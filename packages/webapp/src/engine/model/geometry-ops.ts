@@ -1,12 +1,9 @@
 /**
  * Geometry operations for slope analysis.
  *
- * Replaces: shapely.ops.split, shapely.Polygon, get_surface_line
- *
- * splitPolygonByPolyline uses JSTS (JavaScript Topology Suite) — the same
- * JTS engine that powers Python's Shapely. This gives us robust, battle-tested
- * polygon splitting with correct handling of concave polygons, collinear edges,
- * shared vertices, and all other edge cases.
+ * splitPolygonByPolyline uses JSTS (JavaScript Topology Suite) — a robust,
+ * battle-tested geometry engine with correct handling of concave polygons,
+ * collinear edges, shared vertices, and all other edge cases.
  */
 
 // ── JSTS imports ──────────────────────────────────────────────────
@@ -164,9 +161,7 @@ export function getSurfaceLine(
 /**
  * Split a polygon into pieces along a polyline, using JSTS.
  *
- * Replaces `shapely.ops.split(Polygon, LineString)`.
- *
- * Algorithm (identical to Shapely's split):
+ * Algorithm:
  * 1. Node the polygon boundary with the cutting line (union inserts
  *    intersection vertices into both geometries).
  * 2. Polygonize the noded edges to rebuild closed polygons.

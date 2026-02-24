@@ -78,7 +78,6 @@ export function getCircleLineIntersections(
 
 /**
  * Get the intersection points of a circle and a polygon boundary.
- * Pure-math implementation (no Shapely).
  *
  * @param cx - Circle center x
  * @param cy - Circle center y

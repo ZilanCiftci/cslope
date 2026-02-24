@@ -1,5 +1,5 @@
 /**
- * Tests for geometry operations (Shapely replacements).
+ * Tests for geometry operations.
  *
  * Golden values from: webapp/tests/generate_phase2_golden.py
  */
