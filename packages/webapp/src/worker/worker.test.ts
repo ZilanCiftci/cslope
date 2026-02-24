@@ -6,9 +6,8 @@
  */
 
 import { describe, it, expect } from "vitest";
-import type { SlopeDefinition } from "../worker/messages";
-import { buildSlope } from "../worker/build-slope";
-import { analyseSlope } from "../engine/model/index";
+import type { SlopeDefinition } from "@cslope/engine";
+import { buildSlope, analyseSlope } from "@cslope/engine";
 
 // ── Fixtures ─────────────────────────────────────────────────────
 

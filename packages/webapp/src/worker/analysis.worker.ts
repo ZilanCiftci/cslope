@@ -10,10 +10,12 @@ import type {
   AnalysisResult,
   SlipSurfaceResult,
   SliceData,
-} from "../engine/types/index";
-import { analyseSlope } from "../engine/model/index";
-import { mapAnalysisResultToModelSpace } from "../engine/model/canonical";
-import { buildSlope } from "./build-slope";
+} from "@cslope/engine";
+import {
+  analyseSlope,
+  mapAnalysisResultToModelSpace,
+  buildSlope,
+} from "@cslope/engine";
 
 // ── Worker handler ──────────────────────────────────────────────
 

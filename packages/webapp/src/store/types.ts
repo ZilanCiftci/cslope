@@ -1,7 +1,7 @@
-import type { AnalysisOptions, AnalysisResult } from "../engine/types/analysis";
+import type { AnalysisOptions, AnalysisResult } from "@cslope/engine";
 
 // Export analysis types so UI components can consume them from a single module
-export type { AnalysisResult } from "../engine/types/analysis";
+export type { AnalysisResult } from "@cslope/engine";
 
 export type AppMode = "edit" | "result";
 export type ThemeMode = "dark" | "light";

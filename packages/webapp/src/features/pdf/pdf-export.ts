@@ -1,5 +1,5 @@
 import { jsPDF } from "jspdf";
-import type { AnalysisResult } from "../../engine/types/analysis";
+import type { AnalysisResult } from "@cslope/engine";
 import type {
   AnalysisLimitsState,
   MaterialBoundaryRow,

@@ -1,4 +1,4 @@
-import type { AnalysisMethod } from "../../../engine/types/analysis";
+import type { AnalysisMethod } from "@cslope/engine";
 import { useAppStore } from "../../../store/app-store";
 import { Section } from "../../../components/ui/Section";
 import { Label } from "../../../components/ui/Label";

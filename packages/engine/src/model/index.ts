@@ -28,3 +28,18 @@ export {
   analyseMorgensternPrice,
   analyseSlope,
 } from "./solvers";
+
+export { buildSlope } from "./build-slope";
+
+export {
+  mirrorX,
+  mirrorPoint,
+  mirrorPoints,
+  getDomainX,
+  inferOrientationFromCoordinates,
+  resolveOrientation,
+  mirrorLimits,
+  toCanonicalSlopeDefinition,
+  mapAnalysisResultToModelSpace,
+} from "./canonical";
+export type { SlopeOrientation } from "./canonical";

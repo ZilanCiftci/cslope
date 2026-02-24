@@ -1,5 +1,8 @@
-import type { AnalysisOptions } from "../../engine/types/analysis";
-import { DEFAULT_ANALYSIS_OPTIONS } from "../../engine/types/analysis";
+import type { AnalysisOptions } from "@cslope/engine";
+import {
+  DEFAULT_ANALYSIS_OPTIONS,
+  toCanonicalSlopeDefinition,
+} from "@cslope/engine";
 import type { AnalysisResponse, SlopeDefinition } from "../../worker/messages";
 import type { SliceCreator } from "../helpers";
 import { RUN_RESET } from "../helpers";
@@ -11,7 +14,6 @@ import {
   findMaterialBelowBoundary,
   type Region,
 } from "../../utils/regions";
-import { toCanonicalSlopeDefinition } from "../../engine/model/canonical";
 
 export const createAnalysisSlice: SliceCreator<AnalysisSlice> = (set, get) => ({
   analysisLimits: { ...DEFAULT_ANALYSIS_LIMITS },

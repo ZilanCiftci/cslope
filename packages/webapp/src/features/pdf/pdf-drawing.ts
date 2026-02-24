@@ -2,7 +2,7 @@ import { jsPDF } from "jspdf";
 import { fosColor } from "../../utils/fos-color";
 import { circleArcPoints } from "../../utils/arc";
 import { computeRegions } from "../../utils/regions";
-import type { AnalysisResult } from "../../engine/types/analysis";
+import type { AnalysisResult } from "@cslope/engine";
 import type {
   AnalysisLimitsState,
   Annotation,

@@ -1,5 +1,5 @@
 import type { AnalysisResult, AnalysisLimits } from "../types/analysis";
-import type { SlopeDefinition } from "../../worker/messages";
+import type { SlopeDefinition } from "../types/slope-definition";
 
 export type SlopeOrientation = "ltr" | "rtl";
 

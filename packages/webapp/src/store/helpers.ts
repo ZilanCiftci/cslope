@@ -1,6 +1,6 @@
 import type { StateCreator } from "zustand";
 import type { AnalysisResponse, SlopeDefinition } from "../worker/messages";
-import { toCanonicalSlopeDefinition } from "../engine/model/canonical";
+import { toCanonicalSlopeDefinition } from "@cslope/engine";
 import { computeRegions, findMaterialBelowBoundary } from "../utils/regions";
 import type { AppState, ModelsSlice } from "./types";
 

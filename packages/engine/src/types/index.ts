@@ -27,6 +27,9 @@ export type {
   SliceSolverState,
 } from "./geometry";
 
+// Slope definition DTO
+export type { SlopeDefinition } from "./slope-definition";
+
 // Constants
 export {
   DEFAULT_SLICES,

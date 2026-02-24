@@ -2,8 +2,8 @@ import { describe, expect, it } from "vitest";
 import type { AnalysisMethod } from "../types/analysis";
 import { analyseSlope } from "./solvers";
 import { toCanonicalSlopeDefinition } from "./canonical";
-import { buildSlope } from "../../worker/build-slope";
-import type { SlopeDefinition } from "../../worker/messages";
+import { buildSlope } from "./build-slope";
+import type { SlopeDefinition } from "../types/slope-definition";
 
 function makeDefinition(opts: {
   orientation: "ltr" | "rtl";

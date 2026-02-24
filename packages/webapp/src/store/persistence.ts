@@ -1,11 +1,10 @@
-import { DEFAULT_ANALYSIS_OPTIONS } from "../engine/types/analysis";
+import { DEFAULT_ANALYSIS_OPTIONS, resolveOrientation } from "@cslope/engine";
 import {
   DEFAULT_ANALYSIS_LIMITS,
   DEFAULT_PIEZO_LINE,
   DEFAULT_PROJECT_INFO,
   DEFAULT_RESULT_VIEW_SETTINGS,
 } from "./defaults";
-import { resolveOrientation } from "../engine/model/canonical";
 import type {
   AppState,
   ModelEntry,

@@ -3,16 +3,20 @@
  */
 
 import { describe, it, expect, beforeEach } from "vitest";
-import { Slope } from "./slope";
-import { getSlices } from "./slices";
 import {
+  Slope,
+  getSlices,
   setEntryExitPlanes,
   generatePlanes,
   addSingleCircularPlane,
-} from "./search";
-import { Material, Udl, LineLoad } from "../types/index";
+  Material,
+  Udl,
+  LineLoad,
+  getDomainX,
+  mirrorLimits,
+  mirrorPoints,
+} from "@cslope/engine";
 import { EXAMPLE_MODELS } from "../../store/examples";
-import { getDomainX, mirrorLimits, mirrorPoints } from "./canonical";
 
 // ── Test fixtures ─────────────────────────────────────────────────
 

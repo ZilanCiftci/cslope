@@ -1,4 +1,4 @@
-import { DEFAULT_ANALYSIS_OPTIONS } from "../../engine/types/analysis";
+import { DEFAULT_ANALYSIS_OPTIONS } from "@cslope/engine";
 import { BENCHMARK_MODELS } from "../examples";
 import {
   DEFAULT_ANALYSIS_LIMITS,

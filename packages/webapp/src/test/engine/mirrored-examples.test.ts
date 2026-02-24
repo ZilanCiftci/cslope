@@ -1,15 +1,15 @@
 import { describe, expect, it } from "vitest";
 import { EXAMPLE_MODELS } from "../../store/examples";
 import type { ModelEntry } from "../../store/types";
-import { analyseSlope } from "./solvers";
-import { buildSlope } from "../../worker/build-slope";
-import type { SlopeDefinition } from "../../worker/messages";
+import type { SlopeDefinition } from "@cslope/engine";
 import {
+  analyseSlope,
+  buildSlope,
   getDomainX,
   mapAnalysisResultToModelSpace,
   mirrorX,
   toCanonicalSlopeDefinition,
-} from "./canonical";
+} from "@cslope/engine";
 import { computeRegions, findMaterialBelowBoundary } from "../../utils/regions";
 
 function modelToSlopeDefinition(model: ModelEntry): SlopeDefinition {

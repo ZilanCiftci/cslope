@@ -3,13 +3,13 @@
  */
 
 import type { ModelEntry } from "./app-store";
-import type { AnalysisOptions } from "../engine/types/analysis";
+import type { AnalysisOptions } from "@cslope/engine";
 import {
   getDomainX,
   mirrorLimits,
   mirrorPoints,
   mirrorX,
-} from "../engine/model/canonical";
+} from "@cslope/engine";
 
 // ────────────────────────────────────────────────────────────────
 // 1. T-ACADS Simple — homogeneous slope, single material

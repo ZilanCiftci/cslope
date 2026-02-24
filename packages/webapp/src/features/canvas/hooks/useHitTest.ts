@@ -1,5 +1,5 @@
 import { useCallback, type RefObject } from "react";
-import { isPointInPolygon } from "../../../engine/math/polygon";
+import { isPointInPolygon } from "@cslope/engine";
 import { computeRegions } from "../../../utils/regions";
 import type { AppState } from "../../../store/types";
 import { EDGE_THRESHOLD, SNAP_THRESHOLD } from "../constants";

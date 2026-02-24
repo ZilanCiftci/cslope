@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { AnalysisResult } from "../types/analysis";
-import type { SlopeDefinition } from "../../worker/messages";
+import type { SlopeDefinition } from "../types/slope-definition";
 import { Material } from "../types/material";
 import {
   inferOrientationFromCoordinates,

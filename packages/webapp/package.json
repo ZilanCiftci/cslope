@@ -13,6 +13,7 @@
     "typecheck": "tsc -b --noEmit"
   },
   "dependencies": {
+    "@cslope/engine": "workspace:*",
     "chroma-js": "^3.2.0",
     "jspdf": "^4.1.0",
     "jsts": "^2.12.1",

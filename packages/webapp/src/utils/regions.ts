@@ -9,8 +9,7 @@
  *   2. Closed polygons entirely inside the exterior — split via polygon subtraction
  */
 
-import { splitPolygonByPolyline } from "../engine/model/geometry-ops";
-import { isPointInPolygon } from "../engine/math/polygon";
+import { splitPolygonByPolyline, isPointInPolygon } from "@cslope/engine";
 import type { MaterialBoundaryRow, RegionMaterials } from "../store/app-store";
 
 export interface Region {

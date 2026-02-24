@@ -5,10 +5,10 @@
  * and also available for testing without worker context.
  */
 
-import type { SlopeDefinition } from "./messages";
-import type { MaterialType } from "../engine/types/material";
-import { Material, Udl, LineLoad } from "../engine/types/index";
-import { Slope } from "../engine/model/index";
+import type { SlopeDefinition } from "../types/slope-definition";
+import type { MaterialType } from "../types/material";
+import { Material, Udl, LineLoad } from "../types/index";
+import { Slope } from "./slope";
 
 /**
  * Reconstruct a Slope model from a serialized SlopeDefinition DTO.
