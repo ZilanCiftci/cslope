@@ -1,0 +1,14 @@
+{
+  "name": "cslope",
+  "private": true,
+  "workspaces": [
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "bun run --filter @cslope/webapp dev",
+    "build": "bun run --filter @cslope/webapp build",
+    "test": "bun run --filter '*' test",
+    "lint": "bun run --filter '*' lint",
+    "typecheck": "bun run --filter '*' typecheck"
+  }
+}
