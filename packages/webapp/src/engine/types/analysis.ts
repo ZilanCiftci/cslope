@@ -1,7 +1,5 @@
 /**
  * Analysis type definitions for slope stability analysis.
- *
- * Mirrors Python: src/pyslope/core.py (analysis options and results)
  */
 
 import type { Material } from "./material";
@@ -33,7 +31,7 @@ export interface AnalysisOptions {
   limitMorgensternPrice: number;
 }
 
-/** Default analysis options matching Python defaults. */
+/** Default analysis options. */
 export const DEFAULT_ANALYSIS_OPTIONS: AnalysisOptions = {
   slices: 25,
   iterations: 1000,

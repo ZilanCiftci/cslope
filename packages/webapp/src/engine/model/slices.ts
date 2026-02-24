@@ -1,8 +1,5 @@
 /**
  * Slice creation and generation for slope stability analysis.
- *
- * Mirrors Python: src/pyslope/geometry.py (Slice class) +
- *                 src/pyslope/solvers.py  (get_slices function)
  */
 
 import type { GeometryWithMaterial, Slice } from "../types/index";
@@ -23,8 +20,6 @@ import type { Slope } from "./slope";
 
 /**
  * Create a single Slice from its geometric parameters.
- *
- * Mirrors Python Slice.__init__ + _set_material_geometries + _calculate_weight.
  */
 export function createSlice(
   x0: number,
@@ -189,8 +184,6 @@ export function createSlice(
 
 /**
  * Divide a circular failure surface into vertical slices.
- *
- * Mirrors Python: solvers.get_slices()
  *
  * @param slope The Slope model.
  * @param x0 Left entry point x.

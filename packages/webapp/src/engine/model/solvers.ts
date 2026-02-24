@@ -1,9 +1,6 @@
 /**
  * Factor of Safety (FOS) solvers for slope stability analysis.
  *
- * Mirrors Python: src/pyslope/solvers.py + src/pyslope/math_utils.py
- *   (solve_fos_generic_moment, solve_fos_generic_force_circular)
- *
  * All Numba JIT functions are ported to plain TypeScript loops.
  */
 
@@ -96,7 +93,6 @@ type SolverResult = [
 
 /**
  * Generic moment equilibrium FOS solver.
- * Direct port of Python `math_utils.solve_fos_generic_moment`.
  */
 function solveFOSGenericMoment(
   p: SliceArrays,
@@ -198,7 +194,6 @@ function solveFOSGenericMoment(
 
 /**
  * Generic force equilibrium FOS solver for circular surfaces.
- * Direct port of Python `math_utils.solve_fos_generic_force_circular`.
  */
 function solveFOSGenericForceCircular(
   p: SliceArrays,

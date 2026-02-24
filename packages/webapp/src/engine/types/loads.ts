@@ -1,7 +1,5 @@
 /**
  * Load type definitions for slope stability analysis.
- *
- * Mirrors Python: src/pyslope/loads.py
  */
 
 /** Uniformly distributed load (surface pressure) in kPa. */

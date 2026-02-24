@@ -1,7 +1,6 @@
 /**
  * Numerical constants for slope stability analysis.
  *
- * All values must match the Python implementation exactly.
  * See docs/typescript-conversion-guide.md Section 7.
  */
 

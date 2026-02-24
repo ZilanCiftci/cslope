@@ -1,7 +1,5 @@
 /**
  * Tests for geometry operations.
- *
- * Golden values from: webapp/tests/generate_phase2_golden.py
  */
 
 import { describe, it, expect } from "vitest";
@@ -46,9 +44,9 @@ describe("lineSegmentIntersection", () => {
 // ── getSurfaceLine ────────────────────────────────────────────────
 
 describe("getSurfaceLine", () => {
-  it("extracts surface of a rectangle (Python golden)", () => {
+  it("extracts surface of a rectangle", () => {
     // Rectangle: (0,0), (10,0), (10,-10), (0,-10), (0,0)
-    // Python: x=[0, 10], y=[0, 0]
+    // expected: x=[0, 10], y=[0, 0]
     const px = [0, 10, 10, 0, 0];
     const py = [0, 0, -10, -10, 0];
     const sl = getSurfaceLine(px, py);
@@ -56,9 +54,9 @@ describe("getSurfaceLine", () => {
     expect(sl.y).toEqual([0, 0]);
   });
 
-  it("extracts surface of a slope polygon (Python golden)", () => {
+  it("extracts surface of a slope polygon", () => {
     // Slope: (0,0), (5,0), (25,-10), (30,-10), (30,-15), (0,-15), (0,0)
-    // Python: x=[0, 5, 25, 30], y=[0, 0, -10, -10]
+    // expected: x=[0, 5, 25, 30], y=[0, 0, -10, -10]
     const px = [0, 5, 25, 30, 30, 0, 0];
     const py = [0, 0, -10, -10, -15, -15, 0];
     const sl = getSurfaceLine(px, py);
@@ -66,9 +64,9 @@ describe("getSurfaceLine", () => {
     expect(sl.y).toEqual([0, 0, -10, -10]);
   });
 
-  it("extracts surface of the test slope (Python golden)", () => {
+  it("extracts surface of the test slope", () => {
     // (0,0), (20,0), (40,-10), (50,-10), (50,-15), (0,-15), (0,0)
-    // Python: x=[0, 20, 40, 50], y=[0, 0, -10, -10]
+    // expected: x=[0, 20, 40, 50], y=[0, 0, -10, -10]
     const px = [0, 20, 40, 50, 50, 0, 0];
     const py = [0, 0, -10, -10, -15, -15, 0];
     const sl = getSurfaceLine(px, py);
@@ -112,11 +110,11 @@ describe("splitPolygonByPolyline", () => {
     expect(totalArea).toBeCloseTo(100, 1);
   });
 
-  it("splits the slope polygon horizontally (Python golden)", () => {
+  it("splits the slope polygon horizontally", () => {
     // Slope: (0,0), (20,0), (40,-10), (50,-10), (50,-15), (0,-15), (0,0)
     // Cut at y=-5
-    // Python upper: area of (0,0), (20,0), (30,-5), (0,-5) = 125
-    // Python lower: area of remaining
+    // upper: area of (0,0), (20,0), (30,-5), (0,-5) = 125
+    // lower: area of remaining
     const px = [0, 20, 40, 50, 50, 0, 0];
     const py = [0, 0, -10, -10, -15, -15, 0];
     const pieces = splitPolygonByPolyline(px, py, [0, 50], [-5, -5]);

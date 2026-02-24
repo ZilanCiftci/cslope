@@ -10,11 +10,11 @@ const polyX = [0, 5, 10];
 const polyY = [0, 10, 5];
 
 describe("getYAtX", () => {
-  it("interpolates midpoint of first segment (golden: 5.0)", () => {
+  it("interpolates midpoint of first segment (expected: 5.0)", () => {
     expect(getYAtX(polyX, polyY, 2.5)).toBeCloseTo(5.0, 10);
   });
 
-  it("interpolates midpoint of second segment (golden: 7.5)", () => {
+  it("interpolates midpoint of second segment (expected: 7.5)", () => {
     expect(getYAtX(polyX, polyY, 7.5)).toBeCloseTo(7.5, 10);
   });
 

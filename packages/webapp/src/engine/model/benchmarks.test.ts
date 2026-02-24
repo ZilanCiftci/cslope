@@ -6,9 +6,6 @@
  *   - Arai & Tagyo (1985) pore-pressure example
  *   - Prandtl bearing capacity
  *   - Method consistency checks
- *
- * Golden values from: webapp/tests/generate_phase4_golden.py
- *   → webapp/tests/phase4_golden.json
  */
 
 import { describe, it, expect } from "vitest";
@@ -59,7 +56,7 @@ describe("T-ACADS Validation", () => {
     analyseSlope(s);
 
     const fos = s.getMinFOS();
-    // Python golden: 0.985094, published: 0.984
+    // expected: 0.985094, published: 0.984
     expect(fos).toBeGreaterThan(0.97);
     expect(fos).toBeLessThan(1.0);
 
@@ -71,13 +68,13 @@ describe("T-ACADS Validation", () => {
     expect(s.search.length).toBeGreaterThan(0);
   });
 
-  it("T-ACADS simple slope (Bishop) matches Python golden", () => {
+  it("T-ACADS simple slope (Bishop) matches expected FOS", () => {
     const s = createTAcadsSlope();
     s.updateAnalysisOptions({ slices: 30, method: "Bishop" });
     analyseSlope(s);
 
     const fos = s.getMinFOS();
-    // Python golden: 0.984932
+    // expected: 0.984932
     expect(fos).toBeGreaterThan(0.95);
     expect(fos).toBeLessThan(1.02);
   });
@@ -88,7 +85,7 @@ describe("T-ACADS Validation", () => {
     analyseSlope(s);
 
     const fos = s.getMinFOS();
-    // Python golden: 0.937688 — Janbu typically gives lower FOS
+    // expected: 0.937688 — Janbu typically gives lower FOS
     expect(fos).toBeGreaterThan(0.9);
     expect(fos).toBeLessThan(0.98);
   });
@@ -149,8 +146,8 @@ describe("T-ACADS Validation", () => {
     analyseSlope(s);
 
     const fos = s.getMinFOS();
-    // Python golden: 1.400654, T-ACADS published: 1.373
-    // Multi-layer geometry splitting may differ slightly between TS and Python
+    // expected: 1.400654, T-ACADS published: 1.373
+    // Multi-layer geometry splitting may differ slightly due to polygon clipping
     // Allow tolerance for differences in polygon clipping and material assignment
     expect(fos).toBeGreaterThan(1.2);
     expect(fos).toBeLessThan(1.5);
@@ -194,12 +191,12 @@ describe("Prandtl Bearing Capacity", () => {
     analyseSlope(s);
     const fos = s.getMinFOS();
 
-    // Python golden: 1.075129
+    // expected: 1.075129
     expect(fos).toBeGreaterThan(1.0);
     expect(fos).toBeLessThan(1.15);
   });
 
-  it("Bishop on critical circle agrees with Python", () => {
+  it("Bishop on critical circle agrees with M-P", () => {
     // First find critical circle via M-P
     const sMP = createPrandtlSlope("Morgenstern-Price");
     analyseSlope(sMP);
@@ -211,7 +208,7 @@ describe("Prandtl Bearing Capacity", () => {
     analyseSlope(s);
     const fos = s.getMinFOS();
 
-    // Python golden: 1.075129 (Bishop on same circle)
+    // expected: 1.075129 (Bishop on same circle)
     expect(fos).toBeGreaterThan(1.0);
     expect(fos).toBeLessThan(1.15);
   });
@@ -226,7 +223,7 @@ describe("Prandtl Bearing Capacity", () => {
     analyseSlope(s);
     const fos = s.getMinFOS();
 
-    // Python golden: 1.015325
+    // expected: 1.015325
     expect(fos).toBeGreaterThan(0.95);
     expect(fos).toBeLessThan(1.1);
   });
@@ -276,7 +273,7 @@ describe("Arai & Tagyo with water table", () => {
     analyseSlope(s);
 
     const fos = s.getMinFOS();
-    // Python golden: 1.157740, published range: 1.10–1.20
+    // expected: 1.157740, published range: 1.10–1.20
     expect(fos).toBeGreaterThan(1.1);
     expect(fos).toBeLessThan(1.25);
 

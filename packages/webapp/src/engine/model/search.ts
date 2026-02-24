@@ -1,7 +1,5 @@
 /**
  * Search plane generation for slope stability analysis.
- *
- * Mirrors Python: src/pyslope/search.py
  */
 
 import {
@@ -73,8 +71,6 @@ function isPlaneWithinExternalBoundary(
 
 /**
  * Generate circular failure planes through entry and exit points.
- *
- * Mirrors Python: search.generate_planes()
  */
 export function generatePlanes(
   slope: Slope,
@@ -278,8 +274,6 @@ export function generateRefinedPlanes(
 
 /**
  * Generate search planes based on predetermined entry/exit points.
- *
- * Mirrors Python: search.set_entry_exit_planes()
  */
 export function setEntryExitPlanes(slope: Slope): void {
   const { numCircles, numPointsTop, numPointsBot } = getSearchGridSpec(slope);
@@ -339,8 +333,6 @@ export function setEntryExitPlanes(slope: Slope): void {
 
 /**
  * Add potential failure surfaces defined by entry and exit x-coordinates.
- *
- * Mirrors Python: search.add_single_entry_exit_plane()
  */
 export function addSingleEntryExitPlane(
   slope: Slope,
@@ -361,8 +353,6 @@ export function addSingleEntryExitPlane(
 
 /**
  * Add a specific circular failure surface to the analysis.
- *
- * Mirrors Python: search.add_single_circular_plane()
  */
 export function addSingleCircularPlane(
   slope: Slope,

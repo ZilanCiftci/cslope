@@ -1,8 +1,6 @@
 /**
  * Phase 4 — Integration tests for complete slope analysis workflows.
  *
- * Mirrors Python: tests/test_integration.py
- *
  * Tests cover end-to-end analysis with:
  *   - Loads (UDL, line load)
  *   - Water table
@@ -80,7 +78,7 @@ describe("Integration: Slope with loads", () => {
 
     const fos = s.getMinFOS();
     expect(fos).toBeGreaterThan(0);
-    // Python golden: 0.985762
+    // expected: 0.985762
     expect(fos).toBeGreaterThan(0.5);
     expect(fos).toBeLessThan(2.0);
   });
@@ -93,7 +91,7 @@ describe("Integration: Slope with loads", () => {
 
     const fos = s.getMinFOS();
     expect(fos).toBeGreaterThan(0);
-    // Python golden: 0.985762
+    // expected: 0.985762
     expect(fos).toBeGreaterThan(0.5);
     expect(fos).toBeLessThan(2.0);
   });
@@ -144,15 +142,14 @@ describe("Integration: Slope with loads", () => {
 describe("Integration: Slope with water table", () => {
   it("horizontal water table (followBoundary=true, default)", () => {
     const s = createBaseSlope();
-    // Python default: follow_external_boundary=True
-    // This clips the water line to the terrain surface
+    // followBoundary=true clips the water line to the terrain surface
     s.setWaterTable({ height: -5 });
     s.updateAnalysisOptions({ slices: 40, iterations: 200, method: "Bishop" });
     analyseSlope(s);
 
     const fos = s.getMinFOS();
     expect(fos).toBeGreaterThan(0);
-    // Python golden: 0.714313
+    // expected: 0.714313
     expect(fos).toBeGreaterThan(0.3);
     expect(fos).toBeLessThan(1.5);
   });
@@ -220,7 +217,7 @@ describe("Integration: Multiple materials", () => {
 
     const fos = s.getMinFOS();
     expect(fos).toBeGreaterThan(0);
-    // Python golden: 1.193234
+    // expected: 1.193234
     expect(fos).toBeGreaterThan(0.5);
     expect(fos).toBeLessThan(3.0);
   });
@@ -234,7 +231,7 @@ describe("Integration: Search plane generation", () => {
     s.updateAnalysisOptions({ slices: 30, iterations: 1000, method: "Bishop" });
     analyseSlope(s);
 
-    // Python golden: ~1041 planes for 1000 iterations
+    // expected: ~1041 planes for 1000 iterations
     expect(s.search.length).toBeGreaterThan(100);
     expect(s.search.length).toBeLessThan(2000);
   });

@@ -12,14 +12,14 @@ describe("calculatePolygonArea", () => {
     expect(calculatePolygonArea([], [])).toBe(0);
   });
 
-  it("calculates area of unit square (golden: 1.0)", () => {
+  it("calculates area of unit square (expected: 1.0)", () => {
     expect(calculatePolygonArea([0, 1, 1, 0], [0, 0, 1, 1])).toBeCloseTo(
       1.0,
       10,
     );
   });
 
-  it("calculates area of triangle (golden: 6.0)", () => {
+  it("calculates area of triangle (expected: 6.0)", () => {
     expect(calculatePolygonArea([0, 4, 2], [0, 0, 3])).toBeCloseTo(6.0, 10);
   });
 
@@ -34,11 +34,11 @@ describe("isPointInPolygon", () => {
   const sqX = [0, 1, 1, 0];
   const sqY = [0, 0, 1, 1];
 
-  it("returns true for interior point (golden: True)", () => {
+  it("returns true for interior point (expected: true)", () => {
     expect(isPointInPolygon(0.5, 0.5, sqX, sqY)).toBe(true);
   });
 
-  it("returns false for exterior point (golden: False)", () => {
+  it("returns false for exterior point (expected: false)", () => {
     expect(isPointInPolygon(2.0, 0.5, sqX, sqY)).toBe(false);
   });
 
@@ -74,7 +74,7 @@ describe("clipPolygonHalfplane", () => {
 });
 
 describe("clipPolygonVertical", () => {
-  it("clips [0,4]x[0,3] to [1,3] strip (golden area: 6.0)", () => {
+  it("clips [0,4]x[0,3] to [1,3] strip (expected area: 6.0)", () => {
     const [rx, ry] = clipPolygonVertical([0, 4, 4, 0], [0, 0, 3, 3], 1.0, 3.0);
     expect(rx.length).toBeGreaterThanOrEqual(3);
     expect(calculatePolygonArea(rx, ry)).toBeCloseTo(6.0, 6);

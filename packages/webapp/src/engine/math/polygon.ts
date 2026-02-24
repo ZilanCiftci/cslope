@@ -1,8 +1,5 @@
 /**
  * Polygon area and point-in-polygon calculations.
- *
- * Mirrors Python: math_utils.calculate_polygon_area, is_point_in_polygon,
- * clip_polygon_halfplane, clip_polygon_vertical
  */
 
 /**

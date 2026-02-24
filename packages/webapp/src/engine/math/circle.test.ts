@@ -9,11 +9,11 @@ import {
 } from "./circle";
 
 describe("getCircleYCoordinateAtX", () => {
-  it("returns bottom of circle at center (golden: 5.0)", () => {
+  it("returns bottom of circle at center (expected: 5.0)", () => {
     expect(getCircleYCoordinateAtX(5, 10, 5, 5)).toBeCloseTo(5.0, 10);
   });
 
-  it("returns correct y at offset x (golden: 5.4174…)", () => {
+  it("returns correct y at offset x (expected: 5.4174…)", () => {
     expect(getCircleYCoordinateAtX(5, 10, 5, 3)).toBeCloseTo(
       5.41742430504416,
       8,
@@ -22,7 +22,7 @@ describe("getCircleYCoordinateAtX", () => {
 });
 
 describe("getCircleLineIntersections", () => {
-  it("finds intersections of circle and horizontal line (golden: [8,5],[2,5])", () => {
+  it("finds intersections of circle and horizontal line (expected: [8,5],[2,5])", () => {
     const ints = getCircleLineIntersections(5, 5, 3, [0, 10], [5, 5]);
     expect(ints.length).toBe(2);
     // Sort by x
@@ -40,7 +40,7 @@ describe("getCircleLineIntersections", () => {
 });
 
 describe("getCirclePolygonIntersection", () => {
-  it("finds intersections of circle and horizontal polyline (golden: [(-4,3),(4,3)])", () => {
+  it("finds intersections of circle and horizontal polyline (expected: [(-4,3),(4,3)])", () => {
     const pts = getCirclePolygonIntersection(0, 0, 5, [-10, 10], [3, 3]);
     expect(pts.length).toBe(2);
     expect(pts[0][0]).toBeCloseTo(-4.0, 8);

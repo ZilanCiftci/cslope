@@ -1,7 +1,5 @@
 /**
  * Material type definitions for slope stability analysis.
- *
- * Mirrors Python: src/pyslope/material.py
  */
 
 /** Supported material constitutive models. */
@@ -61,7 +59,7 @@ export class Material {
     this.materialType =
       mt === "Mohr-Coulomb" || mt === "Combined" ? mt : "Mohr-Coulomb";
 
-    // Validation (mirrors Python __post_init__)
+    // Validation
     if (this.unitWeight < 0 || this.unitWeight > 500) {
       throw new RangeError("unit weight must be between 0 and 500");
     }

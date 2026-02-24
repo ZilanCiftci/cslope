@@ -17,8 +17,7 @@ export function buildSlope(def: SlopeDefinition): Slope {
   const slope = new Slope();
 
   // Materials — build Material instances first so we can assign the first
-  // one to the external boundary (matching Python's behaviour where
-  // set_external_boundary uses materials[0]).
+  // one to the external boundary (set_external_boundary uses materials[0]).
   const materialsByName = new Map<string, InstanceType<typeof Material>>();
   for (const m of def.materials) {
     const mat = new Material({
@@ -69,7 +68,7 @@ export function buildSlope(def: SlopeDefinition): Slope {
 
     // Assign material to the top region.
     // When topRegionMaterialName is explicitly provided, use it.
-    // Otherwise fall back to the first defined material (matching Python).
+    // Otherwise fall back to the first defined material.
     const topMatName = def.topRegionMaterialName ?? def.materials[0]?.name;
     const topMat = topMatName ? materialsByName.get(topMatName) : undefined;
     if (topMat) {

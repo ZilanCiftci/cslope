@@ -1,9 +1,5 @@
 /**
  * Core Slope model for slope stability analysis.
- *
- * Mirrors Python: src/pyslope/core.py  (Slope class)
- * API uses camelCase per Architectural Decision #2.
- * Typo fixed: asign_material → assignMaterial (Decision #3).
  */
 
 import type {

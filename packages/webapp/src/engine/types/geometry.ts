@@ -1,7 +1,5 @@
 /**
  * Geometry type definitions for slope stability analysis.
- *
- * Mirrors Python: src/pyslope/geometry.py
  */
 
 import type { Material } from "./material";

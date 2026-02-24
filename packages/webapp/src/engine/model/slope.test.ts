@@ -1,7 +1,5 @@
 /**
  * Tests for the Slope model class and slice generation.
- *
- * Golden values from: webapp/tests/generate_phase2_golden.py
  */
 
 import { describe, it, expect, beforeEach } from "vitest";
@@ -90,15 +88,15 @@ describe("Slope model setup", () => {
     slope.setExternalBoundary(SLOPE_BOUNDARY);
   });
 
-  it("extracts the correct surface line (Python golden)", () => {
+  it("extracts the correct surface line", () => {
     const sl = slope.surfaceLineXY;
     expect(sl).not.toBeNull();
     expect(sl!.x).toEqual([0, 20, 40, 50]);
     expect(sl!.y).toEqual([0, 0, -10, -10]);
   });
 
-  it("computes y-intersections matching Python golden values", () => {
-    // Python: {0: 0, 10: 0, 20: 0, 30: -5, 40: -10, 50: -10}
+  it("computes y-intersections matching expected values", () => {
+    // expected: {0: 0, 10: 0, 20: 0, 30: -5, 40: -10, 50: -10}
     expect(slope.getExternalYIntersection(0)).toBeCloseTo(0, 6);
     expect(slope.getExternalYIntersection(10)).toBeCloseTo(0, 6);
     expect(slope.getExternalYIntersection(20)).toBeCloseTo(0, 6);
@@ -108,7 +106,7 @@ describe("Slope model setup", () => {
   });
 
   it("has correct default analysis limits (full slope)", () => {
-    // Python: [0, 50, 0, 50]
+    // expected: [0, 50, 0, 50]
     expect(slope.limits[0]).toBeCloseTo(0, 6);
     expect(slope.limits[1]).toBeCloseTo(50, 6);
     expect(slope.limits[2]).toBeCloseTo(0, 6);
@@ -168,7 +166,7 @@ describe("Material boundaries and assignment", () => {
     slope.setExternalBoundary(SLOPE_BOUNDARY);
   });
 
-  it("splits into correct number of geometries (Python golden)", () => {
+  it("splits into correct number of geometries", () => {
     slope.setMaterialBoundary([
       [0, -5],
       [50, -5],
@@ -177,11 +175,11 @@ describe("Material boundaries and assignment", () => {
       [0, -10],
       [50, -10],
     ]);
-    // Python: 3 geometries
+    // expected: 3 geometries
     expect(slope.materialGeometries.length).toBe(3);
   });
 
-  it("assigns materials to correct regions (Python golden)", () => {
+  it("assigns materials to correct regions", () => {
     slope.setMaterialBoundary([
       [0, -5],
       [50, -5],
@@ -281,12 +279,12 @@ describe("Water table", () => {
 // ── Circle-Surface Intersection ───────────────────────────────────
 
 describe("Circle-surface intersection", () => {
-  it("matches Python golden values", () => {
+  it("matches expected values", () => {
     const slope = new Slope();
     slope.setExternalBoundary(SLOPE_BOUNDARY);
 
     // Circle: center (30, 10), radius 25
-    // Python: [(7.087121525220801, 0.0), (45.0, -10.0)]
+    // expected: [(7.087, 0.0), (45.0, -10.0)]
     const ints = slope.getCircleExternalIntersection(30, 10, 25);
     expect(ints.length).toBe(2);
     expect(ints[0][0]).toBeCloseTo(7.0871, 3);
@@ -316,7 +314,7 @@ describe("Slice generation", () => {
 
     const slices = getSlices(slope, ints[0][0], ints[1][0], cx, cy, radius);
 
-    // Python: 26 slices
+    // expected: 26 slices
     expect(slices.length).toBeGreaterThan(0);
     expect(slices.length).toBeCloseTo(26, -1); // within ±5
 
@@ -328,18 +326,18 @@ describe("Slice generation", () => {
     }
   });
 
-  it("produces slice weights matching Python golden values", () => {
+  it("produces slice weights matching expected values", () => {
     const cx = 30,
       cy = 10,
       radius = 25;
     const ints = slope.getCircleExternalIntersection(cx, cy, radius);
     const slices = getSlices(slope, ints[0][0], ints[1][0], cx, cy, radius);
 
-    // Python total weight: 5376.058 (with unitWeight=18)
+    // expected total weight: 5376.058 (with unitWeight=18)
     const totalWeight = slices.reduce((s, sl) => s + sl.weight, 0);
     expect(totalWeight).toBeCloseTo(5376, -1); // within ±5 kN
 
-    // First slice properties (Python golden)
+    // First slice properties
     const first = slices[0];
     expect(first.xLeft).toBeCloseTo(7.087, 2);
     expect(first.yTop).toBeCloseTo(0, 2);
@@ -391,7 +389,7 @@ describe("Search plane generation", () => {
     slope.updateAnalysisOptions({ iterations: 1000 });
     setEntryExitPlanes(slope);
 
-    // Python: 1034 planes (may differ slightly with pure-TS circle intersection)
+    // expected: ~1034 planes (may differ slightly due to circle intersection)
     expect(slope.search.length).toBeGreaterThan(100);
   });
 

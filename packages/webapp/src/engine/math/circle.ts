@@ -1,11 +1,5 @@
 /**
  * Circle geometry calculations.
- *
- * Mirrors Python: math_utils.get_circle_y_coordinate_at_x,
- * math_utils.get_circle_line_intersections,
- * utilities.circle_radius_from_abcd, utilities.circle_centre,
- * utilities.generate_circle_coordinates,
- * utilities.get_circle_polygon_intersection
  */
 
 /**

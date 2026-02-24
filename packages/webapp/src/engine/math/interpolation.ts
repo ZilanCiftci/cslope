@@ -1,8 +1,5 @@
 /**
  * Polyline interpolation functions.
- *
- * Mirrors Python: math_utils.get_y_at_x, get_y_at_x_many,
- * utilities.get_y_at_x, utilities.get_line_between_points
  */
 
 /**

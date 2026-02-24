@@ -1,5 +1,5 @@
 /**
- * Pre-loaded example models based on Python validation cases.
+ * Pre-loaded example models for validation.
  */
 
 import type { ModelEntry } from "./app-store";
@@ -241,8 +241,7 @@ const ARAI_TAGYO: ModelEntry = {
 };
 
 // ────────────────────────────────────────────────────────────────
-// 4. Talbingo Dam — RTL validation model (Python RTL case)
-//    Source: examples/validation/talbingo_dam.py
+// 4. Talbingo Dam — RTL validation model
 // ────────────────────────────────────────────────────────────────
 
 const TALBINGO_DAM_RTL: ModelEntry = {

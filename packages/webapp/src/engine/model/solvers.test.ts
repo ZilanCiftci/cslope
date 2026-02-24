@@ -3,9 +3,6 @@
  *
  * Tests the Ordinary, Bishop, Janbu, and Morgenstern-Price solvers,
  * plus the top-level analyseSlope orchestrator.
- *
- * Golden values generated from Python:
- *   webapp/tests/generate_phase3_golden.py
  */
 
 import { describe, it, expect, beforeEach } from "vitest";
@@ -49,7 +46,7 @@ function createHomogeneousSlope(): Slope {
 // ── Individual solver tests with a known circle ──────────────────
 
 describe("Individual solver methods (fixed circle)", () => {
-  // Python golden: cx=28, cy=25, r=35
+  // cx=28, cy=25, r=35
   // Entry x=3.505103, Exit x=37.418087
   // Ordinary FOS=1.634496, Bishop FOS=1.714896, Janbu FOS=1.628078
   const CX = 28,
@@ -72,29 +69,29 @@ describe("Individual solver methods (fixed circle)", () => {
   });
 
   it("generates expected number of slices", () => {
-    // Python: 30 slices
+    // expected: 30 slices
     expect(slices.length).toBeGreaterThanOrEqual(25);
     expect(slices.length).toBeLessThanOrEqual(40);
   });
 
-  it("Ordinary method matches Python golden", () => {
+  it("Ordinary method matches expected FOS", () => {
     const fos = analyseOrdinary(slope, slices);
     expect(fos).not.toBeNull();
-    // Python: 1.634496
+    // expected: 1.634496
     expect(fos!).toBeCloseTo(1.634, 1);
   });
 
-  it("Bishop method matches Python golden", () => {
+  it("Bishop method matches expected FOS", () => {
     const [fos] = analyseBishop(slope, slices);
     expect(fos).not.toBeNull();
-    // Python: 1.714896
+    // expected: 1.714896
     expect(fos!).toBeCloseTo(1.715, 1);
   });
 
-  it("Janbu method matches Python golden", () => {
+  it("Janbu method matches expected FOS", () => {
     const [fos] = analyseJanbu(slope, slices);
     expect(fos).not.toBeNull();
-    // Python: 1.628078
+    // expected: 1.628078
     expect(fos!).toBeCloseTo(1.628, 1);
   });
 
@@ -129,7 +126,7 @@ describe("analyseSlope full orchestration", () => {
     const fos = analyseSlope(s);
 
     expect(fos).not.toBeNull();
-    // Python golden: 0.984635
+    // expected: 0.984635
     // Allow wider tolerance since search grid discretisation may differ
     expect(fos!).toBeGreaterThan(0.5);
     expect(fos!).toBeLessThan(2.0);
@@ -232,7 +229,7 @@ describe("analyseSlope full orchestration", () => {
 
     const fos = analyseSlope(s);
     expect(fos).not.toBeNull();
-    // Python golden: Bishop FOS ~1.71 for this circle
+    // expected: Bishop FOS ~1.71 for this circle
     expect(fos!).toBeCloseTo(1.7, 0);
   });
 });
@@ -256,7 +253,7 @@ describe("Morgenstern-Price method", () => {
     const fos = analyseSlope(s);
 
     expect(fos).not.toBeNull();
-    // Python: 0.984792
+    // expected: 0.984792
     expect(fos!).toBeGreaterThan(0.5);
     expect(fos!).toBeLessThan(2.0);
   });
@@ -328,7 +325,7 @@ describe("Multi-material slope analysis", () => {
 
     const fos = analyseSlope(s);
     expect(fos).not.toBeNull();
-    // Python: 1.487133
+    // expected: 1.487133
     expect(fos!).toBeGreaterThan(0.5);
     expect(fos!).toBeLessThan(5.0);
   });

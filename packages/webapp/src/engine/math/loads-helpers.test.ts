@@ -10,7 +10,7 @@ import {
 } from "./helpers";
 
 describe("calculateAllLoads", () => {
-  it("computes UDL and LL forces correctly (golden values)", () => {
+  it("computes UDL and LL forces correctly", () => {
     const widths = [2, 2, 2];
     const centers = [1, 3, 5];
     const udls: [number, number, number][] = [[0.5, 4.5, 10]];
@@ -18,7 +18,7 @@ describe("calculateAllLoads", () => {
 
     const [udlForces, llForces] = calculateAllLoads(widths, centers, udls, lls);
 
-    // Golden: udl [15.0, 20.0, 5.0], ll [0.0, 50.0, 0.0]
+    // expected: udl [15.0, 20.0, 5.0], ll [0.0, 50.0, 0.0]
     expect(udlForces[0]).toBeCloseTo(15.0, 8);
     expect(udlForces[1]).toBeCloseTo(20.0, 8);
     expect(udlForces[2]).toBeCloseTo(5.0, 8);
@@ -35,15 +35,15 @@ describe("calculateAllLoads", () => {
 });
 
 describe("halfsine", () => {
-  it("returns 1.0 at midpoint (golden: 1.0)", () => {
+  it("returns 1.0 at midpoint (expected: 1.0)", () => {
     expect(halfsine(5, 0, 10)).toBeCloseTo(1.0, 10);
   });
 
-  it("returns ~0.707 at quarter (golden: 0.7071067811865476)", () => {
+  it("returns ~0.707 at quarter (expected: 0.7071067811865476)", () => {
     expect(halfsine(2.5, 0, 10)).toBeCloseTo(0.7071067811865476, 10);
   });
 
-  it("returns 0 outside domain (golden: 0.0)", () => {
+  it("returns 0 outside domain (expected: 0.0)", () => {
     expect(halfsine(-1, 0, 10)).toBe(0);
     expect(halfsine(11, 0, 10)).toBe(0);
   });
@@ -73,7 +73,7 @@ describe("distPoints", () => {
 });
 
 describe("extrapolateLambda", () => {
-  it("extrapolates correctly (golden: [0.8348, 1.3947])", () => {
+  it("extrapolates correctly (expected: [0.8348, 1.3947])", () => {
     const [lambda, fs] = extrapolateLambda([
       [0.2, 1.387, 1.289],
       [0.4, 1.386, 1.336],

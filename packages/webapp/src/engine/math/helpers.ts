@@ -1,9 +1,5 @@
 /**
  * Miscellaneous helper/utility functions.
- *
- * Mirrors Python: math_utils.halfsine, utilities.mid_coord,
- * utilities.dist_points, utilities.extrapolate_lambda,
- * utilities.get_precision, utilities.MATERIAL_COLORS
  */
 
 /**

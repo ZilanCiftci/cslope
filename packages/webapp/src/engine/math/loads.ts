@@ -1,7 +1,5 @@
 /**
  * Load force calculations for slices.
- *
- * Mirrors Python: math_utils.calculate_all_loads
  */
 
 /**
