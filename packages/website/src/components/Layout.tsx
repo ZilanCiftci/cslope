@@ -2,25 +2,7 @@ import { Link, useLocation } from "react-router";
 import { useState, type ReactNode } from "react";
 import { Moon, Sun, Menu, X } from "lucide-react";
 
-function MountainIcon({ className }: { className?: string }) {
-  return (
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      width="24"
-      height="24"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      className={className}
-    >
-      <path d="m8 3 4 8 5-5 5 15H2L8 3z" />
-      <path d="M4.14 15.08c2.62-1.57 5.24-1.43 7.86.42 2.74 1.94 5.49 2 8.23.19" />
-    </svg>
-  );
-}
+import { CslopeLogo } from "@/components/CslopeLogo";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { useTheme } from "@/components/theme-provider";
@@ -59,7 +41,7 @@ export function Layout({ children }: { children: ReactNode }) {
       <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
         <div className="container mx-auto flex h-14 items-center px-4">
           <Link to="/" className="mr-6 flex items-center space-x-2">
-            <MountainIcon className="h-6 w-6" />
+            <CslopeLogo className="h-6 w-6" />
             <span className="font-bold">cSlope</span>
           </Link>
 
