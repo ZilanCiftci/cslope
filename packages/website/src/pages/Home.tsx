@@ -8,7 +8,7 @@ const highlights = [
     icon: <Layers className="h-8 w-8" />,
     title: "Multiple Methods",
     description:
-      "Bishop, Fellenius, and other limit equilibrium methods for comprehensive slope stability analysis.",
+      "Bishop Simplified, GLE (Morgenstern–Price), and other limit equilibrium methods for comprehensive slope stability analysis.",
   },
   {
     icon: <BarChart3 className="h-8 w-8" />,

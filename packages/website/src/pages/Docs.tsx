@@ -76,8 +76,9 @@ export function Docs() {
               for circular slip surfaces.
             </li>
             <li>
-              <strong>Fellenius (Ordinary Method of Slices)</strong> — A simpler
-              approach that neglects inter-slice forces.
+              <strong>GLE / Morgenstern–Price</strong> — A rigorous method
+              satisfying both force and moment equilibrium with a user-defined
+              inter-slice force function.
             </li>
           </ul>
         </section>

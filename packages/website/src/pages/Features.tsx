@@ -20,7 +20,7 @@ const features = [
     icon: <Calculator className="h-8 w-8" />,
     title: "Limit Equilibrium Methods",
     description:
-      "Supports Bishop Simplified, Fellenius (Ordinary Method of Slices), and more. Each method is implemented with rigorous numerical accuracy.",
+      "Supports Bishop Simplified, GLE (Morgenstern–Price), and more. Each method is implemented with rigorous numerical accuracy.",
   },
   {
     icon: <Layers className="h-8 w-8" />,
