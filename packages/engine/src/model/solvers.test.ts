@@ -1,6 +1,4 @@
 /**
- * Phase 3 tests — FOS solvers and full analysis orchestrator.
- *
  * Tests the Ordinary, Bishop, Janbu, and Morgenstern-Price solvers,
  * plus the top-level analyseSlope orchestrator.
  */

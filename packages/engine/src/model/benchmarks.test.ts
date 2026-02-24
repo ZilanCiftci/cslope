@@ -1,6 +1,4 @@
 /**
- * Phase 4 — Benchmark regression tests against published reference values.
- *
  * Validates TS engine against:
  *   - T-ACADS verification manual cases
  *   - Arai & Tagyo (1985) pore-pressure example
