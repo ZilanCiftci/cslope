@@ -112,12 +112,23 @@ function buildMenu() {
       label: "File",
       submenu: [
         {
+          label: "New Project",
+          accelerator: "CmdOrCtrl+N",
+          click: () => {
+            currentFilePath = null;
+            win?.setTitle("cSlope");
+            win?.webContents.send("menu:new");
+          },
+        },
+        { type: "separator" },
+        {
           label: "Open Project…",
           accelerator: "CmdOrCtrl+O",
           click: () => win?.webContents.send("menu:open"),
         },
+        { type: "separator" },
         {
-          label: "Save Project…",
+          label: "Save Project",
           accelerator: "CmdOrCtrl+S",
           click: () => win?.webContents.send("menu:save"),
         },
@@ -137,14 +148,20 @@ function buildMenu() {
       label: "Help",
       submenu: [
         {
+          label: "Load Benchmarks",
+          click: () => win?.webContents.send("menu:loadBenchmarks"),
+        },
+        { type: "separator" },
+        {
           label: "About cSlope",
           click: () => {
+            const version = app.getVersion();
             dialog.showMessageBox({
               type: "info",
               title: "About cSlope",
-              message: "cSlope — Slope Stability Analysis",
+              message: `cSlope v${version}`,
               detail:
-                "Open-source geotechnical engineering software.\nhttps://cslope.com",
+                "Slope Stability Analysis\nOpen-source geotechnical engineering software.\nhttps://cslope.com",
             });
           },
         },

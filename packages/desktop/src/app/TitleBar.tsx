@@ -1,5 +1,6 @@
 import { FileMenu } from "./FileMenu";
 import { HelpMenu } from "./HelpMenu";
+import { isElectron } from "../utils/is-electron";
 
 interface Props {
   theme: "dark" | "light";
@@ -26,8 +27,12 @@ export function TitleBar({ theme, onToggleTheme, activeModelName }: Props) {
         >
           cS
         </div>
-        <FileMenu activeModelName={activeModelName} />
-        <HelpMenu />
+        {!isElectron && (
+          <>
+            <FileMenu activeModelName={activeModelName} />
+            <HelpMenu />
+          </>
+        )}
       </div>
       <div className="flex-1" />
       <button

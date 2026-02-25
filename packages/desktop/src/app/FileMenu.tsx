@@ -1,7 +1,6 @@
 import { useEffect, useRef, useState, type ChangeEventHandler } from "react";
 import { parseProjectFile, serializeProject } from "../store/persistence";
 import { useAppStore } from "../store/app-store";
-import { isElectron } from "../utils/is-electron";
 
 interface Props {
   activeModelName?: string;
@@ -12,6 +11,10 @@ const ensureJsonName = (name: string) =>
 
 const stripJsonExt = (name: string) => name.replace(/\.json$/i, "");
 
+/**
+ * Browser-only file menu (hidden when running in Electron —
+ * native menu events are handled by useElectronMenu instead).
+ */
 export function FileMenu({ activeModelName }: Props) {
   const [open, setOpen] = useState(false);
   const [fileName, setFileName] = useState("");
@@ -29,22 +32,6 @@ export function FileMenu({ activeModelName }: Props) {
     return () => document.removeEventListener("mousedown", onClickOutside);
   }, [open]);
 
-  // Listen for native Electron menu events
-  useEffect(() => {
-    if (!isElectron) return;
-    const onOpen = () => handleOpen();
-    const onSave = () => runSave(false);
-    const onSaveAs = () => runSave(true);
-    window.ipcRenderer.on("menu:open", onOpen);
-    window.ipcRenderer.on("menu:save", onSave);
-    window.ipcRenderer.on("menu:saveAs", onSaveAs);
-    return () => {
-      window.ipcRenderer.off("menu:open", onOpen);
-      window.ipcRenderer.off("menu:save", onSave);
-      window.ipcRenderer.off("menu:saveAs", onSaveAs);
-    };
-  });
-
   const defaultBaseName = activeModelName?.trim() || "cslope-project";
 
   const triggerDownload = (json: string, name: string) => {
@@ -57,20 +44,11 @@ export function FileMenu({ activeModelName }: Props) {
     URL.revokeObjectURL(url);
   };
 
-  const runSave = async (promptForName: boolean) => {
+  const runSave = (promptForName: boolean) => {
     const store = useAppStore.getState();
     store.saveCurrentModel();
     const snapshot = serializeProject(useAppStore.getState());
     const json = JSON.stringify(snapshot, null, 2);
-
-    if (isElectron) {
-      const saveFn = promptForName
-        ? window.cslope.saveFileAs
-        : window.cslope.saveFile;
-      await saveFn(json);
-      setOpen(false);
-      return;
-    }
 
     const suggested = fileName || defaultBaseName;
     const inputName = promptForName
@@ -84,21 +62,7 @@ export function FileMenu({ activeModelName }: Props) {
     setOpen(false);
   };
 
-  const handleOpen = async () => {
-    if (isElectron) {
-      const contents = await window.cslope.openFile();
-      if (!contents) return;
-      try {
-        const parsed = parseProjectFile(contents);
-        useAppStore.getState().loadProject(parsed);
-      } catch (err) {
-        const message = err instanceof Error ? err.message : "Unknown error";
-        window.alert(`Unable to open project: ${message}`);
-      }
-      setOpen(false);
-      return;
-    }
-
+  const handleOpen = () => {
     const input = fileInputRef.current;
     if (!input) return;
     input.value = "";

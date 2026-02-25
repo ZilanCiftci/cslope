@@ -12,8 +12,11 @@ import {
   SlopeCanvas,
 } from "../components";
 import { useAppStore } from "../store/app-store";
+import { useElectronMenu } from "./useElectronMenu";
 
 export function AppShell() {
+  useElectronMenu();
+
   const explorerLocation = useAppStore((s) => s.explorerLocation);
   const propertiesLocation = useAppStore((s) => s.propertiesLocation);
   const setExplorerLocation = useAppStore((s) => s.setExplorerLocation);
