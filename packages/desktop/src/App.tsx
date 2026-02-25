@@ -7,7 +7,7 @@ function App() {
     // Tell the main process the renderer has mounted so it can
     // close the splash screen and show the main window.
     if (isElectron) {
-      window.ipcRenderer.send("app:ready");
+      window.cslope.appReady();
     }
   }, []);
 

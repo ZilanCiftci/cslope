@@ -6,6 +6,7 @@
 import { useRef, useEffect, type RefObject } from "react";
 import { useAppStore } from "../../store/app-store";
 import { cssVar, GRID_STEP_MIN } from "../canvas/constants";
+import { GRID_RAW_STEP_PX } from "../../constants";
 
 const RULER_SIZE = 32; // px width/height of the ruler band
 const TICK_LEN = 6;
@@ -82,7 +83,7 @@ export function AxisOverlay({
 
     // Compute grid step (same algorithm as draw.ts)
     const safeScale = Math.max(viewScale || 0, 0.0001);
-    const rawStep = 50 / safeScale;
+    const rawStep = GRID_RAW_STEP_PX / safeScale;
     const mag = Math.pow(10, Math.floor(Math.log10(rawStep)));
     const steps = [1, 2, 5, 10];
     const gridStep = Math.max(

@@ -1,4 +1,5 @@
 import { DEFAULT_ANALYSIS_OPTIONS } from "@cslope/engine";
+import { DEFAULT_MODEL_NAME } from "../../constants";
 import { BENCHMARK_MODELS } from "../examples";
 import {
   DEFAULT_ANALYSIS_LIMITS,
@@ -123,7 +124,10 @@ const mapModelToState = (model: ModelEntry) => ({
 });
 
 export const INITIAL_MODEL_ID = "model-initial";
-export const INITIAL_MODEL = createDefaultModel(INITIAL_MODEL_ID, "Untitled");
+export const INITIAL_MODEL = createDefaultModel(
+  INITIAL_MODEL_ID,
+  DEFAULT_MODEL_NAME,
+);
 
 export const createModelsSlice: SliceCreator<ModelsSlice> = (set, get) => ({
   activeModelId: INITIAL_MODEL_ID,
@@ -154,7 +158,7 @@ export const createModelsSlice: SliceCreator<ModelsSlice> = (set, get) => ({
     const id = nextId("model");
     const entry = createDefaultModel(
       id,
-      name ?? `Untitled ${get().models.length + 1}`,
+      name ?? `${DEFAULT_MODEL_NAME} ${get().models.length + 1}`,
     );
     set((s) => ({ models: [...s.models, entry] }));
     get().switchModel(id);
@@ -373,7 +377,7 @@ export const createModelsSlice: SliceCreator<ModelsSlice> = (set, get) => ({
 
   newProject: () => {
     const id = nextId("model");
-    const entry = createDefaultModel(id, "Untitled");
+    const entry = createDefaultModel(id, DEFAULT_MODEL_NAME);
 
     set({
       models: [entry],

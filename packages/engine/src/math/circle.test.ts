@@ -19,6 +19,13 @@ describe("getCircleYCoordinateAtX", () => {
       8,
     );
   });
+
+  it("returns cy instead of NaN when x is just outside radius (regression for 2.3)", () => {
+    // x is radius + tiny epsilon outside the circle
+    const result = getCircleYCoordinateAtX(5, 10, 5, 5 + 5 + 1e-14);
+    expect(result).not.toBeNaN();
+    expect(result).toBeCloseTo(10, 8);
+  });
 });
 
 describe("getCircleLineIntersections", () => {
@@ -76,6 +83,12 @@ describe("circleRadiusFromAbcd", () => {
     // R = (C + c²) / (2c) where C = half_chord² and c = chord_to_edge
     // For c=4, C=16 → R = (16 + 16) / 8 = 4
     expect(circleRadiusFromAbcd(4, 16)).toBeCloseTo(4.0, 10);
+  });
+
+  it("returns null when cToE is zero (regression for 2.4)", () => {
+    expect(circleRadiusFromAbcd(0, 16)).toBeNull();
+    expect(circleRadiusFromAbcd(1e-15, 16)).toBeNull();
+    expect(circleRadiusFromAbcd(-1e-15, 16)).toBeNull();
   });
 });
 

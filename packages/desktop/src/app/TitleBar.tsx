@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { DEFAULT_MODEL_NAME } from "../constants";
 import { DevMenu } from "./DevMenu";
 import { FileMenu } from "./FileMenu";
 import { HelpMenu } from "./HelpMenu";
@@ -22,9 +23,9 @@ export function TitleBar({ theme, onToggleTheme, activeModelName }: Props) {
     // Listen for changes
     const onMaxChange = (_e: unknown, isMax: unknown) =>
       setMaximized(Boolean(isMax));
-    window.ipcRenderer.on("window:maximized", onMaxChange);
+    window.cslope.onMaximized(onMaxChange);
     return () => {
-      window.ipcRenderer.off("window:maximized", onMaxChange);
+      window.cslope.offMaximized(onMaxChange);
     };
   }, []);
 
@@ -63,7 +64,7 @@ export function TitleBar({ theme, onToggleTheme, activeModelName }: Props) {
             color: "var(--color-vsc-text-muted)",
           }}
         >
-          {activeModelName ?? "Untitled"} — cSlope
+          {activeModelName ?? DEFAULT_MODEL_NAME} — cSlope
         </span>
       </div>
 

@@ -1,5 +1,6 @@
 import { PAPER_DIMENSIONS } from "../../store/app-store";
 import type { PaperSize } from "../../store/app-store";
+import { PAPER_FRAME_MARGIN_PX } from "../../constants";
 
 /** Compute the paper frame rectangle (centered, with margin) given canvas CSS size. */
 export function computePaperFrame(
@@ -9,7 +10,7 @@ export function computePaperFrame(
 ): { x: number; y: number; w: number; h: number } {
   const { w: pw, h: ph } = PAPER_DIMENSIONS[paperSize];
   const paperAspect = pw / ph;
-  const margin = 20; // px margin around the frame
+  const margin = PAPER_FRAME_MARGIN_PX;
   const availW = canvasW - margin * 2;
   const availH = canvasH - margin * 2;
   let frameW: number;

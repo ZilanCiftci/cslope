@@ -74,6 +74,9 @@ function createWindow() {
     show: false, // hidden until renderer signals ready
     webPreferences: {
       preload: path.join(__dirname, "preload.mjs"),
+      contextIsolation: true,
+      nodeIntegration: false,
+      sandbox: true,
     },
   });
 
@@ -149,9 +152,17 @@ let currentFilePath: string | null = null;
 
 ipcMain.handle("file:openPath", async (_event, filePath: string) => {
   if (!win) return null;
+  const ext = path.extname(filePath).toLowerCase();
+  if (ext !== ".json" && ext !== ".cslope") return null;
+  const resolved = path.resolve(filePath);
   try {
-    const contents = fs.readFileSync(filePath, "utf-8");
-    currentFilePath = filePath;
+    if (!fs.statSync(resolved).isFile()) return null;
+  } catch {
+    return null;
+  }
+  try {
+    const contents = fs.readFileSync(resolved, "utf-8");
+    currentFilePath = resolved;
     const name = path.basename(filePath, path.extname(filePath));
     win.setTitle(`${name} — cSlope`);
     return contents;

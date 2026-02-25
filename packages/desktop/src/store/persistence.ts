@@ -1,4 +1,5 @@
 import { DEFAULT_ANALYSIS_OPTIONS, resolveOrientation } from "@cslope/engine";
+import { DEFAULT_MODEL_NAME } from "../constants";
 import {
   DEFAULT_ANALYSIS_LIMITS,
   DEFAULT_PIEZO_LINE,
@@ -92,7 +93,7 @@ function normalizeModelEntry(raw: unknown): ModelEntry {
 
   return {
     id: model.id,
-    name: typeof model.name === "string" ? model.name : "Untitled",
+    name: typeof model.name === "string" ? model.name : DEFAULT_MODEL_NAME,
     orientation,
     projectInfo: normalizeProjectInfo(model.projectInfo),
     coordinates,

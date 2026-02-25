@@ -33,6 +33,7 @@ export function AppShell() {
   const toggleSidebar = useAppStore((s) => s.toggleSidebar);
   const runState = useAppStore((s) => s.runState);
   const runAnalysis = useAppStore((s) => s.runAnalysis);
+  const cancelAnalysis = useAppStore((s) => s.cancelAnalysis);
   const result = useAppStore((s) => s.result);
   const models = useAppStore((s) => s.models);
   const activeModelId = useAppStore((s) => s.activeModelId);
@@ -93,6 +94,7 @@ export function AppShell() {
         runState={runState}
         hasResult={Boolean(result)}
         onRun={handleRunAndSwitch}
+        onCancel={cancelAnalysis}
         onRunAll={handleRunAll}
       />
 

@@ -17,7 +17,7 @@ export function getCircleYCoordinateAtX(
   radius: number,
   x: number,
 ): number {
-  return cy - Math.sqrt(radius * radius - (x - cx) * (x - cx));
+  return cy - Math.sqrt(Math.max(0, radius * radius - (x - cx) * (x - cx)));
 }
 
 /**
@@ -185,7 +185,8 @@ export function getCirclePolygonIntersection(
  * Calculate circle radius from intersecting chord property.
  * a * b = c * d  →  R = (C + c²) / (2c)
  */
-export function circleRadiusFromAbcd(cToE: number, C: number): number {
+export function circleRadiusFromAbcd(cToE: number, C: number): number | null {
+  if (Math.abs(cToE) < 1e-12) return null;
   return (C + cToE * cToE) / (2 * cToE);
 }
 

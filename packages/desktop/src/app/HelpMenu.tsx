@@ -29,7 +29,7 @@ export function HelpMenu() {
   const handleAbout = () => {
     setOpen(false);
     if (isElectron) {
-      window.ipcRenderer.send("menu:about");
+      window.cslope.menuAbout();
     } else {
       window.alert("cSlope — Slope Stability Analysis\nhttps://cslope.com");
     }

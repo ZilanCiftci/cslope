@@ -103,6 +103,7 @@ function generatePlanesWithScale(
   for (let i = 0; i < numCircles; i++) {
     const chordToEdge = (startChordToEdge * (numCircles - i)) / numCircles;
     const radius = circleRadiusFromAbcd(chordToEdge, C);
+    if (radius === null) continue;
     const centre = circleCentre(beta, midCoord(lc, rc), radius - chordToEdge);
     const [cX, cY] = centre;
 

@@ -256,8 +256,8 @@ function solveFOSGenericForceCircular(
 
         // Circular force equilibrium resistance
         if (matCode === 1) {
-          const rd = c * bl * R + (N - U * bl) * R * tanPhi;
-          const ru = cu * bl * R;
+          const rd = c * bl * cosA + (N - U * bl) * cosA * tanPhi;
+          const ru = cu * bl * cosA;
           resisting += Math.min(rd, ru);
         } else {
           resisting += c * bl * cosA + (N - U * bl) * cosA * tanPhi;

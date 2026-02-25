@@ -1,26 +1,24 @@
 /** Ambient types for APIs exposed by the Electron preload script. */
 
 interface Window {
-  ipcRenderer: {
-    on(
-      channel: string,
-      listener: (event: unknown, ...args: unknown[]) => void,
-    ): void;
-    off(
-      channel: string,
-      listener: (event: unknown, ...args: unknown[]) => void,
-    ): void;
-    send(channel: string, ...args: unknown[]): void;
-    invoke(channel: string, ...args: unknown[]): Promise<unknown>;
-  };
   cslope: {
+    // File dialogs
     openFile: () => Promise<string | null>;
     openFilePath: (filePath: string) => Promise<string | null>;
     saveFile: (content: string) => Promise<boolean>;
     saveFileAs: (content: string) => Promise<boolean>;
+    // Window controls
     minimize: () => void;
     maximize: () => void;
     close: () => void;
     isMaximized: () => Promise<boolean>;
+    onMaximized: (listener: (event: unknown, isMax: unknown) => void) => void;
+    offMaximized: (listener: (event: unknown, isMax: unknown) => void) => void;
+    // App lifecycle
+    appReady: () => void;
+    // Menu actions
+    menuNew: () => void;
+    menuAbout: () => void;
+    toggleDevTools: () => void;
   };
 }

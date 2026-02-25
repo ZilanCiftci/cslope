@@ -7,6 +7,7 @@ interface Props {
   runState: AnalysisRunState;
   hasResult: boolean;
   onRun: () => void;
+  onCancel: () => void;
   onRunAll: () => void;
 }
 
@@ -16,6 +17,7 @@ export function TabBar({
   runState,
   hasResult,
   onRun,
+  onCancel,
   onRunAll,
 }: Props) {
   const [menuOpen, setMenuOpen] = useState(false);
@@ -67,33 +69,36 @@ export function TabBar({
         style={{ borderRight: "1px solid var(--color-vsc-border)" }}
       >
         <button
-          onClick={onRun}
-          disabled={runState === "running"}
-          className="px-4 text-[12px] font-medium cursor-pointer flex items-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed group"
+          onClick={runState === "running" ? onCancel : onRun}
+          className="px-4 text-[12px] font-medium cursor-pointer flex items-center gap-2 group"
           style={{ background: "transparent" }}
-          title="Run analysis and view results"
+          title={
+            runState === "running"
+              ? "Cancel running analysis"
+              : "Run analysis and view results"
+          }
         >
           <div
             className="w-5 h-5 rounded-full flex items-center justify-center text-[10px] group-hover:scale-110 transition-transform"
             style={{
               background:
                 runState === "running"
-                  ? "var(--color-vsc-warning)"
+                  ? "var(--color-vsc-error, #f44747)"
                   : "var(--color-vsc-success)",
               color: "var(--color-vsc-bg)",
             }}
           >
-            {runState === "running" ? "⏳" : "▶"}
+            {runState === "running" ? "■" : "▶"}
           </div>
           <span
             style={{
               color:
                 runState === "running"
-                  ? "var(--color-vsc-warning)"
+                  ? "var(--color-vsc-error, #f44747)"
                   : "var(--color-vsc-success)",
             }}
           >
-            {runState === "running" ? "Running…" : "Run"}
+            {runState === "running" ? "Cancel" : "Run"}
           </span>
         </button>
         <button

@@ -10,6 +10,7 @@ import type {
   ResultViewSettings,
 } from "../../store/types";
 import { PAPER_DIMENSIONS, PLOT_MARGINS } from "../../store/defaults";
+import { PAPER_FRAME_MARGIN_PX } from "../../constants";
 import {
   drawAnnotations,
   drawClosedPolyline,
@@ -64,7 +65,7 @@ function createTransform(
   const paperH = dim.h;
 
   const paperAspect = paperW / paperH;
-  const margin = 20;
+  const margin = PAPER_FRAME_MARGIN_PX;
   const availW = canvasW - margin * 2;
   const availH = canvasH - margin * 2;
   let frameW: number;

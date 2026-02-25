@@ -14,6 +14,11 @@ import {
   findMaterialBelowBoundary,
   type Region,
 } from "../../utils/regions";
+import { ANALYSIS_TIMEOUT_MS } from "../../constants";
+
+/** Active worker reference — used to terminate a previous run on re-invocation. */
+let activeWorker: Worker | null = null;
+let activeTimeout: ReturnType<typeof setTimeout> | null = null;
 
 export const createAnalysisSlice: SliceCreator<AnalysisSlice> = (set, get) => ({
   analysisLimits: { ...DEFAULT_ANALYSIS_LIMITS },
@@ -33,6 +38,16 @@ export const createAnalysisSlice: SliceCreator<AnalysisSlice> = (set, get) => ({
     set((s) => ({ options: { ...s.options, ...opts }, ...RUN_RESET })),
 
   runAnalysis: () => {
+    // Terminate any previously running worker to prevent racing updates
+    if (activeWorker) {
+      activeWorker.terminate();
+      activeWorker = null;
+    }
+    if (activeTimeout) {
+      clearTimeout(activeTimeout);
+      activeTimeout = null;
+    }
+
     const state = get();
     set({ runState: "running", progress: 0, result: null, errorMessage: null });
 
@@ -40,23 +55,52 @@ export const createAnalysisSlice: SliceCreator<AnalysisSlice> = (set, get) => ({
       new URL("../../worker/analysis.worker.ts", import.meta.url),
       { type: "module" },
     );
+    activeWorker = worker;
+
+    // Auto-terminate after 60s
+    activeTimeout = setTimeout(() => {
+      if (activeWorker === worker) {
+        worker.terminate();
+        activeWorker = null;
+        activeTimeout = null;
+        set({
+          runState: "error",
+          errorMessage: "Analysis timed out after 60 seconds.",
+        });
+      }
+    }, ANALYSIS_TIMEOUT_MS);
 
     worker.onmessage = (event: MessageEvent<AnalysisResponse>) => {
       const msg = event.data;
       if (msg.type === "analysis-complete") {
         set({ runState: "done", result: msg.result, progress: 1 });
         worker.terminate();
+        if (activeWorker === worker) activeWorker = null;
+        if (activeTimeout) {
+          clearTimeout(activeTimeout);
+          activeTimeout = null;
+        }
       } else if (msg.type === "analysis-progress") {
         set({ progress: msg.progress });
       } else if (msg.type === "analysis-error") {
         set({ runState: "error", errorMessage: msg.error });
         worker.terminate();
+        if (activeWorker === worker) activeWorker = null;
+        if (activeTimeout) {
+          clearTimeout(activeTimeout);
+          activeTimeout = null;
+        }
       }
     };
 
     worker.onerror = (err) => {
       set({ runState: "error", errorMessage: err.message });
       worker.terminate();
+      if (activeWorker === worker) activeWorker = null;
+      if (activeTimeout) {
+        clearTimeout(activeTimeout);
+        activeTimeout = null;
+      }
     };
 
     worker.postMessage({
@@ -65,6 +109,18 @@ export const createAnalysisSlice: SliceCreator<AnalysisSlice> = (set, get) => ({
       slope: buildSlopeDTO(state),
       options: state.options,
     });
+  },
+
+  cancelAnalysis: () => {
+    if (activeWorker) {
+      activeWorker.terminate();
+      activeWorker = null;
+    }
+    if (activeTimeout) {
+      clearTimeout(activeTimeout);
+      activeTimeout = null;
+    }
+    set({ runState: "idle", progress: 0, errorMessage: null });
   },
 
   reset: () =>
@@ -94,6 +150,29 @@ export const createAnalysisSlice: SliceCreator<AnalysisSlice> = (set, get) => ({
           { type: "module" },
         );
 
+        // 60s timeout per individual model
+        const timeout = setTimeout(() => {
+          worker.terminate();
+          set((s) => ({
+            models: s.models.map((m) =>
+              m.id === freshModel.id
+                ? {
+                    ...m,
+                    runState: "error",
+                    errorMessage: "Analysis timed out after 60 seconds.",
+                  }
+                : m,
+            ),
+            ...(freshModel.id === activeId
+              ? {
+                  runState: "error",
+                  errorMessage: "Analysis timed out after 60 seconds.",
+                }
+              : {}),
+          }));
+          resolve();
+        }, ANALYSIS_TIMEOUT_MS);
+
         set((s) => ({
           models: s.models.map((m) =>
             m.id === freshModel.id
@@ -119,6 +198,7 @@ export const createAnalysisSlice: SliceCreator<AnalysisSlice> = (set, get) => ({
         worker.onmessage = (event: MessageEvent<AnalysisResponse>) => {
           const msg = event.data;
           if (msg.type === "analysis-complete") {
+            clearTimeout(timeout);
             set((s) => ({
               models: s.models.map((m) =>
                 m.id === freshModel.id
@@ -144,6 +224,7 @@ export const createAnalysisSlice: SliceCreator<AnalysisSlice> = (set, get) => ({
               ...(freshModel.id === activeId ? { progress: msg.progress } : {}),
             }));
           } else if (msg.type === "analysis-error") {
+            clearTimeout(timeout);
             set((s) => ({
               models: s.models.map((m) =>
                 m.id === freshModel.id
@@ -164,6 +245,7 @@ export const createAnalysisSlice: SliceCreator<AnalysisSlice> = (set, get) => ({
         };
 
         worker.onerror = (err) => {
+          clearTimeout(timeout);
           set((s) => ({
             models: s.models.map((m) =>
               m.id === freshModel.id

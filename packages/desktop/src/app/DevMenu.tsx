@@ -25,7 +25,7 @@ export function DevMenu() {
   const handleToggleDevTools = () => {
     setOpen(false);
     if (isElectron) {
-      window.ipcRenderer.send("dev:toggle-devtools");
+      window.cslope.toggleDevTools();
     }
   };
 

@@ -37,21 +37,13 @@ export function calculateAllLoads(
     const sxl = sx - b / 2.0;
     const sxr = sx + b / 2.0;
 
-    // UDLs
+    // UDLs — single overlap formula handles all cases
     for (let j = 0; j < udls.length; j++) {
       const [ux1, ux2, umag] = udls[j];
-
-      // Case 1: load completely covers slice
-      if (ux1 <= sxl && ux2 >= sxr) {
-        udlForces[i] += b * umag;
-      }
-      // Case 2: slice extends past left edge of load
-      else if (sxl <= ux1 && sxr >= ux1) {
-        udlForces[i] += (sxr - ux1) * umag;
-      }
-      // Case 3: slice extends past right edge of load
-      else if (sxl <= ux2 && sxr >= ux2) {
-        udlForces[i] += (ux2 - sxl) * umag;
+      const overlapL = Math.max(sxl, ux1);
+      const overlapR = Math.min(sxr, ux2);
+      if (overlapR > overlapL) {
+        udlForces[i] += (overlapR - overlapL) * umag;
       }
     }
 

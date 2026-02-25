@@ -48,7 +48,7 @@ export function FileMenu({ activeModelName }: Props) {
     useAppStore.getState().newProject();
     setFileName("");
     setOpen(false);
-    if (isElectron) window.ipcRenderer.send("menu:new");
+    if (isElectron) window.cslope.menuNew();
   };
 
   const handleOpen = async () => {

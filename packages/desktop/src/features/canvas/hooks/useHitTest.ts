@@ -2,7 +2,7 @@ import { useCallback, type RefObject } from "react";
 import { isPointInPolygon } from "@cslope/engine";
 import { computeRegions } from "../../../utils/regions";
 import type { AppState } from "../../../store/types";
-import { EDGE_THRESHOLD, SNAP_THRESHOLD } from "../constants";
+import { ARROW_HEIGHT_PX, EDGE_THRESHOLD, SNAP_THRESHOLD } from "../constants";
 import type { EdgeHit, LimitHandle, PointHit, UdlHandle } from "../types";
 
 function pointToSegmentDist(
@@ -163,7 +163,6 @@ export function useHitTest({
       // UDL load arrows (only active when loads enabled and Load panel is open)
       // Hit-test the full vertical arrow shaft, not just the tip
       if (udls.length > 0 && coordinates.length >= 3 && editingLoads) {
-        const UDL_ARROW_H = 38; // must match ARROW_HEIGHT_PX in draw code
         for (const u of udls) {
           const udlHandles: UdlHandle[] = ["x1", "x2"];
           for (const handle of udlHandles) {
@@ -171,7 +170,7 @@ export function useHitTest({
             const uy = surfaceYAtX(ux);
             if (uy === null) continue;
             const [px, py] = worldToCanvas(ux, uy, rect.width, rect.height);
-            const topPy = py - UDL_ARROW_H;
+            const topPy = py - ARROW_HEIGHT_PX;
             if (
               Math.abs(px - mx) < SNAP_THRESHOLD + 4 &&
               my >= topPy - 4 &&
@@ -185,12 +184,11 @@ export function useHitTest({
 
       // Line load arrows (only active when loads enabled and Load panel is open)
       if (lineLoads.length > 0 && coordinates.length >= 3 && editingLoads) {
-        const LL_ARROW_H = 38; // must match ARROW_HEIGHT_PX in draw code
         for (const ll of lineLoads) {
           const ly = surfaceYAtX(ll.x);
           if (ly === null) continue;
           const [px, py] = worldToCanvas(ll.x, ly, rect.width, rect.height);
-          const topPy = py - LL_ARROW_H;
+          const topPy = py - ARROW_HEIGHT_PX;
           if (
             Math.abs(px - mx) < SNAP_THRESHOLD + 4 &&
             my >= topPy - 4 &&

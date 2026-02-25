@@ -261,6 +261,7 @@ export interface AnalysisSlice {
   setAnalysisLimits: (limits: Partial<AnalysisLimitsState>) => void;
   setOptions: (opts: Partial<AnalysisOptions>) => void;
   runAnalysis: () => void;
+  cancelAnalysis: () => void;
   runAllAnalyses: () => Promise<void>;
   reset: () => void;
 }

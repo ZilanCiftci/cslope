@@ -4,13 +4,20 @@ import { circleArcPoints } from "../../utils/arc";
 import { fosColor } from "../../utils/fos-color";
 import { computeRegions } from "../../utils/regions";
 import {
+  ARROW_HEAD_LEN_PX,
+  ARROW_HEAD_PX,
+  ARROW_HEIGHT_PX,
   GRID_STEP_MIN,
+  HATCH_SPACING_PX,
+  LL_COLOR,
   POINT_COLOR,
   POINT_COLOR_HOVER,
   POINT_COLOR_SELECTED,
   POINT_RADIUS,
+  UDL_COLOR,
   cssVar,
 } from "./constants";
+import { GRID_RAW_STEP_PX } from "../../constants";
 import { computePaperFrame, drawParamBlock, drawTable } from "./helpers";
 import type { PointHit } from "./types";
 
@@ -149,7 +156,7 @@ export function drawCanvas(
 
   // ── Grid ───────────────────────────────────────────────
   const showGrid = mode !== "result" || !result || resultViewSettings.showGrid;
-  const rawStep = 50 / viewScale;
+  const rawStep = GRID_RAW_STEP_PX / viewScale;
   const mag = Math.pow(10, Math.floor(Math.log10(rawStep)));
   const steps = [1, 2, 5, 10];
   const gridStep = Math.max(
@@ -529,12 +536,6 @@ export function drawCanvas(
 
   // ── UDL loads ────────────────────────────────────────────
   if (udls.length > 0 && coordinates.length >= 3) {
-    const ARROW_HEIGHT_PX = 38; // arrow shaft length in pixels
-    const ARROW_HEAD_PX = 8; // arrowhead half-width
-    const ARROW_HEAD_LEN_PX = 12; // arrowhead length
-    const HATCH_SPACING_PX = 8; // spacing between hatch lines
-    const UDL_COLOR = "#cc0000";
-
     for (const u of udls) {
       const y1 = surfaceYAtX(u.x1);
       const y2 = surfaceYAtX(u.x2);
@@ -680,17 +681,12 @@ export function drawCanvas(
 
   // ── Line loads ──────────────────────────────────────────
   if (lineLoads.length > 0 && coordinates.length >= 3) {
-    const LL_ARROW_HEIGHT_PX = 38;
-    const LL_ARROW_HEAD_PX = 8;
-    const LL_ARROW_HEAD_LEN_PX = 12;
-    const LL_COLOR = "#2563eb"; // blue
-
     for (const ll of lineLoads) {
       const sy = surfaceYAtX(ll.x);
       if (sy === null) continue;
 
       const [cx, cy] = worldToCanvas(ll.x, sy, w, h);
-      const topY = cy - LL_ARROW_HEIGHT_PX;
+      const topY = cy - ARROW_HEIGHT_PX;
 
       const isHover =
         hoverHit?.kind === "lineLoad" && hoverHit.loadId === ll.id;
@@ -708,8 +704,8 @@ export function drawCanvas(
       ctx.fillStyle = color;
       ctx.beginPath();
       ctx.moveTo(cx, cy); // tip
-      ctx.lineTo(cx - LL_ARROW_HEAD_PX, cy - LL_ARROW_HEAD_LEN_PX);
-      ctx.lineTo(cx + LL_ARROW_HEAD_PX, cy - LL_ARROW_HEAD_LEN_PX);
+      ctx.lineTo(cx - ARROW_HEAD_PX, cy - ARROW_HEAD_LEN_PX);
+      ctx.lineTo(cx + ARROW_HEAD_PX, cy - ARROW_HEAD_LEN_PX);
       ctx.closePath();
       ctx.fill();
 

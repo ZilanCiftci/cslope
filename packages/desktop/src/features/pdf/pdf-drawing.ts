@@ -2,6 +2,12 @@ import { jsPDF } from "jspdf";
 import { fosColor } from "../../utils/fos-color";
 import { circleArcPoints } from "../../utils/arc";
 import { computeRegions } from "../../utils/regions";
+import { GRID_RAW_STEP_PX } from "../../constants";
+import {
+  GRID_STEP_MIN,
+  LL_COLOR_RGB,
+  UDL_COLOR_RGB,
+} from "../canvas/constants";
 import type { AnalysisResult } from "@cslope/engine";
 import type {
   AnalysisLimitsState,
@@ -31,8 +37,7 @@ export function drawGrid(
   viewScale: number,
   clip: { x: number; y: number; w: number; h: number },
 ) {
-  const GRID_STEP_MIN = 1;
-  const rawStep = 50 / viewScale;
+  const rawStep = GRID_RAW_STEP_PX / viewScale;
   const mag = Math.pow(10, Math.floor(Math.log10(rawStep)));
   const steps = [1, 2, 5, 10];
   const gridStep = Math.max(
@@ -247,7 +252,7 @@ export function drawUdlLoads(
   udls: { x1: number; x2: number; magnitude: number }[],
   coordinates: [number, number][],
 ) {
-  const UDL_COLOR: [number, number, number] = [204, 0, 0];
+  const UDL_COLOR = UDL_COLOR_RGB;
   const arrowH = 8 * tf.mmPerPx;
 
   for (const u of udls) {
@@ -285,7 +290,7 @@ export function drawLineLoads(
   lineLoads: { x: number; magnitude: number }[],
   coordinates: [number, number][],
 ) {
-  const LL_COLOR: [number, number, number] = [37, 99, 235];
+  const LL_COLOR = LL_COLOR_RGB;
   const arrowH = 8 * tf.mmPerPx;
 
   for (const ll of lineLoads) {

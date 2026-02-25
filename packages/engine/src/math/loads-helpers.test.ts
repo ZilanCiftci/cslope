@@ -32,6 +32,15 @@ describe("calculateAllLoads", () => {
     expect(udlForces[0]).toBe(0);
     expect(llForces[0]).toBe(0);
   });
+
+  it("handles UDL entirely inside a slice (regression for 2.1)", () => {
+    // Slice [0,10], UDL [3,7] mag 10 → expected force = (7−3)×10 = 40
+    const widths = [10];
+    const centers = [5];
+    const udls: [number, number, number][] = [[3, 7, 10]];
+    const [udlForces] = calculateAllLoads(widths, centers, udls, []);
+    expect(udlForces[0]).toBeCloseTo(40.0, 8);
+  });
 });
 
 describe("halfsine", () => {
