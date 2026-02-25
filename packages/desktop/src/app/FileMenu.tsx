@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, type ChangeEventHandler } from "react";
 import { parseProjectFile, serializeProject } from "../store/persistence";
 import { useAppStore } from "../store/app-store";
+import { isElectron } from "../utils/is-electron";
 
 interface Props {
   activeModelName?: string;
@@ -28,6 +29,22 @@ export function FileMenu({ activeModelName }: Props) {
     return () => document.removeEventListener("mousedown", onClickOutside);
   }, [open]);
 
+  // Listen for native Electron menu events
+  useEffect(() => {
+    if (!isElectron) return;
+    const onOpen = () => handleOpen();
+    const onSave = () => runSave(false);
+    const onSaveAs = () => runSave(true);
+    window.ipcRenderer.on("menu:open", onOpen);
+    window.ipcRenderer.on("menu:save", onSave);
+    window.ipcRenderer.on("menu:saveAs", onSaveAs);
+    return () => {
+      window.ipcRenderer.off("menu:open", onOpen);
+      window.ipcRenderer.off("menu:save", onSave);
+      window.ipcRenderer.off("menu:saveAs", onSaveAs);
+    };
+  });
+
   const defaultBaseName = activeModelName?.trim() || "cslope-project";
 
   const triggerDownload = (json: string, name: string) => {
@@ -40,10 +57,20 @@ export function FileMenu({ activeModelName }: Props) {
     URL.revokeObjectURL(url);
   };
 
-  const runSave = (promptForName: boolean) => {
+  const runSave = async (promptForName: boolean) => {
     const store = useAppStore.getState();
     store.saveCurrentModel();
     const snapshot = serializeProject(useAppStore.getState());
+    const json = JSON.stringify(snapshot, null, 2);
+
+    if (isElectron) {
+      const saveFn = promptForName
+        ? window.cslope.saveFileAs
+        : window.cslope.saveFile;
+      await saveFn(json);
+      setOpen(false);
+      return;
+    }
 
     const suggested = fileName || defaultBaseName;
     const inputName = promptForName
@@ -52,12 +79,26 @@ export function FileMenu({ activeModelName }: Props) {
     if (!inputName) return;
 
     const finalName = ensureJsonName(inputName.trim());
-    triggerDownload(JSON.stringify(snapshot, null, 2), finalName);
+    triggerDownload(json, finalName);
     setFileName(stripJsonExt(finalName));
     setOpen(false);
   };
 
-  const handleOpen = () => {
+  const handleOpen = async () => {
+    if (isElectron) {
+      const contents = await window.cslope.openFile();
+      if (!contents) return;
+      try {
+        const parsed = parseProjectFile(contents);
+        useAppStore.getState().loadProject(parsed);
+      } catch (err) {
+        const message = err instanceof Error ? err.message : "Unknown error";
+        window.alert(`Unable to open project: ${message}`);
+      }
+      setOpen(false);
+      return;
+    }
+
     const input = fileInputRef.current;
     if (!input) return;
     input.value = "";

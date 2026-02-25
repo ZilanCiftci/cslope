@@ -46,6 +46,8 @@ function createWindow() {
 
 // ── Native file dialogs via IPC ──────────────────────────────
 
+let currentFilePath: string | null = null;
+
 ipcMain.handle("dialog:openFile", async () => {
   if (!win) return null;
   const { canceled, filePaths } = await dialog.showOpenDialog(win, {
@@ -57,22 +59,47 @@ ipcMain.handle("dialog:openFile", async () => {
     properties: ["openFile"],
   });
   if (canceled || filePaths.length === 0) return null;
-  return fs.readFileSync(filePaths[0], "utf-8");
+  currentFilePath = filePaths[0];
+  const name = path.basename(currentFilePath, path.extname(currentFilePath));
+  win.setTitle(`${name} — cSlope`);
+  return fs.readFileSync(currentFilePath, "utf-8");
 });
+
+async function saveToPath(filePath: string, content: string) {
+  fs.writeFileSync(filePath, content, "utf-8");
+  currentFilePath = filePath;
+  const name = path.basename(filePath, path.extname(filePath));
+  win?.setTitle(`${name} — cSlope`);
+  return true;
+}
 
 ipcMain.handle("dialog:saveFile", async (_event, content: string) => {
   if (!win) return false;
+  // If we already have a path, save directly (no dialog)
+  if (currentFilePath) {
+    return saveToPath(currentFilePath, content);
+  }
+  // Otherwise fall through to Save As
+  return saveAs(content);
+});
+
+ipcMain.handle("dialog:saveFileAs", async (_event, content: string) => {
+  return saveAs(content);
+});
+
+async function saveAs(content: string): Promise<boolean> {
+  if (!win) return false;
   const { canceled, filePath } = await dialog.showSaveDialog(win, {
     title: "Save cSlope Project",
+    defaultPath: currentFilePath ?? "cslope-project.json",
     filters: [
       { name: "cSlope Projects", extensions: ["json", "cslope"] },
       { name: "All Files", extensions: ["*"] },
     ],
   });
   if (canceled || !filePath) return false;
-  fs.writeFileSync(filePath, content, "utf-8");
-  return true;
-});
+  return saveToPath(filePath, content);
+}
 
 // ── Application menu ─────────────────────────────────────────
 
@@ -93,6 +120,11 @@ function buildMenu() {
           label: "Save Project…",
           accelerator: "CmdOrCtrl+S",
           click: () => win?.webContents.send("menu:save"),
+        },
+        {
+          label: "Save Project As…",
+          accelerator: "CmdOrCtrl+Shift+S",
+          click: () => win?.webContents.send("menu:saveAs"),
         },
         { type: "separator" },
         isMac ? { role: "close" as const } : { role: "quit" as const },

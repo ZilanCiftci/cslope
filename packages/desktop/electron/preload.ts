@@ -26,4 +26,6 @@ contextBridge.exposeInMainWorld("ipcRenderer", {
 contextBridge.exposeInMainWorld("cslope", {
   openFile: () => ipcRenderer.invoke("dialog:openFile"),
   saveFile: (content: string) => ipcRenderer.invoke("dialog:saveFile", content),
+  saveFileAs: (content: string) =>
+    ipcRenderer.invoke("dialog:saveFileAs", content),
 });

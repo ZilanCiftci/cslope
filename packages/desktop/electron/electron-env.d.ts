@@ -27,5 +27,6 @@ interface Window {
   cslope: {
     openFile: () => Promise<string | null>;
     saveFile: (content: string) => Promise<boolean>;
+    saveFileAs: (content: string) => Promise<boolean>;
   };
 }
