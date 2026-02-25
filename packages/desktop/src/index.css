@@ -1,68 +1,172 @@
-:root {
-  font-family: Inter, system-ui, Avenir, Helvetica, Arial, sans-serif;
-  line-height: 1.5;
-  font-weight: 400;
+@import "tailwindcss";
 
-  color-scheme: light dark;
-  color: rgba(255, 255, 255, 0.87);
-  background-color: #242424;
+/* ── Theme tokens ──────────────────────────────────────────── */
+/* Dark theme — VS Code style dark gray */
+:root,
+[data-theme="dark"] {
+  --color-vsc-bg: #1e1e1e;
+  --color-vsc-sidebar: #252526;
+  --color-vsc-panel: #1e1e1e;
+  --color-vsc-titlebar: #323233;
+  --color-vsc-activitybar: #181818;
+  --color-vsc-border: #3c3c3c;
+  --color-vsc-text: #cccccc;
+  --color-vsc-text-muted: #858585;
+  --color-vsc-text-bright: #e8e8e8;
+  --color-vsc-accent: #0078d4;
+  --color-vsc-accent-hover: #1a8adb;
+  --color-vsc-selection: #264f78;
+  --color-vsc-list-hover: rgba(255, 255, 255, 0.04);
+  --color-vsc-list-active: rgba(255, 255, 255, 0.08);
+  --color-vsc-input-bg: #2d2d2d;
+  --color-vsc-input-border: #3c3c3c;
+  --color-vsc-badge: #616161;
+  --color-vsc-tab-active: #1e1e1e;
+  --color-vsc-tab-inactive: #2d2d2d;
+  --color-vsc-status: #181818;
+  --color-vsc-error: #f14c4c;
+  --color-vsc-warning: #cca700;
+  --color-vsc-success: #89d185;
+  --color-vsc-surface-tint: rgba(255,255,255,0.03);
+  --color-vsc-surface-tint-strong: rgba(255,255,255,0.04);
+  --color-vsc-swatch-border: rgba(255,255,255,0.2);
+  --color-vsc-selected-bg: rgba(0, 120, 212, 0.15);
 
-  font-synthesis: none;
-  text-rendering: optimizeLegibility;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-}
+  /* Canvas-specific */
+  --color-canvas-bg: #1e1e1e;
+  --color-canvas-grid: #2a2a2a;
+  --color-canvas-grid-text: #555;
+  --color-canvas-axis: #444;
+  --color-canvas-poly-stroke: #c0c0c0;
+  --color-canvas-stroke-active: #ffffff;
+  --color-canvas-stroke-inactive: #8899aa;
+  --color-canvas-label: #aaaaaa;
+  --color-canvas-region-select: #007acc;
+  --color-canvas-region-hover: rgba(67, 97, 238, 0.08);
+  --color-canvas-crosshair: rgba(255,255,255,0.15);
+  --color-canvas-tooltip-bg: #252526;
+  --color-canvas-tooltip-text: #ffffff;
+  --color-canvas-tooltip-shadow: rgba(0,0,0,0.4);
+  --color-canvas-hint-text: rgba(255,255,255,0.3);
 
-a {
-  font-weight: 500;
-  color: #646cff;
-  text-decoration: inherit;
-}
-a:hover {
-  color: #535bf2;
-}
-
-body {
-  margin: 0;
-  display: flex;
-  place-items: center;
-  min-width: 320px;
-  min-height: 100vh;
-}
-
-h1 {
-  font-size: 3.2em;
-  line-height: 1.1;
-}
-
-button {
-  border-radius: 8px;
-  border: 1px solid transparent;
-  padding: 0.6em 1.2em;
-  font-size: 1em;
-  font-weight: 500;
-  font-family: inherit;
-  background-color: #1a1a1a;
-  cursor: pointer;
-  transition: border-color 0.25s;
-}
-button:hover {
-  border-color: #646cff;
-}
-button:focus,
-button:focus-visible {
-  outline: 4px auto -webkit-focus-ring-color;
+  color-scheme: dark;
 }
 
-@media (prefers-color-scheme: light) {
-  :root {
-    color: #213547;
-    background-color: #ffffff;
+/* Light theme */
+[data-theme="light"] {
+  --color-vsc-bg: #f3f3f3;
+  --color-vsc-sidebar: #f8f8f8;
+  --color-vsc-panel: #ffffff;
+  --color-vsc-titlebar: #dddddd;
+  --color-vsc-activitybar: #e8e8e8;
+  --color-vsc-border: #d4d4d4;
+  --color-vsc-text: #333333;
+  --color-vsc-text-muted: #717171;
+  --color-vsc-text-bright: #1e1e1e;
+  --color-vsc-accent: #0078d4;
+  --color-vsc-accent-hover: #005a9e;
+  --color-vsc-selection: #add6ff;
+  --color-vsc-list-hover: rgba(0, 0, 0, 0.04);
+  --color-vsc-list-active: rgba(0, 0, 0, 0.06);
+  --color-vsc-input-bg: #ffffff;
+  --color-vsc-input-border: #cecece;
+  --color-vsc-badge: #c4c4c4;
+  --color-vsc-tab-active: #ffffff;
+  --color-vsc-tab-inactive: #ececec;
+  --color-vsc-status: #f3f3f3;
+  --color-vsc-error: #d32f2f;
+  --color-vsc-warning: #bf8803;
+  --color-vsc-success: #388e3c;
+  --color-vsc-surface-tint: rgba(0,0,0,0.03);
+  --color-vsc-surface-tint-strong: rgba(0,0,0,0.04);
+  --color-vsc-swatch-border: rgba(0,0,0,0.2);
+  --color-vsc-selected-bg: rgba(0, 120, 212, 0.12);
+
+  /* Canvas-specific */
+  --color-canvas-bg: #ffffff;
+  --color-canvas-grid: #e8e8e8;
+  --color-canvas-grid-text: #aaa;
+  --color-canvas-axis: #ccc;
+  --color-canvas-poly-stroke: #000000;
+  --color-canvas-stroke-active: #333333;
+  --color-canvas-stroke-inactive: #888888;
+  --color-canvas-label: #666666;
+  --color-canvas-region-select: #005a9e;
+  --color-canvas-region-hover: rgba(0, 120, 212, 0.08);
+  --color-canvas-crosshair: rgba(0,0,0,0.12);
+  --color-canvas-tooltip-bg: #f0f0f0;
+  --color-canvas-tooltip-text: #333333;
+  --color-canvas-tooltip-shadow: rgba(0,0,0,0.15);
+  --color-canvas-hint-text: rgba(0,0,0,0.3);
+
+  color-scheme: light;
+}
+
+@layer base {
+  body {
+    margin: 0;
+    min-height: 100vh;
+    background-color: var(--color-vsc-bg);
+    color: var(--color-vsc-text);
+    font-family: "Inter", "Segoe UI", system-ui, -apple-system, sans-serif;
+    font-size: 13px;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    overflow: hidden;
+    letter-spacing: 0.01em;
   }
-  a:hover {
-    color: #747bff;
+
+  /* ── Refined scrollbar ────────────────────────────────── */
+  ::-webkit-scrollbar { width: 12px; height: 12px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb {
+    background: rgba(128, 128, 128, 0.35);
+    border-radius: 10px;
   }
+  ::-webkit-scrollbar-thumb:hover {
+    background: rgba(128, 128, 128, 0.65);
+  }
+
+  /* ── Inputs ───────────────────────────────────────────── */
+  input[type="number"],
+  input[type="text"],
+  select {
+    background: var(--color-vsc-input-bg);
+    border: 1px solid var(--color-vsc-input-border);
+    color: var(--color-vsc-text);
+    border-radius: 6px;
+    padding: 4px 8px;
+    font-size: 12px;
+    outline: none;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
+  }
+  input[type="number"]:focus,
+  input[type="text"]:focus,
+  select:focus {
+    border-color: var(--color-vsc-accent);
+    box-shadow: 0 0 0 2px rgba(0, 120, 212, 0.25);
+  }
+  input[type="number"]:hover,
+  input[type="text"]:hover,
+  select:hover {
+    border-color: var(--color-vsc-accent);
+  }
+  select option {
+    background: var(--color-vsc-input-bg);
+    color: var(--color-vsc-text);
+  }
+
+  /* ── Checkboxes & radios ──────────────────────────────── */
+  input[type="checkbox"],
+  input[type="radio"] {
+    accent-color: var(--color-vsc-accent);
+  }
+
+  /* ── Buttons — universal transitions ──────────────────── */
   button {
-    background-color: #f9f9f9;
+    transition: background 0.15s ease, color 0.15s ease,
+                opacity 0.15s ease, box-shadow 0.15s ease;
+    border: none;
+    background: transparent;
   }
 }
