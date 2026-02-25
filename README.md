@@ -11,11 +11,9 @@ bun run dev
 
 ## Project Structure
 
-- `packages/webapp` — Web application (Vite + React)
-- `packages/engine` — (future) Standalone analysis engine
-- `packages/desktop` — (future) Electron desktop app
-- `packages/website` — (future) Project landing page
-- `data/` — Validation data and example projects
+- `packages/desktop` — Desktop application (Electron + Vite + React)
+- `packages/engine` — Standalone analysis engine
+- `packages/website` — Project landing page
 
 ## License
 
