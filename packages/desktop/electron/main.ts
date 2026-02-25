@@ -26,6 +26,26 @@ process.env.VITE_PUBLIC = VITE_DEV_SERVER_URL
   : RENDERER_DIST;
 
 let win: BrowserWindow | null;
+let splash: BrowserWindow | null;
+
+function createSplash() {
+  splash = new BrowserWindow({
+    width: 360,
+    height: 320,
+    frame: false,
+    transparent: true,
+    resizable: false,
+    skipTaskbar: true,
+    alwaysOnTop: true,
+    center: true,
+    icon: path.join(process.env.VITE_PUBLIC, "mountain.svg"),
+    webPreferences: { nodeIntegration: false, contextIsolation: true },
+  });
+
+  // In dev the file lives in public/; in prod it's copied to dist/
+  const splashPath = path.join(process.env.VITE_PUBLIC, "splash.html");
+  splash.loadFile(splashPath);
+}
 
 function createWindow() {
   win = new BrowserWindow({
@@ -35,6 +55,7 @@ function createWindow() {
     icon: path.join(process.env.VITE_PUBLIC, "mountain.svg"),
     frame: false,
     titleBarStyle: "hidden",
+    show: false, // hidden until renderer signals ready
     webPreferences: {
       preload: path.join(__dirname, "preload.mjs"),
     },
@@ -50,6 +71,19 @@ function createWindow() {
     win.loadFile(path.join(RENDERER_DIST, "index.html"));
   }
 }
+
+// When the renderer tells us it has mounted, show the main window
+// and close the splash screen.
+ipcMain.on("app:ready", () => {
+  if (win) {
+    win.show();
+    if (win.isMaximized()) win.show();
+  }
+  if (splash && !splash.isDestroyed()) {
+    splash.close();
+    splash = null;
+  }
+});
 
 // ── Content Security Policy ──────────────────────────────────
 
@@ -187,5 +221,6 @@ app.on("activate", () => {
 app.whenReady().then(() => {
   setupCSP();
   buildMenu();
+  createSplash();
   createWindow();
 });
