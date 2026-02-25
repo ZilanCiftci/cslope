@@ -137,12 +137,12 @@ export function ProjectInfoDialog({ initialInfo, onSave, onClose }: Props) {
 
             <div>
               <label className="block text-xs font-medium mb-1 opacity-70">
-                Canvas Width (px)
+                Canvas Width (m)
               </label>
               <input
                 type="number"
-                min={100}
-                max={5000}
+                min={10}
+                max={100000}
                 value={info.canvasWidth}
                 onChange={(e) =>
                   handleChange("canvasWidth", Number(e.target.value) || 0)
@@ -152,12 +152,12 @@ export function ProjectInfoDialog({ initialInfo, onSave, onClose }: Props) {
             </div>
             <div>
               <label className="block text-xs font-medium mb-1 opacity-70">
-                Canvas Height (px)
+                Canvas Height (m)
               </label>
               <input
                 type="number"
-                min={100}
-                max={5000}
+                min={10}
+                max={100000}
                 value={info.canvasHeight}
                 onChange={(e) =>
                   handleChange("canvasHeight", Number(e.target.value) || 0)

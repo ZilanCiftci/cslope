@@ -27,6 +27,22 @@ process.env.VITE_PUBLIC = VITE_DEV_SERVER_URL
 
 let win: BrowserWindow | null;
 let splash: BrowserWindow | null;
+let splashTimeout: ReturnType<typeof setTimeout> | null = null;
+
+function showMainWindow() {
+  if (win && !win.isDestroyed()) {
+    win.show();
+    win.focus();
+  }
+  if (splashTimeout) {
+    clearTimeout(splashTimeout);
+    splashTimeout = null;
+  }
+  if (splash && !splash.isDestroyed()) {
+    splash.close();
+    splash = null;
+  }
+}
 
 function createSplash() {
   splash = new BrowserWindow({
@@ -65,6 +81,23 @@ function createWindow() {
   win.on("maximize", () => win?.webContents.send("window:maximized", true));
   win.on("unmaximize", () => win?.webContents.send("window:maximized", false));
 
+  // Fallback: if renderer loads but never emits `app:ready`, still show window.
+  win.webContents.once("did-finish-load", () => {
+    if (splash && !splash.isDestroyed()) {
+      showMainWindow();
+    }
+  });
+
+  // If load fails (e.g. dev server hiccup), avoid permanent splash deadlock.
+  win.webContents.once("did-fail-load", () => {
+    showMainWindow();
+  });
+
+  // Absolute fallback for unexpected startup issues.
+  splashTimeout = setTimeout(() => {
+    showMainWindow();
+  }, 10000);
+
   if (VITE_DEV_SERVER_URL) {
     win.loadURL(VITE_DEV_SERVER_URL);
   } else {
@@ -75,14 +108,7 @@ function createWindow() {
 // When the renderer tells us it has mounted, show the main window
 // and close the splash screen.
 ipcMain.on("app:ready", () => {
-  if (win) {
-    win.show();
-    if (win.isMaximized()) win.show();
-  }
-  if (splash && !splash.isDestroyed()) {
-    splash.close();
-    splash = null;
-  }
+  showMainWindow();
 });
 
 // ── Content Security Policy ──────────────────────────────────

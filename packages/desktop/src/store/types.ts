@@ -290,10 +290,26 @@ export interface ResultViewSlice {
   ) => void;
 }
 
+export interface CanvasToolbarState {
+  zoomBoxActive: boolean;
+  panActive: boolean;
+  onFitToScreen: () => void;
+  onZoomIn: () => void;
+  onZoomOut: () => void;
+  onToggleZoomBox: () => void;
+  onTogglePan: () => void;
+}
+
+export interface CanvasToolbarSlice {
+  canvasToolbar: CanvasToolbarState | null;
+  setCanvasToolbar: (toolbar: CanvasToolbarState | null) => void;
+}
+
 export type AppState = LayoutSlice &
   ModelsSlice &
   GeometrySlice &
   LoadsSlice &
   AnalysisSlice &
   ViewportSlice &
-  ResultViewSlice;
+  ResultViewSlice &
+  CanvasToolbarSlice;

@@ -1,6 +1,7 @@
 import { create } from "zustand";
 import type { AppState } from "./types";
 import { createAnalysisSlice } from "./slices/analysisSlice";
+import { createCanvasToolbarSlice } from "./slices/canvasToolbarSlice";
 import { createGeometrySlice } from "./slices/geometrySlice";
 import { createLayoutSlice } from "./slices/layoutSlice";
 import { createLoadsSlice } from "./slices/loadsSlice";
@@ -19,4 +20,5 @@ export const useAppStore = create<AppState>()((...args) => ({
   ...createAnalysisSlice(...args),
   ...createViewportSlice(...args),
   ...createResultViewSlice(...args),
+  ...createCanvasToolbarSlice(...args),
 }));

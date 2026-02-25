@@ -179,11 +179,9 @@ export function drawCanvas(
       ctx.moveTo(px, 0);
       ctx.lineTo(px, h);
       ctx.stroke();
-      ctx.fillText(gx.toFixed(gx === Math.round(gx) ? 0 : 1), px, h - 4);
     }
 
     // Horizontal grid lines
-    ctx.textAlign = "left";
     const startY = Math.floor(worldBottom / gridStep) * gridStep;
     for (let gy = startY; gy <= worldTop; gy += gridStep) {
       const [, py] = worldToCanvas(0, gy, w, h);
@@ -191,11 +189,10 @@ export function drawCanvas(
       ctx.moveTo(0, py);
       ctx.lineTo(w, py);
       ctx.stroke();
-      ctx.fillText(gy.toFixed(gy === Math.round(gy) ? 0 : 1), 4, py - 3);
     }
   }
 
-  // Axes
+  // Axes (origin lines)
   if (showGrid) {
     ctx.strokeStyle = AXIS_COLOR;
     ctx.lineWidth = 1.5;

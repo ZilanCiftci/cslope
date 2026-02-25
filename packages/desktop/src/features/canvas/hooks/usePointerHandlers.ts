@@ -18,6 +18,7 @@ import type {
 
 interface PointerDeps {
   canvasRef: RefObject<HTMLCanvasElement | null>;
+  containerRef?: RefObject<HTMLDivElement | null>;
   getEventWorldPos: (e: {
     clientX: number;
     clientY: number;
@@ -41,6 +42,7 @@ interface PointerDeps {
   materialBoundaries: MaterialBoundaryRow[];
   assigningMaterialId: string | null;
   editingAssignment: boolean;
+  panActive: boolean;
   setRegionMaterial: (regionKey: string, materialId: string) => void;
   setAssigningMaterial: (materialId: string | null) => void;
   setSelectedRegionKey: (key: string | null) => void;
@@ -79,6 +81,7 @@ interface PointerDeps {
 export function usePointerHandlers(deps: PointerDeps) {
   const {
     canvasRef,
+    containerRef,
     getEventWorldPos,
     viewOffset,
     setActiveViewOffset,
@@ -95,6 +98,7 @@ export function usePointerHandlers(deps: PointerDeps) {
     materialBoundaries,
     assigningMaterialId,
     editingAssignment,
+    panActive,
     setRegionMaterial,
     setAssigningMaterial,
     setSelectedRegionKey,
@@ -179,6 +183,13 @@ export function usePointerHandlers(deps: PointerDeps) {
             }
           }
           setSelectedAnnotations([]);
+          if (panActive && e.button === 0) {
+            panRef.current = {
+              startPx: [e.clientX, e.clientY],
+              startOffset: [...viewOffset],
+            };
+            (e.target as HTMLElement).setPointerCapture(e.pointerId);
+          }
           return;
         }
       }
@@ -230,6 +241,13 @@ export function usePointerHandlers(deps: PointerDeps) {
           setSelectedPoint(hit.index);
         }
         (e.target as HTMLElement).setPointerCapture(e.pointerId);
+      } else if (panActive) {
+        panRef.current = {
+          startPx: [e.clientX, e.clientY],
+          startOffset: [...viewOffset],
+        };
+        (e.target as HTMLElement).setPointerCapture(e.pointerId);
+        return;
       } else {
         const region = findRegionAtPoint(wx, wy);
         if (region) {
@@ -250,6 +268,7 @@ export function usePointerHandlers(deps: PointerDeps) {
       analysisLimits,
       assigningMaterialId,
       canvasRef,
+      containerRef,
       coordinates,
       editingAssignment,
       findNearPointUnified,
@@ -280,6 +299,53 @@ export function usePointerHandlers(deps: PointerDeps) {
       const s = useAppStore.getState();
       const currentViewScale =
         (s.mode === "result" ? s.resultViewScale : s.editViewScale) || 1;
+
+      if (dragRef.current && dragRef.current.hit.kind !== "annotation") {
+        const rect = containerRef?.current?.getBoundingClientRect();
+        const canvasRect = canvasRef.current?.getBoundingClientRect();
+        const viewRect = rect ?? canvasRect;
+        if (viewRect) {
+          const cx = e.clientX - viewRect.left;
+          const cy = e.clientY - viewRect.top;
+          const edgeMargin = 24;
+          const maxPanPx = 18;
+
+          let panPxX = 0;
+          let panPxY = 0;
+
+          if (cx < edgeMargin) {
+            panPxX = Math.max(-maxPanPx, (cx - edgeMargin) * 0.35);
+          } else if (cx > viewRect.width - edgeMargin) {
+            panPxX = Math.min(
+              maxPanPx,
+              (cx - (viewRect.width - edgeMargin)) * 0.35,
+            );
+          }
+
+          if (cy < edgeMargin) {
+            panPxY = Math.max(-maxPanPx, (cy - edgeMargin) * 0.35);
+          } else if (cy > viewRect.height - edgeMargin) {
+            panPxY = Math.min(
+              maxPanPx,
+              (cy - (viewRect.height - edgeMargin)) * 0.35,
+            );
+          }
+
+          if (panPxX !== 0 || panPxY !== 0) {
+            const offset =
+              s.mode === "result" ? s.resultViewOffset : s.editViewOffset;
+            setActiveViewOffset([
+              offset[0] - panPxX / currentViewScale,
+              offset[1] + panPxY / currentViewScale,
+            ]);
+
+            dragRef.current.startPx = [
+              dragRef.current.startPx[0] - panPxX,
+              dragRef.current.startPx[1] - panPxY,
+            ];
+          }
+        }
+      }
 
       if (panRef.current) {
         const dx = (e.clientX - panRef.current.startPx[0]) / currentViewScale;
@@ -388,25 +454,31 @@ export function usePointerHandlers(deps: PointerDeps) {
       setHoverHit(hit);
       const canvas = canvasRef.current;
       if (canvas) {
-        canvas.style.cursor =
-          hit?.kind === "annotation"
-            ? "grab"
-            : hit?.kind === "limit" ||
-                hit?.kind === "udl" ||
-                hit?.kind === "lineLoad"
-              ? "ew-resize"
-              : hit
-                ? "grab"
-                : "";
+        if (panActive) {
+          canvas.style.cursor = panRef.current ? "grabbing" : "grab";
+        } else {
+          canvas.style.cursor =
+            hit?.kind === "annotation"
+              ? "grab"
+              : hit?.kind === "limit" ||
+                  hit?.kind === "udl" ||
+                  hit?.kind === "lineLoad"
+                ? "ew-resize"
+                : hit
+                  ? "grab"
+                  : "";
+        }
       }
     },
     [
       canvasRef,
+      containerRef,
       findNearPointUnified,
       findSnapTarget,
       getEventWorldPos,
       mode,
       selectedAnnotationIds,
+      panActive,
       setActiveViewOffset,
       setAnalysisLimits,
       setCoordinate,
@@ -448,7 +520,7 @@ export function usePointerHandlers(deps: PointerDeps) {
       const oldScale =
         state.mode === "result" ? state.resultViewScale : state.editViewScale;
       if (oldScale <= 0) return;
-      const newScale = Math.max(5, Math.min(200, oldScale * factor));
+      const newScale = Math.max(0.1, Math.min(200, oldScale * factor));
       const [ox, oy] =
         state.mode === "result" ? state.resultViewOffset : state.editViewOffset;
       setActiveViewOffset([

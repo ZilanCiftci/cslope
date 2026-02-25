@@ -3,6 +3,7 @@ import { ActivityBar } from "./ActivityBar";
 import { StatusBar } from "./StatusBar";
 import { TabBar } from "./TabBar";
 import { TitleBar } from "./TitleBar";
+import { CanvasToolbar } from "../features/canvas/CanvasToolbar";
 import {
   Explorer,
   PropertiesPanel,
@@ -43,6 +44,7 @@ export function AppShell() {
   const toggleTheme = useAppStore((s) => s.toggleTheme);
   const coordinateCount = useAppStore((s) => s.coordinates.length);
   const runAllAnalyses = useAppStore((s) => s.runAllAnalyses);
+  const canvasToolbar = useAppStore((s) => s.canvasToolbar);
 
   const activeModel = models.find((m) => m.id === activeModelId);
 
@@ -93,6 +95,26 @@ export function AppShell() {
         onRun={handleRunAndSwitch}
         onRunAll={handleRunAll}
       />
+
+      {canvasToolbar && (
+        <div
+          className="flex items-center h-9 shrink-0 px-2"
+          style={{
+            background: "var(--color-vsc-tab-inactive)",
+            borderBottom: "1px solid var(--color-vsc-border)",
+          }}
+        >
+          <CanvasToolbar
+            zoomBoxActive={canvasToolbar.zoomBoxActive}
+            panActive={canvasToolbar.panActive}
+            onFitToScreen={canvasToolbar.onFitToScreen}
+            onZoomIn={canvasToolbar.onZoomIn}
+            onZoomOut={canvasToolbar.onZoomOut}
+            onToggleZoomBox={canvasToolbar.onToggleZoomBox}
+            onTogglePan={canvasToolbar.onTogglePan}
+          />
+        </div>
+      )}
 
       <div className="flex flex-1 min-h-0">
         <ActivityBar
