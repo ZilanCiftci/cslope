@@ -1,7 +1,10 @@
 import { useEffect, useState } from "react";
+import { DevMenu } from "./DevMenu";
 import { FileMenu } from "./FileMenu";
 import { HelpMenu } from "./HelpMenu";
 import { isElectron } from "../utils/is-electron";
+
+const isDev = import.meta.env.DEV;
 
 interface Props {
   theme: "dark" | "light";
@@ -41,17 +44,15 @@ export function TitleBar({ theme, onToggleTheme, activeModelName }: Props) {
         className="flex items-center gap-1 px-2"
         style={{ WebkitAppRegion: "no-drag" } as React.CSSProperties}
       >
-        <div
-          className="w-6 h-6 rounded-md flex items-center justify-center text-[11px] font-bold mr-1"
-          style={{
-            background: "var(--color-vsc-accent)",
-            color: "#fff",
-          }}
-        >
-          cS
-        </div>
+        <img
+          src="/mountain.svg"
+          alt="cSlope"
+          className="w-5 h-5 mr-1"
+          draggable={false}
+        />
         <FileMenu activeModelName={activeModelName} />
         <HelpMenu />
+        {isDev && <DevMenu />}
       </div>
 
       {/* ── Center: project name ── */}

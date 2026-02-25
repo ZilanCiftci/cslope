@@ -193,6 +193,12 @@ export function FileMenu({ activeModelName }: Props) {
             shortcut="Ctrl+Shift+S"
             onClick={handleSaveAs}
           />
+          {isElectron && (
+            <>
+              <MenuSep />
+              <MenuItem label="Exit" onClick={() => window.cslope.close()} />
+            </>
+          )}
         </div>
       )}
 

@@ -1,4 +1,4 @@
-import { app, BrowserWindow, Menu, dialog, ipcMain } from "electron";
+import { app, BrowserWindow, Menu, dialog, ipcMain, session } from "electron";
 import { fileURLToPath } from "node:url";
 import path from "node:path";
 import fs from "node:fs";
@@ -51,6 +51,24 @@ function createWindow() {
   }
 }
 
+// ── Content Security Policy ──────────────────────────────────
+
+function setupCSP() {
+  session.defaultSession.webRequest.onHeadersReceived((details, callback) => {
+    const csp = VITE_DEV_SERVER_URL
+      ? // Dev: allow Vite HMR websocket & eval for fast-refresh
+        "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; connect-src 'self' ws://localhost:*; img-src 'self' data: blob:; font-src 'self' data:;"
+      : // Production: strict policy
+        "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:;";
+    callback({
+      responseHeaders: {
+        ...details.responseHeaders,
+        "Content-Security-Policy": [csp],
+      },
+    });
+  });
+}
+
 // ── Window control IPC ───────────────────────────────────────
 
 ipcMain.on("window:minimize", () => win?.minimize());
@@ -63,6 +81,7 @@ ipcMain.on("window:maximize", () => {
 });
 ipcMain.on("window:close", () => win?.close());
 ipcMain.handle("window:isMaximized", () => win?.isMaximized() ?? false);
+ipcMain.on("dev:toggle-devtools", () => win?.webContents.toggleDevTools());
 
 // ── Native file dialogs via IPC ──────────────────────────────
 
@@ -166,6 +185,7 @@ app.on("activate", () => {
 });
 
 app.whenReady().then(() => {
+  setupCSP();
   buildMenu();
   createWindow();
 });
