@@ -28,4 +28,9 @@ contextBridge.exposeInMainWorld("cslope", {
   saveFile: (content: string) => ipcRenderer.invoke("dialog:saveFile", content),
   saveFileAs: (content: string) =>
     ipcRenderer.invoke("dialog:saveFileAs", content),
+  // Window controls
+  minimize: () => ipcRenderer.send("window:minimize"),
+  maximize: () => ipcRenderer.send("window:maximize"),
+  close: () => ipcRenderer.send("window:close"),
+  isMaximized: () => ipcRenderer.invoke("window:isMaximized"),
 });

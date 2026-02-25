@@ -55,16 +55,16 @@ describe("App — VS Code dark layout", () => {
     render(<App />);
     const toggle = screen.getByLabelText("Toggle models");
     // Explorer sidebar should be visible initially
-    const explorerModels = screen.getAllByText("Untitled");
+    const explorerModels = screen.getAllByText(/Untitled/);
     expect(explorerModels.length).toBeGreaterThanOrEqual(2); // title bar + explorer
     // Close explorer
     await user.click(toggle);
-    // Only title bar "Untitled" should remain
-    const afterClose = screen.getAllByText("Untitled");
+    // Only title bar "Untitled — cSlope" should remain
+    const afterClose = screen.getAllByText(/Untitled/);
     expect(afterClose).toHaveLength(1);
     // Re-open
     await user.click(toggle);
-    const afterOpen = screen.getAllByText("Untitled");
+    const afterOpen = screen.getAllByText(/Untitled/);
     expect(afterOpen.length).toBeGreaterThanOrEqual(2);
   });
 

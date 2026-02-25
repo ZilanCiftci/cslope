@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, type ChangeEventHandler } from "react";
 import { parseProjectFile, serializeProject } from "../store/persistence";
 import { useAppStore } from "../store/app-store";
+import { isElectron } from "../utils/is-electron";
 
 interface Props {
   activeModelName?: string;
@@ -11,10 +12,6 @@ const ensureJsonName = (name: string) =>
 
 const stripJsonExt = (name: string) => name.replace(/\.json$/i, "");
 
-/**
- * Browser-only file menu (hidden when running in Electron —
- * native menu events are handled by useElectronMenu instead).
- */
 export function FileMenu({ activeModelName }: Props) {
   const [open, setOpen] = useState(false);
   const [fileName, setFileName] = useState("");
@@ -34,6 +31,7 @@ export function FileMenu({ activeModelName }: Props) {
 
   const defaultBaseName = activeModelName?.trim() || "cslope-project";
 
+  // ── Browser-only download helper ──
   const triggerDownload = (json: string, name: string) => {
     const blob = new Blob([json], { type: "application/json" });
     const url = URL.createObjectURL(blob);
@@ -44,36 +42,76 @@ export function FileMenu({ activeModelName }: Props) {
     URL.revokeObjectURL(url);
   };
 
-  const runSave = (promptForName: boolean) => {
+  // ── Actions (work in both Electron and browser) ──
+
+  const handleNew = () => {
+    useAppStore.getState().newProject();
+    setFileName("");
+    setOpen(false);
+    if (isElectron) window.ipcRenderer.send("menu:new");
+  };
+
+  const handleOpen = async () => {
+    setOpen(false);
+    if (isElectron) {
+      const contents = await window.cslope.openFile();
+      if (!contents) return;
+      try {
+        const parsed = parseProjectFile(contents);
+        useAppStore.getState().loadProject(parsed);
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : "Unknown error";
+        window.alert(`Unable to open project: ${msg}`);
+      }
+      return;
+    }
+    const input = fileInputRef.current;
+    if (!input) return;
+    input.value = "";
+    input.click();
+  };
+
+  const handleSave = async () => {
     const store = useAppStore.getState();
     store.saveCurrentModel();
     const snapshot = serializeProject(useAppStore.getState());
     const json = JSON.stringify(snapshot, null, 2);
 
+    if (isElectron) {
+      await window.cslope.saveFile(json);
+      setOpen(false);
+      return;
+    }
     const suggested = fileName || defaultBaseName;
-    const inputName = promptForName
-      ? window.prompt("Save project as", suggested)
-      : suggested;
-    if (!inputName) return;
+    const finalName = ensureJsonName(suggested.trim());
+    triggerDownload(json, finalName);
+    setFileName(stripJsonExt(finalName));
+    setOpen(false);
+  };
 
+  const handleSaveAs = async () => {
+    const store = useAppStore.getState();
+    store.saveCurrentModel();
+    const snapshot = serializeProject(useAppStore.getState());
+    const json = JSON.stringify(snapshot, null, 2);
+
+    if (isElectron) {
+      await window.cslope.saveFileAs(json);
+      setOpen(false);
+      return;
+    }
+    const suggested = fileName || defaultBaseName;
+    const inputName = window.prompt("Save project as", suggested);
+    if (!inputName) return;
     const finalName = ensureJsonName(inputName.trim());
     triggerDownload(json, finalName);
     setFileName(stripJsonExt(finalName));
     setOpen(false);
   };
 
-  const handleOpen = () => {
-    const input = fileInputRef.current;
-    if (!input) return;
-    input.value = "";
-    input.click();
-    setOpen(false);
-  };
-
   const handleFileChange: ChangeEventHandler<HTMLInputElement> = (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
-
     const reader = new FileReader();
     reader.onload = () => {
       try {
@@ -81,24 +119,45 @@ export function FileMenu({ activeModelName }: Props) {
         useAppStore.getState().loadProject(parsed);
         setFileName(stripJsonExt(file.name));
       } catch (err) {
-        const message = err instanceof Error ? err.message : "Unknown error";
-        window.alert(`Unable to open project: ${message}`);
+        const msg = err instanceof Error ? err.message : "Unknown error";
+        window.alert(`Unable to open project: ${msg}`);
       }
     };
     reader.readAsText(file);
   };
 
-  const handleNew = () => {
-    useAppStore.getState().newProject();
-    setFileName("");
-    setOpen(false);
-  };
+  // ── Keyboard shortcuts (Ctrl+N/O/S/Shift+S) ──
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      const ctrl = e.ctrlKey || e.metaKey;
+      if (!ctrl) return;
+      if (e.key === "n" || e.key === "N") {
+        e.preventDefault();
+        handleNew();
+      } else if (e.key === "o" || e.key === "O") {
+        e.preventDefault();
+        void handleOpen();
+      } else if (e.shiftKey && (e.key === "s" || e.key === "S")) {
+        e.preventDefault();
+        void handleSaveAs();
+      } else if (e.key === "s" || e.key === "S") {
+        e.preventDefault();
+        void handleSave();
+      }
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  });
 
   return (
-    <div className="relative" ref={menuRef}>
+    <div
+      className="relative"
+      ref={menuRef}
+      style={{ WebkitAppRegion: "no-drag" } as React.CSSProperties}
+    >
       <button
         onClick={() => setOpen((v) => !v)}
-        className="h-8 px-3 rounded text-[12px] font-medium flex items-center gap-1"
+        className="h-8 px-3 rounded text-[12px] font-medium flex items-center cursor-pointer"
         style={{
           color: "var(--color-vsc-text-muted)",
           background: open ? "var(--color-vsc-list-active)" : "transparent",
@@ -107,14 +166,11 @@ export function FileMenu({ activeModelName }: Props) {
         aria-expanded={open}
       >
         File
-        <svg width="10" height="10" viewBox="0 0 10 10" fill="currentColor">
-          <path d="M2 3l3 3.5L8 3z" />
-        </svg>
       </button>
 
       {open && (
         <div
-          className="absolute mt-1 w-44 rounded shadow-lg py-1 text-[12px]"
+          className="absolute left-0 mt-0.5 w-56 rounded shadow-lg py-1 text-[12px]"
           style={{
             background: "var(--color-vsc-panel)",
             border: "1px solid var(--color-vsc-border)",
@@ -123,38 +179,20 @@ export function FileMenu({ activeModelName }: Props) {
           }}
           role="menu"
         >
-          <button
-            className="w-full text-left px-3 py-2 hover:bg-[var(--color-vsc-list-hover)]"
-            onClick={handleNew}
-            role="menuitem"
-          >
-            New
-          </button>
-          <button
-            className="w-full text-left px-3 py-2 hover:bg-[var(--color-vsc-list-hover)]"
+          <MenuItem label="New Project" shortcut="Ctrl+N" onClick={handleNew} />
+          <MenuSep />
+          <MenuItem
+            label="Open Project…"
+            shortcut="Ctrl+O"
             onClick={handleOpen}
-            role="menuitem"
-          >
-            Open...
-          </button>
-          <div
-            className="my-1"
-            style={{ borderTop: "1px solid var(--color-vsc-border)" }}
           />
-          <button
-            className="w-full text-left px-3 py-2 hover:bg-[var(--color-vsc-list-hover)]"
-            onClick={() => runSave(false)}
-            role="menuitem"
-          >
-            Save
-          </button>
-          <button
-            className="w-full text-left px-3 py-2 hover:bg-[var(--color-vsc-list-hover)]"
-            onClick={() => runSave(true)}
-            role="menuitem"
-          >
-            Save As...
-          </button>
+          <MenuSep />
+          <MenuItem label="Save" shortcut="Ctrl+S" onClick={handleSave} />
+          <MenuItem
+            label="Save As…"
+            shortcut="Ctrl+Shift+S"
+            onClick={handleSaveAs}
+          />
         </div>
       )}
 
@@ -166,5 +204,44 @@ export function FileMenu({ activeModelName }: Props) {
         onChange={handleFileChange}
       />
     </div>
+  );
+}
+
+// ── Shared sub-components ──
+
+function MenuItem({
+  label,
+  shortcut,
+  onClick,
+}: {
+  label: string;
+  shortcut?: string;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      className="w-full text-left px-3 py-1.5 hover:bg-[var(--color-vsc-list-hover)] flex items-center justify-between cursor-pointer"
+      onClick={onClick}
+      role="menuitem"
+    >
+      <span>{label}</span>
+      {shortcut && (
+        <span
+          className="text-[11px] ml-6"
+          style={{ color: "var(--color-vsc-text-muted)" }}
+        >
+          {shortcut}
+        </span>
+      )}
+    </button>
+  );
+}
+
+function MenuSep() {
+  return (
+    <div
+      className="my-1 mx-2"
+      style={{ borderTop: "1px solid var(--color-vsc-border)" }}
+    />
   );
 }

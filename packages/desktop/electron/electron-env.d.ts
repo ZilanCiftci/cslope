@@ -28,5 +28,9 @@ interface Window {
     openFile: () => Promise<string | null>;
     saveFile: (content: string) => Promise<boolean>;
     saveFileAs: (content: string) => Promise<boolean>;
+    minimize: () => void;
+    maximize: () => void;
+    close: () => void;
+    isMaximized: () => Promise<boolean>;
   };
 }

@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useAppStore } from "../store/app-store";
+import { isElectron } from "../utils/is-electron";
 
 export function HelpMenu() {
   const [open, setOpen] = useState(false);
@@ -25,11 +26,24 @@ export function HelpMenu() {
     setOpen(false);
   };
 
+  const handleAbout = () => {
+    setOpen(false);
+    if (isElectron) {
+      window.ipcRenderer.send("menu:about");
+    } else {
+      window.alert("cSlope — Slope Stability Analysis\nhttps://cslope.com");
+    }
+  };
+
   return (
-    <div className="relative" ref={menuRef}>
+    <div
+      className="relative"
+      ref={menuRef}
+      style={{ WebkitAppRegion: "no-drag" } as React.CSSProperties}
+    >
       <button
         onClick={() => setOpen((v) => !v)}
-        className="h-8 px-3 rounded text-[12px] font-medium flex items-center gap-1"
+        className="h-8 px-3 rounded text-[12px] font-medium flex items-center cursor-pointer"
         style={{
           color: "var(--color-vsc-text-muted)",
           background: open ? "var(--color-vsc-list-active)" : "transparent",
@@ -38,14 +52,11 @@ export function HelpMenu() {
         aria-expanded={open}
       >
         Help
-        <svg width="10" height="10" viewBox="0 0 10 10" fill="currentColor">
-          <path d="M2 3l3 3.5L8 3z" />
-        </svg>
       </button>
 
       {open && (
         <div
-          className="absolute mt-1 w-52 rounded shadow-lg py-1 text-[12px]"
+          className="absolute left-0 mt-0.5 w-52 rounded shadow-lg py-1 text-[12px]"
           style={{
             background: "var(--color-vsc-panel)",
             border: "1px solid var(--color-vsc-border)",
@@ -55,11 +66,22 @@ export function HelpMenu() {
           role="menu"
         >
           <button
-            className="w-full text-left px-3 py-2 hover:bg-(--color-vsc-list-hover)"
+            className="w-full text-left px-3 py-1.5 hover:bg-[var(--color-vsc-list-hover)] cursor-pointer"
             onClick={handleLoadBenchmarks}
             role="menuitem"
           >
             Load Benchmarks
+          </button>
+          <div
+            className="my-1 mx-2"
+            style={{ borderTop: "1px solid var(--color-vsc-border)" }}
+          />
+          <button
+            className="w-full text-left px-3 py-1.5 hover:bg-[var(--color-vsc-list-hover)] cursor-pointer"
+            onClick={handleAbout}
+            role="menuitem"
+          >
+            About cSlope
           </button>
         </div>
       )}

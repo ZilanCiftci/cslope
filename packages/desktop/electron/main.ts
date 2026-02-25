@@ -33,10 +33,16 @@ function createWindow() {
     height: 860,
     title: "cSlope",
     icon: path.join(process.env.VITE_PUBLIC, "mountain.svg"),
+    frame: false,
+    titleBarStyle: "hidden",
     webPreferences: {
       preload: path.join(__dirname, "preload.mjs"),
     },
   });
+
+  // Notify renderer when maximized state changes
+  win.on("maximize", () => win?.webContents.send("window:maximized", true));
+  win.on("unmaximize", () => win?.webContents.send("window:maximized", false));
 
   if (VITE_DEV_SERVER_URL) {
     win.loadURL(VITE_DEV_SERVER_URL);
@@ -44,6 +50,19 @@ function createWindow() {
     win.loadFile(path.join(RENDERER_DIST, "index.html"));
   }
 }
+
+// ── Window control IPC ───────────────────────────────────────
+
+ipcMain.on("window:minimize", () => win?.minimize());
+ipcMain.on("window:maximize", () => {
+  if (win?.isMaximized()) {
+    win.unmaximize();
+  } else {
+    win?.maximize();
+  }
+});
+ipcMain.on("window:close", () => win?.close());
+ipcMain.handle("window:isMaximized", () => win?.isMaximized() ?? false);
 
 // ── Native file dialogs via IPC ──────────────────────────────
 
@@ -102,76 +121,33 @@ async function saveAs(content: string): Promise<boolean> {
   return saveToPath(filePath, content);
 }
 
-// ── Application menu ─────────────────────────────────────────
+// ── Application menu (hidden — custom title bar in renderer) ─
 
 function buildMenu() {
-  const isMac = process.platform === "darwin";
-
-  const template: Electron.MenuItemConstructorOptions[] = [
-    ...(isMac ? [{ role: "appMenu" as const }] : []),
-    {
-      label: "File",
-      submenu: [
-        {
-          label: "New Project",
-          accelerator: "CmdOrCtrl+N",
-          click: () => {
-            currentFilePath = null;
-            win?.setTitle("cSlope");
-            win?.webContents.send("menu:new");
-          },
-        },
-        { type: "separator" },
-        {
-          label: "Open Project…",
-          accelerator: "CmdOrCtrl+O",
-          click: () => win?.webContents.send("menu:open"),
-        },
-        { type: "separator" },
-        {
-          label: "Save Project",
-          accelerator: "CmdOrCtrl+S",
-          click: () => win?.webContents.send("menu:save"),
-        },
-        {
-          label: "Save Project As…",
-          accelerator: "CmdOrCtrl+Shift+S",
-          click: () => win?.webContents.send("menu:saveAs"),
-        },
-        { type: "separator" },
-        isMac ? { role: "close" as const } : { role: "quit" as const },
-      ],
-    },
-    { role: "editMenu" as const },
-    { role: "viewMenu" as const },
-    { role: "windowMenu" as const },
-    {
-      label: "Help",
-      submenu: [
-        {
-          label: "Load Benchmarks",
-          click: () => win?.webContents.send("menu:loadBenchmarks"),
-        },
-        { type: "separator" },
-        {
-          label: "About cSlope",
-          click: () => {
-            const version = app.getVersion();
-            dialog.showMessageBox({
-              type: "info",
-              title: "About cSlope",
-              message: `cSlope v${version}`,
-              detail:
-                "Slope Stability Analysis\nOpen-source geotechnical engineering software.\nhttps://cslope.com",
-            });
-          },
-        },
-      ],
-    },
-  ];
-
-  Menu.setApplicationMenu(Menu.buildFromTemplate(template));
+  // Remove the native menu bar; the renderer has its own.
+  Menu.setApplicationMenu(null);
 }
+
+// ── Keyboard-shortcut IPC from renderer ──────────────────────
+// The renderer sends these when the user triggers a shortcut or
+// clicks a custom menu item. We handle them here so the main
+// process can coordinate file-path state and window title.
+
+ipcMain.on("menu:new", () => {
+  currentFilePath = null;
+  win?.setTitle("cSlope");
+});
+
+ipcMain.on("menu:about", () => {
+  const version = app.getVersion();
+  dialog.showMessageBox({
+    type: "info",
+    title: "About cSlope",
+    message: `cSlope v${version}`,
+    detail:
+      "Slope Stability Analysis\nOpen-source geotechnical engineering software.\nhttps://cslope.com",
+  });
+});
 
 // Quit when all windows are closed, except on macOS. There, it's common
 // for applications and their menu bar to stay active until the user quits
