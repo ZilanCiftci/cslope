@@ -2,16 +2,22 @@ import { DEFAULT_ANALYSIS_OPTIONS, resolveOrientation } from "@cslope/engine";
 import { DEFAULT_MODEL_NAME } from "../constants";
 import {
   DEFAULT_ANALYSIS_LIMITS,
+  DEFAULT_MATERIAL,
   DEFAULT_PIEZO_LINE,
   DEFAULT_PROJECT_INFO,
   DEFAULT_RESULT_VIEW_SETTINGS,
+  MATERIAL_COLORS,
 } from "./defaults";
 import type {
+  AnalysisLimitsState,
   AppState,
+  LineLoadRow,
+  MaterialRow,
   ModelEntry,
   PiezometricLineState,
   ProjectInfo,
   ResultViewSettings,
+  UdlRow,
 } from "./types";
 
 export const PROJECT_FILE_VERSION = 1;
@@ -97,9 +103,9 @@ function normalizeModelEntry(raw: unknown): ModelEntry {
     orientation,
     projectInfo: normalizeProjectInfo(model.projectInfo),
     coordinates,
-    materials: (model.materials as unknown[]).map((m) => ({
-      ...(m as Record<string, unknown>),
-    })) as unknown as ModelEntry["materials"],
+    materials: (model.materials as unknown[]).map((m, i) =>
+      normalizeMaterial(m, i),
+    ),
     materialBoundaries: (Array.isArray(model.materialBoundaries)
       ? model.materialBoundaries.map((boundary) => {
           const boundaryRecord = boundary as Record<string, unknown>;
@@ -116,25 +122,23 @@ function normalizeModelEntry(raw: unknown): ModelEntry {
         ? { ...(model.regionMaterials as Record<string, string>) }
         : {},
     piezometricLine: normalizePiezo(model.piezometricLine),
-    udls: (Array.isArray(model.udls)
-      ? model.udls.map((load) => ({ ...(load as Record<string, unknown>) }))
-      : []) as unknown as ModelEntry["udls"],
-    lineLoads: (Array.isArray(model.lineLoads)
-      ? model.lineLoads.map((load) => ({
-          ...(load as Record<string, unknown>),
-        }))
-      : []) as unknown as ModelEntry["lineLoads"],
+    udls: Array.isArray(model.udls)
+      ? ((model.udls as unknown[])
+          .map(normalizeUdl)
+          .filter(Boolean) as UdlRow[])
+      : [],
+    lineLoads: Array.isArray(model.lineLoads)
+      ? ((model.lineLoads as unknown[])
+          .map(normalizeLineLoad)
+          .filter(Boolean) as LineLoadRow[])
+      : [],
     options: model.options
       ? ({
           ...DEFAULT_ANALYSIS_OPTIONS,
           ...(model.options as Record<string, unknown>),
         } as unknown as ModelEntry["options"])
       : { ...DEFAULT_ANALYSIS_OPTIONS },
-    analysisLimits: model.analysisLimits
-      ? ({
-          ...(model.analysisLimits as Record<string, unknown>),
-        } as unknown as ModelEntry["analysisLimits"])
-      : { ...DEFAULT_ANALYSIS_LIMITS },
+    analysisLimits: normalizeAnalysisLimits(model.analysisLimits),
     editViewOffset: (model.editViewOffset ??
       model.viewOffset) as ModelEntry["editViewOffset"],
     editViewScale: (model.editViewScale ??
@@ -273,5 +277,81 @@ function normalizePiezo(raw: unknown): PiezometricLineState {
       piezo.materialAssignment && typeof piezo.materialAssignment === "object"
         ? (piezo.materialAssignment as Record<string, string>)
         : {},
+  };
+}
+
+// ── 4.2 — Material field validation ──
+
+const finiteOr = (v: unknown, fallback: number): number =>
+  typeof v === "number" && isFinite(v) ? v : fallback;
+
+function normalizeMaterial(raw: unknown, index: number): MaterialRow {
+  if (!raw || typeof raw !== "object") {
+    return { ...DEFAULT_MATERIAL, id: `mat-${index + 1}` };
+  }
+  const m = raw as Record<string, unknown>;
+  return {
+    id: typeof m.id === "string" ? m.id : `mat-${index + 1}`,
+    name: typeof m.name === "string" ? m.name : DEFAULT_MATERIAL.name,
+    unitWeight: Math.max(
+      0.1,
+      finiteOr(m.unitWeight, DEFAULT_MATERIAL.unitWeight),
+    ),
+    frictionAngle: Math.max(
+      0,
+      finiteOr(m.frictionAngle, DEFAULT_MATERIAL.frictionAngle),
+    ),
+    cohesion: Math.max(0, finiteOr(m.cohesion, DEFAULT_MATERIAL.cohesion)),
+    color:
+      typeof m.color === "string" && m.color.length > 0
+        ? m.color
+        : MATERIAL_COLORS[index % MATERIAL_COLORS.length],
+    depthRange:
+      Array.isArray(m.depthRange) &&
+      m.depthRange.length >= 2 &&
+      typeof m.depthRange[0] === "number" &&
+      typeof m.depthRange[1] === "number"
+        ? [m.depthRange[0], m.depthRange[1]]
+        : undefined,
+  };
+}
+
+// ── 4.3 — UDL / lineLoad field validation ──
+
+function normalizeUdl(raw: unknown): UdlRow | null {
+  if (!raw || typeof raw !== "object") return null;
+  const u = raw as Record<string, unknown>;
+  const id = typeof u.id === "string" ? u.id : null;
+  const magnitude = finiteOr(u.magnitude, 0);
+  const x1 = finiteOr(u.x1, 0);
+  const x2 = finiteOr(u.x2, 0);
+  if (!id || x1 === x2) return null;
+  return { id, magnitude, x1, x2 };
+}
+
+function normalizeLineLoad(raw: unknown): LineLoadRow | null {
+  if (!raw || typeof raw !== "object") return null;
+  const l = raw as Record<string, unknown>;
+  const id = typeof l.id === "string" ? l.id : null;
+  const magnitude = finiteOr(l.magnitude, 0);
+  const x = finiteOr(l.x, 0);
+  if (!id) return null;
+  return { id, magnitude, x };
+}
+
+// ── 4.4 — analysisLimits type validation ──
+
+function normalizeAnalysisLimits(raw: unknown): AnalysisLimitsState {
+  if (!raw || typeof raw !== "object") return { ...DEFAULT_ANALYSIS_LIMITS };
+  const a = raw as Record<string, unknown>;
+  return {
+    enabled:
+      typeof a.enabled === "boolean"
+        ? a.enabled
+        : DEFAULT_ANALYSIS_LIMITS.enabled,
+    entryLeftX: finiteOr(a.entryLeftX, DEFAULT_ANALYSIS_LIMITS.entryLeftX),
+    entryRightX: finiteOr(a.entryRightX, DEFAULT_ANALYSIS_LIMITS.entryRightX),
+    exitLeftX: finiteOr(a.exitLeftX, DEFAULT_ANALYSIS_LIMITS.exitLeftX),
+    exitRightX: finiteOr(a.exitRightX, DEFAULT_ANALYSIS_LIMITS.exitRightX),
   };
 }

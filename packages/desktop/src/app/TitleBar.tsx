@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { DEFAULT_MODEL_NAME } from "../constants";
 import { DevMenu } from "./DevMenu";
+import { EditMenu } from "./EditMenu";
 import { FileMenu } from "./FileMenu";
 import { HelpMenu } from "./HelpMenu";
 import { isElectron } from "../utils/is-electron";
@@ -52,6 +53,7 @@ export function TitleBar({ theme, onToggleTheme, activeModelName }: Props) {
           draggable={false}
         />
         <FileMenu activeModelName={activeModelName} />
+        <EditMenu />
         <HelpMenu />
         {isDev && <DevMenu />}
       </div>

@@ -23,6 +23,7 @@ export function HelpMenu() {
     );
     if (!ok) return;
     useAppStore.getState().loadBenchmarks();
+    useAppStore.temporal.getState().clear();
     setOpen(false);
   };
 

@@ -178,6 +178,7 @@ export function usePointerHandlers(deps: PointerDeps) {
                 startWorld: [a.x, a.y],
                 startPx: [e.clientX, e.clientY],
               };
+              useAppStore.temporal.getState().pause();
               (e.target as HTMLElement).setPointerCapture(e.pointerId);
               return;
             }
@@ -237,6 +238,7 @@ export function usePointerHandlers(deps: PointerDeps) {
           startWorld,
           startPx: [e.clientX, e.clientY],
         };
+        useAppStore.temporal.getState().pause();
         if (hit.kind === "external") {
           setSelectedPoint(hit.index);
         }
@@ -492,6 +494,9 @@ export function usePointerHandlers(deps: PointerDeps) {
   );
 
   const handlePointerUp = useCallback((e: RPointerEvent<HTMLCanvasElement>) => {
+    if (dragRef.current) {
+      useAppStore.temporal.getState().resume();
+    }
     dragRef.current = null;
     panRef.current = null;
     (e.target as HTMLElement).releasePointerCapture(e.pointerId);

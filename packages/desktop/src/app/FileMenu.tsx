@@ -46,6 +46,7 @@ export function FileMenu({ activeModelName }: Props) {
 
   const handleNew = () => {
     useAppStore.getState().newProject();
+    useAppStore.temporal.getState().clear();
     setFileName("");
     setOpen(false);
     if (isElectron) window.cslope.menuNew();
@@ -59,6 +60,7 @@ export function FileMenu({ activeModelName }: Props) {
       try {
         const parsed = parseProjectFile(contents);
         useAppStore.getState().loadProject(parsed);
+        useAppStore.temporal.getState().clear();
       } catch (err) {
         const msg = err instanceof Error ? err.message : "Unknown error";
         window.alert(`Unable to open project: ${msg}`);
@@ -117,6 +119,7 @@ export function FileMenu({ activeModelName }: Props) {
       try {
         const parsed = parseProjectFile(String(reader.result ?? ""));
         useAppStore.getState().loadProject(parsed);
+        useAppStore.temporal.getState().clear();
         setFileName(stripJsonExt(file.name));
       } catch (err) {
         const msg = err instanceof Error ? err.message : "Unknown error";
