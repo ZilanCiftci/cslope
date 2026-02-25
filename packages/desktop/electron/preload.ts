@@ -25,6 +25,8 @@ contextBridge.exposeInMainWorld("ipcRenderer", {
 // --------- Native file dialog API ---------
 contextBridge.exposeInMainWorld("cslope", {
   openFile: () => ipcRenderer.invoke("dialog:openFile"),
+  openFilePath: (filePath: string) =>
+    ipcRenderer.invoke("file:openPath", filePath),
   saveFile: (content: string) => ipcRenderer.invoke("dialog:saveFile", content),
   saveFileAs: (content: string) =>
     ipcRenderer.invoke("dialog:saveFileAs", content),

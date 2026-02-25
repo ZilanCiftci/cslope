@@ -15,6 +15,7 @@ interface Window {
   };
   cslope: {
     openFile: () => Promise<string | null>;
+    openFilePath: (filePath: string) => Promise<string | null>;
     saveFile: (content: string) => Promise<boolean>;
     saveFileAs: (content: string) => Promise<boolean>;
     minimize: () => void;

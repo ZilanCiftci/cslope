@@ -121,6 +121,19 @@ ipcMain.on("dev:toggle-devtools", () => win?.webContents.toggleDevTools());
 
 let currentFilePath: string | null = null;
 
+ipcMain.handle("file:openPath", async (_event, filePath: string) => {
+  if (!win) return null;
+  try {
+    const contents = fs.readFileSync(filePath, "utf-8");
+    currentFilePath = filePath;
+    const name = path.basename(filePath, path.extname(filePath));
+    win.setTitle(`${name} — cSlope`);
+    return contents;
+  } catch {
+    return null;
+  }
+});
+
 ipcMain.handle("dialog:openFile", async () => {
   if (!win) return null;
   const { canceled, filePaths } = await dialog.showOpenDialog(win, {

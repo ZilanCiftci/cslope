@@ -12,8 +12,10 @@ import {
   SlopeCanvas,
 } from "../components";
 import { useAppStore } from "../store/app-store";
+import { useDragDrop } from "../features/canvas/hooks/useDragDrop";
 
 export function AppShell() {
+  useDragDrop();
   const explorerLocation = useAppStore((s) => s.explorerLocation);
   const propertiesLocation = useAppStore((s) => s.propertiesLocation);
   const setExplorerLocation = useAppStore((s) => s.setExplorerLocation);
