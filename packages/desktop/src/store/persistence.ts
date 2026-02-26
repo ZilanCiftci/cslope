@@ -8,7 +8,7 @@ import {
   DEFAULT_ANALYSIS_LIMITS,
   DEFAULT_MATERIAL,
   DEFAULT_PIEZO_LINE,
-  DEFAULT_PROJECT_INFO,
+  createDefaultProjectInfo,
   DEFAULT_RESULT_VIEW_SETTINGS,
   MATERIAL_COLORS,
 } from "./defaults";
@@ -176,49 +176,34 @@ function normalizeCoords(raw: unknown): [number, number][] {
 
 function normalizeProjectInfo(raw: unknown): ProjectInfo {
   if (!raw || typeof raw !== "object") {
-    return { ...DEFAULT_PROJECT_INFO };
+    return createDefaultProjectInfo();
   }
   const info = raw as Partial<ProjectInfo>;
+  const base = createDefaultProjectInfo();
   const width =
     typeof info.canvasWidth === "number" && isFinite(info.canvasWidth)
       ? info.canvasWidth
-      : DEFAULT_PROJECT_INFO.canvasWidth;
+      : base.canvasWidth;
   const height =
     typeof info.canvasHeight === "number" && isFinite(info.canvasHeight)
       ? info.canvasHeight
-      : DEFAULT_PROJECT_INFO.canvasHeight;
+      : base.canvasHeight;
   return {
-    title:
-      typeof info.title === "string" ? info.title : DEFAULT_PROJECT_INFO.title,
-    subtitle:
-      typeof info.subtitle === "string"
-        ? info.subtitle
-        : DEFAULT_PROJECT_INFO.subtitle,
-    client:
-      typeof info.client === "string"
-        ? info.client
-        : DEFAULT_PROJECT_INFO.client,
+    title: typeof info.title === "string" ? info.title : base.title,
+    subtitle: typeof info.subtitle === "string" ? info.subtitle : base.subtitle,
+    client: typeof info.client === "string" ? info.client : base.client,
     projectNumber:
       typeof info.projectNumber === "string"
         ? info.projectNumber
-        : DEFAULT_PROJECT_INFO.projectNumber,
-    revision:
-      typeof info.revision === "string"
-        ? info.revision
-        : DEFAULT_PROJECT_INFO.revision,
-    author:
-      typeof info.author === "string"
-        ? info.author
-        : DEFAULT_PROJECT_INFO.author,
-    checker:
-      typeof info.checker === "string"
-        ? info.checker
-        : DEFAULT_PROJECT_INFO.checker,
-    date: typeof info.date === "string" ? info.date : DEFAULT_PROJECT_INFO.date,
+        : base.projectNumber,
+    revision: typeof info.revision === "string" ? info.revision : base.revision,
+    author: typeof info.author === "string" ? info.author : base.author,
+    checker: typeof info.checker === "string" ? info.checker : base.checker,
+    date: typeof info.date === "string" ? info.date : base.date,
     description:
       typeof info.description === "string"
         ? info.description
-        : DEFAULT_PROJECT_INFO.description,
+        : base.description,
     canvasWidth: width,
     canvasHeight: height,
   };

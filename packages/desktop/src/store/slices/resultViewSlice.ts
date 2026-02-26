@@ -1,16 +1,29 @@
 import { DEFAULT_RESULT_VIEW_SETTINGS } from "../defaults";
 import { nextId } from "../helpers";
 import type { SliceCreator } from "../helpers";
-import type { ResultViewSlice } from "../types";
+import type { ModelEntry, ResultViewSlice } from "../types";
+
+type ResultViewState = ResultViewSlice & {
+  activeModelId: string;
+  models: ModelEntry[];
+};
+
+const syncActiveModel = (
+  state: ResultViewState,
+  resultViewSettings: ResultViewSlice["resultViewSettings"],
+) => ({
+  resultViewSettings,
+  models: state.models.map((m) =>
+    m.id === state.activeModelId ? { ...m, resultViewSettings } : m,
+  ),
+});
 
 export const createResultViewSlice: SliceCreator<ResultViewSlice> = (set) => ({
   resultViewSettings: { ...DEFAULT_RESULT_VIEW_SETTINGS },
   selectedAnnotationIds: [],
 
   setResultViewSettings: (patch) =>
-    set((s) => ({
-      resultViewSettings: { ...s.resultViewSettings, ...patch },
-    })),
+    set((s) => syncActiveModel(s, { ...s.resultViewSettings, ...patch })),
 
   addAnnotation: (type) => {
     const anno = {
@@ -21,32 +34,32 @@ export const createResultViewSlice: SliceCreator<ResultViewSlice> = (set) => ({
       text: type === "text" ? "Annotation" : undefined,
       fontSize: 12,
     } as ResultViewSlice["resultViewSettings"]["annotations"][number];
-    set((s) => ({
-      resultViewSettings: {
+    set((s) =>
+      syncActiveModel(s, {
         ...s.resultViewSettings,
         annotations: [...s.resultViewSettings.annotations, anno],
-      },
-    }));
+      }),
+    );
   },
 
   updateAnnotation: (id, patch) =>
-    set((s) => ({
-      resultViewSettings: {
+    set((s) =>
+      syncActiveModel(s, {
         ...s.resultViewSettings,
         annotations: s.resultViewSettings.annotations.map((a) =>
           a.id === id ? { ...a, ...patch } : a,
         ),
-      },
-    })),
+      }),
+    ),
 
   removeAnnotation: (id) =>
     set((s) => ({
-      resultViewSettings: {
+      ...syncActiveModel(s, {
         ...s.resultViewSettings,
         annotations: s.resultViewSettings.annotations.filter(
           (a) => a.id !== id,
         ),
-      },
+      }),
       selectedAnnotationIds: s.selectedAnnotationIds.filter((i) => i !== id),
     })),
 
@@ -102,18 +115,16 @@ export const createResultViewSlice: SliceCreator<ResultViewSlice> = (set) => ({
         }
       }
 
-      return {
-        resultViewSettings: {
-          ...s.resultViewSettings,
-          annotations: s.resultViewSettings.annotations.map((a) => {
-            if (!sel.includes(a.id)) return a;
-            return {
-              ...a,
-              ...(targetX !== undefined ? { x: targetX } : {}),
-              ...(targetY !== undefined ? { y: targetY } : {}),
-            };
-          }),
-        },
-      };
+      return syncActiveModel(s, {
+        ...s.resultViewSettings,
+        annotations: s.resultViewSettings.annotations.map((a) => {
+          if (!sel.includes(a.id)) return a;
+          return {
+            ...a,
+            ...(targetX !== undefined ? { x: targetX } : {}),
+            ...(targetY !== undefined ? { y: targetY } : {}),
+          };
+        }),
+      });
     }),
 });

@@ -12,6 +12,12 @@ export function LoadsSection() {
   const updateLineLoad = useAppStore((s) => s.updateLineLoad);
   const removeLineLoad = useAppStore((s) => s.removeLineLoad);
 
+  const clampNumber = (value: string, min: number) => {
+    const parsed = parseFloat(value);
+    if (!Number.isFinite(parsed)) return min;
+    return parsed < min ? min : parsed;
+  };
+
   return (
     <Section title="Loads">
       <div
@@ -20,57 +26,92 @@ export function LoadsSection() {
       >
         UDL (kPa)
       </div>
-      {udls.map((u) => (
-        <div key={u.id} className="flex items-end gap-1 text-[12px]">
-          <label className="flex flex-col">
-            <Label>q</Label>
-            <input
-              type="number"
-              step="1"
-              value={u.magnitude}
-              onChange={(e) =>
-                updateUdl(u.id, { magnitude: parseFloat(e.target.value) || 0 })
-              }
-              className="w-14"
-              aria-label="UDL magnitude"
-            />
-          </label>
-          <label className="flex flex-col">
-            <Label>x₁</Label>
-            <input
-              type="number"
-              step="0.5"
-              value={u.x1}
-              onChange={(e) =>
-                updateUdl(u.id, { x1: parseFloat(e.target.value) || 0 })
-              }
-              className="w-14"
-              aria-label="UDL x1"
-            />
-          </label>
-          <label className="flex flex-col">
-            <Label>x₂</Label>
-            <input
-              type="number"
-              step="0.5"
-              value={u.x2}
-              onChange={(e) =>
-                updateUdl(u.id, { x2: parseFloat(e.target.value) || 0 })
-              }
-              className="w-14"
-              aria-label="UDL x2"
-            />
-          </label>
-          <button
-            onClick={() => removeUdl(u.id)}
-            className="w-5 h-5 flex items-center justify-center rounded hover:bg-red-500/20 hover:text-red-400 cursor-pointer transition-colors"
-            style={{ color: "var(--color-vsc-text-muted)", fontSize: "10px" }}
-            aria-label="Remove UDL"
-          >
-            ✕
-          </button>
-        </div>
-      ))}
+      {udls.map((u) => {
+        const magnitudeInvalid = u.magnitude <= 0;
+        const spanInvalid = Math.abs(u.x1 - u.x2) < 1e-6;
+        const spanTitle = spanInvalid
+          ? "x1 and x2 must be different."
+          : undefined;
+        return (
+          <div key={u.id} className="flex items-end gap-1 text-[12px]">
+            <label className="flex flex-col">
+              <Label>q</Label>
+              <input
+                type="number"
+                step="1"
+                min="0.1"
+                value={u.magnitude}
+                onChange={(e) =>
+                  updateUdl(u.id, {
+                    magnitude: parseFloat(e.target.value) || 0,
+                  })
+                }
+                onBlur={(e) =>
+                  updateUdl(u.id, {
+                    magnitude: clampNumber(e.target.value, 0.1),
+                  })
+                }
+                aria-invalid={magnitudeInvalid}
+                style={
+                  magnitudeInvalid
+                    ? { borderColor: "var(--color-vsc-error)" }
+                    : undefined
+                }
+                className="w-14"
+                aria-label="UDL magnitude"
+              />
+            </label>
+            <label className="flex flex-col">
+              <Label>x₁</Label>
+              <input
+                type="number"
+                step="0.5"
+                value={u.x1}
+                onChange={(e) =>
+                  updateUdl(u.id, { x1: parseFloat(e.target.value) || 0 })
+                }
+                aria-invalid={spanInvalid}
+                title={spanTitle}
+                style={
+                  spanInvalid
+                    ? { borderColor: "var(--color-vsc-error)" }
+                    : undefined
+                }
+                className="w-14"
+                aria-label="UDL x1"
+              />
+            </label>
+            <label className="flex flex-col">
+              <Label>x₂</Label>
+              <input
+                type="number"
+                step="0.5"
+                value={u.x2}
+                onChange={(e) =>
+                  updateUdl(u.id, { x2: parseFloat(e.target.value) || 0 })
+                }
+                aria-invalid={spanInvalid}
+                title={spanTitle}
+                style={
+                  spanInvalid
+                    ? { borderColor: "var(--color-vsc-error)" }
+                    : undefined
+                }
+                className="w-14"
+                aria-label="UDL x2"
+              />
+            </label>
+            <button
+              onClick={() => removeUdl(u.id)}
+              className="w-5 h-5 flex items-center justify-center rounded hover:bg-red-500/20 hover:text-red-400 cursor-pointer transition-colors"
+              style={{ color: "var(--color-vsc-text-muted)", fontSize: "10px" }}
+              aria-label="Remove UDL"
+            >
+              ✕
+            </button>
+          </div>
+        );
+      })}
       <button
         onClick={addUdl}
         className="text-[11px] mt-1 cursor-pointer hover:underline font-medium"
@@ -85,46 +126,61 @@ export function LoadsSection() {
       >
         Line Load (kN/m)
       </div>
-      {lineLoads.map((l) => (
-        <div key={l.id} className="flex items-end gap-1 text-[12px]">
-          <label className="flex flex-col">
-            <Label>P</Label>
-            <input
-              type="number"
-              step="1"
-              value={l.magnitude}
-              onChange={(e) =>
-                updateLineLoad(l.id, {
-                  magnitude: parseFloat(e.target.value) || 0,
-                })
-              }
-              className="w-14"
-              aria-label="Line load magnitude"
-            />
-          </label>
-          <label className="flex flex-col">
-            <Label>x</Label>
-            <input
-              type="number"
-              step="0.5"
-              value={l.x}
-              onChange={(e) =>
-                updateLineLoad(l.id, { x: parseFloat(e.target.value) || 0 })
-              }
-              className="w-14"
-              aria-label="Line load x"
-            />
-          </label>
-          <button
-            onClick={() => removeLineLoad(l.id)}
-            className="w-5 h-5 flex items-center justify-center rounded hover:bg-red-500/20 hover:text-red-400 cursor-pointer transition-colors"
-            style={{ color: "var(--color-vsc-text-muted)", fontSize: "10px" }}
-            aria-label="Remove line load"
-          >
-            ✕
-          </button>
-        </div>
-      ))}
+      {lineLoads.map((l) => {
+        const magnitudeInvalid = l.magnitude <= 0;
+        return (
+          <div key={l.id} className="flex items-end gap-1 text-[12px]">
+            <label className="flex flex-col">
+              <Label>P</Label>
+              <input
+                type="number"
+                step="1"
+                min="0.1"
+                value={l.magnitude}
+                onChange={(e) =>
+                  updateLineLoad(l.id, {
+                    magnitude: parseFloat(e.target.value) || 0,
+                  })
+                }
+                onBlur={(e) =>
+                  updateLineLoad(l.id, {
+                    magnitude: clampNumber(e.target.value, 0.1),
+                  })
+                }
+                aria-invalid={magnitudeInvalid}
+                style={
+                  magnitudeInvalid
+                    ? { borderColor: "var(--color-vsc-error)" }
+                    : undefined
+                }
+                className="w-14"
+                aria-label="Line load magnitude"
+              />
+            </label>
+            <label className="flex flex-col">
+              <Label>x</Label>
+              <input
+                type="number"
+                step="0.5"
+                value={l.x}
+                onChange={(e) =>
+                  updateLineLoad(l.id, { x: parseFloat(e.target.value) || 0 })
+                }
+                className="w-14"
+                aria-label="Line load x"
+              />
+            </label>
+            <button
+              onClick={() => removeLineLoad(l.id)}
+              className="w-5 h-5 flex items-center justify-center rounded hover:bg-red-500/20 hover:text-red-400 cursor-pointer transition-colors"
+              style={{ color: "var(--color-vsc-text-muted)", fontSize: "10px" }}
+              aria-label="Remove line load"
+            >
+              ✕
+            </button>
+          </div>
+        );
+      })}
       <button
         onClick={addLineLoad}
         className="text-[11px] mt-1 cursor-pointer hover:underline font-medium"

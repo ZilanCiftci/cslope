@@ -258,6 +258,7 @@ export interface AnalysisSlice {
   progress: number;
   result: AnalysisResult | null;
   errorMessage: string | null;
+  invalidateAnalysis: () => void;
   setAnalysisLimits: (limits: Partial<AnalysisLimitsState>) => void;
   setOptions: (opts: Partial<AnalysisOptions>) => void;
   runAnalysis: () => void;

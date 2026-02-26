@@ -21,7 +21,7 @@ export const PLOT_MARGINS = {
   R: 0.05,
 };
 
-export const DEFAULT_PROJECT_INFO: ProjectInfo = {
+export const createDefaultProjectInfo = (): ProjectInfo => ({
   title: "New Slope Analysis",
   subtitle: "",
   client: "",
@@ -33,7 +33,9 @@ export const DEFAULT_PROJECT_INFO: ProjectInfo = {
   description: "",
   canvasWidth: 1000,
   canvasHeight: 1000,
-};
+});
+
+export const DEFAULT_PROJECT_INFO: ProjectInfo = createDefaultProjectInfo();
 
 export const DEFAULT_COORDS: [number, number][] = [
   [0, 0],

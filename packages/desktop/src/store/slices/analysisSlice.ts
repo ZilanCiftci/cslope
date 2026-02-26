@@ -5,7 +5,6 @@ import {
 } from "@cslope/engine";
 import type { AnalysisResponse, SlopeDefinition } from "../../worker/messages";
 import type { SliceCreator } from "../helpers";
-import { RUN_RESET } from "../helpers";
 import { buildSlopeDTO } from "../helpers";
 import type { AnalysisSlice, ModelEntry } from "../types";
 import { DEFAULT_ANALYSIS_LIMITS, DEFAULT_PIEZO_LINE } from "../defaults";
@@ -28,14 +27,34 @@ export const createAnalysisSlice: SliceCreator<AnalysisSlice> = (set, get) => ({
   result: null,
   errorMessage: null,
 
-  setAnalysisLimits: (limits) =>
-    set((s) => ({
-      analysisLimits: { ...s.analysisLimits, ...limits },
-      ...RUN_RESET,
-    })),
+  invalidateAnalysis: () =>
+    set({ runState: "idle", progress: 0, result: null, errorMessage: null }),
 
-  setOptions: (opts: Partial<AnalysisOptions>) =>
-    set((s) => ({ options: { ...s.options, ...opts }, ...RUN_RESET })),
+  setAnalysisLimits: (limits) => {
+    set((s) => {
+      const analysisLimits = { ...s.analysisLimits, ...limits };
+      return {
+        analysisLimits,
+        models: s.models.map((m) =>
+          m.id === s.activeModelId ? { ...m, analysisLimits } : m,
+        ),
+      };
+    });
+    get().invalidateAnalysis();
+  },
+
+  setOptions: (opts: Partial<AnalysisOptions>) => {
+    set((s) => {
+      const options = { ...s.options, ...opts };
+      return {
+        options,
+        models: s.models.map((m) =>
+          m.id === s.activeModelId ? { ...m, options } : m,
+        ),
+      };
+    });
+    get().invalidateAnalysis();
+  },
 
   runAnalysis: () => {
     // Terminate any previously running worker to prevent racing updates
@@ -268,9 +287,22 @@ export const createAnalysisSlice: SliceCreator<AnalysisSlice> = (set, get) => ({
         });
       });
 
-    for (const model of get().models) {
-      await runModel(model);
-    }
+    const models = get().models.slice();
+    const maxConcurrency =
+      typeof navigator !== "undefined" && navigator.hardwareConcurrency
+        ? navigator.hardwareConcurrency
+        : 4;
+    const concurrency = Math.max(1, Math.min(models.length, maxConcurrency));
+    let cursor = 0;
+
+    await Promise.all(
+      Array.from({ length: concurrency }, async () => {
+        while (cursor < models.length) {
+          const model = models[cursor++];
+          await runModel(model);
+        }
+      }),
+    );
 
     const refreshedActive = get().models.find((m) => m.id === activeId);
     if (refreshedActive) {

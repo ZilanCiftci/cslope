@@ -6,7 +6,7 @@ import {
   DEFAULT_COORDS,
   DEFAULT_MATERIAL,
   DEFAULT_PIEZO_LINE,
-  DEFAULT_PROJECT_INFO,
+  createDefaultProjectInfo,
   DEFAULT_RESULT_VIEW_SETTINGS,
 } from "../defaults";
 import type { SliceCreator } from "../helpers";
@@ -14,62 +14,10 @@ import { nextId } from "../helpers";
 import type { ModelEntry, ModelsSlice } from "../types";
 
 function cloneModelEntry(model: ModelEntry): ModelEntry {
-  return {
-    ...model,
-    projectInfo: model.projectInfo ? { ...model.projectInfo } : undefined,
-    coordinates: model.coordinates.map((c) => [...c] as [number, number]),
-    materials: model.materials.map((m) => ({ ...m })),
-    materialBoundaries: model.materialBoundaries.map((b) => ({
-      ...b,
-      coordinates: b.coordinates.map((c) => [...c] as [number, number]),
-    })),
-    regionMaterials: { ...model.regionMaterials },
-    piezometricLine: {
-      ...model.piezometricLine,
-      lines: model.piezometricLine.lines.map((line) => ({
-        ...line,
-        coordinates: line.coordinates.map((c) => [...c] as [number, number]),
-      })),
-      materialAssignment: { ...model.piezometricLine.materialAssignment },
-    },
-    udls: model.udls.map((u) => ({ ...u })),
-    lineLoads: model.lineLoads.map((l) => ({ ...l })),
-    options: { ...model.options },
-    analysisLimits: { ...model.analysisLimits },
-    editViewOffset: model.editViewOffset
-      ? ([...model.editViewOffset] as [number, number])
-      : undefined,
-    editViewScale: model.editViewScale,
-    resultViewOffset: model.resultViewOffset
-      ? ([...model.resultViewOffset] as [number, number])
-      : undefined,
-    resultViewScale: model.resultViewScale,
-    viewOffset: model.viewOffset
-      ? ([...model.viewOffset] as [number, number])
-      : undefined,
-    viewScale: model.viewScale,
-    resultViewSettings: model.resultViewSettings
-      ? {
-          ...model.resultViewSettings,
-          annotations: model.resultViewSettings.annotations.map((a) => ({
-            ...a,
-          })),
-          paperFrame: { ...model.resultViewSettings.paperFrame },
-          viewLock: model.resultViewSettings.viewLock
-            ? {
-                ...model.resultViewSettings.viewLock,
-                bottomLeft: [
-                  ...model.resultViewSettings.viewLock.bottomLeft,
-                ] as [number, number],
-                topRight: [...model.resultViewSettings.viewLock.topRight] as [
-                  number,
-                  number,
-                ],
-              }
-            : undefined,
-        }
-      : undefined,
-  };
+  const clone = globalThis.structuredClone
+    ? globalThis.structuredClone
+    : (value: ModelEntry) => JSON.parse(JSON.stringify(value));
+  return clone(model);
 }
 
 function createDefaultModel(id: string, name: string): ModelEntry {
@@ -77,7 +25,7 @@ function createDefaultModel(id: string, name: string): ModelEntry {
     id,
     name,
     orientation: "ltr",
-    projectInfo: { ...DEFAULT_PROJECT_INFO },
+    projectInfo: createDefaultProjectInfo(),
     coordinates: [...DEFAULT_COORDS],
     materials: [{ ...DEFAULT_MATERIAL, id: nextId("mat") }],
     materialBoundaries: [],
@@ -96,7 +44,7 @@ function createDefaultModel(id: string, name: string): ModelEntry {
 
 const mapModelToState = (model: ModelEntry) => ({
   orientation: model.orientation ?? "ltr",
-  projectInfo: model.projectInfo ?? { ...DEFAULT_PROJECT_INFO },
+  projectInfo: model.projectInfo ?? createDefaultProjectInfo(),
   coordinates: model.coordinates,
   materials: model.materials,
   materialBoundaries: model.materialBoundaries,

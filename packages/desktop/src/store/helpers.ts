@@ -8,6 +8,10 @@ export type SliceCreator<T> = StateCreator<AppState, [], [], T>;
 
 let idCounter = 100;
 export function nextId(prefix: string): string {
+  const cryptoApi = globalThis.crypto;
+  if (cryptoApi && typeof cryptoApi.randomUUID === "function") {
+    return `${prefix}-${cryptoApi.randomUUID()}`;
+  }
   return `${prefix}-${++idCounter}`;
 }
 

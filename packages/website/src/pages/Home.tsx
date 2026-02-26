@@ -1,14 +1,5 @@
 import { motion } from "framer-motion";
-import {
-  Download,
-  BarChart3,
-  Layers,
-  ShieldCheck,
-  Zap,
-  Workflow,
-  LineChart,
-  Globe,
-} from "lucide-react";
+import { Download, BarChart3, Layers, ShieldCheck, Zap } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
@@ -43,44 +34,6 @@ const highlights = [
     title: "Focused desktop build",
     description:
       "Electron-based preview prioritises quick iteration on Windows; macOS packages are planned once stable.",
-  },
-];
-
-const workflow = [
-  {
-    title: "Sketch the slope",
-    detail:
-      "Start from example models or draw coordinates directly. Snapping, hit-tests, and undo keep edits clean.",
-  },
-  {
-    title: "Assign materials & loads",
-    detail:
-      "Define material sets, draw boundaries, toggle piezometric lines, and apply UDLs or line loads.",
-  },
-  {
-    title: "Scan failure mechanisms",
-    detail:
-      "Search circular failures, tweak solver options, and compare Bishop, Janbu, or Morgenstern–Price outputs side by side.",
-  },
-  {
-    title: "Package the findings",
-    detail:
-      "Export project JSON or vector PDFs to bring into reports while development continues toward one-click installers.",
-  },
-];
-
-const capabilityCallouts = [
-  {
-    title: "Data you can trust",
-    description:
-      "Everything is plain JSON plus regression-tested solvers, so you can inspect and version-control every change.",
-    icon: <LineChart className="h-5 w-5" />,
-  },
-  {
-    title: "Built for modern teams",
-    description:
-      "Keyboard shortcuts, undo/redo, and transparent GitHub issues keep collaboration honest about what ships next.",
-    icon: <Globe className="h-5 w-5" />,
   },
 ];
 

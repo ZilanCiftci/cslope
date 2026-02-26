@@ -8,6 +8,12 @@ export function MaterialsSection() {
   const addMaterial = useAppStore((s) => s.addMaterial);
   const removeMaterial = useAppStore((s) => s.removeMaterial);
 
+  const clampNumber = (value: string, min: number) => {
+    const parsed = parseFloat(value);
+    if (!Number.isFinite(parsed)) return min;
+    return parsed < min ? min : parsed;
+  };
+
   return (
     <Section title="Materials">
       {materials.map((mat) => (
@@ -58,42 +64,93 @@ export function MaterialsSection() {
           <div className="grid grid-cols-3 gap-2">
             <label className="flex flex-col gap-0.5">
               <Label>γ (kN/m³)</Label>
-              <input
-                type="number"
-                step="0.5"
-                value={mat.unitWeight}
-                onChange={(e) =>
-                  updateMaterial(mat.id, {
-                    unitWeight: parseFloat(e.target.value) || 0,
-                  })
-                }
-              />
+              {(() => {
+                const invalid = mat.unitWeight < 0.01;
+                return (
+                  <input
+                    type="number"
+                    step="0.5"
+                    min="0.01"
+                    value={mat.unitWeight}
+                    onChange={(e) =>
+                      updateMaterial(mat.id, {
+                        unitWeight: parseFloat(e.target.value) || 0,
+                      })
+                    }
+                    onBlur={(e) =>
+                      updateMaterial(mat.id, {
+                        unitWeight: clampNumber(e.target.value, 0.1),
+                      })
+                    }
+                    aria-invalid={invalid}
+                    style={
+                      invalid
+                        ? { borderColor: "var(--color-vsc-error)" }
+                        : undefined
+                    }
+                  />
+                );
+              })()}
             </label>
             <label className="flex flex-col gap-0.5">
               <Label>φ (°)</Label>
-              <input
-                type="number"
-                step="1"
-                value={mat.frictionAngle}
-                onChange={(e) =>
-                  updateMaterial(mat.id, {
-                    frictionAngle: parseFloat(e.target.value) || 0,
-                  })
-                }
-              />
+              {(() => {
+                const invalid = mat.frictionAngle < 0;
+                return (
+                  <input
+                    type="number"
+                    step="1"
+                    min="0"
+                    value={mat.frictionAngle}
+                    onChange={(e) =>
+                      updateMaterial(mat.id, {
+                        frictionAngle: parseFloat(e.target.value) || 0,
+                      })
+                    }
+                    onBlur={(e) =>
+                      updateMaterial(mat.id, {
+                        frictionAngle: clampNumber(e.target.value, 0),
+                      })
+                    }
+                    aria-invalid={invalid}
+                    style={
+                      invalid
+                        ? { borderColor: "var(--color-vsc-error)" }
+                        : undefined
+                    }
+                  />
+                );
+              })()}
             </label>
             <label className="flex flex-col gap-0.5">
               <Label>c (kPa)</Label>
-              <input
-                type="number"
-                step="0.5"
-                value={mat.cohesion}
-                onChange={(e) =>
-                  updateMaterial(mat.id, {
-                    cohesion: parseFloat(e.target.value) || 0,
-                  })
-                }
-              />
+              {(() => {
+                const invalid = mat.cohesion < 0;
+                return (
+                  <input
+                    type="number"
+                    step="0.5"
+                    min="0"
+                    value={mat.cohesion}
+                    onChange={(e) =>
+                      updateMaterial(mat.id, {
+                        cohesion: parseFloat(e.target.value) || 0,
+                      })
+                    }
+                    onBlur={(e) =>
+                      updateMaterial(mat.id, {
+                        cohesion: clampNumber(e.target.value, 0),
+                      })
+                    }
+                    aria-invalid={invalid}
+                    style={
+                      invalid
+                        ? { borderColor: "var(--color-vsc-error)" }
+                        : undefined
+                    }
+                  />
+                );
+              })()}
             </label>
           </div>
         </div>

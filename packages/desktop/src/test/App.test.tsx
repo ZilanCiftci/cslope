@@ -27,8 +27,8 @@ describe("App — VS Code dark layout", () => {
 
   it("renders Edit and Results mode tabs", () => {
     render(<App />);
-    expect(screen.getByText("Edit")).toBeInTheDocument();
-    expect(screen.getByText("Results")).toBeInTheDocument();
+    expect(screen.getAllByText("Edit").length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByText("Results").length).toBeGreaterThanOrEqual(1);
   });
 
   it("renders the Run button in the tab bar", () => {

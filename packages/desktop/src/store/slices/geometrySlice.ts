@@ -4,15 +4,41 @@ import {
   DEFAULT_PIEZO_LINE,
   PIEZO_COLORS,
   MATERIAL_COLORS,
-  DEFAULT_PROJECT_INFO,
+  createDefaultProjectInfo,
 } from "../defaults";
-import { nextId, RUN_RESET } from "../helpers";
+import { nextId } from "../helpers";
 import type { SliceCreator } from "../helpers";
-import type { GeometrySlice, PiezoLine } from "../types";
+import type { GeometrySlice, ModelEntry, PiezoLine } from "../types";
+
+type GeometryState = GeometrySlice & {
+  activeModelId: string;
+  models: ModelEntry[];
+};
+
+const syncActiveModel = (
+  state: GeometryState,
+  patch: Partial<GeometrySlice>,
+) => {
+  const modelPatch = {
+    orientation: patch.orientation ?? state.orientation,
+    projectInfo: patch.projectInfo ?? state.projectInfo,
+    coordinates: patch.coordinates ?? state.coordinates,
+    materials: patch.materials ?? state.materials,
+    materialBoundaries: patch.materialBoundaries ?? state.materialBoundaries,
+    regionMaterials: patch.regionMaterials ?? state.regionMaterials,
+    piezometricLine: patch.piezometricLine ?? state.piezometricLine,
+  };
+  return {
+    ...patch,
+    models: state.models.map((m) =>
+      m.id === state.activeModelId ? { ...m, ...modelPatch } : m,
+    ),
+  };
+};
 
 export const createGeometrySlice: SliceCreator<GeometrySlice> = (set, get) => ({
   orientation: "ltr",
-  projectInfo: { ...DEFAULT_PROJECT_INFO },
+  projectInfo: createDefaultProjectInfo(),
   coordinates: DEFAULT_COORDS,
   materials: [{ ...DEFAULT_MATERIAL }],
   materialBoundaries: [],
@@ -23,158 +49,212 @@ export const createGeometrySlice: SliceCreator<GeometrySlice> = (set, get) => ({
   selectedRegionKey: null,
 
   setSelectedPoint: (index) => set({ selectedPointIndex: index }),
-  setOrientation: (orientation) => set({ orientation, ...RUN_RESET }),
+  setOrientation: (orientation) => {
+    set((s) => syncActiveModel(s, { orientation }));
+    get().invalidateAnalysis();
+  },
   setAssigningMaterial: (materialId) =>
     set({ assigningMaterialId: materialId }),
   setSelectedRegionKey: (key) => set({ selectedRegionKey: key }),
 
-  setCoordinates: (coords) => set({ coordinates: coords, ...RUN_RESET }),
-  setCoordinate: (index, coord) =>
+  setCoordinates: (coords) => {
+    set((s) => syncActiveModel(s, { coordinates: coords }));
+    get().invalidateAnalysis();
+  },
+  setCoordinate: (index, coord) => {
     set((s) => {
       const next = [...s.coordinates];
       next[index] = coord;
-      return { coordinates: next, ...RUN_RESET };
-    }),
-  addCoordinate: (coord) =>
-    set((s) => ({ coordinates: [...s.coordinates, coord], ...RUN_RESET })),
-  insertCoordinateAt: (index, coord) =>
+      return syncActiveModel(s, { coordinates: next });
+    });
+    get().invalidateAnalysis();
+  },
+  addCoordinate: (coord) => {
+    set((s) => syncActiveModel(s, { coordinates: [...s.coordinates, coord] }));
+    get().invalidateAnalysis();
+  },
+  insertCoordinateAt: (index, coord) => {
     set((s) => {
       const next = [...s.coordinates];
       next.splice(index, 0, coord);
-      return { coordinates: next, ...RUN_RESET };
-    }),
-  removeCoordinate: (index) =>
-    set((s) => ({
-      coordinates: s.coordinates.filter((_, i) => i !== index),
-      ...RUN_RESET,
-    })),
+      return syncActiveModel(s, { coordinates: next });
+    });
+    get().invalidateAnalysis();
+  },
+  removeCoordinate: (index) => {
+    set((s) =>
+      syncActiveModel(s, {
+        coordinates: s.coordinates.filter((_, i) => i !== index),
+      }),
+    );
+    get().invalidateAnalysis();
+  },
 
-  setMaterials: (mats) => set({ materials: mats, ...RUN_RESET }),
-  updateMaterial: (id, patch) =>
-    set((s) => ({
-      materials: s.materials.map((m) => (m.id === id ? { ...m, ...patch } : m)),
-      ...RUN_RESET,
-    })),
-  addMaterial: () =>
-    set((s) => ({
-      materials: [
-        ...s.materials,
-        {
-          id: nextId("mat"),
-          name: `Material ${s.materials.length + 1}`,
-          unitWeight: 20,
-          frictionAngle: 35,
-          cohesion: 2,
-          color: MATERIAL_COLORS[s.materials.length % MATERIAL_COLORS.length],
-        },
-      ],
-      ...RUN_RESET,
-    })),
-  removeMaterial: (id) =>
-    set((s) => ({
-      materials: s.materials.filter((m) => m.id !== id),
-      regionMaterials: Object.fromEntries(
-        Object.entries(s.regionMaterials).filter(([, matId]) => matId !== id),
-      ),
-      ...RUN_RESET,
-    })),
+  setMaterials: (mats) => {
+    set((s) => syncActiveModel(s, { materials: mats }));
+    get().invalidateAnalysis();
+  },
+  updateMaterial: (id, patch) => {
+    set((s) =>
+      syncActiveModel(s, {
+        materials: s.materials.map((m) =>
+          m.id === id ? { ...m, ...patch } : m,
+        ),
+      }),
+    );
+    get().invalidateAnalysis();
+  },
+  addMaterial: () => {
+    set((s) =>
+      syncActiveModel(s, {
+        materials: [
+          ...s.materials,
+          {
+            id: nextId("mat"),
+            name: `Material ${s.materials.length + 1}`,
+            unitWeight: 20,
+            frictionAngle: 35,
+            cohesion: 2,
+            color: MATERIAL_COLORS[s.materials.length % MATERIAL_COLORS.length],
+          },
+        ],
+      }),
+    );
+    get().invalidateAnalysis();
+  },
+  removeMaterial: (id) => {
+    set((s) =>
+      syncActiveModel(s, {
+        materials: s.materials.filter((m) => m.id !== id),
+        regionMaterials: Object.fromEntries(
+          Object.entries(s.regionMaterials).filter(([, matId]) => matId !== id),
+        ),
+      }),
+    );
+    get().invalidateAnalysis();
+  },
 
   addMaterialBoundary: (coordinates) => {
     const id = nextId("bnd");
-    set((s) => ({
-      materialBoundaries: [...s.materialBoundaries, { id, coordinates }],
-      regionMaterials: {
-        ...s.regionMaterials,
-        [`below-${id}`]: s.materials[0]?.id ?? "",
-      },
-      ...RUN_RESET,
-    }));
+    set((s) =>
+      syncActiveModel(s, {
+        materialBoundaries: [...s.materialBoundaries, { id, coordinates }],
+        regionMaterials: {
+          ...s.regionMaterials,
+          [`below-${id}`]: s.materials[0]?.id ?? "",
+        },
+      }),
+    );
+    get().invalidateAnalysis();
   },
 
-  updateMaterialBoundary: (id, patch) =>
-    set((s) => ({
-      materialBoundaries: s.materialBoundaries.map((b) =>
-        b.id === id ? { ...b, ...patch } : b,
-      ),
-      ...RUN_RESET,
-    })),
+  updateMaterialBoundary: (id, patch) => {
+    set((s) =>
+      syncActiveModel(s, {
+        materialBoundaries: s.materialBoundaries.map((b) =>
+          b.id === id ? { ...b, ...patch } : b,
+        ),
+      }),
+    );
+    get().invalidateAnalysis();
+  },
 
-  removeMaterialBoundary: (id) =>
+  removeMaterialBoundary: (id) => {
     set((s) => {
       const rest = { ...s.regionMaterials };
       delete rest[`below-${id}`];
-      return {
+      return syncActiveModel(s, {
         materialBoundaries: s.materialBoundaries.filter((b) => b.id !== id),
         regionMaterials: rest,
-        ...RUN_RESET,
-      };
-    }),
+      });
+    });
+    get().invalidateAnalysis();
+  },
 
-  addBoundaryPoint: (boundaryId, coord) =>
-    set((s) => ({
-      materialBoundaries: s.materialBoundaries.map((b) =>
-        b.id === boundaryId
-          ? { ...b, coordinates: [...b.coordinates, coord] }
-          : b,
-      ),
-      ...RUN_RESET,
-    })),
-
-  insertBoundaryPointAt: (boundaryId, index, coord) =>
-    set((s) => ({
-      materialBoundaries: s.materialBoundaries.map((b) =>
-        b.id === boundaryId
-          ? {
-              ...b,
-              coordinates: [
-                ...b.coordinates.slice(0, index),
-                coord,
-                ...b.coordinates.slice(index),
-              ],
-            }
-          : b,
-      ),
-      ...RUN_RESET,
-    })),
-
-  updateBoundaryPoint: (boundaryId, index, coord) =>
-    set((s) => ({
-      materialBoundaries: s.materialBoundaries.map((b) => {
-        if (b.id !== boundaryId) return b;
-        const next = [...b.coordinates];
-        next[index] = coord;
-        return { ...b, coordinates: next };
+  addBoundaryPoint: (boundaryId, coord) => {
+    set((s) =>
+      syncActiveModel(s, {
+        materialBoundaries: s.materialBoundaries.map((b) =>
+          b.id === boundaryId
+            ? { ...b, coordinates: [...b.coordinates, coord] }
+            : b,
+        ),
       }),
-      ...RUN_RESET,
-    })),
+    );
+    get().invalidateAnalysis();
+  },
 
-  removeBoundaryPoint: (boundaryId, index) =>
-    set((s) => ({
-      materialBoundaries: s.materialBoundaries.map((b) =>
-        b.id === boundaryId
-          ? { ...b, coordinates: b.coordinates.filter((_, i) => i !== index) }
-          : b,
-      ),
-      ...RUN_RESET,
-    })),
+  insertBoundaryPointAt: (boundaryId, index, coord) => {
+    set((s) =>
+      syncActiveModel(s, {
+        materialBoundaries: s.materialBoundaries.map((b) =>
+          b.id === boundaryId
+            ? {
+                ...b,
+                coordinates: [
+                  ...b.coordinates.slice(0, index),
+                  coord,
+                  ...b.coordinates.slice(index),
+                ],
+              }
+            : b,
+        ),
+      }),
+    );
+    get().invalidateAnalysis();
+  },
 
-  setRegionMaterial: (regionKey, materialId) =>
-    set((s) => ({
-      regionMaterials: { ...s.regionMaterials, [regionKey]: materialId },
-      ...RUN_RESET,
-    })),
+  updateBoundaryPoint: (boundaryId, index, coord) => {
+    set((s) =>
+      syncActiveModel(s, {
+        materialBoundaries: s.materialBoundaries.map((b) => {
+          if (b.id !== boundaryId) return b;
+          const next = [...b.coordinates];
+          next[index] = coord;
+          return { ...b, coordinates: next };
+        }),
+      }),
+    );
+    get().invalidateAnalysis();
+  },
 
-  setPiezometricLine: (pl) =>
+  removeBoundaryPoint: (boundaryId, index) => {
+    set((s) =>
+      syncActiveModel(s, {
+        materialBoundaries: s.materialBoundaries.map((b) =>
+          b.id === boundaryId
+            ? {
+                ...b,
+                coordinates: b.coordinates.filter((_, i) => i !== index),
+              }
+            : b,
+        ),
+      }),
+    );
+    get().invalidateAnalysis();
+  },
+
+  setRegionMaterial: (regionKey, materialId) => {
+    set((s) =>
+      syncActiveModel(s, {
+        regionMaterials: { ...s.regionMaterials, [regionKey]: materialId },
+      }),
+    );
+    get().invalidateAnalysis();
+  },
+
+  setPiezometricLine: (pl) => {
     set((s) => {
       const next = { ...s.piezometricLine, ...pl };
-      return {
+      return syncActiveModel(s, {
         piezometricLine: {
           ...next,
           enabled: next.lines.length > 0,
         },
-        ...RUN_RESET,
-      };
-    }),
+      });
+    });
+    get().invalidateAnalysis();
+  },
 
   addPiezoLine: (coords) => {
     const s = get();
@@ -187,18 +267,20 @@ export const createGeometrySlice: SliceCreator<GeometrySlice> = (set, get) => ({
       color,
       coordinates: coords ?? [],
     };
-    set({
-      piezometricLine: {
-        ...s.piezometricLine,
-        enabled: true,
-        lines: [...s.piezometricLine.lines, line],
-        activeLineId: id,
-      },
-      ...RUN_RESET,
-    });
+    set((state) =>
+      syncActiveModel(state, {
+        piezometricLine: {
+          ...s.piezometricLine,
+          enabled: true,
+          lines: [...s.piezometricLine.lines, line],
+          activeLineId: id,
+        },
+      }),
+    );
+    get().invalidateAnalysis();
   },
 
-  removePiezoLine: (lineId) =>
+  removePiezoLine: (lineId) => {
     set((s) => {
       const lines = s.piezometricLine.lines.filter((l) => l.id !== lineId);
       const activeLineId =
@@ -209,7 +291,7 @@ export const createGeometrySlice: SliceCreator<GeometrySlice> = (set, get) => ({
       for (const [matId, plId] of Object.entries(materialAssignment)) {
         if (plId === lineId) delete materialAssignment[matId];
       }
-      return {
+      return syncActiveModel(s, {
         piezometricLine: {
           ...s.piezometricLine,
           enabled: lines.length > 0,
@@ -217,32 +299,39 @@ export const createGeometrySlice: SliceCreator<GeometrySlice> = (set, get) => ({
           activeLineId,
           materialAssignment,
         },
-        ...RUN_RESET,
-      };
-    }),
+      });
+    });
+    get().invalidateAnalysis();
+  },
 
-  renamePiezoLine: (lineId, name) =>
-    set((s) => ({
-      piezometricLine: {
-        ...s.piezometricLine,
-        lines: s.piezometricLine.lines.map((l) =>
-          l.id === lineId ? { ...l, name } : l,
-        ),
-      },
-      ...RUN_RESET,
-    })),
+  renamePiezoLine: (lineId, name) => {
+    set((s) =>
+      syncActiveModel(s, {
+        piezometricLine: {
+          ...s.piezometricLine,
+          lines: s.piezometricLine.lines.map((l) =>
+            l.id === lineId ? { ...l, name } : l,
+          ),
+        },
+      }),
+    );
+    get().invalidateAnalysis();
+  },
 
-  setActivePiezoLine: (lineId) =>
-    set((s) => ({
-      piezometricLine: { ...s.piezometricLine, activeLineId: lineId },
-      ...RUN_RESET,
-    })),
+  setActivePiezoLine: (lineId) => {
+    set((s) =>
+      syncActiveModel(s, {
+        piezometricLine: { ...s.piezometricLine, activeLineId: lineId },
+      }),
+    );
+    get().invalidateAnalysis();
+  },
 
-  setPiezoCoordinate: (index, coord) =>
+  setPiezoCoordinate: (index, coord) => {
     set((s) => {
       const activeId = s.piezometricLine.activeLineId;
       if (!activeId) return {};
-      return {
+      return syncActiveModel(s, {
         piezometricLine: {
           ...s.piezometricLine,
           lines: s.piezometricLine.lines.map((l) => {
@@ -252,15 +341,16 @@ export const createGeometrySlice: SliceCreator<GeometrySlice> = (set, get) => ({
             return { ...l, coordinates: coords };
           }),
         },
-        ...RUN_RESET,
-      };
-    }),
+      });
+    });
+    get().invalidateAnalysis();
+  },
 
-  addPiezoPoint: (coord) =>
+  addPiezoPoint: (coord) => {
     set((s) => {
       const activeId = s.piezometricLine.activeLineId;
       if (!activeId) return {};
-      return {
+      return syncActiveModel(s, {
         piezometricLine: {
           ...s.piezometricLine,
           lines: s.piezometricLine.lines.map((l) =>
@@ -269,15 +359,16 @@ export const createGeometrySlice: SliceCreator<GeometrySlice> = (set, get) => ({
               : l,
           ),
         },
-        ...RUN_RESET,
-      };
-    }),
+      });
+    });
+    get().invalidateAnalysis();
+  },
 
-  insertPiezoPointAt: (index, coord) =>
+  insertPiezoPointAt: (index, coord) => {
     set((s) => {
       const activeId = s.piezometricLine.activeLineId;
       if (!activeId) return {};
-      return {
+      return syncActiveModel(s, {
         piezometricLine: {
           ...s.piezometricLine,
           lines: s.piezometricLine.lines.map((l) => {
@@ -287,15 +378,16 @@ export const createGeometrySlice: SliceCreator<GeometrySlice> = (set, get) => ({
             return { ...l, coordinates: coords };
           }),
         },
-        ...RUN_RESET,
-      };
-    }),
+      });
+    });
+    get().invalidateAnalysis();
+  },
 
-  removePiezoPoint: (index) =>
+  removePiezoPoint: (index) => {
     set((s) => {
       const activeId = s.piezometricLine.activeLineId;
       if (!activeId) return {};
-      return {
+      return syncActiveModel(s, {
         piezometricLine: {
           ...s.piezometricLine,
           lines: s.piezometricLine.lines.map((l) =>
@@ -307,21 +399,25 @@ export const createGeometrySlice: SliceCreator<GeometrySlice> = (set, get) => ({
               : l,
           ),
         },
-        ...RUN_RESET,
-      };
-    }),
+      });
+    });
+    get().invalidateAnalysis();
+  },
 
-  setPiezoMaterialAssignment: (materialId, piezoLineId) =>
-    set((s) => ({
-      piezometricLine: {
-        ...s.piezometricLine,
-        materialAssignment: {
-          ...s.piezometricLine.materialAssignment,
-          [materialId]: piezoLineId,
+  setPiezoMaterialAssignment: (materialId, piezoLineId) => {
+    set((s) =>
+      syncActiveModel(s, {
+        piezometricLine: {
+          ...s.piezometricLine,
+          materialAssignment: {
+            ...s.piezometricLine.materialAssignment,
+            [materialId]: piezoLineId,
+          },
         },
-      },
-      ...RUN_RESET,
-    })),
+      }),
+    );
+    get().invalidateAnalysis();
+  },
 
   enablePiezoWithDefault: () => {
     const s = get();
@@ -329,10 +425,12 @@ export const createGeometrySlice: SliceCreator<GeometrySlice> = (set, get) => ({
 
     const coords = s.coordinates;
     if (coords.length < 3) {
-      set({
-        piezometricLine: { ...s.piezometricLine, enabled: true },
-        ...RUN_RESET,
-      });
+      set((state) =>
+        syncActiveModel(state, {
+          piezometricLine: { ...s.piezometricLine, enabled: true },
+        }),
+      );
+      get().invalidateAnalysis();
       return;
     }
 
@@ -351,14 +449,16 @@ export const createGeometrySlice: SliceCreator<GeometrySlice> = (set, get) => ({
         [maxX, midY],
       ],
     };
-    set({
-      piezometricLine: {
-        enabled: true,
-        lines: [defaultLine],
-        activeLineId: lineId,
-        materialAssignment: {},
-      },
-      ...RUN_RESET,
-    });
+    set((state) =>
+      syncActiveModel(state, {
+        piezometricLine: {
+          enabled: true,
+          lines: [defaultLine],
+          activeLineId: lineId,
+          materialAssignment: {},
+        },
+      }),
+    );
+    get().invalidateAnalysis();
   },
 });
