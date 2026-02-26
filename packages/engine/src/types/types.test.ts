@@ -75,6 +75,7 @@ describe("constants", () => {
     expect(DEFAULT_ANALYSIS_OPTIONS.tolerance).toBe(0.005);
     expect(DEFAULT_ANALYSIS_OPTIONS.maxIterations).toBe(15);
     expect(DEFAULT_ANALYSIS_OPTIONS.method).toBe("Bishop");
+    expect(DEFAULT_ANALYSIS_OPTIONS.intersliceFunction).toBe("half-sine");
   });
 
   it("has correct numerical constants", () => {

@@ -1,13 +1,45 @@
-import type { AnalysisMethod } from "@cslope/engine";
+import type { AnalysisMethod, IntersliceFunctionType } from "@cslope/engine";
 import { useAppStore } from "../../../store/app-store";
 import { Section } from "../../../components/ui/Section";
 import { Label } from "../../../components/ui/Label";
 
 const METHODS: AnalysisMethod[] = ["Bishop", "Janbu", "Morgenstern-Price"];
+const INTERSLICE_FUNCTIONS: IntersliceFunctionType[] = [
+  "constant",
+  "half-sine",
+  "clipped-sine",
+  "trapezoidal",
+  "data-point-specified",
+];
+
+function parseInterslicePoints(input: string): [number, number][] {
+  return input
+    .split(";")
+    .map((chunk) => chunk.trim())
+    .filter(Boolean)
+    .map((chunk) => {
+      const [xRaw, yRaw] = chunk.split(",").map((v) => v.trim());
+      const x = Number(xRaw);
+      const y = Number(yRaw);
+      return [x, y] as [number, number];
+    })
+    .filter(([x, y]) => Number.isFinite(x) && Number.isFinite(y));
+}
+
+function formatInterslicePoints(
+  points: [number, number][] | undefined,
+): string {
+  if (!points || points.length === 0) return "";
+  return points.map(([x, y]) => `${x},${y}`).join("; ");
+}
 
 export function OptionsSection() {
   const options = useAppStore((s) => s.options);
   const setOptions = useAppStore((s) => s.setOptions);
+  const intersliceFunction = options.intersliceFunction ?? "half-sine";
+  const interslicePointsValue = formatInterslicePoints(
+    options.intersliceDataPoints,
+  );
 
   return (
     <Section title="Analysis Options">
@@ -84,6 +116,43 @@ export function OptionsSection() {
             aria-label="Tolerance"
           />
         </label>
+        {options.method === "Morgenstern-Price" && (
+          <label className="flex flex-col gap-0.5">
+            <Label>Interslice Function</Label>
+            <select
+              value={intersliceFunction}
+              onChange={(e) =>
+                setOptions({
+                  intersliceFunction: e.target.value as IntersliceFunctionType,
+                })
+              }
+              aria-label="Morgenstern-Price interslice function"
+            >
+              {INTERSLICE_FUNCTIONS.map((fn) => (
+                <option key={fn} value={fn}>
+                  {fn}
+                </option>
+              ))}
+            </select>
+          </label>
+        )}
+        {options.method === "Morgenstern-Price" &&
+          intersliceFunction === "data-point-specified" && (
+            <label className="col-span-2 flex flex-col gap-0.5">
+              <Label>Data Points (x,f)</Label>
+              <input
+                type="text"
+                value={interslicePointsValue}
+                onChange={(e) =>
+                  setOptions({
+                    intersliceDataPoints: parseInterslicePoints(e.target.value),
+                  })
+                }
+                placeholder="0,0; 0.2,0.6; 0.5,1; 0.8,0.6; 1,0"
+                aria-label="Interslice data points"
+              />
+            </label>
+          )}
       </div>
     </Section>
   );

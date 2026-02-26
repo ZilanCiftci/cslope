@@ -55,7 +55,8 @@ export function createSlice(
 
   // Base length (arc)
   const chordLength = Math.hypot(x0 - x1, y0Bottom - y1Bottom);
-  const baseLength = 2 * Math.asin(chordLength / (2 * radius)) * radius;
+  const asinArg = Math.min(1, chordLength / (2 * radius));
+  const baseLength = 2 * Math.asin(asinArg) * radius;
 
   // Pore water pressure
   let U = 0;

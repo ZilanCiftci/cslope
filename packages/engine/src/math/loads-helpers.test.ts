@@ -1,7 +1,12 @@
 import { describe, expect, it } from "vitest";
 import { calculateAllLoads } from "./loads";
 import {
+  constantInterslice,
   halfsine,
+  clippedSine,
+  trapezoidal,
+  dataPointSpecified,
+  getIntersliceFunctionValue,
   midCoord,
   distPoints,
   extrapolateLambda,
@@ -60,6 +65,51 @@ describe("halfsine", () => {
   it("returns 0 at boundaries", () => {
     expect(halfsine(0, 0, 10)).toBe(0);
     expect(halfsine(10, 0, 10)).toBe(0);
+  });
+});
+
+describe("constantInterslice", () => {
+  it("returns 1 inside domain and 0 outside", () => {
+    expect(constantInterslice(5, 0, 10)).toBe(1);
+    expect(constantInterslice(0, 0, 10)).toBe(0);
+    expect(constantInterslice(10, 0, 10)).toBe(0);
+  });
+});
+
+describe("clippedSine", () => {
+  it("clips low values above tails", () => {
+    expect(clippedSine(1, 0, 10)).toBeGreaterThan(0.34);
+    expect(clippedSine(5, 0, 10)).toBeCloseTo(1, 10);
+  });
+});
+
+describe("trapezoidal", () => {
+  it("has plateau in center and ramps on sides", () => {
+    expect(trapezoidal(2, 0, 10)).toBeCloseTo(1, 10);
+    expect(trapezoidal(5, 0, 10)).toBeCloseTo(1, 10);
+    expect(trapezoidal(9, 0, 10)).toBeCloseTo(0.5, 10);
+  });
+});
+
+describe("dataPointSpecified", () => {
+  it("interpolates from normalized points", () => {
+    const pts: [number, number][] = [
+      [0, 0],
+      [0.5, 1],
+      [1, 0],
+    ];
+    expect(dataPointSpecified(5, 0, 10, pts)).toBeCloseTo(1, 10);
+    expect(dataPointSpecified(2.5, 0, 10, pts)).toBeCloseTo(0.5, 10);
+  });
+});
+
+describe("getIntersliceFunctionValue", () => {
+  it("dispatches by function name", () => {
+    expect(getIntersliceFunctionValue("constant", 5, 0, 10)).toBe(1);
+    expect(getIntersliceFunctionValue("half-sine", 5, 0, 10)).toBeCloseTo(
+      1,
+      10,
+    );
   });
 });
 

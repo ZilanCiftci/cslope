@@ -4,6 +4,7 @@
 
 import type {
   AnalysisLimits,
+  IntersliceFunctionType,
   AnalysisMethod,
   AnalysisOptions,
   GeometryWithMaterial,
@@ -86,6 +87,8 @@ export class Slope {
   private _limitToRunBishops: number;
   private _limitToRunJanbu: number;
   private _limitToRunMorgenstern: number;
+  private _intersliceFunction: IntersliceFunctionType;
+  private _intersliceDataPoints: [number, number][];
 
   // ── Analysis limits ───────────────────────────────────────────
   private _limits: [number, number, number, number] = [0, 0, 0, 0];
@@ -111,6 +114,8 @@ export class Slope {
     this._limitToRunBishops = d.limitBishop;
     this._limitToRunJanbu = d.limitJanbu;
     this._limitToRunMorgenstern = d.limitMorgensternPrice;
+    this._intersliceFunction = d.intersliceFunction ?? "half-sine";
+    this._intersliceDataPoints = [...(d.intersliceDataPoints ?? [])];
   }
 
   // ────────────────────────────────────────────────────────────────
@@ -196,6 +201,14 @@ export class Slope {
 
   get limitToRunMorgenstern(): number {
     return this._limitToRunMorgenstern;
+  }
+
+  get intersliceFunction(): IntersliceFunctionType {
+    return this._intersliceFunction;
+  }
+
+  get intersliceDataPoints(): [number, number][] {
+    return this._intersliceDataPoints;
   }
 
   // ────────────────────────────────────────────────────────────────
@@ -531,6 +544,28 @@ export class Slope {
     }
     if (opts.limitMorgensternPrice !== undefined) {
       this._limitToRunMorgenstern = opts.limitMorgensternPrice;
+    }
+    if (opts.intersliceFunction !== undefined) {
+      if (
+        ![
+          "constant",
+          "half-sine",
+          "clipped-sine",
+          "trapezoidal",
+          "data-point-specified",
+        ].includes(opts.intersliceFunction)
+      ) {
+        throw new Error(
+          "intersliceFunction must be one of 'constant', 'half-sine', 'clipped-sine', 'trapezoidal', or 'data-point-specified'",
+        );
+      }
+      this._intersliceFunction = opts.intersliceFunction;
+    }
+    if (opts.intersliceDataPoints !== undefined) {
+      this._intersliceDataPoints = opts.intersliceDataPoints.filter(
+        (p): p is [number, number] =>
+          Array.isArray(p) && p.length >= 2 && isFinite(p[0]) && isFinite(p[1]),
+      );
     }
     this._resetResults();
   }

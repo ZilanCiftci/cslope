@@ -11,6 +11,7 @@ export type { UdlParams, LineLoadParams } from "./loads";
 
 export type {
   AnalysisMethod,
+  IntersliceFunctionType,
   AnalysisOptions,
   AnalysisResult,
   AnalysisLimits,

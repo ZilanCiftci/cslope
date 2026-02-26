@@ -47,18 +47,7 @@ self.onmessage = (event: MessageEvent<AnalysisRequest>) => {
     const slope = buildSlope(slopeDef);
 
     // Apply analysis options
-    slope.updateAnalysisOptions({
-      slices: options.slices,
-      iterations: options.iterations,
-      refinedIterations: options.refinedIterations,
-      method: options.method,
-      tolerance: options.tolerance,
-      maxIterations: options.maxIterations,
-    });
-
-    if (options.minFailureDist > 0) {
-      slope.updateAnalysisOptions({ minFailureDist: options.minFailureDist });
-    }
+    slope.updateAnalysisOptions(options);
 
     // Send progress: running analysis
     self.postMessage({

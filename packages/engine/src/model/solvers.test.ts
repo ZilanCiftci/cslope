@@ -286,6 +286,47 @@ describe("Morgenstern-Price method", () => {
     // For simple slopes, M-P and Bishop should be very close
     expect(Math.abs(fosMP! - fosB!)).toBeLessThan(0.1);
   });
+
+  it("supports selectable interslice function modes", () => {
+    const modes = [
+      "constant",
+      "half-sine",
+      "clipped-sine",
+      "trapezoidal",
+      "data-point-specified",
+    ] as const;
+
+    for (const mode of modes) {
+      const s = createHomogeneousSlope();
+      s.setAnalysisLimits({
+        entryLeftX: 17,
+        entryRightX: 22,
+        exitLeftX: 37,
+        exitRightX: 43,
+      });
+      s.updateAnalysisOptions({
+        slices: 40,
+        iterations: 150,
+        method: "Morgenstern-Price",
+        intersliceFunction: mode,
+        intersliceDataPoints:
+          mode === "data-point-specified"
+            ? [
+                [0, 0],
+                [0.2, 0.6],
+                [0.5, 1.0],
+                [0.8, 0.6],
+                [1, 0],
+              ]
+            : [],
+      });
+
+      const fos = analyseSlope(s);
+      expect(fos, `mode=${mode}`).not.toBeNull();
+      expect(fos!, `mode=${mode}`).toBeGreaterThan(0.3);
+      expect(fos!, `mode=${mode}`).toBeLessThan(5.0);
+    }
+  });
 });
 
 // ── Multi-material slope ─────────────────────────────────────────

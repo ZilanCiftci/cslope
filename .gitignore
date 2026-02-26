@@ -1,10 +1,30 @@
+# Dependencies
 node_modules/
+
+# Build output
 dist/
-docs/
 dist-electron/
 release/
-.vscode/
-.env
 *.tsbuildinfo
+
+# IDE / OS
+.vscode/
+.DS_Store
+Thumbs.db
+
+# Environment / secrets
+.env
+.env.*
+!.env.example
+
+# Logs
+*.log
+
+# Python
 .venv/
+
+# Profiling
 *.prof
+
+# Docs (generated)
+docs/

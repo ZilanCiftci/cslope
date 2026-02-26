@@ -5,7 +5,7 @@
  */
 
 import type { Slice } from "../types/index";
-import { halfsine, extrapolateLambda } from "../math/index";
+import { getIntersliceFunctionValue, extrapolateLambda } from "../math/index";
 import type { Slope, SearchPlane } from "./slope";
 import { getSlices } from "./slices";
 import { setEntryExitPlanes, generateRefinedPlanes } from "./search";
@@ -33,6 +33,8 @@ function getSlicePropertyArrays(
   slices: Slice[],
   x0: number,
   x1: number,
+  intersliceFunction: Slope["intersliceFunction"],
+  intersliceDataPoints: Slope["intersliceDataPoints"],
 ): SliceArrays {
   const n = slices.length;
   const weights = new Float64Array(n);
@@ -61,7 +63,13 @@ function getSlicePropertyArrays(
     cohesionUndraineds[i] = s.cohesionUndrained;
     materialCodes[i] = s.materialType === "Combined" ? 1 : 0;
     dxs[i] = s.dx;
-    funcs[i] = halfsine(s.xRight, x0, x1);
+    funcs[i] = getIntersliceFunctionValue(
+      intersliceFunction,
+      s.xRight,
+      x0,
+      x1,
+      intersliceDataPoints,
+    );
   }
 
   return {
@@ -197,7 +205,6 @@ function solveFOSGenericMoment(
  */
 function solveFOSGenericForceCircular(
   p: SliceArrays,
-  R: number,
   lambdaVal: number,
   initialFOS: number,
   initialNs: Float64Array,
@@ -339,7 +346,13 @@ export function analyseBishop(
 
   const x0 = slices[0].xLeft;
   const x1 = slices[slices.length - 1].xRight;
-  const props = getSlicePropertyArrays(slices, x0, x1);
+  const props = getSlicePropertyArrays(
+    slices,
+    x0,
+    x1,
+    slope.intersliceFunction,
+    slope.intersliceDataPoints,
+  );
   const initialNs = new Float64Array(slices.length);
 
   const [fos, pushing, resisting] = solveFOSGenericMoment(
@@ -370,12 +383,17 @@ export function analyseJanbu(
 
   const x0 = slices[0].xLeft;
   const x1 = slices[slices.length - 1].xRight;
-  const props = getSlicePropertyArrays(slices, x0, x1);
+  const props = getSlicePropertyArrays(
+    slices,
+    x0,
+    x1,
+    slope.intersliceFunction,
+    slope.intersliceDataPoints,
+  );
   const initialNs = new Float64Array(slices.length);
 
   const [fos, pushing, resisting] = solveFOSGenericForceCircular(
     props,
-    slices[0].R,
     0, // lambda = 0
     FS,
     initialNs,
@@ -406,7 +424,13 @@ export function analyseMorgensternPrice(
 
   const x0 = slices[0].xLeft;
   const x1 = slices[slices.length - 1].xRight;
-  const props = getSlicePropertyArrays(slices, x0, x1);
+  const props = getSlicePropertyArrays(
+    slices,
+    x0,
+    x1,
+    slope.intersliceFunction,
+    slope.intersliceDataPoints,
+  );
   const R = slices[0].R;
   const n = slices.length;
   const maxIters = slope.maxIterations;
@@ -434,7 +458,6 @@ export function analyseMorgensternPrice(
   let Nf: Float64Array = new Float64Array(n);
   let [FSf, pushingF, resistingF, NfOut] = solveFOSGenericForceCircular(
     props,
-    R,
     0,
     FSord,
     Nf,
@@ -449,7 +472,6 @@ export function analyseMorgensternPrice(
     for (const fact of [2, 0.5, 1.5, 0.75, 1.1, 0.9]) {
       [FSf, pushingF, resistingF, NfOut] = solveFOSGenericForceCircular(
         props,
-        R,
         0,
         FSord * fact,
         new Float64Array(n),
@@ -482,7 +504,6 @@ export function analyseMorgensternPrice(
 
   [FSf, pushingF, resistingF, NfOut] = solveFOSGenericForceCircular(
     props,
-    R,
     lambda2,
     FSf,
     Nf,
@@ -528,7 +549,6 @@ export function analyseMorgensternPrice(
 
     [FSf, pushingF, resistingF, NfOut] = solveFOSGenericForceCircular(
       props,
-      R,
       lambdaNew,
       FSf,
       Nf,
@@ -589,10 +609,18 @@ export function analyseSlope(slope: Slope): number | null {
   }
 
   // Combine search + individual planes
-  const allPlanes: SearchPlane[] = [
+  const combinedPlanes: SearchPlane[] = [
     ...slope.search.map((p) => ({ ...p, fos: 100, slices: null })),
     ...slope.individualPlanes.map((p) => ({ ...p, fos: 100, slices: null })),
   ];
+  const allPlanes: SearchPlane[] = [];
+  const seenPlanes = new Set<string>();
+  for (const plane of combinedPlanes) {
+    const key = `${plane.cx}|${plane.cy}|${plane.radius}`;
+    if (seenPlanes.has(key)) continue;
+    seenPlanes.add(key);
+    allPlanes.push(plane);
+  }
 
   evaluatePlanes(slope, allPlanes);
 

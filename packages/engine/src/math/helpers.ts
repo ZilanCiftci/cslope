@@ -3,6 +3,18 @@
  */
 
 /**
+ * Constant interslice function (unity across domain).
+ */
+export function constantInterslice(
+  x: number,
+  xStart: number,
+  xEnd: number,
+): number {
+  if (x <= xStart || x >= xEnd) return 0.0;
+  return 1.0;
+}
+
+/**
  * Half-sine interslice function for Morgenstern-Price analysis.
  *
  * @param x - x-coordinate to evaluate
@@ -13,6 +25,113 @@
 export function halfsine(x: number, xStart: number, xEnd: number): number {
   if (x <= xStart || x >= xEnd) return 0.0;
   return Math.sin((Math.PI * (x - xStart)) / (xEnd - xStart));
+}
+
+/**
+ * Clipped-sine interslice function.
+ *
+ * Uses a half-sine profile clipped from below to avoid very low tail values.
+ */
+export function clippedSine(x: number, xStart: number, xEnd: number): number {
+  if (x <= xStart || x >= xEnd) return 0.0;
+  const y = halfsine(x, xStart, xEnd);
+  return Math.max(0.35, y);
+}
+
+/**
+ * Trapezoidal interslice function.
+ *
+ * Piecewise-linear rise (0–20%), flat top (20–80%), and fall (80–100%).
+ */
+export function trapezoidal(x: number, xStart: number, xEnd: number): number {
+  if (x <= xStart || x >= xEnd) return 0.0;
+  const span = xEnd - xStart;
+  if (span <= 0) return 0.0;
+
+  const xi = (x - xStart) / span;
+  if (xi <= 0 || xi >= 1) return 0.0;
+  if (xi < 0.2) return xi / 0.2;
+  if (xi <= 0.8) return 1.0;
+  return (1 - xi) / 0.2;
+}
+
+/**
+ * Data-point-specified interslice function using piecewise-linear interpolation.
+ *
+ * The provided points are normalized: x in [0,1], f in [0,1].
+ */
+export function dataPointSpecified(
+  x: number,
+  xStart: number,
+  xEnd: number,
+  points: [number, number][],
+): number {
+  if (x <= xStart || x >= xEnd) return 0.0;
+  const span = xEnd - xStart;
+  if (span <= 0 || points.length === 0) return halfsine(x, xStart, xEnd);
+
+  const xi = (x - xStart) / span;
+  if (xi <= 0 || xi >= 1) return 0.0;
+
+  const normalized = [...points]
+    .filter(
+      (p): p is [number, number] =>
+        Number.isFinite(p[0]) && Number.isFinite(p[1]),
+    )
+    .map(([px, py]) => [Math.max(0, Math.min(1, px)), Math.max(0, py)] as const)
+    .sort((a, b) => a[0] - b[0]);
+
+  if (normalized.length === 0) return halfsine(x, xStart, xEnd);
+
+  if (xi <= normalized[0][0]) return normalized[0][1];
+  if (xi >= normalized[normalized.length - 1][0]) {
+    return normalized[normalized.length - 1][1];
+  }
+
+  for (let i = 0; i < normalized.length - 1; i++) {
+    const [x0, y0] = normalized[i];
+    const [x1, y1] = normalized[i + 1];
+    if (xi >= x0 && xi <= x1) {
+      const dx = x1 - x0;
+      if (dx <= 1e-12) return y1;
+      const t = (xi - x0) / dx;
+      return y0 + t * (y1 - y0);
+    }
+  }
+
+  return 0.0;
+}
+
+/**
+ * Select and evaluate the configured interslice function.
+ */
+export function getIntersliceFunctionValue(
+  kind:
+    | "constant"
+    | "half-sine"
+    | "clipped-sine"
+    | "trapezoidal"
+    | "data-point-specified"
+    | undefined,
+  x: number,
+  xStart: number,
+  xEnd: number,
+  points: [number, number][] = [],
+): number {
+  switch (kind ?? "half-sine") {
+    case "constant":
+      return constantInterslice(x, xStart, xEnd);
+    case "half-sine":
+      return halfsine(x, xStart, xEnd);
+    case "clipped-sine":
+      return clippedSine(x, xStart, xEnd);
+    case "trapezoidal":
+      return trapezoidal(x, xStart, xEnd);
+    case "data-point-specified":
+      return dataPointSpecified(x, xStart, xEnd, points);
+    default:
+      return halfsine(x, xStart, xEnd);
+  }
 }
 
 /**

@@ -1,4 +1,8 @@
-import { DEFAULT_ANALYSIS_OPTIONS, resolveOrientation } from "@cslope/engine";
+import {
+  DEFAULT_ANALYSIS_OPTIONS,
+  resolveOrientation,
+  type AnalysisOptions,
+} from "@cslope/engine";
 import { DEFAULT_MODEL_NAME } from "../constants";
 import {
   DEFAULT_ANALYSIS_LIMITS,
@@ -19,7 +23,6 @@ import type {
   ResultViewSettings,
   UdlRow,
 } from "./types";
-
 export const PROJECT_FILE_VERSION = 1;
 
 export interface ProjectFile {
@@ -133,10 +136,7 @@ function normalizeModelEntry(raw: unknown): ModelEntry {
           .filter(Boolean) as LineLoadRow[])
       : [],
     options: model.options
-      ? ({
-          ...DEFAULT_ANALYSIS_OPTIONS,
-          ...(model.options as Record<string, unknown>),
-        } as unknown as ModelEntry["options"])
+      ? normalizeAnalysisOptions(model.options)
       : { ...DEFAULT_ANALYSIS_OPTIONS },
     analysisLimits: normalizeAnalysisLimits(model.analysisLimits),
     editViewOffset: (model.editViewOffset ??
@@ -353,5 +353,63 @@ function normalizeAnalysisLimits(raw: unknown): AnalysisLimitsState {
     entryRightX: finiteOr(a.entryRightX, DEFAULT_ANALYSIS_LIMITS.entryRightX),
     exitLeftX: finiteOr(a.exitLeftX, DEFAULT_ANALYSIS_LIMITS.exitLeftX),
     exitRightX: finiteOr(a.exitRightX, DEFAULT_ANALYSIS_LIMITS.exitRightX),
+  };
+}
+
+function normalizeAnalysisOptions(raw: unknown): AnalysisOptions {
+  const base: AnalysisOptions = { ...DEFAULT_ANALYSIS_OPTIONS };
+  if (!raw || typeof raw !== "object") return base;
+
+  const o = raw as Record<string, unknown>;
+  const intersliceFunction =
+    o.intersliceFunction === "constant" ||
+    o.intersliceFunction === "half-sine" ||
+    o.intersliceFunction === "clipped-sine" ||
+    o.intersliceFunction === "trapezoidal" ||
+    o.intersliceFunction === "data-point-specified"
+      ? o.intersliceFunction
+      : base.intersliceFunction;
+
+  const intersliceDataPoints = Array.isArray(o.intersliceDataPoints)
+    ? o.intersliceDataPoints
+        .map((p) => (Array.isArray(p) ? [Number(p[0]), Number(p[1])] : null))
+        .filter(
+          (p): p is [number, number] =>
+            !!p && Number.isFinite(p[0]) && Number.isFinite(p[1]),
+        )
+    : base.intersliceDataPoints;
+
+  return {
+    ...base,
+    ...o,
+    method:
+      o.method === "Bishop" ||
+      o.method === "Janbu" ||
+      o.method === "Morgenstern-Price"
+        ? o.method
+        : base.method,
+    slices: Math.max(10, Math.min(500, finiteOr(o.slices, base.slices))),
+    iterations: Math.max(
+      500,
+      Math.min(100000, finiteOr(o.iterations, base.iterations)),
+    ),
+    refinedIterations: Math.max(
+      0,
+      Math.min(100000, finiteOr(o.refinedIterations, base.refinedIterations)),
+    ),
+    minFailureDist: Math.max(
+      0,
+      finiteOr(o.minFailureDist, base.minFailureDist),
+    ),
+    tolerance: Math.max(0.000001, finiteOr(o.tolerance, base.tolerance)),
+    maxIterations: Math.max(1, finiteOr(o.maxIterations, base.maxIterations)),
+    limitBishop: Math.max(0, finiteOr(o.limitBishop, base.limitBishop)),
+    limitJanbu: Math.max(0, finiteOr(o.limitJanbu, base.limitJanbu)),
+    limitMorgensternPrice: Math.max(
+      0,
+      finiteOr(o.limitMorgensternPrice, base.limitMorgensternPrice),
+    ),
+    intersliceFunction,
+    intersliceDataPoints,
   };
 }

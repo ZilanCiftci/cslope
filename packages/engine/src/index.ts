@@ -13,6 +13,7 @@ export type { UdlParams, LineLoadParams } from "./types/loads";
 
 export type {
   AnalysisMethod,
+  IntersliceFunctionType,
   AnalysisOptions,
   AnalysisResult,
   AnalysisLimits,
@@ -81,7 +82,12 @@ export { calculateAllLoads } from "./math/loads";
 export type { UdlData, LineLoadData } from "./math/loads";
 
 export {
+  constantInterslice,
   halfsine,
+  clippedSine,
+  trapezoidal,
+  dataPointSpecified,
+  getIntersliceFunctionValue,
   midCoord,
   distPoints,
   extrapolateLambda,

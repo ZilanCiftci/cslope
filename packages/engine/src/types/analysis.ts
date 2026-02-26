@@ -7,6 +7,14 @@ import type { Material } from "./material";
 /** Supported analysis methods. */
 export type AnalysisMethod = "Bishop" | "Janbu" | "Morgenstern-Price";
 
+/** Supported interslice force functions for Morgenstern-Price. */
+export type IntersliceFunctionType =
+  | "constant"
+  | "half-sine"
+  | "clipped-sine"
+  | "trapezoidal"
+  | "data-point-specified";
+
 /** Analysis configuration options. */
 export interface AnalysisOptions {
   /** Number of slices (10–500, default: 25). */
@@ -29,6 +37,10 @@ export interface AnalysisOptions {
   limitJanbu: number;
   /** FOS limit for Morgenstern-Price. */
   limitMorgensternPrice: number;
+  /** Interslice force function shape for Morgenstern-Price. */
+  intersliceFunction?: IntersliceFunctionType;
+  /** Normalized [x, f] points in [0,1]×[0,1] for data-point-specified mode. */
+  intersliceDataPoints?: [number, number][];
 }
 
 /** Default analysis options. */
@@ -43,6 +55,8 @@ export const DEFAULT_ANALYSIS_OPTIONS: AnalysisOptions = {
   limitBishop: 5,
   limitJanbu: 5,
   limitMorgensternPrice: 5,
+  intersliceFunction: "half-sine",
+  intersliceDataPoints: [],
 };
 
 /** Water table input — one of three modes. */

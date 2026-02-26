@@ -220,6 +220,12 @@ export function generateCircleCoordinates(
 ): [number[], number[]] {
   const x: number[] = [];
   const y: number[] = [];
+  if (numPoints < 2) {
+    const angle = Math.PI / 2;
+    x.push(Math.round((cx - Math.cos(angle) * radius) * 1000) / 1000);
+    y.push(Math.round((cy - Math.sin(angle) * radius) * 1000) / 1000);
+    return [x, y];
+  }
   for (let i = 0; i < numPoints; i++) {
     const angle = ((1 + (i * 178) / (numPoints - 1)) * Math.PI) / 180;
     x.push(Math.round((cx - Math.cos(angle) * radius) * 1000) / 1000);

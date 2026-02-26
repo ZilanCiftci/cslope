@@ -9,7 +9,7 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
-    "package": "tsc -b && vite build && electron-builder",
+    "package": "tsc -b && vite build && dotenv -e .env.trustedsigning -- electron-builder",
     "lint": "eslint .",
     "typecheck": "tsc -b --noEmit",
     "test": "vitest run",
@@ -27,6 +27,7 @@
     "zustand": "^5.0.11"
   },
   "devDependencies": {
+    "@electron/windows-sign": "^2.0.2",
     "@eslint/js": "^9.39.1",
     "@tailwindcss/vite": "^4.1.18",
     "@testing-library/jest-dom": "^6.9.1",
@@ -38,6 +39,7 @@
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^5.1.1",
     "electron": "^30.0.1",
+    "dotenv-cli": "^11.0.0",
     "electron-builder": "^24.13.3",
     "eslint": "^9.39.1",
     "eslint-plugin-react-hooks": "^7.0.1",

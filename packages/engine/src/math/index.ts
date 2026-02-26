@@ -29,7 +29,12 @@ export { calculateAllLoads } from "./loads";
 export type { UdlData, LineLoadData } from "./loads";
 
 export {
+  constantInterslice,
   halfsine,
+  clippedSine,
+  trapezoidal,
+  dataPointSpecified,
+  getIntersliceFunctionValue,
   midCoord,
   distPoints,
   extrapolateLambda,

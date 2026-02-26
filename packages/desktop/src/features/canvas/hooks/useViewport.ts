@@ -139,8 +139,6 @@ export function useViewport(
 
       const activeScale =
         state.mode === "result" ? state.resultViewScale : state.editViewScale;
-      const activeOffset =
-        state.mode === "result" ? state.resultViewOffset : state.editViewOffset;
 
       const margin = Math.max(worldW, worldH) * 0.05;
 
