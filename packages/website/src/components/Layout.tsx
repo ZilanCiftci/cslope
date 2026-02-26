@@ -10,9 +10,7 @@ import { cn } from "@/lib/utils";
 
 const navLinks = [
   { to: "/", label: "Home" },
-  { to: "/features", label: "Features" },
   { to: "/docs", label: "Docs" },
-  { to: "/about", label: "About" },
 ];
 
 function ThemeToggle() {
