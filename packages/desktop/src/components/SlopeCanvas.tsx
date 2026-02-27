@@ -11,7 +11,7 @@ import { usePointerHandlers } from "../features/canvas/hooks/usePointerHandlers"
 import { useContextMenu } from "../features/canvas/hooks/useContextMenu";
 import { useMaterialPicker } from "../features/canvas/hooks/useMaterialPicker";
 import { drawCanvas } from "../features/canvas/draw";
-import { ARROW_HEIGHT_PX } from "../features/canvas/constants";
+import { ARROW_HEIGHT_PX, cssVar } from "../features/canvas/constants";
 import { computePaperFrame } from "../features/canvas/helpers";
 import { circleArcPoints } from "../utils/arc";
 
@@ -20,6 +20,7 @@ const SCROLL_PAN_FACTOR = 0.25; // dampen scrollbar panning sensitivity
 
 export function SlopeCanvas() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const crosshairCanvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const scrollStateRef = useRef({ x: 0, y: 0 });
   const drawRafRef = useRef<number | null>(null);
@@ -316,6 +317,13 @@ export function SlopeCanvas() {
     return () => ro.disconnect();
   }, [canvasSize.width, canvasSize.height, canvasSize.dpr]);
 
+  useEffect(() => {
+    const canvas = crosshairCanvasRef.current;
+    if (!canvas || canvasSize.width <= 0 || canvasSize.height <= 0) return;
+    canvas.width = canvasSize.width * canvasSize.dpr;
+    canvas.height = canvasSize.height * canvasSize.dpr;
+  }, [canvasSize.width, canvasSize.height, canvasSize.dpr]);
+
   // ── Draw ────────────────────────────────────────────────────
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -345,7 +353,7 @@ export function SlopeCanvas() {
       lineLoads,
       piezometricLine,
       viewScale,
-      mouseWorld,
+      mouseWorld: null,
       hoverHit,
       selectedPointIndex,
       worldToCanvas,
@@ -396,7 +404,6 @@ export function SlopeCanvas() {
     lineLoads,
     piezometricLine,
     viewScale,
-    mouseWorld,
     hoverHit,
     selectedPointIndex,
     canvasToWorld,
@@ -415,6 +422,36 @@ export function SlopeCanvas() {
     projectInfo,
     theme,
   ]);
+
+  useEffect(() => {
+    const canvas = crosshairCanvasRef.current;
+    if (!canvas || canvasSize.width <= 0 || canvasSize.height <= 0) return;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+    ctx.setTransform(canvasSize.dpr, 0, 0, canvasSize.dpr, 0, 0);
+    ctx.clearRect(0, 0, canvasSize.width, canvasSize.height);
+
+    if (mode !== "edit" || !mouseWorld) return;
+
+    const [mx, my] = worldToCanvas(
+      mouseWorld[0],
+      mouseWorld[1],
+      canvasSize.width,
+      canvasSize.height,
+    );
+    ctx.strokeStyle = cssVar("--color-canvas-crosshair");
+    ctx.lineWidth = 1;
+    ctx.setLineDash([4, 4]);
+    ctx.beginPath();
+    ctx.moveTo(mx, 0);
+    ctx.lineTo(mx, canvasSize.height);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(0, my);
+    ctx.lineTo(canvasSize.width, my);
+    ctx.stroke();
+    ctx.setLineDash([]);
+  }, [canvasSize, mode, mouseWorld, worldToCanvas]);
 
   useEffect(() => {
     return () => {
@@ -1046,6 +1083,10 @@ export function SlopeCanvas() {
             onWheel={handleWheel}
             onContextMenu={handleContextMenu}
             data-testid="slope-canvas"
+          />
+          <canvas
+            ref={crosshairCanvasRef}
+            className="absolute inset-0 w-full h-full pointer-events-none"
           />
 
           {zoomRect && (

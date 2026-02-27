@@ -135,6 +135,33 @@ export function usePointerHandlers(deps: PointerDeps) {
 
   const [mouseWorld, setMouseWorld] = useState<[number, number] | null>(null);
   const [hoverHit, setHoverHit] = useState<PointHit | null>(null);
+  const hoverHitRef = useRef<PointHit | null>(null);
+
+  const isSameHit = (a: PointHit | null, b: PointHit | null) => {
+    if (!a || !b) return a === b;
+    switch (a.kind) {
+      case "external":
+        return b.kind === "external" && a.index === b.index;
+      case "piezo":
+        return b.kind === "piezo" && a.index === b.index;
+      case "limit":
+        return b.kind === "limit" && a.handle === b.handle;
+      case "udl":
+        return b.kind === "udl" && a.udlId === b.udlId && a.handle === b.handle;
+      case "lineLoad":
+        return b.kind === "lineLoad" && a.loadId === b.loadId;
+      case "boundary":
+        return (
+          b.kind === "boundary" &&
+          a.boundaryId === b.boundaryId &&
+          a.pointIndex === b.pointIndex
+        );
+      case "annotation":
+        return b.kind === "annotation" && a.annoId === b.annoId;
+      default:
+        return false;
+    }
+  };
 
   const applyEdgePan = useCallback(() => {
     const drag = dragRef.current;
@@ -519,7 +546,10 @@ export function usePointerHandlers(deps: PointerDeps) {
       } else {
         hit = findNearPointUnified(wx, wy);
       }
-      setHoverHit(hit);
+      if (!isSameHit(hoverHitRef.current, hit)) {
+        hoverHitRef.current = hit;
+        setHoverHit(hit);
+      }
     },
     [
       canvasRef,
