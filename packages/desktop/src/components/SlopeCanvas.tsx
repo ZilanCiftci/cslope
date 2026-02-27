@@ -11,6 +11,8 @@ import { usePointerHandlers } from "../features/canvas/hooks/usePointerHandlers"
 import { useContextMenu } from "../features/canvas/hooks/useContextMenu";
 import { useMaterialPicker } from "../features/canvas/hooks/useMaterialPicker";
 import { drawCanvas } from "../features/canvas/draw";
+import { ARROW_HEIGHT_PX } from "../features/canvas/constants";
+import { computePaperFrame } from "../features/canvas/helpers";
 import { circleArcPoints } from "../utils/arc";
 
 const SCROLL_FALLBACK = 4000; // virtual surface to show scrollbars when sizes are missing
@@ -20,6 +22,10 @@ export function SlopeCanvas() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const scrollStateRef = useRef({ x: 0, y: 0 });
+  const drawRafRef = useRef<number | null>(null);
+  const drawDirtyRef = useRef(false);
+  const drawArgsRef = useRef<Parameters<typeof drawCanvas>[1] | null>(null);
+  const drawMetaRef = useRef({ dpr: 1 });
   const [zoomBoxActive, setZoomBoxActive] = useState(false);
   const [panActive, setPanActive] = useState(false);
   const [zoomBoxStart, setZoomBoxStart] = useState<[number, number] | null>(
@@ -28,6 +34,14 @@ export function SlopeCanvas() {
   const [zoomBoxCurrent, setZoomBoxCurrent] = useState<[number, number] | null>(
     null,
   );
+  const [zoomBoxOrigin, setZoomBoxOrigin] = useState<[number, number] | null>(
+    null,
+  );
+  const [canvasSize, setCanvasSize] = useState({
+    width: 0,
+    height: 0,
+    dpr: window.devicePixelRatio || 1,
+  });
 
   const mode = useAppStore((s) => s.mode);
   const result = useAppStore((s) => s.result);
@@ -181,6 +195,16 @@ export function SlopeCanvas() {
     setMaterialPicker,
   });
 
+  const recenterScrollbars = useCallback(() => {
+    const el = containerRef.current;
+    if (!el) return;
+    const centerX = (el.scrollWidth - el.clientWidth) / 2;
+    const centerY = (el.scrollHeight - el.clientHeight) / 2;
+    el.scrollLeft = centerX;
+    el.scrollTop = centerY;
+    scrollStateRef.current = { x: centerX, y: centerY };
+  }, []);
+
   const {
     mouseWorld,
     hoverHit,
@@ -195,6 +219,7 @@ export function SlopeCanvas() {
     viewOffset,
     setActiveViewOffset,
     setActiveViewScale,
+    onZoomCompleted: recenterScrollbars,
     findNearPointUnified: hitTest.findNearPointUnified,
     findRegionAtPoint: hitTest.findRegionAtPoint,
     findSnapTarget: hitTest.findSnapTarget,
@@ -229,14 +254,8 @@ export function SlopeCanvas() {
 
   // Center scrollbars initially so we can treat scroll deltas as pan inputs.
   useEffect(() => {
-    const el = containerRef.current;
-    if (!el) return;
-    const centerX = (el.scrollWidth - el.clientWidth) / 2;
-    const centerY = (el.scrollHeight - el.clientHeight) / 2;
-    el.scrollLeft = centerX;
-    el.scrollTop = centerY;
-    scrollStateRef.current = { x: centerX, y: centerY };
-  }, []);
+    recenterScrollbars();
+  }, [recenterScrollbars]);
 
   const handleScroll = useCallback(() => {
     const el = containerRef.current;
@@ -246,16 +265,21 @@ export function SlopeCanvas() {
     const dy = el.scrollTop - scrollStateRef.current.y;
     if (dx === 0 && dy === 0) return;
 
-    const scale = viewScale || 1;
+    const state = useAppStore.getState();
+    const scale =
+      (state.mode === "result" ? state.resultViewScale : state.editViewScale) ||
+      1;
+    const offset =
+      state.mode === "result" ? state.resultViewOffset : state.editViewOffset;
     // Invert directions so scrollbar motion matches model motion (right→right, up→up).
     setActiveViewOffset([
-      viewOffset[0] - (dx / scale) * SCROLL_PAN_FACTOR,
-      viewOffset[1] + (dy / scale) * SCROLL_PAN_FACTOR,
+      offset[0] - (dx / scale) * SCROLL_PAN_FACTOR,
+      offset[1] + (dy / scale) * SCROLL_PAN_FACTOR,
     ]);
 
     // Track current position so thumb moves naturally.
     scrollStateRef.current = { x: el.scrollLeft, y: el.scrollTop };
-  }, [viewOffset, viewScale, setActiveViewOffset]);
+  }, [setActiveViewOffset]);
 
   const handleWheelCapture = useCallback(
     (e: React.WheelEvent<HTMLDivElement>) => {
@@ -266,25 +290,44 @@ export function SlopeCanvas() {
     [],
   );
 
-  // ── Draw ────────────────────────────────────────────────────
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
-    const ctx = canvas.getContext("2d");
-    if (!ctx) return;
 
-    const dpr = window.devicePixelRatio || 1;
-    const rect = canvas.getBoundingClientRect();
-    canvas.width = rect.width * dpr;
-    canvas.height = rect.height * dpr;
-    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    const updateSize = () => {
+      const rect = canvas.getBoundingClientRect();
+      const dpr = window.devicePixelRatio || 1;
+      if (rect.width <= 0 || rect.height <= 0) return;
+      if (
+        rect.width === canvasSize.width &&
+        rect.height === canvasSize.height &&
+        dpr === canvasSize.dpr
+      ) {
+        return;
+      }
+      canvas.width = rect.width * dpr;
+      canvas.height = rect.height * dpr;
+      setCanvasSize({ width: rect.width, height: rect.height, dpr });
+    };
+
+    updateSize();
+    const ro = new ResizeObserver(() => updateSize());
+    ro.observe(canvas);
+    return () => ro.disconnect();
+  }, [canvasSize.width, canvasSize.height, canvasSize.dpr]);
+
+  // ── Draw ────────────────────────────────────────────────────
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas || canvasSize.width <= 0 || canvasSize.height <= 0) return;
+    drawMetaRef.current = { dpr: canvasSize.dpr };
 
     // Ensure redraw when theme CSS variables change
     void theme;
 
-    drawCanvas(ctx, {
-      w: rect.width,
-      h: rect.height,
+    drawArgsRef.current = {
+      w: canvasSize.width,
+      h: canvasSize.height,
       mode,
       result,
       resultViewSettings,
@@ -311,8 +354,39 @@ export function SlopeCanvas() {
       editingExterior,
       editingBoundaries,
       editingPiezo,
-    });
+    };
+
+    const requestDraw = () => {
+      if (drawRafRef.current !== null) return;
+      drawRafRef.current = requestAnimationFrame(() => {
+        drawRafRef.current = null;
+        if (!drawDirtyRef.current) return;
+        drawDirtyRef.current = false;
+
+        const canvas = canvasRef.current;
+        const args = drawArgsRef.current;
+        if (!canvas || !args) return;
+        const ctx = canvas.getContext("2d");
+        if (!ctx) return;
+
+        ctx.setTransform(
+          drawMetaRef.current.dpr,
+          0,
+          0,
+          drawMetaRef.current.dpr,
+          0,
+          0,
+        );
+        drawCanvas(ctx, args);
+
+        if (drawDirtyRef.current) requestDraw();
+      });
+    };
+
+    drawDirtyRef.current = true;
+    requestDraw();
   }, [
+    canvasSize,
     coordinates,
     orientation,
     materials,
@@ -341,6 +415,15 @@ export function SlopeCanvas() {
     projectInfo,
     theme,
   ]);
+
+  useEffect(() => {
+    return () => {
+      if (drawRafRef.current !== null) {
+        cancelAnimationFrame(drawRafRef.current);
+        drawRafRef.current = null;
+      }
+    };
+  }, []);
 
   // Keyboard shortcuts
   useEffect(() => {
@@ -424,9 +507,60 @@ export function SlopeCanvas() {
       yMax = Math.max(yMax, y);
     };
 
+    const addCanvasRect = (
+      x: number,
+      y: number,
+      width: number,
+      height: number,
+    ) => {
+      const corners: [number, number][] = [
+        [x, y],
+        [x + width, y],
+        [x, y + height],
+        [x + width, y + height],
+      ];
+      for (const [px, py] of corners) {
+        const [wx, wy] = canvasToWorld(px, py, w, h);
+        addPoint(wx, wy);
+      }
+    };
+
     for (const [x, y] of coordinates) addPoint(x, y);
 
+    for (const boundary of materialBoundaries) {
+      for (const [x, y] of boundary.coordinates) addPoint(x, y);
+    }
+
+    for (const line of piezometricLine.lines) {
+      for (const [x, y] of line.coordinates) addPoint(x, y);
+    }
+
+    if (analysisLimits.enabled) {
+      const entryLeftY = surfaceYAtX(analysisLimits.entryLeftX);
+      if (entryLeftY !== null) addPoint(analysisLimits.entryLeftX, entryLeftY);
+      const entryRightY = surfaceYAtX(analysisLimits.entryRightX);
+      if (entryRightY !== null)
+        addPoint(analysisLimits.entryRightX, entryRightY);
+      const exitLeftY = surfaceYAtX(analysisLimits.exitLeftX);
+      if (exitLeftY !== null) addPoint(analysisLimits.exitLeftX, exitLeftY);
+      const exitRightY = surfaceYAtX(analysisLimits.exitRightX);
+      if (exitRightY !== null) addPoint(analysisLimits.exitRightX, exitRightY);
+    }
+
+    for (const udl of udls) {
+      const y1 = surfaceYAtX(udl.x1);
+      if (y1 !== null) addPoint(udl.x1, y1);
+      const y2 = surfaceYAtX(udl.x2);
+      if (y2 !== null) addPoint(udl.x2, y2);
+    }
+
+    for (const lineLoad of lineLoads) {
+      const y = surfaceYAtX(lineLoad.x);
+      if (y !== null) addPoint(lineLoad.x, y);
+    }
+
     if (mode === "result" && result) {
+      const ctx = canvas?.getContext("2d") ?? null;
       const rvs = resultViewSettings;
       const surfaces = (() => {
         if (rvs.surfaceDisplay === "critical") {
@@ -458,6 +592,155 @@ export function SlopeCanvas() {
 
       for (const surf of surfaces) addSurface(surf);
       if (result.criticalSurface) addSurface(result.criticalSurface);
+
+      if (ctx && rvs.annotations.length > 0) {
+        const pf = computePaperFrame(w, h, rvs.paperFrame.paperSize);
+        const annoScale = Math.min(pf.w, pf.h) / 600;
+
+        const resolveAnnotationText = (text: string) => {
+          if (!text) return "";
+          return text
+            .replace(/#Title/gi, projectInfo.title)
+            .replace(/#Subtitle/gi, projectInfo.subtitle)
+            .replace(/#Client/gi, projectInfo.client)
+            .replace(/#ProjectNumber/gi, projectInfo.projectNumber)
+            .replace(/#Revision/gi, projectInfo.revision)
+            .replace(/#Author/gi, projectInfo.author)
+            .replace(/#Checker/gi, projectInfo.checker)
+            .replace(/#Date/gi, projectInfo.date)
+            .replace(/#Description/gi, projectInfo.description)
+            .replace(/#FOS/gi, result.minFOS.toFixed(3))
+            .replace(/#MinFOS/gi, result.minFOS.toFixed(3))
+            .replace(/#Method/gi, result.method)
+            .replace(/\n/g, "\n");
+        };
+
+        const measureParamBlock = (title: string, lines: string[]) => {
+          const padding = 8 * annoScale;
+          const lineHeight = 16 * annoScale;
+          const titleHeight = 20 * annoScale;
+          const font = `${12 * annoScale}px sans-serif`;
+          const titleFont = `bold ${12 * annoScale}px sans-serif`;
+
+          ctx.font = titleFont;
+          let maxW = ctx.measureText(title).width;
+          ctx.font = font;
+          for (const line of lines) {
+            maxW = Math.max(maxW, ctx.measureText(line).width);
+          }
+          const boxW = maxW + padding * 2;
+          const boxH = titleHeight + lines.length * lineHeight + padding;
+          return { width: boxW, height: boxH };
+        };
+
+        const measureTable = (header: string[], rows: string[][]) => {
+          const padding = 6 * annoScale;
+          const rowH = 18 * annoScale;
+          const headerH = 22 * annoScale;
+          const font = `${11 * annoScale}px sans-serif`;
+          const headerFont = `bold ${11 * annoScale}px sans-serif`;
+          const swatchW = 12 * annoScale;
+
+          ctx.font = headerFont;
+          const colW = header.map(
+            (h) => ctx.measureText(h).width + padding * 2,
+          );
+          ctx.font = font;
+          for (const row of rows) {
+            for (let c = 0; c < row.length; c++) {
+              colW[c] = Math.max(
+                colW[c],
+                ctx.measureText(row[c]).width + padding * 2,
+              );
+            }
+          }
+          colW[0] += swatchW + 4;
+
+          const totalW = colW.reduce((a, b) => a + b, 0);
+          const totalH = headerH + rows.length * rowH;
+          return { width: totalW, height: totalH };
+        };
+
+        for (const anno of rvs.annotations) {
+          const ax = pf.x + anno.x * pf.w;
+          const ay = pf.y + anno.y * pf.h;
+
+          if (anno.type === "text") {
+            const fontSize = (anno.fontSize ?? 12) * annoScale;
+            const family = anno.fontFamily ?? "sans-serif";
+            const weight = anno.bold ? "bold" : "normal";
+            const style = anno.italic ? "italic" : "normal";
+            const resolvedText = resolveAnnotationText(anno.text ?? "");
+            const lines = resolvedText.split("\n");
+            const lineHeight = fontSize * 1.2;
+
+            ctx.font = `${style} ${weight} ${fontSize}px ${family}`;
+            let maxW = 0;
+            for (const line of lines) {
+              maxW = Math.max(maxW, ctx.measureText(line).width);
+            }
+            const height = lines.length * lineHeight;
+            addCanvasRect(ax, ay, maxW, height);
+          } else if (anno.type === "color-bar") {
+            const barW = 20 * annoScale;
+            const barH = 200 * annoScale;
+            const barX = ax;
+            const barY = ay;
+
+            const fosMin = result.minFOS;
+            const fosMax = result.maxFOS;
+            const numTicks = 5;
+            const fontSize = Math.max(10, 11 * annoScale);
+            const labelX2 = barX + barW + 5 * annoScale;
+
+            ctx.font = `${fontSize}px 'Segoe UI', sans-serif`;
+            let maxLabelW = 0;
+            for (let t = 0; t <= numTicks; t++) {
+              const frac = t / numTicks;
+              const fos = fosMax - frac * (fosMax - fosMin);
+              maxLabelW = Math.max(
+                maxLabelW,
+                ctx.measureText(fos.toFixed(2)).width,
+              );
+            }
+
+            const xRight = labelX2 + maxLabelW;
+            const yTop = barY - 4 * annoScale - fontSize;
+            const yBottom = barY + barH;
+            addCanvasRect(barX, yTop, xRight - barX, yBottom - yTop);
+          } else if (anno.type === "input-params") {
+            const { width, height } = measureParamBlock("Input Parameters", [
+              `Method: ${result.method}`,
+              `Slices: ${result.criticalSlices.length}`,
+              `Surfaces: ${result.allSurfaces.length}`,
+            ]);
+            addCanvasRect(ax, ay, width, height);
+          } else if (anno.type === "output-params") {
+            const lines = [`FOS = ${result.minFOS.toFixed(3)}`];
+            if (result.criticalSurface) {
+              lines.push(
+                `Centre: (${result.criticalSurface.cx.toFixed(1)}, ${result.criticalSurface.cy.toFixed(1)})`,
+              );
+              lines.push(
+                `Radius: ${result.criticalSurface.radius.toFixed(2)} m`,
+              );
+            }
+            lines.push(`Time: ${result.elapsedMs.toFixed(0)} ms`);
+            const { width, height } = measureParamBlock("Results", lines);
+            addCanvasRect(ax, ay, width, height);
+          } else if (anno.type === "material-table") {
+            const header = ["Material", "gamma", "phi", "c"];
+            const rows = materials.map((m) => [
+              m.name,
+              `${m.unitWeight}`,
+              `${m.frictionAngle} deg`,
+              `${m.cohesion}`,
+            ]);
+            const { width, height } = measureTable(header, rows);
+            addCanvasRect(ax, ay, width, height);
+          }
+        }
+      }
     }
 
     if (!Number.isFinite(xMin) || !Number.isFinite(yMin)) return;
@@ -475,6 +758,13 @@ export function SlopeCanvas() {
     };
 
     let scale = computeScale(xMin, xMax, yMin, yMax);
+
+    if (udls.length > 0 || lineLoads.length > 0) {
+      const extraPx = ARROW_HEIGHT_PX + 18;
+      const extraWorld = extraPx / scale;
+      yMax += extraWorld;
+      scale = computeScale(xMin, xMax, yMin, yMax);
+    }
 
     if (
       mode === "result" &&
@@ -515,12 +805,21 @@ export function SlopeCanvas() {
       container.scrollTop = centerY;
     }
   }, [
+    analysisLimits,
+    canvasToWorld,
     coordinates,
+    lineLoads,
+    materialBoundaries,
+    materials,
     mode,
+    piezometricLine,
+    projectInfo,
     result,
     resultViewSettings,
     setActiveViewOffset,
     setActiveViewScale,
+    surfaceYAtX,
+    udls,
   ]);
 
   const handleZoomStep = useCallback(
@@ -545,13 +844,22 @@ export function SlopeCanvas() {
         oy - (cy - h / 2) / newScale + (cy - h / 2) / oldScale,
       ]);
       setActiveViewScale(newScale);
+      recenterScrollbars();
     },
-    [viewOffset, viewScale, setActiveViewOffset, setActiveViewScale],
+    [
+      viewOffset,
+      viewScale,
+      setActiveViewOffset,
+      setActiveViewScale,
+      recenterScrollbars,
+    ],
   );
 
   const handleCanvasPointerDown = useCallback(
     (e: React.PointerEvent<HTMLCanvasElement>) => {
       if (zoomBoxActive && e.button === 0) {
+        const rect = canvasRef.current?.getBoundingClientRect() ?? null;
+        if (rect) setZoomBoxOrigin([rect.left, rect.top]);
         setZoomBoxStart([e.clientX, e.clientY]);
         setZoomBoxCurrent([e.clientX, e.clientY]);
         (e.target as HTMLElement).setPointerCapture(e.pointerId);
@@ -633,6 +941,7 @@ export function SlopeCanvas() {
         setZoomBoxStart(null);
         setZoomBoxCurrent(null);
         setZoomBoxActive(false);
+        setZoomBoxOrigin(null);
         (e.target as HTMLElement).releasePointerCapture(e.pointerId);
         return;
       }
@@ -650,19 +959,19 @@ export function SlopeCanvas() {
   );
 
   const zoomRect = useMemo(() => {
-    if (!zoomBoxStart || !zoomBoxCurrent || !canvasRef.current) return null;
-    const rect = canvasRef.current.getBoundingClientRect();
-    const x0 = zoomBoxStart[0] - rect.left;
-    const y0 = zoomBoxStart[1] - rect.top;
-    const x1 = zoomBoxCurrent[0] - rect.left;
-    const y1 = zoomBoxCurrent[1] - rect.top;
+    if (!zoomBoxStart || !zoomBoxCurrent || !zoomBoxOrigin) return null;
+    const [left, top] = zoomBoxOrigin;
+    const x0 = zoomBoxStart[0] - left;
+    const y0 = zoomBoxStart[1] - top;
+    const x1 = zoomBoxCurrent[0] - left;
+    const y1 = zoomBoxCurrent[1] - top;
     return {
       left: Math.min(x0, x1),
       top: Math.min(y0, y1),
       width: Math.abs(x1 - x0),
       height: Math.abs(y1 - y0),
     };
-  }, [zoomBoxStart, zoomBoxCurrent]);
+  }, [zoomBoxStart, zoomBoxCurrent, zoomBoxOrigin]);
 
   useEffect(() => {
     setCanvasToolbar({
@@ -674,6 +983,7 @@ export function SlopeCanvas() {
       onToggleZoomBox: () => {
         setZoomBoxStart(null);
         setZoomBoxCurrent(null);
+        setZoomBoxOrigin(null);
         setZoomBoxActive((v) => !v);
         setPanActive(false);
       },
@@ -722,9 +1032,13 @@ export function SlopeCanvas() {
                   ? "crosshair"
                   : panActive
                     ? "grab"
-                    : hoverHit
-                      ? "grab"
-                      : "default",
+                    : hoverHit?.kind === "limit" ||
+                        hoverHit?.kind === "udl" ||
+                        hoverHit?.kind === "lineLoad"
+                      ? "ew-resize"
+                      : hoverHit
+                        ? "grab"
+                        : "default",
             }}
             onPointerDown={handleCanvasPointerDown}
             onPointerMove={handleCanvasPointerMove}

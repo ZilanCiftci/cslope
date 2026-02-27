@@ -76,8 +76,14 @@ export function getYAtXStrict(line: [number[], number[]], x: number): number {
   const xClamped = Math.max(xMin, Math.min(xMax, x));
 
   for (let i = 0; i < xArr.length - 1; i++) {
-    if (xArr[i] <= xClamped && xClamped <= xArr[i + 1]) {
-      const slope = (yArr[i + 1] - yArr[i]) / (xArr[i + 1] - xArr[i]);
+    const segMin = Math.min(xArr[i], xArr[i + 1]);
+    const segMax = Math.max(xArr[i], xArr[i + 1]);
+    if (segMin <= xClamped && xClamped <= segMax) {
+      const dx = xArr[i + 1] - xArr[i];
+      if (Math.abs(dx) < 1e-12) {
+        return (yArr[i] + yArr[i + 1]) / 2;
+      }
+      const slope = (yArr[i + 1] - yArr[i]) / dx;
       return yArr[i] + slope * (xClamped - xArr[i]);
     }
   }

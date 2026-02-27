@@ -39,7 +39,6 @@ export function DevMenu() {
   };
 
   const handleLogState = () => {
-    // eslint-disable-next-line no-console
     console.log("App store state:", useAppStore.getState());
     setOpen(false);
   };

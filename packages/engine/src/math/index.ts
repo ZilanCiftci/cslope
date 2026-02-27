@@ -12,7 +12,6 @@ export {
 export {
   getCircleYCoordinateAtX,
   getCircleLineIntersections,
-  getCirclePolygonIntersection,
   circleRadiusFromAbcd,
   circleCentre,
   generateCircleCoordinates,

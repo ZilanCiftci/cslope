@@ -21,6 +21,38 @@ import { GRID_RAW_STEP_PX } from "../../constants";
 import { computePaperFrame, drawParamBlock, drawTable } from "./helpers";
 import type { PointHit } from "./types";
 
+const arcPointCache = new WeakMap<object, Map<string, [number, number][]>>();
+
+type ArcSurface = {
+  cx: number;
+  cy: number;
+  radius: number;
+  entryPoint: [number, number];
+  exitPoint: [number, number];
+};
+
+function getArcCache(result: AppState["result"]) {
+  if (!result || typeof result !== "object") return null;
+  const key = result as object;
+  const existing = arcPointCache.get(key);
+  if (existing) return existing;
+  const created = new Map<string, [number, number][]>();
+  arcPointCache.set(key, created);
+  return created;
+}
+
+function getArcKey(surf: ArcSurface): string {
+  return [
+    surf.cx,
+    surf.cy,
+    surf.radius,
+    surf.entryPoint[0],
+    surf.entryPoint[1],
+    surf.exitPoint[0],
+    surf.exitPoint[1],
+  ].join("|");
+}
+
 export interface DrawCanvasParams {
   w: number;
   h: number;
@@ -898,6 +930,30 @@ export function drawCanvas(
   // ── Analysis result surfaces ─────────────────────────
   if (mode === "result" && result) {
     const rvs = resultViewSettings;
+    const arcCache = getArcCache(result);
+    const getArcPoints = (surf: ArcSurface) => {
+      if (!arcCache) {
+        return circleArcPoints(
+          surf.cx,
+          surf.cy,
+          surf.radius,
+          surf.entryPoint,
+          surf.exitPoint,
+        );
+      }
+      const key = getArcKey(surf);
+      const cached = arcCache.get(key);
+      if (cached) return cached;
+      const points = circleArcPoints(
+        surf.cx,
+        surf.cy,
+        surf.radius,
+        surf.entryPoint,
+        surf.exitPoint,
+      );
+      arcCache.set(key, points);
+      return points;
+    };
 
     // ── Paper background + shadow (drawn first, behind geometry) ──
     // (already drawn before grid above)
@@ -918,13 +974,7 @@ export function drawCanvas(
         if (rvs.surfaceDisplay === "filter" && surf.fos > rvs.fosFilterMax)
           continue;
 
-        const arcPts = circleArcPoints(
-          surf.cx,
-          surf.cy,
-          surf.radius,
-          surf.entryPoint,
-          surf.exitPoint,
-        );
+        const arcPts = getArcPoints(surf);
         ctx.strokeStyle = fosColor(surf.fos, result.minFOS, result.maxFOS);
         ctx.lineWidth = 1;
         ctx.globalAlpha = 0.6;
@@ -942,13 +992,7 @@ export function drawCanvas(
     // Critical surface
     if (result.criticalSurface) {
       const cs = result.criticalSurface;
-      const arcPts = circleArcPoints(
-        cs.cx,
-        cs.cy,
-        cs.radius,
-        cs.entryPoint,
-        cs.exitPoint,
-      );
+      const arcPts = getArcPoints(cs);
 
       // Draw the failure mass region (area between slope surface and arc)
       // with semi-transparent fill

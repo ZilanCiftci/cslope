@@ -24,6 +24,7 @@ function createDefaultModel(id: string, name: string): ModelEntry {
   return {
     id,
     name,
+    mode: "edit",
     orientation: "ltr",
     projectInfo: createDefaultProjectInfo(),
     coordinates: [...DEFAULT_COORDS],
@@ -43,6 +44,7 @@ function createDefaultModel(id: string, name: string): ModelEntry {
 }
 
 const mapModelToState = (model: ModelEntry) => ({
+  mode: model.mode ?? "edit",
   orientation: model.orientation ?? "ltr",
   projectInfo: model.projectInfo ?? createDefaultProjectInfo(),
   coordinates: model.coordinates,
@@ -243,6 +245,7 @@ export const createModelsSlice: SliceCreator<ModelsSlice> = (set, get) => ({
       m.id === s.activeModelId
         ? {
             ...m,
+            mode: s.mode,
             orientation: s.orientation,
             projectInfo: s.projectInfo,
             coordinates: s.coordinates,
@@ -281,6 +284,7 @@ export const createModelsSlice: SliceCreator<ModelsSlice> = (set, get) => ({
         m.id === s.activeModelId
           ? {
               ...m,
+              mode: s.mode,
               orientation: s.orientation,
               projectInfo: s.projectInfo,
               coordinates: s.coordinates,
@@ -318,7 +322,6 @@ export const createModelsSlice: SliceCreator<ModelsSlice> = (set, get) => ({
     set({
       models,
       activeModelId: targetId,
-      mode: "edit",
       ...mapModelToState(target),
     });
   },
@@ -330,7 +333,6 @@ export const createModelsSlice: SliceCreator<ModelsSlice> = (set, get) => ({
     set({
       models: [entry],
       activeModelId: id,
-      mode: "edit",
       ...mapModelToState(entry),
     });
   },
@@ -342,7 +344,6 @@ export const createModelsSlice: SliceCreator<ModelsSlice> = (set, get) => ({
     set({
       models,
       activeModelId: first.id,
-      mode: "edit",
       ...mapModelToState(first),
     });
   },

@@ -215,6 +215,19 @@ function normalizeResultView(raw: unknown): ResultViewSettings {
   }
   const view = raw as Partial<ResultViewSettings>;
   const paperFrame = view.paperFrame ?? DEFAULT_RESULT_VIEW_SETTINGS.paperFrame;
+  const annotations = Array.isArray(view.annotations)
+    ? view.annotations.filter(
+        (anno): anno is ResultViewSettings["annotations"][number] => {
+          if (!anno || typeof anno !== "object") return false;
+          const a = anno as unknown as Record<string, unknown>;
+          if (typeof a.id !== "string") return false;
+          if (typeof a.type !== "string") return false;
+          if (typeof a.x !== "number" || typeof a.y !== "number") return false;
+          return true;
+        },
+      )
+    : [];
+
   return {
     surfaceDisplay:
       view.surfaceDisplay ?? DEFAULT_RESULT_VIEW_SETTINGS.surfaceDisplay,
@@ -228,7 +241,7 @@ function normalizeResultView(raw: unknown): ResultViewSettings {
     showCentreMarker:
       view.showCentreMarker ?? DEFAULT_RESULT_VIEW_SETTINGS.showCentreMarker,
     showGrid: view.showGrid ?? DEFAULT_RESULT_VIEW_SETTINGS.showGrid,
-    annotations: Array.isArray(view.annotations) ? [...view.annotations] : [],
+    annotations,
     paperFrame: { ...paperFrame },
     viewLock:
       view.viewLock &&

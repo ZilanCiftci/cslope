@@ -144,6 +144,7 @@ export interface ModelEntry {
   progress?: number;
   result?: AnalysisResult | null;
   errorMessage?: string | null;
+  mode?: AppMode;
 }
 
 export interface LayoutSlice {

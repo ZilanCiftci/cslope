@@ -1,5 +1,6 @@
 import {
   useCallback,
+  useEffect,
   useRef,
   useState,
   type PointerEvent as RPointerEvent,
@@ -26,6 +27,7 @@ interface PointerDeps {
   viewOffset: [number, number];
   setActiveViewOffset: (offset: [number, number]) => void;
   setActiveViewScale: (scale: number) => void;
+  onZoomCompleted?: () => void;
   findNearPointUnified: (wx: number, wy: number) => PointHit | null;
   findRegionAtPoint: (wx: number, wy: number) => { regionKey: string } | null;
   findSnapTarget: (
@@ -86,6 +88,7 @@ export function usePointerHandlers(deps: PointerDeps) {
     viewOffset,
     setActiveViewOffset,
     setActiveViewScale,
+    onZoomCompleted,
     findNearPointUnified,
     findRegionAtPoint,
     findSnapTarget,
@@ -127,9 +130,174 @@ export function usePointerHandlers(deps: PointerDeps) {
     startPx: [number, number];
     startOffset: [number, number];
   } | null>(null);
+  const autoPanRafRef = useRef<number | null>(null);
+  const lastPointerRef = useRef<{ x: number; y: number } | null>(null);
 
   const [mouseWorld, setMouseWorld] = useState<[number, number] | null>(null);
   const [hoverHit, setHoverHit] = useState<PointHit | null>(null);
+
+  const applyEdgePan = useCallback(() => {
+    const drag = dragRef.current;
+    const last = lastPointerRef.current;
+    if (!drag || drag.hit.kind === "annotation" || !last) return;
+
+    const rect = containerRef?.current?.getBoundingClientRect();
+    const canvasRect = canvasRef.current?.getBoundingClientRect();
+    const viewRect = rect ?? canvasRect;
+    if (!viewRect) return;
+
+    const cx = last.x - viewRect.left;
+    const cy = last.y - viewRect.top;
+    const edgeMargin = 24;
+    const maxPanPx = 18;
+
+    let panPxX = 0;
+    let panPxY = 0;
+
+    if (cx < edgeMargin) {
+      panPxX = Math.max(-maxPanPx, (cx - edgeMargin) * 0.35);
+    } else if (cx > viewRect.width - edgeMargin) {
+      panPxX = Math.min(maxPanPx, (cx - (viewRect.width - edgeMargin)) * 0.35);
+    }
+
+    if (cy < edgeMargin) {
+      panPxY = Math.max(-maxPanPx, (cy - edgeMargin) * 0.35);
+    } else if (cy > viewRect.height - edgeMargin) {
+      panPxY = Math.min(maxPanPx, (cy - (viewRect.height - edgeMargin)) * 0.35);
+    }
+
+    if (panPxX !== 0 || panPxY !== 0) {
+      const s = useAppStore.getState();
+      const currentViewScale =
+        (s.mode === "result" ? s.resultViewScale : s.editViewScale) || 1;
+      const offset =
+        s.mode === "result" ? s.resultViewOffset : s.editViewOffset;
+
+      setActiveViewOffset([
+        offset[0] - panPxX / currentViewScale,
+        offset[1] + panPxY / currentViewScale,
+      ]);
+
+      const updatedDrag = dragRef.current;
+      if (!updatedDrag) return;
+      updatedDrag.startPx = [
+        updatedDrag.startPx[0] - panPxX,
+        updatedDrag.startPx[1] - panPxY,
+      ];
+    }
+  }, [canvasRef, containerRef, setActiveViewOffset]);
+
+  const stopAutoPan = useCallback(() => {
+    if (autoPanRafRef.current !== null) {
+      cancelAnimationFrame(autoPanRafRef.current);
+      autoPanRafRef.current = null;
+    }
+  }, []);
+
+  useEffect(() => stopAutoPan, [stopAutoPan]);
+
+  const updateDragAtPointer = useCallback(
+    (clientX: number, clientY: number) => {
+      const drag = dragRef.current;
+      if (!drag) return;
+
+      const s = useAppStore.getState();
+      const currentViewScale =
+        (s.mode === "result" ? s.resultViewScale : s.editViewScale) || 1;
+
+      const dx = (clientX - drag.startPx[0]) / currentViewScale;
+      const dy = -(clientY - drag.startPx[1]) / currentViewScale;
+      const rawX = drag.startWorld[0] + dx;
+      const rawY = drag.startWorld[1] + dy;
+
+      const snap = findSnapTarget(rawX, rawY, drag.hit);
+      const newX = snap ? snap[0] : snapValue(rawX);
+      const newY = snap ? snap[1] : snapValue(rawY);
+
+      if (drag.hit.kind === "annotation") {
+        const canvas = canvasRef.current;
+        if (!canvas) return;
+        const rect = canvas.getBoundingClientRect();
+        const pf = computePaperFrame(
+          rect.width,
+          rect.height,
+          s.resultViewSettings.paperFrame.paperSize,
+        );
+        const cxPx = clientX - rect.left;
+        const cyPx = clientY - rect.top;
+        const fx = (cxPx - pf.x) / pf.w;
+        const fy = (cyPx - pf.y) / pf.h;
+        const draggedId = drag.hit.annoId;
+
+        if (selectedAnnotationIds.includes(draggedId)) {
+          if (selectedAnnotationIds.length > 1) {
+            const draggedAnno = s.resultViewSettings.annotations.find(
+              (a) => a.id === draggedId,
+            );
+            if (draggedAnno) {
+              const ddx = fx - draggedAnno.x;
+              const ddy = fy - draggedAnno.y;
+              for (const sid of selectedAnnotationIds) {
+                const sa = s.resultViewSettings.annotations.find(
+                  (a) => a.id === sid,
+                );
+                if (sa) {
+                  updateAnnotation(sid, { x: sa.x + ddx, y: sa.y + ddy });
+                }
+              }
+            }
+          } else {
+            updateAnnotation(draggedId, { x: fx, y: fy });
+          }
+        } else {
+          updateAnnotation(draggedId, { x: fx, y: fy });
+        }
+      } else if (drag.hit.kind === "external") {
+        setCoordinate(drag.hit.index, [newX, newY]);
+      } else if (drag.hit.kind === "piezo") {
+        setPiezoCoordinate(drag.hit.index, [newX, newY]);
+      } else if (drag.hit.kind === "limit") {
+        setAnalysisLimits({ [drag.hit.handle]: newX });
+      } else if (drag.hit.kind === "udl") {
+        updateUdl(drag.hit.udlId, { [drag.hit.handle]: newX });
+      } else if (drag.hit.kind === "lineLoad") {
+        updateLineLoad(drag.hit.loadId, { x: newX });
+      } else {
+        updateBoundaryPoint(drag.hit.boundaryId, drag.hit.pointIndex, [
+          newX,
+          newY,
+        ]);
+      }
+    },
+    [
+      canvasRef,
+      findSnapTarget,
+      selectedAnnotationIds,
+      setAnalysisLimits,
+      setCoordinate,
+      setPiezoCoordinate,
+      snapValue,
+      updateAnnotation,
+      updateBoundaryPoint,
+      updateLineLoad,
+      updateUdl,
+    ],
+  );
+
+  const startAutoPan = useCallback(() => {
+    if (autoPanRafRef.current !== null) return;
+    const tick = () => {
+      if (!dragRef.current) {
+        autoPanRafRef.current = null;
+        return;
+      }
+      applyEdgePan();
+      const last = lastPointerRef.current;
+      if (last) updateDragAtPointer(last.x, last.y);
+      autoPanRafRef.current = requestAnimationFrame(tick);
+    };
+    autoPanRafRef.current = requestAnimationFrame(tick);
+  }, [applyEdgePan, updateDragAtPointer]);
 
   const handlePointerDown = useCallback(
     (e: RPointerEvent<HTMLCanvasElement>) => {
@@ -138,8 +306,11 @@ export function usePointerHandlers(deps: PointerDeps) {
 
       const [wx, wy] = getEventWorldPos(e);
       setMouseWorld([wx, wy]);
+      lastPointerRef.current = { x: e.clientX, y: e.clientY };
 
       if (e.button === 1) {
+        e.preventDefault();
+        e.stopPropagation();
         panRef.current = {
           startPx: [e.clientX, e.clientY],
           startOffset: [...viewOffset],
@@ -239,6 +410,7 @@ export function usePointerHandlers(deps: PointerDeps) {
           startPx: [e.clientX, e.clientY],
         };
         useAppStore.temporal.getState().pause();
+        startAutoPan();
         if (hit.kind === "external") {
           setSelectedPoint(hit.index);
         }
@@ -270,7 +442,6 @@ export function usePointerHandlers(deps: PointerDeps) {
       analysisLimits,
       assigningMaterialId,
       canvasRef,
-      containerRef,
       coordinates,
       editingAssignment,
       findNearPointUnified,
@@ -279,6 +450,7 @@ export function usePointerHandlers(deps: PointerDeps) {
       lineLoads,
       materialBoundaries,
       mode,
+      panActive,
       selectedAnnotationIds,
       setAssigningMaterial,
       setContextMenu,
@@ -287,6 +459,7 @@ export function usePointerHandlers(deps: PointerDeps) {
       setSelectedPoint,
       setSelectedRegionKey,
       setRegionMaterial,
+      startAutoPan,
       toggleAnnotationSelection,
       udls,
       viewOffset,
@@ -297,57 +470,13 @@ export function usePointerHandlers(deps: PointerDeps) {
     (e: RPointerEvent<HTMLCanvasElement>) => {
       const [wx, wy] = getEventWorldPos(e);
       setMouseWorld([wx, wy]);
+      lastPointerRef.current = { x: e.clientX, y: e.clientY };
 
       const s = useAppStore.getState();
       const currentViewScale =
         (s.mode === "result" ? s.resultViewScale : s.editViewScale) || 1;
 
-      if (dragRef.current && dragRef.current.hit.kind !== "annotation") {
-        const rect = containerRef?.current?.getBoundingClientRect();
-        const canvasRect = canvasRef.current?.getBoundingClientRect();
-        const viewRect = rect ?? canvasRect;
-        if (viewRect) {
-          const cx = e.clientX - viewRect.left;
-          const cy = e.clientY - viewRect.top;
-          const edgeMargin = 24;
-          const maxPanPx = 18;
-
-          let panPxX = 0;
-          let panPxY = 0;
-
-          if (cx < edgeMargin) {
-            panPxX = Math.max(-maxPanPx, (cx - edgeMargin) * 0.35);
-          } else if (cx > viewRect.width - edgeMargin) {
-            panPxX = Math.min(
-              maxPanPx,
-              (cx - (viewRect.width - edgeMargin)) * 0.35,
-            );
-          }
-
-          if (cy < edgeMargin) {
-            panPxY = Math.max(-maxPanPx, (cy - edgeMargin) * 0.35);
-          } else if (cy > viewRect.height - edgeMargin) {
-            panPxY = Math.min(
-              maxPanPx,
-              (cy - (viewRect.height - edgeMargin)) * 0.35,
-            );
-          }
-
-          if (panPxX !== 0 || panPxY !== 0) {
-            const offset =
-              s.mode === "result" ? s.resultViewOffset : s.editViewOffset;
-            setActiveViewOffset([
-              offset[0] - panPxX / currentViewScale,
-              offset[1] + panPxY / currentViewScale,
-            ]);
-
-            dragRef.current.startPx = [
-              dragRef.current.startPx[0] - panPxX,
-              dragRef.current.startPx[1] - panPxY,
-            ];
-          }
-        }
-      }
+      if (dragRef.current) applyEdgePan();
 
       if (panRef.current) {
         const dx = (e.clientX - panRef.current.startPx[0]) / currentViewScale;
@@ -360,70 +489,7 @@ export function usePointerHandlers(deps: PointerDeps) {
       }
 
       if (dragRef.current) {
-        const dx = (e.clientX - dragRef.current.startPx[0]) / currentViewScale;
-        const dy = -(e.clientY - dragRef.current.startPx[1]) / currentViewScale;
-        const rawX = dragRef.current.startWorld[0] + dx;
-        const rawY = dragRef.current.startWorld[1] + dy;
-
-        const snap = findSnapTarget(rawX, rawY, dragRef.current.hit);
-        const newX = snap ? snap[0] : snapValue(rawX);
-        const newY = snap ? snap[1] : snapValue(rawY);
-
-        if (dragRef.current.hit.kind === "annotation") {
-          const canvas = canvasRef.current!;
-          const rect = canvas.getBoundingClientRect();
-          const pf = computePaperFrame(
-            rect.width,
-            rect.height,
-            useAppStore.getState().resultViewSettings.paperFrame.paperSize,
-          );
-          const cxPx = e.clientX - rect.left;
-          const cyPx = e.clientY - rect.top;
-          const fx = (cxPx - pf.x) / pf.w;
-          const fy = (cyPx - pf.y) / pf.h;
-          const draggedId = dragRef.current.hit.annoId;
-
-          if (
-            selectedAnnotationIds.includes(draggedId) &&
-            selectedAnnotationIds.length > 1
-          ) {
-            const draggedAnno = useAppStore
-              .getState()
-              .resultViewSettings.annotations.find((a) => a.id === draggedId);
-            if (draggedAnno) {
-              const ddx = fx - draggedAnno.x;
-              const ddy = fy - draggedAnno.y;
-              for (const sid of selectedAnnotationIds) {
-                const sa = useAppStore
-                  .getState()
-                  .resultViewSettings.annotations.find((a) => a.id === sid);
-                if (sa) {
-                  updateAnnotation(sid, { x: sa.x + ddx, y: sa.y + ddy });
-                }
-              }
-            }
-          } else {
-            updateAnnotation(draggedId, { x: fx, y: fy });
-          }
-        } else if (dragRef.current.hit.kind === "external") {
-          setCoordinate(dragRef.current.hit.index, [newX, newY]);
-        } else if (dragRef.current.hit.kind === "piezo") {
-          setPiezoCoordinate(dragRef.current.hit.index, [newX, newY]);
-        } else if (dragRef.current.hit.kind === "limit") {
-          setAnalysisLimits({ [dragRef.current.hit.handle]: newX });
-        } else if (dragRef.current.hit.kind === "udl") {
-          updateUdl(dragRef.current.hit.udlId, {
-            [dragRef.current.hit.handle]: newX,
-          });
-        } else if (dragRef.current.hit.kind === "lineLoad") {
-          updateLineLoad(dragRef.current.hit.loadId, { x: newX });
-        } else {
-          updateBoundaryPoint(
-            dragRef.current.hit.boundaryId,
-            dragRef.current.hit.pointIndex,
-            [newX, newY],
-          );
-        }
+        updateDragAtPointer(e.clientX, e.clientY);
         return;
       }
 
@@ -454,53 +520,31 @@ export function usePointerHandlers(deps: PointerDeps) {
         hit = findNearPointUnified(wx, wy);
       }
       setHoverHit(hit);
-      const canvas = canvasRef.current;
-      if (canvas) {
-        if (panActive) {
-          canvas.style.cursor = panRef.current ? "grabbing" : "grab";
-        } else {
-          canvas.style.cursor =
-            hit?.kind === "annotation"
-              ? "grab"
-              : hit?.kind === "limit" ||
-                  hit?.kind === "udl" ||
-                  hit?.kind === "lineLoad"
-                ? "ew-resize"
-                : hit
-                  ? "grab"
-                  : "";
-        }
-      }
     },
     [
       canvasRef,
-      containerRef,
+      applyEdgePan,
       findNearPointUnified,
-      findSnapTarget,
       getEventWorldPos,
       mode,
-      selectedAnnotationIds,
-      panActive,
       setActiveViewOffset,
-      setAnalysisLimits,
-      setCoordinate,
-      setPiezoCoordinate,
-      snapValue,
-      updateAnnotation,
-      updateBoundaryPoint,
-      updateLineLoad,
-      updateUdl,
+      updateDragAtPointer,
     ],
   );
 
-  const handlePointerUp = useCallback((e: RPointerEvent<HTMLCanvasElement>) => {
-    if (dragRef.current) {
-      useAppStore.temporal.getState().resume();
-    }
-    dragRef.current = null;
-    panRef.current = null;
-    (e.target as HTMLElement).releasePointerCapture(e.pointerId);
-  }, []);
+  const handlePointerUp = useCallback(
+    (e: RPointerEvent<HTMLCanvasElement>) => {
+      if (dragRef.current) {
+        useAppStore.temporal.getState().resume();
+      }
+      dragRef.current = null;
+      panRef.current = null;
+      lastPointerRef.current = null;
+      stopAutoPan();
+      (e.target as HTMLElement).releasePointerCapture(e.pointerId);
+    },
+    [stopAutoPan],
+  );
 
   const handleWheel = useCallback(
     (e: RWheelEvent<HTMLCanvasElement>) => {
@@ -513,7 +557,7 @@ export function usePointerHandlers(deps: PointerDeps) {
       if (state.mode === "result" && state.resultViewSettings.viewLock?.enabled)
         return;
 
-      const factor = e.deltaY > 0 ? 0.9 : 1.1;
+      const factor = e.deltaY > 0 ? 0.8 : 1.2;
       const canvas = canvasRef.current;
       if (!canvas) return;
       const rect = canvas.getBoundingClientRect();
@@ -533,8 +577,9 @@ export function usePointerHandlers(deps: PointerDeps) {
         oy - (my - h / 2) / newScale + (my - h / 2) / oldScale,
       ]);
       setActiveViewScale(newScale);
+      onZoomCompleted?.();
     },
-    [canvasRef, setActiveViewOffset, setActiveViewScale],
+    [canvasRef, onZoomCompleted, setActiveViewOffset, setActiveViewScale],
   );
 
   return {

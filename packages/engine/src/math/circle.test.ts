@@ -2,7 +2,6 @@ import { describe, expect, it } from "vitest";
 import {
   getCircleYCoordinateAtX,
   getCircleLineIntersections,
-  getCirclePolygonIntersection,
   circleRadiusFromAbcd,
   circleCentre,
   generateCircleCoordinates,
@@ -43,38 +42,6 @@ describe("getCircleLineIntersections", () => {
   it("returns empty for non-intersecting line", () => {
     const ints = getCircleLineIntersections(5, 5, 3, [0, 10], [20, 20]);
     expect(ints.length).toBe(0);
-  });
-});
-
-describe("getCirclePolygonIntersection", () => {
-  it("finds intersections of circle and horizontal polyline (expected: [(-4,3),(4,3)])", () => {
-    const pts = getCirclePolygonIntersection(0, 0, 5, [-10, 10], [3, 3]);
-    expect(pts.length).toBe(2);
-    expect(pts[0][0]).toBeCloseTo(-4.0, 8);
-    expect(pts[0][1]).toBeCloseTo(3.0, 8);
-    expect(pts[1][0]).toBeCloseTo(4.0, 8);
-    expect(pts[1][1]).toBeCloseTo(3.0, 8);
-  });
-
-  it("returns empty when circle is fully inside polygon", () => {
-    const pts = getCirclePolygonIntersection(
-      5,
-      5,
-      3,
-      [0, 10, 10, 0, 0],
-      [0, 0, 10, 10, 0],
-    );
-    expect(pts.length).toBe(0);
-  });
-
-  it("handles vertical line segments", () => {
-    // Circle at origin r=5, vertical line x=3 from y=-10 to y=10
-    const pts = getCirclePolygonIntersection(0, 0, 5, [3, 3], [-10, 10]);
-    expect(pts.length).toBe(2);
-    // y = ±4
-    pts.sort((a, b) => a[1] - b[1]);
-    expect(pts[0][1]).toBeCloseTo(-4.0, 8);
-    expect(pts[1][1]).toBeCloseTo(4.0, 8);
   });
 });
 
