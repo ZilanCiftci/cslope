@@ -234,7 +234,7 @@ export function drawCanvas(
   // Axes (origin lines)
   if (showGrid) {
     ctx.strokeStyle = AXIS_COLOR;
-    ctx.lineWidth = 1.5;
+    ctx.lineWidth = 1;
     const [ax0] = worldToCanvas(0, 0, w, h);
     const [, ay0] = worldToCanvas(0, 0, w, h);
     ctx.beginPath();

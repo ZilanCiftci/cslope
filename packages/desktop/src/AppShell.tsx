@@ -1,9 +1,9 @@
 import { useEffect, useState } from "react";
-import { ActivityBar } from "./ActivityBar";
-import { StatusBar } from "./StatusBar";
-import { TabBar } from "./TabBar";
-import { TitleBar } from "./TitleBar";
-import { CanvasToolbar } from "../features/canvas/CanvasToolbar";
+import { ActivityBar } from "./components/ActivityBar";
+import { StatusBar } from "./components/StatusBar";
+import { MenuBar } from "./components/ui/ribbon/MenuBar";
+import { TabBar } from "./components/TabBar";
+import { TitleBar } from "./components/TitleBar";
 import {
   Explorer,
   PropertiesPanel,
@@ -11,9 +11,9 @@ import {
   ResultPanel,
   ResultSidebar,
   SlopeCanvas,
-} from "../components";
-import { useAppStore } from "../store/app-store";
-import { useDragDrop } from "../features/canvas/hooks/useDragDrop";
+} from "./components";
+import { useAppStore } from "./store/app-store";
+import { useDragDrop } from "./features/canvas/hooks/useDragDrop";
 
 export function AppShell() {
   useDragDrop();
@@ -44,6 +44,7 @@ export function AppShell() {
   const theme = useAppStore((s) => s.theme);
   const toggleTheme = useAppStore((s) => s.toggleTheme);
   const coordinateCount = useAppStore((s) => s.coordinates.length);
+  const cursorWorld = useAppStore((s) => s.cursorWorld);
   const runAllAnalyses = useAppStore((s) => s.runAllAnalyses);
   const canvasToolbar = useAppStore((s) => s.canvasToolbar);
 
@@ -88,6 +89,11 @@ export function AppShell() {
         activeModelName={activeModel?.name}
       />
 
+      <MenuBar
+        activeModelName={activeModel?.name}
+        canvasToolbar={canvasToolbar}
+      />
+
       <TabBar
         mode={mode}
         setMode={setMode}
@@ -97,26 +103,6 @@ export function AppShell() {
         onCancel={cancelAnalysis}
         onRunAll={handleRunAll}
       />
-
-      {canvasToolbar && (
-        <div
-          className="flex items-center h-9 shrink-0 px-2"
-          style={{
-            background: "var(--color-vsc-tab-inactive)",
-            borderBottom: "1px solid var(--color-vsc-border)",
-          }}
-        >
-          <CanvasToolbar
-            zoomBoxActive={canvasToolbar.zoomBoxActive}
-            panActive={canvasToolbar.panActive}
-            onFitToScreen={canvasToolbar.onFitToScreen}
-            onZoomIn={canvasToolbar.onZoomIn}
-            onZoomOut={canvasToolbar.onZoomOut}
-            onToggleZoomBox={canvasToolbar.onToggleZoomBox}
-            onTogglePan={canvasToolbar.onTogglePan}
-          />
-        </div>
-      )}
 
       <div className="flex flex-1 min-h-0">
         <ActivityBar
@@ -197,6 +183,7 @@ export function AppShell() {
         setSnapToGrid={setSnapToGrid}
         setGridSnapSize={setGridSnapSize}
         coordinateCount={coordinateCount}
+        cursorWorld={cursorWorld}
       />
     </div>
   );

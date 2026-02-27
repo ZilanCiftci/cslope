@@ -183,6 +183,9 @@ export interface ModelsSlice {
   loadProject: (data: { models: ModelEntry[]; activeModelId?: string }) => void;
   newProject: () => void;
   loadBenchmarks: () => void;
+  /** Set after loadProject / loadBenchmarks so the canvas auto-fits. */
+  _pendingFitToScreen: boolean;
+  clearPendingFitToScreen: () => void;
 }
 
 export interface GeometrySlice {
@@ -306,6 +309,8 @@ export interface CanvasToolbarState {
 export interface CanvasToolbarSlice {
   canvasToolbar: CanvasToolbarState | null;
   setCanvasToolbar: (toolbar: CanvasToolbarState | null) => void;
+  cursorWorld: [number, number] | null;
+  setCursorWorld: (pos: [number, number] | null) => void;
 }
 
 export type AppState = LayoutSlice &

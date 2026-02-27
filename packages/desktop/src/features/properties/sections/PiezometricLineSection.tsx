@@ -3,6 +3,7 @@ import { Section } from "../../../components/ui/Section";
 import { Label } from "../../../components/ui/Label";
 import {
   SpreadsheetNumberInput,
+  SpreadsheetRemoveButton,
   SpreadsheetTable,
   type SpreadsheetColumn,
 } from "../../../components/ui/SpreadsheetTable";
@@ -30,6 +31,7 @@ export function PiezometricLineSection() {
     {
       header: <Label>#</Label>,
       widthClassName: "w-8",
+      cellClassName: "py-1 px-2",
       renderCell: (_line, i) => (
         <span
           style={{
@@ -43,6 +45,7 @@ export function PiezometricLineSection() {
     },
     {
       header: <Label>Line</Label>,
+      cellClassName: "py-1 px-2",
       renderCell: (line) => (
         <div className="flex items-center gap-2 min-w-0">
           <span
@@ -63,23 +66,16 @@ export function PiezometricLineSection() {
     {
       header: null,
       widthClassName: "w-8",
+      cellClassName: "py-1 px-2",
       align: "right",
       renderCell: (line) => (
-        <button
+        <SpreadsheetRemoveButton
+          ariaLabel={`Remove ${line.name}`}
           onClick={(e) => {
             e.stopPropagation();
             removePiezoLine(line.id);
           }}
-          className="w-5 h-5 flex items-center justify-center rounded hover:bg-red-500/20 hover:text-red-400 cursor-pointer transition-colors"
-          style={{
-            color: "var(--color-vsc-text-muted)",
-            fontSize: "10px",
-          }}
-          title="Remove line"
-          aria-label={`Remove ${line.name}`}
-        >
-          ✕
-        </button>
+        />
       ),
     },
   ];
@@ -88,6 +84,7 @@ export function PiezometricLineSection() {
     {
       header: <Label>#</Label>,
       widthClassName: "w-8",
+      cellClassName: "py-1 px-2",
       renderCell: (_row, i) => (
         <span
           style={{
@@ -126,24 +123,17 @@ export function PiezometricLineSection() {
     {
       header: null,
       widthClassName: "w-8",
+      cellClassName: "py-1 px-2",
       align: "right",
       renderCell: (_row, i) =>
         activeLine && activeLine.coordinates.length > 2 ? (
-          <button
+          <SpreadsheetRemoveButton
+            ariaLabel={`Remove piezometric point ${i + 1}`}
             onClick={(e) => {
               e.stopPropagation();
               removePiezoPoint(i);
             }}
-            className="w-5 h-5 flex items-center justify-center rounded hover:bg-red-500/20 hover:text-red-400 cursor-pointer transition-colors"
-            style={{
-              color: "var(--color-vsc-text-muted)",
-              fontSize: "10px",
-            }}
-            title="Remove point"
-            aria-label={`Remove piezometric point ${i + 1}`}
-          >
-            ✕
-          </button>
+          />
         ) : null,
     },
   ];
@@ -205,7 +195,9 @@ export function PiezometricLineSection() {
             rows={pl.lines}
             columns={lineColumns}
             getRowKey={(line) => line.id}
-            selectedRowIndex={pl.lines.findIndex((l) => l.id === pl.activeLineId)}
+            selectedRowIndex={pl.lines.findIndex(
+              (l) => l.id === pl.activeLineId,
+            )}
             onRowClick={(line) => setActivePiezoLine(line.id)}
             getRowStyle={(line) => {
               const isActive = line.id === pl.activeLineId;

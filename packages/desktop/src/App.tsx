@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { AppShell } from "./app/AppShell";
+import { AppShell } from "./AppShell";
 import { isElectron } from "./utils/is-electron";
 
 function App() {

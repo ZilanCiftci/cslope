@@ -82,6 +82,8 @@ export const INITIAL_MODEL = createDefaultModel(
 export const createModelsSlice: SliceCreator<ModelsSlice> = (set, get) => ({
   activeModelId: INITIAL_MODEL_ID,
   models: [INITIAL_MODEL],
+  _pendingFitToScreen: false,
+  clearPendingFitToScreen: () => set({ _pendingFitToScreen: false }),
 
   setProjectInfo: (patch) =>
     set((s) => ({
@@ -323,6 +325,7 @@ export const createModelsSlice: SliceCreator<ModelsSlice> = (set, get) => ({
       models,
       activeModelId: targetId,
       ...mapModelToState(target),
+      _pendingFitToScreen: true,
     });
   },
 
@@ -345,6 +348,7 @@ export const createModelsSlice: SliceCreator<ModelsSlice> = (set, get) => ({
       models,
       activeModelId: first.id,
       ...mapModelToState(first),
+      _pendingFitToScreen: true,
     });
   },
 });

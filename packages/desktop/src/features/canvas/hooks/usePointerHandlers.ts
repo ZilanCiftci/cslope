@@ -12,10 +12,44 @@ import { useAppStore } from "../../../store/app-store";
 import type { ContextMenuState, MaterialPickerState, PointHit } from "../types";
 import type {
   AnalysisLimitsState,
+  AppState,
   LineLoadRow,
   MaterialBoundaryRow,
   UdlRow,
 } from "../../../store/types";
+
+type UndoableSnapshot = Pick<
+  AppState,
+  | "orientation"
+  | "coordinates"
+  | "materials"
+  | "materialBoundaries"
+  | "regionMaterials"
+  | "piezometricLine"
+  | "udls"
+  | "lineLoads"
+  | "analysisLimits"
+  | "options"
+>;
+
+function pickUndoableSnapshot(state: AppState): UndoableSnapshot {
+  return {
+    orientation: state.orientation,
+    coordinates: state.coordinates,
+    materials: state.materials,
+    materialBoundaries: state.materialBoundaries,
+    regionMaterials: state.regionMaterials,
+    piezometricLine: state.piezometricLine,
+    udls: state.udls,
+    lineLoads: state.lineLoads,
+    analysisLimits: state.analysisLimits,
+    options: state.options,
+  };
+}
+
+function isSameUndoableSnapshot(a: UndoableSnapshot, b: UndoableSnapshot) {
+  return JSON.stringify(a) === JSON.stringify(b);
+}
 
 interface PointerDeps {
   canvasRef: RefObject<HTMLCanvasElement | null>;
@@ -132,6 +166,38 @@ export function usePointerHandlers(deps: PointerDeps) {
   } | null>(null);
   const autoPanRafRef = useRef<number | null>(null);
   const lastPointerRef = useRef<{ x: number; y: number } | null>(null);
+  const dragStartSnapshotRef = useRef<UndoableSnapshot | null>(null);
+
+  const beginDragHistoryBatch = useCallback(() => {
+    dragStartSnapshotRef.current = pickUndoableSnapshot(useAppStore.getState());
+    useAppStore.temporal.getState().pause();
+  }, []);
+
+  const commitDragHistoryBatch = useCallback(() => {
+    const temporalStore = useAppStore.temporal;
+    const temporalState = temporalStore.getState();
+    const startSnapshot = dragStartSnapshotRef.current;
+
+    temporalState.resume();
+
+    if (!startSnapshot) {
+      dragStartSnapshotRef.current = null;
+      return;
+    }
+
+    const endSnapshot = pickUndoableSnapshot(useAppStore.getState());
+    if (!isSameUndoableSnapshot(startSnapshot, endSnapshot)) {
+      temporalStore.setState((s) => ({
+        pastStates:
+          s.pastStates.length >= 50
+            ? [...s.pastStates.slice(1), startSnapshot]
+            : [...s.pastStates, startSnapshot],
+        futureStates: [],
+      }));
+    }
+
+    dragStartSnapshotRef.current = null;
+  }, []);
 
   const [mouseWorld, setMouseWorld] = useState<[number, number] | null>(null);
   const [hoverHit, setHoverHit] = useState<PointHit | null>(null);
@@ -240,6 +306,11 @@ export function usePointerHandlers(deps: PointerDeps) {
       const snap = findSnapTarget(rawX, rawY, drag.hit);
       const newX = snap ? snap[0] : snapValue(rawX);
       const newY = snap ? snap[1] : snapValue(rawY);
+
+      // Show the snapped coordinate in the status bar, not the raw mouse position
+      if (drag.hit.kind !== "annotation") {
+        setMouseWorld([newX, newY]);
+      }
 
       if (drag.hit.kind === "annotation") {
         const canvas = canvasRef.current;
@@ -376,7 +447,7 @@ export function usePointerHandlers(deps: PointerDeps) {
                 startWorld: [a.x, a.y],
                 startPx: [e.clientX, e.clientY],
               };
-              useAppStore.temporal.getState().pause();
+              beginDragHistoryBatch();
               (e.target as HTMLElement).setPointerCapture(e.pointerId);
               return;
             }
@@ -436,7 +507,7 @@ export function usePointerHandlers(deps: PointerDeps) {
           startWorld,
           startPx: [e.clientX, e.clientY],
         };
-        useAppStore.temporal.getState().pause();
+        beginDragHistoryBatch();
         startAutoPan();
         if (hit.kind === "external") {
           setSelectedPoint(hit.index);
@@ -490,6 +561,7 @@ export function usePointerHandlers(deps: PointerDeps) {
       toggleAnnotationSelection,
       udls,
       viewOffset,
+      beginDragHistoryBatch,
     ],
   );
 
@@ -564,30 +636,36 @@ export function usePointerHandlers(deps: PointerDeps) {
 
   const handlePointerUp = useCallback(
     (e: RPointerEvent<HTMLCanvasElement>) => {
-      if (dragRef.current) {
-        useAppStore.temporal.getState().resume();
-      }
+      if (dragRef.current) commitDragHistoryBatch();
       dragRef.current = null;
       panRef.current = null;
       lastPointerRef.current = null;
       stopAutoPan();
       (e.target as HTMLElement).releasePointerCapture(e.pointerId);
     },
-    [stopAutoPan],
+    [commitDragHistoryBatch, stopAutoPan],
+  );
+
+  const handlePointerCancel = useCallback(
+    (e: RPointerEvent<HTMLCanvasElement>) => {
+      if (dragRef.current) commitDragHistoryBatch();
+      dragRef.current = null;
+      panRef.current = null;
+      lastPointerRef.current = null;
+      stopAutoPan();
+      (e.target as HTMLElement).releasePointerCapture(e.pointerId);
+    },
+    [commitDragHistoryBatch, stopAutoPan],
   );
 
   const handleWheel = useCallback(
     (e: RWheelEvent<HTMLCanvasElement>) => {
-      // Only zoom when Ctrl is held; otherwise let scrollbars move normally.
-      if (!e.ctrlKey) return;
-
       e.preventDefault();
       e.stopPropagation();
       const state = useAppStore.getState();
       if (state.mode === "result" && state.resultViewSettings.viewLock?.enabled)
         return;
 
-      const factor = e.deltaY > 0 ? 0.8 : 1.2;
       const canvas = canvasRef.current;
       if (!canvas) return;
       const rect = canvas.getBoundingClientRect();
@@ -599,15 +677,26 @@ export function usePointerHandlers(deps: PointerDeps) {
       const oldScale =
         state.mode === "result" ? state.resultViewScale : state.editViewScale;
       if (oldScale <= 0) return;
-      const newScale = Math.max(0.1, Math.min(200, oldScale * factor));
+
       const [ox, oy] =
         state.mode === "result" ? state.resultViewOffset : state.editViewOffset;
-      setActiveViewOffset([
-        ox + (mx - w / 2) / newScale - (mx - w / 2) / oldScale,
-        oy - (my - h / 2) / newScale + (my - h / 2) / oldScale,
-      ]);
-      setActiveViewScale(newScale);
-      onZoomCompleted?.();
+
+      if (e.ctrlKey) {
+        const factor = e.deltaY > 0 ? 0.8 : 1.2;
+        const newScale = Math.max(0.1, Math.min(200, oldScale * factor));
+        setActiveViewOffset([
+          ox + (mx - w / 2) / newScale - (mx - w / 2) / oldScale,
+          oy - (my - h / 2) / newScale + (my - h / 2) / oldScale,
+        ]);
+        setActiveViewScale(newScale);
+        onZoomCompleted?.();
+      } else {
+        // Pan
+        setActiveViewOffset([
+          ox - e.deltaX / oldScale,
+          oy + e.deltaY / oldScale,
+        ]);
+      }
     },
     [canvasRef, onZoomCompleted, setActiveViewOffset, setActiveViewScale],
   );
@@ -618,6 +707,7 @@ export function usePointerHandlers(deps: PointerDeps) {
     handlePointerDown,
     handlePointerMove,
     handlePointerUp,
+    handlePointerCancel,
     handleWheel,
     setMouseWorld,
     setHoverHit,

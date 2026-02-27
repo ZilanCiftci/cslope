@@ -3,6 +3,7 @@ import { Section } from "../../../components/ui/Section";
 import { Label } from "../../../components/ui/Label";
 import {
   SpreadsheetNumberInput,
+  SpreadsheetRemoveButton,
   SpreadsheetTable,
   type SpreadsheetColumn,
 } from "../../../components/ui/SpreadsheetTable";
@@ -46,17 +47,10 @@ export function BoundariesSection() {
             >
               Boundary {bIdx + 1}
             </span>
-            <button
+            <SpreadsheetRemoveButton
+              ariaLabel="Remove boundary"
               onClick={() => removeMaterialBoundary(b.id)}
-              className="w-5 h-5 flex items-center justify-center rounded hover:bg-red-500/20 hover:text-red-400 cursor-pointer transition-colors"
-              style={{
-                color: "var(--color-vsc-text-muted)",
-                fontSize: "10px",
-              }}
-              aria-label="Remove boundary"
-            >
-              ✕
-            </button>
+            />
           </div>
 
           <SpreadsheetTable
@@ -67,6 +61,7 @@ export function BoundariesSection() {
                 {
                   header: <Label>#</Label>,
                   widthClassName: "w-8",
+                  cellClassName: "py-1 px-2",
                   renderCell: (_row, i) => (
                     <span
                       style={{
@@ -107,23 +102,17 @@ export function BoundariesSection() {
                 {
                   header: null,
                   widthClassName: "w-8",
+                  cellClassName: "py-1 px-2",
                   align: "right",
                   renderCell: (_row, i) =>
                     b.coordinates.length > 2 ? (
-                      <button
+                      <SpreadsheetRemoveButton
+                        ariaLabel={`Remove point ${i + 1}`}
                         onClick={(e) => {
                           e.stopPropagation();
                           removeBoundaryPoint(b.id, i);
                         }}
-                        className="w-5 h-5 flex items-center justify-center rounded hover:bg-red-500/20 hover:text-red-400 cursor-pointer transition-colors"
-                        style={{
-                          color: "var(--color-vsc-text-muted)",
-                          fontSize: "10px",
-                        }}
-                        aria-label={`Remove point ${i + 1}`}
-                      >
-                        ✕
-                      </button>
+                      />
                     ) : null,
                 },
               ] satisfies SpreadsheetColumn<[number, number]>[]

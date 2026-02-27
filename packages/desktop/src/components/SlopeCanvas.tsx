@@ -11,18 +11,19 @@ import { usePointerHandlers } from "../features/canvas/hooks/usePointerHandlers"
 import { useContextMenu } from "../features/canvas/hooks/useContextMenu";
 import { useMaterialPicker } from "../features/canvas/hooks/useMaterialPicker";
 import { drawCanvas } from "../features/canvas/draw";
-import { ARROW_HEIGHT_PX, cssVar } from "../features/canvas/constants";
+import {
+  ARROW_HEIGHT_PX,
+  RULER_SIZE_PX,
+  cssVar,
+} from "../features/canvas/constants";
 import { computePaperFrame } from "../features/canvas/helpers";
 import { circleArcPoints } from "../utils/arc";
-
-const SCROLL_FALLBACK = 4000; // virtual surface to show scrollbars when sizes are missing
-const SCROLL_PAN_FACTOR = 0.25; // dampen scrollbar panning sensitivity
+import { AxisOverlay } from "../features/canvas/AxisOverlay";
 
 export function SlopeCanvas() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const crosshairCanvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
-  const scrollStateRef = useRef({ x: 0, y: 0 });
   const drawRafRef = useRef<number | null>(null);
   const drawDirtyRef = useRef(false);
   const drawArgsRef = useRef<Parameters<typeof drawCanvas>[1] | null>(null);
@@ -196,22 +197,13 @@ export function SlopeCanvas() {
     setMaterialPicker,
   });
 
-  const recenterScrollbars = useCallback(() => {
-    const el = containerRef.current;
-    if (!el) return;
-    const centerX = (el.scrollWidth - el.clientWidth) / 2;
-    const centerY = (el.scrollHeight - el.clientHeight) / 2;
-    el.scrollLeft = centerX;
-    el.scrollTop = centerY;
-    scrollStateRef.current = { x: centerX, y: centerY };
-  }, []);
-
   const {
     mouseWorld,
     hoverHit,
     handlePointerDown,
     handlePointerMove,
     handlePointerUp,
+    handlePointerCancel,
     handleWheel,
   } = usePointerHandlers({
     canvasRef,
@@ -220,7 +212,6 @@ export function SlopeCanvas() {
     viewOffset,
     setActiveViewOffset,
     setActiveViewScale,
-    onZoomCompleted: recenterScrollbars,
     findNearPointUnified: hitTest.findNearPointUnified,
     findRegionAtPoint: hitTest.findRegionAtPoint,
     findSnapTarget: hitTest.findSnapTarget,
@@ -253,34 +244,11 @@ export function SlopeCanvas() {
     setMaterialPicker,
   });
 
-  // Center scrollbars initially so we can treat scroll deltas as pan inputs.
+  // Sync mouse world position to the store so StatusBar can display it
+  const setCursorWorld = useAppStore((s) => s.setCursorWorld);
   useEffect(() => {
-    recenterScrollbars();
-  }, [recenterScrollbars]);
-
-  const handleScroll = useCallback(() => {
-    const el = containerRef.current;
-    if (!el) return;
-
-    const dx = el.scrollLeft - scrollStateRef.current.x;
-    const dy = el.scrollTop - scrollStateRef.current.y;
-    if (dx === 0 && dy === 0) return;
-
-    const state = useAppStore.getState();
-    const scale =
-      (state.mode === "result" ? state.resultViewScale : state.editViewScale) ||
-      1;
-    const offset =
-      state.mode === "result" ? state.resultViewOffset : state.editViewOffset;
-    // Invert directions so scrollbar motion matches model motion (right→right, up→up).
-    setActiveViewOffset([
-      offset[0] - (dx / scale) * SCROLL_PAN_FACTOR,
-      offset[1] + (dy / scale) * SCROLL_PAN_FACTOR,
-    ]);
-
-    // Track current position so thumb moves naturally.
-    scrollStateRef.current = { x: el.scrollLeft, y: el.scrollTop };
-  }, [setActiveViewOffset]);
+    setCursorWorld(mouseWorld);
+  }, [mouseWorld, setCursorWorld]);
 
   const handleWheelCapture = useCallback(
     (e: React.WheelEvent<HTMLDivElement>) => {
@@ -377,6 +345,44 @@ export function SlopeCanvas() {
         const ctx = canvas.getContext("2d");
         if (!ctx) return;
 
+        // Read latest viewport from store to avoid React render lag
+        const state = useAppStore.getState();
+        const currentViewOffset =
+          state.mode === "result"
+            ? state.resultViewOffset
+            : state.editViewOffset;
+        const currentViewScale =
+          state.mode === "result" ? state.resultViewScale : state.editViewScale;
+
+        const currentWorldToCanvas = (
+          wx: number,
+          wy: number,
+          w: number,
+          h: number,
+        ): [number, number] => {
+          const cx = w / 2 + (wx + currentViewOffset[0]) * currentViewScale;
+          const cy = h / 2 - (wy + currentViewOffset[1]) * currentViewScale;
+          return [cx, cy];
+        };
+
+        const currentCanvasToWorld = (
+          cx: number,
+          cy: number,
+          w: number,
+          h: number,
+        ): [number, number] => {
+          const wx = (cx - w / 2) / currentViewScale - currentViewOffset[0];
+          const wy = -(cy - h / 2) / currentViewScale - currentViewOffset[1];
+          return [wx, wy];
+        };
+
+        const updatedArgs = {
+          ...args,
+          viewScale: currentViewScale,
+          worldToCanvas: currentWorldToCanvas,
+          canvasToWorld: currentCanvasToWorld,
+        };
+
         ctx.setTransform(
           drawMetaRef.current.dpr,
           0,
@@ -385,7 +391,7 @@ export function SlopeCanvas() {
           0,
           0,
         );
-        drawCanvas(ctx, args);
+        drawCanvas(ctx, updatedArgs);
 
         if (drawDirtyRef.current) requestDraw();
       });
@@ -393,6 +399,35 @@ export function SlopeCanvas() {
 
     drawDirtyRef.current = true;
     requestDraw();
+
+    // Subscribe to store to redraw synchronously on viewport changes
+    const unsub = useAppStore.subscribe((state, prevState) => {
+      const oldOffset =
+        prevState.mode === "result"
+          ? prevState.resultViewOffset
+          : prevState.editViewOffset;
+      const newOffset =
+        state.mode === "result" ? state.resultViewOffset : state.editViewOffset;
+      const oldScale =
+        prevState.mode === "result"
+          ? prevState.resultViewScale
+          : prevState.editViewScale;
+      const newScale =
+        state.mode === "result" ? state.resultViewScale : state.editViewScale;
+
+      if (oldOffset !== newOffset || oldScale !== newScale) {
+        drawDirtyRef.current = true;
+        requestDraw();
+      }
+    });
+
+    return () => {
+      unsub();
+      if (drawRafRef.current !== null) {
+        cancelAnimationFrame(drawRafRef.current);
+        drawRafRef.current = null;
+      }
+    };
   }, [
     canvasSize,
     coordinates,
@@ -453,15 +488,6 @@ export function SlopeCanvas() {
     ctx.setLineDash([]);
   }, [canvasSize, mode, mouseWorld, worldToCanvas]);
 
-  useEffect(() => {
-    return () => {
-      if (drawRafRef.current !== null) {
-        cancelAnimationFrame(drawRafRef.current);
-        drawRafRef.current = null;
-      }
-    };
-  }, []);
-
   // Keyboard shortcuts
   useEffect(() => {
     const handleKey = (e: KeyboardEvent) => {
@@ -508,28 +534,19 @@ export function SlopeCanvas() {
     setAnnoStyleMenu,
   ]);
 
-  const handleContainerWheel = useCallback(
-    (e: React.WheelEvent<HTMLDivElement>) => {
-      // Shift+wheel pans horizontally via scrollbars.
-      if (e.shiftKey && !e.ctrlKey) {
-        const el = containerRef.current;
-        if (!el) return;
-        el.scrollLeft += e.deltaY;
-        e.preventDefault();
-        e.stopPropagation();
-      }
-    },
-    [],
-  );
-
   const handleFitToScreen = useCallback(() => {
     if (coordinates.length < 2) return;
 
     const container = containerRef.current;
     const canvas = canvasRef.current;
     const rect = container?.getBoundingClientRect();
-    const w = rect?.width ?? canvas?.getBoundingClientRect().width ?? 0;
-    const h = rect?.height ?? canvas?.getBoundingClientRect().height ?? 0;
+    const rulerPadding = RULER_SIZE_PX + 16; // ruler band + extra margin
+    const w =
+      (rect?.width ?? canvas?.getBoundingClientRect().width ?? 0) -
+      rulerPadding;
+    const h =
+      (rect?.height ?? canvas?.getBoundingClientRect().height ?? 0) -
+      rulerPadding;
     if (w <= 0 || h <= 0) return;
 
     let xMin = Number.POSITIVE_INFINITY;
@@ -833,14 +850,6 @@ export function SlopeCanvas() {
 
     setActiveViewScale(Math.max(0.1, Math.min(200, scale)));
     setActiveViewOffset([-cx, -cy]);
-
-    if (container) {
-      const centerX = (container.scrollWidth - container.clientWidth) / 2;
-      const centerY = (container.scrollHeight - container.clientHeight) / 2;
-      scrollStateRef.current = { x: centerX, y: centerY };
-      container.scrollLeft = centerX;
-      container.scrollTop = centerY;
-    }
   }, [
     analysisLimits,
     canvasToWorld,
@@ -881,16 +890,22 @@ export function SlopeCanvas() {
         oy - (cy - h / 2) / newScale + (cy - h / 2) / oldScale,
       ]);
       setActiveViewScale(newScale);
-      recenterScrollbars();
     },
-    [
-      viewOffset,
-      viewScale,
-      setActiveViewOffset,
-      setActiveViewScale,
-      recenterScrollbars,
-    ],
+    [viewOffset, viewScale, setActiveViewOffset, setActiveViewScale],
   );
+
+  // Auto-fit when a project file is loaded / benchmarks opened
+  const pendingFit = useAppStore((s) => s._pendingFitToScreen);
+  const clearPendingFit = useAppStore((s) => s.clearPendingFitToScreen);
+  useEffect(() => {
+    if (!pendingFit) return;
+    // Wait one frame so the canvas has valid dimensions after the state update
+    const id = requestAnimationFrame(() => {
+      handleFitToScreen();
+      clearPendingFit();
+    });
+    return () => cancelAnimationFrame(id);
+  }, [pendingFit, handleFitToScreen, clearPendingFit]);
 
   const handleCanvasPointerDown = useCallback(
     (e: React.PointerEvent<HTMLCanvasElement>) => {
@@ -962,16 +977,6 @@ export function SlopeCanvas() {
 
             setActiveViewScale(Math.max(0.1, Math.min(200, scale)));
             setActiveViewOffset([-cx, -cy]);
-
-            if (container) {
-              const centerX =
-                (container.scrollWidth - container.clientWidth) / 2;
-              const centerY =
-                (container.scrollHeight - container.clientHeight) / 2;
-              scrollStateRef.current = { x: centerX, y: centerY };
-              container.scrollLeft = centerX;
-              container.scrollTop = centerY;
-            }
           }
         }
 
@@ -1043,396 +1048,384 @@ export function SlopeCanvas() {
     <div className="relative w-full h-full">
       <div
         ref={containerRef}
-        className="relative w-full h-full overflow-auto"
+        className="relative w-full h-full overflow-hidden"
         style={{
           background: "var(--color-canvas-bg)",
           overscrollBehavior: "none",
         }}
-        onScroll={handleScroll}
         onWheelCapture={handleWheelCapture}
-        onWheel={handleContainerWheel}
       >
-        <div
-          className="relative"
+        <canvas
+          ref={canvasRef}
+          className="absolute inset-0 w-full h-full"
           style={{
-            width: `${SCROLL_FALLBACK}px`,
-            height: `${SCROLL_FALLBACK}px`,
-          }}
-        >
-          <canvas
-            ref={canvasRef}
-            className="absolute inset-0 w-full h-full"
-            style={{
-              cursor: assigningMaterialId
+            cursor: assigningMaterialId
+              ? "crosshair"
+              : zoomBoxActive
                 ? "crosshair"
-                : zoomBoxActive
-                  ? "crosshair"
-                  : panActive
-                    ? "grab"
-                    : hoverHit?.kind === "limit" ||
-                        hoverHit?.kind === "udl" ||
-                        hoverHit?.kind === "lineLoad"
-                      ? "ew-resize"
-                      : hoverHit
-                        ? "grab"
-                        : "default",
+                : panActive
+                  ? "grab"
+                  : hoverHit?.kind === "limit" ||
+                      hoverHit?.kind === "udl" ||
+                      hoverHit?.kind === "lineLoad"
+                    ? "ew-resize"
+                    : hoverHit
+                      ? "grab"
+                      : "default",
+          }}
+          onPointerDown={handleCanvasPointerDown}
+          onPointerMove={handleCanvasPointerMove}
+          onPointerUp={handleCanvasPointerUp}
+          onPointerCancel={handlePointerCancel}
+          onWheel={handleWheel}
+          onContextMenu={handleContextMenu}
+          data-testid="slope-canvas"
+        />
+        <canvas
+          ref={crosshairCanvasRef}
+          className="absolute inset-0 w-full h-full pointer-events-none"
+        />
+        {zoomRect && (
+          <div
+            className="absolute pointer-events-none"
+            style={{
+              left: zoomRect.left,
+              top: zoomRect.top,
+              width: zoomRect.width,
+              height: zoomRect.height,
+              border: "1px dashed var(--color-vsc-accent)",
+              background: "rgba(0,120,212,0.12)",
+              zIndex: 35,
             }}
-            onPointerDown={handleCanvasPointerDown}
-            onPointerMove={handleCanvasPointerMove}
-            onPointerUp={handleCanvasPointerUp}
-            onWheel={handleWheel}
-            onContextMenu={handleContextMenu}
-            data-testid="slope-canvas"
           />
-          <canvas
-            ref={crosshairCanvasRef}
-            className="absolute inset-0 w-full h-full pointer-events-none"
-          />
+        )}
 
-          {zoomRect && (
-            <div
-              className="absolute pointer-events-none"
+        {mouseWorld && (
+          <div
+            className="absolute bottom-10 right-3 text-[11px] font-mono select-none pointer-events-none z-70"
+            style={{ color: "var(--color-vsc-text-muted)", display: "none" }}
+          >
+            x: {mouseWorld[0].toFixed(1)} &nbsp; y: {mouseWorld[1].toFixed(1)}
+          </div>
+        )}
+
+        {assigningMaterialId && (
+          <div
+            className="absolute top-2 left-1/2 -translate-x-1/2 z-40 flex items-center gap-2 px-3 py-1.5 rounded-md text-[12px] font-medium select-none"
+            style={{
+              background: "var(--color-vsc-accent)",
+              color: "var(--color-canvas-tooltip-text)",
+              boxShadow: "0 4px 12px var(--color-canvas-tooltip-shadow)",
+            }}
+          >
+            <span
+              className="w-3 h-3 rounded-sm inline-block"
               style={{
-                left: zoomRect.left,
-                top: zoomRect.top,
-                width: zoomRect.width,
-                height: zoomRect.height,
-                border: "1px dashed var(--color-vsc-accent)",
-                background: "rgba(0,120,212,0.12)",
-                zIndex: 35,
+                background:
+                  materials.find((m) => m.id === assigningMaterialId)?.color ??
+                  "#888",
+                border: "1px solid rgba(255,255,255,0.4)",
               }}
             />
-          )}
-
-          {mouseWorld && (
-            <div
-              className="absolute bottom-2 right-3 text-[11px] font-mono select-none pointer-events-none"
-              style={{ color: "var(--color-vsc-text-muted)" }}
+            Click a region to assign{" "}
+            <strong>
+              {materials.find((m) => m.id === assigningMaterialId)?.name ?? "?"}
+            </strong>
+            <button
+              onClick={() => setAssigningMaterial(null)}
+              className="ml-1 px-1.5 py-0.5 rounded text-[11px] cursor-pointer"
+              style={{ background: "rgba(255,255,255,0.2)" }}
             >
-              x: {mouseWorld[0].toFixed(1)} &nbsp; y: {mouseWorld[1].toFixed(1)}
-            </div>
-          )}
-
-          {assigningMaterialId && (
-            <div
-              className="absolute top-2 left-1/2 -translate-x-1/2 z-40 flex items-center gap-2 px-3 py-1.5 rounded-md text-[12px] font-medium select-none"
-              style={{
-                background: "var(--color-vsc-accent)",
-                color: "var(--color-canvas-tooltip-text)",
-                boxShadow: "0 4px 12px var(--color-canvas-tooltip-shadow)",
-              }}
-            >
-              <span
-                className="w-3 h-3 rounded-sm inline-block"
-                style={{
-                  background:
-                    materials.find((m) => m.id === assigningMaterialId)
-                      ?.color ?? "#888",
-                  border: "1px solid rgba(255,255,255,0.4)",
-                }}
-              />
-              Click a region to assign{" "}
-              <strong>
-                {materials.find((m) => m.id === assigningMaterialId)?.name ??
-                  "?"}
-              </strong>
+              Cancel
+            </button>
+          </div>
+        )}
+        {contextMenu && (
+          <div
+            className="absolute z-50 py-1 rounded-md shadow-xl min-w-[140px]"
+            style={{
+              left: contextMenu.screenX,
+              top: contextMenu.screenY,
+              background: "var(--color-vsc-input-bg)",
+              border: "1px solid var(--color-vsc-border)",
+              boxShadow: "0 8px 24px rgba(0,0,0,0.4)",
+            }}
+            onMouseDown={(e) => e.stopPropagation()}
+          >
+            {contextMenu.items.map((item) => (
               <button
-                onClick={() => setAssigningMaterial(null)}
-                className="ml-1 px-1.5 py-0.5 rounded text-[11px] cursor-pointer"
-                style={{ background: "rgba(255,255,255,0.2)" }}
-              >
-                Cancel
-              </button>
-            </div>
-          )}
-          {contextMenu && (
-            <div
-              className="absolute z-50 py-1 rounded-md shadow-xl min-w-[140px]"
-              style={{
-                left: contextMenu.screenX,
-                top: contextMenu.screenY,
-                background: "var(--color-vsc-input-bg)",
-                border: "1px solid var(--color-vsc-border)",
-                boxShadow: "0 8px 24px rgba(0,0,0,0.4)",
-              }}
-              onMouseDown={(e) => e.stopPropagation()}
-            >
-              {contextMenu.items.map((item) => (
-                <button
-                  key={item.label}
-                  onClick={item.disabled ? undefined : item.action}
-                  disabled={item.disabled}
-                  className="w-full flex items-center gap-2 px-3 py-1.5 text-[12px] text-left cursor-pointer transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
-                  style={{
-                    color: item.danger
-                      ? "var(--color-vsc-error)"
-                      : "var(--color-vsc-text)",
-                  }}
-                  onMouseEnter={(e) => {
-                    if (!item.disabled)
-                      (e.currentTarget as HTMLElement).style.background =
-                        "var(--color-vsc-list-hover)";
-                  }}
-                  onMouseLeave={(e) => {
-                    (e.currentTarget as HTMLElement).style.background = "";
-                  }}
-                >
-                  {item.label}
-                </button>
-              ))}
-            </div>
-          )}
-
-          {materialPicker && (
-            <div
-              className="absolute z-50 py-1 rounded-md shadow-xl min-w-[140px]"
-              style={{
-                left: materialPicker.screenX,
-                top: materialPicker.screenY,
-                background: "var(--color-vsc-input-bg)",
-                border: "1px solid var(--color-vsc-border)",
-                boxShadow: "0 8px 24px rgba(0,0,0,0.4)",
-              }}
-              onMouseDown={(e) => e.stopPropagation()}
-            >
-              <div
-                className="px-3 py-1 text-[10px] font-medium"
-                style={{ color: "var(--color-vsc-text-muted)" }}
-              >
-                Assign Material
-              </div>
-              {materials.map((m) => (
-                <button
-                  key={m.id}
-                  onClick={() => {
-                    setRegionMaterial(materialPicker.regionKey, m.id);
-                    setMaterialPicker(null);
-                  }}
-                  className="w-full flex items-center gap-2 px-3 py-1.5 text-[12px] text-left cursor-pointer transition-colors"
-                  style={{ color: "var(--color-vsc-text)" }}
-                  onMouseEnter={(e) => {
+                key={item.label}
+                onClick={item.disabled ? undefined : item.action}
+                disabled={item.disabled}
+                className="w-full flex items-center gap-2 px-3 py-1.5 text-[12px] text-left cursor-pointer transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                style={{
+                  color: item.danger
+                    ? "var(--color-vsc-error)"
+                    : "var(--color-vsc-text)",
+                }}
+                onMouseEnter={(e) => {
+                  if (!item.disabled)
                     (e.currentTarget as HTMLElement).style.background =
                       "var(--color-vsc-list-hover)";
-                  }}
-                  onMouseLeave={(e) => {
-                    (e.currentTarget as HTMLElement).style.background = "";
-                  }}
-                >
-                  <div
-                    className="w-3 h-3 rounded-sm"
-                    style={{ background: m.color }}
-                  />
-                  {m.name}
-                </button>
-              ))}
-            </div>
-          )}
+                }}
+                onMouseLeave={(e) => {
+                  (e.currentTarget as HTMLElement).style.background = "";
+                }}
+              >
+                {item.label}
+              </button>
+            ))}
+          </div>
+        )}
 
-          {annoStyleMenu &&
-            (() => {
-              const anno = resultViewSettings.annotations.find(
-                (a) => a.id === annoStyleMenu.annoId,
-              );
-              if (!anno) return null;
-              const FONT_SIZES = [8, 10, 12, 14, 16, 18, 20, 24, 28, 32];
-              const FONT_FAMILIES = [
-                { label: "Sans-serif", value: "sans-serif" },
-                { label: "Serif", value: "serif" },
-                { label: "Monospace", value: "monospace" },
-              ];
-              const COLORS = [
-                "#000000",
-                "#333333",
-                "#666666",
-                "#999999",
-                "#cc0000",
-                "#cc6600",
-                "#cccc00",
-                "#00cc00",
-                "#0066cc",
-                "#6600cc",
-                "#ffffff",
-              ];
-              return (
+        {materialPicker && (
+          <div
+            className="absolute z-50 py-1 rounded-md shadow-xl min-w-[140px]"
+            style={{
+              left: materialPicker.screenX,
+              top: materialPicker.screenY,
+              background: "var(--color-vsc-input-bg)",
+              border: "1px solid var(--color-vsc-border)",
+              boxShadow: "0 8px 24px rgba(0,0,0,0.4)",
+            }}
+            onMouseDown={(e) => e.stopPropagation()}
+          >
+            <div
+              className="px-3 py-1 text-[10px] font-medium"
+              style={{ color: "var(--color-vsc-text-muted)" }}
+            >
+              Assign Material
+            </div>
+            {materials.map((m) => (
+              <button
+                key={m.id}
+                onClick={() => {
+                  setRegionMaterial(materialPicker.regionKey, m.id);
+                  setMaterialPicker(null);
+                }}
+                className="w-full flex items-center gap-2 px-3 py-1.5 text-[12px] text-left cursor-pointer transition-colors"
+                style={{ color: "var(--color-vsc-text)" }}
+                onMouseEnter={(e) => {
+                  (e.currentTarget as HTMLElement).style.background =
+                    "var(--color-vsc-list-hover)";
+                }}
+                onMouseLeave={(e) => {
+                  (e.currentTarget as HTMLElement).style.background = "";
+                }}
+              >
                 <div
-                  className="absolute z-50 p-3 rounded-md shadow-xl min-w-[200px] space-y-2.5"
-                  style={{
-                    left: annoStyleMenu.screenX,
-                    top: annoStyleMenu.screenY,
-                    background: "var(--color-vsc-input-bg)",
-                    border: "1px solid var(--color-vsc-border)",
-                    boxShadow: "0 8px 24px rgba(0,0,0,0.4)",
-                  }}
-                  onMouseDown={(e) => e.stopPropagation()}
-                  onClick={(e) => e.stopPropagation()}
+                  className="w-3 h-3 rounded-sm"
+                  style={{ background: m.color }}
+                />
+                {m.name}
+              </button>
+            ))}
+          </div>
+        )}
+
+        {annoStyleMenu &&
+          (() => {
+            const anno = resultViewSettings.annotations.find(
+              (a) => a.id === annoStyleMenu.annoId,
+            );
+            if (!anno) return null;
+            const FONT_SIZES = [8, 10, 12, 14, 16, 18, 20, 24, 28, 32];
+            const FONT_FAMILIES = [
+              { label: "Sans-serif", value: "sans-serif" },
+              { label: "Serif", value: "serif" },
+              { label: "Monospace", value: "monospace" },
+            ];
+            const COLORS = [
+              "#000000",
+              "#333333",
+              "#666666",
+              "#999999",
+              "#cc0000",
+              "#cc6600",
+              "#cccc00",
+              "#00cc00",
+              "#0066cc",
+              "#6600cc",
+              "#ffffff",
+            ];
+            return (
+              <div
+                className="absolute z-50 p-3 rounded-md shadow-xl min-w-[200px] space-y-2.5"
+                style={{
+                  left: annoStyleMenu.screenX,
+                  top: annoStyleMenu.screenY,
+                  background: "var(--color-vsc-input-bg)",
+                  border: "1px solid var(--color-vsc-border)",
+                  boxShadow: "0 8px 24px rgba(0,0,0,0.4)",
+                }}
+                onMouseDown={(e) => e.stopPropagation()}
+                onClick={(e) => e.stopPropagation()}
+              >
+                <div
+                  className="text-[10px] font-medium mb-1"
+                  style={{ color: "var(--color-vsc-text-muted)" }}
                 >
-                  <div
-                    className="text-[10px] font-medium mb-1"
+                  Annotation Style
+                </div>
+
+                {anno.type === "text" && (
+                  <div>
+                    <label
+                      className="text-[10px] block mb-0.5"
+                      style={{ color: "var(--color-vsc-text-muted)" }}
+                    >
+                      Text
+                    </label>
+                    <textarea
+                      value={anno.text ?? ""}
+                      onChange={(e) =>
+                        updateAnnotation(anno.id, { text: e.target.value })
+                      }
+                      className="w-full text-[11px] px-1.5 py-1 rounded resize-y min-h-[48px]"
+                      style={{
+                        background: "var(--color-vsc-bg)",
+                        color: "var(--color-vsc-text)",
+                        border: "1px solid var(--color-vsc-border)",
+                      }}
+                    />
+                  </div>
+                )}
+
+                <div>
+                  <label
+                    className="text-[10px] block mb-0.5"
                     style={{ color: "var(--color-vsc-text-muted)" }}
                   >
-                    Annotation Style
-                  </div>
-
-                  {anno.type === "text" && (
-                    <div>
-                      <label
-                        className="text-[10px] block mb-0.5"
-                        style={{ color: "var(--color-vsc-text-muted)" }}
-                      >
-                        Text
-                      </label>
-                      <textarea
-                        value={anno.text ?? ""}
-                        onChange={(e) =>
-                          updateAnnotation(anno.id, { text: e.target.value })
-                        }
-                        className="w-full text-[11px] px-1.5 py-1 rounded resize-y min-h-[48px]"
-                        style={{
-                          background: "var(--color-vsc-bg)",
-                          color: "var(--color-vsc-text)",
-                          border: "1px solid var(--color-vsc-border)",
-                        }}
-                      />
-                    </div>
-                  )}
-
-                  <div>
-                    <label
-                      className="text-[10px] block mb-0.5"
-                      style={{ color: "var(--color-vsc-text-muted)" }}
-                    >
-                      Font
-                    </label>
-                    <select
-                      value={anno.fontFamily ?? "sans-serif"}
-                      onChange={(e) =>
-                        updateAnnotation(anno.id, {
-                          fontFamily: e.target.value,
-                        })
-                      }
-                      className="w-full text-[11px] px-1.5 py-1 rounded cursor-pointer"
-                      style={{
-                        background: "var(--color-vsc-bg)",
-                        color: "var(--color-vsc-text)",
-                        border: "1px solid var(--color-vsc-border)",
-                      }}
-                    >
-                      {FONT_FAMILIES.map((f) => (
-                        <option key={f.value} value={f.value}>
-                          {f.label}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-
-                  <div>
-                    <label
-                      className="text-[10px] block mb-0.5"
-                      style={{ color: "var(--color-vsc-text-muted)" }}
-                    >
-                      Size
-                    </label>
-                    <select
-                      value={anno.fontSize ?? 12}
-                      onChange={(e) =>
-                        updateAnnotation(anno.id, {
-                          fontSize: Number(e.target.value),
-                        })
-                      }
-                      className="w-full text-[11px] px-1.5 py-1 rounded cursor-pointer"
-                      style={{
-                        background: "var(--color-vsc-bg)",
-                        color: "var(--color-vsc-text)",
-                        border: "1px solid var(--color-vsc-border)",
-                      }}
-                    >
-                      {FONT_SIZES.map((s) => (
-                        <option key={s} value={s}>
-                          {s}px
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-
-                  <div className="flex gap-1.5">
-                    <button
-                      onClick={() =>
-                        updateAnnotation(anno.id, { bold: !anno.bold })
-                      }
-                      className="flex-1 text-[12px] font-bold py-1 rounded cursor-pointer"
-                      style={{
-                        background: anno.bold
-                          ? "var(--color-vsc-accent)"
-                          : "var(--color-vsc-bg)",
-                        color: anno.bold ? "#fff" : "var(--color-vsc-text)",
-                        border: "1px solid var(--color-vsc-border)",
-                      }}
-                    >
-                      B
-                    </button>
-                    <button
-                      onClick={() =>
-                        updateAnnotation(anno.id, { italic: !anno.italic })
-                      }
-                      className="flex-1 text-[12px] italic py-1 rounded cursor-pointer"
-                      style={{
-                        background: anno.italic
-                          ? "var(--color-vsc-accent)"
-                          : "var(--color-vsc-bg)",
-                        color: anno.italic ? "#fff" : "var(--color-vsc-text)",
-                        border: "1px solid var(--color-vsc-border)",
-                      }}
-                    >
-                      I
-                    </button>
-                  </div>
-
-                  <div>
-                    <label
-                      className="text-[10px] block mb-0.5"
-                      style={{ color: "var(--color-vsc-text-muted)" }}
-                    >
-                      Color
-                    </label>
-                    <div className="flex flex-wrap gap-1">
-                      {COLORS.map((c) => (
-                        <button
-                          key={c}
-                          onClick={() =>
-                            updateAnnotation(anno.id, { color: c })
-                          }
-                          className="w-5 h-5 rounded-sm cursor-pointer"
-                          style={{
-                            background: c,
-                            border:
-                              (anno.color ?? "#000000") === c
-                                ? "2px solid var(--color-vsc-accent)"
-                                : "1px solid var(--color-vsc-border)",
-                          }}
-                        />
-                      ))}
-                    </div>
-                  </div>
-
-                  <button
-                    onClick={() => {
-                      removeAnnotation(anno.id);
-                      setAnnoStyleMenu(null);
-                    }}
-                    className="w-full text-[11px] py-1 rounded cursor-pointer mt-1"
+                    Font
+                  </label>
+                  <select
+                    value={anno.fontFamily ?? "sans-serif"}
+                    onChange={(e) =>
+                      updateAnnotation(anno.id, {
+                        fontFamily: e.target.value,
+                      })
+                    }
+                    className="w-full text-[11px] px-1.5 py-1 rounded cursor-pointer"
                     style={{
-                      background: "transparent",
-                      color: "var(--color-vsc-error)",
-                      border: "1px solid var(--color-vsc-error)",
+                      background: "var(--color-vsc-bg)",
+                      color: "var(--color-vsc-text)",
+                      border: "1px solid var(--color-vsc-border)",
                     }}
                   >
-                    Delete Annotation
+                    {FONT_FAMILIES.map((f) => (
+                      <option key={f.value} value={f.value}>
+                        {f.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label
+                    className="text-[10px] block mb-0.5"
+                    style={{ color: "var(--color-vsc-text-muted)" }}
+                  >
+                    Size
+                  </label>
+                  <select
+                    value={anno.fontSize ?? 12}
+                    onChange={(e) =>
+                      updateAnnotation(anno.id, {
+                        fontSize: Number(e.target.value),
+                      })
+                    }
+                    className="w-full text-[11px] px-1.5 py-1 rounded cursor-pointer"
+                    style={{
+                      background: "var(--color-vsc-bg)",
+                      color: "var(--color-vsc-text)",
+                      border: "1px solid var(--color-vsc-border)",
+                    }}
+                  >
+                    {FONT_SIZES.map((s) => (
+                      <option key={s} value={s}>
+                        {s}px
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="flex gap-1.5">
+                  <button
+                    onClick={() =>
+                      updateAnnotation(anno.id, { bold: !anno.bold })
+                    }
+                    className="flex-1 text-[12px] font-bold py-1 rounded cursor-pointer"
+                    style={{
+                      background: anno.bold
+                        ? "var(--color-vsc-accent)"
+                        : "var(--color-vsc-bg)",
+                      color: anno.bold ? "#fff" : "var(--color-vsc-text)",
+                      border: "1px solid var(--color-vsc-border)",
+                    }}
+                  >
+                    B
+                  </button>
+                  <button
+                    onClick={() =>
+                      updateAnnotation(anno.id, { italic: !anno.italic })
+                    }
+                    className="flex-1 text-[12px] italic py-1 rounded cursor-pointer"
+                    style={{
+                      background: anno.italic
+                        ? "var(--color-vsc-accent)"
+                        : "var(--color-vsc-bg)",
+                      color: anno.italic ? "#fff" : "var(--color-vsc-text)",
+                      border: "1px solid var(--color-vsc-border)",
+                    }}
+                  >
+                    I
                   </button>
                 </div>
-              );
-            })()}
-        </div>
+
+                <div>
+                  <label
+                    className="text-[10px] block mb-0.5"
+                    style={{ color: "var(--color-vsc-text-muted)" }}
+                  >
+                    Color
+                  </label>
+                  <div className="flex flex-wrap gap-1">
+                    {COLORS.map((c) => (
+                      <button
+                        key={c}
+                        onClick={() => updateAnnotation(anno.id, { color: c })}
+                        className="w-5 h-5 rounded-sm cursor-pointer"
+                        style={{
+                          background: c,
+                          border:
+                            (anno.color ?? "#000000") === c
+                              ? "2px solid var(--color-vsc-accent)"
+                              : "1px solid var(--color-vsc-border)",
+                        }}
+                      />
+                    ))}
+                  </div>
+                </div>
+
+                <button
+                  onClick={() => {
+                    removeAnnotation(anno.id);
+                    setAnnoStyleMenu(null);
+                  }}
+                  className="w-full text-[11px] py-1 rounded cursor-pointer mt-1"
+                  style={{
+                    background: "transparent",
+                    color: "var(--color-vsc-error)",
+                    border: "1px solid var(--color-vsc-error)",
+                  }}
+                >
+                  Delete Annotation
+                </button>
+              </div>
+            );
+          })()}
       </div>
+      <AxisOverlay containerRef={containerRef} canvasRef={canvasRef} />
     </div>
   );
 }

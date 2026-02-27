@@ -12,6 +12,7 @@ export const ARROW_HEIGHT_PX = 38; // arrow shaft length in pixels
 export const ARROW_HEAD_PX = 8; // arrowhead half-width in pixels
 export const ARROW_HEAD_LEN_PX = 12; // arrowhead length in pixels
 export const HATCH_SPACING_PX = 8; // spacing between hatch lines
+export const RULER_SIZE_PX = 32; // axis overlay ruler band width/height
 
 // Load colors (canvas hex, PDF RGB tuples)
 export const UDL_COLOR = "#cc0000";

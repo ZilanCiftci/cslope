@@ -6,4 +6,6 @@ export const createCanvasToolbarSlice: SliceCreator<CanvasToolbarSlice> = (
 ) => ({
   canvasToolbar: null,
   setCanvasToolbar: (toolbar) => set({ canvasToolbar: toolbar }),
+  cursorWorld: null,
+  setCursorWorld: (pos) => set({ cursorWorld: pos }),
 });

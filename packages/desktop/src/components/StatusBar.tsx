@@ -8,6 +8,7 @@ interface Props {
   setSnapToGrid: (value: boolean) => void;
   setGridSnapSize: (size: number) => void;
   coordinateCount: number;
+  cursorWorld: [number, number] | null;
 }
 
 export function StatusBar({
@@ -18,6 +19,7 @@ export function StatusBar({
   setSnapToGrid,
   setGridSnapSize,
   coordinateCount,
+  cursorWorld,
 }: Props) {
   return (
     <div
@@ -90,6 +92,36 @@ export function StatusBar({
           <option value="2">2.0</option>
           <option value="5">5.0</option>
         </select>
+        <span style={{ color: "var(--color-vsc-border)" }}>|</span>
+        {cursorWorld ? (
+          <span className="font-mono">
+            X:{" "}
+            <span className="inline-block w-12 text-right">
+              {cursorWorld[0].toFixed(2)}
+            </span>{" "}
+            &nbsp; Y:{" "}
+            <span className="inline-block w-12 text-right">
+              {cursorWorld[1].toFixed(2)}
+            </span>
+          </span>
+        ) : (
+          <span className="font-mono">
+            X:{" "}
+            <span
+              className="inline-block w-12 text-right"
+              style={{ opacity: 0.4 }}
+            >
+              —
+            </span>{" "}
+            &nbsp; Y:{" "}
+            <span
+              className="inline-block w-12 text-right"
+              style={{ opacity: 0.4 }}
+            >
+              —
+            </span>
+          </span>
+        )}
         <span style={{ color: "var(--color-vsc-border)" }}>|</span>
         <span style={{ opacity: 0.6 }}>cSlope v0.1</span>
       </div>
