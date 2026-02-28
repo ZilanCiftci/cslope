@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import type { AnalysisMethod, IntersliceFunctionType } from "@cslope/engine";
 import { useAppStore } from "../../../store/app-store";
 import { Section } from "../../../components/ui/Section";
@@ -53,23 +53,9 @@ export function OptionsSection() {
   const [refinedIterationsDraft, setRefinedIterationsDraft] = useState(
     String(options.refinedIterations),
   );
-  const [toleranceDraft, setToleranceDraft] = useState(String(options.tolerance));
-
-  useEffect(() => {
-    setSlicesDraft(String(options.slices));
-  }, [options.slices]);
-
-  useEffect(() => {
-    setIterationsDraft(String(options.iterations));
-  }, [options.iterations]);
-
-  useEffect(() => {
-    setRefinedIterationsDraft(String(options.refinedIterations));
-  }, [options.refinedIterations]);
-
-  useEffect(() => {
-    setToleranceDraft(String(options.tolerance));
-  }, [options.tolerance]);
+  const [toleranceDraft, setToleranceDraft] = useState(
+    String(options.tolerance),
+  );
 
   const slicesParsed = Number(slicesDraft);
   const iterationsParsed = Number(iterationsDraft);
@@ -87,7 +73,9 @@ export function OptionsSection() {
     refinedParsed < 0 ||
     refinedParsed > 100000;
   const toleranceInvalid =
-    toleranceDraft.trim() === "" || toleranceParsed < 0.001 || toleranceParsed > 0.1;
+    toleranceDraft.trim() === "" ||
+    toleranceParsed < 0.001 ||
+    toleranceParsed > 0.1;
 
   return (
     <Section title="Analysis Options">

@@ -55,7 +55,13 @@ function buildPdfFilename(projectInfo?: ProjectInfo): string {
 
   const sanitizedBase = preferredBase
     .normalize("NFKD")
-    .replace(/[<>:"/\\|?*\x00-\x1F]/g, "")
+    .replace(/[<>:"/\\|?*]/g, "")
+    .split("")
+    .filter((ch) => {
+      const code = ch.charCodeAt(0);
+      return code < 0 || code > 31;
+    })
+    .join("")
     .replace(/\s+/g, " ")
     .replace(/\.+$/, "")
     .trim()
@@ -305,9 +311,14 @@ export function exportVectorPdf(data: PdfExportData): void {
 
     const measureDict = `<< /Type /Measure /Subtype /RL /R (1 mm = ${metersPerMmPdf} m) /X [ << /Type /NumberFormat /U (m) /C ${metersPerPtPdf} /D 3 >> ] /Y [ << /Type /NumberFormat /U (m) /C ${metersPerPtPdf} /D 3 >> ] /D [ << /Type /NumberFormat /U (m) /C ${metersPerPtPdf} /D 3 >> ] /A [ << /Type /NumberFormat /U (sq m) /C ${areaPerPt2Pdf} /D 3 >> ] >>`;
 
+    type PdfInternalWithOut = typeof pdf.internal & {
+      out: (chunk: string) => void;
+    };
+    const pdfInternal = pdf.internal as PdfInternalWithOut;
+
     pdf.internal.events.subscribe("putPage", function () {
-      (pdf.internal as any).out(`/Measure ${measureDict}`);
-      (pdf.internal as any).out(
+      pdfInternal.out(`/Measure ${measureDict}`);
+      pdfInternal.out(
         `/VP [ << /Type /Viewport /Name (Model Space) /BBox [${pdfNum(bboxX0, 4)} ${pdfNum(bboxY0, 4)} ${pdfNum(bboxX1, 4)} ${pdfNum(bboxY1, 4)}] /Measure ${measureDict} >> ]`,
       );
     });

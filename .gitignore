@@ -20,6 +20,12 @@ Thumbs.db
 # Logs
 *.log
 
+# Test coverage output
+coverage/
+**/coverage/
+.nyc_output/
+coverage-final.json
+
 # Python
 .venv/
 

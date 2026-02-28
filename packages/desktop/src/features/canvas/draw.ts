@@ -31,6 +31,50 @@ type ArcSurface = {
   exitPoint: [number, number];
 };
 
+type RegionCacheEntry = {
+  coordinatesRef: DrawCanvasParams["coordinates"];
+  materialBoundariesRef: DrawCanvasParams["materialBoundaries"];
+  regionMaterialsRef: DrawCanvasParams["regionMaterials"];
+  defaultMaterialId: string;
+  regions: ReturnType<typeof computeRegions>;
+};
+
+let regionCache: RegionCacheEntry | null = null;
+
+function getCachedRegions(
+  coordinates: DrawCanvasParams["coordinates"],
+  materialBoundaries: DrawCanvasParams["materialBoundaries"],
+  regionMaterials: DrawCanvasParams["regionMaterials"],
+  defaultMaterialId: string,
+): ReturnType<typeof computeRegions> {
+  if (
+    regionCache &&
+    regionCache.coordinatesRef === coordinates &&
+    regionCache.materialBoundariesRef === materialBoundaries &&
+    regionCache.regionMaterialsRef === regionMaterials &&
+    regionCache.defaultMaterialId === defaultMaterialId
+  ) {
+    return regionCache.regions;
+  }
+
+  const regions = computeRegions(
+    coordinates,
+    materialBoundaries,
+    regionMaterials,
+    defaultMaterialId,
+  );
+
+  regionCache = {
+    coordinatesRef: coordinates,
+    materialBoundariesRef: materialBoundaries,
+    regionMaterialsRef: regionMaterials,
+    defaultMaterialId,
+    regions,
+  };
+
+  return regions;
+}
+
 function getArcCache(result: AppState["result"]) {
   if (!result || typeof result !== "object") return null;
   const key = result as object;
@@ -250,7 +294,7 @@ export function drawCanvas(
   // ── Material region fills ─────────────────────────────
   if (coordinates.length >= 3) {
     const defaultMatId = materials[0]?.id ?? "";
-    const regions = computeRegions(
+    const regions = getCachedRegions(
       coordinates,
       materialBoundaries,
       regionMaterials,

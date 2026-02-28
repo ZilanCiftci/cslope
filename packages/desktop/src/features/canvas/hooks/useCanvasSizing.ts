@@ -49,8 +49,8 @@ export function useCanvasSizing(
   useEffect(() => {
     const overlay = overlayCanvasRef?.current;
     if (!overlay || canvasSize.width <= 0 || canvasSize.height <= 0) return;
-    overlay.width = canvasSize.width * canvasSize.dpr;
-    overlay.height = canvasSize.height * canvasSize.dpr;
+    overlay.setAttribute("width", String(canvasSize.width * canvasSize.dpr));
+    overlay.setAttribute("height", String(canvasSize.height * canvasSize.dpr));
   }, [overlayCanvasRef, canvasSize]);
 
   return canvasSize;

@@ -402,10 +402,10 @@ export function EditCanvas() {
       rulerPadding;
     if (w <= 0 || h <= 0) return;
 
-    let fitW = w;
-    let fitH = h;
-    let targetCx = w / 2;
-    let targetCy = h / 2;
+    const fitW = w;
+    const fitH = h;
+    const targetCx = w / 2;
+    const targetCy = h / 2;
 
     const modelBounds = collectModelFitBounds({
       coordinates,
@@ -418,7 +418,8 @@ export function EditCanvas() {
     });
     if (!modelBounds) return;
 
-    let { xMin, xMax, yMin, yMax } = modelBounds;
+    const { xMin, xMax, yMin } = modelBounds;
+    let { yMax } = modelBounds;
 
     const computeScale = (
       minX: number,

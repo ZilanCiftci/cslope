@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { EXAMPLE_MODELS } from "../../store/examples";
+import { EXAMPLE_MODELS, mirrorModelEntry } from "../../store/examples";
 import type { ModelEntry } from "../../store/types";
 import type { SlopeDefinition } from "@cslope/engine";
 import {
@@ -131,46 +131,54 @@ function analyseExample(model: ModelEntry) {
 
 describe("Mirrored example parity", () => {
   const tolerance = 0.01;
+  const baseExamples = EXAMPLE_MODELS.filter(
+    (model) => model.orientation === "ltr",
+  );
+  const mirroredPairs = baseExamples.map((model) => ({
+    ltr: model,
+    rtl: mirrorModelEntry(model),
+  }));
 
-  it.skip("mirrored examples produce equivalent minimum FOS", () => {
-    // Skipped: auto-mirrored examples (id ending with "-rtl") are commented out in examples.ts.
-    // Re-enable when mirrorModelEntry calls are uncommented.
-    const mirroredExamples = EXAMPLE_MODELS.filter((model) =>
-      model.id.endsWith("-rtl"),
-    );
+  const runCache = new Map<string, ReturnType<typeof analyseExample>>();
 
-    expect(mirroredExamples.length).toBe(3);
+  const getRun = (model: ModelEntry) => {
+    const cached = runCache.get(model.id);
+    if (cached) return cached;
+    const run = analyseExample(model);
+    runCache.set(model.id, run);
+    return run;
+  };
 
-    for (const rtlModel of mirroredExamples) {
-      const baseModelId = rtlModel.id.replace(/-rtl$/, "");
-      const ltrModel = EXAMPLE_MODELS.find((model) => model.id === baseModelId);
+  it("baseline and mirrored examples analyse with valid minimum FOS", () => {
+    expect(mirroredPairs.length).toBeGreaterThan(0);
 
-      expect(ltrModel).toBeDefined();
-      if (!ltrModel) continue;
+    for (const { ltr, rtl } of mirroredPairs) {
+      const ltrRun = getRun(ltr);
+      const rtlRun = getRun(rtl);
 
-      const ltrRun = analyseExample(ltrModel);
-      const rtlRun = analyseExample(rtlModel);
+      expect(ltrRun.minFos, `ltr=${ltr.id}`).toBeGreaterThan(0.3);
+      expect(ltrRun.minFos, `ltr=${ltr.id}`).toBeLessThan(5.0);
+
+      expect(rtlRun.minFos, `rtl=${rtl.id}`).toBeGreaterThan(0.3);
+      expect(rtlRun.minFos, `rtl=${rtl.id}`).toBeLessThan(5.0);
+    }
+  }, 60_000);
+
+  it("mirrored examples produce equivalent minimum FOS", () => {
+    for (const { ltr, rtl } of mirroredPairs) {
+      const ltrRun = getRun(ltr);
+      const rtlRun = getRun(rtl);
 
       expect(Math.abs(ltrRun.minFos - rtlRun.minFos)).toBeLessThanOrEqual(
         tolerance,
       );
     }
-  }, 30_000);
+  }, 60_000);
 
   it("critical surfaces mirror correctly in model space", () => {
-    const mirroredExamples = EXAMPLE_MODELS.filter((model) =>
-      model.id.endsWith("-rtl"),
-    );
-
-    for (const rtlModel of mirroredExamples) {
-      const baseModelId = rtlModel.id.replace(/-rtl$/, "");
-      const ltrModel = EXAMPLE_MODELS.find((model) => model.id === baseModelId);
-
-      expect(ltrModel).toBeDefined();
-      if (!ltrModel) continue;
-
-      const ltrRun = analyseExample(ltrModel);
-      const rtlRun = analyseExample(rtlModel);
+    for (const { ltr, rtl } of mirroredPairs) {
+      const ltrRun = getRun(ltr);
+      const rtlRun = getRun(rtl);
 
       const ltrResultModelSpace = mapAnalysisResultToModelSpace(
         {
@@ -186,7 +194,7 @@ describe("Mirrored example parity", () => {
           },
           allSurfaces: [],
           criticalSlices: [],
-          method: ltrModel.options.method,
+          method: ltr.options.method,
           elapsedMs: 0,
         },
         ltrRun.canonicalDefinition,
@@ -206,7 +214,7 @@ describe("Mirrored example parity", () => {
           },
           allSurfaces: [],
           criticalSlices: [],
-          method: rtlModel.options.method,
+          method: rtl.options.method,
           elapsedMs: 0,
         },
         rtlRun.canonicalDefinition,
@@ -219,11 +227,23 @@ describe("Mirrored example parity", () => {
       expect(rtlCritical).not.toBeNull();
       if (!ltrCritical || !rtlCritical) continue;
 
-      const [xMin, xMax] = getDomainX(ltrModel.coordinates);
+      const [xMin, xMax] = getDomainX(ltr.coordinates);
 
       expect(
         Math.abs(rtlCritical.cx - mirrorX(ltrCritical.cx, xMin, xMax)),
       ).toBeLessThanOrEqual(tolerance);
+
+      expect(Math.abs(rtlCritical.cy - ltrCritical.cy)).toBeLessThanOrEqual(
+        tolerance,
+      );
+
+      expect(
+        Math.abs(rtlCritical.radius - ltrCritical.radius),
+      ).toBeLessThanOrEqual(tolerance);
+
+      expect(Math.abs(rtlCritical.fos - ltrCritical.fos)).toBeLessThanOrEqual(
+        tolerance,
+      );
 
       expect(
         Math.abs(
@@ -233,11 +253,19 @@ describe("Mirrored example parity", () => {
       ).toBeLessThanOrEqual(tolerance);
 
       expect(
+        Math.abs(rtlCritical.entryPoint[1] - ltrCritical.entryPoint[1]),
+      ).toBeLessThanOrEqual(tolerance);
+
+      expect(
         Math.abs(
           rtlCritical.exitPoint[0] -
             mirrorX(ltrCritical.exitPoint[0], xMin, xMax),
         ),
       ).toBeLessThanOrEqual(tolerance);
+
+      expect(
+        Math.abs(rtlCritical.exitPoint[1] - ltrCritical.exitPoint[1]),
+      ).toBeLessThanOrEqual(tolerance);
     }
-  }, 30_000);
+  }, 60_000);
 });
