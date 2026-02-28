@@ -24,6 +24,13 @@ export function GeometrySection() {
     setCoordinate(i, c);
   };
 
+  const handleBlur = (i: number, axis: 0 | 1, val: string) => {
+    const num = parseFloat(val);
+    const c: [number, number] = [...coordinates[i]];
+    c[axis] = Number.isFinite(num) ? num : coordinates[i][axis];
+    setCoordinate(i, c);
+  };
+
   const columns: SpreadsheetColumn<[number, number]>[] = [
     {
       header: <Label>#</Label>,
@@ -47,6 +54,7 @@ export function GeometrySection() {
           value={x}
           ariaLabel={`Point ${i + 1} X`}
           onChange={(value) => handleChange(i, 0, value)}
+          onBlur={(value) => handleBlur(i, 0, value)}
         />
       ),
     },
@@ -57,6 +65,7 @@ export function GeometrySection() {
           value={y}
           ariaLabel={`Point ${i + 1} Y`}
           onChange={(value) => handleChange(i, 1, value)}
+          onBlur={(value) => handleBlur(i, 1, value)}
         />
       ),
     },

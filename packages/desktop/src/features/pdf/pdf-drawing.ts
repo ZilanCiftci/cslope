@@ -620,12 +620,13 @@ export function drawAnnotations(
   result: AnalysisResult,
   materials: MaterialRow[],
   projectInfo: Partial<ProjectInfo>,
+  paperFrame: { x: number; y: number; w: number; h: number },
 ) {
   const annoScale = Math.min(tf.paperW, tf.paperH) / 600;
 
   for (const anno of annotations) {
-    const ax = anno.x * tf.paperW;
-    const ay = anno.y * tf.paperH;
+    const ax = paperFrame.x + anno.x * paperFrame.w;
+    const ay = paperFrame.y + anno.y * paperFrame.h;
 
     if (anno.type === "text") {
       drawTextAnnotation(pdf, ax, ay, anno, annoScale, projectInfo, result);

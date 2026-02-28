@@ -50,14 +50,39 @@ export function resetOpacity(pdf: jsPDF): void {
   pdf.restoreGraphicsState();
 }
 
-/**
- * jsPDF's path() builds the path but ignores the style parameter.
- * This wrapper calls path() then writes the raw PDF painting operator.
- */
 export function pdfPath(pdf: jsPDF, ops: PathOp[], style: string): void {
-  pdf.path(ops);
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  (pdf.internal as any).write(style);
+  for (const op of ops) {
+    if (op.op === "m") {
+      pdf.moveTo(op.c[0], op.c[1]);
+      continue;
+    }
+
+    if (op.op === "l") {
+      pdf.lineTo(op.c[0], op.c[1]);
+      continue;
+    }
+
+    if (op.op === "h") {
+      pdf.close();
+    }
+  }
+
+  if (style === "S") {
+    pdf.stroke();
+    return;
+  }
+
+  if (style === "f") {
+    pdf.fill();
+    return;
+  }
+
+  if (style === "f*") {
+    pdf.fillEvenOdd();
+    return;
+  }
+
+  throw new Error(`Unsupported PDF path style: ${style}`);
 }
 
 export function buildPolylinePath(

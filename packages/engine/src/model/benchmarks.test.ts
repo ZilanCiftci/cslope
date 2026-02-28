@@ -370,9 +370,9 @@ describe("Critical surface extraction", () => {
     s.updateAnalysisOptions({ slices: 30, method: "Bishop" });
     analyseSlope(s);
 
-    const planes = s.search;
+    const planes = s.search.filter((plane) => plane.fos != null);
     for (let i = 1; i < planes.length; i++) {
-      expect(planes[i].fos).toBeGreaterThanOrEqual(planes[i - 1].fos);
+      expect(planes[i].fos!).toBeGreaterThanOrEqual(planes[i - 1].fos!);
     }
   });
 });

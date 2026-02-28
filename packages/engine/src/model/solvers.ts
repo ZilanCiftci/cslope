@@ -93,10 +93,11 @@ function getSlicePropertyArrays(
 // ────────────────────────────────────────────────────────────────
 
 type SolverResult = [
-  fos: number,
+  fos: number | null,
   pushing: number,
   resisting: number,
   N: Float64Array,
+  converged: boolean,
 ];
 
 /**
@@ -121,6 +122,7 @@ function solveFOSGenericMoment(
   let resisting = 0;
 
   for (let outer = 0; outer < numOuterIters; outer++) {
+    let innerConverged = false;
     for (let iter = 0; iter < maxIters; iter++) {
       pushing = 0;
       resisting = 0;
@@ -178,11 +180,18 @@ function solveFOSGenericMoment(
         xLeft = xRight;
       }
 
-      if (pushing <= 0) return [0, pushing, resisting, nCurrent];
+      if (pushing <= 0) return [null, pushing, resisting, nCurrent, false];
 
       fos = resisting / pushing;
-      if (iter > 3 && Math.abs(prevFOS - fos) < tolerance) break;
+      if (iter > 3 && Math.abs(prevFOS - fos) < tolerance) {
+        innerConverged = true;
+        break;
+      }
       prevFOS = prevFOS + 0.5 * (fos - prevFOS);
+    }
+
+    if (numOuterIters === 1) {
+      return [fos, pushing, resisting, nCurrent, innerConverged];
     }
 
     // Outer convergence check on N values
@@ -191,13 +200,14 @@ function solveFOSGenericMoment(
       const diff = Math.abs(nPrev[i] - nCurrent[i]);
       if (diff > maxNDiff) maxNDiff = diff;
     }
-    if (maxNDiff < tolerance) return [fos, pushing, resisting, nCurrent];
+    if (maxNDiff < tolerance)
+      return [fos, pushing, resisting, nCurrent, innerConverged];
 
     prevFOS = fos;
     for (let i = 0; i < n; i++) nPrev[i] = nCurrent[i];
   }
 
-  return [fos, pushing, resisting, nCurrent];
+  return [fos, pushing, resisting, nCurrent, false];
 }
 
 /**
@@ -221,6 +231,7 @@ function solveFOSGenericForceCircular(
   let resisting = 0;
 
   for (let outer = 0; outer < numOuterIters; outer++) {
+    let innerConverged = false;
     for (let iter = 0; iter < maxIters; iter++) {
       pushing = 0;
       resisting = 0;
@@ -276,11 +287,18 @@ function solveFOSGenericForceCircular(
         xLeft = xRight;
       }
 
-      if (pushing <= 0) return [0, pushing, resisting, nCurrent];
+      if (pushing <= 0) return [null, pushing, resisting, nCurrent, false];
 
       fos = resisting / pushing;
-      if (iter > 3 && Math.abs(prevFOS - fos) < tolerance) break;
+      if (iter > 3 && Math.abs(prevFOS - fos) < tolerance) {
+        innerConverged = true;
+        break;
+      }
       prevFOS = prevFOS + 0.5 * (fos - prevFOS);
+    }
+
+    if (numOuterIters === 1) {
+      return [fos, pushing, resisting, nCurrent, innerConverged];
     }
 
     // Outer convergence check on N values
@@ -289,13 +307,14 @@ function solveFOSGenericForceCircular(
       const diff = Math.abs(nPrev[i] - nCurrent[i]);
       if (diff > maxNDiff) maxNDiff = diff;
     }
-    if (maxNDiff < tolerance) return [fos, pushing, resisting, nCurrent];
+    if (maxNDiff < tolerance)
+      return [fos, pushing, resisting, nCurrent, innerConverged];
 
     prevFOS = fos;
     for (let i = 0; i < n; i++) nPrev[i] = nCurrent[i];
   }
 
-  return [fos, pushing, resisting, nCurrent];
+  return [fos, pushing, resisting, nCurrent, false];
 }
 
 // ────────────────────────────────────────────────────────────────
@@ -340,9 +359,14 @@ export function analyseBishop(
   slope: Slope,
   slices: Slice[],
   FS?: number | null,
-): [fos: number | null, pushing: number | null, resisting: number | null] {
+): [
+  fos: number | null,
+  pushing: number | null,
+  resisting: number | null,
+  converged: boolean,
+] {
   if (FS == null) FS = analyseOrdinary(slope, slices);
-  if (FS == null || FS > slope.limitToRunBishops) return [FS, null, null];
+  if (FS == null || FS > slope.limitToRunBishops) return [FS, null, null, true];
 
   const x0 = slices[0].xLeft;
   const x1 = slices[slices.length - 1].xRight;
@@ -355,7 +379,7 @@ export function analyseBishop(
   );
   const initialNs = new Float64Array(slices.length);
 
-  const [fos, pushing, resisting] = solveFOSGenericMoment(
+  const [fos, pushing, resisting, , converged] = solveFOSGenericMoment(
     props,
     slices[0].R,
     0, // lambda = 0
@@ -366,8 +390,8 @@ export function analyseBishop(
     1, // numOuterIters = 1 when lambda = 0
   );
 
-  if (fos === 0) return [null, null, null];
-  return [fos, pushing, resisting];
+  if (fos == null) return [null, null, null, false];
+  return [fos, pushing, resisting, converged];
 }
 
 /**
@@ -377,9 +401,14 @@ export function analyseJanbu(
   slope: Slope,
   slices: Slice[],
   FS?: number | null,
-): [fos: number | null, pushing: number | null, resisting: number | null] {
+): [
+  fos: number | null,
+  pushing: number | null,
+  resisting: number | null,
+  converged: boolean,
+] {
   if (FS == null) FS = analyseOrdinary(slope, slices);
-  if (FS == null || FS > slope.limitToRunJanbu) return [FS, null, null];
+  if (FS == null || FS > slope.limitToRunJanbu) return [FS, null, null, true];
 
   const x0 = slices[0].xLeft;
   const x1 = slices[slices.length - 1].xRight;
@@ -392,7 +421,7 @@ export function analyseJanbu(
   );
   const initialNs = new Float64Array(slices.length);
 
-  const [fos, pushing, resisting] = solveFOSGenericForceCircular(
+  const [fos, pushing, resisting, , converged] = solveFOSGenericForceCircular(
     props,
     0, // lambda = 0
     FS,
@@ -402,8 +431,8 @@ export function analyseJanbu(
     1, // numOuterIters = 1 when lambda = 0
   );
 
-  if (fos === 0) return [null, null, null];
-  return [fos, pushing, resisting];
+  if (fos == null) return [null, null, null, false];
+  return [fos, pushing, resisting, converged];
 }
 
 /**
@@ -414,13 +443,14 @@ export function analyseMorgensternPrice(
   slices: Slice[],
 ): [
   fos: number | null,
-  lffArray: [number, number, number][] | null,
+  lffArray: [number, number, number, number][] | null,
   pushing: number | null,
   resisting: number | null,
+  converged: boolean,
 ] {
   const FSord = analyseOrdinary(slope, slices);
   if (FSord == null || FSord > slope.limitToRunBishops)
-    return [FSord, null, null, null];
+    return [FSord, null, null, null, true];
 
   const x0 = slices[0].xLeft;
   const x1 = slices[slices.length - 1].xRight;
@@ -435,10 +465,11 @@ export function analyseMorgensternPrice(
   const n = slices.length;
   const maxIters = slope.maxIterations;
   const tol = slope.tolerance;
+  const mpEquilibriumTolerance = Math.max(tol * 4, 0.02);
 
   // Step 1: Initial Bishop solution (lambda = 0)
   let Nm: Float64Array = new Float64Array(n);
-  let [FSm, pushing0, resisting0, NmOut] = solveFOSGenericMoment(
+  let [FSm, pushing0, resisting0, NmOut, convergedM] = solveFOSGenericMoment(
     props,
     R,
     0,
@@ -450,9 +481,9 @@ export function analyseMorgensternPrice(
   );
   Nm = new Float64Array(NmOut);
 
-  if (FSm === 0) return [null, null, null, null];
+  if (FSm == null) return [null, null, null, null, false];
   if (FSm > slope.limitToRunMorgenstern)
-    return [FSm, null, pushing0, resisting0];
+    return [FSm, null, pushing0, resisting0, convergedM];
 
   // Step 1b: Initial force solution (lambda = 0)
   let Nf: Float64Array = new Float64Array(n);
@@ -467,7 +498,7 @@ export function analyseMorgensternPrice(
   );
   Nf = new Float64Array(NfOut);
 
-  if (FSf === 0) {
+  if (FSf == null) {
     // Retry with different initial FS values
     for (const fact of [2, 0.5, 1.5, 0.75, 1.1, 0.9]) {
       [FSf, pushingF, resistingF, NfOut] = solveFOSGenericForceCircular(
@@ -480,17 +511,20 @@ export function analyseMorgensternPrice(
         1,
       );
       Nf = new Float64Array(NfOut);
-      if (FSf !== 0) break;
+      if (FSf != null) break;
     }
-    if (FSf === 0) return [FSm, null, pushingF, resistingF];
+    if (FSf == null) return [FSm, null, pushingF, resistingF, false];
   }
 
-  const lffArray: [number, number, number][] = [[0, FSm, FSf]];
-  if (Math.abs(FSm - FSf) < tol) return [FSm, lffArray, pushingF, resistingF];
+  const lffArray: [number, number, number, number][] = [
+    [0, FSm, FSf, Math.abs(FSm - FSf)],
+  ];
+  if (Math.abs(FSm - FSf) < tol)
+    return [FSm, lffArray, pushingF, resistingF, true];
 
   // Step 2: Second point (lambda = 0.1)
   const lambda2 = 0.1;
-  [FSm, pushing0, resisting0, NmOut] = solveFOSGenericMoment(
+  [FSm, pushing0, resisting0, NmOut, convergedM] = solveFOSGenericMoment(
     props,
     R,
     lambda2,
@@ -501,6 +535,7 @@ export function analyseMorgensternPrice(
     maxIters,
   );
   Nm = new Float64Array(NmOut);
+  if (FSm == null) return [null, lffArray, pushing0, resisting0, false];
 
   [FSf, pushingF, resistingF, NfOut] = solveFOSGenericForceCircular(
     props,
@@ -513,17 +548,22 @@ export function analyseMorgensternPrice(
   );
   Nf = new Float64Array(NfOut);
 
-  if (FSf === 0) return [FSm, lffArray, pushingF, resistingF];
+  if (FSf == null) return [FSm, lffArray, pushingF, resistingF, false];
 
-  lffArray.push([lambda2, FSm, FSf]);
+  lffArray.push([lambda2, FSm, FSf, Math.abs(FSm - FSf)]);
   lffArray.sort((a, b) => a[0] - b[0]);
-  if (Math.abs(FSm - FSf) < tol) return [FSm, lffArray, pushingF, resistingF];
+  if (Math.abs(FSm - FSf) < tol)
+    return [FSm, lffArray, pushingF, resistingF, true];
 
   // Step 3: Iterative extrapolation
   for (let ii = 0; ii <= 6; ii++) {
     const prevLambda = lffArray[lffArray.length - 1][0];
-    let [lambdaNew] = extrapolateLambda(lffArray);
-    const [, fsExtrap] = extrapolateLambda(lffArray);
+    const lffTriplets = lffArray.map(
+      ([lambda, fsMoment, fsForce]) =>
+        [lambda, fsMoment, fsForce] as [number, number, number],
+    );
+    let [lambdaNew] = extrapolateLambda(lffTriplets);
+    const [, fsExtrap] = extrapolateLambda(lffTriplets);
 
     // Limit step size
     if (Math.abs(lambdaNew - prevLambda) > 0.3) {
@@ -535,7 +575,7 @@ export function analyseMorgensternPrice(
       lambdaNew *= 0.9;
     }
 
-    [FSm, pushing0, resisting0, NmOut] = solveFOSGenericMoment(
+    [FSm, pushing0, resisting0, NmOut, convergedM] = solveFOSGenericMoment(
       props,
       R,
       lambdaNew,
@@ -546,6 +586,7 @@ export function analyseMorgensternPrice(
       maxIters,
     );
     Nm = new Float64Array(NmOut);
+    if (FSm == null) return [null, lffArray, pushing0, resisting0, false];
 
     [FSf, pushingF, resistingF, NfOut] = solveFOSGenericForceCircular(
       props,
@@ -558,35 +599,63 @@ export function analyseMorgensternPrice(
     );
     Nf = new Float64Array(NfOut);
 
-    if (FSf === 0) return [FSm, lffArray, pushingF, resistingF];
+    if (FSf == null) return [FSm, lffArray, pushingF, resistingF, false];
 
-    lffArray.push([lambdaNew, FSm, FSf]);
+    lffArray.push([lambdaNew, FSm, FSf, Math.abs(FSm - FSf)]);
     lffArray.sort((a, b) => a[0] - b[0]);
 
-    if (Math.abs(FSm - FSf) < tol) return [FSm, lffArray, pushingF, resistingF];
+    if (Math.abs(FSm - FSf) < tol)
+      return [FSm, lffArray, pushingF, resistingF, true];
 
     if (ii > 5) {
       // Fallback: pick closest match
-      const sorted = [...lffArray].sort(
-        (a, b) => Math.abs(a[1] - a[2]) - Math.abs(b[1] - b[2]),
-      );
+      const sorted = [...lffArray].sort((a, b) => a[3] - b[3]);
       const [bestLambda, bestFS] = sorted[0];
-      [FSm, pushing0, resisting0, NmOut] = solveFOSGenericMoment(
-        props,
-        R,
-        bestLambda,
-        bestFS,
-        Nm,
-        maxIters,
-        tol,
-        maxIters,
-      );
+      let convergedBestM: boolean;
+      [FSm, pushing0, resisting0, NmOut, convergedBestM] =
+        solveFOSGenericMoment(
+          props,
+          R,
+          bestLambda,
+          bestFS,
+          Nm,
+          maxIters,
+          tol,
+          maxIters,
+        );
       Nm = new Float64Array(NmOut);
-      return [FSm, lffArray, pushing0, resisting0];
+      if (FSm == null) return [null, lffArray, pushing0, resisting0, false];
+
+      let convergedBestF: boolean;
+      [FSf, pushingF, resistingF, NfOut, convergedBestF] =
+        solveFOSGenericForceCircular(
+          props,
+          bestLambda,
+          bestFS,
+          Nf,
+          maxIters,
+          tol,
+          maxIters,
+        );
+      Nf = new Float64Array(NfOut);
+      if (FSf == null) return [FSm, lffArray, pushingF, resistingF, false];
+
+      const equilibriumGap = Math.abs(FSm - FSf);
+      lffArray.push([bestLambda, FSm, FSf, equilibriumGap]);
+
+      return [
+        FSm,
+        lffArray,
+        pushing0,
+        resisting0,
+        convergedBestM &&
+          convergedBestF &&
+          equilibriumGap <= mpEquilibriumTolerance,
+      ];
     }
   }
 
-  return [FSm, lffArray, pushing0!, resisting0!];
+  return [FSm, lffArray, pushing0!, resisting0!, false];
 }
 
 // ────────────────────────────────────────────────────────────────
@@ -610,8 +679,18 @@ export function analyseSlope(slope: Slope): number | null {
 
   // Combine search + individual planes
   const combinedPlanes: SearchPlane[] = [
-    ...slope.search.map((p) => ({ ...p, fos: 100, slices: null })),
-    ...slope.individualPlanes.map((p) => ({ ...p, fos: 100, slices: null })),
+    ...slope.search.map((p) => ({
+      ...p,
+      fos: null,
+      slices: null,
+      converged: true,
+    })),
+    ...slope.individualPlanes.map((p) => ({
+      ...p,
+      fos: null,
+      slices: null,
+      converged: true,
+    })),
   ];
   const allPlanes: SearchPlane[] = [];
   const seenPlanes = new Set<string>();
@@ -625,7 +704,11 @@ export function analyseSlope(slope: Slope): number | null {
   evaluatePlanes(slope, allPlanes);
 
   if (slope.refinedIterations > 0) {
-    allPlanes.sort((a, b) => a.fos - b.fos);
+    allPlanes.sort((a, b) => {
+      const af = a.fos ?? Number.POSITIVE_INFINITY;
+      const bf = b.fos ?? Number.POSITIVE_INFINITY;
+      return af - bf;
+    });
     const refinedPlanes = generateRefinedPlanes(
       slope,
       allPlanes,
@@ -638,12 +721,15 @@ export function analyseSlope(slope: Slope): number | null {
   }
 
   // Sort by FOS ascending
-  allPlanes.sort((a, b) => a.fos - b.fos);
+  allPlanes.sort((a, b) => {
+    const af = a.fos ?? Number.POSITIVE_INFINITY;
+    const bf = b.fos ?? Number.POSITIVE_INFINITY;
+    return af - bf;
+  });
   slope.setSearchResults(allPlanes);
 
-  return allPlanes.length > 0 && allPlanes[0].fos < 100
-    ? allPlanes[0].fos
-    : null;
+  const best = allPlanes.find((plane) => plane.fos != null);
+  return best?.fos ?? null;
 }
 
 function evaluatePlanes(slope: Slope, allPlanes: SearchPlane[]): void {
@@ -664,29 +750,34 @@ function evaluatePlanes(slope: Slope, allPlanes: SearchPlane[]): void {
     if (slices.length === 0) continue;
 
     let fos: number | null;
+    let converged = true;
 
     switch (slope.method) {
       case "Bishop": {
-        const [f] = analyseBishop(slope, slices);
+        const [f, , , cvg] = analyseBishop(slope, slices);
         fos = f;
+        converged = cvg;
         break;
       }
       case "Janbu": {
-        const [f] = analyseJanbu(slope, slices);
+        const [f, , , cvg] = analyseJanbu(slope, slices);
         fos = f;
+        converged = cvg;
         break;
       }
       case "Morgenstern-Price": {
-        const [f, lff] = analyseMorgensternPrice(slope, slices);
+        const [f, lff, , , cvg] = analyseMorgensternPrice(slope, slices);
         fos = f;
         plane.lffArray = lff ?? undefined;
+        converged = cvg;
         break;
       }
       default:
         throw new Error(`Unknown method: ${slope.method}`);
     }
 
-    plane.fos = fos ?? 100;
+    plane.fos = fos;
     plane.slices = slices;
+    plane.converged = converged;
   }
 }

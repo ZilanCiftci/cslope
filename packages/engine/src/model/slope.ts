@@ -28,7 +28,7 @@ import {
 } from "../math/index";
 import {
   getSurfaceLine,
-  splitPolygonByPolyline,
+  splitPolygonByPolylineDetailed,
   createGeometryWithMaterial,
 } from "./geometry-ops";
 
@@ -47,11 +47,13 @@ export interface SearchPlane {
   /** Circle radius. */
   radius: number;
   /** Factor of safety (set after analysis). */
-  fos: number;
+  fos: number | null;
   /** Slices for this surface (set after analysis). */
   slices: Slice[] | null;
   /** Lambda-FS-FForce array for Morgenstern-Price. */
-  lffArray?: [number, number, number][];
+  lffArray?: [number, number, number, number][];
+  /** Whether iterative solver converged for this surface. */
+  converged?: boolean;
 }
 
 // ── Slope Class ───────────────────────────────────────────────────
@@ -97,6 +99,7 @@ export class Slope {
   private _search: SearchPlane[] = [];
   private _individualPlanes: SearchPlane[] = [];
   private _fixedSlices: number[] | null = null;
+  private _splitFailureCount = 0;
 
   // ── Cache for y-intersections ─────────────────────────────────
   private _externalYCache = new Map<number, number>();
@@ -211,6 +214,14 @@ export class Slope {
     return this._intersliceDataPoints;
   }
 
+  get splitFailureCount(): number {
+    return this._splitFailureCount;
+  }
+
+  get splitFailed(): boolean {
+    return this._splitFailureCount > 0;
+  }
+
   // ────────────────────────────────────────────────────────────────
   // Mutable setters for the solver (used by search/solver code)
   // ────────────────────────────────────────────────────────────────
@@ -291,6 +302,7 @@ export class Slope {
     this.removeAnalysisLimits();
 
     // Reset results
+    this._splitFailureCount = 0;
     this._resetResults();
   }
 
@@ -309,7 +321,9 @@ export class Slope {
 
     const newGeometries: GeometryWithMaterial[] = [];
     for (const mg of this._materialGeometries) {
-      const pieces = splitPolygonByPolyline(mg.px, mg.py, lx, ly);
+      const split = splitPolygonByPolylineDetailed(mg.px, mg.py, lx, ly);
+      if (split.splitFailed) this._splitFailureCount += 1;
+      const pieces = split.pieces;
       for (const piece of pieces) {
         newGeometries.push(
           createGeometryWithMaterial(piece.px, piece.py, mg.material),
@@ -391,12 +405,14 @@ export class Slope {
         // Split external boundary at water height and get upper surface
         const cutLx = [minX, maxX];
         const cutLy = [waterHeight, waterHeight];
-        const pieces = splitPolygonByPolyline(
+        const split = splitPolygonByPolylineDetailed(
           this._externalBoundaryPx,
           this._externalBoundaryPy,
           cutLx,
           cutLy,
         );
+        if (split.splitFailed) this._splitFailureCount += 1;
+        const pieces = split.pieces;
         if (pieces.length >= 2) {
           // The upper piece is the one with higher average y
           const avgYs = pieces.map(
@@ -417,12 +433,14 @@ export class Slope {
       const wy = waterCoords.map((c) => c[1]);
 
       if (followBoundary) {
-        const pieces = splitPolygonByPolyline(
+        const split = splitPolygonByPolylineDetailed(
           this._externalBoundaryPx,
           this._externalBoundaryPy,
           wx,
           wy,
         );
+        if (split.splitFailed) this._splitFailureCount += 1;
+        const pieces = split.pieces;
         if (pieces.length >= 2) {
           const avgYs = pieces.map(
             (p) => p.py.reduce((s, v) => s + v, 0) / p.py.length,
@@ -706,20 +724,22 @@ export class Slope {
    * Get the minimum factor of safety from the analysis results.
    */
   getMinFOS(): number {
-    if (this._search.length === 0) {
+    const valid = this._search.filter((plane) => plane.fos != null);
+    if (valid.length === 0) {
       throw new Error("No analysis results available");
     }
-    return this._search[0].fos;
+    return valid[0].fos!;
   }
 
   /**
    * Get the maximum factor of safety from the analysis results.
    */
   getMaxFOS(): number {
-    if (this._search.length === 0) {
+    const valid = this._search.filter((plane) => plane.fos != null);
+    if (valid.length === 0) {
       throw new Error("No analysis results available");
     }
-    return this._search[this._search.length - 1].fos;
+    return valid[valid.length - 1].fos!;
   }
 
   /**

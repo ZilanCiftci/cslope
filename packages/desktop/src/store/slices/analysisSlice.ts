@@ -18,6 +18,16 @@ import { ANALYSIS_TIMEOUT_MS } from "../../constants";
 /** Active worker reference — used to terminate a previous run on re-invocation. */
 let activeWorker: Worker | null = null;
 let activeTimeout: ReturnType<typeof setTimeout> | null = null;
+let activeProgressInterval: ReturnType<typeof setInterval> | null = null;
+
+const RUN_PROGRESS_MAX = 0.95;
+
+function stopProgressInterval() {
+  if (activeProgressInterval) {
+    clearInterval(activeProgressInterval);
+    activeProgressInterval = null;
+  }
+}
 
 export const createAnalysisSlice: SliceCreator<AnalysisSlice> = (set, get) => ({
   analysisLimits: { ...DEFAULT_ANALYSIS_LIMITS },
@@ -66,9 +76,33 @@ export const createAnalysisSlice: SliceCreator<AnalysisSlice> = (set, get) => ({
       clearTimeout(activeTimeout);
       activeTimeout = null;
     }
+    stopProgressInterval();
 
     const state = get();
-    set({ runState: "running", progress: 0, result: null, errorMessage: null });
+    set({
+      runState: "running",
+      progress: 0.02,
+      result: null,
+      errorMessage: null,
+    });
+
+    activeProgressInterval = setInterval(() => {
+      const current = get();
+      if (current.runState !== "running") {
+        stopProgressInterval();
+        return;
+      }
+
+      const next = Math.min(
+        RUN_PROGRESS_MAX,
+        current.progress +
+          Math.max(0.004, (RUN_PROGRESS_MAX - current.progress) * 0.08),
+      );
+
+      if (next > current.progress) {
+        set({ progress: next });
+      }
+    }, 120);
 
     const worker = new Worker(
       new URL("../../worker/analysis.worker.ts", import.meta.url),
@@ -86,12 +120,14 @@ export const createAnalysisSlice: SliceCreator<AnalysisSlice> = (set, get) => ({
           runState: "error",
           errorMessage: "Analysis timed out after 60 seconds.",
         });
+        stopProgressInterval();
       }
     }, ANALYSIS_TIMEOUT_MS);
 
     worker.onmessage = (event: MessageEvent<AnalysisResponse>) => {
       const msg = event.data;
       if (msg.type === "analysis-complete") {
+        stopProgressInterval();
         set({ runState: "done", result: msg.result, progress: 1 });
         worker.terminate();
         if (activeWorker === worker) activeWorker = null;
@@ -100,8 +136,14 @@ export const createAnalysisSlice: SliceCreator<AnalysisSlice> = (set, get) => ({
           activeTimeout = null;
         }
       } else if (msg.type === "analysis-progress") {
-        set({ progress: msg.progress });
+        set((s) => ({
+          progress: Math.max(
+            s.progress,
+            Math.min(RUN_PROGRESS_MAX, Math.max(0, msg.progress)),
+          ),
+        }));
       } else if (msg.type === "analysis-error") {
+        stopProgressInterval();
         set({ runState: "error", errorMessage: msg.error });
         worker.terminate();
         if (activeWorker === worker) activeWorker = null;
@@ -113,6 +155,7 @@ export const createAnalysisSlice: SliceCreator<AnalysisSlice> = (set, get) => ({
     };
 
     worker.onerror = (err) => {
+      stopProgressInterval();
       set({ runState: "error", errorMessage: err.message });
       worker.terminate();
       if (activeWorker === worker) activeWorker = null;
@@ -139,6 +182,7 @@ export const createAnalysisSlice: SliceCreator<AnalysisSlice> = (set, get) => ({
       clearTimeout(activeTimeout);
       activeTimeout = null;
     }
+    stopProgressInterval();
     set({ runState: "idle", progress: 0, errorMessage: null });
   },
 
@@ -154,6 +198,53 @@ export const createAnalysisSlice: SliceCreator<AnalysisSlice> = (set, get) => ({
     const baseState = get();
     const activeId = baseState.activeModelId;
     baseState.saveCurrentModel();
+    const models = get().models.slice();
+
+    if (models.length === 0) {
+      set({ runState: "idle", progress: 0, result: null, errorMessage: null });
+      return;
+    }
+
+    const progressByModel = new Map<string, number>(
+      models.map((model) => [model.id, 0]),
+    );
+    const modelProgressIntervals = new Map<
+      string,
+      ReturnType<typeof setInterval>
+    >();
+
+    const stopModelProgressInterval = (modelId: string) => {
+      const interval = modelProgressIntervals.get(modelId);
+      if (!interval) return;
+      clearInterval(interval);
+      modelProgressIntervals.delete(modelId);
+    };
+
+    const startModelProgressInterval = (modelId: string) => {
+      stopModelProgressInterval(modelId);
+      const interval = setInterval(() => {
+        const current = progressByModel.get(modelId) ?? 0;
+        const next = Math.min(
+          RUN_PROGRESS_MAX,
+          current + Math.max(0.006, (RUN_PROGRESS_MAX - current) * 0.06),
+        );
+        if (next > current) {
+          progressByModel.set(modelId, next);
+          updateBatchProgress();
+        }
+      }, 120);
+      modelProgressIntervals.set(modelId, interval);
+    };
+
+    const updateBatchProgress = () => {
+      const totalProgress = models.reduce(
+        (sum, model) => sum + (progressByModel.get(model.id) ?? 0),
+        0,
+      );
+      set({
+        progress: Math.max(0, Math.min(1, totalProgress / models.length)),
+      });
+    };
 
     // Track active model status in UI while running batch.
     set({ runState: "running", progress: 0, errorMessage: null });
@@ -172,6 +263,9 @@ export const createAnalysisSlice: SliceCreator<AnalysisSlice> = (set, get) => ({
         // 60s timeout per individual model
         const timeout = setTimeout(() => {
           worker.terminate();
+          stopModelProgressInterval(freshModel.id);
+          progressByModel.set(freshModel.id, 1);
+          updateBatchProgress();
           set((s) => ({
             models: s.models.map((m) =>
               m.id === freshModel.id
@@ -192,6 +286,9 @@ export const createAnalysisSlice: SliceCreator<AnalysisSlice> = (set, get) => ({
           resolve();
         }, ANALYSIS_TIMEOUT_MS);
 
+        progressByModel.set(freshModel.id, 0.08);
+        updateBatchProgress();
+        startModelProgressInterval(freshModel.id);
         set((s) => ({
           models: s.models.map((m) =>
             m.id === freshModel.id
@@ -207,7 +304,6 @@ export const createAnalysisSlice: SliceCreator<AnalysisSlice> = (set, get) => ({
           ...(freshModel.id === activeId
             ? {
                 runState: "running",
-                progress: 0,
                 result: null,
                 errorMessage: null,
               }
@@ -218,6 +314,9 @@ export const createAnalysisSlice: SliceCreator<AnalysisSlice> = (set, get) => ({
           const msg = event.data;
           if (msg.type === "analysis-complete") {
             clearTimeout(timeout);
+            stopModelProgressInterval(freshModel.id);
+            progressByModel.set(freshModel.id, 1);
+            updateBatchProgress();
             set((s) => ({
               models: s.models.map((m) =>
                 m.id === freshModel.id
@@ -227,7 +326,6 @@ export const createAnalysisSlice: SliceCreator<AnalysisSlice> = (set, get) => ({
               ...(freshModel.id === activeId
                 ? {
                     runState: "done",
-                    progress: 1,
                     result: msg.result,
                     errorMessage: null,
                   }
@@ -236,14 +334,25 @@ export const createAnalysisSlice: SliceCreator<AnalysisSlice> = (set, get) => ({
             worker.terminate();
             resolve();
           } else if (msg.type === "analysis-progress") {
+            const nextProgress = Math.min(
+              RUN_PROGRESS_MAX,
+              Math.max(0, msg.progress),
+            );
+            progressByModel.set(
+              freshModel.id,
+              Math.max(progressByModel.get(freshModel.id) ?? 0, nextProgress),
+            );
+            updateBatchProgress();
             set((s) => ({
               models: s.models.map((m) =>
-                m.id === freshModel.id ? { ...m, progress: msg.progress } : m,
+                m.id === freshModel.id ? { ...m, progress: nextProgress } : m,
               ),
-              ...(freshModel.id === activeId ? { progress: msg.progress } : {}),
             }));
           } else if (msg.type === "analysis-error") {
             clearTimeout(timeout);
+            stopModelProgressInterval(freshModel.id);
+            progressByModel.set(freshModel.id, 1);
+            updateBatchProgress();
             set((s) => ({
               models: s.models.map((m) =>
                 m.id === freshModel.id
@@ -265,6 +374,9 @@ export const createAnalysisSlice: SliceCreator<AnalysisSlice> = (set, get) => ({
 
         worker.onerror = (err) => {
           clearTimeout(timeout);
+          stopModelProgressInterval(freshModel.id);
+          progressByModel.set(freshModel.id, 1);
+          updateBatchProgress();
           set((s) => ({
             models: s.models.map((m) =>
               m.id === freshModel.id
@@ -287,7 +399,6 @@ export const createAnalysisSlice: SliceCreator<AnalysisSlice> = (set, get) => ({
         });
       });
 
-    const models = get().models.slice();
     const maxConcurrency =
       typeof navigator !== "undefined" && navigator.hardwareConcurrency
         ? navigator.hardwareConcurrency
@@ -304,16 +415,21 @@ export const createAnalysisSlice: SliceCreator<AnalysisSlice> = (set, get) => ({
       }),
     );
 
+    for (const interval of modelProgressIntervals.values()) {
+      clearInterval(interval);
+    }
+    modelProgressIntervals.clear();
+
     const refreshedActive = get().models.find((m) => m.id === activeId);
     if (refreshedActive) {
       set({
         runState: refreshedActive.runState ?? "idle",
-        progress: refreshedActive.progress ?? 0,
+        progress: 1,
         result: refreshedActive.result ?? null,
         errorMessage: refreshedActive.errorMessage ?? null,
       });
     } else {
-      set({ runState: "idle", progress: 0 });
+      set({ runState: "idle", progress: 1 });
     }
   },
 });

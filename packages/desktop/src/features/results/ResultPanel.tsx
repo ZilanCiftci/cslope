@@ -56,13 +56,13 @@ export function ResultPanel() {
             Analysing…
           </p>
           <div
-            className="w-full rounded-full h-1.5"
+            className="w-full h-1.5 rounded-full overflow-hidden"
             style={{ background: "var(--color-vsc-input-bg)" }}
           >
             <div
-              className="h-1.5 rounded-full transition-all duration-300"
+              className="h-1.5 rounded-full transition-all duration-150"
               style={{
-                width: `${Math.round(progress * 100)}%`,
+                width: `${Math.max(2, Math.round(progress * 100))}%`,
                 background: "var(--color-vsc-accent)",
               }}
             />
@@ -105,6 +105,21 @@ export function ResultPanel() {
               {result.elapsedMs.toFixed(0)} ms
             </span>
           </Row>
+          {result.nonConvergedSurfaces && result.nonConvergedSurfaces > 0 && (
+            <Row label="Convergence">
+              <span style={{ color: "var(--color-vsc-warning)" }}>
+                {result.nonConvergedSurfaces} surface(s) with weak equilibrium
+                fit
+              </span>
+            </Row>
+          )}
+          {result.splitFailureCount && result.splitFailureCount > 0 && (
+            <Row label="Geometry Split">
+              <span style={{ color: "var(--color-vsc-warning)" }}>
+                {result.splitFailureCount} split operation(s) failed
+              </span>
+            </Row>
+          )}
           {result.criticalSurface && (
             <div
               className="mt-2 p-2 rounded text-[11px]"

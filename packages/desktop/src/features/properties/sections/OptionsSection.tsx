@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import type { AnalysisMethod, IntersliceFunctionType } from "@cslope/engine";
 import { useAppStore } from "../../../store/app-store";
 import { Section } from "../../../components/ui/Section";
@@ -33,6 +34,10 @@ function formatInterslicePoints(
   return points.map(([x, y]) => `${x},${y}`).join("; ");
 }
 
+function clampNumber(value: number, min: number, max: number): number {
+  return Math.min(max, Math.max(min, value));
+}
+
 export function OptionsSection() {
   const options = useAppStore((s) => s.options);
   const setOptions = useAppStore((s) => s.setOptions);
@@ -40,6 +45,49 @@ export function OptionsSection() {
   const interslicePointsValue = formatInterslicePoints(
     options.intersliceDataPoints,
   );
+
+  const [slicesDraft, setSlicesDraft] = useState(String(options.slices));
+  const [iterationsDraft, setIterationsDraft] = useState(
+    String(options.iterations),
+  );
+  const [refinedIterationsDraft, setRefinedIterationsDraft] = useState(
+    String(options.refinedIterations),
+  );
+  const [toleranceDraft, setToleranceDraft] = useState(String(options.tolerance));
+
+  useEffect(() => {
+    setSlicesDraft(String(options.slices));
+  }, [options.slices]);
+
+  useEffect(() => {
+    setIterationsDraft(String(options.iterations));
+  }, [options.iterations]);
+
+  useEffect(() => {
+    setRefinedIterationsDraft(String(options.refinedIterations));
+  }, [options.refinedIterations]);
+
+  useEffect(() => {
+    setToleranceDraft(String(options.tolerance));
+  }, [options.tolerance]);
+
+  const slicesParsed = Number(slicesDraft);
+  const iterationsParsed = Number(iterationsDraft);
+  const refinedParsed = Number(refinedIterationsDraft);
+  const toleranceParsed = Number(toleranceDraft);
+
+  const slicesInvalid =
+    slicesDraft.trim() === "" || slicesParsed < 10 || slicesParsed > 500;
+  const iterationsInvalid =
+    iterationsDraft.trim() === "" ||
+    iterationsParsed < 100 ||
+    iterationsParsed > 100000;
+  const refinedIterationsInvalid =
+    refinedIterationsDraft.trim() === "" ||
+    refinedParsed < 0 ||
+    refinedParsed > 100000;
+  const toleranceInvalid =
+    toleranceDraft.trim() === "" || toleranceParsed < 0.001 || toleranceParsed > 0.1;
 
   return (
     <Section title="Analysis Options">
@@ -67,9 +115,27 @@ export function OptionsSection() {
             min={10}
             max={500}
             step={5}
-            value={options.slices}
-            onChange={(e) =>
-              setOptions({ slices: parseInt(e.target.value) || 25 })
+            value={slicesDraft}
+            onChange={(e) => {
+              const value = e.target.value;
+              setSlicesDraft(value);
+              const parsed = Number(value);
+              if (!Number.isFinite(parsed)) return;
+              setOptions({ slices: Math.round(clampNumber(parsed, 10, 500)) });
+            }}
+            onBlur={(e) => {
+              const parsed = Number(e.target.value);
+              const normalized = Number.isFinite(parsed)
+                ? Math.round(clampNumber(parsed, 10, 500))
+                : options.slices;
+              setOptions({ slices: normalized });
+              setSlicesDraft(String(normalized));
+            }}
+            aria-invalid={slicesInvalid}
+            style={
+              slicesInvalid
+                ? { borderColor: "var(--color-vsc-error)" }
+                : undefined
             }
             aria-label="Number of slices"
           />
@@ -81,9 +147,29 @@ export function OptionsSection() {
             min={100}
             max={100000}
             step={100}
-            value={options.iterations}
-            onChange={(e) =>
-              setOptions({ iterations: parseInt(e.target.value) || 1000 })
+            value={iterationsDraft}
+            onChange={(e) => {
+              const value = e.target.value;
+              setIterationsDraft(value);
+              const parsed = Number(value);
+              if (!Number.isFinite(parsed)) return;
+              setOptions({
+                iterations: Math.round(clampNumber(parsed, 100, 100000)),
+              });
+            }}
+            onBlur={(e) => {
+              const parsed = Number(e.target.value);
+              const normalized = Number.isFinite(parsed)
+                ? Math.round(clampNumber(parsed, 100, 100000))
+                : options.iterations;
+              setOptions({ iterations: normalized });
+              setIterationsDraft(String(normalized));
+            }}
+            aria-invalid={iterationsInvalid}
+            style={
+              iterationsInvalid
+                ? { borderColor: "var(--color-vsc-error)" }
+                : undefined
             }
             aria-label="Number of iterations"
           />
@@ -95,9 +181,29 @@ export function OptionsSection() {
             min={0}
             max={100000}
             step={50}
-            value={options.refinedIterations}
-            onChange={(e) =>
-              setOptions({ refinedIterations: parseInt(e.target.value) || 0 })
+            value={refinedIterationsDraft}
+            onChange={(e) => {
+              const value = e.target.value;
+              setRefinedIterationsDraft(value);
+              const parsed = Number(value);
+              if (!Number.isFinite(parsed)) return;
+              setOptions({
+                refinedIterations: Math.round(clampNumber(parsed, 0, 100000)),
+              });
+            }}
+            onBlur={(e) => {
+              const parsed = Number(e.target.value);
+              const normalized = Number.isFinite(parsed)
+                ? Math.round(clampNumber(parsed, 0, 100000))
+                : options.refinedIterations;
+              setOptions({ refinedIterations: normalized });
+              setRefinedIterationsDraft(String(normalized));
+            }}
+            aria-invalid={refinedIterationsInvalid}
+            style={
+              refinedIterationsInvalid
+                ? { borderColor: "var(--color-vsc-error)" }
+                : undefined
             }
             aria-label="Number of refined iterations"
           />
@@ -109,9 +215,27 @@ export function OptionsSection() {
             min={0.001}
             max={0.1}
             step={0.001}
-            value={options.tolerance}
-            onChange={(e) =>
-              setOptions({ tolerance: parseFloat(e.target.value) || 0.005 })
+            value={toleranceDraft}
+            onChange={(e) => {
+              const value = e.target.value;
+              setToleranceDraft(value);
+              const parsed = Number(value);
+              if (!Number.isFinite(parsed)) return;
+              setOptions({ tolerance: clampNumber(parsed, 0.001, 0.1) });
+            }}
+            onBlur={(e) => {
+              const parsed = Number(e.target.value);
+              const normalized = Number.isFinite(parsed)
+                ? clampNumber(parsed, 0.001, 0.1)
+                : options.tolerance;
+              setOptions({ tolerance: normalized });
+              setToleranceDraft(String(normalized));
+            }}
+            aria-invalid={toleranceInvalid}
+            style={
+              toleranceInvalid
+                ? { borderColor: "var(--color-vsc-error)" }
+                : undefined
             }
             aria-label="Tolerance"
           />

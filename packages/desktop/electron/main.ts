@@ -120,9 +120,9 @@ function setupCSP() {
   session.defaultSession.webRequest.onHeadersReceived((details, callback) => {
     const csp = VITE_DEV_SERVER_URL
       ? // Dev: allow Vite HMR websocket & eval for fast-refresh
-        "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; connect-src 'self' ws://localhost:*; img-src 'self' data: blob:; font-src 'self' data:;"
+        "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; connect-src 'self' ws://localhost:*; worker-src 'self' blob:; img-src 'self' data: blob:; font-src 'self' data:;"
       : // Production: strict policy
-        "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:;";
+        "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; worker-src 'self'; img-src 'self' data: blob:; font-src 'self' data:;";
     callback({
       responseHeaders: {
         ...details.responseHeaders,

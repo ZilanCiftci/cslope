@@ -34,10 +34,35 @@ interface PdfViewBounds {
   yMax: number;
 }
 
+interface Rect {
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+}
+
 function pdfNum(value: number, decimals = 12): string {
   if (!Number.isFinite(value)) return "0";
   const fixed = value.toFixed(decimals);
   return fixed.replace(/\.0+$/, "").replace(/(\.\d*?)0+$/, "$1");
+}
+
+function buildPdfFilename(projectInfo?: ProjectInfo): string {
+  const preferredBase =
+    projectInfo?.title?.trim() ||
+    projectInfo?.projectNumber?.trim() ||
+    "slope-analysis";
+
+  const sanitizedBase = preferredBase
+    .normalize("NFKD")
+    .replace(/[<>:"/\\|?*\x00-\x1F]/g, "")
+    .replace(/\s+/g, " ")
+    .replace(/\.+$/, "")
+    .trim()
+    .slice(0, 120);
+
+  const safeBase = sanitizedBase.length > 0 ? sanitizedBase : "slope-analysis";
+  return `${safeBase}.pdf`;
 }
 
 export interface PdfExportData {
@@ -102,6 +127,35 @@ function createTransform(
   return { worldToPdf, canvasToPdf, mmPerPx, paperW, paperH };
 }
 
+function computeVirtualPaperFrame(
+  canvasW: number,
+  canvasH: number,
+  paperSize: PaperSize,
+): Rect {
+  const dim = PAPER_DIMENSIONS[paperSize];
+  const paperAspect = dim.w / dim.h;
+  const margin = PAPER_FRAME_MARGIN_PX;
+  const availW = canvasW - margin * 2;
+  const availH = canvasH - margin * 2;
+
+  let frameW: number;
+  let frameH: number;
+  if (availW / availH > paperAspect) {
+    frameH = availH;
+    frameW = frameH * paperAspect;
+  } else {
+    frameW = availW;
+    frameH = frameW / paperAspect;
+  }
+
+  return {
+    x: (canvasW - frameW) / 2,
+    y: (canvasH - frameH) / 2,
+    w: frameW,
+    h: frameH,
+  };
+}
+
 export function exportVectorPdf(data: PdfExportData): void {
   try {
     const {
@@ -119,6 +173,16 @@ export function exportVectorPdf(data: PdfExportData): void {
       projectInfo,
       viewBounds,
     } = data;
+
+    const hasSurfaces =
+      Array.isArray(result?.allSurfaces) && result.allSurfaces.length > 0;
+    const hasCriticalSurface = Boolean(result?.criticalSurface);
+    if (!hasSurfaces || !hasCriticalSurface) {
+      window.alert(
+        "No analysis results available to export. Run analysis first, then export PDF.",
+      );
+      return;
+    }
 
     const paperSize = rvs.paperFrame.paperSize;
     const dim = PAPER_DIMENSIONS[paperSize];
@@ -181,6 +245,26 @@ export function exportVectorPdf(data: PdfExportData): void {
       viewOffset,
       viewScale,
     );
+
+    const virtualPaperFrame = computeVirtualPaperFrame(
+      virtualW,
+      virtualH,
+      paperSize,
+    );
+    const [afx0, afy0] = tf.canvasToPdf(
+      virtualPaperFrame.x,
+      virtualPaperFrame.y,
+    );
+    const [afx1, afy1] = tf.canvasToPdf(
+      virtualPaperFrame.x + virtualPaperFrame.w,
+      virtualPaperFrame.y + virtualPaperFrame.h,
+    );
+    const annotationFrame = {
+      x: afx0,
+      y: afy0,
+      w: afx1 - afx0,
+      h: afy1 - afy0,
+    };
 
     const pdf = new jsPDF({
       orientation: "landscape",
@@ -283,11 +367,12 @@ export function exportVectorPdf(data: PdfExportData): void {
       result,
       materials,
       projectInfo || {},
+      annotationFrame,
     );
 
     drawRulerFrame(pdf, tf, viewScale, innerFrame);
 
-    pdf.save("slope-analysis.pdf");
+    pdf.save(buildPdfFilename(projectInfo));
   } catch (error) {
     console.error("PDF export failed", error);
     window.alert(

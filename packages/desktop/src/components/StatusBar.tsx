@@ -1,7 +1,8 @@
-import type { AnalysisResult } from "../store/types";
+import type { AnalysisResult, RunState } from "../store/types";
 
 interface Props {
   mode: "edit" | "result";
+  runState: RunState;
   result: AnalysisResult | null;
   snapToGrid: boolean;
   gridSnapSize: number;
@@ -13,6 +14,7 @@ interface Props {
 
 export function StatusBar({
   mode,
+  runState,
   result,
   snapToGrid,
   gridSnapSize,
@@ -63,6 +65,14 @@ export function StatusBar({
                 {result.minFOS.toFixed(3)}
               </strong>{" "}
               ({result.method})
+            </span>
+          </>
+        )}
+        {runState === "running" && (
+          <>
+            <span style={{ color: "var(--color-vsc-border)" }}>|</span>
+            <span style={{ color: "var(--color-vsc-accent)", fontWeight: 600 }}>
+              Analysing...
             </span>
           </>
         )}

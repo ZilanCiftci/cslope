@@ -151,12 +151,14 @@ export function SpreadsheetNumberInput({
   step = "0.5",
   ariaLabel,
   onChange,
+  onBlur,
   className,
 }: {
   value: number;
   step?: string;
   ariaLabel: string;
   onChange: (value: string) => void;
+  onBlur?: (value: string) => void;
   className?: string;
 }) {
   return (
@@ -165,6 +167,7 @@ export function SpreadsheetNumberInput({
       step={step}
       value={value}
       onChange={(e) => onChange(e.target.value)}
+      onBlur={onBlur ? (e) => onBlur(e.target.value) : undefined}
       className={`w-full h-full py-1 px-2 text-[12px] outline-none border-2 border-transparent focus:border-[var(--color-vsc-accent)] ${className ?? ""}`}
       style={{
         background: "var(--color-vsc-input-bg)",

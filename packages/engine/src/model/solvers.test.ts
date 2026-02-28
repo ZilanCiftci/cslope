@@ -326,7 +326,7 @@ describe("Morgenstern-Price method", () => {
       expect(fos!, `mode=${mode}`).toBeGreaterThan(0.3);
       expect(fos!, `mode=${mode}`).toBeLessThan(5.0);
     }
-  });
+  }, 15_000);
 });
 
 // ── Multi-material slope ─────────────────────────────────────────

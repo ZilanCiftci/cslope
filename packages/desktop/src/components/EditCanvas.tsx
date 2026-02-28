@@ -56,42 +56,69 @@ export function EditCanvas() {
   const materials = useAppStore((s) => s.materials);
   const materialBoundaries = useAppStore((s) => s.materialBoundaries);
   const analysisLimits = useAppStore((s) => s.analysisLimits);
-  const setAnalysisLimits = useAppStore((s) => s.setAnalysisLimits);
   const udls = useAppStore((s) => s.udls);
-  const updateUdl = useAppStore((s) => s.updateUdl);
   const lineLoads = useAppStore((s) => s.lineLoads);
-  const updateLineLoad = useAppStore((s) => s.updateLineLoad);
   const activeSection = useAppStore((s) => s.activeSection);
   const piezometricLine = useAppStore((s) => s.piezometricLine);
-  const setPiezoCoordinate = useAppStore((s) => s.setPiezoCoordinate);
-  const insertPiezoPointAt = useAppStore((s) => s.insertPiezoPointAt);
-  const removePiezoPoint = useAppStore((s) => s.removePiezoPoint);
   const selectedPointIndex = useAppStore((s) => s.selectedPointIndex);
-  const setCoordinate = useAppStore((s) => s.setCoordinate);
-  const insertCoordinateAt = useAppStore((s) => s.insertCoordinateAt);
-  const removeCoordinate = useAppStore((s) => s.removeCoordinate);
-  const setSelectedPoint = useAppStore((s) => s.setSelectedPoint);
-  const updateBoundaryPoint = useAppStore((s) => s.updateBoundaryPoint);
-  const removeBoundaryPoint = useAppStore((s) => s.removeBoundaryPoint);
-  const insertBoundaryPointAt = useAppStore((s) => s.insertBoundaryPointAt);
   const regionMaterials = useAppStore((s) => s.regionMaterials);
-  const setRegionMaterial = useAppStore((s) => s.setRegionMaterial);
   const assigningMaterialId = useAppStore((s) => s.assigningMaterialId);
-  const setAssigningMaterial = useAppStore((s) => s.setAssigningMaterial);
   const selectedRegionKey = useAppStore((s) => s.selectedRegionKey);
-  const setSelectedRegionKey = useAppStore((s) => s.setSelectedRegionKey);
-  const updateAnnotation = useAppStore((s) => s.updateAnnotation);
   const selectedAnnotationIds = useAppStore((s) => s.selectedAnnotationIds);
-  const setSelectedAnnotations = useAppStore((s) => s.setSelectedAnnotations);
-  const toggleAnnotationSelection = useAppStore(
-    (s) => s.toggleAnnotationSelection,
-  );
-  const alignAnnotations = useAppStore((s) => s.alignAnnotations);
   const theme = useAppStore((s) => s.theme);
   const snapToGrid = useAppStore((s) => s.snapToGrid);
   const gridSnapSize = useAppStore((s) => s.gridSnapSize);
   const projectInfo = useAppStore((s) => s.projectInfo);
-  const setCanvasToolbar = useAppStore((s) => s.setCanvasToolbar);
+  const {
+    setAnalysisLimits,
+    updateUdl,
+    updateLineLoad,
+    setPiezoCoordinate,
+    insertPiezoPointAt,
+    removePiezoPoint,
+    setCoordinate,
+    insertCoordinateAt,
+    removeCoordinate,
+    setSelectedPoint,
+    updateBoundaryPoint,
+    removeBoundaryPoint,
+    insertBoundaryPointAt,
+    setRegionMaterial,
+    setAssigningMaterial,
+    setSelectedRegionKey,
+    updateAnnotation,
+    setSelectedAnnotations,
+    toggleAnnotationSelection,
+    alignAnnotations,
+    setCanvasToolbar,
+    setCursorWorld,
+  } = useMemo(() => {
+    const state = useAppStore.getState();
+    return {
+      setAnalysisLimits: state.setAnalysisLimits,
+      updateUdl: state.updateUdl,
+      updateLineLoad: state.updateLineLoad,
+      setPiezoCoordinate: state.setPiezoCoordinate,
+      insertPiezoPointAt: state.insertPiezoPointAt,
+      removePiezoPoint: state.removePiezoPoint,
+      setCoordinate: state.setCoordinate,
+      insertCoordinateAt: state.insertCoordinateAt,
+      removeCoordinate: state.removeCoordinate,
+      setSelectedPoint: state.setSelectedPoint,
+      updateBoundaryPoint: state.updateBoundaryPoint,
+      removeBoundaryPoint: state.removeBoundaryPoint,
+      insertBoundaryPointAt: state.insertBoundaryPointAt,
+      setRegionMaterial: state.setRegionMaterial,
+      setAssigningMaterial: state.setAssigningMaterial,
+      setSelectedRegionKey: state.setSelectedRegionKey,
+      updateAnnotation: state.updateAnnotation,
+      setSelectedAnnotations: state.setSelectedAnnotations,
+      toggleAnnotationSelection: state.toggleAnnotationSelection,
+      alignAnnotations: state.alignAnnotations,
+      setCanvasToolbar: state.setCanvasToolbar,
+      setCursorWorld: state.setCursorWorld,
+    };
+  }, []);
 
   const editingExterior =
     mode === "edit" && activeSection === "Exterior Boundary";
@@ -228,7 +255,6 @@ export function EditCanvas() {
   });
 
   // Sync mouse world position to the store so StatusBar can display it
-  const setCursorWorld = useAppStore((s) => s.setCursorWorld);
   useEffect(() => {
     setCursorWorld(mouseWorld);
   }, [mouseWorld, setCursorWorld]);

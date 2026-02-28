@@ -91,6 +91,8 @@ export interface SlipSurfaceResult {
   entryPoint: [number, number];
   /** Exit point [x, y]. */
   exitPoint: [number, number];
+  /** Whether iterative solver converged for this surface. */
+  converged?: boolean;
 }
 
 /** Slice data for detailed output. */
@@ -129,4 +131,8 @@ export interface AnalysisResult {
   method: AnalysisMethod;
   /** Elapsed time in ms. */
   elapsedMs: number;
+  /** Number of analysed surfaces that did not converge within iteration limits. */
+  nonConvergedSurfaces?: number;
+  /** Number of geometry split operations that failed and fell back to unsplit. */
+  splitFailureCount?: number;
 }

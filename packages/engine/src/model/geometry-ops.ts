@@ -16,6 +16,11 @@ import "jsts/org/locationtech/jts/monkey.js";
 /** Shared JSTS GeometryFactory instance. */
 const gf = new GeometryFactory();
 
+export interface SplitPolygonResult {
+  pieces: { px: number[]; py: number[] }[];
+  splitFailed: boolean;
+}
+
 // ── Line-segment intersection ─────────────────────────────────────
 
 /**
@@ -184,6 +189,15 @@ export function splitPolygonByPolyline(
   lx: number[],
   ly: number[],
 ): { px: number[]; py: number[] }[] {
+  return splitPolygonByPolylineDetailed(px, py, lx, ly).pieces;
+}
+
+export function splitPolygonByPolylineDetailed(
+  px: number[],
+  py: number[],
+  lx: number[],
+  ly: number[],
+): SplitPolygonResult {
   // Ensure polygon is closed
   const cpx = [...px];
   const cpy = [...py];
@@ -200,13 +214,15 @@ export function splitPolygonByPolyline(
   const polygon = gf.createPolygon(gf.createLinearRing(polyCoords));
 
   const lineCoords = lx.map((x, i) => new Coordinate(x, ly[i]));
-  if (lineCoords.length < 2) return [{ px: cpx, py: cpy }];
+  if (lineCoords.length < 2) {
+    return { pieces: [{ px: cpx, py: cpy }], splitFailed: false };
+  }
   const line = gf.createLineString(lineCoords);
 
   // Quick bail-out if line doesn't touch the polygon
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   if (!(polygon as any).intersects(line)) {
-    return [{ px: cpx, py: cpy }];
+    return { pieces: [{ px: cpx, py: cpy }], splitFailed: false };
   }
 
   try {
@@ -237,7 +253,9 @@ export function splitPolygonByPolyline(
       }
     }
 
-    if (results.length === 0) return [{ px: cpx, py: cpy }];
+    if (results.length === 0) {
+      return { pieces: [{ px: cpx, py: cpy }], splitFailed: false };
+    }
 
     // Sort by average y descending so upper (surface-side) pieces come first,
     // matching the expected order for slope analysis.
@@ -247,10 +265,20 @@ export function splitPolygonByPolyline(
       return avgB - avgA;
     });
 
-    return results;
-  } catch {
-    // If JSTS fails for any reason, return the original polygon unsplit
-    return [{ px: cpx, py: cpy }];
+    return { pieces: results, splitFailed: false };
+  } catch (error) {
+    // If JSTS fails for any reason, return the original polygon unsplit,
+    // but make the failure explicit for diagnostics.
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    console.warn(
+      "splitPolygonByPolyline: JSTS split failed, returning original polygon unsplit.",
+      {
+        polygonVertexCount: cpx.length,
+        polylineVertexCount: lx.length,
+        error: errorMessage,
+      },
+    );
+    return { pieces: [{ px: cpx, py: cpy }], splitFailed: true };
   }
 }
 

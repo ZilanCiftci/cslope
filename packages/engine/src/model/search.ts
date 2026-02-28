@@ -142,8 +142,8 @@ export function generateRefinedPlanes(
     return [];
   }
 
-  const validRanked = rankedPlanes.filter((plane) =>
-    Number.isFinite(plane.fos),
+  const validRanked = rankedPlanes.filter(
+    (plane) => plane.fos != null && Number.isFinite(plane.fos),
   );
   if (validRanked.length === 0) {
     return [];
@@ -170,7 +170,7 @@ export function generateRefinedPlanes(
 
   const seeds = validRanked
     .slice()
-    .sort((a, b) => a.fos - b.fos)
+    .sort((a, b) => a.fos! - b.fos!)
     .slice(0, Math.min(10, validRanked.length));
 
   const grid = getSearchGridSpec(slope);

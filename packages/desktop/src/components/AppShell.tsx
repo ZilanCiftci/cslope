@@ -1,20 +1,19 @@
 import { useEffect, useState } from "react";
-import { ActivityBar } from "./components/ActivityBar";
-import { StatusBar } from "./components/StatusBar";
-import { MenuBar } from "./components/ui/ribbon/MenuBar";
-import { TabBar } from "./components/TabBar";
-import { TitleBar } from "./components/TitleBar";
+import { ActivityBar } from "./ActivityBar";
+import { StatusBar } from "./StatusBar";
+import { MenuBar } from "./ui/ribbon/MenuBar";
+import { TabBar } from "./TabBar";
+import { TitleBar } from "./TitleBar";
 import {
   Explorer,
-  EditCanvas,
   PropertiesPanel,
   ResizablePanel,
   ResultPanel,
-  ResultCanvas,
   ResultSidebar,
-} from "./components";
-import { useAppStore } from "./store/app-store";
-import { useDragDrop } from "./features/canvas/hooks/useDragDrop";
+  SlopeCanvas,
+} from "./index";
+import { useAppStore } from "../store/app-store";
+import { useDragDrop } from "../features/canvas/hooks/useDragDrop";
 
 export function AppShell() {
   useDragDrop();
@@ -45,9 +44,9 @@ export function AppShell() {
   const theme = useAppStore((s) => s.theme);
   const toggleTheme = useAppStore((s) => s.toggleTheme);
   const coordinateCount = useAppStore((s) => s.coordinates.length);
-  const cursorWorld = useAppStore((s) => s.cursorWorld);
   const runAllAnalyses = useAppStore((s) => s.runAllAnalyses);
   const canvasToolbar = useAppStore((s) => s.canvasToolbar);
+  const cursorWorld = useAppStore((s) => s.cursorWorld);
 
   const activeModel = models.find((m) => m.id === activeModelId);
 
@@ -144,7 +143,7 @@ export function AppShell() {
 
         <div className="flex-1 min-w-0 flex flex-col">
           <div className="flex-1 min-h-0">
-            {mode === "result" ? <ResultCanvas /> : <EditCanvas />}
+            <SlopeCanvas />
           </div>
           {mode === "result" && (
             <div

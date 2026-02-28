@@ -111,13 +111,21 @@ function analyseExample(model: ModelEntry) {
 
   analyseSlope(slope);
 
-  const critical = slope.search[0];
+  const critical = slope.search.find((surface) => surface.fos != null);
+  if (!critical || critical.fos == null) {
+    throw new Error("No valid critical surface found in example analysis");
+  }
+
+  const criticalWithFos = {
+    ...critical,
+    fos: critical.fos,
+  };
 
   return {
     model,
     canonicalDefinition,
     minFos: slope.getMinFOS(),
-    critical,
+    critical: criticalWithFos,
   };
 }
 
