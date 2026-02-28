@@ -381,191 +381,6 @@ export function drawCanvas(
     }
   }
 
-  // ── Entry / Exit range markers ──────────────────────────
-  if (analysisLimits.enabled && coordinates.length >= 3) {
-    // Helper: draw an arrow marker on the surface.
-    //   dir = "right" means >|   dir = "left" means |<
-    const drawArrow = (
-      worldX: number,
-      worldY: number,
-      dir: "left" | "right",
-      handle: "entryLeftX" | "entryRightX" | "exitLeftX" | "exitRightX",
-    ) => {
-      const [cx, cy] = worldToCanvas(worldX, worldY, w, h);
-      const isHover = hoverHit?.kind === "limit" && hoverHit.handle === handle;
-      const sz = 7; // half-size of arrowhead
-      const barH = 10; // half-height of the bar |
-
-      const color = isHover ? "#cc0000" : "#000000";
-      ctx.strokeStyle = color;
-      ctx.fillStyle = color;
-      ctx.lineWidth = isHover ? 2.5 : 2;
-
-      // Vertical bar |
-      ctx.beginPath();
-      ctx.moveTo(cx, cy - barH);
-      ctx.lineTo(cx, cy + barH);
-      ctx.stroke();
-
-      // Triangle arrowhead pointing inward
-      const tipX = dir === "right" ? cx - sz * 2 : cx + sz * 2;
-      ctx.beginPath();
-      ctx.moveTo(cx, cy); // tip at the bar
-      ctx.lineTo(tipX, cy - sz);
-      ctx.lineTo(tipX, cy + sz);
-      ctx.closePath();
-      ctx.fill();
-    };
-
-    // Helper: draw dotted markers along the surface between two Xs
-    const drawDottedRange = (surfPts: [number, number][]) => {
-      if (surfPts.length < 2) return;
-      const canvasPts = surfPts.map(([sx, sy]) => worldToCanvas(sx, sy, w, h));
-      const spacing = 12;
-      const radius = 3.5;
-
-      ctx.fillStyle = "#cc0000";
-
-      // Always place dots at endpoints
-      const placeDot = (x: number, y: number) => {
-        ctx.beginPath();
-        ctx.arc(x, y, radius, 0, Math.PI * 2);
-        ctx.fill();
-      };
-
-      placeDot(canvasPts[0][0], canvasPts[0][1]);
-
-      let carry = 0; // leftover distance from prior segment
-      for (let i = 0; i < canvasPts.length - 1; i++) {
-        const [x1, y1] = canvasPts[i];
-        const [x2, y2] = canvasPts[i + 1];
-        const dx = x2 - x1;
-        const dy = y2 - y1;
-        const segLen = Math.hypot(dx, dy);
-        if (segLen === 0) continue;
-
-        let t = spacing - carry;
-        while (t <= segLen) {
-          const frac = t / segLen;
-          const cx = x1 + dx * frac;
-          const cy = y1 + dy * frac;
-          placeDot(cx, cy);
-          t += spacing;
-        }
-        carry = (carry + segLen) % spacing;
-      }
-
-      placeDot(
-        canvasPts[canvasPts.length - 1][0],
-        canvasPts[canvasPts.length - 1][1],
-      );
-    };
-
-    const leftHandleDir: "left" | "right" =
-      orientation === "rtl" ? "left" : "right";
-    const rightHandleDir: "left" | "right" =
-      orientation === "rtl" ? "right" : "left";
-
-    // Entry range markers
-    const entryLeftY = surfaceYAtX(analysisLimits.entryLeftX);
-    const entryRightY = surfaceYAtX(analysisLimits.entryRightX);
-
-    if (entryLeftY !== null) {
-      drawArrow(
-        analysisLimits.entryLeftX,
-        entryLeftY,
-        leftHandleDir,
-        "entryLeftX",
-      );
-    }
-    if (entryRightY !== null) {
-      drawArrow(
-        analysisLimits.entryRightX,
-        entryRightY,
-        rightHandleDir,
-        "entryRightX",
-      );
-    }
-
-    // Red dotted line between entry arrows along the surface
-    if (entryLeftY !== null && entryRightY !== null) {
-      // Walk along the surface segments between entryLeftX and entryRightX
-      const leftX = Math.min(
-        analysisLimits.entryLeftX,
-        analysisLimits.entryRightX,
-      );
-      const rightX = Math.max(
-        analysisLimits.entryLeftX,
-        analysisLimits.entryRightX,
-      );
-
-      // Collect surface points in the range
-      const surfPts: [number, number][] = [];
-      surfPts.push([leftX, surfaceYAtX(leftX)!]);
-      for (const [cx, cy] of coordinates) {
-        if (cx > leftX && cx < rightX) {
-          // Only include if it's on the top surface
-          const topY = surfaceYAtX(cx);
-          if (topY !== null && Math.abs(cy - topY) < 0.001) {
-            surfPts.push([cx, cy]);
-          }
-        }
-      }
-      surfPts.push([rightX, surfaceYAtX(rightX)!]);
-      surfPts.sort((a, b) => a[0] - b[0]);
-
-      drawDottedRange(surfPts);
-    }
-
-    // Exit range markers
-    const exitLeftY = surfaceYAtX(analysisLimits.exitLeftX);
-    const exitRightY = surfaceYAtX(analysisLimits.exitRightX);
-
-    if (exitLeftY !== null) {
-      drawArrow(
-        analysisLimits.exitLeftX,
-        exitLeftY,
-        leftHandleDir,
-        "exitLeftX",
-      );
-    }
-    if (exitRightY !== null) {
-      drawArrow(
-        analysisLimits.exitRightX,
-        exitRightY,
-        rightHandleDir,
-        "exitRightX",
-      );
-    }
-
-    // Red dotted line between exit arrows along the surface
-    if (exitLeftY !== null && exitRightY !== null) {
-      const leftX = Math.min(
-        analysisLimits.exitLeftX,
-        analysisLimits.exitRightX,
-      );
-      const rightX = Math.max(
-        analysisLimits.exitLeftX,
-        analysisLimits.exitRightX,
-      );
-
-      const surfPts: [number, number][] = [];
-      surfPts.push([leftX, surfaceYAtX(leftX)!]);
-      for (const [cx, cy] of coordinates) {
-        if (cx > leftX && cx < rightX) {
-          const topY = surfaceYAtX(cx);
-          if (topY !== null && Math.abs(cy - topY) < 0.001) {
-            surfPts.push([cx, cy]);
-          }
-        }
-      }
-      surfPts.push([rightX, surfaceYAtX(rightX)!]);
-      surfPts.sort((a, b) => a[0] - b[0]);
-
-      drawDottedRange(surfPts);
-    }
-  }
-
   // ── UDL loads ────────────────────────────────────────────
   if (udls.length > 0 && coordinates.length >= 3) {
     for (const u of udls) {
@@ -924,6 +739,195 @@ export function drawCanvas(
       ctx.strokeStyle = editingBoundaries ? STROKE_ACTIVE : STROKE_INACTIVE;
       ctx.lineWidth = editingBoundaries ? 1.5 : 1;
       ctx.stroke();
+    }
+  }
+
+  // ── Entry / Exit range markers ──────────────────────────
+  if (analysisLimits.enabled && coordinates.length >= 3) {
+    // Helper: draw an arrow marker on the surface.
+    //   dir = "right" means >|   dir = "left" means |<
+    const drawArrow = (
+      worldX: number,
+      worldY: number,
+      dir: "left" | "right",
+      handle: "entryLeftX" | "entryRightX" | "exitLeftX" | "exitRightX",
+      baseColor: string = "#000000",
+      activeColor: string = "#cc0000",
+    ) => {
+      const [cx, cy] = worldToCanvas(worldX, worldY, w, h);
+      const isHover = hoverHit?.kind === "limit" && hoverHit.handle === handle;
+      const sz = 7; // half-size of arrowhead
+      const barH = 10; // half-height of the bar |
+
+      const color = isHover ? activeColor : baseColor;
+      ctx.strokeStyle = color;
+      ctx.fillStyle = color;
+      ctx.lineWidth = isHover ? 2.5 : 2;
+
+      // Vertical bar |
+      ctx.beginPath();
+      ctx.moveTo(cx, cy - barH);
+      ctx.lineTo(cx, cy + barH);
+      ctx.stroke();
+
+      // Triangle arrowhead pointing inward
+      const tipX = dir === "right" ? cx - sz * 2 : cx + sz * 2;
+      ctx.beginPath();
+      ctx.moveTo(cx, cy); // tip at the bar
+      ctx.lineTo(tipX, cy - sz);
+      ctx.lineTo(tipX, cy + sz);
+      ctx.closePath();
+      ctx.fill();
+    };
+
+    // Helper: draw dotted markers along the surface between two Xs
+    const drawDottedRange = (surfPts: [number, number][], color: string) => {
+      if (surfPts.length < 2) return;
+      const canvasPts = surfPts.map(([sx, sy]) => worldToCanvas(sx, sy, w, h));
+      const spacing = 12;
+      const radius = 2.5;
+
+      ctx.fillStyle = color;
+
+      // Always place dots at endpoints
+      const placeDot = (x: number, y: number) => {
+        ctx.beginPath();
+        ctx.arc(x, y, radius, 0, Math.PI * 2);
+        ctx.fill();
+      };
+
+      let carry = 0; // leftover distance from prior segment
+      for (let i = 0; i < canvasPts.length - 1; i++) {
+        const [x1, y1] = canvasPts[i];
+        const [x2, y2] = canvasPts[i + 1];
+        const dx = x2 - x1;
+        const dy = y2 - y1;
+        const segLen = Math.hypot(dx, dy);
+        if (segLen === 0) continue;
+
+        let t = spacing - carry;
+        // Start placing dots only after skipping spacing, preventing overlap with end markings
+        while (t < segLen - 0.1) {
+          const frac = t / segLen;
+          const cx = x1 + dx * frac;
+          const cy = y1 + dy * frac;
+          placeDot(cx, cy);
+          t += spacing;
+        }
+        carry = (carry + segLen) % spacing;
+      }
+    };
+
+    const leftHandleDir: "left" | "right" =
+      orientation === "rtl" ? "left" : "right";
+    const rightHandleDir: "left" | "right" =
+      orientation === "rtl" ? "right" : "left";
+
+    // Entry range markers
+    const entryLeftY = surfaceYAtX(analysisLimits.entryLeftX);
+    const entryRightY = surfaceYAtX(analysisLimits.entryRightX);
+
+    // Red dotted line between entry arrows along the surface
+    if (entryLeftY !== null && entryRightY !== null) {
+      // Walk along the surface segments between entryLeftX and entryRightX
+      const leftX = Math.min(
+        analysisLimits.entryLeftX,
+        analysisLimits.entryRightX,
+      );
+      const rightX = Math.max(
+        analysisLimits.entryLeftX,
+        analysisLimits.entryRightX,
+      );
+
+      // Collect surface points in the range
+      const surfPts: [number, number][] = [];
+      surfPts.push([leftX, surfaceYAtX(leftX)!]);
+      for (const [cx, cy] of coordinates) {
+        if (cx > leftX && cx < rightX) {
+          // Only include if it's on the top surface
+          const topY = surfaceYAtX(cx);
+          if (topY !== null && Math.abs(cy - topY) < 0.001) {
+            surfPts.push([cx, cy]);
+          }
+        }
+      }
+      surfPts.push([rightX, surfaceYAtX(rightX)!]);
+      surfPts.sort((a, b) => a[0] - b[0]);
+
+      drawDottedRange(surfPts, "#006400");
+    }
+
+    if (entryLeftY !== null) {
+      drawArrow(
+        analysisLimits.entryLeftX,
+        entryLeftY,
+        leftHandleDir,
+        "entryLeftX",
+        "#000000",
+        "#006400",
+      );
+    }
+    if (entryRightY !== null) {
+      drawArrow(
+        analysisLimits.entryRightX,
+        entryRightY,
+        rightHandleDir,
+        "entryRightX",
+        "#000000",
+        "#006400",
+      );
+    }
+
+    // Exit range markers
+    const exitLeftY = surfaceYAtX(analysisLimits.exitLeftX);
+    const exitRightY = surfaceYAtX(analysisLimits.exitRightX);
+
+    // Red dotted line between exit arrows along the surface
+    if (exitLeftY !== null && exitRightY !== null) {
+      const leftX = Math.min(
+        analysisLimits.exitLeftX,
+        analysisLimits.exitRightX,
+      );
+      const rightX = Math.max(
+        analysisLimits.exitLeftX,
+        analysisLimits.exitRightX,
+      );
+
+      const surfPts: [number, number][] = [];
+      surfPts.push([leftX, surfaceYAtX(leftX)!]);
+      for (const [cx, cy] of coordinates) {
+        if (cx > leftX && cx < rightX) {
+          const topY = surfaceYAtX(cx);
+          if (topY !== null && Math.abs(cy - topY) < 0.001) {
+            surfPts.push([cx, cy]);
+          }
+        }
+      }
+      surfPts.push([rightX, surfaceYAtX(rightX)!]);
+      surfPts.sort((a, b) => a[0] - b[0]);
+
+      drawDottedRange(surfPts, "#cc0000");
+    }
+
+    if (exitLeftY !== null) {
+      drawArrow(
+        analysisLimits.exitLeftX,
+        exitLeftY,
+        leftHandleDir,
+        "exitLeftX",
+        "#000000",
+        "#cc0000",
+      );
+    }
+    if (exitRightY !== null) {
+      drawArrow(
+        analysisLimits.exitRightX,
+        exitRightY,
+        rightHandleDir,
+        "exitRightX",
+        "#000000",
+        "#cc0000",
+      );
     }
   }
 

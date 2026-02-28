@@ -34,6 +34,12 @@ interface PdfViewBounds {
   yMax: number;
 }
 
+function pdfNum(value: number, decimals = 12): string {
+  if (!Number.isFinite(value)) return "0";
+  const fixed = value.toFixed(decimals);
+  return fixed.replace(/\.0+$/, "").replace(/(\.\d*?)0+$/, "$1");
+}
+
 export interface PdfExportData {
   coordinates: [number, number][];
   materials: MaterialRow[];
@@ -192,6 +198,35 @@ export function exportVectorPdf(data: PdfExportData): void {
       w: tf.paperW - PAD_L - PAD_R,
       h: tf.paperH - PAD_T - PAD_B,
     };
+
+    // Inject PDF Viewport and Measure dictionary for accurate scaling in PDF viewers.
+    // Calibrate from the actual transform output (1 m reference segment), and scope
+    // the viewport to the inner plotting frame (where model geometry is drawn).
+    const ptsPerMm = 72 / 25.4;
+    const [wx0, wy0] = tf.worldToPdf(0, 0);
+    const [wx1, wy1] = tf.worldToPdf(1, 0);
+    const mmPerWorld = Math.hypot(wx1 - wx0, wy1 - wy0);
+    const ptsPerWorld = mmPerWorld * ptsPerMm;
+    const metersPerPt = ptsPerWorld > 0 ? 1 / ptsPerWorld : 0;
+    const metersPerMm = mmPerWorld > 0 ? 1 / mmPerWorld : 0;
+
+    const bboxX0 = 0;
+    const bboxX1 = tf.paperW * ptsPerMm;
+    const bboxY0 = 0;
+    const bboxY1 = tf.paperH * ptsPerMm;
+
+    const metersPerPtPdf = pdfNum(metersPerPt, 12);
+    const metersPerMmPdf = pdfNum(metersPerMm, 9);
+    const areaPerPt2Pdf = pdfNum(metersPerPt * metersPerPt, 15);
+
+    const measureDict = `<< /Type /Measure /Subtype /RL /R (1 mm = ${metersPerMmPdf} m) /X [ << /Type /NumberFormat /U (m) /C ${metersPerPtPdf} /D 3 >> ] /Y [ << /Type /NumberFormat /U (m) /C ${metersPerPtPdf} /D 3 >> ] /D [ << /Type /NumberFormat /U (m) /C ${metersPerPtPdf} /D 3 >> ] /A [ << /Type /NumberFormat /U (sq m) /C ${areaPerPt2Pdf} /D 3 >> ] >>`;
+
+    pdf.internal.events.subscribe("putPage", function () {
+      (pdf.internal as any).out(`/Measure ${measureDict}`);
+      (pdf.internal as any).out(
+        `/VP [ << /Type /Viewport /Name (Model Space) /BBox [${pdfNum(bboxX0, 4)} ${pdfNum(bboxY0, 4)} ${pdfNum(bboxX1, 4)} ${pdfNum(bboxY1, 4)}] /Measure ${measureDict} >> ]`,
+      );
+    });
 
     pdf.setFillColor(255, 255, 255);
     pdf.rect(0, 0, tf.paperW, tf.paperH, "F");

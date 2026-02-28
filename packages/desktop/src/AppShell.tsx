@@ -6,11 +6,12 @@ import { TabBar } from "./components/TabBar";
 import { TitleBar } from "./components/TitleBar";
 import {
   Explorer,
+  EditCanvas,
   PropertiesPanel,
   ResizablePanel,
   ResultPanel,
+  ResultCanvas,
   ResultSidebar,
-  SlopeCanvas,
 } from "./components";
 import { useAppStore } from "./store/app-store";
 import { useDragDrop } from "./features/canvas/hooks/useDragDrop";
@@ -143,7 +144,7 @@ export function AppShell() {
 
         <div className="flex-1 min-w-0 flex flex-col">
           <div className="flex-1 min-h-0">
-            <SlopeCanvas />
+            {mode === "result" ? <ResultCanvas /> : <EditCanvas />}
           </div>
           {mode === "result" && (
             <div
