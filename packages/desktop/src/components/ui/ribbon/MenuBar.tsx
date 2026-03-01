@@ -26,7 +26,7 @@ export function MenuBar({ activeModelName, canvasToolbar }: Props) {
   return (
     <div className="flex flex-col shrink-0">
       <div
-        className="flex items-center h-9 gap-1 px-2"
+        className="flex items-center h-[1.9rem] gap-1 px-2"
         style={{
           background: "var(--color-vsc-tab-inactive)",
           borderBottom: "1px solid var(--color-vsc-border)",
@@ -65,7 +65,7 @@ export function MenuBar({ activeModelName, canvasToolbar }: Props) {
       </div>
       <div
         ref={setPanelHost}
-        className="h-25 px-3 flex items-center"
+        className="h-[4.375rem] px-3 flex items-center"
         style={{
           background: "var(--color-vsc-panel)",
           borderBottom: "1px solid var(--color-vsc-border)",

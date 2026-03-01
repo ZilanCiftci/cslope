@@ -7,7 +7,7 @@ import {
   type WheelEvent as RWheelEvent,
   type RefObject,
 } from "react";
-import { computePaperFrame } from "../helpers";
+import { computePaperFrame, getAnnotationBoundsPx } from "../helpers";
 import { useAppStore } from "../../../store/app-store";
 import type { ContextMenuState, MaterialPickerState, PointHit } from "../types";
 import type {
@@ -30,6 +30,7 @@ type UndoableSnapshot = Pick<
   | "lineLoads"
   | "analysisLimits"
   | "options"
+  | "resultViewSettings"
 >;
 
 function pickUndoableSnapshot(state: AppState): UndoableSnapshot {
@@ -44,6 +45,7 @@ function pickUndoableSnapshot(state: AppState): UndoableSnapshot {
     lineLoads: state.lineLoads,
     analysisLimits: state.analysisLimits,
     options: state.options,
+    resultViewSettings: state.resultViewSettings,
   };
 }
 
@@ -320,6 +322,7 @@ export function usePointerHandlers(deps: PointerDeps) {
           rect.width,
           rect.height,
           s.resultViewSettings.paperFrame.paperSize,
+          s.resultViewSettings.paperFrame.landscape,
         );
         const cxPx = clientX - rect.left;
         const cyPx = clientY - rect.top;
@@ -420,22 +423,47 @@ export function usePointerHandlers(deps: PointerDeps) {
       if (mode === "result") {
         const canvas = canvasRef.current;
         if (canvas) {
+          const ctx = canvas.getContext("2d");
           const rect = canvas.getBoundingClientRect();
           const pf = computePaperFrame(
             rect.width,
             rect.height,
             useAppStore.getState().resultViewSettings.paperFrame.paperSize,
+            useAppStore.getState().resultViewSettings.paperFrame.landscape,
           );
           const cxPx = e.clientX - rect.left;
           const cyPx = e.clientY - rect.top;
-          const fx = (cxPx - pf.x) / pf.w;
-          const fy = (cyPx - pf.y) / pf.h;
-          const annos = useAppStore.getState().resultViewSettings.annotations;
+          const state = useAppStore.getState();
+          const annos = state.resultViewSettings.annotations;
+          const resultForBounds = state.result;
           for (let i = annos.length - 1; i >= 0; i--) {
             const a = annos[i];
-            const dx = (fx - a.x) * pf.w;
-            const dy = (fy - a.y) * pf.h;
-            if (Math.hypot(dx, dy) < 15) {
+            const hit =
+              ctx && resultForBounds
+                ? (() => {
+                    const b = getAnnotationBoundsPx(ctx, {
+                      annotation: a,
+                      paperFrame: pf,
+                      result: resultForBounds,
+                      materials: state.materials,
+                      projectInfo: state.projectInfo,
+                    });
+                    return (
+                      cxPx >= b.x &&
+                      cxPx <= b.x + b.w &&
+                      cyPx >= b.y &&
+                      cyPx <= b.y + b.h
+                    );
+                  })()
+                : (() => {
+                    const fx = (cxPx - pf.x) / pf.w;
+                    const fy = (cyPx - pf.y) / pf.h;
+                    const dx = (fx - a.x) * pf.w;
+                    const dy = (fy - a.y) * pf.h;
+                    return Math.hypot(dx, dy) < 15;
+                  })();
+
+            if (hit) {
               if (e.ctrlKey || e.shiftKey) {
                 toggleAnnotationSelection(a.id, true);
               } else if (!selectedAnnotationIds.includes(a.id)) {
@@ -602,6 +630,7 @@ export function usePointerHandlers(deps: PointerDeps) {
           rect.width,
           rect.height,
           useAppStore.getState().resultViewSettings.paperFrame.paperSize,
+          useAppStore.getState().resultViewSettings.paperFrame.landscape,
         );
         const fx = (cxPx - pf.x) / pf.w;
         const fy = (cyPx - pf.y) / pf.h;

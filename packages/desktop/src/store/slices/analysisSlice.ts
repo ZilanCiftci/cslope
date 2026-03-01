@@ -31,7 +31,15 @@ function stopProgressInterval() {
 
 export const createAnalysisSlice: SliceCreator<AnalysisSlice> = (set, get) => ({
   analysisLimits: { ...DEFAULT_ANALYSIS_LIMITS },
-  options: { ...DEFAULT_ANALYSIS_OPTIONS },
+  options: {
+    ...DEFAULT_ANALYSIS_OPTIONS,
+    method: "Morgenstern-Price",
+    slices: 30,
+    iterations: 1000,
+    refinedIterations: 500,
+  },
+  iterations: 1000,
+  refinedIterations: 500,
   runState: "idle",
   progress: 0,
   result: null,
@@ -395,7 +403,11 @@ export const createAnalysisSlice: SliceCreator<AnalysisSlice> = (set, get) => ({
           type: "run-analysis",
           id: crypto.randomUUID(),
           slope,
-          options: freshModel.options ?? { ...DEFAULT_ANALYSIS_OPTIONS },
+          options: freshModel.options ?? {
+            ...DEFAULT_ANALYSIS_OPTIONS,
+            method: "Morgenstern-Price",
+            slices: 30,
+          },
         });
       });
 

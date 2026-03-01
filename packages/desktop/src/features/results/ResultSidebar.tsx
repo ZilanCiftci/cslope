@@ -4,7 +4,7 @@
  * Controls surface display mode, FOS filtering, annotations, and export.
  */
 
-import { type ReactNode, useState } from "react";
+import { type ReactNode } from "react";
 import {
   useAppStore,
   PAPER_DIMENSIONS,
@@ -58,19 +58,45 @@ export function ResultSidebar() {
     cursor: "pointer",
   };
 
-  const [maintainAr, setMaintainAr] = useState(true);
+  const getPaperDimensions = () => {
+    const { paperSize, landscape } = rvs.paperFrame;
+    const { w, h } = PAPER_DIMENSIONS[paperSize];
+    return {
+      width: landscape ? Math.max(w, h) : Math.min(w, h),
+      height: landscape ? Math.min(w, h) : Math.max(w, h),
+    };
+  };
 
   // Re-add setViewLockToModelBounds as it was deleted
   const setViewLockToModelBounds = () => {
     const state = useAppStore.getState();
     const coords = state.coordinates;
-    let bl: [number, number] = [0, 0];
-    let tr: [number, number] = [20, 10];
+    const ar = getPlotAspectRatio();
+
+    // Defaults: 20m x-width with 1m side margins and 1m bottom margin
+    let bl: [number, number] = [-1, -1];
+    let tr: [number, number] = [21, -1 + 22 / ar];
     if (coords.length >= 2) {
       const xs = coords.map((c) => c[0]);
       const ys = coords.map((c) => c[1]);
-      bl = [Math.min(...xs), Math.min(...ys)];
-      tr = [Math.max(...xs), Math.max(...ys)];
+      const xMin = Math.min(...xs);
+      const xMax = Math.max(...xs);
+      const yMin = Math.min(...ys);
+
+      // 1m margin in X direction (left/right)
+      const left = xMin - 1;
+      const right = xMax + 1;
+
+      // Align model bottom to paper bottom with 1m margin
+      const bottom = yMin - 1;
+
+      // Fit plot height from paper aspect ratio using the x-span above
+      const width = right - left;
+      const height = width / ar;
+      const top = bottom + height;
+
+      bl = [left, bottom];
+      tr = [right, top];
     }
     setRvs({
       viewLock: {
@@ -82,10 +108,9 @@ export function ResultSidebar() {
   };
 
   const getPlotAspectRatio = () => {
-    const { paperSize } = rvs.paperFrame;
-    const { w, h } = PAPER_DIMENSIONS[paperSize];
-    const PLOT_W = w * (1 - PLOT_MARGINS.L - PLOT_MARGINS.R);
-    const PLOT_H = h * (1 - PLOT_MARGINS.T - PLOT_MARGINS.B);
+    const { width, height } = getPaperDimensions();
+    const PLOT_W = width * (1 - PLOT_MARGINS.L - PLOT_MARGINS.R);
+    const PLOT_H = height * (1 - PLOT_MARGINS.T - PLOT_MARGINS.B);
     return PLOT_W / PLOT_H;
   };
 
@@ -105,27 +130,23 @@ export function ResultSidebar() {
     else if (field === "tr_x") newVl.topRight[0] = val;
     else if (field === "tr_y") newVl.topRight[1] = val;
 
-    if (maintainAr) {
-      const ar = getPlotAspectRatio();
+    const ar = getPlotAspectRatio();
 
-      // If we change X limits, adjust TR Y (Height)
-      if (field === "bl_x" || field === "tr_x") {
-        const w = newVl.topRight[0] - newVl.bottomLeft[0];
-        // h = w / ar
-        const newH = w / ar;
-        // Keep BL Y fixed, adjust TR Y
-        newVl.topRight[1] = newVl.bottomLeft[1] + newH;
-      }
-      // If we change BL Y, adjust TR Y to maintain same height? Or adjust TR X?
-      // User likely wants to sustain aspect ratio.
-      // If Y changes, let's adjust TR X (Width)
-      else if (field === "bl_y" || field === "tr_y") {
-        const h = newVl.topRight[1] - newVl.bottomLeft[1];
-        // w = h * ar
-        const newW = h * ar;
-        // Keep BL X fixed, adjust TR X
-        newVl.topRight[0] = newVl.bottomLeft[0] + newW;
-      }
+    // If we change X limits, adjust TR Y (Height)
+    if (field === "bl_x" || field === "tr_x") {
+      const w = newVl.topRight[0] - newVl.bottomLeft[0];
+      // h = w / ar
+      const newH = w / ar;
+      // Keep BL Y fixed, adjust TR Y
+      newVl.topRight[1] = newVl.bottomLeft[1] + newH;
+    }
+    // If Y changes, adjust TR X (Width)
+    else if (field === "bl_y" || field === "tr_y") {
+      const h = newVl.topRight[1] - newVl.bottomLeft[1];
+      // w = h * ar
+      const newW = h * ar;
+      // Keep BL X fixed, adjust TR X
+      newVl.topRight[0] = newVl.bottomLeft[0] + newW;
     }
 
     setRvs({ viewLock: newVl });
@@ -141,9 +162,11 @@ export function ResultSidebar() {
     if (!canvas) return undefined;
 
     const rect = canvas.getBoundingClientRect();
-    const { paperSize } = state.resultViewSettings.paperFrame;
-    const { w: pw, h: ph } = PAPER_DIMENSIONS[paperSize];
-    const paperAspect = pw / ph;
+    const { paperSize, landscape } = state.resultViewSettings.paperFrame;
+    const { w, h } = PAPER_DIMENSIONS[paperSize];
+    const paperW = landscape ? Math.max(w, h) : Math.min(w, h);
+    const paperH = landscape ? Math.min(w, h) : Math.max(w, h);
+    const paperAspect = paperW / paperH;
     const margin = 20;
     const availW = rect.width - margin * 2;
     const availH = rect.height - margin * 2;
@@ -190,8 +213,10 @@ export function ResultSidebar() {
 
     const dpr = window.devicePixelRatio || 1;
     const { paperFrame } = useAppStore.getState().resultViewSettings;
-    const { w: pw, h: ph } = PAPER_DIMENSIONS[paperFrame.paperSize];
-    const paperAspect = pw / ph;
+    const { w, h } = PAPER_DIMENSIONS[paperFrame.paperSize];
+    const paperW = paperFrame.landscape ? Math.max(w, h) : Math.min(w, h);
+    const paperH = paperFrame.landscape ? Math.min(w, h) : Math.max(w, h);
+    const paperAspect = paperW / paperH;
     const cssW = canvas.width / dpr;
     const cssH = canvas.height / dpr;
     const margin = 20;
@@ -449,6 +474,22 @@ export function ResultSidebar() {
             </select>
           </Row>
 
+          <Row label="Landscape">
+            <input
+              type="checkbox"
+              checked={rvs.paperFrame.landscape}
+              onChange={(e) =>
+                setRvs({
+                  paperFrame: {
+                    ...rvs.paperFrame,
+                    landscape: e.target.checked,
+                  },
+                })
+              }
+              className="accent-blue-500"
+            />
+          </Row>
+
           <Row label="Show Frame">
             <input
               type="checkbox"
@@ -475,8 +516,8 @@ export function ResultSidebar() {
               type="checkbox"
               checked={rvs.viewLock?.enabled ?? false}
               onChange={(e) => {
-                // When enabling, lock to CURRENT viewport world bounds (no jump).
                 if (e.target.checked && !rvs.viewLock?.enabled) {
+                  // First lock to CURRENT viewport world bounds (no jump).
                   const state = useAppStore.getState();
                   const currentBounds = getInnerFrameWorldBounds(state);
 
@@ -489,7 +530,7 @@ export function ResultSidebar() {
                       },
                     });
                   } else {
-                    // Fallback if canvas/bounds not available
+                    // Fallback when canvas/bounds are unavailable
                     setViewLockToModelBounds();
                   }
                 } else {
@@ -508,25 +549,18 @@ export function ResultSidebar() {
               className="accent-blue-500"
             />
           </Row>
-          <button
-            type="button"
-            onClick={setViewLockToModelBounds}
-            style={btnStyle}
-            className="w-full"
-          >
-            Use Model Bounds
-          </button>
+          {rvs.viewLock?.enabled && (
+            <button
+              type="button"
+              onClick={setViewLockToModelBounds}
+              style={btnStyle}
+              className="w-full"
+            >
+              Use Model Bounds
+            </button>
+          )}
           {rvs.viewLock?.enabled && (
             <>
-              <Row label="Maintain Aspect">
-                <input
-                  type="checkbox"
-                  checked={maintainAr}
-                  onChange={(e) => setMaintainAr(e.target.checked)}
-                  title="When adjusting lock bounds, automatically update the other axis to maintain paper aspect ratio"
-                  className="accent-blue-500"
-                />
-              </Row>
               <div className="grid grid-cols-2 gap-2">
                 <div>
                   <Label>BL X</Label>

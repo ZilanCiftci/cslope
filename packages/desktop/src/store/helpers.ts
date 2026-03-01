@@ -107,6 +107,21 @@ export const RUN_RESET = {
   errorMessage: null,
 };
 
+export function getAnalysisInputSignature(state: AppState): string {
+  return JSON.stringify({
+    orientation: state.orientation,
+    coordinates: state.coordinates,
+    materials: state.materials,
+    materialBoundaries: state.materialBoundaries,
+    regionMaterials: state.regionMaterials,
+    piezometricLine: state.piezometricLine,
+    udls: state.udls,
+    lineLoads: state.lineLoads,
+    analysisLimits: state.analysisLimits,
+    options: state.options,
+  });
+}
+
 export type WorkerMessageHandler = (
   event: MessageEvent<AnalysisResponse>,
 ) => void;

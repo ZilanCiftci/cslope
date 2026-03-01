@@ -48,6 +48,11 @@
   --color-canvas-tooltip-text: #ffffff;
   --color-canvas-tooltip-shadow: rgba(0,0,0,0.4);
   --color-canvas-hint-text: rgba(255,255,255,0.3);
+  --color-canvas-paper-outside: #24272c;
+  --color-canvas-paper: #4b525a;
+  --color-canvas-paper-shadow: rgba(0,0,0,0.35);
+  --color-canvas-paper-ticks: #f1f3f5;
+  --color-canvas-paper-border: #ffffff;
 
   color-scheme: dark;
 }
@@ -98,6 +103,11 @@
   --color-canvas-tooltip-text: #333333;
   --color-canvas-tooltip-shadow: rgba(0,0,0,0.15);
   --color-canvas-hint-text: rgba(0,0,0,0.3);
+  --color-canvas-paper-outside: #d9d9d9;
+  --color-canvas-paper: #f4f4f4;
+  --color-canvas-paper-shadow: rgba(0,0,0,0.35);
+  --color-canvas-paper-ticks: #2e2e2e;
+  --color-canvas-paper-border: #111111;
 
   color-scheme: light;
 }

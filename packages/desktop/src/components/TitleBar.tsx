@@ -3,7 +3,7 @@ import { useStore } from "zustand";
 import { DEFAULT_MODEL_NAME } from "../constants";
 import { parseProjectFile, serializeProject } from "../store/persistence";
 import { useAppStore } from "../store/app-store";
-import { RUN_RESET } from "../store/helpers";
+import { RUN_RESET, getAnalysisInputSignature } from "../store/helpers";
 import { isElectron } from "../utils/is-electron";
 
 interface Props {
@@ -97,15 +97,23 @@ export function TitleBar({ theme, onToggleTheme, activeModelName }: Props) {
   };
 
   const handleUndo = () => {
+    const before = getAnalysisInputSignature(useAppStore.getState());
     useAppStore.temporal.getState().resume();
     useAppStore.temporal.getState().undo();
-    useAppStore.setState(RUN_RESET);
+    const after = getAnalysisInputSignature(useAppStore.getState());
+    if (before !== after) {
+      useAppStore.setState(RUN_RESET);
+    }
   };
 
   const handleRedo = () => {
+    const before = getAnalysisInputSignature(useAppStore.getState());
     useAppStore.temporal.getState().resume();
     useAppStore.temporal.getState().redo();
-    useAppStore.setState(RUN_RESET);
+    const after = getAnalysisInputSignature(useAppStore.getState());
+    if (before !== after) {
+      useAppStore.setState(RUN_RESET);
+    }
   };
 
   const handleFileChange: ChangeEventHandler<HTMLInputElement> = (e) => {

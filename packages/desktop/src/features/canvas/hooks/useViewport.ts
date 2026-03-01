@@ -77,6 +77,7 @@ export function useViewport(
 
   const lockWasEnabledRef = useRef(false);
   const lastAppliedLockRef = useRef<string | undefined>(undefined);
+  const lastActiveModelIdRef = useRef<string | null>(null);
 
   /** Compute and apply viewport from viewLock bounds or auto-fit geometry. */
   const applyView = useCallback(
@@ -93,8 +94,8 @@ export function useViewport(
       const vl = state.resultViewSettings.viewLock;
 
       if (state.mode === "result" && vl?.enabled) {
-        const { paperSize } = state.resultViewSettings.paperFrame;
-        const pf = computePaperFrame(w, h, paperSize);
+        const { paperSize, landscape } = state.resultViewSettings.paperFrame;
+        const pf = computePaperFrame(w, h, paperSize, landscape);
 
         const PLOT_PAD_L = pf.w * PLOT_MARGINS.L;
         const PLOT_PAD_B = pf.h * PLOT_MARGINS.B;
@@ -167,7 +168,14 @@ export function useViewport(
   }, [mode, coordsForViewport, resultViewSettings.viewLock, applyView]);
 
   useEffect(() => {
-    applyView(true);
+    if (lastActiveModelIdRef.current === null) {
+      lastActiveModelIdRef.current = activeModelId;
+      return;
+    }
+    if (lastActiveModelIdRef.current !== activeModelId) {
+      lastActiveModelIdRef.current = activeModelId;
+      applyView(true);
+    }
   }, [activeModelId, applyView]);
 
   useEffect(() => {

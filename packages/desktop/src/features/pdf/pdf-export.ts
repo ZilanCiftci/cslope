@@ -94,12 +94,13 @@ function createTransform(
   canvasW: number,
   canvasH: number,
   paperSize: PaperSize,
+  landscape: boolean,
   viewOffset: [number, number],
   viewScale: number,
 ): PdfTransform {
   const dim = PAPER_DIMENSIONS[paperSize];
-  const paperW = dim.w;
-  const paperH = dim.h;
+  const paperW = landscape ? Math.max(dim.w, dim.h) : Math.min(dim.w, dim.h);
+  const paperH = landscape ? Math.min(dim.w, dim.h) : Math.max(dim.w, dim.h);
 
   const paperAspect = paperW / paperH;
   const margin = PAPER_FRAME_MARGIN_PX;
@@ -137,9 +138,12 @@ function computeVirtualPaperFrame(
   canvasW: number,
   canvasH: number,
   paperSize: PaperSize,
+  landscape: boolean,
 ): Rect {
   const dim = PAPER_DIMENSIONS[paperSize];
-  const paperAspect = dim.w / dim.h;
+  const paperW = landscape ? Math.max(dim.w, dim.h) : Math.min(dim.w, dim.h);
+  const paperH = landscape ? Math.min(dim.w, dim.h) : Math.max(dim.w, dim.h);
+  const paperAspect = paperW / paperH;
   const margin = PAPER_FRAME_MARGIN_PX;
   const availW = canvasW - margin * 2;
   const availH = canvasH - margin * 2;
@@ -191,10 +195,13 @@ export function exportVectorPdf(data: PdfExportData): void {
     }
 
     const paperSize = rvs.paperFrame.paperSize;
+    const landscape = rvs.paperFrame.landscape;
     const dim = PAPER_DIMENSIONS[paperSize];
+    const paperW = landscape ? Math.max(dim.w, dim.h) : Math.min(dim.w, dim.h);
+    const paperH = landscape ? Math.min(dim.w, dim.h) : Math.max(dim.w, dim.h);
 
     const virtualW = 1200;
-    const virtualH = (1200 * dim.h) / dim.w;
+    const virtualH = (1200 * paperH) / paperW;
 
     const PLOT_PAD_L = PLOT_MARGINS.L;
     const PLOT_PAD_B = PLOT_MARGINS.B;
@@ -248,6 +255,7 @@ export function exportVectorPdf(data: PdfExportData): void {
       virtualW,
       virtualH,
       paperSize,
+      landscape,
       viewOffset,
       viewScale,
     );
@@ -256,6 +264,7 @@ export function exportVectorPdf(data: PdfExportData): void {
       virtualW,
       virtualH,
       paperSize,
+      landscape,
     );
     const [afx0, afy0] = tf.canvasToPdf(
       virtualPaperFrame.x,
@@ -273,9 +282,9 @@ export function exportVectorPdf(data: PdfExportData): void {
     };
 
     const pdf = new jsPDF({
-      orientation: "landscape",
+      orientation: landscape ? "landscape" : "portrait",
       unit: "mm",
-      format: [dim.w, dim.h],
+      format: [paperW, paperH],
     });
 
     const PAD_L = tf.paperW * 0.06;

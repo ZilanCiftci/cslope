@@ -4,7 +4,7 @@ import {
   type RefObject,
   type MouseEvent as RMouseEvent,
 } from "react";
-import { computePaperFrame } from "../helpers";
+import { computePaperFrame, getAnnotationBoundsPx } from "../helpers";
 import { useAppStore } from "../../../store/app-store";
 import type { AppMode } from "../../../store/types";
 import type {
@@ -81,24 +81,52 @@ export function useContextMenu(params: ContextMenuParams) {
       if (mode === "result") {
         const canvas = canvasRef.current;
         if (!canvas) return;
+        const ctx = canvas.getContext("2d");
         const canvasRect = canvas.getBoundingClientRect();
         const cxPx = e.clientX - canvasRect.left;
         const cyPx = e.clientY - canvasRect.top;
+
+        // Use true window coordinates for the floating dialog
+        const windowX = e.clientX;
+        const windowY = e.clientY;
         const pf = computePaperFrame(
           canvasRect.width,
           canvasRect.height,
           useAppStore.getState().resultViewSettings.paperFrame.paperSize,
+          useAppStore.getState().resultViewSettings.paperFrame.landscape,
         );
-        const fx = (cxPx - pf.x) / pf.w;
-        const fy = (cyPx - pf.y) / pf.h;
-
-        const annos = useAppStore.getState().resultViewSettings.annotations;
+        const state = useAppStore.getState();
+        const annos = state.resultViewSettings.annotations;
+        const resultForBounds = state.result;
         let hitAnno: string | null = null;
         for (let i = annos.length - 1; i >= 0; i--) {
           const a = annos[i];
-          const dx = (fx - a.x) * pf.w;
-          const dy = (fy - a.y) * pf.h;
-          if (Math.hypot(dx, dy) < 15) {
+          const hit =
+            ctx && resultForBounds
+              ? (() => {
+                  const b = getAnnotationBoundsPx(ctx, {
+                    annotation: a,
+                    paperFrame: pf,
+                    result: resultForBounds,
+                    materials: state.materials,
+                    projectInfo: state.projectInfo,
+                  });
+                  return (
+                    cxPx >= b.x &&
+                    cxPx <= b.x + b.w &&
+                    cyPx >= b.y &&
+                    cyPx <= b.y + b.h
+                  );
+                })()
+              : (() => {
+                  const fx = (cxPx - pf.x) / pf.w;
+                  const fy = (cyPx - pf.y) / pf.h;
+                  const dx = (fx - a.x) * pf.w;
+                  const dy = (fy - a.y) * pf.h;
+                  return Math.hypot(dx, dy) < 15;
+                })();
+
+          if (hit) {
             hitAnno = a.id;
             break;
           }
@@ -155,7 +183,11 @@ export function useContextMenu(params: ContextMenuParams) {
             ];
             setContextMenu({ screenX: cxPx, screenY: cyPx, items });
           } else {
-            setAnnoStyleMenu({ screenX: cxPx, screenY: cyPx, annoId: hitAnno });
+            setAnnoStyleMenu({
+              screenX: windowX,
+              screenY: windowY,
+              annoId: hitAnno,
+            });
           }
           return;
         }

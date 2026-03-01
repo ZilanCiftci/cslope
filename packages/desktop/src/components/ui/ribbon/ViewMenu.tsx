@@ -42,7 +42,7 @@ export function ViewMenu({
     <div className="relative">
       <button
         onClick={handleActivate}
-        className="h-9 px-4 text-[12px] font-medium flex items-center cursor-pointer relative"
+        className="h-[1.9rem] px-4 text-[11px] font-medium flex items-center cursor-pointer relative"
         style={{
           color: isOpen
             ? "var(--color-vsc-text-bright)"

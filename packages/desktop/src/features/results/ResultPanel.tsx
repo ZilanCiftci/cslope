@@ -17,7 +17,7 @@ function Row({ label, children }: { label: string; children: ReactNode }) {
   );
 }
 
-export function ResultPanel() {
+export function ResultPanel({ showTitle = true }: { showTitle?: boolean }) {
   const runState = useAppStore((s) => s.runState);
   const progress = useAppStore((s) => s.progress);
   const result = useAppStore((s) => s.result);
@@ -31,12 +31,14 @@ export function ResultPanel() {
         color: "var(--color-vsc-text)",
       }}
     >
-      <div
-        className="text-[11px] font-semibold uppercase tracking-wider mb-2 select-none"
-        style={{ color: "var(--color-vsc-text-muted)" }}
-      >
-        Results
-      </div>
+      {showTitle && (
+        <div
+          className="text-[11px] font-semibold uppercase tracking-wider mb-2 select-none"
+          style={{ color: "var(--color-vsc-text-muted)" }}
+        >
+          Results
+        </div>
+      )}
 
       {runState === "idle" && (
         <p

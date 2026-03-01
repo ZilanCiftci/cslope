@@ -2,6 +2,7 @@ import { PAPER_DIMENSIONS } from "../../store/app-store";
 import type { PaperSize } from "../../store/app-store";
 import type {
   AnalysisResult,
+  Annotation,
   MaterialRow,
   ProjectInfo,
   ResultViewSettings,
@@ -14,8 +15,11 @@ export function computePaperFrame(
   canvasW: number,
   canvasH: number,
   paperSize: PaperSize,
+  landscape = true,
 ): { x: number; y: number; w: number; h: number } {
-  const { w: pw, h: ph } = PAPER_DIMENSIONS[paperSize];
+  const { w, h } = PAPER_DIMENSIONS[paperSize];
+  const pw = landscape ? Math.max(w, h) : Math.min(w, h);
+  const ph = landscape ? Math.min(w, h) : Math.max(w, h);
   const paperAspect = pw / ph;
   const margin = PAPER_FRAME_MARGIN_PX;
   const availW = canvasW - margin * 2;
@@ -187,6 +191,211 @@ export function drawTable(
       cx += colW[c];
     }
   }
+}
+
+function resolveAnnotationText(
+  text: string,
+  result: AnalysisResult,
+  projectInfo: ProjectInfo,
+) {
+  if (!text) return "";
+  return text
+    .replace(/#Title/gi, projectInfo.title)
+    .replace(/#Subtitle/gi, projectInfo.subtitle)
+    .replace(/#Client/gi, projectInfo.client)
+    .replace(/#ProjectNumber/gi, projectInfo.projectNumber)
+    .replace(/#Revision/gi, projectInfo.revision)
+    .replace(/#Author/gi, projectInfo.author)
+    .replace(/#Checker/gi, projectInfo.checker)
+    .replace(/#Date/gi, projectInfo.date)
+    .replace(/#Description/gi, projectInfo.description)
+    .replace(/#FOS/gi, result.minFOS.toFixed(3))
+    .replace(/#MinFOS/gi, result.minFOS.toFixed(3))
+    .replace(/#Method/gi, result.method)
+    .replace(/\n/g, "\n");
+}
+
+function measureParamBlock(
+  ctx: CanvasRenderingContext2D,
+  title: string,
+  lines: string[],
+  scale = 1,
+) {
+  const padding = 8 * scale;
+  const lineHeight = 16 * scale;
+  const titleHeight = 20 * scale;
+  const font = `${12 * scale}px sans-serif`;
+  const titleFont = `bold ${12 * scale}px sans-serif`;
+
+  ctx.font = titleFont;
+  let maxW = ctx.measureText(title).width;
+  ctx.font = font;
+  for (const line of lines) {
+    maxW = Math.max(maxW, ctx.measureText(line).width);
+  }
+
+  return {
+    w: maxW + padding * 2,
+    h: titleHeight + lines.length * lineHeight + padding,
+  };
+}
+
+function measureTable(
+  ctx: CanvasRenderingContext2D,
+  header: string[],
+  rows: string[][],
+  scale = 1,
+) {
+  const padding = 6 * scale;
+  const rowH = 18 * scale;
+  const headerH = 22 * scale;
+  const font = `${11 * scale}px sans-serif`;
+  const headerFont = `bold ${11 * scale}px sans-serif`;
+  const swatchW = 12 * scale;
+
+  ctx.font = headerFont;
+  const colW = header.map((h) => ctx.measureText(h).width + padding * 2);
+  ctx.font = font;
+  for (const row of rows) {
+    for (let c = 0; c < row.length; c++) {
+      colW[c] = Math.max(colW[c], ctx.measureText(row[c]).width + padding * 2);
+    }
+  }
+  colW[0] += swatchW + 4;
+
+  return {
+    w: colW.reduce((a, b) => a + b, 0),
+    h: headerH + rows.length * rowH,
+  };
+}
+
+export function getAnnotationBoundsPx(
+  ctx: CanvasRenderingContext2D,
+  params: {
+    annotation: Annotation;
+    paperFrame: { x: number; y: number; w: number; h: number };
+    result: AnalysisResult;
+    materials: MaterialRow[];
+    projectInfo: ProjectInfo;
+  },
+): { x: number; y: number; w: number; h: number } {
+  const {
+    annotation: anno,
+    paperFrame: pf,
+    result,
+    materials,
+    projectInfo,
+  } = params;
+
+  const annoScale = Math.min(pf.w, pf.h) / 600;
+  const ax = pf.x + anno.x * pf.w;
+  const ay = pf.y + anno.y * pf.h;
+  const hitPad = 4;
+
+  if (anno.type === "text") {
+    const family = anno.fontFamily ?? "sans-serif";
+    const weight = anno.bold ? "bold" : "normal";
+    const style = anno.italic ? "italic" : "normal";
+    const fontSize = (anno.fontSize ?? 12) * annoScale;
+    const resolved = resolveAnnotationText(
+      anno.text ?? "",
+      result,
+      projectInfo,
+    );
+    const lines = resolved.split("\n");
+    const lineHeight = fontSize * 1.2;
+
+    ctx.font = `${style} ${weight} ${fontSize}px ${family}`;
+    let maxW = 0;
+    for (const line of lines) {
+      maxW = Math.max(maxW, ctx.measureText(line).width);
+    }
+    const textH = Math.max(lineHeight, lines.length * lineHeight);
+
+    return {
+      x: ax - hitPad,
+      y: ay - hitPad,
+      w: Math.max(8, maxW) + hitPad * 2,
+      h: Math.max(8, textH) + hitPad * 2,
+    };
+  }
+
+  if (anno.type === "color-bar") {
+    const barW = 20 * annoScale;
+    const barH = 200 * annoScale;
+    const numTicks = 5;
+    const labelPad = 5 * annoScale;
+    const labelFontSize = Math.max(10, 11 * annoScale);
+
+    ctx.font = `${labelFontSize}px 'Segoe UI', sans-serif`;
+    let maxLabelW = 0;
+    for (let t = 0; t <= numTicks; t++) {
+      const frac = t / numTicks;
+      const fos = result.maxFOS - frac * (result.maxFOS - result.minFOS);
+      maxLabelW = Math.max(maxLabelW, ctx.measureText(fos.toFixed(2)).width);
+    }
+
+    const titleExtraTop = labelFontSize + 4 * annoScale;
+
+    return {
+      x: ax - hitPad,
+      y: ay - titleExtraTop - hitPad,
+      w: barW + labelPad + maxLabelW + hitPad * 2,
+      h: barH + titleExtraTop + hitPad * 2,
+    };
+  }
+
+  if (anno.type === "input-params") {
+    const lines = [
+      `Method: ${result.method}`,
+      `Slices: ${result.criticalSlices.length}`,
+      `Surfaces: ${result.allSurfaces.length}`,
+    ];
+    const box = measureParamBlock(ctx, "Input Parameters", lines, annoScale);
+    return {
+      x: ax - hitPad,
+      y: ay - hitPad,
+      w: box.w + hitPad * 2,
+      h: box.h + hitPad * 2,
+    };
+  }
+
+  if (anno.type === "output-params") {
+    const lines = [`FOS = ${result.minFOS.toFixed(3)}`];
+    if (result.criticalSurface) {
+      lines.push(
+        `Centre: (${result.criticalSurface.cx.toFixed(1)}, ${result.criticalSurface.cy.toFixed(1)})`,
+      );
+      lines.push(`Radius: ${result.criticalSurface.radius.toFixed(2)} m`);
+    }
+    lines.push(`Time: ${result.elapsedMs.toFixed(0)} ms`);
+    const box = measureParamBlock(ctx, "Results", lines, annoScale);
+    return {
+      x: ax - hitPad,
+      y: ay - hitPad,
+      w: box.w + hitPad * 2,
+      h: box.h + hitPad * 2,
+    };
+  }
+
+  if (anno.type === "material-table") {
+    const header = ["Material", "γ", "φ", "c"];
+    const rows = materials.map((m) => [
+      m.name,
+      `${m.unitWeight}`,
+      `${m.frictionAngle}°`,
+      `${m.cohesion}`,
+    ]);
+    const box = measureTable(ctx, header, rows, annoScale);
+    return {
+      x: ax - hitPad,
+      y: ay - hitPad,
+      w: box.w + hitPad * 2,
+      h: box.h + hitPad * 2,
+    };
+  }
+
+  return { x: ax - 6, y: ay - 6, w: 12, h: 12 };
 }
 
 type Coord = [number, number];
@@ -384,7 +593,12 @@ export function extendBoundsWithResultFitExtras(params: {
     }
   };
 
-  const pf = computePaperFrame(width, height, rvs.paperFrame.paperSize);
+  const pf = computePaperFrame(
+    width,
+    height,
+    rvs.paperFrame.paperSize,
+    rvs.paperFrame.landscape,
+  );
   const annoScale = Math.min(pf.w, pf.h) / 600;
 
   const resolveAnnotationText = (text: string) => {

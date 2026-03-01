@@ -87,9 +87,10 @@ export function ResizablePanel({
       {/* Handle */}
       <div
         onPointerDown={handlePointerDown}
-        className={`absolute top-0 bottom-0 z-10 w-1 cursor-col-resize hover:bg-blue-500 transition-colors opacity-0 hover:opacity-100 ${
+        className={`absolute top-0 bottom-0 w-1 cursor-col-resize hover:bg-blue-500 transition-colors opacity-0 hover:opacity-100 ${
           position === "left" ? "-right-1" : "-left-1"
         } ${isResizing ? "bg-blue-500 opacity-100" : ""}`}
+        style={{ zIndex: 80 }}
       />
     </div>
   );

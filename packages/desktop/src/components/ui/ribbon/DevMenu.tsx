@@ -39,7 +39,7 @@ export function DevMenu({ isOpen, onActivate, panelHost }: Props) {
     >
       <button
         onClick={onActivate}
-        className="h-9 px-4 text-[12px] font-medium flex items-center cursor-pointer relative"
+        className="h-[1.9rem] px-4 text-[11px] font-medium flex items-center cursor-pointer relative"
         style={{
           color: "#e5a00d",
           background: isOpen ? "var(--color-vsc-tab-active)" : "transparent",

@@ -80,6 +80,7 @@ export interface ProjectInfo {
 
 export interface PaperFrameSettings {
   paperSize: PaperSize;
+  landscape: boolean;
   showFrame: boolean;
 }
 

@@ -9,7 +9,6 @@ import {
   EditCanvas,
   PropertiesPanel,
   ResizablePanel,
-  ResultPanel,
   ResultCanvas,
   ResultSidebar,
 } from "./components";
@@ -146,14 +145,6 @@ export function AppShell() {
           <div className="flex-1 min-h-0">
             {mode === "result" ? <ResultCanvas /> : <EditCanvas />}
           </div>
-          {mode === "result" && (
-            <div
-              className="h-48 shrink-0"
-              style={{ borderTop: "1px solid var(--color-vsc-border)" }}
-            >
-              <ResultPanel />
-            </div>
-          )}
         </div>
 
         {sidebarOpen && propertiesLocation === "right" && (

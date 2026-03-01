@@ -214,7 +214,21 @@ function normalizeResultView(raw: unknown): ResultViewSettings {
     return { ...DEFAULT_RESULT_VIEW_SETTINGS };
   }
   const view = raw as Partial<ResultViewSettings>;
-  const paperFrame = view.paperFrame ?? DEFAULT_RESULT_VIEW_SETTINGS.paperFrame;
+  const rawPaperFrame =
+    view.paperFrame ?? DEFAULT_RESULT_VIEW_SETTINGS.paperFrame;
+  const paperFrame = {
+    paperSize:
+      rawPaperFrame.paperSize ??
+      DEFAULT_RESULT_VIEW_SETTINGS.paperFrame.paperSize,
+    landscape:
+      typeof rawPaperFrame.landscape === "boolean"
+        ? rawPaperFrame.landscape
+        : DEFAULT_RESULT_VIEW_SETTINGS.paperFrame.landscape,
+    showFrame:
+      typeof rawPaperFrame.showFrame === "boolean"
+        ? rawPaperFrame.showFrame
+        : DEFAULT_RESULT_VIEW_SETTINGS.paperFrame.showFrame,
+  };
   const annotations = Array.isArray(view.annotations)
     ? view.annotations.filter(
         (anno): anno is ResultViewSettings["annotations"][number] => {

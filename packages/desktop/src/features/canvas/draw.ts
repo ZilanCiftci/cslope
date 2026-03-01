@@ -18,7 +18,12 @@ import {
   cssVar,
 } from "./constants";
 import { GRID_RAW_STEP_PX } from "../../constants";
-import { computePaperFrame, drawParamBlock, drawTable } from "./helpers";
+import {
+  computePaperFrame,
+  drawParamBlock,
+  drawTable,
+  getAnnotationBoundsPx,
+} from "./helpers";
 import type { PointHit } from "./types";
 
 const arcPointCache = new WeakMap<object, Map<string, [number, number][]>>();
@@ -182,6 +187,11 @@ export function drawCanvas(
   const LABEL_COLOR = cssVar("--color-canvas-label");
   const REGION_SELECT = cssVar("--color-canvas-region-select");
   const CROSSHAIR_COLOR = cssVar("--color-canvas-crosshair");
+  const PAPER_OUTSIDE_COLOR = cssVar("--color-canvas-paper-outside");
+  const PAPER_FILL_COLOR = cssVar("--color-canvas-paper");
+  const PAPER_SHADOW_COLOR = cssVar("--color-canvas-paper-shadow");
+  const PAPER_TICK_COLOR = cssVar("--color-canvas-paper-ticks");
+  const PAPER_BORDER_COLOR = cssVar("--color-canvas-paper-border");
 
   // Background
   ctx.fillStyle = BG_COLOR;
@@ -191,10 +201,15 @@ export function drawCanvas(
   if (mode === "result" && result) {
     const { paperFrame: pf0Frame } = resultViewSettings;
     if (pf0Frame.showFrame) {
-      const pf0 = computePaperFrame(w, h, pf0Frame.paperSize);
-      // Gray background outside paper
+      const pf0 = computePaperFrame(
+        w,
+        h,
+        pf0Frame.paperSize,
+        pf0Frame.landscape,
+      );
+      // Theme-aware background outside paper
       ctx.save();
-      ctx.fillStyle = "#d0d0d0";
+      ctx.fillStyle = PAPER_OUTSIDE_COLOR;
       ctx.beginPath();
       ctx.rect(0, 0, w, h);
       ctx.rect(pf0.x, pf0.y, pf0.w, pf0.h);
@@ -203,11 +218,11 @@ export function drawCanvas(
 
       // Paper shadow
       ctx.save();
-      ctx.shadowColor = "rgba(0,0,0,0.35)";
+      ctx.shadowColor = PAPER_SHADOW_COLOR;
       ctx.shadowBlur = 12;
       ctx.shadowOffsetX = 4;
       ctx.shadowOffsetY = 4;
-      ctx.fillStyle = "#ffffff";
+      ctx.fillStyle = PAPER_FILL_COLOR;
       ctx.fillRect(pf0.x, pf0.y, pf0.w, pf0.h);
       ctx.restore();
 
@@ -1180,10 +1195,6 @@ export function drawCanvas(
         const tw = ctx.measureText(fosText).width;
         const labelX = ccx2 + 10;
 
-        // Background for readability
-        ctx.fillStyle = "rgba(255,255,255,0.85)";
-        ctx.fillRect(labelX - 3, ccy2 - 16, tw + 6, 20);
-
         // Text
         ctx.fillStyle = "#000000";
         ctx.textAlign = "left";
@@ -1202,7 +1213,12 @@ export function drawCanvas(
 
     // ── Paper frame ──────────────────────────────────────
     const { paperFrame } = rvs;
-    const pf = computePaperFrame(w, h, paperFrame.paperSize);
+    const pf = computePaperFrame(
+      w,
+      h,
+      paperFrame.paperSize,
+      paperFrame.landscape,
+    );
 
     if (paperFrame.showFrame) {
       // Restore clip (ticks draw inside paper, on top of geometry)
@@ -1241,8 +1257,8 @@ export function drawCanvas(
       );
 
       ctx.save();
-      ctx.fillStyle = "#333";
-      ctx.strokeStyle = "#333";
+      ctx.fillStyle = PAPER_TICK_COLOR;
+      ctx.strokeStyle = PAPER_TICK_COLOR;
       ctx.lineWidth = 1;
       ctx.font = rulerFont;
 
@@ -1305,7 +1321,7 @@ export function drawCanvas(
       ctx.restore();
 
       // Inner frame border (plot area)
-      ctx.strokeStyle = "#000000";
+      ctx.strokeStyle = PAPER_BORDER_COLOR;
       ctx.lineWidth = 1.5;
       ctx.strokeRect(ifx, ify, ifw, ifh);
     }
@@ -1447,12 +1463,18 @@ export function drawCanvas(
 
       // Selection highlight for selected annotations
       if (selectedAnnotationIds.includes(anno.id)) {
+        const bounds = getAnnotationBoundsPx(ctx, {
+          annotation: anno,
+          paperFrame: pf,
+          result,
+          materials,
+          projectInfo,
+        });
         ctx.save();
         ctx.strokeStyle = "#0078d4";
         ctx.lineWidth = 1.5;
         ctx.setLineDash([4, 3]);
-        // Draw a small selection indicator at the annotation origin
-        ctx.strokeRect(ax - 3, ay - 3, 6, 6);
+        ctx.strokeRect(bounds.x, bounds.y, bounds.w, bounds.h);
         ctx.setLineDash([]);
         ctx.restore();
       }

@@ -10,6 +10,49 @@ import {
   mirrorPoints,
   mirrorX,
 } from "@cslope/engine";
+import { DEFAULT_RESULT_VIEW_SETTINGS, PAPER_DIMENSIONS } from "./defaults";
+
+type ExamplePaperOptions = {
+  paperSize?: keyof typeof PAPER_DIMENSIONS;
+  landscape?: boolean;
+};
+
+function createExampleResultViewSettings(
+  coordinates: [number, number][],
+  paperOptions: ExamplePaperOptions = {},
+): ModelEntry["resultViewSettings"] {
+  const xs = coordinates.map((c) => c[0]);
+  const ys = coordinates.map((c) => c[1]);
+  const xMin = Math.min(...xs);
+  const xMax = Math.max(...xs);
+  const yMin = Math.min(...ys);
+  const paperSize =
+    paperOptions.paperSize ?? DEFAULT_RESULT_VIEW_SETTINGS.paperFrame.paperSize;
+  const landscape = paperOptions.landscape ?? true;
+  const { w, h } = PAPER_DIMENSIONS[paperSize];
+  const paperWidth = landscape ? Math.max(w, h) : Math.min(w, h);
+  const paperHeight = landscape ? Math.min(w, h) : Math.max(w, h);
+
+  const bottomLeftX = xMin - 1;
+  const topRightX = xMax + 1;
+  const bottomLeftY = yMin - 1;
+  const xSpan = topRightX - bottomLeftX;
+  const topRightY = bottomLeftY + (xSpan * paperHeight) / paperWidth;
+
+  return {
+    ...DEFAULT_RESULT_VIEW_SETTINGS,
+    paperFrame: {
+      ...DEFAULT_RESULT_VIEW_SETTINGS.paperFrame,
+      paperSize,
+      landscape,
+    },
+    viewLock: {
+      enabled: true,
+      bottomLeft: [bottomLeftX, bottomLeftY],
+      topRight: [topRightX, topRightY],
+    },
+  };
+}
 
 // ────────────────────────────────────────────────────────────────
 // 1. T-ACADS Simple — homogeneous slope, single material
@@ -19,6 +62,19 @@ import {
 const TACADS_SIMPLE: ModelEntry = {
   id: "example-tacads-simple",
   name: "T-ACADS Simple",
+  projectInfo: {
+    title: "T-ACADS Simple",
+    subtitle: "Published FOS result: 1.00",
+    client: "",
+    projectNumber: "",
+    revision: "0",
+    author: "",
+    checker: "",
+    date: "",
+    description: "",
+    canvasWidth: 1000,
+    canvasHeight: 1000,
+  },
   orientation: "ltr",
   coordinates: [
     [0, -15],
@@ -67,6 +123,14 @@ const TACADS_SIMPLE: ModelEntry = {
     exitLeftX: 37,
     exitRightX: 43,
   },
+  resultViewSettings: createExampleResultViewSettings([
+    [0, -15],
+    [0, 0],
+    [20, 0],
+    [40, -10],
+    [50, -10],
+    [50, -15],
+  ]),
 };
 
 // ────────────────────────────────────────────────────────────────
@@ -77,6 +141,19 @@ const TACADS_SIMPLE: ModelEntry = {
 const TACADS_NONHOMOGENEOUS: ModelEntry = {
   id: "example-tacads-nonhomo",
   name: "T-ACADS Non-Homogeneous",
+  projectInfo: {
+    title: "T-ACADS Non-Homogeneous",
+    subtitle: "Published FOS result: 1.39",
+    client: "",
+    projectNumber: "",
+    revision: "0",
+    author: "",
+    checker: "",
+    date: "",
+    description: "",
+    canvasWidth: 1000,
+    canvasHeight: 1000,
+  },
   orientation: "ltr",
   coordinates: [
     [0, -15],
@@ -167,6 +244,14 @@ const TACADS_NONHOMOGENEOUS: ModelEntry = {
     exitLeftX: 38.5,
     exitRightX: 42.5,
   },
+  resultViewSettings: createExampleResultViewSettings([
+    [0, -15],
+    [0, 0],
+    [20, 0],
+    [40, -10],
+    [50, -10],
+    [50, -15],
+  ]),
 };
 
 // ────────────────────────────────────────────────────────────────
@@ -177,6 +262,19 @@ const TACADS_NONHOMOGENEOUS: ModelEntry = {
 const ARAI_TAGYO: ModelEntry = {
   id: "example-arai-tagyo",
   name: "Arai & Tagyo (1985)",
+  projectInfo: {
+    title: "Arai & Tagyo (1985)",
+    subtitle: "Published FOS result: 1.138",
+    client: "",
+    projectNumber: "",
+    revision: "0",
+    author: "",
+    checker: "",
+    date: "",
+    description: "",
+    canvasWidth: 1000,
+    canvasHeight: 1000,
+  },
   orientation: "ltr",
   coordinates: [
     [0, 0],
@@ -238,6 +336,14 @@ const ARAI_TAGYO: ModelEntry = {
     exitLeftX: 48,
     exitRightX: 66,
   },
+  resultViewSettings: createExampleResultViewSettings([
+    [0, 0],
+    [0, 35],
+    [18, 35],
+    [48, 15],
+    [66, 15],
+    [66, 0],
+  ]),
 };
 
 // ────────────────────────────────────────────────────────────────
@@ -247,6 +353,19 @@ const ARAI_TAGYO: ModelEntry = {
 const TALBINGO_DAM_RTL: ModelEntry = {
   id: "example-talbingo-dam",
   name: "Talbingo Dam",
+  projectInfo: {
+    title: "Talbingo Dam",
+    subtitle: "Published FOS result: 1.95",
+    client: "",
+    projectNumber: "",
+    revision: "0",
+    author: "",
+    checker: "",
+    date: "",
+    description: "",
+    canvasWidth: 1000,
+    canvasHeight: 1000,
+  },
   orientation: "rtl",
   coordinates: [
     [0, 0],
@@ -379,6 +498,23 @@ const TALBINGO_DAM_RTL: ModelEntry = {
     exitLeftX: 150.0,
     exitRightX: 0,
   },
+  resultViewSettings: createExampleResultViewSettings([
+    [0, 0],
+    [315.5, 162],
+    [319.5, 162],
+    [321.6, 162],
+    [327.6, 162],
+    [386.9, 130.6],
+    [394.1, 130.6],
+    [453.4, 97.9],
+    [460.6, 97.9],
+    [515, 65.3],
+    [521.1, 65.3],
+    [577.9, 31.4],
+    [585.1, 31.4],
+    [648, 0],
+    [0, 0],
+  ]),
 };
 
 export function mirrorModelEntry(model: ModelEntry): ModelEntry {

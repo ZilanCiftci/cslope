@@ -34,7 +34,13 @@ function createDefaultModel(id: string, name: string): ModelEntry {
     piezometricLine: { ...DEFAULT_PIEZO_LINE },
     udls: [],
     lineLoads: [],
-    options: { ...DEFAULT_ANALYSIS_OPTIONS },
+    options: {
+      ...DEFAULT_ANALYSIS_OPTIONS,
+      method: "Morgenstern-Price",
+      slices: 30,
+      iterations: 1000,
+      refinedIterations: 500,
+    },
     analysisLimits: { ...DEFAULT_ANALYSIS_LIMITS },
     runState: "idle",
     progress: 0,
@@ -54,7 +60,13 @@ const mapModelToState = (model: ModelEntry) => ({
   piezometricLine: model.piezometricLine ?? { ...DEFAULT_PIEZO_LINE },
   udls: model.udls ?? [],
   lineLoads: model.lineLoads ?? [],
-  options: model.options ?? { ...DEFAULT_ANALYSIS_OPTIONS },
+  options: model.options ?? {
+    ...DEFAULT_ANALYSIS_OPTIONS,
+    method: "Morgenstern-Price",
+    slices: 30,
+    iterations: 1000,
+    refinedIterations: 500,
+  },
   analysisLimits: model.analysisLimits ?? { ...DEFAULT_ANALYSIS_LIMITS },
   editViewOffset: model.editViewOffset ?? model.viewOffset ?? [0, 0],
   editViewScale: model.editViewScale ?? model.viewScale ?? 0,
@@ -321,11 +333,16 @@ export const createModelsSlice: SliceCreator<ModelsSlice> = (set, get) => ({
     const target = models.find((m) => m.id === targetId);
     if (!target) return;
 
+    const hasSavedViewport =
+      (typeof target.editViewScale === "number" && target.editViewScale > 0) ||
+      (typeof target.resultViewScale === "number" &&
+        target.resultViewScale > 0);
+
     set({
       models,
       activeModelId: targetId,
       ...mapModelToState(target),
-      _pendingFitToScreen: true,
+      _pendingFitToScreen: !hasSavedViewport,
     });
   },
 

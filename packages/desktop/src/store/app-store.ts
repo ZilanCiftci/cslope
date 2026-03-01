@@ -29,6 +29,7 @@ type UndoableState = Pick<
   | "lineLoads"
   | "analysisLimits"
   | "options"
+  | "resultViewSettings"
 >;
 
 export const useAppStore = create<AppState>()(
@@ -55,6 +56,7 @@ export const useAppStore = create<AppState>()(
         lineLoads: state.lineLoads,
         analysisLimits: state.analysisLimits,
         options: state.options,
+        resultViewSettings: state.resultViewSettings,
       }),
       limit: 50,
       equality: (pastState, currentState) =>

@@ -2,7 +2,7 @@ import { useEffect } from "react";
 import { createPortal } from "react-dom";
 import { useStore } from "zustand";
 import { useAppStore } from "../../../store/app-store";
-import { RUN_RESET } from "../../../store/helpers";
+import { RUN_RESET, getAnalysisInputSignature } from "../../../store/helpers";
 import { RibbonGroup, RibbonButton } from "./RibbonParts";
 
 interface Props {
@@ -21,18 +21,32 @@ export function EditMenu({ isOpen, onActivate, panelHost }: Props) {
     (s) => s.futureStates.length > 0,
   );
 
-  const handleUndo = () => {
+  const runUndo = () => {
+    const before = getAnalysisInputSignature(useAppStore.getState());
     useAppStore.temporal.getState().resume();
     useAppStore.temporal.getState().undo();
-    // Invalidate stale analysis results after undo
-    useAppStore.setState(RUN_RESET);
+    const after = getAnalysisInputSignature(useAppStore.getState());
+    if (before !== after) {
+      useAppStore.setState(RUN_RESET);
+    }
+  };
+
+  const runRedo = () => {
+    const before = getAnalysisInputSignature(useAppStore.getState());
+    useAppStore.temporal.getState().resume();
+    useAppStore.temporal.getState().redo();
+    const after = getAnalysisInputSignature(useAppStore.getState());
+    if (before !== after) {
+      useAppStore.setState(RUN_RESET);
+    }
+  };
+
+  const handleUndo = () => {
+    runUndo();
   };
 
   const handleRedo = () => {
-    useAppStore.temporal.getState().resume();
-    useAppStore.temporal.getState().redo();
-    // Invalidate stale analysis results after redo
-    useAppStore.setState(RUN_RESET);
+    runRedo();
   };
 
   // ── Keyboard shortcuts (Ctrl+Z / Ctrl+Shift+Z / Ctrl+Y) ──
@@ -45,9 +59,7 @@ export function EditMenu({ isOpen, onActivate, panelHost }: Props) {
       if (e.key === "z" && !e.shiftKey) {
         e.preventDefault();
         if (canUndo) {
-          useAppStore.temporal.getState().resume();
-          useAppStore.temporal.getState().undo();
-          useAppStore.setState(RUN_RESET);
+          runUndo();
         }
       }
       // Ctrl+Shift+Z or Ctrl+Y  →  Redo
@@ -59,9 +71,7 @@ export function EditMenu({ isOpen, onActivate, panelHost }: Props) {
       ) {
         e.preventDefault();
         if (canRedo) {
-          useAppStore.temporal.getState().resume();
-          useAppStore.temporal.getState().redo();
-          useAppStore.setState(RUN_RESET);
+          runRedo();
         }
       }
     };
@@ -76,7 +86,7 @@ export function EditMenu({ isOpen, onActivate, panelHost }: Props) {
     >
       <button
         onClick={onActivate}
-        className="h-9 px-4 text-[12px] font-medium flex items-center cursor-pointer relative"
+        className="h-[1.9rem] px-4 text-[11px] font-medium flex items-center cursor-pointer relative"
         style={{
           color: isOpen
             ? "var(--color-vsc-text-bright)"

@@ -5,6 +5,7 @@
 import type React from "react";
 import { useRef, useEffect, useCallback, useMemo, useState } from "react";
 import { PLOT_MARGINS, useAppStore } from "../store/app-store";
+import type { Annotation } from "../store/types";
 import { useHitTest } from "../features/canvas/hooks/useHitTest";
 import { useViewport } from "../features/canvas/hooks/useViewport";
 import { usePointerHandlers } from "../features/canvas/hooks/usePointerHandlers";
@@ -21,7 +22,10 @@ import {
   extendBoundsWithResultFitExtras,
   surfaceYAtXFromCoordinates,
 } from "../features/canvas/helpers";
-import { AnnotationStyleMenu } from "../features/canvas/AnnotationStyleMenu";
+import {
+  AnnotationStyleMenu,
+  type AnnotationDraft,
+} from "../features/canvas/AnnotationStyleMenu";
 import { ContextMenuOverlay } from "../features/canvas/ContextMenuOverlay";
 import { AxisOverlay } from "../features/canvas/AxisOverlay";
 
@@ -47,11 +51,31 @@ export function ResultCanvas() {
   const [zoomBoxOrigin, setZoomBoxOrigin] = useState<[number, number] | null>(
     null,
   );
+  const [annotationStylePreview, setAnnotationStylePreview] = useState<{
+    annoId: string;
+    draft: AnnotationDraft | null;
+  } | null>(null);
   const canvasSize = useCanvasSizing(canvasRef, crosshairCanvasRef);
 
   const mode = "result" as const;
   const result = useAppStore((s) => s.result);
   const resultViewSettings = useAppStore((s) => s.resultViewSettings);
+  const resultViewSettingsForRender = useMemo(() => {
+    if (!annotationStylePreview || !annotationStylePreview.draft) {
+      return resultViewSettings;
+    }
+
+    const mergedAnnotations = resultViewSettings.annotations.map((anno) =>
+      anno.id === annotationStylePreview.annoId
+        ? ({ ...anno, ...annotationStylePreview.draft } as Annotation)
+        : anno,
+    );
+
+    return {
+      ...resultViewSettings,
+      annotations: mergedAnnotations,
+    };
+  }, [resultViewSettings, annotationStylePreview]);
   const orientation = useAppStore((s) => s.orientation);
   const coordinates = useAppStore((s) => s.coordinates);
   const materials = useAppStore((s) => s.materials);
@@ -299,6 +323,7 @@ export function ResultCanvas() {
           w,
           h,
           resultViewSettings.paperFrame.paperSize,
+          resultViewSettings.paperFrame.landscape,
         );
         const PLOT_PAD_L = pf.w * PLOT_MARGINS.L;
         const PLOT_PAD_B = pf.h * PLOT_MARGINS.B;
@@ -350,6 +375,7 @@ export function ResultCanvas() {
     mode,
     resultViewSettings.paperFrame.showFrame,
     resultViewSettings.paperFrame.paperSize,
+    resultViewSettings.paperFrame.landscape,
     viewScale,
     viewOffset,
     setActiveViewScale,
@@ -362,7 +388,7 @@ export function ResultCanvas() {
       h: canvasSize.height,
       mode,
       result,
-      resultViewSettings,
+      resultViewSettings: resultViewSettingsForRender,
       orientation,
       coordinates,
       materials,
@@ -412,7 +438,7 @@ export function ResultCanvas() {
       surfaceYAtX,
       mode,
       result,
-      resultViewSettings,
+      resultViewSettingsForRender,
       selectedAnnotationIds,
       projectInfo,
     ],
@@ -441,12 +467,38 @@ export function ResultCanvas() {
   // Keyboard shortcuts
   useEffect(() => {
     const handleKey = (e: KeyboardEvent) => {
+      const target = e.target as HTMLElement | null;
+      if (
+        target &&
+        (target.tagName === "INPUT" ||
+          target.tagName === "TEXTAREA" ||
+          target.isContentEditable)
+      ) {
+        return;
+      }
+
       if (e.key === "Escape") {
         setContextMenu(null);
         setAssigningMaterial(null);
         setAnnoStyleMenu(null);
+        setAnnotationStylePreview(null);
         return;
       }
+
+      if (
+        (e.key === "Delete" || e.key === "Backspace") &&
+        selectedAnnotationIds.length > 0
+      ) {
+        e.preventDefault();
+        for (const id of selectedAnnotationIds) {
+          removeAnnotation(id);
+        }
+        setSelectedAnnotations([]);
+        setAnnoStyleMenu(null);
+        setAnnotationStylePreview(null);
+        return;
+      }
+
       if (
         (e.key === "ArrowLeft" ||
           e.key === "ArrowRight" ||
@@ -475,9 +527,12 @@ export function ResultCanvas() {
   }, [
     selectedAnnotationIds,
     updateAnnotation,
+    removeAnnotation,
+    setSelectedAnnotations,
     setAssigningMaterial,
     setContextMenu,
     setAnnoStyleMenu,
+    setAnnotationStylePreview,
   ]);
 
   const handleFitToScreen = useCallback(() => {
@@ -505,6 +560,7 @@ export function ResultCanvas() {
         w,
         h,
         resultViewSettings.paperFrame.paperSize,
+        resultViewSettings.paperFrame.landscape,
       );
       const PLOT_PAD_L = pf.w * PLOT_MARGINS.L;
       const PLOT_PAD_B = pf.h * PLOT_MARGINS.B;
@@ -892,7 +948,19 @@ export function ResultCanvas() {
           annotations={resultViewSettings.annotations}
           updateAnnotation={updateAnnotation}
           removeAnnotation={removeAnnotation}
-          onClose={() => setAnnoStyleMenu(null)}
+          onPreviewChange={(annoId, draft) => {
+            if (!draft) {
+              setAnnotationStylePreview((prev) =>
+                prev?.annoId === annoId ? null : prev,
+              );
+              return;
+            }
+            setAnnotationStylePreview({ annoId, draft });
+          }}
+          onClose={() => {
+            setAnnotationStylePreview(null);
+            setAnnoStyleMenu(null);
+          }}
         />
       </div>
       <AxisOverlay containerRef={containerRef} canvasRef={canvasRef} />
