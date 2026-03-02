@@ -630,7 +630,11 @@ export function analyseMorgensternPrice(
 
   // Step 3: Iterative extrapolation
   for (let ii = 0; ii <= 6; ii++) {
-    const prevLambda = lffArray[lffArray.length - 1][0];
+    // Use the best-performing lambda (smallest gap) as pivot for step limiting,
+    // NOT the largest lambda in the sorted array, which would prevent exploration
+    // into the negative-lambda region where Fm and Ff may intersect.
+    const bestEntry = [...lffArray].sort((a, b) => a[3] - b[3])[0];
+    const prevLambda = bestEntry[0];
     const lffTriplets = lffArray.map(
       ([lambda, fsMoment, fsForce]) =>
         [lambda, fsMoment, fsForce] as [number, number, number],
@@ -644,8 +648,14 @@ export function analyseMorgensternPrice(
     }
 
     // Ensure unique lambda
+    let nudgeCount = 0;
     while (lffArray.some((x) => x[0] === lambdaNew)) {
-      lambdaNew *= 0.9;
+      if (lambdaNew === 0) {
+        lambdaNew = 1e-6;
+      } else {
+        lambdaNew *= 0.9;
+      }
+      if (++nudgeCount > 50) break;
     }
 
     [FSm, pushing0, resisting0, NmOut, convergedM] = solveFOSGenericMoment(
