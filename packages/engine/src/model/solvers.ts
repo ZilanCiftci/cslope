@@ -395,7 +395,75 @@ export function analyseBishop(
 }
 
 /**
- * Janbu's Simplified Method.
+ * Janbu correction factor f₀ (Janbu, 1973).
+ *
+ * The Simplified Method underestimates FOS because it neglects interslice
+ * shear forces. The empirical correction compensates for this:
+ *
+ *   F_corrected = f₀ × F_simplified
+ *   f₀ = 1 + b₁ × [d/L − 1.4 × (d/L)²]
+ *
+ * where d = max vertical distance from the chord connecting the entry and
+ * exit points of the failure surface to the arc (the sagitta), L = horizontal
+ * distance between entry and exit, and b₁ depends on soil type:
+ *   c-only soil (φ=0): b₁ = 0.69
+ *   φ-only soil (c=0): b₁ = 0.31
+ *   c-φ soil:          b₁ = 0.50
+ */
+function janbuCorrectionFactor(slices: Slice[]): number {
+  if (slices.length === 0) return 1;
+
+  const L = slices[slices.length - 1].xRight - slices[0].xLeft;
+  if (L <= 0) return 1;
+
+  // Entry and exit points on the failure surface
+  const xEntry = slices[0].xLeft;
+  const yEntry = slices[0].y0Bottom;
+  const xExit = slices[slices.length - 1].xRight;
+  const yExit = slices[slices.length - 1].y1Bottom;
+
+  // d = max vertical distance from the chord (entry→exit) to the arc
+  let d = 0;
+  for (const s of slices) {
+    // Interpolate chord y at slice midpoint x
+    const t = (s.x - xEntry) / (xExit - xEntry);
+    const chordY = yEntry + t * (yExit - yEntry);
+    // The arc is below the chord, so chord Y > arc Y
+    const sag = chordY - s.yBottom;
+    if (sag > d) d = sag;
+  }
+
+  const dOverL = d / L;
+
+  // Determine b₁ from the soil type across all slices.
+  // Pure cohesion (φ=0): b₁ = 0.69, pure friction (c=0): b₁ = 0.31, mixed: b₁ = 0.50
+  let hasCohesion = false;
+  let hasFriction = false;
+  for (const s of slices) {
+    if (s.cohesion > 0) hasCohesion = true;
+    if (s.phi > 0) hasFriction = true;
+    if (hasCohesion && hasFriction) break;
+  }
+
+  let b1: number;
+  if (hasCohesion && hasFriction) {
+    b1 = 0.5;
+  } else if (hasCohesion) {
+    b1 = 0.69;
+  } else {
+    b1 = 0.31;
+  }
+
+  // f₀ = 1 + b₁ × [d/L − 1.4 × (d/L)²]
+  return 1 + b1 * (dOverL - 1.4 * dOverL * dOverL);
+}
+
+/**
+ * Janbu's Simplified Method with correction factor f₀ (Janbu, 1973).
+ *
+ * Satisfies horizontal force equilibrium with λ = 0 (no interslice shear).
+ * The empirical correction factor f₀ compensates for the systematic
+ * underestimation inherent in the simplified assumption.
  */
 export function analyseJanbu(
   slope: Slope,
@@ -432,7 +500,12 @@ export function analyseJanbu(
   );
 
   if (fos == null) return [null, null, null, false];
-  return [fos, pushing, resisting, converged];
+
+  // Apply Janbu correction factor f₀ (only when enabled)
+  const f0 = slope.janbuCorrection ? janbuCorrectionFactor(slices) : 1;
+  const correctedFos = fos * f0;
+
+  return [correctedFos, pushing, resisting, converged];
 }
 
 /**

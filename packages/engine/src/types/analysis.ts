@@ -37,6 +37,8 @@ export interface AnalysisOptions {
   limitJanbu: number;
   /** FOS limit for Morgenstern-Price. */
   limitMorgensternPrice: number;
+  /** Apply Janbu correction factor f₀ (default: false). */
+  janbuCorrection?: boolean;
   /** Interslice force function shape for Morgenstern-Price. */
   intersliceFunction?: IntersliceFunctionType;
   /** Normalized [x, f] points in [0,1]×[0,1] for data-point-specified mode. */
@@ -55,6 +57,7 @@ export const DEFAULT_ANALYSIS_OPTIONS: AnalysisOptions = {
   limitBishop: 5,
   limitJanbu: 5,
   limitMorgensternPrice: 5,
+  janbuCorrection: false,
   intersliceFunction: "half-sine",
   intersliceDataPoints: [],
 };
@@ -129,6 +132,8 @@ export interface AnalysisResult {
   criticalSlices: SliceData[];
   /** Analysis method used. */
   method: AnalysisMethod;
+  /** Lambda-Fm-Ff data for the critical surface (Morgenstern-Price only). */
+  criticalLffArray?: [number, number, number, number][];
   /** Elapsed time in ms. */
   elapsedMs: number;
   /** Number of analysed surfaces that did not converge within iteration limits. */

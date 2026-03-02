@@ -115,6 +115,10 @@ self.onmessage = (event: MessageEvent<AnalysisRequest>) => {
       allSurfaces,
       criticalSlices,
       method: options.method,
+      criticalLffArray:
+        options.method === "Morgenstern-Price" && validSurfaces.length > 0
+          ? validSurfaces[0].lffArray
+          : undefined,
       elapsedMs: performance.now() - start,
       nonConvergedSurfaces,
       splitFailureCount: slope.splitFailureCount,

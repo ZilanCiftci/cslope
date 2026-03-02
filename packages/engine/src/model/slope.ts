@@ -89,6 +89,7 @@ export class Slope {
   private _limitToRunBishops: number;
   private _limitToRunJanbu: number;
   private _limitToRunMorgenstern: number;
+  private _janbuCorrection: boolean;
   private _intersliceFunction: IntersliceFunctionType;
   private _intersliceDataPoints: [number, number][];
 
@@ -118,6 +119,7 @@ export class Slope {
     this._limitToRunBishops = d.limitBishop;
     this._limitToRunJanbu = d.limitJanbu;
     this._limitToRunMorgenstern = d.limitMorgensternPrice;
+    this._janbuCorrection = d.janbuCorrection ?? false;
     this._intersliceFunction = d.intersliceFunction ?? "half-sine";
     this._intersliceDataPoints = [...(d.intersliceDataPoints ?? [])];
   }
@@ -209,6 +211,10 @@ export class Slope {
 
   get limitToRunJanbu(): number {
     return this._limitToRunJanbu;
+  }
+
+  get janbuCorrection(): boolean {
+    return this._janbuCorrection;
   }
 
   get limitToRunMorgenstern(): number {
@@ -568,6 +574,9 @@ export class Slope {
     }
     if (opts.limitJanbu !== undefined) {
       this._limitToRunJanbu = opts.limitJanbu;
+    }
+    if (opts.janbuCorrection !== undefined) {
+      this._janbuCorrection = opts.janbuCorrection;
     }
     if (opts.limitMorgensternPrice !== undefined) {
       this._limitToRunMorgenstern = opts.limitMorgensternPrice;

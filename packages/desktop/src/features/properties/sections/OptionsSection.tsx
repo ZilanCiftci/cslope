@@ -228,6 +228,21 @@ export function OptionsSection() {
             aria-label="Tolerance"
           />
         </label>
+        {options.method === "Janbu" && (
+          <label className="col-span-2 flex items-center gap-1.5">
+            <input
+              type="checkbox"
+              checked={options.janbuCorrection ?? false}
+              onChange={(e) =>
+                setOptions({ janbuCorrection: e.target.checked })
+              }
+              aria-label="Apply Janbu correction factor"
+            />
+            <Label>
+              Apply correction factor f<sub>0</sub>
+            </Label>
+          </label>
+        )}
         {options.method === "Morgenstern-Price" && (
           <label className="flex flex-col gap-0.5">
             <Label>Interslice Function</Label>
