@@ -202,13 +202,19 @@ export function exportVectorPdf(data: PdfExportData): void {
 
     const virtualW = 1200;
     const virtualH = (1200 * paperH) / paperW;
+    const virtualPaperFrame = computeVirtualPaperFrame(
+      virtualW,
+      virtualH,
+      paperSize,
+      landscape,
+    );
 
     const PLOT_PAD_L = PLOT_MARGINS.L;
     const PLOT_PAD_B = PLOT_MARGINS.B;
     const PLOT_PAD_T = PLOT_MARGINS.T;
     const PLOT_PAD_R = PLOT_MARGINS.R;
-    const plotW = virtualW * (1 - PLOT_PAD_L - PLOT_PAD_R);
-    const plotH = virtualH * (1 - PLOT_PAD_T - PLOT_PAD_B);
+    const plotW = virtualPaperFrame.w * (1 - PLOT_PAD_L - PLOT_PAD_R);
+    const plotH = virtualPaperFrame.h * (1 - PLOT_PAD_T - PLOT_PAD_B);
 
     let viewScale: number;
     let viewOffset: [number, number];
@@ -224,8 +230,8 @@ export function exportVectorPdf(data: PdfExportData): void {
       const worldCx = (viewBounds.xMin + viewBounds.xMax) / 2;
       const worldCy = (viewBounds.yMin + viewBounds.yMax) / 2;
 
-      const shiftX = (virtualW / 2) * (PLOT_PAD_L - PLOT_PAD_R);
-      const shiftY = (virtualH / 2) * (PLOT_PAD_B - PLOT_PAD_T);
+      const shiftX = (virtualPaperFrame.w / 2) * (PLOT_PAD_L - PLOT_PAD_R);
+      const shiftY = (virtualPaperFrame.h / 2) * (PLOT_PAD_B - PLOT_PAD_T);
 
       const ox = shiftX / viewScale - worldCx;
       const oy = shiftY / viewScale - worldCy;
@@ -242,9 +248,9 @@ export function exportVectorPdf(data: PdfExportData): void {
       const worldH = yMax - yMin || 10;
       viewScale = Math.min(plotW / (worldW * 1.3), plotH / (worldH * 1.3));
       const plotCenterOffsetX =
-        (((PLOT_PAD_L - PLOT_PAD_R) / 2) * virtualW) / viewScale;
+        (((PLOT_PAD_L - PLOT_PAD_R) / 2) * virtualPaperFrame.w) / viewScale;
       const plotCenterOffsetY =
-        (((PLOT_PAD_B - PLOT_PAD_T) / 2) * virtualH) / viewScale;
+        (((PLOT_PAD_B - PLOT_PAD_T) / 2) * virtualPaperFrame.h) / viewScale;
       viewOffset = [
         -(xMin + xMax) / 2 - plotCenterOffsetX,
         -(yMin + yMax) / 2 + plotCenterOffsetY,
@@ -260,12 +266,6 @@ export function exportVectorPdf(data: PdfExportData): void {
       viewScale,
     );
 
-    const virtualPaperFrame = computeVirtualPaperFrame(
-      virtualW,
-      virtualH,
-      paperSize,
-      landscape,
-    );
     const [afx0, afy0] = tf.canvasToPdf(
       virtualPaperFrame.x,
       virtualPaperFrame.y,
@@ -287,10 +287,10 @@ export function exportVectorPdf(data: PdfExportData): void {
       format: [paperW, paperH],
     });
 
-    const PAD_L = tf.paperW * 0.06;
-    const PAD_B = tf.paperH * 0.06;
-    const PAD_T = tf.paperH * 0.05;
-    const PAD_R = tf.paperW * 0.04;
+    const PAD_L = tf.paperW * PLOT_MARGINS.L;
+    const PAD_B = tf.paperH * PLOT_MARGINS.B;
+    const PAD_T = tf.paperH * PLOT_MARGINS.T;
+    const PAD_R = tf.paperW * PLOT_MARGINS.R;
     const innerFrame = {
       x: PAD_L,
       y: PAD_T,
@@ -334,6 +334,10 @@ export function exportVectorPdf(data: PdfExportData): void {
 
     pdf.setFillColor(255, 255, 255);
     pdf.rect(0, 0, tf.paperW, tf.paperH, "F");
+
+    pdf.saveGraphicsState();
+    pdf.rect(innerFrame.x, innerFrame.y, innerFrame.w, innerFrame.h, null);
+    pdf.clip();
 
     if (rvs.showGrid) {
       drawGrid(pdf, tf, viewScale, innerFrame);
@@ -379,6 +383,8 @@ export function exportVectorPdf(data: PdfExportData): void {
     drawSlipSurfaces(pdf, tf, result, rvs);
 
     drawCriticalSurface(pdf, tf, result, rvs, coordinates);
+
+    pdf.restoreGraphicsState();
 
     drawAnnotations(
       pdf,

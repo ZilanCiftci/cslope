@@ -224,6 +224,7 @@ describe("analyseSlope full orchestration", () => {
     const s = createHomogeneousSlope();
     s.updateAnalysisOptions({ slices: 30, method: "Bishop" });
     addSingleCircularPlane(s, 28, 25, 35);
+    s.customPlanesOnly = true;
 
     const fos = analyseSlope(s);
     expect(fos).not.toBeNull();

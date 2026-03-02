@@ -672,8 +672,8 @@ export function analyseMorgensternPrice(
  * @returns Minimum FOS found, or null if no valid surfaces.
  */
 export function analyseSlope(slope: Slope): number | null {
-  // Generate search planes if needed
-  if (slope.search.length === 0 && slope.individualPlanes.length === 0) {
+  // Generate search planes unless only custom planes are requested
+  if (slope.search.length === 0 && !slope.customPlanesOnly) {
     setEntryExitPlanes(slope);
   }
 
@@ -703,7 +703,7 @@ export function analyseSlope(slope: Slope): number | null {
 
   evaluatePlanes(slope, allPlanes);
 
-  if (slope.refinedIterations > 0) {
+  if (slope.refinedIterations > 0 && !slope.customPlanesOnly) {
     allPlanes.sort((a, b) => {
       const af = a.fos ?? Number.POSITIVE_INFINITY;
       const bf = b.fos ?? Number.POSITIVE_INFINITY;

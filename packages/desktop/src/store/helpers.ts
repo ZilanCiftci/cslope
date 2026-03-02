@@ -97,6 +97,15 @@ export function buildSlopeDTO(state: AppState): SlopeDefinition {
     }));
   }
 
+  if (state.customSearchPlanes.length > 0) {
+    slope.customSearchPlanes = state.customSearchPlanes.map((p) => ({
+      cx: p.cx,
+      cy: p.cy,
+      radius: p.radius,
+    }));
+    slope.customPlanesOnly = state.customPlanesOnly;
+  }
+
   return toCanonicalSlopeDefinition(slope);
 }
 
@@ -117,6 +126,8 @@ export function getAnalysisInputSignature(state: AppState): string {
     piezometricLine: state.piezometricLine,
     udls: state.udls,
     lineLoads: state.lineLoads,
+    customSearchPlanes: state.customSearchPlanes,
+    customPlanesOnly: state.customPlanesOnly,
     analysisLimits: state.analysisLimits,
     options: state.options,
   });

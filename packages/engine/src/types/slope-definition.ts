@@ -48,4 +48,8 @@ export interface SlopeDefinition {
   topRegionMaterialName?: string;
   /** Search area limits for entry/exit ranges. */
   analysisLimits?: AnalysisLimits;
+  /** User-specified circular search planes (cx, cy, radius). */
+  customSearchPlanes?: Array<{ cx: number; cy: number; radius: number }>;
+  /** When true, only analyse custom search planes (skip random search). */
+  customPlanesOnly?: boolean;
 }

@@ -9,6 +9,7 @@ import type { SlopeDefinition } from "../types/slope-definition";
 import type { MaterialType } from "../types/material";
 import { Material, Udl, LineLoad } from "../types/index";
 import { Slope } from "./slope";
+import { addSingleCircularPlane } from "./search";
 
 /**
  * Reconstruct a Slope model from a serialized SlopeDefinition DTO.
@@ -121,6 +122,18 @@ export function buildSlope(def: SlopeDefinition): Slope {
   // Analysis limits
   if (def.analysisLimits) {
     slope.setAnalysisLimits(def.analysisLimits);
+  }
+
+  // Custom search planes
+  if (def.customSearchPlanes) {
+    for (const p of def.customSearchPlanes) {
+      addSingleCircularPlane(slope, p.cx, p.cy, p.radius);
+    }
+  }
+
+  // Custom-planes-only mode: skip random search generation
+  if (def.customPlanesOnly) {
+    slope.customPlanesOnly = true;
   }
 
   return slope;

@@ -76,7 +76,8 @@ describe("App — VS Code dark layout", () => {
   it("renders the status bar with mode and point count", () => {
     render(<App />);
     expect(screen.getByText("EDIT")).toBeInTheDocument();
-    expect(screen.getByText(/Points: 6/)).toBeInTheDocument();
+    const pointCount = useAppStore.getState().coordinates.length;
+    expect(screen.getByText(new RegExp(`Points: ${pointCount}`))).toBeInTheDocument();
   });
 
   it("shows properties panel sections in sidebar", () => {

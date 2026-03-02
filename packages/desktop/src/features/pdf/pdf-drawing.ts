@@ -3,6 +3,7 @@ import { fosColor } from "../../utils/fos-color";
 import { circleArcPoints } from "../../utils/arc";
 import { computeRegions } from "../../utils/regions";
 import { GRID_RAW_STEP_PX } from "../../constants";
+import { computeRulerStep, formatRulerLabel } from "../../utils/ruler";
 import {
   GRID_STEP_MIN,
   LL_COLOR_RGB,
@@ -103,15 +104,8 @@ export function drawRulerFrame(
   const worldTop = (originPdfY - innerFrame.y) * worldPerMm;
   const worldBottom = (originPdfY - (innerFrame.y + innerFrame.h)) * worldPerMm;
 
-  const pixelsPerWorldUnit = innerFrame.w / (worldRight - worldLeft);
-  const rulerRawStep = (10 / pixelsPerWorldUnit) * (tf.paperW / 297);
-  const rawStep = Math.max(rulerRawStep, 0.5);
-  const mag = Math.pow(10, Math.floor(Math.log10(rawStep)));
-  const stepOptions = [1, 2, 5, 10];
-  const rulerStep = Math.max(
-    0.5,
-    stepOptions.find((s) => s * mag >= rawStep)! * mag,
-  );
+  const worldSpan = worldRight - worldLeft;
+  const rulerStep = computeRulerStep(worldSpan, innerFrame.w, tf.paperW);
 
   pdf.setFontSize(FONT_SIZE);
   pdf.setFont("helvetica", "normal");
@@ -130,7 +124,7 @@ export function drawRulerFrame(
     if (px < ifx || px > ifx + ifw) continue;
     pdf.setLineWidth(0.2);
     pdf.line(px, btmY, px, btmY + TICK_LEN);
-    const label = Number.isInteger(gx) ? gx.toString() : gx.toFixed(1);
+    const label = formatRulerLabel(gx);
     pdf.text(label, px, btmY + TICK_LEN + FONT_SIZE * 0.35 + 1.0, {
       align: "center",
     });
@@ -152,7 +146,7 @@ export function drawRulerFrame(
     if (py < ify || py > ify + ifh) continue;
     pdf.setLineWidth(0.2);
     pdf.line(ifx, py, ifx - TICK_LEN, py);
-    const label = Number.isInteger(gy) ? gy.toString() : gy.toFixed(1);
+    const label = formatRulerLabel(gy);
     pdf.text(label, ifx - TICK_LEN - 1.0, py + FONT_SIZE * 0.12, {
       align: "right",
     });
@@ -374,7 +368,8 @@ export function drawEntryExitMarkers(
   orientation: ModelOrientation,
 ) {
   const MARKER_COLOR: [number, number, number] = [0, 0, 0];
-  const DOTTED_COLOR: [number, number, number] = [204, 0, 0];
+  const ENTRY_DOT_COLOR: [number, number, number] = [0, 100, 0];
+  const EXIT_DOT_COLOR: [number, number, number] = [204, 0, 0];
   const barH = 10 * tf.mmPerPx;
   const sz = 7 * tf.mmPerPx;
 
@@ -396,7 +391,11 @@ export function drawEntryExitMarkers(
     pdfPath(pdf, triOps, "f");
   };
 
-  const drawDottedSurfaceLine = (x1: number, x2: number) => {
+  const drawDottedSurfaceLine = (
+    x1: number,
+    x2: number,
+    color: [number, number, number],
+  ) => {
     const leftX = Math.min(x1, x2);
     const rightX = Math.max(x1, x2);
 
@@ -420,12 +419,36 @@ export function drawEntryExitMarkers(
     if (surfPts.length < 2) return;
 
     const pdfPts = surfPts.map(([wx, wy]) => tf.worldToPdf(wx, wy));
-    pdf.setDrawColor(...DOTTED_COLOR);
-    pdf.setLineWidth(0.4);
-    pdf.setLineDashPattern([0.6, 0.8], 0);
-    const ops = buildPolylinePath(pdfPts, false);
-    pdfPath(pdf, ops, "S");
-    pdf.setLineDashPattern([], 0);
+    const spacing = 12 * tf.mmPerPx;
+    const radius = 2.5 * tf.mmPerPx;
+
+    pdf.setFillColor(...color);
+
+    const placeDot = (x: number, y: number) => {
+      pdf.circle(x, y, radius, "F");
+    };
+
+    // Always place dots at endpoints
+    placeDot(pdfPts[0][0], pdfPts[0][1]);
+    placeDot(pdfPts[pdfPts.length - 1][0], pdfPts[pdfPts.length - 1][1]);
+
+    let carry = 0;
+    for (let i = 0; i < pdfPts.length - 1; i++) {
+      const [x1p, y1p] = pdfPts[i];
+      const [x2p, y2p] = pdfPts[i + 1];
+      const dx = x2p - x1p;
+      const dy = y2p - y1p;
+      const segLen = Math.hypot(dx, dy);
+      if (segLen === 0) continue;
+
+      let t = spacing - carry;
+      while (t < segLen - 0.1 * tf.mmPerPx) {
+        const frac = t / segLen;
+        placeDot(x1p + dx * frac, y1p + dy * frac);
+        t += spacing;
+      }
+      carry = (carry + segLen) % spacing;
+    }
   };
 
   const leftHandleDir: "left" | "right" =
@@ -442,7 +465,11 @@ export function drawEntryExitMarkers(
     drawArrow(limits.entryRightX, entryRightY, rightHandleDir);
   }
   if (entryLeftY !== null && entryRightY !== null) {
-    drawDottedSurfaceLine(limits.entryLeftX, limits.entryRightX);
+    drawDottedSurfaceLine(
+      limits.entryLeftX,
+      limits.entryRightX,
+      ENTRY_DOT_COLOR,
+    );
   }
 
   const exitLeftY = surfaceYAtX(limits.exitLeftX, coordinates);
@@ -454,7 +481,7 @@ export function drawEntryExitMarkers(
     drawArrow(limits.exitRightX, exitRightY, rightHandleDir);
   }
   if (exitLeftY !== null && exitRightY !== null) {
-    drawDottedSurfaceLine(limits.exitLeftX, limits.exitRightX);
+    drawDottedSurfaceLine(limits.exitLeftX, limits.exitRightX, EXIT_DOT_COLOR);
   }
 }
 
@@ -546,8 +573,9 @@ export function drawCriticalSurface(
   }
 
   if (rvs.showSlices && result.criticalSlices.length > 0) {
-    pdf.setDrawColor(160, 160, 160);
-    pdf.setLineWidth(0.15);
+    pdf.setDrawColor(0, 0, 0);
+    pdf.setLineWidth(0.8 * tf.mmPerPx);
+    setOpacity(pdf, 1, 0.6);
 
     const arcYAt = (x: number): number | null => {
       const dx = x - cs.cx;
@@ -569,6 +597,8 @@ export function drawCriticalSurface(
       const [, ey] = tf.worldToPdf(x, botY);
       pdf.line(sx, sy, sx, ey);
     }
+
+    resetOpacity(pdf);
   }
 
   {

@@ -5,6 +5,7 @@ import { parseProjectFile, serializeProject } from "../store/persistence";
 import { useAppStore } from "../store/app-store";
 import { RUN_RESET, getAnalysisInputSignature } from "../store/helpers";
 import { isElectron } from "../utils/is-electron";
+import { NewIcon, OpenIcon, SaveIcon } from "./icons/FileActionIcons";
 
 interface Props {
   theme: "dark" | "light";
@@ -164,13 +165,13 @@ export function TitleBar({ theme, onToggleTheme, activeModelName }: Props) {
           }}
         >
           <FavButton title="New project" onClick={handleNew}>
-            <NewIcon />
+            <NewIcon size={18} />
           </FavButton>
           <FavButton title="Open project" onClick={handleOpen}>
-            <OpenIcon />
+            <OpenIcon size={18} />
           </FavButton>
           <FavButton title="Save" onClick={handleSave}>
-            <SaveIcon />
+            <SaveIcon size={18} />
           </FavButton>
           <div
             className="mx-1 h-4"
@@ -285,62 +286,6 @@ function FavButton({
 }
 
 // ── SVG icons ──
-
-function NewIcon() {
-  return (
-    <svg
-      width="14"
-      height="14"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-      <path d="M14 2v6h6" />
-      <path d="M12 18v-6M9 15h6" />
-    </svg>
-  );
-}
-
-function OpenIcon() {
-  return (
-    <svg
-      width="14"
-      height="14"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <path d="M3 7h6l2 2h10v10H3z" />
-      <path d="M3 7V5a2 2 0 0 1 2-2h6l2 2h8" />
-    </svg>
-  );
-}
-
-function SaveIcon() {
-  return (
-    <svg
-      width="14"
-      height="14"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z" />
-      <path d="M17 21V13H7v8" />
-      <path d="M7 3v5h8" />
-    </svg>
-  );
-}
 
 function UndoIcon() {
   return (

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { EXAMPLE_MODELS, mirrorModelEntry } from "../../store/examples";
+import { EXAMPLE_MODELS, mirrorModelEntry } from "../../store/benchmarks";
 import type { ModelEntry } from "../../store/types";
 import type { SlopeDefinition } from "@cslope/engine";
 import {

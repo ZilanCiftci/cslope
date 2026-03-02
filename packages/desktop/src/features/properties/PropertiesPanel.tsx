@@ -1,4 +1,5 @@
 import { BoundariesSection } from "./sections/BoundariesSection";
+import { CustomSearchPlanesSection } from "./sections/CustomSearchPlanesSection";
 import { GeometrySection } from "./sections/GeometrySection";
 import { LoadsSection } from "./sections/LoadsSection";
 import { MaterialAssignmentSection } from "./sections/MaterialAssignmentSection";
@@ -22,6 +23,7 @@ export function PropertiesPanel() {
       <PiezometricLineSection />
       <LoadsSection />
       <SearchLimitsSection />
+      <CustomSearchPlanesSection />
       <OptionsSection />
     </div>
   );

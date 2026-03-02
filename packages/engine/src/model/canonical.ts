@@ -143,6 +143,11 @@ export function toCanonicalSlopeDefinition(
     analysisLimits: slopeDefinition.analysisLimits
       ? mirrorLimits(slopeDefinition.analysisLimits, xMin, xMax)
       : undefined,
+    customSearchPlanes: slopeDefinition.customSearchPlanes?.map((p) => ({
+      ...p,
+      cx: mirrorX(p.cx, xMin, xMax),
+    })),
+    customPlanesOnly: slopeDefinition.customPlanesOnly,
   };
 }
 

@@ -287,6 +287,7 @@ export function ResultSidebar() {
       lineLoads: state.lineLoads,
       analysisLimits: state.analysisLimits,
       orientation: state.orientation,
+      projectInfo: state.projectInfo,
       viewBounds,
     });
   };

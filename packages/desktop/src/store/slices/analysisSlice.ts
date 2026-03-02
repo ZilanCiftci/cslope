@@ -14,6 +14,7 @@ import {
   type Region,
 } from "../../utils/regions";
 import { ANALYSIS_TIMEOUT_MS } from "../../constants";
+import { nextId } from "../helpers";
 
 /** Active worker reference — used to terminate a previous run on re-invocation. */
 let activeWorker: Worker | null = null;
@@ -31,6 +32,8 @@ function stopProgressInterval() {
 
 export const createAnalysisSlice: SliceCreator<AnalysisSlice> = (set, get) => ({
   analysisLimits: { ...DEFAULT_ANALYSIS_LIMITS },
+  customSearchPlanes: [],
+  customPlanesOnly: false,
   options: {
     ...DEFAULT_ANALYSIS_OPTIONS,
     method: "Morgenstern-Price",
@@ -58,6 +61,60 @@ export const createAnalysisSlice: SliceCreator<AnalysisSlice> = (set, get) => ({
         ),
       };
     });
+    get().invalidateAnalysis();
+  },
+
+  addCustomSearchPlane: () => {
+    set((s) => {
+      const plane = { id: nextId("csp"), cx: 0, cy: 0, radius: 10 };
+      const customSearchPlanes = [...s.customSearchPlanes, plane];
+      return {
+        customSearchPlanes,
+        models: s.models.map((m) =>
+          m.id === s.activeModelId ? { ...m, customSearchPlanes } : m,
+        ),
+      };
+    });
+    get().invalidateAnalysis();
+  },
+
+  updateCustomSearchPlane: (id, patch) => {
+    set((s) => {
+      const customSearchPlanes = s.customSearchPlanes.map((p) =>
+        p.id === id ? { ...p, ...patch } : p,
+      );
+      return {
+        customSearchPlanes,
+        models: s.models.map((m) =>
+          m.id === s.activeModelId ? { ...m, customSearchPlanes } : m,
+        ),
+      };
+    });
+    get().invalidateAnalysis();
+  },
+
+  removeCustomSearchPlane: (id) => {
+    set((s) => {
+      const customSearchPlanes = s.customSearchPlanes.filter(
+        (p) => p.id !== id,
+      );
+      return {
+        customSearchPlanes,
+        models: s.models.map((m) =>
+          m.id === s.activeModelId ? { ...m, customSearchPlanes } : m,
+        ),
+      };
+    });
+    get().invalidateAnalysis();
+  },
+
+  setCustomPlanesOnly: (value) => {
+    set((s) => ({
+      customPlanesOnly: value,
+      models: s.models.map((m) =>
+        m.id === s.activeModelId ? { ...m, customPlanesOnly: value } : m,
+      ),
+    }));
     get().invalidateAnalysis();
   },
 

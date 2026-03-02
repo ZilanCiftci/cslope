@@ -35,6 +35,13 @@ export interface AnalysisLimitsState {
   exitRightX: number;
 }
 
+export interface CustomSearchPlane {
+  id: string;
+  cx: number;
+  cy: number;
+  radius: number;
+}
+
 export interface UdlRow {
   id: string;
   magnitude: number;
@@ -132,6 +139,8 @@ export interface ModelEntry {
   piezometricLine: PiezometricLineState;
   udls: UdlRow[];
   lineLoads: LineLoadRow[];
+  customSearchPlanes: CustomSearchPlane[];
+  customPlanesOnly: boolean;
   options: AnalysisOptions;
   analysisLimits: AnalysisLimitsState;
   editViewOffset?: [number, number];
@@ -258,6 +267,8 @@ export interface LoadsSlice {
 
 export interface AnalysisSlice {
   analysisLimits: AnalysisLimitsState;
+  customSearchPlanes: CustomSearchPlane[];
+  customPlanesOnly: boolean;
   options: AnalysisOptions;
   runState: RunState;
   progress: number;
@@ -265,6 +276,13 @@ export interface AnalysisSlice {
   errorMessage: string | null;
   invalidateAnalysis: () => void;
   setAnalysisLimits: (limits: Partial<AnalysisLimitsState>) => void;
+  addCustomSearchPlane: () => void;
+  updateCustomSearchPlane: (
+    id: string,
+    patch: Partial<CustomSearchPlane>,
+  ) => void;
+  removeCustomSearchPlane: (id: string) => void;
+  setCustomPlanesOnly: (value: boolean) => void;
   setOptions: (opts: Partial<AnalysisOptions>) => void;
   runAnalysis: () => void;
   cancelAnalysis: () => void;

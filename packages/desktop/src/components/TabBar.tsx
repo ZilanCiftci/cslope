@@ -1,5 +1,6 @@
 import { useState } from "react";
 import type { AnalysisRunState } from "../store/types";
+import { EditModeIcon, ResultsModeIcon } from "./icons/ModeIcons";
 
 interface Props {
   mode: "edit" | "result";
@@ -43,18 +44,7 @@ export function TabBar({
           borderRight: "1px solid var(--color-vsc-border)",
         }}
       >
-        <svg
-          width="14"
-          height="14"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        >
-          <path d="M12 20h9M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z" />
-        </svg>
+        <EditModeIcon />
         Edit
         {mode === "edit" && (
           <div
@@ -154,19 +144,7 @@ export function TabBar({
           pointerEvents: hasResult ? "auto" : "none",
         }}
       >
-        <svg
-          width="14"
-          height="14"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        >
-          <path d="M3 3v18h18" />
-          <path d="M18 17V9M13 17V5M8 17v-3" />
-        </svg>
+        <ResultsModeIcon />
         Results
         {hasResult && mode !== "result" && (
           <div

@@ -1,6 +1,6 @@
 import { DEFAULT_ANALYSIS_OPTIONS } from "@cslope/engine";
 import { DEFAULT_MODEL_NAME } from "../../constants";
-import { BENCHMARK_MODELS } from "../examples";
+import { BENCHMARK_MODELS } from "../benchmarks";
 import {
   DEFAULT_ANALYSIS_LIMITS,
   DEFAULT_COORDS,
@@ -34,6 +34,8 @@ function createDefaultModel(id: string, name: string): ModelEntry {
     piezometricLine: { ...DEFAULT_PIEZO_LINE },
     udls: [],
     lineLoads: [],
+    customSearchPlanes: [],
+    customPlanesOnly: false,
     options: {
       ...DEFAULT_ANALYSIS_OPTIONS,
       method: "Morgenstern-Price",
@@ -60,6 +62,8 @@ const mapModelToState = (model: ModelEntry) => ({
   piezometricLine: model.piezometricLine ?? { ...DEFAULT_PIEZO_LINE },
   udls: model.udls ?? [],
   lineLoads: model.lineLoads ?? [],
+  customSearchPlanes: model.customSearchPlanes ?? [],
+  customPlanesOnly: model.customPlanesOnly ?? false,
   options: model.options ?? {
     ...DEFAULT_ANALYSIS_OPTIONS,
     method: "Morgenstern-Price",
@@ -183,6 +187,11 @@ export const createModelsSlice: SliceCreator<ModelsSlice> = (set, get) => ({
       },
       udls: source.udls.map((u) => ({ ...u, id: nextId("udl") })),
       lineLoads: source.lineLoads.map((l) => ({ ...l, id: nextId("ll") })),
+      customSearchPlanes: (source.customSearchPlanes ?? []).map((p) => ({
+        ...p,
+        id: nextId("csp"),
+      })),
+      customPlanesOnly: source.customPlanesOnly ?? false,
       options: { ...source.options },
       analysisLimits: { ...source.analysisLimits },
       editViewOffset: source.editViewOffset
@@ -308,6 +317,8 @@ export const createModelsSlice: SliceCreator<ModelsSlice> = (set, get) => ({
               piezometricLine: s.piezometricLine,
               udls: s.udls,
               lineLoads: s.lineLoads,
+              customSearchPlanes: s.customSearchPlanes,
+              customPlanesOnly: s.customPlanesOnly,
               options: s.options,
               analysisLimits: s.analysisLimits,
               editViewOffset: s.editViewOffset,

@@ -20,8 +20,16 @@ describe("Property sections — invalid input handling", () => {
     const user = userEvent.setup();
     render(<MaterialsSection />);
 
-    const [unitWeightInput, frictionAngleInput, cohesionInput] =
-      screen.getAllByRole("spinbutton") as HTMLInputElement[];
+    // Query by label text instead of positional index for robustness
+    const unitWeightInput = screen.getByRole("spinbutton", {
+      name: /γ/,
+    }) as HTMLInputElement;
+    const frictionAngleInput = screen.getByRole("spinbutton", {
+      name: /φ/,
+    }) as HTMLInputElement;
+    const cohesionInput = screen.getByRole("spinbutton", {
+      name: /c \(kPa\)/,
+    }) as HTMLInputElement;
 
     fireEvent.change(unitWeightInput, { target: { value: "-5" } });
     expect(unitWeightInput).toHaveAttribute("aria-invalid", "true");

@@ -98,6 +98,7 @@ export class Slope {
   // ── Search planes ─────────────────────────────────────────────
   private _search: SearchPlane[] = [];
   private _individualPlanes: SearchPlane[] = [];
+  private _customPlanesOnly = false;
   private _fixedSlices: number[] | null = null;
   private _splitFailureCount = 0;
 
@@ -192,6 +193,14 @@ export class Slope {
 
   get individualPlanes(): readonly SearchPlane[] {
     return this._individualPlanes;
+  }
+
+  get customPlanesOnly(): boolean {
+    return this._customPlanesOnly;
+  }
+
+  set customPlanesOnly(value: boolean) {
+    this._customPlanesOnly = value;
   }
 
   get limitToRunBishops(): number {

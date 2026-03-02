@@ -32,10 +32,10 @@ function createExampleResultViewSettings(
   const { w, h } = PAPER_DIMENSIONS[paperSize];
   const paperWidth = landscape ? Math.max(w, h) : Math.min(w, h);
   const paperHeight = landscape ? Math.min(w, h) : Math.max(w, h);
-
-  const bottomLeftX = xMin - 1;
-  const topRightX = xMax + 1;
-  const bottomLeftY = yMin - 1;
+  const margin = Math.floor((xMax - xMin) / 25); // Add 1x margin on each side
+  const bottomLeftX = xMin - margin;
+  const topRightX = xMax + margin;
+  const bottomLeftY = yMin - margin;
   const xSpan = topRightX - bottomLeftX;
   const topRightY = bottomLeftY + (xSpan * paperHeight) / paperWidth;
 
@@ -51,6 +51,35 @@ function createExampleResultViewSettings(
       bottomLeft: [bottomLeftX, bottomLeftY],
       topRight: [topRightX, topRightY],
     },
+    showFosLabel: false,
+    showCentreMarker: false,
+    showGrid: false,
+    annotations: [
+      {
+        id: "anno-8d2aabaf-31cb-43b5-b9a5-980aa7354464",
+        type: "text",
+        x: 0.11,
+        y: 0.08,
+        text: "#Title",
+        fontSize: 24,
+      },
+      {
+        id: "anno-89ddb1d9-0f29-4483-849a-bf5c09ea5076",
+        type: "text",
+        x: 0.11,
+        y: 0.14,
+        text: "#Subtitle",
+        fontSize: 14,
+      },
+      {
+        id: "anno-89ddb1d9-0f29-4483-849a-bf5c09ea5076",
+        type: "text",
+        x: 0.11,
+        y: 0.18,
+        text: "Calculate FOS: #FOS",
+        fontSize: 14,
+      },
+    ],
   };
 }
 
@@ -67,8 +96,8 @@ const TACADS_SIMPLE: ModelEntry = {
     subtitle: "Published FOS result: 1.00",
     client: "",
     projectNumber: "",
-    revision: "0",
-    author: "",
+    revision: "1",
+    author: "Zilan Ciftci",
     checker: "",
     date: "",
     description: "",
@@ -104,6 +133,8 @@ const TACADS_SIMPLE: ModelEntry = {
   },
   udls: [],
   lineLoads: [],
+  customSearchPlanes: [],
+  customPlanesOnly: false,
   options: {
     slices: 30,
     iterations: 1000,
@@ -225,6 +256,8 @@ const TACADS_NONHOMOGENEOUS: ModelEntry = {
   },
   udls: [],
   lineLoads: [],
+  customSearchPlanes: [],
+  customPlanesOnly: false,
   options: {
     slices: 30,
     iterations: 1000,
@@ -317,6 +350,8 @@ const ARAI_TAGYO: ModelEntry = {
   },
   udls: [],
   lineLoads: [],
+  customSearchPlanes: [],
+  customPlanesOnly: false,
   options: {
     slices: 30,
     iterations: 1000,
@@ -479,6 +514,8 @@ const TALBINGO_DAM_RTL: ModelEntry = {
   },
   udls: [],
   lineLoads: [],
+  customSearchPlanes: [],
+  customPlanesOnly: false,
   options: {
     slices: 30,
     iterations: 1000,
@@ -551,6 +588,10 @@ export function mirrorModelEntry(model: ModelEntry): ModelEntry {
       ...lineLoad,
       x: mirrorX(lineLoad.x, xMin, xMax),
     })),
+    customSearchPlanes: (model.customSearchPlanes ?? []).map((p) => ({
+      ...p,
+      cx: mirrorX(p.cx, xMin, xMax),
+    })),
     analysisLimits: model.analysisLimits.enabled
       ? {
           ...model.analysisLimits,
@@ -559,6 +600,27 @@ export function mirrorModelEntry(model: ModelEntry): ModelEntry {
       : { ...model.analysisLimits },
   };
 }
+
+// ────────────────────────────────────────────────────────────────
+// 5. Talbingo Dam (Single Circle) — RTL, prescribed slip surface
+//    Circle: cx=100.3, cy=291.0, R=278.8  (model-space RTL)
+//    Published FOS: 2.29 (Morgenstern-Price)
+// ────────────────────────────────────────────────────────────────
+
+const TALBINGO_SINGLE_CIRCLE: ModelEntry = {
+  ...TALBINGO_DAM_RTL,
+  id: "example-talbingo-dam-single",
+  name: "Talbingo Dam (Single Circle)",
+  projectInfo: {
+    ...TALBINGO_DAM_RTL.projectInfo!,
+    title: "Talbingo Dam (Single Circle)",
+    subtitle: "Published FOS result: 2.29",
+  },
+  customSearchPlanes: [
+    { id: "csp-talbingo-1", cx: 100.3, cy: 291.0, radius: 278.8 },
+  ],
+  customPlanesOnly: true,
+};
 
 //const TACADS_SIMPLE_RTL = mirrorModelEntry(TACADS_SIMPLE);
 //const TACADS_NONHOMOGENEOUS_RTL = mirrorModelEntry(TACADS_NONHOMOGENEOUS);
@@ -574,6 +636,86 @@ export const BENCHMARK_MODELS: ModelEntry[] = [
   ARAI_TAGYO,
   //ARAI_TAGYO_RTL,
   TALBINGO_DAM_RTL,
+  TALBINGO_SINGLE_CIRCLE,
 ];
 
 export const EXAMPLE_MODELS = BENCHMARK_MODELS;
+
+/**
+ * Published / reference FOS values for each benchmark model and method.
+ *
+ * Sources:
+ *   - T-ACADS: "Slope Stability Programs — Verification Manual", ACADS (1985)
+ *   - Arai & Tagyo: Arai, K. & Tagyo, K. (1985) "Determination of non-circular
+ *     slip surfaces in slope stability analysis", Soils and Foundations, 25(1).
+ *   - Talbingo Dam: Published dam safety analysis results.
+ */
+export type PublishedBenchmark = {
+  modelId: string;
+  name: string;
+  method: string;
+  publishedFos: number;
+  /** Acceptable ± tolerance (absolute). Wider for search-dependent results. */
+  tolerance: number;
+};
+
+export const PUBLISHED_BENCHMARKS: PublishedBenchmark[] = [
+  // T-ACADS Simple Slope — single homogeneous material
+  {
+    modelId: "example-tacads-simple",
+    name: "T-ACADS Simple",
+    method: "Morgenstern-Price",
+    publishedFos: 0.984,
+    tolerance: 0.05,
+  },
+  {
+    modelId: "example-tacads-simple",
+    name: "T-ACADS Simple",
+    method: "Bishop",
+    publishedFos: 0.985,
+    tolerance: 0.05,
+  },
+  {
+    modelId: "example-tacads-simple",
+    name: "T-ACADS Simple",
+    method: "Janbu",
+    publishedFos: 0.938,
+    tolerance: 0.05,
+  },
+
+  // T-ACADS Non-Homogeneous — 3 materials, 2 interior boundaries
+  {
+    modelId: "example-tacads-nonhomo",
+    name: "T-ACADS Non-Homogeneous",
+    method: "Morgenstern-Price",
+    publishedFos: 1.373,
+    tolerance: 0.05,
+  },
+
+  // Arai & Tagyo (1985) — with water table
+  {
+    modelId: "example-arai-tagyo",
+    name: "Arai & Tagyo (1985)",
+    method: "Bishop",
+    publishedFos: 1.138,
+    tolerance: 0.05,
+  },
+
+  // Talbingo Dam — RTL multi-material dam
+  {
+    modelId: "example-talbingo-dam",
+    name: "Talbingo Dam",
+    method: "Morgenstern-Price",
+    publishedFos: 1.95,
+    tolerance: 0.05,
+  },
+
+  // Talbingo Dam (Single Circle) — prescribed slip surface
+  {
+    modelId: "example-talbingo-dam-single",
+    name: "Talbingo Dam (Single Circle)",
+    method: "Morgenstern-Price",
+    publishedFos: 2.29,
+    tolerance: 0.05,
+  },
+];

@@ -262,6 +262,7 @@ describe("Integration: Search plane generation", () => {
 
     // Add specific circle
     addSingleCircularPlane(s, 28, 25, 35);
+    s.customPlanesOnly = true;
     analyseSlope(s);
 
     // Should have exactly 1 result (the individual plane)

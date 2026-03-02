@@ -1,4 +1,4 @@
-import { PLOT_MARGINS } from "../../store/app-store";
+import { PAPER_DIMENSIONS, PLOT_MARGINS } from "../../store/app-store";
 import type { AppState } from "../../store/types";
 import { circleArcPoints } from "../../utils/arc";
 import { fosColor } from "../../utils/fos-color";
@@ -18,6 +18,7 @@ import {
   cssVar,
 } from "./constants";
 import { GRID_RAW_STEP_PX } from "../../constants";
+import { computeRulerStep, formatRulerLabel } from "../../utils/ruler";
 import {
   computePaperFrame,
   drawParamBlock,
@@ -1191,7 +1192,7 @@ export function drawCanvas(
       if (rvs.showFosLabel) {
         const [ccx2, ccy2] = worldToCanvas(cs.cx, cs.cy, w, h);
         const fosText = cs.fos.toFixed(3);
-        ctx.font = "bold 14px sans-serif";
+        ctx.font = "bold 12px sans-serif";
         const tw = ctx.measureText(fosText).width;
         const labelX = ccx2 + 10;
 
@@ -1247,13 +1248,17 @@ export function drawCanvas(
       const [, worldBottomTick] = canvasToWorld(ifx, ify + ifh, w, h);
 
       // Compute tick spacing
-      const pixelsPerWorldUnit = ifw / (worldRightTick - worldLeftTick);
-      const rulerRawStep = 40 / pixelsPerWorldUnit;
-      const rulerMag = Math.pow(10, Math.floor(Math.log10(rulerRawStep)));
-      const rulerSteps = [1, 2, 5, 10];
-      const rulerStep = Math.max(
-        0.5,
-        rulerSteps.find((s) => s * rulerMag >= rulerRawStep)! * rulerMag,
+      const worldSpan = worldRightTick - worldLeftTick;
+      const { w: dimW, h: dimH } = PAPER_DIMENSIONS[paperFrame.paperSize];
+      const paperWidthMm = paperFrame.landscape
+        ? Math.max(dimW, dimH)
+        : Math.min(dimW, dimH);
+      const innerFrameWidthMm =
+        paperWidthMm * (1 - PLOT_MARGINS.L - PLOT_MARGINS.R);
+      const rulerStep = computeRulerStep(
+        worldSpan,
+        innerFrameWidthMm,
+        paperWidthMm,
       );
 
       ctx.save();
@@ -1274,7 +1279,7 @@ export function drawCanvas(
         ctx.moveTo(px, btmY);
         ctx.lineTo(px, btmY + TICK_LEN);
         ctx.stroke();
-        const label = Number.isInteger(gx) ? gx.toString() : gx.toFixed(1);
+        const label = formatRulerLabel(gx);
         ctx.fillText(label, px, btmY + TICK_LEN + 2);
       }
       // Minor ticks
@@ -1302,7 +1307,7 @@ export function drawCanvas(
         ctx.moveTo(ifx, py);
         ctx.lineTo(ifx - TICK_LEN, py);
         ctx.stroke();
-        const label = Number.isInteger(gy) ? gy.toString() : gy.toFixed(1);
+        const label = formatRulerLabel(gy);
         ctx.fillText(label, ifx - TICK_LEN - 3, py);
       }
       // Minor ticks

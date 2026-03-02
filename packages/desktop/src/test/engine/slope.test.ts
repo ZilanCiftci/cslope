@@ -16,7 +16,7 @@ import {
   mirrorLimits,
   mirrorPoints,
 } from "@cslope/engine";
-import { EXAMPLE_MODELS } from "../../store/examples";
+import { EXAMPLE_MODELS } from "../../store/benchmarks";
 
 // ── Test fixtures ─────────────────────────────────────────────────
 
