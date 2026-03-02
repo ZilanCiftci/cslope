@@ -147,6 +147,10 @@ function normalizeModelEntry(raw: unknown): ModelEntry {
       model.viewOffset) as ModelEntry["resultViewOffset"],
     resultViewScale: (model.resultViewScale ??
       model.viewScale) as ModelEntry["resultViewScale"],
+    customSearchPlanes: (Array.isArray(model.customSearchPlanes)
+      ? model.customSearchPlanes
+      : []) as ModelEntry["customSearchPlanes"],
+    customPlanesOnly: (model.customPlanesOnly === true) as ModelEntry["customPlanesOnly"],
     resultViewSettings: normalizeResultView(model.resultViewSettings),
     viewOffset: model.viewOffset as ModelEntry["viewOffset"],
     viewScale: model.viewScale as ModelEntry["viewScale"],

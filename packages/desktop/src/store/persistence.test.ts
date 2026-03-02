@@ -171,6 +171,8 @@ describe("persistence round-trip", () => {
       runState: "idle",
       progress: 0,
       result: null,
+      customSearchPlanes: [],
+      customPlanesOnly: false,
       errorMessage: null,
     };
 

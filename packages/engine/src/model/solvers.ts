@@ -157,13 +157,13 @@ function solveFOSGenericMoment(
         const shearFactor = lambdaVal * f;
 
         const num =
-          W + xLeft - cohesionTerm / prevFOS - baseConstant * shearFactor;
-        let denom = malpha + nMultiplier * shearFactor;
+          W + xLeft - cohesionTerm / prevFOS + baseConstant * shearFactor;
+        let denom = malpha - nMultiplier * shearFactor;
         if (Math.abs(denom) < 1e-12) denom = denom >= 0 ? 1e-12 : -1e-12;
 
         const N = num / denom;
         const eRight = baseConstant + N * nMultiplier;
-        const xRight = eRight * shearFactor;
+        const xRight = -eRight * shearFactor;
 
         // Resistance
         if (matCode === 1) {
@@ -264,13 +264,13 @@ function solveFOSGenericForceCircular(
         const shearFactor = lambdaVal * f;
 
         const num =
-          W + xLeft - CPrimeSin / prevFOS - baseConstant * shearFactor;
-        let denom = malpha + nMultiplier * shearFactor;
+          W + xLeft - CPrimeSin / prevFOS + baseConstant * shearFactor;
+        let denom = malpha - nMultiplier * shearFactor;
         if (Math.abs(denom) < 1e-12) denom = denom >= 0 ? 1e-12 : -1e-12;
 
         const N = num / denom;
         const eRight = baseConstant + N * nMultiplier;
-        const xRight = eRight * shearFactor;
+        const xRight = -eRight * shearFactor;
 
         // Circular force equilibrium resistance
         if (matCode === 1) {
