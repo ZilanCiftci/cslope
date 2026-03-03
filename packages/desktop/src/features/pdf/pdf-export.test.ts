@@ -105,4 +105,162 @@ describe("exportVectorPdf", () => {
     expect(doc.__savedFilename).toBe("PDF Test Model.pdf");
     expect(alertSpy).not.toHaveBeenCalled();
   });
+
+  it("alerts and returns early when result has no surfaces", () => {
+    const alertSpy = vi.spyOn(window, "alert").mockImplementation(() => {});
+
+    const data: PdfExportData = {
+      coordinates: [
+        [0, 0],
+        [0, 10],
+        [10, 10],
+        [20, 5],
+        [20, 0],
+      ],
+      materials: [{ ...DEFAULT_MATERIAL }],
+      materialBoundaries: [],
+      regionMaterials: {},
+      result: {
+        minFOS: 0,
+        maxFOS: 0,
+        criticalSurface:
+          null as unknown as PdfExportData["result"]["criticalSurface"],
+        allSurfaces: [],
+        criticalSlices: [],
+        method: "Bishop",
+        elapsedMs: 0,
+      },
+      resultViewSettings: {
+        ...DEFAULT_RESULT_VIEW_SETTINGS,
+        annotations: [],
+      },
+      piezometricLine: { enabled: false, lines: [] },
+      udls: [],
+      lineLoads: [],
+      analysisLimits: { ...DEFAULT_ANALYSIS_LIMITS },
+      orientation: "ltr",
+      projectInfo: { title: "Empty Result" } as PdfExportData["projectInfo"],
+    };
+
+    exportVectorPdf(data);
+    expect(alertSpy).toHaveBeenCalledWith(
+      expect.stringContaining("No analysis results"),
+    );
+    // No PDF should have been created
+    expect(pdfInstances).toHaveLength(0);
+  });
+
+  it("alerts and returns early when result has no critical surface", () => {
+    const alertSpy = vi.spyOn(window, "alert").mockImplementation(() => {});
+
+    const data: PdfExportData = {
+      coordinates: [
+        [0, 0],
+        [0, 10],
+        [10, 10],
+        [20, 5],
+        [20, 0],
+      ],
+      materials: [{ ...DEFAULT_MATERIAL }],
+      materialBoundaries: [],
+      regionMaterials: {},
+      result: {
+        minFOS: 1.2,
+        maxFOS: 1.6,
+        criticalSurface:
+          null as unknown as PdfExportData["result"]["criticalSurface"],
+        allSurfaces: [
+          {
+            cx: 10,
+            cy: 12,
+            radius: 10,
+            fos: 1.2,
+            entryPoint: [2, 8],
+            exitPoint: [18, 2],
+            converged: true,
+          },
+        ],
+        criticalSlices: [],
+        method: "Bishop",
+        elapsedMs: 100,
+      },
+      resultViewSettings: {
+        ...DEFAULT_RESULT_VIEW_SETTINGS,
+        annotations: [],
+      },
+      piezometricLine: { enabled: false, lines: [] },
+      udls: [],
+      lineLoads: [],
+      analysisLimits: { ...DEFAULT_ANALYSIS_LIMITS },
+      orientation: "ltr",
+      projectInfo: { title: "No Critical" } as PdfExportData["projectInfo"],
+    };
+
+    exportVectorPdf(data);
+    expect(alertSpy).toHaveBeenCalledWith(
+      expect.stringContaining("No analysis results"),
+    );
+    expect(pdfInstances).toHaveLength(0);
+  });
+
+  it("generates PDF with default filename when projectInfo is missing", () => {
+    vi.spyOn(URL, "createObjectURL").mockReturnValue("blob:test-pdf");
+    vi.spyOn(URL, "revokeObjectURL").mockImplementation(() => {});
+    vi.spyOn(window, "alert").mockImplementation(() => {});
+
+    const data: PdfExportData = {
+      coordinates: [
+        [0, 0],
+        [0, 10],
+        [10, 10],
+        [20, 5],
+        [20, 0],
+      ],
+      materials: [{ ...DEFAULT_MATERIAL }],
+      materialBoundaries: [],
+      regionMaterials: {},
+      result: {
+        minFOS: 1.2,
+        maxFOS: 1.6,
+        criticalSurface: {
+          cx: 10,
+          cy: 12,
+          radius: 10,
+          fos: 1.2,
+          entryPoint: [2, 8],
+          exitPoint: [18, 2],
+          converged: true,
+        },
+        allSurfaces: [
+          {
+            cx: 10,
+            cy: 12,
+            radius: 10,
+            fos: 1.2,
+            entryPoint: [2, 8],
+            exitPoint: [18, 2],
+            converged: true,
+          },
+        ],
+        criticalSlices: [],
+        method: "Bishop",
+        elapsedMs: 123,
+      },
+      resultViewSettings: {
+        ...DEFAULT_RESULT_VIEW_SETTINGS,
+        annotations: [],
+      },
+      piezometricLine: { enabled: false, lines: [] },
+      udls: [],
+      lineLoads: [],
+      analysisLimits: { ...DEFAULT_ANALYSIS_LIMITS },
+      orientation: "ltr",
+    };
+
+    expect(() => exportVectorPdf(data)).not.toThrow();
+    expect(pdfInstances).toHaveLength(1);
+    // Without projectInfo.title, filename should fall back to default
+    const doc = pdfInstances[0];
+    expect(doc.__savedFilename).toMatch(/\.pdf$/);
+  });
 });

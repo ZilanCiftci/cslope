@@ -20,9 +20,12 @@ describe("App — VS Code dark layout", () => {
     });
   });
 
-  it("renders the title bar", () => {
+  it("renders the title bar with current model name", () => {
     render(<App />);
     expect(screen.getByText("File")).toBeInTheDocument();
+    // Title bar displays model name — use substring match to avoid coupling
+    // to the exact format "Untitled — cSlope"
+    expect(screen.getByText(/— cSlope$/)).toBeInTheDocument();
   });
 
   it("renders Edit and Results mode tabs", () => {
@@ -46,26 +49,23 @@ describe("App — VS Code dark layout", () => {
 
   it("shows the explorer sidebar by default", () => {
     render(<App />);
-    // Explorer (Models) shows the model names
-    expect(screen.getAllByText("Untitled").length).toBeGreaterThanOrEqual(1);
+    // Explorer model row has aria-label matching the model name
+    expect(screen.getByLabelText("Untitled")).toBeInTheDocument();
   });
 
   it("can toggle explorer open/closed", async () => {
     const user = userEvent.setup();
     render(<App />);
     const toggle = screen.getByLabelText("Toggle models");
-    // Explorer sidebar should be visible initially
-    const explorerModels = screen.getAllByText(/Untitled/);
-    expect(explorerModels.length).toBeGreaterThanOrEqual(2); // title bar + explorer
+    // Explorer sidebar should be visible initially — model row has aria-label
+    expect(screen.getByLabelText("Untitled")).toBeInTheDocument();
     // Close explorer
     await user.click(toggle);
-    // Only title bar "Untitled — cSlope" should remain
-    const afterClose = screen.getAllByText(/Untitled/);
-    expect(afterClose).toHaveLength(1);
+    // Model row should no longer be present
+    expect(screen.queryByLabelText("Untitled")).not.toBeInTheDocument();
     // Re-open
     await user.click(toggle);
-    const afterOpen = screen.getAllByText(/Untitled/);
-    expect(afterOpen.length).toBeGreaterThanOrEqual(2);
+    expect(screen.getByLabelText("Untitled")).toBeInTheDocument();
   });
 
   it("renders the interactive canvas in edit mode", () => {
@@ -77,7 +77,9 @@ describe("App — VS Code dark layout", () => {
     render(<App />);
     expect(screen.getByText("EDIT")).toBeInTheDocument();
     const pointCount = useAppStore.getState().coordinates.length;
-    expect(screen.getByText(new RegExp(`Points: ${pointCount}`))).toBeInTheDocument();
+    expect(
+      screen.getByText(new RegExp(`Points: ${pointCount}`)),
+    ).toBeInTheDocument();
   });
 
   it("shows properties panel sections in sidebar", () => {
@@ -86,5 +88,65 @@ describe("App — VS Code dark layout", () => {
     expect(screen.getByText("Exterior Boundary")).toBeInTheDocument();
     // "Materials" may appear in both explorer and properties — just check at least one
     expect(screen.getAllByText("Materials").length).toBeGreaterThanOrEqual(1);
+  });
+
+  // ── Running / error / result states ──────────────────────────────────
+
+  it("shows cancel button and analysing indicator when running", () => {
+    useAppStore.setState({ runState: "running", progress: 0.4 });
+    render(<App />);
+    // TabBar should show a Cancel button when running
+    const cancelBtn = screen.getByTitle("Cancel running analysis");
+    expect(cancelBtn).toBeInTheDocument();
+    expect(screen.getByText("Cancel")).toBeInTheDocument();
+    // StatusBar shows "Analysing..."
+    expect(screen.getByText("Analysing...")).toBeInTheDocument();
+  });
+
+  it("shows FOS result in status bar when analysis is done", () => {
+    useAppStore.setState({
+      mode: "result",
+      runState: "done",
+      result: {
+        minFOS: 1.234,
+        maxFOS: 1.6,
+        criticalSurface: {
+          cx: 10,
+          cy: 12,
+          radius: 10,
+          fos: 1.234,
+          entryPoint: [2, 8],
+          exitPoint: [18, 2],
+          converged: true,
+        },
+        allSurfaces: [
+          {
+            cx: 10,
+            cy: 12,
+            radius: 10,
+            fos: 1.234,
+            entryPoint: [2, 8],
+            exitPoint: [18, 2],
+            converged: true,
+          },
+        ],
+        criticalSlices: [],
+        method: "Bishop",
+        elapsedMs: 100,
+      },
+    });
+    render(<App />);
+    // StatusBar displays FOS and method
+    expect(screen.getByText("1.234")).toBeInTheDocument();
+    expect(screen.getByText(/(Bishop)/)).toBeInTheDocument();
+    // Status bar shows RESULT mode
+    expect(screen.getByText("RESULT")).toBeInTheDocument();
+  });
+
+  it("disables run-all menu when analysis is running", () => {
+    useAppStore.setState({ runState: "running" });
+    render(<App />);
+    const runMenu = screen.getByLabelText("Run menu");
+    expect(runMenu).toBeDisabled();
   });
 });

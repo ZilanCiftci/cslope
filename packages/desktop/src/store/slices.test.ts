@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import { useAppStore } from "./app-store";
 import { INITIAL_MODEL } from "./slices/modelsSlice";
+import type { ModelEntry } from "./types";
 
 function clone<T>(value: T): T {
   const sc = globalThis.structuredClone as ((v: T) => T) | undefined;
@@ -22,6 +23,8 @@ function resetStoreState() {
     piezometricLine: clone(baseModel.piezometricLine),
     udls: [],
     lineLoads: [],
+    customSearchPlanes: [],
+    customPlanesOnly: false,
     options: clone(baseModel.options),
     analysisLimits: clone(baseModel.analysisLimits),
     runState: "idle",
@@ -700,6 +703,106 @@ describe("store slices", () => {
     expect(useAppStore.getState().selectedRegionKey).toBeNull();
   });
 
+  // ── analysisSlice ────────────────────────────────────────────────────
+
+  it("analysisSlice invalidateAnalysis resets run state", () => {
+    useAppStore.setState({
+      runState: "done",
+      progress: 1,
+      result: { minFOS: 1.2 } as never,
+      errorMessage: "some error",
+    });
+
+    useAppStore.getState().invalidateAnalysis();
+    const s = useAppStore.getState();
+    expect(s.runState).toBe("idle");
+    expect(s.progress).toBe(0);
+    expect(s.result).toBeNull();
+    expect(s.errorMessage).toBeNull();
+  });
+
+  it("analysisSlice setAnalysisLimits merges patch and syncs model", () => {
+    const initial = useAppStore.getState().analysisLimits;
+    useAppStore.getState().setAnalysisLimits({ entryLeftX: 5 });
+
+    const updated = useAppStore.getState().analysisLimits;
+    expect(updated.entryLeftX).toBe(5);
+    // other fields unchanged
+    expect(updated.entryRightX).toBe(initial.entryRightX);
+
+    // synced to model
+    const model = useAppStore.getState().models[0];
+    expect(model.analysisLimits.entryLeftX).toBe(5);
+  });
+
+  it("analysisSlice setAnalysisLimits invalidates analysis", () => {
+    useAppStore.setState({ runState: "done", result: { minFOS: 1 } as never });
+    useAppStore.getState().setAnalysisLimits({ entryRightX: 20 });
+    expect(useAppStore.getState().runState).toBe("idle");
+    expect(useAppStore.getState().result).toBeNull();
+  });
+
+  it("analysisSlice setOptions merges patch and syncs model", () => {
+    useAppStore.getState().setOptions({ slices: 50 });
+    expect(useAppStore.getState().options.slices).toBe(50);
+    const model = useAppStore.getState().models[0];
+    expect(model.options.slices).toBe(50);
+  });
+
+  it("analysisSlice setOptions invalidates analysis", () => {
+    useAppStore.setState({ runState: "done", result: { minFOS: 1 } as never });
+    useAppStore.getState().setOptions({ method: "Bishop" });
+    expect(useAppStore.getState().runState).toBe("idle");
+  });
+
+  it("analysisSlice addCustomSearchPlane adds and syncs", () => {
+    expect(useAppStore.getState().customSearchPlanes).toHaveLength(0);
+    useAppStore.getState().addCustomSearchPlane();
+    const planes = useAppStore.getState().customSearchPlanes;
+    expect(planes).toHaveLength(1);
+    expect(planes[0]).toHaveProperty("cx");
+    expect(planes[0]).toHaveProperty("cy");
+    expect(planes[0]).toHaveProperty("radius");
+
+    const model = useAppStore.getState().models[0];
+    expect(model.customSearchPlanes).toHaveLength(1);
+  });
+
+  it("analysisSlice updateCustomSearchPlane patches plane and syncs", () => {
+    useAppStore.getState().addCustomSearchPlane();
+    const id = useAppStore.getState().customSearchPlanes[0].id;
+
+    useAppStore.getState().updateCustomSearchPlane(id, { cx: 15, cy: 20 });
+    const updated = useAppStore.getState().customSearchPlanes[0];
+    expect(updated.cx).toBe(15);
+    expect(updated.cy).toBe(20);
+
+    const model = useAppStore.getState().models[0];
+    expect(model.customSearchPlanes[0].cx).toBe(15);
+  });
+
+  it("analysisSlice removeCustomSearchPlane removes and syncs", () => {
+    useAppStore.getState().addCustomSearchPlane();
+    useAppStore.getState().addCustomSearchPlane();
+    expect(useAppStore.getState().customSearchPlanes).toHaveLength(2);
+
+    const id = useAppStore.getState().customSearchPlanes[0].id;
+    useAppStore.getState().removeCustomSearchPlane(id);
+    expect(useAppStore.getState().customSearchPlanes).toHaveLength(1);
+
+    const model = useAppStore.getState().models[0];
+    expect(model.customSearchPlanes).toHaveLength(1);
+  });
+
+  it("analysisSlice setCustomPlanesOnly sets value and syncs", () => {
+    expect(useAppStore.getState().customPlanesOnly).toBe(false);
+    useAppStore.getState().setCustomPlanesOnly(true);
+    expect(useAppStore.getState().customPlanesOnly).toBe(true);
+
+    const model = useAppStore.getState().models[0];
+    expect(model.customPlanesOnly).toBe(true);
+  });
+
   // ── resultViewSlice ──────────────────────────────────────────────────
 
   it("resultViewSlice setResultViewSettings merges patch into settings", () => {
@@ -965,5 +1068,359 @@ describe("store slices", () => {
 
     useAppStore.getState().setCursorWorld(null);
     expect(useAppStore.getState().cursorWorld).toBeNull();
+  });
+
+  // ── modelsSlice: addModel with default name ──────────────────────
+
+  it("modelsSlice addModel uses default name when none provided", () => {
+    const store = useAppStore.getState();
+    const prevCount = store.models.length;
+    store.addModel();
+    const next = useAppStore.getState();
+    expect(next.models).toHaveLength(prevCount + 1);
+    const newModel = next.models.find((m) => m.id === next.activeModelId);
+    expect(newModel?.name).toContain("Untitled");
+  });
+
+  // ── modelsSlice: switchModel with legacy viewOffset fields ──────
+
+  it("modelsSlice switchModel applies mapModelToState defaults for missing fields", () => {
+    const store = useAppStore.getState();
+    // Create a minimal model entry with legacy/missing optional fields
+    const legacyModel = {
+      id: "legacy-1",
+      name: "Legacy",
+      coordinates: [
+        [0, 0],
+        [10, 10],
+        [20, 0],
+      ] as [number, number][],
+      materials: clone(store.materials),
+      materialBoundaries: [],
+      regionMaterials: {},
+      piezometricLine: clone(store.piezometricLine),
+      udls: [],
+      lineLoads: [],
+      customSearchPlanes: [],
+      customPlanesOnly: false,
+      options: clone(store.options),
+      analysisLimits: clone(store.analysisLimits),
+      // Legacy fields: viewOffset/viewScale instead of edit/result variants
+      viewOffset: [5, 10] as [number, number],
+      viewScale: 2.5,
+      // No mode, orientation, projectInfo, resultViewSettings, etc.
+    };
+    useAppStore.setState({
+      models: [...store.models, legacyModel as ModelEntry],
+    });
+
+    // Switch to the legacy model — exercises ?? fallbacks in mapModelToState
+    useAppStore.getState().switchModel("legacy-1");
+    const next = useAppStore.getState();
+    expect(next.activeModelId).toBe("legacy-1");
+    expect(next.mode).toBe("edit"); // ?? "edit"
+    expect(next.orientation).toBe("ltr"); // ?? "ltr"
+    expect(next.editViewOffset).toEqual([5, 10]); // ?? viewOffset
+    expect(next.editViewScale).toBe(2.5); // ?? viewScale
+    expect(next.resultViewOffset).toEqual([5, 10]);
+    expect(next.resultViewScale).toBe(2.5);
+    expect(next.runState).toBe("idle"); // ?? "idle"
+    expect(next.progress).toBe(0); // ?? 0
+    expect(next.result).toBeNull(); // ?? null
+    expect(next.errorMessage).toBeNull(); // ?? null
+    expect(next.resultViewSettings).toBeDefined();
+  });
+
+  // ── modelsSlice: duplicateModel with rich data ────────────────────
+
+  it("modelsSlice duplicateModel deep-copies resultViewSettings and viewLock", () => {
+    const store = useAppStore.getState();
+    const id = store.activeModelId;
+
+    // Set up rich result view settings with viewLock and annotations
+    useAppStore.getState().addAnnotation("text");
+    useAppStore.getState().addAnnotation("color-bar");
+    const annos = useAppStore.getState().resultViewSettings.annotations;
+    expect(annos.length).toBeGreaterThanOrEqual(2);
+
+    useAppStore.getState().setResultViewSettings({
+      viewLock: { enabled: true, bottomLeft: [1, 2], topRight: [3, 4] },
+    });
+    expect(useAppStore.getState().resultViewSettings.viewLock).toBeDefined();
+
+    // Set viewport offsets to exercise the copy branches
+    useAppStore.getState().setEditViewOffset([11, 22]);
+    useAppStore.getState().setEditViewScale(3.0);
+    useAppStore.getState().setResultViewOffset([33, 44]);
+    useAppStore.getState().setResultViewScale(4.0);
+
+    // Save and duplicate
+    useAppStore.getState().saveCurrentModel();
+    useAppStore.getState().duplicateModel(id);
+
+    const next = useAppStore.getState();
+    const copy = next.models.find((m) => m.id === next.activeModelId);
+    expect(copy).toBeDefined();
+    expect(copy!.id).not.toBe(id);
+    expect(copy!.name).toContain("(copy)");
+
+    // Verify deep copy of resultViewSettings
+    expect(copy!.resultViewSettings).toBeDefined();
+    expect(copy!.resultViewSettings!.annotations).toHaveLength(annos.length);
+    expect(copy!.resultViewSettings!.viewLock).toBeDefined();
+    expect(copy!.resultViewSettings!.viewLock!.bottomLeft).toEqual([1, 2]);
+    expect(copy!.resultViewSettings!.viewLock!.topRight).toEqual([3, 4]);
+
+    // Verify viewport offsets are deep-copied
+    expect(copy!.editViewOffset).toEqual([11, 22]);
+    expect(copy!.editViewScale).toBe(3.0);
+    expect(copy!.resultViewOffset).toEqual([33, 44]);
+    expect(copy!.resultViewScale).toBe(4.0);
+
+    // Verify independence (mutation doesn't affect original)
+    copy!.resultViewSettings!.viewLock!.bottomLeft[0] = 999;
+    const original = next.models.find((m) => m.id === id);
+    expect(original!.resultViewSettings?.viewLock?.bottomLeft[0]).not.toBe(999);
+  });
+
+  it("modelsSlice duplicateModel copies regionMaterials with remapped IDs", () => {
+    const store = useAppStore.getState();
+    const id = store.activeModelId;
+
+    // Add a material boundary and assign regions
+    store.addMaterial();
+    const mats = useAppStore.getState().materials;
+    const mat2Id = mats[1].id;
+    useAppStore.getState().addMaterialBoundary([
+      [5, 5],
+      [15, 5],
+    ]);
+    const bnds = useAppStore.getState().materialBoundaries;
+    const bndId = bnds[0].id;
+
+    useAppStore.getState().setRegionMaterial(`below-${bndId}`, mat2Id);
+    useAppStore.getState().setRegionMaterial("top", mats[0].id);
+
+    useAppStore.getState().saveCurrentModel();
+    useAppStore.getState().duplicateModel(id);
+
+    const next = useAppStore.getState();
+    const copy = next.models.find((m) => m.id === next.activeModelId);
+    expect(copy).toBeDefined();
+    // Region materials should exist with remapped keys
+    expect(Object.keys(copy!.regionMaterials).length).toBeGreaterThan(0);
+    expect(copy!.regionMaterials["top"]).toBeDefined();
+    // The "below-xxx" key should have a new boundary ID
+    const belowKeys = Object.keys(copy!.regionMaterials).filter((k) =>
+      k.startsWith("below-"),
+    );
+    expect(belowKeys.length).toBe(1);
+    expect(belowKeys[0]).not.toBe(`below-${bndId}`); // remapped
+  });
+
+  // ── modelsSlice: loadProject with saved viewport ────────────────
+
+  it("modelsSlice loadProject sets _pendingFitToScreen false when viewport is saved", () => {
+    const store = useAppStore.getState();
+    const model = clone(store.models[0]);
+    model.id = "vp-saved";
+    model.editViewScale = 2.5;
+    model.editViewOffset = [10, 20];
+
+    store.loadProject({ models: [model], activeModelId: "vp-saved" });
+    const next = useAppStore.getState();
+    expect(next._pendingFitToScreen).toBe(false);
+    expect(next.editViewScale).toBe(2.5);
+  });
+
+  it("modelsSlice loadProject sets _pendingFitToScreen true when no viewport saved", () => {
+    const store = useAppStore.getState();
+    const model = clone(store.models[0]);
+    model.id = "vp-none";
+    model.editViewScale = undefined;
+    model.resultViewScale = undefined;
+    model.viewScale = undefined;
+
+    store.loadProject({ models: [model], activeModelId: "vp-none" });
+    const next = useAppStore.getState();
+    expect(next._pendingFitToScreen).toBe(true);
+  });
+
+  // ── modelsSlice: deleteModel active vs non-active ────────────────
+
+  it("modelsSlice deleteModel non-active model keeps active unchanged", () => {
+    const store = useAppStore.getState();
+    store.addModel("Model X");
+    const modelXId = useAppStore.getState().activeModelId;
+
+    // Switch back to initial
+    const initialId = store.models[0].id;
+    useAppStore.getState().switchModel(initialId);
+    expect(useAppStore.getState().activeModelId).toBe(initialId);
+
+    // Delete non-active model
+    useAppStore.getState().deleteModel(modelXId);
+    const next = useAppStore.getState();
+    expect(next.models).toHaveLength(1);
+    expect(next.activeModelId).toBe(initialId);
+  });
+
+  // ── modelsSlice: duplicateModel with UDLs and line loads ─────────
+
+  it("modelsSlice duplicateModel copies udls and lineLoads with new IDs", () => {
+    const store = useAppStore.getState();
+    store.addUdl();
+    store.addLineLoad();
+    store.saveCurrentModel();
+
+    const id = store.activeModelId;
+    useAppStore.getState().duplicateModel(id);
+    const next = useAppStore.getState();
+    const copy = next.models.find((m) => m.id === next.activeModelId);
+
+    expect(copy!.udls).toHaveLength(1);
+    expect(copy!.lineLoads).toHaveLength(1);
+    // IDs should be different from originals
+    const orig = next.models.find((m) => m.id === id);
+    expect(copy!.udls[0].id).not.toBe(orig!.udls[0].id);
+    expect(copy!.lineLoads[0].id).not.toBe(orig!.lineLoads[0].id);
+  });
+
+  // ── modelsSlice: duplicateModel piezometric line ─────────────────
+
+  it("modelsSlice duplicateModel copies piezometric lines with remapped IDs", () => {
+    const store = useAppStore.getState();
+    store.addPiezoLine();
+    const lines = useAppStore.getState().piezometricLine.lines;
+    expect(lines).toHaveLength(1);
+
+    store.saveCurrentModel();
+    const id = store.activeModelId;
+    useAppStore.getState().duplicateModel(id);
+
+    const next = useAppStore.getState();
+    const copy = next.models.find((m) => m.id === next.activeModelId);
+    expect(copy!.piezometricLine.lines).toHaveLength(1);
+    expect(copy!.piezometricLine.lines[0].id).not.toBe(lines[0].id);
+  });
+
+  // ── geometrySlice: boundary management ───────────────────────────
+
+  it("geometrySlice removeMaterialBoundary removes boundary and cleans up", () => {
+    const store = useAppStore.getState();
+    store.addMaterialBoundary([
+      [5, 5],
+      [15, 5],
+    ]);
+    let next = useAppStore.getState();
+    expect(next.materialBoundaries).toHaveLength(1);
+    const bndId = next.materialBoundaries[0].id;
+
+    next.removeMaterialBoundary(bndId);
+    next = useAppStore.getState();
+    expect(next.materialBoundaries).toHaveLength(0);
+  });
+
+  // ── loadsSlice: UDL and line load management ─────────────────────
+
+  it("loadsSlice addUdl adds default UDL and syncs to model", () => {
+    useAppStore.getState().addUdl();
+    const next = useAppStore.getState();
+    expect(next.udls).toHaveLength(1);
+    expect(next.udls[0].magnitude).toBeDefined();
+    expect(next.models[0].udls).toHaveLength(1);
+  });
+
+  it("loadsSlice updateUdl patches a UDL", () => {
+    useAppStore.getState().addUdl();
+    const udlId = useAppStore.getState().udls[0].id;
+    useAppStore.getState().updateUdl(udlId, { magnitude: 50 });
+    expect(useAppStore.getState().udls[0].magnitude).toBe(50);
+  });
+
+  it("loadsSlice removeUdl removes a UDL", () => {
+    useAppStore.getState().addUdl();
+    const udlId = useAppStore.getState().udls[0].id;
+    useAppStore.getState().removeUdl(udlId);
+    expect(useAppStore.getState().udls).toHaveLength(0);
+  });
+
+  it("loadsSlice addLineLoad adds default line load and syncs to model", () => {
+    useAppStore.getState().addLineLoad();
+    const next = useAppStore.getState();
+    expect(next.lineLoads).toHaveLength(1);
+    expect(next.lineLoads[0].magnitude).toBeDefined();
+    expect(next.models[0].lineLoads).toHaveLength(1);
+  });
+
+  it("loadsSlice updateLineLoad patches a line load", () => {
+    useAppStore.getState().addLineLoad();
+    const llId = useAppStore.getState().lineLoads[0].id;
+    useAppStore.getState().updateLineLoad(llId, { magnitude: 75 });
+    expect(useAppStore.getState().lineLoads[0].magnitude).toBe(75);
+  });
+
+  it("loadsSlice removeLineLoad removes a line load", () => {
+    useAppStore.getState().addLineLoad();
+    const llId = useAppStore.getState().lineLoads[0].id;
+    useAppStore.getState().removeLineLoad(llId);
+    expect(useAppStore.getState().lineLoads).toHaveLength(0);
+  });
+
+  // ── layoutSlice: theme, sidebar, explorer ────────────────────────
+
+  it("layoutSlice toggleTheme switches between dark and light", () => {
+    useAppStore.getState().setTheme("light");
+    useAppStore.getState().toggleTheme();
+    expect(useAppStore.getState().theme).toBe("dark");
+    useAppStore.getState().toggleTheme();
+    expect(useAppStore.getState().theme).toBe("light");
+  });
+
+  it("layoutSlice toggleSidebar toggles sidebar open state", () => {
+    const initial = useAppStore.getState().sidebarOpen;
+    useAppStore.getState().toggleSidebar();
+    expect(useAppStore.getState().sidebarOpen).toBe(!initial);
+    useAppStore.getState().toggleSidebar();
+    expect(useAppStore.getState().sidebarOpen).toBe(initial);
+  });
+
+  it("layoutSlice setActiveSection changes active section", () => {
+    useAppStore.getState().setActiveSection("materials");
+    expect(useAppStore.getState().activeSection).toBe("materials");
+    useAppStore.getState().setActiveSection(null);
+    expect(useAppStore.getState().activeSection).toBeNull();
+  });
+
+  it("layoutSlice setExplorerLocation and setPropertiesLocation", () => {
+    useAppStore.getState().setExplorerLocation("right");
+    expect(useAppStore.getState().explorerLocation).toBe("right");
+    useAppStore.getState().setPropertiesLocation("left");
+    expect(useAppStore.getState().propertiesLocation).toBe("left");
+  });
+
+  // ── geometrySlice: orientation ─────────────────────────────────────
+
+  it("geometrySlice setOrientation changes orientation and syncs", () => {
+    useAppStore.getState().setOrientation("rtl");
+    const next = useAppStore.getState();
+    expect(next.orientation).toBe("rtl");
+    expect(next.models[0].orientation).toBe("rtl");
+  });
+
+  // ── geometrySlice: piezometric line management ──────────────────
+
+  it("geometrySlice addPiezometricLine adds line and syncs", () => {
+    useAppStore.getState().addPiezoLine();
+    const next = useAppStore.getState();
+    expect(next.piezometricLine.lines).toHaveLength(1);
+    expect(next.models[0].piezometricLine.lines).toHaveLength(1);
+  });
+
+  it("geometrySlice removePiezoLine removes line", () => {
+    useAppStore.getState().addPiezoLine();
+    const lineId = useAppStore.getState().piezometricLine.lines[0].id;
+    useAppStore.getState().removePiezoLine(lineId);
+    expect(useAppStore.getState().piezometricLine.lines).toHaveLength(0);
   });
 });
