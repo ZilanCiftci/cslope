@@ -12,6 +12,7 @@ import { createViewportSlice } from "./slices/viewportSlice";
 export * from "./types";
 export * from "./defaults";
 export * from "./helpers";
+export * from "./selectors";
 
 /**
  * Fields tracked by undo/redo — geometry, materials, loads, analysis options.

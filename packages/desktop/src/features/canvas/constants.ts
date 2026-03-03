@@ -1,3 +1,5 @@
+import { UDL_LOAD_COLOR, LINE_LOAD_COLOR } from "../rendering/style-spec";
+
 // Canvas interaction constants
 export const POINT_RADIUS = 6;
 export const SNAP_THRESHOLD = 12; // px distance to snap to a point
@@ -14,11 +16,11 @@ export const ARROW_HEAD_LEN_PX = 12; // arrowhead length in pixels
 export const HATCH_SPACING_PX = 8; // spacing between hatch lines
 export const RULER_SIZE_PX = 32; // axis overlay ruler band width/height
 
-// Load colors (canvas hex, PDF RGB tuples)
-export const UDL_COLOR = "#cc0000";
-export const LL_COLOR = "#2563eb";
-export const UDL_COLOR_RGB: [number, number, number] = [204, 0, 0];
-export const LL_COLOR_RGB: [number, number, number] = [37, 99, 235];
+// Load colors — derived from shared style-spec
+export const UDL_COLOR = UDL_LOAD_COLOR.hex;
+export const LL_COLOR = LINE_LOAD_COLOR.hex;
+export const UDL_COLOR_RGB: [number, number, number] = UDL_LOAD_COLOR.rgb;
+export const LL_COLOR_RGB: [number, number, number] = LINE_LOAD_COLOR.rgb;
 
 /** Read a CSS custom property from :root at render time. */
 export function cssVar(name: string): string {

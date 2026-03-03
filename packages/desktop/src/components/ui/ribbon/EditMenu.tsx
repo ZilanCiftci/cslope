@@ -1,8 +1,11 @@
 import { useEffect } from "react";
 import { createPortal } from "react-dom";
 import { useStore } from "zustand";
-import { useAppStore } from "../../../store/app-store";
-import { RUN_RESET, getAnalysisInputSignature } from "../../../store/helpers";
+import {
+  useAppStore,
+  performUndo,
+  performRedo,
+} from "../../../store/app-store";
 import { RibbonGroup, RibbonButton } from "./RibbonParts";
 import { RibbonUndoIcon, RibbonRedoIcon } from "../../icons/EditIcons";
 
@@ -22,34 +25,6 @@ export function EditMenu({ isOpen, onActivate, panelHost }: Props) {
     (s) => s.futureStates.length > 0,
   );
 
-  const runUndo = () => {
-    const before = getAnalysisInputSignature(useAppStore.getState());
-    useAppStore.temporal.getState().resume();
-    useAppStore.temporal.getState().undo();
-    const after = getAnalysisInputSignature(useAppStore.getState());
-    if (before !== after) {
-      useAppStore.setState(RUN_RESET);
-    }
-  };
-
-  const runRedo = () => {
-    const before = getAnalysisInputSignature(useAppStore.getState());
-    useAppStore.temporal.getState().resume();
-    useAppStore.temporal.getState().redo();
-    const after = getAnalysisInputSignature(useAppStore.getState());
-    if (before !== after) {
-      useAppStore.setState(RUN_RESET);
-    }
-  };
-
-  const handleUndo = () => {
-    runUndo();
-  };
-
-  const handleRedo = () => {
-    runRedo();
-  };
-
   // ── Keyboard shortcuts (Ctrl+Z / Ctrl+Shift+Z / Ctrl+Y) ──
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
@@ -60,7 +35,7 @@ export function EditMenu({ isOpen, onActivate, panelHost }: Props) {
       if (e.key === "z" && !e.shiftKey) {
         e.preventDefault();
         if (canUndo) {
-          runUndo();
+          performUndo();
         }
       }
       // Ctrl+Shift+Z or Ctrl+Y  →  Redo
@@ -72,7 +47,7 @@ export function EditMenu({ isOpen, onActivate, panelHost }: Props) {
       ) {
         e.preventDefault();
         if (canRedo) {
-          runRedo();
+          performRedo();
         }
       }
     };
@@ -115,14 +90,14 @@ export function EditMenu({ isOpen, onActivate, panelHost }: Props) {
                 icon={<RibbonUndoIcon />}
                 label="Undo"
                 shortcut="Ctrl+Z"
-                onClick={handleUndo}
+                onClick={performUndo}
                 disabled={!canUndo}
               />
               <RibbonButton
                 icon={<RibbonRedoIcon />}
                 label="Redo"
                 shortcut="Ctrl+Shift+Z"
-                onClick={handleRedo}
+                onClick={performRedo}
                 disabled={!canRedo}
               />
             </RibbonGroup>

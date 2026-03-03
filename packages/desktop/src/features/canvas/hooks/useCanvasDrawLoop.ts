@@ -1,5 +1,5 @@
 import { useEffect, type MutableRefObject } from "react";
-import { useAppStore } from "../../../store/app-store";
+import { useAppStore, getActiveViewport } from "../../../store/app-store";
 import { drawCanvas, type DrawCanvasParams } from "../draw";
 import type { CanvasSize } from "./useCanvasSizing";
 
@@ -47,12 +47,8 @@ export function useCanvasDrawLoop({
         if (!ctx) return;
 
         const state = useAppStore.getState();
-        const currentViewOffset =
-          state.mode === "result"
-            ? state.resultViewOffset
-            : state.editViewOffset;
-        const currentViewScale =
-          state.mode === "result" ? state.resultViewScale : state.editViewScale;
+        const { viewOffset: currentViewOffset, viewScale: currentViewScale } =
+          getActiveViewport(state);
 
         const currentWorldToCanvas = (
           wx: number,

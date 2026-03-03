@@ -9,12 +9,10 @@ import {
   ARROW_HEIGHT_PX,
   GRID_STEP_MIN,
   HATCH_SPACING_PX,
-  LL_COLOR,
   POINT_COLOR,
   POINT_COLOR_HOVER,
   POINT_COLOR_SELECTED,
   POINT_RADIUS,
-  UDL_COLOR,
   cssVar,
 } from "./constants";
 import { GRID_RAW_STEP_PX } from "../../constants";
@@ -26,6 +24,35 @@ import {
   getAnnotationBoundsPx,
 } from "./helpers";
 import type { PointHit } from "./types";
+import {
+  ANNOTATION_DEFAULT_FONT_FAMILY,
+  ANNOTATION_DEFAULT_FONT_SIZE,
+  ANNOTATION_DEFAULT_TEXT_COLOR,
+  ANNOTATION_LINE_HEIGHT,
+  ANNOTATION_SCALE_DIVISOR,
+  COLOR_BAR_NUM_TICKS,
+  CRITICAL_SURFACE_COLOR,
+  ENTRY_DOT_COLOR,
+  ENTRY_EXIT_DOT_RADIUS_PX,
+  ENTRY_EXIT_DOT_SPACING_PX,
+  EXIT_DOT_COLOR,
+  FAILURE_MASS_COLOR,
+  FAILURE_MASS_FILL_OPACITY,
+  LINE_LOAD_COLOR,
+  MARKER_BAR_H_PX,
+  MARKER_COLOR,
+  MARKER_SZ_PX,
+  PIEZO_BAR_GAP1_PX,
+  PIEZO_BAR_GAP2_PX,
+  PIEZO_BAR_W_PX,
+  PIEZO_COLOR,
+  PIEZO_TRI_HALF_PX,
+  PIEZO_TRI_H_PX,
+  SLICE_LINE_OPACITY,
+  SLICE_LINE_WIDTH_PX,
+  SLIP_SURFACE_OPACITY,
+  UDL_LOAD_COLOR,
+} from "../rendering/style-spec";
 
 const arcPointCache = new WeakMap<object, Map<string, [number, number][]>>();
 
@@ -487,7 +514,7 @@ export function drawCanvas(
       ctx.clip();
 
       // Draw diagonal hatch lines (top-left to bottom-right pattern)
-      ctx.strokeStyle = UDL_COLOR;
+      ctx.strokeStyle = UDL_LOAD_COLOR.hex;
       ctx.lineWidth = 1;
       ctx.globalAlpha = 0.5;
       const allXs = surfCanvas.map(([x]) => x);
@@ -510,7 +537,7 @@ export function drawCanvas(
       ctx.restore();
 
       // ── Outline the hatched area ──
-      ctx.strokeStyle = UDL_COLOR;
+      ctx.strokeStyle = UDL_LOAD_COLOR.hex;
       ctx.lineWidth = 1.5;
       ctx.beginPath();
       // Top edge (left→right)
@@ -537,7 +564,7 @@ export function drawCanvas(
         hoverHit?.kind === "udl" &&
         hoverHit.udlId === u.id &&
         hoverHit.handle === "x1";
-      const arrowColor1 = hoverX1 ? "#ff0000" : UDL_COLOR;
+      const arrowColor1 = hoverX1 ? "#ff0000" : UDL_LOAD_COLOR.hex;
       ctx.strokeStyle = arrowColor1;
       ctx.lineWidth = hoverX1 ? 3 : 2;
       ctx.beginPath();
@@ -560,7 +587,7 @@ export function drawCanvas(
         hoverHit?.kind === "udl" &&
         hoverHit.udlId === u.id &&
         hoverHit.handle === "x2";
-      const arrowColor2 = hoverX2 ? "#ff0000" : UDL_COLOR;
+      const arrowColor2 = hoverX2 ? "#ff0000" : UDL_LOAD_COLOR.hex;
       ctx.strokeStyle = arrowColor2;
       ctx.lineWidth = hoverX2 ? 3 : 2;
       ctx.beginPath();
@@ -578,7 +605,7 @@ export function drawCanvas(
       // ── Label above ──
       const labelX = (cx1 + cx2) / 2;
       const labelY = Math.min(topY1, topY2) - 8;
-      ctx.fillStyle = UDL_COLOR;
+      ctx.fillStyle = UDL_LOAD_COLOR.hex;
       ctx.font = "bold 13px sans-serif";
       ctx.textAlign = "center";
       ctx.textBaseline = "bottom";
@@ -597,7 +624,7 @@ export function drawCanvas(
 
       const isHover =
         hoverHit?.kind === "lineLoad" && hoverHit.loadId === ll.id;
-      const color = isHover ? "#3b82f6" : LL_COLOR;
+      const color = isHover ? "#3b82f6" : LINE_LOAD_COLOR.hex;
 
       // Shaft
       ctx.strokeStyle = color;
@@ -628,7 +655,7 @@ export function drawCanvas(
   // ── Piezometric lines ──────────────────────────────────
   if (piezometricLine.lines.length > 0) {
     const multiLine = piezometricLine.lines.length > 1;
-    const piezoBlue = "#1a3a8a";
+    const piezoBlue = PIEZO_COLOR.hex;
     for (let lineIdx = 0; lineIdx < piezometricLine.lines.length; lineIdx++) {
       const line = piezometricLine.lines[lineIdx];
       if (line.coordinates.length < 2) continue;
@@ -648,8 +675,8 @@ export function drawCanvas(
 
       // Symbol at the midpoint of each segment:
       // inverted triangle with bottom vertex on the line + two horizontal lines below
-      const triHalf = 6; // half-width of triangle base
-      const triH = 10; // triangle height
+      const triHalf = PIEZO_TRI_HALF_PX;
+      const triH = PIEZO_TRI_H_PX;
       const labelNum = String(lineIdx + 1);
       for (let i = 0; i < plCoords.length - 1; i++) {
         const [ax, ay] = worldToCanvas(plCoords[i][0], plCoords[i][1], w, h);
@@ -673,16 +700,16 @@ export function drawCanvas(
         ctx.fill();
 
         // Two horizontal lines below the triangle tip
-        const barW = triHalf + 1;
+        const barW = PIEZO_BAR_W_PX;
         ctx.strokeStyle = piezoBlue;
         ctx.lineWidth = 1.2;
         ctx.beginPath();
-        ctx.moveTo(mx - barW, my + 3);
-        ctx.lineTo(mx + barW, my + 3);
+        ctx.moveTo(mx - barW, my + PIEZO_BAR_GAP1_PX);
+        ctx.lineTo(mx + barW, my + PIEZO_BAR_GAP1_PX);
         ctx.stroke();
         ctx.beginPath();
-        ctx.moveTo(mx - barW, my + 6);
-        ctx.lineTo(mx + barW, my + 6);
+        ctx.moveTo(mx - barW, my + PIEZO_BAR_GAP2_PX);
+        ctx.lineTo(mx + barW, my + PIEZO_BAR_GAP2_PX);
         ctx.stroke();
 
         // Line number above the triangle (only if multiple lines)
@@ -811,13 +838,13 @@ export function drawCanvas(
       worldY: number,
       dir: "left" | "right",
       handle: "entryLeftX" | "entryRightX" | "exitLeftX" | "exitRightX",
-      baseColor: string = "#000000",
-      activeColor: string = "#cc0000",
+      baseColor: string = MARKER_COLOR.hex,
+      activeColor: string = EXIT_DOT_COLOR.hex,
     ) => {
       const [cx, cy] = worldToCanvas(worldX, worldY, w, h);
       const isHover = hoverHit?.kind === "limit" && hoverHit.handle === handle;
-      const sz = 7; // half-size of arrowhead
-      const barH = 10; // half-height of the bar |
+      const sz = MARKER_SZ_PX;
+      const barH = MARKER_BAR_H_PX;
 
       const color = isHover ? activeColor : baseColor;
       ctx.strokeStyle = color;
@@ -844,8 +871,8 @@ export function drawCanvas(
     const drawDottedRange = (surfPts: [number, number][], color: string) => {
       if (surfPts.length < 2) return;
       const canvasPts = surfPts.map(([sx, sy]) => worldToCanvas(sx, sy, w, h));
-      const spacing = 12;
-      const radius = 2.5;
+      const spacing = ENTRY_EXIT_DOT_SPACING_PX;
+      const radius = ENTRY_EXIT_DOT_RADIUS_PX;
 
       ctx.fillStyle = color;
 
@@ -914,7 +941,7 @@ export function drawCanvas(
       surfPts.push([rightX, surfaceYAtX(rightX)!]);
       surfPts.sort((a, b) => a[0] - b[0]);
 
-      drawDottedRange(surfPts, "#006400");
+      drawDottedRange(surfPts, ENTRY_DOT_COLOR.hex);
     }
 
     if (entryLeftY !== null) {
@@ -923,8 +950,8 @@ export function drawCanvas(
         entryLeftY,
         leftHandleDir,
         "entryLeftX",
-        "#000000",
-        "#006400",
+        MARKER_COLOR.hex,
+        ENTRY_DOT_COLOR.hex,
       );
     }
     if (entryRightY !== null) {
@@ -933,8 +960,8 @@ export function drawCanvas(
         entryRightY,
         rightHandleDir,
         "entryRightX",
-        "#000000",
-        "#006400",
+        MARKER_COLOR.hex,
+        ENTRY_DOT_COLOR.hex,
       );
     }
 
@@ -966,7 +993,7 @@ export function drawCanvas(
       surfPts.push([rightX, surfaceYAtX(rightX)!]);
       surfPts.sort((a, b) => a[0] - b[0]);
 
-      drawDottedRange(surfPts, "#cc0000");
+      drawDottedRange(surfPts, EXIT_DOT_COLOR.hex);
     }
 
     if (exitLeftY !== null) {
@@ -975,8 +1002,8 @@ export function drawCanvas(
         exitLeftY,
         leftHandleDir,
         "exitLeftX",
-        "#000000",
-        "#cc0000",
+        MARKER_COLOR.hex,
+        EXIT_DOT_COLOR.hex,
       );
     }
     if (exitRightY !== null) {
@@ -985,8 +1012,8 @@ export function drawCanvas(
         exitRightY,
         rightHandleDir,
         "exitRightX",
-        "#000000",
-        "#cc0000",
+        MARKER_COLOR.hex,
+        EXIT_DOT_COLOR.hex,
       );
     }
   }
@@ -1041,7 +1068,7 @@ export function drawCanvas(
         const arcPts = getArcPoints(surf);
         ctx.strokeStyle = fosColor(surf.fos, result.minFOS, result.maxFOS);
         ctx.lineWidth = 1;
-        ctx.globalAlpha = 0.6;
+        ctx.globalAlpha = SLIP_SURFACE_OPACITY;
         ctx.beginPath();
         for (let i = 0; i < arcPts.length; i++) {
           const [px, py] = worldToCanvas(arcPts[i][0], arcPts[i][1], w, h);
@@ -1061,8 +1088,8 @@ export function drawCanvas(
       // Draw the failure mass region (area between slope surface and arc)
       // with semi-transparent fill
       ctx.save();
-      ctx.globalAlpha = 0.12;
-      ctx.fillStyle = "#000000";
+      ctx.globalAlpha = FAILURE_MASS_FILL_OPACITY;
+      ctx.fillStyle = FAILURE_MASS_COLOR.hex;
       ctx.beginPath();
       // Top edge: walk the slope surface from entry to exit
       const entryX = cs.entryPoint[0];
@@ -1108,9 +1135,9 @@ export function drawCanvas(
 
       // Slice lines (vertical lines within the failure mass)
       if (rvs.showSlices && result.criticalSlices.length > 0) {
-        ctx.strokeStyle = "#000000";
-        ctx.lineWidth = 0.8;
-        ctx.globalAlpha = 0.6;
+        ctx.strokeStyle = CRITICAL_SURFACE_COLOR.hex;
+        ctx.lineWidth = SLICE_LINE_WIDTH_PX;
+        ctx.globalAlpha = SLICE_LINE_OPACITY;
 
         // Helper: compute the arc Y (bottom of circle) at a given X
         const arcYAtX = (x: number): number | null => {
@@ -1143,7 +1170,7 @@ export function drawCanvas(
       }
 
       // Arc stroke (bold black like reference image)
-      ctx.strokeStyle = "#000000";
+      ctx.strokeStyle = CRITICAL_SURFACE_COLOR.hex;
       ctx.lineWidth = 2;
       ctx.beginPath();
       for (let i = 0; i < arcPts.length; i++) {
@@ -1170,7 +1197,7 @@ export function drawCanvas(
         );
 
         // Radius lines (solid, bold — same style as the arc)
-        ctx.strokeStyle = "#000000";
+        ctx.strokeStyle = CRITICAL_SURFACE_COLOR.hex;
         ctx.lineWidth = 2;
         ctx.beginPath();
         ctx.moveTo(ccx, ccy);
@@ -1182,7 +1209,7 @@ export function drawCanvas(
         ctx.stroke();
 
         // Small filled circle at centre
-        ctx.fillStyle = "#000000";
+        ctx.fillStyle = CRITICAL_SURFACE_COLOR.hex;
         ctx.beginPath();
         ctx.arc(ccx, ccy, 3, 0, Math.PI * 2);
         ctx.fill();
@@ -1197,13 +1224,13 @@ export function drawCanvas(
         const labelX = ccx2 + 10;
 
         // Text
-        ctx.fillStyle = "#000000";
+        ctx.fillStyle = CRITICAL_SURFACE_COLOR.hex;
         ctx.textAlign = "left";
         ctx.textBaseline = "middle";
         ctx.fillText(fosText, labelX, ccy2 - 4);
 
         // Underline
-        ctx.strokeStyle = "#000000";
+        ctx.strokeStyle = CRITICAL_SURFACE_COLOR.hex;
         ctx.lineWidth = 1.5;
         ctx.beginPath();
         ctx.moveTo(labelX - 1, ccy2 + 2);
@@ -1334,7 +1361,7 @@ export function drawCanvas(
     // ── Annotations ──────────────────────────────────────
     const annotations = resultViewSettings.annotations;
     // Scale factor for annotations based on paper frame size
-    const annoScale = Math.min(pf.w, pf.h) / 600;
+    const annoScale = Math.min(pf.w, pf.h) / ANNOTATION_SCALE_DIVISOR;
 
     const resolveAnnotationText = (text: string) => {
       if (!text) return "";
@@ -1358,20 +1385,21 @@ export function drawCanvas(
       // Convert fractional paper-frame coordinates to canvas pixels
       const ax = pf.x + anno.x * pf.w;
       const ay = pf.y + anno.y * pf.h;
-      const fontSize = (anno.fontSize ?? 12) * annoScale;
+      const fontSize =
+        (anno.fontSize ?? ANNOTATION_DEFAULT_FONT_SIZE) * annoScale;
 
       if (anno.type === "text") {
-        const family = anno.fontFamily ?? "sans-serif";
+        const family = anno.fontFamily ?? ANNOTATION_DEFAULT_FONT_FAMILY;
         const weight = anno.bold ? "bold" : "normal";
         const style = anno.italic ? "italic" : "normal";
         const resolvedText = resolveAnnotationText(anno.text ?? "");
-        ctx.fillStyle = anno.color ?? "#000000";
+        ctx.fillStyle = anno.color ?? ANNOTATION_DEFAULT_TEXT_COLOR;
         ctx.font = `${style} ${weight} ${fontSize}px ${family}`;
         ctx.textAlign = "left";
         ctx.textBaseline = "top";
 
         const lines = resolvedText.split("\n");
-        const lineHeight = fontSize * 1.2;
+        const lineHeight = fontSize * ANNOTATION_LINE_HEIGHT;
         lines.forEach((line, i) => {
           ctx.fillText(line, ax, ay + i * lineHeight);
         });
@@ -1414,7 +1442,7 @@ export function drawCanvas(
         ctx.textBaseline = "middle";
 
         // Tick marks and labels
-        const numTicks = 5;
+        const numTicks = COLOR_BAR_NUM_TICKS;
         for (let t = 0; t <= numTicks; t++) {
           const frac = t / numTicks;
           const y = barY + frac * barH;

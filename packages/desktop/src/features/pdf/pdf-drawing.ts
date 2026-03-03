@@ -4,11 +4,37 @@ import { circleArcPoints } from "../../utils/arc";
 import { computeRegions } from "../../utils/regions";
 import { GRID_RAW_STEP_PX } from "../../constants";
 import { computeRulerStep, formatRulerLabel } from "../../utils/ruler";
+import { GRID_STEP_MIN } from "../canvas/constants";
 import {
-  GRID_STEP_MIN,
-  LL_COLOR_RGB,
-  UDL_COLOR_RGB,
-} from "../canvas/constants";
+  ANNOTATION_DEFAULT_FONT_FAMILY,
+  ANNOTATION_DEFAULT_FONT_SIZE,
+  ANNOTATION_DEFAULT_TEXT_COLOR,
+  ANNOTATION_LINE_HEIGHT,
+  ANNOTATION_SCALE_DIVISOR,
+  COLOR_BAR_NUM_TICKS,
+  CRITICAL_SURFACE_COLOR,
+  ENTRY_DOT_COLOR,
+  ENTRY_EXIT_DOT_RADIUS_PX,
+  ENTRY_EXIT_DOT_SPACING_PX,
+  EXIT_DOT_COLOR,
+  FAILURE_MASS_COLOR,
+  FAILURE_MASS_FILL_OPACITY,
+  FOS_LABEL_BG_COLOR,
+  LINE_LOAD_COLOR,
+  MARKER_BAR_H_PX,
+  MARKER_COLOR,
+  MARKER_SZ_PX,
+  PIEZO_BAR_GAP1_PX,
+  PIEZO_BAR_GAP2_PX,
+  PIEZO_BAR_W_PX,
+  PIEZO_COLOR,
+  PIEZO_TRI_HALF_PX,
+  PIEZO_TRI_H_PX,
+  SLICE_LINE_OPACITY,
+  SLICE_LINE_WIDTH_PX,
+  SLIP_SURFACE_OPACITY,
+  UDL_LOAD_COLOR,
+} from "../rendering/style-spec";
 import type { AnalysisResult } from "@cslope/engine";
 import type {
   AnalysisLimitsState,
@@ -246,7 +272,6 @@ export function drawUdlLoads(
   udls: { x1: number; x2: number; magnitude: number }[],
   coordinates: [number, number][],
 ) {
-  const UDL_COLOR = UDL_COLOR_RGB;
   const arrowH = 8 * tf.mmPerPx;
 
   for (const u of udls) {
@@ -257,11 +282,11 @@ export function drawUdlLoads(
     const [px1, py1] = tf.worldToPdf(u.x1, y1);
     const [px2, py2] = tf.worldToPdf(u.x2, y2);
 
-    pdf.setDrawColor(...UDL_COLOR);
+    pdf.setDrawColor(...UDL_LOAD_COLOR.rgb);
     pdf.setLineWidth(0.4);
 
     pdf.line(px1, py1 - arrowH, px1, py1);
-    pdf.setFillColor(...UDL_COLOR);
+    pdf.setFillColor(...UDL_LOAD_COLOR.rgb);
     pdf.triangle(px1, py1, px1 - 1.5, py1 - 2.5, px1 + 1.5, py1 - 2.5, "F");
 
     pdf.line(px2, py2 - arrowH, px2, py2);
@@ -271,7 +296,7 @@ export function drawUdlLoads(
 
     pdf.setFontSize(9);
     pdf.setFont("helvetica", "bold");
-    pdf.setTextColor(...UDL_COLOR);
+    pdf.setTextColor(...UDL_LOAD_COLOR.rgb);
     const labelX = (px1 + px2) / 2;
     const labelY = Math.min(py1, py2) - arrowH - 1.5;
     pdf.text(`q = ${u.magnitude} kPa`, labelX, labelY, { align: "center" });
@@ -284,7 +309,6 @@ export function drawLineLoads(
   lineLoads: { x: number; magnitude: number }[],
   coordinates: [number, number][],
 ) {
-  const LL_COLOR = LL_COLOR_RGB;
   const arrowH = 8 * tf.mmPerPx;
 
   for (const ll of lineLoads) {
@@ -292,15 +316,15 @@ export function drawLineLoads(
     if (sy === null) continue;
 
     const [px, py] = tf.worldToPdf(ll.x, sy);
-    pdf.setDrawColor(...LL_COLOR);
+    pdf.setDrawColor(...LINE_LOAD_COLOR.rgb);
     pdf.setLineWidth(0.4);
     pdf.line(px, py - arrowH, px, py);
-    pdf.setFillColor(...LL_COLOR);
+    pdf.setFillColor(...LINE_LOAD_COLOR.rgb);
     pdf.triangle(px, py, px - 1.5, py - 2.5, px + 1.5, py - 2.5, "F");
 
     pdf.setFontSize(9);
     pdf.setFont("helvetica", "bold");
-    pdf.setTextColor(...LL_COLOR);
+    pdf.setTextColor(...LINE_LOAD_COLOR.rgb);
     pdf.text(`P = ${ll.magnitude} kN/m`, px, py - arrowH - 1.5, {
       align: "center",
     });
@@ -312,7 +336,6 @@ export function drawPiezometricLines(
   tf: PdfTransform,
   lines: { id: string; coordinates: [number, number][] }[],
 ) {
-  const PIEZO_COLOR: [number, number, number] = [26, 58, 138];
   const multiLine = lines.length > 1;
 
   for (let lineIdx = 0; lineIdx < lines.length; lineIdx++) {
@@ -320,23 +343,23 @@ export function drawPiezometricLines(
     if (line.coordinates.length < 2) continue;
     const pts = line.coordinates.map(([wx, wy]) => tf.worldToPdf(wx, wy));
 
-    pdf.setDrawColor(...PIEZO_COLOR);
+    pdf.setDrawColor(...PIEZO_COLOR.rgb);
     pdf.setLineWidth(0.35);
     const ops = buildPolylinePath(pts, false);
     pdfPath(pdf, ops, "S");
 
-    const triHalf = 6 * tf.mmPerPx;
-    const triH = 10 * tf.mmPerPx;
-    const barW = 7 * tf.mmPerPx;
-    const barGap1 = 3 * tf.mmPerPx;
-    const barGap2 = 6 * tf.mmPerPx;
+    const triHalf = PIEZO_TRI_HALF_PX * tf.mmPerPx;
+    const triH = PIEZO_TRI_H_PX * tf.mmPerPx;
+    const barW = PIEZO_BAR_W_PX * tf.mmPerPx;
+    const barGap1 = PIEZO_BAR_GAP1_PX * tf.mmPerPx;
+    const barGap2 = PIEZO_BAR_GAP2_PX * tf.mmPerPx;
 
     for (let i = 0; i < pts.length - 1; i++) {
       const mx = (pts[i][0] + pts[i + 1][0]) / 2;
       const my = (pts[i][1] + pts[i + 1][1]) / 2;
 
       const triTop = my - triH;
-      pdf.setFillColor(...PIEZO_COLOR);
+      pdf.setFillColor(...PIEZO_COLOR.rgb);
       const triOps: PathOp[] = [
         { op: "m", c: [mx - triHalf, triTop] },
         { op: "l", c: [mx + triHalf, triTop] },
@@ -345,7 +368,7 @@ export function drawPiezometricLines(
       ];
       pdfPath(pdf, triOps, "f");
 
-      pdf.setDrawColor(...PIEZO_COLOR);
+      pdf.setDrawColor(...PIEZO_COLOR.rgb);
       pdf.setLineWidth(0.25);
       pdf.line(mx - barW, my + barGap1, mx + barW, my + barGap1);
       pdf.line(mx - barW, my + barGap2, mx + barW, my + barGap2);
@@ -353,7 +376,7 @@ export function drawPiezometricLines(
       if (multiLine) {
         pdf.setFont("helvetica", "bold");
         pdf.setFontSize(8);
-        pdf.setTextColor(...PIEZO_COLOR);
+        pdf.setTextColor(...PIEZO_COLOR.rgb);
         pdf.text(String(lineIdx + 1), mx, triTop - 1, { align: "center" });
       }
     }
@@ -367,21 +390,18 @@ export function drawEntryExitMarkers(
   coordinates: [number, number][],
   orientation: ModelOrientation,
 ) {
-  const MARKER_COLOR: [number, number, number] = [0, 0, 0];
-  const ENTRY_DOT_COLOR: [number, number, number] = [0, 100, 0];
-  const EXIT_DOT_COLOR: [number, number, number] = [204, 0, 0];
-  const barH = 10 * tf.mmPerPx;
-  const sz = 7 * tf.mmPerPx;
+  const barH = MARKER_BAR_H_PX * tf.mmPerPx;
+  const sz = MARKER_SZ_PX * tf.mmPerPx;
 
   const drawArrow = (worldX: number, worldY: number, dir: "left" | "right") => {
     const [cx, cy] = tf.worldToPdf(worldX, worldY);
 
-    pdf.setDrawColor(...MARKER_COLOR);
+    pdf.setDrawColor(...MARKER_COLOR.rgb);
     pdf.setLineWidth(0.4);
     pdf.line(cx, cy - barH, cx, cy + barH);
 
     const tipX = dir === "right" ? cx - sz * 2 : cx + sz * 2;
-    pdf.setFillColor(...MARKER_COLOR);
+    pdf.setFillColor(...MARKER_COLOR.rgb);
     const triOps: PathOp[] = [
       { op: "m", c: [cx, cy] },
       { op: "l", c: [tipX, cy - sz] },
@@ -419,8 +439,8 @@ export function drawEntryExitMarkers(
     if (surfPts.length < 2) return;
 
     const pdfPts = surfPts.map(([wx, wy]) => tf.worldToPdf(wx, wy));
-    const spacing = 12 * tf.mmPerPx;
-    const radius = 2.5 * tf.mmPerPx;
+    const spacing = ENTRY_EXIT_DOT_SPACING_PX * tf.mmPerPx;
+    const radius = ENTRY_EXIT_DOT_RADIUS_PX * tf.mmPerPx;
 
     pdf.setFillColor(...color);
 
@@ -468,7 +488,7 @@ export function drawEntryExitMarkers(
     drawDottedSurfaceLine(
       limits.entryLeftX,
       limits.entryRightX,
-      ENTRY_DOT_COLOR,
+      ENTRY_DOT_COLOR.rgb,
     );
   }
 
@@ -481,7 +501,11 @@ export function drawEntryExitMarkers(
     drawArrow(limits.exitRightX, exitRightY, rightHandleDir);
   }
   if (exitLeftY !== null && exitRightY !== null) {
-    drawDottedSurfaceLine(limits.exitLeftX, limits.exitRightX, EXIT_DOT_COLOR);
+    drawDottedSurfaceLine(
+      limits.exitLeftX,
+      limits.exitRightX,
+      EXIT_DOT_COLOR.rgb,
+    );
   }
 }
 
@@ -521,7 +545,7 @@ export function drawSlipSurfaces(
 
     pdf.setDrawColor(...color);
     pdf.setLineWidth(0.15);
-    setOpacity(pdf, 1, 0.6);
+    setOpacity(pdf, 1, SLIP_SURFACE_OPACITY);
     const ops = buildPolylinePath(pdfPts, false);
     pdfPath(pdf, ops, "S");
     resetOpacity(pdf);
@@ -566,16 +590,16 @@ export function drawCriticalSurface(
     arcPts.reverse();
 
     const ops = buildPolylinePath(allPts, true);
-    pdf.setFillColor(0, 0, 0);
-    setOpacity(pdf, 0.12);
+    pdf.setFillColor(...FAILURE_MASS_COLOR.rgb);
+    setOpacity(pdf, FAILURE_MASS_FILL_OPACITY);
     pdfPath(pdf, ops, "f");
     resetOpacity(pdf);
   }
 
   if (rvs.showSlices && result.criticalSlices.length > 0) {
-    pdf.setDrawColor(0, 0, 0);
-    pdf.setLineWidth(0.8 * tf.mmPerPx);
-    setOpacity(pdf, 1, 0.6);
+    pdf.setDrawColor(...CRITICAL_SURFACE_COLOR.rgb);
+    pdf.setLineWidth(SLICE_LINE_WIDTH_PX * tf.mmPerPx);
+    setOpacity(pdf, 1, SLICE_LINE_OPACITY);
 
     const arcYAt = (x: number): number | null => {
       const dx = x - cs.cx;
@@ -603,7 +627,7 @@ export function drawCriticalSurface(
 
   {
     const pdfPts = arcPts.map(([wx, wy]) => tf.worldToPdf(wx, wy));
-    pdf.setDrawColor(0, 0, 0);
+    pdf.setDrawColor(...CRITICAL_SURFACE_COLOR.rgb);
     pdf.setLineWidth(0.5);
     const ops = buildPolylinePath(pdfPts, false);
     pdfPath(pdf, ops, "S");
@@ -614,12 +638,12 @@ export function drawCriticalSurface(
     const [epx, epy] = tf.worldToPdf(cs.entryPoint[0], cs.entryPoint[1]);
     const [xpx, xpy] = tf.worldToPdf(cs.exitPoint[0], cs.exitPoint[1]);
 
-    pdf.setDrawColor(0, 0, 0);
+    pdf.setDrawColor(...CRITICAL_SURFACE_COLOR.rgb);
     pdf.setLineWidth(0.5);
     pdf.line(ccx, ccy, epx, epy);
     pdf.line(ccx, ccy, xpx, xpy);
 
-    pdf.setFillColor(0, 0, 0);
+    pdf.setFillColor(...CRITICAL_SURFACE_COLOR.rgb);
     pdf.circle(ccx, ccy, 0.8, "F");
   }
 
@@ -631,13 +655,13 @@ export function drawCriticalSurface(
     pdf.setFontSize(10);
     pdf.setFont("helvetica", "bold");
     const tw = pdf.getTextWidth(fosText);
-    pdf.setFillColor(255, 255, 255);
+    pdf.setFillColor(...FOS_LABEL_BG_COLOR.rgb);
     pdf.rect(labelX - 0.5, ccy - 4.5, tw + 1, 5.5, "F");
 
-    pdf.setTextColor(0, 0, 0);
+    pdf.setTextColor(...CRITICAL_SURFACE_COLOR.rgb);
     pdf.text(fosText, labelX, ccy - 1);
 
-    pdf.setDrawColor(0, 0, 0);
+    pdf.setDrawColor(...CRITICAL_SURFACE_COLOR.rgb);
     pdf.setLineWidth(0.3);
     pdf.line(labelX - 0.2, ccy, labelX + tw + 0.2, ccy);
   }
@@ -652,7 +676,7 @@ export function drawAnnotations(
   projectInfo: Partial<ProjectInfo>,
   paperFrame: { x: number; y: number; w: number; h: number },
 ) {
-  const annoScale = Math.min(tf.paperW, tf.paperH) / 600;
+  const annoScale = Math.min(tf.paperW, tf.paperH) / ANNOTATION_SCALE_DIVISOR;
 
   for (const anno of annotations) {
     const ax = paperFrame.x + anno.x * paperFrame.w;
@@ -732,20 +756,20 @@ function drawTextAnnotation(
   projectInfo: Partial<ProjectInfo>,
   result: AnalysisResult,
 ) {
-  const fontSize = (anno.fontSize ?? 12) * scale;
+  const fontSize = (anno.fontSize ?? ANNOTATION_DEFAULT_FONT_SIZE) * scale;
   const ptSize = Math.max(8, fontSize / 0.3528);
 
-  const family = mapFont(anno.fontFamily ?? "sans-serif");
+  const family = mapFont(anno.fontFamily ?? ANNOTATION_DEFAULT_FONT_FAMILY);
   const style = mapFontStyle(anno.bold, anno.italic);
 
   pdf.setFont(family, style);
   pdf.setFontSize(ptSize);
-  const [r, g, b] = parseColor(anno.color ?? "#000000");
+  const [r, g, b] = parseColor(anno.color ?? ANNOTATION_DEFAULT_TEXT_COLOR);
   pdf.setTextColor(r, g, b);
 
   const resolved = resolveAnnotationText(anno.text ?? "", projectInfo, result);
   const lines = resolved.split("\n");
-  const lineHeight = fontSize * 1.2;
+  const lineHeight = fontSize * ANNOTATION_LINE_HEIGHT;
 
   lines.forEach((line, i) => {
     pdf.text(line, x, y + fontSize * 0.8 + i * lineHeight);
@@ -774,16 +798,16 @@ function drawColorBarAnnotation(
     pdf.rect(x, y + t * barH, barW, barH / (numSteps - 1) + 0.1, "F");
   }
 
-  pdf.setDrawColor(0, 0, 0);
+  pdf.setDrawColor(...MARKER_COLOR.rgb);
   pdf.setLineWidth(0.2);
   pdf.rect(x, y, barW, barH, "S");
 
   pdf.setFontSize(Math.max(8, 8 * scale));
   pdf.setFont("helvetica", "bold");
-  pdf.setTextColor(0, 0, 0);
+  pdf.setTextColor(...MARKER_COLOR.rgb);
   pdf.text("FOS", x, y - 2 * scale);
 
-  const numTicks = 5;
+  const numTicks = COLOR_BAR_NUM_TICKS;
   pdf.setFont("helvetica", "normal");
   pdf.setFontSize(Math.max(7, 7 * scale));
 
@@ -792,7 +816,7 @@ function drawColorBarAnnotation(
     const ty = y + frac * barH;
     const fos = fosMax - frac * (fosMax - fosMin);
 
-    pdf.setDrawColor(0, 0, 0);
+    pdf.setDrawColor(...MARKER_COLOR.rgb);
     pdf.setLineWidth(0.2);
     pdf.line(x + barW, ty, x + barW + 1.5 * scale, ty);
 

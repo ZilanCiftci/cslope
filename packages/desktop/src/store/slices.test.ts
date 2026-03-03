@@ -699,4 +699,271 @@ describe("store slices", () => {
     useAppStore.getState().setSelectedRegionKey(null);
     expect(useAppStore.getState().selectedRegionKey).toBeNull();
   });
+
+  // ── resultViewSlice ──────────────────────────────────────────────────
+
+  it("resultViewSlice setResultViewSettings merges patch into settings", () => {
+    const initial = useAppStore.getState().resultViewSettings;
+    expect(initial.showSlices).toBe(true);
+
+    useAppStore.getState().setResultViewSettings({ showSlices: false });
+    const updated = useAppStore.getState().resultViewSettings;
+    expect(updated.showSlices).toBe(false);
+    // other fields unchanged
+    expect(updated.surfaceDisplay).toBe(initial.surfaceDisplay);
+    expect(updated.fosFilterMax).toBe(initial.fosFilterMax);
+  });
+
+  it("resultViewSlice setResultViewSettings syncs to active model", () => {
+    useAppStore.getState().setResultViewSettings({ showGrid: false });
+    const model = useAppStore.getState().models[0];
+    expect(model.resultViewSettings?.showGrid).toBe(false);
+  });
+
+  it("resultViewSlice addAnnotation adds a text annotation", () => {
+    const before = useAppStore.getState().resultViewSettings.annotations.length;
+    useAppStore.getState().addAnnotation("text");
+    const after = useAppStore.getState().resultViewSettings.annotations;
+    expect(after).toHaveLength(before + 1);
+    const added = after[after.length - 1];
+    expect(added.type).toBe("text");
+    expect(added.text).toBe("Annotation");
+    expect(added.x).toBe(0.5);
+    expect(added.y).toBe(0.5);
+  });
+
+  it("resultViewSlice addAnnotation adds non-text annotation types", () => {
+    for (const type of [
+      "input-params",
+      "output-params",
+      "material-table",
+      "color-bar",
+    ] as const) {
+      useAppStore.getState().addAnnotation(type);
+      const annos = useAppStore.getState().resultViewSettings.annotations;
+      const last = annos[annos.length - 1];
+      expect(last.type).toBe(type);
+      expect(last.text).toBeUndefined();
+    }
+  });
+
+  it("resultViewSlice addAnnotation syncs to model", () => {
+    useAppStore.getState().addAnnotation("color-bar");
+    const model = useAppStore.getState().models[0];
+    const annos = model.resultViewSettings?.annotations ?? [];
+    expect(annos.some((a) => a.type === "color-bar")).toBe(true);
+  });
+
+  it("resultViewSlice updateAnnotation patches an existing annotation", () => {
+    useAppStore.getState().addAnnotation("text");
+    const annos = useAppStore.getState().resultViewSettings.annotations;
+    const id = annos[annos.length - 1].id;
+
+    useAppStore.getState().updateAnnotation(id, { x: 0.9, fontSize: 20 });
+    const updated = useAppStore
+      .getState()
+      .resultViewSettings.annotations.find((a) => a.id === id)!;
+    expect(updated.x).toBe(0.9);
+    expect(updated.fontSize).toBe(20);
+    expect(updated.y).toBe(0.5); // unchanged
+  });
+
+  it("resultViewSlice removeAnnotation removes annotation and deselects it", () => {
+    useAppStore.getState().addAnnotation("text");
+    const annos = useAppStore.getState().resultViewSettings.annotations;
+    const id = annos[annos.length - 1].id;
+
+    // select it first
+    useAppStore.getState().setSelectedAnnotations([id]);
+    expect(useAppStore.getState().selectedAnnotationIds).toContain(id);
+
+    useAppStore.getState().removeAnnotation(id);
+    const remaining = useAppStore.getState().resultViewSettings.annotations;
+    expect(remaining.find((a) => a.id === id)).toBeUndefined();
+    expect(useAppStore.getState().selectedAnnotationIds).not.toContain(id);
+  });
+
+  it("resultViewSlice setSelectedAnnotations replaces selection", () => {
+    useAppStore.getState().setSelectedAnnotations(["a", "b"]);
+    expect(useAppStore.getState().selectedAnnotationIds).toEqual(["a", "b"]);
+
+    useAppStore.getState().setSelectedAnnotations(["c"]);
+    expect(useAppStore.getState().selectedAnnotationIds).toEqual(["c"]);
+  });
+
+  it("resultViewSlice toggleAnnotationSelection in single-select mode", () => {
+    useAppStore.getState().setSelectedAnnotations(["x", "y"]);
+    useAppStore.getState().toggleAnnotationSelection("z", false);
+    expect(useAppStore.getState().selectedAnnotationIds).toEqual(["z"]);
+  });
+
+  it("resultViewSlice toggleAnnotationSelection additive adds and removes", () => {
+    useAppStore.getState().setSelectedAnnotations(["a"]);
+
+    // add "b"
+    useAppStore.getState().toggleAnnotationSelection("b", true);
+    expect(useAppStore.getState().selectedAnnotationIds).toEqual(["a", "b"]);
+
+    // remove "a"
+    useAppStore.getState().toggleAnnotationSelection("a", true);
+    expect(useAppStore.getState().selectedAnnotationIds).toEqual(["b"]);
+  });
+
+  it("resultViewSlice alignAnnotations left aligns x to minimum", () => {
+    // add 3 annotations with different x positions
+    useAppStore.getState().addAnnotation("text");
+    useAppStore.getState().addAnnotation("text");
+    useAppStore.getState().addAnnotation("text");
+    const annos = useAppStore.getState().resultViewSettings.annotations;
+    const ids = annos.slice(-3).map((a) => a.id);
+
+    useAppStore.getState().updateAnnotation(ids[0], { x: 0.2 });
+    useAppStore.getState().updateAnnotation(ids[1], { x: 0.5 });
+    useAppStore.getState().updateAnnotation(ids[2], { x: 0.8 });
+
+    useAppStore.getState().setSelectedAnnotations(ids);
+    useAppStore.getState().alignAnnotations("left");
+
+    const aligned = useAppStore.getState().resultViewSettings.annotations;
+    for (const id of ids) {
+      expect(aligned.find((a) => a.id === id)!.x).toBe(0.2);
+    }
+  });
+
+  it("resultViewSlice alignAnnotations right aligns x to maximum", () => {
+    useAppStore.getState().addAnnotation("text");
+    useAppStore.getState().addAnnotation("text");
+    const annos = useAppStore.getState().resultViewSettings.annotations;
+    const ids = annos.slice(-2).map((a) => a.id);
+
+    useAppStore.getState().updateAnnotation(ids[0], { x: 0.1 });
+    useAppStore.getState().updateAnnotation(ids[1], { x: 0.7 });
+
+    useAppStore.getState().setSelectedAnnotations(ids);
+    useAppStore.getState().alignAnnotations("right");
+
+    const aligned = useAppStore.getState().resultViewSettings.annotations;
+    for (const id of ids) {
+      expect(aligned.find((a) => a.id === id)!.x).toBe(0.7);
+    }
+  });
+
+  it("resultViewSlice alignAnnotations top aligns y to minimum", () => {
+    useAppStore.getState().addAnnotation("text");
+    useAppStore.getState().addAnnotation("text");
+    const annos = useAppStore.getState().resultViewSettings.annotations;
+    const ids = annos.slice(-2).map((a) => a.id);
+
+    useAppStore.getState().updateAnnotation(ids[0], { y: 0.3 });
+    useAppStore.getState().updateAnnotation(ids[1], { y: 0.9 });
+
+    useAppStore.getState().setSelectedAnnotations(ids);
+    useAppStore.getState().alignAnnotations("top");
+
+    const aligned = useAppStore.getState().resultViewSettings.annotations;
+    for (const id of ids) {
+      expect(aligned.find((a) => a.id === id)!.y).toBe(0.3);
+    }
+  });
+
+  it("resultViewSlice alignAnnotations bottom aligns y to maximum", () => {
+    useAppStore.getState().addAnnotation("text");
+    useAppStore.getState().addAnnotation("text");
+    const annos = useAppStore.getState().resultViewSettings.annotations;
+    const ids = annos.slice(-2).map((a) => a.id);
+
+    useAppStore.getState().updateAnnotation(ids[0], { y: 0.1 });
+    useAppStore.getState().updateAnnotation(ids[1], { y: 0.6 });
+
+    useAppStore.getState().setSelectedAnnotations(ids);
+    useAppStore.getState().alignAnnotations("bottom");
+
+    const aligned = useAppStore.getState().resultViewSettings.annotations;
+    for (const id of ids) {
+      expect(aligned.find((a) => a.id === id)!.y).toBe(0.6);
+    }
+  });
+
+  it("resultViewSlice alignAnnotations center-h averages x", () => {
+    useAppStore.getState().addAnnotation("text");
+    useAppStore.getState().addAnnotation("text");
+    const annos = useAppStore.getState().resultViewSettings.annotations;
+    const ids = annos.slice(-2).map((a) => a.id);
+
+    useAppStore.getState().updateAnnotation(ids[0], { x: 0.2 });
+    useAppStore.getState().updateAnnotation(ids[1], { x: 0.8 });
+
+    useAppStore.getState().setSelectedAnnotations(ids);
+    useAppStore.getState().alignAnnotations("center-h");
+
+    const aligned = useAppStore.getState().resultViewSettings.annotations;
+    for (const id of ids) {
+      expect(aligned.find((a) => a.id === id)!.x).toBe(0.5);
+    }
+  });
+
+  it("resultViewSlice alignAnnotations center-v averages y", () => {
+    useAppStore.getState().addAnnotation("text");
+    useAppStore.getState().addAnnotation("text");
+    const annos = useAppStore.getState().resultViewSettings.annotations;
+    const ids = annos.slice(-2).map((a) => a.id);
+
+    useAppStore.getState().updateAnnotation(ids[0], { y: 0.0 });
+    useAppStore.getState().updateAnnotation(ids[1], { y: 1.0 });
+
+    useAppStore.getState().setSelectedAnnotations(ids);
+    useAppStore.getState().alignAnnotations("center-v");
+
+    const aligned = useAppStore.getState().resultViewSettings.annotations;
+    for (const id of ids) {
+      expect(aligned.find((a) => a.id === id)!.y).toBe(0.5);
+    }
+  });
+
+  it("resultViewSlice alignAnnotations is no-op with fewer than 2 selected", () => {
+    useAppStore.getState().addAnnotation("text");
+    const annos = useAppStore.getState().resultViewSettings.annotations;
+    const id = annos[annos.length - 1].id;
+    useAppStore.getState().updateAnnotation(id, { x: 0.3 });
+
+    useAppStore.getState().setSelectedAnnotations([id]);
+    useAppStore.getState().alignAnnotations("left");
+
+    const after = useAppStore
+      .getState()
+      .resultViewSettings.annotations.find((a) => a.id === id)!;
+    expect(after.x).toBe(0.3); // unchanged
+  });
+
+  // ── canvasToolbarSlice ───────────────────────────────────────────────
+
+  it("canvasToolbarSlice setCanvasToolbar sets and clears toolbar", () => {
+    expect(useAppStore.getState().canvasToolbar).toBeNull();
+
+    const toolbar = {
+      zoomBoxActive: false,
+      panActive: false,
+      onFitToScreen: () => {},
+      onZoomIn: () => {},
+      onZoomOut: () => {},
+      onToggleZoomBox: () => {},
+      onTogglePan: () => {},
+    };
+
+    useAppStore.getState().setCanvasToolbar(toolbar);
+    expect(useAppStore.getState().canvasToolbar).toBe(toolbar);
+
+    useAppStore.getState().setCanvasToolbar(null);
+    expect(useAppStore.getState().canvasToolbar).toBeNull();
+  });
+
+  it("canvasToolbarSlice setCursorWorld sets and clears cursor position", () => {
+    expect(useAppStore.getState().cursorWorld).toBeNull();
+
+    useAppStore.getState().setCursorWorld([10.5, 3.2]);
+    expect(useAppStore.getState().cursorWorld).toEqual([10.5, 3.2]);
+
+    useAppStore.getState().setCursorWorld(null);
+    expect(useAppStore.getState().cursorWorld).toBeNull();
+  });
 });

@@ -1,8 +1,7 @@
 import { useEffect, useState } from "react";
 import { useStore } from "zustand";
 import { DEFAULT_MODEL_NAME } from "../constants";
-import { useAppStore } from "../store/app-store";
-import { RUN_RESET, getAnalysisInputSignature } from "../store/helpers";
+import { useAppStore, performUndo, performRedo } from "../store/app-store";
 import { isElectron } from "../utils/is-electron";
 import { useProjectActions } from "../features/project/useProjectActions";
 import { NewIcon, OpenIcon, SaveIcon } from "./icons/FileActionIcons";
@@ -50,25 +49,8 @@ export function TitleBar({ theme, onToggleTheme, activeModelName }: Props) {
     };
   }, []);
 
-  const handleUndo = () => {
-    const before = getAnalysisInputSignature(useAppStore.getState());
-    useAppStore.temporal.getState().resume();
-    useAppStore.temporal.getState().undo();
-    const after = getAnalysisInputSignature(useAppStore.getState());
-    if (before !== after) {
-      useAppStore.setState(RUN_RESET);
-    }
-  };
-
-  const handleRedo = () => {
-    const before = getAnalysisInputSignature(useAppStore.getState());
-    useAppStore.temporal.getState().resume();
-    useAppStore.temporal.getState().redo();
-    const after = getAnalysisInputSignature(useAppStore.getState());
-    if (before !== after) {
-      useAppStore.setState(RUN_RESET);
-    }
-  };
+  const handleUndo = () => performUndo();
+  const handleRedo = () => performRedo();
 
   return (
     <div

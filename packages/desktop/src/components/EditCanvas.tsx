@@ -3,8 +3,12 @@
  */
 
 import type React from "react";
-import { useRef, useEffect, useCallback, useMemo, useState } from "react";
-import { useAppStore } from "../store/app-store";
+import { useRef, useEffect, useCallback, useState, useMemo } from "react";
+import {
+  useAppStore,
+  useCanvasModelState,
+  useCanvasActions,
+} from "../store/app-store";
 import { useHitTest } from "../features/canvas/hooks/useHitTest";
 import { useViewport } from "../features/canvas/hooks/useViewport";
 import { usePointerHandlers } from "../features/canvas/hooks/usePointerHandlers";
@@ -49,26 +53,28 @@ export function EditCanvas() {
   const canvasSize = useCanvasSizing(canvasRef, crosshairCanvasRef);
 
   const mode = "edit" as const;
-  const result = useAppStore((s) => s.result);
-  const resultViewSettings = useAppStore((s) => s.resultViewSettings);
-  const orientation = useAppStore((s) => s.orientation);
-  const coordinates = useAppStore((s) => s.coordinates);
-  const materials = useAppStore((s) => s.materials);
-  const materialBoundaries = useAppStore((s) => s.materialBoundaries);
-  const analysisLimits = useAppStore((s) => s.analysisLimits);
-  const udls = useAppStore((s) => s.udls);
-  const lineLoads = useAppStore((s) => s.lineLoads);
+  const {
+    result,
+    resultViewSettings,
+    orientation,
+    coordinates,
+    materials,
+    materialBoundaries,
+    analysisLimits,
+    udls,
+    lineLoads,
+    piezometricLine,
+    selectedPointIndex,
+    regionMaterials,
+    assigningMaterialId,
+    selectedRegionKey,
+    selectedAnnotationIds,
+    theme,
+    snapToGrid,
+    gridSnapSize,
+    projectInfo,
+  } = useCanvasModelState();
   const activeSection = useAppStore((s) => s.activeSection);
-  const piezometricLine = useAppStore((s) => s.piezometricLine);
-  const selectedPointIndex = useAppStore((s) => s.selectedPointIndex);
-  const regionMaterials = useAppStore((s) => s.regionMaterials);
-  const assigningMaterialId = useAppStore((s) => s.assigningMaterialId);
-  const selectedRegionKey = useAppStore((s) => s.selectedRegionKey);
-  const selectedAnnotationIds = useAppStore((s) => s.selectedAnnotationIds);
-  const theme = useAppStore((s) => s.theme);
-  const snapToGrid = useAppStore((s) => s.snapToGrid);
-  const gridSnapSize = useAppStore((s) => s.gridSnapSize);
-  const projectInfo = useAppStore((s) => s.projectInfo);
   const {
     setAnalysisLimits,
     updateUdl,
@@ -92,33 +98,7 @@ export function EditCanvas() {
     alignAnnotations,
     setCanvasToolbar,
     setCursorWorld,
-  } = useMemo(() => {
-    const state = useAppStore.getState();
-    return {
-      setAnalysisLimits: state.setAnalysisLimits,
-      updateUdl: state.updateUdl,
-      updateLineLoad: state.updateLineLoad,
-      setPiezoCoordinate: state.setPiezoCoordinate,
-      insertPiezoPointAt: state.insertPiezoPointAt,
-      removePiezoPoint: state.removePiezoPoint,
-      setCoordinate: state.setCoordinate,
-      insertCoordinateAt: state.insertCoordinateAt,
-      removeCoordinate: state.removeCoordinate,
-      setSelectedPoint: state.setSelectedPoint,
-      updateBoundaryPoint: state.updateBoundaryPoint,
-      removeBoundaryPoint: state.removeBoundaryPoint,
-      insertBoundaryPointAt: state.insertBoundaryPointAt,
-      setRegionMaterial: state.setRegionMaterial,
-      setAssigningMaterial: state.setAssigningMaterial,
-      setSelectedRegionKey: state.setSelectedRegionKey,
-      updateAnnotation: state.updateAnnotation,
-      setSelectedAnnotations: state.setSelectedAnnotations,
-      toggleAnnotationSelection: state.toggleAnnotationSelection,
-      alignAnnotations: state.alignAnnotations,
-      setCanvasToolbar: state.setCanvasToolbar,
-      setCursorWorld: state.setCursorWorld,
-    };
-  }, []);
+  } = useCanvasActions();
 
   const editingExterior =
     mode === "edit" && activeSection === "Exterior Boundary";

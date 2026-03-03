@@ -5,7 +5,7 @@
  */
 
 import { useRef, useEffect, useState, type RefObject } from "react";
-import { useAppStore } from "../../store/app-store";
+import { useAppStore, getActiveViewport } from "../../store/app-store";
 import { cssVar, GRID_STEP_MIN, RULER_SIZE_PX } from "../canvas/constants";
 import { GRID_RAW_STEP_PX } from "../../constants";
 
@@ -13,16 +13,9 @@ const RULER_SIZE = RULER_SIZE_PX;
 const TICK_LEN = 6;
 const FONT = "10px 'Segoe UI', sans-serif";
 
-/* ── Inline viewport math (same as useViewport.ts) ── */
-
-function getViewportFromStore(): {
-  viewOffset: [number, number];
-  viewScale: number;
-} {
-  const s = useAppStore.getState();
-  const offset = s.mode === "result" ? s.resultViewOffset : s.editViewOffset;
-  const scale = s.mode === "result" ? s.resultViewScale : s.editViewScale;
-  return { viewOffset: offset, viewScale: scale };
+/** Resolve the mode-dependent viewport from current store state. */
+function getViewportFromStore() {
+  return getActiveViewport(useAppStore.getState());
 }
 
 function w2c(
