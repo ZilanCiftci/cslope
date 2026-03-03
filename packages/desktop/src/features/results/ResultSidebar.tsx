@@ -5,13 +5,14 @@
  */
 
 import { type ReactNode } from "react";
-import {
-  useAppStore,
-  PAPER_DIMENSIONS,
-  PLOT_MARGINS,
-} from "../../store/app-store";
+import { useAppStore, PAPER_DIMENSIONS } from "../../store/app-store";
 import type { SurfaceDisplayMode, PaperSize } from "../../store/app-store";
 import { exportVectorPdf } from "../pdf/pdf-export";
+import {
+  getPlotAspectRatio as getSharedPlotAspectRatio,
+  computePaperFrame,
+  computeInnerFrame,
+} from "../view/paper";
 import { Section } from "../../components/ui/Section";
 import { Label } from "../../components/ui/Label";
 import { LambdaFmFfChart } from "./LambdaFmFfChart";
@@ -59,15 +60,6 @@ export function ResultSidebar() {
     cursor: "pointer",
   };
 
-  const getPaperDimensions = () => {
-    const { paperSize, landscape } = rvs.paperFrame;
-    const { w, h } = PAPER_DIMENSIONS[paperSize];
-    return {
-      width: landscape ? Math.max(w, h) : Math.min(w, h),
-      height: landscape ? Math.min(w, h) : Math.max(w, h),
-    };
-  };
-
   // Re-add setViewLockToModelBounds as it was deleted
   const setViewLockToModelBounds = () => {
     const state = useAppStore.getState();
@@ -109,10 +101,8 @@ export function ResultSidebar() {
   };
 
   const getPlotAspectRatio = () => {
-    const { width, height } = getPaperDimensions();
-    const PLOT_W = width * (1 - PLOT_MARGINS.L - PLOT_MARGINS.R);
-    const PLOT_H = height * (1 - PLOT_MARGINS.T - PLOT_MARGINS.B);
-    return PLOT_W / PLOT_H;
+    const { paperSize, landscape } = rvs.paperFrame;
+    return getSharedPlotAspectRatio(paperSize, landscape);
   };
 
   const handleLockUpdate = (
@@ -164,44 +154,16 @@ export function ResultSidebar() {
 
     const rect = canvas.getBoundingClientRect();
     const { paperSize, landscape } = state.resultViewSettings.paperFrame;
-    const { w, h } = PAPER_DIMENSIONS[paperSize];
-    const paperW = landscape ? Math.max(w, h) : Math.min(w, h);
-    const paperH = landscape ? Math.min(w, h) : Math.max(w, h);
-    const paperAspect = paperW / paperH;
-    const margin = 20;
-    const availW = rect.width - margin * 2;
-    const availH = rect.height - margin * 2;
-
-    let frameW: number;
-    let frameH: number;
-    if (availW / availH > paperAspect) {
-      frameH = availH;
-      frameW = frameH * paperAspect;
-    } else {
-      frameW = availW;
-      frameH = frameW / paperAspect;
-    }
-    const pfX = (rect.width - frameW) / 2;
-    const pfY = (rect.height - frameH) / 2;
-
-    // Standardized margins
-    const PLOT_PAD_L = frameW * PLOT_MARGINS.L;
-    const PLOT_PAD_R = frameW * PLOT_MARGINS.R;
-    const PLOT_PAD_T = frameH * PLOT_MARGINS.T;
-    const PLOT_PAD_B = frameH * PLOT_MARGINS.B;
-
-    const innerLeftPx = pfX + PLOT_PAD_L;
-    const innerRightPx = pfX + frameW - PLOT_PAD_R;
-    const innerTopPx = pfY + PLOT_PAD_T;
-    const innerBottomPx = pfY + frameH - PLOT_PAD_B;
+    const pf = computePaperFrame(rect.width, rect.height, paperSize, landscape);
+    const inner = computeInnerFrame(pf);
 
     const vs = state.resultViewScale;
     const [ox, oy] = state.resultViewOffset;
 
-    const xMin = (innerLeftPx - rect.width / 2) / vs - ox;
-    const xMax = (innerRightPx - rect.width / 2) / vs - ox;
-    const yMax = -(innerTopPx - rect.height / 2) / vs - oy;
-    const yMin = -(innerBottomPx - rect.height / 2) / vs - oy;
+    const xMin = (inner.x - rect.width / 2) / vs - ox;
+    const xMax = (inner.x + inner.w - rect.width / 2) / vs - ox;
+    const yMax = -(inner.y - rect.height / 2) / vs - oy;
+    const yMin = -(inner.y + inner.h - rect.height / 2) / vs - oy;
 
     return { xMin, xMax, yMin, yMax };
   };
@@ -214,32 +176,20 @@ export function ResultSidebar() {
 
     const dpr = window.devicePixelRatio || 1;
     const { paperFrame } = useAppStore.getState().resultViewSettings;
-    const { w, h } = PAPER_DIMENSIONS[paperFrame.paperSize];
-    const paperW = paperFrame.landscape ? Math.max(w, h) : Math.min(w, h);
-    const paperH = paperFrame.landscape ? Math.min(w, h) : Math.max(w, h);
-    const paperAspect = paperW / paperH;
     const cssW = canvas.width / dpr;
     const cssH = canvas.height / dpr;
-    const margin = 20;
-    const availW = cssW - margin * 2;
-    const availH = cssH - margin * 2;
-    let frameW: number;
-    let frameH: number;
-    if (availW / availH > paperAspect) {
-      frameH = availH;
-      frameW = frameH * paperAspect;
-    } else {
-      frameW = availW;
-      frameH = frameW / paperAspect;
-    }
-    const pfX = (cssW - frameW) / 2;
-    const pfY = (cssH - frameH) / 2;
+    const pf = computePaperFrame(
+      cssW,
+      cssH,
+      paperFrame.paperSize,
+      paperFrame.landscape,
+    );
 
     // Crop to the paper frame area (in device pixels)
-    const sx = pfX * dpr;
-    const sy = pfY * dpr;
-    const sw = frameW * dpr;
-    const sh = frameH * dpr;
+    const sx = pf.x * dpr;
+    const sy = pf.y * dpr;
+    const sw = pf.w * dpr;
+    const sh = pf.h * dpr;
 
     const exportCanvas = document.createElement("canvas");
     exportCanvas.width = sw;

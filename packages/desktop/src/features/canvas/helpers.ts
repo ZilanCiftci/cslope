@@ -1,5 +1,3 @@
-import { PAPER_DIMENSIONS } from "../../store/app-store";
-import type { PaperSize } from "../../store/app-store";
 import type {
   AnalysisResult,
   Annotation,
@@ -7,38 +5,10 @@ import type {
   ProjectInfo,
   ResultViewSettings,
 } from "../../store/types";
-import { PAPER_FRAME_MARGIN_PX } from "../../constants";
 import { circleArcPoints } from "../../utils/arc";
+import { computePaperFrame } from "../view/paper";
 
-/** Compute the paper frame rectangle (centered, with margin) given canvas CSS size. */
-export function computePaperFrame(
-  canvasW: number,
-  canvasH: number,
-  paperSize: PaperSize,
-  landscape = true,
-): { x: number; y: number; w: number; h: number } {
-  const { w, h } = PAPER_DIMENSIONS[paperSize];
-  const pw = landscape ? Math.max(w, h) : Math.min(w, h);
-  const ph = landscape ? Math.min(w, h) : Math.max(w, h);
-  const paperAspect = pw / ph;
-  const margin = PAPER_FRAME_MARGIN_PX;
-  const availW = canvasW - margin * 2;
-  const availH = canvasH - margin * 2;
-  let frameW: number;
-  let frameH: number;
-  if (availW / availH > paperAspect) {
-    // Canvas is wider than paper — fit height
-    frameH = availH;
-    frameW = frameH * paperAspect;
-  } else {
-    // Canvas is taller — fit width
-    frameW = availW;
-    frameH = frameW / paperAspect;
-  }
-  const x = (canvasW - frameW) / 2;
-  const y = (canvasH - frameH) / 2;
-  return { x, y, w: frameW, h: frameH };
-}
+export { computePaperFrame } from "../view/paper";
 
 /** Draw a labelled parameter block on the canvas. */
 export function drawParamBlock(
@@ -421,22 +391,17 @@ type LineLoadLike = {
   x: number;
 };
 
+import { surfaceYAtX as _surfaceYAtX } from "../view/surface";
+
+/**
+ * @deprecated Use `surfaceYAtX` from `features/view/surface` directly.
+ * Kept as a thin re-export for backward compatibility with existing call sites.
+ */
 export function surfaceYAtXFromCoordinates(
   coordinates: Coord[],
   x: number,
 ): number | null {
-  let bestY: number | null = null;
-  for (let i = 0; i < coordinates.length; i++) {
-    const [x0, y0] = coordinates[i];
-    const [x1, y1] = coordinates[(i + 1) % coordinates.length];
-    if ((x0 <= x && x <= x1) || (x1 <= x && x <= x0)) {
-      if (x1 === x0) continue;
-      const t = (x - x0) / (x1 - x0);
-      const y = y0 + t * (y1 - y0);
-      if (bestY === null || y > bestY) bestY = y;
-    }
-  }
-  return bestY;
+  return _surfaceYAtX(coordinates, x);
 }
 
 export function collectModelFitBounds(params: {

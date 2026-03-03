@@ -27,10 +27,10 @@ import {
   pdfPath,
   resetOpacity,
   setOpacity,
-  surfaceYAtX,
   type PathOp,
   type PdfTransform,
 } from "./pdf-helpers";
+import { surfaceYAtX } from "../view/surface";
 
 export function drawGrid(
   pdf: jsPDF,
@@ -250,8 +250,8 @@ export function drawUdlLoads(
   const arrowH = 8 * tf.mmPerPx;
 
   for (const u of udls) {
-    const y1 = surfaceYAtX(u.x1, coordinates);
-    const y2 = surfaceYAtX(u.x2, coordinates);
+    const y1 = surfaceYAtX(coordinates, u.x1);
+    const y2 = surfaceYAtX(coordinates, u.x2);
     if (y1 === null || y2 === null) continue;
 
     const [px1, py1] = tf.worldToPdf(u.x1, y1);
@@ -288,7 +288,7 @@ export function drawLineLoads(
   const arrowH = 8 * tf.mmPerPx;
 
   for (const ll of lineLoads) {
-    const sy = surfaceYAtX(ll.x, coordinates);
+    const sy = surfaceYAtX(coordinates, ll.x);
     if (sy === null) continue;
 
     const [px, py] = tf.worldToPdf(ll.x, sy);
@@ -400,14 +400,14 @@ export function drawEntryExitMarkers(
     const rightX = Math.max(x1, x2);
 
     const surfPts: [number, number][] = [];
-    const leftY = surfaceYAtX(leftX, coordinates);
-    const rightY = surfaceYAtX(rightX, coordinates);
+    const leftY = surfaceYAtX(coordinates, leftX);
+    const rightY = surfaceYAtX(coordinates, rightX);
     if (leftY === null || rightY === null) return;
 
     surfPts.push([leftX, leftY]);
     for (const [cx, cy] of coordinates) {
       if (cx > leftX && cx < rightX) {
-        const topY = surfaceYAtX(cx, coordinates);
+        const topY = surfaceYAtX(coordinates, cx);
         if (topY !== null && Math.abs(cy - topY) < 0.001) {
           surfPts.push([cx, cy]);
         }
@@ -456,8 +456,8 @@ export function drawEntryExitMarkers(
   const rightHandleDir: "left" | "right" =
     orientation === "rtl" ? "right" : "left";
 
-  const entryLeftY = surfaceYAtX(limits.entryLeftX, coordinates);
-  const entryRightY = surfaceYAtX(limits.entryRightX, coordinates);
+  const entryLeftY = surfaceYAtX(coordinates, limits.entryLeftX);
+  const entryRightY = surfaceYAtX(coordinates, limits.entryRightX);
   if (entryLeftY !== null) {
     drawArrow(limits.entryLeftX, entryLeftY, leftHandleDir);
   }
@@ -472,8 +472,8 @@ export function drawEntryExitMarkers(
     );
   }
 
-  const exitLeftY = surfaceYAtX(limits.exitLeftX, coordinates);
-  const exitRightY = surfaceYAtX(limits.exitRightX, coordinates);
+  const exitLeftY = surfaceYAtX(coordinates, limits.exitLeftX);
+  const exitRightY = surfaceYAtX(coordinates, limits.exitRightX);
   if (exitLeftY !== null) {
     drawArrow(limits.exitLeftX, exitLeftY, leftHandleDir);
   }
@@ -590,7 +590,7 @@ export function drawCriticalSurface(
     }
 
     for (const x of xBounds) {
-      const topY = surfaceYAtX(x, coordinates);
+      const topY = surfaceYAtX(coordinates, x);
       const botY = arcYAt(x);
       if (topY === null || botY === null) continue;
       const [sx, sy] = tf.worldToPdf(x, topY);

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, type RefObject } from "react";
-import { useAppStore, PLOT_MARGINS } from "../../../store/app-store";
-import { computePaperFrame } from "../helpers";
+import { useAppStore } from "../../../store/app-store";
+import { computePaperFrame, computeInnerFrame } from "../../view/paper";
+import { computeViewLockFit } from "../../view/fit";
 
 export function useViewport(
   canvasRef: RefObject<HTMLCanvasElement | null>,
@@ -96,32 +97,12 @@ export function useViewport(
       if (state.mode === "result" && vl?.enabled) {
         const { paperSize, landscape } = state.resultViewSettings.paperFrame;
         const pf = computePaperFrame(w, h, paperSize, landscape);
+        const inner = computeInnerFrame(pf);
+        const fit = computeViewLockFit(inner, vl, w, h);
 
-        const PLOT_PAD_L = pf.w * PLOT_MARGINS.L;
-        const PLOT_PAD_B = pf.h * PLOT_MARGINS.B;
-        const PLOT_PAD_T = pf.h * PLOT_MARGINS.T;
-        const PLOT_PAD_R = pf.w * PLOT_MARGINS.R;
-
-        const ifx = pf.x + PLOT_PAD_L;
-        const ify = pf.y + PLOT_PAD_T;
-        const ifw = pf.w - PLOT_PAD_L - PLOT_PAD_R;
-        const ifh = pf.h - PLOT_PAD_T - PLOT_PAD_B;
-
-        const worldW = vl.topRight[0] - vl.bottomLeft[0];
-        const worldH = vl.topRight[1] - vl.bottomLeft[1];
-
-        if (worldW > 0 && worldH > 0 && ifw > 0 && ifh > 0) {
-          const scale = Math.min(ifw / worldW, ifh / worldH);
-          const worldCx = (vl.bottomLeft[0] + vl.topRight[0]) / 2;
-          const worldCy = (vl.bottomLeft[1] + vl.topRight[1]) / 2;
-          const targetCx = ifx + ifw / 2;
-          const targetCy = ify + ifh / 2;
-
-          const ox = (targetCx - w / 2) / scale - worldCx;
-          const oy = (h / 2 - targetCy) / scale - worldCy;
-
-          state.setResultViewScale(scale);
-          state.setResultViewOffset([ox, oy]);
+        if (fit) {
+          state.setResultViewScale(fit.scale);
+          state.setResultViewOffset(fit.offset);
         }
         return;
       }

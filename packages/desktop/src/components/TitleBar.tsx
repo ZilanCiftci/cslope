@@ -6,6 +6,14 @@ import { RUN_RESET, getAnalysisInputSignature } from "../store/helpers";
 import { isElectron } from "../utils/is-electron";
 import { useProjectActions } from "../features/project/useProjectActions";
 import { NewIcon, OpenIcon, SaveIcon } from "./icons/FileActionIcons";
+import { UndoIcon, RedoIcon } from "./icons/EditIcons";
+import { SunIcon, MoonIcon } from "./icons/ThemeIcons";
+import {
+  MinimizeIcon,
+  MaximizeIcon,
+  RestoreIcon,
+  CloseIcon,
+} from "./icons/WindowIcons";
 
 interface Props {
   theme: "dark" | "light";
@@ -209,125 +217,5 @@ function FavButton({
     >
       {children}
     </button>
-  );
-}
-
-// ── SVG icons ──
-
-function UndoIcon() {
-  return (
-    <svg
-      width="14"
-      height="14"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <path d="M9 14l-4-4 4-4" />
-      <path d="M20 20a8 8 0 0 0-11-8H5" />
-    </svg>
-  );
-}
-
-function RedoIcon() {
-  return (
-    <svg
-      width="14"
-      height="14"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <path d="M15 6l4 4-4 4" />
-      <path d="M4 20a8 8 0 0 1 11-8h4" />
-    </svg>
-  );
-}
-
-function SunIcon() {
-  return (
-    <svg
-      width="16"
-      height="16"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <circle cx="12" cy="12" r="5" />
-      <path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M17.36 17.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M17.36 6.64l1.42-1.42" />
-    </svg>
-  );
-}
-
-function MoonIcon() {
-  return (
-    <svg
-      width="16"
-      height="16"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
-    </svg>
-  );
-}
-
-function MinimizeIcon() {
-  return (
-    <svg width="10" height="10" viewBox="0 0 10 10" fill="currentColor">
-      <rect x="0" y="4.5" width="10" height="1" />
-    </svg>
-  );
-}
-
-function MaximizeIcon() {
-  return (
-    <svg
-      width="10"
-      height="10"
-      viewBox="0 0 10 10"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1"
-    >
-      <rect x="0.5" y="0.5" width="9" height="9" />
-    </svg>
-  );
-}
-
-function RestoreIcon() {
-  return (
-    <svg
-      width="10"
-      height="10"
-      viewBox="0 0 10 10"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1"
-    >
-      <rect x="0.5" y="2.5" width="7" height="7" />
-      <polyline points="2.5,2.5 2.5,0.5 9.5,0.5 9.5,7.5 7.5,7.5" />
-    </svg>
-  );
-}
-
-function CloseIcon() {
-  return (
-    <svg width="10" height="10" viewBox="0 0 10 10" fill="currentColor">
-      <path d="M1.41 0L5 3.59 8.59 0 10 1.41 6.41 5 10 8.59 8.59 10 5 6.41 1.41 10 0 8.59 3.59 5 0 1.41z" />
-    </svg>
   );
 }

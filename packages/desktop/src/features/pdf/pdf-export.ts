@@ -9,8 +9,8 @@ import type {
   ProjectInfo,
   ResultViewSettings,
 } from "../../store/types";
-import { PAPER_DIMENSIONS, PLOT_MARGINS } from "../../store/defaults";
-import { PAPER_FRAME_MARGIN_PX } from "../../constants";
+import { PLOT_MARGINS } from "../../store/defaults";
+import { computePaperFrame, getPaperDimensions } from "../view/paper";
 import {
   drawAnnotations,
   drawClosedPolyline,
@@ -32,13 +32,6 @@ interface PdfViewBounds {
   xMax: number;
   yMin: number;
   yMax: number;
-}
-
-interface Rect {
-  x: number;
-  y: number;
-  w: number;
-  h: number;
 }
 
 function pdfNum(value: number, decimals = 12): string {
@@ -98,31 +91,17 @@ function createTransform(
   viewOffset: [number, number],
   viewScale: number,
 ): PdfTransform {
-  const dim = PAPER_DIMENSIONS[paperSize];
-  const paperW = landscape ? Math.max(dim.w, dim.h) : Math.min(dim.w, dim.h);
-  const paperH = landscape ? Math.min(dim.w, dim.h) : Math.max(dim.w, dim.h);
+  const { width: paperW, height: paperH } = getPaperDimensions(
+    paperSize,
+    landscape,
+  );
+  const pf = computePaperFrame(canvasW, canvasH, paperSize, landscape);
 
-  const paperAspect = paperW / paperH;
-  const margin = PAPER_FRAME_MARGIN_PX;
-  const availW = canvasW - margin * 2;
-  const availH = canvasH - margin * 2;
-  let frameW: number;
-  let frameH: number;
-  if (availW / availH > paperAspect) {
-    frameH = availH;
-    frameW = frameH * paperAspect;
-  } else {
-    frameW = availW;
-    frameH = frameW / paperAspect;
-  }
-  const pfX = (canvasW - frameW) / 2;
-  const pfY = (canvasH - frameH) / 2;
-
-  const mmPerPx = paperW / frameW;
+  const mmPerPx = paperW / pf.w;
 
   const canvasToPdf = (cx: number, cy: number): [number, number] => [
-    (cx - pfX) * mmPerPx,
-    (cy - pfY) * mmPerPx,
+    (cx - pf.x) * mmPerPx,
+    (cy - pf.y) * mmPerPx,
   ];
 
   const worldToPdf = (wx: number, wy: number): [number, number] => {
@@ -132,38 +111,6 @@ function createTransform(
   };
 
   return { worldToPdf, canvasToPdf, mmPerPx, paperW, paperH };
-}
-
-function computeVirtualPaperFrame(
-  canvasW: number,
-  canvasH: number,
-  paperSize: PaperSize,
-  landscape: boolean,
-): Rect {
-  const dim = PAPER_DIMENSIONS[paperSize];
-  const paperW = landscape ? Math.max(dim.w, dim.h) : Math.min(dim.w, dim.h);
-  const paperH = landscape ? Math.min(dim.w, dim.h) : Math.max(dim.w, dim.h);
-  const paperAspect = paperW / paperH;
-  const margin = PAPER_FRAME_MARGIN_PX;
-  const availW = canvasW - margin * 2;
-  const availH = canvasH - margin * 2;
-
-  let frameW: number;
-  let frameH: number;
-  if (availW / availH > paperAspect) {
-    frameH = availH;
-    frameW = frameH * paperAspect;
-  } else {
-    frameW = availW;
-    frameH = frameW / paperAspect;
-  }
-
-  return {
-    x: (canvasW - frameW) / 2,
-    y: (canvasH - frameH) / 2,
-    w: frameW,
-    h: frameH,
-  };
 }
 
 export function exportVectorPdf(data: PdfExportData): void {
@@ -196,13 +143,14 @@ export function exportVectorPdf(data: PdfExportData): void {
 
     const paperSize = rvs.paperFrame.paperSize;
     const landscape = rvs.paperFrame.landscape;
-    const dim = PAPER_DIMENSIONS[paperSize];
-    const paperW = landscape ? Math.max(dim.w, dim.h) : Math.min(dim.w, dim.h);
-    const paperH = landscape ? Math.min(dim.w, dim.h) : Math.max(dim.w, dim.h);
+    const { width: paperW, height: paperH } = getPaperDimensions(
+      paperSize,
+      landscape,
+    );
 
     const virtualW = 1200;
     const virtualH = (1200 * paperH) / paperW;
-    const virtualPaperFrame = computeVirtualPaperFrame(
+    const virtualPaperFrame = computePaperFrame(
       virtualW,
       virtualH,
       paperSize,

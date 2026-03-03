@@ -4,6 +4,7 @@ import { useStore } from "zustand";
 import { useAppStore } from "../../../store/app-store";
 import { RUN_RESET, getAnalysisInputSignature } from "../../../store/helpers";
 import { RibbonGroup, RibbonButton } from "./RibbonParts";
+import { RibbonUndoIcon, RibbonRedoIcon } from "../../icons/EditIcons";
 
 interface Props {
   isOpen: boolean;
@@ -111,14 +112,14 @@ export function EditMenu({ isOpen, onActivate, panelHost }: Props) {
           <div className="h-full flex items-center gap-0" role="menu">
             <RibbonGroup label="History">
               <RibbonButton
-                icon={<UndoIcon />}
+                icon={<RibbonUndoIcon />}
                 label="Undo"
                 shortcut="Ctrl+Z"
                 onClick={handleUndo}
                 disabled={!canUndo}
               />
               <RibbonButton
-                icon={<RedoIcon />}
+                icon={<RibbonRedoIcon />}
                 label="Redo"
                 shortcut="Ctrl+Shift+Z"
                 onClick={handleRedo}
@@ -129,51 +130,5 @@ export function EditMenu({ isOpen, onActivate, panelHost }: Props) {
           panelHost,
         )}
     </div>
-  );
-}
-
-// ── Icons ──
-
-function UndoIcon() {
-  return (
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-      <path
-        d="M5 10h9a5 5 0 0 1 0 10h-3"
-        stroke="#5c6bc0"
-        strokeWidth="2"
-        strokeLinecap="round"
-      />
-      <path
-        d="M9 14L5 10l4-4"
-        stroke="#5c6bc0"
-        strokeWidth="2"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        fill="none"
-      />
-      <path d="M5 10l4 4" stroke="#90a4d8" strokeWidth="1" opacity="0.5" />
-    </svg>
-  );
-}
-
-function RedoIcon() {
-  return (
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-      <path
-        d="M19 10h-9a5 5 0 0 0 0 10h3"
-        stroke="#5c6bc0"
-        strokeWidth="2"
-        strokeLinecap="round"
-      />
-      <path
-        d="M15 14l4-4-4-4"
-        stroke="#5c6bc0"
-        strokeWidth="2"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        fill="none"
-      />
-      <path d="M19 10l-4 4" stroke="#90a4d8" strokeWidth="1" opacity="0.5" />
-    </svg>
   );
 }

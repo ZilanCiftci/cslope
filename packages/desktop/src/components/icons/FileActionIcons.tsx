@@ -56,3 +56,55 @@ export function SaveIcon({ size = 20 }: IconProps) {
     </svg>
   );
 }
+
+export function SaveAsIcon({ size = 20 }: IconProps) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <path
+        d="M17 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h9l5 5v11a2 2 0 0 1-2 2z"
+        fill="#5c95d6"
+        stroke="#3b6ea5"
+        strokeWidth="1.5"
+      />
+      <rect x="7" y="13" width="8" height="8" rx="1" fill="#e8f0fe" />
+      <rect x="8" y="3" width="6" height="5" rx="0.5" fill="#b7d4f5" />
+      <path
+        d="M18 14l-5 5M16.5 15.5l2 2"
+        stroke="#e8a735"
+        strokeWidth="1.8"
+        strokeLinecap="round"
+      />
+      <circle cx="20" cy="13" r="1.5" fill="#e8a735" />
+    </svg>
+  );
+}
+
+export function ExitIcon({ size = 20 }: IconProps) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <path
+        d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"
+        stroke="#78909c"
+        strokeWidth="1.8"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <polyline
+        points="16 17 21 12 16 7"
+        stroke="#e53935"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <line
+        x1="21"
+        y1="12"
+        x2="9"
+        y2="12"
+        stroke="#e53935"
+        strokeWidth="2"
+        strokeLinecap="round"
+      />
+    </svg>
+  );
+}

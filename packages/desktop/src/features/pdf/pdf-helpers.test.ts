@@ -163,18 +163,18 @@ describe("surfaceYAtX", () => {
   it("interpolates Y on a horizontal segment", () => {
     // Between (10,10) and (12.5,7.5) is a slope, but (15,7.5)–(17.5,10) also slopes
     // Between (0,10) and (10,10) is horizontal at y=10
-    const y = surfaceYAtX(5, coords);
+    const y = surfaceYAtX(coords, 5);
     expect(y).toBeCloseTo(10, 5);
   });
 
   it("interpolates Y on a sloped segment", () => {
     // Between (10,10) and (12.5,7.5): at x=11.25, y should be 8.75
-    const y = surfaceYAtX(11.25, coords);
+    const y = surfaceYAtX(coords, 11.25);
     expect(y).toBeCloseTo(8.75, 5);
   });
 
   it("returns the vertex value at an exact vertex", () => {
-    const y = surfaceYAtX(10, coords);
+    const y = surfaceYAtX(coords, 10);
     expect(y).toBeCloseTo(10, 5);
   });
 
@@ -182,7 +182,7 @@ describe("surfaceYAtX", () => {
     // x=0 appears in two segments: (25,0)-(0,0) at y=0 and (0,0)-(0,10) which is vertical
     // The function skips vertical segments (x0 === x1), so at x=0 it should find the
     // segment from the closing wrap-around
-    const y = surfaceYAtX(0, coords);
+    const y = surfaceYAtX(coords, 0);
     expect(y).not.toBeNull();
   });
 
@@ -191,8 +191,8 @@ describe("surfaceYAtX", () => {
       [5, 0],
       [10, 5],
     ];
-    expect(surfaceYAtX(3, simple)).toBeNull();
-    expect(surfaceYAtX(12, simple)).toBeNull();
+    expect(surfaceYAtX(simple, 3)).toBeNull();
+    expect(surfaceYAtX(simple, 12)).toBeNull();
   });
 
   it("handles a simple 2-point line segment", () => {
@@ -200,10 +200,10 @@ describe("surfaceYAtX", () => {
       [0, 0],
       [10, 10],
     ];
-    expect(surfaceYAtX(5, line)).toBeCloseTo(5, 5);
+    expect(surfaceYAtX(line, 5)).toBeCloseTo(5, 5);
   });
 
   it("returns null for empty coordinates", () => {
-    expect(surfaceYAtX(5, [])).toBeNull();
+    expect(surfaceYAtX([], 5)).toBeNull();
   });
 });
