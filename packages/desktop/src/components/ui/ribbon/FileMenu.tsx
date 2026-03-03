@@ -1,8 +1,7 @@
-import { useEffect, useRef, useState, type ChangeEventHandler } from "react";
+import { useEffect } from "react";
 import { createPortal } from "react-dom";
-import { parseProjectFile, serializeProject } from "../../../store/persistence";
-import { useAppStore } from "../../../store/app-store";
 import { isElectron } from "../../../utils/is-electron";
+import { useProjectActions } from "../../../features/project/useProjectActions";
 import { RibbonGroup, RibbonButton, RibbonSep } from "./RibbonParts";
 import { NewIcon, OpenIcon, SaveIcon } from "../../icons/FileActionIcons";
 
@@ -13,113 +12,21 @@ interface Props {
   panelHost: HTMLElement | null;
 }
 
-const ensureJsonName = (name: string) =>
-  name.toLowerCase().endsWith(".json") ? name : `${name}.json`;
-
-const stripJsonExt = (name: string) => name.replace(/\.json$/i, "");
-
 export function FileMenu({
   activeModelName,
   isOpen,
   onActivate,
   panelHost,
 }: Props) {
-  const [fileName, setFileName] = useState("");
-  const fileInputRef = useRef<HTMLInputElement>(null);
-
   const defaultBaseName = activeModelName?.trim() || "cslope-project";
-
-  // ── Browser-only download helper ──
-  const triggerDownload = (json: string, name: string) => {
-    const blob = new Blob([json], { type: "application/json" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = name;
-    a.click();
-    URL.revokeObjectURL(url);
-  };
-
-  // ── Actions (work in both Electron and browser) ──
-
-  const handleNew = () => {
-    useAppStore.getState().newProject();
-    useAppStore.temporal.getState().clear();
-    setFileName("");
-    if (isElectron) window.cslope.menuNew();
-  };
-
-  const handleOpen = async () => {
-    if (isElectron) {
-      const contents = await window.cslope.openFile();
-      if (!contents) return;
-      try {
-        const parsed = parseProjectFile(contents);
-        useAppStore.getState().loadProject(parsed);
-        useAppStore.temporal.getState().clear();
-      } catch (err) {
-        const msg = err instanceof Error ? err.message : "Unknown error";
-        window.alert(`Unable to open project: ${msg}`);
-      }
-      return;
-    }
-    const input = fileInputRef.current;
-    if (!input) return;
-    input.value = "";
-    input.click();
-  };
-
-  const handleSave = async () => {
-    const store = useAppStore.getState();
-    store.saveCurrentModel();
-    const snapshot = serializeProject(useAppStore.getState());
-    const json = JSON.stringify(snapshot, null, 2);
-
-    if (isElectron) {
-      await window.cslope.saveFile(json);
-      return;
-    }
-    const suggested = fileName || defaultBaseName;
-    const finalName = ensureJsonName(suggested.trim());
-    triggerDownload(json, finalName);
-    setFileName(stripJsonExt(finalName));
-  };
-
-  const handleSaveAs = async () => {
-    const store = useAppStore.getState();
-    store.saveCurrentModel();
-    const snapshot = serializeProject(useAppStore.getState());
-    const json = JSON.stringify(snapshot, null, 2);
-
-    if (isElectron) {
-      await window.cslope.saveFileAs(json);
-      return;
-    }
-    const suggested = fileName || defaultBaseName;
-    const inputName = window.prompt("Save project as", suggested);
-    if (!inputName) return;
-    const finalName = ensureJsonName(inputName.trim());
-    triggerDownload(json, finalName);
-    setFileName(stripJsonExt(finalName));
-  };
-
-  const handleFileChange: ChangeEventHandler<HTMLInputElement> = (e) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = () => {
-      try {
-        const parsed = parseProjectFile(String(reader.result ?? ""));
-        useAppStore.getState().loadProject(parsed);
-        useAppStore.temporal.getState().clear();
-        setFileName(stripJsonExt(file.name));
-      } catch (err) {
-        const msg = err instanceof Error ? err.message : "Unknown error";
-        window.alert(`Unable to open project: ${msg}`);
-      }
-    };
-    reader.readAsText(file);
-  };
+  const {
+    fileInputRef,
+    handleNew,
+    handleOpen,
+    handleSave,
+    handleSaveAs,
+    handleFileChange,
+  } = useProjectActions(defaultBaseName);
 
   // ── Keyboard shortcuts (Ctrl+N/O/S/Shift+S) ──
   useEffect(() => {

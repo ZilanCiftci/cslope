@@ -1,10 +1,10 @@
-import { useEffect, useRef, useState, type ChangeEventHandler } from "react";
+import { useEffect, useState } from "react";
 import { useStore } from "zustand";
 import { DEFAULT_MODEL_NAME } from "../constants";
-import { parseProjectFile, serializeProject } from "../store/persistence";
 import { useAppStore } from "../store/app-store";
 import { RUN_RESET, getAnalysisInputSignature } from "../store/helpers";
 import { isElectron } from "../utils/is-electron";
+import { useProjectActions } from "../features/project/useProjectActions";
 import { NewIcon, OpenIcon, SaveIcon } from "./icons/FileActionIcons";
 
 interface Props {
@@ -15,8 +15,10 @@ interface Props {
 
 export function TitleBar({ theme, onToggleTheme, activeModelName }: Props) {
   const [maximized, setMaximized] = useState(false);
-  const [fileName, setFileName] = useState("");
-  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const defaultBaseName = activeModelName?.trim() || "cslope-project";
+  const { fileInputRef, handleNew, handleOpen, handleSave, handleFileChange } =
+    useProjectActions(defaultBaseName);
 
   const canUndo = useStore(
     useAppStore.temporal,
@@ -40,63 +42,6 @@ export function TitleBar({ theme, onToggleTheme, activeModelName }: Props) {
     };
   }, []);
 
-  const defaultBaseName = activeModelName?.trim() || "cslope-project";
-  const ensureJsonName = (name: string) =>
-    name.toLowerCase().endsWith(".json") ? name : `${name}.json`;
-
-  const triggerDownload = (json: string, name: string) => {
-    const blob = new Blob([json], { type: "application/json" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = name;
-    a.click();
-    URL.revokeObjectURL(url);
-  };
-
-  const handleNew = () => {
-    useAppStore.getState().newProject();
-    useAppStore.temporal.getState().clear();
-    setFileName("");
-    if (isElectron) window.cslope.menuNew();
-  };
-
-  const handleOpen = async () => {
-    if (isElectron) {
-      const contents = await window.cslope.openFile();
-      if (!contents) return;
-      try {
-        const parsed = parseProjectFile(contents);
-        useAppStore.getState().loadProject(parsed);
-        useAppStore.temporal.getState().clear();
-      } catch (err) {
-        const msg = err instanceof Error ? err.message : "Unknown error";
-        window.alert(`Unable to open project: ${msg}`);
-      }
-      return;
-    }
-    const input = fileInputRef.current;
-    if (!input) return;
-    input.value = "";
-    input.click();
-  };
-
-  const handleSave = async () => {
-    const store = useAppStore.getState();
-    store.saveCurrentModel();
-    const snapshot = serializeProject(useAppStore.getState());
-    const json = JSON.stringify(snapshot, null, 2);
-
-    if (isElectron) {
-      await window.cslope.saveFile(json);
-      return;
-    }
-    const suggested = fileName || defaultBaseName;
-    const finalName = ensureJsonName(suggested.trim());
-    triggerDownload(json, finalName);
-    setFileName(finalName.replace(/\.json$/i, ""));
-  };
-
   const handleUndo = () => {
     const before = getAnalysisInputSignature(useAppStore.getState());
     useAppStore.temporal.getState().resume();
@@ -115,24 +60,6 @@ export function TitleBar({ theme, onToggleTheme, activeModelName }: Props) {
     if (before !== after) {
       useAppStore.setState(RUN_RESET);
     }
-  };
-
-  const handleFileChange: ChangeEventHandler<HTMLInputElement> = (e) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = () => {
-      try {
-        const parsed = parseProjectFile(String(reader.result ?? ""));
-        useAppStore.getState().loadProject(parsed);
-        useAppStore.temporal.getState().clear();
-        setFileName(file.name.replace(/\.json$/i, ""));
-      } catch (err) {
-        const msg = err instanceof Error ? err.message : "Unknown error";
-        window.alert(`Unable to open project: ${msg}`);
-      }
-    };
-    reader.readAsText(file);
   };
 
   return (

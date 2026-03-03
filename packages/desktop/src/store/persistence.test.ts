@@ -315,7 +315,7 @@ describe("persistence normalization fallbacks", () => {
   it("defaults projectInfo when missing", () => {
     const parsed = parseProjectFile(makeBaseProject([minimalModel]));
     expect(parsed.models[0].projectInfo).toBeDefined();
-    expect(typeof parsed.models[0].projectInfo.title).toBe("string");
+    expect(typeof parsed.models[0].projectInfo!.title).toBe("string");
   });
 
   it("defaults piezometricLine when missing", () => {

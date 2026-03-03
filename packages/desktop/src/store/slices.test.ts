@@ -120,8 +120,8 @@ describe("store slices", () => {
     const store = useAppStore.getState();
     expect(store.mode).toBe("edit");
 
-    store.setMode("results");
-    expect(useAppStore.getState().mode).toBe("results");
+    store.setMode("result");
+    expect(useAppStore.getState().mode).toBe("result");
 
     store.setMode("edit");
     expect(useAppStore.getState().mode).toBe("edit");
@@ -366,7 +366,7 @@ describe("store slices", () => {
     store.saveCurrentModel();
     const next = useAppStore.getState();
     const model = next.models.find((m) => m.id === next.activeModelId);
-    expect(model?.projectInfo.title).toBe("Saved Title");
+    expect(model?.projectInfo?.title).toBe("Saved Title");
   });
 
   // ── modelsSlice: setProjectInfo ─────────────────────────────────
@@ -378,7 +378,7 @@ describe("store slices", () => {
     expect(next.projectInfo.title).toBe("T");
     expect(next.projectInfo.subtitle).toBe("S");
     const model = next.models.find((m) => m.id === next.activeModelId);
-    expect(model?.projectInfo.title).toBe("T");
+    expect(model?.projectInfo?.title).toBe("T");
   });
 
   // ── geometrySlice: materials ────────────────────────────────────
