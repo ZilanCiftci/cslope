@@ -850,71 +850,82 @@ export function drawCanvas(
   }
 
   // ── External boundary points ─────────────────────────
-  const extRadius = editingExterior ? POINT_RADIUS : 3;
-  for (let i = 0; i < coordinates.length; i++) {
-    const [px, py] = worldToCanvas(coordinates[i][0], coordinates[i][1], w, h);
-    const isSelected = editingExterior && i === selectedPointIndex;
-    const isHover =
-      editingExterior && hoverHit?.kind === "external" && hoverHit.index === i;
-
-    ctx.beginPath();
-    ctx.arc(px, py, extRadius, 0, Math.PI * 2);
-    ctx.fillStyle = isSelected
-      ? POINT_COLOR_SELECTED
-      : isHover
-        ? POINT_COLOR_HOVER
-        : editingExterior
-          ? POINT_COLOR
-          : STROKE_INACTIVE;
-    ctx.fill();
-    ctx.strokeStyle = editingExterior ? STROKE_ACTIVE : STROKE_INACTIVE;
-    ctx.lineWidth = editingExterior ? 1.5 : 1;
-    ctx.stroke();
-
-    // Coordinate label — only when editing
-    if (editingExterior) {
-      ctx.fillStyle = LABEL_COLOR;
-      ctx.font = "10px 'Segoe UI', sans-serif";
-      ctx.textAlign = "center";
-      ctx.fillText(
-        `(${coordinates[i][0].toFixed(1)}, ${coordinates[i][1].toFixed(1)})`,
-        px,
-        py - 12,
+  if (mode !== "result") {
+    const extRadius = editingExterior ? POINT_RADIUS : 3;
+    for (let i = 0; i < coordinates.length; i++) {
+      const [px, py] = worldToCanvas(
+        coordinates[i][0],
+        coordinates[i][1],
+        w,
+        h,
       );
+      const isSelected = editingExterior && i === selectedPointIndex;
+      const isHover =
+        editingExterior &&
+        hoverHit?.kind === "external" &&
+        hoverHit.index === i;
+
+      ctx.beginPath();
+      ctx.arc(px, py, extRadius, 0, Math.PI * 2);
+      ctx.fillStyle = isSelected
+        ? POINT_COLOR_SELECTED
+        : isHover
+          ? POINT_COLOR_HOVER
+          : editingExterior
+            ? POINT_COLOR
+            : STROKE_INACTIVE;
+      ctx.fill();
+      ctx.strokeStyle = editingExterior ? STROKE_ACTIVE : STROKE_INACTIVE;
+      ctx.lineWidth = editingExterior ? 1.5 : 1;
+      ctx.stroke();
+
+      // Coordinate label — only when editing
+      if (editingExterior) {
+        ctx.fillStyle = LABEL_COLOR;
+        ctx.font = "10px 'Segoe UI', sans-serif";
+        ctx.textAlign = "center";
+        ctx.fillText(
+          `(${coordinates[i][0].toFixed(1)}, ${coordinates[i][1].toFixed(1)})`,
+          px,
+          py - 12,
+        );
+      }
     }
   }
 
   // ── Material boundary points (interactive) ──────────
-  const bndRadius = editingBoundaries ? POINT_RADIUS - 1 : 3;
-  for (const b of materialBoundaries) {
-    const belowMatId = regionMaterials[`below-${b.id}`] ?? materials[0]?.id;
-    const mat = materials.find((m) => m.id === belowMatId);
-    const color = mat?.color ?? "#888";
+  if (mode !== "result") {
+    const bndRadius = editingBoundaries ? POINT_RADIUS - 1 : 3;
+    for (const b of materialBoundaries) {
+      const belowMatId = regionMaterials[`below-${b.id}`] ?? materials[0]?.id;
+      const mat = materials.find((m) => m.id === belowMatId);
+      const color = mat?.color ?? "#888";
 
-    for (let i = 0; i < b.coordinates.length; i++) {
-      const [px, py] = worldToCanvas(
-        b.coordinates[i][0],
-        b.coordinates[i][1],
-        w,
-        h,
-      );
-      const isHover =
-        editingBoundaries &&
-        hoverHit?.kind === "boundary" &&
-        hoverHit.boundaryId === b.id &&
-        hoverHit.pointIndex === i;
+      for (let i = 0; i < b.coordinates.length; i++) {
+        const [px, py] = worldToCanvas(
+          b.coordinates[i][0],
+          b.coordinates[i][1],
+          w,
+          h,
+        );
+        const isHover =
+          editingBoundaries &&
+          hoverHit?.kind === "boundary" &&
+          hoverHit.boundaryId === b.id &&
+          hoverHit.pointIndex === i;
 
-      ctx.beginPath();
-      ctx.arc(px, py, bndRadius, 0, Math.PI * 2);
-      ctx.fillStyle = isHover
-        ? POINT_COLOR_HOVER
-        : editingBoundaries
-          ? color
-          : STROKE_INACTIVE;
-      ctx.fill();
-      ctx.strokeStyle = editingBoundaries ? STROKE_ACTIVE : STROKE_INACTIVE;
-      ctx.lineWidth = editingBoundaries ? 1.5 : 1;
-      ctx.stroke();
+        ctx.beginPath();
+        ctx.arc(px, py, bndRadius, 0, Math.PI * 2);
+        ctx.fillStyle = isHover
+          ? POINT_COLOR_HOVER
+          : editingBoundaries
+            ? color
+            : STROKE_INACTIVE;
+        ctx.fill();
+        ctx.strokeStyle = editingBoundaries ? STROKE_ACTIVE : STROKE_INACTIVE;
+        ctx.lineWidth = editingBoundaries ? 1.5 : 1;
+        ctx.stroke();
+      }
     }
   }
 

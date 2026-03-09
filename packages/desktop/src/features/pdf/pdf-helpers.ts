@@ -42,7 +42,6 @@ export function setOpacity(
     opacity: fillOpacity,
     "stroke-opacity": strokeOpacity ?? fillOpacity,
   });
-  // @ts-ignore - jsPDF types might not include setGState depending on version
   pdf.setGState(state);
 }
 
