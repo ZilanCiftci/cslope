@@ -7,6 +7,7 @@
 
 import type { AnalysisLimits } from "./analysis";
 import type { SlopeOrientation } from "../model/canonical";
+import type { MaterialModel } from "./material-models";
 
 /** Slope definition sent from the UI to the engine / worker. */
 export interface SlopeDefinition {
@@ -24,6 +25,12 @@ export interface SlopeDefinition {
     cohesionRateOfChange?: number;
     cohesionUndrained?: number;
     materialType?: string;
+    /**
+     * Full material model definition.
+     * When present, this is the source of truth for strength resolution.
+     * When absent, a MohrCoulombModel is synthesised from the flat fields.
+     */
+    model?: MaterialModel;
     /** Depth range [top, bottom] in m for this material. */
     depthRange?: [number, number];
     color?: string;

@@ -3,6 +3,7 @@
  */
 
 import type { GeometryWithMaterial, Slice } from "../types/index";
+import { resolveStrength } from "../types/index";
 import { WATER_UNIT_WEIGHT, SLICE_DEDUP_TOLERANCE } from "../types/constants";
 import {
   getCircleYCoordinateAtX,
@@ -140,11 +141,18 @@ export function createSlice(
 
   if (baseMaterial === null) return null; // No material → invalid slice
 
-  // Material properties at base
+  // Resolve strength via the material model plugin system
+  const strength = resolveStrength(baseMaterial.model, {
+    yBottom,
+    x,
+    yGround: yTop,
+    alpha,
+  });
+
   const materialType = baseMaterial.materialType;
-  const cohesion = baseMaterial.getCohesion(yBottom);
-  const cohesionUndrained = baseMaterial.getCohesionUndrained(yBottom);
-  const frictionAngle = baseMaterial.frictionAngle;
+  const cohesion = strength.cohesion;
+  const cohesionUndrained = strength.cohesionUndrained;
+  const frictionAngle = strength.frictionAngle;
   const phi = (frictionAngle * Math.PI) / 180;
 
   const slice: Slice = {
@@ -176,6 +184,9 @@ export function createSlice(
     frictionAngle,
     phi,
     U,
+    isCombined: strength.isCombined,
+    skipSurface: strength.skipSurface,
+    impenetrable: strength.impenetrable,
   };
 
   return slice;

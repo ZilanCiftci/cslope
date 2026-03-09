@@ -29,6 +29,7 @@ export function buildSlopeDTO(state: AppState): SlopeDefinition {
       cohesion: m.cohesion,
       color: m.color,
       depthRange: m.depthRange,
+      model: m.model,
     })),
   };
 

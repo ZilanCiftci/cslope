@@ -8,8 +8,48 @@
 import type { SlopeDefinition } from "../types/slope-definition";
 import type { MaterialType } from "../types/material";
 import { Material, Udl, LineLoad } from "../types/index";
+import type { MohrCoulombModel } from "../types/material-models";
+import { validateMaterialModel } from "../types/validation";
 import { Slope } from "./slope";
 import { addSingleCircularPlane } from "./search";
+
+/**
+ * Compute the midpoint along a polyline at half of its total arc length.
+ * The result always lies ON the polyline and is robust for any number of
+ * vertices — including 2-point boundaries where the old vertex-index
+ * approach would pick an endpoint that might lie outside the slope.
+ */
+function polylineMidpoint(coords: [number, number][]): [number, number] {
+  if (coords.length === 1) return coords[0];
+
+  // Compute cumulative segment lengths
+  let totalLen = 0;
+  const segLens: number[] = [];
+  for (let i = 1; i < coords.length; i++) {
+    const dx = coords[i][0] - coords[i - 1][0];
+    const dy = coords[i][1] - coords[i - 1][1];
+    const len = Math.sqrt(dx * dx + dy * dy);
+    segLens.push(len);
+    totalLen += len;
+  }
+
+  // Walk along the polyline to the half-length point
+  const halfLen = totalLen / 2;
+  let accum = 0;
+  for (let i = 0; i < segLens.length; i++) {
+    if (accum + segLens[i] >= halfLen) {
+      const t = (halfLen - accum) / segLens[i];
+      return [
+        coords[i][0] + t * (coords[i + 1][0] - coords[i][0]),
+        coords[i][1] + t * (coords[i + 1][1] - coords[i][1]),
+      ];
+    }
+    accum += segLens[i];
+  }
+
+  // Fallback: return last point
+  return coords[coords.length - 1];
+}
 
 /**
  * Reconstruct a Slope model from a serialized SlopeDefinition DTO.
@@ -21,6 +61,30 @@ export function buildSlope(def: SlopeDefinition): Slope {
   // one to the external boundary (set_external_boundary uses materials[0]).
   const materialsByName = new Map<string, InstanceType<typeof Material>>();
   for (const m of def.materials) {
+    // When a full MaterialModel is provided, use it directly.
+    // Otherwise, fall back to constructing from flat fields (backward compat).
+    const model =
+      m.model ??
+      ({
+        kind: "mohr-coulomb" as const,
+        unitWeight: m.unitWeight,
+        cohesion: m.cohesion,
+        frictionAngle: m.frictionAngle,
+        cohesionRefDepth: m.cohesionRefDepth,
+        cohesionRateOfChange: m.cohesionRateOfChange,
+        cohesionUndrained: m.cohesionUndrained,
+        name: m.name,
+        color: m.color,
+      } satisfies MohrCoulombModel);
+
+    // Validate the model before constructing the Material.
+    const validationErrors = validateMaterialModel(model);
+    if (validationErrors.length > 0) {
+      throw new Error(
+        `Material "${m.name}" has invalid model:\n  – ${validationErrors.join("\n  – ")}`,
+      );
+    }
+
     const mat = new Material({
       name: m.name,
       unitWeight: m.unitWeight,
@@ -31,6 +95,7 @@ export function buildSlope(def: SlopeDefinition): Slope {
       cohesionUndrained: m.cohesionUndrained,
       materialType: m.materialType as MaterialType | undefined,
       color: m.color,
+      model,
     });
     materialsByName.set(m.name, mat);
   }
@@ -56,13 +121,14 @@ export function buildSlope(def: SlopeDefinition): Slope {
     }
 
     // Assign materials below each boundary.
-    // For each boundary, find a point just below the midpoint of the polyline.
+    // For each boundary, find a point just below the geometric midpoint
+    // of the polyline. We compute the true geometric midpoint (average of
+    // all vertices) rather than picking a vertex by index, because for
+    // short polylines the endpoint may fall outside the slope geometry.
     for (const b of def.materialBoundaries) {
       const mat = materialsByName.get(b.materialName);
       if (mat && b.coordinates.length >= 2) {
-        // Use the midpoint of the polyline, offset slightly downward
-        const midIdx = Math.floor(b.coordinates.length / 2);
-        const midPt = b.coordinates[midIdx];
+        const midPt = polylineMidpoint(b.coordinates);
         slope.assignMaterial([midPt[0], midPt[1] - 0.01], mat);
       }
     }
@@ -74,8 +140,7 @@ export function buildSlope(def: SlopeDefinition): Slope {
     const topMat = topMatName ? materialsByName.get(topMatName) : undefined;
     if (topMat) {
       const firstB = def.materialBoundaries[0];
-      const midIdx = Math.floor(firstB.coordinates.length / 2);
-      const midPt = firstB.coordinates[midIdx];
+      const midPt = polylineMidpoint(firstB.coordinates);
       slope.assignMaterial([midPt[0], midPt[1] + 0.01], topMat);
     }
   }

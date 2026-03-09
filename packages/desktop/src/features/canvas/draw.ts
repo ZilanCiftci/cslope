@@ -52,7 +52,13 @@ import {
   SLICE_LINE_WIDTH_PX,
   SLIP_SURFACE_OPACITY,
   UDL_LOAD_COLOR,
+  MODEL_HATCH_PATTERNS,
+  MODEL_SHORT_LABELS,
 } from "../rendering/style-spec";
+import {
+  drawCanvasHatch,
+  drawCanvasHatchLabel,
+} from "../rendering/hatch";
 
 const arcPointCache = new WeakMap<object, Map<string, [number, number][]>>();
 
@@ -461,6 +467,49 @@ export function drawCanvas(
 
       ctx.fillStyle = mat.color + "55";
       ctx.fill(region.holes ? "evenodd" : "nonzero");
+
+      // ── Hatch pattern overlay for special model kinds ──
+      const modelKind = mat.model?.kind;
+      const hatchPattern = modelKind
+        ? MODEL_HATCH_PATTERNS[modelKind]
+        : undefined;
+      if (hatchPattern) {
+        const canvasPts: [number, number][] = region.px.map((_, i) =>
+          worldToCanvas(region.px[i], region.py[i], w, h),
+        );
+        // Clip to region polygon for hatch lines
+        ctx.save();
+        ctx.beginPath();
+        ctx.moveTo(canvasPts[0][0], canvasPts[0][1]);
+        for (let i = 1; i < canvasPts.length; i++) {
+          ctx.lineTo(canvasPts[i][0], canvasPts[i][1]);
+        }
+        ctx.closePath();
+        if (region.holes) {
+          for (const hole of region.holes) {
+            if (hole.px.length < 3) continue;
+            const hPts: [number, number][] = hole.px.map((_, i) =>
+              worldToCanvas(hole.px[i], hole.py[i], w, h),
+            );
+            ctx.moveTo(hPts[0][0], hPts[0][1]);
+            for (let i = 1; i < hPts.length; i++) {
+              ctx.lineTo(hPts[i][0], hPts[i][1]);
+            }
+            ctx.closePath();
+          }
+        }
+        ctx.clip(region.holes ? "evenodd" : "nonzero");
+        drawCanvasHatch(ctx, canvasPts, hatchPattern);
+        ctx.restore();
+
+        // Label at centroid (outside clip so it's not clipped)
+        if (hatchPattern.label) {
+          const labelPts: [number, number][] = region.px.map((_, i) =>
+            worldToCanvas(region.px[i], region.py[i], w, h),
+          );
+          drawCanvasHatchLabel(ctx, labelPts, hatchPattern.label);
+        }
+      }
     }
     ctx.restore();
 
@@ -1584,9 +1633,10 @@ export function drawCanvas(
         lines.push(`Time: ${result.elapsedMs.toFixed(0)} ms`);
         drawParamBlock(ctx, ax, ay, "Results", lines, annoScale);
       } else if (anno.type === "material-table") {
-        const header = ["Material", "γ", "φ", "c"];
+        const header = ["Material", "Model", "γ", "φ", "c"];
         const rows = materials.map((m) => [
           m.name,
+          MODEL_SHORT_LABELS[m.model?.kind ?? "mohr-coulomb"],
           `${m.unitWeight}`,
           `${m.frictionAngle}°`,
           `${m.cohesion}`,

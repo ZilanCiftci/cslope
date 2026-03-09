@@ -8,6 +8,7 @@ import {
 } from "../defaults";
 import { nextId } from "../helpers";
 import type { SliceCreator } from "../helpers";
+import { createDefaultModel } from "../../features/properties/sections/material-forms/model-defaults";
 import type { GeometrySlice, ModelEntry, PiezoLine } from "../types";
 
 type GeometryState = GeometrySlice & {
@@ -116,6 +117,7 @@ export const createGeometrySlice: SliceCreator<GeometrySlice> = (set, get) => ({
             frictionAngle: 35,
             cohesion: 2,
             color: MATERIAL_COLORS[s.materials.length % MATERIAL_COLORS.length],
+            model: createDefaultModel("mohr-coulomb", 20),
           },
         ],
       }),

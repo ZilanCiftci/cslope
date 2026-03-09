@@ -6,6 +6,29 @@
 export { Material } from "./material";
 export type { MaterialParams, MaterialType } from "./material";
 
+// Material model types
+export type {
+  MaterialModel,
+  MaterialModelKind,
+  MaterialModelBase,
+  MohrCoulombModel,
+  UndrainedModel,
+  HighStrengthModel,
+  ImpenetrableModel,
+  SpatialMohrCoulombModel,
+  AnisotropicFunctionModel,
+  StrengthFromDepthModel,
+  StrengthFromDatumModel,
+} from "./material-models";
+export { MATERIAL_MODEL_LABELS } from "./material-models";
+
+// Strength resolution
+export { resolveStrength, interpolateFunction } from "./strength";
+export type { ResolvedStrength, StrengthContext } from "./strength";
+
+// Validation
+export { validateMaterialModel } from "./validation";
+
 export { Udl, LineLoad } from "./loads";
 export type { UdlParams, LineLoadParams } from "./loads";
 

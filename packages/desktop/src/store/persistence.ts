@@ -2,6 +2,7 @@ import {
   DEFAULT_ANALYSIS_OPTIONS,
   resolveOrientation,
   type AnalysisOptions,
+  type MaterialModel,
 } from "@cslope/engine";
 import { DEFAULT_MODEL_NAME } from "../constants";
 import {
@@ -309,28 +310,47 @@ function normalizeMaterial(raw: unknown, index: number): MaterialRow {
     return { ...DEFAULT_MATERIAL, id: `mat-${index + 1}` };
   }
   const m = raw as Record<string, unknown>;
-  return {
-    id: typeof m.id === "string" ? m.id : `mat-${index + 1}`,
-    name: typeof m.name === "string" ? m.name : DEFAULT_MATERIAL.name,
-    unitWeight: Math.max(
-      0.1,
-      finiteOr(m.unitWeight, DEFAULT_MATERIAL.unitWeight),
-    ),
-    frictionAngle: Math.max(
-      0,
-      finiteOr(m.frictionAngle, DEFAULT_MATERIAL.frictionAngle),
-    ),
-    cohesion: Math.max(0, finiteOr(m.cohesion, DEFAULT_MATERIAL.cohesion)),
-    color:
-      typeof m.color === "string" && m.color.length > 0
-        ? m.color
-        : MATERIAL_COLORS[index % MATERIAL_COLORS.length],
-    depthRange: (Array.isArray(m.depthRange) &&
+
+  const unitWeight = Math.max(
+    0.1,
+    finiteOr(m.unitWeight, DEFAULT_MATERIAL.unitWeight),
+  );
+  const frictionAngle = Math.max(
+    0,
+    finiteOr(m.frictionAngle, DEFAULT_MATERIAL.frictionAngle),
+  );
+  const cohesion = Math.max(0, finiteOr(m.cohesion, DEFAULT_MATERIAL.cohesion));
+  const name = typeof m.name === "string" ? m.name : DEFAULT_MATERIAL.name;
+  const color =
+    typeof m.color === "string" && m.color.length > 0
+      ? m.color
+      : MATERIAL_COLORS[index % MATERIAL_COLORS.length];
+  const depthRange = (
+    Array.isArray(m.depthRange) &&
     m.depthRange.length >= 2 &&
     typeof m.depthRange[0] === "number" &&
     typeof m.depthRange[1] === "number"
       ? [m.depthRange[0], m.depthRange[1]]
-      : undefined) as [number, number] | undefined,
+      : undefined
+  ) as [number, number] | undefined;
+
+  // Preserve the MaterialModel if present in the saved data.
+  // If absent, don't synthesise one — the engine will build a
+  // MohrCoulombModel from the flat fields automatically.
+  const model =
+    m.model && typeof m.model === "object" && "kind" in (m.model as object)
+      ? (m.model as MaterialModel)
+      : undefined;
+
+  return {
+    id: typeof m.id === "string" ? m.id : `mat-${index + 1}`,
+    name,
+    unitWeight,
+    frictionAngle,
+    cohesion,
+    color,
+    depthRange,
+    ...(model ? { model } : {}),
   };
 }
 

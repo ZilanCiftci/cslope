@@ -22,7 +22,10 @@ export {
   getYAtXMany,
   getYAtXStrict,
   getLineBetweenPoints,
+  interpolateIDW,
+  interpolateNearest,
 } from "./interpolation";
+export type { SpatialDataPoint } from "./interpolation";
 
 export { calculateAllLoads } from "./loads";
 export type { UdlData, LineLoadData } from "./loads";

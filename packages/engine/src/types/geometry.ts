@@ -93,7 +93,10 @@ export interface Slice {
   isValid: boolean;
   /** Base material at the slice bottom. */
   baseMaterial: Material | null;
-  /** Material type at base. */
+  /**
+   * Material type at base.
+   * @deprecated Use `isCombined` flag instead of checking `=== "Combined"`.
+   */
   materialType?: string;
   /** Effective cohesion at base (kPa). */
   cohesion: number;
@@ -105,6 +108,20 @@ export interface Slice {
   phi: number;
   /** Pore water pressure force (kN). */
   U: number;
+  /**
+   * When `true`, the solver uses Combined method (min of drained/undrained).
+   */
+  isCombined?: boolean;
+  /**
+   * When `true`, any slip surface passing through this slice should
+   * be treated as infinitely stable and excluded from the search.
+   */
+  skipSurface?: boolean;
+  /**
+   * When `true`, the slip surface has entered impenetrable material
+   * and the entire surface must be rejected.
+   */
+  impenetrable?: boolean;
 }
 
 /**

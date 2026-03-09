@@ -61,7 +61,7 @@ function getSlicePropertyArrays(
     Us[i] = s.U;
     cohesions[i] = s.cohesion;
     cohesionUndraineds[i] = s.cohesionUndrained;
-    materialCodes[i] = s.materialType === "Combined" ? 1 : 0;
+    materialCodes[i] = s.isCombined ? 1 : 0;
     dxs[i] = s.dx;
     funcs[i] = getIntersliceFunctionValue(
       intersliceFunction,
@@ -331,7 +331,7 @@ export function analyseOrdinary(_slope: Slope, slices: Slice[]): number | null {
   for (const s of slices) {
     const W = s.weight + s.udl + s.ll;
 
-    if (s.materialType === "Combined") {
+    if (s.isCombined) {
       const fd =
         s.cohesion * s.baseLength +
         Math.max(0, W * Math.cos(s.alpha) - s.U * s.baseLength) *
@@ -831,6 +831,15 @@ function evaluatePlanes(slope: Slope, allPlanes: SearchPlane[]): void {
       continue;
     }
     if (slices.length === 0) continue;
+
+    // If any slice has skipSurface (e.g. high-strength material) or
+    // impenetrable (bedrock), the surface is invalid — skip analysis.
+    if (slices.some((s) => s.skipSurface || s.impenetrable)) {
+      plane.fos = null;
+      plane.slices = slices;
+      plane.converged = true;
+      continue;
+    }
 
     let fos: number | null;
     let converged = true;

@@ -2,7 +2,17 @@
  * Material type definitions for slope stability analysis.
  */
 
-/** Supported material constitutive models. */
+import type { MaterialModel, MohrCoulombModel } from "./material-models";
+import { resolveStrength } from "./strength";
+import type { StrengthContext } from "./strength";
+
+/**
+ * Supported material constitutive models.
+ *
+ * @deprecated Prefer `MaterialModelKind` from `material-models.ts`.
+ *   Kept for backward compatibility with existing code that checks
+ *   `materialType === "Combined"`.
+ */
 export type MaterialType = "Mohr-Coulomb" | "Combined";
 
 /** Geological material unit properties. */
@@ -27,6 +37,12 @@ export interface MaterialParams {
   materialType?: MaterialType;
   /** Combined-method c-factor (default: 0). */
   cFactor?: number;
+  /**
+   * Full material model descriptor.
+   * When provided, takes precedence over the flat parameter fields.
+   * If omitted, a `MohrCoulombModel` is synthesised from the flat fields.
+   */
+  model?: MaterialModel;
 }
 
 /** Small tolerance for floating-point comparisons. */
@@ -44,6 +60,16 @@ export class Material {
   readonly materialType: MaterialType;
   readonly cFactor: number;
 
+  /**
+   * The canonical material model descriptor.
+   *
+   * This is the source of truth for strength resolution.  Legacy
+   * properties (`cohesion`, `frictionAngle`, etc.) are kept in sync
+   * for backward-compatible reads but new code should prefer
+   * `resolveStrength(material.model, context)`.
+   */
+  readonly model: MaterialModel;
+
   constructor(params: MaterialParams = {}) {
     this.unitWeight = params.unitWeight ?? 20;
     this.frictionAngle = params.frictionAngle ?? 35;
@@ -59,6 +85,14 @@ export class Material {
     this.materialType =
       mt === "Mohr-Coulomb" || mt === "Combined" ? mt : "Mohr-Coulomb";
 
+    // Build the canonical MaterialModel from legacy params.
+    // If a `model` was supplied directly, use it instead.
+    if (params.model) {
+      this.model = params.model;
+    } else {
+      this.model = Material.buildModelFromParams(params, this);
+    }
+
     // Validation
     if (this.unitWeight < 0 || this.unitWeight > 500) {
       throw new RangeError("unit weight must be between 0 and 500");
@@ -68,19 +102,72 @@ export class Material {
     }
   }
 
-  /** Effective cohesion at a given depth (m). */
+  /**
+   * Effective cohesion at a given depth (m).
+   *
+   * @deprecated Use `resolveStrength(material.model, context)` instead.
+   */
   getCohesion(depth: number = 0): number {
-    const c =
-      this.cohesion +
-      (this.cohesionRefDepth - depth) * this.cohesionRateOfChange;
-    return this.materialType === "Combined" ? c * this.cFactor : c;
+    const result = resolveStrength(this.model, {
+      yBottom: depth,
+      x: 0,
+      yGround: 0,
+      alpha: 0,
+    });
+    return result.cohesion;
   }
 
-  /** Undrained cohesion at a given depth (m). */
+  /**
+   * Undrained cohesion at a given depth (m).
+   *
+   * @deprecated Use `resolveStrength(material.model, context)` instead.
+   */
   getCohesionUndrained(depth: number = 0): number {
-    return (
-      this.cohesion +
-      (this.cohesionRefDepth - depth) * this.cohesionRateOfChange
-    );
+    const result = resolveStrength(this.model, {
+      yBottom: depth,
+      x: 0,
+      yGround: 0,
+      alpha: 0,
+    });
+    return result.cohesionUndrained;
+  }
+
+  /**
+   * Resolve the effective strength at a given context.
+   * Convenience wrapper around the free `resolveStrength()` function.
+   */
+  getStrength(context: StrengthContext) {
+    return resolveStrength(this.model, context);
+  }
+
+  // ── Internal helpers ──────────────────────────────────────────
+
+  /** Build a `MohrCoulombModel` from legacy `MaterialParams`. */
+  private static buildModelFromParams(
+    _params: MaterialParams,
+    resolved: {
+      unitWeight: number;
+      frictionAngle: number;
+      cohesion: number;
+      cohesionRefDepth: number;
+      cohesionRateOfChange: number;
+      cohesionUndrained: number;
+      name: string;
+      color: string;
+      cFactor: number;
+    },
+  ): MohrCoulombModel {
+    return {
+      kind: "mohr-coulomb",
+      unitWeight: resolved.unitWeight,
+      frictionAngle: resolved.frictionAngle,
+      cohesion: resolved.cohesion,
+      cohesionRefDepth: resolved.cohesionRefDepth,
+      cohesionRateOfChange: resolved.cohesionRateOfChange,
+      cohesionUndrained: resolved.cohesionUndrained,
+      cFactor: resolved.cFactor,
+      name: resolved.name || undefined,
+      color: resolved.color || undefined,
+    };
   }
 }

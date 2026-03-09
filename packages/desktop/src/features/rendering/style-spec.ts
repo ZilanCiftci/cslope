@@ -106,3 +106,64 @@ export const ANNOTATION_DEFAULT_TEXT_COLOR = "#000000";
 
 /** Number of tick/label positions on the FOS colour bar. */
 export const COLOR_BAR_NUM_TICKS = 5;
+
+// ── Material model hatch patterns ──────────────────────────────
+
+import type { MaterialModelKind } from "@cslope/engine";
+
+/**
+ * Describes a hatch-pattern overlay for special material model kinds.
+ *
+ * `lineSpacing` is in logical pixels (canvas) — the PDF renderer
+ * multiplies by `tf.mmPerPx`.
+ */
+export interface HatchPattern {
+  /** Hatch line angle in degrees (0 = horizontal, 45 = diagonal). */
+  angle: number;
+  /** Spacing between hatch lines (logical px). */
+  lineSpacing: number;
+  /** Hatch line width (logical px). */
+  lineWidth: number;
+  /** Stroke colour. */
+  color: DualColor;
+  /** Optional second angle for cross-hatch. */
+  crossAngle?: number;
+  /** Short label drawn in the region centroid. */
+  label?: string;
+}
+
+/** Hatch patterns for model kinds that need visual distinction. */
+export const MODEL_HATCH_PATTERNS: Partial<
+  Record<MaterialModelKind, HatchPattern>
+> = {
+  "high-strength": {
+    angle: 45,
+    lineSpacing: 8,
+    lineWidth: 1.2,
+    color: { hex: "#555555", rgb: [85, 85, 85] },
+    crossAngle: -45,
+    label: "HS",
+  },
+  impenetrable: {
+    angle: 45,
+    lineSpacing: 6,
+    lineWidth: 1.5,
+    color: { hex: "#333333", rgb: [51, 51, 51] },
+    label: "BR",
+  },
+};
+
+/**
+ * Short display labels for each model kind, used in the material table
+ * "Model" column. Falls back to the full label from MATERIAL_MODEL_LABELS.
+ */
+export const MODEL_SHORT_LABELS: Record<MaterialModelKind, string> = {
+  "mohr-coulomb": "M-C",
+  undrained: "Undr.",
+  "high-strength": "High-S",
+  impenetrable: "Bedrock",
+  "spatial-mohr-coulomb": "Spat. M-C",
+  "anisotropic-function": "Aniso.",
+  "s-f-depth": "S=f(d)",
+  "s-f-datum": "S=f(z)",
+};

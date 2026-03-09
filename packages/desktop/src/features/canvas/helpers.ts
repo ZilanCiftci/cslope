@@ -7,6 +7,7 @@ import type {
 } from "../../store/types";
 import { circleArcPoints } from "../../utils/arc";
 import { computePaperFrame } from "../view/paper";
+import { MODEL_SHORT_LABELS } from "../rendering/style-spec";
 
 export { computePaperFrame } from "../view/paper";
 
@@ -349,9 +350,10 @@ export function getAnnotationBoundsPx(
   }
 
   if (anno.type === "material-table") {
-    const header = ["Material", "γ", "φ", "c"];
+    const header = ["Material", "Model", "γ", "φ", "c"];
     const rows = materials.map((m) => [
       m.name,
+      MODEL_SHORT_LABELS[m.model?.kind ?? "mohr-coulomb"],
       `${m.unitWeight}`,
       `${m.frictionAngle}°`,
       `${m.cohesion}`,
@@ -693,9 +695,10 @@ export function extendBoundsWithResultFitExtras(params: {
       const { width: boxW, height: boxH } = measureParamBlock("Results", lines);
       addCanvasRect(ax, ay, boxW, boxH);
     } else if (anno.type === "material-table") {
-      const header = ["Material", "gamma", "phi", "c"];
+      const header = ["Material", "Model", "gamma", "phi", "c"];
       const rows = materials.map((m) => [
         m.name,
+        MODEL_SHORT_LABELS[m.model?.kind ?? "mohr-coulomb"],
         `${m.unitWeight}`,
         `${m.frictionAngle} deg`,
         `${m.cohesion}`,

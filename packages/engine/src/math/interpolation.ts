@@ -144,3 +144,94 @@ export function getLineBetweenPoints(
 
   return [xOut, yOut];
 }
+
+// ── 2D Spatial Interpolation ───────────────────────────────────
+
+/** A 2D data point with arbitrary numeric values. */
+export interface SpatialDataPoint {
+  x: number;
+  y: number;
+  values: number[];
+}
+
+/**
+ * Inverse Distance Weighting (IDW) interpolation in 2D.
+ *
+ * Interpolates `values` at query point `(qx, qy)` from a set of
+ * data points using the formula:
+ *   v = Σ(wi * vi) / Σ(wi),  where wi = 1 / dist(q, pi)^p
+ *
+ * If the query point coincides with (or is very close to) a data point,
+ * that data point's values are returned directly to avoid division by zero.
+ *
+ * @param points  Array of spatial data points.
+ * @param qx      Query x-coordinate.
+ * @param qy      Query y-coordinate.
+ * @param power   Distance exponent (default: 2).
+ * @param eps     Distance threshold below which a point is considered
+ *                coincident (default: 1e-10).
+ * @returns Interpolated values array (same length as `points[0].values`).
+ *          Returns an array of zeros if `points` is empty.
+ */
+export function interpolateIDW(
+  points: SpatialDataPoint[],
+  qx: number,
+  qy: number,
+  power: number = 2,
+  eps: number = 1e-10,
+): number[] {
+  if (points.length === 0) return [];
+  const nValues = points[0].values.length;
+
+  if (points.length === 1) return [...points[0].values];
+
+  // Check for coincident point
+  for (const p of points) {
+    const d = Math.sqrt((p.x - qx) ** 2 + (p.y - qy) ** 2);
+    if (d < eps) return [...p.values];
+  }
+
+  const result = new Array<number>(nValues).fill(0);
+  let wSum = 0;
+
+  for (const p of points) {
+    const d = Math.sqrt((p.x - qx) ** 2 + (p.y - qy) ** 2);
+    const w = 1 / d ** power;
+    wSum += w;
+    for (let j = 0; j < nValues; j++) {
+      result[j] += w * p.values[j];
+    }
+  }
+
+  for (let j = 0; j < nValues; j++) {
+    result[j] /= wSum;
+  }
+
+  return result;
+}
+
+/**
+ * Nearest-neighbour interpolation in 2D.
+ *
+ * Returns the values of the data point closest to `(qx, qy)`.
+ */
+export function interpolateNearest(
+  points: SpatialDataPoint[],
+  qx: number,
+  qy: number,
+): number[] {
+  if (points.length === 0) return [];
+
+  let bestDist = Infinity;
+  let bestIdx = 0;
+
+  for (let i = 0; i < points.length; i++) {
+    const d = (points[i].x - qx) ** 2 + (points[i].y - qy) ** 2;
+    if (d < bestDist) {
+      bestDist = d;
+      bestIdx = i;
+    }
+  }
+
+  return [...points[bestIdx].values];
+}

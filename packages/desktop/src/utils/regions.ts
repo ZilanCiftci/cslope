@@ -395,6 +395,37 @@ export function computeRegions(
 }
 
 /**
+ * Compute the point at half of a polyline's arc length.
+ * Always lies ON the polyline, robust for any vertex count — including
+ * 2-point boundaries where a vertex-index approach would pick an
+ * endpoint that may fall outside the slope geometry.
+ */
+function polylineMidpoint(coords: [number, number][]): [number, number] {
+  if (coords.length <= 1) return coords[0];
+  let totalLen = 0;
+  const segLens: number[] = [];
+  for (let i = 1; i < coords.length; i++) {
+    const dx = coords[i][0] - coords[i - 1][0];
+    const dy = coords[i][1] - coords[i - 1][1];
+    segLens.push(Math.sqrt(dx * dx + dy * dy));
+    totalLen += segLens[segLens.length - 1];
+  }
+  const halfLen = totalLen / 2;
+  let accum = 0;
+  for (let i = 0; i < segLens.length; i++) {
+    if (accum + segLens[i] >= halfLen) {
+      const t = (halfLen - accum) / segLens[i];
+      return [
+        coords[i][0] + t * (coords[i + 1][0] - coords[i][0]),
+        coords[i][1] + t * (coords[i + 1][1] - coords[i][1]),
+      ];
+    }
+    accum += segLens[i];
+  }
+  return coords[coords.length - 1];
+}
+
+/**
  * For a given boundary, find its material by checking which computed region
  * contains a point just below / inside the boundary's midpoint.
  * Checks smallest regions first so inner regions take precedence.
@@ -404,8 +435,7 @@ export function findMaterialBelowBoundary(
   regions: Region[],
   defaultMaterialId: string,
 ): string {
-  const midIdx = Math.floor(boundary.coordinates.length / 2);
-  const midPt = boundary.coordinates[midIdx];
+  const midPt = polylineMidpoint(boundary.coordinates);
 
   let testX: number;
   let testY: number;

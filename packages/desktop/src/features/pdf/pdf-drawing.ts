@@ -34,7 +34,13 @@ import {
   SLICE_LINE_WIDTH_PX,
   SLIP_SURFACE_OPACITY,
   UDL_LOAD_COLOR,
+  MODEL_HATCH_PATTERNS,
+  MODEL_SHORT_LABELS,
 } from "../rendering/style-spec";
+import {
+  drawPdfHatch,
+  drawPdfHatchLabel,
+} from "../rendering/hatch";
 import type { AnalysisResult } from "@cslope/engine";
 import type {
   AnalysisLimitsState,
@@ -245,6 +251,30 @@ export function drawMaterialRegions(
     setOpacity(pdf, 0.33);
     pdfPath(pdf, ops, region.holes ? "f*" : "f");
     resetOpacity(pdf);
+
+    // ── Hatch pattern overlay for special model kinds ──
+    const modelKind = mat.model?.kind;
+    const hatchPattern = modelKind
+      ? MODEL_HATCH_PATTERNS[modelKind]
+      : undefined;
+    if (hatchPattern) {
+      // Clip to region polygon for hatch
+      pdf.saveGraphicsState();
+      pdfPath(pdf, ops, "");
+      pdf.clip();
+      (pdf as unknown as { discardPath?: () => void }).discardPath?.();
+
+      setOpacity(pdf, 0.45);
+      drawPdfHatch(pdf, outerPts, hatchPattern, tf.mmPerPx);
+      resetOpacity(pdf);
+
+      pdf.restoreGraphicsState();
+
+      // Label at centroid
+      if (hatchPattern.label) {
+        drawPdfHatchLabel(pdf, outerPts, hatchPattern.label, tf.mmPerPx);
+      }
+    }
   }
 
   // Restore state to remove model polygon clip
@@ -902,9 +932,10 @@ function drawTablePdf(
   materials: MaterialRow[],
   scale: number,
 ) {
-  const header = ["Material", "γ", "φ", "c"];
+  const header = ["Material", "Model", "γ", "φ", "c"];
   const rows = materials.map((m) => [
     m.name,
+    MODEL_SHORT_LABELS[m.model?.kind ?? "mohr-coulomb"],
     `${m.unitWeight}`,
     `${m.frictionAngle}°`,
     `${m.cohesion}`,

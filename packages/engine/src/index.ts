@@ -32,6 +32,29 @@ export type {
 
 export type { SlopeDefinition } from "./types/slope-definition";
 
+// Material model types
+export type {
+  MaterialModel,
+  MaterialModelKind,
+  MaterialModelBase,
+  MohrCoulombModel,
+  UndrainedModel,
+  HighStrengthModel,
+  ImpenetrableModel,
+  SpatialMohrCoulombModel,
+  AnisotropicFunctionModel,
+  StrengthFromDepthModel,
+  StrengthFromDatumModel,
+} from "./types/material-models";
+export { MATERIAL_MODEL_LABELS } from "./types/material-models";
+
+// Strength resolution
+export { resolveStrength, interpolateFunction } from "./types/strength";
+export type { ResolvedStrength, StrengthContext } from "./types/strength";
+
+// Validation
+export { validateMaterialModel } from "./types/validation";
+
 export {
   DEFAULT_SLICES,
   DEFAULT_ITERATIONS,

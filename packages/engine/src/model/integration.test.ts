@@ -11,9 +11,11 @@
 
 import { describe, it, expect } from "vitest";
 import { Material, Udl, LineLoad } from "../types/index";
+import type { SlopeDefinition } from "../types/slope-definition";
 import { Slope } from "./slope";
 import { analyseSlope } from "./solvers";
 import { addSingleCircularPlane } from "./search";
+import { buildSlope } from "./build-slope";
 import { getSlices } from "./slices";
 import { analyseBishop } from "./solvers";
 
@@ -311,5 +313,221 @@ describe("Integration: Analysis method comparison", () => {
         `${method} deviates ${(deviation * 100).toFixed(1)}% from avg`,
       ).toBeLessThan(0.2);
     }
+  });
+});
+
+// ── High Strength & Impenetrable surface exclusion ───────────────
+
+describe("Integration: High-strength and impenetrable exclusion", () => {
+  it("high-strength layer excludes surfaces passing through it", () => {
+    const clay = new Material({
+      name: "Clay",
+      unitWeight: 20,
+      frictionAngle: 19.6,
+      cohesion: 3,
+    });
+    const rock = new Material({
+      name: "Rock",
+      unitWeight: 24,
+      model: { kind: "high-strength", unitWeight: 24 },
+    });
+
+    // Slope with a high-strength layer at y = -5
+    const s = new Slope();
+    s.setExternalBoundary(T_ACADS_BOUNDARY);
+    s.setMaterialBoundary([
+      [0, -5],
+      [50, -5],
+    ]);
+    s.assignMaterial([25, -3], clay);
+    s.assignMaterial([25, -12], rock);
+    s.updateAnalysisOptions({ slices: 30, method: "Bishop" });
+    s.customPlanesOnly = true;
+
+    // Shallow circle (bottom at y = -4, stays above rock layer)
+    addSingleCircularPlane(s, 28, 25, 29);
+    // Deep circle (bottom at y = -10, passes into rock)
+    addSingleCircularPlane(s, 28, 25, 35);
+    analyseSlope(s);
+
+    // The deep circle should be excluded (fos = null)
+    const deepPlane = s.search.find((p) => p.radius === 35);
+    expect(deepPlane).toBeDefined();
+    expect(deepPlane!.fos).toBeNull();
+
+    // The shallow circle should have a valid FOS
+    const shallowPlane = s.search.find((p) => p.radius === 29);
+    expect(shallowPlane).toBeDefined();
+    expect(shallowPlane!.fos).toBeGreaterThan(0);
+  });
+
+  it("impenetrable layer excludes surfaces passing through it", () => {
+    const clay = new Material({
+      name: "Clay",
+      unitWeight: 20,
+      frictionAngle: 19.6,
+      cohesion: 3,
+    });
+    const bedrock = new Material({
+      name: "Bedrock",
+      unitWeight: 26,
+      model: { kind: "impenetrable", unitWeight: 26 },
+    });
+
+    // Slope with impenetrable bedrock at y = -5
+    const s = new Slope();
+    s.setExternalBoundary(T_ACADS_BOUNDARY);
+    s.setMaterialBoundary([
+      [0, -5],
+      [50, -5],
+    ]);
+    s.assignMaterial([25, -3], clay);
+    s.assignMaterial([25, -12], bedrock);
+    s.updateAnalysisOptions({ slices: 30, method: "Bishop" });
+    s.customPlanesOnly = true;
+
+    // Shallow circle (bottom at y = -4, stays above bedrock layer)
+    addSingleCircularPlane(s, 28, 25, 29);
+    // Deep circle (bottom at y = -10, passes into bedrock)
+    addSingleCircularPlane(s, 28, 25, 35);
+    analyseSlope(s);
+
+    // The deep circle should be excluded (fos = null)
+    const deepPlane = s.search.find((p) => p.radius === 35);
+    expect(deepPlane).toBeDefined();
+    expect(deepPlane!.fos).toBeNull();
+
+    // The shallow circle should have a valid FOS
+    const shallowPlane = s.search.find((p) => p.radius === 29);
+    expect(shallowPlane).toBeDefined();
+    expect(shallowPlane!.fos).toBeGreaterThan(0);
+  });
+
+  it("single circle through impenetrable returns null FOS", () => {
+    const clay = new Material({
+      name: "Clay",
+      unitWeight: 20,
+      frictionAngle: 19.6,
+      cohesion: 3,
+    });
+    const bedrock = new Material({
+      name: "Bedrock",
+      unitWeight: 26,
+      model: { kind: "impenetrable", unitWeight: 26 },
+    });
+
+    const s = new Slope();
+    s.setExternalBoundary(T_ACADS_BOUNDARY);
+    s.setMaterialBoundary([
+      [0, -5],
+      [50, -5],
+    ]);
+    s.assignMaterial([25, -3], clay);
+    s.assignMaterial([25, -12], bedrock);
+    s.updateAnalysisOptions({ slices: 30, method: "Bishop" });
+    s.customPlanesOnly = true;
+
+    // Add a single circle that passes deep into the bedrock (bottom at y = -10)
+    addSingleCircularPlane(s, 28, 25, 35);
+    analyseSlope(s);
+
+    // The single plane should be excluded
+    expect(s.search.length).toBe(1);
+    expect(s.search[0].fos).toBeNull();
+  });
+
+  it("single circle through high-strength returns null FOS", () => {
+    const clay = new Material({
+      name: "Clay",
+      unitWeight: 20,
+      frictionAngle: 19.6,
+      cohesion: 3,
+    });
+    const rock = new Material({
+      name: "Rock",
+      unitWeight: 24,
+      model: { kind: "high-strength", unitWeight: 24 },
+    });
+
+    const s = new Slope();
+    s.setExternalBoundary(T_ACADS_BOUNDARY);
+    s.setMaterialBoundary([
+      [0, -5],
+      [50, -5],
+    ]);
+    s.assignMaterial([25, -3], clay);
+    s.assignMaterial([25, -12], rock);
+    s.updateAnalysisOptions({ slices: 30, method: "Bishop" });
+    s.customPlanesOnly = true;
+
+    // Add a single circle that passes deep into the rock (bottom at y = -10)
+    addSingleCircularPlane(s, 28, 25, 35);
+    analyseSlope(s);
+
+    // The single plane should be excluded
+    expect(s.search.length).toBe(1);
+    expect(s.search[0].fos).toBeNull();
+  });
+
+  it("buildSlope DTO path assigns impenetrable material correctly", () => {
+    // Exact DTO from a user-reported bug: 2-point boundary whose endpoint
+    // falls outside the slope geometry. The old vertex-index midpoint
+    // would fail to assign the bedrock material.
+    const def: SlopeDefinition = {
+      orientation: "ltr",
+      coordinates: [
+        [0, -15],
+        [0, 0],
+        [20, 0],
+        [40, -10],
+        [50, -10],
+        [50, -15],
+      ],
+      materials: [
+        {
+          name: "M1",
+          unitWeight: 20,
+          frictionAngle: 19.6,
+          cohesion: 3,
+        },
+        {
+          name: "Bedrock",
+          unitWeight: 20,
+          frictionAngle: 0,
+          cohesion: 0,
+          model: { kind: "impenetrable", unitWeight: 20 },
+        },
+      ],
+      materialBoundaries: [
+        {
+          coordinates: [
+            [-7, -14.5],
+            [50, -7.5],
+          ],
+          materialName: "Bedrock",
+        },
+      ],
+      topRegionMaterialName: "M1",
+      analysisLimits: {
+        entryLeftX: 17,
+        entryRightX: 22,
+        exitLeftX: 31.5,
+        exitRightX: 43,
+      },
+    };
+
+    const s = buildSlope(def);
+    s.updateAnalysisOptions({ slices: 30, method: "Bishop" });
+    s.customPlanesOnly = true;
+
+    // Circle that passes into bedrock
+    addSingleCircularPlane(s, 40.85, 19.9, 29.9);
+    analyseSlope(s);
+
+    const plane = s.search[0];
+    expect(plane.fos).toBeNull();
+
+    const bedrockSlices = plane.slices?.filter((sl) => sl.impenetrable) ?? [];
+    expect(bedrockSlices.length).toBeGreaterThan(0);
   });
 });

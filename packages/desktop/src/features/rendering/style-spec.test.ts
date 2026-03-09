@@ -19,6 +19,8 @@ import {
   MARKER_BAR_H_PX,
   MARKER_COLOR,
   MARKER_SZ_PX,
+  MODEL_HATCH_PATTERNS,
+  MODEL_SHORT_LABELS,
   PIEZO_BAR_GAP1_PX,
   PIEZO_BAR_GAP2_PX,
   PIEZO_BAR_W_PX,
@@ -134,5 +136,61 @@ describe("style-spec string defaults", () => {
 
   it("annotation default font family is a non-empty string", () => {
     expect(ANNOTATION_DEFAULT_FONT_FAMILY.length).toBeGreaterThan(0);
+  });
+});
+
+// ── Material model hatch patterns ──────────────────────────────
+
+describe("style-spec material model hatch patterns", () => {
+  it("defines hatch patterns for high-strength and impenetrable", () => {
+    expect(MODEL_HATCH_PATTERNS["high-strength"]).toBeDefined();
+    expect(MODEL_HATCH_PATTERNS["impenetrable"]).toBeDefined();
+  });
+
+  it("hatch pattern colours are consistent hex/rgb", () => {
+    for (const [, pattern] of Object.entries(MODEL_HATCH_PATTERNS)) {
+      if (!pattern) continue;
+      expectConsistent(pattern.color, "hatch color");
+    }
+  });
+
+  it("hatch patterns have positive lineSpacing and lineWidth", () => {
+    for (const [, pattern] of Object.entries(MODEL_HATCH_PATTERNS)) {
+      if (!pattern) continue;
+      expect(pattern.lineSpacing).toBeGreaterThan(0);
+      expect(pattern.lineWidth).toBeGreaterThan(0);
+    }
+  });
+
+  it("high-strength has cross-hatch (two angles)", () => {
+    const hs = MODEL_HATCH_PATTERNS["high-strength"];
+    expect(hs?.crossAngle).toBeDefined();
+  });
+
+  it("impenetrable has a single-direction hatch (no crossAngle)", () => {
+    const imp = MODEL_HATCH_PATTERNS["impenetrable"];
+    expect(imp?.crossAngle).toBeUndefined();
+  });
+});
+
+// ── Model short labels ─────────────────────────────────────────
+
+describe("style-spec model short labels", () => {
+  const expectedKinds = [
+    "mohr-coulomb",
+    "undrained",
+    "high-strength",
+    "impenetrable",
+    "spatial-mohr-coulomb",
+    "anisotropic-function",
+    "s-f-depth",
+    "s-f-datum",
+  ] as const;
+
+  it("has a short label for every model kind", () => {
+    for (const kind of expectedKinds) {
+      expect(MODEL_SHORT_LABELS[kind]).toBeDefined();
+      expect(MODEL_SHORT_LABELS[kind].length).toBeGreaterThan(0);
+    }
   });
 });

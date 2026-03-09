@@ -17,10 +17,8 @@ describe("Property sections — invalid input handling", () => {
   });
 
   it("sanitizes invalid numeric inputs in MaterialsSection", async () => {
-    const user = userEvent.setup();
     render(<MaterialsSection />);
 
-    // Query by label text instead of positional index for robustness
     const unitWeightInput = screen.getByRole("spinbutton", {
       name: /γ/,
     }) as HTMLInputElement;
@@ -37,7 +35,8 @@ describe("Property sections — invalid input handling", () => {
     expect(unitWeightInput).toHaveValue(0.1);
     expect(unitWeightInput).toHaveAttribute("aria-invalid", "false");
 
-    await user.clear(frictionAngleInput);
+    fireEvent.change(frictionAngleInput, { target: { value: "-1" } });
+    expect(frictionAngleInput).toHaveAttribute("aria-invalid", "true");
     fireEvent.blur(frictionAngleInput);
     expect(frictionAngleInput).toHaveValue(0);
     expect(frictionAngleInput).toHaveAttribute("aria-invalid", "false");
@@ -81,5 +80,76 @@ describe("Property sections — invalid input handling", () => {
     fireEvent.blur(lineLoadMagnitude);
     expect(lineLoadMagnitude).toHaveValue(0.1);
     expect(lineLoadMagnitude).toHaveAttribute("aria-invalid", "false");
+  });
+});
+
+describe("MaterialsSection — model selector", () => {
+  beforeEach(() => {
+    useAppStore.setState({
+      activeSection: "Materials",
+      materials: [{ ...DEFAULT_MATERIAL }],
+    });
+  });
+
+  it("renders model kind dropdown defaulting to Mohr-Coulomb", () => {
+    render(<MaterialsSection />);
+    const select = screen.getByRole("combobox", {
+      name: "Model type",
+    }) as HTMLSelectElement;
+    expect(select.value).toBe("mohr-coulomb");
+  });
+
+  it("shows Mohr-Coulomb fields (γ, φ, c) by default", () => {
+    render(<MaterialsSection />);
+    expect(screen.getByLabelText(/γ/)).toBeInTheDocument();
+    expect(screen.getByLabelText(/φ/)).toBeInTheDocument();
+    expect(screen.getByLabelText(/c \(kPa\)/)).toBeInTheDocument();
+  });
+
+  it("switches to Undrained fields when model kind changes", () => {
+    render(<MaterialsSection />);
+    const select = screen.getByRole("combobox", { name: "Model type" });
+    fireEvent.change(select, { target: { value: "undrained" } });
+
+    expect(screen.getByLabelText(/γ/)).toBeInTheDocument();
+    expect(screen.getByLabelText(/Su/)).toBeInTheDocument();
+    expect(screen.queryByLabelText(/φ/)).toBeNull();
+  });
+
+  it("switches to Impenetrable fields", () => {
+    render(<MaterialsSection />);
+    const select = screen.getByRole("combobox", { name: "Model type" });
+    fireEvent.change(select, { target: { value: "impenetrable" } });
+
+    expect(screen.getByLabelText(/γ/)).toBeInTheDocument();
+    expect(screen.queryByLabelText(/φ/)).toBeNull();
+    expect(screen.queryByLabelText(/c \(kPa\)/)).toBeNull();
+    // "Bedrock" appears in both the <option> and the info text
+    expect(screen.getAllByText(/Bedrock/i).length).toBeGreaterThanOrEqual(1);
+  });
+
+  it("switches to S=f(depth) fields", () => {
+    render(<MaterialsSection />);
+    const select = screen.getByRole("combobox", { name: "Model type" });
+    fireEvent.change(select, { target: { value: "s-f-depth" } });
+
+    expect(screen.getByLabelText(/γ/)).toBeInTheDocument();
+    // "Depth" appears in both the <option> label and the table header
+    expect(screen.getAllByText(/Depth/i).length).toBeGreaterThanOrEqual(1);
+  });
+
+  it("preserves unit weight when switching models", () => {
+    render(<MaterialsSection />);
+    // Change unitWeight first
+    const unitWeightInput = screen.getByLabelText(/γ/) as HTMLInputElement;
+    fireEvent.change(unitWeightInput, { target: { value: "22" } });
+
+    // Switch to undrained
+    const select = screen.getByRole("combobox", { name: "Model type" });
+    fireEvent.change(select, { target: { value: "undrained" } });
+
+    // Unit weight should be preserved
+    const newUnitWeight = screen.getByLabelText(/γ/) as HTMLInputElement;
+    expect(newUnitWeight).toHaveValue(22);
   });
 });

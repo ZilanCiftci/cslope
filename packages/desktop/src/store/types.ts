@@ -1,4 +1,8 @@
-import type { AnalysisOptions, AnalysisResult } from "@cslope/engine";
+import type {
+  AnalysisOptions,
+  AnalysisResult,
+  MaterialModel,
+} from "@cslope/engine";
 
 // Export analysis types so UI components can consume them from a single module
 export type { AnalysisResult } from "@cslope/engine";
@@ -18,6 +22,12 @@ export interface MaterialRow {
   cohesion: number;
   color: string;
   depthRange?: [number, number];
+  /**
+   * Full material model definition.
+   * When present, this is the source of truth for strength resolution.
+   * When absent (legacy), a MohrCoulombModel is synthesised from the flat fields.
+   */
+  model?: MaterialModel;
 }
 
 export interface MaterialBoundaryRow {

@@ -24,6 +24,7 @@ function modelToSlopeDefinition(model: ModelEntry): SlopeDefinition {
       cohesion: material.cohesion,
       color: material.color,
       depthRange: material.depthRange,
+      model: material.model,
     })),
   };
 

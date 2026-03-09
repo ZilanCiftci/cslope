@@ -95,6 +95,38 @@ describe("buildSlopeDTO", () => {
     expect(dto.materialBoundaries!.length).toBe(1);
   });
 
+  it("assigns correct material below a 2-point boundary extending beyond slope", () => {
+    // Regression: a 2-point boundary whose right endpoint is at the far
+    // edge of the slope geometry used to pick that endpoint as the
+    // "midpoint" (index = Math.floor(2/2) = 1), placing the test point
+    // outside the geometry so the material fell back to the default.
+    const state = makeMinimalState({
+      // Default coords: (0,0)→(0,10)→(10,10)→(12.5,7.5)→(15,7.5)→(17.5,10)→(25,10)→(25,0)
+      materials: [
+        { ...DEFAULT_MATERIAL, id: "mat-soil", name: "Soil" },
+        {
+          ...DEFAULT_MATERIAL,
+          id: "mat-rock",
+          name: "Rock",
+          model: { kind: "impenetrable" as const, unitWeight: 20 },
+        },
+      ],
+      materialBoundaries: [
+        {
+          id: "b1",
+          coordinates: [
+            [0, 5],
+            [25, 5],
+          ],
+        },
+      ] as AppState["materialBoundaries"],
+      regionMaterials: { "below-b1": "mat-rock" },
+    });
+    const dto = buildSlopeDTO(state);
+    expect(dto.materialBoundaries).toBeDefined();
+    expect(dto.materialBoundaries![0].materialName).toBe("Rock");
+  });
+
   it("includes analysis limits when enabled", () => {
     const state = makeMinimalState({
       analysisLimits: { ...DEFAULT_ANALYSIS_LIMITS, enabled: true },
