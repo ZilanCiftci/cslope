@@ -54,6 +54,7 @@ function createExampleResultViewSettings(
     showFosLabel: false,
     showCentreMarker: false,
     showGrid: false,
+    showSoilColor: true,
     annotations: [
       {
         id: "anno-8d2aabaf-31cb-43b5-b9a5-980aa7354464",
@@ -72,7 +73,7 @@ function createExampleResultViewSettings(
         fontSize: 14,
       },
       {
-        id: "anno-89ddb1d9-0f29-4483-849a-bf5c09ea5076",
+        id: "anno-c4e72f10-8a61-4d2b-9c3e-5f1a0b7d8e92",
         type: "text",
         x: 0.11,
         y: 0.18,

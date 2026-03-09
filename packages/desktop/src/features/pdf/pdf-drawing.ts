@@ -200,7 +200,9 @@ export function drawMaterialRegions(
   materials: MaterialRow[],
   materialBoundaries: MaterialBoundaryRow[],
   regionMaterials: Record<string, string>,
+  showSoilColor?: boolean,
 ) {
+  if (showSoilColor === false) return;
   const defaultMatId = materials[0]?.id ?? "";
   const regions = computeRegions(
     coordinates,
@@ -208,6 +210,14 @@ export function drawMaterialRegions(
     regionMaterials,
     defaultMatId,
   );
+
+  // Clip to model polygon so material colors cannot bleed outside the model
+  pdf.saveGraphicsState();
+  const clipPts = coordinates.map(([wx, wy]) => tf.worldToPdf(wx, wy));
+  const clipOps: PathOp[] = buildPolylinePath(clipPts, true);
+  pdfPath(pdf, clipOps, "");
+  pdf.clip();
+  (pdf as unknown as { discardPath?: () => void }).discardPath?.();
 
   for (const region of regions) {
     const mat = materials.find((m) => m.id === region.materialId);
@@ -230,10 +240,15 @@ export function drawMaterialRegions(
 
     const [r, g, b] = parseColor(mat.color);
     pdf.setFillColor(r, g, b);
+
+    // Use setOpacity which manages its own GState save/restore
     setOpacity(pdf, 0.33);
     pdfPath(pdf, ops, region.holes ? "f*" : "f");
     resetOpacity(pdf);
   }
+
+  // Restore state to remove model polygon clip
+  pdf.restoreGraphicsState();
 }
 
 export function drawClosedPolyline(

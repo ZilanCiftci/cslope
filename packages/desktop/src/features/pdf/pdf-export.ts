@@ -286,6 +286,7 @@ export function exportVectorPdf(data: PdfExportData): void {
     pdf.saveGraphicsState();
     pdf.rect(innerFrame.x, innerFrame.y, innerFrame.w, innerFrame.h, null);
     pdf.clip();
+    (pdf as unknown as { discardPath?: () => void }).discardPath?.();
 
     if (rvs.showGrid) {
       drawGrid(pdf, tf, viewScale, innerFrame);
@@ -299,6 +300,7 @@ export function exportVectorPdf(data: PdfExportData): void {
         materials,
         materialBoundaries,
         regionMaterials,
+        rvs.showSoilColor ?? true,
       );
     }
 

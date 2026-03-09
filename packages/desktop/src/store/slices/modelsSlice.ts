@@ -278,6 +278,8 @@ export const createModelsSlice: SliceCreator<ModelsSlice> = (set, get) => ({
             piezometricLine: s.piezometricLine,
             udls: s.udls,
             lineLoads: s.lineLoads,
+            customSearchPlanes: s.customSearchPlanes,
+            customPlanesOnly: s.customPlanesOnly,
             options: s.options,
             analysisLimits: s.analysisLimits,
             editViewOffset: s.editViewOffset,

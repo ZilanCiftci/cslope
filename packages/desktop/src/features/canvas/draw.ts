@@ -275,20 +275,85 @@ export function drawCanvas(
 
   // ── Grid ───────────────────────────────────────────────
   const showGrid = mode !== "result" || !result || resultViewSettings.showGrid;
-  const rawStep = GRID_RAW_STEP_PX / viewScale;
-  const mag = Math.pow(10, Math.floor(Math.log10(rawStep)));
-  const steps = [1, 2, 5, 10];
-  const gridStep = Math.max(
-    GRID_STEP_MIN,
-    steps.find((s) => s * mag >= rawStep)! * mag,
-  );
-
   const [tlx, tly] = canvasToWorld(0, 0, w, h);
   const [brx, bry] = canvasToWorld(w, h, w, h);
   const worldLeft = Math.min(tlx, brx);
   const worldRight = Math.max(tlx, brx);
   const worldBottom = Math.min(tly, bry);
   const worldTop = Math.max(tly, bry);
+  let gridWorldBounds = {
+    xMin: worldLeft,
+    xMax: worldRight,
+    yMin: worldBottom,
+    yMax: worldTop,
+  };
+  let gridCanvasBounds = {
+    xMin: 0,
+    xMax: w,
+    yMin: 0,
+    yMax: h,
+  };
+
+  let effectiveScale = viewScale;
+  if (mode === "result" && result && resultViewSettings.paperFrame.showFrame) {
+    const { paperSize, landscape } = resultViewSettings.paperFrame;
+    const pfGrid = computePaperFrame(w, h, paperSize, landscape);
+    const padL = pfGrid.w * PLOT_MARGINS.L;
+    const padR = pfGrid.w * PLOT_MARGINS.R;
+    const padT = pfGrid.h * PLOT_MARGINS.T;
+    const padB = pfGrid.h * PLOT_MARGINS.B;
+
+    const ifx = pfGrid.x + padL;
+    const ify = pfGrid.y + padT;
+    const ifw = pfGrid.w - padL - padR;
+    const ifh = pfGrid.h - padT - padB;
+
+    const [innerLeftX] = canvasToWorld(ifx, ify, w, h);
+    const [innerRightX] = canvasToWorld(ifx + ifw, ify, w, h);
+    const [, innerTopY] = canvasToWorld(ifx, ify, w, h);
+    const [, innerBottomY] = canvasToWorld(ifx, ify + ifh, w, h);
+
+    gridWorldBounds = {
+      xMin: Math.min(innerLeftX, innerRightX),
+      xMax: Math.max(innerLeftX, innerRightX),
+      yMin: Math.min(innerBottomY, innerTopY),
+      yMax: Math.max(innerBottomY, innerTopY),
+    };
+    gridCanvasBounds = {
+      xMin: ifx,
+      xMax: ifx + ifw,
+      yMin: ify,
+      yMax: ify + ifh,
+    };
+
+    const { w: dimW, h: dimH } = PAPER_DIMENSIONS[paperSize];
+    const paperWidthMm = landscape ? Math.max(dimW, dimH) : Math.min(dimW, dimH);
+    const paperHeightMm = landscape ? Math.min(dimW, dimH) : Math.max(dimW, dimH);
+    const virtualW = 1200;
+    const virtualH = (1200 * paperHeightMm) / paperWidthMm;
+    const virtualPaperFrame = computePaperFrame(
+      virtualW,
+      virtualH,
+      paperSize,
+      landscape,
+    );
+    const virtualPlotW =
+      virtualPaperFrame.w * (1 - PLOT_MARGINS.L - PLOT_MARGINS.R);
+    const visibleWorldW =
+      gridWorldBounds.xMax - gridWorldBounds.xMin;
+
+    if (visibleWorldW > 0) {
+      effectiveScale = virtualPlotW / visibleWorldW;
+    }
+  }
+
+  const rawStep = GRID_RAW_STEP_PX / effectiveScale;
+  const mag = Math.pow(10, Math.floor(Math.log10(rawStep)));
+  const steps = [1, 2, 5, 10];
+  const gridStep = Math.max(
+    GRID_STEP_MIN,
+    steps.find((s) => s * mag >= rawStep)! * mag,
+  );
 
   ctx.strokeStyle = GRID_COLOR;
   ctx.lineWidth = 1;
@@ -298,22 +363,22 @@ export function drawCanvas(
 
   if (showGrid) {
     // Vertical grid lines
-    const startX = Math.floor(worldLeft / gridStep) * gridStep;
-    for (let gx = startX; gx <= worldRight; gx += gridStep) {
+    const startX = Math.floor(gridWorldBounds.xMin / gridStep) * gridStep;
+    for (let gx = startX; gx <= gridWorldBounds.xMax; gx += gridStep) {
       const [px] = worldToCanvas(gx, 0, w, h);
       ctx.beginPath();
-      ctx.moveTo(px, 0);
-      ctx.lineTo(px, h);
+      ctx.moveTo(px, gridCanvasBounds.yMin);
+      ctx.lineTo(px, gridCanvasBounds.yMax);
       ctx.stroke();
     }
 
     // Horizontal grid lines
-    const startY = Math.floor(worldBottom / gridStep) * gridStep;
-    for (let gy = startY; gy <= worldTop; gy += gridStep) {
+    const startY = Math.floor(gridWorldBounds.yMin / gridStep) * gridStep;
+    for (let gy = startY; gy <= gridWorldBounds.yMax; gy += gridStep) {
       const [, py] = worldToCanvas(0, gy, w, h);
       ctx.beginPath();
-      ctx.moveTo(0, py);
-      ctx.lineTo(w, py);
+      ctx.moveTo(gridCanvasBounds.xMin, py);
+      ctx.lineTo(gridCanvasBounds.xMax, py);
       ctx.stroke();
     }
   }
@@ -325,17 +390,17 @@ export function drawCanvas(
     const [ax0] = worldToCanvas(0, 0, w, h);
     const [, ay0] = worldToCanvas(0, 0, w, h);
     ctx.beginPath();
-    ctx.moveTo(ax0, 0);
-    ctx.lineTo(ax0, h);
+    ctx.moveTo(ax0, gridCanvasBounds.yMin);
+    ctx.lineTo(ax0, gridCanvasBounds.yMax);
     ctx.stroke();
     ctx.beginPath();
-    ctx.moveTo(0, ay0);
-    ctx.lineTo(w, ay0);
+    ctx.moveTo(gridCanvasBounds.xMin, ay0);
+    ctx.lineTo(gridCanvasBounds.xMax, ay0);
     ctx.stroke();
   }
 
   // ── Material region fills ─────────────────────────────
-  if (coordinates.length >= 3) {
+  if (coordinates.length >= 3 && resultViewSettings.showSoilColor !== false) {
     const defaultMatId = materials[0]?.id ?? "";
     const regions = getCachedRegions(
       coordinates,
@@ -343,6 +408,29 @@ export function drawCanvas(
       regionMaterials,
       defaultMatId,
     );
+
+    // Clip to model polygon so material colors cannot bleed outside the model
+    ctx.save();
+    ctx.beginPath();
+    const [cx0, cy0] = worldToCanvas(
+      coordinates[0][0],
+      coordinates[0][1],
+      w,
+      h,
+    );
+    ctx.moveTo(cx0, cy0);
+    for (let i = 1; i < coordinates.length; i++) {
+      const [cpx, cpy] = worldToCanvas(
+        coordinates[i][0],
+        coordinates[i][1],
+        w,
+        h,
+      );
+      ctx.lineTo(cpx, cpy);
+    }
+    ctx.closePath();
+    ctx.clip();
+
     for (const region of regions) {
       const mat = materials.find((m) => m.id === region.materialId);
       if (!mat || region.px.length < 3) continue;
@@ -374,6 +462,7 @@ export function drawCanvas(
       ctx.fillStyle = mat.color + "55";
       ctx.fill(region.holes ? "evenodd" : "nonzero");
     }
+    ctx.restore();
 
     // ── Highlight selected region (only when Material Assignment is open) ──
     if (selectedRegionKey && editingAssignment) {

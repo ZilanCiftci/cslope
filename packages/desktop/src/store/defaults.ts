@@ -88,6 +88,7 @@ export const DEFAULT_RESULT_VIEW_SETTINGS: ResultViewSettings = {
   showFosLabel: true,
   showCentreMarker: true,
   showGrid: true,
+  showSoilColor: true,
   annotations: [
     {
       id: "anno-8d2aabaf-31cb-43b5-b9a5-980aa7354464",

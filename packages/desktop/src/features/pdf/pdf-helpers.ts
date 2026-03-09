@@ -38,12 +38,12 @@ export function setOpacity(
   strokeOpacity?: number,
 ): void {
   pdf.saveGraphicsState();
-  pdf.setGState(
-    new GState({
-      opacity: fillOpacity,
-      "stroke-opacity": strokeOpacity ?? fillOpacity,
-    }),
-  );
+  const state = new GState({
+    opacity: fillOpacity,
+    "stroke-opacity": strokeOpacity ?? fillOpacity,
+  });
+  // @ts-ignore - jsPDF types might not include setGState depending on version
+  pdf.setGState(state);
 }
 
 export function resetOpacity(pdf: jsPDF): void {
@@ -79,6 +79,11 @@ export function pdfPath(pdf: jsPDF, ops: PathOp[], style: string): void {
 
   if (style === "f*") {
     pdf.fillEvenOdd();
+    return;
+  }
+
+  // Empty style: path defined but no fill/stroke (used for clip paths)
+  if (style === "") {
     return;
   }
 

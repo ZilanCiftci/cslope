@@ -122,6 +122,7 @@ export interface ResultViewSettings {
   showFosLabel: boolean;
   showCentreMarker: boolean;
   showGrid: boolean;
+  showSoilColor?: boolean;
   annotations: Annotation[];
   paperFrame: PaperFrameSettings;
   viewLock?: ViewLock;

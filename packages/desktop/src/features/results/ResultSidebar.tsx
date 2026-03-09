@@ -413,6 +413,15 @@ export function ResultSidebar() {
             />
           </Row>
 
+          <Row label="Soil Colors">
+            <input
+              type="checkbox"
+              checked={rvs.showSoilColor}
+              onChange={(e) => setRvs({ showSoilColor: e.target.checked })}
+              className="accent-blue-500"
+            />
+          </Row>
+
           <Row label="Paper Size">
             <select
               value={rvs.paperFrame.paperSize}

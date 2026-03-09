@@ -260,6 +260,8 @@ function normalizeResultView(raw: unknown): ResultViewSettings {
     showCentreMarker:
       view.showCentreMarker ?? DEFAULT_RESULT_VIEW_SETTINGS.showCentreMarker,
     showGrid: view.showGrid ?? DEFAULT_RESULT_VIEW_SETTINGS.showGrid,
+    showSoilColor:
+      view.showSoilColor ?? DEFAULT_RESULT_VIEW_SETTINGS.showSoilColor,
     annotations,
     paperFrame: { ...paperFrame },
     viewLock:
@@ -323,13 +325,12 @@ function normalizeMaterial(raw: unknown, index: number): MaterialRow {
       typeof m.color === "string" && m.color.length > 0
         ? m.color
         : MATERIAL_COLORS[index % MATERIAL_COLORS.length],
-    depthRange:
-      Array.isArray(m.depthRange) &&
-      m.depthRange.length >= 2 &&
-      typeof m.depthRange[0] === "number" &&
-      typeof m.depthRange[1] === "number"
-        ? [m.depthRange[0], m.depthRange[1]]
-        : undefined,
+    depthRange: (Array.isArray(m.depthRange) &&
+    m.depthRange.length >= 2 &&
+    typeof m.depthRange[0] === "number" &&
+    typeof m.depthRange[1] === "number"
+      ? [m.depthRange[0], m.depthRange[1]]
+      : undefined) as [number, number] | undefined,
   };
 }
 
