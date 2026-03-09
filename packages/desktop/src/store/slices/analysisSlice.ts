@@ -1,24 +1,109 @@
-import type { AnalysisOptions } from "@cslope/engine";
-import {
-  DEFAULT_ANALYSIS_OPTIONS,
-  toCanonicalSlopeDefinition,
-} from "@cslope/engine";
-import type { AnalysisResponse, SlopeDefinition } from "../../worker/messages";
+import type { AnalysisOptions, AnalysisResult } from "@cslope/engine";
+import { DEFAULT_ANALYSIS_OPTIONS } from "@cslope/engine";
+import type { AnalysisResponse } from "../../worker/messages";
 import type { SliceCreator } from "../helpers";
-import { buildSlopeDTO } from "../helpers";
+import { buildSlopeDTOFromModel, nextId } from "../helpers";
 import type { AnalysisSlice, ModelEntry } from "../types";
-import { DEFAULT_ANALYSIS_LIMITS, DEFAULT_PIEZO_LINE } from "../defaults";
-import {
-  computeRegions,
-  findMaterialBelowBoundary,
-  type Region,
-} from "../../utils/regions";
+import { DEFAULT_ANALYSIS_LIMITS } from "../defaults";
 import { ANALYSIS_TIMEOUT_MS } from "../../constants";
-import { nextId } from "../helpers";
 
-/** Active worker reference — used to terminate a previous run on re-invocation. */
-let activeWorker: Worker | null = null;
-let activeTimeout: ReturnType<typeof setTimeout> | null = null;
+// ── Shared worker execution ────────────────────────────────────────
+
+/** A cancellable handle to a running analysis worker. */
+interface AnalysisHandle {
+  promise: Promise<AnalysisResult>;
+  cancel: () => void;
+}
+
+/**
+ * Spawn a Web Worker to run a single model analysis.
+ *
+ * Returns a `{ promise, cancel }` handle.  The promise resolves with
+ * the `AnalysisResult` on success, or rejects on error / timeout.
+ * Calling `cancel()` terminates the worker early.
+ */
+function executeModelAnalysis(
+  model: ModelEntry,
+  onProgress?: (progress: number) => void,
+): AnalysisHandle {
+  const slope = buildSlopeDTOFromModel(model);
+  const options: AnalysisOptions = model.options ?? {
+    ...DEFAULT_ANALYSIS_OPTIONS,
+    method: "Morgenstern-Price",
+    slices: 30,
+    iterations: 1000,
+    refinedIterations: 500,
+  };
+
+  let worker: Worker | null = new Worker(
+    new URL("../../worker/analysis.worker.ts", import.meta.url),
+    { type: "module" },
+  );
+  let timeout: ReturnType<typeof setTimeout> | null = null;
+  let settled = false;
+
+  const cancel = () => {
+    if (settled) return;
+    settled = true;
+    worker?.terminate();
+    worker = null;
+    if (timeout) {
+      clearTimeout(timeout);
+      timeout = null;
+    }
+  };
+
+  const promise = new Promise<AnalysisResult>((resolve, reject) => {
+    timeout = setTimeout(() => {
+      if (settled) return;
+      cancel();
+      reject(new Error("Analysis timed out after 60 seconds."));
+    }, ANALYSIS_TIMEOUT_MS);
+
+    worker!.onmessage = (event: MessageEvent<AnalysisResponse>) => {
+      if (settled) return;
+      const msg = event.data;
+      if (msg.type === "analysis-complete") {
+        settled = true;
+        if (timeout) clearTimeout(timeout);
+        worker?.terminate();
+        worker = null;
+        resolve(msg.result);
+      } else if (msg.type === "analysis-progress") {
+        onProgress?.(Math.min(RUN_PROGRESS_MAX, Math.max(0, msg.progress)));
+      } else if (msg.type === "analysis-error") {
+        settled = true;
+        if (timeout) clearTimeout(timeout);
+        worker?.terminate();
+        worker = null;
+        reject(new Error(msg.error));
+      }
+    };
+
+    worker!.onerror = (err) => {
+      if (settled) return;
+      settled = true;
+      if (timeout) clearTimeout(timeout);
+      worker?.terminate();
+      worker = null;
+      reject(new Error(err.message));
+    };
+
+    worker!.postMessage({
+      type: "run-analysis",
+      id: crypto.randomUUID(),
+      slope,
+      options,
+    });
+  });
+
+  return { promise, cancel };
+}
+
+// ── Single-run state ───────────────────────────────────────────────
+
+/** Handle for the currently running single-model analysis. */
+let activeHandle: AnalysisHandle | null = null;
 let activeProgressInterval: ReturnType<typeof setInterval> | null = null;
 
 const RUN_PROGRESS_MAX = 0.95;
@@ -132,18 +217,35 @@ export const createAnalysisSlice: SliceCreator<AnalysisSlice> = (set, get) => ({
   },
 
   runAnalysis: () => {
-    // Terminate any previously running worker to prevent racing updates
-    if (activeWorker) {
-      activeWorker.terminate();
-      activeWorker = null;
-    }
-    if (activeTimeout) {
-      clearTimeout(activeTimeout);
-      activeTimeout = null;
+    // Cancel any previously running analysis
+    if (activeHandle) {
+      activeHandle.cancel();
+      activeHandle = null;
     }
     stopProgressInterval();
 
     const state = get();
+
+    // Build a model snapshot from the current flat state for the shared
+    // execution path.  This ensures "Run" and "Run All" go through the
+    // exact same DTO-building and worker-spawning code.
+    const modelSnapshot: ModelEntry = {
+      id: state.activeModelId,
+      name: "",
+      orientation: state.orientation,
+      coordinates: state.coordinates,
+      materials: state.materials,
+      materialBoundaries: state.materialBoundaries,
+      regionMaterials: state.regionMaterials,
+      piezometricLine: state.piezometricLine,
+      udls: state.udls,
+      lineLoads: state.lineLoads,
+      customSearchPlanes: state.customSearchPlanes,
+      customPlanesOnly: state.customPlanesOnly,
+      options: state.options,
+      analysisLimits: state.analysisLimits,
+    };
+
     set({
       runState: "running",
       progress: 0.02,
@@ -151,101 +253,48 @@ export const createAnalysisSlice: SliceCreator<AnalysisSlice> = (set, get) => ({
       errorMessage: null,
     });
 
+    // Fake progress interval for UI responsiveness
     activeProgressInterval = setInterval(() => {
       const current = get();
       if (current.runState !== "running") {
         stopProgressInterval();
         return;
       }
-
       const next = Math.min(
         RUN_PROGRESS_MAX,
         current.progress +
           Math.max(0.004, (RUN_PROGRESS_MAX - current.progress) * 0.08),
       );
-
       if (next > current.progress) {
         set({ progress: next });
       }
     }, 120);
 
-    const worker = new Worker(
-      new URL("../../worker/analysis.worker.ts", import.meta.url),
-      { type: "module" },
+    const handle = executeModelAnalysis(modelSnapshot, (p) =>
+      set((s) => ({ progress: Math.max(s.progress, p) })),
     );
-    activeWorker = worker;
+    activeHandle = handle;
 
-    // Auto-terminate after 60s
-    activeTimeout = setTimeout(() => {
-      if (activeWorker === worker) {
-        worker.terminate();
-        activeWorker = null;
-        activeTimeout = null;
+    handle.promise
+      .then((result) => {
+        stopProgressInterval();
+        set({ runState: "done", result, progress: 1 });
+        if (activeHandle === handle) activeHandle = null;
+      })
+      .catch((err) => {
+        stopProgressInterval();
         set({
           runState: "error",
-          errorMessage: "Analysis timed out after 60 seconds.",
+          errorMessage: err instanceof Error ? err.message : String(err),
         });
-        stopProgressInterval();
-      }
-    }, ANALYSIS_TIMEOUT_MS);
-
-    worker.onmessage = (event: MessageEvent<AnalysisResponse>) => {
-      const msg = event.data;
-      if (msg.type === "analysis-complete") {
-        stopProgressInterval();
-        set({ runState: "done", result: msg.result, progress: 1 });
-        worker.terminate();
-        if (activeWorker === worker) activeWorker = null;
-        if (activeTimeout) {
-          clearTimeout(activeTimeout);
-          activeTimeout = null;
-        }
-      } else if (msg.type === "analysis-progress") {
-        set((s) => ({
-          progress: Math.max(
-            s.progress,
-            Math.min(RUN_PROGRESS_MAX, Math.max(0, msg.progress)),
-          ),
-        }));
-      } else if (msg.type === "analysis-error") {
-        stopProgressInterval();
-        set({ runState: "error", errorMessage: msg.error });
-        worker.terminate();
-        if (activeWorker === worker) activeWorker = null;
-        if (activeTimeout) {
-          clearTimeout(activeTimeout);
-          activeTimeout = null;
-        }
-      }
-    };
-
-    worker.onerror = (err) => {
-      stopProgressInterval();
-      set({ runState: "error", errorMessage: err.message });
-      worker.terminate();
-      if (activeWorker === worker) activeWorker = null;
-      if (activeTimeout) {
-        clearTimeout(activeTimeout);
-        activeTimeout = null;
-      }
-    };
-
-    worker.postMessage({
-      type: "run-analysis",
-      id: crypto.randomUUID(),
-      slope: buildSlopeDTO(state),
-      options: state.options,
-    });
+        if (activeHandle === handle) activeHandle = null;
+      });
   },
 
   cancelAnalysis: () => {
-    if (activeWorker) {
-      activeWorker.terminate();
-      activeWorker = null;
-    }
-    if (activeTimeout) {
-      clearTimeout(activeTimeout);
-      activeTimeout = null;
+    if (activeHandle) {
+      activeHandle.cancel();
+      activeHandle = null;
     }
     stopProgressInterval();
     set({ runState: "idle", progress: 0, errorMessage: null });
@@ -314,159 +363,84 @@ export const createAnalysisSlice: SliceCreator<AnalysisSlice> = (set, get) => ({
     // Track active model status in UI while running batch.
     set({ runState: "running", progress: 0, errorMessage: null });
 
-    const runModel = (model: ModelEntry) =>
-      new Promise<void>((resolve) => {
-        const freshModel = get().models.find((m) => m.id === model.id);
-        if (!freshModel) return resolve();
+    const runModel = async (model: ModelEntry) => {
+      const freshModel = get().models.find((m) => m.id === model.id);
+      if (!freshModel) return;
 
-        const slope = buildSlopeFromModel(freshModel);
-        const worker = new Worker(
-          new URL("../../worker/analysis.worker.ts", import.meta.url),
-          { type: "module" },
+      progressByModel.set(freshModel.id, 0.08);
+      updateBatchProgress();
+      startModelProgressInterval(freshModel.id);
+
+      set((s) => ({
+        models: s.models.map((m) =>
+          m.id === freshModel.id
+            ? {
+                ...m,
+                runState: "running",
+                progress: 0,
+                result: null,
+                errorMessage: null,
+              }
+            : m,
+        ),
+        ...(freshModel.id === activeId
+          ? {
+              runState: "running",
+              result: null,
+              errorMessage: null,
+            }
+          : {}),
+      }));
+
+      const handle = executeModelAnalysis(freshModel, (p) => {
+        progressByModel.set(
+          freshModel.id,
+          Math.max(progressByModel.get(freshModel.id) ?? 0, p),
         );
-
-        // 60s timeout per individual model
-        const timeout = setTimeout(() => {
-          worker.terminate();
-          stopModelProgressInterval(freshModel.id);
-          progressByModel.set(freshModel.id, 1);
-          updateBatchProgress();
-          set((s) => ({
-            models: s.models.map((m) =>
-              m.id === freshModel.id
-                ? {
-                    ...m,
-                    runState: "error",
-                    errorMessage: "Analysis timed out after 60 seconds.",
-                  }
-                : m,
-            ),
-            ...(freshModel.id === activeId
-              ? {
-                  runState: "error",
-                  errorMessage: "Analysis timed out after 60 seconds.",
-                }
-              : {}),
-          }));
-          resolve();
-        }, ANALYSIS_TIMEOUT_MS);
-
-        progressByModel.set(freshModel.id, 0.08);
         updateBatchProgress();
-        startModelProgressInterval(freshModel.id);
+        set((s) => ({
+          models: s.models.map((m) =>
+            m.id === freshModel.id ? { ...m, progress: p } : m,
+          ),
+        }));
+      });
+
+      try {
+        const result = await handle.promise;
+        stopModelProgressInterval(freshModel.id);
+        progressByModel.set(freshModel.id, 1);
+        updateBatchProgress();
         set((s) => ({
           models: s.models.map((m) =>
             m.id === freshModel.id
-              ? {
-                  ...m,
-                  runState: "running",
-                  progress: 0,
-                  result: null,
-                  errorMessage: null,
-                }
+              ? { ...m, runState: "done", progress: 1, result }
               : m,
           ),
           ...(freshModel.id === activeId
             ? {
-                runState: "running",
-                result: null,
+                runState: "done",
+                result,
                 errorMessage: null,
               }
             : {}),
         }));
-
-        worker.onmessage = (event: MessageEvent<AnalysisResponse>) => {
-          const msg = event.data;
-          if (msg.type === "analysis-complete") {
-            clearTimeout(timeout);
-            stopModelProgressInterval(freshModel.id);
-            progressByModel.set(freshModel.id, 1);
-            updateBatchProgress();
-            set((s) => ({
-              models: s.models.map((m) =>
-                m.id === freshModel.id
-                  ? { ...m, runState: "done", progress: 1, result: msg.result }
-                  : m,
-              ),
-              ...(freshModel.id === activeId
-                ? {
-                    runState: "done",
-                    result: msg.result,
-                    errorMessage: null,
-                  }
-                : {}),
-            }));
-            worker.terminate();
-            resolve();
-          } else if (msg.type === "analysis-progress") {
-            const nextProgress = Math.min(
-              RUN_PROGRESS_MAX,
-              Math.max(0, msg.progress),
-            );
-            progressByModel.set(
-              freshModel.id,
-              Math.max(progressByModel.get(freshModel.id) ?? 0, nextProgress),
-            );
-            updateBatchProgress();
-            set((s) => ({
-              models: s.models.map((m) =>
-                m.id === freshModel.id ? { ...m, progress: nextProgress } : m,
-              ),
-            }));
-          } else if (msg.type === "analysis-error") {
-            clearTimeout(timeout);
-            stopModelProgressInterval(freshModel.id);
-            progressByModel.set(freshModel.id, 1);
-            updateBatchProgress();
-            set((s) => ({
-              models: s.models.map((m) =>
-                m.id === freshModel.id
-                  ? {
-                      ...m,
-                      runState: "error",
-                      errorMessage: msg.error,
-                    }
-                  : m,
-              ),
-              ...(freshModel.id === activeId
-                ? { runState: "error", errorMessage: msg.error }
-                : {}),
-            }));
-            worker.terminate();
-            resolve();
-          }
-        };
-
-        worker.onerror = (err) => {
-          clearTimeout(timeout);
-          stopModelProgressInterval(freshModel.id);
-          progressByModel.set(freshModel.id, 1);
-          updateBatchProgress();
-          set((s) => ({
-            models: s.models.map((m) =>
-              m.id === freshModel.id
-                ? { ...m, runState: "error", errorMessage: err.message }
-                : m,
-            ),
-            ...(freshModel.id === activeId
-              ? { runState: "error", errorMessage: err.message }
-              : {}),
-          }));
-          worker.terminate();
-          resolve();
-        };
-
-        worker.postMessage({
-          type: "run-analysis",
-          id: crypto.randomUUID(),
-          slope,
-          options: freshModel.options ?? {
-            ...DEFAULT_ANALYSIS_OPTIONS,
-            method: "Morgenstern-Price",
-            slices: 30,
-          },
-        });
-      });
+      } catch (err) {
+        stopModelProgressInterval(freshModel.id);
+        progressByModel.set(freshModel.id, 1);
+        updateBatchProgress();
+        const errorMessage = err instanceof Error ? err.message : String(err);
+        set((s) => ({
+          models: s.models.map((m) =>
+            m.id === freshModel.id
+              ? { ...m, runState: "error", errorMessage }
+              : m,
+          ),
+          ...(freshModel.id === activeId
+            ? { runState: "error", errorMessage }
+            : {}),
+        }));
+      }
+    };
 
     const maxConcurrency =
       typeof navigator !== "undefined" && navigator.hardwareConcurrency
@@ -502,83 +476,3 @@ export const createAnalysisSlice: SliceCreator<AnalysisSlice> = (set, get) => ({
     }
   },
 });
-
-function buildSlopeFromModel(model: ModelEntry): SlopeDefinition {
-  const materials = model.materials ?? [];
-  const analysisLimits = model.analysisLimits ?? { ...DEFAULT_ANALYSIS_LIMITS };
-  const piezometricLine = model.piezometricLine ?? { ...DEFAULT_PIEZO_LINE };
-  const slope: SlopeDefinition = {
-    orientation: model.orientation ?? "ltr",
-    coordinates: model.coordinates,
-    materials: materials.map((m) => ({
-      name: m.name,
-      unitWeight: m.unitWeight,
-      frictionAngle: m.frictionAngle,
-      cohesion: m.cohesion,
-      color: m.color,
-      depthRange: m.depthRange,
-      model: m.model,
-    })),
-  };
-
-  if (model.materialBoundaries?.length) {
-    const defaultMatId = materials[0]?.id ?? "";
-    const regions = computeRegions(
-      model.coordinates,
-      model.materialBoundaries,
-      model.regionMaterials,
-      defaultMatId,
-    );
-
-    slope.materialBoundaries = model.materialBoundaries.map((b) => {
-      const matId = findMaterialBelowBoundary(b, regions, defaultMatId);
-      const matName =
-        materials.find((m) => m.id === matId)?.name ?? materials[0]?.name ?? "";
-      return {
-        coordinates: b.coordinates,
-        materialName: matName,
-      };
-    });
-
-    const topRegion = regions.find((r: Region) => r.regionKey === "top");
-    if (topRegion && topRegion.materialId !== defaultMatId) {
-      const topMatName = materials.find(
-        (m) => m.id === topRegion.materialId,
-      )?.name;
-      if (topMatName) slope.topRegionMaterialName = topMatName;
-    }
-  }
-
-  if (analysisLimits.enabled) {
-    slope.analysisLimits = {
-      entryLeftX: analysisLimits.entryLeftX,
-      entryRightX: analysisLimits.entryRightX,
-      exitLeftX: analysisLimits.exitLeftX,
-      exitRightX: analysisLimits.exitRightX,
-    };
-  }
-
-  if (piezometricLine.lines.length > 0) {
-    const firstLine = piezometricLine.lines[0];
-    if (firstLine.coordinates.length >= 2) {
-      slope.waterTable = { mode: "custom", value: firstLine.coordinates };
-    }
-  }
-
-  if (model.udls?.length) {
-    slope.udls = model.udls.map((u) => ({
-      magnitude: u.magnitude,
-      x1: u.x1,
-      x2: u.x2,
-    }));
-  }
-
-  if (model.lineLoads?.length) {
-    slope.lineLoads = model.lineLoads.map((l) => ({
-      magnitude: l.magnitude,
-      x: l.x,
-    }));
-  }
-
-  return toCanonicalSlopeDefinition(slope);
-}
