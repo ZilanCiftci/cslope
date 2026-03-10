@@ -85,3 +85,36 @@ export function RibbonRedoIcon({ size = 20 }: IconProps) {
     </svg>
   );
 }
+
+/** Coloured layers icon for the ribbon Define Materials button. */
+export function RibbonMaterialsIcon({ size = 20 }: IconProps) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      {/* Bottom layer */}
+      <path d="M12 20l-8-4.5 8-4.5 8 4.5z" fill="#66bb6a" opacity="0.35" />
+      {/* Middle layer */}
+      <path d="M12 16l-8-4.5 8-4.5 8 4.5z" fill="#42a5f5" opacity="0.5" />
+      {/* Top layer */}
+      <path d="M12 12L4 7.5 12 3l8 4.5z" fill="#5c6bc0" opacity="0.85" />
+      {/* Layer outlines */}
+      <path
+        d="M12 20l-8-4.5 8-4.5 8 4.5z"
+        stroke="#4caf50"
+        strokeWidth="0.8"
+        fill="none"
+      />
+      <path
+        d="M12 16l-8-4.5 8-4.5 8 4.5z"
+        stroke="#2196f3"
+        strokeWidth="0.8"
+        fill="none"
+      />
+      <path
+        d="M12 12L4 7.5 12 3l8 4.5z"
+        stroke="#3f51b5"
+        strokeWidth="0.8"
+        fill="none"
+      />
+    </svg>
+  );
+}

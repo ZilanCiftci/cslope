@@ -17,10 +17,6 @@
 export interface MaterialModelBase {
   /** Material unit weight in kN/m³. */
   unitWeight: number;
-  /** Optional display name. */
-  name?: string;
-  /** Optional display colour (hex or CSS name). */
-  color?: string;
 }
 
 // ── Model variants ─────────────────────────────────────────────
@@ -110,25 +106,33 @@ export interface AnisotropicFunctionModel extends MaterialModelBase {
 /**
  * Strength as a function of depth below the ground surface.
  *
- * φ = 0; shear strength Su is interpolated from a user-defined
- * function of depth (m) below the ground surface at the slice x.
+ * φ = 0; Su = suRef + (depth − depthRef) × rate,
+ * where depth = yGround − yBottom at the slice.
  */
 export interface StrengthFromDepthModel extends MaterialModelBase {
   kind: "s-f-depth";
-  /** Strength vs depth: [[depth (m), Su (kPa)], …]. */
-  strengthFunction: [number, number][];
+  /** Reference undrained shear strength Su (kPa). */
+  suRef: number;
+  /** Reference depth below ground surface (m). */
+  depthRef: number;
+  /** Rate of change of Su with depth (kPa/m). */
+  rate: number;
 }
 
 /**
  * Strength as a function of datum (absolute elevation y).
  *
- * φ = 0; shear strength Su is interpolated from a user-defined
- * function of elevation (y-coordinate).
+ * φ = 0; Su = suRef + (y − yRef) × rate,
+ * where y is the elevation of the slice base.
  */
 export interface StrengthFromDatumModel extends MaterialModelBase {
   kind: "s-f-datum";
-  /** Strength vs elevation: [[y (m), Su (kPa)], …]. */
-  strengthFunction: [number, number][];
+  /** Reference undrained shear strength Su (kPa). */
+  suRef: number;
+  /** Reference elevation y (m). */
+  yRef: number;
+  /** Rate of change of Su with elevation (kPa/m). */
+  rate: number;
 }
 
 // ── Union ──────────────────────────────────────────────────────

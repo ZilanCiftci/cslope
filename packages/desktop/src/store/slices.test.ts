@@ -19,7 +19,7 @@ function resetStoreState() {
     coordinates: clone(baseModel.coordinates),
     materials: clone(baseModel.materials),
     materialBoundaries: [],
-    regionMaterials: {},
+    regionMaterials: [],
     piezometricLine: clone(baseModel.piezometricLine),
     udls: [],
     lineLoads: [],
@@ -402,21 +402,31 @@ describe("store slices", () => {
     const matId = next.materials[1].id;
 
     // Assign region to this material
-    next.setRegionMaterial("below-test", matId);
+    next.setRegionMaterial([5, 5], matId);
     next = useAppStore.getState();
-    expect(next.regionMaterials["below-test"]).toBe(matId);
+    expect(
+      next.regionMaterials.find((a) => a.materialId === matId),
+    ).toBeDefined();
 
     next.removeMaterial(matId);
     next = useAppStore.getState();
     expect(next.materials).toHaveLength(1);
-    expect(next.regionMaterials["below-test"]).toBeUndefined();
+    expect(
+      next.regionMaterials.find((a) => a.materialId === matId),
+    ).toBeUndefined();
   });
 
   it("geometrySlice updateMaterial patches a material", () => {
     const store = useAppStore.getState();
     const matId = store.materials[0].id;
-    store.updateMaterial(matId, { cohesion: 99 });
-    expect(useAppStore.getState().materials[0].cohesion).toBe(99);
+    store.updateMaterial(matId, {
+      model: { kind: "mohr-coulomb", unitWeight: 18, frictionAngle: 0, cohesion: 99 },
+    });
+    const updated = useAppStore.getState().materials[0];
+    expect(updated.model.kind).toBe("mohr-coulomb");
+    expect(
+      updated.model.kind === "mohr-coulomb" ? updated.model.cohesion : -1,
+    ).toBe(99);
   });
 
   it("geometrySlice setMaterials replaces entire array", () => {
@@ -525,11 +535,14 @@ describe("store slices", () => {
     ).toHaveLength(2);
   });
 
-  it("geometrySlice setRegionMaterial assigns a material to a region key", () => {
+  it("geometrySlice setRegionMaterial assigns a material to a region point", () => {
     const store = useAppStore.getState();
     const matId = store.materials[0].id;
-    store.setRegionMaterial("top", matId);
-    expect(useAppStore.getState().regionMaterials["top"]).toBe(matId);
+    store.setRegionMaterial([5, 5], matId);
+    const rm = useAppStore.getState().regionMaterials;
+    expect(rm).toHaveLength(1);
+    expect(rm[0].point).toEqual([5, 5]);
+    expect(rm[0].materialId).toBe(matId);
   });
 
   // ── geometrySlice: piezometric line ─────────────────────────────
@@ -1097,7 +1110,7 @@ describe("store slices", () => {
       ] as [number, number][],
       materials: clone(store.materials),
       materialBoundaries: [],
-      regionMaterials: {},
+      regionMaterials: [],
       piezometricLine: clone(store.piezometricLine),
       udls: [],
       lineLoads: [],
@@ -1195,11 +1208,9 @@ describe("store slices", () => {
       [5, 5],
       [15, 5],
     ]);
-    const bnds = useAppStore.getState().materialBoundaries;
-    const bndId = bnds[0].id;
 
-    useAppStore.getState().setRegionMaterial(`below-${bndId}`, mat2Id);
-    useAppStore.getState().setRegionMaterial("top", mats[0].id);
+    useAppStore.getState().setRegionMaterial([10, 3], mat2Id);
+    useAppStore.getState().setRegionMaterial([10, 7], mats[0].id);
 
     useAppStore.getState().saveCurrentModel();
     useAppStore.getState().duplicateModel(id);
@@ -1207,15 +1218,13 @@ describe("store slices", () => {
     const next = useAppStore.getState();
     const copy = next.models.find((m) => m.id === next.activeModelId);
     expect(copy).toBeDefined();
-    // Region materials should exist with remapped keys
-    expect(Object.keys(copy!.regionMaterials).length).toBeGreaterThan(0);
-    expect(copy!.regionMaterials["top"]).toBeDefined();
-    // The "below-xxx" key should have a new boundary ID
-    const belowKeys = Object.keys(copy!.regionMaterials).filter((k) =>
-      k.startsWith("below-"),
-    );
-    expect(belowKeys.length).toBe(1);
-    expect(belowKeys[0]).not.toBe(`below-${bndId}`); // remapped
+    // Region materials should exist with remapped material IDs
+    expect(copy!.regionMaterials.length).toBeGreaterThan(0);
+    // Material IDs should be remapped (not equal to originals)
+    for (const a of copy!.regionMaterials) {
+      expect(a.materialId).not.toBe(mat2Id);
+      expect(a.materialId).not.toBe(mats[0].id);
+    }
   });
 
   // ── modelsSlice: loadProject with saved viewport ────────────────

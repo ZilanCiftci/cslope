@@ -10,57 +10,44 @@ import {
   mirrorX,
   toCanonicalSlopeDefinition,
 } from "@cslope/engine";
-import { computeRegions, findMaterialBelowBoundary } from "../../utils/regions";
+
+import { flatFieldsFromModel } from "../../features/properties/sections/material-forms/model-defaults";
 
 function modelToSlopeDefinition(model: ModelEntry): SlopeDefinition {
   const materials = model.materials;
   const slope: SlopeDefinition = {
     orientation: model.orientation,
     coordinates: model.coordinates,
-    materials: materials.map((material) => ({
-      name: material.name,
-      unitWeight: material.unitWeight,
-      frictionAngle: material.frictionAngle,
-      cohesion: material.cohesion,
-      color: material.color,
-      depthRange: material.depthRange,
-      model: material.model,
-    })),
+    materials: materials.map((material) => {
+      const flat = flatFieldsFromModel(material.model);
+      return {
+        name: material.name,
+        unitWeight: flat.unitWeight,
+        frictionAngle: flat.frictionAngle,
+        cohesion: flat.cohesion,
+        color: material.color,
+        depthRange: material.depthRange,
+        model: material.model,
+      };
+    }),
   };
 
   if (model.materialBoundaries.length > 0) {
-    const defaultMaterialId = materials[0]?.id ?? "";
-    const regions = computeRegions(
-      model.coordinates,
-      model.materialBoundaries,
-      model.regionMaterials,
-      defaultMaterialId,
-    );
+    slope.materialBoundaries = model.materialBoundaries.map((b) => ({
+      coordinates: b.coordinates,
+      materialName: "",
+    }));
 
-    slope.materialBoundaries = model.materialBoundaries.map((boundary) => {
-      const materialId = findMaterialBelowBoundary(
-        boundary,
-        regions,
-        defaultMaterialId,
-      );
-      const materialName =
-        materials.find((material) => material.id === materialId)?.name ??
-        materials[0]?.name ??
-        "";
-      return {
-        coordinates: boundary.coordinates,
-        materialName,
-      };
-    });
-
-    const topRegion = regions.find((region) => region.regionKey === "top");
-    if (topRegion && topRegion.materialId !== defaultMaterialId) {
-      const topMaterialName = materials.find(
-        (material) => material.id === topRegion.materialId,
-      )?.name;
-      if (topMaterialName) {
-        slope.topRegionMaterialName = topMaterialName;
-      }
+    if (model.regionMaterials.length > 0) {
+      slope.regionAssignments = model.regionMaterials
+        .map((a) => {
+          const mat = materials.find((m) => m.id === a.materialId);
+          return mat ? { point: a.point, materialName: mat.name } : null;
+        })
+        .filter(
+          (a): a is { point: [number, number]; materialName: string } =>
+            a !== null,
+        );
     }
   }
 

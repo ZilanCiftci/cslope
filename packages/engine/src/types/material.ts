@@ -166,8 +166,6 @@ export class Material {
       cohesionRateOfChange: resolved.cohesionRateOfChange,
       cohesionUndrained: resolved.cohesionUndrained,
       cFactor: resolved.cFactor,
-      name: resolved.name || undefined,
-      color: resolved.color || undefined,
     };
   }
 }

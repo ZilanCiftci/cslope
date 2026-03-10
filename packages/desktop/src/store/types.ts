@@ -17,17 +17,10 @@ export type ModelOrientation = "ltr" | "rtl";
 export interface MaterialRow {
   id: string;
   name: string;
-  unitWeight: number;
-  frictionAngle: number;
-  cohesion: number;
   color: string;
   depthRange?: [number, number];
-  /**
-   * Full material model definition.
-   * When present, this is the source of truth for strength resolution.
-   * When absent (legacy), a MohrCoulombModel is synthesised from the flat fields.
-   */
-  model?: MaterialModel;
+  /** Full material model definition — source of truth for strength. */
+  model: MaterialModel;
 }
 
 export interface MaterialBoundaryRow {
@@ -35,7 +28,12 @@ export interface MaterialBoundaryRow {
   coordinates: [number, number][];
 }
 
-export type RegionMaterials = Record<string, string>;
+export interface RegionAssignment {
+  point: [number, number];
+  materialId: string;
+}
+
+export type RegionMaterials = RegionAssignment[];
 
 export interface AnalysisLimitsState {
   enabled: boolean;
@@ -204,6 +202,7 @@ export interface ModelsSlice {
   loadProject: (data: { models: ModelEntry[]; activeModelId?: string }) => void;
   newProject: () => void;
   loadBenchmarks: () => void;
+  loadLovoModels: () => void;
   /** Set after loadProject / loadBenchmarks so the canvas auto-fits. */
   _pendingFitToScreen: boolean;
   clearPendingFitToScreen: () => void;
@@ -251,7 +250,7 @@ export interface GeometrySlice {
     coord: [number, number],
   ) => void;
   removeBoundaryPoint: (boundaryId: string, index: number) => void;
-  setRegionMaterial: (regionKey: string, materialId: string) => void;
+  setRegionMaterial: (point: [number, number], materialId: string) => void;
   setPiezometricLine: (pl: Partial<PiezometricLineState>) => void;
   addPiezoLine: (coords?: [number, number][]) => void;
   removePiezoLine: (lineId: string) => void;

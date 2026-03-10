@@ -86,8 +86,7 @@ describe("App — VS Code dark layout", () => {
     render(<App />);
     // PropertiesPanel has collapsible sections
     expect(screen.getByText("Exterior Boundary")).toBeInTheDocument();
-    // "Materials" may appear in both explorer and properties — just check at least one
-    expect(screen.getAllByText("Materials").length).toBeGreaterThanOrEqual(1);
+    expect(screen.getByText("Material Assignment")).toBeInTheDocument();
   });
 
   // ── Running / error / result states ──────────────────────────────────

@@ -53,19 +53,17 @@ const validAniso: AnisotropicFunctionModel = {
 const validSfDepth: StrengthFromDepthModel = {
   kind: "s-f-depth",
   unitWeight: 18,
-  strengthFunction: [
-    [0, 20],
-    [10, 40],
-  ],
+  suRef: 20,
+  depthRef: 0,
+  rate: 2,
 };
 
 const validSfDatum: StrengthFromDatumModel = {
   kind: "s-f-datum",
   unitWeight: 18,
-  strengthFunction: [
-    [0, 30],
-    [10, 50],
-  ],
+  suRef: 30,
+  yRef: 0,
+  rate: 2,
 };
 
 // ── Common validation ──────────────────────────────────────────
@@ -302,42 +300,32 @@ describe("validateMaterialModel — s-f-depth", () => {
     expect(validateMaterialModel(validSfDepth)).toEqual([]);
   });
 
-  it("rejects fewer than 2 strength points", () => {
-    const errs = validateMaterialModel({
-      ...validSfDepth,
-      strengthFunction: [[0, 20]],
-    });
-    expect(errs).toContainEqual(expect.stringContaining("at least 2"));
+  it("rejects negative suRef", () => {
+    const errs = validateMaterialModel({ ...validSfDepth, suRef: -1 });
+    expect(errs).toContainEqual(expect.stringContaining("suRef"));
   });
 
-  it("rejects empty strength function", () => {
-    const errs = validateMaterialModel({
-      ...validSfDepth,
-      strengthFunction: [],
-    });
-    expect(errs).toContainEqual(expect.stringContaining("at least 2"));
+  it("rejects NaN suRef", () => {
+    const errs = validateMaterialModel({ ...validSfDepth, suRef: NaN });
+    expect(errs).toContainEqual(expect.stringContaining("suRef"));
   });
 
-  it("rejects negative depth", () => {
-    const errs = validateMaterialModel({
-      ...validSfDepth,
-      strengthFunction: [
-        [-1, 20],
-        [10, 40],
-      ],
-    });
-    expect(errs).toContainEqual(expect.stringContaining("depth"));
+  it("rejects NaN depthRef", () => {
+    const errs = validateMaterialModel({ ...validSfDepth, depthRef: NaN });
+    expect(errs).toContainEqual(expect.stringContaining("depthRef"));
   });
 
-  it("rejects negative Su", () => {
-    const errs = validateMaterialModel({
-      ...validSfDepth,
-      strengthFunction: [
-        [0, -5],
-        [10, 40],
-      ],
-    });
-    expect(errs).toContainEqual(expect.stringContaining("Su"));
+  it("rejects NaN rate", () => {
+    const errs = validateMaterialModel({ ...validSfDepth, rate: NaN });
+    expect(errs).toContainEqual(expect.stringContaining("Rate"));
+  });
+
+  it("allows suRef = 0", () => {
+    expect(validateMaterialModel({ ...validSfDepth, suRef: 0 })).toEqual([]);
+  });
+
+  it("allows negative rate", () => {
+    expect(validateMaterialModel({ ...validSfDepth, rate: -1 })).toEqual([]);
   });
 });
 
@@ -348,35 +336,23 @@ describe("validateMaterialModel — s-f-datum", () => {
     expect(validateMaterialModel(validSfDatum)).toEqual([]);
   });
 
-  it("rejects fewer than 2 strength points", () => {
-    const errs = validateMaterialModel({
-      ...validSfDatum,
-      strengthFunction: [[0, 30]],
-    });
-    expect(errs).toContainEqual(expect.stringContaining("at least 2"));
+  it("rejects negative suRef", () => {
+    const errs = validateMaterialModel({ ...validSfDatum, suRef: -1 });
+    expect(errs).toContainEqual(expect.stringContaining("suRef"));
   });
 
-  it("rejects negative Su", () => {
-    const errs = validateMaterialModel({
-      ...validSfDatum,
-      strengthFunction: [
-        [0, -5],
-        [10, 50],
-      ],
-    });
-    expect(errs).toContainEqual(expect.stringContaining("Su"));
+  it("rejects NaN yRef", () => {
+    const errs = validateMaterialModel({ ...validSfDatum, yRef: NaN });
+    expect(errs).toContainEqual(expect.stringContaining("yRef"));
   });
 
-  it("allows negative elevation (below sea level)", () => {
-    expect(
-      validateMaterialModel({
-        ...validSfDatum,
-        strengthFunction: [
-          [-10, 30],
-          [10, 50],
-        ],
-      }),
-    ).toEqual([]);
+  it("rejects NaN rate", () => {
+    const errs = validateMaterialModel({ ...validSfDatum, rate: NaN });
+    expect(errs).toContainEqual(expect.stringContaining("Rate"));
+  });
+
+  it("allows negative yRef (below sea level)", () => {
+    expect(validateMaterialModel({ ...validSfDatum, yRef: -10 })).toEqual([]);
   });
 });
 

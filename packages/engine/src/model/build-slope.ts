@@ -73,8 +73,6 @@ export function buildSlope(def: SlopeDefinition): Slope {
         cohesionRefDepth: m.cohesionRefDepth,
         cohesionRateOfChange: m.cohesionRateOfChange,
         cohesionUndrained: m.cohesionUndrained,
-        name: m.name,
-        color: m.color,
       } satisfies MohrCoulombModel);
 
     // Validate the model before constructing the Material.
@@ -120,28 +118,33 @@ export function buildSlope(def: SlopeDefinition): Slope {
       }
     }
 
-    // Assign materials below each boundary.
-    // For each boundary, find a point just below the geometric midpoint
-    // of the polyline. We compute the true geometric midpoint (average of
-    // all vertices) rather than picking a vertex by index, because for
-    // short polylines the endpoint may fall outside the slope geometry.
-    for (const b of def.materialBoundaries) {
-      const mat = materialsByName.get(b.materialName);
-      if (mat && b.coordinates.length >= 2) {
-        const midPt = polylineMidpoint(b.coordinates);
-        slope.assignMaterial([midPt[0], midPt[1] - 0.01], mat);
+    if (def.regionAssignments && def.regionAssignments.length > 0) {
+      // Point-based assignment: each entry maps a representative point
+      // to a material.  The engine assigns it to whichever region
+      // contains the point.
+      for (const ra of def.regionAssignments) {
+        const mat = materialsByName.get(ra.materialName);
+        if (mat) {
+          slope.assignMaterial(ra.point, mat);
+        }
       }
-    }
+    } else {
+      // Legacy boundary-name assignment (materialBoundaries carry materialName)
+      for (const b of def.materialBoundaries) {
+        const mat = materialsByName.get(b.materialName);
+        if (mat && b.coordinates.length >= 2) {
+          const midPt = polylineMidpoint(b.coordinates);
+          slope.assignMaterial([midPt[0], midPt[1] - 0.01], mat);
+        }
+      }
 
-    // Assign material to the top region.
-    // When topRegionMaterialName is explicitly provided, use it.
-    // Otherwise fall back to the first defined material.
-    const topMatName = def.topRegionMaterialName ?? def.materials[0]?.name;
-    const topMat = topMatName ? materialsByName.get(topMatName) : undefined;
-    if (topMat) {
-      const firstB = def.materialBoundaries[0];
-      const midPt = polylineMidpoint(firstB.coordinates);
-      slope.assignMaterial([midPt[0], midPt[1] + 0.01], topMat);
+      const topMatName = def.topRegionMaterialName ?? def.materials[0]?.name;
+      const topMat = topMatName ? materialsByName.get(topMatName) : undefined;
+      if (topMat) {
+        const firstB = def.materialBoundaries[0];
+        const midPt = polylineMidpoint(firstB.coordinates);
+        slope.assignMaterial([midPt[0], midPt[1] + 0.01], topMat);
+      }
     }
   }
 

@@ -121,10 +121,17 @@ function normalizeModelEntry(raw: unknown): ModelEntry {
           };
         })
       : []) as unknown as ModelEntry["materialBoundaries"],
-    regionMaterials:
-      model.regionMaterials && typeof model.regionMaterials === "object"
-        ? { ...(model.regionMaterials as Record<string, string>) }
-        : {},
+    regionMaterials: Array.isArray(model.regionMaterials)
+      ? (
+          model.regionMaterials as {
+            point: [number, number];
+            materialId: string;
+          }[]
+        ).map((a) => ({
+          point: [...a.point] as [number, number],
+          materialId: a.materialId,
+        }))
+      : [],
     piezometricLine: normalizePiezo(model.piezometricLine),
     udls: Array.isArray(model.udls)
       ? ((model.udls as unknown[])
@@ -311,15 +318,6 @@ function normalizeMaterial(raw: unknown, index: number): MaterialRow {
   }
   const m = raw as Record<string, unknown>;
 
-  const unitWeight = Math.max(
-    0.1,
-    finiteOr(m.unitWeight, DEFAULT_MATERIAL.unitWeight),
-  );
-  const frictionAngle = Math.max(
-    0,
-    finiteOr(m.frictionAngle, DEFAULT_MATERIAL.frictionAngle),
-  );
-  const cohesion = Math.max(0, finiteOr(m.cohesion, DEFAULT_MATERIAL.cohesion));
   const name = typeof m.name === "string" ? m.name : DEFAULT_MATERIAL.name;
   const color =
     typeof m.color === "string" && m.color.length > 0
@@ -334,23 +332,32 @@ function normalizeMaterial(raw: unknown, index: number): MaterialRow {
       : undefined
   ) as [number, number] | undefined;
 
-  // Preserve the MaterialModel if present in the saved data.
-  // If absent, don't synthesise one — the engine will build a
-  // MohrCoulombModel from the flat fields automatically.
-  const model =
-    m.model && typeof m.model === "object" && "kind" in (m.model as object)
-      ? (m.model as MaterialModel)
-      : undefined;
+  // Use persisted model if present; otherwise synthesise from legacy flat fields
+  let model: MaterialModel;
+  if (m.model && typeof m.model === "object" && "kind" in (m.model as object)) {
+    model = m.model as MaterialModel;
+  } else {
+    // Legacy file without model — synthesise MohrCoulomb from flat fields
+    const unitWeight = Math.max(
+      0.1,
+      finiteOr(m.unitWeight, DEFAULT_MATERIAL.model.unitWeight),
+    );
+    const frictionAngle = Math.max(0, finiteOr(m.frictionAngle, 0));
+    const cohesion = Math.max(0, finiteOr(m.cohesion, 0));
+    model = {
+      kind: "mohr-coulomb",
+      unitWeight,
+      frictionAngle,
+      cohesion,
+    };
+  }
 
   return {
     id: typeof m.id === "string" ? m.id : `mat-${index + 1}`,
     name,
-    unitWeight,
-    frictionAngle,
-    cohesion,
     color,
     depthRange,
-    ...(model ? { model } : {}),
+    model,
   };
 }
 

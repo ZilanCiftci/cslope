@@ -8,6 +8,7 @@ import type {
 import { circleArcPoints } from "../../utils/arc";
 import { computePaperFrame } from "../view/paper";
 import { MODEL_SHORT_LABELS } from "../rendering/style-spec";
+import { flatFieldsFromModel } from "../properties/sections/material-forms/model-defaults";
 
 export { computePaperFrame } from "../view/paper";
 
@@ -351,13 +352,16 @@ export function getAnnotationBoundsPx(
 
   if (anno.type === "material-table") {
     const header = ["Material", "Model", "γ", "φ", "c"];
-    const rows = materials.map((m) => [
-      m.name,
-      MODEL_SHORT_LABELS[m.model?.kind ?? "mohr-coulomb"],
-      `${m.unitWeight}`,
-      `${m.frictionAngle}°`,
-      `${m.cohesion}`,
-    ]);
+    const rows = materials.map((m) => {
+      const f = flatFieldsFromModel(m.model);
+      return [
+        m.name,
+        MODEL_SHORT_LABELS[m.model.kind],
+        `${f.unitWeight}`,
+        `${f.frictionAngle}°`,
+        `${f.cohesion}`,
+      ];
+    });
     const box = measureTable(ctx, header, rows, annoScale);
     return {
       x: ax - hitPad,
@@ -696,13 +700,16 @@ export function extendBoundsWithResultFitExtras(params: {
       addCanvasRect(ax, ay, boxW, boxH);
     } else if (anno.type === "material-table") {
       const header = ["Material", "Model", "gamma", "phi", "c"];
-      const rows = materials.map((m) => [
-        m.name,
-        MODEL_SHORT_LABELS[m.model?.kind ?? "mohr-coulomb"],
-        `${m.unitWeight}`,
-        `${m.frictionAngle} deg`,
-        `${m.cohesion}`,
-      ]);
+      const rows = materials.map((m) => {
+        const f = flatFieldsFromModel(m.model);
+        return [
+          m.name,
+          MODEL_SHORT_LABELS[m.model.kind],
+          `${f.unitWeight}`,
+          `${f.frictionAngle} deg`,
+          `${f.cohesion}`,
+        ];
+      });
       const { width: tableW, height: tableH } = measureTable(header, rows);
       addCanvasRect(ax, ay, tableW, tableH);
     }

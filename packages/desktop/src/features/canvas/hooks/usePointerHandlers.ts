@@ -81,7 +81,7 @@ interface PointerDeps {
   assigningMaterialId: string | null;
   editingAssignment: boolean;
   panActive: boolean;
-  setRegionMaterial: (regionKey: string, materialId: string) => void;
+  setRegionMaterial: (point: [number, number], materialId: string) => void;
   setAssigningMaterial: (materialId: string | null) => void;
   setSelectedRegionKey: (key: string | null) => void;
   setSelectedPoint: (idx: number | null) => void;
@@ -552,10 +552,20 @@ export function usePointerHandlers(deps: PointerDeps) {
         const region = findRegionAtPoint(wx, wy);
         if (region) {
           if (assigningMaterialId) {
-            setRegionMaterial(region.regionKey, assigningMaterialId);
+            setRegionMaterial([wx, wy], assigningMaterialId);
             setAssigningMaterial(null);
           } else if (editingAssignment) {
+            // Open the material picker popup at the click position so the
+            // user can assign a material to the point they clicked.
             setSelectedRegionKey(region.regionKey);
+            const rect = canvasRef.current?.getBoundingClientRect();
+            if (rect) {
+              setMaterialPicker({
+                screenX: e.clientX - rect.left,
+                screenY: e.clientY - rect.top,
+                worldPoint: [wx, wy],
+              });
+            }
           }
         } else if (assigningMaterialId) {
           setAssigningMaterial(null);

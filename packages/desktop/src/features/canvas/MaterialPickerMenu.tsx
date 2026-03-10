@@ -4,7 +4,7 @@ import type { MaterialPickerState } from "./types";
 interface MaterialPickerMenuProps {
   picker: MaterialPickerState | null;
   materials: MaterialRow[];
-  onSelect: (regionKey: string, materialId: string) => void;
+  onSelect: (worldPoint: [number, number], materialId: string) => void;
   onClose: () => void;
 }
 
@@ -38,7 +38,7 @@ export function MaterialPickerMenu({
         <button
           key={m.id}
           onClick={() => {
-            onSelect(picker.regionKey, m.id);
+            onSelect(picker.worldPoint, m.id);
             onClose();
           }}
           className="w-full flex items-center gap-2 px-3 py-1.5 text-[12px] text-left cursor-pointer transition-colors"

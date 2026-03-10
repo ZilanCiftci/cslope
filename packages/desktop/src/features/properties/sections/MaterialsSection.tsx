@@ -17,7 +17,6 @@ import {
   SfDepthFields,
   SfDatumFields,
   createDefaultModel,
-  flatFieldsFromModel,
 } from "./material-forms";
 
 /** All valid model kinds for the dropdown, in display order. */
@@ -40,17 +39,11 @@ export function MaterialsSection() {
 
   /** Resolve the effective MaterialModel for a row. */
   const getModel = (mat: (typeof materials)[number]): MaterialModel =>
-    mat.model ?? {
-      kind: "mohr-coulomb" as const,
-      unitWeight: mat.unitWeight,
-      cohesion: mat.cohesion,
-      frictionAngle: mat.frictionAngle,
-    };
+    mat.model;
 
-  /** Update the model field and sync flat fields for backward compat. */
+  /** Update the model field. */
   const setModel = (matId: string, model: MaterialModel) => {
-    const flat = flatFieldsFromModel(model);
-    updateMaterial(matId, { model, ...flat });
+    updateMaterial(matId, { model });
   };
 
   /** Patch a subset of the current material's model. */

@@ -232,7 +232,7 @@ function resolveStrengthFromDepth(
   context: StrengthContext,
 ): ResolvedStrength {
   const depth = context.yGround - context.yBottom;
-  const su = interpolateFunction(model.strengthFunction, depth);
+  const su = model.suRef + (depth - model.depthRef) * model.rate;
 
   return {
     cohesion: su,
@@ -245,7 +245,7 @@ function resolveStrengthFromDatum(
   model: Extract<MaterialModel, { kind: "s-f-datum" }>,
   context: StrengthContext,
 ): ResolvedStrength {
-  const su = interpolateFunction(model.strengthFunction, context.yBottom);
+  const su = model.suRef + (context.yBottom - model.yRef) * model.rate;
 
   return {
     cohesion: su,

@@ -46,7 +46,7 @@ export function MaterialAssignmentSection() {
             Click a region on the canvas to select it.
           </div>
           {regions.map((r) => {
-            const currentMatId = regionMaterials[r.regionKey] ?? defaultMatId;
+            const currentMatId = r.materialId;
             const currentMat = materials.find((m) => m.id === currentMatId);
             const isSelected = selectedRegionKey === r.regionKey;
             return (
@@ -90,7 +90,7 @@ export function MaterialAssignmentSection() {
                   value={currentMatId}
                   onChange={(e) => {
                     e.stopPropagation();
-                    setRegionMaterial(r.regionKey, e.target.value);
+                    setRegionMaterial([r.cx, r.cy], e.target.value);
                   }}
                   onClick={(e) => e.stopPropagation()}
                   className="text-[11px] px-1.5 py-0.5 rounded cursor-pointer"

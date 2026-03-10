@@ -3,7 +3,6 @@ import { CustomSearchPlanesSection } from "./sections/CustomSearchPlanesSection"
 import { GeometrySection } from "./sections/GeometrySection";
 import { LoadsSection } from "./sections/LoadsSection";
 import { MaterialAssignmentSection } from "./sections/MaterialAssignmentSection";
-import { MaterialsSection } from "./sections/MaterialsSection";
 import { OptionsSection } from "./sections/OptionsSection";
 import { PiezometricLineSection } from "./sections/PiezometricLineSection";
 import { SearchLimitsSection } from "./sections/SearchLimitsSection";
@@ -18,7 +17,6 @@ export function PropertiesPanel() {
     >
       <GeometrySection />
       <BoundariesSection />
-      <MaterialsSection />
       <MaterialAssignmentSection />
       <PiezometricLineSection />
       <LoadsSection />

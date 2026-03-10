@@ -132,59 +132,26 @@ export function validateMaterialModel(model: MaterialModel): string[] {
       break;
 
     case "s-f-depth":
-      if (
-        !Array.isArray(model.strengthFunction) ||
-        model.strengthFunction.length < 2
-      ) {
-        errors.push(
-          "S=f(depth) requires at least 2 data points in the strength function.",
-        );
-      } else {
-        for (let i = 0; i < model.strengthFunction.length; i++) {
-          const pt = model.strengthFunction[i];
-          if (!Array.isArray(pt) || pt.length !== 2) {
-            errors.push(
-              `Strength point ${i + 1}: must have 2 values [depth, Su].`,
-            );
-          } else if (!pt.every((v) => Number.isFinite(v))) {
-            errors.push(
-              `Strength point ${i + 1}: all values must be finite numbers.`,
-            );
-          } else {
-            if (pt[0] < 0) {
-              errors.push(`Strength point ${i + 1}: depth must be ≥ 0.`);
-            }
-            if (pt[1] < 0) {
-              errors.push(`Strength point ${i + 1}: Su must be ≥ 0.`);
-            }
-          }
-        }
+      if (!Number.isFinite(model.suRef) || model.suRef < 0) {
+        errors.push("Reference Su (suRef) must be ≥ 0.");
+      }
+      if (!Number.isFinite(model.depthRef)) {
+        errors.push("Reference depth (depthRef) must be a finite number.");
+      }
+      if (!Number.isFinite(model.rate)) {
+        errors.push("Rate of change must be a finite number.");
       }
       break;
 
     case "s-f-datum":
-      if (
-        !Array.isArray(model.strengthFunction) ||
-        model.strengthFunction.length < 2
-      ) {
-        errors.push(
-          "S=f(datum) requires at least 2 data points in the strength function.",
-        );
-      } else {
-        for (let i = 0; i < model.strengthFunction.length; i++) {
-          const pt = model.strengthFunction[i];
-          if (!Array.isArray(pt) || pt.length !== 2) {
-            errors.push(
-              `Strength point ${i + 1}: must have 2 values [elevation, Su].`,
-            );
-          } else if (!pt.every((v) => Number.isFinite(v))) {
-            errors.push(
-              `Strength point ${i + 1}: all values must be finite numbers.`,
-            );
-          } else if (pt[1] < 0) {
-            errors.push(`Strength point ${i + 1}: Su must be ≥ 0.`);
-          }
-        }
+      if (!Number.isFinite(model.suRef) || model.suRef < 0) {
+        errors.push("Reference Su (suRef) must be ≥ 0.");
+      }
+      if (!Number.isFinite(model.yRef)) {
+        errors.push("Reference elevation (yRef) must be a finite number.");
+      }
+      if (!Number.isFinite(model.rate)) {
+        errors.push("Rate of change must be a finite number.");
       }
       break;
   }

@@ -143,6 +143,13 @@ export function toCanonicalSlopeDefinition(
     analysisLimits: slopeDefinition.analysisLimits
       ? mirrorLimits(slopeDefinition.analysisLimits, xMin, xMax)
       : undefined,
+    regionAssignments: slopeDefinition.regionAssignments?.map((ra) => ({
+      ...ra,
+      point: [mirrorX(ra.point[0], xMin, xMax), ra.point[1]] as [
+        number,
+        number,
+      ],
+    })),
     customSearchPlanes: slopeDefinition.customSearchPlanes?.map((p) => ({
       ...p,
       cx: mirrorX(p.cx, xMin, xMax),

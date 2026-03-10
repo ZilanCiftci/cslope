@@ -1,4 +1,4 @@
-import { describe, expect, it, vi, afterEach } from "vitest";
+﻿import { describe, expect, it, vi, afterEach } from "vitest";
 import {
   DEFAULT_ANALYSIS_LIMITS,
   DEFAULT_MATERIAL,
@@ -58,7 +58,7 @@ describe("exportVectorPdf", () => {
       ],
       materials: [{ ...DEFAULT_MATERIAL }],
       materialBoundaries: [],
-      regionMaterials: {},
+      regionMaterials: [],
       result: {
         minFOS: 1.2,
         maxFOS: 1.6,
@@ -119,7 +119,7 @@ describe("exportVectorPdf", () => {
       ],
       materials: [{ ...DEFAULT_MATERIAL }],
       materialBoundaries: [],
-      regionMaterials: {},
+      regionMaterials: [],
       result: {
         minFOS: 0,
         maxFOS: 0,
@@ -163,7 +163,7 @@ describe("exportVectorPdf", () => {
       ],
       materials: [{ ...DEFAULT_MATERIAL }],
       materialBoundaries: [],
-      regionMaterials: {},
+      regionMaterials: [],
       result: {
         minFOS: 1.2,
         maxFOS: 1.6,
@@ -218,7 +218,7 @@ describe("exportVectorPdf", () => {
       ],
       materials: [{ ...DEFAULT_MATERIAL }],
       materialBoundaries: [],
-      regionMaterials: {},
+      regionMaterials: [],
       result: {
         minFOS: 1.2,
         maxFOS: 1.6,

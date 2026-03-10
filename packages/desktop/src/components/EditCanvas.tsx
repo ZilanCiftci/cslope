@@ -723,8 +723,8 @@ export function EditCanvas() {
         <MaterialPickerMenu
           picker={materialPicker}
           materials={materials}
-          onSelect={(regionKey, materialId) =>
-            setRegionMaterial(regionKey, materialId)
+          onSelect={(worldPoint, materialId) =>
+            setRegionMaterial(worldPoint, materialId)
           }
           onClose={() => setMaterialPicker(null)}
         />

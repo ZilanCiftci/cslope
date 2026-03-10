@@ -7,6 +7,9 @@
  * Supports two kinds of interior boundary:
  *   1. Open polylines that cross the exterior — split via splitPolygonByPolyline
  *   2. Closed polygons entirely inside the exterior — split via polygon subtraction
+ *
+ * Material assignment is point-based: each region is assigned the material
+ * from the first RegionAssignment whose point falls inside the region polygon.
  */
 
 import { splitPolygonByPolyline, isPointInPolygon } from "@cslope/engine";
@@ -29,29 +32,6 @@ function isClosedBoundary(coords: [number, number][]): boolean {
   const [x0, y0] = coords[0];
   const [xn, yn] = coords[coords.length - 1];
   return Math.abs(x0 - xn) < 1e-9 && Math.abs(y0 - yn) < 1e-9;
-}
-
-/**
- * Evaluate a polyline's Y at a given X by linear interpolation.
- * Returns undefined if X is outside the polyline's range.
- */
-function polylineYAtX(
-  lx: number[],
-  ly: number[],
-  x: number,
-): number | undefined {
-  for (let i = 0; i < lx.length - 1; i++) {
-    const x1 = lx[i],
-      x2 = lx[i + 1];
-    const lo = Math.min(x1, x2);
-    const hi = Math.max(x1, x2);
-    if (x >= lo - 1e-9 && x <= hi + 1e-9) {
-      if (Math.abs(x2 - x1) < 1e-12) continue; // vertical segment
-      const t = (x - x1) / (x2 - x1);
-      return ly[i] + t * (ly[i + 1] - ly[i]);
-    }
-  }
-  return undefined;
 }
 
 /** Twice the signed area of a closed polygon (positive → CCW). */
@@ -197,39 +177,6 @@ function subtractInnerPolygon(
 
 // ── Main ──────────────────────────────────────────────────────────────────
 
-/**
- * Find a point guaranteed to be inside a polygon (not on or outside it).
- *
- * The simple vertex-average centroid can fall inside a hole for donut
- * polygons created by bridge-cut. This function tries the centroid first
- * and falls back to edge-midpoint probing.
- */
-function findInteriorPoint(px: number[], py: number[]): [number, number] {
-  const [cx, cy] = regionCentroid(px, py);
-  if (isPointInPolygon(cx, cy, px, py)) return [cx, cy];
-
-  // Try midpoints of polygon edges, nudged slightly toward the centroid
-  const n = px.length - 1; // closed polygon: last == first
-  for (let i = 0; i < n; i++) {
-    const mx = (px[i] + px[i + 1]) / 2;
-    const my = (py[i] + py[i + 1]) / 2;
-    // Nudge 5% toward centroid to avoid landing exactly on the edge
-    const tx = mx + (cx - mx) * 0.05;
-    const ty = my + (cy - my) * 0.05;
-    if (isPointInPolygon(tx, ty, px, py)) return [tx, ty];
-  }
-
-  // Last resort: try polygon vertices nudged toward centroid
-  for (let i = 0; i < n; i++) {
-    const tx = px[i] + (cx - px[i]) * 0.05;
-    const ty = py[i] + (cy - py[i]) * 0.05;
-    if (isPointInPolygon(tx, ty, px, py)) return [tx, ty];
-  }
-
-  // Absolute fallback
-  return [cx, cy];
-}
-
 /** Compute material regions by splitting the exterior polygon with boundaries. */
 export function computeRegions(
   coordinates: [number, number][],
@@ -246,11 +193,16 @@ export function computeRegions(
   const { px, py } = closed;
 
   if (materialBoundaries.length === 0) {
-    const topMatId = regionMaterials["top"] ?? defaultMaterialId;
-    return [{ px, py, materialId: topMatId, regionKey: "top" }];
+    const matId = findMaterialForPiece(
+      px,
+      py,
+      regionMaterials,
+      defaultMaterialId,
+    );
+    return [{ px, py, materialId: matId, regionKey: "region-0" }];
   }
 
-  // Sort boundaries by ID for stable composite-key ordering
+  // Sort boundaries by ID for stable ordering
   const sorted = [...materialBoundaries].sort((a, b) =>
     a.id.localeCompare(b.id),
   );
@@ -279,35 +231,53 @@ export function computeRegions(
     pieces = next;
   }
 
-  // Phase 2: Split by closed (polygon) boundaries using subtraction
-  // Track holes per piece so rendering can use evenodd fill
-  // Also track original outer boundary (before bridge-cut) for clean rendering
-  const pieceHoles = new Map<number, { px: number[]; py: number[] }[]>();
-  const pieceOuter = new Map<number, { px: number[]; py: number[] }>();
-  let nextPieceId = 0;
-  const pieceIds = pieces.map(() => nextPieceId++);
-
+  // Phase 2: Split by closed (polygon) boundaries using subtraction.
+  //
+  // Pre-split each closed boundary by the open boundary polylines so that
+  // when a closed polygon crosses an open boundary, each resulting
+  // sub-polygon sits entirely inside one piece from Phase 1.
+  const closedSubPolygons: { px: number[]; py: number[] }[] = [];
   for (const b of closedBoundaries) {
     const inner = ensureClosed(
       b.coordinates.map((c) => c[0]),
       b.coordinates.map((c) => c[1]),
     );
+    let subPieces = [inner];
+    for (const ob of openBoundaries) {
+      const lx = ob.coordinates.map((c) => c[0]);
+      const ly = ob.coordinates.map((c) => c[1]);
+      const next: { px: number[]; py: number[] }[] = [];
+      for (const sp of subPieces) {
+        try {
+          const splits = splitPolygonByPolyline(sp.px, sp.py, lx, ly);
+          next.push(...splits);
+        } catch {
+          next.push(sp);
+        }
+      }
+      subPieces = next;
+    }
+    closedSubPolygons.push(...subPieces);
+  }
 
-    // Find which piece contains the centroid of this closed boundary
+  const pieceHoles = new Map<number, { px: number[]; py: number[] }[]>();
+  const pieceOuter = new Map<number, { px: number[]; py: number[] }>();
+  let nextPieceId = 0;
+  const pieceIds = pieces.map(() => nextPieceId++);
+
+  for (const inner of closedSubPolygons) {
     const [icx, icy] = regionCentroid(inner.px, inner.py);
     const containerIdx = pieces.findIndex((p) =>
       isPointInPolygon(icx, icy, p.px, p.py),
     );
-    if (containerIdx < 0) continue; // boundary not inside any piece
+    if (containerIdx < 0) continue;
 
     const container = pieces[containerIdx];
-    // Save the container's clean outer boundary before bridge-cut
     const outerBoundary = pieceOuter.get(pieceIds[containerIdx]) ?? {
       px: [...container.px],
       py: [...container.py],
     };
 
-    // Subtract inner from container → donut (for hit-testing) + inner piece
     const donut = subtractInnerPolygon(
       container.px,
       container.py,
@@ -315,7 +285,6 @@ export function computeRegions(
       inner.py,
     );
 
-    // Track the hole on the donut piece for rendering
     const donutId = nextPieceId++;
     const existingHoles = pieceHoles.get(pieceIds[containerIdx]) ?? [];
     existingHoles.push({ px: inner.px, py: inner.py });
@@ -327,66 +296,26 @@ export function computeRegions(
     pieceIds.splice(containerIdx, 1, donutId, innerId);
   }
 
-  // Phase 3: Classify each piece by a guaranteed-interior sample point
-  const classified = pieces.map((piece, idx) => {
-    const [cx, cy] = findInteriorPoint(piece.px, piece.py);
-    const ids: string[] = [];
-
-    for (const b of sorted) {
-      if (isClosedBoundary(b.coordinates)) {
-        // For closed boundaries: inside?
-        const bpx = b.coordinates.map((c) => c[0]);
-        const bpy = b.coordinates.map((c) => c[1]);
-        if (isPointInPolygon(cx, cy, bpx, bpy)) {
-          ids.push(b.id);
-        }
-      } else {
-        // For open boundaries: below?
-        const lx = b.coordinates.map((c) => c[0]);
-        const ly = b.coordinates.map((c) => c[1]);
-        const yAtCx = polylineYAtX(lx, ly, cx);
-        if (yAtCx !== undefined && cy < yAtCx) {
-          ids.push(b.id);
-        }
-      }
-    }
-
-    const baseKey = ids.length === 0 ? "top" : `below-${ids.join("+")}`;
-    return { piece, idx, baseKey };
-  });
-
-  // Deduplicate region keys — a concave polygon can produce multiple pieces
-  // on the same side of a boundary, all getting the same base key.  Append
-  // a suffix (-2, -3, …) to make each key unique while keeping the largest
-  // piece as the canonical (un-suffixed) key for backward-compat.
-  // First, group by baseKey and sort each group by area descending so the
-  // largest piece keeps the bare key.
-  type ClassifiedEntry = (typeof classified)[number];
-  const keyGroups = new Map<string, ClassifiedEntry[]>();
-  for (const entry of classified) {
-    const group = keyGroups.get(entry.baseKey) ?? [];
-    group.push(entry);
-    keyGroups.set(entry.baseKey, group);
-  }
-  for (const group of keyGroups.values()) {
-    group.sort(
-      (a, b) =>
-        polyArea(b.piece.px, b.piece.py) - polyArea(a.piece.px, a.piece.py),
+  // Phase 3: Point-based material assignment
+  // For each piece, find which stored assignment point falls inside it.
+  const regions = pieces.map((piece, idx) => {
+    const materialId = findMaterialForPiece(
+      piece.px,
+      piece.py,
+      regionMaterials,
+      defaultMaterialId,
     );
-  }
-
-  const regions = classified.map((entry) => {
-    const group = keyGroups.get(entry.baseKey)!;
-    const rank = group.indexOf(entry); // 0 = largest
-    const regionKey =
-      rank === 0 ? entry.baseKey : `${entry.baseKey}-${rank + 1}`;
-    const materialId = regionMaterials[regionKey] ?? defaultMaterialId;
-    const holes = pieceHoles.get(pieceIds[entry.idx]);
-    // Use the clean outer boundary (without bridge-cut slit) for rendering
-    const outer = pieceOuter.get(pieceIds[entry.idx]);
-    const rpx = outer ? outer.px : entry.piece.px;
-    const rpy = outer ? outer.py : entry.piece.py;
-    return { px: rpx, py: rpy, materialId, regionKey, holes };
+    const holes = pieceHoles.get(pieceIds[idx]);
+    const outer = pieceOuter.get(pieceIds[idx]);
+    const rpx = outer ? outer.px : piece.px;
+    const rpy = outer ? outer.py : piece.py;
+    return {
+      px: rpx,
+      py: rpy,
+      materialId,
+      regionKey: `region-${idx}`,
+      holes,
+    };
   });
 
   // Sort so smaller regions come last (drawn on top, matched first in reverse)
@@ -395,67 +324,18 @@ export function computeRegions(
 }
 
 /**
- * Compute the point at half of a polyline's arc length.
- * Always lies ON the polyline, robust for any vertex count — including
- * 2-point boundaries where a vertex-index approach would pick an
- * endpoint that may fall outside the slope geometry.
+ * Find the material for a polygon piece by checking which stored
+ * RegionAssignment point falls inside it.
  */
-function polylineMidpoint(coords: [number, number][]): [number, number] {
-  if (coords.length <= 1) return coords[0];
-  let totalLen = 0;
-  const segLens: number[] = [];
-  for (let i = 1; i < coords.length; i++) {
-    const dx = coords[i][0] - coords[i - 1][0];
-    const dy = coords[i][1] - coords[i - 1][1];
-    segLens.push(Math.sqrt(dx * dx + dy * dy));
-    totalLen += segLens[segLens.length - 1];
-  }
-  const halfLen = totalLen / 2;
-  let accum = 0;
-  for (let i = 0; i < segLens.length; i++) {
-    if (accum + segLens[i] >= halfLen) {
-      const t = (halfLen - accum) / segLens[i];
-      return [
-        coords[i][0] + t * (coords[i + 1][0] - coords[i][0]),
-        coords[i][1] + t * (coords[i + 1][1] - coords[i][1]),
-      ];
-    }
-    accum += segLens[i];
-  }
-  return coords[coords.length - 1];
-}
-
-/**
- * For a given boundary, find its material by checking which computed region
- * contains a point just below / inside the boundary's midpoint.
- * Checks smallest regions first so inner regions take precedence.
- */
-export function findMaterialBelowBoundary(
-  boundary: MaterialBoundaryRow,
-  regions: Region[],
+function findMaterialForPiece(
+  px: number[],
+  py: number[],
+  regionMaterials: RegionMaterials,
   defaultMaterialId: string,
 ): string {
-  const midPt = polylineMidpoint(boundary.coordinates);
-
-  let testX: number;
-  let testY: number;
-
-  if (isClosedBoundary(boundary.coordinates)) {
-    // Move test point slightly toward centroid (guaranteed inside)
-    const bpx = boundary.coordinates.map((c) => c[0]);
-    const bpy = boundary.coordinates.map((c) => c[1]);
-    const [cx, cy] = regionCentroid(bpx, bpy);
-    testX = midPt[0] + (cx - midPt[0]) * 0.01;
-    testY = midPt[1] + (cy - midPt[1]) * 0.01;
-  } else {
-    testX = midPt[0];
-    testY = midPt[1] - 0.01;
-  }
-
-  // Iterate backward (smallest regions last in the sorted array → first here)
-  for (let i = regions.length - 1; i >= 0; i--) {
-    if (isPointInPolygon(testX, testY, regions[i].px, regions[i].py)) {
-      return regions[i].materialId;
+  for (const assignment of regionMaterials) {
+    if (isPointInPolygon(assignment.point[0], assignment.point[1], px, py)) {
+      return assignment.materialId;
     }
   }
   return defaultMaterialId;

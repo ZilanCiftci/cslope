@@ -5,6 +5,7 @@ import { computeRegions } from "../../utils/regions";
 import { GRID_RAW_STEP_PX } from "../../constants";
 import { computeRulerStep, formatRulerLabel } from "../../utils/ruler";
 import { GRID_STEP_MIN } from "../canvas/constants";
+import { flatFieldsFromModel } from "../properties/sections/material-forms/model-defaults";
 import {
   ANNOTATION_DEFAULT_FONT_FAMILY,
   ANNOTATION_DEFAULT_FONT_SIZE,
@@ -49,6 +50,7 @@ import type {
   MaterialRow,
   ModelOrientation,
   ProjectInfo,
+  RegionMaterials,
   ResultViewSettings,
 } from "../../store/types";
 import {
@@ -205,7 +207,7 @@ export function drawMaterialRegions(
   coordinates: [number, number][],
   materials: MaterialRow[],
   materialBoundaries: MaterialBoundaryRow[],
-  regionMaterials: Record<string, string>,
+  regionMaterials: RegionMaterials,
   showSoilColor?: boolean,
 ) {
   if (showSoilColor === false) return;
@@ -933,13 +935,16 @@ function drawTablePdf(
   scale: number,
 ) {
   const header = ["Material", "Model", "γ", "φ", "c"];
-  const rows = materials.map((m) => [
-    m.name,
-    MODEL_SHORT_LABELS[m.model?.kind ?? "mohr-coulomb"],
-    `${m.unitWeight}`,
-    `${m.frictionAngle}°`,
-    `${m.cohesion}`,
-  ]);
+  const rows = materials.map((m) => {
+    const f = flatFieldsFromModel(m.model);
+    return [
+      m.name,
+      MODEL_SHORT_LABELS[m.model.kind],
+      `${f.unitWeight}`,
+      `${f.frictionAngle}°`,
+      `${f.cohesion}`,
+    ];
+  });
 
   const bodyPt = Math.max(8, (2.8 * scale) / 0.3528);
   const headerPt = Math.max(9, (2.8 * scale) / 0.3528);

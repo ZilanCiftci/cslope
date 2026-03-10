@@ -53,6 +53,15 @@ export interface SlopeDefinition {
   /** Material name for the top region (above all boundaries).
    *  Only needed when it differs from the first (default) material. */
   topRegionMaterialName?: string;
+  /**
+   * Point-based region material assignments.
+   * Each entry maps a representative point to a material name.
+   * The engine assigns the material to whichever region contains the point.
+   */
+  regionAssignments?: Array<{
+    point: [number, number];
+    materialName: string;
+  }>;
   /** Search area limits for entry/exit ranges. */
   analysisLimits?: AnalysisLimits;
   /** User-specified circular search planes (cx, cy, radius). */

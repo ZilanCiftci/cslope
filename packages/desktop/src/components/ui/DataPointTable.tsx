@@ -1,5 +1,3 @@
-import { Label } from "./Label";
-
 interface DataPointTableProps {
   /** Column headers (e.g. ["Depth (m)", "Su (kPa)"]). */
   headers: string[];
@@ -130,13 +128,6 @@ export function DataPointTable({
       >
         + Add Row
       </button>
-      {tooFew && (
-        <Label>
-          <span style={{ color: "var(--color-vsc-error)" }}>
-            At least {minRows} row{minRows > 1 ? "s" : ""} required
-          </span>
-        </Label>
-      )}
     </div>
   );
 }

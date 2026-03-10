@@ -14,7 +14,8 @@ import {
   buildSlope,
   toCanonicalSlopeDefinition,
 } from "@cslope/engine";
-import { computeRegions, findMaterialBelowBoundary } from "../../utils/regions";
+
+import { flatFieldsFromModel } from "../../features/properties/sections/material-forms/model-defaults";
 
 // ── Helpers ─────────────────────────────────────────────────────
 
@@ -23,50 +24,36 @@ function modelToSlopeDefinition(model: ModelEntry): SlopeDefinition {
   const slope: SlopeDefinition = {
     orientation: model.orientation,
     coordinates: model.coordinates,
-    materials: materials.map((m) => ({
-      name: m.name,
-      unitWeight: m.unitWeight,
-      frictionAngle: m.frictionAngle,
-      cohesion: m.cohesion,
-      color: m.color,
-      depthRange: m.depthRange,
-      model: m.model,
-    })),
+    materials: materials.map((m) => {
+      const flat = flatFieldsFromModel(m.model);
+      return {
+        name: m.name,
+        unitWeight: flat.unitWeight,
+        frictionAngle: flat.frictionAngle,
+        cohesion: flat.cohesion,
+        color: m.color,
+        depthRange: m.depthRange,
+        model: m.model,
+      };
+    }),
   };
 
   if (model.materialBoundaries.length > 0) {
-    const defaultMaterialId = materials[0]?.id ?? "";
-    const regions = computeRegions(
-      model.coordinates,
-      model.materialBoundaries,
-      model.regionMaterials,
-      defaultMaterialId,
-    );
+    slope.materialBoundaries = model.materialBoundaries.map((b) => ({
+      coordinates: b.coordinates,
+      materialName: "",
+    }));
 
-    slope.materialBoundaries = model.materialBoundaries.map((boundary) => {
-      const materialId = findMaterialBelowBoundary(
-        boundary,
-        regions,
-        defaultMaterialId,
-      );
-      const materialName =
-        materials.find((m) => m.id === materialId)?.name ??
-        materials[0]?.name ??
-        "";
-      return {
-        coordinates: boundary.coordinates,
-        materialName,
-      };
-    });
-
-    const topRegion = regions.find((r) => r.regionKey === "top");
-    if (topRegion && topRegion.materialId !== defaultMaterialId) {
-      const topMaterialName = materials.find(
-        (m) => m.id === topRegion.materialId,
-      )?.name;
-      if (topMaterialName) {
-        slope.topRegionMaterialName = topMaterialName;
-      }
+    if (model.regionMaterials.length > 0) {
+      slope.regionAssignments = model.regionMaterials
+        .map((a) => {
+          const mat = materials.find((m) => m.id === a.materialId);
+          return mat ? { point: a.point, materialName: mat.name } : null;
+        })
+        .filter(
+          (a): a is { point: [number, number]; materialName: string } =>
+            a !== null,
+        );
     }
   }
 

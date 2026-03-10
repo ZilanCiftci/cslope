@@ -9,6 +9,8 @@ import {
 import { nextId } from "../helpers";
 import type { SliceCreator } from "../helpers";
 import { createDefaultModel } from "../../features/properties/sections/material-forms/model-defaults";
+import { computeRegions } from "../../utils/regions";
+import { isPointInPolygon } from "@cslope/engine";
 import type { GeometrySlice, ModelEntry, PiezoLine } from "../types";
 
 type GeometryState = GeometrySlice & {
@@ -43,7 +45,7 @@ export const createGeometrySlice: SliceCreator<GeometrySlice> = (set, get) => ({
   coordinates: DEFAULT_COORDS,
   materials: [{ ...DEFAULT_MATERIAL }],
   materialBoundaries: [],
-  regionMaterials: {},
+  regionMaterials: [],
   piezometricLine: { ...DEFAULT_PIEZO_LINE },
   selectedPointIndex: null,
   assigningMaterialId: null,
@@ -113,9 +115,6 @@ export const createGeometrySlice: SliceCreator<GeometrySlice> = (set, get) => ({
           {
             id: nextId("mat"),
             name: `Material ${s.materials.length + 1}`,
-            unitWeight: 20,
-            frictionAngle: 35,
-            cohesion: 2,
             color: MATERIAL_COLORS[s.materials.length % MATERIAL_COLORS.length],
             model: createDefaultModel("mohr-coulomb", 20),
           },
@@ -128,9 +127,7 @@ export const createGeometrySlice: SliceCreator<GeometrySlice> = (set, get) => ({
     set((s) =>
       syncActiveModel(s, {
         materials: s.materials.filter((m) => m.id !== id),
-        regionMaterials: Object.fromEntries(
-          Object.entries(s.regionMaterials).filter(([, matId]) => matId !== id),
-        ),
+        regionMaterials: s.regionMaterials.filter((a) => a.materialId !== id),
       }),
     );
     get().invalidateAnalysis();
@@ -141,10 +138,6 @@ export const createGeometrySlice: SliceCreator<GeometrySlice> = (set, get) => ({
     set((s) =>
       syncActiveModel(s, {
         materialBoundaries: [...s.materialBoundaries, { id, coordinates }],
-        regionMaterials: {
-          ...s.regionMaterials,
-          [`below-${id}`]: s.materials[0]?.id ?? "",
-        },
       }),
     );
     get().invalidateAnalysis();
@@ -162,14 +155,11 @@ export const createGeometrySlice: SliceCreator<GeometrySlice> = (set, get) => ({
   },
 
   removeMaterialBoundary: (id) => {
-    set((s) => {
-      const rest = { ...s.regionMaterials };
-      delete rest[`below-${id}`];
-      return syncActiveModel(s, {
+    set((s) =>
+      syncActiveModel(s, {
         materialBoundaries: s.materialBoundaries.filter((b) => b.id !== id),
-        regionMaterials: rest,
-      });
-    });
+      }),
+    );
     get().invalidateAnalysis();
   },
 
@@ -236,10 +226,34 @@ export const createGeometrySlice: SliceCreator<GeometrySlice> = (set, get) => ({
     get().invalidateAnalysis();
   },
 
-  setRegionMaterial: (regionKey, materialId) => {
-    set((s) =>
-      syncActiveModel(s, {
-        regionMaterials: { ...s.regionMaterials, [regionKey]: materialId },
+  setRegionMaterial: (point, materialId) => {
+    const s = get();
+    const defaultMatId = s.materials[0]?.id ?? "";
+    const regions = computeRegions(
+      s.coordinates,
+      s.materialBoundaries,
+      s.regionMaterials,
+      defaultMatId,
+    );
+    // Find the region that contains the clicked point
+    const targetRegion = regions.find((r) =>
+      isPointInPolygon(point[0], point[1], r.px, r.py),
+    );
+    // Remove any existing assignments whose point falls inside the same region
+    const filtered = targetRegion
+      ? s.regionMaterials.filter(
+          (a) =>
+            !isPointInPolygon(
+              a.point[0],
+              a.point[1],
+              targetRegion.px,
+              targetRegion.py,
+            ),
+        )
+      : s.regionMaterials;
+    set((st) =>
+      syncActiveModel(st, {
+        regionMaterials: [...filtered, { point, materialId }],
       }),
     );
     get().invalidateAnalysis();

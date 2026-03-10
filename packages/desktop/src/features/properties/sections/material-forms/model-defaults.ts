@@ -74,14 +74,18 @@ export function createDefaultModel(
       return {
         kind: "s-f-depth",
         unitWeight,
-        strengthFunction: [],
+        suRef: 0,
+        depthRef: 0,
+        rate: 0,
       } satisfies StrengthFromDepthModel;
 
     case "s-f-datum":
       return {
         kind: "s-f-datum",
         unitWeight,
-        strengthFunction: [],
+        suRef: 0,
+        yRef: 0,
+        rate: 0,
       } satisfies StrengthFromDatumModel;
   }
 }

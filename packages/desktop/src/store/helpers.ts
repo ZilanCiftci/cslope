@@ -1,9 +1,9 @@
 import type { StateCreator } from "zustand";
 import type { AnalysisResponse, SlopeDefinition } from "../worker/messages";
 import { toCanonicalSlopeDefinition } from "@cslope/engine";
-import { computeRegions, findMaterialBelowBoundary } from "../utils/regions";
 import type { AppState, ModelEntry, ModelsSlice } from "./types";
 import { DEFAULT_ANALYSIS_LIMITS, DEFAULT_PIEZO_LINE } from "./defaults";
+import { flatFieldsFromModel } from "../features/properties/sections/material-forms/model-defaults";
 
 export type SliceCreator<T> = StateCreator<AppState, [], [], T>;
 
@@ -32,44 +32,38 @@ export function buildSlopeDTOFromModel(model: ModelEntry): SlopeDefinition {
   const slope: SlopeDefinition = {
     orientation: model.orientation ?? "ltr",
     coordinates: model.coordinates,
-    materials: materials.map((m) => ({
-      name: m.name,
-      unitWeight: m.unitWeight,
-      frictionAngle: m.frictionAngle,
-      cohesion: m.cohesion,
-      color: m.color,
-      depthRange: m.depthRange,
-      model: m.model,
-    })),
+    materials: materials.map((m) => {
+      const flat = flatFieldsFromModel(m.model);
+      return {
+        name: m.name,
+        unitWeight: flat.unitWeight,
+        frictionAngle: flat.frictionAngle,
+        cohesion: flat.cohesion,
+        color: m.color,
+        depthRange: m.depthRange,
+        model: m.model,
+      };
+    }),
   };
 
   if (model.materialBoundaries?.length > 0) {
-    const defaultMatId = materials[0]?.id ?? "";
-    const regions = computeRegions(
-      model.coordinates,
-      model.materialBoundaries,
-      model.regionMaterials,
-      defaultMatId,
-    );
+    // Pass boundaries as coordinates-only (materialName not used with regionAssignments)
+    slope.materialBoundaries = model.materialBoundaries.map((b) => ({
+      coordinates: b.coordinates,
+      materialName: "",
+    }));
 
-    slope.materialBoundaries = model.materialBoundaries.map((b) => {
-      const matId = findMaterialBelowBoundary(b, regions, defaultMatId);
-      const matName =
-        materials.find((m) => m.id === matId)?.name ?? materials[0]?.name ?? "";
-      return {
-        coordinates: b.coordinates,
-        materialName: matName,
-      };
-    });
-
-    const topRegion = regions.find((r) => r.regionKey === "top");
-    if (topRegion && topRegion.materialId !== defaultMatId) {
-      const topMatName = materials.find(
-        (m) => m.id === topRegion.materialId,
-      )?.name;
-      if (topMatName) {
-        slope.topRegionMaterialName = topMatName;
-      }
+    // Point-based region assignments
+    if (model.regionMaterials.length > 0) {
+      slope.regionAssignments = model.regionMaterials
+        .map((a) => {
+          const mat = materials.find((m) => m.id === a.materialId);
+          return mat ? { point: a.point, materialName: mat.name } : null;
+        })
+        .filter(
+          (a): a is { point: [number, number]; materialName: string } =>
+            a !== null,
+        );
     }
   }
 

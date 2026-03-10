@@ -122,10 +122,13 @@ describe("persistence round-trip", () => {
         {
           ...DEFAULT_MATERIAL,
           id: "mat-1",
-          unitWeight: 18.5,
-          frictionAngle: 32,
-          cohesion: 4,
           color: "#c084fc",
+          model: {
+            kind: "mohr-coulomb",
+            unitWeight: 18.5,
+            frictionAngle: 32,
+            cohesion: 4,
+          },
         },
       ],
       materialBoundaries: [
@@ -137,7 +140,7 @@ describe("persistence round-trip", () => {
           ],
         },
       ],
-      regionMaterials: { top: "mat-1" },
+      regionMaterials: [{ point: [5, 5], materialId: "mat-1" }],
       piezometricLine: {
         ...DEFAULT_PIEZO_LINE,
         enabled: true,
@@ -350,9 +353,10 @@ describe("persistence normalization fallbacks", () => {
       ]),
     );
     const mat = parsed.models[0].materials[0];
-    expect(mat.unitWeight).toBeGreaterThanOrEqual(0.1);
-    expect(mat.frictionAngle).toBeGreaterThanOrEqual(0);
-    expect(mat.cohesion).toBeGreaterThanOrEqual(0);
+    // Legacy file without model — normalizeMaterial should synthesise a MC model
+    expect(mat.model).toBeDefined();
+    expect(mat.model.kind).toBe("mohr-coulomb");
+    expect(mat.model.unitWeight).toBeGreaterThanOrEqual(0.1);
   });
 
   it("normalizes material without id uses index-based fallback", () => {
@@ -489,7 +493,7 @@ describe("persistence normalization fallbacks", () => {
 
   it("defaults regionMaterials when missing", () => {
     const parsed = parseProjectFile(makeBaseProject([minimalModel]));
-    expect(parsed.models[0].regionMaterials).toEqual({});
+    expect(parsed.models[0].regionMaterials).toEqual([]);
   });
 
   it("normalizes materialBoundaries when missing", () => {

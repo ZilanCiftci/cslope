@@ -35,7 +35,7 @@ function makeMinimalState(overrides: Partial<AppState> = {}): AppState {
     coordinates: [...DEFAULT_COORDS],
     materials: [{ ...DEFAULT_MATERIAL, id: "mat-1" }],
     materialBoundaries: [],
-    regionMaterials: {},
+    regionMaterials: [],
     piezometricLine: { ...DEFAULT_PIEZO_LINE },
     udls: [],
     lineLoads: [],
@@ -120,11 +120,16 @@ describe("buildSlopeDTO", () => {
           ],
         },
       ] as AppState["materialBoundaries"],
-      regionMaterials: { "below-b1": "mat-rock" },
+      regionMaterials: [{ point: [12, 3], materialId: "mat-rock" }],
     });
     const dto = buildSlopeDTO(state);
     expect(dto.materialBoundaries).toBeDefined();
-    expect(dto.materialBoundaries![0].materialName).toBe("Rock");
+    expect(dto.materialBoundaries![0].coordinates).toEqual([
+      [0, 5],
+      [25, 5],
+    ]);
+    expect(dto.regionAssignments).toBeDefined();
+    expect(dto.regionAssignments![0].materialName).toBe("Rock");
   });
 
   it("includes analysis limits when enabled", () => {
@@ -300,7 +305,18 @@ describe("getAnalysisInputSignature", () => {
   it("changes when materials change", () => {
     const state1 = makeMinimalState();
     const state2 = makeMinimalState({
-      materials: [{ ...DEFAULT_MATERIAL, id: "mat-1", cohesion: 99 }],
+      materials: [
+        {
+          ...DEFAULT_MATERIAL,
+          id: "mat-1",
+          model: {
+            kind: "mohr-coulomb",
+            unitWeight: 18,
+            frictionAngle: 0,
+            cohesion: 99,
+          },
+        },
+      ],
     });
     expect(getAnalysisInputSignature(state1)).not.toBe(
       getAnalysisInputSignature(state2),

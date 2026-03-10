@@ -291,56 +291,47 @@ describe("resolveStrength — s-f-depth", () => {
   const sfd: StrengthFromDepthModel = {
     kind: "s-f-depth",
     unitWeight: 18,
-    strengthFunction: [
-      [0, 20],
-      [5, 40],
-      [10, 60],
-    ],
+    suRef: 20,
+    depthRef: 0,
+    rate: 4,
   };
 
-  it("interpolates Su from depth below ground", () => {
-    // yGround=10, yBottom=5 → depth=5 → Su=40
+  it("computes Su from depth below ground using linear formula", () => {
+    // depth = 10 - 5 = 5; Su = 20 + (5 - 0) * 4 = 40
     const r = resolveStrength(sfd, ctx({ yGround: 10, yBottom: 5 }));
     expect(r.cohesion).toBeCloseTo(40);
     expect(r.frictionAngle).toBe(0);
   });
 
-  it("clamps at upper boundary", () => {
-    // depth = 12 (beyond table) → Su = 60 (last point)
-    const r = resolveStrength(sfd, ctx({ yGround: 12, yBottom: 0 }));
-    expect(r.cohesion).toBeCloseTo(60);
-  });
-
-  it("returns Su at ground surface (depth=0)", () => {
+  it("returns suRef at reference depth", () => {
+    // depth = 10 - 10 = 0; Su = 20 + (0 - 0) * 4 = 20
     const r = resolveStrength(sfd, ctx({ yGround: 10, yBottom: 10 }));
-    // depth = 0 → Su = 20
     expect(r.cohesion).toBeCloseTo(20);
   });
 
-  it("interpolates at intermediate depth", () => {
-    // yGround=10, yBottom=7.5 → depth=2.5 → lerp(20, 40, 0.5)=30
+  it("computes Su at large depth", () => {
+    // depth = 12 - 0 = 12; Su = 20 + (12 - 0) * 4 = 68
+    const r = resolveStrength(sfd, ctx({ yGround: 12, yBottom: 0 }));
+    expect(r.cohesion).toBeCloseTo(68);
+  });
+
+  it("computes Su at intermediate depth", () => {
+    // depth = 10 - 7.5 = 2.5; Su = 20 + (2.5 - 0) * 4 = 30
     const r = resolveStrength(sfd, ctx({ yGround: 10, yBottom: 7.5 }));
     expect(r.cohesion).toBeCloseTo(30);
   });
 
-  it("returns 0 for empty function", () => {
-    const sfdEmpty: StrengthFromDepthModel = {
+  it("handles non-zero depthRef", () => {
+    const sfd2: StrengthFromDepthModel = {
       kind: "s-f-depth",
       unitWeight: 18,
-      strengthFunction: [],
+      suRef: 20,
+      depthRef: 5,
+      rate: 4,
     };
-    const r = resolveStrength(sfdEmpty, ctx());
-    expect(r.cohesion).toBe(0);
-  });
-
-  it("returns single value for single-point function", () => {
-    const sfdSingle: StrengthFromDepthModel = {
-      kind: "s-f-depth",
-      unitWeight: 18,
-      strengthFunction: [[5, 42]],
-    };
-    const r = resolveStrength(sfdSingle, ctx({ yGround: 10, yBottom: 0 }));
-    expect(r.cohesion).toBe(42);
+    // depth = 10 - 0 = 10; Su = 20 + (10 - 5) * 4 = 40
+    const r = resolveStrength(sfd2, ctx({ yGround: 10, yBottom: 0 }));
+    expect(r.cohesion).toBeCloseTo(40);
   });
 
   it("always has φ = 0 and cohesionUndrained = cohesion", () => {
@@ -356,51 +347,40 @@ describe("resolveStrength — s-f-datum", () => {
   const sfdat: StrengthFromDatumModel = {
     kind: "s-f-datum",
     unitWeight: 18,
-    strengthFunction: [
-      [0, 80],
-      [10, 40],
-      [20, 10],
-    ],
+    suRef: 40,
+    yRef: 10,
+    rate: -4,
   };
 
-  it("interpolates Su from elevation", () => {
-    // yBottom = 5 → lerp(80, 40, 0.5) = 60
+  it("computes Su from elevation using linear formula", () => {
+    // Su = 40 + (5 - 10) * (-4) = 40 + 20 = 60
     const r = resolveStrength(sfdat, ctx({ yBottom: 5 }));
     expect(r.cohesion).toBeCloseTo(60);
     expect(r.frictionAngle).toBe(0);
   });
 
-  it("clamps at lower bound", () => {
-    // yBottom = -5 → below table → Su = 80
-    const r = resolveStrength(sfdat, ctx({ yBottom: -5 }));
-    expect(r.cohesion).toBeCloseTo(80);
-  });
-
-  it("clamps at upper bound", () => {
-    // yBottom = 25 → above table → Su = 10
-    const r = resolveStrength(sfdat, ctx({ yBottom: 25 }));
-    expect(r.cohesion).toBeCloseTo(10);
-  });
-
-  it("interpolates at intermediate elevation", () => {
-    // yBottom = 15 → lerp(40, 10, 0.5) = 25
-    const r = resolveStrength(sfdat, ctx({ yBottom: 15 }));
-    expect(r.cohesion).toBeCloseTo(25);
-  });
-
-  it("returns exact value at table point", () => {
+  it("returns suRef at reference elevation", () => {
+    // Su = 40 + (10 - 10) * (-4) = 40
     const r = resolveStrength(sfdat, ctx({ yBottom: 10 }));
     expect(r.cohesion).toBeCloseTo(40);
   });
 
-  it("returns 0 for empty function", () => {
-    const sfdatEmpty: StrengthFromDatumModel = {
-      kind: "s-f-datum",
-      unitWeight: 18,
-      strengthFunction: [],
-    };
-    const r = resolveStrength(sfdatEmpty, ctx());
-    expect(r.cohesion).toBe(0);
+  it("computes Su below reference", () => {
+    // Su = 40 + (-5 - 10) * (-4) = 40 + 60 = 100
+    const r = resolveStrength(sfdat, ctx({ yBottom: -5 }));
+    expect(r.cohesion).toBeCloseTo(100);
+  });
+
+  it("computes Su above reference", () => {
+    // Su = 40 + (15 - 10) * (-4) = 40 - 20 = 20
+    const r = resolveStrength(sfdat, ctx({ yBottom: 15 }));
+    expect(r.cohesion).toBeCloseTo(20);
+  });
+
+  it("computes Su at intermediate elevation", () => {
+    // Su = 40 + (7.5 - 10) * (-4) = 40 + 10 = 50
+    const r = resolveStrength(sfdat, ctx({ yBottom: 7.5 }));
+    expect(r.cohesion).toBeCloseTo(50);
   });
 
   it("always has φ = 0", () => {

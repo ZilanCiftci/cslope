@@ -12,9 +12,6 @@ function resetStore(overrides: Record<string, unknown> = {}) {
       {
         id: DEFAULT_ID,
         name: "Clay",
-        unitWeight: 18,
-        frictionAngle: 25,
-        cohesion: 10,
         color: "#d4a373",
         model: {
           kind: "mohr-coulomb" as const,
@@ -155,7 +152,7 @@ describe("MaterialsSection — validation", () => {
     expect(screen.queryByRole("alert")).not.toBeInTheDocument();
   });
 
-  it("shows errors for s-f-depth with fewer than 2 points", () => {
+  it("shows errors for s-f-depth with invalid fields", () => {
     resetStore({
       materials: [
         {
@@ -168,7 +165,9 @@ describe("MaterialsSection — validation", () => {
           model: {
             kind: "s-f-depth" as const,
             unitWeight: 18,
-            strengthFunction: [[0, 20]],
+            suRef: -1,
+            depthRef: 0,
+            rate: 0,
           },
         },
       ],
@@ -176,6 +175,6 @@ describe("MaterialsSection — validation", () => {
     render(<MaterialsSection />);
     const alert = screen.getByRole("alert");
     expect(alert).toBeInTheDocument();
-    expect(alert.textContent).toContain("at least 2");
+    expect(alert.textContent).toContain("suRef");
   });
 });

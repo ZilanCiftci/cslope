@@ -7,6 +7,7 @@ import type {
   ModelOrientation,
   PaperSize,
   ProjectInfo,
+  RegionMaterials,
   ResultViewSettings,
 } from "../../store/types";
 import { PLOT_MARGINS } from "../../store/defaults";
@@ -68,7 +69,7 @@ export interface PdfExportData {
   coordinates: [number, number][];
   materials: MaterialRow[];
   materialBoundaries: MaterialBoundaryRow[];
-  regionMaterials: Record<string, string>;
+  regionMaterials: RegionMaterials;
   result: AnalysisResult;
   resultViewSettings: ResultViewSettings;
   piezometricLine: {

@@ -8,6 +8,7 @@ import {
   LogIcon,
   ResetIcon,
 } from "../../icons/DevIcons";
+import { BenchmarkIcon } from "../../icons/HelpIcons";
 
 interface Props {
   isOpen: boolean;
@@ -32,6 +33,15 @@ export function DevMenu({ isOpen, onActivate, panelHost }: Props) {
     );
     if (!ok) return;
     useAppStore.getState().newProject();
+  };
+
+  const handleLoadLovo = () => {
+    const ok = window.confirm(
+      "Load Lovö models into the current workspace? This will replace current models.",
+    );
+    if (!ok) return;
+    useAppStore.getState().loadLovoModels();
+    useAppStore.temporal.getState().clear();
   };
 
   const handleLogState = () => {
@@ -81,6 +91,14 @@ export function DevMenu({ isOpen, onActivate, panelHost }: Props) {
                   onClick={handleToggleDevTools}
                 />
               )}
+            </RibbonGroup>
+            <RibbonSep />
+            <RibbonGroup label="Models">
+              <RibbonButton
+                icon={<BenchmarkIcon />}
+                label="Lovö"
+                onClick={handleLoadLovo}
+              />
             </RibbonGroup>
             <RibbonSep />
             <RibbonGroup label="Store">

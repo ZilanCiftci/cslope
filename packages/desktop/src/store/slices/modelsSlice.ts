@@ -1,6 +1,7 @@
 import { DEFAULT_ANALYSIS_OPTIONS } from "@cslope/engine";
 import { DEFAULT_MODEL_NAME } from "../../constants";
 import { BENCHMARK_MODELS } from "../benchmarks";
+import { LOVO_MODELS } from "../lovo";
 import {
   DEFAULT_ANALYSIS_LIMITS,
   DEFAULT_COORDS,
@@ -30,7 +31,7 @@ function createDefaultModel(id: string, name: string): ModelEntry {
     coordinates: [...DEFAULT_COORDS],
     materials: [{ ...DEFAULT_MATERIAL, id: nextId("mat") }],
     materialBoundaries: [],
-    regionMaterials: {},
+    regionMaterials: [],
     piezometricLine: { ...DEFAULT_PIEZO_LINE },
     udls: [],
     lineLoads: [],
@@ -160,7 +161,10 @@ export const createModelsSlice: SliceCreator<ModelsSlice> = (set, get) => ({
           coordinates: b.coordinates.map((c) => [...c] as [number, number]),
         };
       }),
-      regionMaterials: {},
+      regionMaterials: source.regionMaterials.map((a) => ({
+        point: [...a.point] as [number, number],
+        materialId: matIdMap.get(a.materialId) ?? a.materialId,
+      })),
       piezometricLine: {
         ...source.piezometricLine,
         lines: source.piezometricLine.lines.map((l) => {
@@ -232,17 +236,6 @@ export const createModelsSlice: SliceCreator<ModelsSlice> = (set, get) => ({
       errorMessage: null,
     };
 
-    for (const [key, matId] of Object.entries(source.regionMaterials)) {
-      const mappedMatId = matIdMap.get(matId) ?? matId;
-      if (key === "top") {
-        copy.regionMaterials["top"] = mappedMatId;
-      } else if (key.startsWith("below-")) {
-        const idPart = key.slice(6);
-        const oldIds = idPart.split("+");
-        const newIds = oldIds.map((oldId) => bndIdMap.get(oldId) ?? oldId);
-        copy.regionMaterials[`below-${newIds.join("+")}`] = mappedMatId;
-      }
-    }
     set((st) => ({ models: [...st.models, copy] }));
     get().switchModel(newId);
   },
@@ -372,6 +365,18 @@ export const createModelsSlice: SliceCreator<ModelsSlice> = (set, get) => ({
 
   loadBenchmarks: () => {
     const models = BENCHMARK_MODELS.map(cloneModelEntry);
+    if (models.length === 0) return;
+    const first = models[0];
+    set({
+      models,
+      activeModelId: first.id,
+      ...mapModelToState(first),
+      _pendingFitToScreen: true,
+    });
+  },
+
+  loadLovoModels: () => {
+    const models = LOVO_MODELS.map(cloneModelEntry);
     if (models.length === 0) return;
     const first = models[0];
     set({

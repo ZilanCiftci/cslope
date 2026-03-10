@@ -1,5 +1,6 @@
 import type {
   AnalysisLimitsState,
+  MaterialRow,
   PiezometricLineState,
   ProjectInfo,
   ResultViewSettings,
@@ -48,13 +49,16 @@ export const DEFAULT_COORDS: [number, number][] = [
   [25, 0],
 ];
 
-export const DEFAULT_MATERIAL = {
+export const DEFAULT_MATERIAL: MaterialRow = {
   id: "mat-1",
   name: "Clay",
-  unitWeight: 18,
-  frictionAngle: 0,
-  cohesion: 12,
   color: "#d4a373",
+  model: {
+    kind: "mohr-coulomb",
+    unitWeight: 18,
+    frictionAngle: 0,
+    cohesion: 12,
+  },
 };
 
 export const PIEZO_COLORS = [

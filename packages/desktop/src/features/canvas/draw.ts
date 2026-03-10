@@ -3,6 +3,7 @@ import type { AppState } from "../../store/types";
 import { circleArcPoints } from "../../utils/arc";
 import { fosColor } from "../../utils/fos-color";
 import { computeRegions } from "../../utils/regions";
+import { flatFieldsFromModel } from "../properties/sections/material-forms/model-defaults";
 import {
   ARROW_HEAD_LEN_PX,
   ARROW_HEAD_PX,
@@ -946,9 +947,7 @@ export function drawCanvas(
   if (mode !== "result") {
     const bndRadius = editingBoundaries ? POINT_RADIUS - 1 : 3;
     for (const b of materialBoundaries) {
-      const belowMatId = regionMaterials[`below-${b.id}`] ?? materials[0]?.id;
-      const mat = materials.find((m) => m.id === belowMatId);
-      const color = mat?.color ?? "#888";
+      const color = materials[0]?.color ?? "#888";
 
       for (let i = 0; i < b.coordinates.length; i++) {
         const [px, py] = worldToCanvas(
@@ -1634,13 +1633,16 @@ export function drawCanvas(
         drawParamBlock(ctx, ax, ay, "Results", lines, annoScale);
       } else if (anno.type === "material-table") {
         const header = ["Material", "Model", "γ", "φ", "c"];
-        const rows = materials.map((m) => [
-          m.name,
-          MODEL_SHORT_LABELS[m.model?.kind ?? "mohr-coulomb"],
-          `${m.unitWeight}`,
-          `${m.frictionAngle}°`,
-          `${m.cohesion}`,
-        ]);
+        const rows = materials.map((m) => {
+          const f = flatFieldsFromModel(m.model);
+          return [
+            m.name,
+            MODEL_SHORT_LABELS[m.model.kind],
+            `${f.unitWeight}`,
+            `${f.frictionAngle}°`,
+            `${f.cohesion}`,
+          ];
+        });
         drawTable(ctx, ax, ay, header, rows, materials, annoScale);
       }
 

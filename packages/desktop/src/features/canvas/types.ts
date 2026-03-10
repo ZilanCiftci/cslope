@@ -38,5 +38,5 @@ export interface ContextMenuState {
 export interface MaterialPickerState {
   screenX: number;
   screenY: number;
-  regionKey: string;
+  worldPoint: [number, number];
 }
