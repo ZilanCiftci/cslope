@@ -192,9 +192,6 @@ export const LOVO_MODELS: ModelEntry[] = [
       tolerance: 0.005,
       maxIterations: 15,
       method: "Morgenstern-Price",
-      limitBishop: 5,
-      limitJanbu: 5,
-      limitMorgensternPrice: 5,
     } satisfies AnalysisOptions,
     analysisLimits: {
       enabled: true,

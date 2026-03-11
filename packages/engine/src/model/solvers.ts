@@ -366,7 +366,7 @@ export function analyseBishop(
   converged: boolean,
 ] {
   if (FS == null) FS = analyseOrdinary(slope, slices);
-  if (FS == null || FS > slope.limitToRunBishops) return [FS, null, null, true];
+  if (FS == null) return [FS, null, null, true];
 
   const x0 = slices[0].xLeft;
   const x1 = slices[slices.length - 1].xRight;
@@ -476,7 +476,7 @@ export function analyseJanbu(
   converged: boolean,
 ] {
   if (FS == null) FS = analyseOrdinary(slope, slices);
-  if (FS == null || FS > slope.limitToRunJanbu) return [FS, null, null, true];
+  if (FS == null) return [FS, null, null, true];
 
   const x0 = slices[0].xLeft;
   const x1 = slices[slices.length - 1].xRight;
@@ -522,8 +522,7 @@ export function analyseMorgensternPrice(
   converged: boolean,
 ] {
   const FSord = analyseOrdinary(slope, slices);
-  if (FSord == null || FSord > slope.limitToRunBishops)
-    return [FSord, null, null, null, true];
+  if (FSord == null) return [FSord, null, null, null, true];
 
   const x0 = slices[0].xLeft;
   const x1 = slices[slices.length - 1].xRight;
@@ -542,7 +541,7 @@ export function analyseMorgensternPrice(
 
   // Step 1: Initial Bishop solution (lambda = 0)
   let Nm: Float64Array = new Float64Array(n);
-  let [FSm, pushing0, resisting0, NmOut, convergedM] = solveFOSGenericMoment(
+  let [FSm, pushing0, resisting0, NmOut] = solveFOSGenericMoment(
     props,
     R,
     0,
@@ -555,8 +554,6 @@ export function analyseMorgensternPrice(
   Nm = new Float64Array(NmOut);
 
   if (FSm == null) return [null, null, null, null, false];
-  if (FSm > slope.limitToRunMorgenstern)
-    return [FSm, null, pushing0, resisting0, convergedM];
 
   // Step 1b: Initial force solution (lambda = 0)
   let Nf: Float64Array = new Float64Array(n);
@@ -597,7 +594,7 @@ export function analyseMorgensternPrice(
 
   // Step 2: Second point (lambda = 0.1)
   const lambda2 = 0.1;
-  [FSm, pushing0, resisting0, NmOut, convergedM] = solveFOSGenericMoment(
+  [FSm, pushing0, resisting0, NmOut] = solveFOSGenericMoment(
     props,
     R,
     lambda2,
@@ -658,7 +655,7 @@ export function analyseMorgensternPrice(
       if (++nudgeCount > 50) break;
     }
 
-    [FSm, pushing0, resisting0, NmOut, convergedM] = solveFOSGenericMoment(
+    [FSm, pushing0, resisting0, NmOut] = solveFOSGenericMoment(
       props,
       R,
       lambdaNew,

@@ -147,9 +147,6 @@ const TACADS_SIMPLE: ModelEntry = {
     tolerance: 0.005,
     maxIterations: 15,
     method: "Morgenstern-Price",
-    limitBishop: 5,
-    limitJanbu: 5,
-    limitMorgensternPrice: 5,
   } satisfies AnalysisOptions,
   analysisLimits: {
     enabled: true,
@@ -279,9 +276,6 @@ const TACADS_NONHOMOGENEOUS: ModelEntry = {
     tolerance: 0.005,
     maxIterations: 15,
     method: "Morgenstern-Price",
-    limitBishop: 5,
-    limitJanbu: 5,
-    limitMorgensternPrice: 5,
   } satisfies AnalysisOptions,
   analysisLimits: {
     enabled: true,
@@ -376,9 +370,6 @@ const ARAI_TAGYO: ModelEntry = {
     tolerance: 0.001,
     maxIterations: 15,
     method: "Morgenstern-Price",
-    limitBishop: 5,
-    limitJanbu: 5,
-    limitMorgensternPrice: 5,
   } satisfies AnalysisOptions,
   analysisLimits: {
     enabled: true,
@@ -551,9 +542,6 @@ const TALBINGO_DAM_RTL: ModelEntry = {
     tolerance: 0.001,
     maxIterations: 15,
     method: "Morgenstern-Price",
-    limitBishop: 5,
-    limitJanbu: 5,
-    limitMorgensternPrice: 5,
   } satisfies AnalysisOptions,
   analysisLimits: {
     enabled: true,

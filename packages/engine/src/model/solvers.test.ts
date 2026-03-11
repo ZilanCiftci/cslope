@@ -379,26 +379,6 @@ describe("Solver edge cases", () => {
     expect(analyseOrdinary(s, [])).toBeNull();
   });
 
-  it("Bishop returns [FS, null, null] when Ordinary FOS > limit", () => {
-    const s = createHomogeneousSlope();
-    s.updateAnalysisOptions({ limitBishop: 0.5 });
-    // Use a circle that gives FOS > 0.5
-    const ints = s.getCircleExternalIntersection(28, 25, 35);
-    const slices = getSlices(
-      s,
-      ints[0][0],
-      ints[ints.length - 1][0],
-      28,
-      25,
-      35,
-    );
-    const [fos, pushing, resisting] = analyseBishop(s, slices);
-    // Ordinary FOS is ~1.63 which exceeds limit of 0.5
-    expect(fos).not.toBeNull();
-    expect(pushing).toBeNull();
-    expect(resisting).toBeNull();
-  });
-
   it("Ordinary returns null for zero or negative pushing force", () => {
     // Create a flat slope where pushing should be ≤ 0
     const s = new Slope();

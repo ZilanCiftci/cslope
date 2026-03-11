@@ -86,9 +86,6 @@ export class Slope {
   private _tolerance: number;
   private _maxIterations: number;
   private _method: AnalysisMethod;
-  private _limitToRunBishops: number;
-  private _limitToRunJanbu: number;
-  private _limitToRunMorgenstern: number;
   private _janbuCorrection: boolean;
   private _intersliceFunction: IntersliceFunctionType;
   private _intersliceDataPoints: [number, number][];
@@ -116,9 +113,6 @@ export class Slope {
     this._tolerance = d.tolerance;
     this._maxIterations = d.maxIterations;
     this._method = d.method;
-    this._limitToRunBishops = d.limitBishop;
-    this._limitToRunJanbu = d.limitJanbu;
-    this._limitToRunMorgenstern = d.limitMorgensternPrice;
     this._janbuCorrection = d.janbuCorrection ?? false;
     this._intersliceFunction = d.intersliceFunction ?? "half-sine";
     this._intersliceDataPoints = [...(d.intersliceDataPoints ?? [])];
@@ -205,20 +199,8 @@ export class Slope {
     this._customPlanesOnly = value;
   }
 
-  get limitToRunBishops(): number {
-    return this._limitToRunBishops;
-  }
-
-  get limitToRunJanbu(): number {
-    return this._limitToRunJanbu;
-  }
-
   get janbuCorrection(): boolean {
     return this._janbuCorrection;
-  }
-
-  get limitToRunMorgenstern(): number {
-    return this._limitToRunMorgenstern;
   }
 
   get intersliceFunction(): IntersliceFunctionType {
@@ -569,17 +551,8 @@ export class Slope {
     if (opts.maxIterations !== undefined) {
       this._maxIterations = opts.maxIterations;
     }
-    if (opts.limitBishop !== undefined) {
-      this._limitToRunBishops = opts.limitBishop;
-    }
-    if (opts.limitJanbu !== undefined) {
-      this._limitToRunJanbu = opts.limitJanbu;
-    }
     if (opts.janbuCorrection !== undefined) {
       this._janbuCorrection = opts.janbuCorrection;
-    }
-    if (opts.limitMorgensternPrice !== undefined) {
-      this._limitToRunMorgenstern = opts.limitMorgensternPrice;
     }
     if (opts.intersliceFunction !== undefined) {
       if (

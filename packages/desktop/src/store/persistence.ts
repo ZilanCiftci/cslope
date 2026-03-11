@@ -448,12 +448,6 @@ function normalizeAnalysisOptions(raw: unknown): AnalysisOptions {
     ),
     tolerance: Math.max(0.000001, finiteOr(o.tolerance, base.tolerance)),
     maxIterations: Math.max(1, finiteOr(o.maxIterations, base.maxIterations)),
-    limitBishop: Math.max(0, finiteOr(o.limitBishop, base.limitBishop)),
-    limitJanbu: Math.max(0, finiteOr(o.limitJanbu, base.limitJanbu)),
-    limitMorgensternPrice: Math.max(
-      0,
-      finiteOr(o.limitMorgensternPrice, base.limitMorgensternPrice),
-    ),
     intersliceFunction,
     intersliceDataPoints,
   };
