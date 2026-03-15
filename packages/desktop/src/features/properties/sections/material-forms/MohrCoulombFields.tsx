@@ -1,4 +1,5 @@
 import { Label } from "../../../../components/ui/Label";
+import { NumericInput } from "../../../../components/ui/NumericInput";
 import type { MohrCoulombModel } from "@cslope/engine";
 
 interface Props {
@@ -7,25 +8,17 @@ interface Props {
 }
 
 export function MohrCoulombFields({ model, onChange }: Props) {
-  const clamp = (v: string, min: number) => {
-    const n = parseFloat(v);
-    return Number.isFinite(n) && n >= min ? n : min;
-  };
-
   return (
     <>
       <div className="grid grid-cols-3 gap-2">
         <label className="flex flex-col gap-0.5">
           <Label>γ (kN/m³)</Label>
-          <input
-            type="number"
-            step="0.5"
-            min="0.01"
+          <NumericInput
             value={model.unitWeight}
-            onChange={(e) =>
-              onChange({ unitWeight: parseFloat(e.target.value) || 0 })
-            }
-            onBlur={(e) => onChange({ unitWeight: clamp(e.target.value, 0.1) })}
+            onValueChange={(unitWeight) => onChange({ unitWeight })}
+            min={0.01}
+            fallbackValue={0.1}
+            allowNegative={false}
             aria-label="γ (kN/m³)"
             aria-invalid={model.unitWeight < 0.01}
             style={
@@ -37,17 +30,12 @@ export function MohrCoulombFields({ model, onChange }: Props) {
         </label>
         <label className="flex flex-col gap-0.5">
           <Label>φ (°)</Label>
-          <input
-            type="number"
-            step="1"
-            min="0"
+          <NumericInput
             value={model.frictionAngle}
-            onChange={(e) =>
-              onChange({ frictionAngle: parseFloat(e.target.value) || 0 })
-            }
-            onBlur={(e) =>
-              onChange({ frictionAngle: clamp(e.target.value, 0) })
-            }
+            onValueChange={(frictionAngle) => onChange({ frictionAngle })}
+            min={0}
+            fallbackValue={0}
+            allowNegative={false}
             aria-label="φ (°)"
             aria-invalid={model.frictionAngle < 0}
             style={
@@ -59,15 +47,12 @@ export function MohrCoulombFields({ model, onChange }: Props) {
         </label>
         <label className="flex flex-col gap-0.5">
           <Label>c (kPa)</Label>
-          <input
-            type="number"
-            step="0.5"
-            min="0"
+          <NumericInput
             value={model.cohesion}
-            onChange={(e) =>
-              onChange({ cohesion: parseFloat(e.target.value) || 0 })
-            }
-            onBlur={(e) => onChange({ cohesion: clamp(e.target.value, 0) })}
+            onValueChange={(cohesion) => onChange({ cohesion })}
+            min={0}
+            fallbackValue={0}
+            allowNegative={false}
             aria-label="c (kPa)"
             aria-invalid={model.cohesion < 0}
             style={

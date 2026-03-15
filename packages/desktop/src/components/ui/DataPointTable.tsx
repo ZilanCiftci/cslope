@@ -1,3 +1,8 @@
+import { useState } from "react";
+
+const normalizeDecimalSeparator = (value: string): string =>
+  value.replace(/,/g, ".");
+
 interface DataPointTableProps {
   /** Column headers (e.g. ["Depth (m)", "Su (kPa)"]). */
   headers: string[];
@@ -15,22 +20,37 @@ export function DataPointTable({
   onChange,
   minRows = 0,
 }: DataPointTableProps) {
-  const updateCell = (rowIdx: number, colIdx: number, value: string) => {
-    const parsed = parseFloat(value);
+  const [draftCells, setDraftCells] = useState<Record<string, string>>({});
+
+  const cellKey = (rowIdx: number, colIdx: number) => `${rowIdx}:${colIdx}`;
+
+  const updateCell = (rowIdx: number, colIdx: number, value: number) => {
     const next = rows.map((r) => [...r]);
-    next[rowIdx][colIdx] = Number.isFinite(parsed) ? parsed : 0;
+    next[rowIdx][colIdx] = value;
     onChange(next);
   };
+
+  const updateDraftCell = (rowIdx: number, colIdx: number, value: string) => {
+    const key = cellKey(rowIdx, colIdx);
+    setDraftCells((current) => ({ ...current, [key]: value }));
+  };
+
+  const canBeNumericDraft = (value: string) => /^-?\d*\.?\d*$/.test(value);
+
+  const isTransientDraft = (value: string) =>
+    value === "" || value === "-" || value === "." || value === "-.";
 
   const addRow = () => {
     const lastRow = rows.length > 0 ? rows[rows.length - 1] : undefined;
     const newRow = lastRow
       ? lastRow.map((v) => v)
       : new Array<number>(headers.length).fill(0);
+    setDraftCells({});
     onChange([...rows, newRow]);
   };
 
   const removeRow = (rowIdx: number) => {
+    setDraftCells({});
     onChange(rows.filter((_, i) => i !== rowIdx));
   };
 
@@ -90,9 +110,44 @@ export function DataPointTable({
                     }}
                   >
                     <input
-                      type="number"
-                      value={val}
-                      onChange={(e) => updateCell(ri, ci, e.target.value)}
+                      type="text"
+                      inputMode="decimal"
+                      value={draftCells[cellKey(ri, ci)] ?? String(val)}
+                      onChange={(e) => {
+                        const nextDraft = normalizeDecimalSeparator(
+                          e.target.value,
+                        );
+                        if (!canBeNumericDraft(nextDraft)) {
+                          return;
+                        }
+
+                        updateDraftCell(ri, ci, nextDraft);
+
+                        if (isTransientDraft(nextDraft)) {
+                          return;
+                        }
+
+                        const parsed = Number(nextDraft);
+                        if (Number.isFinite(parsed)) {
+                          updateCell(ri, ci, parsed);
+                        }
+                      }}
+                      onBlur={(e) => {
+                        const nextDraft = normalizeDecimalSeparator(
+                          e.target.value,
+                        );
+                        let resolved = 0;
+
+                        if (!isTransientDraft(nextDraft)) {
+                          const parsed = Number(nextDraft);
+                          if (Number.isFinite(parsed)) {
+                            resolved = parsed;
+                          }
+                        }
+
+                        updateDraftCell(ri, ci, String(resolved));
+                        updateCell(ri, ci, resolved);
+                      }}
                       className="w-full bg-transparent border-none text-[11px] px-1.5 py-0.5 outline-none"
                       style={{ color: "var(--color-vsc-text)" }}
                       aria-label={`${headers[ci]} row ${ri + 1}`}

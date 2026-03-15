@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { createPortal } from "react-dom";
 import { useStore } from "zustand";
 import {
@@ -12,7 +12,6 @@ import {
   RibbonRedoIcon,
   RibbonMaterialsIcon,
 } from "../../icons/EditIcons";
-import { DefineMaterialsDialog } from "../../../features/properties/DefineMaterialsDialog";
 
 interface Props {
   isOpen: boolean;
@@ -21,8 +20,6 @@ interface Props {
 }
 
 export function EditMenu({ isOpen, onActivate, panelHost }: Props) {
-  const [showMaterialsDialog, setShowMaterialsDialog] = useState(false);
-
   const canUndo = useStore(
     useAppStore.temporal,
     (s) => s.pastStates.length > 0,
@@ -114,17 +111,13 @@ export function EditMenu({ isOpen, onActivate, panelHost }: Props) {
             <RibbonGroup label="Materials">
               <RibbonButton
                 icon={<RibbonMaterialsIcon />}
-                label="Define Materials"
-                onClick={() => setShowMaterialsDialog(true)}
+                label="Define"
+                onClick={() => window.cslope.openMaterialsDialog()}
               />
             </RibbonGroup>
           </div>,
           panelHost,
         )}
-
-      {showMaterialsDialog && (
-        <DefineMaterialsDialog onClose={() => setShowMaterialsDialog(false)} />
-      )}
     </div>
   );
 }

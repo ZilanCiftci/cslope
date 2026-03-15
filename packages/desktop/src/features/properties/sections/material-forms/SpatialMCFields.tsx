@@ -1,4 +1,5 @@
 import { Label } from "../../../../components/ui/Label";
+import { NumericInput } from "../../../../components/ui/NumericInput";
 import { DataPointTable } from "../../../../components/ui/DataPointTable";
 import type { SpatialMohrCoulombModel } from "@cslope/engine";
 
@@ -8,11 +9,6 @@ interface Props {
 }
 
 export function SpatialMCFields({ model, onChange }: Props) {
-  const clamp = (v: string, min: number) => {
-    const n = parseFloat(v);
-    return Number.isFinite(n) && n >= min ? n : min;
-  };
-
   // Convert tuple data points to rows for DataPointTable
   const rows = model.dataPoints.map(([x, y, c, phi, gamma]) => [
     x,
@@ -42,15 +38,12 @@ export function SpatialMCFields({ model, onChange }: Props) {
       <div className="grid grid-cols-2 gap-2">
         <label className="flex flex-col gap-0.5">
           <Label>γ (kN/m³)</Label>
-          <input
-            type="number"
-            step="0.5"
-            min="0.01"
+          <NumericInput
             value={model.unitWeight}
-            onChange={(e) =>
-              onChange({ unitWeight: parseFloat(e.target.value) || 0 })
-            }
-            onBlur={(e) => onChange({ unitWeight: clamp(e.target.value, 0.1) })}
+            onValueChange={(unitWeight) => onChange({ unitWeight })}
+            min={0.01}
+            fallbackValue={0.1}
+            allowNegative={false}
             aria-label="γ (kN/m³)"
           />
         </label>

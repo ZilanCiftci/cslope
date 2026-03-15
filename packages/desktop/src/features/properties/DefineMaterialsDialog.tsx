@@ -37,11 +37,12 @@ const MODEL_KINDS: MaterialModelKind[] = [
 
 interface Props {
   onClose: () => void;
+  mode?: "popup" | "window";
 }
 
 // ── Main dialog ──
 
-export function DefineMaterialsDialog({ onClose }: Props) {
+export function DefineMaterialsDialog({ onClose, mode = "popup" }: Props) {
   const materials = useAppStore((s) => s.materials);
   const updateMaterial = useAppStore((s) => s.updateMaterial);
   const addMaterial = useAppStore((s) => s.addMaterial);
@@ -96,26 +97,8 @@ export function DefineMaterialsDialog({ onClose }: Props) {
 
   const model = selected ? getModel(selected) : undefined;
 
-  return (
-    <PopupPanel
-      title="Define Materials"
-      onClose={onClose}
-      width={560}
-      maxHeight="85vh"
-      footer={
-        <button
-          onClick={onClose}
-          className="flex-1 text-[11px] py-1 rounded cursor-pointer font-medium"
-          style={{
-            background: "var(--color-vsc-accent)",
-            color: "#fff",
-            border: "1px solid var(--color-vsc-accent)",
-          }}
-        >
-          Close
-        </button>
-      }
-    >
+  const body = (
+    <>
       {/* Material list table + action buttons */}
       <div className="flex gap-3">
         <div
@@ -267,6 +250,63 @@ export function DefineMaterialsDialog({ onClose }: Props) {
           </div>
         </div>
       )}
+    </>
+  );
+
+  if (mode === "window") {
+    return (
+      <div
+        className="h-screen flex flex-col p-3"
+        style={{
+          background: "var(--color-vsc-bg)",
+          color: "var(--color-vsc-text)",
+        }}
+      >
+        <div className="pb-2">
+          <h2 className="text-[12px] font-semibold">Define Materials</h2>
+        </div>
+        <div className="flex-1 overflow-y-auto space-y-3 pr-1">{body}</div>
+        <div
+          className="pt-3 mt-2 border-t"
+          style={{ borderColor: "var(--color-vsc-border)" }}
+        >
+          <button
+            onClick={onClose}
+            className="w-full text-[11px] py-1 rounded cursor-pointer font-medium"
+            style={{
+              background: "var(--color-vsc-accent)",
+              color: "#fff",
+              border: "1px solid var(--color-vsc-accent)",
+            }}
+          >
+            Close
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <PopupPanel
+      title="Define Materials"
+      onClose={onClose}
+      width={560}
+      maxHeight="85vh"
+      footer={
+        <button
+          onClick={onClose}
+          className="flex-1 text-[11px] py-1 rounded cursor-pointer font-medium"
+          style={{
+            background: "var(--color-vsc-accent)",
+            color: "#fff",
+            border: "1px solid var(--color-vsc-accent)",
+          }}
+        >
+          Close
+        </button>
+      }
+    >
+      {body}
     </PopupPanel>
   );
 }

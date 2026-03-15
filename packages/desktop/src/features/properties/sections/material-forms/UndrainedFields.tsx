@@ -1,4 +1,5 @@
 import { Label } from "../../../../components/ui/Label";
+import { NumericInput } from "../../../../components/ui/NumericInput";
 import type { UndrainedModel } from "@cslope/engine";
 
 interface Props {
@@ -7,42 +8,29 @@ interface Props {
 }
 
 export function UndrainedFields({ model, onChange }: Props) {
-  const clamp = (v: string, min: number) => {
-    const n = parseFloat(v);
-    return Number.isFinite(n) && n >= min ? n : min;
-  };
-
   return (
     <div className="grid grid-cols-2 gap-2">
       <label className="flex flex-col gap-0.5">
         <Label>γ (kN/m³)</Label>
-        <input
-          type="number"
-          step="0.5"
-          min="0.01"
+        <NumericInput
           value={model.unitWeight}
-          onChange={(e) =>
-            onChange({ unitWeight: parseFloat(e.target.value) || 0 })
-          }
-          onBlur={(e) => onChange({ unitWeight: clamp(e.target.value, 0.1) })}
+          onValueChange={(unitWeight) => onChange({ unitWeight })}
+          min={0.01}
+          fallbackValue={0.1}
+          allowNegative={false}
           aria-label="γ (kN/m³)"
         />
       </label>
       <label className="flex flex-col gap-0.5">
         <Label>Su (kPa)</Label>
-        <input
-          type="number"
-          step="1"
-          min="0"
+        <NumericInput
           value={model.undrainedShearStrength}
-          onChange={(e) =>
-            onChange({
-              undrainedShearStrength: parseFloat(e.target.value) || 0,
-            })
+          onValueChange={(undrainedShearStrength) =>
+            onChange({ undrainedShearStrength })
           }
-          onBlur={(e) =>
-            onChange({ undrainedShearStrength: clamp(e.target.value, 0) })
-          }
+          min={0}
+          fallbackValue={0}
+          allowNegative={false}
           aria-label="Su (kPa)"
         />
       </label>

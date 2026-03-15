@@ -27,6 +27,7 @@ process.env.VITE_PUBLIC = VITE_DEV_SERVER_URL
 
 let win: BrowserWindow | null;
 let splash: BrowserWindow | null;
+let materialsWin: BrowserWindow | null;
 let splashTimeout: ReturnType<typeof setTimeout> | null = null;
 
 function showMainWindow() {
@@ -108,6 +109,46 @@ function createWindow() {
   }
 }
 
+function createMaterialsWindow() {
+  if (!win) return;
+
+  if (materialsWin && !materialsWin.isDestroyed()) {
+    materialsWin.show();
+    materialsWin.focus();
+    return;
+  }
+
+  materialsWin = new BrowserWindow({
+    width: 760,
+    height: 760,
+    minWidth: 640,
+    minHeight: 560,
+    title: "Define Materials",
+    parent: win,
+    modal: false,
+    autoHideMenuBar: true,
+    icon: path.join(process.env.VITE_PUBLIC, "mountain.svg"),
+    webPreferences: {
+      preload: path.join(__dirname, "preload.mjs"),
+      contextIsolation: true,
+      nodeIntegration: false,
+      sandbox: true,
+    },
+  });
+
+  materialsWin.on("closed", () => {
+    materialsWin = null;
+  });
+
+  if (VITE_DEV_SERVER_URL) {
+    materialsWin.loadURL(`${VITE_DEV_SERVER_URL}#materials-dialog`);
+  } else {
+    materialsWin.loadFile(path.join(RENDERER_DIST, "index.html"), {
+      hash: "materials-dialog",
+    });
+  }
+}
+
 // When the renderer tells us it has mounted, show the main window
 // and close the splash screen.
 ipcMain.on("app:ready", () => {
@@ -145,6 +186,31 @@ ipcMain.on("window:maximize", () => {
 ipcMain.on("window:close", () => win?.close());
 ipcMain.handle("window:isMaximized", () => win?.isMaximized() ?? false);
 ipcMain.on("dev:toggle-devtools", () => win?.webContents.toggleDevTools());
+ipcMain.on("window:openMaterialsDialog", () => createMaterialsWindow());
+
+// ── Materials window sync IPC (main window <-> materials window) ─────
+
+ipcMain.on("materials:requestState", (event) => {
+  if (event.sender === materialsWin?.webContents) {
+    win?.webContents.send("materials:requestState");
+  }
+});
+
+ipcMain.on("materials:stateResponse", (event, materials) => {
+  if (event.sender === win?.webContents) {
+    materialsWin?.webContents.send("materials:stateResponse", materials);
+  }
+});
+
+ipcMain.on("materials:changed", (event, materials) => {
+  if (event.sender === materialsWin?.webContents) {
+    win?.webContents.send("materials:changed", materials);
+    return;
+  }
+  if (event.sender === win?.webContents) {
+    materialsWin?.webContents.send("materials:changed", materials);
+  }
+});
 
 // ── Native file dialogs via IPC ──────────────────────────────
 
