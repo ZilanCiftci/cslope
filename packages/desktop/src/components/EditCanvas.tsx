@@ -65,6 +65,8 @@ export function EditCanvas() {
     lineLoads,
     piezometricLine,
     selectedPointIndex,
+    selectedMaterialBoundaryId,
+    interiorBoundariesDialogOpen,
     regionMaterials,
     assigningMaterialId,
     selectedRegionKey,
@@ -86,6 +88,7 @@ export function EditCanvas() {
     insertCoordinateAt,
     removeCoordinate,
     setSelectedPoint,
+    setSelectedMaterialBoundary,
     updateBoundaryPoint,
     removeBoundaryPoint,
     insertBoundaryPointAt,
@@ -98,6 +101,7 @@ export function EditCanvas() {
     alignAnnotations,
     setCanvasToolbar,
     setCursorWorld,
+    setActivePiezoLine,
   } = useCanvasActions();
 
   const editingExterior =
@@ -114,14 +118,6 @@ export function EditCanvas() {
     (x: number): number | null => surfaceYAtXFromCoordinates(coordinates, x),
     [coordinates],
   );
-
-  const activePiezoCoords: [number, number][] = useMemo(() => {
-    const activePiezoLine =
-      piezometricLine.lines.find(
-        (l) => l.id === piezometricLine.activeLineId,
-      ) ?? null;
-    return activePiezoLine?.coordinates ?? [];
-  }, [piezometricLine]);
 
   const snapValue = useCallback(
     (v: number) =>
@@ -150,7 +146,6 @@ export function EditCanvas() {
     materialBoundaries,
     regionMaterials,
     piezometricLine,
-    activePiezoCoords,
     analysisLimits,
     udls,
     lineLoads,
@@ -176,7 +171,8 @@ export function EditCanvas() {
     findNearEdgeUnified: hitTest.findNearEdgeUnified,
     coordinates,
     materialBoundaries,
-    activePiezoCoords,
+    piezometricLine,
+    setActivePiezoLine,
     removeCoordinate,
     removeBoundaryPoint,
     removePiezoPoint,
@@ -184,6 +180,7 @@ export function EditCanvas() {
     insertBoundaryPointAt,
     insertPiezoPointAt,
     setSelectedPoint,
+    setSelectedMaterialBoundary,
     setMaterialPicker,
   });
 
@@ -203,21 +200,25 @@ export function EditCanvas() {
     setActiveViewOffset,
     setActiveViewScale,
     findNearPointUnified: hitTest.findNearPointUnified,
+    findNearEdgeUnified: hitTest.findNearEdgeUnified,
     findRegionAtPoint: hitTest.findRegionAtPoint,
     findSnapTarget: hitTest.findSnapTarget,
     snapValue,
     coordinates,
-    activePiezoCoords,
+    piezometricLine,
+    setActivePiezoLine,
     analysisLimits,
     udls,
     lineLoads,
     materialBoundaries,
     assigningMaterialId,
     editingAssignment,
+    editingBoundaries,
     panActive,
     setRegionMaterial,
     setAssigningMaterial,
     setSelectedRegionKey,
+    setSelectedMaterialBoundary,
     setSelectedPoint,
     updateAnnotation,
     setSelectedAnnotations,
@@ -274,6 +275,8 @@ export function EditCanvas() {
       mouseWorld: null,
       hoverHit,
       selectedPointIndex,
+      selectedMaterialBoundaryId,
+      interiorBoundariesDialogOpen,
       worldToCanvas,
       canvasToWorld,
       surfaceYAtX,
@@ -295,6 +298,8 @@ export function EditCanvas() {
       viewScale,
       hoverHit,
       selectedPointIndex,
+      selectedMaterialBoundaryId,
+      interiorBoundariesDialogOpen,
       canvasToWorld,
       worldToCanvas,
       editingExterior,
@@ -472,6 +477,64 @@ export function EditCanvas() {
     [viewOffset, viewScale, setActiveViewOffset, setActiveViewScale],
   );
 
+  const computeFitWidthScale = useCallback(() => {
+    if (coordinates.length < 2) return null;
+
+    const container = containerRef.current;
+    const canvas = canvasRef.current;
+    const rect = container?.getBoundingClientRect();
+    const rulerPadding = RULER_SIZE_PX + 16;
+    const w =
+      (rect?.width ?? canvas?.getBoundingClientRect().width ?? 0) -
+      rulerPadding;
+    if (w <= 0) return null;
+
+    const modelBounds = collectModelFitBounds({
+      coordinates,
+      materialBoundaries,
+      piezometricLines: piezometricLine.lines,
+      analysisLimits,
+      udls,
+      lineLoads,
+      surfaceYAtX,
+    });
+    if (!modelBounds) return null;
+
+    const { xMin, xMax, yMin, yMax } = modelBounds;
+    const worldW = xMax - xMin || 10;
+    const worldH = yMax - yMin || 10;
+    const margin = Math.max(worldW, worldH) * 0.05;
+    return w / (worldW + margin * 2);
+  }, [
+    analysisLimits,
+    coordinates,
+    lineLoads,
+    materialBoundaries,
+    piezometricLine,
+    surfaceYAtX,
+    udls,
+  ]);
+
+  const handleSetZoomPercent = useCallback(
+    (percent: number) => {
+      const fitWidthScale = computeFitWidthScale();
+      if (!fitWidthScale || fitWidthScale <= 0) return;
+      const scale = Math.max(
+        0.1,
+        Math.min(200, fitWidthScale * (percent / 100)),
+      );
+      setActiveViewScale(scale);
+    },
+    [computeFitWidthScale, setActiveViewScale],
+  );
+
+  const zoomPercent = useMemo(() => {
+    // eslint-disable-next-line react-hooks/refs -- reading ref dimensions for display-only zoom percentage is safe
+    const fitWidthScale = computeFitWidthScale();
+    if (!fitWidthScale || fitWidthScale <= 0 || viewScale <= 0) return 100;
+    return Math.max(1, Math.round((viewScale / fitWidthScale) * 100));
+  }, [computeFitWidthScale, viewScale]);
+
   // Auto-fit when a project file is loaded / benchmarks opened
   const pendingFit = useAppStore((s) => s._pendingFitToScreen);
   const clearPendingFit = useAppStore((s) => s.clearPendingFitToScreen);
@@ -597,9 +660,11 @@ export function EditCanvas() {
     setCanvasToolbar({
       zoomBoxActive,
       panActive,
+      zoomPercent,
       onFitToScreen: handleFitToScreen,
       onZoomIn: () => handleZoomStep(1.1),
       onZoomOut: () => handleZoomStep(0.9),
+      onSetZoomPercent: handleSetZoomPercent,
       onToggleZoomBox: () => {
         setZoomBoxStart(null);
         setZoomBoxCurrent(null);
@@ -617,8 +682,10 @@ export function EditCanvas() {
   }, [
     zoomBoxActive,
     panActive,
+    zoomPercent,
     handleFitToScreen,
     handleZoomStep,
+    handleSetZoomPercent,
     setCanvasToolbar,
   ]);
 

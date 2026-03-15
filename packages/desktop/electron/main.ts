@@ -28,6 +28,12 @@ process.env.VITE_PUBLIC = VITE_DEV_SERVER_URL
 let win: BrowserWindow | null;
 let splash: BrowserWindow | null;
 let materialsWin: BrowserWindow | null;
+let materialAssignmentWin: BrowserWindow | null;
+let geometryWin: BrowserWindow | null;
+let interiorBoundariesWin: BrowserWindow | null;
+let udlWin: BrowserWindow | null;
+let lineLoadsWin: BrowserWindow | null;
+let piezoWin: BrowserWindow | null;
 let splashTimeout: ReturnType<typeof setTimeout> | null = null;
 
 function showMainWindow() {
@@ -149,6 +155,258 @@ function createMaterialsWindow() {
   }
 }
 
+function createMaterialAssignmentWindow() {
+  if (!win) return;
+
+  if (materialAssignmentWin && !materialAssignmentWin.isDestroyed()) {
+    materialAssignmentWin.show();
+    materialAssignmentWin.focus();
+    return;
+  }
+
+  materialAssignmentWin = new BrowserWindow({
+    width: 520,
+    height: 760,
+    minWidth: 420,
+    minHeight: 520,
+    title: "Assign Materials",
+    parent: win,
+    modal: false,
+    autoHideMenuBar: true,
+    icon: path.join(process.env.VITE_PUBLIC, "mountain.svg"),
+    webPreferences: {
+      preload: path.join(__dirname, "preload.mjs"),
+      contextIsolation: true,
+      nodeIntegration: false,
+      sandbox: true,
+    },
+  });
+
+  materialAssignmentWin.on("closed", () => {
+    materialAssignmentWin = null;
+  });
+
+  if (VITE_DEV_SERVER_URL) {
+    materialAssignmentWin.loadURL(
+      `${VITE_DEV_SERVER_URL}#material-assignment-dialog`,
+    );
+  } else {
+    materialAssignmentWin.loadFile(path.join(RENDERER_DIST, "index.html"), {
+      hash: "material-assignment-dialog",
+    });
+  }
+}
+
+function createGeometryWindow() {
+  if (!win) return;
+
+  if (geometryWin && !geometryWin.isDestroyed()) {
+    geometryWin.show();
+    geometryWin.focus();
+    return;
+  }
+
+  geometryWin = new BrowserWindow({
+    width: 520,
+    height: 760,
+    minWidth: 420,
+    minHeight: 520,
+    title: "Exterior Boundary",
+    parent: win,
+    modal: false,
+    autoHideMenuBar: true,
+    icon: path.join(process.env.VITE_PUBLIC, "mountain.svg"),
+    webPreferences: {
+      preload: path.join(__dirname, "preload.mjs"),
+      contextIsolation: true,
+      nodeIntegration: false,
+      sandbox: true,
+    },
+  });
+
+  geometryWin.on("closed", () => {
+    geometryWin = null;
+  });
+
+  if (VITE_DEV_SERVER_URL) {
+    geometryWin.loadURL(`${VITE_DEV_SERVER_URL}#geometry-dialog`);
+  } else {
+    geometryWin.loadFile(path.join(RENDERER_DIST, "index.html"), {
+      hash: "geometry-dialog",
+    });
+  }
+}
+
+function createInteriorBoundariesWindow() {
+  if (!win) return;
+
+  const broadcastOpenState = (open: boolean) => {
+    win?.webContents.send("interiorBoundaries:dialogOpenChanged", open);
+  };
+
+  if (interiorBoundariesWin && !interiorBoundariesWin.isDestroyed()) {
+    interiorBoundariesWin.show();
+    interiorBoundariesWin.focus();
+    broadcastOpenState(true);
+    return;
+  }
+
+  interiorBoundariesWin = new BrowserWindow({
+    width: 640,
+    height: 760,
+    minWidth: 520,
+    minHeight: 560,
+    title: "Interior Boundaries",
+    parent: win,
+    modal: false,
+    autoHideMenuBar: true,
+    icon: path.join(process.env.VITE_PUBLIC, "mountain.svg"),
+    webPreferences: {
+      preload: path.join(__dirname, "preload.mjs"),
+      contextIsolation: true,
+      nodeIntegration: false,
+      sandbox: true,
+    },
+  });
+
+  interiorBoundariesWin.on("closed", () => {
+    broadcastOpenState(false);
+    interiorBoundariesWin = null;
+  });
+
+  broadcastOpenState(true);
+
+  if (VITE_DEV_SERVER_URL) {
+    interiorBoundariesWin.loadURL(
+      `${VITE_DEV_SERVER_URL}#interior-boundaries-dialog`,
+    );
+  } else {
+    interiorBoundariesWin.loadFile(path.join(RENDERER_DIST, "index.html"), {
+      hash: "interior-boundaries-dialog",
+    });
+  }
+}
+
+function createUdlWindow() {
+  if (!win) return;
+
+  if (udlWin && !udlWin.isDestroyed()) {
+    udlWin.show();
+    udlWin.focus();
+    return;
+  }
+
+  udlWin = new BrowserWindow({
+    width: 520,
+    height: 760,
+    minWidth: 420,
+    minHeight: 520,
+    title: "UDL",
+    parent: win,
+    modal: false,
+    autoHideMenuBar: true,
+    icon: path.join(process.env.VITE_PUBLIC, "mountain.svg"),
+    webPreferences: {
+      preload: path.join(__dirname, "preload.mjs"),
+      contextIsolation: true,
+      nodeIntegration: false,
+      sandbox: true,
+    },
+  });
+
+  udlWin.on("closed", () => {
+    udlWin = null;
+  });
+
+  if (VITE_DEV_SERVER_URL) {
+    udlWin.loadURL(`${VITE_DEV_SERVER_URL}#udl-dialog`);
+  } else {
+    udlWin.loadFile(path.join(RENDERER_DIST, "index.html"), {
+      hash: "udl-dialog",
+    });
+  }
+}
+
+function createLineLoadsWindow() {
+  if (!win) return;
+
+  if (lineLoadsWin && !lineLoadsWin.isDestroyed()) {
+    lineLoadsWin.show();
+    lineLoadsWin.focus();
+    return;
+  }
+
+  lineLoadsWin = new BrowserWindow({
+    width: 520,
+    height: 760,
+    minWidth: 420,
+    minHeight: 520,
+    title: "Line Loads",
+    parent: win,
+    modal: false,
+    autoHideMenuBar: true,
+    icon: path.join(process.env.VITE_PUBLIC, "mountain.svg"),
+    webPreferences: {
+      preload: path.join(__dirname, "preload.mjs"),
+      contextIsolation: true,
+      nodeIntegration: false,
+      sandbox: true,
+    },
+  });
+
+  lineLoadsWin.on("closed", () => {
+    lineLoadsWin = null;
+  });
+
+  if (VITE_DEV_SERVER_URL) {
+    lineLoadsWin.loadURL(`${VITE_DEV_SERVER_URL}#line-loads-dialog`);
+  } else {
+    lineLoadsWin.loadFile(path.join(RENDERER_DIST, "index.html"), {
+      hash: "line-loads-dialog",
+    });
+  }
+}
+
+function createPiezoWindow() {
+  if (!win) return;
+
+  if (piezoWin && !piezoWin.isDestroyed()) {
+    piezoWin.show();
+    piezoWin.focus();
+    return;
+  }
+
+  piezoWin = new BrowserWindow({
+    width: 520,
+    height: 760,
+    minWidth: 420,
+    minHeight: 520,
+    title: "Piezometric Lines",
+    parent: win,
+    modal: false,
+    autoHideMenuBar: true,
+    icon: path.join(process.env.VITE_PUBLIC, "mountain.svg"),
+    webPreferences: {
+      preload: path.join(__dirname, "preload.mjs"),
+      contextIsolation: true,
+      nodeIntegration: false,
+      sandbox: true,
+    },
+  });
+
+  piezoWin.on("closed", () => {
+    piezoWin = null;
+  });
+
+  if (VITE_DEV_SERVER_URL) {
+    piezoWin.loadURL(`${VITE_DEV_SERVER_URL}#piezo-dialog`);
+  } else {
+    piezoWin.loadFile(path.join(RENDERER_DIST, "index.html"), {
+      hash: "piezo-dialog",
+    });
+  }
+}
+
 // When the renderer tells us it has mounted, show the main window
 // and close the splash screen.
 ipcMain.on("app:ready", () => {
@@ -187,6 +445,16 @@ ipcMain.on("window:close", () => win?.close());
 ipcMain.handle("window:isMaximized", () => win?.isMaximized() ?? false);
 ipcMain.on("dev:toggle-devtools", () => win?.webContents.toggleDevTools());
 ipcMain.on("window:openMaterialsDialog", () => createMaterialsWindow());
+ipcMain.on("window:openMaterialAssignmentDialog", () =>
+  createMaterialAssignmentWindow(),
+);
+ipcMain.on("window:openGeometryDialog", () => createGeometryWindow());
+ipcMain.on("window:openInteriorBoundariesDialog", () =>
+  createInteriorBoundariesWindow(),
+);
+ipcMain.on("window:openUdlDialog", () => createUdlWindow());
+ipcMain.on("window:openLineLoadsDialog", () => createLineLoadsWindow());
+ipcMain.on("window:openPiezoDialog", () => createPiezoWindow());
 
 // ── Materials window sync IPC (main window <-> materials window) ─────
 
@@ -209,6 +477,153 @@ ipcMain.on("materials:changed", (event, materials) => {
   }
   if (event.sender === win?.webContents) {
     materialsWin?.webContents.send("materials:changed", materials);
+  }
+});
+
+// ── Material assignment window sync IPC (main window <-> assign window) ──
+
+ipcMain.on("materialAssignment:requestState", (event) => {
+  if (event.sender === materialAssignmentWin?.webContents) {
+    win?.webContents.send("materialAssignment:requestState");
+  }
+});
+
+ipcMain.on("materialAssignment:stateResponse", (event, state) => {
+  if (event.sender === win?.webContents) {
+    materialAssignmentWin?.webContents.send(
+      "materialAssignment:stateResponse",
+      state,
+    );
+  }
+});
+
+ipcMain.on("materialAssignment:changed", (event, state) => {
+  if (event.sender === materialAssignmentWin?.webContents) {
+    win?.webContents.send("materialAssignment:changed", state);
+    return;
+  }
+  if (event.sender === win?.webContents) {
+    materialAssignmentWin?.webContents.send(
+      "materialAssignment:changed",
+      state,
+    );
+  }
+});
+
+// ── Geometry window sync IPC (main window <-> geometry window) ───────
+
+ipcMain.on("geometry:requestState", (event) => {
+  if (event.sender === geometryWin?.webContents) {
+    win?.webContents.send("geometry:requestState");
+  }
+});
+
+ipcMain.on("geometry:stateResponse", (event, state) => {
+  if (event.sender === win?.webContents) {
+    geometryWin?.webContents.send("geometry:stateResponse", state);
+  }
+});
+
+ipcMain.on("geometry:changed", (event, state) => {
+  if (event.sender === geometryWin?.webContents) {
+    win?.webContents.send("geometry:changed", state);
+    return;
+  }
+  if (event.sender === win?.webContents) {
+    geometryWin?.webContents.send("geometry:changed", state);
+  }
+});
+
+// ── Interior boundaries window sync IPC (main window <-> boundaries window) ──
+
+ipcMain.on("interiorBoundaries:requestState", (event) => {
+  if (event.sender === interiorBoundariesWin?.webContents) {
+    win?.webContents.send("interiorBoundaries:requestState");
+  }
+});
+
+ipcMain.on("interiorBoundaries:stateResponse", (event, state) => {
+  if (event.sender === win?.webContents) {
+    interiorBoundariesWin?.webContents.send(
+      "interiorBoundaries:stateResponse",
+      state,
+    );
+  }
+});
+
+ipcMain.on("interiorBoundaries:changed", (event, state) => {
+  if (event.sender === interiorBoundariesWin?.webContents) {
+    win?.webContents.send("interiorBoundaries:changed", state);
+    return;
+  }
+  if (event.sender === win?.webContents) {
+    interiorBoundariesWin?.webContents.send(
+      "interiorBoundaries:changed",
+      state,
+    );
+  }
+});
+
+// ── Loads window sync IPC (main window <-> loads windows) ───────────────
+
+ipcMain.on("loads:requestState", (event) => {
+  if (
+    event.sender === udlWin?.webContents ||
+    event.sender === lineLoadsWin?.webContents
+  ) {
+    win?.webContents.send("loads:requestState");
+  }
+});
+
+ipcMain.on("loads:stateResponse", (event, state) => {
+  if (event.sender === win?.webContents) {
+    udlWin?.webContents.send("loads:stateResponse", state);
+    lineLoadsWin?.webContents.send("loads:stateResponse", state);
+  }
+});
+
+ipcMain.on("loads:changed", (event, state) => {
+  if (
+    event.sender === udlWin?.webContents ||
+    event.sender === lineLoadsWin?.webContents
+  ) {
+    win?.webContents.send("loads:changed", state);
+    if (event.sender !== udlWin?.webContents) {
+      udlWin?.webContents.send("loads:changed", state);
+    }
+    if (event.sender !== lineLoadsWin?.webContents) {
+      lineLoadsWin?.webContents.send("loads:changed", state);
+    }
+    return;
+  }
+
+  if (event.sender === win?.webContents) {
+    udlWin?.webContents.send("loads:changed", state);
+    lineLoadsWin?.webContents.send("loads:changed", state);
+  }
+});
+
+// ── Piezometric line window sync IPC (main window <-> piezo window) ──────
+
+ipcMain.on("piezo:requestState", (event) => {
+  if (event.sender === piezoWin?.webContents) {
+    win?.webContents.send("piezo:requestState");
+  }
+});
+
+ipcMain.on("piezo:stateResponse", (event, state) => {
+  if (event.sender === win?.webContents) {
+    piezoWin?.webContents.send("piezo:stateResponse", state);
+  }
+});
+
+ipcMain.on("piezo:changed", (event, state) => {
+  if (event.sender === piezoWin?.webContents) {
+    win?.webContents.send("piezo:changed", state);
+    return;
+  }
+  if (event.sender === win?.webContents) {
+    piezoWin?.webContents.send("piezo:changed", state);
   }
 });
 

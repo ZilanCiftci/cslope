@@ -10,7 +10,7 @@ export function RibbonGroup({
   children: React.ReactNode;
 }) {
   return (
-    <div className="flex flex-col items-center h-full justify-between py-1">
+    <div className="flex flex-col items-center h-full justify-between py-0.5">
       <div className="flex items-center gap-1 flex-1">{children}</div>
       {label && (
         <span

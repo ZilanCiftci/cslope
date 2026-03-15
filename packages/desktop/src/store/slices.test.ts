@@ -420,7 +420,12 @@ describe("store slices", () => {
     const store = useAppStore.getState();
     const matId = store.materials[0].id;
     store.updateMaterial(matId, {
-      model: { kind: "mohr-coulomb", unitWeight: 18, frictionAngle: 0, cohesion: 99 },
+      model: {
+        kind: "mohr-coulomb",
+        unitWeight: 18,
+        frictionAngle: 0,
+        cohesion: 99,
+      },
     });
     const updated = useAppStore.getState().materials[0];
     expect(updated.model.kind).toBe("mohr-coulomb");
@@ -1059,9 +1064,11 @@ describe("store slices", () => {
     const toolbar = {
       zoomBoxActive: false,
       panActive: false,
+      zoomPercent: 100,
       onFitToScreen: () => {},
       onZoomIn: () => {},
       onZoomOut: () => {},
+      onSetZoomPercent: () => {},
       onToggleZoomBox: () => {},
       onTogglePan: () => {},
     };

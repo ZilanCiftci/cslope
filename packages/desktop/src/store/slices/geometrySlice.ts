@@ -48,10 +48,16 @@ export const createGeometrySlice: SliceCreator<GeometrySlice> = (set, get) => ({
   regionMaterials: [],
   piezometricLine: { ...DEFAULT_PIEZO_LINE },
   selectedPointIndex: null,
+  selectedMaterialBoundaryId: null,
+  interiorBoundariesDialogOpen: false,
   assigningMaterialId: null,
   selectedRegionKey: null,
 
   setSelectedPoint: (index) => set({ selectedPointIndex: index }),
+  setSelectedMaterialBoundary: (boundaryId) =>
+    set({ selectedMaterialBoundaryId: boundaryId }),
+  setInteriorBoundariesDialogOpen: (open) =>
+    set({ interiorBoundariesDialogOpen: open }),
   setOrientation: (orientation) => {
     set((s) => syncActiveModel(s, { orientation }));
     get().invalidateAnalysis();
@@ -95,6 +101,24 @@ export const createGeometrySlice: SliceCreator<GeometrySlice> = (set, get) => ({
 
   setMaterials: (mats) => {
     set((s) => syncActiveModel(s, { materials: mats }));
+    get().invalidateAnalysis();
+  },
+  setMaterialBoundaries: (boundaries) => {
+    set((s) => {
+      const selectedExists = boundaries.some(
+        (b) => b.id === s.selectedMaterialBoundaryId,
+      );
+      return {
+        ...syncActiveModel(s, { materialBoundaries: boundaries }),
+        selectedMaterialBoundaryId: selectedExists
+          ? s.selectedMaterialBoundaryId
+          : null,
+      };
+    });
+    get().invalidateAnalysis();
+  },
+  setRegionMaterials: (assignments) => {
+    set((s) => syncActiveModel(s, { regionMaterials: assignments }));
     get().invalidateAnalysis();
   },
   updateMaterial: (id, patch) => {
@@ -155,11 +179,18 @@ export const createGeometrySlice: SliceCreator<GeometrySlice> = (set, get) => ({
   },
 
   removeMaterialBoundary: (id) => {
-    set((s) =>
-      syncActiveModel(s, {
-        materialBoundaries: s.materialBoundaries.filter((b) => b.id !== id),
-      }),
-    );
+    set((s) => {
+      const nextBoundaries = s.materialBoundaries.filter((b) => b.id !== id);
+      return {
+        ...syncActiveModel(s, {
+          materialBoundaries: nextBoundaries,
+        }),
+        selectedMaterialBoundaryId:
+          s.selectedMaterialBoundaryId === id
+            ? (nextBoundaries[0]?.id ?? null)
+            : s.selectedMaterialBoundaryId,
+      };
+    });
     get().invalidateAnalysis();
   },
 

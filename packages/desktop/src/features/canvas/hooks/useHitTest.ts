@@ -42,7 +42,6 @@ interface UseHitTestParams {
   materialBoundaries: AppState["materialBoundaries"];
   regionMaterials: AppState["regionMaterials"];
   piezometricLine: AppState["piezometricLine"];
-  activePiezoCoords: [number, number][];
   analysisLimits: AppState["analysisLimits"];
   udls: AppState["udls"];
   lineLoads: AppState["lineLoads"];
@@ -67,7 +66,6 @@ export function useHitTest({
   materialBoundaries,
   regionMaterials,
   piezometricLine,
-  activePiezoCoords,
   analysisLimits,
   udls,
   lineLoads,
@@ -122,16 +120,25 @@ export function useHitTest({
       }
 
       // Piezometric line points (only when editing piezo)
+      // Hit-test ALL lines so users can click on any line to select it
       if (editingPiezo && piezometricLine.lines.length > 0) {
-        for (let i = 0; i < activePiezoCoords.length; i++) {
-          const [px, py] = worldToCanvas(
-            activePiezoCoords[i][0],
-            activePiezoCoords[i][1],
-            rect.width,
-            rect.height,
-          );
-          if (Math.hypot(px - mx, py - my) < SNAP_THRESHOLD) {
-            return { kind: "piezo", index: i };
+        // Check active line first for priority
+        const activeFirst = [...piezometricLine.lines].sort((a, b) => {
+          const aActive = a.id === piezometricLine.activeLineId ? 0 : 1;
+          const bActive = b.id === piezometricLine.activeLineId ? 0 : 1;
+          return aActive - bActive;
+        });
+        for (const line of activeFirst) {
+          for (let i = 0; i < line.coordinates.length; i++) {
+            const [px, py] = worldToCanvas(
+              line.coordinates[i][0],
+              line.coordinates[i][1],
+              rect.width,
+              rect.height,
+            );
+            if (Math.hypot(px - mx, py - my) < SNAP_THRESHOLD) {
+              return { kind: "piezo", lineId: line.id, index: i };
+            }
           }
         }
       }
@@ -205,7 +212,6 @@ export function useHitTest({
       coordinates,
       materialBoundaries,
       piezometricLine,
-      activePiezoCoords,
       analysisLimits,
       udls,
       lineLoads,
@@ -316,41 +322,45 @@ export function useHitTest({
       }
 
       // Piezometric line edges (only when editing piezo)
+      // Hit-test ALL lines so users can right-click on any line
       if (editingPiezo && piezometricLine.lines.length > 0) {
-        for (let i = 0; i < activePiezoCoords.length - 1; i++) {
-          const [ax, ay] = worldToCanvas(
-            activePiezoCoords[i][0],
-            activePiezoCoords[i][1],
-            rect.width,
-            rect.height,
-          );
-          const [bx, by] = worldToCanvas(
-            activePiezoCoords[i + 1][0],
-            activePiezoCoords[i + 1][1],
-            rect.width,
-            rect.height,
-          );
-          const { dist, projX, projY } = pointToSegmentDist(
-            mx,
-            my,
-            ax,
-            ay,
-            bx,
-            by,
-          );
-          if (dist < bestDist) {
-            bestDist = dist;
-            const [swx, swy] = canvasToWorld(
-              projX,
-              projY,
+        for (const line of piezometricLine.lines) {
+          for (let i = 0; i < line.coordinates.length - 1; i++) {
+            const [ax, ay] = worldToCanvas(
+              line.coordinates[i][0],
+              line.coordinates[i][1],
               rect.width,
               rect.height,
             );
-            bestHit = {
-              kind: "piezo",
-              insertIndex: i + 1,
-              snapPoint: [snapValue(swx), snapValue(swy)],
-            };
+            const [bx, by] = worldToCanvas(
+              line.coordinates[i + 1][0],
+              line.coordinates[i + 1][1],
+              rect.width,
+              rect.height,
+            );
+            const { dist, projX, projY } = pointToSegmentDist(
+              mx,
+              my,
+              ax,
+              ay,
+              bx,
+              by,
+            );
+            if (dist < bestDist) {
+              bestDist = dist;
+              const [swx, swy] = canvasToWorld(
+                projX,
+                projY,
+                rect.width,
+                rect.height,
+              );
+              bestHit = {
+                kind: "piezo",
+                lineId: line.id,
+                insertIndex: i + 1,
+                snapPoint: [snapValue(swx), snapValue(swy)],
+              };
+            }
           }
         }
       }
@@ -361,7 +371,6 @@ export function useHitTest({
       coordinates,
       materialBoundaries,
       piezometricLine,
-      activePiezoCoords,
       worldToCanvas,
       canvasToWorld,
       snapValue,

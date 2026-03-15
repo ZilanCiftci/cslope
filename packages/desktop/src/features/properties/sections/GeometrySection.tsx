@@ -8,7 +8,11 @@ import {
   type SpreadsheetColumn,
 } from "../../../components/ui/SpreadsheetTable";
 
-export function GeometrySection() {
+interface GeometrySectionProps {
+  plain?: boolean;
+}
+
+export function GeometrySection({ plain = false }: GeometrySectionProps) {
   const coordinates = useAppStore((s) => s.coordinates);
   const setCoordinate = useAppStore((s) => s.setCoordinate);
   const removeCoordinate = useAppStore((s) => s.removeCoordinate);
@@ -87,8 +91,8 @@ export function GeometrySection() {
     },
   ];
 
-  return (
-    <Section title="Exterior Boundary">
+  const content = (
+    <>
       <SpreadsheetTable
         rows={coordinates}
         columns={columns}
@@ -106,6 +110,12 @@ export function GeometrySection() {
       >
         + Add Point
       </button>
-    </Section>
+    </>
   );
+
+  if (plain) {
+    return <div className="space-y-2.5">{content}</div>;
+  }
+
+  return <Section title="Exterior Boundary">{content}</Section>;
 }

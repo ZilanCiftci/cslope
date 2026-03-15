@@ -56,10 +56,7 @@ import {
   MODEL_HATCH_PATTERNS,
   MODEL_SHORT_LABELS,
 } from "../rendering/style-spec";
-import {
-  drawCanvasHatch,
-  drawCanvasHatchLabel,
-} from "../rendering/hatch";
+import { drawCanvasHatch, drawCanvasHatchLabel } from "../rendering/hatch";
 
 const arcPointCache = new WeakMap<object, Map<string, [number, number][]>>();
 
@@ -160,6 +157,8 @@ export interface DrawCanvasParams {
   mouseWorld: [number, number] | null;
   hoverHit: PointHit | null;
   selectedPointIndex: number | null;
+  selectedMaterialBoundaryId: string | null;
+  interiorBoundariesDialogOpen: boolean;
   worldToCanvas: (
     wx: number,
     wy: number,
@@ -203,6 +202,8 @@ export function drawCanvas(
     mouseWorld,
     hoverHit,
     selectedPointIndex,
+    selectedMaterialBoundaryId,
+    interiorBoundariesDialogOpen,
     worldToCanvas,
     canvasToWorld,
     surfaceYAtX,
@@ -227,6 +228,7 @@ export function drawCanvas(
   const PAPER_SHADOW_COLOR = cssVar("--color-canvas-paper-shadow");
   const PAPER_TICK_COLOR = cssVar("--color-canvas-paper-ticks");
   const PAPER_BORDER_COLOR = cssVar("--color-canvas-paper-border");
+  const SELECTED_BOUNDARY_COLOR = "#f59e0b";
 
   // Background
   ctx.fillStyle = BG_COLOR;
@@ -334,8 +336,12 @@ export function drawCanvas(
     };
 
     const { w: dimW, h: dimH } = PAPER_DIMENSIONS[paperSize];
-    const paperWidthMm = landscape ? Math.max(dimW, dimH) : Math.min(dimW, dimH);
-    const paperHeightMm = landscape ? Math.min(dimW, dimH) : Math.max(dimW, dimH);
+    const paperWidthMm = landscape
+      ? Math.max(dimW, dimH)
+      : Math.min(dimW, dimH);
+    const paperHeightMm = landscape
+      ? Math.min(dimW, dimH)
+      : Math.max(dimW, dimH);
     const virtualW = 1200;
     const virtualH = (1200 * paperHeightMm) / paperWidthMm;
     const virtualPaperFrame = computePaperFrame(
@@ -346,8 +352,7 @@ export function drawCanvas(
     );
     const virtualPlotW =
       virtualPaperFrame.w * (1 - PLOT_MARGINS.L - PLOT_MARGINS.R);
-    const visibleWorldW =
-      gridWorldBounds.xMax - gridWorldBounds.xMin;
+    const visibleWorldW = gridWorldBounds.xMax - gridWorldBounds.xMin;
 
     if (visibleWorldW > 0) {
       effectiveScale = virtualPlotW / visibleWorldW;
@@ -583,9 +588,15 @@ export function drawCanvas(
   if (materialBoundaries.length > 0 && coordinates.length >= 3) {
     for (const b of materialBoundaries) {
       if (b.coordinates.length < 2) continue;
+      const isSelectedBoundary =
+        interiorBoundariesDialogOpen &&
+        selectedMaterialBoundaryId !== null &&
+        b.id === selectedMaterialBoundaryId;
       // Draw polyline
-      ctx.strokeStyle = POLY_STROKE;
-      ctx.lineWidth = 2;
+      ctx.strokeStyle = isSelectedBoundary
+        ? SELECTED_BOUNDARY_COLOR
+        : POLY_STROKE;
+      ctx.lineWidth = isSelectedBoundary ? 3 : 2;
       ctx.beginPath();
       const [sx, sy] = worldToCanvas(
         b.coordinates[0][0],
@@ -801,9 +812,11 @@ export function drawCanvas(
       const isActive = line.id === piezometricLine.activeLineId;
       const plCoords = line.coordinates;
 
-      // Stroke: solid blue polyline
-      ctx.strokeStyle = piezoBlue;
-      ctx.lineWidth = isActive && editingPiezo ? 2 : 1.5;
+      // Stroke: solid polyline
+      const lineColor =
+        isActive && editingPiezo ? SELECTED_BOUNDARY_COLOR : piezoBlue;
+      ctx.strokeStyle = lineColor;
+      ctx.lineWidth = isActive && editingPiezo ? 3 : 1.5;
       ctx.beginPath();
       for (let i = 0; i < plCoords.length; i++) {
         const [px, py] = worldToCanvas(plCoords[i][0], plCoords[i][1], w, h);
@@ -863,13 +876,13 @@ export function drawCanvas(
       }
 
       // Circle node markers (draggable points)
-      const piezoRadius = editingPiezo && isActive ? POINT_RADIUS : 3;
+      const piezoRadius = editingPiezo ? POINT_RADIUS : 3;
       for (let i = 0; i < plCoords.length; i++) {
         const [px, py] = worldToCanvas(plCoords[i][0], plCoords[i][1], w, h);
         const isHover =
           editingPiezo &&
-          isActive &&
           hoverHit?.kind === "piezo" &&
+          hoverHit.lineId === line.id &&
           hoverHit.index === i;
 
         ctx.beginPath();
@@ -877,12 +890,13 @@ export function drawCanvas(
         ctx.fillStyle = isHover
           ? POINT_COLOR_HOVER
           : editingPiezo && isActive
-            ? piezoBlue
-            : piezoBlue + "99";
+            ? SELECTED_BOUNDARY_COLOR
+            : editingPiezo
+              ? piezoBlue
+              : piezoBlue + "99";
         ctx.fill();
-        ctx.strokeStyle =
-          editingPiezo && isActive ? STROKE_ACTIVE : STROKE_INACTIVE;
-        ctx.lineWidth = editingPiezo && isActive ? 1.5 : 1;
+        ctx.strokeStyle = editingPiezo ? STROKE_ACTIVE : STROKE_INACTIVE;
+        ctx.lineWidth = editingPiezo ? 1.5 : 1;
         ctx.stroke();
 
         if (editingPiezo && isActive) {
@@ -948,6 +962,13 @@ export function drawCanvas(
     const bndRadius = editingBoundaries ? POINT_RADIUS - 1 : 3;
     for (const b of materialBoundaries) {
       const color = materials[0]?.color ?? "#888";
+      const isSelectedBoundary =
+        interiorBoundariesDialogOpen &&
+        selectedMaterialBoundaryId !== null &&
+        b.id === selectedMaterialBoundaryId;
+      const boundaryBaseColor = isSelectedBoundary
+        ? SELECTED_BOUNDARY_COLOR
+        : color;
 
       for (let i = 0; i < b.coordinates.length; i++) {
         const [px, py] = worldToCanvas(
@@ -967,11 +988,15 @@ export function drawCanvas(
         ctx.fillStyle = isHover
           ? POINT_COLOR_HOVER
           : editingBoundaries
-            ? color
+            ? boundaryBaseColor
             : STROKE_INACTIVE;
         ctx.fill();
-        ctx.strokeStyle = editingBoundaries ? STROKE_ACTIVE : STROKE_INACTIVE;
-        ctx.lineWidth = editingBoundaries ? 1.5 : 1;
+        ctx.strokeStyle = editingBoundaries
+          ? isSelectedBoundary
+            ? SELECTED_BOUNDARY_COLOR
+            : STROKE_ACTIVE
+          : STROKE_INACTIVE;
+        ctx.lineWidth = editingBoundaries ? (isSelectedBoundary ? 2 : 1.5) : 1;
         ctx.stroke();
       }
     }

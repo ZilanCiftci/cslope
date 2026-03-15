@@ -1,14 +1,7 @@
 import { createPortal } from "react-dom";
-import { useAppStore } from "../../../store/app-store";
 import type { CanvasToolbarState } from "../../../store/types";
-import { RibbonGroup, RibbonButton, RibbonSep } from "./RibbonParts";
-import {
-  RibbonFitIcon,
-  RibbonZoomBoxIcon,
-  RibbonHandIcon,
-  PlusIcon,
-  MinusIcon,
-} from "../../icons/ViewIcons";
+import { RibbonGroup } from "./RibbonParts";
+import { PlusIcon, MinusIcon } from "../../icons/ViewIcons";
 
 interface Props {
   canvasToolbar: CanvasToolbarState | null;
@@ -24,22 +17,6 @@ export function ViewMenu({
   panelHost,
 }: Props) {
   const disabled = !canvasToolbar;
-  const mode = useAppStore((s) => s.mode);
-  const editViewScale = useAppStore((s) => s.editViewScale);
-  const resultViewScale = useAppStore((s) => s.resultViewScale);
-  const setEditViewScale = useAppStore((s) => s.setEditViewScale);
-  const setResultViewScale = useAppStore((s) => s.setResultViewScale);
-
-  const currentScale = Math.max(
-    0.1,
-    mode === "result" ? resultViewScale || 1 : editViewScale || 1,
-  );
-
-  const setZoomPercent = (percent: number) => {
-    const scale = Math.max(0.1, Math.min(200, percent / 100));
-    if (mode === "result") setResultViewScale(scale);
-    else setEditViewScale(scale);
-  };
 
   const handleActivate = () => {
     if (!disabled) onActivate();
@@ -77,30 +54,10 @@ export function ViewMenu({
           <div className="h-full flex items-center gap-0" role="menu">
             <RibbonGroup label="Zoom">
               <ZoomControl
-                scalePercent={Math.round(currentScale * 100)}
+                scalePercent={canvasToolbar.zoomPercent}
                 onZoomIn={canvasToolbar.onZoomIn}
                 onZoomOut={canvasToolbar.onZoomOut}
-                onSetZoom={setZoomPercent}
-              />
-            </RibbonGroup>
-            <RibbonSep />
-            <RibbonGroup label="Navigation">
-              <RibbonButton
-                icon={<RibbonFitIcon />}
-                label="Fit"
-                onClick={canvasToolbar.onFitToScreen}
-              />
-              <RibbonButton
-                icon={<RibbonHandIcon />}
-                label="Pan"
-                onClick={canvasToolbar.onTogglePan}
-                active={canvasToolbar.panActive}
-              />
-              <RibbonButton
-                icon={<RibbonZoomBoxIcon />}
-                label="Zoom box"
-                onClick={canvasToolbar.onToggleZoomBox}
-                active={canvasToolbar.zoomBoxActive}
+                onSetZoom={canvasToolbar.onSetZoomPercent}
               />
             </RibbonGroup>
           </div>,

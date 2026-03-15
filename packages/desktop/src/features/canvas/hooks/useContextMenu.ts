@@ -13,6 +13,7 @@ import type {
   MaterialPickerState,
   PointHit,
 } from "../types";
+import type { PiezometricLineState } from "../../../store/types";
 
 interface ContextMenuParams {
   canvasRef: RefObject<HTMLCanvasElement | null>;
@@ -29,7 +30,8 @@ interface ContextMenuParams {
   findNearEdgeUnified: (wx: number, wy: number) => EdgeHit | null;
   coordinates: [number, number][];
   materialBoundaries: { id: string; coordinates: [number, number][] }[];
-  activePiezoCoords: [number, number][];
+  piezometricLine: PiezometricLineState;
+  setActivePiezoLine: (lineId: string | null) => void;
   removeCoordinate: (idx: number) => void;
   removeBoundaryPoint: (boundaryId: string, idx: number) => void;
   removePiezoPoint: (idx: number) => void;
@@ -41,6 +43,7 @@ interface ContextMenuParams {
   ) => void;
   insertPiezoPointAt: (idx: number, pt: [number, number]) => void;
   setSelectedPoint: (idx: number | null) => void;
+  setSelectedMaterialBoundary: (boundaryId: string | null) => void;
   setMaterialPicker: (picker: MaterialPickerState | null) => void;
 }
 
@@ -55,7 +58,8 @@ export function useContextMenu(params: ContextMenuParams) {
     findNearEdgeUnified,
     coordinates,
     materialBoundaries,
-    activePiezoCoords,
+    piezometricLine,
+    setActivePiezoLine,
     removeCoordinate,
     removeBoundaryPoint,
     removePiezoPoint,
@@ -63,6 +67,7 @@ export function useContextMenu(params: ContextMenuParams) {
     insertBoundaryPointAt,
     insertPiezoPointAt,
     setSelectedPoint,
+    setSelectedMaterialBoundary,
     setMaterialPicker,
   } = params;
 
@@ -220,18 +225,24 @@ export function useContextMenu(params: ContextMenuParams) {
             },
           });
         } else if (pointHit.kind === "piezo") {
+          setActivePiezoLine(pointHit.lineId);
+          const piezoLine = piezometricLine.lines.find(
+            (l) => l.id === pointHit.lineId,
+          );
+          const lineLen = piezoLine?.coordinates.length ?? 0;
           items.push({
             label: "Delete Point",
             danger: true,
-            disabled: activePiezoCoords.length <= 2,
+            disabled: lineLen <= 2,
             action: () => {
-              if (activePiezoCoords.length > 2) {
+              if (lineLen > 2) {
                 removePiezoPoint(pointHit.index);
               }
               setContextMenu(null);
             },
           });
         } else if (pointHit.kind === "boundary") {
+          setSelectedMaterialBoundary(pointHit.boundaryId);
           const b = materialBoundaries.find(
             (mb) => mb.id === pointHit.boundaryId,
           );
@@ -264,6 +275,7 @@ export function useContextMenu(params: ContextMenuParams) {
             },
           });
         } else if (edgeHit.kind === "piezo") {
+          setActivePiezoLine(edgeHit.lineId);
           items.push({
             label: "Add Point",
             action: () => {
@@ -272,6 +284,7 @@ export function useContextMenu(params: ContextMenuParams) {
             },
           });
         } else {
+          setSelectedMaterialBoundary(edgeHit.boundaryId);
           items.push({
             label: "Add Point",
             action: () => {
@@ -291,7 +304,6 @@ export function useContextMenu(params: ContextMenuParams) {
       setContextMenu(null);
     },
     [
-      activePiezoCoords,
       alignAnnotations,
       canvasRef,
       coordinates,
@@ -303,11 +315,14 @@ export function useContextMenu(params: ContextMenuParams) {
       insertPiezoPointAt,
       materialBoundaries,
       mode,
+      piezometricLine.lines,
       removeBoundaryPoint,
       removeCoordinate,
       removePiezoPoint,
       selectedAnnotationIds,
+      setActivePiezoLine,
       setMaterialPicker,
+      setSelectedMaterialBoundary,
       setSelectedPoint,
     ],
   );

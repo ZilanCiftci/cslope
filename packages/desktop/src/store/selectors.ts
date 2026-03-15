@@ -41,6 +41,12 @@ export function useCanvasModelState() {
   const lineLoads = useAppStore((s) => s.lineLoads);
   const piezometricLine = useAppStore((s) => s.piezometricLine);
   const selectedPointIndex = useAppStore((s) => s.selectedPointIndex);
+  const selectedMaterialBoundaryId = useAppStore(
+    (s) => s.selectedMaterialBoundaryId,
+  );
+  const interiorBoundariesDialogOpen = useAppStore(
+    (s) => s.interiorBoundariesDialogOpen,
+  );
   const regionMaterials = useAppStore((s) => s.regionMaterials);
   const assigningMaterialId = useAppStore((s) => s.assigningMaterialId);
   const selectedRegionKey = useAppStore((s) => s.selectedRegionKey);
@@ -62,6 +68,8 @@ export function useCanvasModelState() {
     lineLoads,
     piezometricLine,
     selectedPointIndex,
+    selectedMaterialBoundaryId,
+    interiorBoundariesDialogOpen,
     regionMaterials,
     assigningMaterialId,
     selectedRegionKey,
@@ -92,10 +100,12 @@ export function useCanvasActions() {
     setPiezoCoordinate: state.setPiezoCoordinate,
     insertPiezoPointAt: state.insertPiezoPointAt,
     removePiezoPoint: state.removePiezoPoint,
+    setActivePiezoLine: state.setActivePiezoLine,
     setCoordinate: state.setCoordinate,
     insertCoordinateAt: state.insertCoordinateAt,
     removeCoordinate: state.removeCoordinate,
     setSelectedPoint: state.setSelectedPoint,
+    setSelectedMaterialBoundary: state.setSelectedMaterialBoundary,
     updateBoundaryPoint: state.updateBoundaryPoint,
     removeBoundaryPoint: state.removeBoundaryPoint,
     insertBoundaryPointAt: state.insertBoundaryPointAt,

@@ -118,3 +118,230 @@ export function RibbonMaterialsIcon({ size = 20 }: IconProps) {
     </svg>
   );
 }
+
+/** Coloured polygon icon for geometry boundary editing actions. */
+export function RibbonGeometryIcon({ size = 20 }: IconProps) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <path
+        d="M5 17L7.5 6.5L16.5 4L20 13L12.5 20Z"
+        fill="#42a5f5"
+        opacity="0.2"
+      />
+      <path
+        d="M5 17L7.5 6.5L16.5 4L20 13L12.5 20Z"
+        stroke="#42a5f5"
+        strokeWidth="1.6"
+        strokeLinejoin="round"
+      />
+      <circle cx="5" cy="17" r="1.6" fill="#66bb6a" />
+      <circle cx="7.5" cy="6.5" r="1.6" fill="#66bb6a" />
+      <circle cx="16.5" cy="4" r="1.6" fill="#66bb6a" />
+      <circle cx="20" cy="13" r="1.6" fill="#66bb6a" />
+      <circle cx="12.5" cy="20" r="1.6" fill="#66bb6a" />
+    </svg>
+  );
+}
+
+/** Coloured split-region icon for interior boundary actions. */
+export function RibbonInteriorBoundaryIcon({ size = 20 }: IconProps) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <path
+        d="M4 18L6.5 6.5L17 4L20 13.5L12 20Z"
+        fill="#66bb6a"
+        opacity="0.16"
+      />
+      <path
+        d="M4 18L6.5 6.5L17 4L20 13.5L12 20Z"
+        stroke="#42a5f5"
+        strokeWidth="1.6"
+        strokeLinejoin="round"
+      />
+      <path
+        d="M5.8 11.4C8.4 10.9 11.2 10.7 14.1 10.9C16 11 17.6 11.3 19 11.8"
+        stroke="#e53935"
+        strokeWidth="2.4"
+        strokeLinecap="round"
+        strokeDasharray="2.2 2"
+      />
+      <circle cx="5.8" cy="11.4" r="1.3" fill="#e53935" />
+      <circle cx="12.3" cy="10.8" r="1.3" fill="#e53935" />
+      <circle cx="19" cy="11.8" r="1.3" fill="#e53935" />
+    </svg>
+  );
+}
+
+/** Coloured arrow-into-layers icon for the ribbon Assign Materials button. */
+export function RibbonAssignMaterialsIcon({ size = 20 }: IconProps) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      {/* Top layer fill */}
+      <path d="M3 8H21V14H3Z" fill="#42a5f5" opacity="0.25" />
+      {/* Bottom layer fill */}
+      <path d="M3 14H21V20H3Z" fill="#66bb6a" opacity="0.25" />
+      {/* Region outline */}
+      <rect
+        x="3"
+        y="8"
+        width="18"
+        height="12"
+        rx="1.2"
+        stroke="#78909c"
+        strokeWidth="1.3"
+        fill="none"
+      />
+      {/* Divider line */}
+      <line x1="3" y1="14" x2="21" y2="14" stroke="#78909c" strokeWidth="1.3" />
+      {/* Arrow shaft pointing down into the layers */}
+      <line
+        x1="12"
+        y1="1"
+        x2="12"
+        y2="7"
+        stroke="#ff9800"
+        strokeWidth="2"
+        strokeLinecap="round"
+      />
+      {/* Arrow head */}
+      <path
+        d="M8.8 4.5L12 8L15.2 4.5"
+        stroke="#ff9800"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        fill="none"
+      />
+    </svg>
+  );
+}
+
+/** Coloured UDL (uniformly distributed load) icon –
+ *  hatched rectangle with two downward arrows, matching the canvas rendering. */
+export function RibbonUdlIcon({ size = 20 }: IconProps) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      {/* Hatched rectangle body */}
+      <defs>
+        <clipPath id="udl-clip">
+          <rect x="3" y="4" width="18" height="12" />
+        </clipPath>
+      </defs>
+      <rect x="3" y="4" width="18" height="12" fill="#ef5350" opacity="0.15" />
+      {/* Diagonal hatch lines */}
+      <g
+        clipPath="url(#udl-clip)"
+        stroke="#e53935"
+        strokeWidth="1"
+        opacity="0.55"
+      >
+        <line x1="3" y1="16" x2="7" y2="4" />
+        <line x1="7" y1="16" x2="11" y2="4" />
+        <line x1="11" y1="16" x2="15" y2="4" />
+        <line x1="15" y1="16" x2="19" y2="4" />
+        <line x1="19" y1="16" x2="23" y2="4" />
+      </g>
+      {/* Rectangle outline */}
+      <rect
+        x="3"
+        y="4"
+        width="18"
+        height="12"
+        stroke="#e53935"
+        strokeWidth="1.4"
+        fill="none"
+      />
+      {/* Left downward arrow */}
+      <line x1="3" y1="16" x2="3" y2="22" stroke="#e53935" strokeWidth="1.4" />
+      <path
+        d="M1 20l2 2.5 2-2.5"
+        stroke="#e53935"
+        strokeWidth="1.4"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        fill="none"
+      />
+      {/* Right downward arrow */}
+      <line
+        x1="21"
+        y1="16"
+        x2="21"
+        y2="22"
+        stroke="#e53935"
+        strokeWidth="1.4"
+      />
+      <path
+        d="M19 20l2 2.5 2-2.5"
+        stroke="#e53935"
+        strokeWidth="1.4"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        fill="none"
+      />
+    </svg>
+  );
+}
+
+/** Coloured line-load (point load) icon –
+ *  a single downward arrow, matching the canvas rendering. */
+export function RibbonLineLoadIcon({ size = 20 }: IconProps) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      {/* Arrow shaft */}
+      <line
+        x1="12"
+        y1="2"
+        x2="12"
+        y2="19"
+        stroke="#42a5f5"
+        strokeWidth="2.2"
+        strokeLinecap="round"
+      />
+      {/* Arrow head */}
+      <path
+        d="M7.5 15L12 21l4.5-6"
+        stroke="#42a5f5"
+        strokeWidth="2.2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        fill="none"
+      />
+    </svg>
+  );
+}
+
+/** Coloured piezometric line icon – a wavy water line with a dashed line below. */
+export function RibbonPiezoLineIcon({ size = 20 }: IconProps) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      {/* Water fill below the wavy line */}
+      <path
+        d="M2 14c2-2 4-2 6 0s4 2 6 0 4-2 6 0V22H2Z"
+        fill="#42a5f5"
+        opacity="0.15"
+      />
+      {/* Wavy water surface line */}
+      <path
+        d="M2 14c2-2 4-2 6 0s4 2 6 0 4-2 6 0"
+        stroke="#42a5f5"
+        strokeWidth="2"
+        strokeLinecap="round"
+        fill="none"
+      />
+      {/* Dashed piezometric line */}
+      <line
+        x1="3"
+        y1="9"
+        x2="21"
+        y2="9"
+        stroke="#1565c0"
+        strokeWidth="1.6"
+        strokeDasharray="3 2"
+        strokeLinecap="round"
+      />
+      {/* Small triangle markers */}
+      <polygon points="5,7 7,7 6,5.5" fill="#1565c0" />
+      <polygon points="17,7 19,7 18,5.5" fill="#1565c0" />
+    </svg>
+  );
+}

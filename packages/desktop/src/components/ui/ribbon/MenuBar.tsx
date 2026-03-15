@@ -39,6 +39,7 @@ export function MenuBar({ activeModelName, canvasToolbar }: Props) {
           panelHost={panelHost}
         />
         <EditMenu
+          canvasToolbar={canvasToolbar}
           isOpen={effectiveMenu === "edit"}
           onActivate={() => setActiveMenu("edit")}
           panelHost={panelHost}

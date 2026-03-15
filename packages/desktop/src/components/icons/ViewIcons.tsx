@@ -219,37 +219,67 @@ export function RibbonZoomBoxIcon({ size = 20 }: IconProps) {
   );
 }
 
-/** Coloured hand/pan icon for the ribbon View panel. */
+/** Coloured open-palm hand icon for the ribbon View panel. */
 export function RibbonHandIcon({ size = 20 }: IconProps) {
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      {/* Open hand – five fingers up, palm facing viewer */}
       <path
-        d="M8 13V9a2 2 0 0 1 4 0v4"
-        fill="#fff3e0"
-        stroke="#f57c00"
-        strokeWidth="1.5"
-        strokeLinecap="round"
-      />
-      <path
-        d="M12 11V7a2 2 0 0 1 4 0v6"
-        fill="#fff3e0"
-        stroke="#f57c00"
-        strokeWidth="1.5"
-        strokeLinecap="round"
-      />
-      <path
-        d="M16 13V6a2 2 0 0 1 4 0v8"
-        fill="#fff3e0"
-        stroke="#f57c00"
-        strokeWidth="1.5"
-        strokeLinecap="round"
-      />
-      <path
-        d="M8 13v2a6 6 0 0 0 12 0v-1"
-        stroke="#f57c00"
-        strokeWidth="1.5"
-        strokeLinecap="round"
+        d={[
+          // Thumb (leftmost, slightly shorter & angled out)
+          "M4.2 13.5",
+          "C3 13 2.2 11.8 2.5 10.5",
+          "C2.8 9.2 3.8 8.5 4.8 8.8",
+          "L5.5 9.2",
+          "L5.5 12",
+          // Index finger
+          "L5.5 5.5 C5.5 4 6 3 7 3 C8 3 8.5 4 8.5 5.5 L8.5 11.5",
+          // Middle finger (tallest)
+          "L8.5 4.5 C8.5 2.8 9 1.8 10 1.8 C11 1.8 11.5 2.8 11.5 4.5 L11.5 11.5",
+          // Ring finger
+          "L11.5 5 C11.5 3.2 12 2.2 13 2.2 C14 2.2 14.5 3.2 14.5 5 L14.5 11.5",
+          // Pinky (shortest)
+          "L14.5 6.5 C14.5 5 15 4 16 4 C17 4 17.5 5 17.5 6.5 L17.5 12",
+          // Right side of palm down to wrist
+          "L17.5 15 C17.5 18.5 15.5 21 12 21",
+          "L10 21",
+          "C6.5 21 4.5 18.5 4.5 15",
+          "L4.2 13.5",
+          "Z",
+        ].join(" ")}
         fill="#ffe0b2"
+        stroke="#5d4037"
+        strokeWidth="1.4"
+        strokeLinejoin="round"
+        strokeLinecap="round"
+      />
+      {/* Finger separation lines */}
+      <line
+        x1="8.5"
+        y1="11.5"
+        x2="8.5"
+        y2="14"
+        stroke="#5d4037"
+        strokeWidth="0.7"
+        opacity="0.35"
+      />
+      <line
+        x1="11.5"
+        y1="11.5"
+        x2="11.5"
+        y2="14"
+        stroke="#5d4037"
+        strokeWidth="0.7"
+        opacity="0.35"
+      />
+      <line
+        x1="14.5"
+        y1="11.5"
+        x2="14.5"
+        y2="14"
+        stroke="#5d4037"
+        strokeWidth="0.7"
+        opacity="0.35"
       />
     </svg>
   );

@@ -8,7 +8,7 @@ export type UdlHandle = "x1" | "x2";
 export type PointHit =
   | { kind: "external"; index: number }
   | { kind: "boundary"; boundaryId: string; pointIndex: number }
-  | { kind: "piezo"; index: number }
+  | { kind: "piezo"; lineId: string; index: number }
   | { kind: "limit"; handle: LimitHandle }
   | { kind: "udl"; udlId: string; handle: UdlHandle }
   | { kind: "lineLoad"; loadId: string }
@@ -22,7 +22,12 @@ export type EdgeHit =
       insertIndex: number;
       snapPoint: [number, number];
     }
-  | { kind: "piezo"; insertIndex: number; snapPoint: [number, number] };
+  | {
+      kind: "piezo";
+      lineId: string;
+      insertIndex: number;
+      snapPoint: [number, number];
+    };
 
 export interface ContextMenuState {
   screenX: number;

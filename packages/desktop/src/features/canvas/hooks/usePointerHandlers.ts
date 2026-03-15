@@ -15,6 +15,7 @@ import type {
   AppState,
   LineLoadRow,
   MaterialBoundaryRow,
+  PiezometricLineState,
   UdlRow,
 } from "../../../store/types";
 
@@ -65,6 +66,27 @@ interface PointerDeps {
   setActiveViewScale: (scale: number) => void;
   onZoomCompleted?: () => void;
   findNearPointUnified: (wx: number, wy: number) => PointHit | null;
+  findNearEdgeUnified: (
+    wx: number,
+    wy: number,
+  ) =>
+    | {
+        kind: "external";
+        insertIndex: number;
+        snapPoint: [number, number];
+      }
+    | {
+        kind: "boundary";
+        boundaryId: string;
+        insertIndex: number;
+        snapPoint: [number, number];
+      }
+    | {
+        kind: "piezo";
+        insertIndex: number;
+        snapPoint: [number, number];
+      }
+    | null;
   findRegionAtPoint: (wx: number, wy: number) => { regionKey: string } | null;
   findSnapTarget: (
     wx: number,
@@ -73,17 +95,20 @@ interface PointerDeps {
   ) => [number, number] | null;
   snapValue: (v: number) => number;
   coordinates: [number, number][];
-  activePiezoCoords: [number, number][];
+  piezometricLine: PiezometricLineState;
+  setActivePiezoLine: (lineId: string | null) => void;
   analysisLimits: AnalysisLimitsState;
   udls: UdlRow[];
   lineLoads: LineLoadRow[];
   materialBoundaries: MaterialBoundaryRow[];
   assigningMaterialId: string | null;
   editingAssignment: boolean;
+  editingBoundaries: boolean;
   panActive: boolean;
   setRegionMaterial: (point: [number, number], materialId: string) => void;
   setAssigningMaterial: (materialId: string | null) => void;
   setSelectedRegionKey: (key: string | null) => void;
+  setSelectedMaterialBoundary: (boundaryId: string | null) => void;
   setSelectedPoint: (idx: number | null) => void;
   updateAnnotation: (
     id: string,
@@ -126,21 +151,25 @@ export function usePointerHandlers(deps: PointerDeps) {
     setActiveViewScale,
     onZoomCompleted,
     findNearPointUnified,
+    findNearEdgeUnified,
     findRegionAtPoint,
     findSnapTarget,
     snapValue,
     coordinates,
-    activePiezoCoords,
+    piezometricLine,
+    setActivePiezoLine,
     analysisLimits,
     udls,
     lineLoads,
     materialBoundaries,
     assigningMaterialId,
     editingAssignment,
+    editingBoundaries,
     panActive,
     setRegionMaterial,
     setAssigningMaterial,
     setSelectedRegionKey,
+    setSelectedMaterialBoundary,
     setSelectedPoint,
     updateAnnotation,
     setSelectedAnnotations,
@@ -500,10 +529,17 @@ export function usePointerHandlers(deps: PointerDeps) {
           hit.kind === "external"
             ? [coordinates[hit.index][0], coordinates[hit.index][1]]
             : hit.kind === "piezo"
-              ? [
-                  activePiezoCoords[hit.index][0],
-                  activePiezoCoords[hit.index][1],
-                ]
+              ? (() => {
+                  const line = piezometricLine.lines.find(
+                    (l) => l.id === hit.lineId,
+                  );
+                  return line
+                    ? [
+                        line.coordinates[hit.index][0],
+                        line.coordinates[hit.index][1],
+                      ]
+                    : [0, 0];
+                })()
               : hit.kind === "limit"
                 ? [analysisLimits[hit.handle], 0]
                 : hit.kind === "udl"
@@ -539,6 +575,14 @@ export function usePointerHandlers(deps: PointerDeps) {
         startAutoPan();
         if (hit.kind === "external") {
           setSelectedPoint(hit.index);
+          setSelectedMaterialBoundary(null);
+        }
+        if (hit.kind === "piezo") {
+          setActivePiezoLine(hit.lineId);
+        }
+        if (hit.kind === "boundary") {
+          setSelectedMaterialBoundary(hit.boundaryId);
+          setSelectedPoint(null);
         }
         (e.target as HTMLElement).setPointerCapture(e.pointerId);
       } else if (panActive) {
@@ -549,6 +593,15 @@ export function usePointerHandlers(deps: PointerDeps) {
         (e.target as HTMLElement).setPointerCapture(e.pointerId);
         return;
       } else {
+        if (editingBoundaries) {
+          const edgeHit = findNearEdgeUnified(wx, wy);
+          if (edgeHit?.kind === "boundary") {
+            setSelectedMaterialBoundary(edgeHit.boundaryId);
+            setSelectedPoint(null);
+            return;
+          }
+        }
+
         const region = findRegionAtPoint(wx, wy);
         if (region) {
           if (assigningMaterialId) {
@@ -571,15 +624,19 @@ export function usePointerHandlers(deps: PointerDeps) {
           setAssigningMaterial(null);
         }
         setSelectedPoint(null);
+        if (!editingBoundaries) {
+          setSelectedMaterialBoundary(null);
+        }
       }
     },
     [
-      activePiezoCoords,
       analysisLimits,
       assigningMaterialId,
       canvasRef,
       coordinates,
       editingAssignment,
+      editingBoundaries,
+      findNearEdgeUnified,
       findNearPointUnified,
       findRegionAtPoint,
       getEventWorldPos,
@@ -587,11 +644,14 @@ export function usePointerHandlers(deps: PointerDeps) {
       materialBoundaries,
       mode,
       panActive,
+      piezometricLine.lines,
       selectedAnnotationIds,
+      setActivePiezoLine,
       setAssigningMaterial,
       setContextMenu,
       setMaterialPicker,
       setSelectedAnnotations,
+      setSelectedMaterialBoundary,
       setSelectedPoint,
       setSelectedRegionKey,
       setRegionMaterial,

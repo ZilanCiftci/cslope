@@ -85,8 +85,7 @@ describe("App — VS Code dark layout", () => {
   it("shows properties panel sections in sidebar", () => {
     render(<App />);
     // PropertiesPanel has collapsible sections
-    expect(screen.getByText("Exterior Boundary")).toBeInTheDocument();
-    expect(screen.getByText("Material Assignment")).toBeInTheDocument();
+    expect(screen.getByText("Search Limits")).toBeInTheDocument();
   });
 
   // ── Running / error / result states ──────────────────────────────────

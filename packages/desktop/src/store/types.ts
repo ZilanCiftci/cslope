@@ -217,10 +217,14 @@ export interface GeometrySlice {
   regionMaterials: RegionMaterials;
   piezometricLine: PiezometricLineState;
   selectedPointIndex: number | null;
+  selectedMaterialBoundaryId: string | null;
+  interiorBoundariesDialogOpen: boolean;
   assigningMaterialId: string | null;
   selectedRegionKey: string | null;
   setOrientation: (orientation: ModelOrientation) => void;
   setSelectedPoint: (index: number | null) => void;
+  setSelectedMaterialBoundary: (boundaryId: string | null) => void;
+  setInteriorBoundariesDialogOpen: (open: boolean) => void;
   setAssigningMaterial: (materialId: string | null) => void;
   setSelectedRegionKey: (key: string | null) => void;
   setCoordinates: (coords: [number, number][]) => void;
@@ -229,6 +233,8 @@ export interface GeometrySlice {
   insertCoordinateAt: (index: number, coord: [number, number]) => void;
   removeCoordinate: (index: number) => void;
   setMaterials: (mats: MaterialRow[]) => void;
+  setMaterialBoundaries: (boundaries: MaterialBoundaryRow[]) => void;
+  setRegionMaterials: (assignments: RegionMaterials) => void;
   updateMaterial: (id: string, patch: Partial<MaterialRow>) => void;
   addMaterial: () => void;
   removeMaterial: (id: string) => void;
@@ -328,9 +334,11 @@ export interface ResultViewSlice {
 export interface CanvasToolbarState {
   zoomBoxActive: boolean;
   panActive: boolean;
+  zoomPercent: number;
   onFitToScreen: () => void;
   onZoomIn: () => void;
   onZoomOut: () => void;
+  onSetZoomPercent: (percent: number) => void;
   onToggleZoomBox: () => void;
   onTogglePan: () => void;
 }
