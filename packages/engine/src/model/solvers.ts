@@ -865,6 +865,13 @@ function evaluatePlanes(slope: Slope, allPlanes: SearchPlane[]): void {
         throw new Error(`Unknown method: ${slope.method}`);
     }
 
+    // Discard non-converged or negative FoS — these arise from
+    // degenerate surfaces (e.g. flat terrain with near-zero driving
+    // moment) where the iterative solver produces meaningless values.
+    if (fos != null && (!converged || fos < 0)) {
+      fos = null;
+    }
+
     plane.fos = fos;
     plane.slices = slices;
     plane.converged = converged;
