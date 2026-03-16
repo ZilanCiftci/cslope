@@ -308,6 +308,25 @@ export const createAnalysisSlice: SliceCreator<AnalysisSlice> = (set, get) => ({
       errorMessage: null,
     }),
 
+  resetAllAnalyses: () => {
+    const s = get();
+    const resetState = {
+      runState: "idle" as const,
+      progress: 0,
+      result: null,
+      errorMessage: null,
+    };
+    set({
+      ...resetState,
+      mode: "edit",
+      models: s.models.map((m) => ({
+        ...m,
+        ...resetState,
+        mode: "edit",
+      })),
+    });
+  },
+
   runAllAnalyses: async () => {
     const baseState = get();
     const activeId = baseState.activeModelId;

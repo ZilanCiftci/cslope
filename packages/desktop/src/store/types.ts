@@ -303,6 +303,7 @@ export interface AnalysisSlice {
   runAnalysis: () => void;
   cancelAnalysis: () => void;
   runAllAnalyses: () => Promise<void>;
+  resetAllAnalyses: () => void;
   reset: () => void;
 }
 

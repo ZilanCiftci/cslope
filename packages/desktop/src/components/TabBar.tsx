@@ -10,6 +10,8 @@ interface Props {
   onRun: () => void;
   onCancel: () => void;
   onRunAll: () => void;
+  onReset: () => void;
+  onResetAll: () => void;
 }
 
 export function TabBar({
@@ -20,6 +22,8 @@ export function TabBar({
   onRun,
   onCancel,
   onRunAll,
+  onReset,
+  onResetAll,
 }: Props) {
   const [menuOpen, setMenuOpen] = useState(false);
 
@@ -121,6 +125,34 @@ export function TabBar({
               }}
             >
               Run all
+            </button>
+            <div
+              className="mx-2 my-1"
+              style={{ borderTop: "1px solid var(--color-vsc-border)" }}
+            />
+            <button
+              className="w-full text-left px-3 py-2 text-[12px] cursor-pointer hover:bg-[var(--color-vsc-list-hover)]"
+              style={{
+                color: hasResult
+                  ? "var(--color-vsc-text)"
+                  : "var(--color-vsc-badge)",
+                pointerEvents: hasResult ? "auto" : "none",
+              }}
+              onClick={() => {
+                setMenuOpen(false);
+                onReset();
+              }}
+            >
+              Reset
+            </button>
+            <button
+              className="w-full text-left px-3 py-2 text-[12px] cursor-pointer hover:bg-[var(--color-vsc-list-hover)]"
+              onClick={() => {
+                setMenuOpen(false);
+                onResetAll();
+              }}
+            >
+              Reset all
             </button>
           </div>
         )}

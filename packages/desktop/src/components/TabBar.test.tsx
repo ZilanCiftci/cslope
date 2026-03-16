@@ -13,6 +13,8 @@ const defaultProps = {
   onRun: noop,
   onCancel: noop,
   onRunAll: noop,
+  onReset: noop,
+  onResetAll: noop,
 };
 
 describe("TabBar", () => {

@@ -3,11 +3,13 @@ import { useAppStore, type ProjectInfo } from "../../store/app-store";
 import { ContextMenu, type MenuPos } from "./ContextMenu";
 import { ModelRow } from "./ModelRow";
 import { ProjectInfoDialog } from "./ProjectInfoDialog";
+import type { ModelEntry } from "../../store/types";
 
 export function Explorer() {
   const models = useAppStore((s) => s.models);
   const activeModelId = useAppStore((s) => s.activeModelId);
   const switchModel = useAppStore((s) => s.switchModel);
+  const setMode = useAppStore((s) => s.setMode);
   const deleteModel = useAppStore((s) => s.deleteModel);
   const duplicateModel = useAppStore((s) => s.duplicateModel);
   const renameModel = useAppStore((s) => s.renameModel);
@@ -19,6 +21,16 @@ export function Explorer() {
   const [menu, setMenu] = useState<MenuPos | null>(null);
   const [propertiesLog, setPropertiesLog] = useState<string | null>(null);
   const [modelsOpen, setModelsOpen] = useState(true);
+
+  const handleSelect = useCallback(
+    (model: ModelEntry) => {
+      switchModel(model.id);
+      if (model.result) {
+        setMode("result");
+      }
+    },
+    [switchModel, setMode],
+  );
 
   const closeMenu = useCallback(() => setMenu(null), []);
 
@@ -105,12 +117,13 @@ export function Explorer() {
                 model={model}
                 isActive={isActive}
                 isEditing={isEditing}
+                hasResult={!!model.result}
                 editName={editName}
                 onChangeName={setEditName}
                 onCommitRename={commitRename}
                 onCancelRename={cancelRename}
                 onStartRename={startRename}
-                onSelect={() => switchModel(model.id)}
+                onSelect={() => handleSelect(model)}
                 onContextMenu={handleContextMenu}
               />
             );

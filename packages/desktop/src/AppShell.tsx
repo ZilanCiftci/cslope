@@ -46,6 +46,8 @@ export function AppShell() {
   const coordinateCount = useAppStore((s) => s.coordinates.length);
   const cursorWorld = useAppStore((s) => s.cursorWorld);
   const runAllAnalyses = useAppStore((s) => s.runAllAnalyses);
+  const invalidateAnalysis = useAppStore((s) => s.invalidateAnalysis);
+  const resetAllAnalyses = useAppStore((s) => s.resetAllAnalyses);
   const canvasToolbar = useAppStore((s) => s.canvasToolbar);
 
   const activeModel = models.find((m) => m.id === activeModelId);
@@ -78,6 +80,15 @@ export function AppShell() {
     setMode("result");
   };
 
+  const handleReset = () => {
+    invalidateAnalysis();
+    setMode("edit");
+  };
+
+  const handleResetAll = () => {
+    resetAllAnalyses();
+  };
+
   return (
     <div
       className="flex flex-col h-screen overflow-hidden"
@@ -102,6 +113,8 @@ export function AppShell() {
         onRun={handleRunAndSwitch}
         onCancel={cancelAnalysis}
         onRunAll={handleRunAll}
+        onReset={handleReset}
+        onResetAll={handleResetAll}
       />
 
       <div className="flex flex-1 min-h-0">

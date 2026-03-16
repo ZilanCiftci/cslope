@@ -5,6 +5,7 @@ interface Props {
   model: ModelEntry;
   isActive: boolean;
   isEditing: boolean;
+  hasResult: boolean;
   editName: string;
   onChangeName: (value: string) => void;
   onCommitRename: () => void;
@@ -22,6 +23,7 @@ export function ModelRow({
   model,
   isActive,
   isEditing,
+  hasResult,
   editName,
   onChangeName,
   onCommitRename,
@@ -69,11 +71,23 @@ export function ModelRow({
           <linearGradient id={gradientId} x1="0" y1="0" x2="1" y2="1">
             <stop
               offset="0%"
-              stopColor={isActive ? "#4361ee" : "var(--color-vsc-text-muted)"}
+              stopColor={
+                isActive
+                  ? "#4361ee"
+                  : hasResult
+                    ? "#10b981"
+                    : "var(--color-vsc-text-muted)"
+              }
             />
             <stop
               offset="100%"
-              stopColor={isActive ? "#06d6a0" : "var(--color-vsc-text-muted)"}
+              stopColor={
+                isActive
+                  ? "#06d6a0"
+                  : hasResult
+                    ? "#34d399"
+                    : "var(--color-vsc-text-muted)"
+              }
             />
           </linearGradient>
         </defs>
