@@ -217,7 +217,7 @@ export function drawCanvas(
 ) {
   // Read theme-aware colors
   const BG_COLOR = cssVar("--color-canvas-bg");
-  const GRID_COLOR = cssVar("--color-canvas-grid");
+  const GRID_COLOR = "rgba(0, 0, 0, 0.1)";
   const GRID_TEXT_COLOR = cssVar("--color-canvas-grid-text");
   const AXIS_COLOR = cssVar("--color-canvas-axis");
   const POLY_STROKE = cssVar("--color-canvas-poly-stroke");
@@ -376,8 +376,12 @@ export function drawCanvas(
   ctx.fillStyle = GRID_TEXT_COLOR;
   ctx.textAlign = "center";
 
-  if (showGrid) {
+  const drawGridLayer = () => {
+    if (!showGrid) return;
+
     // Vertical grid lines
+    ctx.strokeStyle = GRID_COLOR;
+    ctx.lineWidth = 1;
     const startX = Math.floor(gridWorldBounds.xMin / gridStep) * gridStep;
     for (let gx = startX; gx <= gridWorldBounds.xMax; gx += gridStep) {
       const [px] = worldToCanvas(gx, 0, w, h);
@@ -396,10 +400,8 @@ export function drawCanvas(
       ctx.lineTo(gridCanvasBounds.xMax, py);
       ctx.stroke();
     }
-  }
 
-  // Axes (origin lines)
-  if (showGrid) {
+    // Axes (origin lines)
     ctx.strokeStyle = AXIS_COLOR;
     ctx.lineWidth = 1;
     const [ax0] = worldToCanvas(0, 0, w, h);
@@ -412,7 +414,7 @@ export function drawCanvas(
     ctx.moveTo(gridCanvasBounds.xMin, ay0);
     ctx.lineTo(gridCanvasBounds.xMax, ay0);
     ctx.stroke();
-  }
+  };
 
   // ── Material region fills ─────────────────────────────
   if (coordinates.length >= 3 && resultViewSettings.showSoilColor !== false) {
@@ -572,6 +574,9 @@ export function drawCanvas(
       }
     }
   }
+
+  // Draw grid above model fills so lines remain visible over colored regions.
+  drawGridLayer();
 
   // ── External boundary stroke ─────────────────────────
   if (coordinates.length >= 3) {
