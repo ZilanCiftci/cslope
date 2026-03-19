@@ -15,7 +15,6 @@ import {
 } from "../view/paper";
 import { Section } from "../../components/ui/Section";
 import { Label } from "../../components/ui/Label";
-import { LambdaFmFfChart } from "./LambdaFmFfChart";
 
 function Row({ label, children }: { label: string; children: ReactNode }) {
   return (
@@ -330,16 +329,6 @@ export function ResultSidebar() {
           </p>
         )}
       </Section>
-
-      {/* ── Lambda vs Fm/Ff Chart (M-P only) ───────────── */}
-      {result &&
-        result.method === "Morgenstern-Price" &&
-        result.criticalLffArray &&
-        result.criticalLffArray.length >= 2 && (
-          <Section title="Lambda vs Fm/Ff" sectionKey="result:LambdaChart">
-            <LambdaFmFfChart data={result.criticalLffArray} />
-          </Section>
-        )}
 
       {/* ── Display Settings ───────────────────────────── */}
       <Section title="Display" sectionKey="result:Display">

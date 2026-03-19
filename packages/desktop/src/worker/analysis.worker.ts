@@ -62,6 +62,7 @@ self.onmessage = (event: MessageEvent<AnalysisRequest>) => {
         entryPoint: crit.lc,
         exitPoint: crit.rc,
         converged: crit.converged,
+        lffArray: crit.lffArray,
       };
 
       // Convert slices for critical surface
@@ -99,6 +100,7 @@ self.onmessage = (event: MessageEvent<AnalysisRequest>) => {
           entryPoint: p.lc,
           exitPoint: p.rc,
           converged: p.converged,
+          lffArray: p.lffArray,
         });
       }
     }

@@ -57,7 +57,7 @@ export function ResultsMenu({ isOpen, onActivate, panelHost }: Props) {
             <RibbonGroup label="Plots">
               <RibbonButton
                 icon={<ResultsPlotIcon />}
-                label="Slip Surface"
+                label="Results Plot"
                 onClick={openResultsPlot}
                 disabled={!hasResult}
               />

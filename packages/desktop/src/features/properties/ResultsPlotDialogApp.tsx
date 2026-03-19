@@ -10,8 +10,11 @@ import {
 import { type ModelEntry, type ModelOrientation } from "../../store/types";
 import {
   CartesianGrid,
+  Legend,
   Line,
   LineChart,
+  ReferenceDot,
+  ReferenceLine,
   ResponsiveContainer,
   Tooltip,
   XAxis,
@@ -26,6 +29,7 @@ interface ResultsPlotStatePayload {
 }
 
 type AxisMode = "slice" | "x";
+type PlotMode = "slipSurface" | "lambdaFmFf";
 
 type MetricKey =
   | "shearStrength"
@@ -43,6 +47,19 @@ interface PlotPoint {
   resistingForce: number;
   pullingForce: number;
 }
+
+interface LffPoint {
+  lambda: number;
+  momentFos: number;
+  forceFos: number;
+  gap: number;
+}
+
+const SELECT_STYLE: React.CSSProperties = {
+  background: "var(--color-vsc-input-bg)",
+  color: "var(--color-vsc-text)",
+  border: "1px solid var(--color-vsc-border)",
+};
 
 const METRIC_OPTIONS: Array<{ key: MetricKey; label: string; unit: string }> = [
   { key: "shearStrength", label: "Shear strength", unit: "kPa" },
@@ -95,6 +112,36 @@ function toFiniteNumber(value: unknown): number | null {
   return typeof value === "number" && Number.isFinite(value) ? value : null;
 }
 
+function formatAxisNumber(value: number, maxDigits = 3): string {
+  if (!Number.isFinite(value)) return "-";
+  return value.toFixed(maxDigits).replace(/\.0+$|(?<=\.[0-9]*?)0+$/g, "");
+}
+
+function niceStep(range: number, targetTicks: number): number {
+  const safeRange = Number.isFinite(range) && range > 0 ? range : 1;
+  const raw = safeRange / Math.max(targetTicks, 2);
+  const mag = Math.pow(10, Math.floor(Math.log10(raw)));
+  const norm = raw / mag;
+  let step = 1;
+  if (norm > 1.5) step = 2;
+  if (norm > 3) step = 5;
+  if (norm > 7) step = 10;
+  return step * mag;
+}
+
+function buildNiceTicks(min: number, max: number, targetTicks = 6): number[] {
+  if (!Number.isFinite(min) || !Number.isFinite(max)) return [];
+  if (Math.abs(max - min) < 1e-9) return [min];
+
+  const step = niceStep(max - min, targetTicks);
+  const start = Math.ceil(min / step) * step;
+  const ticks: number[] = [];
+  for (let v = start; v <= max + step * 0.001; v += step) {
+    ticks.push(Number(v.toPrecision(10)));
+  }
+  return ticks;
+}
+
 export function ResultsPlotDialogApp() {
   const [snapshot, setSnapshot] = useState<ResultsPlotStatePayload | null>(
     null,
@@ -103,6 +150,7 @@ export function ResultsPlotDialogApp() {
   const [selectedSurfaceIndex, setSelectedSurfaceIndex] = useState(0);
   const [axisMode, setAxisMode] = useState<AxisMode>("slice");
   const [metric, setMetric] = useState<MetricKey>("shearStrength");
+  const [plotMode, setPlotMode] = useState<PlotMode>("slipSurface");
 
   useEffect(() => {
     if (!isElectron) return;
@@ -189,10 +237,114 @@ export function ResultsPlotDialogApp() {
 
   const xKey: keyof PlotPoint = axisMode === "slice" ? "sliceNumber" : "xValue";
 
+  const slipXAxisConfig = useMemo(() => {
+    if (axisMode === "slice") {
+      return {
+        ticks: undefined as number[] | undefined,
+        allowDecimals: false,
+        formatTick: (value: unknown) => formatAxisNumber(Number(value), 0),
+      };
+    }
+
+    const xs = plotData.map((d) => d.xValue).filter(Number.isFinite);
+    if (xs.length === 0) {
+      return {
+        ticks: undefined as number[] | undefined,
+        allowDecimals: true,
+        formatTick: (value: unknown) => formatAxisNumber(Number(value), 3),
+      };
+    }
+
+    const min = Math.min(...xs);
+    const max = Math.max(...xs);
+
+    const intStart = Math.ceil(min);
+    const intEnd = Math.floor(max);
+    const intSpan = intEnd - intStart;
+
+    if (intSpan >= 2) {
+      const maxTickCount = 8;
+      const intStep = Math.max(1, Math.ceil(intSpan / (maxTickCount - 1)));
+      const ticks: number[] = [];
+      for (let t = intStart; t <= intEnd; t += intStep) {
+        ticks.push(t);
+      }
+      if (ticks.length === 0 || ticks[ticks.length - 1] !== intEnd) {
+        ticks.push(intEnd);
+      }
+
+      return {
+        ticks,
+        allowDecimals: false,
+        formatTick: (value: unknown) => formatAxisNumber(Number(value), 0),
+      };
+    }
+
+    return {
+      ticks: buildNiceTicks(min, max, 6),
+      allowDecimals: true,
+      formatTick: (value: unknown) => formatAxisNumber(Number(value), 3),
+    };
+  }, [axisMode, plotData]);
+
   const hasCritical =
     !!snapshot?.result?.criticalSurface &&
     !!selectedSurface &&
     isSameSurface(snapshot.result.criticalSurface, selectedSurface);
+
+  const lambdaData = useMemo<LffPoint[]>(() => {
+    const rows = selectedSurface?.lffArray ?? [];
+    if (rows.length < 2) return [];
+    return [...rows]
+      .map(([lambda, momentFos, forceFos, gap]) => ({
+        lambda,
+        momentFos,
+        forceFos,
+        gap,
+      }))
+      .sort((a, b) => a.lambda - b.lambda);
+  }, [selectedSurface]);
+
+  const equilibriumPoint = useMemo(() => {
+    if (lambdaData.length === 0) return null;
+    return lambdaData.reduce((best, row) => (row.gap < best.gap ? row : best));
+  }, [lambdaData]);
+
+  const lambdaXAxisDomain = useMemo<[number, number] | undefined>(() => {
+    if (lambdaData.length === 0) return undefined;
+    const xs = lambdaData.map((d) => d.lambda).filter(Number.isFinite);
+    if (xs.length === 0) return undefined;
+    const min = Math.min(...xs);
+    const max = Math.max(...xs);
+    if (Math.abs(max - min) < 1e-9) {
+      const pad = Math.max(Math.abs(min) * 0.05, 0.01);
+      return [min - pad, max + pad];
+    }
+    return [min, max];
+  }, [lambdaData]);
+
+  const lambdaYAxisDomain = useMemo<[number, number] | undefined>(() => {
+    if (lambdaData.length === 0) return undefined;
+    const ys = lambdaData
+      .flatMap((d) => [d.momentFos, d.forceFos])
+      .filter(Number.isFinite);
+    if (ys.length === 0) return undefined;
+
+    const min = Math.min(...ys);
+    const max = Math.max(...ys);
+    const span = max - min;
+    const margin =
+      span > 1e-9 ? span * 0.08 : Math.max(Math.abs(max) * 0.05, 0.02);
+    return [min - margin, max + margin];
+  }, [lambdaData]);
+
+  const canShowLambdaPlot = snapshot?.result?.method === "Morgenstern-Price";
+
+  useEffect(() => {
+    if (plotMode === "lambdaFmFf" && !canShowLambdaPlot) {
+      setPlotMode("slipSurface");
+    }
+  }, [canShowLambdaPlot, plotMode]);
 
   return (
     <div
@@ -209,8 +361,7 @@ export function ResultsPlotDialogApp() {
             className="text-[10px] mt-0.5"
             style={{ color: "var(--color-vsc-text-muted)" }}
           >
-            Plot slice-level variables for critical and non-critical slip
-            surfaces.
+            Plot slip-surface variables and Lambda vs Fm/Ff analysis curves.
           </p>
         </div>
         <div
@@ -234,17 +385,32 @@ export function ResultsPlotDialogApp() {
             color: "var(--color-vsc-text-muted)",
           }}
         >
-          Run an analysis first to plot slip-surface variables.
+          Run an analysis first to open results plots.
         </div>
       ) : (
         <>
           <div
-            className="grid grid-cols-1 md:grid-cols-3 gap-2.5 p-2.5 rounded border"
+            className="grid grid-cols-1 md:grid-cols-4 gap-2.5 p-2.5 rounded border"
             style={{
               borderColor: "var(--color-vsc-border)",
               background: "var(--color-vsc-surface-tint)",
             }}
           >
+            <label className="text-[10px] flex flex-col gap-1">
+              <span style={{ color: "var(--color-vsc-text-muted)" }}>Plot</span>
+              <select
+                value={plotMode}
+                onChange={(e) => setPlotMode(e.target.value as PlotMode)}
+                className="text-[11px] px-2 py-1 rounded"
+                style={SELECT_STYLE}
+              >
+                <option value="slipSurface">Slip Surface Variables</option>
+                <option value="lambdaFmFf" disabled={!canShowLambdaPlot}>
+                  Lambda vs Fm/Ff
+                </option>
+              </select>
+            </label>
+
             <label className="text-[10px] flex flex-col gap-1">
               <span style={{ color: "var(--color-vsc-text-muted)" }}>
                 Slip surface
@@ -255,11 +421,7 @@ export function ResultsPlotDialogApp() {
                   setSelectedSurfaceIndex(Number(e.target.value))
                 }
                 className="text-[11px] px-2 py-1 rounded"
-                style={{
-                  background: "var(--color-vsc-input-bg)",
-                  color: "var(--color-vsc-text)",
-                  border: "1px solid var(--color-vsc-border)",
-                }}
+                style={SELECT_STYLE}
               >
                 {surfaces.map((surface, idx) => {
                   const tag =
@@ -290,41 +452,51 @@ export function ResultsPlotDialogApp() {
               <span style={{ color: "var(--color-vsc-text-muted)" }}>
                 X axis
               </span>
-              <select
-                value={axisMode}
-                onChange={(e) => setAxisMode(e.target.value as AxisMode)}
-                className="text-[11px] px-2 py-1 rounded"
-                style={{
-                  background: "var(--color-vsc-input-bg)",
-                  color: "var(--color-vsc-text)",
-                  border: "1px solid var(--color-vsc-border)",
-                }}
-              >
-                <option value="slice">Slice number</option>
-                <option value="x">X value</option>
-              </select>
+              {plotMode === "slipSurface" ? (
+                <select
+                  value={axisMode}
+                  onChange={(e) => setAxisMode(e.target.value as AxisMode)}
+                  className="text-[11px] px-2 py-1 rounded"
+                  style={SELECT_STYLE}
+                >
+                  <option value="slice">Slice number</option>
+                  <option value="x">X value</option>
+                </select>
+              ) : (
+                <div
+                  className="text-[11px] px-2 py-1 rounded"
+                  style={SELECT_STYLE}
+                >
+                  Lambda
+                </div>
+              )}
             </label>
 
             <label className="text-[10px] flex flex-col gap-1">
               <span style={{ color: "var(--color-vsc-text-muted)" }}>
-                Y variable
+                Y axis
               </span>
-              <select
-                value={metric}
-                onChange={(e) => setMetric(e.target.value as MetricKey)}
-                className="text-[11px] px-2 py-1 rounded"
-                style={{
-                  background: "var(--color-vsc-input-bg)",
-                  color: "var(--color-vsc-text)",
-                  border: "1px solid var(--color-vsc-border)",
-                }}
-              >
-                {METRIC_OPTIONS.map((option) => (
-                  <option key={option.key} value={option.key}>
-                    {option.label}
-                  </option>
-                ))}
-              </select>
+              {plotMode === "slipSurface" ? (
+                <select
+                  value={metric}
+                  onChange={(e) => setMetric(e.target.value as MetricKey)}
+                  className="text-[11px] px-2 py-1 rounded"
+                  style={SELECT_STYLE}
+                >
+                  {METRIC_OPTIONS.map((option) => (
+                    <option key={option.key} value={option.key}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+              ) : (
+                <div
+                  className="text-[11px] px-2 py-1 rounded"
+                  style={SELECT_STYLE}
+                >
+                  Factor of Safety
+                </div>
+              )}
             </label>
           </div>
 
@@ -332,12 +504,25 @@ export function ResultsPlotDialogApp() {
             className="mt-2 text-[10px] flex items-center gap-3 px-0.5"
             style={{ color: "var(--color-vsc-text-muted)" }}
           >
-            <span>FoS: {formatNumber(selectedSurface.fos, 4)}</span>
-            <span>Slices: {plotData.length}</span>
-            <span>
-              {hasCritical ? "Critical surface" : "Non-critical surface"}
-            </span>
-            <span>Metric unit: {metricMeta.unit}</span>
+            {plotMode === "slipSurface" ? (
+              <>
+                <span>FoS: {formatNumber(selectedSurface.fos, 4)}</span>
+                <span>Slices: {plotData.length}</span>
+                <span>
+                  {hasCritical ? "Critical surface" : "Non-critical surface"}
+                </span>
+                <span>Metric unit: {metricMeta.unit}</span>
+              </>
+            ) : (
+              <>
+                <span>Method: {snapshot?.result?.method ?? "-"}</span>
+                <span>Lambda points: {lambdaData.length}</span>
+                <span>
+                  Equilibrium λ:{" "}
+                  {formatNumber(equilibriumPoint?.lambda ?? NaN, 4)}
+                </span>
+              </>
+            )}
           </div>
 
           <div
@@ -347,30 +532,135 @@ export function ResultsPlotDialogApp() {
               background: "var(--color-vsc-panel)",
             }}
           >
-            {plotData.length === 0 ? (
+            {plotMode === "slipSurface" ? (
+              plotData.length === 0 ? (
+                <div
+                  className="h-full flex items-center justify-center text-[11px]"
+                  style={{ color: "var(--color-vsc-text-muted)" }}
+                >
+                  Unable to derive slice values for the selected surface.
+                </div>
+              ) : (
+                <ResponsiveContainer width="100%" height="100%">
+                  <LineChart
+                    data={plotData}
+                    margin={{ top: 16, right: 20, left: 6, bottom: 12 }}
+                  >
+                    <CartesianGrid
+                      strokeDasharray="3 3"
+                      stroke="rgba(120,130,140,0.35)"
+                    />
+                    <XAxis
+                      type="number"
+                      dataKey={xKey}
+                      domain={["dataMin", "dataMax"]}
+                      tickCount={axisMode === "slice" ? 8 : 7}
+                      interval={0}
+                      ticks={slipXAxisConfig.ticks}
+                      allowDecimals={slipXAxisConfig.allowDecimals}
+                      tickFormatter={slipXAxisConfig.formatTick}
+                      tick={{
+                        fontSize: 10,
+                        fill: "var(--color-vsc-text-muted)",
+                      }}
+                      tickLine={{ stroke: "var(--color-vsc-border)" }}
+                      axisLine={{ stroke: "var(--color-vsc-border)" }}
+                      label={{
+                        value:
+                          axisMode === "slice" ? "Slice number" : "X value",
+                        position: "insideBottom",
+                        offset: -8,
+                        fill: "var(--color-vsc-text-muted)",
+                        fontSize: 10,
+                      }}
+                    />
+                    <YAxis
+                      tick={{
+                        fontSize: 10,
+                        fill: "var(--color-vsc-text-muted)",
+                      }}
+                      tickLine={{ stroke: "var(--color-vsc-border)" }}
+                      axisLine={{ stroke: "var(--color-vsc-border)" }}
+                      label={{
+                        value: `${metricMeta.label} (${metricMeta.unit})`,
+                        angle: -90,
+                        position: "insideLeft",
+                        fill: "var(--color-vsc-text-muted)",
+                        fontSize: 10,
+                      }}
+                    />
+                    <Tooltip
+                      contentStyle={{
+                        background: "var(--color-vsc-input-bg)",
+                        border: "1px solid var(--color-vsc-border)",
+                        borderRadius: 6,
+                        fontSize: 11,
+                      }}
+                      formatter={(value) => {
+                        const numeric = toFiniteNumber(value);
+                        return numeric == null
+                          ? `- ${metricMeta.unit}`
+                          : `${formatNumber(numeric, 4)} ${metricMeta.unit}`;
+                      }}
+                      labelFormatter={(label) => {
+                        const numeric = toFiniteNumber(label);
+                        if (numeric == null) {
+                          return axisMode === "slice" ? "Slice -" : "X -";
+                        }
+                        return axisMode === "slice"
+                          ? `Slice ${formatNumber(numeric, 0)}`
+                          : `X ${formatNumber(numeric, 3)}`;
+                      }}
+                    />
+                    <Line
+                      type="monotone"
+                      dataKey={metric}
+                      stroke="#26a69a"
+                      strokeWidth={2.2}
+                      dot={{ r: 2.5, strokeWidth: 1.2 }}
+                      activeDot={{ r: 4.5 }}
+                      isAnimationActive={false}
+                    />
+                  </LineChart>
+                </ResponsiveContainer>
+              )
+            ) : !canShowLambdaPlot ? (
               <div
                 className="h-full flex items-center justify-center text-[11px]"
                 style={{ color: "var(--color-vsc-text-muted)" }}
               >
-                Unable to derive slice values for the selected surface.
+                Lambda vs Fm/Ff is available only for Morgenstern-Price runs.
+              </div>
+            ) : lambdaData.length === 0 ? (
+              <div
+                className="h-full flex items-center justify-center text-[11px]"
+                style={{ color: "var(--color-vsc-text-muted)" }}
+              >
+                No Lambda vs Fm/Ff data is available for the selected slip
+                surface.
               </div>
             ) : (
               <ResponsiveContainer width="100%" height="100%">
                 <LineChart
-                  data={plotData}
-                  margin={{ top: 16, right: 20, left: 6, bottom: 12 }}
+                  data={lambdaData}
+                  margin={{ top: 34, right: 20, left: 6, bottom: 12 }}
                 >
                   <CartesianGrid
                     strokeDasharray="3 3"
                     stroke="rgba(120,130,140,0.35)"
                   />
                   <XAxis
-                    dataKey={xKey}
+                    type="number"
+                    dataKey="lambda"
+                    domain={lambdaXAxisDomain ?? ["dataMin", "dataMax"]}
+                    tickCount={6}
+                    interval={0}
                     tick={{ fontSize: 10, fill: "var(--color-vsc-text-muted)" }}
+                    tickFormatter={(value) => formatNumber(Number(value), 3)}
                     tickLine={{ stroke: "var(--color-vsc-border)" }}
                     axisLine={{ stroke: "var(--color-vsc-border)" }}
                     label={{
-                      value: axisMode === "slice" ? "Slice number" : "X value",
+                      value: "Lambda",
                       position: "insideBottom",
                       offset: -8,
                       fill: "var(--color-vsc-text-muted)",
@@ -378,11 +668,16 @@ export function ResultsPlotDialogApp() {
                     }}
                   />
                   <YAxis
+                    type="number"
+                    domain={lambdaYAxisDomain ?? ["auto", "auto"]}
+                    tickFormatter={(value) =>
+                      formatAxisNumber(Number(value), 3)
+                    }
                     tick={{ fontSize: 10, fill: "var(--color-vsc-text-muted)" }}
                     tickLine={{ stroke: "var(--color-vsc-border)" }}
                     axisLine={{ stroke: "var(--color-vsc-border)" }}
                     label={{
-                      value: `${metricMeta.label} (${metricMeta.unit})`,
+                      value: "Factor of Safety",
                       angle: -90,
                       position: "insideLeft",
                       fill: "var(--color-vsc-text-muted)",
@@ -396,30 +691,70 @@ export function ResultsPlotDialogApp() {
                       borderRadius: 6,
                       fontSize: 11,
                     }}
-                    formatter={(value) => {
+                    formatter={(value, name) => {
                       const numeric = toFiniteNumber(value);
-                      return numeric == null
-                        ? `- ${metricMeta.unit}`
-                        : `${formatNumber(numeric, 4)} ${metricMeta.unit}`;
+                      if (numeric == null) {
+                        return ["-", name];
+                      }
+                      return [formatNumber(numeric, 4), name];
                     }}
                     labelFormatter={(label) => {
                       const numeric = toFiniteNumber(label);
-                      if (numeric == null) {
-                        return axisMode === "slice" ? "Slice -" : "X -";
-                      }
-                      return axisMode === "slice"
-                        ? `Slice ${formatNumber(numeric, 0)}`
-                        : `X ${formatNumber(numeric, 3)}`;
+                      return numeric == null
+                        ? "Lambda -"
+                        : `Lambda ${formatNumber(numeric, 3)}`;
                     }}
                   />
+                  {equilibriumPoint && (
+                    <ReferenceLine
+                      x={equilibriumPoint.lambda}
+                      stroke="#98c379"
+                      strokeDasharray="4 3"
+                      ifOverflow="extendDomain"
+                    />
+                  )}
                   <Line
                     type="monotone"
-                    dataKey={metric}
-                    stroke="#26a69a"
+                    dataKey="momentFos"
+                    name="Moment (Fm)"
+                    stroke="#e06c75"
                     strokeWidth={2.2}
                     dot={{ r: 2.5, strokeWidth: 1.2 }}
                     activeDot={{ r: 4.5 }}
                     isAnimationActive={false}
+                  />
+                  <Line
+                    type="monotone"
+                    dataKey="forceFos"
+                    name="Force (Ff)"
+                    stroke="#61afef"
+                    strokeWidth={2.2}
+                    dot={{ r: 2.5, strokeWidth: 1.2 }}
+                    activeDot={{ r: 4.5 }}
+                    isAnimationActive={false}
+                  />
+                  {equilibriumPoint && (
+                    <ReferenceDot
+                      x={equilibriumPoint.lambda}
+                      y={
+                        (equilibriumPoint.momentFos +
+                          equilibriumPoint.forceFos) /
+                        2
+                      }
+                      r={4}
+                      fill="#98c379"
+                      stroke="#98c379"
+                    />
+                  )}
+                  <Legend
+                    verticalAlign="top"
+                    align="right"
+                    wrapperStyle={{ fontSize: 10 }}
+                    formatter={(value) => (
+                      <span style={{ color: "var(--color-vsc-text-muted)" }}>
+                        {value}
+                      </span>
+                    )}
                   />
                 </LineChart>
               </ResponsiveContainer>

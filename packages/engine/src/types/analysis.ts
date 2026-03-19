@@ -87,6 +87,8 @@ export interface SlipSurfaceResult {
   exitPoint: [number, number];
   /** Whether iterative solver converged for this surface. */
   converged?: boolean;
+  /** Lambda-Fm-Ff-gap rows for this surface (Morgenstern-Price only). */
+  lffArray?: [number, number, number, number][];
 }
 
 /** Slice data for detailed output. */
