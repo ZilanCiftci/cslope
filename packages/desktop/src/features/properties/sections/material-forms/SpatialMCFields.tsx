@@ -1,14 +1,24 @@
 import { Label } from "../../../../components/ui/Label";
-import { NumericInput } from "../../../../components/ui/NumericInput";
+import { ExpressionNumericInput } from "../../../../components/ui/ExpressionNumericInput";
 import { DataPointTable } from "../../../../components/ui/DataPointTable";
 import type { SpatialMohrCoulombModel } from "@cslope/engine";
+import type { MaterialExpressions } from "../../../../store/types";
 
 interface Props {
   model: SpatialMohrCoulombModel;
   onChange: (patch: Partial<SpatialMohrCoulombModel>) => void;
+  modelExpressions: MaterialExpressions | undefined;
+  parameterValues: Record<string, number>;
+  onExpressionChange: (field: string, expression: string | undefined) => void;
 }
 
-export function SpatialMCFields({ model, onChange }: Props) {
+export function SpatialMCFields({
+  model,
+  onChange,
+  modelExpressions,
+  parameterValues,
+  onExpressionChange,
+}: Props) {
   // Convert tuple data points to rows for DataPointTable
   const rows = model.dataPoints.map(([x, y, c, phi, gamma]) => [
     x,
@@ -38,9 +48,14 @@ export function SpatialMCFields({ model, onChange }: Props) {
       <div className="grid grid-cols-2 gap-2">
         <label className="flex flex-col gap-0.5">
           <Label>γ (kN/m³)</Label>
-          <NumericInput
+          <ExpressionNumericInput
             value={model.unitWeight}
+            expression={modelExpressions?.unitWeight}
+            vars={parameterValues}
             onValueChange={(unitWeight) => onChange({ unitWeight })}
+            onExpressionChange={(expr) =>
+              onExpressionChange("unitWeight", expr)
+            }
             min={0.01}
             fallbackValue={0.1}
             allowNegative={false}

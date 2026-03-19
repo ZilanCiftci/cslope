@@ -3,6 +3,7 @@ import { DevMenu } from "./DevMenu";
 import { EditMenu } from "./EditMenu";
 import { FileMenu } from "./FileMenu";
 import { HelpMenu } from "./HelpMenu";
+import { ResultsMenu } from "./ResultsMenu";
 import { ViewMenu } from "./ViewMenu";
 import type { CanvasToolbarState } from "../../../store/types";
 
@@ -13,7 +14,7 @@ interface Props {
   canvasToolbar: CanvasToolbarState | null;
 }
 
-type MenuKey = "file" | "edit" | "view" | "help" | "dev";
+type MenuKey = "file" | "edit" | "view" | "results" | "help" | "dev";
 
 export function MenuBar({ activeModelName, canvasToolbar }: Props) {
   const [activeMenu, setActiveMenu] = useState<MenuKey>("file");
@@ -48,6 +49,11 @@ export function MenuBar({ activeModelName, canvasToolbar }: Props) {
           canvasToolbar={canvasToolbar}
           isOpen={effectiveMenu === "view"}
           onActivate={() => setActiveMenu("view")}
+          panelHost={panelHost}
+        />
+        <ResultsMenu
+          isOpen={effectiveMenu === "results"}
+          onActivate={() => setActiveMenu("results")}
           panelHost={panelHost}
         />
         <HelpMenu

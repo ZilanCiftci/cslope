@@ -34,6 +34,8 @@ let interiorBoundariesWin: BrowserWindow | null;
 let udlWin: BrowserWindow | null;
 let lineLoadsWin: BrowserWindow | null;
 let piezoWin: BrowserWindow | null;
+let parametersWin: BrowserWindow | null;
+let resultsPlotWin: BrowserWindow | null;
 let splashTimeout: ReturnType<typeof setTimeout> | null = null;
 
 function showMainWindow() {
@@ -407,6 +409,86 @@ function createPiezoWindow() {
   }
 }
 
+function createParametersWindow() {
+  if (!win) return;
+
+  if (parametersWin && !parametersWin.isDestroyed()) {
+    parametersWin.show();
+    parametersWin.focus();
+    return;
+  }
+
+  parametersWin = new BrowserWindow({
+    width: 760,
+    height: 760,
+    minWidth: 640,
+    minHeight: 560,
+    title: "Parameters",
+    parent: win,
+    modal: false,
+    autoHideMenuBar: true,
+    icon: path.join(process.env.VITE_PUBLIC, "mountain.svg"),
+    webPreferences: {
+      preload: path.join(__dirname, "preload.mjs"),
+      contextIsolation: true,
+      nodeIntegration: false,
+      sandbox: true,
+    },
+  });
+
+  parametersWin.on("closed", () => {
+    parametersWin = null;
+  });
+
+  if (VITE_DEV_SERVER_URL) {
+    parametersWin.loadURL(`${VITE_DEV_SERVER_URL}#parameters-dialog`);
+  } else {
+    parametersWin.loadFile(path.join(RENDERER_DIST, "index.html"), {
+      hash: "parameters-dialog",
+    });
+  }
+}
+
+function createResultsPlotWindow() {
+  if (!win) return;
+
+  if (resultsPlotWin && !resultsPlotWin.isDestroyed()) {
+    resultsPlotWin.show();
+    resultsPlotWin.focus();
+    return;
+  }
+
+  resultsPlotWin = new BrowserWindow({
+    width: 980,
+    height: 760,
+    minWidth: 760,
+    minHeight: 560,
+    title: "Results Plot",
+    parent: win,
+    modal: false,
+    autoHideMenuBar: true,
+    icon: path.join(process.env.VITE_PUBLIC, "mountain.svg"),
+    webPreferences: {
+      preload: path.join(__dirname, "preload.mjs"),
+      contextIsolation: true,
+      nodeIntegration: false,
+      sandbox: true,
+    },
+  });
+
+  resultsPlotWin.on("closed", () => {
+    resultsPlotWin = null;
+  });
+
+  if (VITE_DEV_SERVER_URL) {
+    resultsPlotWin.loadURL(`${VITE_DEV_SERVER_URL}#results-plot-dialog`);
+  } else {
+    resultsPlotWin.loadFile(path.join(RENDERER_DIST, "index.html"), {
+      hash: "results-plot-dialog",
+    });
+  }
+}
+
 // When the renderer tells us it has mounted, show the main window
 // and close the splash screen.
 ipcMain.on("app:ready", () => {
@@ -455,6 +537,8 @@ ipcMain.on("window:openInteriorBoundariesDialog", () =>
 ipcMain.on("window:openUdlDialog", () => createUdlWindow());
 ipcMain.on("window:openLineLoadsDialog", () => createLineLoadsWindow());
 ipcMain.on("window:openPiezoDialog", () => createPiezoWindow());
+ipcMain.on("window:openParametersDialog", () => createParametersWindow());
+ipcMain.on("window:openResultsPlotDialog", () => createResultsPlotWindow());
 
 // ── Materials window sync IPC (main window <-> materials window) ─────
 
@@ -624,6 +708,50 @@ ipcMain.on("piezo:changed", (event, state) => {
   }
   if (event.sender === win?.webContents) {
     piezoWin?.webContents.send("piezo:changed", state);
+  }
+});
+
+// ── Parameters window sync IPC (main window <-> parameters window) ───────
+
+ipcMain.on("parameters:requestState", (event) => {
+  if (event.sender === parametersWin?.webContents) {
+    win?.webContents.send("parameters:requestState");
+  }
+});
+
+ipcMain.on("parameters:stateResponse", (event, state) => {
+  if (event.sender === win?.webContents) {
+    parametersWin?.webContents.send("parameters:stateResponse", state);
+  }
+});
+
+ipcMain.on("parameters:changed", (event, state) => {
+  if (event.sender === parametersWin?.webContents) {
+    win?.webContents.send("parameters:changed", state);
+    return;
+  }
+  if (event.sender === win?.webContents) {
+    parametersWin?.webContents.send("parameters:changed", state);
+  }
+});
+
+// ── Results plot window sync IPC (main window <-> results window) ───────
+
+ipcMain.on("resultsPlot:requestState", (event) => {
+  if (event.sender === resultsPlotWin?.webContents) {
+    win?.webContents.send("resultsPlot:requestState");
+  }
+});
+
+ipcMain.on("resultsPlot:stateResponse", (event, state) => {
+  if (event.sender === win?.webContents) {
+    resultsPlotWin?.webContents.send("resultsPlot:stateResponse", state);
+  }
+});
+
+ipcMain.on("resultsPlot:changed", (event, state) => {
+  if (event.sender === win?.webContents) {
+    resultsPlotWin?.webContents.send("resultsPlot:changed", state);
   }
 });
 

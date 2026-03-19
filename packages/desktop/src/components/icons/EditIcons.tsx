@@ -345,3 +345,48 @@ export function RibbonPiezoLineIcon({ size = 20 }: IconProps) {
     </svg>
   );
 }
+
+/** Coloured parameters icon – variable tag with fx marker. */
+export function RibbonParametersIcon({ size = 20 }: IconProps) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <rect
+        x="3"
+        y="4"
+        width="18"
+        height="16"
+        rx="2"
+        fill="#5c6bc0"
+        opacity="0.12"
+      />
+      <rect
+        x="3"
+        y="4"
+        width="18"
+        height="16"
+        rx="2"
+        stroke="#5c6bc0"
+        strokeWidth="1.5"
+      />
+      <path
+        d="M8 9h8M8 12h5"
+        stroke="#42a5f5"
+        strokeWidth="1.6"
+        strokeLinecap="round"
+      />
+      <path
+        d="M7.8 16.5h2.5M11.8 16.5h2.6"
+        stroke="#26a69a"
+        strokeWidth="1.6"
+        strokeLinecap="round"
+      />
+      <path
+        d="M10.7 15.3l-0.9 2.4M11.4 15.3l0.9 2.4"
+        stroke="#26a69a"
+        strokeWidth="1.2"
+        strokeLinecap="round"
+      />
+      <circle cx="16.8" cy="16.5" r="1.2" fill="#ef5350" />
+    </svg>
+  );
+}

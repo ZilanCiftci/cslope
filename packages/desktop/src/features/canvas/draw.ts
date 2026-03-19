@@ -24,6 +24,7 @@ import {
   drawTable,
   getAnnotationBoundsPx,
 } from "./helpers";
+import { resolveAnnotationText } from "../annotations/resolveAnnotationText";
 import type { PointHit } from "./types";
 import {
   ANNOTATION_DEFAULT_FONT_FAMILY,
@@ -149,6 +150,7 @@ export interface DrawCanvasParams {
   editingAssignment: boolean;
   selectedAnnotationIds: AppState["selectedAnnotationIds"];
   projectInfo: AppState["projectInfo"];
+  parameters: AppState["parameters"];
   analysisLimits: AppState["analysisLimits"];
   udls: AppState["udls"];
   lineLoads: AppState["lineLoads"];
@@ -194,6 +196,7 @@ export function drawCanvas(
     editingAssignment,
     selectedAnnotationIds,
     projectInfo,
+    parameters,
     analysisLimits,
     udls,
     lineLoads,
@@ -471,8 +474,14 @@ export function drawCanvas(
         }
       }
 
-      ctx.fillStyle = mat.color + "55";
+      ctx.fillStyle = mat.color;
       ctx.fill(region.holes ? "evenodd" : "nonzero");
+
+      if (mode === "result") {
+        ctx.strokeStyle = POLY_STROKE;
+        ctx.lineWidth = 0.6;
+        ctx.stroke();
+      }
 
       // ── Hatch pattern overlay for special model kinds ──
       const modelKind = mat.model?.kind;
@@ -580,12 +589,16 @@ export function drawCanvas(
     }
     ctx.closePath();
     ctx.strokeStyle = POLY_STROKE;
-    ctx.lineWidth = 2;
+    ctx.lineWidth = 1;
     ctx.stroke();
   }
 
   // ── Material boundary lines ─────────────────────────────
-  if (materialBoundaries.length > 0 && coordinates.length >= 3) {
+  if (
+    mode !== "result" &&
+    materialBoundaries.length > 0 &&
+    coordinates.length >= 3
+  ) {
     for (const b of materialBoundaries) {
       if (b.coordinates.length < 2) continue;
       const isSelectedBoundary =
@@ -596,7 +609,7 @@ export function drawCanvas(
       ctx.strokeStyle = isSelectedBoundary
         ? SELECTED_BOUNDARY_COLOR
         : POLY_STROKE;
-      ctx.lineWidth = isSelectedBoundary ? 3 : 2;
+      ctx.lineWidth = isSelectedBoundary ? 2 : 1;
       ctx.beginPath();
       const [sx, sy] = worldToCanvas(
         b.coordinates[0][0],
@@ -1286,11 +1299,21 @@ export function drawCanvas(
       // Sort by X
       surfacePts.sort((a, b) => a[0] - b[0]);
 
-      // Draw: surface line → then arc back
-      for (let i = 0; i < surfacePts.length; i++) {
+      // Keep top-edge direction as entry -> exit to avoid polygon self-intersection
+      // when entry X is greater than exit X (e.g. mirrored/oriented views).
+      const topForward = cs.entryPoint[0] <= cs.exitPoint[0];
+
+      const topPtsOrdered = [...surfacePts].filter(([x, y]) => {
+        const topY = surfaceYAtX(x);
+        return topY !== null && Math.abs(y - topY) < 0.001;
+      });
+      topPtsOrdered.sort((a, b) => (topForward ? a[0] - b[0] : b[0] - a[0]));
+
+      // Draw: surface line (entry -> exit) -> then arc back (exit -> entry)
+      for (let i = 0; i < topPtsOrdered.length; i++) {
         const [px, py] = worldToCanvas(
-          surfacePts[i][0],
-          surfacePts[i][1],
+          topPtsOrdered[i][0],
+          topPtsOrdered[i][1],
           w,
           h,
         );
@@ -1536,24 +1559,6 @@ export function drawCanvas(
     // Scale factor for annotations based on paper frame size
     const annoScale = Math.min(pf.w, pf.h) / ANNOTATION_SCALE_DIVISOR;
 
-    const resolveAnnotationText = (text: string) => {
-      if (!text) return "";
-      return text
-        .replace(/#Title/gi, projectInfo.title)
-        .replace(/#Subtitle/gi, projectInfo.subtitle)
-        .replace(/#Client/gi, projectInfo.client)
-        .replace(/#ProjectNumber/gi, projectInfo.projectNumber)
-        .replace(/#Revision/gi, projectInfo.revision)
-        .replace(/#Author/gi, projectInfo.author)
-        .replace(/#Checker/gi, projectInfo.checker)
-        .replace(/#Date/gi, projectInfo.date)
-        .replace(/#Description/gi, projectInfo.description)
-        .replace(/#FOS/gi, result.minFOS.toFixed(3))
-        .replace(/#MinFOS/gi, result.minFOS.toFixed(3))
-        .replace(/#Method/gi, result.method)
-        .replace(/\n/g, "\n");
-    };
-
     for (const anno of annotations) {
       // Convert fractional paper-frame coordinates to canvas pixels
       const ax = pf.x + anno.x * pf.w;
@@ -1565,7 +1570,12 @@ export function drawCanvas(
         const family = anno.fontFamily ?? ANNOTATION_DEFAULT_FONT_FAMILY;
         const weight = anno.bold ? "bold" : "normal";
         const style = anno.italic ? "italic" : "normal";
-        const resolvedText = resolveAnnotationText(anno.text ?? "");
+        const resolvedText = resolveAnnotationText({
+          text: anno.text ?? "",
+          projectInfo,
+          result,
+          parameters,
+        });
         ctx.fillStyle = anno.color ?? ANNOTATION_DEFAULT_TEXT_COLOR;
         ctx.font = `${style} ${weight} ${fontSize}px ${family}`;
         ctx.textAlign = "left";
@@ -1679,6 +1689,7 @@ export function drawCanvas(
           result,
           materials,
           projectInfo,
+          parameters,
         });
         ctx.save();
         ctx.strokeStyle = "#0078d4";

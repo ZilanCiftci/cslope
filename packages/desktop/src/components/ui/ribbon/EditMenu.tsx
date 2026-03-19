@@ -17,6 +17,7 @@ import {
   RibbonUdlIcon,
   RibbonLineLoadIcon,
   RibbonPiezoLineIcon,
+  RibbonParametersIcon,
 } from "../../icons/EditIcons";
 import {
   RibbonFitIcon,
@@ -226,13 +227,26 @@ export function EditMenu({
 
             <RibbonSep />
 
-            <RibbonGroup label="Pore Water Pressure">
+            <RibbonGroup label="Water Pressure">
               <RibbonButton
                 icon={<RibbonPiezoLineIcon />}
                 label="Piezometric Lines"
                 onClick={() => {
                   setActiveSection("Piezometric Lines");
                   window.cslope.openPiezoDialog();
+                }}
+              />
+            </RibbonGroup>
+
+            <RibbonSep />
+
+            <RibbonGroup label="Parameters">
+              <RibbonButton
+                icon={<RibbonParametersIcon />}
+                label="Define"
+                onClick={() => {
+                  setActiveSection("Parameters");
+                  window.cslope.openParametersDialog();
                 }}
               />
             </RibbonGroup>

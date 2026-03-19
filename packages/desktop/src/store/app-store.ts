@@ -7,6 +7,7 @@ import { createGeometrySlice } from "./slices/geometrySlice";
 import { createLayoutSlice } from "./slices/layoutSlice";
 import { createLoadsSlice } from "./slices/loadsSlice";
 import { createModelsSlice } from "./slices/modelsSlice";
+import { createParametersSlice } from "./slices/parametersSlice";
 import { createResultViewSlice } from "./slices/resultViewSlice";
 import { createViewportSlice } from "./slices/viewportSlice";
 export * from "./types";
@@ -22,6 +23,8 @@ type UndoableState = Pick<
   AppState,
   | "orientation"
   | "coordinates"
+  | "coordinateExpressions"
+  | "parameters"
   | "materials"
   | "materialBoundaries"
   | "regionMaterials"
@@ -39,6 +42,7 @@ export const useAppStore = create<AppState>()(
       ...createLayoutSlice(...args),
       ...createModelsSlice(...args),
       ...createGeometrySlice(...args),
+      ...createParametersSlice(...args),
       ...createLoadsSlice(...args),
       ...createAnalysisSlice(...args),
       ...createViewportSlice(...args),
@@ -49,6 +53,8 @@ export const useAppStore = create<AppState>()(
       partialize: (state): UndoableState => ({
         orientation: state.orientation,
         coordinates: state.coordinates,
+        coordinateExpressions: state.coordinateExpressions,
+        parameters: state.parameters,
         materials: state.materials,
         materialBoundaries: state.materialBoundaries,
         regionMaterials: state.regionMaterials,

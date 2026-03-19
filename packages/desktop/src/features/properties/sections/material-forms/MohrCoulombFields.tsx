@@ -1,21 +1,36 @@
 import { Label } from "../../../../components/ui/Label";
-import { NumericInput } from "../../../../components/ui/NumericInput";
+import { ExpressionNumericInput } from "../../../../components/ui/ExpressionNumericInput";
 import type { MohrCoulombModel } from "@cslope/engine";
+import type { MaterialExpressions } from "../../../../store/types";
 
 interface Props {
   model: MohrCoulombModel;
   onChange: (patch: Partial<MohrCoulombModel>) => void;
+  modelExpressions: MaterialExpressions | undefined;
+  parameterValues: Record<string, number>;
+  onExpressionChange: (field: string, expression: string | undefined) => void;
 }
 
-export function MohrCoulombFields({ model, onChange }: Props) {
+export function MohrCoulombFields({
+  model,
+  onChange,
+  modelExpressions,
+  parameterValues,
+  onExpressionChange,
+}: Props) {
   return (
     <>
       <div className="grid grid-cols-3 gap-2">
         <label className="flex flex-col gap-0.5">
           <Label>γ (kN/m³)</Label>
-          <NumericInput
+          <ExpressionNumericInput
             value={model.unitWeight}
+            expression={modelExpressions?.unitWeight}
+            vars={parameterValues}
             onValueChange={(unitWeight) => onChange({ unitWeight })}
+            onExpressionChange={(expr) =>
+              onExpressionChange("unitWeight", expr)
+            }
             min={0.01}
             fallbackValue={0.1}
             allowNegative={false}
@@ -30,9 +45,14 @@ export function MohrCoulombFields({ model, onChange }: Props) {
         </label>
         <label className="flex flex-col gap-0.5">
           <Label>φ (°)</Label>
-          <NumericInput
+          <ExpressionNumericInput
             value={model.frictionAngle}
+            expression={modelExpressions?.frictionAngle}
+            vars={parameterValues}
             onValueChange={(frictionAngle) => onChange({ frictionAngle })}
+            onExpressionChange={(expr) =>
+              onExpressionChange("frictionAngle", expr)
+            }
             min={0}
             fallbackValue={0}
             allowNegative={false}
@@ -47,9 +67,12 @@ export function MohrCoulombFields({ model, onChange }: Props) {
         </label>
         <label className="flex flex-col gap-0.5">
           <Label>c (kPa)</Label>
-          <NumericInput
+          <ExpressionNumericInput
             value={model.cohesion}
+            expression={modelExpressions?.cohesion}
+            vars={parameterValues}
             onValueChange={(cohesion) => onChange({ cohesion })}
+            onExpressionChange={(expr) => onExpressionChange("cohesion", expr)}
             min={0}
             fallbackValue={0}
             allowNegative={false}

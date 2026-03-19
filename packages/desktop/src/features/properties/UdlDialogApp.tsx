@@ -2,17 +2,31 @@ import { useEffect, useRef, useState } from "react";
 import { isElectron } from "../../utils/is-electron";
 import { Label } from "../../components/ui/Label";
 import {
-  SpreadsheetNumberInput,
   SpreadsheetRemoveButton,
   SpreadsheetTable,
   type SpreadsheetColumn,
 } from "../../components/ui/SpreadsheetTable";
+import { SpreadsheetExpressionInput } from "../../components/ui/SpreadsheetExpressionInput";
 import { useAppStore } from "../../store/app-store";
-import type { LineLoadRow, UdlRow } from "../../store/types";
+import type { LineLoadRow, ParameterDef, UdlRow } from "../../store/types";
+import { resolveParameters } from "../../utils/expression";
 
 interface LoadsStatePayload {
   udls: UdlRow[];
   lineLoads: LineLoadRow[];
+  parameters?: ParameterDef[];
+}
+
+function normalizeLoadsPayload(
+  payload: LoadsStatePayload | null | undefined,
+): LoadsStatePayload | null {
+  if (!payload || typeof payload !== "object") {
+    return null;
+  }
+  if (!Array.isArray(payload.udls) || !Array.isArray(payload.lineLoads)) {
+    return null;
+  }
+  return payload;
 }
 
 export function UdlDialogApp() {
@@ -21,6 +35,7 @@ export function UdlDialogApp() {
   const addUdl = useAppStore((s) => s.addUdl);
   const updateUdl = useAppStore((s) => s.updateUdl);
   const removeUdl = useAppStore((s) => s.removeUdl);
+  const parameters = useAppStore((s) => s.parameters);
   const [isHydrated, setIsHydrated] = useState(!isElectron);
   const suppressNextBroadcastRef = useRef(false);
 
@@ -28,11 +43,23 @@ export function UdlDialogApp() {
     if (!isElectron) return;
 
     const applyState = (_event: unknown, next: LoadsStatePayload) => {
+      const normalized = normalizeLoadsPayload(next);
+      if (!normalized) return;
       suppressNextBroadcastRef.current = true;
-      useAppStore.setState({
-        udls: next.udls,
-        lineLoads: next.lineLoads,
-      });
+      const patch: {
+        udls: UdlRow[];
+        lineLoads: LineLoadRow[];
+        parameters?: ParameterDef[];
+      } = {
+        udls: normalized.udls,
+        lineLoads: normalized.lineLoads,
+      };
+
+      if (Array.isArray(normalized.parameters)) {
+        patch.parameters = normalized.parameters;
+      }
+
+      useAppStore.setState(patch);
       setIsHydrated(true);
     };
 
@@ -54,13 +81,23 @@ export function UdlDialogApp() {
       return;
     }
 
-    window.cslope.sendLoadsChanged({ udls, lineLoads });
-  }, [udls, lineLoads, isHydrated]);
+    window.cslope.sendLoadsChanged({ udls, lineLoads, parameters });
+  }, [udls, lineLoads, parameters, isHydrated]);
 
-  const clampNumber = (value: string, min: number) => {
-    const parsed = parseFloat(value);
-    if (!Number.isFinite(parsed)) return min;
-    return parsed < min ? min : parsed;
+  const parameterValues = resolveParameters(parameters).resolved;
+
+  const setUdlExpression = (
+    row: UdlRow,
+    field: "magnitude" | "x1" | "x2",
+    expression: string | undefined,
+  ) => {
+    const nextExpressions = { ...(row.expressions ?? {}) };
+    if (!expression || expression.trim().length === 0) {
+      delete nextExpressions[field];
+    } else {
+      nextExpressions[field] = expression;
+    }
+    updateUdl(row.id, { expressions: nextExpressions });
   };
 
   const columns: SpreadsheetColumn<UdlRow>[] = [
@@ -79,32 +116,43 @@ export function UdlDialogApp() {
     {
       header: <Label>q (kPa)</Label>,
       renderCell: (row) => (
-        <SpreadsheetNumberInput
+        <SpreadsheetExpressionInput
           value={row.magnitude}
-          step="1"
+          expression={row.expressions?.magnitude}
+          vars={parameterValues}
           ariaLabel="UDL magnitude"
-          onChange={(v) => updateUdl(row.id, { magnitude: parseFloat(v) || 0 })}
-          onBlur={(v) => updateUdl(row.id, { magnitude: clampNumber(v, 0.1) })}
+          onResolvedValue={(nextMagnitude) =>
+            updateUdl(row.id, { magnitude: Math.max(0.1, nextMagnitude) })
+          }
+          onExpressionChange={(expr) =>
+            setUdlExpression(row, "magnitude", expr)
+          }
         />
       ),
     },
     {
       header: <Label>x1</Label>,
       renderCell: (row) => (
-        <SpreadsheetNumberInput
+        <SpreadsheetExpressionInput
           value={row.x1}
+          expression={row.expressions?.x1}
+          vars={parameterValues}
           ariaLabel="UDL x1"
-          onChange={(v) => updateUdl(row.id, { x1: parseFloat(v) || 0 })}
+          onResolvedValue={(nextX1) => updateUdl(row.id, { x1: nextX1 })}
+          onExpressionChange={(expr) => setUdlExpression(row, "x1", expr)}
         />
       ),
     },
     {
       header: <Label>x2</Label>,
       renderCell: (row) => (
-        <SpreadsheetNumberInput
+        <SpreadsheetExpressionInput
           value={row.x2}
+          expression={row.expressions?.x2}
+          vars={parameterValues}
           ariaLabel="UDL x2"
-          onChange={(v) => updateUdl(row.id, { x2: parseFloat(v) || 0 })}
+          onResolvedValue={(nextX2) => updateUdl(row.id, { x2: nextX2 })}
+          onExpressionChange={(expr) => setUdlExpression(row, "x2", expr)}
         />
       ),
     },

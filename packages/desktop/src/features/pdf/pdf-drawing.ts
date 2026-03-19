@@ -38,10 +38,7 @@ import {
   MODEL_HATCH_PATTERNS,
   MODEL_SHORT_LABELS,
 } from "../rendering/style-spec";
-import {
-  drawPdfHatch,
-  drawPdfHatchLabel,
-} from "../rendering/hatch";
+import { drawPdfHatch, drawPdfHatchLabel } from "../rendering/hatch";
 import type { AnalysisResult } from "@cslope/engine";
 import type {
   AnalysisLimitsState,
@@ -49,6 +46,7 @@ import type {
   MaterialBoundaryRow,
   MaterialRow,
   ModelOrientation,
+  ParameterDef,
   ProjectInfo,
   RegionMaterials,
   ResultViewSettings,
@@ -65,6 +63,7 @@ import {
   type PdfTransform,
 } from "./pdf-helpers";
 import { surfaceYAtX } from "../view/surface";
+import { resolveAnnotationText } from "../annotations/resolveAnnotationText";
 
 export function drawGrid(
   pdf: jsPDF,
@@ -721,6 +720,7 @@ export function drawAnnotations(
   result: AnalysisResult,
   materials: MaterialRow[],
   projectInfo: Partial<ProjectInfo>,
+  parameters: ParameterDef[],
   paperFrame: { x: number; y: number; w: number; h: number },
 ) {
   const annoScale = Math.min(tf.paperW, tf.paperH) / ANNOTATION_SCALE_DIVISOR;
@@ -730,7 +730,16 @@ export function drawAnnotations(
     const ay = paperFrame.y + anno.y * paperFrame.h;
 
     if (anno.type === "text") {
-      drawTextAnnotation(pdf, ax, ay, anno, annoScale, projectInfo, result);
+      drawTextAnnotation(
+        pdf,
+        ax,
+        ay,
+        anno,
+        annoScale,
+        projectInfo,
+        result,
+        parameters,
+      );
     } else if (anno.type === "color-bar" && result.allSurfaces.length > 1) {
       drawColorBarAnnotation(pdf, ax, ay, result, annoScale);
     } else if (anno.type === "input-params") {
@@ -762,38 +771,6 @@ export function drawAnnotations(
   }
 }
 
-function resolveAnnotationText(
-  text: string,
-  projectInfo: Partial<ProjectInfo>,
-  result?: AnalysisResult,
-): string {
-  if (!text) return "";
-  let t = text;
-
-  if (projectInfo) {
-    t = t.replace(/#Title/gi, projectInfo.title ?? "");
-    t = t.replace(/#Subtitle/gi, projectInfo.subtitle ?? "");
-    t = t.replace(/#Date/gi, projectInfo.date ?? "");
-    t = t.replace(/#Author/gi, projectInfo.author ?? "");
-    t = t.replace(/#Client/gi, projectInfo.client ?? "");
-    t = t.replace(/#ProjectNumber/gi, projectInfo.projectNumber ?? "");
-    t = t.replace(/#Revision/gi, projectInfo.revision ?? "");
-    t = t.replace(/#Checker/gi, projectInfo.checker ?? "");
-    t = t.replace(/#Description/gi, projectInfo.description ?? "");
-  }
-
-  if (result) {
-    t = t.replace(/#Method/gi, result.method);
-    const minFOS = result.minFOS?.toFixed(3) ?? "N/A";
-    t = t.replace(/#FOS/gi, minFOS);
-    t = t.replace(/#MinFOS/gi, minFOS);
-  }
-
-  t = t.replace(/\\n/g, "\n");
-
-  return t;
-}
-
 function drawTextAnnotation(
   pdf: jsPDF,
   x: number,
@@ -802,6 +779,7 @@ function drawTextAnnotation(
   scale: number,
   projectInfo: Partial<ProjectInfo>,
   result: AnalysisResult,
+  parameters: ParameterDef[],
 ) {
   const fontSize = (anno.fontSize ?? ANNOTATION_DEFAULT_FONT_SIZE) * scale;
   const ptSize = Math.max(8, fontSize / 0.3528);
@@ -814,7 +792,12 @@ function drawTextAnnotation(
   const [r, g, b] = parseColor(anno.color ?? ANNOTATION_DEFAULT_TEXT_COLOR);
   pdf.setTextColor(r, g, b);
 
-  const resolved = resolveAnnotationText(anno.text ?? "", projectInfo, result);
+  const resolved = resolveAnnotationText({
+    text: anno.text ?? "",
+    projectInfo,
+    result,
+    parameters,
+  });
   const lines = resolved.split("\n");
   const lineHeight = fontSize * ANNOTATION_LINE_HEIGHT;
 

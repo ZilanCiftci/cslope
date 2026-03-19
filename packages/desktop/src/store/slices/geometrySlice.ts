@@ -1,5 +1,6 @@
 import {
   DEFAULT_COORDS,
+  DEFAULT_COORDINATE_EXPRESSIONS,
   DEFAULT_MATERIAL,
   DEFAULT_PIEZO_LINE,
   PIEZO_COLORS,
@@ -26,6 +27,8 @@ const syncActiveModel = (
     orientation: patch.orientation ?? state.orientation,
     projectInfo: patch.projectInfo ?? state.projectInfo,
     coordinates: patch.coordinates ?? state.coordinates,
+    coordinateExpressions:
+      patch.coordinateExpressions ?? state.coordinateExpressions,
     materials: patch.materials ?? state.materials,
     materialBoundaries: patch.materialBoundaries ?? state.materialBoundaries,
     regionMaterials: patch.regionMaterials ?? state.regionMaterials,
@@ -39,10 +42,17 @@ const syncActiveModel = (
   };
 };
 
+const alignCoordinateExpressions = (
+  coordinates: [number, number][],
+  existing: GeometrySlice["coordinateExpressions"],
+): GeometrySlice["coordinateExpressions"] =>
+  coordinates.map((_, i) => existing[i] ?? {});
+
 export const createGeometrySlice: SliceCreator<GeometrySlice> = (set, get) => ({
   orientation: "ltr",
   projectInfo: createDefaultProjectInfo(),
   coordinates: DEFAULT_COORDS,
+  coordinateExpressions: [...DEFAULT_COORDINATE_EXPRESSIONS],
   materials: [{ ...DEFAULT_MATERIAL }],
   materialBoundaries: [],
   regionMaterials: [],
@@ -67,26 +77,67 @@ export const createGeometrySlice: SliceCreator<GeometrySlice> = (set, get) => ({
   setSelectedRegionKey: (key) => set({ selectedRegionKey: key }),
 
   setCoordinates: (coords) => {
-    set((s) => syncActiveModel(s, { coordinates: coords }));
+    set((s) =>
+      syncActiveModel(s, {
+        coordinates: coords,
+        coordinateExpressions: alignCoordinateExpressions(
+          coords,
+          s.coordinateExpressions,
+        ),
+      }),
+    );
     get().invalidateAnalysis();
   },
   setCoordinate: (index, coord) => {
     set((s) => {
       const next = [...s.coordinates];
       next[index] = coord;
-      return syncActiveModel(s, { coordinates: next });
+      return syncActiveModel(s, {
+        coordinates: next,
+        coordinateExpressions: alignCoordinateExpressions(
+          next,
+          s.coordinateExpressions,
+        ),
+      });
+    });
+    get().invalidateAnalysis();
+  },
+  setCoordinateExpression: (index, axis, expr) => {
+    set((s) => {
+      const next = alignCoordinateExpressions(
+        s.coordinates,
+        s.coordinateExpressions,
+      );
+      const current = { ...(next[index] ?? {}) };
+      if (!expr || expr.trim().length === 0) {
+        delete current[axis];
+      } else {
+        current[axis] = expr;
+      }
+      next[index] = current;
+      return syncActiveModel(s, { coordinateExpressions: next });
     });
     get().invalidateAnalysis();
   },
   addCoordinate: (coord) => {
-    set((s) => syncActiveModel(s, { coordinates: [...s.coordinates, coord] }));
+    set((s) =>
+      syncActiveModel(s, {
+        coordinates: [...s.coordinates, coord],
+        coordinateExpressions: [...s.coordinateExpressions, {}],
+      }),
+    );
     get().invalidateAnalysis();
   },
   insertCoordinateAt: (index, coord) => {
     set((s) => {
       const next = [...s.coordinates];
       next.splice(index, 0, coord);
-      return syncActiveModel(s, { coordinates: next });
+      const nextExpr = [...s.coordinateExpressions];
+      nextExpr.splice(index, 0, {});
+      return syncActiveModel(s, {
+        coordinates: next,
+        coordinateExpressions: nextExpr,
+      });
     });
     get().invalidateAnalysis();
   },
@@ -94,6 +145,9 @@ export const createGeometrySlice: SliceCreator<GeometrySlice> = (set, get) => ({
     set((s) =>
       syncActiveModel(s, {
         coordinates: s.coordinates.filter((_, i) => i !== index),
+        coordinateExpressions: s.coordinateExpressions.filter(
+          (_, i) => i !== index,
+        ),
       }),
     );
     get().invalidateAnalysis();
@@ -140,6 +194,7 @@ export const createGeometrySlice: SliceCreator<GeometrySlice> = (set, get) => ({
             id: nextId("mat"),
             name: `Material ${s.materials.length + 1}`,
             color: MATERIAL_COLORS[s.materials.length % MATERIAL_COLORS.length],
+            modelExpressions: {},
             model: createDefaultModel("mohr-coulomb", 20),
           },
         ],
@@ -161,7 +216,14 @@ export const createGeometrySlice: SliceCreator<GeometrySlice> = (set, get) => ({
     const id = nextId("bnd");
     set((s) =>
       syncActiveModel(s, {
-        materialBoundaries: [...s.materialBoundaries, { id, coordinates }],
+        materialBoundaries: [
+          ...s.materialBoundaries,
+          {
+            id,
+            coordinates,
+            coordinateExpressions: coordinates.map(() => ({})),
+          },
+        ],
       }),
     );
     get().invalidateAnalysis();
@@ -199,7 +261,11 @@ export const createGeometrySlice: SliceCreator<GeometrySlice> = (set, get) => ({
       syncActiveModel(s, {
         materialBoundaries: s.materialBoundaries.map((b) =>
           b.id === boundaryId
-            ? { ...b, coordinates: [...b.coordinates, coord] }
+            ? {
+                ...b,
+                coordinates: [...b.coordinates, coord],
+                coordinateExpressions: [...(b.coordinateExpressions ?? []), {}],
+              }
             : b,
         ),
       }),
@@ -219,6 +285,11 @@ export const createGeometrySlice: SliceCreator<GeometrySlice> = (set, get) => ({
                   coord,
                   ...b.coordinates.slice(index),
                 ],
+                coordinateExpressions: [
+                  ...(b.coordinateExpressions ?? []).slice(0, index),
+                  {},
+                  ...(b.coordinateExpressions ?? []).slice(index),
+                ],
               }
             : b,
         ),
@@ -234,7 +305,13 @@ export const createGeometrySlice: SliceCreator<GeometrySlice> = (set, get) => ({
           if (b.id !== boundaryId) return b;
           const next = [...b.coordinates];
           next[index] = coord;
-          return { ...b, coordinates: next };
+          return {
+            ...b,
+            coordinates: next,
+            coordinateExpressions: next.map(
+              (_, i) => b.coordinateExpressions?.[i] ?? {},
+            ),
+          };
         }),
       }),
     );
@@ -249,6 +326,9 @@ export const createGeometrySlice: SliceCreator<GeometrySlice> = (set, get) => ({
             ? {
                 ...b,
                 coordinates: b.coordinates.filter((_, i) => i !== index),
+                coordinateExpressions: (b.coordinateExpressions ?? []).filter(
+                  (_, i) => i !== index,
+                ),
               }
             : b,
         ),
@@ -313,6 +393,7 @@ export const createGeometrySlice: SliceCreator<GeometrySlice> = (set, get) => ({
       name: `Line ${idx + 1}`,
       color,
       coordinates: coords ?? [],
+      coordinateExpressions: (coords ?? []).map(() => ({})),
     };
     set((state) =>
       syncActiveModel(state, {
@@ -385,7 +466,13 @@ export const createGeometrySlice: SliceCreator<GeometrySlice> = (set, get) => ({
             if (l.id !== activeId) return l;
             const coords = [...l.coordinates];
             coords[index] = coord;
-            return { ...l, coordinates: coords };
+            return {
+              ...l,
+              coordinates: coords,
+              coordinateExpressions: coords.map(
+                (_, i) => l.coordinateExpressions?.[i] ?? {},
+              ),
+            };
           }),
         },
       });
@@ -402,7 +489,14 @@ export const createGeometrySlice: SliceCreator<GeometrySlice> = (set, get) => ({
           ...s.piezometricLine,
           lines: s.piezometricLine.lines.map((l) =>
             l.id === activeId
-              ? { ...l, coordinates: [...l.coordinates, coord] }
+              ? {
+                  ...l,
+                  coordinates: [...l.coordinates, coord],
+                  coordinateExpressions: [
+                    ...(l.coordinateExpressions ?? []),
+                    {},
+                  ],
+                }
               : l,
           ),
         },
@@ -422,7 +516,9 @@ export const createGeometrySlice: SliceCreator<GeometrySlice> = (set, get) => ({
             if (l.id !== activeId) return l;
             const coords = [...l.coordinates];
             coords.splice(index, 0, coord);
-            return { ...l, coordinates: coords };
+            const coordinateExpressions = [...(l.coordinateExpressions ?? [])];
+            coordinateExpressions.splice(index, 0, {});
+            return { ...l, coordinates: coords, coordinateExpressions };
           }),
         },
       });
@@ -442,6 +538,9 @@ export const createGeometrySlice: SliceCreator<GeometrySlice> = (set, get) => ({
               ? {
                   ...l,
                   coordinates: l.coordinates.filter((_, i) => i !== index),
+                  coordinateExpressions: (l.coordinateExpressions ?? []).filter(
+                    (_, i) => i !== index,
+                  ),
                 }
               : l,
           ),
@@ -495,6 +594,7 @@ export const createGeometrySlice: SliceCreator<GeometrySlice> = (set, get) => ({
         [minX, midY],
         [maxX, midY],
       ],
+      coordinateExpressions: [{}, {}],
     };
     set((state) =>
       syncActiveModel(state, {

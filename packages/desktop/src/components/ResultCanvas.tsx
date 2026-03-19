@@ -85,6 +85,7 @@ export function ResultCanvas() {
     snapToGrid,
     gridSnapSize,
     projectInfo,
+    parameters,
   } = useCanvasModelState();
   const resultViewSettingsForRender = useMemo(() => {
     if (!annotationStylePreview || !annotationStylePreview.draft) {
@@ -379,6 +380,7 @@ export function ResultCanvas() {
       editingAssignment,
       selectedAnnotationIds,
       projectInfo,
+      parameters,
       analysisLimits,
       udls,
       lineLoads,
@@ -426,6 +428,7 @@ export function ResultCanvas() {
       resultViewSettingsForRender,
       selectedAnnotationIds,
       projectInfo,
+      parameters,
     ],
   );
 
@@ -584,6 +587,7 @@ export function ResultCanvas() {
         resultViewSettings,
         materials,
         projectInfo,
+        parameters,
         canvas,
         width: w,
         height: h,
@@ -734,6 +738,7 @@ export function ResultCanvas() {
         resultViewSettings,
         materials,
         projectInfo,
+        parameters,
         canvas,
         width: w,
         height: h,
@@ -778,6 +783,7 @@ export function ResultCanvas() {
     materials,
     piezometricLine,
     projectInfo,
+    parameters,
     result,
     resultViewSettings,
     surfaceYAtX,

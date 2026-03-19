@@ -2,6 +2,7 @@ import type {
   AnalysisResult,
   Annotation,
   MaterialRow,
+  ParameterDef,
   ProjectInfo,
   ResultViewSettings,
 } from "../../store/types";
@@ -9,6 +10,7 @@ import { circleArcPoints } from "../../utils/arc";
 import { computePaperFrame } from "../view/paper";
 import { MODEL_SHORT_LABELS } from "../rendering/style-spec";
 import { flatFieldsFromModel } from "../properties/sections/material-forms/model-defaults";
+import { resolveAnnotationText } from "../annotations/resolveAnnotationText";
 
 export { computePaperFrame } from "../view/paper";
 
@@ -165,28 +167,6 @@ export function drawTable(
   }
 }
 
-function resolveAnnotationText(
-  text: string,
-  result: AnalysisResult,
-  projectInfo: ProjectInfo,
-) {
-  if (!text) return "";
-  return text
-    .replace(/#Title/gi, projectInfo.title)
-    .replace(/#Subtitle/gi, projectInfo.subtitle)
-    .replace(/#Client/gi, projectInfo.client)
-    .replace(/#ProjectNumber/gi, projectInfo.projectNumber)
-    .replace(/#Revision/gi, projectInfo.revision)
-    .replace(/#Author/gi, projectInfo.author)
-    .replace(/#Checker/gi, projectInfo.checker)
-    .replace(/#Date/gi, projectInfo.date)
-    .replace(/#Description/gi, projectInfo.description)
-    .replace(/#FOS/gi, result.minFOS.toFixed(3))
-    .replace(/#MinFOS/gi, result.minFOS.toFixed(3))
-    .replace(/#Method/gi, result.method)
-    .replace(/\n/g, "\n");
-}
-
 function measureParamBlock(
   ctx: CanvasRenderingContext2D,
   title: string,
@@ -249,6 +229,7 @@ export function getAnnotationBoundsPx(
     result: AnalysisResult;
     materials: MaterialRow[];
     projectInfo: ProjectInfo;
+    parameters: ParameterDef[];
   },
 ): { x: number; y: number; w: number; h: number } {
   const {
@@ -257,6 +238,7 @@ export function getAnnotationBoundsPx(
     result,
     materials,
     projectInfo,
+    parameters,
   } = params;
 
   const annoScale = Math.min(pf.w, pf.h) / 600;
@@ -269,11 +251,12 @@ export function getAnnotationBoundsPx(
     const weight = anno.bold ? "bold" : "normal";
     const style = anno.italic ? "italic" : "normal";
     const fontSize = (anno.fontSize ?? 12) * annoScale;
-    const resolved = resolveAnnotationText(
-      anno.text ?? "",
-      result,
+    const resolved = resolveAnnotationText({
+      text: anno.text ?? "",
       projectInfo,
-    );
+      result,
+      parameters,
+    });
     const lines = resolved.split("\n");
     const lineHeight = fontSize * 1.2;
 
@@ -485,6 +468,7 @@ export function extendBoundsWithResultFitExtras(params: {
   resultViewSettings: ResultViewSettings;
   materials: MaterialRow[];
   projectInfo: ProjectInfo;
+  parameters: ParameterDef[];
   canvas: HTMLCanvasElement | null;
   width: number;
   height: number;
@@ -501,6 +485,7 @@ export function extendBoundsWithResultFitExtras(params: {
     resultViewSettings,
     materials,
     projectInfo,
+    parameters,
     canvas,
     width,
     height,
@@ -572,24 +557,6 @@ export function extendBoundsWithResultFitExtras(params: {
   );
   const annoScale = Math.min(pf.w, pf.h) / 600;
 
-  const resolveAnnotationText = (text: string) => {
-    if (!text) return "";
-    return text
-      .replace(/#Title/gi, projectInfo.title)
-      .replace(/#Subtitle/gi, projectInfo.subtitle)
-      .replace(/#Client/gi, projectInfo.client)
-      .replace(/#ProjectNumber/gi, projectInfo.projectNumber)
-      .replace(/#Revision/gi, projectInfo.revision)
-      .replace(/#Author/gi, projectInfo.author)
-      .replace(/#Checker/gi, projectInfo.checker)
-      .replace(/#Date/gi, projectInfo.date)
-      .replace(/#Description/gi, projectInfo.description)
-      .replace(/#FOS/gi, result.minFOS.toFixed(3))
-      .replace(/#MinFOS/gi, result.minFOS.toFixed(3))
-      .replace(/#Method/gi, result.method)
-      .replace(/\n/g, "\n");
-  };
-
   const measureParamBlock = (title: string, lines: string[]) => {
     const padding = 8 * annoScale;
     const lineHeight = 16 * annoScale;
@@ -643,7 +610,12 @@ export function extendBoundsWithResultFitExtras(params: {
       const family = anno.fontFamily ?? "sans-serif";
       const weight = anno.bold ? "bold" : "normal";
       const style = anno.italic ? "italic" : "normal";
-      const resolvedText = resolveAnnotationText(anno.text ?? "");
+      const resolvedText = resolveAnnotationText({
+        text: anno.text ?? "",
+        projectInfo,
+        result,
+        parameters,
+      });
       const lines = resolvedText.split("\n");
       const lineHeight = fontSize * 1.2;
 

@@ -5,6 +5,7 @@ import type {
   MaterialBoundaryRow,
   MaterialRow,
   ModelOrientation,
+  ParameterDef,
   PaperSize,
   ProjectInfo,
   RegionMaterials,
@@ -81,6 +82,7 @@ export interface PdfExportData {
   analysisLimits: AnalysisLimitsState;
   orientation: ModelOrientation;
   projectInfo?: ProjectInfo;
+  parameters?: ParameterDef[];
   viewBounds?: PdfViewBounds;
 }
 
@@ -129,6 +131,7 @@ export function exportVectorPdf(data: PdfExportData): void {
       analysisLimits,
       orientation,
       projectInfo,
+      parameters,
       viewBounds,
     } = data;
 
@@ -344,6 +347,7 @@ export function exportVectorPdf(data: PdfExportData): void {
       result,
       materials,
       projectInfo || {},
+      parameters ?? [],
       annotationFrame,
     );
 

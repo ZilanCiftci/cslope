@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { MaterialAssignmentSection } from "./sections/MaterialAssignmentSection";
 import { isElectron } from "../../utils/is-electron";
 import { useAppStore } from "../../store/app-store";
@@ -25,6 +25,7 @@ export function MaterialAssignmentDialogApp() {
   const setMaterialBoundaries = useAppStore((s) => s.setMaterialBoundaries);
   const setRegionMaterials = useAppStore((s) => s.setRegionMaterials);
   const [isHydrated, setIsHydrated] = useState(!isElectron);
+  const suppressNextBroadcastRef = useRef(false);
 
   useEffect(() => {
     if (!isElectron) return;
@@ -33,6 +34,7 @@ export function MaterialAssignmentDialogApp() {
       _event: unknown,
       next: MaterialAssignmentStatePayload,
     ) => {
+      suppressNextBroadcastRef.current = true;
       setCoordinates(next.coordinates);
       setMaterials(next.materials);
       setMaterialBoundaries(next.materialBoundaries);
@@ -52,6 +54,11 @@ export function MaterialAssignmentDialogApp() {
 
   useEffect(() => {
     if (!isElectron || !isHydrated) return;
+
+    if (suppressNextBroadcastRef.current) {
+      suppressNextBroadcastRef.current = false;
+      return;
+    }
 
     window.cslope.sendMaterialAssignmentChanged({
       coordinates,

@@ -1,9 +1,12 @@
 /** Ambient types for APIs exposed by the Electron preload script. */
 
 import type {
+  AnalysisResult,
   LineLoadRow,
   MaterialBoundaryRow,
   MaterialRow,
+  ModelEntry,
+  ParameterDef,
   PiezometricLineState,
   RegionMaterials,
   UdlRow,
@@ -18,23 +21,42 @@ interface MaterialAssignmentStatePayload {
 
 interface GeometryStatePayload {
   coordinates: [number, number][];
+  coordinateExpressions: { x?: string; y?: string }[];
+  parameters?: ParameterDef[];
+}
+
+interface MaterialsStatePayload {
+  materials: MaterialRow[];
+  parameters?: ParameterDef[];
 }
 
 interface InteriorBoundariesStatePayload {
   coordinates: [number, number][];
   materialBoundaries: MaterialBoundaryRow[];
   selectedMaterialBoundaryId: string | null;
+  parameters?: ParameterDef[];
 }
 
 interface LoadsStatePayload {
   udls: UdlRow[];
   lineLoads: LineLoadRow[];
+  parameters?: ParameterDef[];
 }
 
 interface PiezoStatePayload {
   piezometricLine: PiezometricLineState;
   coordinates: [number, number][];
   materials: MaterialRow[];
+  parameters?: ParameterDef[];
+}
+
+interface ResultsPlotStatePayload {
+  model: ModelEntry;
+  result: AnalysisResult | null;
+}
+
+interface ParametersStatePayload {
+  parameters: ParameterDef[];
 }
 
 declare global {
@@ -56,6 +78,8 @@ declare global {
       openUdlDialog: () => void;
       openLineLoadsDialog: () => void;
       openPiezoDialog: () => void;
+      openParametersDialog: () => void;
+      openResultsPlotDialog: () => void;
       onInteriorBoundariesDialogOpenChanged: (
         listener: (event: unknown, open: boolean) => void,
       ) => void;
@@ -75,21 +99,21 @@ declare global {
       toggleDevTools: () => void;
       // Materials dialog sync
       requestMaterialsState: () => void;
-      sendMaterialsState: (materials: MaterialRow[]) => void;
-      sendMaterialsChanged: (materials: MaterialRow[]) => void;
+      sendMaterialsState: (state: MaterialsStatePayload) => void;
+      sendMaterialsChanged: (state: MaterialsStatePayload) => void;
       onMaterialsRequestState: (listener: (event: unknown) => void) => void;
       offMaterialsRequestState: (listener: (event: unknown) => void) => void;
       onMaterialsState: (
-        listener: (event: unknown, materials: MaterialRow[]) => void,
+        listener: (event: unknown, state: MaterialsStatePayload) => void,
       ) => void;
       offMaterialsState: (
-        listener: (event: unknown, materials: MaterialRow[]) => void,
+        listener: (event: unknown, state: MaterialsStatePayload) => void,
       ) => void;
       onMaterialsChanged: (
-        listener: (event: unknown, materials: MaterialRow[]) => void,
+        listener: (event: unknown, state: MaterialsStatePayload) => void,
       ) => void;
       offMaterialsChanged: (
-        listener: (event: unknown, materials: MaterialRow[]) => void,
+        listener: (event: unknown, state: MaterialsStatePayload) => void,
       ) => void;
       // Material Assignment dialog sync
       requestMaterialAssignmentState: () => void;
@@ -220,6 +244,42 @@ declare global {
       ) => void;
       offPiezoChanged: (
         listener: (event: unknown, state: PiezoStatePayload) => void,
+      ) => void;
+      // Parameters dialog sync
+      requestParametersState: () => void;
+      sendParametersState: (state: ParametersStatePayload) => void;
+      sendParametersChanged: (state: ParametersStatePayload) => void;
+      onParametersRequestState: (listener: (event: unknown) => void) => void;
+      offParametersRequestState: (listener: (event: unknown) => void) => void;
+      onParametersState: (
+        listener: (event: unknown, state: ParametersStatePayload) => void,
+      ) => void;
+      offParametersState: (
+        listener: (event: unknown, state: ParametersStatePayload) => void,
+      ) => void;
+      onParametersChanged: (
+        listener: (event: unknown, state: ParametersStatePayload) => void,
+      ) => void;
+      offParametersChanged: (
+        listener: (event: unknown, state: ParametersStatePayload) => void,
+      ) => void;
+      // Results plot dialog sync
+      requestResultsPlotState: () => void;
+      sendResultsPlotState: (state: ResultsPlotStatePayload) => void;
+      sendResultsPlotChanged: (state: ResultsPlotStatePayload) => void;
+      onResultsPlotRequestState: (listener: (event: unknown) => void) => void;
+      offResultsPlotRequestState: (listener: (event: unknown) => void) => void;
+      onResultsPlotState: (
+        listener: (event: unknown, state: ResultsPlotStatePayload) => void,
+      ) => void;
+      offResultsPlotState: (
+        listener: (event: unknown, state: ResultsPlotStatePayload) => void,
+      ) => void;
+      onResultsPlotChanged: (
+        listener: (event: unknown, state: ResultsPlotStatePayload) => void,
+      ) => void;
+      offResultsPlotChanged: (
+        listener: (event: unknown, state: ResultsPlotStatePayload) => void,
       ) => void;
     };
   }

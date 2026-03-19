@@ -75,6 +75,7 @@ export function EditCanvas() {
     snapToGrid,
     gridSnapSize,
     projectInfo,
+    parameters,
   } = useCanvasModelState();
   const activeSection = useAppStore((s) => s.activeSection);
   const {
@@ -267,6 +268,7 @@ export function EditCanvas() {
       editingAssignment,
       selectedAnnotationIds,
       projectInfo,
+      parameters,
       analysisLimits,
       udls,
       lineLoads,
@@ -314,6 +316,7 @@ export function EditCanvas() {
       resultViewSettings,
       selectedAnnotationIds,
       projectInfo,
+      parameters,
     ],
   );
 

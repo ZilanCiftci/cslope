@@ -55,6 +55,7 @@ export function useCanvasModelState() {
   const snapToGrid = useAppStore((s) => s.snapToGrid);
   const gridSnapSize = useAppStore((s) => s.gridSnapSize);
   const projectInfo = useAppStore((s) => s.projectInfo);
+  const parameters = useAppStore((s) => s.parameters);
 
   return {
     result,
@@ -78,6 +79,7 @@ export function useCanvasModelState() {
     snapToGrid,
     gridSnapSize,
     projectInfo,
+    parameters,
   };
 }
 

@@ -16,9 +16,11 @@ import {
 import type {
   AnalysisLimitsState,
   AppState,
+  CoordinateExpression,
   LineLoadRow,
   MaterialRow,
   ModelEntry,
+  ParameterDef,
   PiezometricLineState,
   ProjectInfo,
   ResultViewSettings,
@@ -94,6 +96,11 @@ function normalizeModelEntry(raw: unknown): ModelEntry {
   }
 
   const coordinates = normalizeCoords(model.coordinates);
+  const coordinateExpressions = normalizeCoordinateExpressions(
+    model.coordinateExpressions,
+    coordinates.length,
+    true,
+  );
   const orientation = resolveOrientation(
     model.orientation === "ltr" || model.orientation === "rtl"
       ? model.orientation
@@ -107,17 +114,25 @@ function normalizeModelEntry(raw: unknown): ModelEntry {
     orientation,
     projectInfo: normalizeProjectInfo(model.projectInfo),
     coordinates,
+    coordinateExpressions,
+    parameters: normalizeParameters(model.parameters, true),
     materials: (model.materials as unknown[]).map((m, i) =>
       normalizeMaterial(m, i),
     ),
     materialBoundaries: (Array.isArray(model.materialBoundaries)
       ? model.materialBoundaries.map((boundary) => {
           const boundaryRecord = boundary as Record<string, unknown>;
+          const boundaryCoordinates = Array.isArray(boundaryRecord.coordinates)
+            ? [...boundaryRecord.coordinates]
+            : [];
           return {
             ...boundaryRecord,
-            coordinates: Array.isArray(boundaryRecord.coordinates)
-              ? [...boundaryRecord.coordinates]
-              : [],
+            coordinates: boundaryCoordinates,
+            coordinateExpressions: normalizeCoordinateExpressions(
+              boundaryRecord.coordinateExpressions,
+              boundaryCoordinates.length,
+              true,
+            ),
           };
         })
       : []) as unknown as ModelEntry["materialBoundaries"],
@@ -296,6 +311,11 @@ function normalizePiezo(raw: unknown): PiezometricLineState {
       ? piezo.lines.map((l) => ({
           ...l,
           coordinates: Array.isArray(l.coordinates) ? [...l.coordinates] : [],
+          coordinateExpressions: normalizeCoordinateExpressions(
+            l.coordinateExpressions,
+            Array.isArray(l.coordinates) ? l.coordinates.length : 0,
+            true,
+          ),
         }))
       : [],
     activeLineId:
@@ -358,7 +378,74 @@ function normalizeMaterial(raw: unknown, index: number): MaterialRow {
     color,
     depthRange,
     model,
+    modelExpressions: normalizeModelExpressions(m.modelExpressions, true),
   };
+}
+
+function normalizeParameters(
+  raw: unknown,
+  preserveMissing: boolean,
+): ParameterDef[] | undefined {
+  if (!Array.isArray(raw)) return preserveMissing ? undefined : [];
+
+  return raw
+    .map((entry) => {
+      if (!entry || typeof entry !== "object") return null;
+      const record = entry as Record<string, unknown>;
+      if (
+        typeof record.id !== "string" ||
+        typeof record.name !== "string" ||
+        typeof record.expression !== "string"
+      ) {
+        return null;
+      }
+      return {
+        id: record.id,
+        name: record.name,
+        expression: record.expression,
+      } satisfies ParameterDef;
+    })
+    .filter((entry): entry is ParameterDef => entry !== null);
+}
+
+function normalizeCoordinateExpressions(
+  raw: unknown,
+  length: number,
+  preserveMissing: boolean,
+): CoordinateExpression[] | undefined {
+  if (!Array.isArray(raw)) {
+    return preserveMissing ? undefined : Array.from({ length }, () => ({}));
+  }
+
+  const out = Array.from({ length }, (_, i) => {
+    const item = raw[i];
+    if (!item || typeof item !== "object") return {};
+    const record = item as Record<string, unknown>;
+    const next: CoordinateExpression = {};
+    if (typeof record.x === "string") next.x = record.x;
+    if (typeof record.y === "string") next.y = record.y;
+    return next;
+  });
+
+  return out;
+}
+
+function normalizeModelExpressions(
+  raw: unknown,
+  preserveMissing: boolean,
+): MaterialRow["modelExpressions"] {
+  if (!raw || typeof raw !== "object") {
+    return preserveMissing ? undefined : {};
+  }
+
+  return Object.fromEntries(
+    Object.entries(raw as Record<string, unknown>)
+      .filter((entry): entry is [string, string] => {
+        const value = entry[1];
+        return typeof value === "string";
+      })
+      .map(([key, value]) => [key, value]),
+  );
 }
 
 // ── 4.3 — UDL / lineLoad field validation ──
@@ -371,7 +458,13 @@ function normalizeUdl(raw: unknown): UdlRow | null {
   const x1 = finiteOr(u.x1, 0);
   const x2 = finiteOr(u.x2, 0);
   if (!id || x1 === x2) return null;
-  return { id, magnitude, x1, x2 };
+  return {
+    id,
+    magnitude,
+    x1,
+    x2,
+    expressions: normalizeLoadExpressions(u.expressions, ["magnitude", "x1", "x2"]),
+  };
 }
 
 function normalizeLineLoad(raw: unknown): LineLoadRow | null {
@@ -381,7 +474,29 @@ function normalizeLineLoad(raw: unknown): LineLoadRow | null {
   const magnitude = finiteOr(l.magnitude, 0);
   const x = finiteOr(l.x, 0);
   if (!id) return null;
-  return { id, magnitude, x };
+  return {
+    id,
+    magnitude,
+    x,
+    expressions: normalizeLoadExpressions(l.expressions, ["magnitude", "x"]),
+  };
+}
+
+function normalizeLoadExpressions(
+  raw: unknown,
+  allowedKeys: string[],
+): Record<string, string> | undefined {
+  if (!raw || typeof raw !== "object") return undefined;
+
+  const out: Record<string, string> = {};
+  for (const [key, value] of Object.entries(raw as Record<string, unknown>)) {
+    if (!allowedKeys.includes(key) || typeof value !== "string") {
+      continue;
+    }
+    out[key] = value;
+  }
+
+  return Object.keys(out).length > 0 ? out : undefined;
 }
 
 // ── 4.4 — analysisLimits type validation ──

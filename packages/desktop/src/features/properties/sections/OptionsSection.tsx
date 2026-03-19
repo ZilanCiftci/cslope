@@ -41,6 +41,8 @@ function clampNumber(value: number, min: number, max: number): number {
 export function OptionsSection() {
   const options = useAppStore((s) => s.options);
   const setOptions = useAppStore((s) => s.setOptions);
+  const orientation = useAppStore((s) => s.orientation);
+  const setOrientation = useAppStore((s) => s.setOrientation);
   const intersliceFunction = options.intersliceFunction ?? "half-sine";
   const interslicePointsValue = formatInterslicePoints(
     options.intersliceDataPoints,
@@ -80,6 +82,52 @@ export function OptionsSection() {
   return (
     <Section title="Analysis Options">
       <div className="grid grid-cols-2 gap-3 text-[12px]">
+        <div className="col-span-2 flex flex-col gap-1">
+          <Label>Analysis Direction</Label>
+          <div className="grid grid-cols-2 gap-1">
+            <button
+              type="button"
+              onClick={() => setOrientation("ltr")}
+              className="px-2 py-1 rounded border text-[11px] font-medium cursor-pointer"
+              style={{
+                borderColor:
+                  orientation === "ltr"
+                    ? "var(--color-vsc-accent)"
+                    : "var(--color-vsc-border)",
+                background:
+                  orientation === "ltr"
+                    ? "color-mix(in srgb, var(--color-vsc-accent) 18%, transparent)"
+                    : "var(--color-vsc-input-bg)",
+                color: "var(--color-vsc-text)",
+              }}
+              aria-pressed={orientation === "ltr"}
+              aria-label="Analysis direction left to right"
+            >
+              Left to right
+            </button>
+            <button
+              type="button"
+              onClick={() => setOrientation("rtl")}
+              className="px-2 py-1 rounded border text-[11px] font-medium cursor-pointer"
+              style={{
+                borderColor:
+                  orientation === "rtl"
+                    ? "var(--color-vsc-accent)"
+                    : "var(--color-vsc-border)",
+                background:
+                  orientation === "rtl"
+                    ? "color-mix(in srgb, var(--color-vsc-accent) 18%, transparent)"
+                    : "var(--color-vsc-input-bg)",
+                color: "var(--color-vsc-text)",
+              }}
+              aria-pressed={orientation === "rtl"}
+              aria-label="Analysis direction right to left"
+            >
+              Right to left
+            </button>
+          </div>
+        </div>
+
         <label className="flex flex-col gap-0.5">
           <Label>Method</Label>
           <select

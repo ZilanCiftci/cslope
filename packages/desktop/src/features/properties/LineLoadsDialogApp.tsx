@@ -2,17 +2,31 @@ import { useEffect, useRef, useState } from "react";
 import { isElectron } from "../../utils/is-electron";
 import { Label } from "../../components/ui/Label";
 import {
-  SpreadsheetNumberInput,
   SpreadsheetRemoveButton,
   SpreadsheetTable,
   type SpreadsheetColumn,
 } from "../../components/ui/SpreadsheetTable";
+import { SpreadsheetExpressionInput } from "../../components/ui/SpreadsheetExpressionInput";
 import { useAppStore } from "../../store/app-store";
-import type { LineLoadRow, UdlRow } from "../../store/types";
+import type { LineLoadRow, ParameterDef, UdlRow } from "../../store/types";
+import { resolveParameters } from "../../utils/expression";
 
 interface LoadsStatePayload {
   udls: UdlRow[];
   lineLoads: LineLoadRow[];
+  parameters?: ParameterDef[];
+}
+
+function normalizeLoadsPayload(
+  payload: LoadsStatePayload | null | undefined,
+): LoadsStatePayload | null {
+  if (!payload || typeof payload !== "object") {
+    return null;
+  }
+  if (!Array.isArray(payload.udls) || !Array.isArray(payload.lineLoads)) {
+    return null;
+  }
+  return payload;
 }
 
 export function LineLoadsDialogApp() {
@@ -21,6 +35,7 @@ export function LineLoadsDialogApp() {
   const addLineLoad = useAppStore((s) => s.addLineLoad);
   const updateLineLoad = useAppStore((s) => s.updateLineLoad);
   const removeLineLoad = useAppStore((s) => s.removeLineLoad);
+  const parameters = useAppStore((s) => s.parameters);
   const [isHydrated, setIsHydrated] = useState(!isElectron);
   const suppressNextBroadcastRef = useRef(false);
 
@@ -28,11 +43,23 @@ export function LineLoadsDialogApp() {
     if (!isElectron) return;
 
     const applyState = (_event: unknown, next: LoadsStatePayload) => {
+      const normalized = normalizeLoadsPayload(next);
+      if (!normalized) return;
       suppressNextBroadcastRef.current = true;
-      useAppStore.setState({
-        udls: next.udls,
-        lineLoads: next.lineLoads,
-      });
+      const patch: {
+        udls: UdlRow[];
+        lineLoads: LineLoadRow[];
+        parameters?: ParameterDef[];
+      } = {
+        udls: normalized.udls,
+        lineLoads: normalized.lineLoads,
+      };
+
+      if (Array.isArray(normalized.parameters)) {
+        patch.parameters = normalized.parameters;
+      }
+
+      useAppStore.setState(patch);
       setIsHydrated(true);
     };
 
@@ -54,13 +81,23 @@ export function LineLoadsDialogApp() {
       return;
     }
 
-    window.cslope.sendLoadsChanged({ udls, lineLoads });
-  }, [udls, lineLoads, isHydrated]);
+    window.cslope.sendLoadsChanged({ udls, lineLoads, parameters });
+  }, [udls, lineLoads, parameters, isHydrated]);
 
-  const clampNumber = (value: string, min: number) => {
-    const parsed = parseFloat(value);
-    if (!Number.isFinite(parsed)) return min;
-    return parsed < min ? min : parsed;
+  const parameterValues = resolveParameters(parameters).resolved;
+
+  const setLineLoadExpression = (
+    row: LineLoadRow,
+    field: "magnitude" | "x",
+    expression: string | undefined,
+  ) => {
+    const nextExpressions = { ...(row.expressions ?? {}) };
+    if (!expression || expression.trim().length === 0) {
+      delete nextExpressions[field];
+    } else {
+      nextExpressions[field] = expression;
+    }
+    updateLineLoad(row.id, { expressions: nextExpressions });
   };
 
   const columns: SpreadsheetColumn<LineLoadRow>[] = [
@@ -79,15 +116,16 @@ export function LineLoadsDialogApp() {
     {
       header: <Label>P (kN/m)</Label>,
       renderCell: (row) => (
-        <SpreadsheetNumberInput
+        <SpreadsheetExpressionInput
           value={row.magnitude}
-          step="1"
+          expression={row.expressions?.magnitude}
+          vars={parameterValues}
           ariaLabel="Line load magnitude"
-          onChange={(v) =>
-            updateLineLoad(row.id, { magnitude: parseFloat(v) || 0 })
+          onResolvedValue={(nextMagnitude) =>
+            updateLineLoad(row.id, { magnitude: Math.max(0.1, nextMagnitude) })
           }
-          onBlur={(v) =>
-            updateLineLoad(row.id, { magnitude: clampNumber(v, 0.1) })
+          onExpressionChange={(expr) =>
+            setLineLoadExpression(row, "magnitude", expr)
           }
         />
       ),
@@ -95,10 +133,13 @@ export function LineLoadsDialogApp() {
     {
       header: <Label>x</Label>,
       renderCell: (row) => (
-        <SpreadsheetNumberInput
+        <SpreadsheetExpressionInput
           value={row.x}
+          expression={row.expressions?.x}
+          vars={parameterValues}
           ariaLabel="Line load x"
-          onChange={(v) => updateLineLoad(row.id, { x: parseFloat(v) || 0 })}
+          onResolvedValue={(nextX) => updateLineLoad(row.id, { x: nextX })}
+          onExpressionChange={(expr) => setLineLoadExpression(row, "x", expr)}
         />
       ),
     },

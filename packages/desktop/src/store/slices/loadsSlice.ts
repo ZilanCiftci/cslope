@@ -24,7 +24,10 @@ export const createLoadsSlice: SliceCreator<LoadsSlice> = (set, get) => ({
   addUdl: () => {
     set((s) =>
       syncActiveModel(s, {
-        udls: [...s.udls, { id: nextId("udl"), magnitude: 10, x1: 0, x2: 5 }],
+        udls: [
+          ...s.udls,
+          { id: nextId("udl"), magnitude: 10, x1: 0, x2: 5, expressions: {} },
+        ],
       }),
     );
     get().invalidateAnalysis();
@@ -51,7 +54,10 @@ export const createLoadsSlice: SliceCreator<LoadsSlice> = (set, get) => ({
   addLineLoad: () => {
     set((s) =>
       syncActiveModel(s, {
-        lineLoads: [...s.lineLoads, { id: nextId("ll"), magnitude: 50, x: 10 }],
+        lineLoads: [
+          ...s.lineLoads,
+          { id: nextId("ll"), magnitude: 50, x: 10, expressions: {} },
+        ],
       }),
     );
     get().invalidateAnalysis();

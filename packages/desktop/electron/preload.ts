@@ -22,6 +22,8 @@ contextBridge.exposeInMainWorld("cslope", {
   openUdlDialog: () => ipcRenderer.send("window:openUdlDialog"),
   openLineLoadsDialog: () => ipcRenderer.send("window:openLineLoadsDialog"),
   openPiezoDialog: () => ipcRenderer.send("window:openPiezoDialog"),
+  openParametersDialog: () => ipcRenderer.send("window:openParametersDialog"),
+  openResultsPlotDialog: () => ipcRenderer.send("window:openResultsPlotDialog"),
   onInteriorBoundariesDialogOpenChanged: (
     listener: (event: unknown, open: unknown) => void,
   ) => ipcRenderer.on("interiorBoundaries:dialogOpenChanged", listener),
@@ -159,4 +161,40 @@ contextBridge.exposeInMainWorld("cslope", {
     ipcRenderer.on("piezo:changed", listener),
   offPiezoChanged: (listener: (event: unknown, state: unknown) => void) =>
     ipcRenderer.off("piezo:changed", listener),
+  // Parameters dialog sync
+  requestParametersState: () => ipcRenderer.send("parameters:requestState"),
+  sendParametersState: (state: unknown) =>
+    ipcRenderer.send("parameters:stateResponse", state),
+  sendParametersChanged: (state: unknown) =>
+    ipcRenderer.send("parameters:changed", state),
+  onParametersRequestState: (listener: (event: unknown) => void) =>
+    ipcRenderer.on("parameters:requestState", listener),
+  offParametersRequestState: (listener: (event: unknown) => void) =>
+    ipcRenderer.off("parameters:requestState", listener),
+  onParametersState: (listener: (event: unknown, state: unknown) => void) =>
+    ipcRenderer.on("parameters:stateResponse", listener),
+  offParametersState: (listener: (event: unknown, state: unknown) => void) =>
+    ipcRenderer.off("parameters:stateResponse", listener),
+  onParametersChanged: (listener: (event: unknown, state: unknown) => void) =>
+    ipcRenderer.on("parameters:changed", listener),
+  offParametersChanged: (listener: (event: unknown, state: unknown) => void) =>
+    ipcRenderer.off("parameters:changed", listener),
+  // Results plot dialog sync
+  requestResultsPlotState: () => ipcRenderer.send("resultsPlot:requestState"),
+  sendResultsPlotState: (state: unknown) =>
+    ipcRenderer.send("resultsPlot:stateResponse", state),
+  sendResultsPlotChanged: (state: unknown) =>
+    ipcRenderer.send("resultsPlot:changed", state),
+  onResultsPlotRequestState: (listener: (event: unknown) => void) =>
+    ipcRenderer.on("resultsPlot:requestState", listener),
+  offResultsPlotRequestState: (listener: (event: unknown) => void) =>
+    ipcRenderer.off("resultsPlot:requestState", listener),
+  onResultsPlotState: (listener: (event: unknown, state: unknown) => void) =>
+    ipcRenderer.on("resultsPlot:stateResponse", listener),
+  offResultsPlotState: (listener: (event: unknown, state: unknown) => void) =>
+    ipcRenderer.off("resultsPlot:stateResponse", listener),
+  onResultsPlotChanged: (listener: (event: unknown, state: unknown) => void) =>
+    ipcRenderer.on("resultsPlot:changed", listener),
+  offResultsPlotChanged: (listener: (event: unknown, state: unknown) => void) =>
+    ipcRenderer.off("resultsPlot:changed", listener),
 });

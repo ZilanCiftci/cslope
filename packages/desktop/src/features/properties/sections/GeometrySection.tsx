@@ -2,11 +2,12 @@ import { useAppStore } from "../../../store/app-store";
 import { Section } from "../../../components/ui/Section";
 import { Label } from "../../../components/ui/Label";
 import {
-  SpreadsheetNumberInput,
   SpreadsheetRemoveButton,
   SpreadsheetTable,
   type SpreadsheetColumn,
 } from "../../../components/ui/SpreadsheetTable";
+import { SpreadsheetExpressionInput } from "../../../components/ui/SpreadsheetExpressionInput";
+import { resolveParameters } from "../../../utils/expression";
 
 interface GeometrySectionProps {
   plain?: boolean;
@@ -14,26 +15,16 @@ interface GeometrySectionProps {
 
 export function GeometrySection({ plain = false }: GeometrySectionProps) {
   const coordinates = useAppStore((s) => s.coordinates);
+  const coordinateExpressions = useAppStore((s) => s.coordinateExpressions);
+  const parameters = useAppStore((s) => s.parameters);
   const setCoordinate = useAppStore((s) => s.setCoordinate);
+  const setCoordinateExpression = useAppStore((s) => s.setCoordinateExpression);
   const removeCoordinate = useAppStore((s) => s.removeCoordinate);
   const addCoordinate = useAppStore((s) => s.addCoordinate);
   const selectedPointIndex = useAppStore((s) => s.selectedPointIndex);
   const setSelectedPoint = useAppStore((s) => s.setSelectedPoint);
 
-  const handleChange = (i: number, axis: 0 | 1, val: string) => {
-    const num = parseFloat(val);
-    if (isNaN(num)) return;
-    const c: [number, number] = [...coordinates[i]];
-    c[axis] = num;
-    setCoordinate(i, c);
-  };
-
-  const handleBlur = (i: number, axis: 0 | 1, val: string) => {
-    const num = parseFloat(val);
-    const c: [number, number] = [...coordinates[i]];
-    c[axis] = Number.isFinite(num) ? num : coordinates[i][axis];
-    setCoordinate(i, c);
-  };
+  const parameterValues = resolveParameters(parameters).resolved;
 
   const columns: SpreadsheetColumn<[number, number]>[] = [
     {
@@ -54,22 +45,34 @@ export function GeometrySection({ plain = false }: GeometrySectionProps) {
     {
       header: <Label>X</Label>,
       renderCell: ([x], i) => (
-        <SpreadsheetNumberInput
+        <SpreadsheetExpressionInput
           value={x}
+          expression={coordinateExpressions[i]?.x}
+          vars={parameterValues}
           ariaLabel={`Point ${i + 1} X`}
-          onChange={(value) => handleChange(i, 0, value)}
-          onBlur={(value) => handleBlur(i, 0, value)}
+          onResolvedValue={(nextX) => {
+            const c: [number, number] = [...coordinates[i]];
+            c[0] = nextX;
+            setCoordinate(i, c);
+          }}
+          onExpressionChange={(expr) => setCoordinateExpression(i, "x", expr)}
         />
       ),
     },
     {
       header: <Label>Y</Label>,
       renderCell: ([, y], i) => (
-        <SpreadsheetNumberInput
+        <SpreadsheetExpressionInput
           value={y}
+          expression={coordinateExpressions[i]?.y}
+          vars={parameterValues}
           ariaLabel={`Point ${i + 1} Y`}
-          onChange={(value) => handleChange(i, 1, value)}
-          onBlur={(value) => handleBlur(i, 1, value)}
+          onResolvedValue={(nextY) => {
+            const c: [number, number] = [...coordinates[i]];
+            c[1] = nextY;
+            setCoordinate(i, c);
+          }}
+          onExpressionChange={(expr) => setCoordinateExpression(i, "y", expr)}
         />
       ),
     },

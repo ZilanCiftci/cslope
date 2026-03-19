@@ -125,6 +125,8 @@ export function buildSlopeDTO(state: AppState): SlopeDefinition {
     name: "",
     orientation: state.orientation,
     coordinates: state.coordinates,
+    coordinateExpressions: state.coordinateExpressions,
+    parameters: state.parameters,
     materials: state.materials,
     materialBoundaries: state.materialBoundaries,
     regionMaterials: state.regionMaterials,
@@ -149,6 +151,8 @@ export function getAnalysisInputSignature(state: AppState): string {
   return JSON.stringify({
     orientation: state.orientation,
     coordinates: state.coordinates,
+    coordinateExpressions: state.coordinateExpressions,
+    parameters: state.parameters,
     materials: state.materials,
     materialBoundaries: state.materialBoundaries,
     regionMaterials: state.regionMaterials,

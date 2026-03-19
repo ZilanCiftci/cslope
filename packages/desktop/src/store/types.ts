@@ -14,6 +14,19 @@ export type AnalysisRunState = RunState;
 export type SurfaceDisplayMode = "critical" | "all" | "filter";
 export type ModelOrientation = "ltr" | "rtl";
 
+export interface ParameterDef {
+  id: string;
+  name: string;
+  expression: string;
+}
+
+export interface CoordinateExpression {
+  x?: string;
+  y?: string;
+}
+
+export type MaterialExpressions = Partial<Record<string, string>>;
+
 export interface MaterialRow {
   id: string;
   name: string;
@@ -21,11 +34,14 @@ export interface MaterialRow {
   depthRange?: [number, number];
   /** Full material model definition — source of truth for strength. */
   model: MaterialModel;
+  /** Expression strings for numeric material model fields. */
+  modelExpressions?: MaterialExpressions;
 }
 
 export interface MaterialBoundaryRow {
   id: string;
   coordinates: [number, number][];
+  coordinateExpressions?: CoordinateExpression[];
 }
 
 export interface RegionAssignment {
@@ -50,17 +66,30 @@ export interface CustomSearchPlane {
   radius: number;
 }
 
+export interface UdlExpressions {
+  magnitude?: string;
+  x1?: string;
+  x2?: string;
+}
+
+export interface LineLoadExpressions {
+  magnitude?: string;
+  x?: string;
+}
+
 export interface UdlRow {
   id: string;
   magnitude: number;
   x1: number;
   x2: number;
+  expressions?: UdlExpressions;
 }
 
 export interface LineLoadRow {
   id: string;
   magnitude: number;
   x: number;
+  expressions?: LineLoadExpressions;
 }
 
 export interface PiezoLine {
@@ -68,6 +97,7 @@ export interface PiezoLine {
   name: string;
   color: string;
   coordinates: [number, number][];
+  coordinateExpressions?: CoordinateExpression[];
 }
 
 export interface PiezometricLineState {
@@ -142,6 +172,8 @@ export interface ModelEntry {
   orientation?: ModelOrientation;
   projectInfo?: ProjectInfo;
   coordinates: [number, number][];
+  coordinateExpressions?: CoordinateExpression[];
+  parameters?: ParameterDef[];
   materials: MaterialRow[];
   materialBoundaries: MaterialBoundaryRow[];
   regionMaterials: RegionMaterials;
@@ -212,6 +244,7 @@ export interface GeometrySlice {
   orientation: ModelOrientation;
   projectInfo: ProjectInfo;
   coordinates: [number, number][];
+  coordinateExpressions: CoordinateExpression[];
   materials: MaterialRow[];
   materialBoundaries: MaterialBoundaryRow[];
   regionMaterials: RegionMaterials;
@@ -229,6 +262,11 @@ export interface GeometrySlice {
   setSelectedRegionKey: (key: string | null) => void;
   setCoordinates: (coords: [number, number][]) => void;
   setCoordinate: (index: number, coord: [number, number]) => void;
+  setCoordinateExpression: (
+    index: number,
+    axis: "x" | "y",
+    expr: string | undefined,
+  ) => void;
   addCoordinate: (coord: [number, number]) => void;
   insertCoordinateAt: (index: number, coord: [number, number]) => void;
   removeCoordinate: (index: number) => void;
@@ -279,6 +317,14 @@ export interface LoadsSlice {
   addLineLoad: () => void;
   updateLineLoad: (id: string, patch: Partial<LineLoadRow>) => void;
   removeLineLoad: (id: string) => void;
+}
+
+export interface ParametersSlice {
+  parameters: ParameterDef[];
+  addParameter: () => void;
+  updateParameter: (id: string, patch: Partial<ParameterDef>) => void;
+  removeParameter: (id: string) => void;
+  setParameters: (params: ParameterDef[]) => void;
 }
 
 export interface AnalysisSlice {
@@ -354,6 +400,7 @@ export interface CanvasToolbarSlice {
 export type AppState = LayoutSlice &
   ModelsSlice &
   GeometrySlice &
+  ParametersSlice &
   LoadsSlice &
   AnalysisSlice &
   ViewportSlice &

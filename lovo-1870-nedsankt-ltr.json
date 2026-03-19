@@ -1,0 +1,325 @@
+{
+  "version": 1,
+  "activeModelId": "lovo-1870-nedsankt-ltr",
+  "models": [
+    {
+      "id": "lovo-1870-nedsankt-ltr",
+      "name": "Lovo 4/000 - 4/300 (LTR mirrored)",
+      "orientation": "ltr",
+      "projectInfo": {
+        "title": "4/000 - 4/300, 2.15 m, 1:1, SK2, Odranad analys, eta = 0.95",
+        "subtitle": "Odranad analys - Forvantad: 0.73",
+        "client": "",
+        "projectNumber": "",
+        "revision": "0",
+        "author": "Zilan Ciftci",
+        "checker": "",
+        "date": "2026-03-18",
+        "description": "",
+        "canvasWidth": 1000,
+        "canvasHeight": 1000
+      },
+      "coordinates": [
+        [20, -10],
+        [20, 0],
+        [12.9, 0],
+        [10.95, -1.95],
+        [10, -1.95],
+        [9.05, -1.95],
+        [7.1, 0],
+        [-10, 0],
+        [-10, -10]
+      ],
+      "parameters": [
+        {
+          "id": "param-e696d372-85c8-42cb-a870-2ff090875b5b",
+          "name": "road_distance",
+          "expression": "2"
+        },
+        {
+          "id": "param-ff4f0b82-e4a8-49ce-87c2-00e24a14df99",
+          "name": "model_height",
+          "expression": "10"
+        },
+        {
+          "id": "param-dcea2c06-7125-41e5-aedb-e6095be6210e",
+          "name": "slope_gradient",
+          "expression": "1"
+        },
+        {
+          "id": "param-6e609a8a-2de7-4a84-b8e3-48876de3b547",
+          "name": "bottom_width",
+          "expression": "1.9"
+        },
+        {
+          "id": "param-e6acad62-8382-443b-a6d1-b21f2ea64357",
+          "name": "road_width",
+          "expression": "5"
+        },
+        {
+          "id": "param-b2f38a3a-49d2-431f-96a0-086e3bf06ada",
+          "name": "bottom_y",
+          "expression": "-excevation_deoth"
+        },
+        {
+          "id": "param-84809adb-e324-4532-929a-eb76f3c3e9be",
+          "name": "top_x",
+          "expression": "-excevation_deoth*slope_gradient-bottom_width/2"
+        },
+        {
+          "id": "param-d500d01a-400a-4054-accf-5514b09091e2",
+          "name": "road_x2",
+          "expression": "-top_x+road_distance"
+        },
+        {
+          "id": "param-a154c924-5a54-4802-8623-0e27ab1dbf1c",
+          "name": "road_x1",
+          "expression": "road_x2+road_width"
+        },
+        {
+          "id": "param-f9404fc8-466e-40d6-b67d-a3ef4e3d5ef8",
+          "name": "top_surface_length",
+          "expression": "10"
+        },
+        {
+          "id": "param-a02dcf0b-5f95-4cc1-b9cf-47f8a9d1a364",
+          "name": "top_surface_length_right",
+          "expression": "20"
+        },
+        {
+          "id": "param-2d8707a0-72b4-466e-b83b-000481891e8e",
+          "name": "road_height",
+          "expression": "0.5"
+        },
+        {
+          "id": "param-b278d27e-7f5a-422e-93df-8d023dda331d",
+          "name": "excevation_deoth",
+          "expression": "1.95"
+        }
+      ],
+      "materials": [
+        {
+          "id": "mat-lovo-f",
+          "name": "F",
+          "color": "#808080",
+          "model": {
+            "kind": "mohr-coulomb",
+            "unitWeight": 20,
+            "frictionAngle": 32.3,
+            "cohesion": 0
+          }
+        },
+        {
+          "id": "mat-lovo-let",
+          "name": "Let",
+          "color": "#6b2b0f",
+          "model": {
+            "kind": "undrained",
+            "unitWeight": 17,
+            "undrainedShearStrength": 9.5
+          }
+        },
+        {
+          "id": "mat-lovo-le1",
+          "name": "Le 1",
+          "color": "#fff700",
+          "model": {
+            "kind": "s-f-datum",
+            "unitWeight": 16.5,
+            "suRef": 9.5,
+            "yRef": -1,
+            "rate": 1.25
+          }
+        },
+        {
+          "id": "mat-lovo-le2",
+          "name": "Le 2",
+          "color": "#FFD700",
+          "model": {
+            "kind": "undrained",
+            "unitWeight": 16.5,
+            "undrainedShearStrength": 7
+          }
+        },
+        {
+          "id": "mat-lovo-fr",
+          "name": "Le 3",
+          "color": "#ebc400",
+          "model": {
+            "kind": "s-f-datum",
+            "unitWeight": 16.5,
+            "suRef": 7,
+            "yRef": -5.5,
+            "rate": -1.25
+          }
+        }
+      ],
+      "materialBoundaries": [
+        {
+          "id": "bnd-lovo-1",
+          "coordinates": [
+            [5.1, 0],
+            [4.6, -0.5],
+            [0.6, -0.5],
+            [0.1, 0]
+          ]
+        },
+        {
+          "id": "bnd-lovo-2",
+          "coordinates": [
+            [20, -1],
+            [-10, -1]
+          ]
+        },
+        {
+          "id": "bnd-lovo-3",
+          "coordinates": [
+            [20, -3],
+            [-10, -3]
+          ]
+        },
+        {
+          "id": "bnd-lovo-4",
+          "coordinates": [
+            [20, -5.5],
+            [-10, -5.5]
+          ]
+        }
+      ],
+      "regionMaterials": [
+        {
+          "point": [4, 0],
+          "materialId": "mat-lovo-f"
+        },
+        {
+          "point": [-10.53067513185134, -0.40875143976610717],
+          "materialId": "mat-lovo-let"
+        },
+        {
+          "point": [13.931593017964541, -0.7095451487812605],
+          "materialId": "mat-lovo-let"
+        },
+        {
+          "point": [6.492993728236781, -0.7095451487812605],
+          "materialId": "mat-lovo-let"
+        },
+        {
+          "point": [3.2625163224121545, -0.19946976891421375],
+          "materialId": "mat-lovo-f"
+        },
+        {
+          "point": [1.732290182811015, -1.899721035137702],
+          "materialId": "mat-lovo-le1"
+        },
+        {
+          "point": [0.37208916983222624, -4.620123061095283],
+          "materialId": "mat-lovo-le2"
+        },
+        {
+          "point": [0.9246708313548577, -7.383031368708451],
+          "materialId": "mat-lovo-fr"
+        }
+      ],
+      "piezometricLine": {
+        "enabled": true,
+        "lines": [
+          {
+            "id": "piezo-lovo-1",
+            "name": "Water Table",
+            "color": "#3b82f6",
+            "coordinates": [
+              [20, 0],
+              [12.9, 0],
+              [10.95, -1.95],
+              [9.05, -1.95],
+              [7.1, 0],
+              [-10, 0]
+            ]
+          }
+        ],
+        "activeLineId": "piezo-lovo-1",
+        "materialAssignment": {}
+      },
+      "udls": [
+        {
+          "id": "udl-lovo-1",
+          "magnitude": 19.1,
+          "x1": 0.1,
+          "x2": 5.1
+        }
+      ],
+      "lineLoads": [],
+      "options": {
+        "slices": 30,
+        "iterations": 1000,
+        "refinedIterations": 500,
+        "minFailureDist": 0,
+        "tolerance": 0.005,
+        "maxIterations": 15,
+        "method": "Morgenstern-Price",
+        "janbuCorrection": false,
+        "intersliceFunction": "half-sine",
+        "intersliceDataPoints": []
+      },
+      "analysisLimits": {
+        "enabled": true,
+        "entryLeftX": -0.5,
+        "entryRightX": 4,
+        "exitLeftX": 9,
+        "exitRightX": 11
+      },
+      "customSearchPlanes": [],
+      "customPlanesOnly": false,
+      "resultViewSettings": {
+        "surfaceDisplay": "critical",
+        "fosFilterMax": 0.77,
+        "showSlices": true,
+        "showFosLabel": true,
+        "showCentreMarker": true,
+        "showGrid": true,
+        "showSoilColor": true,
+        "annotations": [
+          {
+            "id": "anno-8d2aabaf-31cb-43b5-b9a5-980aa7354464",
+            "type": "text",
+            "x": 0.11,
+            "y": 0.08,
+            "text": "#Title",
+            "fontSize": 24
+          },
+          {
+            "id": "anno-89ddb1d9-0f29-4483-849a-bf5c09ea5076",
+            "type": "text",
+            "x": 0.11,
+            "y": 0.13,
+            "text": "#Subtitle",
+            "fontSize": 14
+          },
+          {
+            "id": "anno-914f8327-a15e-4806-b7ca-a41a54698ebe",
+            "type": "material-table",
+            "x": 0.6916182698423182,
+            "y": 0.17576607952694745,
+            "fontSize": 20,
+            "color": "#6600cc"
+          }
+        ],
+        "paperFrame": {
+          "paperSize": "A4",
+          "landscape": true,
+          "showFrame": true
+        },
+        "viewLock": {
+          "enabled": false,
+          "bottomLeft": [-1, -1],
+          "topRight": [26, 18.09090909090909]
+        }
+      },
+      "runState": "idle",
+      "progress": 0,
+      "result": null,
+      "errorMessage": null,
+      "mode": "edit"
+    }
+  ]
+}

@@ -115,6 +115,7 @@ export function useContextMenu(params: ContextMenuParams) {
                     result: resultForBounds,
                     materials: state.materials,
                     projectInfo: state.projectInfo,
+                    parameters: state.parameters,
                   });
                   return (
                     cxPx >= b.x &&

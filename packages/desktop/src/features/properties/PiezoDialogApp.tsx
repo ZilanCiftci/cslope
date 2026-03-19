@@ -1,19 +1,41 @@
 import { type ReactNode, useEffect, useRef, useState } from "react";
 import { isElectron } from "../../utils/is-electron";
 import { useAppStore } from "../../store/app-store";
-import type { MaterialRow, PiezometricLineState } from "../../store/types";
+import type {
+  MaterialRow,
+  ParameterDef,
+  PiezometricLineState,
+} from "../../store/types";
 import { Label } from "../../components/ui/Label";
 import {
-  SpreadsheetNumberInput,
   SpreadsheetRemoveButton,
   SpreadsheetTable,
   type SpreadsheetColumn,
 } from "../../components/ui/SpreadsheetTable";
+import { SpreadsheetExpressionInput } from "../../components/ui/SpreadsheetExpressionInput";
+import { resolveParameters } from "../../utils/expression";
 
 interface PiezoStatePayload {
   piezometricLine: PiezometricLineState;
   coordinates: [number, number][];
   materials: MaterialRow[];
+  parameters?: ParameterDef[];
+}
+
+function normalizePiezoPayload(
+  payload: PiezoStatePayload | null | undefined,
+): PiezoStatePayload | null {
+  if (!payload || typeof payload !== "object") {
+    return null;
+  }
+  if (
+    !payload.piezometricLine ||
+    !Array.isArray(payload.coordinates) ||
+    !Array.isArray(payload.materials)
+  ) {
+    return null;
+  }
+  return payload;
 }
 
 export function PiezoDialogApp() {
@@ -29,6 +51,8 @@ export function PiezoDialogApp() {
   const setPiezoMaterialAssignment = useAppStore(
     (s) => s.setPiezoMaterialAssignment,
   );
+  const setPiezometricLine = useAppStore((s) => s.setPiezometricLine);
+  const parameters = useAppStore((s) => s.parameters);
 
   const [isHydrated, setIsHydrated] = useState(!isElectron);
   const suppressNextBroadcastRef = useRef(false);
@@ -37,12 +61,25 @@ export function PiezoDialogApp() {
     if (!isElectron) return;
 
     const applyState = (_event: unknown, next: PiezoStatePayload) => {
+      const normalized = normalizePiezoPayload(next);
+      if (!normalized) return;
       suppressNextBroadcastRef.current = true;
-      useAppStore.setState({
-        piezometricLine: next.piezometricLine,
-        coordinates: next.coordinates,
-        materials: next.materials,
-      });
+      const patch: {
+        piezometricLine: PiezometricLineState;
+        coordinates: [number, number][];
+        materials: MaterialRow[];
+        parameters?: ParameterDef[];
+      } = {
+        piezometricLine: normalized.piezometricLine,
+        coordinates: normalized.coordinates,
+        materials: normalized.materials,
+      };
+
+      if (Array.isArray(normalized.parameters)) {
+        patch.parameters = normalized.parameters;
+      }
+
+      useAppStore.setState(patch);
       setIsHydrated(true);
     };
 
@@ -68,11 +105,36 @@ export function PiezoDialogApp() {
       piezometricLine: pl,
       coordinates,
       materials,
+      parameters,
     });
-  }, [pl, coordinates, materials, isHydrated]);
+  }, [pl, coordinates, materials, parameters, isHydrated]);
 
   const activeLine =
     pl.lines.find((l) => l.id === pl.activeLineId) ?? pl.lines[0] ?? null;
+  const parameterValues = resolveParameters(parameters).resolved;
+
+  const setPiezoCoordinateExpression = (
+    lineId: string,
+    pointIndex: number,
+    axis: "x" | "y",
+    expr: string | undefined,
+  ) => {
+    const lines = pl.lines.map((line) => {
+      if (line.id !== lineId) return line;
+      const current = line.coordinateExpressions ?? [];
+      const next = line.coordinates.map((_, i) => ({ ...(current[i] ?? {}) }));
+      const cell = { ...(next[pointIndex] ?? {}) };
+      if (!expr || expr.trim().length === 0) {
+        delete cell[axis];
+      } else {
+        cell[axis] = expr;
+      }
+      next[pointIndex] = cell;
+      return { ...line, coordinateExpressions: next };
+    });
+
+    setPiezometricLine({ lines });
+  };
 
   const coordinateColumns: SpreadsheetColumn<[number, number]>[] = [
     {
@@ -90,24 +152,32 @@ export function PiezoDialogApp() {
     {
       header: <Label>X</Label>,
       renderCell: ([x, y], i) => (
-        <SpreadsheetNumberInput
+        <SpreadsheetExpressionInput
           value={x}
+          expression={activeLine?.coordinateExpressions?.[i]?.x}
+          vars={parameterValues}
           ariaLabel={`Piezometric point ${i + 1} X`}
-          onChange={(value) =>
-            setPiezoCoordinate(i, [parseFloat(value) || 0, y])
-          }
+          onResolvedValue={(nextX) => setPiezoCoordinate(i, [nextX, y])}
+          onExpressionChange={(expr) => {
+            if (!activeLine) return;
+            setPiezoCoordinateExpression(activeLine.id, i, "x", expr);
+          }}
         />
       ),
     },
     {
       header: <Label>Y</Label>,
       renderCell: ([x, y], i) => (
-        <SpreadsheetNumberInput
+        <SpreadsheetExpressionInput
           value={y}
+          expression={activeLine?.coordinateExpressions?.[i]?.y}
+          vars={parameterValues}
           ariaLabel={`Piezometric point ${i + 1} Y`}
-          onChange={(value) =>
-            setPiezoCoordinate(i, [x, parseFloat(value) || 0])
-          }
+          onResolvedValue={(nextY) => setPiezoCoordinate(i, [x, nextY])}
+          onExpressionChange={(expr) => {
+            if (!activeLine) return;
+            setPiezoCoordinateExpression(activeLine.id, i, "y", expr);
+          }}
         />
       ),
     },

@@ -46,6 +46,14 @@ describe("calculateAllLoads", () => {
     const [udlForces] = calculateAllLoads(widths, centers, udls, []);
     expect(udlForces[0]).toBeCloseTo(40.0, 8);
   });
+
+  it("handles reversed UDL endpoints", () => {
+    const widths = [10];
+    const centers = [5];
+    const udls: [number, number, number][] = [[7, 3, 10]];
+    const [udlForces] = calculateAllLoads(widths, centers, udls, []);
+    expect(udlForces[0]).toBeCloseTo(40.0, 8);
+  });
 });
 
 describe("halfsine", () => {

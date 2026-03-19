@@ -239,6 +239,7 @@ export function ResultSidebar() {
       analysisLimits: state.analysisLimits,
       orientation: state.orientation,
       projectInfo: state.projectInfo,
+      parameters: state.parameters,
       viewBounds,
     });
   };
@@ -682,6 +683,15 @@ export function ResultSidebar() {
             </button>
           </div>
 
+          <p
+            className="text-[11px]"
+            style={{ color: "var(--color-vsc-text-muted)" }}
+          >
+            Text supports tags like <code>#Title</code>, parameter tags like{" "}
+            <code>#road_x1</code>, and expressions like{" "}
+            <code>{"{{road_x1 + road_width}}"}</code>.
+          </p>
+
           {rvs.annotations.length === 0 && (
             <p
               className="text-[11px]"
@@ -725,7 +735,7 @@ export function ResultSidebar() {
                     minHeight: 32,
                   }}
                   rows={2}
-                  placeholder="Enter text..."
+                  placeholder="Enter text, e.g. Crest = #road_x1 m"
                 />
               )}
               <button

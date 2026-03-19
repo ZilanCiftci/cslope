@@ -39,7 +39,9 @@ export function calculateAllLoads(
 
     // UDLs — single overlap formula handles all cases
     for (let j = 0; j < udls.length; j++) {
-      const [ux1, ux2, umag] = udls[j];
+      const [rawX1, rawX2, umag] = udls[j];
+      const ux1 = Math.min(rawX1, rawX2);
+      const ux2 = Math.max(rawX1, rawX2);
       const overlapL = Math.max(sxl, ux1);
       const overlapR = Math.min(sxr, ux2);
       if (overlapR > overlapL) {

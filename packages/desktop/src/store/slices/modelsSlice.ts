@@ -4,8 +4,10 @@ import { BENCHMARK_MODELS } from "../benchmarks";
 import { LOVO_MODELS } from "../lovo";
 import {
   DEFAULT_ANALYSIS_LIMITS,
+  DEFAULT_COORDINATE_EXPRESSIONS,
   DEFAULT_COORDS,
   DEFAULT_MATERIAL,
+  DEFAULT_PARAMETERS,
   DEFAULT_PIEZO_LINE,
   createDefaultProjectInfo,
   DEFAULT_RESULT_VIEW_SETTINGS,
@@ -29,6 +31,8 @@ function createDefaultModel(id: string, name: string): ModelEntry {
     orientation: "ltr",
     projectInfo: createDefaultProjectInfo(),
     coordinates: [...DEFAULT_COORDS],
+    coordinateExpressions: [...DEFAULT_COORDINATE_EXPRESSIONS],
+    parameters: [...DEFAULT_PARAMETERS],
     materials: [{ ...DEFAULT_MATERIAL, id: nextId("mat") }],
     materialBoundaries: [],
     regionMaterials: [],
@@ -57,6 +61,8 @@ const mapModelToState = (model: ModelEntry) => ({
   orientation: model.orientation ?? "ltr",
   projectInfo: model.projectInfo ?? createDefaultProjectInfo(),
   coordinates: model.coordinates,
+  coordinateExpressions: model.coordinateExpressions ?? [],
+  parameters: model.parameters ?? [],
   materials: model.materials,
   materialBoundaries: model.materialBoundaries,
   regionMaterials: model.regionMaterials,
@@ -147,10 +153,18 @@ export const createModelsSlice: SliceCreator<ModelsSlice> = (set, get) => ({
       id: newId,
       name: `${source.name} (copy)`,
       coordinates: source.coordinates.map((c) => [...c] as [number, number]),
+      coordinateExpressions: (source.coordinateExpressions ?? []).map((expr) =>
+        expr ? { ...expr } : {},
+      ),
+      parameters: (source.parameters ?? []).map((p) => ({ ...p })),
       materials: source.materials.map((m) => {
         const newMatId = nextId("mat");
         matIdMap.set(m.id, newMatId);
-        return { ...m, id: newMatId };
+        return {
+          ...m,
+          id: newMatId,
+          modelExpressions: { ...(m.modelExpressions ?? {}) },
+        };
       }),
       materialBoundaries: source.materialBoundaries.map((b) => {
         const newBndId = nextId("bnd");
@@ -159,6 +173,9 @@ export const createModelsSlice: SliceCreator<ModelsSlice> = (set, get) => ({
           ...b,
           id: newBndId,
           coordinates: b.coordinates.map((c) => [...c] as [number, number]),
+          coordinateExpressions: (b.coordinateExpressions ?? []).map((expr) =>
+            expr ? { ...expr } : {},
+          ),
         };
       }),
       regionMaterials: source.regionMaterials.map((a) => ({
@@ -174,6 +191,9 @@ export const createModelsSlice: SliceCreator<ModelsSlice> = (set, get) => ({
             ...l,
             id: newLineId,
             coordinates: l.coordinates.map((c) => [...c] as [number, number]),
+            coordinateExpressions: (l.coordinateExpressions ?? []).map(
+              (expr) => (expr ? { ...expr } : {}),
+            ),
           };
         }),
         activeLineId: source.piezometricLine.activeLineId
@@ -265,6 +285,8 @@ export const createModelsSlice: SliceCreator<ModelsSlice> = (set, get) => ({
             orientation: s.orientation,
             projectInfo: s.projectInfo,
             coordinates: s.coordinates,
+            coordinateExpressions: s.coordinateExpressions,
+            parameters: s.parameters,
             materials: s.materials,
             materialBoundaries: s.materialBoundaries,
             regionMaterials: s.regionMaterials,
@@ -306,6 +328,8 @@ export const createModelsSlice: SliceCreator<ModelsSlice> = (set, get) => ({
               orientation: s.orientation,
               projectInfo: s.projectInfo,
               coordinates: s.coordinates,
+              coordinateExpressions: s.coordinateExpressions,
+              parameters: s.parameters,
               materials: s.materials,
               materialBoundaries: s.materialBoundaries,
               regionMaterials: s.regionMaterials,

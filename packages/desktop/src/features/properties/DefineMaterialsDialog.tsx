@@ -19,6 +19,7 @@ import {
 } from "./sections/material-forms";
 import { PopupPanel } from "../../components/ui/PopupPanel";
 import type { MaterialRow } from "../../store/types";
+import { resolveParameters } from "../../utils/expression";
 
 // ── Constants ──
 
@@ -47,6 +48,7 @@ export function DefineMaterialsDialog({ onClose, mode = "popup" }: Props) {
   const updateMaterial = useAppStore((s) => s.updateMaterial);
   const addMaterial = useAppStore((s) => s.addMaterial);
   const removeMaterial = useAppStore((s) => s.removeMaterial);
+  const parameters = useAppStore((s) => s.parameters);
 
   const [selectedId, setSelectedId] = useState<string>(materials[0]?.id ?? "");
 
@@ -96,6 +98,28 @@ export function DefineMaterialsDialog({ onClose, mode = "popup" }: Props) {
   };
 
   const model = selected ? getModel(selected) : undefined;
+  const parameterValues = useMemo(
+    () => resolveParameters(parameters).resolved,
+    [parameters],
+  );
+
+  const patchModelExpression = (
+    matId: string,
+    field: string,
+    expression: string | undefined,
+  ) => {
+    const material = materials.find((m) => m.id === matId);
+    if (!material) return;
+
+    const nextExpressions = { ...(material.modelExpressions ?? {}) };
+    if (!expression || expression.trim().length === 0) {
+      delete nextExpressions[field];
+    } else {
+      nextExpressions[field] = expression;
+    }
+
+    updateMaterial(matId, { modelExpressions: nextExpressions });
+  };
 
   const body = (
     <>
@@ -243,6 +267,11 @@ export function DefineMaterialsDialog({ onClose, mode = "popup" }: Props) {
             <ModelFields
               model={model}
               onChange={(patch) => patchModel(selected.id, model, patch)}
+              modelExpressions={selected.modelExpressions}
+              parameterValues={parameterValues}
+              onExpressionChange={(field, expression) =>
+                patchModelExpression(selected.id, field, expression)
+              }
             />
 
             {/* Inline validation errors */}
@@ -345,9 +374,15 @@ function DialogButton({
 function ModelFields({
   model,
   onChange,
+  modelExpressions,
+  parameterValues,
+  onExpressionChange,
 }: {
   model: MaterialModel;
   onChange: (patch: Partial<MaterialModel>) => void;
+  modelExpressions: MaterialRow["modelExpressions"] | undefined;
+  parameterValues: Record<string, number>;
+  onExpressionChange: (field: string, expression: string | undefined) => void;
 }) {
   switch (model.kind) {
     case "mohr-coulomb":
@@ -355,6 +390,9 @@ function ModelFields({
         <MohrCoulombFields
           model={model}
           onChange={onChange as (p: Partial<typeof model>) => void}
+          modelExpressions={modelExpressions}
+          parameterValues={parameterValues}
+          onExpressionChange={onExpressionChange}
         />
       );
     case "undrained":
@@ -362,6 +400,9 @@ function ModelFields({
         <UndrainedFields
           model={model}
           onChange={onChange as (p: Partial<typeof model>) => void}
+          modelExpressions={modelExpressions}
+          parameterValues={parameterValues}
+          onExpressionChange={onExpressionChange}
         />
       );
     case "high-strength":
@@ -369,6 +410,9 @@ function ModelFields({
         <HighStrengthFields
           model={model}
           onChange={onChange as (p: Partial<typeof model>) => void}
+          modelExpressions={modelExpressions}
+          parameterValues={parameterValues}
+          onExpressionChange={onExpressionChange}
         />
       );
     case "impenetrable":
@@ -376,6 +420,9 @@ function ModelFields({
         <ImpenetrableFields
           model={model}
           onChange={onChange as (p: Partial<typeof model>) => void}
+          modelExpressions={modelExpressions}
+          parameterValues={parameterValues}
+          onExpressionChange={onExpressionChange}
         />
       );
     case "spatial-mohr-coulomb":
@@ -383,6 +430,9 @@ function ModelFields({
         <SpatialMCFields
           model={model}
           onChange={onChange as (p: Partial<typeof model>) => void}
+          modelExpressions={modelExpressions}
+          parameterValues={parameterValues}
+          onExpressionChange={onExpressionChange}
         />
       );
     case "anisotropic-function":
@@ -390,6 +440,9 @@ function ModelFields({
         <AnisotropicFields
           model={model}
           onChange={onChange as (p: Partial<typeof model>) => void}
+          modelExpressions={modelExpressions}
+          parameterValues={parameterValues}
+          onExpressionChange={onExpressionChange}
         />
       );
     case "s-f-depth":
@@ -397,6 +450,9 @@ function ModelFields({
         <SfDepthFields
           model={model}
           onChange={onChange as (p: Partial<typeof model>) => void}
+          modelExpressions={modelExpressions}
+          parameterValues={parameterValues}
+          onExpressionChange={onExpressionChange}
         />
       );
     case "s-f-datum":
@@ -404,6 +460,9 @@ function ModelFields({
         <SfDatumFields
           model={model}
           onChange={onChange as (p: Partial<typeof model>) => void}
+          modelExpressions={modelExpressions}
+          parameterValues={parameterValues}
+          onExpressionChange={onExpressionChange}
         />
       );
   }

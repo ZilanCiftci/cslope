@@ -57,6 +57,13 @@ describe("Udl", () => {
     expect(u.x2).toBe(8);
     expect(u.length).toBe(6);
   });
+
+  it("accepts reversed endpoints by normalizing x1/x2", () => {
+    const u = new Udl({ magnitude: 12, x1: 8, x2: 2 });
+    expect(u.x1).toBe(2);
+    expect(u.x2).toBe(8);
+    expect(u.length).toBe(6);
+  });
 });
 
 describe("LineLoad", () => {

@@ -302,7 +302,7 @@ export function setEntryExitPlanes(slope: Slope): void {
     leftCoords.push([x, slope.getExternalYIntersection(x)]);
   }
   for (const udl of slope.udls) {
-    const x = udl.x1 - 0.001;
+    const x = Math.min(udl.x1, udl.x2) - 0.001;
     leftCoords.push([x, slope.getExternalYIntersection(x)]);
   }
 

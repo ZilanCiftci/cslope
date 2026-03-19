@@ -476,6 +476,7 @@ export function usePointerHandlers(deps: PointerDeps) {
                       result: resultForBounds,
                       materials: state.materials,
                       projectInfo: state.projectInfo,
+                      parameters: state.parameters,
                     });
                     return (
                       cxPx >= b.x &&

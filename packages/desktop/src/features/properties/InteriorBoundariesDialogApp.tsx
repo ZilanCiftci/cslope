@@ -1,19 +1,21 @@
 import { type ReactNode, useEffect, useRef, useState } from "react";
 import { Label } from "../../components/ui/Label";
 import {
-  SpreadsheetNumberInput,
   SpreadsheetRemoveButton,
   SpreadsheetTable,
   type SpreadsheetColumn,
 } from "../../components/ui/SpreadsheetTable";
+import { SpreadsheetExpressionInput } from "../../components/ui/SpreadsheetExpressionInput";
 import { isElectron } from "../../utils/is-electron";
 import { useAppStore } from "../../store/app-store";
-import type { MaterialBoundaryRow } from "../../store/types";
+import type { MaterialBoundaryRow, ParameterDef } from "../../store/types";
+import { resolveParameters } from "../../utils/expression";
 
 interface InteriorBoundariesStatePayload {
   coordinates: [number, number][];
   materialBoundaries: MaterialBoundaryRow[];
   selectedMaterialBoundaryId: string | null;
+  parameters?: ParameterDef[];
 }
 
 export function InteriorBoundariesDialogApp() {
@@ -24,6 +26,8 @@ export function InteriorBoundariesDialogApp() {
   const addBoundaryPoint = useAppStore((s) => s.addBoundaryPoint);
   const updateBoundaryPoint = useAppStore((s) => s.updateBoundaryPoint);
   const removeBoundaryPoint = useAppStore((s) => s.removeBoundaryPoint);
+  const updateMaterialBoundary = useAppStore((s) => s.updateMaterialBoundary);
+  const parameters = useAppStore((s) => s.parameters);
   const selectedMaterialBoundaryId = useAppStore(
     (s) => s.selectedMaterialBoundaryId,
   );
@@ -46,6 +50,27 @@ export function InteriorBoundariesDialogApp() {
   const yMin = ys.length > 0 ? Math.min(...ys) : 0;
   const yMax = ys.length > 0 ? Math.max(...ys) : 10;
   const yMid = Math.round(((yMin + yMax) / 2) * 10) / 10;
+  const parameterValues = resolveParameters(parameters).resolved;
+
+  const setBoundaryCoordinateExpression = (
+    boundary: MaterialBoundaryRow,
+    pointIndex: number,
+    axis: "x" | "y",
+    expr: string | undefined,
+  ) => {
+    const current = boundary.coordinateExpressions ?? [];
+    const next = boundary.coordinates.map((_, i) => ({
+      ...(current[i] ?? {}),
+    }));
+    const cell = { ...(next[pointIndex] ?? {}) };
+    if (!expr || expr.trim().length === 0) {
+      delete cell[axis];
+    } else {
+      cell[axis] = expr;
+    }
+    next[pointIndex] = cell;
+    updateMaterialBoundary(boundary.id, { coordinateExpressions: next });
+  };
 
   useEffect(() => {
     if (!isElectron) return;
@@ -55,11 +80,22 @@ export function InteriorBoundariesDialogApp() {
       next: InteriorBoundariesStatePayload,
     ) => {
       suppressNextBroadcastRef.current = true;
-      useAppStore.setState({
+      const patch: {
+        coordinates: [number, number][];
+        materialBoundaries: MaterialBoundaryRow[];
+        selectedMaterialBoundaryId: string | null;
+        parameters?: ParameterDef[];
+      } = {
         coordinates: next.coordinates,
         materialBoundaries: next.materialBoundaries,
         selectedMaterialBoundaryId: next.selectedMaterialBoundaryId,
-      });
+      };
+
+      if (Array.isArray(next.parameters)) {
+        patch.parameters = next.parameters;
+      }
+
+      useAppStore.setState(patch);
       setIsHydrated(true);
     };
 
@@ -85,8 +121,15 @@ export function InteriorBoundariesDialogApp() {
       coordinates,
       materialBoundaries,
       selectedMaterialBoundaryId,
+      parameters,
     });
-  }, [coordinates, materialBoundaries, selectedMaterialBoundaryId, isHydrated]);
+  }, [
+    coordinates,
+    materialBoundaries,
+    selectedMaterialBoundaryId,
+    parameters,
+    isHydrated,
+  ]);
 
   useEffect(() => {
     if (selectedBoundary) {
@@ -261,28 +304,54 @@ export function InteriorBoundariesDialogApp() {
                   {
                     header: <Label>X</Label>,
                     renderCell: ([x, y], i) => (
-                      <SpreadsheetNumberInput
+                      <SpreadsheetExpressionInput
                         value={x}
+                        expression={
+                          selectedBoundary.coordinateExpressions?.[i]?.x
+                        }
+                        vars={parameterValues}
                         ariaLabel={`Boundary ${selectedBoundaryIndex + 1} point ${i + 1} X`}
-                        onChange={(value) => {
-                          const num = parseFloat(value);
-                          if (!Number.isFinite(num)) return;
-                          updateBoundaryPoint(selectedBoundary.id, i, [num, y]);
-                        }}
+                        onResolvedValue={(nextX) =>
+                          updateBoundaryPoint(selectedBoundary.id, i, [
+                            nextX,
+                            y,
+                          ])
+                        }
+                        onExpressionChange={(expr) =>
+                          setBoundaryCoordinateExpression(
+                            selectedBoundary,
+                            i,
+                            "x",
+                            expr,
+                          )
+                        }
                       />
                     ),
                   },
                   {
                     header: <Label>Y</Label>,
                     renderCell: ([x, y], i) => (
-                      <SpreadsheetNumberInput
+                      <SpreadsheetExpressionInput
                         value={y}
+                        expression={
+                          selectedBoundary.coordinateExpressions?.[i]?.y
+                        }
+                        vars={parameterValues}
                         ariaLabel={`Boundary ${selectedBoundaryIndex + 1} point ${i + 1} Y`}
-                        onChange={(value) => {
-                          const num = parseFloat(value);
-                          if (!Number.isFinite(num)) return;
-                          updateBoundaryPoint(selectedBoundary.id, i, [x, num]);
-                        }}
+                        onResolvedValue={(nextY) =>
+                          updateBoundaryPoint(selectedBoundary.id, i, [
+                            x,
+                            nextY,
+                          ])
+                        }
+                        onExpressionChange={(expr) =>
+                          setBoundaryCoordinateExpression(
+                            selectedBoundary,
+                            i,
+                            "y",
+                            expr,
+                          )
+                        }
                       />
                     ),
                   },
