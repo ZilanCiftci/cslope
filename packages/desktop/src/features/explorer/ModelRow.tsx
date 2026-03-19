@@ -4,6 +4,7 @@ import type { ModelEntry } from "../../store/types";
 interface Props {
   model: ModelEntry;
   isActive: boolean;
+  isSelected: boolean;
   isEditing: boolean;
   hasResult: boolean;
   editName: string;
@@ -11,17 +12,25 @@ interface Props {
   onCommitRename: () => void;
   onCancelRename: () => void;
   onStartRename: (id: string, name: string) => void;
-  onSelect: () => void;
+  onSelect: (e: React.MouseEvent) => void;
   onContextMenu: (
     e: React.MouseEvent,
     modelId: string,
     modelName: string,
   ) => void;
+  isDragSource: boolean;
+  isDropBefore: boolean;
+  isDropAfter: boolean;
+  onDragStart: (modelId: string) => void;
+  onDragOver: (e: React.DragEvent<HTMLElement>, modelId: string) => void;
+  onDrop: (e: React.DragEvent<HTMLElement>, modelId: string) => void;
+  onDragEnd: () => void;
 }
 
 export function ModelRow({
   model,
   isActive,
+  isSelected,
   isEditing,
   hasResult,
   editName,
@@ -31,6 +40,13 @@ export function ModelRow({
   onStartRename,
   onSelect,
   onContextMenu,
+  isDragSource,
+  isDropBefore,
+  isDropAfter,
+  onDragStart,
+  onDragOver,
+  onDrop,
+  onDragEnd,
 }: Props) {
   const gradientId = `fg-${model.id}`;
 
@@ -38,26 +54,47 @@ export function ModelRow({
     <div
       className="group flex items-center gap-2 px-4 py-[5px] cursor-pointer text-[12px] select-none rounded-sm mx-1 transition-colors"
       style={{
-        background: isActive ? "var(--color-vsc-list-active)" : undefined,
-        color: isActive
-          ? "var(--color-vsc-text-bright)"
-          : "var(--color-vsc-text)",
+        background: isActive
+          ? "var(--color-vsc-list-active)"
+          : isSelected
+            ? "var(--color-vsc-list-hover)"
+            : undefined,
+        color:
+          isActive || isSelected
+            ? "var(--color-vsc-text-bright)"
+            : "var(--color-vsc-text)",
+        opacity: isDragSource ? 0.5 : 1,
+        borderTop: isDropBefore
+          ? "1px solid var(--color-vsc-accent)"
+          : "1px solid transparent",
+        borderBottom: isDropAfter
+          ? "1px solid var(--color-vsc-accent)"
+          : "1px solid transparent",
       }}
       onMouseEnter={(e) => {
-        if (!isActive)
+        if (!isActive && !isSelected)
           (e.currentTarget as HTMLElement).style.background =
             "var(--color-vsc-list-hover)";
       }}
       onMouseLeave={(e) => {
-        if (!isActive) (e.currentTarget as HTMLElement).style.background = "";
+        if (!isActive && !isSelected)
+          (e.currentTarget as HTMLElement).style.background = "";
       }}
-      onClick={() => {
-        if (!isEditing) onSelect();
+      onClick={(e) => {
+        if (!isEditing) {
+          // Forward click modifiers so Explorer can do range/toggle selection.
+          onSelect(e);
+        }
       }}
       onDoubleClick={() => onStartRename(model.id, model.name)}
       onContextMenu={(e) => onContextMenu(e, model.id, model.name)}
+      draggable={!isEditing}
+      onDragStart={() => onDragStart(model.id)}
+      onDragOver={(e) => onDragOver(e, model.id)}
+      onDrop={(e) => onDrop(e, model.id)}
+      onDragEnd={onDragEnd}
       role="treeitem"
-      aria-selected={isActive}
+      aria-selected={isActive || isSelected}
       aria-label={model.name}
     >
       <svg

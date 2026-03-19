@@ -229,6 +229,11 @@ export interface ModelsSlice {
   duplicateModel: (id: string) => void;
   deleteModel: (id: string) => void;
   renameModel: (id: string, name: string) => void;
+  reorderModels: (
+    draggedId: string,
+    targetId: string,
+    position?: "before" | "after",
+  ) => void;
   switchModel: (id: string) => void;
   saveCurrentModel: () => void;
   loadProject: (data: { models: ModelEntry[]; activeModelId?: string }) => void;

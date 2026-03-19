@@ -5,6 +5,7 @@ export interface MenuPos {
   y: number;
   modelId: string;
   modelName: string;
+  selectedModelIds: string[];
 }
 
 interface Props {
@@ -15,6 +16,7 @@ interface Props {
   onDelete: () => void;
   onProperties: () => void;
   canDelete: boolean;
+  multiSelect: boolean;
 }
 
 export function ContextMenu({
@@ -25,6 +27,7 @@ export function ContextMenu({
   onDelete,
   onProperties,
   canDelete,
+  multiSelect,
 }: Props) {
   const menuRef = useRef<HTMLDivElement>(null);
 
@@ -67,6 +70,7 @@ export function ContextMenu({
         onRename();
         onClose();
       },
+      disabled: multiSelect,
     },
     {
       label: "Duplicate",
@@ -75,9 +79,12 @@ export function ContextMenu({
         onDuplicate();
         onClose();
       },
+      disabled: multiSelect,
     },
     {
-      label: "Delete",
+      label: multiSelect
+        ? `Delete Selected (${pos.selectedModelIds.length})`
+        : "Delete",
       icon: "M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16",
       action: () => {
         onDelete();

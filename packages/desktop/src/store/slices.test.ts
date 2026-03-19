@@ -98,6 +98,29 @@ describe("store slices", () => {
     expect(copy?.name).toContain("(copy)");
   });
 
+  it("modelsSlice reorders models while keeping active model", () => {
+    const store = useAppStore.getState();
+    const firstModelId = store.activeModelId;
+
+    store.addModel("Model B");
+    store.addModel("Model C");
+
+    let next = useAppStore.getState();
+    const modelCId = next.activeModelId;
+    const modelBId = next.models.find((m) => m.name === "Model B")?.id;
+    expect(modelBId).toBeDefined();
+
+    next.reorderModels(modelCId, firstModelId, "before");
+    next = useAppStore.getState();
+    expect(next.models.map((m) => m.id)[0]).toBe(modelCId);
+
+    next.reorderModels(firstModelId, modelBId!, "after");
+    next = useAppStore.getState();
+    const ids = next.models.map((m) => m.id);
+    expect(ids.indexOf(firstModelId)).toBeGreaterThan(ids.indexOf(modelBId!));
+    expect(next.activeModelId).toBe(modelCId);
+  });
+
   it("analysisSlice runAllAnalyses guard keeps state idle when no models", async () => {
     useAppStore.setState({
       models: [],

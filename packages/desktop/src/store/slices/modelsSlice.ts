@@ -275,6 +275,27 @@ export const createModelsSlice: SliceCreator<ModelsSlice> = (set, get) => ({
       models: s.models.map((m) => (m.id === id ? { ...m, name } : m)),
     })),
 
+  reorderModels: (draggedId, targetId, position = "before") =>
+    set((s) => {
+      if (draggedId === targetId) return {};
+      const fromIndex = s.models.findIndex((m) => m.id === draggedId);
+      const targetIndex = s.models.findIndex((m) => m.id === targetId);
+      if (fromIndex < 0 || targetIndex < 0) return {};
+
+      const reordered = [...s.models];
+      const [draggedModel] = reordered.splice(fromIndex, 1);
+      let insertIndex = position === "after" ? targetIndex + 1 : targetIndex;
+
+      // Account for index shift after removing the dragged model.
+      if (fromIndex < insertIndex) {
+        insertIndex -= 1;
+      }
+
+      if (insertIndex === fromIndex) return {};
+      reordered.splice(insertIndex, 0, draggedModel);
+      return { models: reordered };
+    }),
+
   switchModel: (id) => {
     const s = get();
     const updated = s.models.map((m) =>
