@@ -1,11 +1,14 @@
 /** Ambient types for APIs exposed by the Electron preload script. */
 
 import type {
+  AnalysisLimitsState,
   AnalysisResult,
+  CustomSearchPlane,
   LineLoadRow,
   MaterialBoundaryRow,
   MaterialRow,
   ModelEntry,
+  ModelOrientation,
   ParameterDef,
   PiezometricLineState,
   RegionMaterials,
@@ -59,6 +62,15 @@ interface ParametersStatePayload {
   parameters: ParameterDef[];
 }
 
+interface AnalysisStatePayload {
+  coordinates: [number, number][];
+  orientation: ModelOrientation;
+  analysisLimits: AnalysisLimitsState;
+  customSearchPlanes: CustomSearchPlane[];
+  customPlanesOnly: boolean;
+  options: ModelEntry["options"];
+}
+
 declare global {
   interface Window {
     cslope: {
@@ -80,6 +92,9 @@ declare global {
       openPiezoDialog: () => void;
       openParametersDialog: () => void;
       openResultsPlotDialog: () => void;
+      openSearchLimitsDialog: () => void;
+      openCustomSearchPlanesDialog: () => void;
+      openOptionsDialog: () => void;
       onInteriorBoundariesDialogOpenChanged: (
         listener: (event: unknown, open: boolean) => void,
       ) => void;
@@ -280,6 +295,24 @@ declare global {
       ) => void;
       offResultsPlotChanged: (
         listener: (event: unknown, state: ResultsPlotStatePayload) => void,
+      ) => void;
+      // Analysis popups sync
+      requestAnalysisState: () => void;
+      sendAnalysisState: (state: AnalysisStatePayload) => void;
+      sendAnalysisChanged: (state: AnalysisStatePayload) => void;
+      onAnalysisRequestState: (listener: (event: unknown) => void) => void;
+      offAnalysisRequestState: (listener: (event: unknown) => void) => void;
+      onAnalysisState: (
+        listener: (event: unknown, state: AnalysisStatePayload) => void,
+      ) => void;
+      offAnalysisState: (
+        listener: (event: unknown, state: AnalysisStatePayload) => void,
+      ) => void;
+      onAnalysisChanged: (
+        listener: (event: unknown, state: AnalysisStatePayload) => void,
+      ) => void;
+      offAnalysisChanged: (
+        listener: (event: unknown, state: AnalysisStatePayload) => void,
       ) => void;
     };
   }

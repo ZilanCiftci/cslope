@@ -2,7 +2,13 @@ import { useAppStore } from "../../../store/app-store";
 import { Section } from "../../../components/ui/Section";
 import { Label } from "../../../components/ui/Label";
 
-export function SearchLimitsSection() {
+interface SearchLimitsSectionProps {
+  plain?: boolean;
+}
+
+export function SearchLimitsSection({
+  plain = false,
+}: SearchLimitsSectionProps) {
   const limits = useAppStore((s) => s.analysisLimits);
   const orientation = useAppStore((s) => s.orientation);
   const setLimits = useAppStore((s) => s.setAnalysisLimits);
@@ -14,8 +20,8 @@ export function SearchLimitsSection() {
   const crestSide = orientation === "rtl" ? "right" : "left";
   const toeSide = orientation === "rtl" ? "left" : "right";
 
-  return (
-    <Section title="Search Limits">
+  const content = (
+    <>
       <label className="flex items-center gap-2 text-[12px]">
         <input
           type="checkbox"
@@ -107,6 +113,12 @@ export function SearchLimitsSection() {
           </div>
         </div>
       )}
-    </Section>
+    </>
   );
+
+  if (plain) {
+    return <div className="space-y-2.5">{content}</div>;
+  }
+
+  return <Section title="Search Limits">{content}</Section>;
 }

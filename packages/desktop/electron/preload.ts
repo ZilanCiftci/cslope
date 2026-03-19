@@ -24,6 +24,11 @@ contextBridge.exposeInMainWorld("cslope", {
   openPiezoDialog: () => ipcRenderer.send("window:openPiezoDialog"),
   openParametersDialog: () => ipcRenderer.send("window:openParametersDialog"),
   openResultsPlotDialog: () => ipcRenderer.send("window:openResultsPlotDialog"),
+  openSearchLimitsDialog: () =>
+    ipcRenderer.send("window:openSearchLimitsDialog"),
+  openCustomSearchPlanesDialog: () =>
+    ipcRenderer.send("window:openCustomSearchPlanesDialog"),
+  openOptionsDialog: () => ipcRenderer.send("window:openOptionsDialog"),
   onInteriorBoundariesDialogOpenChanged: (
     listener: (event: unknown, open: unknown) => void,
   ) => ipcRenderer.on("interiorBoundaries:dialogOpenChanged", listener),
@@ -197,4 +202,22 @@ contextBridge.exposeInMainWorld("cslope", {
     ipcRenderer.on("resultsPlot:changed", listener),
   offResultsPlotChanged: (listener: (event: unknown, state: unknown) => void) =>
     ipcRenderer.off("resultsPlot:changed", listener),
+  // Analysis popups sync
+  requestAnalysisState: () => ipcRenderer.send("analysis:requestState"),
+  sendAnalysisState: (state: unknown) =>
+    ipcRenderer.send("analysis:stateResponse", state),
+  sendAnalysisChanged: (state: unknown) =>
+    ipcRenderer.send("analysis:changed", state),
+  onAnalysisRequestState: (listener: (event: unknown) => void) =>
+    ipcRenderer.on("analysis:requestState", listener),
+  offAnalysisRequestState: (listener: (event: unknown) => void) =>
+    ipcRenderer.off("analysis:requestState", listener),
+  onAnalysisState: (listener: (event: unknown, state: unknown) => void) =>
+    ipcRenderer.on("analysis:stateResponse", listener),
+  offAnalysisState: (listener: (event: unknown, state: unknown) => void) =>
+    ipcRenderer.off("analysis:stateResponse", listener),
+  onAnalysisChanged: (listener: (event: unknown, state: unknown) => void) =>
+    ipcRenderer.on("analysis:changed", listener),
+  offAnalysisChanged: (listener: (event: unknown, state: unknown) => void) =>
+    ipcRenderer.off("analysis:changed", listener),
 });

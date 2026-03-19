@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { AnalysisMethod, IntersliceFunctionType } from "@cslope/engine";
 import { useAppStore } from "../../../store/app-store";
 import { Section } from "../../../components/ui/Section";
@@ -38,7 +38,11 @@ function clampNumber(value: number, min: number, max: number): number {
   return Math.min(max, Math.max(min, value));
 }
 
-export function OptionsSection() {
+interface OptionsSectionProps {
+  plain?: boolean;
+}
+
+export function OptionsSection({ plain = false }: OptionsSectionProps) {
   const options = useAppStore((s) => s.options);
   const setOptions = useAppStore((s) => s.setOptions);
   const orientation = useAppStore((s) => s.orientation);
@@ -58,6 +62,19 @@ export function OptionsSection() {
   const [toleranceDraft, setToleranceDraft] = useState(
     String(options.tolerance),
   );
+
+  // Keep numeric drafts in sync when options are hydrated from another window.
+  useEffect(() => {
+    setSlicesDraft(String(options.slices));
+    setIterationsDraft(String(options.iterations));
+    setRefinedIterationsDraft(String(options.refinedIterations));
+    setToleranceDraft(String(options.tolerance));
+  }, [
+    options.slices,
+    options.iterations,
+    options.refinedIterations,
+    options.tolerance,
+  ]);
 
   const slicesParsed = Number(slicesDraft);
   const iterationsParsed = Number(iterationsDraft);
@@ -79,8 +96,8 @@ export function OptionsSection() {
     toleranceParsed < 0.001 ||
     toleranceParsed > 0.1;
 
-  return (
-    <Section title="Analysis Options">
+  const content = (
+    <>
       <div className="grid grid-cols-2 gap-3 text-[12px]">
         <div className="col-span-2 flex flex-col gap-1">
           <Label>Analysis Direction</Label>
@@ -329,6 +346,12 @@ export function OptionsSection() {
             </label>
           )}
       </div>
-    </Section>
+    </>
   );
+
+  if (plain) {
+    return <div className="space-y-2.5">{content}</div>;
+  }
+
+  return <Section title="Analysis Options">{content}</Section>;
 }

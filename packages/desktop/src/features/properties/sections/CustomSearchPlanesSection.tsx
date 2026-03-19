@@ -2,7 +2,13 @@ import { useAppStore } from "../../../store/app-store";
 import { Section } from "../../../components/ui/Section";
 import { Label } from "../../../components/ui/Label";
 
-export function CustomSearchPlanesSection() {
+interface CustomSearchPlanesSectionProps {
+  plain?: boolean;
+}
+
+export function CustomSearchPlanesSection({
+  plain = false,
+}: CustomSearchPlanesSectionProps) {
   const planes = useAppStore((s) => s.customSearchPlanes);
   const customPlanesOnly = useAppStore((s) => s.customPlanesOnly);
   const addPlane = useAppStore((s) => s.addCustomSearchPlane);
@@ -10,8 +16,8 @@ export function CustomSearchPlanesSection() {
   const removePlane = useAppStore((s) => s.removeCustomSearchPlane);
   const setCustomPlanesOnly = useAppStore((s) => s.setCustomPlanesOnly);
 
-  return (
-    <Section title="Custom Search Planes">
+  const content = (
+    <>
       <div
         className="text-[10px] mb-1.5"
         style={{ color: "var(--color-vsc-text-muted)" }}
@@ -105,6 +111,12 @@ export function CustomSearchPlanesSection() {
       >
         + Add Search Plane
       </button>
-    </Section>
+    </>
   );
+
+  if (plain) {
+    return <div className="space-y-2.5">{content}</div>;
+  }
+
+  return <Section title="Custom Search Planes">{content}</Section>;
 }

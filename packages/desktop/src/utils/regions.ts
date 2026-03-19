@@ -67,6 +67,49 @@ function ensureClosed(
 }
 
 /**
+ * Apply all open-boundary splits repeatedly until the piece set stabilizes.
+ *
+ * This makes results independent from boundary ordering. A boundary that does
+ * not split the original polygon (for example, one endpoint starts inside) may
+ * split a derived piece after another boundary has already cut the model.
+ */
+function splitPiecesByOpenBoundaries(
+  sourcePieces: { px: number[]; py: number[] }[],
+  openBoundaries: MaterialBoundaryRow[],
+): { px: number[]; py: number[] }[] {
+  if (openBoundaries.length === 0) return sourcePieces;
+
+  let pieces = sourcePieces;
+  const maxPasses = Math.max(1, openBoundaries.length + 2);
+
+  for (let pass = 0; pass < maxPasses; pass++) {
+    let changed = false;
+
+    for (const b of openBoundaries) {
+      const lx = b.coordinates.map((c) => c[0]);
+      const ly = b.coordinates.map((c) => c[1]);
+      const next: { px: number[]; py: number[] }[] = [];
+
+      for (const piece of pieces) {
+        try {
+          const splits = splitPolygonByPolyline(piece.px, piece.py, lx, ly);
+          if (splits.length > 1) changed = true;
+          next.push(...splits);
+        } catch {
+          next.push(piece);
+        }
+      }
+
+      pieces = next;
+    }
+
+    if (!changed) break;
+  }
+
+  return pieces;
+}
+
+/**
  * Subtract an inner closed polygon from an outer polygon using a bridge-cut.
  *
  * Returns the donut-shaped remainder as a single simple-polygon ring with a
@@ -213,23 +256,11 @@ export function computeRegions(
     isClosedBoundary(b.coordinates),
   );
 
-  // Phase 1: Split all pieces by every open boundary
-  let pieces: { px: number[]; py: number[] }[] = [{ px, py }];
-
-  for (const b of openBoundaries) {
-    const lx = b.coordinates.map((c) => c[0]);
-    const ly = b.coordinates.map((c) => c[1]);
-    const next: { px: number[]; py: number[] }[] = [];
-    for (const piece of pieces) {
-      try {
-        const splits = splitPolygonByPolyline(piece.px, piece.py, lx, ly);
-        next.push(...splits);
-      } catch {
-        next.push(piece);
-      }
-    }
-    pieces = next;
-  }
+  // Phase 1: Split by open boundaries until stable (order-independent).
+  let pieces: { px: number[]; py: number[] }[] = splitPiecesByOpenBoundaries(
+    [{ px, py }],
+    openBoundaries,
+  );
 
   // Phase 2: Split by closed (polygon) boundaries using subtraction.
   //
@@ -242,21 +273,7 @@ export function computeRegions(
       b.coordinates.map((c) => c[0]),
       b.coordinates.map((c) => c[1]),
     );
-    let subPieces = [inner];
-    for (const ob of openBoundaries) {
-      const lx = ob.coordinates.map((c) => c[0]);
-      const ly = ob.coordinates.map((c) => c[1]);
-      const next: { px: number[]; py: number[] }[] = [];
-      for (const sp of subPieces) {
-        try {
-          const splits = splitPolygonByPolyline(sp.px, sp.py, lx, ly);
-          next.push(...splits);
-        } catch {
-          next.push(sp);
-        }
-      }
-      subPieces = next;
-    }
+    const subPieces = splitPiecesByOpenBoundaries([inner], openBoundaries);
     closedSubPolygons.push(...subPieces);
   }
 

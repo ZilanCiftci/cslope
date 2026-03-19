@@ -2,6 +2,7 @@ import { ExplorerIcon } from "./icons/ExplorerIcon";
 import { PropertiesIcon } from "./icons/PropertiesIcon";
 
 interface Props {
+  mode: "edit" | "result";
   explorerOpen: boolean;
   propertiesOpen: boolean;
   explorerLocation: "left" | "right";
@@ -13,6 +14,7 @@ interface Props {
 }
 
 export function ActivityBar({
+  mode,
   explorerOpen,
   propertiesOpen,
   explorerLocation,
@@ -47,23 +49,28 @@ export function ActivityBar({
       >
         <ExplorerIcon active={explorerOpen} location={explorerLocation} />
       </button>
-      <button
-        onClick={onToggleProperties}
-        onContextMenu={(e) => {
-          e.preventDefault();
-          onTogglePropertiesLocation();
-        }}
-        className="w-9 h-9 flex items-center justify-center cursor-pointer rounded-lg relative group"
-        style={{
-          background: propertiesOpen
-            ? "var(--color-vsc-list-active)"
-            : "transparent",
-        }}
-        title="Properties (Right-click to move)"
-        aria-label="Toggle properties"
-      >
-        <PropertiesIcon active={propertiesOpen} location={propertiesLocation} />
-      </button>
+      {mode === "result" ? (
+        <button
+          onClick={onToggleProperties}
+          onContextMenu={(e) => {
+            e.preventDefault();
+            onTogglePropertiesLocation();
+          }}
+          className="w-9 h-9 flex items-center justify-center cursor-pointer rounded-lg relative group"
+          style={{
+            background: propertiesOpen
+              ? "var(--color-vsc-list-active)"
+              : "transparent",
+          }}
+          title="Properties (Right-click to move)"
+          aria-label="Toggle properties"
+        >
+          <PropertiesIcon
+            active={propertiesOpen}
+            location={propertiesLocation}
+          />
+        </button>
+      ) : null}
     </div>
   );
 }

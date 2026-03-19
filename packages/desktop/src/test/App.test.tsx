@@ -41,10 +41,12 @@ describe("App — VS Code dark layout", () => {
     expect(button).not.toBeDisabled();
   });
 
-  it("renders the activity bar with explorer & properties toggles", () => {
+  it("renders the activity bar with models toggle", () => {
     render(<App />);
     expect(screen.getByLabelText("Toggle models")).toBeInTheDocument();
-    expect(screen.getByLabelText("Toggle properties")).toBeInTheDocument();
+    expect(
+      screen.queryByLabelText("Toggle properties"),
+    ).not.toBeInTheDocument();
   });
 
   it("shows the explorer sidebar by default", () => {
@@ -82,10 +84,11 @@ describe("App — VS Code dark layout", () => {
     ).toBeInTheDocument();
   });
 
-  it("shows properties panel sections in sidebar", () => {
+  it("does not show properties sidebar in edit mode", () => {
     render(<App />);
-    // PropertiesPanel has collapsible sections
-    expect(screen.getByText("Search Limits")).toBeInTheDocument();
+    expect(
+      screen.queryByText("Analysis controls moved"),
+    ).not.toBeInTheDocument();
   });
 
   // ── Running / error / result states ──────────────────────────────────

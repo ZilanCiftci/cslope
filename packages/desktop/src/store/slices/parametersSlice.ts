@@ -135,7 +135,7 @@ export const createParametersSlice: SliceCreator<ParametersSlice> = (
         ...s.parameters,
         {
           id: nextId("param"),
-          name: `param_${s.parameters.length + 1}`,
+          name: "",
           expression: "0",
         },
       ]),

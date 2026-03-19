@@ -65,6 +65,23 @@ export function ParametersDialogApp() {
     return counts;
   }, [parameters]);
 
+  const sortedParameters = useMemo(() => {
+    const normalized = (name: string) => name.trim().toLocaleLowerCase();
+    return [...parameters].sort((a, b) => {
+      const aName = normalized(a.name);
+      const bName = normalized(b.name);
+
+      // Keep unnamed/new parameters at the bottom by default.
+      const aEmpty = aName.length === 0;
+      const bEmpty = bName.length === 0;
+      if (aEmpty !== bEmpty) return aEmpty ? 1 : -1;
+
+      const byName = aName.localeCompare(bName);
+      if (byName !== 0) return byName;
+      return a.id.localeCompare(b.id);
+    });
+  }, [parameters]);
+
   const updateParam = (id: string, patch: Partial<ParameterDef>) => {
     setParameters(
       parameters.map((p) => (p.id === id ? { ...p, ...patch } : p)),
@@ -198,7 +215,7 @@ export function ParametersDialogApp() {
 
       <div className="flex-1 overflow-y-auto pr-1 space-y-2.5">
         <SpreadsheetTable
-          rows={parameters}
+          rows={sortedParameters}
           columns={columns}
           getRowKey={(row) => row.id}
         />

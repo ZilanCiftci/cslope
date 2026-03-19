@@ -7,7 +7,6 @@ import { TitleBar } from "./components/TitleBar";
 import {
   Explorer,
   EditCanvas,
-  PropertiesPanel,
   ResizablePanel,
   ResultCanvas,
   ResultSidebar,
@@ -119,6 +118,7 @@ export function AppShell() {
 
       <div className="flex flex-1 min-h-0">
         <ActivityBar
+          mode={mode}
           explorerOpen={explorerOpen}
           propertiesOpen={sidebarOpen}
           explorerLocation={explorerLocation}
@@ -144,13 +144,13 @@ export function AppShell() {
             <Explorer />
           </ResizablePanel>
         )}
-        {sidebarOpen && propertiesLocation === "left" && (
+        {mode === "result" && sidebarOpen && propertiesLocation === "left" && (
           <ResizablePanel
             width={propertiesWidth}
             onResize={setPropertiesWidth}
             position="left"
           >
-            {mode === "result" ? <ResultSidebar /> : <PropertiesPanel />}
+            <ResultSidebar />
           </ResizablePanel>
         )}
 
@@ -160,13 +160,13 @@ export function AppShell() {
           </div>
         </div>
 
-        {sidebarOpen && propertiesLocation === "right" && (
+        {mode === "result" && sidebarOpen && propertiesLocation === "right" && (
           <ResizablePanel
             width={propertiesWidth}
             onResize={setPropertiesWidth}
             position="right"
           >
-            {mode === "result" ? <ResultSidebar /> : <PropertiesPanel />}
+            <ResultSidebar />
           </ResizablePanel>
         )}
         {explorerOpen && explorerLocation === "right" && (

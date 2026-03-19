@@ -18,6 +18,9 @@ import {
   RibbonLineLoadIcon,
   RibbonPiezoLineIcon,
   RibbonParametersIcon,
+  RibbonSearchLimitsIcon,
+  RibbonCustomPlanesIcon,
+  RibbonOptionsIcon,
 } from "../../icons/EditIcons";
 import {
   RibbonFitIcon,
@@ -247,6 +250,35 @@ export function EditMenu({
                 onClick={() => {
                   setActiveSection("Parameters");
                   window.cslope.openParametersDialog();
+                }}
+              />
+            </RibbonGroup>
+
+            <RibbonSep />
+
+            <RibbonGroup label="Analysis">
+              <RibbonButton
+                icon={<RibbonSearchLimitsIcon />}
+                label="Search limits"
+                onClick={() => {
+                  setActiveSection("Search Limits");
+                  window.cslope.openSearchLimitsDialog();
+                }}
+              />
+              <RibbonButton
+                icon={<RibbonCustomPlanesIcon />}
+                label="Custom search planes"
+                onClick={() => {
+                  setActiveSection("Custom Search Planes");
+                  window.cslope.openCustomSearchPlanesDialog();
+                }}
+              />
+              <RibbonButton
+                icon={<RibbonOptionsIcon />}
+                label="Options"
+                onClick={() => {
+                  setActiveSection("Options");
+                  window.cslope.openOptionsDialog();
                 }}
               />
             </RibbonGroup>

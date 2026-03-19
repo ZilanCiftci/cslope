@@ -36,6 +36,9 @@ let lineLoadsWin: BrowserWindow | null;
 let piezoWin: BrowserWindow | null;
 let parametersWin: BrowserWindow | null;
 let resultsPlotWin: BrowserWindow | null;
+let searchLimitsWin: BrowserWindow | null;
+let customSearchPlanesWin: BrowserWindow | null;
+let optionsWin: BrowserWindow | null;
 let splashTimeout: ReturnType<typeof setTimeout> | null = null;
 
 function showMainWindow() {
@@ -489,6 +492,128 @@ function createResultsPlotWindow() {
   }
 }
 
+function createSearchLimitsWindow() {
+  if (!win) return;
+
+  if (searchLimitsWin && !searchLimitsWin.isDestroyed()) {
+    searchLimitsWin.show();
+    searchLimitsWin.focus();
+    return;
+  }
+
+  searchLimitsWin = new BrowserWindow({
+    width: 520,
+    height: 760,
+    minWidth: 420,
+    minHeight: 520,
+    title: "Search limits",
+    parent: win,
+    modal: false,
+    autoHideMenuBar: true,
+    icon: path.join(process.env.VITE_PUBLIC, "mountain.svg"),
+    webPreferences: {
+      preload: path.join(__dirname, "preload.mjs"),
+      contextIsolation: true,
+      nodeIntegration: false,
+      sandbox: true,
+    },
+  });
+
+  searchLimitsWin.on("closed", () => {
+    searchLimitsWin = null;
+  });
+
+  if (VITE_DEV_SERVER_URL) {
+    searchLimitsWin.loadURL(`${VITE_DEV_SERVER_URL}#search-limits-dialog`);
+  } else {
+    searchLimitsWin.loadFile(path.join(RENDERER_DIST, "index.html"), {
+      hash: "search-limits-dialog",
+    });
+  }
+}
+
+function createCustomSearchPlanesWindow() {
+  if (!win) return;
+
+  if (customSearchPlanesWin && !customSearchPlanesWin.isDestroyed()) {
+    customSearchPlanesWin.show();
+    customSearchPlanesWin.focus();
+    return;
+  }
+
+  customSearchPlanesWin = new BrowserWindow({
+    width: 520,
+    height: 760,
+    minWidth: 420,
+    minHeight: 520,
+    title: "Custom search planes",
+    parent: win,
+    modal: false,
+    autoHideMenuBar: true,
+    icon: path.join(process.env.VITE_PUBLIC, "mountain.svg"),
+    webPreferences: {
+      preload: path.join(__dirname, "preload.mjs"),
+      contextIsolation: true,
+      nodeIntegration: false,
+      sandbox: true,
+    },
+  });
+
+  customSearchPlanesWin.on("closed", () => {
+    customSearchPlanesWin = null;
+  });
+
+  if (VITE_DEV_SERVER_URL) {
+    customSearchPlanesWin.loadURL(
+      `${VITE_DEV_SERVER_URL}#custom-search-planes-dialog`,
+    );
+  } else {
+    customSearchPlanesWin.loadFile(path.join(RENDERER_DIST, "index.html"), {
+      hash: "custom-search-planes-dialog",
+    });
+  }
+}
+
+function createOptionsWindow() {
+  if (!win) return;
+
+  if (optionsWin && !optionsWin.isDestroyed()) {
+    optionsWin.show();
+    optionsWin.focus();
+    return;
+  }
+
+  optionsWin = new BrowserWindow({
+    width: 560,
+    height: 760,
+    minWidth: 460,
+    minHeight: 560,
+    title: "Options",
+    parent: win,
+    modal: false,
+    autoHideMenuBar: true,
+    icon: path.join(process.env.VITE_PUBLIC, "mountain.svg"),
+    webPreferences: {
+      preload: path.join(__dirname, "preload.mjs"),
+      contextIsolation: true,
+      nodeIntegration: false,
+      sandbox: true,
+    },
+  });
+
+  optionsWin.on("closed", () => {
+    optionsWin = null;
+  });
+
+  if (VITE_DEV_SERVER_URL) {
+    optionsWin.loadURL(`${VITE_DEV_SERVER_URL}#options-dialog`);
+  } else {
+    optionsWin.loadFile(path.join(RENDERER_DIST, "index.html"), {
+      hash: "options-dialog",
+    });
+  }
+}
+
 // When the renderer tells us it has mounted, show the main window
 // and close the splash screen.
 ipcMain.on("app:ready", () => {
@@ -539,6 +664,11 @@ ipcMain.on("window:openLineLoadsDialog", () => createLineLoadsWindow());
 ipcMain.on("window:openPiezoDialog", () => createPiezoWindow());
 ipcMain.on("window:openParametersDialog", () => createParametersWindow());
 ipcMain.on("window:openResultsPlotDialog", () => createResultsPlotWindow());
+ipcMain.on("window:openSearchLimitsDialog", () => createSearchLimitsWindow());
+ipcMain.on("window:openCustomSearchPlanesDialog", () =>
+  createCustomSearchPlanesWindow(),
+);
+ipcMain.on("window:openOptionsDialog", () => createOptionsWindow());
 
 // ── Materials window sync IPC (main window <-> materials window) ─────
 
@@ -752,6 +882,52 @@ ipcMain.on("resultsPlot:stateResponse", (event, state) => {
 ipcMain.on("resultsPlot:changed", (event, state) => {
   if (event.sender === win?.webContents) {
     resultsPlotWin?.webContents.send("resultsPlot:changed", state);
+  }
+});
+
+// ── Analysis windows sync IPC (main window <-> analysis windows) ─────────
+
+ipcMain.on("analysis:requestState", (event) => {
+  if (
+    event.sender === searchLimitsWin?.webContents ||
+    event.sender === customSearchPlanesWin?.webContents ||
+    event.sender === optionsWin?.webContents
+  ) {
+    win?.webContents.send("analysis:requestState");
+  }
+});
+
+ipcMain.on("analysis:stateResponse", (event, state) => {
+  if (event.sender === win?.webContents) {
+    searchLimitsWin?.webContents.send("analysis:stateResponse", state);
+    customSearchPlanesWin?.webContents.send("analysis:stateResponse", state);
+    optionsWin?.webContents.send("analysis:stateResponse", state);
+  }
+});
+
+ipcMain.on("analysis:changed", (event, state) => {
+  if (
+    event.sender === searchLimitsWin?.webContents ||
+    event.sender === customSearchPlanesWin?.webContents ||
+    event.sender === optionsWin?.webContents
+  ) {
+    win?.webContents.send("analysis:changed", state);
+    if (event.sender !== searchLimitsWin?.webContents) {
+      searchLimitsWin?.webContents.send("analysis:changed", state);
+    }
+    if (event.sender !== customSearchPlanesWin?.webContents) {
+      customSearchPlanesWin?.webContents.send("analysis:changed", state);
+    }
+    if (event.sender !== optionsWin?.webContents) {
+      optionsWin?.webContents.send("analysis:changed", state);
+    }
+    return;
+  }
+
+  if (event.sender === win?.webContents) {
+    searchLimitsWin?.webContents.send("analysis:changed", state);
+    customSearchPlanesWin?.webContents.send("analysis:changed", state);
+    optionsWin?.webContents.send("analysis:changed", state);
   }
 });
 

@@ -390,3 +390,74 @@ export function RibbonParametersIcon({ size = 20 }: IconProps) {
     </svg>
   );
 }
+
+/** Coloured search limits icon - horizontal range with end markers. */
+export function RibbonSearchLimitsIcon({ size = 20 }: IconProps) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <line
+        x1="4"
+        y1="12"
+        x2="20"
+        y2="12"
+        stroke="#5c6bc0"
+        strokeWidth="1.8"
+        strokeLinecap="round"
+      />
+      <line x1="8" y1="6" x2="8" y2="18" stroke="#26a69a" strokeWidth="2" />
+      <line x1="16" y1="6" x2="16" y2="18" stroke="#ef5350" strokeWidth="2" />
+      <circle cx="8" cy="12" r="2" fill="#26a69a" opacity="0.35" />
+      <circle cx="16" cy="12" r="2" fill="#ef5350" opacity="0.35" />
+    </svg>
+  );
+}
+
+/** Coloured custom planes icon - multiple circles. */
+export function RibbonCustomPlanesIcon({ size = 20 }: IconProps) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <circle cx="9" cy="11" r="5" stroke="#42a5f5" strokeWidth="1.6" />
+      <circle cx="15.5" cy="13.5" r="4" stroke="#66bb6a" strokeWidth="1.6" />
+      <circle cx="9" cy="11" r="1.2" fill="#42a5f5" />
+      <circle cx="15.5" cy="13.5" r="1.2" fill="#66bb6a" />
+    </svg>
+  );
+}
+
+/** Coloured options icon - slider controls. */
+export function RibbonOptionsIcon({ size = 20 }: IconProps) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <line
+        x1="4"
+        y1="7"
+        x2="20"
+        y2="7"
+        stroke="#5c6bc0"
+        strokeWidth="1.6"
+        strokeLinecap="round"
+      />
+      <line
+        x1="4"
+        y1="12"
+        x2="20"
+        y2="12"
+        stroke="#5c6bc0"
+        strokeWidth="1.6"
+        strokeLinecap="round"
+      />
+      <line
+        x1="4"
+        y1="17"
+        x2="20"
+        y2="17"
+        stroke="#5c6bc0"
+        strokeWidth="1.6"
+        strokeLinecap="round"
+      />
+      <circle cx="9" cy="7" r="2.2" fill="#42a5f5" />
+      <circle cx="15" cy="12" r="2.2" fill="#66bb6a" />
+      <circle cx="12" cy="17" r="2.2" fill="#ef5350" />
+    </svg>
+  );
+}

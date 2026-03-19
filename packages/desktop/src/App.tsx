@@ -10,13 +10,19 @@ import { LineLoadsDialogApp } from "./features/properties/LineLoadsDialogApp";
 import { PiezoDialogApp } from "./features/properties/PiezoDialogApp";
 import { ParametersDialogApp } from "./features/properties/ParametersDialogApp";
 import { ResultsPlotDialogApp } from "./features/properties/ResultsPlotDialogApp";
+import { SearchLimitsDialogApp } from "./features/properties/SearchLimitsDialogApp";
+import { CustomSearchPlanesDialogApp } from "./features/properties/CustomSearchPlanesDialogApp";
+import { OptionsDialogApp } from "./features/properties/OptionsDialogApp";
 import { useAppStore } from "./store/app-store";
 import type {
+  AnalysisLimitsState,
   AnalysisResult,
+  CustomSearchPlane,
   LineLoadRow,
   MaterialBoundaryRow,
   MaterialRow,
   ModelEntry,
+  ModelOrientation,
   PiezometricLineState,
   ParameterDef,
   RegionMaterials,
@@ -61,6 +67,15 @@ interface ResultsPlotStatePayload {
 
 interface ParametersStatePayload {
   parameters: ParameterDef[];
+}
+
+interface AnalysisStatePayload {
+  coordinates: [number, number][];
+  orientation: ModelOrientation;
+  analysisLimits: AnalysisLimitsState;
+  customSearchPlanes: CustomSearchPlane[];
+  customPlanesOnly: boolean;
+  options: ModelEntry["options"];
 }
 
 function normalizeMaterialsPayload(
@@ -180,12 +195,22 @@ function App() {
   const isResultsPlotDialogWindow =
     typeof window !== "undefined" &&
     window.location.hash.replace(/^#/, "") === "results-plot-dialog";
+  const isSearchLimitsDialogWindow =
+    typeof window !== "undefined" &&
+    window.location.hash.replace(/^#/, "") === "search-limits-dialog";
+  const isCustomSearchPlanesDialogWindow =
+    typeof window !== "undefined" &&
+    window.location.hash.replace(/^#/, "") === "custom-search-planes-dialog";
+  const isOptionsDialogWindow =
+    typeof window !== "undefined" &&
+    window.location.hash.replace(/^#/, "") === "options-dialog";
   const suppressNextGeometryBroadcastRef = useRef(false);
   const suppressNextMaterialAssignmentBroadcastRef = useRef(false);
   const suppressNextInteriorBoundariesBroadcastRef = useRef(false);
   const suppressNextLoadsBroadcastRef = useRef(false);
   const suppressNextPiezoBroadcastRef = useRef(false);
   const suppressNextParametersBroadcastRef = useRef(false);
+  const suppressNextAnalysisBroadcastRef = useRef(false);
 
   const isAnyDialogWindow =
     isMaterialsDialogWindow ||
@@ -196,7 +221,10 @@ function App() {
     isLineLoadsDialogWindow ||
     isPiezoDialogWindow ||
     isParametersDialogWindow ||
-    isResultsPlotDialogWindow;
+    isResultsPlotDialogWindow ||
+    isSearchLimitsDialogWindow ||
+    isCustomSearchPlanesDialogWindow ||
+    isOptionsDialogWindow;
 
   useEffect(() => {
     // Tell the main process the renderer has mounted so it can
@@ -578,6 +606,71 @@ function App() {
   useEffect(() => {
     if (!isElectron || isAnyDialogWindow) return;
 
+    const handleAnalysisRequestState = () => {
+      const state = useAppStore.getState();
+      window.cslope.sendAnalysisState({
+        coordinates: state.coordinates,
+        orientation: state.orientation,
+        analysisLimits: state.analysisLimits,
+        customSearchPlanes: state.customSearchPlanes,
+        customPlanesOnly: state.customPlanesOnly,
+        options: state.options,
+      });
+    };
+
+    const handleAnalysisChanged = (
+      _event: unknown,
+      next: AnalysisStatePayload,
+    ) => {
+      suppressNextAnalysisBroadcastRef.current = true;
+      useAppStore.setState({
+        coordinates: next.coordinates,
+        orientation: next.orientation,
+        analysisLimits: next.analysisLimits,
+        customSearchPlanes: next.customSearchPlanes,
+        customPlanesOnly: next.customPlanesOnly,
+        options: next.options,
+      });
+    };
+
+    window.cslope.onAnalysisRequestState(handleAnalysisRequestState);
+    window.cslope.onAnalysisChanged(handleAnalysisChanged);
+
+    return () => {
+      window.cslope.offAnalysisRequestState(handleAnalysisRequestState);
+      window.cslope.offAnalysisChanged(handleAnalysisChanged);
+    };
+  }, [isAnyDialogWindow]);
+
+  useEffect(() => {
+    if (!isElectron || isAnyDialogWindow) return;
+
+    if (suppressNextAnalysisBroadcastRef.current) {
+      suppressNextAnalysisBroadcastRef.current = false;
+      return;
+    }
+
+    window.cslope.sendAnalysisChanged({
+      coordinates,
+      orientation,
+      analysisLimits,
+      customSearchPlanes,
+      customPlanesOnly,
+      options,
+    });
+  }, [
+    coordinates,
+    orientation,
+    analysisLimits,
+    customSearchPlanes,
+    customPlanesOnly,
+    options,
+    isAnyDialogWindow,
+  ]);
+
+  useEffect(() => {
+    if (!isElectron || isAnyDialogWindow) return;
+
     const handleResultsPlotRequestState = () => {
       window.cslope.sendResultsPlotState(buildResultsPlotPayloadFromState());
     };
@@ -645,6 +738,18 @@ function App() {
 
   if (isResultsPlotDialogWindow) {
     return <ResultsPlotDialogApp />;
+  }
+
+  if (isSearchLimitsDialogWindow) {
+    return <SearchLimitsDialogApp />;
+  }
+
+  if (isCustomSearchPlanesDialogWindow) {
+    return <CustomSearchPlanesDialogApp />;
+  }
+
+  if (isOptionsDialogWindow) {
+    return <OptionsDialogApp />;
   }
 
   return <AppShell />;
