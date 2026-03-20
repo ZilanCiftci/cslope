@@ -844,6 +844,67 @@ describe("store slices", () => {
     expect(model.customPlanesOnly).toBe(true);
   });
 
+  it("analysisSlice runAnalysis handles worker startup failures", () => {
+    const originalWorker = globalThis.Worker;
+    const brokenWorker = function BrokenWorker() {
+      throw new Error("Worker init failed");
+    } as unknown as typeof Worker;
+
+    Object.defineProperty(globalThis, "Worker", {
+      configurable: true,
+      writable: true,
+      value: brokenWorker,
+    });
+
+    try {
+      useAppStore.getState().runAnalysis();
+      const s = useAppStore.getState();
+      expect(s.runState).toBe("error");
+      expect(s.errorMessage).toContain("Worker init failed");
+      expect(s.progress).toBe(0);
+    } finally {
+      if (originalWorker === undefined) {
+        delete (globalThis as { Worker?: unknown }).Worker;
+      } else {
+        Object.defineProperty(globalThis, "Worker", {
+          configurable: true,
+          writable: true,
+          value: originalWorker,
+        });
+      }
+    }
+  });
+
+  it("analysisSlice runAllAnalyses handles worker startup failures", async () => {
+    const originalWorker = globalThis.Worker;
+    const brokenWorker = function BrokenWorker() {
+      throw new Error("Worker init failed");
+    } as unknown as typeof Worker;
+
+    Object.defineProperty(globalThis, "Worker", {
+      configurable: true,
+      writable: true,
+      value: brokenWorker,
+    });
+
+    try {
+      await useAppStore.getState().runAllAnalyses();
+      const s = useAppStore.getState();
+      expect(s.runState).toBe("error");
+      expect(s.errorMessage).toContain("Worker init failed");
+    } finally {
+      if (originalWorker === undefined) {
+        delete (globalThis as { Worker?: unknown }).Worker;
+      } else {
+        Object.defineProperty(globalThis, "Worker", {
+          configurable: true,
+          writable: true,
+          value: originalWorker,
+        });
+      }
+    }
+  });
+
   // ── resultViewSlice ──────────────────────────────────────────────────
 
   it("resultViewSlice setResultViewSettings merges patch into settings", () => {

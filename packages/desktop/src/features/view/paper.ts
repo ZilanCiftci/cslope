@@ -43,6 +43,9 @@ export function computePaperFrame(
   canvasH: number,
   paperSize: PaperSize,
   landscape = true,
+  zoom = 1,
+  offsetX = 0,
+  offsetY = 0,
 ): Rect {
   const { width: pw, height: ph } = getPaperDimensions(paperSize, landscape);
   const paperAspect = pw / ph;
@@ -60,8 +63,12 @@ export function computePaperFrame(
     frameW = availW;
     frameH = frameW / paperAspect;
   }
-  const x = (canvasW - frameW) / 2;
-  const y = (canvasH - frameH) / 2;
+  const clampedZoom = Number.isFinite(zoom) ? Math.max(0.25, zoom) : 1;
+  frameW *= clampedZoom;
+  frameH *= clampedZoom;
+
+  const x = (canvasW - frameW) / 2 + offsetX;
+  const y = (canvasH - frameH) / 2 + offsetY;
   return { x, y, w: frameW, h: frameH };
 }
 

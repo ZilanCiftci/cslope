@@ -352,6 +352,9 @@ export function usePointerHandlers(deps: PointerDeps) {
           rect.height,
           s.resultViewSettings.paperFrame.paperSize,
           s.resultViewSettings.paperFrame.landscape,
+          s.resultViewSettings.paperFrame.zoom ?? 1,
+          s.resultViewSettings.paperFrame.offsetX ?? 0,
+          s.resultViewSettings.paperFrame.offsetY ?? 0,
         );
         const cxPx = clientX - rect.left;
         const cyPx = clientY - rect.top;
@@ -459,6 +462,9 @@ export function usePointerHandlers(deps: PointerDeps) {
             rect.height,
             useAppStore.getState().resultViewSettings.paperFrame.paperSize,
             useAppStore.getState().resultViewSettings.paperFrame.landscape,
+            useAppStore.getState().resultViewSettings.paperFrame.zoom ?? 1,
+            useAppStore.getState().resultViewSettings.paperFrame.offsetX ?? 0,
+            useAppStore.getState().resultViewSettings.paperFrame.offsetY ?? 0,
           );
           const cxPx = e.clientX - rect.left;
           const cyPx = e.clientY - rect.top;
@@ -702,6 +708,9 @@ export function usePointerHandlers(deps: PointerDeps) {
           rect.height,
           useAppStore.getState().resultViewSettings.paperFrame.paperSize,
           useAppStore.getState().resultViewSettings.paperFrame.landscape,
+          useAppStore.getState().resultViewSettings.paperFrame.zoom ?? 1,
+          useAppStore.getState().resultViewSettings.paperFrame.offsetX ?? 0,
+          useAppStore.getState().resultViewSettings.paperFrame.offsetY ?? 0,
         );
         const fx = (cxPx - pf.x) / pf.w;
         const fy = (cyPx - pf.y) / pf.h;

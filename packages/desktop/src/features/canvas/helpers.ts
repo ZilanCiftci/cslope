@@ -554,6 +554,9 @@ export function extendBoundsWithResultFitExtras(params: {
     height,
     rvs.paperFrame.paperSize,
     rvs.paperFrame.landscape,
+    rvs.paperFrame.zoom ?? 1,
+    rvs.paperFrame.offsetX ?? 0,
+    rvs.paperFrame.offsetY ?? 0,
   );
   const annoScale = Math.min(pf.w, pf.h) / 600;
 

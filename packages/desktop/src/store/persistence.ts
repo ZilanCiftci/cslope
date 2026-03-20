@@ -256,6 +256,21 @@ function normalizeResultView(raw: unknown): ResultViewSettings {
       typeof rawPaperFrame.showFrame === "boolean"
         ? rawPaperFrame.showFrame
         : DEFAULT_RESULT_VIEW_SETTINGS.paperFrame.showFrame,
+    zoom:
+      typeof rawPaperFrame.zoom === "number" &&
+      Number.isFinite(rawPaperFrame.zoom)
+        ? rawPaperFrame.zoom
+        : (DEFAULT_RESULT_VIEW_SETTINGS.paperFrame.zoom ?? 1),
+    offsetX:
+      typeof rawPaperFrame.offsetX === "number" &&
+      Number.isFinite(rawPaperFrame.offsetX)
+        ? rawPaperFrame.offsetX
+        : (DEFAULT_RESULT_VIEW_SETTINGS.paperFrame.offsetX ?? 0),
+    offsetY:
+      typeof rawPaperFrame.offsetY === "number" &&
+      Number.isFinite(rawPaperFrame.offsetY)
+        ? rawPaperFrame.offsetY
+        : (DEFAULT_RESULT_VIEW_SETTINGS.paperFrame.offsetY ?? 0),
   };
   const annotations = Array.isArray(view.annotations)
     ? view.annotations.filter(
@@ -463,7 +478,11 @@ function normalizeUdl(raw: unknown): UdlRow | null {
     magnitude,
     x1,
     x2,
-    expressions: normalizeLoadExpressions(u.expressions, ["magnitude", "x1", "x2"]),
+    expressions: normalizeLoadExpressions(u.expressions, [
+      "magnitude",
+      "x1",
+      "x2",
+    ]),
   };
 }
 

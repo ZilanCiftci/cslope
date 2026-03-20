@@ -127,6 +127,9 @@ export interface PaperFrameSettings {
   paperSize: PaperSize;
   landscape: boolean;
   showFrame: boolean;
+  zoom?: number;
+  offsetX?: number;
+  offsetY?: number;
 }
 
 export interface ViewLock {

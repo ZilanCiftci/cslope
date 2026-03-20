@@ -246,6 +246,9 @@ export function drawCanvas(
         h,
         pf0Frame.paperSize,
         pf0Frame.landscape,
+        pf0Frame.zoom ?? 1,
+        pf0Frame.offsetX ?? 0,
+        pf0Frame.offsetY ?? 0,
       );
       // Theme-aware background outside paper
       ctx.save();
@@ -309,7 +312,15 @@ export function drawCanvas(
   let effectiveScale = viewScale;
   if (mode === "result" && result && resultViewSettings.paperFrame.showFrame) {
     const { paperSize, landscape } = resultViewSettings.paperFrame;
-    const pfGrid = computePaperFrame(w, h, paperSize, landscape);
+    const pfGrid = computePaperFrame(
+      w,
+      h,
+      paperSize,
+      landscape,
+      resultViewSettings.paperFrame.zoom ?? 1,
+      resultViewSettings.paperFrame.offsetX ?? 0,
+      resultViewSettings.paperFrame.offsetY ?? 0,
+    );
     const padL = pfGrid.w * PLOT_MARGINS.L;
     const padR = pfGrid.w * PLOT_MARGINS.R;
     const padT = pfGrid.h * PLOT_MARGINS.T;
@@ -1447,6 +1458,9 @@ export function drawCanvas(
       h,
       paperFrame.paperSize,
       paperFrame.landscape,
+      paperFrame.zoom ?? 1,
+      paperFrame.offsetX ?? 0,
+      paperFrame.offsetY ?? 0,
     );
 
     if (paperFrame.showFrame) {

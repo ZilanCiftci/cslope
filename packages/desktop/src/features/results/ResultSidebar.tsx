@@ -152,8 +152,17 @@ export function ResultSidebar() {
     if (!canvas) return undefined;
 
     const rect = canvas.getBoundingClientRect();
-    const { paperSize, landscape } = state.resultViewSettings.paperFrame;
-    const pf = computePaperFrame(rect.width, rect.height, paperSize, landscape);
+    const { paperSize, landscape, zoom, offsetX, offsetY } =
+      state.resultViewSettings.paperFrame;
+    const pf = computePaperFrame(
+      rect.width,
+      rect.height,
+      paperSize,
+      landscape,
+      zoom ?? 1,
+      offsetX ?? 0,
+      offsetY ?? 0,
+    );
     const inner = computeInnerFrame(pf);
 
     const vs = state.resultViewScale;
@@ -182,6 +191,9 @@ export function ResultSidebar() {
       cssH,
       paperFrame.paperSize,
       paperFrame.landscape,
+      paperFrame.zoom ?? 1,
+      paperFrame.offsetX ?? 0,
+      paperFrame.offsetY ?? 0,
     );
 
     // Crop to the paper frame area (in device pixels)

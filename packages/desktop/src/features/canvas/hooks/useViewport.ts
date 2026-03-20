@@ -96,7 +96,15 @@ export function useViewport(
 
       if (state.mode === "result" && vl?.enabled) {
         const { paperSize, landscape } = state.resultViewSettings.paperFrame;
-        const pf = computePaperFrame(w, h, paperSize, landscape);
+        const pf = computePaperFrame(
+          w,
+          h,
+          paperSize,
+          landscape,
+          state.resultViewSettings.paperFrame.zoom ?? 1,
+          state.resultViewSettings.paperFrame.offsetX ?? 0,
+          state.resultViewSettings.paperFrame.offsetY ?? 0,
+        );
         const inner = computeInnerFrame(pf);
         const fit = computeViewLockFit(inner, vl, w, h);
 

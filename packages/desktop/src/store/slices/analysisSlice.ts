@@ -270,9 +270,21 @@ export const createAnalysisSlice: SliceCreator<AnalysisSlice> = (set, get) => ({
       }
     }, 120);
 
-    const handle = executeModelAnalysis(modelSnapshot, (p) =>
-      set((s) => ({ progress: Math.max(s.progress, p) })),
-    );
+    let handle: AnalysisHandle;
+    try {
+      handle = executeModelAnalysis(modelSnapshot, (p) =>
+        set((s) => ({ progress: Math.max(s.progress, p) })),
+      );
+    } catch (err) {
+      stopProgressInterval();
+      set({
+        runState: "error",
+        progress: 0,
+        errorMessage: err instanceof Error ? err.message : String(err),
+      });
+      activeHandle = null;
+      return;
+    }
     activeHandle = handle;
 
     handle.promise
@@ -411,18 +423,37 @@ export const createAnalysisSlice: SliceCreator<AnalysisSlice> = (set, get) => ({
           : {}),
       }));
 
-      const handle = executeModelAnalysis(freshModel, (p) => {
-        progressByModel.set(
-          freshModel.id,
-          Math.max(progressByModel.get(freshModel.id) ?? 0, p),
-        );
+      let handle: AnalysisHandle;
+      try {
+        handle = executeModelAnalysis(freshModel, (p) => {
+          progressByModel.set(
+            freshModel.id,
+            Math.max(progressByModel.get(freshModel.id) ?? 0, p),
+          );
+          updateBatchProgress();
+          set((s) => ({
+            models: s.models.map((m) =>
+              m.id === freshModel.id ? { ...m, progress: p } : m,
+            ),
+          }));
+        });
+      } catch (err) {
+        stopModelProgressInterval(freshModel.id);
+        progressByModel.set(freshModel.id, 1);
         updateBatchProgress();
+        const errorMessage = err instanceof Error ? err.message : String(err);
         set((s) => ({
           models: s.models.map((m) =>
-            m.id === freshModel.id ? { ...m, progress: p } : m,
+            m.id === freshModel.id
+              ? { ...m, runState: "error", errorMessage }
+              : m,
           ),
+          ...(freshModel.id === activeId
+            ? { runState: "error", errorMessage }
+            : {}),
         }));
-      });
+        return;
+      }
 
       try {
         const result = await handle.promise;

@@ -99,6 +99,9 @@ export function useContextMenu(params: ContextMenuParams) {
           canvasRect.height,
           useAppStore.getState().resultViewSettings.paperFrame.paperSize,
           useAppStore.getState().resultViewSettings.paperFrame.landscape,
+          useAppStore.getState().resultViewSettings.paperFrame.zoom ?? 1,
+          useAppStore.getState().resultViewSettings.paperFrame.offsetX ?? 0,
+          useAppStore.getState().resultViewSettings.paperFrame.offsetY ?? 0,
         );
         const state = useAppStore.getState();
         const annos = state.resultViewSettings.annotations;

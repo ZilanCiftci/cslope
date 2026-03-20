@@ -42,9 +42,13 @@ export function ResultCanvas() {
   const drawDirtyRef = useRef(false);
   const drawArgsRef = useRef<Parameters<typeof drawCanvas>[1] | null>(null);
   const drawMetaRef = useRef({ dpr: 1 });
-  const prevResultLayoutRef = useRef<{ width: number; height: number } | null>(
-    null,
-  );
+  const prevPlotViewportRef = useRef<{
+    canvasW: number;
+    canvasH: number;
+    plotBox: { x: number; y: number; w: number; h: number };
+    viewScale: number;
+    viewOffset: [number, number];
+  } | null>(null);
   const [zoomBoxActive, setZoomBoxActive] = useState(false);
   const [panActive, setPanActive] = useState(false);
   const [zoomBoxStart, setZoomBoxStart] = useState<[number, number] | null>(
@@ -53,6 +57,10 @@ export function ResultCanvas() {
   const [zoomBoxCurrent, setZoomBoxCurrent] = useState<[number, number] | null>(
     null,
   );
+  const paperPanRef = useRef<{
+    startPx: [number, number];
+    startOffset: [number, number];
+  } | null>(null);
   const [zoomBoxOrigin, setZoomBoxOrigin] = useState<[number, number] | null>(
     null,
   );
@@ -103,6 +111,7 @@ export function ResultCanvas() {
       annotations: mergedAnnotations,
     };
   }, [resultViewSettings, annotationStylePreview]);
+  const setRvs = useAppStore((s) => s.setResultViewSettings);
   const {
     setAnalysisLimits,
     updateUdl,
@@ -221,7 +230,6 @@ export function ResultCanvas() {
     handlePointerMove,
     handlePointerUp,
     handlePointerCancel,
-    handleWheel,
   } = usePointerHandlers({
     canvasRef,
     containerRef,
@@ -279,33 +287,17 @@ export function ResultCanvas() {
     [],
   );
 
-  useRafCleanup(drawRafRef);
-
-  useEffect(() => {
-    if (canvasSize.width <= 0 || canvasSize.height <= 0) return;
-    if (mode !== "result") {
-      prevResultLayoutRef.current = null;
-      return;
-    }
-
-    const prev = prevResultLayoutRef.current;
-    prevResultLayoutRef.current = {
-      width: canvasSize.width,
-      height: canvasSize.height,
-    };
-
-    if (!prev) return;
-    if (prev.width === canvasSize.width && prev.height === canvasSize.height)
-      return;
-    if (viewScale <= 0) return;
-
-    const getPlotBox = (w: number, h: number) => {
+  const computePlotBox = useCallback(
+    (w: number, h: number) => {
       if (resultViewSettings.paperFrame.showFrame) {
         const pf = computePaperFrame(
           w,
           h,
           resultViewSettings.paperFrame.paperSize,
           resultViewSettings.paperFrame.landscape,
+          resultViewSettings.paperFrame.zoom ?? 1,
+          resultViewSettings.paperFrame.offsetX ?? 0,
+          resultViewSettings.paperFrame.offsetY ?? 0,
         );
         const PLOT_PAD_L = pf.w * PLOT_MARGINS.L;
         const PLOT_PAD_B = pf.h * PLOT_MARGINS.B;
@@ -320,19 +312,76 @@ export function ResultCanvas() {
       }
 
       return { x: 0, y: 0, w, h };
-    };
+    },
+    [
+      resultViewSettings.paperFrame.showFrame,
+      resultViewSettings.paperFrame.paperSize,
+      resultViewSettings.paperFrame.landscape,
+      resultViewSettings.paperFrame.zoom,
+      resultViewSettings.paperFrame.offsetX,
+      resultViewSettings.paperFrame.offsetY,
+    ],
+  );
 
-    const prevBox = getPlotBox(prev.width, prev.height);
-    const nextBox = getPlotBox(canvasSize.width, canvasSize.height);
+  useRafCleanup(drawRafRef);
+
+  useEffect(() => {
+    if (canvasSize.width <= 0 || canvasSize.height <= 0) return;
+    if (mode !== "result") {
+      prevPlotViewportRef.current = null;
+      return;
+    }
+    if (viewScale <= 0) return;
+
+    const nextBox = computePlotBox(canvasSize.width, canvasSize.height);
+    const prev = prevPlotViewportRef.current;
+
+    if (!prev) {
+      prevPlotViewportRef.current = {
+        canvasW: canvasSize.width,
+        canvasH: canvasSize.height,
+        plotBox: nextBox,
+        viewScale,
+        viewOffset: [viewOffset[0], viewOffset[1]],
+      };
+      return;
+    }
+
+    const sameCanvas =
+      prev.canvasW === canvasSize.width && prev.canvasH === canvasSize.height;
+    const sameBox =
+      Math.abs(prev.plotBox.x - nextBox.x) < 1e-6 &&
+      Math.abs(prev.plotBox.y - nextBox.y) < 1e-6 &&
+      Math.abs(prev.plotBox.w - nextBox.w) < 1e-6 &&
+      Math.abs(prev.plotBox.h - nextBox.h) < 1e-6;
+
+    if (sameCanvas && sameBox) {
+      // Keep snapshot in sync when viewport changes for reasons other than
+      // paper-frame layout changes (for example view-lock value edits).
+      prevPlotViewportRef.current = {
+        canvasW: canvasSize.width,
+        canvasH: canvasSize.height,
+        plotBox: nextBox,
+        viewScale,
+        viewOffset: [viewOffset[0], viewOffset[1]],
+      };
+      return;
+    }
+
+    const prevBox = prev.plotBox;
     if (prevBox.w <= 0 || prevBox.h <= 0 || nextBox.w <= 0 || nextBox.h <= 0)
       return;
 
-    const prevLeft = (prevBox.x - prev.width / 2) / viewScale - viewOffset[0];
+    const prevLeft =
+      (prevBox.x - prev.canvasW / 2) / prev.viewScale - prev.viewOffset[0];
     const prevRight =
-      (prevBox.x + prevBox.w - prev.width / 2) / viewScale - viewOffset[0];
-    const prevTop = -(prevBox.y - prev.height / 2) / viewScale - viewOffset[1];
+      (prevBox.x + prevBox.w - prev.canvasW / 2) / prev.viewScale -
+      prev.viewOffset[0];
+    const prevTop =
+      -(prevBox.y - prev.canvasH / 2) / prev.viewScale - prev.viewOffset[1];
     const prevBottom =
-      -(prevBox.y + prevBox.h - prev.height / 2) / viewScale - viewOffset[1];
+      -(prevBox.y + prevBox.h - prev.canvasH / 2) / prev.viewScale -
+      prev.viewOffset[1];
 
     const worldW = prevRight - prevLeft;
     const worldH = prevTop - prevBottom;
@@ -351,13 +400,19 @@ export function ResultCanvas() {
 
     setActiveViewScale(nextScale);
     setActiveViewOffset([ox, oy]);
+
+    prevPlotViewportRef.current = {
+      canvasW: canvasSize.width,
+      canvasH: canvasSize.height,
+      plotBox: nextBox,
+      viewScale: nextScale,
+      viewOffset: [ox, oy],
+    };
   }, [
     canvasSize.width,
     canvasSize.height,
     mode,
-    resultViewSettings.paperFrame.showFrame,
-    resultViewSettings.paperFrame.paperSize,
-    resultViewSettings.paperFrame.landscape,
+    computePlotBox,
     viewScale,
     viewOffset,
     setActiveViewScale,
@@ -549,6 +604,9 @@ export function ResultCanvas() {
         h,
         resultViewSettings.paperFrame.paperSize,
         resultViewSettings.paperFrame.landscape,
+        resultViewSettings.paperFrame.zoom ?? 1,
+        resultViewSettings.paperFrame.offsetX ?? 0,
+        resultViewSettings.paperFrame.offsetY ?? 0,
       );
       const PLOT_PAD_L = pf.w * PLOT_MARGINS.L;
       const PLOT_PAD_B = pf.h * PLOT_MARGINS.B;
@@ -660,155 +718,48 @@ export function ResultCanvas() {
 
   const handleZoomStep = useCallback(
     (factor: number) => {
-      const canvas = canvasRef.current;
-      if (!canvas || viewScale <= 0) return;
-
-      const rect = canvas.getBoundingClientRect();
-      const w = rect.width;
-      const h = rect.height;
-
-      const oldScale = viewScale;
-      const newScale = Math.max(0.1, Math.min(200, oldScale * factor));
-      if (newScale === oldScale) return;
-
-      const cx = w / 2;
-      const cy = h / 2;
-      const [ox, oy] = viewOffset;
-
-      setActiveViewOffset([
-        ox + (cx - w / 2) / newScale - (cx - w / 2) / oldScale,
-        oy - (cy - h / 2) / newScale + (cy - h / 2) / oldScale,
-      ]);
-      setActiveViewScale(newScale);
-    },
-    [viewOffset, viewScale, setActiveViewOffset, setActiveViewScale],
-  );
-
-  const computeFitWidthScale = useCallback(() => {
-    if (coordinates.length < 2) return null;
-
-    const container = containerRef.current;
-    const canvas = canvasRef.current;
-    const rect = container?.getBoundingClientRect();
-    const rulerPadding = RULER_SIZE_PX + 16;
-    const w =
-      (rect?.width ?? canvas?.getBoundingClientRect().width ?? 0) -
-      rulerPadding;
-    const h =
-      (rect?.height ?? canvas?.getBoundingClientRect().height ?? 0) -
-      rulerPadding;
-    if (w <= 0 || h <= 0) return null;
-
-    let fitW = w;
-    if (result && resultViewSettings.paperFrame.showFrame) {
-      const pf = computePaperFrame(
-        w,
-        h,
-        resultViewSettings.paperFrame.paperSize,
-        resultViewSettings.paperFrame.landscape,
-      );
-      const PLOT_PAD_L = pf.w * PLOT_MARGINS.L;
-      const PLOT_PAD_R = pf.w * PLOT_MARGINS.R;
-      fitW = pf.w - PLOT_PAD_L - PLOT_PAD_R;
-    }
-
-    const modelBounds = collectModelFitBounds({
-      coordinates,
-      materialBoundaries,
-      piezometricLines: piezometricLine.lines,
-      analysisLimits,
-      udls,
-      lineLoads,
-      surfaceYAtX,
-    });
-    if (!modelBounds) return null;
-
-    let { xMin, xMax, yMin, yMax } = modelBounds;
-
-    const addPoint = (x: number, y: number) => {
-      xMin = Math.min(xMin, x);
-      xMax = Math.max(xMax, x);
-      yMin = Math.min(yMin, y);
-      yMax = Math.max(yMax, y);
-    };
-
-    if (result) {
-      extendBoundsWithResultFitExtras({
-        result,
-        resultViewSettings,
-        materials,
-        projectInfo,
-        parameters,
-        canvas,
-        width: w,
-        height: h,
-        canvasToWorld,
-        addPoint,
+      const currentZoom = resultViewSettings.paperFrame.zoom ?? 1;
+      const nextZoom = Math.max(0.25, Math.min(3, currentZoom * factor));
+      setRvs({
+        paperFrame: {
+          ...resultViewSettings.paperFrame,
+          zoom: nextZoom,
+        },
       });
-    }
-
-    const getWidthScale = (
-      minX: number,
-      maxX: number,
-      minY: number,
-      maxY: number,
-    ) => {
-      const worldW = maxX - minX || 10;
-      const worldH = maxY - minY || 10;
-      const margin = Math.max(worldW, worldH) * 0.05;
-      return fitW / (worldW + margin * 2);
-    };
-
-    let scale = getWidthScale(xMin, xMax, yMin, yMax);
-
-    const fosPaddedBounds = extendBoundsWithFosLabelFitPadding({
-      result,
-      showFosLabel: resultViewSettings.showFosLabel,
-      canvas,
-      scale,
-      bounds: { xMin, xMax, yMin, yMax },
-    });
-    if (fosPaddedBounds) {
-      ({ xMin, xMax, yMin, yMax } = fosPaddedBounds);
-      scale = getWidthScale(xMin, xMax, yMin, yMax);
-    }
-
-    return scale;
-  }, [
-    analysisLimits,
-    canvasToWorld,
-    coordinates,
-    lineLoads,
-    materialBoundaries,
-    materials,
-    piezometricLine,
-    projectInfo,
-    parameters,
-    result,
-    resultViewSettings,
-    surfaceYAtX,
-    udls,
-  ]);
+    },
+    [resultViewSettings.paperFrame, setRvs],
+  );
 
   const handleSetZoomPercent = useCallback(
     (percent: number) => {
-      const fitWidthScale = computeFitWidthScale();
-      if (!fitWidthScale || fitWidthScale <= 0) return;
-      const scale = Math.max(
-        0.1,
-        Math.min(200, fitWidthScale * (percent / 100)),
-      );
-      setActiveViewScale(scale);
+      const nextZoom = Math.max(0.25, Math.min(3, percent / 100));
+      setRvs({
+        paperFrame: {
+          ...resultViewSettings.paperFrame,
+          zoom: nextZoom,
+        },
+      });
     },
-    [computeFitWidthScale, setActiveViewScale],
+    [resultViewSettings.paperFrame, setRvs],
   );
 
   const zoomPercent = useMemo(() => {
-    // eslint-disable-next-line react-hooks/refs -- reading ref dimensions for display-only zoom percentage is safe
-    const fitWidthScale = computeFitWidthScale();
-    if (!fitWidthScale || fitWidthScale <= 0 || viewScale <= 0) return 100;
-    return Math.max(1, Math.round((viewScale / fitWidthScale) * 100));
-  }, [computeFitWidthScale, viewScale]);
+    return Math.max(
+      1,
+      Math.round((resultViewSettings.paperFrame.zoom ?? 1) * 100),
+    );
+  }, [resultViewSettings.paperFrame.zoom]);
+
+  const handleResultWheel = useCallback(
+    (e: React.WheelEvent<HTMLCanvasElement>) => {
+      e.preventDefault();
+      e.stopPropagation();
+      if (e.ctrlKey) {
+        handleZoomStep(e.deltaY > 0 ? 0.9 : 1.1);
+      }
+    },
+    [handleZoomStep],
+  );
 
   // Auto-fit when a project file is loaded / benchmarks opened
   const pendingFit = useAppStore((s) => s._pendingFitToScreen);
@@ -825,6 +776,30 @@ export function ResultCanvas() {
 
   const handleCanvasPointerDown = useCallback(
     (e: React.PointerEvent<HTMLCanvasElement>) => {
+      if (mode === "result" && e.button === 1) {
+        paperPanRef.current = {
+          startPx: [e.clientX, e.clientY],
+          startOffset: [
+            resultViewSettings.paperFrame.offsetX ?? 0,
+            resultViewSettings.paperFrame.offsetY ?? 0,
+          ],
+        };
+        (e.target as HTMLElement).setPointerCapture(e.pointerId);
+        return;
+      }
+
+      if (panActive && e.button === 0) {
+        paperPanRef.current = {
+          startPx: [e.clientX, e.clientY],
+          startOffset: [
+            resultViewSettings.paperFrame.offsetX ?? 0,
+            resultViewSettings.paperFrame.offsetY ?? 0,
+          ],
+        };
+        (e.target as HTMLElement).setPointerCapture(e.pointerId);
+        return;
+      }
+
       if (zoomBoxActive && e.button === 0) {
         const rect = canvasRef.current?.getBoundingClientRect() ?? null;
         if (rect) setZoomBoxOrigin([rect.left, rect.top]);
@@ -835,22 +810,48 @@ export function ResultCanvas() {
       }
       handlePointerDown(e);
     },
-    [zoomBoxActive, handlePointerDown],
+    [
+      mode,
+      panActive,
+      resultViewSettings.paperFrame.offsetX,
+      resultViewSettings.paperFrame.offsetY,
+      zoomBoxActive,
+      handlePointerDown,
+    ],
   );
 
   const handleCanvasPointerMove = useCallback(
     (e: React.PointerEvent<HTMLCanvasElement>) => {
+      if (paperPanRef.current) {
+        const dx = e.clientX - paperPanRef.current.startPx[0];
+        const dy = e.clientY - paperPanRef.current.startPx[1];
+        setRvs({
+          paperFrame: {
+            ...resultViewSettings.paperFrame,
+            offsetX: paperPanRef.current.startOffset[0] + dx,
+            offsetY: paperPanRef.current.startOffset[1] + dy,
+          },
+        });
+        return;
+      }
+
       if (zoomBoxStart) {
         setZoomBoxCurrent([e.clientX, e.clientY]);
         return;
       }
       handlePointerMove(e);
     },
-    [zoomBoxStart, handlePointerMove],
+    [resultViewSettings.paperFrame, setRvs, zoomBoxStart, handlePointerMove],
   );
 
   const handleCanvasPointerUp = useCallback(
     (e: React.PointerEvent<HTMLCanvasElement>) => {
+      if (paperPanRef.current) {
+        paperPanRef.current = null;
+        (e.target as HTMLElement).releasePointerCapture(e.pointerId);
+        return;
+      }
+
       if (zoomBoxStart && zoomBoxCurrent) {
         const canvas = canvasRef.current;
         if (canvas) {
@@ -916,6 +917,18 @@ export function ResultCanvas() {
     ],
   );
 
+  const handleCanvasPointerCancel = useCallback(
+    (e: React.PointerEvent<HTMLCanvasElement>) => {
+      if (paperPanRef.current) {
+        paperPanRef.current = null;
+        (e.target as HTMLElement).releasePointerCapture(e.pointerId);
+        return;
+      }
+      handlePointerCancel(e);
+    },
+    [handlePointerCancel],
+  );
+
   const zoomRect = useMemo(() => {
     if (!zoomBoxStart || !zoomBoxCurrent || !zoomBoxOrigin) return null;
     const [left, top] = zoomBoxOrigin;
@@ -932,24 +945,28 @@ export function ResultCanvas() {
   }, [zoomBoxStart, zoomBoxCurrent, zoomBoxOrigin]);
 
   useEffect(() => {
+    const noop = () => {};
     setCanvasToolbar({
       zoomBoxActive,
       panActive,
       zoomPercent,
-      onFitToScreen: handleFitToScreen,
+      onFitToScreen: noop,
       onZoomIn: () => handleZoomStep(1.1),
       onZoomOut: () => handleZoomStep(0.9),
       onSetZoomPercent: handleSetZoomPercent,
       onToggleZoomBox: () => {
-        setZoomBoxStart(null);
-        setZoomBoxCurrent(null);
-        setZoomBoxOrigin(null);
-        setZoomBoxActive((v) => !v);
-        setPanActive(false);
+        setZoomBoxActive((v) => {
+          const next = !v;
+          if (next) setPanActive(false);
+          return next;
+        });
       },
       onTogglePan: () => {
-        setPanActive((v) => !v);
-        setZoomBoxActive(false);
+        setPanActive((v) => {
+          const next = !v;
+          if (next) setZoomBoxActive(false);
+          return next;
+        });
       },
     });
 
@@ -958,7 +975,6 @@ export function ResultCanvas() {
     zoomBoxActive,
     panActive,
     zoomPercent,
-    handleFitToScreen,
     handleZoomStep,
     handleSetZoomPercent,
     setCanvasToolbar,
@@ -996,8 +1012,8 @@ export function ResultCanvas() {
           onPointerDown={handleCanvasPointerDown}
           onPointerMove={handleCanvasPointerMove}
           onPointerUp={handleCanvasPointerUp}
-          onPointerCancel={handlePointerCancel}
-          onWheel={handleWheel}
+          onPointerCancel={handleCanvasPointerCancel}
+          onWheel={handleResultWheel}
           onContextMenu={handleContextMenu}
           data-testid="slope-canvas"
         />

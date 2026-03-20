@@ -118,7 +118,14 @@ export const DEFAULT_RESULT_VIEW_SETTINGS: ResultViewSettings = {
       fontSize: 14,
     },
   ],
-  paperFrame: { paperSize: "A4", landscape: true, showFrame: true },
+  paperFrame: {
+    paperSize: "A4",
+    landscape: true,
+    showFrame: true,
+    zoom: 1,
+    offsetX: 0,
+    offsetY: 0,
+  },
   viewLock: {
     enabled: true,
     bottomLeft: [-1, -1],
