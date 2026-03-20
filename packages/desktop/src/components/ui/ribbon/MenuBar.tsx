@@ -4,7 +4,6 @@ import { EditMenu } from "./EditMenu";
 import { FileMenu } from "./FileMenu";
 import { HelpMenu } from "./HelpMenu";
 import { ResultsMenu } from "./ResultsMenu";
-import { ViewMenu } from "./ViewMenu";
 import type { CanvasToolbarState } from "../../../store/types";
 
 const isDev = import.meta.env.DEV;
@@ -14,15 +13,13 @@ interface Props {
   canvasToolbar: CanvasToolbarState | null;
 }
 
-type MenuKey = "file" | "edit" | "view" | "results" | "help" | "dev";
+type MenuKey = "file" | "edit" | "results" | "help" | "dev";
 
 export function MenuBar({ activeModelName, canvasToolbar }: Props) {
   const [activeMenu, setActiveMenu] = useState<MenuKey>("file");
   const [panelHost, setPanelHost] = useState<HTMLDivElement | null>(null);
 
-  // If view tab is active but there's no canvas toolbar, fall back to file
-  const effectiveMenu =
-    !canvasToolbar && activeMenu === "view" ? "file" : activeMenu;
+  const effectiveMenu = activeMenu;
 
   return (
     <div className="flex flex-col shrink-0">
@@ -43,12 +40,6 @@ export function MenuBar({ activeModelName, canvasToolbar }: Props) {
           canvasToolbar={canvasToolbar}
           isOpen={effectiveMenu === "edit"}
           onActivate={() => setActiveMenu("edit")}
-          panelHost={panelHost}
-        />
-        <ViewMenu
-          canvasToolbar={canvasToolbar}
-          isOpen={effectiveMenu === "view"}
-          onActivate={() => setActiveMenu("view")}
           panelHost={panelHost}
         />
         <ResultsMenu
