@@ -294,7 +294,7 @@ export function ResultsPlotDialogApp() {
 
   const lambdaData = useMemo<LffPoint[]>(() => {
     const rows = selectedSurface?.lffArray ?? [];
-    if (rows.length < 2) return [];
+    if (rows.length < 1) return [];
     return [...rows]
       .map(([lambda, momentFos, forceFos, gap]) => ({
         lambda,
