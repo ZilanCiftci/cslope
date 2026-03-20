@@ -94,7 +94,7 @@ export function useViewport(
       const state = useAppStore.getState();
       const vl = state.resultViewSettings.viewLock;
 
-      if (state.mode === "result" && vl?.enabled) {
+      if (state.mode === "result" && vl) {
         const { paperSize, landscape } = state.resultViewSettings.paperFrame;
         const pf = computePaperFrame(
           w,
@@ -154,7 +154,13 @@ export function useViewport(
 
   useEffect(() => {
     applyView();
-  }, [mode, coordsForViewport, resultViewSettings.viewLock, applyView]);
+  }, [
+    mode,
+    coordsForViewport,
+    resultViewSettings.viewLock,
+    resultViewSettings.paperFrame,
+    applyView,
+  ]);
 
   useEffect(() => {
     if (lastActiveModelIdRef.current === null) {
@@ -169,9 +175,10 @@ export function useViewport(
 
   useEffect(() => {
     const vl = resultViewSettings.viewLock;
-    const enabledNow = mode === "result" && vl?.enabled;
+    const { paperSize, landscape } = resultViewSettings.paperFrame;
+    const enabledNow = mode === "result" && !!vl;
     const currentKey = vl
-      ? `${vl.bottomLeft[0]},${vl.bottomLeft[1]},${vl.topRight[0]},${vl.topRight[1]}`
+      ? `${vl.bottomLeft[0]},${vl.bottomLeft[1]},${vl.topRight[0]},${vl.topRight[1]},${paperSize},${landscape}`
       : undefined;
 
     if (!enabledNow) {
@@ -193,7 +200,33 @@ export function useViewport(
       applyView();
       lastAppliedLockRef.current = currentKey;
     }
-  }, [mode, resultViewSettings.viewLock, applyView]);
+  }, [
+    mode,
+    resultViewSettings.viewLock,
+    resultViewSettings.paperFrame,
+    applyView,
+  ]);
+
+  useEffect(() => {
+    if (mode !== "result" || !resultViewSettings.viewLock) return;
+
+    // Refit after layout/paint so orientation changes always update the model
+    // position immediately, without requiring a later pan/zoom interaction.
+    const rafId = requestAnimationFrame(() => {
+      applyView();
+    });
+
+    return () => cancelAnimationFrame(rafId);
+  }, [
+    mode,
+    resultViewSettings.viewLock,
+    resultViewSettings.paperFrame.paperSize,
+    resultViewSettings.paperFrame.landscape,
+    resultViewSettings.paperFrame.zoom,
+    resultViewSettings.paperFrame.offsetX,
+    resultViewSettings.paperFrame.offsetY,
+    applyView,
+  ]);
 
   return {
     viewOffset,

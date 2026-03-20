@@ -158,7 +158,7 @@ export function FloatingToolbar({
       role="toolbar"
       aria-label="Floating toolbar"
       style={{
-        opacity: faded ? 0.2 : 1,
+        opacity: faded ? 0.4 : 1,
         transition: "opacity 0.4s ease",
       }}
       onPointerEnter={() => {

@@ -12,6 +12,7 @@ import type {
   ParameterDef,
   PiezometricLineState,
   RegionMaterials,
+  ResultViewSettings,
   UdlRow,
 } from "./store/types";
 
@@ -71,6 +72,13 @@ interface AnalysisStatePayload {
   options: ModelEntry["options"];
 }
 
+interface ViewSettingsStatePayload {
+  resultViewSettings: ResultViewSettings;
+  coordinates: [number, number][];
+  resultViewScale: number;
+  resultViewOffset: [number, number];
+}
+
 declare global {
   interface Window {
     cslope: {
@@ -95,6 +103,7 @@ declare global {
       openSearchLimitsDialog: () => void;
       openCustomSearchPlanesDialog: () => void;
       openOptionsDialog: () => void;
+      openViewSettingsDialog: () => void;
       onInteriorBoundariesDialogOpenChanged: (
         listener: (event: unknown, open: boolean) => void,
       ) => void;
@@ -313,6 +322,24 @@ declare global {
       ) => void;
       offAnalysisChanged: (
         listener: (event: unknown, state: AnalysisStatePayload) => void,
+      ) => void;
+      // View settings dialog sync
+      requestViewSettingsState: () => void;
+      sendViewSettingsState: (state: ViewSettingsStatePayload) => void;
+      sendViewSettingsChanged: (state: ViewSettingsStatePayload) => void;
+      onViewSettingsRequestState: (listener: (event: unknown) => void) => void;
+      offViewSettingsRequestState: (listener: (event: unknown) => void) => void;
+      onViewSettingsState: (
+        listener: (event: unknown, state: ViewSettingsStatePayload) => void,
+      ) => void;
+      offViewSettingsState: (
+        listener: (event: unknown, state: ViewSettingsStatePayload) => void,
+      ) => void;
+      onViewSettingsChanged: (
+        listener: (event: unknown, state: ViewSettingsStatePayload) => void,
+      ) => void;
+      offViewSettingsChanged: (
+        listener: (event: unknown, state: ViewSettingsStatePayload) => void,
       ) => void;
     };
   }

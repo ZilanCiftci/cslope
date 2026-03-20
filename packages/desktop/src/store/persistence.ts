@@ -307,7 +307,6 @@ function normalizeResultView(raw: unknown): ResultViewSettings {
       Array.isArray(view.viewLock.bottomLeft) &&
       Array.isArray(view.viewLock.topRight)
         ? {
-            ...view.viewLock,
             bottomLeft: [...view.viewLock.bottomLeft],
             topRight: [...view.viewLock.topRight],
           }

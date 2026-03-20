@@ -13,6 +13,7 @@ import { ResultsPlotDialogApp } from "./features/properties/ResultsPlotDialogApp
 import { SearchLimitsDialogApp } from "./features/properties/SearchLimitsDialogApp";
 import { CustomSearchPlanesDialogApp } from "./features/properties/CustomSearchPlanesDialogApp";
 import { OptionsDialogApp } from "./features/properties/OptionsDialogApp";
+import { ViewSettingsDialogApp } from "./features/properties/ViewSettingsDialogApp";
 import { useAppStore } from "./store/app-store";
 import type {
   AnalysisLimitsState,
@@ -26,6 +27,7 @@ import type {
   PiezometricLineState,
   ParameterDef,
   RegionMaterials,
+  ResultViewSettings,
   UdlRow,
 } from "./store/types";
 
@@ -76,6 +78,13 @@ interface AnalysisStatePayload {
   customSearchPlanes: CustomSearchPlane[];
   customPlanesOnly: boolean;
   options: ModelEntry["options"];
+}
+
+interface ViewSettingsStatePayload {
+  resultViewSettings: ResultViewSettings;
+  coordinates: [number, number][];
+  resultViewScale: number;
+  resultViewOffset: [number, number];
 }
 
 function normalizeMaterialsPayload(
@@ -162,6 +171,7 @@ function App() {
   const customPlanesOnly = useAppStore((s) => s.customPlanesOnly);
   const options = useAppStore((s) => s.options);
   const analysisLimits = useAppStore((s) => s.analysisLimits);
+  const resultViewSettings = useAppStore((s) => s.resultViewSettings);
   const activeModelId = useAppStore((s) => s.activeModelId);
   const models = useAppStore((s) => s.models);
   const result = useAppStore((s) => s.result);
@@ -204,6 +214,9 @@ function App() {
   const isOptionsDialogWindow =
     typeof window !== "undefined" &&
     window.location.hash.replace(/^#/, "") === "options-dialog";
+  const isViewSettingsDialogWindow =
+    typeof window !== "undefined" &&
+    window.location.hash.replace(/^#/, "") === "view-settings-dialog";
   const suppressNextGeometryBroadcastRef = useRef(false);
   const suppressNextMaterialAssignmentBroadcastRef = useRef(false);
   const suppressNextInteriorBoundariesBroadcastRef = useRef(false);
@@ -211,6 +224,7 @@ function App() {
   const suppressNextPiezoBroadcastRef = useRef(false);
   const suppressNextParametersBroadcastRef = useRef(false);
   const suppressNextAnalysisBroadcastRef = useRef(false);
+  const suppressNextViewSettingsBroadcastRef = useRef(false);
 
   const isAnyDialogWindow =
     isMaterialsDialogWindow ||
@@ -224,7 +238,8 @@ function App() {
     isResultsPlotDialogWindow ||
     isSearchLimitsDialogWindow ||
     isCustomSearchPlanesDialogWindow ||
-    isOptionsDialogWindow;
+    isOptionsDialogWindow ||
+    isViewSettingsDialogWindow;
 
   useEffect(() => {
     // Tell the main process the renderer has mounted so it can
@@ -671,6 +686,55 @@ function App() {
   useEffect(() => {
     if (!isElectron || isAnyDialogWindow) return;
 
+    const handleViewSettingsRequestState = () => {
+      const state = useAppStore.getState();
+      window.cslope.sendViewSettingsState({
+        resultViewSettings: state.resultViewSettings,
+        coordinates: state.coordinates,
+        resultViewScale: state.resultViewScale,
+        resultViewOffset: state.resultViewOffset,
+      });
+    };
+
+    const handleViewSettingsChanged = (
+      _event: unknown,
+      next: ViewSettingsStatePayload,
+    ) => {
+      suppressNextViewSettingsBroadcastRef.current = true;
+      useAppStore.setState({
+        resultViewSettings: next.resultViewSettings,
+        coordinates: next.coordinates,
+      });
+    };
+
+    window.cslope.onViewSettingsRequestState(handleViewSettingsRequestState);
+    window.cslope.onViewSettingsChanged(handleViewSettingsChanged);
+
+    return () => {
+      window.cslope.offViewSettingsRequestState(handleViewSettingsRequestState);
+      window.cslope.offViewSettingsChanged(handleViewSettingsChanged);
+    };
+  }, [isAnyDialogWindow]);
+
+  useEffect(() => {
+    if (!isElectron || isAnyDialogWindow) return;
+
+    if (suppressNextViewSettingsBroadcastRef.current) {
+      suppressNextViewSettingsBroadcastRef.current = false;
+      return;
+    }
+
+    window.cslope.sendViewSettingsChanged({
+      resultViewSettings,
+      coordinates,
+      resultViewScale: useAppStore.getState().resultViewScale,
+      resultViewOffset: useAppStore.getState().resultViewOffset,
+    });
+  }, [resultViewSettings, coordinates, isAnyDialogWindow]);
+
+  useEffect(() => {
+    if (!isElectron || isAnyDialogWindow) return;
+
     const handleResultsPlotRequestState = () => {
       window.cslope.sendResultsPlotState(buildResultsPlotPayloadFromState());
     };
@@ -750,6 +814,10 @@ function App() {
 
   if (isOptionsDialogWindow) {
     return <OptionsDialogApp />;
+  }
+
+  if (isViewSettingsDialogWindow) {
+    return <ViewSettingsDialogApp />;
   }
 
   return <AppShell />;

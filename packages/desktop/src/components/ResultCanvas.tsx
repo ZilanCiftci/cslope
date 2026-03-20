@@ -289,32 +289,27 @@ export function ResultCanvas() {
 
   const computePlotBox = useCallback(
     (w: number, h: number) => {
-      if (resultViewSettings.paperFrame.showFrame) {
-        const pf = computePaperFrame(
-          w,
-          h,
-          resultViewSettings.paperFrame.paperSize,
-          resultViewSettings.paperFrame.landscape,
-          resultViewSettings.paperFrame.zoom ?? 1,
-          resultViewSettings.paperFrame.offsetX ?? 0,
-          resultViewSettings.paperFrame.offsetY ?? 0,
-        );
-        const PLOT_PAD_L = pf.w * PLOT_MARGINS.L;
-        const PLOT_PAD_B = pf.h * PLOT_MARGINS.B;
-        const PLOT_PAD_T = pf.h * PLOT_MARGINS.T;
-        const PLOT_PAD_R = pf.w * PLOT_MARGINS.R;
-        return {
-          x: pf.x + PLOT_PAD_L,
-          y: pf.y + PLOT_PAD_T,
-          w: pf.w - PLOT_PAD_L - PLOT_PAD_R,
-          h: pf.h - PLOT_PAD_T - PLOT_PAD_B,
-        };
-      }
-
-      return { x: 0, y: 0, w, h };
+      const pf = computePaperFrame(
+        w,
+        h,
+        resultViewSettings.paperFrame.paperSize,
+        resultViewSettings.paperFrame.landscape,
+        resultViewSettings.paperFrame.zoom ?? 1,
+        resultViewSettings.paperFrame.offsetX ?? 0,
+        resultViewSettings.paperFrame.offsetY ?? 0,
+      );
+      const PLOT_PAD_L = pf.w * PLOT_MARGINS.L;
+      const PLOT_PAD_B = pf.h * PLOT_MARGINS.B;
+      const PLOT_PAD_T = pf.h * PLOT_MARGINS.T;
+      const PLOT_PAD_R = pf.w * PLOT_MARGINS.R;
+      return {
+        x: pf.x + PLOT_PAD_L,
+        y: pf.y + PLOT_PAD_T,
+        w: pf.w - PLOT_PAD_L - PLOT_PAD_R,
+        h: pf.h - PLOT_PAD_T - PLOT_PAD_B,
+      };
     },
     [
-      resultViewSettings.paperFrame.showFrame,
       resultViewSettings.paperFrame.paperSize,
       resultViewSettings.paperFrame.landscape,
       resultViewSettings.paperFrame.zoom,
@@ -594,23 +589,21 @@ export function ResultCanvas() {
     if (w <= 0 || h <= 0) return;
 
     // Reset paper frame zoom/offset to defaults so the frame fits the canvas
-    if (resultViewSettings.paperFrame.showFrame) {
-      setRvs({
-        paperFrame: {
-          ...resultViewSettings.paperFrame,
-          zoom: 1,
-          offsetX: 0,
-          offsetY: 0,
-        },
-      });
-    }
+    setRvs({
+      paperFrame: {
+        ...resultViewSettings.paperFrame,
+        zoom: 1,
+        offsetX: 0,
+        offsetY: 0,
+      },
+    });
 
     let fitW = w;
     let fitH = h;
     let targetCx = w / 2;
     let targetCy = h / 2;
 
-    if (result && resultViewSettings.paperFrame.showFrame) {
+    if (result) {
       // Compute paper frame at default zoom=1 / offset=0 for fitting
       const pf = computePaperFrame(
         w,
@@ -779,7 +772,7 @@ export function ResultCanvas() {
 
         const pf = resultViewSettings.paperFrame;
         const currentZoom = pf.zoom ?? 1;
-        const factor = e.deltaY > 0 ? 0.9 : 1.1;
+        const factor = e.deltaY > 0 ? 0.8 : 1.2;
         const nextZoom = Math.max(0.25, Math.min(3, currentZoom * factor));
 
         // Paper frame center (before offset) at current zoom

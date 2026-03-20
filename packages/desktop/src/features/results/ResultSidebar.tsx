@@ -4,26 +4,11 @@
  * Controls surface display mode, FOS filtering, annotations, and export.
  */
 
-import { type ReactNode } from "react";
-import { useAppStore, PAPER_DIMENSIONS } from "../../store/app-store";
-import type { SurfaceDisplayMode, PaperSize } from "../../store/app-store";
+import { useAppStore } from "../../store/app-store";
 import { exportVectorPdf } from "../pdf/pdf-export";
-import {
-  getPlotAspectRatio as getSharedPlotAspectRatio,
-  computePaperFrame,
-  computeInnerFrame,
-} from "../view/paper";
+import { computePaperFrame, computeInnerFrame } from "../view/paper";
 import { Section } from "../../components/ui/Section";
 import { Label } from "../../components/ui/Label";
-
-function Row({ label, children }: { label: string; children: ReactNode }) {
-  return (
-    <div className="flex items-center justify-between gap-2">
-      <Label>{label}</Label>
-      {children}
-    </div>
-  );
-}
 
 // ── ResultSidebar ─────────────────────────────────────────────
 
@@ -44,11 +29,6 @@ export function ResultSidebar() {
     fontSize: 12,
   };
 
-  const selectStyle: React.CSSProperties = {
-    ...inputStyle,
-    cursor: "pointer",
-  };
-
   const btnStyle: React.CSSProperties = {
     background: "var(--color-vsc-list-hover)",
     border: "1px solid var(--color-vsc-border)",
@@ -57,89 +37,6 @@ export function ResultSidebar() {
     padding: "4px 8px",
     fontSize: 11,
     cursor: "pointer",
-  };
-
-  // Re-add setViewLockToModelBounds as it was deleted
-  const setViewLockToModelBounds = () => {
-    const state = useAppStore.getState();
-    const coords = state.coordinates;
-    const ar = getPlotAspectRatio();
-
-    // Defaults: 20m x-width with 1m side margins and 1m bottom margin
-    let bl: [number, number] = [-1, -1];
-    let tr: [number, number] = [21, -1 + 22 / ar];
-    if (coords.length >= 2) {
-      const xs = coords.map((c) => c[0]);
-      const ys = coords.map((c) => c[1]);
-      const xMin = Math.min(...xs);
-      const xMax = Math.max(...xs);
-      const yMin = Math.min(...ys);
-
-      // 1m margin in X direction (left/right)
-      const left = xMin - 1;
-      const right = xMax + 1;
-
-      // Align model bottom to paper bottom with 1m margin
-      const bottom = yMin - 1;
-
-      // Fit plot height from paper aspect ratio using the x-span above
-      const width = right - left;
-      const height = width / ar;
-      const top = bottom + height;
-
-      bl = [left, bottom];
-      tr = [right, top];
-    }
-    setRvs({
-      viewLock: {
-        enabled: true,
-        bottomLeft: bl,
-        topRight: tr,
-      },
-    });
-  };
-
-  const getPlotAspectRatio = () => {
-    const { paperSize, landscape } = rvs.paperFrame;
-    return getSharedPlotAspectRatio(paperSize, landscape);
-  };
-
-  const handleLockUpdate = (
-    field: "bl_x" | "bl_y" | "tr_x" | "tr_y",
-    val: number,
-  ) => {
-    if (!rvs.viewLock) return;
-    const newVl = {
-      enabled: true,
-      bottomLeft: [...rvs.viewLock.bottomLeft] as [number, number],
-      topRight: [...rvs.viewLock.topRight] as [number, number],
-    };
-
-    if (field === "bl_x") newVl.bottomLeft[0] = val;
-    else if (field === "bl_y") newVl.bottomLeft[1] = val;
-    else if (field === "tr_x") newVl.topRight[0] = val;
-    else if (field === "tr_y") newVl.topRight[1] = val;
-
-    const ar = getPlotAspectRatio();
-
-    // If we change X limits, adjust TR Y (Height)
-    if (field === "bl_x" || field === "tr_x") {
-      const w = newVl.topRight[0] - newVl.bottomLeft[0];
-      // h = w / ar
-      const newH = w / ar;
-      // Keep BL Y fixed, adjust TR Y
-      newVl.topRight[1] = newVl.bottomLeft[1] + newH;
-    }
-    // If Y changes, adjust TR X (Width)
-    else if (field === "bl_y" || field === "tr_y") {
-      const h = newVl.topRight[1] - newVl.bottomLeft[1];
-      // w = h * ar
-      const newW = h * ar;
-      // Keep BL X fixed, adjust TR X
-      newVl.topRight[0] = newVl.bottomLeft[0] + newW;
-    }
-
-    setRvs({ viewLock: newVl });
   };
 
   const getInnerFrameWorldBounds = (
@@ -225,7 +122,7 @@ export function ResultSidebar() {
     let viewBounds:
       | { xMin: number; xMax: number; yMin: number; yMax: number }
       | undefined;
-    if (vl?.enabled) {
+    if (vl) {
       viewBounds = {
         xMin: vl.bottomLeft[0],
         xMax: vl.topRight[0],
@@ -364,253 +261,6 @@ export function ResultSidebar() {
             No results yet.
           </p>
         )}
-      </Section>
-
-      {/* ── Display Settings ───────────────────────────── */}
-      <Section title="Display" sectionKey="result:Display">
-        <div className="space-y-3">
-          <Row label="Surfaces">
-            <select
-              value={rvs.surfaceDisplay}
-              onChange={(e) =>
-                setRvs({
-                  surfaceDisplay: e.target.value as SurfaceDisplayMode,
-                })
-              }
-              style={selectStyle}
-              className="w-24"
-            >
-              <option value="critical">Critical only</option>
-              <option value="all">All</option>
-              <option value="filter">Filter</option>
-            </select>
-          </Row>
-
-          {rvs.surfaceDisplay === "filter" && (
-            <Row label={"FOS ≤"}>
-              <input
-                type="number"
-                value={rvs.fosFilterMax}
-                onChange={(e) =>
-                  setRvs({ fosFilterMax: parseFloat(e.target.value) || 1.5 })
-                }
-                step="0.1"
-                min="0.1"
-                max="10"
-                style={inputStyle}
-                className="w-20 text-right"
-              />
-            </Row>
-          )}
-
-          <Row label="Slices">
-            <input
-              type="checkbox"
-              checked={rvs.showSlices}
-              onChange={(e) => setRvs({ showSlices: e.target.checked })}
-              className="accent-blue-500"
-            />
-          </Row>
-
-          <Row label="FOS Label">
-            <input
-              type="checkbox"
-              checked={rvs.showFosLabel}
-              onChange={(e) => setRvs({ showFosLabel: e.target.checked })}
-              className="accent-blue-500"
-            />
-          </Row>
-
-          <Row label="Centre ×">
-            <input
-              type="checkbox"
-              checked={rvs.showCentreMarker}
-              onChange={(e) => setRvs({ showCentreMarker: e.target.checked })}
-              className="accent-blue-500"
-            />
-          </Row>
-
-          <Row label="Grid Lines">
-            <input
-              type="checkbox"
-              checked={rvs.showGrid}
-              onChange={(e) => setRvs({ showGrid: e.target.checked })}
-              className="accent-blue-500"
-            />
-          </Row>
-
-          <Row label="Soil Colors">
-            <input
-              type="checkbox"
-              checked={rvs.showSoilColor}
-              onChange={(e) => setRvs({ showSoilColor: e.target.checked })}
-              className="accent-blue-500"
-            />
-          </Row>
-
-          <Row label="Paper Size">
-            <select
-              value={rvs.paperFrame.paperSize}
-              onChange={(e) =>
-                setRvs({
-                  paperFrame: {
-                    ...rvs.paperFrame,
-                    paperSize: e.target.value as PaperSize,
-                  },
-                })
-              }
-              style={selectStyle}
-              className="w-24"
-            >
-              {(Object.keys(PAPER_DIMENSIONS) as PaperSize[]).map((size) => (
-                <option key={size} value={size}>
-                  {size} ({PAPER_DIMENSIONS[size].w}×{PAPER_DIMENSIONS[size].h}
-                  mm)
-                </option>
-              ))}
-            </select>
-          </Row>
-
-          <Row label="Landscape">
-            <input
-              type="checkbox"
-              checked={rvs.paperFrame.landscape}
-              onChange={(e) =>
-                setRvs({
-                  paperFrame: {
-                    ...rvs.paperFrame,
-                    landscape: e.target.checked,
-                  },
-                })
-              }
-              className="accent-blue-500"
-            />
-          </Row>
-
-          <Row label="Show Frame">
-            <input
-              type="checkbox"
-              checked={rvs.paperFrame.showFrame}
-              onChange={(e) =>
-                setRvs({
-                  paperFrame: {
-                    ...rvs.paperFrame,
-                    showFrame: e.target.checked,
-                  },
-                })
-              }
-              className="accent-blue-500"
-            />
-          </Row>
-        </div>
-      </Section>
-
-      {/* ── View Lock ──────────────────────────────────── */}
-      <Section title="View Lock" sectionKey="result:View Lock">
-        <div className="space-y-2">
-          <Row label="Lock View">
-            <input
-              type="checkbox"
-              checked={rvs.viewLock?.enabled ?? false}
-              onChange={(e) => {
-                if (e.target.checked && !rvs.viewLock?.enabled) {
-                  // First lock to CURRENT viewport world bounds (no jump).
-                  const state = useAppStore.getState();
-                  const currentBounds = getInnerFrameWorldBounds(state);
-
-                  if (currentBounds) {
-                    setRvs({
-                      viewLock: {
-                        enabled: true,
-                        bottomLeft: [currentBounds.xMin, currentBounds.yMin],
-                        topRight: [currentBounds.xMax, currentBounds.yMax],
-                      },
-                    });
-                  } else {
-                    // Fallback when canvas/bounds are unavailable
-                    setViewLockToModelBounds();
-                  }
-                } else {
-                  setRvs({
-                    viewLock: {
-                      ...(rvs.viewLock ?? {
-                        enabled: false,
-                        bottomLeft: [0, 0],
-                        topRight: [20, 10],
-                      }),
-                      enabled: e.target.checked,
-                    },
-                  });
-                }
-              }}
-              className="accent-blue-500"
-            />
-          </Row>
-          {rvs.viewLock?.enabled && (
-            <button
-              type="button"
-              onClick={setViewLockToModelBounds}
-              style={btnStyle}
-              className="w-full"
-            >
-              Use Model Bounds
-            </button>
-          )}
-          {rvs.viewLock?.enabled && (
-            <>
-              <div className="grid grid-cols-2 gap-2">
-                <div>
-                  <Label>BL X</Label>
-                  <input
-                    type="number"
-                    step="any"
-                    value={rvs.viewLock.bottomLeft[0]}
-                    onChange={(e) =>
-                      handleLockUpdate("bl_x", Number(e.target.value))
-                    }
-                    style={{ ...inputStyle, width: "100%" }}
-                  />
-                </div>
-                <div>
-                  <Label>BL Y</Label>
-                  <input
-                    type="number"
-                    step="any"
-                    value={rvs.viewLock.bottomLeft[1]}
-                    onChange={(e) =>
-                      handleLockUpdate("bl_y", Number(e.target.value))
-                    }
-                    style={{ ...inputStyle, width: "100%" }}
-                  />
-                </div>
-                <div>
-                  <Label>TR X</Label>
-                  <input
-                    type="number"
-                    step="any"
-                    value={rvs.viewLock.topRight[0]}
-                    onChange={(e) =>
-                      handleLockUpdate("tr_x", Number(e.target.value))
-                    }
-                    style={{ ...inputStyle, width: "100%" }}
-                  />
-                </div>
-                <div>
-                  <Label>TR Y</Label>
-                  <input
-                    type="number"
-                    step="any"
-                    value={rvs.viewLock.topRight[1]}
-                    onChange={(e) =>
-                      handleLockUpdate("tr_y", Number(e.target.value))
-                    }
-                    style={{ ...inputStyle, width: "100%" }}
-                  />
-                </div>
-              </div>
-            </>
-          )}
-        </div>
       </Section>
 
       {/* ── View Templates ─────────────────────────────── */}

@@ -47,7 +47,6 @@ function createExampleResultViewSettings(
       landscape,
     },
     viewLock: {
-      enabled: true,
       bottomLeft: [bottomLeftX, bottomLeftY],
       topRight: [topRightX, topRightY],
     },

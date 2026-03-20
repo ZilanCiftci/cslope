@@ -208,20 +208,20 @@ describe("computeViewLockFit", () => {
     expect(result!.scale).toBe(20);
   });
 
-  it("centres the world in the inner frame", () => {
+  it("keeps X centred but anchors bottom Y to the inner-frame bottom", () => {
     const inner = { x: 100, y: 50, w: 400, h: 200 };
     const vl = {
       bottomLeft: [0, 0] as [number, number],
-      topRight: [20, 10] as [number, number],
+      topRight: [20, 5] as [number, number],
     };
     const result = computeViewLockFit(inner, vl, 800, 400);
     expect(result).not.toBeNull();
-    // scale = min(400/20, 200/10) = 20
+    // scale = min(400/20, 200/5) = 20 (width-limited fit)
     expect(result!.scale).toBe(20);
-    // worldCx = 10, worldCy = 5
-    // targetCx = 100 + 200 = 300, targetCy = 50 + 100 = 150
+    // worldCx = 10, bottomY = 0
+    // targetCx = 100 + 200 = 300, targetBottomY = 50 + 200 = 250
     // ox = (300 - 400) / 20 - 10 = -5 - 10 = -15
-    // oy = (200 - 150) / 20 - 5 = 2.5 - 5 = -2.5
+    // oy = (200 - 250) / 20 - 0 = -2.5
     expect(result!.offset[0]).toBeCloseTo(-15, 8);
     expect(result!.offset[1]).toBeCloseTo(-2.5, 8);
   });

@@ -24,6 +24,17 @@ export function ResultsMenu({ isOpen, onActivate, panelHost }: Props) {
     );
   };
 
+  const openViewSettings = () => {
+    if (isElectron) {
+      window.cslope.openViewSettingsDialog();
+      return;
+    }
+
+    window.alert(
+      "View settings dialog is available in the desktop app window mode.",
+    );
+  };
+
   return (
     <div
       className="relative"
@@ -62,6 +73,13 @@ export function ResultsMenu({ isOpen, onActivate, panelHost }: Props) {
                 disabled={!hasResult}
               />
             </RibbonGroup>
+            <RibbonGroup label="View">
+              <RibbonButton
+                icon={<ViewSettingsIcon />}
+                label="View Settings"
+                onClick={openViewSettings}
+              />
+            </RibbonGroup>
           </div>,
           panelHost,
         )}
@@ -96,6 +114,29 @@ function ResultsPlotIcon({ size = 20 }: { size?: number }) {
       />
       <circle cx="10.2" cy="12.4" r="1.3" fill="#ef5350" />
       <circle cx="17.5" cy="8.8" r="1.3" fill="#ef5350" />
+    </svg>
+  );
+}
+
+function ViewSettingsIcon({ size = 20 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <rect
+        x="3"
+        y="3"
+        width="18"
+        height="18"
+        rx="2"
+        fill="#7e57c2"
+        opacity="0.15"
+      />
+      <circle cx="12" cy="12" r="3" stroke="#7e57c2" strokeWidth="1.6" />
+      <path
+        d="M12 5v2M12 17v2M5 12h2M17 12h2M7.05 7.05l1.41 1.41M15.54 15.54l1.41 1.41M7.05 16.95l1.41-1.41M15.54 8.46l1.41-1.41"
+        stroke="#78909c"
+        strokeWidth="1.2"
+        strokeLinecap="round"
+      />
     </svg>
   );
 }

@@ -29,6 +29,8 @@ contextBridge.exposeInMainWorld("cslope", {
   openCustomSearchPlanesDialog: () =>
     ipcRenderer.send("window:openCustomSearchPlanesDialog"),
   openOptionsDialog: () => ipcRenderer.send("window:openOptionsDialog"),
+  openViewSettingsDialog: () =>
+    ipcRenderer.send("window:openViewSettingsDialog"),
   onInteriorBoundariesDialogOpenChanged: (
     listener: (event: unknown, open: unknown) => void,
   ) => ipcRenderer.on("interiorBoundaries:dialogOpenChanged", listener),
@@ -220,4 +222,23 @@ contextBridge.exposeInMainWorld("cslope", {
     ipcRenderer.on("analysis:changed", listener),
   offAnalysisChanged: (listener: (event: unknown, state: unknown) => void) =>
     ipcRenderer.off("analysis:changed", listener),
+  // View settings dialog sync
+  requestViewSettingsState: () => ipcRenderer.send("viewSettings:requestState"),
+  sendViewSettingsState: (state: unknown) =>
+    ipcRenderer.send("viewSettings:stateResponse", state),
+  sendViewSettingsChanged: (state: unknown) =>
+    ipcRenderer.send("viewSettings:changed", state),
+  onViewSettingsRequestState: (listener: (event: unknown) => void) =>
+    ipcRenderer.on("viewSettings:requestState", listener),
+  offViewSettingsRequestState: (listener: (event: unknown) => void) =>
+    ipcRenderer.off("viewSettings:requestState", listener),
+  onViewSettingsState: (listener: (event: unknown, state: unknown) => void) =>
+    ipcRenderer.on("viewSettings:stateResponse", listener),
+  offViewSettingsState: (listener: (event: unknown, state: unknown) => void) =>
+    ipcRenderer.off("viewSettings:stateResponse", listener),
+  onViewSettingsChanged: (listener: (event: unknown, state: unknown) => void) =>
+    ipcRenderer.on("viewSettings:changed", listener),
+  offViewSettingsChanged: (
+    listener: (event: unknown, state: unknown) => void,
+  ) => ipcRenderer.off("viewSettings:changed", listener),
 });

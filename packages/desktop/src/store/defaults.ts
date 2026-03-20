@@ -127,7 +127,6 @@ export const DEFAULT_RESULT_VIEW_SETTINGS: ResultViewSettings = {
     offsetY: 0,
   },
   viewLock: {
-    enabled: true,
     bottomLeft: [-1, -1],
     topRight: [26, 18.09090909090909],
   },

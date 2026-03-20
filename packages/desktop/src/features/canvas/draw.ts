@@ -240,7 +240,7 @@ export function drawCanvas(
   // ── Paper background (result mode) — drawn before grid so geometry appears on top ──
   if (mode === "result" && result) {
     const { paperFrame: pf0Frame } = resultViewSettings;
-    if (pf0Frame.showFrame) {
+    {
       const pf0 = computePaperFrame(
         w,
         h,
@@ -310,7 +310,7 @@ export function drawCanvas(
   };
 
   let effectiveScale = viewScale;
-  if (mode === "result" && result && resultViewSettings.paperFrame.showFrame) {
+  if (mode === "result" && result) {
     const { paperSize, landscape } = resultViewSettings.paperFrame;
     const pfGrid = computePaperFrame(
       w,
@@ -1463,7 +1463,7 @@ export function drawCanvas(
       paperFrame.offsetY ?? 0,
     );
 
-    if (paperFrame.showFrame) {
+    {
       // Restore clip (ticks draw inside paper, on top of geometry)
       ctx.restore();
 

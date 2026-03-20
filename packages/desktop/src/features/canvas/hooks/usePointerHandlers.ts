@@ -772,8 +772,7 @@ export function usePointerHandlers(deps: PointerDeps) {
       e.preventDefault();
       e.stopPropagation();
       const state = useAppStore.getState();
-      if (state.mode === "result" && state.resultViewSettings.viewLock?.enabled)
-        return;
+      if (state.mode === "result" && state.resultViewSettings.viewLock) return;
 
       const canvas = canvasRef.current;
       if (!canvas) return;

@@ -1248,7 +1248,7 @@ describe("store slices", () => {
     expect(annos.length).toBeGreaterThanOrEqual(2);
 
     useAppStore.getState().setResultViewSettings({
-      viewLock: { enabled: true, bottomLeft: [1, 2], topRight: [3, 4] },
+      viewLock: { bottomLeft: [1, 2], topRight: [3, 4] },
     });
     expect(useAppStore.getState().resultViewSettings.viewLock).toBeDefined();
 

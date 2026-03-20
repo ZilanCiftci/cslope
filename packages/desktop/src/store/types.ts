@@ -133,7 +133,6 @@ export interface PaperFrameSettings {
 }
 
 export interface ViewLock {
-  enabled: boolean;
   bottomLeft: [number, number];
   topRight: [number, number];
 }
