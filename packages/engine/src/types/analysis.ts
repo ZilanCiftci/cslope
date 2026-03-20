@@ -127,6 +127,12 @@ export interface AnalysisResult {
   method: AnalysisMethod;
   /** Lambda-Fm-Ff data for the critical surface (Morgenstern-Price only). */
   criticalLffArray?: [number, number, number, number][];
+  /** Critical surface pushing moment used in FoS calculations. */
+  criticalPushingMoment?: number;
+  /** Critical surface resisting moment used in FoS calculations. */
+  criticalResistingMoment?: number;
+  /** Critical slip volume (2D area, i.e. volume per unit width). */
+  criticalSlipVolume?: number;
   /** Elapsed time in ms. */
   elapsedMs: number;
   /** Number of analysed surfaces that did not converge within iteration limits. */

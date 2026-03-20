@@ -301,6 +301,30 @@ export function ResultSidebar() {
                 {result.elapsedMs.toFixed(0)} ms
               </span>
             </div>
+            {typeof result.criticalPushingMoment === "number" && (
+              <div className="flex justify-between">
+                <Label>Pushing Moment</Label>
+                <span className="tabular-nums">
+                  {result.criticalPushingMoment.toFixed(3)} kN m
+                </span>
+              </div>
+            )}
+            {typeof result.criticalResistingMoment === "number" && (
+              <div className="flex justify-between">
+                <Label>Resisting Moment</Label>
+                <span className="tabular-nums">
+                  {result.criticalResistingMoment.toFixed(3)} kN m
+                </span>
+              </div>
+            )}
+            {typeof result.criticalSlipVolume === "number" && (
+              <div className="flex justify-between">
+                <Label>Slip Volume</Label>
+                <span className="tabular-nums">
+                  {result.criticalSlipVolume.toFixed(3)} m^3/m
+                </span>
+              </div>
+            )}
             {result.criticalSurface && (
               <div
                 className="mt-2 p-2 rounded text-[11px]"

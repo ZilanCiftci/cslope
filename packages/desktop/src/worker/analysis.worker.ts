@@ -17,6 +17,37 @@ import {
   buildSlope,
 } from "@cslope/engine";
 
+function computeCriticalPushingMoment(
+  slices:
+    | ReadonlyArray<{
+        weight: number;
+        udl: number;
+        ll: number;
+        dx: number;
+      }>
+    | null
+    | undefined,
+): number | null {
+  if (!slices || slices.length === 0) return null;
+  let pushing = 0;
+  for (const s of slices) {
+    const W = s.weight + s.udl + s.ll;
+    pushing += W * s.dx;
+  }
+  return Number.isFinite(pushing) && pushing > 0 ? pushing : null;
+}
+
+function computeCriticalSlipVolume(
+  slices: ReadonlyArray<{ area: number }> | null | undefined,
+): number | null {
+  if (!slices || slices.length === 0) return null;
+  let volume = 0;
+  for (const s of slices) {
+    volume += s.area;
+  }
+  return Number.isFinite(volume) && volume > 0 ? volume : null;
+}
+
 // ── Worker handler ──────────────────────────────────────────────
 
 /** Handle incoming analysis requests. */
@@ -105,6 +136,17 @@ self.onmessage = (event: MessageEvent<AnalysisRequest>) => {
       }
     }
 
+    const criticalPushingMoment = computeCriticalPushingMoment(
+      validSurfaces[0]?.slices,
+    );
+    const criticalSlipVolume = computeCriticalSlipVolume(
+      validSurfaces[0]?.slices,
+    );
+    const criticalResistingMoment =
+      criticalPushingMoment != null && criticalSurface
+        ? criticalPushingMoment * criticalSurface.fos
+        : null;
+
     const nonConvergedSurfaces = slope.search.reduce(
       (count, plane) => count + (plane.converged === false ? 1 : 0),
       0,
@@ -121,6 +163,12 @@ self.onmessage = (event: MessageEvent<AnalysisRequest>) => {
         options.method === "Morgenstern-Price" && validSurfaces.length > 0
           ? validSurfaces[0].lffArray
           : undefined,
+      criticalPushingMoment:
+        criticalPushingMoment != null ? criticalPushingMoment : undefined,
+      criticalResistingMoment:
+        criticalResistingMoment != null ? criticalResistingMoment : undefined,
+      criticalSlipVolume:
+        criticalSlipVolume != null ? criticalSlipVolume : undefined,
       elapsedMs: performance.now() - start,
       nonConvergedSurfaces,
       splitFailureCount: slope.splitFailureCount,
