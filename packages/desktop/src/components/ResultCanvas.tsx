@@ -593,20 +593,33 @@ export function ResultCanvas() {
       rulerPadding;
     if (w <= 0 || h <= 0) return;
 
+    // Reset paper frame zoom/offset to defaults so the frame fits the canvas
+    if (resultViewSettings.paperFrame.showFrame) {
+      setRvs({
+        paperFrame: {
+          ...resultViewSettings.paperFrame,
+          zoom: 1,
+          offsetX: 0,
+          offsetY: 0,
+        },
+      });
+    }
+
     let fitW = w;
     let fitH = h;
     let targetCx = w / 2;
     let targetCy = h / 2;
 
     if (result && resultViewSettings.paperFrame.showFrame) {
+      // Compute paper frame at default zoom=1 / offset=0 for fitting
       const pf = computePaperFrame(
         w,
         h,
         resultViewSettings.paperFrame.paperSize,
         resultViewSettings.paperFrame.landscape,
-        resultViewSettings.paperFrame.zoom ?? 1,
-        resultViewSettings.paperFrame.offsetX ?? 0,
-        resultViewSettings.paperFrame.offsetY ?? 0,
+        1,
+        0,
+        0,
       );
       const PLOT_PAD_L = pf.w * PLOT_MARGINS.L;
       const PLOT_PAD_B = pf.h * PLOT_MARGINS.B;
@@ -712,6 +725,7 @@ export function ResultCanvas() {
     resultViewSettings,
     setActiveViewOffset,
     setActiveViewScale,
+    setRvs,
     surfaceYAtX,
     udls,
   ]);
@@ -755,10 +769,42 @@ export function ResultCanvas() {
       e.preventDefault();
       e.stopPropagation();
       if (e.ctrlKey) {
-        handleZoomStep(e.deltaY > 0 ? 0.9 : 1.1);
+        const canvas = canvasRef.current;
+        if (!canvas) return;
+        const rect = canvas.getBoundingClientRect();
+        // Mouse position in CSS pixels relative to canvas
+        const mx = e.clientX - rect.left;
+        const my = e.clientY - rect.top;
+
+        const pf = resultViewSettings.paperFrame;
+        const currentZoom = pf.zoom ?? 1;
+        const factor = e.deltaY > 0 ? 0.9 : 1.1;
+        const nextZoom = Math.max(0.25, Math.min(3, currentZoom * factor));
+
+        // Paper frame center (before offset) at current zoom
+        const cxBefore = rect.width / 2 + (pf.offsetX ?? 0);
+        const cyBefore = rect.height / 2 + (pf.offsetY ?? 0);
+
+        // Vector from paper center to mouse
+        const dx = mx - cxBefore;
+        const dy = my - cyBefore;
+
+        // Rescale that vector so the point under the mouse stays put
+        const ratio = nextZoom / currentZoom;
+        const newOffsetX = (pf.offsetX ?? 0) + dx - dx * ratio;
+        const newOffsetY = (pf.offsetY ?? 0) + dy - dy * ratio;
+
+        setRvs({
+          paperFrame: {
+            ...pf,
+            zoom: nextZoom,
+            offsetX: newOffsetX,
+            offsetY: newOffsetY,
+          },
+        });
       }
     },
-    [handleZoomStep],
+    [resultViewSettings.paperFrame, setRvs],
   );
 
   // Auto-fit when a project file is loaded / benchmarks opened
@@ -855,7 +901,6 @@ export function ResultCanvas() {
       if (zoomBoxStart && zoomBoxCurrent) {
         const canvas = canvasRef.current;
         if (canvas) {
-          const container = containerRef.current;
           const rect = canvas.getBoundingClientRect();
           const x0 = zoomBoxStart[0] - rect.left;
           const y0 = zoomBoxStart[1] - rect.top;
@@ -867,33 +912,45 @@ export function ResultCanvas() {
           const topPx = Math.min(y0, y1);
           const bottomPx = Math.max(y0, y1);
 
-          if (rightPx - leftPx > 8 && bottomPx - topPx > 8) {
-            const [wx0, wy0] = canvasToWorld(
-              leftPx,
-              topPx,
-              rect.width,
-              rect.height,
-            );
-            const [wx1, wy1] = canvasToWorld(
-              rightPx,
-              bottomPx,
-              rect.width,
-              rect.height,
-            );
-            const worldLeft = Math.min(wx0, wx1);
-            const worldRight = Math.max(wx0, wx1);
-            const worldBottom = Math.min(wy0, wy1);
-            const worldTop = Math.max(wy0, wy1);
-            const worldW = Math.max(0.001, worldRight - worldLeft);
-            const worldH = Math.max(0.001, worldTop - worldBottom);
-            const viewW = container?.clientWidth ?? rect.width;
-            const viewH = container?.clientHeight ?? rect.height;
-            const scale = Math.min(viewW / worldW, viewH / worldH);
-            const cx = (worldLeft + worldRight) / 2;
-            const cy = (worldBottom + worldTop) / 2;
+          const boxW = rightPx - leftPx;
+          const boxH = bottomPx - topPx;
 
-            setActiveViewScale(Math.max(0.1, Math.min(200, scale)));
-            setActiveViewOffset([-cx, -cy]);
+          if (boxW > 8 && boxH > 8) {
+            // Zoom the paper frame so the selected region fills the canvas
+            const pf = resultViewSettings.paperFrame;
+            const currentZoom = pf.zoom ?? 1;
+            const currentOffsetX = pf.offsetX ?? 0;
+            const currentOffsetY = pf.offsetY ?? 0;
+
+            // Scale factor: canvas size / zoom-box size
+            const zoomFactor = Math.min(rect.width / boxW, rect.height / boxH);
+            const nextZoom = Math.max(
+              0.25,
+              Math.min(3, currentZoom * zoomFactor),
+            );
+
+            // Center of the zoom box in canvas coords
+            const boxCx = (leftPx + rightPx) / 2;
+            const boxCy = (topPx + bottomPx) / 2;
+
+            // Box center in paper-relative coords (before zoom/offset)
+            const paperRelX =
+              (boxCx - rect.width / 2 - currentOffsetX) / currentZoom;
+            const paperRelY =
+              (boxCy - rect.height / 2 - currentOffsetY) / currentZoom;
+
+            // Offset so that paper-relative point lands at canvas center
+            const newOffsetX = -paperRelX * nextZoom;
+            const newOffsetY = -paperRelY * nextZoom;
+
+            setRvs({
+              paperFrame: {
+                ...pf,
+                zoom: nextZoom,
+                offsetX: newOffsetX,
+                offsetY: newOffsetY,
+              },
+            });
           }
         }
 
@@ -910,9 +967,8 @@ export function ResultCanvas() {
     [
       zoomBoxStart,
       zoomBoxCurrent,
-      canvasToWorld,
-      setActiveViewOffset,
-      setActiveViewScale,
+      resultViewSettings.paperFrame,
+      setRvs,
       handlePointerUp,
     ],
   );
@@ -945,12 +1001,11 @@ export function ResultCanvas() {
   }, [zoomBoxStart, zoomBoxCurrent, zoomBoxOrigin]);
 
   useEffect(() => {
-    const noop = () => {};
     setCanvasToolbar({
       zoomBoxActive,
       panActive,
       zoomPercent,
-      onFitToScreen: noop,
+      onFitToScreen: handleFitToScreen,
       onZoomIn: () => handleZoomStep(1.1),
       onZoomOut: () => handleZoomStep(0.9),
       onSetZoomPercent: handleSetZoomPercent,
@@ -975,6 +1030,7 @@ export function ResultCanvas() {
     zoomBoxActive,
     panActive,
     zoomPercent,
+    handleFitToScreen,
     handleZoomStep,
     handleSetZoomPercent,
     setCanvasToolbar,

@@ -1,8 +1,9 @@
 import { useEffect, useState } from "react";
+import { useStore } from "zustand";
 import { ActivityBar } from "./components/ActivityBar";
 import { StatusBar } from "./components/StatusBar";
 import { MenuBar } from "./components/ui/ribbon/MenuBar";
-import { TabBar } from "./components/TabBar";
+import { FloatingToolbar } from "./components/ui/FloatingToolbar";
 import { TitleBar } from "./components/TitleBar";
 import {
   Explorer,
@@ -11,7 +12,7 @@ import {
   ResultCanvas,
   ResultSidebar,
 } from "./components";
-import { useAppStore } from "./store/app-store";
+import { useAppStore, performUndo, performRedo } from "./store/app-store";
 import { useDragDrop } from "./features/canvas/hooks/useDragDrop";
 
 export function AppShell() {
@@ -48,6 +49,15 @@ export function AppShell() {
   const invalidateAnalysis = useAppStore((s) => s.invalidateAnalysis);
   const resetAllAnalyses = useAppStore((s) => s.resetAllAnalyses);
   const canvasToolbar = useAppStore((s) => s.canvasToolbar);
+
+  const canUndo = useStore(
+    useAppStore.temporal,
+    (s) => s.pastStates.length > 0,
+  );
+  const canRedo = useStore(
+    useAppStore.temporal,
+    (s) => s.futureStates.length > 0,
+  );
 
   const activeModel = models.find((m) => m.id === activeModelId);
 
@@ -101,19 +111,6 @@ export function AppShell() {
 
       <MenuBar
         activeModelName={activeModel?.name}
-        canvasToolbar={canvasToolbar}
-      />
-
-      <TabBar
-        mode={mode}
-        setMode={setMode}
-        runState={runState}
-        hasResult={Boolean(result)}
-        onRun={handleRunAndSwitch}
-        onCancel={cancelAnalysis}
-        onRunAll={handleRunAll}
-        onReset={handleReset}
-        onResetAll={handleResetAll}
       />
 
       <div className="flex flex-1 min-h-0">
@@ -155,8 +152,24 @@ export function AppShell() {
         )}
 
         <div className="flex-1 min-w-0 flex flex-col">
-          <div className="flex-1 min-h-0">
+          <div className="flex-1 min-h-0 relative">
             {mode === "result" ? <ResultCanvas /> : <EditCanvas />}
+            <FloatingToolbar
+              mode={mode}
+              setMode={setMode}
+              runState={runState}
+              hasResult={Boolean(result)}
+              onRun={handleRunAndSwitch}
+              onCancel={cancelAnalysis}
+              onRunAll={handleRunAll}
+              onReset={handleReset}
+              onResetAll={handleResetAll}
+              canUndo={canUndo}
+              canRedo={canRedo}
+              onUndo={performUndo}
+              onRedo={performRedo}
+              canvasToolbar={canvasToolbar}
+            />
           </div>
         </div>
 

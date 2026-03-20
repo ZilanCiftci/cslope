@@ -4,18 +4,16 @@ import { EditMenu } from "./EditMenu";
 import { FileMenu } from "./FileMenu";
 import { HelpMenu } from "./HelpMenu";
 import { ResultsMenu } from "./ResultsMenu";
-import type { CanvasToolbarState } from "../../../store/types";
 
 const isDev = import.meta.env.DEV;
 
 interface Props {
   activeModelName?: string;
-  canvasToolbar: CanvasToolbarState | null;
 }
 
 type MenuKey = "file" | "edit" | "results" | "help" | "dev";
 
-export function MenuBar({ activeModelName, canvasToolbar }: Props) {
+export function MenuBar({ activeModelName }: Props) {
   const [activeMenu, setActiveMenu] = useState<MenuKey>("file");
   const [panelHost, setPanelHost] = useState<HTMLDivElement | null>(null);
 
@@ -37,7 +35,6 @@ export function MenuBar({ activeModelName, canvasToolbar }: Props) {
           panelHost={panelHost}
         />
         <EditMenu
-          canvasToolbar={canvasToolbar}
           isOpen={effectiveMenu === "edit"}
           onActivate={() => setActiveMenu("edit")}
           panelHost={panelHost}

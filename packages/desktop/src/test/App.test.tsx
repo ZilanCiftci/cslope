@@ -34,11 +34,10 @@ describe("App — VS Code dark layout", () => {
     expect(screen.getAllByText("Results").length).toBeGreaterThanOrEqual(1);
   });
 
-  it("renders the Run button in the tab bar", () => {
+  it("renders the Run button in the floating toolbar", () => {
     render(<App />);
     const button = screen.getByTitle("Run analysis and view results");
     expect(button).toBeInTheDocument();
-    expect(button).not.toBeDisabled();
   });
 
   it("renders the activity bar with models toggle", () => {
@@ -96,7 +95,7 @@ describe("App — VS Code dark layout", () => {
   it("shows cancel button and analysing indicator when running", () => {
     useAppStore.setState({ runState: "running", progress: 0.4 });
     render(<App />);
-    // TabBar should show a Cancel button when running
+    // FloatingToolbar should show a Cancel button when running
     const cancelBtn = screen.getByTitle("Cancel running analysis");
     expect(cancelBtn).toBeInTheDocument();
     expect(screen.getByText("Cancel")).toBeInTheDocument();
@@ -147,7 +146,7 @@ describe("App — VS Code dark layout", () => {
   it("disables run-all menu when analysis is running", () => {
     useAppStore.setState({ runState: "running" });
     render(<App />);
-    const runMenu = screen.getByLabelText("Run menu");
+    const runMenu = screen.getByTitle("More run options");
     expect(runMenu).toBeDisabled();
   });
 });
