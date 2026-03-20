@@ -340,11 +340,10 @@ export function ResultsPlotDialogApp() {
 
   const canShowLambdaPlot = snapshot?.result?.method === "Morgenstern-Price";
 
-  useEffect(() => {
-    if (plotMode === "lambdaFmFf" && !canShowLambdaPlot) {
-      setPlotMode("slipSurface");
-    }
-  }, [canShowLambdaPlot, plotMode]);
+  // Reset plotMode during render when lambda plot is unavailable.
+  if (plotMode === "lambdaFmFf" && !canShowLambdaPlot) {
+    setPlotMode("slipSurface");
+  }
 
   return (
     <div

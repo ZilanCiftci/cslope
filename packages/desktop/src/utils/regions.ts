@@ -257,7 +257,7 @@ export function computeRegions(
   );
 
   // Phase 1: Split by open boundaries until stable (order-independent).
-  let pieces: { px: number[]; py: number[] }[] = splitPiecesByOpenBoundaries(
+  const pieces: { px: number[]; py: number[] }[] = splitPiecesByOpenBoundaries(
     [{ px, py }],
     openBoundaries,
   );

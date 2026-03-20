@@ -719,6 +719,7 @@ export function ResultCanvas() {
     lineLoads,
     materialBoundaries,
     materials,
+    parameters,
     piezometricLine,
     projectInfo,
     result,

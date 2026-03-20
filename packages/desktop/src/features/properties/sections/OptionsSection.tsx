@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import type { AnalysisMethod, IntersliceFunctionType } from "@cslope/engine";
 import { useAppStore } from "../../../store/app-store";
 import { Section } from "../../../components/ui/Section";
@@ -64,17 +64,20 @@ export function OptionsSection({ plain = false }: OptionsSectionProps) {
   );
 
   // Keep numeric drafts in sync when options are hydrated from another window.
-  useEffect(() => {
+  // React-recommended render-time state adjustment pattern.
+  const [prevOptions, setPrevOptions] = useState(options);
+  if (
+    prevOptions.slices !== options.slices ||
+    prevOptions.iterations !== options.iterations ||
+    prevOptions.refinedIterations !== options.refinedIterations ||
+    prevOptions.tolerance !== options.tolerance
+  ) {
+    setPrevOptions(options);
     setSlicesDraft(String(options.slices));
     setIterationsDraft(String(options.iterations));
     setRefinedIterationsDraft(String(options.refinedIterations));
     setToleranceDraft(String(options.tolerance));
-  }, [
-    options.slices,
-    options.iterations,
-    options.refinedIterations,
-    options.tolerance,
-  ]);
+  }
 
   const slicesParsed = Number(slicesDraft);
   const iterationsParsed = Number(iterationsDraft);

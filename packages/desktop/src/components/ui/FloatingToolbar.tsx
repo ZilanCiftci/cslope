@@ -102,9 +102,10 @@ export function FloatingToolbar({
 
   // Start the initial fade timer on mount
   useEffect(() => {
-    resetFadeTimer();
+    clearTimeout(fadeTimerRef.current);
+    fadeTimerRef.current = setTimeout(() => setFaded(true), 3000);
     return () => clearTimeout(fadeTimerRef.current);
-  }, [resetFadeTimer]);
+  }, []);
 
   // ── Icon-only collapse when canvas is narrow ───────────────────────
   const [compact, setCompact] = useState(false);
