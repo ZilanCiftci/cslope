@@ -26,11 +26,11 @@ coverage/
 .nyc_output/
 coverage-final.json
 
-# Python
-.venv/
-
 # Profiling
 *.prof
 
 # Docs (generated)
 docs/
+
+# Agent files
+.github/*.md
