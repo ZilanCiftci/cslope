@@ -10,7 +10,6 @@ import {
   useCanvasModelState,
   useCanvasActions,
 } from "../store/app-store";
-import type { Annotation } from "../store/types";
 import { useHitTest } from "../features/canvas/hooks/useHitTest";
 import { useViewport } from "../features/canvas/hooks/useViewport";
 import { usePointerHandlers } from "../features/canvas/hooks/usePointerHandlers";
@@ -27,10 +26,6 @@ import {
   extendBoundsWithResultFitExtras,
   surfaceYAtXFromCoordinates,
 } from "../features/canvas/helpers";
-import {
-  AnnotationStyleMenu,
-  type AnnotationDraft,
-} from "../features/canvas/AnnotationStyleMenu";
 import { ContextMenuOverlay } from "../features/canvas/ContextMenuOverlay";
 import { AxisOverlay } from "../features/canvas/AxisOverlay";
 
@@ -64,10 +59,6 @@ export function ResultCanvas() {
   const [zoomBoxOrigin, setZoomBoxOrigin] = useState<[number, number] | null>(
     null,
   );
-  const [annotationStylePreview, setAnnotationStylePreview] = useState<{
-    annoId: string;
-    draft: AnnotationDraft | null;
-  } | null>(null);
   const canvasSize = useCanvasSizing(canvasRef, crosshairCanvasRef);
 
   const mode = "result" as const;
@@ -95,22 +86,6 @@ export function ResultCanvas() {
     projectInfo,
     parameters,
   } = useCanvasModelState();
-  const resultViewSettingsForRender = useMemo(() => {
-    if (!annotationStylePreview || !annotationStylePreview.draft) {
-      return resultViewSettings;
-    }
-
-    const mergedAnnotations = resultViewSettings.annotations.map((anno) =>
-      anno.id === annotationStylePreview.annoId
-        ? ({ ...anno, ...annotationStylePreview.draft } as Annotation)
-        : anno,
-    );
-
-    return {
-      ...resultViewSettings,
-      annotations: mergedAnnotations,
-    };
-  }, [resultViewSettings, annotationStylePreview]);
   const setRvs = useAppStore((s) => s.setResultViewSettings);
   const {
     setAnalysisLimits,
@@ -194,16 +169,11 @@ export function ResultCanvas() {
     editingLoads,
   });
 
-  const {
-    contextMenu,
-    annoStyleMenu,
-    setContextMenu,
-    setAnnoStyleMenu,
-    handleContextMenu,
-  } = useContextMenu({
+  const { contextMenu, setContextMenu, handleContextMenu } = useContextMenu({
     canvasRef,
     mode,
     selectedAnnotationIds,
+    setSelectedAnnotations,
     alignAnnotations,
     getEventWorldPos,
     findNearPointUnified: hitTest.findNearPointUnified,
@@ -420,7 +390,7 @@ export function ResultCanvas() {
       h: canvasSize.height,
       mode,
       result,
-      resultViewSettings: resultViewSettingsForRender,
+      resultViewSettings,
       orientation,
       coordinates,
       materials,
@@ -475,7 +445,7 @@ export function ResultCanvas() {
       surfaceYAtX,
       mode,
       result,
-      resultViewSettingsForRender,
+      resultViewSettings,
       selectedAnnotationIds,
       projectInfo,
       parameters,
@@ -518,8 +488,6 @@ export function ResultCanvas() {
       if (e.key === "Escape") {
         setContextMenu(null);
         setAssigningMaterial(null);
-        setAnnoStyleMenu(null);
-        setAnnotationStylePreview(null);
         return;
       }
 
@@ -532,8 +500,6 @@ export function ResultCanvas() {
           removeAnnotation(id);
         }
         setSelectedAnnotations([]);
-        setAnnoStyleMenu(null);
-        setAnnotationStylePreview(null);
         return;
       }
 
@@ -569,8 +535,6 @@ export function ResultCanvas() {
     setSelectedAnnotations,
     setAssigningMaterial,
     setContextMenu,
-    setAnnoStyleMenu,
-    setAnnotationStylePreview,
   ]);
 
   const handleFitToScreen = useCallback(() => {
@@ -650,6 +614,7 @@ export function ResultCanvas() {
         result,
         resultViewSettings,
         materials,
+        piezometricLine,
         projectInfo,
         parameters,
         canvas,
@@ -1127,26 +1092,6 @@ export function ResultCanvas() {
           </div>
         )}
         <ContextMenuOverlay menu={contextMenu} />
-
-        <AnnotationStyleMenu
-          menu={annoStyleMenu}
-          annotations={resultViewSettings.annotations}
-          updateAnnotation={updateAnnotation}
-          removeAnnotation={removeAnnotation}
-          onPreviewChange={(annoId, draft) => {
-            if (!draft) {
-              setAnnotationStylePreview((prev) =>
-                prev?.annoId === annoId ? null : prev,
-              );
-              return;
-            }
-            setAnnotationStylePreview({ annoId, draft });
-          }}
-          onClose={() => {
-            setAnnotationStylePreview(null);
-            setAnnoStyleMenu(null);
-          }}
-        />
       </div>
       <AxisOverlay containerRef={containerRef} canvasRef={canvasRef} />
     </div>

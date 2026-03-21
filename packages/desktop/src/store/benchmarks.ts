@@ -79,6 +79,15 @@ function createExampleResultViewSettings(
         text: "Calculate FOS: #FOS",
         fontSize: 14,
       },
+      {
+        id: "anno-benchmark-material-table",
+        type: "material-table",
+        x: 0.95,
+        y: 0.05,
+        anchor: "top-right",
+        fontSize: 6,
+        tableColumns: ["model", "unitWeight", "cohesion", "frictionAngle"],
+      },
     ],
   };
 }

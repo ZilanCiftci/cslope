@@ -18,8 +18,8 @@ export const PAPER_DIMENSIONS: Record<PaperSize, { w: number; h: number }> = {
 };
 
 export const PLOT_MARGINS = {
-  L: 0.08,
-  B: 0.08,
+  L: 0.05,
+  B: 0.05,
   T: 0.05,
   R: 0.05,
 };
@@ -116,6 +116,15 @@ export const DEFAULT_RESULT_VIEW_SETTINGS: ResultViewSettings = {
       y: 0.13,
       text: "#Subtitle",
       fontSize: 14,
+    },
+    {
+      id: "anno-default-material-table",
+      type: "material-table",
+      x: 0.95,
+      y: 0.05,
+      anchor: "top-right",
+      fontSize: 6,
+      tableColumns: ["model", "unitWeight", "cohesion", "frictionAngle"],
     },
   ],
   paperFrame: {

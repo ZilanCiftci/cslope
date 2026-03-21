@@ -5,7 +5,7 @@ import { computeRegions } from "../../utils/regions";
 import { GRID_RAW_STEP_PX } from "../../constants";
 import { computeRulerStep, formatRulerLabel } from "../../utils/ruler";
 import { GRID_STEP_MIN } from "../canvas/constants";
-import { flatFieldsFromModel } from "../properties/sections/material-forms/model-defaults";
+import { buildMaterialTableData } from "../canvas/helpers";
 import {
   ANNOTATION_DEFAULT_FONT_FAMILY,
   ANNOTATION_DEFAULT_FONT_SIZE,
@@ -36,7 +36,6 @@ import {
   SLIP_SURFACE_OPACITY,
   UDL_LOAD_COLOR,
   MODEL_HATCH_PATTERNS,
-  MODEL_SHORT_LABELS,
 } from "../rendering/style-spec";
 import { drawPdfHatch, drawPdfHatchLabel } from "../rendering/hatch";
 import type { AnalysisResult } from "@cslope/engine";
@@ -48,6 +47,7 @@ import type {
   ModelOrientation,
   ParameterDef,
   ProjectInfo,
+  PiezometricLineState,
   RegionMaterials,
   ResultViewSettings,
 } from "../../store/types";
@@ -64,6 +64,8 @@ import {
 } from "./pdf-helpers";
 import { surfaceYAtX } from "../view/surface";
 import { resolveAnnotationText } from "../annotations/resolveAnnotationText";
+import { getMaterialTableColumnWidthMm } from "../annotations/materialTableLayout";
+import { anchoredTopLeft } from "../annotations/anchorPosition";
 
 export function drawGrid(
   pdf: jsPDF,
@@ -734,12 +736,126 @@ export function drawCriticalSurface(
   }
 }
 
+function measureTextAnnotationPdf(
+  pdf: jsPDF,
+  anno: Annotation,
+  scale: number,
+  projectInfo: Partial<ProjectInfo>,
+  result: AnalysisResult,
+  parameters: ParameterDef[],
+): { w: number; h: number } {
+  const fontSize = (anno.fontSize ?? ANNOTATION_DEFAULT_FONT_SIZE) * scale;
+  const ptSize = Math.max(8, fontSize / 0.3528);
+  const family = mapFont(anno.fontFamily ?? ANNOTATION_DEFAULT_FONT_FAMILY);
+  const style = mapFontStyle(anno.bold, anno.italic);
+  pdf.setFont(family, style);
+  pdf.setFontSize(ptSize);
+  const resolved = resolveAnnotationText({
+    text: anno.text ?? "",
+    projectInfo,
+    result,
+    parameters,
+  });
+  const lines = resolved.split("\n");
+  const lineHeight = fontSize * ANNOTATION_LINE_HEIGHT;
+  let maxW = 0;
+  for (const line of lines) maxW = Math.max(maxW, pdf.getTextWidth(line));
+  return { w: maxW, h: Math.max(lineHeight, lines.length * lineHeight) };
+}
+
+function measureColorBarPdf(scale: number): { w: number; h: number } {
+  const barW = 5 * scale;
+  const barH = 50 * scale;
+  const labelFontSize = Math.max(7, 7 * scale);
+  const titleExtraTop = Math.max(8, 8 * scale) + 2 * scale;
+  const labelPad = 2 * scale;
+  // Approximate max label width (e.g. "10.00" is ~5 chars)
+  const approxLabelW = labelFontSize * 0.5 * 5;
+  return {
+    w: barW + labelPad + approxLabelW,
+    h: barH + titleExtraTop,
+  };
+}
+
+function measureTablePdf(
+  pdf: jsPDF,
+  annotation: Annotation,
+  materials: MaterialRow[],
+  piezometricLine: PiezometricLineState,
+  scale: number,
+): { w: number; h: number } {
+  const fontSize = annotation.fontSize ?? 6;
+  const { columnKeys, header, rows } = buildMaterialTableData(
+    annotation,
+    materials,
+    piezometricLine,
+  );
+  const fontScale = fontSize / 6;
+  const bodyPt = Math.max(8, (fontSize * scale * 0.47) / 0.3528);
+  const headerPt = Math.max(9, ((fontSize * scale) / 0.3528) * 0.9);
+  const padding = Math.max(1.1, 1.1 * scale);
+  const rowH = Math.max(bodyPt * 0.3528 * 1.15, 3.8 * scale * fontScale);
+  const headerLineH = Math.max(
+    headerPt * 0.3528 * 1.15,
+    1.8 * scale * fontScale,
+  );
+  const swatchW = 2.6 * scale * fontScale;
+
+  pdf.setFont("helvetica", "bold");
+  pdf.setFontSize(headerPt);
+  const wrapHeader = (text: string, maxWidth: number): string[] => {
+    if (pdf.getTextWidth(text) <= maxWidth) return [text];
+    const words = text.split(/\s+/).filter((w) => w.length > 0);
+    if (words.length <= 1) return [text];
+    const lines: string[] = [];
+    let line = "";
+    for (const word of words) {
+      const candidate = line ? `${line} ${word}` : word;
+      if (!line || pdf.getTextWidth(candidate) <= maxWidth) {
+        line = candidate;
+        continue;
+      }
+      lines.push(line);
+      line = word;
+    }
+    if (line) lines.push(line);
+    return lines.length > 0 ? lines : [text];
+  };
+  const headerLines = header.map((h, c) =>
+    c <= 1
+      ? [h]
+      : wrapHeader(
+          h,
+          Math.max(
+            4,
+            getMaterialTableColumnWidthMm(columnKeys[c], scale, fontSize) -
+              padding * 2,
+          ),
+        ),
+  );
+  const colW = columnKeys.map((key, index) => {
+    const fixed = getMaterialTableColumnWidthMm(key, scale, fontSize);
+    if (index === 0) return Math.max(fixed, swatchW + padding * 2);
+    return fixed;
+  });
+  const maxHeaderLines = Math.max(...headerLines.map((l) => l.length));
+  const headerH = Math.max(
+    maxHeaderLines * headerLineH + padding * 2,
+    5.5 * scale * fontScale,
+  );
+  return {
+    w: colW.reduce((a, b) => a + b, 0),
+    h: headerH + rows.length * rowH,
+  };
+}
+
 export function drawAnnotations(
   pdf: jsPDF,
   tf: PdfTransform,
   annotations: Annotation[],
   result: AnalysisResult,
   materials: MaterialRow[],
+  piezometricLine: PiezometricLineState,
   projectInfo: Partial<ProjectInfo>,
   parameters: ParameterDef[],
   paperFrame: { x: number; y: number; w: number; h: number },
@@ -751,10 +867,25 @@ export function drawAnnotations(
     const ay = paperFrame.y + anno.y * paperFrame.h;
 
     if (anno.type === "text") {
-      drawTextAnnotation(
+      const size = measureTextAnnotationPdf(
         pdf,
+        anno,
+        annoScale,
+        projectInfo,
+        result,
+        parameters,
+      );
+      const { x: drawX, y: drawY } = anchoredTopLeft(
         ax,
         ay,
+        size.w,
+        size.h,
+        anno.anchor,
+      );
+      drawTextAnnotation(
+        pdf,
+        drawX,
+        drawY,
         anno,
         annoScale,
         projectInfo,
@@ -762,9 +893,39 @@ export function drawAnnotations(
         parameters,
       );
     } else if (anno.type === "color-bar" && result.allSurfaces.length > 1) {
-      drawColorBarAnnotation(pdf, ax, ay, result, annoScale);
+      const size = measureColorBarPdf(annoScale);
+      const { x: drawX, y: drawY } = anchoredTopLeft(
+        ax,
+        ay,
+        size.w,
+        size.h,
+        anno.anchor,
+      );
+      drawColorBarAnnotation(pdf, drawX, drawY, result, annoScale);
     } else if (anno.type === "material-table") {
-      drawTablePdf(pdf, ax, ay, materials, annoScale);
+      const size = measureTablePdf(
+        pdf,
+        anno,
+        materials,
+        piezometricLine,
+        annoScale,
+      );
+      const { x: drawX, y: drawY } = anchoredTopLeft(
+        ax,
+        ay,
+        size.w,
+        size.h,
+        anno.anchor,
+      );
+      drawTablePdf(
+        pdf,
+        drawX,
+        drawY,
+        anno,
+        materials,
+        piezometricLine,
+        annoScale,
+      );
     }
   }
 }
@@ -856,54 +1017,101 @@ function drawTablePdf(
   pdf: jsPDF,
   x: number,
   y: number,
+  annotation: Annotation,
   materials: MaterialRow[],
+  piezometricLine: PiezometricLineState,
   scale: number,
 ) {
-  const header = ["Material", "Model", "γ", "φ", "c"];
-  const rows = materials.map((m) => {
-    const f = flatFieldsFromModel(m.model);
-    return [
-      m.name,
-      MODEL_SHORT_LABELS[m.model.kind],
-      `${f.unitWeight}`,
-      `${f.frictionAngle}°`,
-      `${f.cohesion}`,
-    ];
-  });
+  const fitTextPdf = (text: string, maxWidth: number): string => {
+    if (maxWidth <= 0) return "";
+    if (pdf.getTextWidth(text) <= maxWidth) return text;
+    let out = text;
+    while (out.length > 1 && pdf.getTextWidth(`${out}\u2026`) > maxWidth) {
+      out = out.slice(0, -1);
+    }
+    return `${out}\u2026`;
+  };
 
-  const bodyPt = Math.max(8, (2.8 * scale) / 0.3528);
-  const headerPt = Math.max(9, (2.8 * scale) / 0.3528);
+  const wrapHeaderTextPdf = (text: string, maxWidth: number): string[] => {
+    if (pdf.getTextWidth(text) <= maxWidth) return [text];
+    const words = text.split(/\s+/).filter((w) => w.length > 0);
+    if (words.length <= 1) return [text];
 
-  const padding = Math.max(1.5, 1.5 * scale);
-  const rowH = Math.max(bodyPt * 0.3528 * 1.3, 4.5 * scale);
-  const headerH = Math.max(headerPt * 0.3528 * 1.3, 5.5 * scale);
-  const swatchW = 3 * scale;
+    const lines: string[] = [];
+    let line = "";
+    for (const word of words) {
+      const candidate = line ? `${line} ${word}` : word;
+      if (!line || pdf.getTextWidth(candidate) <= maxWidth) {
+        line = candidate;
+        continue;
+      }
+      lines.push(line);
+      line = word;
+    }
+    if (line) lines.push(line);
+    return lines.length > 0 ? lines : [text];
+  };
+
+  const { columnKeys, header, rows } = buildMaterialTableData(
+    annotation,
+    materials,
+    piezometricLine,
+  );
+
+  const fontSize = annotation.fontSize ?? 6;
+  const fontScale = fontSize / 6;
+
+  const bodyPt = Math.max(8, (fontSize * scale * 0.47) / 0.3528);
+  const headerPt = Math.max(9, ((fontSize * scale) / 0.3528) * 0.9);
+
+  const padding = Math.max(1.1, 1.1 * scale);
+  const rowH = Math.max(bodyPt * 0.3528 * 1.15, 3.8 * scale * fontScale);
+  const headerLineH = Math.max(
+    headerPt * 0.3528 * 1.15,
+    1.8 * scale * fontScale,
+  );
+  const swatchW = 2.6 * scale * fontScale;
 
   pdf.setFont("helvetica", "bold");
   pdf.setFontSize(headerPt);
-  const colW = header.map((h) => pdf.getTextWidth(h) + padding * 2);
+  const headerLines = header.map((h, c) =>
+    c <= 1
+      ? [h]
+      : wrapHeaderTextPdf(
+          h,
+          Math.max(
+            4,
+            getMaterialTableColumnWidthMm(columnKeys[c], scale, fontSize) -
+              padding * 2,
+          ),
+        ),
+  );
+  const colW = columnKeys.map((key, index) => {
+    const fixed = getMaterialTableColumnWidthMm(key, scale, fontSize);
+    if (index === 0) return Math.max(fixed, swatchW + padding * 2);
+    return fixed;
+  });
   pdf.setFont("helvetica", "normal");
   pdf.setFontSize(bodyPt);
-  for (const row of rows) {
-    for (let c = 0; c < row.length; c++) {
-      colW[c] = Math.max(colW[c], pdf.getTextWidth(row[c]) + padding * 2);
-    }
-  }
-  colW[0] += swatchW + 1;
+  const maxHeaderLines = Math.max(...headerLines.map((l) => l.length));
+  const headerH = Math.max(
+    maxHeaderLines * headerLineH + padding * 2,
+    5.5 * scale * fontScale,
+  );
 
   const totalW = colW.reduce((a, b) => a + b, 0);
   const totalH = headerH + rows.length * rowH;
 
   pdf.setFillColor(255, 255, 255);
-  pdf.setDrawColor(51, 51, 51);
-  pdf.setLineWidth(0.2);
+  pdf.setDrawColor(0, 0, 0);
+  pdf.setLineWidth(0.35);
   pdf.rect(x, y, totalW, totalH, "FD");
 
   pdf.setFillColor(240, 240, 240);
   pdf.rect(x, y, totalW, headerH, "F");
 
-  pdf.setDrawColor(204, 204, 204);
-  pdf.setLineWidth(0.1);
+  pdf.setDrawColor(0, 0, 0);
+  pdf.setLineWidth(0.35);
   pdf.line(x, y + headerH, x + totalW, y + headerH);
 
   pdf.setFont("helvetica", "bold");
@@ -911,11 +1119,11 @@ function drawTablePdf(
   pdf.setTextColor(0, 0, 0);
   let cx = x;
   for (let c = 0; c < header.length; c++) {
-    pdf.text(
-      header[c],
-      cx + padding + (c === 0 ? swatchW + 1 : 0),
-      y + headerH * 0.65,
-    );
+    const lines = headerLines[c];
+    const startY = y + padding + headerLineH * 0.75;
+    for (let i = 0; i < lines.length; i++) {
+      pdf.text(lines[i], cx + padding, startY + i * headerLineH);
+    }
     cx += colW[c];
   }
 
@@ -929,27 +1137,39 @@ function drawTablePdf(
       pdf.rect(x, ry, totalW, rowH, "F");
     }
 
-    pdf.setDrawColor(238, 238, 238);
+    pdf.setDrawColor(0, 0, 0);
+    pdf.setLineWidth(0.35);
     pdf.line(x, ry + rowH, x + totalW, ry + rowH);
 
     cx = x;
     for (let c = 0; c < rows[r].length; c++) {
       if (c === 0 && materials[r]) {
+        const swatchX = cx + (colW[c] - swatchW) / 2;
         const [sr, sg, sb] = parseColor(materials[r].color);
         pdf.setFillColor(sr, sg, sb);
-        pdf.rect(cx + padding, ry + 0.8, swatchW, swatchW, "FD");
+        const swatchY = ry + (rowH - swatchW) / 2;
+        pdf.rect(swatchX, swatchY, swatchW, swatchW, "FD");
         pdf.setDrawColor(102, 102, 102);
         pdf.setLineWidth(0.1);
-        pdf.rect(cx + padding, ry + 0.8, swatchW, swatchW, "S");
+        pdf.rect(swatchX, swatchY, swatchW, swatchW, "S");
+      }
+      if (c === 0) {
+        cx += colW[c];
+        continue;
       }
 
       pdf.setTextColor(51, 51, 51);
-      pdf.text(
-        rows[r][c],
-        cx + padding + (c === 0 ? swatchW + 1 : 0),
-        ry + rowH * 0.65,
-      );
+      const fitted = fitTextPdf(rows[r][c], Math.max(2, colW[c] - padding * 2));
+      pdf.text(fitted, cx + padding, ry + rowH * 0.65);
       cx += colW[c];
     }
+  }
+
+  let separatorX = x;
+  pdf.setDrawColor(0, 0, 0);
+  pdf.setLineWidth(0.35);
+  for (let c = 0; c < colW.length - 1; c++) {
+    separatorX += colW[c];
+    pdf.line(separatorX, y, separatorX, y + totalH);
   }
 }

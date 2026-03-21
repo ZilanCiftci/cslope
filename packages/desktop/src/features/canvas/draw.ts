@@ -3,7 +3,6 @@ import type { AppState } from "../../store/types";
 import { circleArcPoints } from "../../utils/arc";
 import { fosColor } from "../../utils/fos-color";
 import { computeRegions } from "../../utils/regions";
-import { flatFieldsFromModel } from "../properties/sections/material-forms/model-defaults";
 import {
   ARROW_HEAD_LEN_PX,
   ARROW_HEAD_PX,
@@ -18,8 +17,15 @@ import {
 } from "./constants";
 import { GRID_RAW_STEP_PX } from "../../constants";
 import { computeRulerStep, formatRulerLabel } from "../../utils/ruler";
-import { computePaperFrame, drawTable, getAnnotationBoundsPx } from "./helpers";
+import {
+  buildMaterialTableData,
+  computePaperFrame,
+  drawTable,
+  getAnnotationBoundsPx,
+  measureTable,
+} from "./helpers";
 import { resolveAnnotationText } from "../annotations/resolveAnnotationText";
+import { anchoredTopLeft } from "../annotations/anchorPosition";
 import type { PointHit } from "./types";
 import {
   ANNOTATION_DEFAULT_FONT_FAMILY,
@@ -50,7 +56,6 @@ import {
   SLIP_SURFACE_OPACITY,
   UDL_LOAD_COLOR,
   MODEL_HATCH_PATTERNS,
-  MODEL_SHORT_LABELS,
 } from "../rendering/style-spec";
 import { drawCanvasHatch, drawCanvasHatchLabel } from "../rendering/hatch";
 
@@ -1589,7 +1594,7 @@ export function drawCanvas(
     const annoScale = Math.min(pf.w, pf.h) / ANNOTATION_SCALE_DIVISOR;
 
     for (const anno of annotations) {
-      // Convert fractional paper-frame coordinates to canvas pixels
+      // Convert fractional paper-frame coordinates to canvas pixels (anchor point)
       const ax = pf.x + anno.x * pf.w;
       const ay = pf.y + anno.y * pf.h;
       const fontSize =
@@ -1612,15 +1617,50 @@ export function drawCanvas(
 
         const lines = resolvedText.split("\n");
         const lineHeight = fontSize * ANNOTATION_LINE_HEIGHT;
+        let maxW = 0;
+        for (const line of lines)
+          maxW = Math.max(maxW, ctx.measureText(line).width);
+        const textH = Math.max(lineHeight, lines.length * lineHeight);
+        const { x: drawX, y: drawY } = anchoredTopLeft(
+          ax,
+          ay,
+          maxW,
+          textH,
+          anno.anchor,
+        );
+
         lines.forEach((line, i) => {
-          ctx.fillText(line, ax, ay + i * lineHeight);
+          ctx.fillText(line, drawX, drawY + i * lineHeight);
         });
       } else if (anno.type === "color-bar") {
         const barW = 20 * annoScale;
         const barH = 200 * annoScale;
-        // Use anno position as top-left of color bar
-        const barX = ax;
-        const barY = ay;
+        const labelFontSize = Math.max(10, 11 * annoScale);
+        const titleExtraTop = labelFontSize + 4 * annoScale;
+
+        // Measure label width for total content size
+        ctx.font = `${labelFontSize}px 'Segoe UI', sans-serif`;
+        let maxLabelW = 0;
+        const numTicks = COLOR_BAR_NUM_TICKS;
+        for (let t = 0; t <= numTicks; t++) {
+          const frac = t / numTicks;
+          const fos = result.maxFOS - frac * (result.maxFOS - result.minFOS);
+          maxLabelW = Math.max(
+            maxLabelW,
+            ctx.measureText(fos.toFixed(2)).width,
+          );
+        }
+        const contentW = barW + 5 * annoScale + maxLabelW;
+        const contentH = barH + titleExtraTop;
+        const { x: drawX, y: drawY } = anchoredTopLeft(
+          ax,
+          ay,
+          contentW,
+          contentH,
+          anno.anchor,
+        );
+        const barX = drawX;
+        const barY = drawY + titleExtraTop;
 
         const fosMin = result.minFOS;
         const fosMax = result.maxFOS;
@@ -1641,20 +1681,19 @@ export function drawCanvas(
 
         // Labels
         ctx.fillStyle = "#000000";
-        ctx.font = `${Math.max(10, 11 * annoScale)}px 'Segoe UI', sans-serif`;
+        ctx.font = `${labelFontSize}px 'Segoe UI', sans-serif`;
         ctx.textAlign = "left";
         ctx.textBaseline = "middle";
         const labelX2 = barX + barW + 5 * annoScale;
 
         // Title
-        ctx.font = `bold ${Math.max(10, 11 * annoScale)}px 'Segoe UI', sans-serif`;
+        ctx.font = `bold ${labelFontSize}px 'Segoe UI', sans-serif`;
         ctx.textBaseline = "bottom";
         ctx.fillText("FOS", barX, barY - 4 * annoScale);
-        ctx.font = `${Math.max(10, 11 * annoScale)}px 'Segoe UI', sans-serif`;
+        ctx.font = `${labelFontSize}px 'Segoe UI', sans-serif`;
         ctx.textBaseline = "middle";
 
         // Tick marks and labels
-        const numTicks = COLOR_BAR_NUM_TICKS;
         for (let t = 0; t <= numTicks; t++) {
           const frac = t / numTicks;
           const y = barY + frac * barH;
@@ -1673,18 +1712,38 @@ export function drawCanvas(
           ctx.fillText(fos.toFixed(2), labelX2, y);
         }
       } else if (anno.type === "material-table") {
-        const header = ["Material", "Model", "γ", "φ", "c"];
-        const rows = materials.map((m) => {
-          const f = flatFieldsFromModel(m.model);
-          return [
-            m.name,
-            MODEL_SHORT_LABELS[m.model.kind],
-            `${f.unitWeight}`,
-            `${f.frictionAngle}°`,
-            `${f.cohesion}`,
-          ];
-        });
-        drawTable(ctx, ax, ay, header, rows, materials, annoScale);
+        const { columnKeys, header, rows } = buildMaterialTableData(
+          anno,
+          materials,
+          piezometricLine,
+        );
+        const tableFontSize = anno.fontSize ?? 6;
+        const tableSize = measureTable(
+          ctx,
+          columnKeys,
+          header,
+          rows,
+          annoScale,
+          tableFontSize,
+        );
+        const { x: drawX, y: drawY } = anchoredTopLeft(
+          ax,
+          ay,
+          tableSize.w,
+          tableSize.h,
+          anno.anchor,
+        );
+        drawTable(
+          ctx,
+          drawX,
+          drawY,
+          columnKeys,
+          header,
+          rows,
+          materials,
+          annoScale,
+          tableFontSize,
+        );
       }
 
       // Selection highlight for selected annotations
@@ -1694,6 +1753,7 @@ export function drawCanvas(
           paperFrame: pf,
           result,
           materials,
+          piezometricLine,
           projectInfo,
           parameters,
         });

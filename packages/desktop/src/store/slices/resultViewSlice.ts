@@ -29,10 +29,15 @@ export const createResultViewSlice: SliceCreator<ResultViewSlice> = (set) => ({
     const anno = {
       id: nextId("anno"),
       type,
-      x: 0.5,
-      y: 0.5,
+      x: type === "material-table" ? 0.95 : 0.5,
+      y: type === "material-table" ? 0.05 : 0.5,
+      anchor: type === "material-table" ? "top-right" : undefined,
       text: type === "text" ? "Annotation" : undefined,
-      fontSize: 12,
+      fontSize: type === "material-table" ? 6 : 12,
+      tableColumns:
+        type === "material-table"
+          ? ["model", "unitWeight", "cohesion", "frictionAngle"]
+          : undefined,
     } as ResultViewSlice["resultViewSettings"]["annotations"][number];
     set((s) =>
       syncActiveModel(s, {

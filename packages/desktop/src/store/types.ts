@@ -137,17 +137,35 @@ export interface ViewLock {
   topRight: [number, number];
 }
 
+export type MaterialTableColumnKey =
+  | "model"
+  | "unitWeight"
+  | "frictionAngle"
+  | "cohesion"
+  | "piezometricLine"
+  | "depthRef"
+  | "cDatum"
+  | "cRate";
+
+export type AnchorPosition =
+  | "top-left"
+  | "top-right"
+  | "bottom-left"
+  | "bottom-right";
+
 export interface Annotation {
   id: string;
   type: "text" | "material-table" | "color-bar";
   x: number;
   y: number;
+  anchor?: AnchorPosition;
   text?: string;
   fontSize?: number;
   fontFamily?: string;
   bold?: boolean;
   italic?: boolean;
   color?: string;
+  tableColumns?: MaterialTableColumnKey[];
 }
 
 export interface ResultViewSettings {

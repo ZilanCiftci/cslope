@@ -358,8 +358,10 @@ export function usePointerHandlers(deps: PointerDeps) {
         );
         const cxPx = clientX - rect.left;
         const cyPx = clientY - rect.top;
-        const fx = (cxPx - pf.x) / pf.w;
-        const fy = (cyPx - pf.y) / pf.h;
+        const startCxPx = drag.startPx[0] - rect.left;
+        const startCyPx = drag.startPx[1] - rect.top;
+        const dxFrac = (cxPx - startCxPx) / pf.w;
+        const dyFrac = (cyPx - startCyPx) / pf.h;
         const draggedId = drag.hit.annoId;
 
         if (selectedAnnotationIds.includes(draggedId)) {
@@ -368,8 +370,8 @@ export function usePointerHandlers(deps: PointerDeps) {
               (a) => a.id === draggedId,
             );
             if (draggedAnno) {
-              const ddx = fx - draggedAnno.x;
-              const ddy = fy - draggedAnno.y;
+              const ddx = drag.startWorld[0] + dxFrac - draggedAnno.x;
+              const ddy = drag.startWorld[1] + dyFrac - draggedAnno.y;
               for (const sid of selectedAnnotationIds) {
                 const sa = s.resultViewSettings.annotations.find(
                   (a) => a.id === sid,
@@ -380,10 +382,16 @@ export function usePointerHandlers(deps: PointerDeps) {
               }
             }
           } else {
-            updateAnnotation(draggedId, { x: fx, y: fy });
+            updateAnnotation(draggedId, {
+              x: drag.startWorld[0] + dxFrac,
+              y: drag.startWorld[1] + dyFrac,
+            });
           }
         } else {
-          updateAnnotation(draggedId, { x: fx, y: fy });
+          updateAnnotation(draggedId, {
+            x: drag.startWorld[0] + dxFrac,
+            y: drag.startWorld[1] + dyFrac,
+          });
         }
       } else if (drag.hit.kind === "external") {
         setCoordinate(drag.hit.index, [newX, newY]);
@@ -481,6 +489,7 @@ export function usePointerHandlers(deps: PointerDeps) {
                       paperFrame: pf,
                       result: resultForBounds,
                       materials: state.materials,
+                      piezometricLine: state.piezometricLine,
                       projectInfo: state.projectInfo,
                       parameters: state.parameters,
                     });

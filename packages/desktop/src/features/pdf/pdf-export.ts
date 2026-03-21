@@ -7,6 +7,7 @@ import type {
   ModelOrientation,
   ParameterDef,
   PaperSize,
+  PiezometricLineState,
   ProjectInfo,
   RegionMaterials,
   ResultViewSettings,
@@ -73,10 +74,7 @@ export interface PdfExportData {
   regionMaterials: RegionMaterials;
   result: AnalysisResult;
   resultViewSettings: ResultViewSettings;
-  piezometricLine: {
-    enabled: boolean;
-    lines: { id: string; coordinates: [number, number][] }[];
-  };
+  piezometricLine: PiezometricLineState;
   udls: { id: string; x1: number; x2: number; magnitude: number }[];
   lineLoads: { id: string; x: number; magnitude: number }[];
   analysisLimits: AnalysisLimitsState;
@@ -346,6 +344,7 @@ export function exportVectorPdf(data: PdfExportData): void {
       rvs.annotations,
       result,
       materials,
+      piezometricLine,
       projectInfo || {},
       parameters ?? [],
       annotationFrame,

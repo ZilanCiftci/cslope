@@ -166,6 +166,7 @@ export function EditCanvas() {
     canvasRef,
     mode,
     selectedAnnotationIds,
+    setSelectedAnnotations,
     alignAnnotations,
     getEventWorldPos,
     findNearPointUnified: hitTest.findNearPointUnified,

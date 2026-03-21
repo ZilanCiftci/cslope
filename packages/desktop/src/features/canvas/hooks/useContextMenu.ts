@@ -19,6 +19,7 @@ interface ContextMenuParams {
   canvasRef: RefObject<HTMLCanvasElement | null>;
   mode: AppMode;
   selectedAnnotationIds: string[];
+  setSelectedAnnotations: (ids: string[]) => void;
   alignAnnotations: (
     dir: "left" | "right" | "top" | "bottom" | "center-h" | "center-v",
   ) => void;
@@ -52,6 +53,7 @@ export function useContextMenu(params: ContextMenuParams) {
     canvasRef,
     mode,
     selectedAnnotationIds,
+    setSelectedAnnotations,
     alignAnnotations,
     getEventWorldPos,
     findNearPointUnified,
@@ -72,16 +74,10 @@ export function useContextMenu(params: ContextMenuParams) {
   } = params;
 
   const [contextMenu, setContextMenu] = useState<ContextMenuState | null>(null);
-  const [annoStyleMenu, setAnnoStyleMenu] = useState<{
-    screenX: number;
-    screenY: number;
-    annoId: string;
-  } | null>(null);
 
   const handleContextMenu = useCallback(
     (e: RMouseEvent<HTMLCanvasElement>) => {
       e.preventDefault();
-      setAnnoStyleMenu(null);
 
       if (mode === "result") {
         const canvas = canvasRef.current;
@@ -90,10 +86,6 @@ export function useContextMenu(params: ContextMenuParams) {
         const canvasRect = canvas.getBoundingClientRect();
         const cxPx = e.clientX - canvasRect.left;
         const cyPx = e.clientY - canvasRect.top;
-
-        // Use true window coordinates for the floating dialog
-        const windowX = e.clientX;
-        const windowY = e.clientY;
         const pf = computePaperFrame(
           canvasRect.width,
           canvasRect.height,
@@ -117,6 +109,7 @@ export function useContextMenu(params: ContextMenuParams) {
                     paperFrame: pf,
                     result: resultForBounds,
                     materials: state.materials,
+                    piezometricLine: state.piezometricLine,
                     projectInfo: state.projectInfo,
                     parameters: state.parameters,
                   });
@@ -192,11 +185,8 @@ export function useContextMenu(params: ContextMenuParams) {
             ];
             setContextMenu({ screenX: cxPx, screenY: cyPx, items });
           } else {
-            setAnnoStyleMenu({
-              screenX: windowX,
-              screenY: windowY,
-              annoId: hitAnno,
-            });
+            setSelectedAnnotations([hitAnno]);
+            setContextMenu(null);
           }
           return;
         }
@@ -324,6 +314,7 @@ export function useContextMenu(params: ContextMenuParams) {
       removeCoordinate,
       removePiezoPoint,
       selectedAnnotationIds,
+      setSelectedAnnotations,
       setActivePiezoLine,
       setMaterialPicker,
       setSelectedMaterialBoundary,
@@ -333,9 +324,7 @@ export function useContextMenu(params: ContextMenuParams) {
 
   return {
     contextMenu,
-    annoStyleMenu,
     setContextMenu,
-    setAnnoStyleMenu,
     handleContextMenu,
   };
 }
