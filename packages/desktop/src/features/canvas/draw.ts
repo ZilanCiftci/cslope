@@ -373,6 +373,13 @@ export function drawCanvas(
     }
   }
 
+  // Zoom scale factor: in result mode, scale pixel-based sizes with paper zoom
+  // so that ticks, markers, labels etc. maintain their visual proportion to the model.
+  const paperZoom =
+    mode === "result" && result
+      ? Math.max(0.25, resultViewSettings.paperFrame.zoom ?? 1)
+      : 1;
+
   const rawStep = GRID_RAW_STEP_PX / effectiveScale;
   const mag = Math.pow(10, Math.floor(Math.log10(rawStep)));
   const steps = [1, 2, 5, 10];
@@ -389,8 +396,8 @@ export function drawCanvas(
       : autoGridStep;
 
   ctx.strokeStyle = GRID_COLOR;
-  ctx.lineWidth = 1;
-  ctx.font = "10px 'Segoe UI', sans-serif";
+  ctx.lineWidth = 1 * paperZoom;
+  ctx.font = `${10 * paperZoom}px 'Segoe UI', sans-serif`;
   ctx.fillStyle = GRID_TEXT_COLOR;
   ctx.textAlign = "center";
 
@@ -399,7 +406,7 @@ export function drawCanvas(
 
     // Vertical grid lines
     ctx.strokeStyle = GRID_COLOR;
-    ctx.lineWidth = 1;
+    ctx.lineWidth = 1 * paperZoom;
     const startX = Math.floor(gridWorldBounds.xMin / gridStep) * gridStep;
     for (let gx = startX; gx <= gridWorldBounds.xMax; gx += gridStep) {
       const [px] = worldToCanvas(gx, 0, w, h);
@@ -421,7 +428,7 @@ export function drawCanvas(
 
     // Axes (origin lines)
     ctx.strokeStyle = AXIS_COLOR;
-    ctx.lineWidth = 1;
+    ctx.lineWidth = 1 * paperZoom;
     const [ax0] = worldToCanvas(0, 0, w, h);
     const [, ay0] = worldToCanvas(0, 0, w, h);
     ctx.beginPath();
@@ -502,7 +509,7 @@ export function drawCanvas(
 
       if (mode === "result") {
         ctx.strokeStyle = POLY_STROKE;
-        ctx.lineWidth = 0.6;
+        ctx.lineWidth = 0.6 * paperZoom;
         ctx.stroke();
       }
 
@@ -615,7 +622,7 @@ export function drawCanvas(
     }
     ctx.closePath();
     ctx.strokeStyle = POLY_STROKE;
-    ctx.lineWidth = 1;
+    ctx.lineWidth = 1 * paperZoom;
     ctx.stroke();
   }
 
@@ -684,7 +691,8 @@ export function drawCanvas(
       const surfCanvas = surfPts.map(([sx, sy]) => worldToCanvas(sx, sy, w, h));
       // Top edge: offset each surface point upward by ARROW_HEIGHT_PX
       const topCanvas = surfCanvas.map(
-        ([sx, sy]) => [sx, sy - ARROW_HEIGHT_PX] as [number, number],
+        ([sx, sy]) =>
+          [sx, sy - ARROW_HEIGHT_PX * paperZoom] as [number, number],
       );
 
       // ── Draw hatched area between the arrows ──
@@ -704,7 +712,7 @@ export function drawCanvas(
 
       // Draw diagonal hatch lines (top-left to bottom-right pattern)
       ctx.strokeStyle = UDL_LOAD_COLOR.hex;
-      ctx.lineWidth = 1;
+      ctx.lineWidth = 1 * paperZoom;
       ctx.globalAlpha = 0.5;
       const allXs = surfCanvas.map(([x]) => x);
       const allYs = [
@@ -716,7 +724,7 @@ export function drawCanvas(
       const minY = Math.min(...allYs);
       const maxY = Math.max(...allYs);
       const span = maxX - minX + (maxY - minY);
-      for (let d = -span; d < span; d += HATCH_SPACING_PX) {
+      for (let d = -span; d < span; d += HATCH_SPACING_PX * paperZoom) {
         ctx.beginPath();
         ctx.moveTo(minX + d, minY);
         ctx.lineTo(minX + d + (maxY - minY), maxY);
@@ -727,7 +735,7 @@ export function drawCanvas(
 
       // ── Outline the hatched area ──
       ctx.strokeStyle = UDL_LOAD_COLOR.hex;
-      ctx.lineWidth = 1.5;
+      ctx.lineWidth = 1.5 * paperZoom;
       ctx.beginPath();
       // Top edge (left→right)
       for (let i = 0; i < topCanvas.length; i++) {
@@ -748,14 +756,14 @@ export function drawCanvas(
 
       // ── Draw downward arrow at x1 ──
       const [cx1, cy1] = worldToCanvas(u.x1, y1, w, h);
-      const topY1 = cy1 - ARROW_HEIGHT_PX;
+      const topY1 = cy1 - ARROW_HEIGHT_PX * paperZoom;
       const hoverX1 =
         hoverHit?.kind === "udl" &&
         hoverHit.udlId === u.id &&
         hoverHit.handle === "x1";
       const arrowColor1 = hoverX1 ? "#ff0000" : UDL_LOAD_COLOR.hex;
       ctx.strokeStyle = arrowColor1;
-      ctx.lineWidth = hoverX1 ? 3 : 2;
+      ctx.lineWidth = (hoverX1 ? 3 : 2) * paperZoom;
       ctx.beginPath();
       ctx.moveTo(cx1, topY1);
       ctx.lineTo(cx1, cy1);
@@ -764,21 +772,27 @@ export function drawCanvas(
       ctx.fillStyle = arrowColor1;
       ctx.beginPath();
       ctx.moveTo(cx1, cy1); // tip
-      ctx.lineTo(cx1 - ARROW_HEAD_PX, cy1 - ARROW_HEAD_LEN_PX);
-      ctx.lineTo(cx1 + ARROW_HEAD_PX, cy1 - ARROW_HEAD_LEN_PX);
+      ctx.lineTo(
+        cx1 - ARROW_HEAD_PX * paperZoom,
+        cy1 - ARROW_HEAD_LEN_PX * paperZoom,
+      );
+      ctx.lineTo(
+        cx1 + ARROW_HEAD_PX * paperZoom,
+        cy1 - ARROW_HEAD_LEN_PX * paperZoom,
+      );
       ctx.closePath();
       ctx.fill();
 
       // ── Draw downward arrow at x2 ──
       const [cx2, cy2] = worldToCanvas(u.x2, y2, w, h);
-      const topY2 = cy2 - ARROW_HEIGHT_PX;
+      const topY2 = cy2 - ARROW_HEIGHT_PX * paperZoom;
       const hoverX2 =
         hoverHit?.kind === "udl" &&
         hoverHit.udlId === u.id &&
         hoverHit.handle === "x2";
       const arrowColor2 = hoverX2 ? "#ff0000" : UDL_LOAD_COLOR.hex;
       ctx.strokeStyle = arrowColor2;
-      ctx.lineWidth = hoverX2 ? 3 : 2;
+      ctx.lineWidth = (hoverX2 ? 3 : 2) * paperZoom;
       ctx.beginPath();
       ctx.moveTo(cx2, topY2);
       ctx.lineTo(cx2, cy2);
@@ -786,16 +800,22 @@ export function drawCanvas(
       ctx.fillStyle = arrowColor2;
       ctx.beginPath();
       ctx.moveTo(cx2, cy2); // tip
-      ctx.lineTo(cx2 - ARROW_HEAD_PX, cy2 - ARROW_HEAD_LEN_PX);
-      ctx.lineTo(cx2 + ARROW_HEAD_PX, cy2 - ARROW_HEAD_LEN_PX);
+      ctx.lineTo(
+        cx2 - ARROW_HEAD_PX * paperZoom,
+        cy2 - ARROW_HEAD_LEN_PX * paperZoom,
+      );
+      ctx.lineTo(
+        cx2 + ARROW_HEAD_PX * paperZoom,
+        cy2 - ARROW_HEAD_LEN_PX * paperZoom,
+      );
       ctx.closePath();
       ctx.fill();
 
       // ── Label above ──
       const labelX = (cx1 + cx2) / 2;
-      const labelY = Math.min(topY1, topY2) - 8;
+      const labelY = Math.min(topY1, topY2) - 8 * paperZoom;
       ctx.fillStyle = UDL_LOAD_COLOR.hex;
-      ctx.font = "bold 13px sans-serif";
+      ctx.font = `bold ${13 * paperZoom}px sans-serif`;
       ctx.textAlign = "center";
       ctx.textBaseline = "bottom";
       ctx.fillText(`q = ${u.magnitude} kPa`, labelX, labelY);
@@ -809,7 +829,7 @@ export function drawCanvas(
       if (sy === null) continue;
 
       const [cx, cy] = worldToCanvas(ll.x, sy, w, h);
-      const topY = cy - ARROW_HEIGHT_PX;
+      const topY = cy - ARROW_HEIGHT_PX * paperZoom;
 
       const isHover =
         hoverHit?.kind === "lineLoad" && hoverHit.loadId === ll.id;
@@ -817,7 +837,7 @@ export function drawCanvas(
 
       // Shaft
       ctx.strokeStyle = color;
-      ctx.lineWidth = isHover ? 3 : 2;
+      ctx.lineWidth = (isHover ? 3 : 2) * paperZoom;
       ctx.beginPath();
       ctx.moveTo(cx, topY);
       ctx.lineTo(cx, cy);
@@ -827,17 +847,23 @@ export function drawCanvas(
       ctx.fillStyle = color;
       ctx.beginPath();
       ctx.moveTo(cx, cy); // tip
-      ctx.lineTo(cx - ARROW_HEAD_PX, cy - ARROW_HEAD_LEN_PX);
-      ctx.lineTo(cx + ARROW_HEAD_PX, cy - ARROW_HEAD_LEN_PX);
+      ctx.lineTo(
+        cx - ARROW_HEAD_PX * paperZoom,
+        cy - ARROW_HEAD_LEN_PX * paperZoom,
+      );
+      ctx.lineTo(
+        cx + ARROW_HEAD_PX * paperZoom,
+        cy - ARROW_HEAD_LEN_PX * paperZoom,
+      );
       ctx.closePath();
       ctx.fill();
 
       // Label above
       ctx.fillStyle = color;
-      ctx.font = "bold 13px sans-serif";
+      ctx.font = `bold ${13 * paperZoom}px sans-serif`;
       ctx.textAlign = "center";
       ctx.textBaseline = "bottom";
-      ctx.fillText(`P = ${ll.magnitude} kN/m`, cx, topY - 4);
+      ctx.fillText(`P = ${ll.magnitude} kN/m`, cx, topY - 4 * paperZoom);
     }
   }
 
@@ -855,7 +881,7 @@ export function drawCanvas(
       const lineColor =
         isActive && editingPiezo ? SELECTED_BOUNDARY_COLOR : piezoBlue;
       ctx.strokeStyle = lineColor;
-      ctx.lineWidth = isActive && editingPiezo ? 3 : 1.5;
+      ctx.lineWidth = (isActive && editingPiezo ? 3 : 1.5) * paperZoom;
       ctx.beginPath();
       for (let i = 0; i < plCoords.length; i++) {
         const [px, py] = worldToCanvas(plCoords[i][0], plCoords[i][1], w, h);
@@ -866,8 +892,8 @@ export function drawCanvas(
 
       // Symbol at the midpoint of each segment:
       // inverted triangle with bottom vertex on the line + two horizontal lines below
-      const triHalf = PIEZO_TRI_HALF_PX;
-      const triH = PIEZO_TRI_H_PX;
+      const triHalf = PIEZO_TRI_HALF_PX * paperZoom;
+      const triH = PIEZO_TRI_H_PX * paperZoom;
       const labelNum = String(lineIdx + 1);
       for (let i = 0; i < plCoords.length - 1; i++) {
         const [ax, ay] = worldToCanvas(plCoords[i][0], plCoords[i][1], w, h);
@@ -891,25 +917,25 @@ export function drawCanvas(
         ctx.fill();
 
         // Two horizontal lines below the triangle tip
-        const barW = PIEZO_BAR_W_PX;
+        const barW = PIEZO_BAR_W_PX * paperZoom;
         ctx.strokeStyle = piezoBlue;
-        ctx.lineWidth = 1.2;
+        ctx.lineWidth = 1.2 * paperZoom;
         ctx.beginPath();
-        ctx.moveTo(mx - barW, my + PIEZO_BAR_GAP1_PX);
-        ctx.lineTo(mx + barW, my + PIEZO_BAR_GAP1_PX);
+        ctx.moveTo(mx - barW, my + PIEZO_BAR_GAP1_PX * paperZoom);
+        ctx.lineTo(mx + barW, my + PIEZO_BAR_GAP1_PX * paperZoom);
         ctx.stroke();
         ctx.beginPath();
-        ctx.moveTo(mx - barW, my + PIEZO_BAR_GAP2_PX);
-        ctx.lineTo(mx + barW, my + PIEZO_BAR_GAP2_PX);
+        ctx.moveTo(mx - barW, my + PIEZO_BAR_GAP2_PX * paperZoom);
+        ctx.lineTo(mx + barW, my + PIEZO_BAR_GAP2_PX * paperZoom);
         ctx.stroke();
 
         // Line number above the triangle (only if multiple lines)
         if (multiLine) {
           ctx.fillStyle = piezoBlue;
-          ctx.font = "bold 10px 'Segoe UI', sans-serif";
+          ctx.font = `bold ${10 * paperZoom}px 'Segoe UI', sans-serif`;
           ctx.textAlign = "center";
           ctx.textBaseline = "bottom";
-          ctx.fillText(labelNum, mx, triTop - 2);
+          ctx.fillText(labelNum, mx, triTop - 2 * paperZoom);
           ctx.textBaseline = "alphabetic";
         }
       }
@@ -1055,13 +1081,13 @@ export function drawCanvas(
     ) => {
       const [cx, cy] = worldToCanvas(worldX, worldY, w, h);
       const isHover = hoverHit?.kind === "limit" && hoverHit.handle === handle;
-      const sz = MARKER_SZ_PX;
-      const barH = MARKER_BAR_H_PX;
+      const sz = MARKER_SZ_PX * paperZoom;
+      const barH = MARKER_BAR_H_PX * paperZoom;
 
       const color = isHover ? activeColor : baseColor;
       ctx.strokeStyle = color;
       ctx.fillStyle = color;
-      ctx.lineWidth = isHover ? 2.5 : 2;
+      ctx.lineWidth = (isHover ? 2.5 : 2) * paperZoom;
 
       // Vertical bar |
       ctx.beginPath();
@@ -1083,8 +1109,8 @@ export function drawCanvas(
     const drawDottedRange = (surfPts: [number, number][], color: string) => {
       if (surfPts.length < 2) return;
       const canvasPts = surfPts.map(([sx, sy]) => worldToCanvas(sx, sy, w, h));
-      const spacing = ENTRY_EXIT_DOT_SPACING_PX;
-      const radius = ENTRY_EXIT_DOT_RADIUS_PX;
+      const spacing = ENTRY_EXIT_DOT_SPACING_PX * paperZoom;
+      const radius = ENTRY_EXIT_DOT_RADIUS_PX * paperZoom;
 
       ctx.fillStyle = color;
 
@@ -1279,7 +1305,7 @@ export function drawCanvas(
 
         const arcPts = getArcPoints(surf);
         ctx.strokeStyle = fosColor(surf.fos, result.minFOS, result.maxFOS);
-        ctx.lineWidth = 1;
+        ctx.lineWidth = 1 * paperZoom;
         ctx.globalAlpha = SLIP_SURFACE_OPACITY;
         ctx.beginPath();
         for (let i = 0; i < arcPts.length; i++) {
@@ -1358,7 +1384,7 @@ export function drawCanvas(
       // Slice lines (vertical lines within the failure mass)
       if (rvs.showSlices && result.criticalSlices.length > 0) {
         ctx.strokeStyle = CRITICAL_SURFACE_COLOR.hex;
-        ctx.lineWidth = SLICE_LINE_WIDTH_PX;
+        ctx.lineWidth = SLICE_LINE_WIDTH_PX * paperZoom;
         ctx.globalAlpha = SLICE_LINE_OPACITY;
 
         // Helper: compute the arc Y (bottom of circle) at a given X
@@ -1393,7 +1419,7 @@ export function drawCanvas(
 
       // Arc stroke (bold black like reference image)
       ctx.strokeStyle = CRITICAL_SURFACE_COLOR.hex;
-      ctx.lineWidth = 2;
+      ctx.lineWidth = 2 * paperZoom;
       ctx.beginPath();
       for (let i = 0; i < arcPts.length; i++) {
         const [px, py] = worldToCanvas(arcPts[i][0], arcPts[i][1], w, h);
@@ -1420,7 +1446,7 @@ export function drawCanvas(
 
         // Radius lines (solid, bold — same style as the arc)
         ctx.strokeStyle = CRITICAL_SURFACE_COLOR.hex;
-        ctx.lineWidth = 2;
+        ctx.lineWidth = 2 * paperZoom;
         ctx.beginPath();
         ctx.moveTo(ccx, ccy);
         ctx.lineTo(epx, epy);
@@ -1433,7 +1459,7 @@ export function drawCanvas(
         // Small filled circle at centre
         ctx.fillStyle = CRITICAL_SURFACE_COLOR.hex;
         ctx.beginPath();
-        ctx.arc(ccx, ccy, 3, 0, Math.PI * 2);
+        ctx.arc(ccx, ccy, 3 * paperZoom, 0, Math.PI * 2);
         ctx.fill();
       }
 
@@ -1441,22 +1467,22 @@ export function drawCanvas(
       if (rvs.showFosLabel) {
         const [ccx2, ccy2] = worldToCanvas(cs.cx, cs.cy, w, h);
         const fosText = cs.fos.toFixed(3);
-        ctx.font = "bold 12px sans-serif";
+        ctx.font = `bold ${12 * paperZoom}px sans-serif`;
         const tw = ctx.measureText(fosText).width;
-        const labelX = ccx2 + 10;
+        const labelX = ccx2 + 10 * paperZoom;
 
         // Text
         ctx.fillStyle = CRITICAL_SURFACE_COLOR.hex;
         ctx.textAlign = "left";
         ctx.textBaseline = "middle";
-        ctx.fillText(fosText, labelX, ccy2 - 4);
+        ctx.fillText(fosText, labelX, ccy2 - 4 * paperZoom);
 
         // Underline
         ctx.strokeStyle = CRITICAL_SURFACE_COLOR.hex;
-        ctx.lineWidth = 1.5;
+        ctx.lineWidth = 1.5 * paperZoom;
         ctx.beginPath();
-        ctx.moveTo(labelX - 1, ccy2 + 2);
-        ctx.lineTo(labelX + tw + 1, ccy2 + 2);
+        ctx.moveTo(labelX - 1 * paperZoom, ccy2 + 2 * paperZoom);
+        ctx.lineTo(labelX + tw + 1 * paperZoom, ccy2 + 2 * paperZoom);
         ctx.stroke();
       }
     }
@@ -1489,9 +1515,9 @@ export function drawCanvas(
       const ifh = pf.h - PLOT_PAD_T - PLOT_PAD_B;
 
       // ── Ticks + labels between paper edge and inner frame ──
-      const TICK_LEN = 6;
-      const MINI_TICK = 3;
-      const rulerFont = "10px 'Segoe UI', sans-serif";
+      const TICK_LEN = 6 * paperZoom;
+      const MINI_TICK = 3 * paperZoom;
+      const rulerFont = `${10 * paperZoom}px 'Segoe UI', sans-serif`;
 
       // World coords at inner frame edges
       const [worldLeftTick] = canvasToWorld(ifx, ify, w, h);
@@ -1516,7 +1542,7 @@ export function drawCanvas(
       ctx.save();
       ctx.fillStyle = PAPER_TICK_COLOR;
       ctx.strokeStyle = PAPER_TICK_COLOR;
-      ctx.lineWidth = 1;
+      ctx.lineWidth = 1 * paperZoom;
       ctx.font = rulerFont;
 
       // ── Bottom ticks (X axis) — below inner frame ──
@@ -1532,7 +1558,7 @@ export function drawCanvas(
         ctx.lineTo(px, btmY + TICK_LEN);
         ctx.stroke();
         const label = formatRulerLabel(gx);
-        ctx.fillText(label, px, btmY + TICK_LEN + 2);
+        ctx.fillText(label, px, btmY + TICK_LEN + 2 * paperZoom);
       }
       // Minor ticks (X axis)
       if (minorTickCount > 0) {
@@ -1562,7 +1588,7 @@ export function drawCanvas(
         ctx.lineTo(ifx - TICK_LEN, py);
         ctx.stroke();
         const label = formatRulerLabel(gy);
-        ctx.fillText(label, ifx - TICK_LEN - 3, py);
+        ctx.fillText(label, ifx - TICK_LEN - 3 * paperZoom, py);
       }
       // Minor ticks (Y axis)
       if (minorTickCount > 0) {
@@ -1584,7 +1610,7 @@ export function drawCanvas(
 
       // Inner frame border (plot area)
       ctx.strokeStyle = PAPER_BORDER_COLOR;
-      ctx.lineWidth = 1.5;
+      ctx.lineWidth = 1.5 * paperZoom;
       ctx.strokeRect(ifx, ify, ifw, ifh);
     }
 
