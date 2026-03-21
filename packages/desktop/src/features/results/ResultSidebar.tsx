@@ -190,13 +190,7 @@ export function ResultSidebar() {
         const hitPad = 4;
         const wFrac = (bounds.w - 2 * hitPad) / pf.w;
         const hFrac = (bounds.h - 2 * hitPad) / pf.h;
-        const oldTL = anchoredTopLeft(
-          anno.x,
-          anno.y,
-          wFrac,
-          hFrac,
-          oldAnchor,
-        );
+        const oldTL = anchoredTopLeft(anno.x, anno.y, wFrac, hFrac, oldAnchor);
         const newPos = anchorPointFromTopLeft(
           oldTL.x,
           oldTL.y,
@@ -330,7 +324,7 @@ export function ResultSidebar() {
         open={openSections.annotations}
         onToggle={() => toggleSection("annotations")}
       >
-        <div className="space-y-2">
+        <div className="space-y-1">
           {rvs.annotations.length === 0 && (
             <p
               className="text-[11px]"
@@ -345,7 +339,7 @@ export function ResultSidebar() {
             return (
               <div
                 key={anno.id}
-                className="flex items-center gap-2 p-1.5 rounded cursor-pointer select-none"
+                className="flex items-center gap-1 p-1 rounded cursor-pointer select-none"
                 style={{
                   background: isSelected
                     ? "var(--color-vsc-list-active)"
@@ -355,15 +349,15 @@ export function ResultSidebar() {
                     : "none",
                 }}
                 onClick={(e) => {
-                  if (e.ctrlKey || e.metaKey) {
+                  if (e.ctrlKey || e.metaKey || e.shiftKey) {
                     toggleAnnotationSelection(anno.id, true);
-                  } else {
+                  } else if (!isSelected) {
                     setSelectedAnnotations([anno.id]);
                   }
                 }}
               >
                 <span
-                  className="text-[11px] flex-1 min-w-0 truncate"
+                  className="text-[10px] flex-1 min-w-0 truncate"
                   style={{ color: "var(--color-vsc-text)" }}
                 >
                   {anno.type === "color-bar"
@@ -377,7 +371,7 @@ export function ResultSidebar() {
                     e.stopPropagation();
                     removeAnnotation(anno.id);
                   }}
-                  className="text-[11px] px-1.5 py-0.5 rounded cursor-pointer"
+                  className="text-[10px] px-1 py-0 rounded cursor-pointer leading-none"
                   style={{
                     color: "var(--color-vsc-error)",
                     background: "transparent",
