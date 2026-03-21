@@ -14,59 +14,6 @@ import { resolveAnnotationText } from "../annotations/resolveAnnotationText";
 
 export { computePaperFrame } from "../view/paper";
 
-/** Draw a labelled parameter block on the canvas. */
-export function drawParamBlock(
-  ctx: CanvasRenderingContext2D,
-  x: number,
-  y: number,
-  title: string,
-  lines: string[],
-  scale = 1,
-) {
-  const padding = 8 * scale;
-  const lineHeight = 16 * scale;
-  const titleHeight = 20 * scale;
-  const font = `${12 * scale}px sans-serif`;
-  const titleFont = `bold ${12 * scale}px sans-serif`;
-
-  ctx.font = titleFont;
-  let maxW = ctx.measureText(title).width;
-  ctx.font = font;
-  for (const line of lines) {
-    maxW = Math.max(maxW, ctx.measureText(line).width);
-  }
-  const boxW = maxW + padding * 2;
-  const boxH = titleHeight + lines.length * lineHeight + padding;
-
-  // Background
-  ctx.fillStyle = "rgba(255,255,255,0.92)";
-  ctx.strokeStyle = "#333";
-  ctx.lineWidth = 1;
-  ctx.fillRect(x, y, boxW, boxH);
-  ctx.strokeRect(x, y, boxW, boxH);
-
-  // Title
-  ctx.fillStyle = "#000";
-  ctx.font = titleFont;
-  ctx.textAlign = "left";
-  ctx.textBaseline = "top";
-  ctx.fillText(title, x + padding, y + padding);
-
-  // Separator line
-  ctx.strokeStyle = "#ccc";
-  ctx.beginPath();
-  ctx.moveTo(x + 4, y + titleHeight);
-  ctx.lineTo(x + boxW - 4, y + titleHeight);
-  ctx.stroke();
-
-  // Lines
-  ctx.fillStyle = "#333";
-  ctx.font = font;
-  for (let i = 0; i < lines.length; i++) {
-    ctx.fillText(lines[i], x + padding, y + titleHeight + 4 + i * lineHeight);
-  }
-}
-
 /** Draw a material table on the canvas. */
 export function drawTable(
   ctx: CanvasRenderingContext2D,
@@ -165,31 +112,6 @@ export function drawTable(
       cx += colW[c];
     }
   }
-}
-
-function measureParamBlock(
-  ctx: CanvasRenderingContext2D,
-  title: string,
-  lines: string[],
-  scale = 1,
-) {
-  const padding = 8 * scale;
-  const lineHeight = 16 * scale;
-  const titleHeight = 20 * scale;
-  const font = `${12 * scale}px sans-serif`;
-  const titleFont = `bold ${12 * scale}px sans-serif`;
-
-  ctx.font = titleFont;
-  let maxW = ctx.measureText(title).width;
-  ctx.font = font;
-  for (const line of lines) {
-    maxW = Math.max(maxW, ctx.measureText(line).width);
-  }
-
-  return {
-    w: maxW + padding * 2,
-    h: titleHeight + lines.length * lineHeight + padding,
-  };
 }
 
 function measureTable(
@@ -297,39 +219,6 @@ export function getAnnotationBoundsPx(
       y: ay - titleExtraTop - hitPad,
       w: barW + labelPad + maxLabelW + hitPad * 2,
       h: barH + titleExtraTop + hitPad * 2,
-    };
-  }
-
-  if (anno.type === "input-params") {
-    const lines = [
-      `Method: ${result.method}`,
-      `Slices: ${result.criticalSlices.length}`,
-      `Surfaces: ${result.allSurfaces.length}`,
-    ];
-    const box = measureParamBlock(ctx, "Input Parameters", lines, annoScale);
-    return {
-      x: ax - hitPad,
-      y: ay - hitPad,
-      w: box.w + hitPad * 2,
-      h: box.h + hitPad * 2,
-    };
-  }
-
-  if (anno.type === "output-params") {
-    const lines = [`FOS = ${result.minFOS.toFixed(3)}`];
-    if (result.criticalSurface) {
-      lines.push(
-        `Centre: (${result.criticalSurface.cx.toFixed(1)}, ${result.criticalSurface.cy.toFixed(1)})`,
-      );
-      lines.push(`Radius: ${result.criticalSurface.radius.toFixed(2)} m`);
-    }
-    lines.push(`Time: ${result.elapsedMs.toFixed(0)} ms`);
-    const box = measureParamBlock(ctx, "Results", lines, annoScale);
-    return {
-      x: ax - hitPad,
-      y: ay - hitPad,
-      w: box.w + hitPad * 2,
-      h: box.h + hitPad * 2,
     };
   }
 
@@ -560,24 +449,6 @@ export function extendBoundsWithResultFitExtras(params: {
   );
   const annoScale = Math.min(pf.w, pf.h) / 600;
 
-  const measureParamBlock = (title: string, lines: string[]) => {
-    const padding = 8 * annoScale;
-    const lineHeight = 16 * annoScale;
-    const titleHeight = 20 * annoScale;
-    const font = `${12 * annoScale}px sans-serif`;
-    const titleFont = `bold ${12 * annoScale}px sans-serif`;
-
-    ctx.font = titleFont;
-    let maxW = ctx.measureText(title).width;
-    ctx.font = font;
-    for (const line of lines) {
-      maxW = Math.max(maxW, ctx.measureText(line).width);
-    }
-    const boxW = maxW + padding * 2;
-    const boxH = titleHeight + lines.length * lineHeight + padding;
-    return { width: boxW, height: boxH };
-  };
-
   const measureTable = (header: string[], rows: string[][]) => {
     const padding = 6 * annoScale;
     const rowH = 18 * annoScale;
@@ -652,27 +523,6 @@ export function extendBoundsWithResultFitExtras(params: {
       const yTop = barY - 4 * annoScale - fontSize;
       const yBottom = barY + barH;
       addCanvasRect(ax, yTop, xRight - ax, yBottom - yTop);
-    } else if (anno.type === "input-params") {
-      const { width: boxW, height: boxH } = measureParamBlock(
-        "Input Parameters",
-        [
-          `Method: ${result.method}`,
-          `Slices: ${result.criticalSlices.length}`,
-          `Surfaces: ${result.allSurfaces.length}`,
-        ],
-      );
-      addCanvasRect(ax, ay, boxW, boxH);
-    } else if (anno.type === "output-params") {
-      const lines = [`FOS = ${result.minFOS.toFixed(3)}`];
-      if (result.criticalSurface) {
-        lines.push(
-          `Centre: (${result.criticalSurface.cx.toFixed(1)}, ${result.criticalSurface.cy.toFixed(1)})`,
-        );
-        lines.push(`Radius: ${result.criticalSurface.radius.toFixed(2)} m`);
-      }
-      lines.push(`Time: ${result.elapsedMs.toFixed(0)} ms`);
-      const { width: boxW, height: boxH } = measureParamBlock("Results", lines);
-      addCanvasRect(ax, ay, boxW, boxH);
     } else if (anno.type === "material-table") {
       const header = ["Material", "Model", "gamma", "phi", "c"];
       const rows = materials.map((m) => {

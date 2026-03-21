@@ -99,10 +99,10 @@ export function EditMenu({ isOpen, onActivate, panelHost }: Props) {
         panelHost &&
         createPortal(
           <div className="h-full flex items-center gap-0" role="menu">
-            <RibbonGroup label="GEOMETRY">
+            <RibbonGroup label="Boundaries">
               <RibbonButton
                 icon={<RibbonGeometryIcon />}
-                label="Exterior Boundary"
+                label="Exterior"
                 onClick={() => {
                   setActiveSection("Exterior Boundary");
                   window.cslope.openGeometryDialog();
@@ -110,7 +110,7 @@ export function EditMenu({ isOpen, onActivate, panelHost }: Props) {
               />
               <RibbonButton
                 icon={<RibbonInteriorBoundaryIcon />}
-                label="Interior Boundaries"
+                label="Interior"
                 onClick={() => {
                   setActiveSection("Interior Boundaries");
                   window.cslope.openInteriorBoundariesDialog();

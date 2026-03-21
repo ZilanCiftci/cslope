@@ -293,7 +293,7 @@ export function exportVectorPdf(data: PdfExportData): void {
     (pdf as unknown as { discardPath?: () => void }).discardPath?.();
 
     if (rvs.showGrid) {
-      drawGrid(pdf, tf, viewScale, innerFrame);
+      drawGrid(pdf, tf, viewScale, innerFrame, rvs.gridSpacing);
     }
 
     if (coordinates.length >= 3) {
@@ -351,7 +351,14 @@ export function exportVectorPdf(data: PdfExportData): void {
       annotationFrame,
     );
 
-    drawRulerFrame(pdf, tf, viewScale, innerFrame);
+    drawRulerFrame(
+      pdf,
+      tf,
+      viewScale,
+      innerFrame,
+      rvs.gridSpacing,
+      rvs.minorTicks,
+    );
 
     pdf.save(buildPdfFilename(projectInfo));
   } catch (error) {

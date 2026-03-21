@@ -118,7 +118,17 @@ export function useCanvasDrawLoop({
         state.udls !== prevState.udls ||
         state.lineLoads !== prevState.lineLoads;
 
-      if (oldOffset !== newOffset || oldScale !== newScale || geometryChanged) {
+      const resultViewRenderChanged =
+        state.resultViewSettings !== prevState.resultViewSettings ||
+        state.result !== prevState.result ||
+        state.selectedAnnotationIds !== prevState.selectedAnnotationIds;
+
+      if (
+        oldOffset !== newOffset ||
+        oldScale !== newScale ||
+        geometryChanged ||
+        resultViewRenderChanged
+      ) {
         if (drawArgsRef.current) {
           drawArgsRef.current = {
             ...drawArgsRef.current,
@@ -128,6 +138,9 @@ export function useCanvasDrawLoop({
             analysisLimits: state.analysisLimits,
             udls: state.udls,
             lineLoads: state.lineLoads,
+            result: state.result,
+            resultViewSettings: state.resultViewSettings,
+            selectedAnnotationIds: state.selectedAnnotationIds,
           };
         }
         drawDirtyRef.current = true;

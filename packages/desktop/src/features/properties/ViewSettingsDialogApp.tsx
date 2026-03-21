@@ -1,11 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { isElectron } from "../../utils/is-electron";
 import { useAppStore, PAPER_DIMENSIONS } from "../../store/app-store";
-import type {
-  ResultViewSettings,
-  SurfaceDisplayMode,
-  PaperSize,
-} from "../../store/types";
+import type { ResultViewSettings, PaperSize } from "../../store/types";
 import { getPlotAspectRatio as getSharedPlotAspectRatio } from "../view/paper";
 
 interface ViewSettingsStatePayload {
@@ -27,35 +23,6 @@ function GroupHeading({ children }: { children: React.ReactNode }) {
     >
       {children}
     </h3>
-  );
-}
-
-function CheckboxItem({
-  label,
-  checked,
-  onChange,
-}: {
-  label: string;
-  checked: boolean;
-  onChange: (checked: boolean) => void;
-}) {
-  return (
-    <label
-      className="flex items-center gap-2 py-[5px] px-2 rounded cursor-pointer text-[12px] select-none"
-      style={{ color: "var(--color-vsc-text)" }}
-      onMouseEnter={(e) =>
-        (e.currentTarget.style.background = "var(--color-vsc-list-hover)")
-      }
-      onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
-    >
-      <input
-        type="checkbox"
-        checked={checked}
-        onChange={(e) => onChange(e.target.checked)}
-        className="accent-blue-500"
-      />
-      {label}
-    </label>
   );
 }
 
@@ -151,6 +118,29 @@ export function ViewSettingsDialogApp() {
     cursor: "pointer",
   };
 
+  type ExtentField = "bl_x" | "bl_y" | "tr_x" | "tr_y";
+
+  const extentFieldValue = (field: ExtentField): number => {
+    if (field === "bl_x") return rvs.viewLock?.bottomLeft[0] ?? -1;
+    if (field === "bl_y") return rvs.viewLock?.bottomLeft[1] ?? -1;
+    if (field === "tr_x") return rvs.viewLock?.topRight[0] ?? 26;
+    return rvs.viewLock?.topRight[1] ?? 18;
+  };
+
+  const formatExtentValue = (value: number) => {
+    const rounded = Math.round((value + Number.EPSILON) * 100) / 100;
+    return rounded.toFixed(2);
+  };
+
+  const [extentDraft, setExtentDraft] = useState<Record<ExtentField, string>>({
+    bl_x: formatExtentValue(extentFieldValue("bl_x")),
+    bl_y: formatExtentValue(extentFieldValue("bl_y")),
+    tr_x: formatExtentValue(extentFieldValue("tr_x")),
+    tr_y: formatExtentValue(extentFieldValue("tr_y")),
+  });
+  const [activeExtentField, setActiveExtentField] =
+    useState<ExtentField | null>(null);
+
   const getPlotAspectRatio = () => {
     const { paperSize, landscape } = rvs.paperFrame;
     return getSharedPlotAspectRatio(paperSize, landscape);
@@ -206,10 +196,10 @@ export function ViewSettingsDialogApp() {
     const ar = getPlotAspectRatio();
 
     if (field === "tr_y") {
-      // When Top Y changes, adjust Right X to keep aspect ratio
-      const h = newVl.topRight[1] - newVl.bottomLeft[1];
-      const newW = h * ar;
-      newVl.topRight[0] = newVl.bottomLeft[0] + newW;
+      // When Top Y changes, keep Right X fixed and adjust Bottom Y.
+      const w = newVl.topRight[0] - newVl.bottomLeft[0];
+      const newH = w / ar;
+      newVl.bottomLeft[1] = newVl.topRight[1] - newH;
     } else {
       // For Left X, Bottom Y, Right X: adjust Top Y to keep aspect ratio
       const w = newVl.topRight[0] - newVl.bottomLeft[0];
@@ -218,6 +208,43 @@ export function ViewSettingsDialogApp() {
     }
 
     setRvs({ viewLock: newVl });
+  };
+
+  useEffect(() => {
+    // Keep input boxes in sync with external updates when user is not typing.
+    if (activeExtentField) return;
+    setExtentDraft({
+      bl_x: formatExtentValue(extentFieldValue("bl_x")),
+      bl_y: formatExtentValue(extentFieldValue("bl_y")),
+      tr_x: formatExtentValue(extentFieldValue("tr_x")),
+      tr_y: formatExtentValue(extentFieldValue("tr_y")),
+    });
+  }, [rvs.viewLock, activeExtentField]);
+
+  const commitExtentField = (field: ExtentField) => {
+    const raw = extentDraft[field].trim();
+    if (raw === "" || raw === "-" || raw === "+") {
+      setExtentDraft((prev) => ({
+        ...prev,
+        [field]: formatExtentValue(extentFieldValue(field)),
+      }));
+      return;
+    }
+
+    const parsed = Number(raw);
+    if (!Number.isFinite(parsed)) {
+      setExtentDraft((prev) => ({
+        ...prev,
+        [field]: formatExtentValue(extentFieldValue(field)),
+      }));
+      return;
+    }
+
+    handleLockUpdate(field, parsed);
+  };
+
+  const handleExtentChange = (field: ExtentField, raw: string) => {
+    setExtentDraft((prev) => ({ ...prev, [field]: raw }));
   };
 
   return (
@@ -229,75 +256,6 @@ export function ViewSettingsDialogApp() {
       }}
     >
       <div className="flex-1 overflow-y-auto pr-1">
-        {/* ── Surfaces ─────────────────────────────────── */}
-        <GroupHeading>Surfaces</GroupHeading>
-
-        <FieldRow label="Display">
-          <select
-            value={rvs.surfaceDisplay}
-            onChange={(e) =>
-              setRvs({
-                surfaceDisplay: e.target.value as SurfaceDisplayMode,
-              })
-            }
-            style={selectStyle}
-            className="w-28"
-          >
-            <option value="critical">Critical only</option>
-            <option value="all">All</option>
-            <option value="filter">Filter</option>
-          </select>
-        </FieldRow>
-
-        {rvs.surfaceDisplay === "filter" && (
-          <FieldRow label="FOS ≤">
-            <input
-              type="number"
-              value={rvs.fosFilterMax}
-              onChange={(e) =>
-                setRvs({
-                  fosFilterMax: parseFloat(e.target.value) || 1.5,
-                })
-              }
-              step="0.1"
-              min="0.1"
-              max="10"
-              style={inputStyle}
-              className="w-20 text-right"
-            />
-          </FieldRow>
-        )}
-
-        <CheckboxItem
-          label="Show slices"
-          checked={rvs.showSlices}
-          onChange={(v) => setRvs({ showSlices: v })}
-        />
-        <CheckboxItem
-          label="Show FOS label"
-          checked={rvs.showFosLabel}
-          onChange={(v) => setRvs({ showFosLabel: v })}
-        />
-        <CheckboxItem
-          label="Show centre marker"
-          checked={rvs.showCentreMarker}
-          onChange={(v) => setRvs({ showCentreMarker: v })}
-        />
-
-        {/* ── Appearance ───────────────────────────────── */}
-        <GroupHeading>Appearance</GroupHeading>
-
-        <CheckboxItem
-          label="Grid lines"
-          checked={rvs.showGrid}
-          onChange={(v) => setRvs({ showGrid: v })}
-        />
-        <CheckboxItem
-          label="Soil colors"
-          checked={rvs.showSoilColor ?? true}
-          onChange={(v) => setRvs({ showSoilColor: v })}
-        />
-
         {/* ── Paper ────────────────────────────────────── */}
         <GroupHeading>Paper</GroupHeading>
 
@@ -355,6 +313,56 @@ export function ViewSettingsDialogApp() {
           </select>
         </FieldRow>
 
+        {/* ── Grid & Ticks ──────────────────────── */}
+        <GroupHeading>Grid &amp; Ticks</GroupHeading>
+
+        <FieldRow label="Spacing">
+          <input
+            type="number"
+            min={0}
+            step="any"
+            placeholder="Auto"
+            value={rvs.gridSpacing ?? ""}
+            onChange={(e) => {
+              const raw = e.target.value;
+              if (raw === "") {
+                setRvs({ gridSpacing: undefined });
+                return;
+              }
+              const parsed = Number(raw);
+              setRvs({
+                gridSpacing:
+                  Number.isFinite(parsed) && parsed > 0 ? parsed : undefined,
+              });
+            }}
+            style={{ ...inputStyle, width: 80 }}
+          />
+        </FieldRow>
+
+        <FieldRow label="Minor ticks">
+          <input
+            type="number"
+            min={0}
+            max={20}
+            step={1}
+            value={rvs.minorTicks ?? 0}
+            onChange={(e) => {
+              const raw = e.target.value;
+              if (raw === "") {
+                setRvs({ minorTicks: undefined });
+                return;
+              }
+              const parsed = Number(raw);
+              if (!Number.isFinite(parsed)) {
+                return;
+              }
+              const value = Math.max(0, Math.min(20, Math.round(parsed)));
+              setRvs({ minorTicks: value || undefined });
+            }}
+            style={{ ...inputStyle, width: 80 }}
+          />
+        </FieldRow>
+
         {/* ── Plot Extents ─────────────────────────── */}
         <GroupHeading>Plot Extents</GroupHeading>
 
@@ -364,23 +372,20 @@ export function ViewSettingsDialogApp() {
               <span className="text-[10px] opacity-60">Left X</span>
               <input
                 type="number"
-                step="any"
-                value={rvs.viewLock?.bottomLeft[0] ?? -1}
-                onChange={(e) =>
-                  handleLockUpdate("bl_x", Number(e.target.value))
-                }
-                style={{ ...inputStyle, width: "100%" }}
-              />
-            </div>
-            <div>
-              <span className="text-[10px] opacity-60">Bottom Y</span>
-              <input
-                type="number"
-                step="any"
-                value={rvs.viewLock?.bottomLeft[1] ?? -1}
-                onChange={(e) =>
-                  handleLockUpdate("bl_y", Number(e.target.value))
-                }
+                step={1}
+                value={extentDraft.bl_x}
+                onFocus={() => setActiveExtentField("bl_x")}
+                onChange={(e) => handleExtentChange("bl_x", e.target.value)}
+                onBlur={() => {
+                  commitExtentField("bl_x");
+                  setActiveExtentField(null);
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    commitExtentField("bl_x");
+                    (e.currentTarget as HTMLInputElement).blur();
+                  }
+                }}
                 style={{ ...inputStyle, width: "100%" }}
               />
             </div>
@@ -388,11 +393,41 @@ export function ViewSettingsDialogApp() {
               <span className="text-[10px] opacity-60">Right X</span>
               <input
                 type="number"
-                step="any"
-                value={rvs.viewLock?.topRight[0] ?? 26}
-                onChange={(e) =>
-                  handleLockUpdate("tr_x", Number(e.target.value))
-                }
+                step={1}
+                value={extentDraft.tr_x}
+                onFocus={() => setActiveExtentField("tr_x")}
+                onChange={(e) => handleExtentChange("tr_x", e.target.value)}
+                onBlur={() => {
+                  commitExtentField("tr_x");
+                  setActiveExtentField(null);
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    commitExtentField("tr_x");
+                    (e.currentTarget as HTMLInputElement).blur();
+                  }
+                }}
+                style={{ ...inputStyle, width: "100%" }}
+              />
+            </div>
+            <div>
+              <span className="text-[10px] opacity-60">Bottom Y</span>
+              <input
+                type="number"
+                step={1}
+                value={extentDraft.bl_y}
+                onFocus={() => setActiveExtentField("bl_y")}
+                onChange={(e) => handleExtentChange("bl_y", e.target.value)}
+                onBlur={() => {
+                  commitExtentField("bl_y");
+                  setActiveExtentField(null);
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    commitExtentField("bl_y");
+                    (e.currentTarget as HTMLInputElement).blur();
+                  }
+                }}
                 style={{ ...inputStyle, width: "100%" }}
               />
             </div>
@@ -400,11 +435,20 @@ export function ViewSettingsDialogApp() {
               <span className="text-[10px] opacity-60">Top Y</span>
               <input
                 type="number"
-                step="any"
-                value={rvs.viewLock?.topRight[1] ?? 18}
-                onChange={(e) =>
-                  handleLockUpdate("tr_y", Number(e.target.value))
-                }
+                step={1}
+                value={extentDraft.tr_y}
+                onFocus={() => setActiveExtentField("tr_y")}
+                onChange={(e) => handleExtentChange("tr_y", e.target.value)}
+                onBlur={() => {
+                  commitExtentField("tr_y");
+                  setActiveExtentField(null);
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    commitExtentField("tr_y");
+                    (e.currentTarget as HTMLInputElement).blur();
+                  }
+                }}
                 style={{ ...inputStyle, width: "100%" }}
               />
             </div>

@@ -70,14 +70,16 @@ export function drawGrid(
   tf: PdfTransform,
   viewScale: number,
   clip: { x: number; y: number; w: number; h: number },
+  gridSpacing?: number,
 ) {
   const rawStep = GRID_RAW_STEP_PX / viewScale;
   const mag = Math.pow(10, Math.floor(Math.log10(rawStep)));
   const steps = [1, 2, 5, 10];
-  const gridStep = Math.max(
+  const autoGridStep = Math.max(
     GRID_STEP_MIN,
     steps.find((s) => s * mag >= rawStep)! * mag,
   );
+  const gridStep = gridSpacing && gridSpacing > 0 ? gridSpacing : autoGridStep;
 
   const [originPdfX, originPdfY] = tf.worldToPdf(0, 0);
   const worldPerMm = 1 / (viewScale * tf.mmPerPx);
@@ -124,6 +126,8 @@ export function drawRulerFrame(
   tf: PdfTransform,
   viewScale: number,
   innerFrame: { x: number; y: number; w: number; h: number },
+  gridSpacing?: number,
+  minorTicks?: number,
 ) {
   const TICK_LEN = 2.0;
   const MINI_TICK = 1.0;
@@ -138,7 +142,11 @@ export function drawRulerFrame(
   const worldBottom = (originPdfY - (innerFrame.y + innerFrame.h)) * worldPerMm;
 
   const worldSpan = worldRight - worldLeft;
-  const rulerStep = computeRulerStep(worldSpan, innerFrame.w, tf.paperW);
+  const rulerStep =
+    gridSpacing && gridSpacing > 0
+      ? gridSpacing
+      : computeRulerStep(worldSpan, innerFrame.w, tf.paperW);
+  const minorTickCount = minorTicks ?? 0;
 
   pdf.setFontSize(FONT_SIZE);
   pdf.setFont("helvetica", "normal");
@@ -163,14 +171,17 @@ export function drawRulerFrame(
     });
   }
 
-  const xMinorStep = rulerStep / 2;
-  const xMinorStart = Math.ceil(worldLeft / xMinorStep) * xMinorStep;
-  for (let gx = xMinorStart; gx <= worldRight; gx += xMinorStep) {
-    const [px] = tf.worldToPdf(gx, 0);
-    if (px < ifx || px > ifx + ifw) continue;
-    if (Math.abs(gx / rulerStep - Math.round(gx / rulerStep)) < 0.001) continue;
-    pdf.setLineWidth(0.15);
-    pdf.line(px, btmY, px, btmY + MINI_TICK);
+  if (minorTickCount > 0) {
+    const xMinorStep = rulerStep / (minorTickCount + 1);
+    const xMinorStart = Math.ceil(worldLeft / xMinorStep) * xMinorStep;
+    for (let gx = xMinorStart; gx <= worldRight; gx += xMinorStep) {
+      const [px] = tf.worldToPdf(gx, 0);
+      if (px < ifx || px > ifx + ifw) continue;
+      if (Math.abs(gx / rulerStep - Math.round(gx / rulerStep)) < 0.001)
+        continue;
+      pdf.setLineWidth(0.15);
+      pdf.line(px, btmY, px, btmY + MINI_TICK);
+    }
   }
 
   const yStart = Math.ceil(worldBottom / rulerStep) * rulerStep;
@@ -185,14 +196,17 @@ export function drawRulerFrame(
     });
   }
 
-  const yMinorStep = rulerStep / 2;
-  const yMinorStart = Math.ceil(worldBottom / yMinorStep) * yMinorStep;
-  for (let gy = yMinorStart; gy <= worldTop; gy += yMinorStep) {
-    const [, py] = tf.worldToPdf(0, gy);
-    if (py < ify || py > ify + ifh) continue;
-    if (Math.abs(gy / rulerStep - Math.round(gy / rulerStep)) < 0.001) continue;
-    pdf.setLineWidth(0.15);
-    pdf.line(ifx, py, ifx - MINI_TICK, py);
+  if (minorTickCount > 0) {
+    const yMinorStep = rulerStep / (minorTickCount + 1);
+    const yMinorStart = Math.ceil(worldBottom / yMinorStep) * yMinorStep;
+    for (let gy = yMinorStart; gy <= worldTop; gy += yMinorStep) {
+      const [, py] = tf.worldToPdf(0, gy);
+      if (py < ify || py > ify + ifh) continue;
+      if (Math.abs(gy / rulerStep - Math.round(gy / rulerStep)) < 0.001)
+        continue;
+      pdf.setLineWidth(0.15);
+      pdf.line(ifx, py, ifx - MINI_TICK, py);
+    }
   }
 
   pdf.setDrawColor(0, 0, 0);
@@ -209,7 +223,7 @@ export function drawMaterialRegions(
   regionMaterials: RegionMaterials,
   showSoilColor?: boolean,
 ) {
-  if (showSoilColor === false) return;
+  const colorEnabled = showSoilColor !== false;
   const defaultMatId = materials[0]?.id ?? "";
   const regions = computeRegions(
     coordinates,
@@ -245,20 +259,27 @@ export function drawMaterialRegions(
       }
     }
 
-    const [r, g, b] = parseColor(mat.color);
-    pdf.setFillColor(r, g, b);
+    if (colorEnabled) {
+      const [r, g, b] = parseColor(mat.color);
+      pdf.setFillColor(r, g, b);
 
-    // Use setOpacity which manages its own GState save/restore
-    setOpacity(pdf, 0.33);
-    pdfPath(pdf, ops, region.holes ? "f*" : "f");
-    resetOpacity(pdf);
+      // Use setOpacity which manages its own GState save/restore
+      setOpacity(pdf, 0.33);
+      pdfPath(pdf, ops, region.holes ? "f*" : "f");
+      resetOpacity(pdf);
+    }
+
+    // Region border stroke
+    pdf.setDrawColor(0, 0, 0);
+    pdf.setLineWidth(0.15);
+    pdfPath(pdf, ops, "S");
 
     // ── Hatch pattern overlay for special model kinds ──
     const modelKind = mat.model?.kind;
     const hatchPattern = modelKind
       ? MODEL_HATCH_PATTERNS[modelKind]
       : undefined;
-    if (hatchPattern) {
+    if (colorEnabled && hatchPattern) {
       // Clip to region polygon for hatch
       pdf.saveGraphicsState();
       pdfPath(pdf, ops, "");
@@ -742,29 +763,6 @@ export function drawAnnotations(
       );
     } else if (anno.type === "color-bar" && result.allSurfaces.length > 1) {
       drawColorBarAnnotation(pdf, ax, ay, result, annoScale);
-    } else if (anno.type === "input-params") {
-      drawParamBlockPdf(
-        pdf,
-        ax,
-        ay,
-        "Input Parameters",
-        [
-          `Method: ${result.method}`,
-          `Slices: ${result.criticalSlices.length}`,
-          `Surfaces: ${result.allSurfaces.length}`,
-        ],
-        annoScale,
-      );
-    } else if (anno.type === "output-params") {
-      const lines = [`FOS = ${result.minFOS.toFixed(3)}`];
-      if (result.criticalSurface) {
-        lines.push(
-          `Centre: (${result.criticalSurface.cx.toFixed(1)}, ${result.criticalSurface.cy.toFixed(1)})`,
-        );
-        lines.push(`Radius: ${result.criticalSurface.radius.toFixed(2)} m`);
-      }
-      lines.push(`Time: ${result.elapsedMs.toFixed(0)} ms`);
-      drawParamBlockPdf(pdf, ax, ay, "Results", lines, annoScale);
     } else if (anno.type === "material-table") {
       drawTablePdf(pdf, ax, ay, materials, annoScale);
     }
@@ -851,62 +849,6 @@ function drawColorBarAnnotation(
     pdf.line(x + barW, ty, x + barW + 1.5 * scale, ty);
 
     pdf.text(fos.toFixed(2), x + barW + 2 * scale, ty + 1 * scale);
-  }
-}
-
-function drawParamBlockPdf(
-  pdf: jsPDF,
-  x: number,
-  y: number,
-  title: string,
-  lines: string[],
-  scale: number,
-) {
-  const bodyPt = Math.max(8, (3 * scale) / 0.3528);
-  const titlePt = Math.max(9, (3 * scale) / 0.3528);
-
-  const bodyH = bodyPt * 0.3528;
-  const titleH = titlePt * 0.3528;
-
-  const padding = Math.max(1.5, 2 * scale);
-  const lineHeight = Math.max(bodyH * 1.2, 4 * scale);
-  const titleHeight = Math.max(titleH * 1.2, 5 * scale);
-
-  pdf.setFont("helvetica", "bold");
-  pdf.setFontSize(titlePt);
-  let maxW = pdf.getTextWidth(title);
-  pdf.setFont("helvetica", "normal");
-  pdf.setFontSize(bodyPt);
-  for (const line of lines) {
-    maxW = Math.max(maxW, pdf.getTextWidth(line));
-  }
-
-  const boxW = maxW + padding * 2;
-  const boxH = titleHeight + lines.length * lineHeight + padding;
-
-  pdf.setFillColor(255, 255, 255);
-  pdf.setDrawColor(51, 51, 51);
-  pdf.setLineWidth(0.2);
-  pdf.rect(x, y, boxW, boxH, "FD");
-
-  pdf.setFont("helvetica", "bold");
-  pdf.setFontSize(titlePt);
-  pdf.setTextColor(0, 0, 0);
-  pdf.text(title, x + padding, y + padding + titleHeight * 0.6);
-
-  pdf.setDrawColor(204, 204, 204);
-  pdf.setLineWidth(0.1);
-  pdf.line(x + 1, y + titleHeight, x + boxW - 1, y + titleHeight);
-
-  pdf.setFont("helvetica", "normal");
-  pdf.setFontSize(bodyPt);
-  pdf.setTextColor(51, 51, 51);
-  for (let i = 0; i < lines.length; i++) {
-    pdf.text(
-      lines[i],
-      x + padding,
-      y + titleHeight + 1 + (i + 0.7) * lineHeight,
-    );
   }
 }
 

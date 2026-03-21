@@ -18,12 +18,7 @@ import {
 } from "./constants";
 import { GRID_RAW_STEP_PX } from "../../constants";
 import { computeRulerStep, formatRulerLabel } from "../../utils/ruler";
-import {
-  computePaperFrame,
-  drawParamBlock,
-  drawTable,
-  getAnnotationBoundsPx,
-} from "./helpers";
+import { computePaperFrame, drawTable, getAnnotationBoundsPx } from "./helpers";
 import { resolveAnnotationText } from "../annotations/resolveAnnotationText";
 import type { PointHit } from "./types";
 import {
@@ -376,10 +371,17 @@ export function drawCanvas(
   const rawStep = GRID_RAW_STEP_PX / effectiveScale;
   const mag = Math.pow(10, Math.floor(Math.log10(rawStep)));
   const steps = [1, 2, 5, 10];
-  const gridStep = Math.max(
+  const autoGridStep = Math.max(
     GRID_STEP_MIN,
     steps.find((s) => s * mag >= rawStep)! * mag,
   );
+  const gridStep =
+    mode === "result" &&
+    result &&
+    resultViewSettings.gridSpacing &&
+    resultViewSettings.gridSpacing > 0
+      ? resultViewSettings.gridSpacing
+      : autoGridStep;
 
   ctx.strokeStyle = GRID_COLOR;
   ctx.lineWidth = 1;
@@ -428,7 +430,8 @@ export function drawCanvas(
   };
 
   // ── Material region fills ─────────────────────────────
-  if (coordinates.length >= 3 && resultViewSettings.showSoilColor !== false) {
+  if (coordinates.length >= 3) {
+    const showSoilColor = resultViewSettings.showSoilColor !== false;
     const defaultMatId = materials[0]?.id ?? "";
     const regions = getCachedRegions(
       coordinates,
@@ -487,8 +490,10 @@ export function drawCanvas(
         }
       }
 
-      ctx.fillStyle = mat.color;
-      ctx.fill(region.holes ? "evenodd" : "nonzero");
+      if (showSoilColor) {
+        ctx.fillStyle = mat.color;
+        ctx.fill(region.holes ? "evenodd" : "nonzero");
+      }
 
       if (mode === "result") {
         ctx.strokeStyle = POLY_STROKE;
@@ -501,7 +506,7 @@ export function drawCanvas(
       const hatchPattern = modelKind
         ? MODEL_HATCH_PATTERNS[modelKind]
         : undefined;
-      if (hatchPattern) {
+      if (showSoilColor && hatchPattern) {
         const canvasPts: [number, number][] = region.px.map((_, i) =>
           worldToCanvas(region.px[i], region.py[i], w, h),
         );
@@ -1497,11 +1502,11 @@ export function drawCanvas(
         : Math.min(dimW, dimH);
       const innerFrameWidthMm =
         paperWidthMm * (1 - PLOT_MARGINS.L - PLOT_MARGINS.R);
-      const rulerStep = computeRulerStep(
-        worldSpan,
-        innerFrameWidthMm,
-        paperWidthMm,
-      );
+      const rulerStep =
+        resultViewSettings.gridSpacing && resultViewSettings.gridSpacing > 0
+          ? resultViewSettings.gridSpacing
+          : computeRulerStep(worldSpan, innerFrameWidthMm, paperWidthMm);
+      const minorTickCount = resultViewSettings.minorTicks ?? 0;
 
       ctx.save();
       ctx.fillStyle = PAPER_TICK_COLOR;
@@ -1524,18 +1529,20 @@ export function drawCanvas(
         const label = formatRulerLabel(gx);
         ctx.fillText(label, px, btmY + TICK_LEN + 2);
       }
-      // Minor ticks
-      const xMinorStep = rulerStep / 2;
-      const xMinorStart = Math.ceil(worldLeftTick / xMinorStep) * xMinorStep;
-      for (let gx = xMinorStart; gx <= worldRightTick; gx += xMinorStep) {
-        const [px] = worldToCanvas(gx, 0, w, h);
-        if (px < ifx || px > ifx + ifw) continue;
-        if (Math.abs(gx / rulerStep - Math.round(gx / rulerStep)) < 0.001)
-          continue;
-        ctx.beginPath();
-        ctx.moveTo(px, btmY);
-        ctx.lineTo(px, btmY + MINI_TICK);
-        ctx.stroke();
+      // Minor ticks (X axis)
+      if (minorTickCount > 0) {
+        const xMinorStep = rulerStep / (minorTickCount + 1);
+        const xMinorStart = Math.ceil(worldLeftTick / xMinorStep) * xMinorStep;
+        for (let gx = xMinorStart; gx <= worldRightTick; gx += xMinorStep) {
+          const [px] = worldToCanvas(gx, 0, w, h);
+          if (px < ifx || px > ifx + ifw) continue;
+          if (Math.abs(gx / rulerStep - Math.round(gx / rulerStep)) < 0.001)
+            continue;
+          ctx.beginPath();
+          ctx.moveTo(px, btmY);
+          ctx.lineTo(px, btmY + MINI_TICK);
+          ctx.stroke();
+        }
       }
 
       // ── Left ticks (Y axis) — left of inner frame ──
@@ -1552,18 +1559,21 @@ export function drawCanvas(
         const label = formatRulerLabel(gy);
         ctx.fillText(label, ifx - TICK_LEN - 3, py);
       }
-      // Minor ticks
-      const yMinorStep = rulerStep / 2;
-      const yMinorStart = Math.ceil(worldBottomTick / yMinorStep) * yMinorStep;
-      for (let gy = yMinorStart; gy <= worldTopTick; gy += yMinorStep) {
-        const [, py] = worldToCanvas(0, gy, w, h);
-        if (py < ify || py > ify + ifh) continue;
-        if (Math.abs(gy / rulerStep - Math.round(gy / rulerStep)) < 0.001)
-          continue;
-        ctx.beginPath();
-        ctx.moveTo(ifx, py);
-        ctx.lineTo(ifx - MINI_TICK, py);
-        ctx.stroke();
+      // Minor ticks (Y axis)
+      if (minorTickCount > 0) {
+        const yMinorStep = rulerStep / (minorTickCount + 1);
+        const yMinorStart =
+          Math.ceil(worldBottomTick / yMinorStep) * yMinorStep;
+        for (let gy = yMinorStart; gy <= worldTopTick; gy += yMinorStep) {
+          const [, py] = worldToCanvas(0, gy, w, h);
+          if (py < ify || py > ify + ifh) continue;
+          if (Math.abs(gy / rulerStep - Math.round(gy / rulerStep)) < 0.001)
+            continue;
+          ctx.beginPath();
+          ctx.moveTo(ifx, py);
+          ctx.lineTo(ifx - MINI_TICK, py);
+          ctx.stroke();
+        }
       }
       ctx.restore();
 
@@ -1662,29 +1672,6 @@ export function drawCanvas(
           ctx.fillStyle = "#000000";
           ctx.fillText(fos.toFixed(2), labelX2, y);
         }
-      } else if (anno.type === "input-params") {
-        drawParamBlock(
-          ctx,
-          ax,
-          ay,
-          "Input Parameters",
-          [
-            `Method: ${result.method}`,
-            `Slices: ${result.criticalSlices.length}`,
-            `Surfaces: ${result.allSurfaces.length}`,
-          ],
-          annoScale,
-        );
-      } else if (anno.type === "output-params") {
-        const lines = [`FOS = ${result.minFOS.toFixed(3)}`];
-        if (result.criticalSurface) {
-          lines.push(
-            `Centre: (${result.criticalSurface.cx.toFixed(1)}, ${result.criticalSurface.cy.toFixed(1)})`,
-          );
-          lines.push(`Radius: ${result.criticalSurface.radius.toFixed(2)} m`);
-        }
-        lines.push(`Time: ${result.elapsedMs.toFixed(0)} ms`);
-        drawParamBlock(ctx, ax, ay, "Results", lines, annoScale);
       } else if (anno.type === "material-table") {
         const header = ["Material", "Model", "γ", "φ", "c"];
         const rows = materials.map((m) => {
