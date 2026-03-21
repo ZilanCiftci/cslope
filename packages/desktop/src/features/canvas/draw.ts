@@ -940,39 +940,41 @@ export function drawCanvas(
         }
       }
 
-      // Circle node markers (draggable points)
-      const piezoRadius = editingPiezo ? POINT_RADIUS : 3;
-      for (let i = 0; i < plCoords.length; i++) {
-        const [px, py] = worldToCanvas(plCoords[i][0], plCoords[i][1], w, h);
-        const isHover =
-          editingPiezo &&
-          hoverHit?.kind === "piezo" &&
-          hoverHit.lineId === line.id &&
-          hoverHit.index === i;
+      // Circle node markers are edit-mode affordances only; hide them in result view.
+      if (mode !== "result") {
+        const piezoRadius = editingPiezo ? POINT_RADIUS : 3;
+        for (let i = 0; i < plCoords.length; i++) {
+          const [px, py] = worldToCanvas(plCoords[i][0], plCoords[i][1], w, h);
+          const isHover =
+            editingPiezo &&
+            hoverHit?.kind === "piezo" &&
+            hoverHit.lineId === line.id &&
+            hoverHit.index === i;
 
-        ctx.beginPath();
-        ctx.arc(px, py, piezoRadius, 0, Math.PI * 2);
-        ctx.fillStyle = isHover
-          ? POINT_COLOR_HOVER
-          : editingPiezo && isActive
-            ? SELECTED_BOUNDARY_COLOR
-            : editingPiezo
-              ? piezoBlue
-              : piezoBlue + "99";
-        ctx.fill();
-        ctx.strokeStyle = editingPiezo ? STROKE_ACTIVE : STROKE_INACTIVE;
-        ctx.lineWidth = editingPiezo ? 1.5 : 1;
-        ctx.stroke();
+          ctx.beginPath();
+          ctx.arc(px, py, piezoRadius, 0, Math.PI * 2);
+          ctx.fillStyle = isHover
+            ? POINT_COLOR_HOVER
+            : editingPiezo && isActive
+              ? SELECTED_BOUNDARY_COLOR
+              : editingPiezo
+                ? piezoBlue
+                : piezoBlue + "99";
+          ctx.fill();
+          ctx.strokeStyle = editingPiezo ? STROKE_ACTIVE : STROKE_INACTIVE;
+          ctx.lineWidth = editingPiezo ? 1.5 : 1;
+          ctx.stroke();
 
-        if (editingPiezo && isActive) {
-          ctx.fillStyle = LABEL_COLOR;
-          ctx.font = "10px 'Segoe UI', sans-serif";
-          ctx.textAlign = "center";
-          ctx.fillText(
-            `(${plCoords[i][0].toFixed(1)}, ${plCoords[i][1].toFixed(1)})`,
-            px,
-            py - 12,
-          );
+          if (editingPiezo && isActive) {
+            ctx.fillStyle = LABEL_COLOR;
+            ctx.font = "10px 'Segoe UI', sans-serif";
+            ctx.textAlign = "center";
+            ctx.fillText(
+              `(${plCoords[i][0].toFixed(1)}, ${plCoords[i][1].toFixed(1)})`,
+              px,
+              py - 12,
+            );
+          }
         }
       }
     }
