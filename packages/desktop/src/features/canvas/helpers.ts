@@ -25,7 +25,7 @@ export const MATERIAL_TABLE_COLUMNS: Array<{
   key: MaterialTableColumnKey;
   label: string;
 }> = [
-  { key: "model", label: "Slope Stability Material Model" },
+  { key: "model", label: "Material Model" },
   { key: "unitWeight", label: "Unit Weight (kN/m3)" },
   { key: "cohesion", label: "Undrained Shear Strength (kPa)" },
   { key: "piezometricLine", label: "Piezometric Surface" },
@@ -98,9 +98,9 @@ export function buildMaterialTableData(
   const visibleColumns = annotation.tableColumns?.length
     ? annotation.tableColumns
     : DEFAULT_MATERIAL_TABLE_COLUMNS;
-  const visibleDefs = MATERIAL_TABLE_COLUMNS.filter((c) =>
-    visibleColumns.includes(c.key),
-  );
+  const visibleDefs = visibleColumns
+    .map((key) => MATERIAL_TABLE_COLUMNS.find((c) => c.key === key))
+    .filter((c): c is (typeof MATERIAL_TABLE_COLUMNS)[number] => c != null);
 
   const columnKeys: MaterialTableRenderColumnKey[] = [
     "color",

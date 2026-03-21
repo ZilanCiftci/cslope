@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 export type MultiSelectOption = {
   value: string;
@@ -81,6 +81,67 @@ export function MultiSelectComboboxChips({
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
   const [highlightedIndex, setHighlightedIndex] = useState(0);
+
+  const [dragIndex, setDragIndex] = useState<number | null>(null);
+  const [dropTarget, setDropTarget] = useState<{
+    index: number;
+    side: "left" | "right";
+  } | null>(null);
+  const dragIndexRef = useRef<number | null>(null);
+
+  const handleDragStart = useCallback(
+    (idx: number) => (e: React.DragEvent) => {
+      setDragIndex(idx);
+      dragIndexRef.current = idx;
+      e.dataTransfer.effectAllowed = "move";
+      e.dataTransfer.setData("application/x-chip-index", String(idx));
+      e.dataTransfer.setData("text/plain", String(idx));
+    },
+    [],
+  );
+
+  const handleDragOver = useCallback(
+    (idx: number) => (e: React.DragEvent) => {
+      e.preventDefault();
+      e.dataTransfer.dropEffect = "move";
+      const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+      const midX = rect.left + rect.width / 2;
+      const side: "left" | "right" = e.clientX < midX ? "left" : "right";
+      setDropTarget((prev) =>
+        prev?.index === idx && prev.side === side ? prev : { index: idx, side },
+      );
+
+      const from = dragIndexRef.current;
+      if (from == null) return;
+      let to = side === "right" ? idx + 1 : idx;
+      if (from < to) to -= 1;
+      if (from === to) return;
+
+      const next = [...value];
+      const [moved] = next.splice(from, 1);
+      next.splice(to, 0, moved);
+      dragIndexRef.current = to;
+      setDragIndex(to);
+      onValueChange(next);
+    },
+    [value, onValueChange],
+  );
+
+  const handleDrop = useCallback(
+    (_idx: number) => (e: React.DragEvent) => {
+      e.preventDefault();
+      setDragIndex(null);
+      setDropTarget(null);
+      dragIndexRef.current = null;
+    },
+    [],
+  );
+
+  const handleDragEnd = useCallback(() => {
+    setDragIndex(null);
+    setDropTarget(null);
+    dragIndexRef.current = null;
+  }, []);
 
   const selectedSet = useMemo(() => new Set(value), [value]);
 
@@ -180,19 +241,44 @@ export function MultiSelectComboboxChips({
           transition: "border-color 100ms, box-shadow 100ms",
         }}
       >
-        <div className="flex flex-wrap items-center gap-1 px-1.5 py-1">
+        <div
+          className="flex flex-wrap items-center gap-1 px-1.5 py-1"
+          onDragOver={(e) => e.preventDefault()}
+        >
           {/* ── Chips ──────────────────────────────────── */}
-          {value.map((v) => {
+          {value.map((v, i) => {
             const opt = options.find((o) => o.value === v);
             if (!opt) return null;
+            const isDragging = dragIndex === i;
+            const showLeft =
+              dropTarget?.index === i &&
+              dropTarget.side === "left" &&
+              dragIndex !== i;
+            const showRight =
+              dropTarget?.index === i &&
+              dropTarget.side === "right" &&
+              dragIndex !== i;
             return (
               <span
                 key={v}
+                draggable
+                onDragStart={handleDragStart(i)}
+                onDragOver={handleDragOver(i)}
+                onDrop={handleDrop(i)}
+                onDragEnd={handleDragEnd}
                 className="inline-flex items-center gap-0.5 rounded-md pl-2 pr-1 py-[1px] text-[10px] font-medium select-none"
                 style={{
+                  position: "relative",
                   background: "var(--color-vsc-surface-tint-strong)",
                   border: "1px solid var(--color-vsc-border)",
                   color: "var(--color-vsc-text)",
+                  opacity: isDragging ? 0.4 : 1,
+                  cursor: "grab",
+                  boxShadow: showLeft
+                    ? "inset 2px 0 0 0 var(--color-vsc-accent)"
+                    : showRight
+                      ? "inset -2px 0 0 0 var(--color-vsc-accent)"
+                      : "none",
                 }}
               >
                 {opt.label}
