@@ -140,6 +140,105 @@ describe("store slices", () => {
     expect(next.errorMessage).toBeNull();
   });
 
+  it("analysisSlice runAllAnalyses keeps results bound to each model when active model changes mid-run", async () => {
+    const originalWorker = globalThis.Worker;
+
+    type FakeMsg = MessageEvent<{
+      type: "analysis-complete" | "analysis-progress" | "analysis-error";
+      result?: unknown;
+      progress?: number;
+      error?: string;
+    }>;
+
+    class FakeWorker {
+      onmessage: ((event: FakeMsg) => void) | null = null;
+      onerror: ((event: ErrorEvent) => void) | null = null;
+      static instances: FakeWorker[] = [];
+
+      constructor() {
+        FakeWorker.instances.push(this);
+      }
+
+      postMessage() {
+        // no-op in test
+      }
+
+      terminate() {
+        // no-op in test
+      }
+
+      emitComplete(result: unknown) {
+        this.onmessage?.({
+          data: {
+            type: "analysis-complete",
+            result,
+          },
+        } as FakeMsg);
+      }
+    }
+
+    Object.defineProperty(globalThis, "Worker", {
+      configurable: true,
+      writable: true,
+      value: FakeWorker as unknown as typeof Worker,
+    });
+
+    try {
+      const store = useAppStore.getState();
+      const firstModelId = store.activeModelId;
+      store.addModel("Model B");
+
+      let next = useAppStore.getState();
+      const secondModelId = next.activeModelId;
+
+      const runAllPromise = next.runAllAnalyses();
+
+      // Wait until both worker instances are created.
+      for (let i = 0; i < 20 && FakeWorker.instances.length < 2; i++) {
+        await Promise.resolve();
+      }
+      expect(FakeWorker.instances.length).toBe(2);
+
+      // Switch active model while batch is still running.
+      useAppStore.getState().switchModel(firstModelId);
+
+      const resultFirst = { minFOS: 1.11 } as unknown;
+      const resultSecond = { minFOS: 2.22 } as unknown;
+
+      // Complete second model first (non-active at this point).
+      FakeWorker.instances[1].emitComplete(resultSecond);
+      await Promise.resolve();
+
+      next = useAppStore.getState();
+      expect(next.activeModelId).toBe(firstModelId);
+      expect(next.result).not.toBe(resultSecond);
+
+      // Complete first model (active model) and finalize run-all.
+      FakeWorker.instances[0].emitComplete(resultFirst);
+      await runAllPromise;
+
+      next = useAppStore.getState();
+      expect(next.activeModelId).toBe(firstModelId);
+      expect(next.result).toBe(resultFirst);
+
+      const firstModel = next.models.find((m) => m.id === firstModelId);
+      const secondModel = next.models.find((m) => m.id === secondModelId);
+
+      expect(firstModel?.result).toBe(resultFirst);
+      expect(secondModel?.result).toBe(resultSecond);
+    } finally {
+      if (originalWorker === undefined) {
+        delete (globalThis as { Worker?: unknown }).Worker;
+      } else {
+        Object.defineProperty(globalThis, "Worker", {
+          configurable: true,
+          writable: true,
+          value: originalWorker,
+        });
+      }
+    }
+  });
+
   // ── layoutSlice ──────────────────────────────────────────────────
 
   it("layoutSlice setMode switches between edit and results", () => {

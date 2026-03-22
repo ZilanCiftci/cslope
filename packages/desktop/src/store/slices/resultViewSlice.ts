@@ -21,6 +21,7 @@ const syncActiveModel = (
 export const createResultViewSlice: SliceCreator<ResultViewSlice> = (set) => ({
   resultViewSettings: { ...DEFAULT_RESULT_VIEW_SETTINGS },
   selectedAnnotationIds: [],
+  selectedResultObject: null,
 
   setResultViewSettings: (patch) =>
     set((s) => syncActiveModel(s, { ...s.resultViewSettings, ...patch })),
@@ -68,7 +69,8 @@ export const createResultViewSlice: SliceCreator<ResultViewSlice> = (set) => ({
       selectedAnnotationIds: s.selectedAnnotationIds.filter((i) => i !== id),
     })),
 
-  setSelectedAnnotations: (ids) => set({ selectedAnnotationIds: ids }),
+  setSelectedAnnotations: (ids) =>
+    set({ selectedAnnotationIds: ids, selectedResultObject: null }),
 
   toggleAnnotationSelection: (id, additive) =>
     set((s) => {
@@ -78,10 +80,14 @@ export const createResultViewSlice: SliceCreator<ResultViewSlice> = (set) => ({
           selectedAnnotationIds: has
             ? s.selectedAnnotationIds.filter((i) => i !== id)
             : [...s.selectedAnnotationIds, id],
+          selectedResultObject: null,
         };
       }
-      return { selectedAnnotationIds: [id] };
+      return { selectedAnnotationIds: [id], selectedResultObject: null };
     }),
+
+  setSelectedResultObject: (target) =>
+    set({ selectedResultObject: target, selectedAnnotationIds: [] }),
 
   alignAnnotations: (align) =>
     set((s) => {

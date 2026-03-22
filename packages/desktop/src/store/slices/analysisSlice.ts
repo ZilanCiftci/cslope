@@ -341,7 +341,6 @@ export const createAnalysisSlice: SliceCreator<AnalysisSlice> = (set, get) => ({
 
   runAllAnalyses: async () => {
     const baseState = get();
-    const activeId = baseState.activeModelId;
     baseState.saveCurrentModel();
     const models = get().models.slice();
 
@@ -414,7 +413,7 @@ export const createAnalysisSlice: SliceCreator<AnalysisSlice> = (set, get) => ({
               }
             : m,
         ),
-        ...(freshModel.id === activeId
+        ...(freshModel.id === s.activeModelId
           ? {
               runState: "running",
               result: null,
@@ -448,7 +447,7 @@ export const createAnalysisSlice: SliceCreator<AnalysisSlice> = (set, get) => ({
               ? { ...m, runState: "error", errorMessage }
               : m,
           ),
-          ...(freshModel.id === activeId
+          ...(freshModel.id === s.activeModelId
             ? { runState: "error", errorMessage }
             : {}),
         }));
@@ -466,7 +465,7 @@ export const createAnalysisSlice: SliceCreator<AnalysisSlice> = (set, get) => ({
               ? { ...m, runState: "done", progress: 1, result }
               : m,
           ),
-          ...(freshModel.id === activeId
+          ...(freshModel.id === s.activeModelId
             ? {
                 runState: "done",
                 result,
@@ -485,7 +484,7 @@ export const createAnalysisSlice: SliceCreator<AnalysisSlice> = (set, get) => ({
               ? { ...m, runState: "error", errorMessage }
               : m,
           ),
-          ...(freshModel.id === activeId
+          ...(freshModel.id === s.activeModelId
             ? { runState: "error", errorMessage }
             : {}),
         }));
@@ -513,7 +512,8 @@ export const createAnalysisSlice: SliceCreator<AnalysisSlice> = (set, get) => ({
     }
     modelProgressIntervals.clear();
 
-    const refreshedActive = get().models.find((m) => m.id === activeId);
+    const currentActiveId = get().activeModelId;
+    const refreshedActive = get().models.find((m) => m.id === currentActiveId);
     if (refreshedActive) {
       set({
         runState: refreshedActive.runState ?? "idle",

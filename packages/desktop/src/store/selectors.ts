@@ -51,6 +51,7 @@ export function useCanvasModelState() {
   const assigningMaterialId = useAppStore((s) => s.assigningMaterialId);
   const selectedRegionKey = useAppStore((s) => s.selectedRegionKey);
   const selectedAnnotationIds = useAppStore((s) => s.selectedAnnotationIds);
+  const selectedResultObject = useAppStore((s) => s.selectedResultObject);
   const theme = useAppStore((s) => s.theme);
   const snapToGrid = useAppStore((s) => s.snapToGrid);
   const gridSnapSize = useAppStore((s) => s.gridSnapSize);
@@ -75,6 +76,7 @@ export function useCanvasModelState() {
     assigningMaterialId,
     selectedRegionKey,
     selectedAnnotationIds,
+    selectedResultObject,
     theme,
     snapToGrid,
     gridSnapSize,
@@ -118,6 +120,7 @@ export function useCanvasActions() {
     removeAnnotation: state.removeAnnotation,
     setSelectedAnnotations: state.setSelectedAnnotations,
     toggleAnnotationSelection: state.toggleAnnotationSelection,
+    setSelectedResultObject: state.setSelectedResultObject,
     alignAnnotations: state.alignAnnotations,
     setCanvasToolbar: state.setCanvasToolbar,
     setCursorWorld: state.setCursorWorld,

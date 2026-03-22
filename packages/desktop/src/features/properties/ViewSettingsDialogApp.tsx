@@ -210,16 +210,20 @@ export function ViewSettingsDialogApp() {
     setRvs({ viewLock: newVl });
   };
 
-  useEffect(() => {
-    // Keep input boxes in sync with external updates when user is not typing.
-    if (activeExtentField) return;
-    setExtentDraft({
-      bl_x: formatExtentValue(extentFieldValue("bl_x")),
-      bl_y: formatExtentValue(extentFieldValue("bl_y")),
-      tr_x: formatExtentValue(extentFieldValue("tr_x")),
-      tr_y: formatExtentValue(extentFieldValue("tr_y")),
-    });
-  }, [rvs.viewLock, activeExtentField]);
+  const extentInputValue = (field: ExtentField) => {
+    if (activeExtentField === field) {
+      return extentDraft[field];
+    }
+    return formatExtentValue(extentFieldValue(field));
+  };
+
+  const handleExtentFocus = (field: ExtentField) => {
+    setActiveExtentField(field);
+    setExtentDraft((prev) => ({
+      ...prev,
+      [field]: formatExtentValue(extentFieldValue(field)),
+    }));
+  };
 
   const commitExtentField = (field: ExtentField) => {
     const raw = extentDraft[field].trim();
@@ -373,8 +377,8 @@ export function ViewSettingsDialogApp() {
               <input
                 type="number"
                 step={1}
-                value={extentDraft.bl_x}
-                onFocus={() => setActiveExtentField("bl_x")}
+                value={extentInputValue("bl_x")}
+                onFocus={() => handleExtentFocus("bl_x")}
                 onChange={(e) => handleExtentChange("bl_x", e.target.value)}
                 onBlur={() => {
                   commitExtentField("bl_x");
@@ -394,8 +398,8 @@ export function ViewSettingsDialogApp() {
               <input
                 type="number"
                 step={1}
-                value={extentDraft.tr_x}
-                onFocus={() => setActiveExtentField("tr_x")}
+                value={extentInputValue("tr_x")}
+                onFocus={() => handleExtentFocus("tr_x")}
                 onChange={(e) => handleExtentChange("tr_x", e.target.value)}
                 onBlur={() => {
                   commitExtentField("tr_x");
@@ -415,8 +419,8 @@ export function ViewSettingsDialogApp() {
               <input
                 type="number"
                 step={1}
-                value={extentDraft.bl_y}
-                onFocus={() => setActiveExtentField("bl_y")}
+                value={extentInputValue("bl_y")}
+                onFocus={() => handleExtentFocus("bl_y")}
                 onChange={(e) => handleExtentChange("bl_y", e.target.value)}
                 onBlur={() => {
                   commitExtentField("bl_y");
@@ -436,8 +440,8 @@ export function ViewSettingsDialogApp() {
               <input
                 type="number"
                 step={1}
-                value={extentDraft.tr_y}
-                onFocus={() => setActiveExtentField("tr_y")}
+                value={extentInputValue("tr_y")}
+                onFocus={() => handleExtentFocus("tr_y")}
                 onChange={(e) => handleExtentChange("tr_y", e.target.value)}
                 onBlur={() => {
                   commitExtentField("tr_y");

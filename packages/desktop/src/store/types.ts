@@ -391,12 +391,14 @@ export interface ViewportSlice {
 export interface ResultViewSlice {
   resultViewSettings: ResultViewSettings;
   selectedAnnotationIds: string[];
+  selectedResultObject: "paper-frame" | null;
   setResultViewSettings: (patch: Partial<ResultViewSettings>) => void;
   addAnnotation: (type: Annotation["type"]) => void;
   updateAnnotation: (id: string, patch: Partial<Annotation>) => void;
   removeAnnotation: (id: string) => void;
   setSelectedAnnotations: (ids: string[]) => void;
   toggleAnnotationSelection: (id: string, additive: boolean) => void;
+  setSelectedResultObject: (target: "paper-frame" | null) => void;
   alignAnnotations: (
     align: "left" | "right" | "top" | "bottom" | "center-h" | "center-v",
   ) => void;

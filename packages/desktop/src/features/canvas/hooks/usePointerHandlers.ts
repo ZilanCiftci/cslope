@@ -125,6 +125,7 @@ interface PointerDeps {
   ) => void;
   setSelectedAnnotations: (ids: string[]) => void;
   toggleAnnotationSelection: (id: string, add: boolean) => void;
+  setSelectedResultObject: (target: "paper-frame" | null) => void;
   selectedAnnotationIds: string[];
   mode: "edit" | "result";
   setAnalysisLimits: (patch: Partial<AnalysisLimitsState>) => void;
@@ -174,6 +175,7 @@ export function usePointerHandlers(deps: PointerDeps) {
     updateAnnotation,
     setSelectedAnnotations,
     toggleAnnotationSelection,
+    setSelectedResultObject,
     selectedAnnotationIds,
     mode,
     setAnalysisLimits,
@@ -525,7 +527,7 @@ export function usePointerHandlers(deps: PointerDeps) {
               return;
             }
           }
-          setSelectedAnnotations([]);
+          setSelectedResultObject("paper-frame");
           if (panActive && e.button === 0) {
             panRef.current = {
               startPx: [e.clientX, e.clientY],
@@ -536,6 +538,8 @@ export function usePointerHandlers(deps: PointerDeps) {
           return;
         }
       }
+
+      setSelectedResultObject(null);
 
       if (e.button !== 0) return;
 
@@ -667,6 +671,7 @@ export function usePointerHandlers(deps: PointerDeps) {
       setContextMenu,
       setMaterialPicker,
       setSelectedAnnotations,
+      setSelectedResultObject,
       setSelectedMaterialBoundary,
       setSelectedPoint,
       setSelectedRegionKey,

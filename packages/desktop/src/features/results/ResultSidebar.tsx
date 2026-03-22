@@ -3,7 +3,7 @@
  */
 
 import { useCallback, useMemo, useState } from "react";
-import { useAppStore } from "../../store/app-store";
+import { PAPER_DIMENSIONS, useAppStore } from "../../store/app-store";
 import { Section } from "../../components/ui/Section";
 import { Label } from "../../components/ui/Label";
 import { MultiSelectComboboxChips } from "../../components/ui/MultiSelectComboboxChips";
@@ -11,12 +11,20 @@ import {
   MATERIAL_TABLE_COLUMNS,
   getAnnotationBoundsPx,
 } from "../canvas/helpers";
-import { computePaperFrame } from "../view/paper";
+import {
+  computePaperFrame,
+  getPlotAspectRatio as getSharedPlotAspectRatio,
+} from "../view/paper";
 import {
   anchoredTopLeft,
   anchorPointFromTopLeft,
 } from "../annotations/anchorPosition";
-import type { MaterialTableColumnKey, AnchorPosition } from "../../store/types";
+import type {
+  MaterialTableColumnKey,
+  AnchorPosition,
+  PaperSize,
+  ResultViewSettings,
+} from "../../store/types";
 
 const FONT_SIZES = [6, 8, 10, 12, 14, 16, 18, 20, 24, 28, 32];
 const FONT_FAMILIES = [
@@ -66,6 +74,7 @@ const MATERIAL_TABLE_COLUMN_OPTIONS = MATERIAL_TABLE_COLUMNS.map((col) => ({
 }));
 
 type SidebarSection = "summary" | "annotations" | "properties";
+type ExtentField = "bl_x" | "bl_y" | "tr_x" | "tr_y";
 
 function commonValue<T>(values: T[]): T | undefined {
   if (values.length === 0) return undefined;
@@ -76,9 +85,12 @@ function commonValue<T>(values: T[]): T | undefined {
 export function ResultSidebar() {
   const result = useAppStore((s) => s.result);
   const rvs = useAppStore((s) => s.resultViewSettings);
+  const coordinates = useAppStore((s) => s.coordinates);
+  const setRvs = useAppStore((s) => s.setResultViewSettings);
   const removeAnnotation = useAppStore((s) => s.removeAnnotation);
   const updateAnnotation = useAppStore((s) => s.updateAnnotation);
   const selectedAnnotationIds = useAppStore((s) => s.selectedAnnotationIds);
+  const selectedResultObject = useAppStore((s) => s.selectedResultObject);
   const setSelectedAnnotations = useAppStore((s) => s.setSelectedAnnotations);
   const toggleAnnotationSelection = useAppStore(
     (s) => s.toggleAnnotationSelection,
@@ -91,6 +103,136 @@ export function ResultSidebar() {
     annotations: true,
     properties: true,
   });
+
+  const extentFieldValue = useCallback(
+    (field: ExtentField): number => {
+      if (field === "bl_x") return rvs.viewLock?.bottomLeft[0] ?? -1;
+      if (field === "bl_y") return rvs.viewLock?.bottomLeft[1] ?? -1;
+      if (field === "tr_x") return rvs.viewLock?.topRight[0] ?? 26;
+      return rvs.viewLock?.topRight[1] ?? 18;
+    },
+    [rvs.viewLock],
+  );
+
+  const formatExtentValue = useCallback((value: number) => {
+    const rounded = Math.round((value + Number.EPSILON) * 100) / 100;
+    return rounded.toFixed(2);
+  }, []);
+
+  const [extentDraft, setExtentDraft] = useState<Record<ExtentField, string>>({
+    bl_x: formatExtentValue(extentFieldValue("bl_x")),
+    bl_y: formatExtentValue(extentFieldValue("bl_y")),
+    tr_x: formatExtentValue(extentFieldValue("tr_x")),
+    tr_y: formatExtentValue(extentFieldValue("tr_y")),
+  });
+  const [activeExtentField, setActiveExtentField] =
+    useState<ExtentField | null>(null);
+
+  const extentInputValue = (field: ExtentField) =>
+    activeExtentField === field
+      ? extentDraft[field]
+      : formatExtentValue(extentFieldValue(field));
+
+  const handleExtentFocus = (field: ExtentField) => {
+    setActiveExtentField(field);
+    setExtentDraft((prev) => ({
+      ...prev,
+      [field]: formatExtentValue(extentFieldValue(field)),
+    }));
+  };
+
+  const handleLockUpdate = useCallback(
+    (field: ExtentField, val: number) => {
+      const source =
+        rvs.viewLock ?? ({ bottomLeft: [-1, -1], topRight: [26, 18] } as const);
+      const newVl = {
+        bottomLeft: [...source.bottomLeft] as [number, number],
+        topRight: [...source.topRight] as [number, number],
+      };
+
+      if (field === "bl_x") newVl.bottomLeft[0] = val;
+      else if (field === "bl_y") newVl.bottomLeft[1] = val;
+      else if (field === "tr_x") newVl.topRight[0] = val;
+      else if (field === "tr_y") newVl.topRight[1] = val;
+
+      const ar = getSharedPlotAspectRatio(
+        rvs.paperFrame.paperSize,
+        rvs.paperFrame.landscape,
+      );
+      if (field === "tr_y") {
+        const w = newVl.topRight[0] - newVl.bottomLeft[0];
+        const newH = w / ar;
+        newVl.bottomLeft[1] = newVl.topRight[1] - newH;
+      } else {
+        const w = newVl.topRight[0] - newVl.bottomLeft[0];
+        const newH = w / ar;
+        newVl.topRight[1] = newVl.bottomLeft[1] + newH;
+      }
+
+      setRvs({ viewLock: newVl });
+    },
+    [rvs.paperFrame.landscape, rvs.paperFrame.paperSize, rvs.viewLock, setRvs],
+  );
+
+  const commitExtentField = (field: ExtentField) => {
+    const raw = extentDraft[field].trim();
+    if (raw === "" || raw === "-" || raw === "+") {
+      setExtentDraft((prev) => ({
+        ...prev,
+        [field]: formatExtentValue(extentFieldValue(field)),
+      }));
+      return;
+    }
+
+    const parsed = Number(raw);
+    if (!Number.isFinite(parsed)) {
+      setExtentDraft((prev) => ({
+        ...prev,
+        [field]: formatExtentValue(extentFieldValue(field)),
+      }));
+      return;
+    }
+
+    handleLockUpdate(field, parsed);
+  };
+
+  const handleExtentChange = (field: ExtentField, raw: string) => {
+    setExtentDraft((prev) => ({ ...prev, [field]: raw }));
+  };
+
+  const setViewLockToModelBounds = useCallback(() => {
+    const ar = getSharedPlotAspectRatio(
+      rvs.paperFrame.paperSize,
+      rvs.paperFrame.landscape,
+    );
+
+    let bl: [number, number] = [-1, -1];
+    let tr: [number, number] = [21, -1 + 22 / ar];
+    if (coordinates.length >= 2) {
+      const xs = coordinates.map((c) => c[0]);
+      const ys = coordinates.map((c) => c[1]);
+      const xMin = Math.min(...xs);
+      const xMax = Math.max(...xs);
+      const yMin = Math.min(...ys);
+
+      const left = xMin - 1;
+      const right = xMax + 1;
+      const bottom = yMin - 1;
+      const width = right - left;
+      const height = width / ar;
+      const top = bottom + height;
+
+      bl = [left, bottom];
+      tr = [right, top];
+    }
+
+    setRvs({
+      viewLock: {
+        bottomLeft: bl,
+        topRight: tr,
+      },
+    });
+  }, [coordinates, rvs.paperFrame.landscape, rvs.paperFrame.paperSize, setRvs]);
 
   const toggleSection = useCallback((section: SidebarSection) => {
     setOpenSections((prev) => ({ ...prev, [section]: !prev[section] }));
@@ -248,6 +390,8 @@ export function ResultSidebar() {
     );
   }, [selectedMaterialTableAnnotations]);
 
+  const paperFrameSelected = selectedResultObject === "paper-frame";
+
   const setVisibleColumnsForAll = useCallback(
     (next: string[]) => {
       const normalized = next.filter((value): value is MaterialTableColumnKey =>
@@ -392,13 +536,323 @@ export function ResultSidebar() {
         open={openSections.properties}
         onToggle={() => toggleSection("properties")}
       >
-        {selectedAnnotations.length === 0 && (
+        {selectedAnnotations.length === 0 && !paperFrameSelected && (
           <p
             className="text-[11px]"
             style={{ color: "var(--color-vsc-text-muted)" }}
           >
             Select an object on the canvas to edit its properties.
           </p>
+        )}
+
+        {paperFrameSelected && (
+          <div className="space-y-2 mb-3">
+            <div
+              className="grid gap-2"
+              style={{
+                gridTemplateColumns: "repeat(auto-fit, minmax(64px, 1fr))",
+              }}
+            >
+              <div>
+                <label
+                  className="text-[10px] block mb-0.5"
+                  style={{ color: "var(--color-vsc-text-muted)" }}
+                >
+                  Left X
+                </label>
+                <input
+                  type="number"
+                  step="1"
+                  value={extentInputValue("bl_x")}
+                  onFocus={() => handleExtentFocus("bl_x")}
+                  onChange={(e) => handleExtentChange("bl_x", e.target.value)}
+                  onBlur={() => {
+                    commitExtentField("bl_x");
+                    setActiveExtentField(null);
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      commitExtentField("bl_x");
+                      (e.currentTarget as HTMLInputElement).blur();
+                    }
+                  }}
+                  className="w-full text-[11px] px-1.5 py-1 rounded tabular-nums"
+                  style={{
+                    background: "var(--color-vsc-bg)",
+                    color: "var(--color-vsc-text)",
+                    border: "1px solid var(--color-vsc-border)",
+                  }}
+                />
+              </div>
+
+              <div>
+                <label
+                  className="text-[10px] block mb-0.5"
+                  style={{ color: "var(--color-vsc-text-muted)" }}
+                >
+                  Right X
+                </label>
+                <input
+                  type="number"
+                  step="1"
+                  value={extentInputValue("tr_x")}
+                  onFocus={() => handleExtentFocus("tr_x")}
+                  onChange={(e) => handleExtentChange("tr_x", e.target.value)}
+                  onBlur={() => {
+                    commitExtentField("tr_x");
+                    setActiveExtentField(null);
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      commitExtentField("tr_x");
+                      (e.currentTarget as HTMLInputElement).blur();
+                    }
+                  }}
+                  className="w-full text-[11px] px-1.5 py-1 rounded tabular-nums"
+                  style={{
+                    background: "var(--color-vsc-bg)",
+                    color: "var(--color-vsc-text)",
+                    border: "1px solid var(--color-vsc-border)",
+                  }}
+                />
+              </div>
+            </div>
+
+            <div
+              className="grid gap-2"
+              style={{
+                gridTemplateColumns: "repeat(auto-fit, minmax(64px, 1fr))",
+              }}
+            >
+              <div>
+                <label
+                  className="text-[10px] block mb-0.5"
+                  style={{ color: "var(--color-vsc-text-muted)" }}
+                >
+                  Bottom Y
+                </label>
+                <input
+                  type="number"
+                  step="1"
+                  value={extentInputValue("bl_y")}
+                  onFocus={() => handleExtentFocus("bl_y")}
+                  onChange={(e) => handleExtentChange("bl_y", e.target.value)}
+                  onBlur={() => {
+                    commitExtentField("bl_y");
+                    setActiveExtentField(null);
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      commitExtentField("bl_y");
+                      (e.currentTarget as HTMLInputElement).blur();
+                    }
+                  }}
+                  className="w-full text-[11px] px-1.5 py-1 rounded tabular-nums"
+                  style={{
+                    background: "var(--color-vsc-bg)",
+                    color: "var(--color-vsc-text)",
+                    border: "1px solid var(--color-vsc-border)",
+                  }}
+                />
+              </div>
+
+              <div>
+                <label
+                  className="text-[10px] block mb-0.5"
+                  style={{ color: "var(--color-vsc-text-muted)" }}
+                >
+                  Top Y
+                </label>
+                <input
+                  type="number"
+                  step="1"
+                  value={extentInputValue("tr_y")}
+                  onFocus={() => handleExtentFocus("tr_y")}
+                  onChange={(e) => handleExtentChange("tr_y", e.target.value)}
+                  onBlur={() => {
+                    commitExtentField("tr_y");
+                    setActiveExtentField(null);
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      commitExtentField("tr_y");
+                      (e.currentTarget as HTMLInputElement).blur();
+                    }
+                  }}
+                  className="w-full text-[11px] px-1.5 py-1 rounded tabular-nums"
+                  style={{
+                    background: "var(--color-vsc-bg)",
+                    color: "var(--color-vsc-text)",
+                    border: "1px solid var(--color-vsc-border)",
+                  }}
+                />
+              </div>
+            </div>
+
+            <button
+              type="button"
+              onClick={setViewLockToModelBounds}
+              className="w-full text-[11px] px-1.5 py-1 rounded cursor-pointer"
+              style={{
+                background: "var(--color-vsc-list-hover)",
+                color: "var(--color-vsc-text)",
+                border: "1px solid var(--color-vsc-border)",
+              }}
+            >
+              Use model bounds
+            </button>
+
+            <div
+              className="grid gap-2"
+              style={{
+                gridTemplateColumns: "repeat(auto-fit, minmax(64px, 1fr))",
+              }}
+            >
+              <div>
+                <label
+                  className="text-[10px] block mb-0.5"
+                  style={{ color: "var(--color-vsc-text-muted)" }}
+                >
+                  Ticks spacing
+                </label>
+                <input
+                  type="number"
+                  min={0}
+                  step="any"
+                  placeholder="Auto"
+                  value={rvs.gridSpacing ?? ""}
+                  onChange={(e) => {
+                    const raw = e.target.value;
+                    if (raw === "") {
+                      setRvs({ gridSpacing: undefined });
+                      return;
+                    }
+                    const parsed = Number(raw);
+                    setRvs({
+                      gridSpacing:
+                        Number.isFinite(parsed) && parsed > 0
+                          ? parsed
+                          : undefined,
+                    });
+                  }}
+                  className="w-full text-[11px] px-1.5 py-1 rounded tabular-nums"
+                  style={{
+                    background: "var(--color-vsc-bg)",
+                    color: "var(--color-vsc-text)",
+                    border: "1px solid var(--color-vsc-border)",
+                  }}
+                />
+              </div>
+
+              <div>
+                <label
+                  className="text-[10px] block mb-0.5"
+                  style={{ color: "var(--color-vsc-text-muted)" }}
+                >
+                  Minor ticks
+                </label>
+                <input
+                  type="number"
+                  min={0}
+                  max={20}
+                  step={1}
+                  value={rvs.minorTicks ?? 0}
+                  onChange={(e) => {
+                    const raw = e.target.value;
+                    if (raw === "") {
+                      setRvs({ minorTicks: undefined });
+                      return;
+                    }
+                    const parsed = Number(raw);
+                    if (!Number.isFinite(parsed)) return;
+                    const value = Math.max(0, Math.min(20, Math.round(parsed)));
+                    setRvs({ minorTicks: value || undefined });
+                  }}
+                  className="w-full text-[11px] px-1.5 py-1 rounded tabular-nums"
+                  style={{
+                    background: "var(--color-vsc-bg)",
+                    color: "var(--color-vsc-text)",
+                    border: "1px solid var(--color-vsc-border)",
+                  }}
+                />
+              </div>
+            </div>
+
+            <div>
+              <label
+                className="text-[10px] block mb-0.5"
+                style={{ color: "var(--color-vsc-text-muted)" }}
+              >
+                Paper size
+              </label>
+              <select
+                value={rvs.paperFrame.paperSize}
+                onChange={(e) =>
+                  setRvs({
+                    paperFrame: {
+                      ...rvs.paperFrame,
+                      paperSize: e.target.value as PaperSize,
+                    },
+                  })
+                }
+                className="w-full text-[11px] px-1.5 py-1 rounded cursor-pointer"
+                style={{
+                  background: "var(--color-vsc-bg)",
+                  color: "var(--color-vsc-text)",
+                  border: "1px solid var(--color-vsc-border)",
+                }}
+              >
+                {(Object.keys(PAPER_DIMENSIONS) as PaperSize[]).map((size) => (
+                  <option key={size} value={size}>
+                    {size} ({PAPER_DIMENSIONS[size].w}x
+                    {PAPER_DIMENSIONS[size].h}mm)
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label
+                className="text-[10px] block mb-0.5"
+                style={{ color: "var(--color-vsc-text-muted)" }}
+              >
+                Paper orientation
+              </label>
+              <select
+                value={rvs.paperFrame.landscape ? "landscape" : "portrait"}
+                onChange={(e) => {
+                  const newLandscape = e.target.value === "landscape";
+                  const newAr = getSharedPlotAspectRatio(
+                    rvs.paperFrame.paperSize,
+                    newLandscape,
+                  );
+                  const updates: Partial<ResultViewSettings> = {
+                    paperFrame: {
+                      ...rvs.paperFrame,
+                      landscape: newLandscape,
+                    },
+                  };
+                  if (rvs.viewLock) {
+                    const bl = [...rvs.viewLock.bottomLeft] as [number, number];
+                    const tr = [...rvs.viewLock.topRight] as [number, number];
+                    const w = tr[0] - bl[0];
+                    tr[1] = bl[1] + w / newAr;
+                    updates.viewLock = { bottomLeft: bl, topRight: tr };
+                  }
+                  setRvs(updates);
+                }}
+                className="w-full text-[11px] px-1.5 py-1 rounded cursor-pointer"
+                style={{
+                  background: "var(--color-vsc-bg)",
+                  color: "var(--color-vsc-text)",
+                  border: "1px solid var(--color-vsc-border)",
+                }}
+              >
+                <option value="portrait">Portrait</option>
+                <option value="landscape">Landscape</option>
+              </select>
+            </div>
+          </div>
         )}
 
         {selectedAnnotations.length > 0 && (

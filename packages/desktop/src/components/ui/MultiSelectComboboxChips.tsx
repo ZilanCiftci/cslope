@@ -127,15 +127,12 @@ export function MultiSelectComboboxChips({
     [value, onValueChange],
   );
 
-  const handleDrop = useCallback(
-    (_idx: number) => (e: React.DragEvent) => {
-      e.preventDefault();
-      setDragIndex(null);
-      setDropTarget(null);
-      dragIndexRef.current = null;
-    },
-    [],
-  );
+  const handleDrop = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    setDragIndex(null);
+    setDropTarget(null);
+    dragIndexRef.current = null;
+  }, []);
 
   const handleDragEnd = useCallback(() => {
     setDragIndex(null);
@@ -150,11 +147,6 @@ export function MultiSelectComboboxChips({
     if (!q) return options;
     return options.filter((opt) => opt.label.toLowerCase().includes(q));
   }, [options, query]);
-
-  // Reset highlight when filter/open state changes
-  useEffect(() => {
-    setHighlightedIndex(0);
-  }, [query, open]);
 
   // Scroll highlighted row into view
   useEffect(() => {
@@ -229,6 +221,7 @@ export function MultiSelectComboboxChips({
         aria-expanded={open}
         onClick={() => {
           setOpen(true);
+          setHighlightedIndex(0);
           inputRef.current?.focus();
         }}
         className="w-full rounded-lg border min-h-[32px] cursor-text"
@@ -264,7 +257,7 @@ export function MultiSelectComboboxChips({
                 draggable
                 onDragStart={handleDragStart(i)}
                 onDragOver={handleDragOver(i)}
-                onDrop={handleDrop(i)}
+                onDrop={handleDrop}
                 onDragEnd={handleDragEnd}
                 className="inline-flex items-center gap-0.5 rounded-md pl-2 pr-1 py-[1px] text-[10px] font-medium select-none"
                 style={{
@@ -305,10 +298,14 @@ export function MultiSelectComboboxChips({
           <input
             ref={inputRef}
             value={query}
-            onFocus={() => setOpen(true)}
+            onFocus={() => {
+              setOpen(true);
+              setHighlightedIndex(0);
+            }}
             onChange={(e) => {
               setQuery(e.target.value);
               setOpen(true);
+              setHighlightedIndex(0);
             }}
             onKeyDown={handleKeyDown}
             placeholder={value.length === 0 ? placeholder : ""}
@@ -322,7 +319,11 @@ export function MultiSelectComboboxChips({
             tabIndex={-1}
             onClick={(e) => {
               e.stopPropagation();
-              setOpen((p) => !p);
+              setOpen((p) => {
+                const next = !p;
+                if (next) setHighlightedIndex(0);
+                return next;
+              });
             }}
             className="inline-flex items-center justify-center rounded w-5 h-5 shrink-0 cursor-pointer"
             style={{ color: "var(--color-vsc-text-muted)" }}

@@ -149,6 +149,7 @@ export interface DrawCanvasParams {
   selectedRegionKey: AppState["selectedRegionKey"];
   editingAssignment: boolean;
   selectedAnnotationIds: AppState["selectedAnnotationIds"];
+  selectedResultObject: AppState["selectedResultObject"];
   projectInfo: AppState["projectInfo"];
   parameters: AppState["parameters"];
   analysisLimits: AppState["analysisLimits"];
@@ -195,6 +196,7 @@ export function drawCanvas(
     selectedRegionKey,
     editingAssignment,
     selectedAnnotationIds,
+    selectedResultObject,
     projectInfo,
     parameters,
     analysisLimits,
@@ -1793,6 +1795,17 @@ export function drawCanvas(
         ctx.setLineDash([]);
         ctx.restore();
       }
+    }
+
+    // Selection highlight for paper/axis properties target.
+    if (selectedResultObject === "paper-frame") {
+      ctx.save();
+      ctx.strokeStyle = "#0078d4";
+      ctx.lineWidth = 1.5;
+      ctx.setLineDash([4, 3]);
+      ctx.strokeRect(pf.x, pf.y, pf.w, pf.h);
+      ctx.setLineDash([]);
+      ctx.restore();
     }
   }
 
