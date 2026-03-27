@@ -29,6 +29,9 @@ coverage-final.json
 # Profiling
 *.prof
 
+# Generated media assets (regenerate with: bun run media:capture)
+packages/website/public/media/generated/
+
 # Docs (generated)
 docs/
 

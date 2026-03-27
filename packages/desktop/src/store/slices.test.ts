@@ -68,6 +68,9 @@ describe("store slices", () => {
   it("modelsSlice supports add, switch, and duplicate model workflows", () => {
     const initial = useAppStore.getState();
     const initialId = initial.activeModelId;
+    expect(initial.models.find((m) => m.id === initialId)?.name).toBe(
+      "T-ACADS Simple",
+    );
 
     initial.addModel("Model B");
     let next = useAppStore.getState();
@@ -437,6 +440,9 @@ describe("store slices", () => {
     useAppStore.getState().newProject();
     const next = useAppStore.getState();
     expect(next.models).toHaveLength(1);
+    expect(next.models.find((m) => m.id === next.activeModelId)?.name).toBe(
+      "T-ACADS Simple",
+    );
     expect(next.runState).toBe("idle");
   });
 

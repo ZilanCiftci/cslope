@@ -1122,6 +1122,12 @@ app.on("activate", () => {
 app.whenReady().then(() => {
   setupCSP();
   buildMenu();
-  createSplash();
+  if (!process.env.CSLOPE_CAPTURE) {
+    createSplash();
+  }
   createWindow();
+  if (process.env.CSLOPE_CAPTURE) {
+    // In capture mode show the main window immediately (no splash to wait for)
+    showMainWindow();
+  }
 });

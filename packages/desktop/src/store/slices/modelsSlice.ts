@@ -97,10 +97,28 @@ const mapModelToState = (model: ModelEntry) => ({
 });
 
 export const INITIAL_MODEL_ID = "model-initial";
-export const INITIAL_MODEL = createDefaultModel(
-  INITIAL_MODEL_ID,
-  DEFAULT_MODEL_NAME,
-);
+const STARTER_MODEL_NAME = "T-ACADS Simple";
+
+function createStarterModel(id: string): ModelEntry {
+  const starter =
+    BENCHMARK_MODELS.find((m) => m.name === STARTER_MODEL_NAME) ??
+    BENCHMARK_MODELS[0];
+  if (!starter) {
+    return createDefaultModel(id, DEFAULT_MODEL_NAME);
+  }
+
+  return {
+    ...cloneModelEntry(starter),
+    id,
+    mode: "edit",
+    runState: "idle",
+    progress: 0,
+    result: null,
+    errorMessage: null,
+  };
+}
+
+export const INITIAL_MODEL = createStarterModel(INITIAL_MODEL_ID);
 
 export const createModelsSlice: SliceCreator<ModelsSlice> = (set, get) => ({
   activeModelId: INITIAL_MODEL_ID,
@@ -399,7 +417,7 @@ export const createModelsSlice: SliceCreator<ModelsSlice> = (set, get) => ({
 
   newProject: () => {
     const id = nextId("model");
-    const entry = createDefaultModel(id, DEFAULT_MODEL_NAME);
+    const entry = createStarterModel(id);
 
     set({
       models: [entry],

@@ -5,6 +5,14 @@ import App from "../App";
 import { useAppStore } from "../store/app-store";
 
 describe("App — VS Code dark layout", () => {
+  const getActiveModelName = () => {
+    const state = useAppStore.getState();
+    return (
+      state.models.find((m) => m.id === state.activeModelId)?.name ??
+      "T-ACADS Simple"
+    );
+  };
+
   beforeEach(() => {
     // Reset Zustand store between tests
     const initial = useAppStore.getState();
@@ -24,7 +32,7 @@ describe("App — VS Code dark layout", () => {
     render(<App />);
     expect(screen.getByText("File")).toBeInTheDocument();
     // Title bar displays model name — use substring match to avoid coupling
-    // to the exact format "Untitled — cSlope"
+    // to the exact format "<model> — cSlope"
     expect(screen.getByText(/— cSlope$/)).toBeInTheDocument();
   });
 
@@ -51,7 +59,7 @@ describe("App — VS Code dark layout", () => {
   it("shows the explorer sidebar by default", () => {
     render(<App />);
     // Explorer model row has aria-label matching the model name
-    expect(screen.getByLabelText("Untitled")).toBeInTheDocument();
+    expect(screen.getByLabelText(getActiveModelName())).toBeInTheDocument();
   });
 
   it("can toggle explorer open/closed", async () => {
@@ -59,14 +67,15 @@ describe("App — VS Code dark layout", () => {
     render(<App />);
     const toggle = screen.getByLabelText("Toggle models");
     // Explorer sidebar should be visible initially — model row has aria-label
-    expect(screen.getByLabelText("Untitled")).toBeInTheDocument();
+    const modelName = getActiveModelName();
+    expect(screen.getByLabelText(modelName)).toBeInTheDocument();
     // Close explorer
     await user.click(toggle);
     // Model row should no longer be present
-    expect(screen.queryByLabelText("Untitled")).not.toBeInTheDocument();
+    expect(screen.queryByLabelText(modelName)).not.toBeInTheDocument();
     // Re-open
     await user.click(toggle);
-    expect(screen.getByLabelText("Untitled")).toBeInTheDocument();
+    expect(screen.getByLabelText(modelName)).toBeInTheDocument();
   });
 
   it("renders the interactive canvas in edit mode", () => {
