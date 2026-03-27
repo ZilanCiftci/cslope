@@ -330,6 +330,12 @@ export function ResultsMenu({ isOpen, onActivate, panelHost }: Props) {
                 active={false}
               />
               <SmallButton
+                icon={<AnnoPlotIcon />}
+                title="Add Plot"
+                onClick={() => addAnnotation("plot")}
+                active={false}
+              />
+              <SmallButton
                 icon={<AnnoTableIcon />}
                 title="Add Material Table"
                 onClick={() => addAnnotation("material-table")}
@@ -809,6 +815,31 @@ function AnnoTableIcon() {
         fill="#42a5f5"
         opacity="0.2"
       />
+    </svg>
+  );
+}
+
+function AnnoPlotIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+      <rect
+        x="2"
+        y="2"
+        width="12"
+        height="12"
+        rx="1.5"
+        fill="#26a69a"
+        opacity="0.12"
+      />
+      <path d="M4 12V4h8" stroke="#78909c" strokeWidth="0.9" />
+      <path
+        d="M5 10l2-2 2 1.2L11.5 6"
+        stroke="#26a69a"
+        strokeWidth="1.2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <circle cx="11.5" cy="6" r="1" fill="#26a69a" />
     </svg>
   );
 }

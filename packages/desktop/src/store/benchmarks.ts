@@ -88,6 +88,17 @@ function createExampleResultViewSettings(
         fontSize: 6,
         tableColumns: ["model", "unitWeight", "cohesion", "frictionAngle"],
       },
+      {
+        id: "anno-benchmark-plot",
+        type: "plot",
+        x: 0.72,
+        y: 0.26,
+        anchor: "top-left",
+        width: 0.24,
+        height: 0.18,
+        plotAxisX: "slice",
+        plotAxisY: "shearStrength",
+      },
     ],
   };
 }

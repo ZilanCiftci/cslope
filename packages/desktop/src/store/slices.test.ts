@@ -1037,12 +1037,18 @@ describe("store slices", () => {
   });
 
   it("resultViewSlice addAnnotation adds non-text annotation types", () => {
-    for (const type of ["material-table", "color-bar"] as const) {
+    for (const type of ["material-table", "color-bar", "plot"] as const) {
       useAppStore.getState().addAnnotation(type);
       const annos = useAppStore.getState().resultViewSettings.annotations;
       const last = annos[annos.length - 1];
       expect(last.type).toBe(type);
       expect(last.text).toBeUndefined();
+      if (type === "plot") {
+        expect(last.width).toBe(0.24);
+        expect(last.height).toBe(0.18);
+        expect(last.plotAxisX).toBe("slice");
+        expect(last.plotAxisY).toBe("shearStrength");
+      }
     }
   });
 

@@ -33,7 +33,12 @@ type PlotMode = "slipSurface" | "lambdaFmFf";
 
 type MetricKey =
   | "shearStrength"
+  | "frictionAngle"
   | "cohesion"
+  | "baseCohesion"
+  | "porePressure"
+  | "pwp"
+  | "sliceWeight"
   | "cohesionStrength"
   | "resistingForce"
   | "pullingForce";
@@ -42,7 +47,12 @@ interface PlotPoint {
   sliceNumber: number;
   xValue: number;
   shearStrength: number;
+  frictionAngle: number;
   cohesion: number;
+  baseCohesion: number;
+  porePressure: number;
+  pwp: number;
+  sliceWeight: number;
   cohesionStrength: number;
   resistingForce: number;
   pullingForce: number;
@@ -63,7 +73,12 @@ const SELECT_STYLE: React.CSSProperties = {
 
 const METRIC_OPTIONS: Array<{ key: MetricKey; label: string; unit: string }> = [
   { key: "shearStrength", label: "Shear strength", unit: "kPa" },
+  { key: "frictionAngle", label: "Friction angle", unit: "deg" },
   { key: "cohesion", label: "Cohesion", unit: "kPa" },
+  { key: "baseCohesion", label: "Base cohesion", unit: "kPa" },
+  { key: "porePressure", label: "Pore pressure", unit: "kPa" },
+  { key: "pwp", label: "PWP", unit: "kN" },
+  { key: "sliceWeight", label: "Slice weight", unit: "kN" },
   { key: "cohesionStrength", label: "Cohesion strength", unit: "kN" },
   { key: "resistingForce", label: "Resisting force", unit: "kN" },
   { key: "pullingForce", label: "Pulling force", unit: "kN" },
@@ -211,6 +226,7 @@ export function ResultsPlotDialogApp() {
           totalWeight * Math.cos(slice.alpha) - slice.U * slice.baseLength;
         const frictionStrength =
           Math.max(normalEffective, 0) * Math.tan(slice.phi);
+        const frictionAngle = (slice.phi * 180) / Math.PI;
         const cohesionStrength = slice.cohesion * slice.baseLength;
         const resistingForce = cohesionStrength + frictionStrength;
         const pullingForce = totalWeight * Math.sin(slice.alpha);
@@ -221,7 +237,12 @@ export function ResultsPlotDialogApp() {
           sliceNumber: index + 1,
           xValue: slice.x,
           shearStrength,
+          frictionAngle,
           cohesion: slice.cohesion,
+          baseCohesion: slice.cohesion,
+          porePressure: slice.U,
+          pwp: slice.U * slice.baseLength,
+          sliceWeight: totalWeight,
           cohesionStrength,
           resistingForce,
           pullingForce,

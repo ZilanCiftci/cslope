@@ -339,8 +339,10 @@ export function getSlices(
 
   // Water table y-values
   let waterY: number[] | null = null;
+  let waterYMid: number[] | null = null;
   if (slope.hasWaterTable && slope.waterRLXY) {
     waterY = getYAtXMany(slope.waterRLXY.x, slope.waterRLXY.y, slicesX);
+    waterYMid = getYAtXMany(slope.waterRLXY.x, slope.waterRLXY.y, sxArray);
   }
 
   // Create slices
@@ -349,12 +351,19 @@ export function getSlices(
     let waterYMean: number | null = null;
     let waterH: number | null = null;
 
-    if (waterY) {
+    if (waterY && waterYMid) {
       const wy1 = waterY[i];
       const wy2 = waterY[i + 1];
-      // If water Y is NaN (slice x outside water table range), treat as no water
-      if (Number.isFinite(wy1) && Number.isFinite(wy2)) {
-        waterYMean = (wy1 + wy2) / 2;
+      const wyMid = waterYMid[i];
+      // If water Y is NaN (slice x outside water table range), treat as no water.
+      // Use midpoint water elevation for pore-pressure head so visual checks at slice
+      // center align with the computed U value.
+      if (
+        Number.isFinite(wy1) &&
+        Number.isFinite(wy2) &&
+        Number.isFinite(wyMid)
+      ) {
+        waterYMean = wyMid;
         waterH =
           wy1 !== wy2 ? Math.cos(Math.atan((wy2 - wy1) / bArray[i])) ** 2 : 1;
       }

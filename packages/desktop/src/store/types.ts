@@ -147,6 +147,20 @@ export type MaterialTableColumnKey =
   | "cDatum"
   | "cRate";
 
+export type PlotAxisMode = "slice" | "x";
+
+export type PlotMetricKey =
+  | "shearStrength"
+  | "cohesion"
+  | "baseCohesion"
+  | "cohesionStrength"
+  | "frictionAngle"
+  | "porePressure"
+  | "pwp"
+  | "sliceWeight"
+  | "resistingForce"
+  | "pullingForce";
+
 export type AnchorPosition =
   | "top-left"
   | "top-right"
@@ -155,10 +169,12 @@ export type AnchorPosition =
 
 export interface Annotation {
   id: string;
-  type: "text" | "material-table" | "color-bar";
+  type: "text" | "material-table" | "color-bar" | "plot";
   x: number;
   y: number;
   anchor?: AnchorPosition;
+  width?: number;
+  height?: number;
   text?: string;
   fontSize?: number;
   fontFamily?: string;
@@ -166,6 +182,8 @@ export interface Annotation {
   italic?: boolean;
   color?: string;
   tableColumns?: MaterialTableColumnKey[];
+  plotAxisX?: PlotAxisMode;
+  plotAxisY?: PlotMetricKey;
 }
 
 export interface ResultViewSettings {

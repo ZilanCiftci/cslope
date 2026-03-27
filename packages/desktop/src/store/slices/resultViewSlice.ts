@@ -35,6 +35,10 @@ export const createResultViewSlice: SliceCreator<ResultViewSlice> = (set) => ({
       anchor: type === "material-table" ? "top-right" : undefined,
       text: type === "text" ? "Annotation" : undefined,
       fontSize: type === "material-table" ? 6 : 12,
+      width: type === "plot" ? 0.24 : undefined,
+      height: type === "plot" ? 0.18 : undefined,
+      plotAxisX: type === "plot" ? "slice" : undefined,
+      plotAxisY: type === "plot" ? "shearStrength" : undefined,
       tableColumns:
         type === "material-table"
           ? ["model", "unitWeight", "cohesion", "frictionAngle"]

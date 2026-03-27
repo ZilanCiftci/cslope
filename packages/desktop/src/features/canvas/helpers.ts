@@ -465,6 +465,24 @@ export function getAnnotationBoundsPx(
     };
   }
 
+  if (anno.type === "plot") {
+    const plotW = pf.w * (anno.width ?? 0.24);
+    const plotH = pf.h * (anno.height ?? 0.18);
+    const { x: tlx, y: tly } = anchoredTopLeft(
+      ax,
+      ay,
+      plotW,
+      plotH,
+      anno.anchor,
+    );
+    return {
+      x: tlx - hitPad,
+      y: tly - hitPad,
+      w: plotW + hitPad * 2,
+      h: plotH + hitPad * 2,
+    };
+  }
+
   return { x: ax - 6, y: ay - 6, w: 12, h: 12 };
 }
 
@@ -736,6 +754,17 @@ export function extendBoundsWithResultFitExtras(params: {
         anno.fontSize ?? 6,
       );
       addCanvasRect(ax, ay, tableW, tableH);
+    } else if (anno.type === "plot") {
+      const plotW = pf.w * (anno.width ?? 0.24);
+      const plotH = pf.h * (anno.height ?? 0.18);
+      const { x: tlx, y: tly } = anchoredTopLeft(
+        ax,
+        ay,
+        plotW,
+        plotH,
+        anno.anchor,
+      );
+      addCanvasRect(tlx, tly, plotW, plotH);
     }
   }
 }

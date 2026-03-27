@@ -22,6 +22,8 @@ import {
 import type {
   MaterialTableColumnKey,
   AnchorPosition,
+  PlotAxisMode,
+  PlotMetricKey,
   PaperSize,
   ResultViewSettings,
 } from "../../store/types";
@@ -72,6 +74,24 @@ const MATERIAL_TABLE_COLUMN_OPTIONS = MATERIAL_TABLE_COLUMNS.map((col) => ({
   value: col.key,
   label: SHORT_COLUMN_LABELS[col.key],
 }));
+
+const PLOT_AXIS_X_OPTIONS: Array<{ value: PlotAxisMode; label: string }> = [
+  { value: "slice", label: "Slice number" },
+  { value: "x", label: "X coordinate" },
+];
+
+const PLOT_AXIS_Y_OPTIONS: Array<{ value: PlotMetricKey; label: string }> = [
+  { value: "shearStrength", label: "Shear strength" },
+  { value: "frictionAngle", label: "Friction angle" },
+  { value: "cohesion", label: "Cohesion" },
+  { value: "baseCohesion", label: "Base cohesion" },
+  { value: "porePressure", label: "Pore pressure" },
+  { value: "pwp", label: "PWP" },
+  { value: "sliceWeight", label: "Slice weight" },
+  { value: "cohesionStrength", label: "Cohesion strength" },
+  { value: "resistingForce", label: "Resisting force" },
+  { value: "pullingForce", label: "Pulling force" },
+];
 
 type SidebarSection = "summary" | "annotations" | "properties";
 type ExtentField = "bl_x" | "bl_y" | "tr_x" | "tr_y";
@@ -252,6 +272,10 @@ export function ResultSidebar() {
     () => selectedAnnotations.filter((anno) => anno.type === "material-table"),
     [selectedAnnotations],
   );
+  const selectedPlotAnnotations = useMemo(
+    () => selectedAnnotations.filter((anno) => anno.type === "plot"),
+    [selectedAnnotations],
+  );
 
   const allSelectedAreText =
     selectedAnnotations.length > 0 &&
@@ -259,6 +283,9 @@ export function ResultSidebar() {
   const allSelectedAreMaterialTable =
     selectedAnnotations.length > 0 &&
     selectedMaterialTableAnnotations.length === selectedAnnotations.length;
+  const allSelectedArePlot =
+    selectedAnnotations.length > 0 &&
+    selectedPlotAnnotations.length === selectedAnnotations.length;
 
   const textValue = commonValue(
     selectedTextAnnotations.map((a) => a.text ?? ""),
@@ -354,6 +381,19 @@ export function ResultSidebar() {
     selectedMaterialTableAnnotations.map((a) => a.fontSize ?? 6),
   );
 
+  const plotWidthValue = commonValue(
+    selectedPlotAnnotations.map((a) => a.width ?? 0.24),
+  );
+  const plotHeightValue = commonValue(
+    selectedPlotAnnotations.map((a) => a.height ?? 0.18),
+  );
+  const plotAxisXValue = commonValue(
+    selectedPlotAnnotations.map((a) => a.plotAxisX ?? "slice"),
+  );
+  const plotAxisYValue = commonValue(
+    selectedPlotAnnotations.map((a) => a.plotAxisY ?? "shearStrength"),
+  );
+
   const applyToSelectedText = useCallback(
     (patch: {
       text?: string;
@@ -377,6 +417,20 @@ export function ResultSidebar() {
       }
     },
     [selectedMaterialTableAnnotations, updateAnnotation],
+  );
+
+  const applyToSelectedPlots = useCallback(
+    (patch: {
+      width?: number;
+      height?: number;
+      plotAxisX?: PlotAxisMode;
+      plotAxisY?: PlotMetricKey;
+    }) => {
+      for (const anno of selectedPlotAnnotations) {
+        updateAnnotation(anno.id, patch);
+      }
+    },
+    [selectedPlotAnnotations, updateAnnotation],
   );
 
   const visibleColumnsValue = useMemo(() => {
@@ -508,7 +562,9 @@ export function ResultSidebar() {
                     ? "Color Bar"
                     : anno.type === "material-table"
                       ? "Material Table"
-                      : "Text"}
+                      : anno.type === "plot"
+                        ? "Plot"
+                        : "Text"}
                 </span>
                 <button
                   onClick={(e) => {
@@ -966,7 +1022,8 @@ export function ResultSidebar() {
 
             {selectedAnnotations.length > 1 &&
               !allSelectedAreText &&
-              !allSelectedAreMaterialTable && (
+              !allSelectedAreMaterialTable &&
+              !allSelectedArePlot && (
                 <div
                   className="border-t pt-2 mt-2"
                   style={{ borderColor: "var(--color-vsc-border)" }}
@@ -1179,6 +1236,143 @@ export function ResultSidebar() {
                 placeholder="Select columns"
                 emptyText="No columns found."
               />
+            </div>
+          </div>
+        )}
+
+        {allSelectedArePlot && (
+          <div className="space-y-2">
+            <div className="flex gap-2">
+              <div className="flex-1">
+                <label
+                  className="text-[10px] block mb-0.5"
+                  style={{ color: "var(--color-vsc-text-muted)" }}
+                >
+                  Width (%)
+                </label>
+                <input
+                  type="number"
+                  min={5}
+                  max={95}
+                  step="1"
+                  value={
+                    plotWidthValue !== undefined
+                      ? Math.round(plotWidthValue * 1000) / 10
+                      : ""
+                  }
+                  placeholder={plotWidthValue === undefined ? "Mixed" : ""}
+                  onChange={(e) => {
+                    const v = Number(e.target.value);
+                    if (!Number.isFinite(v)) return;
+                    const clamped = Math.max(5, Math.min(95, v));
+                    applyToSelectedPlots({ width: clamped / 100 });
+                  }}
+                  className="w-full text-[11px] px-1.5 py-1 rounded tabular-nums"
+                  style={{
+                    background: "var(--color-vsc-bg)",
+                    color: "var(--color-vsc-text)",
+                    border: "1px solid var(--color-vsc-border)",
+                  }}
+                />
+              </div>
+              <div className="flex-1">
+                <label
+                  className="text-[10px] block mb-0.5"
+                  style={{ color: "var(--color-vsc-text-muted)" }}
+                >
+                  Height (%)
+                </label>
+                <input
+                  type="number"
+                  min={5}
+                  max={95}
+                  step="1"
+                  value={
+                    plotHeightValue !== undefined
+                      ? Math.round(plotHeightValue * 1000) / 10
+                      : ""
+                  }
+                  placeholder={plotHeightValue === undefined ? "Mixed" : ""}
+                  onChange={(e) => {
+                    const v = Number(e.target.value);
+                    if (!Number.isFinite(v)) return;
+                    const clamped = Math.max(5, Math.min(95, v));
+                    applyToSelectedPlots({ height: clamped / 100 });
+                  }}
+                  className="w-full text-[11px] px-1.5 py-1 rounded tabular-nums"
+                  style={{
+                    background: "var(--color-vsc-bg)",
+                    color: "var(--color-vsc-text)",
+                    border: "1px solid var(--color-vsc-border)",
+                  }}
+                />
+              </div>
+            </div>
+
+            <div>
+              <label
+                className="text-[10px] block mb-0.5"
+                style={{ color: "var(--color-vsc-text-muted)" }}
+              >
+                X axis
+              </label>
+              <select
+                value={plotAxisXValue ?? "__mixed__"}
+                onChange={(e) => {
+                  if (e.target.value === "__mixed__") return;
+                  applyToSelectedPlots({
+                    plotAxisX: e.target.value as PlotAxisMode,
+                  });
+                }}
+                className="w-full text-[11px] px-1.5 py-1 rounded cursor-pointer"
+                style={{
+                  background: "var(--color-vsc-bg)",
+                  color: "var(--color-vsc-text)",
+                  border: "1px solid var(--color-vsc-border)",
+                }}
+              >
+                {plotAxisXValue === undefined && (
+                  <option value="__mixed__">Mixed values</option>
+                )}
+                {PLOT_AXIS_X_OPTIONS.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label
+                className="text-[10px] block mb-0.5"
+                style={{ color: "var(--color-vsc-text-muted)" }}
+              >
+                Y axis
+              </label>
+              <select
+                value={plotAxisYValue ?? "__mixed__"}
+                onChange={(e) => {
+                  if (e.target.value === "__mixed__") return;
+                  applyToSelectedPlots({
+                    plotAxisY: e.target.value as PlotMetricKey,
+                  });
+                }}
+                className="w-full text-[11px] px-1.5 py-1 rounded cursor-pointer"
+                style={{
+                  background: "var(--color-vsc-bg)",
+                  color: "var(--color-vsc-text)",
+                  border: "1px solid var(--color-vsc-border)",
+                }}
+              >
+                {plotAxisYValue === undefined && (
+                  <option value="__mixed__">Mixed values</option>
+                )}
+                {PLOT_AXIS_Y_OPTIONS.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
             </div>
           </div>
         )}

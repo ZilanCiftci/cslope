@@ -1774,6 +1774,195 @@ export function drawCanvas(
           annoScale,
           tableFontSize,
         );
+      } else if (anno.type === "plot") {
+        const plotW = pf.w * (anno.width ?? 0.24);
+        const plotH = pf.h * (anno.height ?? 0.18);
+        const { x: drawX, y: drawY } = anchoredTopLeft(
+          ax,
+          ay,
+          plotW,
+          plotH,
+          anno.anchor,
+        );
+
+        ctx.save();
+        ctx.fillStyle = "rgba(255,255,255,0.94)";
+        ctx.strokeStyle = "#78909c";
+        ctx.lineWidth = 1;
+        ctx.fillRect(drawX, drawY, plotW, plotH);
+        ctx.strokeRect(drawX, drawY, plotW, plotH);
+
+        const axisMode = anno.plotAxisX ?? "slice";
+        const metric = anno.plotAxisY ?? "shearStrength";
+        const metricMeta: Record<
+          NonNullable<typeof anno.plotAxisY>,
+          { label: string; unit: string }
+        > = {
+          shearStrength: { label: "Shear", unit: "kPa" },
+          frictionAngle: { label: "Friction angle", unit: "deg" },
+          cohesion: { label: "Cohesion", unit: "kPa" },
+          baseCohesion: { label: "Base cohesion", unit: "kPa" },
+          porePressure: { label: "Pore pressure", unit: "kPa" },
+          pwp: { label: "PWP", unit: "kN" },
+          sliceWeight: { label: "Slice weight", unit: "kN" },
+          cohesionStrength: { label: "Cohesion F", unit: "kN" },
+          resistingForce: { label: "Resisting", unit: "kN" },
+          pullingForce: { label: "Pulling", unit: "kN" },
+        };
+
+        const points = result.criticalSlices.map((slice, index) => {
+          const phiRad =
+            Math.abs(slice.frictionAngle) > Math.PI
+              ? (slice.frictionAngle * Math.PI) / 180
+              : slice.frictionAngle;
+          const phiDeg =
+            Math.abs(slice.frictionAngle) > Math.PI * 2
+              ? slice.frictionAngle
+              : (slice.frictionAngle * 180) / Math.PI;
+          const cohesionStrength = slice.cohesion * slice.baseLength;
+          const frictionStrength =
+            Math.max(slice.normalForce, 0) * Math.tan(phiRad);
+          const resistingForce = cohesionStrength + frictionStrength;
+          const pullingForce = slice.weight * Math.sin(slice.alpha);
+          const porePressure = slice.porePressure;
+          const pwp = slice.porePressure * slice.baseLength;
+          const shearStrength =
+            slice.baseLength > 1e-9 ? resistingForce / slice.baseLength : 0;
+
+          const yValue =
+            metric === "shearStrength"
+              ? shearStrength
+              : metric === "frictionAngle"
+                ? phiDeg
+                : metric === "cohesion"
+                  ? slice.cohesion
+                  : metric === "baseCohesion"
+                    ? slice.cohesion
+                    : metric === "porePressure"
+                      ? porePressure
+                      : metric === "pwp"
+                        ? pwp
+                        : metric === "sliceWeight"
+                          ? slice.weight
+                          : metric === "cohesionStrength"
+                            ? cohesionStrength
+                            : metric === "resistingForce"
+                              ? resistingForce
+                              : pullingForce;
+          const xValue = axisMode === "slice" ? index + 1 : slice.x;
+          return { x: xValue, y: yValue };
+        });
+
+        const titleSize = Math.max(8, 10 * annoScale);
+        const axisSize = Math.max(7, 9 * annoScale);
+        const title = `${metricMeta[metric].label} (${metricMeta[metric].unit})`;
+        const titlePad = titleSize + 6;
+
+        if (points.length < 2) {
+          ctx.font = `${titleSize}px sans-serif`;
+          ctx.fillStyle = "#78909c";
+          ctx.textAlign = "left";
+          ctx.textBaseline = "top";
+          ctx.fillText(title, drawX + 6, drawY + 4);
+          ctx.font = `${axisSize}px sans-serif`;
+          ctx.fillStyle = "#666";
+          ctx.textAlign = "center";
+          ctx.textBaseline = "middle";
+          ctx.fillText("No slice data", drawX + plotW / 2, drawY + plotH / 2);
+          ctx.restore();
+          continue;
+        }
+
+        const padLeft = Math.max(26, 32 * annoScale);
+        const padRight = Math.max(10, 12 * annoScale);
+        const padBottom = Math.max(18, 22 * annoScale);
+        const padTop = titlePad;
+        const chartX = drawX + padLeft;
+        const chartY = drawY + padTop;
+        const chartW = Math.max(8, plotW - padLeft - padRight);
+        const chartH = Math.max(8, plotH - padTop - padBottom);
+
+        const xs = points.map((p) => p.x);
+        const ys = points.map((p) => p.y);
+        let xMin = Math.min(...xs);
+        let xMax = Math.max(...xs);
+        let yMin = Math.min(...ys);
+        let yMax = Math.max(...ys);
+        if (Math.abs(xMax - xMin) < 1e-9) {
+          xMin -= 0.5;
+          xMax += 0.5;
+        }
+        if (Math.abs(yMax - yMin) < 1e-9) {
+          const bump = Math.max(1, Math.abs(yMax) * 0.1);
+          yMin -= bump;
+          yMax += bump;
+        }
+
+        const mapX = (v: number) =>
+          chartX + ((v - xMin) / (xMax - xMin)) * chartW;
+        const mapY = (v: number) =>
+          chartY + chartH - ((v - yMin) / (yMax - yMin)) * chartH;
+
+        ctx.font = `${titleSize}px sans-serif`;
+        ctx.fillStyle = "#78909c";
+        ctx.textAlign = "left";
+        ctx.textBaseline = "top";
+        ctx.fillText(title, drawX + 6, drawY + 4);
+
+        ctx.strokeStyle = "rgba(120,144,156,0.35)";
+        ctx.lineWidth = 0.8;
+        for (let i = 0; i <= 4; i++) {
+          const gy = chartY + (chartH * i) / 4;
+          ctx.beginPath();
+          ctx.moveTo(chartX, gy);
+          ctx.lineTo(chartX + chartW, gy);
+          ctx.stroke();
+        }
+
+        ctx.strokeStyle = "#78909c";
+        ctx.lineWidth = 1;
+        ctx.strokeRect(chartX, chartY, chartW, chartH);
+
+        ctx.strokeStyle = "#26a69a";
+        ctx.lineWidth = Math.max(1.1, 1.3 * annoScale);
+        ctx.beginPath();
+        points.forEach((point, index) => {
+          const px = mapX(point.x);
+          const py = mapY(point.y);
+          if (index === 0) ctx.moveTo(px, py);
+          else ctx.lineTo(px, py);
+        });
+        ctx.stroke();
+
+        ctx.fillStyle = "#26a69a";
+        points.forEach((point) => {
+          const px = mapX(point.x);
+          const py = mapY(point.y);
+          ctx.beginPath();
+          ctx.arc(px, py, Math.max(1.4, 1.8 * annoScale), 0, Math.PI * 2);
+          ctx.fill();
+        });
+
+        ctx.font = `${axisSize}px sans-serif`;
+        ctx.fillStyle = "#5f6b73";
+        ctx.textBaseline = "middle";
+        ctx.textAlign = "right";
+        ctx.fillText(yMax.toFixed(2), chartX - 4, chartY);
+        ctx.fillText(yMin.toFixed(2), chartX - 4, chartY + chartH);
+
+        ctx.textBaseline = "top";
+        ctx.textAlign = "center";
+        ctx.fillText(
+          xs[0].toFixed(axisMode === "slice" ? 0 : 1),
+          chartX,
+          chartY + chartH + 4,
+        );
+        ctx.fillText(
+          xs[xs.length - 1].toFixed(axisMode === "slice" ? 0 : 1),
+          chartX + chartW,
+          chartY + chartH + 4,
+        );
+        ctx.restore();
       }
 
       // Selection highlight for selected annotations

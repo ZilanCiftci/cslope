@@ -203,6 +203,42 @@ describe("analyseSlope full orchestration", () => {
     expect(fosWet!).toBeLessThan(fosDry!);
   });
 
+  it("sets zero pore pressure when slice midpoint is above water line", () => {
+    const CX = 28,
+      CY = 25,
+      R = 35;
+
+    const s = createHomogeneousSlope();
+    // Sloped custom water line with followBoundary=true to include realistic
+    // clipping behavior around side boundaries and terrain breaks.
+    s.setWaterTable({
+      coordinates: [
+        [0, -3],
+        [50, -10],
+      ],
+      followBoundary: true,
+    });
+    s.updateAnalysisOptions({ slices: 30, method: "Bishop" });
+
+    const ints = s.getCircleExternalIntersection(CX, CY, R);
+    const slices = getSlices(
+      s,
+      ints[0][0],
+      ints[ints.length - 1][0],
+      CX,
+      CY,
+      R,
+    );
+
+    for (const slice of slices) {
+      const waterY = s.getWaterYIntersection(slice.x);
+      if (!Number.isFinite(waterY)) continue;
+      if (slice.yBottom >= waterY - 1e-9) {
+        expect(slice.U).toBeCloseTo(0, 9);
+      }
+    }
+  });
+
   it("sets search results on slope model after analysis", () => {
     const s = createHomogeneousSlope();
     s.setAnalysisLimits({
