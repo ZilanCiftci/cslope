@@ -17,6 +17,7 @@ import {
   isPointInPolygon,
 } from "../math/index";
 import type { Slope } from "./slope";
+import { polylineYAtSide } from "./geometry-ops";
 
 // ── createSlice ───────────────────────────────────────────────────
 
@@ -295,6 +296,20 @@ export function getSlices(
       }
     }
 
+    // Concentrated and edge loads: a line load gets its own thin slice so
+    // its moment arm is exact, and UDL ends become slice boundaries.
+    const LINE_LOAD_HALF_WIDTH = 0.01;
+    for (const ll of slope.lineLoads) {
+      for (const x of [ll.x - LINE_LOAD_HALF_WIDTH, ll.x + LINE_LOAD_HALF_WIDTH]) {
+        if (x > x0 && x < x1) allSlicesSet.add(x);
+      }
+    }
+    for (const udl of slope.udls) {
+      for (const x of [udl.x1, udl.x2]) {
+        if (x > x0 && x < x1) allSlicesSet.add(x);
+      }
+    }
+
     // Water table intersections (every line, so per-material lines too)
     for (const waterXY of slope.allWaterLines) {
       const waterIntersections = getCircleLineIntersections(
@@ -369,10 +384,15 @@ export function getSlices(
     llData,
   );
 
-  // Batch compute surface y-values
-  const yTops = getYAtXMany(surfXY.x, surfXY.y, slicesX);
-  const yTopsL = yTops.slice(0, -1);
-  const yTopsR = yTops.slice(1);
+  // Surface y at each slice edge, taken from the slice's own side: at a
+  // vertical face the averaged value would put the top below the base and
+  // the slice next to the face would be dropped.
+  const surfaceYFrom = (x: number, side: "left" | "right") => {
+    const y = polylineYAtSide(surfXY.x, surfXY.y, x, side);
+    return Number.isFinite(y) ? y : getYAtX(surfXY.x, surfXY.y, x);
+  };
+  const yTopsL = slicesX.slice(0, -1).map((x) => surfaceYFrom(x, "right"));
+  const yTopsR = slicesX.slice(1).map((x) => surfaceYFrom(x, "left"));
 
   // Water table y-values
   let waterY: number[] | null = null;

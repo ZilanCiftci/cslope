@@ -154,9 +154,11 @@ export function getSurfaceLine(
     idx = (((idx - 1) % n) + n) % n;
   }
 
-  // Pick the path with higher average y (= surface)
-  const avgFwd = fwdY.reduce((s, v) => s + v, 0) / fwdY.length;
-  const avgBwd = bwdY.reduce((s, v) => s + v, 0) / bwdY.length;
+  // Pick the path with higher average y (= surface).  Average over x,
+  // not over vertices: a densely digitised stretch must not outweigh the
+  // rest of the path.
+  const avgFwd = averageYOverX(fwdX, fwdY);
+  const avgBwd = averageYOverX(bwdX, bwdY);
 
   return avgFwd >= avgBwd ? { x: fwdX, y: fwdY } : { x: bwdX, y: bwdY };
 }
@@ -170,7 +172,7 @@ export function getSurfaceLine(
  * "left" and "right" values differ.  Returns NaN when no segment on that
  * side contains x.
  */
-function polylineYAtSide(
+export function polylineYAtSide(
   px: number[],
   py: number[],
   x: number,
@@ -250,6 +252,19 @@ export function clipLineToSurface(
   }
 
   return outX.length >= 2 ? { x: outX, y: outY } : null;
+}
+
+/** Mean y of a path weighted by horizontal extent (vertex mean if vertical). */
+function averageYOverX(px: number[], py: number[]): number {
+  let area = 0;
+  let span = 0;
+  for (let i = 0; i < px.length - 1; i++) {
+    const dx = Math.abs(px[i + 1] - px[i]);
+    area += ((py[i] + py[i + 1]) / 2) * dx;
+    span += dx;
+  }
+  if (span > 1e-12) return area / span;
+  return py.reduce((s, v) => s + v, 0) / py.length;
 }
 
 // ── splitPolygonByPolyline (JSTS-based) ───────────────────────────

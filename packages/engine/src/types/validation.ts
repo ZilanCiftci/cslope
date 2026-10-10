@@ -29,6 +29,8 @@ export function validateMaterialModel(model: MaterialModel): string[] {
       }
       if (!Number.isFinite(model.frictionAngle) || model.frictionAngle < 0) {
         errors.push("Friction angle (φ) must be ≥ 0.");
+      } else if (model.frictionAngle >= 90) {
+        errors.push("Friction angle (φ) must be less than 90°.");
       }
       if (model.cohesion === 0 && model.frictionAngle === 0) {
         errors.push(
@@ -105,6 +107,8 @@ export function validateMaterialModel(model: MaterialModel): string[] {
       }
       if (!Number.isFinite(model.frictionAngle) || model.frictionAngle < 0) {
         errors.push("Base friction angle (φ) must be ≥ 0.");
+      } else if (model.frictionAngle >= 90) {
+        errors.push("Base friction angle (φ) must be less than 90°.");
       }
       if (
         !Array.isArray(model.modifierFunction) ||

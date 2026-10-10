@@ -212,9 +212,9 @@ function resolveSpatialMohrCoulomb(
 
   const [c, phi] = result;
   return {
-    cohesion: c,
-    frictionAngle: phi,
-    cohesionUndrained: c,
+    cohesion: nonNegative(c),
+    frictionAngle: physicalFrictionAngle(phi),
+    cohesionUndrained: nonNegative(c),
   };
 }
 
@@ -226,9 +226,9 @@ function resolveAnisotropic(
   const factor = interpolateModifier(model.modifierFunction, alphaDeg);
 
   return {
-    cohesion: model.cohesion * factor,
-    frictionAngle: model.frictionAngle * factor,
-    cohesionUndrained: model.cohesion * factor,
+    cohesion: nonNegative(model.cohesion * factor),
+    frictionAngle: physicalFrictionAngle(model.frictionAngle * factor),
+    cohesionUndrained: nonNegative(model.cohesion * factor),
   };
 }
 
@@ -270,6 +270,18 @@ function resolveStrengthFromDatum(
  */
 function nonNegative(value: number): number {
   return value > 0 ? value : 0;
+}
+
+/** Highest friction angle used (tan φ must stay finite and positive). */
+const MAX_FRICTION_ANGLE = 89.9;
+
+/**
+ * A modifier or interpolation can produce φ ≥ 90°, where tan φ becomes
+ * huge or negative and the FOS meaningless; keep φ in [0°, 89.9°].
+ */
+function physicalFrictionAngle(phi: number): number {
+  if (!(phi > 0)) return 0;
+  return Math.min(phi, MAX_FRICTION_ANGLE);
 }
 
 /**

@@ -57,6 +57,9 @@ export interface SearchPlane {
   converged?: boolean;
 }
 
+/** Smallest useful inner iteration limit for the FOS solvers. */
+const MIN_MAX_ITERATIONS = 6;
+
 // ── Slope Class ───────────────────────────────────────────────────
 
 export class Slope {
@@ -596,7 +599,9 @@ export class Slope {
       this._tolerance = opts.tolerance;
     }
     if (opts.maxIterations !== undefined) {
-      this._maxIterations = opts.maxIterations;
+      // The solvers require more than 3 inner iterations before accepting
+      // convergence; fewer would discard every surface.
+      this._maxIterations = Math.max(MIN_MAX_ITERATIONS, opts.maxIterations);
     }
     if (opts.janbuCorrection !== undefined) {
       this._janbuCorrection = opts.janbuCorrection;
@@ -753,9 +758,16 @@ export class Slope {
       this._surfaceLineX,
       this._surfaceLineY,
     );
-    // Sort by x-coordinate
+    // Sort by x-coordinate.  A circle through a surface vertex is found on
+    // both adjacent segments; drop the duplicate or the plane's entry and
+    // exit collapse into one point and the plane is discarded.
     intersections.sort((a, b) => a[0] - b[0]);
-    return intersections;
+    return intersections.filter(
+      (p, i) =>
+        i === 0 ||
+        Math.abs(p[0] - intersections[i - 1][0]) > 1e-9 ||
+        Math.abs(p[1] - intersections[i - 1][1]) > 1e-9,
+    );
   }
 
   /**

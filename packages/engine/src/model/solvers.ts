@@ -403,9 +403,9 @@ export function analyseBishop(
  *   F_corrected = f₀ × F_simplified
  *   f₀ = 1 + b₁ × [d/L − 1.4 × (d/L)²]
  *
- * where d = max vertical distance from the chord connecting the entry and
- * exit points of the failure surface to the arc (the sagitta), L = horizontal
- * distance between entry and exit, and b₁ depends on soil type:
+ * where L = length of the chord connecting the entry and exit points of
+ * the failure surface and d = the greatest depth of the surface measured
+ * perpendicular to that chord, and b₁ depends on soil type:
  *   c-only soil (φ=0): b₁ = 0.69
  *   φ-only soil (c=0): b₁ = 0.31
  *   c-φ soil:          b₁ = 0.50
@@ -413,24 +413,23 @@ export function analyseBishop(
 function janbuCorrectionFactor(slices: Slice[]): number {
   if (slices.length === 0) return 1;
 
-  const L = slices[slices.length - 1].xRight - slices[0].xLeft;
-  if (L <= 0) return 1;
-
   // Entry and exit points on the failure surface
   const xEntry = slices[0].xLeft;
   const yEntry = slices[0].y0Bottom;
   const xExit = slices[slices.length - 1].xRight;
   const yExit = slices[slices.length - 1].y1Bottom;
 
-  // d = max vertical distance from the chord (entry→exit) to the arc
+  // L = chord length, d = largest depth perpendicular to the chord
+  const L = Math.hypot(xExit - xEntry, yExit - yEntry);
+  if (L <= 0) return 1;
   let d = 0;
   for (const s of slices) {
-    // Interpolate chord y at slice midpoint x
-    const t = (s.x - xEntry) / (xExit - xEntry);
-    const chordY = yEntry + t * (yExit - yEntry);
-    // The arc is below the chord, so chord Y > arc Y
-    const sag = chordY - s.yBottom;
-    if (sag > d) d = sag;
+    // Signed distance of the base midpoint below the chord line
+    const depth =
+      ((xExit - xEntry) * (yEntry - s.yBottom) -
+        (yExit - yEntry) * (xEntry - s.x)) /
+      L;
+    if (depth > d) d = depth;
   }
 
   const dOverL = d / L;

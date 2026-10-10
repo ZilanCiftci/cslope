@@ -115,6 +115,27 @@ export function toCanonicalSlopeDefinition(
     ...slopeDefinition,
     orientation,
     coordinates: mirrorPoints(slopeDefinition.coordinates, xMin, xMax),
+    // Spatially varying strength is given at model-space points.
+    materials: slopeDefinition.materials.map((m) => {
+      const model = m.model;
+      if (model?.kind !== "spatial-mohr-coulomb") return m;
+      return {
+        ...m,
+        model: {
+          ...model,
+          dataPoints: model.dataPoints.map(
+            ([x, y, c, phi, gamma]) =>
+              [mirrorX(x, xMin, xMax), y, c, phi, gamma] as [
+                number,
+                number,
+                number,
+                number,
+                number,
+              ],
+          ),
+        },
+      };
+    }),
     materialBoundaries: slopeDefinition.materialBoundaries?.map((boundary) => ({
       ...boundary,
       coordinates: mirrorPoints(boundary.coordinates, xMin, xMax),

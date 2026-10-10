@@ -67,6 +67,27 @@ function isPlaneWithinExternalBoundary(
   return true;
 }
 
+/**
+ * True when a plane's actual entry/exit points lie within the search
+ * limits and it is longer (horizontally) than the minimum failure
+ * distance.  Circles generated through grid points can intersect the
+ * ground elsewhere, so this must be checked on the plane itself.
+ */
+function isPlaneWithinSearchLimits(
+  slope: Slope,
+  plane: Pick<SearchPlane, "lc" | "rc">,
+): boolean {
+  const [entryLeftX, entryRightX, exitLeftX, exitRightX] = slope.limits;
+  const tol = 1e-9;
+  return (
+    plane.lc[0] >= entryLeftX - tol &&
+    plane.lc[0] <= entryRightX + tol &&
+    plane.rc[0] >= exitLeftX - tol &&
+    plane.rc[0] <= exitRightX + tol &&
+    plane.rc[0] - plane.lc[0] > Math.max(slope.minFailureDistance, 0)
+  );
+}
+
 // ── generatePlanes ────────────────────────────────────────────────
 
 /**
@@ -155,6 +176,7 @@ export function generateRefinedPlanes(
 
   const addPlane = (plane: SearchPlane): void => {
     if (generated.length >= refinedIterations) return;
+    if (!isPlaneWithinSearchLimits(slope, plane)) return;
     const key = planeKey(plane);
     if (existingKeys.has(key) || generatedKeys.has(key)) return;
     generatedKeys.add(key);
@@ -318,13 +340,8 @@ export function setEntryExitPlanes(slope: Slope): void {
   }
 
   // Filter valid planes
-  const validPlanes = allPlanes.filter(
-    (plane) =>
-      entryLeftX <= plane.lc[0] &&
-      plane.lc[0] <= entryRightX &&
-      exitLeftX <= plane.rc[0] &&
-      plane.rc[0] <= exitRightX &&
-      (plane.lc[0] !== plane.rc[0] || plane.lc[1] !== plane.rc[1]),
+  const validPlanes = allPlanes.filter((plane) =>
+    isPlaneWithinSearchLimits(slope, plane),
   );
 
   slope.setSearchPlanes(validPlanes);
