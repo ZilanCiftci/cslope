@@ -1,6 +1,6 @@
 import { act, renderHook } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { useAppStore } from "../../store/app-store";
+import { markProjectClean, useAppStore } from "../../store/app-store";
 import { INITIAL_MODEL } from "../../store/slices/modelsSlice";
 import { useProjectActions } from "./useProjectActions";
 
@@ -41,6 +41,8 @@ describe("useProjectActions", () => {
     resetStore();
     // Clear temporal history
     useAppStore.temporal.getState().clear();
+    // Start each test from a saved project (no unsaved-changes prompt).
+    markProjectClean(useAppStore.getState());
   });
 
   afterEach(() => {

@@ -16,6 +16,7 @@ import type { SliceCreator } from "../helpers";
 import { nextId } from "../helpers";
 import type { ModelEntry, ModelsSlice } from "../types";
 import { abortAllAnalyses } from "./analysisSlice";
+import { markProjectClean } from "../unsaved";
 
 function cloneModelEntry(model: ModelEntry): ModelEntry {
   const clone = globalThis.structuredClone
@@ -435,6 +436,7 @@ export const createModelsSlice: SliceCreator<ModelsSlice> = (
       _pendingFitToScreen: !hasSavedViewport,
     });
     clearUndoHistory(api);
+    markProjectClean(get());
   },
 
   newProject: () => {
@@ -448,6 +450,7 @@ export const createModelsSlice: SliceCreator<ModelsSlice> = (
       ...mapModelToState(entry),
     });
     clearUndoHistory(api);
+    markProjectClean(get());
   },
 
   loadBenchmarks: () => {
@@ -462,6 +465,7 @@ export const createModelsSlice: SliceCreator<ModelsSlice> = (
       _pendingFitToScreen: true,
     });
     clearUndoHistory(api);
+    markProjectClean(get());
   },
 
   loadLovoModels: () => {
@@ -476,5 +480,6 @@ export const createModelsSlice: SliceCreator<ModelsSlice> = (
       _pendingFitToScreen: true,
     });
     clearUndoHistory(api);
+    markProjectClean(get());
   },
 });

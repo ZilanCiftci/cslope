@@ -1,5 +1,15 @@
 import { createPortal } from "react-dom";
-import { useAppStore } from "../../../store/app-store";
+import { isProjectDirty, useAppStore } from "../../../store/app-store";
+import { confirmUnsavedChanges } from "../../../features/project/unsavedGuard";
+
+/**
+ * Before replacing the project: offer to save unsaved changes, or else
+ * ask the plain confirmation question.
+ */
+async function confirmReplace(question: string): Promise<boolean> {
+  if (isProjectDirty(useAppStore.getState())) return confirmUnsavedChanges();
+  return window.confirm(question);
+}
 import { isElectron } from "../../../utils/is-electron";
 import { RibbonGroup, RibbonButton } from "./RibbonParts";
 import { BenchmarkIcon, InfoIcon } from "../../icons/HelpIcons";
@@ -11,8 +21,8 @@ interface Props {
 }
 
 export function HelpMenu({ isOpen, onActivate, panelHost }: Props) {
-  const handleLoadBenchmarks = () => {
-    const ok = window.confirm(
+  const handleLoadBenchmarks = async () => {
+    const ok = await confirmReplace(
       "Load benchmark models into the current workspace? This will replace current models.",
     );
     if (!ok) return;

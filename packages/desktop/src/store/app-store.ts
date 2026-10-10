@@ -1,6 +1,7 @@
 import { create } from "zustand";
 import { temporal } from "zundo";
 import type { AppState } from "./types";
+import { markProjectClean } from "./unsaved";
 import { createAnalysisSlice } from "./slices/analysisSlice";
 import { createCanvasToolbarSlice } from "./slices/canvasToolbarSlice";
 import { createGeometrySlice } from "./slices/geometrySlice";
@@ -14,6 +15,7 @@ export * from "./types";
 export * from "./defaults";
 export * from "./helpers";
 export * from "./selectors";
+export { isProjectDirty, markProjectClean } from "./unsaved";
 
 /**
  * Fields tracked by undo/redo — geometry, materials, loads, analysis options.
@@ -75,3 +77,6 @@ export const useAppStore = create<AppState>()(
     },
   ),
 );
+
+// The project the app starts with counts as saved.
+markProjectClean(useAppStore.getState());

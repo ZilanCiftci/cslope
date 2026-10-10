@@ -1,5 +1,15 @@
 import { createPortal } from "react-dom";
-import { useAppStore } from "../../../store/app-store";
+import { isProjectDirty, useAppStore } from "../../../store/app-store";
+import { confirmUnsavedChanges } from "../../../features/project/unsavedGuard";
+
+/**
+ * Before replacing the project: offer to save unsaved changes, or else
+ * ask the plain confirmation question.
+ */
+async function confirmReplace(question: string): Promise<boolean> {
+  if (isProjectDirty(useAppStore.getState())) return confirmUnsavedChanges();
+  return window.confirm(question);
+}
 import { isElectron } from "../../../utils/is-electron";
 import { RibbonGroup, RibbonButton, RibbonSep } from "./RibbonParts";
 import {
@@ -27,16 +37,16 @@ export function DevMenu({ isOpen, onActivate, panelHost }: Props) {
     }
   };
 
-  const handleResetStore = () => {
-    const ok = window.confirm(
+  const handleResetStore = async () => {
+    const ok = await confirmReplace(
       "Reset the entire app store to defaults? This cannot be undone.",
     );
     if (!ok) return;
     useAppStore.getState().newProject();
   };
 
-  const handleLoadLovo = () => {
-    const ok = window.confirm(
+  const handleLoadLovo = async () => {
+    const ok = await confirmReplace(
       "Load Lovö models into the current workspace? This will replace current models.",
     );
     if (!ok) return;

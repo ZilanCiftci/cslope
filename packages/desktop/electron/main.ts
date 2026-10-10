@@ -93,6 +93,18 @@ function createWindow() {
     },
   });
 
+  // Ask the renderer before closing so it can offer to save unsaved
+  // changes.  Only once the renderer has registered its handler; otherwise
+  // (still loading, crashed) close normally.
+  closeGuardReady = false;
+  closeConfirmed = false;
+  win.on("close", (event) => {
+    if (closeConfirmed || !closeGuardReady || !win) return;
+    if (win.webContents.isDestroyed() || win.webContents.isCrashed()) return;
+    event.preventDefault();
+    win.webContents.send("app:closeRequested");
+  });
+
   // Notify renderer when maximized state changes
   win.on("maximize", () => win?.webContents.send("window:maximized", true));
   win.on("unmaximize", () => win?.webContents.send("window:maximized", false));
@@ -1000,6 +1012,39 @@ ipcMain.on("viewSettings:changed", (event, state) => {
 // ── Native file dialogs via IPC ──────────────────────────────
 
 let currentFilePath: string | null = null;
+
+// ── Unsaved changes guard ─────────────────────────────────────
+
+let closeGuardReady = false;
+let closeConfirmed = false;
+
+ipcMain.on("app:closeGuardReady", (event) => {
+  if (event.sender === win?.webContents) closeGuardReady = true;
+});
+
+ipcMain.on("app:closeConfirmed", (event) => {
+  if (event.sender !== win?.webContents) return;
+  closeConfirmed = true;
+  win?.close();
+});
+
+ipcMain.handle("dialog:unsavedChanges", async (event) => {
+  if (!win || event.sender !== win.webContents) return "cancel";
+  const name = currentFilePath
+    ? path.basename(currentFilePath, path.extname(currentFilePath))
+    : "Untitled";
+  const { response } = await dialog.showMessageBox(win, {
+    type: "warning",
+    title: "Unsaved changes",
+    message: `Do you want to save the changes to ${name}?`,
+    detail: "Your changes will be lost if you don't save them.",
+    buttons: ["Save", "Don't Save", "Cancel"],
+    defaultId: 0,
+    cancelId: 2,
+    noLink: true,
+  });
+  return response === 0 ? "save" : response === 1 ? "discard" : "cancel";
+});
 /**
  * Path of a file that was read but not yet loaded by the renderer.  It
  * only becomes the current (save target) path once the renderer confirms

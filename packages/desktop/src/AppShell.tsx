@@ -12,7 +12,14 @@ import {
   ResultCanvas,
   ResultSidebar,
 } from "./components";
-import { useAppStore, performUndo, performRedo } from "./store/app-store";
+import {
+  isProjectDirty,
+  performRedo,
+  performUndo,
+  useAppStore,
+} from "./store/app-store";
+import { confirmUnsavedChanges } from "./features/project/unsavedGuard";
+import { isElectron } from "./utils/is-electron";
 import { useDragDrop } from "./features/canvas/hooks/useDragDrop";
 
 export function AppShell() {
@@ -60,6 +67,32 @@ export function AppShell() {
   );
 
   const activeModel = models.find((m) => m.id === activeModelId);
+
+  // Unsaved changes: Electron asks before closing the window; a browser
+  // shows its own "leave site?" prompt.
+  useEffect(() => {
+    if (!isElectron) {
+      const onBeforeUnload = (e: BeforeUnloadEvent) => {
+        if (!isProjectDirty(useAppStore.getState())) return;
+        e.preventDefault();
+        e.returnValue = "";
+      };
+      window.addEventListener("beforeunload", onBeforeUnload);
+      return () => window.removeEventListener("beforeunload", onBeforeUnload);
+    }
+    let asking = false;
+    const unsubscribe = window.cslope.onCloseRequested(async () => {
+      if (asking) return;
+      asking = true;
+      try {
+        if (await confirmUnsavedChanges()) window.cslope.confirmClose();
+      } finally {
+        asking = false;
+      }
+    });
+    window.cslope.closeGuardReady();
+    return unsubscribe;
+  }, []);
 
   useEffect(() => {
     const blockCtrlWheel = (evt: WheelEvent) => {

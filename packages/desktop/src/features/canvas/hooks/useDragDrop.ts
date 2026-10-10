@@ -2,6 +2,7 @@ import { useEffect } from "react";
 import { parseProjectFile } from "../../../store/persistence";
 import { useAppStore } from "../../../store/app-store";
 import { isElectron } from "../../../utils/is-electron";
+import { confirmUnsavedChanges } from "../../project/unsavedGuard";
 
 /**
  * Allows dropping `.json` or `.cslope` project files onto the window.
@@ -45,6 +46,7 @@ export function useDragDrop() {
 
         if (!contents) return;
         const parsed = parseProjectFile(contents);
+        if (!(await confirmUnsavedChanges())) return;
         useAppStore.getState().loadProject(parsed);
         if (isElectron) window.cslope.confirmFileOpened();
       } catch (err) {

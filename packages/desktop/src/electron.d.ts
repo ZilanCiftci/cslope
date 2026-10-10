@@ -87,6 +87,13 @@ declare global {
       openFilePath: (filePath: string) => Promise<string | null>;
       /** Make the file just read by openFile/openFilePath the save target. */
       confirmFileOpened: () => void;
+      /** Native Save / Don't Save / Cancel prompt for unsaved changes. */
+      askUnsavedChanges: () => Promise<"save" | "discard" | "cancel">;
+      /** The renderer handles close requests (enables the close guard). */
+      closeGuardReady: () => void;
+      /** Close the main window after the unsaved-changes check passed. */
+      confirmClose: () => void;
+      onCloseRequested: (listener: (event: unknown) => void) => () => void;
       saveFile: (content: string) => Promise<boolean>;
       saveFileAs: (content: string) => Promise<boolean>;
       // Window controls

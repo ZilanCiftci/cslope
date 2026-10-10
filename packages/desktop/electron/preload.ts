@@ -31,6 +31,12 @@ contextBridge.exposeInMainWorld("cslope", {
   openFilePath: (filePath: string) =>
     ipcRenderer.invoke("file:openPath", filePath),
   confirmFileOpened: () => ipcRenderer.send("file:openConfirmed"),
+  // Unsaved changes
+  askUnsavedChanges: () => ipcRenderer.invoke("dialog:unsavedChanges"),
+  closeGuardReady: () => ipcRenderer.send("app:closeGuardReady"),
+  confirmClose: () => ipcRenderer.send("app:closeConfirmed"),
+  onCloseRequested: (listener: (event: unknown) => void) =>
+    subscribe("app:closeRequested", listener),
   saveFile: (content: string) => ipcRenderer.invoke("dialog:saveFile", content),
   saveFileAs: (content: string) =>
     ipcRenderer.invoke("dialog:saveFileAs", content),

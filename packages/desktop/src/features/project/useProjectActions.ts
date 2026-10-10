@@ -11,7 +11,11 @@ import {
   type ChangeEventHandler,
   type RefObject,
 } from "react";
-import { useAppStore } from "../../store/app-store";
+import {
+  isProjectDirty,
+  markProjectClean,
+  useAppStore,
+} from "../../store/app-store";
 import { isElectron } from "../../utils/is-electron";
 import {
   buildProjectJson,
@@ -20,6 +24,11 @@ import {
   stripJsonExt,
   triggerBrowserDownload,
 } from "./actions";
+import {
+  confirmUnsavedChanges,
+  saveProjectInElectron,
+  withUnsavedChangesCheck,
+} from "./unsavedGuard";
 
 export interface ProjectActions {
   /** Current project file-name (without `.json`). Empty for untitled. */
@@ -28,8 +37,8 @@ export interface ProjectActions {
   /** Hidden `<input type="file">` ref for browser Open dialog. */
   fileInputRef: RefObject<HTMLInputElement | null>;
 
-  /** Create a fresh, empty project. */
-  handleNew: () => void;
+  /** Create a fresh, empty project (asks about unsaved changes first). */
+  handleNew: () => void | Promise<void>;
 
   /** Open a project file (Electron dialog or browser file-picker). */
   handleOpen: () => Promise<void>;
@@ -52,32 +61,30 @@ export interface ProjectActions {
  *                         one yet (typically the active model name or
  *                         `"cslope-project"`).
  */
-/** Run an Electron save and tell the user when writing the file fails. */
-async function saveInElectron(save: () => Promise<boolean>): Promise<void> {
-  try {
-    await save();
-  } catch (err) {
-    const msg = err instanceof Error ? err.message : "Unknown error";
-    window.alert(`Unable to save project: ${msg}`);
-  }
-}
-
 export function useProjectActions(defaultBaseName: string): ProjectActions {
   const [fileName, setFileName] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // ── New ──────────────────────────────────────────────────────────
 
-  const handleNew = () => {
-    useAppStore.getState().newProject();
-    useAppStore.temporal.getState().clear();
-    setFileName("");
-    if (isElectron) window.cslope.menuNew();
-  };
+  const handleNew = () =>
+    withUnsavedChangesCheck(() => {
+      useAppStore.getState().newProject();
+      useAppStore.temporal.getState().clear();
+      setFileName("");
+      if (isElectron) window.cslope.menuNew();
+    });
 
   // ── Open ─────────────────────────────────────────────────────────
 
   const handleOpen = async () => {
+    // Stay synchronous when there is nothing to save: a browser only opens
+    // the file picker from within the click.
+    if (
+      isProjectDirty(useAppStore.getState()) &&
+      !(await confirmUnsavedChanges())
+    )
+      return;
     if (isElectron) {
       try {
         const contents = await window.cslope.openFile();
@@ -107,12 +114,13 @@ export function useProjectActions(defaultBaseName: string): ProjectActions {
     const json = buildProjectJson(useAppStore.getState());
 
     if (isElectron) {
-      await saveInElectron(() => window.cslope.saveFile(json));
+      await saveProjectInElectron();
       return;
     }
     const suggested = fileName || defaultBaseName;
     const finalName = ensureJsonName(suggested.trim());
     triggerBrowserDownload(json, finalName);
+    markProjectClean(useAppStore.getState());
     setFileName(stripJsonExt(finalName));
   };
 
@@ -124,7 +132,7 @@ export function useProjectActions(defaultBaseName: string): ProjectActions {
     const json = buildProjectJson(useAppStore.getState());
 
     if (isElectron) {
-      await saveInElectron(() => window.cslope.saveFileAs(json));
+      await saveProjectInElectron(true);
       return;
     }
     const suggested = fileName || defaultBaseName;
@@ -132,6 +140,7 @@ export function useProjectActions(defaultBaseName: string): ProjectActions {
     if (!inputName) return;
     const finalName = ensureJsonName(inputName.trim());
     triggerBrowserDownload(json, finalName);
+    markProjectClean(useAppStore.getState());
     setFileName(stripJsonExt(finalName));
   };
 
