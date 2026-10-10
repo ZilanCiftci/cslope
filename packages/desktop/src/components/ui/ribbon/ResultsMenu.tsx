@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useAppStore } from "../../../store/app-store";
+import { normalizeResultView } from "../../../store/persistence";
 import { isElectron } from "../../../utils/is-electron";
 import { exportVectorPdf } from "../../../features/pdf/pdf-export";
 import {
@@ -382,9 +383,22 @@ export function ResultsMenu({ isOpen, onActivate, panelHost }: Props) {
                     reader.onload = () => {
                       try {
                         const data = JSON.parse(reader.result as string);
-                        if (data?.resultViewSettings) {
-                          setRvs(data.resultViewSettings);
+                        if (
+                          !data?.resultViewSettings ||
+                          typeof data.resultViewSettings !== "object"
+                        ) {
+                          alert("Invalid template file.");
+                          return;
                         }
+                        // Validate like a project file; unset optional
+                        // fields so values from the current view don't
+                        // leak into the template's settings.
+                        setRvs({
+                          gridSpacing: undefined,
+                          minorTicks: undefined,
+                          viewLock: undefined,
+                          ...normalizeResultView(data.resultViewSettings),
+                        });
                       } catch {
                         alert("Invalid template file.");
                       }

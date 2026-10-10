@@ -17,6 +17,7 @@ import {
   createDefaultProjectInfo,
   DEFAULT_RESULT_VIEW_SETTINGS,
   MATERIAL_COLORS,
+  PAPER_DIMENSIONS,
 } from "./defaults";
 import type {
   AnalysisLimitsState,
@@ -308,7 +309,8 @@ function normalizeProjectInfo(raw: unknown): ProjectInfo {
   };
 }
 
-function normalizeResultView(raw: unknown): ResultViewSettings {
+/** Also used for imported view templates. */
+export function normalizeResultView(raw: unknown): ResultViewSettings {
   if (!raw || typeof raw !== "object") {
     return { ...DEFAULT_RESULT_VIEW_SETTINGS };
   }
@@ -317,8 +319,10 @@ function normalizeResultView(raw: unknown): ResultViewSettings {
     view.paperFrame ?? DEFAULT_RESULT_VIEW_SETTINGS.paperFrame;
   const paperFrame = {
     paperSize:
-      rawPaperFrame.paperSize ??
-      DEFAULT_RESULT_VIEW_SETTINGS.paperFrame.paperSize,
+      typeof rawPaperFrame.paperSize === "string" &&
+      Object.hasOwn(PAPER_DIMENSIONS, rawPaperFrame.paperSize)
+        ? rawPaperFrame.paperSize
+        : DEFAULT_RESULT_VIEW_SETTINGS.paperFrame.paperSize,
     landscape:
       typeof rawPaperFrame.landscape === "boolean"
         ? rawPaperFrame.landscape
@@ -379,14 +383,22 @@ function normalizeResultView(raw: unknown): ResultViewSettings {
     paperFrame: { ...paperFrame },
     viewLock:
       view.viewLock &&
-      Array.isArray(view.viewLock.bottomLeft) &&
-      Array.isArray(view.viewLock.topRight)
+      isFinitePair(view.viewLock.bottomLeft) &&
+      isFinitePair(view.viewLock.topRight)
         ? {
             bottomLeft: [...view.viewLock.bottomLeft],
             topRight: [...view.viewLock.topRight],
           }
         : undefined,
   };
+}
+
+function isFinitePair(value: unknown): value is [number, number] {
+  return (
+    Array.isArray(value) &&
+    value.length === 2 &&
+    value.every((v) => typeof v === "number" && Number.isFinite(v))
+  );
 }
 
 function normalizePiezo(raw: unknown): PiezometricLineState {

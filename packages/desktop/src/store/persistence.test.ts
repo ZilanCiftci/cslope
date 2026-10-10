@@ -8,7 +8,11 @@ import {
   DEFAULT_RESULT_VIEW_SETTINGS,
 } from "./defaults";
 import type { AppState, ModelEntry } from "./types";
-import { parseProjectFile, serializeProject } from "./persistence";
+import {
+  normalizeResultView,
+  parseProjectFile,
+  serializeProject,
+} from "./persistence";
 
 function makeBaseProject(models: unknown[]) {
   return JSON.stringify({
@@ -640,5 +644,25 @@ describe("persistence normalization fallbacks", () => {
     expect(rvs?.viewLock).toBeDefined();
     expect(rvs?.viewLock?.bottomLeft).toEqual([0, 0]);
     expect(rvs?.viewLock?.topRight).toEqual([10, 10]);
+  });
+});
+
+describe("normalizeResultView (also used for view templates)", () => {
+  it("replaces an unknown paper size and a malformed view lock", () => {
+    const view = normalizeResultView({
+      paperFrame: { paperSize: "Letter", landscape: true },
+      viewLock: { bottomLeft: [0, "x"], topRight: [10, 5] },
+      annotations: "nope",
+    });
+    expect(view.paperFrame.paperSize).toBe("A4");
+    expect(view.viewLock).toBeUndefined();
+    expect(view.annotations).toEqual([]);
+  });
+
+  it("keeps a valid view lock", () => {
+    const view = normalizeResultView({
+      viewLock: { bottomLeft: [0, -2], topRight: [10, 5] },
+    });
+    expect(view.viewLock).toEqual({ bottomLeft: [0, -2], topRight: [10, 5] });
   });
 });
