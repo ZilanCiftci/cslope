@@ -276,6 +276,11 @@ export function computeRegions(
     const subPieces = splitPiecesByOpenBoundaries([inner], openBoundaries);
     closedSubPolygons.push(...subPieces);
   }
+  // Process outer polygons before the ones nested inside them.  In id
+  // order (random UUIDs) an inner polygon could be cut out first, after
+  // which the outer polygon's centroid falls inside the inner piece and
+  // the regions come out wrong.
+  closedSubPolygons.sort((a, b) => polyArea(b.px, b.py) - polyArea(a.px, a.py));
 
   const pieceHoles = new Map<number, { px: number[]; py: number[] }[]>();
   const pieceOuter = new Map<number, { px: number[]; py: number[] }>();
