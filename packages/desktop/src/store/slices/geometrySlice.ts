@@ -19,6 +19,16 @@ type GeometryState = GeometrySlice & {
   models: ModelEntry[];
 };
 
+/** "Material N" with N one higher than any existing "Material <n>". */
+function nextMaterialName(materials: { name: string }[]): string {
+  let max = materials.length;
+  for (const m of materials) {
+    const match = /^Material (\d+)$/.exec(m.name);
+    if (match) max = Math.max(max, Number(match[1]));
+  }
+  return `Material ${max + 1}`;
+}
+
 const syncActiveModel = (
   state: GeometryState,
   patch: Partial<GeometrySlice>,
@@ -192,7 +202,7 @@ export const createGeometrySlice: SliceCreator<GeometrySlice> = (set, get) => ({
           ...s.materials,
           {
             id: nextId("mat"),
-            name: `Material ${s.materials.length + 1}`,
+            name: nextMaterialName(s.materials),
             color: MATERIAL_COLORS[s.materials.length % MATERIAL_COLORS.length],
             modelExpressions: {},
             model: createDefaultModel("mohr-coulomb", 20),

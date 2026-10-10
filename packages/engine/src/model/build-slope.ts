@@ -118,17 +118,7 @@ export function buildSlope(def: SlopeDefinition): Slope {
       }
     }
 
-    if (def.regionAssignments && def.regionAssignments.length > 0) {
-      // Point-based assignment: each entry maps a representative point
-      // to a material.  The engine assigns it to whichever region
-      // contains the point.
-      for (const ra of def.regionAssignments) {
-        const mat = materialsByName.get(ra.materialName);
-        if (mat) {
-          slope.assignMaterial(ra.point, mat);
-        }
-      }
-    } else {
+    if (!(def.regionAssignments && def.regionAssignments.length > 0)) {
       // Legacy boundary-name assignment (materialBoundaries carry materialName)
       for (const b of def.materialBoundaries) {
         const mat = materialsByName.get(b.materialName);
@@ -144,6 +134,20 @@ export function buildSlope(def: SlopeDefinition): Slope {
         const firstB = def.materialBoundaries[0];
         const midPt = polylineMidpoint(firstB.coordinates);
         slope.assignMaterial([midPt[0], midPt[1] + 0.01], topMat);
+      }
+    }
+  }
+
+  // Point-based assignment: each entry maps a representative point to a
+  // material, assigned to whichever region contains the point.  This also
+  // applies to a model without interior boundaries (a single region).
+  // When several points fall in the same region the FIRST one wins (same
+  // rule as the desktop canvas), so apply them in reverse order.
+  if (def.regionAssignments && def.regionAssignments.length > 0) {
+    for (const ra of [...def.regionAssignments].reverse()) {
+      const mat = materialsByName.get(ra.materialName);
+      if (mat) {
+        slope.assignMaterial(ra.point, mat);
       }
     }
   }

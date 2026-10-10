@@ -29,13 +29,25 @@ export function buildSlopeDTOFromModel(model: ModelEntry): SlopeDefinition {
   const analysisLimits = model.analysisLimits ?? { ...DEFAULT_ANALYSIS_LIMITS };
   const piezometricLine = model.piezometricLine ?? { ...DEFAULT_PIEZO_LINE };
 
+  // The engine looks materials up by name, but users can give two
+  // materials the same name.  Give every material a unique engine name
+  // (the display name, suffixed on collision) and refer to it by id.
+  const engineNameById = new Map<string, string>();
+  const usedNames = new Set<string>();
+  for (const m of materials) {
+    let name = m.name;
+    for (let k = 2; usedNames.has(name); k++) name = `${m.name} (${k})`;
+    usedNames.add(name);
+    engineNameById.set(m.id, name);
+  }
+
   const slope: SlopeDefinition = {
     orientation: model.orientation ?? "ltr",
     coordinates: model.coordinates,
     materials: materials.map((m) => {
       const flat = flatFieldsFromModel(m.model);
       return {
-        name: m.name,
+        name: engineNameById.get(m.id) ?? m.name,
         unitWeight: flat.unitWeight,
         frictionAngle: flat.frictionAngle,
         cohesion: flat.cohesion,
@@ -52,19 +64,21 @@ export function buildSlopeDTOFromModel(model: ModelEntry): SlopeDefinition {
       coordinates: b.coordinates,
       materialName: "",
     }));
+  }
 
-    // Point-based region assignments
-    if (model.regionMaterials.length > 0) {
-      slope.regionAssignments = model.regionMaterials
-        .map((a) => {
-          const mat = materials.find((m) => m.id === a.materialId);
-          return mat ? { point: a.point, materialName: mat.name } : null;
-        })
-        .filter(
-          (a): a is { point: [number, number]; materialName: string } =>
-            a !== null,
-        );
-    }
+  // Point-based region assignments.  These apply even without interior
+  // boundaries: the canvas lets the user assign a material to the single
+  // region, and the analysis must use it too.
+  if (model.regionMaterials?.length > 0) {
+    slope.regionAssignments = model.regionMaterials
+      .map((a) => {
+        const name = engineNameById.get(a.materialId);
+        return name ? { point: a.point, materialName: name } : null;
+      })
+      .filter(
+        (a): a is { point: [number, number]; materialName: string } =>
+          a !== null,
+      );
   }
 
   if (analysisLimits.enabled) {
