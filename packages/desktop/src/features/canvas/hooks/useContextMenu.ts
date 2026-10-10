@@ -14,6 +14,7 @@ import type {
   PointHit,
 } from "../types";
 import type { PiezometricLineState } from "../../../store/types";
+import { isClosedBoundary } from "../../../utils/regions";
 
 interface ContextMenuParams {
   canvasRef: RefObject<HTMLCanvasElement | null>;
@@ -243,7 +244,10 @@ export function useContextMenu(params: ContextMenuParams) {
           items.push({
             label: "Delete Point",
             danger: true,
-            disabled: !b || b.coordinates.length <= 2,
+            // Open polyline: at least 2 points; closed: at least a triangle.
+            disabled:
+              !b ||
+              b.coordinates.length <= (isClosedBoundary(b.coordinates) ? 4 : 2),
             action: () => {
               if (b && b.coordinates.length > 2) {
                 removeBoundaryPoint(pointHit.boundaryId, pointHit.pointIndex);

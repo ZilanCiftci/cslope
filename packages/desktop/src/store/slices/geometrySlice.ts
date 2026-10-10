@@ -10,7 +10,7 @@ import {
 import { nextId } from "../helpers";
 import type { SliceCreator } from "../helpers";
 import { createDefaultModel } from "../../features/properties/sections/material-forms/model-defaults";
-import { computeRegions } from "../../utils/regions";
+import { computeRegions, isClosedBoundary } from "../../utils/regions";
 import { isPointInPolygon } from "@cslope/engine";
 import type { GeometrySlice, ModelEntry, PiezoLine } from "../types";
 
@@ -101,13 +101,44 @@ export const createGeometrySlice: SliceCreator<GeometrySlice> = (set, get) => ({
   setCoordinate: (index, coord) => {
     set((s) => {
       const next = [...s.coordinates];
+      const old = next[index];
       next[index] = coord;
+
+      // Interior boundary and piezometric points that sit on the moved
+      // exterior vertex are the same vertex: move them along, or the
+      // boundary no longer reaches the exterior and its region is lost.
+      const follow = (pts: [number, number][]): [number, number][] => {
+        if (!old) return pts;
+        let moved = false;
+        const out = pts.map((p) => {
+          if (Math.abs(p[0] - old[0]) < 1e-9 && Math.abs(p[1] - old[1]) < 1e-9) {
+            moved = true;
+            return coord;
+          }
+          return p;
+        });
+        return moved ? out : pts;
+      };
+      const materialBoundaries = s.materialBoundaries.map((b) => {
+        const coordinates = follow(b.coordinates);
+        return coordinates === b.coordinates ? b : { ...b, coordinates };
+      });
+      const piezometricLine = {
+        ...s.piezometricLine,
+        lines: s.piezometricLine.lines.map((l) => {
+          const coordinates = follow(l.coordinates);
+          return coordinates === l.coordinates ? l : { ...l, coordinates };
+        }),
+      };
+
       return syncActiveModel(s, {
         coordinates: next,
         coordinateExpressions: alignCoordinateExpressions(
           next,
           s.coordinateExpressions,
         ),
+        materialBoundaries,
+        piezometricLine,
       });
     });
     get().invalidateAnalysis();
@@ -314,7 +345,14 @@ export const createGeometrySlice: SliceCreator<GeometrySlice> = (set, get) => ({
         materialBoundaries: s.materialBoundaries.map((b) => {
           if (b.id !== boundaryId) return b;
           const next = [...b.coordinates];
+          const last = next.length - 1;
           next[index] = coord;
+          // The first and last points of a closed boundary are the same
+          // vertex: move both or the polygon opens.
+          if (isClosedBoundary(b.coordinates) && (index === 0 || index === last)) {
+            next[0] = coord;
+            next[last] = coord;
+          }
           return {
             ...b,
             coordinates: next,
@@ -331,17 +369,32 @@ export const createGeometrySlice: SliceCreator<GeometrySlice> = (set, get) => ({
   removeBoundaryPoint: (boundaryId, index) => {
     set((s) =>
       syncActiveModel(s, {
-        materialBoundaries: s.materialBoundaries.map((b) =>
-          b.id === boundaryId
-            ? {
-                ...b,
-                coordinates: b.coordinates.filter((_, i) => i !== index),
-                coordinateExpressions: (b.coordinateExpressions ?? []).filter(
-                  (_, i) => i !== index,
-                ),
-              }
-            : b,
-        ),
+        materialBoundaries: s.materialBoundaries.map((b) => {
+          if (b.id !== boundaryId) return b;
+          const coords = b.coordinates;
+          const exprs = coords.map((_, i) => b.coordinateExpressions?.[i] ?? {});
+          const last = coords.length - 1;
+          if (!isClosedBoundary(coords)) {
+            return {
+              ...b,
+              coordinates: coords.filter((_, i) => i !== index),
+              coordinateExpressions: exprs.filter((_, i) => i !== index),
+            };
+          }
+          // Closed: keep at least a triangle, and treat the shared
+          // first/last vertex as one point so the polygon stays closed.
+          if (coords.length <= 4) return b;
+          const ring = coords.slice(0, last);
+          const ringExprs = exprs.slice(0, last);
+          const drop = index === last ? 0 : index;
+          const keptCoords = ring.filter((_, i) => i !== drop);
+          const keptExprs = ringExprs.filter((_, i) => i !== drop);
+          return {
+            ...b,
+            coordinates: [...keptCoords, keptCoords[0]],
+            coordinateExpressions: [...keptExprs, keptExprs[0]],
+          };
+        }),
       }),
     );
     get().invalidateAnalysis();

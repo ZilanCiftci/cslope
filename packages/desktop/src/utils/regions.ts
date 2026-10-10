@@ -27,7 +27,7 @@ export interface Region {
 // ── Helpers ───────────────────────────────────────────────────────────────
 
 /** Check whether a boundary forms a closed loop (first ≈ last point). */
-function isClosedBoundary(coords: [number, number][]): boolean {
+export function isClosedBoundary(coords: [number, number][]): boolean {
   if (coords.length < 3) return false;
   const [x0, y0] = coords[0];
   const [xn, yn] = coords[coords.length - 1];
