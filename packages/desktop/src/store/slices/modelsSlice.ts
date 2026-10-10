@@ -121,7 +121,25 @@ function createStarterModel(id: string): ModelEntry {
 
 export const INITIAL_MODEL = createStarterModel(INITIAL_MODEL_ID);
 
-export const createModelsSlice: SliceCreator<ModelsSlice> = (set, get) => ({
+/**
+ * Undo history belongs to one model.  Loading another model's data into
+ * the tracked fields must not become an undo step, or Undo would write the
+ * previous model's geometry into the newly active model.  Must run after
+ * `set` returns, because zundo records the previous state after setState.
+ */
+function clearUndoHistory(api: unknown): void {
+  (
+    api as { temporal?: { getState: () => { clear: () => void } } }
+  ).temporal
+    ?.getState()
+    .clear();
+}
+
+export const createModelsSlice: SliceCreator<ModelsSlice> = (
+  set,
+  get,
+  api,
+) => ({
   activeModelId: INITIAL_MODEL_ID,
   models: [INITIAL_MODEL],
   _pendingFitToScreen: false,
@@ -356,6 +374,7 @@ export const createModelsSlice: SliceCreator<ModelsSlice> = (set, get) => ({
       activeModelId: id,
       ...mapModelToState(target),
     });
+    if (id !== s.activeModelId) clearUndoHistory(api);
   },
 
   saveCurrentModel: () =>
@@ -415,6 +434,7 @@ export const createModelsSlice: SliceCreator<ModelsSlice> = (set, get) => ({
       ...mapModelToState(target),
       _pendingFitToScreen: !hasSavedViewport,
     });
+    clearUndoHistory(api);
   },
 
   newProject: () => {
@@ -427,6 +447,7 @@ export const createModelsSlice: SliceCreator<ModelsSlice> = (set, get) => ({
       activeModelId: id,
       ...mapModelToState(entry),
     });
+    clearUndoHistory(api);
   },
 
   loadBenchmarks: () => {
@@ -440,6 +461,7 @@ export const createModelsSlice: SliceCreator<ModelsSlice> = (set, get) => ({
       ...mapModelToState(first),
       _pendingFitToScreen: true,
     });
+    clearUndoHistory(api);
   },
 
   loadLovoModels: () => {
@@ -453,5 +475,6 @@ export const createModelsSlice: SliceCreator<ModelsSlice> = (set, get) => ({
       ...mapModelToState(first),
       _pendingFitToScreen: true,
     });
+    clearUndoHistory(api);
   },
 });

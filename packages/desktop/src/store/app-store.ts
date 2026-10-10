@@ -31,6 +31,8 @@ type UndoableState = Pick<
   | "piezometricLine"
   | "udls"
   | "lineLoads"
+  | "customSearchPlanes"
+  | "customPlanesOnly"
   | "analysisLimits"
   | "options"
   | "resultViewSettings"
@@ -61,6 +63,8 @@ export const useAppStore = create<AppState>()(
         piezometricLine: state.piezometricLine,
         udls: state.udls,
         lineLoads: state.lineLoads,
+        customSearchPlanes: state.customSearchPlanes,
+        customPlanesOnly: state.customPlanesOnly,
         analysisLimits: state.analysisLimits,
         options: state.options,
         resultViewSettings: state.resultViewSettings,
