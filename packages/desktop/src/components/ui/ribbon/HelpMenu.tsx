@@ -28,6 +28,9 @@ export function HelpMenu({ isOpen, onActivate, panelHost }: Props) {
     if (!ok) return;
     useAppStore.getState().loadBenchmarks();
     useAppStore.temporal.getState().clear();
+    // The examples are a new, unsaved project: Ctrl+S must not write them
+    // over the file that was open before.
+    if (isElectron) window.cslope.menuNew();
   };
 
   const handleAbout = () => {

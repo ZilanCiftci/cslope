@@ -69,7 +69,9 @@ export function TitleBar({ theme, onToggleTheme, activeModelName }: Props) {
         style={{ WebkitAppRegion: "no-drag" } as React.CSSProperties}
       >
         <img
-          src="/mountain.svg"
+          // Relative to the page: "/mountain.svg" would resolve to the
+          // file-system root in the packaged (file://) app.
+          src={new URL("mountain.svg", document.baseURI).href}
           alt="cSlope"
           className="w-5 h-5 mr-1"
           draggable={false}

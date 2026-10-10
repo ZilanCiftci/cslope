@@ -98,7 +98,20 @@ function createWindow() {
   // (still loading, crashed) close normally.
   closeGuardReady = false;
   closeConfirmed = false;
+  currentFilePath = null;
+  pendingOpenPath = null;
+  // A (re)loading renderer starts with a fresh, unsaved project and has
+  // not registered its close handler yet.
+  win.webContents.on("did-start-loading", () => {
+    closeGuardReady = false;
+    currentFilePath = null;
+    pendingOpenPath = null;
+    win?.setTitle("cSlope");
+  });
   win.on("close", (event) => {
+    // Automated media capture quits with SIGTERM and must never block on
+    // an unsaved-changes prompt.
+    if (process.env.CSLOPE_CAPTURE) return;
     if (closeConfirmed || !closeGuardReady || !win) return;
     if (win.webContents.isDestroyed() || win.webContents.isCrashed()) return;
     event.preventDefault();
@@ -1165,6 +1178,14 @@ ipcMain.on("menu:about", () => {
 // Quit when all windows are closed, except on macOS. There, it's common
 // for applications and their menu bar to stay active until the user quits
 // explicitly with Cmd + Q.
+// Dialog windows keep their own title; the page <title> ("cSlope") would
+// otherwise replace "Define Materials", "Piezometric Lines", ...
+app.on("browser-window-created", (_event, created) => {
+  created.on("page-title-updated", (event) => {
+    if (created !== win) event.preventDefault();
+  });
+});
+
 app.on("window-all-closed", () => {
   if (process.platform !== "darwin") {
     app.quit();

@@ -206,10 +206,13 @@ async function getFirstPage(browser: Browser): Promise<Page> {
 async function stopElectron(proc: ChildProcess): Promise<void> {
   if (proc.killed || proc.exitCode !== null) return;
   proc.kill();
-  await new Promise<void>((resolve) => {
-    proc.once("exit", () => resolve());
-    setTimeout(resolve, 2_000);
+  const exited = await new Promise<boolean>((resolve) => {
+    proc.once("exit", () => resolve(true));
+    setTimeout(() => resolve(false), 2_000);
   });
+  // A stale instance would keep the debugging port and be picked up by
+  // the next run, which would then capture an old build.
+  if (!exited && proc.exitCode === null) proc.kill("SIGKILL");
 }
 
 main().catch((err) => {

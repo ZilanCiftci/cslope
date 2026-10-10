@@ -43,6 +43,7 @@ export function DevMenu({ isOpen, onActivate, panelHost }: Props) {
     );
     if (!ok) return;
     useAppStore.getState().newProject();
+    if (isElectron) window.cslope.menuNew();
   };
 
   const handleLoadLovo = async () => {
@@ -52,6 +53,7 @@ export function DevMenu({ isOpen, onActivate, panelHost }: Props) {
     if (!ok) return;
     useAppStore.getState().loadLovoModels();
     useAppStore.temporal.getState().clear();
+    if (isElectron) window.cslope.menuNew();
   };
 
   const handleLogState = () => {

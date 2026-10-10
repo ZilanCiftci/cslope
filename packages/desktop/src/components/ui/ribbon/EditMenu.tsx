@@ -44,21 +44,28 @@ export function EditMenu({ isOpen, onActivate, panelHost }: Props) {
     const onKeyDown = (e: KeyboardEvent) => {
       const ctrl = e.ctrlKey || e.metaKey;
       if (!ctrl) return;
+      // In a text field, Ctrl+Z undoes the typing, not the model.
+      const target = e.target as HTMLElement | null;
+      if (
+        target &&
+        (target.tagName === "INPUT" ||
+          target.tagName === "TEXTAREA" ||
+          target.tagName === "SELECT" ||
+          target.isContentEditable)
+      ) {
+        return;
+      }
+      const key = e.key.toLowerCase();
 
       // Ctrl+Z  →  Undo
-      if (e.key === "z" && !e.shiftKey) {
+      if (key === "z" && !e.shiftKey) {
         e.preventDefault();
         if (canUndo) {
           performUndo();
         }
       }
       // Ctrl+Shift+Z or Ctrl+Y  →  Redo
-      else if (
-        (e.key === "Z" && e.shiftKey) ||
-        (e.key === "z" && e.shiftKey) ||
-        e.key === "y" ||
-        e.key === "Y"
-      ) {
+      else if ((key === "z" && e.shiftKey) || key === "y") {
         e.preventDefault();
         if (canRedo) {
           performRedo();
