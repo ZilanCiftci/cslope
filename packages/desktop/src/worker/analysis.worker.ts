@@ -82,6 +82,12 @@ self.onmessage = (event: MessageEvent<AnalysisRequest>) => {
     const criticalSlices: SliceData[] = [];
 
     const validSurfaces = slope.search.filter((s) => s.fos != null);
+    if (validSurfaces.length === 0) {
+      // Reporting FOS 0.000 here would read as a collapsed slope.
+      throw new Error(
+        "No valid slip surface was found. Check the search limits, the geometry and the material strengths.",
+      );
+    }
 
     if (validSurfaces.length > 0) {
       const crit = validSurfaces[0];
@@ -99,6 +105,7 @@ self.onmessage = (event: MessageEvent<AnalysisRequest>) => {
       // Convert slices for critical surface
       if (crit.slices) {
         for (const s of crit.slices) {
+          const surfaceLoad = s.udl + s.ll;
           criticalSlices.push({
             x: s.x,
             xLeft: s.xLeft,
@@ -111,9 +118,13 @@ self.onmessage = (event: MessageEvent<AnalysisRequest>) => {
             alpha: s.alpha,
             baseLength: s.baseLength,
             weight: s.weight,
+            surfaceLoad,
             cohesion: s.cohesion,
             frictionAngle: s.frictionAngle,
-            normalForce: 0, // N-force not stored on slice
+            // Same effective normal force as the results plot dialog.
+            normalForce:
+              (s.weight + surfaceLoad) * Math.cos(s.alpha) -
+              s.U * s.baseLength,
             porePressure: s.U,
             baseMaterial: s.baseMaterial!,
           });

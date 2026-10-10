@@ -1811,19 +1811,15 @@ export function drawCanvas(
         };
 
         const points = result.criticalSlices.map((slice, index) => {
-          const phiRad =
-            Math.abs(slice.frictionAngle) > Math.PI
-              ? (slice.frictionAngle * Math.PI) / 180
-              : slice.frictionAngle;
-          const phiDeg =
-            Math.abs(slice.frictionAngle) > Math.PI * 2
-              ? slice.frictionAngle
-              : (slice.frictionAngle * 180) / Math.PI;
+          // SliceData.frictionAngle is always in degrees.
+          const phiDeg = slice.frictionAngle;
+          const phiRad = (phiDeg * Math.PI) / 180;
+          const totalWeight = slice.weight + (slice.surfaceLoad ?? 0);
           const cohesionStrength = slice.cohesion * slice.baseLength;
           const frictionStrength =
             Math.max(slice.normalForce, 0) * Math.tan(phiRad);
           const resistingForce = cohesionStrength + frictionStrength;
-          const pullingForce = slice.weight * Math.sin(slice.alpha);
+          const pullingForce = totalWeight * Math.sin(slice.alpha);
           const porePressure = slice.porePressure;
           const pwp = slice.porePressure * slice.baseLength;
           const shearStrength =
@@ -1843,7 +1839,7 @@ export function drawCanvas(
                       : metric === "pwp"
                         ? pwp
                         : metric === "sliceWeight"
-                          ? slice.weight
+                          ? totalWeight
                           : metric === "cohesionStrength"
                             ? cohesionStrength
                             : metric === "resistingForce"

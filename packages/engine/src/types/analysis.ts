@@ -103,10 +103,16 @@ export interface SliceData {
   area: number;
   alpha: number;
   baseLength: number;
+  /** Soil weight of the slice (kN). */
   weight: number;
+  /** UDL and line load acting on the slice (kN). */
+  surfaceLoad?: number;
   cohesion: number;
+  /** Friction angle at the base (degrees). */
   frictionAngle: number;
+  /** Effective base normal force N' = (W + loads)·cos α − u·l (kN). */
   normalForce: number;
+  /** Pore water pressure at the base (kPa). */
   porePressure: number;
   baseMaterial: Material;
 }

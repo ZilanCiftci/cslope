@@ -220,6 +220,12 @@ export function ResultsPlotDialogApp() {
         canonical.radius,
       );
 
+      // Slices are computed in canonical (left-to-right) space; plot x in
+      // model coordinates so it matches the canvas.
+      const [xMin, xMax] = getDomainX(snapshot.model.coordinates);
+      const toModelX = (x: number) =>
+        snapshot.model.orientation === "rtl" ? mirrorX(x, xMin, xMax) : x;
+
       return slices.map((slice, index) => {
         const totalWeight = slice.weight + slice.udl + slice.ll;
         const normalEffective =
@@ -235,7 +241,7 @@ export function ResultsPlotDialogApp() {
 
         return {
           sliceNumber: index + 1,
-          xValue: slice.x,
+          xValue: toModelX(slice.x),
           shearStrength,
           frictionAngle,
           cohesion: slice.cohesion,
