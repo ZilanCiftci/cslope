@@ -8,108 +8,18 @@
 import { describe, expect, it } from "vitest";
 import { BENCHMARK_MODELS, PUBLISHED_BENCHMARKS } from "../../store/benchmarks";
 import type { ModelEntry } from "../../store/types";
-import type { SlopeDefinition } from "@cslope/engine";
-import {
-  analyseSlope,
-  buildSlope,
-  toCanonicalSlopeDefinition,
-} from "@cslope/engine";
-
-import { flatFieldsFromModel } from "../../features/properties/sections/material-forms/model-defaults";
+import { analyseSlope, buildSlope } from "@cslope/engine";
+import { buildSlopeDTOFromModel } from "../../store/helpers";
 
 // ── Helpers ─────────────────────────────────────────────────────
-
-function modelToSlopeDefinition(model: ModelEntry): SlopeDefinition {
-  const materials = model.materials;
-  const slope: SlopeDefinition = {
-    orientation: model.orientation,
-    coordinates: model.coordinates,
-    materials: materials.map((m) => {
-      const flat = flatFieldsFromModel(m.model);
-      return {
-        name: m.name,
-        unitWeight: flat.unitWeight,
-        frictionAngle: flat.frictionAngle,
-        cohesion: flat.cohesion,
-        color: m.color,
-        depthRange: m.depthRange,
-        model: m.model,
-      };
-    }),
-  };
-
-  if (model.materialBoundaries.length > 0) {
-    slope.materialBoundaries = model.materialBoundaries.map((b) => ({
-      coordinates: b.coordinates,
-      materialName: "",
-    }));
-
-    if (model.regionMaterials.length > 0) {
-      slope.regionAssignments = model.regionMaterials
-        .map((a) => {
-          const mat = materials.find((m) => m.id === a.materialId);
-          return mat ? { point: a.point, materialName: mat.name } : null;
-        })
-        .filter(
-          (a): a is { point: [number, number]; materialName: string } =>
-            a !== null,
-        );
-    }
-  }
-
-  if (model.analysisLimits.enabled) {
-    slope.analysisLimits = {
-      entryLeftX: model.analysisLimits.entryLeftX,
-      entryRightX: model.analysisLimits.entryRightX,
-      exitLeftX: model.analysisLimits.exitLeftX,
-      exitRightX: model.analysisLimits.exitRightX,
-    };
-  }
-
-  if (model.piezometricLine.lines.length > 0) {
-    const firstLine = model.piezometricLine.lines[0];
-    if (firstLine.coordinates.length >= 2) {
-      slope.waterTable = {
-        mode: "custom",
-        value: firstLine.coordinates,
-      };
-    }
-  }
-
-  if (model.udls.length > 0) {
-    slope.udls = model.udls.map((udl) => ({
-      magnitude: udl.magnitude,
-      x1: udl.x1,
-      x2: udl.x2,
-    }));
-  }
-
-  if (model.lineLoads.length > 0) {
-    slope.lineLoads = model.lineLoads.map((ll) => ({
-      magnitude: ll.magnitude,
-      x: ll.x,
-    }));
-  }
-
-  if (model.customSearchPlanes.length > 0) {
-    slope.customSearchPlanes = model.customSearchPlanes.map((p) => ({
-      cx: p.cx,
-      cy: p.cy,
-      radius: p.radius,
-    }));
-    slope.customPlanesOnly = model.customPlanesOnly;
-  }
-
-  return slope;
-}
+// Benchmarks go through the same request builder as the app
+// (buildSlopeDTOFromModel), so they validate what users actually run.
 
 function runBenchmark(
   model: ModelEntry,
   methodOverride?: string,
 ): { minFos: number; surfaceCount: number } {
-  const definition = modelToSlopeDefinition(model);
-  const canonical = toCanonicalSlopeDefinition(definition);
-  const slope = buildSlope(canonical);
+  const slope = buildSlope(buildSlopeDTOFromModel(model));
 
   slope.updateAnalysisOptions({
     ...model.options,

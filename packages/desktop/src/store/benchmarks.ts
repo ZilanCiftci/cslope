@@ -693,21 +693,21 @@ export const PUBLISHED_BENCHMARKS: PublishedBenchmark[] = [
     name: "T-ACADS Simple",
     method: "Morgenstern-Price",
     publishedFos: 0.984,
-    tolerance: 0.05,
+    tolerance: 0.01,
   },
   {
     modelId: "example-tacads-simple",
     name: "T-ACADS Simple",
     method: "Bishop",
     publishedFos: 0.985,
-    tolerance: 0.05,
+    tolerance: 0.01,
   },
   {
     modelId: "example-tacads-simple",
     name: "T-ACADS Simple",
     method: "Janbu",
     publishedFos: 0.938,
-    tolerance: 0.05,
+    tolerance: 0.01,
   },
 
   // T-ACADS Non-Homogeneous — 3 materials, 2 interior boundaries
@@ -716,7 +716,7 @@ export const PUBLISHED_BENCHMARKS: PublishedBenchmark[] = [
     name: "T-ACADS Non-Homogeneous",
     method: "Morgenstern-Price",
     publishedFos: 1.373,
-    tolerance: 0.05,
+    tolerance: 0.015,
   },
 
   // Arai & Tagyo (1985) — with water table
@@ -725,7 +725,7 @@ export const PUBLISHED_BENCHMARKS: PublishedBenchmark[] = [
     name: "Arai & Tagyo (1985)",
     method: "Bishop",
     publishedFos: 1.138,
-    tolerance: 0.05,
+    tolerance: 0.025,
   },
 
   // Talbingo Dam — RTL multi-material dam
@@ -734,7 +734,7 @@ export const PUBLISHED_BENCHMARKS: PublishedBenchmark[] = [
     name: "Talbingo Dam",
     method: "Morgenstern-Price",
     publishedFos: 1.95,
-    tolerance: 0.05,
+    tolerance: 0.015,
   },
 
   // Talbingo Dam (Single Circle) — prescribed slip surface
@@ -743,6 +743,6 @@ export const PUBLISHED_BENCHMARKS: PublishedBenchmark[] = [
     name: "Talbingo Dam (Single Circle)",
     method: "Morgenstern-Price",
     publishedFos: 2.29,
-    tolerance: 0.05,
+    tolerance: 0.02,
   },
 ];
