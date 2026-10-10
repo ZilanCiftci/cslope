@@ -79,7 +79,14 @@ export function DefineMaterialsDialog({ onClose, mode = "popup" }: Props) {
     newKind: MaterialModelKind,
   ) => {
     const newModel = createDefaultModel(newKind, currentModel.unitWeight);
-    setModel(matId, newModel);
+    // Expressions belong to the old kind's fields; keep only γ, which
+    // every kind has, or a stale expression would come back later.
+    const mat = materials.find((m) => m.id === matId);
+    const unitWeightExpr = mat?.modelExpressions?.unitWeight;
+    updateMaterial(matId, {
+      model: newModel,
+      modelExpressions: unitWeightExpr ? { unitWeight: unitWeightExpr } : {},
+    });
   };
 
   const handleAdd = () => {

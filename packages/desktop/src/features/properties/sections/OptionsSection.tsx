@@ -1,5 +1,6 @@
 import { useState } from "react";
 import type { AnalysisMethod, IntersliceFunctionType } from "@cslope/engine";
+import { ITERATIONS_RANGE } from "@cslope/engine";
 import { useAppStore } from "../../../store/app-store";
 import { Section } from "../../../components/ui/Section";
 import { Label } from "../../../components/ui/Label";
@@ -111,7 +112,7 @@ export function OptionsSection({ plain = false }: OptionsSectionProps) {
     slicesDraft.trim() === "" || slicesParsed < 10 || slicesParsed > 500;
   const iterationsInvalid =
     iterationsDraft.trim() === "" ||
-    iterationsParsed < 100 ||
+    iterationsParsed < ITERATIONS_RANGE.min ||
     iterationsParsed > 100000;
   const refinedIterationsInvalid =
     refinedIterationsDraft.trim() === "" ||
@@ -221,19 +222,31 @@ export function OptionsSection({ plain = false }: OptionsSectionProps) {
           <Label>Iterations</Label>
           <input
             type="number"
-            min={100}
-            max={100000}
+            min={ITERATIONS_RANGE.min}
+            max={ITERATIONS_RANGE.max}
             step={100}
             value={iterationsDraft}
             onChange={(e) => {
               const value = e.target.value;
               setIterationsDraft(value);
-              commitWhileTyping("iterations", value, 100, 100000, true);
+              commitWhileTyping(
+                "iterations",
+                value,
+                ITERATIONS_RANGE.min,
+                ITERATIONS_RANGE.max,
+                true,
+              );
             }}
             onBlur={(e) => {
               const parsed = Number(e.target.value);
               const normalized = Number.isFinite(parsed)
-                ? Math.round(clampNumber(parsed, 100, 100000))
+                ? Math.round(
+                    clampNumber(
+                      parsed,
+                      ITERATIONS_RANGE.min,
+                      ITERATIONS_RANGE.max,
+                    ),
+                  )
                 : options.iterations;
               setOptions({ iterations: normalized });
               setIterationsDraft(String(normalized));

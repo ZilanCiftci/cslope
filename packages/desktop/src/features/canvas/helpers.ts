@@ -27,9 +27,9 @@ export const MATERIAL_TABLE_COLUMNS: Array<{
 }> = [
   { key: "model", label: "Material Model" },
   { key: "unitWeight", label: "Unit Weight (kN/m3)" },
-  { key: "cohesion", label: "Undrained Shear Strength (kPa)" },
+  { key: "cohesion", label: "Cohesion / Su (kPa)" },
   { key: "piezometricLine", label: "Piezometric Surface" },
-  { key: "depthRef", label: "Datum (Elevation) (m)" },
+  { key: "depthRef", label: "Datum Elevation / Ref. Depth (m)" },
   { key: "cDatum", label: "C-Datum (kPa)" },
   { key: "cRate", label: "C-Rate of Change (kN/m2/m)" },
   { key: "frictionAngle", label: "Effective Friction Angle (\u00b0)" },
@@ -57,10 +57,24 @@ function formatMaterialCell(
       return MODEL_SHORT_LABELS[material.model.kind];
     case "unitWeight":
       return `${f.unitWeight}`;
-    case "frictionAngle":
-      return `${f.frictionAngle}\u00b0`;
-    case "cohesion":
-      return `${f.cohesion}`;
+    case "frictionAngle": {
+      // Only models with a friction angle; φ = 0 for undrained strength.
+      const k = material.model.kind;
+      if (k === "mohr-coulomb" || k === "anisotropic-function")
+        return `${f.frictionAngle}\u00b0`;
+      if (k === "undrained" || k === "s-f-depth" || k === "s-f-datum")
+        return "0\u00b0";
+      return "-";
+    }
+    case "cohesion": {
+      // Effective c' for Mohr-Coulomb, Su for undrained; depth/datum
+      // strength is in the C-Datum columns, others have no single value.
+      const m = material.model;
+      if (m.kind === "mohr-coulomb" || m.kind === "anisotropic-function")
+        return `${m.cohesion}`;
+      if (m.kind === "undrained") return `${m.undrainedShearStrength}`;
+      return "-";
+    }
     case "piezometricLine": {
       // Unassigned materials use the first line (same rule as the analysis).
       const lines = piezometricLine?.lines ?? [];

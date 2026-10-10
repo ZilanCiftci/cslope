@@ -86,6 +86,9 @@ export const DEFAULT_PIEZO_LINE: PiezometricLineState = {
   materialAssignment: {},
 };
 
+/** Allowed FOS convergence tolerance (options form and file loading). */
+export const TOLERANCE_RANGE = { min: 0.001, max: 0.1 } as const;
+
 /** Analysis options for a new model (the app's defaults, not the engine's). */
 export const APP_DEFAULT_ANALYSIS_OPTIONS: AnalysisOptions = {
   ...DEFAULT_ANALYSIS_OPTIONS,

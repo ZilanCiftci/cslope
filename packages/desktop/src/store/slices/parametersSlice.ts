@@ -8,6 +8,46 @@ import {
   resolveMaterialModel,
   resolveParameters,
 } from "../../utils/expression";
+import type { CoordinateExpression } from "../../utils/expression";
+import { isClosedBoundary } from "../../utils/regions";
+
+type Point = [number, number];
+
+const samePoint = (a: Point, b: Point) =>
+  Math.abs(a[0] - b[0]) < 1e-9 && Math.abs(a[1] - b[1]) < 1e-9;
+
+const hasExpression = (e: CoordinateExpression | undefined) =>
+  !!(e?.x?.trim() || e?.y?.trim());
+
+/**
+ * Keep shared vertices together after re-resolving expressions, the same
+ * way direct edits do: a boundary/piezo point without its own expression
+ * that sat on an exterior vertex follows that vertex, and a closed
+ * boundary keeps its first and last points equal.
+ */
+function keepVerticesAttached(
+  before: Point[],
+  exprs: CoordinateExpression[],
+  after: Point[],
+  moves: { from: Point; to: Point }[],
+): Point[] {
+  const next = after.map((p, i) => {
+    if (hasExpression(exprs[i])) return p;
+    const move = moves.find((m) => samePoint(m.from, before[i]));
+    return move ? move.to : p;
+  });
+  if (isClosedBoundary(before) && next.length > 1) {
+    const last = next.length - 1;
+    if (!samePoint(next[0], next[last])) {
+      if (hasExpression(exprs[last]) && !hasExpression(exprs[0])) {
+        next[0] = next[last];
+      } else {
+        next[last] = next[0];
+      }
+    }
+  }
+  return next;
+}
 
 type ParametersState = AppState;
 
@@ -23,12 +63,18 @@ const syncActiveModelParameters = (
     resolved,
   );
 
+  // Exterior vertices moved by the new parameter values.
+  const moves = state.coordinates
+    .map((from, i) => ({ from, to: resolvedCoordinates[i] }))
+    .filter((m) => m.to && !samePoint(m.from, m.to));
+
   const resolvedMaterialBoundaries = state.materialBoundaries.map((b) => ({
     ...b,
-    coordinates: resolveCoordinates(
+    coordinates: keepVerticesAttached(
       b.coordinates,
       b.coordinateExpressions ?? [],
-      resolved,
+      resolveCoordinates(b.coordinates, b.coordinateExpressions ?? [], resolved),
+      moves,
     ),
   }));
 
@@ -36,10 +82,15 @@ const syncActiveModelParameters = (
     ...state.piezometricLine,
     lines: state.piezometricLine.lines.map((line) => ({
       ...line,
-      coordinates: resolveCoordinates(
+      coordinates: keepVerticesAttached(
         line.coordinates,
         line.coordinateExpressions ?? [],
-        resolved,
+        resolveCoordinates(
+          line.coordinates,
+          line.coordinateExpressions ?? [],
+          resolved,
+        ),
+        moves,
       ),
     })),
   };

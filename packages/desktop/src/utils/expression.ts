@@ -219,10 +219,10 @@ export function resolveMaterialModel(
     const expr = expression.trim();
     if (expr.length === 0) continue;
 
+    // Only fields the model actually has: an expression left over from
+    // another model kind must not add a stray field.
     const current = next[field];
-    if (typeof current !== "number" && typeof current !== "undefined") {
-      continue;
-    }
+    if (typeof current !== "number") continue;
 
     try {
       next[field] = evaluate(expr, vars);

@@ -1,12 +1,17 @@
 import {
+  ITERATIONS_RANGE,
+  REFINED_ITERATIONS_RANGE,
+  SLICES_RANGE,
   resolveOrientation,
   type AnalysisOptions,
   type MaterialModel,
 } from "@cslope/engine";
 import { DEFAULT_MODEL_NAME } from "../constants";
+import { nextId } from "./helpers";
 import {
   APP_DEFAULT_ANALYSIS_OPTIONS,
   DEFAULT_ANALYSIS_LIMITS,
+  TOLERANCE_RANGE,
   DEFAULT_MATERIAL,
   DEFAULT_PIEZO_LINE,
   createDefaultProjectInfo,
@@ -120,13 +125,17 @@ function normalizeModelEntry(raw: unknown): ModelEntry {
       normalizeMaterial(m, i),
     ),
     materialBoundaries: (Array.isArray(model.materialBoundaries)
-      ? model.materialBoundaries.map((boundary) => {
+      ? model.materialBoundaries
+          .filter((b) => b && typeof b === "object")
+          .map((boundary) => {
           const boundaryRecord = boundary as Record<string, unknown>;
-          const boundaryCoordinates = Array.isArray(boundaryRecord.coordinates)
-            ? [...boundaryRecord.coordinates]
-            : [];
+          const boundaryCoordinates = normalizePoints(boundaryRecord.coordinates);
           return {
             ...boundaryRecord,
+            id:
+              typeof boundaryRecord.id === "string"
+                ? boundaryRecord.id
+                : nextId("bnd"),
             coordinates: boundaryCoordinates,
             coordinateExpressions: normalizeCoordinateExpressions(
               boundaryRecord.coordinateExpressions,
@@ -159,28 +168,48 @@ function normalizeModelEntry(raw: unknown): ModelEntry {
       ? normalizeAnalysisOptions(model.options)
       : { ...APP_DEFAULT_ANALYSIS_OPTIONS },
     analysisLimits: normalizeAnalysisLimits(model.analysisLimits),
-    editViewOffset: (model.editViewOffset ??
-      model.viewOffset) as ModelEntry["editViewOffset"],
-    editViewScale: (model.editViewScale ??
-      model.viewScale) as ModelEntry["editViewScale"],
-    resultViewOffset: (model.resultViewOffset ??
-      model.viewOffset) as ModelEntry["resultViewOffset"],
-    resultViewScale: (model.resultViewScale ??
-      model.viewScale) as ModelEntry["resultViewScale"],
-    customSearchPlanes: (Array.isArray(model.customSearchPlanes)
-      ? model.customSearchPlanes
-      : []) as ModelEntry["customSearchPlanes"],
+    editViewOffset: pointOrUndefined(model.editViewOffset ?? model.viewOffset),
+    editViewScale: positiveOrUndefined(model.editViewScale ?? model.viewScale),
+    resultViewOffset: pointOrUndefined(
+      model.resultViewOffset ?? model.viewOffset,
+    ),
+    resultViewScale: positiveOrUndefined(
+      model.resultViewScale ?? model.viewScale,
+    ),
+    customSearchPlanes: Array.isArray(model.customSearchPlanes)
+      ? (model.customSearchPlanes as unknown[]).flatMap((raw) => {
+          if (!raw || typeof raw !== "object") return [];
+          const p = raw as Record<string, unknown>;
+          const [cx, cy, radius] = [p.cx, p.cy, p.radius];
+          if (
+            typeof cx !== "number" || !Number.isFinite(cx) ||
+            typeof cy !== "number" || !Number.isFinite(cy) ||
+            typeof radius !== "number" || !Number.isFinite(radius) ||
+            radius <= 0
+          ) {
+            return [];
+          }
+          return [
+            { id: typeof p.id === "string" ? p.id : nextId("plane"), cx, cy, radius },
+          ];
+        })
+      : [],
     customPlanesOnly: (model.customPlanesOnly ===
       true) as ModelEntry["customPlanesOnly"],
     resultViewSettings: normalizeResultView(model.resultViewSettings),
-    viewOffset: model.viewOffset as ModelEntry["viewOffset"],
-    viewScale: model.viewScale as ModelEntry["viewScale"],
+    viewOffset: pointOrUndefined(model.viewOffset),
+    viewScale: positiveOrUndefined(model.viewScale),
     // A run cannot survive a save/load: no worker exists for it any more.
     ...(model.runState === "running"
       ? { runState: "idle" as const, progress: 0 }
       : {
-          runState: model.runState as ModelEntry["runState"],
-          progress: model.progress as ModelEntry["progress"],
+          runState:
+            model.runState === "done" || model.runState === "error"
+              ? model.runState
+              : ("idle" as const),
+          progress: Number.isFinite(model.progress)
+            ? (model.progress as number)
+            : 0,
         }),
     result: (model.result as ModelEntry["result"]) ?? null,
     errorMessage: (model.errorMessage as ModelEntry["errorMessage"]) ?? null,
@@ -189,6 +218,29 @@ function normalizeModelEntry(raw: unknown): ModelEntry {
         ? model.mode
         : undefined,
   };
+}
+
+/** Keep only finite [x, y] pairs. */
+function normalizePoints(raw: unknown): [number, number][] {
+  if (!Array.isArray(raw)) return [];
+  return raw.flatMap((p) =>
+    Array.isArray(p) && Number.isFinite(p[0]) && Number.isFinite(p[1])
+      ? [[p[0] as number, p[1] as number] as [number, number]]
+      : [],
+  );
+}
+
+function pointOrUndefined(raw: unknown): [number, number] | undefined {
+  return Array.isArray(raw) && Number.isFinite(raw[0]) && Number.isFinite(raw[1])
+    ? [raw[0] as number, raw[1] as number]
+    : undefined;
+}
+
+/** View scale: finite and not negative (0 means "fit automatically"). */
+function positiveOrUndefined(raw: unknown): number | undefined {
+  return typeof raw === "number" && Number.isFinite(raw) && raw >= 0
+    ? raw
+    : undefined;
 }
 
 function isRegionAssignment(
@@ -342,25 +394,40 @@ function normalizePiezo(raw: unknown): PiezometricLineState {
     return { ...DEFAULT_PIEZO_LINE };
   }
   const piezo = raw as Partial<PiezometricLineState>;
+  const lines = Array.isArray(piezo.lines)
+    ? piezo.lines
+        .filter((l) => l && typeof l === "object")
+        .map((l) => {
+          const coordinates = normalizePoints(l.coordinates);
+          return {
+            ...l,
+            id: typeof l.id === "string" ? l.id : nextId("piezo"),
+            coordinates,
+            coordinateExpressions: normalizeCoordinateExpressions(
+              l.coordinateExpressions,
+              coordinates.length,
+              true,
+            ),
+          };
+        })
+    : [];
+  // Edits go to the active line; without one they would be dropped.
+  const activeLineId =
+    typeof piezo.activeLineId === "string" &&
+    lines.some((l) => l.id === piezo.activeLineId)
+      ? piezo.activeLineId
+      : (lines[0]?.id ?? null);
+  const materialAssignment: Record<string, string> = {};
+  if (piezo.materialAssignment && typeof piezo.materialAssignment === "object") {
+    for (const [matId, lineId] of Object.entries(piezo.materialAssignment)) {
+      if (typeof lineId === "string") materialAssignment[matId] = lineId;
+    }
+  }
   return {
     enabled: piezo.enabled ?? false,
-    lines: Array.isArray(piezo.lines)
-      ? piezo.lines.map((l) => ({
-          ...l,
-          coordinates: Array.isArray(l.coordinates) ? [...l.coordinates] : [],
-          coordinateExpressions: normalizeCoordinateExpressions(
-            l.coordinateExpressions,
-            Array.isArray(l.coordinates) ? l.coordinates.length : 0,
-            true,
-          ),
-        }))
-      : [],
-    activeLineId:
-      typeof piezo.activeLineId === "string" ? piezo.activeLineId : null,
-    materialAssignment:
-      piezo.materialAssignment && typeof piezo.materialAssignment === "object"
-        ? (piezo.materialAssignment as Record<string, string>)
-        : {},
+    lines,
+    activeLineId,
+    materialAssignment,
   };
 }
 
@@ -543,7 +610,11 @@ function normalizeLoadExpressions(
 // ── 4.4 — analysisLimits type validation ──
 
 function normalizeAnalysisLimits(raw: unknown): AnalysisLimitsState {
-  if (!raw || typeof raw !== "object") return { ...DEFAULT_ANALYSIS_LIMITS };
+  // The default numbers are tuned for the starter geometry; a file without
+  // limits should search the whole slope, not x 4–15.
+  if (!raw || typeof raw !== "object") {
+    return { ...DEFAULT_ANALYSIS_LIMITS, enabled: false };
+  }
   const a = raw as Record<string, unknown>;
   return {
     enabled:
@@ -582,27 +653,40 @@ function normalizeAnalysisOptions(raw: unknown): AnalysisOptions {
 
   return {
     ...base,
-    ...o,
+    janbuCorrection:
+      typeof o.janbuCorrection === "boolean"
+        ? o.janbuCorrection
+        : base.janbuCorrection,
     method:
       o.method === "Bishop" ||
       o.method === "Janbu" ||
       o.method === "Morgenstern-Price"
         ? o.method
         : base.method,
-    slices: Math.max(10, Math.min(500, finiteOr(o.slices, base.slices))),
+    // Same ranges as the engine and the options form.
+    slices: Math.max(
+      SLICES_RANGE.min,
+      Math.min(SLICES_RANGE.max, finiteOr(o.slices, base.slices)),
+    ),
     iterations: Math.max(
-      500,
-      Math.min(100000, finiteOr(o.iterations, base.iterations)),
+      ITERATIONS_RANGE.min,
+      Math.min(ITERATIONS_RANGE.max, finiteOr(o.iterations, base.iterations)),
     ),
     refinedIterations: Math.max(
-      0,
-      Math.min(100000, finiteOr(o.refinedIterations, base.refinedIterations)),
+      REFINED_ITERATIONS_RANGE.min,
+      Math.min(
+        REFINED_ITERATIONS_RANGE.max,
+        finiteOr(o.refinedIterations, base.refinedIterations),
+      ),
     ),
     minFailureDist: Math.max(
       0,
       finiteOr(o.minFailureDist, base.minFailureDist),
     ),
-    tolerance: Math.max(0.000001, finiteOr(o.tolerance, base.tolerance)),
+    tolerance: Math.max(
+      TOLERANCE_RANGE.min,
+      Math.min(TOLERANCE_RANGE.max, finiteOr(o.tolerance, base.tolerance)),
+    ),
     maxIterations: Math.max(1, finiteOr(o.maxIterations, base.maxIterations)),
     intersliceFunction,
     intersliceDataPoints,

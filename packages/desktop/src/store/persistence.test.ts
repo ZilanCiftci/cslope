@@ -589,7 +589,7 @@ describe("persistence normalization fallbacks", () => {
       makeBaseProject([
         {
           ...minimalModel,
-          customSearchPlanes: [{ id: "csp1", x1: 0, x2: 10 }],
+          customSearchPlanes: [{ id: "csp1", cx: 5, cy: 12, radius: 9 }],
           customPlanesOnly: true,
         },
       ]),

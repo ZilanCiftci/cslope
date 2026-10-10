@@ -244,12 +244,21 @@ export const createGeometrySlice: SliceCreator<GeometrySlice> = (set, get) => ({
     get().invalidateAnalysis();
   },
   removeMaterial: (id) => {
-    set((s) =>
-      syncActiveModel(s, {
-        materials: s.materials.filter((m) => m.id !== id),
-        regionMaterials: s.regionMaterials.filter((a) => a.materialId !== id),
-      }),
-    );
+    // A model always keeps at least one material (the default region).
+    if (get().materials.length <= 1) return;
+    set((s) => {
+      const materialAssignment = { ...s.piezometricLine.materialAssignment };
+      delete materialAssignment[id];
+      return {
+        ...syncActiveModel(s, {
+          materials: s.materials.filter((m) => m.id !== id),
+          regionMaterials: s.regionMaterials.filter((a) => a.materialId !== id),
+          piezometricLine: { ...s.piezometricLine, materialAssignment },
+        }),
+        assigningMaterialId:
+          s.assigningMaterialId === id ? null : s.assigningMaterialId,
+      };
+    });
     get().invalidateAnalysis();
   },
 
