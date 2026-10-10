@@ -135,12 +135,15 @@ function resolveMohrCoulomb(
     model.cohesion + (refDepth - context.yBottom) * rateOfChange;
 
   const cFactor = model.cFactor ?? 0;
-  const cohesion = cFactor !== 0 ? baseCohesion * cFactor : baseCohesion;
+  const cohesion = nonNegative(
+    cFactor !== 0 ? baseCohesion * cFactor : baseCohesion,
+  );
 
   // Undrained cohesion (used by Combined method)
-  const cohesionUndrained =
+  const cohesionUndrained = nonNegative(
     (model.cohesionUndrained ?? model.cohesion) +
-    (refDepth - context.yBottom) * rateOfChange;
+      (refDepth - context.yBottom) * rateOfChange,
+  );
 
   return {
     cohesion,
@@ -156,7 +159,9 @@ function resolveUndrained(
 ): ResolvedStrength {
   const refDepth = model.suRefDepth ?? 0;
   const rate = model.suRateOfChange ?? 0;
-  const su = model.undrainedShearStrength + (refDepth - context.yBottom) * rate;
+  const su = nonNegative(
+    model.undrainedShearStrength + (refDepth - context.yBottom) * rate,
+  );
 
   return {
     cohesion: su,
@@ -232,7 +237,7 @@ function resolveStrengthFromDepth(
   context: StrengthContext,
 ): ResolvedStrength {
   const depth = context.yGround - context.yBottom;
-  const su = model.suRef + (depth - model.depthRef) * model.rate;
+  const su = nonNegative(model.suRef + (depth - model.depthRef) * model.rate);
 
   return {
     cohesion: su,
@@ -245,7 +250,9 @@ function resolveStrengthFromDatum(
   model: Extract<MaterialModel, { kind: "s-f-datum" }>,
   context: StrengthContext,
 ): ResolvedStrength {
-  const su = model.suRef + (context.yBottom - model.yRef) * model.rate;
+  const su = nonNegative(
+    model.suRef + (context.yBottom - model.yRef) * model.rate,
+  );
 
   return {
     cohesion: su,
@@ -255,6 +262,15 @@ function resolveStrengthFromDatum(
 }
 
 // ── Helpers ────────────────────────────────────────────────────
+
+/**
+ * Linearly varying strength can extrapolate below zero far from its
+ * reference level; negative shear strength is not physical and would
+ * produce a meaningless (near-zero) factor of safety.
+ */
+function nonNegative(value: number): number {
+  return value > 0 ? value : 0;
+}
 
 /**
  * Linearly interpolate a 1-D function defined by sorted (x, y) pairs.

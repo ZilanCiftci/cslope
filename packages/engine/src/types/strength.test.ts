@@ -740,3 +740,37 @@ describe("interpolateNearest", () => {
     expect(pts[0].values[0]).toBe(10); // original unchanged
   });
 });
+
+describe("resolveStrength — linear variation never goes negative", () => {
+  const c = { yBottom: -20, x: 0, yGround: 0, alpha: 0 };
+  it("clamps S = f(datum) at zero", () => {
+    const r = resolveStrength(
+      { kind: "s-f-datum", unitWeight: 18, suRef: 30, yRef: 0, rate: 5 },
+      c,
+    );
+    expect(r.cohesion).toBe(0);
+    expect(r.cohesionUndrained).toBe(0);
+  });
+  it("clamps S = f(depth) at zero", () => {
+    const r = resolveStrength(
+      { kind: "s-f-depth", unitWeight: 18, suRef: 10, depthRef: 0, rate: -2 },
+      c,
+    );
+    expect(r.cohesion).toBe(0);
+  });
+  it("clamps Mohr-Coulomb cohesion at zero", () => {
+    const r = resolveStrength(
+      {
+        kind: "mohr-coulomb",
+        unitWeight: 18,
+        cohesion: 5,
+        frictionAngle: 30,
+        cohesionRefDepth: -30,
+        cohesionRateOfChange: 1,
+      },
+      c,
+    );
+    expect(r.cohesion).toBe(0);
+    expect(r.frictionAngle).toBe(30);
+  });
+});
