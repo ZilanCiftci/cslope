@@ -24,7 +24,8 @@ export class ExpressionError extends Error {
     | "TOKEN"
     | "SYNTAX"
     | "UNKNOWN_VARIABLE"
-    | "DIVISION_BY_ZERO";
+    | "DIVISION_BY_ZERO"
+    | "NOT_FINITE";
 
   constructor(
     code:
@@ -32,7 +33,8 @@ export class ExpressionError extends Error {
       | "TOKEN"
       | "SYNTAX"
       | "UNKNOWN_VARIABLE"
-      | "DIVISION_BY_ZERO",
+      | "DIVISION_BY_ZERO"
+      | "NOT_FINITE",
     message: string,
   ) {
     super(message);
@@ -72,6 +74,9 @@ export function evaluate(
   const parser = new Parser(tokenize(source), vars);
   const value = parser.parseExpression();
   parser.expect("eof", "Unexpected token at end of expression.");
+  if (typeof value !== "number" || !Number.isFinite(value)) {
+    throw new ExpressionError("NOT_FINITE", "Result is not a finite number.");
+  }
   return value;
 }
 
@@ -393,7 +398,9 @@ class Parser {
 
     if (this.match("ident")) {
       const name = this.previous().lexeme;
-      if (!(name in this.vars)) {
+      // Own properties only: `in` would also accept inherited names such
+      // as "toString" or "constructor" and return a function or string.
+      if (!Object.hasOwn(this.vars, name)) {
         throw new ExpressionError(
           "UNKNOWN_VARIABLE",
           `Unknown variable: ${name}.`,

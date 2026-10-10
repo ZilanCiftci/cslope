@@ -176,3 +176,19 @@ describe("resolveMaterialModel", () => {
     expect(next.suRateOfChange).toBe(0.5);
   });
 });
+
+describe("evaluate rejects non-numeric and non-finite results", () => {
+  it("does not resolve inherited object properties as variables", () => {
+    expect(() => evaluate("toString", {})).toThrow(ExpressionError);
+    expect(() => evaluate("constructor + 1", {})).toThrow(ExpressionError);
+    expect(() => evaluate("valueOf * 2", {})).toThrow(ExpressionError);
+  });
+
+  it("rejects results that overflow to Infinity", () => {
+    expect(() => evaluate("1e200 * 1e200", {})).toThrow(ExpressionError);
+  });
+
+  it("still evaluates own variables", () => {
+    expect(evaluate("h * 2", { h: 3 })).toBe(6);
+  });
+});
