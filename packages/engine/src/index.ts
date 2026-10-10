@@ -49,7 +49,11 @@ export type {
 export { MATERIAL_MODEL_LABELS } from "./types/material-models";
 
 // Strength resolution
-export { resolveStrength, interpolateFunction } from "./types/strength";
+export {
+  resolveStrength,
+  resolveUnitWeight,
+  interpolateFunction,
+} from "./types/strength";
 export type { ResolvedStrength, StrengthContext } from "./types/strength";
 
 // Validation

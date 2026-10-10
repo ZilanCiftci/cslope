@@ -3,7 +3,7 @@
  */
 
 import type { GeometryWithMaterial, Slice } from "../types/index";
-import { resolveStrength } from "../types/index";
+import { resolveStrength, resolveUnitWeight } from "../types/index";
 import { WATER_UNIT_WEIGHT, SLICE_DEDUP_TOLERANCE } from "../types/constants";
 import {
   getCircleYCoordinateAtX,
@@ -135,7 +135,7 @@ export function createSlice(
     // Calculate area and weight
     const area = calculatePolygonArea(mpx, mpy);
     totalArea += area;
-    totalWeight += area * m.material.unitWeight;
+    totalWeight += area * fragmentUnitWeight(m.material, mpx, mpy, area);
 
     // Check if this material is at the base of the slice
     if (isPointInPolygon(x, yBottom + 1e-10, mpx, mpy)) {
@@ -456,4 +456,35 @@ export function getSlices(
   }
 
   return results;
+}
+
+/**
+ * Unit weight of a clipped material fragment: the material's γ, or for a
+ * spatially varying model the γ interpolated at the fragment centroid.
+ */
+function fragmentUnitWeight(
+  material: GeometryWithMaterial["material"],
+  px: number[],
+  py: number[],
+  area: number,
+): number {
+  if (material.model.kind !== "spatial-mohr-coulomb" || area <= 0) {
+    return material.unitWeight;
+  }
+  let a2 = 0;
+  let cx = 0;
+  let cy = 0;
+  for (let i = 0, j = px.length - 1; i < px.length; j = i++) {
+    const cross = px[j] * py[i] - px[i] * py[j];
+    a2 += cross;
+    cx += (px[j] + px[i]) * cross;
+    cy += (py[j] + py[i]) * cross;
+  }
+  if (Math.abs(a2) < 1e-12) return material.unitWeight;
+  return resolveUnitWeight(
+    material.model,
+    material.unitWeight,
+    cx / (3 * a2),
+    cy / (3 * a2),
+  );
 }

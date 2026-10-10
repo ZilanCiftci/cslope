@@ -170,6 +170,33 @@ function resolveUndrained(
   };
 }
 
+/**
+ * Unit weight at a point (kN/m³).
+ *
+ * Only the spatial Mohr-Coulomb model varies γ: it is interpolated from
+ * the data points that give a positive γ, the same way as c and φ.
+ * Every other model (and a spatial model without γ data) uses
+ * `fallback`, the material's own unit weight.
+ */
+export function resolveUnitWeight(
+  model: MaterialModel,
+  fallback: number,
+  x: number,
+  y: number,
+): number {
+  if (model.kind !== "spatial-mohr-coulomb") return fallback;
+  const points: SpatialDataPoint[] = model.dataPoints
+    .filter(([, , , , gamma]) => Number.isFinite(gamma) && gamma > 0)
+    .map(([px, py, , , gamma]) => ({ x: px, y: py, values: [gamma] }));
+  if (points.length === 0) return fallback;
+  const method = model.interpolation ?? "idw";
+  const [gamma] =
+    method === "nearest"
+      ? interpolateNearest(points, x, y)
+      : interpolateIDW(points, x, y, method === "linear" ? 1 : 2);
+  return gamma;
+}
+
 function resolveSpatialMohrCoulomb(
   model: Extract<MaterialModel, { kind: "spatial-mohr-coulomb" }>,
   context: StrengthContext,

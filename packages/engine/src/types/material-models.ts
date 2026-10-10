@@ -28,9 +28,12 @@ export interface MohrCoulombModel extends MaterialModelBase {
   cohesion: number;
   /** Friction angle φ (°). */
   frictionAngle: number;
-  /** Reference depth for cohesion variation (m). */
+  /**
+   * Reference ELEVATION y (m, despite the name) where c = `cohesion`:
+   * c = cohesion + (cohesionRefDepth − y_base) × cohesionRateOfChange.
+   */
   cohesionRefDepth?: number;
-  /** Rate of cohesion change with depth (kPa/m). */
+  /** Rate of cohesion increase per metre below the reference elevation (kPa/m). */
   cohesionRateOfChange?: number;
   /** Undrained cohesion Su (kPa). Used by Combined method. */
   cohesionUndrained?: number;
@@ -43,9 +46,9 @@ export interface UndrainedModel extends MaterialModelBase {
   kind: "undrained";
   /** Undrained shear strength Su (kPa). */
   undrainedShearStrength: number;
-  /** Rate of Su change with depth (kPa/m). */
+  /** Rate of Su increase per metre below `suRefDepth` (kPa/m). */
   suRateOfChange?: number;
-  /** Reference depth for Su variation (m). */
+  /** Reference ELEVATION y (m, despite the name) where Su = `undrainedShearStrength`. */
   suRefDepth?: number;
 }
 
