@@ -17,6 +17,10 @@ import { useContextMenu } from "../features/canvas/hooks/useContextMenu";
 import { useCanvasSizing } from "../features/canvas/hooks/useCanvasSizing";
 import { useRafCleanup } from "../features/canvas/hooks/useRafCleanup";
 import { useCanvasDrawLoop } from "../features/canvas/hooks/useCanvasDrawLoop";
+import {
+  useNonPassiveWheel,
+  type CanvasWheelEvent,
+} from "../features/canvas/hooks/useNonPassiveWheel";
 import { drawCanvas, type DrawCanvasParams } from "../features/canvas/draw";
 import { ARROW_HEIGHT_PX, RULER_SIZE_PX } from "../features/canvas/constants";
 import {
@@ -251,14 +255,6 @@ export function ResultCanvas() {
     setCursorWorld(mouseWorld);
   }, [mouseWorld, setCursorWorld]);
 
-  const handleWheelCapture = useCallback(
-    (e: React.WheelEvent<HTMLDivElement>) => {
-      // Prevent page zoom; only stop propagation when not using Ctrl-zoom (so canvas still handles it).
-      // Prevent browser zoom when user requests canvas zoom with Ctrl+wheel.
-      if (e.ctrlKey) e.preventDefault();
-    },
-    [],
-  );
 
   const computePlotBox = useCallback(
     (w: number, h: number) => {
@@ -729,7 +725,7 @@ export function ResultCanvas() {
   }, [resultViewSettings.paperFrame.zoom]);
 
   const handleResultWheel = useCallback(
-    (e: React.WheelEvent<HTMLCanvasElement>) => {
+    (e: CanvasWheelEvent) => {
       e.preventDefault();
       e.stopPropagation();
       if (e.ctrlKey) {
@@ -770,6 +766,7 @@ export function ResultCanvas() {
     },
     [resultViewSettings.paperFrame, setRvs],
   );
+  useNonPassiveWheel(canvasRef, handleResultWheel);
 
   // Auto-fit when a project file is loaded / benchmarks opened
   const pendingFit = useAppStore((s) => s._pendingFitToScreen);
@@ -1009,7 +1006,6 @@ export function ResultCanvas() {
           background: "var(--color-canvas-bg)",
           overscrollBehavior: "none",
         }}
-        onWheelCapture={handleWheelCapture}
       >
         <canvas
           ref={canvasRef}
@@ -1033,7 +1029,6 @@ export function ResultCanvas() {
           onPointerMove={handleCanvasPointerMove}
           onPointerUp={handleCanvasPointerUp}
           onPointerCancel={handleCanvasPointerCancel}
-          onWheel={handleResultWheel}
           onContextMenu={handleContextMenu}
           data-testid="slope-canvas"
         />

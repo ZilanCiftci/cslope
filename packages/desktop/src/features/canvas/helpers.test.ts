@@ -4,7 +4,9 @@ import {
   computePaperFrame,
   surfaceYAtXFromCoordinates,
   collectModelFitBounds,
+  extendBoundsWithResultFitExtras,
 } from "./helpers";
+import { DEFAULT_RESULT_VIEW_SETTINGS } from "../../store/defaults";
 
 describe("computePaperFrame", () => {
   it("fits A4 frame into available canvas area while preserving aspect", () => {
@@ -267,5 +269,73 @@ describe("collectModelFitBounds", () => {
       surfaceYAtX: () => null,
     });
     expect(bounds).toBeNull();
+  });
+});
+
+describe("extendBoundsWithResultFitExtras annotation anchors", () => {
+  it("extends the bounds up and left from a bottom-right anchored annotation", () => {
+    const ctx = new Proxy(
+      {},
+      {
+        get: (_t, k) =>
+          k === "measureText"
+            ? (text: string) => ({ width: text.length * 10 })
+            : () => {},
+        set: () => true,
+      },
+    );
+    const canvas = { getContext: () => ctx } as unknown as HTMLCanvasElement;
+    const points: [number, number][] = [];
+    const W = 1000;
+    const H = 700;
+    extendBoundsWithResultFitExtras({
+      result: {
+        minFOS: 1,
+        maxFOS: 2,
+        criticalSurface: null,
+        allSurfaces: [],
+        criticalSlices: [],
+        method: "Bishop",
+        elapsedMs: 0,
+      },
+      resultViewSettings: {
+        ...DEFAULT_RESULT_VIEW_SETTINGS,
+        annotations: [
+          {
+            id: "t",
+            type: "text",
+            x: 0.5,
+            y: 0.5,
+            anchor: "bottom-right",
+            text: "LONG LABEL",
+            fontSize: 20,
+          } as never,
+        ],
+      },
+      materials: [],
+      projectInfo: {} as never,
+      parameters: [],
+      canvas,
+      width: W,
+      height: H,
+      canvasToWorld: (cx, cy) => [cx, cy],
+      addPoint: (x, y) => points.push([x, y]),
+    });
+    const pf = computePaperFrame(
+      W,
+      H,
+      DEFAULT_RESULT_VIEW_SETTINGS.paperFrame.paperSize,
+      DEFAULT_RESULT_VIEW_SETTINGS.paperFrame.landscape,
+      1,
+      0,
+      0,
+    );
+    const ax = pf.x + 0.5 * pf.w;
+    const ay = pf.y + 0.5 * pf.h;
+    expect(points.length).toBeGreaterThan(0);
+    // Content lies up and to the left of the anchor (small hit padding).
+    expect(Math.max(...points.map((p) => p[0]))).toBeLessThanOrEqual(ax + 5);
+    expect(Math.max(...points.map((p) => p[1]))).toBeLessThanOrEqual(ay + 5);
+    expect(Math.min(...points.map((p) => p[0]))).toBeLessThan(ax - 50);
   });
 });

@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { act, cleanup, render } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { computePaperFrame } from "../features/canvas/helpers";
 import type { AnalysisResult } from "@cslope/engine";
 import App from "../App";
 import { useAppStore } from "../store/app-store";
@@ -45,7 +46,7 @@ describe("fit to screen in the result view", () => {
               k in t
                 ? (t as Record<string | symbol, unknown>)[k]
                 : k === "measureText"
-                  ? () => ({ width: 0 })
+                  ? (text: string) => ({ width: String(text).length * 10 })
                   : () => {},
             set: () => true,
           },
@@ -95,5 +96,42 @@ describe("fit to screen in the result view", () => {
 
     expect(useAppStore.getState().resultViewSettings.paperFrame.zoom).toBe(1);
     expect(afterZoom).toBeCloseTo(baseline, 6);
+  });
+
+  it("shows the hover cursor anywhere over an annotation, like a click", async () => {
+    act(() => {
+      const rvs = useAppStore.getState().resultViewSettings;
+      useAppStore.setState({
+        mode: "result",
+        result: fakeResult(),
+        runState: "done",
+        resultViewSettings: {
+          ...rvs,
+          annotations: [
+            {
+              id: "label",
+              type: "text",
+              x: 0.3,
+              y: 0.3,
+              anchor: "top-left",
+              text: "A long annotation label",
+              fontSize: 16,
+            } as never,
+          ],
+        },
+      });
+    });
+    render(<App />);
+    await frames(3);
+    const rvs = useAppStore.getState().resultViewSettings;
+    const pf = computePaperFrame(W, H, rvs.paperFrame.paperSize, rvs.paperFrame.landscape, rvs.paperFrame.zoom ?? 1, rvs.paperFrame.offsetX ?? 0, rvs.paperFrame.offsetY ?? 0);
+    const canvas = screen.getByTestId("slope-canvas");
+    // 80 px right of the anchor: inside the text, far outside 15 px.
+    fireEvent.pointerMove(canvas, {
+      clientX: pf.x + 0.3 * pf.w + 80,
+      clientY: pf.y + 0.3 * pf.h + 5,
+    });
+    await frames(1);
+    expect(canvas.style.cursor).toBe("grab");
   });
 });

@@ -4,11 +4,11 @@ import {
   useRef,
   useState,
   type PointerEvent as RPointerEvent,
-  type WheelEvent as RWheelEvent,
   type RefObject,
 } from "react";
 import { computePaperFrame, getAnnotationBoundsPx } from "../helpers";
 import { useAppStore } from "../../../store/app-store";
+import type { CanvasWheelEvent } from "./useNonPassiveWheel";
 import type { ContextMenuState, MaterialPickerState, PointHit } from "../types";
 import type {
   AnalysisLimitsState,
@@ -445,6 +445,61 @@ export function usePointerHandlers(deps: PointerDeps) {
     ],
   );
 
+  /**
+   * Topmost annotation under the pointer, using its drawn bounding box
+   * (the anchor point within 15 px when there is no result to measure).
+   */
+  const findAnnotationAt = useCallback(
+    (clientX: number, clientY: number) => {
+      const canvas = canvasRef.current;
+      if (!canvas) return null;
+      const ctx = canvas.getContext("2d");
+      const rect = canvas.getBoundingClientRect();
+      const state = useAppStore.getState();
+      const frame = state.resultViewSettings.paperFrame;
+      const pf = computePaperFrame(
+        rect.width,
+        rect.height,
+        frame.paperSize,
+        frame.landscape,
+        frame.zoom ?? 1,
+        frame.offsetX ?? 0,
+        frame.offsetY ?? 0,
+      );
+      const cxPx = clientX - rect.left;
+      const cyPx = clientY - rect.top;
+      const annos = state.resultViewSettings.annotations;
+      for (let i = annos.length - 1; i >= 0; i--) {
+        const a = annos[i];
+        if (ctx && state.result) {
+          const b = getAnnotationBoundsPx(ctx, {
+            annotation: a,
+            paperFrame: pf,
+            result: state.result,
+            materials: state.materials,
+            piezometricLine: state.piezometricLine,
+            projectInfo: state.projectInfo,
+            parameters: state.parameters,
+          });
+          if (
+            cxPx >= b.x &&
+            cxPx <= b.x + b.w &&
+            cyPx >= b.y &&
+            cyPx <= b.y + b.h
+          ) {
+            return a;
+          }
+        } else {
+          const dx = cxPx - (pf.x + a.x * pf.w);
+          const dy = cyPx - (pf.y + a.y * pf.h);
+          if (Math.hypot(dx, dy) < 15) return a;
+        }
+      }
+      return null;
+    },
+    [canvasRef],
+  );
+
   // The animation loop outlives the render it started in; read the latest
   // callbacks through refs instead of the ones captured at pointer-down.
   const updateDragRef = useRef(updateDragAtPointer);
@@ -493,71 +548,26 @@ export function usePointerHandlers(deps: PointerDeps) {
       if (mode === "result") {
         const canvas = canvasRef.current;
         if (canvas) {
-          const ctx = canvas.getContext("2d");
-          const rect = canvas.getBoundingClientRect();
-          const pf = computePaperFrame(
-            rect.width,
-            rect.height,
-            useAppStore.getState().resultViewSettings.paperFrame.paperSize,
-            useAppStore.getState().resultViewSettings.paperFrame.landscape,
-            useAppStore.getState().resultViewSettings.paperFrame.zoom ?? 1,
-            useAppStore.getState().resultViewSettings.paperFrame.offsetX ?? 0,
-            useAppStore.getState().resultViewSettings.paperFrame.offsetY ?? 0,
-          );
-          const cxPx = e.clientX - rect.left;
-          const cyPx = e.clientY - rect.top;
-          const state = useAppStore.getState();
-          const annos = state.resultViewSettings.annotations;
-          const resultForBounds = state.result;
-          for (let i = annos.length - 1; i >= 0; i--) {
-            const a = annos[i];
-            const hit =
-              ctx && resultForBounds
-                ? (() => {
-                    const b = getAnnotationBoundsPx(ctx, {
-                      annotation: a,
-                      paperFrame: pf,
-                      result: resultForBounds,
-                      materials: state.materials,
-                      piezometricLine: state.piezometricLine,
-                      projectInfo: state.projectInfo,
-                      parameters: state.parameters,
-                    });
-                    return (
-                      cxPx >= b.x &&
-                      cxPx <= b.x + b.w &&
-                      cyPx >= b.y &&
-                      cyPx <= b.y + b.h
-                    );
-                  })()
-                : (() => {
-                    const fx = (cxPx - pf.x) / pf.w;
-                    const fy = (cyPx - pf.y) / pf.h;
-                    const dx = (fx - a.x) * pf.w;
-                    const dy = (fy - a.y) * pf.h;
-                    return Math.hypot(dx, dy) < 15;
-                  })();
-
-            if (hit) {
-              if (e.ctrlKey || e.shiftKey) {
-                toggleAnnotationSelection(a.id, true);
-              } else if (!selectedAnnotationIds.includes(a.id)) {
-                setSelectedAnnotations([a.id]);
-              }
-              // Only the primary button drags (right-click opens a menu).
-              if (e.button !== 0) return;
-              const hit: PointHit = { kind: "annotation", annoId: a.id };
-              dragRef.current = {
-                hit,
-                startWorld: [a.x, a.y],
-                startPx: [e.clientX, e.clientY],
-                downPx: [e.clientX, e.clientY],
-                moved: false,
-              };
-              beginDragHistoryBatch();
-              (e.target as HTMLElement).setPointerCapture(e.pointerId);
-              return;
+          const a = findAnnotationAt(e.clientX, e.clientY);
+          if (a) {
+            if (e.ctrlKey || e.shiftKey) {
+              toggleAnnotationSelection(a.id, true);
+            } else if (!selectedAnnotationIds.includes(a.id)) {
+              setSelectedAnnotations([a.id]);
             }
+            // Only the primary button drags (right-click opens a menu).
+            if (e.button !== 0) return;
+            const hit: PointHit = { kind: "annotation", annoId: a.id };
+            dragRef.current = {
+              hit,
+              startWorld: [a.x, a.y],
+              startPx: [e.clientX, e.clientY],
+              downPx: [e.clientX, e.clientY],
+              moved: false,
+            };
+            beginDragHistoryBatch();
+            (e.target as HTMLElement).setPointerCapture(e.pointerId);
+            return;
           }
           setSelectedResultObject("paper-frame");
           if (panActive && e.button === 0) {
@@ -690,6 +700,7 @@ export function usePointerHandlers(deps: PointerDeps) {
       coordinates,
       editingAssignment,
       editingBoundaries,
+      findAnnotationAt,
       findNearEdgeUnified,
       findNearPointUnified,
       findRegionAtPoint,
@@ -747,31 +758,9 @@ export function usePointerHandlers(deps: PointerDeps) {
 
       let hit: PointHit | null = null;
       if (mode === "result") {
-        const canvas = canvasRef.current!;
-        const rect = canvas.getBoundingClientRect();
-        const cxPx = e.clientX - rect.left;
-        const cyPx = e.clientY - rect.top;
-        const pf = computePaperFrame(
-          rect.width,
-          rect.height,
-          useAppStore.getState().resultViewSettings.paperFrame.paperSize,
-          useAppStore.getState().resultViewSettings.paperFrame.landscape,
-          useAppStore.getState().resultViewSettings.paperFrame.zoom ?? 1,
-          useAppStore.getState().resultViewSettings.paperFrame.offsetX ?? 0,
-          useAppStore.getState().resultViewSettings.paperFrame.offsetY ?? 0,
-        );
-        const fx = (cxPx - pf.x) / pf.w;
-        const fy = (cyPx - pf.y) / pf.h;
-        const annos = useAppStore.getState().resultViewSettings.annotations;
-        for (let i = annos.length - 1; i >= 0; i--) {
-          const a = annos[i];
-          const dx = (fx - a.x) * pf.w;
-          const dy = (fy - a.y) * pf.h;
-          if (Math.hypot(dx, dy) < 15) {
-            hit = { kind: "annotation", annoId: a.id };
-            break;
-          }
-        }
+        // Same hit area as a click, so the cursor matches what a click does.
+        const a = findAnnotationAt(e.clientX, e.clientY);
+        hit = a ? { kind: "annotation", annoId: a.id } : null;
       } else {
         hit = findNearPointUnified(wx, wy);
       }
@@ -781,8 +770,8 @@ export function usePointerHandlers(deps: PointerDeps) {
       }
     },
     [
-      canvasRef,
       applyEdgePan,
+      findAnnotationAt,
       findNearPointUnified,
       getEventWorldPos,
       mode,
@@ -816,7 +805,7 @@ export function usePointerHandlers(deps: PointerDeps) {
   );
 
   const handleWheel = useCallback(
-    (e: RWheelEvent<HTMLCanvasElement>) => {
+    (e: CanvasWheelEvent) => {
       e.preventDefault();
       e.stopPropagation();
       const state = useAppStore.getState();

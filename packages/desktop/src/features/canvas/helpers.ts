@@ -691,83 +691,20 @@ export function extendBoundsWithResultFitExtras(params: {
     rvs.paperFrame.offsetX ?? 0,
     rvs.paperFrame.offsetY ?? 0,
   );
-  const annoScale = Math.min(pf.w, pf.h) / 600;
-
+  // Same bounds as drawing and hit-testing use, which honour each
+  // annotation's anchor corner (the previous measurement here always
+  // extended right/down from the anchor point).
   for (const anno of rvs.annotations) {
-    const ax = pf.x + anno.x * pf.w;
-    const ay = pf.y + anno.y * pf.h;
-
-    if (anno.type === "text") {
-      const fontSize = (anno.fontSize ?? 12) * annoScale;
-      const family = anno.fontFamily ?? "sans-serif";
-      const weight = anno.bold ? "bold" : "normal";
-      const style = anno.italic ? "italic" : "normal";
-      const resolvedText = resolveAnnotationText({
-        text: anno.text ?? "",
-        projectInfo,
-        result,
-        parameters,
-      });
-      const lines = resolvedText.split("\n");
-      const lineHeight = fontSize * 1.2;
-
-      ctx.font = `${style} ${weight} ${fontSize}px ${family}`;
-      let maxW = 0;
-      for (const line of lines) {
-        maxW = Math.max(maxW, ctx.measureText(line).width);
-      }
-      const textHeight = lines.length * lineHeight;
-      addCanvasRect(ax, ay, maxW, textHeight);
-    } else if (anno.type === "color-bar") {
-      const barW = 20 * annoScale;
-      const barH = 200 * annoScale;
-      const barY = ay;
-
-      const fosMin = result.minFOS;
-      const fosMax = result.maxFOS;
-      const numTicks = 5;
-      const fontSize = Math.max(10, 11 * annoScale);
-      const labelX2 = ax + barW + 5 * annoScale;
-
-      ctx.font = `${fontSize}px 'Segoe UI', sans-serif`;
-      let maxLabelW = 0;
-      for (let t = 0; t <= numTicks; t++) {
-        const frac = t / numTicks;
-        const fos = fosMax - frac * (fosMax - fosMin);
-        maxLabelW = Math.max(maxLabelW, ctx.measureText(fos.toFixed(2)).width);
-      }
-
-      const xRight = labelX2 + maxLabelW;
-      const yTop = barY - 4 * annoScale - fontSize;
-      const yBottom = barY + barH;
-      addCanvasRect(ax, yTop, xRight - ax, yBottom - yTop);
-    } else if (anno.type === "material-table") {
-      const { columnKeys, header, rows } = buildMaterialTableData(
-        anno,
-        materials,
-        piezometricLine,
-      );
-      const { w: tableW, h: tableH } = measureTable(
-        ctx,
-        columnKeys,
-        header,
-        rows,
-        annoScale,
-        anno.fontSize ?? 6,
-      );
-      addCanvasRect(ax, ay, tableW, tableH);
-    } else if (anno.type === "plot") {
-      const plotW = pf.w * (anno.width ?? 0.24);
-      const plotH = pf.h * (anno.height ?? 0.18);
-      const { x: tlx, y: tly } = anchoredTopLeft(
-        ax,
-        ay,
-        plotW,
-        plotH,
-        anno.anchor,
-      );
-      addCanvasRect(tlx, tly, plotW, plotH);
-    }
+    const b = getAnnotationBoundsPx(ctx, {
+      annotation: anno,
+      paperFrame: pf,
+      result,
+      materials,
+      piezometricLine,
+      projectInfo,
+      parameters,
+    });
+    addCanvasRect(b.x, b.y, b.w, b.h);
   }
 }
 

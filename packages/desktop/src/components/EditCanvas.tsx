@@ -17,6 +17,7 @@ import { useMaterialPicker } from "../features/canvas/hooks/useMaterialPicker";
 import { useCanvasSizing } from "../features/canvas/hooks/useCanvasSizing";
 import { useRafCleanup } from "../features/canvas/hooks/useRafCleanup";
 import { useCanvasDrawLoop } from "../features/canvas/hooks/useCanvasDrawLoop";
+import { useNonPassiveWheel } from "../features/canvas/hooks/useNonPassiveWheel";
 import { drawCanvas, type DrawCanvasParams } from "../features/canvas/draw";
 import {
   ARROW_HEIGHT_PX,
@@ -245,14 +246,7 @@ export function EditCanvas() {
     setCursorWorld(mouseWorld);
   }, [mouseWorld, setCursorWorld]);
 
-  const handleWheelCapture = useCallback(
-    (e: React.WheelEvent<HTMLDivElement>) => {
-      // Prevent page zoom; only stop propagation when not using Ctrl-zoom (so canvas still handles it).
-      // Prevent browser zoom when user requests canvas zoom with Ctrl+wheel.
-      if (e.ctrlKey) e.preventDefault();
-    },
-    [],
-  );
+  useNonPassiveWheel(canvasRef, handleWheel);
 
   useRafCleanup(drawRafRef);
 
@@ -707,7 +701,6 @@ export function EditCanvas() {
           background: "var(--color-canvas-bg)",
           overscrollBehavior: "none",
         }}
-        onWheelCapture={handleWheelCapture}
       >
         <canvas
           ref={canvasRef}
@@ -731,7 +724,6 @@ export function EditCanvas() {
           onPointerMove={handleCanvasPointerMove}
           onPointerUp={handleCanvasPointerUp}
           onPointerCancel={handlePointerCancel}
-          onWheel={handleWheel}
           onContextMenu={handleContextMenu}
           data-testid="slope-canvas"
         />

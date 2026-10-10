@@ -151,4 +151,22 @@ describe("dragging points on the edit canvas", () => {
     expect(s.coordinates[2][1]).toBeCloseTo(vertex[1] + 2, 6);
     expect(s.materialBoundaries[0].coordinates[0]).toEqual(s.coordinates[2]);
   });
+
+  it("zooms on Ctrl+wheel and suppresses the browser default", async () => {
+    const canvas = screen.getByTestId("slope-canvas");
+    const before = useAppStore.getState().editViewScale;
+    const event = new WheelEvent("wheel", {
+      bubbles: true,
+      cancelable: true,
+      ctrlKey: true,
+      deltaY: -100,
+      clientX: W / 2,
+      clientY: H / 2,
+    });
+    act(() => {
+      canvas.dispatchEvent(event);
+    });
+    expect(event.defaultPrevented).toBe(true);
+    expect(useAppStore.getState().editViewScale).toBeGreaterThan(before);
+  });
 });
