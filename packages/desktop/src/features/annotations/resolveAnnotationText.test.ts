@@ -40,3 +40,23 @@ describe("resolveAnnotationText", () => {
     expect(resolved).toBe("bad={{unknown + 1}}");
   });
 });
+
+describe("resolveAnnotationText tag matching", () => {
+  it("does not replace a tag that is only the prefix of a parameter name", () => {
+    const out = resolveAnnotationText({
+      text: "#FOS / #FOS_target",
+      projectInfo: {},
+      result: { minFOS: 1.234 } as never,
+      parameters: [{ id: "p1", name: "FOS_target", expression: "1.5" }],
+    });
+    expect(out).toBe("1.234 / 1.5");
+  });
+
+  it("keeps dollar signs in project values literally", () => {
+    const out = resolveAnnotationText({
+      text: "#Title",
+      projectInfo: { title: "Cost $& and $$5" },
+    });
+    expect(out).toBe("Cost $& and $$5");
+  });
+});

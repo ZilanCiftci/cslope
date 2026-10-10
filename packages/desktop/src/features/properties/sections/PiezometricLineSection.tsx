@@ -102,9 +102,10 @@ export function PiezometricLineSection() {
         <SpreadsheetNumberInput
           value={x}
           ariaLabel={`Piezometric point ${i + 1} X`}
-          onChange={(value) =>
-            setPiezoCoordinate(i, [parseFloat(value) || 0, y])
-          }
+          onChange={(value) => {
+            const next = parseFloat(value);
+            if (Number.isFinite(next)) setPiezoCoordinate(i, [next, y]);
+          }}
         />
       ),
     },
@@ -114,9 +115,10 @@ export function PiezometricLineSection() {
         <SpreadsheetNumberInput
           value={y}
           ariaLabel={`Piezometric point ${i + 1} Y`}
-          onChange={(value) =>
-            setPiezoCoordinate(i, [x, parseFloat(value) || 0])
-          }
+          onChange={(value) => {
+            const next = parseFloat(value);
+            if (Number.isFinite(next)) setPiezoCoordinate(i, [x, next]);
+          }}
         />
       ),
     },

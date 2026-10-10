@@ -35,10 +35,10 @@ function applyStaticTags(
 ): string {
   let next = text;
   for (const [tag, resolver] of Object.entries(STATIC_TAG_RESOLVERS)) {
-    next = next.replace(
-      new RegExp(`#${tag}`, "gi"),
-      resolver(projectInfo, result),
-    );
+    // Whole tag only (so "#FOS" does not eat the start of "#FOS_target"),
+    // and a replacer function so "$" in user text is not a pattern.
+    const value = resolver(projectInfo, result);
+    next = next.replace(new RegExp(`#${tag}(?![A-Za-z0-9_])`, "gi"), () => value);
   }
   return next;
 }
