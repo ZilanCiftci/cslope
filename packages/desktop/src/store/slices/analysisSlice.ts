@@ -2,8 +2,8 @@ import type { AnalysisOptions, AnalysisResult } from "@cslope/engine";
 import { DEFAULT_ANALYSIS_OPTIONS } from "@cslope/engine";
 import type { AnalysisResponse } from "../../worker/messages";
 import type { SliceCreator } from "../helpers";
-import { buildSlopeDTOFromModel, nextId } from "../helpers";
-import type { AnalysisSlice, ModelEntry } from "../types";
+import { buildSlopeDTOFromModel, nextId, RUN_RESET } from "../helpers";
+import type { AnalysisSlice, AppState, ModelEntry } from "../types";
 import { DEFAULT_ANALYSIS_LIMITS } from "../defaults";
 import { ANALYSIS_TIMEOUT_MS } from "../../constants";
 
@@ -13,6 +13,24 @@ import { ANALYSIS_TIMEOUT_MS } from "../../constants";
 interface AnalysisHandle {
   promise: Promise<AnalysisResult>;
   cancel: () => void;
+}
+
+/** Rejection reason used when a run is cancelled; never shown to the user. */
+class AnalysisCancelledError extends Error {
+  constructor() {
+    super("Analysis cancelled");
+    this.name = "AnalysisCancelledError";
+  }
+}
+
+/**
+ * Time budget for one analysis. The base timeout covers the default
+ * search size (1000 + 500 surfaces); larger searches get proportionally
+ * more time instead of being killed after a fixed minute.
+ */
+function analysisTimeoutMs(options: AnalysisOptions): number {
+  const surfaces = (options.iterations ?? 0) + (options.refinedIterations ?? 0);
+  return ANALYSIS_TIMEOUT_MS * Math.max(1, surfaces / 1500);
 }
 
 /**
@@ -41,9 +59,9 @@ function executeModelAnalysis(
   );
   let timeout: ReturnType<typeof setTimeout> | null = null;
   let settled = false;
+  let rejectPromise: ((reason: Error) => void) | null = null;
 
-  const cancel = () => {
-    if (settled) return;
+  const stop = () => {
     settled = true;
     worker?.terminate();
     worker = null;
@@ -53,12 +71,26 @@ function executeModelAnalysis(
     }
   };
 
+  // Cancelling rejects the promise so that anything awaiting it (Run All)
+  // can finish instead of hanging forever.
+  const cancel = () => {
+    if (settled) return;
+    stop();
+    rejectPromise?.(new AnalysisCancelledError());
+  };
+
+  const timeoutMs = analysisTimeoutMs(options);
   const promise = new Promise<AnalysisResult>((resolve, reject) => {
+    rejectPromise = reject;
     timeout = setTimeout(() => {
       if (settled) return;
-      cancel();
-      reject(new Error("Analysis timed out after 60 seconds."));
-    }, ANALYSIS_TIMEOUT_MS);
+      stop();
+      reject(
+        new Error(
+          `Analysis timed out after ${Math.round(timeoutMs / 1000)} seconds.`,
+        ),
+      );
+    }, timeoutMs);
 
     worker!.onmessage = (event: MessageEvent<AnalysisResponse>) => {
       if (settled) return;
@@ -100,11 +132,65 @@ function executeModelAnalysis(
   return { promise, cancel };
 }
 
+/** Model-shaped snapshot of the active model's analysis inputs. */
+function snapshotFromState(state: AppState): ModelEntry {
+  return {
+    id: state.activeModelId,
+    name: "",
+    orientation: state.orientation,
+    coordinates: state.coordinates,
+    materials: state.materials,
+    materialBoundaries: state.materialBoundaries,
+    regionMaterials: state.regionMaterials,
+    piezometricLine: state.piezometricLine,
+    udls: state.udls,
+    lineLoads: state.lineLoads,
+    customSearchPlanes: state.customSearchPlanes,
+    customPlanesOnly: state.customPlanesOnly,
+    options: state.options,
+    analysisLimits: state.analysisLimits,
+  };
+}
+
+/**
+ * Key identifying exactly what the engine is asked to compute.  A result
+ * is only accepted if the model still produces the same key when the run
+ * finishes.
+ */
+function analysisInputKey(model: ModelEntry): string {
+  return JSON.stringify({
+    slope: buildSlopeDTOFromModel(model),
+    options: model.options,
+  });
+}
+
 // ── Single-run state ───────────────────────────────────────────────
 
 /** Handle for the currently running single-model analysis. */
 let activeHandle: AnalysisHandle | null = null;
+/** Model the single run belongs to (the user may switch away meanwhile). */
+let activeRunModelId: string | null = null;
 let activeProgressInterval: ReturnType<typeof setInterval> | null = null;
+
+// ── Run-all state ──────────────────────────────────────────────────
+
+/** Bumped to abandon an in-flight Run All (cancel, new/open project). */
+let batchGeneration = 0;
+const batchHandles = new Set<AnalysisHandle>();
+
+/**
+ * Cancel every running analysis (single and Run All) without touching
+ * store state. Used when the whole project is replaced.
+ */
+export function abortAllAnalyses(): void {
+  activeHandle?.cancel();
+  activeHandle = null;
+  activeRunModelId = null;
+  stopProgressInterval();
+  batchGeneration += 1;
+  for (const handle of batchHandles) handle.cancel();
+  batchHandles.clear();
+}
 
 const RUN_PROGRESS_MAX = 0.95;
 
@@ -133,8 +219,17 @@ export const createAnalysisSlice: SliceCreator<AnalysisSlice> = (set, get) => ({
   result: null,
   errorMessage: null,
 
-  invalidateAnalysis: () =>
-    set({ runState: "idle", progress: 0, result: null, errorMessage: null }),
+  invalidateAnalysis: () => {
+    // A run for the model being edited would finish with a result for the
+    // old inputs, so stop it.  Runs for other models are left alone.
+    if (activeHandle && activeRunModelId === get().activeModelId) {
+      activeHandle.cancel();
+      activeHandle = null;
+      activeRunModelId = null;
+      stopProgressInterval();
+    }
+    set({ ...RUN_RESET });
+  },
 
   setAnalysisLimits: (limits) => {
     set((s) => {
@@ -225,26 +320,13 @@ export const createAnalysisSlice: SliceCreator<AnalysisSlice> = (set, get) => ({
     stopProgressInterval();
 
     const state = get();
+    const runModelId = state.activeModelId;
 
     // Build a model snapshot from the current flat state for the shared
     // execution path.  This ensures "Run" and "Run All" go through the
     // exact same DTO-building and worker-spawning code.
-    const modelSnapshot: ModelEntry = {
-      id: state.activeModelId,
-      name: "",
-      orientation: state.orientation,
-      coordinates: state.coordinates,
-      materials: state.materials,
-      materialBoundaries: state.materialBoundaries,
-      regionMaterials: state.regionMaterials,
-      piezometricLine: state.piezometricLine,
-      udls: state.udls,
-      lineLoads: state.lineLoads,
-      customSearchPlanes: state.customSearchPlanes,
-      customPlanesOnly: state.customPlanesOnly,
-      options: state.options,
-      analysisLimits: state.analysisLimits,
-    };
+    const modelSnapshot = snapshotFromState(state);
+    const inputKey = analysisInputKey(modelSnapshot);
 
     set({
       runState: "running",
@@ -272,9 +354,10 @@ export const createAnalysisSlice: SliceCreator<AnalysisSlice> = (set, get) => ({
 
     let handle: AnalysisHandle;
     try {
-      handle = executeModelAnalysis(modelSnapshot, (p) =>
-        set((s) => ({ progress: Math.max(s.progress, p) })),
-      );
+      handle = executeModelAnalysis(modelSnapshot, (p) => {
+        if (get().activeModelId !== runModelId) return;
+        set((s) => ({ progress: Math.max(s.progress, p) }));
+      });
     } catch (err) {
       stopProgressInterval();
       set({
@@ -283,33 +366,76 @@ export const createAnalysisSlice: SliceCreator<AnalysisSlice> = (set, get) => ({
         errorMessage: err instanceof Error ? err.message : String(err),
       });
       activeHandle = null;
+      activeRunModelId = null;
       return;
     }
     activeHandle = handle;
+    activeRunModelId = runModelId;
+
+    /**
+     * Store the outcome on the model the run was started for.  The flat
+     * (displayed) state is only touched while that model is active, and
+     * the outcome is dropped if the model's inputs changed meanwhile.
+     */
+    const finish = (
+      outcome: Pick<ModelEntry, "runState" | "result" | "errorMessage">,
+    ) => {
+      if (activeHandle !== handle) return; // superseded or cancelled
+      activeHandle = null;
+      activeRunModelId = null;
+      stopProgressInterval();
+
+      const s = get();
+      if (s.activeModelId === runModelId) {
+        if (analysisInputKey(snapshotFromState(s)) !== inputKey) {
+          set({ ...RUN_RESET });
+          return;
+        }
+        set({ ...outcome, progress: outcome.runState === "done" ? 1 : 0 });
+        return;
+      }
+      const entry = s.models.find((m) => m.id === runModelId);
+      if (!entry) return;
+      const stale = analysisInputKey(entry) !== inputKey;
+      set({
+        models: s.models.map((m) =>
+          m.id === runModelId
+            ? stale
+              ? { ...m, ...RUN_RESET }
+              : {
+                  ...m,
+                  ...outcome,
+                  progress: outcome.runState === "done" ? 1 : 0,
+                }
+            : m,
+        ),
+      });
+    };
 
     handle.promise
       .then((result) => {
-        stopProgressInterval();
-        set({ runState: "done", result, progress: 1 });
-        if (activeHandle === handle) activeHandle = null;
+        finish({ runState: "done", result, errorMessage: null });
       })
       .catch((err) => {
-        stopProgressInterval();
-        set({
+        if (err instanceof AnalysisCancelledError) return;
+        finish({
           runState: "error",
+          result: null,
           errorMessage: err instanceof Error ? err.message : String(err),
         });
-        if (activeHandle === handle) activeHandle = null;
       });
   },
 
   cancelAnalysis: () => {
-    if (activeHandle) {
-      activeHandle.cancel();
-      activeHandle = null;
-    }
-    stopProgressInterval();
-    set({ runState: "idle", progress: 0, errorMessage: null });
+    abortAllAnalyses();
+    set((s) => ({
+      runState: "idle",
+      progress: 0,
+      errorMessage: null,
+      models: s.models.map((m) =>
+        m.runState === "running" ? { ...m, runState: "idle", progress: 0 } : m,
+      ),
+    }));
   },
 
   reset: () =>
@@ -343,6 +469,9 @@ export const createAnalysisSlice: SliceCreator<AnalysisSlice> = (set, get) => ({
     const baseState = get();
     baseState.saveCurrentModel();
     const models = get().models.slice();
+    batchGeneration += 1;
+    const generation = batchGeneration;
+    const isCurrentBatch = () => generation === batchGeneration;
 
     if (models.length === 0) {
       set({ runState: "idle", progress: 0, result: null, errorMessage: null });
@@ -394,8 +523,20 @@ export const createAnalysisSlice: SliceCreator<AnalysisSlice> = (set, get) => ({
     set({ runState: "running", progress: 0, errorMessage: null });
 
     const runModel = async (model: ModelEntry) => {
+      if (!isCurrentBatch()) return;
       const freshModel = get().models.find((m) => m.id === model.id);
       if (!freshModel) return;
+      const inputKey = analysisInputKey(freshModel);
+
+      /** Inputs of this model now (flat state when it is the active one). */
+      const currentKey = (): string | null => {
+        const s = get();
+        if (s.activeModelId === freshModel.id) {
+          return analysisInputKey(snapshotFromState(s));
+        }
+        const entry = s.models.find((m) => m.id === freshModel.id);
+        return entry ? analysisInputKey(entry) : null;
+      };
 
       progressByModel.set(freshModel.id, 0.08);
       updateBatchProgress();
@@ -454,11 +595,22 @@ export const createAnalysisSlice: SliceCreator<AnalysisSlice> = (set, get) => ({
         return;
       }
 
+      batchHandles.add(handle);
       try {
         const result = await handle.promise;
         stopModelProgressInterval(freshModel.id);
+        if (!isCurrentBatch()) return;
         progressByModel.set(freshModel.id, 1);
         updateBatchProgress();
+        if (currentKey() !== inputKey) {
+          // The model was edited while it was being analysed.
+          set((s) => ({
+            models: s.models.map((m) =>
+              m.id === freshModel.id ? { ...m, ...RUN_RESET } : m,
+            ),
+          }));
+          return;
+        }
         set((s) => ({
           models: s.models.map((m) =>
             m.id === freshModel.id
@@ -475,6 +627,7 @@ export const createAnalysisSlice: SliceCreator<AnalysisSlice> = (set, get) => ({
         }));
       } catch (err) {
         stopModelProgressInterval(freshModel.id);
+        if (err instanceof AnalysisCancelledError || !isCurrentBatch()) return;
         progressByModel.set(freshModel.id, 1);
         updateBatchProgress();
         const errorMessage = err instanceof Error ? err.message : String(err);
@@ -488,6 +641,8 @@ export const createAnalysisSlice: SliceCreator<AnalysisSlice> = (set, get) => ({
             ? { runState: "error", errorMessage }
             : {}),
         }));
+      } finally {
+        batchHandles.delete(handle);
       }
     };
 
@@ -500,7 +655,7 @@ export const createAnalysisSlice: SliceCreator<AnalysisSlice> = (set, get) => ({
 
     await Promise.all(
       Array.from({ length: concurrency }, async () => {
-        while (cursor < models.length) {
+        while (cursor < models.length && isCurrentBatch()) {
           const model = models[cursor++];
           await runModel(model);
         }
@@ -511,6 +666,7 @@ export const createAnalysisSlice: SliceCreator<AnalysisSlice> = (set, get) => ({
       clearInterval(interval);
     }
     modelProgressIntervals.clear();
+    if (!isCurrentBatch()) return;
 
     const currentActiveId = get().activeModelId;
     const refreshedActive = get().models.find((m) => m.id === currentActiveId);

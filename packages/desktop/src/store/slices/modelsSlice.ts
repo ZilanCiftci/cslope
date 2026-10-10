@@ -15,6 +15,7 @@ import {
 import type { SliceCreator } from "../helpers";
 import { nextId } from "../helpers";
 import type { ModelEntry, ModelsSlice } from "../types";
+import { abortAllAnalyses } from "./analysisSlice";
 
 function cloneModelEntry(model: ModelEntry): ModelEntry {
   const clone = globalThis.structuredClone
@@ -394,6 +395,7 @@ export const createModelsSlice: SliceCreator<ModelsSlice> = (set, get) => ({
     })),
 
   loadProject: ({ models, activeModelId }) => {
+    abortAllAnalyses();
     if (!models || models.length === 0) return;
     const targetId =
       activeModelId && models.some((m) => m.id === activeModelId)
@@ -416,6 +418,7 @@ export const createModelsSlice: SliceCreator<ModelsSlice> = (set, get) => ({
   },
 
   newProject: () => {
+    abortAllAnalyses();
     const id = nextId("model");
     const entry = createStarterModel(id);
 
@@ -427,6 +430,7 @@ export const createModelsSlice: SliceCreator<ModelsSlice> = (set, get) => ({
   },
 
   loadBenchmarks: () => {
+    abortAllAnalyses();
     const models = BENCHMARK_MODELS.map(cloneModelEntry);
     if (models.length === 0) return;
     const first = models[0];
@@ -439,6 +443,7 @@ export const createModelsSlice: SliceCreator<ModelsSlice> = (set, get) => ({
   },
 
   loadLovoModels: () => {
+    abortAllAnalyses();
     const models = LOVO_MODELS.map(cloneModelEntry);
     if (models.length === 0) return;
     const first = models[0];

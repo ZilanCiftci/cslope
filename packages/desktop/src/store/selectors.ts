@@ -6,7 +6,7 @@
  */
 
 import { useAppStore } from "./app-store";
-import { getAnalysisInputSignature, RUN_RESET } from "./helpers";
+import { getAnalysisInputSignature } from "./helpers";
 import type { AppState } from "./types";
 
 // ── Active viewport resolution ─────────────────────────────────
@@ -139,7 +139,7 @@ export function performUndo(): void {
   useAppStore.temporal.getState().undo();
   const after = getAnalysisInputSignature(useAppStore.getState());
   if (before !== after) {
-    useAppStore.setState(RUN_RESET);
+    useAppStore.getState().invalidateAnalysis();
   }
 }
 
@@ -153,6 +153,6 @@ export function performRedo(): void {
   useAppStore.temporal.getState().redo();
   const after = getAnalysisInputSignature(useAppStore.getState());
   if (before !== after) {
-    useAppStore.setState(RUN_RESET);
+    useAppStore.getState().invalidateAnalysis();
   }
 }
