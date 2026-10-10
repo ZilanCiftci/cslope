@@ -2,6 +2,7 @@
  * ResultSidebar — right sidebar for result view settings.
  */
 
+import { DraftNumberInput } from "../../components/ui/DraftNumberInput";
 import { useCallback, useMemo, useState } from "react";
 import { PAPER_DIMENSIONS, useAppStore } from "../../store/app-store";
 import { Section } from "../../components/ui/Section";
@@ -771,26 +772,15 @@ export function ResultSidebar() {
                 >
                   Ticks spacing
                 </label>
-                <input
-                  type="number"
+                <DraftNumberInput
                   min={0}
                   step="any"
                   placeholder="Auto"
-                  value={rvs.gridSpacing ?? ""}
-                  onChange={(e) => {
-                    const raw = e.target.value;
-                    if (raw === "") {
-                      setRvs({ gridSpacing: undefined });
-                      return;
-                    }
-                    const parsed = Number(raw);
-                    setRvs({
-                      gridSpacing:
-                        Number.isFinite(parsed) && parsed > 0
-                          ? parsed
-                          : undefined,
-                    });
-                  }}
+                  value={rvs.gridSpacing}
+                  onValueChange={(value) =>
+                    setRvs({ gridSpacing: value > 0 ? value : undefined })
+                  }
+                  onClear={() => setRvs({ gridSpacing: undefined })}
                   className="w-full text-[11px] px-1.5 py-1 rounded tabular-nums"
                   style={{
                     background: "var(--color-vsc-bg)",

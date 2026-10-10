@@ -4,9 +4,12 @@ type Props = Omit<
   InputHTMLAttributes<HTMLInputElement>,
   "type" | "value" | "onChange"
 > & {
-  value: number;
+  /** Undefined shows an empty field (e.g. "Auto" via placeholder). */
+  value: number | undefined;
   /** Called with every complete, finite number the user types. */
   onValueChange: (value: number) => void;
+  /** Called when the user empties the field. */
+  onClear?: () => void;
 };
 
 /**
@@ -20,6 +23,7 @@ type Props = Omit<
 export function DraftNumberInput({
   value,
   onValueChange,
+  onClear,
   onBlur,
   ...rest
 }: Props) {
@@ -28,10 +32,13 @@ export function DraftNumberInput({
     <input
       {...rest}
       type="number"
-      value={draft ?? value}
+      value={draft ?? value ?? ""}
       onChange={(e) => {
         setDraft(e.target.value);
-        if (e.target.value.trim() === "") return;
+        if (e.target.value.trim() === "") {
+          onClear?.();
+          return;
+        }
         const parsed = Number(e.target.value);
         if (Number.isFinite(parsed)) onValueChange(parsed);
       }}

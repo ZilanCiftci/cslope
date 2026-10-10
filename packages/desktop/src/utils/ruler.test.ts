@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { computeRulerStep, formatRulerLabel } from "./ruler";
+import { computeRulerStep, formatRulerLabel, resolveTickStep } from "./ruler";
 
 describe("computeRulerStep", () => {
   it("returns a reasonable step for a typical A4 slope model", () => {
@@ -106,5 +106,19 @@ describe("formatRulerLabel with a tick step", () => {
     expect(formatRulerLabel(0.125, 0.125)).toBe("0.125");
     expect(formatRulerLabel(2, 0.25)).toBe("2");
     expect(formatRulerLabel(0.5, 0.5)).toBe("0.5");
+  });
+});
+
+describe("resolveTickStep", () => {
+  it("uses the user's spacing when it is sensible", () => {
+    expect(resolveTickStep(2.5, 10)).toBe(2.5);
+    expect(resolveTickStep(50, 10)).toBe(50);
+  });
+  it("falls back to auto for missing, invalid or far too dense spacing", () => {
+    expect(resolveTickStep(undefined, 10)).toBe(10);
+    expect(resolveTickStep(0, 10)).toBe(10);
+    expect(resolveTickStep(-1, 10)).toBe(10);
+    expect(resolveTickStep(Number.NaN, 10)).toBe(10);
+    expect(resolveTickStep(0.001, 10)).toBe(10);
   });
 });

@@ -35,3 +35,26 @@ export function formatRulerLabel(value: number, step?: number): string {
   const decimals = step !== undefined ? Math.max(1, decimalsOf(step)) : 1;
   return snapped.toFixed(decimals);
 }
+
+/** A user tick spacing may be at most this many times denser than auto. */
+export const MAX_TICK_DENSITY = 20;
+
+/**
+ * The user's grid/tick spacing when it is usable, else the automatic one.
+ * A tiny spacing (e.g. 0.001 on a 100 m model) would otherwise draw
+ * millions of lines and freeze the canvas and the PDF export.
+ */
+export function resolveTickStep(
+  userSpacing: number | undefined,
+  autoStep: number,
+): number {
+  if (
+    userSpacing === undefined ||
+    !Number.isFinite(userSpacing) ||
+    userSpacing <= 0 ||
+    userSpacing < autoStep / MAX_TICK_DENSITY
+  ) {
+    return autoStep;
+  }
+  return userSpacing;
+}

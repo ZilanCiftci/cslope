@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { DraftNumberInput } from "../../components/ui/DraftNumberInput";
 import { isElectron } from "../../utils/is-electron";
 import { useAppStore, PAPER_DIMENSIONS } from "../../store/app-store";
 import type { ResultViewSettings, PaperSize } from "../../store/types";
@@ -321,24 +322,15 @@ export function ViewSettingsDialogApp() {
         <GroupHeading>Grid &amp; Ticks</GroupHeading>
 
         <FieldRow label="Spacing">
-          <input
-            type="number"
+          <DraftNumberInput
             min={0}
             step="any"
             placeholder="Auto"
-            value={rvs.gridSpacing ?? ""}
-            onChange={(e) => {
-              const raw = e.target.value;
-              if (raw === "") {
-                setRvs({ gridSpacing: undefined });
-                return;
-              }
-              const parsed = Number(raw);
-              setRvs({
-                gridSpacing:
-                  Number.isFinite(parsed) && parsed > 0 ? parsed : undefined,
-              });
-            }}
+            value={rvs.gridSpacing}
+            onValueChange={(value) =>
+              setRvs({ gridSpacing: value > 0 ? value : undefined })
+            }
+            onClear={() => setRvs({ gridSpacing: undefined })}
             style={{ ...inputStyle, width: 80 }}
           />
         </FieldRow>
