@@ -1,11 +1,11 @@
 import {
-  DEFAULT_ANALYSIS_OPTIONS,
   resolveOrientation,
   type AnalysisOptions,
   type MaterialModel,
 } from "@cslope/engine";
 import { DEFAULT_MODEL_NAME } from "../constants";
 import {
+  APP_DEFAULT_ANALYSIS_OPTIONS,
   DEFAULT_ANALYSIS_LIMITS,
   DEFAULT_MATERIAL,
   DEFAULT_PIEZO_LINE,
@@ -137,15 +137,12 @@ function normalizeModelEntry(raw: unknown): ModelEntry {
         })
       : []) as unknown as ModelEntry["materialBoundaries"],
     regionMaterials: Array.isArray(model.regionMaterials)
-      ? (
-          model.regionMaterials as {
-            point: [number, number];
-            materialId: string;
-          }[]
-        ).map((a) => ({
-          point: [...a.point] as [number, number],
-          materialId: a.materialId,
-        }))
+      ? (model.regionMaterials as unknown[])
+          .filter(isRegionAssignment)
+          .map((a) => ({
+            point: [a.point[0], a.point[1]] as [number, number],
+            materialId: a.materialId,
+          }))
       : [],
     piezometricLine: normalizePiezo(model.piezometricLine),
     udls: Array.isArray(model.udls)
@@ -160,7 +157,7 @@ function normalizeModelEntry(raw: unknown): ModelEntry {
       : [],
     options: model.options
       ? normalizeAnalysisOptions(model.options)
-      : { ...DEFAULT_ANALYSIS_OPTIONS },
+      : { ...APP_DEFAULT_ANALYSIS_OPTIONS },
     analysisLimits: normalizeAnalysisLimits(model.analysisLimits),
     editViewOffset: (model.editViewOffset ??
       model.viewOffset) as ModelEntry["editViewOffset"],
@@ -178,11 +175,33 @@ function normalizeModelEntry(raw: unknown): ModelEntry {
     resultViewSettings: normalizeResultView(model.resultViewSettings),
     viewOffset: model.viewOffset as ModelEntry["viewOffset"],
     viewScale: model.viewScale as ModelEntry["viewScale"],
-    runState: model.runState as ModelEntry["runState"],
-    progress: model.progress as ModelEntry["progress"],
+    // A run cannot survive a save/load: no worker exists for it any more.
+    ...(model.runState === "running"
+      ? { runState: "idle" as const, progress: 0 }
+      : {
+          runState: model.runState as ModelEntry["runState"],
+          progress: model.progress as ModelEntry["progress"],
+        }),
     result: (model.result as ModelEntry["result"]) ?? null,
     errorMessage: (model.errorMessage as ModelEntry["errorMessage"]) ?? null,
+    mode:
+      model.mode === "edit" || model.mode === "result"
+        ? model.mode
+        : undefined,
   };
+}
+
+function isRegionAssignment(
+  raw: unknown,
+): raw is { point: [number, number]; materialId: string } {
+  if (!raw || typeof raw !== "object") return false;
+  const a = raw as Record<string, unknown>;
+  return (
+    Array.isArray(a.point) &&
+    Number.isFinite(a.point[0]) &&
+    Number.isFinite(a.point[1]) &&
+    typeof a.materialId === "string"
+  );
 }
 
 function normalizeCoords(raw: unknown): [number, number][] {
@@ -300,6 +319,10 @@ function normalizeResultView(raw: unknown): ResultViewSettings {
     showGrid: view.showGrid ?? DEFAULT_RESULT_VIEW_SETTINGS.showGrid,
     showSoilColor:
       view.showSoilColor ?? DEFAULT_RESULT_VIEW_SETTINGS.showSoilColor,
+    ...(Number.isFinite(view.gridSpacing)
+      ? { gridSpacing: view.gridSpacing }
+      : {}),
+    ...(Number.isFinite(view.minorTicks) ? { minorTicks: view.minorTicks } : {}),
     annotations,
     paperFrame: { ...paperFrame },
     viewLock:
@@ -535,7 +558,7 @@ function normalizeAnalysisLimits(raw: unknown): AnalysisLimitsState {
 }
 
 function normalizeAnalysisOptions(raw: unknown): AnalysisOptions {
-  const base: AnalysisOptions = { ...DEFAULT_ANALYSIS_OPTIONS };
+  const base: AnalysisOptions = { ...APP_DEFAULT_ANALYSIS_OPTIONS };
   if (!raw || typeof raw !== "object") return base;
 
   const o = raw as Record<string, unknown>;

@@ -1,3 +1,5 @@
+import type { AnalysisOptions } from "@cslope/engine";
+import { DEFAULT_ANALYSIS_OPTIONS } from "@cslope/engine";
 import type {
   AnalysisLimitsState,
   CoordinateExpression,
@@ -82,6 +84,15 @@ export const DEFAULT_PIEZO_LINE: PiezometricLineState = {
   lines: [],
   activeLineId: null,
   materialAssignment: {},
+};
+
+/** Analysis options for a new model (the app's defaults, not the engine's). */
+export const APP_DEFAULT_ANALYSIS_OPTIONS: AnalysisOptions = {
+  ...DEFAULT_ANALYSIS_OPTIONS,
+  method: "Morgenstern-Price",
+  slices: 30,
+  iterations: 1000,
+  refinedIterations: 500,
 };
 
 export const DEFAULT_ANALYSIS_LIMITS: AnalysisLimitsState = {
