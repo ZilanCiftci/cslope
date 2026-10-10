@@ -28,7 +28,7 @@ const MATERIALS: MaterialRow[] = [
   } as MaterialRow,
 ];
 
-function record(anno: Annotation) {
+function record(anno: Annotation, result: AnalysisResult = RESULT) {
   const pdf = new jsPDF({ unit: "mm", format: [297, 210], orientation: "landscape" });
   const rects: { w: number; h: number; style?: string | null }[] = [];
   const fontSizes: number[] = [];
@@ -42,18 +42,24 @@ function record(anno: Annotation) {
     fontSizes.push(size);
     return setFontSize(size);
   }) as typeof pdf.setFontSize;
+  const circle = pdf.circle.bind(pdf);
+  let circles = 0;
+  pdf.circle = ((...args: Parameters<typeof pdf.circle>) => {
+    circles++;
+    return circle(...args);
+  }) as typeof pdf.circle;
   drawAnnotations(
     pdf,
     PAPER as never,
     [anno],
-    RESULT,
+    result,
     MATERIALS,
     { enabled: false, lines: [], activeLineId: null, materialAssignment: {} },
     {},
     [],
     FRAME,
   );
-  return { rects, fontSizes };
+  return { rects, fontSizes, circles };
 }
 
 describe("PDF annotations match the canvas proportions", () => {
@@ -80,5 +86,36 @@ describe("PDF annotations match the canvas proportions", () => {
       fontSize: 6,
     } as Annotation);
     expect(fontSizes.at(-1)).toBeCloseTo((6 * SCALE) / 0.3528, 6);
+  });
+
+  it("draws a slice plot annotation like the canvas does", () => {
+    const anno = {
+      id: "p",
+      type: "plot",
+      x: 0.5,
+      y: 0.5,
+      width: 0.24,
+      height: 0.18,
+    } as Annotation;
+    const empty = record(anno);
+    expect(empty.rects[0]).toMatchObject({ w: 297 * 0.24, h: 210 * 0.18 });
+
+    const slice = (x: number) => ({
+      x,
+      weight: 50,
+      cohesion: 5,
+      frictionAngle: 30,
+      baseLength: 1,
+      normalForce: 40,
+      alpha: 0.3,
+      porePressure: 0,
+    });
+    const withSlices = record(anno, {
+      ...RESULT,
+      criticalSlices: [slice(1), slice(2), slice(3)],
+    } as unknown as AnalysisResult);
+    // Frame + chart box, and one marker per slice.
+    expect(withSlices.rects.length).toBe(2);
+    expect(withSlices.circles).toBe(3);
   });
 });

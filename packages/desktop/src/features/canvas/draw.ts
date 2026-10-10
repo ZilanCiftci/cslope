@@ -16,7 +16,11 @@ import {
   cssVar,
 } from "./constants";
 import { GRID_RAW_STEP_PX } from "../../constants";
-import { computeRulerStep, formatRulerLabel } from "../../utils/ruler";
+import {
+  computeRulerStep,
+  formatRulerLabel,
+  resolveTickStep,
+} from "../../utils/ruler";
 import {
   buildMaterialTableData,
   computePaperFrame,
@@ -26,6 +30,7 @@ import {
 } from "./helpers";
 import { resolveAnnotationText } from "../annotations/resolveAnnotationText";
 import { anchoredTopLeft } from "../annotations/anchorPosition";
+import { computeSlicePlotData } from "../annotations/slicePlotData";
 import type { PointHit } from "./types";
 import {
   ANNOTATION_DEFAULT_FONT_FAMILY,
@@ -390,11 +395,8 @@ export function drawCanvas(
     steps.find((s) => s * mag >= rawStep)! * mag,
   );
   const gridStep =
-    mode === "result" &&
-    result &&
-    resultViewSettings.gridSpacing &&
-    resultViewSettings.gridSpacing > 0
-      ? resultViewSettings.gridSpacing
+    mode === "result" && result
+      ? resolveTickStep(resultViewSettings.gridSpacing, autoGridStep)
       : autoGridStep;
 
   ctx.strokeStyle = GRID_COLOR;
@@ -1537,10 +1539,10 @@ export function drawCanvas(
         : Math.min(dimW, dimH);
       const innerFrameWidthMm =
         paperWidthMm * (1 - PLOT_MARGINS.L - PLOT_MARGINS.R);
-      const rulerStep =
-        resultViewSettings.gridSpacing && resultViewSettings.gridSpacing > 0
-          ? resultViewSettings.gridSpacing
-          : computeRulerStep(worldSpan, innerFrameWidthMm, paperWidthMm);
+      const rulerStep = resolveTickStep(
+        resultViewSettings.gridSpacing,
+        computeRulerStep(worldSpan, innerFrameWidthMm, paperWidthMm),
+      );
       const minorTickCount = resultViewSettings.minorTicks ?? 0;
 
       ctx.save();
@@ -1792,69 +1794,18 @@ export function drawCanvas(
         ctx.fillRect(drawX, drawY, plotW, plotH);
         ctx.strokeRect(drawX, drawY, plotW, plotH);
 
-        const axisMode = anno.plotAxisX ?? "slice";
-        const metric = anno.plotAxisY ?? "shearStrength";
-        const metricMeta: Record<
-          NonNullable<typeof anno.plotAxisY>,
-          { label: string; unit: string }
-        > = {
-          shearStrength: { label: "Shear", unit: "kPa" },
-          frictionAngle: { label: "Friction angle", unit: "deg" },
-          cohesion: { label: "Cohesion", unit: "kPa" },
-          baseCohesion: { label: "Base cohesion", unit: "kPa" },
-          porePressure: { label: "Pore pressure", unit: "kPa" },
-          pwp: { label: "PWP", unit: "kN" },
-          sliceWeight: { label: "Slice weight", unit: "kN" },
-          cohesionStrength: { label: "Cohesion F", unit: "kN" },
-          resistingForce: { label: "Resisting", unit: "kN" },
-          pullingForce: { label: "Pulling", unit: "kN" },
-        };
-
-        const points = result.criticalSlices.map((slice, index) => {
-          // SliceData.frictionAngle is always in degrees.
-          const phiDeg = slice.frictionAngle;
-          const phiRad = (phiDeg * Math.PI) / 180;
-          const totalWeight = slice.weight + (slice.surfaceLoad ?? 0);
-          const cohesionStrength = slice.cohesion * slice.baseLength;
-          const frictionStrength =
-            Math.max(slice.normalForce, 0) * Math.tan(phiRad);
-          const resistingForce = cohesionStrength + frictionStrength;
-          const pullingForce = totalWeight * Math.sin(slice.alpha);
-          const porePressure = slice.porePressure;
-          const pwp = slice.porePressure * slice.baseLength;
-          const shearStrength =
-            slice.baseLength > 1e-9 ? resistingForce / slice.baseLength : 0;
-
-          const yValue =
-            metric === "shearStrength"
-              ? shearStrength
-              : metric === "frictionAngle"
-                ? phiDeg
-                : metric === "cohesion"
-                  ? slice.cohesion
-                  : metric === "baseCohesion"
-                    ? slice.cohesion
-                    : metric === "porePressure"
-                      ? porePressure
-                      : metric === "pwp"
-                        ? pwp
-                        : metric === "sliceWeight"
-                          ? totalWeight
-                          : metric === "cohesionStrength"
-                            ? cohesionStrength
-                            : metric === "resistingForce"
-                              ? resistingForce
-                              : pullingForce;
-          const xValue = axisMode === "slice" ? index + 1 : slice.x;
-          return { x: xValue, y: yValue };
-        });
+        const plot = computeSlicePlotData(
+          result,
+          anno.plotAxisX,
+          anno.plotAxisY,
+        );
+        const { points, title } = plot;
 
         const titleSize = Math.max(8, 10 * annoScale);
         const axisSize = Math.max(7, 9 * annoScale);
-        const title = `${metricMeta[metric].label} (${metricMeta[metric].unit})`;
         const titlePad = titleSize + 6;
 
-        if (points.length < 2) {
+        if (!plot.range) {
           ctx.font = `${titleSize}px sans-serif`;
           ctx.fillStyle = "#78909c";
           ctx.textAlign = "left";
@@ -1877,22 +1828,7 @@ export function drawCanvas(
         const chartY = drawY + padTop;
         const chartW = Math.max(8, plotW - padLeft - padRight);
         const chartH = Math.max(8, plotH - padTop - padBottom);
-
-        const xs = points.map((p) => p.x);
-        const ys = points.map((p) => p.y);
-        let xMin = Math.min(...xs);
-        let xMax = Math.max(...xs);
-        let yMin = Math.min(...ys);
-        let yMax = Math.max(...ys);
-        if (Math.abs(xMax - xMin) < 1e-9) {
-          xMin -= 0.5;
-          xMax += 0.5;
-        }
-        if (Math.abs(yMax - yMin) < 1e-9) {
-          const bump = Math.max(1, Math.abs(yMax) * 0.1);
-          yMin -= bump;
-          yMax += bump;
-        }
+        const { xMin, xMax, yMin, yMax } = plot.range;
 
         const mapX = (v: number) =>
           chartX + ((v - xMin) / (xMax - xMin)) * chartW;
@@ -1949,12 +1885,12 @@ export function drawCanvas(
         ctx.textBaseline = "top";
         ctx.textAlign = "center";
         ctx.fillText(
-          xs[0].toFixed(axisMode === "slice" ? 0 : 1),
+          points[0].x.toFixed(plot.xDecimals),
           chartX,
           chartY + chartH + 4,
         );
         ctx.fillText(
-          xs[xs.length - 1].toFixed(axisMode === "slice" ? 0 : 1),
+          points[points.length - 1].x.toFixed(plot.xDecimals),
           chartX + chartW,
           chartY + chartH + 4,
         );

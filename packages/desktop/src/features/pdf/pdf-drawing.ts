@@ -3,7 +3,11 @@ import { fosColor } from "../../utils/fos-color";
 import { circleArcPoints } from "../../utils/arc";
 import { computeRegions } from "../../utils/regions";
 import { GRID_RAW_STEP_PX } from "../../constants";
-import { computeRulerStep, formatRulerLabel } from "../../utils/ruler";
+import {
+  computeRulerStep,
+  formatRulerLabel,
+  resolveTickStep,
+} from "../../utils/ruler";
 import { GRID_STEP_MIN } from "../canvas/constants";
 import { buildMaterialTableData } from "../canvas/helpers";
 import {
@@ -66,6 +70,7 @@ import { surfaceYAtX } from "../view/surface";
 import { resolveAnnotationText } from "../annotations/resolveAnnotationText";
 import { getMaterialTableColumnWidthPx } from "../annotations/materialTableLayout";
 import { anchoredTopLeft } from "../annotations/anchorPosition";
+import { computeSlicePlotData } from "../annotations/slicePlotData";
 
 export function drawGrid(
   pdf: jsPDF,
@@ -81,7 +86,7 @@ export function drawGrid(
     GRID_STEP_MIN,
     steps.find((s) => s * mag >= rawStep)! * mag,
   );
-  const gridStep = gridSpacing && gridSpacing > 0 ? gridSpacing : autoGridStep;
+  const gridStep = resolveTickStep(gridSpacing, autoGridStep);
 
   const [originPdfX, originPdfY] = tf.worldToPdf(0, 0);
   const worldPerMm = 1 / (viewScale * tf.mmPerPx);
@@ -144,10 +149,10 @@ export function drawRulerFrame(
   const worldBottom = (originPdfY - (innerFrame.y + innerFrame.h)) * worldPerMm;
 
   const worldSpan = worldRight - worldLeft;
-  const rulerStep =
-    gridSpacing && gridSpacing > 0
-      ? gridSpacing
-      : computeRulerStep(worldSpan, innerFrame.w, tf.paperW);
+  const rulerStep = resolveTickStep(
+    gridSpacing,
+    computeRulerStep(worldSpan, innerFrame.w, tf.paperW),
+  );
   const minorTickCount = minorTicks ?? 0;
 
   pdf.setFontSize(FONT_SIZE);
@@ -985,8 +990,121 @@ export function drawAnnotations(
         piezometricLine,
         annoScale,
       );
+    } else if (anno.type === "plot") {
+      const plotW = paperFrame.w * (anno.width ?? 0.24);
+      const plotH = paperFrame.h * (anno.height ?? 0.18);
+      const { x: drawX, y: drawY } = anchoredTopLeft(
+        ax,
+        ay,
+        plotW,
+        plotH,
+        anno.anchor,
+      );
+      drawPlotAnnotationPdf(
+        pdf,
+        drawX,
+        drawY,
+        plotW,
+        plotH,
+        anno,
+        result,
+        annoScale,
+      );
     }
   }
+}
+
+/** Mirrors the canvas slice plot (draw.ts) in paper millimetres. */
+function drawPlotAnnotationPdf(
+  pdf: jsPDF,
+  x: number,
+  y: number,
+  w: number,
+  h: number,
+  anno: Annotation,
+  result: AnalysisResult,
+  scale: number,
+) {
+  const plot = computeSlicePlotData(result, anno.plotAxisX, anno.plotAxisY);
+  const titleMm = 10 * scale;
+  const axisMm = 9 * scale;
+  const pad = 4 * scale;
+
+  pdf.setFillColor(255, 255, 255);
+  pdf.setDrawColor(120, 144, 156);
+  pdf.setLineWidth(0.2);
+  pdf.rect(x, y, w, h, "FD");
+
+  pdf.setFont("helvetica", "normal");
+  pdf.setFontSize(titleMm / 0.3528);
+  pdf.setTextColor(120, 144, 156);
+  pdf.text(plot.title, x + 6 * scale, y + pad, { baseline: "top" });
+
+  pdf.setFontSize(axisMm / 0.3528);
+  if (!plot.range) {
+    pdf.setTextColor(102, 102, 102);
+    pdf.text("No slice data", x + w / 2, y + h / 2, {
+      align: "center",
+      baseline: "middle",
+    });
+    return;
+  }
+
+  const padLeft = 32 * scale;
+  const padRight = 12 * scale;
+  const padBottom = 22 * scale;
+  const padTop = titleMm + 6 * scale;
+  const chartX = x + padLeft;
+  const chartY = y + padTop;
+  const chartW = Math.max(2, w - padLeft - padRight);
+  const chartH = Math.max(2, h - padTop - padBottom);
+  const { xMin, xMax, yMin, yMax } = plot.range;
+  const mapX = (v: number) => chartX + ((v - xMin) / (xMax - xMin)) * chartW;
+  const mapY = (v: number) =>
+    chartY + chartH - ((v - yMin) / (yMax - yMin)) * chartH;
+
+  pdf.setDrawColor(207, 216, 220);
+  pdf.setLineWidth(0.15);
+  for (let i = 1; i < 4; i++) {
+    const gy = chartY + (chartH * i) / 4;
+    pdf.line(chartX, gy, chartX + chartW, gy);
+  }
+  pdf.setDrawColor(120, 144, 156);
+  pdf.setLineWidth(0.2);
+  pdf.rect(chartX, chartY, chartW, chartH, "S");
+
+  pdf.setDrawColor(38, 166, 154);
+  pdf.setFillColor(38, 166, 154);
+  pdf.setLineWidth(Math.max(0.25, 0.35 * scale));
+  for (let i = 1; i < plot.points.length; i++) {
+    const a = plot.points[i - 1];
+    const b = plot.points[i];
+    pdf.line(mapX(a.x), mapY(a.y), mapX(b.x), mapY(b.y));
+  }
+  const r = Math.max(0.35, 1.8 * scale);
+  for (const p of plot.points) pdf.circle(mapX(p.x), mapY(p.y), r, "F");
+
+  pdf.setTextColor(95, 107, 115);
+  pdf.text(yMax.toFixed(2), chartX - pad, chartY, {
+    align: "right",
+    baseline: "middle",
+  });
+  pdf.text(yMin.toFixed(2), chartX - pad, chartY + chartH, {
+    align: "right",
+    baseline: "middle",
+  });
+  const first = plot.points[0];
+  const last = plot.points[plot.points.length - 1];
+  pdf.text(first.x.toFixed(plot.xDecimals), chartX, chartY + chartH + pad, {
+    align: "center",
+    baseline: "top",
+  });
+  pdf.text(
+    last.x.toFixed(plot.xDecimals),
+    chartX + chartW,
+    chartY + chartH + pad,
+    { align: "center", baseline: "top" },
+  );
 }
 
 function drawTextAnnotation(
