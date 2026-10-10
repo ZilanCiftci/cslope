@@ -64,7 +64,7 @@ import {
 } from "./pdf-helpers";
 import { surfaceYAtX } from "../view/surface";
 import { resolveAnnotationText } from "../annotations/resolveAnnotationText";
-import { getMaterialTableColumnWidthMm } from "../annotations/materialTableLayout";
+import { getMaterialTableColumnWidthPx } from "../annotations/materialTableLayout";
 import { anchoredTopLeft } from "../annotations/anchorPosition";
 
 export function drawGrid(
@@ -167,7 +167,7 @@ export function drawRulerFrame(
     if (px < ifx || px > ifx + ifw) continue;
     pdf.setLineWidth(0.2);
     pdf.line(px, btmY, px, btmY + TICK_LEN);
-    const label = formatRulerLabel(gx);
+    const label = formatRulerLabel(gx, rulerStep);
     pdf.text(label, px, btmY + TICK_LEN + FONT_SIZE * 0.35 + 1.0, {
       align: "center",
     });
@@ -192,7 +192,7 @@ export function drawRulerFrame(
     if (py < ify || py > ify + ifh) continue;
     pdf.setLineWidth(0.2);
     pdf.line(ifx, py, ifx - TICK_LEN, py);
-    const label = formatRulerLabel(gy);
+    const label = formatRulerLabel(gy, rulerStep);
     pdf.text(label, ifx - TICK_LEN - 1.0, py + FONT_SIZE * 0.12, {
       align: "right",
     });
@@ -265,10 +265,8 @@ export function drawMaterialRegions(
       const [r, g, b] = parseColor(mat.color);
       pdf.setFillColor(r, g, b);
 
-      // Use setOpacity which manages its own GState save/restore
-      setOpacity(pdf, 0.33);
+      // Opaque, like the canvas and the material table swatches.
       pdfPath(pdf, ops, region.holes ? "f*" : "f");
-      resetOpacity(pdf);
     }
 
     // Region border stroke
@@ -645,9 +643,15 @@ export function drawCriticalSurface(
     const minX = Math.min(entryX, exitX);
     const maxX = Math.max(entryX, exitX);
 
+    // Only vertices on the ground surface (as on the canvas): a vertex on
+    // the bottom boundary would pull the fill down to the model base.
     const surfacePts: [number, number][] = [cs.entryPoint];
     for (const [bx, by] of coordinates) {
-      if (bx > minX && bx < maxX) surfacePts.push([bx, by]);
+      if (bx <= minX || bx >= maxX) continue;
+      const topY = surfaceYAtX(coordinates, bx);
+      if (topY !== null && Math.abs(by - topY) < 0.001) {
+        surfacePts.push([bx, by]);
+      }
     }
     surfacePts.push(cs.exitPoint);
     surfacePts.sort((a, b) => a[0] - b[0]);
@@ -745,7 +749,7 @@ function measureTextAnnotationPdf(
   parameters: ParameterDef[],
 ): { w: number; h: number } {
   const fontSize = (anno.fontSize ?? ANNOTATION_DEFAULT_FONT_SIZE) * scale;
-  const ptSize = Math.max(8, fontSize / 0.3528);
+  const ptSize = fontSize / 0.3528;
   const family = mapFont(anno.fontFamily ?? ANNOTATION_DEFAULT_FONT_FAMILY);
   const style = mapFontStyle(anno.bold, anno.italic);
   pdf.setFont(family, style);
@@ -763,17 +767,126 @@ function measureTextAnnotationPdf(
   return { w: maxW, h: Math.max(lineHeight, lines.length * lineHeight) };
 }
 
-function measureColorBarPdf(scale: number): { w: number; h: number } {
-  const barW = 5 * scale;
-  const barH = 50 * scale;
-  const labelFontSize = Math.max(7, 7 * scale);
-  const titleExtraTop = Math.max(8, 8 * scale) + 2 * scale;
-  const labelPad = 2 * scale;
-  // Approximate max label width (e.g. "10.00" is ~5 chars)
-  const approxLabelW = labelFontSize * 0.5 * 5;
+/**
+ * Colour bar layout in mm, using the canvas proportions (bar 20 × 200,
+ * labels 11, title above the bar) with the annotation scale in mm.
+ */
+function layoutColorBarPdf(pdf: jsPDF, result: AnalysisResult, scale: number) {
+  const barW = 20 * scale;
+  const barH = 200 * scale;
+  const labelMm = 11 * scale;
+  const labelPt = labelMm / 0.3528;
+  const titleExtraTop = labelMm + 4 * scale;
+  pdf.setFont("helvetica", "normal");
+  pdf.setFontSize(labelPt);
+  let maxLabelW = 0;
+  for (let t = 0; t <= COLOR_BAR_NUM_TICKS; t++) {
+    const frac = t / COLOR_BAR_NUM_TICKS;
+    const fos = result.maxFOS - frac * (result.maxFOS - result.minFOS);
+    maxLabelW = Math.max(maxLabelW, pdf.getTextWidth(fos.toFixed(2)));
+  }
   return {
-    w: barW + labelPad + approxLabelW,
+    barW,
+    barH,
+    labelPt,
+    titleExtraTop,
+    w: barW + 5 * scale + maxLabelW,
     h: barH + titleExtraTop,
+  };
+}
+
+/** Points per millimetre-sized font (1 pt = 0.3528 mm). */
+const MM_PER_PT = 0.3528;
+
+function wrapTextPdf(pdf: jsPDF, text: string, maxWidth: number): string[] {
+  if (pdf.getTextWidth(text) <= maxWidth) return [text];
+  const words = text.split(/\s+/).filter((w) => w.length > 0);
+  if (words.length <= 1) return [text];
+  const lines: string[] = [];
+  let line = "";
+  for (const word of words) {
+    const candidate = line ? `${line} ${word}` : word;
+    if (!line || pdf.getTextWidth(candidate) <= maxWidth) {
+      line = candidate;
+      continue;
+    }
+    lines.push(line);
+    line = word;
+  }
+  if (line) lines.push(line);
+  return lines.length > 0 ? lines : [text];
+}
+
+/**
+ * Material table layout in mm.  Uses exactly the canvas formulas
+ * (features/canvas/helpers.ts drawTable/measureTable) with the annotation
+ * scale in mm instead of px, so the PDF table has the same proportions as
+ * on screen.  (It used to convert px to mm twice and clamp fonts to 8 pt,
+ * making the table ~3.7× too small with every cell cut off.)
+ */
+function layoutMaterialTablePdf(
+  pdf: jsPDF,
+  annotation: Annotation,
+  materials: MaterialRow[],
+  piezometricLine: PiezometricLineState,
+  scale: number,
+) {
+  const fontSize = annotation.fontSize ?? 6;
+  const f = fontSize / 6;
+  const { columnKeys, header, rows } = buildMaterialTableData(
+    annotation,
+    materials,
+    piezometricLine,
+  );
+  const padding = 3 * scale;
+  const rowH = 15 * scale * f;
+  const fontMm = fontSize * scale;
+  const bodyPt = fontMm / MM_PER_PT;
+  const headerPt = fontMm / MM_PER_PT;
+  const swatchW = 10 * scale * f;
+  const headerLineH = Math.max(fontMm * 1.1, 11 * scale * f);
+
+  pdf.setFont("helvetica", "bold");
+  pdf.setFontSize(headerPt);
+  const headerLines = header.map((h, c) =>
+    c <= 1
+      ? [h]
+      : wrapTextPdf(
+          pdf,
+          h,
+          Math.max(
+            20 * scale,
+            getMaterialTableColumnWidthPx(columnKeys[c], scale, fontSize) -
+              padding * 2,
+          ),
+        ),
+  );
+  const colW = columnKeys.map((key) =>
+    getMaterialTableColumnWidthPx(key, scale, fontSize),
+  );
+  colW[0] = Math.max(colW[0], swatchW + padding * 2);
+  const maxHeaderLines = Math.max(...headerLines.map((l) => l.length));
+  const headerH = Math.max(
+    22 * scale * f,
+    maxHeaderLines * headerLineH + padding * 2,
+  );
+  const totalW = colW.reduce((a, b) => a + b, 0);
+  const totalH = headerH + rows.length * rowH;
+  return {
+    columnKeys,
+    header,
+    rows,
+    padding,
+    rowH,
+    bodyPt,
+    headerPt,
+    swatchW,
+    headerLineH,
+    headerLines,
+    colW,
+    headerH,
+    totalW,
+    totalH,
   };
 }
 
@@ -784,69 +897,14 @@ function measureTablePdf(
   piezometricLine: PiezometricLineState,
   scale: number,
 ): { w: number; h: number } {
-  const fontSize = annotation.fontSize ?? 6;
-  const { columnKeys, header, rows } = buildMaterialTableData(
+  const layout = layoutMaterialTablePdf(
+    pdf,
     annotation,
     materials,
     piezometricLine,
+    scale,
   );
-  const fontScale = fontSize / 6;
-  const bodyPt = Math.max(8, (fontSize * scale * 0.47) / 0.3528);
-  const headerPt = Math.max(9, ((fontSize * scale) / 0.3528) * 0.9);
-  const padding = Math.max(1.1, 1.1 * scale);
-  const rowH = Math.max(bodyPt * 0.3528 * 1.15, 3.8 * scale * fontScale);
-  const headerLineH = Math.max(
-    headerPt * 0.3528 * 1.15,
-    1.8 * scale * fontScale,
-  );
-  const swatchW = 2.6 * scale * fontScale;
-
-  pdf.setFont("helvetica", "bold");
-  pdf.setFontSize(headerPt);
-  const wrapHeader = (text: string, maxWidth: number): string[] => {
-    if (pdf.getTextWidth(text) <= maxWidth) return [text];
-    const words = text.split(/\s+/).filter((w) => w.length > 0);
-    if (words.length <= 1) return [text];
-    const lines: string[] = [];
-    let line = "";
-    for (const word of words) {
-      const candidate = line ? `${line} ${word}` : word;
-      if (!line || pdf.getTextWidth(candidate) <= maxWidth) {
-        line = candidate;
-        continue;
-      }
-      lines.push(line);
-      line = word;
-    }
-    if (line) lines.push(line);
-    return lines.length > 0 ? lines : [text];
-  };
-  const headerLines = header.map((h, c) =>
-    c <= 1
-      ? [h]
-      : wrapHeader(
-          h,
-          Math.max(
-            4,
-            getMaterialTableColumnWidthMm(columnKeys[c], scale, fontSize) -
-              padding * 2,
-          ),
-        ),
-  );
-  const colW = columnKeys.map((key, index) => {
-    const fixed = getMaterialTableColumnWidthMm(key, scale, fontSize);
-    if (index === 0) return Math.max(fixed, swatchW + padding * 2);
-    return fixed;
-  });
-  const maxHeaderLines = Math.max(...headerLines.map((l) => l.length));
-  const headerH = Math.max(
-    maxHeaderLines * headerLineH + padding * 2,
-    5.5 * scale * fontScale,
-  );
-  return {
-    w: colW.reduce((a, b) => a + b, 0),
-    h: headerH + rows.length * rowH,
-  };
+  return { w: layout.totalW, h: layout.totalH };
 }
 
 export function drawAnnotations(
@@ -892,8 +950,9 @@ export function drawAnnotations(
         result,
         parameters,
       );
-    } else if (anno.type === "color-bar" && result.allSurfaces.length > 1) {
-      const size = measureColorBarPdf(annoScale);
+    } else if (anno.type === "color-bar") {
+      // Drawn whenever the canvas draws it (also for a single surface).
+      const size = layoutColorBarPdf(pdf, result, annoScale);
       const { x: drawX, y: drawY } = anchoredTopLeft(
         ax,
         ay,
@@ -940,8 +999,10 @@ function drawTextAnnotation(
   result: AnalysisResult,
   parameters: ParameterDef[],
 ) {
+  // Same size as on the canvas (no 8 pt floor, which made small text
+  // overlap because the line spacing used the unclamped size).
   const fontSize = (anno.fontSize ?? ANNOTATION_DEFAULT_FONT_SIZE) * scale;
-  const ptSize = Math.max(8, fontSize / 0.3528);
+  const ptSize = fontSize / 0.3528;
 
   const family = mapFont(anno.fontFamily ?? ANNOTATION_DEFAULT_FONT_FAMILY);
   const style = mapFontStyle(anno.bold, anno.italic);
@@ -961,7 +1022,7 @@ function drawTextAnnotation(
   const lineHeight = fontSize * ANNOTATION_LINE_HEIGHT;
 
   lines.forEach((line, i) => {
-    pdf.text(line, x, y + fontSize * 0.8 + i * lineHeight);
+    pdf.text(line, x, y + i * lineHeight, { baseline: "top" });
   });
 }
 
@@ -972,8 +1033,12 @@ function drawColorBarAnnotation(
   result: AnalysisResult,
   scale: number,
 ) {
-  const barW = 5 * scale;
-  const barH = 50 * scale;
+  const { barW, barH, labelPt, titleExtraTop } = layoutColorBarPdf(
+    pdf,
+    result,
+    scale,
+  );
+  const barY = y + titleExtraTop;
 
   const fosMin = result.minFOS;
   const fosMax = result.maxFOS;
@@ -984,32 +1049,30 @@ function drawColorBarAnnotation(
     const fos = fosMax - t * (fosMax - fosMin);
     const [r, g, b] = parseColor(fosColor(fos, fosMin, fosMax));
     pdf.setFillColor(r, g, b);
-    pdf.rect(x, y + t * barH, barW, barH / (numSteps - 1) + 0.1, "F");
+    pdf.rect(x, barY + t * barH, barW, barH / (numSteps - 1) + 0.1, "F");
   }
 
   pdf.setDrawColor(...MARKER_COLOR.rgb);
   pdf.setLineWidth(0.2);
-  pdf.rect(x, y, barW, barH, "S");
+  pdf.rect(x, barY, barW, barH, "S");
 
-  pdf.setFontSize(Math.max(8, 8 * scale));
+  pdf.setFontSize(labelPt);
   pdf.setFont("helvetica", "bold");
   pdf.setTextColor(...MARKER_COLOR.rgb);
-  pdf.text("FOS", x, y - 2 * scale);
+  pdf.text("FOS", x, barY - 4 * scale, { baseline: "bottom" });
 
-  const numTicks = COLOR_BAR_NUM_TICKS;
   pdf.setFont("helvetica", "normal");
-  pdf.setFontSize(Math.max(7, 7 * scale));
-
-  for (let t = 0; t <= numTicks; t++) {
-    const frac = t / numTicks;
-    const ty = y + frac * barH;
+  const labelX = x + barW + 5 * scale;
+  for (let t = 0; t <= COLOR_BAR_NUM_TICKS; t++) {
+    const frac = t / COLOR_BAR_NUM_TICKS;
+    const ty = barY + frac * barH;
     const fos = fosMax - frac * (fosMax - fosMin);
 
     pdf.setDrawColor(...MARKER_COLOR.rgb);
     pdf.setLineWidth(0.2);
-    pdf.line(x + barW, ty, x + barW + 1.5 * scale, ty);
+    pdf.line(x + barW, ty, x + barW + 3 * scale, ty);
 
-    pdf.text(fos.toFixed(2), x + barW + 2 * scale, ty + 1 * scale);
+    pdf.text(fos.toFixed(2), labelX, ty, { baseline: "middle" });
   }
 }
 
@@ -1032,75 +1095,21 @@ function drawTablePdf(
     return `${out}\u2026`;
   };
 
-  const wrapHeaderTextPdf = (text: string, maxWidth: number): string[] => {
-    if (pdf.getTextWidth(text) <= maxWidth) return [text];
-    const words = text.split(/\s+/).filter((w) => w.length > 0);
-    if (words.length <= 1) return [text];
-
-    const lines: string[] = [];
-    let line = "";
-    for (const word of words) {
-      const candidate = line ? `${line} ${word}` : word;
-      if (!line || pdf.getTextWidth(candidate) <= maxWidth) {
-        line = candidate;
-        continue;
-      }
-      lines.push(line);
-      line = word;
-    }
-    if (line) lines.push(line);
-    return lines.length > 0 ? lines : [text];
-  };
-
-  const { columnKeys, header, rows } = buildMaterialTableData(
-    annotation,
-    materials,
-    piezometricLine,
-  );
-
-  const fontSize = annotation.fontSize ?? 6;
-  const fontScale = fontSize / 6;
-
-  const bodyPt = Math.max(8, (fontSize * scale * 0.47) / 0.3528);
-  const headerPt = Math.max(9, ((fontSize * scale) / 0.3528) * 0.9);
-
-  const padding = Math.max(1.1, 1.1 * scale);
-  const rowH = Math.max(bodyPt * 0.3528 * 1.15, 3.8 * scale * fontScale);
-  const headerLineH = Math.max(
-    headerPt * 0.3528 * 1.15,
-    1.8 * scale * fontScale,
-  );
-  const swatchW = 2.6 * scale * fontScale;
-
-  pdf.setFont("helvetica", "bold");
-  pdf.setFontSize(headerPt);
-  const headerLines = header.map((h, c) =>
-    c <= 1
-      ? [h]
-      : wrapHeaderTextPdf(
-          h,
-          Math.max(
-            4,
-            getMaterialTableColumnWidthMm(columnKeys[c], scale, fontSize) -
-              padding * 2,
-          ),
-        ),
-  );
-  const colW = columnKeys.map((key, index) => {
-    const fixed = getMaterialTableColumnWidthMm(key, scale, fontSize);
-    if (index === 0) return Math.max(fixed, swatchW + padding * 2);
-    return fixed;
-  });
-  pdf.setFont("helvetica", "normal");
-  pdf.setFontSize(bodyPt);
-  const maxHeaderLines = Math.max(...headerLines.map((l) => l.length));
-  const headerH = Math.max(
-    maxHeaderLines * headerLineH + padding * 2,
-    5.5 * scale * fontScale,
-  );
-
-  const totalW = colW.reduce((a, b) => a + b, 0);
-  const totalH = headerH + rows.length * rowH;
+  const {
+    header,
+    rows,
+    padding,
+    rowH,
+    bodyPt,
+    headerPt,
+    swatchW,
+    headerLineH,
+    headerLines,
+    colW,
+    headerH,
+    totalW,
+    totalH,
+  } = layoutMaterialTablePdf(pdf, annotation, materials, piezometricLine, scale);
 
   pdf.setFillColor(255, 255, 255);
   pdf.setDrawColor(0, 0, 0);
@@ -1120,9 +1129,11 @@ function drawTablePdf(
   let cx = x;
   for (let c = 0; c < header.length; c++) {
     const lines = headerLines[c];
-    const startY = y + padding + headerLineH * 0.75;
+    const startY = y + padding;
     for (let i = 0; i < lines.length; i++) {
-      pdf.text(lines[i], cx + padding, startY + i * headerLineH);
+      pdf.text(lines[i], cx + padding, startY + i * headerLineH, {
+        baseline: "top",
+      });
     }
     cx += colW[c];
   }
@@ -1160,7 +1171,7 @@ function drawTablePdf(
 
       pdf.setTextColor(51, 51, 51);
       const fitted = fitTextPdf(rows[r][c], Math.max(2, colW[c] - padding * 2));
-      pdf.text(fitted, cx + padding, ry + rowH * 0.65);
+      pdf.text(fitted, cx + padding, ry + rowH / 2, { baseline: "middle" });
       cx += colW[c];
     }
   }

@@ -1561,7 +1561,7 @@ export function drawCanvas(
         ctx.moveTo(px, btmY);
         ctx.lineTo(px, btmY + TICK_LEN);
         ctx.stroke();
-        const label = formatRulerLabel(gx);
+        const label = formatRulerLabel(gx, rulerStep);
         ctx.fillText(label, px, btmY + TICK_LEN + 2 * paperZoom);
       }
       // Minor ticks (X axis)
@@ -1591,7 +1591,7 @@ export function drawCanvas(
         ctx.moveTo(ifx, py);
         ctx.lineTo(ifx - TICK_LEN, py);
         ctx.stroke();
-        const label = formatRulerLabel(gy);
+        const label = formatRulerLabel(gy, rulerStep);
         ctx.fillText(label, ifx - TICK_LEN - 3 * paperZoom, py);
       }
       // Minor ticks (Y axis)

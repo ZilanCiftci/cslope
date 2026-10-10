@@ -290,10 +290,6 @@ export function exportVectorPdf(data: PdfExportData): void {
     pdf.clip();
     (pdf as unknown as { discardPath?: () => void }).discardPath?.();
 
-    if (rvs.showGrid) {
-      drawGrid(pdf, tf, viewScale, innerFrame, rvs.gridSpacing);
-    }
-
     if (coordinates.length >= 3) {
       drawMaterialRegions(
         pdf,
@@ -304,6 +300,11 @@ export function exportVectorPdf(data: PdfExportData): void {
         regionMaterials,
         rvs.showSoilColor ?? true,
       );
+    }
+
+    // Grid on top of the (opaque) regions, as on the canvas.
+    if (rvs.showGrid) {
+      drawGrid(pdf, tf, viewScale, innerFrame, rvs.gridSpacing);
     }
 
     if (coordinates.length >= 3) {

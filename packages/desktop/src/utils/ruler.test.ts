@@ -97,3 +97,14 @@ describe("formatRulerLabel", () => {
     expect(formatRulerLabel(999.5)).toBe("999.5");
   });
 });
+
+describe("formatRulerLabel with a tick step", () => {
+  it("uses as many decimals as the step needs", () => {
+    expect(formatRulerLabel(0.25, 0.25)).toBe("0.25");
+    expect(formatRulerLabel(0.75, 0.25)).toBe("0.75");
+    expect(formatRulerLabel(1.25, 0.25)).toBe("1.25");
+    expect(formatRulerLabel(0.125, 0.125)).toBe("0.125");
+    expect(formatRulerLabel(2, 0.25)).toBe("2");
+    expect(formatRulerLabel(0.5, 0.5)).toBe("0.5");
+  });
+});

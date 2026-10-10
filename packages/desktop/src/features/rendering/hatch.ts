@@ -214,7 +214,8 @@ export function drawPdfHatchLabel(
   cx /= pts.length;
   cy /= pts.length;
 
-  const fontSize = Math.max(6, 10 * mmPerPx);
+  // Same size as the canvas label (10 px); a 6 mm floor made it ~17 pt.
+  const fontSize = 10 * mmPerPx;
   pdf.setFont("helvetica", "bold");
   pdf.setFontSize(fontSize / 0.3528);
 

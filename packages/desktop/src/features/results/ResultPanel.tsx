@@ -107,7 +107,7 @@ export function ResultPanel({ showTitle = true }: { showTitle?: boolean }) {
               {result.elapsedMs.toFixed(0)} ms
             </span>
           </Row>
-          {result.nonConvergedSurfaces && result.nonConvergedSurfaces > 0 && (
+          {(result.nonConvergedSurfaces ?? 0) > 0 && (
             <Row label="Convergence">
               <span style={{ color: "var(--color-vsc-warning)" }}>
                 {result.nonConvergedSurfaces} surface(s) with weak equilibrium
@@ -115,7 +115,7 @@ export function ResultPanel({ showTitle = true }: { showTitle?: boolean }) {
               </span>
             </Row>
           )}
-          {result.splitFailureCount && result.splitFailureCount > 0 && (
+          {(result.splitFailureCount ?? 0) > 0 && (
             <Row label="Geometry Split">
               <span style={{ color: "var(--color-vsc-warning)" }}>
                 {result.splitFailureCount} split operation(s) failed
