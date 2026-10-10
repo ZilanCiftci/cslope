@@ -74,6 +74,16 @@ export class Slope {
   // ── Water table ───────────────────────────────────────────────
   private _waterRL: boolean = false;
   private _waterRLXY: { x: number[]; y: number[] } | null = null;
+  /**
+   * Additional water tables by id (null = the line does not overlap the
+   * slope).  Materials assigned to one of these use it for pore pressure
+   * instead of the default water table.
+   */
+  private _extraWaterLines = new Map<
+    string,
+    { x: number[]; y: number[] } | null
+  >();
+  private _materialWaterTable = new Map<Material, string>();
 
   // ── Loads ─────────────────────────────────────────────────────
   private _udls: Udl[] = [];
@@ -138,6 +148,40 @@ export class Slope {
 
   get hasWaterTable(): boolean {
     return this._waterRL;
+  }
+
+  /** True when at least one material uses its own water table. */
+  get hasMaterialWaterTables(): boolean {
+    return this._materialWaterTable.size > 0;
+  }
+
+  /**
+   * Water lines that can govern pore pressure (the default line and any
+   * line assigned to a material), used as slice break points.
+   */
+  get allWaterLines(): { x: number[]; y: number[] }[] {
+    const lines: { x: number[]; y: number[] }[] = [];
+    if (this._waterRL && this._waterRLXY) lines.push(this._waterRLXY);
+    for (const id of new Set(this._materialWaterTable.values())) {
+      const line = this._extraWaterLines.get(id);
+      if (line) lines.push(line);
+    }
+    return lines;
+  }
+
+  /**
+   * Water line that governs pore pressure at the base of a slice in the
+   * given material: the material's own water table when it has one,
+   * otherwise the default water table.  Null means no pore pressure.
+   */
+  getWaterLineForMaterial(
+    material: Material | null,
+  ): { x: number[]; y: number[] } | null {
+    const id = material ? this._materialWaterTable.get(material) : undefined;
+    if (id !== undefined && this._extraWaterLines.has(id)) {
+      return this._extraWaterLines.get(id) ?? null;
+    }
+    return this._waterRL ? this._waterRLXY : null;
   }
 
   get udls(): readonly Udl[] {
@@ -407,41 +451,64 @@ export class Slope {
       wy = waterCoords.map((c) => c[1]);
     }
 
-    this._waterRL = false;
-    this._waterRLXY = null;
-    if (wx && wy) {
-      if (followBoundary) {
-        // Where the piezometric line lies above the ground surface, the
-        // water table follows the ground surface (no ponding).
-        if (!this._surfaceLineX || !this._surfaceLineY) {
-          throw new Error(
-            "External boundary must be set before setting water table",
-          );
-        }
-        const clipped = clipLineToSurface(
-          wx,
-          wy,
-          this._surfaceLineX,
-          this._surfaceLineY,
-        );
-        if (clipped) {
-          this._waterRL = true;
-          this._waterRLXY = clipped;
-        }
-      } else if (wx.length >= 2) {
-        this._waterRL = true;
-        this._waterRLXY = { x: wx, y: wy };
-      }
-    }
+    this._waterRLXY = wx && wy ? this._buildWaterLine(wx, wy, followBoundary) : null;
+    this._waterRL = this._waterRLXY !== null;
 
     this._waterYCache.clear();
     this._resetResults();
+  }
+
+  /**
+   * Add (or replace) an additional water table that materials can be
+   * assigned to with `assignMaterialWaterTable`.
+   */
+  setWaterTableById(
+    id: string,
+    coordinates: [number, number][],
+    followBoundary = true,
+  ): void {
+    this._extraWaterLines.set(
+      id,
+      this._buildWaterLine(
+        coordinates.map((c) => c[0]),
+        coordinates.map((c) => c[1]),
+        followBoundary,
+      ),
+    );
+    this._resetResults();
+  }
+
+  /** Make a material use the water table added with the given id. */
+  assignMaterialWaterTable(material: Material, id: string): void {
+    this._materialWaterTable.set(material, id);
+    this._resetResults();
+  }
+
+  /**
+   * Water line used for pore pressure.  With `followBoundary` it never
+   * rises above the ground surface (no ponding).
+   */
+  private _buildWaterLine(
+    wx: number[],
+    wy: number[],
+    followBoundary: boolean,
+  ): { x: number[]; y: number[] } | null {
+    if (wx.length < 2) return null;
+    if (!followBoundary) return { x: wx, y: wy };
+    if (!this._surfaceLineX || !this._surfaceLineY) {
+      throw new Error(
+        "External boundary must be set before setting water table",
+      );
+    }
+    return clipLineToSurface(wx, wy, this._surfaceLineX, this._surfaceLineY);
   }
 
   /** Remove the water table from the model. */
   removeWaterTable(): void {
     this._waterRL = false;
     this._waterRLXY = null;
+    this._extraWaterLines.clear();
+    this._materialWaterTable.clear();
     this._waterYCache.clear();
     this._resetResults();
   }

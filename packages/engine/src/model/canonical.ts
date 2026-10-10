@@ -127,6 +127,10 @@ export function toCanonicalSlopeDefinition(
             value: mirrorPoints(slopeDefinition.waterTable.value, xMin, xMax),
           }
         : slopeDefinition.waterTable,
+    waterTables: slopeDefinition.waterTables?.map((wt) => ({
+      ...wt,
+      coordinates: mirrorPoints(wt.coordinates, xMin, xMax),
+    })),
     udls: slopeDefinition.udls?.map((udl) => {
       const x1 = mirrorX(udl.x2, xMin, xMax);
       const x2 = mirrorX(udl.x1, xMin, xMax);

@@ -62,9 +62,11 @@ function formatMaterialCell(
     case "cohesion":
       return `${f.cohesion}`;
     case "piezometricLine": {
-      const lineId = piezometricLine?.materialAssignment[material.id];
-      if (!lineId) return "-";
-      return piezometricLine?.lines.find((l) => l.id === lineId)?.name ?? "-";
+      // Unassigned materials use the first line (same rule as the analysis).
+      const lines = piezometricLine?.lines ?? [];
+      const lineId =
+        piezometricLine?.materialAssignment[material.id] ?? lines[0]?.id;
+      return lines.find((l) => l.id === lineId)?.name ?? "-";
     }
     case "depthRef":
       if (material.model.kind === "s-f-depth")

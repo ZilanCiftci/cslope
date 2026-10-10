@@ -34,6 +34,11 @@ export interface SlopeDefinition {
     /** Depth range [top, bottom] in m for this material. */
     depthRange?: [number, number];
     color?: string;
+    /**
+     * Id of an entry in `waterTables` that governs pore pressure in this
+     * material.  When absent (or unknown) the default `waterTable` is used.
+     */
+    waterTableId?: string;
   }>;
   /** Water table definition (optional). */
   waterTable?: {
@@ -41,6 +46,15 @@ export interface SlopeDefinition {
     value: number | [number, number][];
     followBoundary?: boolean;
   };
+  /**
+   * Additional water tables (piezometric lines) that materials can refer
+   * to with `waterTableId`.  Same clipping rule as `waterTable`.
+   */
+  waterTables?: Array<{
+    id: string;
+    coordinates: [number, number][];
+    followBoundary?: boolean;
+  }>;
   /** UDL loads. */
   udls?: Array<{ magnitude: number; x1: number; x2: number }>;
   /** Line loads (point loads). */

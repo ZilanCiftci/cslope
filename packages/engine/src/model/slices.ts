@@ -8,6 +8,7 @@ import { WATER_UNIT_WEIGHT, SLICE_DEDUP_TOLERANCE } from "../types/constants";
 import {
   getCircleYCoordinateAtX,
   getCircleLineIntersections,
+  getYAtX,
   getYAtXMany,
   calculateAllLoads,
   calculatePolygonArea,
@@ -35,6 +36,13 @@ export function createSlice(
   waterYMean: number | null,
   waterH: number | null,
   materialGeometries: GeometryWithMaterial[],
+  /**
+   * Per-material water: when given, pore pressure comes from the water
+   * line of the base material (overriding `waterYMean` / `waterH`).
+   */
+  waterForMaterial?: (
+    material: GeometryWithMaterial["material"],
+  ) => { yMean: number; h: number } | null,
 ): Slice | null {
   const x = (x0 + x1) / 2;
   const dx = cx - x;
@@ -141,6 +149,11 @@ export function createSlice(
 
   if (baseMaterial === null) return null; // No material → invalid slice
 
+  if (waterForMaterial) {
+    const water = waterForMaterial(baseMaterial);
+    U = water ? Math.max(water.yMean - yBottom, 0) * WATER_UNIT_WEIGHT * water.h : 0;
+  }
+
   // Resolve strength via the material model plugin system
   const strength = resolveStrength(baseMaterial.model, {
     yBottom,
@@ -190,6 +203,31 @@ export function createSlice(
   };
 
   return slice;
+}
+
+// ── Water at a slice ──────────────────────────────────────────────
+
+/**
+ * Water elevation at the slice midpoint and the head correction factor
+ * cos²θ for an inclined water line, or null when the slice lies outside
+ * the line's x-range (no pore pressure).
+ */
+function waterAtSlice(
+  line: { x: number[]; y: number[] } | null,
+  xLeft: number,
+  xRight: number,
+  xMid: number,
+): { yMean: number; h: number } | null {
+  if (!line) return null;
+  const wy1 = getYAtX(line.x, line.y, xLeft);
+  const wy2 = getYAtX(line.x, line.y, xRight);
+  const wyMid = getYAtX(line.x, line.y, xMid);
+  if (!Number.isFinite(wy1) || !Number.isFinite(wy2) || !Number.isFinite(wyMid)) {
+    return null;
+  }
+  const h =
+    wy1 !== wy2 ? Math.cos(Math.atan((wy2 - wy1) / (xRight - xLeft))) ** 2 : 1;
+  return { yMean: wyMid, h };
 }
 
 // ── getSlices ─────────────────────────────────────────────────────
@@ -257,9 +295,8 @@ export function getSlices(
       }
     }
 
-    // Water table intersections
-    const waterXY = slope.waterRLXY;
-    if (waterXY) {
+    // Water table intersections (every line, so per-material lines too)
+    for (const waterXY of slope.allWaterLines) {
       const waterIntersections = getCircleLineIntersections(
         cx,
         cy,
@@ -382,6 +419,15 @@ export function getSlices(
       waterYMean,
       waterH,
       [...slope.materialGeometries], // pass a copy
+      slope.hasMaterialWaterTables
+        ? (material) =>
+            waterAtSlice(
+              slope.getWaterLineForMaterial(material),
+              slicesX[i],
+              slicesX[i + 1],
+              sxArray[i],
+            )
+        : undefined,
     );
 
     if (s !== null && s.isValid) {

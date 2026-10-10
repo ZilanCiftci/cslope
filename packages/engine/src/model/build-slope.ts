@@ -173,6 +173,19 @@ export function buildSlope(def: SlopeDefinition): Slope {
     }
   }
 
+  // Per-material water tables
+  if (def.waterTables && def.waterTables.length > 0) {
+    for (const wt of def.waterTables) {
+      slope.setWaterTableById(wt.id, wt.coordinates, wt.followBoundary);
+    }
+    for (const m of def.materials) {
+      const mat = materialsByName.get(m.name);
+      if (mat && m.waterTableId !== undefined) {
+        slope.assignMaterialWaterTable(mat, m.waterTableId);
+      }
+    }
+  }
+
   // UDLs
   if (def.udls) {
     slope.setUdls(

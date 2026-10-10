@@ -98,6 +98,25 @@ export function buildSlopeDTOFromModel(model: ModelEntry): SlopeDefinition {
         value: firstLine.coordinates,
       };
     }
+
+    // Several lines: each material uses the line assigned to it (the
+    // first line when none is assigned, as the UI shows).
+    const usableLines = piezometricLine.lines.filter(
+      (l) => l.coordinates.length >= 2,
+    );
+    if (piezometricLine.lines.length > 1 && usableLines.length > 0) {
+      slope.waterTables = usableLines.map((l) => ({
+        id: l.id,
+        coordinates: l.coordinates,
+      }));
+      const usableIds = new Set(usableLines.map((l) => l.id));
+      slope.materials = slope.materials.map((dtoMaterial, i) => {
+        const lineId = piezometricLine.materialAssignment?.[materials[i].id];
+        return lineId && usableIds.has(lineId)
+          ? { ...dtoMaterial, waterTableId: lineId }
+          : dtoMaterial;
+      });
+    }
   }
 
   if (model.udls?.length > 0) {
