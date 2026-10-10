@@ -302,10 +302,10 @@ function App() {
       setInteriorBoundariesDialogOpen(Boolean(open));
     };
 
-    window.cslope.onInteriorBoundariesDialogOpenChanged(handleOpenChanged);
+    const unsubscribeInteriorBoundariesDialogOpenChanged = window.cslope.onInteriorBoundariesDialogOpenChanged(handleOpenChanged);
 
     return () => {
-      window.cslope.offInteriorBoundariesDialogOpenChanged(handleOpenChanged);
+      unsubscribeInteriorBoundariesDialogOpenChanged();
       setInteriorBoundariesDialogOpen(false);
     };
   }, [isAnyDialogWindow, setInteriorBoundariesDialogOpen]);
@@ -337,12 +337,12 @@ function App() {
       }
     };
 
-    window.cslope.onMaterialsRequestState(handleMaterialsRequestState);
-    window.cslope.onMaterialsChanged(handleMaterialsChanged);
+    const unsubscribeMaterialsRequestState = window.cslope.onMaterialsRequestState(handleMaterialsRequestState);
+    const unsubscribeMaterialsChanged = window.cslope.onMaterialsChanged(handleMaterialsChanged);
 
     return () => {
-      window.cslope.offMaterialsRequestState(handleMaterialsRequestState);
-      window.cslope.offMaterialsChanged(handleMaterialsChanged);
+      unsubscribeMaterialsRequestState();
+      unsubscribeMaterialsChanged();
     };
   }, [isAnyDialogWindow]);
 
@@ -380,16 +380,12 @@ function App() {
       setRegionMaterials(next.regionMaterials);
     };
 
-    window.cslope.onMaterialAssignmentRequestState(
-      handleAssignmentRequestState,
-    );
-    window.cslope.onMaterialAssignmentChanged(handleAssignmentChanged);
+    const unsubscribeMaterialAssignmentRequestState = window.cslope.onMaterialAssignmentRequestState(handleAssignmentRequestState);
+    const unsubscribeMaterialAssignmentChanged = window.cslope.onMaterialAssignmentChanged(handleAssignmentChanged);
 
     return () => {
-      window.cslope.offMaterialAssignmentRequestState(
-        handleAssignmentRequestState,
-      );
-      window.cslope.offMaterialAssignmentChanged(handleAssignmentChanged);
+      unsubscribeMaterialAssignmentRequestState();
+      unsubscribeMaterialAssignmentChanged();
     };
   }, [isAnyDialogWindow, setRegionMaterials]);
 
@@ -438,12 +434,12 @@ function App() {
       });
     };
 
-    window.cslope.onGeometryRequestState(handleGeometryRequestState);
-    window.cslope.onGeometryChanged(handleGeometryChanged);
+    const unsubscribeGeometryRequestState = window.cslope.onGeometryRequestState(handleGeometryRequestState);
+    const unsubscribeGeometryChanged = window.cslope.onGeometryChanged(handleGeometryChanged);
 
     return () => {
-      window.cslope.offGeometryRequestState(handleGeometryRequestState);
-      window.cslope.offGeometryChanged(handleGeometryChanged);
+      unsubscribeGeometryRequestState();
+      unsubscribeGeometryChanged();
     };
   }, [isAnyDialogWindow]);
 
@@ -498,18 +494,12 @@ function App() {
       applyDialogPatch(patch);
     };
 
-    window.cslope.onInteriorBoundariesRequestState(
-      handleInteriorBoundariesRequestState,
-    );
-    window.cslope.onInteriorBoundariesChanged(handleInteriorBoundariesChanged);
+    const unsubscribeInteriorBoundariesRequestState = window.cslope.onInteriorBoundariesRequestState(handleInteriorBoundariesRequestState);
+    const unsubscribeInteriorBoundariesChanged = window.cslope.onInteriorBoundariesChanged(handleInteriorBoundariesChanged);
 
     return () => {
-      window.cslope.offInteriorBoundariesRequestState(
-        handleInteriorBoundariesRequestState,
-      );
-      window.cslope.offInteriorBoundariesChanged(
-        handleInteriorBoundariesChanged,
-      );
+      unsubscribeInteriorBoundariesRequestState();
+      unsubscribeInteriorBoundariesChanged();
     };
   }, [isAnyDialogWindow]);
 
@@ -567,12 +557,12 @@ function App() {
       applyDialogPatch(patch);
     };
 
-    window.cslope.onLoadsRequestState(handleLoadsRequestState);
-    window.cslope.onLoadsChanged(handleLoadsChanged);
+    const unsubscribeLoadsRequestState = window.cslope.onLoadsRequestState(handleLoadsRequestState);
+    const unsubscribeLoadsChanged = window.cslope.onLoadsChanged(handleLoadsChanged);
 
     return () => {
-      window.cslope.offLoadsRequestState(handleLoadsRequestState);
-      window.cslope.offLoadsChanged(handleLoadsChanged);
+      unsubscribeLoadsRequestState();
+      unsubscribeLoadsChanged();
     };
   }, [isAnyDialogWindow]);
 
@@ -622,12 +612,12 @@ function App() {
       applyDialogPatch(patch);
     };
 
-    window.cslope.onPiezoRequestState(handlePiezoRequestState);
-    window.cslope.onPiezoChanged(handlePiezoChanged);
+    const unsubscribePiezoRequestState = window.cslope.onPiezoRequestState(handlePiezoRequestState);
+    const unsubscribePiezoChanged = window.cslope.onPiezoChanged(handlePiezoChanged);
 
     return () => {
-      window.cslope.offPiezoRequestState(handlePiezoRequestState);
-      window.cslope.offPiezoChanged(handlePiezoChanged);
+      unsubscribePiezoRequestState();
+      unsubscribePiezoChanged();
     };
   }, [isAnyDialogWindow]);
 
@@ -665,12 +655,12 @@ function App() {
       useAppStore.getState().setParameters(next.parameters);
     };
 
-    window.cslope.onParametersRequestState(handleParametersRequestState);
-    window.cslope.onParametersChanged(handleParametersChanged);
+    const unsubscribeParametersRequestState = window.cslope.onParametersRequestState(handleParametersRequestState);
+    const unsubscribeParametersChanged = window.cslope.onParametersChanged(handleParametersChanged);
 
     return () => {
-      window.cslope.offParametersRequestState(handleParametersRequestState);
-      window.cslope.offParametersChanged(handleParametersChanged);
+      unsubscribeParametersRequestState();
+      unsubscribeParametersChanged();
     };
   }, [isAnyDialogWindow]);
 
@@ -715,12 +705,12 @@ function App() {
       });
     };
 
-    window.cslope.onAnalysisRequestState(handleAnalysisRequestState);
-    window.cslope.onAnalysisChanged(handleAnalysisChanged);
+    const unsubscribeAnalysisRequestState = window.cslope.onAnalysisRequestState(handleAnalysisRequestState);
+    const unsubscribeAnalysisChanged = window.cslope.onAnalysisChanged(handleAnalysisChanged);
 
     return () => {
-      window.cslope.offAnalysisRequestState(handleAnalysisRequestState);
-      window.cslope.offAnalysisChanged(handleAnalysisChanged);
+      unsubscribeAnalysisRequestState();
+      unsubscribeAnalysisChanged();
     };
   }, [isAnyDialogWindow]);
 
@@ -774,12 +764,12 @@ function App() {
       });
     };
 
-    window.cslope.onViewSettingsRequestState(handleViewSettingsRequestState);
-    window.cslope.onViewSettingsChanged(handleViewSettingsChanged);
+    const unsubscribeViewSettingsRequestState = window.cslope.onViewSettingsRequestState(handleViewSettingsRequestState);
+    const unsubscribeViewSettingsChanged = window.cslope.onViewSettingsChanged(handleViewSettingsChanged);
 
     return () => {
-      window.cslope.offViewSettingsRequestState(handleViewSettingsRequestState);
-      window.cslope.offViewSettingsChanged(handleViewSettingsChanged);
+      unsubscribeViewSettingsRequestState();
+      unsubscribeViewSettingsChanged();
     };
   }, [isAnyDialogWindow]);
 
@@ -806,10 +796,10 @@ function App() {
       window.cslope.sendResultsPlotState(buildResultsPlotPayloadFromState());
     };
 
-    window.cslope.onResultsPlotRequestState(handleResultsPlotRequestState);
+    const unsubscribeResultsPlotRequestState = window.cslope.onResultsPlotRequestState(handleResultsPlotRequestState);
 
     return () => {
-      window.cslope.offResultsPlotRequestState(handleResultsPlotRequestState);
+      unsubscribeResultsPlotRequestState();
     };
   }, [isAnyDialogWindow]);
 

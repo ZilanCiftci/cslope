@@ -44,13 +44,13 @@ export function MaterialsDialogApp() {
       setIsHydrated(true);
     };
 
-    window.cslope.onMaterialsState(applyMaterialsState);
-    window.cslope.onMaterialsChanged(applyMaterialsState);
+    const unsubscribeMaterialsState = window.cslope.onMaterialsState(applyMaterialsState);
+    const unsubscribeMaterialsChanged = window.cslope.onMaterialsChanged(applyMaterialsState);
     window.cslope.requestMaterialsState();
 
     return () => {
-      window.cslope.offMaterialsState(applyMaterialsState);
-      window.cslope.offMaterialsChanged(applyMaterialsState);
+      unsubscribeMaterialsState();
+      unsubscribeMaterialsChanged();
     };
   }, [setMaterials, setParameters]);
 

@@ -99,13 +99,13 @@ export function InteriorBoundariesDialogApp() {
       setIsHydrated(true);
     };
 
-    window.cslope.onInteriorBoundariesState(applyState);
-    window.cslope.onInteriorBoundariesChanged(applyState);
+    const unsubscribeInteriorBoundariesState = window.cslope.onInteriorBoundariesState(applyState);
+    const unsubscribeInteriorBoundariesChanged = window.cslope.onInteriorBoundariesChanged(applyState);
     window.cslope.requestInteriorBoundariesState();
 
     return () => {
-      window.cslope.offInteriorBoundariesState(applyState);
-      window.cslope.offInteriorBoundariesChanged(applyState);
+      unsubscribeInteriorBoundariesState();
+      unsubscribeInteriorBoundariesChanged();
     };
   }, []);
 

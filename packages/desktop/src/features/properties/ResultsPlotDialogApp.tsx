@@ -175,13 +175,13 @@ export function ResultsPlotDialogApp() {
       setIsHydrated(true);
     };
 
-    window.cslope.onResultsPlotState(applyState);
-    window.cslope.onResultsPlotChanged(applyState);
+    const unsubscribeResultsPlotState = window.cslope.onResultsPlotState(applyState);
+    const unsubscribeResultsPlotChanged = window.cslope.onResultsPlotChanged(applyState);
     window.cslope.requestResultsPlotState();
 
     return () => {
-      window.cslope.offResultsPlotState(applyState);
-      window.cslope.offResultsPlotChanged(applyState);
+      unsubscribeResultsPlotState();
+      unsubscribeResultsPlotChanged();
     };
   }, []);
 

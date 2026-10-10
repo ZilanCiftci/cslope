@@ -20,9 +20,13 @@ function installFakeBridge() {
         if (prop.startsWith("on")) {
           return (fn: Handler) => {
             handlers.set(prop, [...(handlers.get(prop) ?? []), fn]);
+            return () =>
+              handlers.set(
+                prop,
+                (handlers.get(prop) ?? []).filter((h) => h !== fn),
+              );
           };
         }
-        if (prop.startsWith("off")) return () => {};
         if (prop.startsWith("send")) {
           return (payload: unknown) => sent.push({ name: prop, payload });
         }

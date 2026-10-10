@@ -43,9 +43,9 @@ export function TitleBar({ theme, onToggleTheme, activeModelName }: Props) {
     // Listen for changes
     const onMaxChange = (_e: unknown, isMax: unknown) =>
       setMaximized(Boolean(isMax));
-    window.cslope.onMaximized(onMaxChange);
+    const unsubscribeMaximized = window.cslope.onMaximized(onMaxChange);
     return () => {
-      window.cslope.offMaximized(onMaxChange);
+      unsubscribeMaximized();
     };
   }, []);
 

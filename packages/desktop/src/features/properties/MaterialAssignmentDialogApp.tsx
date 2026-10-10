@@ -42,13 +42,13 @@ export function MaterialAssignmentDialogApp() {
       setIsHydrated(true);
     };
 
-    window.cslope.onMaterialAssignmentState(applyState);
-    window.cslope.onMaterialAssignmentChanged(applyState);
+    const unsubscribeMaterialAssignmentState = window.cslope.onMaterialAssignmentState(applyState);
+    const unsubscribeMaterialAssignmentChanged = window.cslope.onMaterialAssignmentChanged(applyState);
     window.cslope.requestMaterialAssignmentState();
 
     return () => {
-      window.cslope.offMaterialAssignmentState(applyState);
-      window.cslope.offMaterialAssignmentChanged(applyState);
+      unsubscribeMaterialAssignmentState();
+      unsubscribeMaterialAssignmentChanged();
     };
   }, [setCoordinates, setMaterials, setMaterialBoundaries, setRegionMaterials]);
 

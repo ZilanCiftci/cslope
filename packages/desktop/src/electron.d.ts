@@ -108,15 +108,9 @@ declare global {
       openViewSettingsDialog: () => void;
       onInteriorBoundariesDialogOpenChanged: (
         listener: (event: unknown, open: boolean) => void,
-      ) => void;
-      offInteriorBoundariesDialogOpenChanged: (
-        listener: (event: unknown, open: boolean) => void,
-      ) => void;
+      ) => () => void;
       isMaximized: () => Promise<boolean>;
-      onMaximized: (listener: (event: unknown, isMax: unknown) => void) => void;
-      offMaximized: (
-        listener: (event: unknown, isMax: unknown) => void,
-      ) => void;
+      onMaximized: (listener: (event: unknown, isMax: unknown) => void) => () => void;
       // App lifecycle
       appReady: () => void;
       // Menu actions
@@ -127,20 +121,13 @@ declare global {
       requestMaterialsState: () => void;
       sendMaterialsState: (state: MaterialsStatePayload) => void;
       sendMaterialsChanged: (state: MaterialsStatePayload) => void;
-      onMaterialsRequestState: (listener: (event: unknown) => void) => void;
-      offMaterialsRequestState: (listener: (event: unknown) => void) => void;
+      onMaterialsRequestState: (listener: (event: unknown) => void) => () => void;
       onMaterialsState: (
         listener: (event: unknown, state: MaterialsStatePayload) => void,
-      ) => void;
-      offMaterialsState: (
-        listener: (event: unknown, state: MaterialsStatePayload) => void,
-      ) => void;
+      ) => () => void;
       onMaterialsChanged: (
         listener: (event: unknown, state: MaterialsStatePayload) => void,
-      ) => void;
-      offMaterialsChanged: (
-        listener: (event: unknown, state: MaterialsStatePayload) => void,
-      ) => void;
+      ) => () => void;
       // Material Assignment dialog sync
       requestMaterialAssignmentState: () => void;
       sendMaterialAssignmentState: (
@@ -151,52 +138,30 @@ declare global {
       ) => void;
       onMaterialAssignmentRequestState: (
         listener: (event: unknown) => void,
-      ) => void;
-      offMaterialAssignmentRequestState: (
-        listener: (event: unknown) => void,
-      ) => void;
+      ) => () => void;
       onMaterialAssignmentState: (
         listener: (
           event: unknown,
           state: MaterialAssignmentStatePayload,
         ) => void,
-      ) => void;
-      offMaterialAssignmentState: (
-        listener: (
-          event: unknown,
-          state: MaterialAssignmentStatePayload,
-        ) => void,
-      ) => void;
+      ) => () => void;
       onMaterialAssignmentChanged: (
         listener: (
           event: unknown,
           state: MaterialAssignmentStatePayload,
         ) => void,
-      ) => void;
-      offMaterialAssignmentChanged: (
-        listener: (
-          event: unknown,
-          state: MaterialAssignmentStatePayload,
-        ) => void,
-      ) => void;
+      ) => () => void;
       // Geometry dialog sync
       requestGeometryState: () => void;
       sendGeometryState: (state: GeometryStatePayload) => void;
       sendGeometryChanged: (state: GeometryStatePayload) => void;
-      onGeometryRequestState: (listener: (event: unknown) => void) => void;
-      offGeometryRequestState: (listener: (event: unknown) => void) => void;
+      onGeometryRequestState: (listener: (event: unknown) => void) => () => void;
       onGeometryState: (
         listener: (event: unknown, state: GeometryStatePayload) => void,
-      ) => void;
-      offGeometryState: (
-        listener: (event: unknown, state: GeometryStatePayload) => void,
-      ) => void;
+      ) => () => void;
       onGeometryChanged: (
         listener: (event: unknown, state: GeometryStatePayload) => void,
-      ) => void;
-      offGeometryChanged: (
-        listener: (event: unknown, state: GeometryStatePayload) => void,
-      ) => void;
+      ) => () => void;
       // Interior boundaries dialog sync
       requestInteriorBoundariesState: () => void;
       sendInteriorBoundariesState: (
@@ -207,142 +172,85 @@ declare global {
       ) => void;
       onInteriorBoundariesRequestState: (
         listener: (event: unknown) => void,
-      ) => void;
-      offInteriorBoundariesRequestState: (
-        listener: (event: unknown) => void,
-      ) => void;
+      ) => () => void;
       onInteriorBoundariesState: (
         listener: (
           event: unknown,
           state: InteriorBoundariesStatePayload,
         ) => void,
-      ) => void;
-      offInteriorBoundariesState: (
-        listener: (
-          event: unknown,
-          state: InteriorBoundariesStatePayload,
-        ) => void,
-      ) => void;
+      ) => () => void;
       onInteriorBoundariesChanged: (
         listener: (
           event: unknown,
           state: InteriorBoundariesStatePayload,
         ) => void,
-      ) => void;
-      offInteriorBoundariesChanged: (
-        listener: (
-          event: unknown,
-          state: InteriorBoundariesStatePayload,
-        ) => void,
-      ) => void;
+      ) => () => void;
       // Loads dialog sync
       requestLoadsState: () => void;
       sendLoadsState: (state: LoadsStatePayload) => void;
       sendLoadsChanged: (state: LoadsStatePayload) => void;
-      onLoadsRequestState: (listener: (event: unknown) => void) => void;
-      offLoadsRequestState: (listener: (event: unknown) => void) => void;
+      onLoadsRequestState: (listener: (event: unknown) => void) => () => void;
       onLoadsState: (
         listener: (event: unknown, state: LoadsStatePayload) => void,
-      ) => void;
-      offLoadsState: (
-        listener: (event: unknown, state: LoadsStatePayload) => void,
-      ) => void;
+      ) => () => void;
       onLoadsChanged: (
         listener: (event: unknown, state: LoadsStatePayload) => void,
-      ) => void;
-      offLoadsChanged: (
-        listener: (event: unknown, state: LoadsStatePayload) => void,
-      ) => void;
+      ) => () => void;
       // Piezometric line dialog sync
       requestPiezoState: () => void;
       sendPiezoState: (state: PiezoStatePayload) => void;
       sendPiezoChanged: (state: PiezoStatePayload) => void;
-      onPiezoRequestState: (listener: (event: unknown) => void) => void;
-      offPiezoRequestState: (listener: (event: unknown) => void) => void;
+      onPiezoRequestState: (listener: (event: unknown) => void) => () => void;
       onPiezoState: (
         listener: (event: unknown, state: PiezoStatePayload) => void,
-      ) => void;
-      offPiezoState: (
-        listener: (event: unknown, state: PiezoStatePayload) => void,
-      ) => void;
+      ) => () => void;
       onPiezoChanged: (
         listener: (event: unknown, state: PiezoStatePayload) => void,
-      ) => void;
-      offPiezoChanged: (
-        listener: (event: unknown, state: PiezoStatePayload) => void,
-      ) => void;
+      ) => () => void;
       // Parameters dialog sync
       requestParametersState: () => void;
       sendParametersState: (state: ParametersStatePayload) => void;
       sendParametersChanged: (state: ParametersStatePayload) => void;
-      onParametersRequestState: (listener: (event: unknown) => void) => void;
-      offParametersRequestState: (listener: (event: unknown) => void) => void;
+      onParametersRequestState: (listener: (event: unknown) => void) => () => void;
       onParametersState: (
         listener: (event: unknown, state: ParametersStatePayload) => void,
-      ) => void;
-      offParametersState: (
-        listener: (event: unknown, state: ParametersStatePayload) => void,
-      ) => void;
+      ) => () => void;
       onParametersChanged: (
         listener: (event: unknown, state: ParametersStatePayload) => void,
-      ) => void;
-      offParametersChanged: (
-        listener: (event: unknown, state: ParametersStatePayload) => void,
-      ) => void;
+      ) => () => void;
       // Results plot dialog sync
       requestResultsPlotState: () => void;
       sendResultsPlotState: (state: ResultsPlotStatePayload) => void;
       sendResultsPlotChanged: (state: ResultsPlotStatePayload) => void;
-      onResultsPlotRequestState: (listener: (event: unknown) => void) => void;
-      offResultsPlotRequestState: (listener: (event: unknown) => void) => void;
+      onResultsPlotRequestState: (listener: (event: unknown) => void) => () => void;
       onResultsPlotState: (
         listener: (event: unknown, state: ResultsPlotStatePayload) => void,
-      ) => void;
-      offResultsPlotState: (
-        listener: (event: unknown, state: ResultsPlotStatePayload) => void,
-      ) => void;
+      ) => () => void;
       onResultsPlotChanged: (
         listener: (event: unknown, state: ResultsPlotStatePayload) => void,
-      ) => void;
-      offResultsPlotChanged: (
-        listener: (event: unknown, state: ResultsPlotStatePayload) => void,
-      ) => void;
+      ) => () => void;
       // Analysis popups sync
       requestAnalysisState: () => void;
       sendAnalysisState: (state: AnalysisStatePayload) => void;
       sendAnalysisChanged: (state: AnalysisStatePayload) => void;
-      onAnalysisRequestState: (listener: (event: unknown) => void) => void;
-      offAnalysisRequestState: (listener: (event: unknown) => void) => void;
+      onAnalysisRequestState: (listener: (event: unknown) => void) => () => void;
       onAnalysisState: (
         listener: (event: unknown, state: AnalysisStatePayload) => void,
-      ) => void;
-      offAnalysisState: (
-        listener: (event: unknown, state: AnalysisStatePayload) => void,
-      ) => void;
+      ) => () => void;
       onAnalysisChanged: (
         listener: (event: unknown, state: AnalysisStatePayload) => void,
-      ) => void;
-      offAnalysisChanged: (
-        listener: (event: unknown, state: AnalysisStatePayload) => void,
-      ) => void;
+      ) => () => void;
       // View settings dialog sync
       requestViewSettingsState: () => void;
       sendViewSettingsState: (state: ViewSettingsStatePayload) => void;
       sendViewSettingsChanged: (state: ViewSettingsStatePayload) => void;
-      onViewSettingsRequestState: (listener: (event: unknown) => void) => void;
-      offViewSettingsRequestState: (listener: (event: unknown) => void) => void;
+      onViewSettingsRequestState: (listener: (event: unknown) => void) => () => void;
       onViewSettingsState: (
         listener: (event: unknown, state: ViewSettingsStatePayload) => void,
-      ) => void;
-      offViewSettingsState: (
-        listener: (event: unknown, state: ViewSettingsStatePayload) => void,
-      ) => void;
+      ) => () => void;
       onViewSettingsChanged: (
         listener: (event: unknown, state: ViewSettingsStatePayload) => void,
-      ) => void;
-      offViewSettingsChanged: (
-        listener: (event: unknown, state: ViewSettingsStatePayload) => void,
-      ) => void;
+      ) => () => void;
     };
   }
 }

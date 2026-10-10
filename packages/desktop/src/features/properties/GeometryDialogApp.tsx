@@ -38,13 +38,13 @@ export function GeometryDialogApp() {
       setIsHydrated(true);
     };
 
-    window.cslope.onGeometryState(applyState);
-    window.cslope.onGeometryChanged(applyState);
+    const unsubscribeGeometryState = window.cslope.onGeometryState(applyState);
+    const unsubscribeGeometryChanged = window.cslope.onGeometryChanged(applyState);
     window.cslope.requestGeometryState();
 
     return () => {
-      window.cslope.offGeometryState(applyState);
-      window.cslope.offGeometryChanged(applyState);
+      unsubscribeGeometryState();
+      unsubscribeGeometryChanged();
     };
   }, []);
 

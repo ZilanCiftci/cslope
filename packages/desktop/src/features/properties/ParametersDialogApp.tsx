@@ -32,13 +32,13 @@ export function ParametersDialogApp() {
       setIsHydrated(true);
     };
 
-    window.cslope.onParametersState(applyState);
-    window.cslope.onParametersChanged(applyState);
+    const unsubscribeParametersState = window.cslope.onParametersState(applyState);
+    const unsubscribeParametersChanged = window.cslope.onParametersChanged(applyState);
     window.cslope.requestParametersState();
 
     return () => {
-      window.cslope.offParametersState(applyState);
-      window.cslope.offParametersChanged(applyState);
+      unsubscribeParametersState();
+      unsubscribeParametersChanged();
     };
   }, [setParameters]);
 

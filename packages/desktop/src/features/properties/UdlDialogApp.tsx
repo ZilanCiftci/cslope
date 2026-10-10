@@ -63,13 +63,13 @@ export function UdlDialogApp() {
       setIsHydrated(true);
     };
 
-    window.cslope.onLoadsState(applyState);
-    window.cslope.onLoadsChanged(applyState);
+    const unsubscribeLoadsState = window.cslope.onLoadsState(applyState);
+    const unsubscribeLoadsChanged = window.cslope.onLoadsChanged(applyState);
     window.cslope.requestLoadsState();
 
     return () => {
-      window.cslope.offLoadsState(applyState);
-      window.cslope.offLoadsChanged(applyState);
+      unsubscribeLoadsState();
+      unsubscribeLoadsChanged();
     };
   }, []);
 

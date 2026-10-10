@@ -1,4 +1,28 @@
 import { ipcRenderer, contextBridge } from "electron";
+import type { IpcRendererEvent } from "electron";
+
+/**
+ * Subscribe to an IPC channel and return a function that unsubscribes.
+ *
+ * A function passed through contextBridge arrives as a new proxy on every
+ * call, so a separate `off(listener)` can never match the proxy that was
+ * registered and listeners would pile up.  The returned closure captures
+ * the exact wrapper that was registered.
+ */
+function subscribe(
+  channel: string,
+  listener: (event: unknown, ...args: never[]) => void,
+): () => void {
+  const wrapped = (event: IpcRendererEvent, ...args: unknown[]) =>
+    (listener as (event: unknown, ...args: unknown[]) => void)(
+      event,
+      ...args,
+    );
+  ipcRenderer.on(channel, wrapped);
+  return () => {
+    ipcRenderer.off(channel, wrapped);
+  };
+}
 
 // --------- Expose scoped API to the Renderer process ---------
 contextBridge.exposeInMainWorld("cslope", {
@@ -34,15 +58,10 @@ contextBridge.exposeInMainWorld("cslope", {
     ipcRenderer.send("window:openViewSettingsDialog"),
   onInteriorBoundariesDialogOpenChanged: (
     listener: (event: unknown, open: unknown) => void,
-  ) => ipcRenderer.on("interiorBoundaries:dialogOpenChanged", listener),
-  offInteriorBoundariesDialogOpenChanged: (
-    listener: (event: unknown, open: unknown) => void,
-  ) => ipcRenderer.off("interiorBoundaries:dialogOpenChanged", listener),
+  ) => subscribe("interiorBoundaries:dialogOpenChanged", listener),
   isMaximized: () => ipcRenderer.invoke("window:isMaximized"),
   onMaximized: (listener: (event: unknown, isMax: unknown) => void) =>
-    ipcRenderer.on("window:maximized", listener),
-  offMaximized: (listener: (event: unknown, isMax: unknown) => void) =>
-    ipcRenderer.off("window:maximized", listener),
+    subscribe("window:maximized", listener),
   // App lifecycle
   appReady: () => ipcRenderer.send("app:ready"),
   // Menu actions
@@ -56,19 +75,12 @@ contextBridge.exposeInMainWorld("cslope", {
   sendMaterialsChanged: (materials: unknown) =>
     ipcRenderer.send("materials:changed", materials),
   onMaterialsRequestState: (listener: (event: unknown) => void) =>
-    ipcRenderer.on("materials:requestState", listener),
-  offMaterialsRequestState: (listener: (event: unknown) => void) =>
-    ipcRenderer.off("materials:requestState", listener),
+    subscribe("materials:requestState", listener),
   onMaterialsState: (listener: (event: unknown, materials: unknown) => void) =>
-    ipcRenderer.on("materials:stateResponse", listener),
-  offMaterialsState: (listener: (event: unknown, materials: unknown) => void) =>
-    ipcRenderer.off("materials:stateResponse", listener),
+    subscribe("materials:stateResponse", listener),
   onMaterialsChanged: (
     listener: (event: unknown, materials: unknown) => void,
-  ) => ipcRenderer.on("materials:changed", listener),
-  offMaterialsChanged: (
-    listener: (event: unknown, materials: unknown) => void,
-  ) => ipcRenderer.off("materials:changed", listener),
+  ) => subscribe("materials:changed", listener),
   // Material Assignment dialog sync
   requestMaterialAssignmentState: () =>
     ipcRenderer.send("materialAssignment:requestState"),
@@ -77,21 +89,13 @@ contextBridge.exposeInMainWorld("cslope", {
   sendMaterialAssignmentChanged: (state: unknown) =>
     ipcRenderer.send("materialAssignment:changed", state),
   onMaterialAssignmentRequestState: (listener: (event: unknown) => void) =>
-    ipcRenderer.on("materialAssignment:requestState", listener),
-  offMaterialAssignmentRequestState: (listener: (event: unknown) => void) =>
-    ipcRenderer.off("materialAssignment:requestState", listener),
+    subscribe("materialAssignment:requestState", listener),
   onMaterialAssignmentState: (
     listener: (event: unknown, state: unknown) => void,
-  ) => ipcRenderer.on("materialAssignment:stateResponse", listener),
-  offMaterialAssignmentState: (
-    listener: (event: unknown, state: unknown) => void,
-  ) => ipcRenderer.off("materialAssignment:stateResponse", listener),
+  ) => subscribe("materialAssignment:stateResponse", listener),
   onMaterialAssignmentChanged: (
     listener: (event: unknown, state: unknown) => void,
-  ) => ipcRenderer.on("materialAssignment:changed", listener),
-  offMaterialAssignmentChanged: (
-    listener: (event: unknown, state: unknown) => void,
-  ) => ipcRenderer.off("materialAssignment:changed", listener),
+  ) => subscribe("materialAssignment:changed", listener),
   // Geometry dialog sync
   requestGeometryState: () => ipcRenderer.send("geometry:requestState"),
   sendGeometryState: (state: unknown) =>
@@ -99,17 +103,11 @@ contextBridge.exposeInMainWorld("cslope", {
   sendGeometryChanged: (state: unknown) =>
     ipcRenderer.send("geometry:changed", state),
   onGeometryRequestState: (listener: (event: unknown) => void) =>
-    ipcRenderer.on("geometry:requestState", listener),
-  offGeometryRequestState: (listener: (event: unknown) => void) =>
-    ipcRenderer.off("geometry:requestState", listener),
+    subscribe("geometry:requestState", listener),
   onGeometryState: (listener: (event: unknown, state: unknown) => void) =>
-    ipcRenderer.on("geometry:stateResponse", listener),
-  offGeometryState: (listener: (event: unknown, state: unknown) => void) =>
-    ipcRenderer.off("geometry:stateResponse", listener),
+    subscribe("geometry:stateResponse", listener),
   onGeometryChanged: (listener: (event: unknown, state: unknown) => void) =>
-    ipcRenderer.on("geometry:changed", listener),
-  offGeometryChanged: (listener: (event: unknown, state: unknown) => void) =>
-    ipcRenderer.off("geometry:changed", listener),
+    subscribe("geometry:changed", listener),
   // Interior boundaries dialog sync
   requestInteriorBoundariesState: () =>
     ipcRenderer.send("interiorBoundaries:requestState"),
@@ -118,21 +116,13 @@ contextBridge.exposeInMainWorld("cslope", {
   sendInteriorBoundariesChanged: (state: unknown) =>
     ipcRenderer.send("interiorBoundaries:changed", state),
   onInteriorBoundariesRequestState: (listener: (event: unknown) => void) =>
-    ipcRenderer.on("interiorBoundaries:requestState", listener),
-  offInteriorBoundariesRequestState: (listener: (event: unknown) => void) =>
-    ipcRenderer.off("interiorBoundaries:requestState", listener),
+    subscribe("interiorBoundaries:requestState", listener),
   onInteriorBoundariesState: (
     listener: (event: unknown, state: unknown) => void,
-  ) => ipcRenderer.on("interiorBoundaries:stateResponse", listener),
-  offInteriorBoundariesState: (
-    listener: (event: unknown, state: unknown) => void,
-  ) => ipcRenderer.off("interiorBoundaries:stateResponse", listener),
+  ) => subscribe("interiorBoundaries:stateResponse", listener),
   onInteriorBoundariesChanged: (
     listener: (event: unknown, state: unknown) => void,
-  ) => ipcRenderer.on("interiorBoundaries:changed", listener),
-  offInteriorBoundariesChanged: (
-    listener: (event: unknown, state: unknown) => void,
-  ) => ipcRenderer.off("interiorBoundaries:changed", listener),
+  ) => subscribe("interiorBoundaries:changed", listener),
   // Loads dialog sync
   requestLoadsState: () => ipcRenderer.send("loads:requestState"),
   sendLoadsState: (state: unknown) =>
@@ -140,17 +130,11 @@ contextBridge.exposeInMainWorld("cslope", {
   sendLoadsChanged: (state: unknown) =>
     ipcRenderer.send("loads:changed", state),
   onLoadsRequestState: (listener: (event: unknown) => void) =>
-    ipcRenderer.on("loads:requestState", listener),
-  offLoadsRequestState: (listener: (event: unknown) => void) =>
-    ipcRenderer.off("loads:requestState", listener),
+    subscribe("loads:requestState", listener),
   onLoadsState: (listener: (event: unknown, state: unknown) => void) =>
-    ipcRenderer.on("loads:stateResponse", listener),
-  offLoadsState: (listener: (event: unknown, state: unknown) => void) =>
-    ipcRenderer.off("loads:stateResponse", listener),
+    subscribe("loads:stateResponse", listener),
   onLoadsChanged: (listener: (event: unknown, state: unknown) => void) =>
-    ipcRenderer.on("loads:changed", listener),
-  offLoadsChanged: (listener: (event: unknown, state: unknown) => void) =>
-    ipcRenderer.off("loads:changed", listener),
+    subscribe("loads:changed", listener),
   // Piezometric line dialog sync
   requestPiezoState: () => ipcRenderer.send("piezo:requestState"),
   sendPiezoState: (state: unknown) =>
@@ -158,17 +142,11 @@ contextBridge.exposeInMainWorld("cslope", {
   sendPiezoChanged: (state: unknown) =>
     ipcRenderer.send("piezo:changed", state),
   onPiezoRequestState: (listener: (event: unknown) => void) =>
-    ipcRenderer.on("piezo:requestState", listener),
-  offPiezoRequestState: (listener: (event: unknown) => void) =>
-    ipcRenderer.off("piezo:requestState", listener),
+    subscribe("piezo:requestState", listener),
   onPiezoState: (listener: (event: unknown, state: unknown) => void) =>
-    ipcRenderer.on("piezo:stateResponse", listener),
-  offPiezoState: (listener: (event: unknown, state: unknown) => void) =>
-    ipcRenderer.off("piezo:stateResponse", listener),
+    subscribe("piezo:stateResponse", listener),
   onPiezoChanged: (listener: (event: unknown, state: unknown) => void) =>
-    ipcRenderer.on("piezo:changed", listener),
-  offPiezoChanged: (listener: (event: unknown, state: unknown) => void) =>
-    ipcRenderer.off("piezo:changed", listener),
+    subscribe("piezo:changed", listener),
   // Parameters dialog sync
   requestParametersState: () => ipcRenderer.send("parameters:requestState"),
   sendParametersState: (state: unknown) =>
@@ -176,17 +154,11 @@ contextBridge.exposeInMainWorld("cslope", {
   sendParametersChanged: (state: unknown) =>
     ipcRenderer.send("parameters:changed", state),
   onParametersRequestState: (listener: (event: unknown) => void) =>
-    ipcRenderer.on("parameters:requestState", listener),
-  offParametersRequestState: (listener: (event: unknown) => void) =>
-    ipcRenderer.off("parameters:requestState", listener),
+    subscribe("parameters:requestState", listener),
   onParametersState: (listener: (event: unknown, state: unknown) => void) =>
-    ipcRenderer.on("parameters:stateResponse", listener),
-  offParametersState: (listener: (event: unknown, state: unknown) => void) =>
-    ipcRenderer.off("parameters:stateResponse", listener),
+    subscribe("parameters:stateResponse", listener),
   onParametersChanged: (listener: (event: unknown, state: unknown) => void) =>
-    ipcRenderer.on("parameters:changed", listener),
-  offParametersChanged: (listener: (event: unknown, state: unknown) => void) =>
-    ipcRenderer.off("parameters:changed", listener),
+    subscribe("parameters:changed", listener),
   // Results plot dialog sync
   requestResultsPlotState: () => ipcRenderer.send("resultsPlot:requestState"),
   sendResultsPlotState: (state: unknown) =>
@@ -194,17 +166,11 @@ contextBridge.exposeInMainWorld("cslope", {
   sendResultsPlotChanged: (state: unknown) =>
     ipcRenderer.send("resultsPlot:changed", state),
   onResultsPlotRequestState: (listener: (event: unknown) => void) =>
-    ipcRenderer.on("resultsPlot:requestState", listener),
-  offResultsPlotRequestState: (listener: (event: unknown) => void) =>
-    ipcRenderer.off("resultsPlot:requestState", listener),
+    subscribe("resultsPlot:requestState", listener),
   onResultsPlotState: (listener: (event: unknown, state: unknown) => void) =>
-    ipcRenderer.on("resultsPlot:stateResponse", listener),
-  offResultsPlotState: (listener: (event: unknown, state: unknown) => void) =>
-    ipcRenderer.off("resultsPlot:stateResponse", listener),
+    subscribe("resultsPlot:stateResponse", listener),
   onResultsPlotChanged: (listener: (event: unknown, state: unknown) => void) =>
-    ipcRenderer.on("resultsPlot:changed", listener),
-  offResultsPlotChanged: (listener: (event: unknown, state: unknown) => void) =>
-    ipcRenderer.off("resultsPlot:changed", listener),
+    subscribe("resultsPlot:changed", listener),
   // Analysis popups sync
   requestAnalysisState: () => ipcRenderer.send("analysis:requestState"),
   sendAnalysisState: (state: unknown) =>
@@ -212,17 +178,11 @@ contextBridge.exposeInMainWorld("cslope", {
   sendAnalysisChanged: (state: unknown) =>
     ipcRenderer.send("analysis:changed", state),
   onAnalysisRequestState: (listener: (event: unknown) => void) =>
-    ipcRenderer.on("analysis:requestState", listener),
-  offAnalysisRequestState: (listener: (event: unknown) => void) =>
-    ipcRenderer.off("analysis:requestState", listener),
+    subscribe("analysis:requestState", listener),
   onAnalysisState: (listener: (event: unknown, state: unknown) => void) =>
-    ipcRenderer.on("analysis:stateResponse", listener),
-  offAnalysisState: (listener: (event: unknown, state: unknown) => void) =>
-    ipcRenderer.off("analysis:stateResponse", listener),
+    subscribe("analysis:stateResponse", listener),
   onAnalysisChanged: (listener: (event: unknown, state: unknown) => void) =>
-    ipcRenderer.on("analysis:changed", listener),
-  offAnalysisChanged: (listener: (event: unknown, state: unknown) => void) =>
-    ipcRenderer.off("analysis:changed", listener),
+    subscribe("analysis:changed", listener),
   // View settings dialog sync
   requestViewSettingsState: () => ipcRenderer.send("viewSettings:requestState"),
   sendViewSettingsState: (state: unknown) =>
@@ -230,16 +190,9 @@ contextBridge.exposeInMainWorld("cslope", {
   sendViewSettingsChanged: (state: unknown) =>
     ipcRenderer.send("viewSettings:changed", state),
   onViewSettingsRequestState: (listener: (event: unknown) => void) =>
-    ipcRenderer.on("viewSettings:requestState", listener),
-  offViewSettingsRequestState: (listener: (event: unknown) => void) =>
-    ipcRenderer.off("viewSettings:requestState", listener),
+    subscribe("viewSettings:requestState", listener),
   onViewSettingsState: (listener: (event: unknown, state: unknown) => void) =>
-    ipcRenderer.on("viewSettings:stateResponse", listener),
-  offViewSettingsState: (listener: (event: unknown, state: unknown) => void) =>
-    ipcRenderer.off("viewSettings:stateResponse", listener),
+    subscribe("viewSettings:stateResponse", listener),
   onViewSettingsChanged: (listener: (event: unknown, state: unknown) => void) =>
-    ipcRenderer.on("viewSettings:changed", listener),
-  offViewSettingsChanged: (
-    listener: (event: unknown, state: unknown) => void,
-  ) => ipcRenderer.off("viewSettings:changed", listener),
+    subscribe("viewSettings:changed", listener),
 });

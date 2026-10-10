@@ -68,13 +68,13 @@ export function ViewSettingsDialogApp() {
       setIsHydrated(true);
     };
 
-    window.cslope.onViewSettingsState(applyState);
-    window.cslope.onViewSettingsChanged(applyState);
+    const unsubscribeViewSettingsState = window.cslope.onViewSettingsState(applyState);
+    const unsubscribeViewSettingsChanged = window.cslope.onViewSettingsChanged(applyState);
     window.cslope.requestViewSettingsState();
 
     return () => {
-      window.cslope.offViewSettingsState(applyState);
-      window.cslope.offViewSettingsChanged(applyState);
+      unsubscribeViewSettingsState();
+      unsubscribeViewSettingsChanged();
     };
   }, []);
 

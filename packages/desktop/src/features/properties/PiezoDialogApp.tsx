@@ -83,13 +83,13 @@ export function PiezoDialogApp() {
       setIsHydrated(true);
     };
 
-    window.cslope.onPiezoState(applyState);
-    window.cslope.onPiezoChanged(applyState);
+    const unsubscribePiezoState = window.cslope.onPiezoState(applyState);
+    const unsubscribePiezoChanged = window.cslope.onPiezoChanged(applyState);
     window.cslope.requestPiezoState();
 
     return () => {
-      window.cslope.offPiezoState(applyState);
-      window.cslope.offPiezoChanged(applyState);
+      unsubscribePiezoState();
+      unsubscribePiezoChanged();
     };
   }, []);
 

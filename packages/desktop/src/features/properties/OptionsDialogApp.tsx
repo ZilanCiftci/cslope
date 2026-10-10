@@ -45,13 +45,13 @@ export function OptionsDialogApp() {
       setIsHydrated(true);
     };
 
-    window.cslope.onAnalysisState(applyState);
-    window.cslope.onAnalysisChanged(applyState);
+    const unsubscribeAnalysisState = window.cslope.onAnalysisState(applyState);
+    const unsubscribeAnalysisChanged = window.cslope.onAnalysisChanged(applyState);
     window.cslope.requestAnalysisState();
 
     return () => {
-      window.cslope.offAnalysisState(applyState);
-      window.cslope.offAnalysisChanged(applyState);
+      unsubscribeAnalysisState();
+      unsubscribeAnalysisChanged();
     };
   }, []);
 
