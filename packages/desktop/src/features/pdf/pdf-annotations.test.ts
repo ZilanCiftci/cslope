@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { jsPDF } from "jspdf";
 import type { AnalysisResult } from "@cslope/engine";
-import { drawAnnotations } from "./pdf-drawing";
+import { drawAnnotations, drawMaterialRegions } from "./pdf-drawing";
 import type { Annotation, MaterialRow } from "../../store/types";
 
 const PAPER = { paperW: 297, paperH: 210 };
@@ -117,5 +117,44 @@ describe("PDF annotations match the canvas proportions", () => {
     // Frame + chart box, and one marker per slice.
     expect(withSlices.rects.length).toBe(2);
     expect(withSlices.circles).toBe(3);
+  });
+});
+
+describe("PDF material regions", () => {
+  it("clips the hatch of a region with holes even-odd, like the canvas", () => {
+    const pdf = new jsPDF({ unit: "mm", format: [297, 210], orientation: "landscape" });
+    const rules: (string | undefined)[] = [];
+    const clip = pdf.clip.bind(pdf);
+    pdf.clip = ((rule?: "evenodd") => {
+      rules.push(rule);
+      return clip(rule);
+    }) as typeof pdf.clip;
+    const bedrock: MaterialRow = {
+      ...MATERIALS[0],
+      id: "rock",
+      name: "Rock",
+      model: { kind: "impenetrable", unitWeight: 22 },
+    } as MaterialRow;
+    const clay: MaterialRow = { ...MATERIALS[0], id: "clay" };
+    const tf = {
+      worldToPdf: (x: number, y: number) => [20 + x * 5, 150 - y * 5],
+      canvasToPdf: (x: number, y: number) => [x, y],
+      mmPerPx: 0.25,
+      paperW: 297,
+      paperH: 210,
+    };
+    drawMaterialRegions(
+      pdf,
+      tf as never,
+      [[0, 0], [20, 0], [20, 20], [0, 20]],
+      [bedrock, clay],
+      [{ id: "b", coordinates: [[5, 5], [10, 5], [10, 10], [5, 10], [5, 5]] }],
+      [
+        { point: [2, 2], materialId: "rock" },
+        { point: [7, 7], materialId: "clay" },
+      ],
+    );
+    // Model clip (nonzero) + the hatched bedrock region with a hole.
+    expect(rules).toContain("evenodd");
   });
 });

@@ -285,10 +285,12 @@ export function drawMaterialRegions(
       ? MODEL_HATCH_PATTERNS[modelKind]
       : undefined;
     if (colorEnabled && hatchPattern) {
-      // Clip to region polygon for hatch
+      // Clip to region polygon for hatch (even-odd so holes stay clear,
+      // as on the canvas).
       pdf.saveGraphicsState();
       pdfPath(pdf, ops, "");
-      pdf.clip();
+      if (region.holes) pdf.clip("evenodd");
+      else pdf.clip();
       (pdf as unknown as { discardPath?: () => void }).discardPath?.();
 
       setOpacity(pdf, 0.45);
