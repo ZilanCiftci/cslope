@@ -29,6 +29,7 @@ import {
 import {
   getSurfaceLine,
   splitPolygonByPolylineDetailed,
+  clipLineToSurface,
   createGeometryWithMaterial,
 } from "./geometry-ops";
 
@@ -389,6 +390,8 @@ export class Slope {
       waterCoords = options.coordinates;
     }
 
+    let wx: number[] | undefined;
+    let wy: number[] | undefined;
     if (waterHeight !== undefined) {
       if (this._externalBoundaryPx.length === 0) {
         throw new Error(
@@ -397,58 +400,35 @@ export class Slope {
       }
       const minX = Math.min(...this._externalBoundaryPx);
       const maxX = Math.max(...this._externalBoundaryPx);
-
-      if (followBoundary) {
-        // Split external boundary at water height and get upper surface
-        const cutLx = [minX, maxX];
-        const cutLy = [waterHeight, waterHeight];
-        const split = splitPolygonByPolylineDetailed(
-          this._externalBoundaryPx,
-          this._externalBoundaryPy,
-          cutLx,
-          cutLy,
-        );
-        if (split.splitFailed) this._splitFailureCount += 1;
-        const pieces = split.pieces;
-        if (pieces.length >= 2) {
-          // The upper piece is the one with higher average y
-          const avgYs = pieces.map(
-            (p) => p.py.reduce((s, v) => s + v, 0) / p.py.length,
-          );
-          const upperIdx = avgYs.indexOf(Math.max(...avgYs));
-          const upper = pieces[upperIdx];
-          const wl = getSurfaceLine(upper.px, upper.py);
-          this._waterRL = true;
-          this._waterRLXY = { x: wl.x, y: wl.y };
-        }
-      } else {
-        this._waterRL = true;
-        this._waterRLXY = { x: [minX, maxX], y: [waterHeight, waterHeight] };
-      }
+      wx = [minX, maxX];
+      wy = [waterHeight, waterHeight];
     } else if (waterCoords) {
-      const wx = waterCoords.map((c) => c[0]);
-      const wy = waterCoords.map((c) => c[1]);
+      wx = waterCoords.map((c) => c[0]);
+      wy = waterCoords.map((c) => c[1]);
+    }
 
+    this._waterRL = false;
+    this._waterRLXY = null;
+    if (wx && wy) {
       if (followBoundary) {
-        const split = splitPolygonByPolylineDetailed(
-          this._externalBoundaryPx,
-          this._externalBoundaryPy,
+        // Where the piezometric line lies above the ground surface, the
+        // water table follows the ground surface (no ponding).
+        if (!this._surfaceLineX || !this._surfaceLineY) {
+          throw new Error(
+            "External boundary must be set before setting water table",
+          );
+        }
+        const clipped = clipLineToSurface(
           wx,
           wy,
+          this._surfaceLineX,
+          this._surfaceLineY,
         );
-        if (split.splitFailed) this._splitFailureCount += 1;
-        const pieces = split.pieces;
-        if (pieces.length >= 2) {
-          const avgYs = pieces.map(
-            (p) => p.py.reduce((s, v) => s + v, 0) / p.py.length,
-          );
-          const upperIdx = avgYs.indexOf(Math.max(...avgYs));
-          const upper = pieces[upperIdx];
-          const wl = getSurfaceLine(upper.px, upper.py);
+        if (clipped) {
           this._waterRL = true;
-          this._waterRLXY = { x: wl.x, y: wl.y };
+          this._waterRLXY = clipped;
         }
-      } else {
+      } else if (wx.length >= 2) {
         this._waterRL = true;
         this._waterRLXY = { x: wx, y: wy };
       }

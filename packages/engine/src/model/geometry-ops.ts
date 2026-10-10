@@ -161,6 +161,97 @@ export function getSurfaceLine(
   return avgFwd >= avgBwd ? { x: fwdX, y: fwdY } : { x: bwdX, y: bwdY };
 }
 
+// ── clipLineToSurface ─────────────────────────────────────────────
+
+/**
+ * Y-value of a polyline at x, approached from one side.
+ *
+ * Only non-vertical segments are considered, so at a vertical step the
+ * "left" and "right" values differ.  Returns NaN when no segment on that
+ * side contains x.
+ */
+function polylineYAtSide(
+  px: number[],
+  py: number[],
+  x: number,
+  side: "left" | "right",
+): number {
+  for (let i = 0; i < px.length - 1; i++) {
+    const a = Math.min(px[i], px[i + 1]);
+    const b = Math.max(px[i], px[i + 1]);
+    if (b - a < 1e-12) continue;
+    const inside = side === "left" ? a < x && x <= b : a <= x && x < b;
+    if (inside) {
+      const t = (x - px[i]) / (px[i + 1] - px[i]);
+      return py[i] + t * (py[i + 1] - py[i]);
+    }
+  }
+  return NaN;
+}
+
+/**
+ * Clip a phreatic / piezometric line so that it never rises above the
+ * ground surface: returns the pointwise minimum of the two polylines over
+ * their common x-range, including the points where they cross.
+ *
+ * @returns The clipped line, or `null` when the x-ranges do not overlap.
+ */
+export function clipLineToSurface(
+  wx: number[],
+  wy: number[],
+  sx: number[],
+  sy: number[],
+): { x: number[]; y: number[] } | null {
+  if (wx.length < 2 || sx.length < 2) return null;
+  const lo = Math.max(Math.min(...wx), Math.min(...sx));
+  const hi = Math.min(Math.max(...wx), Math.max(...sx));
+  if (!(hi - lo > 1e-12)) return null;
+
+  const breaks = [...wx, ...sx, lo, hi]
+    .filter((x) => x >= lo && x <= hi)
+    .sort((a, b) => a - b)
+    .filter((x, i, arr) => i === 0 || x - arr[i - 1] > 1e-9);
+
+  const evalSide = (px: number[], py: number[], x: number, side: "left" | "right") => {
+    const v = polylineYAtSide(px, py, x, side);
+    return Number.isFinite(v)
+      ? v
+      : polylineYAtSide(px, py, x, side === "left" ? "right" : "left");
+  };
+
+  const outX: number[] = [];
+  const outY: number[] = [];
+  const push = (x: number, y: number) => {
+    const n = outX.length;
+    if (n > 0 && Math.abs(outX[n - 1] - x) < 1e-9 && Math.abs(outY[n - 1] - y) < 1e-9) return;
+    outX.push(x);
+    outY.push(y);
+  };
+
+  let prevX = NaN;
+  let prevDiff = NaN;
+  for (const x of breaks) {
+    const wL = evalSide(wx, wy, x, "left");
+    const wR = evalSide(wx, wy, x, "right");
+    const sL = evalSide(sx, sy, x, "left");
+    const sR = evalSide(sx, sy, x, "right");
+
+    // Crossing strictly between the previous breakpoint and this one.
+    const diffL = wL - sL;
+    if (Number.isFinite(prevDiff) && prevDiff * diffL < 0) {
+      const xc = prevX + ((x - prevX) * prevDiff) / (prevDiff - diffL);
+      push(xc, evalSide(wx, wy, xc, "right"));
+    }
+
+    push(x, Math.min(wL, sL));
+    push(x, Math.min(wR, sR));
+    prevX = x;
+    prevDiff = wR - sR;
+  }
+
+  return outX.length >= 2 ? { x: outX, y: outY } : null;
+}
+
 // ── splitPolygonByPolyline (JSTS-based) ───────────────────────────
 
 /**

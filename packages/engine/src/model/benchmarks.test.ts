@@ -271,9 +271,9 @@ describe("Arai & Tagyo with water table", () => {
     analyseSlope(s);
 
     const fos = s.getMinFOS();
-    // expected: 1.157740, published range: 1.10–1.20
-    expect(fos).toBeGreaterThan(1.1);
-    expect(fos).toBeLessThan(1.25);
+    // expected: 1.157740, published: 1.138
+    expect(fos).toBeGreaterThan(1.145);
+    expect(fos).toBeLessThan(1.17);
 
     // Water table should reduce FOS below dry analysis
     expect(fos).toBeLessThan(2.0);
