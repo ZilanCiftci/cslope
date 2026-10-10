@@ -1,5 +1,5 @@
 import { describe, expect, it, beforeEach } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import App from "../App";
 import { useAppStore } from "../store/app-store";
@@ -145,9 +145,11 @@ describe("App — VS Code dark layout", () => {
       },
     });
     render(<App />);
-    // StatusBar displays FOS and method
-    expect(screen.getByText("1.234")).toBeInTheDocument();
-    expect(screen.getByText(/(Bishop)/)).toBeInTheDocument();
+    // StatusBar displays FOS and method. The FOS value also appears in the
+    // result sidebar summary, so scope the query to the status bar.
+    const statusBar = within(screen.getByTestId("status-bar"));
+    expect(statusBar.getByText("1.234")).toBeInTheDocument();
+    expect(statusBar.getByText(/\(Bishop\)/)).toBeInTheDocument();
     // Status bar shows RESULT mode
     expect(screen.getByText("RESULT")).toBeInTheDocument();
   });

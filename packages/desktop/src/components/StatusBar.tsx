@@ -25,6 +25,7 @@ export function StatusBar({
 }: Props) {
   return (
     <div
+      data-testid="status-bar"
       className="flex items-center h-6 px-4 text-[11px] shrink-0"
       style={{
         background: "var(--color-vsc-status)",
