@@ -46,6 +46,7 @@ export function useDragDrop() {
         if (!contents) return;
         const parsed = parseProjectFile(contents);
         useAppStore.getState().loadProject(parsed);
+        if (isElectron) window.cslope.confirmFileOpened();
       } catch (err) {
         const msg = err instanceof Error ? err.message : "Unknown error";
         window.alert(`Unable to open project: ${msg}`);

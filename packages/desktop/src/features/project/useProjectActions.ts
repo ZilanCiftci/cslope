@@ -52,6 +52,16 @@ export interface ProjectActions {
  *                         one yet (typically the active model name or
  *                         `"cslope-project"`).
  */
+/** Run an Electron save and tell the user when writing the file fails. */
+async function saveInElectron(save: () => Promise<boolean>): Promise<void> {
+  try {
+    await save();
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : "Unknown error";
+    window.alert(`Unable to save project: ${msg}`);
+  }
+}
+
 export function useProjectActions(defaultBaseName: string): ProjectActions {
   const [fileName, setFileName] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -69,12 +79,13 @@ export function useProjectActions(defaultBaseName: string): ProjectActions {
 
   const handleOpen = async () => {
     if (isElectron) {
-      const contents = await window.cslope.openFile();
-      if (!contents) return;
       try {
+        const contents = await window.cslope.openFile();
+        if (!contents) return;
         const parsed = parseProjectFile(contents);
         useAppStore.getState().loadProject(parsed);
         useAppStore.temporal.getState().clear();
+        window.cslope.confirmFileOpened();
       } catch (err) {
         const msg = err instanceof Error ? err.message : "Unknown error";
         window.alert(`Unable to open project: ${msg}`);
@@ -96,7 +107,7 @@ export function useProjectActions(defaultBaseName: string): ProjectActions {
     const json = buildProjectJson(useAppStore.getState());
 
     if (isElectron) {
-      await window.cslope.saveFile(json);
+      await saveInElectron(() => window.cslope.saveFile(json));
       return;
     }
     const suggested = fileName || defaultBaseName;
@@ -113,7 +124,7 @@ export function useProjectActions(defaultBaseName: string): ProjectActions {
     const json = buildProjectJson(useAppStore.getState());
 
     if (isElectron) {
-      await window.cslope.saveFileAs(json);
+      await saveInElectron(() => window.cslope.saveFileAs(json));
       return;
     }
     const suggested = fileName || defaultBaseName;

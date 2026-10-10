@@ -85,6 +85,8 @@ declare global {
       // File dialogs
       openFile: () => Promise<string | null>;
       openFilePath: (filePath: string) => Promise<string | null>;
+      /** Make the file just read by openFile/openFilePath the save target. */
+      confirmFileOpened: () => void;
       saveFile: (content: string) => Promise<boolean>;
       saveFileAs: (content: string) => Promise<boolean>;
       // Window controls

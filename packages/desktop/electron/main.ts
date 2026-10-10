@@ -1000,6 +1000,19 @@ ipcMain.on("viewSettings:changed", (event, state) => {
 // ── Native file dialogs via IPC ──────────────────────────────
 
 let currentFilePath: string | null = null;
+/**
+ * Path of a file that was read but not yet loaded by the renderer.  It
+ * only becomes the current (save target) path once the renderer confirms
+ * the project parsed and loaded; otherwise a failed open would make the
+ * next Save overwrite the file that could not be opened.
+ */
+let pendingOpenPath: string | null = null;
+
+function setCurrentFilePath(filePath: string) {
+  currentFilePath = filePath;
+  const name = path.basename(filePath, path.extname(filePath));
+  win?.setTitle(`${name} — cSlope`);
+}
 
 ipcMain.handle("file:openPath", async (_event, filePath: string) => {
   if (!win) return null;
@@ -1013,9 +1026,7 @@ ipcMain.handle("file:openPath", async (_event, filePath: string) => {
   }
   try {
     const contents = fs.readFileSync(resolved, "utf-8");
-    currentFilePath = resolved;
-    const name = path.basename(filePath, path.extname(filePath));
-    win.setTitle(`${name} — cSlope`);
+    pendingOpenPath = resolved;
     return contents;
   } catch {
     return null;
@@ -1033,17 +1044,20 @@ ipcMain.handle("dialog:openFile", async () => {
     properties: ["openFile"],
   });
   if (canceled || filePaths.length === 0) return null;
-  currentFilePath = filePaths[0];
-  const name = path.basename(currentFilePath, path.extname(currentFilePath));
-  win.setTitle(`${name} — cSlope`);
-  return fs.readFileSync(currentFilePath, "utf-8");
+  const contents = fs.readFileSync(filePaths[0], "utf-8");
+  pendingOpenPath = filePaths[0];
+  return contents;
+});
+
+ipcMain.on("file:openConfirmed", (event) => {
+  if (event.sender !== win?.webContents || !pendingOpenPath) return;
+  setCurrentFilePath(pendingOpenPath);
+  pendingOpenPath = null;
 });
 
 async function saveToPath(filePath: string, content: string) {
   fs.writeFileSync(filePath, content, "utf-8");
-  currentFilePath = filePath;
-  const name = path.basename(filePath, path.extname(filePath));
-  win?.setTitle(`${name} — cSlope`);
+  setCurrentFilePath(filePath);
   return true;
 }
 
