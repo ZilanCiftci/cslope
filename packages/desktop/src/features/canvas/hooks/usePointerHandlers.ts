@@ -142,6 +142,9 @@ interface PointerDeps {
   setMaterialPicker: (picker: MaterialPickerState | null) => void;
 }
 
+/** Pointer travel (px) before a press on a handle becomes a drag. */
+const DRAG_THRESHOLD_PX = 3;
+
 export function usePointerHandlers(deps: PointerDeps) {
   const {
     canvasRef,
@@ -192,6 +195,10 @@ export function usePointerHandlers(deps: PointerDeps) {
     hit: PointHit;
     startWorld: [number, number];
     startPx: [number, number];
+    /** Pointer position at pointer-down (not shifted by edge panning). */
+    downPx: [number, number];
+    /** True once the pointer has moved past the drag threshold. */
+    moved: boolean;
   } | null>(null);
   const panRef = useRef<{
     startPx: [number, number];
@@ -242,7 +249,7 @@ export function usePointerHandlers(deps: PointerDeps) {
       case "external":
         return b.kind === "external" && a.index === b.index;
       case "piezo":
-        return b.kind === "piezo" && a.index === b.index;
+        return b.kind === "piezo" && a.lineId === b.lineId && a.index === b.index;
       case "limit":
         return b.kind === "limit" && a.handle === b.handle;
       case "udl":
@@ -326,6 +333,17 @@ export function usePointerHandlers(deps: PointerDeps) {
     (clientX: number, clientY: number) => {
       const drag = dragRef.current;
       if (!drag) return;
+
+      // A click selects without moving anything: ignore the drag (and the
+      // grid/neighbour snapping it applies) until the pointer really moves.
+      if (!drag.moved) {
+        const moved = Math.hypot(
+          clientX - drag.downPx[0],
+          clientY - drag.downPx[1],
+        );
+        if (moved < DRAG_THRESHOLD_PX) return;
+        drag.moved = true;
+      }
 
       const s = useAppStore.getState();
       const currentViewScale =
@@ -427,20 +445,30 @@ export function usePointerHandlers(deps: PointerDeps) {
     ],
   );
 
+  // The animation loop outlives the render it started in; read the latest
+  // callbacks through refs instead of the ones captured at pointer-down.
+  const updateDragRef = useRef(updateDragAtPointer);
+  const applyEdgePanRef = useRef(applyEdgePan);
+  useEffect(() => {
+    updateDragRef.current = updateDragAtPointer;
+    applyEdgePanRef.current = applyEdgePan;
+  }, [updateDragAtPointer, applyEdgePan]);
+
   const startAutoPan = useCallback(() => {
     if (autoPanRafRef.current !== null) return;
     const tick = () => {
-      if (!dragRef.current) {
+      const drag = dragRef.current;
+      if (!drag) {
         autoPanRafRef.current = null;
         return;
       }
-      applyEdgePan();
+      if (drag.moved) applyEdgePanRef.current();
       const last = lastPointerRef.current;
-      if (last) updateDragAtPointer(last.x, last.y);
+      if (last) updateDragRef.current(last.x, last.y);
       autoPanRafRef.current = requestAnimationFrame(tick);
     };
     autoPanRafRef.current = requestAnimationFrame(tick);
-  }, [applyEdgePan, updateDragAtPointer]);
+  }, []);
 
   const handlePointerDown = useCallback(
     (e: RPointerEvent<HTMLCanvasElement>) => {
@@ -516,11 +544,15 @@ export function usePointerHandlers(deps: PointerDeps) {
               } else if (!selectedAnnotationIds.includes(a.id)) {
                 setSelectedAnnotations([a.id]);
               }
+              // Only the primary button drags (right-click opens a menu).
+              if (e.button !== 0) return;
               const hit: PointHit = { kind: "annotation", annoId: a.id };
               dragRef.current = {
                 hit,
                 startWorld: [a.x, a.y],
                 startPx: [e.clientX, e.clientY],
+                downPx: [e.clientX, e.clientY],
+                moved: false,
               };
               beginDragHistoryBatch();
               (e.target as HTMLElement).setPointerCapture(e.pointerId);
@@ -590,6 +622,8 @@ export function usePointerHandlers(deps: PointerDeps) {
           hit,
           startWorld,
           startPx: [e.clientX, e.clientY],
+          downPx: [e.clientX, e.clientY],
+          moved: false,
         };
         beginDragHistoryBatch();
         startAutoPan();

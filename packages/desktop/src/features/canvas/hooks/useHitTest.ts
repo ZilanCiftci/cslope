@@ -1,6 +1,6 @@
 import { useCallback, type RefObject } from "react";
 import { isPointInPolygon } from "@cslope/engine";
-import { computeRegions } from "../../../utils/regions";
+import { computeRegions, isClosedBoundary } from "../../../utils/regions";
 import type { AppState } from "../../../store/types";
 import { ARROW_HEIGHT_PX, EDGE_THRESHOLD, SNAP_THRESHOLD } from "../constants";
 import type { EdgeHit, LimitHandle, PointHit, UdlHandle } from "../types";
@@ -418,6 +418,15 @@ export function useHitTest({
       let bestDist = worldSnapRadius;
       let bestSnap: [number, number] | null = null;
 
+      // Boundary and piezometric points sitting on a dragged exterior
+      // vertex move with it (setCoordinate), so they must not attract it.
+      const draggedVertex =
+        excludeHit.kind === "external" ? coordinates[excludeHit.index] : null;
+      const onDraggedVertex = (p: [number, number]) =>
+        !!draggedVertex &&
+        Math.abs(p[0] - draggedVertex[0]) < 1e-9 &&
+        Math.abs(p[1] - draggedVertex[1]) < 1e-9;
+
       // Check external boundary points
       for (let i = 0; i < coordinates.length; i++) {
         if (excludeHit.kind === "external" && excludeHit.index === i) continue;
@@ -430,13 +439,21 @@ export function useHitTest({
 
       // Check material boundary points
       for (const b of materialBoundaries) {
+        const last = b.coordinates.length - 1;
+        const closed = isClosedBoundary(b.coordinates);
+        const isEnd = (k: number) => k === 0 || k === last;
         for (let j = 0; j < b.coordinates.length; j++) {
+          // Skip the dragged point itself; for a closed boundary its first
+          // and last entries are one vertex, so skip both or the point
+          // snaps to its own twin and cannot be moved.
           if (
             excludeHit.kind === "boundary" &&
             excludeHit.boundaryId === b.id &&
-            excludeHit.pointIndex === j
+            (excludeHit.pointIndex === j ||
+              (closed && isEnd(j) && isEnd(excludeHit.pointIndex)))
           )
             continue;
+          if (onDraggedVertex(b.coordinates[j])) continue;
           const d = Math.hypot(
             b.coordinates[j][0] - wx,
             b.coordinates[j][1] - wy,
@@ -453,11 +470,12 @@ export function useHitTest({
         for (const line of piezometricLine.lines) {
           for (let i = 0; i < line.coordinates.length; i++) {
             if (
-              line.id === piezometricLine.activeLineId &&
               excludeHit.kind === "piezo" &&
+              line.id === excludeHit.lineId &&
               excludeHit.index === i
             )
               continue;
+            if (onDraggedVertex(line.coordinates[i])) continue;
             const d = Math.hypot(
               line.coordinates[i][0] - wx,
               line.coordinates[i][1] - wy,
