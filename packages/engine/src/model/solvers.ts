@@ -837,6 +837,17 @@ function evaluatePlanes(slope: Slope, allPlanes: SearchPlane[]): void {
       continue;
     }
 
+    // A surface with no net driving moment in the sliding direction (e.g.
+    // a symmetric circle under level ground, or one that would slide the
+    // other way) cannot fail here.  The iterative solvers oscillate on
+    // such surfaces, which used to report them as "weak equilibrium".
+    if (!hasDrivingMoment(slices)) {
+      plane.fos = null;
+      plane.slices = slices;
+      plane.converged = true;
+      continue;
+    }
+
     let fos: number | null;
     let converged = true;
 
@@ -875,4 +886,16 @@ function evaluatePlanes(slope: Slope, allPlanes: SearchPlane[]): void {
     plane.slices = slices;
     plane.converged = converged;
   }
+}
+
+/** True when the slices' net driving moment is clearly positive. */
+function hasDrivingMoment(slices: Slice[]): boolean {
+  let net = 0;
+  let gross = 0;
+  for (const s of slices) {
+    const m = (s.weight + s.udl + s.ll) * s.dx;
+    net += m;
+    gross += Math.abs(m);
+  }
+  return gross > 0 && net > 1e-6 * gross;
 }

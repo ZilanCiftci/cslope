@@ -160,3 +160,24 @@ describe("materials and mirroring", () => {
     expect(analyseSlope(slope)).not.toBeNull();
   });
 });
+
+describe("surfaces without driving moment", () => {
+  it("are not reported as non-converged", () => {
+    const slope = buildSlope(BASE);
+    slope.updateAnalysisOptions({ iterations: 1500, refinedIterations: 500 });
+    const minFos = analyseSlope(slope);
+    expect(minFos).toBeGreaterThan(1.5);
+    // Symmetric circles on the level crest/toe have zero net driving
+    // moment; they used to make up ~170 "weak equilibrium" surfaces.
+    const flat = slope.search.filter(
+      (p) => p.lc[0] >= 40 && p.rc[0] >= 40,
+    );
+    expect(flat.length).toBeGreaterThan(0);
+    for (const p of flat) {
+      expect(p.fos).toBeNull();
+      expect(p.converged).toBe(true);
+    }
+    const nonConverged = slope.search.filter((p) => p.converged === false);
+    expect(nonConverged.length).toBeLessThan(10);
+  });
+});
