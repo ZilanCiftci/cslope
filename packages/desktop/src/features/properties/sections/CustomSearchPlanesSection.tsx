@@ -1,6 +1,7 @@
 import { useAppStore } from "../../../store/app-store";
 import { Section } from "../../../components/ui/Section";
 import { Label } from "../../../components/ui/Label";
+import { DraftNumberInput } from "../../../components/ui/DraftNumberInput";
 
 interface CustomSearchPlanesSectionProps {
   plain?: boolean;
@@ -41,42 +42,31 @@ export function CustomSearchPlanesSection({
           <div key={p.id} className="flex items-end gap-1 text-[12px]">
             <label className="flex flex-col">
               <Label>cx</Label>
-              <input
-                type="number"
+              <DraftNumberInput
                 step="0.5"
                 value={p.cx}
-                onChange={(e) =>
-                  updatePlane(p.id, { cx: parseFloat(e.target.value) || 0 })
-                }
+                onValueChange={(v) => updatePlane(p.id, { cx: v })}
                 className="w-16"
                 aria-label="Circle centre X"
               />
             </label>
             <label className="flex flex-col">
               <Label>cy</Label>
-              <input
-                type="number"
+              <DraftNumberInput
                 step="0.5"
                 value={p.cy}
-                onChange={(e) =>
-                  updatePlane(p.id, { cy: parseFloat(e.target.value) || 0 })
-                }
+                onValueChange={(v) => updatePlane(p.id, { cy: v })}
                 className="w-16"
                 aria-label="Circle centre Y"
               />
             </label>
             <label className="flex flex-col">
               <Label>R</Label>
-              <input
-                type="number"
+              <DraftNumberInput
                 step="0.5"
                 min="0.1"
                 value={p.radius}
-                onChange={(e) =>
-                  updatePlane(p.id, {
-                    radius: parseFloat(e.target.value) || 0,
-                  })
-                }
+                onValueChange={(v) => updatePlane(p.id, { radius: v })}
                 onBlur={(e) => {
                   const v = parseFloat(e.target.value);
                   if (!Number.isFinite(v) || v <= 0) {

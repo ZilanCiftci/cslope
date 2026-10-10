@@ -1,6 +1,7 @@
 import { useAppStore } from "../../../store/app-store";
 import { Section } from "../../../components/ui/Section";
 import { Label } from "../../../components/ui/Label";
+import { DraftNumberInput } from "../../../components/ui/DraftNumberInput";
 
 interface SearchLimitsSectionProps {
   plain?: boolean;
@@ -42,29 +43,19 @@ export function SearchLimitsSection({
           <div className="grid grid-cols-2 gap-2 text-[12px]">
             <label className="flex flex-col gap-0.5">
               <Label>Min X</Label>
-              <input
-                type="number"
+              <DraftNumberInput
                 step="0.5"
                 value={limits.entryLeftX}
-                onChange={(e) =>
-                  setLimits({
-                    entryLeftX: parseFloat(e.target.value) || xMin,
-                  })
-                }
+                onValueChange={(v) => setLimits({ entryLeftX: v })}
                 aria-label="Entry minimum X"
               />
             </label>
             <label className="flex flex-col gap-0.5">
               <Label>Max X</Label>
-              <input
-                type="number"
+              <DraftNumberInput
                 step="0.5"
                 value={limits.entryRightX}
-                onChange={(e) =>
-                  setLimits({
-                    entryRightX: parseFloat(e.target.value) || xMax,
-                  })
-                }
+                onValueChange={(v) => setLimits({ entryRightX: v })}
                 aria-label="Entry maximum X"
               />
             </label>
@@ -78,29 +69,19 @@ export function SearchLimitsSection({
           <div className="grid grid-cols-2 gap-2 text-[12px]">
             <label className="flex flex-col gap-0.5">
               <Label>Min X</Label>
-              <input
-                type="number"
+              <DraftNumberInput
                 step="0.5"
                 value={limits.exitLeftX}
-                onChange={(e) =>
-                  setLimits({
-                    exitLeftX: parseFloat(e.target.value) || xMin,
-                  })
-                }
+                onValueChange={(v) => setLimits({ exitLeftX: v })}
                 aria-label="Exit minimum X"
               />
             </label>
             <label className="flex flex-col gap-0.5">
               <Label>Max X</Label>
-              <input
-                type="number"
+              <DraftNumberInput
                 step="0.5"
                 value={limits.exitRightX}
-                onChange={(e) =>
-                  setLimits({
-                    exitRightX: parseFloat(e.target.value) || xMax,
-                  })
-                }
+                onValueChange={(v) => setLimits({ exitRightX: v })}
                 aria-label="Exit maximum X"
               />
             </label>

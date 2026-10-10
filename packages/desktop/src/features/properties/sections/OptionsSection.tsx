@@ -79,6 +79,29 @@ export function OptionsSection({ plain = false }: OptionsSectionProps) {
     setToleranceDraft(String(options.tolerance));
   }
 
+  /**
+   * While typing, store a value only when it is already valid, unclamped,
+   * and record it as "seen" so the resync above does not overwrite the
+   * text being typed.  Clamping happens on blur.
+   */
+  const commitWhileTyping = (
+    field: "slices" | "iterations" | "refinedIterations" | "tolerance",
+    raw: string,
+    min: number,
+    max: number,
+    integer: boolean,
+  ) => {
+    if (raw.trim() === "") return;
+    const parsed = Number(raw);
+    if (!Number.isFinite(parsed) || parsed < min || parsed > max) return;
+    const value = integer ? Math.round(parsed) : parsed;
+    setPrevOptions((prev) => ({ ...prev, [field]: value }));
+    setOptions({ [field]: value });
+  };
+
+  // Free-text data points: keep the typed text while editing.
+  const [pointsDraft, setPointsDraft] = useState<string | null>(null);
+
   const slicesParsed = Number(slicesDraft);
   const iterationsParsed = Number(iterationsDraft);
   const refinedParsed = Number(refinedIterationsDraft);
@@ -175,9 +198,7 @@ export function OptionsSection({ plain = false }: OptionsSectionProps) {
             onChange={(e) => {
               const value = e.target.value;
               setSlicesDraft(value);
-              const parsed = Number(value);
-              if (!Number.isFinite(parsed)) return;
-              setOptions({ slices: Math.round(clampNumber(parsed, 10, 500)) });
+              commitWhileTyping("slices", value, 10, 500, true);
             }}
             onBlur={(e) => {
               const parsed = Number(e.target.value);
@@ -207,11 +228,7 @@ export function OptionsSection({ plain = false }: OptionsSectionProps) {
             onChange={(e) => {
               const value = e.target.value;
               setIterationsDraft(value);
-              const parsed = Number(value);
-              if (!Number.isFinite(parsed)) return;
-              setOptions({
-                iterations: Math.round(clampNumber(parsed, 100, 100000)),
-              });
+              commitWhileTyping("iterations", value, 100, 100000, true);
             }}
             onBlur={(e) => {
               const parsed = Number(e.target.value);
@@ -241,11 +258,7 @@ export function OptionsSection({ plain = false }: OptionsSectionProps) {
             onChange={(e) => {
               const value = e.target.value;
               setRefinedIterationsDraft(value);
-              const parsed = Number(value);
-              if (!Number.isFinite(parsed)) return;
-              setOptions({
-                refinedIterations: Math.round(clampNumber(parsed, 0, 100000)),
-              });
+              commitWhileTyping("refinedIterations", value, 0, 100000, true);
             }}
             onBlur={(e) => {
               const parsed = Number(e.target.value);
@@ -275,9 +288,7 @@ export function OptionsSection({ plain = false }: OptionsSectionProps) {
             onChange={(e) => {
               const value = e.target.value;
               setToleranceDraft(value);
-              const parsed = Number(value);
-              if (!Number.isFinite(parsed)) return;
-              setOptions({ tolerance: clampNumber(parsed, 0.001, 0.1) });
+              commitWhileTyping("tolerance", value, 0.001, 0.1, false);
             }}
             onBlur={(e) => {
               const parsed = Number(e.target.value);
@@ -337,12 +348,14 @@ export function OptionsSection({ plain = false }: OptionsSectionProps) {
               <Label>Data Points (x,f)</Label>
               <input
                 type="text"
-                value={interslicePointsValue}
-                onChange={(e) =>
+                value={pointsDraft ?? interslicePointsValue}
+                onChange={(e) => {
+                  setPointsDraft(e.target.value);
                   setOptions({
                     intersliceDataPoints: parseInterslicePoints(e.target.value),
-                  })
-                }
+                  });
+                }}
+                onBlur={() => setPointsDraft(null)}
                 placeholder="0,0; 0.2,0.6; 0.5,1; 0.8,0.6; 1,0"
                 aria-label="Interslice data points"
               />
