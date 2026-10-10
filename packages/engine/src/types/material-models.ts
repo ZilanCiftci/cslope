@@ -102,7 +102,14 @@ export interface AnisotropicFunctionModel extends MaterialModelBase {
   cohesion: number;
   /** Base friction angle φ (°). */
   frictionAngle: number;
-  /** Modifier vs inclination: [[α_deg, factor], …]. */
+  /**
+   * Modifier vs base inclination: [[α_deg, factor], …].
+   *
+   * α is measured relative to the sliding direction, not geometrically:
+   * positive where the slice base dips down in the direction of sliding
+   * (the back scarp), negative where it rises (the toe).  The same
+   * function therefore applies unchanged to left- and right-facing slopes.
+   */
   modifierFunction: [number, number][];
 }
 
