@@ -14,8 +14,9 @@ import { SearchLimitsDialogApp } from "./features/properties/SearchLimitsDialogA
 import { CustomSearchPlanesDialogApp } from "./features/properties/CustomSearchPlanesDialogApp";
 import { OptionsDialogApp } from "./features/properties/OptionsDialogApp";
 import { ViewSettingsDialogApp } from "./features/properties/ViewSettingsDialogApp";
-import { useAppStore } from "./store/app-store";
+import { getAnalysisInputSignature, useAppStore } from "./store/app-store";
 import type {
+  AppState,
   AnalysisLimitsState,
   AnalysisResult,
   CustomSearchPlane,
@@ -87,6 +88,51 @@ interface ViewSettingsStatePayload {
   resultViewOffset: [number, number];
 }
 
+/** Store fields that are also persisted on the active model entry. */
+const MODEL_ENTRY_FIELDS = [
+  "orientation",
+  "coordinates",
+  "coordinateExpressions",
+  "parameters",
+  "materials",
+  "materialBoundaries",
+  "regionMaterials",
+  "piezometricLine",
+  "udls",
+  "lineLoads",
+  "customSearchPlanes",
+  "customPlanesOnly",
+  "options",
+  "analysisLimits",
+  "resultViewSettings",
+] as const satisfies readonly (keyof AppState & keyof ModelEntry)[];
+
+/**
+ * Apply state received from a dialog window the way store actions do:
+ * write it through to the active model entry, and invalidate the analysis
+ * result when the analysis inputs actually changed.
+ */
+function applyDialogPatch(patch: Partial<AppState>): void {
+  const before = getAnalysisInputSignature(useAppStore.getState());
+  useAppStore.setState((s) => {
+    const modelPatch: Partial<ModelEntry> = {};
+    for (const key of MODEL_ENTRY_FIELDS) {
+      if (key in patch) {
+        (modelPatch as Record<string, unknown>)[key] = patch[key];
+      }
+    }
+    return {
+      ...patch,
+      models: s.models.map((m) =>
+        m.id === s.activeModelId ? { ...m, ...modelPatch } : m,
+      ),
+    };
+  });
+  if (getAnalysisInputSignature(useAppStore.getState()) !== before) {
+    useAppStore.getState().invalidateAnalysis();
+  }
+}
+
 function normalizeMaterialsPayload(
   payload: MaterialsStatePayload | MaterialRow[],
 ): MaterialsStatePayload {
@@ -152,7 +198,6 @@ function buildResultsPlotPayloadFromState(): ResultsPlotStatePayload {
 }
 
 function App() {
-  const setMaterials = useAppStore((s) => s.setMaterials);
   const setRegionMaterials = useAppStore((s) => s.setRegionMaterials);
   const setInteriorBoundariesDialogOpen = useAppStore(
     (s) => s.setInteriorBoundariesDialogOpen,
@@ -218,6 +263,7 @@ function App() {
     typeof window !== "undefined" &&
     window.location.hash.replace(/^#/, "") === "view-settings-dialog";
   const suppressNextGeometryBroadcastRef = useRef(false);
+  const suppressNextMaterialsBroadcastRef = useRef(false);
   const suppressNextMaterialAssignmentBroadcastRef = useRef(false);
   const suppressNextInteriorBoundariesBroadcastRef = useRef(false);
   const suppressNextLoadsBroadcastRef = useRef(false);
@@ -280,7 +326,15 @@ function App() {
       raw: MaterialsStatePayload | MaterialRow[],
     ) => {
       const next = normalizeMaterialsPayload(raw);
-      setMaterials(next.materials);
+      suppressNextMaterialsBroadcastRef.current = true;
+      applyDialogPatch({ materials: next.materials });
+      if (
+        Array.isArray(next.parameters) &&
+        JSON.stringify(next.parameters) !==
+          JSON.stringify(useAppStore.getState().parameters)
+      ) {
+        useAppStore.getState().setParameters(next.parameters);
+      }
     };
 
     window.cslope.onMaterialsRequestState(handleMaterialsRequestState);
@@ -290,7 +344,20 @@ function App() {
       window.cslope.offMaterialsRequestState(handleMaterialsRequestState);
       window.cslope.offMaterialsChanged(handleMaterialsChanged);
     };
-  }, [isAnyDialogWindow, setMaterials]);
+  }, [isAnyDialogWindow]);
+
+  // Keep an open Materials window in sync with the main window (model
+  // switch, undo, open file, edits from other dialogs).
+  useEffect(() => {
+    if (!isElectron || isAnyDialogWindow) return;
+
+    if (suppressNextMaterialsBroadcastRef.current) {
+      suppressNextMaterialsBroadcastRef.current = false;
+      return;
+    }
+
+    window.cslope.sendMaterialsChanged({ materials, parameters });
+  }, [materials, parameters, isAnyDialogWindow]);
 
   useEffect(() => {
     if (!isElectron || isAnyDialogWindow) return;
@@ -365,7 +432,7 @@ function App() {
       next: GeometryStatePayload,
     ) => {
       suppressNextGeometryBroadcastRef.current = true;
-      useAppStore.setState({
+      applyDialogPatch({
         coordinates: next.coordinates,
         coordinateExpressions: next.coordinateExpressions,
       });
@@ -428,7 +495,7 @@ function App() {
         patch.parameters = next.parameters;
       }
 
-      useAppStore.setState(patch);
+      applyDialogPatch(patch);
     };
 
     window.cslope.onInteriorBoundariesRequestState(
@@ -497,7 +564,7 @@ function App() {
         patch.parameters = normalized.parameters;
       }
 
-      useAppStore.setState(patch);
+      applyDialogPatch(patch);
     };
 
     window.cslope.onLoadsRequestState(handleLoadsRequestState);
@@ -552,7 +619,7 @@ function App() {
         patch.parameters = normalized.parameters;
       }
 
-      useAppStore.setState(patch);
+      applyDialogPatch(patch);
     };
 
     window.cslope.onPiezoRequestState(handlePiezoRequestState);
@@ -638,7 +705,7 @@ function App() {
       next: AnalysisStatePayload,
     ) => {
       suppressNextAnalysisBroadcastRef.current = true;
-      useAppStore.setState({
+      applyDialogPatch({
         coordinates: next.coordinates,
         orientation: next.orientation,
         analysisLimits: next.analysisLimits,
@@ -701,7 +768,7 @@ function App() {
       next: ViewSettingsStatePayload,
     ) => {
       suppressNextViewSettingsBroadcastRef.current = true;
-      useAppStore.setState({
+      applyDialogPatch({
         resultViewSettings: next.resultViewSettings,
         coordinates: next.coordinates,
       });

@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { DefineMaterialsDialog } from "./DefineMaterialsDialog";
 import { useAppStore } from "../../store/app-store";
 import type { MaterialRow, ParameterDef } from "../../store/types";
@@ -24,6 +24,9 @@ export function MaterialsDialogApp() {
   const setParameters = useAppStore((s) => s.setParameters);
   const parameters = useAppStore((s) => s.parameters);
   const [isHydrated, setIsHydrated] = useState(!isElectron);
+  // State that arrived from the main window must not be echoed back: the
+  // echo would invalidate the analysis result even though nothing changed.
+  const suppressNextBroadcastRef = useRef(false);
 
   useEffect(() => {
     if (!isElectron) return;
@@ -33,6 +36,7 @@ export function MaterialsDialogApp() {
       raw: MaterialsStatePayload | MaterialRow[],
     ) => {
       const next = normalizeMaterialsPayload(raw);
+      suppressNextBroadcastRef.current = true;
       setMaterials(next.materials);
       if (Array.isArray(next.parameters)) {
         setParameters(next.parameters);
@@ -52,6 +56,10 @@ export function MaterialsDialogApp() {
 
   useEffect(() => {
     if (!isElectron || !isHydrated) return;
+    if (suppressNextBroadcastRef.current) {
+      suppressNextBroadcastRef.current = false;
+      return;
+    }
     window.cslope.sendMaterialsChanged({ materials, parameters });
   }, [materials, parameters, isHydrated]);
 
