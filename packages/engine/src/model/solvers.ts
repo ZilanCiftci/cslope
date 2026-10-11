@@ -14,6 +14,7 @@ import {
   generateLocalPlanes,
   planeKey,
 } from "./search";
+import { optimiseNonCircular } from "./optimize";
 
 // ────────────────────────────────────────────────────────────────
 // Slice property arrays (replaces _get_slice_property_arrays)
@@ -25,6 +26,9 @@ interface SliceArrays {
   lls: Float64Array;
   hForces: Float64Array;
   extraMoments: Float64Array;
+  /** Moment arms of base shear and normal force about the centre. */
+  shearArms: Float64Array;
+  normalArms: Float64Array;
   alphas: Float64Array;
   baseLengths: Float64Array;
   phis: Float64Array;
@@ -49,6 +53,8 @@ function getSlicePropertyArrays(
   const lls = new Float64Array(n);
   const hForces = new Float64Array(n);
   const extraMoments = new Float64Array(n);
+  const shearArms = new Float64Array(n);
+  const normalArms = new Float64Array(n);
   const alphas = new Float64Array(n);
   const baseLengths = new Float64Array(n);
   const phis = new Float64Array(n);
@@ -67,6 +73,8 @@ function getSlicePropertyArrays(
     lls[i] = s.ll;
     hForces[i] = s.hForce ?? 0;
     extraMoments[i] = s.extraMoment ?? 0;
+    shearArms[i] = s.R;
+    normalArms[i] = s.normalArm ?? 0;
     alphas[i] = s.alpha;
     baseLengths[i] = s.baseLength;
     phis[i] = s.phi;
@@ -90,6 +98,8 @@ function getSlicePropertyArrays(
     lls,
     hForces,
     extraMoments,
+    shearArms,
+    normalArms,
     alphas,
     baseLengths,
     phis,
@@ -150,7 +160,6 @@ function solveSliceNormal(
  */
 function solveFOSGenericMoment(
   p: SliceArrays,
-  R: number,
   lambdaVal: number,
   initialFOS: number,
   initialNs: Float64Array,
@@ -205,6 +214,7 @@ function solveFOSGenericMoment(
           shearFactor,
           prevFOS,
         );
+        const R = p.shearArms[i];
         let res = (c * bl + (N - U * bl) * tanPhi) * R;
         // Combined method: where the undrained strength governs, the
         // slice must be in equilibrium with that (smaller) shear too.
@@ -224,7 +234,8 @@ function solveFOSGenericMoment(
         }
         resisting += res;
 
-        pushing += W * dx + p.extraMoments[i];
+        // On a non-circular surface the normal force has a moment too.
+        pushing += W * dx + p.extraMoments[i] + N * p.normalArms[i];
         nCurrent[i] = N;
         eLeft = eRight;
         xLeft = xRight;
@@ -438,7 +449,6 @@ export function analyseBishop(
 
   const [fos, pushing, resisting, , converged] = solveFOSGenericMoment(
     props,
-    slices[0].R,
     0, // lambda = 0
     FS,
     initialNs,
@@ -592,7 +602,6 @@ export function analyseMorgensternPrice(
     slope.intersliceFunction,
     slope.intersliceDataPoints,
   );
-  const R = slices[0].R;
   const n = slices.length;
   const maxIters = slope.maxIterations;
   const tol = slope.tolerance;
@@ -607,7 +616,6 @@ export function analyseMorgensternPrice(
   let Nm: Float64Array = new Float64Array(n);
   let [FSm, pushing0, resisting0, NmOut] = solveFOSGenericMoment(
     props,
-    R,
     0,
     FSord,
     Nm,
@@ -660,7 +668,6 @@ export function analyseMorgensternPrice(
   const lambda2 = 0.1;
   [FSm, pushing0, resisting0, NmOut] = solveFOSGenericMoment(
     props,
-    R,
     lambda2,
     FSm,
     Nm,
@@ -719,7 +726,6 @@ export function analyseMorgensternPrice(
 
     [FSm, pushing0, resisting0, NmOut] = solveFOSGenericMoment(
       props,
-      R,
       lambdaNew,
       fsExtrap,
       Nm,
@@ -757,7 +763,6 @@ export function analyseMorgensternPrice(
       [FSm, pushing0, resisting0, NmOut, convergedBestM] =
         solveFOSGenericMoment(
           props,
-          R,
           bestLambda,
           bestFS,
           Nm,
@@ -837,7 +842,9 @@ export function analyseSlope(slope: Slope): number | null {
   const allPlanes: SearchPlane[] = [];
   const seenPlanes = new Set<string>();
   for (const plane of combinedPlanes) {
-    const key = `${plane.cx}|${plane.cy}|${plane.radius}`;
+    const key = plane.points
+      ? JSON.stringify(plane.points)
+      : `${plane.cx}|${plane.cy}|${plane.radius}`;
     if (seenPlanes.has(key)) continue;
     seenPlanes.add(key);
     allPlanes.push(plane);
@@ -873,6 +880,14 @@ export function analyseSlope(slope: Slope): number | null {
     }
   }
 
+  // Non-circular optimisation of the best circles.
+  if (slope.nonCircularOptimization && !slope.customPlanesOnly) {
+    const optimised = optimiseNonCircular(slope, allPlanes, (planes) =>
+      evaluatePlanes(slope, planes),
+    );
+    allPlanes.push(...optimised);
+  }
+
   // Sort by FOS ascending
   allPlanes.sort((a, b) => {
     const af = a.fos ?? Number.POSITIVE_INFINITY;
@@ -896,6 +911,7 @@ function evaluatePlanes(slope: Slope, allPlanes: SearchPlane[]): void {
         plane.cx,
         plane.cy,
         plane.radius,
+        plane.points,
       );
     } catch {
       plane.fos = null;
@@ -909,6 +925,20 @@ function evaluatePlanes(slope: Slope, allPlanes: SearchPlane[]): void {
     }
     if (slices[0].xLeft > plane.lc[0] + 1e-9) {
       plane.crack = [slices[0].xLeft, slices[0].y0Bottom];
+    }
+
+    // Minimum depth: shallower surfaces are not analysed.
+    if (slope.minSlipDepth > 0) {
+      let maxDepth = 0;
+      for (const s of slices) {
+        maxDepth = Math.max(maxDepth, s.y0Top - s.y0Bottom, s.y1Top - s.y1Bottom);
+      }
+      if (maxDepth < slope.minSlipDepth) {
+        plane.fos = null;
+        plane.slices = slices;
+        plane.converged = true;
+        continue;
+      }
     }
 
     // If any slice has skipSurface (e.g. high-strength material) or

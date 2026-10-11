@@ -83,8 +83,17 @@ export interface Slice {
   dx: number;
   /** Height from center of rotation to midpoint. */
   e: number;
-  /** Circle radius (m). */
+  /**
+   * Moment arm of the base shear about the centre (m): the radius on a
+   * circle, the perpendicular distance to the base on a non-circular
+   * surface.
+   */
   R: number;
+  /**
+   * Moment arm of the base normal force about the axis point (m),
+   * positive where the normal force drives; 0 on a circle.
+   */
+  normalArm?: number;
   /** UDL force on slice (kN). */
   udl: number;
   /** Line load force on slice (kN). */

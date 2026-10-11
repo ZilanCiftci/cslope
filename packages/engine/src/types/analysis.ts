@@ -68,6 +68,16 @@ export interface AnalysisOptions {
    * limits, since the model's limits belong to its own direction.
    */
   bothDirections?: boolean;
+  /**
+   * After the circular search, optimise the best circles as non-circular
+   * (polyline) surfaces, which can follow weak layers (default false).
+   */
+  nonCircularOptimization?: boolean;
+  /**
+   * Surfaces less deep than this below the ground (m, vertical) are not
+   * analysed (default 0).
+   */
+  minSlipDepth?: number;
 }
 
 /** Partial factors applied to characteristic values. */
@@ -107,6 +117,8 @@ export const DEFAULT_ANALYSIS_OPTIONS: AnalysisOptions = {
   porePressureHead: "vertical",
   tensionCrackDepth: 0,
   tensionCrackWater: 0,
+  nonCircularOptimization: false,
+  minSlipDepth: 0,
 };
 
 /** Water table input — one of three modes. */
@@ -145,6 +157,11 @@ export interface SlipSurfaceResult {
   converged?: boolean;
   /** Lambda-Fm-Ff-gap rows for this surface (Morgenstern-Price only). */
   lffArray?: [number, number, number, number][];
+  /**
+   * Non-circular surface: its points from entry to exit (then cx, cy is
+   * the moment axis and radius 0). Absent for a circle.
+   */
+  points?: [number, number][];
 }
 
 /** Slice data for detailed output. */

@@ -21,7 +21,12 @@ function roundTo(value: number, decimals: number): number {
   return Math.round(value * scale) / scale;
 }
 
-export function planeKey(plane: Pick<SearchPlane, "cx" | "cy" | "radius">): string {
+export function planeKey(
+  plane: Pick<SearchPlane, "cx" | "cy" | "radius" | "points">,
+): string {
+  if (plane.points) {
+    return plane.points.map(([x, y]) => `${roundTo(x, 4)},${roundTo(y, 4)}`).join(";");
+  }
   return `${roundTo(plane.cx, 4)}|${roundTo(plane.cy, 4)}|${roundTo(plane.radius, 4)}`;
 }
 
@@ -233,8 +238,9 @@ export function generateRefinedPlanes(
     }
   };
 
+  // Refinement varies circles; non-circular surfaces are not seeds.
   const seeds = validRanked
-    .slice()
+    .filter((plane) => !plane.points)
     .sort((a, b) => a.fos! - b.fos!)
     .slice(0, Math.min(10, validRanked.length));
 
@@ -356,7 +362,7 @@ export function generateLocalPlanes(
   // The numSeeds best planes, in one pass (the list is large).
   const seeds: SearchPlane[] = [];
   for (const plane of evaluatedPlanes) {
-    if (plane.fos == null || !Number.isFinite(plane.fos)) continue;
+    if (plane.fos == null || !Number.isFinite(plane.fos) || plane.points) continue;
     if (seeds.length < numSeeds || plane.fos < seeds[seeds.length - 1].fos!) {
       let i = seeds.length;
       while (i > 0 && seeds[i - 1].fos! > plane.fos) i--;

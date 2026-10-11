@@ -18,6 +18,7 @@ import {
 } from "../math/index";
 import type { Slope } from "./slope";
 import { polylineYAtSide } from "./geometry-ops";
+import { polylineCrossingsX, polylineYAt, type Pt } from "./surface";
 
 // ── createSlice ───────────────────────────────────────────────────
 
@@ -44,24 +45,45 @@ export function createSlice(
   waterForMaterial?: (
     material: GeometryWithMaterial["material"],
   ) => { yMean: number; h: number } | null,
+  /**
+   * Base of a non-circular surface (straight within the slice); then
+   * (cx, cy) is the axis point for moment equilibrium and `radius` unused.
+   */
+  base?: (x: number) => number,
 ): Slice | null {
   const x = (x0 + x1) / 2;
   const dx = cx - x;
   const yTop = (y0Top + y1Top) / 2;
   const width = Math.abs(x0 - x1);
 
-  const y0Bottom = getCircleYCoordinateAtX(cx, cy, radius, x0);
-  const y1Bottom = getCircleYCoordinateAtX(cx, cy, radius, x1);
-  const yBottom = getCircleYCoordinateAtX(cx, cy, radius, x);
+  const y0Bottom = base ? base(x0) : getCircleYCoordinateAtX(cx, cy, radius, x0);
+  const y1Bottom = base ? base(x1) : getCircleYCoordinateAtX(cx, cy, radius, x1);
+  const yBottom = base
+    ? (y0Bottom + y1Bottom) / 2
+    : getCircleYCoordinateAtX(cx, cy, radius, x);
 
   if (yBottom > yTop) return null; // Invalid: bottom above top
 
   const height = Math.abs(yTop - yBottom);
   const e = cy - (yTop + yBottom) / 2;
 
-  // Alpha angle
-  const dyA = cy - yBottom;
-  const alpha = Math.atan(dx / dyA);
+  // Alpha angle: positive where the base descends towards +x (the
+  // sliding direction). On a circle the tangent at the slice middle.
+  const alpha = base
+    ? Math.atan((y0Bottom - y1Bottom) / width)
+    : Math.atan(dx / (cy - yBottom));
+
+  // Moment arms about the centre / axis point. The base shear resists
+  // with arm R; the normal force has arm `normalArm` (0 on a circle,
+  // where it passes through the centre).
+  let shearArm = radius;
+  let normalArm = 0;
+  if (base) {
+    const bx = x - cx;
+    const by = yBottom - cy;
+    shearArm = -(bx * Math.sin(alpha) + by * Math.cos(alpha));
+    normalArm = bx * Math.cos(alpha) - by * Math.sin(alpha);
+  }
 
   // Base length consistent with the base inclination the solvers use
   // (the equilibrium equations assume a straight base of length b/cos α).
@@ -200,7 +222,8 @@ export function createSlice(
     weight: totalWeight,
     dx,
     e,
-    R: radius,
+    R: shearArm,
+    normalArm,
     udl: udlForce,
     ll: llForce,
     isValid: true,
@@ -267,11 +290,20 @@ export function getSlices(
   cx: number,
   cy: number,
   radius: number,
+  /**
+   * Non-circular surface: polyline from entry to exit (x increasing);
+   * (cx, cy) is then the axis point and `radius` is unused.
+   */
+  points?: readonly Pt[],
 ): Slice[] {
   if (entryX >= x1) throw new Error("x0 must be less than x1");
 
   const surfXY = slope.surfaceLineXY;
   if (!surfXY) throw new Error("Surface line not defined");
+  const poly = points && points.length >= 2 ? points : null;
+  const baseY = poly
+    ? (x: number) => polylineYAt(poly, x)
+    : (x: number) => getCircleYCoordinateAtX(cx, cy, radius, x);
 
   // A tension crack cuts the surface off where it reaches the crack depth
   // on the upslope side; a surface that never gets that deep has no
@@ -279,7 +311,7 @@ export function getSlices(
   let x0 = entryX;
   const crackDepth = slope.tensionCrackDepth;
   if (crackDepth > 0) {
-    const xc = findCrackX(surfXY, entryX, x1, cx, cy, radius, crackDepth);
+    const xc = findCrackX(surfXY, entryX, x1, baseY, crackDepth);
     if (xc === null) return [];
     x0 = xc;
   }
@@ -297,26 +329,26 @@ export function getSlices(
   } else {
     // Determine geometry-critical points
     const radiusSq = radius ** 2;
+    // A polyline's kinks must be slice boundaries (straight bases).
+    if (poly) {
+      for (const [px] of poly) if (px > x0 && px < x1) allSlicesSet.add(px);
+    }
     for (const mg of slope.materialGeometries) {
-      // Polygon corner points
+      // Polygon corner points within the sliding mass
       for (let i = 0; i < mg.px.length; i++) {
-        if (
-          mg.px[i] > x0 &&
-          mg.px[i] < x1 &&
-          (mg.px[i] - cx) ** 2 + (mg.py[i] - cy) ** 2 <= radiusSq + 1e-9
-        ) {
-          allSlicesSet.add(mg.px[i]);
-        }
+        if (mg.px[i] <= x0 || mg.px[i] >= x1) continue;
+        const inside = poly
+          ? mg.py[i] >= baseY(mg.px[i]) - 1e-9
+          : (mg.px[i] - cx) ** 2 + (mg.py[i] - cy) ** 2 <= radiusSq + 1e-9;
+        if (inside) allSlicesSet.add(mg.px[i]);
       }
-      // Circle-polygon edge intersections
-      const intersections = getCircleLineIntersections(
-        cx,
-        cy,
-        radius,
-        mg.px,
-        mg.py,
-      );
-      for (const [ix] of intersections) {
+      // Surface-polygon edge intersections
+      const intersections = poly
+        ? polylineCrossingsX(poly, mg.px, mg.py, true)
+        : getCircleLineIntersections(cx, cy, radius, mg.px, mg.py).map(
+            ([ix]) => ix,
+          );
+      for (const ix of intersections) {
         if (ix > x0 && ix < x1) {
           allSlicesSet.add(ix);
         }
@@ -339,14 +371,12 @@ export function getSlices(
 
     // Water table intersections (every line, so per-material lines too)
     for (const waterXY of slope.allWaterLines) {
-      const waterIntersections = getCircleLineIntersections(
-        cx,
-        cy,
-        radius,
-        waterXY.x,
-        waterXY.y,
-      );
-      for (const [ix] of waterIntersections) {
+      const waterIntersections = poly
+        ? polylineCrossingsX(poly, waterXY.x, waterXY.y, false)
+        : getCircleLineIntersections(cx, cy, radius, waterXY.x, waterXY.y).map(
+            ([ix]) => ix,
+          );
+      for (const ix of waterIntersections) {
         if (ix > x0 && ix < x1) {
           allSlicesSet.add(ix);
         }
@@ -431,6 +461,20 @@ export function getSlices(
     waterYMid = getYAtXMany(slope.waterRLXY.x, slope.waterRLXY.y, sxArray);
   }
 
+  // A non-circular surface must stay below the ground between entry and
+  // exit; a segment cutting through the air is no slip surface.
+  if (poly) {
+    const tol = 1e-6 * Math.max(1, x1 - x0);
+    for (let i = 0; i < nSlices; i++) {
+      if (
+        baseY(slicesX[i]) > yTopsL[i] + tol ||
+        baseY(slicesX[i + 1]) > yTopsR[i] + tol
+      ) {
+        return [];
+      }
+    }
+  }
+
   // Create slices
   const results: Slice[] = [];
   const verticalHead = slope.porePressureHead === "vertical";
@@ -481,6 +525,7 @@ export function getSlices(
               verticalHead,
             )
         : undefined,
+      poly ? baseY : undefined,
     );
 
     if (s !== null && s.isValid) {
@@ -541,13 +586,10 @@ function findCrackX(
   surf: { x: number[]; y: number[] },
   xEntry: number,
   xExit: number,
-  cx: number,
-  cy: number,
-  radius: number,
+  baseY: (x: number) => number,
   depth: number,
 ): number | null {
-  const below = (x: number) =>
-    getYAtX(surf.x, surf.y, x) - getCircleYCoordinateAtX(cx, cy, radius, x);
+  const below = (x: number) => getYAtX(surf.x, surf.y, x) - baseY(x);
   const steps = 200;
   let prev = xEntry;
   for (let k = 1; k <= steps; k++) {

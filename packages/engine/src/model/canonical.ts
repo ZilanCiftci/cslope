@@ -179,6 +179,10 @@ export function toCanonicalSlopeDefinition(
       ...p,
       cx: mirrorX(p.cx, xMin, xMax),
     })),
+    customSurfaces: slopeDefinition.customSurfaces?.map((surface) => ({
+      ...surface,
+      points: mirrorPoints(surface.points, xMin, xMax),
+    })),
     customPlanesOnly: slopeDefinition.customPlanesOnly,
   };
 }
@@ -201,6 +205,7 @@ export function oppositeDirectionDefinition(
     orientation: "rtl",
     analysisLimits: undefined,
     customSearchPlanes: undefined,
+    customSurfaces: undefined,
     customPlanesOnly: false,
   });
   return { ...mirrored, orientation: orientation === "ltr" ? "rtl" : "ltr" };
@@ -237,6 +242,9 @@ export function mapAnalysisResultToModelSpace(
             xMin,
             xMax,
           ),
+          points: analysisResult.criticalSurface.points?.map((p) =>
+            mirrorPoint(p, xMin, xMax),
+          ),
         }
       : null,
     allSurfaces: analysisResult.allSurfaces.map((surface) => ({
@@ -244,6 +252,7 @@ export function mapAnalysisResultToModelSpace(
       cx: mirrorX(surface.cx, xMin, xMax),
       entryPoint: mirrorPoint(surface.entryPoint, xMin, xMax),
       exitPoint: mirrorPoint(surface.exitPoint, xMin, xMax),
+      points: surface.points?.map((p) => mirrorPoint(p, xMin, xMax)),
     })),
     criticalSlices: analysisResult.criticalSlices.map((slice) => {
       const mirroredLeft = mirrorX(slice.xLeft, xMin, xMax);

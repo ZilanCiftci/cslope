@@ -800,6 +800,67 @@ export const VERIFICATION_CASES: VerificationCase[] = [
     notes: ["SLOPE/W reports 1.664 (Bishop) and the ACADS reference band is 1.65–1.70; Slide2 and xslope (1.589) agree with each other."],
   },
   {
+    id: "VP8",
+    title: "ACADS 3(b), weak layer, specified non-circular surface",
+    reference: "Giam & Donald (1989), ACADS problem 3(b). Slide2 Verification Problem #8; SLOPE/W example 2.8.",
+    surface: "fixed",
+    units: "SI",
+    description: "Slope with a 0.5 m weak layer (c' = 0, φ' = 10°) and a water table at its base, analysed on the published four-point non-circular surface that runs along the weak layer.",
+    definition: layered(
+      [[20, 27.75], [43, 27.75], [67.5, 40], [84, 40]],
+      20,
+      [
+        { name: "Soil 1", topY: null, model: mc(28.5, 20, 18.84) },
+        { name: "Weak layer", topY: 27, model: mc(0, 10, 18.84) },
+        { name: "Soil 1 below", topY: 26.5, model: mc(28.5, 20, 18.84) },
+      ],
+      {
+        orientation: "rtl",
+        waterTable: { mode: "custom", value: [[20, 26.5], [84, 26.5]] },
+        customSurfaces: [{ points: [[41.85, 27.75], [44, 26.5], [63.5, 27], [73.31, 40]] }],
+        customPlanesOnly: true,
+      },
+    ),
+    checks: [
+      {
+        method: "Janbu",
+        label: "Janbu corrected (f0)",
+        published: 1.294,
+        publishedBy: "Slide2",
+        tolerance: 0.005,
+        options: { janbuCorrection: true },
+      },
+      spencer(1.277, "Slide2", 0.005),
+      mp(1.261, "SLOPE/W", 0.005),
+    ],
+    notes: ["Bishop on a non-circular surface depends on the moment axis; cSlope gives 1.250 about its default axis, SLOPE/W 1.259."],
+  },
+  {
+    id: "VP7",
+    title: "ACADS 3(a), weak layer, non-circular search",
+    reference: "Giam & Donald (1989), ACADS problem 3(a). Slide2 Verification Problem #7; SLOPE/W example 2.7.",
+    surface: "search",
+    units: "SI",
+    description: "As VP8, with a circular search followed by non-circular optimisation; the critical surface slides along the weak layer with a back scarp to the crest.",
+    definition: layered(
+      [[20, 27.75], [43, 27.75], [67.5, 40], [84, 40]],
+      20,
+      [
+        { name: "Soil 1", topY: null, model: mc(28.5, 20, 18.84) },
+        { name: "Weak layer", topY: 27, model: mc(0, 10, 18.84) },
+        { name: "Soil 1 below", topY: 26.5, model: mc(28.5, 20, 18.84) },
+      ],
+      { orientation: "rtl", waterTable: { mode: "custom", value: [[20, 26.5], [84, 26.5]] } },
+    ),
+    checks: [
+      mp(1.261, "SLOPE/W", 0.015, { options: { nonCircularOptimization: true } }),
+      spencer(1.246, "Slide2", 0.02, { options: { nonCircularOptimization: true } }),
+    ],
+    notes: [
+      "The best circle gives 1.51; the optimised surface follows the base of the weak layer. ACADS accepts about 1.24–1.27.",
+    ],
+  },
+  {
     id: "VP68",
     title: "USACE example E-10, ponded water",
     reference: "USACE EM 1110-2-1902, example E-10. Slide2 Verification Problem #68.",

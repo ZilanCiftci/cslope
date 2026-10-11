@@ -80,6 +80,12 @@ export interface SlopeDefinition {
   analysisLimits?: AnalysisLimits;
   /** User-specified circular search planes (cx, cy, radius). */
   customSearchPlanes?: Array<{ cx: number; cy: number; radius: number }>;
+  /**
+   * User-specified non-circular surfaces: polylines through the soil. They
+   * are fitted to the ground (end segments extended to it) and analysed
+   * with moments about a default axis point.
+   */
+  customSurfaces?: Array<{ points: [number, number][] }>;
   /** When true, only analyse custom search planes (skip random search). */
   customPlanesOnly?: boolean;
 }

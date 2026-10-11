@@ -60,6 +60,12 @@ export interface SearchPlane {
   /** Whether iterative solver converged for this surface. */
   converged?: boolean;
   /**
+   * Non-circular surface: polyline from entry to exit (x increasing).
+   * (cx, cy) is then the axis point for moment equilibrium and `radius`
+   * is 0.
+   */
+  points?: [number, number][];
+  /**
    * Bottom of the tension crack [x, y] on the arc, where the surface was
    * cut off; the sliding mass starts here instead of at `lc`.
    */
@@ -115,6 +121,8 @@ export class Slope {
   private _tensionCrackDepth: number;
   private _tensionCrackWater: number;
   private _partialFactors: PartialFactors | null = null;
+  private _nonCircularOptimization = false;
+  private _minSlipDepth = 0;
   private _intersliceDataPoints: [number, number][];
 
   // ── Analysis limits ───────────────────────────────────────────
@@ -281,6 +289,14 @@ export class Slope {
 
   get partialFactors(): PartialFactors | null {
     return this._partialFactors;
+  }
+
+  get nonCircularOptimization(): boolean {
+    return this._nonCircularOptimization;
+  }
+
+  get minSlipDepth(): number {
+    return this._minSlipDepth;
   }
 
   get intersliceFunction(): IntersliceFunctionType {
@@ -712,6 +728,15 @@ export class Slope {
         throw new Error("tensionCrackWater must be between 0 and 1");
       }
       this._tensionCrackWater = opts.tensionCrackWater;
+    }
+    if (opts.nonCircularOptimization !== undefined) {
+      this._nonCircularOptimization = opts.nonCircularOptimization;
+    }
+    if (opts.minSlipDepth !== undefined) {
+      if (!Number.isFinite(opts.minSlipDepth) || opts.minSlipDepth < 0) {
+        throw new Error("minSlipDepth must be a number ≥ 0");
+      }
+      this._minSlipDepth = opts.minSlipDepth;
     }
     if (opts.partialFactors !== undefined) {
       const f = opts.partialFactors;

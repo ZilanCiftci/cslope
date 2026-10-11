@@ -4,6 +4,7 @@
  */
 import { describe, it, expect } from "vitest";
 import { getSlices } from "./slices";
+import { analyseBishop, analyseMorgensternPrice } from "./solvers";
 import {
   VERIFICATION_CASES,
   circle,
@@ -146,5 +147,72 @@ describe("Partial factors", () => {
     const factored = runVerification(layered(ground, -10, soil, { ...fixed, ...loads(20) }), "Bishop", pf({ variableLoad: 1.3 })).fos!;
     const scaled = runVerification(layered(ground, -10, soil, { ...fixed, ...loads(26) }), "Bishop").fos!;
     expect(factored).toBeCloseTo(scaled, 9);
+  });
+});
+
+describe("Non-circular surfaces", () => {
+  const ground: [number, number][] = [[0, 0], [10, 0], [25, 10], [40, 10]];
+  const soil = [{ name: "S", topY: null, model: mc(10, 25, 19) }];
+  const [cx, cy, r] = [12, 22, 22.2];
+
+  it("a dense polyline on a circle about its centre gives the circle's FOS", () => {
+    const circleFos = runVerification(layered(ground, -10, soil, circle(cx, cy, r)), "Bishop").fos!;
+    const pts: [number, number][] = [];
+    for (let i = 0; i <= 400; i++) {
+      const x = -8 + (48 * i) / 400;
+      const t = r * r - (x - cx) ** 2;
+      if (t > 0) pts.push([x, cy - Math.sqrt(t)]);
+    }
+    const { slope } = runVerification(
+      layered(ground, -10, soil, { customSurfaces: [{ points: pts }], customPlanesOnly: true }),
+      "Bishop",
+    );
+    const plane = slope.search[0];
+    // About the circle centre (not the default axis) the methods coincide.
+    plane.cx = cx;
+    plane.cy = cy;
+    const fit = getSlices(slope, plane.lc[0], plane.rc[0], cx, cy, 0, plane.points);
+    const [fos] = analyseBishop(slope, fit);
+    expect(fos!).toBeCloseTo(circleFos, 2);
+  });
+
+  it("Spencer and M-P on a polyline do not depend on the axis point", () => {
+    const pts: [number, number][] = [[8, 0], [14, -3], [24, -2], [30, 10]];
+    const def = layered(ground, -10, soil, { customSurfaces: [{ points: pts }], customPlanesOnly: true });
+    const { slope } = runVerification(def, "Morgenstern-Price");
+    const p = slope.search[0];
+    const fos = (ax: number, ay: number) => {
+      const [f] = analyseMorgensternPrice(slope, getSlices(slope, p.lc[0], p.rc[0], ax, ay, 0, p.points));
+      return f!;
+    };
+    expect(fos(20, 30)).toBeCloseTo(fos(10, 50), 2);
+  });
+
+  it("optimisation never ends above the best circle", () => {
+    const def = layered(ground, -10, soil);
+    const c = runVerification(def, "Bishop").fos!;
+    const nc = runVerification(def, "Bishop", { nonCircularOptimization: true }).fos!;
+    expect(nc).toBeLessThanOrEqual(c + 1e-9);
+  });
+
+  it("a polyline cutting through the air between entry and exit gives no slices", () => {
+    // The ground at x = 20 is at y = 6.7; the vertex at 9 is in the air.
+    const { slope } = runVerification(layered(ground, -10, soil), "Bishop", { iterations: 500 });
+    const pts: [number, number][] = [[5, 0], [12, -2], [20, 9], [24, 4], [30, 10]];
+    expect(getSlices(slope, 5, 30, 20, 30, 0, pts)).toEqual([]);
+  });
+});
+
+describe("Minimum slip depth", () => {
+  it("surfaces shallower than the minimum are not analysed", () => {
+    const def = layered([[0, 0], [10, 0], [25, 10], [40, 10]], -10, [{ name: "S", topY: null, model: mc(0, 30, 19) }]);
+    const free = runVerification(def, "Bishop");
+    const limited = runVerification(def, "Bishop", { minSlipDepth: 2 });
+    expect(limited.fos!).toBeGreaterThan(free.fos!);
+    for (const p of limited.slope.search) {
+      if (p.fos == null) continue;
+      const depth = Math.max(...p.slices!.map((s) => s.y0Top - s.y0Bottom));
+      expect(depth).toBeGreaterThanOrEqual(2 - 1e-9);
+    }
   });
 });

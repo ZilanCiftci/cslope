@@ -19,6 +19,7 @@ import {
   resolveOrientation,
   sliceDrivingMoment,
   sliceVerticalLoad,
+  type SearchPlane,
   type Slice,
   type AnalysisOptions,
   type SlopeDefinition,
@@ -117,6 +118,17 @@ function analyseBothDirections(
   };
 }
 
+/**
+ * Points of a non-circular surface as drawn: from the crack bottom (when
+ * cracked) to the exit.
+ */
+function displayPoints(p: SearchPlane): [number, number][] | undefined {
+  if (!p.points) return undefined;
+  const crack = p.crack;
+  if (!crack) return p.points;
+  return [crack, ...p.points.filter((q) => q[0] > crack[0] + 1e-9)];
+}
+
 /** Run one analysis on a canonical definition (result in canonical space). */
 function analyse(
   slopeDef: SlopeDefinition,
@@ -156,6 +168,7 @@ function analyse(
       exitPoint: crit.rc,
       converged: crit.converged,
       lffArray: crit.lffArray,
+      points: displayPoints(crit),
     };
 
     // Convert slices for critical surface
@@ -199,6 +212,7 @@ function analyse(
         exitPoint: p.rc,
         converged: p.converged,
         lffArray: p.lffArray,
+        points: displayPoints(p),
       });
     }
   }
