@@ -15,7 +15,8 @@
     "test": "vitest run",
     "test:coverage": "vitest run --coverage",
     "test:watch": "vitest",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "verification-report": "bun scripts/verification-report.ts"
   },
   "dependencies": {
     "@cslope/engine": "workspace:*",

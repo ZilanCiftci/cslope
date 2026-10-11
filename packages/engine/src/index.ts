@@ -166,3 +166,14 @@ export {
   mapAnalysisResultToModelSpace,
 } from "./model/canonical";
 export type { SlopeOrientation } from "./model/canonical";
+
+// ── Verification problems ──────────────────────────────────────
+export {
+  VERIFICATION_CASES,
+  VERIFICATION_OPTIONS,
+  runVerification,
+} from "./verification/cases";
+export type {
+  VerificationCase,
+  VerificationCheck,
+} from "./verification/cases";
