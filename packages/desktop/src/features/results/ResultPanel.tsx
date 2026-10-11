@@ -4,7 +4,7 @@
 
 import type { ReactNode } from "react";
 import { useAppStore } from "../../store/app-store";
-import { surfaceCountText } from "../../utils/fos-color";
+import { surfaceCountText } from "../../utils/result-summary";
 
 function Row({ label, children }: { label: string; children: ReactNode }) {
   return (

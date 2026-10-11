@@ -104,7 +104,13 @@ export function buildSlopeDTOFromModel(model: ModelEntry): SlopeDefinition {
     // Free water above the ground comes from the main line; a clipped
     // line never rises above the surface.
     const followBoundary = piezometricLine.freeWater === false;
-    const mainLine = mainPiezoLine(piezometricLine)!;
+    // A main line still being drawn (under two points) cannot carry the
+    // water: the first complete line does.
+    const mainLine =
+      mainPiezoLine({
+        lines: piezometricLine.lines.filter((l) => l.coordinates.length >= 2),
+        mainLineId: piezometricLine.mainLineId,
+      }) ?? piezometricLine.lines[0];
     if (mainLine.coordinates.length >= 2) {
       slope.waterTable = {
         mode: "custom",

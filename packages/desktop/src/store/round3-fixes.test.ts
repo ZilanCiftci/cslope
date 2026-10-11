@@ -170,6 +170,15 @@ describe("free water above ground", () => {
     expect(stale.piezometricLine.mainLineId).toBeUndefined();
     expect(buildSlopeDTOFromModel(stale).waterTable?.value).toEqual(stale.piezometricLine.lines[0].coordinates);
   });
+
+  it("falls back to the first complete line while the main line is unfinished", () => {
+    withLine();
+    useAppStore.getState().addPiezoLine([[0, -3]]);
+    const pl = useAppStore.getState().piezometricLine;
+    useAppStore.getState().setPiezoMainLine(pl.lines[1].id);
+    const model = parseProjectFile(JSON.stringify(serializeProject(useAppStore.getState()))).models[0];
+    expect(buildSlopeDTOFromModel(model).waterTable?.value).toEqual(model.piezometricLine.lines[0].coordinates);
+  });
 });
 
 describe("tension crack options", () => {
@@ -204,6 +213,14 @@ describe("saturated unit weight", () => {
     const model = parseProjectFile(JSON.stringify(raw)).models[0];
     expect(model.materials[0].model.unitWeightSat).toBe(21);
     expect(buildSlopeDTOFromModel(model).materials[0].model?.unitWeightSat).toBe(21);
+  });
+
+  it("is dropped when invalid in a file instead of failing the analysis", () => {
+    useAppStore.getState().newProject();
+    const raw = JSON.parse(JSON.stringify(serializeProject(useAppStore.getState())));
+    raw.models[0].materials[0].model.unitWeightSat = null;
+    const model = parseProjectFile(JSON.stringify(raw)).models[0];
+    expect("unitWeightSat" in model.materials[0].model).toBe(false);
   });
 });
 

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { fosColor, fosScaleRange, fosTickLabel, surfaceCountText } from "./fos-color";
+import { fosColor, fosScaleRange, fosTickLabel } from "./fos-color";
 
 describe("fosColor", () => {
   it("returns a valid hex color string", () => {
@@ -96,12 +96,5 @@ describe("fosScaleRange", () => {
 
   it("spans at least one unit for low critical FOS", () => {
     expect(fosScaleRange({ minFOS: 0.4, maxFOS: 50 }).max).toBeCloseTo(1.4);
-  });
-});
-
-describe("surfaceCountText", () => {
-  it("adds the number of surfaces below 1.0", () => {
-    expect(surfaceCountText({ allSurfaces: [{ fos: 1.2 }, { fos: 1.5 }] })).toBe("2");
-    expect(surfaceCountText({ allSurfaces: [{ fos: 0.9 }, { fos: 0.99 }, { fos: 1.5 }] })).toBe("3 (2 below 1.0)");
   });
 });

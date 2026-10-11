@@ -550,6 +550,15 @@ function normalizeMaterial(raw: unknown, index: number): MaterialRow {
   let model: MaterialModel;
   if (m.model && typeof m.model === "object" && "kind" in (m.model as object)) {
     model = m.model as MaterialModel;
+    // A bad saturated unit weight is dropped (γ applies) instead of failing
+    // the analysis.
+    if ("unitWeightSat" in model) {
+      const g = model.unitWeightSat;
+      if (!(typeof g === "number" && Number.isFinite(g) && g > 0 && g <= 500)) {
+        model = { ...model };
+        delete model.unitWeightSat;
+      }
+    }
   } else {
     // Legacy file without model — synthesise MohrCoulomb from flat fields
     const unitWeight = Math.max(

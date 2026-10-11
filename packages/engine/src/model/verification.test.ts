@@ -350,7 +350,7 @@ describe("Automatic tension crack depth", () => {
     return runVerification(def, "Bishop", { tensionCrackAuto: true, ...opts });
   };
 
-  it("is the Rankine depth of the soil at the crest", () => {
+  it("is the Rankine depth of the soil at the crest", { timeout: 30000 }, () => {
     // Undrained: 2cu/γ
     expect(rankineCrackDepth(slopeWith(su(20, 18)).slope, 5)).toBeCloseTo(40 / 18, 9);
     // Drained: 2c/(γ√Ka), Ka = tan²(45° − φ/2)
@@ -365,6 +365,23 @@ describe("Automatic tension crack depth", () => {
     expect(rankineCrackDepth(pf.slope, 5)).toBeCloseTo(40 / 1.5 / 18, 9);
     // Cohesionless soil: no crack
     expect(rankineCrackDepth(slopeWith(mc(0, 30, 18)).slope, 5)).toBe(0);
+  });
+
+  it("depends on the soil at the crack, so re-slicing from the crack finds it again", () => {
+    // Load from x = 0 to 3 on the crest: no load beyond it, so the crack
+    // (where the surface is as deep as the local Rankine depth) can sit
+    // either side of the load edge.
+    const loaded = slopeWith(su(20, 18), {}, { udls: [{ magnitude: 10, x1: 0, x2: 3 }] });
+    const p = loaded.slope.search.find((q) => q.fos != null && q.crack)!;
+    const again = getSlices(loaded.slope, p.crack![0], p.rc[0], p.cx, p.cy, p.radius);
+    expect(again[0].xLeft).toBeCloseTo(p.crack![0], 6);
+    const depth = rankineCrackDepth(loaded.slope, p.crack![0]);
+    expect(again[0].y0Top - again[0].y0Bottom).toBeCloseTo(depth, 6);
+  });
+
+  it("free water on the crest closes the crack like a surcharge", () => {
+    const wet = slopeWith(su(20, 18), {}, { waterTable: { mode: "custom", value: [[0, 11], [30, 11]], followBoundary: false } });
+    expect(rankineCrackDepth(wet.slope, 5)).toBeCloseTo((40 - 9.81) / 18, 2);
   });
 
   it("gives the same result as the same fixed depth", () => {

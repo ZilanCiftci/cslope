@@ -53,6 +53,8 @@ export function PiezoDialogApp() {
     (s) => s.setPiezoMaterialAssignment,
   );
   const setPiezometricLine = useAppStore((s) => s.setPiezometricLine);
+  const setPiezoFreeWater = useAppStore((s) => s.setPiezoFreeWater);
+  const setPiezoMainLine = useAppStore((s) => s.setPiezoMainLine);
   const parameters = useAppStore((s) => s.parameters);
 
   const [isHydrated, setIsHydrated] = useState(!isElectron);
@@ -364,6 +366,55 @@ export function PiezoDialogApp() {
             }}
           >
             Add a piezometric line to start editing coordinates.
+          </div>
+        )}
+
+        {/* ── Free water and main line ── */}
+        {pl.lines.length > 0 && (
+          <div
+            className="p-3 rounded space-y-2"
+            style={{
+              background: "var(--color-vsc-surface-tint)",
+              border: "1px solid var(--color-vsc-border)",
+            }}
+          >
+            <label
+              className="flex items-center gap-1.5 text-[11px]"
+              title="Where the main line lies above the ground the water stands on the slope and loads it, as in Slide and SLOPE/W. Off: the lines are clipped to the ground surface."
+            >
+              <input
+                type="checkbox"
+                checked={pl.freeWater !== false}
+                onChange={(e) => setPiezoFreeWater(e.target.checked)}
+                aria-label="Free water above ground"
+              />
+              Free water above ground (ponding)
+            </label>
+            {pl.lines.length > 1 && (
+              <label
+                className="flex items-center gap-2 text-[11px]"
+                title="The line that gives the free water above the ground and the pore pressure of materials without a line of their own."
+              >
+                <span>Main line</span>
+                <select
+                  value={mainPiezoLine(pl)?.id ?? ""}
+                  onChange={(e) => setPiezoMainLine(e.target.value)}
+                  aria-label="Main piezometric line"
+                  className="text-[11px] px-1 py-0.5 rounded flex-1"
+                  style={{
+                    background: "var(--color-vsc-input-bg)",
+                    color: "var(--color-vsc-text)",
+                    border: "1px solid var(--color-vsc-border)",
+                  }}
+                >
+                  {pl.lines.map((line) => (
+                    <option key={line.id} value={line.id}>
+                      {line.name}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            )}
           </div>
         )}
 

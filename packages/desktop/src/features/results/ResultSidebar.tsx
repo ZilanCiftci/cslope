@@ -20,7 +20,7 @@ import {
   anchoredTopLeft,
   anchorPointFromTopLeft,
 } from "../annotations/anchorPosition";
-import { surfaceCountText } from "../../utils/fos-color";
+import { surfaceCountText } from "../../utils/result-summary";
 import type {
   MaterialTableColumnKey,
   AnchorPosition,

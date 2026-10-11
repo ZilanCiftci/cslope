@@ -329,12 +329,22 @@ export function getSlices(
   // A tension crack cuts the surface off where it reaches the crack depth
   // on the upslope side; a surface that never gets that deep has no
   // sliding mass below the crack zone.
+  // With the automatic depth the crack is where the surface is as deep as
+  // the Rankine depth of the soil there, so re-slicing from the crack finds
+  // the same crack.
   let x0 = entryX;
-  const crackDepth = slope.tensionCrackAuto
-    ? rankineCrackDepth(slope, entryX)
-    : slope.tensionCrackDepth;
-  if (crackDepth > 0) {
-    const xc = findCrackX(surfXY, entryX, x1, baseY, crackDepth);
+  let crackDepth = 0;
+  if (slope.tensionCrackAuto) {
+    const depthAt = (x: number) => rankineCrackDepth(slope, x);
+    if (depthAt(entryX) > 0 || depthAt(x1) > 0) {
+      const xc = findCrackX(surfXY, entryX, x1, baseY, depthAt);
+      if (xc === null) return [];
+      x0 = xc;
+      crackDepth = depthAt(xc);
+    }
+  } else if (slope.tensionCrackDepth > 0) {
+    crackDepth = slope.tensionCrackDepth;
+    const xc = findCrackX(surfXY, entryX, x1, baseY, () => crackDepth);
     if (xc === null) return [];
     x0 = xc;
   }
@@ -505,6 +515,18 @@ export function getSlices(
   const hasSatWeight = slope.materialGeometries.some(
     (g) => g.material.model.unitWeightSat !== undefined,
   );
+  // Water y at the slice edges, once per water line (for γsat).
+  const waterYsCache = new Map<{ x: number[]; y: number[] }, number[]>();
+  const waterYsFor = (material: GeometryWithMaterial["material"]) => {
+    const line = slope.getWaterLineForMaterial(material);
+    if (!line) return null;
+    let ys = waterYsCache.get(line);
+    if (!ys) {
+      ys = getYAtXMany(line.x, line.y, slicesX);
+      waterYsCache.set(line, ys);
+    }
+    return ys;
+  };
   for (let i = 0; i < nSlices; i++) {
     let waterYMean: number | null = null;
     let waterH: number | null = null;
@@ -555,10 +577,10 @@ export function getSlices(
       poly ? baseY : undefined,
       hasSatWeight
         ? (material) => {
-            const line = slope.getWaterLineForMaterial(material);
-            if (!line) return null;
-            const w0 = getYAtX(line.x, line.y, slicesX[i]);
-            const w1 = getYAtX(line.x, line.y, slicesX[i + 1]);
+            const ys = waterYsFor(material);
+            if (!ys) return null;
+            const w0 = ys[i];
+            const w1 = ys[i + 1];
             return Number.isFinite(w0) && Number.isFinite(w1) ? [w0, w1] : null;
           }
         : undefined,
@@ -619,7 +641,9 @@ function applyMaterialFactors(s: Slice, f: PartialFactors): void {
  * of the soil just below the ground, σa = (γz + q)·Ka − 2c√Ka, is zero.
  * z = 2c/(γ√Ka) − q/γ, Ka = tan²(45° − φ/2); for undrained strength
  * (φ = 0) z = 2cu/γ − q/γ. Strength as in the analysis (design values with
- * partial factors), q the (factored) distributed load at x.
+ * partial factors), q the (factored) distributed load and any free water
+ * standing on the ground at x. A combined material uses its drained c′,
+ * which is what governs near the surface.
  */
 export function rankineCrackDepth(slope: Slope, x: number): number {
   const surf = slope.surfaceLineXY;
@@ -648,7 +672,7 @@ export function rankineCrackDepth(slope: Slope, x: number): number {
       tanPhi /= f.tanPhi;
     }
   }
-  const gamma = geo.material.unitWeight;
+  const gamma = resolveUnitWeight(model, geo.material.unitWeight, x, y);
   if (!(c > 0) || !(gamma > 0)) return 0;
   const phi = Math.atan(tanPhi);
   const sqrtKa = Math.tan(Math.PI / 4 - phi / 2);
@@ -656,6 +680,13 @@ export function rankineCrackDepth(slope: Slope, x: number): number {
   let q = 0;
   for (const u of slope.udls) {
     if (x >= Math.min(u.x1, u.x2) && x <= Math.max(u.x1, u.x2)) q += u.magnitude * loadFactor;
+  }
+  // Free water standing on the ground is a surcharge too (a clipped line
+  // never rises above the ground).
+  const water = slope.hasWaterTable ? slope.waterRLXY : null;
+  if (water) {
+    const wy = getYAtX(water.x, water.y, x);
+    if (Number.isFinite(wy) && wy > yGround) q += WATER_UNIT_WEIGHT * (wy - yGround);
   }
   return Math.max(0, (2 * c) / (gamma * sqrtKa) - q / gamma);
 }
@@ -669,19 +700,20 @@ function findCrackX(
   xEntry: number,
   xExit: number,
   baseY: (x: number) => number,
-  depth: number,
+  depthAt: (x: number) => number,
 ): number | null {
-  const below = (x: number) => getYAtX(surf.x, surf.y, x) - baseY(x);
+  // Surface depth beyond the crack depth at x (≥ 0: deep enough).
+  const below = (x: number) => getYAtX(surf.x, surf.y, x) - baseY(x) - depthAt(x);
   const steps = 200;
   let prev = xEntry;
   for (let k = 1; k <= steps; k++) {
     const x = xEntry + ((xExit - xEntry) * k) / steps;
-    if (below(x) >= depth) {
+    if (below(x) >= 0) {
       let lo = prev;
       let hi = x;
       for (let it = 0; it < 50; it++) {
         const mid = (lo + hi) / 2;
-        if (below(mid) >= depth) hi = mid;
+        if (below(mid) >= 0) hi = mid;
         else lo = mid;
       }
       return hi < xExit ? hi : null;
