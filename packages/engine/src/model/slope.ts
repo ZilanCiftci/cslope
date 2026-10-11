@@ -295,6 +295,12 @@ export class Slope {
     return this._nonCircularOptimization;
   }
 
+  /** Height of the model (extent of the external boundary in y). */
+  get modelHeight(): number {
+    const ys = this._externalBoundaryPy;
+    return ys.length ? Math.max(...ys) - Math.min(...ys) : 0;
+  }
+
   get minSlipDepth(): number {
     return this._minSlipDepth;
   }

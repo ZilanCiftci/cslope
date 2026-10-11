@@ -1,5 +1,8 @@
 import { jsPDF } from "jspdf";
-import { fosColor } from "../../utils/fos-color";
+import { fosColor, fosScaleRange, fosTickLabel } from "../../utils/fos-color";
+
+/** "≥" is not in the standard PDF fonts. */
+const PDF_GE = ">= ";
 import {
   fosLabelAnchor,
   sameSurface,
@@ -648,6 +651,7 @@ export function drawSlipSurfaces(
     return;
   }
 
+  const fosRange = fosScaleRange(result);
   for (let si = result.allSurfaces.length - 1; si >= 0; si--) {
     const surf = result.allSurfaces[si];
     if (result.criticalSurface && sameSurface(surf, result.criticalSurface)) {
@@ -659,7 +663,7 @@ export function drawSlipSurfaces(
 
     const arcPts = surfacePoints(surf);
     const pdfPts = arcPts.map(([wx, wy]) => tf.worldToPdf(wx, wy));
-    const color = parseColor(fosColor(surf.fos, result.minFOS, result.maxFOS));
+    const color = parseColor(fosColor(surf.fos, fosRange.min, fosRange.max));
 
     pdf.setDrawColor(...color);
     pdf.setLineWidth(0.15);
@@ -825,10 +829,12 @@ function layoutColorBarPdf(pdf: jsPDF, result: AnalysisResult, scale: number) {
   pdf.setFont("helvetica", "normal");
   pdf.setFontSize(labelPt);
   let maxLabelW = 0;
+  const fosScale = fosScaleRange(result);
   for (let t = 0; t <= COLOR_BAR_NUM_TICKS; t++) {
-    const frac = t / COLOR_BAR_NUM_TICKS;
-    const fos = result.maxFOS - frac * (result.maxFOS - result.minFOS);
-    maxLabelW = Math.max(maxLabelW, pdf.getTextWidth(fos.toFixed(2)));
+    maxLabelW = Math.max(
+      maxLabelW,
+      pdf.getTextWidth(fosTickLabel(fosScale, t, COLOR_BAR_NUM_TICKS, PDF_GE)),
+    );
   }
   return {
     barW,
@@ -1197,8 +1203,9 @@ function drawColorBarAnnotation(
   );
   const barY = y + titleExtraTop;
 
-  const fosMin = result.minFOS;
-  const fosMax = result.maxFOS;
+  const fosScale = fosScaleRange(result);
+  const fosMin = fosScale.min;
+  const fosMax = fosScale.max;
   const numSteps = 50;
 
   for (let i = 0; i < numSteps; i++) {
@@ -1223,13 +1230,14 @@ function drawColorBarAnnotation(
   for (let t = 0; t <= COLOR_BAR_NUM_TICKS; t++) {
     const frac = t / COLOR_BAR_NUM_TICKS;
     const ty = barY + frac * barH;
-    const fos = fosMax - frac * (fosMax - fosMin);
 
     pdf.setDrawColor(...MARKER_COLOR.rgb);
     pdf.setLineWidth(0.2);
     pdf.line(x + barW, ty, x + barW + 3 * scale, ty);
 
-    pdf.text(fos.toFixed(2), labelX, ty, { baseline: "middle" });
+    pdf.text(fosTickLabel(fosScale, t, COLOR_BAR_NUM_TICKS, PDF_GE), labelX, ty, {
+      baseline: "middle",
+    });
   }
 }
 

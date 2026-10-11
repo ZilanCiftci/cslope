@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { fosColor } from "./fos-color";
+import { fosColor, fosScaleRange, fosTickLabel } from "./fos-color";
 
 describe("fosColor", () => {
   it("returns a valid hex color string", () => {
@@ -77,5 +77,24 @@ describe("fosColor", () => {
     });
     // Overall trend: last should be much higher than first
     expect(blues[blues.length - 1]).toBeGreaterThan(blues[0]);
+  });
+});
+
+describe("fosScaleRange", () => {
+  it("keeps the full range when max FOS is moderate", () => {
+    expect(fosScaleRange({ minFOS: 1.2, maxFOS: 2.0 })).toEqual({ min: 1.2, max: 2.0, capped: false });
+  });
+
+  it("caps very high max FOS near the critical value", () => {
+    const r = fosScaleRange({ minFOS: 1.2, maxFOS: 477 });
+    expect(r).toEqual({ min: 1.2, max: 2.4, capped: true });
+    expect(fosTickLabel(r, 0, 5)).toBe("≥ 2.40");
+    expect(fosTickLabel(r, 5, 5)).toBe("1.20");
+    // Surfaces above the cap get the top colour.
+    expect(fosColor(477, r.min, r.max)).toBe(fosColor(r.max, r.min, r.max));
+  });
+
+  it("spans at least one unit for low critical FOS", () => {
+    expect(fosScaleRange({ minFOS: 0.4, maxFOS: 50 }).max).toBeCloseTo(1.4);
   });
 });

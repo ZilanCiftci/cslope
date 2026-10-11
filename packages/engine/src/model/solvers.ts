@@ -912,6 +912,9 @@ export function analyseSlope(slope: Slope): number | null {
   return best?.fos ?? null;
 }
 
+/** Surfaces shallower than this fraction of the model height are degenerate. */
+const DEGENERATE_DEPTH = 1e-3;
+
 function evaluatePlanes(slope: Slope, allPlanes: SearchPlane[]): void {
   for (const plane of allPlanes) {
     let slices: Slice[];
@@ -939,13 +942,17 @@ function evaluatePlanes(slope: Slope, allPlanes: SearchPlane[]): void {
       plane.crack = [slices[0].xLeft, slices[0].y0Bottom];
     }
 
-    // Minimum depth: shallower surfaces are not analysed.
-    if (slope.minSlipDepth > 0) {
+    // Minimum depth: shallower surfaces are not analysed. Surfaces that
+    // only scratch the ground (thinner than 0.1 % of the model height) are
+    // always skipped: their FOS grows without bound as c/(γ·depth) and
+    // tells nothing about the slope.
+    const minDepth = Math.max(slope.minSlipDepth, DEGENERATE_DEPTH * slope.modelHeight);
+    if (minDepth > 0) {
       let maxDepth = 0;
       for (const s of slices) {
         maxDepth = Math.max(maxDepth, s.y0Top - s.y0Bottom, s.y1Top - s.y1Bottom);
       }
-      if (maxDepth < slope.minSlipDepth) {
+      if (maxDepth < minDepth) {
         plane.fos = null;
         plane.slices = slices;
         plane.converged = true;

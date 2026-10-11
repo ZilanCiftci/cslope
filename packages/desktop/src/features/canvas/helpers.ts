@@ -22,6 +22,7 @@ import {
   type MaterialTableRenderColumnKey,
 } from "../annotations/materialTableLayout";
 import { anchoredTopLeft } from "../annotations/anchorPosition";
+import { fosScaleRange, fosTickLabel } from "../../utils/fos-color";
 
 export { computePaperFrame } from "../view/paper";
 
@@ -431,10 +432,9 @@ export function getAnnotationBoundsPx(
 
     ctx.font = `${labelFontSize}px 'Segoe UI', sans-serif`;
     let maxLabelW = 0;
+    const fosScale = fosScaleRange(result);
     for (let t = 0; t <= numTicks; t++) {
-      const frac = t / numTicks;
-      const fos = result.maxFOS - frac * (result.maxFOS - result.minFOS);
-      maxLabelW = Math.max(maxLabelW, ctx.measureText(fos.toFixed(2)).width);
+      maxLabelW = Math.max(maxLabelW, ctx.measureText(fosTickLabel(fosScale, t, numTicks)).width);
     }
 
     const titleExtraTop = labelFontSize + 4 * annoScale;

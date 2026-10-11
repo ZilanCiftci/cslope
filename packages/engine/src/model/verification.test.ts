@@ -262,4 +262,16 @@ describe("Minimum slip depth", () => {
       expect(depth).toBeGreaterThanOrEqual(2 - 1e-9);
     }
   });
+
+  it("degenerate surfaces that only scratch the ground are skipped", () => {
+    // Cohesive soil: FOS ∝ c/(γ·depth) is unbounded for very thin surfaces.
+    const def = layered([[0, 0], [10, 0], [25, 10], [40, 10]], -10, [{ name: "C", topY: null, model: su(12, 19) }]);
+    const { slope } = runVerification(def, "Bishop");
+    const minDepth = 1e-3 * slope.modelHeight;
+    for (const p of slope.search) {
+      if (p.fos == null) continue;
+      const depth = Math.max(...p.slices!.map((s) => Math.max(s.y0Top - s.y0Bottom, s.y1Top - s.y1Bottom)));
+      expect(depth).toBeGreaterThanOrEqual(minDepth);
+    }
+  });
 });

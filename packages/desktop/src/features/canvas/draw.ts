@@ -7,7 +7,7 @@ import {
   surfacePoints,
   type DrawableSurface,
 } from "../../utils/arc";
-import { fosColor } from "../../utils/fos-color";
+import { fosColor, fosScaleRange, fosTickLabel } from "../../utils/fos-color";
 import { computeRegions } from "../../utils/regions";
 import {
   ARROW_HEAD_LEN_PX,
@@ -1317,6 +1317,7 @@ export function drawCanvas(
     // Non-critical surfaces (when "all" or "filter" mode)
     // Draw in reverse FOS order (high FOS first = behind, low FOS last = on top)
     if (rvs.surfaceDisplay !== "critical" && result.allSurfaces.length > 0) {
+      const fosRange = fosScaleRange(result);
       for (let si = result.allSurfaces.length - 1; si >= 0; si--) {
         const surf = result.allSurfaces[si];
         // Skip critical (drawn separately) and filtered out
@@ -1326,7 +1327,7 @@ export function drawCanvas(
           continue;
 
         const arcPts = getArcPoints(surf);
-        ctx.strokeStyle = fosColor(surf.fos, result.minFOS, result.maxFOS);
+        ctx.strokeStyle = fosColor(surf.fos, fosRange.min, fosRange.max);
         ctx.lineWidth = 1 * paperZoom;
         ctx.globalAlpha = SLIP_SURFACE_OPACITY;
         ctx.beginPath();
@@ -1688,12 +1689,11 @@ export function drawCanvas(
         ctx.font = `${labelFontSize}px 'Segoe UI', sans-serif`;
         let maxLabelW = 0;
         const numTicks = COLOR_BAR_NUM_TICKS;
+        const fosScale = fosScaleRange(result);
         for (let t = 0; t <= numTicks; t++) {
-          const frac = t / numTicks;
-          const fos = result.maxFOS - frac * (result.maxFOS - result.minFOS);
           maxLabelW = Math.max(
             maxLabelW,
-            ctx.measureText(fos.toFixed(2)).width,
+            ctx.measureText(fosTickLabel(fosScale, t, numTicks)).width,
           );
         }
         const contentW = barW + 5 * annoScale + maxLabelW;
@@ -1708,8 +1708,8 @@ export function drawCanvas(
         const barX = drawX;
         const barY = drawY + titleExtraTop;
 
-        const fosMin = result.minFOS;
-        const fosMax = result.maxFOS;
+        const fosMin = fosScale.min;
+        const fosMax = fosScale.max;
         const numSteps = Math.floor(barH);
 
         // Draw gradient bar
@@ -1743,7 +1743,6 @@ export function drawCanvas(
         for (let t = 0; t <= numTicks; t++) {
           const frac = t / numTicks;
           const y = barY + frac * barH;
-          const fos = fosMax - frac * (fosMax - fosMin);
 
           // Tick
           ctx.strokeStyle = "#000000";
@@ -1755,7 +1754,7 @@ export function drawCanvas(
 
           // Label
           ctx.fillStyle = "#000000";
-          ctx.fillText(fos.toFixed(2), labelX2, y);
+          ctx.fillText(fosTickLabel(fosScale, t, numTicks), labelX2, y);
         }
       } else if (anno.type === "material-table") {
         const { columnKeys, header, rows } = buildMaterialTableData(
