@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import { useState } from "react";
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { DataPointTable } from "./DataPointTable";
 
@@ -103,5 +103,17 @@ describe("DataPointTable", () => {
     render(<Harness initial={[]} minRows={1} />);
     const frame = screen.getByRole("table").parentElement!;
     expect(frame.getAttribute("style")).toContain("var(--color-vsc-error)");
+  });
+
+  it("shows new values passed in after a cell was edited", async () => {
+    render(<Harness initial={[[0, 10]]} />);
+    const su = cell("Su row 1");
+    fireEvent.change(su, { target: { value: "15" } });
+    fireEvent.blur(su);
+    expect(su.value).toBe("15");
+    // E.g. another material with the same table is selected.
+    await userEvent.click(screen.getByRole("button", { name: "Replace" }));
+    expect(cell("Depth row 1").value).toBe("100");
+    expect(cell("Su row 1").value).toBe("200");
   });
 });
