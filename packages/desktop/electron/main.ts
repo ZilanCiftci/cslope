@@ -102,6 +102,24 @@ function createWindow() {
   pendingOpenPath = null;
   // A (re)loading renderer starts with a fresh, unsaved project and has
   // not registered its close handler yet.
+  // A crashed renderer leaves a blank window: say so and offer a reload.
+  win.webContents.on("render-process-gone", (_event, details) => {
+    if (details.reason === "clean-exit" || !win) return;
+    closeGuardReady = false; // nobody left to answer the close guard
+    void dialog
+      .showMessageBox(win, {
+        type: "error",
+        title: "cSlope",
+        message: "cSlope stopped unexpectedly.",
+        detail: `The window has to be reloaded (${details.reason}). Changes since the last save may be lost.`,
+        buttons: ["Reload", "Close"],
+        defaultId: 0,
+      })
+      .then(({ response }) => {
+        if (response === 0) win?.reload();
+        else win?.close();
+      });
+  });
   win.webContents.on("did-start-loading", () => {
     closeGuardReady = false;
     currentFilePath = null;
@@ -716,7 +734,11 @@ ipcMain.on("window:maximize", () => {
 });
 ipcMain.on("window:close", () => win?.close());
 ipcMain.handle("window:isMaximized", () => win?.isMaximized() ?? false);
-ipcMain.on("dev:toggle-devtools", () => win?.webContents.toggleDevTools());
+ipcMain.on("dev:toggle-devtools", (event) => {
+  // Developer tool only: never in packaged builds, only for the main window.
+  if (app.isPackaged || event.sender !== win?.webContents) return;
+  win.webContents.toggleDevTools();
+});
 ipcMain.on("window:openMaterialsDialog", () => createMaterialsWindow());
 ipcMain.on("window:openMaterialAssignmentDialog", () =>
   createMaterialAssignmentWindow(),
@@ -1072,13 +1094,19 @@ function setCurrentFilePath(filePath: string) {
   win?.setTitle(`${name} — cSlope`);
 }
 
-ipcMain.handle("file:openPath", async (_event, filePath: string) => {
-  if (!win) return null;
+/** Largest project file accepted (a real project is a few hundred kB). */
+const MAX_PROJECT_BYTES = 50 * 1024 * 1024;
+
+ipcMain.handle("file:openPath", async (event, filePath: string) => {
+  // File access only for the main window (not dialogs or a page that a
+  // dropped file might have navigated to).
+  if (!win || event.sender !== win.webContents) return null;
   const ext = path.extname(filePath).toLowerCase();
   if (ext !== ".json" && ext !== ".cslope") return null;
   const resolved = path.resolve(filePath);
   try {
-    if (!fs.statSync(resolved).isFile()) return null;
+    const stat = fs.statSync(resolved);
+    if (!stat.isFile() || stat.size > MAX_PROJECT_BYTES) return null;
   } catch {
     return null;
   }
@@ -1091,8 +1119,8 @@ ipcMain.handle("file:openPath", async (_event, filePath: string) => {
   }
 });
 
-ipcMain.handle("dialog:openFile", async () => {
-  if (!win) return null;
+ipcMain.handle("dialog:openFile", async (event) => {
+  if (!win || event.sender !== win.webContents) return null;
   const { canceled, filePaths } = await dialog.showOpenDialog(win, {
     title: "Open cSlope Project",
     filters: [
@@ -1102,7 +1130,19 @@ ipcMain.handle("dialog:openFile", async () => {
     properties: ["openFile"],
   });
   if (canceled || filePaths.length === 0) return null;
-  const contents = fs.readFileSync(filePaths[0], "utf-8");
+  let contents: string;
+  try {
+    if (fs.statSync(filePaths[0]).size > MAX_PROJECT_BYTES) {
+      throw new Error("The file is too large to be a cSlope project.");
+    }
+    contents = fs.readFileSync(filePaths[0], "utf-8");
+  } catch (err) {
+    dialog.showErrorBox(
+      "Could not open file",
+      err instanceof Error ? err.message : String(err),
+    );
+    return null;
+  }
   pendingOpenPath = filePaths[0];
   return contents;
 });
@@ -1113,14 +1153,43 @@ ipcMain.on("file:openConfirmed", (event) => {
   pendingOpenPath = null;
 });
 
+/**
+ * Write the project atomically: to a temporary file next to the target,
+ * flushed to disk, then renamed over it. Writing in place truncates the
+ * existing file first, so a crash, power loss or full disk mid-write
+ * would destroy the user's only copy.
+ */
 async function saveToPath(filePath: string, content: string) {
-  fs.writeFileSync(filePath, content, "utf-8");
+  let target = filePath;
+  try {
+    target = fs.realpathSync(filePath); // keep symlinks pointing at the file
+  } catch {
+    // New file.
+  }
+  const tmp = `${target}.tmp-${process.pid}`;
+  try {
+    const fd = fs.openSync(tmp, "w");
+    try {
+      fs.writeFileSync(fd, content, "utf-8");
+      fs.fsyncSync(fd);
+    } finally {
+      fs.closeSync(fd);
+    }
+    fs.renameSync(tmp, target);
+  } catch (err) {
+    try {
+      fs.unlinkSync(tmp);
+    } catch {
+      // Nothing to clean up.
+    }
+    throw err;
+  }
   setCurrentFilePath(filePath);
   return true;
 }
 
-ipcMain.handle("dialog:saveFile", async (_event, content: string) => {
-  if (!win) return false;
+ipcMain.handle("dialog:saveFile", async (event, content: string) => {
+  if (!win || event.sender !== win.webContents) return false;
   // If we already have a path, save directly (no dialog)
   if (currentFilePath) {
     return saveToPath(currentFilePath, content);
@@ -1129,7 +1198,8 @@ ipcMain.handle("dialog:saveFile", async (_event, content: string) => {
   return saveAs(content);
 });
 
-ipcMain.handle("dialog:saveFileAs", async (_event, content: string) => {
+ipcMain.handle("dialog:saveFileAs", async (event, content: string) => {
+  if (event.sender !== win?.webContents) return false;
   return saveAs(content);
 });
 
@@ -1159,20 +1229,24 @@ function buildMenu() {
 // clicks a custom menu item. We handle them here so the main
 // process can coordinate file-path state and window title.
 
-ipcMain.on("menu:new", () => {
+ipcMain.on("menu:new", (event) => {
+  if (event.sender !== win?.webContents) return;
   currentFilePath = null;
   win?.setTitle("cSlope");
 });
 
 ipcMain.on("menu:about", () => {
   const version = app.getVersion();
-  dialog.showMessageBox({
-    type: "info",
+  const options = {
+    type: "info" as const,
     title: "About cSlope",
     message: `cSlope v${version}`,
     detail:
       "Slope Stability Analysis\nOpen-source geotechnical engineering software.\nhttps://cslope.com",
-  });
+  };
+  // Modal to the main window so it cannot open behind it.
+  if (win) dialog.showMessageBox(win, options);
+  else dialog.showMessageBox(options);
 });
 
 // Quit when all windows are closed, except on macOS. There, it's common
@@ -1180,6 +1254,14 @@ ipcMain.on("menu:about", () => {
 // explicitly with Cmd + Q.
 // Dialog windows keep their own title; the page <title> ("cSlope") would
 // otherwise replace "Define Materials", "Piezometric Lines", ...
+// No window may navigate away from the app or open new windows: a file
+// dropped on a dialog window would otherwise replace it (and a dropped
+// .html page would get the preload API).
+app.on("web-contents-created", (_event, contents) => {
+  contents.on("will-navigate", (event) => event.preventDefault());
+  contents.setWindowOpenHandler(() => ({ action: "deny" }));
+});
+
 app.on("browser-window-created", (_event, created) => {
   created.on("page-title-updated", (event) => {
     if (created !== win) event.preventDefault();
