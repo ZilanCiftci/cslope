@@ -151,6 +151,8 @@ export {
   analyseJanbu,
   analyseMorgensternPrice,
   analyseSlope,
+  sliceDrivingMoment,
+  sliceVerticalLoad,
 } from "./model/solvers";
 
 export { buildSlope } from "./model/build-slope";

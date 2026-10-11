@@ -12,6 +12,7 @@ import {
   setEntryExitPlanes,
   generateRefinedPlanes,
   generateLocalPlanes,
+  planeKey,
 } from "./search";
 
 // ────────────────────────────────────────────────────────────────
@@ -385,7 +386,7 @@ export function analyseOrdinary(_slope: Slope, slices: Slice[]): number | null {
   let resisting = 0;
 
   for (const s of slices) {
-    const W = s.weight + s.udl + s.ll + (s.waterLoad ?? 0);
+    const W = sliceVerticalLoad(s);
 
     if (s.isCombined) {
       const fd =
@@ -862,8 +863,9 @@ export function analyseSlope(slope: Slope): number | null {
 
     // Spend the rest of the budget on a local search with shrinking steps.
     let budget = slope.refinedIterations - refinedPlanes.length;
+    const keys = new Set(allPlanes.map(planeKey));
     for (let level = 1; budget > 0 && level <= 12; level++) {
-      const localPlanes = generateLocalPlanes(slope, allPlanes, budget, level);
+      const localPlanes = generateLocalPlanes(slope, allPlanes, budget, level, keys);
       if (localPlanes.length === 0) break;
       evaluatePlanes(slope, localPlanes);
       allPlanes.push(...localPlanes);
@@ -896,9 +898,15 @@ function evaluatePlanes(slope: Slope, allPlanes: SearchPlane[]): void {
         plane.radius,
       );
     } catch {
+      plane.fos = null;
       continue;
     }
-    if (slices.length === 0) continue;
+    // Refined and local planes arrive with a placeholder FOS; a surface
+    // without slices (e.g. too shallow for the tension crack) is invalid.
+    if (slices.length === 0) {
+      plane.fos = null;
+      continue;
+    }
     if (slices[0].xLeft > plane.lc[0] + 1e-9) {
       plane.crack = [slices[0].xLeft, slices[0].y0Bottom];
     }
@@ -969,14 +977,24 @@ function evaluatePlanes(slope: Slope, allPlanes: SearchPlane[]): void {
   }
 }
 
+/** Vertical load on a slice: soil weight, surface loads and free water. */
+export function sliceVerticalLoad(s: Pick<Slice, "weight" | "udl" | "ll" | "waterLoad">): number {
+  return s.weight + s.udl + s.ll + (s.waterLoad ?? 0);
+}
+
+/** Driving moment of a slice about the circle centre (kN·m). */
+export function sliceDrivingMoment(
+  s: Pick<Slice, "weight" | "udl" | "ll" | "waterLoad" | "dx" | "extraMoment">,
+): number {
+  return sliceVerticalLoad(s) * s.dx + (s.extraMoment ?? 0);
+}
+
 /** True when the slices' net driving moment is clearly positive. */
 function hasDrivingMoment(slices: Slice[]): boolean {
   let net = 0;
   let gross = 0;
   for (const s of slices) {
-    const m =
-      (s.weight + s.udl + s.ll + (s.waterLoad ?? 0)) * s.dx +
-      (s.extraMoment ?? 0);
+    const m = sliceDrivingMoment(s);
     net += m;
     gross += Math.abs(m);
   }

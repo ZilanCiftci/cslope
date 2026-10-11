@@ -28,6 +28,8 @@ export {
   analyseJanbu,
   analyseMorgensternPrice,
   analyseSlope,
+  sliceDrivingMoment,
+  sliceVerticalLoad,
 } from "./solvers";
 
 export { buildSlope } from "./build-slope";

@@ -1,3 +1,5 @@
+import { surfaceYAtX } from "../features/view/surface";
+
 type Pt = [number, number];
 
 /**
@@ -22,17 +24,9 @@ export function piezoExtensions(line: Pt[], model: Pt[]): [Pt, Pt][] {
   return out;
 }
 
-/** Top of the model polygon at x (highest edge crossing), or NaN. */
+/** Ground surface at x, as the slip-mass fill draws it. */
 function groundTopAt(model: Pt[], x: number): number {
-  let top = Number.NaN;
-  for (let i = 0; i < model.length; i++) {
-    const [ax, ay] = model[i];
-    const [bx, by] = model[(i + 1) % model.length];
-    if (ax === bx || x < Math.min(ax, bx) || x > Math.max(ax, bx)) continue;
-    const y = ay + ((x - ax) / (bx - ax)) * (by - ay);
-    if (!(y <= top)) top = y;
-  }
-  return top;
+  return surfaceYAtX(model, x) ?? Number.NaN;
 }
 
 /** Water level of a line at x, continued horizontally beyond its ends. */

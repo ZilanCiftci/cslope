@@ -21,7 +21,7 @@ function roundTo(value: number, decimals: number): number {
   return Math.round(value * scale) / scale;
 }
 
-function planeKey(plane: Pick<SearchPlane, "cx" | "cy" | "radius">): string {
+export function planeKey(plane: Pick<SearchPlane, "cx" | "cy" | "radius">): string {
   return `${roundTo(plane.cx, 4)}|${roundTo(plane.cy, 4)}|${roundTo(plane.radius, 4)}`;
 }
 
@@ -348,16 +348,24 @@ export function generateLocalPlanes(
   evaluatedPlanes: SearchPlane[],
   budget: number,
   level: number,
+  /** Keys of all planes so far; new planes are added to it. */
+  existingKeys: Set<string> = new Set(evaluatedPlanes.map(planeKey)),
   numSeeds = 4,
 ): SearchPlane[] {
   if (budget <= 0) return [];
-  const seeds = evaluatedPlanes
-    .filter((plane) => plane.fos != null && Number.isFinite(plane.fos))
-    .sort((a, b) => a.fos! - b.fos!)
-    .slice(0, numSeeds);
+  // The numSeeds best planes, in one pass (the list is large).
+  const seeds: SearchPlane[] = [];
+  for (const plane of evaluatedPlanes) {
+    if (plane.fos == null || !Number.isFinite(plane.fos)) continue;
+    if (seeds.length < numSeeds || plane.fos < seeds[seeds.length - 1].fos!) {
+      let i = seeds.length;
+      while (i > 0 && seeds[i - 1].fos! > plane.fos) i--;
+      seeds.splice(i, 0, plane);
+      if (seeds.length > numSeeds) seeds.pop();
+    }
+  }
   if (seeds.length === 0) return [];
 
-  const existingKeys = new Set(evaluatedPlanes.map((plane) => planeKey(plane)));
   const generated: SearchPlane[] = [];
 
   const grid = getSearchGridSpec(slope);

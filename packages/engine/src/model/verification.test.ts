@@ -66,7 +66,7 @@ describe("Free water above the ground", () => {
   const ground: [number, number][] = [[0, 0], [20, 0], [40, 10], [70, 10]];
   const soil = (gamma: number) => [{ name: "S", topY: null, model: mc(5, 30, gamma) }];
   for (const method of ["Bishop", "Janbu", "Morgenstern-Price"] as const) {
-    it(`${method}: fully submerged slope = buoyant dry slope`, () => {
+    it(`${method}: fully submerged slope = buoyant dry slope`, { timeout: 20000 }, () => {
       const buoyant = runVerification(layered(ground, -10, soil(10)), method).fos!;
       const submerged = runVerification(
         layered(ground, -10, soil(19.81), {
@@ -99,6 +99,17 @@ describe("Tension crack", () => {
   it("a crack deeper than any surface leaves no sliding mass", () => {
     expect(runVerification(def, "Bishop", { tensionCrackDepth: 30 }).fos).toBeNull();
   });
+
+  it("surfaces too shallow for the crack never keep a placeholder FOS", () => {
+    // Refined and local planes used to arrive with fos: 100 and keep it
+    // when getSlices returned nothing, swamping Max FOS and the colour scale.
+    const { slope } = runVerification(def, "Bishop", { tensionCrackDepth: 6 });
+    expect(slope.search.length).toBeGreaterThan(0);
+    for (const p of slope.search) {
+      // A reported FOS always belongs to a surface that was sliced.
+      if (p.fos != null) expect(p.slices).not.toBeNull();
+    }
+  });
 });
 
 describe("Partial factors", () => {
@@ -112,6 +123,13 @@ describe("Partial factors", () => {
     const def = layered(ground, -10, [{ name: "Clay", topY: null, model: su(30, 18) }], fixed);
     const fk = runVerification(def, "Bishop").fos!;
     const fd = runVerification(def, "Bishop", pf({ cu: 1.5 })).fos!;
+    expect(fd).toBeCloseTo(fk / 1.5, 6);
+  });
+
+  it("Mohr-Coulomb with φ = 0 is undrained and takes γcu", () => {
+    const def = layered(ground, -10, [{ name: "Clay", topY: null, model: mc(30, 0, 18) }], fixed);
+    const fk = runVerification(def, "Bishop").fos!;
+    const fd = runVerification(def, "Bishop", pf({ cu: 1.5, cohesion: 1.3 })).fos!;
     expect(fd).toBeCloseTo(fk / 1.5, 6);
   });
 

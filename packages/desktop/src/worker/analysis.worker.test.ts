@@ -104,4 +104,12 @@ describe("both sliding directions", () => {
     const surf = both.result.criticalSurface!;
     expect(Math.max(surf.entryPoint[0], surf.exitPoint[0])).toBeLessThanOrEqual(40);
   });
+
+  it("reports the error of the model's own direction instead of the other face", () => {
+    // Limits that admit no surface: the user must see that, not a green
+    // FOS from the opposite face.
+    const noSurface = { ...RIDGE, analysisLimits: { entryLeftX: 70, entryRightX: 75, exitLeftX: 76, exitRightX: 80 } };
+    expect(run(noSurface).type).toBe("analysis-error");
+    expect(run(noSurface, { bothDirections: true }).type).toBe("analysis-error");
+  });
 });

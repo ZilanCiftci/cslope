@@ -494,8 +494,11 @@ export function getSlices(
   // γw·hw²/2 at hw/3 above the crack bottom.
   const hw = crackDepth * slope.tensionCrackWater;
   if (crackDepth > 0 && hw > 0 && results.length > 0) {
+    // The force acts on the slice at the crack face; if that slice was
+    // dropped as degenerate, the surface is not a valid cracked mass.
     const first = results[0];
-    const yCrackBottom = getCircleYCoordinateAtX(cx, cy, radius, x0);
+    if (Math.abs(first.xLeft - x0) > SLICE_DEDUP_TOLERANCE) return [];
+    const yCrackBottom = first.y0Bottom;
     const force = 0.5 * WATER_UNIT_WEIGHT * hw * hw;
     first.hForce = (first.hForce ?? 0) + force;
     first.extraMoment =
@@ -507,8 +510,9 @@ export function getSlices(
 
 /**
  * Design strength: characteristic strength divided by the partial factor.
- * Undrained models (Su, S = f(depth/datum), anisotropy with φ = 0) take
- * γcu; drained models take γc' on c' and γφ' on tan φ'. The undrained
+ * Undrained strength (Su, S = f(depth/datum), and any model entered with
+ * φ = 0, the common way to give undrained clay as Mohr-Coulomb) takes γcu;
+ * drained strength takes γc' on c' and γφ' on tan φ'. The undrained
  * strength of a combined material takes γcu.
  */
 function applyMaterialFactors(s: Slice, f: PartialFactors): void {
@@ -517,7 +521,7 @@ function applyMaterialFactors(s: Slice, f: PartialFactors): void {
     kind === "undrained" ||
     kind === "s-f-depth" ||
     kind === "s-f-datum" ||
-    (kind === "anisotropic-function" && s.frictionAngle === 0);
+    (s.frictionAngle === 0 && !s.isCombined);
   if (kind === "high-strength" || kind === "impenetrable") return;
   s.cohesionUndrained /= f.cu;
   if (undrained) {
@@ -608,7 +612,7 @@ function applyFreeWater(
     (WATER_UNIT_WEIGHT * len *
       (momentDensity(ta) + 4 * momentDensity(tm) + momentDensity(tb))) /
     6;
-  s.waterLoad = load;
+  s.waterLoad = (s.waterLoad ?? 0) + load;
   s.hForce = (s.hForce ?? 0) + surfaceSlope * load;
   // The solvers already take the vertical load at the slice centre.
   s.extraMoment = (s.extraMoment ?? 0) + moment - load * s.dx;

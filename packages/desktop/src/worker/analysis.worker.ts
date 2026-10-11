@@ -17,29 +17,19 @@ import {
   buildSlope,
   oppositeDirectionDefinition,
   resolveOrientation,
+  sliceDrivingMoment,
+  sliceVerticalLoad,
+  type Slice,
   type AnalysisOptions,
   type SlopeDefinition,
 } from "@cslope/engine";
 
 function computeCriticalPushingMoment(
-  slices:
-    | ReadonlyArray<{
-        weight: number;
-        udl: number;
-        ll: number;
-        dx: number;
-        waterLoad?: number;
-        extraMoment?: number;
-      }>
-    | null
-    | undefined,
+  slices: ReadonlyArray<Slice> | null | undefined,
 ): number | null {
   if (!slices || slices.length === 0) return null;
   let pushing = 0;
-  for (const s of slices) {
-    const W = s.weight + s.udl + s.ll + (s.waterLoad ?? 0);
-    pushing += W * s.dx + (s.extraMoment ?? 0);
-  }
+  for (const s of slices) pushing += sliceDrivingMoment(s);
   return Number.isFinite(pushing) && pushing > 0 ? pushing : null;
 }
 
@@ -113,13 +103,13 @@ function analyseBothDirections(
       return { error: err };
     }
   };
-  const a = tryRun(slopeDef);
+  // A failure in the model's own direction (its limits, its geometry) is
+  // the user's error to see; only the opposite run may come up empty.
+  const ownResult = mapAnalysisResultToModelSpace(analyse(slopeDef, options), slopeDef);
   const b = tryRun(oppositeDef);
-  if (!a.result && !b.result) throw a.error;
-  const ownGoverns =
-    a.result && (!b.result || a.result.minFOS <= b.result.minFOS);
-  const governing = ownGoverns ? a.result! : b.result!;
-  const other = ownGoverns ? b.result : a.result;
+  const ownGoverns = !b.result || ownResult.minFOS <= b.result.minFOS;
+  const governing = ownGoverns ? ownResult : b.result!;
+  const other = ownGoverns ? b.result : ownResult;
   return {
     ...governing,
     slidingDirection: ownGoverns ? own : own === "ltr" ? "rtl" : "ltr",
@@ -171,7 +161,7 @@ function analyse(
     // Convert slices for critical surface
     if (crit.slices) {
       for (const s of crit.slices) {
-        const surfaceLoad = s.udl + s.ll + (s.waterLoad ?? 0);
+        const surfaceLoad = sliceVerticalLoad(s) - s.weight;
         criticalSlices.push({
           x: s.x,
           xLeft: s.xLeft,
