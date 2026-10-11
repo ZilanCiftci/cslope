@@ -137,6 +137,15 @@ export const circle = (cx: number, cy: number, radius: number) => ({
   customPlanesOnly: true,
 });
 
+/** S = f(datum): Su = s at yRef, increasing by `rate` per unit depth. */
+export const sfd = (s: number, yRef: number, rate: number, gamma: number): MaterialModel => ({
+  kind: "s-f-datum",
+  unitWeight: gamma,
+  suRef: s,
+  yRef,
+  rate,
+});
+
 export const FT = 0.3048;
 export const PSF = 0.04788026; // kPa
 export const PCF = 0.15708746; // kN/m³
@@ -299,6 +308,46 @@ const CANNON_SURFACES = [
 ] as const;
 
 // ── The problems ─────────────────────────────────────────────────────
+
+/** Baker & Leshchinsky (2001) clay-core dam (VP42). */
+function vp42(extra: Partial<SlopeDefinition>): SlopeDefinition {
+  const material = (name: string, model: MaterialModel) => ({
+    name,
+    unitWeight: model.unitWeight,
+    frictionAngle: 0,
+    cohesion: 0,
+    model,
+  });
+  return {
+    coordinates: [[0, -10], [0, 0], [110, 54], [130, 54], [265, 0], [265, -10]],
+    materials: [
+      material("Granular fill", mc(0, 40, 21.5)),
+      material("Clay core", mc(20, 20, 20)),
+      material("Granular fill below core", mc(0, 40, 21.5)),
+      material("Hard base", mc(200, 45, 24)),
+    ],
+    materialBoundaries: [
+      { coordinates: [[0, 0], [265, 0]], materialName: "" },
+      { coordinates: [[88, 16], [110, 49], [130, 49], [152, 18], [88, 16]], materialName: "" },
+      { coordinates: [[88, 16], [110, 0]], materialName: "" },
+      { coordinates: [[152, 18], [130, 0]], materialName: "" },
+    ],
+    regionAssignments: [
+      { point: [100, -5], materialName: "Hard base" },
+      { point: [120, 30], materialName: "Clay core" },
+      { point: [120, 8], materialName: "Granular fill below core" },
+      { point: [50, 10], materialName: "Granular fill" },
+    ],
+    // The reservoir on the right face stands above the ground: free water.
+    waterTable: {
+      mode: "custom",
+      value: [[0, 0], [15.82035, 2.035683], [86.71558, 6.05312], [88, 16], [110, 22.3], [130, 25.8], [145, 30], [265, 30]],
+      followBoundary: false,
+    },
+    orientation: "ltr",
+    ...extra,
+  };
+}
 
 export const VERIFICATION_CASES: VerificationCase[] = [
   {
@@ -904,4 +953,218 @@ export const VERIFICATION_CASES: VerificationCase[] = [
       checks: [bishop(1.603, "Slide2", 0.01), spencer(1.599, "Slide2", 0.01)],
     }),
   ),
+  {
+    id: "VP19",
+    title: "Yamagami & Ueta (1988) four-layer slope, non-circular",
+    reference: "Greco (1996) example 4; Yamagami & Ueta (1988). Slide2 Verification Problem #19.",
+    surface: "search",
+    units: "SI",
+    description: "Four-layer slope without water whose critical surface is non-circular; circular search followed by non-circular optimisation.",
+    definition: layered([[0, 40], [60, 40], [180, 100], [200, 100], [260, 70]], 0, [
+      { name: "Upper layer", topY: null, model: mc(49, 29, 20.38) },
+      { name: "Layer 2", topY: 40, model: mc(0, 30, 17.64) },
+      { name: "Layer 3", topY: 35, model: mc(7.84, 20, 20.38) },
+      { name: "Bottom layer", topY: 26, model: mc(0, 30, 17.64) },
+    ], { orientation: "rtl" }),
+    checks: [spencer(1.398, "Slide2 (Monte Carlo)", 0.015, { options: { nonCircularOptimization: true } })],
+    notes: ["Greco publishes 1.40–1.42 for the non-circular surface; the best circle gives 1.430."],
+  },
+  {
+    id: "VP23",
+    title: "Low (1989), stiff crust over soft clays, published circle",
+    reference: "Low (1989). Slide2 Verification Problem #23.",
+    surface: "fixed",
+    units: "SI",
+    description: "Stiff upper slope on two undrained clays, the lowest with Su increasing linearly with depth (S = f(datum)), on the circle that carries Slide's published values.",
+    definition: layered([[0, 8], [10, 8], [26, 16], [40, 16]], 0, [
+      { name: "Upper", topY: null, model: mc(95, 15, 20) },
+      { name: "Middle", topY: 8, model: mc(15, 0, 20) },
+      { name: "Lower", topY: 4, model: sfd(15, 4, 3.75, 20) },
+    ], { ...circle(19, 18.5, 18), orientation: "rtl" }),
+    checks: [bishop(1.192, "Slide2", 0.01)],
+  },
+  {
+    id: "VP25",
+    title: "Prandtl bearing mechanism on a 60° slope",
+    reference: "Chen & Shao (1988). Slide2 Verification Problem #25.",
+    surface: "fixed",
+    units: "SI",
+    description: "Weightless, frictionless 10 m slope at 60° under the critical strip load (149.31 kPa) on the Prandtl surface (wedge, fan and passive wedge); theoretical FOS 1.0.",
+    definition: layered([[-3, 0], [0, 0], [5.7735026919, 10], [20, 10]], -2, [{ name: "Clay", topY: null, model: mc(49, 0, 1e-6) }], {
+      orientation: "rtl",
+      udls: [{ magnitude: 149.31, x1: 5.7735026919, x2: 15.7735026919 }],
+      customSurfaces: [{ points: [[-0.05, 2.05], [0.773, 1.34], [7.6033, 3.1698], [7.8995, 3.2561], [8.1917, 3.3553], [8.4792, 3.4671], [8.7616, 3.5913], [9.0384, 3.7278], [9.3089, 3.8762], [9.5727, 4.0362], [9.8292, 4.2076], [10.078, 4.3901], [10.3186, 4.5832], [10.5506, 4.7866], [10.7735, 5], [15.7735, 10], [16.0735, 10.3]] }],
+      customPlanesOnly: true,
+    }),
+    checks: [spencer(1.051, "Slide2", 0.01)],
+    notes: ["Chen & Shao give 1.05 with the method of slices; limit equilibrium on this mechanism is about 5 % above the plasticity solution."],
+  },
+  {
+    id: "VP42",
+    title: "Baker & Leshchinsky clay-core dam, reservoir and crest crack",
+    reference: "Baker & Leshchinsky (2001). Slide2 Verification Problem #42.",
+    surface: "fixed",
+    units: "SI",
+    description: "Granular dam with a diamond clay core on a hard base, half-full reservoir standing on the face (free water), phreatic surface through the core and a 5 m dry tension crack at the crest; Slide's critical circle.",
+    definition: vp42({ ...circle(233.762, 188.495, 187.195) }),
+    checks: [spencer(1.925, "Slide2", 0.005, { options: { tensionCrackDepth: 5 } })],
+  },
+  {
+    id: "VP42-B",
+    title: "Baker & Leshchinsky dam, Baker's non-circular surface",
+    reference: "Baker & Leshchinsky (2001). Slide2 Verification Problem #42.",
+    surface: "fixed",
+    units: "SI",
+    description: "As VP42, on the non-circular surface published by Baker & Leshchinsky.",
+    definition: vp42({
+      customSurfaces: [{ points: [[112.33, 54.6], [117, 49], [122, 43], [134, 33], [145, 24], [149, 22], [162, 17], [174, 13], [185, 11], [243, 3], [264, 0.79]] }],
+      customPlanesOnly: true,
+    }),
+    checks: [spencer(1.91, "Baker & Leshchinsky", 0.02, { options: { tensionCrackDepth: 5 } })],
+    notes: ["xslope gives 1.882 on the same surface."],
+  },
+  {
+    id: "VP43",
+    title: "Baker (2001) planar surface",
+    reference: "Baker (2001). Slide2 Verification Problem #43; SLOPE/W example 2.26.",
+    surface: "fixed",
+    units: "SI",
+    description: "Homogeneous 10 m slope on the critical plane from the toe to the crest at 49.6°.",
+    definition: layered([[-5, 0], [0, 0], [2.5, 10], [20, 10]], -5, [{ name: "Soil", topY: null, model: mc(30, 30, 20) }], {
+      orientation: "rtl",
+      customSurfaces: [{ points: [[0, 0], [8.5, 10]] }],
+      customPlanesOnly: true,
+    }),
+    checks: [
+      spencer(1.351, "RocPlane", 0.005),
+      { method: "Janbu", label: "Janbu simplified", published: 1.351, publishedBy: "RocPlane", tolerance: 0.005 },
+    ],
+  },
+  ...([false, true] as const).map(
+    (wet): VerificationCase => ({
+      id: wet ? "VP52b" : "VP52a",
+      title: `Zhu four-layer slope, ${wet ? "with water table" : "dry"}`,
+      reference: "Slide2 Verification Problem #52.",
+      surface: "search",
+      units: "SI",
+      description: `Four horizontal layers under a two-bench slope${wet ? " with the published water table" : ""}; circular search (deep surface family).`,
+      definition: layered([[-20, 0], [0, 0], [6, 3], [18, 9], [30, 15], [50, 15]], -9, [
+        { name: "Layer 1", topY: null, model: mc(20, 18, 18.8) },
+        { name: "Layer 2", topY: 9, model: mc(40, 22, 18.5) },
+        { name: "Layer 3", topY: 3, model: mc(25, 26, 18.4) },
+        { name: "Layer 4", topY: -6, model: mc(10, 12, 18) },
+      ], {
+        orientation: "rtl",
+        ...(wet
+          ? { waterTable: { mode: "custom", value: [[-20, 0], [0, 0], [6, 3], [10.568, 5.284], [25.314, 9.002], [39.149, 10.269], [50, 10.269]] } }
+          : {}),
+      }),
+      checks: wet
+        ? [bishop(1.176, "Slide2", 0.01), spencer(1.189, "Slide2", 0.01)]
+        : [bishop(1.804, "Slide2", 0.01), spencer(1.804, "Slide2", 0.01)],
+    }),
+  ),
+  {
+    id: "VP53",
+    title: "Priest (1993) rigid block on a plane, water-filled crack",
+    reference: "Priest (1993). Slide2 Verification Problem #53.",
+    surface: "fixed",
+    units: "SI",
+    description: "Block on a 30° plane from the toe, a 15 m tension crack holding 3.75 m of water and a water table along the plane up to the crack.",
+    definition: layered([[-25, 0], [0, 0], [17, 30], [60, 30]], -15, [{ name: "Block", topY: null, model: mc(20, 30, 25) }], {
+      orientation: "rtl",
+      waterTable: { mode: "custom", value: [[-25, 0], [0, 0], [25.981, 18.75], [60, 18.75]] },
+      customSurfaces: [{ points: [[0, 0], [51.962, 30]] }],
+      customPlanesOnly: true,
+    }),
+    checks: [
+      { method: "Janbu", label: "Janbu simplified", published: 1.049, publishedBy: "Slide2, RocPlane, Priest", tolerance: 0.005, options: { tensionCrackDepth: 15, tensionCrackWater: 0.25 } },
+      spencer(1.049, "Slide2, RocPlane, Priest", 0.005, { options: { tensionCrackDepth: 15, tensionCrackWater: 0.25 } }),
+    ],
+  },
+  {
+    id: "VP56",
+    title: "Pockoski & Duncan test slope 2, dry tension crack",
+    reference: "Pockoski & Duncan (2000). Slide2 Verification Problem #56.",
+    surface: "fixed",
+    units: "SI",
+    description: "The VP55 slope with a dry 5.5 ft tension crack, on Slide's critical circle. Converted to SI.",
+    definition: layered(ft([[-70, 100], [0, 100], [100, 150], [170, 150]]), 75 * FT, [{ name: "Sandy clay", topY: null, model: mc(300 * PSF, 30, 120 * PCF) }], {
+      orientation: "rtl",
+      waterTable: { mode: "custom", value: ft([[-70, 100], [0, 100], [100, 140], [170, 140]]) },
+      ...circle(24.662 * FT, 197.656 * FT, 100.79 * FT),
+    }),
+    checks: [
+      bishop(1.285, "Slide2", 0.01, { options: { tensionCrackDepth: 5.5 * FT } }),
+      spencer(1.29, "Slide2", 0.01, { options: { tensionCrackDepth: 5.5 * FT } }),
+    ],
+  },
+  {
+    id: "VP57",
+    title: "Pockoski & Duncan test slope 3, clay seam and dry crack",
+    reference: "Pockoski & Duncan (2000). Slide2 Verification Problem #57.",
+    surface: "search",
+    units: "SI",
+    description: "Sandy clay over a 5 ft highly plastic clay seam on the model base, water table and a dry 6 ft tension crack; circular search. Converted to SI.",
+    definition: layered(ft([[-70, 100], [0, 100], [125, 150], [200, 150]]), 85 * FT, [
+      { name: "Sandy clay", topY: null, model: mc(300 * PSF, 35, 130 * PCF) },
+      { name: "Plastic clay seam", topY: 90 * FT, model: mc(0, 25, 130 * PCF) },
+    ], { orientation: "rtl", waterTable: { mode: "custom", value: ft([[-70, 100], [0, 100], [125, 140], [200, 140]]) } }),
+    checks: [
+      bishop(1.417, "Slide2 (circles)", 0.01, { options: { tensionCrackDepth: 6 * FT } }),
+      spencer(1.422, "Slide2 (circles)", 0.01, { options: { tensionCrackDepth: 6 * FT } }),
+    ],
+    notes: ["Slide's composite surfaces (circles cut off at the base) give 1.392 / 1.400; cSlope's non-circular optimisation, which is not restricted to that shape, finds 1.353 / 1.369 along the seam."],
+  },
+  {
+    id: "VP61",
+    title: "Baker (2003) London clay slope, Mohr-Coulomb fit",
+    reference: "Baker (2003) example 3. Slide2 Verification Problem #61(b).",
+    surface: "search",
+    units: "SI",
+    description: "43° slope, 6 m high, with the Mohr-Coulomb envelope fitted to London clay data (c' = 6 kPa, φ' = 32°); critical circle search.",
+    definition: layered([[-6, 0], [0, 0], [6.43, 6], [20, 6]], -4, [{ name: "London clay", topY: null, model: mc(6, 32, 18) }], { orientation: "rtl" }),
+    checks: [spencer(1.366, "Slide2", 0.01)],
+  },
+  {
+    id: "VP69",
+    title: "USACE example F-6, steady-seepage dam",
+    reference: "USACE EM 1110-2-1902, example F-6. Slide2 Verification Problem #69.",
+    surface: "fixed",
+    units: "SI",
+    description: "112 ft embankment on a granular foundation under steady seepage: piezometric line from the pool through the chimney drain to the tailwater, which stands on the downstream toe (free water). USACE's circle. Converted to SI.",
+    definition: layered(ft([[0, 100], [38.4, 100], [60.8, 112], [81, 112], [194.9, 73.7], [400, 0], [450, 0]]), -75 * FT, [
+      { name: "Embankment", topY: null, model: mc(0, 34, 130 * PCF) },
+      { name: "Foundation", topY: 0, model: mc(0, 35, 125 * PCF) },
+    ], {
+      waterTable: { mode: "custom", value: ft([[0, 100], [38.4, 100], [121.1, 69], [179.4, 22.5], [450, 22.5]]), followBoundary: false },
+      ...circle(269 * FT, 248 * FT, 280 * FT),
+    }),
+    checks: [bishop(2.011, "Slide2", 0.01), spencer(2.026, "Slide2", 0.01)],
+    notes: ["The kink of the piezometric line is located from the figure to about a foot; xslope also reads 0.6 % low."],
+  },
+  {
+    id: "VP73",
+    title: "Bradwell excavated slope, stiff-fissured London clay",
+    reference: "Skempton & LaRochelle (1965); Duncan & Wright, Soil Strength and Slope Stability. Slide2 Verification Problem #73.",
+    surface: "search",
+    units: "imperial",
+    description: "Excavation in London clay (six sublayers with Su increasing with depth, S = f(datum)) under Marsh clay and a clay fill cracked to its full depth (11.4 ft); search for the deep failure, entering on the crest and leaving at the excavation toe.",
+    definition: layered([[0, 17.4], [45, 17.4], [56.4, 6], [68.4, 6], [77.4, -3], [83.4, -3], [97.5, -31.2], [145, -31.2]], -50, [
+      { name: "Clay fill", topY: null, model: mc(1, 35, 110) },
+      { name: "Marsh clay", topY: 6, model: mc(300, 0, 105) },
+      { name: "Brown London clay 1", topY: -3, model: sfd(750, -3, 90, 120) },
+      { name: "Brown London clay 2", topY: -9.5, model: sfd(1335, -9.5, 82, 120) },
+      { name: "Brown London clay 3", topY: -14, model: sfd(1704, -14, 53, 120) },
+      { name: "Brown London clay 4", topY: -24, model: sfd(2234, -24, 47, 120) },
+      { name: "Blue London clay 1", topY: -27, model: sfd(2375, -27, 47, 120) },
+      { name: "Blue London clay 2", topY: -29, model: sfd(2469, -29, 39, 120) },
+    ], { analysisLimits: { entryLeftX: 0, entryRightX: 45, exitLeftX: 83.4, exitRightX: 145 } }),
+    checks: [
+      bishop(1.762, "Slide2", 0.01, { options: { tensionCrackDepth: 11.4 } }),
+      spencer(1.758, "Slide2", 0.01, { options: { tensionCrackDepth: 11.4 } }),
+      { method: "Janbu", label: "Janbu corrected (f0)", published: 1.736, publishedBy: "Slide2", tolerance: 0.01, options: { tensionCrackDepth: 11.4, janbuCorrection: true } },
+    ],
+    notes: ["Without limits the search finds shallower mechanisms: a sliver in the cohesionless 1:1 fill (0.74) and, with the crack, a surface through the fill and Marsh clay (1.15). The published value is the deep failure."],
+  },
 ];
