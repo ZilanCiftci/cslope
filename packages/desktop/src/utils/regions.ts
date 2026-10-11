@@ -28,7 +28,8 @@ export interface Region {
 
 /** Check whether a boundary forms a closed loop (first ≈ last point). */
 export function isClosedBoundary(coords: [number, number][]): boolean {
-  if (coords.length < 3) return false;
+  // A loop needs three distinct corners: [a, b, a] is a line folded back.
+  if (coords.length < 4) return false;
   const [x0, y0] = coords[0];
   const [xn, yn] = coords[coords.length - 1];
   return Math.abs(x0 - xn) < 1e-9 && Math.abs(y0 - yn) < 1e-9;

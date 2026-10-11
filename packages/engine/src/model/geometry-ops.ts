@@ -381,6 +381,23 @@ export function splitPolygonByPolylineDetailed(
       return { pieces: [{ px: cpx, py: cpy }], splitFailed: false };
     }
 
+    // Only accept a clean split: no sliver pieces and the pieces add up
+    // to the original. Re-splitting with a line that runs along an
+    // existing edge produced zero-area and duplicated "phantom" pieces.
+    const parentArea = Math.abs(signedArea(cpx.map((x, i) => [x, cpy[i]])));
+    const areas = results.map((r) =>
+      Math.abs(signedArea(r.px.map((x, i) => [x, r.py[i]]))),
+    );
+    const eps = 1e-9 * Math.max(1, parentArea);
+    const total = areas.reduce((s, a) => s + a, 0);
+    if (
+      results.length > 1 &&
+      (areas.some((a) => a <= eps) ||
+        Math.abs(total - parentArea) > 1e-6 * Math.max(1, parentArea))
+    ) {
+      return { pieces: [{ px: cpx, py: cpy }], splitFailed: false };
+    }
+
     // Sort by average y descending so upper (surface-side) pieces come first,
     // matching the expected order for slope analysis.
     results.sort((a, b) => {

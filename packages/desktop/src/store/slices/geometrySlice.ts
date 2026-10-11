@@ -321,13 +321,33 @@ export const createGeometrySlice: SliceCreator<GeometrySlice> = (set, get) => ({
     set((s) =>
       syncActiveModel(s, {
         materialBoundaries: s.materialBoundaries.map((b) =>
-          b.id === boundaryId
-            ? {
-                ...b,
-                coordinates: [...b.coordinates, coord],
-                coordinateExpressions: [...(b.coordinateExpressions ?? []), {}],
-              }
-            : b,
+          b.id !== boundaryId
+            ? b
+            : isClosedBoundary(b.coordinates)
+              ? {
+                  // Keep a closed boundary closed: insert before the
+                  // closing vertex instead of appending after it.
+                  ...b,
+                  coordinates: [
+                    ...b.coordinates.slice(0, -1),
+                    coord,
+                    b.coordinates[b.coordinates.length - 1],
+                  ],
+                  coordinateExpressions: (() => {
+                    const e = b.coordinates.map(
+                      (_, i) => b.coordinateExpressions?.[i] ?? {},
+                    );
+                    return [...e.slice(0, -1), {}, e[e.length - 1]];
+                  })(),
+                }
+              : {
+                  ...b,
+                  coordinates: [...b.coordinates, coord],
+                  coordinateExpressions: [
+                    ...(b.coordinateExpressions ?? []),
+                    {},
+                  ],
+                },
         ),
       }),
     );

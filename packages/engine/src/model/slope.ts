@@ -363,7 +363,8 @@ export class Slope {
    *
    * @param coordinates Array of [x, y] tuples defining the boundary line.
    */
-  setMaterialBoundary(coordinates: [number, number][]): void {
+  /** Split by a boundary polyline; returns true when any piece was split. */
+  setMaterialBoundary(coordinates: [number, number][]): boolean {
     if (!coordinates || coordinates.length < 2) {
       throw new Error("Material boundary needs at least 2 coordinate points");
     }
@@ -372,10 +373,12 @@ export class Slope {
     const ly = coordinates.map((c) => c[1]);
 
     const newGeometries: GeometryWithMaterial[] = [];
+    let changed = false;
     for (const mg of this._materialGeometries) {
       const split = splitPolygonByPolylineDetailed(mg.px, mg.py, lx, ly);
       if (split.splitFailed) this._splitFailureCount += 1;
       const pieces = split.pieces;
+      if (pieces.length > 1) changed = true;
       for (const piece of pieces) {
         newGeometries.push(
           createGeometryWithMaterial(piece.px, piece.py, mg.material),
@@ -383,6 +386,7 @@ export class Slope {
       }
     }
     this._materialGeometries = newGeometries;
+    return changed;
   }
 
   /**

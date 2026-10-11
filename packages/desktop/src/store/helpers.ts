@@ -1,4 +1,5 @@
 import type { StateCreator } from "zustand";
+import { isClosedBoundary } from "../utils/regions";
 import type { AnalysisResponse, SlopeDefinition } from "../worker/messages";
 import { toCanonicalSlopeDefinition } from "@cslope/engine";
 import type { AppState, ModelEntry, ModelsSlice } from "./types";
@@ -59,8 +60,16 @@ export function buildSlopeDTOFromModel(model: ModelEntry): SlopeDefinition {
   };
 
   if (model.materialBoundaries?.length > 0) {
-    // Pass boundaries as coordinates-only (materialName not used with regionAssignments)
-    slope.materialBoundaries = model.materialBoundaries.map((b) => ({
+    // Pass boundaries as coordinates-only (materialName not used with
+    // regionAssignments), in the order the canvas applies them (by id,
+    // open boundaries before closed ones) so both split the same way.
+    const sorted = [...model.materialBoundaries].sort((a, b) =>
+      a.id.localeCompare(b.id),
+    );
+    slope.materialBoundaries = [
+      ...sorted.filter((b) => !isClosedBoundary(b.coordinates)),
+      ...sorted.filter((b) => isClosedBoundary(b.coordinates)),
+    ].map((b) => ({
       coordinates: b.coordinates,
       materialName: "",
     }));

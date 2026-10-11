@@ -1,0 +1,69 @@
+import { beforeEach, describe, expect, it } from "vitest";
+import { buildSlope, isPointInPolygon } from "@cslope/engine";
+import { useAppStore } from "../store/app-store";
+import { buildSlopeDTO } from "../store/helpers";
+import { computeRegions } from "../utils/regions";
+
+type P = [number, number];
+const S = () => useAppStore.getState();
+const area = (px: number[], py: number[]) => {
+  let s = 0;
+  for (let i = 0, j = px.length - 1; i < px.length; j = i++) s += px[j] * py[i] - px[i] * py[j];
+  return Math.abs(s) / 2;
+};
+const regions = () =>
+  computeRegions(S().coordinates, S().materialBoundaries, S().regionMaterials, S().materials[0].id);
+const engineNamesAt = (p: P) =>
+  buildSlope(buildSlopeDTO(S()))
+    .materialGeometries.filter((g) => isPointInPolygon(p[0], p[1], g.px, g.py))
+    .map((g) => g.material.name);
+const EXT: P[] = [[0, 0], [40, 0], [40, 10], [25, 10], [15, 20], [0, 20]];
+
+describe("canvas regions and engine geometry agree (round 7)", () => {
+  beforeEach(() => {
+    S().newProject();
+    S().addMaterial();
+    S().addMaterial();
+  });
+
+  it("re-splitting creates no zero-area or duplicated regions", () => {
+    S().setCoordinates(EXT);
+    S().setMaterialBoundaries([
+      { id: "b", coordinates: [[-0.05, 4.176458638906479], [18.52370324358344, 7.1990269375965], [40.05, 10.05]] },
+    ]);
+    const a = regions().map((r) => area(r.px, r.py));
+    expect(a).toHaveLength(2);
+    expect(Math.min(...a)).toBeGreaterThan(1);
+
+    S().setMaterialBoundaries([{ id: "b", coordinates: [[6.026681855320929, 20], [40, 4.261417495086789]] }]);
+    const total = regions().reduce((s, r) => s + area(r.px, r.py), 0);
+    expect(total).toBeCloseTo(600, 3);
+  });
+
+  it("a boundary ending on another splits regardless of the boundary order", () => {
+    S().setCoordinates([[0, 0], [10, 0], [10, 10], [0, 10]]);
+    const wedge = { coordinates: [[0, 2], [6, 5]] as P[] };
+    const layer = { coordinates: [[0, 5], [10, 5]] as P[] };
+    const [, , m3] = S().materials;
+    for (const ids of [["bnd-2", "bnd-1"], ["bnd-1", "bnd-2"]]) {
+      S().setMaterialBoundaries([
+        { id: ids[0], ...wedge },
+        { id: ids[1], ...layer },
+      ]);
+      S().setRegionMaterials([{ point: [1, 3.5], materialId: m3.id }]);
+      expect(regions()).toHaveLength(3);
+      expect(engineNamesAt([8, 2])).toEqual([S().materials[0].name]);
+      expect(engineNamesAt([1, 3.5])).toEqual([m3.name]);
+    }
+  });
+
+  it("adding a point to a closed boundary keeps it closed", () => {
+    S().setCoordinates([[0, 0], [10, 0], [10, 10], [0, 10]]);
+    S().setMaterialBoundaries([{ id: "lens", coordinates: [[3, 3], [7, 3], [7, 6], [3, 6], [3, 3]] }]);
+    S().addBoundaryPoint("lens", [2, 4.5]);
+    const c = S().materialBoundaries[0].coordinates;
+    expect(c).toHaveLength(6);
+    expect(c[0]).toEqual(c[c.length - 1]);
+    expect(regions()).toHaveLength(2);
+  });
+});

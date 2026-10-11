@@ -115,11 +115,19 @@ export function buildSlope(def: SlopeDefinition): Slope {
 
   // Material boundaries — split the geometry first, then assign materials
   if (def.materialBoundaries && def.materialBoundaries.length > 0) {
-    // Split at each boundary polyline
-    for (const b of def.materialBoundaries) {
-      if (b.coordinates.length >= 2) {
-        slope.setMaterialBoundary(b.coordinates);
+    // Split at each boundary polyline, repeated until nothing changes: a
+    // boundary that ends on another one only splits once that one has
+    // cut the model, so a single pass depended on the boundary order
+    // (and could disagree with the canvas, which also repeats).
+    const usable = def.materialBoundaries.filter(
+      (b) => b.coordinates.length >= 2,
+    );
+    for (let pass = 0; pass < usable.length + 2; pass++) {
+      let changed = false;
+      for (const b of usable) {
+        if (slope.setMaterialBoundary(b.coordinates)) changed = true;
       }
+      if (!changed) break;
     }
 
     if (!(def.regionAssignments && def.regionAssignments.length > 0)) {
