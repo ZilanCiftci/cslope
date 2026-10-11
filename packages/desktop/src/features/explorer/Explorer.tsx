@@ -104,7 +104,8 @@ export function Explorer() {
       }
 
       switchModel(model.id);
-      if (model.result) {
+      // The models[] entry of the active model can lag behind its edits.
+      if (useAppStore.getState().result) {
         setMode("result");
       }
     },

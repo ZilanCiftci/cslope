@@ -146,6 +146,8 @@ function snapshotFromState(state: AppState): ModelEntry {
     name: "",
     orientation: state.orientation,
     coordinates: state.coordinates,
+    coordinateExpressions: state.coordinateExpressions,
+    parameters: state.parameters,
     materials: state.materials,
     materialBoundaries: state.materialBoundaries,
     regionMaterials: state.regionMaterials,
@@ -199,6 +201,16 @@ export function abortAllAnalyses(): void {
   batchHandles.clear();
 }
 
+/** Stop the single run of a model that is being deleted. */
+export function cancelRunForModel(modelId: string): void {
+  if (activeHandle && activeRunModelId === modelId) {
+    activeHandle.cancel();
+    activeHandle = null;
+    activeRunModelId = null;
+    stopProgressInterval();
+  }
+}
+
 const RUN_PROGRESS_MAX = 0.95;
 
 function stopProgressInterval() {
@@ -235,7 +247,14 @@ export const createAnalysisSlice: SliceCreator<AnalysisSlice> = (set, get) => ({
       activeRunModelId = null;
       stopProgressInterval();
     }
-    set({ ...RUN_RESET });
+    // Also the stored entry: a Run All finishing later (or switching away
+    // and back) would otherwise bring the old result back.
+    set((s) => ({
+      ...RUN_RESET,
+      models: s.models.map((m) =>
+        m.id === s.activeModelId ? { ...m, ...RUN_RESET } : m,
+      ),
+    }));
   },
 
   setAnalysisLimits: (limits) => {
@@ -319,10 +338,20 @@ export const createAnalysisSlice: SliceCreator<AnalysisSlice> = (set, get) => ({
   },
 
   runAnalysis: () => {
-    // Cancel any previously running analysis
+    // Cancel any previously running analysis.  If it belonged to another
+    // model, that model must not stay "running" forever.
     if (activeHandle) {
       activeHandle.cancel();
       activeHandle = null;
+      const previousModelId = activeRunModelId;
+      if (previousModelId && previousModelId !== get().activeModelId) {
+        set((s) => ({
+          models: s.models.map((m) =>
+            m.id === previousModelId ? { ...m, ...RUN_RESET } : m,
+          ),
+        }));
+      }
+      activeRunModelId = null;
     }
     stopProgressInterval();
 
@@ -476,6 +505,9 @@ export const createAnalysisSlice: SliceCreator<AnalysisSlice> = (set, get) => ({
     const baseState = get();
     baseState.saveCurrentModel();
     const models = get().models.slice();
+    // A new batch replaces a running one: stop its workers.
+    for (const handle of batchHandles) handle.cancel();
+    batchHandles.clear();
     batchGeneration += 1;
     const generation = batchGeneration;
     const isCurrentBatch = () => generation === batchGeneration;

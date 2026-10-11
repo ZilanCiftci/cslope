@@ -15,7 +15,7 @@ import {
 import type { SliceCreator } from "../helpers";
 import { nextId } from "../helpers";
 import type { ModelEntry, ModelsSlice } from "../types";
-import { abortAllAnalyses } from "./analysisSlice";
+import { abortAllAnalyses, cancelRunForModel } from "./analysisSlice";
 import { markProjectClean } from "../unsaved";
 
 function cloneModelEntry(model: ModelEntry): ModelEntry {
@@ -292,6 +292,7 @@ export const createModelsSlice: SliceCreator<ModelsSlice> = (
       progress: 0,
       result: null,
       errorMessage: null,
+      mode: "edit",
     };
 
     set((st) => ({ models: [...st.models, copy] }));
@@ -301,6 +302,7 @@ export const createModelsSlice: SliceCreator<ModelsSlice> = (
   deleteModel: (id) => {
     const s = get();
     if (s.models.length <= 1) return;
+    cancelRunForModel(id);
     const remaining = s.models.filter((m) => m.id !== id);
     const newActive =
       s.activeModelId === id ? remaining[0].id : s.activeModelId;
