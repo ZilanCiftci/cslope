@@ -37,7 +37,17 @@ export interface AnalysisOptions {
   intersliceFunction?: IntersliceFunctionType;
   /** Normalized [x, f] points in [0,1]×[0,1] for data-point-specified mode. */
   intersliceDataPoints?: [number, number][];
+  /**
+   * Pore pressure head below an inclined piezometric line:
+   * - "phreatic-correction" (default): vertical head × cos²θ of the line's
+   *   inclination (equipotentials normal to a straight phreatic line).
+   * - "vertical": full vertical head, as Slide and SLOPE/W use for a
+   *   piezometric line.
+   */
+  porePressureHead?: PorePressureHead;
 }
+
+export type PorePressureHead = "phreatic-correction" | "vertical";
 
 /** Default analysis options. */
 export const DEFAULT_ANALYSIS_OPTIONS: AnalysisOptions = {
@@ -51,6 +61,7 @@ export const DEFAULT_ANALYSIS_OPTIONS: AnalysisOptions = {
   janbuCorrection: false,
   intersliceFunction: "half-sine",
   intersliceDataPoints: [],
+  porePressureHead: "phreatic-correction",
 };
 
 /** Water table input — one of three modes. */

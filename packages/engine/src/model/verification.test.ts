@@ -227,6 +227,8 @@ describe("Verification problems — fixed circles", () => {
       udls: [{ magnitude: 35, x1: 52, x2: 62 }],
     });
     expectNear(fos(def, "Bishop"), 1.173, 0.02);
+    // With the vertical-head option the published value is reproduced.
+    expectNear(fos(def, "Bishop", { porePressureHead: "vertical" }), 1.173, 0.005);
   });
 });
 
@@ -456,6 +458,59 @@ describe("Verification problems — round 4, critical circle search", () => {
   it("VP106 Cai & Ugai (2000) slope, no pile: Bishop 1.14", () => {
     const def = layered([[0, 0], [10, 0], [25, 10], [35, 10]], -10, [{ name: "S", topY: null, model: mc(10, 20, 20) }]);
     expectNear(fos(def, "Bishop"), 1.14, 0.015);
+  });
+});
+
+describe("Verification problems — vertical pore-pressure head", () => {
+  const V = { porePressureHead: "vertical" as const };
+  const VS = { ...V, ...SPENCER };
+
+  it("VP55 Pockoski & Duncan (2000) slope 1, Slide's circle: Bishop 1.293, Spencer 1.300", () => {
+    const def = layered(ft([[-75, 100], [0, 100], [100, 150], [170, 150]]), 75 * FT, [{ name: "Sandy clay", topY: null, model: mc(300 * PSF, 30, 120 * PCF) }], {
+      ...circle(24.103 * FT, 195.256 * FT, 100.266 * FT),
+      waterTable: { mode: "custom", value: ft([[-75, 100], [0, 100], [100, 140], [170, 140]]) },
+    });
+    expectNear(fos(def, "Bishop", V), 1.293, 0.01);
+    expectNear(fos(def, "Morgenstern-Price", VS), 1.3, 0.01);
+  });
+
+  it("VP100 Morgenstern (1963) complete drawdown, 3:1: Bishop 1.20 (chart), Slide 1.212", () => {
+    // Water table on the face (B-bar = 1, pool drawn down to the toe); base at the toe (D = 1).
+    const face = ft([[0, 0], [300, 100], [373, 100]]);
+    const def: SlopeDefinition = {
+      coordinates: [...face, [373 * FT, 0]],
+      materials: [{ name: "S", unitWeight: 124.8 * PCF, frictionAngle: 0, cohesion: 0, model: mc(312 * PSF, 30, 124.8 * PCF) }],
+      regionAssignments: [{ point: [300 * FT, 50 * FT], materialName: "S" }],
+      waterTable: { mode: "custom", value: face },
+    };
+    expectNear(fos(def, "Bishop", V), 1.2, 0.01);
+    expectNear(fos(def, "Morgenstern-Price", VS), 1.2, 0.01);
+  });
+
+  it("VP20 Greco (1996) ex. 5 / Chen & Shao (1988), circular: Bishop 1.087, Spencer 1.093", () => {
+    const def: SlopeDefinition = {
+      coordinates: [[0, 0], [0, 20], [55, 20], [75, 30], [95, 40], [100, 40], [145, 70], [240, 70], [240, 16], [150, 15]],
+      materials: [
+        { name: "Layer 1", unitWeight: 20, frictionAngle: 0, cohesion: 0, model: mc(9.8, 35, 20) },
+        { name: "Layer 2", unitWeight: 19, frictionAngle: 0, cohesion: 0, model: mc(58.8, 25, 19) },
+        { name: "Layer 3", unitWeight: 21.5, frictionAngle: 0, cohesion: 0, model: mc(19.8, 30, 21.5) },
+        { name: "Seam", unitWeight: 21.5, frictionAngle: 0, cohesion: 0, model: mc(9.8, 16, 21.5) },
+      ],
+      materialBoundaries: [
+        { coordinates: [[100, 40], [190, 55], [241, 55]], materialName: "" },
+        { coordinates: [[75, 30], [241, 30]], materialName: "" },
+        { coordinates: [[-1, 0.4], [150, 15.5], [241, 16.51]], materialName: "" },
+      ],
+      regionAssignments: [
+        { point: [200, 62], materialName: "Layer 1" },
+        { point: [200, 45], materialName: "Layer 2" },
+        { point: [100, 20], materialName: "Layer 3" },
+        { point: [100, 10.25], materialName: "Seam" },
+      ],
+      waterTable: { mode: "custom", value: [[0, 20], [55, 20], [75, 30], [95, 40], [100, 40], [190, 55], [240, 55]] },
+    };
+    expectNear(fos(def, "Bishop", V), 1.087, 0.01);
+    expectNear(fos(def, "Morgenstern-Price", VS), 1.093, 0.01);
   });
 });
 

@@ -231,6 +231,7 @@ function waterAtSlice(
   xLeft: number,
   xRight: number,
   xMid: number,
+  verticalHead = false,
 ): { yMean: number; h: number } | null {
   if (!line) return null;
   const wy1 = getYAtX(line.x, line.y, xLeft);
@@ -240,7 +241,9 @@ function waterAtSlice(
     return null;
   }
   const h =
-    wy1 !== wy2 ? Math.cos(Math.atan((wy2 - wy1) / (xRight - xLeft))) ** 2 : 1;
+    !verticalHead && wy1 !== wy2
+      ? Math.cos(Math.atan((wy2 - wy1) / (xRight - xLeft))) ** 2
+      : 1;
   return { yMean: wyMid, h };
 }
 
@@ -417,6 +420,7 @@ export function getSlices(
 
   // Create slices
   const results: Slice[] = [];
+  const verticalHead = slope.porePressureHead === "vertical";
   for (let i = 0; i < nSlices; i++) {
     let waterYMean: number | null = null;
     let waterH: number | null = null;
@@ -435,7 +439,9 @@ export function getSlices(
       ) {
         waterYMean = wyMid;
         waterH =
-          wy1 !== wy2 ? Math.cos(Math.atan((wy2 - wy1) / bArray[i])) ** 2 : 1;
+          !verticalHead && wy1 !== wy2
+            ? Math.cos(Math.atan((wy2 - wy1) / bArray[i])) ** 2
+            : 1;
       }
     }
 
@@ -459,6 +465,7 @@ export function getSlices(
               slicesX[i],
               slicesX[i + 1],
               sxArray[i],
+              verticalHead,
             )
         : undefined,
     );

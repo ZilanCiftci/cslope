@@ -5,6 +5,7 @@
 import type {
   AnalysisLimits,
   IntersliceFunctionType,
+  PorePressureHead,
   AnalysisMethod,
   AnalysisOptions,
   GeometryWithMaterial,
@@ -102,6 +103,7 @@ export class Slope {
   private _method: AnalysisMethod;
   private _janbuCorrection: boolean;
   private _intersliceFunction: IntersliceFunctionType;
+  private _porePressureHead: PorePressureHead;
   private _intersliceDataPoints: [number, number][];
 
   // ── Analysis limits ───────────────────────────────────────────
@@ -130,6 +132,7 @@ export class Slope {
     this._janbuCorrection = d.janbuCorrection ?? false;
     this._intersliceFunction = d.intersliceFunction ?? "half-sine";
     this._intersliceDataPoints = [...(d.intersliceDataPoints ?? [])];
+    this._porePressureHead = d.porePressureHead ?? "phreatic-correction";
   }
 
   // ────────────────────────────────────────────────────────────────
@@ -249,6 +252,10 @@ export class Slope {
 
   get janbuCorrection(): boolean {
     return this._janbuCorrection;
+  }
+
+  get porePressureHead(): PorePressureHead {
+    return this._porePressureHead;
   }
 
   get intersliceFunction(): IntersliceFunctionType {
@@ -605,6 +612,14 @@ export class Slope {
     }
     if (opts.janbuCorrection !== undefined) {
       this._janbuCorrection = opts.janbuCorrection;
+    }
+    if (opts.porePressureHead !== undefined) {
+      if (!["phreatic-correction", "vertical"].includes(opts.porePressureHead)) {
+        throw new Error(
+          "porePressureHead must be 'phreatic-correction' or 'vertical'",
+        );
+      }
+      this._porePressureHead = opts.porePressureHead;
     }
     if (opts.intersliceFunction !== undefined) {
       if (
