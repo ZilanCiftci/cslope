@@ -4,9 +4,8 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 const stats = [
-  { label: "Analysis methods", value: "Multiple" },
-  { label: "Your desktop", value: "Runs on" },
-
+  { label: "Analysis methods", value: "3" },
+  { label: "Platform", value: "Desktop" },
   { label: "License", value: "MIT" },
 ];
 
@@ -56,14 +55,17 @@ export function Home() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, delay: 0.2 }}
-          ></motion.p>
+          >
+            Limit equilibrium analysis of circular slip surfaces with Bishop,
+            Janbu and Morgenstern–Price.
+          </motion.p>
           <motion.p
             className="mt-6 text-sm uppercase tracking-[0.35em] text-primary/80"
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5 }}
           >
-            FAST, MODERN,OPEN SOURCE SOFTWARE <br />
+            FAST, MODERN, OPEN SOURCE SOFTWARE <br />
             FOR SLOPE STABILITY
           </motion.p>
           <motion.div
@@ -73,7 +75,7 @@ export function Home() {
             transition={{ duration: 0.5, delay: 0.3 }}
           >
             <a
-              href="https://github.com/ZilanCiftci/cslope"
+              href="https://github.com/ZilanCiftci/cslope/releases"
               target="_blank"
               rel="noopener noreferrer"
             >
@@ -156,7 +158,7 @@ export function Home() {
             </p>
             <div className="mt-8 flex flex-col items-center gap-3 sm:flex-row sm:justify-center">
               <a
-                href="https://github.com/ZilanCiftci/cslope"
+                href="https://github.com/ZilanCiftci/cslope/releases"
                 target="_blank"
                 rel="noopener noreferrer"
               >

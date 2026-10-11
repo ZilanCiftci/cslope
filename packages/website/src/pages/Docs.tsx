@@ -46,7 +46,7 @@ export function Docs() {
                 bun run dev
               </code>
             </li>
-            <li>Open your browser and start defining your slope geometry.</li>
+            <li>The cSlope desktop window opens; start defining your slope geometry.</li>
           </ol>
         </section>
 
@@ -76,6 +76,10 @@ export function Docs() {
               for circular slip surfaces.
             </li>
             <li>
+              <strong>Janbu Simplified</strong> — Satisfies horizontal force
+              equilibrium, optionally with the f<sub>0</sub> correction factor.
+            </li>
+            <li>
               <strong>GLE / Morgenstern–Price</strong> — A rigorous method
               satisfying both force and moment equilibrium with a user-defined
               inter-slice force function.
@@ -88,7 +92,8 @@ export function Docs() {
         <section>
           <h2 className="text-2xl font-semibold">Project Files</h2>
           <p className="mt-4 text-muted-foreground leading-relaxed">
-            Save your analysis as a JSON project file using the export function.
+            Save your analysis with Save / Save As as a project file (.cslope or
+            .json).
             You can share this file with colleagues or reload it later. The
             project file stores the complete slope definition including
             geometry, soil properties, and analysis settings.
