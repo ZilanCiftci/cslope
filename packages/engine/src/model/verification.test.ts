@@ -276,7 +276,7 @@ describe("Minimum slip depth", () => {
   });
   it("sliding masses below the minimum area are skipped (automatic by default)", () => {
     const def = layered([[0, 0], [10, 0], [25, 10], [40, 10]], -10, [{ name: "C", topY: null, model: su(12, 19) }]);
-    const area = (p: { slices?: { area: number }[] }) => p.slices!.reduce((a, s) => a + s.area, 0);
+    const area = (p: { slices?: { area: number }[] | null }) => p.slices!.reduce((a, s) => a + s.area, 0);
     const auto = runVerification(def, "Bishop");
     expect(auto.slope.minSlipArea).toBeCloseTo(1e-3 * auto.slope.modelArea);
     for (const p of auto.slope.search) {
