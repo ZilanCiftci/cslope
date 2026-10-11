@@ -105,8 +105,10 @@ export function DefineMaterialsDialog({ onClose, mode = "popup" }: Props) {
   };
 
   const handleDelete = () => {
-    if (materials.length <= 1) return;
-    removeMaterial(selectedId);
+    if (materials.length <= 1 || !selected) return;
+    // The shown material: selectedId can name a material that was replaced
+    // (e.g. when the Materials window receives the main window's list).
+    removeMaterial(selected.id);
     const remaining = useAppStore.getState().materials;
     if (remaining.length > 0) setSelectedId(remaining[0].id);
   };
@@ -162,7 +164,7 @@ export function DefineMaterialsDialog({ onClose, mode = "popup" }: Props) {
             </thead>
             <tbody>
               {materials.map((mat) => {
-                const isSelected = mat.id === selectedId;
+                const isSelected = mat.id === selected?.id;
                 return (
                   <tr
                     key={mat.id}

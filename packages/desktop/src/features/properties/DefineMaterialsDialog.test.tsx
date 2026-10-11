@@ -73,6 +73,23 @@ describe("DefineMaterialsDialog — material list", () => {
     expect(mats().some((m) => m.id === newId)).toBe(false);
   });
 
+  it("deletes the shown material after the list was replaced from outside", async () => {
+    // The Materials window mounts before the main window's state arrives.
+    render(<DefineMaterialsDialog onClose={() => {}} />);
+    act(() => {
+      store().setMaterials([
+        material("a", "Sand", { kind: "mohr-coulomb", unitWeight: 19, cohesion: 0, frictionAngle: 34 }),
+        material("b", "Clay", { kind: "undrained", unitWeight: 17, undrainedShearStrength: 40 }),
+      ]);
+    });
+    // The first material is shown...
+    expect(screen.getByLabelText("φ (°)")).toHaveValue("34");
+    // ...and Delete removes it.
+    await userEvent.click(screen.getByRole("button", { name: "Delete" }));
+    expect(mats().map((m) => m.id)).toEqual(["b"]);
+    expect(screen.getByLabelText("Su (kPa)")).toHaveValue("40");
+  });
+
   it("selects a material by clicking its row", async () => {
     store().setMaterials([
       material("a", "Sand", { kind: "mohr-coulomb", unitWeight: 19, cohesion: 0, frictionAngle: 34 }),
