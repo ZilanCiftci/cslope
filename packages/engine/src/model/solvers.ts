@@ -152,6 +152,9 @@ type SolverResult = [
   converged: boolean,
 ];
 
+/** Trial-FOS increases allowed when the driving side vanishes (×2 each: 0.1 → 400). */
+const MAX_NON_POSITIVE = 12;
+
 /**
  * Base normal force and right-hand interslice forces of one slice from
  * vertical equilibrium with the shear mobilised at the trial FOS.
@@ -202,6 +205,7 @@ function solveFOSGenericMoment(
   let fos = initialFOS;
   let pushing = 0;
   let resisting = 0;
+  let nonPositive = 0;
 
   for (let outer = 0; outer < numOuterIters; outer++) {
     let innerConverged = false;
@@ -293,7 +297,14 @@ function solveFOSGenericMoment(
       // moment: no division by a driving moment the passive force could
       // make vanish.
       resisting -= passiveMoment;
-      if (pushing <= 0) return [null, pushing, resisting, nCurrent, false];
+      // A trial FOS far too low can make the driving side vanish for one
+      // iteration (large active loads, steep slices): raise the trial
+      // value instead of giving up on the surface.
+      if (pushing <= 0) {
+        if (++nonPositive > MAX_NON_POSITIVE) return [null, pushing, resisting, nCurrent, false];
+        prevFOS = Math.max(2 * prevFOS, 0.1);
+        continue;
+      }
 
       fos = resisting / pushing;
       if (iter > 3 && Math.abs(prevFOS - fos) < tolerance) {
@@ -342,6 +353,7 @@ function solveFOSGenericForceCircular(
   let fos = initialFOS;
   let pushing = 0;
   let resisting = 0;
+  let nonPositive = 0;
 
   for (let outer = 0; outer < numOuterIters; outer++) {
     let innerConverged = false;
@@ -418,7 +430,12 @@ function solveFOSGenericForceCircular(
 
       // Passive horizontal force (< 0) on the resisting side, as above.
       resisting -= passiveForce;
-      if (pushing <= 0) return [null, pushing, resisting, nCurrent, false];
+      // As in the moment solver: a too-low trial value is raised.
+      if (pushing <= 0) {
+        if (++nonPositive > MAX_NON_POSITIVE) return [null, pushing, resisting, nCurrent, false];
+        prevFOS = Math.max(2 * prevFOS, 0.1);
+        continue;
+      }
 
       fos = resisting / pushing;
       if (iter > 3 && Math.abs(prevFOS - fos) < tolerance) {
@@ -475,8 +492,9 @@ export function analyseOrdinary(_slope: Slope, slices: Slice[]): number | null {
     const rp = s.reinforcementPassive;
     const W = sliceVerticalLoad(s) + (ra?.[0] ?? 0);
     const rMoment = ra?.[2] ?? 0;
-    // A horizontal force (+x, sliding direction) lifts the slice off its base.
-    const hNormal = (ra?.[1] ?? 0) * Math.sin(s.alpha);
+    // A horizontal force (+x, sliding direction: reinforcement, water on
+    // the ground or in a crack) lifts the slice off its base.
+    const hNormal = ((ra?.[1] ?? 0) + (s.hForce ?? 0)) * Math.sin(s.alpha);
     if (rp && meanArm > 1e-9) {
       resisting -= (rp[0] * s.dx + rp[2]) / meanArm;
     }

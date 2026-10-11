@@ -107,6 +107,26 @@ describe("Reinforcement on a rigid block", () => {
   });
 });
 
+describe("Large active loads", () => {
+  // 10 m vertical cut on a 60° plane with a 500 kN/m horizontal anchor:
+  // high up, the Ordinary start value is so low that the driving side
+  // vanished in the first iteration and the surface was dropped.
+  const wall = (y: number) =>
+    layered([[-5, 0], [0, 0], [0, 10], [20, 10]], -5, [{ name: "S", topY: null, model: mc(0, 30, 20) }], {
+      orientation: "rtl",
+      customSurfaces: [{ points: [[0, 0], [10 / Math.tan(Math.PI / 3), 10]] }],
+      customPlanesOnly: true,
+      reinforcements: [{ x1: 0, y1: y, x2: 15, y2: y, tensileCapacity: 500, application: "active" }],
+    });
+  it("force methods converge from a low start value, whatever the anchor height", () => {
+    const high = runVerification(wall(9), "Janbu").fos;
+    const low = runVerification(wall(10 / 3), "Janbu").fos;
+    expect(high).not.toBeNull();
+    expect(high!).toBeCloseTo(low!, 2);
+    expect(runVerification(wall(9), "Morgenstern-Price", { intersliceFunction: "constant" }).fos!).toBeCloseTo(high!, 1);
+  });
+});
+
 describe("Capacity envelope", () => {
   const slope = buildSlope(layered([[0, 10], [10, 10], [20, 0], [30, 0]], -10, [{ name: "S", topY: null, model: mc(0, 30, 20) }]));
   const line = { x1: 0, y1: 5, x2: 10, y2: 5, tensileCapacity: 100 };
