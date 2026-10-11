@@ -8,6 +8,7 @@ export type { SearchPlane } from "./slope";
 export {
   getSurfaceLine,
   splitPolygonByPolyline,
+  polygonizeRegions,
   lineSegmentIntersection,
   createGeometryWithMaterial,
 } from "./geometry-ops";

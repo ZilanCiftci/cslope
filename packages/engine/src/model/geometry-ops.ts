@@ -499,3 +499,78 @@ export function keyholeRing(
   }
   return [...ring, ring[0]];
 }
+
+/** A face of the slope cut by all material boundaries. */
+export interface RegionFace {
+  outer: [number, number][];
+  holes: [number, number][][];
+}
+
+/**
+ * Cut the slope polygon by all boundary polylines at once and return the
+ * faces inside it (with holes for enclosed lenses).
+ *
+ * Noding every line together makes the result independent of the order
+ * of the boundaries and avoids re-splitting already split pieces (which
+ * produced slivers and duplicate pieces). The canvas and the engine both
+ * use this, so the regions shown are the regions analysed.
+ */
+export function polygonizeRegions(
+  px: number[],
+  py: number[],
+  lines: [number, number][][],
+): RegionFace[] {
+  const ring: [number, number][] = px.map((x, i) => [x, py[i]]);
+  if (
+    ring.length > 0 &&
+    (ring[0][0] !== ring[ring.length - 1][0] ||
+      ring[0][1] !== ring[ring.length - 1][1])
+  ) {
+    ring.push([ring[0][0], ring[0][1]]);
+  }
+  const toFace = (outer: [number, number][]): RegionFace[] => [
+    { outer, holes: [] },
+  ];
+  if (ring.length < 4) return [];
+  const polygon = gf.createPolygon(
+    gf.createLinearRing(ring.map(([x, y]) => new Coordinate(x, y))),
+  );
+  const usable = lines.filter((l) => l.length >= 2);
+  if (usable.length === 0) return toFace(ring);
+
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    let noded: any = polygon.getBoundary();
+    for (const l of usable) {
+      noded = noded.union(
+        gf.createLineString(l.map(([x, y]) => new Coordinate(x, y))),
+      );
+    }
+    const polygonizer = new Polygonizer();
+    polygonizer.add(noded);
+    const parentArea = Math.abs(signedArea(ring));
+    const faces: RegionFace[] = [];
+    const arr = polygonizer.getPolygons().array;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const toXY = (r: any): [number, number][] =>
+      r
+        .getCoordinates()
+        .map((c: InstanceType<typeof Coordinate>) => [c.x, c.y]);
+    for (let i = 0; i < arr.length; i++) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const p = arr[i] as any;
+      if (p.getArea() <= 1e-9 * Math.max(1, parentArea)) continue;
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      if (!(polygon as any).contains(p.getInteriorPoint())) continue;
+      const holes: [number, number][][] = [];
+      for (let h = 0; h < p.getNumInteriorRing(); h++) {
+        holes.push(toXY(p.getInteriorRingN(h)));
+      }
+      faces.push({ outer: toXY(p.getExteriorRing()), holes });
+    }
+    return faces.length > 0 ? faces : toFace(ring);
+  } catch (error) {
+    console.warn("polygonizeRegions failed; using the unsplit slope.", error);
+    return toFace(ring);
+  }
+}

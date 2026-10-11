@@ -129,9 +129,11 @@ export type { SearchPlane } from "./model/slope";
 export {
   getSurfaceLine,
   splitPolygonByPolyline,
+  polygonizeRegions,
   lineSegmentIntersection,
   createGeometryWithMaterial,
 } from "./model/geometry-ops";
+export type { RegionFace } from "./model/geometry-ops";
 
 export { createSlice, getSlices } from "./model/slices";
 

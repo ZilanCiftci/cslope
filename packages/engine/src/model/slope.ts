@@ -30,6 +30,8 @@ import {
 import {
   getSurfaceLine,
   splitPolygonByPolylineDetailed,
+  polygonizeRegions,
+  keyholeRing,
   clipLineToSurface,
   createGeometryWithMaterial,
 } from "./geometry-ops";
@@ -363,6 +365,30 @@ export class Slope {
    *
    * @param coordinates Array of [x, y] tuples defining the boundary line.
    */
+  /**
+   * Replace the material geometry by the slope cut by all boundary
+   * polylines at once (see polygonizeRegions); every face starts with the
+   * first material and is assigned later by point.
+   */
+  setMaterialBoundaries(lines: [number, number][][]): void {
+    if (this._materialGeometries.length === 0) {
+      throw new Error("External boundary must be set before boundaries");
+    }
+    const material = this._materialGeometries[0].material;
+    this._materialGeometries = polygonizeRegions(
+      this._externalBoundaryPx,
+      this._externalBoundaryPy,
+      lines,
+    ).map((face) => {
+      const ring = keyholeRing(face.outer, face.holes);
+      return createGeometryWithMaterial(
+        ring.map((c) => c[0]),
+        ring.map((c) => c[1]),
+        material,
+      );
+    });
+  }
+
   /** Split by a boundary polyline; returns true when any piece was split. */
   setMaterialBoundary(coordinates: [number, number][]): boolean {
     if (!coordinates || coordinates.length < 2) {

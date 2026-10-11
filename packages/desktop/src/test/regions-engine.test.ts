@@ -80,4 +80,21 @@ describe("canvas regions and engine geometry agree (round 7)", () => {
     expect(engineNamesAt([9, 5])).toEqual([m2.name]);
     expect(engineNamesAt([2, 2])).toEqual([S().materials[0].name]);
   });
+
+  it("two separate lenses get the same materials on canvas and in the engine", () => {
+    S().setCoordinates(EXT);
+    S().setMaterialBoundaries([
+      { id: "l1", coordinates: [[18.67, 6.78], [16.87, 7.39], [17.29, 5.6], [18.67, 6.78]] },
+      { id: "l2", coordinates: [[22.35, 3.39], [20.67, 5.39], [18.4, 4.45], [18.8, 1.68], [21.43, 1.54], [22.35, 3.39]] },
+    ]);
+    const [m1, m2, m3] = S().materials;
+    S().setRegionMaterials([
+      { point: [17.6, 6.6], materialId: m2.id },
+      { point: [20.5, 3.3], materialId: m3.id },
+    ]);
+    expect(regions()).toHaveLength(3);
+    for (const [p, m] of [[[17.6, 6.6], m2], [[20.5, 3.3], m3], [[5, 5], m1]] as const) {
+      expect(engineNamesAt(p as P)).toEqual([m.name]);
+    }
+  });
 });
