@@ -23,6 +23,7 @@ import type { MaterialModel } from "../types/material-models";
 import type { AnalysisMethod, AnalysisOptions } from "../types/analysis";
 import { REINFORCED_CASES } from "./reinforcement-cases";
 import { PILE_CASES } from "./pile-cases";
+import { CORPUS_CASES } from "./corpus-cases";
 import { RELIABILITY_CASES, type ReliabilityCaseData, type ReliabilityQuantity } from "./reliability-cases";
 import { analyseReliability } from "../model/reliability";
 
@@ -1181,7 +1182,7 @@ export const VERIFICATION_CASES: VerificationCase[] = [
     notes: ["Without limits the search finds shallower mechanisms: a sliver in the cohesionless 1:1 fill (0.74) and, with the crack, a surface through the fill and Marsh clay (1.15). The published value is the deep failure."],
   },
   // Reinforcement (anchors, tiebacks, nails, geosynthetics).
-  ...[...REINFORCED_CASES, ...PILE_CASES].map(
+  ...[...REINFORCED_CASES, ...PILE_CASES, ...CORPUS_CASES].map(
     (c): VerificationCase => ({
       id: c.id,
       title: c.title,
