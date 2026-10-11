@@ -177,9 +177,18 @@ describe("reinforcement coverage", () => {
 });
 
 describe("pile force direction", () => {
+  // The VP54b input as it was when the Slide2 cross-check was made (the
+  // no-pile circle, an Ito & Matsui pile capped at 10.7 kN); the
+  // verification case itself now uses Slide2's with-pile circle.
   const vp54b = PILE_CASES.find((c) => c.id === "VP54b")!;
+  const definition: SlopeDefinition = {
+    ...vp54b.definition,
+    piles: [{ x1: 9, y1: 4, x2: 9, y2: -2, spacing: 1, diameter: 0.3, shearCapacity: 10.7, momentCapacity: 1000000 }],
+    customSearchPlanes: [{ cx: 2.674, cy: 7.573, radius: 8.031 }],
+    customPlanesOnly: true,
+  };
   const run = (extra: Partial<Pile>) =>
-    runVerification({ ...vp54b.definition, piles: [{ ...vp54b.definition.piles![0], ...extra }] }, "Bishop", vp54b.options as Partial<AnalysisOptions>).fos!;
+    runVerification({ ...definition, piles: [{ ...definition.piles![0], ...extra }] }, "Bishop", vp54b.options as Partial<AnalysisOptions>).fos!;
 
   it("keeps the given angle when no direction is set", () => {
     expect(run({})).toBeCloseTo(run({ direction: "angle" }), 9);
