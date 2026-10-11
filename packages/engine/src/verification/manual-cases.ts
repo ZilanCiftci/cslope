@@ -29,7 +29,7 @@ export const MANUAL_CASES: ReinforcedCaseData[] = [
     description: "The VP25 Prandtl slope with GLE / Morgenstern-Price and Chen & Shao's interslice function (Table 25.1: f = 1 over the toe end, 0 over the crest end), on the same surface.",
     definition: { coordinates: [[-3, -2], [-3, 0], [0, 0], [5.7735, 10], [20, 10], [20, -2]], materials: [{ name: "Clay", unitWeight: 1e-06, frictionAngle: 0, cohesion: 0, model: { kind: "mohr-coulomb", unitWeight: 1e-06, cohesion: 49, frictionAngle: 0 } }], materialBoundaries: [], regionAssignments: [{ point: [-2.77, -1.95], materialName: "Clay" }], orientation: "rtl", udls: [{ magnitude: 149.31, x1: 5.7735, x2: 15.7735 }], customSurfaces: [{ points: [[-0.05, 2.05], [0.773, 1.34], [7.6033, 3.1698], [7.8995, 3.2561], [8.1917, 3.3553], [8.4792, 3.4671], [8.7616, 3.5913], [9.0384, 3.7278], [9.3089, 3.8762], [9.5727, 4.0362], [9.8292, 4.2076], [10.078, 4.3901], [10.3186, 4.5832], [10.5506, 4.7866], [10.7735, 5], [15.7735, 10], [16.0735, 10.3]] }], customPlanesOnly: true },
     options: { intersliceFunction: "data-point-specified", intersliceDataPoints: [[0, 1], [0.3, 1], [0.6, 0], [1, 0]] },
-    checks: [["MP", 1.009, "Slide2", 0.01, { pending: "interslice function data points interpreted in model space (mirrored for a right-to-left model)" }]],
+    checks: [["MP", 1.009, "Slide2", 0.01]],
     notes: ["f(x) as printed: (0, 1), (0.3, 1), (0.6, 0), (1, 0) with x from the toe end of the slip surface (model space). Until the data points are mirrored for a right-to-left model cSlope reads them from the crest end and gives 1.079 (+6.9 %); entered reversed it gives 1.008."],
   },
   {
@@ -304,7 +304,7 @@ export const MANUAL_CASES: ReinforcedCaseData[] = [
     description: "As GS2.15-S with Morgenstern-Price and Chen & Shao's interslice function (Table 35).",
     definition: { coordinates: [[-3, -2], [-3, 0], [0, 0], [5.7735, 10], [20, 10], [20, -2]], materials: [{ name: "Clay", unitWeight: 1e-06, frictionAngle: 0, cohesion: 0, model: { kind: "mohr-coulomb", unitWeight: 1e-06, cohesion: 49, frictionAngle: 0 } }], materialBoundaries: [], regionAssignments: [{ point: [-2.77, -1.95], materialName: "Clay" }], orientation: "rtl", udls: [{ magnitude: 149.31, x1: 5.7735, x2: 15.7735 }], customSurfaces: [{ points: [[-0.05, 2.05], [0.773, 1.34], [7.6033, 3.1698], [7.8995, 3.2561], [8.1917, 3.3553], [8.4792, 3.4671], [8.7616, 3.5913], [9.0384, 3.7278], [9.3089, 3.8762], [9.5727, 4.0362], [9.8292, 4.2076], [10.078, 4.3901], [10.3186, 4.5832], [10.5506, 4.7866], [10.7735, 5], [15.7735, 10], [16.0735, 10.3]] }], customPlanesOnly: true },
     options: { slices: 50, intersliceFunction: "data-point-specified", intersliceDataPoints: [[0, 1], [0.3, 1], [0.6, 0], [1, 0]] },
-    checks: [["MP", 1.017, "SLOPE/W", 0.01, { pending: "interslice function data points interpreted in model space (mirrored for a right-to-left model)" }]],
+    checks: [["MP", 1.017, "SLOPE/W", 0.01]],
     notes: ["Table 35 f(x): (0, 1), (0.3, 1), (0.6, 0), (1, 0) from the toe end (model space). Until the data points are mirrored for a right-to-left model cSlope reads them from the crest end; entered reversed it gives 1.008."],
   },
   {

@@ -38,9 +38,9 @@ export const PILE_CASES: ReinforcedCaseData[] = [
     reference: "Yamagami et al. (2000). Slide2 Verification Problem #54.",
     surface: "fixed",
     description: "As VP54a with a micro-pile row (1 m spacing) whose shear strength of 10.7 kN acts as a passive force tangent to the slip surface, on Slide's with-pile circle (2.674, 7.376, R = 8.102).",
-    definition: { materials: [{ name: "Material 1", unitWeight: 15.68, frictionAngle: 10, cohesion: 4.9, model: { kind: "mohr-coulomb", unitWeight: 15.68, cohesion: 4.9, frictionAngle: 10 } }], coordinates: [[-6, -5], [-6, 0], [0, 0], [8, 4], [12, 4], [12, -5]], materialBoundaries: [], regionAssignments: [{ point: [10, 3.5], materialName: "Material 1" }], piles: [{ x1: 9, y1: 4, x2: 9, y2: -2, spacing: 1, force: 10.7, direction: "tangent", application: "passive" }], reinforcements: [], customSearchPlanes: [{ cx: 2.674, cy: 7.376, radius: 8.102 }], customPlanesOnly: true } as unknown as SlopeDefinition,
+    definition: { materials: [{ name: "Material 1", unitWeight: 15.68, frictionAngle: 10, cohesion: 4.9, model: { kind: "mohr-coulomb", unitWeight: 15.68, cohesion: 4.9, frictionAngle: 10 } }], coordinates: [[-6, -5], [-6, 0], [0, 0], [8, 4], [12, 4], [12, -5]], materialBoundaries: [], regionAssignments: [{ point: [10, 3.5], materialName: "Material 1" }], piles: [{ x1: 9, y1: 4, x2: 9, y2: -2, spacing: 1, force: 10.7, direction: "tangent", application: "passive" }], reinforcements: [], customSearchPlanes: [{ cx: 2.674, cy: 7.376, radius: 8.102 }], customPlanesOnly: true },
     options: { porePressureHead: "vertical", slices: 50 },
-    checks: [["Bishop", 1.193, "Slide2", 0.01, { pending: "pile force direction tangent to the slip surface (pile direction: \"tangent\")" }]],
+    checks: [["Bishop", 1.193, "Slide2", 0.01]],
     notes: ["Yamagami 1.20, SLOPE/W 1.223; xslope 1.185 (Ito & Matsui force, active, on the no-pile circle).", "On this circle the 10.7 kN passive force gives 1.172 horizontal and 1.195 tilted 51.3° (the base inclination where the circle crosses the pile)."],
   },
   {

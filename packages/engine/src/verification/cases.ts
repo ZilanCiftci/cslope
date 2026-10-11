@@ -569,10 +569,9 @@ export const VERIFICATION_CASES: VerificationCase[] = [
       bishop(0.42, "Slide2", 0.01),
       spencer(0.414, "Slide2 (non-circular)", 0.025, {
         options: NONCIRCULAR,
-        pending: "admissibility of optimised non-circular surfaces in the weak layer (VP15)",
       }),
     ],
-    notes: ["Non-circular: Slide2 0.414 (random search with optimisation); Greco 0.39, Kim et al. 0.39–0.44. cSlope's optimisation currently reaches 0.27 on surfaces Slide2 would not accept."],
+    notes: ["Non-circular: Slide2 0.414 (random search with optimisation); Greco 0.39, Kim et al. 0.39–0.44. Before the Morgenstern-Price λ iteration ignored unconverged solutions, cSlope's optimisation reached 0.27–0.39 on surfaces where the force and moment curves never cross."],
   },
   {
     id: "VP17",
