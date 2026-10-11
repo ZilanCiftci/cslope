@@ -14,6 +14,9 @@ import {
 } from "../../../features/view/paper";
 import { RibbonButton, RibbonGroup, RibbonSep } from "./RibbonParts";
 import type { SurfaceDisplayMode } from "../../../store/types";
+import { buildSliceTable, toCsv } from "../../../features/export/sliceTable";
+import { buildXlsx } from "../../../utils/xlsx";
+import { downloadFile, safeFileName } from "../../../utils/download";
 
 interface Props {
   isOpen: boolean;
@@ -545,6 +548,30 @@ export function ResultsMenu({ isOpen, onActivate, panelHost }: Props) {
                     >
                       Export as PNG
                     </button>
+                    {(
+                      [
+                        ["xlsx", "Slice data (Excel)"],
+                        ["csv", "Slice data (CSV)"],
+                        ["csv-se", "Slice data (CSV, ; and ,)"],
+                      ] as const
+                    ).map(([format, label]) => (
+                      <button
+                        key={format}
+                        onClick={() => {
+                          setExportMenuOpen(false);
+                          exportSliceData(format);
+                        }}
+                        className="w-full text-left px-3 py-1.5 text-[11px] cursor-pointer"
+                        style={{
+                          background: "transparent",
+                          border: "none",
+                          color: "var(--color-vsc-text)",
+                        }}
+                        title="Slices of the critical surface as a table"
+                      >
+                        {label}
+                      </button>
+                    ))}
                   </div>
                 )}
               </div>
@@ -554,6 +581,34 @@ export function ResultsMenu({ isOpen, onActivate, panelHost }: Props) {
         )}
     </div>
   );
+}
+
+/** Export the critical surface's slices of the active model. */
+function exportSliceData(format: "xlsx" | "csv" | "csv-se"): void {
+  const state = useAppStore.getState();
+  const result = state.result;
+  if (!result) return;
+  const modelName =
+    state.models.find((m) => m.id === state.activeModelId)?.name ?? "cslope";
+  const rows = buildSliceTable(result, {
+    modelName,
+    date: new Date().toISOString().slice(0, 10),
+  });
+  const base = `${modelName} slices`;
+  if (format === "xlsx") {
+    downloadFile(
+      safeFileName(base, "xlsx"),
+      buildXlsx("Slices", rows),
+      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    );
+  } else {
+    // BOM so Excel reads the file as UTF-8 (°, ², ').
+    downloadFile(
+      safeFileName(base, "csv"),
+      "\uFEFF" + toCsv(rows, format === "csv-se"),
+      "text/csv;charset=utf-8",
+    );
+  }
 }
 
 function ResultsPlotIcon({ size = 20 }: { size?: number }) {

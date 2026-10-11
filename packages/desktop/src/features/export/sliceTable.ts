@@ -1,0 +1,110 @@
+import type { AnalysisResult } from "@cslope/engine";
+import type { XlsxCell } from "../../utils/xlsx";
+
+export interface SliceTableMeta {
+  modelName: string;
+  /** Units label for forces and stresses (SI). */
+  date?: string;
+}
+
+const HEADERS = [
+  "Slice",
+  "x left (m)",
+  "x right (m)",
+  "x mid (m)",
+  "Width (m)",
+  "y top (m)",
+  "y base (m)",
+  "Height (m)",
+  "Area (m²)",
+  "Base angle α (°)",
+  "Base length (m)",
+  "Weight (kN/m)",
+  "Surface load (kN/m)",
+  "Base material",
+  "Cohesion c (kPa)",
+  "Friction angle φ (°)",
+  "Pore pressure u (kPa)",
+  "Effective normal force N' (kN/m)",
+  "Shear strength c·l + N'·tan φ (kN/m)",
+];
+
+/**
+ * Slice data of the critical surface as a table (header block, blank
+ * row, column headers, one row per slice), for CSV and Excel export.
+ */
+export function buildSliceTable(
+  result: AnalysisResult,
+  meta: SliceTableMeta,
+): XlsxCell[][] {
+  const cs = result.criticalSurface;
+  const rows: XlsxCell[][] = [
+    ["Model", meta.modelName],
+    ["Method", result.method],
+    ["Minimum FOS", round(result.minFOS, 4)],
+  ];
+  if (cs) {
+    if (cs.points) {
+      rows.push(["Critical surface", `non-circular, ${cs.points.length} points`]);
+    } else {
+      rows.push(["Critical surface", "circle"], ["Centre x (m)", round(cs.cx, 4)], ["Centre y (m)", round(cs.cy, 4)], ["Radius (m)", round(cs.radius, 4)]);
+    }
+    rows.push(
+      ["Entry x (m)", round(cs.entryPoint[0], 4)],
+      ["Exit x (m)", round(cs.exitPoint[0], 4)],
+    );
+  }
+  if (meta.date) rows.push(["Exported", meta.date]);
+  rows.push([], HEADERS);
+  result.criticalSlices.forEach((s, i) => {
+    const phi = s.frictionAngle;
+    const strength =
+      s.cohesion * s.baseLength +
+      Math.max(s.normalForce, 0) * Math.tan((phi * Math.PI) / 180);
+    rows.push([
+      i + 1,
+      round(s.xLeft, 4),
+      round(s.xRight, 4),
+      round(s.x, 4),
+      round(s.width, 4),
+      round(s.yTop, 4),
+      round(s.yBottom, 4),
+      round(s.height, 4),
+      round(s.area, 4),
+      round((s.alpha * 180) / Math.PI, 3),
+      round(s.baseLength, 4),
+      round(s.weight, 3),
+      round(s.surfaceLoad ?? 0, 3),
+      s.baseMaterial?.name ?? "",
+      round(s.cohesion, 3),
+      round(phi, 3),
+      round(s.porePressure, 3),
+      round(s.normalForce, 3),
+      round(strength, 3),
+    ]);
+  });
+  return rows;
+}
+
+function round(v: number, digits: number): number | null {
+  if (!Number.isFinite(v)) return null;
+  const f = 10 ** digits;
+  return Math.round(v * f) / f;
+}
+
+/**
+ * CSV text. With `decimalComma` the decimal separator is a comma and the
+ * field separator a semicolon (what Excel expects with Swedish settings).
+ */
+export function toCsv(rows: XlsxCell[][], decimalComma = false): string {
+  const sep = decimalComma ? ";" : ",";
+  const cell = (v: XlsxCell): string => {
+    if (v === null || v === undefined) return "";
+    if (typeof v === "number") {
+      const s = String(v);
+      return decimalComma ? s.replace(".", ",") : s;
+    }
+    return /[",;\n\r]/.test(v) ? `"${v.replace(/"/g, '""')}"` : v;
+  };
+  return rows.map((r) => r.map(cell).join(sep)).join("\r\n") + "\r\n";
+}

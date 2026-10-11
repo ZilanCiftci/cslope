@@ -3,6 +3,7 @@ import { createPortal } from "react-dom";
 import { isElectron } from "../../../utils/is-electron";
 import { useProjectActions } from "../../../features/project/useProjectActions";
 import { RibbonGroup, RibbonButton, RibbonSep } from "./RibbonParts";
+import { importDxf } from "../../../features/project/importDxf";
 import {
   NewIcon,
   OpenIcon,
@@ -33,6 +34,26 @@ export function FileMenu({
     handleSaveAs,
     handleFileChange,
   } = useProjectActions(defaultBaseName);
+
+  const handleImportDxf = () => {
+    const input = document.createElement("input");
+    input.type = "file";
+    input.accept = ".dxf";
+    input.onchange = () => {
+      const file = input.files?.[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = () => {
+        try {
+          alert(importDxf(String(reader.result ?? ""), file.name));
+        } catch (err) {
+          alert(`DXF import failed: ${err instanceof Error ? err.message : String(err)}`);
+        }
+      };
+      reader.readAsText(file);
+    };
+    input.click();
+  };
 
   // ── Keyboard shortcuts (Ctrl+N/O/S/Shift+S) ──
   useEffect(() => {
@@ -100,6 +121,11 @@ export function FileMenu({
                 shortcut="Ctrl+O"
                 onClick={handleOpen}
               />
+              <RibbonButton
+                icon={<ImportDxfIcon />}
+                label="Import DXF"
+                onClick={handleImportDxf}
+              />
             </RibbonGroup>
             <RibbonSep />
             <RibbonGroup label="Save">
@@ -140,5 +166,22 @@ export function FileMenu({
         onChange={handleFileChange}
       />
     </div>
+  );
+}
+
+function ImportDxfIcon({ size = 22 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 32 32" fill="none">
+      <path
+        d="M7 3h12l7 7v18a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z"
+        fill="#e8eaed"
+        stroke="#90a4ae"
+        strokeWidth="1.2"
+      />
+      <path d="M8 22l5-6 4 3 6-7" stroke="#26a69a" strokeWidth="1.8" fill="none" />
+      <text x="16" y="29" fontSize="6" textAnchor="middle" fill="#546e7a" fontWeight="bold">
+        DXF
+      </text>
+    </svg>
   );
 }
