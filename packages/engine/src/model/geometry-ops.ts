@@ -10,6 +10,7 @@
 import GeometryFactory from "jsts/org/locationtech/jts/geom/GeometryFactory.js";
 import Coordinate from "jsts/org/locationtech/jts/geom/Coordinate.js";
 import Polygonizer from "jsts/org/locationtech/jts/operation/polygonize/Polygonizer.js";
+import UnaryUnionOp from "jsts/org/locationtech/jts/operation/union/UnaryUnionOp.js";
 // Side-effect import: patches Geometry.prototype with union/contains/intersects/etc.
 import "jsts/org/locationtech/jts/monkey.js";
 
@@ -506,6 +507,13 @@ export interface RegionFace {
   holes: [number, number][][];
 }
 
+/** Faces of the slope, and whether noding the boundaries failed. */
+export interface RegionFacesResult {
+  faces: RegionFace[];
+  /** True when the boundaries could not be noded (slope left unsplit). */
+  failed: boolean;
+}
+
 /**
  * Cut the slope polygon by all boundary polylines at once and return the
  * faces inside it (with holes for enclosed lenses).
@@ -520,6 +528,15 @@ export function polygonizeRegions(
   py: number[],
   lines: [number, number][][],
 ): RegionFace[] {
+  return polygonizeRegionsDetailed(px, py, lines).faces;
+}
+
+/** polygonizeRegions that also reports a failed split. */
+export function polygonizeRegionsDetailed(
+  px: number[],
+  py: number[],
+  lines: [number, number][][],
+): RegionFacesResult {
   const ring: [number, number][] = px.map((x, i) => [x, py[i]]);
   if (
     ring.length > 0 &&
@@ -528,10 +545,11 @@ export function polygonizeRegions(
   ) {
     ring.push([ring[0][0], ring[0][1]]);
   }
-  const toFace = (outer: [number, number][]): RegionFace[] => [
-    { outer, holes: [] },
-  ];
-  if (ring.length < 4) return [];
+  const toFace = (outer: [number, number][], failed = false) => ({
+    faces: [{ outer, holes: [] }] as RegionFace[],
+    failed,
+  });
+  if (ring.length < 4) return { faces: [], failed: false };
   const polygon = gf.createPolygon(
     gf.createLinearRing(ring.map(([x, y]) => new Coordinate(x, y))),
   );
@@ -539,13 +557,18 @@ export function polygonizeRegions(
   if (usable.length === 0) return toFace(ring);
 
   try {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    let noded: any = polygon.getBoundary();
-    for (const l of usable) {
-      noded = noded.union(
+    // One unary union nodes everything at once (a union per line was
+    // quadratic: 150 ms for 50 layers, recomputed while dragging).
+    const lineStrings = [
+      gf.createLineString(ring.map(([x, y]) => new Coordinate(x, y))),
+      ...usable.map((l) =>
         gf.createLineString(l.map(([x, y]) => new Coordinate(x, y))),
-      );
-    }
+      ),
+    ];
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const noded: any = (UnaryUnionOp as any).union(
+      gf.createMultiLineString(lineStrings),
+    );
     const polygonizer = new Polygonizer();
     polygonizer.add(noded);
     const parentArea = Math.abs(signedArea(ring));
@@ -568,9 +591,9 @@ export function polygonizeRegions(
       }
       faces.push({ outer: toXY(p.getExteriorRing()), holes });
     }
-    return faces.length > 0 ? faces : toFace(ring);
+    return faces.length > 0 ? { faces, failed: false } : toFace(ring, true);
   } catch (error) {
     console.warn("polygonizeRegions failed; using the unsplit slope.", error);
-    return toFace(ring);
+    return toFace(ring, true);
   }
 }

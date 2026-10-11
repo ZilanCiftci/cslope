@@ -30,7 +30,7 @@ import {
 import {
   getSurfaceLine,
   splitPolygonByPolylineDetailed,
-  polygonizeRegions,
+  polygonizeRegionsDetailed,
   keyholeRing,
   clipLineToSurface,
   createGeometryWithMaterial,
@@ -375,11 +375,14 @@ export class Slope {
       throw new Error("External boundary must be set before boundaries");
     }
     const material = this._materialGeometries[0].material;
-    this._materialGeometries = polygonizeRegions(
+    const { faces, failed } = polygonizeRegionsDetailed(
       this._externalBoundaryPx,
       this._externalBoundaryPy,
       lines,
-    ).map((face) => {
+    );
+    // Reported in the result panel ("split operation(s) failed").
+    if (failed) this._splitFailureCount += 1;
+    this._materialGeometries = faces.map((face) => {
       const ring = keyholeRing(face.outer, face.holes);
       return createGeometryWithMaterial(
         ring.map((c) => c[0]),
