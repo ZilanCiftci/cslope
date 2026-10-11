@@ -5,11 +5,13 @@
  * message names the seed and case index.
  */
 import { describe, it, expect } from "vitest";
+import type { SlopeDefinition } from "../types/slope-definition";
 import {
   rng,
   uniform,
   randomCase,
   onCircle,
+  onPolyline,
   fosOf,
   mirrorDefinition,
   transformDefinition,
@@ -70,6 +72,76 @@ describe("mirror symmetry", () => {
         expect(gainMirrored, `case ${i} ${method}`).toBeCloseTo(gain, 6);
       }
     }
+  }, 30_000);
+});
+
+describe("mirror symmetry: surfaces, water and strength given per point", () => {
+  it("polyline surfaces, per-material water tables, spatial strength and asymmetric interslice points", () => {
+    const r = rng(31);
+    let compared = 0;
+    for (let i = 0; i < 12; i++) {
+      const g = randomCase(r, { layers: 2 });
+      const { shape, circle } = g;
+      // A three-segment polyline through the circle's entry, bottom and exit region.
+      const xIn = circle.cx - Math.sqrt(circle.radius ** 2 - (shape.H - circle.cy) ** 2);
+      const xOut = shape.crest + shape.run + 0.3 * shape.toe;
+      const yLow = circle.cy - circle.radius * uniform(r, 0.9, 0.99);
+      const pts: [number, number][] = [
+        [xIn - 1, shape.H + 0.5],
+        [xIn + 0.3 * (xOut - xIn), yLow],
+        [xIn + 0.7 * (xOut - xIn), yLow + uniform(r, 0, 1)],
+        [xOut + 1, 0.5],
+      ];
+      const xEnd = shape.crest + shape.run + shape.toe;
+      let def: SlopeDefinition = {
+        ...g.def,
+        waterTables: [{ id: "p", coordinates: [[0, -shape.depth * 0.3], [xEnd, -shape.depth * 0.5]], followBoundary: true }],
+        waterTable: { mode: "custom", value: [[0, shape.H * 0.4], [xEnd, -0.5]], followBoundary: true },
+      };
+      def.materials = [
+        { ...def.materials[0] },
+        {
+          ...def.materials[1],
+          waterTableId: "p",
+          model: {
+            kind: "spatial-mohr-coulomb",
+            unitWeight: def.materials[1].unitWeight,
+            dataPoints: [
+              [0, 0, 5, 25, 18],
+              [xEnd * 0.5, -shape.depth * 0.5, 15, 30, 19],
+              [xEnd, 0, 8, 20, 20],
+            ],
+            interpolation: "idw",
+          },
+        },
+      ];
+      def = onPolyline(def, pts, i % 2 ? [circle.cx, circle.cy] : undefined);
+      const axis = uniform(r, -20, 60);
+      const mirrored = mirrorDefinition(def, axis);
+      const dp: [number, number][] = [[0, 0.1], [0.2, 0.9], [0.6, 1], [1, 0.3]];
+      const dpMirrored = dp.map(([x, f]) => [1 - x, f] as [number, number]).reverse();
+      for (const method of ["Ordinary", "Bishop", "Janbu", "Morgenstern-Price"] as Method[]) {
+        const a = fosOf(def, method);
+        const b = fosOf(mirrored, method);
+        const label = `seed 31 case ${i} ${method}`;
+        expect(b === null, label).toBe(a === null);
+        if (a !== null && b !== null) {
+          expect(relDiff(a, b), `${label}: ${a} vs ${b}`).toBeLessThan(1e-6);
+          compared++;
+        }
+      }
+      // Interslice points are entered with x = 0 at the left end in model
+      // space: the mirror image of a function is the mirrored point list.
+      const opts = { intersliceFunction: "data-point-specified" as const };
+      const a = fosOf(def, "Morgenstern-Price", { ...opts, intersliceDataPoints: dp });
+      const b = fosOf(mirrored, "Morgenstern-Price", { ...opts, intersliceDataPoints: dpMirrored });
+      expect(b === null, `case ${i} data points`).toBe(a === null);
+      if (a !== null && b !== null) {
+        expect(relDiff(a, b), `seed 31 case ${i} data points: ${a} vs ${b}`).toBeLessThan(1e-6);
+        compared++;
+      }
+    }
+    expect(compared).toBeGreaterThan(40);
   }, 30_000);
 });
 
