@@ -377,6 +377,32 @@ export function OptionsSection({ plain = false }: OptionsSectionProps) {
         </label>
         <label
           className="col-span-2 flex items-center gap-1.5"
+          title="After the circular search, optimise the best circles as non-circular surfaces, which can follow weak layers and stiff bases."
+        >
+          <input
+            type="checkbox"
+            checked={options.nonCircularOptimization === true}
+            onChange={(e) =>
+              setOptions({ nonCircularOptimization: e.target.checked })
+            }
+            aria-label="Non-circular optimisation"
+          />
+          <Label>Non-circular optimisation</Label>
+        </label>
+        <label className="flex flex-col gap-0.5">
+          <Label>Min. slip depth (m)</Label>
+          <DraftNumberInput
+            value={options.minSlipDepth ?? 0}
+            min={0}
+            step={0.5}
+            onValueChange={(v) => v >= 0 && setOptions({ minSlipDepth: v })}
+            aria-label="Minimum slip depth"
+            title="Surfaces less deep than this below the ground are not analysed (e.g. shallow slivers under line loads). 0 = no limit."
+          />
+        </label>
+        <div />
+        <label
+          className="col-span-2 flex items-center gap-1.5"
           title="Also search for sliding in the opposite direction (with automatic search limits) and report the lower FOS."
         >
           <input

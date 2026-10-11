@@ -134,11 +134,19 @@ export function ResultPanel({ showTitle = true }: { showTitle?: boolean }) {
               >
                 Critical Surface
               </p>
-              <p>
-                Centre: ({result.criticalSurface.cx.toFixed(2)},{" "}
-                {result.criticalSurface.cy.toFixed(2)})
-              </p>
-              <p>Radius: {result.criticalSurface.radius.toFixed(2)} m</p>
+              {result.criticalSurface.points ? (
+                <p>
+                  Non-circular, {result.criticalSurface.points.length} points
+                </p>
+              ) : (
+                <>
+                  <p>
+                    Centre: ({result.criticalSurface.cx.toFixed(2)},{" "}
+                    {result.criticalSurface.cy.toFixed(2)})
+                  </p>
+                  <p>Radius: {result.criticalSurface.radius.toFixed(2)} m</p>
+                </>
+              )}
             </div>
           )}
         </div>

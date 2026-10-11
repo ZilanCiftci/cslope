@@ -64,6 +64,11 @@ export interface CustomSearchPlane {
   cx: number;
   cy: number;
   radius: number;
+  /**
+   * Non-circular surface: polyline through the soil (cx, cy, radius are
+   * then unused). Fitted to the ground by the engine.
+   */
+  points?: [number, number][];
 }
 
 export interface UdlExpressions {
@@ -387,7 +392,7 @@ export interface AnalysisSlice {
   errorMessage: string | null;
   invalidateAnalysis: () => void;
   setAnalysisLimits: (limits: Partial<AnalysisLimitsState>) => void;
-  addCustomSearchPlane: () => void;
+  addCustomSearchPlane: (kind?: "circle" | "polyline") => void;
   updateCustomSearchPlane: (
     id: string,
     patch: Partial<CustomSearchPlane>,

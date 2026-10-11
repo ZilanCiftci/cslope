@@ -618,6 +618,9 @@ export function mirrorModelEntry(model: ModelEntry): ModelEntry {
     customSearchPlanes: (model.customSearchPlanes ?? []).map((p) => ({
       ...p,
       cx: mirrorX(p.cx, xMin, xMax),
+      points: p.points?.map(
+        ([x, y]) => [mirrorX(x, xMin, xMax), y] as [number, number],
+      ),
     })),
     analysisLimits: model.analysisLimits.enabled
       ? {

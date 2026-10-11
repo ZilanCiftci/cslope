@@ -113,3 +113,56 @@ describe("both sliding directions", () => {
     expect(run(noSurface, { bothDirections: true }).type).toBe("analysis-error");
   });
 });
+
+describe("non-circular surfaces", () => {
+  // ACADS 3 weak-layer slope, drawn right-to-left as entered.
+  const WEAK: SlopeDefinition = {
+    orientation: "rtl",
+    coordinates: [[20, 20], [20, 27.75], [43, 27.75], [67.5, 40], [84, 40], [84, 20]],
+    materials: [
+      { name: "Soil", unitWeight: 18.84, frictionAngle: 20, cohesion: 28.5 },
+      { name: "Weak", unitWeight: 18.84, frictionAngle: 10, cohesion: 0 },
+      { name: "Below", unitWeight: 18.84, frictionAngle: 20, cohesion: 28.5 },
+    ],
+    materialBoundaries: [
+      { coordinates: [[19, 27], [85, 27]], materialName: "" },
+      { coordinates: [[19, 26.5], [85, 26.5]], materialName: "" },
+    ],
+    regionAssignments: [
+      { point: [70, 35], materialName: "Soil" },
+      { point: [30, 26.75], materialName: "Weak" },
+      { point: [30, 23], materialName: "Below" },
+    ],
+    waterTable: { mode: "custom", value: [[20, 26.5], [84, 26.5]] },
+  };
+
+  it("optimisation returns a polyline in model space along the weak layer", () => {
+    const circle = run(WEAK, { method: "Morgenstern-Price", iterations: 1000 });
+    const opt = run(WEAK, { method: "Morgenstern-Price", iterations: 1000, nonCircularOptimization: true });
+    if (circle.type !== "analysis-complete" || opt.type !== "analysis-complete") {
+      throw new Error("analysis failed");
+    }
+    const surf = opt.result.criticalSurface!;
+    expect(surf.points!.length).toBeGreaterThan(2);
+    expect(opt.result.minFOS).toBeLessThan(circle.result.minFOS - 0.1);
+    // Model space: the surface slides left, entry (crest) on the right.
+    expect(surf.entryPoint[0]).toBeGreaterThan(surf.exitPoint[0]);
+    expect(surf.points![0]).toEqual(surf.entryPoint);
+    const lowest = Math.min(...surf.points!.map((p) => p[1]));
+    expect(lowest).toBeGreaterThan(26.4);
+    expect(lowest).toBeLessThan(27.1);
+  });
+
+  it("analyses a user polyline given in model space", () => {
+    const msg = run(
+      {
+        ...WEAK,
+        customSurfaces: [{ points: [[73.31, 40], [63.5, 27], [44, 26.5], [41.85, 27.75]] }],
+        customPlanesOnly: true,
+      },
+      { method: "Morgenstern-Price" },
+    );
+    if (msg.type !== "analysis-complete") throw new Error("analysis failed");
+    expect(msg.result.minFOS).toBeCloseTo(1.26, 2);
+  });
+});

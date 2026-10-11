@@ -245,13 +245,14 @@ interface Plane {
   lc: Pt;
   rc: Pt;
   fos: number;
+  points?: Pt[];
 }
 
 function criticalPlane(slope: Slope): Plane | null {
   const valid = slope.search.filter((p) => p.fos != null);
   if (valid.length === 0) return null;
   const best = valid.reduce((a, b) => (b.fos! < a.fos! ? b : a));
-  return { cx: best.cx, cy: best.cy, radius: best.radius, lc: best.lc as Pt, rc: best.rc as Pt, fos: best.fos! };
+  return { cx: best.cx, cy: best.cy, radius: best.radius, lc: best.lc as Pt, rc: best.rc as Pt, fos: best.fos!, points: best.points as Pt[] | undefined };
 }
 
 function niceStep(range: number, target = 6): number {
@@ -426,15 +427,18 @@ function figure(def: SlopeDefinition, slope: Slope, plane: Plane | null, label: 
     pdf.setLineWidth(0.55);
     const n = 80;
     let prev: Pt | null = null;
-    for (let i = 0; i <= n; i++) {
+    const pts: Pt[] = plane.points ?? Array.from({ length: n + 1 }, (_, i) => {
       const x = plane.lc[0] + ((plane.rc[0] - plane.lc[0]) * i) / n;
-      const yy = plane.cy - Math.sqrt(Math.max(0, plane.radius ** 2 - (x - plane.cx) ** 2));
+      return [x, plane.cy - Math.sqrt(Math.max(0, plane.radius ** 2 - (x - plane.cx) ** 2))] as Pt;
+    });
+    for (const [x, yy] of pts) {
       const p = P(x, yy);
       if (prev) pdf.line(prev[0], prev[1], p[0], p[1]);
       prev = p;
     }
     const [ccx, ccy] = P(plane.cx, plane.cy);
-    const inside = ccy >= fy && ccy <= fy + fh && ccx >= fx && ccx <= fx + fw;
+    // Centre and radii only for circles.
+    const inside = !plane.points && ccy >= fy && ccy <= fy + fh && ccx >= fx && ccx <= fx + fw;
     pdf.setLineWidth(0.15);
     pdf.setLineDashPattern([0.8, 0.8], 0);
     for (const e of [plane.lc, plane.rc]) {
@@ -679,11 +683,15 @@ caseResults.forEach((r, i) => {
   if (i > 0) newPage();
   const { c } = r;
   const units = c.units === "SI" ? SI : IMPERIAL;
+  const nonCircular = !!r.plane?.points;
+  const surfaceKind = c.surface === "fixed"
+    ? nonCircular ? "Specified non-circular surface" : "Fixed circle"
+    : nonCircular ? "Circle search with non-circular optimisation" : "Critical circle search";
   heading(`3.${i + 1}  ${c.id} — ${c.title}`, 2);
   paragraph(c.reference, 8.5, "italic", MUTED);
   y += 1;
   paragraph(
-    `${c.surface === "fixed" ? "Fixed circle" : "Critical circle search"}  ·  Units: ${c.units === "SI" ? "SI (m, kPa, kN/m³)" : "imperial (ft, psf, pcf)"}`,
+    `${surfaceKind}  ·  Units: ${c.units === "SI" ? "SI (m, kPa, kN/m³)" : "imperial (ft, psf, pcf)"}`,
     8.5,
     "bold",
     INK,
@@ -696,7 +704,7 @@ caseResults.forEach((r, i) => {
     c.definition,
     r.slope,
     r.plane,
-    `Figure ${i + 1}. ${c.id}: ${c.surface === "fixed" ? "analysed circle" : "critical circle"} (${first.check.label}, FOS = ${fmt(first.fos ?? NaN)}).`,
+    `Figure ${i + 1}. ${c.id}: ${c.surface === "fixed" ? (nonCircular ? "analysed surface" : "analysed circle") : (nonCircular ? "critical surface" : "critical circle")} (${first.check.label}, FOS = ${fmt(first.fos ?? NaN)}).`,
     units,
   );
   table(

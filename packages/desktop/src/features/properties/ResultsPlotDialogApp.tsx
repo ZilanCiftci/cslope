@@ -22,6 +22,7 @@ import {
 } from "recharts";
 import { buildSlopeDTOFromModel } from "../../store/helpers";
 import { isElectron } from "../../utils/is-electron";
+import { sameSurface } from "../../utils/arc";
 
 interface ResultsPlotStatePayload {
   model: ModelEntry;
@@ -86,6 +87,7 @@ const METRIC_OPTIONS: Array<{ key: MetricKey; label: string; unit: string }> = [
 
 function isSameSurface(a: SlipSurfaceResult, b: SlipSurfaceResult): boolean {
   const tol = 1e-6;
+  if (a.points || b.points) return sameSurface(a, b);
   return (
     Math.abs(a.cx - b.cx) < tol &&
     Math.abs(a.cy - b.cy) < tol &&
@@ -99,13 +101,20 @@ function toCanonicalSurface(
   surface: SlipSurfaceResult,
   orientation: ModelOrientation | undefined,
   coordinates: [number, number][],
-): { cx: number; entryX: number; exitX: number; radius: number } {
+): {
+  cx: number;
+  entryX: number;
+  exitX: number;
+  radius: number;
+  points?: [number, number][];
+} {
   if (orientation !== "rtl") {
     return {
       cx: surface.cx,
       entryX: surface.entryPoint[0],
       exitX: surface.exitPoint[0],
       radius: surface.radius,
+      points: surface.points,
     };
   }
 
@@ -115,6 +124,10 @@ function toCanonicalSurface(
     entryX: mirrorX(surface.entryPoint[0], xMin, xMax),
     exitX: mirrorX(surface.exitPoint[0], xMin, xMax),
     radius: surface.radius,
+    // Entry first in both spaces, so mirroring keeps x increasing.
+    points: surface.points?.map(
+      ([x, y]) => [mirrorX(x, xMin, xMax), y] as [number, number],
+    ),
   };
 }
 
@@ -218,6 +231,7 @@ export function ResultsPlotDialogApp() {
         canonical.cx,
         selectedSurface.cy,
         canonical.radius,
+        canonical.points,
       );
 
       // Slices are computed in canonical (left-to-right) space; plot x in
@@ -227,7 +241,8 @@ export function ResultsPlotDialogApp() {
         snapshot.model.orientation === "rtl" ? mirrorX(x, xMin, xMax) : x;
 
       return slices.map((slice, index) => {
-        const totalWeight = slice.weight + slice.udl + slice.ll;
+        const totalWeight =
+          slice.weight + slice.udl + slice.ll + (slice.waterLoad ?? 0);
         const normalEffective =
           totalWeight * Math.cos(slice.alpha) - slice.U * slice.baseLength;
         const frictionStrength =

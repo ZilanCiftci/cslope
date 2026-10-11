@@ -182,3 +182,29 @@ describe("partial factors option", () => {
     expect(parseProjectFile(JSON.stringify(raw)).models[0].options?.partialFactors).toBeUndefined();
   });
 });
+
+describe("non-circular surfaces in the model", () => {
+  it("are saved, reloaded and reach the engine as customSurfaces", () => {
+    useAppStore.getState().newProject();
+    useAppStore.getState().addCustomSearchPlane("polyline");
+    const id = useAppStore.getState().customSearchPlanes[0].id;
+    useAppStore.getState().updateCustomSearchPlane(id, { points: [[1, 2], [3, 1], [6, 4]] });
+    useAppStore.getState().addCustomSearchPlane("circle");
+    useAppStore.getState().setOptions({ nonCircularOptimization: true, minSlipDepth: 1.5 });
+    const raw = JSON.parse(JSON.stringify(serializeProject(useAppStore.getState())));
+    const model = parseProjectFile(JSON.stringify(raw)).models[0];
+    expect(model.customSearchPlanes[0].points).toEqual([[1, 2], [3, 1], [6, 4]]);
+    expect(model.options?.nonCircularOptimization).toBe(true);
+    expect(model.options?.minSlipDepth).toBe(1.5);
+    const dto = buildSlopeDTOFromModel(model);
+    expect(dto.customSearchPlanes).toHaveLength(1);
+    expect(dto.customSurfaces).toHaveLength(1);
+  });
+
+  it("an unfinished polyline (under two points) is left out of the analysis", () => {
+    useAppStore.getState().newProject();
+    useAppStore.getState().addCustomSearchPlane("polyline");
+    const model = parseProjectFile(JSON.stringify(serializeProject(useAppStore.getState()))).models[0];
+    expect(buildSlopeDTOFromModel(model).customSurfaces).toBeUndefined();
+  });
+});

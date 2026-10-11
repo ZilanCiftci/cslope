@@ -270,9 +270,12 @@ export const createAnalysisSlice: SliceCreator<AnalysisSlice> = (set, get) => ({
     get().invalidateAnalysis();
   },
 
-  addCustomSearchPlane: () => {
+  addCustomSearchPlane: (kind = "circle") => {
     set((s) => {
-      const plane = { id: nextId("csp"), cx: 0, cy: 0, radius: 10 };
+      const plane =
+        kind === "polyline"
+          ? { id: nextId("csp"), cx: 0, cy: 0, radius: 0, points: [] }
+          : { id: nextId("csp"), cx: 0, cy: 0, radius: 10 };
       const customSearchPlanes = [...s.customSearchPlanes, plane];
       return {
         customSearchPlanes,

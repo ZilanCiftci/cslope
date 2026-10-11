@@ -8,7 +8,7 @@ import type {
   ProjectInfo,
   ResultViewSettings,
 } from "../../store/types";
-import { circleArcPoints } from "../../utils/arc";
+import { surfacePoints, type DrawableSurface } from "../../utils/arc";
 import { computePaperFrame } from "../view/paper";
 import { MODEL_SHORT_LABELS } from "../rendering/style-spec";
 import { flatFieldsFromModel } from "../properties/sections/material-forms/model-defaults";
@@ -651,20 +651,8 @@ export function extendBoundsWithResultFitExtras(params: {
     return result.allSurfaces;
   })();
 
-  const addSurface = (surf: {
-    cx: number;
-    cy: number;
-    radius: number;
-    entryPoint: [number, number];
-    exitPoint: [number, number];
-  }) => {
-    const arcPts = circleArcPoints(
-      surf.cx,
-      surf.cy,
-      surf.radius,
-      surf.entryPoint,
-      surf.exitPoint,
-    );
+  const addSurface = (surf: DrawableSurface) => {
+    const arcPts = surfacePoints(surf);
     for (const [px, py] of arcPts) addPoint(px, py);
   };
 

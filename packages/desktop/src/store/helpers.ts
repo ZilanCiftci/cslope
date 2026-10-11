@@ -149,11 +149,21 @@ export function buildSlopeDTOFromModel(model: ModelEntry): SlopeDefinition {
   }
 
   if (model.customSearchPlanes?.length > 0) {
-    slope.customSearchPlanes = model.customSearchPlanes.map((p) => ({
-      cx: p.cx,
-      cy: p.cy,
-      radius: p.radius,
-    }));
+    const circles = model.customSearchPlanes.filter((p) => !p.points);
+    // Polylines need two points; incomplete ones are still being entered.
+    const polylines = model.customSearchPlanes.filter(
+      (p) => p.points && p.points.length >= 2,
+    );
+    if (circles.length > 0) {
+      slope.customSearchPlanes = circles.map((p) => ({
+        cx: p.cx,
+        cy: p.cy,
+        radius: p.radius,
+      }));
+    }
+    if (polylines.length > 0) {
+      slope.customSurfaces = polylines.map((p) => ({ points: p.points! }));
+    }
     slope.customPlanesOnly = model.customPlanesOnly ?? false;
   }
 

@@ -243,6 +243,17 @@ function normalizeModelEntry(raw: unknown): ModelEntry {
       ? (model.customSearchPlanes as unknown[]).flatMap((raw) => {
           if (!raw || typeof raw !== "object") return [];
           const p = raw as Record<string, unknown>;
+          if (Array.isArray(p.points)) {
+            return [
+              {
+                id: typeof p.id === "string" ? p.id : nextId("plane"),
+                cx: 0,
+                cy: 0,
+                radius: 0,
+                points: normalizePoints(p.points),
+              },
+            ];
+          }
           const [cx, cy, radius] = [p.cx, p.cy, p.radius];
           if (
             typeof cx !== "number" || !Number.isFinite(cx) ||
@@ -780,6 +791,14 @@ function normalizeAnalysisOptions(raw: unknown): AnalysisOptions {
     intersliceDataPoints,
     partialFactors: normalizePartialFactors(o.partialFactors),
     ...(o.bothDirections === true ? { bothDirections: true } : {}),
+    ...(o.nonCircularOptimization === true
+      ? { nonCircularOptimization: true }
+      : {}),
+    ...(typeof o.minSlipDepth === "number" &&
+    Number.isFinite(o.minSlipDepth) &&
+    o.minSlipDepth > 0
+      ? { minSlipDepth: o.minSlipDepth }
+      : {}),
     tensionCrackDepth: Math.max(
       0,
       finiteOr(o.tensionCrackDepth, base.tensionCrackDepth ?? 0),

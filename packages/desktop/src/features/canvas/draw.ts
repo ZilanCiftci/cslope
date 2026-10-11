@@ -1,6 +1,11 @@
 import { PAPER_DIMENSIONS, PLOT_MARGINS } from "../../store/app-store";
 import type { AppState } from "../../store/types";
-import { circleArcPoints } from "../../utils/arc";
+import {
+  sameSurface,
+  surfaceBaseYAt,
+  surfacePoints,
+  type DrawableSurface,
+} from "../../utils/arc";
 import { fosColor } from "../../utils/fos-color";
 import { computeRegions } from "../../utils/regions";
 import {
@@ -67,13 +72,7 @@ import { freeWaterPolygons, piezoExtensions } from "../../utils/piezo";
 
 const arcPointCache = new WeakMap<object, Map<string, [number, number][]>>();
 
-type ArcSurface = {
-  cx: number;
-  cy: number;
-  radius: number;
-  entryPoint: [number, number];
-  exitPoint: [number, number];
-};
+type ArcSurface = DrawableSurface;
 
 type RegionCacheEntry = {
   coordinatesRef: DrawCanvasParams["coordinates"];
@@ -138,6 +137,7 @@ function getArcKey(surf: ArcSurface): string {
     surf.entryPoint[1],
     surf.exitPoint[0],
     surf.exitPoint[1],
+    surf.points ? surf.points.flat().join(",") : "",
   ].join("|");
 }
 
@@ -1301,25 +1301,11 @@ export function drawCanvas(
     const rvs = resultViewSettings;
     const arcCache = getArcCache(result);
     const getArcPoints = (surf: ArcSurface) => {
-      if (!arcCache) {
-        return circleArcPoints(
-          surf.cx,
-          surf.cy,
-          surf.radius,
-          surf.entryPoint,
-          surf.exitPoint,
-        );
-      }
+      if (!arcCache) return surfacePoints(surf);
       const key = getArcKey(surf);
       const cached = arcCache.get(key);
       if (cached) return cached;
-      const points = circleArcPoints(
-        surf.cx,
-        surf.cy,
-        surf.radius,
-        surf.entryPoint,
-        surf.exitPoint,
-      );
+      const points = surfacePoints(surf);
       arcCache.set(key, points);
       return points;
     };
@@ -1333,12 +1319,7 @@ export function drawCanvas(
       for (let si = result.allSurfaces.length - 1; si >= 0; si--) {
         const surf = result.allSurfaces[si];
         // Skip critical (drawn separately) and filtered out
-        if (
-          result.criticalSurface &&
-          surf.cx === result.criticalSurface.cx &&
-          surf.cy === result.criticalSurface.cy &&
-          surf.radius === result.criticalSurface.radius
-        )
+        if (result.criticalSurface && sameSurface(surf, result.criticalSurface))
           continue;
         if (rvs.surfaceDisplay === "filter" && surf.fos > rvs.fosFilterMax)
           continue;
@@ -1428,13 +1409,8 @@ export function drawCanvas(
         ctx.lineWidth = SLICE_LINE_WIDTH_PX * paperZoom;
         ctx.globalAlpha = SLICE_LINE_OPACITY;
 
-        // Helper: compute the arc Y (bottom of circle) at a given X
-        const arcYAtX = (x: number): number | null => {
-          const dx = x - cs.cx;
-          if (Math.abs(dx) > cs.radius) return null;
-          // Two solutions; pick the lower one (failure arc goes below center)
-          return cs.cy - Math.sqrt(cs.radius * cs.radius - dx * dx);
-        };
+        // Surface y at a given x (lower arc of a circle, or the polyline)
+        const arcYAtX = (x: number): number | null => surfaceBaseYAt(cs, x);
 
         // Collect all unique X boundaries from slices
         const xBounds = new Set<number>();

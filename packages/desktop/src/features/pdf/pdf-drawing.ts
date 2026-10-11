@@ -1,6 +1,6 @@
 import { jsPDF } from "jspdf";
 import { fosColor } from "../../utils/fos-color";
-import { circleArcPoints } from "../../utils/arc";
+import { sameSurface, surfaceBaseYAt, surfacePoints } from "../../utils/arc";
 import { computeRegions } from "../../utils/regions";
 import { GRID_RAW_STEP_PX } from "../../constants";
 import {
@@ -645,25 +645,14 @@ export function drawSlipSurfaces(
 
   for (let si = result.allSurfaces.length - 1; si >= 0; si--) {
     const surf = result.allSurfaces[si];
-    if (
-      result.criticalSurface &&
-      surf.cx === result.criticalSurface.cx &&
-      surf.cy === result.criticalSurface.cy &&
-      surf.radius === result.criticalSurface.radius
-    ) {
+    if (result.criticalSurface && sameSurface(surf, result.criticalSurface)) {
       continue;
     }
     if (rvs.surfaceDisplay === "filter" && surf.fos > rvs.fosFilterMax) {
       continue;
     }
 
-    const arcPts = circleArcPoints(
-      surf.cx,
-      surf.cy,
-      surf.radius,
-      surf.entryPoint,
-      surf.exitPoint,
-    );
+    const arcPts = surfacePoints(surf);
     const pdfPts = arcPts.map(([wx, wy]) => tf.worldToPdf(wx, wy));
     const color = parseColor(fosColor(surf.fos, result.minFOS, result.maxFOS));
 
@@ -686,13 +675,8 @@ export function drawCriticalSurface(
   const cs = result.criticalSurface;
   if (!cs) return;
 
-  const arcPts = circleArcPoints(
-    cs.cx,
-    cs.cy,
-    cs.radius,
-    cs.entryPoint,
-    cs.exitPoint,
-  );
+  // Copy: the fill below reverses it in place.
+  const arcPts = [...surfacePoints(cs)];
 
   {
     const entryX = cs.entryPoint[0];
@@ -734,11 +718,7 @@ export function drawCriticalSurface(
     pdf.setLineWidth(SLICE_LINE_WIDTH_PX * tf.mmPerPx);
     setOpacity(pdf, 1, SLICE_LINE_OPACITY);
 
-    const arcYAt = (x: number): number | null => {
-      const dx = x - cs.cx;
-      if (Math.abs(dx) > cs.radius) return null;
-      return cs.cy - Math.sqrt(cs.radius * cs.radius - dx * dx);
-    };
+    const arcYAt = (x: number): number | null => surfaceBaseYAt(cs, x);
 
     const xBounds = new Set<number>();
     for (const slice of result.criticalSlices) {
