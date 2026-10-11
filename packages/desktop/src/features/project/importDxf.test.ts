@@ -30,5 +30,6 @@ describe("importDxf", () => {
     expect(s.materialBoundaries).toHaveLength(1);
     expect(s.piezometricLine.lines).toHaveLength(1);
     expect(message).toContain("1 ARC");
+    expect(s.analysisLimits.enabled).toBe(false);
   });
 });

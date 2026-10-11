@@ -17,6 +17,7 @@ import type { SurfaceDisplayMode } from "../../../store/types";
 import { buildSliceTable, toCsv } from "../../../features/export/sliceTable";
 import { buildXlsx } from "../../../utils/xlsx";
 import { downloadFile, safeFileName } from "../../../utils/download";
+import { useSensitivityStore } from "../../../features/sensitivity/store";
 
 interface Props {
   isOpen: boolean;
@@ -254,6 +255,11 @@ export function ResultsMenu({ isOpen, onActivate, panelHost }: Props) {
                 label="Results Plot"
                 onClick={openResultsPlot}
                 disabled={!hasResult}
+              />
+              <RibbonButton
+                icon={<SensitivityIcon />}
+                label="Sensitivity"
+                onClick={() => useSensitivityStore.getState().setOpen(true)}
               />
             </RibbonGroup>
             <RibbonSep />
@@ -609,6 +615,16 @@ function exportSliceData(format: "xlsx" | "csv" | "csv-se"): void {
       "text/csv;charset=utf-8",
     );
   }
+}
+
+function SensitivityIcon({ size = 20 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <path d="M4 19h16M4 19V5" stroke="#78909c" strokeWidth="1.4" strokeLinecap="round" />
+      <path d="M5.5 16c3-1 5-8 9-9 2-.5 3.5 0 4.5 1" stroke="#26a69a" strokeWidth="2" strokeLinecap="round" fill="none" />
+      <path d="M4 12h16" stroke="#ef5350" strokeWidth="1" strokeDasharray="2 2" />
+    </svg>
+  );
 }
 
 function ResultsPlotIcon({ size = 20 }: { size?: number }) {

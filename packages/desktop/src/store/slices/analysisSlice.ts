@@ -11,7 +11,7 @@ import { ANALYSIS_TIMEOUT_MS } from "../../constants";
 // ── Shared worker execution ────────────────────────────────────────
 
 /** A cancellable handle to a running analysis worker. */
-interface AnalysisHandle {
+export interface AnalysisHandle {
   promise: Promise<AnalysisResult>;
   cancel: () => void;
 }
@@ -41,7 +41,7 @@ function analysisTimeoutMs(options: AnalysisOptions): number {
  * the `AnalysisResult` on success, or rejects on error / timeout.
  * Calling `cancel()` terminates the worker early.
  */
-function executeModelAnalysis(
+export function executeModelAnalysis(
   model: ModelEntry,
   onProgress?: (progress: number) => void,
 ): AnalysisHandle {
@@ -140,7 +140,7 @@ function executeModelAnalysis(
 }
 
 /** Model-shaped snapshot of the active model's analysis inputs. */
-function snapshotFromState(state: AppState): ModelEntry {
+export function snapshotFromState(state: AppState): ModelEntry {
   return {
     id: state.activeModelId,
     name: "",

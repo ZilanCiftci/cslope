@@ -18,7 +18,8 @@ import {
 describe("Verification problems", () => {
   for (const c of VERIFICATION_CASES) {
     for (const check of c.checks) {
-      it(`${c.id} ${c.title}: ${check.label} ${check.published}`, () => {
+      // Searches with non-circular optimisation take a few seconds.
+      it(`${c.id} ${c.title}: ${check.label} ${check.published}`, { timeout: 30000 }, () => {
         const { fos } = runVerification(c.definition, check.method, check.options);
         expect(fos).not.toBeNull();
         expect(Math.abs(fos! - check.published) / check.published).toBeLessThanOrEqual(check.tolerance);

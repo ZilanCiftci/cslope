@@ -51,10 +51,26 @@ function keepVerticesAttached(
 
 type ParametersState = AppState;
 
-const syncActiveModelParameters = (
-  state: ParametersState,
+/** The model fields that parameter expressions can drive. */
+export type ParameterDrivenFields = Pick<
+  AppState,
+  | "coordinates"
+  | "coordinateExpressions"
+  | "materials"
+  | "materialBoundaries"
+  | "piezometricLine"
+  | "udls"
+  | "lineLoads"
+>;
+
+/**
+ * Re-resolve every expression of a model with the given parameter
+ * definitions; returns the updated geometry, materials and loads.
+ */
+export function resolveModelParameters(
+  state: ParameterDrivenFields,
   parameters: ParametersSlice["parameters"],
-) => {
+) {
   const { resolved } = resolveParameters(parameters);
 
   const resolvedCoordinates = resolveCoordinates(
@@ -109,16 +125,6 @@ const syncActiveModelParameters = (
     resolveLineLoadRow(lineLoad, resolved),
   );
 
-  const modelPatch = {
-    parameters,
-    coordinates: resolvedCoordinates,
-    materials: resolvedMaterials,
-    materialBoundaries: resolvedMaterialBoundaries,
-    piezometricLine: resolvedPiezo,
-    udls: resolvedUdls,
-    lineLoads: resolvedLineLoads,
-  };
-
   return {
     parameters,
     coordinates: resolvedCoordinates,
@@ -127,6 +133,16 @@ const syncActiveModelParameters = (
     piezometricLine: resolvedPiezo,
     udls: resolvedUdls,
     lineLoads: resolvedLineLoads,
+  };
+}
+
+const syncActiveModelParameters = (
+  state: ParametersState,
+  parameters: ParametersSlice["parameters"],
+) => {
+  const modelPatch = resolveModelParameters(state, parameters);
+  return {
+    ...modelPatch,
     models: state.models.map((m) =>
       m.id === state.activeModelId ? { ...m, ...modelPatch } : m,
     ),

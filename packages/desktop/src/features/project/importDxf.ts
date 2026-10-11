@@ -19,6 +19,8 @@ export function importDxf(text: string, fileName: string): string {
   s.setOrientation(inferOrientationFromCoordinates(geometry.coordinates));
   for (const boundary of geometry.materialBoundaries) s.addMaterialBoundary(boundary);
   for (const line of geometry.waterLines) s.addPiezoLine(line);
+  // The new model's default search limits belong to the default geometry.
+  s.setAnalysisLimits({ enabled: false });
   useAppStore.setState({ _pendingFitToScreen: true });
 
   const parts = [
