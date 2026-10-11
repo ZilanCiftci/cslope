@@ -8,7 +8,11 @@ import type {
   ProjectInfo,
   ResultViewSettings,
 } from "../../store/types";
-import { surfacePoints, type DrawableSurface } from "../../utils/arc";
+import {
+  fosLabelAnchor,
+  surfacePoints,
+  type DrawableSurface,
+} from "../../utils/arc";
 import { computePaperFrame } from "../view/paper";
 import { MODEL_SHORT_LABELS } from "../rendering/style-spec";
 import { flatFieldsFromModel } from "../properties/sections/material-forms/model-defaults";
@@ -660,7 +664,7 @@ export function extendBoundsWithResultFitExtras(params: {
   if (result.criticalSurface) addSurface(result.criticalSurface);
 
   if (result.criticalSurface && (rvs.showCentreMarker || rvs.showFosLabel)) {
-    addPoint(result.criticalSurface.cx, result.criticalSurface.cy);
+    addPoint(...fosLabelAnchor(result.criticalSurface));
   }
 
   const ctx = canvas?.getContext("2d") ?? null;

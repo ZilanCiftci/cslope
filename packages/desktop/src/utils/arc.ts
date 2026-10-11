@@ -84,3 +84,16 @@ export function sameSurface(a: DrawableSurface, b: DrawableSurface): boolean {
   }
   return a.cx === b.cx && a.cy === b.cy && a.radius === b.radius;
 }
+
+/**
+ * Where the FOS label goes: the circle centre, or for a non-circular
+ * surface (whose (cx, cy) is only the moment axis) above the middle of
+ * the sliding mass.
+ */
+export function fosLabelAnchor(surf: DrawableSurface): [number, number] {
+  if (!surf.points) return [surf.cx, surf.cy];
+  return [
+    (surf.entryPoint[0] + surf.exitPoint[0]) / 2,
+    Math.max(surf.entryPoint[1], surf.exitPoint[1]),
+  ];
+}

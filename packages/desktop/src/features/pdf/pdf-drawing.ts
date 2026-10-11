@@ -1,6 +1,11 @@
 import { jsPDF } from "jspdf";
 import { fosColor } from "../../utils/fos-color";
-import { sameSurface, surfaceBaseYAt, surfacePoints } from "../../utils/arc";
+import {
+  fosLabelAnchor,
+  sameSurface,
+  surfaceBaseYAt,
+  surfacePoints,
+} from "../../utils/arc";
 import { computeRegions } from "../../utils/regions";
 import { GRID_RAW_STEP_PX } from "../../constants";
 import {
@@ -746,7 +751,7 @@ export function drawCriticalSurface(
     pdfPath(pdf, ops, "S");
   }
 
-  if (rvs.showCentreMarker) {
+  if (rvs.showCentreMarker && !cs.points) {
     const [ccx, ccy] = tf.worldToPdf(cs.cx, cs.cy);
     const [epx, epy] = tf.worldToPdf(cs.entryPoint[0], cs.entryPoint[1]);
     const [xpx, xpy] = tf.worldToPdf(cs.exitPoint[0], cs.exitPoint[1]);
@@ -761,7 +766,7 @@ export function drawCriticalSurface(
   }
 
   if (rvs.showFosLabel) {
-    const [ccx, ccy] = tf.worldToPdf(cs.cx, cs.cy);
+    const [ccx, ccy] = tf.worldToPdf(...fosLabelAnchor(cs));
     const fosText = cs.fos.toFixed(3);
     const labelX = ccx + 3;
 

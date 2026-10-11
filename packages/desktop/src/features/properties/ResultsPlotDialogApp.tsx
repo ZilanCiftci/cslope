@@ -3,6 +3,7 @@ import {
   buildSlope,
   getDomainX,
   getSlices,
+  mirrorPoints,
   mirrorX,
   type AnalysisResult,
   type SlipSurfaceResult,
@@ -125,9 +126,7 @@ function toCanonicalSurface(
     exitX: mirrorX(surface.exitPoint[0], xMin, xMax),
     radius: surface.radius,
     // Entry first in both spaces, so mirroring keeps x increasing.
-    points: surface.points?.map(
-      ([x, y]) => [mirrorX(x, xMin, xMax), y] as [number, number],
-    ),
+    points: surface.points && mirrorPoints(surface.points, xMin, xMax),
   };
 }
 

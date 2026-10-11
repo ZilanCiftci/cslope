@@ -4,6 +4,7 @@
  */
 import { describe, it, expect } from "vitest";
 import { getSlices } from "./slices";
+import { defaultAxisPoint } from "./surface";
 import { analyseBishop, analyseMorgensternPrice } from "./solvers";
 import {
   VERIFICATION_CASES,
@@ -196,10 +197,55 @@ describe("Non-circular surfaces", () => {
   });
 
   it("a polyline cutting through the air between entry and exit gives no slices", () => {
-    // The ground at x = 20 is at y = 6.7; the vertex at 9 is in the air.
-    const { slope } = runVerification(layered(ground, -10, soil), "Bishop", { iterations: 500 });
-    const pts: [number, number][] = [[5, 0], [12, -2], [20, 9], [24, 4], [30, 10]];
-    expect(getSlices(slope, 5, 30, 20, 30, 0, pts)).toEqual([]);
+    // Left-to-right slope, so these are canonical coordinates. The ground
+    // at x = 26 is at y = 2.7; the vertex at 5 is in the air.
+    const ltr: [number, number][] = [[0, 10], [15, 10], [30, 0], [40, 0]];
+    const { slope } = runVerification(layered(ltr, -10, soil), "Bishop", { iterations: 500 });
+    const inAir: [number, number][] = [[10, 10], [18, 6], [26, 5], [35, 0]];
+    expect(getSlices(slope, 10, 35, 20, 30, 0, inAir)).toEqual([]);
+    const below: [number, number][] = [[10, 10], [18, 6], [26, 0], [35, 0]];
+    expect(getSlices(slope, 10, 35, 20, 30, 0, below).length).toBeGreaterThan(0);
+  });
+});
+
+describe("Non-circular review fixes", () => {
+  const ground: [number, number][] = [[0, 0], [10, 0], [25, 10], [40, 10]];
+  const soil = [{ name: "S", topY: null, model: mc(10, 25, 19) }];
+
+  it("polyline kinks stay slice boundaries with fixed slices", () => {
+    const ltr: [number, number][] = [[0, 10], [15, 10], [30, 0], [40, 0]];
+    const { slope } = runVerification(layered(ltr, -10, soil), "Bishop", { iterations: 500 });
+    slope.addFixedSlices([14, 22]);
+    const pts: [number, number][] = [[10, 10], [17.37, 7], [25.71, -1], [35, 0]];
+    const slices = getSlices(slope, 10, 35, 20, 30, 0, pts);
+    expect(slices.length).toBeGreaterThan(0);
+    const edges = new Set(slices.flatMap((s) => [s.xLeft, s.xRight]));
+    for (const [x] of pts) expect(edges.has(x)).toBe(true);
+  });
+
+  it("a custom polyline that misses the ground or leaves the model is skipped, not fatal", () => {
+    const def = layered(ground, -10, soil, {
+      customSurfaces: [
+        { points: [[0, 20], [40, 20]] }, // above the ground
+        { points: [[8, 0], [15, -14], [30, 10]] }, // below the model base
+      ],
+    });
+    const { fos, slope } = runVerification(def, "Bishop");
+    expect(fos).not.toBeNull();
+    expect(slope.search.some((p) => p.points)).toBe(false);
+  });
+
+  it("the default axis lies above a deep, skewed surface", () => {
+    const axis = defaultAxisPoint([[0, 0], [0.1, -5], [10, 0]]);
+    expect(axis[1]).toBeGreaterThan(2);
+  });
+
+  it("optimisation respects the minimum failure distance", () => {
+    const def = layered(ground, -10, [{ name: "S", topY: null, model: mc(0, 30, 19) }]);
+    const { slope } = runVerification(def, "Bishop", { nonCircularOptimization: true, minFailureDist: 15 });
+    for (const p of slope.search) {
+      if (p.points && p.fos != null) expect(p.rc[0] - p.lc[0]).toBeGreaterThan(15);
+    }
   });
 });
 

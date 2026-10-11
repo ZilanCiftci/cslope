@@ -217,9 +217,12 @@ function analyse(
     }
   }
 
-  const criticalPushingMoment = computeCriticalPushingMoment(
-    validSurfaces[0]?.slices,
-  );
+  // Moments about a circle's centre; on a non-circular surface they
+  // depend on the axis point and the solved normal forces, so none are
+  // reported.
+  const criticalPushingMoment = validSurfaces[0]?.points
+    ? null
+    : computeCriticalPushingMoment(validSurfaces[0]?.slices);
   const criticalSlipVolume = computeCriticalSlipVolume(
     validSurfaces[0]?.slices,
   );

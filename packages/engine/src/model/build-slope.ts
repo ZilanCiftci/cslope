@@ -12,7 +12,11 @@ import type { MohrCoulombModel } from "../types/material-models";
 import { validateMaterialModel } from "../types/validation";
 import { Slope } from "./slope";
 import { addSingleCircularPlane } from "./search";
-import { defaultAxisPoint, fitPolylineToGround } from "./surface";
+import {
+  defaultAxisPoint,
+  fitPolylineToGround,
+  isAdmissiblePolyline,
+} from "./surface";
 
 /**
  * Compute the midpoint along a polyline at half of its total arc length.
@@ -229,13 +233,11 @@ export function buildSlope(def: SlopeDefinition): Slope {
 
   // Custom non-circular surfaces
   if (def.customSurfaces) {
-    def.customSurfaces.forEach((surface, i) => {
+    for (const surface of def.customSurfaces) {
+      // Like a custom circle that misses the ground, a polyline that does
+      // not cut through the soil or leaves the model is no surface.
       const points = fitPolylineToGround(slope, surface.points);
-      if (!points) {
-        throw new Error(
-          `Non-circular surface ${i + 1} does not cut through the ground: it needs at least two points with x increasing, passing below the ground surface.`,
-        );
-      }
+      if (!points || !isAdmissiblePolyline(slope, points, Infinity)) continue;
       const [cx, cy] = defaultAxisPoint(points);
       slope.addIndividualPlanes([
         {
@@ -249,7 +251,7 @@ export function buildSlope(def: SlopeDefinition): Slope {
           slices: null,
         },
       ]);
-    });
+    }
   }
 
   // Custom-planes-only mode: skip random search generation

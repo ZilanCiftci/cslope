@@ -85,11 +85,23 @@ function optimiseSeed(
   budget: number,
 ): SearchPlane | null {
   const axis: Pt = [seed.cx, seed.cy];
-  let points = circleToPolyline(seed.cx, seed.cy, seed.radius, seed.lc, seed.rc, START_VERTICES);
-  let best = makePlane(points, axis);
-  evaluate([best]);
-  let used = 1;
-  if (best.fos == null) return null;
+  // Start from the circle as a polyline; under a convex crest the chords
+  // near the entry can cut through the air, so try finer ones before
+  // giving up on the seed.
+  let points: Pt[] = [];
+  let best: SearchPlane | null = null;
+  let used = 0;
+  for (const vertices of [START_VERTICES, MAX_VERTICES, 2 * MAX_VERTICES - 1]) {
+    points = circleToPolyline(seed.cx, seed.cy, seed.radius, seed.lc, seed.rc, vertices);
+    const plane = makePlane(points, axis);
+    evaluate([plane]);
+    used++;
+    if (plane.fos != null) {
+      best = plane;
+      break;
+    }
+  }
+  if (!best) return null;
 
   const groundAt = (x: number) => slope.getExternalYIntersection(x);
   const [entryL, entryR, exitL, exitR] = slope.limits;
@@ -101,13 +113,20 @@ function optimiseSeed(
   const span = points[points.length - 1][0] - points[0][0];
   const minStep = Math.max(1e-3, 2e-3 * depth);
 
+  const minLength = Math.max(slope.minFailureDistance, 0);
   const tryCandidate = (candidate: Pt[]): boolean => {
     if (used >= budget) return false;
+    if (candidate[candidate.length - 1][0] - candidate[0][0] <= minLength) return false;
+    if (slope.minSlipDepth > 0) {
+      let d = 0;
+      for (const [x, y] of candidate) d = Math.max(d, groundAt(x) - y);
+      if (d < slope.minSlipDepth) return false;
+    }
     if (!isAdmissiblePolyline(slope, candidate)) return false;
     const plane = makePlane(candidate, axis);
     evaluate([plane]);
     used++;
-    if (plane.fos != null && plane.fos < best.fos! - 1e-6) {
+    if (plane.fos != null && plane.fos < best!.fos! - 1e-6) {
       best = plane;
       points = candidate;
       return true;
@@ -149,12 +168,14 @@ function optimiseSeed(
         const [bx, by] = points[i];
         refined.push([(ax + bx) / 2, (ay + by) / 2], [bx, by]);
       }
-      points = refined;
-      const plane = makePlane(points, axis);
+      // Continue from the refined shape, but keep the best surface found:
+      // the extra slice boundaries change the FOS slightly.
+      const plane = makePlane(refined, axis);
       evaluate([plane]);
       used++;
       if (plane.fos == null) break;
-      best = plane;
+      points = refined;
+      if (plane.fos < best.fos!) best = plane;
     } else {
       break;
     }

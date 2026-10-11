@@ -215,10 +215,13 @@ function solveFOSGenericMoment(
           prevFOS,
         );
         const R = p.shearArms[i];
-        let res = (c * bl + (N - U * bl) * tanPhi) * R;
+        const shear = c * bl + (N - U * bl) * tanPhi;
+        let res = shear * R;
         // Combined method: where the undrained strength governs, the
         // slice must be in equilibrium with that (smaller) shear too.
-        if (matCode === 1 && !(res >= 0 && res <= cu * bl * R)) {
+        // (Compared as forces: on a non-circular surface the arm can be
+        // negative.)
+        if (matCode === 1 && !(shear >= 0 && shear <= cu * bl)) {
           [N, eRight, xRight] = solveSliceNormal(
             W,
             xLeft,
@@ -395,6 +398,15 @@ function solveFOSGenericForceCircular(
 export function analyseOrdinary(_slope: Slope, slices: Slice[]): number | null {
   let pushing = 0;
   let resisting = 0;
+  // External moments as forces along the base: divided by the mean shear
+  // arm (the radius on a circle; per-slice arms on a polyline can be ~0).
+  let armSum = 0;
+  let lenSum = 0;
+  for (const s of slices) {
+    armSum += s.R * s.baseLength;
+    lenSum += s.baseLength;
+  }
+  const meanArm = lenSum > 0 ? armSum / lenSum : 0;
 
   for (const s of slices) {
     const W = sliceVerticalLoad(s);
@@ -413,7 +425,9 @@ export function analyseOrdinary(_slope: Slope, slices: Slice[]): number | null {
           Math.tan(s.phi);
     }
 
-    pushing += W * Math.sin(s.alpha) + (s.extraMoment ?? 0) / s.R;
+    pushing +=
+      W * Math.sin(s.alpha) +
+      (meanArm > 1e-9 ? (s.extraMoment ?? 0) / meanArm : 0);
   }
 
   if (pushing <= 0) return null;
@@ -842,9 +856,7 @@ export function analyseSlope(slope: Slope): number | null {
   const allPlanes: SearchPlane[] = [];
   const seenPlanes = new Set<string>();
   for (const plane of combinedPlanes) {
-    const key = plane.points
-      ? JSON.stringify(plane.points)
-      : `${plane.cx}|${plane.cy}|${plane.radius}`;
+    const key = planeKey(plane);
     if (seenPlanes.has(key)) continue;
     seenPlanes.add(key);
     allPlanes.push(plane);
@@ -1012,11 +1024,19 @@ export function sliceVerticalLoad(s: Pick<Slice, "weight" | "udl" | "ll" | "wate
   return s.weight + s.udl + s.ll + (s.waterLoad ?? 0);
 }
 
-/** Driving moment of a slice about the circle centre (kN·m). */
+/**
+ * Driving moment of a slice about the circle centre (kN·m). On a
+ * non-circular surface the base normal force has a moment too; it is
+ * estimated here with N ≈ W·cos α (the solvers use the solved N).
+ */
 export function sliceDrivingMoment(
-  s: Pick<Slice, "weight" | "udl" | "ll" | "waterLoad" | "dx" | "extraMoment">,
+  s: Pick<
+    Slice,
+    "weight" | "udl" | "ll" | "waterLoad" | "dx" | "extraMoment" | "alpha" | "normalArm"
+  >,
 ): number {
-  return sliceVerticalLoad(s) * s.dx + (s.extraMoment ?? 0);
+  const W = sliceVerticalLoad(s);
+  return W * s.dx + (s.extraMoment ?? 0) + W * Math.cos(s.alpha) * (s.normalArm ?? 0);
 }
 
 /** True when the slices' net driving moment is clearly positive. */

@@ -1,6 +1,7 @@
 import { PAPER_DIMENSIONS, PLOT_MARGINS } from "../../store/app-store";
 import type { AppState } from "../../store/types";
 import {
+  fosLabelAnchor,
   sameSurface,
   surfaceBaseYAt,
   surfacePoints,
@@ -137,7 +138,6 @@ function getArcKey(surf: ArcSurface): string {
     surf.entryPoint[1],
     surf.exitPoint[0],
     surf.exitPoint[1],
-    surf.points ? surf.points.flat().join(",") : "",
   ].join("|");
 }
 
@@ -1301,7 +1301,8 @@ export function drawCanvas(
     const rvs = resultViewSettings;
     const arcCache = getArcCache(result);
     const getArcPoints = (surf: ArcSurface) => {
-      if (!arcCache) return surfacePoints(surf);
+      // Polylines are their own points; only arcs are sampled and cached.
+      if (!arcCache || surf.points) return surfacePoints(surf);
       const key = getArcKey(surf);
       const cached = arcCache.get(key);
       if (cached) return cached;
@@ -1445,8 +1446,9 @@ export function drawCanvas(
       }
       ctx.stroke();
 
-      // Centre dot and radius lines to entry/exit
-      if (rvs.showCentreMarker) {
+      // Centre dot and radius lines to entry/exit (circles only: the
+      // axis point of a non-circular surface is no centre)
+      if (rvs.showCentreMarker && !cs.points) {
         const [ccx, ccy] = worldToCanvas(cs.cx, cs.cy, w, h);
         const [epx, epy] = worldToCanvas(
           cs.entryPoint[0],
@@ -1482,7 +1484,8 @@ export function drawCanvas(
 
       // FOS label to the right of the circle centre
       if (rvs.showFosLabel) {
-        const [ccx2, ccy2] = worldToCanvas(cs.cx, cs.cy, w, h);
+        const [ax, ay] = fosLabelAnchor(cs);
+        const [ccx2, ccy2] = worldToCanvas(ax, ay, w, h);
         const fosText = cs.fos.toFixed(3);
         ctx.font = `bold ${12 * paperZoom}px sans-serif`;
         const tw = ctx.measureText(fosText).width;

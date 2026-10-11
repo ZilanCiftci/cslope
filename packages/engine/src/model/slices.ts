@@ -322,6 +322,11 @@ export function getSlices(
   allSlicesSet.add(x0);
   allSlicesSet.add(x1);
 
+  // A polyline's kinks must be slice boundaries (straight bases), also
+  // with fixed slices.
+  if (poly) {
+    for (const [px] of poly) if (px > x0 && px < x1) allSlicesSet.add(px);
+  }
   if (slope.fixedSlices) {
     for (const fx of slope.fixedSlices) {
       if (fx > x0 && fx < x1) allSlicesSet.add(fx);
@@ -329,10 +334,6 @@ export function getSlices(
   } else {
     // Determine geometry-critical points
     const radiusSq = radius ** 2;
-    // A polyline's kinks must be slice boundaries (straight bases).
-    if (poly) {
-      for (const [px] of poly) if (px > x0 && px < x1) allSlicesSet.add(px);
-    }
     for (const mg of slope.materialGeometries) {
       // Polygon corner points within the sliding mass
       for (let i = 0; i < mg.px.length; i++) {

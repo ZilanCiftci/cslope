@@ -84,7 +84,8 @@ export function defaultAxisPoint(points: readonly Pt[]): Pt {
     }
   }
   const mid: Pt = [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2];
-  if (depth < 1e-6 * len) return [mid[0] + nx * len, mid[1] + ny * len];
+  const fallback: Pt = [mid[0] + nx * len, mid[1] + ny * len];
+  if (depth < 1e-6 * len) return fallback;
   // Circumcentre of a, b, deepest.
   const [x1, y1] = a;
   const [x2, y2] = b;
@@ -93,10 +94,17 @@ export function defaultAxisPoint(points: readonly Pt[]): Pt {
   const s1 = x1 * x1 + y1 * y1;
   const s2 = x2 * x2 + y2 * y2;
   const s3 = x3 * x3 + y3 * y3;
-  return [
+  const centre: Pt = [
     (s1 * (y2 - y3) + s2 * (y3 - y1) + s3 * (y1 - y2)) / d,
     (s1 * (x3 - x2) + s2 * (x1 - x3) + s3 * (x2 - x1)) / d,
   ];
+  // The axis must lie above the sliding mass: for deep or skewed surfaces
+  // the circumcentre drops below the chord (tiny or negative shear arms).
+  const above = (centre[0] - mid[0]) * nx + (centre[1] - mid[1]) * ny;
+  if (!(above > 0.25 * len) || Math.hypot(centre[0] - mid[0], centre[1] - mid[1]) > 10 * len) {
+    return fallback;
+  }
+  return centre;
 }
 
 /**
