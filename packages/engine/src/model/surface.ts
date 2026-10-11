@@ -174,9 +174,18 @@ export function fitPolylineToGround(
   }
 
   // Crossings with the ground: entry = first down-crossing, exit = the
-  // next up-crossing.
+  // next up-crossing. Kept within the polyline: for a polyline that ends
+  // on the ground (e.g. one fitted before, as the reliability analysis
+  // passes back) rounding can put the crossing a hair beyond the end
+  // vertex, where the polyline has no height (NaN exit, surface dropped).
+  const xFirst = pts[0][0];
+  const xLast = pts[pts.length - 1][0];
   const crossings = [
-    ...new Set(polylineCrossingsX(pts, surf.x, surf.y, false)),
+    ...new Set(
+      polylineCrossingsX(pts, surf.x, surf.y, false).map((x) =>
+        Math.min(xLast, Math.max(xFirst, x)),
+      ),
+    ),
   ].sort((p, q) => p - q);
   const eps = 1e-6;
   let entry: number | null = null;

@@ -301,6 +301,9 @@ export function analyseReliability(
   const random = rng(ro.seed ?? 1);
   const L = cholesky(corr);
   const slope = build(onSurface(def, atMean.surface), options);
+  if (slope.individualPlanes.length === 0) {
+    throw new Error("The critical surface at the mean values could not be set up again for the samples.");
+  }
   const materialsByIndex = def.materials.map((m) =>
     slope.materialGeometries.map((g) => g.material).find((mat) => mat.name === m.name) ?? null,
   );

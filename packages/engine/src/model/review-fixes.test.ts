@@ -2,6 +2,9 @@ import { describe, it, expect } from "vitest";
 import { buildSlope } from "./build-slope";
 import { toCanonicalSlopeDefinition } from "./canonical";
 import { VERIFICATION_CASES, runVerification } from "../verification/cases";
+import { CORPUS_CASES } from "../verification/corpus-cases";
+import { analyseReliability } from "./reliability";
+import { fitPolylineToGround } from "./surface";
 
 const caseById = (id: string) => {
   const c = VERIFICATION_CASES.find((v) => v.id === id);
@@ -71,4 +74,32 @@ describe("Morgenstern-Price λ iteration", () => {
     const exitDeg = (Math.atan2(b[1] - a[1], b[0] - a[0]) * 180) / Math.PI;
     expect(exitDeg).toBeLessThan(45);
   }, 60_000);
+});
+
+describe("Monte Carlo on a specified non-circular surface", () => {
+  const vp34 = CORPUS_CASES.find((c) => c.id === "VP34")!;
+  const def = toCanonicalSlopeDefinition(vp34.definition);
+  const options = { ...vp34.options, method: "Morgenstern-Price" as const, intersliceFunction: "constant" as const };
+
+  it("fits an already fitted polyline to the same surface", () => {
+    // The printed surface ends just above the ground; once fitted its exit
+    // lies on the ground and the crossing came out a hair beyond the end
+    // vertex (exit height NaN), so the surface was dropped when rebuilt.
+    const slope = buildSlope(def);
+    const fitted = fitPolylineToGround(slope, def.customSurfaces![0].points)!;
+    const refit = fitPolylineToGround(slope, fitted);
+    expect(refit).not.toBeNull();
+    expect(refit!.every(([x, y]) => Number.isFinite(x) && Number.isFinite(y))).toBe(true);
+    expect(refit!.length).toBe(fitted.length);
+  });
+
+  it("samples VP34's printed surface", () => {
+    const r = analyseReliability(def, options, [{ material: 0, field: "cohesion", sd: 1e-6 }], {
+      method: "monte-carlo",
+      samples: 20,
+    });
+    expect(r.failed).toBe(0);
+    expect(r.samples!.length).toBe(20);
+    expect(r.meanFOS).toBeCloseTo(r.fos, 6);
+  });
 });
