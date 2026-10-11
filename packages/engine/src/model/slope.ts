@@ -74,6 +74,8 @@ export interface SearchPlane {
 
 /** Smallest useful inner iteration limit for the FOS solvers. */
 const MIN_MAX_ITERATIONS = 6;
+/** Default smallest sliding mass, as a fraction of the model area. */
+const AUTO_MIN_SLIP_AREA = 1e-3;
 
 // ── Slope Class ───────────────────────────────────────────────────
 
@@ -123,6 +125,8 @@ export class Slope {
   private _partialFactors: PartialFactors | null = null;
   private _nonCircularOptimization = false;
   private _minSlipDepth = 0;
+  /** Null: automatic (see minSlipArea). */
+  private _minSlipArea: number | null = null;
   private _intersliceDataPoints: [number, number][];
 
   // ── Analysis limits ───────────────────────────────────────────
@@ -293,6 +297,26 @@ export class Slope {
 
   get nonCircularOptimization(): boolean {
     return this._nonCircularOptimization;
+  }
+
+  /**
+   * Smallest sliding mass that is analysed (m²): the set value, or by
+   * default 0.1 % of the model's cross-section area.
+   */
+  get minSlipArea(): number {
+    return this._minSlipArea ?? AUTO_MIN_SLIP_AREA * this.modelArea;
+  }
+
+  /** Cross-section area of the model (inside the external boundary). */
+  get modelArea(): number {
+    const px = this._externalBoundaryPx;
+    const py = this._externalBoundaryPy;
+    let a = 0;
+    for (let i = 0; i < px.length; i++) {
+      const j = (i + 1) % px.length;
+      a += px[i] * py[j] - px[j] * py[i];
+    }
+    return Math.abs(a) / 2;
   }
 
   /** Height of the model (extent of the external boundary in y). */
@@ -743,6 +767,15 @@ export class Slope {
         throw new Error("minSlipDepth must be a number ≥ 0");
       }
       this._minSlipDepth = opts.minSlipDepth;
+    }
+    if (opts.minSlipArea !== undefined) {
+      if (
+        opts.minSlipArea !== null &&
+        (!Number.isFinite(opts.minSlipArea) || opts.minSlipArea < 0)
+      ) {
+        throw new Error("minSlipArea must be a number ≥ 0 or null");
+      }
+      this._minSlipArea = opts.minSlipArea;
     }
     if (opts.partialFactors !== undefined) {
       const f = opts.partialFactors;

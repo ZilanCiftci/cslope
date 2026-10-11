@@ -799,6 +799,11 @@ function normalizeAnalysisOptions(raw: unknown): AnalysisOptions {
     o.minSlipDepth > 0
       ? { minSlipDepth: o.minSlipDepth }
       : {}),
+    ...(typeof o.minSlipArea === "number" &&
+    Number.isFinite(o.minSlipArea) &&
+    o.minSlipArea >= 0
+      ? { minSlipArea: o.minSlipArea }
+      : {}),
     tensionCrackDepth: Math.max(
       0,
       finiteOr(o.tensionCrackDepth, base.tensionCrackDepth ?? 0),

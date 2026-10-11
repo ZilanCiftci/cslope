@@ -960,6 +960,20 @@ function evaluatePlanes(slope: Slope, allPlanes: SearchPlane[]): void {
       }
     }
 
+    // Minimum size of the sliding mass (micro-surfaces are of no interest
+    // and their FOS is arbitrarily high in cohesive soil).
+    const minArea = slope.minSlipArea;
+    if (minArea > 0) {
+      let area = 0;
+      for (const s of slices) area += s.area;
+      if (area < minArea) {
+        plane.fos = null;
+        plane.slices = slices;
+        plane.converged = true;
+        continue;
+      }
+    }
+
     // If any slice has skipSurface (e.g. high-strength material) or
     // impenetrable (bedrock), the surface is invalid — skip analysis.
     if (slices.some((s) => s.skipSurface || s.impenetrable)) {

@@ -400,7 +400,19 @@ export function OptionsSection({ plain = false }: OptionsSectionProps) {
             title="Surfaces less deep than this below the ground are not analysed (e.g. shallow slivers under line loads). 0 = no limit."
           />
         </label>
-        <div />
+        <label className="flex flex-col gap-0.5">
+          <Label>Min. sliding area (m²)</Label>
+          <DraftNumberInput
+            value={options.minSlipArea ?? undefined}
+            min={0}
+            step={0.5}
+            placeholder="Auto"
+            onValueChange={(v) => v >= 0 && setOptions({ minSlipArea: v })}
+            onClear={() => setOptions({ minSlipArea: undefined })}
+            aria-label="Minimum sliding area"
+            title="Surfaces whose sliding mass is smaller than this are not analysed. Empty = automatic (0.1 % of the model's cross-section area, skips micro-surfaces); 0 = no limit."
+          />
+        </label>
         <label
           className="col-span-2 flex items-center gap-1.5"
           title="Also search for sliding in the opposite direction (with automatic search limits) and report the lower FOS."

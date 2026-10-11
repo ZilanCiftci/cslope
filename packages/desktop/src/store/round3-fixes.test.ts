@@ -190,12 +190,14 @@ describe("non-circular surfaces in the model", () => {
     const id = useAppStore.getState().customSearchPlanes[0].id;
     useAppStore.getState().updateCustomSearchPlane(id, { points: [[1, 2], [3, 1], [6, 4]] });
     useAppStore.getState().addCustomSearchPlane("circle");
-    useAppStore.getState().setOptions({ nonCircularOptimization: true, minSlipDepth: 1.5 });
+    useAppStore.getState().setOptions({ nonCircularOptimization: true, minSlipDepth: 1.5, minSlipArea: 0 });
     const raw = JSON.parse(JSON.stringify(serializeProject(useAppStore.getState())));
     const model = parseProjectFile(JSON.stringify(raw)).models[0];
     expect(model.customSearchPlanes[0].points).toEqual([[1, 2], [3, 1], [6, 4]]);
     expect(model.options?.nonCircularOptimization).toBe(true);
     expect(model.options?.minSlipDepth).toBe(1.5);
+    // 0 (no limit) is kept; it differs from the automatic default.
+    expect(model.options?.minSlipArea).toBe(0);
     const dto = buildSlopeDTOFromModel(model);
     expect(dto.customSearchPlanes).toHaveLength(1);
     expect(dto.customSurfaces).toHaveLength(1);

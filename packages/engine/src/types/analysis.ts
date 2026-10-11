@@ -78,6 +78,12 @@ export interface AnalysisOptions {
    * analysed (default 0).
    */
   minSlipDepth?: number;
+  /**
+   * Surfaces whose sliding mass is smaller than this (m²) are not
+   * analysed. Null or not set: automatic, 0.1 % of the model's
+   * cross-section area. 0: no limit.
+   */
+  minSlipArea?: number | null;
 }
 
 /** Partial factors applied to characteristic values. */

@@ -274,4 +274,19 @@ describe("Minimum slip depth", () => {
       expect(depth).toBeGreaterThanOrEqual(minDepth);
     }
   });
+  it("sliding masses below the minimum area are skipped (automatic by default)", () => {
+    const def = layered([[0, 0], [10, 0], [25, 10], [40, 10]], -10, [{ name: "C", topY: null, model: su(12, 19) }]);
+    const area = (p: { slices?: { area: number }[] }) => p.slices!.reduce((a, s) => a + s.area, 0);
+    const auto = runVerification(def, "Bishop");
+    expect(auto.slope.minSlipArea).toBeCloseTo(1e-3 * auto.slope.modelArea);
+    for (const p of auto.slope.search) {
+      if (p.fos != null) expect(area(p)).toBeGreaterThanOrEqual(auto.slope.minSlipArea);
+    }
+    const set = runVerification(def, "Bishop", { minSlipArea: 5 });
+    for (const p of set.slope.search) if (p.fos != null) expect(area(p)).toBeGreaterThanOrEqual(5);
+    // 0 turns the limit off: smaller surfaces are analysed again.
+    const off = runVerification(def, "Bishop", { minSlipArea: 0 });
+    expect(off.slope.search.some((p) => p.fos != null && area(p) < auto.slope.minSlipArea)).toBe(true);
+    expect(auto.fos!).toBeCloseTo(off.fos!, 6);
+  });
 });
