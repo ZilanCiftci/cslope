@@ -344,7 +344,13 @@ export function exportVectorPdf(data: PdfExportData): void {
     }
 
     if (piezometricLine.lines.length > 0) {
-      drawPiezometricLines(pdf, tf, piezometricLine.lines, coordinates);
+      drawPiezometricLines(
+        pdf,
+        tf,
+        piezometricLine.lines,
+        coordinates,
+        piezometricLine.freeWater !== false,
+      );
     }
 
     if (analysisLimits.enabled && coordinates.length >= 3) {

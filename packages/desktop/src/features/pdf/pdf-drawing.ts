@@ -47,7 +47,7 @@ import {
   MODEL_HATCH_PATTERNS,
 } from "../rendering/style-spec";
 import { drawPdfHatch, drawPdfHatchLabel } from "../rendering/hatch";
-import { piezoExtensions } from "../../utils/piezo";
+import { freeWaterPolygons, piezoExtensions } from "../../utils/piezo";
 import type { AnalysisResult } from "@cslope/engine";
 import type {
   AnalysisLimitsState,
@@ -437,8 +437,20 @@ export function drawPiezometricLines(
   tf: PdfTransform,
   lines: { id: string; coordinates: [number, number][] }[],
   modelCoordinates: [number, number][] = [],
+  freeWater = false,
 ) {
   const multiLine = lines.length > 1;
+
+  // Free water standing on the ground (from the first line), as on canvas.
+  if (freeWater && lines[0]) {
+    pdf.setFillColor(...PIEZO_COLOR.rgb);
+    setOpacity(pdf, 0.15);
+    for (const poly of freeWaterPolygons(lines[0].coordinates, modelCoordinates)) {
+      const pts = poly.map(([wx, wy]) => tf.worldToPdf(wx, wy));
+      pdfPath(pdf, buildPolylinePath(pts, true), "F");
+    }
+    resetOpacity(pdf);
+  }
 
   for (let lineIdx = 0; lineIdx < lines.length; lineIdx++) {
     const line = lines[lineIdx];

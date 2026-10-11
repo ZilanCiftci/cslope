@@ -105,7 +105,7 @@ self.onmessage = (event: MessageEvent<AnalysisRequest>) => {
       // Convert slices for critical surface
       if (crit.slices) {
         for (const s of crit.slices) {
-          const surfaceLoad = s.udl + s.ll;
+          const surfaceLoad = s.udl + s.ll + (s.waterLoad ?? 0);
           criticalSlices.push({
             x: s.x,
             xLeft: s.xLeft,

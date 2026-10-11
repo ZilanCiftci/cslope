@@ -35,8 +35,9 @@ import type {
 /**
  * 2: vertical pore-pressure head is the default, and the S = f(datum) rate
  *    is positive for strength increasing with depth (was: with elevation).
+ * 3: a water line above the ground acts as free water (was: clipped).
  */
-export const PROJECT_FILE_VERSION = 2;
+export const PROJECT_FILE_VERSION = 3;
 
 export interface ProjectFile {
   version: number;
@@ -74,6 +75,7 @@ export function parseProjectFile(contents: string): ProjectFile {
   const fileVersion = typeof root.version === "number" ? root.version : 1;
   const models = root.models
     .map((m) => (fileVersion < 2 ? migrateModelFromV1(m) : m))
+    .map((m) => (fileVersion < 3 ? migrateModelFromV2(m) : m))
     .map(normalizeModelEntry);
   const requestedActiveId =
     typeof root.activeModelId === "string" ? root.activeModelId : undefined;
@@ -130,6 +132,15 @@ function migrateModelFromV1(raw: unknown): unknown {
     });
   }
   return model;
+}
+
+/** Files before version 3 clipped water lines to the ground surface. */
+function migrateModelFromV2(raw: unknown): unknown {
+  if (!raw || typeof raw !== "object") return raw;
+  const model = raw as Record<string, unknown>;
+  const piezo = model.piezometricLine;
+  if (!piezo || typeof piezo !== "object") return raw;
+  return { ...model, piezometricLine: { ...piezo, freeWater: false } };
 }
 
 function normalizeModelEntry(raw: unknown): ModelEntry {
@@ -490,6 +501,7 @@ function normalizePiezo(raw: unknown): PiezometricLineState {
     lines,
     activeLineId,
     materialAssignment,
+    ...(typeof piezo.freeWater === "boolean" ? { freeWater: piezo.freeWater } : {}),
   };
 }
 

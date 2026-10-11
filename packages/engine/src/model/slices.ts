@@ -471,11 +471,63 @@ export function getSlices(
     );
 
     if (s !== null && s.isValid) {
+      if (waterY) applyFreeWater(s, waterY[i], waterY[i + 1], cy);
       results.push(s);
     }
   }
 
   return results;
+}
+
+/**
+ * Water standing above the ground (a water line above the surface, e.g. a
+ * submerged slope or a lake at the toe) presses on the slice top: its
+ * weight acts as a vertical load and, on an inclined surface, it pushes
+ * horizontally. Without this the base carried the full pore pressure of
+ * the water depth but nothing balanced it, and a fully submerged slope
+ * gave about half its FOS. Slide and SLOPE/W apply this automatically.
+ *
+ * The pressure γw·g(x), with g the water depth above the surface, is
+ * integrated over the wet part of the slice top: vertical load ∫p dx,
+ * horizontal force ∫p dy = slope·∫p dx, and their moment about the centre.
+ */
+function applyFreeWater(
+  s: Slice,
+  wyLeft: number,
+  wyRight: number,
+  cy: number,
+): void {
+  if (!Number.isFinite(wyLeft) || !Number.isFinite(wyRight)) return;
+  const g0 = wyLeft - s.y0Top;
+  const g1 = wyRight - s.y1Top;
+  if (g0 <= 0 && g1 <= 0) return;
+  const b = s.xRight - s.xLeft;
+  if (b <= 0) return;
+  // Wet part of the slice top as fractions of its width.
+  let ta = 0;
+  let tb = 1;
+  if (g0 <= 0) ta = g0 / (g0 - g1);
+  if (g1 <= 0) tb = g0 / (g0 - g1);
+  const cx = s.x + s.dx;
+  const surfaceSlope = (s.y1Top - s.y0Top) / b;
+  const depth = (t: number) => Math.max(g0 + (g1 - g0) * t, 0);
+  const xAt = (t: number) => s.xLeft + b * t;
+  const yAt = (t: number) => s.y0Top + (s.y1Top - s.y0Top) * t;
+  // Moment of the pressure per unit x: downward part at arm (cx − x),
+  // horizontal part at arm (cy − y). Quadratic in t, so Simpson is exact.
+  const momentDensity = (t: number) =>
+    depth(t) * (cx - xAt(t) + surfaceSlope * (cy - yAt(t)));
+  const tm = (ta + tb) / 2;
+  const len = (tb - ta) * b;
+  const load = WATER_UNIT_WEIGHT * len * ((depth(ta) + depth(tb)) / 2);
+  const moment =
+    (WATER_UNIT_WEIGHT * len *
+      (momentDensity(ta) + 4 * momentDensity(tm) + momentDensity(tb))) /
+    6;
+  s.waterLoad = load;
+  s.hForce = (s.hForce ?? 0) + surfaceSlope * load;
+  // The solvers already take the vertical load at the slice centre.
+  s.extraMoment = (s.extraMoment ?? 0) + moment - load * s.dx;
 }
 
 /**

@@ -21,6 +21,7 @@ export function PiezometricLineSection() {
   const setPiezoMaterialAssignment = useAppStore(
     (s) => s.setPiezoMaterialAssignment,
   );
+  const setPiezoFreeWater = useAppStore((s) => s.setPiezoFreeWater);
   const coordinates = useAppStore((s) => s.coordinates);
 
   const activeLine =
@@ -245,6 +246,19 @@ export function PiezometricLineSection() {
               </button>
             </>
           )}
+
+          <label
+            className="flex items-center gap-1.5 text-[11px] mt-2"
+            title="Where the line lies above the ground the water stands on the slope and loads it, as in Slide and SLOPE/W. Off: the line is clipped to the ground surface."
+          >
+            <input
+              type="checkbox"
+              checked={pl.freeWater !== false}
+              onChange={(e) => setPiezoFreeWater(e.target.checked)}
+              aria-label="Free water above ground"
+            />
+            Free water above ground (ponding)
+          </label>
 
           {pl.lines.length > 1 && materials.length > 0 && (
             <>

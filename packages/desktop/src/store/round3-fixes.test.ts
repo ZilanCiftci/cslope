@@ -1,7 +1,8 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import { useAppStore } from "./app-store";
 import { findExpressionErrors } from "./expression-check";
-import { parseProjectFile, serializeProject } from "./persistence";
+import { PROJECT_FILE_VERSION, parseProjectFile, serializeProject } from "./persistence";
+import { buildSlopeDTOFromModel } from "./helpers";
 import { evaluate } from "../utils/expression";
 import type { AnalysisResult } from "@cslope/engine";
 import type { ModelEntry } from "./types";
@@ -98,7 +99,7 @@ describe("pore pressure head option", () => {
     delete raw.models[0].options;
     const parsed = parseProjectFile(JSON.stringify(raw));
     expect(parsed.models[0].options?.porePressureHead).toBe("phreatic-correction");
-    expect(parsed.version).toBe(2);
+    expect(parsed.version).toBe(PROJECT_FILE_VERSION);
   });
 });
 
@@ -120,5 +121,34 @@ describe("S = f(datum) sign convention", () => {
     const v2 = parseProjectFile(JSON.stringify(raw)).models[0].materials[0];
     expect(v2.model).toMatchObject({ rate: -12.7 });
     expect(v2.modelExpressions?.rate).toBe("k*2");
+  });
+});
+
+describe("free water above ground", () => {
+  const withLine = () => {
+    useAppStore.getState().newProject();
+    useAppStore.getState().enablePiezoWithDefault();
+    return JSON.parse(JSON.stringify(serializeProject(useAppStore.getState())));
+  };
+
+  it("is on for new models and reaches the engine as an unclipped line", () => {
+    const raw = withLine();
+    const model = parseProjectFile(JSON.stringify(raw)).models[0];
+    expect(model.piezometricLine.freeWater).not.toBe(false);
+    expect(buildSlopeDTOFromModel(model).waterTable?.followBoundary).toBe(false);
+  });
+
+  it("stays off for files from before version 3", () => {
+    const raw = withLine();
+    raw.version = 2;
+    const model = parseProjectFile(JSON.stringify(raw)).models[0];
+    expect(model.piezometricLine.freeWater).toBe(false);
+    expect(buildSlopeDTOFromModel(model).waterTable?.followBoundary).toBe(true);
+  });
+
+  it("can be switched off", () => {
+    withLine();
+    useAppStore.getState().setPiezoFreeWater(false);
+    expect(useAppStore.getState().piezometricLine.freeWater).toBe(false);
   });
 });

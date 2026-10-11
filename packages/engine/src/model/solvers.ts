@@ -22,6 +22,8 @@ interface SliceArrays {
   weights: Float64Array;
   udls: Float64Array;
   lls: Float64Array;
+  hForces: Float64Array;
+  extraMoments: Float64Array;
   alphas: Float64Array;
   baseLengths: Float64Array;
   phis: Float64Array;
@@ -44,6 +46,8 @@ function getSlicePropertyArrays(
   const weights = new Float64Array(n);
   const udls = new Float64Array(n);
   const lls = new Float64Array(n);
+  const hForces = new Float64Array(n);
+  const extraMoments = new Float64Array(n);
   const alphas = new Float64Array(n);
   const baseLengths = new Float64Array(n);
   const phis = new Float64Array(n);
@@ -57,8 +61,11 @@ function getSlicePropertyArrays(
   for (let i = 0; i < n; i++) {
     const s = slices[i];
     weights[i] = s.weight;
-    udls[i] = s.udl;
+    // Free water on the slice acts like a surface load.
+    udls[i] = s.udl + (s.waterLoad ?? 0);
     lls[i] = s.ll;
+    hForces[i] = s.hForce ?? 0;
+    extraMoments[i] = s.extraMoment ?? 0;
     alphas[i] = s.alpha;
     baseLengths[i] = s.baseLength;
     phis[i] = s.phi;
@@ -80,6 +87,8 @@ function getSlicePropertyArrays(
     weights,
     udls,
     lls,
+    hForces,
+    extraMoments,
     alphas,
     baseLengths,
     phis,
@@ -166,6 +175,9 @@ function solveFOSGenericMoment(
 
       for (let i = 0; i < n; i++) {
         const W = p.weights[i] + p.udls[i] + p.lls[i];
+        // Horizontal external force in the sliding direction; with the
+        // solvers' sign of E it reduces the interslice force on the right.
+        const H = p.hForces[i];
         const c = p.cohesions[i];
         const bl = p.baseLengths[i];
         const a = p.alphas[i];
@@ -184,7 +196,7 @@ function solveFOSGenericMoment(
         let [N, eRight, xRight] = solveSliceNormal(
           W,
           xLeft,
-          eLeft,
+          eLeft - H,
           c * bl - U * bl * tanPhi,
           tanPhi,
           cosA,
@@ -199,7 +211,7 @@ function solveFOSGenericMoment(
           [N, eRight, xRight] = solveSliceNormal(
             W,
             xLeft,
-            eLeft,
+            eLeft - H,
             cu * bl,
             0,
             cosA,
@@ -211,7 +223,7 @@ function solveFOSGenericMoment(
         }
         resisting += res;
 
-        pushing += W * dx;
+        pushing += W * dx + p.extraMoments[i];
         nCurrent[i] = N;
         eLeft = eRight;
         xLeft = xRight;
@@ -277,6 +289,9 @@ function solveFOSGenericForceCircular(
 
       for (let i = 0; i < n; i++) {
         const W = p.weights[i] + p.udls[i] + p.lls[i];
+        // Horizontal external force in the sliding direction; with the
+        // solvers' sign of E it reduces the interslice force on the right.
+        const H = p.hForces[i];
         const c = p.cohesions[i];
         const bl = p.baseLengths[i];
         const a = p.alphas[i];
@@ -294,7 +309,7 @@ function solveFOSGenericForceCircular(
         let [N, eRight, xRight] = solveSliceNormal(
           W,
           xLeft,
-          eLeft,
+          eLeft - H,
           c * bl - U * bl * tanPhi,
           tanPhi,
           cosA,
@@ -310,7 +325,7 @@ function solveFOSGenericForceCircular(
           [N, eRight, xRight] = solveSliceNormal(
             W,
             xLeft,
-            eLeft,
+            eLeft - H,
             cu * bl,
             0,
             cosA,
@@ -322,7 +337,7 @@ function solveFOSGenericForceCircular(
         }
         resisting += res;
 
-        pushing += N * sinA;
+        pushing += N * sinA + H;
         nCurrent[i] = N;
         eLeft = eRight;
         xLeft = xRight;
@@ -370,7 +385,7 @@ export function analyseOrdinary(_slope: Slope, slices: Slice[]): number | null {
   let resisting = 0;
 
   for (const s of slices) {
-    const W = s.weight + s.udl + s.ll;
+    const W = s.weight + s.udl + s.ll + (s.waterLoad ?? 0);
 
     if (s.isCombined) {
       const fd =
@@ -386,7 +401,7 @@ export function analyseOrdinary(_slope: Slope, slices: Slice[]): number | null {
           Math.tan(s.phi);
     }
 
-    pushing += W * Math.sin(s.alpha);
+    pushing += W * Math.sin(s.alpha) + (s.extraMoment ?? 0) / s.R;
   }
 
   if (pushing <= 0) return null;
@@ -956,7 +971,9 @@ function hasDrivingMoment(slices: Slice[]): boolean {
   let net = 0;
   let gross = 0;
   for (const s of slices) {
-    const m = (s.weight + s.udl + s.ll) * s.dx;
+    const m =
+      (s.weight + s.udl + s.ll + (s.waterLoad ?? 0)) * s.dx +
+      (s.extraMoment ?? 0);
     net += m;
     gross += Math.abs(m);
   }

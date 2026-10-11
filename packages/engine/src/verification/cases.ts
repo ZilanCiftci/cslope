@@ -750,4 +750,48 @@ export const VERIFICATION_CASES: VerificationCase[] = [
     ],
     notes: ["With the phreatic correction (cos²θ) cSlope gives 1.141 (Bishop)."],
   },
+  {
+    id: "VP68",
+    title: "USACE example E-10, ponded water",
+    reference: "USACE EM 1110-2-1902, example E-10. Slide2 Verification Problem #68.",
+    surface: "fixed",
+    units: "SI",
+    description: "Undrained three-layer slope with 8 ft of water ponded against its toe (pool el. 0), on the published circle tangent to the base of the lowest layer. Converted to SI.",
+    definition: layered(
+      ft([[0, -8], [40, -8], [50, 4], [60, 16], [100, 16]]),
+      -20 * FT,
+      [
+        { name: "Soil 1", topY: null, model: su(600 * PSF, 120 * PCF) },
+        { name: "Soil 2", topY: 4 * FT, model: su(400 * PSF, 100 * PCF) },
+        { name: "Soil 3", topY: -8 * FT, model: su(500 * PSF, 105 * PCF) },
+      ],
+      {
+        ...circle(48.4 * FT, 28 * FT, 48 * FT),
+        orientation: "rtl",
+        waterTable: { mode: "custom", value: ft([[0, 0], [100, 0]]), followBoundary: false },
+      },
+    ),
+    checks: [bishop(1.241, "Slide2", 0.01), mp(1.244, "Slide2 (GLE)", 0.01)],
+    notes: ["The water above the toe acts as a load on the ground surface; the published USACE chart value is 1.33."],
+  },
+  ...([30, 60] as const).map(
+    (pool): VerificationCase => ({
+      id: pool === 30 ? "VP70a" : "VP70b",
+      title: `Duncan & Wright fig. 6.27, submerged slope, pool +${pool} ft`,
+      reference: "Duncan & Wright, Soil Strength and Slope Stability, fig. 6.27. Slide2 Verification Problem #70.",
+      surface: "search",
+      units: "SI",
+      description: `Fully submerged homogeneous 2.5:1 slope with the pool ${pool} ft above the crest; the factor of safety does not depend on the depth of submergence. Converted to SI.`,
+      definition: layered(
+        ft([[0, 15], [30, 15], [105, 45], [140, 45]]),
+        0,
+        [{ name: "Soil", topY: null, model: mc(100 * PSF, 20, 128 * PCF) }],
+        {
+          orientation: "rtl",
+          waterTable: { mode: "custom", value: ft([[0, 45 + pool], [140, 45 + pool]]), followBoundary: false },
+        },
+      ),
+      checks: [bishop(1.603, "Slide2", 0.01), spencer(1.599, "Slide2", 0.01)],
+    }),
+  ),
 ];

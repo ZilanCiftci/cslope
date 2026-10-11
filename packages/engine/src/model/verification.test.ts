@@ -57,3 +57,22 @@ describe("Search convergence", () => {
     expect(fine).toBeLessThanOrEqual(1.439);
   });
 });
+
+describe("Free water above the ground", () => {
+  // Submerged soil is in equilibrium under buoyant weight alone, so a fully
+  // submerged slope must give the FOS of the dry slope with γ' = γsat − γw.
+  const ground: [number, number][] = [[0, 0], [20, 0], [40, 10], [70, 10]];
+  const soil = (gamma: number) => [{ name: "S", topY: null, model: mc(5, 30, gamma) }];
+  for (const method of ["Bishop", "Janbu", "Morgenstern-Price"] as const) {
+    it(`${method}: fully submerged slope = buoyant dry slope`, () => {
+      const buoyant = runVerification(layered(ground, -10, soil(10)), method).fos!;
+      const submerged = runVerification(
+        layered(ground, -10, soil(19.81), {
+          waterTable: { mode: "custom", value: [[0, 30], [70, 30]], followBoundary: false },
+        }),
+        method,
+      ).fos!;
+      expect(Math.abs(submerged / buoyant - 1)).toBeLessThanOrEqual(0.003);
+    });
+  }
+});

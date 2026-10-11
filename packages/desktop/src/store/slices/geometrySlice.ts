@@ -660,6 +660,15 @@ export const createGeometrySlice: SliceCreator<GeometrySlice> = (set, get) => ({
     get().invalidateAnalysis();
   },
 
+  setPiezoFreeWater: (enabled) => {
+    set((s) =>
+      syncActiveModel(s, {
+        piezometricLine: { ...s.piezometricLine, freeWater: enabled },
+      }),
+    );
+    get().invalidateAnalysis();
+  },
+
   enablePiezoWithDefault: () => {
     const s = get();
     if (s.piezometricLine.lines.length > 0) return;

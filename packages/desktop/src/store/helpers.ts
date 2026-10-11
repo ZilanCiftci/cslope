@@ -100,11 +100,15 @@ export function buildSlopeDTOFromModel(model: ModelEntry): SlopeDefinition {
   }
 
   if (piezometricLine.lines.length > 0) {
+    // Free water above the ground comes from the first line; a clipped
+    // line never rises above the surface.
+    const followBoundary = piezometricLine.freeWater === false;
     const firstLine = piezometricLine.lines[0];
     if (firstLine.coordinates.length >= 2) {
       slope.waterTable = {
         mode: "custom",
         value: firstLine.coordinates,
+        followBoundary,
       };
     }
 
@@ -117,6 +121,7 @@ export function buildSlopeDTOFromModel(model: ModelEntry): SlopeDefinition {
       slope.waterTables = usableLines.map((l) => ({
         id: l.id,
         coordinates: l.coordinates,
+        followBoundary,
       }));
       const usableIds = new Set(usableLines.map((l) => l.id));
       slope.materials = slope.materials.map((dtoMaterial, i) => {
@@ -208,6 +213,7 @@ export function getAnalysisInputSignature(state: AppState): string {
         coordinateExpressions: l.coordinateExpressions,
       })),
       materialAssignment: piezo.materialAssignment,
+      freeWater: piezo.freeWater,
     },
     udls: state.udls,
     lineLoads: state.lineLoads,

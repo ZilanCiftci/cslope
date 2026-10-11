@@ -108,6 +108,19 @@ export interface Slice {
   phi: number;
   /** Pore water pressure force (kN). */
   U: number;
+  /** Weight of free water standing on the slice top (kN). */
+  waterLoad?: number;
+  /**
+   * Horizontal external force on the slice (kN), positive in the sliding
+   * direction (+x in canonical coordinates): water pressure on an inclined
+   * ground surface or in a tension crack.
+   */
+  hForce?: number;
+  /**
+   * Driving moment about the circle centre (kN·m) of the external water
+   * forces that is not already included as (weight + loads) × dx.
+   */
+  extraMoment?: number;
   /**
    * When `true`, the solver uses Combined method (min of drained/undrained).
    */

@@ -105,6 +105,12 @@ export interface PiezometricLineState {
   lines: PiezoLine[];
   activeLineId: string | null;
   materialAssignment: Record<string, string>;
+  /**
+   * Where a line lies above the ground, the water stands on the surface as
+   * free water (load on the slope) instead of being clipped to the ground.
+   * Missing means true; files from before version 3 are loaded with false.
+   */
+  freeWater?: boolean;
 }
 
 export type PaperSize = "A4" | "A3" | "A2" | "A1" | "A0";
@@ -347,6 +353,7 @@ export interface GeometrySlice {
   insertPiezoPointAt: (index: number, coord: [number, number]) => void;
   removePiezoPoint: (index: number) => void;
   setPiezoMaterialAssignment: (materialId: string, piezoLineId: string) => void;
+  setPiezoFreeWater: (enabled: boolean) => void;
   enablePiezoWithDefault: () => void;
 }
 
