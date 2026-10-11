@@ -33,6 +33,14 @@ export type { ResolvedStrength, StrengthContext } from "./strength";
 // Validation
 export { validateMaterialModel } from "./validation";
 
+export type {
+  Reinforcement,
+  ReinforcementDirection,
+  ReinforcementApplication,
+  ReinforcementPullout,
+  ReinforcementForce,
+} from "./reinforcement";
+
 export { Udl, LineLoad } from "./loads";
 export type { UdlParams, LineLoadParams } from "./loads";
 

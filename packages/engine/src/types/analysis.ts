@@ -4,6 +4,7 @@
 
 import type { Material } from "./material";
 import type { SlopeOrientation } from "../model/canonical";
+import type { ReinforcementForce } from "./reinforcement";
 
 /** Supported analysis methods. */
 export type AnalysisMethod = "Bishop" | "Janbu" | "Morgenstern-Price";
@@ -175,6 +176,8 @@ export interface SlipSurfaceResult {
    * the moment axis and radius 0). Absent for a circle.
    */
   points?: [number, number][];
+  /** Reinforcement forces on the sliding mass (critical surface only). */
+  reinforcementForces?: ReinforcementForce[];
 }
 
 /** Slice data for detailed output. */

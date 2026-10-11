@@ -7,6 +7,7 @@ import { GeometryDialogApp } from "./features/properties/GeometryDialogApp";
 import { InteriorBoundariesDialogApp } from "./features/properties/InteriorBoundariesDialogApp";
 import { UdlDialogApp } from "./features/properties/UdlDialogApp";
 import { LineLoadsDialogApp } from "./features/properties/LineLoadsDialogApp";
+import { ReinforcementDialogApp } from "./features/properties/ReinforcementDialogApp";
 import { PiezoDialogApp } from "./features/properties/PiezoDialogApp";
 import { ParametersDialogApp } from "./features/properties/ParametersDialogApp";
 import { ResultsPlotDialogApp } from "./features/properties/ResultsPlotDialogApp";
@@ -28,6 +29,7 @@ import type {
   PiezometricLineState,
   ParameterDef,
   RegionMaterials,
+  ReinforcementRow,
   ResultViewSettings,
   UdlRow,
 } from "./store/types";
@@ -35,6 +37,7 @@ import type {
 interface LoadsStatePayload {
   udls: UdlRow[];
   lineLoads: LineLoadRow[];
+  reinforcements?: ReinforcementRow[];
   parameters?: ParameterDef[];
 }
 
@@ -100,6 +103,7 @@ const MODEL_ENTRY_FIELDS = [
   "piezometricLine",
   "udls",
   "lineLoads",
+  "reinforcements",
   "customSearchPlanes",
   "customPlanesOnly",
   "options",
@@ -188,6 +192,7 @@ function buildResultsPlotPayloadFromState(): ResultsPlotStatePayload {
       piezometricLine: state.piezometricLine,
       udls: state.udls,
       lineLoads: state.lineLoads,
+      reinforcements: state.reinforcements,
       customSearchPlanes: state.customSearchPlanes,
       customPlanesOnly: state.customPlanesOnly,
       options: state.options,
@@ -209,6 +214,7 @@ function App() {
   const regionMaterials = useAppStore((s) => s.regionMaterials);
   const udls = useAppStore((s) => s.udls);
   const lineLoads = useAppStore((s) => s.lineLoads);
+  const reinforcements = useAppStore((s) => s.reinforcements);
   const piezometricLine = useAppStore((s) => s.piezometricLine);
   const parameters = useAppStore((s) => s.parameters);
   const orientation = useAppStore((s) => s.orientation);
@@ -241,6 +247,9 @@ function App() {
   const isLineLoadsDialogWindow =
     typeof window !== "undefined" &&
     window.location.hash.replace(/^#/, "") === "line-loads-dialog";
+  const isReinforcementDialogWindow =
+    typeof window !== "undefined" &&
+    window.location.hash.replace(/^#/, "") === "reinforcement-dialog";
   const isPiezoDialogWindow =
     typeof window !== "undefined" &&
     window.location.hash.replace(/^#/, "") === "piezo-dialog";
@@ -279,6 +288,7 @@ function App() {
     isInteriorBoundariesDialogWindow ||
     isUdlDialogWindow ||
     isLineLoadsDialogWindow ||
+    isReinforcementDialogWindow ||
     isPiezoDialogWindow ||
     isParametersDialogWindow ||
     isResultsPlotDialogWindow ||
@@ -578,6 +588,7 @@ function App() {
       window.cslope.sendLoadsState({
         udls: state.udls,
         lineLoads: state.lineLoads,
+        reinforcements: state.reinforcements,
         parameters: state.parameters,
       });
     };
@@ -589,11 +600,16 @@ function App() {
       const patch: {
         udls: UdlRow[];
         lineLoads: LineLoadRow[];
+        reinforcements?: ReinforcementRow[];
         parameters?: ParameterDef[];
       } = {
         udls: normalized.udls,
         lineLoads: normalized.lineLoads,
       };
+      // Only the reinforcement window sends reinforcement.
+      if (Array.isArray(normalized.reinforcements)) {
+        patch.reinforcements = normalized.reinforcements;
+      }
 
       if (Array.isArray(normalized.parameters)) {
         patch.parameters = normalized.parameters;
@@ -619,8 +635,8 @@ function App() {
       return;
     }
 
-    window.cslope.sendLoadsChanged({ udls, lineLoads, parameters });
-  }, [udls, lineLoads, parameters, isAnyDialogWindow]);
+    window.cslope.sendLoadsChanged({ udls, lineLoads, reinforcements, parameters });
+  }, [udls, lineLoads, reinforcements, parameters, isAnyDialogWindow]);
 
   useEffect(() => {
     if (!isElectron || isAnyDialogWindow) return;
@@ -860,6 +876,7 @@ function App() {
     piezometricLine,
     udls,
     lineLoads,
+    reinforcements,
     customSearchPlanes,
     customPlanesOnly,
     options,
@@ -892,6 +909,10 @@ function App() {
 
   if (isLineLoadsDialogWindow) {
     return <LineLoadsDialogApp />;
+  }
+
+  if (isReinforcementDialogWindow) {
+    return <ReinforcementDialogApp />;
   }
 
   if (isPiezoDialogWindow) {

@@ -1,0 +1,103 @@
+import { beforeEach, describe, expect, it } from "vitest";
+import { mapAnalysisResultToModelSpace, type AnalysisResult, type SlopeDefinition } from "@cslope/engine";
+import { useAppStore } from "../store/app-store";
+import { buildSlopeDTOFromModel } from "../store/helpers";
+import { parseProjectFile, serializeProject } from "../store/persistence";
+import { snapshotFromState } from "../store/slices/analysisSlice";
+import {
+  newReinforcement,
+  reinforcementPreset,
+  sanitizeReinforcement,
+  toEngineReinforcement,
+} from "./reinforcement";
+
+const ground: [number, number][] = [[0, -5], [0, 10], [10, 10], [20, 0], [30, 0], [30, -5]];
+
+describe("reinforcement rows", () => {
+  it("maps each type to the engine's capacity model", () => {
+    const base = newReinforcement("r", "anchor", ground, "ltr");
+    expect(toEngineReinforcement(base).pullout).toBeUndefined();
+    const tieback = toEngineReinforcement({ ...base, ...reinforcementPreset("tieback") });
+    expect(tieback.pullout).toEqual({ kind: "bond", strength: 60, bondedLength: 5 });
+    expect(tieback.end1Capacity).toBe(300);
+    const nail = toEngineReinforcement({ ...base, ...reinforcementPreset("nail") });
+    // Bond along the whole nail (no bonded length), passive.
+    expect(nail.pullout).toEqual({ kind: "bond", strength: 15 });
+    expect(nail.application).toBe("passive");
+    const geo = toEngineReinforcement({ ...base, ...reinforcementPreset("geosynthetic") });
+    expect(geo.pullout).toEqual({ kind: "interface", adhesion: 0, frictionAngle: 20 });
+    expect(geo.direction).toBe("tangent");
+  });
+
+  it("new elements point into the slope", () => {
+    const ltr = newReinforcement("a", "nail", ground, "ltr");
+    expect(ltr.x2).toBeLessThan(ltr.x1);
+    expect(ltr.y2).toBeLessThan(ltr.y1);
+    expect(newReinforcement("b", "nail", ground, "rtl").x2).toBeGreaterThan(ltr.x1);
+  });
+
+  it("drops invalid file entries and repairs invalid values", () => {
+    expect(sanitizeReinforcement({ type: "rocket", x1: 0, y1: 0, x2: 1, y2: 0 }, "x")).toBeNull();
+    expect(sanitizeReinforcement({ type: "anchor", x1: 0, y1: Number.NaN, x2: 1, y2: 0 }, "x")).toBeNull();
+    const r = sanitizeReinforcement(
+      { type: "nail", x1: 0, y1: 0, x2: 1, y2: 0, spacing: -1, tensileCapacity: -5, direction: "sideways", interfaceFriction: 95 },
+      "x",
+    )!;
+    expect(r.id).toBe("x");
+    expect(r.spacing).toBe(1.5);
+    expect(r.tensileCapacity).toBe(100);
+    expect(r.direction).toBe("axial");
+    expect(r.interfaceFriction).toBe(0);
+  });
+});
+
+describe("reinforcement in the store", () => {
+  beforeEach(() => {
+    useAppStore.getState().newProject();
+  });
+
+  it("is saved with the project and reaches the engine", () => {
+    useAppStore.getState().addReinforcement("tieback");
+    const [row] = useAppStore.getState().reinforcements;
+    useAppStore.getState().updateReinforcement(row.id, { tensileCapacity: 250 });
+    useAppStore.getState().saveCurrentModel();
+    const loaded = parseProjectFile(JSON.stringify(serializeProject(useAppStore.getState()))).models[0];
+    expect(loaded.reinforcements?.[0]).toMatchObject({ type: "tieback", tensileCapacity: 250 });
+    const dto = buildSlopeDTOFromModel(snapshotFromState(useAppStore.getState()));
+    expect(dto.reinforcements?.[0].tensileCapacity).toBe(250);
+    useAppStore.getState().removeReinforcement(row.id);
+    expect(useAppStore.getState().reinforcements).toHaveLength(0);
+  });
+
+  it("a duplicated model gets its own elements", () => {
+    useAppStore.getState().addReinforcement("anchor");
+    useAppStore.getState().saveCurrentModel();
+    const id = useAppStore.getState().activeModelId;
+    useAppStore.getState().duplicateModel(id);
+    const models = useAppStore.getState().models;
+    const [a, b] = models.map((m) => m.reinforcements?.[0]?.id);
+    expect(a).toBeDefined();
+    expect(b).toBeDefined();
+    expect(a).not.toBe(b);
+  });
+});
+
+describe("reinforcement forces in model space", () => {
+  it("are mirrored back for a right-to-left model", () => {
+    const def: SlopeDefinition = {
+      orientation: "rtl",
+      coordinates: [[0, 0], [0, 5], [10, 10], [20, 10], [20, 0]],
+      materials: [],
+    };
+    const result = {
+      criticalSurface: {
+        cx: 5, cy: 20, radius: 15, fos: 1.2, entryPoint: [2, 6], exitPoint: [15, 10],
+        reinforcementForces: [{ index: 0, x: 4, y: 3, fx: -10, fy: 2, force: 10.2, passive: false }],
+      },
+      allSurfaces: [],
+      criticalSlices: [],
+    } as unknown as AnalysisResult;
+    const mapped = mapAnalysisResultToModelSpace(result, def);
+    expect(mapped.criticalSurface!.reinforcementForces![0]).toMatchObject({ x: 16, fx: 10, fy: 2 });
+  });
+});

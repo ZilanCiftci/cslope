@@ -41,6 +41,7 @@ function createDefaultModel(id: string, name: string): ModelEntry {
     piezometricLine: { ...DEFAULT_PIEZO_LINE },
     udls: [],
     lineLoads: [],
+    reinforcements: [],
     customSearchPlanes: [],
     customPlanesOnly: false,
     options: {
@@ -71,6 +72,7 @@ export const mapModelToState = (model: ModelEntry) => ({
   piezometricLine: model.piezometricLine ?? { ...DEFAULT_PIEZO_LINE },
   udls: model.udls ?? [],
   lineLoads: model.lineLoads ?? [],
+  reinforcements: model.reinforcements ?? [],
   customSearchPlanes: model.customSearchPlanes ?? [],
   customPlanesOnly: model.customPlanesOnly ?? false,
   options: model.options ?? {
@@ -249,6 +251,10 @@ export const createModelsSlice: SliceCreator<ModelsSlice> = (
       },
       udls: source.udls.map((u) => ({ ...u, id: nextId("udl") })),
       lineLoads: source.lineLoads.map((l) => ({ ...l, id: nextId("ll") })),
+      reinforcements: (source.reinforcements ?? []).map((r) => ({
+        ...r,
+        id: nextId("reinf"),
+      })),
       customSearchPlanes: (source.customSearchPlanes ?? []).map((p) => ({
         ...p,
         id: nextId("csp"),
@@ -354,6 +360,7 @@ export const createModelsSlice: SliceCreator<ModelsSlice> = (
             piezometricLine: s.piezometricLine,
             udls: s.udls,
             lineLoads: s.lineLoads,
+            reinforcements: s.reinforcements,
             customSearchPlanes: s.customSearchPlanes,
             customPlanesOnly: s.customPlanesOnly,
             options: s.options,
@@ -398,6 +405,7 @@ export const createModelsSlice: SliceCreator<ModelsSlice> = (
               piezometricLine: s.piezometricLine,
               udls: s.udls,
               lineLoads: s.lineLoads,
+              reinforcements: s.reinforcements,
               customSearchPlanes: s.customSearchPlanes,
               customPlanesOnly: s.customPlanesOnly,
               options: s.options,

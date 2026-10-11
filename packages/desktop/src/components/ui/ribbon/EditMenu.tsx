@@ -14,6 +14,7 @@ import {
   RibbonMaterialsIcon,
   RibbonUdlIcon,
   RibbonLineLoadIcon,
+  RibbonReinforcementIcon,
   RibbonPiezoLineIcon,
   RibbonParametersIcon,
   RibbonSearchLimitsIcon,
@@ -160,6 +161,19 @@ export function EditMenu({ isOpen, onActivate, panelHost }: Props) {
                 onClick={() => {
                   setActiveSection("Loads");
                   window.cslope.openLineLoadsDialog();
+                }}
+              />
+            </RibbonGroup>
+
+            <RibbonSep />
+
+            <RibbonGroup label="Support">
+              <RibbonButton
+                icon={<RibbonReinforcementIcon />}
+                label="Reinforcement"
+                onClick={() => {
+                  setActiveSection("Loads");
+                  window.cslope.openReinforcementDialog();
                 }}
               />
             </RibbonGroup>

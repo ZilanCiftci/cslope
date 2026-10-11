@@ -52,6 +52,8 @@ contextBridge.exposeInMainWorld("cslope", {
     ipcRenderer.send("window:openInteriorBoundariesDialog"),
   openUdlDialog: () => ipcRenderer.send("window:openUdlDialog"),
   openLineLoadsDialog: () => ipcRenderer.send("window:openLineLoadsDialog"),
+  openReinforcementDialog: () =>
+    ipcRenderer.send("window:openReinforcementDialog"),
   openPiezoDialog: () => ipcRenderer.send("window:openPiezoDialog"),
   openParametersDialog: () => ipcRenderer.send("window:openParametersDialog"),
   openResultsPlotDialog: () => ipcRenderer.send("window:openResultsPlotDialog"),

@@ -26,6 +26,13 @@ interface SliceArrays {
   lls: Float64Array;
   hForces: Float64Array;
   extraMoments: Float64Array;
+  /** Reinforcement [down, horizontal, moment]: active as is, passive ÷ F. */
+  activeV: Float64Array;
+  activeH: Float64Array;
+  activeM: Float64Array;
+  passiveV: Float64Array;
+  passiveH: Float64Array;
+  passiveM: Float64Array;
   /** Moment arms of base shear and normal force about the centre. */
   shearArms: Float64Array;
   normalArms: Float64Array;
@@ -53,6 +60,12 @@ function getSlicePropertyArrays(
   const lls = new Float64Array(n);
   const hForces = new Float64Array(n);
   const extraMoments = new Float64Array(n);
+  const activeV = new Float64Array(n);
+  const activeH = new Float64Array(n);
+  const activeM = new Float64Array(n);
+  const passiveV = new Float64Array(n);
+  const passiveH = new Float64Array(n);
+  const passiveM = new Float64Array(n);
   const shearArms = new Float64Array(n);
   const normalArms = new Float64Array(n);
   const alphas = new Float64Array(n);
@@ -73,6 +86,12 @@ function getSlicePropertyArrays(
     lls[i] = s.ll;
     hForces[i] = s.hForce ?? 0;
     extraMoments[i] = s.extraMoment ?? 0;
+    if (s.reinforcementActive) {
+      [activeV[i], activeH[i], activeM[i]] = s.reinforcementActive;
+    }
+    if (s.reinforcementPassive) {
+      [passiveV[i], passiveH[i], passiveM[i]] = s.reinforcementPassive;
+    }
     shearArms[i] = s.R;
     normalArms[i] = s.normalArm ?? 0;
     alphas[i] = s.alpha;
@@ -98,6 +117,12 @@ function getSlicePropertyArrays(
     lls,
     hForces,
     extraMoments,
+    activeV,
+    activeH,
+    activeM,
+    passiveV,
+    passiveH,
+    passiveM,
     shearArms,
     normalArms,
     alphas,
@@ -183,11 +208,14 @@ function solveFOSGenericMoment(
       let eLeft = 0;
       let xLeft = 0;
 
+      // Passive reinforcement mobilises with the soil: divided by F.
+      const kP = 1 / prevFOS;
       for (let i = 0; i < n; i++) {
-        const W = p.weights[i] + p.udls[i] + p.lls[i];
+        const W =
+          p.weights[i] + p.udls[i] + p.lls[i] + p.activeV[i] + p.passiveV[i] * kP;
         // Horizontal external force in the sliding direction; with the
         // solvers' sign of E it reduces the interslice force on the right.
-        const H = p.hForces[i];
+        const H = p.hForces[i] + p.activeH[i] + p.passiveH[i] * kP;
         const c = p.cohesions[i];
         const bl = p.baseLengths[i];
         const a = p.alphas[i];
@@ -238,7 +266,12 @@ function solveFOSGenericMoment(
         resisting += res;
 
         // On a non-circular surface the normal force has a moment too.
-        pushing += W * dx + p.extraMoments[i] + N * p.normalArms[i];
+        pushing +=
+          W * dx +
+          p.extraMoments[i] +
+          p.activeM[i] +
+          p.passiveM[i] * kP +
+          N * p.normalArms[i];
         nCurrent[i] = N;
         eLeft = eRight;
         xLeft = xRight;
@@ -302,11 +335,14 @@ function solveFOSGenericForceCircular(
       let eLeft = 0;
       let xLeft = 0;
 
+      // Passive reinforcement mobilises with the soil: divided by F.
+      const kP = 1 / prevFOS;
       for (let i = 0; i < n; i++) {
-        const W = p.weights[i] + p.udls[i] + p.lls[i];
+        const W =
+          p.weights[i] + p.udls[i] + p.lls[i] + p.activeV[i] + p.passiveV[i] * kP;
         // Horizontal external force in the sliding direction; with the
         // solvers' sign of E it reduces the interslice force on the right.
-        const H = p.hForces[i];
+        const H = p.hForces[i] + p.activeH[i] + p.passiveH[i] * kP;
         const c = p.cohesions[i];
         const bl = p.baseLengths[i];
         const a = p.alphas[i];
@@ -409,7 +445,15 @@ export function analyseOrdinary(_slope: Slope, slices: Slice[]): number | null {
   const meanArm = lenSum > 0 ? armSum / lenSum : 0;
 
   for (const s of slices) {
-    const W = sliceVerticalLoad(s);
+    // Reinforcement: active forces load the slice; passive ones (divided
+    // by F in the solvers) are added to the resistance.
+    const ra = s.reinforcementActive;
+    const rp = s.reinforcementPassive;
+    const W = sliceVerticalLoad(s) + (ra?.[0] ?? 0);
+    const rMoment = ra?.[2] ?? 0;
+    if (rp && meanArm > 1e-9) {
+      resisting -= (rp[0] * s.dx + rp[2]) / meanArm;
+    }
 
     if (s.isCombined) {
       const fd =
@@ -427,7 +471,7 @@ export function analyseOrdinary(_slope: Slope, slices: Slice[]): number | null {
 
     pushing +=
       W * Math.sin(s.alpha) +
-      (meanArm > 1e-9 ? (s.extraMoment ?? 0) / meanArm : 0);
+      (meanArm > 1e-9 ? ((s.extraMoment ?? 0) + rMoment) / meanArm : 0);
   }
 
   if (pushing <= 0) return null;

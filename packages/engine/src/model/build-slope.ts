@@ -214,6 +214,11 @@ export function buildSlope(def: SlopeDefinition): Slope {
     );
   }
 
+  // Reinforcement
+  if (def.reinforcements?.length) {
+    slope.setReinforcements(def.reinforcements);
+  }
+
   // Analysis limits
   if (def.analysisLimits) {
     slope.setAnalysisLimits(def.analysisLimits);

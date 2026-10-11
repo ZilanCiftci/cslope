@@ -185,7 +185,9 @@ export function extrapolateLambda(
   }
 
   let lambdaExtrap = lambda2 + (fsForce2 - fs2) / (slopeM - slopeF);
-  lambdaExtrap = Math.max(-1, Math.min(lambdaExtrap, 1));
+  // Planar surfaces can need λ above 1 (the step per iteration is
+  // limited by the caller).
+  lambdaExtrap = Math.max(-5, Math.min(lambdaExtrap, 5));
   const fsExtrap = fs1 + slopeM * (lambdaExtrap - lambda1);
   return [lambdaExtrap, fsExtrap];
 }

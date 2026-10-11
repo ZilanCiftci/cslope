@@ -1,3 +1,6 @@
+import type { ReinforcementForce } from "@cslope/engine";
+import type { ReinforcementRow } from "../../store/types";
+import { bondedSpan } from "../canvas/reinforcement-draw";
 import { jsPDF } from "jspdf";
 import { fosColor, fosScaleRange, fosTickLabel } from "../../utils/fos-color";
 
@@ -437,6 +440,76 @@ export function drawLineLoads(
     pdf.text(`P = ${ll.magnitude} kN/m`, px, py - arrowH - 1.5, {
       align: "center",
     });
+  }
+}
+
+const REINFORCEMENT_RGB: [number, number, number] = [142, 68, 173];
+
+/** Reinforcement elements: bar, head plate, bonded part (as on canvas). */
+export function drawReinforcementsPdf(
+  pdf: jsPDF,
+  tf: PdfTransform,
+  rows: readonly ReinforcementRow[],
+) {
+  rows.forEach((r, i) => {
+    const [ax, ay] = tf.worldToPdf(r.x1, r.y1);
+    const [bx, by] = tf.worldToPdf(r.x2, r.y2);
+    const len = Math.hypot(bx - ax, by - ay);
+    if (!(len > 0)) return;
+    const ux = (bx - ax) / len;
+    const uy = (by - ay) / len;
+    const span = bondedSpan(r);
+    if (span) {
+      pdf.setDrawColor(...REINFORCEMENT_RGB);
+      setOpacity(pdf, 0.3);
+      pdf.setLineWidth(1.6);
+      pdf.line(ax + ux * len * span[0], ay + uy * len * span[0], ax + ux * len * span[1], ay + uy * len * span[1]);
+      setOpacity(pdf, 1);
+    }
+    pdf.setDrawColor(...REINFORCEMENT_RGB);
+    pdf.setLineWidth(0.45);
+    pdf.line(ax, ay, bx, by);
+    const p = 1.2;
+    pdf.setLineWidth(0.6);
+    pdf.line(ax - uy * p, ay + ux * p, ax + uy * p, ay - ux * p);
+    pdf.setFontSize(8);
+    pdf.setFont("helvetica", "bold");
+    pdf.setTextColor(...REINFORCEMENT_RGB);
+    pdf.text(String(i + 1), ax - ux * 2.5, ay - uy * 2.5, { align: "center", baseline: "middle" });
+  });
+}
+
+/** Reinforcement forces on the critical surface (arrow and size). */
+export function drawReinforcementForcesPdf(
+  pdf: jsPDF,
+  tf: PdfTransform,
+  forces: readonly ReinforcementForce[],
+) {
+  const ARROW = 7;
+  const HEAD = 1.5;
+  pdf.setDrawColor(...REINFORCEMENT_RGB);
+  pdf.setFillColor(...REINFORCEMENT_RGB);
+  pdf.setTextColor(...REINFORCEMENT_RGB);
+  pdf.setFontSize(7);
+  pdf.setFont("helvetica", "bold");
+  for (const f of forces) {
+    const n = Math.hypot(f.fx, f.fy);
+    if (!(n > 0)) continue;
+    const [px, py] = tf.worldToPdf(f.x, f.y);
+    const ux = f.fx / n;
+    const uy = -f.fy / n;
+    const ex = px + ux * ARROW;
+    const ey = py + uy * ARROW;
+    pdf.setLineWidth(0.4);
+    pdf.line(px, py, ex - ux * HEAD, ey - uy * HEAD);
+    pdf.triangle(
+      ex, ey,
+      ex - ux * HEAD - uy * HEAD * 0.6, ey - uy * HEAD + ux * HEAD * 0.6,
+      ex - ux * HEAD + uy * HEAD * 0.6, ey - uy * HEAD - ux * HEAD * 0.6,
+      "F",
+    );
+    const label = `${f.force.toFixed(f.force >= 100 ? 0 : 1)} kN/m${f.passive ? " /F" : ""}`;
+    pdf.text(label, ex + (ux >= 0 ? 1 : -1), ey, { align: ux >= 0 ? "left" : "right", baseline: "middle" });
   }
 }
 

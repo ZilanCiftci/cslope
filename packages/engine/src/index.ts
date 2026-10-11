@@ -34,6 +34,14 @@ export type {
 
 export type { SlopeDefinition } from "./types/slope-definition";
 
+export type {
+  Reinforcement,
+  ReinforcementDirection,
+  ReinforcementApplication,
+  ReinforcementPullout,
+  ReinforcementForce,
+} from "./types/reinforcement";
+
 // Material model types
 export type {
   MaterialModel,
@@ -156,6 +164,13 @@ export {
 } from "./model/solvers";
 
 export { buildSlope } from "./model/build-slope";
+export {
+  buildEnvelope,
+  envelopeAt,
+  pulloutBeyond,
+  effectiveVerticalStress,
+} from "./model/reinforcement";
+export type { ReinforcementEnvelope } from "./model/reinforcement";
 
 export {
   mirrorX,
@@ -177,6 +192,8 @@ export {
   VERIFICATION_OPTIONS,
   runVerification,
 } from "./verification/cases";
+export { FHWA_PULLOUT_TABLES } from "./verification/pullout-tables";
+export type { PulloutTable } from "./verification/pullout-tables";
 export type {
   VerificationCase,
   VerificationCheck,

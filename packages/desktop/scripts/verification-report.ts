@@ -420,6 +420,16 @@ function figure(def: SlopeDefinition, slope: Slope, plane: Plane | null, label: 
     font(7, "normal", LOAD);
     pdf.text(`P = ${l.magnitude}`, top[0], top[1] - 1, { align: "center" });
   }
+  // Reinforcement: the bar, with the head (end 1) marked.
+  for (const r of canon.reinforcements ?? []) {
+    const [ax, ay] = P(r.x1, r.y1);
+    const [bx, by] = P(r.x2, r.y2);
+    pdf.setDrawColor(142, 68, 173);
+    pdf.setLineWidth(0.35);
+    pdf.line(ax, ay, bx, by);
+    pdf.setFillColor(142, 68, 173);
+    pdf.circle(ax, ay, 0.5, "F");
+  }
 
   // Critical surface.
   if (plane) {

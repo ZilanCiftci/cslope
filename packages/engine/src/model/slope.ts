@@ -36,6 +36,8 @@ import {
   clipLineToSurface,
   createGeometryWithMaterial,
 } from "./geometry-ops";
+import type { Reinforcement } from "../types/reinforcement";
+import { buildEnvelope, type ReinforcementEnvelope } from "./reinforcement";
 
 // ── Types used internally ─────────────────────────────────────────
 
@@ -108,6 +110,8 @@ export class Slope {
   // ── Loads ─────────────────────────────────────────────────────
   private _udls: Udl[] = [];
   private _lls: LineLoad[] = [];
+  private _reinforcements: Reinforcement[] = [];
+  private _reinforcementEnvelopes: ReinforcementEnvelope[] | null = null;
 
   // ── Analysis options ──────────────────────────────────────────
   private _slices: number;
@@ -219,6 +223,16 @@ export class Slope {
 
   get udls(): readonly Udl[] {
     return this._udls;
+  }
+
+  get reinforcements(): readonly Reinforcement[] {
+    return this._reinforcements;
+  }
+
+  /** Capacity envelopes of the reinforcement (built on first use). */
+  get reinforcementEnvelopes(): readonly ReinforcementEnvelope[] {
+    this._reinforcementEnvelopes ??= this._reinforcements.map((r) => buildEnvelope(this, r));
+    return this._reinforcementEnvelopes;
   }
 
   get lineLoads(): readonly LineLoad[] {
@@ -620,6 +634,13 @@ export class Slope {
     followBoundary: boolean,
   ): { x: number[]; y: number[] } | null {
     if (wx.length < 2) return null;
+    // A line entered right to left (e.g. mirrored for a right-to-left
+    // model) is reversed first: the sort below is stable, so the points of
+    // a vertical step keep their order along the line.
+    if (wx[0] > wx[wx.length - 1]) {
+      wx = [...wx].reverse();
+      wy = [...wy].reverse();
+    }
     // Beyond its end points a piezometric line continues horizontally to
     // the model edges (as in Slide and SLOPE/W); previously slices past
     // the ends of a short line got no pore pressure at all.
@@ -691,6 +712,44 @@ export class Slope {
         this._lls.push(ll);
       }
     }
+    this._resetResults();
+  }
+
+  /**
+   * Set the reinforcement (anchors, tiebacks, nails, geosynthetics).
+   */
+  setReinforcements(reinforcements: readonly Reinforcement[]): void {
+    for (const r of reinforcements) {
+      const nums = [r.x1, r.y1, r.x2, r.y2, r.tensileCapacity];
+      if (!nums.every(Number.isFinite)) {
+        throw new Error("Reinforcement needs finite end points and tensile capacity.");
+      }
+      const bad = (v: number | undefined) => v !== undefined && !(Number.isFinite(v) && v >= 0);
+      if (r.tensileCapacity < 0 || bad(r.end1Capacity) || bad(r.end2Capacity)) {
+        throw new Error("Reinforcement capacities must be ≥ 0.");
+      }
+      if (r.spacing !== undefined && !(Number.isFinite(r.spacing) && r.spacing > 0)) {
+        throw new Error("Reinforcement spacing must be > 0.");
+      }
+      const p = r.pullout;
+      if (p?.kind === "bond" && (!(Number.isFinite(p.strength) && p.strength >= 0) || bad(p.bondedLength))) {
+        throw new Error("Reinforcement bond strength and bonded length must be ≥ 0.");
+      }
+      if (p?.kind === "development" && (bad(p.length1) || bad(p.length2) || p.length1 === undefined || p.length2 === undefined)) {
+        throw new Error("Reinforcement development lengths must be ≥ 0.");
+      }
+      if (
+        p?.kind === "interface" &&
+        (!(Number.isFinite(p.adhesion) && p.adhesion >= 0 && Number.isFinite(p.frictionAngle) && p.frictionAngle >= 0 && p.frictionAngle < 90) ||
+          (p.coverage !== undefined && !(Number.isFinite(p.coverage) && p.coverage > 0)))
+      ) {
+        throw new Error("Reinforcement adhesion must be ≥ 0, interface friction angle 0–90° and coverage > 0.");
+      }
+    }
+    // All kept (zero length or capacity carries nothing), so that a force's
+    // index is the element's position in the input.
+    this._reinforcements = [...reinforcements];
+    this._reinforcementEnvelopes = null;
     this._resetResults();
   }
 
@@ -1019,6 +1078,8 @@ export class Slope {
 
   private _resetResults(): void {
     this._search = [];
+    // Pullout from the overburden depends on geometry, materials and water.
+    this._reinforcementEnvelopes = null;
     this._externalYCache.clear();
     // Don't clear water cache here — water table doesn't change with results reset
   }

@@ -9,6 +9,7 @@
 
 import { getYAtX } from "../math/index";
 import type { Slope } from "./slope";
+import { polylineYAtSide } from "./geometry-ops";
 
 export type Pt = [number, number];
 
@@ -130,7 +131,20 @@ export function fitPolylineToGround(
   const xMax = Math.max(...surf.x);
   // Clamped: rounding can put an extended end a hair outside the model.
   const ground = (x: number) => getYAtX(surf.x, surf.y, Math.min(xMax, Math.max(xMin, x)));
-  const below = (p: Pt) => p[1] < ground(p[0]) - 1e-9;
+  // At a vertical face the ground has two heights; a point is below the
+  // ground only below the lower one, and on it anywhere on the face.
+  const sides = (x: number): [number, number] => {
+    const xc = Math.min(xMax, Math.max(xMin, x));
+    const l = polylineYAtSide(surf.x, surf.y, xc, "left");
+    const r = polylineYAtSide(surf.x, surf.y, xc, "right");
+    const g = ground(x);
+    return [Number.isFinite(l) ? l : g, Number.isFinite(r) ? r : g];
+  };
+  const below = (p: Pt) => p[1] < Math.min(...sides(p[0])) - 1e-9;
+  const onGround = (p: Pt) => {
+    const [l, r] = sides(p[0]);
+    return p[1] >= Math.min(l, r) - 1e-6 && p[1] <= Math.max(l, r) + 1e-6;
+  };
 
   // Extend the end segments until they meet the ground.
   const extend = (p: Pt, q: Pt, towardsLow: boolean): Pt | null => {
@@ -179,10 +193,26 @@ export function fitPolylineToGround(
       break;
     }
   }
-  if (entry === null || exit === null || exit - entry < 1e-6) return null;
-  const out: Pt[] = [[entry, ground(entry)]];
+  // A surface that starts or ends on the ground (e.g. at the foot of a
+  // vertical wall, where the ground is double-valued) enters or leaves
+  // there.
+  const first = pts[0];
+  const last = pts[pts.length - 1];
+  // On the polyline (at a vertical face the ground there is ambiguous).
+  let entryPt: Pt | null = entry === null ? null : [entry, polylineYAt(pts, entry)];
+  if (entryPt === null && onGround(first) && polylineYAt(pts, first[0] + eps) < ground(first[0] + eps)) {
+    entry = first[0];
+    entryPt = [first[0], first[1]];
+  }
+  let exitPt: Pt | null = exit === null ? null : [exit, polylineYAt(pts, exit)];
+  if (entry !== null && exitPt === null && onGround(last) && polylineYAt(pts, last[0] - eps) < ground(last[0] - eps)) {
+    exit = last[0];
+    exitPt = [last[0], last[1]];
+  }
+  if (entry === null || exit === null || !entryPt || !exitPt || exit - entry < 1e-6) return null;
+  const out: Pt[] = [entryPt];
   for (const p of pts) if (p[0] > entry + 1e-9 && p[0] < exit - 1e-9) out.push([p[0], p[1]]);
-  out.push([exit, ground(exit)]);
+  out.push(exitPt);
   return out;
 }
 

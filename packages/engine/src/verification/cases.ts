@@ -21,6 +21,7 @@ import type { Slope } from "../model/slope";
 import type { SlopeDefinition } from "../types/slope-definition";
 import type { MaterialModel } from "../types/material-models";
 import type { AnalysisMethod, AnalysisOptions } from "../types/analysis";
+import { REINFORCED_CASES } from "./reinforcement-cases";
 
 export type Pt = [number, number];
 
@@ -1209,6 +1210,26 @@ export const VERIFICATION_CASES: VerificationCase[] = [
     ],
     notes: ["Without limits the search finds shallower mechanisms: a sliver in the cohesionless 1:1 fill (0.74) and, with the crack, a surface through the fill and Marsh clay (1.15). The published value is the deep failure."],
   },
+  // Reinforcement (anchors, tiebacks, nails, geosynthetics).
+  ...REINFORCED_CASES.map(
+    (c): VerificationCase => ({
+      id: c.id,
+      title: c.title,
+      reference: c.reference,
+      surface: c.surface,
+      units: "SI",
+      description: c.description,
+      definition: c.definition,
+      notes: c.notes,
+      checks: c.checks.map(([m, published, publishedBy, tolerance]) => {
+        const options = c.options as Partial<AnalysisOptions>;
+        if (m === "Bishop") return bishop(published, publishedBy, tolerance, { options });
+        if (m === "Spencer") return spencer(published, publishedBy, tolerance, { options });
+        if (m === "MP") return mp(published, publishedBy, tolerance, { options });
+        return { method: "Janbu", label: "Janbu corrected (f0)", published, publishedBy, tolerance, options: { ...options, janbuCorrection: true } };
+      }),
+    }),
+  ),
   {
     id: "VP22a",
     title: "Fredlund & Krahn slope on a weak seam, composite surface",

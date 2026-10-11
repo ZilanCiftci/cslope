@@ -1,8 +1,14 @@
 import { nextId } from "../helpers";
 import type { SliceCreator } from "../helpers";
-import type { LoadsSlice, ModelEntry } from "../types";
+import type { LoadsSlice, ModelEntry, ModelOrientation } from "../types";
+import { newReinforcement } from "../../utils/reinforcement";
 
-type LoadsState = LoadsSlice & { activeModelId: string; models: ModelEntry[] };
+type LoadsState = LoadsSlice & {
+  activeModelId: string;
+  models: ModelEntry[];
+  coordinates: [number, number][];
+  orientation: ModelOrientation;
+};
 
 const syncActiveModel = (state: LoadsState, patch: Partial<LoadsSlice>) => ({
   ...patch,
@@ -12,6 +18,7 @@ const syncActiveModel = (state: LoadsState, patch: Partial<LoadsSlice>) => ({
           ...m,
           udls: patch.udls ?? state.udls,
           lineLoads: patch.lineLoads ?? state.lineLoads,
+          reinforcements: patch.reinforcements ?? state.reinforcements,
         }
       : m,
   ),
@@ -20,6 +27,7 @@ const syncActiveModel = (state: LoadsState, patch: Partial<LoadsSlice>) => ({
 export const createLoadsSlice: SliceCreator<LoadsSlice> = (set, get) => ({
   udls: [],
   lineLoads: [],
+  reinforcements: [],
 
   addUdl: () => {
     set((s) =>
@@ -78,6 +86,38 @@ export const createLoadsSlice: SliceCreator<LoadsSlice> = (set, get) => ({
     set((s) =>
       syncActiveModel(s, {
         lineLoads: s.lineLoads.filter((l) => l.id !== id),
+      }),
+    );
+    get().invalidateAnalysis();
+  },
+
+  addReinforcement: (type = "anchor") => {
+    set((s) =>
+      syncActiveModel(s, {
+        reinforcements: [
+          ...s.reinforcements,
+          newReinforcement(nextId("reinf"), type, s.coordinates, s.orientation),
+        ],
+      }),
+    );
+    get().invalidateAnalysis();
+  },
+
+  updateReinforcement: (id, patch) => {
+    set((s) =>
+      syncActiveModel(s, {
+        reinforcements: s.reinforcements.map((r) =>
+          r.id === id ? { ...r, ...patch } : r,
+        ),
+      }),
+    );
+    get().invalidateAnalysis();
+  },
+
+  removeReinforcement: (id) => {
+    set((s) =>
+      syncActiveModel(s, {
+        reinforcements: s.reinforcements.filter((r) => r.id !== id),
       }),
     );
     get().invalidateAnalysis();

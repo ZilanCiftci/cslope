@@ -116,7 +116,8 @@ export function useCanvasDrawLoop({
         state.piezometricLine !== prevState.piezometricLine ||
         state.analysisLimits !== prevState.analysisLimits ||
         state.udls !== prevState.udls ||
-        state.lineLoads !== prevState.lineLoads;
+        state.lineLoads !== prevState.lineLoads ||
+        state.reinforcements !== prevState.reinforcements;
 
       const resultViewRenderChanged =
         state.resultViewSettings !== prevState.resultViewSettings ||
@@ -138,6 +139,7 @@ export function useCanvasDrawLoop({
             analysisLimits: state.analysisLimits,
             udls: state.udls,
             lineLoads: state.lineLoads,
+            reinforcements: state.reinforcements,
             result: state.result,
             resultViewSettings: state.resultViewSettings,
             selectedAnnotationIds: state.selectedAnnotationIds,

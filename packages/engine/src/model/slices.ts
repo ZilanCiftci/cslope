@@ -19,6 +19,7 @@ import {
 import type { Slope } from "./slope";
 import { polylineYAtSide } from "./geometry-ops";
 import { polylineCrossingsX, polylineYAt, type Pt } from "./surface";
+import { applyReinforcement } from "./reinforcement";
 
 // ── createSlice ───────────────────────────────────────────────────
 
@@ -278,8 +279,8 @@ function waterAtSlice(
   verticalHead = false,
 ): { yMean: number; h: number } | null {
   if (!line) return null;
-  const wy1 = getYAtX(line.x, line.y, xLeft);
-  const wy2 = getYAtX(line.x, line.y, xRight);
+  const wy1 = lineYFrom(line, xLeft, "right");
+  const wy2 = lineYFrom(line, xRight, "left");
   const wyMid = getYAtX(line.x, line.y, xMid);
   if (!Number.isFinite(wy1) || !Number.isFinite(wy2) || !Number.isFinite(wyMid)) {
     return null;
@@ -289,6 +290,15 @@ function waterAtSlice(
       ? Math.cos(Math.atan((wy2 - wy1) / (xRight - xLeft))) ** 2
       : 1;
   return { yMean: wyMid, h };
+}
+
+/**
+ * y of a line at x, approached from one side (at a vertical step the two
+ * sides differ); the plain value where the side has no segment.
+ */
+function lineYFrom(line: { x: number[]; y: number[] }, x: number, side: "left" | "right"): number {
+  const y = polylineYAtSide(line.x, line.y, x, side);
+  return Number.isFinite(y) ? y : getYAtX(line.x, line.y, x);
 }
 
 // ── getSlices ─────────────────────────────────────────────────────
@@ -488,10 +498,15 @@ export function getSlices(
   const yTopsR = slicesX.slice(1).map((x) => surfaceYFrom(x, "left"));
 
   // Water table y-values
-  let waterY: number[] | null = null;
+  // At the slice edges from the slice's own side, so that a vertical step
+  // in the line (e.g. at a wall) does not leak into the next slice.
+  let waterYL: number[] | null = null;
+  let waterYR: number[] | null = null;
   let waterYMid: number[] | null = null;
   if (slope.hasWaterTable && slope.waterRLXY) {
-    waterY = getYAtXMany(slope.waterRLXY.x, slope.waterRLXY.y, slicesX);
+    const w = slope.waterRLXY;
+    waterYL = slicesX.slice(0, -1).map((x) => lineYFrom(w, x, "right"));
+    waterYR = slicesX.slice(1).map((x) => lineYFrom(w, x, "left"));
     waterYMid = getYAtXMany(slope.waterRLXY.x, slope.waterRLXY.y, sxArray);
   }
 
@@ -516,13 +531,16 @@ export function getSlices(
     (g) => g.material.model.unitWeightSat !== undefined,
   );
   // Water y at the slice edges, once per water line (for γsat).
-  const waterYsCache = new Map<{ x: number[]; y: number[] }, number[]>();
+  const waterYsCache = new Map<{ x: number[]; y: number[] }, [number[], number[]]>();
   const waterYsFor = (material: GeometryWithMaterial["material"]) => {
     const line = slope.getWaterLineForMaterial(material);
     if (!line) return null;
     let ys = waterYsCache.get(line);
     if (!ys) {
-      ys = getYAtXMany(line.x, line.y, slicesX);
+      ys = [
+        slicesX.slice(0, -1).map((x) => lineYFrom(line, x, "right")),
+        slicesX.slice(1).map((x) => lineYFrom(line, x, "left")),
+      ];
       waterYsCache.set(line, ys);
     }
     return ys;
@@ -531,9 +549,9 @@ export function getSlices(
     let waterYMean: number | null = null;
     let waterH: number | null = null;
 
-    if (waterY && waterYMid) {
-      const wy1 = waterY[i];
-      const wy2 = waterY[i + 1];
+    if (waterYL && waterYR && waterYMid) {
+      const wy1 = waterYL[i];
+      const wy2 = waterYR[i];
       const wyMid = waterYMid[i];
       // If water Y is NaN (slice x outside water table range), treat as no water.
       // Use midpoint water elevation for pore-pressure head so visual checks at slice
@@ -579,8 +597,8 @@ export function getSlices(
         ? (material) => {
             const ys = waterYsFor(material);
             if (!ys) return null;
-            const w0 = ys[i];
-            const w1 = ys[i + 1];
+            const w0 = ys[0][i];
+            const w1 = ys[1][i];
             return Number.isFinite(w0) && Number.isFinite(w1) ? [w0, w1] : null;
           }
         : undefined,
@@ -588,7 +606,7 @@ export function getSlices(
 
     if (s !== null && s.isValid) {
       if (factors) applyMaterialFactors(s, factors);
-      if (waterY) applyFreeWater(s, waterY[i], waterY[i + 1], cy);
+      if (waterYL && waterYR) applyFreeWater(s, waterYL[i], waterYR[i], cy);
       results.push(s);
     }
   }
@@ -607,6 +625,8 @@ export function getSlices(
     first.extraMoment =
       (first.extraMoment ?? 0) + force * (cy - (yCrackBottom + hw / 3));
   }
+
+  applyReinforcement(slope, results, cx, cy);
 
   return results;
 }

@@ -310,6 +310,23 @@ export function RibbonLineLoadIcon({ size = 20 }: IconProps) {
   );
 }
 
+/** Reinforcement icon – an inclined anchor bar with a head plate and a
+ *  grouted bond zone, in the canvas reinforcement colour. */
+export function RibbonReinforcementIcon({ size = 20 }: IconProps) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      {/* Slope face */}
+      <path d="M3 21L9 3" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" opacity="0.6" />
+      {/* Bar */}
+      <line x1="6" y1="12" x2="21" y2="16" stroke="#8e44ad" strokeWidth="2" strokeLinecap="round" />
+      {/* Head plate */}
+      <line x1="5.2" y1="9.5" x2="6.8" y2="14.5" stroke="#8e44ad" strokeWidth="2.2" strokeLinecap="round" />
+      {/* Bond zone */}
+      <line x1="15" y1="14.4" x2="21" y2="16" stroke="#8e44ad" strokeWidth="4.5" strokeLinecap="round" opacity="0.45" />
+    </svg>
+  );
+}
+
 /** Coloured piezometric line icon – a wavy water line with a dashed line below. */
 export function RibbonPiezoLineIcon({ size = 20 }: IconProps) {
   return (

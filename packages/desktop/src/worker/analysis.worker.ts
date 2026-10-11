@@ -30,7 +30,13 @@ function computeCriticalPushingMoment(
 ): number | null {
   if (!slices || slices.length === 0) return null;
   let pushing = 0;
-  for (const s of slices) pushing += sliceDrivingMoment(s);
+  for (const s of slices) {
+    pushing += sliceDrivingMoment(s);
+    // Active reinforcement is on the driving side (passive is part of the
+    // resistance, which is reported as pushing × FOS).
+    const a = s.reinforcementActive;
+    if (a) pushing += a[0] * s.dx + a[2];
+  }
   return Number.isFinite(pushing) && pushing > 0 ? pushing : null;
 }
 
@@ -169,6 +175,7 @@ function analyse(
       converged: crit.converged,
       lffArray: crit.lffArray,
       points: displayPoints(crit),
+      reinforcementForces: crit.slices?.flatMap((s) => s.reinforcementForces ?? []),
     };
 
     // Convert slices for critical surface

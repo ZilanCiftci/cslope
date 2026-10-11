@@ -8,6 +8,7 @@
 import type { AnalysisLimits } from "./analysis";
 import type { SlopeOrientation } from "../model/canonical";
 import type { MaterialModel } from "./material-models";
+import type { Reinforcement } from "./reinforcement";
 
 /** Slope definition sent from the UI to the engine / worker. */
 export interface SlopeDefinition {
@@ -59,6 +60,8 @@ export interface SlopeDefinition {
   udls?: Array<{ magnitude: number; x1: number; x2: number }>;
   /** Line loads (point loads). */
   lineLoads?: Array<{ magnitude: number; x: number }>;
+  /** Reinforcement: anchors, tiebacks, soil nails, geosynthetics. */
+  reinforcements?: Reinforcement[];
   /** Material boundary polylines that divide the slope into layers. */
   materialBoundaries?: Array<{
     coordinates: [number, number][];

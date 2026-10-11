@@ -39,6 +39,7 @@ export function useCanvasModelState() {
   const analysisLimits = useAppStore((s) => s.analysisLimits);
   const udls = useAppStore((s) => s.udls);
   const lineLoads = useAppStore((s) => s.lineLoads);
+  const reinforcements = useAppStore((s) => s.reinforcements);
   const piezometricLine = useAppStore((s) => s.piezometricLine);
   const selectedPointIndex = useAppStore((s) => s.selectedPointIndex);
   const selectedMaterialBoundaryId = useAppStore(
@@ -68,6 +69,7 @@ export function useCanvasModelState() {
     analysisLimits,
     udls,
     lineLoads,
+    reinforcements,
     piezometricLine,
     selectedPointIndex,
     selectedMaterialBoundaryId,

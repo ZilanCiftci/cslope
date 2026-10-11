@@ -5,6 +5,7 @@ import type {
   AnalysisResult,
   CustomSearchPlane,
   LineLoadRow,
+  ReinforcementRow,
   MaterialBoundaryRow,
   MaterialRow,
   ModelEntry,
@@ -44,6 +45,7 @@ interface InteriorBoundariesStatePayload {
 interface LoadsStatePayload {
   udls: UdlRow[];
   lineLoads: LineLoadRow[];
+  reinforcements?: ReinforcementRow[];
   parameters?: ParameterDef[];
 }
 
@@ -106,6 +108,7 @@ declare global {
       openInteriorBoundariesDialog: () => void;
       openUdlDialog: () => void;
       openLineLoadsDialog: () => void;
+      openReinforcementDialog: () => void;
       openPiezoDialog: () => void;
       openParametersDialog: () => void;
       openResultsPlotDialog: () => void;

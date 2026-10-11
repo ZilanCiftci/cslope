@@ -3,6 +3,7 @@
  */
 
 import type { Material } from "./material";
+import type { ReinforcementForce } from "./reinforcement";
 
 /**
  * Represents a polygon region with an associated material.
@@ -130,6 +131,16 @@ export interface Slice {
    * forces that is not already included as (weight + loads) × dx.
    */
   extraMoment?: number;
+  /**
+   * Reinforcement forces on the slice, [downward, horizontal (+x), extra
+   * moment] per metre, like the loads above: the moment beyond
+   * downward·dx. Active forces are applied as they are, passive ones
+   * divided by the trial FOS.
+   */
+  reinforcementActive?: [number, number, number];
+  reinforcementPassive?: [number, number, number];
+  /** The individual reinforcement forces acting on the slice. */
+  reinforcementForces?: ReinforcementForce[];
   /**
    * When `true`, the solver uses Combined method (min of drained/undrained).
    */

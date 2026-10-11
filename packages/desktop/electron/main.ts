@@ -33,6 +33,7 @@ let geometryWin: BrowserWindow | null;
 let interiorBoundariesWin: BrowserWindow | null;
 let udlWin: BrowserWindow | null;
 let lineLoadsWin: BrowserWindow | null;
+let reinforcementWin: BrowserWindow | null;
 let piezoWin: BrowserWindow | null;
 let parametersWin: BrowserWindow | null;
 let resultsPlotWin: BrowserWindow | null;
@@ -416,6 +417,46 @@ function createLineLoadsWindow() {
   }
 }
 
+function createReinforcementWindow() {
+  if (!win) return;
+
+  if (reinforcementWin && !reinforcementWin.isDestroyed()) {
+    reinforcementWin.show();
+    reinforcementWin.focus();
+    return;
+  }
+
+  reinforcementWin = new BrowserWindow({
+    width: 760,
+    height: 760,
+    minWidth: 560,
+    minHeight: 520,
+    title: "Reinforcement",
+    parent: win,
+    modal: false,
+    autoHideMenuBar: true,
+    icon: path.join(process.env.VITE_PUBLIC, "mountain.svg"),
+    webPreferences: {
+      preload: path.join(__dirname, "preload.mjs"),
+      contextIsolation: true,
+      nodeIntegration: false,
+      sandbox: true,
+    },
+  });
+
+  reinforcementWin.on("closed", () => {
+    reinforcementWin = null;
+  });
+
+  if (VITE_DEV_SERVER_URL) {
+    reinforcementWin.loadURL(`${VITE_DEV_SERVER_URL}#reinforcement-dialog`);
+  } else {
+    reinforcementWin.loadFile(path.join(RENDERER_DIST, "index.html"), {
+      hash: "reinforcement-dialog",
+    });
+  }
+}
+
 function createPiezoWindow() {
   if (!win) return;
 
@@ -749,6 +790,9 @@ ipcMain.on("window:openInteriorBoundariesDialog", () =>
 );
 ipcMain.on("window:openUdlDialog", () => createUdlWindow());
 ipcMain.on("window:openLineLoadsDialog", () => createLineLoadsWindow());
+ipcMain.on("window:openReinforcementDialog", () =>
+  createReinforcementWindow(),
+);
 ipcMain.on("window:openPiezoDialog", () => createPiezoWindow());
 ipcMain.on("window:openParametersDialog", () => createParametersWindow());
 ipcMain.on("window:openResultsPlotDialog", () => createResultsPlotWindow());
@@ -869,40 +913,30 @@ ipcMain.on("interiorBoundaries:changed", (event, state) => {
 
 // ── Loads window sync IPC (main window <-> loads windows) ───────────────
 
+const loadsWindows = () => [udlWin, lineLoadsWin, reinforcementWin];
+const isLoadsWindow = (sender: Electron.WebContents) =>
+  loadsWindows().some((w) => w && !w.isDestroyed() && w.webContents === sender);
+
 ipcMain.on("loads:requestState", (event) => {
-  if (
-    event.sender === udlWin?.webContents ||
-    event.sender === lineLoadsWin?.webContents
-  ) {
+  if (isLoadsWindow(event.sender)) {
     win?.webContents.send("loads:requestState");
   }
 });
 
 ipcMain.on("loads:stateResponse", (event, state) => {
   if (event.sender === win?.webContents) {
-    udlWin?.webContents.send("loads:stateResponse", state);
-    lineLoadsWin?.webContents.send("loads:stateResponse", state);
+    for (const w of loadsWindows()) w?.webContents.send("loads:stateResponse", state);
   }
 });
 
 ipcMain.on("loads:changed", (event, state) => {
-  if (
-    event.sender === udlWin?.webContents ||
-    event.sender === lineLoadsWin?.webContents
-  ) {
-    win?.webContents.send("loads:changed", state);
-    if (event.sender !== udlWin?.webContents) {
-      udlWin?.webContents.send("loads:changed", state);
+  const fromDialog = isLoadsWindow(event.sender);
+  if (!fromDialog && event.sender !== win?.webContents) return;
+  if (fromDialog) win?.webContents.send("loads:changed", state);
+  for (const w of loadsWindows()) {
+    if (w && !w.isDestroyed() && w.webContents !== event.sender) {
+      w.webContents.send("loads:changed", state);
     }
-    if (event.sender !== lineLoadsWin?.webContents) {
-      lineLoadsWin?.webContents.send("loads:changed", state);
-    }
-    return;
-  }
-
-  if (event.sender === win?.webContents) {
-    udlWin?.webContents.send("loads:changed", state);
-    lineLoadsWin?.webContents.send("loads:changed", state);
   }
 });
 

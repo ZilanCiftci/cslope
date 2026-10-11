@@ -97,6 +97,45 @@ export interface LineLoadRow {
   expressions?: LineLoadExpressions;
 }
 
+export type ReinforcementType = "anchor" | "tieback" | "nail" | "geosynthetic";
+
+/**
+ * Reinforcement element (stag, jordspik, geonät): a straight line from end 1
+ * (the head, at the face) to end 2 (the embedded end). Capacities are per
+ * element (kN), or per metre for spacing 1.
+ */
+export interface ReinforcementRow {
+  id: string;
+  label?: string;
+  type: ReinforcementType;
+  x1: number;
+  y1: number;
+  x2: number;
+  y2: number;
+  /** Tensile capacity (kN per element). */
+  tensileCapacity: number;
+  /** Out-of-plane spacing (m). */
+  spacing: number;
+  /**
+   * Pullout along the element: none (fully anchored ends), constant bond
+   * (kN/m), or interface friction from the overburden (geosynthetics).
+   */
+  pullout: "none" | "bond" | "interface";
+  /** Bond strength (kN per m of element). */
+  bondStrength: number;
+  /** Bonded length at end 2 (m); 0 = the whole element (nails). */
+  bondedLength: number;
+  /** Interface adhesion (kPa) and friction angle (°), both faces. */
+  adhesion: number;
+  interfaceFriction: number;
+  /** Plate / facing connection capacity at end 1 (kN per element). */
+  end1Capacity: number;
+  /** Anchorage capacity at end 2 (kN per element). */
+  end2Capacity: number;
+  direction: "axial" | "tangent" | "bisector";
+  application: "active" | "passive";
+}
+
 export interface PiezoLine {
   id: string;
   name: string;
@@ -233,6 +272,7 @@ export interface ModelEntry {
   piezometricLine: PiezometricLineState;
   udls: UdlRow[];
   lineLoads: LineLoadRow[];
+  reinforcements?: ReinforcementRow[];
   customSearchPlanes: CustomSearchPlane[];
   customPlanesOnly: boolean;
   options: AnalysisOptions;
@@ -377,6 +417,10 @@ export interface LoadsSlice {
   addLineLoad: () => void;
   updateLineLoad: (id: string, patch: Partial<LineLoadRow>) => void;
   removeLineLoad: (id: string) => void;
+  reinforcements: ReinforcementRow[];
+  addReinforcement: (type?: ReinforcementType) => void;
+  updateReinforcement: (id: string, patch: Partial<ReinforcementRow>) => void;
+  removeReinforcement: (id: string) => void;
 }
 
 export interface ParametersSlice {

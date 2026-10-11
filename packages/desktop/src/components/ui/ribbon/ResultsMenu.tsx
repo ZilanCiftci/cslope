@@ -163,6 +163,7 @@ export function ResultsMenu({ isOpen, onActivate, panelHost }: Props) {
       piezometricLine: state.piezometricLine,
       udls: state.udls,
       lineLoads: state.lineLoads,
+      reinforcements: state.reinforcements,
       analysisLimits: state.analysisLimits,
       orientation: state.orientation,
       projectInfo: state.projectInfo,

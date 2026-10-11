@@ -10,6 +10,7 @@ import type {
   PiezometricLineState,
   ProjectInfo,
   RegionMaterials,
+  ReinforcementRow,
   ResultViewSettings,
 } from "../../store/types";
 import { PLOT_MARGINS } from "../../store/defaults";
@@ -21,6 +22,8 @@ import {
   drawEntryExitMarkers,
   drawGrid,
   drawLineLoads,
+  drawReinforcementsPdf,
+  drawReinforcementForcesPdf,
   drawMaterialRegions,
   drawOpenPolyline,
   drawPiezometricLines,
@@ -85,6 +88,7 @@ export interface PdfExportData {
   piezometricLine: PiezometricLineState;
   udls: { id: string; x1: number; x2: number; magnitude: number }[];
   lineLoads: { id: string; x: number; magnitude: number }[];
+  reinforcements?: ReinforcementRow[];
   analysisLimits: AnalysisLimitsState;
   orientation: ModelOrientation;
   projectInfo?: ProjectInfo;
@@ -134,6 +138,7 @@ export function exportVectorPdf(data: PdfExportData): void {
       piezometricLine,
       udls,
       lineLoads,
+      reinforcements = [],
       analysisLimits,
       orientation,
       projectInfo,
@@ -343,6 +348,10 @@ export function exportVectorPdf(data: PdfExportData): void {
       drawLineLoads(pdf, tf, lineLoads, coordinates);
     }
 
+    if (reinforcements.length > 0) {
+      drawReinforcementsPdf(pdf, tf, reinforcements);
+    }
+
     if (piezometricLine.lines.length > 0) {
       drawPiezometricLines(
         pdf,
@@ -361,6 +370,9 @@ export function exportVectorPdf(data: PdfExportData): void {
     drawSlipSurfaces(pdf, tf, result, rvs);
 
     drawCriticalSurface(pdf, tf, result, rvs, coordinates);
+    if (result.criticalSurface?.reinforcementForces?.length) {
+      drawReinforcementForcesPdf(pdf, tf, result.criticalSurface.reinforcementForces);
+    }
 
     pdf.restoreGraphicsState();
 

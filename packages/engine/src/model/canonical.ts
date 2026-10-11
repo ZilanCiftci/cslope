@@ -165,6 +165,11 @@ export function toCanonicalSlopeDefinition(
       ...lineLoad,
       x: mirrorX(lineLoad.x, xMin, xMax),
     })),
+    reinforcements: slopeDefinition.reinforcements?.map((r) => ({
+      ...r,
+      x1: mirrorX(r.x1, xMin, xMax),
+      x2: mirrorX(r.x2, xMin, xMax),
+    })),
     analysisLimits: slopeDefinition.analysisLimits
       ? mirrorLimits(slopeDefinition.analysisLimits, xMin, xMax)
       : undefined,
@@ -244,6 +249,9 @@ export function mapAnalysisResultToModelSpace(
           ),
           points: analysisResult.criticalSurface.points?.map((p) =>
             mirrorPoint(p, xMin, xMax),
+          ),
+          reinforcementForces: analysisResult.criticalSurface.reinforcementForces?.map(
+            (f) => ({ ...f, x: mirrorX(f.x, xMin, xMax), fx: -f.fx }),
           ),
         }
       : null,

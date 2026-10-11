@@ -1,3 +1,4 @@
+import { sanitizeReinforcement } from "../utils/reinforcement";
 import {
   ITERATIONS_RANGE,
   REFINED_ITERATIONS_RANGE,
@@ -25,6 +26,7 @@ import type {
   AppState,
   CoordinateExpression,
   LineLoadRow,
+  ReinforcementRow,
   MaterialRow,
   ModelEntry,
   ParameterDef,
@@ -227,6 +229,13 @@ function normalizeModelEntry(raw: unknown): ModelEntry {
           .map(normalizeLineLoad)
           .filter(Boolean) as LineLoadRow[])
       : [],
+    ...(Array.isArray(model.reinforcements)
+      ? {
+          reinforcements: (model.reinforcements as unknown[])
+            .map((r, i) => sanitizeReinforcement(r, `reinf-${i + 1}`))
+            .filter((r): r is ReinforcementRow => r !== null),
+        }
+      : {}),
     options: model.options
       ? normalizeAnalysisOptions(model.options)
       : { ...APP_DEFAULT_ANALYSIS_OPTIONS },

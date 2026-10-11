@@ -69,6 +69,7 @@ import {
   MODEL_HATCH_PATTERNS,
 } from "../rendering/style-spec";
 import { drawCanvasHatch, drawCanvasHatchLabel } from "../rendering/hatch";
+import { drawReinforcementForces, drawReinforcements } from "./reinforcement-draw";
 import { freeWaterPolygons, mainPiezoLine, piezoExtensions } from "../../utils/piezo";
 
 const arcPointCache = new WeakMap<object, Map<string, [number, number][]>>();
@@ -161,6 +162,7 @@ export interface DrawCanvasParams {
   analysisLimits: AppState["analysisLimits"];
   udls: AppState["udls"];
   lineLoads: AppState["lineLoads"];
+  reinforcements?: AppState["reinforcements"];
   piezometricLine: AppState["piezometricLine"];
   viewScale: number;
   mouseWorld: [number, number] | null;
@@ -208,6 +210,7 @@ export function drawCanvas(
     analysisLimits,
     udls,
     lineLoads,
+    reinforcements,
     piezometricLine,
     viewScale,
     mouseWorld,
@@ -872,6 +875,11 @@ export function drawCanvas(
     }
   }
 
+  // ── Reinforcement ───────────────────────────────────────
+  if (reinforcements && reinforcements.length > 0) {
+    drawReinforcements(ctx, reinforcements, (x, y) => worldToCanvas(x, y, w, h), paperZoom);
+  }
+
   // ── Piezometric lines ──────────────────────────────────
   if (piezometricLine.lines.length > 0) {
     const multiLine = piezometricLine.lines.length > 1;
@@ -1481,6 +1489,11 @@ export function drawCanvas(
         ctx.beginPath();
         ctx.arc(ccx, ccy, 3 * paperZoom, 0, Math.PI * 2);
         ctx.fill();
+      }
+
+      // Reinforcement forces on the sliding mass
+      if (cs.reinforcementForces?.length) {
+        drawReinforcementForces(ctx, cs.reinforcementForces, (x, y) => worldToCanvas(x, y, w, h), paperZoom);
       }
 
       // FOS label to the right of the circle centre
