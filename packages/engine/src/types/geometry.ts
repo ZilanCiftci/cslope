@@ -141,6 +141,8 @@ export interface Slice {
   reinforcementPassive?: [number, number, number];
   /** The individual reinforcement forces acting on the slice. */
   reinforcementForces?: ReinforcementForce[];
+  /** Combined method: the undrained strength governed in the last solve. */
+  undrainedGoverns?: boolean;
   /**
    * When `true`, the solver uses Combined method (min of drained/undrained).
    */

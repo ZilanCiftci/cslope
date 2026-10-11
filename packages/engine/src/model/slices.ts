@@ -602,6 +602,47 @@ export function getSlices(
     }
   }
 
+  // Free water against a vertical face of the ground (a wall, a quay): the
+  // slice tops never include the face, so its horizontal pressure is
+  // applied here, toward the higher side, like the inclined-face thrust
+  // in applyFreeWater.
+  if (waterYL && waterYR && results.length > 0) {
+    const w = slope.waterRLXY!;
+    const tol = 1e-6 * Math.max(1, x1 - x0);
+    for (let k = 0; k <= nSlices; k++) {
+      // Ground on each side of the boundary; outside the mass at its ends.
+      const yL = k > 0 ? yTopsR[k - 1] : surfaceYFrom(x0, "left");
+      const yR = k < nSlices ? yTopsL[k] : surfaceYFrom(x1, "right");
+      if (!Number.isFinite(yL) || !Number.isFinite(yR) || Math.abs(yL - yR) <= tol) continue;
+      const highLeft = yL > yR;
+      // The face belongs to the sliding mass only where the mass is the
+      // higher side (at the ends, the single slice there).
+      if ((k === 0 && highLeft) || (k === nSlices && !highLeft)) continue;
+      const yLo = Math.min(yL, yR);
+      const yHi = Math.max(yL, yR);
+      // Water on the low side, read from that side.
+      const wy = highLeft
+        ? k < nSlices ? waterYL[k] : lineYFrom(w, x1, "right")
+        : k > 0 ? waterYR[k - 1] : lineYFrom(w, x0, "left");
+      if (!Number.isFinite(wy) || wy <= yLo) continue;
+      const h1 = wy - yLo;
+      const h2 = Math.max(wy - yHi, 0);
+      const force = (WATER_UNIT_WEIGHT * (h1 * h1 - h2 * h2)) / 2;
+      // Centroid of the trapezoidal pressure between yLo and min(wy, yHi).
+      const d = Math.min(wy, yHi) - yLo;
+      const yc = yLo + (d * (h1 + 2 * h2)) / (3 * (h1 + h2));
+      const fx = highLeft ? -force : force;
+      const xFace = slicesX[k];
+      // The slice on the low side carries the force.
+      const target =
+        results.find((s) => Math.abs((highLeft ? s.xLeft : s.xRight) - xFace) <= SLICE_DEDUP_TOLERANCE) ??
+        results.find((s) => Math.abs((highLeft ? s.xRight : s.xLeft) - xFace) <= SLICE_DEDUP_TOLERANCE);
+      if (!target) continue;
+      target.hForce = (target.hForce ?? 0) + fx;
+      target.extraMoment = (target.extraMoment ?? 0) + fx * (cy - yc);
+    }
+  }
+
   // Water in the crack pushes the sliding mass downslope (+x): resultant
   // γw·hw²/2 at hw/3 above the crack bottom.
   const hw = crackDepth * slope.tensionCrackWater;

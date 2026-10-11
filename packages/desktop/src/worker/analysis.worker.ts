@@ -6,6 +6,7 @@
  */
 
 import type { AnalysisResponse, ReliabilityRequest, WorkerMessage } from "./messages";
+import { runReliabilityRequest } from "./reliability-run";
 import type {
   AnalysisResult,
   SlipSurfaceResult,
@@ -13,8 +14,6 @@ import type {
 } from "@cslope/engine";
 import {
   analyseSlope,
-  analyseReliability,
-  reliabilitySurfaceToModelSpace,
   mapAnalysisResultToModelSpace,
   buildSlope,
   oppositeDirectionDefinition,
@@ -99,19 +98,12 @@ self.onmessage = (event: MessageEvent<WorkerMessage>) => {
   }
 };
 
-/**
- * Probabilistic analysis in the model's own sliding direction. The request
- * carries the canonical definition (as for a normal run); the surface is
- * mapped back to model coordinates.
- */
+/** Probabilistic analysis; the result's surface is in model coordinates. */
 function runReliability(req: ReliabilityRequest): void {
   try {
-    const result = analyseReliability(req.slope, req.options, req.variables, {
-      ...req.reliability,
-      onProgress: (progress) =>
-        self.postMessage({ type: "analysis-progress", id: req.id, progress } satisfies AnalysisResponse),
-    });
-    result.surface = reliabilitySurfaceToModelSpace(result.surface, req.slope);
+    const result = runReliabilityRequest(req, (progress) =>
+      self.postMessage({ type: "analysis-progress", id: req.id, progress } satisfies AnalysisResponse),
+    );
     self.postMessage({ type: "reliability-complete", id: req.id, result } satisfies AnalysisResponse);
   } catch (err: unknown) {
     self.postMessage({

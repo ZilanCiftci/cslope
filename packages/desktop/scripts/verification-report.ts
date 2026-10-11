@@ -648,8 +648,8 @@ table(
     { title: "Value", width: CONTENT_W - 62 },
   ],
   [
-    ["Slip surfaces", "Circular. Fixed circles where the source gives one, otherwise a critical-circle search."],
-    ["Number of slices", String(VERIFICATION_OPTIONS.slices)],
+    ["Slip surfaces", "Circular, or the non-circular surface the source gives. Fixed surfaces where the source gives one, otherwise a critical-circle search (with non-circular optimisation where stated)."],
+    ["Number of slices", `${VERIFICATION_OPTIONS.slices} unless the problem states otherwise`],
     ["Search", `${VERIFICATION_OPTIONS.iterations} entry/exit combinations plus ${VERIFICATION_OPTIONS.refinedIterations} refined around the best surfaces`],
     ["Convergence tolerance", "0.005 on the factor of safety (default)"],
     ["Methods", "Bishop simplified, Janbu simplified (uncorrected unless stated), Morgenstern-Price with half-sine interslice function; Spencer = Morgenstern-Price with a constant interslice function"],
@@ -659,7 +659,7 @@ table(
 );
 heading("Acceptance", 2);
 paragraph(
-  "A result passes when its relative difference from the published value is within the tolerance stated for the problem (0.5–2.5 %). Tighter tolerances are used for fixed circles, wider ones for searches, whose result depends on the search grid of each program.",
+  "A result passes when its relative difference from the published value is within the tolerance stated for the problem (0.5–2.5 %). Tighter tolerances are used where the input is exactly known; wider ones for searches, whose result depends on the search grid of each program, and for problems whose input (e.g. a digitised water table) is only approximately known, as stated in the notes. Reliability indices and probabilities of failure are compared with absolute tolerances, and the bundled benchmark models with an absolute tolerance on the factor of safety. Checks marked \"xslope (same input)\" compare with another program run on the identical input, not with a publication.",
 );
 y += 2;
 heading("Units", 2);
@@ -888,7 +888,7 @@ benchResults.forEach((b, i) => {
       { title: "Published", width: 24, align: "right" },
       { title: "cSlope", width: 22, align: "right" },
       { title: "Difference", width: 24, align: "right" },
-      { title: "Tolerance", width: 26, align: "right" },
+      { title: "Tolerance (abs.)", width: 26, align: "right" },
       { title: "", width: CONTENT_W - 152, align: "center" },
     ],
     b.rows.map((x) => [

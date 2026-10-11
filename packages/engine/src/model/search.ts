@@ -294,6 +294,7 @@ export function generateRefinedPlanes(
 
     const siblings = validRanked.filter(
       (plane) =>
+        !plane.points && // a custom polyline has no radius
         Math.abs(plane.lc[0] - seed.lc[0]) <= radiusGroupTol &&
         Math.abs(plane.rc[0] - seed.rc[0]) <= radiusGroupTol,
     );

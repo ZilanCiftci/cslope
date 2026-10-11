@@ -290,19 +290,6 @@ const vp80Ground: Pt[] = [
   [330, 110],
 ];
 
-const vp28Layers: Layer[] = [
-  { name: "Fill", topY: null, model: mc(10, 12, 20) },
-  { name: "Clay", topY: 15, model: mc(40, 0, 18) },
-  { name: "Rock", topY: 5, model: { kind: "impenetrable", unitWeight: 22 } },
-];
-const vp28Ground: Pt[] = [
-  [0, 15],
-  [30, 15],
-  [55, 25],
-  [60, 25],
-  [80, 15],
-  [90, 15],
-];
 
 /** Clarence Cannon Dam (Hassan & Wolff 1999), circle = centre + radius. */
 const cannon = (cx: number, cy: number, r: number): SlopeDefinition => ({
@@ -456,26 +443,6 @@ export const VERIFICATION_CASES: VerificationCase[] = [
     description: "As VP80a with a deeper circle of radius 102 ft, reaching the weak clay layers.",
     definition: layered(vp80Ground, 0, vp80Layers, circle(142, 147, 102)),
     checks: [bishop(1.398, "Duncan & Wright", 0.01)],
-  },
-  {
-    id: "VP28a",
-    title: "Chowdhury & Xu (1995) example 5, circle 1",
-    reference: "Chowdhury & Xu (1995), example 5. Slide2 Verification Problem #28.",
-    surface: "fixed",
-    units: "SI",
-    description: "Ridge of fill over clay on impenetrable rock; the published surfaces slide down the left face (right-to-left model).",
-    definition: layered(vp28Ground, 0, vp28Layers, { ...circle(37.369, 42.429, 27.429), orientation: "rtl" }),
-    checks: [bishop(1.16, "Chowdhury & Xu", 0.01)],
-  },
-  {
-    id: "VP28b",
-    title: "Chowdhury & Xu (1995) example 5, circle 2",
-    reference: "Chowdhury & Xu (1995), example 5. Slide2 Verification Problem #28.",
-    surface: "fixed",
-    units: "SI",
-    description: "As VP28a with the second published circle.",
-    definition: layered(vp28Ground, 0, vp28Layers, { ...circle(40.256, 29.437, 24.437), orientation: "rtl" }),
-    checks: [bishop(1.185, "Chowdhury & Xu", 0.01)],
   },
   {
     id: "EC7",

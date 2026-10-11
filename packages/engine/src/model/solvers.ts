@@ -45,6 +45,8 @@ interface SliceArrays {
   materialCodes: Int32Array;
   dxs: Float64Array;
   funcs: Float64Array;
+  /** The slices themselves: the solvers note which strength governed. */
+  slices: Slice[];
 }
 
 function getSlicePropertyArrays(
@@ -134,6 +136,7 @@ function getSlicePropertyArrays(
     materialCodes,
     dxs,
     funcs,
+    slices,
   };
 }
 
@@ -209,8 +212,9 @@ function solveFOSGenericMoment(
       let eLeft = 0;
       let xLeft = 0;
 
-      // Passive reinforcement mobilises with the soil: divided by F.
-      const kP = 1 / prevFOS;
+      // Passive reinforcement mobilises with the soil: divided by F (an
+      // initial guess of 0 from the Ordinary method would give NaN).
+      const kP = prevFOS > 0 ? 1 / prevFOS : 1;
       for (let i = 0; i < n; i++) {
         const W =
           p.weights[i] + p.udls[i] + p.lls[i] + p.activeV[i] + p.passiveV[i] * kP;
@@ -247,10 +251,14 @@ function solveFOSGenericMoment(
         const shear = c * bl + (N - U * bl) * tanPhi;
         let res = shear * R;
         // Combined method: where the undrained strength governs, the
-        // slice must be in equilibrium with that (smaller) shear too.
+        // slice must be in equilibrium with that (smaller) shear too; a
+        // negative drained shear (N′ < 0, e.g. m_α < 0 on a steep slice)
+        // is replaced the same way, which keeps the iteration stable.
         // (Compared as forces: on a non-circular surface the arm can be
         // negative.)
+        let undrainedGoverns = false;
         if (matCode === 1 && !(shear >= 0 && shear <= cu * bl)) {
+          undrainedGoverns = true;
           [N, eRight, xRight] = solveSliceNormal(
             W,
             xLeft,
@@ -265,6 +273,7 @@ function solveFOSGenericMoment(
           res = cu * bl * R;
         }
         resisting += res;
+        if (matCode === 1) p.slices[i].undrainedGoverns = undrainedGoverns;
 
         // On a non-circular surface the normal force has a moment too.
         // Passive reinforcement is resistance: its moment is collected
@@ -343,8 +352,9 @@ function solveFOSGenericForceCircular(
       let eLeft = 0;
       let xLeft = 0;
 
-      // Passive reinforcement mobilises with the soil: divided by F.
-      const kP = 1 / prevFOS;
+      // Passive reinforcement mobilises with the soil: divided by F (an
+      // initial guess of 0 from the Ordinary method would give NaN).
+      const kP = prevFOS > 0 ? 1 / prevFOS : 1;
       for (let i = 0; i < n; i++) {
         const W =
           p.weights[i] + p.udls[i] + p.lls[i] + p.activeV[i] + p.passiveV[i] * kP;
@@ -380,7 +390,9 @@ function solveFOSGenericForceCircular(
         let res = c * bl * cosA + (N - U * bl) * cosA * tanPhi;
         // Combined method: where the undrained strength governs, N and the
         // interslice forces must follow from that shear as well.
+        let undrainedGoverns = false;
         if (matCode === 1 && !(res >= 0 && res <= cu * bl * cosA)) {
+          undrainedGoverns = true;
           [N, eRight, xRight] = solveSliceNormal(
             W,
             xLeft,
@@ -395,6 +407,7 @@ function solveFOSGenericForceCircular(
           res = cu * bl * cosA;
         }
         resisting += res;
+        if (matCode === 1) p.slices[i].undrainedGoverns = undrainedGoverns;
 
         pushing += N * sinA + H - p.passiveH[i] * kP;
         passiveForce += p.passiveH[i];
@@ -903,12 +916,14 @@ export function analyseSlope(slope: Slope): number | null {
       ...p,
       fos: null,
       slices: null,
+      crack: undefined,
       converged: true,
     })),
     ...slope.individualPlanes.map((p) => ({
       ...p,
       fos: null,
       slices: null,
+      crack: undefined,
       converged: true,
     })),
   ];
@@ -1135,5 +1150,8 @@ function hasDrivingMoment(slices: Slice[]): boolean {
 }
 
 function mAlpha(s: Slice, fos: number): number {
-  return Math.cos(s.alpha) + (Math.sin(s.alpha) * Math.tan(s.phi)) / fos;
+  // A combined-method slice in equilibrium with its undrained strength has
+  // tan φ = 0 in the equation that was solved.
+  const tanPhi = s.undrainedGoverns ? 0 : Math.tan(s.phi);
+  return Math.cos(s.alpha) + (Math.sin(s.alpha) * tanPhi) / fos;
 }

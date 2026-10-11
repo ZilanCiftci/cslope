@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { analyseReliability, analyseSlope, buildSlope, type ReliabilityResult } from "@cslope/engine";
+import { analyseSlope, buildSlope, type ReliabilityResult } from "@cslope/engine";
+import { runReliabilityRequest } from "../../worker/reliability-run";
 import { buildSlopeDTOFromModel } from "../../store/helpers";
 import { useAppStore } from "../../store/app-store";
 import { snapshotFromState } from "../../store/slices/analysisSlice";
@@ -77,7 +78,7 @@ describe("probabilistic analysis", () => {
     expect(useReliabilityStore.getState()).toMatchObject({ result: null, labels: [], error: null });
   });
 
-  it("the analysis request is already canonical: right-to-left models give the normal run's FOS", () => {
+  it("the worker analyses the (already canonical) request as it is: right-to-left models give the normal run's FOS", () => {
     const model = activeModel();
     const xs = model.coordinates.map((c) => c[0]);
     const sum = Math.min(...xs) + Math.max(...xs);
@@ -92,7 +93,17 @@ describe("probabilistic analysis", () => {
     const slope = buildSlope(dto);
     slope.updateAnalysisOptions(rtl.options);
     const fos = analyseSlope(slope)!;
-    const r = analyseReliability(dto, rtl.options, [{ material: 0, field: "cohesion", sd: 0.5 }], { method: "taylor", search: false });
+    const variables = [{ material: 0, field: "cohesion", sd: 0.5 }];
+    const reliability = { method: "taylor" as const, search: false };
+    const r = runReliabilityRequest({ slope: dto, options: rtl.options, variables, reliability });
     expect(r.fos).toBeCloseTo(fos, 6);
+    // The surface comes back in model coordinates: the mirror image of the
+    // same model sliding left to right.
+    const ltr = { ...rtl, orientation: "ltr" as const, coordinates: model.coordinates };
+    const m = runReliabilityRequest({ slope: buildSlopeDTOFromModel(ltr), options: rtl.options, variables, reliability });
+    expect(m.fos).toBeCloseTo(fos, 6);
+    expect(r.surface.cx).toBeCloseTo(sum - m.surface.cx, 4);
+    // Entry stays entry (the crest side), as the engine maps results back.
+    expect(r.surface.lc[0]).toBeCloseTo(sum - m.surface.lc[0], 4);
   });
 });

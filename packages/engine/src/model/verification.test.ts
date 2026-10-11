@@ -8,6 +8,8 @@ import { defaultAxisPoint, isAdmissiblePolyline } from "./surface";
 import { validateMaterialModel } from "../types/validation";
 import { analyseBishop, analyseMorgensternPrice } from "./solvers";
 import { rankineCrackDepth } from "./slices";
+import { Material } from "../types/material";
+import { analyseSlope } from "./solvers";
 import { RELIABILITY_CASES } from "../verification/reliability-cases";
 import type { Slice } from "../types/geometry";
 import {
@@ -35,10 +37,16 @@ describe("Verification problems", () => {
 
 describe("Probabilistic verification problems", () => {
   for (const c of RELIABILITY_CASES) {
-    it(`${c.id} ${c.title}`, { timeout: 120000 }, () => {
-      for (const r of runReliabilityCase(c)) {
-        expect({ check: `${r.quantity} ${r.published} (${r.publishedBy})`, computed: r.computed, pass: r.pass }).toMatchObject({ pass: true });
-      }
+    // One run per case (Taylor series and Monte Carlo), one test per check.
+    let results: ReturnType<typeof runReliabilityCase> | null = null;
+    const run = () => (results ??= runReliabilityCase(c));
+    c.checks.forEach(([quantity, published, publishedBy, tolerance], i) => {
+      if (quantity === "fos") return; // in VERIFICATION_CASES
+      it(`${c.id} ${c.title}: ${quantity} ${published} (${publishedBy})`, { timeout: 120000 }, () => {
+        const r = run()[i];
+        expect(r.quantity).toBe(quantity);
+        expect(Math.abs(r.computed - published)).toBeLessThanOrEqual(tolerance + 1e-9);
+      });
     });
   }
 });
@@ -95,6 +103,48 @@ describe("Free water above the ground", () => {
       expect(Math.abs(submerged / buoyant - 1)).toBeLessThanOrEqual(0.003);
     });
   }
+});
+
+describe("Free water against a vertical face", () => {
+  // A quay wall: the thrust on the face is the only difference from a face
+  // 0.06° off vertical, so the FOS must be continuous there.
+  const soil = [{ name: "S", topY: null, model: mc(20, 30, 20) }];
+  const wall = (dx: number, water: number) =>
+    layered([[-10, -10], [-10, 10], [10, 10], [10 + dx, 0], [40, 0], [40, -10]], -10, soil, {
+      waterTable: { mode: "custom", value: [[-10, water], [40, water]], followBoundary: false },
+      ...circle(8, 10, 11),
+    });
+  it("a lake against the wall resists like one against a near-vertical face", () => {
+    const vertical = runVerification(wall(0, 5), "Bishop").fos!;
+    const steep = runVerification(wall(0.01, 5), "Bishop").fos!;
+    expect(Math.abs(vertical / steep - 1)).toBeLessThan(0.002);
+    // Without the thrust the FOS was 2.02.
+    expect(vertical).toBeGreaterThan(2.3);
+  });
+  it("a submerged vertical cut = the buoyant cut", () => {
+    const submerged = runVerification(wall(0, 15), "Bishop").fos!;
+    const buoyant = runVerification(
+      layered([[-10, -10], [-10, 10], [10, 10], [10, 0], [40, 0], [40, -10]], -10, [{ name: "S", topY: null, model: mc(20, 30, 20 - 9.81) }], circle(8, 10, 11)),
+      "Bishop",
+    ).fos!;
+    expect(Math.abs(submerged / buoyant - 1)).toBeLessThan(0.001);
+  });
+});
+
+describe("Combined method", () => {
+  it("accepts a surface whose steep exit slice is governed by the undrained strength", () => {
+    // Exit slice at α ≈ −54°: m_α with φ′ = 35° is negative, but the slice
+    // is in equilibrium with cu (tan φ = 0), which is what was solved.
+    const ground: [number, number][] = [[-30, 10], [10, 10], [20, 0], [40, 0]];
+    const combined = { ...mc(5, 35, 20), cohesionUndrained: 10, cFactor: 1 };
+    const fos = runVerification(layered(ground, -10, [{ name: "C", topY: null, model: combined }], circle(8, 10.6, 20)), "Bishop").fos;
+    const undrained = runVerification(layered(ground, -10, [{ name: "C", topY: null, model: su(10, 20) }], circle(8, 10.6, 20)), "Bishop").fos;
+    expect(undrained).not.toBeNull();
+    expect(fos).not.toBeNull();
+    // The combined strength is the smaller of the two on every slice.
+    expect(fos!).toBeLessThanOrEqual(undrained! + 1e-9);
+    expect(fos!).toBeGreaterThan(0.9 * undrained!);
+  });
 });
 
 describe("Tension crack", () => {
@@ -387,15 +437,27 @@ describe("Automatic tension crack depth", () => {
   });
 
   it("depends on the soil at the crack, so re-slicing from the crack finds it again", () => {
-    // Load from x = 0 to 3 on the crest: no load beyond it, so the crack
-    // (where the surface is as deep as the local Rankine depth) can sit
-    // either side of the load edge.
-    const loaded = slopeWith(su(20, 18), {}, { udls: [{ magnitude: 10, x1: 0, x2: 3 }] });
+    // Load from x = 0 to 3 on the crest; this circle enters under the load
+    // (Rankine depth 1.67 m) and cracks beyond it (2.22 m), so the depth at
+    // the entry would put the crack elsewhere.
+    const loaded = slopeWith(su(20, 18), {}, { udls: [{ magnitude: 10, x1: 0, x2: 3 }], ...circle(14, 18, 14) });
+    expect(loaded.slope.search[0].lc[0]).toBeLessThan(3);
+    expect(loaded.slope.search[0].crack![0]).toBeGreaterThan(3);
     const p = loaded.slope.search.find((q) => q.fos != null && q.crack)!;
     const again = getSlices(loaded.slope, p.crack![0], p.rc[0], p.cx, p.cy, p.radius);
     expect(again[0].xLeft).toBeCloseTo(p.crack![0], 6);
     const depth = rankineCrackDepth(loaded.slope, p.crack![0]);
     expect(again[0].y0Top - again[0].y0Bottom).toBeCloseTo(depth, 6);
+  });
+
+  it("is recomputed after a material change", () => {
+    const run = slopeWith(su(40, 18), {}, circle(12, 16, 12));
+    const before = run.slope.search[0].crack;
+    expect(before).toBeDefined();
+    run.slope.assignMaterial([5, 5], new Material({ name: "Sand", unitWeight: 18, frictionAngle: 30, cohesion: 0 }));
+    expect(run.slope.search).toHaveLength(0); // results dropped
+    analyseSlope(run.slope);
+    expect(run.slope.search[0].crack).toBeUndefined();
   });
 
   it("free water on the crest closes the crack like a surcharge", () => {
