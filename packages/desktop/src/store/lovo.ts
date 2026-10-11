@@ -75,7 +75,9 @@ export const LOVO_MODELS: ModelEntry[] = [
           unitWeight: 17.0,
           suRef: 19.0,
           yRef: -1.7,
-          rate: 12.7,
+          // Su falls from 19 kPa at the datum to 6.3 kPa (Le 2) one metre
+          // below, as in the SLOPE/W input (C-Rate of Change −12.7).
+          rate: -12.7,
         },
       },
       {
@@ -263,7 +265,9 @@ export const LOVO_MODELS: ModelEntry[] = [
           unitWeight: 17.0,
           suRef: 19.0,
           yRef: -1.7,
-          rate: 12.7,
+          // Su falls from 19 kPa at the datum to 6.3 kPa (Le 2) one metre
+          // below, as in the SLOPE/W input (C-Rate of Change −12.7).
+          rate: -12.7,
         },
       },
       {
