@@ -105,6 +105,8 @@ function commonValue<T>(values: T[]): T | undefined {
 
 export function ResultSidebar() {
   const result = useAppStore((s) => s.result);
+  const runState = useAppStore((s) => s.runState);
+  const errorMessage = useAppStore((s) => s.errorMessage);
   const rvs = useAppStore((s) => s.resultViewSettings);
   const coordinates = useAppStore((s) => s.coordinates);
   const setRvs = useAppStore((s) => s.setResultViewSettings);
@@ -507,7 +509,28 @@ export function ResultSidebar() {
                 {result.elapsedMs.toFixed(0)} ms
               </span>
             </div>
+            {(result.nonConvergedSurfaces ?? 0) > 0 && (
+              <p style={{ color: "var(--color-vsc-warning)" }}>
+                {result.nonConvergedSurfaces} surface(s) with weak equilibrium
+                fit were discarded
+              </p>
+            )}
+            {(result.splitFailureCount ?? 0) > 0 && (
+              <p style={{ color: "var(--color-vsc-warning)" }}>
+                {result.splitFailureCount} material boundary split(s) failed —
+                check the interior boundaries
+              </p>
+            )}
           </div>
+        ) : runState === "error" ? (
+          // Without this a failed run only showed "No results yet".
+          <p
+            className="text-[12px] font-medium"
+            role="alert"
+            style={{ color: "var(--color-vsc-error)" }}
+          >
+            Analysis failed: {errorMessage}
+          </p>
         ) : (
           <p
             className="text-[12px]"

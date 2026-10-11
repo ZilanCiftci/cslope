@@ -372,6 +372,27 @@ export function EditCanvas() {
         setAssigningMaterial(null);
         return;
       }
+      // Delete the selected exterior vertex, like the context menu does.
+      if (e.key === "Delete" || e.key === "Backspace") {
+        const target = e.target as HTMLElement | null;
+        if (
+          target &&
+          (["INPUT", "TEXTAREA", "SELECT"].includes(target.tagName) ||
+            target.isContentEditable)
+        ) {
+          return;
+        }
+        const st = useAppStore.getState();
+        if (
+          st.mode === "edit" &&
+          st.selectedPointIndex !== null &&
+          st.coordinates.length > 3
+        ) {
+          e.preventDefault();
+          st.removeCoordinate(st.selectedPointIndex);
+          st.setSelectedPoint(null);
+        }
+      }
     };
     document.addEventListener("keydown", handleKey);
     return () => document.removeEventListener("keydown", handleKey);

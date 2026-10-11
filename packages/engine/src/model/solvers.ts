@@ -946,7 +946,10 @@ function hasDrivingMoment(slices: Slice[]): boolean {
     net += m;
     gross += Math.abs(m);
   }
-  return gross > 0 && net > 1e-6 * gross;
+  // 0.1 % of the gross moment: below that FOS runs into the thousands
+  // (meaningless "Max FOS" and colour scale) and the surface is never
+  // critical.
+  return gross > 0 && net > 1e-3 * gross;
 }
 
 function mAlpha(s: Slice, fos: number): number {
