@@ -222,6 +222,48 @@ const spencer = (
 
 // ── Geometry shared by several problems ──────────────────────────────
 
+/** Slope from an outline, material boundaries and one point per region. */
+function regions(
+  coordinates: Pt[],
+  boundaries: Pt[][],
+  mats: { name: string; model: MaterialModel; at: Pt[] }[],
+  extra: Partial<SlopeDefinition> = {},
+): SlopeDefinition {
+  return {
+    coordinates,
+    materials: mats.map((m) => ({ name: m.name, unitWeight: m.model.unitWeight, frictionAngle: 0, cohesion: 0, model: m.model })),
+    materialBoundaries: boundaries.map((b) => ({ coordinates: b, materialName: "" })),
+    regionAssignments: mats.flatMap((m) => m.at.map((point) => ({ point, materialName: m.name }))),
+    ...extra,
+  };
+}
+
+/** With a saturated unit weight below the water line. */
+const sat = (m: MaterialModel, gammaSat: number): MaterialModel => ({ ...m, unitWeightSat: gammaSat });
+
+/**
+ * Circle (cx, cy, r) cut off by a horizontal floor at yFloor: the arc
+ * down to the floor, along it and back up, from x0 to x1.
+ */
+function compositeCircle(cx: number, cy: number, r: number, yFloor: number, x0: number, x1: number, n = 60): Pt[] {
+  const pts: Pt[] = [];
+  for (let i = 0; i <= n; i++) {
+    const x = x0 + ((x1 - x0) * i) / n;
+    const y = cy - Math.sqrt(Math.max(r * r - (x - cx) ** 2, 0));
+    pts.push([x, Math.max(y, yFloor)]);
+  }
+  return pts;
+}
+
+// USACE EM 1110-2-1902 dam (Slide2 VP64–66), imperial coordinates.
+const usaceTrench: Pt[] = [[-225, 0], [-17, 0], [-8, -10], [8, -10], [17, 0], [225, 0]];
+const usaceLayers = (models: [MaterialModel, MaterialModel, MaterialModel, MaterialModel]) => [
+  { name: "Embankment", model: models[0], at: ft([[0, 45]]) },
+  { name: "Sand", model: models[1], at: ft([[-121, -5], [121, -5]]) },
+  { name: "Foundation clay", model: models[2], at: ft([[0, -23.5]]) },
+  { name: "Rock", model: models[3], at: ft([[0, -38.5]]) },
+];
+
 const vp21Ground: Pt[] = [
   [0, 60],
   [60, 60],
@@ -1167,4 +1209,218 @@ export const VERIFICATION_CASES: VerificationCase[] = [
     ],
     notes: ["Without limits the search finds shallower mechanisms: a sliver in the cohesionless 1:1 fill (0.74) and, with the crack, a surface through the fill and Marsh clay (1.15). The published value is the deep failure."],
   },
+  {
+    id: "VP22a",
+    title: "Fredlund & Krahn slope on a weak seam, composite surface",
+    reference: "Fredlund, D.G. & Krahn, J. (1977). Can. Geotech. J. 14(3). Slide2 Verification Problem #22.",
+    surface: "fixed",
+    units: "imperial",
+    description: "The VP21 slope with a 1 ft weak seam (c′ = 0, φ′ = 10°) on the impenetrable base at el. 15; the published circle (120, 90, R = 80) reaches below the base, so the surface follows the arc down to the base, runs along the seam and climbs back on the arc. Dry.",
+    definition: layered(vp21Ground, 15, [
+      { name: "Upper soil", topY: null, model: mc(600, 20, 120) },
+      { name: "Weak seam", topY: 16, model: mc(0, 10, 120) },
+    ], {
+      customSurfaces: [{ points: compositeCircle(120, 90, 80, 15, 45.5, 159) }],
+      customPlanesOnly: true,
+    }),
+    checks: [
+      bishop(1.382, "Slide2", 0.01),
+      spencer(1.382, "Slide2", 0.01),
+      mp(1.37, "Fredlund & Krahn", 0.01),
+    ],
+  },
+  {
+    id: "VP27",
+    title: "XSTABL slope over undulating bedrock, zero-strength cap",
+    reference: "Sharma (1996), XSTABL reference manual; Malkawi et al. (2001). Slide2 Verification Problem #27.",
+    surface: "fixed",
+    units: "SI",
+    description: "Two-material slope over undulating bedrock with a zero-strength cap layer and a water table (phreatic correction); soil 1 has moist/saturated unit weights 116.4/124.2 pcf. Specified circle (59.52, 219.21, R = 157.68). Converted to SI.",
+    definition: regions(
+      ft([[0, 15], [29, 24], [51, 26], [78, 56], [94, 65], [113, 64], [133, 56], [161, 58], [200, 76], [200, 99], [200, 110], [138, 103], [101, 88], [63, 73], [38, 63], [22, 67], [0, 68]]),
+      [ft([[101, 88], [200, 99]])],
+      [
+        { name: "Soil 1", model: sat(mc(500 * PSF, 14, 116.4 * PCF), 124.2 * PCF), at: ft([[32.25, 41]]) },
+        { name: "Soil 2 (zero strength)", model: su(0, 116.4 * PCF), at: ft([[132.5, 93.5]]) },
+      ],
+      {
+        waterTable: { mode: "custom", value: ft([[0, 68], [22, 67], [38, 63], [63, 73], [80, 78.6], [95, 81.8], [110, 84.5], [125, 86.9], [155, 90.2], [185, 93.1], [200, 94.5]]), followBoundary: false },
+        ...circle(59.52 * FT, 219.21 * FT, 157.68 * FT),
+      },
+    ),
+    checks: [
+      bishop(1.396, "Slide2", 0.025, { options: PHREATIC }),
+      spencer(1.402, "Slide2", 0.025, { options: PHREATIC }),
+      bishop(1.369, "xslope (same input)", 0.005, { options: PHREATIC }),
+      spencer(1.375, "xslope (same input)", 0.005, { options: PHREATIC }),
+    ],
+    notes: ["The water table is traced from the manual's figure to about ±2 ft; xslope reads 1.9 % below Slide2 for every method on the same input, as cSlope does."],
+  },
+  {
+    id: "VP39a",
+    title: "Tandjiria embankment, clay fill, water-filled crack",
+    reference: "Tandjiria (2002). Slide2 Verification Problem #39.",
+    surface: "search",
+    units: "SI",
+    description: "Half-embankment (9 m crest, 10 m wide crest, 1V:1.67H face) of clay fill (Su = 20 kPa) on soft clay (Su = 20 kPa), γ = 19.4; 2 m water-filled tension crack, unreinforced; circular search. Also run with the automatic (Rankine) crack depth.",
+    definition: layered([[0, 9], [10, 9], [20, 3], [30, 3]], 0, [
+      { name: "Fill", topY: null, model: su(20, 19.4) },
+      { name: "Soft clay", topY: 3, model: su(20, 19.4) },
+    ]),
+    checks: [
+      spencer(0.975, "Slide2", 0.01, { options: { tensionCrackDepth: 2, tensionCrackWater: 1 } }),
+      spencer(0.975, "Slide2", 0.012, {
+        options: { tensionCrackAuto: true, tensionCrackWater: 1 },
+        note: "Automatic crack depth 2c/γ = 2.06 m instead of the given 2 m.",
+      }),
+    ],
+    notes: ["xslope gives 0.968 on Slide's circle, as cSlope does; Tandjiria 0.981."],
+  },
+  {
+    id: "VP39c",
+    title: "Tandjiria embankment, sand fill, dry crack",
+    reference: "Tandjiria (2002). Slide2 Verification Problem #39.",
+    surface: "search",
+    units: "SI",
+    description: "The VP39 embankment as a sand fill (φ′ = 37°, γ = 17) on soft clay (Su = 20 kPa, γ = 20) with a dry 2 m tension crack, unreinforced; circular search.",
+    definition: layered([[0, 9], [10, 9], [20, 3], [30, 3]], 0, [
+      { name: "Fill", topY: null, model: mc(0, 37, 17) },
+      { name: "Soft clay", topY: 3, model: su(20, 20) },
+    ]),
+    checks: [spencer(1.209, "Slide2", 0.01, { options: { tensionCrackDepth: 2 } })],
+    notes: ["xslope gives 1.200 on Slide's circle; Tandjiria 1.219."],
+  },
+  {
+    id: "VP46",
+    title: "Baker (1993) dam, end of construction, infinite-slope face",
+    reference: "Baker (1993). Slide2 Verification Problem #46.",
+    surface: "search",
+    units: "SI",
+    description: "Compacted-clay embankment (c′ = 6.5 kPa, φ′ = 40°) on a deep natural-clay foundation (c′ = 0, φ′ = 32°) whose 4H:1V downstream face governs; dry; circular search. Theoretical (infinite slope) FOS tan 32°/tan 14.04° = 2.50.",
+    definition: regions(
+      [[0, 0], [0, 95], [80, 95], [100, 101], [128, 95], [148, 90], [220, 90], [220, 0]],
+      [[[0, 95], [80, 95], [128, 95], [148, 90], [220, 90]]],
+      [
+        { name: "Compacted clay", model: mc(6.5, 40, 18), at: [[98, 99.9]] },
+        { name: "Natural clay", model: mc(0, 32, 18), at: [[40, 94.5]] },
+      ],
+    ),
+    checks: [bishop(2.5, "theory (infinite slope)", 0.01), spencer(2.5, "theory (infinite slope)", 0.01)],
+    notes: [
+      "The critical surfaces are shallow slabs on the cohesionless face; a minimum sliding area in proportion to the model area (here 20 000 m²) would skip them and read 3 % high.",
+      "Slide2 2.534 (noncircular, minimum depth 5 m); Baker 2.41.",
+    ],
+  },
+  {
+    id: "VP64",
+    title: "USACE dam, end of construction (EM 1110-2-1902 fig. 4-1)",
+    reference: "USACE EM 1110-2-1902 (2003), fig. 4-1. Slide2 Verification Problem #64.",
+    surface: "fixed",
+    units: "SI",
+    description: "Symmetric 50 ft embankment at 4H:1V (c = 1000 psf, φ = 5°) with a core trench through a 10 ft sand blanket over foundation clay (Su = 3000 psf) and rock; groundwater at the sand top, 7 ft dry crest crack; moist/saturated unit weights. Specified circle (102, 163, R = 163). Converted to SI.",
+    definition: regions(
+      ft([[-225, -40], [225, -40], [225, 0], [217, 0], [17, 50], [-17, 50], [-217, 0], [-225, 0]]),
+      [ft([[217, 0], [17, 0], [8, -10]]), ft([[8, -10], [-8, -10]]), ft([[8, -10], [225, -10]]), ft([[-8, -10], [-17, 0], [-217, 0]]), ft([[-8, -10], [-225, -10]]), ft([[-225, -37], [225, -37]])],
+      usaceLayers([
+        sat(mc(1000 * PSF, 5, 115 * PCF), 120 * PCF),
+        sat(mc(0, 35, 125 * PCF), 130 * PCF),
+        sat(su(3000 * PSF, 110 * PCF), 115 * PCF),
+        sat(mc(0, 45, 160 * PCF), 165 * PCF),
+      ]),
+      {
+        waterTable: { mode: "custom", value: ft([[-225, 0], [-17, 0], [-8, -10], [8, -10], [17, 0], [225, 0]]), followBoundary: false },
+        ...circle(102 * FT, 163 * FT, 163 * FT),
+      },
+    ),
+    checks: [
+      spencer(2.445, "Slide2", 0.025, { options: { ...VERTICAL, tensionCrackDepth: 7 * FT } }),
+      bishop(2.447, "Slide2", 0.025, { options: { ...VERTICAL, tensionCrackDepth: 7 * FT } }),
+      spencer(2.488, "xslope (same input)", 0.005, { options: { ...VERTICAL, tensionCrackDepth: 7 * FT } }),
+      bishop(2.489, "xslope (same input)", 0.005, { options: { ...VERTICAL, tensionCrackDepth: 7 * FT } }),
+    ],
+    notes: ["Neither figure labels its vertices; xslope pins the crest and toes from USACE's slice table and reads 1.8 % above Slide2 on the same input, as cSlope does. USACE 2.44."],
+  },
+  {
+    id: "VP65",
+    title: "USACE dam, upstream low pool (EM 1110-2-1902 fig. 4-2)",
+    reference: "USACE EM 1110-2-1902 (2003), fig. 4-2. Slide2 Verification Problem #65.",
+    surface: "fixed",
+    units: "SI",
+    description: "The VP64 dam with drained strengths (embankment c = 100 psf, φ = 25°; sand 0/35; clay 0/28; rock 0/45; moist/saturated unit weights) and the pool at el. 20 standing on the upstream face. USACE's circle (−102, 163, R = 173), tangent to the clay top. Converted to SI.",
+    definition: regions(
+      ft([[-225, -40], [-225, 0], [-217, 0], [-17, 50], [17, 50], [217, 0], [225, 0], [225, -40]]),
+      [ft(usaceTrench), ft([[-225, -10], [225, -10]]), ft([[-225, -37], [225, -37]])],
+      usaceLayers([
+        sat(mc(100 * PSF, 25, 115 * PCF), 120 * PCF),
+        sat(mc(0, 35, 125 * PCF), 130 * PCF),
+        sat(mc(0, 28, 110 * PCF), 115 * PCF),
+        sat(mc(0, 45, 160 * PCF), 165 * PCF),
+      ]),
+      {
+        orientation: "rtl",
+        waterTable: { mode: "custom", value: ft([[-225, 20], [117.778, 20]]), followBoundary: false },
+        ...circle(-102 * FT, 163 * FT, 173 * FT),
+      },
+    ),
+    checks: [bishop(2.716, "Slide2", 0.01, { options: VERTICAL }), spencer(2.736, "Slide2", 0.01, { options: VERTICAL })],
+    notes: ["USACE 2.71 (Bishop); xslope 2.725 / 2.748."],
+  },
+  {
+    id: "VP66",
+    title: "USACE dam, chart-check properties (EM 1110-2-1902 fig. 4-3)",
+    reference: "USACE EM 1110-2-1902 (2003), fig. 4-3. Slide2 Verification Problem #66.",
+    surface: "fixed",
+    units: "SI",
+    description: "The VP64 dam family with single unit weights (embankment c = 200 psf, φ = 25°, γ = 115; sand 0/35/130; clay 0/27/115), slightly flatter faces and ponded water at el. 20 on both faces. Slide's circle (−135, 169, R = 169.1), tangent to the sand top. Converted to SI.",
+    definition: regions(
+      ft([[-225, -40], [-225, 0], [-222, 0], [-17, 49.517], [-15, 50], [15, 50], [17, 49.517], [222, 0], [225, 0], [225, -40]]),
+      [ft(usaceTrench), ft([[-225, -10], [225, -10]]), ft([[-225, -37], [225, -37]])],
+      usaceLayers([mc(200 * PSF, 25, 115 * PCF), mc(0, 35, 130 * PCF), mc(0, 27, 115 * PCF), mc(0, 45, 160 * PCF)]),
+      {
+        orientation: "rtl",
+        waterTable: { mode: "custom", value: ft([[-225, 20], [225, 20]]), followBoundary: false },
+        ...circle(-135 * FT, 169 * FT, 169.1 * FT),
+      },
+    ),
+    checks: [
+      spencer(2.307, "Slide2", 0.025, { options: VERTICAL }),
+      bishop(2.307, "Slide2", 0.025, { options: VERTICAL }),
+      spencer(2.258, "xslope (same input)", 0.005, { options: VERTICAL }),
+      bishop(2.254, "xslope (same input)", 0.005, { options: VERTICAL }),
+    ],
+    notes: ["The three Slide models #64–66 carry slightly different digitisations of the same dam; xslope reads about 2 % below Slide2 here on the same input, as cSlope does. USACE 2.30."],
+  },
+  {
+    id: "VP75",
+    title: "James Bay dyke (Duncan & Wright fig. 7.16)",
+    reference: "Duncan & Wright, Soil Strength and Slope Stability, fig. 7.16. Slide2 Verification Problem #75.",
+    surface: "search",
+    units: "SI",
+    description: "Granular fill embankment with a wide berm (c′ = 0, φ′ = 30°) on a 4 m clay crust (Su = 41), 8 m marine clay (34.5) and 7 m lacustrine clay (31.2); circular search. The critical circle is deep and tangent to the base of the lacustrine clay.",
+    definition: layered([[-17, 31], [40, 31], [58, 25], [114, 25], [132, 19], [168, 19]], 0, [
+      { name: "Fill", topY: null, model: mc(0, 30, 20) },
+      { name: "Clay crust", topY: 19, model: su(41, 20) },
+      { name: "Marine clay", topY: 15, model: su(34.5, 18.8) },
+      { name: "Lacustrine clay", topY: 7, model: su(31.2, 20.3) },
+    ]),
+    checks: [bishop(1.45, "Duncan & Wright", 0.025), spencer(1.45, "Duncan & Wright", 0.025)],
+    notes: ["xslope's search gives 1.424 / 1.420; Slide2 reports 1.468 / 1.464 on its own (not the critical) circle."],
+  },
+  ...([
+    [84, 1.215, "deep"],
+    [90, 1.29, "deep"],
+    [96, 1.315, "shallow"],
+  ] as const).map(([cu2, published, mode], i): VerificationCase => ({
+    id: `VP103${"abc"[i]}`,
+    title: `Guo & Griffiths two-layer undrained slope, cu2/cu1 = ${(cu2 / 60).toFixed(1)}`,
+    reference: "Guo & Griffiths (2020), Can. Geotech. J. 57. Slide2 Verification Problem #103.",
+    surface: "search",
+    units: "SI",
+    description: `18 m embankment at 1V:2H (Su = 60 kPa) on an 18 m undrained foundation (Su = ${cu2} kPa), γ = 20, firm base; optimised non-circular search. The ${mode} mechanism governs.`,
+    definition: layered([[0, 36], [36, 36], [72, 18], [90, 18]], 0, [
+      { name: "Embankment", topY: null, model: su(60, 20) },
+      { name: "Foundation", topY: 18, model: su(cu2, 20) },
+    ]),
+    checks: [spencer(published, "Slide2 (particle swarm + surface altering)", 0.01, { options: { nonCircularOptimization: true } })],
+  })),
 ];

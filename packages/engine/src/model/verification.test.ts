@@ -4,7 +4,7 @@
  */
 import { describe, it, expect } from "vitest";
 import { getSlices } from "./slices";
-import { defaultAxisPoint } from "./surface";
+import { defaultAxisPoint, isAdmissiblePolyline } from "./surface";
 import { validateMaterialModel } from "../types/validation";
 import { analyseBishop, analyseMorgensternPrice } from "./solvers";
 import { rankineCrackDepth } from "./slices";
@@ -244,6 +244,12 @@ describe("Non-circular review fixes", () => {
     expect(axis[1]).toBeGreaterThan(2);
   });
 
+  it("surfaces with undefined points are not admissible", () => {
+    const { slope } = runVerification(layered(ground, -10, soil), "Bishop", { iterations: 200 });
+    expect(isAdmissiblePolyline(slope, [[12, 1], [20, 2], [30, 10]])).toBe(true);
+    expect(isAdmissiblePolyline(slope, [[12, Number.NaN], [20, 2], [30, 10]])).toBe(false);
+  });
+
   it("optimisation respects the minimum failure distance", () => {
     const def = layered(ground, -10, [{ name: "S", topY: null, model: mc(0, 30, 19) }]);
     const { slope } = runVerification(def, "Bishop", { nonCircularOptimization: true, minFailureDist: 15 });
@@ -281,7 +287,7 @@ describe("Minimum slip depth", () => {
     const def = layered([[0, 0], [10, 0], [25, 10], [40, 10]], -10, [{ name: "C", topY: null, model: su(12, 19) }]);
     const area = (p: { slices?: { area: number }[] | null }) => p.slices!.reduce((a, s) => a + s.area, 0);
     const auto = runVerification(def, "Bishop");
-    expect(auto.slope.minSlipArea).toBeCloseTo(1e-3 * auto.slope.modelArea);
+    expect(auto.slope.minSlipArea).toBeCloseTo(1e-2 * 10 ** 2);
     for (const p of auto.slope.search) {
       if (p.fos != null) expect(area(p)).toBeGreaterThanOrEqual(auto.slope.minSlipArea);
     }

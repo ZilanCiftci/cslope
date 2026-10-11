@@ -126,9 +126,10 @@ export function fitPolylineToGround(
     if (pts[i][0] - pts[i - 1][0] < 1e-9) return null;
   }
   if (pts.length < 2) return null;
-  const ground = (x: number) => getYAtX(surf.x, surf.y, x);
   const xMin = Math.min(...surf.x);
   const xMax = Math.max(...surf.x);
+  // Clamped: rounding can put an extended end a hair outside the model.
+  const ground = (x: number) => getYAtX(surf.x, surf.y, Math.min(xMax, Math.max(xMin, x)));
   const below = (p: Pt) => p[1] < ground(p[0]) - 1e-9;
 
   // Extend the end segments until they meet the ground.
@@ -148,7 +149,7 @@ export function fitPolylineToGround(
       if (f(mid) < 0) lo = mid;
       else hi = mid;
     }
-    return [p[0] + hi * dx, p[1] + hi * dy];
+    return [Math.min(xMax, Math.max(xMin, p[0] + hi * dx)), p[1] + hi * dy];
   };
   if (below(pts[0])) {
     const e = extend(pts[0], pts[1], true);
@@ -198,6 +199,7 @@ export function isAdmissiblePolyline(
 ): boolean {
   const surf = slope.surfaceLineXY;
   if (!surf || points.length < 2) return false;
+  if (!points.every(([x, y]) => Number.isFinite(x) && Number.isFinite(y))) return false;
   let prevAlpha = Infinity;
   const tol = (concavityTolDeg * Math.PI) / 180;
   for (let i = 0; i < points.length - 1; i++) {

@@ -115,6 +115,11 @@ function isPlaneWithinExternalBoundary(
     }
   }
 
+  // The lowest point, where a circle tangent to the base touches it.
+  const [x0, x1] = [Math.min(plane.lc[0], plane.rc[0]), Math.max(plane.lc[0], plane.rc[0])];
+  if (plane.cx > x0 && plane.cx < x1) {
+    return slope.isInsideExternalBoundary(plane.cx, plane.cy - plane.radius + 1e-6);
+  }
   return true;
 }
 
@@ -172,16 +177,12 @@ function generatePlanesWithScale(
   const startChordToEdge = startRadius - startChordToCentre;
   const C = halfCoordDist ** 2;
 
-  for (let i = 0; i < numCircles; i++) {
-    const chordToEdge = (startChordToEdge * (numCircles - i)) / numCircles;
+  const planeAt = (chordToEdge: number): SearchPlane | null | "outside" => {
     const radius = circleRadiusFromAbcd(chordToEdge, C);
-    if (radius === null) continue;
-    const centre = circleCentre(beta, midCoord(lc, rc), radius - chordToEdge);
-    const [cX, cY] = centre;
-
+    if (radius === null) return null;
+    const [cX, cY] = circleCentre(beta, midCoord(lc, rc), radius - chordToEdge);
     const ends = selectEntryExit(slope, cX, cY, radius);
-    if (!ends) continue;
-
+    if (!ends) return null;
     const plane: SearchPlane = {
       lc: ends[0],
       rc: ends[1],
@@ -191,11 +192,39 @@ function generatePlanesWithScale(
       fos: 100,
       slices: null,
     };
+    return isPlaneWithinExternalBoundary(slope, plane) ? plane : "outside";
+  };
 
-    if (!isPlaneWithinExternalBoundary(slope, plane)) {
+  // From the deepest circle to the shallowest.
+  let deepestOutside: number | null = null;
+  let tangentAdded = false;
+  for (let i = 0; i < numCircles; i++) {
+    const chordToEdge = (startChordToEdge * (numCircles - i)) / numCircles;
+    const plane = planeAt(chordToEdge);
+    if (plane === "outside") {
+      deepestOutside = chordToEdge;
       continue;
     }
-
+    if (plane === null) continue;
+    // A deeper circle left the model (typically through its base): the
+    // critical circle is often the one just touching the base, between
+    // the two depths. Find the deepest circle that still fits.
+    if (deepestOutside !== null && !tangentAdded) {
+      let inside = chordToEdge;
+      let outside = deepestOutside;
+      let best: SearchPlane = plane;
+      for (let k = 0; k < 24; k++) {
+        const mid = (inside + outside) / 2;
+        const p = planeAt(mid);
+        if (p === "outside" || p === null) outside = mid;
+        else {
+          inside = mid;
+          best = p;
+        }
+      }
+      if (best !== plane) planes.push(best);
+      tangentAdded = true;
+    }
     planes.push(plane);
   }
 

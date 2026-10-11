@@ -143,12 +143,17 @@ function optimiseSeed(
           const candidate = points.map((p) => [p[0], p[1]] as Pt);
           if (k === 0 || k === points.length - 1) {
             // Entry/exit slide along the ground within the search limits.
-            const x = points[k][0] + dir * step * Math.max(1, span / depth) * 0.5;
+            let x = points[k][0] + dir * step * Math.max(1, span / depth) * 0.5;
             const [lo, hi] = k === 0 ? [entryL, entryR] : [exitL, exitR];
             if (x < lo - tol || x > hi + tol) continue;
+            // Within the tolerance: snap to the limit (it can be the model
+            // edge, where the ground is undefined just outside).
+            x = Math.min(hi, Math.max(lo, x));
             const neighbour = points[k === 0 ? 1 : k - 1][0];
             if (k === 0 ? x >= neighbour : x <= neighbour) continue;
-            candidate[k] = [x, groundAt(x)];
+            const g = groundAt(x);
+            if (!Number.isFinite(g)) continue;
+            candidate[k] = [x, g];
           } else {
             candidate[k] = [points[k][0], points[k][1] + dir * step];
           }

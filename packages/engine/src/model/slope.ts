@@ -75,7 +75,7 @@ export interface SearchPlane {
 /** Smallest useful inner iteration limit for the FOS solvers. */
 const MIN_MAX_ITERATIONS = 6;
 /** Default smallest sliding mass, as a fraction of the model area. */
-const AUTO_MIN_SLIP_AREA = 1e-3;
+const AUTO_MIN_SLIP_AREA = 1e-2;
 
 // ── Slope Class ───────────────────────────────────────────────────
 
@@ -307,10 +307,18 @@ export class Slope {
 
   /**
    * Smallest sliding mass that is analysed (m²): the set value, or by
-   * default 0.1 % of the model's cross-section area.
+   * default 1 % of the squared ground relief (1 m² for a 10 m slope).
+   * Scaled by the relief rather than the model area so that deep models
+   * do not filter out the shallow surfaces that govern in friction soil.
    */
   get minSlipArea(): number {
-    return this._minSlipArea ?? AUTO_MIN_SLIP_AREA * this.modelArea;
+    return this._minSlipArea ?? AUTO_MIN_SLIP_AREA * this.groundRelief ** 2;
+  }
+
+  /** Height difference of the ground surface (model height if not set). */
+  get groundRelief(): number {
+    const ys = this._surfaceLineY;
+    return ys?.length ? Math.max(...ys) - Math.min(...ys) : this.modelHeight;
   }
 
   /** Cross-section area of the model (inside the external boundary). */

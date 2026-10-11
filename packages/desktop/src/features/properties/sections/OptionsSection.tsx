@@ -424,7 +424,7 @@ export function OptionsSection({ plain = false }: OptionsSectionProps) {
             onValueChange={(v) => v >= 0 && setOptions({ minSlipArea: v })}
             onClear={() => setOptions({ minSlipArea: undefined })}
             aria-label="Minimum sliding area"
-            title="Surfaces whose sliding mass is smaller than this are not analysed. Empty = automatic (0.1 % of the model's cross-section area, skips micro-surfaces); 0 = no limit."
+            title="Surfaces whose sliding mass is smaller than this are not analysed. Empty = automatic (1 % of the squared ground relief, e.g. 1 m² for a 10 m slope; skips micro-surfaces); 0 = no limit."
           />
         </label>
         <label
