@@ -45,10 +45,10 @@ describe("real-world coordinates", () => {
     const world = slicesOf(model(6439598, 1881));
     expect(world.slices.length).toBe(local.slices.length);
     local.slices.forEach((s, i) => {
-      expect(world.slices[i].baseMaterial.name, `slice ${i}`).toBe(s.baseMaterial.name);
+      expect(world.slices[i].baseMaterial?.name, `slice ${i}`).toBe(s.baseMaterial?.name);
       expect(world.slices[i].weight).toBeCloseTo(s.weight, 5);
     });
-    expect(local.slices[local.slices.length - 1].baseMaterial.name).toBe("Upper");
+    expect(local.slices[local.slices.length - 1].baseMaterial?.name).toBe("Upper");
     const [fLocal] = analyseBishop(local.slope, local.slices);
     const [fWorld] = analyseBishop(world.slope, world.slices);
     expect(fWorld!).toBeCloseTo(fLocal!, 7);
