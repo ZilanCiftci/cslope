@@ -413,21 +413,58 @@ export function usePointerHandlers(deps: PointerDeps) {
             y: drag.startWorld[1] + dyFrac,
           });
         }
-      } else if (drag.hit.kind === "external") {
-        setCoordinate(drag.hit.index, [newX, newY]);
-      } else if (drag.hit.kind === "piezo") {
-        setPiezoCoordinate(drag.hit.index, [newX, newY]);
       } else if (drag.hit.kind === "limit") {
         setAnalysisLimits({ [drag.hit.handle]: newX });
-      } else if (drag.hit.kind === "udl") {
-        updateUdl(drag.hit.udlId, { [drag.hit.handle]: newX });
-      } else if (drag.hit.kind === "lineLoad") {
-        updateLineLoad(drag.hit.loadId, { x: newX });
       } else {
-        updateBoundaryPoint(drag.hit.boundaryId, drag.hit.pointIndex, [
-          newX,
-          newY,
-        ]);
+        // An axis driven by a parameter expression stays where the
+        // expression puts it; otherwise the next parameter edit would
+        // silently snap the dragged point back.
+        const st = useAppStore.getState();
+        const hit = drag.hit;
+        const keepAxes = (
+          current: [number, number] | undefined,
+          expr: { x?: string; y?: string } | undefined,
+        ): [number, number] => [
+          current && expr?.x?.trim() ? current[0] : newX,
+          current && expr?.y?.trim() ? current[1] : newY,
+        ];
+        if (hit.kind === "external") {
+          setCoordinate(
+            hit.index,
+            keepAxes(st.coordinates[hit.index], st.coordinateExpressions[hit.index]),
+          );
+        } else if (hit.kind === "piezo") {
+          const line = st.piezometricLine.lines.find(
+            (l) => l.id === st.piezometricLine.activeLineId,
+          );
+          setPiezoCoordinate(
+            hit.index,
+            keepAxes(
+              line?.coordinates[hit.index],
+              line?.coordinateExpressions?.[hit.index],
+            ),
+          );
+        } else if (hit.kind === "udl") {
+          const udl = st.udls.find((u) => u.id === hit.udlId);
+          if (!udl?.expressions?.[hit.handle]?.trim()) {
+            updateUdl(hit.udlId, { [hit.handle]: newX });
+          }
+        } else if (hit.kind === "lineLoad") {
+          const load = st.lineLoads.find((l) => l.id === hit.loadId);
+          if (!load?.expressions?.x?.trim()) {
+            updateLineLoad(hit.loadId, { x: newX });
+          }
+        } else {
+          const b = st.materialBoundaries.find((m) => m.id === hit.boundaryId);
+          updateBoundaryPoint(
+            hit.boundaryId,
+            hit.pointIndex,
+            keepAxes(
+              b?.coordinates[hit.pointIndex],
+              b?.coordinateExpressions?.[hit.pointIndex],
+            ),
+          );
+        }
       }
     },
     [

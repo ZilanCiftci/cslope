@@ -1,4 +1,5 @@
 import type { AnalysisOptions, AnalysisResult } from "@cslope/engine";
+import { findExpressionErrors } from "../expression-check";
 import { DEFAULT_ANALYSIS_OPTIONS } from "@cslope/engine";
 import type { AnalysisResponse } from "../../worker/messages";
 import type { SliceCreator } from "../helpers";
@@ -44,6 +45,12 @@ function executeModelAnalysis(
   model: ModelEntry,
   onProgress?: (progress: number) => void,
 ): AnalysisHandle {
+  const problems = findExpressionErrors(model);
+  if (problems.length > 0) {
+    throw new Error(
+      `Cannot run: ${problems.length} expression(s) cannot be evaluated — ${problems.join("; ")}`,
+    );
+  }
   const slope = buildSlopeDTOFromModel(model);
   const options: AnalysisOptions = model.options ?? {
     ...DEFAULT_ANALYSIS_OPTIONS,

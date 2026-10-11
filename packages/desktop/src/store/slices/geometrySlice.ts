@@ -107,8 +107,19 @@ export const createGeometrySlice: SliceCreator<GeometrySlice> = (set, get) => ({
       // Interior boundary and piezometric points that sit on the moved
       // exterior vertex are the same vertex: move them along, or the
       // boundary no longer reaches the exterior and its region is lost.
+      // A point shared with another exterior vertex at the same spot (e.g.
+      // an intermediate value while typing landed on a neighbour) belongs
+      // to that vertex and stays put.
+      const sharedWithOther =
+        !!old &&
+        s.coordinates.some(
+          (c, i) =>
+            i !== index &&
+            Math.abs(c[0] - old[0]) < 1e-9 &&
+            Math.abs(c[1] - old[1]) < 1e-9,
+        );
       const follow = (pts: [number, number][]): [number, number][] => {
-        if (!old) return pts;
+        if (!old || sharedWithOther) return pts;
         let moved = false;
         const out = pts.map((p) => {
           if (Math.abs(p[0] - old[0]) < 1e-9 && Math.abs(p[1] - old[1]) < 1e-9) {
@@ -515,7 +526,6 @@ export const createGeometrySlice: SliceCreator<GeometrySlice> = (set, get) => ({
         },
       }),
     );
-    get().invalidateAnalysis();
   },
 
   setActivePiezoLine: (lineId) => {
@@ -524,7 +534,6 @@ export const createGeometrySlice: SliceCreator<GeometrySlice> = (set, get) => ({
         piezometricLine: { ...s.piezometricLine, activeLineId: lineId },
       }),
     );
-    get().invalidateAnalysis();
   },
 
   setPiezoCoordinate: (index, coord) => {

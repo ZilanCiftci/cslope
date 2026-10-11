@@ -275,6 +275,15 @@ function tokenize(source: string): Token[] {
         }
         break;
       }
+      // Exponent part, e.g. 1e3 or 1.5E-2.
+      if (source[i] === "e" || source[i] === "E") {
+        let j = i + 1;
+        if (source[j] === "+" || source[j] === "-") j += 1;
+        if (j < source.length && isDigit(source[j])) {
+          while (j < source.length && isDigit(source[j])) j += 1;
+          i = j;
+        }
+      }
 
       const lexeme = source.slice(start, i);
       if (lexeme === ".") {
@@ -387,6 +396,9 @@ class Parser {
   private parseUnary(): number {
     if (this.match("minus")) {
       return -this.parseUnary();
+    }
+    if (this.match("plus")) {
+      return this.parseUnary();
     }
     return this.parsePrimary();
   }

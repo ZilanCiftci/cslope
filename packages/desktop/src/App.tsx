@@ -428,6 +428,18 @@ function App() {
       next: GeometryStatePayload,
     ) => {
       suppressNextGeometryBroadcastRef.current = true;
+      // Move changed vertices one by one through the store action so that
+      // boundary and piezometric points on them follow (the dialog's own
+      // store does not hold this window's boundaries).
+      const current = useAppStore.getState().coordinates;
+      if (current.length === next.coordinates.length) {
+        next.coordinates.forEach((c, i) => {
+          const prev = useAppStore.getState().coordinates[i];
+          if (prev[0] !== c[0] || prev[1] !== c[1]) {
+            useAppStore.getState().setCoordinate(i, c);
+          }
+        });
+      }
       applyDialogPatch({
         coordinates: next.coordinates,
         coordinateExpressions: next.coordinateExpressions,

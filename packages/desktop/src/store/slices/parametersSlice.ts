@@ -146,13 +146,17 @@ function resolveNumberExpression(
   }
 }
 
+/** Smallest load magnitude the load dialogs accept (kPa or kN/m). */
+export const MIN_LOAD_MAGNITUDE = 0.1;
+
 function resolveUdlRow(row: UdlRow, vars: Record<string, number>): UdlRow {
   return {
     ...row,
-    magnitude: resolveNumberExpression(
-      row.magnitude,
-      row.expressions?.magnitude,
-      vars,
+    // Same floor as the load dialogs: a parameter must not turn a load
+    // into an upward (negative) one behind the user's back.
+    magnitude: Math.max(
+      MIN_LOAD_MAGNITUDE,
+      resolveNumberExpression(row.magnitude, row.expressions?.magnitude, vars),
     ),
     x1: resolveNumberExpression(row.x1, row.expressions?.x1, vars),
     x2: resolveNumberExpression(row.x2, row.expressions?.x2, vars),
@@ -165,10 +169,9 @@ function resolveLineLoadRow(
 ): LineLoadRow {
   return {
     ...row,
-    magnitude: resolveNumberExpression(
-      row.magnitude,
-      row.expressions?.magnitude,
-      vars,
+    magnitude: Math.max(
+      MIN_LOAD_MAGNITUDE,
+      resolveNumberExpression(row.magnitude, row.expressions?.magnitude, vars),
     ),
     x: resolveNumberExpression(row.x, row.expressions?.x, vars),
   };

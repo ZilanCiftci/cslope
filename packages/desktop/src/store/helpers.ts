@@ -181,6 +181,9 @@ export const RUN_RESET = {
 };
 
 export function getAnalysisInputSignature(state: AppState): string {
+  // Only what reaches the engine: selecting or renaming a piezometric
+  // line (activeLineId, name, colour) must not discard the result.
+  const piezo = state.piezometricLine;
   return JSON.stringify({
     orientation: state.orientation,
     coordinates: state.coordinates,
@@ -189,7 +192,14 @@ export function getAnalysisInputSignature(state: AppState): string {
     materials: state.materials,
     materialBoundaries: state.materialBoundaries,
     regionMaterials: state.regionMaterials,
-    piezometricLine: state.piezometricLine,
+    piezometricLine: {
+      lines: piezo.lines.map((l) => ({
+        id: l.id,
+        coordinates: l.coordinates,
+        coordinateExpressions: l.coordinateExpressions,
+      })),
+      materialAssignment: piezo.materialAssignment,
+    },
     udls: state.udls,
     lineLoads: state.lineLoads,
     customSearchPlanes: state.customSearchPlanes,
