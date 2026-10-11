@@ -288,6 +288,22 @@ function App() {
     isViewSettingsDialogWindow;
 
   useEffect(() => {
+    // Escape closes a dialog window (unless a field or menu handles it).
+    if (!isAnyDialogWindow) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== "Escape" || e.defaultPrevented) return;
+      const t = e.target as HTMLElement | null;
+      if (t && ["INPUT", "TEXTAREA", "SELECT"].includes(t.tagName)) {
+        t.blur();
+        return;
+      }
+      window.close();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [isAnyDialogWindow]);
+
+  useEffect(() => {
     // Tell the main process the renderer has mounted so it can
     // close the splash screen and show the main window.
     if (isElectron && !isAnyDialogWindow) {

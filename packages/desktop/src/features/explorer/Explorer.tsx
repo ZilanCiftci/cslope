@@ -178,6 +178,19 @@ export function Explorer() {
 
   const handleDeleteSelected = useCallback(() => {
     const ids = menu?.selectedModelIds ?? effectiveSelectedModelIds;
+    // Deleting a model (and its results) cannot be undone.
+    const names = models
+      .filter((m) => ids.includes(m.id))
+      .map((m) => `"${m.name}"`)
+      .join(", ");
+    if (
+      ids.length === 0 ||
+      !window.confirm(
+        `Delete ${ids.length === 1 ? "model" : "models"} ${names}? This cannot be undone.`,
+      )
+    ) {
+      return;
+    }
     for (const id of ids) {
       deleteModel(id);
     }
@@ -185,7 +198,7 @@ export function Explorer() {
       const deleteSet = new Set(ids);
       return prev.filter((id) => !deleteSet.has(id));
     });
-  }, [deleteModel, menu?.selectedModelIds, effectiveSelectedModelIds]);
+  }, [deleteModel, menu?.selectedModelIds, effectiveSelectedModelIds, models]);
 
   const clearDragState = useCallback(() => {
     setDraggedModelId(null);
