@@ -214,7 +214,12 @@ export function clipLineToSurface(
     .sort((a, b) => a - b)
     .filter((x, i, arr) => i === 0 || x - arr[i - 1] > 1e-9);
 
-  const evalSide = (px: number[], py: number[], x: number, side: "left" | "right") => {
+  const evalSide = (
+    px: number[],
+    py: number[],
+    x: number,
+    side: "left" | "right",
+  ) => {
     const v = polylineYAtSide(px, py, x, side);
     return Number.isFinite(v)
       ? v
@@ -225,7 +230,12 @@ export function clipLineToSurface(
   const outY: number[] = [];
   const push = (x: number, y: number) => {
     const n = outX.length;
-    if (n > 0 && Math.abs(outX[n - 1] - x) < 1e-9 && Math.abs(outY[n - 1] - y) < 1e-9) return;
+    if (
+      n > 0 &&
+      Math.abs(outX[n - 1] - x) < 1e-9 &&
+      Math.abs(outY[n - 1] - y) < 1e-9
+    )
+      return;
     outX.push(x);
     outY.push(y);
   };
@@ -350,12 +360,20 @@ export function splitPolygonByPolylineDetailed(
       const p = arr[i] as any;
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       if ((polygon as any).contains(p.getInteriorPoint())) {
-        const ring = p.getExteriorRing();
-        const coords = ring.getCoordinates();
-        results.push({
-          px: coords.map((c: InstanceType<typeof Coordinate>) => c.x),
-          py: coords.map((c: InstanceType<typeof Coordinate>) => c.y),
-        });
+        const toXY = (ring: any): [number, number][] =>
+          ring
+            .getCoordinates()
+            .map((c: InstanceType<typeof Coordinate>) => [c.x, c.y]);
+        const holes: [number, number][][] = [];
+        for (let h = 0; h < p.getNumInteriorRing(); h++) {
+          holes.push(toXY(p.getInteriorRingN(h)));
+        }
+        // A piece around a closed boundary (lens) has a hole. The engine's
+        // polygons are single rings, so cut the hole in through a bridge;
+        // dropping it made the lens count twice (weight) and gave its
+        // slices the surrounding material.
+        const ring = keyholeRing(toXY(p.getExteriorRing()), holes);
+        results.push({ px: ring.map((c) => c[0]), py: ring.map((c) => c[1]) });
       }
     }
 
@@ -408,4 +426,59 @@ export function createGeometryWithMaterial(
     gm.xMax = Math.max(...px);
   }
   return gm;
+}
+
+function signedArea(ring: [number, number][]): number {
+  let a = 0;
+  for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) {
+    a += (ring[j][0] - ring[i][0]) * (ring[j][1] + ring[i][1]);
+  }
+  return a / 2;
+}
+
+/**
+ * Single closed ring for a polygon with holes: each hole is joined to the
+ * outline by a zero-width bridge between their nearest vertices and
+ * traversed in the opposite direction, so the shoelace area and even-odd
+ * point tests treat it as a hole.
+ */
+export function keyholeRing(
+  outer: [number, number][],
+  holes: [number, number][][],
+): [number, number][] {
+  const open = (r: [number, number][]) =>
+    r.length > 1 &&
+    r[0][0] === r[r.length - 1][0] &&
+    r[0][1] === r[r.length - 1][1]
+      ? r.slice(0, -1)
+      : [...r];
+  let ring = open(outer);
+  const outerSign = Math.sign(signedArea(ring));
+  for (const rawHole of holes) {
+    let hole = open(rawHole);
+    if (hole.length < 3) continue;
+    if (Math.sign(signedArea(hole)) === outerSign) hole = hole.reverse();
+    let bi = 0;
+    let bj = 0;
+    let best = Infinity;
+    for (let i = 0; i < ring.length; i++) {
+      for (let j = 0; j < hole.length; j++) {
+        const d =
+          (ring[i][0] - hole[j][0]) ** 2 + (ring[i][1] - hole[j][1]) ** 2;
+        if (d < best) {
+          best = d;
+          bi = i;
+          bj = j;
+        }
+      }
+    }
+    const holeLoop = [...hole.slice(bj), ...hole.slice(0, bj), hole[bj]];
+    ring = [
+      ...ring.slice(0, bi + 1),
+      ...holeLoop,
+      ring[bi],
+      ...ring.slice(bi + 1),
+    ];
+  }
+  return [...ring, ring[0]];
 }

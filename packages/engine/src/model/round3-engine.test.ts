@@ -199,3 +199,39 @@ describe("round 6 engine fixes", () => {
     ).toThrow(/positive radius/);
   });
 });
+
+describe("closed material boundaries (lenses)", () => {
+  const def = (withLens: boolean): SlopeDefinition => ({
+    coordinates: [[-10, 0], [-10, 10], [30, 10], [30, 0]],
+    materials: [
+      { name: "A", unitWeight: 20, frictionAngle: 30, cohesion: 5 },
+      { name: "B", unitWeight: 20, frictionAngle: 20, cohesion: 50 },
+    ],
+    materialBoundaries: withLens
+      ? [{ coordinates: [[5, 3], [15, 3], [15, 6], [5, 6], [5, 3]], materialName: "" }]
+      : [],
+    regionAssignments: withLens
+      ? [
+          { point: [10, 4.5], materialName: "B" },
+          { point: [0, 8], materialName: "A" },
+        ]
+      : [],
+  });
+
+  it("does not count the lens twice and gives its slices the lens material", () => {
+    const area = (d: SlopeDefinition) => {
+      const slope = buildSlope(d);
+      const slices = getSlices(slope, -4.1, 24.1, 10, 20, 15);
+      return { slices, total: slices.reduce((s, x) => s + x.weight / 20, 0) };
+    };
+    const without = area(def(false));
+    const withLens = area(def(true));
+    // Same soil area (slice positions differ slightly, hence 0.1 %).
+    expect(Math.abs(withLens.total / without.total - 1)).toBeLessThan(1e-3);
+    for (const s of withLens.slices) {
+      const inLens = s.x > 5 && s.x < 15 && s.yBottom > 3 && s.yBottom < 6;
+      if (inLens) expect(s.baseMaterial?.name).toBe("B");
+    }
+    expect(withLens.slices.some((s) => s.baseMaterial?.name === "B")).toBe(true);
+  });
+});
