@@ -2,8 +2,12 @@ import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useAppStore } from "../../../store/app-store";
 import { normalizeResultView } from "../../../store/persistence";
+import { DraftNumberInput } from "../DraftNumberInput";
 import { isElectron } from "../../../utils/is-electron";
-import { exportVectorPdf } from "../../../features/pdf/pdf-export";
+import {
+  buildExportFilename,
+  exportVectorPdf,
+} from "../../../features/pdf/pdf-export";
 import {
   computeInnerFrame,
   computePaperFrame,
@@ -63,6 +67,26 @@ export function ResultsMenu({ isOpen, onActivate, panelHost }: Props) {
   };
 
   const handleExportPng = () => {
+    // Selection outlines are drawn on the same canvas: hide them, let the
+    // canvas redraw, copy it, then restore the selection.
+    const { selectedAnnotationIds, selectedResultObject } =
+      useAppStore.getState();
+    useAppStore.setState({
+      selectedAnnotationIds: [],
+      selectedResultObject: null,
+    });
+    requestAnimationFrame(() =>
+      requestAnimationFrame(() => {
+        try {
+          copyCanvasToPng();
+        } finally {
+          useAppStore.setState({ selectedAnnotationIds, selectedResultObject });
+        }
+      }),
+    );
+  };
+
+  const copyCanvasToPng = () => {
     const canvas = document.querySelector<HTMLCanvasElement>(
       "[data-testid='slope-canvas']",
     );
@@ -97,7 +121,10 @@ export function ResultsMenu({ isOpen, onActivate, panelHost }: Props) {
     ctx.drawImage(canvas, sx, sy, sw, sh, 0, 0, sw, sh);
 
     const link = document.createElement("a");
-    link.download = "slope-analysis.png";
+    link.download = buildExportFilename(
+      useAppStore.getState().projectInfo,
+      "png",
+    );
     link.href = exportCanvas.toDataURL("image/png");
     link.click();
   };
@@ -275,6 +302,32 @@ export function ResultsMenu({ isOpen, onActivate, panelHost }: Props) {
                             {item.label}
                           </button>
                         ))}
+                        {rvs.surfaceDisplay === "filter" && (
+                          <label
+                            className="flex items-center gap-2 px-3 py-1.5 text-[11px]"
+                            style={{
+                              color: "var(--color-vsc-text)",
+                              borderTop: "1px solid var(--color-vsc-border)",
+                            }}
+                          >
+                            FOS ≤
+                            <DraftNumberInput
+                              min={0.01}
+                              step={0.05}
+                              value={rvs.fosFilterMax}
+                              onValueChange={(value) => {
+                                if (value > 0) setRvs({ fosFilterMax: value });
+                              }}
+                              aria-label="Maximum FOS shown"
+                              className="w-16 text-[11px] px-1 py-0.5 rounded tabular-nums"
+                              style={{
+                                background: "var(--color-vsc-bg)",
+                                color: "var(--color-vsc-text)",
+                                border: "1px solid var(--color-vsc-border)",
+                              }}
+                            />
+                          </label>
+                        )}
                       </div>
                     )}
                   </div>

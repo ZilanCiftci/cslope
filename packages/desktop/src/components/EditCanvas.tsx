@@ -23,6 +23,8 @@ import {
   ARROW_HEIGHT_PX,
   RULER_SIZE_PX,
   cssVar,
+  VIEW_SCALE_MAX,
+  VIEW_SCALE_MIN,
 } from "../features/canvas/constants";
 import {
   collectModelFitBounds,
@@ -436,7 +438,7 @@ export function EditCanvas() {
     const cx = (xMin + xMax) / 2;
     const cy = (yMin + yMax) / 2;
 
-    const clampedScale = Math.max(0.1, Math.min(200, scale));
+    const clampedScale = Math.max(VIEW_SCALE_MIN, Math.min(VIEW_SCALE_MAX, scale));
     const ox = (targetCx - w / 2) / clampedScale - cx;
     const oy = (h / 2 - targetCy) / clampedScale - cy;
 
@@ -464,7 +466,7 @@ export function EditCanvas() {
       const h = rect.height;
 
       const oldScale = viewScale;
-      const newScale = Math.max(0.1, Math.min(200, oldScale * factor));
+      const newScale = Math.max(VIEW_SCALE_MIN, Math.min(VIEW_SCALE_MAX, oldScale * factor));
       if (newScale === oldScale) return;
 
       const cx = w / 2;
@@ -523,8 +525,8 @@ export function EditCanvas() {
       const fitWidthScale = computeFitWidthScale();
       if (!fitWidthScale || fitWidthScale <= 0) return;
       const scale = Math.max(
-        0.1,
-        Math.min(200, fitWidthScale * (percent / 100)),
+        VIEW_SCALE_MIN,
+        Math.min(VIEW_SCALE_MAX, fitWidthScale * (percent / 100)),
       );
       setActiveViewScale(scale);
     },
@@ -619,7 +621,7 @@ export function EditCanvas() {
             const cx = (worldLeft + worldRight) / 2;
             const cy = (worldBottom + worldTop) / 2;
 
-            setActiveViewScale(Math.max(0.1, Math.min(200, scale)));
+            setActiveViewScale(Math.max(VIEW_SCALE_MIN, Math.min(VIEW_SCALE_MAX, scale)));
             setActiveViewOffset([-cx, -cy]);
           }
         }

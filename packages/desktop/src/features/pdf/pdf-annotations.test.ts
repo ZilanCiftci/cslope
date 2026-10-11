@@ -117,6 +117,30 @@ describe("PDF annotations match the canvas proportions", () => {
     // Frame + chart box, and one marker per slice.
     expect(withSlices.rects.length).toBe(2);
     expect(withSlices.circles).toBe(3);
+
+    // Right-to-left model: slices come in descending x, the axis still
+    // runs from xMin (left) to xMax (right).
+    const pdf = new jsPDF({ unit: "mm", format: [297, 210], orientation: "landscape" });
+    const labels: { text: string; x: number }[] = [];
+    const text = pdf.text.bind(pdf);
+    pdf.text = ((t: string, x: number, ...rest: unknown[]) => {
+      labels.push({ text: String(t), x });
+      return (text as (...a: unknown[]) => jsPDF)(t, x, ...rest);
+    }) as typeof pdf.text;
+    drawAnnotations(
+      pdf,
+      PAPER as never,
+      [{ ...anno, plotAxisX: "x" } as Annotation],
+      { ...RESULT, criticalSlices: [slice(30), slice(20), slice(10)] } as unknown as AnalysisResult,
+      MATERIALS,
+      { enabled: false, lines: [], activeLineId: null, materialAssignment: {} },
+      {},
+      [],
+      FRAME,
+    );
+    const left = labels.find((l) => l.text === "10.0")!;
+    const right = labels.find((l) => l.text === "30.0")!;
+    expect(left.x).toBeLessThan(right.x);
   });
 });
 

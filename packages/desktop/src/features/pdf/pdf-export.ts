@@ -44,6 +44,14 @@ function pdfNum(value: number, decimals = 12): string {
 }
 
 function buildPdfFilename(projectInfo?: ProjectInfo): string {
+  return buildExportFilename(projectInfo, "pdf");
+}
+
+/** File name for an exported view, from the project title or number. */
+export function buildExportFilename(
+  projectInfo: ProjectInfo | undefined,
+  extension: string,
+): string {
   const preferredBase =
     projectInfo?.title?.trim() ||
     projectInfo?.projectNumber?.trim() ||
@@ -64,7 +72,7 @@ function buildPdfFilename(projectInfo?: ProjectInfo): string {
     .slice(0, 120);
 
   const safeBase = sanitizedBase.length > 0 ? sanitizedBase : "slope-analysis";
-  return `${safeBase}.pdf`;
+  return `${safeBase}.${extension}`;
 }
 
 export interface PdfExportData {

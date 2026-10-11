@@ -1095,14 +1095,13 @@ function drawPlotAnnotationPdf(
     align: "right",
     baseline: "middle",
   });
-  const first = plot.points[0];
-  const last = plot.points[plot.points.length - 1];
-  pdf.text(first.x.toFixed(plot.xDecimals), chartX, chartY + chartH + pad, {
+  // Axis ends, not first/last slice (descending x on rtl models).
+  pdf.text(xMin.toFixed(plot.xDecimals), chartX, chartY + chartH + pad, {
     align: "center",
     baseline: "top",
   });
   pdf.text(
-    last.x.toFixed(plot.xDecimals),
+    xMax.toFixed(plot.xDecimals),
     chartX + chartW,
     chartY + chartH + pad,
     { align: "center", baseline: "top" },

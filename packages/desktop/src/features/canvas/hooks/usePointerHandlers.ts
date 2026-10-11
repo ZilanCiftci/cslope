@@ -8,6 +8,7 @@ import {
 } from "react";
 import { computePaperFrame, getAnnotationBoundsPx } from "../helpers";
 import { useAppStore } from "../../../store/app-store";
+import { VIEW_SCALE_MAX, VIEW_SCALE_MIN } from "../constants";
 import type { CanvasWheelEvent } from "./useNonPassiveWheel";
 import type { ContextMenuState, MaterialPickerState, PointHit } from "../types";
 import type {
@@ -865,7 +866,7 @@ export function usePointerHandlers(deps: PointerDeps) {
 
       if (e.ctrlKey) {
         const factor = e.deltaY > 0 ? 0.8 : 1.2;
-        const newScale = Math.max(0.1, Math.min(200, oldScale * factor));
+        const newScale = Math.max(VIEW_SCALE_MIN, Math.min(VIEW_SCALE_MAX, oldScale * factor));
         setActiveViewOffset([
           ox + (mx - w / 2) / newScale - (mx - w / 2) / oldScale,
           oy - (my - h / 2) / newScale + (my - h / 2) / oldScale,

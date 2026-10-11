@@ -1884,13 +1884,15 @@ export function drawCanvas(
 
         ctx.textBaseline = "top";
         ctx.textAlign = "center";
+        // Axis ends, not first/last slice: slices of a right-to-left
+        // model come in descending x.
         ctx.fillText(
-          points[0].x.toFixed(plot.xDecimals),
+          xMin.toFixed(plot.xDecimals),
           chartX,
           chartY + chartH + 4,
         );
         ctx.fillText(
-          points[points.length - 1].x.toFixed(plot.xDecimals),
+          xMax.toFixed(plot.xDecimals),
           chartX + chartW,
           chartY + chartH + 4,
         );

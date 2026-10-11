@@ -28,3 +28,10 @@ export function cssVar(name: string): string {
     .getPropertyValue(name)
     .trim();
 }
+
+/**
+ * Zoom limits in px per metre. Wide enough that manual zoom and Fit
+ * never fight the automatic fit, from small lab models to km-wide sections.
+ */
+export const VIEW_SCALE_MIN = 0.001;
+export const VIEW_SCALE_MAX = 10000;
