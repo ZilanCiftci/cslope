@@ -52,7 +52,11 @@ export function calculateAllLoads(
     // Line loads
     for (let j = 0; j < linLoads.length; j++) {
       const [lx, lmag] = linLoads[j];
-      if (sxl <= lx && lx < sxr) {
+      // Half-open per slice so a load on a shared boundary counts once,
+      // but closed on the last slice: a load exactly at the exit point
+      // was dropped while one at the entry point was kept.
+      const last = i === widths.length - 1;
+      if (sxl <= lx && (lx < sxr || (last && lx <= sxr))) {
         llForces[i] += lmag;
       }
     }

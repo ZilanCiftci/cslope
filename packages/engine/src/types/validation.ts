@@ -20,6 +20,25 @@ export function validateMaterialModel(model: MaterialModel): string[] {
   // ── Common: unitWeight must be positive ──────────────────────
   if (!Number.isFinite(model.unitWeight) || model.unitWeight <= 0) {
     errors.push("Unit weight (γ) must be a positive number.");
+  } else if (model.unitWeight > 500) {
+    errors.push("Unit weight (γ) must be at most 500 kN/m³.");
+  }
+
+  // Optional numeric fields must be finite when given: NaN would silently
+  // turn into zero strength further on.
+  const optional = model as unknown as Record<string, unknown>;
+  for (const field of [
+    "cohesionRefDepth",
+    "cohesionRateOfChange",
+    "cohesionUndrained",
+    "cFactor",
+    "suRefDepth",
+    "suRateOfChange",
+  ]) {
+    const v = optional[field];
+    if (v !== undefined && (typeof v !== "number" || !Number.isFinite(v))) {
+      errors.push(`${field} must be a finite number.`);
+    }
   }
 
   switch (model.kind) {
@@ -32,7 +51,14 @@ export function validateMaterialModel(model: MaterialModel): string[] {
       } else if (model.frictionAngle >= 90) {
         errors.push("Friction angle (φ) must be less than 90°.");
       }
-      if (model.cohesion === 0 && model.frictionAngle === 0) {
+      if (model.cFactor !== undefined && model.cFactor < 0) {
+        errors.push("cFactor must be ≥ 0.");
+      }
+      if (
+        model.cohesion === 0 &&
+        model.frictionAngle === 0 &&
+        !((model.cohesionRateOfChange ?? 0) > 0)
+      ) {
         errors.push(
           "Both c and φ are zero — the material has no strength. Set at least one.",
         );

@@ -85,7 +85,8 @@ export function buildSlope(def: SlopeDefinition): Slope {
 
     const mat = new Material({
       name: m.name,
-      unitWeight: m.unitWeight,
+      // The model is the source of truth (and the validated value).
+      unitWeight: model.unitWeight,
       frictionAngle: m.frictionAngle,
       cohesion: m.cohesion,
       cohesionRefDepth: m.cohesionRefDepth,

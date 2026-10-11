@@ -123,3 +123,51 @@ describe("combined (drained/undrained) materials", () => {
     });
   }
 });
+
+describe("round 5 engine fixes", () => {
+  const base = (extra: Partial<SlopeDefinition> = {}): SlopeDefinition => ({
+    coordinates: [[0, 0], [0, 10], [10, 10], [20, 5], [30, 5], [30, 0]],
+    materials: [{ name: "A", unitWeight: 20, frictionAngle: 30, cohesion: 5 }],
+    customSearchPlanes: [{ cx: 18, cy: 20, radius: 17 }],
+    customPlanesOnly: true,
+    ...extra,
+  });
+  const fos = (def: SlopeDefinition) => {
+    const slope = buildSlope(def);
+    slope.updateAnalysisOptions({ method: "Bishop", slices: 50 });
+    return analyseSlope(slope)!;
+  };
+
+  it("a short water line continues horizontally to the model edges", () => {
+    const full = fos(base({ waterTable: { mode: "custom", value: [[0, 7], [30, 7]] } }));
+    const short = fos(base({ waterTable: { mode: "custom", value: [[0, 7], [15, 7]] } }));
+    expect(short).toBeCloseTo(full, 6);
+  });
+
+  it("a line load exactly at the exit point is applied", () => {
+    const slope = buildSlope(base());
+    const [cx, cy, r] = [18, 20, 17];
+    const pts = slope.getCircleExternalIntersection(cx, cy, r);
+    const exitX = pts[pts.length - 1][0];
+    const at = fos(base({ lineLoads: [{ magnitude: 100, x: exitX }] }));
+    const near = fos(base({ lineLoads: [{ magnitude: 100, x: exitX - 1e-9 }] }));
+    expect(at).toBeCloseTo(near, 6);
+  });
+
+  it("rejects non-finite optional strength fields and uses the model unit weight", async () => {
+    const { validateMaterialModel } = await import("../types/validation");
+    expect(
+      validateMaterialModel({ kind: "mohr-coulomb", unitWeight: 20, cohesion: 10, frictionAngle: 30, cohesionRateOfChange: Number.NaN }),
+    ).not.toEqual([]);
+    expect(
+      validateMaterialModel({ kind: "mohr-coulomb", unitWeight: 20, cohesion: 0, frictionAngle: 0, cohesionRateOfChange: 2 }),
+    ).toEqual([]);
+    const flat25 = fos(base({
+      materials: [{ name: "A", unitWeight: 25, frictionAngle: 30, cohesion: 5, model: { kind: "mohr-coulomb", unitWeight: 18, cohesion: 5, frictionAngle: 30 } }],
+    }));
+    const both18 = fos(base({
+      materials: [{ name: "A", unitWeight: 18, frictionAngle: 30, cohesion: 5 }],
+    }));
+    expect(flat25).toBeCloseTo(both18, 6);
+  });
+});

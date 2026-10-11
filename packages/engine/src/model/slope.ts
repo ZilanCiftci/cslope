@@ -504,6 +504,26 @@ export class Slope {
     followBoundary: boolean,
   ): { x: number[]; y: number[] } | null {
     if (wx.length < 2) return null;
+    // Beyond its end points a piezometric line continues horizontally to
+    // the model edges (as in Slide and SLOPE/W); previously slices past
+    // the ends of a short line got no pore pressure at all.
+    if (this._externalBoundaryPx.length >= 3) {
+      const order = wx.map((_, i) => i).sort((a, b) => wx[a] - wx[b]);
+      const xs = order.map((i) => wx[i]);
+      const ys = order.map((i) => wy[i]);
+      const xMin = Math.min(...this._externalBoundaryPx);
+      const xMax = Math.max(...this._externalBoundaryPx);
+      if (xs[0] > xMin) {
+        xs.unshift(xMin);
+        ys.unshift(ys[0]);
+      }
+      if (xs[xs.length - 1] < xMax) {
+        xs.push(xMax);
+        ys.push(ys[ys.length - 1]);
+      }
+      wx = xs;
+      wy = ys;
+    }
     if (!followBoundary) return { x: wx, y: wy };
     if (!this._surfaceLineX || !this._surfaceLineY) {
       throw new Error(
