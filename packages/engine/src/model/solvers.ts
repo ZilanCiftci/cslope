@@ -574,6 +574,11 @@ export function analyseMorgensternPrice(
   const maxIters = slope.maxIterations;
   const tol = slope.tolerance;
   const mpEquilibriumTolerance = Math.max(tol * 4, 0.02);
+  // Fm(λ) and Ff(λ) are evaluated much more precisely than the λ search
+  // needs: near the root the gap Fm − Ff is of the order of `tol`, and
+  // evaluation noise of that size sent the secant step the wrong way
+  // (e.g. Slide VP37, where Fm hardly depends on λ).
+  const evalTol = tol * 0.01;
 
   // Step 1: Initial Bishop solution (lambda = 0)
   let Nm: Float64Array = new Float64Array(n);
@@ -584,7 +589,7 @@ export function analyseMorgensternPrice(
     FSord,
     Nm,
     maxIters,
-    tol,
+    evalTol,
     1,
   );
   Nm = new Float64Array(NmOut);
@@ -599,7 +604,7 @@ export function analyseMorgensternPrice(
     FSord,
     Nf,
     maxIters,
-    tol,
+    evalTol,
     1,
   );
   Nf = new Float64Array(NfOut);
@@ -613,7 +618,7 @@ export function analyseMorgensternPrice(
         FSord * fact,
         new Float64Array(n),
         maxIters,
-        tol,
+        evalTol,
         1,
       );
       Nf = new Float64Array(NfOut);
@@ -637,7 +642,7 @@ export function analyseMorgensternPrice(
     FSm,
     Nm,
     maxIters,
-    tol,
+    evalTol,
     maxIters,
   );
   Nm = new Float64Array(NmOut);
@@ -649,7 +654,7 @@ export function analyseMorgensternPrice(
     FSf,
     Nf,
     maxIters,
-    tol,
+    evalTol,
     maxIters,
   );
   Nf = new Float64Array(NfOut);
@@ -698,7 +703,7 @@ export function analyseMorgensternPrice(
       fsExtrap,
       Nm,
       maxIters,
-      tol,
+      evalTol,
       maxIters,
     );
     Nm = new Float64Array(NmOut);
@@ -710,7 +715,7 @@ export function analyseMorgensternPrice(
       FSf,
       Nf,
       maxIters,
-      tol,
+      evalTol,
       maxIters,
     );
     Nf = new Float64Array(NfOut);
@@ -736,7 +741,7 @@ export function analyseMorgensternPrice(
           bestFS,
           Nm,
           maxIters,
-          tol,
+          evalTol,
           maxIters,
         );
       Nm = new Float64Array(NmOut);
@@ -750,7 +755,7 @@ export function analyseMorgensternPrice(
           bestFS,
           Nf,
           maxIters,
-          tol,
+          evalTol,
           maxIters,
         );
       Nf = new Float64Array(NfOut);

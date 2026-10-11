@@ -396,12 +396,14 @@ describe("Verification problems — round 4, fixed circles", () => {
     });
   }
 
-  it("VP37 XSTABL reinforcement example, unreinforced, 40 kPa surcharge: Bishop 0.764", () => {
+  it("VP37 XSTABL reinforcement example, unreinforced, 40 kPa surcharge: Bishop 0.764, Spencer 0.764", () => {
     const def = layered([[0, 5], [5, 5], [17, 17], [40, 17]], 0, [{ name: "Sand", topY: null, model: mc(0, 36, 20) }], {
       ...circle(-11.41, 35.264, 34.426),
       udls: [{ magnitude: 40, x1: 17, x2: 30 }],
     });
     expectNear(fos(def, "Bishop"), 0.764, 0.01);
+    // M-P used to return no result here (λ secant misled by Fm noise).
+    expectNear(fos(def, "Morgenstern-Price", SPENCER), 0.764, 0.01);
   });
 
   it("VP54 Yamagami micro-pile slope, no pile: Bishop 1.102", () => {
