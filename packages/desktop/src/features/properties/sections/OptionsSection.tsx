@@ -345,12 +345,26 @@ export function OptionsSection({ plain = false }: OptionsSectionProps) {
             </option>
           </select>
         </label>
+        <label
+          className="col-span-2 flex items-center gap-1.5"
+          title="Crack depth from the soil just below the ground at each surface's entry: z = 2c/(γ√Ka) − q/γ, Ka = tan²(45° − φ/2); 2·cu/γ − q/γ for undrained clay. Uses the same (design) strengths as the analysis."
+        >
+          <input
+            type="checkbox"
+            checked={options.tensionCrackAuto === true}
+            onChange={(e) => setOptions({ tensionCrackAuto: e.target.checked })}
+            aria-label="Automatic tension crack depth"
+          />
+          <Label>Tension crack depth from the soil (Rankine)</Label>
+        </label>
         <label className="flex flex-col gap-0.5">
           <Label>Tension crack depth (m)</Label>
           <DraftNumberInput
-            value={options.tensionCrackDepth ?? 0}
+            value={options.tensionCrackAuto ? undefined : (options.tensionCrackDepth ?? 0)}
+            placeholder="Auto"
             min={0}
             step={0.1}
+            disabled={options.tensionCrackAuto === true}
             onValueChange={(v) =>
               v >= 0 && setOptions({ tensionCrackDepth: v })
             }
@@ -365,7 +379,7 @@ export function OptionsSection({ plain = false }: OptionsSectionProps) {
             min={0}
             max={100}
             step={10}
-            disabled={!(options.tensionCrackDepth! > 0)}
+            disabled={!(options.tensionCrackDepth! > 0) && !options.tensionCrackAuto}
             onValueChange={(v) =>
               v >= 0 &&
               v <= 100 &&

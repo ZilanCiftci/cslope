@@ -350,6 +350,7 @@ export function exportVectorPdf(data: PdfExportData): void {
         piezometricLine.lines,
         coordinates,
         piezometricLine.freeWater !== false,
+        piezometricLine.mainLineId,
       );
     }
 

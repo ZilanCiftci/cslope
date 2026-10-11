@@ -82,7 +82,8 @@ describe("ResultPanel", () => {
     });
     render(<ResultPanel />);
     expect(screen.getByText("1.234")).toBeInTheDocument();
-    expect(screen.getByText("1.678")).toBeInTheDocument();
+    // The largest FOS of the search is not shown (it says little).
+    expect(screen.queryByText("1.678")).toBeNull();
     expect(screen.getByText("Bishop")).toBeInTheDocument();
     expect(screen.getByText("1")).toBeInTheDocument(); // surfaces count
     expect(screen.getByText("250 ms")).toBeInTheDocument();

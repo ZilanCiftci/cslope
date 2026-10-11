@@ -7,6 +7,7 @@ import {
   SpreadsheetTable,
   type SpreadsheetColumn,
 } from "../../../components/ui/SpreadsheetTable";
+import { mainPiezoLine } from "../../../utils/piezo";
 
 export function PiezometricLineSection() {
   const pl = useAppStore((s) => s.piezometricLine);
@@ -22,6 +23,7 @@ export function PiezometricLineSection() {
     (s) => s.setPiezoMaterialAssignment,
   );
   const setPiezoFreeWater = useAppStore((s) => s.setPiezoFreeWater);
+  const setPiezoMainLine = useAppStore((s) => s.setPiezoMainLine);
   const coordinates = useAppStore((s) => s.coordinates);
 
   const activeLine =
@@ -260,6 +262,32 @@ export function PiezometricLineSection() {
             Free water above ground (ponding)
           </label>
 
+          {pl.lines.length > 1 && (
+            <label
+              className="flex items-center gap-1.5 text-[11px]"
+              title="The line that gives the free water above the ground and the pore pressure of materials without a line of their own."
+            >
+              Main line
+              <select
+                value={mainPiezoLine(pl)?.id ?? ""}
+                onChange={(e) => setPiezoMainLine(e.target.value)}
+                aria-label="Main piezometric line"
+                className="text-[11px] px-1 py-0.5 rounded flex-1"
+                style={{
+                  background: "var(--color-vsc-input-bg)",
+                  color: "var(--color-vsc-text)",
+                  border: "1px solid var(--color-vsc-border)",
+                }}
+              >
+                {pl.lines.map((line) => (
+                  <option key={line.id} value={line.id}>
+                    {line.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+          )}
+
           {pl.lines.length > 1 && materials.length > 0 && (
             <>
               <div
@@ -276,7 +304,7 @@ export function PiezometricLineSection() {
               </p>
               {materials.map((m) => {
                 const assignedId =
-                  pl.materialAssignment[m.id] ?? pl.lines[0]?.id ?? "";
+                  pl.materialAssignment[m.id] ?? mainPiezoLine(pl)?.id ?? "";
                 return (
                   <div
                     key={m.id}

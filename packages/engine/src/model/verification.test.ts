@@ -5,7 +5,9 @@
 import { describe, it, expect } from "vitest";
 import { getSlices } from "./slices";
 import { defaultAxisPoint } from "./surface";
+import { validateMaterialModel } from "../types/validation";
 import { analyseBishop, analyseMorgensternPrice } from "./solvers";
+import { rankineCrackDepth } from "./slices";
 import {
   VERIFICATION_CASES,
   circle,
@@ -288,5 +290,88 @@ describe("Minimum slip depth", () => {
     const off = runVerification(def, "Bishop", { minSlipArea: 0 });
     expect(off.slope.search.some((p) => p.fos != null && area(p) < auto.slope.minSlipArea)).toBe(true);
     expect(auto.fos!).toBeCloseTo(off.fos!, 6);
+  });
+});
+
+describe("Saturated unit weight", () => {
+  const ground: [number, number][] = [[0, 0], [10, 0], [20, 10], [30, 10]];
+  const water = { waterTable: { mode: "custom" as const, value: [[0, 4], [30, 4]] as [number, number][], followBoundary: false } };
+  const slicesFor = (gammaSat?: number) => {
+    const model = { ...mc(5, 30, 18), ...(gammaSat !== undefined ? { unitWeightSat: gammaSat } : {}) };
+    const def = layered(ground, -10, [{ name: "S", topY: null, model }], { ...water, ...circle(8, 22, 22) });
+    const { slope } = runVerification(def, "Bishop");
+    return slope.search[0].slices!;
+  };
+
+  it("soil below the water line weighs γsat, above it γ", () => {
+    const plain = slicesFor();
+    const sat = slicesFor(21);
+    expect(sat.length).toBe(plain.length);
+    let below = 0;
+    let above = 0;
+    for (let i = 0; i < sat.length; i++) {
+      const s = sat[i];
+      const top = Math.max(s.y0Top, s.y1Top);
+      const bottom = Math.min(s.y0Bottom, s.y1Bottom);
+      if (top < 4 - 1e-6) {
+        expect(s.weight / s.area).toBeCloseTo(21, 9);
+        below++;
+      } else if (bottom > 4 - 1e-6) {
+        expect(s.weight).toBeCloseTo(plain[i].weight, 9);
+        above++;
+      } else {
+        expect(s.weight).toBeGreaterThan(plain[i].weight);
+        expect(s.weight).toBeLessThan(plain[i].weight * (21 / 18));
+      }
+    }
+    expect(below).toBeGreaterThan(0);
+    expect(above).toBeGreaterThan(0);
+  });
+
+  it("the extra weight is proportional to γsat − γ", () => {
+    const w = (g?: number) => slicesFor(g).reduce((a, s) => a + s.weight, 0);
+    const base = w();
+    expect((w(21) - base) / (w(19) - base)).toBeCloseTo(3, 9);
+    // Equal to γ changes nothing.
+    expect(w(18)).toBeCloseTo(base, 9);
+  });
+
+  it("an invalid γsat is reported", () => {
+    expect(validateMaterialModel({ ...mc(5, 30, 18), unitWeightSat: -1 })).not.toEqual([]);
+    expect(validateMaterialModel({ ...mc(5, 30, 18), unitWeightSat: 20 })).toEqual([]);
+  });
+});
+
+describe("Automatic tension crack depth", () => {
+  // Crest on the left: canonical coordinates are the model's own.
+  const ground: [number, number][] = [[0, 10], [10, 10], [20, 0], [30, 0]];
+  const slopeWith = (model: ReturnType<typeof mc>, opts: Record<string, unknown> = {}, extra = {}) => {
+    const def = layered(ground, -10, [{ name: "S", topY: null, model }], extra);
+    return runVerification(def, "Bishop", { tensionCrackAuto: true, ...opts });
+  };
+
+  it("is the Rankine depth of the soil at the crest", () => {
+    // Undrained: 2cu/γ
+    expect(rankineCrackDepth(slopeWith(su(20, 18)).slope, 5)).toBeCloseTo(40 / 18, 9);
+    // Drained: 2c/(γ√Ka), Ka = tan²(45° − φ/2)
+    const sqrtKa = Math.tan(Math.PI / 4 - Math.PI / 12);
+    expect(rankineCrackDepth(slopeWith(mc(10, 30, 18)).slope, 5)).toBeCloseTo(20 / (18 * sqrtKa), 9);
+    // A surcharge closes the crack by q/γ
+    const loaded = slopeWith(su(20, 18), {}, { udls: [{ magnitude: 10, x1: 2, x2: 8 }] });
+    expect(rankineCrackDepth(loaded.slope, 5)).toBeCloseTo(30 / 18, 9);
+    expect(rankineCrackDepth(loaded.slope, 9)).toBeCloseTo(40 / 18, 9);
+    // Design strength with partial factors
+    const pf = slopeWith(su(20, 18), { partialFactors: { cu: 1.5, cohesion: 1.3, tanPhi: 1.3, variableLoad: 1.3 } });
+    expect(rankineCrackDepth(pf.slope, 5)).toBeCloseTo(40 / 1.5 / 18, 9);
+    // Cohesionless soil: no crack
+    expect(rankineCrackDepth(slopeWith(mc(0, 30, 18)).slope, 5)).toBe(0);
+  });
+
+  it("gives the same result as the same fixed depth", () => {
+    const auto = slopeWith(su(20, 18));
+    const fixed = runVerification(layered(ground, -10, [{ name: "S", topY: null, model: su(20, 18) }]), "Bishop", { tensionCrackDepth: 40 / 18 });
+    expect(auto.fos!).toBeCloseTo(fixed.fos!, 9);
+    const crack = auto.slope.search.find((p) => p.fos != null)!.crack!;
+    expect(crack).toBeDefined();
   });
 });

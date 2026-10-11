@@ -20,6 +20,7 @@ import {
   anchoredTopLeft,
   anchorPointFromTopLeft,
 } from "../annotations/anchorPosition";
+import { surfaceCountText } from "../../utils/fos-color";
 import type {
   MaterialTableColumnKey,
   AnchorPosition,
@@ -519,16 +520,12 @@ export function ResultSidebar() {
               </>
             )}
             <div className="flex justify-between">
-              <Label>Max FOS</Label>
-              <span className="tabular-nums">{result.maxFOS.toFixed(3)}</span>
-            </div>
-            <div className="flex justify-between">
               <Label>Method</Label>
               <span>{result.method}</span>
             </div>
             <div className="flex justify-between">
               <Label>Surfaces</Label>
-              <span className="tabular-nums">{result.allSurfaces.length}</span>
+              <span className="tabular-nums">{surfaceCountText(result)}</span>
             </div>
             <div className="flex justify-between">
               <Label>Elapsed</Label>

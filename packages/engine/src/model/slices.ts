@@ -50,6 +50,13 @@ export function createSlice(
    * (cx, cy) is the axis point for moment equilibrium and `radius` unused.
    */
   base?: (x: number) => number,
+  /**
+   * Water line of a material at the slice edges [y at x0, y at x1], for
+   * materials with a saturated unit weight (null: no water there).
+   */
+  waterForWeight?: (
+    material: GeometryWithMaterial["material"],
+  ) => [number, number] | null,
 ): Slice | null {
   const x = (x0 + x1) / 2;
   const dx = cx - x;
@@ -159,7 +166,21 @@ export function createSlice(
     // Calculate area and weight
     const area = calculatePolygonArea(mpx, mpy);
     totalArea += area;
-    totalWeight += area * fragmentUnitWeight(m.material, mpx, mpy, area);
+    const gamma = fragmentUnitWeight(m.material, mpx, mpy, area);
+    totalWeight += area * gamma;
+    const gammaSat = m.material.model.unitWeightSat;
+    if (gammaSat !== undefined && gammaSat !== gamma && waterForWeight) {
+      // The part of the fragment below the material's water line (straight
+      // across the slice) weighs γsat instead of γ.
+      const w = waterForWeight(m.material);
+      if (w) {
+        const s = (w[1] - w[0]) / (x1 - x0);
+        const [bx, by] = clipPolygonHalfplane(mpx, mpy, s, -1, w[0] - s * x0);
+        if (bx.length >= 3) {
+          totalWeight += calculatePolygonArea(bx, by) * (gammaSat - gamma);
+        }
+      }
+    }
 
     // Check if this material is at the base of the slice
     // Test in coordinates local to the slice base: with real-world
@@ -309,7 +330,9 @@ export function getSlices(
   // on the upslope side; a surface that never gets that deep has no
   // sliding mass below the crack zone.
   let x0 = entryX;
-  const crackDepth = slope.tensionCrackDepth;
+  const crackDepth = slope.tensionCrackAuto
+    ? rankineCrackDepth(slope, entryX)
+    : slope.tensionCrackDepth;
   if (crackDepth > 0) {
     const xc = findCrackX(surfXY, entryX, x1, baseY, crackDepth);
     if (xc === null) return [];
@@ -479,6 +502,9 @@ export function getSlices(
   // Create slices
   const results: Slice[] = [];
   const verticalHead = slope.porePressureHead === "vertical";
+  const hasSatWeight = slope.materialGeometries.some(
+    (g) => g.material.model.unitWeightSat !== undefined,
+  );
   for (let i = 0; i < nSlices; i++) {
     let waterYMean: number | null = null;
     let waterH: number | null = null;
@@ -527,6 +553,15 @@ export function getSlices(
             )
         : undefined,
       poly ? baseY : undefined,
+      hasSatWeight
+        ? (material) => {
+            const line = slope.getWaterLineForMaterial(material);
+            if (!line) return null;
+            const w0 = getYAtX(line.x, line.y, slicesX[i]);
+            const w1 = getYAtX(line.x, line.y, slicesX[i + 1]);
+            return Number.isFinite(w0) && Number.isFinite(w1) ? [w0, w1] : null;
+          }
+        : undefined,
     );
 
     if (s !== null && s.isValid) {
@@ -577,6 +612,52 @@ function applyMaterialFactors(s: Slice, f: PartialFactors): void {
   s.cohesion /= f.cohesion;
   s.phi = Math.atan(Math.tan(s.phi) / f.tanPhi);
   s.frictionAngle = (s.phi * 180) / Math.PI;
+}
+
+/**
+ * Rankine depth of a tension crack at x: where the active earth pressure
+ * of the soil just below the ground, σa = (γz + q)·Ka − 2c√Ka, is zero.
+ * z = 2c/(γ√Ka) − q/γ, Ka = tan²(45° − φ/2); for undrained strength
+ * (φ = 0) z = 2cu/γ − q/γ. Strength as in the analysis (design values with
+ * partial factors), q the (factored) distributed load at x.
+ */
+export function rankineCrackDepth(slope: Slope, x: number): number {
+  const surf = slope.surfaceLineXY;
+  if (!surf) return 0;
+  const yGround = getYAtX(surf.x, surf.y, x);
+  if (!Number.isFinite(yGround)) return 0;
+  const y = yGround - 1e-3;
+  const geo = slope.materialGeometries.find((g) => isPointInPolygon(x, y, g.px, g.py));
+  if (!geo) return 0;
+  const model = geo.material.model;
+  if (model.kind === "high-strength" || model.kind === "impenetrable") return 0;
+  const strength = resolveStrength(model, { yBottom: y, x, yGround, alpha: 0 });
+  let c = strength.cohesion;
+  let tanPhi = Math.tan((strength.frictionAngle * Math.PI) / 180);
+  const f = slope.partialFactors;
+  if (f) {
+    const undrained =
+      model.kind === "undrained" ||
+      model.kind === "s-f-depth" ||
+      model.kind === "s-f-datum" ||
+      (strength.frictionAngle === 0 && !strength.isCombined);
+    if (undrained) {
+      c /= f.cu;
+    } else {
+      c /= f.cohesion;
+      tanPhi /= f.tanPhi;
+    }
+  }
+  const gamma = geo.material.unitWeight;
+  if (!(c > 0) || !(gamma > 0)) return 0;
+  const phi = Math.atan(tanPhi);
+  const sqrtKa = Math.tan(Math.PI / 4 - phi / 2);
+  const loadFactor = f?.variableLoad ?? 1;
+  let q = 0;
+  for (const u of slope.udls) {
+    if (x >= Math.min(u.x1, u.x2) && x <= Math.max(u.x1, u.x2)) q += u.magnitude * loadFactor;
+  }
+  return Math.max(0, (2 * c) / (gamma * sqrtKa) - q / gamma);
 }
 
 /**

@@ -136,7 +136,7 @@ export {
 } from "./model/geometry-ops";
 export type { RegionFace } from "./model/geometry-ops";
 
-export { createSlice, getSlices } from "./model/slices";
+export { createSlice, getSlices, rankineCrackDepth } from "./model/slices";
 
 export {
   generatePlanes,

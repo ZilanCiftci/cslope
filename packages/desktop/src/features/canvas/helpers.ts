@@ -23,6 +23,7 @@ import {
 } from "../annotations/materialTableLayout";
 import { anchoredTopLeft } from "../annotations/anchorPosition";
 import { fosScaleRange, fosTickLabel } from "../../utils/fos-color";
+import { mainPiezoLine } from "../../utils/piezo";
 
 export { computePaperFrame } from "../view/paper";
 
@@ -61,7 +62,11 @@ function formatMaterialCell(
     case "model":
       return MODEL_SHORT_LABELS[material.model.kind];
     case "unitWeight":
-      return `${f.unitWeight}`;
+      // γ above / γsat below the water line, when different.
+      return material.model.unitWeightSat !== undefined &&
+        material.model.unitWeightSat !== f.unitWeight
+        ? `${f.unitWeight} / ${material.model.unitWeightSat}`
+        : `${f.unitWeight}`;
     case "frictionAngle": {
       // Only models with a friction angle; φ = 0 for undrained strength.
       const k = material.model.kind;
@@ -81,10 +86,11 @@ function formatMaterialCell(
       return "-";
     }
     case "piezometricLine": {
-      // Unassigned materials use the first line (same rule as the analysis).
+      // Unassigned materials use the main line (same rule as the analysis).
       const lines = piezometricLine?.lines ?? [];
       const lineId =
-        piezometricLine?.materialAssignment[material.id] ?? lines[0]?.id;
+        piezometricLine?.materialAssignment[material.id] ??
+        (piezometricLine ? mainPiezoLine(piezometricLine)?.id : undefined);
       return lines.find((l) => l.id === lineId)?.name ?? "-";
     }
     case "depthRef":

@@ -13,7 +13,7 @@ export {
   createGeometryWithMaterial,
 } from "./geometry-ops";
 
-export { createSlice, getSlices } from "./slices";
+export { createSlice, getSlices, rankineCrackDepth } from "./slices";
 
 export {
   generatePlanes,

@@ -103,3 +103,15 @@ export function freeWaterPolygons(line: Pt[], model: Pt[]): Pt[][] {
   close();
   return polygons;
 }
+
+/**
+ * The main piezometric line: it gives the free water above the ground and
+ * the pore pressure of materials without a line of their own. The chosen
+ * line, or the first one.
+ */
+export function mainPiezoLine<L extends { id: string }>(pl: {
+  lines: L[];
+  mainLineId?: string;
+}): L | undefined {
+  return pl.lines.find((l) => l.id === pl.mainLineId) ?? pl.lines[0];
+}

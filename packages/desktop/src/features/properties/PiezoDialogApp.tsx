@@ -14,6 +14,7 @@ import {
 } from "../../components/ui/SpreadsheetTable";
 import { SpreadsheetExpressionInput } from "../../components/ui/SpreadsheetExpressionInput";
 import { resolveParameters } from "../../utils/expression";
+import { mainPiezoLine } from "../../utils/piezo";
 
 interface PiezoStatePayload {
   piezometricLine: PiezometricLineState;
@@ -389,7 +390,7 @@ export function PiezoDialogApp() {
             </p>
             {materials.map((m) => {
               const assignedId =
-                pl.materialAssignment[m.id] ?? pl.lines[0]?.id ?? "";
+                pl.materialAssignment[m.id] ?? mainPiezoLine(pl)?.id ?? "";
               return (
                 <div key={m.id} className="flex items-center gap-2 text-[12px]">
                   <span

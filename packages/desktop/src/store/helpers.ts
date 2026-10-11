@@ -5,6 +5,7 @@ import { toCanonicalSlopeDefinition } from "@cslope/engine";
 import type { AppState, ModelEntry, ModelsSlice } from "./types";
 import { DEFAULT_ANALYSIS_LIMITS, DEFAULT_PIEZO_LINE } from "./defaults";
 import { flatFieldsFromModel } from "../features/properties/sections/material-forms/model-defaults";
+import { mainPiezoLine } from "../utils/piezo";
 
 export type SliceCreator<T> = StateCreator<AppState, [], [], T>;
 
@@ -100,20 +101,20 @@ export function buildSlopeDTOFromModel(model: ModelEntry): SlopeDefinition {
   }
 
   if (piezometricLine.lines.length > 0) {
-    // Free water above the ground comes from the first line; a clipped
+    // Free water above the ground comes from the main line; a clipped
     // line never rises above the surface.
     const followBoundary = piezometricLine.freeWater === false;
-    const firstLine = piezometricLine.lines[0];
-    if (firstLine.coordinates.length >= 2) {
+    const mainLine = mainPiezoLine(piezometricLine)!;
+    if (mainLine.coordinates.length >= 2) {
       slope.waterTable = {
         mode: "custom",
-        value: firstLine.coordinates,
+        value: mainLine.coordinates,
         followBoundary,
       };
     }
 
     // Several lines: each material uses the line assigned to it (the
-    // first line when none is assigned, as the UI shows).
+    // main line when none is assigned, as the UI shows).
     const usableLines = piezometricLine.lines.filter(
       (l) => l.coordinates.length >= 2,
     );

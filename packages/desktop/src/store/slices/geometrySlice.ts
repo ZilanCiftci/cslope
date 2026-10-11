@@ -660,6 +660,15 @@ export const createGeometrySlice: SliceCreator<GeometrySlice> = (set, get) => ({
     get().invalidateAnalysis();
   },
 
+  setPiezoMainLine: (lineId) => {
+    set((s) =>
+      syncActiveModel(s, {
+        piezometricLine: { ...s.piezometricLine, mainLineId: lineId },
+      }),
+    );
+    get().invalidateAnalysis();
+  },
+
   setPiezoFreeWater: (enabled) => {
     set((s) =>
       syncActiveModel(s, {

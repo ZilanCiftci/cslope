@@ -69,7 +69,7 @@ import {
   MODEL_HATCH_PATTERNS,
 } from "../rendering/style-spec";
 import { drawCanvasHatch, drawCanvasHatchLabel } from "../rendering/hatch";
-import { freeWaterPolygons, piezoExtensions } from "../../utils/piezo";
+import { freeWaterPolygons, mainPiezoLine, piezoExtensions } from "../../utils/piezo";
 
 const arcPointCache = new WeakMap<object, Map<string, [number, number][]>>();
 
@@ -876,12 +876,12 @@ export function drawCanvas(
   if (piezometricLine.lines.length > 0) {
     const multiLine = piezometricLine.lines.length > 1;
     const piezoBlue = PIEZO_COLOR.hex;
-    // Free water standing on the ground (from the first line).
+    // Free water standing on the ground (from the main line).
     if (piezometricLine.freeWater !== false) {
       ctx.fillStyle = piezoBlue;
       ctx.globalAlpha = 0.15;
       for (const poly of freeWaterPolygons(
-        piezometricLine.lines[0].coordinates,
+        mainPiezoLine(piezometricLine)!.coordinates,
         coordinates,
       )) {
         ctx.beginPath();

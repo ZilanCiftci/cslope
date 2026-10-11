@@ -4,6 +4,7 @@
 
 import type { ReactNode } from "react";
 import { useAppStore } from "../../store/app-store";
+import { surfaceCountText } from "../../utils/fos-color";
 
 function Row({ label, children }: { label: string; children: ReactNode }) {
   return (
@@ -96,12 +97,9 @@ export function ResultPanel({ showTitle = true }: { showTitle?: boolean }) {
               {result.minFOS.toFixed(3)}
             </span>
           </Row>
-          <Row label="Max FOS">
-            <span className="tabular-nums">{result.maxFOS.toFixed(3)}</span>
-          </Row>
           <Row label="Method">{result.method}</Row>
           <Row label="Surfaces">
-            <span className="tabular-nums">{result.allSurfaces.length}</span>
+            <span className="tabular-nums">{surfaceCountText(result)}</span>
           </Row>
           <Row label="Elapsed">
             <span className="tabular-nums">

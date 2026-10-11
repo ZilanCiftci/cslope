@@ -56,6 +56,13 @@ export interface AnalysisOptions {
   /** Fraction of the crack depth filled with water (0–1, default 0). */
   tensionCrackWater?: number;
   /**
+   * Tension crack depth from the soil at each surface's entry instead of
+   * `tensionCrackDepth`: the Rankine depth z = 2c/(γ√Ka) − q/γ with
+   * Ka = tan²(45° − φ/2), i.e. 2cu/γ − q/γ for undrained clay (default
+   * false). Uses the same (design) strengths as the analysis.
+   */
+  tensionCrackAuto?: boolean;
+  /**
    * Partial factors (Eurocode 7 design values). When set, strengths are
    * divided and variable loads multiplied by them, and the FOS is the
    * over-design factor on design values (≥ 1.0 satisfies the design).

@@ -18,6 +18,8 @@ import {
   createDefaultModel,
 } from "./sections/material-forms";
 import { PopupPanel } from "../../components/ui/PopupPanel";
+import { DraftNumberInput } from "../../components/ui/DraftNumberInput";
+import { Label } from "../../components/ui/Label";
 import type { MaterialRow } from "../../store/types";
 import { resolveParameters } from "../../utils/expression";
 
@@ -79,6 +81,9 @@ export function DefineMaterialsDialog({ onClose, mode = "popup" }: Props) {
     newKind: MaterialModelKind,
   ) => {
     const newModel = createDefaultModel(newKind, currentModel.unitWeight);
+    if (currentModel.unitWeightSat !== undefined && newKind !== "impenetrable") {
+      newModel.unitWeightSat = currentModel.unitWeightSat;
+    }
     // Expressions belong to the old kind's fields; keep only γ, which
     // every kind has, or a stale expression would come back later.
     const mat = materials.find((m) => m.id === matId);
@@ -280,6 +285,28 @@ export function DefineMaterialsDialog({ onClose, mode = "popup" }: Props) {
                 patchModelExpression(selected.id, field, expression)
               }
             />
+
+            {model.kind !== "impenetrable" && (
+              <label
+                className="flex flex-col gap-0.5"
+                title="Unit weight of the soil below the material's piezometric line. Empty: γ throughout."
+              >
+                <Label>γsat below water (kN/m³)</Label>
+                <DraftNumberInput
+                  value={model.unitWeightSat}
+                  min={0.01}
+                  step={0.5}
+                  placeholder="= γ"
+                  onValueChange={(v) =>
+                    v > 0 && patchModel(selected.id, model, { unitWeightSat: v })
+                  }
+                  onClear={() =>
+                    patchModel(selected.id, model, { unitWeightSat: undefined })
+                  }
+                  aria-label="Saturated unit weight"
+                />
+              </label>
+            )}
 
             {/* Inline validation errors */}
             <ValidationErrors model={model} />

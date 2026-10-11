@@ -116,6 +116,11 @@ export interface PiezometricLineState {
    * Missing means true; files from before version 3 are loaded with false.
    */
   freeWater?: boolean;
+  /**
+   * Line giving the free water and the pore pressure of materials without
+   * a line of their own (see mainPiezoLine). Missing: the first line.
+   */
+  mainLineId?: string;
 }
 
 export type PaperSize = "A4" | "A3" | "A2" | "A1" | "A0";
@@ -359,6 +364,7 @@ export interface GeometrySlice {
   removePiezoPoint: (index: number) => void;
   setPiezoMaterialAssignment: (materialId: string, piezoLineId: string) => void;
   setPiezoFreeWater: (enabled: boolean) => void;
+  setPiezoMainLine: (lineId: string) => void;
   enablePiezoWithDefault: () => void;
 }
 

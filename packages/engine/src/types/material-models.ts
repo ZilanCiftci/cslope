@@ -17,6 +17,11 @@
 export interface MaterialModelBase {
   /** Material unit weight in kN/m³. */
   unitWeight: number;
+  /**
+   * Saturated unit weight (kN/m³) for the soil below the material's water
+   * line. Not set: `unitWeight` throughout.
+   */
+  unitWeightSat?: number;
 }
 
 // ── Model variants ─────────────────────────────────────────────

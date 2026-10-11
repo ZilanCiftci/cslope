@@ -151,6 +151,25 @@ describe("free water above ground", () => {
     useAppStore.getState().setPiezoFreeWater(false);
     expect(useAppStore.getState().piezometricLine.freeWater).toBe(false);
   });
+
+  it("comes from the chosen main line, which unassigned materials follow", () => {
+    withLine();
+    const s = useAppStore.getState();
+    s.addPiezoLine([[0, -3], [100, -3]]);
+    const second = useAppStore.getState().piezometricLine.lines[1].id;
+    useAppStore.getState().setPiezoMainLine(second);
+    const raw = JSON.parse(JSON.stringify(serializeProject(useAppStore.getState())));
+    const model = parseProjectFile(JSON.stringify(raw)).models[0];
+    expect(model.piezometricLine.mainLineId).toBe(second);
+    const dto = buildSlopeDTOFromModel(model);
+    expect(dto.waterTable?.value).toEqual([[0, -3], [100, -3]]);
+    expect(dto.materials.every((m) => m.waterTableId === undefined)).toBe(true);
+    // A main line that no longer exists falls back to the first line.
+    raw.models[0].piezometricLine.mainLineId = "gone";
+    const stale = parseProjectFile(JSON.stringify(raw)).models[0];
+    expect(stale.piezometricLine.mainLineId).toBeUndefined();
+    expect(buildSlopeDTOFromModel(stale).waterTable?.value).toEqual(stale.piezometricLine.lines[0].coordinates);
+  });
 });
 
 describe("tension crack options", () => {
@@ -166,6 +185,25 @@ describe("tension crack options", () => {
     const bad = parseProjectFile(JSON.stringify(raw)).models[0].options!;
     expect(bad.tensionCrackDepth).toBe(0);
     expect(bad.tensionCrackWater).toBe(1);
+  });
+
+  it("automatic depth is saved and reloaded", () => {
+    useAppStore.getState().newProject();
+    useAppStore.getState().setOptions({ tensionCrackAuto: true });
+    const raw = JSON.parse(JSON.stringify(serializeProject(useAppStore.getState())));
+    expect(parseProjectFile(JSON.stringify(raw)).models[0].options!.tensionCrackAuto).toBe(true);
+  });
+});
+
+describe("saturated unit weight", () => {
+  it("is saved with the material and reaches the engine", () => {
+    useAppStore.getState().newProject();
+    const mat = useAppStore.getState().materials[0];
+    useAppStore.getState().updateMaterial(mat.id, { model: { ...mat.model, unitWeightSat: 21 } });
+    const raw = JSON.parse(JSON.stringify(serializeProject(useAppStore.getState())));
+    const model = parseProjectFile(JSON.stringify(raw)).models[0];
+    expect(model.materials[0].model.unitWeightSat).toBe(21);
+    expect(buildSlopeDTOFromModel(model).materials[0].model?.unitWeightSat).toBe(21);
   });
 });
 

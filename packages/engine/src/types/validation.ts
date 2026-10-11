@@ -23,6 +23,14 @@ export function validateMaterialModel(model: MaterialModel): string[] {
   } else if (model.unitWeight > 500) {
     errors.push("Unit weight (γ) must be at most 500 kN/m³.");
   }
+  if (
+    model.unitWeightSat !== undefined &&
+    (!Number.isFinite(model.unitWeightSat) ||
+      model.unitWeightSat <= 0 ||
+      model.unitWeightSat > 500)
+  ) {
+    errors.push("Saturated unit weight (γsat) must be a positive number up to 500 kN/m³.");
+  }
 
   // Optional numeric fields must be finite when given: NaN would silently
   // turn into zero strength further on.

@@ -122,6 +122,7 @@ export class Slope {
   private _porePressureHead: PorePressureHead;
   private _tensionCrackDepth: number;
   private _tensionCrackWater: number;
+  private _tensionCrackAuto: boolean;
   private _partialFactors: PartialFactors | null = null;
   private _nonCircularOptimization = false;
   private _minSlipDepth = 0;
@@ -158,6 +159,7 @@ export class Slope {
     this._porePressureHead = d.porePressureHead ?? "vertical";
     this._tensionCrackDepth = d.tensionCrackDepth ?? 0;
     this._tensionCrackWater = d.tensionCrackWater ?? 0;
+    this._tensionCrackAuto = d.tensionCrackAuto ?? false;
   }
 
   // ────────────────────────────────────────────────────────────────
@@ -289,6 +291,10 @@ export class Slope {
 
   get tensionCrackWater(): number {
     return this._tensionCrackWater;
+  }
+
+  get tensionCrackAuto(): boolean {
+    return this._tensionCrackAuto;
   }
 
   get partialFactors(): PartialFactors | null {
@@ -748,6 +754,9 @@ export class Slope {
         throw new Error("tensionCrackDepth must be a number ≥ 0");
       }
       this._tensionCrackDepth = opts.tensionCrackDepth;
+    }
+    if (opts.tensionCrackAuto !== undefined) {
+      this._tensionCrackAuto = opts.tensionCrackAuto;
     }
     if (opts.tensionCrackWater !== undefined) {
       if (

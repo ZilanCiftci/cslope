@@ -514,6 +514,10 @@ function normalizePiezo(raw: unknown): PiezometricLineState {
     activeLineId,
     materialAssignment,
     ...(typeof piezo.freeWater === "boolean" ? { freeWater: piezo.freeWater } : {}),
+    ...(typeof piezo.mainLineId === "string" &&
+    lines.some((l) => l.id === piezo.mainLineId)
+      ? { mainLineId: piezo.mainLineId }
+      : {}),
   };
 }
 
@@ -804,6 +808,7 @@ function normalizeAnalysisOptions(raw: unknown): AnalysisOptions {
     o.minSlipArea >= 0
       ? { minSlipArea: o.minSlipArea }
       : {}),
+    ...(o.tensionCrackAuto === true ? { tensionCrackAuto: true } : {}),
     tensionCrackDepth: Math.max(
       0,
       finiteOr(o.tensionCrackDepth, base.tensionCrackDepth ?? 0),
