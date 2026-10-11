@@ -247,7 +247,7 @@ export function buildSlope(def: SlopeDefinition): Slope {
       // not cut through the soil or leaves the model is no surface.
       const points = fitPolylineToGround(slope, surface.points);
       if (!points || !isAdmissiblePolyline(slope, points, Infinity)) continue;
-      const [cx, cy] = defaultAxisPoint(points);
+      const [cx, cy] = surface.axis ?? defaultAxisPoint(points);
       slope.addIndividualPlanes([
         {
           lc: points[0],

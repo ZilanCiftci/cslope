@@ -104,6 +104,8 @@ export function toCsv(rows: XlsxCell[][], decimalComma = false): string {
       const s = String(v);
       return decimalComma ? s.replace(".", ",") : s;
     }
+    // Text a spreadsheet would run as a formula is quoted as text.
+    if (/^[=+\-@\t\r]/.test(v)) return `"'${v.replace(/"/g, '""')}"`;
     return /[",;\n\r]/.test(v) ? `"${v.replace(/"/g, '""')}"` : v;
   };
   return rows.map((r) => r.map(cell).join(sep)).join("\r\n") + "\r\n";

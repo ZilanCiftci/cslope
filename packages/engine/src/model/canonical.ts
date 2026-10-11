@@ -192,6 +192,7 @@ export function toCanonicalSlopeDefinition(
     customSurfaces: slopeDefinition.customSurfaces?.map((surface) => ({
       ...surface,
       points: mirrorPoints(surface.points, xMin, xMax),
+      ...(surface.axis ? { axis: mirrorPoint(surface.axis, xMin, xMax) } : {}),
     })),
     customPlanesOnly: slopeDefinition.customPlanesOnly,
   };

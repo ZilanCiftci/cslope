@@ -105,7 +105,7 @@ export function normalCdf(x: number): number {
 
 /** Lognormal reliability index of a factor of safety with mean F and coefficient of variation COV. */
 export function lognormalBeta(F: number, cov: number): number {
-  if (!(cov > 0)) return Infinity;
+  if (!(cov > 0)) return F >= 1 ? Infinity : -Infinity;
   const s2 = Math.log(1 + cov * cov);
   return Math.log(F / Math.sqrt(1 + cov * cov)) / Math.sqrt(s2);
 }
@@ -211,8 +211,10 @@ function build(def: SlopeDefinition, options: Partial<AnalysisOptions>): Slope {
 
 /** The definition with only the given surface analysed. */
 function onSurface(def: SlopeDefinition, s: CriticalSurface): SlopeDefinition {
+  // The moment axis of a polyline is kept (an optimised surface uses its
+  // seed circle's centre; the default axis would give another FOS).
   return s.points
-    ? { ...def, customSurfaces: [{ points: s.points }], customSearchPlanes: undefined, customPlanesOnly: true }
+    ? { ...def, customSurfaces: [{ points: s.points, axis: [s.cx, s.cy] }], customSearchPlanes: undefined, customPlanesOnly: true }
     : { ...def, customSearchPlanes: [{ cx: s.cx, cy: s.cy, radius: s.radius }], customSurfaces: undefined, customPlanesOnly: true };
 }
 
@@ -231,8 +233,16 @@ export function analyseReliability(
     if (!(Number.isFinite(v.sd) && v.sd >= 0)) throw new Error("Standard deviations must be ≥ 0.");
   }
   const means = variables.map((v) => modelValue(def, v));
-  const atMean = critical(build(def, options));
+  const meanSlope = build(def, options);
+  const atMean = critical(meanSlope);
   if (!atMean) throw new Error("No valid slip surface at the mean values.");
+  // A material in no region would vary nothing.
+  const used = new Set(meanSlope.materialGeometries.map((g) => g.material.name));
+  for (const v of variables) {
+    if (!used.has(def.materials[v.material].name)) {
+      throw new Error(`Random variable: material "${def.materials[v.material].name}" is not used in the model.`);
+    }
+  }
   const F = atMean.fos;
   const corr = correlationMatrix(variables.length, ro.correlations);
 
@@ -278,7 +288,7 @@ export function analyseReliability(
       cov,
       betaLognormal: beta,
       pfLognormal: normalCdf(-beta),
-      betaNormal: sd > 0 ? (F - 1) / sd : Infinity,
+      betaNormal: sd > 0 ? (F - 1) / sd : F >= 1 ? Infinity : -Infinity,
       terms,
       surface: atMean.surface,
       failed: 0,
@@ -347,7 +357,7 @@ export function analyseReliability(
     cov,
     betaLognormal: beta,
     pfLognormal: normalCdf(-beta),
-    betaNormal: sd > 0 ? (mean - 1) / sd : Infinity,
+    betaNormal: sd > 0 ? (mean - 1) / sd : mean >= 1 ? Infinity : -Infinity,
     pf: samples.filter((f) => f < 1).length / samples.length,
     samples,
     surface: atMean.surface,

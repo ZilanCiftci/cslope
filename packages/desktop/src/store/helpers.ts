@@ -242,6 +242,8 @@ export function getAnalysisInputSignature(state: AppState): string {
       })),
       materialAssignment: piezo.materialAssignment,
       freeWater: piezo.freeWater,
+      // Free water and the default pore pressure come from the main line.
+      mainLineId: piezo.mainLineId,
     },
     udls: state.udls,
     lineLoads: state.lineLoads,

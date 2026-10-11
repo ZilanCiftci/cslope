@@ -242,6 +242,9 @@ export const createModelsSlice: SliceCreator<ModelsSlice> = (
           ? (lineIdMap.get(source.piezometricLine.activeLineId) ??
             source.piezometricLine.activeLineId)
           : null,
+        ...(source.piezometricLine.mainLineId
+          ? { mainLineId: lineIdMap.get(source.piezometricLine.mainLineId) }
+          : {}),
         materialAssignment: Object.fromEntries(
           Object.entries(source.piezometricLine.materialAssignment).map(
             ([materialId, piezoLineId]) => [

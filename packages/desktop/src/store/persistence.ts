@@ -233,14 +233,14 @@ function normalizeModelEntry(raw: unknown): ModelEntry {
     ...(Array.isArray(model.reinforcements)
       ? {
           reinforcements: (model.reinforcements as unknown[])
-            .map((r, i) => sanitizeReinforcement(r, `reinf-${i + 1}`))
+            .map((r) => sanitizeReinforcement(r, nextId("reinf")))
             .filter((r): r is ReinforcementRow => r !== null),
         }
       : {}),
     ...(Array.isArray(model.piles)
       ? {
           piles: (model.piles as unknown[])
-            .map((p, i) => sanitizePile(p, `pile-${i + 1}`))
+            .map((p) => sanitizePile(p, nextId("pile")))
             .filter((p): p is PileRow => p !== null),
         }
       : {}),

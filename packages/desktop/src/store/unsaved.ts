@@ -53,7 +53,15 @@ export function projectContentSignature(state: AppState): string {
             resultViewSettings: state.resultViewSettings,
           }
         : m;
-    const content: Record<string, unknown> = { ...entry };
+    // Optional arrays are absent in older files but present in the flat
+    // state, so they compare as empty.
+    const content: Record<string, unknown> = {
+      ...entry,
+      parameters: entry.parameters ?? [],
+      coordinateExpressions: entry.coordinateExpressions ?? [],
+      reinforcements: entry.reinforcements ?? [],
+      piles: entry.piles ?? [],
+    };
     for (const key of VOLATILE_FIELDS) delete content[key];
     return content;
   });

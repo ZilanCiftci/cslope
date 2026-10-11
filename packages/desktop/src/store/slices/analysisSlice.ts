@@ -170,7 +170,7 @@ function runInWorker<T>(
     worker!.onerror = (err) => {
       if (settled) return;
       stop();
-      reject(new Error(err.message));
+      reject(new Error(err.message || "The analysis worker failed to start."));
     };
 
     worker!.postMessage(request);

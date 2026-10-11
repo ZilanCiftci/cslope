@@ -24,6 +24,7 @@ describe("normal distribution helpers", () => {
     // ln(1.5/√1.04)/√ln 1.04
     expect(lognormalBeta(1.5, 0.2)).toBeCloseTo(1.9483, 4);
     expect(lognormalBeta(1.5, 0)).toBe(Infinity);
+    expect(lognormalBeta(0.8, 0)).toBe(-Infinity);
   });
 });
 
@@ -88,6 +89,24 @@ describe("Taylor series", { timeout: 30_000 }, () => {
     const r = analyseReliability(rising, options, v, { method: "taylor", search: false });
     expect(r.terms![0].fPlus).toBeGreaterThan(r.fos);
     expect(r.terms![0].fMinus).toBeLessThan(r.fos);
+  });
+
+  it("re-analyses an optimised non-circular surface about the same axis", () => {
+    const sand = layered(ground, -10, [{ name: "S", topY: null, model: mc(5, 30, 19) }]);
+    const v: RandomVariable[] = [{ material: 0, field: "cohesion", sd: 1e-6 }];
+    const opts = { ...options, nonCircularOptimization: true };
+    const r = analyseReliability(sand, opts, v, { method: "taylor", search: false });
+    expect(r.surface.points).toBeDefined();
+    expect(r.terms![0].fPlus).toBeCloseTo(r.fos, 5);
+    const m = analyseReliability(sand, opts, v, { method: "monte-carlo", samples: 20 });
+    expect(m.meanFOS).toBeCloseTo(r.fos, 5);
+  });
+
+  it("rejects a material that is in no region", () => {
+    const unused = { ...clay, materials: [...clay.materials, { ...clay.materials[0], name: "Unused" }] };
+    expect(() =>
+      analyseReliability(unused, options, [{ material: 1, field: "undrainedShearStrength", sd: 8 }], { method: "monte-carlo" }),
+    ).toThrow(/not used/);
   });
 
   it("rejects mean − σ below zero and unknown fields", () => {

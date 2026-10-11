@@ -88,9 +88,10 @@ export interface SlopeDefinition {
   /**
    * User-specified non-circular surfaces: polylines through the soil. They
    * are fitted to the ground (end segments extended to it) and analysed
-   * with moments about a default axis point.
+   * with moments about a default axis point, or about `axis` when given
+   * (the circle centre an optimised surface was derived from).
    */
-  customSurfaces?: Array<{ points: [number, number][] }>;
+  customSurfaces?: Array<{ points: [number, number][]; axis?: [number, number] }>;
   /** When true, only analyse custom search planes (skip random search). */
   customPlanesOnly?: boolean;
 }

@@ -516,9 +516,11 @@ export const createGeometrySlice: SliceCreator<GeometrySlice> = (set, get) => ({
       for (const [matId, plId] of Object.entries(materialAssignment)) {
         if (plId === lineId) delete materialAssignment[matId];
       }
+      const { mainLineId, ...rest } = s.piezometricLine;
       return syncActiveModel(s, {
         piezometricLine: {
-          ...s.piezometricLine,
+          ...rest,
+          ...(mainLineId !== lineId && mainLineId ? { mainLineId } : {}),
           enabled: lines.length > 0,
           lines,
           activeLineId,

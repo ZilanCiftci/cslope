@@ -76,7 +76,10 @@ export function effectiveVerticalStress(slope: Slope, x: number, y: number): num
     const m = materialAt(slope, x, yy);
     if (m) sigma += unitWeightAt(slope, m, x, yy) * dz;
   }
-  const u = Math.max(0, waterLineAt(slope, materialAt(slope, x, y), x) - y) * WATER_UNIT_WEIGHT;
+  // Ponded water above the ground weighs on the column.
+  const wl = waterLineAt(slope, materialAt(slope, x, y), x);
+  sigma += Math.max(0, wl - yGround) * WATER_UNIT_WEIGHT;
+  const u = Math.max(0, wl - y) * WATER_UNIT_WEIGHT;
   return Math.max(0, sigma - u);
 }
 
@@ -120,11 +123,14 @@ export function buildEnvelope(slope: Slope, r: Reinforcement): ReinforcementEnve
   const tanDelta = Math.tan((p.frictionAngle * Math.PI) / 180);
   // r is per metre of slope; the envelope is kept per element (× spacing).
   const perElement = (p.coverage ?? 1) * (r.spacing ?? 1);
+  const surf = slope.surfaceLineXY;
   for (let k = 0; k < n; k++) {
     const t = (k + 0.5) / n;
     const x = r.x1 + t * (r.x2 - r.x1);
     const y = r.y1 + t * (r.y2 - r.y1);
-    const rate = 2 * (p.adhesion + effectiveVerticalStress(slope, x, y) * tanDelta) * perElement;
+    // No interface outside the soil.
+    const inSoil = !!surf && y < getYAtX(surf.x, surf.y, x);
+    const rate = inSoil ? 2 * (p.adhesion + effectiveVerticalStress(slope, x, y) * tanDelta) * perElement : 0;
     s[k + 1] = ((k + 1) / n) * length;
     fromEnd1[k + 1] = fromEnd1[k] + rate * (length / n);
   }

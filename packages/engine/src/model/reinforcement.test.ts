@@ -8,7 +8,7 @@ import { layered, mc, runVerification } from "../verification/cases";
 import { FHWA_PULLOUT_TABLES } from "../verification/pullout-tables";
 import { buildSlope } from "./build-slope";
 import { Material } from "../types/material";
-import { buildEnvelope, envelopeAt, pulloutBeyond } from "./reinforcement";
+import { buildEnvelope, effectiveVerticalStress, envelopeAt, pulloutBeyond } from "./reinforcement";
 import type { Reinforcement } from "../types/reinforcement";
 import type { SlopeDefinition } from "../types/slope-definition";
 
@@ -135,6 +135,22 @@ describe("Capacity envelope", () => {
     // 5 m of soil above the line: σ′v = 100 kPa, r = 2·100·tan 20°.
     const env = buildEnvelope(slope, { ...line, tensileCapacity: 1e6, pullout: { kind: "interface", adhesion: 0, frictionAngle: 20 } });
     expect(pulloutBeyond(env, 6)).toBeCloseTo(2 * 100 * Math.tan((20 * Math.PI) / 180) * 4, 6);
+  });
+
+  it("no interface outside the soil", () => {
+    const adhesion = { kind: "interface" as const, adhesion: 10, frictionAngle: 0 };
+    const inside = buildEnvelope(slope, { ...line, x2: 15, tensileCapacity: 1e6, pullout: adhesion });
+    const partlyInAir = buildEnvelope(slope, { ...line, x2: 25, tensileCapacity: 1e6, pullout: adhesion });
+    expect(pulloutBeyond(partlyInAir, 0)).toBeCloseTo(pulloutBeyond(inside, 0), 6);
+    expect(pulloutBeyond(inside, 0)).toBeCloseTo(2 * 10 * 15, 6);
+  });
+
+  it("ponded water weighs on the overburden", () => {
+    // Flat ground at 10, pond to 12: σ′v at depth 5 = 100 + 2·γw − 7·γw.
+    const def = layered([[0, 10], [40, 10]], -10, [{ name: "S", topY: null, model: mc(0, 30, 20) }], {
+      waterTable: { mode: "custom", value: [[0, 12], [40, 12]], followBoundary: false },
+    });
+    expect(effectiveVerticalStress(buildSlope(def), 20, 5)).toBeCloseTo(100 - 5 * 9.81, 6);
   });
 
   it("follows changes of the materials (σ′v)", () => {
