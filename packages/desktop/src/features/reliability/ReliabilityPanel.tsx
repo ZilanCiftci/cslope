@@ -23,15 +23,17 @@ import { useReliabilityStore } from "./store";
  */
 export function ReliabilityPanel() {
   const open = useReliabilityStore((s) => s.open);
+  const opened = useReliabilityStore((s) => s.opened);
   if (!open) return null;
-  return <ReliabilityPanelBody />;
+  // Remounted on every open so the model snapshot is current.
+  return <ReliabilityPanelBody key={opened} />;
 }
 
 function ReliabilityPanelBody() {
   const { setOpen, run, cancel, running, progress, result, labels, error } = useReliabilityStore();
   const designValues = useAppStore((s) => !!s.options.partialFactors);
   const bothDirections = useAppStore((s) => !!s.options.bothDirections);
-  // The model as it is when the panel opens (later edits need a reopen).
+  // The model as it is when the panel opens (edits need a reopen, which remounts).
   const model = useMemo(() => {
     const s = useAppStore.getState();
     const name = s.models.find((m) => m.id === s.activeModelId)?.name ?? "";

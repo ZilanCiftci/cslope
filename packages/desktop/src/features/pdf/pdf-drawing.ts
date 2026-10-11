@@ -464,7 +464,7 @@ export function drawReinforcementsPdf(
       setOpacity(pdf, 0.3);
       pdf.setLineWidth(1.6);
       pdf.line(ax + ux * len * span[0], ay + uy * len * span[0], ax + ux * len * span[1], ay + uy * len * span[1]);
-      setOpacity(pdf, 1);
+      resetOpacity(pdf);
     }
     pdf.setDrawColor(...REINFORCEMENT_RGB);
     pdf.setLineWidth(0.45);

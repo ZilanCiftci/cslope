@@ -165,7 +165,8 @@ function PolylineInput({
       onChange={(e) => {
         setDraft(e.target.value);
         const next = parsePolyline(e.target.value);
-        if (next) onChange(next);
+        // A surface needs two points; a single pair is still being typed.
+        if (next && next.length >= 2) onChange(next);
       }}
       onBlur={() => setDraft(null)}
       aria-invalid={invalid}

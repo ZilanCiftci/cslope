@@ -269,8 +269,9 @@ function niceStep(range: number, target = 6): number {
  * Draw the (canonical) model with its critical surface; mirrored back for
  * right-to-left models so the figure matches the input.
  */
-function figure(def: SlopeDefinition, slope: Slope, plane: Plane | null, label: string, units: Units, height = 88) {
-  const canon = toCanonicalSlopeDefinition(def);
+function figure(def: SlopeDefinition, slope: Slope, plane: Plane | null, label: string, units: Units, height = 88, canonical = false) {
+  // The app's request builder already canonicalises (and the transform is not idempotent).
+  const canon = canonical ? def : toCanonicalSlopeDefinition(def);
   const mirror = canon.orientation === "rtl";
   const xs0 = canon.coordinates.map((c) => c[0]);
   const xMinM = Math.min(...xs0);
@@ -710,6 +711,20 @@ table(
         statusCell(x.pass),
       ]),
     ),
+    // Reliability (β, Pf): absolute differences.
+    ...RELIABILITY_CASES.flatMap((c) =>
+      (reliabilityResults.get(c.id) ?? [])
+        .filter((x) => x.quantity !== "fos")
+        .map((x) => [
+          c.id,
+          c.title,
+          RELIABILITY_LABELS[x.quantity],
+          x.published.toFixed(3),
+          x.computed.toFixed(3),
+          (x.computed - x.published >= 0 ? "+" : "") + (x.computed - x.published).toFixed(3),
+          statusCell(x.pass),
+        ]),
+    ),
   ],
   7.6,
 );
@@ -846,6 +861,7 @@ benchResults.forEach((b, i) => {
     `Figure ${caseResults.length + i + 1}. ${b.name}: critical circle (${methodName(b.rows[0].method)}, FOS = ${fmt(b.rows[0].fos ?? NaN)}).`,
     SI,
     80,
+    true,
   );
   table(
     [

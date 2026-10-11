@@ -23,15 +23,17 @@ import { useSensitivityStore } from "./store";
  */
 export function SensitivityPanel() {
   const open = useSensitivityStore((s) => s.open);
+  const opened = useSensitivityStore((s) => s.opened);
   if (!open) return null;
-  return <SensitivityPanelBody />;
+  // Remounted on every open so the model snapshot is current.
+  return <SensitivityPanelBody key={opened} />;
 }
 
 function SensitivityPanelBody() {
   const { setOpen, run, cancel, running, points, total, label, runValue } =
     useSensitivityStore();
   const designValues = useAppStore((s) => !!s.options.partialFactors);
-  // The model as it is when the panel opens (later edits need a reopen).
+  // The model as it is when the panel opens (edits need a reopen, which remounts).
   const model = useMemo(() => {
     const s = useAppStore.getState();
     const name = s.models.find((m) => m.id === s.activeModelId)?.name ?? "";

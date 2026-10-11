@@ -5,6 +5,8 @@ import { executeReliability, type ReliabilityHandle } from "../../store/slices/a
 
 interface ReliabilityState {
   open: boolean;
+  /** Bumped on every open; the panel takes a fresh model snapshot. */
+  opened: number;
   running: boolean;
   progress: number;
   result: ReliabilityResult | null;
@@ -27,15 +29,17 @@ let activeHandle: ReliabilityHandle | null = null;
 /** Probabilistic analysis panel state (not saved with the project). */
 export const useReliabilityStore = create<ReliabilityState>((set, get) => ({
   open: false,
+  opened: 0,
   running: false,
   progress: 0,
   result: null,
   labels: [],
   error: null,
   setOpen: (open) => {
-    if (!open) get().cancel();
-    // A result belongs to the model snapshot of the panel it was run in.
-    set(open ? { open } : { open, result: null, labels: [], error: null, progress: 0 });
+    // A result belongs to the model snapshot of the panel it was run in;
+    // opening (again) starts from the model as it is now.
+    get().cancel();
+    set({ open, ...(open ? { opened: get().opened + 1 } : {}), result: null, labels: [], error: null, progress: 0 });
   },
   run: async (model, variables, labels, options) => {
     get().cancel();
