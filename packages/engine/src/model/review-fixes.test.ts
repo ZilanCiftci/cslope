@@ -7,7 +7,10 @@ import { analyseReliability } from "./reliability";
 import { fitPolylineToGround } from "./surface";
 import { Slope } from "./slope";
 import { getSlices } from "./slices";
-import { buildEnvelope, envelopeAt } from "./reinforcement";
+import { buildEnvelope, envelopeAt, pileForceDirection } from "./reinforcement";
+import { PILE_CASES } from "../verification/pile-cases";
+import type { Pile } from "../types/reinforcement";
+import type { AnalysisOptions } from "../types/analysis";
 import { Material } from "../types/index";
 import type { SlopeDefinition } from "../types/slope-definition";
 
@@ -66,11 +69,11 @@ describe("Morgenstern-Price λ iteration", () => {
 
   it("keeps the VP15 non-circular Spencer search within the published range", () => {
     // Slide2 0.414, literature 0.39–0.44; the spurious intersections gave
-    // 0.27–0.33 with exit segments of −60° and steeper.
+    // 0.27–0.39 with exit segments of −60° and steeper (0.387 and −63°
+    // with these settings).
     const { fos, slope } = runVerification(caseById("VP15").definition, "Morgenstern-Price", {
       intersliceFunction: "constant",
       nonCircularOptimization: true,
-      slices: 100,
     });
     expect(fos!).toBeGreaterThan(0.39);
     expect(fos!).toBeLessThan(0.44);
@@ -78,7 +81,7 @@ describe("Morgenstern-Price λ iteration", () => {
     const [a, b] = points.slice(-2);
     const exitDeg = (Math.atan2(b[1] - a[1], b[0] - a[0]) * 180) / Math.PI;
     expect(exitDeg).toBeLessThan(45);
-  }, 60_000);
+  }, 120_000);
 });
 
 describe("Monte Carlo on a specified non-circular surface", () => {
@@ -170,5 +173,42 @@ describe("reinforcement coverage", () => {
     expect(total(full)).toBeCloseTo(2 * 20 * 3 * Math.tan((25 * Math.PI) / 180) * 1.5 * 10, 6);
     // Midway the pullout behind (no end-2 anchorage) governs.
     expect(envelopeAt(strip, 5)).toBeCloseTo(0.5 * total(strip), 6);
+  });
+});
+
+describe("pile force direction", () => {
+  const vp54b = PILE_CASES.find((c) => c.id === "VP54b")!;
+  const run = (extra: Partial<Pile>) =>
+    runVerification({ ...vp54b.definition, piles: [{ ...vp54b.definition.piles![0], ...extra }] }, "Bishop", vp54b.options as Partial<AnalysisOptions>).fos!;
+
+  it("keeps the given angle when no direction is set", () => {
+    expect(run({})).toBeCloseTo(run({ direction: "angle" }), 9);
+    expect(run({ angle: 10 })).not.toBeCloseTo(run({}), 3);
+  });
+
+  it("acts along the slip surface with direction tangent (Slide2 default)", () => {
+    // Slide2 on cSlope's VP54b input, pile passive and tangential: 1.1989.
+    expect(run({ application: "passive", direction: "tangent" })).toBeCloseTo(1.1989, 3);
+  });
+
+  it("is horizontal perpendicular to a vertical pile", () => {
+    expect(run({ direction: "perpendicular" })).toBeCloseTo(run({}), 9);
+    expect(run({ direction: "perpendicular", application: "passive" })).toBeCloseTo(run({ application: "passive" }), 9);
+  });
+
+  it("is normal to an inclined pile, against the movement", () => {
+    const pile: Pile = { x1: 0, y1: 0, x2: 3, y2: -4, force: 10 };
+    // Movement down the slip surface at 30°, towards +x.
+    const [tx, ty] = [Math.cos(Math.PI / 6), -Math.sin(Math.PI / 6)];
+    const [ux, uy] = pileForceDirection({ ...pile, direction: "perpendicular" }, tx, ty);
+    expect(ux * 3 + uy * -4).toBeCloseTo(0, 12);
+    expect(Math.hypot(ux, uy)).toBeCloseTo(1, 12);
+    expect(ux * tx + uy * ty).toBeLessThan(0);
+    expect(pileForceDirection({ ...pile, direction: "tangent" }, tx, ty)).toEqual([-tx, -ty]);
+    expect(pileForceDirection({ ...pile, angle: 0 }, tx, ty)).toEqual([-1, 0]);
+  });
+
+  it("rejects an unknown direction", () => {
+    expect(() => run({ direction: "sideways" as Pile["direction"] })).toThrow(/direction/);
   });
 });

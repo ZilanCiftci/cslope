@@ -2,6 +2,7 @@ import type {
   AnalysisOptions,
   AnalysisResult,
   MaterialModel,
+  PileForceDirection,
 } from "@cslope/engine";
 
 // Export analysis types so UI components can consume them from a single module
@@ -163,8 +164,14 @@ export interface PileRow {
   shearCapacity: number;
   /** Bending capacity per pile (kNm); 0 = no limit. */
   momentCapacity: number;
-  /** Tilt of the force above horizontal (°). */
+  /** Tilt of the force above horizontal (°), for direction "angle". */
   angle: number;
+  /**
+   * Direction of the force: along the slip surface ("tangent", Slide2's
+   * default and that of a new pile row), perpendicular to the pile, or
+   * tilted by `angle`. Absent (older files): by `angle`.
+   */
+  direction?: PileForceDirection;
   application: "active" | "passive";
 }
 

@@ -857,6 +857,9 @@ export class Slope {
       if (p.angle !== undefined && !(Number.isFinite(p.angle) && Math.abs(p.angle) < 90)) {
         throw new Error("Pile force angle must be between −90° and 90°.");
       }
+      if (p.direction !== undefined && !["angle", "tangent", "perpendicular"].includes(p.direction)) {
+        throw new Error("Pile force direction must be 'angle', 'tangent' or 'perpendicular'.");
+      }
       if (p.force === undefined) {
         if (p.diameter === undefined) {
           throw new Error("A pile needs a shear force, or a diameter for Ito & Matsui.");

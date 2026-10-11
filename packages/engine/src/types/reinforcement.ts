@@ -75,9 +75,21 @@ export interface Reinforcement {
 }
 
 /**
+ * Direction of a pile's force on the sliding mass, always against the
+ * movement:
+ * - "angle": tilted `angle` degrees above horizontal (0: horizontal);
+ * - "tangent": along the slip surface where it crosses the pile (Slide2's
+ *   default, "tangential");
+ * - "perpendicular": perpendicular to the pile axis (horizontal for a
+ *   vertical pile).
+ */
+export type PileForceDirection = "angle" | "tangent" | "perpendicular";
+
+/**
  * Pile row (or sheet pile wall) resisting the sliding mass in shear: where
  * a slip surface crosses the pile axis, a force acts against the sliding
- * direction, tilted `angle` degrees upwards (0: horizontal). Its size is
+ * direction (see `direction`; by default tilted `angle` degrees upwards,
+ * 0: horizontal). Its size is
  * the given shear force per pile, or — without one, for a vertical pile —
  * the Ito & Matsui (1975) lateral force of the soil squeezing between the
  * piles above the slip surface; either is limited by the pile's shear and
@@ -99,8 +111,13 @@ export interface Pile {
   shearCapacity?: number;
   /** Bending capacity per pile (kNm): force ≤ M / Lm, Lm the arm of the soil pressure. */
   momentCapacity?: number;
-  /** Tilt of the force above horizontal (°). Default 0. */
+  /** Tilt of the force above horizontal (°), for direction "angle". Default 0. */
   angle?: number;
+  /**
+   * Direction of the force. Default "angle" (with `angle`), so that saved
+   * models keep their result; Slide2 defaults to "tangent".
+   */
+  direction?: PileForceDirection;
   /** Default "active". */
   application?: ReinforcementApplication;
 }
