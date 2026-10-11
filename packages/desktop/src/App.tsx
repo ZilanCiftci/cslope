@@ -327,7 +327,24 @@ function App() {
     ) => {
       const next = normalizeMaterialsPayload(raw);
       suppressNextMaterialsBroadcastRef.current = true;
-      applyDialogPatch({ materials: next.materials });
+      // Materials deleted in the dialog: drop references to them here, as
+      // removeMaterial does in this window (the dialog's store does not
+      // hold this window's region / piezometric assignments).
+      const s = useAppStore.getState();
+      const ids = new Set(next.materials.map((m) => m.id));
+      const materialAssignment = Object.fromEntries(
+        Object.entries(s.piezometricLine.materialAssignment).filter(([id]) =>
+          ids.has(id),
+        ),
+      );
+      applyDialogPatch({
+        materials: next.materials,
+        regionMaterials: s.regionMaterials.filter((a) => ids.has(a.materialId)),
+        piezometricLine: { ...s.piezometricLine, materialAssignment },
+        ...(s.assigningMaterialId && !ids.has(s.assigningMaterialId)
+          ? { assigningMaterialId: null }
+          : {}),
+      });
       if (
         Array.isArray(next.parameters) &&
         JSON.stringify(next.parameters) !==

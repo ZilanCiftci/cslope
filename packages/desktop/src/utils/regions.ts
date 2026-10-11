@@ -288,7 +288,7 @@ export function computeRegions(
   const pieceIds = pieces.map(() => nextPieceId++);
 
   for (const inner of closedSubPolygons) {
-    const [icx, icy] = regionCentroid(inner.px, inner.py);
+    const [icx, icy] = regionInteriorPoint(inner.px, inner.py);
     const containerIdx = pieces.findIndex((p) =>
       isPointInPolygon(icx, icy, p.px, p.py),
     );
@@ -374,4 +374,41 @@ export function regionCentroid(px: number[], py: number[]): [number, number] {
     cy += py[i];
   }
   return [cx / n, cy / n];
+}
+
+/**
+ * A point strictly inside a region (outer polygon minus holes), for
+ * placing a material assignment.  The vertex average used before can lie
+ * in a hole (ring regions) or outside a concave region.  Scans a few
+ * horizontal lines and returns the middle of the widest interior span.
+ */
+export function regionInteriorPoint(
+  px: number[],
+  py: number[],
+  holes: { px: number[]; py: number[] }[] = [],
+): [number, number] {
+  const rings = [{ px, py }, ...holes];
+  const yMin = Math.min(...py);
+  const yMax = Math.max(...py);
+  let best: { x: number; y: number; w: number } | null = null;
+  for (const f of [0.5, 0.35, 0.65, 0.2, 0.8, 0.1, 0.9]) {
+    const y = yMin + (yMax - yMin) * f;
+    const xs: number[] = [];
+    for (const r of rings) {
+      const n = r.px.length;
+      for (let i = 0, j = n - 1; i < n; j = i++) {
+        const [x1, y1, x2, y2] = [r.px[j], r.py[j], r.px[i], r.py[i]];
+        if (y1 === y2) continue;
+        if ((y >= y1 && y < y2) || (y >= y2 && y < y1)) {
+          xs.push(x1 + ((y - y1) / (y2 - y1)) * (x2 - x1));
+        }
+      }
+    }
+    xs.sort((a, b) => a - b);
+    for (let k = 0; k + 1 < xs.length; k += 2) {
+      const w = xs[k + 1] - xs[k];
+      if (!best || w > best.w) best = { x: (xs[k] + xs[k + 1]) / 2, y, w };
+    }
+  }
+  return best ? [best.x, best.y] : regionCentroid(px, py);
 }

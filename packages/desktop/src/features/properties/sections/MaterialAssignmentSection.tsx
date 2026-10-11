@@ -1,6 +1,6 @@
 import { useMemo } from "react";
 import { useAppStore } from "../../../store/app-store";
-import { computeRegions, regionCentroid } from "../../../utils/regions";
+import { computeRegions, regionInteriorPoint } from "../../../utils/regions";
 import { Section } from "../../../components/ui/Section";
 
 interface MaterialAssignmentSectionProps {
@@ -28,7 +28,7 @@ export function MaterialAssignmentSection({
         regionMaterials,
         defaultMatId,
       ).map((r, i) => {
-        const [cx, cy] = regionCentroid(r.px, r.py);
+        const [cx, cy] = regionInteriorPoint(r.px, r.py, r.holes);
         return { ...r, index: i + 1, cx, cy };
       }),
     [coordinates, materialBoundaries, regionMaterials, defaultMatId],

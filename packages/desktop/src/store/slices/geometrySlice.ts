@@ -429,21 +429,15 @@ export const createGeometrySlice: SliceCreator<GeometrySlice> = (set, get) => ({
       s.regionMaterials,
       defaultMatId,
     );
+    // Holes belong to the regions inside them, not to the ring around them.
+    const inRegion = (p: [number, number], r: (typeof regions)[number]) =>
+      isPointInPolygon(p[0], p[1], r.px, r.py) &&
+      !(r.holes ?? []).some((h) => isPointInPolygon(p[0], p[1], h.px, h.py));
     // Find the region that contains the clicked point
-    const targetRegion = regions.find((r) =>
-      isPointInPolygon(point[0], point[1], r.px, r.py),
-    );
+    const targetRegion = regions.find((r) => inRegion(point, r));
     // Remove any existing assignments whose point falls inside the same region
     const filtered = targetRegion
-      ? s.regionMaterials.filter(
-          (a) =>
-            !isPointInPolygon(
-              a.point[0],
-              a.point[1],
-              targetRegion.px,
-              targetRegion.py,
-            ),
-        )
+      ? s.regionMaterials.filter((a) => !inRegion(a.point, targetRegion))
       : s.regionMaterials;
     set((st) =>
       syncActiveModel(st, {

@@ -132,13 +132,18 @@ export function InteriorBoundariesDialogApp() {
   ]);
 
   useEffect(() => {
+    // Local fallback selection only: don't send it back. Sending would
+    // push this window's whole (possibly outdated) geometry copy to the
+    // main window, e.g. in the middle of a vertex drag there.
     if (selectedBoundary) {
       if (selectedMaterialBoundaryId !== selectedBoundary.id) {
+        suppressNextBroadcastRef.current = true;
         setSelectedMaterialBoundary(selectedBoundary.id);
       }
       return;
     }
     if (selectedMaterialBoundaryId !== null) {
+      suppressNextBroadcastRef.current = true;
       setSelectedMaterialBoundary(null);
     }
   }, [
