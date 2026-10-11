@@ -55,6 +55,13 @@ export interface UndrainedModel extends MaterialModelBase {
   suRateOfChange?: number;
   /** Reference ELEVATION y (m, despite the name) where Su = `undrainedShearStrength`. */
   suRefDepth?: number;
+  /**
+   * Strength cutoff (kPa), as Slide2's "Cutoff" / SLOPE/W's "C-max".
+   * With `suRateOfChange` ≥ 0 (Su constant or increasing with depth) it is a
+   * MAXIMUM: Su = min(Su, suMax). With a negative rate (Su decreasing with
+   * depth) it is a MINIMUM: Su = max(Su, suMax). Not set: no cutoff.
+   */
+  suMax?: number;
 }
 
 /**
@@ -118,20 +125,40 @@ export interface AnisotropicFunctionModel extends MaterialModelBase {
   modifierFunction: [number, number][];
 }
 
+/** Where the depth of an `s-f-depth` material is measured from. */
+export type DepthReference = "ground" | "layer-top";
+
 /**
- * Strength as a function of depth below the ground surface.
+ * Strength as a function of depth.
  *
  * φ = 0; Su = suRef + (depth − depthRef) × rate,
- * where depth = yGround − yBottom at the slice.
+ * where depth = yTop − yBottom at the slice base centre, yTop being the
+ * ground surface or the top of the material layer (see `depthReference`).
  */
 export interface StrengthFromDepthModel extends MaterialModelBase {
   kind: "s-f-depth";
   /** Reference undrained shear strength Su (kPa). */
   suRef: number;
-  /** Reference depth below ground surface (m). */
+  /** Reference depth (m) below the depth reference. */
   depthRef: number;
-  /** Rate of change of Su with depth (kPa/m). */
+  /** Rate of change of Su with depth (kPa/m); positive: Su increases downwards. */
   rate: number;
+  /**
+   * What the depth is measured from:
+   * - "ground": the ground surface above the slice base;
+   * - "layer-top": the top of the region of this material directly above
+   *   the slice base (Slide2 "Depth from Top of Layer", SLOPE/W "relative
+   *   to top of soil layer"); for the uppermost layer this is the ground.
+   * Not set: "ground" (models saved before the option existed).
+   */
+  depthReference?: DepthReference;
+  /**
+   * Strength cutoff (kPa), as Slide2's "Cutoff" / SLOPE/W's "C-max".
+   * With `rate` ≥ 0 (Su constant or increasing with depth) it is a MAXIMUM:
+   * Su = min(Su, suMax). With a negative rate (Su decreasing with depth) it
+   * is a MINIMUM: Su = max(Su, suMax). Not set: no cutoff.
+   */
+  suMax?: number;
 }
 
 /**
@@ -149,6 +176,13 @@ export interface StrengthFromDatumModel extends MaterialModelBase {
   yRef: number;
   /** Increase of Su per metre below yRef (kPa/m). */
   rate: number;
+  /**
+   * Strength cutoff (kPa), as Slide2's "Cutoff" / SLOPE/W's "C-max".
+   * With `rate` ≥ 0 (Su constant or increasing below the datum) it is a
+   * MAXIMUM: Su = min(Su, suMax). With a negative rate (Su decreasing
+   * downwards) it is a MINIMUM: Su = max(Su, suMax). Not set: no cutoff.
+   */
+  suMax?: number;
 }
 
 /**
@@ -166,6 +200,13 @@ export interface LimeCementColumnModel extends MaterialModelBase {
   suRefDepth?: number;
   /** Increase of soilSu per metre below the reference level (kPa/m). Default 0. */
   suRateOfChange?: number;
+  /**
+   * Cutoff (kPa) of the soil strength between the columns (soilSu with its
+   * depth variation; the columns are not affected). With `suRateOfChange`
+   * ≥ 0 it is a MAXIMUM: cu,soil = min(cu,soil, suMax); with a negative
+   * rate a MINIMUM: cu,soil = max(cu,soil, suMax). Not set: no cutoff.
+   */
+  suMax?: number;
   /** Undrained shear strength of the columns (kPa). */
   columnSu: number;
   /** Area ratio a = column area / improved area, 0–1. */

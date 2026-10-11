@@ -576,6 +576,7 @@ function normalizeMaterial(raw: unknown, index: number): MaterialRow {
         delete model.unitWeightSat;
       }
     }
+    model = sanitizeStrengthOptions(model);
   } else {
     // Legacy file without model — synthesise MohrCoulomb from flat fields
     const unitWeight = Math.max(
@@ -600,6 +601,39 @@ function normalizeMaterial(raw: unknown, index: number): MaterialRow {
     model,
     modelExpressions: normalizeModelExpressions(m.modelExpressions, true),
   };
+}
+
+/**
+ * Depth reference and strength cutoff of the undrained-strength models.
+ * An absent `depthReference` stays absent (the ground surface, as files
+ * written before the option); an unknown value is dropped the same way. A
+ * cutoff that is not a positive number is dropped (no cutoff).
+ */
+function sanitizeStrengthOptions(model: MaterialModel): MaterialModel {
+  if (
+    model.kind !== "s-f-depth" &&
+    model.kind !== "s-f-datum" &&
+    model.kind !== "undrained" &&
+    model.kind !== "lime-cement-columns"
+  ) {
+    return model;
+  }
+  let out = model;
+  if ("suMax" in out) {
+    const v = out.suMax;
+    if (!(typeof v === "number" && Number.isFinite(v) && v > 0)) {
+      out = { ...out };
+      delete out.suMax;
+    }
+  }
+  if (out.kind === "s-f-depth" && "depthReference" in out) {
+    const r = out.depthReference;
+    if (r !== "ground" && r !== "layer-top") {
+      out = { ...out };
+      delete (out as { depthReference?: unknown }).depthReference;
+    }
+  }
+  return out;
 }
 
 function normalizeParameters(

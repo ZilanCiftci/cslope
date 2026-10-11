@@ -52,11 +52,26 @@ export interface StrengthContext {
   x: number;
   /** Ground-surface Y at this x-coordinate. */
   yGround: number;
+  /**
+   * Y of the top of the base material's layer at this x: the highest point
+   * of the region of that material directly above the base (see
+   * `materialLayerTopAt`). Only needed by models measuring depth from the
+   * top of the layer (`needsLayerTop`); not set: the ground (`yGround`).
+   */
+  yLayerTop?: number;
   /** Base inclination angle α (rad). */
   alpha: number;
 }
 
 // ── Resolver ───────────────────────────────────────────────────
+
+/**
+ * Whether resolving `model` uses `StrengthContext.yLayerTop`, so callers
+ * only search the layer top when it matters.
+ */
+export function needsLayerTop(model: MaterialModel): boolean {
+  return model.kind === "s-f-depth" && model.depthReference === "layer-top";
+}
 
 /**
  * Resolve effective shear-strength parameters for a single slice.
@@ -160,8 +175,11 @@ function resolveLimeCementColumns(
   model: Extract<MaterialModel, { kind: "lime-cement-columns" }>,
   context: StrengthContext,
 ): ResolvedStrength {
-  const soil = nonNegative(
-    model.soilSu + ((model.suRefDepth ?? 0) - context.yBottom) * (model.suRateOfChange ?? 0),
+  const rate = model.suRateOfChange ?? 0;
+  const soil = applyCutoff(
+    nonNegative(model.soilSu + ((model.suRefDepth ?? 0) - context.yBottom) * rate),
+    rate,
+    model.suMax,
   );
   const a = Math.min(1, Math.max(0, model.areaRatio));
   const undrained = a * model.columnSu + (1 - a) * soil;
@@ -186,8 +204,10 @@ function resolveUndrained(
 ): ResolvedStrength {
   const refDepth = model.suRefDepth ?? 0;
   const rate = model.suRateOfChange ?? 0;
-  const su = nonNegative(
-    model.undrainedShearStrength + (refDepth - context.yBottom) * rate,
+  const su = applyCutoff(
+    nonNegative(model.undrainedShearStrength + (refDepth - context.yBottom) * rate),
+    rate,
+    model.suMax,
   );
 
   return {
@@ -290,8 +310,16 @@ function resolveStrengthFromDepth(
   model: Extract<MaterialModel, { kind: "s-f-depth" }>,
   context: StrengthContext,
 ): ResolvedStrength {
-  const depth = context.yGround - context.yBottom;
-  const su = nonNegative(model.suRef + (depth - model.depthRef) * model.rate);
+  const yTop =
+    model.depthReference === "layer-top"
+      ? (context.yLayerTop ?? context.yGround)
+      : context.yGround;
+  const depth = yTop - context.yBottom;
+  const su = applyCutoff(
+    nonNegative(model.suRef + (depth - model.depthRef) * model.rate),
+    model.rate,
+    model.suMax,
+  );
 
   return {
     cohesion: su,
@@ -304,8 +332,10 @@ function resolveStrengthFromDatum(
   model: Extract<MaterialModel, { kind: "s-f-datum" }>,
   context: StrengthContext,
 ): ResolvedStrength {
-  const su = nonNegative(
-    model.suRef + (model.yRef - context.yBottom) * model.rate,
+  const su = applyCutoff(
+    nonNegative(model.suRef + (model.yRef - context.yBottom) * model.rate),
+    model.rate,
+    model.suMax,
   );
 
   return {
@@ -324,6 +354,17 @@ function resolveStrengthFromDatum(
  */
 function nonNegative(value: number): number {
   return value > 0 ? value : 0;
+}
+
+/**
+ * Strength cutoff (Slide2 "Cutoff", SLOPE/W "C-max"). Every rate here is
+ * positive where strength increases with depth; then (and for a constant
+ * strength) the cutoff is a maximum, for a negative rate a minimum. A cutoff
+ * that is not a positive number (rejected by validation) is ignored.
+ */
+function applyCutoff(su: number, rate: number, suMax: number | undefined): number {
+  if (suMax === undefined || !Number.isFinite(suMax) || suMax <= 0) return su;
+  return rate < 0 ? Math.max(su, suMax) : Math.min(su, suMax);
 }
 
 /** Highest friction angle used (tan φ must stay finite and positive). */

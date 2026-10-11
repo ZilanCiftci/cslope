@@ -13,11 +13,12 @@
  */
 
 import type { Material, Slice } from "../types/index";
-import { resolveStrength, resolveUnitWeight } from "../types/index";
+import { needsLayerTop, resolveStrength, resolveUnitWeight } from "../types/index";
 import { WATER_UNIT_WEIGHT } from "../types/constants";
 import type { Pile, Reinforcement, ReinforcementForce } from "../types/reinforcement";
 import { getYAtX, isPointInPolygon } from "../math/index";
 import type { Slope } from "./slope";
+import { materialLayerTopAt } from "./geometry-ops";
 
 /** Capacity envelope of one element, per element (not per metre). */
 export interface ReinforcementEnvelope {
@@ -391,7 +392,10 @@ export function buildPileProfile(slope: Slope, p: Pile): PileProfile | null {
     const m = materialAt(slope, x, yy);
     let pz = 0;
     if (m) {
-      const st = resolveStrength(m.model, { yBottom: yy, x, yGround, alpha: 0 });
+      const yLayerTop = needsLayerTop(m.model)
+        ? (materialLayerTopAt(slope.materialGeometries, m, x, yy) ?? undefined)
+        : undefined;
+      const st = resolveStrength(m.model, { yBottom: yy, x, yGround, yLayerTop, alpha: 0 });
       // High-strength or bedrock: no soil to squeeze between the piles.
       if (Number.isFinite(st.cohesion) && !st.impenetrable) {
         let c = st.cohesion;

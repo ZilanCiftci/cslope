@@ -20,6 +20,7 @@ export type {
   StrengthFromDepthModel,
   StrengthFromDatumModel,
   LimeCementColumnModel,
+  DepthReference,
 } from "./material-models";
 export { MATERIAL_MODEL_LABELS } from "./material-models";
 
@@ -27,6 +28,7 @@ export { MATERIAL_MODEL_LABELS } from "./material-models";
 export {
   resolveStrength,
   resolveUnitWeight,
+  needsLayerTop,
   interpolateFunction,
 } from "./strength";
 export type { ResolvedStrength, StrengthContext } from "./strength";

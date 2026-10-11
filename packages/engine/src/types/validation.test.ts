@@ -369,3 +369,59 @@ describe("validateMaterialModel — multiple errors", () => {
     expect(errs.length).toBeGreaterThanOrEqual(3);
   });
 });
+
+describe("validateMaterialModel — depth reference and strength cutoff", () => {
+  it("accepts both depth references and none", () => {
+    expect(validateMaterialModel({ ...validSfDepth, depthReference: "layer-top" })).toEqual([]);
+    expect(validateMaterialModel({ ...validSfDepth, depthReference: "ground" })).toEqual([]);
+    expect(validateMaterialModel(validSfDepth)).toEqual([]);
+  });
+
+  it("rejects an unknown depth reference", () => {
+    const errs = validateMaterialModel({
+      ...validSfDepth,
+      depthReference: "surface" as unknown as "ground",
+    });
+    expect(errs).toContainEqual(expect.stringContaining("Depth reference"));
+  });
+
+  it("accepts a positive cutoff on every model with one", () => {
+    expect(validateMaterialModel({ ...validSfDepth, suMax: 50 })).toEqual([]);
+    expect(validateMaterialModel({ ...validSfDatum, suMax: 50 })).toEqual([]);
+    expect(validateMaterialModel({ ...validUndrained, suMax: 50 })).toEqual([]);
+    expect(
+      validateMaterialModel({
+        kind: "lime-cement-columns",
+        unitWeight: 16,
+        soilSu: 10,
+        columnSu: 100,
+        areaRatio: 0.2,
+        suMax: 30,
+      }),
+    ).toEqual([]);
+  });
+
+  it("rejects a cutoff that is not a positive finite number", () => {
+    for (const suMax of [0, -5, NaN, Infinity]) {
+      expect(validateMaterialModel({ ...validSfDepth, suMax })).toContainEqual(
+        expect.stringContaining("suMax"),
+      );
+      expect(validateMaterialModel({ ...validUndrained, suMax })).toContainEqual(
+        expect.stringContaining("suMax"),
+      );
+    }
+  });
+
+  it("a minimum cutoff (negative rate) must be below the reference Su", () => {
+    // s-f-depth suRef 20, rate −2: minimum 10 is fine, 20 or more is not.
+    expect(validateMaterialModel({ ...validSfDepth, rate: -2, suMax: 10 })).toEqual([]);
+    expect(validateMaterialModel({ ...validSfDepth, rate: -2, suMax: 20 })).toContainEqual(
+      expect.stringContaining("minimum"),
+    );
+    // With a positive rate a cutoff below the reference is a plain maximum.
+    expect(validateMaterialModel({ ...validSfDepth, suMax: 10 })).toEqual([]);
+    expect(validateMaterialModel({ ...validSfDatum, rate: -1, suMax: 40 })).toContainEqual(
+      expect.stringContaining("minimum"),
+    );
+  });
+});

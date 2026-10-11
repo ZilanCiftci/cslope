@@ -52,6 +52,13 @@ const DEFAULT_MATERIAL_TABLE_COLUMNS: MaterialTableColumnKey[] = [
   "frictionAngle",
 ];
 
+/** Strength cutoff of a model as a suffix for its table cell ("" for none). */
+function cutoffSuffix(model: MaterialRow["model"]): string {
+  return "suMax" in model && model.suMax !== undefined
+    ? ` (cutoff ${model.suMax})`
+    : "";
+}
+
 function formatMaterialCell(
   key: MaterialTableColumnKey,
   material: MaterialRow,
@@ -85,8 +92,10 @@ function formatMaterialCell(
       const m = material.model;
       if (m.kind === "mohr-coulomb" || m.kind === "anisotropic-function")
         return `${m.cohesion}`;
-      if (m.kind === "undrained") return `${m.undrainedShearStrength}`;
-      if (m.kind === "lime-cement-columns") return `${f.cohesion}`;
+      if (m.kind === "undrained")
+        return `${m.undrainedShearStrength}${cutoffSuffix(m)}`;
+      if (m.kind === "lime-cement-columns")
+        return `${f.cohesion}${cutoffSuffix(m)}`;
       return "-";
     }
     case "piezometricLine": {
@@ -99,7 +108,9 @@ function formatMaterialCell(
     }
     case "depthRef":
       if (material.model.kind === "s-f-depth")
-        return `${material.model.depthRef}`;
+        return material.model.depthReference === "layer-top"
+          ? `${material.model.depthRef} (below layer top)`
+          : `${material.model.depthRef}`;
       if (material.model.kind === "s-f-datum") return `${material.model.yRef}`;
       return "-";
     case "cDatum":
@@ -111,7 +122,7 @@ function formatMaterialCell(
         material.model.kind === "s-f-depth" ||
         material.model.kind === "s-f-datum"
       ) {
-        return `${material.model.rate}`;
+        return `${material.model.rate}${cutoffSuffix(material.model)}`;
       }
       return "-";
   }

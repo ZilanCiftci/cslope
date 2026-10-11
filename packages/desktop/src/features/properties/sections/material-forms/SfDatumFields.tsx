@@ -2,6 +2,7 @@ import { Label } from "../../../../components/ui/Label";
 import { ExpressionNumericInput } from "../../../../components/ui/ExpressionNumericInput";
 import type { StrengthFromDatumModel } from "@cslope/engine";
 import type { MaterialExpressions } from "../../../../store/types";
+import { CutoffField } from "./CutoffField";
 
 interface Props {
   model: StrengthFromDatumModel;
@@ -77,6 +78,10 @@ export function SfDatumFields({
             aria-label="Rate (kPa/m)"
           />
         </label>
+        <CutoffField
+          value={model.suMax}
+          onChange={(suMax) => onChange({ suMax })}
+        />
       </div>
     </div>
   );

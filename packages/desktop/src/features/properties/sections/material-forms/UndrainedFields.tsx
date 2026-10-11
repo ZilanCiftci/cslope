@@ -2,6 +2,7 @@ import { Label } from "../../../../components/ui/Label";
 import { ExpressionNumericInput } from "../../../../components/ui/ExpressionNumericInput";
 import type { UndrainedModel } from "@cslope/engine";
 import type { MaterialExpressions } from "../../../../store/types";
+import { CutoffField } from "./CutoffField";
 
 interface Props {
   model: UndrainedModel;
@@ -52,6 +53,10 @@ export function UndrainedFields({
           aria-label="Su (kPa)"
         />
       </label>
+      <CutoffField
+        value={model.suMax}
+        onChange={(suMax) => onChange({ suMax })}
+      />
     </div>
   );
 }

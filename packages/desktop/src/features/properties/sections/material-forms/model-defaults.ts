@@ -3,6 +3,10 @@
  *
  * Used when the user switches model kind in the UI — we reset the
  * model-specific fields to sensible defaults.
+ *
+ * A new S = f(depth) material measures depth from the top of its layer, as
+ * Slide2 and SLOPE/W do; a saved model without `depthReference` keeps the
+ * ground surface (the engine default).
  */
 
 import type {
@@ -78,6 +82,7 @@ export function createDefaultModel(
         suRef: 0,
         depthRef: 0,
         rate: 0,
+        depthReference: "layer-top",
       } satisfies StrengthFromDepthModel;
 
     case "s-f-datum":

@@ -7,7 +7,10 @@ import {
   getSurfaceLine,
   splitPolygonByPolyline,
   lineSegmentIntersection,
+  materialLayerTopAt,
+  createGeometryWithMaterial,
 } from "./geometry-ops";
+import { Material } from "../types/material";
 import { calculatePolygonArea } from "../math/index";
 
 // ── lineSegmentIntersection ───────────────────────────────────────
@@ -173,5 +176,45 @@ describe("splitPolygonByPolyline", () => {
     for (const a of areas) {
       expect(a).toBeCloseTo(50, 0);
     }
+  });
+});
+
+// ── materialLayerTopAt ────────────────────────────────────────────
+
+describe("materialLayerTopAt", () => {
+  const clay = new Material({ name: "Clay" });
+  const sand = new Material({ name: "Sand" });
+  const rect = (x0: number, x1: number, y0: number, y1: number, m: Material) =>
+    createGeometryWithMaterial([x0, x1, x1, x0], [y0, y0, y1, y1], m);
+
+  it("finds the top of the region containing the point", () => {
+    const geos = [rect(0, 10, -10, 0, clay), rect(0, 10, 0, 5, sand)];
+    expect(materialLayerTopAt(geos, clay, 5, -6)).toBe(0);
+    expect(materialLayerTopAt(geos, sand, 5, 1)).toBe(5);
+  });
+
+  it("follows a sloping top", () => {
+    const geos = [createGeometryWithMaterial([0, 10, 10, 0], [-10, -10, 4, 0], clay)];
+    expect(materialLayerTopAt(geos, clay, 5, -6)).toBeCloseTo(2, 12);
+  });
+
+  it("joins adjoining regions of the same material", () => {
+    // Clay split by a boundary at y = −4: one layer up to y = 0.
+    const geos = [rect(0, 10, -10, -4, clay), rect(0, 10, -4, 0, clay), rect(0, 10, 0, 5, sand)];
+    expect(materialLayerTopAt(geos, clay, 5, -8)).toBe(0);
+  });
+
+  it("ignores a lens of the same material above another material", () => {
+    // Clay below y = 0, sand above, a clay lens in the sand at 2..3.
+    const geos = [rect(0, 10, -10, 0, clay), rect(0, 10, 0, 5, sand), rect(4, 6, 2, 3, clay)];
+    expect(materialLayerTopAt(geos, clay, 5, -6)).toBe(0);
+    // Within the lens its own top counts.
+    expect(materialLayerTopAt(geos, clay, 5, 2.5)).toBe(3);
+  });
+
+  it("returns null outside the material", () => {
+    const geos = [rect(0, 10, -10, 0, clay), rect(0, 10, 0, 5, sand)];
+    expect(materialLayerTopAt(geos, clay, 5, 2)).toBeNull();
+    expect(materialLayerTopAt(geos, clay, 20, -5)).toBeNull();
   });
 });

@@ -1,7 +1,8 @@
 import { Label } from "../../../../components/ui/Label";
 import { ExpressionNumericInput } from "../../../../components/ui/ExpressionNumericInput";
-import type { StrengthFromDepthModel } from "@cslope/engine";
+import type { DepthReference, StrengthFromDepthModel } from "@cslope/engine";
 import type { MaterialExpressions } from "../../../../store/types";
+import { CutoffField } from "./CutoffField";
 
 interface Props {
   model: StrengthFromDepthModel;
@@ -75,6 +76,26 @@ export function SfDepthFields({
             aria-label="Rate (kPa/m)"
           />
         </label>
+        <label
+          className="flex flex-col gap-0.5"
+          title="Depth below the ground surface, or below the top of this material's layer above the slice base (as Slide2 and SLOPE/W)."
+        >
+          <Label>Depth measured from</Label>
+          <select
+            value={model.depthReference ?? "ground"}
+            onChange={(e) =>
+              onChange({ depthReference: e.target.value as DepthReference })
+            }
+            aria-label="Depth measured from"
+          >
+            <option value="ground">Ground surface</option>
+            <option value="layer-top">Top of layer</option>
+          </select>
+        </label>
+        <CutoffField
+          value={model.suMax}
+          onChange={(suMax) => onChange({ suMax })}
+        />
       </div>
     </div>
   );

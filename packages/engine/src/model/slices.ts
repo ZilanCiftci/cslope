@@ -3,7 +3,7 @@
  */
 
 import type { GeometryWithMaterial, PartialFactors, Slice } from "../types/index";
-import { resolveStrength, resolveUnitWeight } from "../types/index";
+import { needsLayerTop, resolveStrength, resolveUnitWeight } from "../types/index";
 import { WATER_UNIT_WEIGHT, SLICE_DEDUP_TOLERANCE } from "../types/constants";
 import {
   getCircleYCoordinateAtX,
@@ -17,7 +17,7 @@ import {
   isPointInPolygon,
 } from "../math/index";
 import type { Slope } from "./slope";
-import { polylineYFrom } from "./geometry-ops";
+import { materialLayerTopAt, polylineYFrom } from "./geometry-ops";
 import { polylineCrossingsX, polylineYAt, type Pt } from "./surface";
 import { applyReinforcement } from "./reinforcement";
 
@@ -128,7 +128,10 @@ export function createSlice(
     edgeCoeffs.push([a, b, c]);
   }
 
+  const lift = 1e-6 * Math.max(1, yTop - yBottom);
   let baseMaterial: GeometryWithMaterial["material"] | null = null;
+  // Base material found inside its fragment (not the fallback below).
+  let baseInside = false;
   const intersectedMaterials: GeometryWithMaterial[] = [];
   let totalWeight = 0;
   let totalArea = 0;
@@ -187,7 +190,6 @@ export function createSlice(
     // Test in coordinates local to the slice base: with real-world
     // eastings (~1e5..1e7) a fixed 1e-10 offset is below the floating
     // point resolution and the base material was missed.
-    const lift = 1e-6 * Math.max(1, yTop - yBottom);
     if (
       isPointInPolygon(
         0,
@@ -197,6 +199,7 @@ export function createSlice(
       )
     ) {
       baseMaterial = m.material;
+      baseInside = true;
     }
   }
 
@@ -212,11 +215,21 @@ export function createSlice(
     U = water ? Math.max(water.yMean - yBottom, 0) * WATER_UNIT_WEIGHT * water.h : 0;
   }
 
+  // Top of the base material's layer, for depth measured from it: searched
+  // in the full material regions just above the base centre.
+  let yLayerTop: number | undefined;
+  if (baseInside && needsLayerTop(baseMaterial.model)) {
+    yLayerTop =
+      materialLayerTopAt(materialGeometries, baseMaterial, x, yBottom + lift) ??
+      undefined;
+  }
+
   // Resolve strength via the material model plugin system
   const strength = resolveStrength(baseMaterial.model, {
     yBottom,
     x,
     yGround: yTop,
+    yLayerTop,
     alpha,
   });
 
@@ -715,7 +728,10 @@ export function rankineCrackDepth(slope: Slope, x: number): number {
   if (!geo) return 0;
   const model = geo.material.model;
   if (model.kind === "high-strength" || model.kind === "impenetrable") return 0;
-  const strength = resolveStrength(model, { yBottom: y, x, yGround, alpha: 0 });
+  const yLayerTop = needsLayerTop(model)
+    ? (materialLayerTopAt(slope.materialGeometries, geo.material, x, y) ?? undefined)
+    : undefined;
+  const strength = resolveStrength(model, { yBottom: y, x, yGround, yLayerTop, alpha: 0 });
   let c = strength.cohesion;
   let tanPhi = Math.tan((strength.frictionAngle * Math.PI) / 180);
   const f = slope.partialFactors;

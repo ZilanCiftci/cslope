@@ -461,6 +461,73 @@ export function createGeometryWithMaterial(
   return gm;
 }
 
+// ── Top of a material layer ───────────────────────────────────────
+
+/**
+ * Vertical extents [bottom, top] of a polygon on the line at x, appended
+ * to `out`. Edges are taken half-open in x so that a vertex on the line is
+ * counted once; vertical edges never cross it.
+ */
+function verticalExtentsAt(
+  px: readonly number[],
+  py: readonly number[],
+  x: number,
+  out: [number, number][],
+): void {
+  const ys: number[] = [];
+  const n = px.length;
+  for (let i = 0; i < n; i++) {
+    const j = i + 1 < n ? i + 1 : 0;
+    const xi = px[i];
+    const xj = px[j];
+    if ((xi <= x && x < xj) || (xj <= x && x < xi)) {
+      ys.push(py[i] + ((x - xi) * (py[j] - py[i])) / (xj - xi));
+    }
+  }
+  if (ys.length < 2) return;
+  ys.sort((a, b) => a - b);
+  for (let k = 0; k + 1 < ys.length; k += 2) out.push([ys[k], ys[k + 1]]);
+}
+
+/**
+ * Elevation of the top of the layer of `material` at the point (x, y):
+ * the highest y reached by going straight up from the point while staying
+ * inside regions of that material. Adjoining regions of the same material
+ * (a layer split by another boundary line) count as one layer; a lens of
+ * the same material higher up, separated by another material, does not.
+ * For the uppermost material this is the ground surface.
+ *
+ * @returns The layer top, or null when the point is not inside `material`.
+ */
+export function materialLayerTopAt(
+  geometries: readonly GeometryWithMaterial[],
+  material: Material,
+  x: number,
+  y: number,
+): number | null {
+  const extents: [number, number][] = [];
+  for (const g of geometries) {
+    if (g.material !== material) continue;
+    if (g.xMin !== undefined && g.xMax !== undefined && (x < g.xMin || x > g.xMax)) {
+      continue;
+    }
+    verticalExtentsAt(g.px, g.py, x, extents);
+  }
+  if (extents.length === 0) return null;
+  const tol = (v: number) => 1e-6 * Math.max(1, Math.abs(v));
+  let top: number | null = null;
+  for (const [lo, hi] of extents) {
+    if (y >= lo - tol(lo) && y <= hi + tol(hi) && (top === null || hi > top)) top = hi;
+  }
+  if (top === null) return null;
+  // Climb through same-material regions stacked directly on top.
+  extents.sort((a, b) => a[0] - b[0]);
+  for (const [lo, hi] of extents) {
+    if (lo <= top + tol(top) && hi > top) top = hi;
+  }
+  return top;
+}
+
 function signedArea(ring: [number, number][]): number {
   let a = 0;
   for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) {

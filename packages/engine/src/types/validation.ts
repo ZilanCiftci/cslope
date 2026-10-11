@@ -95,6 +95,12 @@ export function validateMaterialModel(model: MaterialModel): string[] {
       ) {
         errors.push("Undrained shear strength (Su) must be ≥ 0.");
       }
+      validateCutoff(
+        errors,
+        model.suMax,
+        model.suRateOfChange ?? 0,
+        model.undrainedShearStrength,
+      );
       break;
 
     case "high-strength":
@@ -179,6 +185,14 @@ export function validateMaterialModel(model: MaterialModel): string[] {
       if (!Number.isFinite(model.rate)) {
         errors.push("Rate of change must be a finite number.");
       }
+      if (
+        model.depthReference !== undefined &&
+        model.depthReference !== "ground" &&
+        model.depthReference !== "layer-top"
+      ) {
+        errors.push('Depth reference must be "ground" or "layer-top".');
+      }
+      validateCutoff(errors, model.suMax, model.rate, model.suRef);
       break;
 
     case "lime-cement-columns":
@@ -207,6 +221,7 @@ export function validateMaterialModel(model: MaterialModel): string[] {
           errors.push("Drained column friction angle must be 0–90°.");
         }
       }
+      validateCutoff(errors, model.suMax, model.suRateOfChange ?? 0, model.soilSu);
       break;
 
     case "s-f-datum":
@@ -219,6 +234,7 @@ export function validateMaterialModel(model: MaterialModel): string[] {
       if (!Number.isFinite(model.rate)) {
         errors.push("Rate of change must be a finite number.");
       }
+      validateCutoff(errors, model.suMax, model.rate, model.suRef);
       break;
     default:
       errors.push(
@@ -227,4 +243,27 @@ export function validateMaterialModel(model: MaterialModel): string[] {
   }
 
   return errors;
+}
+
+/**
+ * Strength cutoff `suMax`: finite and > 0. With a negative rate it is a
+ * minimum, which only makes sense below the reference strength (otherwise
+ * it replaces the whole profile below the reference level).
+ */
+function validateCutoff(
+  errors: string[],
+  suMax: number | undefined,
+  rate: number,
+  suRef: number,
+): void {
+  if (suMax === undefined) return;
+  if (!Number.isFinite(suMax) || suMax <= 0) {
+    errors.push("Strength cutoff (suMax) must be a positive number.");
+    return;
+  }
+  if (Number.isFinite(rate) && rate < 0 && Number.isFinite(suRef) && suMax >= suRef) {
+    errors.push(
+      "Strength cutoff (suMax) is a minimum with a negative rate and must be below the reference Su.",
+    );
+  }
 }

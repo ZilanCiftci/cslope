@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { resolveStrength, interpolateFunction } from "./strength";
+import { resolveStrength, interpolateFunction, needsLayerTop } from "./strength";
 import type {
   MohrCoulombModel,
   UndrainedModel,
@@ -9,6 +9,7 @@ import type {
   StrengthFromDepthModel,
   StrengthFromDatumModel,
   SpatialMohrCoulombModel,
+  LimeCementColumnModel,
 } from "./material-models";
 import type { StrengthContext } from "./strength";
 import { Material } from "./material";
@@ -772,5 +773,173 @@ describe("resolveStrength — linear variation never goes negative", () => {
     );
     expect(r.cohesion).toBe(0);
     expect(r.frictionAngle).toBe(30);
+  });
+});
+
+// ── Depth from the top of the layer ────────────────────────────
+
+describe("resolveStrength — s-f-depth from the top of the layer", () => {
+  const base: StrengthFromDepthModel = {
+    kind: "s-f-depth",
+    unitWeight: 16,
+    suRef: 10,
+    depthRef: 0,
+    rate: 1.5,
+  };
+
+  it("measures depth from the layer top", () => {
+    // depth = 2 − (−4) = 6; Su = 10 + 6 × 1.5 = 19
+    const r = resolveStrength(
+      { ...base, depthReference: "layer-top" },
+      ctx({ yGround: 8, yLayerTop: 2, yBottom: -4 }),
+    );
+    expect(r.cohesion).toBeCloseTo(19, 12);
+    expect(r.cohesionUndrained).toBeCloseTo(19, 12);
+  });
+
+  it("measures depth from the ground when not set or 'ground'", () => {
+    // depth = 8 − (−4) = 12; Su = 10 + 12 × 1.5 = 28
+    const c = ctx({ yGround: 8, yLayerTop: 2, yBottom: -4 });
+    expect(resolveStrength(base, c).cohesion).toBeCloseTo(28, 12);
+    expect(
+      resolveStrength({ ...base, depthReference: "ground" }, c).cohesion,
+    ).toBeCloseTo(28, 12);
+  });
+
+  it("falls back to the ground without a layer top", () => {
+    const r = resolveStrength(
+      { ...base, depthReference: "layer-top" },
+      ctx({ yGround: 8, yBottom: -4 }),
+    );
+    expect(r.cohesion).toBeCloseTo(28, 12);
+  });
+
+  it("needsLayerTop only for s-f-depth from the layer top", () => {
+    expect(needsLayerTop({ ...base, depthReference: "layer-top" })).toBe(true);
+    expect(needsLayerTop(base)).toBe(false);
+    expect(needsLayerTop({ ...base, depthReference: "ground" })).toBe(false);
+    expect(
+      needsLayerTop({ kind: "s-f-datum", unitWeight: 16, suRef: 10, yRef: 0, rate: 1 }),
+    ).toBe(false);
+  });
+});
+
+// ── Strength cutoff (suMax) ────────────────────────────────────
+
+describe("resolveStrength — strength cutoff", () => {
+  it("s-f-depth: a maximum with a positive rate", () => {
+    const m: StrengthFromDepthModel = {
+      kind: "s-f-depth",
+      unitWeight: 16,
+      suRef: 10,
+      depthRef: 0,
+      rate: 2,
+      suMax: 25,
+    };
+    // depth 5 → 20 (below the cap), depth 10 → 30 → 25
+    expect(resolveStrength(m, ctx({ yGround: 10, yBottom: 5 })).cohesion).toBeCloseTo(20, 12);
+    expect(resolveStrength(m, ctx({ yGround: 10, yBottom: 0 })).cohesion).toBe(25);
+    expect(resolveStrength(m, ctx({ yGround: 10, yBottom: 0 })).cohesionUndrained).toBe(25);
+  });
+
+  it("s-f-depth: a minimum with a negative rate", () => {
+    const m: StrengthFromDepthModel = {
+      kind: "s-f-depth",
+      unitWeight: 16,
+      suRef: 30,
+      depthRef: 0,
+      rate: -2,
+      suMax: 18,
+    };
+    // depth 5 → 20 (above the minimum), depth 10 → 10 → 18
+    expect(resolveStrength(m, ctx({ yGround: 10, yBottom: 5 })).cohesion).toBeCloseTo(20, 12);
+    expect(resolveStrength(m, ctx({ yGround: 10, yBottom: 0 })).cohesion).toBe(18);
+    // Far below, where the linear profile would go negative.
+    expect(resolveStrength(m, ctx({ yGround: 10, yBottom: -50 })).cohesion).toBe(18);
+  });
+
+  it("s-f-depth: a maximum on a constant strength", () => {
+    const m: StrengthFromDepthModel = {
+      kind: "s-f-depth",
+      unitWeight: 16,
+      suRef: 30,
+      depthRef: 0,
+      rate: 0,
+      suMax: 20,
+    };
+    expect(resolveStrength(m, ctx({ yGround: 10, yBottom: 5 })).cohesion).toBe(20);
+  });
+
+  it("s-f-datum: a maximum with a positive rate (Su increasing below the datum)", () => {
+    const m: StrengthFromDatumModel = {
+      kind: "s-f-datum",
+      unitWeight: 18,
+      suRef: 40,
+      yRef: 10,
+      rate: 4,
+      suMax: 50,
+    };
+    // y = 15 → 20; y = 5 → 60 → 50
+    expect(resolveStrength(m, ctx({ yBottom: 15 })).cohesion).toBeCloseTo(20, 12);
+    expect(resolveStrength(m, ctx({ yBottom: 5 })).cohesion).toBe(50);
+  });
+
+  it("s-f-datum: a minimum with a negative rate", () => {
+    const m: StrengthFromDatumModel = {
+      kind: "s-f-datum",
+      unitWeight: 18,
+      suRef: 40,
+      yRef: 10,
+      rate: -4,
+      suMax: 30,
+    };
+    // y = 15 → 60 (above the datum, unaffected); y = 5 → 20 → 30
+    expect(resolveStrength(m, ctx({ yBottom: 15 })).cohesion).toBeCloseTo(60, 12);
+    expect(resolveStrength(m, ctx({ yBottom: 5 })).cohesion).toBe(30);
+  });
+
+  it("undrained: a maximum with a positive rate, a minimum with a negative one", () => {
+    const up: UndrainedModel = {
+      kind: "undrained",
+      unitWeight: 18,
+      undrainedShearStrength: 20,
+      suRefDepth: 0,
+      suRateOfChange: 3,
+      suMax: 35,
+    };
+    // y = −3 → 29; y = −10 → 50 → 35
+    expect(resolveStrength(up, ctx({ yBottom: -3 })).cohesion).toBeCloseTo(29, 12);
+    expect(resolveStrength(up, ctx({ yBottom: -10 })).cohesion).toBe(35);
+    const down: UndrainedModel = { ...up, undrainedShearStrength: 50, suRateOfChange: -3, suMax: 30 };
+    // y = −3 → 41; y = −10 → 20 → 30
+    expect(resolveStrength(down, ctx({ yBottom: -3 })).cohesion).toBeCloseTo(41, 12);
+    expect(resolveStrength(down, ctx({ yBottom: -10 })).cohesion).toBe(30);
+    // Without a rate the cutoff is a maximum on the constant Su.
+    expect(
+      resolveStrength({ ...up, suRateOfChange: undefined, suMax: 15 }, ctx({ yBottom: -10 })).cohesion,
+    ).toBe(15);
+  });
+
+  it("lime-cement columns: caps only the soil between the columns", () => {
+    const m: LimeCementColumnModel = {
+      kind: "lime-cement-columns",
+      unitWeight: 16,
+      soilSu: 10,
+      suRefDepth: 0,
+      suRateOfChange: 2,
+      columnSu: 100,
+      areaRatio: 0.25,
+      suMax: 15,
+    };
+    // y = −10: cu,soil = 30 → 15; τ = 0.25 × 100 + 0.75 × 15 = 36.25
+    const r = resolveStrength(m, ctx({ yBottom: -10 }));
+    expect(r.cohesion).toBeCloseTo(36.25, 12);
+    // y = −1: cu,soil = 12 (unaffected); τ = 25 + 9 = 34
+    expect(resolveStrength(m, ctx({ yBottom: -1 })).cohesion).toBeCloseTo(34, 12);
+  });
+
+  it("no cutoff when suMax is not set", () => {
+    const m: StrengthFromDatumModel = { kind: "s-f-datum", unitWeight: 18, suRef: 40, yRef: 10, rate: 4 };
+    expect(resolveStrength(m, ctx({ yBottom: -100 })).cohesion).toBeCloseTo(480, 9);
   });
 });

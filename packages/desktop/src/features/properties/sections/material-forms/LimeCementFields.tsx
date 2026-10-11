@@ -2,6 +2,7 @@ import { Label } from "../../../../components/ui/Label";
 import { ExpressionNumericInput } from "../../../../components/ui/ExpressionNumericInput";
 import type { LimeCementColumnModel } from "@cslope/engine";
 import type { MaterialExpressions } from "../../../../store/types";
+import { CutoffField } from "./CutoffField";
 
 interface Props {
   model: LimeCementColumnModel;
@@ -44,6 +45,7 @@ export function LimeCementFields({ model, onChange, modelExpressions, parameterV
         {field("columnSu", "Su columns (kPa)", { min: 0 })}
         {field("suRefDepth", "Su soil at level (m)", { allowNegative: true })}
         {field("suRateOfChange", "Su soil increase (kPa/m)", { allowNegative: true })}
+        <CutoffField value={model.suMax} onChange={(suMax) => onChange({ suMax })} />
       </div>
       <label className="flex items-center gap-2 text-[11px]" title="Limit the column strength to c′ + σ′·tan φ′ (≤ Su columns), e.g. c′ = 0.3·Su, φ′ = 30°.">
         <input
