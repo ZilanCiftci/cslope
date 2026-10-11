@@ -8,7 +8,12 @@ import {
   formatRulerLabel,
   resolveTickStep,
 } from "../../utils/ruler";
-import { GRID_STEP_MIN } from "../canvas/constants";
+import {
+  ARROW_HEAD_LEN_PX,
+  ARROW_HEAD_PX,
+  ARROW_HEIGHT_PX,
+  GRID_STEP_MIN,
+} from "../canvas/constants";
 import { buildMaterialTableData } from "../canvas/helpers";
 import {
   ANNOTATION_DEFAULT_FONT_FAMILY,
@@ -42,6 +47,7 @@ import {
   MODEL_HATCH_PATTERNS,
 } from "../rendering/style-spec";
 import { drawPdfHatch, drawPdfHatchLabel } from "../rendering/hatch";
+import { piezoExtensions } from "../../utils/piezo";
 import type { AnalysisResult } from "@cslope/engine";
 import type {
   AnalysisLimitsState,
@@ -346,27 +352,46 @@ export function drawUdlLoads(
   udls: { x1: number; x2: number; magnitude: number }[],
   coordinates: [number, number][],
 ) {
-  const arrowH = 8 * tf.mmPerPx;
+  // Same proportions as the canvas arrows.
+  const arrowH = ARROW_HEIGHT_PX * tf.mmPerPx;
+  const headW = ARROW_HEAD_PX * tf.mmPerPx;
+  const headL = ARROW_HEAD_LEN_PX * tf.mmPerPx;
 
   for (const u of udls) {
-    const y1 = surfaceYAtX(coordinates, u.x1);
-    const y2 = surfaceYAtX(coordinates, u.x2);
+    const x1 = Math.min(u.x1, u.x2);
+    const x2 = Math.max(u.x1, u.x2);
+    const y1 = surfaceYAtX(coordinates, x1);
+    const y2 = surfaceYAtX(coordinates, x2);
     if (y1 === null || y2 === null) continue;
 
-    const [px1, py1] = tf.worldToPdf(u.x1, y1);
-    const [px2, py2] = tf.worldToPdf(u.x2, y2);
+    const [px1, py1] = tf.worldToPdf(x1, y1);
+    const [px2, py2] = tf.worldToPdf(x2, y2);
 
     pdf.setDrawColor(...UDL_LOAD_COLOR.rgb);
     pdf.setLineWidth(0.4);
-
-    pdf.line(px1, py1 - arrowH, px1, py1);
     pdf.setFillColor(...UDL_LOAD_COLOR.rgb);
-    pdf.triangle(px1, py1, px1 - 1.5, py1 - 2.5, px1 + 1.5, py1 - 2.5, "F");
+    for (const [px, py] of [[px1, py1], [px2, py2]]) {
+      pdf.line(px, py - arrowH, px, py - headL);
+      pdf.triangle(px, py, px - headW, py - headL, px + headW, py - headL, "F");
+    }
 
-    pdf.line(px2, py2 - arrowH, px2, py2);
-    pdf.triangle(px2, py2, px2 - 1.5, py2 - 2.5, px2 + 1.5, py2 - 2.5, "F");
-
-    pdf.line(px1, py1 - arrowH, px2, py2 - arrowH);
+    // Top edge follows the ground surface (a straight line between the end
+    // arrows cut through the ground over a crest).
+    const topXs = [
+      x1,
+      ...coordinates.map((c) => c[0]).filter((x) => x > x1 && x < x2),
+      x2,
+    ].sort((a, b) => a - b);
+    const topPts: [number, number][] = [];
+    for (const x of topXs) {
+      const y = surfaceYAtX(coordinates, x);
+      if (y === null) continue;
+      const [px, py] = tf.worldToPdf(x, y);
+      topPts.push([px, py - arrowH]);
+    }
+    for (let i = 1; i < topPts.length; i++) {
+      pdf.line(topPts[i - 1][0], topPts[i - 1][1], topPts[i][0], topPts[i][1]);
+    }
 
     pdf.setFontSize(9);
     pdf.setFont("helvetica", "bold");
@@ -383,7 +408,9 @@ export function drawLineLoads(
   lineLoads: { x: number; magnitude: number }[],
   coordinates: [number, number][],
 ) {
-  const arrowH = 8 * tf.mmPerPx;
+  const arrowH = ARROW_HEIGHT_PX * tf.mmPerPx;
+  const headW = ARROW_HEAD_PX * tf.mmPerPx;
+  const headL = ARROW_HEAD_LEN_PX * tf.mmPerPx;
 
   for (const ll of lineLoads) {
     const sy = surfaceYAtX(coordinates, ll.x);
@@ -392,9 +419,9 @@ export function drawLineLoads(
     const [px, py] = tf.worldToPdf(ll.x, sy);
     pdf.setDrawColor(...LINE_LOAD_COLOR.rgb);
     pdf.setLineWidth(0.4);
-    pdf.line(px, py - arrowH, px, py);
+    pdf.line(px, py - arrowH, px, py - headL);
     pdf.setFillColor(...LINE_LOAD_COLOR.rgb);
-    pdf.triangle(px, py, px - 1.5, py - 2.5, px + 1.5, py - 2.5, "F");
+    pdf.triangle(px, py, px - headW, py - headL, px + headW, py - headL, "F");
 
     pdf.setFontSize(9);
     pdf.setFont("helvetica", "bold");
@@ -409,6 +436,7 @@ export function drawPiezometricLines(
   pdf: jsPDF,
   tf: PdfTransform,
   lines: { id: string; coordinates: [number, number][] }[],
+  modelCoordinates: [number, number][] = [],
 ) {
   const multiLine = lines.length > 1;
 
@@ -421,6 +449,16 @@ export function drawPiezometricLines(
     pdf.setLineWidth(0.35);
     const ops = buildPolylinePath(pts, false);
     pdfPath(pdf, ops, "S");
+
+    // Dashed horizontal continuation used by the analysis (see canvas).
+    pdf.setLineWidth(0.25);
+    pdf.setLineDashPattern([1.6, 1.1], 0);
+    for (const [a, b] of piezoExtensions(line.coordinates, modelCoordinates)) {
+      const [ax, ay] = tf.worldToPdf(a[0], a[1]);
+      const [bx, by] = tf.worldToPdf(b[0], b[1]);
+      pdf.line(ax, ay, bx, by);
+    }
+    pdf.setLineDashPattern([], 0);
 
     const triHalf = PIEZO_TRI_HALF_PX * tf.mmPerPx;
     const triH = PIEZO_TRI_H_PX * tf.mmPerPx;

@@ -177,7 +177,17 @@ export function exportVectorPdf(data: PdfExportData): void {
     let viewScale: number;
     let viewOffset: [number, number];
 
-    if (viewBounds) {
+    // A reversed or empty locked view (e.g. Right X < Left X typed in the
+    // view lock fields) falls back to auto-fit like the canvas does,
+    // instead of a mirrored, off-page drawing.
+    const usableBounds =
+      viewBounds &&
+      viewBounds.xMax > viewBounds.xMin &&
+      viewBounds.yMax > viewBounds.yMin
+        ? viewBounds
+        : null;
+    if (usableBounds) {
+      const viewBounds = usableBounds;
       const worldW = viewBounds.xMax - viewBounds.xMin || 10;
       const worldH = viewBounds.yMax - viewBounds.yMin || 10;
 
@@ -334,7 +344,7 @@ export function exportVectorPdf(data: PdfExportData): void {
     }
 
     if (piezometricLine.lines.length > 0) {
-      drawPiezometricLines(pdf, tf, piezometricLine.lines);
+      drawPiezometricLines(pdf, tf, piezometricLine.lines, coordinates);
     }
 
     if (analysisLimits.enabled && coordinates.length >= 3) {

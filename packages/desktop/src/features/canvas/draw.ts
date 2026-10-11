@@ -63,6 +63,7 @@ import {
   MODEL_HATCH_PATTERNS,
 } from "../rendering/style-spec";
 import { drawCanvasHatch, drawCanvasHatchLabel } from "../rendering/hatch";
+import { piezoExtensions } from "../../utils/piezo";
 
 const arcPointCache = new WeakMap<object, Map<string, [number, number][]>>();
 
@@ -893,6 +894,20 @@ export function drawCanvas(
         else ctx.lineTo(px, py);
       }
       ctx.stroke();
+
+      // Dashed: the horizontal continuation the analysis uses beyond the
+      // line's end points.
+      ctx.setLineDash([6 * paperZoom, 4 * paperZoom]);
+      ctx.lineWidth = 1 * paperZoom;
+      for (const [a, b] of piezoExtensions(plCoords, coordinates)) {
+        const [ax, ay] = worldToCanvas(a[0], a[1], w, h);
+        const [bx, by] = worldToCanvas(b[0], b[1], w, h);
+        ctx.beginPath();
+        ctx.moveTo(ax, ay);
+        ctx.lineTo(bx, by);
+        ctx.stroke();
+      }
+      ctx.setLineDash([]);
 
       // Symbol at the midpoint of each segment:
       // inverted triangle with bottom vertex on the line + two horizontal lines below
