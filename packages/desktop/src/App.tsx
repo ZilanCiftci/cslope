@@ -590,6 +590,8 @@ function App() {
         lineLoads: state.lineLoads,
         reinforcements: state.reinforcements,
         parameters: state.parameters,
+        coordinates: state.coordinates,
+        orientation: state.orientation,
       });
     };
 
@@ -635,8 +637,15 @@ function App() {
       return;
     }
 
-    window.cslope.sendLoadsChanged({ udls, lineLoads, reinforcements, parameters });
-  }, [udls, lineLoads, reinforcements, parameters, isAnyDialogWindow]);
+    window.cslope.sendLoadsChanged({
+      udls,
+      lineLoads,
+      reinforcements,
+      parameters,
+      coordinates,
+      orientation,
+    });
+  }, [udls, lineLoads, reinforcements, parameters, coordinates, orientation, isAnyDialogWindow]);
 
   useEffect(() => {
     if (!isElectron || isAnyDialogWindow) return;

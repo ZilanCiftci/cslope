@@ -1,7 +1,7 @@
+import { jsPDF } from "jspdf";
 import type { ReinforcementForce } from "@cslope/engine";
 import type { ReinforcementRow } from "../../store/types";
-import { bondedSpan } from "../canvas/reinforcement-draw";
-import { jsPDF } from "jspdf";
+import { bondedSpan, formatReinforcementForce } from "../canvas/reinforcement-draw";
 import { fosColor, fosScaleRange, fosTickLabel } from "../../utils/fos-color";
 
 /** "≥" is not in the standard PDF fonts. */
@@ -472,6 +472,11 @@ export function drawReinforcementsPdf(
     const p = 1.2;
     pdf.setLineWidth(0.6);
     pdf.line(ax - uy * p, ay + ux * p, ax + uy * p, ay - ux * p);
+    if (r.pullout === "none") {
+      // Anchor block at the embedded end, as on the canvas.
+      pdf.setFillColor(...REINFORCEMENT_RGB);
+      pdf.rect(bx - 0.8, by - 0.8, 1.6, 1.6, "F");
+    }
     pdf.setFontSize(8);
     pdf.setFont("helvetica", "bold");
     pdf.setTextColor(...REINFORCEMENT_RGB);
@@ -508,8 +513,7 @@ export function drawReinforcementForcesPdf(
       ex - ux * HEAD + uy * HEAD * 0.6, ey - uy * HEAD - ux * HEAD * 0.6,
       "F",
     );
-    const label = `${f.force.toFixed(f.force >= 100 ? 0 : 1)} kN/m${f.passive ? " /F" : ""}`;
-    pdf.text(label, ex + (ux >= 0 ? 1 : -1), ey, { align: ux >= 0 ? "left" : "right", baseline: "middle" });
+    pdf.text(formatReinforcementForce(f), ex + (ux >= 0 ? 1 : -1), ey, { align: ux >= 0 ? "left" : "right", baseline: "middle" });
   }
 }
 

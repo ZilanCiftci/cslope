@@ -13,6 +13,7 @@ import Polygonizer from "jsts/org/locationtech/jts/operation/polygonize/Polygoni
 import UnaryUnionOp from "jsts/org/locationtech/jts/operation/union/UnaryUnionOp.js";
 // Side-effect import: patches Geometry.prototype with union/contains/intersects/etc.
 import "jsts/org/locationtech/jts/monkey.js";
+import { getYAtX } from "../math/index";
 
 /** Shared JSTS GeometryFactory instance. */
 const gf = new GeometryFactory();
@@ -190,6 +191,20 @@ export function polylineYAtSide(
     }
   }
   return NaN;
+}
+
+/**
+ * y of a polyline at x approached from one side (at a vertical step the
+ * two sides differ), or its plain value where that side has no segment.
+ */
+export function polylineYFrom(
+  px: number[],
+  py: number[],
+  x: number,
+  side: "left" | "right",
+): number {
+  const y = polylineYAtSide(px, py, x, side);
+  return Number.isFinite(y) ? y : getYAtX(px, py, x);
 }
 
 /**

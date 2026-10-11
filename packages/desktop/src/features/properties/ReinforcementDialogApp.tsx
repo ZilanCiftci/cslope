@@ -10,6 +10,7 @@ import {
 import { useAppStore } from "../../store/app-store";
 import type {
   LineLoadRow,
+  ModelOrientation,
   ParameterDef,
   ReinforcementRow,
   ReinforcementType,
@@ -25,6 +26,9 @@ interface LoadsStatePayload {
   lineLoads: LineLoadRow[];
   reinforcements?: ReinforcementRow[];
   parameters?: ParameterDef[];
+  /** From the main window: where a new element is placed. */
+  coordinates?: [number, number][];
+  orientation?: ModelOrientation;
 }
 
 const TYPES = Object.keys(REINFORCEMENT_TYPE_LABELS) as ReinforcementType[];
@@ -90,6 +94,8 @@ export function ReinforcementDialogApp() {
         // The UDL and line-load windows send no reinforcement.
         ...(Array.isArray(next.reinforcements) ? { reinforcements: next.reinforcements } : {}),
         ...(Array.isArray(next.parameters) ? { parameters: next.parameters } : {}),
+        ...(Array.isArray(next.coordinates) ? { coordinates: next.coordinates } : {}),
+        ...(next.orientation === "ltr" || next.orientation === "rtl" ? { orientation: next.orientation } : {}),
       });
       setIsHydrated(true);
     };

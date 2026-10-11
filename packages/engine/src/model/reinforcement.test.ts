@@ -7,6 +7,7 @@ import { describe, it, expect } from "vitest";
 import { layered, mc, runVerification } from "../verification/cases";
 import { FHWA_PULLOUT_TABLES } from "../verification/pullout-tables";
 import { buildSlope } from "./build-slope";
+import { Material } from "../types/material";
 import { buildEnvelope, envelopeAt, pulloutBeyond } from "./reinforcement";
 import type { Reinforcement } from "../types/reinforcement";
 import type { SlopeDefinition } from "../types/slope-definition";
@@ -61,6 +62,16 @@ describe("Reinforcement on a rigid block", () => {
     const exact = (CL + W * Math.cos(PSI) * TAN) / (W * Math.sin(PSI) - 100);
     for (const [m, o, digits] of methods) {
       expect(runVerification(block([anchor({ direction: "tangent" })]), m, o).fos!).toBeCloseTo(exact, digits);
+    }
+  });
+
+  it("a passive force larger than the driving moment at F = 1 still gives F = (R + T) / D", () => {
+    // Tangent, passive: F·W sin ψ − T = cL + W cos ψ tan φ.
+    const T = 1500;
+    const exact = (CL + W * Math.cos(PSI) * TAN + T) / (W * Math.sin(PSI));
+    for (const [m, o, digits] of methods) {
+      const def = block([anchor({ tensileCapacity: T, direction: "tangent", application: "passive" })]);
+      expect(runVerification(def, m, o).fos!).toBeCloseTo(exact, digits);
     }
   });
 
@@ -124,6 +135,16 @@ describe("Capacity envelope", () => {
     // 5 m of soil above the line: σ′v = 100 kPa, r = 2·100·tan 20°.
     const env = buildEnvelope(slope, { ...line, tensileCapacity: 1e6, pullout: { kind: "interface", adhesion: 0, frictionAngle: 20 } });
     expect(pulloutBeyond(env, 6)).toBeCloseTo(2 * 100 * Math.tan((20 * Math.PI) / 180) * 4, 6);
+  });
+
+  it("follows changes of the materials (σ′v)", () => {
+    const def = layered([[0, 10], [10, 10], [20, 0], [30, 0]], -10, [{ name: "S", topY: null, model: mc(0, 30, 20) }]);
+    const s2 = buildSlope(def);
+    s2.setReinforcements([{ ...line, tensileCapacity: 1e6, pullout: { kind: "interface", adhesion: 0, frictionAngle: 20 } }]);
+    const before = pulloutBeyond(s2.reinforcementEnvelopes[0], 6);
+    // Half the unit weight: half the overburden and pullout.
+    s2.assignMaterial([5, 5], new Material({ name: "Light", unitWeight: 10, frictionAngle: 30, cohesion: 0 }));
+    expect(pulloutBeyond(s2.reinforcementEnvelopes[0], 6)).toBeCloseTo(before / 2, 6);
   });
 
   it("rejects invalid input", () => {

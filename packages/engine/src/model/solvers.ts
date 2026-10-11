@@ -205,6 +205,7 @@ function solveFOSGenericMoment(
     for (let iter = 0; iter < maxIters; iter++) {
       pushing = 0;
       resisting = 0;
+      let passiveMoment = 0;
       let eLeft = 0;
       let xLeft = 0;
 
@@ -266,17 +267,23 @@ function solveFOSGenericMoment(
         resisting += res;
 
         // On a non-circular surface the normal force has a moment too.
+        // Passive reinforcement is resistance: its moment is collected
+        // unscaled and taken off the driving side below.
         pushing +=
-          W * dx +
+          (W - p.passiveV[i] * kP) * dx +
           p.extraMoments[i] +
           p.activeM[i] +
-          p.passiveM[i] * kP +
           N * p.normalArms[i];
+        passiveMoment += p.passiveV[i] * dx + p.passiveM[i];
         nCurrent[i] = N;
         eLeft = eRight;
         xLeft = xRight;
       }
 
+      // F = R / (D + P/F)  ⇔  F = (R − P) / D, with P (< 0) the passive
+      // moment: no division by a driving moment the passive force could
+      // make vanish.
+      resisting -= passiveMoment;
       if (pushing <= 0) return [null, pushing, resisting, nCurrent, false];
 
       fos = resisting / pushing;
@@ -332,6 +339,7 @@ function solveFOSGenericForceCircular(
     for (let iter = 0; iter < maxIters; iter++) {
       pushing = 0;
       resisting = 0;
+      let passiveForce = 0;
       let eLeft = 0;
       let xLeft = 0;
 
@@ -388,12 +396,15 @@ function solveFOSGenericForceCircular(
         }
         resisting += res;
 
-        pushing += N * sinA + H;
+        pushing += N * sinA + H - p.passiveH[i] * kP;
+        passiveForce += p.passiveH[i];
         nCurrent[i] = N;
         eLeft = eRight;
         xLeft = xRight;
       }
 
+      // Passive horizontal force (< 0) on the resisting side, as above.
+      resisting -= passiveForce;
       if (pushing <= 0) return [null, pushing, resisting, nCurrent, false];
 
       fos = resisting / pushing;
@@ -451,6 +462,8 @@ export function analyseOrdinary(_slope: Slope, slices: Slice[]): number | null {
     const rp = s.reinforcementPassive;
     const W = sliceVerticalLoad(s) + (ra?.[0] ?? 0);
     const rMoment = ra?.[2] ?? 0;
+    // A horizontal force (+x, sliding direction) lifts the slice off its base.
+    const hNormal = (ra?.[1] ?? 0) * Math.sin(s.alpha);
     if (rp && meanArm > 1e-9) {
       resisting -= (rp[0] * s.dx + rp[2]) / meanArm;
     }
@@ -458,14 +471,14 @@ export function analyseOrdinary(_slope: Slope, slices: Slice[]): number | null {
     if (s.isCombined) {
       const fd =
         s.cohesion * s.baseLength +
-        Math.max(0, W * Math.cos(s.alpha) - s.U * s.baseLength) *
+        Math.max(0, W * Math.cos(s.alpha) - hNormal - s.U * s.baseLength) *
           Math.tan(s.phi);
       const fu = s.cohesionUndrained * s.baseLength;
       resisting += Math.min(fd, fu);
     } else {
       resisting +=
         s.cohesion * s.baseLength +
-        Math.max(0, W * Math.cos(s.alpha) - s.U * s.baseLength) *
+        Math.max(0, W * Math.cos(s.alpha) - hNormal - s.U * s.baseLength) *
           Math.tan(s.phi);
     }
 
@@ -765,13 +778,15 @@ export function analyseMorgensternPrice(
       ([lambda, fsMoment, fsForce]) =>
         [lambda, fsMoment, fsForce] as [number, number, number],
     );
-    let [lambdaNew] = extrapolateLambda(lffTriplets);
-    const [, fsExtrap] = extrapolateLambda(lffTriplets);
+    let [lambdaNew, fsExtrap] = extrapolateLambda(lffTriplets);
 
-    // Limit step size
+    // Limit step size; the extrapolated FOS belongs to the unlimited λ,
+    // so a limited step starts from the last moment FOS instead.
     if (Math.abs(lambdaNew - prevLambda) > 0.3) {
       lambdaNew = lambdaNew > prevLambda ? prevLambda + 0.3 : prevLambda - 0.3;
+      fsExtrap = FSm;
     }
+    if (!(fsExtrap > 0)) fsExtrap = FSm;
 
     // Ensure unique lambda
     let nudgeCount = 0;

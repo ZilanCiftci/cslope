@@ -3,6 +3,11 @@ import type { ReinforcementRow } from "../../store/types";
 
 export const REINFORCEMENT_COLOR = "#8e44ad";
 
+/** Label of a reinforcement force: kN/m, "/F" when divided by the FOS. */
+export function formatReinforcementForce(f: Pick<ReinforcementForce, "force" | "passive">): string {
+  return `${f.force.toFixed(f.force >= 100 ? 0 : 1)} kN/m${f.passive ? " /F" : ""}`;
+}
+
 /** Part of an element that develops pullout, as fractions [from, to] of its length. */
 export function bondedSpan(r: ReinforcementRow): [number, number] | null {
   if (r.pullout === "none") return null;
@@ -114,8 +119,7 @@ export function drawReinforcementForces(
     ctx.fill();
     ctx.textAlign = ux >= 0 ? "left" : "right";
     ctx.textBaseline = "middle";
-    const label = `${f.force.toFixed(f.force >= 100 ? 0 : 1)} kN/m${f.passive ? " /F" : ""}`;
-    ctx.fillText(label, ex + (ux >= 0 ? 4 : -4) * zoom, ey);
+    ctx.fillText(formatReinforcementForce(f), ex + (ux >= 0 ? 4 : -4) * zoom, ey);
   }
   ctx.restore();
 }

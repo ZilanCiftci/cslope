@@ -17,7 +17,7 @@ import {
   isPointInPolygon,
 } from "../math/index";
 import type { Slope } from "./slope";
-import { polylineYAtSide } from "./geometry-ops";
+import { polylineYFrom } from "./geometry-ops";
 import { polylineCrossingsX, polylineYAt, type Pt } from "./surface";
 import { applyReinforcement } from "./reinforcement";
 
@@ -292,14 +292,8 @@ function waterAtSlice(
   return { yMean: wyMid, h };
 }
 
-/**
- * y of a line at x, approached from one side (at a vertical step the two
- * sides differ); the plain value where the side has no segment.
- */
-function lineYFrom(line: { x: number[]; y: number[] }, x: number, side: "left" | "right"): number {
-  const y = polylineYAtSide(line.x, line.y, x, side);
-  return Number.isFinite(y) ? y : getYAtX(line.x, line.y, x);
-}
+const lineYFrom = (line: { x: number[]; y: number[] }, x: number, side: "left" | "right") =>
+  polylineYFrom(line.x, line.y, x, side);
 
 // ── getSlices ─────────────────────────────────────────────────────
 
@@ -490,10 +484,7 @@ export function getSlices(
   // Surface y at each slice edge, taken from the slice's own side: at a
   // vertical face the averaged value would put the top below the base and
   // the slice next to the face would be dropped.
-  const surfaceYFrom = (x: number, side: "left" | "right") => {
-    const y = polylineYAtSide(surfXY.x, surfXY.y, x, side);
-    return Number.isFinite(y) ? y : getYAtX(surfXY.x, surfXY.y, x);
-  };
+  const surfaceYFrom = (x: number, side: "left" | "right") => lineYFrom(surfXY, x, side);
   const yTopsL = slicesX.slice(0, -1).map((x) => surfaceYFrom(x, "right"));
   const yTopsR = slicesX.slice(1).map((x) => surfaceYFrom(x, "left"));
 

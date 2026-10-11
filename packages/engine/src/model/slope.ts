@@ -487,6 +487,7 @@ export class Slope {
         material,
       );
     });
+    this._reinforcementEnvelopes = null; // σ′v depends on the materials
   }
 
   /** Split by a boundary polyline; returns true when any piece was split. */
@@ -512,6 +513,7 @@ export class Slope {
       }
     }
     this._materialGeometries = newGeometries;
+    this._reinforcementEnvelopes = null; // σ′v depends on the materials
     return changed;
   }
 
@@ -535,6 +537,7 @@ export class Slope {
     for (const mg of this._materialGeometries) {
       if (isPointInPolygon(coord[0], coord[1], mg.px, mg.py)) {
         mg.material = material;
+        this._reinforcementEnvelopes = null; // σ′v depends on the materials
         return;
       }
     }

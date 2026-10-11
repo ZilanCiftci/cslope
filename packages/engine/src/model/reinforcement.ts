@@ -185,6 +185,8 @@ export function applyReinforcement(
   if (elements.length === 0 || slices.length === 0) return [];
   const envelopes = slope.reinforcementEnvelopes;
   const forces: ReinforcementForce[] = [];
+  // A crossing at a slice edge lies on both slices' bases: counted once.
+  const seen = elements.map(() => [] as [number, number][]);
   for (let i = 0; i < slices.length; i++) {
     const s = slices[i];
     const bx0 = s.xLeft;
@@ -196,7 +198,6 @@ export function applyReinforcement(
     // Direction of movement along the base (towards +x).
     const tx = bdx / blen;
     const ty = bdy / blen;
-    const lastSlice = i === slices.length - 1;
     for (let k = 0; k < elements.length; k++) {
       const r = elements[k];
       const env = envelopes[k];
@@ -212,9 +213,11 @@ export function applyReinforcement(
       const qy = r.y1 - by0;
       const u = (qx * ey - qy * ex) / denom;
       const t = (qx * bdy - qy * bdx) / denom;
-      if (u < 0 || u > 1 || (u === 1 && !lastSlice) || t < 0 || t > 1) continue;
+      if (u < 0 || u > 1 || t < 0 || t > 1) continue;
       const px = bx0 + u * bdx;
       const py = by0 + u * bdy;
+      if (seen[k].some(([sx, sy]) => Math.abs(sx - px) < 1e-9 && Math.abs(sy - py) < 1e-9)) continue;
+      seen[k].push([px, py]);
       // Stable side: +a points into the sliding mass when it lies above
       // (to the left of) the base direction.
       const into = tx * ay - ty * ax > 0;

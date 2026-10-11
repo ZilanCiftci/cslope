@@ -46,6 +46,8 @@ interface LoadsStatePayload {
   udls: UdlRow[];
   lineLoads: LineLoadRow[];
   reinforcements?: ReinforcementRow[];
+  coordinates?: [number, number][];
+  orientation?: "ltr" | "rtl";
   parameters?: ParameterDef[];
 }
 

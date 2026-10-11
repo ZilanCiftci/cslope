@@ -9,7 +9,7 @@
 
 import { getYAtX } from "../math/index";
 import type { Slope } from "./slope";
-import { polylineYAtSide } from "./geometry-ops";
+import { polylineYFrom } from "./geometry-ops";
 
 export type Pt = [number, number];
 
@@ -135,10 +135,7 @@ export function fitPolylineToGround(
   // ground only below the lower one, and on it anywhere on the face.
   const sides = (x: number): [number, number] => {
     const xc = Math.min(xMax, Math.max(xMin, x));
-    const l = polylineYAtSide(surf.x, surf.y, xc, "left");
-    const r = polylineYAtSide(surf.x, surf.y, xc, "right");
-    const g = ground(x);
-    return [Number.isFinite(l) ? l : g, Number.isFinite(r) ? r : g];
+    return [polylineYFrom(surf.x, surf.y, xc, "left"), polylineYFrom(surf.x, surf.y, xc, "right")];
   };
   const below = (p: Pt) => p[1] < Math.min(...sides(p[0])) - 1e-9;
   const onGround = (p: Pt) => {
