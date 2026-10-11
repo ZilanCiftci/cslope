@@ -29,7 +29,12 @@ export type ReinforcementApplication = "active" | "passive";
  *   bearing on both faces of a sheet, with σ′v the effective vertical
  *   stress at the element (the weight of the soil column above it less the
  *   pore pressure) and Rc the coverage ratio (1 for a continuous sheet,
- *   strip width / spacing for strips; FHWA's F*·α·σ′v·C·Rc);
+ *   strip width / spacing for strips; FHWA's F*·α·σ′v·C·Rc). Rc only sets
+ *   the width of soil contact: the tensile and end capacities are per
+ *   element (per strip), so they are not multiplied by it. Slide2's
+ *   geosynthetic "coverage" A scales all strengths given per metre of
+ *   material width (T·A, (C + 2·L·τ)·A); there enter the tensile and end
+ *   capacities × A with spacing 1 (per metre of slope), and coverage A;
  * - "development": the tensile capacity develops linearly over the given
  *   length from each end (0: that end is fully anchored).
  */
@@ -45,7 +50,11 @@ export interface Reinforcement {
   /** End 2 (embedded end). */
   x2: number;
   y2: number;
-  /** Tensile capacity per element (kN), or per metre with spacing 1. */
+  /**
+   * Tensile capacity per element (kN), or per metre with spacing 1. Per
+   * element means per strip or bar; a sheet with partial coverage (Slide2
+   * coverage A) is entered as T·A per metre with spacing 1.
+   */
   tensileCapacity: number;
   /** Out-of-plane spacing (m); all capacities are divided by it. Default 1. */
   spacing?: number;

@@ -178,7 +178,11 @@ export function ReinforcementDialogApp() {
       }),
     ),
     {
-      header: <Label>T (kN)</Label>,
+      header: (
+        <Label title="Tensile capacity per element (strip, bar), kN; per metre of slope it is T / S. A geosynthetic sheet with partial coverage A: enter T × A per metre with S = 1.">
+          T (kN)
+        </Label>
+      ),
       renderCell: (row) => (
         <NumberCell
           value={row.tensileCapacity}
@@ -360,7 +364,7 @@ export function ReinforcementDialogApp() {
         <h2 className="text-[12px] font-semibold">Reinforcement</h2>
         <p className="text-[10px]" style={{ color: "var(--color-vsc-text-muted)" }}>
           End 1 is the head (at the face), end 2 the embedded end. Capacities per element; forces per metre are
-          capacity / spacing.
+          capacity / spacing (a geosynthetic sheet with S = 1: per metre of slope; partial coverage A: T × A).
         </p>
       </div>
       <div className="flex-1 overflow-y-auto pr-1">

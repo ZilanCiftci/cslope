@@ -7,6 +7,7 @@ import { analyseReliability } from "./reliability";
 import { fitPolylineToGround } from "./surface";
 import { Slope } from "./slope";
 import { getSlices } from "./slices";
+import { buildEnvelope, envelopeAt } from "./reinforcement";
 import { Material } from "../types/index";
 import type { SlopeDefinition } from "../types/slope-definition";
 
@@ -144,5 +145,30 @@ describe("water tables that do not span the slip surface", () => {
     const beyond = slices.filter((s) => s.x > 30 && s.yBottom < -3);
     expect(beyond.length).toBeGreaterThan(0);
     expect(beyond.every((s) => s.U > 0)).toBe(true);
+  });
+});
+
+describe("reinforcement coverage", () => {
+  it("scales the interface pullout but not the per-element capacities", () => {
+    // Tensile and end capacities are per element (strip); the coverage
+    // Rc = strip width / spacing only sets the soil contact width.
+    const slope = buildSlope({
+      coordinates: [[0, -10], [0, 0], [20, 0], [30, -10]],
+      materials: [{ name: "S", unitWeight: 20, frictionAngle: 30, cohesion: 0 }],
+    });
+    const element = (coverage: number) => ({
+      x1: 2, y1: -3, x2: 12, y2: -3, tensileCapacity: 1e6, spacing: 1.5, end1Capacity: 40, end2Capacity: 0,
+      pullout: { kind: "interface" as const, adhesion: 0, frictionAngle: 25, coverage },
+    });
+    const full = buildEnvelope(slope, element(1));
+    const strip = buildEnvelope(slope, element(0.2));
+    expect(strip.tensile).toBe(full.tensile);
+    expect(strip.end1).toBe(full.end1);
+    const total = (e: typeof full) => e.fromEnd1[e.fromEnd1.length - 1];
+    expect(total(strip)).toBeCloseTo(0.2 * total(full), 9);
+    // Pullout per element: 2·σ′v·tan δ·Rc·S per metre of element.
+    expect(total(full)).toBeCloseTo(2 * 20 * 3 * Math.tan((25 * Math.PI) / 180) * 1.5 * 10, 6);
+    // Midway the pullout behind (no end-2 anchorage) governs.
+    expect(envelopeAt(strip, 5)).toBeCloseTo(0.5 * total(strip), 6);
   });
 });
