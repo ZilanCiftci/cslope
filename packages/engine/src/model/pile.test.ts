@@ -26,6 +26,19 @@ describe("Ito & Matsui pile force", () => {
     expect(f.governs).toBe("soil");
   });
 
+  it("loads the pile only from its head down, with design strength", () => {
+    const slope = buildSlope(layered(ground, -10, [{ name: "S", topY: null, model: mc(10, 20, 20) }]));
+    const [A1, A2] = itoMatsuiCoefficients(1.6, 0.8, 20);
+    // Head 2 m below the ground, slip surface 5 m deep.
+    const buried: Pile = { x1: 5, y1: 8, x2: 5, y2: -10, diameter: 0.8, spacing: 2.4 };
+    const expected = 10 * A1 * 3 + (20 * A2 * (25 - 4)) / 2;
+    expect(pileForce(slope, buried, 5, 5).perPile).toBeCloseTo(expected, 1);
+    // Partial factors reduce c and tan φ.
+    const full = pileForce(slope, { ...buried, y1: 10 }, 5, 5).perPile;
+    slope.updateAnalysisOptions({ partialFactors: { cu: 1.5, cohesion: 1.3, tanPhi: 1.3, variableLoad: 1.3 } });
+    expect(pileForce(slope, { ...buried, y1: 10 }, 5, 5).perPile).toBeLessThan(full * 0.85);
+  });
+
   it("the φ = 0 solution is a lower bound (no dip at small φ)", () => {
     const [a0, b0] = itoMatsuiCoefficients(1.6, 0.8, 0);
     for (const phi of [1, 2, 5, 10]) {

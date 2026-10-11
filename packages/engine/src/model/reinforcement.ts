@@ -12,7 +12,7 @@
  * Forces are per metre of slope: capacities are divided by the spacing.
  */
 
-import type { Slice } from "../types/index";
+import type { Material, Slice } from "../types/index";
 import { resolveStrength, resolveUnitWeight } from "../types/index";
 import { WATER_UNIT_WEIGHT } from "../types/constants";
 import type { Pile, Reinforcement, ReinforcementForce } from "../types/reinforcement";
@@ -43,33 +43,40 @@ export interface ReinforcementEnvelope {
  * between the ground and the point (γsat below a material's water line)
  * less the pore pressure there.
  */
+function materialAt(slope: Slope, x: number, y: number): Material | null {
+  return slope.materialGeometries.find((g) => isPointInPolygon(x, y, g.px, g.py))?.material ?? null;
+}
+
+/** Elevation of a material's water line at x (−∞ without one). */
+function waterLineAt(slope: Slope, m: Material | null, x: number): number {
+  const line = m ? slope.getWaterLineForMaterial(m) : null;
+  if (!line) return -Infinity;
+  const wy = getYAtX(line.x, line.y, x);
+  return Number.isFinite(wy) ? wy : -Infinity;
+}
+
+/** Unit weight at a point, γsat below the material's water line (as the slices weigh it). */
+function unitWeightAt(slope: Slope, m: Material, x: number, y: number): number {
+  const gammaSat = m.model.unitWeightSat;
+  if (gammaSat !== undefined && y < waterLineAt(slope, m, x)) return gammaSat;
+  return resolveUnitWeight(m.model, m.unitWeight, x, y);
+}
+
 export function effectiveVerticalStress(slope: Slope, x: number, y: number): number {
   const surf = slope.surfaceLineXY;
   if (!surf) return 0;
   const yGround = getYAtX(surf.x, surf.y, x);
   if (!Number.isFinite(yGround) || y >= yGround) return 0;
-  const materialAt = (yy: number) =>
-    slope.materialGeometries.find((g) => isPointInPolygon(x, yy, g.px, g.py))?.material ?? null;
-  const waterAt = (m: ReturnType<typeof materialAt>) => {
-    const line = m ? slope.getWaterLineForMaterial(m) : null;
-    if (!line) return -Infinity;
-    const wy = getYAtX(line.x, line.y, x);
-    return Number.isFinite(wy) ? wy : -Infinity;
-  };
   const depth = yGround - y;
   const n = Math.min(100, Math.max(4, Math.ceil(depth / 0.25)));
   const dz = depth / n;
   let sigma = 0;
   for (let k = 0; k < n; k++) {
     const yy = yGround - (k + 0.5) * dz;
-    const m = materialAt(yy);
-    if (!m) continue;
-    let gamma = resolveUnitWeight(m.model, m.unitWeight, x, yy);
-    const gammaSat = m.model.unitWeightSat;
-    if (gammaSat !== undefined && yy < waterAt(m)) gamma = gammaSat;
-    sigma += gamma * dz;
+    const m = materialAt(slope, x, yy);
+    if (m) sigma += unitWeightAt(slope, m, x, yy) * dz;
   }
-  const u = Math.max(0, waterAt(materialAt(y)) - y) * WATER_UNIT_WEIGHT;
+  const u = Math.max(0, waterLineAt(slope, materialAt(slope, x, y), x) - y) * WATER_UNIT_WEIGHT;
   return Math.max(0, sigma - u);
 }
 
@@ -295,9 +302,10 @@ export function applyReinforcement(
   });
 
   // Piles push back against the movement, tilted by their angle.
+  const profiles = slope.piles.length > 0 ? slope.pileProfiles : [];
   slope.piles.forEach((p, k) => {
     for (const { slice, px, py } of crossings(slices, p.x1, p.y1, p.x2, p.y2)) {
-      const magnitude = pileForce(slope, p, px, py).perMetre;
+      const magnitude = pileForce(slope, p, px, py, profiles[k]).perMetre;
       if (!(magnitude > 0)) continue;
       const a = ((p.angle ?? 0) * Math.PI) / 180;
       const force: ReinforcementForce = {
@@ -341,6 +349,67 @@ export function itoMatsuiCoefficients(D1: number, D: number, phiDeg: number): [n
 }
 
 /**
+ * Ito & Matsui pressure on a vertical pile, integrated down from its head
+ * (or the ground, if lower): at depths z[k] below the ground, the force
+ * F[k] = ∫p dz and the moment Q[k] = ∫p·z dz per pile. Strength as in the
+ * analysis (design values with partial factors), γ as the slices weigh it.
+ */
+export interface PileProfile {
+  z: Float64Array;
+  F: Float64Array;
+  Q: Float64Array;
+}
+
+const PROFILE_STEP = 0.05;
+
+export function buildPileProfile(slope: Slope, p: Pile): PileProfile | null {
+  if (p.force !== undefined || p.diameter === undefined) return null;
+  const surf = slope.surfaceLineXY;
+  const x = p.x1;
+  const yGround = surf ? getYAtX(surf.x, surf.y, x) : NaN;
+  if (!Number.isFinite(yGround)) return null;
+  const zTop = Math.max(0, yGround - Math.max(p.y1, p.y2));
+  const zTip = Math.max(zTop, yGround - Math.min(p.y1, p.y2));
+  const D = p.diameter;
+  const D1 = (p.spacing ?? 1) - D;
+  const f = slope.partialFactors;
+  const n = Math.max(1, Math.ceil((zTip - zTop) / PROFILE_STEP));
+  const dz = (zTip - zTop) / n;
+  const z = new Float64Array(n + 1);
+  const F = new Float64Array(n + 1);
+  const Q = new Float64Array(n + 1);
+  z[0] = zTop;
+  for (let k = 0; k < n; k++) {
+    const zm = zTop + (k + 0.5) * dz;
+    const yy = yGround - zm;
+    const m = materialAt(slope, x, yy);
+    let pz = 0;
+    if (m) {
+      const st = resolveStrength(m.model, { yBottom: yy, x, yGround, alpha: 0 });
+      // High-strength or bedrock: no soil to squeeze between the piles.
+      if (Number.isFinite(st.cohesion) && !st.impenetrable) {
+        let c = st.cohesion;
+        let tanPhi = Math.tan((st.frictionAngle * Math.PI) / 180);
+        if (f) {
+          const kind = m.model.kind;
+          const undrained =
+            kind === "undrained" || kind === "s-f-depth" || kind === "s-f-datum" || kind === "lime-cement-columns" ||
+            (st.frictionAngle === 0 && !st.isCombined);
+          c /= undrained ? f.cu : f.cohesion;
+          tanPhi /= f.tanPhi;
+        }
+        const [A1, A2] = itoMatsuiCoefficients(D1, D, (Math.atan(tanPhi) * 180) / Math.PI);
+        pz = c * A1 + unitWeightAt(slope, m, x, yy) * zm * A2;
+      }
+    }
+    z[k + 1] = zTop + (k + 1) * dz;
+    F[k + 1] = F[k] + pz * dz;
+    Q[k + 1] = Q[k] + pz * zm * dz;
+  }
+  return { z, F, Q };
+}
+
+/**
  * Force of a pile where the slip surface crosses it at (x, y): per pile
  * and per metre of slope, and what governs it.
  */
@@ -349,39 +418,34 @@ export function pileForce(
   p: Pile,
   x: number,
   y: number,
+  profile: PileProfile | null = buildPileProfile(slope, p),
 ): { perPile: number; perMetre: number; governs: "given" | "soil" | "shear" | "bending" } {
   const spacing = p.spacing ?? 1;
   const surf = slope.surfaceLineXY;
   const yGround = surf ? getYAtX(surf.x, surf.y, x) : NaN;
-  const depth = Number.isFinite(yGround) ? Math.max(0, yGround - y) : 0;
+  const zf = Number.isFinite(yGround) ? Math.max(0, yGround - y) : 0;
+  // Loaded from the pile head (or the ground, if lower) to the crossing.
+  const zTop = Number.isFinite(yGround) ? Math.max(0, yGround - Math.max(p.y1, p.y2)) : 0;
   let perPile: number;
   let governs: "given" | "soil" | "shear" | "bending";
   // Arm of the soil pressure above the slip surface, for the bending limit.
-  let arm = depth / 3;
-  if (p.force !== undefined) {
-    perPile = p.force;
+  let arm = Math.max(0, zf - zTop) / 3;
+  if (p.force !== undefined || !profile) {
+    perPile = p.force ?? 0;
     governs = "given";
   } else {
-    // Ito & Matsui: integrate p(z) from the ground to the slip surface,
-    // with each layer's c, φ and γ (γ·z with the layer's γ, as the theory
-    // and Slide2 do).
-    const D = p.diameter!;
-    const D1 = spacing - D;
-    const n = Math.min(400, Math.max(20, Math.ceil(depth / 0.05)));
-    const dz = depth / n;
+    const { z, F, Q } = profile;
+    const last = z.length - 1;
     let force = 0;
     let moment = 0;
-    for (let k = 0; k < n && depth > 0; k++) {
-      const z = (k + 0.5) * dz;
-      const yy = yGround - z;
-      const m = slope.materialGeometries.find((g) => isPointInPolygon(x, yy, g.px, g.py))?.material;
-      if (!m) continue;
-      const st = resolveStrength(m.model, { yBottom: yy, x, yGround, alpha: 0 });
-      if (!Number.isFinite(st.cohesion)) continue; // high strength: no soil to push
-      const [A1, A2] = itoMatsuiCoefficients(D1, D, st.frictionAngle);
-      const pz = st.cohesion * A1 + resolveUnitWeight(m.model, m.unitWeight, x, yy) * z * A2;
-      force += pz * dz;
-      moment += pz * dz * (depth - z);
+    if (zf > z[0]) {
+      let k = 1;
+      while (k < last && z[k] < zf) k++;
+      const span = z[k] - z[k - 1];
+      const t = span > 0 ? Math.min(1, (zf - z[k - 1]) / span) : 1;
+      force = F[k - 1] + t * (F[k] - F[k - 1]);
+      // ∫p·(zf − z) dz about the slip surface.
+      moment = zf * force - (Q[k - 1] + t * (Q[k] - Q[k - 1]));
     }
     perPile = force;
     governs = "soil";

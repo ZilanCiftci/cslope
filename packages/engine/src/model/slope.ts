@@ -37,7 +37,7 @@ import {
   createGeometryWithMaterial,
 } from "./geometry-ops";
 import type { Pile, Reinforcement } from "../types/reinforcement";
-import { buildEnvelope, type ReinforcementEnvelope } from "./reinforcement";
+import { buildEnvelope, buildPileProfile, type PileProfile, type ReinforcementEnvelope } from "./reinforcement";
 
 // ── Types used internally ─────────────────────────────────────────
 
@@ -113,6 +113,7 @@ export class Slope {
   private _reinforcements: Reinforcement[] = [];
   private _reinforcementEnvelopes: ReinforcementEnvelope[] | null = null;
   private _piles: Pile[] = [];
+  private _pileProfiles: (PileProfile | null)[] | null = null;
 
   // ── Analysis options ──────────────────────────────────────────
   private _slices: number;
@@ -232,6 +233,12 @@ export class Slope {
 
   get piles(): readonly Pile[] {
     return this._piles;
+  }
+
+  /** Ito & Matsui pressure profiles of the piles (built on first use). */
+  get pileProfiles(): readonly (PileProfile | null)[] {
+    this._pileProfiles ??= this._piles.map((p) => buildPileProfile(this, p));
+    return this._pileProfiles;
   }
 
   /** Capacity envelopes of the reinforcement (built on first use). */
@@ -493,6 +500,7 @@ export class Slope {
       );
     });
     this._reinforcementEnvelopes = null; // σ′v depends on the materials
+    this._pileProfiles = null;
   }
 
   /** Split by a boundary polyline; returns true when any piece was split. */
@@ -519,6 +527,7 @@ export class Slope {
     }
     this._materialGeometries = newGeometries;
     this._reinforcementEnvelopes = null; // σ′v depends on the materials
+    this._pileProfiles = null;
     return changed;
   }
 
@@ -543,6 +552,7 @@ export class Slope {
       if (isPointInPolygon(coord[0], coord[1], mg.px, mg.py)) {
         mg.material = material;
         this._reinforcementEnvelopes = null; // σ′v depends on the materials
+        this._pileProfiles = null;
         return;
       }
     }
@@ -1116,8 +1126,10 @@ export class Slope {
 
   private _resetResults(): void {
     this._search = [];
-    // Pullout from the overburden depends on geometry, materials and water.
+    // Pullout from the overburden and the pile pressures depend on geometry,
+    // materials, water and the partial factors.
     this._reinforcementEnvelopes = null;
+    this._pileProfiles = null;
     this._externalYCache.clear();
     // Don't clear water cache here — water table doesn't change with results reset
   }

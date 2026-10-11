@@ -38,6 +38,14 @@ interface LoadsStatePayload {
 
 const TYPES = Object.keys(REINFORCEMENT_TYPE_LABELS) as ReinforcementType[];
 
+/** Why the analysis would refuse a pile row, if it would. */
+function pileProblem(p: PileRow): string | null {
+  if (p.mode !== "ito-matsui") return null;
+  if (Math.abs(p.x2 - p.x1) > 1e-6) return "Ito & Matsui needs a vertical pile (x1 = x2); give the force of an inclined pile.";
+  if (!(p.spacing > p.diameter)) return "Ito & Matsui needs a spacing larger than the diameter; use a given force for a wall.";
+  return null;
+}
+
 /** Number cell: applies finite values (≥ min when given). */
 function NumberCell({
   value,
@@ -225,7 +233,12 @@ export function ReinforcementDialogApp() {
           value={row.type}
           aria-label="Pile type"
           className="w-full text-[11px] py-1"
-          onChange={(e) => updatePile(row.id, { ...pilePreset(e.target.value as PileType) })}
+          onChange={(e) => {
+            // The values entered stay; a wall carries a given force per metre.
+            const type = e.target.value as PileType;
+            const preset = pilePreset(type);
+            updatePile(row.id, type === "sheet-pile" ? { type, mode: "force", spacing: 1 } : { type, application: preset.application });
+          }}
         >
           {(Object.keys(PILE_TYPE_LABELS) as PileType[]).map((t) => (
             <option key={t} value={t}>
@@ -290,6 +303,16 @@ export function ReinforcementDialogApp() {
       header: <Label>Mcap</Label>,
       renderCell: (row) => (
         <NumberCell value={row.momentCapacity} label="Bending capacity per pile (0 = no limit)" min={0} onValue={(v) => updatePile(row.id, { momentCapacity: v })} />
+      ),
+    },
+    {
+      header: <Label>θ (°)</Label>,
+      renderCell: (row) => (
+        <NumberCell
+          value={row.angle}
+          label="Tilt of the pile force above horizontal"
+          onValue={(v) => Math.abs(v) < 90 && updatePile(row.id, { angle: v })}
+        />
       ),
     },
     {
@@ -460,6 +483,14 @@ export function ReinforcementDialogApp() {
             vertical pile and S &gt; D; Vcap/Mcap per pile limit the force (0 = no limit). Forces per metre are force / S.
           </p>
           <SpreadsheetTable rows={piles} columns={pileColumns} getRowKey={(row) => row.id} />
+          {piles.map((p, i) => {
+            const problem = pileProblem(p);
+            return problem ? (
+              <p key={p.id} className="text-[10px] mt-1" style={{ color: "#c62828" }}>
+                P{i + 1}: {problem}
+              </p>
+            ) : null;
+          })}
           <div className="flex items-center gap-2 mt-1">
             <select
               value={newPileType}

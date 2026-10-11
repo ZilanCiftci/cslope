@@ -72,6 +72,9 @@ function formatMaterialCell(
       const k = material.model.kind;
       if (k === "mohr-coulomb" || k === "anisotropic-function")
         return `${f.frictionAngle}\u00b0`;
+      // Lime-cement columns with a drained limit: φ′ of the columns.
+      if (k === "lime-cement-columns" && material.model.columnFrictionAngle !== undefined)
+        return `${material.model.columnFrictionAngle}\u00b0 (col.)`;
       if (k === "undrained" || k === "s-f-depth" || k === "s-f-datum" || k === "lime-cement-columns")
         return "0\u00b0";
       return "-";
@@ -83,7 +86,7 @@ function formatMaterialCell(
       if (m.kind === "mohr-coulomb" || m.kind === "anisotropic-function")
         return `${m.cohesion}`;
       if (m.kind === "undrained") return `${m.undrainedShearStrength}`;
-      if (m.kind === "lime-cement-columns") return `${flatFieldsFromModel(m).cohesion}`;
+      if (m.kind === "lime-cement-columns") return `${f.cohesion}`;
       return "-";
     }
     case "piezometricLine": {
