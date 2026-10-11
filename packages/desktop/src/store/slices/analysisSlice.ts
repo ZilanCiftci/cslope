@@ -87,6 +87,7 @@ export function executeReliability(
     { type: "run-reliability", id: crypto.randomUUID(), slope, options, variables, reliability },
     analysisTimeoutMs(options) * runs,
     onProgress,
+    1, // reports real progress, up to done
   );
 }
 
@@ -112,6 +113,7 @@ function runInWorker<T>(
   request: WorkerMessage,
   timeoutMs: number,
   onProgress?: (progress: number) => void,
+  progressMax = RUN_PROGRESS_MAX,
 ): { promise: Promise<T>; cancel: () => void } {
   let worker: Worker | null = new Worker(
     new URL("../../worker/analysis.worker.ts", import.meta.url),
@@ -158,7 +160,7 @@ function runInWorker<T>(
         stop();
         resolve(msg.result as T);
       } else if (msg.type === "analysis-progress") {
-        onProgress?.(Math.min(RUN_PROGRESS_MAX, Math.max(0, msg.progress)));
+        onProgress?.(Math.min(progressMax, Math.max(0, msg.progress)));
       } else if (msg.type === "analysis-error") {
         stop();
         reject(new Error(msg.error));

@@ -175,7 +175,7 @@ export {
   pileForce,
 } from "./model/reinforcement";
 export type { ReinforcementEnvelope } from "./model/reinforcement";
-export { analyseReliability, normalCdf, lognormalBeta } from "./model/reliability";
+export { analyseReliability, normalCdf, lognormalBeta, reliabilitySurfaceToModelSpace } from "./model/reliability";
 export type {
   RandomVariable,
   ReliabilityOptions,

@@ -20,6 +20,7 @@ import type { Material } from "../types/material";
 import { buildSlope } from "./build-slope";
 import { analyseSlope } from "./solvers";
 import type { Slope } from "./slope";
+import { getDomainX, mirrorPoint, mirrorX, resolveOrientation } from "./canonical";
 
 export interface RandomVariable {
   /** Index of the material in the definition's materials. */
@@ -30,7 +31,7 @@ export interface RandomVariable {
   sd: number;
   /** Default "normal". */
   distribution?: "normal" | "lognormal";
-  /** Truncation of sampled values (Monte Carlo). Default: ≥ 0 for strength and unit weight. */
+  /** Truncation of sampled values (Monte Carlo). Default: ≥ 0 for strength and unit weight, φ < 90°. */
   min?: number;
   max?: number;
 }
@@ -90,6 +91,9 @@ export interface ReliabilityResult {
   /** Evaluations without a FOS. */
   failed: number;
 }
+
+/** Fields that cannot be negative (strengths and unit weights); rates and reference levels can. */
+const NON_NEGATIVE = new Set(["cohesion", "frictionAngle", "undrainedShearStrength", "suRef", "cohesionUndrained", "unitWeight"]);
 
 /** Standard normal cumulative distribution (Abramowitz & Stegun 26.2.17). */
 export function normalCdf(x: number): number {
@@ -246,7 +250,7 @@ export function analyseReliability(
     };
     const terms: TaylorTerm[] = [];
     variables.forEach((v, i) => {
-      if (means[i] - v.sd < 0 && v.field !== "suRefDepth" && v.field !== "yRef") {
+      if (NON_NEGATIVE.has(v.field) && means[i] - v.sd < 0) {
         throw new Error(
           `Mean − σ of ${v.field} (material ${v.material + 1}) is negative; use Monte Carlo, which truncates the samples.`,
         );
@@ -299,8 +303,9 @@ export function analyseReliability(
       lognormal,
       mu: lognormal ? Math.log(mean) - s2 / 2 : mean,
       sigma: lognormal ? Math.sqrt(s2) : v.sd,
-      min: v.min ?? (v.field === "suRefDepth" || v.field === "yRef" ? -Infinity : 0),
-      max: v.max ?? Infinity,
+      min: v.min ?? (NON_NEGATIVE.has(v.field) ? 0 : -Infinity),
+      // φ below 90° (the samples skip the model validation).
+      max: v.max ?? (v.field === "frictionAngle" ? 89.9 : Infinity),
     };
   });
   const samples: number[] = [];
@@ -377,4 +382,23 @@ function applyValues(
     m.model = entry.model;
     m.unitWeight = entry.unitWeight;
   }
+}
+
+/**
+ * The critical surface of a result in model coordinates. `def` is the
+ * model definition whose canonical form was analysed (a right-to-left
+ * model is mirrored back).
+ */
+export function reliabilitySurfaceToModelSpace(surface: CriticalSurface, def: SlopeDefinition): CriticalSurface {
+  if (resolveOrientation(def.orientation, def.coordinates) !== "rtl") return surface;
+  const [xMin, xMax] = getDomainX(def.coordinates);
+  const m = (p: [number, number]) => mirrorPoint(p, xMin, xMax);
+  return {
+    cx: mirrorX(surface.cx, xMin, xMax),
+    cy: surface.cy,
+    radius: surface.radius,
+    lc: m(surface.lc),
+    rc: m(surface.rc),
+    ...(surface.points ? { points: surface.points.map(m) } : {}),
+  };
 }

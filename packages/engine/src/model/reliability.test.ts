@@ -4,7 +4,10 @@
  */
 import { describe, it, expect } from "vitest";
 import { layered, mc, su, VERIFICATION_OPTIONS } from "../verification/cases";
-import { analyseReliability, lognormalBeta, normalCdf } from "./reliability";
+import { analyseReliability, lognormalBeta, normalCdf, reliabilitySurfaceToModelSpace } from "./reliability";
+import { RELIABILITY_CASES } from "../verification/reliability-cases";
+import { runVerification } from "../verification/cases";
+import { toCanonicalSlopeDefinition } from "./canonical";
 import type { RandomVariable } from "./reliability";
 import type { AnalysisOptions } from "../types/analysis";
 
@@ -65,6 +68,28 @@ describe("Taylor series", { timeout: 30_000 }, () => {
     expect(searched.terms![0].fMinus).toBeLessThanOrEqual(fixed.terms![0].fMinus + 1e-9);
   });
 
+  it("right-to-left models: the canonical definition, surface mapped back", () => {
+    const c = RELIABILITY_CASES.find((x) => x.id === "VP28b")!;
+    const def = toCanonicalSlopeDefinition(c.definition);
+    const r = analyseReliability(def, { ...options, slices: 60 }, c.variables, { method: "taylor", search: false });
+    expect(r.fos).toBeCloseTo(runVerification(c.definition, "Bishop", { slices: 60 }).fos!, 9);
+    const s = reliabilitySurfaceToModelSpace(r.surface, def);
+    const given = c.definition.customSearchPlanes![0];
+    expect(s.cx).toBeCloseTo(given.cx, 6);
+    expect(s.radius).toBeCloseTo(given.radius, 6);
+    // On the model's left side (face 30–55, crest 55–60).
+    expect(Math.min(s.lc[0], s.rc[0])).toBeGreaterThan(15);
+    expect(Math.max(s.lc[0], s.rc[0])).toBeLessThan(60);
+  });
+
+  it("rates may be zero or negative", () => {
+    const rising = layered(ground, -10, [{ name: "C", topY: null, model: su(40, 18, 10, 0) }]);
+    const v: RandomVariable[] = [{ material: 0, field: "suRateOfChange", sd: 1 }];
+    const r = analyseReliability(rising, options, v, { method: "taylor", search: false });
+    expect(r.terms![0].fPlus).toBeGreaterThan(r.fos);
+    expect(r.terms![0].fMinus).toBeLessThan(r.fos);
+  });
+
   it("rejects mean − σ below zero and unknown fields", () => {
     expect(() =>
       analyseReliability(clay, options, [{ material: 0, field: "undrainedShearStrength", sd: 50 }], { method: "taylor" }),
@@ -95,6 +120,16 @@ describe("Monte Carlo", { timeout: 30_000 }, () => {
     const c = analyseReliability(clay, options, v, { method: "monte-carlo", samples: 200, seed: 4 });
     expect(a.samples).toEqual(b.samples);
     expect(a.samples).not.toEqual(c.samples);
+  });
+
+  it("does not truncate rates at zero", () => {
+    const rising = layered(ground, -10, [{ name: "C", topY: null, model: su(40, 18, 10, 0) }]);
+    const v: RandomVariable[] = [{ material: 0, field: "suRateOfChange", sd: 1 }];
+    const r = analyseReliability(rising, options, v, { method: "monte-carlo", samples: 400, seed: 2 });
+    // Symmetric about the mean: about half of the samples below F.
+    const below = r.samples!.filter((f) => f < r.fos).length / r.samples!.length;
+    expect(below).toBeGreaterThan(0.4);
+    expect(below).toBeLessThan(0.6);
   });
 
   it("truncates normal samples at zero", () => {

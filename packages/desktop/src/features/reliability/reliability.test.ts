@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import type { ReliabilityResult } from "@cslope/engine";
+import { analyseReliability, analyseSlope, buildSlope, type ReliabilityResult } from "@cslope/engine";
+import { buildSlopeDTOFromModel } from "../../store/helpers";
 import { useAppStore } from "../../store/app-store";
 import { snapshotFromState } from "../../store/slices/analysisSlice";
 import { defaultSd, histogram, listRandomCandidates, reliabilityCsv, toRandomVariables } from "./reliability";
@@ -68,5 +69,30 @@ describe("probabilistic analysis", () => {
     expect(useReliabilityStore.getState()).toMatchObject({ running: false, result: fake, labels: ["c"], error: null });
     await useReliabilityStore.getState().run(model, [v, v], ["c", "c"], { method: "taylor" });
     expect(useReliabilityStore.getState()).toMatchObject({ running: false, result: null, error: "no surface" });
+  });
+
+  it("closing the panel drops the result of its model", async () => {
+    await useReliabilityStore.getState().run(activeModel(), [{ material: 0, field: "cohesion", sd: 1 }], ["c"], { method: "taylor" });
+    useReliabilityStore.getState().setOpen(false);
+    expect(useReliabilityStore.getState()).toMatchObject({ result: null, labels: [], error: null });
+  });
+
+  it("the analysis request is already canonical: right-to-left models give the normal run's FOS", () => {
+    const model = activeModel();
+    const xs = model.coordinates.map((c) => c[0]);
+    const sum = Math.min(...xs) + Math.max(...xs);
+    const rtl = {
+      ...model,
+      orientation: "rtl" as const,
+      coordinates: model.coordinates.map(([x, y]) => [sum - x, y] as [number, number]),
+      analysisLimits: { ...model.analysisLimits!, enabled: false },
+      options: { ...model.options!, iterations: 200, refinedIterations: 100 },
+    };
+    const dto = buildSlopeDTOFromModel(rtl);
+    const slope = buildSlope(dto);
+    slope.updateAnalysisOptions(rtl.options);
+    const fos = analyseSlope(slope)!;
+    const r = analyseReliability(dto, rtl.options, [{ material: 0, field: "cohesion", sd: 0.5 }], { method: "taylor", search: false });
+    expect(r.fos).toBeCloseTo(fos, 6);
   });
 });

@@ -34,7 +34,8 @@ export const useReliabilityStore = create<ReliabilityState>((set, get) => ({
   error: null,
   setOpen: (open) => {
     if (!open) get().cancel();
-    set({ open });
+    // A result belongs to the model snapshot of the panel it was run in.
+    set(open ? { open } : { open, result: null, labels: [], error: null, progress: 0 });
   },
   run: async (model, variables, labels, options) => {
     get().cancel();

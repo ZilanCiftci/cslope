@@ -14,7 +14,7 @@ import type {
 import {
   analyseSlope,
   analyseReliability,
-  toCanonicalSlopeDefinition,
+  reliabilitySurfaceToModelSpace,
   mapAnalysisResultToModelSpace,
   buildSlope,
   oppositeDirectionDefinition,
@@ -99,30 +99,19 @@ self.onmessage = (event: MessageEvent<WorkerMessage>) => {
   }
 };
 
-/** Probabilistic analysis in the model's own sliding direction. */
+/**
+ * Probabilistic analysis in the model's own sliding direction. The request
+ * carries the canonical definition (as for a normal run); the surface is
+ * mapped back to model coordinates.
+ */
 function runReliability(req: ReliabilityRequest): void {
   try {
-    const canonical = toCanonicalSlopeDefinition(req.slope);
-    const result = analyseReliability(canonical, req.options, req.variables, {
+    const result = analyseReliability(req.slope, req.options, req.variables, {
       ...req.reliability,
       onProgress: (progress) =>
         self.postMessage({ type: "analysis-progress", id: req.id, progress } satisfies AnalysisResponse),
     });
-    // The surface back in model coordinates (mirrored for right-to-left).
-    if (canonical.orientation === "rtl") {
-      const xs = req.slope.coordinates.map((c) => c[0]);
-      const sum = Math.min(...xs) + Math.max(...xs);
-      const m = (p: [number, number]): [number, number] => [sum - p[0], p[1]];
-      const s = result.surface;
-      result.surface = {
-        cx: sum - s.cx,
-        cy: s.cy,
-        radius: s.radius,
-        lc: m(s.lc),
-        rc: m(s.rc),
-        ...(s.points ? { points: s.points.map(m) } : {}),
-      };
-    }
+    result.surface = reliabilitySurfaceToModelSpace(result.surface, req.slope);
     self.postMessage({ type: "reliability-complete", id: req.id, result } satisfies AnalysisResponse);
   } catch (err: unknown) {
     self.postMessage({
