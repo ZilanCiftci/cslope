@@ -2,11 +2,13 @@
  * Verification problems with published factors of safety.
  *
  * Problems from the Rocscience Slide2 verification manual ("VP<n>"), the
- * GEO-SLOPE SLOPE/W examples and the original references they cite. The
- * input data were transcribed via the open-source xslope project
- * (github.com/njones61/xslope, docs/verification) and the USGS Scoops3D
- * test inputs, because the manuals themselves could not be downloaded.
- * Check each problem against the manual before relying on it.
+ * GEO-SLOPE SLOPE/W verification manual ("GS<section>") and the original
+ * references they cite. The input data were first transcribed via the
+ * open-source xslope project (github.com/njones61/xslope, docs/verification)
+ * and the USGS Scoops3D test inputs, then checked against the manuals
+ * (Slide2 2022 edition, SLOPE/W October 2022); manual-cases.ts holds the
+ * problems transcribed from the manuals directly. Each published value is
+ * labelled with the source that prints it.
  *
  * Imperial problems without water are entered in their own units (FOS is
  * dimensionless); problems with water are converted to SI because the
@@ -21,9 +23,10 @@ import type { Slope } from "../model/slope";
 import type { SlopeDefinition } from "../types/slope-definition";
 import type { MaterialModel } from "../types/material-models";
 import type { AnalysisMethod, AnalysisOptions } from "../types/analysis";
-import { REINFORCED_CASES } from "./reinforcement-cases";
+import { REINFORCED_CASES, type ReinforcedCaseData } from "./reinforcement-cases";
 import { PILE_CASES } from "./pile-cases";
 import { CORPUS_CASES } from "./corpus-cases";
+import { MANUAL_CASES } from "./manual-cases";
 import { RELIABILITY_CASES, type ReliabilityCaseData, type ReliabilityQuantity } from "./reliability-cases";
 import { analyseReliability } from "../model/reliability";
 
@@ -40,6 +43,11 @@ export interface VerificationCheck {
   tolerance: number;
   options?: Partial<AnalysisOptions>;
   note?: string;
+  /**
+   * Engine change this check depends on: the published value and the input
+   * are right, but the check fails until that change lands.
+   */
+  pending?: string;
 }
 
 export interface VerificationCase {
@@ -181,8 +189,12 @@ export function runVerification(
 const SPENCER = { intersliceFunction: "constant" as const };
 const VERTICAL = { porePressureHead: "vertical" as const };
 const PHREATIC = { porePressureHead: "phreatic-correction" as const };
-/** ACADS 1(b): water-filled crack of depth 2c/(γ√Ka) = 3.814 m. */
-const ACADS_CRACK = { tensionCrackDepth: 3.814, tensionCrackWater: 1 };
+/** ACADS 1(b): water-filled crack, 4 m deep as drawn in Slide2's Fig. 2.1 (2c/(γ√Ka) = 3.814 m). */
+const ACADS_CRACK = { tensionCrackDepth: 4, tensionCrackWater: 1 };
+/** Slide2's optimised non-circular surface (cSlope: circular search, then optimisation). */
+const NONCIRCULAR = { nonCircularOptimization: true };
+/** Duncan & Wright's reference values: Spencer's method, two digits. */
+const DWREF = "Duncan & Wright (reference)";
 
 const bishop = (
   published: number,
@@ -328,7 +340,7 @@ const cannon = (cx: number, cy: number, r: number): SlopeDefinition => ({
   ...circle(cx, cy, r),
 });
 
-// [surface, xc, yc, tangent elevation, SLOPE/W M-P, Slide Bishop (null = not used)]
+// [surface, xc, yc, tangent elevation, SLOPE/W Bishop (GeoStudio 2022 manual §2.22), Slide2 Bishop (Table 35.2; null = not used)]
 const CANNON_SURFACES = [
   ["7A", 320.175, 313.336, 145.347, 2.56, 2.551],
   ["7B", 295.235, 277.589, 156.298, 2.806, 2.82],
@@ -383,6 +395,36 @@ function vp42(extra: Partial<SlopeDefinition>): SlopeDefinition {
   };
 }
 
+/** A generated case (reinforcement, piles, corpus, manuals) as a VerificationCase. */
+function fromCaseData(c: ReinforcedCaseData): VerificationCase {
+  return {
+    id: c.id,
+    title: c.title,
+    reference: c.reference,
+    surface: c.surface,
+    units: c.units ?? "SI",
+    description: c.description,
+    definition: c.definition,
+    notes: c.notes,
+    checks: c.checks.map(([m, published, publishedBy, tolerance, extra]) => {
+      const options = { ...c.options, ...extra?.options } as Partial<AnalysisOptions>;
+      const more = { options, ...(extra?.note ? { note: extra.note } : {}), ...(extra?.pending ? { pending: extra.pending } : {}) };
+      switch (m) {
+        case "Bishop":
+          return bishop(published, publishedBy, tolerance, more);
+        case "Spencer":
+          return spencer(published, publishedBy, tolerance, more);
+        case "MP":
+          return mp(published, publishedBy, tolerance, more);
+        case "JanbuSimplified":
+          return { method: "Janbu", label: "Janbu simplified (uncorrected)", published, publishedBy, tolerance, ...more, options: { ...options, janbuCorrection: false } };
+        case "Janbu":
+          return { method: "Janbu", label: "Janbu corrected (f0)", published, publishedBy, tolerance, ...more, options: { ...options, janbuCorrection: true } };
+      }
+    }),
+  };
+}
+
 export const VERIFICATION_CASES: VerificationCase[] = [
   {
     id: "VP21a",
@@ -423,7 +465,12 @@ export const VERIFICATION_CASES: VerificationCase[] = [
       ],
       circle(101, 359, 278),
     ),
-    checks: [bishop(1.332, "USACE", 0.015)],
+    checks: [
+      bishop(1.332, "Slide2", 0.01),
+      spencer(1.328, "Slide2", 0.01),
+      { method: "Janbu", label: "Janbu corrected (f0)", published: 1.345, publishedBy: "Slide2", tolerance: 0.01, options: { janbuCorrection: true } },
+    ],
+    notes: ["USACE's reference value is 1.33 (two digits); Slide2 GLE 1.327."],
   },
   {
     id: "VP80a",
@@ -433,7 +480,8 @@ export const VERIFICATION_CASES: VerificationCase[] = [
     units: "imperial",
     description: "Embankment over alternating cohesive and frictional layers; circle of radius 87 ft.",
     definition: layered(vp80Ground, 0, vp80Layers, circle(142, 147, 87)),
-    checks: [bishop(2.549, "Duncan & Wright", 0.01)],
+    checks: [bishop(2.549, "Slide2", 0.01), spencer(2.545, "Slide2", 0.01), spencer(2.56, DWREF, 0.015)],
+    notes: ["Duncan & Wright's reference values (Spencer, two digits) are compared with a 1.5 % tolerance. Slide2 GLE 2.550."],
   },
   {
     id: "VP80b",
@@ -443,7 +491,8 @@ export const VERIFICATION_CASES: VerificationCase[] = [
     units: "imperial",
     description: "As VP80a with a deeper circle of radius 102 ft, reaching the weak clay layers.",
     definition: layered(vp80Ground, 0, vp80Layers, circle(142, 147, 102)),
-    checks: [bishop(1.398, "Duncan & Wright", 0.01)],
+    checks: [bishop(1.398, "Slide2", 0.01), spencer(1.359, "Slide2", 0.01), spencer(1.35, DWREF, 0.015)],
+    notes: ["Duncan & Wright's 1.35 is a Spencer value (Slide2: Bishop 1.398, Spencer 1.359, GLE 1.358 on this circle)."],
   },
   {
     id: "EC7",
@@ -516,7 +565,14 @@ export const VERIFICATION_CASES: VerificationCase[] = [
         { point: [60, 5], materialName: "Lower" },
       ],
     },
-    checks: [bishop(0.42, "Slide2", 0.01)],
+    checks: [
+      bishop(0.42, "Slide2", 0.01),
+      spencer(0.414, "Slide2 (non-circular)", 0.025, {
+        options: NONCIRCULAR,
+        pending: "admissibility of optimised non-circular surfaces in the weak layer (VP15)",
+      }),
+    ],
+    notes: ["Non-circular: Slide2 0.414 (random search with optimisation); Greco 0.39, Kim et al. 0.39–0.44. cSlope's optimisation currently reaches 0.27 on surfaces Slide2 would not accept."],
   },
   {
     id: "VP17",
@@ -526,29 +582,12 @@ export const VERIFICATION_CASES: VerificationCase[] = [
     units: "SI",
     description: "Homogeneous 2:1 slope, 5 m high; critical circle search.",
     definition: layered([[0, 5], [5, 5], [15, 10], [25, 10]], 0, [{ name: "Soil", topY: null, model: mc(9.8, 10, 17.64) }]),
-    checks: [bishop(1.344, "Slide2", 0.01)],
+    checks: [
+      bishop(1.344, "Slide2", 0.01),
+      spencer(1.325, "Slide2 (non-circular)", 0.015, { options: NONCIRCULAR }),
+    ],
+    notes: ["Yamagami & Ueta: Bishop 1.348, Spencer 1.339 (non-circular); Greco 1.33."],
   },
-  ...([
-    [0, 0.761],
-    [5, 0.909],
-    [10, 1.045],
-    [15, 1.154],
-  ] as const).map(([cz, published], i): VerificationCase => ({
-    id: `VP84${"abcd"[i]}`,
-    title: `Duncan & Wright fig. 15.9, Su increasing ${cz} psf/ft`,
-    reference: "Duncan & Wright, Soil Strength and Slope Stability, fig. 15.9. Slide2 Verification Problem #84.",
-    surface: "search",
-    units: "imperial",
-    description:
-      cz === 0
-        ? "Granular fill on soft clay with a constant undrained strength of 300 psf; critical circle search."
-        : `Granular fill on soft clay whose undrained strength is 300 psf at the clay surface and increases by ${cz} psf per foot of depth; critical circle search.`,
-    definition: layered([[0, 20], [40, 20], [90, 40], [140, 40]], 0, [
-      { name: "Fill", topY: null, model: mc(0, 35, 125) },
-      { name: "Clay", topY: 20, model: su(300, 100, 20, cz) },
-    ]),
-    checks: [bishop(published, "Duncan & Wright", 0.01)],
-  })),
   {
     id: "VP83a",
     title: "Duncan & Wright fig. 14.20b, Su = 200 + 15·depth",
@@ -560,7 +599,12 @@ export const VERIFICATION_CASES: VerificationCase[] = [
       { name: "Fill", topY: null, model: mc(0, 36, 123) },
       { name: "Clay", topY: 30, model: su(200, 97, 30, 15) },
     ]),
-    checks: [bishop(1.313, "Duncan & Wright", 0.01)],
+    checks: [
+      bishop(1.313, "Slide2", 0.01),
+      spencer(1.3, DWREF, 0.02),
+      spencer(1.262, "Slide2 (non-circular)", 0.015, { options: NONCIRCULAR }),
+    ],
+    notes: ["Duncan & Wright's 1.300 is the mean of 1.276–1.323 for different slice counts (2 % tolerance). Slide2 Spencer 1.285 (circle)."],
   },
   {
     id: "VP83b",
@@ -573,7 +617,12 @@ export const VERIFICATION_CASES: VerificationCase[] = [
       { name: "Fill", topY: null, model: mc(0, 36, 123) },
       { name: "Clay", topY: 30, model: su(300, 97) },
     ]),
-    checks: [bishop(1.335, "Duncan & Wright", 0.01)],
+    checks: [
+      bishop(1.335, "Slide2", 0.01),
+      spencer(1.312, DWREF, 0.02),
+      spencer(1.182, "Slide2 (non-circular)", 0.015, { options: NONCIRCULAR }),
+    ],
+    notes: ["Duncan & Wright's 1.312 is the mean of 1.295–1.328 for different slice counts (2 % tolerance). Slide2 Spencer 1.330 (circle)."],
   },
   {
     id: "VP82",
@@ -591,7 +640,12 @@ export const VERIFICATION_CASES: VerificationCase[] = [
       ],
       { waterTable: { mode: "custom", value: ft([[0, 40], [100, 30], [140, 20], [200, 20]]) } },
     ),
-    checks: [bishop(1.533, "Duncan & Wright", 0.01)],
+    checks: [
+      bishop(1.533, "Slide2", 0.01),
+      spencer(1.535, DWREF, 0.015),
+      spencer(1.534, "Slide2 (non-circular)", 0.015, { options: NONCIRCULAR }),
+    ],
+    notes: ["Duncan & Wright's 1.535 is the mean of 1.528–1.542 for different slice counts. Slide2 Spencer 1.540 (circle)."],
   },
   {
     id: "VP78",
@@ -601,7 +655,11 @@ export const VERIFICATION_CASES: VerificationCase[] = [
     units: "imperial",
     description: "Homogeneous undrained clay slope (φ = 0); critical circle search.",
     definition: layered([[0, 30], [90, 30], [130, 80], [240, 80]], 0, [{ name: "Clay", topY: null, model: mc(1000, 0, 100) }]),
-    checks: [bishop(1.126, "Duncan & Wright", 0.01)],
+    checks: [bishop(1.126, "Slide2", 0.01), spencer(1.124, DWREF, 0.015)],
+    notes: [
+      "Slide2's toe circle; its circle tangent to the foundation base gives Bishop 1.141, Spencer 1.139. VP78-H46.5 and VP78-H60 are the deeper foundations.",
+      "Slide2's optimised non-circular surface gives 0.878 (Spencer); cSlope's optimisation stops at 0.927 (+5.6 %), so it is not a check.",
+    ],
   },
   {
     id: "VP79",
@@ -614,7 +672,8 @@ export const VERIFICATION_CASES: VerificationCase[] = [
       { name: "Fill", topY: null, model: mc(0, 30, 120) },
       { name: "Clay", topY: 20, model: mc(450, 0, 120) },
     ]),
-    checks: [bishop(1.412, "Duncan & Wright", 0.01)],
+    checks: [bishop(1.412, "Slide2", 0.01), spencer(1.4, DWREF, 0.015)],
+    notes: ["Slide2 Spencer 1.400, GLE 1.404 (deep circle tangent to the foundation base)."],
   },
   {
     id: "VP74",
@@ -631,7 +690,15 @@ export const VERIFICATION_CASES: VerificationCase[] = [
         { name: "Clay", topY: 50, model: mc(2500, 0, 140) },
       ],
     ),
-    checks: [bishop(1.228, "Duncan & Wright", 0.01)],
+    checks: [
+      bishop(1.228, "Slide2", 0.01),
+      bishop(1.22, "Duncan & Wright", 0.015),
+      spencer(1.19, "Slide2 (non-circular)", 0.025, { options: NONCIRCULAR }),
+    ],
+    notes: [
+      "Duncan & Wright (Table 74.2): Bishop 1.22, Spencer 1.19, Janbu simplified 1.07, corrected 1.16 (two digits). Slide2 Spencer 1.201 (circle).",
+      "cSlope's optimised non-circular surface is 1.9 % below Slide2's: a search difference (2.5 %).",
+    ],
   },
   {
     id: "VP24",
@@ -647,22 +714,24 @@ export const VERIFICATION_CASES: VerificationCase[] = [
     ]),
     checks: [bishop(1.439, "Slide2", 0.015)],
   },
-  ...CANNON_SURFACES.map(([lab, xc, yc, yt, mpFos, bishopFos]): VerificationCase => ({
+  ...CANNON_SURFACES.map(([lab, xc, yc, yt, slopewFos, slideFos]): VerificationCase => ({
     id: `CD-${lab}`,
     title: `Clarence Cannon Dam, surface ${lab}`,
     reference: "Hassan & Wolff (1999). SLOPE/W verification example 2.22; Slide2 Verification Problem #35.",
     surface: "fixed",
     units: "SI",
-    description: `Six-zone embankment dam on sand over limestone, analysed on the published circle ${lab} (centre ${xc}, ${yc}; tangent elevation ${yt}).`,
+    description: `Six-zone embankment dam on sand over limestone, analysed on the published circle ${lab} (centre ${xc}, ${yc}; tangent elevation ${yt}), Bishop.`,
     definition: cannon(xc, yc, yc - yt),
     checks: [
-      mp(mpFos, "SLOPE/W", 0.005),
-      ...(bishopFos ? [bishop(bishopFos, "Slide2", 0.005)] : []),
+      bishop(slopewFos, "SLOPE/W", 0.01),
+      ...(slideFos ? [bishop(slideFos, "Slide2", 0.005)] : []),
     ],
-    notes:
-      bishopFos === null
+    notes: [
+      "Both programs use Bishop's method here (SLOPE/W §2.22, Slide2 Table 35.2). SLOPE/W's values come from its own model of the dam, with the circles placed by its own digitisation, and differ from Slide2's by up to 0.5 % on the same nominal circle: 1 % tolerance. GeoStudio's manual prints Slide2's values under the heading \"Hassan and Wolff\"; Hassan & Wolff's own factors of safety differ (e.g. 2.753 on 7A).",
+      ...(slideFos === null
         ? ["Slide2's Bishop value for 8H (11.23) disagrees with SLOPE/W (11.583) and two other codes and is not used."]
-        : undefined,
+        : []),
+    ],
   })),
   {
     id: "VP37",
@@ -675,7 +744,8 @@ export const VERIFICATION_CASES: VerificationCase[] = [
       ...circle(-11.41, 35.264, 34.426),
       udls: [{ magnitude: 40, x1: 17, x2: 30 }],
     }),
-    checks: [bishop(0.764, "Slide2", 0.01), spencer(0.764, "Slide2", 0.01)],
+    checks: [bishop(0.764, "Slide2", 0.01)],
+    notes: ["Slide2 reports the Bishop value only (Fig. 37.3); cSlope's Spencer is 0.764 as well. VP37R is the slope with the reinforced zone."],
   },
   {
     id: "VP54",
@@ -695,7 +765,14 @@ export const VERIFICATION_CASES: VerificationCase[] = [
     units: "SI",
     description: "Homogeneous 1.5:1 slope, 20 m high; critical circle search.",
     definition: layered([[-30, 15], [18, 15], [48, 35], [100, 35]], 0, [{ name: "Soil", topY: null, model: mc(41.65, 15, 18.82) }]),
-    checks: [bishop(1.417, "Slide2", 0.01), mp(1.414, "Slide2", 0.01)],
+    checks: [
+      bishop(1.409, "Slide2", 0.01),
+      mp(1.414, "Slide2 (GLE)", 0.01),
+      bishop(1.417, "SLOPE/W", 0.01),
+      mp(1.414, "SLOPE/W", 0.01),
+      spencer(1.386, "Slide2 (non-circular)", 0.015, { options: NONCIRCULAR }),
+    ],
+    notes: ["Slide2 Janbu corrected 1.407 (circle); non-circular: Janbu simplified 1.253, corrected 1.346. Arai & Tagyo: Bishop 1.451; Janbu simplified 1.265, corrected 1.357 (non-circular)."],
   },
   {
     id: "VP44",
@@ -752,8 +829,8 @@ export const VERIFICATION_CASES: VerificationCase[] = [
       { name: "Embankment", topY: null, model: mc(0, 30, 124) },
       { name: "Foundation", topY: 15, model: mc(500, 0, 98) },
     ], { analysisLimits: { entryLeftX: 128, entryRightX: 74, exitLeftX: 34, exitRightX: 0 } }),
-    checks: [bishop(1.23, "Slide2", 0.01), spencer(1.209, "Duncan & Wright", 0.01)],
-    notes: ["An unrestricted search finds the infinite-slope sliver in the c = 0 fill (tan 30° / tan 26.6° = 1.155), which is correct mechanics but not the published surface."],
+    checks: [bishop(1.23, "Slide2", 0.01), spencer(1.209, "Slide2", 0.01), spencer(1.21, DWREF, 0.015)],
+    notes: ["An unrestricted search finds the infinite-slope sliver in the c = 0 fill (tan 30° / tan 26.6° = 1.155), which is correct mechanics but not the published deep surface; VP81-shallow checks it."],
   },
   {
     id: "VP106",
@@ -763,7 +840,8 @@ export const VERIFICATION_CASES: VerificationCase[] = [
     units: "SI",
     description: "Homogeneous 1:1.5 slope, 10 m high, without piles; critical circle search.",
     definition: layered([[0, 0], [10, 0], [25, 10], [35, 10]], -10, [{ name: "Soil", topY: null, model: mc(10, 20, 20) }]),
-    checks: [bishop(1.14, "Cai & Ugai", 0.015)],
+    checks: [bishop(1.14, "Slide2", 0.015), bishop(1.13, "Cai & Ugai", 0.015)],
+    notes: ["Both values are Bishop searches, printed to two digits (1.5 %)."],
   },
   {
     id: "VP55",
@@ -802,7 +880,7 @@ export const VERIFICATION_CASES: VerificationCase[] = [
       bishop(1.2, "Morgenstern (chart)", 0.01, { options: VERTICAL, label: "Bishop simplified (vertical head)" }),
       spencer(1.2, "Morgenstern (chart)", 0.01, { options: VERTICAL, label: "Spencer (vertical head)" }),
     ],
-    notes: ["Slide2 reports 1.212 (Bishop). With the phreatic correction (cos²θ) cSlope gives 1.303."],
+    notes: ["Slide2 reports 1.212 (Bishop) on its critical circle, checked in VP100-S. With the phreatic correction (cos²θ) cSlope gives 1.303."],
   },
   {
     id: "VP20",
@@ -844,7 +922,7 @@ export const VERIFICATION_CASES: VerificationCase[] = [
     reference: "Giam & Donald (1989), ACADS problem 1(b). Slide2 Verification Problem #2; SLOPE/W example 2.2.",
     surface: "search",
     units: "SI",
-    description: "The ACADS 1(a) slope (10 m high, 2:1) with c' = 32 kPa, φ' = 10° and a tension crack 3.814 m deep (2c/(γ√Ka)), filled with water; critical circle search.",
+    description: "The ACADS 1(a) slope (10 m high, 2:1) with c' = 32 kPa, φ' = 10° and a water-filled tension crack 4 m deep, the crack zone of Slide2's Fig. 2.1 (35 → 31 m; the formula 2c/(γ√Ka) gives 3.814 m); critical circle search.",
     definition: layered([[0, 25], [30, 25], [50, 35], [90, 35]], 20, [{ name: "Soil", topY: null, model: mc(32, 10, 20) }], {
       orientation: "rtl",
     }),
@@ -856,11 +934,15 @@ export const VERIFICATION_CASES: VerificationCase[] = [
         label: "Janbu corrected (f0)",
         published: 1.489,
         publishedBy: "Slide2",
-        tolerance: 0.01,
+        tolerance: 0.015,
         options: { ...ACADS_CRACK, janbuCorrection: true },
+        note: "Janbu corrected: 1.5 % for a search whose critical circle (and so f0) differs from Bishop's.",
       },
     ],
-    notes: ["SLOPE/W reports 1.664 (Bishop) and the ACADS reference band is 1.65–1.70; Slide2 and xslope (1.589) agree with each other."],
+    notes: [
+      "With the 3.814 m crack of the formula cSlope gives 1.590 / 1.585 / 1.481; the 4 m crack of the figure lowers them by 0.2–0.5 %.",
+      "SLOPE/W's 1.664 (GS2.2) corresponds to a dry 3.6 m crack; the ACADS reference band is 1.65–1.70 (Giam 1.65). xslope 1.589 with the 3.814 m crack.",
+    ],
   },
   {
     id: "VP8",
@@ -929,7 +1011,7 @@ export const VERIFICATION_CASES: VerificationCase[] = [
     reference: "USACE EM 1110-2-1902, example E-10. Slide2 Verification Problem #68.",
     surface: "fixed",
     units: "SI",
-    description: "Undrained three-layer slope with 8 ft of water ponded against its toe (pool el. 0), on the published circle tangent to the base of the lowest layer. Converted to SI.",
+    description: "Undrained three-layer slope with 8 ft of water ponded against its toe (pool el. 0), on Slide2's circle (48.262, 28, R = 47.683 ft; Fig. 68.2). Converted to SI.",
     definition: layered(
       ft([[0, -8], [40, -8], [50, 4], [60, 16], [100, 16]]),
       -20 * FT,
@@ -939,34 +1021,22 @@ export const VERIFICATION_CASES: VerificationCase[] = [
         { name: "Soil 3", topY: -8 * FT, model: su(500 * PSF, 105 * PCF) },
       ],
       {
-        ...circle(48.4 * FT, 28 * FT, 48 * FT),
+        ...circle(48.262 * FT, 28 * FT, 47.683 * FT),
         orientation: "rtl",
         waterTable: { mode: "custom", value: ft([[0, 0], [100, 0]]), followBoundary: false },
       },
     ),
-    checks: [bishop(1.241, "Slide2", 0.01), mp(1.244, "Slide2 (GLE)", 0.01)],
-    notes: ["The water above the toe acts as a load on the ground surface; the published USACE chart value is 1.33."],
+    checks: [
+      bishop(1.241, "Slide2", 0.01),
+      spencer(1.241, "Slide2", 0.01),
+      mp(1.244, "Slide2 (GLE)", 0.01),
+      { method: "Janbu", label: "Janbu corrected (f0)", published: 1.385, publishedBy: "Slide2", tolerance: 0.01, options: { janbuCorrection: true } },
+    ],
+    notes: [
+      "The text describes USACE's circle (centre 8.4 ft right of and 36 ft above the toe, tangent to the base of soil 3: 48.4, 28, R = 48); Slide2's printed circle is slightly smaller. cSlope gives the same FOS on both (1.235).",
+      "The water above the toe acts as a load on the ground surface; the published USACE chart value is 1.33.",
+    ],
   },
-  ...([30, 60] as const).map(
-    (pool): VerificationCase => ({
-      id: pool === 30 ? "VP70a" : "VP70b",
-      title: `Duncan & Wright fig. 6.27, submerged slope, pool +${pool} ft`,
-      reference: "Duncan & Wright, Soil Strength and Slope Stability, fig. 6.27. Slide2 Verification Problem #70.",
-      surface: "search",
-      units: "SI",
-      description: `Fully submerged homogeneous 2.5:1 slope with the pool ${pool} ft above the crest; the factor of safety does not depend on the depth of submergence. Converted to SI.`,
-      definition: layered(
-        ft([[0, 15], [30, 15], [105, 45], [140, 45]]),
-        0,
-        [{ name: "Soil", topY: null, model: mc(100 * PSF, 20, 128 * PCF) }],
-        {
-          orientation: "rtl",
-          waterTable: { mode: "custom", value: ft([[0, 45 + pool], [140, 45 + pool]]), followBoundary: false },
-        },
-      ),
-      checks: [bishop(1.603, "Slide2", 0.01), spencer(1.599, "Slide2", 0.01)],
-    }),
-  ),
   {
     id: "VP19",
     title: "Yamagami & Ueta (1988) four-layer slope, non-circular",
@@ -1054,30 +1124,6 @@ export const VERIFICATION_CASES: VerificationCase[] = [
       { method: "Janbu", label: "Janbu simplified", published: 1.351, publishedBy: "RocPlane", tolerance: 0.005 },
     ],
   },
-  ...([false, true] as const).map(
-    (wet): VerificationCase => ({
-      id: wet ? "VP52b" : "VP52a",
-      title: `Zhu four-layer slope, ${wet ? "with water table" : "dry"}`,
-      reference: "Slide2 Verification Problem #52.",
-      surface: "search",
-      units: "SI",
-      description: `Four horizontal layers under a two-bench slope${wet ? " with the published water table" : ""}; circular search (deep surface family).`,
-      definition: layered([[-20, 0], [0, 0], [6, 3], [18, 9], [30, 15], [50, 15]], -9, [
-        { name: "Layer 1", topY: null, model: mc(20, 18, 18.8) },
-        { name: "Layer 2", topY: 9, model: mc(40, 22, 18.5) },
-        { name: "Layer 3", topY: 3, model: mc(25, 26, 18.4) },
-        { name: "Layer 4", topY: -6, model: mc(10, 12, 18) },
-      ], {
-        orientation: "rtl",
-        ...(wet
-          ? { waterTable: { mode: "custom", value: [[-20, 0], [0, 0], [6, 3], [10.568, 5.284], [25.314, 9.002], [39.149, 10.269], [50, 10.269]] } }
-          : {}),
-      }),
-      checks: wet
-        ? [bishop(1.176, "Slide2", 0.01), spencer(1.189, "Slide2", 0.01)]
-        : [bishop(1.804, "Slide2", 0.01), spencer(1.804, "Slide2", 0.01)],
-    }),
-  ),
   {
     id: "VP53",
     title: "Priest (1993) rigid block on a plane, water-filled crack",
@@ -1154,7 +1200,11 @@ export const VERIFICATION_CASES: VerificationCase[] = [
       waterTable: { mode: "custom", value: ft([[0, 100], [38.4, 100], [121.1, 69], [179.4, 22.5], [450, 22.5]]), followBoundary: false },
       ...circle(269 * FT, 248 * FT, 280 * FT),
     }),
-    checks: [bishop(2.011, "Slide2", 0.01), spencer(2.026, "Slide2", 0.01)],
+    checks: [
+      bishop(2.011, "Slide2", 0.01),
+      spencer(2.026, "Slide2", 0.01),
+      { method: "Janbu", label: "Janbu corrected (f0)", published: 1.83, publishedBy: "Slide2", tolerance: 0.01, options: { janbuCorrection: true } },
+    ],
     notes: ["The kink of the piezometric line is located from the figure to about a foot; xslope also reads 0.6 % low."],
   },
   {
@@ -1181,28 +1231,12 @@ export const VERIFICATION_CASES: VerificationCase[] = [
     ],
     notes: ["Without limits the search finds shallower mechanisms: a sliver in the cohesionless 1:1 fill (0.74) and, with the crack, a surface through the fill and Marsh clay (1.15). The published value is the deep failure."],
   },
-  // Reinforcement (anchors, tiebacks, nails, geosynthetics).
-  ...[...REINFORCED_CASES, ...PILE_CASES, ...CORPUS_CASES].map(
-    (c): VerificationCase => ({
-      id: c.id,
-      title: c.title,
-      reference: c.reference,
-      surface: c.surface,
-      units: "SI",
-      description: c.description,
-      definition: c.definition,
-      notes: c.notes,
-      checks: c.checks.map(([m, published, publishedBy, tolerance]) => {
-        const options = c.options as Partial<AnalysisOptions>;
-        if (m === "Bishop") return bishop(published, publishedBy, tolerance, { options });
-        if (m === "Spencer") return spencer(published, publishedBy, tolerance, { options });
-        if (m === "MP") return mp(published, publishedBy, tolerance, { options });
-        return { method: "Janbu", label: "Janbu corrected (f0)", published, publishedBy, tolerance, options: { ...options, janbuCorrection: true } };
-      }),
-    }),
-  ),
-  // Probabilistic problems: the deterministic factor of safety.
-  ...RELIABILITY_CASES.map(
+  // Reinforcement (anchors, tiebacks, nails, geosynthetics), piles, the
+  // xslope corpus and the problems transcribed from the manuals.
+  ...[...REINFORCED_CASES, ...PILE_CASES, ...CORPUS_CASES, ...MANUAL_CASES].map(fromCaseData),
+  // Probabilistic problems: the deterministic factor of safety. A case
+  // without one only adds reliability checks to the case of the same id.
+  ...RELIABILITY_CASES.filter((c) => c.checks.some(([q]) => q === "fos")).map(
     (c): VerificationCase => ({
       id: c.id,
       title: c.title,
@@ -1264,7 +1298,10 @@ export const VERIFICATION_CASES: VerificationCase[] = [
       bishop(1.369, "xslope (same input)", 0.005, { options: PHREATIC }),
       spencer(1.375, "xslope (same input)", 0.005, { options: PHREATIC }),
     ],
-    notes: ["The water table is traced from the manual's figure to about ±2 ft; xslope reads 1.9 % below Slide2 for every method on the same input, as cSlope does."],
+    notes: [
+      "The water table is traced from the manual's figure to about ±2 ft; xslope reads 1.9 % below Slide2 for every method on the same input, as cSlope does. VP27c and VP27d are the tension-crack variants of Table 27.4.",
+      "Slide2's circular search with exit limits (Table 27.3: Bishop 1.376, Spencer 1.382, Janbu corrected 1.345) is not checked: cSlope's search on this input is 4.2 % lower, beyond the offset explained by the traced water table.",
+    ],
   },
   {
     id: "VP39a",
@@ -1327,10 +1364,10 @@ export const VERIFICATION_CASES: VerificationCase[] = [
     reference: "USACE EM 1110-2-1902 (2003), fig. 4-1. Slide2 Verification Problem #64.",
     surface: "fixed",
     units: "SI",
-    description: "Symmetric 50 ft embankment at 4H:1V (c = 1000 psf, φ = 5°) with a core trench through a 10 ft sand blanket over foundation clay (Su = 3000 psf) and rock; groundwater at the sand top, 7 ft dry crest crack; moist/saturated unit weights. Specified circle (102, 163, R = 163). Converted to SI.",
+    description: "Symmetric 50 ft embankment (crest ±12 ft, toes ±206.18 ft) with c = 1000 psf, φ = 5°, a core trench through a 10 ft sand blanket over foundation clay (Su = 3000 psf) and rock; groundwater at the sand top, 7 ft dry crest crack; moist/saturated unit weights. Specified circle (102, 163, R = 163). Converted to SI.",
     definition: regions(
-      ft([[-225, -40], [225, -40], [225, 0], [217, 0], [17, 50], [-17, 50], [-217, 0], [-225, 0]]),
-      [ft([[217, 0], [17, 0], [8, -10]]), ft([[8, -10], [-8, -10]]), ft([[8, -10], [225, -10]]), ft([[-8, -10], [-17, 0], [-217, 0]]), ft([[-8, -10], [-225, -10]]), ft([[-225, -37], [225, -37]])],
+      ft([[-225, -40], [225, -40], [225, 0], [206.18, 0], [12, 50], [-12, 50], [-206.18, 0], [-225, 0]]),
+      [ft([[206.18, 0], [17, 0], [8, -10]]), ft([[8, -10], [-8, -10]]), ft([[8, -10], [225, -10]]), ft([[-8, -10], [-17, 0], [-206.18, 0]]), ft([[-8, -10], [-225, -10]]), ft([[-225, -37], [225, -37]])],
       usaceLayers([
         sat(mc(1000 * PSF, 5, 115 * PCF), 120 * PCF),
         sat(mc(0, 35, 125 * PCF), 130 * PCF),
@@ -1343,12 +1380,21 @@ export const VERIFICATION_CASES: VerificationCase[] = [
       },
     ),
     checks: [
-      spencer(2.445, "Slide2", 0.025, { options: { ...VERTICAL, tensionCrackDepth: 7 * FT } }),
-      bishop(2.447, "Slide2", 0.025, { options: { ...VERTICAL, tensionCrackDepth: 7 * FT } }),
-      spencer(2.488, "xslope (same input)", 0.005, { options: { ...VERTICAL, tensionCrackDepth: 7 * FT } }),
-      bishop(2.489, "xslope (same input)", 0.005, { options: { ...VERTICAL, tensionCrackDepth: 7 * FT } }),
+      spencer(2.445, "Slide2", 0.01, { options: { ...VERTICAL, tensionCrackDepth: 7 * FT } }),
+      bishop(2.447, "Slide2", 0.01, { options: { ...VERTICAL, tensionCrackDepth: 7 * FT } }),
+      {
+        method: "Janbu",
+        label: "Janbu corrected (f0)",
+        published: 2.43,
+        publishedBy: "Slide2",
+        tolerance: 0.01,
+        options: { ...VERTICAL, tensionCrackDepth: 7 * FT, janbuCorrection: true },
+      },
     ],
-    notes: ["Neither figure labels its vertices; xslope pins the crest and toes from USACE's slice table and reads 1.8 % above Slide2 on the same input, as cSlope does. USACE 2.44."],
+    notes: [
+      "Neither figure labels its vertices. The crest (±12 ft) and toes (±206.18 ft) are inferred from Slide2's printed exit point (161.895, 11.403 ft), which lies on this face; Slide2 GLE 2.447, USACE 2.44.",
+      "The earlier outline after xslope (crest ±17 ft, toes ±217 ft, from USACE's slice table) misses that exit point by 2.4 ft and gave 2.489 / 2.488 (xslope and cSlope alike, 1.8 % above Slide2).",
+    ],
   },
   {
     id: "VP65",
@@ -1356,9 +1402,9 @@ export const VERIFICATION_CASES: VerificationCase[] = [
     reference: "USACE EM 1110-2-1902 (2003), fig. 4-2. Slide2 Verification Problem #65.",
     surface: "fixed",
     units: "SI",
-    description: "The VP64 dam with drained strengths (embankment c = 100 psf, φ = 25°; sand 0/35; clay 0/28; rock 0/45; moist/saturated unit weights) and the pool at el. 20 standing on the upstream face. USACE's circle (−102, 163, R = 173), tangent to the clay top. Converted to SI.",
+    description: "The VP64 dam family, 45 ft high (crest ±15 ft, toes ±200 ft), with drained strengths (embankment c = 100 psf, φ = 25°; sand 0/35; clay 0/28; rock 0/45; moist/saturated unit weights) and the pool at el. 20 standing on the upstream face. USACE's circle (−102, 163, R = 173), tangent to the clay top. Converted to SI.",
     definition: regions(
-      ft([[-225, -40], [-225, 0], [-217, 0], [-17, 50], [17, 50], [217, 0], [225, 0], [225, -40]]),
+      ft([[-225, -40], [-225, 0], [-200, 0], [-15, 45], [15, 45], [200, 0], [225, 0], [225, -40]]),
       [ft(usaceTrench), ft([[-225, -10], [225, -10]]), ft([[-225, -37], [225, -37]])],
       usaceLayers([
         sat(mc(100 * PSF, 25, 115 * PCF), 120 * PCF),
@@ -1372,8 +1418,16 @@ export const VERIFICATION_CASES: VerificationCase[] = [
         ...circle(-102 * FT, 163 * FT, 173 * FT),
       },
     ),
-    checks: [bishop(2.716, "Slide2", 0.01, { options: VERTICAL }), spencer(2.736, "Slide2", 0.01, { options: VERTICAL })],
-    notes: ["USACE 2.71 (Bishop); xslope 2.725 / 2.748."],
+    checks: [
+      bishop(2.716, "Slide2", 0.01, { options: VERTICAL }),
+      spencer(2.736, "Slide2", 0.01, { options: VERTICAL }),
+      { method: "Janbu", label: "Janbu corrected (f0)", published: 2.65, publishedBy: "Slide2", tolerance: 0.01, options: { ...VERTICAL, janbuCorrection: true } },
+    ],
+    notes: [
+      "Outline from Slide2's printed slip-surface endpoints (Fig. 65.2): 45 ft high, crest ±15 ft, toes ±200 ft; the pool line ends on the upstream face at x = 117.778 ft. Slide2 GLE 2.744, USACE 2.71 (Bishop).",
+      "Table 65.1 prints φ = 35° for the embankment, which gives 3.10–3.14; φ = 25° (USACE fig. 4-2) reproduces Slide2's results and is used.",
+      "xslope 2.725 / 2.748 on the earlier 50 ft outline (crest ±17 ft, toes ±217 ft), where cSlope gave 2.724 / 2.747.",
+    ],
   },
   {
     id: "VP66",
@@ -1397,8 +1451,12 @@ export const VERIFICATION_CASES: VerificationCase[] = [
       bishop(2.307, "Slide2", 0.025, { options: VERTICAL }),
       spencer(2.258, "xslope (same input)", 0.005, { options: VERTICAL }),
       bishop(2.254, "xslope (same input)", 0.005, { options: VERTICAL }),
+      { method: "Janbu", label: "Janbu corrected (f0)", published: 2.29, publishedBy: "Slide2", tolerance: 0.025, options: { ...VERTICAL, janbuCorrection: true } },
     ],
-    notes: ["The three Slide models #64–66 carry slightly different digitisations of the same dam; xslope reads about 2 % below Slide2 here on the same input, as cSlope does. USACE 2.30."],
+    notes: [
+      "The three Slide models #64–66 carry slightly different digitisations of the same dam; xslope reads about 2 % below Slide2 here on the same input, as cSlope does. USACE 2.30; Slide2 GLE 2.309.",
+      "An independent Bishop calculation on Slide2's circle (R = 169.0 ft) gives 2.243, as cSlope does; Slide2's 2.307 is not explained (2.5 %).",
+    ],
   },
   {
     id: "VP75",
@@ -1413,8 +1471,13 @@ export const VERIFICATION_CASES: VerificationCase[] = [
       { name: "Marine clay", topY: 15, model: su(34.5, 18.8) },
       { name: "Lacustrine clay", topY: 7, model: su(31.2, 20.3) },
     ]),
-    checks: [bishop(1.45, "Duncan & Wright", 0.025), spencer(1.45, "Duncan & Wright", 0.025)],
-    notes: ["xslope's search gives 1.424 / 1.420; Slide2 reports 1.468 / 1.464 on its own (not the critical) circle."],
+    checks: [
+      bishop(1.45, DWREF, 0.025),
+      spencer(1.45, DWREF, 0.025),
+      spencer(1.167, "Slide2 (non-circular)", 0.015, { options: NONCIRCULAR }),
+      spencer(1.17, `${DWREF}, non-circular`, 0.015, { options: NONCIRCULAR }),
+    ],
+    notes: ["xslope's search gives 1.424 / 1.420; Slide2 reports 1.468 / 1.464 on its own (not the critical) circle. Non-circular: Slide2 Bishop 1.105, GLE 1.142."],
   },
   ...([
     [84, 1.215, "deep"],
@@ -1456,15 +1519,18 @@ export function runReliabilityCase(c: ReliabilityCaseData): ReliabilityCheckResu
       : { method: c.method }),
   };
   const quantities = new Set(c.checks.map(([q]) => q));
-  const taylor = analyseReliability(def, options, c.variables, { method: "taylor", search: false });
+  const correlations = c.correlations;
+  const taylor = [...quantities].some((q) => q === "fos" || q.endsWith("-taylor"))
+    ? analyseReliability(def, options, c.variables, { method: "taylor", search: false, correlations })
+    : null;
   const mc = [...quantities].some((q) => q.endsWith("-mc"))
-    ? analyseReliability(def, options, c.variables, { method: "monte-carlo", samples: c.samples, seed: c.seed })
+    ? analyseReliability(def, options, c.variables, { method: "monte-carlo", samples: c.samples, seed: c.seed, correlations })
     : null;
   const value = (q: ReliabilityQuantity): number => {
     switch (q) {
-      case "fos": return taylor.fos;
-      case "beta-taylor": return taylor.betaLognormal;
-      case "pf-taylor": return taylor.pfLognormal;
+      case "fos": return taylor!.fos;
+      case "beta-taylor": return taylor!.betaLognormal;
+      case "pf-taylor": return taylor!.pfLognormal;
       case "beta-mc": return mc!.betaLognormal;
       case "pf-mc": return mc!.pf!;
     }

@@ -529,7 +529,11 @@ function evaluate(c: VerificationCase): CaseResult {
     const diff = fos == null ? NaN : ((fos - check.published) / check.published) * 100;
     return { check, fos, diff, pass: fos != null && Math.abs(diff) <= check.tolerance * 100 + 1e-9 };
   });
-  return { c, results, slope: firstSlope!, plane: criticalPlane(firstSlope!) };
+  const plane = criticalPlane(firstSlope!);
+  // The figure needs the geometry and the critical surface only: drop the
+  // thousands of searched surfaces (with their slices) kept for every case.
+  firstSlope!.setSearchResults([]);
+  return { c, results, slope: firstSlope!, plane };
 }
 
 console.log(`Running ${VERIFICATION_CASES.length} verification problems…`);
@@ -597,6 +601,8 @@ const benchRows = benchResults.flatMap((b) => b.rows);
 const reliabilityRows = [...reliabilityResults.values()].flat().filter((r) => r.quantity !== "fos");
 const nChecks = allChecks.length + benchRows.length + reliabilityRows.length;
 const nPass = allChecks.filter((r) => r.pass).length + benchRows.filter((r) => r.pass).length + reliabilityRows.filter((r) => r.pass).length;
+// Failing checks that wait for an engine change (counted as not passing).
+const nPending = allChecks.filter((r) => !r.pass && r.check.pending).length;
 const absDiffs = [...allChecks, ...benchRows].map((r) => Math.abs(r.diff)).filter(Number.isFinite);
 const meanAbs = absDiffs.reduce((a, b) => a + b, 0) / absDiffs.length;
 const maxAbs = Math.max(...absDiffs);
@@ -626,6 +632,7 @@ table(
     ["Report generated", today],
     ["Published values compared", String(nChecks)],
     ["Within acceptance tolerance", `${nPass} of ${nChecks}`],
+    ...(nPending > 0 ? [["Pending engine changes", `${nPending} of the others`]] : []),
     ["Mean |difference|", `${meanAbs.toFixed(2)} %`],
     ["Max |difference|", `${maxAbs.toFixed(2)} %`],
   ],
@@ -669,7 +676,7 @@ paragraph(
 y += 2;
 heading("Source of the input data", 2);
 paragraph(
-  "The input data were transcribed via the open-source xslope project (github.com/njones61/xslope, docs/verification), which reproduces the problem definitions of the Slide2 and SLOPE/W verification manuals. The manuals themselves could not be consulted when this report was prepared. Each problem should be checked against the original publication before the report is relied on.",
+  "Most input data were first transcribed via the open-source xslope project (github.com/njones61/xslope, docs/verification), which reproduces the problem definitions of the Slide2 and SLOPE/W verification manuals, and then checked against the manuals themselves (Rocscience Slide2 Slope Stability Verification Manual, 2022; GEO-SLOPE/Seequent Slope Stability Verification Manual, October 2022). Further surfaces, methods and problems were transcribed from the manuals directly. Each published value is labelled with the source that prints it; where a figure had to be digitised or an input inferred, the notes of the problem say so. Checks marked \"pending\" wait for an engine change named in the notes.",
   9.5,
   "normal",
 );
@@ -677,7 +684,10 @@ paragraph(
 // Summary.
 newPage();
 heading("2  Summary of results", 1);
-const statusCell = (pass: boolean) => ({ text: pass ? "Pass" : "Fail", color: pass ? PASS : FAIL, bold: true });
+const PENDING: [number, number, number] = [196, 120, 20];
+/** Pass, Fail, or Pending for a failing check that waits for an engine change. */
+const statusCell = (pass: boolean, pending?: string) =>
+  pass ? { text: "Pass", color: PASS, bold: true } : pending ? { text: "Pending", color: PENDING, bold: true } : { text: "Fail", color: FAIL, bold: true };
 table(
   [
     { title: "Problem", width: 18 },
@@ -697,7 +707,7 @@ table(
         fmt(x.check.published),
         fmt(x.fos ?? NaN),
         pct(x.diff),
-        statusCell(x.pass),
+        statusCell(x.pass, x.check.pending),
       ]),
     ),
     ...benchResults.flatMap((b) =>
@@ -796,14 +806,14 @@ caseResults.forEach((r, i) => {
       fmt(x.fos ?? NaN),
       pct(x.diff),
       `± ${(x.check.tolerance * 100).toFixed(1)} %`,
-      statusCell(x.pass),
+      statusCell(x.pass, x.check.pending),
     ]),
   );
   const reliability = reliabilityResults.get(c.id)?.filter((x) => x.quantity !== "fos");
   if (reliability?.length) {
     const rc = RELIABILITY_CASES.find((x) => x.id === c.id)!;
     paragraph(
-      `Probabilistic analysis on the same surface: ${rc.variables.length} independent normal variables; Taylor series (mean ± σ) and Monte Carlo with ${rc.samples} samples (seed ${rc.seed}). Differences in β and Pf are absolute.`,
+      `Probabilistic analysis on the same surface: ${rc.variables.length} normal variables (${rc.correlations?.length ? rc.correlations.map((k) => `ρ = ${k.rho}`).join(", ") + " between pairs" : "independent"}); Taylor series (mean ± σ) and Monte Carlo with ${rc.samples} samples (seed ${rc.seed}). Differences in β and Pf are absolute.`,
       8.5,
     );
     table(
@@ -827,7 +837,13 @@ caseResults.forEach((r, i) => {
       ]),
     );
   }
-  const notes = [...(c.notes ?? []), ...r.results.flatMap((x) => (x.check.note ? [x.check.note] : []))];
+  const notes = [
+    ...(c.notes ?? []),
+    ...r.results.flatMap((x) => (x.check.note ? [x.check.note] : [])),
+    ...r.results.flatMap((x) =>
+      x.check.pending ? [`${x.check.label} (${x.check.publishedBy}) is pending: it waits for the engine change "${x.check.pending}".`] : [],
+    ),
+  ];
   if (notes.length > 0) {
     font(9, "bold", INK);
     ensure(6);

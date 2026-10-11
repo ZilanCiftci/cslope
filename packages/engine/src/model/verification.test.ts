@@ -22,11 +22,42 @@ import {
   su,
 } from "../verification/cases";
 
+describe("Verification data", () => {
+  it("every problem has a unique id", () => {
+    const ids = VERIFICATION_CASES.map((c) => c.id);
+    const duplicates = ids.filter((id, i) => ids.indexOf(id) !== i);
+    expect(duplicates).toEqual([]);
+  });
+
+  it("every problem has at least one check", () => {
+    expect(VERIFICATION_CASES.filter((c) => c.checks.length === 0).map((c) => c.id)).toEqual([]);
+  });
+
+  it("probabilistic problems have unique ids and add to a deterministic problem", () => {
+    const ids = RELIABILITY_CASES.map((c) => c.id);
+    expect(ids.filter((id, i) => ids.indexOf(id) !== i)).toEqual([]);
+    const deterministic = new Set(VERIFICATION_CASES.map((c) => c.id));
+    expect(ids.filter((id) => !deterministic.has(id))).toEqual([]);
+  });
+
+  it("tolerances stay within 0.5–6 % and published values are positive", () => {
+    for (const c of VERIFICATION_CASES) {
+      for (const check of c.checks) {
+        expect(check.published, c.id).toBeGreaterThan(0);
+        expect(check.tolerance, c.id).toBeGreaterThanOrEqual(0.005);
+        expect(check.tolerance, c.id).toBeLessThanOrEqual(0.06);
+      }
+    }
+  });
+});
+
 describe("Verification problems", () => {
   for (const c of VERIFICATION_CASES) {
     for (const check of c.checks) {
-      // Searches with non-circular optimisation take a few seconds.
-      it(`${c.id} ${c.title}: ${check.label} ${check.published}`, { timeout: 30000 }, () => {
+      // Searches with non-circular optimisation take a few seconds. A check
+      // marked pending waits for an engine change and fails until it lands.
+      const pending = check.pending ? ` [pending: ${check.pending}]` : "";
+      it(`${c.id} ${c.title}: ${check.label} ${check.published} (${check.publishedBy})${pending}`, { timeout: 60000 }, () => {
         const { fos } = runVerification(c.definition, check.method, check.options);
         expect(fos).not.toBeNull();
         expect(Math.abs(fos! - check.published) / check.published).toBeLessThanOrEqual(check.tolerance);
