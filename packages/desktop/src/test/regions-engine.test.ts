@@ -66,4 +66,18 @@ describe("canvas regions and engine geometry agree (round 7)", () => {
     expect(c[0]).toEqual(c[c.length - 1]);
     expect(regions()).toHaveLength(2);
   });
+
+  it("a lens straddling the slope edge is split the same on canvas and in the engine", () => {
+    S().setCoordinates([[0, 0], [10, 0], [10, 10], [0, 10]]);
+    S().setMaterialBoundaries([{ id: "lens", coordinates: [[8, 4], [12, 4], [12, 6], [8, 6], [8, 4]] }]);
+    const m2 = S().materials[1];
+    S().setRegionMaterial([9, 5], m2.id);
+    const rs = regions();
+    expect(rs).toHaveLength(2);
+    expect(rs.reduce((t, r) => t + area(r.px, r.py), 0)).toBeCloseTo(100, 6);
+    const lens = rs.find((r) => r.materialId === m2.id)!;
+    expect(area(lens.px, lens.py)).toBeCloseTo(4, 6);
+    expect(engineNamesAt([9, 5])).toEqual([m2.name]);
+    expect(engineNamesAt([2, 2])).toEqual([S().materials[0].name]);
+  });
 });

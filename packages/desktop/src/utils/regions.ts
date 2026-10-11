@@ -252,10 +252,17 @@ export function computeRegions(
   );
 
   // Separate open (polyline) and closed (polygon) boundaries
-  const openBoundaries = sorted.filter((b) => !isClosedBoundary(b.coordinates));
-  const closedBoundaries = sorted.filter((b) =>
-    isClosedBoundary(b.coordinates),
-  );
+  // A closed boundary that is not entirely inside the slope (a lens
+  // straddling the ground surface) cuts like an open line, as it does in
+  // the engine; as a lens it would be placed outside the slope or lost.
+  const insideExterior = (b: MaterialBoundaryRow) =>
+    b.coordinates.every(([x, y]) =>
+      isPointInPolygon(x, y, closed.px, closed.py),
+    );
+  const isLens = (b: MaterialBoundaryRow) =>
+    isClosedBoundary(b.coordinates) && insideExterior(b);
+  const openBoundaries = sorted.filter((b) => !isLens(b));
+  const closedBoundaries = sorted.filter(isLens);
 
   // Phase 1: Split by open boundaries until stable (order-independent).
   const pieces: { px: number[]; py: number[] }[] = splitPiecesByOpenBoundaries(
