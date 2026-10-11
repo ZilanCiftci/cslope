@@ -82,11 +82,11 @@ interface WaterLineInput {
 }
 
 /**
- * A water line needs two finite points with different x somewhere (it is
- * then continued horizontally beyond its ends). Without one, slices in a
- * material assigned to it would silently get no pore pressure; Slide2
- * likewise calculates no FOS where a water table does not span the slip
- * surface.
+ * A water line needs two finite points (it is then continued
+ * horizontally beyond its ends; two points at one x make a vertical
+ * step). With fewer, slices in a material assigned to it would silently
+ * get no pore pressure; Slide2 likewise calculates no FOS where a water
+ * table does not span the slip surface.
  */
 function checkWaterLine(coordinates: [number, number][]): void {
   const finite = coordinates.filter(
@@ -96,8 +96,11 @@ function checkWaterLine(coordinates: [number, number][]): void {
     throw new Error("Water table points must be finite numbers.");
   }
   const xs = finite.map((c) => c[0]);
-  if (finite.length < 2 || !(Math.max(...xs) - Math.min(...xs) > 1e-9)) {
-    throw new Error("A water table needs at least two points with different x.");
+  // Two points at one x (a vertical step) are a valid line: it is
+  // extended horizontally to the model edges from both ends.
+  void xs;
+  if (finite.length < 2) {
+    throw new Error("A water table needs at least two points.");
   }
 }
 
@@ -681,8 +684,10 @@ export class Slope {
       wy = waterCoords.map((c) => c[1]);
     }
 
+    // Built first: a line that cannot be built leaves no input behind.
+    const line = wx && wy ? this._buildWaterLine(wx, wy, followBoundary) : null;
     this._waterInput = wx && wy ? { wx, wy, followBoundary } : null;
-    this._waterRLXY = wx && wy ? this._buildWaterLine(wx, wy, followBoundary) : null;
+    this._waterRLXY = line;
     this._waterRL = this._waterRLXY !== null;
 
     this._waterYCache.clear();
@@ -701,8 +706,9 @@ export class Slope {
     checkWaterLine(coordinates);
     const wx = coordinates.map((c) => c[0]);
     const wy = coordinates.map((c) => c[1]);
+    const line = this._buildWaterLine(wx, wy, followBoundary);
     this._extraWaterInputs.set(id, { wx, wy, followBoundary });
-    this._extraWaterLines.set(id, this._buildWaterLine(wx, wy, followBoundary));
+    this._extraWaterLines.set(id, line);
     this._resetResults();
   }
 

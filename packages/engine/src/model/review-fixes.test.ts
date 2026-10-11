@@ -131,8 +131,25 @@ describe("water tables that do not span the slip surface", () => {
   it("rejects a material water table that cannot span anything", () => {
     // A one-point line gave the material no pore pressure at all, silently.
     expect(() => buildSlope({ ...def, waterTables: [{ id: "own", coordinates: [[10, -3]] }] })).toThrow(/water table/i);
-    expect(() => buildSlope({ ...def, waterTable: { mode: "custom", value: [[10, -3], [10, -5]] } })).toThrow(/water table/i);
     expect(() => buildSlope(def)).not.toThrow();
+  });
+
+  it("accepts two points at one x as a vertical step, extended both ways", () => {
+    // E.g. the second point snapped straight above the first in the editor.
+    const slope = buildSlope({ ...def, waterTable: { mode: "custom", value: [[30, -5], [30, -2]] } });
+    expect(slope.waterRLXY!.x[0]).toBe(0);
+    expect(slope.waterRLXY!.x.at(-1)).toBe(60);
+    expect(slope.hasWaterTable).toBe(true);
+  });
+
+  it("a water line that cannot be built leaves no input behind", () => {
+    const slope = new Slope();
+    slope.addMaterial(new Material({ name: "M", unitWeight: 20, frictionAngle: 30, cohesion: 5 }));
+    // Following the boundary before there is one fails...
+    expect(() => slope.setWaterTable({ coordinates: [[0, 5], [10, 5]], followBoundary: true })).toThrow();
+    // ...and must not come back to life when the boundary is set later.
+    slope.setExternalBoundary([[0, 0], [0, 10], [60, 10], [60, 0]]);
+    expect(slope.hasWaterTable).toBe(false);
   });
 
   it("extends a line given before the external boundary to the model edges", () => {
@@ -221,3 +238,23 @@ describe("pile force direction", () => {
     expect(() => run({ direction: "sideways" as Pile["direction"] })).toThrow(/direction/);
   });
 });
+
+describe("strength cutoff as a floor", () => {
+  it("a floor above the reference Su is valid, also for reliability with varied values", () => {
+    // S = f(datum) 30 kPa at y = 0, decreasing 0.5 kPa/m downwards, floor 25:
+    // Taylor's mean − σ (24 kPa) used to fail validation and abort the run.
+    const ground: [number, number][] = [[0, 10], [10, 10], [25, 0], [40, 0]];
+    const clay = { kind: "s-f-datum" as const, unitWeight: 18, suRef: 30, yRef: 0, rate: -0.5, suMax: 25 };
+    const def = {
+      coordinates: [[0, -10], [0, 10], [10, 10], [25, 0], [40, 0], [40, -10]] as [number, number][],
+      materials: [{ name: "Clay", unitWeight: 18, frictionAngle: 0, cohesion: 0, model: clay }],
+      materialBoundaries: [],
+      regionAssignments: [{ point: [5, 0] as [number, number], materialName: "Clay" }],
+    };
+    void ground;
+    const r = analyseReliability(def, { method: "Bishop", iterations: 300, refinedIterations: 100 }, [{ material: 0, field: "suRef", sd: 6 }], { method: "taylor", search: false });
+    expect(Number.isFinite(r.fos)).toBe(true);
+    expect(r.terms![0].fMinus).toBeGreaterThan(0);
+  });
+});
+

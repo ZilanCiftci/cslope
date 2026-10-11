@@ -412,16 +412,13 @@ describe("validateMaterialModel — depth reference and strength cutoff", () => 
     }
   });
 
-  it("a minimum cutoff (negative rate) must be below the reference Su", () => {
-    // s-f-depth suRef 20, rate −2: minimum 10 is fine, 20 or more is not.
+  it("a minimum cutoff (negative rate) may lie above the reference Su", () => {
+    // s-f-depth suRef 20 at 3 m, rate −5: Su is 35 at the layer top and
+    // reaches a floor of 25 at 5 m — a valid profile.
+    expect(validateMaterialModel({ ...validSfDepth, depthRef: 3, rate: -5, suMax: 25 })).toEqual([]);
     expect(validateMaterialModel({ ...validSfDepth, rate: -2, suMax: 10 })).toEqual([]);
-    expect(validateMaterialModel({ ...validSfDepth, rate: -2, suMax: 20 })).toContainEqual(
-      expect.stringContaining("minimum"),
-    );
+    expect(validateMaterialModel({ ...validSfDatum, rate: -1, suMax: 40 })).toEqual([]);
     // With a positive rate a cutoff below the reference is a plain maximum.
     expect(validateMaterialModel({ ...validSfDepth, suMax: 10 })).toEqual([]);
-    expect(validateMaterialModel({ ...validSfDatum, rate: -1, suMax: 40 })).toContainEqual(
-      expect.stringContaining("minimum"),
-    );
   });
 });

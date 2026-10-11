@@ -245,7 +245,7 @@ export function ReinforcementDialogApp() {
             updatePile(
               row.id,
               type === "sheet-pile"
-                ? { type, mode: "force", spacing: 1 }
+                ? { type, mode: "force", spacing: 1, application: preset.application, direction: preset.direction }
                 : { type, application: preset.application, direction: preset.direction },
             );
           }}

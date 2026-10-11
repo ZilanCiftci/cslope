@@ -259,11 +259,11 @@ function validateCutoff(
   if (suMax === undefined) return;
   if (!Number.isFinite(suMax) || suMax <= 0) {
     errors.push("Strength cutoff (suMax) must be a positive number.");
-    return;
   }
-  if (Number.isFinite(rate) && rate < 0 && Number.isFinite(suRef) && suMax >= suRef) {
-    errors.push(
-      "Strength cutoff (suMax) is a minimum with a negative rate and must be below the reference Su.",
-    );
-  }
+  // With a negative rate the cutoff is a floor. It may lie above the
+  // reference Su (the profile is highest at its top), so it is not
+  // compared with it; varied values (reliability, sensitivity) must not
+  // make a valid model invalid either.
+  void rate;
+  void suRef;
 }
