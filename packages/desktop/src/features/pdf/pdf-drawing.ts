@@ -549,7 +549,7 @@ export function drawPiezometricLines(
     setOpacity(pdf, 0.15);
     for (const poly of freeWaterPolygons(mainLine.coordinates, modelCoordinates)) {
       const pts = poly.map(([wx, wy]) => tf.worldToPdf(wx, wy));
-      pdfPath(pdf, buildPolylinePath(pts, true), "F");
+      pdfPath(pdf, buildPolylinePath(pts, true), "f");
     }
     resetOpacity(pdf);
   }
