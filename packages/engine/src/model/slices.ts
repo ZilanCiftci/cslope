@@ -117,11 +117,15 @@ export function createSlice(
     [x0, y0Bottom],
   ];
 
-  // Compute edge coefficients for the slip-surface edges (indices 2-3 and 3-4)
+  // Compute edge coefficients for the slip-surface edges (indices 2-3 and 3-4),
+  // in coordinates local to the slice base centre (x, yBottom): with
+  // real-world coordinates (eastings ~1e6 and elevations ~1e3) the constant
+  // term x·y of global coefficients lost the base by more than `lift`
+  // below, and the slice got the wrong base material.
   const edgeCoeffs: [number, number, number][] = [];
   for (let i = 2; i < 4; i++) {
-    const p1 = clipPoly[i];
-    const p2 = clipPoly[i + 1];
+    const p1: [number, number] = [clipPoly[i][0] - x, clipPoly[i][1] - yBottom];
+    const p2: [number, number] = [clipPoly[i + 1][0] - x, clipPoly[i + 1][1] - yBottom];
     const a = p2[1] - p1[1];
     const b = -(p2[0] - p1[0]);
     const c = p2[0] * p1[1] - p2[1] * p1[0];
@@ -148,16 +152,20 @@ export function createSlice(
     [mpx, mpy] = clipPolygonVertical(m.px, m.py, x0, x1);
     if (mpx.length < 3) continue;
 
-    // Step 2: Clip by slip-surface edges
+    // Step 2: Clip by slip-surface edges (in local coordinates)
+    let lx = mpx.map((v) => v - x);
+    let ly = mpy.map((v) => v - yBottom);
     let valid = true;
     for (const [a, b, c] of edgeCoeffs) {
-      [mpx, mpy] = clipPolygonHalfplane(mpx, mpy, a, b, c);
-      if (mpx.length < 3) {
+      [lx, ly] = clipPolygonHalfplane(lx, ly, a, b, c);
+      if (lx.length < 3) {
         valid = false;
         break;
       }
     }
     if (!valid) continue;
+    mpx = lx.map((v) => v + x);
+    mpy = ly.map((v) => v + yBottom);
 
     // Create clipped material fragment
     const mFrag: GeometryWithMaterial = {
@@ -168,7 +176,7 @@ export function createSlice(
     intersectedMaterials.push(mFrag);
 
     // Calculate area and weight
-    const area = calculatePolygonArea(mpx, mpy);
+    const area = calculatePolygonArea(lx, ly);
     totalArea += area;
     const gamma = fragmentUnitWeight(m.material, mpx, mpy, area);
     totalWeight += area * gamma;
@@ -179,7 +187,7 @@ export function createSlice(
       const w = waterForWeight(m.material);
       if (w) {
         const s = (w[1] - w[0]) / (x1 - x0);
-        const [bx, by] = clipPolygonHalfplane(mpx, mpy, s, -1, w[0] - s * x0);
+        const [bx, by] = clipPolygonHalfplane(lx, ly, s, -1, w[0] - yBottom - s * (x0 - x));
         if (bx.length >= 3) {
           totalWeight += calculatePolygonArea(bx, by) * (gammaSat - gamma);
         }
@@ -190,14 +198,7 @@ export function createSlice(
     // Test in coordinates local to the slice base: with real-world
     // eastings (~1e5..1e7) a fixed 1e-10 offset is below the floating
     // point resolution and the base material was missed.
-    if (
-      isPointInPolygon(
-        0,
-        lift,
-        mpx.map((v) => v - x),
-        mpy.map((v) => v - yBottom),
-      )
-    ) {
+    if (isPointInPolygon(0, lift, lx, ly)) {
       baseMaterial = m.material;
       baseInside = true;
     }
