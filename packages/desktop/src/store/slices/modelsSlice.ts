@@ -58,7 +58,7 @@ function createDefaultModel(id: string, name: string): ModelEntry {
   };
 }
 
-const mapModelToState = (model: ModelEntry) => ({
+export const mapModelToState = (model: ModelEntry) => ({
   mode: model.mode ?? "edit",
   orientation: model.orientation ?? "ltr",
   projectInfo: model.projectInfo ?? createDefaultProjectInfo(),

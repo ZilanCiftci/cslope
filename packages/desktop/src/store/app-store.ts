@@ -2,12 +2,21 @@ import { create } from "zustand";
 import { temporal } from "zundo";
 import type { AppState } from "./types";
 import { markProjectClean } from "./unsaved";
+import {
+  viewLockContains,
+  viewLockForModel,
+} from "../features/view/viewLock";
+import { getPlotAspectRatio } from "../features/view/paper";
 import { createAnalysisSlice } from "./slices/analysisSlice";
 import { createCanvasToolbarSlice } from "./slices/canvasToolbarSlice";
 import { createGeometrySlice } from "./slices/geometrySlice";
 import { createLayoutSlice } from "./slices/layoutSlice";
 import { createLoadsSlice } from "./slices/loadsSlice";
-import { createModelsSlice } from "./slices/modelsSlice";
+import {
+  createModelsSlice,
+  INITIAL_MODEL,
+  mapModelToState,
+} from "./slices/modelsSlice";
 import { createParametersSlice } from "./slices/parametersSlice";
 import { createResultViewSlice } from "./slices/resultViewSlice";
 import { createViewportSlice } from "./slices/viewportSlice";
@@ -78,5 +87,39 @@ export const useAppStore = create<AppState>()(
   ),
 );
 
+// Show the starter model the explorer lists (the slices' own defaults are
+// a generic model, so the screen and Save showed different data under the
+// starter's name).
+useAppStore.setState(mapModelToState(INITIAL_MODEL));
+useAppStore.temporal.getState().clear();
+
 // The project the app starts with counts as saved.
 markProjectClean(useAppStore.getState());
+
+// A locked result view that showed the whole model keeps doing so when the
+// geometry grows (otherwise the result view and the PDF/PNG exports stayed
+// clipped to the old extent). A deliberate zoom to part of the model is
+// left alone.
+useAppStore.subscribe((state, prev) => {
+  if (
+    state.coordinates === prev.coordinates ||
+    state.activeModelId !== prev.activeModelId ||
+    state.coordinates.length < 3
+  ) {
+    return;
+  }
+  const lock = state.resultViewSettings.viewLock;
+  if (!lock) return;
+  if (
+    viewLockContains(lock, prev.coordinates) &&
+    !viewLockContains(lock, state.coordinates)
+  ) {
+    const { paperSize, landscape } = state.resultViewSettings.paperFrame;
+    state.setResultViewSettings({
+      viewLock: viewLockForModel(
+        state.coordinates,
+        getPlotAspectRatio(paperSize, landscape),
+      ),
+    });
+  }
+});
