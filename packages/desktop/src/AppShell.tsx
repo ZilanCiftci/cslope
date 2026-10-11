@@ -22,6 +22,7 @@ import { confirmUnsavedChanges } from "./features/project/unsavedGuard";
 import { isElectron } from "./utils/is-electron";
 import { useDragDrop } from "./features/canvas/hooks/useDragDrop";
 import { SensitivityPanel } from "./features/sensitivity/SensitivityPanel";
+import { ReliabilityPanel } from "./features/reliability/ReliabilityPanel";
 
 export function AppShell() {
   useDragDrop();
@@ -239,6 +240,7 @@ export function AppShell() {
         cursorWorld={cursorWorld}
       />
       <SensitivityPanel />
+      <ReliabilityPanel />
     </div>
   );
 }

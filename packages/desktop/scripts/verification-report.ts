@@ -16,8 +16,10 @@ import path from "node:path";
 import { execFileSync } from "node:child_process";
 import { jsPDF } from "jspdf";
 import {
+  RELIABILITY_CASES,
   VERIFICATION_CASES,
   VERIFICATION_OPTIONS,
+  runReliabilityCase,
   analyseSlope,
   buildSlope,
   isPointInPolygon,
@@ -27,6 +29,7 @@ import {
   type AnalysisMethod,
   type AnalysisOptions,
   type MaterialModel,
+  type ReliabilityCheckResult,
   type SlopeDefinition,
   type VerificationCase,
   type VerificationCheck,
@@ -535,6 +538,22 @@ const caseResults = VERIFICATION_CASES.map((c) => {
   return r;
 });
 
+// Probabilistic problems: reliability index and probability of failure.
+console.log(`Running ${RELIABILITY_CASES.length} probabilistic problems…`);
+const reliabilityResults = new Map<string, ReliabilityCheckResult[]>();
+for (const c of RELIABILITY_CASES) {
+  const r = runReliabilityCase(c);
+  reliabilityResults.set(c.id, r);
+  console.log(`  ${c.id.padEnd(8)} ${r.map((x) => `${x.quantity} ${fmt(x.computed)}`).join("  ")}`);
+}
+const RELIABILITY_LABELS: Record<ReliabilityCheckResult["quantity"], string> = {
+  fos: "FOS",
+  "beta-taylor": "β lognormal (Taylor series)",
+  "pf-taylor": "Pf lognormal (Taylor series)",
+  "beta-mc": "β lognormal (Monte Carlo)",
+  "pf-mc": "Pf, share FOS < 1 (Monte Carlo)",
+};
+
 // Bundled benchmark models of the app, through the app's request builder.
 interface BenchResult {
   name: string;
@@ -574,8 +593,9 @@ const today = new Date().toISOString().slice(0, 10);
 
 const allChecks = caseResults.flatMap((r) => r.results);
 const benchRows = benchResults.flatMap((b) => b.rows);
-const nChecks = allChecks.length + benchRows.length;
-const nPass = allChecks.filter((r) => r.pass).length + benchRows.filter((r) => r.pass).length;
+const reliabilityRows = [...reliabilityResults.values()].flat().filter((r) => r.quantity !== "fos");
+const nChecks = allChecks.length + benchRows.length + reliabilityRows.length;
+const nPass = allChecks.filter((r) => r.pass).length + benchRows.filter((r) => r.pass).length + reliabilityRows.filter((r) => r.pass).length;
 const absDiffs = [...allChecks, ...benchRows].map((r) => Math.abs(r.diff)).filter(Number.isFinite);
 const meanAbs = absDiffs.reduce((a, b) => a + b, 0) / absDiffs.length;
 const maxAbs = Math.max(...absDiffs);
@@ -764,6 +784,34 @@ caseResults.forEach((r, i) => {
       statusCell(x.pass),
     ]),
   );
+  const reliability = reliabilityResults.get(c.id)?.filter((x) => x.quantity !== "fos");
+  if (reliability?.length) {
+    const rc = RELIABILITY_CASES.find((x) => x.id === c.id)!;
+    paragraph(
+      `Probabilistic analysis on the same surface: ${rc.variables.length} independent normal variables; Taylor series (mean ± σ) and Monte Carlo with ${rc.samples} samples (seed ${rc.seed}). Differences in β and Pf are absolute.`,
+      8.5,
+    );
+    table(
+      [
+        { title: "Quantity", width: 56 },
+        { title: "Published by", width: 34 },
+        { title: "Published", width: 19, align: "right" },
+        { title: "cSlope", width: 17, align: "right" },
+        { title: "Difference", width: 19, align: "right" },
+        { title: "Tolerance", width: 17, align: "right" },
+        { title: "", width: CONTENT_W - 162, align: "center" },
+      ],
+      reliability.map((x) => [
+        RELIABILITY_LABELS[x.quantity],
+        x.publishedBy,
+        x.published.toFixed(3),
+        x.computed.toFixed(3),
+        (x.computed - x.published >= 0 ? "+" : "") + (x.computed - x.published).toFixed(3),
+        `± ${x.tolerance.toFixed(3)}`,
+        statusCell(x.pass),
+      ]),
+    );
+  }
   const notes = [...(c.notes ?? []), ...r.results.flatMap((x) => (x.check.note ? [x.check.note] : []))];
   if (notes.length > 0) {
     font(9, "bold", INK);

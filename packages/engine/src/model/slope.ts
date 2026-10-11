@@ -1124,6 +1124,11 @@ export class Slope {
   // Internal
   // ────────────────────────────────────────────────────────────────
 
+  /** Material models were changed in place (e.g. Monte Carlo samples): drop what depends on them. */
+  materialsChanged(): void {
+    this._resetResults();
+  }
+
   private _resetResults(): void {
     this._search = [];
     // Pullout from the overburden and the pile pressures depend on geometry,

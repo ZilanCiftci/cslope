@@ -18,6 +18,7 @@ import { buildSliceTable, toCsv } from "../../../features/export/sliceTable";
 import { buildXlsx } from "../../../utils/xlsx";
 import { downloadFile, safeFileName } from "../../../utils/download";
 import { useSensitivityStore } from "../../../features/sensitivity/store";
+import { useReliabilityStore } from "../../../features/reliability/store";
 
 interface Props {
   isOpen: boolean;
@@ -262,6 +263,11 @@ export function ResultsMenu({ isOpen, onActivate, panelHost }: Props) {
                 icon={<SensitivityIcon />}
                 label="Sensitivity"
                 onClick={() => useSensitivityStore.getState().setOpen(true)}
+              />
+              <RibbonButton
+                icon={<ReliabilityIcon />}
+                label="Probabilistic"
+                onClick={() => useReliabilityStore.getState().setOpen(true)}
               />
             </RibbonGroup>
             <RibbonSep />
@@ -614,6 +620,16 @@ function exportSliceData(format: "xlsx" | "csv" | "csv-se"): void {
       "text/csv;charset=utf-8",
     );
   }
+}
+
+function ReliabilityIcon({ size = 20 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <path d="M3 19h18" stroke="#78909c" strokeWidth="1.4" strokeLinecap="round" />
+      <path d="M3.5 18.5C7 18 8 5 12 5s5 13 8.5 13.5" stroke="#26a69a" strokeWidth="2" strokeLinecap="round" fill="none" />
+      <path d="M7 19V9" stroke="#ef5350" strokeWidth="1" strokeDasharray="2 2" />
+    </svg>
+  );
 }
 
 function SensitivityIcon({ size = 20 }: { size?: number }) {

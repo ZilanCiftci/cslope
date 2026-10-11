@@ -175,6 +175,14 @@ export {
   pileForce,
 } from "./model/reinforcement";
 export type { ReinforcementEnvelope } from "./model/reinforcement";
+export { analyseReliability, normalCdf, lognormalBeta } from "./model/reliability";
+export type {
+  RandomVariable,
+  ReliabilityOptions,
+  ReliabilityResult,
+  TaylorTerm,
+  CriticalSurface,
+} from "./model/reliability";
 
 export {
   mirrorX,
@@ -195,10 +203,14 @@ export {
   VERIFICATION_CASES,
   VERIFICATION_OPTIONS,
   runVerification,
+  runReliabilityCase,
 } from "./verification/cases";
+export { RELIABILITY_CASES } from "./verification/reliability-cases";
+export type { ReliabilityCaseData, ReliabilityQuantity } from "./verification/reliability-cases";
 export { FHWA_PULLOUT_TABLES } from "./verification/pullout-tables";
 export type { PulloutTable } from "./verification/pullout-tables";
 export type {
   VerificationCase,
   VerificationCheck,
+  ReliabilityCheckResult,
 } from "./verification/cases";

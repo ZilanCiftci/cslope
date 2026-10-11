@@ -8,6 +8,9 @@
 import type {
   AnalysisOptions,
   AnalysisResult,
+  RandomVariable,
+  ReliabilityOptions,
+  ReliabilityResult,
   SlopeDefinition,
   SlopeOrientation,
 } from "@cslope/engine";
@@ -23,12 +26,28 @@ export interface AnalysisRequest {
   options: AnalysisOptions;
 }
 
+/** Probabilistic analysis of the model (its own sliding direction). */
+export interface ReliabilityRequest {
+  type: "run-reliability";
+  id: string;
+  slope: SlopeDefinition;
+  options: AnalysisOptions;
+  variables: RandomVariable[];
+  reliability: Omit<ReliabilityOptions, "onProgress">;
+}
+
 /** Response messages sent from the worker. */
 export type AnalysisResponse =
   | {
       type: "analysis-complete";
       id: string;
       result: AnalysisResult;
+    }
+  | {
+      type: "reliability-complete";
+      id: string;
+      /** Critical surface in model coordinates. */
+      result: ReliabilityResult;
     }
   | {
       type: "analysis-progress";
@@ -43,5 +62,5 @@ export type AnalysisResponse =
     };
 
 /** Union of all worker messages. */
-export type WorkerMessage = AnalysisRequest;
+export type WorkerMessage = AnalysisRequest | ReliabilityRequest;
 export type WorkerResponse = AnalysisResponse;

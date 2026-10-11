@@ -5,7 +5,7 @@
  * runs the full analysis, and returns structured results.
  */
 
-import type { AnalysisRequest, AnalysisResponse } from "./messages";
+import type { AnalysisResponse, ReliabilityRequest, WorkerMessage } from "./messages";
 import type {
   AnalysisResult,
   SlipSurfaceResult,
@@ -13,6 +13,8 @@ import type {
 } from "@cslope/engine";
 import {
   analyseSlope,
+  analyseReliability,
+  toCanonicalSlopeDefinition,
   mapAnalysisResultToModelSpace,
   buildSlope,
   oppositeDirectionDefinition,
@@ -54,7 +56,11 @@ function computeCriticalSlipVolume(
 // ── Worker handler ──────────────────────────────────────────────
 
 /** Handle incoming analysis requests. */
-self.onmessage = (event: MessageEvent<AnalysisRequest>) => {
+self.onmessage = (event: MessageEvent<WorkerMessage>) => {
+  if (event.data.type === "run-reliability") {
+    runReliability(event.data);
+    return;
+  }
   const { type, id, slope: slopeDef, options } = event.data;
 
   if (type !== "run-analysis") {
@@ -92,6 +98,40 @@ self.onmessage = (event: MessageEvent<AnalysisRequest>) => {
     self.postMessage(errorResponse);
   }
 };
+
+/** Probabilistic analysis in the model's own sliding direction. */
+function runReliability(req: ReliabilityRequest): void {
+  try {
+    const canonical = toCanonicalSlopeDefinition(req.slope);
+    const result = analyseReliability(canonical, req.options, req.variables, {
+      ...req.reliability,
+      onProgress: (progress) =>
+        self.postMessage({ type: "analysis-progress", id: req.id, progress } satisfies AnalysisResponse),
+    });
+    // The surface back in model coordinates (mirrored for right-to-left).
+    if (canonical.orientation === "rtl") {
+      const xs = req.slope.coordinates.map((c) => c[0]);
+      const sum = Math.min(...xs) + Math.max(...xs);
+      const m = (p: [number, number]): [number, number] => [sum - p[0], p[1]];
+      const s = result.surface;
+      result.surface = {
+        cx: sum - s.cx,
+        cy: s.cy,
+        radius: s.radius,
+        lc: m(s.lc),
+        rc: m(s.rc),
+        ...(s.points ? { points: s.points.map(m) } : {}),
+      };
+    }
+    self.postMessage({ type: "reliability-complete", id: req.id, result } satisfies AnalysisResponse);
+  } catch (err: unknown) {
+    self.postMessage({
+      type: "analysis-error",
+      id: req.id,
+      error: err instanceof Error ? err.message : String(err),
+    } satisfies AnalysisResponse);
+  }
+}
 
 /**
  * Analyse the model's own direction and the opposite one and report the

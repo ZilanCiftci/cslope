@@ -1,7 +1,14 @@
-import type { AnalysisOptions, AnalysisResult } from "@cslope/engine";
+import type {
+  AnalysisOptions,
+  AnalysisResult,
+  RandomVariable,
+  ReliabilityOptions,
+  ReliabilityResult,
+  SlopeDefinition,
+} from "@cslope/engine";
 import { findExpressionErrors } from "../expression-check";
 import { DEFAULT_ANALYSIS_OPTIONS } from "@cslope/engine";
-import type { AnalysisResponse } from "../../worker/messages";
+import type { AnalysisResponse, WorkerMessage } from "../../worker/messages";
 import type { SliceCreator } from "../helpers";
 import { buildSlopeDTOFromModel, nextId, RUN_RESET } from "../helpers";
 import type { AnalysisSlice, AppState, ModelEntry } from "../types";
@@ -45,6 +52,45 @@ export function executeModelAnalysis(
   model: ModelEntry,
   onProgress?: (progress: number) => void,
 ): AnalysisHandle {
+  const { slope, options } = workerInputs(model);
+  return runInWorker<AnalysisResult>(
+    { type: "run-analysis", id: crypto.randomUUID(), slope, options },
+    analysisTimeoutMs(options),
+    onProgress,
+  );
+}
+
+/** A cancellable handle to a running probabilistic analysis. */
+export interface ReliabilityHandle {
+  promise: Promise<ReliabilityResult>;
+  cancel: () => void;
+}
+
+/**
+ * Probabilistic analysis of a model in a Web Worker. The variables refer
+ * to the model's materials by index. A Taylor series with search runs
+ * 1 + 2n analyses and a Monte Carlo run one search plus the samples, so
+ * the time budget grows with them.
+ */
+export function executeReliability(
+  model: ModelEntry,
+  variables: RandomVariable[],
+  reliability: Omit<ReliabilityOptions, "onProgress">,
+  onProgress?: (progress: number) => void,
+): ReliabilityHandle {
+  const { slope, options } = workerInputs(model);
+  const runs =
+    reliability.method === "taylor"
+      ? (reliability.search ?? true) ? 1 + 2 * variables.length : 2
+      : 1 + (reliability.samples ?? 1000) / 500;
+  return runInWorker<ReliabilityResult>(
+    { type: "run-reliability", id: crypto.randomUUID(), slope, options, variables, reliability },
+    analysisTimeoutMs(options) * runs,
+    onProgress,
+  );
+}
+
+function workerInputs(model: ModelEntry): { slope: SlopeDefinition; options: AnalysisOptions } {
   const problems = findExpressionErrors(model);
   if (problems.length > 0) {
     throw new Error(
@@ -59,7 +105,14 @@ export function executeModelAnalysis(
     iterations: 1000,
     refinedIterations: 500,
   };
+  return { slope, options };
+}
 
+function runInWorker<T>(
+  request: WorkerMessage,
+  timeoutMs: number,
+  onProgress?: (progress: number) => void,
+): { promise: Promise<T>; cancel: () => void } {
   let worker: Worker | null = new Worker(
     new URL("../../worker/analysis.worker.ts", import.meta.url),
     { type: "module" },
@@ -86,8 +139,7 @@ export function executeModelAnalysis(
     rejectPromise?.(new AnalysisCancelledError());
   };
 
-  const timeoutMs = analysisTimeoutMs(options);
-  const promise = new Promise<AnalysisResult>((resolve, reject) => {
+  const promise = new Promise<T>((resolve, reject) => {
     rejectPromise = reject;
     timeout = setTimeout(() => {
       if (settled) return;
@@ -102,38 +154,24 @@ export function executeModelAnalysis(
     worker!.onmessage = (event: MessageEvent<AnalysisResponse>) => {
       if (settled) return;
       const msg = event.data;
-      if (msg.type === "analysis-complete") {
-        settled = true;
-        if (timeout) clearTimeout(timeout);
-        worker?.terminate();
-        worker = null;
-        resolve(msg.result);
+      if (msg.type === "analysis-complete" || msg.type === "reliability-complete") {
+        stop();
+        resolve(msg.result as T);
       } else if (msg.type === "analysis-progress") {
         onProgress?.(Math.min(RUN_PROGRESS_MAX, Math.max(0, msg.progress)));
       } else if (msg.type === "analysis-error") {
-        settled = true;
-        if (timeout) clearTimeout(timeout);
-        worker?.terminate();
-        worker = null;
+        stop();
         reject(new Error(msg.error));
       }
     };
 
     worker!.onerror = (err) => {
       if (settled) return;
-      settled = true;
-      if (timeout) clearTimeout(timeout);
-      worker?.terminate();
-      worker = null;
+      stop();
       reject(new Error(err.message));
     };
 
-    worker!.postMessage({
-      type: "run-analysis",
-      id: crypto.randomUUID(),
-      slope,
-      options,
-    });
+    worker!.postMessage(request);
   });
 
   return { promise, cancel };

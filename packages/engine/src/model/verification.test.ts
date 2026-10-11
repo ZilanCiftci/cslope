@@ -8,9 +8,11 @@ import { defaultAxisPoint, isAdmissiblePolyline } from "./surface";
 import { validateMaterialModel } from "../types/validation";
 import { analyseBishop, analyseMorgensternPrice } from "./solvers";
 import { rankineCrackDepth } from "./slices";
+import { RELIABILITY_CASES } from "../verification/reliability-cases";
 import type { Slice } from "../types/geometry";
 import {
   VERIFICATION_CASES,
+  runReliabilityCase,
   circle,
   layered,
   mc,
@@ -28,6 +30,16 @@ describe("Verification problems", () => {
         expect(Math.abs(fos! - check.published) / check.published).toBeLessThanOrEqual(check.tolerance);
       });
     }
+  }
+});
+
+describe("Probabilistic verification problems", () => {
+  for (const c of RELIABILITY_CASES) {
+    it(`${c.id} ${c.title}`, { timeout: 120000 }, () => {
+      for (const r of runReliabilityCase(c)) {
+        expect({ check: `${r.quantity} ${r.published} (${r.publishedBy})`, computed: r.computed, pass: r.pass }).toMatchObject({ pass: true });
+      }
+    });
   }
 });
 

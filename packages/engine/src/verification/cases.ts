@@ -23,6 +23,8 @@ import type { MaterialModel } from "../types/material-models";
 import type { AnalysisMethod, AnalysisOptions } from "../types/analysis";
 import { REINFORCED_CASES } from "./reinforcement-cases";
 import { PILE_CASES } from "./pile-cases";
+import { RELIABILITY_CASES, type ReliabilityCaseData, type ReliabilityQuantity } from "./reliability-cases";
+import { analyseReliability } from "../model/reliability";
 
 export type Pt = [number, number];
 
@@ -1231,6 +1233,24 @@ export const VERIFICATION_CASES: VerificationCase[] = [
       }),
     }),
   ),
+  // Probabilistic problems: the deterministic factor of safety.
+  ...RELIABILITY_CASES.map(
+    (c): VerificationCase => ({
+      id: c.id,
+      title: c.title,
+      reference: c.reference,
+      surface: "fixed",
+      units: "SI",
+      description: c.description,
+      definition: c.definition,
+      notes: c.notes,
+      checks: c.checks
+        .filter(([q]) => q === "fos")
+        .map(([, published, publishedBy, tolerance]) =>
+          (c.method === "Spencer" ? spencer : bishop)(published, publishedBy, tolerance, { options: c.options }),
+        ),
+    }),
+  ),
   {
     id: "VP22a",
     title: "Fredlund & Krahn slope on a weak seam, composite surface",
@@ -1446,3 +1466,44 @@ export const VERIFICATION_CASES: VerificationCase[] = [
     checks: [spencer(published, "Slide2 (particle swarm + surface altering)", 0.01, { options: { nonCircularOptimization: true } })],
   })),
 ];
+
+export interface ReliabilityCheckResult {
+  quantity: ReliabilityQuantity;
+  published: number;
+  publishedBy: string;
+  tolerance: number;
+  computed: number;
+  /** Relative for the FOS, absolute for β and Pf. */
+  pass: boolean;
+}
+
+/** Run the reliability checks of a probabilistic problem (Taylor series and Monte Carlo on its surface). */
+export function runReliabilityCase(c: ReliabilityCaseData): ReliabilityCheckResult[] {
+  const def = toCanonicalSlopeDefinition(c.definition);
+  const options: Partial<AnalysisOptions> = {
+    ...VERIFICATION_OPTIONS,
+    ...c.options,
+    ...(c.method === "Spencer"
+      ? { method: "Morgenstern-Price", intersliceFunction: "constant" }
+      : { method: c.method }),
+  };
+  const quantities = new Set(c.checks.map(([q]) => q));
+  const taylor = analyseReliability(def, options, c.variables, { method: "taylor", search: false });
+  const mc = [...quantities].some((q) => q.endsWith("-mc"))
+    ? analyseReliability(def, options, c.variables, { method: "monte-carlo", samples: c.samples, seed: c.seed })
+    : null;
+  const value = (q: ReliabilityQuantity): number => {
+    switch (q) {
+      case "fos": return taylor.fos;
+      case "beta-taylor": return taylor.betaLognormal;
+      case "pf-taylor": return taylor.pfLognormal;
+      case "beta-mc": return mc!.betaLognormal;
+      case "pf-mc": return mc!.pf!;
+    }
+  };
+  return c.checks.map(([quantity, published, publishedBy, tolerance]) => {
+    const computed = value(quantity);
+    const diff = quantity === "fos" ? Math.abs(computed - published) / published : Math.abs(computed - published);
+    return { quantity, published, publishedBy, tolerance, computed, pass: diff <= tolerance + 1e-9 };
+  });
+}
