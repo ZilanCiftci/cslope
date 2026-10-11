@@ -168,4 +168,20 @@ describe("ViewSettingsDialogApp", () => {
     expect(vl.topRight[1]).toBeCloseTo(-1 + 32 / ar, 9);
     expect(lastSent().resultViewSettings.viewLock).toEqual(vl);
   });
+  it("creates a view lock from the shown extents when there is none", async () => {
+    render(<ViewSettingsDialogApp />);
+    // E.g. after importing a view template without a locked view.
+    hydrate({ viewLock: undefined });
+    const left = extent("Left X");
+    expect(Number(left.value)).toBe(-1);
+    await userEvent.clear(left);
+    await userEvent.type(left, "2{Enter}");
+    const ar = getPlotAspectRatio("A4", true);
+    const vl = rvs().viewLock!;
+    expect(vl).toBeDefined();
+    expect(vl.bottomLeft).toEqual([2, -1]);
+    expect(vl.topRight[0]).toBe(26);
+    expect(vl.topRight[1]).toBeCloseTo(-1 + 24 / ar, 9);
+    expect(Number(left.value)).toBe(2);
+  });
 });
