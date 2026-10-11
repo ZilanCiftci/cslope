@@ -12,6 +12,10 @@ interface SensitivityState {
   running: boolean;
   /** Label of the variable of the current/last run. */
   label: string;
+  /** Key of the variable of the current/last run and its model value. */
+  runKey: string;
+  runValue: number | null;
+  /** Results so far, sorted by value. */
   points: SensitivityPoint[];
   /** Number of values in the current run. */
   total: number;
@@ -19,52 +23,75 @@ interface SensitivityState {
   run: (
     model: ModelEntry,
     variable: SensitivityVariable,
-    label: string,
+    info: { key: string; label: string; value: number },
     values: number[],
   ) => Promise<void>;
   cancel: () => void;
 }
 
 let generation = 0;
-let activeHandle: AnalysisHandle | null = null;
+const activeHandles = new Set<AnalysisHandle>();
+
+/** Workers used at once (leaves a core for the interface). */
+function poolSize(): number {
+  const cores = typeof navigator !== "undefined" ? navigator.hardwareConcurrency || 2 : 2;
+  return Math.max(1, Math.min(4, cores - 1));
+}
 
 /** Sensitivity panel state (not saved with the project). */
 export const useSensitivityStore = create<SensitivityState>((set, get) => ({
   open: false,
   running: false,
   label: "",
+  runKey: "",
+  runValue: null,
   points: [],
   total: 0,
   setOpen: (open) => {
     if (!open) get().cancel();
     set({ open });
   },
-  run: async (model, variable, label, values) => {
+  run: async (model, variable, info, values) => {
     get().cancel();
     const run = ++generation;
-    set({ running: true, label, points: [], total: values.length });
-    for (const value of values) {
-      if (run !== generation) return;
-      let point: SensitivityPoint;
-      try {
-        activeHandle = executeModelAnalysis(modelWithValue(model, variable, value));
-        const result = await activeHandle.promise;
-        point = { value, fos: result.minFOS };
-      } catch (err) {
-        if (run !== generation) return; // cancelled
-        point = { value, fos: null, error: err instanceof Error ? err.message : String(err) };
-      } finally {
-        activeHandle = null;
+    set({
+      running: true,
+      label: info.label,
+      runKey: info.key,
+      runValue: info.value,
+      points: [],
+      total: values.length,
+    });
+    const queue = [...values];
+    const worker = async () => {
+      while (queue.length > 0) {
+        if (run !== generation) return;
+        const value = queue.shift()!;
+        let point: SensitivityPoint;
+        let handle: AnalysisHandle | null = null;
+        try {
+          handle = executeModelAnalysis(modelWithValue(model, variable, value));
+          activeHandles.add(handle);
+          const result = await handle.promise;
+          point = { value, fos: result.minFOS };
+        } catch (err) {
+          point = { value, fos: null, error: err instanceof Error ? err.message : String(err) };
+        } finally {
+          if (handle) activeHandles.delete(handle);
+        }
+        if (run !== generation) return; // cancelled meanwhile
+        set((s) => ({
+          points: [...s.points, point].sort((a, b) => a.value - b.value),
+        }));
       }
-      if (run !== generation) return;
-      set((s) => ({ points: [...s.points, point] }));
-    }
+    };
+    await Promise.all(Array.from({ length: Math.min(poolSize(), values.length) }, worker));
     if (run === generation) set({ running: false });
   },
   cancel: () => {
     generation++;
-    activeHandle?.cancel();
-    activeHandle = null;
+    for (const h of activeHandles) h.cancel();
+    activeHandles.clear();
     set({ running: false });
   },
 }));

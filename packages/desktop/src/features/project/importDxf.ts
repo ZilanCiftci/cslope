@@ -22,6 +22,8 @@ export function importDxf(text: string, fileName: string): string {
   // The new model's default search limits belong to the default geometry.
   s.setAnalysisLimits({ enabled: false });
   useAppStore.setState({ _pendingFitToScreen: true });
+  // One import, not a series of edits to undo one by one (as after Open).
+  useAppStore.temporal.getState().clear();
 
   const parts = [
     `Imported "${name}": outline with ${geometry.coordinates.length} points`,
@@ -29,6 +31,7 @@ export function importDxf(text: string, fileName: string): string {
     `${geometry.waterLines.length} water line${geometry.waterLines.length === 1 ? "" : "s"}`,
   ];
   let message = parts.join(", ") + ". Assign materials to the regions before running.";
+  if (drawing.unitNote) message += ` ${drawing.unitNote}`;
   const skipped = Object.entries(drawing.skipped);
   if (skipped.length > 0) {
     message += ` Not imported: ${skipped.map(([t, n]) => `${n} ${t}`).join(", ")} (only polylines and lines are read).`;

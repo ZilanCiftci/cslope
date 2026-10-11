@@ -4,13 +4,13 @@ export function downloadFile(
   data: BlobPart,
   type: string,
 ): void {
-  const blob = new Blob([data], { type });
+  const url = URL.createObjectURL(new Blob([data], { type }));
   const link = document.createElement("a");
   link.download = filename;
-  link.href = URL.createObjectURL(blob);
+  link.href = url;
   link.click();
-  // Revoke after the click has been handled.
-  setTimeout(() => URL.revokeObjectURL(link.href), 0);
+  // The download has started; the URL is no longer needed.
+  URL.revokeObjectURL(url);
 }
 
 /** A file name from a model name: safe characters, given extension. */

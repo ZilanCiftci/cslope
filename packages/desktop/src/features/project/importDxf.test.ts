@@ -31,5 +31,7 @@ describe("importDxf", () => {
     expect(s.piezometricLine.lines).toHaveLength(1);
     expect(message).toContain("1 ARC");
     expect(s.analysisLimits.enabled).toBe(false);
+    // The import is one step: nothing to undo piece by piece.
+    expect(useAppStore.temporal.getState().pastStates).toHaveLength(0);
   });
 });

@@ -50,6 +50,7 @@ export function FileMenu({
           alert(`DXF import failed: ${err instanceof Error ? err.message : String(err)}`);
         }
       };
+      reader.onerror = () => alert(`Could not read ${file.name}.`);
       reader.readAsText(file);
     };
     input.click();

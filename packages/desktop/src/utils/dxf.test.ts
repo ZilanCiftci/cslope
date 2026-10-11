@@ -48,9 +48,31 @@ describe("DXF import", () => {
   });
 
   it("scales millimetre drawings to metres", () => {
-    const mm = DRAWING.replace("$INSUNITS\n70\n6", "$INSUNITS\n70\n4");
-    const g = dxfToGeometry(parseDxf(mm));
-    expect(g.coordinates[2]).toEqual([0.02, 0]);
+    const mm = dxf([
+      [0, "SECTION"], [2, "HEADER"], [9, "$INSUNITS"], [70, 4], [0, "ENDSEC"],
+      [0, "SECTION"], [2, "ENTITIES"],
+      ...lw("p", true, [[0, -10000], [0, 0], [20000, 0], [40000, -10000], [60000, -10000], [60000, -20000]]),
+      [0, "ENDSEC"], [0, "EOF"],
+    ]);
+    const d = parseDxf(mm);
+    expect(dxfToGeometry(d).coordinates[2]).toEqual([20, 0]);
+    expect(d.unitNote).toMatch(/millimetres/);
+  });
+
+  it("takes a metre drawing with a millimetre template setting as metres", () => {
+    const wrongUnits = DRAWING.replace("$INSUNITS\n70\n6", "$INSUNITS\n70\n4");
+    const d = parseDxf(wrongUnits);
+    expect(dxfToGeometry(d).coordinates[2]).toEqual([20, 0]);
+    expect(d.unitNote).toMatch(/imported as drawn in metres/);
+  });
+
+  it("does not take the next vertex's y for a vertex without one", () => {
+    const text = dxf([
+      [0, "SECTION"], [2, "ENTITIES"],
+      [0, "LWPOLYLINE"], [8, "a"], [70, 0], [10, 0], [10, 5], [20, 1], [10, 9], [20, 2],
+      [0, "ENDSEC"], [0, "EOF"],
+    ]);
+    expect(parseDxf(text).polylines[0].points).toEqual([[5, 1], [9, 2]]);
   });
 
   it("explains a drawing without a closed outline", () => {

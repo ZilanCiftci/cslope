@@ -12,6 +12,7 @@ import {
   type ProjectFile,
 } from "../../store/persistence";
 import type { AppState } from "../../store/types";
+import { downloadFile } from "../../utils/download";
 
 // ── Filename helpers ────────────────────────────────────────────────
 
@@ -27,13 +28,7 @@ export const stripJsonExt = (name: string): string =>
 
 /** Trigger a JSON file download in a regular browser context. */
 export function triggerBrowserDownload(json: string, fileName: string): void {
-  const blob = new Blob([json], { type: "application/json" });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = fileName;
-  a.click();
-  URL.revokeObjectURL(url);
+  downloadFile(fileName, json, "application/json");
 }
 
 // ── Serialise / parse wrappers ──────────────────────────────────────

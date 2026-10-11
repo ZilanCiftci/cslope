@@ -24,6 +24,8 @@ export interface DxfDrawing {
   skipped: Record<string, number>;
   /** Drawing units to metres ($INSUNITS), 1 when unknown. */
   unitScale: number;
+  /** How the units were interpreted, for the user (if not plain metres). */
+  unitNote?: string;
 }
 
 const UNIT_SCALES: Record<number, number> = {
@@ -89,9 +91,13 @@ export function parseDxf(text: string): DxfDrawing {
       const flags = Number.parseInt(body.find((p) => p[0] === 70)?.[1] ?? "0", 10);
       const points: Pt[] = [];
       for (let k = 0; k < body.length; k++) {
-        if (body[k][0] === 10) {
-          const y = body.slice(k + 1).find((p) => p[0] === 20);
-          if (y) points.push([num(body[k][1]), num(y[1])]);
+        if (body[k][0] !== 10) continue;
+        // The vertex's y follows its x, before the next vertex.
+        for (let m = k + 1; m < body.length && body[m][0] !== 10; m++) {
+          if (body[m][0] === 20) {
+            points.push([num(body[k][1]), num(body[m][1])]);
+            break;
+          }
         }
       }
       polylines.push({ layer, points, closed: (flags & 1) === 1 });
@@ -131,6 +137,24 @@ export function parseDxf(text: string): DxfDrawing {
   }
 
   polylines.push(...chainSegments(segments));
+
+  // Templates often set $INSUNITS (e.g. mm in acadiso) for drawings made
+  // in metres: a slope that would come out smaller than a metre is taken
+  // as drawn in metres.
+  let unitNote: string | undefined;
+  if (unitScale !== 1) {
+    const xs = polylines.flatMap((p) => p.points.map((q) => q[0]));
+    const ys = polylines.flatMap((p) => p.points.map((q) => q[1]));
+    const extent = xs.length
+      ? Math.max(Math.max(...xs) - Math.min(...xs), Math.max(...ys) - Math.min(...ys))
+      : 0;
+    if (extent * unitScale < 1 && extent >= 1) {
+      unitNote = `The drawing says its units are ${unitName(unitScale)}, but the slope would then be ${(extent * unitScale).toPrecision(2)} m across; it was imported as drawn in metres.`;
+      unitScale = 1;
+    } else {
+      unitNote = `Drawing units: ${unitName(unitScale)}, converted to metres.`;
+    }
+  }
   for (const p of polylines) {
     p.points = dedupe(p.points.map(([x, y]) => [x * unitScale, y * unitScale] as Pt));
     // A polyline drawn back to its start is closed.
@@ -144,7 +168,14 @@ export function parseDxf(text: string): DxfDrawing {
     polylines: polylines.filter((p) => p.points.length >= 2),
     skipped,
     unitScale,
+    unitNote,
   };
+}
+
+function unitName(scale: number): string {
+  return (
+    { 0.0254: "inches", 0.3048: "feet", 0.001: "millimetres", 0.01: "centimetres", 1000: "kilometres" } as Record<number, string>
+  )[scale] ?? "metres";
 }
 
 const TOL = 1e-6;

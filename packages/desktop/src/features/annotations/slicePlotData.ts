@@ -1,4 +1,4 @@
-import type { AnalysisResult } from "@cslope/engine";
+import type { AnalysisResult, SliceData } from "@cslope/engine";
 import type { PlotAxisMode, PlotMetricKey } from "../../store/types";
 
 export const PLOT_METRIC_META: Record<
@@ -16,6 +16,16 @@ export const PLOT_METRIC_META: Record<
   resistingForce: { label: "Resisting", unit: "kN" },
   pullingForce: { label: "Pulling", unit: "kN" },
 };
+
+/** Shear strength along a slice base, c·l + max(N', 0)·tan φ (kN/m). */
+export function sliceShearStrength(
+  slice: Pick<SliceData, "cohesion" | "baseLength" | "normalForce" | "frictionAngle">,
+): number {
+  return (
+    slice.cohesion * slice.baseLength +
+    Math.max(slice.normalForce, 0) * Math.tan((slice.frictionAngle * Math.PI) / 180)
+  );
+}
 
 export interface SlicePlotData {
   title: string;
@@ -37,11 +47,9 @@ export function computeSlicePlotData(
   const points = result.criticalSlices.map((slice, index) => {
     // SliceData.frictionAngle is always in degrees.
     const phiDeg = slice.frictionAngle;
-    const phiRad = (phiDeg * Math.PI) / 180;
     const totalWeight = slice.weight + (slice.surfaceLoad ?? 0);
     const cohesionStrength = slice.cohesion * slice.baseLength;
-    const frictionStrength = Math.max(slice.normalForce, 0) * Math.tan(phiRad);
-    const resistingForce = cohesionStrength + frictionStrength;
+    const resistingForce = sliceShearStrength(slice);
     const values: Record<PlotMetricKey, number> = {
       shearStrength:
         slice.baseLength > 1e-9 ? resistingForce / slice.baseLength : 0,

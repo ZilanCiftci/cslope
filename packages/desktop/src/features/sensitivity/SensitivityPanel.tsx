@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   CartesianGrid,
   Line,
@@ -28,7 +28,8 @@ export function SensitivityPanel() {
 }
 
 function SensitivityPanelBody() {
-  const { setOpen, run, cancel, running, points, total, label } = useSensitivityStore();
+  const { setOpen, run, cancel, running, points, total, label, runValue } =
+    useSensitivityStore();
   const designValues = useAppStore((s) => !!s.options.partialFactors);
   // The model as it is when the panel opens (later edits need a reopen).
   const model = useMemo(() => {
@@ -37,10 +38,18 @@ function SensitivityPanelBody() {
     return { ...snapshotFromState(s), name };
   }, []);
   const variables = useMemo(() => listVariables(model), [model]);
+  // The panel belongs to this model: switching models, a new project or
+  // an import closes it (and stops a run).
+  const activeModelId = useAppStore((s) => s.activeModelId);
+  useEffect(() => {
+    if (activeModelId !== model.id) setOpen(false);
+  }, [activeModelId, model.id, setOpen]);
   const [key, setKey] = useState(variables[0]?.key ?? "");
   const selected = variables.find((v) => v.key === key);
   const defaultRange = (v: number) =>
-    v === 0 ? [-5, 5] : [Math.min(v * 0.8, v * 1.2), Math.max(v * 0.8, v * 1.2)];
+    v === 0
+      ? [-5, 5]
+      : [Math.min(v * 0.8, v * 1.2), Math.max(v * 0.8, v * 1.2)].map(sig);
   const [from, setFrom] = useState(() => defaultRange(selected?.value ?? 0)[0]);
   const [to, setTo] = useState(() => defaultRange(selected?.value ?? 0)[1]);
   const [steps, setSteps] = useState(9);
@@ -50,8 +59,8 @@ function SensitivityPanelBody() {
     const v = variables.find((o) => o.key === next);
     if (v) {
       const [a, b] = defaultRange(v.value);
-      setFrom(round(a));
-      setTo(round(b));
+      setFrom(a);
+      setTo(b);
     }
   };
 
@@ -75,7 +84,12 @@ function SensitivityPanelBody() {
             <button
               onClick={() =>
                 selected &&
-                void run(model, selected.variable, selected.label, sensitivityValues(from, to, steps))
+                void run(
+                  model,
+                  selected.variable,
+                  { key: selected.key, label: selected.label, value: selected.value },
+                  sensitivityValues(from, to, steps),
+                )
               }
               disabled={!selected || from === to}
               className="px-2 py-1 rounded cursor-pointer"
@@ -88,20 +102,24 @@ function SensitivityPanelBody() {
             {running ? `${points.length} / ${total}` : points.length > 0 ? `${data.length} of ${points.length} values gave a FOS` : ""}
           </span>
           <span className="flex-1" />
-          <button
-            onClick={() =>
-              downloadFile(
-                safeFileName(`${model.name || "cslope"} sensitivity`, "csv"),
-                "﻿" + sensitivityCsv(label, points),
-                "text/csv;charset=utf-8",
-              )
-            }
-            disabled={points.length === 0 || running}
-            className="px-2 py-1 rounded cursor-pointer"
-            style={buttonStyle}
-          >
-            Export CSV
-          </button>
+          {([false, true] as const).map((swedish) => (
+            <button
+              key={String(swedish)}
+              onClick={() =>
+                downloadFile(
+                  safeFileName(`${model.name || "cslope"} sensitivity`, "csv"),
+                  "\uFEFF" + sensitivityCsv(label, points, swedish),
+                  "text/csv;charset=utf-8",
+                )
+              }
+              disabled={points.length === 0 || running}
+              className="px-2 py-1 rounded cursor-pointer"
+              style={buttonStyle}
+              title={swedish ? "Semicolons and decimal commas (Swedish Excel)" : "Commas and decimal points"}
+            >
+              {swedish ? "CSV (; ,)" : "Export CSV"}
+            </button>
+          ))}
         </div>
       }
     >
@@ -175,8 +193,9 @@ function SensitivityPanelBody() {
                   ifOverflow="extendDomain"
                   label={{ value: designValues ? "1.0 (design)" : "1.0", fontSize: 9, fill: "var(--color-vsc-error)", position: "insideTopRight" }}
                 />
-                {selected && (
-                  <ReferenceLine x={selected.value} stroke="var(--color-vsc-text-muted)" strokeDasharray="2 3" />
+                {runValue != null && (
+                  // The model's value of the variable that was run.
+                  <ReferenceLine x={runValue} stroke="var(--color-vsc-text-muted)" strokeDasharray="2 3" />
                 )}
                 <Tooltip
                   contentStyle={{
@@ -229,4 +248,9 @@ const buttonStyle: React.CSSProperties = {
 
 function round(v: number): number {
   return Math.round(v * 1000) / 1000;
+}
+
+/** Four significant digits (keeps small values distinct). */
+function sig(v: number): number {
+  return Number(v.toPrecision(4));
 }

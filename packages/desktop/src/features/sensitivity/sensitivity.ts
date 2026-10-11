@@ -1,6 +1,7 @@
 import type { ModelEntry } from "../../store/types";
 import { resolveModelParameters } from "../../store/slices/parametersSlice";
 import { resolveParameters } from "../../utils/expression";
+import { toCsv } from "../export/sliceTable";
 
 /** What a sensitivity analysis varies. */
 export type SensitivityVariable =
@@ -100,17 +101,27 @@ export function modelWithValue(
 /** Evenly spaced values from `from` to `to` (inclusive). */
 export function sensitivityValues(from: number, to: number, steps: number): number[] {
   const n = Math.max(2, Math.min(101, Math.round(steps)));
-  return Array.from({ length: n }, (_, i) => from + ((to - from) * i) / (n - 1));
+  // Rounded so 25.6 + 1.6 is 27.2, not 27.200000000000003.
+  return Array.from({ length: n }, (_, i) =>
+    Number((from + ((to - from) * i) / (n - 1)).toPrecision(12)),
+  );
 }
 
-/** CSV (comma separated) of the points. */
-export function sensitivityCsv(label: string, points: SensitivityPoint[]): string {
-  const quote = (s: string) => (/[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s);
-  const rows = [
-    [quote(label), "FOS", "Note"].join(","),
-    ...points.map((p) =>
-      [String(p.value), p.fos == null ? "" : p.fos.toFixed(4), quote(p.error ?? "")].join(","),
-    ),
-  ];
-  return rows.join("\r\n") + "\r\n";
+/** CSV of the points (Swedish Excel variant with `decimalComma`). */
+export function sensitivityCsv(
+  label: string,
+  points: SensitivityPoint[],
+  decimalComma = false,
+): string {
+  return toCsv(
+    [
+      [label, "FOS", "Note"],
+      ...points.map((p) => [
+        p.value,
+        p.fos == null ? null : Math.round(p.fos * 10000) / 10000,
+        p.error ?? null,
+      ]),
+    ],
+    decimalComma,
+  );
 }

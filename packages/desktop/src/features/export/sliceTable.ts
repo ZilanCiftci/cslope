@@ -1,9 +1,10 @@
 import type { AnalysisResult } from "@cslope/engine";
 import type { XlsxCell } from "../../utils/xlsx";
+import { sliceShearStrength } from "../annotations/slicePlotData";
 
 export interface SliceTableMeta {
   modelName: string;
-  /** Units label for forces and stresses (SI). */
+  /** Export date, written in the header block. */
   date?: string;
 }
 
@@ -17,7 +18,7 @@ const HEADERS = [
   "y base (m)",
   "Height (m)",
   "Area (m²)",
-  "Base angle α (°)",
+  "Base angle α (°, + dipping in the sliding direction)",
   "Base length (m)",
   "Weight (kN/m)",
   "Surface load (kN/m)",
@@ -56,11 +57,10 @@ export function buildSliceTable(
   }
   if (meta.date) rows.push(["Exported", meta.date]);
   rows.push([], HEADERS);
+  // Slices are numbered from the entry (crest) to the exit (toe).
   result.criticalSlices.forEach((s, i) => {
     const phi = s.frictionAngle;
-    const strength =
-      s.cohesion * s.baseLength +
-      Math.max(s.normalForce, 0) * Math.tan((phi * Math.PI) / 180);
+    const strength = sliceShearStrength(s);
     rows.push([
       i + 1,
       round(s.xLeft, 4),

@@ -421,14 +421,11 @@ export function ResultsMenu({ isOpen, onActivate, panelHost }: Props) {
                     version: 1,
                     resultViewSettings: rvs,
                   };
-                  const blob = new Blob([JSON.stringify(template, null, 2)], {
-                    type: "application/json",
-                  });
-                  const link = document.createElement("a");
-                  link.download = "view-template.json";
-                  link.href = URL.createObjectURL(blob);
-                  link.click();
-                  URL.revokeObjectURL(link.href);
+                  downloadFile(
+                    "view-template.json",
+                    JSON.stringify(template, null, 2),
+                    "application/json",
+                  );
                 }}
               />
               <RibbonButton
