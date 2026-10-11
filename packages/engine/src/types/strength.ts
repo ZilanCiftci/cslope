@@ -278,7 +278,7 @@ function resolveStrengthFromDatum(
   context: StrengthContext,
 ): ResolvedStrength {
   const su = nonNegative(
-    model.suRef + (context.yBottom - model.yRef) * model.rate,
+    model.suRef + (model.yRef - context.yBottom) * model.rate,
   );
 
   return {

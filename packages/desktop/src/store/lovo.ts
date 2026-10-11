@@ -75,7 +75,7 @@ export const LOVO_MODELS: ModelEntry[] = [
           unitWeight: 17.0,
           suRef: 19.0,
           yRef: -1.7,
-          rate: -12.7,
+          rate: 12.7,
         },
       },
       {
@@ -263,7 +263,7 @@ export const LOVO_MODELS: ModelEntry[] = [
           unitWeight: 17.0,
           suRef: 19.0,
           yRef: -1.7,
-          rate: -12.7,
+          rate: 12.7,
         },
       },
       {

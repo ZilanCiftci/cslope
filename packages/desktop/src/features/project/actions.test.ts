@@ -6,6 +6,7 @@ import {
   buildProjectJson,
 } from "./actions";
 import type { AppState } from "../../store/types";
+import { PROJECT_FILE_VERSION } from "../../store/persistence";
 
 // ── ensureJsonName ──────────────────────────────────────────────────
 
@@ -96,7 +97,7 @@ describe("buildProjectJson", () => {
     const json = buildProjectJson(fakeState);
     const parsed = JSON.parse(json);
 
-    expect(parsed.version).toBe(1);
+    expect(parsed.version).toBe(PROJECT_FILE_VERSION);
     expect(parsed.activeModelId).toBe("m1");
     expect(parsed.models).toHaveLength(1);
   });

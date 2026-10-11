@@ -39,10 +39,11 @@ export interface AnalysisOptions {
   intersliceDataPoints?: [number, number][];
   /**
    * Pore pressure head below an inclined piezometric line:
-   * - "phreatic-correction" (default): vertical head × cos²θ of the line's
+   * - "vertical" (default): full vertical head, as Slide and SLOPE/W use
+   *   for a piezometric line.
+   * - "phreatic-correction": vertical head × cos²θ of the line's
    *   inclination (equipotentials normal to a straight phreatic line).
-   * - "vertical": full vertical head, as Slide and SLOPE/W use for a
-   *   piezometric line.
+   *   Gives lower pore pressure, i.e. a higher FOS, below a steep line.
    */
   porePressureHead?: PorePressureHead;
 }
@@ -61,7 +62,7 @@ export const DEFAULT_ANALYSIS_OPTIONS: AnalysisOptions = {
   janbuCorrection: false,
   intersliceFunction: "half-sine",
   intersliceDataPoints: [],
-  porePressureHead: "phreatic-correction",
+  porePressureHead: "vertical",
 };
 
 /** Water table input — one of three modes. */

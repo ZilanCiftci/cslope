@@ -349,36 +349,36 @@ describe("resolveStrength — s-f-datum", () => {
     unitWeight: 18,
     suRef: 40,
     yRef: 10,
-    rate: -4,
+    rate: 4,
   };
 
   it("computes Su from elevation using linear formula", () => {
-    // Su = 40 + (5 - 10) * (-4) = 40 + 20 = 60
+    // Su = 40 + (10 - 5) * 4 = 40 + 20 = 60
     const r = resolveStrength(sfdat, ctx({ yBottom: 5 }));
     expect(r.cohesion).toBeCloseTo(60);
     expect(r.frictionAngle).toBe(0);
   });
 
   it("returns suRef at reference elevation", () => {
-    // Su = 40 + (10 - 10) * (-4) = 40
+    // Su = 40 + (10 - 10) * 4 = 40
     const r = resolveStrength(sfdat, ctx({ yBottom: 10 }));
     expect(r.cohesion).toBeCloseTo(40);
   });
 
   it("computes Su below reference", () => {
-    // Su = 40 + (-5 - 10) * (-4) = 40 + 60 = 100
+    // Su = 40 + (10 - (-5)) * 4 = 40 + 60 = 100
     const r = resolveStrength(sfdat, ctx({ yBottom: -5 }));
     expect(r.cohesion).toBeCloseTo(100);
   });
 
   it("computes Su above reference", () => {
-    // Su = 40 + (15 - 10) * (-4) = 40 - 20 = 20
+    // Su = 40 + (10 - 15) * 4 = 40 - 20 = 20
     const r = resolveStrength(sfdat, ctx({ yBottom: 15 }));
     expect(r.cohesion).toBeCloseTo(20);
   });
 
   it("computes Su at intermediate elevation", () => {
-    // Su = 40 + (7.5 - 10) * (-4) = 40 + 10 = 50
+    // Su = 40 + (10 - 7.5) * 4 = 40 + 10 = 50
     const r = resolveStrength(sfdat, ctx({ yBottom: 7.5 }));
     expect(r.cohesion).toBeCloseTo(50);
   });
@@ -745,7 +745,7 @@ describe("resolveStrength — linear variation never goes negative", () => {
   const c = { yBottom: -20, x: 0, yGround: 0, alpha: 0 };
   it("clamps S = f(datum) at zero", () => {
     const r = resolveStrength(
-      { kind: "s-f-datum", unitWeight: 18, suRef: 30, yRef: 0, rate: 5 },
+      { kind: "s-f-datum", unitWeight: 18, suRef: 30, yRef: 0, rate: -5 },
       c,
     );
     expect(r.cohesion).toBe(0);

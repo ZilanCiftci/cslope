@@ -230,7 +230,7 @@ function describeModel(model: MaterialModel | undefined, u: Units): { kind: stri
     case "s-f-depth":
       return { kind: "S = f(depth)", gamma: g(model.unitWeight), strength: `Su = ${g(model.suRef)} at depth ${g(model.depthRef)}, ${g(model.rate)}/${u.length}`, phi: "0°" };
     case "s-f-datum":
-      return { kind: "S = f(datum)", gamma: g(model.unitWeight), strength: `Su = ${g(model.suRef)} at y = ${g(model.yRef)}, ${g(model.rate)}/${u.length}`, phi: "0°" };
+      return { kind: "S = f(datum)", gamma: g(model.unitWeight), strength: `Su = ${g(model.suRef)} at y = ${g(model.yRef)}, ${g(model.rate)} ${u.stress}/${u.length} below`, phi: "0°" };
     default:
       return { kind: model.kind, gamma: g(model.unitWeight), strength: "see model", phi: "–" };
   }
@@ -610,7 +610,7 @@ table(
     ["Search", `${VERIFICATION_OPTIONS.iterations} entry/exit combinations plus ${VERIFICATION_OPTIONS.refinedIterations} refined around the best surfaces`],
     ["Convergence tolerance", "0.005 on the factor of safety (default)"],
     ["Methods", "Bishop simplified, Janbu simplified (uncorrected unless stated), Morgenstern-Price with half-sine interslice function; Spencer = Morgenstern-Price with a constant interslice function"],
-    ["Pore pressure", "Piezometric line; default head = vertical distance × cos²θ (phreatic correction). Problems marked \"vertical head\" use the full vertical distance, as Slide2 and SLOPE/W do."],
+    ["Pore pressure", "Piezometric line; head = vertical distance below the line (default, as Slide2 and SLOPE/W). Checks marked \"phreatic correction\" use vertical distance × cos²θ."],
     ["Unit weight of water", "9.81 kN/m³"],
   ],
 );

@@ -32,7 +32,11 @@ import type {
   ResultViewSettings,
   UdlRow,
 } from "./types";
-export const PROJECT_FILE_VERSION = 1;
+/**
+ * 2: vertical pore-pressure head is the default, and the S = f(datum) rate
+ *    is positive for strength increasing with depth (was: with elevation).
+ */
+export const PROJECT_FILE_VERSION = 2;
 
 export interface ProjectFile {
   version: number;
@@ -66,7 +70,11 @@ export function parseProjectFile(contents: string): ProjectFile {
     throw new Error("File must include at least one model.");
   }
 
-  const models = root.models.map(normalizeModelEntry);
+  // Files without a version predate versioning and follow version 1.
+  const fileVersion = typeof root.version === "number" ? root.version : 1;
+  const models = root.models
+    .map((m) => (fileVersion < 2 ? migrateModelFromV1(m) : m))
+    .map(normalizeModelEntry);
   const requestedActiveId =
     typeof root.activeModelId === "string" ? root.activeModelId : undefined;
   const activeModelId =
@@ -75,11 +83,53 @@ export function parseProjectFile(contents: string): ProjectFile {
       : models[0].id;
 
   return {
-    version:
-      typeof root.version === "number" ? root.version : PROJECT_FILE_VERSION,
+    version: PROJECT_FILE_VERSION,
     activeModelId,
     models,
   };
+}
+
+/**
+ * Version 1 files keep their results: the phreatic correction they were
+ * analysed with is made explicit, and S = f(datum) rates change sign.
+ */
+function migrateModelFromV1(raw: unknown): unknown {
+  if (!raw || typeof raw !== "object") return raw;
+  const model = { ...(raw as Record<string, unknown>) };
+  const saved =
+    model.options && typeof model.options === "object"
+      ? (model.options as Record<string, unknown>)
+      : undefined;
+  model.options = {
+    ...(saved ?? APP_DEFAULT_ANALYSIS_OPTIONS),
+    porePressureHead: saved?.porePressureHead ?? "phreatic-correction",
+  };
+  if (Array.isArray(model.materials)) {
+    model.materials = model.materials.map((m: unknown) => {
+      if (!m || typeof m !== "object") return m;
+      const material = m as Record<string, unknown>;
+      const mm = material.model as Record<string, unknown> | undefined;
+      if (!mm || mm.kind !== "s-f-datum") return m;
+      const migrated: Record<string, unknown> = {
+        ...material,
+        model: {
+          ...mm,
+          rate: typeof mm.rate === "number" ? -mm.rate : mm.rate,
+        },
+      };
+      const expressions = material.modelExpressions as
+        | Record<string, unknown>
+        | undefined;
+      if (expressions && typeof expressions.rate === "string") {
+        migrated.modelExpressions = {
+          ...expressions,
+          rate: `-(${expressions.rate})`,
+        };
+      }
+      return migrated;
+    });
+  }
+  return model;
 }
 
 function normalizeModelEntry(raw: unknown): ModelEntry {
@@ -706,6 +756,6 @@ function normalizeAnalysisOptions(raw: unknown): AnalysisOptions {
       o.porePressureHead === "vertical" ||
       o.porePressureHead === "phreatic-correction"
         ? o.porePressureHead
-        : (base.porePressureHead ?? "phreatic-correction"),
+        : (base.porePressureHead ?? "vertical"),
   };
 }

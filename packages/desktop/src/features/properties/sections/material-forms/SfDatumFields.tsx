@@ -64,8 +64,8 @@ export function SfDatumFields({
           />
         </label>
         <label className="flex flex-col gap-0.5">
-          <Label title="Su = Su ref + (y − Y ref) × rate. A positive rate makes Su increase upward; enter a negative rate for strength increasing with depth.">
-            Rate dSu/dy (kPa/m, + = upward)
+          <Label title="Su = Su ref + (Y ref − y) × rate. A positive rate makes Su increase with depth below the datum (as in Slide and SLOPE/W).">
+            Rate (kPa/m, + = increase with depth)
           </Label>
           <ExpressionNumericInput
             value={model.rate}

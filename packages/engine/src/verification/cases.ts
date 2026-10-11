@@ -166,6 +166,7 @@ export function runVerification(
 
 const SPENCER = { intersliceFunction: "constant" as const };
 const VERTICAL = { porePressureHead: "vertical" as const };
+const PHREATIC = { porePressureHead: "phreatic-correction" as const };
 
 const bishop = (
   published: number,
@@ -394,7 +395,8 @@ export const VERIFICATION_CASES: VerificationCase[] = [
     checks: [
       bishop(1.173, "SLOPE/W", 0.02, {
         label: "Bishop simplified (phreatic correction)",
-        note: "Default pore-pressure convention (head × cos²θ); SLOPE/W uses the vertical head.",
+        note: "Pore pressure from head × cos²θ; SLOPE/W uses the vertical head.",
+        options: PHREATIC,
       }),
       bishop(1.173, "SLOPE/W", 0.005, {
         label: "Bishop simplified (vertical head)",
@@ -690,7 +692,7 @@ export const VERIFICATION_CASES: VerificationCase[] = [
       bishop(1.293, "Slide2", 0.01, { options: VERTICAL, label: "Bishop simplified (vertical head)" }),
       spencer(1.3, "Slide2", 0.01, { options: VERTICAL, label: "Spencer (vertical head)" }),
     ],
-    notes: ["With the default phreatic correction (cos²θ) cSlope gives 1.381 (+6.8 %)."],
+    notes: ["With the phreatic correction (cos²θ) cSlope gives 1.381 (+6.8 %)."],
   },
   {
     id: "VP100",
@@ -712,7 +714,7 @@ export const VERIFICATION_CASES: VerificationCase[] = [
       bishop(1.2, "Morgenstern (chart)", 0.01, { options: VERTICAL, label: "Bishop simplified (vertical head)" }),
       spencer(1.2, "Morgenstern (chart)", 0.01, { options: VERTICAL, label: "Spencer (vertical head)" }),
     ],
-    notes: ["Slide2 reports 1.212 (Bishop). With the default phreatic correction cSlope gives 1.303."],
+    notes: ["Slide2 reports 1.212 (Bishop). With the phreatic correction (cos²θ) cSlope gives 1.303."],
   },
   {
     id: "VP20",
@@ -746,6 +748,6 @@ export const VERIFICATION_CASES: VerificationCase[] = [
       bishop(1.087, "Slide2", 0.01, { options: VERTICAL, label: "Bishop simplified (vertical head)" }),
       spencer(1.093, "Slide2", 0.01, { options: VERTICAL, label: "Spencer (vertical head)" }),
     ],
-    notes: ["With the default phreatic correction cSlope gives 1.147 (Bishop)."],
+    notes: ["With the phreatic correction (cos²θ) cSlope gives 1.141 (Bishop)."],
   },
 ];

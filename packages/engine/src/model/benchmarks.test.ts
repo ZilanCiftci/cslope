@@ -271,9 +271,10 @@ describe("Arai & Tagyo with water table", () => {
     analyseSlope(s);
 
     const fos = s.getMinFOS();
-    // expected: 1.157740, published: 1.138
-    expect(fos).toBeGreaterThan(1.145);
-    expect(fos).toBeLessThan(1.17);
+    // Vertical head: 1.114. Slide2 1.118 (VP16), Arai & Tagyo 1.138;
+    // with the cos²θ phreatic correction cSlope gives 1.158.
+    expect(fos).toBeGreaterThan(1.1);
+    expect(fos).toBeLessThan(1.13);
 
     // Water table should reduce FOS below dry analysis
     expect(fos).toBeLessThan(2.0);

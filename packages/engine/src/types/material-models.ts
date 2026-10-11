@@ -132,8 +132,9 @@ export interface StrengthFromDepthModel extends MaterialModelBase {
 /**
  * Strength as a function of datum (absolute elevation y).
  *
- * φ = 0; Su = suRef + (y − yRef) × rate,
- * where y is the elevation of the slice base.
+ * φ = 0; Su = suRef + (yRef − y) × rate,
+ * where y is the elevation of the slice base: a positive rate increases
+ * Su with depth below the datum, as in Slide and SLOPE/W.
  */
 export interface StrengthFromDatumModel extends MaterialModelBase {
   kind: "s-f-datum";
@@ -141,7 +142,7 @@ export interface StrengthFromDatumModel extends MaterialModelBase {
   suRef: number;
   /** Reference elevation y (m). */
   yRef: number;
-  /** Rate of change of Su with elevation (kPa/m). */
+  /** Increase of Su per metre below yRef (kPa/m). */
   rate: number;
 }
 

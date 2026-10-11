@@ -134,7 +134,7 @@ export class Slope {
     this._janbuCorrection = d.janbuCorrection ?? false;
     this._intersliceFunction = d.intersliceFunction ?? "half-sine";
     this._intersliceDataPoints = [...(d.intersliceDataPoints ?? [])];
-    this._porePressureHead = d.porePressureHead ?? "phreatic-correction";
+    this._porePressureHead = d.porePressureHead ?? "vertical";
   }
 
   // ────────────────────────────────────────────────────────────────

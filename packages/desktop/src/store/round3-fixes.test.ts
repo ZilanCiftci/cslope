@@ -78,12 +78,47 @@ describe("expression syntax", () => {
 describe("pore pressure head option", () => {
   it("is saved, reloaded and validated", () => {
     useAppStore.getState().newProject();
-    useAppStore.getState().setOptions({ porePressureHead: "vertical" });
+    useAppStore.getState().setOptions({ porePressureHead: "phreatic-correction" });
     const raw = JSON.parse(JSON.stringify(serializeProject(useAppStore.getState())));
-    expect(parseProjectFile(JSON.stringify(raw)).models[0].options?.porePressureHead).toBe("vertical");
-    raw.models[0].options.porePressureHead = "bogus";
     expect(parseProjectFile(JSON.stringify(raw)).models[0].options?.porePressureHead).toBe(
       "phreatic-correction",
     );
+    raw.models[0].options.porePressureHead = "bogus";
+    expect(parseProjectFile(JSON.stringify(raw)).models[0].options?.porePressureHead).toBe("vertical");
+  });
+
+  it("keeps version 1 files on the phreatic correction they were analysed with", () => {
+    useAppStore.getState().newProject();
+    const raw = JSON.parse(JSON.stringify(serializeProject(useAppStore.getState())));
+    raw.version = 1;
+    delete raw.models[0].options.porePressureHead;
+    expect(parseProjectFile(JSON.stringify(raw)).models[0].options?.porePressureHead).toBe(
+      "phreatic-correction",
+    );
+    delete raw.models[0].options;
+    const parsed = parseProjectFile(JSON.stringify(raw));
+    expect(parsed.models[0].options?.porePressureHead).toBe("phreatic-correction");
+    expect(parsed.version).toBe(2);
+  });
+});
+
+describe("S = f(datum) sign convention", () => {
+  it("flips the rate (and its expression) of version 1 files to positive-with-depth", () => {
+    useAppStore.getState().newProject();
+    const raw = JSON.parse(JSON.stringify(serializeProject(useAppStore.getState())));
+    raw.version = 1;
+    raw.models[0].materials[0] = {
+      ...raw.models[0].materials[0],
+      model: { kind: "s-f-datum", unitWeight: 17, suRef: 19, yRef: -1.7, rate: -12.7 },
+      modelExpressions: { rate: "k*2" },
+    };
+    const v1 = parseProjectFile(JSON.stringify(raw)).models[0].materials[0];
+    expect(v1.model).toMatchObject({ kind: "s-f-datum", rate: 12.7 });
+    expect(v1.modelExpressions?.rate).toBe("-(k*2)");
+
+    raw.version = 2;
+    const v2 = parseProjectFile(JSON.stringify(raw)).models[0].materials[0];
+    expect(v2.model).toMatchObject({ rate: -12.7 });
+    expect(v2.modelExpressions?.rate).toBe("k*2");
   });
 });

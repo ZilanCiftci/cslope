@@ -323,7 +323,7 @@ export function OptionsSection({ plain = false }: OptionsSectionProps) {
         <label className="col-span-2 flex flex-col gap-0.5">
           <Label>Pore pressure below an inclined water line</Label>
           <select
-            value={options.porePressureHead ?? "phreatic-correction"}
+            value={options.porePressureHead ?? "vertical"}
             onChange={(e) =>
               setOptions({
                 porePressureHead: e.target.value as
@@ -332,12 +332,12 @@ export function OptionsSection({ plain = false }: OptionsSectionProps) {
               })
             }
             aria-label="Pore pressure head"
-            title="Vertical head is what Slide and SLOPE/W use for a piezometric line"
+            title="Vertical head is what Slide and SLOPE/W use for a piezometric line. The cos²θ correction assumes a free phreatic surface with parallel flow and gives a higher FOS below a steep line."
           >
+            <option value="vertical">Vertical head (Slide, SLOPE/W)</option>
             <option value="phreatic-correction">
               Phreatic correction (vertical head × cos²θ)
             </option>
-            <option value="vertical">Vertical head (Slide, SLOPE/W)</option>
           </select>
         </label>
         {options.method === "Janbu" && (

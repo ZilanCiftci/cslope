@@ -312,7 +312,7 @@ const ARAI_TAGYO: ModelEntry = {
   name: "Arai & Tagyo (1985)",
   projectInfo: {
     title: "Arai & Tagyo (1985)",
-    subtitle: "Published FOS result: 1.138",
+    subtitle: "Published FOS: 1.118 (Slide2 #16), 1.138 (Arai & Tagyo)",
     client: "",
     projectNumber: "",
     revision: "0",
@@ -674,7 +674,8 @@ export const EXAMPLE_MODELS = BENCHMARK_MODELS;
  * Sources:
  *   - T-ACADS: "Slope Stability Programs — Verification Manual", ACADS (1985)
  *   - Arai & Tagyo: Arai, K. & Tagyo, K. (1985) "Determination of non-circular
- *     slip surfaces in slope stability analysis", Soils and Foundations, 25(1).
+ *     slip surfaces in slope stability analysis", Soils and Foundations, 25(1);
+ *     reference value from Slide2 Verification Problem #16.
  *   - Talbingo Dam: Published dam safety analysis results.
  */
 export type PublishedBenchmark = {
@@ -719,13 +720,14 @@ export const PUBLISHED_BENCHMARKS: PublishedBenchmark[] = [
     tolerance: 0.015,
   },
 
-  // Arai & Tagyo (1985) — with water table
+  // Arai & Tagyo (1985) — with water table. Slide2 (#16) with the vertical
+  // head below the piezometric line; Arai & Tagyo's own Bishop value is 1.138.
   {
     modelId: "example-arai-tagyo",
     name: "Arai & Tagyo (1985)",
     method: "Bishop",
-    publishedFos: 1.138,
-    tolerance: 0.025,
+    publishedFos: 1.118,
+    tolerance: 0.015,
   },
 
   // Talbingo Dam — RTL multi-material dam
