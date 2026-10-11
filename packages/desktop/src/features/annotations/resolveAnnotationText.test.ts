@@ -60,3 +60,23 @@ describe("resolveAnnotationText tag matching", () => {
     expect(out).toBe("Cost $& and $$5");
   });
 });
+
+describe("resolveAnnotationText single pass (round 5)", () => {
+  it("does not re-process text inserted for a tag", () => {
+    const out = resolveAnnotationText({
+      text: "#Title",
+      projectInfo: { title: "Cut #H {{H*2}} C:\\new" },
+      parameters: [{ id: "p", name: "H", expression: "10" }],
+    });
+    expect(out).toBe("Cut #H {{H*2}} C:\\new");
+  });
+
+  it("lets a parameter named like a built-in tag be shown", () => {
+    const out = resolveAnnotationText({
+      text: "date=#date fos=#FOS",
+      projectInfo: { date: "2024" },
+      parameters: [{ id: "p", name: "date", expression: "3" }],
+    });
+    expect(out).toBe("date=3 fos=N/A");
+  });
+});
