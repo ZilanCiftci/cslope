@@ -135,6 +135,12 @@ export class Slope {
   /** Null: automatic (see minSlipArea). */
   private _minSlipArea: number | null = null;
   private _intersliceDataPoints: [number, number][];
+  /**
+   * The model was mirrored into canonical (left-to-right) coordinates, so
+   * model-space analysis options such as the interslice data points must be
+   * mirrored as well.
+   */
+  private _mirrored = false;
 
   // ── Analysis limits ───────────────────────────────────────────
   private _limits: [number, number, number, number] = [0, 0, 0, 0];
@@ -373,8 +379,31 @@ export class Slope {
     return this._intersliceFunction;
   }
 
+  /**
+   * Interslice function points in canonical coordinates. The user enters
+   * them with x = 0 at the LEFT end of the slip surface in model space,
+   * whatever the sliding direction (as in Slide2), so for a mirrored
+   * (right-to-left) model they are mirrored here: x → 1 − x.
+   */
   get intersliceDataPoints(): [number, number][] {
-    return this._intersliceDataPoints;
+    if (!this._mirrored) return this._intersliceDataPoints;
+    return this._intersliceDataPoints
+      .map(([x, f]) => [1 - x, f] as [number, number])
+      .reverse();
+  }
+
+  /** True when the model was mirrored from a right-to-left model space. */
+  get mirrored(): boolean {
+    return this._mirrored;
+  }
+
+  /**
+   * Mark the model as mirrored from model space (a canonical definition of
+   * a right-to-left slope, see toCanonicalSlopeDefinition).
+   */
+  setMirrored(mirrored: boolean): void {
+    this._mirrored = mirrored;
+    this._resetResults();
   }
 
   get splitFailureCount(): number {
