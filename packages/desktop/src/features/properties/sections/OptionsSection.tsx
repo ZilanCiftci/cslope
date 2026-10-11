@@ -4,6 +4,7 @@ import { ITERATIONS_RANGE } from "@cslope/engine";
 import { useAppStore } from "../../../store/app-store";
 import { Section } from "../../../components/ui/Section";
 import { Label } from "../../../components/ui/Label";
+import { DraftNumberInput } from "../../../components/ui/DraftNumberInput";
 
 const METHODS: AnalysisMethod[] = ["Bishop", "Janbu", "Morgenstern-Price"];
 const INTERSLICE_FUNCTIONS: IntersliceFunctionType[] = [
@@ -339,6 +340,36 @@ export function OptionsSection({ plain = false }: OptionsSectionProps) {
               Phreatic correction (vertical head × cos²θ)
             </option>
           </select>
+        </label>
+        <label className="flex flex-col gap-0.5">
+          <Label>Tension crack depth (m)</Label>
+          <DraftNumberInput
+            value={options.tensionCrackDepth ?? 0}
+            min={0}
+            step={0.1}
+            onValueChange={(v) =>
+              v >= 0 && setOptions({ tensionCrackDepth: v })
+            }
+            aria-label="Tension crack depth"
+            title="Depth of a tension crack below the ground; the slip surface ends at the crack on the upslope side. 0 = no crack. Undrained: about 2·cu/γ."
+          />
+        </label>
+        <label className="flex flex-col gap-0.5">
+          <Label>Water in crack (%)</Label>
+          <DraftNumberInput
+            value={Math.round((options.tensionCrackWater ?? 0) * 100)}
+            min={0}
+            max={100}
+            step={10}
+            disabled={!(options.tensionCrackDepth! > 0)}
+            onValueChange={(v) =>
+              v >= 0 &&
+              v <= 100 &&
+              setOptions({ tensionCrackWater: v / 100 })
+            }
+            aria-label="Water in crack"
+            title="Part of the crack depth filled with water; its hydrostatic thrust pushes the sliding mass."
+          />
         </label>
         {options.method === "Janbu" && (
           <label className="col-span-2 flex items-center gap-1.5">

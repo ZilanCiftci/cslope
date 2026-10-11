@@ -167,6 +167,8 @@ export function runVerification(
 const SPENCER = { intersliceFunction: "constant" as const };
 const VERTICAL = { porePressureHead: "vertical" as const };
 const PHREATIC = { porePressureHead: "phreatic-correction" as const };
+/** ACADS 1(b): water-filled crack of depth 2c/(γ√Ka) = 3.814 m. */
+const ACADS_CRACK = { tensionCrackDepth: 3.814, tensionCrackWater: 1 };
 
 const bishop = (
   published: number,
@@ -749,6 +751,30 @@ export const VERIFICATION_CASES: VerificationCase[] = [
       spencer(1.093, "Slide2", 0.01, { options: VERTICAL, label: "Spencer (vertical head)" }),
     ],
     notes: ["With the phreatic correction (cos²θ) cSlope gives 1.141 (Bishop)."],
+  },
+  {
+    id: "VP2",
+    title: "ACADS 1(b), water-filled tension crack",
+    reference: "Giam & Donald (1989), ACADS problem 1(b). Slide2 Verification Problem #2; SLOPE/W example 2.2.",
+    surface: "search",
+    units: "SI",
+    description: "The ACADS 1(a) slope (10 m high, 2:1) with c' = 32 kPa, φ' = 10° and a tension crack 3.814 m deep (2c/(γ√Ka)), filled with water; critical circle search.",
+    definition: layered([[0, 25], [30, 25], [50, 35], [90, 35]], 20, [{ name: "Soil", topY: null, model: mc(32, 10, 20) }], {
+      orientation: "rtl",
+    }),
+    checks: [
+      bishop(1.596, "Slide2", 0.01, { options: ACADS_CRACK }),
+      spencer(1.592, "Slide2", 0.01, { options: ACADS_CRACK }),
+      {
+        method: "Janbu",
+        label: "Janbu corrected (f0)",
+        published: 1.489,
+        publishedBy: "Slide2",
+        tolerance: 0.01,
+        options: { ...ACADS_CRACK, janbuCorrection: true },
+      },
+    ],
+    notes: ["SLOPE/W reports 1.664 (Bishop) and the ACADS reference band is 1.65–1.70; Slide2 and xslope (1.589) agree with each other."],
   },
   {
     id: "VP68",

@@ -262,16 +262,27 @@ function waterAtSlice(
  */
 export function getSlices(
   slope: Slope,
-  x0: number,
+  entryX: number,
   x1: number,
   cx: number,
   cy: number,
   radius: number,
 ): Slice[] {
-  if (x0 >= x1) throw new Error("x0 must be less than x1");
+  if (entryX >= x1) throw new Error("x0 must be less than x1");
 
   const surfXY = slope.surfaceLineXY;
   if (!surfXY) throw new Error("Surface line not defined");
+
+  // A tension crack cuts the surface off where it reaches the crack depth
+  // on the upslope side; a surface that never gets that deep has no
+  // sliding mass below the crack zone.
+  let x0 = entryX;
+  const crackDepth = slope.tensionCrackDepth;
+  if (crackDepth > 0) {
+    const xc = findCrackX(surfXY, entryX, x1, cx, cy, radius, crackDepth);
+    if (xc === null) return [];
+    x0 = xc;
+  }
 
   const dist = x1 - x0;
   const b = dist / slope.sliceCount;
@@ -476,7 +487,53 @@ export function getSlices(
     }
   }
 
+  // Water in the crack pushes the sliding mass downslope (+x): resultant
+  // γw·hw²/2 at hw/3 above the crack bottom.
+  const hw = crackDepth * slope.tensionCrackWater;
+  if (crackDepth > 0 && hw > 0 && results.length > 0) {
+    const first = results[0];
+    const yCrackBottom = getCircleYCoordinateAtX(cx, cy, radius, x0);
+    const force = 0.5 * WATER_UNIT_WEIGHT * hw * hw;
+    first.hForce = (first.hForce ?? 0) + force;
+    first.extraMoment =
+      (first.extraMoment ?? 0) + force * (cy - (yCrackBottom + hw / 3));
+  }
+
   return results;
+}
+
+/**
+ * x of the tension crack: the first point from the entry where the slip
+ * surface lies `depth` below the ground, or null if it never does.
+ */
+function findCrackX(
+  surf: { x: number[]; y: number[] },
+  xEntry: number,
+  xExit: number,
+  cx: number,
+  cy: number,
+  radius: number,
+  depth: number,
+): number | null {
+  const below = (x: number) =>
+    getYAtX(surf.x, surf.y, x) - getCircleYCoordinateAtX(cx, cy, radius, x);
+  const steps = 200;
+  let prev = xEntry;
+  for (let k = 1; k <= steps; k++) {
+    const x = xEntry + ((xExit - xEntry) * k) / steps;
+    if (below(x) >= depth) {
+      let lo = prev;
+      let hi = x;
+      for (let it = 0; it < 50; it++) {
+        const mid = (lo + hi) / 2;
+        if (below(mid) >= depth) hi = mid;
+        else lo = mid;
+      }
+      return hi < xExit ? hi : null;
+    }
+    prev = x;
+  }
+  return null;
 }
 
 /**

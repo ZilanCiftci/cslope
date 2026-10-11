@@ -899,6 +899,9 @@ function evaluatePlanes(slope: Slope, allPlanes: SearchPlane[]): void {
       continue;
     }
     if (slices.length === 0) continue;
+    if (slices[0].xLeft > plane.lc[0] + 1e-9) {
+      plane.crack = [slices[0].xLeft, slices[0].y0Bottom];
+    }
 
     // If any slice has skipSurface (e.g. high-strength material) or
     // impenetrable (bedrock), the surface is invalid — skip analysis.

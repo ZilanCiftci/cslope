@@ -152,3 +152,19 @@ describe("free water above ground", () => {
     expect(useAppStore.getState().piezometricLine.freeWater).toBe(false);
   });
 });
+
+describe("tension crack options", () => {
+  it("are saved, reloaded and clamped", () => {
+    useAppStore.getState().newProject();
+    useAppStore.getState().setOptions({ tensionCrackDepth: 2.5, tensionCrackWater: 0.5 });
+    const raw = JSON.parse(JSON.stringify(serializeProject(useAppStore.getState())));
+    const opts = parseProjectFile(JSON.stringify(raw)).models[0].options!;
+    expect(opts.tensionCrackDepth).toBe(2.5);
+    expect(opts.tensionCrackWater).toBe(0.5);
+    raw.models[0].options.tensionCrackDepth = -1;
+    raw.models[0].options.tensionCrackWater = 3;
+    const bad = parseProjectFile(JSON.stringify(raw)).models[0].options!;
+    expect(bad.tensionCrackDepth).toBe(0);
+    expect(bad.tensionCrackWater).toBe(1);
+  });
+});

@@ -58,6 +58,11 @@ export interface SearchPlane {
   lffArray?: [number, number, number, number][];
   /** Whether iterative solver converged for this surface. */
   converged?: boolean;
+  /**
+   * Bottom of the tension crack [x, y] on the arc, where the surface was
+   * cut off; the sliding mass starts here instead of at `lc`.
+   */
+  crack?: [number, number];
 }
 
 /** Smallest useful inner iteration limit for the FOS solvers. */
@@ -106,6 +111,8 @@ export class Slope {
   private _janbuCorrection: boolean;
   private _intersliceFunction: IntersliceFunctionType;
   private _porePressureHead: PorePressureHead;
+  private _tensionCrackDepth: number;
+  private _tensionCrackWater: number;
   private _intersliceDataPoints: [number, number][];
 
   // ── Analysis limits ───────────────────────────────────────────
@@ -135,6 +142,8 @@ export class Slope {
     this._intersliceFunction = d.intersliceFunction ?? "half-sine";
     this._intersliceDataPoints = [...(d.intersliceDataPoints ?? [])];
     this._porePressureHead = d.porePressureHead ?? "vertical";
+    this._tensionCrackDepth = d.tensionCrackDepth ?? 0;
+    this._tensionCrackWater = d.tensionCrackWater ?? 0;
   }
 
   // ────────────────────────────────────────────────────────────────
@@ -258,6 +267,14 @@ export class Slope {
 
   get porePressureHead(): PorePressureHead {
     return this._porePressureHead;
+  }
+
+  get tensionCrackDepth(): number {
+    return this._tensionCrackDepth;
+  }
+
+  get tensionCrackWater(): number {
+    return this._tensionCrackWater;
   }
 
   get intersliceFunction(): IntersliceFunctionType {
@@ -673,6 +690,22 @@ export class Slope {
         );
       }
       this._porePressureHead = opts.porePressureHead;
+    }
+    if (opts.tensionCrackDepth !== undefined) {
+      if (!Number.isFinite(opts.tensionCrackDepth) || opts.tensionCrackDepth < 0) {
+        throw new Error("tensionCrackDepth must be a number ≥ 0");
+      }
+      this._tensionCrackDepth = opts.tensionCrackDepth;
+    }
+    if (opts.tensionCrackWater !== undefined) {
+      if (
+        !Number.isFinite(opts.tensionCrackWater) ||
+        opts.tensionCrackWater < 0 ||
+        opts.tensionCrackWater > 1
+      ) {
+        throw new Error("tensionCrackWater must be between 0 and 1");
+      }
+      this._tensionCrackWater = opts.tensionCrackWater;
     }
     if (opts.intersliceFunction !== undefined) {
       if (

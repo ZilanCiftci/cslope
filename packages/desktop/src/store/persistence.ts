@@ -764,6 +764,14 @@ function normalizeAnalysisOptions(raw: unknown): AnalysisOptions {
     maxIterations: Math.max(1, finiteOr(o.maxIterations, base.maxIterations)),
     intersliceFunction,
     intersliceDataPoints,
+    tensionCrackDepth: Math.max(
+      0,
+      finiteOr(o.tensionCrackDepth, base.tensionCrackDepth ?? 0),
+    ),
+    tensionCrackWater: Math.max(
+      0,
+      Math.min(1, finiteOr(o.tensionCrackWater, base.tensionCrackWater ?? 0)),
+    ),
     porePressureHead:
       o.porePressureHead === "vertical" ||
       o.porePressureHead === "phreatic-correction"

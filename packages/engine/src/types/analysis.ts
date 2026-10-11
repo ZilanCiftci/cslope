@@ -46,6 +46,14 @@ export interface AnalysisOptions {
    *   Gives lower pore pressure, i.e. a higher FOS, below a steep line.
    */
   porePressureHead?: PorePressureHead;
+  /**
+   * Depth of a tension crack below the ground surface (m, default 0 = none).
+   * The slip surface ends at the crack on the upslope side and the soil
+   * above the crack depth there carries no shear.
+   */
+  tensionCrackDepth?: number;
+  /** Fraction of the crack depth filled with water (0–1, default 0). */
+  tensionCrackWater?: number;
 }
 
 export type PorePressureHead = "phreatic-correction" | "vertical";
@@ -63,6 +71,8 @@ export const DEFAULT_ANALYSIS_OPTIONS: AnalysisOptions = {
   intersliceFunction: "half-sine",
   intersliceDataPoints: [],
   porePressureHead: "vertical",
+  tensionCrackDepth: 0,
+  tensionCrackWater: 0,
 };
 
 /** Water table input — one of three modes. */

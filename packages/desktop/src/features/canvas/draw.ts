@@ -1377,8 +1377,9 @@ export function drawCanvas(
 
       // Find surface points between entry and exit
       const surfacePts: [number, number][] = [];
-      // Add entry point
-      surfacePts.push(cs.entryPoint);
+      // Add the ground above the entry point (the entry is below it at a
+      // tension crack; the fill then closes up the crack face)
+      surfacePts.push([entryX, surfaceYAtX(entryX) ?? cs.entryPoint[1]]);
       // Add intermediate boundary points that lie between entry and exit X
       for (let i = 0; i < coordinates.length; i++) {
         const [bx, by] = coordinates[i];

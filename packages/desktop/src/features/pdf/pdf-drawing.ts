@@ -702,7 +702,10 @@ export function drawCriticalSurface(
 
     // Only vertices on the ground surface (as on the canvas): a vertex on
     // the bottom boundary would pull the fill down to the model base.
-    const surfacePts: [number, number][] = [cs.entryPoint];
+    // Ground above the entry (below it at a tension crack, as on canvas).
+    const surfacePts: [number, number][] = [
+      [entryX, surfaceYAtX(coordinates, entryX) ?? cs.entryPoint[1]],
+    ];
     for (const [bx, by] of coordinates) {
       if (bx <= minX || bx >= maxX) continue;
       const topY = surfaceYAtX(coordinates, bx);

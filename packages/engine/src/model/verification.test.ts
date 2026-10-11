@@ -3,6 +3,7 @@
  * and sources). The same cases produce the verification report.
  */
 import { describe, it, expect } from "vitest";
+import { getSlices } from "./slices";
 import {
   VERIFICATION_CASES,
   circle,
@@ -75,4 +76,26 @@ describe("Free water above the ground", () => {
       expect(Math.abs(submerged / buoyant - 1)).toBeLessThanOrEqual(0.003);
     });
   }
+});
+
+describe("Tension crack", () => {
+  const def = layered([[0, 25], [30, 25], [50, 35], [90, 35]], 20, [{ name: "S", topY: null, model: mc(32, 10, 20) }]);
+
+  it("starts the sliding mass where the surface is the crack depth below ground", () => {
+    const { slope } = runVerification(def, "Bishop", { tensionCrackDepth: 2, iterations: 500 });
+    const plane = slope.search.find((p) => p.fos != null && p.crack)!;
+    const slices = getSlices(slope, plane.lc[0], plane.rc[0], plane.cx, plane.cy, plane.radius);
+    expect(slices[0].y0Top - slices[0].y0Bottom).toBeCloseTo(2, 6);
+    expect(plane.crack![0]).toBeCloseTo(slices[0].xLeft, 9);
+  });
+
+  it("water in the crack lowers the FOS", () => {
+    const dry = runVerification(def, "Bishop", { tensionCrackDepth: 3.814 }).fos!;
+    const wet = runVerification(def, "Bishop", { tensionCrackDepth: 3.814, tensionCrackWater: 1 }).fos!;
+    expect(wet).toBeLessThan(dry);
+  });
+
+  it("a crack deeper than any surface leaves no sliding mass", () => {
+    expect(runVerification(def, "Bishop", { tensionCrackDepth: 30 }).fos).toBeNull();
+  });
 });
