@@ -8,7 +8,11 @@ import type { Slice } from "../types/index";
 import { getIntersliceFunctionValue, extrapolateLambda } from "../math/index";
 import type { Slope, SearchPlane } from "./slope";
 import { getSlices } from "./slices";
-import { setEntryExitPlanes, generateRefinedPlanes } from "./search";
+import {
+  setEntryExitPlanes,
+  generateRefinedPlanes,
+  generateLocalPlanes,
+} from "./search";
 
 // ────────────────────────────────────────────────────────────────
 // Slice property arrays (replaces _get_slice_property_arrays)
@@ -839,6 +843,16 @@ export function analyseSlope(slope: Slope): number | null {
     if (refinedPlanes.length > 0) {
       evaluatePlanes(slope, refinedPlanes);
       allPlanes.push(...refinedPlanes);
+    }
+
+    // Spend the rest of the budget on a local search with shrinking steps.
+    let budget = slope.refinedIterations - refinedPlanes.length;
+    for (let level = 1; budget > 0 && level <= 12; level++) {
+      const localPlanes = generateLocalPlanes(slope, allPlanes, budget, level);
+      if (localPlanes.length === 0) break;
+      evaluatePlanes(slope, localPlanes);
+      allPlanes.push(...localPlanes);
+      budget -= localPlanes.length;
     }
   }
 

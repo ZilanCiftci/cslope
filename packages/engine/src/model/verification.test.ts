@@ -44,3 +44,16 @@ describe("Slice-count convergence", () => {
     expect(Math.abs(f500 / 1.389 - 1)).toBeLessThanOrEqual(0.01);
   });
 });
+
+describe("Search convergence", () => {
+  it("VP24: the local search reaches the minimum between grid points", () => {
+    // The one-pass refinement stopped at the grid resolution: 1.455 with
+    // 4000 grid surfaces but 1.447 with 2000. A dense brute-force search
+    // gives 1.438 (Slide2 1.439).
+    const c = VERIFICATION_CASES.find((v) => v.id === "VP24")!;
+    const coarse = runVerification(c.definition, "Bishop", { iterations: 2000, refinedIterations: 1000 }).fos!;
+    const fine = runVerification(c.definition, "Bishop", { iterations: 4000, refinedIterations: 2000 }).fos!;
+    expect(Math.abs(coarse / fine - 1)).toBeLessThanOrEqual(0.002);
+    expect(fine).toBeLessThanOrEqual(1.439);
+  });
+});

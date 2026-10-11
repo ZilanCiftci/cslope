@@ -336,6 +336,103 @@ export function generateRefinedPlanes(
   return generated;
 }
 
+/**
+ * One level of the local pattern search that follows the grid search and
+ * generateRefinedPlanes.  Entry, exit and sagitta (chord-to-arc distance)
+ * of the best surfaces so far are moved by steps that halve with each
+ * level, so repeated levels converge on the minimum between grid points
+ * instead of stopping at the grid resolution.
+ */
+export function generateLocalPlanes(
+  slope: Slope,
+  evaluatedPlanes: SearchPlane[],
+  budget: number,
+  level: number,
+  numSeeds = 4,
+): SearchPlane[] {
+  if (budget <= 0) return [];
+  const seeds = evaluatedPlanes
+    .filter((plane) => plane.fos != null && Number.isFinite(plane.fos))
+    .sort((a, b) => a.fos! - b.fos!)
+    .slice(0, numSeeds);
+  if (seeds.length === 0) return [];
+
+  const existingKeys = new Set(evaluatedPlanes.map((plane) => planeKey(plane)));
+  const generated: SearchPlane[] = [];
+
+  const grid = getSearchGridSpec(slope);
+  const [entryLeftX, entryRightX, exitLeftX, exitRightX] = slope.limits;
+  const scale = 0.5 ** (level + 1);
+  const entryStep =
+    grid.numPointsTop > 1
+      ? (Math.abs(entryRightX - entryLeftX) / (grid.numPointsTop - 1)) * scale
+      : 0;
+  const exitStep =
+    grid.numPointsBot > 0
+      ? (Math.abs(exitRightX - exitLeftX) / grid.numPointsBot) * scale
+      : 0;
+  // The grid spaces sagittas by 1/numCircles of the largest one.
+  const sagittaStep = (2 * scale) / Math.max(grid.numCircles, 1);
+
+  for (const seed of seeds) {
+    const vx = seed.rc[0] - seed.lc[0];
+    const vy = seed.rc[1] - seed.lc[1];
+    const halfChord = Math.hypot(vx, vy) / 2;
+    const centreToChord = Math.sqrt(
+      Math.max(0, seed.radius ** 2 - halfChord ** 2),
+    );
+    const centreAbove =
+      vx * (seed.cy - seed.lc[1]) - vy * (seed.cx - seed.lc[0]) > 0;
+    const sagitta = centreAbove
+      ? seed.radius - centreToChord
+      : seed.radius + centreToChord;
+
+    for (const de of [-entryStep, 0, entryStep]) {
+      const ex = seed.lc[0] + de;
+      if (ex < entryLeftX || ex > entryRightX) continue;
+      for (const dx of [-exitStep, 0, exitStep]) {
+        const xx = seed.rc[0] + dx;
+        if (xx < exitLeftX || xx > exitRightX) continue;
+        const lc: [number, number] = [ex, slope.getExternalYIntersection(ex)];
+        const rc: [number, number] = [xx, slope.getExternalYIntersection(xx)];
+        if (distPoints(lc, rc) <= slope.minFailureDistance) continue;
+        const beta = Math.atan((lc[1] - rc[1]) / (rc[0] - lc[0]));
+        const C = (distPoints(lc, rc) / 2) ** 2;
+        for (const ds of [-sagittaStep, 0, sagittaStep]) {
+          if (de === 0 && dx === 0 && ds === 0) continue;
+          const chordToEdge = sagitta * (1 + ds);
+          const radius = circleRadiusFromAbcd(chordToEdge, C);
+          if (radius === null || radius <= 0) continue;
+          const [cX, cY] = circleCentre(
+            beta,
+            midCoord(lc, rc),
+            radius - chordToEdge,
+          );
+          const ends = selectEntryExit(slope, cX, cY, radius);
+          if (!ends) continue;
+          const plane: SearchPlane = {
+            lc: ends[0],
+            rc: ends[1],
+            cx: cX,
+            cy: cY,
+            radius,
+            fos: 100,
+            slices: null,
+          };
+          if (!isPlaneWithinExternalBoundary(slope, plane)) continue;
+          if (!isPlaneWithinSearchLimits(slope, plane)) continue;
+          const key = planeKey(plane);
+          if (existingKeys.has(key)) continue;
+          existingKeys.add(key);
+          generated.push(plane);
+          if (generated.length >= budget) return generated;
+        }
+      }
+    }
+  }
+  return generated;
+}
+
 // ── setEntryExitPlanes ────────────────────────────────────────────
 
 /**

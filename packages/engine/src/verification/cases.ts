@@ -556,7 +556,6 @@ export const VERIFICATION_CASES: VerificationCase[] = [
       { name: "C", topY: 4.5, model: su(150, 18) },
     ]),
     checks: [bishop(1.439, "Slide2", 0.015)],
-    notes: ["The search result depends on the search density; with fewer iterations the minimum is up to ~1 % higher."],
   },
   ...CANNON_SURFACES.map(([lab, xc, yc, yt, mpFos, bishopFos]): VerificationCase => ({
     id: `CD-${lab}`,
