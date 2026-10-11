@@ -270,6 +270,30 @@ describe("DefineMaterialsDialog — switching the model", () => {
     expect(model()).toMatchObject({ interpolation: "nearest" });
   });
 
+  it.each(["high-strength", "impenetrable"])(
+    "edits the unit weight of a %s material",
+    async (kind) => {
+      render(<DefineMaterialsDialog onClose={() => {}} />);
+      await userEvent.selectOptions(kindSelect(), kind);
+      expect(screen.getByText(/slip surfaces (passing through|cannot enter) this material/)).toBeInTheDocument();
+      await setField("γ (kN/m³)", "23");
+      expect(model()).toEqual(expect.objectContaining({ kind, unitWeight: 23 }));
+      expect(screen.queryByLabelText("c (kPa)")).toBeNull();
+    },
+  );
+
+  it("edits strength values of anisotropic and spatial materials", async () => {
+    render(<DefineMaterialsDialog onClose={() => {}} />);
+    await userEvent.selectOptions(kindSelect(), "anisotropic-function");
+    await setField("φ (°)", "25");
+    await setField("c (kPa)", "4");
+    await setField("γ (kN/m³)", "g");
+    expect(model()).toMatchObject({ frictionAngle: 25, cohesion: 4, unitWeight: 19 });
+    await userEvent.selectOptions(kindSelect(), "spatial-mohr-coulomb");
+    await setField("γ (kN/m³)", "21");
+    expect(model()).toMatchObject({ kind: "spatial-mohr-coulomb", unitWeight: 21 });
+  });
+
   it("shows validation errors for invalid values", async () => {
     store().setMaterials([
       material("a", "Bad", { kind: "mohr-coulomb", unitWeight: 19, cohesion: -1, frictionAngle: 30 }),
