@@ -63,10 +63,12 @@ export function createSlice(
   const dyA = cy - yBottom;
   const alpha = Math.atan(dx / dyA);
 
-  // Base length (arc)
-  const chordLength = Math.hypot(x0 - x1, y0Bottom - y1Bottom);
-  const asinArg = Math.min(1, chordLength / (2 * radius));
-  const baseLength = 2 * Math.asin(asinArg) * radius;
+  // Base length consistent with the base inclination the solvers use
+  // (the equilibrium equations assume a straight base of length b/cos α).
+  // The arc length over-credited cohesion on steep slices: on a nearly
+  // vertical entry slice by ~40 %, e.g. +5 % FOS at 50 slices on Slide
+  // VP23 compared with a converged slice count.
+  const baseLength = width / Math.cos(alpha);
 
   // Pore water pressure
   let U = 0;
