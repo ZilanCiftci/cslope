@@ -59,11 +59,17 @@ export function getCircleLineIntersections(
     const t1 = (-b + sqrtDisc) / (2 * a);
     const t2 = (-b - sqrtDisc) / (2 * a);
 
-    if (t1 >= 0.0 && t1 <= 1.0) {
-      intersections.push([x1 + t1 * dx, y1 + t1 * dy]);
+    // A crossing exactly at a vertex can come out as t = 1 + 2e-16 on one
+    // segment and t = -2e-16 on the next and be lost on both: accept a
+    // tiny overshoot and snap it onto the vertex.
+    const T_TOL = 1e-9;
+    if (t1 >= -T_TOL && t1 <= 1 + T_TOL) {
+      const t = Math.min(1, Math.max(0, t1));
+      intersections.push([x1 + t * dx, y1 + t * dy]);
     }
-    if (discriminant > 1e-12 && t2 >= 0.0 && t2 <= 1.0) {
-      intersections.push([x1 + t2 * dx, y1 + t2 * dy]);
+    if (discriminant > 1e-12 && t2 >= -T_TOL && t2 <= 1 + T_TOL) {
+      const t = Math.min(1, Math.max(0, t2));
+      intersections.push([x1 + t * dx, y1 + t * dy]);
     }
   }
 

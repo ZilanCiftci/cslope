@@ -138,7 +138,18 @@ export function createSlice(
     totalWeight += area * fragmentUnitWeight(m.material, mpx, mpy, area);
 
     // Check if this material is at the base of the slice
-    if (isPointInPolygon(x, yBottom + 1e-10, mpx, mpy)) {
+    // Test in coordinates local to the slice base: with real-world
+    // eastings (~1e5..1e7) a fixed 1e-10 offset is below the floating
+    // point resolution and the base material was missed.
+    const lift = 1e-6 * Math.max(1, yTop - yBottom);
+    if (
+      isPointInPolygon(
+        0,
+        lift,
+        mpx.map((v) => v - x),
+        mpy.map((v) => v - yBottom),
+      )
+    ) {
       baseMaterial = m.material;
     }
   }
@@ -265,7 +276,7 @@ export function getSlices(
 
   if (slope.fixedSlices) {
     for (const fx of slope.fixedSlices) {
-      allSlicesSet.add(fx);
+      if (fx > x0 && fx < x1) allSlicesSet.add(fx);
     }
   } else {
     // Determine geometry-critical points

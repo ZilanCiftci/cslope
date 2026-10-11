@@ -41,6 +41,52 @@ function getSearchGridSpec(slope: Slope): SearchGridSpec {
   return { numCircles, numPointsTop, numPointsBot };
 }
 
+/**
+ * Entry and exit of the slip surface on a circle: the first crossing of
+ * the lower arc with the ground where the arc goes from air into soil,
+ * and the next crossing where it comes out again.
+ *
+ * Taking simply the first two crossings by x is wrong when
+ *  - a crossing lies on the upper half of the circle (e.g. on the crest
+ *    behind a vertical face): the slices would hang from the lower arc
+ *    metres below the ground, i.e. a free vertical crack, or
+ *  - the arc only touches the ground at a vertex (typically the toe) and
+ *    stays in the soil: the mass beyond it, and its resistance, was cut
+ *    off.
+ * Returns null when the circle has no such entry/exit pair.
+ */
+function selectEntryExit(
+  slope: Slope,
+  cx: number,
+  cy: number,
+  radius: number,
+): [[number, number], [number, number]] | null {
+  const tol = 1e-9 * Math.max(1, radius);
+  const crossings = slope
+    .getCircleExternalIntersection(cx, cy, radius)
+    .filter((p) => p[1] <= cy + tol);
+  if (crossings.length < 2) return null;
+
+  const eps = 1e-6 * Math.max(1, radius);
+  const arcInSoil = (x: number): boolean => {
+    const term = radius ** 2 - (x - cx) ** 2;
+    if (term < 0) return false;
+    return slope.isInsideExternalBoundary(x, cy - Math.sqrt(term));
+  };
+
+  for (let i = 0; i < crossings.length - 1; i++) {
+    const [ex] = crossings[i];
+    if (arcInSoil(ex - eps) || !arcInSoil(ex + eps)) continue;
+    for (let j = i + 1; j < crossings.length; j++) {
+      if (!arcInSoil(crossings[j][0] + eps)) {
+        return [crossings[i], crossings[j]];
+      }
+    }
+    return null;
+  }
+  return null;
+}
+
 function isPlaneWithinExternalBoundary(
   slope: Slope,
   plane: Pick<SearchPlane, "lc" | "rc" | "cx" | "cy" | "radius">,
@@ -128,15 +174,12 @@ function generatePlanesWithScale(
     const centre = circleCentre(beta, midCoord(lc, rc), radius - chordToEdge);
     const [cX, cY] = centre;
 
-    const iList = slope.getCircleExternalIntersection(cX, cY, radius);
-
-    if (new Set(iList.map((p) => `${p[0]},${p[1]}`)).size < 2) {
-      continue;
-    }
+    const ends = selectEntryExit(slope, cX, cY, radius);
+    if (!ends) continue;
 
     const plane: SearchPlane = {
-      lc: iList[0] as [number, number],
-      rc: iList[1] as [number, number],
+      lc: ends[0],
+      rc: ends[1],
       cx: cX,
       cy: cY,
       radius,
@@ -378,11 +421,11 @@ export function addSingleCircularPlane(
   cy: number,
   radius: number,
 ): void {
-  const iList = slope.getCircleExternalIntersection(cx, cy, radius);
-  if (new Set(iList.map((p) => `${p[0]},${p[1]}`)).size >= 2) {
+  const ends = selectEntryExit(slope, cx, cy, radius);
+  if (ends) {
     const plane: SearchPlane = {
-      lc: iList[0] as [number, number],
-      rc: iList[1] as [number, number],
+      lc: ends[0],
+      rc: ends[1],
       cx,
       cy,
       radius,
