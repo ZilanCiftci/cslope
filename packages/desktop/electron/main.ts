@@ -1166,16 +1166,36 @@ async function saveToPath(filePath: string, content: string) {
   } catch {
     // New file.
   }
+  // Keep the file's protection: a read-only project stays unsaveable (as
+  // with an in-place write) and the copy gets the original mode.
+  let mode: number | undefined;
+  try {
+    const stat = fs.statSync(target);
+    fs.accessSync(target, fs.constants.W_OK);
+    mode = stat.mode & 0o7777;
+  } catch (err) {
+    if ((err as NodeJS.ErrnoException).code !== "ENOENT") throw err;
+  }
   const tmp = `${target}.tmp-${process.pid}`;
   try {
-    const fd = fs.openSync(tmp, "w");
+    const fd = fs.openSync(tmp, "w", mode);
     try {
       fs.writeFileSync(fd, content, "utf-8");
       fs.fsyncSync(fd);
     } finally {
       fs.closeSync(fd);
     }
-    fs.renameSync(tmp, target);
+    if (mode !== undefined) fs.chmodSync(tmp, mode);
+    try {
+      fs.renameSync(tmp, target);
+    } catch (err) {
+      // Windows: the target can be held open (antivirus, sync clients)
+      // so it cannot be replaced; fall back to writing it in place.
+      const code = (err as NodeJS.ErrnoException).code;
+      if (code !== "EPERM" && code !== "EBUSY" && code !== "EXDEV") throw err;
+      fs.writeFileSync(target, content, "utf-8");
+      fs.unlinkSync(tmp);
+    }
   } catch (err) {
     try {
       fs.unlinkSync(tmp);
@@ -1258,7 +1278,12 @@ ipcMain.on("menu:about", () => {
 // dropped on a dialog window would otherwise replace it (and a dropped
 // .html page would get the preload API).
 app.on("web-contents-created", (_event, contents) => {
-  contents.on("will-navigate", (event) => event.preventDefault());
+  contents.on("will-navigate", (event, url) => {
+    // Reloading the app's own page (dev Reload button, Vite full reload)
+    // is fine; anything else is not.
+    const strip = (u: string) => u.split("#")[0];
+    if (strip(url) !== strip(contents.getURL())) event.preventDefault();
+  });
   contents.setWindowOpenHandler(() => ({ action: "deny" }));
 });
 
