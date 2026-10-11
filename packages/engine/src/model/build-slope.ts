@@ -60,6 +60,9 @@ export function buildSlope(def: SlopeDefinition): Slope {
   // Materials — build Material instances first so we can assign the first
   // one to the external boundary (set_external_boundary uses materials[0]).
   const materialsByName = new Map<string, InstanceType<typeof Material>>();
+  if (!Array.isArray(def.materials) || def.materials.length === 0) {
+    throw new Error("The model needs at least one material.");
+  }
   for (const m of def.materials) {
     // When a full MaterialModel is provided, use it directly.
     // Otherwise, fall back to constructing from flat fields (backward compat).
@@ -213,6 +216,11 @@ export function buildSlope(def: SlopeDefinition): Slope {
   // Custom search planes
   if (def.customSearchPlanes) {
     for (const p of def.customSearchPlanes) {
+      if (![p.cx, p.cy, p.radius].every(Number.isFinite) || p.radius <= 0) {
+        throw new Error(
+          `Custom search circle (${p.cx}, ${p.cy}, R ${p.radius}) needs a finite centre and a positive radius.`,
+        );
+      }
       addSingleCircularPlane(slope, p.cx, p.cy, p.radius);
     }
   }

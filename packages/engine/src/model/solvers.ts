@@ -544,6 +544,9 @@ export function analyseJanbu(
   return [correctedFos, pushing, resisting, converged];
 }
 
+/** λ extrapolation steps before falling back to the closest pair. */
+const MP_MAX_STEPS = 10;
+
 /**
  * Morgenstern-Price Method.
  */
@@ -574,11 +577,11 @@ export function analyseMorgensternPrice(
   const maxIters = slope.maxIterations;
   const tol = slope.tolerance;
   const mpEquilibriumTolerance = Math.max(tol * 4, 0.02);
-  // Fm(λ) and Ff(λ) are evaluated much more precisely than the λ search
+  // Fm(λ) and Ff(λ) are evaluated more precisely than the λ search
   // needs: near the root the gap Fm − Ff is of the order of `tol`, and
   // evaluation noise of that size sent the secant step the wrong way
   // (e.g. Slide VP37, where Fm hardly depends on λ).
-  const evalTol = tol * 0.01;
+  const evalTol = tol * 0.1;
 
   // Step 1: Initial Bishop solution (lambda = 0)
   let Nm: Float64Array = new Float64Array(n);
@@ -667,7 +670,7 @@ export function analyseMorgensternPrice(
     return [FSm, lffArray, pushingF, resistingF, true];
 
   // Step 3: Iterative extrapolation
-  for (let ii = 0; ii <= 6; ii++) {
+  for (let ii = 0; ii <= MP_MAX_STEPS; ii++) {
     // Use the best-performing lambda (smallest gap) as pivot for step limiting,
     // NOT the largest lambda in the sorted array, which would prevent exploration
     // into the negative-lambda region where Fm and Ff may intersect.
@@ -688,11 +691,9 @@ export function analyseMorgensternPrice(
     // Ensure unique lambda
     let nudgeCount = 0;
     while (lffArray.some((x) => x[0] === lambdaNew)) {
-      if (lambdaNew === 0) {
-        lambdaNew = 1e-6;
-      } else {
-        lambdaNew *= 0.9;
-      }
+      // Step a little further in the search direction (shrinking towards
+      // 0 walked back over ground already covered).
+      lambdaNew += lambdaNew >= prevLambda ? 0.05 : -0.05;
       if (++nudgeCount > 50) break;
     }
 
@@ -728,7 +729,7 @@ export function analyseMorgensternPrice(
     if (Math.abs(FSm - FSf) < tol)
       return [FSm, lffArray, pushingF, resistingF, true];
 
-    if (ii > 5) {
+    if (ii >= MP_MAX_STEPS) {
       // Fallback: pick closest match
       const sorted = [...lffArray].sort((a, b) => a[3] - b[3]);
       const [bestLambda, bestFS] = sorted[0];
@@ -923,6 +924,12 @@ function evaluatePlanes(slope: Slope, allPlanes: SearchPlane[]): void {
     if (fos != null && (!converged || fos < 0)) {
       fos = null;
     }
+    // m_α = cos α + sin α·tan φ / F ≤ 0 on a slice makes its normal force
+    // meaningless (infinite or negative): raising strength could then
+    // lower the FOS. Such surfaces are rejected, as is common practice.
+    if (fos != null && slices.some((s) => mAlpha(s, fos!) <= 0)) {
+      fos = null;
+    }
 
     plane.fos = fos;
     plane.slices = slices;
@@ -940,4 +947,8 @@ function hasDrivingMoment(slices: Slice[]): boolean {
     gross += Math.abs(m);
   }
   return gross > 0 && net > 1e-6 * gross;
+}
+
+function mAlpha(s: Slice, fos: number): number {
+  return Math.cos(s.alpha) + (Math.sin(s.alpha) * Math.tan(s.phi)) / fos;
 }

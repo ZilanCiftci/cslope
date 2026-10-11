@@ -184,6 +184,10 @@ export function validateMaterialModel(model: MaterialModel): string[] {
         errors.push("Rate of change must be a finite number.");
       }
       break;
+    default:
+      errors.push(
+        `Unknown material model kind "${(model as { kind?: unknown }).kind}".`,
+      );
   }
 
   return errors;

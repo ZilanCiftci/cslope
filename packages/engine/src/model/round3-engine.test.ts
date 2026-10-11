@@ -171,3 +171,31 @@ describe("round 5 engine fixes", () => {
     expect(flat25).toBeCloseTo(both18, 6);
   });
 });
+
+describe("round 6 engine fixes", () => {
+  it("rejects surfaces with a non-positive m_alpha slice instead of reporting erratic FOS", () => {
+    for (const c of [12, 17, 25]) {
+      const slope = buildSlope({
+        coordinates: [[0, -10], [0, 10], [20, 10], [40, 0], [70, 0], [70, -10]],
+        materials: [{ name: "S", unitWeight: 19, frictionAngle: 23, cohesion: c }],
+        lineLoads: [{ magnitude: 150, x: 10 }],
+        customSearchPlanes: [{ cx: 10.7607, cy: 10.246, radius: 0.8004 }],
+        customPlanesOnly: true,
+      });
+      slope.updateAnalysisOptions({ method: "Bishop", slices: 80 });
+      expect(analyseSlope(slope)).toBeNull();
+    }
+  });
+
+  it("gives clear errors for an empty material list and invalid custom circles", () => {
+    const coordinates: [number, number][] = [[0, 0], [0, 10], [10, 10], [20, 0]];
+    expect(() => buildSlope({ coordinates, materials: [] })).toThrow(/at least one material/);
+    expect(() =>
+      buildSlope({
+        coordinates,
+        materials: [{ name: "A", unitWeight: 20, frictionAngle: 30, cohesion: 5 }],
+        customSearchPlanes: [{ cx: 5, cy: 20, radius: -15 }],
+      }),
+    ).toThrow(/positive radius/);
+  });
+});
