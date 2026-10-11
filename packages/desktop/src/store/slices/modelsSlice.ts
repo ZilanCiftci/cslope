@@ -42,6 +42,7 @@ function createDefaultModel(id: string, name: string): ModelEntry {
     udls: [],
     lineLoads: [],
     reinforcements: [],
+    piles: [],
     customSearchPlanes: [],
     customPlanesOnly: false,
     options: {
@@ -73,6 +74,7 @@ export const mapModelToState = (model: ModelEntry) => ({
   udls: model.udls ?? [],
   lineLoads: model.lineLoads ?? [],
   reinforcements: model.reinforcements ?? [],
+  piles: model.piles ?? [],
   customSearchPlanes: model.customSearchPlanes ?? [],
   customPlanesOnly: model.customPlanesOnly ?? false,
   options: model.options ?? {
@@ -255,6 +257,7 @@ export const createModelsSlice: SliceCreator<ModelsSlice> = (
         ...r,
         id: nextId("reinf"),
       })),
+      piles: (source.piles ?? []).map((p) => ({ ...p, id: nextId("pile") })),
       customSearchPlanes: (source.customSearchPlanes ?? []).map((p) => ({
         ...p,
         id: nextId("csp"),
@@ -361,6 +364,7 @@ export const createModelsSlice: SliceCreator<ModelsSlice> = (
             udls: s.udls,
             lineLoads: s.lineLoads,
             reinforcements: s.reinforcements,
+            piles: s.piles,
             customSearchPlanes: s.customSearchPlanes,
             customPlanesOnly: s.customPlanesOnly,
             options: s.options,
@@ -406,6 +410,7 @@ export const createModelsSlice: SliceCreator<ModelsSlice> = (
               udls: s.udls,
               lineLoads: s.lineLoads,
               reinforcements: s.reinforcements,
+              piles: s.piles,
               customSearchPlanes: s.customSearchPlanes,
               customPlanesOnly: s.customPlanesOnly,
               options: s.options,

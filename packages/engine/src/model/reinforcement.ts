@@ -13,9 +13,9 @@
  */
 
 import type { Slice } from "../types/index";
-import { resolveUnitWeight } from "../types/index";
+import { resolveStrength, resolveUnitWeight } from "../types/index";
 import { WATER_UNIT_WEIGHT } from "../types/constants";
-import type { Reinforcement, ReinforcementForce } from "../types/reinforcement";
+import type { Pile, Reinforcement, ReinforcementForce } from "../types/reinforcement";
 import { getYAtX, isPointInPolygon } from "../math/index";
 import type { Slope } from "./slope";
 
@@ -164,6 +164,70 @@ export function envelopeAt(env: ReinforcementEnvelope, s: number): number {
   return Math.max(0, Math.min(env.tensile, env.end1 + developed, pulloutBeyond(env, s)));
 }
 
+interface Crossing {
+  slice: Slice;
+  /** Crossing point. */
+  px: number;
+  py: number;
+  /** Position along the line, 0 (start) – 1 (end). */
+  t: number;
+  /** Direction of movement along the base (towards +x). */
+  tx: number;
+  ty: number;
+}
+
+/**
+ * Crossings of a line with the slice bases of a slip surface; a crossing
+ * at a slice edge lies on both slices' bases and is reported once.
+ */
+function crossings(slices: Slice[], x1: number, y1: number, x2: number, y2: number): Crossing[] {
+  const ex = x2 - x1;
+  const ey = y2 - y1;
+  const len = Math.hypot(ex, ey);
+  const out: Crossing[] = [];
+  if (!(len > 0)) return out;
+  for (const s of slices) {
+    const bx0 = s.xLeft;
+    const by0 = s.y0Bottom;
+    const bdx = s.xRight - s.xLeft;
+    const bdy = s.y1Bottom - s.y0Bottom;
+    const blen = Math.hypot(bdx, bdy);
+    if (!(blen > 0)) continue;
+    const denom = bdx * ey - bdy * ex;
+    if (Math.abs(denom) < 1e-12 * blen * len) continue; // parallel
+    const qx = x1 - bx0;
+    const qy = y1 - by0;
+    const u = (qx * ey - qy * ex) / denom;
+    const t = (qx * bdy - qy * bdx) / denom;
+    if (u < 0 || u > 1 || t < 0 || t > 1) continue;
+    const px = bx0 + u * bdx;
+    const py = by0 + u * bdy;
+    if (out.some((c) => Math.abs(c.px - px) < 1e-9 && Math.abs(c.py - py) < 1e-9)) continue;
+    out.push({ slice: s, px, py, t, tx: bdx / blen, ty: bdy / blen });
+  }
+  return out;
+}
+
+/**
+ * Add a force (fx, fy per metre, +x sliding, +y up) acting at (px, py) to
+ * a slice's reinforcement loads; (cx, cy) the centre / axis point.
+ */
+function addForce(
+  s: Slice,
+  force: ReinforcementForce,
+  cx: number,
+  cy: number,
+): void {
+  const fDown = -force.fy;
+  // Moment beyond fDown·dx, which the solvers take with the slice load.
+  const moment = fDown * (cx - force.x) + force.fx * (cy - force.y) - fDown * s.dx;
+  const load = force.passive ? (s.reinforcementPassive ??= [0, 0, 0]) : (s.reinforcementActive ??= [0, 0, 0]);
+  load[0] += fDown;
+  load[1] += force.fx;
+  load[2] += moment;
+  (s.reinforcementForces ??= []).push(force);
+}
+
 /**
  * Apply the reinforcement forces to the slices of a slip surface: where
  * an element crosses a slice base, its force acts on that slice at the
@@ -181,43 +245,16 @@ export function applyReinforcement(
   cx: number,
   cy: number,
 ): ReinforcementForce[] {
-  const elements = slope.reinforcements;
-  if (elements.length === 0 || slices.length === 0) return [];
-  const envelopes = slope.reinforcementEnvelopes;
   const forces: ReinforcementForce[] = [];
-  // A crossing at a slice edge lies on both slices' bases: counted once.
-  const seen = elements.map(() => [] as [number, number][]);
-  for (let i = 0; i < slices.length; i++) {
-    const s = slices[i];
-    const bx0 = s.xLeft;
-    const by0 = s.y0Bottom;
-    const bdx = s.xRight - s.xLeft;
-    const bdy = s.y1Bottom - s.y0Bottom;
-    const blen = Math.hypot(bdx, bdy);
-    if (!(blen > 0)) continue;
-    // Direction of movement along the base (towards +x).
-    const tx = bdx / blen;
-    const ty = bdy / blen;
-    for (let k = 0; k < elements.length; k++) {
-      const r = elements[k];
-      const env = envelopes[k];
-      if (!(env.length > 0)) continue;
-      const ax = (r.x2 - r.x1) / env.length;
-      const ay = (r.y2 - r.y1) / env.length;
-      // Intersection of the base segment (u ∈ [0, 1)) with the element (t ∈ [0, 1]).
-      const ex = r.x2 - r.x1;
-      const ey = r.y2 - r.y1;
-      const denom = bdx * ey - bdy * ex;
-      if (Math.abs(denom) < 1e-12 * blen * env.length) continue; // parallel
-      const qx = r.x1 - bx0;
-      const qy = r.y1 - by0;
-      const u = (qx * ey - qy * ex) / denom;
-      const t = (qx * bdy - qy * bdx) / denom;
-      if (u < 0 || u > 1 || t < 0 || t > 1) continue;
-      const px = bx0 + u * bdx;
-      const py = by0 + u * bdy;
-      if (seen[k].some(([sx, sy]) => Math.abs(sx - px) < 1e-9 && Math.abs(sy - py) < 1e-9)) continue;
-      seen[k].push([px, py]);
+  if (slices.length === 0) return forces;
+  const elements = slope.reinforcements;
+  const envelopes = elements.length > 0 ? slope.reinforcementEnvelopes : [];
+  elements.forEach((r, k) => {
+    const env = envelopes[k];
+    if (!(env.length > 0)) return;
+    const ax = (r.x2 - r.x1) / env.length;
+    const ay = (r.y2 - r.y1) / env.length;
+    for (const { slice, px, py, t, tx, ty } of crossings(slices, r.x1, r.y1, r.x2, r.y2)) {
       // Stable side: +a points into the sliding mass when it lies above
       // (to the left of) the base direction.
       const into = tx * ay - ty * ax > 0;
@@ -243,20 +280,120 @@ export function applyReinforcement(
         fx = dx;
         fy = dy;
       }
-      fx *= magnitude;
-      fy *= magnitude;
-      const passive = (r.application ?? "active") === "passive";
-      const fDown = -fy;
-      // Moment beyond fDown·dx, which the solvers take with the slice load.
-      const moment = fDown * (cx - px) + fx * (cy - py) - fDown * s.dx;
-      const load = passive ? (s.reinforcementPassive ??= [0, 0, 0]) : (s.reinforcementActive ??= [0, 0, 0]);
-      load[0] += fDown;
-      load[1] += fx;
-      load[2] += moment;
-      const force = { index: k, x: px, y: py, fx, fy, force: magnitude, passive };
-      (s.reinforcementForces ??= []).push(force);
+      const force: ReinforcementForce = {
+        index: k,
+        x: px,
+        y: py,
+        fx: fx * magnitude,
+        fy: fy * magnitude,
+        force: magnitude,
+        passive: (r.application ?? "active") === "passive",
+      };
+      addForce(slice, force, cx, cy);
       forces.push(force);
     }
-  }
+  });
+
+  // Piles push back against the movement, tilted by their angle.
+  slope.piles.forEach((p, k) => {
+    for (const { slice, px, py } of crossings(slices, p.x1, p.y1, p.x2, p.y2)) {
+      const magnitude = pileForce(slope, p, px, py).perMetre;
+      if (!(magnitude > 0)) continue;
+      const a = ((p.angle ?? 0) * Math.PI) / 180;
+      const force: ReinforcementForce = {
+        index: k,
+        pile: true,
+        x: px,
+        y: py,
+        fx: -magnitude * Math.cos(a),
+        fy: magnitude * Math.sin(a),
+        force: magnitude,
+        passive: (p.application ?? "active") === "passive",
+      };
+      addForce(slice, force, cx, cy);
+      forces.push(force);
+    }
+  });
   return forces;
+}
+
+/**
+ * Ito & Matsui (1975) coefficients of the lateral pressure on a pile,
+ * p(z) = c·A1 + γ·z·A2, for clear spacing D1, diameter D and friction
+ * angle φ. The φ = 0 solution (their Eq. 23) is a lower bound for every φ:
+ * the c-φ expressions dip below it at small φ, which is unphysical.
+ */
+export function itoMatsuiCoefficients(D1: number, D: number, phiDeg: number): [number, number] {
+  const S = D1 + D;
+  const A1phi0 = S * (3 * Math.log(S / D1) + (D / D1) * Math.tan(Math.PI / 8) - 2) + 2 * D1;
+  const A2phi0 = D;
+  if (phiDeg < 0.01) return [A1phi0, A2phi0];
+  const phi = (phiDeg * Math.PI) / 180;
+  const Nphi = Math.tan(Math.PI / 4 + phi / 2) ** 2;
+  const sN = Math.sqrt(Nphi);
+  const tp = Math.tan(phi);
+  const R = (S / D1) ** (sN * tp + Nphi - 1);
+  const E = Math.exp((D / D1) * Nphi * tp * Math.tan(Math.PI / 8 + phi / 4));
+  const A2 = (S * R * E - D1) / Nphi;
+  const F = (2 * tp + 2 * sN + 1 / sN) / (sN * tp + Nphi - 1);
+  const A1 = (S * R * (E - 2 * sN * tp - 1)) / (Nphi * tp) + S * F * (R - 1) + (2 * D1) / sN;
+  return [Math.max(A1, A1phi0), Math.max(A2, A2phi0)];
+}
+
+/**
+ * Force of a pile where the slip surface crosses it at (x, y): per pile
+ * and per metre of slope, and what governs it.
+ */
+export function pileForce(
+  slope: Slope,
+  p: Pile,
+  x: number,
+  y: number,
+): { perPile: number; perMetre: number; governs: "given" | "soil" | "shear" | "bending" } {
+  const spacing = p.spacing ?? 1;
+  const surf = slope.surfaceLineXY;
+  const yGround = surf ? getYAtX(surf.x, surf.y, x) : NaN;
+  const depth = Number.isFinite(yGround) ? Math.max(0, yGround - y) : 0;
+  let perPile: number;
+  let governs: "given" | "soil" | "shear" | "bending";
+  // Arm of the soil pressure above the slip surface, for the bending limit.
+  let arm = depth / 3;
+  if (p.force !== undefined) {
+    perPile = p.force;
+    governs = "given";
+  } else {
+    // Ito & Matsui: integrate p(z) from the ground to the slip surface,
+    // with each layer's c, φ and γ (γ·z with the layer's γ, as the theory
+    // and Slide2 do).
+    const D = p.diameter!;
+    const D1 = spacing - D;
+    const n = Math.min(400, Math.max(20, Math.ceil(depth / 0.05)));
+    const dz = depth / n;
+    let force = 0;
+    let moment = 0;
+    for (let k = 0; k < n && depth > 0; k++) {
+      const z = (k + 0.5) * dz;
+      const yy = yGround - z;
+      const m = slope.materialGeometries.find((g) => isPointInPolygon(x, yy, g.px, g.py))?.material;
+      if (!m) continue;
+      const st = resolveStrength(m.model, { yBottom: yy, x, yGround, alpha: 0 });
+      if (!Number.isFinite(st.cohesion)) continue; // high strength: no soil to push
+      const [A1, A2] = itoMatsuiCoefficients(D1, D, st.frictionAngle);
+      const pz = st.cohesion * A1 + resolveUnitWeight(m.model, m.unitWeight, x, yy) * z * A2;
+      force += pz * dz;
+      moment += pz * dz * (depth - z);
+    }
+    perPile = force;
+    governs = "soil";
+    if (force > 0) arm = moment / force;
+  }
+  if (p.shearCapacity !== undefined && p.shearCapacity < perPile) {
+    perPile = p.shearCapacity;
+    governs = "shear";
+  }
+  if (p.momentCapacity !== undefined && arm > 0 && p.momentCapacity / arm < perPile) {
+    perPile = p.momentCapacity / arm;
+    governs = "bending";
+  }
+  return { perPile, perMetre: perPile / spacing, governs };
 }

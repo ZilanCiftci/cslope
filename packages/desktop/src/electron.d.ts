@@ -5,6 +5,7 @@ import type {
   AnalysisResult,
   CustomSearchPlane,
   LineLoadRow,
+  PileRow,
   ReinforcementRow,
   MaterialBoundaryRow,
   MaterialRow,
@@ -46,6 +47,7 @@ interface LoadsStatePayload {
   udls: UdlRow[];
   lineLoads: LineLoadRow[];
   reinforcements?: ReinforcementRow[];
+  piles?: PileRow[];
   coordinates?: [number, number][];
   orientation?: "ltr" | "rtl";
   parameters?: ParameterDef[];

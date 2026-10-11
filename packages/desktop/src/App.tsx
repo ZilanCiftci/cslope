@@ -29,6 +29,7 @@ import type {
   PiezometricLineState,
   ParameterDef,
   RegionMaterials,
+  PileRow,
   ReinforcementRow,
   ResultViewSettings,
   UdlRow,
@@ -38,6 +39,7 @@ interface LoadsStatePayload {
   udls: UdlRow[];
   lineLoads: LineLoadRow[];
   reinforcements?: ReinforcementRow[];
+  piles?: PileRow[];
   parameters?: ParameterDef[];
 }
 
@@ -104,6 +106,7 @@ const MODEL_ENTRY_FIELDS = [
   "udls",
   "lineLoads",
   "reinforcements",
+  "piles",
   "customSearchPlanes",
   "customPlanesOnly",
   "options",
@@ -193,6 +196,7 @@ function buildResultsPlotPayloadFromState(): ResultsPlotStatePayload {
       udls: state.udls,
       lineLoads: state.lineLoads,
       reinforcements: state.reinforcements,
+      piles: state.piles,
       customSearchPlanes: state.customSearchPlanes,
       customPlanesOnly: state.customPlanesOnly,
       options: state.options,
@@ -215,6 +219,7 @@ function App() {
   const udls = useAppStore((s) => s.udls);
   const lineLoads = useAppStore((s) => s.lineLoads);
   const reinforcements = useAppStore((s) => s.reinforcements);
+  const piles = useAppStore((s) => s.piles);
   const piezometricLine = useAppStore((s) => s.piezometricLine);
   const parameters = useAppStore((s) => s.parameters);
   const orientation = useAppStore((s) => s.orientation);
@@ -589,6 +594,7 @@ function App() {
         udls: state.udls,
         lineLoads: state.lineLoads,
         reinforcements: state.reinforcements,
+        piles: state.piles,
         parameters: state.parameters,
         coordinates: state.coordinates,
         orientation: state.orientation,
@@ -603,6 +609,7 @@ function App() {
         udls: UdlRow[];
         lineLoads: LineLoadRow[];
         reinforcements?: ReinforcementRow[];
+        piles?: PileRow[];
         parameters?: ParameterDef[];
       } = {
         udls: normalized.udls,
@@ -611,6 +618,9 @@ function App() {
       // Only the reinforcement window sends reinforcement.
       if (Array.isArray(normalized.reinforcements)) {
         patch.reinforcements = normalized.reinforcements;
+      }
+      if (Array.isArray(normalized.piles)) {
+        patch.piles = normalized.piles;
       }
 
       if (Array.isArray(normalized.parameters)) {
@@ -641,11 +651,12 @@ function App() {
       udls,
       lineLoads,
       reinforcements,
+      piles,
       parameters,
       coordinates,
       orientation,
     });
-  }, [udls, lineLoads, reinforcements, parameters, coordinates, orientation, isAnyDialogWindow]);
+  }, [udls, lineLoads, reinforcements, piles, parameters, coordinates, orientation, isAnyDialogWindow]);
 
   useEffect(() => {
     if (!isElectron || isAnyDialogWindow) return;
@@ -886,6 +897,7 @@ function App() {
     udls,
     lineLoads,
     reinforcements,
+    piles,
     customSearchPlanes,
     customPlanesOnly,
     options,

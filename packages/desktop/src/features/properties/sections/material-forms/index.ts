@@ -6,4 +6,5 @@ export { SpatialMCFields } from "./SpatialMCFields";
 export { AnisotropicFields } from "./AnisotropicFields";
 export { SfDepthFields } from "./SfDepthFields";
 export { SfDatumFields } from "./SfDatumFields";
+export { LimeCementFields } from "./LimeCementFields";
 export { createDefaultModel, flatFieldsFromModel } from "./model-defaults";

@@ -1,5 +1,5 @@
 import type { ReinforcementForce } from "@cslope/engine";
-import type { ReinforcementRow } from "../../store/types";
+import type { PileRow, ReinforcementRow } from "../../store/types";
 
 export const REINFORCEMENT_COLOR = "#8e44ad";
 
@@ -121,5 +121,35 @@ export function drawReinforcementForces(
     ctx.textBaseline = "middle";
     ctx.fillText(formatReinforcementForce(f), ex + (ux >= 0 ? 4 : -4) * zoom, ey);
   }
+  ctx.restore();
+}
+
+export const PILE_COLOR = "#5d4037";
+
+/** Piles and sheet piles: a thick bar (dashed for a wall), labelled P1… at the head. */
+export function drawPiles(
+  ctx: CanvasRenderingContext2D,
+  rows: readonly PileRow[],
+  toCanvas: (x: number, y: number) => [number, number],
+  zoom = 1,
+): void {
+  ctx.save();
+  rows.forEach((p, i) => {
+    const [ax, ay] = toCanvas(p.x1, p.y1);
+    const [bx, by] = toCanvas(p.x2, p.y2);
+    ctx.strokeStyle = PILE_COLOR;
+    ctx.lineWidth = (p.type === "sheet-pile" ? 4 : 3) * zoom;
+    ctx.setLineDash(p.type === "sheet-pile" ? [8 * zoom, 2 * zoom] : []);
+    ctx.beginPath();
+    ctx.moveTo(ax, ay);
+    ctx.lineTo(bx, by);
+    ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.fillStyle = PILE_COLOR;
+    ctx.font = `bold ${11 * zoom}px sans-serif`;
+    ctx.textAlign = "center";
+    ctx.textBaseline = "bottom";
+    ctx.fillText(`P${i + 1}`, ax, ay - 4 * zoom);
+  });
   ctx.restore();
 }

@@ -36,7 +36,7 @@ import {
   clipLineToSurface,
   createGeometryWithMaterial,
 } from "./geometry-ops";
-import type { Reinforcement } from "../types/reinforcement";
+import type { Pile, Reinforcement } from "../types/reinforcement";
 import { buildEnvelope, type ReinforcementEnvelope } from "./reinforcement";
 
 // ── Types used internally ─────────────────────────────────────────
@@ -112,6 +112,7 @@ export class Slope {
   private _lls: LineLoad[] = [];
   private _reinforcements: Reinforcement[] = [];
   private _reinforcementEnvelopes: ReinforcementEnvelope[] | null = null;
+  private _piles: Pile[] = [];
 
   // ── Analysis options ──────────────────────────────────────────
   private _slices: number;
@@ -227,6 +228,10 @@ export class Slope {
 
   get reinforcements(): readonly Reinforcement[] {
     return this._reinforcements;
+  }
+
+  get piles(): readonly Pile[] {
+    return this._piles;
   }
 
   /** Capacity envelopes of the reinforcement (built on first use). */
@@ -753,6 +758,36 @@ export class Slope {
     // index is the element's position in the input.
     this._reinforcements = [...reinforcements];
     this._reinforcementEnvelopes = null;
+    this._resetResults();
+  }
+
+  /** Set the pile rows and sheet pile walls. */
+  setPiles(piles: readonly Pile[]): void {
+    for (const p of piles) {
+      if (![p.x1, p.y1, p.x2, p.y2].every(Number.isFinite)) {
+        throw new Error("A pile needs finite head and tip coordinates.");
+      }
+      const bad = (v: number | undefined, positive = false) =>
+        v !== undefined && !(Number.isFinite(v) && (positive ? v > 0 : v >= 0));
+      if (bad(p.force) || bad(p.shearCapacity) || bad(p.momentCapacity) || bad(p.spacing, true) || bad(p.diameter, true)) {
+        throw new Error("Pile force and capacities must be ≥ 0, spacing and diameter > 0.");
+      }
+      if (p.angle !== undefined && !(Number.isFinite(p.angle) && Math.abs(p.angle) < 90)) {
+        throw new Error("Pile force angle must be between −90° and 90°.");
+      }
+      if (p.force === undefined) {
+        if (p.diameter === undefined) {
+          throw new Error("A pile needs a shear force, or a diameter for Ito & Matsui.");
+        }
+        if (Math.abs(p.x2 - p.x1) > 1e-6) {
+          throw new Error("Ito & Matsui needs a vertical pile; give the shear force of an inclined pile.");
+        }
+        if (!((p.spacing ?? 1) > p.diameter)) {
+          throw new Error("Ito & Matsui needs a spacing larger than the pile diameter (soil between the piles).");
+        }
+      }
+    }
+    this._piles = [...piles];
     this._resetResults();
   }
 

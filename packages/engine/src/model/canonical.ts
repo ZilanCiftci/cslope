@@ -165,6 +165,11 @@ export function toCanonicalSlopeDefinition(
       ...lineLoad,
       x: mirrorX(lineLoad.x, xMin, xMax),
     })),
+    piles: slopeDefinition.piles?.map((p) => ({
+      ...p,
+      x1: mirrorX(p.x1, xMin, xMax),
+      x2: mirrorX(p.x2, xMin, xMax),
+    })),
     reinforcements: slopeDefinition.reinforcements?.map((r) => ({
       ...r,
       x1: mirrorX(r.x1, xMin, xMax),

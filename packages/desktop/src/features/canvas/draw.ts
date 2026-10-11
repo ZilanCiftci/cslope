@@ -69,7 +69,7 @@ import {
   MODEL_HATCH_PATTERNS,
 } from "../rendering/style-spec";
 import { drawCanvasHatch, drawCanvasHatchLabel } from "../rendering/hatch";
-import { drawReinforcementForces, drawReinforcements } from "./reinforcement-draw";
+import { drawPiles, drawReinforcementForces, drawReinforcements } from "./reinforcement-draw";
 import { freeWaterPolygons, mainPiezoLine, piezoExtensions } from "../../utils/piezo";
 
 const arcPointCache = new WeakMap<object, Map<string, [number, number][]>>();
@@ -163,6 +163,7 @@ export interface DrawCanvasParams {
   udls: AppState["udls"];
   lineLoads: AppState["lineLoads"];
   reinforcements?: AppState["reinforcements"];
+  piles?: AppState["piles"];
   piezometricLine: AppState["piezometricLine"];
   viewScale: number;
   mouseWorld: [number, number] | null;
@@ -211,6 +212,7 @@ export function drawCanvas(
     udls,
     lineLoads,
     reinforcements,
+    piles,
     piezometricLine,
     viewScale,
     mouseWorld,
@@ -878,6 +880,9 @@ export function drawCanvas(
   // ── Reinforcement ───────────────────────────────────────
   if (reinforcements && reinforcements.length > 0) {
     drawReinforcements(ctx, reinforcements, (x, y) => worldToCanvas(x, y, w, h), paperZoom);
+  }
+  if (piles && piles.length > 0) {
+    drawPiles(ctx, piles, (x, y) => worldToCanvas(x, y, w, h), paperZoom);
   }
 
   // ── Piezometric lines ──────────────────────────────────

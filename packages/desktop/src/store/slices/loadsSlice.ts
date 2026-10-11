@@ -1,7 +1,7 @@
 import { nextId } from "../helpers";
 import type { SliceCreator } from "../helpers";
 import type { LoadsSlice, ModelEntry, ModelOrientation } from "../types";
-import { newReinforcement } from "../../utils/reinforcement";
+import { newPile, newReinforcement } from "../../utils/reinforcement";
 
 type LoadsState = LoadsSlice & {
   activeModelId: string;
@@ -19,6 +19,7 @@ const syncActiveModel = (state: LoadsState, patch: Partial<LoadsSlice>) => ({
           udls: patch.udls ?? state.udls,
           lineLoads: patch.lineLoads ?? state.lineLoads,
           reinforcements: patch.reinforcements ?? state.reinforcements,
+          piles: patch.piles ?? state.piles,
         }
       : m,
   ),
@@ -28,6 +29,7 @@ export const createLoadsSlice: SliceCreator<LoadsSlice> = (set, get) => ({
   udls: [],
   lineLoads: [],
   reinforcements: [],
+  piles: [],
 
   addUdl: () => {
     set((s) =>
@@ -118,6 +120,33 @@ export const createLoadsSlice: SliceCreator<LoadsSlice> = (set, get) => ({
     set((s) =>
       syncActiveModel(s, {
         reinforcements: s.reinforcements.filter((r) => r.id !== id),
+      }),
+    );
+    get().invalidateAnalysis();
+  },
+
+  addPile: (type = "pile") => {
+    set((s) =>
+      syncActiveModel(s, {
+        piles: [...s.piles, newPile(nextId("pile"), type, s.coordinates)],
+      }),
+    );
+    get().invalidateAnalysis();
+  },
+
+  updatePile: (id, patch) => {
+    set((s) =>
+      syncActiveModel(s, {
+        piles: s.piles.map((p) => (p.id === id ? { ...p, ...patch } : p)),
+      }),
+    );
+    get().invalidateAnalysis();
+  },
+
+  removePile: (id) => {
+    set((s) =>
+      syncActiveModel(s, {
+        piles: s.piles.filter((p) => p.id !== id),
       }),
     );
     get().invalidateAnalysis();

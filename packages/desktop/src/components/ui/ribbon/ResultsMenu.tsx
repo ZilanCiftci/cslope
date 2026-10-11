@@ -164,6 +164,7 @@ export function ResultsMenu({ isOpen, onActivate, panelHost }: Props) {
       udls: state.udls,
       lineLoads: state.lineLoads,
       reinforcements: state.reinforcements,
+      piles: state.piles,
       analysisLimits: state.analysisLimits,
       orientation: state.orientation,
       projectInfo: state.projectInfo,

@@ -117,7 +117,8 @@ export function useCanvasDrawLoop({
         state.analysisLimits !== prevState.analysisLimits ||
         state.udls !== prevState.udls ||
         state.lineLoads !== prevState.lineLoads ||
-        state.reinforcements !== prevState.reinforcements;
+        state.reinforcements !== prevState.reinforcements ||
+        state.piles !== prevState.piles;
 
       const resultViewRenderChanged =
         state.resultViewSettings !== prevState.resultViewSettings ||
@@ -140,6 +141,7 @@ export function useCanvasDrawLoop({
             udls: state.udls,
             lineLoads: state.lineLoads,
             reinforcements: state.reinforcements,
+            piles: state.piles,
             result: state.result,
             resultViewSettings: state.resultViewSettings,
             selectedAnnotationIds: state.selectedAnnotationIds,

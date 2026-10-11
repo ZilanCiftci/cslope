@@ -151,6 +151,31 @@ export interface StrengthFromDatumModel extends MaterialModelBase {
   rate: number;
 }
 
+/**
+ * Clay improved with lime-cement columns (KC-pelare): the shear strength of
+ * the improved block is the area-weighted mean of the columns and the soil
+ * between them, τ = a·τcol + (1 − a)·cu,soil. Undrained by default; with a
+ * drained column strength (c′, φ′) the column part is limited to
+ * c′ + σ′·tan φ′ ≤ cu,col (combined analysis), as in Swedish practice.
+ */
+export interface LimeCementColumnModel extends MaterialModelBase {
+  kind: "lime-cement-columns";
+  /** Undrained shear strength of the soil between the columns (kPa) at the reference level. */
+  soilSu: number;
+  /** Reference level (elevation, m) of soilSu. Default 0. */
+  suRefDepth?: number;
+  /** Increase of soilSu per metre below the reference level (kPa/m). Default 0. */
+  suRateOfChange?: number;
+  /** Undrained shear strength of the columns (kPa). */
+  columnSu: number;
+  /** Area ratio a = column area / improved area, 0–1. */
+  areaRatio: number;
+  /** Drained cohesion of the columns c′ (kPa); with columnFrictionAngle. */
+  columnCohesion?: number;
+  /** Drained friction angle of the columns φ′ (°); with columnCohesion. */
+  columnFrictionAngle?: number;
+}
+
 // ── Union ──────────────────────────────────────────────────────
 
 /** Discriminated union of all supported material models. */
@@ -162,7 +187,8 @@ export type MaterialModel =
   | SpatialMohrCoulombModel
   | AnisotropicFunctionModel
   | StrengthFromDepthModel
-  | StrengthFromDatumModel;
+  | StrengthFromDatumModel
+  | LimeCementColumnModel;
 
 /** All valid `kind` string literals. */
 export type MaterialModelKind = MaterialModel["kind"];
@@ -177,4 +203,5 @@ export const MATERIAL_MODEL_LABELS: Record<MaterialModelKind, string> = {
   "anisotropic-function": "Anisotropic Function",
   "s-f-depth": "S = f(depth)",
   "s-f-datum": "S = f(datum)",
+  "lime-cement-columns": "Lime-cement columns",
 };

@@ -1,5 +1,5 @@
-import type { Reinforcement } from "@cslope/engine";
-import type { ModelOrientation, ReinforcementRow, ReinforcementType } from "../store/types";
+import type { Pile, Reinforcement } from "@cslope/engine";
+import type { ModelOrientation, PileRow, PileType, ReinforcementRow, ReinforcementType } from "../store/types";
 import { surfaceYAtX } from "../features/view/surface";
 
 export const REINFORCEMENT_TYPE_LABELS: Record<ReinforcementType, string> = {
@@ -152,5 +152,91 @@ export function sanitizeReinforcement(raw: unknown, id: string): ReinforcementRo
     end2Capacity: num(r.end2Capacity, preset.end2Capacity),
     direction: pick(r.direction, ["axial", "tangent", "bisector"] as const, preset.direction),
     application: pick(r.application, ["active", "passive"] as const, preset.application),
+  };
+}
+
+export const PILE_TYPE_LABELS: Record<PileType, string> = {
+  pile: "Pile row",
+  "sheet-pile": "Sheet pile wall",
+};
+
+/** Defaults: a pile row with the Ito & Matsui force (passive, as in Slide2), or a sheet pile wall with a given shear force per metre. */
+export function pilePreset(type: PileType): Omit<PileRow, "id" | "x1" | "y1" | "x2" | "y2" | "label"> {
+  return type === "pile"
+    ? {
+        type,
+        mode: "ito-matsui",
+        force: 100,
+        diameter: 0.6,
+        spacing: 2,
+        shearCapacity: 0,
+        momentCapacity: 0,
+        angle: 0,
+        application: "passive",
+      }
+    : {
+        type,
+        mode: "force",
+        force: 100,
+        diameter: 0.6,
+        spacing: 1,
+        shearCapacity: 0,
+        momentCapacity: 0,
+        angle: 0,
+        application: "active",
+      };
+}
+
+/** A new pile: vertical, from the mid ground 10 m down. */
+export function newPile(id: string, type: PileType, coordinates: [number, number][]): PileRow {
+  const xs = coordinates.map((c) => c[0]);
+  const x = xs.length ? (Math.min(...xs) + Math.max(...xs)) / 2 : 0;
+  const yGround = surfaceYAtX(coordinates, x) ?? 0;
+  return { id, x1: x, y1: yGround, x2: x, y2: yGround - 10, ...pilePreset(type) };
+}
+
+/** Engine input for a pile row. */
+export function toEnginePile(row: PileRow): Pile {
+  return {
+    x1: row.x1,
+    y1: row.y1,
+    x2: row.x2,
+    y2: row.y2,
+    ...(row.mode === "force" ? { force: row.force } : {}),
+    diameter: row.diameter,
+    spacing: row.spacing,
+    ...(row.shearCapacity > 0 ? { shearCapacity: row.shearCapacity } : {}),
+    ...(row.momentCapacity > 0 ? { momentCapacity: row.momentCapacity } : {}),
+    angle: row.angle,
+    application: row.application,
+  };
+}
+
+/** A pile row read from a file, or null if it is not one. */
+export function sanitizePile(raw: unknown, id: string): PileRow | null {
+  if (!raw || typeof raw !== "object") return null;
+  const r = raw as Record<string, unknown>;
+  const type: PileType | null = r.type === "pile" || r.type === "sheet-pile" ? r.type : null;
+  if (!type) return null;
+  const finite = (v: unknown) => typeof v === "number" && Number.isFinite(v);
+  if (![r.x1, r.y1, r.x2, r.y2].every(finite)) return null;
+  const preset = pilePreset(type);
+  const num = (v: unknown, fallback: number, ok: (n: number) => boolean) => (finite(v) && ok(v as number) ? (v as number) : fallback);
+  return {
+    id: typeof r.id === "string" && r.id ? r.id : id,
+    ...(typeof r.label === "string" ? { label: r.label } : {}),
+    type,
+    x1: r.x1 as number,
+    y1: r.y1 as number,
+    x2: r.x2 as number,
+    y2: r.y2 as number,
+    mode: r.mode === "force" || r.mode === "ito-matsui" ? r.mode : preset.mode,
+    force: num(r.force, preset.force, (n) => n >= 0),
+    diameter: num(r.diameter, preset.diameter, (n) => n > 0),
+    spacing: num(r.spacing, preset.spacing, (n) => n > 0),
+    shearCapacity: num(r.shearCapacity, 0, (n) => n >= 0),
+    momentCapacity: num(r.momentCapacity, 0, (n) => n >= 0),
+    angle: num(r.angle, 0, (n) => Math.abs(n) < 90),
+    application: r.application === "active" || r.application === "passive" ? r.application : preset.application,
   };
 }

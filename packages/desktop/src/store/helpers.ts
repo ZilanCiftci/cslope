@@ -6,7 +6,7 @@ import type { AppState, ModelEntry, ModelsSlice } from "./types";
 import { DEFAULT_ANALYSIS_LIMITS, DEFAULT_PIEZO_LINE } from "./defaults";
 import { flatFieldsFromModel } from "../features/properties/sections/material-forms/model-defaults";
 import { mainPiezoLine } from "../utils/piezo";
-import { toEngineReinforcement } from "../utils/reinforcement";
+import { toEnginePile, toEngineReinforcement } from "../utils/reinforcement";
 
 export type SliceCreator<T> = StateCreator<AppState, [], [], T>;
 
@@ -160,6 +160,10 @@ export function buildSlopeDTOFromModel(model: ModelEntry): SlopeDefinition {
     slope.reinforcements = model.reinforcements.map(toEngineReinforcement);
   }
 
+  if (model.piles?.length) {
+    slope.piles = model.piles.map(toEnginePile);
+  }
+
   if (model.customSearchPlanes?.length > 0) {
     const circles = model.customSearchPlanes.filter((p) => !p.points);
     // Polylines need two points; incomplete ones are still being entered.
@@ -203,6 +207,7 @@ export function buildSlopeDTO(state: AppState): SlopeDefinition {
     udls: state.udls,
     lineLoads: state.lineLoads,
     reinforcements: state.reinforcements,
+    piles: state.piles,
     customSearchPlanes: state.customSearchPlanes,
     customPlanesOnly: state.customPlanesOnly,
     options: state.options,
@@ -241,6 +246,7 @@ export function getAnalysisInputSignature(state: AppState): string {
     udls: state.udls,
     lineLoads: state.lineLoads,
     reinforcements: state.reinforcements,
+    piles: state.piles,
     customSearchPlanes: state.customSearchPlanes,
     customPlanesOnly: state.customPlanesOnly,
     analysisLimits: state.analysisLimits,

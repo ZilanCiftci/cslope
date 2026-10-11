@@ -219,6 +219,10 @@ export function buildSlope(def: SlopeDefinition): Slope {
     slope.setReinforcements(def.reinforcements);
   }
 
+  if (def.piles?.length) {
+    slope.setPiles(def.piles);
+  }
+
   // Analysis limits
   if (def.analysisLimits) {
     slope.setAnalysisLimits(def.analysisLimits);

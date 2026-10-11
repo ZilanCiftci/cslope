@@ -181,6 +181,34 @@ export function validateMaterialModel(model: MaterialModel): string[] {
       }
       break;
 
+    case "lime-cement-columns":
+      if (!Number.isFinite(model.soilSu) || model.soilSu < 0) {
+        errors.push("Soil Su between the columns must be ≥ 0.");
+      }
+      if (!Number.isFinite(model.columnSu) || model.columnSu < 0) {
+        errors.push("Column Su must be ≥ 0.");
+      }
+      if (!Number.isFinite(model.areaRatio) || model.areaRatio < 0 || model.areaRatio > 1) {
+        errors.push("Area ratio must be between 0 and 1.");
+      }
+      if (model.suRefDepth !== undefined && !Number.isFinite(model.suRefDepth)) {
+        errors.push("Reference level must be a finite number.");
+      }
+      if (model.suRateOfChange !== undefined && !Number.isFinite(model.suRateOfChange)) {
+        errors.push("Rate of change must be a finite number.");
+      }
+      if ((model.columnCohesion === undefined) !== (model.columnFrictionAngle === undefined)) {
+        errors.push("Give both the drained column cohesion and friction angle, or neither.");
+      } else if (model.columnCohesion !== undefined) {
+        if (!Number.isFinite(model.columnCohesion) || model.columnCohesion < 0) {
+          errors.push("Drained column cohesion must be ≥ 0.");
+        }
+        if (!(Number.isFinite(model.columnFrictionAngle) && model.columnFrictionAngle! >= 0 && model.columnFrictionAngle! < 90)) {
+          errors.push("Drained column friction angle must be 0–90°.");
+        }
+      }
+      break;
+
     case "s-f-datum":
       if (!Number.isFinite(model.suRef) || model.suRef < 0) {
         errors.push("Reference Su (suRef) must be ≥ 0.");

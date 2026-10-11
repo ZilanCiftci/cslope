@@ -109,6 +109,9 @@ export function resolveStrength(
       return resolveStrengthFromDepth(model, context);
 
     // ── S = f(datum) ─────────────────────────────────────────
+    case "lime-cement-columns":
+      return resolveLimeCementColumns(model, context);
+
     case "s-f-datum":
       return resolveStrengthFromDatum(model, context);
 
@@ -150,6 +153,30 @@ function resolveMohrCoulomb(
     frictionAngle: model.frictionAngle,
     cohesionUndrained,
     isCombined: cFactor !== 0,
+  };
+}
+
+function resolveLimeCementColumns(
+  model: Extract<MaterialModel, { kind: "lime-cement-columns" }>,
+  context: StrengthContext,
+): ResolvedStrength {
+  const soil = nonNegative(
+    model.soilSu + ((model.suRefDepth ?? 0) - context.yBottom) * (model.suRateOfChange ?? 0),
+  );
+  const a = Math.min(1, Math.max(0, model.areaRatio));
+  const undrained = a * model.columnSu + (1 - a) * soil;
+  if (model.columnCohesion === undefined || model.columnFrictionAngle === undefined) {
+    return { cohesion: undrained, frictionAngle: 0, cohesionUndrained: undrained };
+  }
+  // min over the column part: a·min(c′ + σ′ tan φ′, cu,col) + (1 − a)·cu,soil
+  // = min((1 − a)·cu,soil + a·c′ + σ′·a·tan φ′, undrained): a combined
+  // material with these drained parameters.
+  const tanPhi = a * Math.tan((model.columnFrictionAngle * Math.PI) / 180);
+  return {
+    cohesion: (1 - a) * soil + a * model.columnCohesion,
+    frictionAngle: (Math.atan(tanPhi) * 180) / Math.PI,
+    cohesionUndrained: undrained,
+    isCombined: true,
   };
 }
 

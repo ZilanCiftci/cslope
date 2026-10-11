@@ -16,6 +16,7 @@ import type {
   AnisotropicFunctionModel,
   StrengthFromDepthModel,
   StrengthFromDatumModel,
+  LimeCementColumnModel,
 } from "@cslope/engine";
 
 export function createDefaultModel(
@@ -87,6 +88,15 @@ export function createDefaultModel(
         yRef: 0,
         rate: 0,
       } satisfies StrengthFromDatumModel;
+
+    case "lime-cement-columns":
+      return {
+        kind: "lime-cement-columns",
+        unitWeight,
+        soilSu: 10,
+        columnSu: 100,
+        areaRatio: 0.2,
+      } satisfies LimeCementColumnModel;
   }
 }
 
@@ -120,6 +130,15 @@ export function flatFieldsFromModel(model: MaterialModel): {
         frictionAngle: model.frictionAngle,
         cohesion: model.cohesion,
       };
+    case "lime-cement-columns": {
+      // Improved strength at the reference level.
+      const a = Math.min(1, Math.max(0, model.areaRatio));
+      return {
+        unitWeight: model.unitWeight,
+        frictionAngle: 0,
+        cohesion: a * model.columnSu + (1 - a) * model.soilSu,
+      };
+    }
     default:
       return {
         unitWeight: model.unitWeight,

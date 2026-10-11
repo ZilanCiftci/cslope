@@ -8,7 +8,7 @@
 import type { AnalysisLimits } from "./analysis";
 import type { SlopeOrientation } from "../model/canonical";
 import type { MaterialModel } from "./material-models";
-import type { Reinforcement } from "./reinforcement";
+import type { Pile, Reinforcement } from "./reinforcement";
 
 /** Slope definition sent from the UI to the engine / worker. */
 export interface SlopeDefinition {
@@ -62,6 +62,8 @@ export interface SlopeDefinition {
   lineLoads?: Array<{ magnitude: number; x: number }>;
   /** Reinforcement: anchors, tiebacks, soil nails, geosynthetics. */
   reinforcements?: Reinforcement[];
+  /** Pile rows and sheet pile walls (shear). */
+  piles?: Pile[];
   /** Material boundary polylines that divide the slope into layers. */
   materialBoundaries?: Array<{
     coordinates: [number, number][];

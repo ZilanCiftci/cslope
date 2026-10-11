@@ -10,6 +10,7 @@ import type {
   PiezometricLineState,
   ProjectInfo,
   RegionMaterials,
+  PileRow,
   ReinforcementRow,
   ResultViewSettings,
 } from "../../store/types";
@@ -23,6 +24,7 @@ import {
   drawGrid,
   drawLineLoads,
   drawReinforcementsPdf,
+  drawPilesPdf,
   drawReinforcementForcesPdf,
   drawMaterialRegions,
   drawOpenPolyline,
@@ -89,6 +91,7 @@ export interface PdfExportData {
   udls: { id: string; x1: number; x2: number; magnitude: number }[];
   lineLoads: { id: string; x: number; magnitude: number }[];
   reinforcements?: ReinforcementRow[];
+  piles?: PileRow[];
   analysisLimits: AnalysisLimitsState;
   orientation: ModelOrientation;
   projectInfo?: ProjectInfo;
@@ -139,6 +142,7 @@ export function exportVectorPdf(data: PdfExportData): void {
       udls,
       lineLoads,
       reinforcements = [],
+      piles = [],
       analysisLimits,
       orientation,
       projectInfo,
@@ -350,6 +354,9 @@ export function exportVectorPdf(data: PdfExportData): void {
 
     if (reinforcements.length > 0) {
       drawReinforcementsPdf(pdf, tf, reinforcements);
+    }
+    if (piles.length > 0) {
+      drawPilesPdf(pdf, tf, piles);
     }
 
     if (piezometricLine.lines.length > 0) {

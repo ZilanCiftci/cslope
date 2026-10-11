@@ -19,6 +19,7 @@ export type {
   AnisotropicFunctionModel,
   StrengthFromDepthModel,
   StrengthFromDatumModel,
+  LimeCementColumnModel,
 } from "./material-models";
 export { MATERIAL_MODEL_LABELS } from "./material-models";
 
@@ -39,6 +40,7 @@ export type {
   ReinforcementApplication,
   ReinforcementPullout,
   ReinforcementForce,
+  Pile,
 } from "./reinforcement";
 
 export { Udl, LineLoad } from "./loads";

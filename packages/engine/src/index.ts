@@ -40,6 +40,7 @@ export type {
   ReinforcementApplication,
   ReinforcementPullout,
   ReinforcementForce,
+  Pile,
 } from "./types/reinforcement";
 
 // Material model types
@@ -55,6 +56,7 @@ export type {
   AnisotropicFunctionModel,
   StrengthFromDepthModel,
   StrengthFromDatumModel,
+  LimeCementColumnModel,
 } from "./types/material-models";
 export { MATERIAL_MODEL_LABELS } from "./types/material-models";
 
@@ -169,6 +171,8 @@ export {
   envelopeAt,
   pulloutBeyond,
   effectiveVerticalStress,
+  itoMatsuiCoefficients,
+  pileForce,
 } from "./model/reinforcement";
 export type { ReinforcementEnvelope } from "./model/reinforcement";
 

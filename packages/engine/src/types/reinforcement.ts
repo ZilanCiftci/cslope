@@ -65,10 +65,43 @@ export interface Reinforcement {
   application?: ReinforcementApplication;
 }
 
+/**
+ * Pile row (or sheet pile wall) resisting the sliding mass in shear: where
+ * a slip surface crosses the pile axis, a force acts against the sliding
+ * direction, tilted `angle` degrees upwards (0: horizontal). Its size is
+ * the given shear force per pile, or — without one, for a vertical pile —
+ * the Ito & Matsui (1975) lateral force of the soil squeezing between the
+ * piles above the slip surface; either is limited by the pile's shear and
+ * bending capacity. Per metre of slope: divided by the spacing.
+ */
+export interface Pile {
+  /** Pile head and tip. */
+  x1: number;
+  y1: number;
+  x2: number;
+  y2: number;
+  /** Shear force per pile (kN); omit for Ito & Matsui (needs the diameter). */
+  force?: number;
+  /** Pile diameter / width (m), for Ito & Matsui. */
+  diameter?: number;
+  /** Centre-to-centre spacing (m). Default 1 (a wall per metre). */
+  spacing?: number;
+  /** Shear capacity per pile (kN). */
+  shearCapacity?: number;
+  /** Bending capacity per pile (kNm): force ≤ M / Lm, Lm the arm of the soil pressure. */
+  momentCapacity?: number;
+  /** Tilt of the force above horizontal (°). Default 0. */
+  angle?: number;
+  /** Default "active". */
+  application?: ReinforcementApplication;
+}
+
 /** Applied reinforcement force, per metre of slope. */
 export interface ReinforcementForce {
-  /** Index of the element in the slope's reinforcement list. */
+  /** Index of the element in the slope's reinforcement (or pile) list. */
   index: number;
+  /** Set for a pile. */
+  pile?: true;
   /** Crossing point with the slip surface. */
   x: number;
   y: number;

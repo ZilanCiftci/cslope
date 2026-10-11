@@ -45,6 +45,7 @@ export function projectContentSignature(state: AppState): string {
             udls: state.udls,
             lineLoads: state.lineLoads,
             reinforcements: state.reinforcements,
+            piles: state.piles,
             customSearchPlanes: state.customSearchPlanes,
             customPlanesOnly: state.customPlanesOnly,
             options: state.options,

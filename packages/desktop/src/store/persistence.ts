@@ -1,4 +1,4 @@
-import { sanitizeReinforcement } from "../utils/reinforcement";
+import { sanitizePile, sanitizeReinforcement } from "../utils/reinforcement";
 import {
   ITERATIONS_RANGE,
   REFINED_ITERATIONS_RANGE,
@@ -26,6 +26,7 @@ import type {
   AppState,
   CoordinateExpression,
   LineLoadRow,
+  PileRow,
   ReinforcementRow,
   MaterialRow,
   ModelEntry,
@@ -234,6 +235,13 @@ function normalizeModelEntry(raw: unknown): ModelEntry {
           reinforcements: (model.reinforcements as unknown[])
             .map((r, i) => sanitizeReinforcement(r, `reinf-${i + 1}`))
             .filter((r): r is ReinforcementRow => r !== null),
+        }
+      : {}),
+    ...(Array.isArray(model.piles)
+      ? {
+          piles: (model.piles as unknown[])
+            .map((p, i) => sanitizePile(p, `pile-${i + 1}`))
+            .filter((p): p is PileRow => p !== null),
         }
       : {}),
     options: model.options

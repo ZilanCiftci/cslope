@@ -638,6 +638,14 @@ function applyMaterialFactors(s: Slice, f: PartialFactors): void {
     (s.frictionAngle === 0 && !s.isCombined);
   if (kind === "high-strength" || kind === "impenetrable") return;
   s.cohesionUndrained /= f.cu;
+  if (kind === "lime-cement-columns") {
+    // Column-improved clay: Su of soil and columns take γcu, also in the
+    // drained limit of the columns; tan φ′ takes γφ′.
+    s.cohesion /= f.cu;
+    s.phi = Math.atan(Math.tan(s.phi) / f.tanPhi);
+    s.frictionAngle = (s.phi * 180) / Math.PI;
+    return;
+  }
   if (undrained) {
     s.cohesion /= f.cu;
     return;
@@ -675,9 +683,11 @@ export function rankineCrackDepth(slope: Slope, x: number): number {
       model.kind === "undrained" ||
       model.kind === "s-f-depth" ||
       model.kind === "s-f-datum" ||
+      model.kind === "lime-cement-columns" ||
       (strength.frictionAngle === 0 && !strength.isCombined);
     if (undrained) {
       c /= f.cu;
+      if (model.kind === "lime-cement-columns") tanPhi /= f.tanPhi;
     } else {
       c /= f.cohesion;
       tanPhi /= f.tanPhi;

@@ -40,6 +40,7 @@ export function useCanvasModelState() {
   const udls = useAppStore((s) => s.udls);
   const lineLoads = useAppStore((s) => s.lineLoads);
   const reinforcements = useAppStore((s) => s.reinforcements);
+  const piles = useAppStore((s) => s.piles);
   const piezometricLine = useAppStore((s) => s.piezometricLine);
   const selectedPointIndex = useAppStore((s) => s.selectedPointIndex);
   const selectedMaterialBoundaryId = useAppStore(
@@ -70,6 +71,7 @@ export function useCanvasModelState() {
     udls,
     lineLoads,
     reinforcements,
+    piles,
     piezometricLine,
     selectedPointIndex,
     selectedMaterialBoundaryId,

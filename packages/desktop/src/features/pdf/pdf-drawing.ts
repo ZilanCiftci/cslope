@@ -1,6 +1,6 @@
 import { jsPDF } from "jspdf";
 import type { ReinforcementForce } from "@cslope/engine";
-import type { ReinforcementRow } from "../../store/types";
+import type { PileRow, ReinforcementRow } from "../../store/types";
 import { bondedSpan, formatReinforcementForce } from "../canvas/reinforcement-draw";
 import { fosColor, fosScaleRange, fosTickLabel } from "../../utils/fos-color";
 
@@ -481,6 +481,21 @@ export function drawReinforcementsPdf(
     pdf.setFont("helvetica", "bold");
     pdf.setTextColor(...REINFORCEMENT_RGB);
     pdf.text(String(i + 1), ax - ux * 2.5, ay - uy * 2.5, { align: "center", baseline: "middle" });
+  });
+}
+
+/** Piles and sheet piles: a thick bar labelled P1… at the head. */
+export function drawPilesPdf(pdf: jsPDF, tf: PdfTransform, rows: readonly PileRow[]) {
+  rows.forEach((p, i) => {
+    const [ax, ay] = tf.worldToPdf(p.x1, p.y1);
+    const [bx, by] = tf.worldToPdf(p.x2, p.y2);
+    pdf.setDrawColor(93, 64, 55);
+    pdf.setLineWidth(p.type === "sheet-pile" ? 1 : 0.8);
+    pdf.line(ax, ay, bx, by);
+    pdf.setFontSize(8);
+    pdf.setFont("helvetica", "bold");
+    pdf.setTextColor(93, 64, 55);
+    pdf.text(`P${i + 1}`, ax, ay - 1.2, { align: "center" });
   });
 }
 

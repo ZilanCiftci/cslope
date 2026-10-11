@@ -430,6 +430,14 @@ function figure(def: SlopeDefinition, slope: Slope, plane: Plane | null, label: 
     pdf.setFillColor(142, 68, 173);
     pdf.circle(ax, ay, 0.5, "F");
   }
+  // Piles: a thick bar.
+  for (const p of canon.piles ?? []) {
+    const [ax, ay] = P(p.x1, p.y1);
+    const [bx, by] = P(p.x2, p.y2);
+    pdf.setDrawColor(93, 64, 55);
+    pdf.setLineWidth(0.8);
+    pdf.line(ax, ay, bx, by);
+  }
 
   // Critical surface.
   if (plane) {

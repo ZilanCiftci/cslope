@@ -136,6 +136,38 @@ export interface ReinforcementRow {
   application: "active" | "passive";
 }
 
+export type PileType = "pile" | "sheet-pile";
+
+/**
+ * Pile row or sheet pile wall resisting in shear where the slip surface
+ * crosses it: a given force per pile, or (vertical piles) the Ito & Matsui
+ * force of the soil between the piles, limited by the capacities.
+ */
+export interface PileRow {
+  id: string;
+  label?: string;
+  type: PileType;
+  x1: number;
+  y1: number;
+  x2: number;
+  y2: number;
+  /** "force": the given shear force; "ito-matsui": from the soil. */
+  mode: "force" | "ito-matsui";
+  /** Shear force per pile (kN), or per metre of wall with spacing 1. */
+  force: number;
+  /** Pile diameter / width (m). */
+  diameter: number;
+  /** Centre-to-centre spacing (m); 1 for a wall. */
+  spacing: number;
+  /** Shear capacity per pile (kN); 0 = no limit. */
+  shearCapacity: number;
+  /** Bending capacity per pile (kNm); 0 = no limit. */
+  momentCapacity: number;
+  /** Tilt of the force above horizontal (°). */
+  angle: number;
+  application: "active" | "passive";
+}
+
 export interface PiezoLine {
   id: string;
   name: string;
@@ -273,6 +305,7 @@ export interface ModelEntry {
   udls: UdlRow[];
   lineLoads: LineLoadRow[];
   reinforcements?: ReinforcementRow[];
+  piles?: PileRow[];
   customSearchPlanes: CustomSearchPlane[];
   customPlanesOnly: boolean;
   options: AnalysisOptions;
@@ -421,6 +454,10 @@ export interface LoadsSlice {
   addReinforcement: (type?: ReinforcementType) => void;
   updateReinforcement: (id: string, patch: Partial<ReinforcementRow>) => void;
   removeReinforcement: (id: string) => void;
+  piles: PileRow[];
+  addPile: (type?: PileType) => void;
+  updatePile: (id: string, patch: Partial<PileRow>) => void;
+  removePile: (id: string) => void;
 }
 
 export interface ParametersSlice {

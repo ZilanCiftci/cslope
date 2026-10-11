@@ -5,9 +5,13 @@ import { buildSlopeDTOFromModel } from "../store/helpers";
 import { parseProjectFile, serializeProject } from "../store/persistence";
 import { snapshotFromState } from "../store/slices/analysisSlice";
 import {
+  newPile,
   newReinforcement,
+  pilePreset,
   reinforcementPreset,
+  sanitizePile,
   sanitizeReinforcement,
+  toEnginePile,
   toEngineReinforcement,
 } from "./reinforcement";
 
@@ -99,5 +103,35 @@ describe("reinforcement forces in model space", () => {
     } as unknown as AnalysisResult;
     const mapped = mapAnalysisResultToModelSpace(result, def);
     expect(mapped.criticalSurface!.reinforcementForces![0]).toMatchObject({ x: 16, fx: 10, fy: 2 });
+  });
+});
+
+describe("pile rows", () => {
+  it("map to the engine: Ito & Matsui without a force, capacities 0 = none", () => {
+    const pile = newPile("p", "pile", ground);
+    expect(pile.x1).toBe(pile.x2);
+    const e = toEnginePile(pile);
+    expect(e.force).toBeUndefined();
+    expect(e.shearCapacity).toBeUndefined();
+    expect(e.application).toBe("passive");
+    const wall = toEnginePile({ ...pile, ...pilePreset("sheet-pile"), shearCapacity: 80 });
+    expect(wall).toMatchObject({ force: 100, spacing: 1, shearCapacity: 80, application: "active" });
+  });
+
+  it("are read from a file, invalid entries dropped or repaired", () => {
+    expect(sanitizePile({ type: "pile", x1: 0, y1: 0, x2: 0 }, "x")).toBeNull();
+    const p = sanitizePile({ type: "pile", x1: 0, y1: 0, x2: 0, y2: -5, spacing: 0, angle: 120 }, "x")!;
+    expect(p.spacing).toBe(2);
+    expect(p.angle).toBe(0);
+  });
+
+  it("are saved with the project and reach the engine", () => {
+    useAppStore.getState().newProject();
+    useAppStore.getState().addPile("sheet-pile");
+    useAppStore.getState().saveCurrentModel();
+    const loaded = parseProjectFile(JSON.stringify(serializeProject(useAppStore.getState()))).models[0];
+    expect(loaded.piles?.[0].type).toBe("sheet-pile");
+    const dto = buildSlopeDTOFromModel(snapshotFromState(useAppStore.getState()));
+    expect(dto.piles?.[0].force).toBe(100);
   });
 });
