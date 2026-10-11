@@ -1,6 +1,10 @@
 import { useState } from "react";
-import type { AnalysisMethod, IntersliceFunctionType } from "@cslope/engine";
-import { ITERATIONS_RANGE } from "@cslope/engine";
+import type {
+  AnalysisMethod,
+  IntersliceFunctionType,
+  PartialFactors,
+} from "@cslope/engine";
+import { EC7_DA3_FACTORS, ITERATIONS_RANGE } from "@cslope/engine";
 import { useAppStore } from "../../../store/app-store";
 import { Section } from "../../../components/ui/Section";
 import { Label } from "../../../components/ui/Label";
@@ -371,6 +375,10 @@ export function OptionsSection({ plain = false }: OptionsSectionProps) {
             title="Part of the crack depth filled with water; its hydrostatic thrust pushes the sliding mass."
           />
         </label>
+        <PartialFactorsFields
+          factors={options.partialFactors ?? null}
+          onChange={(partialFactors) => setOptions({ partialFactors })}
+        />
         {options.method === "Janbu" && (
           <label className="col-span-2 flex items-center gap-1.5">
             <input
@@ -434,4 +442,74 @@ export function OptionsSection({ plain = false }: OptionsSectionProps) {
   }
 
   return <Section title="Analysis Options">{content}</Section>;
+}
+
+/** Swedish practice (EKS / IEG): γcu 1.5, γc' = γφ' = 1.3; γQ 1.3. */
+const SWEDISH_FACTORS: PartialFactors = {
+  cu: 1.5,
+  cohesion: 1.3,
+  tanPhi: 1.3,
+  variableLoad: 1.3,
+};
+
+const FACTOR_FIELDS: { key: keyof PartialFactors; label: string; title: string }[] = [
+  { key: "cu", label: "γcu", title: "Partial factor on undrained shear strength" },
+  { key: "cohesion", label: "γc'", title: "Partial factor on effective cohesion" },
+  { key: "tanPhi", label: "γφ'", title: "Partial factor on tan φ'" },
+  { key: "variableLoad", label: "γQ", title: "Partial factor on distributed and line loads" },
+];
+
+function PartialFactorsFields({
+  factors,
+  onChange,
+}: {
+  factors: PartialFactors | null;
+  onChange: (factors: PartialFactors | null) => void;
+}) {
+  return (
+    <div className="col-span-2 flex flex-col gap-1">
+      <label
+        className="flex items-center gap-1.5"
+        title="Divide strengths and multiply variable loads by partial factors (Eurocode 7). The FOS is then the over-design factor on design values: ≥ 1.0 satisfies the design."
+      >
+        <input
+          type="checkbox"
+          checked={factors !== null}
+          onChange={(e) => onChange(e.target.checked ? { ...SWEDISH_FACTORS } : null)}
+          aria-label="Partial factors"
+        />
+        <Label>Partial factors (design values)</Label>
+      </label>
+      {factors && (
+        <>
+          <select
+            value=""
+            onChange={(e) => {
+              if (e.target.value === "se") onChange({ ...SWEDISH_FACTORS });
+              if (e.target.value === "ec7") onChange({ ...EC7_DA3_FACTORS });
+            }}
+            aria-label="Partial factor preset"
+          >
+            <option value="">Preset…</option>
+            <option value="se">Swedish practice (EKS/IEG): 1.5 / 1.3 / 1.3 / 1.3</option>
+            <option value="ec7">EN 1997-1 DA3, M2: 1.4 / 1.25 / 1.25 / 1.3</option>
+          </select>
+          <div className="grid grid-cols-4 gap-1">
+            {FACTOR_FIELDS.map((f) => (
+              <label key={f.key} className="flex flex-col gap-0.5" title={f.title}>
+                <Label>{f.label}</Label>
+                <DraftNumberInput
+                  value={factors[f.key]}
+                  min={0.1}
+                  step={0.05}
+                  onValueChange={(v) => v > 0 && onChange({ ...factors, [f.key]: v })}
+                  aria-label={f.title}
+                />
+              </label>
+            ))}
+          </div>
+        </>
+      )}
+    </div>
+  );
 }

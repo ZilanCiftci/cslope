@@ -10,6 +10,7 @@ import {
   layered,
   mc,
   runVerification,
+  su,
 } from "../verification/cases";
 
 describe("Verification problems", () => {
@@ -97,5 +98,35 @@ describe("Tension crack", () => {
 
   it("a crack deeper than any surface leaves no sliding mass", () => {
     expect(runVerification(def, "Bishop", { tensionCrackDepth: 30 }).fos).toBeNull();
+  });
+});
+
+describe("Partial factors", () => {
+  const ground: [number, number][] = [[0, 0], [10, 0], [25, 10], [40, 10]];
+  const fixed = circle(12, 22, 22.2);
+  const pf = (over: Partial<{ cu: number; cohesion: number; tanPhi: number; variableLoad: number }>) => ({
+    partialFactors: { cu: 1, cohesion: 1, tanPhi: 1, variableLoad: 1, ...over },
+  });
+
+  it("γcu divides the FOS of an undrained slope", () => {
+    const def = layered(ground, -10, [{ name: "Clay", topY: null, model: su(30, 18) }], fixed);
+    const fk = runVerification(def, "Bishop").fos!;
+    const fd = runVerification(def, "Bishop", pf({ cu: 1.5 })).fos!;
+    expect(fd).toBeCloseTo(fk / 1.5, 6);
+  });
+
+  it("γc' and γφ' together divide the FOS of a drained slope", () => {
+    const def = layered(ground, -10, [{ name: "S", topY: null, model: mc(10, 25, 19) }], fixed);
+    const fk = runVerification(def, "Bishop").fos!;
+    const fd = runVerification(def, "Bishop", pf({ cohesion: 1.3, tanPhi: 1.3 })).fos!;
+    expect(fd).toBeCloseTo(fk / 1.3, 3);
+  });
+
+  it("γQ scales distributed and line loads", () => {
+    const loads = (q: number) => ({ udls: [{ magnitude: q, x1: 27, x2: 32 }], lineLoads: [{ magnitude: q, x: 30 }] });
+    const soil = [{ name: "S", topY: null, model: mc(10, 25, 19) }];
+    const factored = runVerification(layered(ground, -10, soil, { ...fixed, ...loads(20) }), "Bishop", pf({ variableLoad: 1.3 })).fos!;
+    const scaled = runVerification(layered(ground, -10, soil, { ...fixed, ...loads(26) }), "Bishop").fos!;
+    expect(factored).toBeCloseTo(scaled, 9);
   });
 });

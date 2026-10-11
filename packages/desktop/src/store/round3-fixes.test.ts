@@ -168,3 +168,17 @@ describe("tension crack options", () => {
     expect(bad.tensionCrackWater).toBe(1);
   });
 });
+
+describe("partial factors option", () => {
+  it("is saved and reloaded; invalid factors fall back to 1, a missing block to none", () => {
+    useAppStore.getState().newProject();
+    const factors = { cu: 1.5, cohesion: 1.3, tanPhi: 1.3, variableLoad: 1.3 };
+    useAppStore.getState().setOptions({ partialFactors: factors });
+    const raw = JSON.parse(JSON.stringify(serializeProject(useAppStore.getState())));
+    expect(parseProjectFile(JSON.stringify(raw)).models[0].options?.partialFactors).toEqual(factors);
+    raw.models[0].options.partialFactors.cu = -2;
+    expect(parseProjectFile(JSON.stringify(raw)).models[0].options?.partialFactors?.cu).toBe(1);
+    delete raw.models[0].options.partialFactors;
+    expect(parseProjectFile(JSON.stringify(raw)).models[0].options?.partialFactors).toBeUndefined();
+  });
+});

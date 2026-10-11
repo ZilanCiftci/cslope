@@ -105,6 +105,7 @@ function commonValue<T>(values: T[]): T | undefined {
 
 export function ResultSidebar() {
   const result = useAppStore((s) => s.result);
+  const designValues = useAppStore((s) => !!s.options.partialFactors);
   const runState = useAppStore((s) => s.runState);
   const errorMessage = useAppStore((s) => s.errorMessage);
   const rvs = useAppStore((s) => s.resultViewSettings);
@@ -476,14 +477,22 @@ export function ResultSidebar() {
         {result ? (
           <div className="space-y-1 text-[12px]">
             <div className="flex justify-between">
-              <Label>Min FOS</Label>
+              <Label
+                title={
+                  designValues
+                    ? "Over-design factor on design values (partial factors applied); ≥ 1.0 satisfies the design"
+                    : undefined
+                }
+              >
+                {designValues ? "Min FOS (design values)" : "Min FOS"}
+              </Label>
               <span
                 className="font-bold tabular-nums"
                 style={{
                   color:
                     result.minFOS < 1.0
                       ? "var(--color-vsc-error)"
-                      : result.minFOS < 1.5
+                      : !designValues && result.minFOS < 1.5
                         ? "var(--color-vsc-warning)"
                         : "var(--color-vsc-success)",
                 }}

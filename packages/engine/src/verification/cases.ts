@@ -407,6 +407,29 @@ export const VERIFICATION_CASES: VerificationCase[] = [
     ],
   },
   {
+    id: "EC7-PF",
+    title: "Eurocode 7 cutting, partial factors applied by cSlope",
+    reference: "GEO-SLOPE International, SLOPE/W example: Eurocode 7 cutting (Overdesign Factor).",
+    surface: "fixed",
+    units: "SI",
+    description: "As EC7, but with the characteristic strength c' = 10 kPa, φ' = 28° and Design Approach 3 material factors (set M2: γc' = γφ' = 1.25) applied by the analysis; the surcharge is permanent (factor 1.0). The FOS is the over-design factor on design values.",
+    definition: layered([[0, 5], [30, 5], [50, 15], [80, 15]], 0, [{ name: "Clay", topY: null, model: mc(10, 28, 20) }], {
+      ...circle(35.4, 25.467, 22.099),
+      waterTable: { mode: "custom", value: [[0, 5], [30, 5], [45.5, 9], [70, 12], [80, 12]] },
+      udls: [{ magnitude: 35, x1: 52, x2: 62 }],
+    }),
+    checks: [
+      bishop(1.173, "SLOPE/W", 0.005, {
+        label: "Bishop simplified, design values",
+        options: { partialFactors: { cu: 1.4, cohesion: 1.25, tanPhi: 1.25, variableLoad: 1 } },
+      }),
+      spencer(1.174, "SLOPE/W", 0.005, {
+        label: "Spencer, design values",
+        options: { partialFactors: { cu: 1.4, cohesion: 1.25, tanPhi: 1.25, variableLoad: 1 } },
+      }),
+    ],
+  },
+  {
     id: "VP15",
     title: "Arai & Tagyo (1985) example 2, three layers",
     reference: "Arai & Tagyo (1985), example 2. Slide2 Verification Problem #15.",

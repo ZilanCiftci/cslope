@@ -54,7 +54,33 @@ export interface AnalysisOptions {
   tensionCrackDepth?: number;
   /** Fraction of the crack depth filled with water (0–1, default 0). */
   tensionCrackWater?: number;
+  /**
+   * Partial factors (Eurocode 7 design values). When set, strengths are
+   * divided and variable loads multiplied by them, and the FOS is the
+   * over-design factor on design values (≥ 1.0 satisfies the design).
+   */
+  partialFactors?: PartialFactors | null;
 }
+
+/** Partial factors applied to characteristic values. */
+export interface PartialFactors {
+  /** γcu on undrained shear strength. */
+  cu: number;
+  /** γc' on effective cohesion. */
+  cohesion: number;
+  /** γφ' on tan φ'. */
+  tanPhi: number;
+  /** γQ on variable loads (distributed and line loads). */
+  variableLoad: number;
+}
+
+/** EN 1997-1 Annex A, material set M2 with γQ = 1.3 (Design Approach 3). */
+export const EC7_DA3_FACTORS: PartialFactors = {
+  cu: 1.4,
+  cohesion: 1.25,
+  tanPhi: 1.25,
+  variableLoad: 1.3,
+};
 
 export type PorePressureHead = "phreatic-correction" | "vertical";
 

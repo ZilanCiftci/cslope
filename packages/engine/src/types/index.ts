@@ -40,6 +40,7 @@ export type {
   AnalysisMethod,
   IntersliceFunctionType,
   PorePressureHead,
+  PartialFactors,
   AnalysisOptions,
   AnalysisResult,
   AnalysisLimits,
@@ -47,7 +48,7 @@ export type {
   SliceData,
   WaterTableInput,
 } from "./analysis";
-export { DEFAULT_ANALYSIS_OPTIONS } from "./analysis";
+export { DEFAULT_ANALYSIS_OPTIONS, EC7_DA3_FACTORS } from "./analysis";
 
 export type {
   GeometryWithMaterial,

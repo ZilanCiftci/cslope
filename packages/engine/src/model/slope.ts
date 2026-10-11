@@ -6,6 +6,7 @@ import type {
   AnalysisLimits,
   IntersliceFunctionType,
   PorePressureHead,
+  PartialFactors,
   AnalysisMethod,
   AnalysisOptions,
   GeometryWithMaterial,
@@ -113,6 +114,7 @@ export class Slope {
   private _porePressureHead: PorePressureHead;
   private _tensionCrackDepth: number;
   private _tensionCrackWater: number;
+  private _partialFactors: PartialFactors | null = null;
   private _intersliceDataPoints: [number, number][];
 
   // ── Analysis limits ───────────────────────────────────────────
@@ -275,6 +277,10 @@ export class Slope {
 
   get tensionCrackWater(): number {
     return this._tensionCrackWater;
+  }
+
+  get partialFactors(): PartialFactors | null {
+    return this._partialFactors;
   }
 
   get intersliceFunction(): IntersliceFunctionType {
@@ -706,6 +712,18 @@ export class Slope {
         throw new Error("tensionCrackWater must be between 0 and 1");
       }
       this._tensionCrackWater = opts.tensionCrackWater;
+    }
+    if (opts.partialFactors !== undefined) {
+      const f = opts.partialFactors;
+      if (
+        f &&
+        ![f.cu, f.cohesion, f.tanPhi, f.variableLoad].every(
+          (v) => Number.isFinite(v) && v > 0,
+        )
+      ) {
+        throw new Error("Partial factors must be positive numbers");
+      }
+      this._partialFactors = f ? { ...f } : null;
     }
     if (opts.intersliceFunction !== undefined) {
       if (

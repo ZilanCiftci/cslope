@@ -2,7 +2,7 @@
  * Slice creation and generation for slope stability analysis.
  */
 
-import type { GeometryWithMaterial, Slice } from "../types/index";
+import type { GeometryWithMaterial, PartialFactors, Slice } from "../types/index";
 import { resolveStrength, resolveUnitWeight } from "../types/index";
 import { WATER_UNIT_WEIGHT, SLICE_DEDUP_TOLERANCE } from "../types/constants";
 import {
@@ -410,6 +410,8 @@ export function getSlices(
     udlData,
     llData,
   );
+  const factors = slope.partialFactors;
+  const loadFactor = factors?.variableLoad ?? 1;
 
   // Surface y at each slice edge, taken from the slice's own side: at a
   // vertical face the averaged value would put the top below the base and
@@ -464,8 +466,8 @@ export function getSlices(
       cx,
       cy,
       radius,
-      udlForces[i],
-      llForces[i],
+      udlForces[i] * loadFactor,
+      llForces[i] * loadFactor,
       waterYMean,
       waterH,
       [...slope.materialGeometries], // pass a copy
@@ -482,6 +484,7 @@ export function getSlices(
     );
 
     if (s !== null && s.isValid) {
+      if (factors) applyMaterialFactors(s, factors);
       if (waterY) applyFreeWater(s, waterY[i], waterY[i + 1], cy);
       results.push(s);
     }
@@ -500,6 +503,30 @@ export function getSlices(
   }
 
   return results;
+}
+
+/**
+ * Design strength: characteristic strength divided by the partial factor.
+ * Undrained models (Su, S = f(depth/datum), anisotropy with φ = 0) take
+ * γcu; drained models take γc' on c' and γφ' on tan φ'. The undrained
+ * strength of a combined material takes γcu.
+ */
+function applyMaterialFactors(s: Slice, f: PartialFactors): void {
+  const kind = s.baseMaterial?.model.kind;
+  const undrained =
+    kind === "undrained" ||
+    kind === "s-f-depth" ||
+    kind === "s-f-datum" ||
+    (kind === "anisotropic-function" && s.frictionAngle === 0);
+  if (kind === "high-strength" || kind === "impenetrable") return;
+  s.cohesionUndrained /= f.cu;
+  if (undrained) {
+    s.cohesion /= f.cu;
+    return;
+  }
+  s.cohesion /= f.cohesion;
+  s.phi = Math.atan(Math.tan(s.phi) / f.tanPhi);
+  s.frictionAngle = (s.phi * 180) / Math.PI;
 }
 
 /**

@@ -5,6 +5,7 @@ import {
   resolveOrientation,
   type AnalysisOptions,
   type MaterialModel,
+  type PartialFactors,
 } from "@cslope/engine";
 import { DEFAULT_MODEL_NAME } from "../constants";
 import { nextId } from "./helpers";
@@ -702,6 +703,19 @@ function normalizeAnalysisLimits(raw: unknown): AnalysisLimitsState {
   };
 }
 
+function normalizePartialFactors(raw: unknown): PartialFactors | undefined {
+  if (!raw || typeof raw !== "object") return undefined;
+  const f = raw as Record<string, unknown>;
+  const factor = (v: unknown) =>
+    typeof v === "number" && Number.isFinite(v) && v > 0 ? v : 1;
+  return {
+    cu: factor(f.cu),
+    cohesion: factor(f.cohesion),
+    tanPhi: factor(f.tanPhi),
+    variableLoad: factor(f.variableLoad),
+  };
+}
+
 function normalizeAnalysisOptions(raw: unknown): AnalysisOptions {
   const base: AnalysisOptions = { ...APP_DEFAULT_ANALYSIS_OPTIONS };
   if (!raw || typeof raw !== "object") return base;
@@ -764,6 +778,7 @@ function normalizeAnalysisOptions(raw: unknown): AnalysisOptions {
     maxIterations: Math.max(1, finiteOr(o.maxIterations, base.maxIterations)),
     intersliceFunction,
     intersliceDataPoints,
+    partialFactors: normalizePartialFactors(o.partialFactors),
     tensionCrackDepth: Math.max(
       0,
       finiteOr(o.tensionCrackDepth, base.tensionCrackDepth ?? 0),

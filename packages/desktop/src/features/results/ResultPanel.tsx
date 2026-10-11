@@ -21,6 +21,7 @@ export function ResultPanel({ showTitle = true }: { showTitle?: boolean }) {
   const runState = useAppStore((s) => s.runState);
   const progress = useAppStore((s) => s.progress);
   const result = useAppStore((s) => s.result);
+  const designValues = useAppStore((s) => !!s.options.partialFactors);
   const errorMessage = useAppStore((s) => s.errorMessage);
 
   return (
@@ -80,14 +81,14 @@ export function ResultPanel({ showTitle = true }: { showTitle?: boolean }) {
 
       {runState === "done" && result && (
         <div className="space-y-1 text-[12px]">
-          <Row label="Min FOS">
+          <Row label={designValues ? "Min FOS (design values)" : "Min FOS"}>
             <span
               className="font-bold tabular-nums"
               style={{
                 color:
                   result.minFOS < 1.0
                     ? "var(--color-vsc-error)"
-                    : result.minFOS < 1.5
+                    : !designValues && result.minFOS < 1.5
                       ? "var(--color-vsc-warning)"
                       : "var(--color-vsc-success)",
               }}
