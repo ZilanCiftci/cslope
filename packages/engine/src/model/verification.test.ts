@@ -18,7 +18,7 @@ import { analyseSlope } from "./solvers";
 import { toCanonicalSlopeDefinition } from "./canonical";
 import type { SlopeDefinition } from "../types/slope-definition";
 import type { MaterialModel } from "../types/material-models";
-import type { AnalysisMethod } from "../types/analysis";
+import type { AnalysisMethod, AnalysisOptions } from "../types/analysis";
 
 type Pt = [number, number];
 interface Layer {
@@ -100,13 +100,18 @@ const circle = (cx: number, cy: number, radius: number) => ({
   customPlanesOnly: true,
 });
 
-function fos(def: SlopeDefinition, method: AnalysisMethod): number {
+function fos(
+  def: SlopeDefinition,
+  method: AnalysisMethod,
+  opts: Partial<AnalysisOptions> = {},
+): number {
   const slope = buildSlope(toCanonicalSlopeDefinition(def));
   slope.updateAnalysisOptions({
     method,
     slices: 50,
     iterations: 4000,
     refinedIterations: 2000,
+    ...opts,
   });
   const f = analyseSlope(slope);
   expect(f).not.toBeNull();
@@ -328,5 +333,148 @@ describe("Verification problems — critical circle search", () => {
       { name: "C", topY: 4.5, model: su(150, 18) },
     ]);
     expectNear(fos(def, "Bishop"), 1.439, 0.015);
+  });
+});
+
+const SPENCER = { intersliceFunction: "constant" as const };
+
+describe("Verification problems — round 4, fixed circles", () => {
+  // Clarence Cannon Dam: Hassan & Wolff (1999); SLOPE/W verification §2.22 (nine saved M-P
+  // analyses) and Slide VP35 Table 35.2 (Bishop). Geometry and circles as in the SLOPE/W
+  // model (transcribed via xslope gs2_22.xlsx). Circle = centre + tangent elevation.
+  const cannon = (cx: number, cy: number, r: number): SlopeDefinition => ({
+    orientation: "ltr",
+    coordinates: [
+      [0.937, 121.205], [0.937, 156.598], [40.517, 156.598], [66.125, 165.456], [101.028, 177.529],
+      [158.875, 182.857], [210.633, 198.842], [219.767, 198.842], [258.205, 185.141], [306.537, 175.627],
+      [320.999, 174.865], [349.162, 166.112], [423.373, 166.112], [423.373, 120.824],
+    ],
+    materials: [
+      { name: "Phase II fill", unitWeight: 22, frictionAngle: 0, cohesion: 0, model: mc(143.64, 15, 22) },
+      { name: "Phase I fill", unitWeight: 22, frictionAngle: 0, cohesion: 0, model: mc(117.79, 8.5, 22) },
+      { name: "Sand filter", unitWeight: 22, frictionAngle: 0, cohesion: 0, model: mc(0, 35, 22) },
+      { name: "Spoil fill", unitWeight: 25, frictionAngle: 0, cohesion: 0, model: mc(5, 35, 25) },
+      { name: "Foundation sand", unitWeight: 20, frictionAngle: 0, cohesion: 0, model: mc(5, 18, 20) },
+      { name: "Limestone", unitWeight: 20, frictionAngle: 0, cohesion: 0, model: mc(100, 35, 20) },
+    ],
+    materialBoundaries: [
+      { coordinates: [[0, 139.853], [425, 139.853]], materialName: "" },
+      { coordinates: [[40.517, 156.598], [174.098, 156.598], [204.163, 139.853]], materialName: "" },
+      { coordinates: [[225.856, 139.853], [255.921, 155.837], [379.607, 155.837], [425, 155.837]], materialName: "" },
+      { coordinates: [[349.162, 166.112], [357.596, 163.266], [379.607, 155.837]], materialName: "" },
+      { coordinates: [[66.125, 165.456], [218.625, 165.456], [357.596, 163.266]], materialName: "" },
+      { coordinates: [[215.2, 165.456], [215.2, 193.894], [218.244, 193.894], [218.625, 165.456]], materialName: "" },
+    ],
+    regionAssignments: [
+      { point: [150, 175], materialName: "Phase II fill" },
+      { point: [200, 160], materialName: "Phase I fill" },
+      { point: [216.7, 180], materialName: "Sand filter" },
+      { point: [400, 162], materialName: "Spoil fill" },
+      { point: [100, 150], materialName: "Foundation sand" },
+      { point: [320, 150], materialName: "Foundation sand" },
+      { point: [200, 130], materialName: "Limestone" },
+    ],
+    ...circle(cx, cy, r),
+  });
+  // [surface, xc, yc, tangent elevation, SLOPE/W M-P, Slide Bishop (null = not used)]
+  for (const [lab, xc, yc, yt, mp, bishop] of [
+    ["7A", 320.175, 313.336, 145.347, 2.56, 2.551],
+    ["7B", 295.235, 277.589, 156.298, 2.806, 2.82],
+    ["7C", 303.683, 310.206, 155.928, 2.771, 2.777],
+    ["7D", 322.152, 310.206, 145.36, 2.589, 2.583],
+    ["7E", 327.693, 324.018, 147.163, 2.703, 2.692],
+    ["8B", 304.239, 307.858, 155.311, 2.673, 2.672],
+    ["8F", 313.114, 304.784, 160.368, 3.586, 3.598],
+    ["8G", 314.856, 305.604, 165.756, 6.069, 6.074],
+    // Slide's Bishop 11.23 for 8H disagrees with SLOPE/W (11.583) and two other codes.
+    ["8H", 316.198, 305.604, 170.537, 11.583, null],
+  ] as const) {
+    it(`Cannon Dam (Hassan & Wolff 1999) surface ${lab}: M-P ${mp}${bishop ? `, Bishop ${bishop}` : ""}`, () => {
+      const def = cannon(xc, yc, yc - yt);
+      expectNear(fos(def, "Morgenstern-Price"), mp, 0.005);
+      if (bishop) expectNear(fos(def, "Bishop"), bishop, 0.005);
+    });
+  }
+
+  it("VP37 XSTABL reinforcement example, unreinforced, 40 kPa surcharge: Bishop 0.764", () => {
+    const def = layered([[0, 5], [5, 5], [17, 17], [40, 17]], 0, [{ name: "Sand", topY: null, model: mc(0, 36, 20) }], {
+      ...circle(-11.41, 35.264, 34.426),
+      udls: [{ magnitude: 40, x1: 17, x2: 30 }],
+    });
+    expectNear(fos(def, "Bishop"), 0.764, 0.01);
+  });
+
+  it("VP54 Yamagami micro-pile slope, no pile: Bishop 1.102", () => {
+    const def = layered([[-6, 0], [0, 0], [8, 4], [12, 4]], -5, [{ name: "S", topY: null, model: mc(4.9, 10, 15.68) }], circle(2.674, 7.573, 8.031));
+    expectNear(fos(def, "Bishop"), 1.102, 0.01);
+  });
+});
+
+describe("Verification problems — round 4, critical circle search", () => {
+  it("VP14 / SLOPE/W 2.11 Arai & Tagyo (1985) ex. 1: Bishop 1.417, M-P 1.414", () => {
+    const def = layered([[-30, 15], [18, 15], [48, 35], [100, 35]], 0, [{ name: "S", topY: null, model: mc(41.65, 15, 18.82) }]);
+    expectNear(fos(def, "Bishop"), 1.417, 0.01);
+    expectNear(fos(def, "Morgenstern-Price"), 1.414, 0.01);
+  });
+
+  it("VP44 Baker (2003) ex. 1, Mohr-Coulomb fit: Spencer 1.536", () => {
+    const def = layered([[-6, 0], [0, 0], [6.43, 6], [20, 6]], -4, [{ name: "S", topY: null, model: mc(11.64, 24.7, 18) }]);
+    expectNear(fos(def, "Morgenstern-Price", SPENCER), 1.536, 0.015);
+  });
+
+  it("VP45 4:1 slope, Mohr-Coulomb: Spencer 2.794, Janbu simplified (uncorrected) 2.662", () => {
+    const def = layered([[0, 0], [48, 12], [100, 12]], 0, [{ name: "S", topY: null, model: mc(11.64, 24.7, 18) }]);
+    expectNear(fos(def, "Morgenstern-Price", SPENCER), 2.794, 0.015);
+    expectNear(fos(def, "Janbu"), 2.662, 0.015);
+  });
+
+  it("VP71 Duncan & Wright fig. 6.38, piezometric line: Bishop 1.142, Spencer 1.142", () => {
+    const def = layered(ft([[0, 40], [120, 40], [200, 80], [440, 80]]), 0, [{ name: "S", topY: null, model: mc(200 * PSF, 20, 125 * PCF) }], {
+      waterTable: {
+        mode: "custom",
+        value: ft([[0, 40], [120, 40], [127.4, 43.2], [147.4, 46.2], [181.7, 50.7], [232.3, 56.7], [326.8, 65.7], [440, 75]]),
+      },
+    });
+    expectNear(fos(def, "Bishop"), 1.142, 0.01);
+    expectNear(fos(def, "Morgenstern-Price", SPENCER), 1.142, 0.01);
+  });
+
+  it("VP81 Duncan & Wright fig. 14.7, deep circle: Bishop 1.230, Spencer 1.209", () => {
+    // An unrestricted search finds the infinite-slope sliver in the c = 0 fill
+    // (tan 30° / tan 26.6° = 1.155); the published values are for the deep
+    // circle, so entry is held to the crest and exit to the toe flat.
+    const def = layered([[0, 15], [35, 15], [73, 34], [128, 34]], 0, [
+      { name: "Embankment", topY: null, model: mc(0, 30, 124) },
+      { name: "Foundation", topY: 15, model: mc(500, 0, 98) },
+    ], { analysisLimits: { entryLeftX: 128, entryRightX: 74, exitLeftX: 34, exitRightX: 0 } });
+    expectNear(fos(def, "Bishop"), 1.23, 0.01);
+    expectNear(fos(def, "Morgenstern-Price", SPENCER), 1.209, 0.01);
+  });
+
+  it("VP106 Cai & Ugai (2000) slope, no pile: Bishop 1.14", () => {
+    const def = layered([[0, 0], [10, 0], [25, 10], [35, 10]], -10, [{ name: "S", topY: null, model: mc(10, 20, 20) }]);
+    expectNear(fos(def, "Bishop"), 1.14, 0.015);
+  });
+});
+
+describe("Slice-count convergence", () => {
+  it("VP23 geometry: a nearly vertical entry slice in a stiff crust does not inflate FOS", () => {
+    // Low (1989) / Slide VP23 layering with the lower clay simplified to a
+    // constant Su. With the arc length as base length, 50 slices gave 1.469
+    // against 1.40 at 500 slices (independent 2000-slice check: 1.389).
+    const def = layered(
+      [[0, 8], [10, 8], [26, 16], [40, 16]],
+      0,
+      [
+        { name: "Upper", topY: null, model: mc(95, 15, 20) },
+        { name: "Middle", topY: 8, model: mc(15, 0, 20) },
+        { name: "Lower", topY: 4, model: mc(22.5, 0, 20) },
+      ],
+      circle(18, 16, 12),
+    );
+    const f50 = fos(def, "Bishop", { slices: 50 });
+    const f500 = fos(def, "Bishop", { slices: 500 });
+    expectNear(f50, f500, 0.01);
+    expectNear(f500, 1.389, 0.01);
   });
 });
