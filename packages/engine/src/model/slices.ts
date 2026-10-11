@@ -280,9 +280,18 @@ export function createSlice(
 // ── Water at a slice ──────────────────────────────────────────────
 
 /**
+ * A water line that does not reach a slice. Water lines are continued
+ * horizontally to the model edges (as in SLOPE/W), so this does not happen
+ * for a line set on the slope; should it, the surface is invalid (Slide2:
+ * no FOS where the water table does not span the slip surface) instead of
+ * silently getting no pore pressure there.
+ */
+export const WATER_LINE_GAP = "The water table does not span the slip surface.";
+
+/**
  * Water elevation at the slice midpoint and the head correction factor
- * cos²θ for an inclined water line, or null when the slice lies outside
- * the line's x-range (no pore pressure).
+ * cos²θ for an inclined water line, or null without a line (no pore
+ * pressure). Throws when the line does not reach the slice.
  */
 function waterAtSlice(
   line: { x: number[]; y: number[] } | null,
@@ -296,7 +305,7 @@ function waterAtSlice(
   const wy2 = lineYFrom(line, xRight, "left");
   const wyMid = getYAtX(line.x, line.y, xMid);
   if (!Number.isFinite(wy1) || !Number.isFinite(wy2) || !Number.isFinite(wyMid)) {
-    return null;
+    throw new Error(WATER_LINE_GAP);
   }
   const h =
     !verticalHead && wy1 !== wy2
@@ -557,20 +566,20 @@ export function getSlices(
       const wy1 = waterYL[i];
       const wy2 = waterYR[i];
       const wyMid = waterYMid[i];
-      // If water Y is NaN (slice x outside water table range), treat as no water.
       // Use midpoint water elevation for pore-pressure head so visual checks at slice
       // center align with the computed U value.
       if (
-        Number.isFinite(wy1) &&
-        Number.isFinite(wy2) &&
-        Number.isFinite(wyMid)
+        !Number.isFinite(wy1) ||
+        !Number.isFinite(wy2) ||
+        !Number.isFinite(wyMid)
       ) {
-        waterYMean = wyMid;
-        waterH =
-          !verticalHead && wy1 !== wy2
-            ? Math.cos(Math.atan((wy2 - wy1) / bArray[i])) ** 2
-            : 1;
+        throw new Error(WATER_LINE_GAP);
       }
+      waterYMean = wyMid;
+      waterH =
+        !verticalHead && wy1 !== wy2
+          ? Math.cos(Math.atan((wy2 - wy1) / bArray[i])) ** 2
+          : 1;
     }
 
     const s = createSlice(

@@ -1,4 +1,4 @@
-import type { Pile, Reinforcement } from "@cslope/engine";
+import type { Pile, PileForceDirection, Reinforcement } from "@cslope/engine";
 import type { ModelOrientation, PileRow, PileType, ReinforcementRow, ReinforcementType } from "../store/types";
 import { surfaceYAtX } from "../features/view/surface";
 
@@ -12,8 +12,8 @@ export const REINFORCEMENT_TYPE_LABELS: Record<ReinforcementType, string> = {
 /**
  * Defaults per type, following the Slide2 conventions: rigid supports act
  * along their axis, geosynthetics along the slip surface; tiebacks and
- * anchors are pre-tensioned (active), nails mobilise with the soil
- * (passive).
+ * anchors are pre-tensioned (active), nails and geosynthetics mobilise
+ * with the soil (passive, which gives the lower FOS).
  */
 export function reinforcementPreset(
   type: ReinforcementType,
@@ -61,6 +61,7 @@ export function reinforcementPreset(
         pullout: "interface",
         interfaceFriction: 20,
         direction: "tangent",
+        application: "passive",
       };
   }
 }
@@ -151,7 +152,9 @@ export function sanitizeReinforcement(raw: unknown, id: string): ReinforcementRo
     end1Capacity: num(r.end1Capacity, preset.end1Capacity),
     end2Capacity: num(r.end2Capacity, preset.end2Capacity),
     direction: pick(r.direction, ["axial", "tangent", "bisector"] as const, preset.direction),
-    application: pick(r.application, ["active", "passive"] as const, preset.application),
+    // A geosynthetic saved without an application was active (the preset
+    // then); it must not turn passive with the newer preset.
+    application: pick(r.application, ["active", "passive"] as const, type === "geosynthetic" ? "active" : preset.application),
   };
 }
 
@@ -160,7 +163,17 @@ export const PILE_TYPE_LABELS: Record<PileType, string> = {
   "sheet-pile": "Sheet pile wall",
 };
 
-/** Defaults: a pile row with the Ito & Matsui force (passive, as in Slide2), or a sheet pile wall with a given shear force per metre. */
+export const PILE_DIRECTION_LABELS: Record<PileForceDirection, string> = {
+  tangent: "Tangent to the slip surface",
+  perpendicular: "Perpendicular to the pile",
+  angle: "At angle θ",
+};
+
+/**
+ * Defaults: a pile row with the Ito & Matsui force, passive and tangent to
+ * the slip surface (as in Slide2), or a sheet pile wall with a given shear
+ * force per metre (active, at angle θ).
+ */
 export function pilePreset(type: PileType): Omit<PileRow, "id" | "x1" | "y1" | "x2" | "y2" | "label"> {
   return type === "pile"
     ? {
@@ -172,6 +185,7 @@ export function pilePreset(type: PileType): Omit<PileRow, "id" | "x1" | "y1" | "
         shearCapacity: 0,
         momentCapacity: 0,
         angle: 0,
+        direction: "tangent",
         application: "passive",
       }
     : {
@@ -208,9 +222,12 @@ export function toEnginePile(row: PileRow): Pile {
     ...(row.shearCapacity > 0 ? { shearCapacity: row.shearCapacity } : {}),
     ...(row.momentCapacity > 0 ? { momentCapacity: row.momentCapacity } : {}),
     angle: row.angle,
+    ...(row.direction ? { direction: row.direction } : {}),
     application: row.application,
   };
 }
+
+const PILE_DIRECTIONS: PileForceDirection[] = ["tangent", "perpendicular", "angle"];
 
 /** A pile row read from a file, or null if it is not one. */
 export function sanitizePile(raw: unknown, id: string): PileRow | null {
@@ -237,6 +254,8 @@ export function sanitizePile(raw: unknown, id: string): PileRow | null {
     shearCapacity: num(r.shearCapacity, 0, (n) => n >= 0),
     momentCapacity: num(r.momentCapacity, 0, (n) => n >= 0),
     angle: num(r.angle, 0, (n) => Math.abs(n) < 90),
+    // Absent stays absent (force at the angle, as before the option).
+    ...(PILE_DIRECTIONS.includes(r.direction as PileForceDirection) ? { direction: r.direction as PileForceDirection } : {}),
     application: r.application === "active" || r.application === "passive" ? r.application : preset.application,
   };
 }

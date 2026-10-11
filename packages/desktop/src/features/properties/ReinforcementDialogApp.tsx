@@ -19,6 +19,7 @@ import type {
   UdlRow,
 } from "../../store/types";
 import {
+  PILE_DIRECTION_LABELS,
   PILE_TYPE_LABELS,
   REINFORCEMENT_TYPE_LABELS,
   pilePreset,
@@ -178,7 +179,11 @@ export function ReinforcementDialogApp() {
       }),
     ),
     {
-      header: <Label>T (kN)</Label>,
+      header: (
+        <Label title="Tensile capacity per element (strip, bar), kN; per metre of slope it is T / S. A geosynthetic sheet with partial coverage A: enter T × A per metre with S = 1.">
+          T (kN)
+        </Label>
+      ),
       renderCell: (row) => (
         <NumberCell
           value={row.tensileCapacity}
@@ -237,7 +242,12 @@ export function ReinforcementDialogApp() {
             // The values entered stay; a wall carries a given force per metre.
             const type = e.target.value as PileType;
             const preset = pilePreset(type);
-            updatePile(row.id, type === "sheet-pile" ? { type, mode: "force", spacing: 1 } : { type, application: preset.application });
+            updatePile(
+              row.id,
+              type === "sheet-pile"
+                ? { type, mode: "force", spacing: 1 }
+                : { type, application: preset.application, direction: preset.direction },
+            );
           }}
         >
           {(Object.keys(PILE_TYPE_LABELS) as PileType[]).map((t) => (
@@ -306,14 +316,40 @@ export function ReinforcementDialogApp() {
       ),
     },
     {
-      header: <Label>θ (°)</Label>,
-      renderCell: (row) => (
-        <NumberCell
-          value={row.angle}
-          label="Tilt of the pile force above horizontal"
-          onValue={(v) => Math.abs(v) < 90 && updatePile(row.id, { angle: v })}
-        />
+      header: (
+        <Label title="Direction of the force on the sliding mass. Slide2 uses tangent to the slip surface by default.">
+          Dir.
+        </Label>
       ),
+      renderCell: (row) => (
+        <select
+          value={row.direction ?? "angle"}
+          aria-label="Pile force direction"
+          className="w-full text-[11px] py-1"
+          onChange={(e) => updatePile(row.id, { direction: e.target.value as NonNullable<PileRow["direction"]> })}
+        >
+          {(Object.keys(PILE_DIRECTION_LABELS) as NonNullable<PileRow["direction"]>[]).map((d) => (
+            <option key={d} value={d}>
+              {PILE_DIRECTION_LABELS[d]}
+            </option>
+          ))}
+        </select>
+      ),
+    },
+    {
+      header: <Label>θ (°)</Label>,
+      renderCell: (row) =>
+        (row.direction ?? "angle") === "angle" ? (
+          <NumberCell
+            value={row.angle}
+            label="Tilt of the pile force above horizontal"
+            onValue={(v) => Math.abs(v) < 90 && updatePile(row.id, { angle: v })}
+          />
+        ) : (
+          <span className="px-2 text-[10px]" style={{ color: "var(--color-vsc-text-muted)" }}>
+            –
+          </span>
+        ),
     },
     {
       header: <Label>Appl.</Label>,
@@ -360,7 +396,7 @@ export function ReinforcementDialogApp() {
         <h2 className="text-[12px] font-semibold">Reinforcement</h2>
         <p className="text-[10px]" style={{ color: "var(--color-vsc-text-muted)" }}>
           End 1 is the head (at the face), end 2 the embedded end. Capacities per element; forces per metre are
-          capacity / spacing.
+          capacity / spacing (a geosynthetic sheet with S = 1: per metre of slope; partial coverage A: T × A).
         </p>
       </div>
       <div className="flex-1 overflow-y-auto pr-1">
@@ -479,7 +515,8 @@ export function ReinforcementDialogApp() {
         <div className="mt-5">
           <h2 className="text-[12px] font-semibold">Piles and sheet piles</h2>
           <p className="text-[10px] pb-1" style={{ color: "var(--color-vsc-text-muted)" }}>
-            Shear against the sliding mass where the slip surface crosses the pile (horizontal). Ito &amp; Matsui needs a
+            Shear against the sliding mass where the slip surface crosses the pile: tangent to the slip surface,
+            perpendicular to the pile or at angle θ above horizontal. Ito &amp; Matsui needs a
             vertical pile and S &gt; D; Vcap/Mcap per pile limit the force (0 = no limit). Forces per metre are force / S.
           </p>
           <SpreadsheetTable rows={piles} columns={pileColumns} getRowKey={(row) => row.id} />

@@ -493,6 +493,7 @@ export function OptionsSection({ plain = false }: OptionsSectionProps) {
                 }}
                 onBlur={() => setPointsDraft(null)}
                 placeholder="0,0; 0.2,0.6; 0.5,1; 0.8,0.6; 1,0"
+                title="x from 0 at the left end to 1 at the right end of the slip surface, whatever the sliding direction"
                 aria-label="Interslice data points"
               />
             </label>

@@ -9,9 +9,11 @@
  *   σF = √Σ(ΔFᵢ/2)² (with correlation terms), COV = σF/F, lognormal
  *   reliability index β = ln(F/√(1+COV²))/√ln(1+COV²) and Pf = Φ(−β). The
  *   critical surface can be searched again for every evaluation.
- * - Monte Carlo on the critical surface at the mean values (as Slide2's
- *   "overall slope" probability): sampled parameters (normal or lognormal,
- *   truncated, optionally correlated), Pf = share of samples with F < 1.
+ * - Monte Carlo on the critical surface at the mean values (Slide2's
+ *   "Global Minimum" method; its "Overall Slope" method repeats the search
+ *   for every sample, which is not done here): sampled parameters (normal
+ *   or lognormal, truncated, optionally correlated), Pf = share of samples
+ *   with F < 1.
  */
 
 import type { AnalysisOptions } from "../types/analysis";
@@ -301,6 +303,9 @@ export function analyseReliability(
   const random = rng(ro.seed ?? 1);
   const L = cholesky(corr);
   const slope = build(onSurface(def, atMean.surface), options);
+  if (slope.individualPlanes.length === 0) {
+    throw new Error("The critical surface at the mean values could not be set up again for the samples.");
+  }
   const materialsByIndex = def.materials.map((m) =>
     slope.materialGeometries.map((g) => g.material).find((mat) => mat.name === m.name) ?? null,
   );

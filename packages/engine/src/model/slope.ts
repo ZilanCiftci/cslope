@@ -74,6 +74,33 @@ export interface SearchPlane {
   crack?: [number, number];
 }
 
+/** A water line as given, with its clipping rule. */
+interface WaterLineInput {
+  wx: number[];
+  wy: number[];
+  followBoundary: boolean;
+}
+
+/**
+ * A water line needs two finite points with different x somewhere (it is
+ * then continued horizontally beyond its ends). Without one, slices in a
+ * material assigned to it would silently get no pore pressure; Slide2
+ * likewise calculates no FOS where a water table does not span the slip
+ * surface.
+ */
+function checkWaterLine(coordinates: [number, number][]): void {
+  const finite = coordinates.filter(
+    (c) => Array.isArray(c) && Number.isFinite(c[0]) && Number.isFinite(c[1]),
+  );
+  if (finite.length !== coordinates.length) {
+    throw new Error("Water table points must be finite numbers.");
+  }
+  const xs = finite.map((c) => c[0]);
+  if (finite.length < 2 || !(Math.max(...xs) - Math.min(...xs) > 1e-9)) {
+    throw new Error("A water table needs at least two points with different x.");
+  }
+}
+
 /** Smallest useful inner iteration limit for the FOS solvers. */
 const MIN_MAX_ITERATIONS = 6;
 /** Default smallest sliding mass, as a fraction of the model area. */
@@ -97,15 +124,22 @@ export class Slope {
   private _waterRL: boolean = false;
   private _waterRLXY: { x: number[]; y: number[] } | null = null;
   /**
-   * Additional water tables by id (null = the line does not overlap the
-   * slope).  Materials assigned to one of these use it for pore pressure
-   * instead of the default water table.
+   * Additional water tables by id.  Materials assigned to one of these use
+   * it for pore pressure instead of the default water table.
    */
   private _extraWaterLines = new Map<
     string,
     { x: number[]; y: number[] } | null
   >();
   private _materialWaterTable = new Map<Material, string>();
+  /**
+   * Water lines as given (before extension to the model edges and
+   * clipping), so that they are built again for a new external boundary:
+   * a line must always span the whole model, or slices beyond its ends
+   * would silently get no pore pressure.
+   */
+  private _waterInput: WaterLineInput | null = null;
+  private _extraWaterInputs = new Map<string, WaterLineInput>();
 
   // ── Loads ─────────────────────────────────────────────────────
   private _udls: Udl[] = [];
@@ -135,6 +169,12 @@ export class Slope {
   /** Null: automatic (see minSlipArea). */
   private _minSlipArea: number | null = null;
   private _intersliceDataPoints: [number, number][];
+  /**
+   * The model was mirrored into canonical (left-to-right) coordinates, so
+   * model-space analysis options such as the interslice data points must be
+   * mirrored as well.
+   */
+  private _mirrored = false;
 
   // ── Analysis limits ───────────────────────────────────────────
   private _limits: [number, number, number, number] = [0, 0, 0, 0];
@@ -373,8 +413,31 @@ export class Slope {
     return this._intersliceFunction;
   }
 
+  /**
+   * Interslice function points in canonical coordinates. The user enters
+   * them with x = 0 at the LEFT end of the slip surface in model space,
+   * whatever the sliding direction (as in Slide2), so for a mirrored
+   * (right-to-left) model they are mirrored here: x → 1 − x.
+   */
   get intersliceDataPoints(): [number, number][] {
-    return this._intersliceDataPoints;
+    if (!this._mirrored) return this._intersliceDataPoints;
+    return this._intersliceDataPoints
+      .map(([x, f]) => [1 - x, f] as [number, number])
+      .reverse();
+  }
+
+  /** True when the model was mirrored from a right-to-left model space. */
+  get mirrored(): boolean {
+    return this._mirrored;
+  }
+
+  /**
+   * Mark the model as mirrored from model space (a canonical definition of
+   * a right-to-left slope, see toCanonicalSlopeDefinition).
+   */
+  setMirrored(mirrored: boolean): void {
+    this._mirrored = mirrored;
+    this._resetResults();
   }
 
   get splitFailureCount(): number {
@@ -457,6 +520,17 @@ export class Slope {
     const surfXMin = Math.min(...surface.x);
     const surfXMax = Math.max(...surface.x);
     this._externalLength = surfXMax - surfXMin;
+
+    // Water lines given before the boundary are extended to its edges now.
+    if (this._waterInput) {
+      const { wx, wy, followBoundary } = this._waterInput;
+      this._waterRLXY = this._buildWaterLine(wx, wy, followBoundary);
+      this._waterRL = this._waterRLXY !== null;
+      this._waterYCache.clear();
+    }
+    for (const [id, { wx, wy, followBoundary }] of this._extraWaterInputs) {
+      this._extraWaterLines.set(id, this._buildWaterLine(wx, wy, followBoundary));
+    }
 
     // Update min failure distance
     this.updateAnalysisOptions({ minFailureDist: 0 });
@@ -602,10 +676,12 @@ export class Slope {
       wx = [minX, maxX];
       wy = [waterHeight, waterHeight];
     } else if (waterCoords) {
+      checkWaterLine(waterCoords);
       wx = waterCoords.map((c) => c[0]);
       wy = waterCoords.map((c) => c[1]);
     }
 
+    this._waterInput = wx && wy ? { wx, wy, followBoundary } : null;
     this._waterRLXY = wx && wy ? this._buildWaterLine(wx, wy, followBoundary) : null;
     this._waterRL = this._waterRLXY !== null;
 
@@ -622,14 +698,11 @@ export class Slope {
     coordinates: [number, number][],
     followBoundary = true,
   ): void {
-    this._extraWaterLines.set(
-      id,
-      this._buildWaterLine(
-        coordinates.map((c) => c[0]),
-        coordinates.map((c) => c[1]),
-        followBoundary,
-      ),
-    );
+    checkWaterLine(coordinates);
+    const wx = coordinates.map((c) => c[0]);
+    const wy = coordinates.map((c) => c[1]);
+    this._extraWaterInputs.set(id, { wx, wy, followBoundary });
+    this._extraWaterLines.set(id, this._buildWaterLine(wx, wy, followBoundary));
     this._resetResults();
   }
 
@@ -689,6 +762,8 @@ export class Slope {
   removeWaterTable(): void {
     this._waterRL = false;
     this._waterRLXY = null;
+    this._waterInput = null;
+    this._extraWaterInputs.clear();
     this._extraWaterLines.clear();
     this._materialWaterTable.clear();
     this._waterYCache.clear();
@@ -781,6 +856,9 @@ export class Slope {
       }
       if (p.angle !== undefined && !(Number.isFinite(p.angle) && Math.abs(p.angle) < 90)) {
         throw new Error("Pile force angle must be between −90° and 90°.");
+      }
+      if (p.direction !== undefined && !["angle", "tangent", "perpendicular"].includes(p.direction)) {
+        throw new Error("Pile force direction must be 'angle', 'tangent' or 'perpendicular'.");
       }
       if (p.force === undefined) {
         if (p.diameter === undefined) {

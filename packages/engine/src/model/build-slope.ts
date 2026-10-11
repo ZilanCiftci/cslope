@@ -117,6 +117,9 @@ export function buildSlope(def: SlopeDefinition): Slope {
     slope.addMaterial(firstMat);
   }
   slope.setExternalBoundary(def.coordinates);
+  // A canonical definition of a right-to-left slope is mirrored model
+  // space; options given in model space (interslice data points) follow.
+  slope.setMirrored(def.orientation === "rtl");
 
   // Material boundaries — split the geometry first, then assign materials
   if (def.materialBoundaries && def.materialBoundaries.length > 0) {

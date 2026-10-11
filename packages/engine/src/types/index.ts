@@ -40,6 +40,7 @@ export type {
   Reinforcement,
   ReinforcementDirection,
   ReinforcementApplication,
+  PileForceDirection,
   ReinforcementPullout,
   ReinforcementForce,
   Pile,

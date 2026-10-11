@@ -799,6 +799,7 @@ export function analyseMorgensternPrice(
     return [FSm, lffArray, pushingF, resistingF, true];
 
   // Step 3: Iterative extrapolation
+  const unconvergedLambdas: number[] = [];
   for (let ii = 0; ii <= MP_MAX_STEPS; ii++) {
     // Use the best-performing lambda (smallest gap) as pivot for step limiting,
     // NOT the largest lambda in the sorted array, which would prevent exploration
@@ -818,6 +819,17 @@ export function analyseMorgensternPrice(
       fsExtrap = FSm;
     }
     if (!(fsExtrap > 0)) fsExtrap = FSm;
+    // Do not step to or past a λ where the equilibrium did not converge:
+    // halve the step towards the pivot instead.
+    for (const bad of unconvergedLambdas) {
+      if (
+        (bad - prevLambda) * (lambdaNew - prevLambda) > 0 &&
+        Math.abs(lambdaNew - prevLambda) >= Math.abs(bad - prevLambda)
+      ) {
+        lambdaNew = prevLambda + (bad - prevLambda) / 2;
+        fsExtrap = FSm;
+      }
+    }
 
     // Ensure unique lambda
     let nudgeCount = 0;
@@ -828,36 +840,48 @@ export function analyseMorgensternPrice(
       if (++nudgeCount > 50) break;
     }
 
-    [FSm, pushing0, resisting0, NmOut] = solveFOSGenericMoment(
-      props,
-      lambdaNew,
-      fsExtrap,
-      Nm,
-      maxIters,
-      evalTol,
-      maxIters,
-    );
-    Nm = new Float64Array(NmOut);
-    if (FSm == null) return [null, lffArray, pushing0, resisting0, false];
+    const [trialM, trialPushM, trialResM, trialNm, convergedM] =
+      solveFOSGenericMoment(
+        props,
+        lambdaNew,
+        fsExtrap,
+        Nm,
+        maxIters,
+        evalTol,
+        maxIters,
+      );
+    if (trialM == null) return [null, lffArray, trialPushM, trialResM, false];
 
-    [FSf, pushingF, resistingF, NfOut] = solveFOSGenericForceCircular(
-      props,
-      lambdaNew,
-      FSf,
-      Nf,
-      maxIters,
-      evalTol,
-      maxIters,
-    );
-    Nf = new Float64Array(NfOut);
+    const [trialF, trialPushF, trialResF, trialNf, convergedF] =
+      solveFOSGenericForceCircular(
+        props,
+        lambdaNew,
+        FSf,
+        Nf,
+        maxIters,
+        evalTol,
+        maxIters,
+      );
 
-    if (FSf == null) return [FSm, lffArray, pushingF, resistingF, false];
+    if (trialF == null) return [trialM, lffArray, trialPushF, trialResF, false];
 
-    lffArray.push([lambdaNew, FSm, FSf, Math.abs(FSm - FSf)]);
-    lffArray.sort((a, b) => a[0] - b[0]);
+    if (convergedM && convergedF) {
+      [FSm, pushing0, resisting0] = [trialM, trialPushM, trialResM];
+      [FSf, pushingF, resistingF] = [trialF, trialPushF, trialResF];
+      Nm = new Float64Array(trialNm);
+      Nf = new Float64Array(trialNf);
+      lffArray.push([lambdaNew, FSm, FSf, Math.abs(FSm - FSf)]);
+      lffArray.sort((a, b) => a[0] - b[0]);
 
-    if (Math.abs(FSm - FSf) < tol)
-      return [FSm, lffArray, pushingF, resistingF, true];
+      if (Math.abs(FSm - FSf) < tol)
+        return [FSm, lffArray, pushingF, resistingF, true];
+    } else {
+      // An unconverged moment or force solution is no point of the
+      // Fm(λ), Ff(λ) curves: far out in λ (e.g. λ ≈ −1 on VP15's
+      // non-circular surface) the force iteration drifts and its value
+      // dropped onto Fm, a spurious "intersection" with a far too low FOS.
+      unconvergedLambdas.push(lambdaNew);
+    }
 
     if (ii >= MP_MAX_STEPS) {
       // Fallback: pick closest match

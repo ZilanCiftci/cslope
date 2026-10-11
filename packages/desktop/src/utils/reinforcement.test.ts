@@ -135,3 +135,53 @@ describe("pile rows", () => {
     expect(dto.piles?.[0].force).toBe(100);
   });
 });
+
+describe("support defaults as in Slide2", () => {
+  it("geosynthetics and piles are passive, anchors and tiebacks active", () => {
+    expect(reinforcementPreset("geosynthetic").application).toBe("passive");
+    expect(reinforcementPreset("nail").application).toBe("passive");
+    expect(reinforcementPreset("anchor").application).toBe("active");
+    expect(reinforcementPreset("tieback").application).toBe("active");
+    expect(pilePreset("pile").application).toBe("passive");
+    expect(pilePreset("sheet-pile").application).toBe("active");
+  });
+
+  it("a pile row acts tangent to the slip surface, a sheet pile wall at its angle", () => {
+    const pile = newPile("p", "pile", ground);
+    expect(pile.direction).toBe("tangent");
+    expect(toEnginePile(pile).direction).toBe("tangent");
+    const wall = newPile("w", "sheet-pile", ground);
+    expect(wall.direction).toBeUndefined();
+    expect("direction" in toEnginePile(wall)).toBe(false);
+  });
+
+  it("a geosynthetic saved without an application stays active", () => {
+    const r = sanitizeReinforcement({ type: "geosynthetic", x1: 0, y1: 0, x2: 5, y2: 0 }, "g")!;
+    expect(r.application).toBe("active");
+    expect(sanitizeReinforcement({ type: "geosynthetic", x1: 0, y1: 0, x2: 5, y2: 0, application: "passive" }, "g")!.application).toBe("passive");
+  });
+
+  it("reads the pile direction from a file; absent stays absent", () => {
+    const raw = { type: "pile", x1: 0, y1: 0, x2: 0, y2: -5 };
+    const old = sanitizePile(raw, "x")!;
+    expect("direction" in old).toBe(false);
+    expect("direction" in toEnginePile(old)).toBe(false);
+    expect(sanitizePile({ ...raw, direction: "perpendicular" }, "x")!.direction).toBe("perpendicular");
+    expect("direction" in sanitizePile({ ...raw, direction: "sideways" }, "x")!).toBe(false);
+  });
+
+  it("keeps the pile direction through save and load", () => {
+    useAppStore.getState().newProject();
+    useAppStore.getState().addPile("pile");
+    useAppStore.getState().addPile("sheet-pile");
+    const [pile] = useAppStore.getState().piles;
+    useAppStore.getState().updatePile(pile.id, { direction: "perpendicular" });
+    useAppStore.getState().saveCurrentModel();
+    const loaded = parseProjectFile(JSON.stringify(serializeProject(useAppStore.getState()))).models[0];
+    expect(loaded.piles?.[0].direction).toBe("perpendicular");
+    expect(loaded.piles?.[1] && "direction" in loaded.piles[1]).toBe(false);
+    const dto = buildSlopeDTOFromModel(snapshotFromState(useAppStore.getState()));
+    expect(dto.piles?.[0].direction).toBe("perpendicular");
+    expect(dto.piles?.[1].direction).toBeUndefined();
+  });
+});

@@ -308,20 +308,21 @@ export function applyReinforcement(
     }
   });
 
-  // Piles push back against the movement, tilted by their angle.
+  // Piles push back against the movement: tilted by their angle, along
+  // the slip surface or perpendicular to the pile.
   const profiles = slope.piles.length > 0 ? slope.pileProfiles : [];
   slope.piles.forEach((p, k) => {
-    for (const { slice, px, py } of crossings(slices, p.x1, p.y1, p.x2, p.y2)) {
+    for (const { slice, px, py, tx, ty } of crossings(slices, p.x1, p.y1, p.x2, p.y2)) {
       const magnitude = pileForce(slope, p, px, py, profiles[k]).perMetre;
       if (!(magnitude > 0)) continue;
-      const a = ((p.angle ?? 0) * Math.PI) / 180;
+      const [ux, uy] = pileForceDirection(p, tx, ty);
       const force: ReinforcementForce = {
         index: k,
         pile: true,
         x: px,
         y: py,
-        fx: -magnitude * Math.cos(a),
-        fy: magnitude * Math.sin(a),
+        fx: magnitude * ux,
+        fy: magnitude * uy,
         force: magnitude,
         passive: (p.application ?? "active") === "passive",
       };
@@ -330,6 +331,31 @@ export function applyReinforcement(
     }
   });
   return forces;
+}
+
+/**
+ * Unit direction of a pile's force on the sliding mass (+x sliding, +y up)
+ * for the movement (tx, ty) along the slip surface at the crossing.
+ */
+export function pileForceDirection(p: Pile, tx: number, ty: number): [number, number] {
+  const direction = p.direction ?? "angle";
+  if (direction === "tangent") return [-tx, -ty];
+  if (direction === "perpendicular") {
+    const len = Math.hypot(p.x2 - p.x1, p.y2 - p.y1);
+    if (len > 0) {
+      // Normal of the pile axis, the one opposing the movement.
+      let nx = -(p.y2 - p.y1) / len;
+      let ny = (p.x2 - p.x1) / len;
+      const along = nx * tx + ny * ty;
+      if (along > 0 || (along === 0 && nx > 0)) {
+        nx = -nx;
+        ny = -ny;
+      }
+      return [nx, ny];
+    }
+  }
+  const a = ((p.angle ?? 0) * Math.PI) / 180;
+  return [-Math.cos(a), Math.sin(a)];
 }
 
 /**
