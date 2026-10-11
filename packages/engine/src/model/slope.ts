@@ -74,6 +74,33 @@ export interface SearchPlane {
   crack?: [number, number];
 }
 
+/** A water line as given, with its clipping rule. */
+interface WaterLineInput {
+  wx: number[];
+  wy: number[];
+  followBoundary: boolean;
+}
+
+/**
+ * A water line needs two finite points with different x somewhere (it is
+ * then continued horizontally beyond its ends). Without one, slices in a
+ * material assigned to it would silently get no pore pressure; Slide2
+ * likewise calculates no FOS where a water table does not span the slip
+ * surface.
+ */
+function checkWaterLine(coordinates: [number, number][]): void {
+  const finite = coordinates.filter(
+    (c) => Array.isArray(c) && Number.isFinite(c[0]) && Number.isFinite(c[1]),
+  );
+  if (finite.length !== coordinates.length) {
+    throw new Error("Water table points must be finite numbers.");
+  }
+  const xs = finite.map((c) => c[0]);
+  if (finite.length < 2 || !(Math.max(...xs) - Math.min(...xs) > 1e-9)) {
+    throw new Error("A water table needs at least two points with different x.");
+  }
+}
+
 /** Smallest useful inner iteration limit for the FOS solvers. */
 const MIN_MAX_ITERATIONS = 6;
 /** Default smallest sliding mass, as a fraction of the model area. */
@@ -97,15 +124,22 @@ export class Slope {
   private _waterRL: boolean = false;
   private _waterRLXY: { x: number[]; y: number[] } | null = null;
   /**
-   * Additional water tables by id (null = the line does not overlap the
-   * slope).  Materials assigned to one of these use it for pore pressure
-   * instead of the default water table.
+   * Additional water tables by id.  Materials assigned to one of these use
+   * it for pore pressure instead of the default water table.
    */
   private _extraWaterLines = new Map<
     string,
     { x: number[]; y: number[] } | null
   >();
   private _materialWaterTable = new Map<Material, string>();
+  /**
+   * Water lines as given (before extension to the model edges and
+   * clipping), so that they are built again for a new external boundary:
+   * a line must always span the whole model, or slices beyond its ends
+   * would silently get no pore pressure.
+   */
+  private _waterInput: WaterLineInput | null = null;
+  private _extraWaterInputs = new Map<string, WaterLineInput>();
 
   // ── Loads ─────────────────────────────────────────────────────
   private _udls: Udl[] = [];
@@ -487,6 +521,17 @@ export class Slope {
     const surfXMax = Math.max(...surface.x);
     this._externalLength = surfXMax - surfXMin;
 
+    // Water lines given before the boundary are extended to its edges now.
+    if (this._waterInput) {
+      const { wx, wy, followBoundary } = this._waterInput;
+      this._waterRLXY = this._buildWaterLine(wx, wy, followBoundary);
+      this._waterRL = this._waterRLXY !== null;
+      this._waterYCache.clear();
+    }
+    for (const [id, { wx, wy, followBoundary }] of this._extraWaterInputs) {
+      this._extraWaterLines.set(id, this._buildWaterLine(wx, wy, followBoundary));
+    }
+
     // Update min failure distance
     this.updateAnalysisOptions({ minFailureDist: 0 });
 
@@ -631,10 +676,12 @@ export class Slope {
       wx = [minX, maxX];
       wy = [waterHeight, waterHeight];
     } else if (waterCoords) {
+      checkWaterLine(waterCoords);
       wx = waterCoords.map((c) => c[0]);
       wy = waterCoords.map((c) => c[1]);
     }
 
+    this._waterInput = wx && wy ? { wx, wy, followBoundary } : null;
     this._waterRLXY = wx && wy ? this._buildWaterLine(wx, wy, followBoundary) : null;
     this._waterRL = this._waterRLXY !== null;
 
@@ -651,14 +698,11 @@ export class Slope {
     coordinates: [number, number][],
     followBoundary = true,
   ): void {
-    this._extraWaterLines.set(
-      id,
-      this._buildWaterLine(
-        coordinates.map((c) => c[0]),
-        coordinates.map((c) => c[1]),
-        followBoundary,
-      ),
-    );
+    checkWaterLine(coordinates);
+    const wx = coordinates.map((c) => c[0]);
+    const wy = coordinates.map((c) => c[1]);
+    this._extraWaterInputs.set(id, { wx, wy, followBoundary });
+    this._extraWaterLines.set(id, this._buildWaterLine(wx, wy, followBoundary));
     this._resetResults();
   }
 
@@ -718,6 +762,8 @@ export class Slope {
   removeWaterTable(): void {
     this._waterRL = false;
     this._waterRLXY = null;
+    this._waterInput = null;
+    this._extraWaterInputs.clear();
     this._extraWaterLines.clear();
     this._materialWaterTable.clear();
     this._waterYCache.clear();

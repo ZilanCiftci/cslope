@@ -5,6 +5,10 @@ import { VERIFICATION_CASES, runVerification } from "../verification/cases";
 import { CORPUS_CASES } from "../verification/corpus-cases";
 import { analyseReliability } from "./reliability";
 import { fitPolylineToGround } from "./surface";
+import { Slope } from "./slope";
+import { getSlices } from "./slices";
+import { Material } from "../types/index";
+import type { SlopeDefinition } from "../types/slope-definition";
 
 const caseById = (id: string) => {
   const c = VERIFICATION_CASES.find((v) => v.id === id);
@@ -101,5 +105,44 @@ describe("Monte Carlo on a specified non-circular surface", () => {
     expect(r.failed).toBe(0);
     expect(r.samples!.length).toBe(20);
     expect(r.meanFOS).toBeCloseTo(r.fos, 6);
+  });
+});
+
+describe("water tables that do not span the slip surface", () => {
+  const def: SlopeDefinition = {
+    coordinates: [[0, -20], [0, 0], [20, 0], [40, -10], [60, -10], [60, -20]],
+    materials: [
+      { name: "Upper", unitWeight: 18, frictionAngle: 28, cohesion: 5, waterTableId: "own" },
+      { name: "Lower", unitWeight: 20, frictionAngle: 32, cohesion: 2 },
+    ],
+    materialBoundaries: [{ coordinates: [[0, -6], [60, -6]], materialName: "" }],
+    regionAssignments: [
+      { point: [5, -2], materialName: "Upper" },
+      { point: [5, -15], materialName: "Lower" },
+    ],
+    waterTable: { mode: "custom", value: [[0, -4], [60, -4]] },
+    waterTables: [{ id: "own", coordinates: [[0, -3], [60, -3]] }],
+  };
+
+  it("rejects a material water table that cannot span anything", () => {
+    // A one-point line gave the material no pore pressure at all, silently.
+    expect(() => buildSlope({ ...def, waterTables: [{ id: "own", coordinates: [[10, -3]] }] })).toThrow(/water table/i);
+    expect(() => buildSlope({ ...def, waterTable: { mode: "custom", value: [[10, -3], [10, -5]] } })).toThrow(/water table/i);
+    expect(() => buildSlope(def)).not.toThrow();
+  });
+
+  it("extends a line given before the external boundary to the model edges", () => {
+    const slope = new Slope();
+    slope.addMaterial(new Material({ name: "M", unitWeight: 20, frictionAngle: 30, cohesion: 5 }));
+    // Short line, entered before the boundary (nothing to extend it to yet).
+    slope.setWaterTable({ coordinates: [[15, -3], [25, -3]], followBoundary: false });
+    slope.setWaterTableById("own", [[15, -4], [25, -4]], false);
+    slope.setExternalBoundary(def.coordinates);
+    expect(slope.waterRLXY).toEqual({ x: [0, 15, 25, 60], y: [-3, -3, -3, -3] });
+    // Slices beyond the ends of the given line have pore pressure.
+    const slices = getSlices(slope, 5, 50, 30, 30, Math.hypot(25, 30));
+    const beyond = slices.filter((s) => s.x > 30 && s.yBottom < -3);
+    expect(beyond.length).toBeGreaterThan(0);
+    expect(beyond.every((s) => s.U > 0)).toBe(true);
   });
 });
