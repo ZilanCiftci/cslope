@@ -80,3 +80,46 @@ describe("slices at real-world coordinates", () => {
     expect(fos[2]).toBeCloseTo(fos[0], 3);
   });
 });
+
+describe("combined (drained/undrained) materials", () => {
+  // With Su below c the undrained strength the undrained branch governs on every
+  // slice, so the combined material must give exactly the FOS of a pure
+  // undrained material with Su = cohesionUndrained, for every method.
+  const coords: [number, number][] = [[0, -15], [0, 0], [20, 0], [40, -10], [50, -10], [50, -15]];
+  const combined: SlopeDefinition = {
+    coordinates: coords,
+    materials: [{
+      name: "C", unitWeight: 20, frictionAngle: 25, cohesion: 20,
+      model: { kind: "mohr-coulomb", unitWeight: 20, cohesion: 20, frictionAngle: 25, cFactor: 1, cohesionUndrained: 18 },
+    }],
+  };
+  const undrained: SlopeDefinition = {
+    coordinates: coords,
+    materials: [{
+      name: "U", unitWeight: 20, frictionAngle: 0, cohesion: 18,
+      model: { kind: "undrained", unitWeight: 20, undrainedShearStrength: 18 },
+    }],
+  };
+  const fosFor = (def: SlopeDefinition, method: "Bishop" | "Janbu" | "Morgenstern-Price") => {
+    const slope = buildSlope(def);
+    slope.updateAnalysisOptions({ method, slices: 30 });
+    const [cx, cy, r] = [28, 25, 35];
+    const pts = slope.getCircleExternalIntersection(cx, cy, r);
+    const slices = getSlices(slope, pts[0][0], pts[pts.length - 1][0], cx, cy, r);
+    if (def === combined) expect(slices.every((s) => s.isCombined)).toBe(true);
+    return { slope, slices };
+  };
+
+  for (const method of ["Bishop", "Janbu", "Morgenstern-Price"] as const) {
+    it(`${method}: undrained-governed slices are in equilibrium with Su`, async () => {
+      const { analyseJanbu, analyseMorgensternPrice } = await import("./solvers");
+      const run = (def: SlopeDefinition) => {
+        const { slope, slices } = fosFor(def, method);
+        if (method === "Bishop") return analyseBishop(slope, slices)[0]!;
+        if (method === "Janbu") return analyseJanbu(slope, slices)[0]!;
+        return analyseMorgensternPrice(slope, slices)[0]!;
+      };
+      expect(run(combined)).toBeCloseTo(run(undrained), 2);
+    });
+  }
+});

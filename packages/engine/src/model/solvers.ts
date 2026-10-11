@@ -101,6 +101,37 @@ type SolverResult = [
 ];
 
 /**
+ * Base normal force and right-hand interslice forces of one slice from
+ * vertical equilibrium with the shear mobilised at the trial FOS.
+ *
+ * @param effC  effective cohesion force C' = c·l − U·l·tanφ (kN/m)
+ * @param tanPhi tan of the friction angle governing the slice
+ * @returns [N, E_right, X_right]
+ */
+function solveSliceNormal(
+  W: number,
+  xLeft: number,
+  eLeft: number,
+  effC: number,
+  tanPhi: number,
+  cosA: number,
+  sinA: number,
+  shearFactor: number,
+  fos: number,
+): [number, number, number] {
+  let malpha = cosA + (sinA * tanPhi) / fos;
+  if (Math.abs(malpha) < 1e-12) malpha = malpha >= 0 ? 1e-12 : -1e-12;
+  const baseConstant = eLeft + (effC * cosA) / fos;
+  const nMultiplier = (tanPhi * cosA) / fos - sinA;
+  const num = W + xLeft - (effC * sinA) / fos + baseConstant * shearFactor;
+  let denom = malpha - nMultiplier * shearFactor;
+  if (Math.abs(denom) < 1e-12) denom = denom >= 0 ? 1e-12 : -1e-12;
+  const N = num / denom;
+  const eRight = baseConstant + N * nMultiplier;
+  return [N, eRight, -eRight * shearFactor];
+}
+
+/**
  * Generic moment equilibrium FOS solver.
  */
 function solveFOSGenericMoment(
@@ -144,35 +175,37 @@ function solveFOSGenericMoment(
         const tanPhi = Math.tan(phi);
         const cosA = Math.cos(a);
         const sinA = Math.sin(a);
-
-        let malpha = cosA + (sinA * tanPhi) / prevFOS;
-        if (Math.abs(malpha) < 1e-12) malpha = malpha >= 0 ? 1e-12 : -1e-12;
-
-        const C = c * bl - U * bl * tanPhi;
-        const cohesionComponent = (C * cosA) / prevFOS;
-        const cohesionTerm = C * sinA;
-
-        const baseConstant = eLeft + cohesionComponent;
-        const nMultiplier = (tanPhi * cosA) / prevFOS - sinA;
         const shearFactor = lambdaVal * f;
 
-        const num =
-          W + xLeft - cohesionTerm / prevFOS + baseConstant * shearFactor;
-        let denom = malpha - nMultiplier * shearFactor;
-        if (Math.abs(denom) < 1e-12) denom = denom >= 0 ? 1e-12 : -1e-12;
-
-        const N = num / denom;
-        const eRight = baseConstant + N * nMultiplier;
-        const xRight = -eRight * shearFactor;
-
-        // Resistance
-        if (matCode === 1) {
-          const rd = (c * bl + (N - U * bl) * tanPhi) * R;
-          const ru = cu * bl * R;
-          resisting += Math.min(rd, ru);
-        } else {
-          resisting += (c * bl + (N - U * bl) * tanPhi) * R;
+        let [N, eRight, xRight] = solveSliceNormal(
+          W,
+          xLeft,
+          eLeft,
+          c * bl - U * bl * tanPhi,
+          tanPhi,
+          cosA,
+          sinA,
+          shearFactor,
+          prevFOS,
+        );
+        let res = (c * bl + (N - U * bl) * tanPhi) * R;
+        // Combined method: where the undrained strength governs, the
+        // slice must be in equilibrium with that (smaller) shear too.
+        if (matCode === 1 && !(res >= 0 && res <= cu * bl * R)) {
+          [N, eRight, xRight] = solveSliceNormal(
+            W,
+            xLeft,
+            eLeft,
+            cu * bl,
+            0,
+            cosA,
+            sinA,
+            shearFactor,
+            prevFOS,
+          );
+          res = cu * bl * R;
         }
+        resisting += res;
 
         pushing += W * dx;
         nCurrent[i] = N;
@@ -252,34 +285,38 @@ function solveFOSGenericForceCircular(
         const tanPhi = Math.tan(phi);
         const cosA = Math.cos(a);
         const sinA = Math.sin(a);
-
-        // N calculation (moment-based normal force)
-        let malpha = cosA + (sinA * tanPhi) / prevFOS;
-        if (Math.abs(malpha) < 1e-12) malpha = malpha >= 0 ? 1e-12 : -1e-12;
-
-        const CPrimeSin = (c * bl - U * bl * tanPhi) * sinA;
-        const cohesionComponent = ((c * bl - U * bl * tanPhi) * cosA) / prevFOS;
-        const baseConstant = eLeft + cohesionComponent;
-        const nMultiplier = (tanPhi * cosA) / prevFOS - sinA;
         const shearFactor = lambdaVal * f;
 
-        const num =
-          W + xLeft - CPrimeSin / prevFOS + baseConstant * shearFactor;
-        let denom = malpha - nMultiplier * shearFactor;
-        if (Math.abs(denom) < 1e-12) denom = denom >= 0 ? 1e-12 : -1e-12;
-
-        const N = num / denom;
-        const eRight = baseConstant + N * nMultiplier;
-        const xRight = -eRight * shearFactor;
-
+        let [N, eRight, xRight] = solveSliceNormal(
+          W,
+          xLeft,
+          eLeft,
+          c * bl - U * bl * tanPhi,
+          tanPhi,
+          cosA,
+          sinA,
+          shearFactor,
+          prevFOS,
+        );
         // Circular force equilibrium resistance
-        if (matCode === 1) {
-          const rd = c * bl * cosA + (N - U * bl) * cosA * tanPhi;
-          const ru = cu * bl * cosA;
-          resisting += Math.min(rd, ru);
-        } else {
-          resisting += c * bl * cosA + (N - U * bl) * cosA * tanPhi;
+        let res = c * bl * cosA + (N - U * bl) * cosA * tanPhi;
+        // Combined method: where the undrained strength governs, N and the
+        // interslice forces must follow from that shear as well.
+        if (matCode === 1 && !(res >= 0 && res <= cu * bl * cosA)) {
+          [N, eRight, xRight] = solveSliceNormal(
+            W,
+            xLeft,
+            eLeft,
+            cu * bl,
+            0,
+            cosA,
+            sinA,
+            shearFactor,
+            prevFOS,
+          );
+          res = cu * bl * cosA;
         }
+        resisting += res;
 
         pushing += N * sinA;
         nCurrent[i] = N;
