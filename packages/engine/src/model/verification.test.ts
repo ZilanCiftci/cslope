@@ -8,6 +8,7 @@ import { defaultAxisPoint } from "./surface";
 import { validateMaterialModel } from "../types/validation";
 import { analyseBishop, analyseMorgensternPrice } from "./solvers";
 import { rankineCrackDepth } from "./slices";
+import type { Slice } from "../types/geometry";
 import {
   VERIFICATION_CASES,
   circle,
@@ -390,5 +391,67 @@ describe("Automatic tension crack depth", () => {
     expect(auto.fos!).toBeCloseTo(fixed.fos!, 9);
     const crack = auto.slope.search.find((p) => p.fos != null)!.crack!;
     expect(crack).toBeDefined();
+  });
+});
+
+describe("Spencer against an independent solution", () => {
+  // Spencer (1967), circular surface: Q from slice equilibrium with the
+  // interslice resultant at θ; force ΣQ = 0 and moment ΣQ cos(α − θ) = 0.
+  // Independent of the solvers' marching formulation; only the slices are
+  // shared. Clay over friction soil with water, the circle reaching into
+  // the friction soil near the toe, where the normal forces (and so the
+  // method) matter.
+  function independentSpencer(sl: Slice[]) {
+    const sums = (F: number, th: number) => {
+      let force = 0;
+      let moment = 0;
+      for (const s of sl) {
+        const a = s.alpha;
+        const tp = Math.tan(s.phi);
+        const W = s.weight + s.udl + s.ll;
+        const q =
+          ((s.cohesion * s.width) / F / Math.cos(a) +
+            (tp / F) * (W * Math.cos(a) - (s.U * s.width) / Math.cos(a)) -
+            W * Math.sin(a)) /
+          (Math.cos(a - th) * (1 + (tp * Math.tan(a - th)) / F));
+        force += q;
+        moment += q * Math.cos(a - th);
+      }
+      return { force, moment };
+    };
+    const root = (g: (x: number) => number, lo: number, hi: number) => {
+      for (let k = 0; k < 100; k++) {
+        const m = (lo + hi) / 2;
+        if (Math.sign(g(m)) === Math.sign(g(lo))) lo = m;
+        else hi = m;
+      }
+      return (lo + hi) / 2;
+    };
+    const fm = (th: number) => root((F) => sums(F, th).moment, 0.3, 4);
+    const ff = (th: number) => root((F) => sums(F, th).force, 0.3, 4);
+    const th = root((t) => fm(t) - ff(t), -0.3, 0.6);
+    return { spencer: fm(th), bishop: fm(0) };
+  }
+
+  it("cSlope's Spencer and Bishop match it on a clay/friction-soil circle", () => {
+    const def = layered(
+      [[0, 10], [10, 10], [20, 3], [30, 3]],
+      -10,
+      [
+        { name: "Clay", topY: null, model: su(18, 17) },
+        { name: "Sand", topY: 2, model: mc(0, 32, 20) },
+      ],
+      { waterTable: { mode: "custom", value: [[0, 6], [20, 3], [30, 3]], followBoundary: true }, ...circle(16, 16, 15) },
+    );
+    const spencer = runVerification(def, "Morgenstern-Price", { intersliceFunction: "constant" });
+    const bishop = runVerification(def, "Bishop");
+    const slices = spencer.slope.search[0].slices!;
+    expect(slices.some((s) => s.phi > 0)).toBe(true);
+    const ref = independentSpencer(slices);
+    expect(bishop.fos!).toBeCloseTo(ref.bishop, 3);
+    expect(Math.abs(spencer.fos! / ref.spencer - 1)).toBeLessThan(0.005);
+    // The interslice shear raises the normal force on the friction-soil
+    // slices at the toe: Spencer is clearly above Bishop here.
+    expect(ref.spencer).toBeGreaterThan(ref.bishop * 1.01);
   });
 });
