@@ -702,5 +702,10 @@ function normalizeAnalysisOptions(raw: unknown): AnalysisOptions {
     maxIterations: Math.max(1, finiteOr(o.maxIterations, base.maxIterations)),
     intersliceFunction,
     intersliceDataPoints,
+    porePressureHead:
+      o.porePressureHead === "vertical" ||
+      o.porePressureHead === "phreatic-correction"
+        ? o.porePressureHead
+        : (base.porePressureHead ?? "phreatic-correction"),
   };
 }

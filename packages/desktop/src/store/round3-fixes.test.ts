@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import { useAppStore } from "./app-store";
 import { findExpressionErrors } from "./expression-check";
+import { parseProjectFile, serializeProject } from "./persistence";
 import { evaluate } from "../utils/expression";
 import type { AnalysisResult } from "@cslope/engine";
 import type { ModelEntry } from "./types";
@@ -71,5 +72,18 @@ describe("expression syntax", () => {
     expect(evaluate("1e3", {})).toBe(1000);
     expect(evaluate("1.5E-2*2", {})).toBeCloseTo(0.03, 12);
     expect(evaluate("2-+3", {})).toBe(-1);
+  });
+});
+
+describe("pore pressure head option", () => {
+  it("is saved, reloaded and validated", () => {
+    useAppStore.getState().newProject();
+    useAppStore.getState().setOptions({ porePressureHead: "vertical" });
+    const raw = JSON.parse(JSON.stringify(serializeProject(useAppStore.getState())));
+    expect(parseProjectFile(JSON.stringify(raw)).models[0].options?.porePressureHead).toBe("vertical");
+    raw.models[0].options.porePressureHead = "bogus";
+    expect(parseProjectFile(JSON.stringify(raw)).models[0].options?.porePressureHead).toBe(
+      "phreatic-correction",
+    );
   });
 });

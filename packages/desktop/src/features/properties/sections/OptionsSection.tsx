@@ -320,6 +320,26 @@ export function OptionsSection({ plain = false }: OptionsSectionProps) {
             aria-label="Tolerance"
           />
         </label>
+        <label className="col-span-2 flex flex-col gap-0.5">
+          <Label>Pore pressure below an inclined water line</Label>
+          <select
+            value={options.porePressureHead ?? "phreatic-correction"}
+            onChange={(e) =>
+              setOptions({
+                porePressureHead: e.target.value as
+                  | "phreatic-correction"
+                  | "vertical",
+              })
+            }
+            aria-label="Pore pressure head"
+            title="Vertical head is what Slide and SLOPE/W use for a piezometric line"
+          >
+            <option value="phreatic-correction">
+              Phreatic correction (vertical head × cos²θ)
+            </option>
+            <option value="vertical">Vertical head (Slide, SLOPE/W)</option>
+          </select>
+        </label>
         {options.method === "Janbu" && (
           <label className="col-span-2 flex items-center gap-1.5">
             <input
