@@ -183,6 +183,29 @@ export function toCanonicalSlopeDefinition(
   };
 }
 
+/**
+ * Canonical definition for sliding in the opposite direction to that of
+ * `canonical` (itself a canonical definition), without the model's search
+ * limits and custom surfaces, which belong to its own direction. Map its
+ * results back with the returned definition.
+ */
+export function oppositeDirectionDefinition(
+  canonical: SlopeDefinition,
+): SlopeDefinition {
+  const orientation = resolveOrientation(
+    canonical.orientation,
+    canonical.coordinates,
+  );
+  const mirrored = toCanonicalSlopeDefinition({
+    ...canonical,
+    orientation: "rtl",
+    analysisLimits: undefined,
+    customSearchPlanes: undefined,
+    customPlanesOnly: false,
+  });
+  return { ...mirrored, orientation: orientation === "ltr" ? "rtl" : "ltr" };
+}
+
 export function mapAnalysisResultToModelSpace(
   analysisResult: AnalysisResult,
   canonicalSlopeDefinition: SlopeDefinition,

@@ -779,6 +779,7 @@ function normalizeAnalysisOptions(raw: unknown): AnalysisOptions {
     intersliceFunction,
     intersliceDataPoints,
     partialFactors: normalizePartialFactors(o.partialFactors),
+    ...(o.bothDirections === true ? { bothDirections: true } : {}),
     tensionCrackDepth: Math.max(
       0,
       finiteOr(o.tensionCrackDepth, base.tensionCrackDepth ?? 0),

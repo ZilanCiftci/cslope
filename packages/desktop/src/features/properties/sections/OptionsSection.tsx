@@ -375,6 +375,18 @@ export function OptionsSection({ plain = false }: OptionsSectionProps) {
             title="Part of the crack depth filled with water; its hydrostatic thrust pushes the sliding mass."
           />
         </label>
+        <label
+          className="col-span-2 flex items-center gap-1.5"
+          title="Also search for sliding in the opposite direction (with automatic search limits) and report the lower FOS."
+        >
+          <input
+            type="checkbox"
+            checked={options.bothDirections === true}
+            onChange={(e) => setOptions({ bothDirections: e.target.checked })}
+            aria-label="Analyse both directions"
+          />
+          <Label>Analyse both sliding directions</Label>
+        </label>
         <PartialFactorsFields
           factors={options.partialFactors ?? null}
           onChange={(partialFactors) => setOptions({ partialFactors })}

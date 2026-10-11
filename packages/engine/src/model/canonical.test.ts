@@ -6,8 +6,11 @@ import {
   inferOrientationFromCoordinates,
   mapAnalysisResultToModelSpace,
   mirrorX,
+  oppositeDirectionDefinition,
   toCanonicalSlopeDefinition,
 } from "./canonical";
+import { buildSlope } from "./build-slope";
+import { analyseSlope } from "./solvers";
 
 describe("canonical helpers", () => {
   it("infers LTR and RTL from boundary crest side", () => {
@@ -137,5 +140,53 @@ describe("canonical helpers", () => {
     expect(mapped.criticalSlices[0].xLeft).toBeLessThan(
       mapped.criticalSlices[0].xRight,
     );
+  });
+});
+
+describe("oppositeDirectionDefinition", () => {
+  // Ridge: steep 1:1 face on the left, gentle 2:1 face on the right.
+  const ridge: SlopeDefinition = {
+    orientation: "ltr",
+    coordinates: [[0, -10], [0, 0], [20, 0], [30, 10], [40, 10], [60, 0], [80, 0], [80, -10]],
+    materials: [{ name: "S", unitWeight: 19, frictionAngle: 25, cohesion: 8 }],
+    analysisLimits: { entryLeftX: 30, entryRightX: 40, exitLeftX: 60, exitRightX: 80 },
+  };
+  const run = (def: SlopeDefinition) => {
+    const slope = buildSlope(def);
+    slope.updateAnalysisOptions({ iterations: 2000, refinedIterations: 500 });
+    return { fos: analyseSlope(slope)!, slope };
+  };
+
+  it("analyses the other face without the model's search limits", () => {
+    const canonical = toCanonicalSlopeDefinition(ridge);
+    const opposite = oppositeDirectionDefinition(canonical);
+    expect(opposite.orientation).toBe("rtl");
+    expect(opposite.analysisLimits).toBeUndefined();
+    const own = run(canonical);
+    const other = run(opposite);
+    const explicit = run(toCanonicalSlopeDefinition({ ...ridge, orientation: "rtl", analysisLimits: undefined }));
+    expect(other.fos).toBeCloseTo(explicit.fos, 9);
+    // The steep face governs.
+    expect(other.fos).toBeLessThan(own.fos);
+  });
+
+  it("maps the opposite result back onto the steep (left) face", () => {
+    const opposite = oppositeDirectionDefinition(toCanonicalSlopeDefinition(ridge));
+    const { slope } = run(opposite);
+    const plane = slope.search.find((p) => p.fos != null)!;
+    const mapped = mapAnalysisResultToModelSpace(
+      {
+        minFOS: plane.fos!,
+        maxFOS: plane.fos!,
+        criticalSurface: { cx: plane.cx, cy: plane.cy, radius: plane.radius, fos: plane.fos!, entryPoint: plane.lc, exitPoint: plane.rc },
+        allSurfaces: [],
+        criticalSlices: [],
+        method: "Bishop",
+        elapsedMs: 0,
+      },
+      opposite,
+    );
+    const xs = [mapped.criticalSurface!.entryPoint[0], mapped.criticalSurface!.exitPoint[0]];
+    expect(Math.max(...xs)).toBeLessThanOrEqual(40);
   });
 });

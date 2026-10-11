@@ -15,6 +15,10 @@ import {
   analyseSlope,
   mapAnalysisResultToModelSpace,
   buildSlope,
+  oppositeDirectionDefinition,
+  resolveOrientation,
+  type AnalysisOptions,
+  type SlopeDefinition,
 } from "@cslope/engine";
 
 function computeCriticalPushingMoment(
@@ -24,6 +28,8 @@ function computeCriticalPushingMoment(
         udl: number;
         ll: number;
         dx: number;
+        waterLoad?: number;
+        extraMoment?: number;
       }>
     | null
     | undefined,
@@ -31,8 +37,8 @@ function computeCriticalPushingMoment(
   if (!slices || slices.length === 0) return null;
   let pushing = 0;
   for (const s of slices) {
-    const W = s.weight + s.udl + s.ll;
-    pushing += W * s.dx;
+    const W = s.weight + s.udl + s.ll + (s.waterLoad ?? 0);
+    pushing += W * s.dx + (s.extraMoment ?? 0);
   }
   return Number.isFinite(pushing) && pushing > 0 ? pushing : null;
 }
@@ -64,133 +70,20 @@ self.onmessage = (event: MessageEvent<AnalysisRequest>) => {
     return;
   }
 
-  const start = performance.now();
-
   try {
-    // Build slope model from DTO
-    const slope = buildSlope(slopeDef);
-
-    // Apply analysis options
-    slope.updateAnalysisOptions(options);
-
-    // Run analysis
-    const minFOS = analyseSlope(slope);
-
-    // Build result DTO
-    let criticalSurface: SlipSurfaceResult | null = null;
-    const allSurfaces: SlipSurfaceResult[] = [];
-    const criticalSlices: SliceData[] = [];
-
-    const validSurfaces = slope.search.filter((s) => s.fos != null);
-    if (validSurfaces.length === 0) {
-      // Reporting FOS 0.000 here would read as a collapsed slope.
-      throw new Error(
-        "No valid slip surface was found. Check the search limits, the geometry and the material strengths.",
-      );
+    const start = performance.now();
+    let result: AnalysisResult;
+    if (options.bothDirections && !slopeDef.customPlanesOnly) {
+      result = analyseBothDirections(slopeDef, options);
+    } else {
+      result = mapAnalysisResultToModelSpace(analyse(slopeDef, options), slopeDef);
     }
-
-    if (validSurfaces.length > 0) {
-      const crit = validSurfaces[0];
-      criticalSurface = {
-        cx: crit.cx,
-        cy: crit.cy,
-        radius: crit.radius,
-        fos: crit.fos!,
-        entryPoint: crit.crack ?? crit.lc,
-        exitPoint: crit.rc,
-        converged: crit.converged,
-        lffArray: crit.lffArray,
-      };
-
-      // Convert slices for critical surface
-      if (crit.slices) {
-        for (const s of crit.slices) {
-          const surfaceLoad = s.udl + s.ll + (s.waterLoad ?? 0);
-          criticalSlices.push({
-            x: s.x,
-            xLeft: s.xLeft,
-            xRight: s.xRight,
-            width: s.width,
-            yTop: s.yTop,
-            yBottom: s.yBottom,
-            height: s.height,
-            area: s.area,
-            alpha: s.alpha,
-            baseLength: s.baseLength,
-            weight: s.weight,
-            surfaceLoad,
-            cohesion: s.cohesion,
-            frictionAngle: s.frictionAngle,
-            // Same effective normal force as the results plot dialog.
-            normalForce:
-              (s.weight + surfaceLoad) * Math.cos(s.alpha) -
-              s.U * s.baseLength,
-            porePressure: s.U,
-            baseMaterial: s.baseMaterial!,
-          });
-        }
-      }
-
-      // All surfaces for visualization (sorted by FOS ascending)
-      for (let i = 0; i < validSurfaces.length; i++) {
-        const p = validSurfaces[i];
-        allSurfaces.push({
-          cx: p.cx,
-          cy: p.cy,
-          radius: p.radius,
-          fos: p.fos!,
-          entryPoint: p.crack ?? p.lc,
-          exitPoint: p.rc,
-          converged: p.converged,
-          lffArray: p.lffArray,
-        });
-      }
-    }
-
-    const criticalPushingMoment = computeCriticalPushingMoment(
-      validSurfaces[0]?.slices,
-    );
-    const criticalSlipVolume = computeCriticalSlipVolume(
-      validSurfaces[0]?.slices,
-    );
-    const criticalResistingMoment =
-      criticalPushingMoment != null && criticalSurface
-        ? criticalPushingMoment * criticalSurface.fos
-        : null;
-
-    const nonConvergedSurfaces = slope.search.reduce(
-      (count, plane) => count + (plane.converged === false ? 1 : 0),
-      0,
-    );
-
-    const result: AnalysisResult = {
-      minFOS: minFOS ?? 0,
-      maxFOS: validSurfaces.length > 0 ? slope.getMaxFOS() : 0,
-      criticalSurface,
-      allSurfaces,
-      criticalSlices,
-      method: options.method,
-      criticalLffArray:
-        options.method === "Morgenstern-Price" && validSurfaces.length > 0
-          ? validSurfaces[0].lffArray
-          : undefined,
-      criticalPushingMoment:
-        criticalPushingMoment != null ? criticalPushingMoment : undefined,
-      criticalResistingMoment:
-        criticalResistingMoment != null ? criticalResistingMoment : undefined,
-      criticalSlipVolume:
-        criticalSlipVolume != null ? criticalSlipVolume : undefined,
-      elapsedMs: performance.now() - start,
-      nonConvergedSurfaces,
-      splitFailureCount: slope.splitFailureCount,
-    };
-
-    const mappedResult = mapAnalysisResultToModelSpace(result, slopeDef);
+    result.elapsedMs = performance.now() - start;
 
     const completeResponse: AnalysisResponse = {
       type: "analysis-complete",
       id,
-      result: mappedResult,
+      result,
     };
     self.postMessage(completeResponse);
   } catch (err: unknown) {
@@ -202,5 +95,163 @@ self.onmessage = (event: MessageEvent<AnalysisRequest>) => {
     self.postMessage(errorResponse);
   }
 };
+
+/**
+ * Analyse the model's own direction and the opposite one and report the
+ * lower FOS, with the direction it slides in.
+ */
+function analyseBothDirections(
+  slopeDef: SlopeDefinition,
+  options: AnalysisOptions,
+): AnalysisResult {
+  const own = resolveOrientation(slopeDef.orientation, slopeDef.coordinates);
+  const oppositeDef = oppositeDirectionDefinition(slopeDef);
+  const tryRun = (def: SlopeDefinition) => {
+    try {
+      return { result: mapAnalysisResultToModelSpace(analyse(def, options), def) };
+    } catch (err) {
+      return { error: err };
+    }
+  };
+  const a = tryRun(slopeDef);
+  const b = tryRun(oppositeDef);
+  if (!a.result && !b.result) throw a.error;
+  const ownGoverns =
+    a.result && (!b.result || a.result.minFOS <= b.result.minFOS);
+  const governing = ownGoverns ? a.result! : b.result!;
+  const other = ownGoverns ? b.result : a.result;
+  return {
+    ...governing,
+    slidingDirection: ownGoverns ? own : own === "ltr" ? "rtl" : "ltr",
+    otherDirectionMinFOS: other ? other.minFOS : null,
+  };
+}
+
+/** Run one analysis on a canonical definition (result in canonical space). */
+function analyse(
+  slopeDef: SlopeDefinition,
+  options: AnalysisOptions,
+): AnalysisResult {
+  const start = performance.now();
+  // Build slope model from DTO
+  const slope = buildSlope(slopeDef);
+
+  // Apply analysis options
+  slope.updateAnalysisOptions(options);
+
+  // Run analysis
+  const minFOS = analyseSlope(slope);
+
+  // Build result DTO
+  let criticalSurface: SlipSurfaceResult | null = null;
+  const allSurfaces: SlipSurfaceResult[] = [];
+  const criticalSlices: SliceData[] = [];
+
+  const validSurfaces = slope.search.filter((s) => s.fos != null);
+  if (validSurfaces.length === 0) {
+    // Reporting FOS 0.000 here would read as a collapsed slope.
+    throw new Error(
+      "No valid slip surface was found. Check the search limits, the geometry and the material strengths.",
+    );
+  }
+
+  if (validSurfaces.length > 0) {
+    const crit = validSurfaces[0];
+    criticalSurface = {
+      cx: crit.cx,
+      cy: crit.cy,
+      radius: crit.radius,
+      fos: crit.fos!,
+      entryPoint: crit.crack ?? crit.lc,
+      exitPoint: crit.rc,
+      converged: crit.converged,
+      lffArray: crit.lffArray,
+    };
+
+    // Convert slices for critical surface
+    if (crit.slices) {
+      for (const s of crit.slices) {
+        const surfaceLoad = s.udl + s.ll + (s.waterLoad ?? 0);
+        criticalSlices.push({
+          x: s.x,
+          xLeft: s.xLeft,
+          xRight: s.xRight,
+          width: s.width,
+          yTop: s.yTop,
+          yBottom: s.yBottom,
+          height: s.height,
+          area: s.area,
+          alpha: s.alpha,
+          baseLength: s.baseLength,
+          weight: s.weight,
+          surfaceLoad,
+          cohesion: s.cohesion,
+          frictionAngle: s.frictionAngle,
+          // Same effective normal force as the results plot dialog.
+          normalForce:
+            (s.weight + surfaceLoad) * Math.cos(s.alpha) -
+            s.U * s.baseLength,
+          porePressure: s.U,
+          baseMaterial: s.baseMaterial!,
+        });
+      }
+    }
+
+    // All surfaces for visualization (sorted by FOS ascending)
+    for (let i = 0; i < validSurfaces.length; i++) {
+      const p = validSurfaces[i];
+      allSurfaces.push({
+        cx: p.cx,
+        cy: p.cy,
+        radius: p.radius,
+        fos: p.fos!,
+        entryPoint: p.crack ?? p.lc,
+        exitPoint: p.rc,
+        converged: p.converged,
+        lffArray: p.lffArray,
+      });
+    }
+  }
+
+  const criticalPushingMoment = computeCriticalPushingMoment(
+    validSurfaces[0]?.slices,
+  );
+  const criticalSlipVolume = computeCriticalSlipVolume(
+    validSurfaces[0]?.slices,
+  );
+  const criticalResistingMoment =
+    criticalPushingMoment != null && criticalSurface
+      ? criticalPushingMoment * criticalSurface.fos
+      : null;
+
+  const nonConvergedSurfaces = slope.search.reduce(
+    (count, plane) => count + (plane.converged === false ? 1 : 0),
+    0,
+  );
+
+  const result: AnalysisResult = {
+    minFOS: minFOS ?? 0,
+    maxFOS: validSurfaces.length > 0 ? slope.getMaxFOS() : 0,
+    criticalSurface,
+    allSurfaces,
+    criticalSlices,
+    method: options.method,
+    criticalLffArray:
+      options.method === "Morgenstern-Price" && validSurfaces.length > 0
+        ? validSurfaces[0].lffArray
+        : undefined,
+    criticalPushingMoment:
+      criticalPushingMoment != null ? criticalPushingMoment : undefined,
+    criticalResistingMoment:
+      criticalResistingMoment != null ? criticalResistingMoment : undefined,
+    criticalSlipVolume:
+      criticalSlipVolume != null ? criticalSlipVolume : undefined,
+    elapsedMs: performance.now() - start,
+    nonConvergedSurfaces,
+    splitFailureCount: slope.splitFailureCount,
+  };
+
+  return result;
+}
 
 export {}; // Ensure this is treated as a module

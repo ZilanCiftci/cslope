@@ -3,6 +3,7 @@
  */
 
 import type { Material } from "./material";
+import type { SlopeOrientation } from "../model/canonical";
 
 /** Supported analysis methods. */
 export type AnalysisMethod = "Bishop" | "Janbu" | "Morgenstern-Price";
@@ -60,6 +61,13 @@ export interface AnalysisOptions {
    * over-design factor on design values (≥ 1.0 satisfies the design).
    */
   partialFactors?: PartialFactors | null;
+  /**
+   * Also analyse sliding in the opposite direction and report the lower
+   * FOS. Run by the application around `analyseSlope` (see
+   * `oppositeDirectionDefinition`); the opposite run uses automatic search
+   * limits, since the model's limits belong to its own direction.
+   */
+  bothDirections?: boolean;
 }
 
 /** Partial factors applied to characteristic values. */
@@ -193,4 +201,11 @@ export interface AnalysisResult {
   nonConvergedSurfaces?: number;
   /** Number of geometry split operations that failed and fell back to unsplit. */
   splitFailureCount?: number;
+  /**
+   * Sliding direction of the reported surfaces in model space: "ltr" =
+   * towards +x. Set when both directions were analysed.
+   */
+  slidingDirection?: SlopeOrientation;
+  /** Minimum FOS in the other direction (null: no valid surface). */
+  otherDirectionMinFOS?: number | null;
 }

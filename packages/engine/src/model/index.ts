@@ -42,5 +42,6 @@ export {
   mirrorLimits,
   toCanonicalSlopeDefinition,
   mapAnalysisResultToModelSpace,
+  oppositeDirectionDefinition,
 } from "./canonical";
 export type { SlopeOrientation } from "./canonical";

@@ -500,6 +500,24 @@ export function ResultSidebar() {
                 {result.minFOS.toFixed(3)}
               </span>
             </div>
+            {result.slidingDirection && (
+              <>
+                <div className="flex justify-between">
+                  <Label>Sliding direction</Label>
+                  <span>
+                    {result.slidingDirection === "ltr" ? "→ right" : "← left"}
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <Label>Other direction</Label>
+                  <span className="tabular-nums">
+                    {result.otherDirectionMinFOS != null
+                      ? result.otherDirectionMinFOS.toFixed(3)
+                      : "no surface"}
+                  </span>
+                </div>
+              </>
+            )}
             <div className="flex justify-between">
               <Label>Max FOS</Label>
               <span className="tabular-nums">{result.maxFOS.toFixed(3)}</span>
