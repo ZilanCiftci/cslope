@@ -114,7 +114,11 @@ export function UdlDialogApp() {
       ),
     },
     {
-      header: <Label>q (kPa)</Label>,
+      header: (
+        <Label title="Vertical pressure per horizontal metre between x1 and x2">
+          q (kPa, per horiz. m)
+        </Label>
+      ),
       renderCell: (row) => (
         <SpreadsheetExpressionInput
           value={row.magnitude}
