@@ -1,0 +1,52 @@
+---
+title: Installation
+description: Install cSlope on Windows, update it, and remove it again.
+section: Getting started
+order: 1
+---
+
+## Requirements
+
+- Windows 10 or Windows 11, 64-bit.
+- No licence key, account or internet connection is needed to use the program.
+
+macOS and Linux versions will follow.
+
+## Install
+
+<Steps>
+  <Step title="Download the installer">
+    Open the [download page](/download) and download the Windows installer, `cSlope-Windows-<version>-Setup.exe`. The release page on GitHub lists its SHA-256 checksum if you want to verify the file.
+  </Step>
+  <Step title="Run the installer">
+    Choose whether to install for your own account only (no administrator rights needed) and the installation folder.
+
+    If Windows SmartScreen shows *Windows protected your PC*, choose **More info** and then **Run anyway**. The message appears because the installer is not yet code-signed.
+  </Step>
+  <Step title="Start cSlope">
+    Start cSlope from the Start menu or the desktop shortcut.
+  </Step>
+</Steps>
+
+<Callout type="tip">
+  To see a complete analysis straight away, open **Help › Benchmarks** and choose one of the built-in models. The [first tutorial](/docs/tutorials/first-analysis) walks through building a model from scratch.
+</Callout>
+
+## Update
+
+Download and run the installer of the new version. It replaces the program and keeps your project files, which are stored wherever you saved them. The [changelog](/changelog) lists what changed in each version.
+
+## Uninstall
+
+Remove cSlope from **Settings › Apps** in Windows. Your project files are not removed.
+
+## Build from source
+
+cSlope is open source. To run it from the source code, install [Bun](https://bun.sh), then:
+
+```bash
+git clone https://github.com/ZilanCiftci/cslope.git
+cd cslope
+bun install
+bun run dev
+```

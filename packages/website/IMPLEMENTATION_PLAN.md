@@ -447,11 +447,13 @@ Varje etapp ska gå att pusha och publicera för sig.
 
 ### Etapp 3: Dokumentationsplattform (1–2 dagar)
 
-- [ ] MDX-pipeline, `DocsLayout`, sidomeny, innehållsförteckning,
+- [x] MDX-pipeline, `DocsLayout`, sidomeny, innehållsförteckning,
       föregående/nästa.
-- [ ] `Figure`, `Steps`, `Callout`.
-- [ ] Flytta nuvarande docs-innehåll till Markdown.
-- [ ] Referenssidor för alla områden i §3, text först, bilder när de finns.
+- [x] `Figure`, `Steps`, `Callout`, `Kbd`; formler med KaTeX.
+- [x] Flytta nuvarande docs-innehåll till Markdown.
+- [x] Referenssidor för alla områden i §3, text först, bilder när de finns.
+      Skrivna mot en kartläggning av appens gränssnitt; en länkkontroll
+      testar att alla interna länkar leder till en sida.
 
 ### Etapp 4: Tutorials och bilder (löpande, ~1 dag per 2 tutorials)
 

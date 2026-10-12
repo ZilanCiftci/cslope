@@ -1,0 +1,32 @@
+---
+title: Documentation
+description: How to model a slope in cSlope, run the analysis and report the result.
+section: Getting started
+order: 0
+---
+
+cSlope is limit equilibrium software for the stability of slopes, embankments and cuttings. This documentation explains each part of the program and walks through complete analyses in the tutorials.
+
+<Figure media="criticalSurface" caption="A result view: the critical slip circle of a homogeneous slope with its slices, the factor of safety and the material table." />
+
+## Where to start
+
+- New to cSlope: [install it](/docs/installation), read [the cSlope window](/docs/interface), then follow the tutorial [Your first analysis](/docs/tutorials/first-analysis).
+- Looking for a particular dialog or option: use the menu on the left. The pages follow the order in which a model is built.
+- Checking how a result is computed: the [theory](/docs/theory) page gives the equations, and the [verification](/verification) page compares cSlope with published solutions.
+
+## How an analysis is built
+
+1. **[Geometry](/docs/geometry)**: draw the exterior boundary of the section and the boundaries between materials, or import them from a DXF drawing.
+2. **[Materials](/docs/materials)**: define the soils and assign one to each region.
+3. **[Water](/docs/water)**: add a piezometric line, and lines for individual materials if needed.
+4. **[Loads](/docs/loads)** and **[reinforcement](/docs/reinforcement)**: add distributed and line loads, anchors, nails, geosynthetics and piles.
+5. **[Search](/docs/search)**: set where slip surfaces may enter and exit, or define your own.
+6. **[Analysis options](/docs/analysis)**: choose the method, the number of slices and any tension crack or partial factors, and run the analysis.
+7. **[Results](/docs/results)** and **[reporting](/docs/reporting)**: inspect the critical surface and the forces on its slices, annotate the view and export it.
+
+[Sensitivity and probabilistic analysis](/docs/sensitivity) build on a finished model.
+
+## Units
+
+cSlope works in SI units: lengths in metres, stresses and strengths in kPa, unit weights in kN/m³ and forces in kN per metre run. The unit weight of water is 9.81 kN/m³.

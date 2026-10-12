@@ -164,10 +164,24 @@ function SiteFooter() {
 export function Layout({ children }: { children: ReactNode }) {
   const { pathname, hash } = useLocation();
   const navigation = useNavigationType();
-  // Start a new page at the top, unless the URL points at an anchor. Back
-  // and forward (POP) keep the browser's own scroll restoration.
+  // Start a new page at the top, or at the heading its #fragment names.
+  // Back and forward (POP) keep the browser's own scroll restoration.
   useEffect(() => {
-    if (navigation !== "POP" && !hash) window.scrollTo(0, 0);
+    if (navigation === "POP") return;
+    if (!hash) {
+      window.scrollTo(0, 0);
+      return;
+    }
+    // The target may render a moment later (a lazily loaded page).
+    let tries = 0;
+    let frame = 0;
+    const scroll = () => {
+      const el = document.getElementById(decodeURIComponent(hash.slice(1)));
+      if (el) el.scrollIntoView();
+      else if (++tries < 30) frame = requestAnimationFrame(scroll);
+    };
+    scroll();
+    return () => cancelAnimationFrame(frame);
   }, [pathname, hash, navigation]);
 
   return (

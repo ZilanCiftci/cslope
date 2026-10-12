@@ -21,19 +21,83 @@
       "destination": "/index.html"
     },
     {
-      "source": "/docs",
-      "destination": "/index.html"
-    },
-    {
-      "source": "/docs/:path*",
-      "destination": "/index.html"
-    },
-    {
       "source": "/about",
       "destination": "/index.html"
     },
     {
       "source": "/changelog",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/docs/analysis",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/docs/file-format",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/docs/geometry",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/docs",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/docs/installation",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/docs/interface",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/docs/loads",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/docs/materials",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/docs/reinforcement",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/docs/reporting",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/docs/results",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/docs/search",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/docs/sensitivity",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/docs/shortcuts",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/docs/theory",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/docs/tutorials/first-analysis",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/docs/tutorials",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/docs/water",
       "destination": "/index.html"
     }
   ],

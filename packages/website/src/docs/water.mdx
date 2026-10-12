@@ -1,0 +1,52 @@
+---
+title: Water
+description: Piezometric lines, a line per material, ponded water above the ground, and how pore pressure is computed.
+section: Modelling
+order: 3
+---
+
+Pore pressures in cSlope come from **piezometric lines**. Open **Model › Water Pressure › Piezometric Lines**.
+
+## Adding a line
+
+**Add** creates a horizontal line across the model at mid-height, named *Line 1*, *Line 2* and so on. Select a line in the list to edit its points in the table below, or drag its points on the canvas. Right-click a line on the canvas to add a point, or a point to delete it. A line keeps at least two points. **Delete** removes the selected line.
+
+Water is part of the analysis as soon as one line exists. Without a line the analysis is dry.
+
+## Pore pressure
+
+At a point below a piezometric line, the pore pressure is
+
+$$
+u = \gamma_w\, h
+$$
+
+with $\gamma_w = 9.81\ \text{kN/m}^3$ and $h$ the pressure head. Above the line the pore pressure is zero.
+
+How $h$ is measured is set in **Model › Analysis › Options**, under *Pore pressure below an inclined water line*:
+
+- **Vertical head (conventional)**, the default: the vertical distance from the point up to the line.
+- **Phreatic correction (vertical head × cos²θ)**: the vertical distance multiplied by cos²θ, where θ is the inclination of the line. This assumes a free phreatic surface with flow parallel to it and gives lower pore pressures below a steep line.
+
+## Several lines
+
+With two or more lines, the window shows two more settings:
+
+- **Main line**: the line that gives the pore pressure of materials without a line of their own, and the free water above the ground. By default the first line.
+- **Material Assignment**: one line per material. Use it for perched water tables or a separate pressure level in an aquifer below a clay layer.
+
+A material's line is also the level below which its [saturated unit weight](/docs/materials#saturated-unit-weight) applies.
+
+## Free water above the ground
+
+**Free water above ground (ponding)** is on by default. Where the main line lies above the ground surface, for example at the toe of a slope in a river or a reservoir, the water stands on the slope. Its weight acts on the slices below it, and against a vertical face it pushes horizontally. This is the usual way to model a submerged toe or a full reservoir.
+
+With the box unticked, the lines are clipped to the ground surface and no water stands on the slope.
+
+<Callout type="note">
+  A fully submerged slope gives the same factor of safety as the same slope in the dry with buoyant unit weights. This is one of the checks in the [verification](/verification).
+</Callout>
+
+## Water in a tension crack
+
+A tension crack can be partly or fully filled with water. The water pushes on the sliding mass. Set it with *Water in crack (%)* in the analysis options; see [Tension cracks](/docs/analysis#tension-crack).

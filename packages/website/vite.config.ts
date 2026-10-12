@@ -1,6 +1,13 @@
 import { defineConfig, loadEnv, type Plugin } from "vite";
 import react from "@vitejs/plugin-react";
 import tailwindcss from "@tailwindcss/vite";
+import mdx from "@mdx-js/rollup";
+import remarkGfm from "remark-gfm";
+import remarkFrontmatter from "remark-frontmatter";
+import remarkMdxFrontmatter from "remark-mdx-frontmatter";
+import rehypeSlug from "rehype-slug";
+import remarkMath from "remark-math";
+import rehypeKatex from "rehype-katex";
 import { copyFileSync } from "node:fs";
 import path from "path";
 
@@ -60,7 +67,23 @@ function shareImage(origin: string): Plugin {
 }
 
 export default defineConfig(({ mode }) => ({
-  plugins: [tailwindcss(), react(), notFoundPage(), shareImage(siteOrigin(loadEnv(mode, process.cwd(), "")))],
+  plugins: [
+    // Documentation pages: Markdown with JSX, frontmatter exported as `frontmatter`.
+    {
+      enforce: "pre" as const,
+      ...mdx({
+        // Only .mdx: plain .md files (CHANGELOG.md) are imported as text.
+        mdExtensions: [],
+        include: /\.mdx$/,
+        remarkPlugins: [remarkGfm, remarkFrontmatter, remarkMdxFrontmatter, remarkMath],
+        rehypePlugins: [rehypeSlug, [rehypeKatex, { output: "html" }]],
+      }),
+    },
+    tailwindcss(),
+    react({ include: /\.(mdx|js|jsx|ts|tsx)$/ }),
+    notFoundPage(),
+    shareImage(siteOrigin(loadEnv(mode, process.cwd(), ""))),
+  ],
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),

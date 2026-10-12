@@ -32,8 +32,8 @@ coverage-final.json
 # Generated media assets are checked in: the website is deployed from the
 # repository. Regenerate with: bun run media:capture
 
-# Docs (generated)
-docs/
+# Docs (generated), at the repository root only
+/docs/
 
 # Agent files
-.github/*.md
+.github/*.md

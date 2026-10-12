@@ -1,0 +1,106 @@
+---
+title: Theory
+description: The limit equilibrium methods cSlope uses, and how pore pressure, tension cracks and the interslice forces enter them.
+section: Reference
+order: 1
+---
+
+cSlope divides the sliding mass above a trial slip surface into vertical slices and finds the factor of safety $F$ that brings the slices into limit equilibrium. The shear strength mobilised along the base of each slice is the available strength divided by $F$:
+
+$$
+S_m = \frac{c'\,\ell + (N - u\,\ell)\tan\varphi'}{F}
+$$
+
+where $\ell$ is the length of the slice base, $N$ the normal force on it, $u$ the pore pressure at its midpoint, and $c'$, $\varphi'$ the strength of the material at the base. For an undrained material $\varphi' = 0$ and $c'$ is the undrained strength $S_u$.
+
+The methods differ in which equilibrium conditions they satisfy and in what they assume about the forces between slices.
+
+## Bishop simplified
+
+Bishop's method satisfies moment equilibrium about the centre of a circle and vertical force equilibrium of each slice, and neglects the vertical (shear) interslice forces. The factor of safety follows by iteration from
+
+$$
+F = \frac{\sum \left[c' b + (W - u b)\tan\varphi'\right] / m_\alpha}{\sum W \sin\alpha},
+\qquad
+m_\alpha = \cos\alpha + \frac{\sin\alpha \tan\varphi'}{F}
+$$
+
+with $b$ the slice width, $W$ its weight and $\alpha$ the inclination of its base. External loads, water forces and reinforcement add their moments to the numerator or denominator. On a non-circular surface cSlope takes moments about an axis point above the surface.
+
+## Janbu simplified
+
+Janbu's simplified method satisfies horizontal force equilibrium and vertical force equilibrium of each slice, again neglecting the interslice shear forces. Because it ignores them it tends to underestimate $F$; Janbu's correction factor $f_0$ compensates for this:
+
+$$
+f_0 = 1 + b_1\left[\frac{d}{L} - 1.4\left(\frac{d}{L}\right)^2\right]
+$$
+
+where $L$ is the length of the chord between the ends of the slip surface and $d$ the largest depth of the surface below that chord. $b_1 = 0.69$ for purely cohesive soil ($\varphi = 0$), $0.31$ for purely frictional soil ($c = 0$) and $0.50$ when both contribute. With the correction switched on, the reported factor of safety is $f_0 F$.
+
+## Morgenstern–Price
+
+The Morgenstern–Price method satisfies both force and moment equilibrium. It relates the shear force $X$ between slices to the normal force $E$ through an interslice function $f(x)$ and a scale factor $\lambda$:
+
+$$
+X = \lambda\, f(x)\, E
+$$
+
+For a given $\lambda$, cSlope computes one factor of safety from moment equilibrium, $F_m$, and one from force equilibrium, $F_f$. It then searches for the $\lambda$ at which the two agree; that common value is the factor of safety. The results include a plot of $F_m$ and $F_f$ against $\lambda$, which shows the intersection.
+
+### Interslice functions
+
+$f(x)$ is defined between the two ends of the slip surface, with $\xi$ the normalised position from 0 at one end to 1 at the other:
+
+| Function | $f(\xi)$ |
+| --- | --- |
+| Constant | 1. This is **Spencer's method**: the interslice forces are all inclined at the same angle. |
+| Half-sine | $\sin(\pi\xi)$. The default. |
+| Clipped-sine | $\max(0.35,\ \sin(\pi\xi))$: a half-sine that does not fall below 0.35 towards the ends. |
+| Trapezoidal | Rises linearly from 0 to 1 over the first 20 %, is 1 in the middle and falls to 0 over the last 20 %. |
+| Data points | A piecewise-linear function through points you enter, with $\xi$ and $f$ between 0 and 1. |
+
+For most slopes the choice of function changes $F$ by only a few per cent. Spencer's method is the usual reference when results from different programs are compared.
+
+## Pore pressure
+
+Pore pressure comes from a piezometric line: at a point below the line, the pressure head is the distance to the line, and $u = \gamma_w h$ with $\gamma_w = 9.81\ \text{kN/m}^3$.
+
+- **Vertical head** (default): $h$ is the vertical distance from the point to the line. This is the usual convention.
+- **Phreatic correction**: $h$ is the vertical distance multiplied by $\cos^2\theta$, where $\theta$ is the inclination of the line above the slice. This assumes a free phreatic surface with flow parallel to it, and gives lower pore pressures, and so a higher $F$, below a steep line.
+
+A material can have its own piezometric line; slices in that material then use it instead of the main line. Where the main line rises above the ground surface, the water standing on the slope acts on it as a load (ponded water).
+
+## Tension cracks
+
+Near the crest of a cohesive slope the soil can be in tension, and the slip surface may end in a vertical crack instead of rising to the surface. Within the crack the soil provides no shear resistance; if the crack is filled with water, the water pushes on the sliding mass.
+
+The crack depth can be entered, or computed from the strength at the crest as the depth of the Rankine tension zone:
+
+$$
+z_c = \frac{2c}{\gamma\sqrt{K_a}} - \frac{q}{\gamma},
+\qquad
+K_a = \tan^2\!\left(45^\circ - \frac{\varphi}{2}\right)
+$$
+
+where $q$ is any surcharge on the crest (distributed loads and ponded water).
+
+## Partial factors
+
+With partial factors switched on, cSlope divides the strength parameters by their factors before the analysis ($c'/\gamma_c$, $\tan\varphi'/\gamma_\varphi$, $S_u/\gamma_{cu}$) and multiplies the loads by theirs. The resulting factor of safety is then an over-design factor: a value of 1.0 or more means the design meets the limit state. See [Analysis options](/docs/analysis) for the factor sets.
+
+## Reliability
+
+The probabilistic analysis treats selected material properties as random variables with a mean and a standard deviation.
+
+- The **Taylor series** method evaluates $F$ at the mean values and with each variable shifted up and down by one standard deviation, and combines the changes into the standard deviation of $F$.
+- The **Monte Carlo** method samples the variables many times and analyses each sample on the critical surface found at the mean values.
+
+Both report the reliability index $\beta$, assuming a lognormal distribution of $F$, and the probability of failure $P_f$, the probability that $F < 1$.
+
+## Further reading
+
+- Duncan, J.M., Wright, S.G. & Brandon, T.L. (2014). *Soil Strength and Slope Stability*, 2nd ed. Wiley.
+- Fredlund, D.G. & Krahn, J. (1977). Comparison of slope stability methods of analysis. *Canadian Geotechnical Journal* 14(3), 429–439.
+- Morgenstern, N.R. & Price, V.E. (1965). The analysis of the stability of general slip surfaces. *Géotechnique* 15(1), 79–93.
+- Bishop, A.W. (1955). The use of the slip circle in the stability analysis of slopes. *Géotechnique* 5(1), 7–17.
+- Janbu, N. (1973). Slope stability computations. In *Embankment-Dam Engineering*, Wiley, 47–86.

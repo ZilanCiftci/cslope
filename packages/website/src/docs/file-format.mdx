@@ -1,0 +1,42 @@
+---
+title: Project files
+description: What a cSlope project file contains, how to open and save it, and the built-in benchmark models.
+section: Reference
+order: 2
+---
+
+## Saving and opening
+
+- **File › Save** (<Kbd>Ctrl</Kbd>+<Kbd>S</Kbd>) saves the project; the first time it asks for a file name. **Save As** (<Kbd>Ctrl</Kbd>+<Kbd>Shift</Kbd>+<Kbd>S</Kbd>) saves under a new name.
+- **File › Open** (<Kbd>Ctrl</Kbd>+<Kbd>O</Kbd>) opens a project. You can also drop a project file onto the window.
+- **File › New** (<Kbd>Ctrl</Kbd>+<Kbd>N</Kbd>) starts a new project with one example model, a homogeneous slope, to adapt.
+
+Project files have the extension `.json` or `.cslope`; both are the same format. Before New, Open, opening the benchmarks or closing the window, cSlope asks whether to save unsaved changes. Changes to zoom, the canvas mode or results do not count as changes.
+
+## What a project contains
+
+A project file is plain JSON. It holds every model in the project, and for each model:
+
+- the geometry, materials, region assignments, piezometric lines, loads, reinforcement and piles,
+- the parameters, analysis options, search limits and custom surfaces,
+- the project information (title, client, revision and so on),
+- the result sheet: annotations, paper and extents,
+- the last analysis result.
+
+Because the result is saved with the model, a project opens with its results, ready to report. Because the format is plain text, project files can be compared and kept under version control.
+
+Files from earlier versions of cSlope are converted when they are opened.
+
+## Benchmark models
+
+**Help › Benchmarks** replaces the project with five well-known published problems:
+
+| Model | Published factor of safety |
+| --- | --- |
+| T-ACADS Simple | 0.984 (Morgenstern–Price), 0.985 (Bishop), 0.938 (Janbu) |
+| T-ACADS Non-Homogeneous | 1.373 (Morgenstern–Price) |
+| Arai & Tagyo (1985) | 1.138 (Arai & Tagyo) |
+| Talbingo Dam | 1.95 (Morgenstern–Price) |
+| Talbingo Dam (Single Circle) | 2.29 (Morgenstern–Price, one given circle) |
+
+They are a quick way to see a complete model and to check the program. The [verification](/verification) page compares cSlope with many more published problems.

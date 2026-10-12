@@ -1,6 +1,7 @@
-import { describe, expect, it, beforeEach } from "vitest";
+import { describe, expect, it, beforeEach, vi } from "vitest";
 import { fireEvent, render, screen, within } from "@testing-library/react";
-import { MemoryRouter, Route, Routes } from "react-router";
+import { Link } from "react-router";
+import { MemoryRouter, Route, Routes, matchPath } from "react-router";
 import { Layout } from "./Layout";
 import { ThemeProvider } from "./theme-provider";
 import { FOOTER_PRODUCT, NAV } from "@/site";
@@ -27,8 +28,8 @@ beforeEach(() => {
 
 describe("Layout", () => {
   it("links only to pages that exist", () => {
-    const paths = new Set(routes.map((r) => r.path));
-    expect([...NAV, ...FOOTER_PRODUCT].filter((l) => !paths.has(l.to))).toEqual([]);
+    const known = (to: string) => routes.some((r) => matchPath(r.path, to));
+    expect([...NAV, ...FOOTER_PRODUCT].filter((l) => !known(l.to))).toEqual([]);
   });
 
   it("opens the mobile menu and closes it on navigation", () => {
@@ -52,5 +53,29 @@ describe("Layout", () => {
   it("names the company in the footer", () => {
     renderAt("/");
     expect(screen.getByRole("link", { name: "Ibirico" })).toHaveAttribute("href", "https://ibirico.se");
+  });
+});
+
+describe("scrolling on navigation", () => {
+  it("scrolls to the heading a link's #fragment names", async () => {
+    const scrolled = vi.fn();
+    Element.prototype.scrollIntoView = scrolled;
+    window.scrollTo = vi.fn();
+    render(
+      <ThemeProvider>
+        <MemoryRouter initialEntries={["/"]}>
+          <Layout>
+            <Routes>
+              <Route path="/" element={<Link to="/docs/water#pore-pressure">go</Link>} />
+              <Route path="/docs/water" element={<h2 id="pore-pressure">Pore pressure</h2>} />
+            </Routes>
+          </Layout>
+        </MemoryRouter>
+      </ThemeProvider>,
+    );
+    fireEvent.click(screen.getByRole("link", { name: "go" }));
+    await screen.findByRole("heading", { name: "Pore pressure" });
+    expect(scrolled).toHaveBeenCalled();
+    expect((scrolled.mock.contexts[0] as HTMLElement).id).toBe("pore-pressure");
   });
 });

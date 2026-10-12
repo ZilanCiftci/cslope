@@ -1,0 +1,33 @@
+---
+title: Loads
+description: Distributed and line loads on the ground surface.
+section: Modelling
+order: 4
+---
+
+cSlope has two kinds of external load, both vertical and both acting on the ground surface.
+
+## Distributed loads (UDL)
+
+Open **Model › External loads › UDL**. Each row is one load:
+
+| Column | Meaning |
+| --- | --- |
+| **q** | Vertical pressure in kPa, per horizontal metre, between x1 and x2 |
+| **x1**, **x2** | The horizontal extent of the load, in metres |
+
+**+ Add UDL** adds a load of 10 kPa from x = 0 to 5 m. On the canvas you can drag the two ends of a load horizontally while the UDL window is open.
+
+## Line loads
+
+Open **Model › External loads › Line loads**. Each row is a vertical line load **P** in kN per metre run at position **x**. **+ Add Line Load** adds a load of 50 kN/m at x = 10 m. Line loads can also be dragged on the canvas.
+
+## How loads enter the analysis
+
+A load on the ground above a slice adds to the slice's weight. A load outside the sliding mass has no effect on that slip surface. All load values accept [parameters](/docs/geometry#parameters).
+
+With [partial factors](/docs/analysis#partial-factors) switched on, both kinds of load are multiplied by the load factor γQ.
+
+<Callout type="tip">
+  A load on the crest usually lowers the factor of safety. A load on the toe, in the resisting part of the sliding mass, can raise it. With undrained soil a load on the resisting side never lowers it.
+</Callout>

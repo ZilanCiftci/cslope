@@ -9,22 +9,22 @@ The first public release.
 ### Analysis
 
 - Bishop simplified, Janbu simplified with the f₀ correction, and Morgenstern–Price with constant (Spencer), half-sine, clipped-sine, trapezoidal and user-defined interslice functions.
-- Circular and non-circular slip surfaces: grid and radius search, custom surfaces, non-circular optimisation, minimum slip depth and minimum sliding area, analysis in both slip directions.
+- Circular and non-circular slip surfaces: search between entry and exit ranges, custom circles and polylines, non-circular optimisation, minimum slip depth and minimum sliding area, analysis in both slip directions.
 - Tension cracks with a fixed or automatic (Rankine) depth, dry or water-filled.
-- Partial factors to Eurocode 7.
-- Sensitivity analysis, and probabilistic analysis with the Taylor series and Monte Carlo methods, with correlated variables.
+- Partial factors on strength and loads, with presets for Swedish practice (EKS/IEG) and EN 1997-1 DA3.
+- Sensitivity analysis, and probabilistic analysis with the Taylor series and Monte Carlo methods.
 
 ### Model
 
 - Exterior and interior boundaries with snapping, DXF import, and parameters with expressions.
 - Material models: Mohr–Coulomb, undrained, strength increasing with depth (from the ground or from the top of the layer) or from a datum, with a strength cutoff, anisotropic, spatially varying, and lime-cement columns. Saturated unit weight below the water table.
-- Water: a piezometric line per material, ponded water above the ground, water pressure lines.
-- Distributed and line loads; anchors, soil nails, geosynthetics, sheet piles and piles.
+- Water: several piezometric lines with one per material if needed, ponded water above the ground.
+- Distributed and line loads; anchors, grouted tiebacks, soil nails, geosynthetics, pile rows and sheet pile walls.
 
 ### Results and reporting
 
 - Critical surface, all surfaces or a factor-of-safety filter, slices, annotations and templates.
-- Interslice force and slice plots, slice tables, export to Excel and PDF.
+- Plots of slice data and of Fm and Ff against λ; export to PDF and PNG, slice data to Excel and CSV.
 
 ### Verification
 

@@ -18,12 +18,15 @@ const rewrites = vercel.rewrites.filter((r) => r.destination === "/index.html").
 const rewritten = (url: string) => rewrites.some((re) => re.test(url));
 
 describe("routes and vercel.json", () => {
-  it("rewrite every page to index.html", () => {
-    expect(routes.map((r) => r.path).filter((p) => !rewritten(sample(p)))).toEqual([]);
+  it("rewrite every page to index.html (the docs are checked one by one in links.test.ts)", () => {
+    const pages = routes.map((r) => r.path).filter((p) => !p.includes("*"));
+    expect(pages.filter((p) => !rewritten(sample(p)))).toEqual([]);
+    expect(rewritten("/docs")).toBe(true);
   });
 
   it("leave unknown URLs and assets alone, so they get a real 404", () => {
     expect(rewritten("/no-such-page")).toBe(false);
+    expect(rewritten("/docs/no-such-page")).toBe(false);
     expect(rewritten("/assets/index-old.js")).toBe(false);
   });
 });

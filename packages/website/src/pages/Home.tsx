@@ -98,7 +98,7 @@ const CAPABILITIES: { icon: ReactNode; title: string; text: string }[] = [
   {
     icon: <Spline className="h-5 w-5" />,
     title: "Circular and non-circular",
-    text: "Grid and radius search, custom surfaces, non-circular optimisation, minimum slip depth and analysis in both slip directions.",
+    text: "Search by entry and exit ranges, custom circles and polylines, non-circular optimisation, minimum slip depth and analysis in both slip directions.",
   },
   {
     icon: <Layers className="h-5 w-5" />,
@@ -113,12 +113,12 @@ const CAPABILITIES: { icon: ReactNode; title: string; text: string }[] = [
   {
     icon: <Anchor className="h-5 w-5" />,
     title: "Reinforcement and loads",
-    text: "Anchors, soil nails, geosynthetics, sheet piles and piles; distributed and line loads; partial factors to Eurocode 7.",
+    text: "Anchors, tiebacks, soil nails, geosynthetics, piles and sheet piles; distributed and line loads; partial factors on strength and loads.",
   },
   {
     icon: <FileText className="h-5 w-5" />,
     title: "Reporting",
-    text: "Annotated result views with templates, slice tables, interslice force plots and export to PDF and Excel.",
+    text: "Annotated result sheets with templates, slice data plots and export to PDF, PNG, Excel and CSV.",
   },
 ];
 

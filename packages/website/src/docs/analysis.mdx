@@ -1,0 +1,69 @@
+---
+title: Analysis options
+description: The method, slices and tolerance, tension cracks, partial factors, and how to run, cancel and reset an analysis.
+section: Analysis
+order: 2
+---
+
+Open **Model › Analysis › Options**. The settings apply to the active model.
+
+## Method
+
+| Setting | Options | Default |
+| --- | --- | --- |
+| **Method** | Bishop, Janbu, Morgenstern-Price | Morgenstern-Price |
+| **Slices** | 10–500 | 30 |
+| **Tolerance** | 0.001–0.1 | 0.005 |
+
+- **Bishop**: Bishop simplified (moment equilibrium).
+- **Janbu**: Janbu simplified (force equilibrium). Tick **Apply correction factor f0** to apply Janbu's correction.
+- **Morgenstern-Price**: full equilibrium. Choose the **Interslice Function**: `constant` (Spencer's method), `half-sine` (default), `clipped-sine`, `trapezoidal` or `data-point-specified`. For the last one, enter the points as `x,f; x,f` with x from 0 (left end of the surface) to 1 (right end), for example `0,0; 0.2,0.6; 0.5,1; 0.8,0.6; 1,0`.
+
+The [theory](/docs/theory) page gives the equations. The **Tolerance** is the convergence limit on the factor of safety.
+
+<Callout type="tip">
+  Thirty slices are enough for most slopes. With thin layers, a steep face or a tension crack, check that more slices do not change the result.
+</Callout>
+
+## Tension crack
+
+- **Tension crack depth (m)**: a vertical crack at the upper end of the slip surface, in which the soil carries no shear. 0 means no crack.
+- **Tension crack depth from the soil (Rankine)**: compute the depth from the strength at the crest, $z_c = 2c/(\gamma\sqrt{K_a}) - q/\gamma$, instead of entering it. The depth field then shows *Auto*.
+- **Water in crack (%)**: how full the crack is with water, from 0 to 100 %. The water pushes on the sliding mass.
+
+## Partial factors
+
+Tick **Partial factors (design values)** for a design check with partial factors. The strength parameters are divided by their factors and the loads multiplied by theirs before the analysis:
+
+| Factor | Applies to | Swedish practice (EKS/IEG) | EN 1997-1 DA3, M2 |
+| --- | --- | --- | --- |
+| **γcu** | Undrained shear strength | 1.5 | 1.4 |
+| **γc'** | Effective cohesion | 1.3 | 1.25 |
+| **γφ'** | tan φ' | 1.3 | 1.25 |
+| **γQ** | Distributed and line loads | 1.3 | 1.3 |
+
+Choose a set from **Preset…** or enter the factors yourself. With partial factors the result is an **over-design factor** on the design values: 1.0 or more means the design is satisfied. The summary shows it as *Min FOS (design values)*.
+
+## Pore pressure
+
+**Pore pressure below an inclined water line**: *Vertical head (conventional)* or *Phreatic correction*. See [Water](/docs/water#pore-pressure).
+
+## Search
+
+Iterations, direction, minimum depth and area, and non-circular optimisation are described in [Slip surface search](/docs/search).
+
+## Running the analysis
+
+Click **▶ Run** on the floating toolbar. cSlope analyses the active model in the background and switches to result mode when it is done. The status bar shows *Analysing...* meanwhile, and the button becomes **■ Cancel**.
+
+The menu next to Run has:
+
+- **Run all**: analyse every model in the project, several at a time.
+- **Reset**: clear the result of the active model and return to edit mode.
+- **Reset all**: clear all results.
+
+If the model has a problem, for example an expression that cannot be evaluated, the analysis does not start and a message says why. If the analysis fails, the result summary shows the reason. A very large search stops after a time limit that grows with the number of iterations.
+
+<Callout type="note">
+  Changing anything that affects the analysis clears the model's result, so a result always belongs to the model as it is.
+</Callout>

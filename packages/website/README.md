@@ -22,6 +22,26 @@ to production; pull requests get a preview deployment. The pages listed in
 other URL gets `404.html` with a real 404 status. `src/routes.test.tsx`
 checks that the two lists agree.
 
+## Documentation
+
+The user documentation is in `src/docs`, one MDX file per page (Markdown
+with JSX). Each page starts with frontmatter:
+
+```mdx
+---
+title: Water
+description: One sentence for the page header and search results.
+section: Modelling        # Getting started, Modelling, Analysis, Results, Tutorials or Reference
+order: 3                  # position within the section
+---
+```
+
+Pages can use `<Figure media="criticalSurface" caption="…" />`,
+`<Callout type="tip">`, `<Steps>`/`<Step title="…">`, `<Kbd>Ctrl</Kbd>` and
+formulas in `$…$` or `$$…$$` (KaTeX). Link to other pages as `/docs/<file>`.
+Add every new page to the rewrites in `vercel.json`; `bun run test` lists
+any that are missing, and any internal link that leads nowhere.
+
 ## Screenshots
 
 The images in `public/media/generated/` come from the desktop app and are

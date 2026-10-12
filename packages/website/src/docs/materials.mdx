@@ -1,0 +1,89 @@
+---
+title: Materials
+description: The material models cSlope offers, their properties, and the saturated unit weight below the water table.
+section: Modelling
+order: 2
+---
+
+Open **Model › Materials › Define**. The table at the top lists the materials with their name, model and colour. **Add** creates a material; **Delete** removes the selected one (the last material cannot be deleted). Select a material to edit its properties below the table.
+
+Every numeric property accepts a number or an expression with [parameters](/docs/geometry#parameters), and a comma as the decimal separator. Problems with the input are listed in red under the form.
+
+## Material models
+
+Choose the model in the **Material Model** list. Changing the model resets the strength properties to that model's defaults and keeps the unit weights.
+
+| Model | Properties | Use for |
+| --- | --- | --- |
+| **Mohr-Coulomb** | γ (kN/m³), φ (°), c (kPa) | Drained analyses with effective strength parameters. |
+| **Undrained** | γ, Su (kPa), Max Su (cutoff) | Clay with a constant undrained shear strength. |
+| **S = f(depth)** | γ, Su ref, Depth ref, Rate (kPa/m), Depth measured from, Max Su | Undrained strength increasing with depth below the ground or below the top of the layer. |
+| **S = f(datum)** | γ, Su ref, Y ref, Rate, Max Su | Undrained strength that varies with elevation. |
+| **Anisotropic Function** | γ, φ, c, modifier table | Strength that depends on the inclination of the slip surface. |
+| **Spatial Mohr-Coulomb** | γ, interpolation, data points | Strength that varies from point to point in the section. |
+| **Lime-cement columns** | γ, area ratio, soil and column strengths | Ground improved with lime-cement columns. |
+| **High Strength** | γ | Material the slip surface may pass through but never fails in. |
+| **Impenetrable (Bedrock)** | γ | Material slip surfaces cannot enter. |
+
+For the undrained models the friction angle is zero and the strength at the base of each slice is the undrained shear strength $S_u$.
+
+### Mohr-Coulomb
+
+The shear strength is $\tau = c' + \sigma'_n \tan\varphi'$, with the effective normal stress from the slice weight and the pore pressure. A new material is Mohr-Coulomb with γ = 20 kN/m³, c = 10 kPa and φ = 30°.
+
+### Undrained
+
+A constant undrained shear strength **Su**.
+
+### S = f(depth)
+
+$$
+S_u = S_{u,\text{ref}} + (z - z_\text{ref}) \cdot \text{rate}
+$$
+
+where $z$ is the depth of the point and $z_\text{ref}$ the **Depth ref**. **Depth measured from** chooses where the depth starts:
+
+- **Top of layer** (default): the depth below the top of this material's layer above the slice. A layer that lies below other layers then starts at Su ref at its own top.
+- **Ground surface**: the depth below the ground surface.
+
+### S = f(datum)
+
+$$
+S_u = S_{u,\text{ref}} + (Y_\text{ref} - y) \cdot \text{rate}
+$$
+
+where $y$ is the elevation of the point and $Y_\text{ref}$ the datum. A positive rate makes $S_u$ increase with depth below the datum.
+
+### Strength cutoff
+
+The undrained models and lime-cement columns have a **Max Su (cutoff)**. Leave it empty for no cutoff. When the strength is constant or increases with depth, the cutoff is a maximum; when the rate is negative, it is a minimum, so that the strength never falls below it.
+
+### Anisotropic Function
+
+Mohr-Coulomb strength in which c and φ are both multiplied by a factor that depends on the inclination α of the slice base, measured relative to the sliding direction. Enter the factors as a table of α (°) and factor; cSlope interpolates between the rows.
+
+### Spatial Mohr-Coulomb
+
+c, φ and γ given at data points (X, Y). Between the points cSlope interpolates by **IDW** (inverse distance weighting), **Nearest** or **Linear**.
+
+### Lime-cement columns
+
+The strength of the improved ground is the area-weighted strength of the columns and the soil between them:
+
+$$
+\tau = a\,\tau_\text{col} + (1 - a)\,c_{u,\text{soil}}
+$$
+
+where **Area ratio a** is the share of the area taken by columns (0–1). The soil strength is **Su soil**, increasing by **Su soil increase** per metre below **Su soil at level**; the column strength is **Su columns**. Tick **Drained limit of the column strength** to also limit the column strength by drained parameters **c′ columns** and **φ′ columns**. The cutoff applies to the soil between the columns only.
+
+### High Strength and Bedrock
+
+**High Strength** material is so strong that it never governs: slip surfaces can pass through it. **Impenetrable (Bedrock)** stops slip surfaces: a surface that would enter it is not analysed. Both are drawn with a hatch on the canvas (HS and BR).
+
+## Saturated unit weight
+
+Every model except Bedrock has a **γsat below water** field. Below the material's piezometric line, the soil then weighs γsat instead of γ. Leave it empty to use γ throughout.
+
+## Colours
+
+Each material has a colour, used for its regions on the canvas, in the material table and in exports. Click the colour in the table to change it. **Soil colors** on the Results tab hides the colours in the result view.
