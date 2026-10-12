@@ -4,7 +4,7 @@ import { Apple, Download as DownloadIcon, Monitor, Terminal } from "lucide-react
 import { PageHeader } from "@/components/PageHeader";
 import { Section, SectionHeading } from "@/components/Section";
 import { Button } from "@/components/ui/button";
-import { APP_VERSION, LATEST_RELEASE, WINDOWS_INSTALLER } from "@/content/release";
+import { LATEST, OFFERED_VERSION, WINDOWS_INSTALLER } from "@/content/release";
 import { usePageMeta } from "@/lib/page-meta";
 import { SITE } from "@/site";
 
@@ -24,7 +24,7 @@ const STEPS = [
 ];
 
 export function Download() {
-  usePageMeta("Download", `Download cSlope ${APP_VERSION} for Windows: free and open source slope stability software.`);
+  usePageMeta("Download", `Download cSlope ${OFFERED_VERSION} for Windows: free and open source slope stability software.`);
   return (
     <>
       <PageHeader
@@ -39,19 +39,26 @@ export function Download() {
             <div className="flex items-center gap-3">
               <Monitor className="h-6 w-6 text-primary" aria-hidden="true" />
               <h2 className="text-xl font-semibold">Windows</h2>
-              <span className="ml-auto rounded-full border px-2.5 py-0.5 font-mono text-xs">v{APP_VERSION}</span>
+              <span className="ml-auto rounded-full border px-2.5 py-0.5 font-mono text-xs">v{OFFERED_VERSION}</span>
             </div>
             <p className="mt-3 text-sm text-muted-foreground">
               Windows 10 or 11, 64-bit. Installer for the current user or all users.
             </p>
             <p className="mt-1 font-mono text-xs text-muted-foreground">{WINDOWS_INSTALLER}</p>
+            {!LATEST?.installer && (
+              <p className="mt-4 rounded-md border bg-surface px-3 py-2 text-sm text-muted-foreground">
+                The first release is on its way. Follow the releases on GitHub to be told when it is out.
+              </p>
+            )}
             <div className="mt-6 flex flex-col gap-3 sm:flex-row">
-              <Button asChild size="lg">
-                <a href={LATEST_RELEASE} target="_blank" rel="noopener noreferrer">
-                  <DownloadIcon className="mr-2 h-4 w-4" />
-                  Download for Windows
-                </a>
-              </Button>
+              {LATEST?.installer && (
+                <Button asChild size="lg">
+                  <a href={LATEST.installer}>
+                    <DownloadIcon className="mr-2 h-4 w-4" />
+                    Download for Windows
+                  </a>
+                </Button>
+              )}
               <Button asChild size="lg" variant="outline">
                 <a href={SITE.releases} target="_blank" rel="noopener noreferrer">
                   All versions

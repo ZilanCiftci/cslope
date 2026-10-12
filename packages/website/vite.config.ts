@@ -9,6 +9,7 @@ import rehypeSlug from "rehype-slug";
 import remarkMath from "remark-math";
 import rehypeKatex from "rehype-katex";
 import { siteOrigin } from "./scripts/site-origin";
+import { latestRelease } from "./scripts/latest-release";
 import license from "rollup-plugin-license";
 import { appendFileSync, existsSync, readFileSync } from "node:fs";
 import { createRequire } from "node:module";
@@ -58,13 +59,17 @@ function shareImage(origin: string): Plugin {
   };
 }
 
-export default defineConfig(({ mode, isSsrBuild }) => ({
+export default defineConfig(async ({ mode, isSsrBuild }) => ({
   // The client manifest tells scripts/prerender.ts which stylesheets the
   // lazily loaded docs need, so that pre-rendered docs pages link them.
   build: { manifest: !isSsrBuild },
   // The year in the footer, fixed at build time so that a pre-rendered page
   // hydrates without a mismatch after New Year.
-  define: { __BUILD_YEAR__: JSON.stringify(new Date().getFullYear()) },
+  define: {
+    __BUILD_YEAR__: JSON.stringify(new Date().getFullYear()),
+    // The latest release on GitHub (scripts/latest-release.ts); none in tests.
+    __LATEST_RELEASE__: JSON.stringify(mode === "test" ? null : await latestRelease()),
+  },
   plugins: [
     // Documentation pages: Markdown with JSX, frontmatter exported as `frontmatter`.
     {

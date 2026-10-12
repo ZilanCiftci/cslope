@@ -20,6 +20,9 @@ concurrency:
 jobs:
   windows:
     runs-on: windows-latest
+    env:
+      # Optional: a Vercel deploy hook, to rebuild the website after a release.
+      VERCEL_DEPLOY_HOOK: ${{ secrets.VERCEL_DEPLOY_HOOK }}
     steps:
       - name: Checkout
         uses: actions/checkout@v6
@@ -86,3 +89,11 @@ jobs:
             ${{ env.INSTALLER }}
             ${{ env.INSTALLER }}.sha256
             cSlope-verification-report.pdf
+      - name: Rebuild the website
+        # The site links to the latest release's installer and report, found
+        # when it is built (packages/website/scripts/latest-release.ts), so it
+        # is rebuilt once the release is out. Needs the repository secret
+        # VERCEL_DEPLOY_HOOK (a deploy hook URL from the Vercel project).
+        if: ${{ env.VERCEL_DEPLOY_HOOK != '' && !contains(github.ref_name, '-') }}
+        shell: bash
+        run: curl -fsS -X POST "$VERCEL_DEPLOY_HOOK" > /dev/null
