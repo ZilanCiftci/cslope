@@ -741,7 +741,7 @@ table(
 );
 heading("Acceptance", 2);
 paragraph(
-  `A result passes when its relative difference from the published value is within the tolerance stated for the problem (0.5–2.5 %). Tighter tolerances are used where the input is exactly known; wider ones for searches, whose result depends on the search grid of each program, and for problems whose input (e.g. a digitised water table) is only approximately known, as stated in the notes. Reliability indices and probabilities of failure are compared with absolute tolerances, and the bundled benchmark models with an absolute tolerance on the factor of safety. Checks marked \"${PUBLIC ? "program D" : "xslope"} (same input)\" compare with another program run on the identical input, not with a publication.`,
+  `A result passes when its relative difference from the published value is within the tolerance stated for the problem (0.5–2.5 %). Tighter tolerances are used where the input is exactly known; wider ones for searches, whose result depends on the search grid of each program, and for problems whose input (e.g. a digitised water table) is only approximately known, as stated in the notes. Reliability indices and probabilities of failure are compared with absolute tolerances, and the bundled benchmark models with an absolute tolerance on the factor of safety. Checks marked "${PUBLIC ? "program D" : "xslope"} (same input)" compare with another program run on the identical input, not with a publication.`,
 );
 y += 2;
 heading("Units", 2);
