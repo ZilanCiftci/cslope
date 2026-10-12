@@ -284,3 +284,65 @@ describe("exportVectorPdf", () => {
     expect(doc.__savedFilename).toMatch(/\.pdf$/);
   });
 });
+
+describe("exportVectorPdf with free water", () => {
+  it("exports a piezometric line standing above the ground (free water)", () => {
+    const alertSpy = vi.spyOn(window, "alert").mockImplementation(() => {});
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    const surface = {
+      cx: 10,
+      cy: 12,
+      radius: 10,
+      fos: 1.2,
+      entryPoint: [2, 8] as [number, number],
+      exitPoint: [18, 2] as [number, number],
+    };
+    exportVectorPdf({
+      coordinates: [
+        [0, 0],
+        [0, 10],
+        [10, 10],
+        [20, 5],
+        [20, 0],
+      ],
+      materials: [{ ...DEFAULT_MATERIAL }],
+      materialBoundaries: [],
+      regionMaterials: [],
+      result: {
+        minFOS: 1.2,
+        maxFOS: 1.6,
+        criticalSurface: surface,
+        allSurfaces: [surface],
+        criticalSlices: [],
+        method: "Bishop",
+        elapsedMs: 1,
+      },
+      resultViewSettings: { ...DEFAULT_RESULT_VIEW_SETTINGS, annotations: [] },
+      // Water table at y = 7: a pond over the toe where the ground is at y = 5.
+      piezometricLine: {
+        enabled: true,
+        lines: [
+          {
+            id: "w",
+            name: "W",
+            color: "#00f",
+            coordinates: [
+              [0, 7],
+              [20, 7],
+            ],
+          },
+        ],
+        activeLineId: "w",
+        materialAssignment: {},
+      },
+      udls: [],
+      lineLoads: [],
+      analysisLimits: { ...DEFAULT_ANALYSIS_LIMITS },
+      orientation: "ltr",
+      projectInfo: { title: "Pond" } as PdfExportData["projectInfo"],
+    });
+    expect(alertSpy).not.toHaveBeenCalled();
+    expect(pdfInstances).toHaveLength(1);
+    expect(pdfInstances[0].__savedFilename).toBe("Pond.pdf");
+  });
+});
