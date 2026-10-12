@@ -6,7 +6,9 @@
 import { describe, it, expect } from "vitest";
 import type { SlopeDefinition } from "../types/slope-definition";
 import type { MaterialModel } from "../types/material-models";
-import { rng, uniform, randomCase, onCircle, fosOf, relDiff, mohrCoulomb, type Method } from "./property-helpers";
+import { rng, uniform, randomCase, onCircle, fosOf, relDiff, mohrCoulomb, groundY, type Method } from "./property-helpers";
+import { buildSlope } from "./build-slope";
+import { getSlices } from "./slices";
 
 const METHODS: Method[] = ["Ordinary", "Bishop", "Janbu", "Morgenstern-Price"];
 
@@ -228,6 +230,71 @@ describe("options that describe the same thing", () => {
       // No data points: the half-sine.
       const none = fosOf(def, "Morgenstern-Price", { intersliceFunction: "data-point-specified", intersliceDataPoints: [] });
       if (hs !== null && none !== null) expect(relDiff(hs, none), `seed 609 case ${i} none`).toBeLessThan(1e-12);
+    }
+  }, 30_000);
+});
+
+describe("lenses", () => {
+  function lensCase(r: () => number) {
+    const g = randomCase(r, { layers: 1 });
+    const { cx, cy, radius } = g.circle;
+    // A rectangle well inside the sliding mass, below the centre.
+    const w = uniform(r, 0.8, 2);
+    const h = uniform(r, 0.3, 0.8);
+    const xl = cx - w / 2;
+    const yb = cy - radius + 0.4;
+    const top = Math.min(groundY(g.shape, xl), groundY(g.shape, xl + w));
+    const ht = Math.min(h, (top - yb) * 0.5);
+    const lens: [number, number][] = [[xl, yb], [xl + w, yb], [xl + w, yb + ht], [xl, yb + ht], [xl, yb]];
+    return { g, lens, area: w * ht, ok: ht > 0.1 };
+  }
+
+  it("a lens of the same material changes nothing but the discretisation", () => {
+    const r = rng(610);
+    for (let i = 0; i < 8; i++) {
+      const { g, lens, ok } = lensCase(r);
+      if (!ok) continue;
+      const def = onCircle(g.def, g.circle);
+      const withLens: SlopeDefinition = {
+        ...def,
+        materials: [def.materials[0], { ...def.materials[0], name: "Lens" }],
+        materialBoundaries: [{ coordinates: lens, materialName: "Lens" }],
+        regionAssignments: [{ point: [lens[0][0] + 0.05, lens[0][1] + 0.05], materialName: "Lens" }, { point: [0.5, 0.5], materialName: def.materials[0].name }],
+      };
+      for (const method of METHODS) {
+        const a = fosOf(def, method, { slices: 80 })!;
+        const b = fosOf(withLens, method, { slices: 80 })!;
+        expect(relDiff(a, b), `seed 610 case ${i} ${method}: ${a} vs ${b}`).toBeLessThan(2e-3);
+      }
+    }
+  }, 30_000);
+
+  it("a heavier lens inside the mass adds (γ2 − γ1)·area to the weight of the slices", () => {
+    const r = rng(611);
+    for (let i = 0; i < 6; i++) {
+      const { g, lens, area, ok } = lensCase(r);
+      if (!ok) continue;
+      const m = g.def.materials[0];
+      const g2 = m.unitWeight + uniform(r, 2, 8);
+      const base = onCircle(g.def, g.circle);
+      const withLens: SlopeDefinition = {
+        ...base,
+        materials: [m, { ...m, name: "Lens", unitWeight: g2, model: mohrCoulomb(g2, m.cohesion, m.frictionAngle) }],
+        materialBoundaries: [{ coordinates: lens, materialName: "Lens" }],
+        regionAssignments: [{ point: [lens[0][0] + 0.05, lens[0][1] + 0.05], materialName: "Lens" }, { point: [0.5, 0.5], materialName: m.name }],
+      };
+      const weight = (def: SlopeDefinition) => {
+        const slope = buildSlope(def);
+        slope.updateAnalysisOptions({ slices: 60 });
+        const p = slope.individualPlanes[0];
+        return getSlices(slope, p.lc[0], p.rc[0], p.cx, p.cy, p.radius).reduce((sum, q) => sum + q.weight, 0);
+      };
+      // Against the same regions (same slices) with the lens at γ1.
+      const sameWeight: SlopeDefinition = {
+        ...withLens,
+        materials: [m, { ...m, name: "Lens" }],
+      };
+      expect(weight(withLens) - weight(sameWeight), `seed 611 case ${i}`).toBeCloseTo((g2 - m.unitWeight) * area, 6);
     }
   }, 30_000);
 });
