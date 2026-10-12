@@ -72,6 +72,8 @@ const AREAS: Area[] = [
       "Tension cracks with a fixed or automatic (Rankine) depth, dry or water-filled.",
       "Vertical head, or the phreatic correction for a free surface with parallel flow.",
     ],
+    media: MEDIA.waterTable,
+    caption: "A piezometric line through the slope",
     docs: "/docs/water",
   },
   {
@@ -82,10 +84,10 @@ const AREAS: Area[] = [
       "Distributed and line loads.",
       "Anchors, grouted tiebacks, soil nails and geosynthetics, active or passive, with tensile and pullout capacity.",
       "Pile rows and sheet pile walls with a given force or the Ito & Matsui method, and a choice of force direction; lime-cement columns as a material.",
-      "Partial factors on strength and loads: Swedish practice (EKS/IEG) or EN 1997-1 DA3.",
+      "Partial factors on strength and loads: Swedish practice (EKS/IEG) or EN 1997‑1 DA3.",
     ],
-    media: MEDIA.dam,
-    caption: "Zoned embankment dam",
+    media: MEDIA.soilNails,
+    caption: "Three rows of soil nails in a slope",
     docs: "/docs/reinforcement",
   },
   {
@@ -98,8 +100,8 @@ const AREAS: Area[] = [
       "Plots of slice data and of Fm and Ff against λ.",
       "Export to PDF and PNG; slice data to Excel and CSV; projects saved as plain JSON.",
     ],
-    media: MEDIA.damResult,
-    caption: "Critical surface through the zones of the dam",
+    media: MEDIA.annotations,
+    caption: "A result sheet with a material table and annotations",
     docs: "/docs/results",
   },
   {
@@ -111,6 +113,8 @@ const AREAS: Area[] = [
       "Taylor series and Monte Carlo methods with normal or lognormal variables.",
       "Reliability index and probability of failure.",
     ],
+    media: MEDIA.sensitivity,
+    caption: "Factor of safety against the unit weight",
     docs: "/docs/sensitivity",
   },
 ];

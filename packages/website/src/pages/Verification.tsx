@@ -121,7 +121,12 @@ function ProblemTable() {
         {shown} of {VERIFICATION.summary.checks} checks in {problems.length} problems
       </p>
 
-      <div className="mt-4 relative overflow-x-auto rounded-lg border bg-card">
+      <div
+        className="mt-4 relative overflow-x-auto rounded-lg border bg-card"
+        tabIndex={0}
+        role="region"
+        aria-label="Verification problems"
+      >
         <table className="w-full min-w-[46rem] text-left text-sm">
           <caption className="sr-only">Verification problems: published and computed factors of safety</caption>
           <thead className="border-b bg-surface text-xs uppercase tracking-wide text-muted-foreground">
@@ -209,7 +214,12 @@ function ReliabilityTable() {
     r.checks.filter((k) => k.quantity !== "fos").map((k) => ({ r, k })),
   );
   return (
-    <div className="mt-8 relative overflow-x-auto rounded-lg border bg-card">
+    <div
+      className="mt-8 relative overflow-x-auto rounded-lg border bg-card"
+      tabIndex={0}
+      role="region"
+      aria-label="Probabilistic verification problems"
+    >
       <table className="w-full min-w-[40rem] text-left text-sm">
         <caption className="sr-only">Probabilistic verification problems</caption>
         <thead className="border-b bg-surface text-xs uppercase tracking-wide text-muted-foreground">

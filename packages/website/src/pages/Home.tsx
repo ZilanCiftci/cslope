@@ -22,7 +22,7 @@ import { VERIFICATION, checkCounts, homeExamples } from "@/content/verification"
 import { usePageMeta } from "@/lib/page-meta";
 import { SITE } from "@/site";
 
-const formatPercent = (x: number) => `${x >= 0 ? "+" : "−"}${Math.abs(x * 100).toFixed(1)} %`;
+const formatPercent = (x: number) => `${x >= 0 ? "+" : "−"}${Math.abs(x * 100).toFixed(2)}\u00a0%`;
 
 function Hero() {
   const s = VERIFICATION.summary;
@@ -144,7 +144,7 @@ function Capabilities() {
       </div>
       <div className="mt-6 flex flex-col gap-3 text-sm text-muted-foreground sm:flex-row sm:items-center sm:justify-between">
         <p className="flex items-center gap-2">
-          <Search className="h-4 w-4" aria-hidden="true" />
+          <Search className="h-4 w-4 shrink-0" aria-hidden="true" />
           Sensitivity analysis and probabilistic analysis (Taylor series and Monte Carlo) are built in.
         </p>
         <Link to="/features" className="inline-flex items-center font-medium text-primary hover:underline">
@@ -185,8 +185,13 @@ function Verification() {
             <ArrowRight className="ml-1 h-4 w-4" />
           </Link>
         </div>
-        <div className="relative overflow-x-auto rounded-lg border bg-card">
-          <table className="w-full min-w-[32rem] text-left text-sm">
+        <div
+          className="relative overflow-x-auto rounded-lg border bg-card [&_td]:px-3 [&_th]:px-3 sm:[&_td]:px-4 sm:[&_th]:px-4"
+          tabIndex={0}
+          role="region"
+          aria-label="Examples of published and computed factors of safety"
+        >
+          <table className="w-full text-left text-sm">
             <caption className="sr-only">Examples of published and computed factors of safety</caption>
             <thead className="border-b bg-surface text-xs uppercase tracking-wide text-muted-foreground">
               <tr>
@@ -199,7 +204,7 @@ function Verification() {
                 <th scope="col" className="px-4 py-3 text-right font-medium">
                   cSlope
                 </th>
-                <th scope="col" className="px-4 py-3 text-right font-medium">
+                <th scope="col" className="hidden px-4 py-3 text-right font-medium sm:table-cell">
                   Difference
                 </th>
               </tr>
@@ -214,8 +219,14 @@ function Verification() {
                     </div>
                   </td>
                   <td className="px-4 py-3 text-right font-mono tabular">{check.published.toFixed(3)}</td>
-                  <td className="px-4 py-3 text-right font-mono tabular">{check.computed?.toFixed(3)}</td>
-                  <td className="px-4 py-3 text-right font-mono tabular text-muted-foreground">
+                  <td className="px-4 py-3 text-right font-mono tabular">
+                    {check.computed?.toFixed(3)}
+                    {/* On a phone the difference goes under the value, not in a column of its own. */}
+                    <div className="text-xs text-muted-foreground sm:hidden">
+                      {check.deviation != null && formatPercent(check.deviation)}
+                    </div>
+                  </td>
+                  <td className="hidden px-4 py-3 text-right font-mono tabular text-muted-foreground sm:table-cell">
                     {check.deviation != null && formatPercent(check.deviation)}
                   </td>
                 </tr>
@@ -241,7 +252,7 @@ function Gallery() {
       <SectionHeading eyebrow="The application" title="Built for daily engineering work" />
       <div className="mt-12 grid gap-6 md:grid-cols-2">
         {GALLERY.map((g) => (
-          <Screenshot key={g.media.src} {...g.media} caption={g.caption} />
+          <Screenshot key={g.media.src} {...g.media} caption={g.caption} aspect="1724 / 1479" />
         ))}
       </div>
     </Section>

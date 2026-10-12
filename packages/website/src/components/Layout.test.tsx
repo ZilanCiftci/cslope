@@ -41,6 +41,14 @@ describe("Layout", () => {
     expect(document.getElementById("mobile-nav")).toBeNull();
   });
 
+  it("closes the mobile menu with Escape", () => {
+    renderAt("/");
+    fireEvent.click(screen.getByRole("button", { name: "Open menu" }));
+    expect(document.getElementById("mobile-nav")).toBeInTheDocument();
+    fireEvent.keyDown(document, { key: "Escape" });
+    expect(document.getElementById("mobile-nav")).toBeNull();
+  });
+
   it("switches the theme and remembers it", () => {
     renderAt("/");
     fireEvent.click(screen.getByRole("button", { name: "Switch to dark theme" }));

@@ -34,4 +34,7 @@ export const MEDIA = {
   materials: generated("edit-materials.png", "Edit view: a non-homogeneous slope with coloured material regions"),
   dam: generated("edit-dam.png", "Edit view: an embankment dam cross-section with core, filter and rockfill zones"),
   geometry: generated("edit-geometry.png", "Edit view: slope geometry with its boundary points"),
+  waterTable: generated("edit-water-table.png", "Edit view: a slope with its piezometric line"),
+  soilNails: media("/media/tutorials/soil-nails/02-model.png", "Edit view: a slope with three rows of soil nails"),
+  sensitivity: media("/media/tutorials/probabilistic/01-sensitivity.png", "Sensitivity analysis: the factor of safety plotted against the unit weight"),
 } satisfies Record<string, Media>;

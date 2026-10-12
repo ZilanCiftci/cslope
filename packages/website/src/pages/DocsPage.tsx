@@ -6,6 +6,7 @@ import { ChevronLeft, ChevronRight, Menu, Pencil } from "lucide-react";
 import { DOCS, SECTIONS, docPath, findDoc, type Doc } from "@/docs/registry";
 import { MDX_COMPONENTS } from "@/docs/mdx-components";
 import { usePageMeta } from "@/lib/page-meta";
+import { useEscape } from "@/lib/use-escape";
 import { NotFound } from "@/pages/NotFound";
 import { SITE } from "@/site";
 import { cn } from "@/lib/utils";
@@ -95,7 +96,10 @@ export function DocsPage() {
   const article = useRef<HTMLElement>(null);
   const headings = useHeadings(article, slug);
   const [menuOpen, setMenuOpen] = useState(false);
-  usePageMeta(doc ? (doc.slug ? `${doc.title} · Docs` : "Documentation") : "Page not found", doc?.description);
+  useEscape(menuOpen, () => setMenuOpen(false));
+  // Tutorials share titles with reference pages ("Reporting"): say which.
+  const tutorial = doc?.section === "Tutorials" && doc.slug !== "tutorials" ? "Tutorial: " : "";
+  usePageMeta(doc ? (doc.slug ? `${tutorial}${doc.title} · Docs` : "Documentation") : "Page not found", doc?.description);
 
   if (!doc) return <NotFound />;
   const i = DOCS.indexOf(doc);
@@ -105,7 +109,7 @@ export function DocsPage() {
   return (
     <div className="mx-auto max-w-7xl px-4 sm:px-6">
       <div className="grid gap-10 py-10 lg:grid-cols-[14rem_minmax(0,1fr)] xl:grid-cols-[14rem_minmax(0,1fr)_12rem]">
-        <aside className="hidden lg:block">
+        <aside className="hidden lg:block" aria-label="Documentation pages">
           <div className="sticky top-24 max-h-[calc(100vh-7rem)] overflow-y-auto pb-8">
             <Sidebar current={doc} />
           </div>
@@ -174,7 +178,7 @@ export function DocsPage() {
           </a>
         </div>
 
-        <aside className="hidden xl:block">
+        <aside className="hidden xl:block" aria-label="On this page">
           <div className="sticky top-24">
             <PageContents headings={headings} />
           </div>

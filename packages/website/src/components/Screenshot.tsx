@@ -11,6 +11,7 @@ export function Screenshot({
   height,
   caption,
   priority = false,
+  aspect,
   className,
 }: {
   src: string;
@@ -20,6 +21,11 @@ export function Screenshot({
   caption?: string;
   /** Load at once (above the fold) instead of lazily. */
   priority?: boolean;
+  /**
+   * Show the image in a frame of this aspect ratio (CSS, e.g. "3 / 2"),
+   * scaled to fit, so that screenshots of different shapes line up.
+   */
+  aspect?: string;
   className?: string;
 }) {
   return (
@@ -31,7 +37,8 @@ export function Screenshot({
         height={height}
         loading={priority ? "eager" : "lazy"}
         decoding="async"
-        className="block h-auto w-full"
+        className={aspect ? "block w-full bg-white object-contain" : "block h-auto w-full"}
+        style={aspect ? { aspectRatio: aspect } : undefined}
       />
       {caption && <figcaption className="border-t px-4 py-3 text-sm text-muted-foreground">{caption}</figcaption>}
     </figure>

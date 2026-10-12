@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { useTheme } from "@/components/theme-provider";
 import { FOOTER_PRODUCT, NAV, SITE } from "@/site";
 import { cn } from "@/lib/utils";
+import { useEscape } from "@/lib/use-escape";
 
 function ThemeToggle() {
   const { resolved, setTheme } = useTheme();
@@ -41,6 +42,7 @@ function SiteHeader() {
     setMenuPath(pathname);
     setOpen(false);
   }
+  useEscape(open, () => setOpen(false));
 
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-background/90 backdrop-blur supports-[backdrop-filter]:bg-background/75">
@@ -215,7 +217,8 @@ export function Layout({ children }: { children: ReactNode }) {
         Skip to content
       </a>
       <SiteHeader />
-      <main id="main" className="flex-1">
+      {/* tabIndex -1: the skip link moves the focus here, not only the view. */}
+      <main id="main" tabIndex={-1} className="flex-1 outline-none">
         {children}
       </main>
       <SiteFooter />

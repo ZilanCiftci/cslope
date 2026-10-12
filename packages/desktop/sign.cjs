@@ -11,9 +11,10 @@ const path = require("path");
 const MAX_RETRIES = 3;
 const RETRY_DELAY_MS = 3000;
 
-// Only sign our app executable and the NSIS installer/uninstaller.
-// Skip vendor & Electron framework binaries (already signed by their publishers).
-const SIGN_PATTERNS = [/cSlope\.exe$/i, /Uninstall.*\.exe$/i];
+// Only sign our app executable, the NSIS installer (cSlope-Windows-x.y.z-Setup.exe,
+// the file SmartScreen checks) and the uninstaller. Skip vendor & Electron
+// framework binaries (already signed by their publishers).
+const SIGN_PATTERNS = [/^cSlope\.exe$/i, /-Setup\.exe$/i, /Uninstall.*\.exe$/i];
 const SKIP_DIRS = ["node_modules", "vendor"];
 
 function shouldSign(filePath) {

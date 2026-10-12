@@ -67,13 +67,13 @@ export function Callout({ type = "note", title, children }: { type?: keyof typeo
   const c = CALLOUT[type];
   const Icon = c.icon;
   return (
-    <aside className={cn("not-prose my-6 flex gap-3 rounded-lg border p-4 text-sm leading-relaxed", c.className)}>
+    <div role="note" aria-label={title ?? c.label} className={cn("not-prose my-6 flex gap-3 rounded-lg border p-4 text-sm leading-relaxed", c.className)}>
       <Icon className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
       <div className="min-w-0 [&_p]:mt-2 [&_p:first-child]:mt-0">
         <p className="font-semibold">{title ?? c.label}</p>
         {children}
       </div>
-    </aside>
+    </div>
   );
 }
 
@@ -132,10 +132,15 @@ export function A({ href = "", children, ...rest }: ComponentProps<"a">) {
   );
 }
 
-/** Wide tables scroll sideways inside the article. */
+/** Code blocks scroll sideways; focusable so that the keyboard can scroll them. */
+export function Pre(props: ComponentProps<"pre">) {
+  return <pre tabIndex={0} {...props} />;
+}
+
+/** Wide tables scroll sideways inside the article; the keyboard can scroll them too. */
 export function Table(props: ComponentProps<"table">) {
   return (
-    <div className="not-prose relative my-6 overflow-x-auto rounded-lg border">
+    <div className="not-prose relative my-6 overflow-x-auto rounded-lg border" tabIndex={0} role="region" aria-label="Table">
       <table {...props} className="w-full text-left text-sm [&_td]:border-t [&_td]:px-3 [&_td]:py-2 [&_td]:align-top [&_th]:bg-surface [&_th]:px-3 [&_th]:py-2 [&_th]:font-medium" />
     </div>
   );

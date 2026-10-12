@@ -7,7 +7,7 @@ import { usePageMeta } from "@/lib/page-meta";
 const RELEASES = parseChangelog(changelogText);
 
 export function Changelog() {
-  usePageMeta("Changelog", "What changed in each version of cSlope.");
+  usePageMeta("Changelog", "What changed in each version of cSlope: new features, corrections and changes to the analysis, release by release.");
   return (
     <>
       <PageHeader eyebrow="Changelog" title="What's new" lead="Every change to cSlope, version by version." />

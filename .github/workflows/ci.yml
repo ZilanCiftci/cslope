@@ -4,6 +4,9 @@ on:
   push:
   pull_request:
 
+permissions:
+  contents: read
+
 # The three jobs run in parallel. The engine is platform-independent
 # TypeScript and runs on the faster Linux runner; the desktop app (Electron
 # main process, file paths) is tested on Windows, where it ships.
@@ -15,8 +18,10 @@ jobs:
         uses: actions/checkout@v6
       - name: Setup Bun
         uses: oven-sh/setup-bun@v2
+        with:
+          bun-version-file: package.json
       - name: Install
-        run: bun install
+        run: bun install --frozen-lockfile
       - name: Typecheck
         run: bun run typecheck
       - name: Lint
@@ -37,8 +42,10 @@ jobs:
         uses: actions/checkout@v6
       - name: Setup Bun
         uses: oven-sh/setup-bun@v2
+        with:
+          bun-version-file: package.json
       - name: Install
-        run: bun install
+        run: bun install --frozen-lockfile
       - name: Test with coverage
         if: github.event_name == 'pull_request' || github.ref == 'refs/heads/main'
         run: bun run --filter @cslope/engine test:coverage
@@ -53,8 +60,10 @@ jobs:
         uses: actions/checkout@v6
       - name: Setup Bun
         uses: oven-sh/setup-bun@v2
+        with:
+          bun-version-file: package.json
       - name: Install
-        run: bun install
+        run: bun install --frozen-lockfile
       - name: Test with coverage
         if: github.event_name == 'pull_request' || github.ref == 'refs/heads/main'
         run: bun run --filter @cslope/desktop test:coverage
