@@ -227,7 +227,10 @@ describe("ReinforcementDialogApp — piles", () => {
       type: "sheet-pile",
       mode: "force",
       spacing: 1,
+      // A wall is active, with the force at angle θ.
+      application: "active",
     });
+    expect(store().piles[0].direction).toBeUndefined();
     await userEvent.selectOptions(screen.getByLabelText("Pile type"), "pile");
     expect(store().piles[0]).toMatchObject({
       type: "pile",

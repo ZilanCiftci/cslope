@@ -294,6 +294,20 @@ describe("DefineMaterialsDialog — switching the model", () => {
     expect(model()).toMatchObject({ kind: "spatial-mohr-coulomb", unitWeight: 21 });
   });
 
+  it.each([
+    ["undrained", ["Su (kPa)"], { undrainedShearStrength: "g" }],
+    ["s-f-depth", ["Su ref (kPa)", "Depth ref (m)", "Rate (kPa/m)"], { suRef: "g", depthRef: "g", rate: "g" }],
+    ["s-f-datum", ["Su ref (kPa)", "Y ref (m)", "Rate (kPa/m)"], { suRef: "g", yRef: "g", rate: "g" }],
+  ] as const)("stores parameter expressions for %s strength fields", async (kind, labels, expected) => {
+    render(<DefineMaterialsDialog onClose={() => {}} />);
+    await userEvent.selectOptions(kindSelect(), kind);
+    for (const label of labels) await setField(label, "g");
+    expect(mats()[0].modelExpressions).toEqual(expected);
+    for (const key of Object.keys(expected)) {
+      expect((model() as unknown as Record<string, number>)[key]).toBe(19);
+    }
+  });
+
   it("shows validation errors for invalid values", async () => {
     store().setMaterials([
       material("a", "Bad", { kind: "mohr-coulomb", unitWeight: 19, cohesion: -1, frictionAngle: 30 }),
