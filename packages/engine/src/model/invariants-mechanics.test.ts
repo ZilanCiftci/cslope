@@ -8,6 +8,7 @@ import { describe, it, expect } from "vitest";
 import type { SlopeDefinition } from "../types/slope-definition";
 import { WATER_UNIT_WEIGHT } from "../types/constants";
 import { buildSlope } from "./build-slope";
+import { analyseSlope } from "./solvers";
 import { toCanonicalSlopeDefinition } from "./canonical";
 import {
   rng,
@@ -19,6 +20,7 @@ import {
   mohrCoulomb,
   relDiff,
   groundY,
+  PROPERTY_OPTIONS,
   type Method,
 } from "./property-helpers";
 
@@ -418,4 +420,28 @@ describe("slice-count convergence", () => {
       }
     }
   }, 60_000);
+});
+
+describe("Morgenstern-Price solution", () => {
+  it("the reported FOS satisfies moment and force equilibrium at its λ (every interslice function)", () => {
+    const r = rng(9191);
+    let checked = 0;
+    for (let i = 0; i < 10; i++) {
+      const g = randomCase(r, { water: i % 2 === 0 });
+      const def = onCircle(i % 3 === 0 ? { ...g.def, udls: [{ magnitude: 15, x1: 0.5, x2: g.shape.crest * 0.6 }] } : g.def, g.circle);
+      for (const fn of ["constant", "half-sine", "clipped-sine", "trapezoidal"] as const) {
+        const slope = buildSlope(toCanonicalSlopeDefinition(def));
+        slope.updateAnalysisOptions({ ...PROPERTY_OPTIONS, method: "Morgenstern-Price", intersliceFunction: fn, tolerance: 1e-6 });
+        const f = analyseSlope(slope);
+        if (f === null) continue;
+        const lff = slope.search[0].lffArray!;
+        const at = lff.find((e) => Math.abs(e[1] - f) < 1e-9);
+        expect(at, `seed 9191 case ${i} ${fn}`).toBeDefined();
+        // Converged: Fm and Ff agree to the solver tolerance there.
+        expect(at![3], `seed 9191 case ${i} ${fn} λ ${at![0]}`).toBeLessThan(1e-5);
+        checked++;
+      }
+    }
+    expect(checked).toBeGreaterThan(30);
+  }, 30_000);
 });
