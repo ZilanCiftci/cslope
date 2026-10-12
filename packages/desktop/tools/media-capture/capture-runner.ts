@@ -73,7 +73,13 @@ async function main() {
   console.log("  Launching Electron...\n");
   const electronProc = spawn(
     electronPath,
-    [DESKTOP_DIR, `--remote-debugging-port=${REMOTE_DEBUGGING_PORT}`],
+    [
+      DESKTOP_DIR,
+      `--remote-debugging-port=${REMOTE_DEBUGGING_PORT}`,
+      // Chromium refuses to run as root with the sandbox on (e.g. in a
+      // container under xvfb); opt out only where that is needed.
+      ...(process.env.CSLOPE_CAPTURE_NO_SANDBOX ? ["--no-sandbox"] : []),
+    ],
     {
       cwd: DESKTOP_DIR,
       env: {

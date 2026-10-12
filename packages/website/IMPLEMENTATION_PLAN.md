@@ -65,9 +65,22 @@ startar Electron via Playwright och tar deterministiska skärmdumpar enligt
 Tagyo och Talbingo Dam. Utdata: `packages/website/public/media/generated/`
 i 1440×900 @2x.
 
-Pipelinen har aldrig körts: utdatamappen finns inte och inga bilder är
-incheckade. Den kräver en maskin med skärm, så den körs lämpligast på
-din Windows-dator. Scen-typerna stöder i dag bara `mode`, `runAnalysis` och
+Pipelinen körs i utvecklingscontainern under en virtuell skärm:
+
+```
+CSLOPE_CAPTURE_NO_SANDBOX=1 xvfb-run -a -s "-screen 0 1440x900x24" bun run media:capture
+```
+
+`CSLOPE_CAPTURE_NO_SANDBOX` lades till i `capture-runner.ts` eftersom
+Chromium vägrar köra som root med sandlådan på. De åtta scenerna är tagna
+och incheckade. Två brister att rätta när scenerna byggs ut:
+
+- `edit-geometry` och `edit-water-table` är identiska bilder; scenen för
+  vattenytan saknar en egen inställning som gör linjen synlig.
+- På `edit-dam` krockar koordinatetiketterna vid krönet. Scenerna behöver
+  kunna stänga av etiketterna.
+
+Scen-typerna stöder i dag bara `mode`, `runAnalysis` och
 resultatvy-inställningar; för tutorials behöver de utökas (öppna dialoger,
 aktiv sektion i Explorer, markerade punkter, `crop: "full"` för hela
 fönstret).
@@ -98,6 +111,16 @@ testa.
 **Språk:** engelska. Appens gränssnitt är på engelska, och målgruppen
 är internationell. Svenska kan läggas till senare som en översättning av
 utvalda sidor, men inte nu.
+
+**Inga konkurrentnamn.** Hemsidan, dokumentationen och den publicerade
+verifieringsrapporten nämner inga andra program vid namn, varken i text,
+tabeller, bildtexter eller alt-texter. Verifieringsfall anges med
+litteraturkälla (författare och år) när en finns. Fall som bara kommer
+från en leverantörs verifieringsmanual anges som "verification manual of
+a commercial slope stability program". Regeln gäller också `media-scenes`,
+benchmark-titlar som visas på sidan och frontmatter i docs. Ett test i
+website-paketet söker igenom allt byggt innehåll efter en lista med
+förbjudna namn och fallerar bygget om något hittas.
 
 ---
 
@@ -133,9 +156,8 @@ Huvudmenyn: Features · Verification · Docs · Download · GitHub.
 
 ### 4.1 Riktning
 
-Tekniskt, lugnt och exakt. Förebilder: dokumentationssajter för
-ingenjörsverktyg (t.ex. Rocscience, Bentley, men renare), inte
-SaaS-landningssidor. Inga animerade gradienter, inga "READY WHEN YOU ARE".
+Tekniskt, lugnt och exakt. Förebild: dokumentationssajter för
+ingenjörsverktyg, men renare; inte SaaS-landningssidor. Inga animerade gradienter, inga "READY WHEN YOU ARE".
 Bilderna gör jobbet.
 
 ### 4.2 Visuell identitet
@@ -187,7 +209,7 @@ Bilderna gör jobbet.
    Methods, Geometry & materials, Water, Reinforcement & piles, Search,
    Results & reporting.
 4. **Verifiering.** Kort sektion: "Every release is checked against
-   Slide2, GeoStudio and the literature." Tre exempel med vårt värde,
+   published solutions." Tre exempel med litteraturkälla, vårt värde,
    publicerat värde och avvikelse. Länk till `/verification`.
 5. **Skärmdumpar.** Tre till fyra bilder i ett galleri.
 6. **Öppen källkod.** Vad MIT betyder för en firma: ingen licensserver,
@@ -221,22 +243,26 @@ menyer:
 
 ### 5.3 Verification
 
-- Inledning: vad som verifieras och mot vad (Slide2, GeoStudio, xslope,
-  publicerade artiklar).
+- Inledning: vad som verifieras och mot vad (publicerade artiklar och
+  böcker, verifieringsmanualer för kommersiella program, utan namn).
 - Tabell: id, titel, metod, vårt värde, publicerat värde, källa, avvikelse.
-  Filtrerbar på källa och metod. Genereras från engine-data vid bygge.
-- Länk till verifieringsrapporten i PDF (genereras med
-  `bun run verification-report` i desktop-paketet och läggs i `public/`).
+  Filtrerbar på källtyp och metod. Genereras från engine-data vid bygge,
+  med källfältet mappat genom en anonymiseringstabell (§7.4).
+- Länk till verifieringsrapporten i PDF. Rapportgeneratorn
+  (`bun run verification-report` i desktop-paketet) får ett läge
+  `--public` som använder samma anonymisering. Den publicerade PDF:en
+  byggs bara i det läget.
 - Avsnitt om testning: antal tester, täckning, CI.
 
 ### 5.4 Download
 
-- En kort per OS med version, filnamn, storlek och SHA-256.
+- Ett kort för Windows med version, filnamn, storlek och SHA-256.
+  macOS och Linux visas som "coming" utan knapp tills de byggs.
 - Systemkrav.
 - Installationsanvisning i tre steg, med bild av SmartScreen-dialogen
   om installern inte är signerad.
 - Länk till alla versioner på GitHub Releases.
-- **Blockerande:** det finns ingen release. Se §9.
+- Kräver ett release-workflow (§7.8) och en första tagg `v0.1.0`.
 
 ### 5.5 Docs
 
@@ -244,8 +270,10 @@ Se §6.
 
 ### 5.6 About
 
-Vem som bygger det, varför det är öppen källkod, hur man rapporterar fel,
-kontakt. Licenstext.
+"cSlope is developed by Ibirico" med länk till ibirico.se. Varför det är
+öppen källkod, hur man rapporterar fel (GitHub Issues), kontakt via en
+e-postadress på ibirico.se. Licenstext. Samma avsändare i sidfoten på
+alla sidor.
 
 ---
 
@@ -287,8 +315,9 @@ Tutorial 1 skrivs först och sätter mallen för de andra.
    storen eller via IPC.
 3. Definiera scener per tutorialsteg i `media-scenes.ts`, grupperade med
    ett `tutorial`-fält så att de hamnar i `public/media/tutorials/<namn>/`.
-4. Kör `bun run media:capture` på en Windows-maskin. Checka in bilderna.
+4. Kör bildtagningen i containern (kommandot i §1.3). Checka in bilderna.
    Bilderna är deterministiska, så en `git diff` visar när UI:t ändrats.
+   Alla bilder tas i ljust tema; sidan visar samma bild i båda lägena.
 5. Lägg till ett CI-steg som bygger appen i capture-läge och verifierar
    att alla scener fortfarande går att köra (utan att jämföra pixlar).
 
@@ -334,13 +363,20 @@ bygger tabellen från filen. Nyckeltalen på startsidan läses från samma
 fil. Filen checkas in så att `bun run build` inte behöver köra engine.
 Ett CI-steg kontrollerar att filen är aktuell.
 
+Källfältet (`publishedBy` i engine) går genom en anonymiseringstabell i
+skriptet: litteraturkällor behålls, leverantörsnamn ersätts med
+"commercial program A/B/…" så att läsaren ändå ser att två olika program
+gav olika värden. Tabellen är den enda platsen där de riktiga namnen finns
+i website-paketet, och den ligger utanför `src/` så att den inte byggs in.
+
 ### 7.5 Deploy
 
-GitHub Pages via ett workflow `deploy-website.yml`: bygg på push till
-`main` när `packages/website/**` eller `packages/engine/src/verification/**`
-ändrats, publicera `dist/`. `base` i `vite.config.ts` sätts från en
-miljövariabel så att sidan fungerar både under `/cslope/` och på en egen
-domän. SPA-fallback via `404.html` som kopia av `index.html`.
+Vercel, kopplat till GitHub-repot. `vercel.json` i paketet anger
+`buildCommand: "bun run build"`, `outputDirectory: "dist"` och en
+rewrite av alla sökvägar till `index.html` för react-router. Root
+directory sätts till `packages/website` i Vercels panel. Varje push till
+`main` publicerar produktion; pull requests får förhandsvisning. Domänen
+läggs till i Vercels panel när den finns; sidan byggs utan `base`.
 
 ### 7.6 SEO och delning
 
@@ -356,7 +392,19 @@ domän. SPA-fallback via `404.html` som kopia av `index.html`.
 - Alla bilder med `alt`, `width` och `height`.
 - Vitest med Testing Library för komponenter med logik (sidomeny,
   verifieringstabellens filter, routing). Inga tester för ren layout.
+- Ett test som söker igenom `dist/` och alla docs-källor efter förbjudna
+  namn (§2) och fallerar om något hittas.
 - `bun run build` i CI, inte bara lint och typecheck.
+
+### 7.8 Release-workflow
+
+`release.yml` i `.github/workflows/`: körs på tagg `v*`, bygger
+Windows-installern med `bun run package` på `windows-latest`, skapar en
+GitHub Release med installern, SHA-256 och en changelog ur
+`CHANGELOG.md`. Signering via `sign.cjs` kräver hemligheterna från
+`.env.trustedsigning` som repository secrets; utan dem byggs en osignerad
+installer och download-sidan visar SmartScreen-anvisningen. macOS och
+Linux läggs till i samma workflow senare.
 
 ---
 
@@ -368,8 +416,9 @@ Varje etapp ska gå att pusha och publicera för sig.
 
 - [ ] Rätta fakta på nuvarande sida (metoder, icke-cirkulärt, ta bort
       "preview"-språket) så att inget är fel medan resten byggs.
-- [ ] Deploy-workflow till GitHub Pages, `base` från miljövariabel.
+- [ ] `vercel.json`; du kopplar repot i Vercels panel.
 - [ ] Bygg i CI.
+- [ ] Testet mot förbjudna namn.
 - [ ] Meta description, favicon, `robots.txt`, 404-sida.
 - [ ] Ny README för paketet. Ta bort `react.svg`.
 
@@ -378,17 +427,20 @@ Varje etapp ska gå att pusha och publicera för sig.
 - [ ] Palett, typsnitt, tokens i `index.css`.
 - [ ] Omritad logotyp, OG-bild.
 - [ ] `SiteHeader`, `SiteFooter` med ny meny.
-- [ ] Startsida enligt §5.1. Kräver minst en skärmdump: kör
-      media-capture för de åtta befintliga scenerna.
+- [x] Media-capture för de åtta befintliga scenerna (incheckade i
+      `public/media/generated/`).
+- [ ] Startsida enligt §5.1.
 - [ ] Ta bort framer-motion.
 
 ### Etapp 2: Features, Verification, Download, About (2 dagar)
 
-- [ ] `generate-data.ts` och `verification.json`.
+- [ ] `generate-data.ts` med anonymisering, och `verification.json`.
+- [ ] `--public`-läge i verifieringsrapporten.
 - [ ] `/verification` med filtrerbar tabell och PDF.
 - [ ] `/features` med bilder från scenerna.
-- [ ] `/download` (med tydlig text om releasens status tills den finns).
-- [ ] `/about`, `/changelog`.
+- [ ] `release.yml` och första taggen `v0.1.0` (Windows).
+- [ ] `/download`.
+- [ ] `/about` (Ibirico), `/changelog`.
 
 ### Etapp 3: Dokumentationsplattform (1–2 dagar)
 
@@ -400,7 +452,8 @@ Varje etapp ska gå att pusha och publicera för sig.
 
 ### Etapp 4: Tutorials och bilder (löpande, ~1 dag per 2 tutorials)
 
-- [ ] Utöka scen-typerna och `store-capture.ts` (§6.3).
+- [ ] Utöka scen-typerna och `store-capture.ts` (§6.3). Rätta
+      vattenyte-scenen och etikettkrocken på dammen.
 - [ ] Tutorial 1 med bilder; sätt mallen.
 - [ ] Tutorials 2–10.
 - [ ] CI-steg som verifierar att scenerna går att köra.
@@ -414,34 +467,23 @@ Varje etapp ska gå att pusha och publicera för sig.
 
 ---
 
-## 9. Öppna frågor
+## 9. Beslut
 
-Svar på de här påverkar etapperna men blockerar inte etapp 0–1.
+| # | Fråga | Beslut |
+|---|---|---|
+| 1 | Release | Windows först via release-workflow och tagg `v0.1.0`; macOS och Linux senare. |
+| 2 | Värd | Vercel, kopplat till repot. Domän läggs till i Vercel när den finns. |
+| 3 | Avsändare | "Developed by Ibirico", länk till ibirico.se, kontakt via e-post på domänen och GitHub Issues. |
+| 4 | Bildtagning | Körs i utvecklingscontainern under xvfb; fungerar, åtta scener tagna. |
+| 5 | Bildtema | Ljust överallt. |
+| 6 | Källor | Litteratur anges med författare och år; leverantörsmanualer anonymiseras. Inga konkurrentnamn någonstans på sidan eller i den publicerade PDF:en. |
 
-1. **Release.** Det finns ingen release på GitHub, så download-knappen
-   leder ingenstans. `electron-builder.json5` är redo för Windows (NSIS,
-   signering via `sign.cjs`), macOS (DMG) och Linux (AppImage). Ska vi
-   göra en första release (t.ex. 0.1.0) i samband med lanseringen, och
-   i så fall för vilka plattformar? Är Windows-signeringen klar
-   (`.env.trustedsigning`)?
-2. **Domän och värd.** GitHub Pages under `zilanciftci.github.io/cslope`
-   eller en egen domän? Ett domännamn gör stor skillnad för förtroendet.
-3. **Avsändare.** Ska sidan säga "Zilan Ciftci" eller ett företagsnamn?
-   Kontaktväg: e-post, GitHub Issues eller båda?
-4. **Bildtagning.** Media-capture kräver en maskin med skärm. Kan du köra
-   `bun run media:capture` på din Windows-dator när scenerna är klara,
-   eller ska jag försöka få det att gå i CI med xvfb?
-5. **Mörkt läge i bilderna.** Stöder appen mörkt tema? Annars tas
-   bilderna bara i ljust läge och sidan visar samma bild i båda lägena.
-6. **Verifieringsrapporten.** Får hela PDF:en publiceras? Den innehåller
-   publicerade värden från Slide2:s och GeoStudios manualer med
-   källhänvisning, vilket bör vara i sin ordning som jämförelse, men
-   säg till om du vill hålla tillbaka något.
+Återstår att få från dig, utan brådska: e-postadressen för kontakt, och
+domännamnet när det är köpt.
 
 ---
 
 ## 10. Nästa steg
 
-Om planen stämmer börjar jag med etapp 0 och etapp 1 i den ordningen.
-Etapp 0 kan gå till `main` samma dag. Etapp 1 behöver minst en riktig
-skärmdump innan den kan publiceras, så fråga 4 är den första att svara på.
+Etapp 0, sedan etapp 1. Etapp 0 kan gå till `main` samma dag; du
+kopplar repot i Vercel när `vercel.json` finns.
