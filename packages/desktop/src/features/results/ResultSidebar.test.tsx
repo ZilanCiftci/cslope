@@ -166,6 +166,30 @@ describe("ResultSidebar paper frame properties", () => {
     expect(right.value).toBe("26.00");
   });
 
+  it("edits the bottom and right extents, keeping the aspect ratio from the bottom", () => {
+    render(<ResultSidebar />);
+    const ar = getPlotAspectRatio("A4", true);
+    const bottom = field("Bottom Y");
+    fireEvent.focus(bottom);
+    fireEvent.change(bottom, { target: { value: "-5" } });
+    fireEvent.keyDown(bottom, { key: "Enter" });
+    let lock = rvs().viewLock!;
+    expect(lock.bottomLeft[1]).toBe(-5);
+    expect(lock.topRight[1]).toBeCloseTo(-5 + (lock.topRight[0] - lock.bottomLeft[0]) / ar, 9);
+    const right = field("Right X");
+    fireEvent.focus(right);
+    fireEvent.change(right, { target: { value: "50" } });
+    fireEvent.blur(right);
+    lock = rvs().viewLock!;
+    expect(lock.topRight[0]).toBe(50);
+    expect(lock.topRight[1]).toBeCloseTo(-5 + (50 - lock.bottomLeft[0]) / ar, 9);
+    // A lone sign is not a number: nothing changes.
+    fireEvent.focus(right);
+    fireEvent.change(right, { target: { value: "-" } });
+    fireEvent.blur(right);
+    expect(rvs().viewLock!.topRight[0]).toBe(50);
+  });
+
   it("fits the locked view to the model bounds", () => {
     act(() =>
       useAppStore.setState({
@@ -277,6 +301,19 @@ describe("ResultSidebar annotation properties", () => {
     expect(field("Text size").value).toBe("6");
     fireEvent.change(field("Text size"), { target: { value: "10" } });
     expect(anno("m").fontSize).toBe(10);
+  });
+
+  it("removes and adds material table columns for the selected tables", () => {
+    // jsdom has no scrolling.
+    Element.prototype.scrollIntoView = vi.fn();
+    select(["m"]);
+    render(<ResultSidebar />);
+    fireEvent.click(screen.getByLabelText("Remove Su"));
+    expect(anno("m").tableColumns).not.toContain("cohesion");
+    expect(anno("m").tableColumns).toContain("unitWeight");
+    fireEvent.click(screen.getByLabelText("Toggle options"));
+    fireEvent.click(screen.getByRole("option", { name: "Su" }));
+    expect(anno("m").tableColumns).toContain("cohesion");
   });
 
   it("sizes plots within 5–95 % and chooses their axes", () => {
