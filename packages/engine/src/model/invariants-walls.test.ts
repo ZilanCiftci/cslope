@@ -157,3 +157,71 @@ describe("water against a face the slip surface leaves through (regression)", ()
     }
   });
 });
+
+describe("a step up at the toe (the surface leaves through a rising face)", () => {
+  function berm(r: () => number) {
+    const H = uniform(r, 6, 12);
+    const D = uniform(r, 6, 10);
+    const crest = uniform(r, 8, 14);
+    const run = uniform(r, 1, 2) * H;
+    const xToe = crest + run;
+    const xStep = xToe + uniform(r, 1, 4);
+    const hStep = uniform(r, 1, 3);
+    const xEnd = xStep + uniform(r, 6, 12);
+    const gamma = uniform(r, 17, 21);
+    const c = uniform(r, 5, 20);
+    const phi = uniform(r, 20, 35);
+    const def: SlopeDefinition = {
+      orientation: "ltr",
+      coordinates: [[0, -D], [0, H], [crest, H], [xToe, 0], [xStep, 0], [xStep, hStep], [xEnd, hStep], [xEnd, -D]],
+      materials: [{ name: "S", unitWeight: gamma, cohesion: c, frictionAngle: phi, model: mohrCoulomb(gamma, c, phi) }],
+    };
+    // Circle through a crest point and a point on the rising face.
+    const a: [number, number] = [crest * uniform(r, 0.3, 0.8), H];
+    const b: [number, number] = [xStep, hStep * uniform(r, 0.2, 0.8)];
+    const mx = (a[0] + b[0]) / 2;
+    const my = (a[1] + b[1]) / 2;
+    const len = Math.hypot(b[0] - a[0], b[1] - a[1]);
+    const nx = (a[1] - b[1]) / len;
+    const ny = (b[0] - a[0]) / len;
+    for (let off = 0.6; off < 3; off += 0.1) {
+      const cx = mx + nx * off * len;
+      const cy = my + ny * off * len;
+      const radius = Math.hypot(a[0] - cx, a[1] - cy);
+      if (cy - radius > -D + 0.3 && cx < xStep) return { def, circle: { cx, cy, radius }, H, hStep };
+    }
+    return null;
+  }
+
+  it("mirror symmetry and submerged = buoyant", () => {
+    const r = rng(7073);
+    let compared = 0;
+    for (let i = 0; i < 10; i++) {
+      const b = berm(r);
+      if (!b) continue;
+      const level = [b.hStep * 0.5, b.hStep + 1, b.H + 2][i % 3];
+      const wet = onCircle({ ...b.def, waterTable: { mode: "height", value: level, followBoundary: false } }, b.circle);
+      const mirrored = mirrorDefinition(wet, uniform(r, -10, 50));
+      for (const method of [...METHODS, "Ordinary" as Method]) {
+        const x = fosOf(wet, method);
+        const y = fosOf(mirrored, method);
+        expect(y === null, `seed 7073 case ${i} ${method}`).toBe(x === null);
+        if (x !== null && y !== null) {
+          expect(relDiff(x, y), `seed 7073 case ${i} ${method}: ${x} vs ${y}`).toBeLessThan(1e-6);
+          compared++;
+        }
+      }
+      if (level > b.H) {
+        const m = b.def.materials[0];
+        const g = m.unitWeight - WATER_UNIT_WEIGHT;
+        const buoyant = onCircle({ ...b.def, materials: [{ ...m, unitWeight: g, model: mohrCoulomb(g, m.cohesion, m.frictionAngle) }] }, b.circle);
+        for (const method of ["Bishop", "Janbu"] as Method[]) {
+          const x = fosOf(wet, method, { slices: 80 })!;
+          const y = fosOf(buoyant, method, { slices: 80 })!;
+          expect(relDiff(x, y), `seed 7073 case ${i} ${method} buoyant: ${x} vs ${y}`).toBeLessThan(1e-3);
+        }
+      }
+    }
+    expect(compared).toBeGreaterThan(20);
+  }, 30_000);
+});
