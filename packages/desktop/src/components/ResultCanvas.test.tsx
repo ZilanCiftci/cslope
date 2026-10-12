@@ -180,6 +180,35 @@ describe("ResultCanvas paper zoom and pan", () => {
     expect(toolbar().zoomBoxActive).toBe(false);
   });
 
+  it("fits a lab-scale model to the plot area (no 200 px/m cap)", () => {
+    const small: [number, number][] = [
+      [0, 0],
+      [0, 0.2],
+      [0.2, 0.2],
+      [0.4, 0.1],
+      [0.5, 0.1],
+      [0.5, 0],
+    ];
+    const surface = { cx: 0.25, cy: 0.35, radius: 0.2, fos: 1.2, entryPoint: [0.15, 0.2] as [number, number], exitPoint: [0.4, 0.1] as [number, number] };
+    act(() =>
+      useAppStore.setState((s) => ({
+        coordinates: small,
+        analysisLimits: { ...s.analysisLimits, enabled: false },
+        udls: [],
+        lineLoads: [],
+        result: { ...fakeResult(), criticalSurface: surface, allSurfaces: [surface] } as AnalysisResult,
+        resultViewSettings: { ...s.resultViewSettings, viewLock: undefined, showFosLabel: false },
+      })),
+    );
+    renderCanvas();
+    act(() => toolbar().onFitToScreen());
+    // Half a metre across a plot area of several hundred px: well above 200 px/m.
+    const scale = useAppStore.getState().resultViewScale;
+    expect(scale).toBeGreaterThan(500);
+    const { offsetX } = paper();
+    expect(offsetX).toBe(0);
+  });
+
   it("keeps the same part of the model in the plot area when the paper is zoomed", () => {
     act(() =>
       useAppStore.setState((s) => ({
