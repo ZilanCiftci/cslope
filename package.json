@@ -8,6 +8,7 @@
     "dev": "bun run --filter @cslope/desktop dev",
     "build": "bun run --filter @cslope/desktop build",
     "test": "bun run --filter '*' test",
+    "test:coverage": "bun run --filter '*' test:coverage",
     "lint": "bun run --filter '*' lint",
     "typecheck": "bun run --filter '*' typecheck",
     "media:capture": "bunx tsx packages/desktop/tools/media-capture/capture-runner.ts"

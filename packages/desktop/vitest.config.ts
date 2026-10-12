@@ -30,11 +30,12 @@ export default defineConfig({
     coverage: {
       provider: "v8",
       reporter: ["text", "html", "lcov"],
+      // Just below the measured coverage: a drop fails the run.
       thresholds: {
-        lines: 38,
-        functions: 54,
-        branches: 35,
-        statements: 39,
+        lines: 96,
+        functions: 94,
+        branches: 86,
+        statements: 94,
       },
     },
   },
