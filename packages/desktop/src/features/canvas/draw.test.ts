@@ -23,6 +23,7 @@ import { REINFORCEMENT_COLOR, PILE_COLOR } from "./reinforcement-draw";
 import { newPile, newReinforcement } from "../../utils/reinforcement";
 import { fosColor } from "../../utils/fos-color";
 import type { Annotation, ResultViewSettings } from "../../store/types";
+import { computeRegions } from "../../utils/regions";
 
 const W = 800;
 const H = 600;
@@ -195,6 +196,55 @@ describe("drawCanvas — edit mode", () => {
   it("does not fill the soil when soil colours are hidden", () => {
     const rec = draw({ resultViewSettings: rvs({ showSoilColor: false }) });
     expect(rec.fills(DEFAULT_MATERIAL.color)).toHaveLength(0);
+  });
+
+  it("fills a ring around a closed lens even-odd and the lens in its own material", () => {
+    const sand = { ...DEFAULT_MATERIAL, id: "sand", color: "#eedd88" };
+    const lens = {
+      id: "lens",
+      coordinates: [
+        [5, 2],
+        [10, 2],
+        [10, 4],
+        [5, 4],
+        [5, 2],
+      ] as [number, number][],
+    };
+    const rec = draw({
+      materials: [{ ...DEFAULT_MATERIAL }, sand],
+      materialBoundaries: [lens],
+      regionMaterials: [{ point: [7, 3], materialId: "sand" }],
+    });
+    const outer = rec.fills(DEFAULT_MATERIAL.color);
+    expect(outer).toHaveLength(1);
+    expect(outer[0].fillRule).toBe("evenodd");
+    // The hole's vertices are part of the outer path.
+    expect(pathPoints(outer[0]).some((p) => close(p, toC(5, 2)))).toBe(true);
+    const inner = rec.fills("#eedd88");
+    expect(inner).toHaveLength(1);
+    expect(inner[0].fillRule).toBe("nonzero");
+  });
+
+  it("outlines the selected region only while assigning materials", () => {
+    const lens = {
+      id: "lens",
+      coordinates: [
+        [5, 2],
+        [10, 2],
+        [10, 4],
+        [5, 4],
+        [5, 2],
+      ] as [number, number][],
+    };
+    const regions = computeRegions(COORDS, [lens], [], DEFAULT_MATERIAL.id);
+    const ring = regions.find((r) => r.holes?.length)!;
+    const selected = draw({ materialBoundaries: [lens], selectedRegionKey: ring.regionKey, editingAssignment: true });
+    const outline = selected.strokes().filter((p) => p.state.lineWidth === 6);
+    expect(outline).toHaveLength(1);
+    // Clipped to the region (even-odd so the hole stays clear).
+    expect(selected.paths.some((p) => p.kind === "clip" && p.fillRule === "evenodd")).toBe(true);
+    const idle = draw({ materialBoundaries: [lens], selectedRegionKey: ring.regionKey, editingAssignment: false });
+    expect(idle.strokes().filter((p) => p.state.lineWidth === 6)).toHaveLength(0);
   });
 
   it("hatches and labels high-strength materials", () => {
@@ -394,6 +444,40 @@ describe("drawCanvas — edit mode", () => {
     expect(rec.textStrings()).toEqual(expect.arrayContaining(["(0.0, 4.0)", "(30.0, 4.0)"]));
   });
 
+  it("colours water-line vertices by hover, active line and editing state", () => {
+    const line = (id: string, y: number) => ({
+      id,
+      name: id,
+      color: "#000",
+      coordinates: [
+        [0, y],
+        [30, y],
+      ] as [number, number][],
+    });
+    const piezometricLine = {
+      ...DEFAULT_PIEZO_LINE,
+      freeWater: false,
+      lines: [line("a", 4), line("b", 2), { ...line("c", 1), coordinates: [[3, 1]] as [number, number][] }],
+      activeLineId: "a",
+    };
+    const dotColour = (rec: ReturnType<typeof draw>, x: number, y: number) =>
+      rec.fills().find((p) => p.segments[0].op === "arc" && close(pathPoints(p)[0], toC(x, y)))?.state.fillStyle;
+    const editing = draw({ editingPiezo: true, piezometricLine, hoverHit: { kind: "piezo", lineId: "b", index: 1 } });
+    expect(dotColour(editing, 0, 4)).toBe("#f59e0b"); // active line
+    expect(dotColour(editing, 0, 2)).toBe(PIEZO_COLOR.hex); // other line
+    expect(dotColour(editing, 30, 2)).toBe(POINT_COLOR_HOVER);
+    // A line with a single point is not drawn.
+    expect(dotColour(editing, 3, 1)).toBeUndefined();
+    const idle = draw({ piezometricLine });
+    expect(dotColour(idle, 0, 4)).toBe(PIEZO_COLOR.hex + "99");
+    expect(idle.callsOf("arc").filter((c) => c.args[2] === 3).length).toBeGreaterThanOrEqual(4);
+  });
+
+  it("skips line loads off the model", () => {
+    const rec = draw({ lineLoads: [{ id: "l", magnitude: 5, x: 45 }] });
+    expect(rec.texts.some((t) => t.text.startsWith("P ="))).toBe(false);
+  });
+
   it("fills free water standing above the ground", () => {
     const rec = draw({
       piezometricLine: {
@@ -527,6 +611,35 @@ describe("drawCanvas — result mode", () => {
     expect(pts.some((p) => close(p, [10, 10]))).toBe(true);
   });
 
+  it("fills the same sliding mass for a mirrored (right-to-left) model", () => {
+    const massArea = (coords: [number, number][], cs: SlipSurfaceResult) => {
+      const rec = drawResult({
+        coordinates: coords,
+        surfaceYAtX: (x) => surfaceYAtXFromCoordinates(coords, x),
+        result: result({ criticalSurface: cs, allSurfaces: [cs] }),
+      });
+      const pts = pathPoints(rec.fills().find((p) => p.state.globalAlpha === 0.12)!);
+      let a = 0;
+      for (let i = 0; i < pts.length; i++) {
+        const [x1, y1] = pts[i];
+        const [x2, y2] = pts[(i + 1) % pts.length];
+        a += x1 * y2 - x2 * y1;
+      }
+      return Math.abs(a) / 2;
+    };
+    const mirror = ([x, y]: [number, number]): [number, number] => [30 - x, y];
+    const cs = surface();
+    const ltr = massArea(COORDS, cs);
+    const rtl = massArea(COORDS.map(mirror).reverse(), {
+      ...cs,
+      cx: 30 - cs.cx,
+      entryPoint: mirror(cs.entryPoint),
+      exitPoint: mirror(cs.exitPoint),
+    });
+    expect(ltr).toBeGreaterThan(1000);
+    expect(rtl).toBeCloseTo(ltr, 3);
+  });
+
   it("marks the centre and draws radius lines when asked", () => {
     const rec = drawResult({ resultViewSettings: rvs({ showCentreMarker: true }) });
     const c = toC(CIRCLE.cx, CIRCLE.cy);
@@ -640,6 +753,30 @@ describe("drawCanvas — result mode", () => {
       .filter((p) => p.length === 2 && p[0][0] === p[1][0])
       .map(([a, b]) => Math.abs(b[1] - a[1]));
     expect(tickLens.filter((l) => l === 3).length).toBeGreaterThanOrEqual(xLabels.length * 3);
+  });
+
+  it("draws a grid line at every labelled tick (one spacing for grid and ticks)", () => {
+    for (const scale of [6, 10, 14, 20, 35]) {
+      const w2c = (wx: number, wy: number, w: number, h: number): [number, number] => [
+        w / 2 + (wx - CX) * scale,
+        h / 2 - (wy - CY) * scale,
+      ];
+      const c2w = (cx: number, cy: number, w: number, h: number): [number, number] => [
+        (cx - w / 2) / scale + CX,
+        -(cy - h / 2) / scale + CY,
+      ];
+      const rec = drawResult({ worldToCanvas: w2c, canvasToWorld: c2w, viewScale: scale, resultViewSettings: rvs({ showGrid: true }) });
+      const gridX = rec
+        .strokes("rgba(0, 0, 0, 0.1)")
+        .map(pathPoints)
+        .filter(([a, b]) => a[0] === b[0])
+        .map(([a]) => a[0]);
+      const tickX = rec.texts.filter((t) => t.state.textBaseline === "top" && /^-?\d+(\.\d+)?$/.test(t.text)).map((t) => t.x);
+      expect(tickX.length, `scale ${scale}`).toBeGreaterThan(1);
+      for (const x of tickX) {
+        expect(gridX.some((g) => Math.abs(g - x) < 1e-6), `tick at ${x}px, scale ${scale}`).toBe(true);
+      }
+    }
   });
 
   it("hides the grid when switched off", () => {

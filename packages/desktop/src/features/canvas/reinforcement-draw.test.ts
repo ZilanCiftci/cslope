@@ -39,6 +39,10 @@ describe("formatReinforcementForce", () => {
     expect(formatReinforcementForce({ force: 1234.6, passive: false })).toBe("1235 kN/m");
   });
 
+  it("chooses the decimals after rounding, so 99.96 reads like 100", () => {
+    expect(formatReinforcementForce({ force: 99.96, passive: false })).toBe("100 kN/m");
+  });
+
   it("marks passive forces as divided by the factor of safety", () => {
     expect(formatReinforcementForce({ force: 20, passive: true })).toBe("20.0 kN/m /F");
   });

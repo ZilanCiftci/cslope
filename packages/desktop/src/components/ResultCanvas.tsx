@@ -22,7 +22,12 @@ import {
   type CanvasWheelEvent,
 } from "../features/canvas/hooks/useNonPassiveWheel";
 import { drawCanvas, type DrawCanvasParams } from "../features/canvas/draw";
-import { ARROW_HEIGHT_PX, RULER_SIZE_PX } from "../features/canvas/constants";
+import {
+  ARROW_HEIGHT_PX,
+  RULER_SIZE_PX,
+  VIEW_SCALE_MAX,
+  VIEW_SCALE_MIN,
+} from "../features/canvas/constants";
 import {
   collectModelFitBounds,
   computePaperFrame,
@@ -672,7 +677,7 @@ export function ResultCanvas() {
     const cx = (xMin + xMax) / 2;
     const cy = (yMin + yMax) / 2;
 
-    const clampedScale = Math.max(0.1, Math.min(200, scale));
+    const clampedScale = Math.max(VIEW_SCALE_MIN, Math.min(VIEW_SCALE_MAX, scale));
     const ox = (targetCx - w / 2) / clampedScale - cx;
     const oy = (h / 2 - targetCy) / clampedScale - cy;
 

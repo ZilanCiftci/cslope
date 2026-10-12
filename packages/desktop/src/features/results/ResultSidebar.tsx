@@ -21,6 +21,7 @@ import {
   anchorPointFromTopLeft,
 } from "../annotations/anchorPosition";
 import { surfaceCountText } from "../../utils/result-summary";
+import { viewLockForModel } from "../view/viewLock";
 import type {
   MaterialTableColumnKey,
   AnchorPosition,
@@ -231,31 +232,14 @@ export function ResultSidebar() {
       rvs.paperFrame.landscape,
     );
 
-    let bl: [number, number] = [-1, -1];
-    let tr: [number, number] = [21, -1 + 22 / ar];
-    if (coordinates.length >= 2) {
-      const xs = coordinates.map((c) => c[0]);
-      const ys = coordinates.map((c) => c[1]);
-      const xMin = Math.min(...xs);
-      const xMax = Math.max(...xs);
-      const yMin = Math.min(...ys);
-
-      const left = xMin - 1;
-      const right = xMax + 1;
-      const bottom = yMin - 1;
-      const width = right - left;
-      const height = width / ar;
-      const top = bottom + height;
-
-      bl = [left, bottom];
-      tr = [right, top];
-    }
-
+    // Shared with the automatic refit, which also widens the view for a
+    // tall model (this used to size it from the width only and cut off
+    // the top of a tall, narrow model).
     setRvs({
-      viewLock: {
-        bottomLeft: bl,
-        topRight: tr,
-      },
+      viewLock:
+        coordinates.length >= 2
+          ? viewLockForModel(coordinates, ar)
+          : { bottomLeft: [-1, -1], topRight: [21, -1 + 22 / ar] },
     });
   }, [coordinates, rvs.paperFrame.landscape, rvs.paperFrame.paperSize, setRvs]);
 

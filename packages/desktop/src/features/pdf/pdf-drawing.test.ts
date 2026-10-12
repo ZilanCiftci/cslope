@@ -204,6 +204,31 @@ describe("drawGrid", () => {
   });
 });
 
+describe("grid and ruler share one spacing", () => {
+  it("draws a grid line at every labelled tick", () => {
+    const frame = { x: 15, y: 10, w: 267, h: 190 };
+    for (const mmPerM of [1.5, 2.5, 4, 5, 9]) {
+      const t: PdfTransform = { ...tf, worldToPdf: (x, y) => [20 + x * mmPerM, 150 - y * mmPerM] };
+      const scale = mmPerM / t.mmPerPx;
+      const rec = recorder();
+      drawGrid(rec.pdf, t, scale, frame);
+      drawRulerFrame(rec.pdf, t, scale, frame);
+      const gridX = rec
+        .linesIn([220, 220, 220])
+        .filter(([x1, , x2]) => x1 === x2)
+        .map(([x]) => x);
+      const tickX = rec
+        .of("text")
+        .filter((c) => (c.args[3] as { align: string }).align === "center")
+        .map((c) => c.args[1] as number);
+      expect(tickX.length, `${mmPerM} mm/m`).toBeGreaterThan(1);
+      for (const x of tickX) {
+        expect(gridX.some((g) => Math.abs(g - x) < 1e-6), `tick at ${x} mm, ${mmPerM} mm/m`).toBe(true);
+      }
+    }
+  });
+});
+
 describe("drawRulerFrame", () => {
   it("labels ticks at their world values below and left of the frame, with minor ticks", () => {
     const rec = recorder();
@@ -533,6 +558,38 @@ describe("drawCriticalSurface", () => {
     expect(rec.of("text")[0].args[1]).toBe(cx + 3);
   });
 
+  it("fills the same sliding mass for a mirrored (right-to-left) model", () => {
+    /** Shoelace area (mm²) of the failure-mass fill path. */
+    const fillArea = (coords: [number, number][], cs: SlipSurfaceResult) => {
+      const rec = recorder();
+      drawCriticalSurface(rec.pdf, tf, result({ criticalSurface: cs }), rvs(), coords);
+      const start = rec.calls.findIndex((c) => c.name === "setGState");
+      const end = rec.calls.findIndex((c, i) => i > start && c.name === "fill");
+      const pts = rec.calls
+        .slice(start, end)
+        .filter((c) => c.name === "moveTo" || c.name === "lineTo")
+        .map((c) => c.args as [number, number]);
+      let a = 0;
+      for (let i = 0; i < pts.length; i++) {
+        const [x1, y1] = pts[i];
+        const [x2, y2] = pts[(i + 1) % pts.length];
+        a += x1 * y2 - x2 * y1;
+      }
+      return Math.abs(a) / 2;
+    };
+    const mirror = ([x, y]: [number, number]): [number, number] => [30 - x, y];
+    const ltr = fillArea(COORDS, surface());
+    const cs = surface();
+    const rtl = fillArea(COORDS.map(mirror).reverse(), {
+      ...cs,
+      cx: 30 - cs.cx,
+      entryPoint: mirror(cs.entryPoint),
+      exitPoint: mirror(cs.exitPoint),
+    });
+    expect(ltr).toBeGreaterThan(100);
+    expect(rtl).toBeCloseTo(ltr, 3);
+  });
+
   it("omits the centre marker of a non-circular surface and labels above the mass", () => {
     const rec = recorder();
     const poly = surface({ points: [[ENTRY_X, 10], [12, 6], [22, 5]] });
@@ -589,5 +646,35 @@ describe("drawAnnotations", () => {
     expect(second.args[0]).toBe("line 2");
     expect(second.args[1]).toBe(first.args[1]);
     expect(second.args[2] as number).toBeGreaterThan(first.args[2] as number);
+  });
+
+  it("draws the material table cells with a colour swatch per material, right-anchored", () => {
+    const rec = recorder();
+    const sand = { ...DEFAULT_MATERIAL, id: "sand", name: "Sand", color: "#eedd88" } as MaterialRow;
+    drawAnnotations(
+      rec.pdf,
+      tf,
+      [{ id: "m", type: "material-table", x: 0.9, y: 0.1, anchor: "top-right", tableColumns: ["unitWeight", "cohesion"] }],
+      result(),
+      [DEFAULT_MATERIAL, sand],
+      PIEZO_EMPTY,
+      {},
+      [],
+      FRAME,
+    );
+    expect(rec.texts()).toEqual(
+      expect.arrayContaining(["Color", "Name", DEFAULT_MATERIAL.name, "Sand", "18", "12"]),
+    );
+    // Swatches in the material colours.
+    const fills = rec.of("setFillColor").map((c) => c.args.join(","));
+    expect(fills).toContain(parseColor(DEFAULT_MATERIAL.color).join(","));
+    expect(fills).toContain("238,221,136");
+    // Second row is shaded.
+    expect(fills).toContain("248,248,248");
+    // Right edge of the outline at the anchor (0.9 of the frame width).
+    const outline = rec.of("rect").find((c) => c.args[4] === "FD")!.args as number[];
+    expect(outline[0] + outline[2]).toBeCloseTo(0.9 * 297, 6);
+    expect(outline[1]).toBeCloseTo(0.1 * 210, 6);
+    expect(rec.balanced()).toBe(true);
   });
 });

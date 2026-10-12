@@ -5,7 +5,10 @@ export const REINFORCEMENT_COLOR = "#8e44ad";
 
 /** Label of a reinforcement force: kN/m, "/F" when divided by the FOS. */
 export function formatReinforcementForce(f: Pick<ReinforcementForce, "force" | "passive">): string {
-  return `${f.force.toFixed(f.force >= 100 ? 0 : 1)} kN/m${f.passive ? " /F" : ""}`;
+  // Decimals from the rounded value: 99.96 is "100", not "100.0".
+  const oneDecimal = f.force.toFixed(1);
+  const text = Number(oneDecimal) >= 100 ? f.force.toFixed(0) : oneDecimal;
+  return `${text} kN/m${f.passive ? " /F" : ""}`;
 }
 
 /** Part of an element that develops pullout, as fractions [from, to] of its length. */
