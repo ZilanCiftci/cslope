@@ -28,4 +28,4 @@ The first public release.
 
 ### Verification
 
-- 180 verification problems with 365 checks (published factors of safety, closed-form solutions and comparisons on identical input), run by the automated tests on every change.
+- 177 verification problems with 356 reference values from the literature and from other programs, run by the automated tests on every change.

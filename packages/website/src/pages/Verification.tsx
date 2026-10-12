@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { Check, FileDown, X } from "lucide-react";
+import { FileDown } from "lucide-react";
 
 import { PageHeader } from "@/components/PageHeader";
 import { Section, SectionHeading } from "@/components/Section";
@@ -8,7 +8,6 @@ import {
   VERIFICATION,
   checkCounts,
   filterProblems,
-  sourceKind,
   type Filter,
   type MethodFilter,
   type SourceFilter,
@@ -17,25 +16,13 @@ import { usePageMeta } from "@/lib/page-meta";
 import { SITE } from "@/site";
 import { cn } from "@/lib/utils";
 
-const pct = (x: number | null) => (x == null ? "–" : `${x >= 0 ? "+" : "−"}${Math.abs(x * 100).toFixed(2)} %`);
 const num = (x: number | null, digits = 3) => (x == null ? "–" : x.toFixed(digits));
+/** A reference value, or the range a source gives ("0.45–0.50"). */
+const reference = (k: { published: number; range?: [number, number] }, digits = 3) =>
+  k.range ? `${k.range[0].toFixed(2)}–${k.range[1].toFixed(2)}` : num(k.published, digits);
 
 /** The public edition of the report, attached to every release. */
 const REPORT = `${SITE.releases}/latest/download/cSlope-verification-report.pdf`;
-
-function Status({ pass }: { pass: boolean }) {
-  return pass ? (
-    <span className="inline-flex items-center gap-1 text-pass">
-      <Check className="h-3.5 w-3.5" aria-hidden="true" />
-      Pass
-    </span>
-  ) : (
-    <span className="inline-flex items-center gap-1 text-destructive">
-      <X className="h-3.5 w-3.5" aria-hidden="true" />
-      Fail
-    </span>
-  );
-}
 
 function Select<T extends string>({
   label,
@@ -112,8 +99,7 @@ function ProblemTable() {
           options={[
             ["all", "All sources"],
             ["literature", "Literature"],
-            ["commercial", "Other programs"],
-            ["same-input", "Same input"],
+            ["program", "Other programs"],
           ]}
         />
       </div>
@@ -127,8 +113,8 @@ function ProblemTable() {
         role="region"
         aria-label="Verification problems"
       >
-        <table className="w-full min-w-[46rem] text-left text-sm">
-          <caption className="sr-only">Verification problems: published and computed factors of safety</caption>
+        <table className="w-full min-w-[36rem] text-left text-sm">
+          <caption className="sr-only">Verification problems: reference and computed factors of safety</caption>
           <thead className="border-b bg-surface text-xs uppercase tracking-wide text-muted-foreground">
             <tr>
               <th scope="col" className="px-4 py-3 font-medium">
@@ -138,19 +124,10 @@ function ProblemTable() {
                 Method · source
               </th>
               <th scope="col" className="px-4 py-3 text-right font-medium">
-                Published
+                Reference
               </th>
               <th scope="col" className="px-4 py-3 text-right font-medium">
                 cSlope
-              </th>
-              <th scope="col" className="px-4 py-3 text-right font-medium">
-                Difference
-              </th>
-              <th scope="col" className="px-4 py-3 text-right font-medium">
-                Tolerance
-              </th>
-              <th scope="col" className="px-4 py-3 font-medium">
-                <span className="sr-only">Result</span>
               </th>
             </tr>
           </thead>
@@ -169,17 +146,8 @@ function ProblemTable() {
                     <div>{k.method}</div>
                     <div className="text-xs text-muted-foreground">{k.source}</div>
                   </td>
-                  <td className="px-4 py-3 text-right align-top font-mono tabular">{num(k.published)}</td>
+                  <td className="px-4 py-3 text-right align-top font-mono tabular whitespace-nowrap">{reference(k)}</td>
                   <td className="px-4 py-3 text-right align-top font-mono tabular">{num(k.computed)}</td>
-                  <td className="px-4 py-3 text-right align-top font-mono tabular text-muted-foreground">
-                    {pct(k.deviation)}
-                  </td>
-                  <td className="px-4 py-3 text-right align-top font-mono tabular text-muted-foreground">
-                    ± {(k.tolerance * 100).toFixed(1)} %
-                  </td>
-                  <td className="px-4 py-3 align-top text-xs font-medium">
-                    <Status pass={k.pass} />
-                  </td>
                 </tr>
               ))}
             </tbody>
@@ -220,7 +188,7 @@ function ReliabilityTable() {
       role="region"
       aria-label="Probabilistic verification problems"
     >
-      <table className="w-full min-w-[40rem] text-left text-sm">
+      <table className="w-full min-w-[32rem] text-left text-sm">
         <caption className="sr-only">Probabilistic verification problems</caption>
         <thead className="border-b bg-surface text-xs uppercase tracking-wide text-muted-foreground">
           <tr>
@@ -231,16 +199,10 @@ function ReliabilityTable() {
               Quantity · source
             </th>
             <th scope="col" className="px-4 py-3 text-right font-medium">
-              Published
+              Reference
             </th>
             <th scope="col" className="px-4 py-3 text-right font-medium">
               cSlope
-            </th>
-            <th scope="col" className="px-4 py-3 text-right font-medium">
-              Tolerance
-            </th>
-            <th scope="col" className="px-4 py-3 font-medium">
-              <span className="sr-only">Result</span>
             </th>
           </tr>
         </thead>
@@ -254,10 +216,7 @@ function ReliabilityTable() {
               </td>
               <td className="px-4 py-3 text-right font-mono tabular">{num(k.published, 4)}</td>
               <td className="px-4 py-3 text-right font-mono tabular">{num(k.computed, 4)}</td>
-              <td className="px-4 py-3 text-right font-mono tabular text-muted-foreground">± {k.tolerance}</td>
-              <td className="px-4 py-3 text-xs font-medium">
-                <Status pass={k.pass} />
-              </td>
+
             </tr>
           ))}
         </tbody>
@@ -269,27 +228,23 @@ function ReliabilityTable() {
 export function Verification() {
   usePageMeta(
     "Verification",
-    `cSlope against ${VERIFICATION.summary.problems} published slope stability problems: published and computed factors of safety, problem by problem.`,
+    `cSlope against ${VERIFICATION.summary.problems} published slope stability problems: reference and computed factors of safety, problem by problem.`,
   );
   const s = VERIFICATION.summary;
   const counts = checkCounts();
-  // Published in the literature; closed-form solutions are counted apart (see the lead).
-  const literatureChecks = VERIFICATION.problems
-    .flatMap((p) => p.checks)
-    .filter((k) => sourceKind(k) === "literature" && !/^theory\b/i.test(k.source)).length;
   return (
     <>
       <PageHeader
         eyebrow="Verification"
-        title="Every result, next to the published one"
-        lead={`cSlope is checked against ${s.problems} problems with ${s.checks} reference values: ${counts.published} published factors of safety, ${counts.theory} closed-form solutions and ${counts.sameInput} results of another program on identical input. The same problems run in the automated tests on every change to the code, so this table is what the program computes today.`}
+        title="Every result, next to the reference"
+        lead={`cSlope is run on ${s.problems} problems with ${s.checks} reference values: ${counts.literature} from the literature, ${counts.theory} closed-form solutions and ${counts.programs} from other programs. The same problems run in the automated tests on every change to the code, so this table is what the program computes today.`}
       >
         <dl className="mt-10 grid max-w-3xl grid-cols-2 gap-6 sm:grid-cols-4">
           {[
             [String(s.problems), "problems"],
-            [`${s.passed}/${s.checks}`, "checks pass"],
-            [String(literatureChecks), "values from the literature"],
-            [String(s.reliabilityChecks), "probabilistic checks (β, Pf)"],
+            [String(s.checks), "reference values"],
+            [String(counts.literature), "from the literature"],
+            [String(s.reliabilityChecks), "probabilistic values (β, Pf)"],
           ].map(([v, l]) => (
             <div key={l} className="flex flex-col-reverse">
               <dt className="mt-1 text-sm text-muted-foreground">{l}</dt>
@@ -308,9 +263,9 @@ export function Verification() {
       <Section>
         <SectionHeading
           title="How the problems are checked"
-          lead="Each problem is entered from its source: geometry, materials, water and loads. cSlope then analyses the surface the source gives, or searches for the critical one where the source did, with the method the source used. A check passes when cSlope's factor of safety lies within the problem's tolerance of the published value: 0.5 % where the input is exactly known, up to a few per cent for searches and digitised input."
+          lead="Each problem is entered from its source: geometry, materials, water and loads. cSlope then analyses the surface the source gives, or searches for the critical one where the source did, with the method the source used. The tables show the reference value next to cSlope's."
         />
-        <ul className="mt-8 grid gap-4 text-sm text-muted-foreground md:grid-cols-3">
+        <ul className="mt-8 grid gap-4 text-sm text-muted-foreground md:grid-cols-2">
           <li className="rounded-lg border bg-card p-4">
             <p className="font-medium text-foreground">Literature</p>
             <p className="mt-1">
@@ -323,13 +278,6 @@ export function Verification() {
               Some values come from the verification and reference manuals of other slope stability programs, most
               of them commercial. They are shown as program A, B and so on: one letter per program, so differences
               between programs stay visible.
-            </p>
-          </li>
-          <li className="rounded-lg border bg-card p-4">
-            <p className="font-medium text-foreground">Same input</p>
-            <p className="mt-1">
-              {counts.sameInput} checks compare with another program run on identical input. They confirm the
-              implementation rather than the published problem.
             </p>
           </li>
         </ul>
@@ -345,7 +293,7 @@ export function Verification() {
       <Section id="probabilistic">
         <SectionHeading
           title="Probabilistic analysis"
-          lead="Reliability index β and probability of failure from the Taylor series and Monte Carlo methods, compared with absolute tolerances."
+          lead="Reliability index β and probability of failure from the Taylor series and Monte Carlo methods, next to the reference values."
         />
         <ReliabilityTable />
       </Section>

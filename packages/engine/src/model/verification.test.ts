@@ -53,11 +53,11 @@ describe("Verification data", () => {
     expect(ids.filter((id) => !deterministic.has(id))).toEqual([]);
   });
 
-  it("tolerances stay within 0.5–6 % and published values are positive", () => {
+  it("tolerances (tolerance.ts) stay within 1–6 % and published values are positive", () => {
     for (const c of VERIFICATION_CASES) {
       for (const check of c.checks) {
         expect(check.published, c.id).toBeGreaterThan(0);
-        expect(check.tolerance, c.id).toBeGreaterThanOrEqual(0.005);
+        expect(check.tolerance, c.id).toBeGreaterThanOrEqual(0.01);
         expect(check.tolerance, c.id).toBeLessThanOrEqual(0.06);
       }
     }

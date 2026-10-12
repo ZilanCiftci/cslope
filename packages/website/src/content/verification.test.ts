@@ -36,11 +36,10 @@ describe("verification filter", () => {
     const spencer = filterProblems(VERIFICATION.problems, { ...all, method: "Spencer" });
     expect(spencer.flatMap((p) => p.checks).every((k) => methodFamily(k.method) === "Spencer")).toBe(true);
     const lit = filterProblems(VERIFICATION.problems, { ...all, source: "literature" });
-    const com = filterProblems(VERIFICATION.problems, { ...all, source: "commercial" });
-    const same = filterProblems(VERIFICATION.problems, { ...all, source: "same-input" });
+    const com = filterProblems(VERIFICATION.problems, { ...all, source: "program" });
     const n = (ps: typeof lit) => ps.reduce((a, p) => a + p.checks.length, 0);
-    expect(n(lit) + n(com) + n(same)).toBe(VERIFICATION.summary.checks);
-    expect(n(same)).toBeGreaterThan(0);
+    expect(n(lit) + n(com)).toBe(VERIFICATION.summary.checks);
+    expect(n(com)).toBeGreaterThan(0);
     expect(com.flatMap((p) => p.checks).every((k) => /\b[Pp]rogram [A-Z]\b/.test(k.source))).toBe(true);
     expect(lit.every((p) => p.checks.length > 0)).toBe(true);
   });

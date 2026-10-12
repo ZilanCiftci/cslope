@@ -6,12 +6,11 @@ export interface VerificationCheck {
   published: number;
   /** Who published the value: literature, or "Commercial program A" etc. */
   source: string;
-  /** Accepted relative deviation. */
-  tolerance: number;
+  /** The reference is a range ("0.45–0.50"); `published` is its middle. */
+  range?: [number, number];
   computed: number | null;
   /** (computed − published) / published. */
   deviation: number | null;
-  pass: boolean;
 }
 
 export interface VerificationProblem {
@@ -32,9 +31,7 @@ export interface ReliabilityCheck {
   quantity: string;
   published: number;
   source: string;
-  tolerance: number;
   computed: number | null;
-  pass: boolean;
 }
 
 export interface ReliabilityProblem {
@@ -47,7 +44,6 @@ export interface VerificationData {
   summary: {
     problems: number;
     checks: number;
-    passed: number;
     literatureProblems: number;
     reliabilityChecks: number;
   };

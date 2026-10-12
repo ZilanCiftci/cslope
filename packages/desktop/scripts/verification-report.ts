@@ -40,6 +40,7 @@ import {
   type ReliabilityCheckResult,
   type VerificationCase,
   type VerificationCheck,
+  agrees,
 } from "@cslope/engine/verification";
 import type { Slope } from "@cslope/engine";
 import { BENCHMARK_MODELS, PUBLISHED_BENCHMARKS } from "../src/store/benchmarks";
@@ -607,7 +608,7 @@ function evaluate(c: VerificationCase): CaseResult {
     const { fos, slope } = runVerification(c.definition, check.method, check.options);
     firstSlope ??= slope;
     const diff = fos == null ? NaN : ((fos - check.published) / check.published) * 100;
-    return { check, fos, diff, pass: fos != null && Math.abs(diff) <= check.tolerance * 100 + 1e-9 };
+    return { check, fos, diff, pass: fos != null && agrees(check, fos) };
   });
   const plane = criticalPlane(firstSlope!);
   // The figure needs the geometry and the critical surface only: drop the
@@ -712,11 +713,16 @@ table(
   [
     ["Program version", `cSlope ${pkg.version ?? ""} (commit ${commit})`],
     ["Report generated", today],
-    ["Published values compared", String(nChecks)],
-    ["Within acceptance tolerance", `${nPass} of ${nChecks}`],
-    ...(nPending > 0 ? [["Pending engine changes", `${nPending} of the others`]] : []),
-    ["Mean |difference|", `${meanAbs.toFixed(2)} %`],
-    ["Max |difference|", `${maxAbs.toFixed(2)} %`],
+    ["Reference values", String(nChecks)],
+    // The public edition shows the reference and the computed values only.
+    ...(PUBLIC
+      ? []
+      : [
+          ["Within acceptance tolerance", `${nPass} of ${nChecks}`],
+          ...(nPending > 0 ? [["Pending engine changes", `${nPending} of the others`]] : []),
+          ["Mean |difference|", `${meanAbs.toFixed(2)} %`],
+          ["Max |difference|", `${maxAbs.toFixed(2)} %`],
+        ]),
   ],
   10,
 );
@@ -749,11 +755,13 @@ table(
     ["Unit weight of water", "9.81 kN/m³"],
   ],
 );
-heading("Acceptance", 2);
-paragraph(
-  `A result passes when its relative difference from the published value is within the tolerance stated for the problem (0.5–2.5 %). Tighter tolerances are used where the input is exactly known; wider ones for searches, whose result depends on the search grid of each program, and for problems whose input (e.g. a digitised water table) is only approximately known, as stated in the notes. Reliability indices and probabilities of failure are compared with absolute tolerances, and the bundled benchmark models with an absolute tolerance on the factor of safety. Checks marked "${PUBLIC ? "program D" : "xslope"} (same input)" compare with another program run on the identical input, not with a publication.`,
-);
-y += 2;
+if (!PUBLIC) {
+  heading("Acceptance", 2);
+  paragraph(
+    `A result passes when its relative difference from the published value is within the tolerance stated for the problem (0.5–2.5 %). Tighter tolerances are used where the input is exactly known; wider ones for searches, whose result depends on the search grid of each program, and for problems whose input (e.g. a digitised water table) is only approximately known, as stated in the notes. Reliability indices and probabilities of failure are compared with absolute tolerances, and the bundled benchmark models with an absolute tolerance on the factor of safety. Checks marked "${PUBLIC ? "program D" : "xslope"} (same input)" compare with another program run on the identical input, not with a publication.`,
+  );
+  y += 2;
+}
 heading("Units", 2);
 paragraph(
   "Problems published in imperial units without water are entered in their own units (ft, psf, pcf); the factor of safety is dimensionless. Problems with water are converted to SI because the program uses γw = 9.81 kN/m³ (62.4 pcf = 9.80 kN/m³, < 0.1 % difference).",
@@ -775,56 +783,60 @@ const PENDING: [number, number, number] = [196, 120, 20];
 /** Pass, Fail, or Pending for a failing check that waits for an engine change. */
 const statusCell = (pass: boolean, pending?: string) =>
   pass ? { text: "Pass", color: PASS, bold: true } : pending ? { text: "Pending", color: PENDING, bold: true } : { text: "Fail", color: FAIL, bold: true };
-table(
-  [
-    { title: "Problem", width: 18 },
-    { title: "Description", width: 54 },
-    { title: "Method", width: 40 },
-    { title: "Published", width: 18, align: "right" },
-    { title: "cSlope", width: 15, align: "right" },
-    { title: "Diff.", width: 15, align: "right" },
-    { title: "", width: CONTENT_W - 160, align: "center" },
-  ],
-  [
-    ...caseResults.flatMap((r) =>
-      r.results.map((x) => [
-        r.c.id,
-        r.c.title,
-        x.check.label,
-        fmt(x.check.published),
-        fmt(x.fos ?? NaN),
-        pct(x.diff),
-        statusCell(x.pass, x.check.pending),
-      ]),
-    ),
-    ...benchResults.flatMap((b) =>
-      b.rows.map((x) => [
-        "Bundled",
-        b.name,
-        methodName(x.method),
-        fmt(x.published),
-        fmt(x.fos ?? NaN),
-        pct(x.diff),
+/** The reference value, or the range a source gives ("0.45–0.50"). */
+const refText = (k: { published: number; range?: [number, number] }) =>
+  k.range ? `${k.range[0].toFixed(2)}–${k.range[1].toFixed(2)}` : fmt(k.published);
+// The public edition shows the reference and cSlope's value only; the
+// internal one adds the difference and the acceptance.
+const summaryRows: Cell[][] = [
+  ...caseResults.flatMap((r) =>
+    r.results.map((x): Cell[] => [r.c.id, r.c.title, x.check.label, refText(x.check), fmt(x.fos ?? NaN), pct(x.diff), statusCell(x.pass, x.check.pending)]),
+  ),
+  ...benchResults.flatMap((b) =>
+    b.rows.map((x): Cell[] => ["Bundled", b.name, methodName(x.method), fmt(x.published), fmt(x.fos ?? NaN), pct(x.diff), statusCell(x.pass)]),
+  ),
+  // Reliability (β, Pf): absolute differences.
+  ...RELIABILITY.flatMap((c) =>
+    (reliabilityResults.get(c.id) ?? [])
+      .filter((x) => x.quantity !== "fos")
+      .map((x): Cell[] => [
+        c.id,
+        c.title,
+        RELIABILITY_LABELS[x.quantity],
+        x.published.toFixed(3),
+        x.computed.toFixed(3),
+        (x.computed - x.published >= 0 ? "+" : "") + (x.computed - x.published).toFixed(3),
         statusCell(x.pass),
       ]),
-    ),
-    // Reliability (β, Pf): absolute differences.
-    ...RELIABILITY.flatMap((c) =>
-      (reliabilityResults.get(c.id) ?? [])
-        .filter((x) => x.quantity !== "fos")
-        .map((x) => [
-          c.id,
-          c.title,
-          RELIABILITY_LABELS[x.quantity],
-          x.published.toFixed(3),
-          x.computed.toFixed(3),
-          (x.computed - x.published >= 0 ? "+" : "") + (x.computed - x.published).toFixed(3),
-          statusCell(x.pass),
-        ]),
-    ),
-  ],
-  7.6,
-);
+  ),
+];
+if (PUBLIC) {
+  table(
+    [
+      { title: "Problem", width: 20 },
+      { title: "Description", width: 70 },
+      { title: "Method", width: 46 },
+      { title: "Reference", width: 22, align: "right" },
+      { title: "cSlope", width: CONTENT_W - 158, align: "right" },
+    ],
+    summaryRows.map((row) => row.slice(0, 5)),
+    7.6,
+  );
+} else {
+  table(
+    [
+      { title: "Problem", width: 18 },
+      { title: "Description", width: 54 },
+      { title: "Method", width: 40 },
+      { title: "Published", width: 18, align: "right" },
+      { title: "cSlope", width: 15, align: "right" },
+      { title: "Diff.", width: 15, align: "right" },
+      { title: "", width: CONTENT_W - 160, align: "center" },
+    ],
+    summaryRows,
+    7.6,
+  );
+}
 
 // Problems.
 newPage();
@@ -876,36 +888,20 @@ caseResults.forEach((r, i) => {
       ];
     }),
   );
-  table(
-    [
-      { title: "Method", width: 56 },
-      { title: "Published by", width: 34 },
-      { title: "Published", width: 19, align: "right" },
-      { title: "cSlope", width: 17, align: "right" },
-      { title: "Difference", width: 19, align: "right" },
-      { title: "Tolerance", width: 17, align: "right" },
-      { title: "", width: CONTENT_W - 162, align: "center" },
-    ],
-    r.results.map((x) => [
-      x.check.label,
-      x.check.publishedBy,
-      fmt(x.check.published),
-      fmt(x.fos ?? NaN),
-      pct(x.diff),
-      `± ${(x.check.tolerance * 100).toFixed(1)} %`,
-      statusCell(x.pass, x.check.pending),
-    ]),
-  );
-  const reliability = reliabilityResults.get(c.id)?.filter((x) => x.quantity !== "fos");
-  if (reliability?.length) {
-    const rc = RELIABILITY.find((x) => x.id === c.id)!;
-    paragraph(
-      `Probabilistic analysis on the same surface: ${rc.variables.length} normal variables (${rc.correlations?.length ? rc.correlations.map((k) => `ρ = ${k.rho}`).join(", ") + " between pairs" : "independent"}); Taylor series (mean ± σ) and Monte Carlo with ${rc.samples} samples (seed ${rc.seed}). Differences in β and Pf are absolute.`,
-      8.5,
-    );
+  if (PUBLIC) {
     table(
       [
-        { title: "Quantity", width: 56 },
+        { title: "Method", width: 64 },
+        { title: "Published by", width: 50 },
+        { title: "Reference", width: 26, align: "right" },
+        { title: "cSlope", width: CONTENT_W - 140, align: "right" },
+      ],
+      r.results.map((x) => [x.check.label, x.check.publishedBy, refText(x.check), fmt(x.fos ?? NaN)]),
+    );
+  } else {
+    table(
+      [
+        { title: "Method", width: 56 },
         { title: "Published by", width: 34 },
         { title: "Published", width: 19, align: "right" },
         { title: "cSlope", width: 17, align: "right" },
@@ -913,16 +909,56 @@ caseResults.forEach((r, i) => {
         { title: "Tolerance", width: 17, align: "right" },
         { title: "", width: CONTENT_W - 162, align: "center" },
       ],
-      reliability.map((x) => [
-        RELIABILITY_LABELS[x.quantity],
-        x.publishedBy,
-        x.published.toFixed(3),
-        x.computed.toFixed(3),
-        (x.computed - x.published >= 0 ? "+" : "") + (x.computed - x.published).toFixed(3),
-        `± ${x.tolerance.toFixed(3)}`,
-        statusCell(x.pass),
+      r.results.map((x) => [
+        x.check.label,
+        x.check.publishedBy,
+        refText(x.check),
+        fmt(x.fos ?? NaN),
+        pct(x.diff),
+        `± ${(x.check.tolerance * 100).toFixed(1)} %`,
+        statusCell(x.pass, x.check.pending),
       ]),
     );
+  }
+  const reliability = reliabilityResults.get(c.id)?.filter((x) => x.quantity !== "fos");
+  if (reliability?.length) {
+    const rc = RELIABILITY.find((x) => x.id === c.id)!;
+    paragraph(
+      `Probabilistic analysis on the same surface: ${rc.variables.length} normal variables (${rc.correlations?.length ? rc.correlations.map((k) => `ρ = ${k.rho}`).join(", ") + " between pairs" : "independent"}); Taylor series (mean ± σ) and Monte Carlo with ${rc.samples} samples (seed ${rc.seed}). Differences in β and Pf are absolute.`,
+      8.5,
+    );
+    if (PUBLIC) {
+      table(
+        [
+          { title: "Quantity", width: 64 },
+          { title: "Published by", width: 50 },
+          { title: "Reference", width: 26, align: "right" },
+          { title: "cSlope", width: CONTENT_W - 140, align: "right" },
+        ],
+        reliability.map((x) => [RELIABILITY_LABELS[x.quantity], x.publishedBy, x.published.toFixed(3), x.computed.toFixed(3)]),
+      );
+    } else {
+      table(
+        [
+          { title: "Quantity", width: 56 },
+          { title: "Published by", width: 34 },
+          { title: "Published", width: 19, align: "right" },
+          { title: "cSlope", width: 17, align: "right" },
+          { title: "Difference", width: 19, align: "right" },
+          { title: "Tolerance", width: 17, align: "right" },
+          { title: "", width: CONTENT_W - 162, align: "center" },
+        ],
+        reliability.map((x) => [
+          RELIABILITY_LABELS[x.quantity],
+          x.publishedBy,
+          x.published.toFixed(3),
+          x.computed.toFixed(3),
+          (x.computed - x.published >= 0 ? "+" : "") + (x.computed - x.published).toFixed(3),
+          `± ${x.tolerance.toFixed(3)}`,
+          statusCell(x.pass),
+        ]),
+      );
+    }
   }
   const notes = [
     ...(c.notes ?? []),
@@ -985,24 +1021,28 @@ benchResults.forEach((b, i) => {
       ];
     }),
   );
-  table(
-    [
-      { title: "Method", width: 56 },
-      { title: "Published", width: 24, align: "right" },
-      { title: "cSlope", width: 22, align: "right" },
-      { title: "Difference", width: 24, align: "right" },
-      { title: "Tolerance (abs.)", width: 26, align: "right" },
-      { title: "", width: CONTENT_W - 152, align: "center" },
-    ],
-    b.rows.map((x) => [
-      methodName(x.method),
-      fmt(x.published),
-      fmt(x.fos ?? NaN),
-      pct(x.diff),
-      `± ${x.tol.toFixed(3)}`,
-      statusCell(x.pass),
-    ]),
-  );
+  if (PUBLIC) {
+    table(
+      [
+        { title: "Method", width: 80 },
+        { title: "Reference", width: 40, align: "right" },
+        { title: "cSlope", width: CONTENT_W - 120, align: "right" },
+      ],
+      b.rows.map((x) => [methodName(x.method), fmt(x.published), fmt(x.fos ?? NaN)]),
+    );
+  } else {
+    table(
+      [
+        { title: "Method", width: 56 },
+        { title: "Published", width: 24, align: "right" },
+        { title: "cSlope", width: 22, align: "right" },
+        { title: "Difference", width: 24, align: "right" },
+        { title: "Tolerance (abs.)", width: 26, align: "right" },
+        { title: "", width: CONTENT_W - 152, align: "center" },
+      ],
+      b.rows.map((x) => [methodName(x.method), fmt(x.published), fmt(x.fos ?? NaN), pct(x.diff), `± ${x.tol.toFixed(3)}`, statusCell(x.pass)]),
+    );
+  }
 });
 
 // Header and footer on every page but the cover.

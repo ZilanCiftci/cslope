@@ -37,7 +37,7 @@ export function homeExamples(d: VerificationData = VERIFICATION): Example[] {
   return out;
 }
 
-export type SourceKind = "literature" | "commercial" | "same-input";
+export type SourceKind = "literature" | "program";
 export type SourceFilter = "all" | SourceKind;
 export type MethodFilter = "all" | "Bishop" | "Janbu" | "Spencer" | "Morgenstern-Price";
 
@@ -56,25 +56,20 @@ export function methodFamily(label: string): Exclude<MethodFilter, "all"> {
 }
 
 /**
- * The checks by kind of reference value: factors of safety published in
- * the literature or in a verification manual, closed-form theory, and
- * another program run on the same input.
+ * The reference values by kind: from the literature (closed-form solutions
+ * counted apart) and from other programs.
  */
 export function checkCounts(d: VerificationData = VERIFICATION) {
   const checks = d.problems.flatMap((p) => p.checks);
-  const sameInput = checks.filter((k) => sourceKind(k) === "same-input").length;
   const theory = checks.filter((k) => /^theory\b/i.test(k.source)).length;
-  return { published: checks.length - sameInput - theory, sameInput, theory };
+  const programs = checks.filter((k) => sourceKind(k) === "program").length;
+  return { literature: checks.length - programs - theory, theory, programs };
 }
 
-/**
- * Where a check's published value comes from: the literature, a commercial
- * program's verification manual, or another program run on the same input.
- */
+/** Where a check's reference value comes from: the literature or another program. */
 export function sourceKind(k: VerificationCheck): SourceKind {
-  if (/same input/i.test(k.source)) return "same-input";
-  // "Commercial program A", and the other programs ("Program H").
-  if (/\b[Pp]rogram [A-Z]\b/.test(k.source)) return "commercial";
+  // "Commercial program A", and the other programs ("Program D").
+  if (/\b[Pp]rogram [A-Z]\b/.test(k.source)) return "program";
   return "literature";
 }
 

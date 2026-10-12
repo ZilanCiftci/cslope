@@ -15,3 +15,4 @@ export type { ReliabilityCaseData, ReliabilityQuantity } from "./reliability-cas
 export { FHWA_PULLOUT_TABLES } from "./pullout-tables";
 export type { PulloutTable } from "./pullout-tables";
 export type { VerificationCase, VerificationCheck, ReliabilityCheckResult } from "./cases";
+export { agrees, referenceTolerance } from "./tolerance";

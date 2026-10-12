@@ -7,6 +7,7 @@
 import { describe, it, expect } from "vitest";
 import { RELIABILITY_CASES } from "../verification/reliability-cases";
 import { VERIFICATION_CASES, runReliabilityCase, runVerification } from "../verification/cases";
+import { agrees } from "../verification/tolerance";
 
 export const SHARDS = 8;
 
@@ -21,7 +22,8 @@ export function defineVerificationShard(shard: number): void {
       it(`${c.id} ${c.title}: ${check.label} ${check.published} (${check.publishedBy})${pending}`, { timeout: 60000 }, () => {
         const { fos } = runVerification(c.definition, check.method, check.options);
         expect(fos).not.toBeNull();
-        expect(Math.abs(fos! - check.published) / check.published).toBeLessThanOrEqual(check.tolerance);
+        const deviation = (fos! - check.published) / check.published;
+        expect(agrees(check, fos!), `deviation ${(deviation * 100).toFixed(2)} %, tolerance ${(check.tolerance * 100).toFixed(2)} %`).toBe(true);
       });
     });
   });

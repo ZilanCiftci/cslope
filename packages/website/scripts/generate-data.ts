@@ -22,6 +22,7 @@ import { join } from "node:path";
 import {
   RELIABILITY_CASES,
   VERIFICATION_CASES,
+  agrees,
   runReliabilityCase,
   runVerification,
 } from "@cslope/engine/verification";
@@ -96,21 +97,19 @@ export function buildData(
       commercial: ref.commercial,
       surface: c.surface,
       units: c.units,
+      // The reference and the computed value only: the site shows no
+      // tolerances or pass marks (the engine's tests keep those).
       checks: c.checks.map((k, j) => {
-        // The pass mark comes from the engine's own value, as in the engine's
-        // verification tests; the shown values are rounded.
         const raw = fos[c.id]?.[j] ?? null;
         const computed = raw == null ? null : round(raw);
-        const rawDeviation = raw == null ? null : (raw - k.published) / k.published;
         const deviation = computed == null ? null : (computed - k.published) / k.published;
         return {
           method: k.label,
           published: k.published,
           source: anonymiseSource(k.publishedBy),
-          tolerance: k.tolerance,
+          ...(k.range ? { range: k.range } : {}),
           computed,
           deviation: deviation == null ? null : round(deviation, 5),
-          pass: rawDeviation != null && Math.abs(rawDeviation) <= k.tolerance,
         };
       }),
     };
@@ -119,22 +118,10 @@ export function buildData(
     id: publicId(c.id),
     // The engine's id follows a vendor's numbering, so it is never shown.
     title: anonymiseTitle(VERIFICATION_CASES.find((v) => v.id === c.id)?.title ?? `Probabilistic problem ${publicId(c.id)}`, ids),
-    checks: c.checks.map(([quantity, published, publishedBy, tolerance], j) => {
+    checks: c.checks.map(([quantity, published, publishedBy], j) => {
       const value = reliabilityResults[c.id]?.[j];
       const raw = value == null || !Number.isFinite(value) ? null : value;
-      const computed = raw == null ? null : round(raw);
-      return {
-        quantity,
-        published,
-        source: anonymiseSource(publishedBy),
-        tolerance,
-        computed,
-        pass:
-          raw != null &&
-          (quantity === "fos"
-            ? Math.abs(raw - published) / published <= tolerance
-            : Math.abs(raw - published) <= tolerance + 1e-9),
-      };
+      return { quantity, published, source: anonymiseSource(publishedBy), computed: raw == null ? null : round(raw) };
     }),
   }));
   const checks = problems.flatMap((p) => p.checks);
@@ -142,7 +129,6 @@ export function buildData(
     summary: {
       problems: problems.length,
       checks: checks.length,
-      passed: checks.filter((k) => k.pass).length,
       literatureProblems: problems.filter((p) => p.literature).length,
       // β and Pf; a probabilistic problem's mean factor of safety is not counted.
       reliabilityChecks: reliability.reduce((n, r) => n + r.checks.filter((k) => k.quantity !== "fos").length, 0),
@@ -150,6 +136,12 @@ export function buildData(
     problems,
     reliability,
   };
+}
+
+/** How many checks agree with their reference by the engine's rule (tolerance.ts). */
+export function agreement(fos: Record<string, (number | null)[]>): { agree: number; total: number } {
+  const checks = VERIFICATION_CASES.flatMap((c) => c.checks.map((k, j) => ({ k, value: fos[c.id]?.[j] ?? null })));
+  return { agree: checks.filter(({ k, value }) => value != null && agrees(k, value)).length, total: checks.length };
 }
 
 if (import.meta.main) {
@@ -183,6 +175,7 @@ if (import.meta.main) {
     mkdirSync(join(OUT, ".."), { recursive: true });
     writeFileSync(OUT, json);
     const s = JSON.parse(json).summary;
-    console.log(`${s.problems} problems, ${s.passed}/${s.checks} checks pass, ${((Date.now() - started) / 1000).toFixed(0)} s → ${OUT}`);
+    const a = agreement(fos);
+    console.log(`${s.problems} problems, ${a.agree}/${a.total} checks agree, ${((Date.now() - started) / 1000).toFixed(0)} s → ${OUT}`);
   }
 }

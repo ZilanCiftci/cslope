@@ -16,7 +16,7 @@ import data from "../src/content/generated/verification.json";
 const root = join(import.meta.dirname, "..");
 const s = data.summary;
 const html = readFileSync(join(root, "scripts/og-image.html"), "utf8")
-  .replace("{{FIGURES}}", `${s.problems} verification problems · ${s.passed}/${s.checks} checks pass`)
+  .replace("{{FIGURES}}", `${s.problems} verification problems · ${s.checks} reference values`)
   .replace(
     "{{FONTS}}",
     ["@fontsource-variable/inter/index.css", "@fontsource/ibm-plex-mono/400.css"]

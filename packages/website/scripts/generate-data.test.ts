@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import { RELIABILITY_CASES, VERIFICATION_CASES } from "@cslope/engine/verification";
 import data from "../src/content/generated/verification.json";
 import type { VerificationData } from "../src/content/verification-types";
-import { buildData } from "./generate-data";
+import { agreement, buildData } from "./generate-data";
 
 const file = data as VerificationData;
 
@@ -22,24 +22,23 @@ describe("generated/verification.json", () => {
     expect(file.reliability.length).toBe(RELIABILITY_CASES.length);
     const { fos, reliability } = computedFromFile();
     // Everything except the engine's results is rebuilt from the problems.
-    // The pass marks come from the unrounded results, so they are compared
-    // separately below.
-    const withoutPass = (d: VerificationData) =>
-      JSON.parse(JSON.stringify(d), (key, value) => (key === "pass" || key === "passed" ? undefined : value));
-    expect(withoutPass(buildData(fos, reliability))).toEqual(withoutPass(file));
+    expect(buildData(fos, reliability)).toEqual(file);
   });
 
-  it("marks a check as passed exactly when it is within tolerance (to rounding)", () => {
-    for (const k of file.problems.flatMap((p) => p.checks)) {
-      if (k.deviation == null) expect(k.pass).toBe(false);
-      else if (Math.abs(Math.abs(k.deviation) - k.tolerance) > 1e-5) expect(k.pass).toBe(Math.abs(k.deviation) <= k.tolerance);
-    }
+  it("publishes no tolerance or pass mark, only the reference and the computed value", () => {
+    const text = JSON.stringify(file);
+    expect(text).not.toMatch(/"(tolerance|pass|passed)":/);
+  });
+
+  it("agrees with every reference by the engine's rule (tolerance.ts)", () => {
+    const { fos } = computedFromFile();
+    const a = agreement(fos);
+    expect(a.agree).toBe(a.total);
   });
 
   it("has a summary consistent with its rows", () => {
     const checks = file.problems.flatMap((p) => p.checks);
     expect(file.summary.checks).toBe(checks.length);
-    expect(file.summary.passed).toBe(checks.filter((k) => k.pass).length);
     expect(file.summary.problems).toBe(file.problems.length);
   });
 });

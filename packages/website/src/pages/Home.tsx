@@ -9,7 +9,6 @@ import {
   FileText,
   Layers,
   Search,
-  ShieldCheck,
   Spline,
 } from "lucide-react";
 import type { ReactNode } from "react";
@@ -22,7 +21,6 @@ import { VERIFICATION, checkCounts, homeExamples } from "@/content/verification"
 import { usePageMeta } from "@/lib/page-meta";
 import { SITE } from "@/site";
 
-const formatPercent = (x: number) => `${x >= 0 ? "+" : "−"}${Math.abs(x * 100).toFixed(2)}\u00a0%`;
 
 function Hero() {
   const s = VERIFICATION.summary;
@@ -36,7 +34,7 @@ function Hero() {
         <div className="animate-fade-up">
           <p className="inline-flex items-center gap-2 rounded-full border bg-background px-3 py-1 text-xs font-medium text-muted-foreground">
             <span className="h-1.5 w-1.5 rounded-full bg-pass" aria-hidden="true" />
-            {s.passed} of {s.checks} verification checks pass
+            {s.problems} verification problems, {s.checks} reference values
           </p>
           <h1 className="mt-6 text-4xl font-semibold tracking-tight text-balance sm:text-5xl">
             Slope stability analysis you can verify
@@ -72,7 +70,7 @@ function KeyFigures() {
   const s = VERIFICATION.summary;
   const figures = [
     { value: String(s.problems), label: "published verification problems" },
-    { value: `${s.passed}/${s.checks}`, label: "checks within tolerance" },
+    { value: String(s.checks), label: "reference values" },
     { value: "3", label: "limit equilibrium methods" },
     { value: SITE.licence, label: "licence, no licence server" },
   ];
@@ -170,17 +168,12 @@ function Verification() {
             lead={
               <>
                 {s.problems} problems from the geotechnical literature and from verification manuals of established
-                programs: {counts.published} published factors of safety, plus {counts.sameInput + counts.theory}{" "}
-                checks against theory or another program on identical input. The checks run on every change to the
-                code.
+                programs: {counts.literature} reference values from the literature, {counts.theory} closed-form
+                solutions and {counts.programs} values from other programs. They run on every change to the code.
               </>
             }
           />
-          <p className="mt-6 flex items-center gap-2 text-sm text-muted-foreground">
-            <ShieldCheck className="h-4 w-4 text-pass" aria-hidden="true" />
-            {s.passed} of {s.checks} checks within their tolerance.
-          </p>
-          <Link to="/verification" className="mt-4 inline-flex items-center text-sm font-medium text-primary hover:underline">
+          <Link to="/verification" className="mt-6 inline-flex items-center text-sm font-medium text-primary hover:underline">
             Every problem and result
             <ArrowRight className="ml-1 h-4 w-4" />
           </Link>
@@ -189,23 +182,20 @@ function Verification() {
           className="relative overflow-x-auto rounded-lg border bg-card [&_td]:px-3 [&_th]:px-3 sm:[&_td]:px-4 sm:[&_th]:px-4"
           tabIndex={0}
           role="region"
-          aria-label="Examples of published and computed factors of safety"
+          aria-label="Examples of reference and computed factors of safety"
         >
           <table className="w-full text-left text-sm">
-            <caption className="sr-only">Examples of published and computed factors of safety</caption>
+            <caption className="sr-only">Examples of reference and computed factors of safety</caption>
             <thead className="border-b bg-surface text-xs uppercase tracking-wide text-muted-foreground">
               <tr>
                 <th scope="col" className="px-4 py-3 font-medium">
                   Problem
                 </th>
                 <th scope="col" className="px-4 py-3 text-right font-medium">
-                  Published
+                  Reference
                 </th>
                 <th scope="col" className="px-4 py-3 text-right font-medium">
                   cSlope
-                </th>
-                <th scope="col" className="hidden px-4 py-3 text-right font-medium sm:table-cell">
-                  Difference
                 </th>
               </tr>
             </thead>
@@ -219,16 +209,7 @@ function Verification() {
                     </div>
                   </td>
                   <td className="px-4 py-3 text-right font-mono tabular">{check.published.toFixed(3)}</td>
-                  <td className="px-4 py-3 text-right font-mono tabular">
-                    {check.computed?.toFixed(3)}
-                    {/* On a phone the difference goes under the value, not in a column of its own. */}
-                    <div className="text-xs text-muted-foreground sm:hidden">
-                      {check.deviation != null && formatPercent(check.deviation)}
-                    </div>
-                  </td>
-                  <td className="hidden px-4 py-3 text-right font-mono tabular text-muted-foreground sm:table-cell">
-                    {check.deviation != null && formatPercent(check.deviation)}
-                  </td>
+                  <td className="px-4 py-3 text-right font-mono tabular">{check.computed?.toFixed(3)}</td>
                 </tr>
               ))}
             </tbody>

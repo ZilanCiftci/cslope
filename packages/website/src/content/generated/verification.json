@@ -1,9 +1,8 @@
 {
  "summary": {
-  "problems": 180,
-  "checks": 365,
-  "passed": 365,
-  "literatureProblems": 161,
+  "problems": 177,
+  "checks": 356,
+  "literatureProblems": 158,
   "reliabilityChecks": 29
  },
  "problems": [
@@ -20,19 +19,15 @@
      "method": "Bishop simplified",
      "published": 2.08,
      "source": "Fredlund & Krahn",
-     "tolerance": 0.005,
      "computed": 2.0757,
-     "deviation": -0.00207,
-     "pass": true
+     "deviation": -0.00207
     },
     {
      "method": "Morgenstern-Price (half-sine)",
      "published": 2.076,
      "source": "Fredlund & Krahn",
-     "tolerance": 0.005,
      "computed": 2.0716,
-     "deviation": -0.00212,
-     "pass": true
+     "deviation": -0.00212
     }
    ]
   },
@@ -49,19 +44,15 @@
      "method": "Bishop simplified",
      "published": 1.834,
      "source": "Fredlund & Krahn",
-     "tolerance": 0.005,
      "computed": 1.8286,
-     "deviation": -0.00294,
-     "pass": true
+     "deviation": -0.00294
     },
     {
      "method": "Morgenstern-Price (half-sine)",
      "published": 1.832,
      "source": "Fredlund & Krahn",
-     "tolerance": 0.005,
      "computed": 1.8266,
-     "deviation": -0.00295,
-     "pass": true
+     "deviation": -0.00295
     }
    ]
   },
@@ -78,28 +69,22 @@
      "method": "Bishop simplified",
      "published": 1.332,
      "source": "Commercial program A",
-     "tolerance": 0.01,
      "computed": 1.3204,
-     "deviation": -0.00871,
-     "pass": true
+     "deviation": -0.00871
     },
     {
      "method": "Spencer (M-P, constant f(x))",
      "published": 1.328,
      "source": "Commercial program A",
-     "tolerance": 0.01,
      "computed": 1.3166,
-     "deviation": -0.00858,
-     "pass": true
+     "deviation": -0.00858
     },
     {
      "method": "Janbu corrected (f0)",
      "published": 1.345,
      "source": "Commercial program A",
-     "tolerance": 0.01,
      "computed": 1.3404,
-     "deviation": -0.00342,
-     "pass": true
+     "deviation": -0.00342
     }
    ]
   },
@@ -116,28 +101,22 @@
      "method": "Bishop simplified",
      "published": 2.549,
      "source": "Commercial program A",
-     "tolerance": 0.01,
      "computed": 2.5333,
-     "deviation": -0.00616,
-     "pass": true
+     "deviation": -0.00616
     },
     {
      "method": "Spencer (M-P, constant f(x))",
      "published": 2.545,
      "source": "Commercial program A",
-     "tolerance": 0.01,
      "computed": 2.5307,
-     "deviation": -0.00562,
-     "pass": true
+     "deviation": -0.00562
     },
     {
      "method": "Spencer (M-P, constant f(x))",
      "published": 2.56,
      "source": "Duncan & Wright (reference)",
-     "tolerance": 0.015,
      "computed": 2.5307,
-     "deviation": -0.01145,
-     "pass": true
+     "deviation": -0.01145
     }
    ]
   },
@@ -154,28 +133,22 @@
      "method": "Bishop simplified",
      "published": 1.398,
      "source": "Commercial program A",
-     "tolerance": 0.01,
      "computed": 1.3888,
-     "deviation": -0.00658,
-     "pass": true
+     "deviation": -0.00658
     },
     {
      "method": "Spencer (M-P, constant f(x))",
      "published": 1.359,
      "source": "Commercial program A",
-     "tolerance": 0.01,
      "computed": 1.353,
-     "deviation": -0.00442,
-     "pass": true
+     "deviation": -0.00442
     },
     {
      "method": "Spencer (M-P, constant f(x))",
      "published": 1.35,
      "source": "Duncan & Wright (reference)",
-     "tolerance": 0.015,
      "computed": 1.353,
-     "deviation": 0.00222,
-     "pass": true
+     "deviation": 0.00222
     }
    ]
   },
@@ -189,22 +162,11 @@
    "units": "SI",
    "checks": [
     {
-     "method": "Bishop simplified (phreatic correction)",
-     "published": 1.173,
-     "source": "Commercial program B",
-     "tolerance": 0.02,
-     "computed": 1.1872,
-     "deviation": 0.01211,
-     "pass": true
-    },
-    {
      "method": "Bishop simplified (vertical head)",
      "published": 1.173,
      "source": "Commercial program B",
-     "tolerance": 0.005,
      "computed": 1.1715,
-     "deviation": -0.00128,
-     "pass": true
+     "deviation": -0.00128
     }
    ]
   },
@@ -221,19 +183,15 @@
      "method": "Bishop simplified, design values",
      "published": 1.173,
      "source": "Commercial program B",
-     "tolerance": 0.005,
      "computed": 1.1717,
-     "deviation": -0.00111,
-     "pass": true
+     "deviation": -0.00111
     },
     {
      "method": "Spencer, design values",
      "published": 1.174,
      "source": "Commercial program B",
-     "tolerance": 0.005,
      "computed": 1.1736,
-     "deviation": -0.00034,
-     "pass": true
+     "deviation": -0.00034
     }
    ]
   },
@@ -250,19 +208,15 @@
      "method": "Bishop simplified",
      "published": 0.42,
      "source": "Commercial program A",
-     "tolerance": 0.01,
      "computed": 0.4192,
-     "deviation": -0.0019,
-     "pass": true
+     "deviation": -0.0019
     },
     {
      "method": "Spencer (M-P, constant f(x))",
      "published": 0.414,
      "source": "Commercial program A (non-circular)",
-     "tolerance": 0.025,
      "computed": 0.4089,
-     "deviation": -0.01232,
-     "pass": true
+     "deviation": -0.01232
     }
    ]
   },
@@ -279,19 +233,15 @@
      "method": "Bishop simplified",
      "published": 1.344,
      "source": "Commercial program A",
-     "tolerance": 0.01,
      "computed": 1.3424,
-     "deviation": -0.00119,
-     "pass": true
+     "deviation": -0.00119
     },
     {
      "method": "Spencer (M-P, constant f(x))",
      "published": 1.325,
      "source": "Commercial program A (non-circular)",
-     "tolerance": 0.015,
      "computed": 1.3244,
-     "deviation": -0.00045,
-     "pass": true
+     "deviation": -0.00045
     }
    ]
   },
@@ -308,28 +258,22 @@
      "method": "Bishop simplified",
      "published": 1.313,
      "source": "Commercial program A",
-     "tolerance": 0.01,
      "computed": 1.3054,
-     "deviation": -0.00579,
-     "pass": true
+     "deviation": -0.00579
     },
     {
      "method": "Spencer (M-P, constant f(x))",
      "published": 1.3,
      "source": "Duncan & Wright (reference)",
-     "tolerance": 0.02,
      "computed": 1.2759,
-     "deviation": -0.01854,
-     "pass": true
+     "deviation": -0.01854
     },
     {
      "method": "Spencer (M-P, constant f(x))",
      "published": 1.262,
      "source": "Commercial program A (non-circular)",
-     "tolerance": 0.015,
      "computed": 1.2607,
-     "deviation": -0.00103,
-     "pass": true
+     "deviation": -0.00103
     }
    ]
   },
@@ -346,28 +290,22 @@
      "method": "Bishop simplified",
      "published": 1.335,
      "source": "Commercial program A",
-     "tolerance": 0.01,
      "computed": 1.3294,
-     "deviation": -0.00419,
-     "pass": true
+     "deviation": -0.00419
     },
     {
      "method": "Spencer (M-P, constant f(x))",
      "published": 1.312,
      "source": "Duncan & Wright (reference)",
-     "tolerance": 0.02,
      "computed": 1.3276,
-     "deviation": 0.01189,
-     "pass": true
+     "deviation": 0.01189
     },
     {
      "method": "Spencer (M-P, constant f(x))",
      "published": 1.182,
      "source": "Commercial program A (non-circular)",
-     "tolerance": 0.015,
      "computed": 1.172,
-     "deviation": -0.00846,
-     "pass": true
+     "deviation": -0.00846
     }
    ]
   },
@@ -384,28 +322,22 @@
      "method": "Bishop simplified",
      "published": 1.533,
      "source": "Commercial program A",
-     "tolerance": 0.01,
      "computed": 1.5201,
-     "deviation": -0.00841,
-     "pass": true
+     "deviation": -0.00841
     },
     {
      "method": "Spencer (M-P, constant f(x))",
      "published": 1.535,
      "source": "Duncan & Wright (reference)",
-     "tolerance": 0.015,
      "computed": 1.5325,
-     "deviation": -0.00163,
-     "pass": true
+     "deviation": -0.00163
     },
     {
      "method": "Spencer (M-P, constant f(x))",
      "published": 1.534,
      "source": "Commercial program A (non-circular)",
-     "tolerance": 0.015,
      "computed": 1.5238,
-     "deviation": -0.00665,
-     "pass": true
+     "deviation": -0.00665
     }
    ]
   },
@@ -422,19 +354,15 @@
      "method": "Bishop simplified",
      "published": 1.126,
      "source": "Commercial program A",
-     "tolerance": 0.01,
      "computed": 1.1225,
-     "deviation": -0.00311,
-     "pass": true
+     "deviation": -0.00311
     },
     {
      "method": "Spencer (M-P, constant f(x))",
      "published": 1.124,
      "source": "Duncan & Wright (reference)",
-     "tolerance": 0.015,
      "computed": 1.1323,
-     "deviation": 0.00738,
-     "pass": true
+     "deviation": 0.00738
     }
    ]
   },
@@ -451,19 +379,15 @@
      "method": "Bishop simplified",
      "published": 1.412,
      "source": "Commercial program A",
-     "tolerance": 0.01,
      "computed": 1.408,
-     "deviation": -0.00283,
-     "pass": true
+     "deviation": -0.00283
     },
     {
      "method": "Spencer (M-P, constant f(x))",
      "published": 1.4,
      "source": "Duncan & Wright (reference)",
-     "tolerance": 0.015,
      "computed": 1.3987,
-     "deviation": -0.00093,
-     "pass": true
+     "deviation": -0.00093
     }
    ]
   },
@@ -480,28 +404,22 @@
      "method": "Bishop simplified",
      "published": 1.228,
      "source": "Commercial program A",
-     "tolerance": 0.01,
      "computed": 1.2188,
-     "deviation": -0.00749,
-     "pass": true
+     "deviation": -0.00749
     },
     {
      "method": "Bishop simplified",
      "published": 1.22,
      "source": "Duncan & Wright",
-     "tolerance": 0.015,
      "computed": 1.2188,
-     "deviation": -0.00098,
-     "pass": true
+     "deviation": -0.00098
     },
     {
      "method": "Spencer (M-P, constant f(x))",
      "published": 1.19,
      "source": "Commercial program A (non-circular)",
-     "tolerance": 0.025,
      "computed": 1.168,
-     "deviation": -0.01849,
-     "pass": true
+     "deviation": -0.01849
     }
    ]
   },
@@ -518,10 +436,8 @@
      "method": "Bishop simplified",
      "published": 1.439,
      "source": "Commercial program A",
-     "tolerance": 0.015,
      "computed": 1.4358,
-     "deviation": -0.00222,
-     "pass": true
+     "deviation": -0.00222
     }
    ]
   },
@@ -538,19 +454,15 @@
      "method": "Bishop simplified",
      "published": 2.56,
      "source": "Commercial program B",
-     "tolerance": 0.01,
      "computed": 2.5485,
-     "deviation": -0.00449,
-     "pass": true
+     "deviation": -0.00449
     },
     {
      "method": "Bishop simplified",
      "published": 2.551,
      "source": "Commercial program A",
-     "tolerance": 0.005,
      "computed": 2.5485,
-     "deviation": -0.00098,
-     "pass": true
+     "deviation": -0.00098
     }
    ]
   },
@@ -567,19 +479,15 @@
      "method": "Bishop simplified",
      "published": 2.806,
      "source": "Commercial program B",
-     "tolerance": 0.01,
      "computed": 2.8154,
-     "deviation": 0.00335,
-     "pass": true
+     "deviation": 0.00335
     },
     {
      "method": "Bishop simplified",
      "published": 2.82,
      "source": "Commercial program A",
-     "tolerance": 0.005,
      "computed": 2.8154,
-     "deviation": -0.00163,
-     "pass": true
+     "deviation": -0.00163
     }
    ]
   },
@@ -596,19 +504,15 @@
      "method": "Bishop simplified",
      "published": 2.771,
      "source": "Commercial program B",
-     "tolerance": 0.01,
      "computed": 2.7791,
-     "deviation": 0.00292,
-     "pass": true
+     "deviation": 0.00292
     },
     {
      "method": "Bishop simplified",
      "published": 2.777,
      "source": "Commercial program A",
-     "tolerance": 0.005,
      "computed": 2.7791,
-     "deviation": 0.00076,
-     "pass": true
+     "deviation": 0.00076
     }
    ]
   },
@@ -625,19 +529,15 @@
      "method": "Bishop simplified",
      "published": 2.589,
      "source": "Commercial program B",
-     "tolerance": 0.01,
      "computed": 2.5768,
-     "deviation": -0.00471,
-     "pass": true
+     "deviation": -0.00471
     },
     {
      "method": "Bishop simplified",
      "published": 2.583,
      "source": "Commercial program A",
-     "tolerance": 0.005,
      "computed": 2.5768,
-     "deviation": -0.0024,
-     "pass": true
+     "deviation": -0.0024
     }
    ]
   },
@@ -654,19 +554,15 @@
      "method": "Bishop simplified",
      "published": 2.703,
      "source": "Commercial program B",
-     "tolerance": 0.01,
      "computed": 2.6898,
-     "deviation": -0.00488,
-     "pass": true
+     "deviation": -0.00488
     },
     {
      "method": "Bishop simplified",
      "published": 2.692,
      "source": "Commercial program A",
-     "tolerance": 0.005,
      "computed": 2.6898,
-     "deviation": -0.00082,
-     "pass": true
+     "deviation": -0.00082
     }
    ]
   },
@@ -683,19 +579,15 @@
      "method": "Bishop simplified",
      "published": 2.673,
      "source": "Commercial program B",
-     "tolerance": 0.01,
      "computed": 2.6731,
-     "deviation": 0.00004,
-     "pass": true
+     "deviation": 0.00004
     },
     {
      "method": "Bishop simplified",
      "published": 2.672,
      "source": "Commercial program A",
-     "tolerance": 0.005,
      "computed": 2.6731,
-     "deviation": 0.00041,
-     "pass": true
+     "deviation": 0.00041
     }
    ]
   },
@@ -712,19 +604,15 @@
      "method": "Bishop simplified",
      "published": 3.586,
      "source": "Commercial program B",
-     "tolerance": 0.01,
      "computed": 3.5917,
-     "deviation": 0.00159,
-     "pass": true
+     "deviation": 0.00159
     },
     {
      "method": "Bishop simplified",
      "published": 3.598,
      "source": "Commercial program A",
-     "tolerance": 0.005,
      "computed": 3.5917,
-     "deviation": -0.00175,
-     "pass": true
+     "deviation": -0.00175
     }
    ]
   },
@@ -741,19 +629,15 @@
      "method": "Bishop simplified",
      "published": 6.069,
      "source": "Commercial program B",
-     "tolerance": 0.01,
      "computed": 6.0628,
-     "deviation": -0.00102,
-     "pass": true
+     "deviation": -0.00102
     },
     {
      "method": "Bishop simplified",
      "published": 6.074,
      "source": "Commercial program A",
-     "tolerance": 0.005,
      "computed": 6.0628,
-     "deviation": -0.00184,
-     "pass": true
+     "deviation": -0.00184
     }
    ]
   },
@@ -770,10 +654,8 @@
      "method": "Bishop simplified",
      "published": 11.583,
      "source": "Commercial program B",
-     "tolerance": 0.01,
      "computed": 11.5666,
-     "deviation": -0.00142,
-     "pass": true
+     "deviation": -0.00142
     }
    ]
   },
@@ -790,10 +672,8 @@
      "method": "Bishop simplified",
      "published": 0.764,
      "source": "Commercial program A",
-     "tolerance": 0.01,
      "computed": 0.7604,
-     "deviation": -0.00471,
-     "pass": true
+     "deviation": -0.00471
     }
    ]
   },
@@ -810,10 +690,8 @@
      "method": "Bishop simplified",
      "published": 1.102,
      "source": "Commercial program A",
-     "tolerance": 0.01,
      "computed": 1.1004,
-     "deviation": -0.00145,
-     "pass": true
+     "deviation": -0.00145
     }
    ]
   },
@@ -830,46 +708,36 @@
      "method": "Bishop simplified",
      "published": 1.409,
      "source": "Commercial program A",
-     "tolerance": 0.01,
      "computed": 1.4036,
-     "deviation": -0.00383,
-     "pass": true
+     "deviation": -0.00383
     },
     {
      "method": "Morgenstern-Price (half-sine)",
      "published": 1.414,
      "source": "Commercial program A (GLE)",
-     "tolerance": 0.01,
      "computed": 1.4008,
-     "deviation": -0.00934,
-     "pass": true
+     "deviation": -0.00934
     },
     {
      "method": "Bishop simplified",
      "published": 1.417,
      "source": "Commercial program B",
-     "tolerance": 0.01,
      "computed": 1.4036,
-     "deviation": -0.00946,
-     "pass": true
+     "deviation": -0.00946
     },
     {
      "method": "Morgenstern-Price (half-sine)",
      "published": 1.414,
      "source": "Commercial program B",
-     "tolerance": 0.01,
      "computed": 1.4008,
-     "deviation": -0.00934,
-     "pass": true
+     "deviation": -0.00934
     },
     {
      "method": "Spencer (M-P, constant f(x))",
      "published": 1.386,
      "source": "Commercial program A (non-circular)",
-     "tolerance": 0.015,
      "computed": 1.3857,
-     "deviation": -0.00022,
-     "pass": true
+     "deviation": -0.00022
     }
    ]
   },
@@ -886,10 +754,8 @@
      "method": "Spencer (M-P, constant f(x))",
      "published": 1.536,
      "source": "Commercial program A",
-     "tolerance": 0.015,
      "computed": 1.5186,
-     "deviation": -0.01133,
-     "pass": true
+     "deviation": -0.01133
     }
    ]
   },
@@ -906,19 +772,15 @@
      "method": "Spencer (M-P, constant f(x))",
      "published": 2.794,
      "source": "Commercial program A",
-     "tolerance": 0.015,
      "computed": 2.8019,
-     "deviation": 0.00283,
-     "pass": true
+     "deviation": 0.00283
     },
     {
      "method": "Janbu simplified (uncorrected)",
      "published": 2.662,
      "source": "Commercial program A",
-     "tolerance": 0.015,
      "computed": 2.6766,
-     "deviation": 0.00548,
-     "pass": true
+     "deviation": 0.00548
     }
    ]
   },
@@ -935,19 +797,15 @@
      "method": "Bishop simplified",
      "published": 1.142,
      "source": "Commercial program A",
-     "tolerance": 0.01,
      "computed": 1.1319,
-     "deviation": -0.00884,
-     "pass": true
+     "deviation": -0.00884
     },
     {
      "method": "Spencer (M-P, constant f(x))",
      "published": 1.142,
      "source": "Commercial program A",
-     "tolerance": 0.01,
      "computed": 1.1325,
-     "deviation": -0.00832,
-     "pass": true
+     "deviation": -0.00832
     }
    ]
   },
@@ -964,28 +822,22 @@
      "method": "Bishop simplified",
      "published": 1.23,
      "source": "Commercial program A",
-     "tolerance": 0.01,
      "computed": 1.2235,
-     "deviation": -0.00528,
-     "pass": true
+     "deviation": -0.00528
     },
     {
      "method": "Spencer (M-P, constant f(x))",
      "published": 1.209,
      "source": "Commercial program A",
-     "tolerance": 0.01,
      "computed": 1.2045,
-     "deviation": -0.00372,
-     "pass": true
+     "deviation": -0.00372
     },
     {
      "method": "Spencer (M-P, constant f(x))",
      "published": 1.21,
      "source": "Duncan & Wright (reference)",
-     "tolerance": 0.015,
      "computed": 1.2045,
-     "deviation": -0.00455,
-     "pass": true
+     "deviation": -0.00455
     }
    ]
   },
@@ -1002,19 +854,15 @@
      "method": "Bishop simplified",
      "published": 1.14,
      "source": "Commercial program A",
-     "tolerance": 0.015,
      "computed": 1.142,
-     "deviation": 0.00175,
-     "pass": true
+     "deviation": 0.00175
     },
     {
      "method": "Bishop simplified",
      "published": 1.13,
      "source": "Cai & Ugai",
-     "tolerance": 0.015,
      "computed": 1.142,
-     "deviation": 0.01062,
-     "pass": true
+     "deviation": 0.01062
     }
    ]
   },
@@ -1031,19 +879,15 @@
      "method": "Bishop simplified (vertical head)",
      "published": 1.293,
      "source": "Commercial program A",
-     "tolerance": 0.01,
      "computed": 1.2887,
-     "deviation": -0.00333,
-     "pass": true
+     "deviation": -0.00333
     },
     {
      "method": "Spencer (vertical head)",
      "published": 1.3,
      "source": "Commercial program A",
-     "tolerance": 0.01,
      "computed": 1.2963,
-     "deviation": -0.00285,
-     "pass": true
+     "deviation": -0.00285
     }
    ]
   },
@@ -1060,19 +904,15 @@
      "method": "Bishop simplified (vertical head)",
      "published": 1.2,
      "source": "Morgenstern (chart)",
-     "tolerance": 0.01,
      "computed": 1.1993,
-     "deviation": -0.00058,
-     "pass": true
+     "deviation": -0.00058
     },
     {
      "method": "Spencer (vertical head)",
      "published": 1.2,
      "source": "Morgenstern (chart)",
-     "tolerance": 0.01,
      "computed": 1.2053,
-     "deviation": 0.00442,
-     "pass": true
+     "deviation": 0.00442
     }
    ]
   },
@@ -1089,19 +929,15 @@
      "method": "Bishop simplified (vertical head)",
      "published": 1.087,
      "source": "Commercial program A",
-     "tolerance": 0.01,
      "computed": 1.0843,
-     "deviation": -0.00248,
-     "pass": true
+     "deviation": -0.00248
     },
     {
      "method": "Spencer (vertical head)",
      "published": 1.093,
      "source": "Commercial program A",
-     "tolerance": 0.01,
      "computed": 1.0912,
-     "deviation": -0.00165,
-     "pass": true
+     "deviation": -0.00165
     }
    ]
   },
@@ -1118,28 +954,22 @@
      "method": "Bishop simplified",
      "published": 1.596,
      "source": "Commercial program A",
-     "tolerance": 0.01,
      "computed": 1.5866,
-     "deviation": -0.00589,
-     "pass": true
+     "deviation": -0.00589
     },
     {
      "method": "Spencer (M-P, constant f(x))",
      "published": 1.592,
      "source": "Commercial program A",
-     "tolerance": 0.01,
      "computed": 1.5824,
-     "deviation": -0.00603,
-     "pass": true
+     "deviation": -0.00603
     },
     {
      "method": "Janbu corrected (f0)",
      "published": 1.489,
      "source": "Commercial program A",
-     "tolerance": 0.015,
      "computed": 1.4741,
-     "deviation": -0.01001,
-     "pass": true
+     "deviation": -0.01001
     }
    ]
   },
@@ -1156,28 +986,22 @@
      "method": "Janbu corrected (f0)",
      "published": 1.294,
      "source": "Commercial program A",
-     "tolerance": 0.005,
      "computed": 1.2938,
-     "deviation": -0.00015,
-     "pass": true
+     "deviation": -0.00015
     },
     {
      "method": "Spencer (M-P, constant f(x))",
      "published": 1.277,
      "source": "Commercial program A",
-     "tolerance": 0.005,
      "computed": 1.2759,
-     "deviation": -0.00086,
-     "pass": true
+     "deviation": -0.00086
     },
     {
      "method": "Morgenstern-Price (half-sine)",
      "published": 1.261,
      "source": "Commercial program B",
-     "tolerance": 0.005,
      "computed": 1.2605,
-     "deviation": -0.0004,
-     "pass": true
+     "deviation": -0.0004
     }
    ]
   },
@@ -1194,19 +1018,15 @@
      "method": "Morgenstern-Price (half-sine)",
      "published": 1.261,
      "source": "Commercial program B",
-     "tolerance": 0.015,
      "computed": 1.2602,
-     "deviation": -0.00063,
-     "pass": true
+     "deviation": -0.00063
     },
     {
      "method": "Spencer (M-P, constant f(x))",
      "published": 1.246,
      "source": "Commercial program A",
-     "tolerance": 0.02,
      "computed": 1.2642,
-     "deviation": 0.01461,
-     "pass": true
+     "deviation": 0.01461
     }
    ]
   },
@@ -1223,37 +1043,29 @@
      "method": "Bishop simplified",
      "published": 1.241,
      "source": "Commercial program A",
-     "tolerance": 0.01,
      "computed": 1.2348,
-     "deviation": -0.005,
-     "pass": true
+     "deviation": -0.005
     },
     {
      "method": "Spencer (M-P, constant f(x))",
      "published": 1.241,
      "source": "Commercial program A",
-     "tolerance": 0.01,
      "computed": 1.2348,
-     "deviation": -0.005,
-     "pass": true
+     "deviation": -0.005
     },
     {
      "method": "Morgenstern-Price (half-sine)",
      "published": 1.244,
      "source": "Commercial program A (GLE)",
-     "tolerance": 0.01,
      "computed": 1.2348,
-     "deviation": -0.0074,
-     "pass": true
+     "deviation": -0.0074
     },
     {
      "method": "Janbu corrected (f0)",
      "published": 1.385,
      "source": "Commercial program A",
-     "tolerance": 0.01,
      "computed": 1.3799,
-     "deviation": -0.00368,
-     "pass": true
+     "deviation": -0.00368
     }
    ]
   },
@@ -1270,10 +1082,8 @@
      "method": "Spencer (M-P, constant f(x))",
      "published": 1.398,
      "source": "Commercial program A (Monte Carlo)",
-     "tolerance": 0.015,
      "computed": 1.4005,
-     "deviation": 0.00179,
-     "pass": true
+     "deviation": 0.00179
     }
    ]
   },
@@ -1290,10 +1100,8 @@
      "method": "Bishop simplified",
      "published": 1.192,
      "source": "Commercial program A",
-     "tolerance": 0.01,
      "computed": 1.1974,
-     "deviation": 0.00453,
-     "pass": true
+     "deviation": 0.00453
     }
    ]
   },
@@ -1310,10 +1118,8 @@
      "method": "Spencer (M-P, constant f(x))",
      "published": 1.051,
      "source": "Commercial program A",
-     "tolerance": 0.01,
      "computed": 1.0521,
-     "deviation": 0.00105,
-     "pass": true
+     "deviation": 0.00105
     }
    ]
   },
@@ -1330,10 +1136,8 @@
      "method": "Spencer (M-P, constant f(x))",
      "published": 1.925,
      "source": "Commercial program A",
-     "tolerance": 0.005,
      "computed": 1.9257,
-     "deviation": 0.00036,
-     "pass": true
+     "deviation": 0.00036
     }
    ]
   },
@@ -1350,10 +1154,8 @@
      "method": "Spencer (M-P, constant f(x))",
      "published": 1.91,
      "source": "Baker & Leshchinsky",
-     "tolerance": 0.02,
      "computed": 1.8817,
-     "deviation": -0.01482,
-     "pass": true
+     "deviation": -0.01482
     }
    ]
   },
@@ -1370,19 +1172,15 @@
      "method": "Spencer (M-P, constant f(x))",
      "published": 1.351,
      "source": "Commercial program C",
-     "tolerance": 0.005,
      "computed": 1.3474,
-     "deviation": -0.00266,
-     "pass": true
+     "deviation": -0.00266
     },
     {
      "method": "Janbu simplified",
      "published": 1.351,
      "source": "Commercial program C",
-     "tolerance": 0.005,
      "computed": 1.352,
-     "deviation": 0.00074,
-     "pass": true
+     "deviation": 0.00074
     }
    ]
   },
@@ -1399,19 +1197,15 @@
      "method": "Janbu simplified",
      "published": 1.049,
      "source": "Commercial program A, commercial program C, Priest",
-     "tolerance": 0.005,
      "computed": 1.0483,
-     "deviation": -0.00067,
-     "pass": true
+     "deviation": -0.00067
     },
     {
      "method": "Spencer (M-P, constant f(x))",
      "published": 1.049,
      "source": "Commercial program A, commercial program C, Priest",
-     "tolerance": 0.005,
      "computed": 1.0507,
-     "deviation": 0.00162,
-     "pass": true
+     "deviation": 0.00162
     }
    ]
   },
@@ -1428,19 +1222,15 @@
      "method": "Bishop simplified",
      "published": 1.285,
      "source": "Commercial program A",
-     "tolerance": 0.01,
      "computed": 1.2812,
-     "deviation": -0.00296,
-     "pass": true
+     "deviation": -0.00296
     },
     {
      "method": "Spencer (M-P, constant f(x))",
      "published": 1.29,
      "source": "Commercial program A",
-     "tolerance": 0.01,
      "computed": 1.2875,
-     "deviation": -0.00194,
-     "pass": true
+     "deviation": -0.00194
     }
    ]
   },
@@ -1457,19 +1247,15 @@
      "method": "Bishop simplified",
      "published": 1.417,
      "source": "Commercial program A (circles)",
-     "tolerance": 0.01,
      "computed": 1.4092,
-     "deviation": -0.0055,
-     "pass": true
+     "deviation": -0.0055
     },
     {
      "method": "Spencer (M-P, constant f(x))",
      "published": 1.422,
      "source": "Commercial program A (circles)",
-     "tolerance": 0.01,
      "computed": 1.4148,
-     "deviation": -0.00506,
-     "pass": true
+     "deviation": -0.00506
     }
    ]
   },
@@ -1486,10 +1272,8 @@
      "method": "Spencer (M-P, constant f(x))",
      "published": 1.366,
      "source": "Commercial program A",
-     "tolerance": 0.01,
      "computed": 1.3646,
-     "deviation": -0.00102,
-     "pass": true
+     "deviation": -0.00102
     }
    ]
   },
@@ -1506,28 +1290,22 @@
      "method": "Bishop simplified",
      "published": 2.011,
      "source": "Commercial program A",
-     "tolerance": 0.01,
      "computed": 1.9975,
-     "deviation": -0.00671,
-     "pass": true
+     "deviation": -0.00671
     },
     {
      "method": "Spencer (M-P, constant f(x))",
      "published": 2.026,
      "source": "Commercial program A",
-     "tolerance": 0.01,
      "computed": 2.012,
-     "deviation": -0.00691,
-     "pass": true
+     "deviation": -0.00691
     },
     {
      "method": "Janbu corrected (f0)",
      "published": 1.83,
      "source": "Commercial program A",
-     "tolerance": 0.01,
      "computed": 1.8328,
-     "deviation": 0.00153,
-     "pass": true
+     "deviation": 0.00153
     }
    ]
   },
@@ -1544,28 +1322,22 @@
      "method": "Bishop simplified",
      "published": 1.762,
      "source": "Commercial program A",
-     "tolerance": 0.01,
      "computed": 1.7588,
-     "deviation": -0.00182,
-     "pass": true
+     "deviation": -0.00182
     },
     {
      "method": "Spencer (M-P, constant f(x))",
      "published": 1.758,
      "source": "Commercial program A",
-     "tolerance": 0.01,
      "computed": 1.7588,
-     "deviation": 0.00046,
-     "pass": true
+     "deviation": 0.00046
     },
     {
      "method": "Janbu corrected (f0)",
      "published": 1.736,
      "source": "Commercial program A",
-     "tolerance": 0.01,
      "computed": 1.7345,
-     "deviation": -0.00086,
-     "pass": true
+     "deviation": -0.00086
     }
    ]
   },
@@ -1582,10 +1354,8 @@
      "method": "Bishop simplified",
      "published": 1.23,
      "source": "Commercial program A",
-     "tolerance": 0.015,
      "computed": 1.2191,
-     "deviation": -0.00886,
-     "pass": true
+     "deviation": -0.00886
     }
    ]
   },
@@ -1602,10 +1372,8 @@
      "method": "Bishop simplified",
      "published": 1.22,
      "source": "Commercial program A",
-     "tolerance": 0.01,
      "computed": 1.2163,
-     "deviation": -0.00303,
-     "pass": true
+     "deviation": -0.00303
     }
    ]
   },
@@ -1622,10 +1390,8 @@
      "method": "Bishop simplified",
      "published": 0.98,
      "source": "Commercial program A",
-     "tolerance": 0.01,
      "computed": 0.9814,
-     "deviation": 0.00143,
-     "pass": true
+     "deviation": 0.00143
     }
    ]
   },
@@ -1642,39 +1408,15 @@
      "method": "Spencer (M-P, constant f(x))",
      "published": 1.35,
      "source": "Commercial program A",
-     "tolerance": 0.015,
      "computed": 1.3328,
-     "deviation": -0.01274,
-     "pass": true
+     "deviation": -0.01274
     },
     {
      "method": "Spencer (M-P, constant f(x))",
      "published": 1.332,
-     "source": "Program D (same input)",
-     "tolerance": 0.005,
+     "source": "Program D",
      "computed": 1.3328,
-     "deviation": 0.0006,
-     "pass": true
-    }
-   ]
-  },
-  {
-   "id": "P-20F4B1",
-   "title": "Tandjiria embankment, sand fill, geosynthetic T = 44 kN/m",
-   "reference": "Tandjiria (2002).",
-   "literature": true,
-   "commercial": true,
-   "surface": "fixed",
-   "units": "SI",
-   "checks": [
-    {
-     "method": "Spencer (M-P, constant f(x))",
-     "published": 1.35,
-     "source": "Commercial program A",
-     "tolerance": 0.02,
-     "computed": 1.3288,
-     "deviation": -0.0157,
-     "pass": true
+     "deviation": 0.0006
     }
    ]
   },
@@ -1691,10 +1433,8 @@
      "method": "Janbu corrected (f0)",
      "published": 0.89,
      "source": "Commercial program A",
-     "tolerance": 0.015,
      "computed": 0.8989,
-     "deviation": 0.01,
-     "pass": true
+     "deviation": 0.01
     }
    ]
   },
@@ -1711,10 +1451,8 @@
      "method": "Janbu corrected (f0)",
      "published": 0.989,
      "source": "Commercial program A",
-     "tolerance": 0.01,
      "computed": 0.9893,
-     "deviation": 0.0003,
-     "pass": true
+     "deviation": 0.0003
     }
    ]
   },
@@ -1731,10 +1469,8 @@
      "method": "Janbu corrected (f0)",
      "published": 1.123,
      "source": "Commercial program A",
-     "tolerance": 0.01,
      "computed": 1.1248,
-     "deviation": 0.0016,
-     "pass": true
+     "deviation": 0.0016
     }
    ]
   },
@@ -1751,10 +1487,8 @@
      "method": "Janbu corrected (f0)",
      "published": 1.043,
      "source": "Commercial program A",
-     "tolerance": 0.01,
      "computed": 1.0442,
-     "deviation": 0.00115,
-     "pass": true
+     "deviation": 0.00115
     }
    ]
   },
@@ -1771,10 +1505,8 @@
      "method": "Janbu corrected (f0)",
      "published": 0.945,
      "source": "Commercial program A",
-     "tolerance": 0.01,
      "computed": 0.9451,
-     "deviation": 0.00011,
-     "pass": true
+     "deviation": 0.00011
     }
    ]
   },
@@ -1791,10 +1523,8 @@
      "method": "Janbu corrected (f0)",
      "published": 0.922,
      "source": "Commercial program A",
-     "tolerance": 0.01,
      "computed": 0.9205,
-     "deviation": -0.00163,
-     "pass": true
+     "deviation": -0.00163
     }
    ]
   },
@@ -1811,10 +1541,8 @@
      "method": "Janbu corrected (f0)",
      "published": 0.923,
      "source": "Commercial program A",
-     "tolerance": 0.01,
      "computed": 0.9207,
-     "deviation": -0.00249,
-     "pass": true
+     "deviation": -0.00249
     }
    ]
   },
@@ -1831,28 +1559,22 @@
      "method": "Janbu corrected (f0)",
      "published": 1.46,
      "source": "Program H",
-     "tolerance": 0.015,
      "computed": 1.4486,
-     "deviation": -0.00781,
-     "pass": true
+     "deviation": -0.00781
     },
     {
      "method": "Janbu corrected (f0)",
      "published": 1.448,
-     "source": "Program D (same input)",
-     "tolerance": 0.005,
+     "source": "Program D",
      "computed": 1.4486,
-     "deviation": 0.00041,
-     "pass": true
+     "deviation": 0.00041
     },
     {
      "method": "Spencer (M-P, constant f(x))",
      "published": 1.576,
-     "source": "Program D (same input)",
-     "tolerance": 0.005,
+     "source": "Program D",
      "computed": 1.5745,
-     "deviation": -0.00095,
-     "pass": true
+     "deviation": -0.00095
     }
    ]
   },
@@ -1869,19 +1591,15 @@
      "method": "Bishop simplified",
      "published": 1.147,
      "source": "Commercial program A",
-     "tolerance": 0.01,
      "computed": 1.1424,
-     "deviation": -0.00401,
-     "pass": true
+     "deviation": -0.00401
     },
     {
      "method": "Spencer (M-P, constant f(x))",
      "published": 1.145,
      "source": "Commercial program A",
-     "tolerance": 0.01,
      "computed": 1.1404,
-     "deviation": -0.00402,
-     "pass": true
+     "deviation": -0.00402
     }
    ]
   },
@@ -1897,11 +1615,9 @@
     {
      "method": "Janbu corrected (f0)",
      "published": 0.579,
-     "source": "Program D (same input)",
-     "tolerance": 0.01,
+     "source": "Program D",
      "computed": 0.5776,
-     "deviation": -0.00242,
-     "pass": true
+     "deviation": -0.00242
     }
    ]
   },
@@ -1918,19 +1634,15 @@
      "method": "Spencer (M-P, constant f(x))",
      "published": 1.009,
      "source": "Commercial program A",
-     "tolerance": 0.01,
      "computed": 1.01,
-     "deviation": 0.00099,
-     "pass": true
+     "deviation": 0.00099
     },
     {
      "method": "Janbu corrected (f0)",
      "published": 1.073,
-     "source": "Program D (same input)",
-     "tolerance": 0.005,
+     "source": "Program D",
      "computed": 1.0748,
-     "deviation": 0.00168,
-     "pass": true
+     "deviation": 0.00168
     }
    ]
   },
@@ -1947,10 +1659,8 @@
      "method": "Morgenstern-Price (half-sine)",
      "published": 1.575,
      "source": "Commercial program A (GLE)",
-     "tolerance": 0.01,
      "computed": 1.5677,
-     "deviation": -0.00463,
-     "pass": true
+     "deviation": -0.00463
     }
    ]
   },
@@ -1967,19 +1677,15 @@
      "method": "Bishop simplified",
      "published": 1.324,
      "source": "Commercial program A",
-     "tolerance": 0.01,
      "computed": 1.3194,
-     "deviation": -0.00347,
-     "pass": true
+     "deviation": -0.00347
     },
     {
      "method": "Bishop simplified",
      "published": 1.32,
      "source": "Duncan & Wright",
-     "tolerance": 0.01,
      "computed": 1.3194,
-     "deviation": -0.00045,
-     "pass": true
+     "deviation": -0.00045
     }
    ]
   },
@@ -1996,19 +1702,15 @@
      "method": "Bishop simplified",
      "published": 1.629,
      "source": "Commercial program A",
-     "tolerance": 0.015,
      "computed": 1.6117,
-     "deviation": -0.01062,
-     "pass": true
+     "deviation": -0.01062
     },
     {
      "method": "Spencer (M-P, constant f(x))",
      "published": 1.62,
      "source": "Commercial program A",
-     "tolerance": 0.015,
      "computed": 1.6073,
-     "deviation": -0.00784,
-     "pass": true
+     "deviation": -0.00784
     }
    ]
   },
@@ -2025,30 +1727,8 @@
      "method": "Bishop simplified",
      "published": 1.04,
      "source": "Commercial program A",
-     "tolerance": 0.015,
      "computed": 1.0288,
-     "deviation": -0.01077,
-     "pass": true
-    }
-   ]
-  },
-  {
-   "id": "P-FE1D48",
-   "title": "Leshchinsky & Han MSE wall, fill φ = 25°",
-   "reference": "Leshchinsky & Han (2004), J. Geotech. Geoenviron. Eng. 130(12).",
-   "literature": true,
-   "commercial": true,
-   "surface": "fixed",
-   "units": "SI",
-   "checks": [
-    {
-     "method": "Spencer (M-P, constant f(x))",
-     "published": 1.043,
-     "source": "Commercial program A",
-     "tolerance": 0.015,
-     "computed": 1.0574,
-     "deviation": 0.01381,
-     "pass": true
+     "deviation": -0.01077
     }
    ]
   },
@@ -2064,11 +1744,9 @@
     {
      "method": "Spencer (M-P, constant f(x))",
      "published": 1.011,
-     "source": "Program D (same input)",
-     "tolerance": 0.005,
+     "source": "Program D",
      "computed": 1.0109,
-     "deviation": -0.0001,
-     "pass": true
+     "deviation": -0.0001
     }
    ]
   },
@@ -2085,10 +1763,8 @@
      "method": "Bishop simplified",
      "published": 1.004,
      "source": "Commercial program A",
-     "tolerance": 0.01,
      "computed": 1.0097,
-     "deviation": 0.00568,
-     "pass": true
+     "deviation": 0.00568
     }
    ]
   },
@@ -2105,10 +1781,8 @@
      "method": "Spencer (M-P, constant f(x))",
      "published": 0.964,
      "source": "Commercial program A",
-     "tolerance": 0.01,
      "computed": 0.9611,
-     "deviation": -0.00301,
-     "pass": true
+     "deviation": -0.00301
     }
    ]
   },
@@ -2124,11 +1798,9 @@
     {
      "method": "Bishop simplified",
      "published": 1.01,
-     "source": "Program D (same input)",
-     "tolerance": 0.005,
+     "source": "Program D",
      "computed": 1.0076,
-     "deviation": -0.00238,
-     "pass": true
+     "deviation": -0.00238
     }
    ]
   },
@@ -2145,10 +1817,8 @@
      "method": "Bishop simplified",
      "published": 0.958,
      "source": "Commercial program A",
-     "tolerance": 0.01,
      "computed": 0.9589,
-     "deviation": 0.00094,
-     "pass": true
+     "deviation": 0.00094
     }
    ]
   },
@@ -2163,21 +1833,10 @@
    "checks": [
     {
      "method": "Bishop simplified",
-     "published": 1.04,
-     "source": "Commercial program A",
-     "tolerance": 0.025,
-     "computed": 1.0153,
-     "deviation": -0.02375,
-     "pass": true
-    },
-    {
-     "method": "Bishop simplified",
      "published": 1.02,
-     "source": "Program D (same input)",
-     "tolerance": 0.005,
+     "source": "Program D",
      "computed": 1.0153,
-     "deviation": -0.00461,
-     "pass": true
+     "deviation": -0.00461
     }
    ]
   },
@@ -2194,28 +1853,22 @@
      "method": "Morgenstern-Price (half-sine)",
      "published": 1.171,
      "source": "Commercial program B",
-     "tolerance": 0.02,
      "computed": 1.1624,
-     "deviation": -0.00734,
-     "pass": true
+     "deviation": -0.00734
     },
     {
      "method": "Bishop simplified",
      "published": 1.17,
      "source": "Commercial program B",
-     "tolerance": 0.02,
      "computed": 1.164,
-     "deviation": -0.00513,
-     "pass": true
+     "deviation": -0.00513
     },
     {
      "method": "Morgenstern-Price (half-sine)",
      "published": 1.15,
      "source": "Borges & Cardoso",
-     "tolerance": 0.015,
      "computed": 1.1624,
-     "deviation": 0.01078,
-     "pass": true
+     "deviation": 0.01078
     }
    ]
   },
@@ -2232,19 +1885,15 @@
      "method": "Janbu corrected (f0)",
      "published": 1.479,
      "source": "Commercial program A",
-     "tolerance": 0.015,
      "computed": 1.4763,
-     "deviation": -0.00183,
-     "pass": true
+     "deviation": -0.00183
     },
     {
      "method": "Janbu simplified (uncorrected)",
      "published": 1.446,
      "source": "Commercial program A",
-     "tolerance": 0.015,
      "computed": 1.4417,
-     "deviation": -0.00297,
-     "pass": true
+     "deviation": -0.00297
     }
    ]
   },
@@ -2261,10 +1910,8 @@
      "method": "Bishop simplified",
      "published": 1.102,
      "source": "Commercial program A",
-     "tolerance": 0.01,
      "computed": 1.1004,
-     "deviation": -0.00145,
-     "pass": true
+     "deviation": -0.00145
     }
    ]
   },
@@ -2281,10 +1928,8 @@
      "method": "Bishop simplified",
      "published": 1.193,
      "source": "Commercial program A",
-     "tolerance": 0.01,
      "computed": 1.1954,
-     "deviation": 0.00201,
-     "pass": true
+     "deviation": 0.00201
     }
    ]
   },
@@ -2301,10 +1946,8 @@
      "method": "Bishop simplified",
      "published": 1.54,
      "source": "Commercial program A",
-     "tolerance": 0.01,
      "computed": 1.5403,
-     "deviation": 0.00019,
-     "pass": true
+     "deviation": 0.00019
     }
    ]
   },
@@ -2321,10 +1964,8 @@
      "method": "Bishop simplified",
      "published": 1.43,
      "source": "Commercial program A",
-     "tolerance": 0.015,
      "computed": 1.4493,
-     "deviation": 0.0135,
-     "pass": true
+     "deviation": 0.0135
     }
    ]
   },
@@ -2341,10 +1982,8 @@
      "method": "Bishop simplified",
      "published": 1.33,
      "source": "Commercial program A",
-     "tolerance": 0.01,
      "computed": 1.341,
-     "deviation": 0.00827,
-     "pass": true
+     "deviation": 0.00827
     }
    ]
   },
@@ -2361,10 +2000,8 @@
      "method": "Bishop simplified",
      "published": 1.25,
      "source": "Commercial program A",
-     "tolerance": 0.01,
      "computed": 1.2591,
-     "deviation": 0.00728,
-     "pass": true
+     "deviation": 0.00728
     }
    ]
   },
@@ -2381,46 +2018,36 @@
      "method": "Bishop simplified",
      "published": 1.405,
      "source": "Commercial program A",
-     "tolerance": 0.01,
      "computed": 1.4019,
-     "deviation": -0.00221,
-     "pass": true
+     "deviation": -0.00221
     },
     {
      "method": "Spencer (M-P, constant f(x))",
      "published": 1.375,
      "source": "Commercial program A",
-     "tolerance": 0.01,
      "computed": 1.3706,
-     "deviation": -0.0032,
-     "pass": true
+     "deviation": -0.0032
     },
     {
      "method": "Janbu corrected (f0)",
      "published": 1.357,
      "source": "Commercial program A",
-     "tolerance": 0.01,
      "computed": 1.3554,
-     "deviation": -0.00118,
-     "pass": true
+     "deviation": -0.00118
     },
     {
      "method": "Morgenstern-Price (half-sine)",
      "published": 1.382,
      "source": "Commercial program B",
-     "tolerance": 0.015,
      "computed": 1.3716,
-     "deviation": -0.00753,
-     "pass": true
+     "deviation": -0.00753
     },
     {
      "method": "Bishop simplified",
      "published": 1.403,
-     "source": "Program D (same input)",
-     "tolerance": 0.01,
+     "source": "Program D",
      "computed": 1.4019,
-     "deviation": -0.00078,
-     "pass": true
+     "deviation": -0.00078
     }
    ]
   },
@@ -2437,37 +2064,29 @@
      "method": "Bishop simplified",
      "published": 1.948,
      "source": "Commercial program A",
-     "tolerance": 0.015,
      "computed": 1.9634,
-     "deviation": 0.00791,
-     "pass": true
+     "deviation": 0.00791
     },
     {
      "method": "Spencer (M-P, constant f(x))",
      "published": 1.948,
      "source": "Commercial program A",
-     "tolerance": 0.015,
      "computed": 1.9636,
-     "deviation": 0.00801,
-     "pass": true
+     "deviation": 0.00801
     },
     {
      "method": "Janbu corrected (f0)",
      "published": 1.949,
      "source": "Commercial program A",
-     "tolerance": 0.015,
      "computed": 1.9741,
-     "deviation": 0.01288,
-     "pass": true
+     "deviation": 0.01288
     },
     {
      "method": "Bishop simplified",
      "published": 1.951,
      "source": "Commercial program B",
-     "tolerance": 0.015,
      "computed": 1.9634,
-     "deviation": 0.00636,
-     "pass": true
+     "deviation": 0.00636
     }
    ]
   },
@@ -2484,37 +2103,29 @@
      "method": "Bishop simplified",
      "published": 2.208,
      "source": "Commercial program A",
-     "tolerance": 0.005,
      "computed": 2.206,
-     "deviation": -0.00091,
-     "pass": true
+     "deviation": -0.00091
     },
     {
      "method": "Spencer (M-P, constant f(x))",
      "published": 2.292,
      "source": "Commercial program A",
-     "tolerance": 0.005,
      "computed": 2.2903,
-     "deviation": -0.00074,
-     "pass": true
+     "deviation": -0.00074
     },
     {
      "method": "Janbu corrected (f0)",
      "published": 2.073,
      "source": "Commercial program A",
-     "tolerance": 0.005,
      "computed": 2.0728,
-     "deviation": -0.0001,
-     "pass": true
+     "deviation": -0.0001
     },
     {
      "method": "Morgenstern-Price (half-sine)",
      "published": 2.299,
      "source": "Commercial program B",
-     "tolerance": 0.005,
      "computed": 2.2993,
-     "deviation": 0.00013,
-     "pass": true
+     "deviation": 0.00013
     }
    ]
   },
@@ -2531,10 +2142,8 @@
      "method": "Spencer (M-P, constant f(x))",
      "published": 0.707,
      "source": "Commercial program A (optimised)",
-     "tolerance": 0.03,
      "computed": 0.7175,
-     "deviation": 0.01485,
-     "pass": true
+     "deviation": 0.01485
     }
    ]
   },
@@ -2551,37 +2160,29 @@
      "method": "Bishop simplified",
      "published": 1.118,
      "source": "Commercial program A",
-     "tolerance": 0.01,
      "computed": 1.1123,
-     "deviation": -0.0051,
-     "pass": true
+     "deviation": -0.0051
     },
     {
      "method": "Spencer (M-P, constant f(x))",
      "published": 1.118,
      "source": "Commercial program A",
-     "tolerance": 0.01,
      "computed": 1.1134,
-     "deviation": -0.00411,
-     "pass": true
+     "deviation": -0.00411
     },
     {
      "method": "Janbu corrected (f0)",
      "published": 1.131,
      "source": "Commercial program A",
-     "tolerance": 0.015,
      "computed": 1.1244,
-     "deviation": -0.00584,
-     "pass": true
+     "deviation": -0.00584
     },
     {
      "method": "Bishop simplified",
      "published": 1.112,
-     "source": "Program D (same input)",
-     "tolerance": 0.01,
+     "source": "Program D",
      "computed": 1.1123,
-     "deviation": 0.00027,
-     "pass": true
+     "deviation": 0.00027
     }
    ]
   },
@@ -2598,10 +2199,8 @@
      "method": "Spencer (M-P, constant f(x))",
      "published": 0.94,
      "source": "Commercial program A",
-     "tolerance": 0.01,
      "computed": 0.9403,
-     "deviation": 0.00032,
-     "pass": true
+     "deviation": 0.00032
     }
    ]
   },
@@ -2616,30 +2215,17 @@
    "checks": [
     {
      "method": "Bishop simplified",
-     "published": 1.305,
-     "source": "Commercial program A",
-     "tolerance": 0.015,
-     "computed": 1.3192,
-     "deviation": 0.01088,
-     "pass": true
-    },
-    {
-     "method": "Bishop simplified",
      "published": 1.31,
      "source": "El-Ramly et al.",
-     "tolerance": 0.015,
      "computed": 1.3192,
-     "deviation": 0.00702,
-     "pass": true
+     "deviation": 0.00702
     },
     {
      "method": "Bishop simplified",
      "published": 1.32,
-     "source": "Program D (same input)",
-     "tolerance": 0.005,
+     "source": "Program D",
      "computed": 1.3192,
-     "deviation": -0.00061,
-     "pass": true
+     "deviation": -0.00061
     }
    ]
   },
@@ -2653,40 +2239,25 @@
    "units": "SI",
    "checks": [
     {
-     "method": "Spencer (M-P, constant f(x))",
-     "published": 2.383,
-     "source": "Commercial program A",
-     "tolerance": 0.02,
-     "computed": 2.4233,
-     "deviation": 0.01691,
-     "pass": true
-    },
-    {
      "method": "Morgenstern-Price (half-sine)",
      "published": 2.36,
      "source": "Wolff & Harr",
-     "tolerance": 0.015,
      "computed": 2.3837,
-     "deviation": 0.01004,
-     "pass": true
+     "deviation": 0.01004
     },
     {
      "method": "Spencer (M-P, constant f(x))",
      "published": 2.423,
-     "source": "Program D (same input)",
-     "tolerance": 0.005,
+     "source": "Program D",
      "computed": 2.4233,
-     "deviation": 0.00012,
-     "pass": true
+     "deviation": 0.00012
     },
     {
      "method": "Morgenstern-Price (half-sine)",
      "published": 2.384,
-     "source": "Program D (same input)",
-     "tolerance": 0.005,
+     "source": "Program D",
      "computed": 2.3837,
-     "deviation": -0.00013,
-     "pass": true
+     "deviation": -0.00013
     }
    ]
   },
@@ -2703,19 +2274,15 @@
      "method": "Bishop simplified",
      "published": 2.551,
      "source": "Commercial program A",
-     "tolerance": 0.015,
      "computed": 2.53,
-     "deviation": -0.00823,
-     "pass": true
+     "deviation": -0.00823
     },
     {
      "method": "Bishop simplified",
      "published": 2.529,
-     "source": "Program D (same input)",
-     "tolerance": 0.01,
+     "source": "Program D",
      "computed": 2.53,
-     "deviation": 0.0004,
-     "pass": true
+     "deviation": 0.0004
     }
    ]
   },
@@ -2732,19 +2299,15 @@
      "method": "Bishop simplified",
      "published": 1.804,
      "source": "Commercial program A",
-     "tolerance": 0.01,
      "computed": 1.7931,
-     "deviation": -0.00604,
-     "pass": true
+     "deviation": -0.00604
     },
     {
      "method": "Spencer (M-P, constant f(x))",
      "published": 1.804,
      "source": "Commercial program A",
-     "tolerance": 0.01,
      "computed": 1.7942,
-     "deviation": -0.00543,
-     "pass": true
+     "deviation": -0.00543
     }
    ]
   },
@@ -2761,19 +2324,15 @@
      "method": "Bishop simplified",
      "published": 1.176,
      "source": "Commercial program A",
-     "tolerance": 0.01,
      "computed": 1.1727,
-     "deviation": -0.00281,
-     "pass": true
+     "deviation": -0.00281
     },
     {
      "method": "Spencer (M-P, constant f(x))",
      "published": 1.189,
      "source": "Commercial program A",
-     "tolerance": 0.01,
      "computed": 1.1869,
-     "deviation": -0.00177,
-     "pass": true
+     "deviation": -0.00177
     }
    ]
   },
@@ -2790,37 +2349,29 @@
      "method": "Bishop simplified",
      "published": 1.603,
      "source": "Commercial program A",
-     "tolerance": 0.01,
      "computed": 1.5964,
-     "deviation": -0.00412,
-     "pass": true
+     "deviation": -0.00412
     },
     {
      "method": "Spencer (M-P, constant f(x))",
      "published": 1.599,
      "source": "Commercial program A",
-     "tolerance": 0.01,
      "computed": 1.594,
-     "deviation": -0.00313,
-     "pass": true
+     "deviation": -0.00313
     },
     {
      "method": "Spencer (M-P, constant f(x))",
      "published": 1.6,
      "source": "Duncan & Wright (reference)",
-     "tolerance": 0.01,
      "computed": 1.594,
-     "deviation": -0.00375,
-     "pass": true
+     "deviation": -0.00375
     },
     {
      "method": "Spencer (M-P, constant f(x))",
      "published": 1.592,
      "source": "Commercial program A (non-circular)",
-     "tolerance": 0.015,
      "computed": 1.5919,
-     "deviation": -0.00006,
-     "pass": true
+     "deviation": -0.00006
     }
    ]
   },
@@ -2837,37 +2388,29 @@
      "method": "Bishop simplified",
      "published": 1.603,
      "source": "Commercial program A",
-     "tolerance": 0.01,
      "computed": 1.5963,
-     "deviation": -0.00418,
-     "pass": true
+     "deviation": -0.00418
     },
     {
      "method": "Spencer (M-P, constant f(x))",
      "published": 1.599,
      "source": "Commercial program A",
-     "tolerance": 0.01,
      "computed": 1.5935,
-     "deviation": -0.00344,
-     "pass": true
+     "deviation": -0.00344
     },
     {
      "method": "Spencer (M-P, constant f(x))",
      "published": 1.6,
      "source": "Duncan & Wright (reference)",
-     "tolerance": 0.01,
      "computed": 1.5935,
-     "deviation": -0.00406,
-     "pass": true
+     "deviation": -0.00406
     },
     {
      "method": "Spencer (M-P, constant f(x))",
      "published": 1.59,
      "source": "Commercial program A (non-circular)",
-     "tolerance": 0.015,
      "computed": 1.5898,
-     "deviation": -0.00013,
-     "pass": true
+     "deviation": -0.00013
     }
    ]
   },
@@ -2884,37 +2427,29 @@
      "method": "Bishop simplified",
      "published": 1.563,
      "source": "Commercial program A",
-     "tolerance": 0.01,
      "computed": 1.5712,
-     "deviation": 0.00525,
-     "pass": true
+     "deviation": 0.00525
     },
     {
      "method": "Spencer (M-P, constant f(x))",
      "published": 1.557,
      "source": "Commercial program A",
-     "tolerance": 0.01,
      "computed": 1.5624,
-     "deviation": 0.00347,
-     "pass": true
+     "deviation": 0.00347
     },
     {
      "method": "Bishop simplified",
      "published": 1.57,
      "source": "Duncan & Wright",
-     "tolerance": 0.01,
      "computed": 1.5712,
-     "deviation": 0.00076,
-     "pass": true
+     "deviation": 0.00076
     },
     {
      "method": "Bishop simplified",
      "published": 1.572,
-     "source": "Program D (same input)",
-     "tolerance": 0.005,
+     "source": "Program D",
      "computed": 1.5712,
-     "deviation": -0.00051,
-     "pass": true
+     "deviation": -0.00051
     }
    ]
   },
@@ -2931,28 +2466,22 @@
      "method": "Bishop simplified",
      "published": 1.09,
      "source": "Commercial program A",
-     "tolerance": 0.025,
      "computed": 1.0687,
-     "deviation": -0.01954,
-     "pass": true
+     "deviation": -0.01954
     },
     {
      "method": "Spencer (M-P, constant f(x))",
      "published": 1.1,
      "source": "Commercial program A",
-     "tolerance": 0.025,
      "computed": 1.0768,
-     "deviation": -0.02109,
-     "pass": true
+     "deviation": -0.02109
     },
     {
      "method": "Bishop simplified",
      "published": 1.07,
-     "source": "Program D (same input)",
-     "tolerance": 0.01,
+     "source": "Program D",
      "computed": 1.0687,
-     "deviation": -0.00121,
-     "pass": true
+     "deviation": -0.00121
     }
    ]
   },
@@ -2969,37 +2498,29 @@
      "method": "Bishop simplified",
      "published": 1.584,
      "source": "Commercial program A",
-     "tolerance": 0.01,
      "computed": 1.591,
-     "deviation": 0.00442,
-     "pass": true
+     "deviation": 0.00442
     },
     {
      "method": "Spencer (M-P, constant f(x))",
      "published": 1.648,
      "source": "Commercial program A",
-     "tolerance": 0.01,
      "computed": 1.6576,
-     "deviation": 0.00583,
-     "pass": true
+     "deviation": 0.00583
     },
     {
      "method": "Bishop simplified",
      "published": 1.591,
-     "source": "Program D (same input)",
-     "tolerance": 0.005,
+     "source": "Program D",
      "computed": 1.591,
-     "deviation": 0,
-     "pass": true
+     "deviation": 0
     },
     {
      "method": "Morgenstern-Price (half-sine)",
      "published": 1.67,
-     "source": "Program D (same input)",
-     "tolerance": 0.005,
+     "source": "Program D",
      "computed": 1.6688,
-     "deviation": -0.00072,
-     "pass": true
+     "deviation": -0.00072
     }
    ]
   },
@@ -3016,37 +2537,29 @@
      "method": "Bishop simplified",
      "published": 0.761,
      "source": "Commercial program A",
-     "tolerance": 0.01,
      "computed": 0.7561,
-     "deviation": -0.00644,
-     "pass": true
+     "deviation": -0.00644
     },
     {
      "method": "Spencer (M-P, constant f(x))",
      "published": 0.756,
      "source": "Commercial program A",
-     "tolerance": 0.01,
      "computed": 0.7519,
-     "deviation": -0.00542,
-     "pass": true
+     "deviation": -0.00542
     },
     {
      "method": "Spencer (M-P, constant f(x))",
      "published": 0.75,
      "source": "Duncan & Wright (reference)",
-     "tolerance": 0.015,
      "computed": 0.7519,
-     "deviation": 0.00253,
-     "pass": true
+     "deviation": 0.00253
     },
     {
      "method": "Spencer (M-P, constant f(x))",
      "published": 0.74,
      "source": "Commercial program A (non-circular)",
-     "tolerance": 0.015,
      "computed": 0.739,
-     "deviation": -0.00135,
-     "pass": true
+     "deviation": -0.00135
     }
    ]
   },
@@ -3063,37 +2576,29 @@
      "method": "Bishop simplified",
      "published": 0.909,
      "source": "Commercial program A",
-     "tolerance": 0.01,
      "computed": 0.9052,
-     "deviation": -0.00418,
-     "pass": true
+     "deviation": -0.00418
     },
     {
      "method": "Spencer (M-P, constant f(x))",
      "published": 0.898,
      "source": "Commercial program A",
-     "tolerance": 0.01,
      "computed": 0.8978,
-     "deviation": -0.00022,
-     "pass": true
+     "deviation": -0.00022
     },
     {
      "method": "Spencer (M-P, constant f(x))",
      "published": 0.9,
      "source": "Duncan & Wright (reference)",
-     "tolerance": 0.015,
      "computed": 0.8978,
-     "deviation": -0.00244,
-     "pass": true
+     "deviation": -0.00244
     },
     {
      "method": "Spencer (M-P, constant f(x))",
      "published": 0.903,
      "source": "Commercial program A (non-circular)",
-     "tolerance": 0.025,
      "computed": 0.884,
-     "deviation": -0.02104,
-     "pass": true
+     "deviation": -0.02104
     }
    ]
   },
@@ -3110,37 +2615,29 @@
      "method": "Bishop simplified",
      "published": 1.045,
      "source": "Commercial program A",
-     "tolerance": 0.01,
      "computed": 1.0417,
-     "deviation": -0.00316,
-     "pass": true
+     "deviation": -0.00316
     },
     {
      "method": "Spencer (M-P, constant f(x))",
      "published": 1.032,
      "source": "Commercial program A",
-     "tolerance": 0.01,
      "computed": 1.0282,
-     "deviation": -0.00368,
-     "pass": true
+     "deviation": -0.00368
     },
     {
      "method": "Spencer (M-P, constant f(x))",
      "published": 1.03,
      "source": "Duncan & Wright (reference)",
-     "tolerance": 0.015,
      "computed": 1.0282,
-     "deviation": -0.00175,
-     "pass": true
+     "deviation": -0.00175
     },
     {
      "method": "Spencer (M-P, constant f(x))",
      "published": 1.018,
      "source": "Commercial program A (non-circular)",
-     "tolerance": 0.015,
      "computed": 1.0168,
-     "deviation": -0.00118,
-     "pass": true
+     "deviation": -0.00118
     }
    ]
   },
@@ -3157,37 +2654,29 @@
      "method": "Bishop simplified",
      "published": 1.154,
      "source": "Commercial program A",
-     "tolerance": 0.01,
      "computed": 1.1515,
-     "deviation": -0.00217,
-     "pass": true
+     "deviation": -0.00217
     },
     {
      "method": "Spencer (M-P, constant f(x))",
      "published": 1.134,
      "source": "Commercial program A",
-     "tolerance": 0.01,
      "computed": 1.1311,
-     "deviation": -0.00256,
-     "pass": true
+     "deviation": -0.00256
     },
     {
      "method": "Spencer (M-P, constant f(x))",
      "published": 1.13,
      "source": "Duncan & Wright (reference)",
-     "tolerance": 0.015,
      "computed": 1.1311,
-     "deviation": 0.00097,
-     "pass": true
+     "deviation": 0.00097
     },
     {
      "method": "Spencer (M-P, constant f(x))",
      "published": 1.116,
      "source": "Commercial program A (non-circular)",
-     "tolerance": 0.015,
      "computed": 1.118,
-     "deviation": 0.00179,
-     "pass": true
+     "deviation": 0.00179
     }
    ]
   },
@@ -3204,28 +2693,22 @@
      "method": "Bishop simplified",
      "published": 1.417,
      "source": "Commercial program A",
-     "tolerance": 0.01,
      "computed": 1.4142,
-     "deviation": -0.00198,
-     "pass": true
+     "deviation": -0.00198
     },
     {
      "method": "Bishop simplified",
      "published": 1.41,
      "source": "Morgenstern chart",
-     "tolerance": 0.015,
      "computed": 1.4142,
-     "deviation": 0.00298,
-     "pass": true
+     "deviation": 0.00298
     },
     {
      "method": "Spencer (M-P, constant f(x))",
      "published": 1.422,
-     "source": "Program D (same input)",
-     "tolerance": 0.01,
+     "source": "Program D",
      "computed": 1.4209,
-     "deviation": -0.00077,
-     "pass": true
+     "deviation": -0.00077
     }
    ]
   },
@@ -3242,19 +2725,15 @@
      "method": "Spencer (M-P, constant f(x))",
      "published": 2.455,
      "source": "Commercial program A",
-     "tolerance": 0.01,
      "computed": 2.451,
-     "deviation": -0.00163,
-     "pass": true
+     "deviation": -0.00163
     },
     {
      "method": "Spencer (M-P, constant f(x))",
      "published": 2.43,
      "source": "Huang & Jia (FE strength reduction)",
-     "tolerance": 0.015,
      "computed": 2.451,
-     "deviation": 0.00864,
-     "pass": true
+     "deviation": 0.00864
     }
    ]
   },
@@ -3271,19 +2750,15 @@
      "method": "Spencer (M-P, constant f(x))",
      "published": 1.36,
      "source": "Commercial program A",
-     "tolerance": 0.015,
      "computed": 1.3706,
-     "deviation": 0.00779,
-     "pass": true
+     "deviation": 0.00779
     },
     {
      "method": "Spencer (M-P, constant f(x))",
      "published": 1.372,
-     "source": "Program D (same input)",
-     "tolerance": 0.01,
+     "source": "Program D",
      "computed": 1.3706,
-     "deviation": -0.00102,
-     "pass": true
+     "deviation": -0.00102
     }
    ]
   },
@@ -3300,28 +2775,22 @@
      "method": "Bishop simplified",
      "published": 1.373,
      "source": "Commercial program A",
-     "tolerance": 0.01,
      "computed": 1.3812,
-     "deviation": 0.00597,
-     "pass": true
+     "deviation": 0.00597
     },
     {
      "method": "Spencer (M-P, constant f(x))",
      "published": 1.386,
      "source": "Commercial program A",
-     "tolerance": 0.01,
      "computed": 1.3982,
-     "deviation": 0.0088,
-     "pass": true
+     "deviation": 0.0088
     },
     {
      "method": "Bishop simplified",
      "published": 1.382,
-     "source": "Program D (same input)",
-     "tolerance": 0.005,
+     "source": "Program D",
      "computed": 1.3812,
-     "deviation": -0.00058,
-     "pass": true
+     "deviation": -0.00058
     }
    ]
   },
@@ -3338,19 +2807,15 @@
      "method": "Bishop simplified",
      "published": 1.378,
      "source": "Commercial program A",
-     "tolerance": 0.01,
      "computed": 1.3812,
-     "deviation": 0.00232,
-     "pass": true
+     "deviation": 0.00232
     },
     {
      "method": "Bishop simplified",
      "published": 1.382,
-     "source": "Program D (same input)",
-     "tolerance": 0.005,
+     "source": "Program D",
      "computed": 1.3812,
-     "deviation": -0.00058,
-     "pass": true
+     "deviation": -0.00058
     }
    ]
   },
@@ -3367,28 +2832,22 @@
      "method": "Bishop simplified",
      "published": 1.787,
      "source": "Commercial program A",
-     "tolerance": 0.01,
      "computed": 1.7901,
-     "deviation": 0.00173,
-     "pass": true
+     "deviation": 0.00173
     },
     {
      "method": "Spencer (M-P, constant f(x))",
      "published": 1.791,
      "source": "Commercial program A",
-     "tolerance": 0.01,
      "computed": 1.7974,
-     "deviation": 0.00357,
-     "pass": true
+     "deviation": 0.00357
     },
     {
      "method": "Bishop simplified",
      "published": 1.79,
-     "source": "Program D (same input)",
-     "tolerance": 0.005,
+     "source": "Program D",
      "computed": 1.7901,
-     "deviation": 0.00006,
-     "pass": true
+     "deviation": 0.00006
     }
    ]
   },
@@ -3405,28 +2864,22 @@
      "method": "Bishop simplified",
      "published": 1.835,
      "source": "Commercial program A",
-     "tolerance": 0.01,
      "computed": 1.8299,
-     "deviation": -0.00278,
-     "pass": true
+     "deviation": -0.00278
     },
     {
      "method": "Spencer (M-P, constant f(x))",
      "published": 1.839,
      "source": "Commercial program A",
-     "tolerance": 0.01,
      "computed": 1.8353,
-     "deviation": -0.00201,
-     "pass": true
+     "deviation": -0.00201
     },
     {
      "method": "Bishop simplified",
      "published": 1.83,
-     "source": "Program D (same input)",
-     "tolerance": 0.005,
+     "source": "Program D",
      "computed": 1.8299,
-     "deviation": -0.00005,
-     "pass": true
+     "deviation": -0.00005
     }
    ]
   },
@@ -3443,28 +2896,22 @@
      "method": "Bishop simplified",
      "published": 1.799,
      "source": "Commercial program A",
-     "tolerance": 0.01,
      "computed": 1.7901,
-     "deviation": -0.00495,
-     "pass": true
+     "deviation": -0.00495
     },
     {
      "method": "Spencer (M-P, constant f(x))",
      "published": 1.803,
      "source": "Commercial program A",
-     "tolerance": 0.01,
      "computed": 1.7973,
-     "deviation": -0.00316,
-     "pass": true
+     "deviation": -0.00316
     },
     {
      "method": "Bishop simplified",
      "published": 1.79,
-     "source": "Program D (same input)",
-     "tolerance": 0.005,
+     "source": "Program D",
      "computed": 1.7901,
-     "deviation": 0.00006,
-     "pass": true
+     "deviation": 0.00006
     }
    ]
   },
@@ -3481,37 +2928,29 @@
      "method": "Spencer (M-P, constant f(x))",
      "published": 1.336,
      "source": "Commercial program A",
-     "tolerance": 0.01,
      "computed": 1.3381,
-     "deviation": 0.00157,
-     "pass": true
+     "deviation": 0.00157
     },
     {
      "method": "Spencer (M-P, constant f(x))",
      "published": 1.327,
      "source": "Cheng et al.",
-     "tolerance": 0.015,
      "computed": 1.3381,
-     "deviation": 0.00836,
-     "pass": true
+     "deviation": 0.00836
     },
     {
      "method": "Spencer (M-P, constant f(x))",
      "published": 1.338,
-     "source": "Program D (same input)",
-     "tolerance": 0.01,
+     "source": "Program D",
      "computed": 1.3381,
-     "deviation": 0.00007,
-     "pass": true
+     "deviation": 0.00007
     },
     {
      "method": "Bishop simplified",
      "published": 1.342,
-     "source": "Program D (same input)",
-     "tolerance": 0.01,
+     "source": "Program D",
      "computed": 1.3412,
-     "deviation": -0.0006,
-     "pass": true
+     "deviation": -0.0006
     }
    ]
   },
@@ -3528,37 +2967,29 @@
      "method": "Spencer (M-P, constant f(x))",
      "published": 1.38,
      "source": "Commercial program A",
-     "tolerance": 0.015,
      "computed": 1.3984,
-     "deviation": 0.01333,
-     "pass": true
+     "deviation": 0.01333
     },
     {
      "method": "Spencer (M-P, constant f(x))",
      "published": 1.383,
      "source": "Cheng et al.",
-     "tolerance": 0.015,
      "computed": 1.3984,
-     "deviation": 0.01114,
-     "pass": true
+     "deviation": 0.01114
     },
     {
      "method": "Spencer (M-P, constant f(x))",
      "published": 1.398,
-     "source": "Program D (same input)",
-     "tolerance": 0.01,
+     "source": "Program D",
      "computed": 1.3984,
-     "deviation": 0.00029,
-     "pass": true
+     "deviation": 0.00029
     },
     {
      "method": "Bishop simplified",
      "published": 1.401,
-     "source": "Program D (same input)",
-     "tolerance": 0.01,
+     "source": "Program D",
      "computed": 1.3995,
-     "deviation": -0.00107,
-     "pass": true
+     "deviation": -0.00107
     }
    ]
   },
@@ -3575,19 +3006,15 @@
      "method": "Spencer (M-P, constant f(x))",
      "published": 1.4,
      "source": "Griffiths & Lane (FE)",
-     "tolerance": 0.03,
      "computed": 1.3661,
-     "deviation": -0.02421,
-     "pass": true
+     "deviation": -0.02421
     },
     {
      "method": "Spencer (M-P, constant f(x))",
      "published": 1.366,
-     "source": "Program D (same input)",
-     "tolerance": 0.01,
+     "source": "Program D",
      "computed": 1.3661,
-     "deviation": 0.00007,
-     "pass": true
+     "deviation": 0.00007
     }
    ]
   },
@@ -3603,11 +3030,13 @@
     {
      "method": "Janbu corrected (f0)",
      "published": 0.475,
-     "source": "Griffiths & Lane (Janbu wedge, 0.45–0.50)",
-     "tolerance": 0.06,
+     "source": "Griffiths & Lane (Janbu wedge)",
+     "range": [
+      0.45,
+      0.5
+     ],
      "computed": 0.4996,
-     "deviation": 0.05179,
-     "pass": true
+     "deviation": 0.05179
     }
    ]
   },
@@ -3624,19 +3053,15 @@
      "method": "Spencer (M-P, constant f(x))",
      "published": 1.46,
      "source": "Griffiths & Lane (LE curve)",
-     "tolerance": 0.02,
      "computed": 1.4705,
-     "deviation": 0.00719,
-     "pass": true
+     "deviation": 0.00719
     },
     {
      "method": "Spencer (M-P, constant f(x))",
      "published": 1.468,
-     "source": "Program D (same input)",
-     "tolerance": 0.01,
+     "source": "Program D",
      "computed": 1.4705,
-     "deviation": 0.0017,
-     "pass": true
+     "deviation": 0.0017
     }
    ]
   },
@@ -3653,19 +3078,15 @@
      "method": "Spencer (M-P, constant f(x))",
      "published": 2.04,
      "source": "Griffiths & Lane (LE curve)",
-     "tolerance": 0.02,
      "computed": 2.0231,
-     "deviation": -0.00828,
-     "pass": true
+     "deviation": -0.00828
     },
     {
      "method": "Spencer (M-P, constant f(x))",
      "published": 2.022,
-     "source": "Program D (same input)",
-     "tolerance": 0.01,
+     "source": "Program D",
      "computed": 2.0231,
-     "deviation": 0.00054,
-     "pass": true
+     "deviation": 0.00054
     }
    ]
   },
@@ -3682,19 +3103,15 @@
      "method": "Spencer (M-P, constant f(x))",
      "published": 1.9,
      "source": "Griffiths & Lane (FE)",
-     "tolerance": 0.02,
      "computed": 1.9152,
-     "deviation": 0.008,
-     "pass": true
+     "deviation": 0.008
     },
     {
      "method": "Spencer (M-P, constant f(x))",
      "published": 1.915,
-     "source": "Program D (same input)",
-     "tolerance": 0.01,
+     "source": "Program D",
      "computed": 1.9152,
-     "deviation": 0.0001,
-     "pass": true
+     "deviation": 0.0001
     }
    ]
   },
@@ -3711,28 +3128,22 @@
      "method": "Bishop simplified",
      "published": 0.987,
      "source": "Commercial program A",
-     "tolerance": 0.01,
      "computed": 0.9845,
-     "deviation": -0.00253,
-     "pass": true
+     "deviation": -0.00253
     },
     {
      "method": "Spencer (M-P, constant f(x))",
      "published": 0.986,
      "source": "Commercial program A",
-     "tolerance": 0.01,
      "computed": 0.9842,
-     "deviation": -0.00183,
-     "pass": true
+     "deviation": -0.00183
     },
     {
      "method": "Janbu corrected (f0)",
      "published": 0.99,
      "source": "Commercial program A",
-     "tolerance": 0.01,
      "computed": 0.9855,
-     "deviation": -0.00455,
-     "pass": true
+     "deviation": -0.00455
     }
    ]
   },
@@ -3749,10 +3160,8 @@
      "method": "Morgenstern-Price (half-sine)",
      "published": 1.009,
      "source": "Commercial program A",
-     "tolerance": 0.01,
      "computed": 1.0084,
-     "deviation": -0.00059,
-     "pass": true
+     "deviation": -0.00059
     }
    ]
   },
@@ -3769,28 +3178,22 @@
      "method": "Bishop simplified",
      "published": 1.532,
      "source": "Commercial program A",
-     "tolerance": 0.025,
      "computed": 1.5038,
-     "deviation": -0.01841,
-     "pass": true
+     "deviation": -0.01841
     },
     {
      "method": "Spencer (M-P, constant f(x))",
      "published": 1.532,
      "source": "Commercial program A",
-     "tolerance": 0.025,
      "computed": 1.5032,
-     "deviation": -0.0188,
-     "pass": true
+     "deviation": -0.0188
     },
     {
      "method": "Morgenstern-Price (half-sine)",
      "published": 1.532,
      "source": "Commercial program A",
-     "tolerance": 0.025,
      "computed": 1.5032,
-     "deviation": -0.0188,
-     "pass": true
+     "deviation": -0.0188
     }
    ]
   },
@@ -3807,19 +3210,15 @@
      "method": "Bishop simplified",
      "published": 1.511,
      "source": "Commercial program A",
-     "tolerance": 0.025,
      "computed": 1.4831,
-     "deviation": -0.01846,
-     "pass": true
+     "deviation": -0.01846
     },
     {
      "method": "Spencer (M-P, constant f(x))",
      "published": 1.51,
      "source": "Commercial program A",
-     "tolerance": 0.025,
      "computed": 1.4824,
-     "deviation": -0.01828,
-     "pass": true
+     "deviation": -0.01828
     }
    ]
   },
@@ -3836,10 +3235,8 @@
      "method": "Bishop simplified",
      "published": 1.108,
      "source": "Commercial program A",
-     "tolerance": 0.01,
      "computed": 1.1077,
-     "deviation": -0.00027,
-     "pass": true
+     "deviation": -0.00027
     }
    ]
   },
@@ -3856,10 +3253,8 @@
      "method": "Bishop simplified",
      "published": 1.058,
      "source": "Commercial program A",
-     "tolerance": 0.01,
      "computed": 1.058,
-     "deviation": 0,
-     "pass": true
+     "deviation": 0
     }
    ]
   },
@@ -3876,10 +3271,8 @@
      "method": "Bishop simplified",
      "published": 2.245,
      "source": "Commercial program A",
-     "tolerance": 0.01,
      "computed": 2.2441,
-     "deviation": -0.0004,
-     "pass": true
+     "deviation": -0.0004
     }
    ]
   },
@@ -3896,10 +3289,8 @@
      "method": "Bishop simplified",
      "published": 2.128,
      "source": "Commercial program A",
-     "tolerance": 0.01,
      "computed": 2.1283,
-     "deviation": 0.00014,
-     "pass": true
+     "deviation": 0.00014
     }
    ]
   },
@@ -3916,10 +3307,8 @@
      "method": "Bishop simplified",
      "published": 1.504,
      "source": "Commercial program A",
-     "tolerance": 0.01,
      "computed": 1.4996,
-     "deviation": -0.00293,
-     "pass": true
+     "deviation": -0.00293
     }
    ]
   },
@@ -3936,10 +3325,8 @@
      "method": "Janbu simplified (uncorrected)",
      "published": 1.469,
      "source": "Commercial program A",
-     "tolerance": 0.01,
      "computed": 1.4675,
-     "deviation": -0.00102,
-     "pass": true
+     "deviation": -0.00102
     }
    ]
   },
@@ -3956,19 +3343,15 @@
      "method": "Janbu simplified (uncorrected)",
      "published": 0.957,
      "source": "Commercial program A",
-     "tolerance": 0.01,
      "computed": 0.9553,
-     "deviation": -0.00178,
-     "pass": true
+     "deviation": -0.00178
     },
     {
      "method": "Spencer (M-P, constant f(x))",
      "published": 0.981,
      "source": "Commercial program A",
-     "tolerance": 0.01,
      "computed": 0.9777,
-     "deviation": -0.00336,
-     "pass": true
+     "deviation": -0.00336
     }
    ]
   },
@@ -3985,19 +3368,15 @@
      "method": "Janbu simplified (uncorrected)",
      "published": 2.61,
      "source": "Commercial program A",
-     "tolerance": 0.01,
      "computed": 2.6091,
-     "deviation": -0.00034,
-     "pass": true
+     "deviation": -0.00034
     },
     {
      "method": "Spencer (M-P, constant f(x))",
      "published": 2.696,
      "source": "Commercial program A",
-     "tolerance": 0.015,
      "computed": 2.6664,
-     "deviation": -0.01098,
-     "pass": true
+     "deviation": -0.01098
     }
    ]
   },
@@ -4014,19 +3393,15 @@
      "method": "Spencer (M-P, constant f(x))",
      "published": 1.804,
      "source": "Commercial program A",
-     "tolerance": 0.01,
      "computed": 1.7995,
-     "deviation": -0.00249,
-     "pass": true
+     "deviation": -0.00249
     },
     {
      "method": "Bishop simplified",
      "published": 1.804,
      "source": "Commercial program A",
-     "tolerance": 0.01,
      "computed": 1.7987,
-     "deviation": -0.00294,
-     "pass": true
+     "deviation": -0.00294
     }
    ]
   },
@@ -4043,28 +3418,22 @@
      "method": "Bishop simplified",
      "published": 1.293,
      "source": "Commercial program A",
-     "tolerance": 0.01,
      "computed": 1.2874,
-     "deviation": -0.00433,
-     "pass": true
+     "deviation": -0.00433
     },
     {
      "method": "Spencer (M-P, constant f(x))",
      "published": 1.3,
      "source": "Commercial program A",
-     "tolerance": 0.01,
      "computed": 1.2943,
-     "deviation": -0.00438,
-     "pass": true
+     "deviation": -0.00438
     },
     {
      "method": "Janbu simplified (uncorrected)",
      "published": 1.151,
      "source": "Commercial program A",
-     "tolerance": 0.01,
      "computed": 1.1471,
-     "deviation": -0.00339,
-     "pass": true
+     "deviation": -0.00339
     }
    ]
   },
@@ -4081,28 +3450,22 @@
      "method": "Bishop simplified",
      "published": 1.285,
      "source": "Commercial program A",
-     "tolerance": 0.01,
      "computed": 1.2806,
-     "deviation": -0.00342,
-     "pass": true
+     "deviation": -0.00342
     },
     {
      "method": "Spencer (M-P, constant f(x))",
      "published": 1.29,
      "source": "Commercial program A",
-     "tolerance": 0.01,
      "computed": 1.2871,
-     "deviation": -0.00225,
-     "pass": true
+     "deviation": -0.00225
     },
     {
      "method": "Janbu simplified (uncorrected)",
      "published": 1.141,
      "source": "Commercial program A",
-     "tolerance": 0.01,
      "computed": 1.1355,
-     "deviation": -0.00482,
-     "pass": true
+     "deviation": -0.00482
     }
    ]
   },
@@ -4119,10 +3482,8 @@
      "method": "Spencer (M-P, constant f(x))",
      "published": 0.596,
      "source": "Commercial program A",
-     "tolerance": 0.01,
      "computed": 0.6002,
-     "deviation": 0.00705,
-     "pass": true
+     "deviation": 0.00705
     }
    ]
   },
@@ -4139,10 +3500,8 @@
      "method": "Janbu simplified (uncorrected)",
      "published": 1.291,
      "source": "Commercial program A",
-     "tolerance": 0.01,
      "computed": 1.2897,
-     "deviation": -0.00101,
-     "pass": true
+     "deviation": -0.00101
     }
    ]
   },
@@ -4159,19 +3518,15 @@
      "method": "Bishop simplified",
      "published": 1.126,
      "source": "Commercial program A",
-     "tolerance": 0.01,
      "computed": 1.1219,
-     "deviation": -0.00364,
-     "pass": true
+     "deviation": -0.00364
     },
     {
      "method": "Spencer (M-P, constant f(x))",
      "published": 1.124,
      "source": "Duncan & Wright (reference)",
-     "tolerance": 0.015,
      "computed": 1.1219,
-     "deviation": -0.00187,
-     "pass": true
+     "deviation": -0.00187
     }
    ]
   },
@@ -4188,19 +3543,15 @@
      "method": "Bishop simplified",
      "published": 1.125,
      "source": "Commercial program A",
-     "tolerance": 0.01,
      "computed": 1.1188,
-     "deviation": -0.00551,
-     "pass": true
+     "deviation": -0.00551
     },
     {
      "method": "Spencer (M-P, constant f(x))",
      "published": 1.124,
      "source": "Duncan & Wright (reference)",
-     "tolerance": 0.015,
      "computed": 1.1188,
-     "deviation": -0.00463,
-     "pass": true
+     "deviation": -0.00463
     }
    ]
   },
@@ -4217,28 +3568,22 @@
      "method": "Bishop simplified",
      "published": 1.155,
      "source": "Commercial program A",
-     "tolerance": 0.01,
      "computed": 1.1559,
-     "deviation": 0.00078,
-     "pass": true
+     "deviation": 0.00078
     },
     {
      "method": "Spencer (M-P, constant f(x))",
      "published": 1.155,
      "source": "Commercial program A",
-     "tolerance": 0.01,
      "computed": 1.1559,
-     "deviation": 0.00078,
-     "pass": true
+     "deviation": 0.00078
     },
     {
      "method": "Spencer (M-P, constant f(x))",
      "published": 1.15,
      "source": "Duncan & Wright (reference)",
-     "tolerance": 0.015,
      "computed": 1.1559,
-     "deviation": 0.00513,
-     "pass": true
+     "deviation": 0.00513
     }
    ]
   },
@@ -4255,10 +3600,8 @@
      "method": "Bishop simplified",
      "published": 1.212,
      "source": "Commercial program A",
-     "tolerance": 0.01,
      "computed": 1.209,
-     "deviation": -0.00248,
-     "pass": true
+     "deviation": -0.00248
     }
    ]
   },
@@ -4275,28 +3618,22 @@
      "method": "Morgenstern-Price (half-sine)",
      "published": 0.991,
      "source": "Commercial program B",
-     "tolerance": 0.01,
      "computed": 0.9841,
-     "deviation": -0.00696,
-     "pass": true
+     "deviation": -0.00696
     },
     {
      "method": "Bishop simplified",
      "published": 0.992,
      "source": "Commercial program B (moment equilibrium, λ = 0)",
-     "tolerance": 0.01,
      "computed": 0.9845,
-     "deviation": -0.00756,
-     "pass": true
+     "deviation": -0.00756
     },
     {
      "method": "Spencer (M-P, constant f(x))",
      "published": 1,
      "source": "ACADS",
-     "tolerance": 0.02,
      "computed": 0.9842,
-     "deviation": -0.0158,
-     "pass": true
+     "deviation": -0.0158
     }
    ]
   },
@@ -4313,19 +3650,15 @@
      "method": "Bishop simplified",
      "published": 1.664,
      "source": "Commercial program B",
-     "tolerance": 0.01,
      "computed": 1.6581,
-     "deviation": -0.00355,
-     "pass": true
+     "deviation": -0.00355
     },
     {
      "method": "Morgenstern-Price (half-sine)",
      "published": 1.66,
      "source": "Commercial program B",
-     "tolerance": 0.01,
      "computed": 1.6552,
-     "deviation": -0.00289,
-     "pass": true
+     "deviation": -0.00289
     }
    ]
   },
@@ -4342,10 +3675,8 @@
      "method": "Morgenstern-Price (half-sine)",
      "published": 1.389,
      "source": "Commercial program B",
-     "tolerance": 0.015,
      "computed": 1.393,
-     "deviation": 0.00288,
-     "pass": true
+     "deviation": 0.00288
     }
    ]
   },
@@ -4362,30 +3693,8 @@
      "method": "Spencer (M-P, constant f(x))",
      "published": 1.054,
      "source": "Commercial program B",
-     "tolerance": 0.025,
      "computed": 1.0316,
-     "deviation": -0.02125,
-     "pass": true
-    }
-   ]
-  },
-  {
-   "id": "P-6D6E9F",
-   "title": "Chen & Shao (1988) frictionless slope, Spencer (reference values)",
-   "reference": "Chen & Shao (1988).",
-   "literature": true,
-   "commercial": true,
-   "surface": "fixed",
-   "units": "SI",
-   "checks": [
-    {
-     "method": "Spencer (M-P, constant f(x))",
-     "published": 1.036,
-     "source": "Commercial program B",
-     "tolerance": 0.02,
-     "computed": 1.0521,
-     "deviation": 0.01554,
-     "pass": true
+     "deviation": -0.02125
     }
    ]
   },
@@ -4402,10 +3711,8 @@
      "method": "Morgenstern-Price (half-sine)",
      "published": 1.017,
      "source": "Commercial program B",
-     "tolerance": 0.01,
      "computed": 1.0084,
-     "deviation": -0.00846,
-     "pass": true
+     "deviation": -0.00846
     }
    ]
   },
@@ -4422,10 +3729,8 @@
      "method": "Morgenstern-Price (half-sine)",
      "published": 0.96,
      "source": "Commercial program B",
-     "tolerance": 0.01,
      "computed": 0.9646,
-     "deviation": 0.00479,
-     "pass": true
+     "deviation": 0.00479
     }
    ]
   },
@@ -4442,19 +3747,15 @@
      "method": "Morgenstern-Price (half-sine)",
      "published": 1.132,
      "source": "Commercial program B",
-     "tolerance": 0.01,
      "computed": 1.1282,
-     "deviation": -0.00336,
-     "pass": true
+     "deviation": -0.00336
     },
     {
      "method": "Bishop simplified",
      "published": 1.128,
      "source": "Chowdhury & Xu",
-     "tolerance": 0.02,
      "computed": 1.1282,
-     "deviation": 0.00018,
-     "pass": true
+     "deviation": 0.00018
     }
    ]
   },
@@ -4471,19 +3772,15 @@
      "method": "Morgenstern-Price (half-sine)",
      "published": 1.116,
      "source": "Commercial program B",
-     "tolerance": 0.01,
      "computed": 1.1098,
-     "deviation": -0.00556,
-     "pass": true
+     "deviation": -0.00556
     },
     {
      "method": "Bishop simplified",
      "published": 1.109,
      "source": "Chowdhury & Xu",
-     "tolerance": 0.02,
      "computed": 1.1098,
-     "deviation": 0.00072,
-     "pass": true
+     "deviation": 0.00072
     }
    ]
   },
@@ -4500,19 +3797,15 @@
      "method": "Morgenstern-Price (half-sine)",
      "published": 1.11,
      "source": "Commercial program B",
-     "tolerance": 0.01,
      "computed": 1.1083,
-     "deviation": -0.00153,
-     "pass": true
+     "deviation": -0.00153
     },
     {
      "method": "Bishop simplified",
      "published": 1.1096,
      "source": "Chowdhury & Xu",
-     "tolerance": 0.02,
      "computed": 1.1083,
-     "deviation": -0.00117,
-     "pass": true
+     "deviation": -0.00117
     }
    ]
   },
@@ -4529,19 +3822,15 @@
      "method": "Morgenstern-Price (half-sine)",
      "published": 1.063,
      "source": "Commercial program B",
-     "tolerance": 0.01,
      "computed": 1.058,
-     "deviation": -0.0047,
-     "pass": true
+     "deviation": -0.0047
     },
     {
      "method": "Bishop simplified",
      "published": 1.0639,
      "source": "Chowdhury & Xu",
-     "tolerance": 0.02,
      "computed": 1.058,
-     "deviation": -0.00555,
-     "pass": true
+     "deviation": -0.00555
     }
    ]
   },
@@ -4558,19 +3847,15 @@
      "method": "Morgenstern-Price (half-sine)",
      "published": 2.248,
      "source": "Commercial program B",
-     "tolerance": 0.01,
      "computed": 2.2448,
-     "deviation": -0.00142,
-     "pass": true
+     "deviation": -0.00142
     },
     {
      "method": "Bishop simplified",
      "published": 2.2343,
      "source": "Chowdhury & Xu",
-     "tolerance": 0.02,
      "computed": 2.2448,
-     "deviation": 0.0047,
-     "pass": true
+     "deviation": 0.0047
     }
    ]
   },
@@ -4587,19 +3872,15 @@
      "method": "Morgenstern-Price (half-sine)",
      "published": 2.138,
      "source": "Commercial program B",
-     "tolerance": 0.01,
      "computed": 2.1281,
-     "deviation": -0.00463,
-     "pass": true
+     "deviation": -0.00463
     },
     {
      "method": "Bishop simplified",
      "published": 2.1396,
      "source": "Chowdhury & Xu",
-     "tolerance": 0.02,
      "computed": 2.1281,
-     "deviation": -0.00537,
-     "pass": true
+     "deviation": -0.00537
     }
    ]
   },
@@ -4616,19 +3897,15 @@
      "method": "Morgenstern-Price (half-sine)",
      "published": 1.422,
      "source": "Commercial program B",
-     "tolerance": 0.01,
      "computed": 1.428,
-     "deviation": 0.00422,
-     "pass": true
+     "deviation": 0.00422
     },
     {
      "method": "Bishop simplified",
      "published": 1.4239,
      "source": "Chowdhury & Xu",
-     "tolerance": 0.02,
      "computed": 1.4278,
-     "deviation": 0.00274,
-     "pass": true
+     "deviation": 0.00274
     }
    ]
   },
@@ -4645,19 +3922,15 @@
      "method": "Morgenstern-Price (half-sine)",
      "published": 1.158,
      "source": "Commercial program B",
-     "tolerance": 0.01,
      "computed": 1.1571,
-     "deviation": -0.00078,
-     "pass": true
+     "deviation": -0.00078
     },
     {
      "method": "Bishop simplified",
      "published": 1.1625,
      "source": "Chowdhury & Xu",
-     "tolerance": 0.02,
      "computed": 1.1583,
-     "deviation": -0.00361,
-     "pass": true
+     "deviation": -0.00361
     }
    ]
   },
@@ -4674,10 +3947,8 @@
      "method": "Morgenstern-Price (half-sine)",
      "published": 1.178,
      "source": "Commercial program B",
-     "tolerance": 0.01,
      "computed": 1.1744,
-     "deviation": -0.00306,
-     "pass": true
+     "deviation": -0.00306
     }
    ]
   },
@@ -4694,10 +3965,8 @@
      "method": "Spencer (M-P, constant f(x))",
      "published": 1.868,
      "source": "Commercial program B (optimised non-circular)",
-     "tolerance": 0.02,
      "computed": 1.8698,
-     "deviation": 0.00096,
-     "pass": true
+     "deviation": 0.00096
     }
    ]
   },
@@ -4714,19 +3983,15 @@
      "method": "Morgenstern-Price (half-sine)",
      "published": 1.049,
      "source": "Commercial program B",
-     "tolerance": 0.005,
      "computed": 1.0528,
-     "deviation": 0.00362,
-     "pass": true
+     "deviation": 0.00362
     },
     {
      "method": "Spencer (M-P, constant f(x))",
      "published": 1.049,
      "source": "Priest",
-     "tolerance": 0.005,
      "computed": 1.0515,
-     "deviation": 0.00238,
-     "pass": true
+     "deviation": 0.00238
     }
    ]
   },
@@ -4743,10 +4008,8 @@
      "method": "Bishop simplified",
      "published": 1.461,
      "source": "Commercial program B",
-     "tolerance": 0.025,
      "computed": 1.4325,
-     "deviation": -0.01951,
-     "pass": true
+     "deviation": -0.01951
     }
    ]
   },
@@ -4763,10 +4026,8 @@
      "method": "Bishop simplified",
      "published": 1.128,
      "source": "Commercial program A",
-     "tolerance": 0.01,
      "computed": 1.1326,
-     "deviation": 0.00408,
-     "pass": true
+     "deviation": 0.00408
     }
    ]
   },
@@ -4783,10 +4044,8 @@
      "method": "Bishop simplified",
      "published": 1.109,
      "source": "Commercial program A",
-     "tolerance": 0.01,
      "computed": 1.1123,
-     "deviation": 0.00298,
-     "pass": true
+     "deviation": 0.00298
     }
    ]
   },
@@ -4803,10 +4062,8 @@
      "method": "Bishop simplified",
      "published": 1.16,
      "source": "Commercial program A",
-     "tolerance": 0.01,
      "computed": 1.1584,
-     "deviation": -0.00138,
-     "pass": true
+     "deviation": -0.00138
     }
    ]
   },
@@ -4823,10 +4080,8 @@
      "method": "Bishop simplified",
      "published": 1.185,
      "source": "Commercial program A",
-     "tolerance": 0.01,
      "computed": 1.1781,
-     "deviation": -0.00582,
-     "pass": true
+     "deviation": -0.00582
     }
    ]
   },
@@ -4842,11 +4097,9 @@
     {
      "method": "Bishop simplified",
      "published": 2.973,
-     "source": "Program D (same input)",
-     "tolerance": 0.01,
+     "source": "Program D",
      "computed": 2.9741,
-     "deviation": 0.00037,
-     "pass": true
+     "deviation": 0.00037
     }
    ]
   },
@@ -4862,11 +4115,9 @@
     {
      "method": "Spencer (M-P, constant f(x))",
      "published": 1.145,
-     "source": "Program D (same input)",
-     "tolerance": 0.01,
+     "source": "Program D",
      "computed": 1.1381,
-     "deviation": -0.00603,
-     "pass": true
+     "deviation": -0.00603
     }
    ]
   },
@@ -4883,28 +4134,22 @@
      "method": "Bishop simplified",
      "published": 1.382,
      "source": "Commercial program A",
-     "tolerance": 0.01,
      "computed": 1.3798,
-     "deviation": -0.00159,
-     "pass": true
+     "deviation": -0.00159
     },
     {
      "method": "Spencer (M-P, constant f(x))",
      "published": 1.382,
      "source": "Commercial program A",
-     "tolerance": 0.01,
      "computed": 1.3793,
-     "deviation": -0.00195,
-     "pass": true
+     "deviation": -0.00195
     },
     {
      "method": "Morgenstern-Price (half-sine)",
      "published": 1.37,
      "source": "Fredlund & Krahn",
-     "tolerance": 0.01,
      "computed": 1.3699,
-     "deviation": -0.00007,
-     "pass": true
+     "deviation": -0.00007
     }
    ]
   },
@@ -4921,37 +4166,29 @@
      "method": "Bishop simplified",
      "published": 1.396,
      "source": "Commercial program A",
-     "tolerance": 0.025,
      "computed": 1.369,
-     "deviation": -0.01934,
-     "pass": true
+     "deviation": -0.01934
     },
     {
      "method": "Spencer (M-P, constant f(x))",
      "published": 1.402,
      "source": "Commercial program A",
-     "tolerance": 0.025,
      "computed": 1.3754,
-     "deviation": -0.01897,
-     "pass": true
+     "deviation": -0.01897
     },
     {
      "method": "Bishop simplified",
      "published": 1.369,
-     "source": "Program D (same input)",
-     "tolerance": 0.005,
+     "source": "Program D",
      "computed": 1.369,
-     "deviation": 0,
-     "pass": true
+     "deviation": 0
     },
     {
      "method": "Spencer (M-P, constant f(x))",
      "published": 1.375,
-     "source": "Program D (same input)",
-     "tolerance": 0.005,
+     "source": "Program D",
      "computed": 1.3754,
-     "deviation": 0.00029,
-     "pass": true
+     "deviation": 0.00029
     }
    ]
   },
@@ -4968,19 +4205,15 @@
      "method": "Spencer (M-P, constant f(x))",
      "published": 0.975,
      "source": "Commercial program A",
-     "tolerance": 0.01,
      "computed": 0.9681,
-     "deviation": -0.00708,
-     "pass": true
+     "deviation": -0.00708
     },
     {
      "method": "Spencer (M-P, constant f(x))",
      "published": 0.975,
      "source": "Commercial program A",
-     "tolerance": 0.012,
      "computed": 0.9663,
-     "deviation": -0.00892,
-     "pass": true
+     "deviation": -0.00892
     }
    ]
   },
@@ -4997,10 +4230,8 @@
      "method": "Spencer (M-P, constant f(x))",
      "published": 1.209,
      "source": "Commercial program A",
-     "tolerance": 0.01,
      "computed": 1.2059,
-     "deviation": -0.00256,
-     "pass": true
+     "deviation": -0.00256
     }
    ]
   },
@@ -5017,19 +4248,15 @@
      "method": "Bishop simplified",
      "published": 2.5,
      "source": "Theory (infinite slope)",
-     "tolerance": 0.01,
      "computed": 2.5096,
-     "deviation": 0.00384,
-     "pass": true
+     "deviation": 0.00384
     },
     {
      "method": "Spencer (M-P, constant f(x))",
      "published": 2.5,
      "source": "Theory (infinite slope)",
-     "tolerance": 0.01,
      "computed": 2.5096,
-     "deviation": 0.00384,
-     "pass": true
+     "deviation": 0.00384
     }
    ]
   },
@@ -5046,28 +4273,22 @@
      "method": "Spencer (M-P, constant f(x))",
      "published": 2.445,
      "source": "Commercial program A",
-     "tolerance": 0.01,
      "computed": 2.4416,
-     "deviation": -0.00139,
-     "pass": true
+     "deviation": -0.00139
     },
     {
      "method": "Bishop simplified",
      "published": 2.447,
      "source": "Commercial program A",
-     "tolerance": 0.01,
      "computed": 2.4422,
-     "deviation": -0.00196,
-     "pass": true
+     "deviation": -0.00196
     },
     {
      "method": "Janbu corrected (f0)",
      "published": 2.43,
      "source": "Commercial program A",
-     "tolerance": 0.01,
      "computed": 2.4435,
-     "deviation": 0.00556,
-     "pass": true
+     "deviation": 0.00556
     }
    ]
   },
@@ -5084,28 +4305,22 @@
      "method": "Bishop simplified",
      "published": 2.716,
      "source": "Commercial program A",
-     "tolerance": 0.01,
      "computed": 2.6981,
-     "deviation": -0.00659,
-     "pass": true
+     "deviation": -0.00659
     },
     {
      "method": "Spencer (M-P, constant f(x))",
      "published": 2.736,
      "source": "Commercial program A",
-     "tolerance": 0.01,
      "computed": 2.7208,
-     "deviation": -0.00556,
-     "pass": true
+     "deviation": -0.00556
     },
     {
      "method": "Janbu corrected (f0)",
      "published": 2.65,
      "source": "Commercial program A",
-     "tolerance": 0.01,
      "computed": 2.6479,
-     "deviation": -0.00079,
-     "pass": true
+     "deviation": -0.00079
     }
    ]
   },
@@ -5120,48 +4335,24 @@
    "checks": [
     {
      "method": "Spencer (M-P, constant f(x))",
-     "published": 2.307,
-     "source": "Commercial program A",
-     "tolerance": 0.025,
-     "computed": 2.2582,
-     "deviation": -0.02115,
-     "pass": true
-    },
-    {
-     "method": "Bishop simplified",
-     "published": 2.307,
-     "source": "Commercial program A",
-     "tolerance": 0.025,
-     "computed": 2.2543,
-     "deviation": -0.02284,
-     "pass": true
-    },
-    {
-     "method": "Spencer (M-P, constant f(x))",
      "published": 2.258,
-     "source": "Program D (same input)",
-     "tolerance": 0.005,
+     "source": "Program D",
      "computed": 2.2582,
-     "deviation": 0.00009,
-     "pass": true
+     "deviation": 0.00009
     },
     {
      "method": "Bishop simplified",
      "published": 2.254,
-     "source": "Program D (same input)",
-     "tolerance": 0.005,
+     "source": "Program D",
      "computed": 2.2543,
-     "deviation": 0.00013,
-     "pass": true
+     "deviation": 0.00013
     },
     {
      "method": "Janbu corrected (f0)",
      "published": 2.29,
      "source": "Commercial program A",
-     "tolerance": 0.025,
      "computed": 2.2584,
-     "deviation": -0.0138,
-     "pass": true
+     "deviation": -0.0138
     }
    ]
   },
@@ -5178,37 +4369,29 @@
      "method": "Bishop simplified",
      "published": 1.45,
      "source": "Duncan & Wright (reference)",
-     "tolerance": 0.025,
      "computed": 1.4242,
-     "deviation": -0.01779,
-     "pass": true
+     "deviation": -0.01779
     },
     {
      "method": "Spencer (M-P, constant f(x))",
      "published": 1.45,
      "source": "Duncan & Wright (reference)",
-     "tolerance": 0.025,
      "computed": 1.4211,
-     "deviation": -0.01993,
-     "pass": true
+     "deviation": -0.01993
     },
     {
      "method": "Spencer (M-P, constant f(x))",
      "published": 1.167,
      "source": "Commercial program A (non-circular)",
-     "tolerance": 0.015,
      "computed": 1.1563,
-     "deviation": -0.00917,
-     "pass": true
+     "deviation": -0.00917
     },
     {
      "method": "Spencer (M-P, constant f(x))",
      "published": 1.17,
      "source": "Duncan & Wright (reference), non-circular",
-     "tolerance": 0.015,
      "computed": 1.1563,
-     "deviation": -0.01171,
-     "pass": true
+     "deviation": -0.01171
     }
    ]
   },
@@ -5225,10 +4408,8 @@
      "method": "Spencer (M-P, constant f(x))",
      "published": 1.215,
      "source": "Commercial program A (optimised)",
-     "tolerance": 0.01,
      "computed": 1.2165,
-     "deviation": 0.00123,
-     "pass": true
+     "deviation": 0.00123
     }
    ]
   },
@@ -5245,10 +4426,8 @@
      "method": "Spencer (M-P, constant f(x))",
      "published": 1.29,
      "source": "Commercial program A (optimised)",
-     "tolerance": 0.01,
      "computed": 1.2914,
-     "deviation": 0.00109,
-     "pass": true
+     "deviation": 0.00109
     }
    ]
   },
@@ -5265,10 +4444,8 @@
      "method": "Spencer (M-P, constant f(x))",
      "published": 1.315,
      "source": "Commercial program A (optimised)",
-     "tolerance": 0.01,
      "computed": 1.317,
-     "deviation": 0.00152,
-     "pass": true
+     "deviation": 0.00152
     }
    ]
   }
@@ -5282,25 +4459,19 @@
      "quantity": "fos",
      "published": 1.128,
      "source": "Commercial program A",
-     "tolerance": 0.01,
-     "computed": 1.1326,
-     "pass": true
+     "computed": 1.1326
     },
     {
      "quantity": "pf-mc",
      "published": 0.2461,
      "source": "Commercial program A",
-     "tolerance": 0.02,
-     "computed": 0.239,
-     "pass": true
+     "computed": 0.239
     },
     {
      "quantity": "beta-mc",
      "published": 0.65,
      "source": "Commercial program A (lognormal)",
-     "tolerance": 0.04,
-     "computed": 0.6714,
-     "pass": true
+     "computed": 0.6714
     }
    ]
   },
@@ -5312,25 +4483,19 @@
      "quantity": "fos",
      "published": 1.109,
      "source": "Commercial program A",
-     "tolerance": 0.01,
-     "computed": 1.1123,
-     "pass": true
+     "computed": 1.1123
     },
     {
      "quantity": "pf-mc",
      "published": 0.2789,
      "source": "Commercial program A",
-     "tolerance": 0.02,
-     "computed": 0.2818,
-     "pass": true
+     "computed": 0.2818
     },
     {
      "quantity": "beta-mc",
      "published": 0.537,
      "source": "Commercial program A (lognormal)",
-     "tolerance": 0.04,
-     "computed": 0.5531,
-     "pass": true
+     "computed": 0.5531
     }
    ]
   },
@@ -5342,49 +4507,37 @@
      "quantity": "fos",
      "published": 1.16,
      "source": "Commercial program A",
-     "tolerance": 0.01,
-     "computed": 1.1584,
-     "pass": true
+     "computed": 1.1584
     },
     {
      "quantity": "pf-mc",
      "published": 0.2117,
      "source": "Commercial program A",
-     "tolerance": 0.02,
-     "computed": 0.2067,
-     "pass": true
+     "computed": 0.2067
     },
     {
      "quantity": "beta-mc",
      "published": 0.799,
      "source": "Commercial program A (lognormal)",
-     "tolerance": 0.04,
-     "computed": 0.8106,
-     "pass": true
+     "computed": 0.8106
     },
     {
      "quantity": "beta-taylor",
      "published": 0.787,
-     "source": "Program D (same input)",
-     "tolerance": 0.03,
-     "computed": 0.7873,
-     "pass": true
+     "source": "Program D",
+     "computed": 0.7873
     },
     {
      "quantity": "beta-mc",
      "published": 0.8,
-     "source": "Program D (same input)",
-     "tolerance": 0.03,
-     "computed": 0.8106,
-     "pass": true
+     "source": "Program D",
+     "computed": 0.8106
     },
     {
      "quantity": "pf-mc",
      "published": 0.206,
-     "source": "Program D (same input)",
-     "tolerance": 0.02,
-     "computed": 0.2067,
-     "pass": true
+     "source": "Program D",
+     "computed": 0.2067
     }
    ]
   },
@@ -5396,49 +4549,37 @@
      "quantity": "fos",
      "published": 1.185,
      "source": "Commercial program A",
-     "tolerance": 0.01,
-     "computed": 1.1781,
-     "pass": true
+     "computed": 1.1781
     },
     {
      "quantity": "pf-mc",
      "published": 0.1992,
      "source": "Commercial program A",
-     "tolerance": 0.02,
-     "computed": 0.2121,
-     "pass": true
+     "computed": 0.2121
     },
     {
      "quantity": "beta-mc",
      "published": 0.82,
      "source": "Commercial program A (lognormal)",
-     "tolerance": 0.04,
-     "computed": 0.7887,
-     "pass": true
+     "computed": 0.7887
     },
     {
      "quantity": "beta-taylor",
      "published": 0.798,
-     "source": "Program D (same input)",
-     "tolerance": 0.03,
-     "computed": 0.8016,
-     "pass": true
+     "source": "Program D",
+     "computed": 0.8016
     },
     {
      "quantity": "beta-mc",
      "published": 0.789,
-     "source": "Program D (same input)",
-     "tolerance": 0.03,
-     "computed": 0.7887,
-     "pass": true
+     "source": "Program D",
+     "computed": 0.7887
     },
     {
      "quantity": "pf-mc",
      "published": 0.209,
-     "source": "Program D (same input)",
-     "tolerance": 0.02,
-     "computed": 0.2121,
-     "pass": true
+     "source": "Program D",
+     "computed": 0.2121
     }
    ]
   },
@@ -5449,18 +4590,14 @@
     {
      "quantity": "fos",
      "published": 2.973,
-     "source": "Program D (same input)",
-     "tolerance": 0.01,
-     "computed": 2.9741,
-     "pass": true
+     "source": "Program D",
+     "computed": 2.9741
     },
     {
      "quantity": "beta-taylor",
      "published": 3.353,
-     "source": "Program D (same input)",
-     "tolerance": 0.05,
-     "computed": 3.3533,
-     "pass": true
+     "source": "Program D",
+     "computed": 3.3533
     }
    ]
   },
@@ -5471,26 +4608,20 @@
     {
      "quantity": "fos",
      "published": 1.145,
-     "source": "Program D (same input)",
-     "tolerance": 0.01,
-     "computed": 1.1381,
-     "pass": true
+     "source": "Program D",
+     "computed": 1.1381
     },
     {
      "quantity": "beta-taylor",
      "published": 0.9,
      "source": "Duncan (2000)",
-     "tolerance": 0.03,
-     "computed": 0.8919,
-     "pass": true
+     "computed": 0.8919
     },
     {
      "quantity": "pf-taylor",
      "published": 0.18,
      "source": "Duncan (2000)",
-     "tolerance": 0.01,
-     "computed": 0.1862,
-     "pass": true
+     "computed": 0.1862
     }
    ]
   },
@@ -5502,9 +4633,7 @@
      "quantity": "beta-mc",
      "published": 10.953,
      "source": "Commercial program A (lognormal)",
-     "tolerance": 0.219,
-     "computed": 11.0347,
-     "pass": true
+     "computed": 11.0347
     }
    ]
   },
@@ -5516,9 +4645,7 @@
      "quantity": "beta-mc",
      "published": 4.351,
      "source": "Commercial program A (lognormal)",
-     "tolerance": 0.087,
-     "computed": 4.4012,
-     "pass": true
+     "computed": 4.4012
     }
    ]
   },
@@ -5530,9 +4657,7 @@
      "quantity": "beta-mc",
      "published": 4.263,
      "source": "Commercial program A (lognormal)",
-     "tolerance": 0.085,
-     "computed": 4.3243,
-     "pass": true
+     "computed": 4.3243
     }
    ]
   },
@@ -5544,9 +4669,7 @@
      "quantity": "beta-mc",
      "published": 11.092,
      "source": "Commercial program A (lognormal)",
-     "tolerance": 0.222,
-     "computed": 11.0764,
-     "pass": true
+     "computed": 11.0764
     }
    ]
   },
@@ -5558,9 +4681,7 @@
      "quantity": "beta-mc",
      "published": 10.281,
      "source": "Commercial program A (lognormal)",
-     "tolerance": 0.206,
-     "computed": 10.3295,
-     "pass": true
+     "computed": 10.3295
     }
    ]
   },
@@ -5572,9 +4693,7 @@
      "quantity": "beta-mc",
      "published": 4.858,
      "source": "Commercial program A (lognormal)",
-     "tolerance": 0.097,
-     "computed": 4.9325,
-     "pass": true
+     "computed": 4.9325
     }
    ]
   },
@@ -5586,9 +4705,7 @@
      "quantity": "beta-mc",
      "published": 5.485,
      "source": "Commercial program A (lognormal)",
-     "tolerance": 0.11,
-     "computed": 5.5275,
-     "pass": true
+     "computed": 5.5275
     }
    ]
   },
@@ -5600,9 +4717,7 @@
      "quantity": "beta-mc",
      "published": 5.563,
      "source": "Commercial program A (lognormal)",
-     "tolerance": 0.111,
-     "computed": 5.4902,
-     "pass": true
+     "computed": 5.4902
     }
    ]
   },
@@ -5614,9 +4729,7 @@
      "quantity": "beta-mc",
      "published": 6.394,
      "source": "Commercial program A (lognormal)",
-     "tolerance": 0.128,
-     "computed": 6.4314,
-     "pass": true
+     "computed": 6.4314
     }
    ]
   },
@@ -5628,9 +4741,7 @@
      "quantity": "pf-mc",
      "published": 0.2531,
      "source": "Commercial program B",
-     "tolerance": 0.02,
-     "computed": 0.2453,
-     "pass": true
+     "computed": 0.2453
     }
    ]
   },
@@ -5642,9 +4753,7 @@
      "quantity": "pf-mc",
      "published": 0.2098,
      "source": "Commercial program B",
-     "tolerance": 0.02,
-     "computed": 0.2079,
-     "pass": true
+     "computed": 0.2079
     }
    ]
   },
@@ -5656,9 +4765,7 @@
      "quantity": "pf-mc",
      "published": 0.2139,
      "source": "Commercial program B",
-     "tolerance": 0.02,
-     "computed": 0.216,
-     "pass": true
+     "computed": 0.216
     }
    ]
   }

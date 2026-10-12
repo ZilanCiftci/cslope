@@ -47,7 +47,7 @@ export const RELIABILITY_CASES: ReliabilityCaseData[] = [
     samples: 10000,
     seed: 1,
     checks: [["fos", 1.128, "Slide2", 0.01], ["pf-mc", 0.2461, "Slide2", 0.02], ["beta-mc", 0.65, "Slide2 (RI lognormal)", 0.04]],
-    notes: ["Slide2's Pf and reliability index come from its Monte Carlo analysis (at least 5000 samples) and are compared with cSlope's Monte Carlo (10 000 samples): tolerances 0.02 in Pf and 0.04 in β, about two standard errors of the difference.", "xslope on the earlier geometry read from the figure labels (top 5, boundaries −9 / −12): β 0.768 (Taylor), 0.774 (Monte Carlo), Pf 0.215; cSlope gives F = 1.129 there. Chowdhury & Xu Pf 26.6 % (normal distribution of F)."],
+    notes: ["Slide2's Pf and reliability index come from its Monte Carlo analysis (at least 5000 samples) and are compared with cSlope's Monte Carlo (10 000 samples).", "xslope on the earlier geometry read from the figure labels (top 5, boundaries −9 / −12): β 0.768 (Taylor), 0.774 (Monte Carlo), Pf 0.215; cSlope gives F = 1.129 there. Chowdhury & Xu Pf 26.6 % (normal distribution of F)."],
   },
   {
     id: "VP28-Ex1-L3",
@@ -61,7 +61,7 @@ export const RELIABILITY_CASES: ReliabilityCaseData[] = [
     samples: 10000,
     seed: 1,
     checks: [["fos", 1.109, "Slide2", 0.01], ["pf-mc", 0.2789, "Slide2", 0.02], ["beta-mc", 0.537, "Slide2 (RI lognormal)", 0.04]],
-    notes: ["Slide2's Pf and reliability index come from its Monte Carlo analysis (at least 5000 samples) and are compared with cSlope's Monte Carlo (10 000 samples): tolerances 0.02 in Pf and 0.04 in β, about two standard errors of the difference.", "Chowdhury & Xu: F = 1.109, Pf 27.4 % (normal distribution of F)."],
+    notes: ["Slide2's Pf and reliability index come from its Monte Carlo analysis (at least 5000 samples) and are compared with cSlope's Monte Carlo (10 000 samples).", "Chowdhury & Xu: F = 1.109, Pf 27.4 % (normal distribution of F)."],
   },
   {
     id: "VP28b",
@@ -74,8 +74,8 @@ export const RELIABILITY_CASES: ReliabilityCaseData[] = [
     variables: [{ material: 0, field: "cohesion", sd: 2 }, { material: 0, field: "frictionAngle", sd: 3 }, { material: 1, field: "undrainedShearStrength", sd: 8 }],
     samples: 10000,
     seed: 1,
-    checks: [["fos", 1.16, "Slide2", 0.01], ["pf-mc", 0.2117, "Slide2", 0.02], ["beta-mc", 0.799, "Slide2 (RI lognormal)", 0.04], ["beta-taylor", 0.787, "xslope (same input)", 0.03], ["beta-mc", 0.8, "xslope (same input)", 0.03], ["pf-mc", 0.206, "xslope (same input)", 0.02]],
-    notes: ["Slide2's Pf and reliability index come from its Monte Carlo analysis (at least 5000 samples) and are compared with cSlope's Monte Carlo (10 000 samples): tolerances 0.02 in Pf and 0.04 in β, about two standard errors of the difference.", "Chowdhury & Xu Pf 20.2 %."],
+    checks: [["fos", 1.16, "Slide2", 0.01], ["pf-mc", 0.2117, "Slide2", 0.02], ["beta-mc", 0.799, "Slide2 (RI lognormal)", 0.04], ["beta-taylor", 0.787, "xslope", 0.03], ["beta-mc", 0.8, "xslope", 0.03], ["pf-mc", 0.206, "xslope", 0.02]],
+    notes: ["Slide2's Pf and reliability index come from its Monte Carlo analysis (at least 5000 samples) and are compared with cSlope's Monte Carlo (10 000 samples).", "Chowdhury & Xu Pf 20.2 %."],
   },
   {
     id: "VP28c",
@@ -88,8 +88,8 @@ export const RELIABILITY_CASES: ReliabilityCaseData[] = [
     variables: [{ material: 0, field: "cohesion", sd: 2 }, { material: 0, field: "frictionAngle", sd: 3 }, { material: 1, field: "undrainedShearStrength", sd: 8 }],
     samples: 10000,
     seed: 1,
-    checks: [["fos", 1.185, "Slide2", 0.01], ["pf-mc", 0.1992, "Slide2", 0.02], ["beta-mc", 0.82, "Slide2 (RI lognormal)", 0.04], ["beta-taylor", 0.798, "xslope (same input)", 0.03], ["beta-mc", 0.789, "xslope (same input)", 0.03], ["pf-mc", 0.209, "xslope (same input)", 0.02]],
-    notes: ["Slide2's Pf and reliability index come from its Monte Carlo analysis (at least 5000 samples) and are compared with cSlope's Monte Carlo (10 000 samples): tolerances 0.02 in Pf and 0.04 in β, about two standard errors of the difference.", "Chowdhury & Xu Pf 19.7 %; C&X FOS 1.148."],
+    checks: [["fos", 1.185, "Slide2", 0.01], ["pf-mc", 0.1992, "Slide2", 0.02], ["beta-mc", 0.82, "Slide2 (RI lognormal)", 0.04], ["beta-taylor", 0.798, "xslope", 0.03], ["beta-mc", 0.789, "xslope", 0.03], ["pf-mc", 0.209, "xslope", 0.02]],
+    notes: ["Slide2's Pf and reliability index come from its Monte Carlo analysis (at least 5000 samples) and are compared with cSlope's Monte Carlo (10 000 samples).", "Chowdhury & Xu Pf 19.7 %; C&X FOS 1.148."],
   },
   {
     id: "VP35-RI",
@@ -102,7 +102,7 @@ export const RELIABILITY_CASES: ReliabilityCaseData[] = [
     variables: [{ material: 0, field: "cohesion", sd: 79 }, { material: 0, field: "frictionAngle", sd: 9 }, { material: 3, field: "cohesion", sd: 58.89 }, { material: 3, field: "frictionAngle", sd: 8.5 }],
     samples: 10000,
     seed: 1,
-    checks: [["fos", 2.973, "xslope (same input)", 0.01], ["beta-taylor", 3.353, "xslope (same input)", 0.05]],
+    checks: [["fos", 2.973, "xslope", 0.01], ["beta-taylor", 3.353, "xslope", 0.05]],
     notes: ["Slide2's reliability indices on Hassan & Wolff's nine circles, with the correlations of Table 35.1, are checked in CD-7A … CD-8H; the critical factor of safety at the means is VP35."],
   },
   {
@@ -116,7 +116,7 @@ export const RELIABILITY_CASES: ReliabilityCaseData[] = [
     variables: [{ material: 0, field: "unitWeight", sd: 0.51839 }, { material: 0, field: "suRateOfChange", sd: 0.1885 }],
     samples: 10000,
     seed: 1,
-    checks: [["fos", 1.145, "xslope (same input)", 0.01], ["beta-taylor", 0.9, "Duncan (2000)", 0.03], ["pf-taylor", 0.18, "Duncan (2000)", 0.01]],
+    checks: [["fos", 1.145, "xslope", 0.01], ["beta-taylor", 0.9, "Duncan (2000)", 0.03], ["pf-taylor", 0.18, "Duncan (2000)", 0.01]],
     notes: ["Above el. −20 ft cSlope extrapolates Su linearly (below 100 psf); xslope keeps 100 psf there (F = 1.146, β = 0.947 when cSlope does the same). Duncan's F is 1.17; Slide2's Latin hypercube Monte Carlo gives Pf = 14 % with a rate-only σ."],
   },
   {
@@ -132,7 +132,7 @@ export const RELIABILITY_CASES: ReliabilityCaseData[] = [
     samples: 10000,
     seed: 1,
     checks: [["beta-mc", 10.953, "Slide2 (RI lognormal)", 0.219]],
-    notes: ["Monte Carlo with 10 000 samples against Slide2's Monte Carlo: 2 % tolerance on β. Hassan & Wolff 10.356; SLOPE/W 11.428 (GeoStudio 2022 manual §2.22, which prints Slide2's values under the heading Hassan and Wolff)."],
+    notes: ["Monte Carlo with 10 000 samples, compared with Slide2's Monte Carlo. Hassan & Wolff 10.356; SLOPE/W 11.428 (GeoStudio 2022 manual §2.22, which prints Slide2's values under the heading Hassan and Wolff)."],
   },
   {
     id: "CD-7B",
@@ -147,7 +147,7 @@ export const RELIABILITY_CASES: ReliabilityCaseData[] = [
     samples: 10000,
     seed: 1,
     checks: [["beta-mc", 4.351, "Slide2 (RI lognormal)", 0.087]],
-    notes: ["Monte Carlo with 10 000 samples against Slide2's Monte Carlo: 2 % tolerance on β. Hassan & Wolff 3.987; SLOPE/W 3.353 (GeoStudio 2022 manual §2.22, which prints Slide2's values under the heading Hassan and Wolff)."],
+    notes: ["Monte Carlo with 10 000 samples, compared with Slide2's Monte Carlo. Hassan & Wolff 3.987; SLOPE/W 3.353 (GeoStudio 2022 manual §2.22, which prints Slide2's values under the heading Hassan and Wolff)."],
   },
   {
     id: "CD-7C",
@@ -162,7 +162,7 @@ export const RELIABILITY_CASES: ReliabilityCaseData[] = [
     samples: 10000,
     seed: 1,
     checks: [["beta-mc", 4.263, "Slide2 (RI lognormal)", 0.085]],
-    notes: ["Monte Carlo with 10 000 samples against Slide2's Monte Carlo: 2 % tolerance on β. Hassan & Wolff 4.606; SLOPE/W 3.246 (GeoStudio 2022 manual §2.22, which prints Slide2's values under the heading Hassan and Wolff)."],
+    notes: ["Monte Carlo with 10 000 samples, compared with Slide2's Monte Carlo. Hassan & Wolff 4.606; SLOPE/W 3.246 (GeoStudio 2022 manual §2.22, which prints Slide2's values under the heading Hassan and Wolff)."],
   },
   {
     id: "CD-7D",
@@ -177,7 +177,7 @@ export const RELIABILITY_CASES: ReliabilityCaseData[] = [
     samples: 10000,
     seed: 1,
     checks: [["beta-mc", 11.092, "Slide2 (RI lognormal)", 0.222]],
-    notes: ["Monte Carlo with 10 000 samples against Slide2's Monte Carlo: 2 % tolerance on β. Hassan & Wolff 8.468; SLOPE/W 11.632 (GeoStudio 2022 manual §2.22, which prints Slide2's values under the heading Hassan and Wolff)."],
+    notes: ["Monte Carlo with 10 000 samples, compared with Slide2's Monte Carlo. Hassan & Wolff 8.468; SLOPE/W 11.632 (GeoStudio 2022 manual §2.22, which prints Slide2's values under the heading Hassan and Wolff)."],
   },
   {
     id: "CD-7E",
@@ -192,7 +192,7 @@ export const RELIABILITY_CASES: ReliabilityCaseData[] = [
     samples: 10000,
     seed: 1,
     checks: [["beta-mc", 10.281, "Slide2 (RI lognormal)", 0.206]],
-    notes: ["Monte Carlo with 10 000 samples against Slide2's Monte Carlo: 2 % tolerance on β. Hassan & Wolff 10.037; SLOPE/W 10.719 (GeoStudio 2022 manual §2.22, which prints Slide2's values under the heading Hassan and Wolff)."],
+    notes: ["Monte Carlo with 10 000 samples, compared with Slide2's Monte Carlo. Hassan & Wolff 10.037; SLOPE/W 10.719 (GeoStudio 2022 manual §2.22, which prints Slide2's values under the heading Hassan and Wolff)."],
   },
   {
     id: "CD-8B",
@@ -207,7 +207,7 @@ export const RELIABILITY_CASES: ReliabilityCaseData[] = [
     samples: 10000,
     seed: 1,
     checks: [["beta-mc", 4.858, "Slide2 (RI lognormal)", 0.097]],
-    notes: ["Monte Carlo with 10 000 samples against Slide2's Monte Carlo: 2 % tolerance on β. Hassan & Wolff 3.987; SLOPE/W 3.936 (GeoStudio 2022 manual §2.22, which prints Slide2's values under the heading Hassan and Wolff)."],
+    notes: ["Monte Carlo with 10 000 samples, compared with Slide2's Monte Carlo. Hassan & Wolff 3.987; SLOPE/W 3.936 (GeoStudio 2022 manual §2.22, which prints Slide2's values under the heading Hassan and Wolff)."],
   },
   {
     id: "CD-8F",
@@ -222,7 +222,7 @@ export const RELIABILITY_CASES: ReliabilityCaseData[] = [
     samples: 10000,
     seed: 1,
     checks: [["beta-mc", 5.485, "Slide2 (RI lognormal)", 0.11]],
-    notes: ["Monte Carlo with 10 000 samples against Slide2's Monte Carlo: 2 % tolerance on β. Hassan & Wolff 4.95; SLOPE/W 4.469 (GeoStudio 2022 manual §2.22, which prints Slide2's values under the heading Hassan and Wolff)."],
+    notes: ["Monte Carlo with 10 000 samples, compared with Slide2's Monte Carlo. Hassan & Wolff 4.95; SLOPE/W 4.469 (GeoStudio 2022 manual §2.22, which prints Slide2's values under the heading Hassan and Wolff)."],
   },
   {
     id: "CD-8G",
@@ -237,7 +237,7 @@ export const RELIABILITY_CASES: ReliabilityCaseData[] = [
     samples: 10000,
     seed: 1,
     checks: [["beta-mc", 5.563, "Slide2 (RI lognormal)", 0.111]],
-    notes: ["Monte Carlo with 10 000 samples against Slide2's Monte Carlo: 2 % tolerance on β. Hassan & Wolff 5.544; SLOPE/W 5.128 (GeoStudio 2022 manual §2.22, which prints Slide2's values under the heading Hassan and Wolff)."],
+    notes: ["Monte Carlo with 10 000 samples, compared with Slide2's Monte Carlo. Hassan & Wolff 5.544; SLOPE/W 5.128 (GeoStudio 2022 manual §2.22, which prints Slide2's values under the heading Hassan and Wolff)."],
   },
   {
     id: "CD-8H",
@@ -252,7 +252,7 @@ export const RELIABILITY_CASES: ReliabilityCaseData[] = [
     samples: 10000,
     seed: 1,
     checks: [["beta-mc", 6.394, "Slide2 (RI lognormal)", 0.128]],
-    notes: ["Monte Carlo with 10 000 samples against Slide2's Monte Carlo: 2 % tolerance on β. Hassan & Wolff 4.838; SLOPE/W 4.309 (GeoStudio 2022 manual §2.22, which prints Slide2's values under the heading Hassan and Wolff)."],
+    notes: ["Monte Carlo with 10 000 samples, compared with Slide2's Monte Carlo. Hassan & Wolff 4.838; SLOPE/W 4.309 (GeoStudio 2022 manual §2.22, which prints Slide2's values under the heading Hassan and Wolff)."],
   },
   {
     id: "GS2.17-1L2",
@@ -266,7 +266,7 @@ export const RELIABILITY_CASES: ReliabilityCaseData[] = [
     samples: 10000,
     seed: 1,
     checks: [["pf-mc", 0.2531, "SLOPE/W", 0.02]],
-    notes: ["SLOPE/W's Monte Carlo probability of failure (sample count not printed) against cSlope's 10 000 samples; tolerance 0.02. Chowdhury & Xu 26.592 % (normal distribution of F)."],
+    notes: ["SLOPE/W's Monte Carlo probability of failure (sample count not printed) against cSlope's 10 000 samples. Chowdhury & Xu 26.592 % (normal distribution of F)."],
   },
   {
     id: "GS2.17-5L1",
@@ -280,7 +280,7 @@ export const RELIABILITY_CASES: ReliabilityCaseData[] = [
     samples: 10000,
     seed: 1,
     checks: [["pf-mc", 0.2098, "SLOPE/W", 0.02]],
-    notes: ["SLOPE/W's Monte Carlo probability of failure (sample count not printed) against cSlope's 10 000 samples; tolerance 0.02. Chowdhury & Xu 20.225 % (normal distribution of F)."],
+    notes: ["SLOPE/W's Monte Carlo probability of failure (sample count not printed) against cSlope's 10 000 samples. Chowdhury & Xu 20.225 % (normal distribution of F)."],
   },
   {
     id: "GS2.17-5L2",
@@ -294,6 +294,6 @@ export const RELIABILITY_CASES: ReliabilityCaseData[] = [
     samples: 10000,
     seed: 1,
     checks: [["pf-mc", 0.2139, "SLOPE/W", 0.02]],
-    notes: ["SLOPE/W's Monte Carlo probability of failure (sample count not printed) against cSlope's 10 000 samples; tolerance 0.02. Chowdhury & Xu 19.733 % (normal distribution of F)."],
+    notes: ["SLOPE/W's Monte Carlo probability of failure (sample count not printed) against cSlope's 10 000 samples. Chowdhury & Xu 19.733 % (normal distribution of F)."],
   },
 ];
