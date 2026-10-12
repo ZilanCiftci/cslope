@@ -6,6 +6,7 @@
  */
 import { describe, it, expect } from "vitest";
 import type { SlopeDefinition } from "../types/slope-definition";
+import { toCanonicalSlopeDefinition, oppositeDirectionDefinition } from "./canonical";
 import {
   rng,
   uniform,
@@ -253,6 +254,50 @@ describe("unit consistency", () => {
       const same = transformDefinition(def, { k: 1, s });
       for (const method of METHODS) {
         expect(relDiff(fosOf(def, method)!, fosOf(same, method)!), `case ${i} ${method}`).toBeLessThan(1e-6);
+      }
+    }
+  }, 30_000);
+});
+
+describe("both sliding directions", () => {
+  it("a symmetric ridge: the opposite direction gives the FOS of the mirrored circle", () => {
+    const r = rng(2525);
+    for (let i = 0; i < 8; i++) {
+      const H = uniform(r, 5, 12);
+      const half = uniform(r, 15, 30);
+      const top = uniform(r, 2, 6);
+      const run = uniform(r, 1, 2.5) * H;
+      const D = uniform(r, 5, 10);
+      const L = 2 * half;
+      const coordinates: [number, number][] = [
+        [0, -D], [0, 0], [half - top - run, 0], [half - top, H], [half + top, H], [half + top + run, 0], [L, 0], [L, -D],
+      ];
+      const gamma = uniform(r, 17, 21);
+      const c = uniform(r, 3, 15);
+      const phi = uniform(r, 20, 35);
+      const def: SlopeDefinition = {
+        orientation: "ltr",
+        coordinates,
+        materials: [{ name: "S", unitWeight: gamma, cohesion: c, frictionAngle: phi }],
+        udls: [{ magnitude: uniform(r, 5, 20), x1: half - top * 0.8, x2: half + top * 0.8 }],
+      };
+      // A circle on the right face (sliding to +x) and its mirror image.
+      const cx = half + top + run * uniform(r, 0.3, 0.7);
+      const cy = H + uniform(r, 3, 10);
+      const radius = Math.hypot(cx - (half + top * 0.3), cy - H);
+      if (cy - radius < -D + 0.2) continue;
+      const canonical = toCanonicalSlopeDefinition({ ...def, customSearchPlanes: [{ cx, cy, radius }], customPlanesOnly: true });
+      const opposite = oppositeDirectionDefinition(toCanonicalSlopeDefinition(def));
+      // The opposite direction analyses the left face, mirrored onto the
+      // right: the mirror image of the circle (L − cx) mirrored again.
+      const oppositeOnCircle = { ...opposite, customSearchPlanes: [{ cx: L - (L - cx), cy, radius }], customPlanesOnly: true };
+      for (const method of METHODS) {
+        const a = fosOf(canonical, method);
+        // The opposite definition is canonical already (its circle in its
+        // own coordinates): analysed as is, not mirrored again.
+        const b = fosOf({ ...oppositeOnCircle, orientation: "ltr" }, method);
+        expect(b === null, `seed 2525 case ${i} ${method}`).toBe(a === null);
+        if (a !== null && b !== null) expect(relDiff(a, b), `seed 2525 case ${i} ${method}: ${a} vs ${b}`).toBeLessThan(1e-6);
       }
     }
   }, 30_000);
