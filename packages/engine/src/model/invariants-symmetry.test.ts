@@ -76,7 +76,7 @@ describe("mirror symmetry", () => {
 });
 
 describe("mirror symmetry: surfaces, water and strength given per point", () => {
-  it("polyline surfaces, per-material water tables, spatial strength and asymmetric interslice points", () => {
+  it("polyline surfaces, cracks, per-material water tables, spatial strength and asymmetric interslice points", () => {
     const r = rng(31);
     let compared = 0;
     for (let i = 0; i < 12; i++) {
@@ -120,10 +120,17 @@ describe("mirror symmetry: surfaces, water and strength given per point", () => 
       const mirrored = mirrorDefinition(def, axis);
       const dp: [number, number][] = [[0, 0.1], [0.2, 0.9], [0.6, 1], [1, 0.3]];
       const dpMirrored = dp.map(([x, f]) => [1 - x, f] as [number, number]).reverse();
+      // A fixed or automatic tension crack (with water) on every other case.
+      const crack =
+        i % 4 === 1
+          ? { tensionCrackDepth: shape.H * 0.15, tensionCrackWater: 1 }
+          : i % 4 === 3
+            ? { tensionCrackAuto: true, tensionCrackWater: 0.5 }
+            : {};
       for (const method of ["Ordinary", "Bishop", "Janbu", "Morgenstern-Price"] as Method[]) {
-        const a = fosOf(def, method);
-        const b = fosOf(mirrored, method);
-        const label = `seed 31 case ${i} ${method}`;
+        const a = fosOf(def, method, crack);
+        const b = fosOf(mirrored, method, crack);
+        const label = `seed 31 case ${i} ${method} ${JSON.stringify(crack)}`;
         expect(b === null, label).toBe(a === null);
         if (a !== null && b !== null) {
           expect(relDiff(a, b), `${label}: ${a} vs ${b}`).toBeLessThan(1e-6);
