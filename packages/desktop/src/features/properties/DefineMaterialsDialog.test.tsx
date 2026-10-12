@@ -306,6 +306,10 @@ describe("DefineMaterialsDialog — switching the model", () => {
     for (const key of Object.keys(expected)) {
       expect((model() as unknown as Record<string, number>)[key]).toBe(19);
     }
+    // γ and the strength cutoff can be set for these kinds too.
+    await setField("γ (kN/m³)", "17.5");
+    await userEvent.type(screen.getByLabelText("Max Su (cutoff) (kPa)"), "120");
+    expect(model()).toMatchObject({ unitWeight: 17.5, suMax: 120 });
   });
 
   it("shows validation errors for invalid values", async () => {
