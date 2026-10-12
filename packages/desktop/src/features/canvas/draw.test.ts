@@ -577,6 +577,35 @@ describe("drawCanvas — result mode", () => {
     expect(pts.some((p) => close(p, [10, 10]))).toBe(true);
   });
 
+  it("fills the same sliding mass for a mirrored (right-to-left) model", () => {
+    const massArea = (coords: [number, number][], cs: SlipSurfaceResult) => {
+      const rec = drawResult({
+        coordinates: coords,
+        surfaceYAtX: (x) => surfaceYAtXFromCoordinates(coords, x),
+        result: result({ criticalSurface: cs, allSurfaces: [cs] }),
+      });
+      const pts = pathPoints(rec.fills().find((p) => p.state.globalAlpha === 0.12)!);
+      let a = 0;
+      for (let i = 0; i < pts.length; i++) {
+        const [x1, y1] = pts[i];
+        const [x2, y2] = pts[(i + 1) % pts.length];
+        a += x1 * y2 - x2 * y1;
+      }
+      return Math.abs(a) / 2;
+    };
+    const mirror = ([x, y]: [number, number]): [number, number] => [30 - x, y];
+    const cs = surface();
+    const ltr = massArea(COORDS, cs);
+    const rtl = massArea(COORDS.map(mirror).reverse(), {
+      ...cs,
+      cx: 30 - cs.cx,
+      entryPoint: mirror(cs.entryPoint),
+      exitPoint: mirror(cs.exitPoint),
+    });
+    expect(ltr).toBeGreaterThan(1000);
+    expect(rtl).toBeCloseTo(ltr, 3);
+  });
+
   it("marks the centre and draws radius lines when asked", () => {
     const rec = drawResult({ resultViewSettings: rvs({ showCentreMarker: true }) });
     const c = toC(CIRCLE.cx, CIRCLE.cy);
