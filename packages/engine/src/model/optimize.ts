@@ -165,7 +165,8 @@ function optimiseSeed(
       }
       if (!improved) step /= 2;
     }
-    if (stage === 0 && points.length < MAX_VERTICES) {
+    // The refined shape costs an evaluation too (the budget is a maximum).
+    if (stage === 0 && points.length < MAX_VERTICES && used < budget) {
       // Double the vertices for a finer shape and optimise again.
       const refined: Pt[] = [points[0]];
       for (let i = 1; i < points.length; i++) {
