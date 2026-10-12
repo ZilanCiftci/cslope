@@ -155,4 +155,40 @@ describe("worker protocol", () => {
     expect(msg.result.slidingDirection).toBeUndefined();
     expect(msg.result.allSurfaces).toHaveLength(1);
   });
+
+  it("counts an active anchor on the driving side of the moment balance", () => {
+    const circle = {
+      ...T_ACADS,
+      customPlanesOnly: true,
+      customSearchPlanes: [{ cx: 30, cy: 20, radius: 30 }],
+    };
+    const plain = analyse(circle);
+    const anchored = analyse({
+      ...circle,
+      reinforcements: [
+        { x1: 32, y1: -4, x2: 10, y2: -4, tensileCapacity: 200, application: "active" },
+      ],
+    } as SlopeDefinition);
+    if (plain.type !== "analysis-complete" || anchored.type !== "analysis-complete") {
+      throw new Error("analysis failed");
+    }
+    const a = anchored.result;
+    expect(a.criticalPushingMoment).toBeDefined();
+    expect(a.criticalPushingMoment).not.toBeCloseTo(plain.result.criticalPushingMoment!, 3);
+    expect(a.criticalResistingMoment).toBeCloseTo(a.criticalPushingMoment! * a.minFOS, 6);
+    expect(a.criticalSurface!.reinforcementForces!.length).toBeGreaterThan(0);
+  });
+
+  it("reports no moments for a non-circular surface", () => {
+    const msg = analyse({
+      ...T_ACADS,
+      customPlanesOnly: true,
+      customSurfaces: [{ points: [[8, 0], [30, -12], [45, -10]] }],
+    } as SlopeDefinition);
+    if (msg.type !== "analysis-complete") throw new Error(JSON.stringify(msg));
+    expect(msg.result.criticalSurface!.points!.length).toBeGreaterThanOrEqual(2);
+    expect(msg.result.criticalPushingMoment).toBeUndefined();
+    expect(msg.result.criticalResistingMoment).toBeUndefined();
+    expect(msg.result.criticalSlipVolume).toBeGreaterThan(0);
+  });
 });
