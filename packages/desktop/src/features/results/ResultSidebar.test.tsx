@@ -209,6 +209,31 @@ describe("ResultSidebar paper frame properties", () => {
     expect(lock.topRight[1]).toBeCloseTo(-1 + 42 / getPlotAspectRatio("A4", true), 9);
   });
 
+  it("fits a tall, narrow model without cutting off its top", () => {
+    act(() =>
+      useAppStore.setState({
+        coordinates: [
+          [0, 0],
+          [0, 30],
+          [10, 30],
+          [10, 0],
+        ],
+      }),
+    );
+    render(<ResultSidebar />);
+    fireEvent.click(screen.getByRole("button", { name: "Use model bounds" }));
+    const lock = rvs().viewLock!;
+    const ar = getPlotAspectRatio("A4", true);
+    // The whole model (with the 1 m margin) is inside the lock…
+    expect(lock.topRight[1]).toBeGreaterThanOrEqual(31 - 1e-9);
+    expect(lock.bottomLeft[1]).toBe(-1);
+    expect(lock.bottomLeft[0]).toBeLessThanOrEqual(-1);
+    expect(lock.topRight[0]).toBeGreaterThanOrEqual(11);
+    // …centred horizontally, with the plot's aspect ratio.
+    expect((lock.bottomLeft[0] + lock.topRight[0]) / 2).toBeCloseTo(5, 9);
+    expect((lock.topRight[0] - lock.bottomLeft[0]) / (lock.topRight[1] - lock.bottomLeft[1])).toBeCloseTo(ar, 9);
+  });
+
   it("sets tick spacing, minor ticks, paper size and orientation", () => {
     render(<ResultSidebar />);
     const minor = field("Minor ticks");
