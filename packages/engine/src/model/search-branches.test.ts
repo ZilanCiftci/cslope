@@ -83,6 +83,17 @@ describe("individual planes", () => {
     expect(s.individualPlanes.length).toBe(before);
   });
 
+  it("a circle dipping a hair below the model base between the samples is not added", () => {
+    const t = model([[0, -10], [0, 10], [10, 10], [25, 0], [40, 0], [40, -10]]);
+    // Lowest point 5 mm below the base, at x = 21.6 between arc samples.
+    const cx = 21.6;
+    const radius = 21;
+    addSingleCircularPlane(t, cx, -10.005 + radius, radius);
+    expect(t.individualPlanes).toHaveLength(0);
+    addSingleCircularPlane(t, cx, -9.9 + radius, radius);
+    expect(t.individualPlanes).toHaveLength(1);
+  });
+
   it("refined and local planes: nothing without a budget or valid seeds", () => {
     expect(generateRefinedPlanes(s, [], 10)).toEqual([]);
     const p = { lc: [5, 10] as [number, number], rc: [30, 0] as [number, number], cx: 20, cy: 20, radius: 18, fos: null, slices: null };
