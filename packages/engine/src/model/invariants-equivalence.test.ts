@@ -166,3 +166,68 @@ describe("geometry and water given in different ways", () => {
     }
   }, 30_000);
 });
+
+describe("options that describe the same thing", () => {
+  it("swapping which line is the default and which a material's own gives the same pore pressures", () => {
+    const r = rng(607);
+    for (let i = 0; i < 4; i++) {
+      const g = randomCase(r, { layers: 2 });
+      const def = onCircle(g.def, g.circle);
+      const xEnd = Math.max(...def.coordinates.map((c) => c[0]));
+      const high: [number, number][] = [[0, g.shape.H * 0.5], [xEnd, -0.5]];
+      const low: [number, number][] = [[0, -g.shape.depth * 0.5], [xEnd, -g.shape.depth * 0.6]];
+      // Upper layer on the high line, lower layer on the low line.
+      const a: SlopeDefinition = {
+        ...def,
+        waterTable: { mode: "custom", value: high },
+        waterTables: [{ id: "low", coordinates: low }],
+        materials: def.materials.map((m, k) => (k === 1 ? { ...m, waterTableId: "low" } : m)),
+      };
+      const b: SlopeDefinition = {
+        ...def,
+        waterTable: { mode: "custom", value: low },
+        waterTables: [{ id: "high", coordinates: high }],
+        materials: def.materials.map((m, k) => (k === 0 ? { ...m, waterTableId: "high" } : m)),
+      };
+      expectSame(a, b, `seed 607 case ${i}`, 1e-9);
+    }
+  }, 30_000);
+
+  it("a horizontal water table: phreatic correction = vertical head", () => {
+    const r = rng(608);
+    for (let i = 0; i < 4; i++) {
+      const g = randomCase(r);
+      const def = onCircle({ ...g.def, waterTable: { mode: "height", value: uniform(r, 0, 0.6) * g.shape.H, followBoundary: false } }, g.circle);
+      for (const method of METHODS) {
+        const a = fosOf(def, method, { porePressureHead: "vertical" });
+        const b = fosOf(def, method, { porePressureHead: "phreatic-correction" });
+        expect(relDiff(a!, b!), `seed 608 case ${i} ${method}`).toBeLessThan(1e-12);
+      }
+      // An inclined line: the correction lowers the pore pressure, so it never lowers the FOS.
+      const inclined = onCircle({ ...g.def, waterTable: { mode: "custom", value: [[0, g.shape.H * 0.6], [g.shape.crest + g.shape.run, -0.5]] } }, g.circle);
+      for (const method of ["Ordinary", "Bishop"] as Method[]) {
+        expect(fosOf(inclined, method, { porePressureHead: "phreatic-correction" })!).toBeGreaterThanOrEqual(
+          fosOf(inclined, method, { porePressureHead: "vertical" })! * (1 - 1e-9),
+        );
+      }
+    }
+  }, 30_000);
+
+  it("data-point interslice functions equal to the built-in shapes give their FOS", () => {
+    const r = rng(609);
+    const halfSine: [number, number][] = Array.from({ length: 201 }, (_, k) => [k / 200, Math.sin((Math.PI * k) / 200)]);
+    for (let i = 0; i < 4; i++) {
+      const g = randomCase(r);
+      const def = onCircle(g.def, g.circle);
+      const constant = fosOf(def, "Morgenstern-Price", { intersliceFunction: "constant" });
+      const ones = fosOf(def, "Morgenstern-Price", { intersliceFunction: "data-point-specified", intersliceDataPoints: [[0, 1], [1, 1]] });
+      if (constant !== null && ones !== null) expect(relDiff(constant, ones), `seed 609 case ${i} constant`).toBeLessThan(1e-9);
+      const hs = fosOf(def, "Morgenstern-Price", { intersliceFunction: "half-sine" });
+      const pts = fosOf(def, "Morgenstern-Price", { intersliceFunction: "data-point-specified", intersliceDataPoints: halfSine });
+      if (hs !== null && pts !== null) expect(relDiff(hs, pts), `seed 609 case ${i} half-sine`).toBeLessThan(1e-4);
+      // No data points: the half-sine.
+      const none = fosOf(def, "Morgenstern-Price", { intersliceFunction: "data-point-specified", intersliceDataPoints: [] });
+      if (hs !== null && none !== null) expect(relDiff(hs, none), `seed 609 case ${i} none`).toBeLessThan(1e-12);
+    }
+  }, 30_000);
+});
