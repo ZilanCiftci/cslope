@@ -29,8 +29,10 @@ coverage-final.json
 # Profiling
 *.prof
 
-# Generated media assets (regenerate with: bun run media:capture)
+# Generated media assets are checked in: the website is deployed from the
+# repository. Regenerate with: bun run media:capture
 
+# Docs (generated)
 docs/
 
 # Agent files
