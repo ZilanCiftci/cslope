@@ -389,8 +389,12 @@ export function EditCanvas() {
           return;
         }
         const st = useAppStore.getState();
+        // Only while the exterior is edited: elsewhere the selection is
+        // not drawn, so Delete would remove a vertex the user cannot see
+        // is selected.
         if (
           st.mode === "edit" &&
+          st.activeSection === "Exterior Boundary" &&
           st.selectedPointIndex !== null &&
           st.coordinates.length > 3
         ) {

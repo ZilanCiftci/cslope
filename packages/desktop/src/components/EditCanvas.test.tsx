@@ -107,6 +107,14 @@ describe("EditCanvas keyboard", () => {
     expect(useAppStore.getState().coordinates).toHaveLength(3);
   });
 
+  it("does not delete a vertex that is not shown as selected (another section is edited)", () => {
+    renderCanvas();
+    act(() => useAppStore.getState().setSelectedPoint(2));
+    act(() => useAppStore.setState({ activeSection: "Loads" }));
+    fireEvent.keyDown(document, { key: "Delete" });
+    expect(useAppStore.getState().coordinates).toHaveLength(6);
+  });
+
   it("cancels material assignment with Escape or the banner button", () => {
     renderCanvas();
     act(() => useAppStore.getState().setAssigningMaterial("sand"));
