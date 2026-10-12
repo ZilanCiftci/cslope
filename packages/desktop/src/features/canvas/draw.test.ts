@@ -444,6 +444,40 @@ describe("drawCanvas — edit mode", () => {
     expect(rec.textStrings()).toEqual(expect.arrayContaining(["(0.0, 4.0)", "(30.0, 4.0)"]));
   });
 
+  it("colours water-line vertices by hover, active line and editing state", () => {
+    const line = (id: string, y: number) => ({
+      id,
+      name: id,
+      color: "#000",
+      coordinates: [
+        [0, y],
+        [30, y],
+      ] as [number, number][],
+    });
+    const piezometricLine = {
+      ...DEFAULT_PIEZO_LINE,
+      freeWater: false,
+      lines: [line("a", 4), line("b", 2), { ...line("c", 1), coordinates: [[3, 1]] as [number, number][] }],
+      activeLineId: "a",
+    };
+    const dotColour = (rec: ReturnType<typeof draw>, x: number, y: number) =>
+      rec.fills().find((p) => p.segments[0].op === "arc" && close(pathPoints(p)[0], toC(x, y)))?.state.fillStyle;
+    const editing = draw({ editingPiezo: true, piezometricLine, hoverHit: { kind: "piezo", lineId: "b", index: 1 } });
+    expect(dotColour(editing, 0, 4)).toBe("#f59e0b"); // active line
+    expect(dotColour(editing, 0, 2)).toBe(PIEZO_COLOR.hex); // other line
+    expect(dotColour(editing, 30, 2)).toBe(POINT_COLOR_HOVER);
+    // A line with a single point is not drawn.
+    expect(dotColour(editing, 3, 1)).toBeUndefined();
+    const idle = draw({ piezometricLine });
+    expect(dotColour(idle, 0, 4)).toBe(PIEZO_COLOR.hex + "99");
+    expect(idle.callsOf("arc").filter((c) => c.args[2] === 3).length).toBeGreaterThanOrEqual(4);
+  });
+
+  it("skips line loads off the model", () => {
+    const rec = draw({ lineLoads: [{ id: "l", magnitude: 5, x: 45 }] });
+    expect(rec.texts.some((t) => t.text.startsWith("P ="))).toBe(false);
+  });
+
   it("fills free water standing above the ground", () => {
     const rec = draw({
       piezometricLine: {
