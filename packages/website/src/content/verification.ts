@@ -56,7 +56,7 @@ export function methodFamily(label: string): Exclude<MethodFilter, "all"> {
 }
 
 /**
- * The reference values by kind: from the literature (closed-form solutions
+ * The reference values by kind: from the literature (analytical solutions
  * counted apart) and from other programs.
  */
 export function checkCounts(d: VerificationData = VERIFICATION) {
