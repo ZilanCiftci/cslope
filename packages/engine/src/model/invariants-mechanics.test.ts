@@ -91,6 +91,64 @@ describe("strength monotonicity", () => {
   }, 30_000);
 });
 
+describe("strength of one material, reinforcement capacity", () => {
+  it("raising the strength of one layer only never lowers the FOS", () => {
+    const r = rng(4747);
+    for (let i = 0; i < 10; i++) {
+      const g = randomCase(r, { layers: 2, water: i % 2 === 0 });
+      const def = onCircle(g.def, g.circle);
+      const k = i % 2;
+      const stronger: SlopeDefinition = {
+        ...def,
+        materials: def.materials.map((m, j) => {
+          if (j !== k) return m;
+          const c = m.cohesion + uniform(r, 0, 10);
+          const phi = m.frictionAngle + uniform(r, 0, 6);
+          return { ...m, cohesion: c, frictionAngle: phi, model: mohrCoulomb(m.unitWeight, c, phi) };
+        }),
+      };
+      for (const method of METHODS) {
+        const a = fos(def, method);
+        const b = fos(stronger, method);
+        if (a === null || b === null) continue;
+        expect(b, `seed 4747 case ${i} ${method} layer ${k}`).toBeGreaterThanOrEqual(a * (1 - 1e-6));
+      }
+    }
+  }, 30_000);
+
+  it("a larger capacity of a tangent nail or a pile force never lowers the FOS", () => {
+    const r = rng(4748);
+    let raised = 0;
+    for (let i = 0; i < 10; i++) {
+      const g = randomCase(r, { layers: 1 });
+      const t = uniform(r, 0.3, 0.7);
+      const x1 = g.shape.crest + g.shape.run * t;
+      const y1 = g.shape.H * (1 - t);
+      const application = i % 2 ? ("passive" as const) : ("active" as const);
+      const withNail = (T: number): SlopeDefinition =>
+        onCircle(
+          {
+            ...g.def,
+            reinforcements: [{ x1, y1, x2: x1 - 12, y2: y1 - 3, tensileCapacity: T, direction: "tangent", application }],
+            piles: [{ x1: x1 + 1, y1: g.shape.H * (1 - (x1 + 1 - g.shape.crest) / g.shape.run), x2: x1 + 1, y2: -g.shape.depth + 0.1, force: T / 2, direction: "tangent", application }],
+          },
+          g.circle,
+        );
+      for (const method of METHODS) {
+        let prev = 0;
+        for (const T of [0, 20, 60, 150]) {
+          const f = fos(withNail(T), method);
+          if (f === null) continue;
+          expect(f, `seed 4748 case ${i} ${method} T ${T} ${application}`).toBeGreaterThanOrEqual(prev * (1 - 1e-6));
+          if (T > 0 && f > prev * 1.001) raised++;
+          prev = f;
+        }
+      }
+    }
+    expect(raised).toBeGreaterThan(30);
+  }, 30_000);
+});
+
 describe("load monotonicity", () => {
   it("for φ = 0, a load on the driving side never raises the FOS, on the resisting side never lowers it", () => {
     const r = rng(271828);
