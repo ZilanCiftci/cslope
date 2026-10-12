@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { act, fireEvent, render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { FloatingToolbar, type FloatingToolbarProps } from "./FloatingToolbar";
 import type { CanvasToolbarState } from "../../store/types";
 
@@ -100,6 +101,17 @@ describe("FloatingToolbar", () => {
     expect(screen.getByRole("button", { name: "Reset" }).style.pointerEvents).toBe("none");
     fireEvent.pointerDown(document.body);
     expect(screen.queryByRole("button", { name: "Reset all" })).toBeNull();
+  });
+
+  it("does not reset from the keyboard while Reset is disabled", async () => {
+    const { props } = setup({ hasResult: false });
+    click(screen.getByTitle("More run options"));
+    const reset = screen.getByRole("button", { name: "Reset" });
+    expect(reset).toBeDisabled();
+    reset.focus();
+    await userEvent.keyboard("{Enter}");
+    fireEvent.click(reset);
+    expect(props.onReset).not.toHaveBeenCalled();
   });
 
   it("undoes and redoes only when available", () => {

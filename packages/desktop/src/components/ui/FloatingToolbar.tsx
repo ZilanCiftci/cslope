@@ -443,6 +443,8 @@ function DropdownItem({
 }) {
   return (
     <button
+      // Disabled for the keyboard too, not only for the pointer.
+      disabled={disabled}
       className="w-full text-left px-3 py-1.5 text-[11px] cursor-pointer"
       style={{
         color: disabled ? "var(--color-vsc-badge)" : "var(--color-vsc-text)",
@@ -457,7 +459,7 @@ function DropdownItem({
       onMouseLeave={(e) => {
         (e.target as HTMLElement).style.background = "transparent";
       }}
-      onClick={onClick}
+      onClick={disabled ? undefined : onClick}
     >
       {label}
     </button>
