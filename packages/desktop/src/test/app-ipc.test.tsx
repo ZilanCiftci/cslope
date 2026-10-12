@@ -239,6 +239,34 @@ describe("dialog windows", () => {
     delete (window as unknown as { cslope?: unknown }).cslope;
   });
 
+  const DIALOGS = [
+    "materials-dialog",
+    "material-assignment-dialog",
+    "geometry-dialog",
+    "interior-boundaries-dialog",
+    "udl-dialog",
+    "line-loads-dialog",
+    "reinforcement-dialog",
+    "piezo-dialog",
+    "parameters-dialog",
+    "results-plot-dialog",
+    "search-limits-dialog",
+    "custom-search-planes-dialog",
+    "options-dialog",
+    "view-settings-dialog",
+  ];
+
+  it.each(DIALOGS)("renders only the dialog for #%s and asks the main window for its state", (hash) => {
+    window.location.hash = `#${hash}`;
+    const { container } = render(<App />);
+    expect(container.querySelector("[data-testid='slope-canvas']")).toBeNull();
+    expect(container.textContent!.length).toBeGreaterThan(0);
+    expect(calls).not.toContain("appReady");
+    expect(calls.some((c) => /^request[A-Za-z]+State$/.test(c))).toBe(true);
+    // The main-window sync handlers are not installed in a dialog window.
+    expect(handlers.get("onMaterialsRequestState") ?? []).toHaveLength(0);
+  });
+
   it("closes on Escape, but only blurs a focused field first", () => {
     window.location.hash = "#parameters-dialog";
     const close = vi.spyOn(window, "close").mockImplementation(() => {});
