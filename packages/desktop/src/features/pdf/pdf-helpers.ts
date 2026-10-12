@@ -23,7 +23,9 @@ export function hexToRgb(hex: string): [number, number, number] {
 /** Parse a CSS color to [r,g,b]. Supports #hex, rgb(), and named colors via chroma. */
 export function parseColor(color: string): [number, number, number] {
   try {
-    if (color.startsWith("#")) return hexToRgb(color);
+    // Six-digit hex directly; short (#abc) and alpha (#rrggbbaa) hex, which
+    // the canvas accepts, via chroma (hexToRgb gave NaN for them).
+    if (/^#[0-9a-f]{6}$/i.test(color)) return hexToRgb(color);
     const [r, g, b] = chroma(color).rgb();
     return [r, g, b];
   } catch {

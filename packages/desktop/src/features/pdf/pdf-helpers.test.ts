@@ -55,6 +55,12 @@ describe("parseColor", () => {
   it("returns black for empty string", () => {
     expect(parseColor("")).toEqual([0, 0, 0]);
   });
+
+  it("parses short and alpha hex colours (valid on the canvas) without NaN", () => {
+    expect(parseColor("#0a8")).toEqual([0, 170, 136]);
+    expect(parseColor("#ff000080")).toEqual([255, 0, 0]);
+    expect(parseColor("#zzz")).toEqual([0, 0, 0]);
+  });
 });
 
 describe("buildPolylinePath", () => {
