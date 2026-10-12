@@ -1148,6 +1148,26 @@ describe("opening files", () => {
     expect(win.setTitle).not.toHaveBeenCalled();
   });
 
+  it("an unconfirmed open does not survive a cancelled open or File > New", async () => {
+    await loadMain();
+    const win = mainWin();
+    const file = path.join(dir, "Old.json");
+    fs.writeFileSync(file, "{}");
+    // Read but never confirmed (e.g. the project failed to parse)...
+    await invoke("file:openPath", win.webContents, file);
+    // ...then the user cancels the next open dialog:
+    fake.dialog.showOpenDialog.mockResolvedValueOnce({ canceled: true, filePaths: [] });
+    expect(await invoke("dialog:openFile", win.webContents)).toBeNull();
+    send("file:openConfirmed", win.webContents);
+    expect(win.setTitle).not.toHaveBeenCalled();
+    // File > New clears it too.
+    await invoke("file:openPath", win.webContents, file);
+    send("menu:new", win.webContents);
+    vi.mocked(win.setTitle).mockClear();
+    send("file:openConfirmed", win.webContents);
+    expect(win.setTitle).not.toHaveBeenCalled();
+  });
+
   it("opens through the native dialog", async () => {
     await loadMain();
     const win = mainWin();

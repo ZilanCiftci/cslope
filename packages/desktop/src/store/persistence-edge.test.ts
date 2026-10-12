@@ -309,7 +309,7 @@ describe("parseProjectFile: analysis options", () => {
       options: {
         method: "Janbu",
         intersliceFunction: "data-point-specified",
-        intersliceDataPoints: [[0, 0], ["0.5", 1], [1], "x", [1, "y"]],
+        intersliceDataPoints: [[0, 0], ["0.5", 1], [1], "x", [1, "y"], [null, 1], [0.7, ""]],
         bothDirections: true,
         nonCircularOptimization: true,
         tensionCrackAuto: true,

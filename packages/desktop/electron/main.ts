@@ -1138,6 +1138,8 @@ ipcMain.handle("file:openPath", async (event, filePath: string) => {
   const ext = path.extname(filePath).toLowerCase();
   if (ext !== ".json" && ext !== ".cslope") return null;
   const resolved = path.resolve(filePath);
+  // A new open attempt replaces any earlier one that was not confirmed.
+  pendingOpenPath = null;
   try {
     const stat = fs.statSync(resolved);
     if (!stat.isFile() || stat.size > MAX_PROJECT_BYTES) return null;
@@ -1155,6 +1157,8 @@ ipcMain.handle("file:openPath", async (event, filePath: string) => {
 
 ipcMain.handle("dialog:openFile", async (event) => {
   if (!win || event.sender !== win.webContents) return null;
+  // A cancelled or failed open must not leave an earlier path to confirm.
+  pendingOpenPath = null;
   const { canceled, filePaths } = await dialog.showOpenDialog(win, {
     title: "Open cSlope Project",
     filters: [
@@ -1286,6 +1290,7 @@ function buildMenu() {
 ipcMain.on("menu:new", (event) => {
   if (event.sender !== win?.webContents) return;
   currentFilePath = null;
+  pendingOpenPath = null;
   win?.setTitle("cSlope");
 });
 

@@ -805,9 +805,13 @@ function normalizeAnalysisOptions(raw: unknown): AnalysisOptions {
       ? o.intersliceFunction
       : base.intersliceFunction;
 
+  // Numbers or numeric text; Number(null) or Number("") would read a
+  // missing value as 0.
+  const pointValue = (v: unknown) =>
+    typeof v === "number" ? v : typeof v === "string" && v.trim() !== "" ? Number(v) : NaN;
   const intersliceDataPoints = Array.isArray(o.intersliceDataPoints)
     ? o.intersliceDataPoints
-        .map((p) => (Array.isArray(p) ? [Number(p[0]), Number(p[1])] : null))
+        .map((p) => (Array.isArray(p) ? [pointValue(p[0]), pointValue(p[1])] : null))
         .filter(
           (p): p is [number, number] =>
             !!p && Number.isFinite(p[0]) && Number.isFinite(p[1]),
