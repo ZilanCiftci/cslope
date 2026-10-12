@@ -384,6 +384,40 @@ describe("hover", () => {
   });
 });
 
+describe("hover identity for each kind of handle", () => {
+  it("keeps the hover object for an equal hit and replaces it for a different one", () => {
+    const hits: PointHit[] = [
+      { kind: "piezo", lineId: "w", index: 0 },
+      { kind: "piezo", lineId: "w", index: 1 },
+      { kind: "limit", handle: "entryLeftX" },
+      { kind: "limit", handle: "exitLeftX" },
+      { kind: "udl", udlId: "u", handle: "x1" },
+      { kind: "udl", udlId: "u", handle: "x2" },
+      { kind: "lineLoad", loadId: "a" },
+      { kind: "lineLoad", loadId: "b" },
+      { kind: "boundary", boundaryId: "b", pointIndex: 0 },
+      { kind: "boundary", boundaryId: "b", pointIndex: 1 },
+      { kind: "annotation", annoId: "x" },
+      { kind: "annotation", annoId: "y" },
+      { kind: "external", index: 0 },
+    ];
+    let current: PointHit = hits[0];
+    const { h, move } = setup({ findNearPointUnified: vi.fn(() => ({ ...current })) });
+    let previous: PointHit | null = null;
+    for (const hit of hits) {
+      current = hit;
+      move(100, 100);
+      const first = h().hoverHit;
+      expect(first).toEqual(hit);
+      if (previous) expect(first).not.toBe(previous);
+      // Same hit again (a new but equal object): unchanged.
+      move(101, 100);
+      expect(h().hoverHit).toBe(first);
+      previous = first;
+    }
+  });
+});
+
 describe("wheel", () => {
   const wheel = (h: ReturnType<typeof setup>["h"], e: Partial<WheelEvent>) =>
     act(() =>
