@@ -22,8 +22,9 @@ jobs:
       - name: Lint
         run: bun run lint
 
-  # Each test job fails when coverage drops below the thresholds in its
-  # package's vitest.config.ts.
+  # Coverage runs on pull requests and on main only, where it is checked
+  # against the thresholds in each package's vitest.config.ts. Other pushes
+  # run the same tests without coverage, which is faster.
   engine:
     runs-on: ubuntu-latest
     steps:
@@ -34,7 +35,11 @@ jobs:
       - name: Install
         run: bun install
       - name: Test with coverage
+        if: github.event_name == 'pull_request' || github.ref == 'refs/heads/main'
         run: bun run --filter @cslope/engine test:coverage
+      - name: Test
+        if: github.event_name != 'pull_request' && github.ref != 'refs/heads/main'
+        run: bun run --filter @cslope/engine test
 
   desktop:
     runs-on: windows-latest
@@ -46,4 +51,8 @@ jobs:
       - name: Install
         run: bun install
       - name: Test with coverage
+        if: github.event_name == 'pull_request' || github.ref == 'refs/heads/main'
         run: bun run --filter @cslope/desktop test:coverage
+      - name: Test
+        if: github.event_name != 'pull_request' && github.ref != 'refs/heads/main'
+        run: bun run --filter @cslope/desktop test
