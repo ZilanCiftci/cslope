@@ -7,7 +7,7 @@ import { describe, it, expect } from "vitest";
 import type { SlopeDefinition } from "../types/slope-definition";
 import type { AnalysisOptions } from "../types/analysis";
 import type { MaterialModel } from "../types/material-models";
-import { analyseReliability, reliabilitySurfaceToModelSpace, type RandomVariable } from "./reliability";
+import { analyseReliability, normalCdf, reliabilitySurfaceToModelSpace, type RandomVariable } from "./reliability";
 import { toCanonicalSlopeDefinition } from "./canonical";
 
 const options: Partial<AnalysisOptions> = { slices: 30, tolerance: 1e-8, maxIterations: 100, method: "Bishop" };
@@ -221,5 +221,25 @@ describe("reliabilitySurfaceToModelSpace", () => {
     const b = analyseReliability(toCanonicalSlopeDefinition(mirrored), options, [SU], { method: "taylor", search: false });
     expect(b.fos).toBeCloseTo(a.fos, 9);
     expect(b.sdFOS).toBeCloseTo(a.sdFOS, 9);
+  });
+});
+
+describe("reliability: agreement with the exact distribution", () => {
+  it("F ∝ su with su normal: Monte Carlo mean, σ and pf match the normal distribution of F", () => {
+    // su = 30 ± 6: F(mean) a little above 1 for this clay, so pf is sizeable.
+    const weak = slope(su(30));
+    const v: RandomVariable = { material: 0, field: "undrainedShearStrength", sd: 6 };
+    const t = analyseReliability(weak, options, [v], { method: "taylor", search: false });
+    const n = 400;
+    const m = analyseReliability(weak, options, [v], { method: "monte-carlo", samples: n, seed: 11 });
+    const sdF = t.fos * 0.2;
+    expect(t.sdFOS).toBeCloseTo(sdF, 9);
+    expect(Math.abs(m.meanFOS - t.fos)).toBeLessThan((4 * sdF) / Math.sqrt(n));
+    expect(m.sdFOS / sdF).toBeGreaterThan(0.85);
+    expect(m.sdFOS / sdF).toBeLessThan(1.15);
+    // pf = Φ(−(F − 1)/σF) up to sampling error.
+    const pfExact = normalCdf(-(t.fos - 1) / sdF);
+    expect(Math.abs(m.pf! - pfExact)).toBeLessThan(4 * Math.sqrt((pfExact * (1 - pfExact)) / n) + 1e-9);
+    expect(t.betaNormal).toBeCloseTo((t.fos - 1) / sdF, 9);
   });
 });
