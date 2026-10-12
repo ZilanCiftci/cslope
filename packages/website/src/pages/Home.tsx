@@ -168,8 +168,8 @@ function Verification() {
             lead={
               <>
                 {s.problems} problems from the geotechnical literature and from verification manuals of established
-                programs: {counts.literature} reference values from the literature, {counts.theory} closed-form
-                solutions and {counts.programs} values from other programs. They run on every change to the code.
+                programs: {counts.literature} reference values from the literature, {counts.theory} from closed-form
+                solutions and {counts.programs} from other programs. The tests run them on every change to the code.
               </>
             }
           />

@@ -234,7 +234,7 @@ export function Verification() {
       <PageHeader
         eyebrow="Verification"
         title="Every result, next to the reference"
-        lead={`cSlope is run on ${s.problems} problems with ${s.checks} reference values: ${counts.literature} from the literature, ${counts.theory} closed-form solutions and ${counts.programs} from other programs. The same problems run in the automated tests on every change to the code, so this table is what the program computes today.`}
+        lead={`cSlope is tested against ${s.problems} problems with ${s.checks} reference values: ${counts.literature} from the literature, ${counts.theory} from closed-form solutions and ${counts.programs} from other programs. The automated tests run the same problems on every change to the code, so the table shows what the program computes today.`}
       >
         <dl className="mt-10 grid max-w-3xl grid-cols-2 gap-6 sm:grid-cols-4">
           {[
