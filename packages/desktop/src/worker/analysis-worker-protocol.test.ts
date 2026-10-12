@@ -191,4 +191,23 @@ describe("worker protocol", () => {
     expect(msg.result.criticalResistingMoment).toBeUndefined();
     expect(msg.result.criticalSlipVolume).toBeGreaterThan(0);
   });
+
+  it("draws a cracked non-circular surface from the bottom of the crack", () => {
+    const msg = analyse(
+      {
+        ...T_ACADS,
+        customPlanesOnly: true,
+        customSurfaces: [{ points: [[8, 0], [30, -12], [45, -10]] }],
+      } as SlopeDefinition,
+      { tensionCrackDepth: 2 },
+    );
+    if (msg.type !== "analysis-complete") throw new Error(JSON.stringify(msg));
+    const surf = msg.result.criticalSurface!;
+    const [first] = surf.points!;
+    // The surface is drawn from the crack bottom, 2 m below the crest.
+    expect(first[1]).toBeCloseTo(-2, 6);
+    expect(surf.entryPoint).toEqual(first);
+    // Points left of the crack are not drawn.
+    expect(surf.points!.every((q) => q[0] >= first[0] - 1e-9)).toBe(true);
+  });
 });
