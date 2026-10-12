@@ -39,8 +39,8 @@ Statusmarkeringar: `[ ]` ej påbörjad, `[~]` pågår, `[x]` klar.
   En ingenjör vill ha ett installationsprogram.
 
 **Inga förtroendesignaler.** Det som faktiskt skiljer cSlope från andra
-projekt syns inte: 180 verifieringsfall med 365 kontroller mot Slide2,
-GeoStudio och publicerad litteratur, deterministiska lösare, 2 800 tester,
+projekt syns inte: 180 verifieringsfall med 365 kontroller mot kommersiella
+program och publicerad litteratur, deterministiska lösare, 2 800 tester,
 över 95 % testtäckning, en genererad verifieringsrapport i PDF.
 
 **Ingen visuell identitet.** Standardpalett, ingen typografi, inga
@@ -90,7 +90,7 @@ fönstret).
 ## 2. Mål och målgrupp
 
 **Primär målgrupp:** geotekniker på konsultfirmor som i dag använder
-Slide2, GeoStudio eller GeoSuite och som ska avgöra om cSlope är värt att
+andra kommersiella program och som ska avgöra om cSlope är värt att
 testa.
 
 **Vad de vill veta, i ordning:**

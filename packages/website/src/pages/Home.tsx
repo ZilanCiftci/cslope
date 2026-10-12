@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 const stats = [
   { label: "Analysis methods", value: "3" },
-  { label: "Platform", value: "Desktop" },
+  { label: "Verification problems", value: "180" },
   { label: "License", value: "MIT" },
 ];
 
@@ -14,7 +14,7 @@ const highlights = [
     icon: <Layers className="h-8 w-8" />,
     title: "Limit equilibrium suite",
     description:
-      "Run Bishop Simplified, Janbu, and Morgenstern–Price with shared options and consistent output.",
+      "Bishop Simplified, Janbu with f0 and Morgenstern–Price (including Spencer) on circular and non-circular slip surfaces.",
   },
   {
     icon: <BarChart3 className="h-8 w-8" />,
@@ -30,9 +30,9 @@ const highlights = [
   },
   {
     icon: <Zap className="h-8 w-8" />,
-    title: "Focused desktop build",
+    title: "Complete desktop tool",
     description:
-      "Electron-based preview prioritises quick iteration on Windows; macOS packages are planned once stable.",
+      "A native Windows application with water, loads, tension cracks, reinforcement, piles and probabilistic analysis built in.",
   },
 ];
 
@@ -56,8 +56,8 @@ export function Home() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, delay: 0.2 }}
           >
-            Limit equilibrium analysis of circular slip surfaces with Bishop,
-            Janbu and Morgenstern–Price.
+            Limit equilibrium slope stability analysis with Bishop, Janbu and
+            Morgenstern–Price, verified against published solutions.
           </motion.p>
           <motion.p
             className="mt-6 text-sm uppercase tracking-[0.35em] text-primary/80"
@@ -65,8 +65,7 @@ export function Home() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5 }}
           >
-            FAST, MODERN, OPEN SOURCE SOFTWARE <br />
-            FOR SLOPE STABILITY
+            Open source software for slope stability
           </motion.p>
           <motion.div
             className="mt-10"
@@ -74,16 +73,16 @@ export function Home() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, delay: 0.3 }}
           >
-            <a
-              href="https://github.com/ZilanCiftci/cslope/releases"
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              <Button size="lg" className="text-base">
-                Download preview build
+            <Button asChild size="lg" className="text-base">
+              <a
+                href="https://github.com/ZilanCiftci/cslope/releases"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                Download
                 <Download className="ml-2 h-4 w-4" />
-              </Button>
-            </a>
+              </a>
+            </Button>
           </motion.div>
           <motion.div
             className="mt-12 grid w-full max-w-3xl gap-6 rounded-2xl border bg-background/80 p-6 backdrop-blur-sm sm:grid-cols-3"
@@ -153,20 +152,20 @@ export function Home() {
               Start modelling smarter slopes today.
             </h2>
             <p className="mt-4 text-muted-foreground max-w-2xl mx-auto">
-              Download the preview build, explore the example projects, and help
-              shape the roadmap toward official installers.
+              Download cSlope for Windows and open one of the built-in benchmark
+              models to see it in action.
             </p>
             <div className="mt-8 flex flex-col items-center gap-3 sm:flex-row sm:justify-center">
-              <a
-                href="https://github.com/ZilanCiftci/cslope/releases"
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                <Button size="lg" className="text-base">
-                  Download preview build
+              <Button asChild size="lg" className="text-base">
+                <a
+                  href="https://github.com/ZilanCiftci/cslope/releases"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  Download
                   <Download className="ml-2 h-4 w-4" />
-                </Button>
-              </a>
+                </a>
+              </Button>
             </div>
           </div>
         </div>

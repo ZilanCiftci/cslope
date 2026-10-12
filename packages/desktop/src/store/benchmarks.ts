@@ -312,7 +312,7 @@ const ARAI_TAGYO: ModelEntry = {
   name: "Arai & Tagyo (1985)",
   projectInfo: {
     title: "Arai & Tagyo (1985)",
-    subtitle: "Published FOS: 1.118 (Slide2 #16), 1.138 (Arai & Tagyo)",
+    subtitle: "Published FOS: 1.118 (verification manual of a commercial program), 1.138 (Arai & Tagyo)",
     client: "",
     projectNumber: "",
     revision: "0",

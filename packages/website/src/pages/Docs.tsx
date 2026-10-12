@@ -29,24 +29,17 @@ export function Docs() {
           <h2 className="text-2xl font-semibold">Quick Start</h2>
           <ol className="mt-4 space-y-3 list-decimal list-inside text-muted-foreground">
             <li>
-              Clone the repository:{" "}
-              <code className="bg-muted px-1.5 py-0.5 rounded text-sm font-mono">
-                git clone https://github.com/ZilanCiftci/cslope.git
-              </code>
+              Download the Windows installer from the{" "}
+              <a
+                href="https://github.com/ZilanCiftci/cslope/releases"
+                className="underline underline-offset-4"
+              >
+                releases page
+              </a>
+              .
             </li>
-            <li>
-              Install dependencies:{" "}
-              <code className="bg-muted px-1.5 py-0.5 rounded text-sm font-mono">
-                bun install
-              </code>
-            </li>
-            <li>
-              Start the development server:{" "}
-              <code className="bg-muted px-1.5 py-0.5 rounded text-sm font-mono">
-                bun run dev
-              </code>
-            </li>
-            <li>The cSlope desktop window opens; start defining your slope geometry.</li>
+            <li>Run the installer and start cSlope from the Start menu.</li>
+            <li>Open a benchmark model from Help &gt; Benchmarks, or start a new project.</li>
           </ol>
         </section>
 
@@ -58,8 +51,8 @@ export function Docs() {
             Use the interactive editor to define your slope geometry by adding
             coordinate points. Add soil layers with their material properties
             (unit weight, cohesion, friction angle). The software will
-            automatically compute the factor of safety using the selected
-            analysis method.
+            search circular and non-circular slip surfaces and report the
+            critical factor of safety for the selected analysis method.
           </p>
         </section>
 
@@ -72,8 +65,7 @@ export function Docs() {
           </p>
           <ul className="mt-3 space-y-2 list-disc list-inside text-muted-foreground">
             <li>
-              <strong>Bishop Simplified</strong> — Satisfies moment equilibrium
-              for circular slip surfaces.
+              <strong>Bishop Simplified</strong> — Satisfies moment equilibrium.
             </li>
             <li>
               <strong>Janbu Simplified</strong> — Satisfies horizontal force
@@ -82,7 +74,8 @@ export function Docs() {
             <li>
               <strong>GLE / Morgenstern–Price</strong> — A rigorous method
               satisfying both force and moment equilibrium with a user-defined
-              inter-slice force function.
+              inter-slice force function. A constant function gives Spencer's
+              method.
             </li>
           </ul>
         </section>

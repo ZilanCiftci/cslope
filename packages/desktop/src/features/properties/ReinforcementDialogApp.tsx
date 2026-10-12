@@ -317,7 +317,7 @@ export function ReinforcementDialogApp() {
     },
     {
       header: (
-        <Label title="Direction of the force on the sliding mass. Slide2 uses tangent to the slip surface by default.">
+        <Label title="Direction of the force on the sliding mass. Tangent to the slip surface is the usual default for passive supports.">
           Dir.
         </Label>
       ),

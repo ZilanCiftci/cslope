@@ -21,6 +21,11 @@ jobs:
         run: bun run typecheck
       - name: Lint
         run: bun run lint
+      - name: Test website
+        run: bun run --filter @cslope/website test
+      # Also fails when another product is named on the site.
+      - name: Build website
+        run: bun run --filter @cslope/website build
 
   # Coverage runs on pull requests and on main only, where it is checked
   # against the thresholds in each package's vitest.config.ts. Other pushes

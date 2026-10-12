@@ -1,14 +1,16 @@
 import { Routes, Route } from "react-router";
 import { Layout } from "@/components/Layout";
-import { Home } from "@/pages/Home";
-import { Docs } from "@/pages/Docs";
+import { NotFound } from "@/pages/NotFound";
+import { routes } from "@/routes";
 
 export function App() {
   return (
     <Layout>
       <Routes>
-        <Route path="/" element={<Home />} />
-        <Route path="/docs" element={<Docs />} />
+        {routes.map((r) => (
+          <Route key={r.path} path={r.path} element={r.element} />
+        ))}
+        <Route path="*" element={<NotFound />} />
       </Routes>
     </Layout>
   );

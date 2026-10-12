@@ -78,7 +78,7 @@ export function SfDepthFields({
         </label>
         <label
           className="flex flex-col gap-0.5"
-          title="Depth below the ground surface, or below the top of this material's layer above the slice base (as Slide2 and SLOPE/W)."
+          title="Depth below the ground surface, or below the top of this material's layer above the slice base."
         >
           <Label>Depth measured from</Label>
           <select

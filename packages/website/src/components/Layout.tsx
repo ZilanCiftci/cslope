@@ -63,16 +63,15 @@ export function Layout({ children }: { children: ReactNode }) {
 
           <div className="flex flex-1 items-center justify-end space-x-2">
             <ThemeToggle />
-            <a
-              href="https://github.com/ZilanCiftci/cslope"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="hidden md:inline-flex"
-            >
-              <Button variant="outline" size="sm">
+            <Button asChild variant="outline" size="sm" className="hidden md:inline-flex">
+              <a
+                href="https://github.com/ZilanCiftci/cslope"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
                 GitHub
-              </Button>
-            </a>
+              </a>
+            </Button>
 
             {/* Mobile menu button */}
             <Button
@@ -110,15 +109,15 @@ export function Layout({ children }: { children: ReactNode }) {
                   {link.label}
                 </Link>
               ))}
-              <a
-                href="https://github.com/ZilanCiftci/cslope"
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                <Button variant="outline" size="sm" className="w-full">
+              <Button asChild variant="outline" size="sm" className="w-full">
+                <a
+                  href="https://github.com/ZilanCiftci/cslope"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
                   GitHub
-                </Button>
-              </a>
+                </a>
+              </Button>
             </nav>
           </div>
         )}

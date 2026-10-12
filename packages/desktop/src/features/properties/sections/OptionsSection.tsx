@@ -337,9 +337,9 @@ export function OptionsSection({ plain = false }: OptionsSectionProps) {
               })
             }
             aria-label="Pore pressure head"
-            title="Vertical head is what Slide and SLOPE/W use for a piezometric line. The cos²θ correction assumes a free phreatic surface with parallel flow and gives a higher FOS below a steep line."
+            title="Vertical head is the usual convention for a piezometric line. The cos²θ correction assumes a free phreatic surface with parallel flow and gives a higher FOS below a steep line."
           >
-            <option value="vertical">Vertical head (Slide, SLOPE/W)</option>
+            <option value="vertical">Vertical head (conventional)</option>
             <option value="phreatic-correction">
               Phreatic correction (vertical head × cos²θ)
             </option>

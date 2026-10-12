@@ -245,7 +245,7 @@ function ReliabilityPanelBody() {
             <p className="text-[10px]" style={{ color: "var(--color-vsc-text-muted)" }}>
               {method === "taylor"
                 ? "FOS at the mean values and at mean ± σ of each variable; σ of the FOS from the differences, β and Pf for a lognormal FOS (Duncan 2000)."
-                : "One search at the mean values, then each sample analysed on that critical surface (Slide2's Global Minimum method, not a new search per sample). Samples are truncated at zero."}
+                : "One search at the mean values, then each sample analysed on that critical surface (not a new search per sample). Samples are truncated at zero."}
               {bothDirections ? " Only the model's own sliding direction is analysed." : ""}
               {designValues ? " Partial factors are applied, so the FOS are design values." : ""}
             </p>

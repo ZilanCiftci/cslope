@@ -8,7 +8,7 @@ interface Props {
 }
 
 const HINT =
-  "Strength cutoff (Slide2 Cutoff, SLOPE/W C-max). A maximum when Su is " +
+  "Strength cutoff. A maximum when Su is " +
   "constant or increases with depth; a minimum when the rate is negative. " +
   "Leave empty for no cutoff.";
 

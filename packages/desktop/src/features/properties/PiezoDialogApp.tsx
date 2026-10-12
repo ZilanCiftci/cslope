@@ -380,7 +380,7 @@ export function PiezoDialogApp() {
           >
             <label
               className="flex items-center gap-1.5 text-[11px]"
-              title="Where the main line lies above the ground the water stands on the slope and loads it, as in Slide and SLOPE/W. Off: the lines are clipped to the ground surface."
+              title="Where the main line lies above the ground the water stands on the slope and loads it. Off: the lines are clipped to the ground surface."
             >
               <input
                 type="checkbox"
