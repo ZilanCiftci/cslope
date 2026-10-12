@@ -6,6 +6,7 @@ import { useAppStore } from "../store/app-store";
 import { DEFAULT_RESULT_VIEW_SETTINGS } from "../store/defaults";
 import { createRecordingContext } from "../test/recording-context";
 import { computePaperFrame } from "../features/canvas/helpers";
+import { PLOT_MARGINS } from "../store/defaults";
 import type { Annotation } from "../store/types";
 
 const W = 1000;
@@ -177,6 +178,35 @@ describe("ResultCanvas paper zoom and pan", () => {
     expect(paper().offsetX).toBeCloseTo(-(725 - 500) * 3, 9);
     expect(paper().offsetY).toBeCloseTo(-(487.5 - 350) * 3, 9);
     expect(toolbar().zoomBoxActive).toBe(false);
+  });
+
+  it("keeps the same part of the model in the plot area when the paper is zoomed", () => {
+    act(() =>
+      useAppStore.setState((s) => ({
+        resultViewSettings: { ...s.resultViewSettings, viewLock: undefined },
+        resultViewScale: 15,
+        resultViewOffset: [-12, -5],
+      })),
+    );
+    renderCanvas();
+    const plotEdges = () => {
+      const s = useAppStore.getState();
+      const pf = s.resultViewSettings.paperFrame;
+      const frame = computePaperFrame(W, H, pf.paperSize, pf.landscape, pf.zoom ?? 1, pf.offsetX ?? 0, pf.offsetY ?? 0);
+      const left = frame.x + frame.w * PLOT_MARGINS.L;
+      const right = frame.x + frame.w * (1 - PLOT_MARGINS.R);
+      const toX = (cx: number) => (cx - W / 2) / s.resultViewScale - s.resultViewOffset[0];
+      return [toX(left), toX(right)];
+    };
+    const before = plotEdges();
+    act(() => toolbar().onSetZoomPercent(200));
+    act(() => {
+      vi.advanceTimersByTime(50);
+    });
+    expect(useAppStore.getState().resultViewScale).toBeCloseTo(30, 6);
+    const after = plotEdges();
+    expect(after[0]).toBeCloseTo(before[0], 6);
+    expect(after[1]).toBeCloseTo(before[1], 6);
   });
 
   it("selects an annotation on click and drags it on the paper", () => {
