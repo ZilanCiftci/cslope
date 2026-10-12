@@ -547,6 +547,13 @@ describe("Run All", () => {
     expect(entry(a).result).toEqual(result(1));
   });
 
+  it("with no models Run All just resets the displayed run", async () => {
+    useAppStore.setState({ models: [], runState: "error", progress: 0.5, errorMessage: "old" });
+    await store().runAllAnalyses();
+    expect(FakeWorker.instances).toHaveLength(0);
+    expect(store()).toMatchObject({ runState: "idle", progress: 0, result: null, errorMessage: null });
+  });
+
   it("resetAllAnalyses clears every model and returns to edit mode", async () => {
     const { a, b } = twoModels();
     const run = store().runAllAnalyses();
