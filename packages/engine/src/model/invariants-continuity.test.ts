@@ -139,7 +139,10 @@ describe("continuity of loads at vertices", () => {
   // by up to 5 mm, and the moment-equilibrium FOS jumps by ~1.3e-4 when the
   // load moves 1e-7 m across the vertex (seed 5152 case 3, Ordinary:
   // 2.537297 at the vertex vs 2.536965 at 1e-7 m before it). Sharing a load
-  // on a slice boundary between both slices does not cure it; a fix would
-  // add the moment correction P·(x_slice − x_load) to the slice.
+  // on a slice boundary between both slices does not cure it. Adding the
+  // moment correction P·(x_slice − x_load) to the carrying slice makes
+  // Ordinary and Bishop continuous, but Janbu (force equilibrium, where the
+  // arm plays no part) still jumps by 1.3e-4 (case 3: 2.529559 vs
+  // 2.529231), so part of the cause lies elsewhere; left for review.
   it.skip("a line load at the crest edge gives the FOS of a line load a hair away", () => loadCase("line load", 5152), 30_000);
 });
