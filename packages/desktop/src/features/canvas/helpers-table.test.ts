@@ -1,6 +1,12 @@
 import { describe, expect, it } from "vitest";
 import type { AnalysisResult, MaterialModel } from "@cslope/engine";
-import { buildMaterialTableData, drawTable, getAnnotationBoundsPx, measureTable } from "./helpers";
+import {
+  buildMaterialTableData,
+  drawTable,
+  extendBoundsWithFosLabelFitPadding,
+  getAnnotationBoundsPx,
+  measureTable,
+} from "./helpers";
 import { drawCanvas, type DrawCanvasParams } from "./draw";
 import { createRecordingContext, type TextCall } from "../../test/recording-context";
 import {
@@ -121,6 +127,56 @@ describe("drawTable", () => {
     const headerWords = rec.texts.filter((t) => t.state.font.startsWith("bold")).map((t) => t.text);
     expect(headerWords).not.toContain("Datum Elevation / Ref. Depth (m)");
     expect(headerWords.join(" ")).toContain("Datum");
+  });
+});
+
+describe("extendBoundsWithFosLabelFitPadding", () => {
+  const canvas = { getContext: () => createRecordingContext().ctx } as unknown as HTMLCanvasElement;
+  const bounds = { xMin: 0, xMax: 30, yMin: 0, yMax: 10 };
+
+  it("pads around the circle centre, where the label of a circle is drawn", () => {
+    const cs = { cx: 15, cy: 12, radius: 8, fos: 1.2, entryPoint: [8, 10], exitPoint: [22, 5] };
+    const out = extendBoundsWithFosLabelFitPadding({
+      result: { criticalSurface: cs } as unknown as AnalysisResult,
+      showFosLabel: true,
+      canvas,
+      scale: 10,
+      bounds,
+    })!;
+    expect(out.yMax).toBeCloseTo(12 + 1.6, 9);
+    expect(out.xMax).toBe(30);
+  });
+
+  it("pads around the drawn label of a non-circular surface, not its far moment axis", () => {
+    const cs = {
+      cx: 200,
+      cy: 150,
+      radius: 0,
+      fos: 1.2,
+      entryPoint: [8, 10],
+      exitPoint: [22, 5],
+      points: [
+        [8, 10],
+        [15, 3],
+        [22, 5],
+      ],
+    };
+    const out = extendBoundsWithFosLabelFitPadding({
+      result: { criticalSurface: cs } as unknown as AnalysisResult,
+      showFosLabel: true,
+      canvas,
+      scale: 10,
+      bounds,
+    })!;
+    // The label sits above the middle of the mass at (15, 10).
+    expect(out.xMax).toBe(30);
+    expect(out.yMax).toBeCloseTo(10 + 1.6, 9);
+  });
+
+  it("does nothing without a label to show", () => {
+    expect(
+      extendBoundsWithFosLabelFitPadding({ result: null, showFosLabel: true, canvas, scale: 10, bounds }),
+    ).toBeNull();
   });
 });
 

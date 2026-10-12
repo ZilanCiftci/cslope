@@ -757,7 +757,9 @@ export function extendBoundsWithFosLabelFitPadding(params: {
   const extraUp = 16 / scale;
   const extraDown = 6 / scale;
 
-  const { cx, cy } = result.criticalSurface;
+  // Where the label is drawn: the centre of a circle, above the sliding
+  // mass of a non-circular surface (whose cx, cy is only the moment axis).
+  const [cx, cy] = fosLabelAnchor(result.criticalSurface);
   return {
     xMin: Math.min(bounds.xMin, cx - extraLeft),
     xMax: Math.max(bounds.xMax, cx + extraRight),
