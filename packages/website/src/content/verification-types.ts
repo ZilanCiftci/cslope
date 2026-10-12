@@ -6,8 +6,6 @@ export interface VerificationCheck {
   published: number;
   /** Who published the value: literature, or "Commercial program A" etc. */
   source: string;
-  /** The reference is a range ("0.45–0.50"); `published` is its middle. */
-  range?: [number, number];
   computed: number | null;
   /** (computed − published) / published. */
   deviation: number | null;

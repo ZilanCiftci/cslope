@@ -107,7 +107,6 @@ export function buildData(
           method: k.label,
           published: k.published,
           source: anonymiseSource(k.publishedBy),
-          ...(k.range ? { range: k.range } : {}),
           computed,
           deviation: deviation == null ? null : round(deviation, 5),
         };

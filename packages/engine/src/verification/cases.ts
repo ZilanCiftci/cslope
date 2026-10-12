@@ -45,8 +45,6 @@ export interface VerificationCheck {
    * it follows from the case and the reference (tolerance.ts).
    */
   tolerance: number;
-  /** The reference is a range ("0.45–0.50"); see tolerance.ts. */
-  range?: [number, number];
   options?: Partial<AnalysisOptions>;
   note?: string;
   /**
@@ -423,7 +421,6 @@ function fromCaseData(c: ReinforcedCaseData): RawCase {
         options,
         ...(extra?.note ? { note: extra.note } : {}),
         ...(extra?.pending ? { pending: extra.pending } : {}),
-        ...(extra?.range ? { range: extra.range } : {}),
       };
       switch (m) {
         case "Bishop":

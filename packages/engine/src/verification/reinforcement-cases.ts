@@ -15,8 +15,6 @@ export interface CheckExtra {
   pending?: string;
   /** Merged over the case options for this check. */
   options?: Record<string, unknown>;
-  /** The reference is a range ("0.45–0.50"); see tolerance.ts. */
-  range?: [number, number];
 }
 
 export interface ReinforcedCaseData {

@@ -11,9 +11,6 @@
  *  - a reference value read from a chart or a figure: + 1 %;
  *  - a reference from a different method (finite elements, strength
  *    reduction): 5 %, an indication rather than a check of the method.
- *
- * A reference given as a range (a paper's "0.45–0.50") passes when the
- * factor of safety lies within it.
  */
 
 export interface ToleranceCase {
@@ -27,7 +24,6 @@ export interface ToleranceCase {
 export interface ToleranceCheck {
   published: number;
   publishedBy: string;
-  range?: [number, number];
 }
 
 const BASE = { fixed: 0.01, search: 0.02 } as const;
@@ -59,9 +55,5 @@ export function referenceTolerance(c: ToleranceCase, k: ToleranceCheck): number 
 
 /** Whether a computed factor of safety agrees with the check's reference. */
 export function agrees(k: ToleranceCheck & { tolerance: number }, fos: number): boolean {
-  if (k.range) {
-    const [lo, hi] = k.range;
-    return fos >= lo - 1e-9 && fos <= hi + 1e-9;
-  }
   return Math.abs(fos - k.published) / Math.abs(k.published) <= k.tolerance + 1e-9;
 }

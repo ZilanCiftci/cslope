@@ -3029,14 +3029,10 @@
    "checks": [
     {
      "method": "Janbu corrected (f0)",
-     "published": 0.475,
-     "source": "Griffiths & Lane (Janbu wedge)",
-     "range": [
-      0.45,
-      0.5
-     ],
+     "published": 0.485,
+     "source": "Griffiths & Lane (Janbu wedge, Fig. 7)",
      "computed": 0.4996,
-     "deviation": 0.05179
+     "deviation": 0.0301
     }
    ]
   },

@@ -783,14 +783,11 @@ const PENDING: [number, number, number] = [196, 120, 20];
 /** Pass, Fail, or Pending for a failing check that waits for an engine change. */
 const statusCell = (pass: boolean, pending?: string) =>
   pass ? { text: "Pass", color: PASS, bold: true } : pending ? { text: "Pending", color: PENDING, bold: true } : { text: "Fail", color: FAIL, bold: true };
-/** The reference value, or the range a source gives ("0.45–0.50"). */
-const refText = (k: { published: number; range?: [number, number] }) =>
-  k.range ? `${k.range[0].toFixed(2)}–${k.range[1].toFixed(2)}` : fmt(k.published);
 // The public edition shows the reference and cSlope's value only; the
 // internal one adds the difference and the acceptance.
 const summaryRows: Cell[][] = [
   ...caseResults.flatMap((r) =>
-    r.results.map((x): Cell[] => [r.c.id, r.c.title, x.check.label, refText(x.check), fmt(x.fos ?? NaN), pct(x.diff), statusCell(x.pass, x.check.pending)]),
+    r.results.map((x): Cell[] => [r.c.id, r.c.title, x.check.label, fmt(x.check.published), fmt(x.fos ?? NaN), pct(x.diff), statusCell(x.pass, x.check.pending)]),
   ),
   ...benchResults.flatMap((b) =>
     b.rows.map((x): Cell[] => ["Bundled", b.name, methodName(x.method), fmt(x.published), fmt(x.fos ?? NaN), pct(x.diff), statusCell(x.pass)]),
@@ -896,7 +893,7 @@ caseResults.forEach((r, i) => {
         { title: "Reference", width: 26, align: "right" },
         { title: "cSlope", width: CONTENT_W - 140, align: "right" },
       ],
-      r.results.map((x) => [x.check.label, x.check.publishedBy, refText(x.check), fmt(x.fos ?? NaN)]),
+      r.results.map((x) => [x.check.label, x.check.publishedBy, fmt(x.check.published), fmt(x.fos ?? NaN)]),
     );
   } else {
     table(
@@ -912,7 +909,7 @@ caseResults.forEach((r, i) => {
       r.results.map((x) => [
         x.check.label,
         x.check.publishedBy,
-        refText(x.check),
+        fmt(x.check.published),
         fmt(x.fos ?? NaN),
         pct(x.diff),
         `± ${(x.check.tolerance * 100).toFixed(1)} %`,

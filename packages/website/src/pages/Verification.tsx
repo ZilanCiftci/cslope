@@ -17,9 +17,6 @@ import { SITE } from "@/site";
 import { cn } from "@/lib/utils";
 
 const num = (x: number | null, digits = 3) => (x == null ? "–" : x.toFixed(digits));
-/** A reference value, or the range a source gives ("0.45–0.50"). */
-const reference = (k: { published: number; range?: [number, number] }, digits = 3) =>
-  k.range ? `${k.range[0].toFixed(2)}–${k.range[1].toFixed(2)}` : num(k.published, digits);
 
 /** The public edition of the report, attached to every release. */
 const REPORT = `${SITE.releases}/latest/download/cSlope-verification-report.pdf`;
@@ -146,7 +143,7 @@ function ProblemTable() {
                     <div>{k.method}</div>
                     <div className="text-xs text-muted-foreground">{k.source}</div>
                   </td>
-                  <td className="px-4 py-3 text-right align-top font-mono tabular whitespace-nowrap">{reference(k)}</td>
+                  <td className="px-4 py-3 text-right align-top font-mono tabular whitespace-nowrap">{num(k.published)}</td>
                   <td className="px-4 py-3 text-right align-top font-mono tabular">{num(k.computed)}</td>
                 </tr>
               ))}
