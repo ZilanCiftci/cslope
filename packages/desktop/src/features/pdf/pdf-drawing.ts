@@ -13,7 +13,6 @@ import {
   surfacePoints,
 } from "../../utils/arc";
 import { computeRegions } from "../../utils/regions";
-import { GRID_RAW_STEP_PX } from "../../constants";
 import {
   computeRulerStep,
   formatRulerLabel,
@@ -23,7 +22,6 @@ import {
   ARROW_HEAD_LEN_PX,
   ARROW_HEAD_PX,
   ARROW_HEIGHT_PX,
-  GRID_STEP_MIN,
 } from "../canvas/constants";
 import { buildMaterialTableData } from "../canvas/helpers";
 import {
@@ -96,15 +94,6 @@ export function drawGrid(
   clip: { x: number; y: number; w: number; h: number },
   gridSpacing?: number,
 ) {
-  const rawStep = GRID_RAW_STEP_PX / viewScale;
-  const mag = Math.pow(10, Math.floor(Math.log10(rawStep)));
-  const steps = [1, 2, 5, 10];
-  const autoGridStep = Math.max(
-    GRID_STEP_MIN,
-    steps.find((s) => s * mag >= rawStep)! * mag,
-  );
-  const gridStep = resolveTickStep(gridSpacing, autoGridStep);
-
   const [originPdfX, originPdfY] = tf.worldToPdf(0, 0);
   const worldPerMm = 1 / (viewScale * tf.mmPerPx);
 
@@ -112,6 +101,14 @@ export function drawGrid(
   const worldRight = (clip.x + clip.w - originPdfX) * worldPerMm;
   const worldTop = (originPdfY - clip.y) * worldPerMm;
   const worldBottom = (originPdfY - (clip.y + clip.h)) * worldPerMm;
+
+  // The ruler's major-tick spacing (drawRulerFrame, same frame), so the
+  // grid lines run through the labelled ticks as on the canvas; the
+  // separately rounded automatic steps used to differ.
+  const gridStep = resolveTickStep(
+    gridSpacing,
+    computeRulerStep(worldRight - worldLeft, clip.w, tf.paperW),
+  );
 
   pdf.setDrawColor(220, 220, 220);
   pdf.setLineWidth(0.1);

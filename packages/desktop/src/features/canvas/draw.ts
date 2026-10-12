@@ -323,6 +323,9 @@ export function drawCanvas(
   };
 
   let effectiveScale = viewScale;
+  // Result view: the major-tick spacing of the paper frame, which the grid
+  // shares ("Ticks spacing" sets both).
+  let resultTickStep: number | null = null;
   if (mode === "result" && result) {
     const { paperSize, landscape } = resultViewSettings.paperFrame;
     const pfGrid = computePaperFrame(
@@ -369,6 +372,14 @@ export function drawCanvas(
     const paperHeightMm = landscape
       ? Math.min(dimW, dimH)
       : Math.max(dimW, dimH);
+    resultTickStep = resolveTickStep(
+      resultViewSettings.gridSpacing,
+      computeRulerStep(
+        innerRightX - innerLeftX,
+        paperWidthMm * (1 - PLOT_MARGINS.L - PLOT_MARGINS.R),
+        paperWidthMm,
+      ),
+    );
     const virtualW = 1200;
     const virtualH = (1200 * paperHeightMm) / paperWidthMm;
     const virtualPaperFrame = computePaperFrame(
@@ -400,10 +411,10 @@ export function drawCanvas(
     GRID_STEP_MIN,
     steps.find((s) => s * mag >= rawStep)! * mag,
   );
-  const gridStep =
-    mode === "result" && result
-      ? resolveTickStep(resultViewSettings.gridSpacing, autoGridStep)
-      : autoGridStep;
+  // On the paper the grid lines run through the labelled ticks; their
+  // separately rounded automatic steps used to differ (e.g. grid 5 m,
+  // ticks 2 m).
+  const gridStep = resultTickStep ?? autoGridStep;
 
   ctx.strokeStyle = GRID_COLOR;
   ctx.lineWidth = 1 * paperZoom;

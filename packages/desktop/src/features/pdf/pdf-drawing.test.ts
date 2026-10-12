@@ -204,6 +204,31 @@ describe("drawGrid", () => {
   });
 });
 
+describe("grid and ruler share one spacing", () => {
+  it("draws a grid line at every labelled tick", () => {
+    const frame = { x: 15, y: 10, w: 267, h: 190 };
+    for (const mmPerM of [1.5, 2.5, 4, 5, 9]) {
+      const t: PdfTransform = { ...tf, worldToPdf: (x, y) => [20 + x * mmPerM, 150 - y * mmPerM] };
+      const scale = mmPerM / t.mmPerPx;
+      const rec = recorder();
+      drawGrid(rec.pdf, t, scale, frame);
+      drawRulerFrame(rec.pdf, t, scale, frame);
+      const gridX = rec
+        .linesIn([220, 220, 220])
+        .filter(([x1, , x2]) => x1 === x2)
+        .map(([x]) => x);
+      const tickX = rec
+        .of("text")
+        .filter((c) => (c.args[3] as { align: string }).align === "center")
+        .map((c) => c.args[1] as number);
+      expect(tickX.length, `${mmPerM} mm/m`).toBeGreaterThan(1);
+      for (const x of tickX) {
+        expect(gridX.some((g) => Math.abs(g - x) < 1e-6), `tick at ${x} mm, ${mmPerM} mm/m`).toBe(true);
+      }
+    }
+  });
+});
+
 describe("drawRulerFrame", () => {
   it("labels ticks at their world values below and left of the frame, with minor ticks", () => {
     const rec = recorder();
