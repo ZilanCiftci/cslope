@@ -9,6 +9,7 @@ import type { PartialFactors } from "../types/analysis";
 import { WATER_UNIT_WEIGHT } from "../types/constants";
 import { Slope } from "./slope";
 import { getSlices, rankineCrackDepth } from "./slices";
+import { buildSlope } from "./build-slope";
 
 const BOUNDARY: [number, number][] = [[0, -10], [0, 10], [10, 10], [25, 0], [40, 0], [40, -10]];
 const F: PartialFactors = { cu: 1.4, cohesion: 1.25, tanPhi: 1.2, variableLoad: 1.3 };
@@ -149,5 +150,28 @@ describe("degenerate surfaces", () => {
     const sl = getSlices(t, ints[0][0], ints[ints.length - 1][0], 22, 18, 18.5);
     expect(sl.length).toBeGreaterThan(5);
     expect(sl.some((q) => q.U > 0)).toBe(true);
+  });
+});
+
+describe("per-material water without a default water table", () => {
+  it("only the material with its own line gets pore pressure", () => {
+    const slope = buildSlope({
+      coordinates: BOUNDARY,
+      materials: [
+        { name: "Top", unitWeight: 19, cohesion: 10, frictionAngle: 25 },
+        { name: "Base", unitWeight: 19, cohesion: 10, frictionAngle: 25, waterTableId: "w" },
+      ],
+      materialBoundaries: [{ coordinates: [[0, 3], [40, -2]], materialName: "Base" }],
+      regionAssignments: [{ point: [1, 8], materialName: "Top" }, { point: [1, -5], materialName: "Base" }],
+      waterTables: [{ id: "w", coordinates: [[0, 6], [40, 0]] }],
+    });
+    slope.updateAnalysisOptions({ slices: 30, porePressureHead: "phreatic-correction" });
+    const ints = slope.getCircleExternalIntersection(22, 18, 18.5);
+    const slices = getSlices(slope, ints[0][0], ints[ints.length - 1][0], 22, 18, 18.5);
+    const top = slices.filter((q) => q.baseMaterial?.name === "Top");
+    const base = slices.filter((q) => q.baseMaterial?.name === "Base");
+    expect(top.length).toBeGreaterThan(0);
+    expect(top.every((q) => q.U === 0)).toBe(true);
+    expect(base.some((q) => q.U > 0)).toBe(true);
   });
 });
