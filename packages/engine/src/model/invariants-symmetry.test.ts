@@ -205,6 +205,37 @@ describe("unit consistency", () => {
     }
   }, 30_000);
 
+  it("with nails (every pullout kind) and piles (given force and Ito & Matsui)", () => {
+    const r = rng(77);
+    const pullouts = [
+      undefined,
+      { kind: "bond", strength: 40, bondedLength: 4 },
+      { kind: "development", length1: 1.5, length2: 2 },
+      { kind: "interface", adhesion: 5, frictionAngle: 25, coverage: 0.9 },
+    ] as const;
+    for (let i = 0; i < 8; i++) {
+      const g = randomCase(r, { layers: 1 });
+      let def = decorate(r, g, new Set(["nail", "pile"]));
+      def = {
+        ...def,
+        reinforcements: def.reinforcements!.map((q) => ({ ...q, pullout: pullouts[i % 4], end1Capacity: 10 })),
+        piles: def.piles!.map((p) =>
+          i % 2 ? { ...p, force: undefined, diameter: 0.6, spacing: 2, shearCapacity: 300, momentCapacity: 400 } : p,
+        ),
+      };
+      def = onCircle(def, g.circle);
+      const k = uniform(r, 0.5, 2);
+      const scaled = transformDefinition(def, { k, s: k });
+      for (const method of METHODS) {
+        const a = fosOf(def, method);
+        const b = fosOf(scaled, method);
+        const label = `seed 77 case ${i} ${method} k ${k}`;
+        expect(b === null, label).toBe(a === null);
+        if (a !== null && b !== null) expect(relDiff(a, b), `${label}: ${a} vs ${b}`).toBeLessThan(1e-5);
+      }
+    }
+  }, 30_000);
+
   it("the FOS depends on c and γ only through c/(γH) (φ fixed)", () => {
     const r = rng(5);
     for (let i = 0; i < 12; i++) {

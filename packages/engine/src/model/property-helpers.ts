@@ -11,6 +11,7 @@
 import type { AnalysisMethod, AnalysisOptions } from "../types/analysis";
 import type { SlopeDefinition } from "../types/slope-definition";
 import type { MaterialModel } from "../types/material-models";
+import type { ReinforcementPullout } from "../types/reinforcement";
 import { buildSlope } from "./build-slope";
 import { analyseSlope, analyseOrdinary } from "./solvers";
 import { toCanonicalSlopeDefinition } from "./canonical";
@@ -291,9 +292,9 @@ export function mirrorDefinition(def: SlopeDefinition, axis: number): SlopeDefin
 
 /**
  * Affine map of a Mohr-Coulomb definition: lengths ×k, then shifted by
- * (dx, dy); stresses ×s (cohesion, UDL, unit weight ×s/k, line loads and
- * reinforcement forces per metre ×s·k). Water keeps γw, so with water only
- * s = k is consistent.
+ * (dx, dy); stresses ×s (cohesion, UDL, unit weight ×s/k, line loads per
+ * metre ×s·k, element and pile forces ×s·k² with their spacing ×k).
+ * Water keeps γw, so with water only s = k is consistent.
  */
 export function transformDefinition(
   def: SlopeDefinition,
@@ -306,6 +307,12 @@ export function transformDefinition(
   const X = (x: number) => x * k + dx;
   const Y = (y: number) => y * k + dy;
   const P = (p: Pt): Pt => [X(p[0]), Y(p[1])];
+  const scalePullout = (p: ReinforcementPullout): ReinforcementPullout =>
+    p.kind === "bond"
+      ? { kind: "bond", strength: p.strength * s * k, ...(p.bondedLength !== undefined ? { bondedLength: p.bondedLength * k } : {}) }
+      : p.kind === "development"
+        ? { kind: "development", length1: p.length1 * k, length2: p.length2 * k }
+        : { ...p, adhesion: p.adhesion * s };
   const out: SlopeDefinition = { ...def, coordinates: def.coordinates.map(P) };
   out.materials = def.materials.map((m) => {
     const model = m.model;
@@ -348,9 +355,26 @@ export function transformDefinition(
       y1: Y(q.y1),
       x2: X(q.x2),
       y2: Y(q.y2),
-      tensileCapacity: q.tensileCapacity * s * k,
-      ...(q.end1Capacity !== undefined ? { end1Capacity: q.end1Capacity * s * k } : {}),
-      ...(q.end2Capacity !== undefined ? { end2Capacity: q.end2Capacity * s * k } : {}),
+      // Capacities per element (spacing ×k): ×s·k².
+      tensileCapacity: q.tensileCapacity * s * k * k,
+      spacing: (q.spacing ?? 1) * k,
+      ...(q.end1Capacity !== undefined ? { end1Capacity: q.end1Capacity * s * k * k } : {}),
+      ...(q.end2Capacity !== undefined ? { end2Capacity: q.end2Capacity * s * k * k } : {}),
+      ...(q.pullout ? { pullout: scalePullout(q.pullout) } : {}),
+    }));
+  }
+  if (def.piles) {
+    out.piles = def.piles.map((p) => ({
+      ...p,
+      x1: X(p.x1),
+      y1: Y(p.y1),
+      x2: X(p.x2),
+      y2: Y(p.y2),
+      spacing: (p.spacing ?? 1) * k,
+      ...(p.diameter !== undefined ? { diameter: p.diameter * k } : {}),
+      ...(p.force !== undefined ? { force: p.force * s * k * k } : {}),
+      ...(p.shearCapacity !== undefined ? { shearCapacity: p.shearCapacity * s * k * k } : {}),
+      ...(p.momentCapacity !== undefined ? { momentCapacity: p.momentCapacity * s * k * k * k } : {}),
     }));
   }
   if (def.analysisLimits) {
