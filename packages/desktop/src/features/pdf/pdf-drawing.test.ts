@@ -590,4 +590,34 @@ describe("drawAnnotations", () => {
     expect(second.args[1]).toBe(first.args[1]);
     expect(second.args[2] as number).toBeGreaterThan(first.args[2] as number);
   });
+
+  it("draws the material table cells with a colour swatch per material, right-anchored", () => {
+    const rec = recorder();
+    const sand = { ...DEFAULT_MATERIAL, id: "sand", name: "Sand", color: "#eedd88" } as MaterialRow;
+    drawAnnotations(
+      rec.pdf,
+      tf,
+      [{ id: "m", type: "material-table", x: 0.9, y: 0.1, anchor: "top-right", tableColumns: ["unitWeight", "cohesion"] }],
+      result(),
+      [DEFAULT_MATERIAL, sand],
+      PIEZO_EMPTY,
+      {},
+      [],
+      FRAME,
+    );
+    expect(rec.texts()).toEqual(
+      expect.arrayContaining(["Color", "Name", DEFAULT_MATERIAL.name, "Sand", "18", "12"]),
+    );
+    // Swatches in the material colours.
+    const fills = rec.of("setFillColor").map((c) => c.args.join(","));
+    expect(fills).toContain(parseColor(DEFAULT_MATERIAL.color).join(","));
+    expect(fills).toContain("238,221,136");
+    // Second row is shaded.
+    expect(fills).toContain("248,248,248");
+    // Right edge of the outline at the anchor (0.9 of the frame width).
+    const outline = rec.of("rect").find((c) => c.args[4] === "FD")!.args as number[];
+    expect(outline[0] + outline[2]).toBeCloseTo(0.9 * 297, 6);
+    expect(outline[1]).toBeCloseTo(0.1 * 210, 6);
+    expect(rec.balanced()).toBe(true);
+  });
 });
