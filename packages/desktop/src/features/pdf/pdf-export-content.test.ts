@@ -22,6 +22,7 @@ import {
   DEFAULT_ANALYSIS_LIMITS,
   DEFAULT_MATERIAL,
   DEFAULT_RESULT_VIEW_SETTINGS,
+  PLOT_MARGINS,
 } from "../../store/defaults";
 import { newPile, newReinforcement } from "../../utils/reinforcement";
 import type { ProjectInfo } from "../../store/types";
@@ -192,6 +193,18 @@ describe("exportVectorPdf — full model", () => {
     const reversed = widthOfModel(data({ viewBounds: { xMin: 60, xMax: -30, yMin: -10, yMax: 30 } }));
     expect(zoomedOut).toBeGreaterThan(auto * 1.5);
     expect(reversed).toBeCloseTo(auto, 9);
+  });
+
+  it("places a locked view like the canvas: its bottom on the plot frame's bottom", () => {
+    // A lock much wider than the plot area (e.g. from a file): the canvas
+    // (computeViewLockFit) puts y = yMin on the bottom of the plot frame.
+    const { doc } = exportDoc(data({ viewBounds: { xMin: 10, xMax: 80, yMin: 0, yMax: 10 } }));
+    const stream = pageStream(doc);
+    const m = /([\d.]+) ([\d.]+) Td\n\(0\) Tj/.exec(stream);
+    expect(m).not.toBeNull();
+    const yFromTopMm = 210 - (Number(m![2]) * 25.4) / 72;
+    // Left ruler label of y = 0 sits at the frame bottom (+ its baseline shift).
+    expect(yFromTopMm).toBeCloseTo(210 * (1 - PLOT_MARGINS.B) + 9 * 0.12, 2);
   });
 
   it("reports an error instead of throwing when drawing fails", () => {

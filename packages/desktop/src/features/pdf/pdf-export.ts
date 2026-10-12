@@ -15,7 +15,8 @@ import type {
   ResultViewSettings,
 } from "../../store/types";
 import { PLOT_MARGINS } from "../../store/defaults";
-import { computePaperFrame, getPaperDimensions } from "../view/paper";
+import { computeInnerFrame, computePaperFrame, getPaperDimensions } from "../view/paper";
+import { computeViewLockFit } from "../view/fit";
 import {
   drawAnnotations,
   drawClosedPolyline,
@@ -195,25 +196,24 @@ export function exportVectorPdf(data: PdfExportData): void {
       viewBounds.yMax > viewBounds.yMin
         ? viewBounds
         : null;
-    if (usableBounds) {
-      const viewBounds = usableBounds;
-      const worldW = viewBounds.xMax - viewBounds.xMin || 10;
-      const worldH = viewBounds.yMax - viewBounds.yMin || 10;
-
-      const scaleX = plotW / worldW;
-      const scaleY = plotH / worldH;
-      viewScale = Math.min(scaleX, scaleY);
-
-      const worldCx = (viewBounds.xMin + viewBounds.xMax) / 2;
-      const worldCy = (viewBounds.yMin + viewBounds.yMax) / 2;
-
-      const shiftX = (virtualPaperFrame.w / 2) * (PLOT_PAD_L - PLOT_PAD_R);
-      const shiftY = (virtualPaperFrame.h / 2) * (PLOT_PAD_B - PLOT_PAD_T);
-
-      const ox = shiftX / viewScale - worldCx;
-      const oy = shiftY / viewScale - worldCy;
-
-      viewOffset = [ox, oy];
+    // Same placement as the canvas (useViewport): a lock whose aspect
+    // differs from the plot area is centred horizontally with its bottom
+    // on the bottom of the plot frame (it used to be centred vertically,
+    // so the PDF did not match the screen).
+    const lockFit = usableBounds
+      ? computeViewLockFit(
+          computeInnerFrame(virtualPaperFrame),
+          {
+            bottomLeft: [usableBounds.xMin, usableBounds.yMin],
+            topRight: [usableBounds.xMax, usableBounds.yMax],
+          },
+          virtualW,
+          virtualH,
+        )
+      : null;
+    if (lockFit) {
+      viewScale = lockFit.scale;
+      viewOffset = lockFit.offset;
     } else {
       const xs = coordinates.map((c) => c[0]);
       const ys = coordinates.map((c) => c[1]);
