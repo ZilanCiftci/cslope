@@ -183,10 +183,13 @@ export function ViewSettingsDialogApp() {
     field: "bl_x" | "bl_y" | "tr_x" | "tr_y",
     val: number,
   ) => {
-    if (!rvs.viewLock) return;
+    // Without a lock, start from the extents shown in the fields (as the
+    // main window's result sidebar does) instead of dropping the edit.
+    const source =
+      rvs.viewLock ?? ({ bottomLeft: [-1, -1], topRight: [26, 18] } as const);
     const newVl = {
-      bottomLeft: [...rvs.viewLock.bottomLeft] as [number, number],
-      topRight: [...rvs.viewLock.topRight] as [number, number],
+      bottomLeft: [...source.bottomLeft] as [number, number],
+      topRight: [...source.topRight] as [number, number],
     };
 
     if (field === "bl_x") newVl.bottomLeft[0] = val;

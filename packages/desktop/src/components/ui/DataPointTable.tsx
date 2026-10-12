@@ -35,6 +35,16 @@ export function DataPointTable({
     setDraftCells((current) => ({ ...current, [key]: value }));
   };
 
+  /** Show the stored value again, e.g. when the cell is left. */
+  const clearDraftCell = (rowIdx: number, colIdx: number) => {
+    const key = cellKey(rowIdx, colIdx);
+    setDraftCells((current) => {
+      const rest = { ...current };
+      delete rest[key];
+      return rest;
+    });
+  };
+
   const canBeNumericDraft = (value: string) => /^-?\d*\.?\d*$/.test(value);
 
   const isTransientDraft = (value: string) =>
@@ -145,7 +155,8 @@ export function DataPointTable({
                           }
                         }
 
-                        updateDraftCell(ri, ci, String(resolved));
+                        // A kept draft would hide rows passed in later.
+                        clearDraftCell(ri, ci);
                         updateCell(ri, ci, resolved);
                       }}
                       className="w-full bg-transparent border-none text-[11px] px-1.5 py-0.5 outline-none"
