@@ -7,6 +7,8 @@
 import { describe, it, expect } from "vitest";
 import type { SlopeDefinition } from "../types/slope-definition";
 import { WATER_UNIT_WEIGHT } from "../types/constants";
+import { buildSlope } from "./build-slope";
+import { toCanonicalSlopeDefinition } from "./canonical";
 import {
   rng,
   uniform,
@@ -260,6 +262,60 @@ describe("method agreement", () => {
       }
     }
   }, 30_000);
+});
+
+describe("Janbu correction factor", () => {
+  function f0Expected(def: SlopeDefinition, b1: number): number {
+    const slope = buildSlope(toCanonicalSlopeDefinition(def));
+    const p = slope.individualPlanes[0];
+    const L = Math.hypot(p.rc[0] - p.lc[0], p.rc[1] - p.lc[1]);
+    // Depth of the arc below the chord: R minus the distance of the centre
+    // from the chord (the deepest point lies between entry and exit here).
+    const dist = Math.abs((p.rc[0] - p.lc[0]) * (p.lc[1] - p.cy) - (p.rc[1] - p.lc[1]) * (p.lc[0] - p.cx)) / L;
+    const dl = (p.radius - dist) / L;
+    return 1 + b1 * (dl - 1.4 * dl * dl);
+  }
+
+  it("f0 = 1 + b1 (d/L − 1.4 (d/L)²) with b1 0.69 (c only), 0.31 (φ only), 0.50 (c-φ or both kinds of layer)", () => {
+    const r = rng(43);
+    const cases: [string, Parameters<typeof randomCase>[1], number][] = [
+      ["c only", { c: [10, 40], phi: [0, 0] }, 0.69],
+      ["φ only", { c: [0, 0], phi: [25, 35] }, 0.31],
+      ["c-φ", { c: [5, 15], phi: [20, 30] }, 0.5],
+    ];
+    for (const [name, opts, b1] of cases) {
+      for (let i = 0; i < 4; i++) {
+        const g = randomCase(r, opts);
+        const def = onCircle(g.def, g.circle);
+        const f0 = fosOf(def, "Janbu", { janbuCorrection: true, slices: 200 })! / fosOf(def, "Janbu", { slices: 200 })!;
+        expect(f0, `seed 43 ${name} case ${i}`).toBeCloseTo(f0Expected(def, b1), 3);
+      }
+    }
+    // A c-only layer over a φ-only layer: the surface sees both, b1 = 0.5.
+    const g = randomCase(r, { layers: 2 });
+    const mixed = onCircle(
+      {
+        ...g.def,
+        materials: [
+          { ...g.def.materials[0], cohesion: 20, frictionAngle: 0, model: mohrCoulomb(g.def.materials[0].unitWeight, 20, 0) },
+          { ...g.def.materials[1], cohesion: 0, frictionAngle: 32, model: mohrCoulomb(g.def.materials[1].unitWeight, 0, 32) },
+        ],
+      },
+      g.circle,
+    );
+    const f0 = fosOf(mixed, "Janbu", { janbuCorrection: true, slices: 200 })! / fosOf(mixed, "Janbu", { slices: 200 })!;
+    expect(f0).toBeCloseTo(f0Expected(mixed, 0.5), 3);
+  }, 30_000);
+
+  it("a planar surface has f0 = 1", () => {
+    const r = rng(44);
+    for (let i = 0; i < 4; i++) {
+      const g = randomCase(r, { layers: 1 });
+      const xb = g.shape.crest + g.shape.run * 0.8;
+      const def = onPolyline(g.def, [[g.shape.crest * 0.5, g.shape.H], [xb, groundY(g.shape, xb)]]);
+      expect(fosOf(def, "Janbu", { janbuCorrection: true })! / fosOf(def, "Janbu")!).toBeCloseTo(1, 9);
+    }
+  });
 });
 
 describe("buoyancy", () => {
