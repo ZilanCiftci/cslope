@@ -131,12 +131,19 @@ describe("Slope: water tables", () => {
     expect(s.hasWaterTable).toBe(true);
   });
 
-  it("rejects non-finite points and lines without two different x", () => {
+  it("rejects non-finite points and lines with fewer than two points", () => {
     const s = model();
     expect(() => s.setWaterTable({ coordinates: [[0, 1], [NaN, 2]] })).toThrow(/finite numbers/);
-    expect(() => s.setWaterTable({ coordinates: [[0, 1]] })).toThrow(/two points with different x/);
-    expect(() => s.setWaterTable({ coordinates: [[5, 1], [5, 2]] })).toThrow(/two points with different x/);
-    expect(() => s.setWaterTableById("w", [[5, 1], [5, 3]])).toThrow(/different x/);
+    expect(() => s.setWaterTable({ coordinates: [[0, 1]] })).toThrow(/two points/);
+    expect(() => s.setWaterTableById("w", [[5, 1]])).toThrow(/two points/);
+  });
+
+  it("accepts two points at one x as a vertical step extended to both edges", () => {
+    const s = model();
+    s.setWaterTable({ coordinates: [[5, 1], [5, 2]], followBoundary: false });
+    expect(s.hasWaterTable).toBe(true);
+    expect(s.waterRLXY!.x[0]).toBe(BOUNDARY[0][0]);
+    s.setWaterTableById("w", [[5, 1], [5, 3]], false);
   });
 
   it("a line given before the boundary is extended to its edges once the boundary is set", () => {

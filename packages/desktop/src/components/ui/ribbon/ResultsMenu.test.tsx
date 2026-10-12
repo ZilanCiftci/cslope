@@ -169,25 +169,25 @@ describe("ResultsMenu", () => {
 
   it("imports a template and rejects invalid files", async () => {
     const alert = vi.spyOn(window, "alert").mockImplementation(() => {});
-    let picker: HTMLInputElement | null = null;
+    const pickers: HTMLInputElement[] = [];
     vi.spyOn(HTMLInputElement.prototype, "click").mockImplementation(function (
       this: HTMLInputElement,
     ) {
-      picker = this;
+      pickers.push(this);
     });
     act(() => store().setResultViewSettings({ gridSpacing: 7, minorTicks: 3 }));
     renderMenu();
 
     const choose = (content: string) => {
       const file = new File([content], "t.json", { type: "application/json" });
-      Object.defineProperty(picker!, "files", { value: [file], configurable: true });
+      Object.defineProperty(pickers.at(-1)!, "files", { value: [file], configurable: true });
       act(() => {
-        picker!.onchange?.(new Event("change"));
+        pickers.at(-1)!.onchange?.(new Event("change"));
       });
     };
 
     await userEvent.click(screen.getByTitle("Import"));
-    expect(picker!.accept).toBe(".json");
+    expect(pickers.at(-1)!.accept).toBe(".json");
     const template = { ...JSON.parse(JSON.stringify(rvs())), showGrid: !rvs().showGrid };
     delete template.gridSpacing;
     delete template.minorTicks;
@@ -261,7 +261,7 @@ describe("ResultsMenu", () => {
       `${name} slices.csv`,
       `${name} slices.csv`,
     ]);
-    expect(calls[1][1]).toMatch(/^﻿/);
+    expect(calls[1][1]).toMatch(/^\uFEFF/);
     expect(String(calls[2][1])).toContain(";");
     expect(calls[1][2]).toBe("text/csv;charset=utf-8");
   });

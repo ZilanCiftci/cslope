@@ -6,7 +6,6 @@
  * definitions are plain SlopeDefinitions, the checks are turned into
  * VerificationChecks in cases.ts.
  */
-import type { SlopeDefinition } from "../types/slope-definition";
 import type { ReinforcedCaseData } from "./reinforcement-cases";
 
 export const PILE_CASES: ReinforcedCaseData[] = [

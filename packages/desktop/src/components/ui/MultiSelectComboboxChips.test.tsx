@@ -1,5 +1,5 @@
 import { beforeAll, describe, expect, it } from "vitest";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { createEvent, fireEvent, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MultiSelectComboboxChips } from "./MultiSelectComboboxChips";
@@ -15,7 +15,9 @@ let lastValue: string[] = [];
 
 function Harness({ initial = [] as string[] }) {
   const [value, setValue] = useState(initial);
-  lastValue = value;
+  useEffect(() => {
+    lastValue = value;
+  }, [value]);
   return (
     <>
       <MultiSelectComboboxChips

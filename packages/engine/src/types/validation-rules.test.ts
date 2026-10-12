@@ -58,7 +58,6 @@ const rejected: [string, MaterialModel, RegExp][] = [
   ["Su NaN", su({ undrainedShearStrength: NaN }), /Undrained shear strength/],
   ["suMax 0", su({ suMax: 0 }), /suMax\) must be a positive/],
   ["suMax NaN", su({ suMax: NaN }), /suMax\) must be a positive/],
-  ["suMax ≥ Su with negative rate", su({ suMax: 30, suRateOfChange: -1 }), /minimum with a negative rate/],
   ["spatial: no points", spatial([]), /at least 1 data point/],
   ["spatial: not an array", spatial(null), /at least 1 data point/],
   ["spatial: 4 values", spatial([[0, 0, 1, 30]]), /must have 5 values/],
@@ -79,11 +78,9 @@ const rejected: [string, MaterialModel, RegExp][] = [
   ["s-f-depth: rate Infinity", sfd({ rate: Infinity }), /Rate of change/],
   ["s-f-depth: bad reference", sfd({ depthReference: "surface" }), /Depth reference/],
   ["s-f-depth: suMax < 0", sfd({ suMax: -5 }), /suMax\) must be a positive/],
-  ["s-f-depth: suMax above suRef, rate < 0", sfd({ rate: -1, suMax: 25 }), /minimum with a negative rate/],
   ["s-f-datum: suRef NaN", sfy({ suRef: NaN }), /Reference Su/],
   ["s-f-datum: yRef NaN", sfy({ yRef: NaN }), /Reference elevation/],
   ["s-f-datum: rate NaN", sfy({ rate: NaN }), /Rate of change/],
-  ["s-f-datum: suMax = suRef, rate < 0", sfy({ rate: -1, suMax: 20 }), /minimum with a negative rate/],
   ["lcc: soil Su < 0", lcc({ soilSu: -1 }), /Soil Su/],
   ["lcc: column Su NaN", lcc({ columnSu: NaN }), /Column Su/],
   ["lcc: area ratio > 1", lcc({ areaRatio: 1.01 }), /Area ratio/],
@@ -95,12 +92,15 @@ const rejected: [string, MaterialModel, RegExp][] = [
   ["lcc: c′ < 0", lcc({ columnCohesion: -1, columnFrictionAngle: 30 }), /Drained column cohesion/],
   ["lcc: φ′ = 90", lcc({ columnCohesion: 10, columnFrictionAngle: 90 }), /friction angle must be 0–90/],
   ["lcc: φ′ < 0", lcc({ columnCohesion: 10, columnFrictionAngle: -1 }), /friction angle must be 0–90/],
-  ["lcc: suMax ≥ soil Su, rate < 0", lcc({ suRateOfChange: -1, suMax: 15 }), /minimum with a negative rate/],
   ["unknown kind", { kind: "granite", unitWeight: 18 } as unknown as MaterialModel, /Unknown material model kind "granite"/],
 ];
 
 /** Boundary values that are valid. */
 const accepted: [string, MaterialModel][] = [
+  ["suMax ≥ Su with negative rate (a floor above the reference is valid)", su({ suMax: 30, suRateOfChange: -1 })],
+  ["s-f-depth: suMax above suRef, rate < 0 (a floor above the reference is valid)", sfd({ rate: -1, suMax: 25 })],
+  ["s-f-datum: suMax = suRef, rate < 0 (a floor above the reference is valid)", sfy({ rate: -1, suMax: 20 })],
+  ["lcc: suMax ≥ soil Su, rate < 0 (a floor above the reference is valid)", lcc({ suRateOfChange: -1, suMax: 15 })],
   ["γ = 500", mc({ unitWeight: 500 })],
   ["γ tiny", mc({ unitWeight: 1e-6 })],
   ["γsat = 500", mc({ unitWeightSat: 500 })],
