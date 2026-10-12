@@ -23,6 +23,9 @@ import { applyReinforcement } from "./reinforcement";
 
 // ── createSlice ───────────────────────────────────────────────────
 
+/** Grid of the local origin for clipping material regions (see createSlice). */
+const LOCAL_ORIGIN_GRID = 4096;
+
 /**
  * Create a single Slice from its geometric parameters.
  */
@@ -117,11 +120,18 @@ export function createSlice(
     [x0, y0Bottom],
   ];
 
-  // Compute edge coefficients for the slip-surface edges (indices 2-3 and 3-4)
+  // Compute edge coefficients for the slip-surface edges (indices 2-3 and 3-4),
+  // relative to a local origin (ox, oy) near the slice: with real-world
+  // coordinates (eastings ~1e6 and elevations ~1e3) the constant term x·y
+  // of global coefficients lost the base by more than `lift` below, and the
+  // slice got the wrong base material. The origin is a multiple of 4096 so
+  // that models near the global origin are computed exactly as before.
+  const ox = Math.round(x / LOCAL_ORIGIN_GRID) * LOCAL_ORIGIN_GRID;
+  const oy = Math.round(yBottom / LOCAL_ORIGIN_GRID) * LOCAL_ORIGIN_GRID;
   const edgeCoeffs: [number, number, number][] = [];
   for (let i = 2; i < 4; i++) {
-    const p1 = clipPoly[i];
-    const p2 = clipPoly[i + 1];
+    const p1: [number, number] = [clipPoly[i][0] - ox, clipPoly[i][1] - oy];
+    const p2: [number, number] = [clipPoly[i + 1][0] - ox, clipPoly[i + 1][1] - oy];
     const a = p2[1] - p1[1];
     const b = -(p2[0] - p1[0]);
     const c = p2[0] * p1[1] - p2[1] * p1[0];
@@ -148,16 +158,20 @@ export function createSlice(
     [mpx, mpy] = clipPolygonVertical(m.px, m.py, x0, x1);
     if (mpx.length < 3) continue;
 
-    // Step 2: Clip by slip-surface edges
+    // Step 2: Clip by slip-surface edges (in local coordinates)
+    let lx = mpx.map((v) => v - ox);
+    let ly = mpy.map((v) => v - oy);
     let valid = true;
     for (const [a, b, c] of edgeCoeffs) {
-      [mpx, mpy] = clipPolygonHalfplane(mpx, mpy, a, b, c);
-      if (mpx.length < 3) {
+      [lx, ly] = clipPolygonHalfplane(lx, ly, a, b, c);
+      if (lx.length < 3) {
         valid = false;
         break;
       }
     }
     if (!valid) continue;
+    mpx = lx.map((v) => v + ox);
+    mpy = ly.map((v) => v + oy);
 
     // Create clipped material fragment
     const mFrag: GeometryWithMaterial = {
@@ -168,7 +182,7 @@ export function createSlice(
     intersectedMaterials.push(mFrag);
 
     // Calculate area and weight
-    const area = calculatePolygonArea(mpx, mpy);
+    const area = calculatePolygonArea(lx, ly);
     totalArea += area;
     const gamma = fragmentUnitWeight(m.material, mpx, mpy, area);
     totalWeight += area * gamma;
@@ -179,7 +193,7 @@ export function createSlice(
       const w = waterForWeight(m.material);
       if (w) {
         const s = (w[1] - w[0]) / (x1 - x0);
-        const [bx, by] = clipPolygonHalfplane(mpx, mpy, s, -1, w[0] - s * x0);
+        const [bx, by] = clipPolygonHalfplane(lx, ly, s, -1, w[0] - oy - s * (x0 - ox));
         if (bx.length >= 3) {
           totalWeight += calculatePolygonArea(bx, by) * (gammaSat - gamma);
         }
@@ -194,8 +208,8 @@ export function createSlice(
       isPointInPolygon(
         0,
         lift,
-        mpx.map((v) => v - x),
-        mpy.map((v) => v - yBottom),
+        lx.map((v) => v - (x - ox)),
+        ly.map((v) => v - (yBottom - oy)),
       )
     ) {
       baseMaterial = m.material;
