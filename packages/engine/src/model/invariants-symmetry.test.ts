@@ -6,6 +6,7 @@
  */
 import { describe, it, expect } from "vitest";
 import type { SlopeDefinition } from "../types/slope-definition";
+import { toCanonicalSlopeDefinition, oppositeDirectionDefinition } from "./canonical";
 import {
   rng,
   uniform,
@@ -76,7 +77,7 @@ describe("mirror symmetry", () => {
 });
 
 describe("mirror symmetry: surfaces, water and strength given per point", () => {
-  it("polyline surfaces, per-material water tables, spatial strength and asymmetric interslice points", () => {
+  it("polyline surfaces, cracks, per-material water tables, spatial strength and asymmetric interslice points", () => {
     const r = rng(31);
     let compared = 0;
     for (let i = 0; i < 12; i++) {
@@ -120,10 +121,17 @@ describe("mirror symmetry: surfaces, water and strength given per point", () => 
       const mirrored = mirrorDefinition(def, axis);
       const dp: [number, number][] = [[0, 0.1], [0.2, 0.9], [0.6, 1], [1, 0.3]];
       const dpMirrored = dp.map(([x, f]) => [1 - x, f] as [number, number]).reverse();
+      // A fixed or automatic tension crack (with water) on every other case.
+      const crack =
+        i % 4 === 1
+          ? { tensionCrackDepth: shape.H * 0.15, tensionCrackWater: 1 }
+          : i % 4 === 3
+            ? { tensionCrackAuto: true, tensionCrackWater: 0.5 }
+            : {};
       for (const method of ["Ordinary", "Bishop", "Janbu", "Morgenstern-Price"] as Method[]) {
-        const a = fosOf(def, method);
-        const b = fosOf(mirrored, method);
-        const label = `seed 31 case ${i} ${method}`;
+        const a = fosOf(def, method, crack);
+        const b = fosOf(mirrored, method, crack);
+        const label = `seed 31 case ${i} ${method} ${JSON.stringify(crack)}`;
         expect(b === null, label).toBe(a === null);
         if (a !== null && b !== null) {
           expect(relDiff(a, b), `${label}: ${a} vs ${b}`).toBeLessThan(1e-6);
@@ -205,6 +213,37 @@ describe("unit consistency", () => {
     }
   }, 30_000);
 
+  it("with nails (every pullout kind) and piles (given force and Ito & Matsui)", () => {
+    const r = rng(77);
+    const pullouts = [
+      undefined,
+      { kind: "bond", strength: 40, bondedLength: 4 },
+      { kind: "development", length1: 1.5, length2: 2 },
+      { kind: "interface", adhesion: 5, frictionAngle: 25, coverage: 0.9 },
+    ] as const;
+    for (let i = 0; i < 8; i++) {
+      const g = randomCase(r, { layers: 1 });
+      let def = decorate(r, g, new Set(["nail", "pile"]));
+      def = {
+        ...def,
+        reinforcements: def.reinforcements!.map((q) => ({ ...q, pullout: pullouts[i % 4], end1Capacity: 10 })),
+        piles: def.piles!.map((p) =>
+          i % 2 ? { ...p, force: undefined, diameter: 0.6, spacing: 2, shearCapacity: 300, momentCapacity: 400 } : p,
+        ),
+      };
+      def = onCircle(def, g.circle);
+      const k = uniform(r, 0.5, 2);
+      const scaled = transformDefinition(def, { k, s: k });
+      for (const method of METHODS) {
+        const a = fosOf(def, method);
+        const b = fosOf(scaled, method);
+        const label = `seed 77 case ${i} ${method} k ${k}`;
+        expect(b === null, label).toBe(a === null);
+        if (a !== null && b !== null) expect(relDiff(a, b), `${label}: ${a} vs ${b}`).toBeLessThan(1e-5);
+      }
+    }
+  }, 30_000);
+
   it("the FOS depends on c and γ only through c/(γH) (φ fixed)", () => {
     const r = rng(5);
     for (let i = 0; i < 12; i++) {
@@ -215,6 +254,50 @@ describe("unit consistency", () => {
       const same = transformDefinition(def, { k: 1, s });
       for (const method of METHODS) {
         expect(relDiff(fosOf(def, method)!, fosOf(same, method)!), `case ${i} ${method}`).toBeLessThan(1e-6);
+      }
+    }
+  }, 30_000);
+});
+
+describe("both sliding directions", () => {
+  it("a symmetric ridge: the opposite direction gives the FOS of the mirrored circle", () => {
+    const r = rng(2525);
+    for (let i = 0; i < 8; i++) {
+      const H = uniform(r, 5, 12);
+      const half = uniform(r, 15, 30);
+      const top = uniform(r, 2, 6);
+      const run = uniform(r, 1, 2.5) * H;
+      const D = uniform(r, 5, 10);
+      const L = 2 * half;
+      const coordinates: [number, number][] = [
+        [0, -D], [0, 0], [half - top - run, 0], [half - top, H], [half + top, H], [half + top + run, 0], [L, 0], [L, -D],
+      ];
+      const gamma = uniform(r, 17, 21);
+      const c = uniform(r, 3, 15);
+      const phi = uniform(r, 20, 35);
+      const def: SlopeDefinition = {
+        orientation: "ltr",
+        coordinates,
+        materials: [{ name: "S", unitWeight: gamma, cohesion: c, frictionAngle: phi }],
+        udls: [{ magnitude: uniform(r, 5, 20), x1: half - top * 0.8, x2: half + top * 0.8 }],
+      };
+      // A circle on the right face (sliding to +x) and its mirror image.
+      const cx = half + top + run * uniform(r, 0.3, 0.7);
+      const cy = H + uniform(r, 3, 10);
+      const radius = Math.hypot(cx - (half + top * 0.3), cy - H);
+      if (cy - radius < -D + 0.2) continue;
+      const canonical = toCanonicalSlopeDefinition({ ...def, customSearchPlanes: [{ cx, cy, radius }], customPlanesOnly: true });
+      const opposite = oppositeDirectionDefinition(toCanonicalSlopeDefinition(def));
+      // The opposite direction analyses the left face, mirrored onto the
+      // right: the mirror image of the circle (L − cx) mirrored again.
+      const oppositeOnCircle = { ...opposite, customSearchPlanes: [{ cx: L - (L - cx), cy, radius }], customPlanesOnly: true };
+      for (const method of METHODS) {
+        const a = fosOf(canonical, method);
+        // The opposite definition is canonical already (its circle in its
+        // own coordinates): analysed as is, not mirrored again.
+        const b = fosOf({ ...oppositeOnCircle, orientation: "ltr" }, method);
+        expect(b === null, `seed 2525 case ${i} ${method}`).toBe(a === null);
+        if (a !== null && b !== null) expect(relDiff(a, b), `seed 2525 case ${i} ${method}: ${a} vs ${b}`).toBeLessThan(1e-6);
       }
     }
   }, 30_000);

@@ -7,6 +7,9 @@
 import { describe, it, expect } from "vitest";
 import type { SlopeDefinition } from "../types/slope-definition";
 import { WATER_UNIT_WEIGHT } from "../types/constants";
+import { buildSlope } from "./build-slope";
+import { analyseSlope } from "./solvers";
+import { toCanonicalSlopeDefinition } from "./canonical";
 import {
   rng,
   uniform,
@@ -17,6 +20,7 @@ import {
   mohrCoulomb,
   relDiff,
   groundY,
+  PROPERTY_OPTIONS,
   type Method,
 } from "./property-helpers";
 
@@ -88,6 +92,64 @@ describe("strength monotonicity", () => {
         expect(relDiff(b, a * k), `case ${i} ${method}`).toBeLessThan(1e-5);
       }
     }
+  }, 30_000);
+});
+
+describe("strength of one material, reinforcement capacity", () => {
+  it("raising the strength of one layer only never lowers the FOS", () => {
+    const r = rng(4747);
+    for (let i = 0; i < 10; i++) {
+      const g = randomCase(r, { layers: 2, water: i % 2 === 0 });
+      const def = onCircle(g.def, g.circle);
+      const k = i % 2;
+      const stronger: SlopeDefinition = {
+        ...def,
+        materials: def.materials.map((m, j) => {
+          if (j !== k) return m;
+          const c = m.cohesion + uniform(r, 0, 10);
+          const phi = m.frictionAngle + uniform(r, 0, 6);
+          return { ...m, cohesion: c, frictionAngle: phi, model: mohrCoulomb(m.unitWeight, c, phi) };
+        }),
+      };
+      for (const method of METHODS) {
+        const a = fos(def, method);
+        const b = fos(stronger, method);
+        if (a === null || b === null) continue;
+        expect(b, `seed 4747 case ${i} ${method} layer ${k}`).toBeGreaterThanOrEqual(a * (1 - 1e-6));
+      }
+    }
+  }, 30_000);
+
+  it("a larger capacity of a tangent nail or a pile force never lowers the FOS", () => {
+    const r = rng(4748);
+    let raised = 0;
+    for (let i = 0; i < 10; i++) {
+      const g = randomCase(r, { layers: 1 });
+      const t = uniform(r, 0.3, 0.7);
+      const x1 = g.shape.crest + g.shape.run * t;
+      const y1 = g.shape.H * (1 - t);
+      const application = i % 2 ? ("passive" as const) : ("active" as const);
+      const withNail = (T: number): SlopeDefinition =>
+        onCircle(
+          {
+            ...g.def,
+            reinforcements: [{ x1, y1, x2: x1 - 12, y2: y1 - 3, tensileCapacity: T, direction: "tangent", application }],
+            piles: [{ x1: x1 + 1, y1: g.shape.H * (1 - (x1 + 1 - g.shape.crest) / g.shape.run), x2: x1 + 1, y2: -g.shape.depth + 0.1, force: T / 2, direction: "tangent", application }],
+          },
+          g.circle,
+        );
+      for (const method of METHODS) {
+        let prev = 0;
+        for (const T of [0, 20, 60, 150]) {
+          const f = fos(withNail(T), method);
+          if (f === null) continue;
+          expect(f, `seed 4748 case ${i} ${method} T ${T} ${application}`).toBeGreaterThanOrEqual(prev * (1 - 1e-6));
+          if (T > 0 && f > prev * 1.001) raised++;
+          prev = f;
+        }
+      }
+    }
+    expect(raised).toBeGreaterThan(30);
   }, 30_000);
 });
 
@@ -204,6 +266,60 @@ describe("method agreement", () => {
   }, 30_000);
 });
 
+describe("Janbu correction factor", () => {
+  function f0Expected(def: SlopeDefinition, b1: number): number {
+    const slope = buildSlope(toCanonicalSlopeDefinition(def));
+    const p = slope.individualPlanes[0];
+    const L = Math.hypot(p.rc[0] - p.lc[0], p.rc[1] - p.lc[1]);
+    // Depth of the arc below the chord: R minus the distance of the centre
+    // from the chord (the deepest point lies between entry and exit here).
+    const dist = Math.abs((p.rc[0] - p.lc[0]) * (p.lc[1] - p.cy) - (p.rc[1] - p.lc[1]) * (p.lc[0] - p.cx)) / L;
+    const dl = (p.radius - dist) / L;
+    return 1 + b1 * (dl - 1.4 * dl * dl);
+  }
+
+  it("f0 = 1 + b1 (d/L − 1.4 (d/L)²) with b1 0.69 (c only), 0.31 (φ only), 0.50 (c-φ or both kinds of layer)", () => {
+    const r = rng(43);
+    const cases: [string, Parameters<typeof randomCase>[1], number][] = [
+      ["c only", { c: [10, 40], phi: [0, 0] }, 0.69],
+      ["φ only", { c: [0, 0], phi: [25, 35] }, 0.31],
+      ["c-φ", { c: [5, 15], phi: [20, 30] }, 0.5],
+    ];
+    for (const [name, opts, b1] of cases) {
+      for (let i = 0; i < 4; i++) {
+        const g = randomCase(r, opts);
+        const def = onCircle(g.def, g.circle);
+        const f0 = fosOf(def, "Janbu", { janbuCorrection: true, slices: 200 })! / fosOf(def, "Janbu", { slices: 200 })!;
+        expect(f0, `seed 43 ${name} case ${i}`).toBeCloseTo(f0Expected(def, b1), 3);
+      }
+    }
+    // A c-only layer over a φ-only layer: the surface sees both, b1 = 0.5.
+    const g = randomCase(r, { layers: 2 });
+    const mixed = onCircle(
+      {
+        ...g.def,
+        materials: [
+          { ...g.def.materials[0], cohesion: 20, frictionAngle: 0, model: mohrCoulomb(g.def.materials[0].unitWeight, 20, 0) },
+          { ...g.def.materials[1], cohesion: 0, frictionAngle: 32, model: mohrCoulomb(g.def.materials[1].unitWeight, 0, 32) },
+        ],
+      },
+      g.circle,
+    );
+    const f0 = fosOf(mixed, "Janbu", { janbuCorrection: true, slices: 200 })! / fosOf(mixed, "Janbu", { slices: 200 })!;
+    expect(f0).toBeCloseTo(f0Expected(mixed, 0.5), 3);
+  }, 30_000);
+
+  it("a planar surface has f0 = 1", () => {
+    const r = rng(44);
+    for (let i = 0; i < 4; i++) {
+      const g = randomCase(r, { layers: 1 });
+      const xb = g.shape.crest + g.shape.run * 0.8;
+      const def = onPolyline(g.def, [[g.shape.crest * 0.5, g.shape.H], [xb, groundY(g.shape, xb)]]);
+      expect(fosOf(def, "Janbu", { janbuCorrection: true })! / fosOf(def, "Janbu")!).toBeCloseTo(1, 9);
+    }
+  });
+});
+
 describe("buoyancy", () => {
   it("a fully submerged slope equals the dry slope with buoyant unit weight", () => {
     const r = rng(2718);
@@ -304,4 +420,28 @@ describe("slice-count convergence", () => {
       }
     }
   }, 60_000);
+});
+
+describe("Morgenstern-Price solution", () => {
+  it("the reported FOS satisfies moment and force equilibrium at its λ (every interslice function)", () => {
+    const r = rng(9191);
+    let checked = 0;
+    for (let i = 0; i < 10; i++) {
+      const g = randomCase(r, { water: i % 2 === 0 });
+      const def = onCircle(i % 3 === 0 ? { ...g.def, udls: [{ magnitude: 15, x1: 0.5, x2: g.shape.crest * 0.6 }] } : g.def, g.circle);
+      for (const fn of ["constant", "half-sine", "clipped-sine", "trapezoidal"] as const) {
+        const slope = buildSlope(toCanonicalSlopeDefinition(def));
+        slope.updateAnalysisOptions({ ...PROPERTY_OPTIONS, method: "Morgenstern-Price", intersliceFunction: fn, tolerance: 1e-6 });
+        const f = analyseSlope(slope);
+        if (f === null) continue;
+        const lff = slope.search[0].lffArray!;
+        const at = lff.find((e) => Math.abs(e[1] - f) < 1e-9);
+        expect(at, `seed 9191 case ${i} ${fn}`).toBeDefined();
+        // Converged: Fm and Ff agree to the solver tolerance there.
+        expect(at![3], `seed 9191 case ${i} ${fn} λ ${at![0]}`).toBeLessThan(1e-5);
+        checked++;
+      }
+    }
+    expect(checked).toBeGreaterThan(30);
+  }, 30_000);
 });

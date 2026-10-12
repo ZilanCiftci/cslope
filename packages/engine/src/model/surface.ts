@@ -151,6 +151,11 @@ export function fitPolylineToGround(
     if ((towardsLow && dx >= 0) || (!towardsLow && dx <= 0)) return null;
     const limit = towardsLow ? xMin : xMax;
     const tMax = (limit - p[0]) / dx;
+    // An end point beyond the model edge (below the ground continued
+    // there): the line comes in through the side of the model, not through
+    // the ground. Walking back from it put an end point on the wrong side
+    // of its neighbour and the polyline out of order.
+    if (!(tMax > 0)) return null;
     const f = (t: number) => p[1] + t * dy - ground(p[0] + t * dx);
     if (f(tMax) < 0) return null;
     let lo = 0;

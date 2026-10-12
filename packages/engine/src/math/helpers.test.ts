@@ -15,6 +15,8 @@ import {
   distPoints,
 } from "./helpers";
 import type { IntersliceFunctionType } from "../types/analysis";
+import { getYAtXStrict, getLineBetweenPoints } from "./interpolation";
+import { generateCircleCoordinates } from "./circle";
 
 const KINDS: IntersliceFunctionType[] = ["constant", "half-sine", "clipped-sine", "trapezoidal", "data-point-specified"];
 
@@ -157,5 +159,26 @@ describe("small helpers", () => {
   it("midCoord and distPoints", () => {
     expect(midCoord([0, 0], [4, -2])).toEqual([2, -1]);
     expect(distPoints([1, 1], [4, 5])).toBe(5);
+  });
+});
+
+describe("strict interpolation and circle points", () => {
+  it("getYAtXStrict: vertical segment, out of range, NaN", () => {
+    expect(getYAtXStrict([[0, 5, 5, 10], [0, 0, 4, 4]], 5)).toBe(0);
+    expect(getYAtXStrict([[5, 5], [0, 4]], 5)).toBe(2);
+    expect(() => getYAtXStrict([[0, 10], [0, 1]], 11)).toThrow(/outside the limits/);
+    expect(() => getYAtXStrict([[0, 10], [0, 1]], NaN)).toThrow(/Could not interpolate/);
+  });
+
+  it("getLineBetweenPoints without vertices between the ends", () => {
+    expect(getLineBetweenPoints([[0, 10], [0, 10]], 2, 3)).toEqual([[2, 3], [2, 3]]);
+    expect(() => getLineBetweenPoints([[0, 10], [0, 10]], -1, 3)).toThrow(/outside the limits/);
+  });
+
+  it("generateCircleCoordinates with a single point gives the lowest point", () => {
+    expect(generateCircleCoordinates(2, 5, 3, 1)).toEqual([[2], [2]]);
+    const [x, y] = generateCircleCoordinates(0, 0, 1, 5);
+    expect(x).toHaveLength(5);
+    for (let i = 0; i < 5; i++) expect(Math.hypot(x[i], y[i])).toBeCloseTo(1, 2);
   });
 });

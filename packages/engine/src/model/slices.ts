@@ -654,8 +654,12 @@ export function getSlices(
       // The face belongs to the sliding mass only where the mass is the
       // higher side (at the ends, the single slice there).
       if ((k === 0 && highLeft) || (k === nSlices && !highLeft)) continue;
-      const yLo = Math.min(yL, yR);
+      // Only the part of the face above the slip surface bounds the mass:
+      // a surface leaving through the face (above its foot) must not get
+      // the thrust on the face below it.
+      const yLo = Math.max(Math.min(yL, yR), baseY(slicesX[k]));
       const yHi = Math.max(yL, yR);
+      if (yHi - yLo <= tol) continue;
       // Water on the low side, read from that side.
       const wy = highLeft
         ? k < nSlices ? waterYL[k] : lineYFrom(w, x1, "right")
