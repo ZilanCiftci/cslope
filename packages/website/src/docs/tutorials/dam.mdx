@@ -1,0 +1,40 @@
+---
+title: An embankment dam
+description: A zoned dam analysed from right to left, and the Morgenstern–Price λ plot.
+section: Tutorials
+order: 4
+---
+
+This tutorial uses the Talbingo dam, a rockfill dam with a clay core and a published benchmark for slope stability programs. Open **Help › Benchmarks** and click **Talbingo Dam**.
+
+<Figure src="/media/tutorials/dam/01-model.png" alt="A dam cross-section with rockfill shells, transition and filter zones and a clay core" caption="Rockfill shells (yellow), transition and filter zones, and the clay core." />
+
+## 1. The zones
+
+Open **Model › Materials › Define**. The rockfill, transition and filter are frictional (φ = 45°, γ = 20.4 kN/m³); the core is a clay with c = 85 kPa and φ = 23° (γ = 18.1 kN/m³).
+
+<Figure src="/media/tutorials/dam/02-materials.png" alt="The Define Materials window with four dam materials" caption="Four materials, one per zone." />
+
+## 2. Direction
+
+This section fails towards the left. In **Model › Analysis › Options**, **Analysis Direction** is set to **Right to left**. For a slope where either face could fail, tick **Analyse both sliding directions** instead.
+
+## 3. Run
+
+Click **▶ Run**.
+
+<Figure src="/media/generated/result-dam.png" alt="The critical slip surface through the upstream shell of the dam" caption="The critical surface lies in the rockfill of the face." />
+
+The factor of safety is 1.95, equal to the published value.
+
+## 4. Check the equilibrium
+
+Morgenstern–Price finds the factor of safety where moment and force equilibrium give the same value. Open **Results › Plots › Results Plot** and choose **Lambda vs Fm/Ff**:
+
+<Figure src="/media/tutorials/dam/04-lambda.png" alt="Factor of safety from moment and force equilibrium against lambda" caption="Fm (moment) and Ff (force) against λ. They meet at the factor of safety." />
+
+In a frictional shell the two curves lie close together: the result hardly depends on the interslice forces. Where they diverge strongly, the choice of interslice function matters more.
+
+## Next
+
+[Reinforcing a slope with soil nails](/docs/tutorials/soil-nails).

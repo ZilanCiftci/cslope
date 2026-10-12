@@ -1,0 +1,30 @@
+---
+title: Sensitivity and probability
+description: How the factor of safety depends on one input, and the probability of failure from uncertain strength.
+section: Tutorials
+order: 8
+---
+
+Start a new project with **File › New** and click **▶ Run**. The factor of safety is 0.984.
+
+## 1. Sensitivity
+
+Choose **Results › Plots › Sensitivity**. The first input, the unit weight of M1, is chosen, from 16 to 24 kN/m³ in 9 values. Click **Run**: cSlope runs the full analysis for each value.
+
+<Figure src="/media/tutorials/probabilistic/01-sensitivity.png" alt="The sensitivity panel with a chart of factor of safety against unit weight" caption="Factor of safety against unit weight, with the line at 1.0." />
+
+The factor of safety reaches 1.0 at a unit weight of about 18.5 kN/m³. Choose another input under **Vary**, such as c or φ, to see which one matters most.
+
+## 2. Probability of failure
+
+Close the panel and choose **Results › Plots › Probabilistic**. Click **+ Add variable** to add the material properties to treat as uncertain, and set a standard deviation σ for each. Here c = 3 ± 0.75 kPa and γ = 20 ± 1 kN/m³, both normally distributed.
+
+Leave **Taylor series** selected and click **Run**.
+
+<Figure src="/media/tutorials/probabilistic/02-probabilistic.png" alt="The probabilistic panel with the results of a Taylor series analysis" caption="Taylor series: the standard deviation of the factor of safety, the reliability index and the probability of failure." />
+
+With a mean factor of safety below 1.0, the reliability index is negative and the probability of failure is above 50 %. The table at the bottom shows how much each variable changes the factor of safety: here the cohesion matters more than the unit weight.
+
+**Monte Carlo** gives the same quantities from many random samples, and a histogram of the factor of safety.
+
+More in [Sensitivity and probability](/docs/sensitivity).

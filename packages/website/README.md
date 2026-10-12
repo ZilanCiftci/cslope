@@ -44,22 +44,34 @@ any that are missing, and any internal link that leads nowhere.
 
 ## Screenshots
 
-The images in `public/media/generated/` come from the desktop app and are
-regenerated, not drawn by hand. The scenes are defined in
-`src/content/media-scenes.ts`. On a machine with a display:
+The images in `public/media/` come from the desktop app and are captured,
+not drawn by hand. The scenes are defined in `src/content/media-scenes.ts`:
+which benchmark to load, store actions to apply, buttons to click, and
+whether to capture the canvas, the whole window or a dialog window. The
+tutorial images are in `public/media/tutorials/<tutorial>/`.
+
+On a machine with a display:
 
 ```bash
 bun run media:capture
 ```
 
 In a container (for example a cloud development session), under a virtual
-display and as root:
+display large enough for the double-resolution window, and as root:
 
 ```bash
-CSLOPE_CAPTURE_NO_SANDBOX=1 xvfb-run -a -s "-screen 0 1440x900x24" bun run media:capture
+CSLOPE_CAPTURE_NO_SANDBOX=1 xvfb-run -a -s "-screen 0 3200x2000x24" bun run media:capture
+```
+
+`CSLOPE_CAPTURE_ONLY=tut-dam` captures only the scenes whose id starts with
+the prefix. After capturing, update the image sizes the pages use:
+
+```bash
+bun scripts/media-sizes.ts
 ```
 
 The images are deterministic, so a `git diff` shows when the UI changed.
+`bun run test` fails when a scene has no image or the sizes are stale.
 
 ## Verification data
 

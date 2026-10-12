@@ -89,11 +89,39 @@
       "destination": "/index.html"
     },
     {
+      "source": "/docs/tutorials/dam",
+      "destination": "/index.html"
+    },
+    {
       "source": "/docs/tutorials/first-analysis",
       "destination": "/index.html"
     },
     {
       "source": "/docs/tutorials",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/docs/tutorials/layered",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/docs/tutorials/partial-factors",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/docs/tutorials/probabilistic",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/docs/tutorials/reporting",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/docs/tutorials/soil-nails",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/docs/tutorials/water-table",
       "destination": "/index.html"
     },
     {

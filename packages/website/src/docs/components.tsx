@@ -2,7 +2,15 @@ import { Children, isValidElement, type ComponentProps, type ReactNode } from "r
 import { Link } from "react-router";
 import { AlertTriangle, Info, Lightbulb } from "lucide-react";
 
-import { MEDIA, type Media } from "@/content/media";
+import { MEDIA, media as mediaAt, type Media } from "@/content/media";
+
+const knownMedia = (src: string): Media | undefined => {
+  try {
+    return mediaAt(src, "");
+  } catch {
+    return undefined;
+  }
+};
 import { cn } from "@/lib/utils";
 
 /** A screenshot with a caption: `<Figure media="criticalSurface" caption="…" />` or with src, width and height. */
@@ -21,7 +29,16 @@ export function Figure({
   height?: number;
   caption?: ReactNode;
 }) {
-  const m: Media | undefined = media ? MEDIA[media] : src ? { src, alt: alt ?? "", width: width ?? 0, height: height ?? 0 } : undefined;
+  // A src under /media gets its size from media-sizes.json; an image that
+  // is not there still shows, without a reserved size (links.test.ts
+  // reports it).
+  const m: Media | undefined = media
+    ? MEDIA[media]
+    : src
+      ? width && height
+        ? { src, alt: alt ?? "", width, height }
+        : (knownMedia(src) ?? { src, alt: alt ?? "", width: 0, height: 0 })
+      : undefined;
   if (!m) throw new Error("Figure needs media or src");
   return (
     <figure className="not-prose my-8 overflow-hidden rounded-lg border bg-card">

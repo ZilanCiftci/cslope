@@ -13,5 +13,8 @@ export const ANALYSIS_TIMEOUT_MS = 60_000;
 /** Time (ms) to wait after state change for canvas to render. */
 export const RENDER_SETTLE_MS = 500;
 
-/** Output directory relative to workspace root. */
-export const OUTPUT_DIR = "packages/website/public/media/generated";
+/** Media directory relative to the workspace root; scenes write to a sub-directory. */
+export const MEDIA_DIR = "packages/website/public/media";
+
+/** Default output directory relative to workspace root. */
+export const OUTPUT_DIR = `${MEDIA_DIR}/generated`;

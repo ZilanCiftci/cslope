@@ -72,3 +72,17 @@ describe("vercel.json", () => {
     expect([...sources].sort()).toEqual([...new Set([...pages, ...docPaths])].sort());
   });
 });
+
+describe("images in the docs", () => {
+  const sizes = JSON.parse(readFileSync(join(src, "content/generated/media-sizes.json"), "utf8")) as Record<string, unknown>;
+
+  it("exist and have a size (run bun scripts/media-sizes.ts after capturing)", () => {
+    const missing: string[] = [];
+    for (const f of all.filter((f) => f.endsWith(".mdx"))) {
+      for (const m of readFileSync(f, "utf8").matchAll(/<Figure[^>]*\bsrc="([^"]+)"/g)) {
+        if (!(m[1] in sizes)) missing.push(`${rel(src, f)}: ${m[1]}`);
+      }
+    }
+    expect(missing).toEqual([]);
+  });
+});

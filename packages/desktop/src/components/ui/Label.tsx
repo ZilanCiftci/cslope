@@ -11,7 +11,7 @@ export function Label({
   return (
     <span
       title={title}
-      className="text-[10px] font-medium uppercase tracking-wider"
+      className="text-[11px] font-medium"
       style={{ color: "var(--color-vsc-text-muted)" }}
     >
       {children}

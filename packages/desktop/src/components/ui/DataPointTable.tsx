@@ -82,7 +82,7 @@ export function DataPointTable({
               {headers.map((h, i) => (
                 <th
                   key={i}
-                  className="py-1 px-1.5 font-semibold text-[10px] uppercase tracking-wide text-left"
+                  className="py-1 px-1.5 font-semibold text-[11px] text-left"
                   style={{
                     color: "var(--color-vsc-text-muted)",
                     borderBottom: "1px solid var(--color-vsc-border)",

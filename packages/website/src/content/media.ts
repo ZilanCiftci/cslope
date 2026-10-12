@@ -1,9 +1,10 @@
 /**
  * The captured screenshots used on the site (see media-scenes.ts for how
- * they are made), with each image's own size in pixels so that the page
- * keeps its layout while they load. media.test.ts checks the sizes against
- * the files.
+ * they are made). Sizes come from generated/media-sizes.json, so that the
+ * page keeps its layout while the images load.
  */
+import sizes from "./generated/media-sizes.json";
+
 export interface Media {
   src: string;
   alt: string;
@@ -11,34 +12,26 @@ export interface Media {
   height: number;
 }
 
-/** Edit views are captured with the whole canvas, result views with the paper only. */
-const EDIT = { width: 1142, height: 739 };
-const RESULT = { width: 862, height: 739 };
+const SIZES = sizes as unknown as Record<string, [number, number]>;
 
-const generated = (file: string, size: { width: number; height: number }, alt: string): Media => ({
-  src: `/media/generated/${file}`,
-  alt,
-  ...size,
-});
+/** An image under public/media with its size, e.g. media("/media/tutorials/dam/03-result.png", "…"). */
+export function media(src: string, alt: string): Media {
+  const size = SIZES[src];
+  if (!size) throw new Error(`${src} is not in media-sizes.json (run bun scripts/media-sizes.ts)`);
+  return { src, alt, width: size[0], height: size[1] };
+}
+
+const generated = (file: string, alt: string): Media => media(`/media/generated/${file}`, alt);
 
 export const MEDIA = {
-  criticalSurface: generated(
-    "result-critical-surface.png",
-    RESULT,
-    "Result view: the critical slip surface of a homogeneous slope with its slices, factor of safety and material table",
+  criticalSurface: generated("result-critical-surface.png", "Result view: the critical slip surface of a homogeneous slope with its slices, factor of safety and material table",
   ),
-  allSurfaces: generated(
-    "result-all-surfaces.png",
-    RESULT,
-    "Result view: every analysed slip surface coloured by its factor of safety",
+  allSurfaces: generated("result-all-surfaces.png", "Result view: every analysed slip surface coloured by its factor of safety",
   ),
-  annotations: generated(
-    "result-annotations.png",
-    RESULT,
-    "Result view of a layered slope with a material table and text annotations",
+  annotations: generated("result-annotations.png", "Result view of a layered slope with a material table and text annotations",
   ),
-  damResult: generated("result-dam.png", RESULT, "Critical slip surface through the zones of an embankment dam"),
-  materials: generated("edit-materials.png", EDIT, "Edit view: a non-homogeneous slope with coloured material regions"),
-  dam: generated("edit-dam.png", EDIT, "Edit view: an embankment dam cross-section with core, filter and rockfill zones"),
-  geometry: generated("edit-geometry.png", EDIT, "Edit view: slope geometry with its boundary points"),
+  damResult: generated("result-dam.png", "Critical slip surface through the zones of an embankment dam"),
+  materials: generated("edit-materials.png", "Edit view: a non-homogeneous slope with coloured material regions"),
+  dam: generated("edit-dam.png", "Edit view: an embankment dam cross-section with core, filter and rockfill zones"),
+  geometry: generated("edit-geometry.png", "Edit view: slope geometry with its boundary points"),
 } satisfies Record<string, Media>;

@@ -5,56 +5,74 @@ section: Tutorials
 order: 1
 ---
 
-This tutorial uses the example model that every new project starts with: a homogeneous slope, 10 m high, from a published benchmark (ACADS problem 1(a), Giam & Donald 1989). You will look at its geometry and material, run the analysis, read the result and export it.
+This tutorial uses the example model that every new project starts with: a homogeneous slope, 10 m high, from a published benchmark (ACADS problem 1(a), Giam & Donald 1989). You look at its geometry and material, run the analysis, read the result and export it.
 
 ## 1. Start a new project
 
 Start cSlope, or choose **File › New**. The project contains one model, *T-ACADS Simple*, shown on the canvas in edit mode.
 
-The slope has a crest at y = 0, a toe at y = −10 and a 1V:2H face between x = 20 and x = 40. The soil is one Mohr-Coulomb material with γ = 20 kN/m³, c = 3 kPa and φ = 19.6°.
+<Figure src="/media/tutorials/first-analysis/01-window.png" alt="The cSlope window in edit mode with the Model tab open and the example slope on the canvas" caption="The cSlope window: the Model tab of the ribbon, the Explorer with the model, the canvas and the status bar." />
+
+The slope has its crest at y = 0 and its toe at y = −10, with a 1V:2H face between x = 20 and x = 40. The soil is one Mohr-Coulomb material.
 
 ## 2. Look at the geometry
 
-Open **Model › Boundaries › Exterior**. The window lists the points of the exterior boundary. Click a row: the point is highlighted on the canvas. Drag a point on the canvas and watch its coordinates change in the table, then undo with <Kbd>Ctrl</Kbd>+<Kbd>Z</Kbd>.
+Open **Model › Boundaries › Exterior**. The window lists the points of the exterior boundary. Click a row and the point is highlighted on the canvas. Drag a point on the canvas and watch its coordinates change in the table, then undo with <Kbd>Ctrl</Kbd>+<Kbd>Z</Kbd>.
+
+<Figure src="/media/tutorials/first-analysis/02-exterior.png" alt="The Exterior Boundary window with six points" caption="The exterior boundary: six points around the section." />
 
 The top of the boundary is the ground surface; slip surfaces start and end on it.
 
 ## 3. Check the material
 
-Open **Model › Materials › Define**. The model has one material, *M1*. Select it to see its model and properties. Change the cohesion to 5 kPa if you like: everything you change applies at once. (Set it back to 3 kPa to compare your result with the published value below.)
+Open **Model › Materials › Define**. The model has one material, *M1*: Mohr-Coulomb with γ = 20 kN/m³, φ = 19.6° and c = 3 kPa.
+
+<Figure src="/media/tutorials/first-analysis/03-materials.png" alt="The Define Materials window with material M1" caption="Define Materials: the material list at the top, the selected material's properties below." />
+
+Any change you make applies at once. Leave the values as they are to compare your result with the published one below.
 
 ## 4. Set where surfaces may start and end
 
-Open **Model › Analysis › Search limits**. **Restrict entry/exit ranges** is ticked: slip surfaces enter the ground in the entry range on the crest and leave it in the exit range at the toe. The ranges appear on the canvas as markers, which you can drag.
+Open **Model › Analysis › Search limits**. *Restrict entry/exit ranges* is ticked: slip surfaces enter the ground between x = 17 and 22 on the crest and leave it between x = 37 and 43 at the toe.
+
+<Figure src="/media/tutorials/first-analysis/04-search-limits.png" alt="The Search limits window with entry and exit ranges" caption="The entry and exit ranges." />
+
+With the window open, the ranges show as markers on the canvas, and you can drag them.
+
+<Figure src="/media/tutorials/first-analysis/05-search-limits-canvas.png" alt="The slope with the entry range on the crest and the exit range at the toe marked" caption="The entry range (green) on the crest and the exit range (red) at the toe." />
 
 ## 5. Choose the method
 
-Open **Model › Analysis › Options**. The method is **Morgenstern-Price** with a **half-sine** interslice function. Leave it for now.
+Open **Model › Analysis › Options**. The method is **Morgenstern-Price** with a **half-sine** interslice function and 30 slices.
+
+<Figure src="/media/tutorials/first-analysis/06-options.png" alt="The Options window" caption="The analysis options." />
 
 ## 6. Run the analysis
 
-Click **▶ Run** on the floating toolbar. After a moment the canvas switches to result mode: the critical slip circle, its slices and its factor of safety.
+Click **▶ Run** on the floating toolbar at the bottom of the canvas. After a moment the canvas switches to result mode.
+
+<Figure src="/media/tutorials/first-analysis/07-result.png" alt="Result mode with the critical slip circle, the result summary on the right and the Results tab open" caption="The result: the critical circle with its slices, and the summary on the right." />
 
 ## 7. Read the result
 
-The result sidebar on the right shows the **Min FOS**, the method and how many surfaces were analysed. The published factor of safety for this problem is 0.98 to 1.00 depending on the method; cSlope's Morgenstern–Price value is 0.984.
+The summary on the right shows a **Min FOS** of 0.984, found among some 1600 analysed surfaces. The referee answer published for this problem is 1.00; the factor of safety from Morgenstern–Price and similar methods is 0.98 to 0.99.
 
-Try **Results › Display › All surfaces** to see every analysed surface coloured by its factor of safety, then switch back to **Critical only**.
+Choose **Results › Display**, then **All surfaces** in the surfaces list, to see every analysed surface coloured by its factor of safety:
+
+<Figure src="/media/generated/result-all-surfaces.png" alt="All analysed slip surfaces coloured from red to blue by factor of safety" caption="All surfaces, from red (lowest factor of safety) to blue." />
+
+Switch back to **Critical only**.
 
 ## 8. Compare methods
 
-Click **Edit**, open **Model › Analysis › Options**, choose **Bishop** and run again. Bishop's value is very close to Morgenstern–Price's for a circular surface in a homogeneous slope. **Janbu** gives a lower value; tick *Apply correction factor f0* to see Janbu's correction.
+Click **Edit**, open **Model › Analysis › Options**, choose **Bishop** and run again. For a circle in a homogeneous slope, Bishop's value is very close to Morgenstern–Price's (0.985). **Janbu** gives a lower value; tick *Apply correction factor f0* to apply Janbu's correction.
 
-## 9. Export
+## 9. Export and save
 
 Choose **Results › Export › PDF** to save the result sheet as a PDF. The title on the sheet comes from the model's properties: right-click the model in the Explorer and choose **Properties** to change it.
 
-## 10. Save
-
 Save the project with **File › Save**. The file contains the model and its result.
 
-## Next steps
+## Next
 
-- Add a layer: [Geometry](/docs/geometry#interior-boundaries) and [Materials](/docs/materials).
-- Add a water table: [Water](/docs/water).
-- Make the sheet your own: [Reporting](/docs/reporting).
+[A slope with a water table](/docs/tutorials/water-table).

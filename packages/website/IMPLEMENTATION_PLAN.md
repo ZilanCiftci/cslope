@@ -457,11 +457,16 @@ Varje etapp ska gå att pusha och publicera för sig.
 
 ### Etapp 4: Tutorials och bilder (löpande, ~1 dag per 2 tutorials)
 
-- [ ] Utöka scen-typerna och `store-capture.ts` (§6.3). Rätta
-      vattenyte-scenen och etikettkrocken på dammen.
-- [ ] Tutorial 1 med bilder; sätt mallen.
-- [ ] Tutorials 2–10.
-- [ ] CI-steg som verifierar att scenerna går att köra.
+- [x] Utöka scen-typerna och `store-capture.ts` (§6.3): store-actions,
+      klick, helfönster och dialogfönster, dubbel upplösning. Vattenyte-scenen
+      rättad.
+- [x] Tutorial 1 med bilder; sätt mallen.
+- [x] Tutorials 2–8: vattenyta, lager, damm, jordspik, partialkoefficienter,
+      rapportering, känslighet och sannolikhet. DXF-import och icke-cirkulära
+      ytor täcks av referenssidorna.
+- [x] Test att varje scen har en bild och att bildstorlekarna stämmer (ett
+      fullt CI-steg med Electron under xvfb vore långsamt; bildtagningen körs
+      lokalt eller i molnsessionen).
 
 ### Etapp 5: Finputs (1 dag)
 

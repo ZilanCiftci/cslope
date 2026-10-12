@@ -49,7 +49,7 @@ export function SpreadsheetTable<T>({
               return (
                 <th
                   key={index}
-                  className={`py-1.5 px-2 font-semibold text-[11px] uppercase tracking-wide ${column.widthClassName ?? ""} ${alignToClass(column.align)}`}
+                  className={`py-1.5 px-2 font-semibold text-[11px] ${column.widthClassName ?? ""} ${alignToClass(column.align)}`}
                   style={{
                     color: "var(--color-vsc-text-muted)",
                     borderBottom: "1px solid var(--color-vsc-border)",

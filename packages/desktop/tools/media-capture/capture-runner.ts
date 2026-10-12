@@ -7,6 +7,9 @@
  * deterministic PNG screenshots.
  *
  * Usage:  bun run packages/desktop/tools/media-capture/capture-runner.ts
+ *
+ * CSLOPE_CAPTURE_ONLY=<prefix> captures only the scenes whose id starts with
+ * the prefix (e.g. "tut-first").
  */
 
 import { chromium, type Browser, type Page } from "playwright";
@@ -15,8 +18,8 @@ import { resolve, join } from "node:path";
 import { execSync, spawn, type ChildProcess } from "node:child_process";
 import { createRequire } from "node:module";
 import { scenes } from "../../../website/src/content/media-scenes";
-import { captureScene } from "./store-capture";
-import { VIEWPORT_WIDTH, VIEWPORT_HEIGHT, OUTPUT_DIR } from "./capture-config";
+import { captureScene, setPixelRatio } from "./store-capture";
+import { VIEWPORT_WIDTH, VIEWPORT_HEIGHT, OUTPUT_DIR, MEDIA_DIR, CAPTURE_DPR } from "./capture-config";
 
 const ROOT = resolve(import.meta.dirname, "../../../..");
 const DESKTOP_DIR = join(ROOT, "packages/desktop");
@@ -49,12 +52,15 @@ function withTimeout<T>(
   });
 }
 
+const ONLY = process.env.CSLOPE_CAPTURE_ONLY;
+const selected = ONLY ? scenes.filter((s) => s.id.startsWith(ONLY)) : scenes;
+
 async function main() {
   const outDir = join(ROOT, OUTPUT_DIR);
   await mkdir(outDir, { recursive: true });
 
-  console.log(`\n  Media Capture — ${scenes.length} scenes\n`);
-  console.log(`  Output → ${outDir}\n`);
+  console.log(`\n  Media Capture — ${selected.length} scenes\n`);
+  console.log(`  Output → ${join(ROOT, MEDIA_DIR)}/<scene dir>\n`);
 
   // Build the app with the capture bridge baked into the renderer bundle.
   // VITE_CAPTURE_MODE is an import.meta.env var — Vite replaces it at compile
@@ -76,6 +82,9 @@ async function main() {
     [
       DESKTOP_DIR,
       `--remote-debugging-port=${REMOTE_DEBUGGING_PORT}`,
+      // Sharp images: the window is drawn at CAPTURE_DPR device pixels per
+      // CSS pixel (the display must be large enough, see the README).
+      `--force-device-scale-factor=${CAPTURE_DPR}`,
       // Chromium refuses to run as root with the sandbox on (e.g. in a
       // container under xvfb); opt out only where that is needed.
       ...(process.env.CSLOPE_CAPTURE_NO_SANDBOX ? ["--no-sandbox"] : []),
@@ -127,10 +136,8 @@ async function main() {
       document.documentElement.dataset.theme = "light";
     });
 
-    await page.setViewportSize({
-      width: VIEWPORT_WIDTH,
-      height: VIEWPORT_HEIGHT,
-    });
+    // A fixed CSS size, rendered at CAPTURE_DPR for sharp images.
+    await setPixelRatio(page, VIEWPORT_WIDTH, VIEWPORT_HEIGHT);
 
     // Wait for the capture bridge to be ready
     console.log("  Waiting for capture bridge...\n");
@@ -150,23 +157,28 @@ async function main() {
     let passed = 0;
     let failed = 0;
 
-    for (const scene of scenes) {
+    for (const scene of selected) {
       const label = `  [${scene.id}] ${scene.title}`;
       try {
         const png = await captureScene(page, scene);
-        const outPath = join(outDir, scene.output.filename);
-        await writeFile(outPath, png);
-        console.log(`  ✓ ${label} → ${scene.output.filename}`);
+        const dir = join(ROOT, MEDIA_DIR, scene.output.dir ?? "generated");
+        await mkdir(dir, { recursive: true });
+        await writeFile(join(dir, scene.output.filename), png);
+        console.log(`  ✓ ${label} → ${scene.output.dir ?? "generated"}/${scene.output.filename}`);
         passed++;
       } catch (err) {
         const msg = err instanceof Error ? err.message : String(err);
         console.error(`  ✗ ${label} — ${msg}`);
         failed++;
+      } finally {
+        // Close the dialog windows the scene opened.
+        for (const p of page.context().pages()) if (p !== page) await p.close().catch(() => {});
+        await page.keyboard.press("Escape").catch(() => {});
       }
     }
 
     console.log(
-      `\n  Done: ${passed} captured, ${failed} failed, ${scenes.length} total.\n`,
+      `\n  Done: ${passed} captured, ${failed} failed, ${selected.length} total.\n`,
     );
 
     if (failed > 0) {

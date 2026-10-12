@@ -1,0 +1,48 @@
+---
+title: A layered slope
+description: Divide a section into layers with interior boundaries, define the materials and assign them to the regions.
+section: Tutorials
+order: 3
+---
+
+This tutorial uses ACADS problem 1(c) (Giam & Donald 1989), a slope through three soils. Open **Help › Benchmarks** and click **T-ACADS Non-Homogeneous** in the Explorer.
+
+<Figure src="/media/tutorials/layered/01-model.png" alt="A slope with three soil layers in different colours" caption="Three soils, each with its own colour." />
+
+## 1. Interior boundaries
+
+Open **Model › Boundaries › Interior**. Each interior boundary is a line through the section. The two boundaries here separate the three layers.
+
+<Figure src="/media/tutorials/layered/02-interior.png" alt="The Interior Boundaries window with a list of boundaries and the points of the selected one" caption="Select a boundary in the list to edit its points." />
+
+To draw a layer boundary of your own, click **Add**: a horizontal line across the model. Then move its points to the layer boundary, by typing coordinates or dragging on the canvas. Let it end on the exterior boundary on both sides; points snap to the boundary when they are close.
+
+## 2. Materials
+
+Open **Model › Materials › Define**. The three soils are Mohr-Coulomb materials:
+
+| Material | γ (kN/m³) | c (kPa) | φ (°) |
+| --- | --- | --- | --- |
+| Soil #1 | 19.5 | 0 | 38 |
+| Soil #2 | 19.5 | 5.3 | 23 |
+| Soil #3 | 19.5 | 7.2 | 20 |
+
+<Figure src="/media/tutorials/layered/03-materials.png" alt="The Define Materials window with three materials" caption="Click Add for a new material, and choose its model and properties below." />
+
+## 3. Assign the materials
+
+Open **Model › Materials › Assign**. cSlope has found the regions between the boundaries; each has a material.
+
+<Figure src="/media/tutorials/layered/04-assign.png" alt="The Assign Materials window listing regions with a material for each" caption="One row per region. You can also click a region on the canvas to choose its material." />
+
+## 4. Run
+
+Click **▶ Run**.
+
+<Figure src="/media/tutorials/layered/05-result.png" alt="The critical circle passing through all three layers" caption="The critical circle passes through all three soils." />
+
+The factor of safety is 1.372 with Morgenstern–Price, against a published 1.39. The material table on the sheet lists the three soils.
+
+## Next
+
+[An embankment dam](/docs/tutorials/dam).
