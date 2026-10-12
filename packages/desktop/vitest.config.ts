@@ -7,6 +7,9 @@ export default defineConfig({
   plugins: [tailwindcss(), react()],
   test: {
     globals: true,
+    // Rendering the whole app and running analyses is slow under coverage
+    // instrumentation, above all on the Windows CI runner.
+    testTimeout: 30_000,
     projects: [
       {
         extends: true,

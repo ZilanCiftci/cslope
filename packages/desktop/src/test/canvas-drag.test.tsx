@@ -12,11 +12,16 @@ function toScreen([x, y]: [number, number]): [number, number] {
   return [W / 2 + (x + editViewOffset[0]) * SCALE, H / 2 - (y + editViewOffset[1]) * SCALE];
 }
 
-const frames = (n: number) =>
-  act(() => new Promise<void>((r) => setTimeout(r, 20 * n)));
+// Fake timers: a drag runs a requestAnimationFrame loop, and waiting for it
+// on real timers inside act() hung under load.
+const frames = async (n: number) =>
+  act(() => {
+    vi.advanceTimersByTime(20 * n);
+  });
 
 describe("dragging points on the edit canvas", () => {
   beforeEach(async () => {
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout", "setInterval", "clearInterval", "requestAnimationFrame", "cancelAnimationFrame"] });
     vi.spyOn(HTMLElement.prototype, "getBoundingClientRect").mockReturnValue({
       left: 0,
       top: 0,
@@ -67,6 +72,7 @@ describe("dragging points on the edit canvas", () => {
   afterEach(() => {
     cleanup();
     vi.restoreAllMocks();
+    vi.useRealTimers();
   });
 
   it("does not move or snap a point that is only clicked", async () => {
