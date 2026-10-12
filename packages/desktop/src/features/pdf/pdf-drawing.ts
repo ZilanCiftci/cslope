@@ -801,7 +801,11 @@ export function drawCriticalSurface(
       }
     }
     surfacePts.push(cs.exitPoint);
-    surfacePts.sort((a, b) => a[0] - b[0]);
+    // Top edge from entry to exit, then the surface back from exit to
+    // entry (as on the canvas): sorting by ascending x made a bow-tie
+    // when the entry is right of the exit (right-to-left models).
+    const forward = entryX <= exitX;
+    surfacePts.sort((a, b) => (forward ? a[0] - b[0] : b[0] - a[0]));
 
     const allPts: [number, number][] = [
       ...surfacePts.map(([wx, wy]) => tf.worldToPdf(wx, wy)),

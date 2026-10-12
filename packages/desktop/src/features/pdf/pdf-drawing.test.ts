@@ -533,6 +533,38 @@ describe("drawCriticalSurface", () => {
     expect(rec.of("text")[0].args[1]).toBe(cx + 3);
   });
 
+  it("fills the same sliding mass for a mirrored (right-to-left) model", () => {
+    /** Shoelace area (mm²) of the failure-mass fill path. */
+    const fillArea = (coords: [number, number][], cs: SlipSurfaceResult) => {
+      const rec = recorder();
+      drawCriticalSurface(rec.pdf, tf, result({ criticalSurface: cs }), rvs(), coords);
+      const start = rec.calls.findIndex((c) => c.name === "setGState");
+      const end = rec.calls.findIndex((c, i) => i > start && c.name === "fill");
+      const pts = rec.calls
+        .slice(start, end)
+        .filter((c) => c.name === "moveTo" || c.name === "lineTo")
+        .map((c) => c.args as [number, number]);
+      let a = 0;
+      for (let i = 0; i < pts.length; i++) {
+        const [x1, y1] = pts[i];
+        const [x2, y2] = pts[(i + 1) % pts.length];
+        a += x1 * y2 - x2 * y1;
+      }
+      return Math.abs(a) / 2;
+    };
+    const mirror = ([x, y]: [number, number]): [number, number] => [30 - x, y];
+    const ltr = fillArea(COORDS, surface());
+    const cs = surface();
+    const rtl = fillArea(COORDS.map(mirror).reverse(), {
+      ...cs,
+      cx: 30 - cs.cx,
+      entryPoint: mirror(cs.entryPoint),
+      exitPoint: mirror(cs.exitPoint),
+    });
+    expect(ltr).toBeGreaterThan(100);
+    expect(rtl).toBeCloseTo(ltr, 3);
+  });
+
   it("omits the centre marker of a non-circular surface and labels above the mass", () => {
     const rec = recorder();
     const poly = surface({ points: [[ENTRY_X, 10], [12, 6], [22, 5]] });
