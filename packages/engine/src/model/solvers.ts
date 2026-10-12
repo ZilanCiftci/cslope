@@ -716,6 +716,8 @@ export function analyseMorgensternPrice(
 
   // Step 1: Initial Bishop solution (lambda = 0)
   let Nm: Float64Array = new Float64Array(n);
+  // The first pushing/resisting values are replaced before they are read.
+  // eslint-disable-next-line no-useless-assignment
   let [FSm, pushing0, resisting0, NmOut] = solveFOSGenericMoment(
     props,
     0,
@@ -888,7 +890,7 @@ export function analyseMorgensternPrice(
       const sorted = [...lffArray].sort((a, b) => a[3] - b[3]);
       const [bestLambda, bestFS] = sorted[0];
       let convergedBestM: boolean;
-      [FSm, pushing0, resisting0, NmOut, convergedBestM] =
+      [FSm, pushing0, resisting0, , convergedBestM] =
         solveFOSGenericMoment(
           props,
           bestLambda,
@@ -898,11 +900,10 @@ export function analyseMorgensternPrice(
           evalTol,
           maxIters,
         );
-      Nm = new Float64Array(NmOut);
       if (FSm == null) return [null, lffArray, pushing0, resisting0, false];
 
       let convergedBestF: boolean;
-      [FSf, pushingF, resistingF, NfOut, convergedBestF] =
+      [FSf, pushingF, resistingF, , convergedBestF] =
         solveFOSGenericForceCircular(
           props,
           bestLambda,
@@ -912,7 +913,6 @@ export function analyseMorgensternPrice(
           evalTol,
           maxIters,
         );
-      Nf = new Float64Array(NfOut);
       if (FSf == null) return [FSm, lffArray, pushingF, resistingF, false];
 
       const equilibriumGap = Math.abs(FSm - FSf);
@@ -1111,7 +1111,7 @@ function evaluatePlanes(slope: Slope, allPlanes: SearchPlane[]): void {
     }
 
     let fos: number | null;
-    let converged = true;
+    let converged: boolean;
 
     switch (slope.method) {
       case "Bishop": {

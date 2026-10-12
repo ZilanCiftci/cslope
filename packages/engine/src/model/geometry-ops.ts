@@ -376,6 +376,7 @@ export function splitPolygonByPolylineDetailed(
       const p = arr[i] as any;
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       if ((polygon as any).contains(p.getInteriorPoint())) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const toXY = (ring: any): [number, number][] =>
           ring
             .getCoordinates()
