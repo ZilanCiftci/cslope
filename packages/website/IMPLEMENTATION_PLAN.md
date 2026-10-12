@@ -414,27 +414,28 @@ Varje etapp ska gå att pusha och publicera för sig.
 
 ### Etapp 0: Grund (0,5–1 dag)
 
-- [ ] Rätta fakta på nuvarande sida (metoder, icke-cirkulärt, ta bort
+- [x] Rätta fakta på nuvarande sida (metoder, icke-cirkulärt, ta bort
       "preview"-språket) så att inget är fel medan resten byggs.
-- [ ] `vercel.json`; du kopplar repot i Vercels panel.
-- [ ] Bygg i CI.
-- [ ] Testet mot förbjudna namn.
-- [ ] Meta description, favicon, `robots.txt`, 404-sida.
-- [ ] Ny README för paketet. Ta bort `react.svg`.
+- [x] `vercel.json`; du kopplar repot i Vercels panel.
+- [x] Bygg i CI.
+- [x] Testet mot förbjudna namn.
+- [x] Meta description, favicon, `robots.txt`, 404-sida.
+- [x] Ny README för paketet. Ta bort `react.svg`.
 
 ### Etapp 1: Identitet och startsida (2–3 dagar)
 
-- [ ] Palett, typsnitt, tokens i `index.css`.
-- [ ] Omritad logotyp, OG-bild.
-- [ ] `SiteHeader`, `SiteFooter` med ny meny.
+- [x] Palett, typsnitt, tokens i `index.css`.
+- [x] Omritad logotyp, OG-bild.
+- [x] `SiteHeader`, `SiteFooter` med ny meny.
 - [x] Media-capture för de åtta befintliga scenerna (incheckade i
       `public/media/generated/`).
-- [ ] Startsida enligt §5.1.
-- [ ] Ta bort framer-motion.
+- [x] Startsida enligt §5.1.
+- [x] Ta bort framer-motion.
+- [x] `generate-data.ts` med anonymisering och `verification.json`
+      (flyttad hit från etapp 2: startsidans siffror behöver den).
 
 ### Etapp 2: Features, Verification, Download, About (2 dagar)
 
-- [ ] `generate-data.ts` med anonymisering, och `verification.json`.
 - [ ] `--public`-läge i verifieringsrapporten.
 - [ ] `/verification` med filtrerbar tabell och PDF.
 - [ ] `/features` med bilder från scenerna.

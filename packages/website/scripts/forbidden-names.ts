@@ -24,6 +24,12 @@ export const FORBIDDEN_NAMES: RegExp[] = [
   /\butexas\d*\b/gi,
   /\bstabl\b/gi,
   /\bgeo5\b/gi,
+  /\bxstabl\b/gi,
+  /\brs2\b/gi,
+  /\brocplane\b/gi,
+  // Capitalised, as a name: "Slide's circle", "Slide Spencer value".
+  /\bSlide's\b/g,
+  /\bSlide\s+(?:Spencer|Bishop|Janbu|value|verification|example)\b/g,
 ];
 
 export interface NameHit {

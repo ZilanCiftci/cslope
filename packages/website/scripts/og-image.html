@@ -1,0 +1,45 @@
+<!doctype html>
+<!-- Template for public/og-image.png; render with scripts/render-og-image.ts. -->
+<html>
+  <head>
+    <meta charset="utf-8" />
+    {{FONTS}}
+    <style>
+      html, body { margin: 0; }
+      body {
+        width: 1200px; height: 630px; box-sizing: border-box; overflow: hidden;
+        font-family: "Inter Variable", "Inter", system-ui, sans-serif;
+        background: #0b1220; color: #eef2f7;
+        display: grid; grid-template-columns: 1fr 620px; align-items: center; gap: 48px;
+        padding: 64px;
+        background-image:
+          linear-gradient(to right, rgba(148,163,184,.08) 1px, transparent 1px),
+          linear-gradient(to bottom, rgba(148,163,184,.08) 1px, transparent 1px);
+        background-size: 32px 32px;
+      }
+      .mark { display: flex; align-items: center; gap: 14px; font-size: 34px; font-weight: 600; letter-spacing: -0.02em; }
+      h1 { font-size: 54px; line-height: 1.08; letter-spacing: -0.03em; margin: 36px 0 20px; font-weight: 600; }
+      p { font-size: 22px; line-height: 1.45; color: #a9b6c8; margin: 0; }
+      .fig { margin-top: 32px; font-family: "IBM Plex Mono", monospace; font-size: 20px; color: #7ab3eb; }
+      img { width: 620px; border-radius: 10px; box-shadow: 0 20px 60px rgba(0,0,0,.5); border: 1px solid #1f2a3d; }
+    </style>
+  </head>
+  <body>
+    <div>
+      <div class="mark">
+        <svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="#eef2f7" stroke-linecap="round" stroke-linejoin="round">
+          <defs><clipPath id="c"><circle cx="12" cy="12" r="11" /></clipPath></defs>
+          <path d="M0 8h8.5l8 8H24v8H0Z" fill="#b39573" fill-opacity="0.4" stroke="none" clip-path="url(#c)" />
+          <path d="M5 8A9 9 0 0 0 17 16" stroke="#f05252" stroke-width="1.6" />
+          <path d="M2.5 8h6l8 8h5" stroke-width="2.1" />
+          <circle cx="12" cy="12" r="11" stroke-width="1.5" />
+        </svg>
+        cSlope
+      </div>
+      <h1>Slope stability analysis you can verify</h1>
+      <p>Open source limit equilibrium software for geotechnical engineers.</p>
+      <div class="fig">{{FIGURES}}</div>
+    </div>
+    <img src="{{IMAGE}}" />
+  </body>
+</html>

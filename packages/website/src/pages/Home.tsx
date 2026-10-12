@@ -1,175 +1,307 @@
-import { motion } from "framer-motion";
-import { Download, BarChart3, Layers, ShieldCheck, Zap } from "lucide-react";
+import { Link } from "react-router";
+import {
+  Anchor,
+  ArrowRight,
+  BarChart3,
+  Code2,
+  Download,
+  Droplets,
+  FileText,
+  Layers,
+  Search,
+  ShieldCheck,
+  Spline,
+} from "lucide-react";
+import type { ReactNode } from "react";
+
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Section, SectionHeading } from "@/components/Section";
+import { Screenshot } from "@/components/Screenshot";
+import { MEDIA } from "@/content/media";
+import { VERIFICATION, homeExamples } from "@/content/verification";
+import { SITE } from "@/site";
 
-const stats = [
-  { label: "Analysis methods", value: "3" },
-  { label: "Verification problems", value: "180" },
-  { label: "License", value: "MIT" },
+const formatPercent = (x: number) => `${x >= 0 ? "+" : "−"}${Math.abs(x * 100).toFixed(1)} %`;
+
+function Hero() {
+  const s = VERIFICATION.summary;
+  return (
+    <section className="relative overflow-hidden border-b">
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute inset-0 bg-[linear-gradient(to_right,hsl(var(--border)/0.5)_1px,transparent_1px),linear-gradient(to_bottom,hsl(var(--border)/0.5)_1px,transparent_1px)] bg-[size:32px_32px] [mask-image:linear-gradient(to_bottom,black,transparent_85%)]"
+      />
+      <div className="relative mx-auto grid max-w-6xl items-center gap-12 px-4 py-16 sm:px-6 sm:py-24 lg:grid-cols-[1fr_1.15fr]">
+        <div className="animate-fade-up">
+          <p className="inline-flex items-center gap-2 rounded-full border bg-background px-3 py-1 text-xs font-medium text-muted-foreground">
+            <span className="h-1.5 w-1.5 rounded-full bg-pass" aria-hidden="true" />
+            {s.passed} of {s.checks} verification checks pass
+          </p>
+          <h1 className="mt-6 text-4xl font-semibold tracking-tight text-balance sm:text-5xl">
+            Slope stability analysis you can verify
+          </h1>
+          <p className="mt-6 max-w-xl text-lg leading-relaxed text-muted-foreground text-pretty">
+            cSlope is limit equilibrium software for geotechnical engineers. Bishop, Janbu and Morgenstern–Price on
+            circular and non-circular slip surfaces, with water, loads, reinforcement and probabilistic analysis. Every
+            release is checked against {s.problems} published problems.
+          </p>
+          <div className="mt-8 flex flex-col gap-3 sm:flex-row">
+            <Button asChild size="lg">
+              <a href={SITE.releases} target="_blank" rel="noopener noreferrer">
+                <Download className="mr-2 h-4 w-4" />
+                Download for Windows
+              </a>
+            </Button>
+            <Button asChild size="lg" variant="outline">
+              <Link to="/docs">
+                Read the documentation
+                <ArrowRight className="ml-2 h-4 w-4" />
+              </Link>
+            </Button>
+          </div>
+          <p className="mt-4 text-sm text-muted-foreground">Free and open source under the {SITE.licence} licence.</p>
+        </div>
+        <Screenshot {...MEDIA.criticalSurface} priority className="animate-fade-up shadow-xl [animation-delay:120ms]" />
+      </div>
+    </section>
+  );
+}
+
+function KeyFigures() {
+  const s = VERIFICATION.summary;
+  const figures = [
+    { value: String(s.problems), label: "published verification problems" },
+    { value: `${s.passed}/${s.checks}`, label: "checks within tolerance" },
+    { value: "3", label: "limit equilibrium methods" },
+    { value: SITE.licence, label: "licence, no licence server" },
+  ];
+  return (
+    <div className="border-b bg-surface">
+      <dl className="mx-auto grid max-w-6xl grid-cols-2 px-4 sm:px-6 lg:grid-cols-4">
+        {figures.map((f) => (
+          <div key={f.label} className="flex flex-col-reverse py-8 pr-4">
+            <dt className="mt-1 text-sm text-muted-foreground">{f.label}</dt>
+            <dd className="font-mono text-3xl font-medium tabular tracking-tight">{f.value}</dd>
+          </div>
+        ))}
+      </dl>
+    </div>
+  );
+}
+
+const CAPABILITIES: { icon: ReactNode; title: string; text: string }[] = [
+  {
+    icon: <BarChart3 className="h-5 w-5" />,
+    title: "Three methods, one model",
+    text: "Bishop simplified, Janbu with the f₀ correction and Morgenstern–Price with constant (Spencer), half-sine, clipped-sine, trapezoidal or user-defined interslice functions.",
+  },
+  {
+    icon: <Spline className="h-5 w-5" />,
+    title: "Circular and non-circular",
+    text: "Grid and radius search, custom surfaces, non-circular optimisation, minimum slip depth and analysis in both slip directions.",
+  },
+  {
+    icon: <Layers className="h-5 w-5" />,
+    title: "Materials",
+    text: "Mohr–Coulomb, undrained, strength increasing with depth or from a datum with a cutoff, anisotropic, spatially varying and lime-cement columns.",
+  },
+  {
+    icon: <Droplets className="h-5 w-5" />,
+    title: "Water",
+    text: "Piezometric lines per material, ponded water above the ground, water-filled tension cracks and saturated unit weight below the water table.",
+  },
+  {
+    icon: <Anchor className="h-5 w-5" />,
+    title: "Reinforcement and loads",
+    text: "Anchors, soil nails, geosynthetics, sheet piles and piles; distributed and line loads; partial factors to Eurocode 7.",
+  },
+  {
+    icon: <FileText className="h-5 w-5" />,
+    title: "Reporting",
+    text: "Annotated result views with templates, slice tables, interslice force plots and export to PDF and Excel.",
+  },
 ];
 
-const highlights = [
-  {
-    icon: <Layers className="h-8 w-8" />,
-    title: "Limit equilibrium suite",
-    description:
-      "Bishop Simplified, Janbu with f0 and Morgenstern–Price (including Spencer) on circular and non-circular slip surfaces.",
-  },
-  {
-    icon: <BarChart3 className="h-8 w-8" />,
-    title: "Visual feedback",
-    description:
-      "Edit geometry, materials, and loads on a single canvas with snapping, hit-testing, and undo/redo.",
-  },
-  {
-    icon: <ShieldCheck className="h-8 w-8" />,
-    title: "Auditable results",
-    description:
-      "Deterministic solvers, JSON persistence, and PDF exports make it easy to review how a model was solved.",
-  },
-  {
-    icon: <Zap className="h-8 w-8" />,
-    title: "Complete desktop tool",
-    description:
-      "A native Windows application with water, loads, tension cracks, reinforcement, piles and probabilistic analysis built in.",
-  },
+function Capabilities() {
+  return (
+    <Section id="capabilities">
+      <SectionHeading
+        eyebrow="Capabilities"
+        title="Everything a slope stability review needs"
+        lead="One desktop application for the whole job: model the section, run the search, check the result and produce the report."
+      />
+      <div className="mt-12 grid gap-px overflow-hidden rounded-lg border bg-border sm:grid-cols-2 lg:grid-cols-3">
+        {CAPABILITIES.map((c) => (
+          <div key={c.title} className="bg-card p-6">
+            <div className="flex h-9 w-9 items-center justify-center rounded-md border bg-surface text-primary">
+              {c.icon}
+            </div>
+            <h3 className="mt-4 font-semibold">{c.title}</h3>
+            <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{c.text}</p>
+          </div>
+        ))}
+      </div>
+      <p className="mt-6 flex items-center gap-2 text-sm text-muted-foreground">
+        <Search className="h-4 w-4" aria-hidden="true" />
+        Sensitivity analysis and probabilistic analysis (Taylor series and Monte Carlo) are built in.
+      </p>
+    </Section>
+  );
+}
+
+function Verification() {
+  const examples = homeExamples();
+  const s = VERIFICATION.summary;
+  return (
+    <Section id="verification" surface>
+      <div className="grid gap-12 lg:grid-cols-[1fr_1.3fr] lg:items-start">
+        <div>
+          <SectionHeading
+            eyebrow="Verification"
+            title="Checked against published solutions"
+            lead={
+              <>
+                {s.problems} problems from the geotechnical literature and from verification manuals of established
+                programs, {s.checks} published factors of safety. The checks run on every change to the code.
+              </>
+            }
+          />
+          <p className="mt-6 flex items-center gap-2 text-sm text-muted-foreground">
+            <ShieldCheck className="h-4 w-4 text-pass" aria-hidden="true" />
+            {s.passed} of {s.checks} checks within their tolerance.
+          </p>
+        </div>
+        <div className="overflow-x-auto rounded-lg border bg-card">
+          <table className="w-full min-w-[32rem] text-left text-sm">
+            <caption className="sr-only">Examples of published and computed factors of safety</caption>
+            <thead className="border-b bg-surface text-xs uppercase tracking-wide text-muted-foreground">
+              <tr>
+                <th scope="col" className="px-4 py-3 font-medium">
+                  Problem
+                </th>
+                <th scope="col" className="px-4 py-3 text-right font-medium">
+                  Published
+                </th>
+                <th scope="col" className="px-4 py-3 text-right font-medium">
+                  cSlope
+                </th>
+                <th scope="col" className="px-4 py-3 text-right font-medium">
+                  Difference
+                </th>
+              </tr>
+            </thead>
+            <tbody className="divide-y">
+              {examples.map(({ problem, check }) => (
+                <tr key={problem.id}>
+                  <td className="px-4 py-3">
+                    <div className="font-medium">{problem.title}</div>
+                    <div className="text-xs text-muted-foreground">
+                      {check.method} · {check.source}
+                    </div>
+                  </td>
+                  <td className="px-4 py-3 text-right font-mono tabular">{check.published.toFixed(3)}</td>
+                  <td className="px-4 py-3 text-right font-mono tabular">{check.computed?.toFixed(3)}</td>
+                  <td className="px-4 py-3 text-right font-mono tabular text-muted-foreground">
+                    {check.deviation != null && formatPercent(check.deviation)}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </Section>
+  );
+}
+
+const GALLERY = [
+  { media: MEDIA.materials, caption: "Material regions of a non-homogeneous slope" },
+  { media: MEDIA.allSurfaces, caption: "Every analysed surface, coloured by factor of safety" },
+  { media: MEDIA.dam, caption: "Zoned embankment dam" },
+  { media: MEDIA.damResult, caption: "Critical surface through the dam" },
 ];
+
+function Gallery() {
+  return (
+    <Section id="screenshots">
+      <SectionHeading eyebrow="The application" title="Built for daily engineering work" />
+      <div className="mt-12 grid gap-6 md:grid-cols-2">
+        {GALLERY.map((g) => (
+          <Screenshot key={g.media.src} {...g.media} caption={g.caption} />
+        ))}
+      </div>
+    </Section>
+  );
+}
+
+const OPEN_SOURCE = [
+  ["Transparent", "The solvers, the search and every verification problem are in the public repository."],
+  ["Reproducible", "Deterministic solvers and a plain JSON project file: the same model gives the same answer."],
+  ["Maintained", `Developed by ${SITE.company.name}, with automated tests and verification on every change.`],
+] as const;
+
+function OpenSource() {
+  return (
+    <Section id="open-source" surface>
+      <div className="grid gap-10 md:grid-cols-2 md:items-center">
+        <SectionHeading
+          eyebrow="Open source"
+          title="Yours to inspect, run and keep"
+          lead="cSlope is MIT licensed. There is no licence server, no subscription and no lock-in: install it on every machine in the office, read the solver code behind any result, and keep the version your project was approved with."
+        />
+        <ul className="grid gap-4 text-sm">
+          {OPEN_SOURCE.map(([title, text]) => (
+            <li key={title} className="flex gap-3 rounded-lg border bg-card p-4">
+              <Code2 className="mt-0.5 h-4 w-4 shrink-0 text-primary" aria-hidden="true" />
+              <div>
+                <p className="font-medium">{title}</p>
+                <p className="mt-1 text-muted-foreground">{text}</p>
+              </div>
+            </li>
+          ))}
+        </ul>
+      </div>
+    </Section>
+  );
+}
+
+function DownloadBand() {
+  return (
+    <Section id="download">
+      <div className="flex flex-col items-start justify-between gap-8 rounded-xl border bg-card p-8 sm:p-12 md:flex-row md:items-center">
+        <div className="max-w-xl">
+          <h2 className="text-2xl font-semibold tracking-tight sm:text-3xl">Try it on your next section</h2>
+          <p className="mt-3 text-muted-foreground">
+            Install cSlope on Windows and open one of the built-in benchmark models from Help &gt; Benchmarks to see a
+            complete analysis in a minute.
+          </p>
+        </div>
+        <div className="flex shrink-0 flex-col gap-3 sm:flex-row">
+          <Button asChild size="lg">
+            <a href={SITE.releases} target="_blank" rel="noopener noreferrer">
+              <Download className="mr-2 h-4 w-4" />
+              Download
+            </a>
+          </Button>
+          <Button asChild size="lg" variant="outline">
+            <Link to="/docs">Get started</Link>
+          </Button>
+        </div>
+      </div>
+    </Section>
+  );
+}
 
 export function Home() {
   return (
-    <div className="flex flex-col items-center">
-      {/* Hero */}
-      <section className="w-full bg-gradient-to-b from-primary/10 via-background to-background py-24 md:py-32">
-        <div className="container mx-auto flex flex-col items-center text-center px-4">
-          <motion.h1
-            className="mt-6 max-w-3xl text-4xl font-extrabold tracking-tight sm:text-5xl md:text-6xl"
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, delay: 0.1 }}
-          >
-            cSlope
-          </motion.h1>
-          <motion.p
-            className="mt-6 max-w-2xl text-lg text-muted-foreground sm:text-xl"
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, delay: 0.2 }}
-          >
-            Limit equilibrium slope stability analysis with Bishop, Janbu and
-            Morgenstern–Price, verified against published solutions.
-          </motion.p>
-          <motion.p
-            className="mt-6 text-sm uppercase tracking-[0.35em] text-primary/80"
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5 }}
-          >
-            Open source software for slope stability
-          </motion.p>
-          <motion.div
-            className="mt-10"
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, delay: 0.3 }}
-          >
-            <Button asChild size="lg" className="text-base">
-              <a
-                href="https://github.com/ZilanCiftci/cslope/releases"
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                Download
-                <Download className="ml-2 h-4 w-4" />
-              </a>
-            </Button>
-          </motion.div>
-          <motion.div
-            className="mt-12 grid w-full max-w-3xl gap-6 rounded-2xl border bg-background/80 p-6 backdrop-blur-sm sm:grid-cols-3"
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, delay: 0.35 }}
-          >
-            {stats.map((stat) => (
-              <div key={stat.label} className="text-left">
-                <p className="text-3xl font-bold">{stat.value}</p>
-                <p className="text-sm uppercase tracking-wide text-muted-foreground">
-                  {stat.label}
-                </p>
-              </div>
-            ))}
-          </motion.div>
-        </div>
-      </section>
-
-      {/* Highlights */}
-      <section className="w-full py-10" id="capabilities">
-        <div className="container mx-auto px-4">
-          <div className="mb-10 flex flex-col items-start gap-3 text-left">
-            <p className="text-sm font-semibold text-primary">
-              Capability stack
-            </p>
-            <h2 className="text-3xl font-semibold tracking-tight sm:text-4xl">
-              Everything you need for day-to-day slope reviews.
-            </h2>
-          </div>
-          <motion.div
-            className="grid gap-6 md:grid-cols-2"
-            initial={{ opacity: 0, y: 30 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true, amount: 0.3 }}
-            transition={{ duration: 0.5 }}
-          >
-            {highlights.map((item) => (
-              <Card key={item.title} className="bg-background/80">
-                <CardHeader className="flex flex-row items-center gap-4">
-                  <div className="rounded-full border bg-primary/10 p-3 text-primary">
-                    {item.icon}
-                  </div>
-                  <CardTitle className="text-xl font-semibold">
-                    {item.title}
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-muted-foreground leading-relaxed">
-                    {item.description}
-                  </p>
-                </CardContent>
-              </Card>
-            ))}
-          </motion.div>
-        </div>
-      </section>
-
-      {/* Closing CTA */}
-      <section className="w-full py-24" id="download">
-        <div className="container mx-auto px-4">
-          <div className="rounded-[32px] border bg-gradient-to-br from-primary/15 via-primary/5 to-background p-10 text-center">
-            <p className="text-sm font-semibold uppercase tracking-[0.3em] text-primary/80">
-              READY WHEN YOU ARE
-            </p>
-            <h2 className="mt-5 text-3xl font-bold sm:text-4xl">
-              Start modelling smarter slopes today.
-            </h2>
-            <p className="mt-4 text-muted-foreground max-w-2xl mx-auto">
-              Download cSlope for Windows and open one of the built-in benchmark
-              models to see it in action.
-            </p>
-            <div className="mt-8 flex flex-col items-center gap-3 sm:flex-row sm:justify-center">
-              <Button asChild size="lg" className="text-base">
-                <a
-                  href="https://github.com/ZilanCiftci/cslope/releases"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                >
-                  Download
-                  <Download className="ml-2 h-4 w-4" />
-                </a>
-              </Button>
-            </div>
-          </div>
-        </div>
-      </section>
-    </div>
+    <>
+      <Hero />
+      <KeyFigures />
+      <Capabilities />
+      <Verification />
+      <Gallery />
+      <OpenSource />
+      <DownloadBand />
+    </>
   );
 }

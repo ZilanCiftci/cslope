@@ -11,6 +11,14 @@
     <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)" />
     <meta name="theme-color" content="#0b1220" media="(prefers-color-scheme: dark)" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <script>
+      // Set the theme before the first paint (see theme-provider.tsx).
+      try {
+        var t = localStorage.getItem("cslope-ui-theme");
+        var dark = t === "dark" || (t !== "light" && matchMedia("(prefers-color-scheme: dark)").matches);
+        document.documentElement.classList.add(dark ? "dark" : "light");
+      } catch (e) {}
+    </script>
     <meta property="og:type" content="website" />
     <meta property="og:site_name" content="cSlope" />
     <meta property="og:title" content="cSlope — Slope Stability Analysis" />

@@ -76,7 +76,7 @@ function createExampleResultViewSettings(
         type: "text",
         x: 0.11,
         y: 0.18,
-        text: "Calculate FOS: #FOS",
+        text: "Calculated FOS: #FOS",
         fontSize: 14,
       },
       {

@@ -1,161 +1,192 @@
-import { Link, useLocation } from "react-router";
-import { useState, type ReactNode } from "react";
-import { Moon, Sun, Menu, X } from "lucide-react";
+import { Link, NavLink as RouterNavLink, useLocation, useNavigationType } from "react-router";
+import { useEffect, useState, type ReactNode } from "react";
+import { Github, Menu, Moon, Sun, X } from "lucide-react";
 
-import { CslopeLogo } from "@/components/CslopeLogo";
+import { CslopeWordmark } from "@/components/CslopeLogo";
 import { Button } from "@/components/ui/button";
-import { Separator } from "@/components/ui/separator";
 import { useTheme } from "@/components/theme-provider";
+import { NAV, SITE } from "@/site";
 import { cn } from "@/lib/utils";
 
-const navLinks = [
-  { to: "/", label: "Home" },
-  { to: "/docs", label: "Docs" },
-];
-
 function ThemeToggle() {
-  const { theme, setTheme } = useTheme();
-
+  const { resolved, setTheme } = useTheme();
+  const dark = resolved === "dark";
   return (
     <Button
       variant="ghost"
       size="icon"
-      onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
-      aria-label="Toggle theme"
+      onClick={() => setTheme(dark ? "light" : "dark")}
+      aria-label={dark ? "Switch to light theme" : "Switch to dark theme"}
     >
-      <Sun className="h-5 w-5 rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0" />
-      <Moon className="absolute h-5 w-5 rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />
+      {dark ? <Sun className="h-[18px] w-[18px]" /> : <Moon className="h-[18px] w-[18px]" />}
     </Button>
   );
 }
 
-export function Layout({ children }: { children: ReactNode }) {
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const location = useLocation();
+const navClass = ({ isActive }: { isActive: boolean }) =>
+  cn(
+    "rounded-md px-3 py-2 text-sm font-medium transition-colors hover:text-foreground",
+    isActive ? "text-foreground" : "text-muted-foreground",
+  );
+
+function SiteHeader() {
+  const [open, setOpen] = useState(false);
+  const { pathname } = useLocation();
+  const [menuPath, setMenuPath] = useState(pathname);
+  // Close the mobile menu on navigation.
+  if (menuPath !== pathname) {
+    setMenuPath(pathname);
+    setOpen(false);
+  }
 
   return (
-    <div className="min-h-screen flex flex-col">
-      {/* Header */}
-      <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-        <div className="container mx-auto flex h-14 items-center px-4">
-          <Link to="/" className="mr-6 flex items-center space-x-2">
-            <CslopeLogo className="h-6 w-6" />
-            <span className="font-bold">cSlope</span>
-          </Link>
+    <header className="sticky top-0 z-50 w-full border-b bg-background/90 backdrop-blur supports-[backdrop-filter]:bg-background/75">
+      <div className="mx-auto flex h-16 max-w-6xl items-center gap-6 px-4 sm:px-6">
+        <Link to="/" className="rounded-md" aria-label="cSlope home">
+          <CslopeWordmark className="text-lg" />
+        </Link>
 
-          {/* Desktop nav */}
-          <nav className="hidden md:flex items-center space-x-6 text-sm font-medium">
-            {navLinks.map((link) => (
-              <Link
-                key={link.to}
-                to={link.to}
-                className={cn(
-                  "transition-colors hover:text-foreground/80",
-                  location.pathname === link.to
-                    ? "text-foreground"
-                    : "text-foreground/60",
-                )}
-              >
+        <nav className="hidden items-center md:flex" aria-label="Main">
+          {NAV.map((link) => (
+            <RouterNavLink key={link.to} to={link.to} className={navClass}>
+              {link.label}
+            </RouterNavLink>
+          ))}
+        </nav>
+
+        <div className="ml-auto flex items-center gap-1">
+          <ThemeToggle />
+          <Button asChild variant="ghost" size="icon" className="hidden md:inline-flex">
+            <a href={SITE.github} target="_blank" rel="noopener noreferrer" aria-label="cSlope on GitHub">
+              <Github className="h-[18px] w-[18px]" />
+            </a>
+          </Button>
+          <Button asChild size="sm" className="ml-2 hidden md:inline-flex">
+            <a href={SITE.releases} target="_blank" rel="noopener noreferrer">
+              Download
+            </a>
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="md:hidden"
+            onClick={() => setOpen((o) => !o)}
+            aria-label={open ? "Close menu" : "Open menu"}
+            aria-expanded={open}
+            aria-controls="mobile-nav"
+          >
+            {open ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+          </Button>
+        </div>
+      </div>
+
+      {open && (
+        <nav id="mobile-nav" className="border-t md:hidden" aria-label="Main">
+          <div className="mx-auto flex max-w-6xl flex-col gap-1 px-4 py-3">
+            {NAV.map((link) => (
+              <RouterNavLink key={link.to} to={link.to} className={navClass}>
                 {link.label}
-              </Link>
+              </RouterNavLink>
             ))}
-          </nav>
-
-          <div className="flex flex-1 items-center justify-end space-x-2">
-            <ThemeToggle />
-            <Button asChild variant="outline" size="sm" className="hidden md:inline-flex">
-              <a
-                href="https://github.com/ZilanCiftci/cslope"
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                GitHub
+            <a href={SITE.github} target="_blank" rel="noopener noreferrer" className={navClass({ isActive: false })}>
+              GitHub
+            </a>
+            <Button asChild size="sm" className="mt-2">
+              <a href={SITE.releases} target="_blank" rel="noopener noreferrer">
+                Download
               </a>
             </Button>
-
-            {/* Mobile menu button */}
-            <Button
-              variant="ghost"
-              size="icon"
-              className="md:hidden"
-              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              aria-label="Toggle menu"
-            >
-              {mobileMenuOpen ? (
-                <X className="h-5 w-5" />
-              ) : (
-                <Menu className="h-5 w-5" />
-              )}
-            </Button>
           </div>
-        </div>
+        </nav>
+      )}
+    </header>
+  );
+}
 
-        {/* Mobile nav */}
-        {mobileMenuOpen && (
-          <div className="md:hidden border-t">
-            <nav className="container mx-auto py-4 flex flex-col space-y-3 px-4">
-              {navLinks.map((link) => (
-                <Link
-                  key={link.to}
-                  to={link.to}
-                  onClick={() => setMobileMenuOpen(false)}
-                  className={cn(
-                    "text-sm font-medium transition-colors hover:text-foreground/80",
-                    location.pathname === link.to
-                      ? "text-foreground"
-                      : "text-foreground/60",
-                  )}
-                >
-                  {link.label}
-                </Link>
-              ))}
-              <Button asChild variant="outline" size="sm" className="w-full">
-                <a
-                  href="https://github.com/ZilanCiftci/cslope"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                >
-                  GitHub
-                </a>
-              </Button>
-            </nav>
-          </div>
-        )}
-      </header>
-
-      {/* Main content */}
-      <main className="flex-1">{children}</main>
-
-      {/* Footer */}
-      <footer className="border-t">
-        <div className="container mx-auto flex flex-col items-center justify-between gap-4 py-6 md:h-16 md:flex-row md:py-0 px-4">
-          <p className="text-center text-sm leading-loose text-muted-foreground md:text-left">
-            Built by{" "}
+function SiteFooter() {
+  return (
+    <footer className="border-t bg-surface">
+      <div className="mx-auto grid max-w-6xl gap-10 px-4 py-12 sm:px-6 md:grid-cols-[2fr_1fr_1fr]">
+        <div className="max-w-sm">
+          <CslopeWordmark />
+          <p className="mt-3 text-sm leading-relaxed text-muted-foreground">{SITE.description}</p>
+          <p className="mt-4 text-sm text-muted-foreground">
+            Developed by{" "}
             <a
-              href="https://github.com/ZilanCiftci"
+              href={SITE.company.url}
               target="_blank"
               rel="noopener noreferrer"
-              className="font-medium underline underline-offset-4"
+              className="font-medium text-foreground underline-offset-4 hover:underline"
             >
-              Zilan Ciftci
-            </a>
-            . Source code on{" "}
-            <a
-              href="https://github.com/ZilanCiftci/cslope"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="font-medium underline underline-offset-4"
-            >
-              GitHub
+              {SITE.company.name}
             </a>
             .
           </p>
-          <Separator className="md:hidden" />
-          <p className="text-center text-sm text-muted-foreground md:text-right">
-            MIT License &copy; {new Date().getFullYear()} Zilan Ciftci
-          </p>
         </div>
-      </footer>
+        <div>
+          <h2 className="text-sm font-semibold">Product</h2>
+          <ul className="mt-3 space-y-2 text-sm text-muted-foreground">
+            {NAV.map((l) => (
+              <li key={l.to}>
+                <Link to={l.to} className="hover:text-foreground">
+                  {l.label}
+                </Link>
+              </li>
+            ))}
+            <li>
+              <a href={SITE.releases} target="_blank" rel="noopener noreferrer" className="hover:text-foreground">
+                Releases
+              </a>
+            </li>
+          </ul>
+        </div>
+        <div>
+          <h2 className="text-sm font-semibold">Open source</h2>
+          <ul className="mt-3 space-y-2 text-sm text-muted-foreground">
+            <li>
+              <a href={SITE.github} target="_blank" rel="noopener noreferrer" className="hover:text-foreground">
+                Source code
+              </a>
+            </li>
+            <li>
+              <a href={SITE.issues} target="_blank" rel="noopener noreferrer" className="hover:text-foreground">
+                Report an issue
+              </a>
+            </li>
+          </ul>
+        </div>
+      </div>
+      <div className="border-t">
+        <p className="mx-auto max-w-6xl px-4 py-5 text-xs text-muted-foreground sm:px-6">
+          © {new Date().getFullYear()} {SITE.company.name}. cSlope is released under the {SITE.licence} licence.
+        </p>
+      </div>
+    </footer>
+  );
+}
+
+export function Layout({ children }: { children: ReactNode }) {
+  const { pathname, hash } = useLocation();
+  const navigation = useNavigationType();
+  // Start a new page at the top, unless the URL points at an anchor. Back
+  // and forward (POP) keep the browser's own scroll restoration.
+  useEffect(() => {
+    if (navigation !== "POP" && !hash) window.scrollTo(0, 0);
+  }, [pathname, hash, navigation]);
+
+  return (
+    <div className="flex min-h-screen flex-col">
+      <a
+        href="#main"
+        className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-[60] focus:rounded-md focus:bg-background focus:px-3 focus:py-2 focus:shadow"
+      >
+        Skip to content
+      </a>
+      <SiteHeader />
+      <main id="main" className="flex-1">
+        {children}
+      </main>
+      <SiteFooter />
     </div>
   );
 }

@@ -41,6 +41,30 @@ CSLOPE_CAPTURE_NO_SANDBOX=1 xvfb-run -a -s "-screen 0 1440x900x24" bun run media
 
 The images are deterministic, so a `git diff` shows when the UI changed.
 
+## Verification data
+
+`src/content/generated/verification.json` holds every published
+verification problem with the engine's result, for the verification
+table and the figures on the home page. Regenerate it after changing the
+engine or the problems:
+
+```bash
+bun scripts/generate-data.ts            # runs the engine (about 2 minutes)
+bun scripts/generate-data.ts --cached   # reuse the last run, e.g. after editing anonymise.ts
+```
+
+`bun run test` fails when the file no longer matches the problems in the
+engine.
+
+## Share image
+
+`public/og-image.png` is rendered from `scripts/og-image.html`:
+
+```bash
+bun scripts/render-og-image.ts
+# in a container: CHROMIUM_PATH=/opt/pw-browsers/chromium CSLOPE_CAPTURE_NO_SANDBOX=1 bun scripts/render-og-image.ts
+```
+
 ## No other products by name
 
 The site must not name other slope stability programs or their vendors.

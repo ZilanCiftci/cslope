@@ -1,30 +1,20 @@
-import { motion } from "framer-motion";
 import { Separator } from "@/components/ui/separator";
 
 export function Docs() {
   return (
     <div className="container mx-auto py-16 md:py-24 max-w-3xl px-4">
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5 }}
-      >
+      <div>
         <h1 className="text-3xl font-bold tracking-tight sm:text-4xl">
           Documentation
         </h1>
         <p className="mt-4 text-lg text-muted-foreground">
           Get started with cSlope in minutes.
         </p>
-      </motion.div>
+      </div>
 
       <Separator className="my-8" />
 
-      <motion.div
-        className="space-y-8"
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5, delay: 0.15 }}
-      >
+      <div className="space-y-8">
         <section>
           <h2 className="text-2xl font-semibold">Quick Start</h2>
           <ol className="mt-4 space-y-3 list-decimal list-inside text-muted-foreground">
@@ -92,7 +82,7 @@ export function Docs() {
             geometry, soil properties, and analysis settings.
           </p>
         </section>
-      </motion.div>
+      </div>
     </div>
   );
 }
