@@ -6,6 +6,7 @@
 import { describe, expect, it } from "vitest";
 import { readdirSync, readFileSync, statSync } from "node:fs";
 import { join, relative, sep } from "node:path";
+import { outputFile } from "./prerender";
 
 const src = join(import.meta.dirname, "../src");
 
@@ -70,6 +71,11 @@ describe("vercel.json", () => {
   it("rewrites exactly the pages and docs, so any other URL gets a real 404", () => {
     const pages = routes.filter((r) => !r.includes("*"));
     expect([...sources].sort()).toEqual([...new Set([...pages, ...docPaths])].sort());
+  });
+
+  it("serves each page from its pre-rendered file (scripts/prerender.ts)", () => {
+    const wrong = vercel.rewrites.filter((r) => r.destination !== "/" + outputFile(r.source));
+    expect(wrong).toEqual([]);
   });
 });
 

@@ -14,11 +14,11 @@ function sourceToRegExp(source: string): RegExp {
 /** A concrete URL for a react-router path ("/docs/*" -> "/docs/x"). */
 const sample = (path: string) => path.replace(/\*/g, "x").replace(/:\w+/g, "x");
 
-const rewrites = vercel.rewrites.filter((r) => r.destination === "/index.html").map((r) => sourceToRegExp(r.source));
+const rewrites = vercel.rewrites.map((r) => sourceToRegExp(r.source));
 const rewritten = (url: string) => rewrites.some((re) => re.test(url));
 
 describe("routes and vercel.json", () => {
-  it("rewrite every page to index.html (the docs are checked one by one in links.test.ts)", () => {
+  it("rewrite every page to its pre-rendered file (the docs are checked one by one in links.test.ts)", () => {
     const pages = routes.map((r) => r.path).filter((p) => !p.includes("*"));
     expect(pages.filter((p) => !rewritten(sample(p)))).toEqual([]);
     expect(rewritten("/docs")).toBe(true);

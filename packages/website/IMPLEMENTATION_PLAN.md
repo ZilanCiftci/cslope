@@ -470,10 +470,15 @@ Varje etapp ska gå att pusha och publicera för sig.
 
 ### Etapp 5: Finputs (1 dag)
 
-- [ ] Lighthouse-genomgång.
-- [ ] Komponenttester.
-- [ ] Mobilgenomgång av alla sidor.
-- [ ] Sitemap, OG-taggar per sida.
+- [x] Lighthouse-genomgång: 95–99 i prestanda och 100 i tillgänglighet,
+      bästa praxis och SEO på startsidan, funktioner, verifiering,
+      nedladdning och två docs-sidor (mobilprofil, gzip som på Vercel).
+- [x] Komponenttester: förrendering, mallfyllnad, sitemap och 404-sidan.
+- [x] Mobilgenomgång av alla sidor: inget horisontellt spill i 375 px,
+      inga hydreringsfel i ljust eller mörkt läge.
+- [x] Sitemap, OG-taggar per sida: varje sida förrenderas till statisk HTML
+      med egen titel, beskrivning, og:title, og:description, canonical och
+      og:url; sitemap.xml och Sitemap-rad i robots.txt när domänen är känd.
 
 ---
 

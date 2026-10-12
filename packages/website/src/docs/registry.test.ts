@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { DOCS, SECTIONS, docPath, findDoc, toDoc } from "./registry";
+import { isDocSlug } from "./slugs";
 
 describe("docs registry", () => {
   it("loads every doc with a unique path, in section order", () => {
@@ -12,6 +13,12 @@ describe("docs registry", () => {
 
   it("finds a doc with or without slashes", () => {
     expect(findDoc("/")).toBe(findDoc(""));
+  });
+
+  it("knows the same paths without loading the docs", () => {
+    for (const d of DOCS) expect(isDocSlug(d.slug)).toBe(true);
+    expect(isDocSlug("/tutorials/")).toBe(true);
+    expect(isDocSlug("no-such-page")).toBe(false);
   });
 
   it("rejects missing frontmatter and unknown sections", () => {

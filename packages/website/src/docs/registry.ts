@@ -1,5 +1,6 @@
 import type { ComponentType } from "react";
 import type { MDXComponents } from "mdx/types";
+import { cleanSlug, slugOf } from "./slugs";
 
 /** The sidebar groups, in order. */
 export const SECTIONS = ["Getting started", "Modelling", "Analysis", "Results", "Tutorials", "Reference"] as const;
@@ -32,7 +33,7 @@ export function toDoc(file: string, m: DocModule): Doc {
   const missing = (["title", "description", "section", "order"] as const).filter((k) => f[k] === undefined);
   if (missing.length) throw new Error(`${file}: frontmatter is missing ${missing.join(", ")}`);
   if (!SECTIONS.includes(f.section as DocSection)) throw new Error(`${file}: unknown section "${f.section}"`);
-  const slug = file.replace(/\.mdx$/, "").replace(/(^|\/)index$/, "");
+  const slug = slugOf(file);
   return { ...(f as DocFrontmatter), slug, file, Component: m.default };
 }
 
@@ -46,6 +47,6 @@ export const DOCS: Doc[] = Object.entries(modules)
 export const docPath = (d: Doc) => (d.slug ? `/docs/${d.slug}` : "/docs");
 
 export function findDoc(slug: string): Doc | undefined {
-  const clean = slug.replace(/^\/+|\/+$/g, "");
+  const clean = cleanSlug(slug);
   return DOCS.find((d) => d.slug === clean);
 }

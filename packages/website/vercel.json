@@ -3,6 +3,19 @@
   "installCommand": "cd ../.. && bun install --frozen-lockfile",
   "buildCommand": "bun run build",
   "outputDirectory": "dist",
+  "trailingSlash": false,
+  "redirects": [
+    {
+      "source": "/(.*)/index.html",
+      "destination": "/$1",
+      "permanent": true
+    },
+    {
+      "source": "/index.html",
+      "destination": "/",
+      "permanent": true
+    }
+  ],
   "rewrites": [
     {
       "source": "/",
@@ -10,123 +23,123 @@
     },
     {
       "source": "/features",
-      "destination": "/index.html"
+      "destination": "/features/index.html"
     },
     {
       "source": "/verification",
-      "destination": "/index.html"
+      "destination": "/verification/index.html"
     },
     {
       "source": "/download",
-      "destination": "/index.html"
+      "destination": "/download/index.html"
     },
     {
       "source": "/about",
-      "destination": "/index.html"
+      "destination": "/about/index.html"
     },
     {
       "source": "/changelog",
-      "destination": "/index.html"
+      "destination": "/changelog/index.html"
     },
     {
       "source": "/docs/analysis",
-      "destination": "/index.html"
+      "destination": "/docs/analysis/index.html"
     },
     {
       "source": "/docs/file-format",
-      "destination": "/index.html"
+      "destination": "/docs/file-format/index.html"
     },
     {
       "source": "/docs/geometry",
-      "destination": "/index.html"
+      "destination": "/docs/geometry/index.html"
     },
     {
       "source": "/docs",
-      "destination": "/index.html"
+      "destination": "/docs/index.html"
     },
     {
       "source": "/docs/installation",
-      "destination": "/index.html"
+      "destination": "/docs/installation/index.html"
     },
     {
       "source": "/docs/interface",
-      "destination": "/index.html"
+      "destination": "/docs/interface/index.html"
     },
     {
       "source": "/docs/loads",
-      "destination": "/index.html"
+      "destination": "/docs/loads/index.html"
     },
     {
       "source": "/docs/materials",
-      "destination": "/index.html"
+      "destination": "/docs/materials/index.html"
     },
     {
       "source": "/docs/reinforcement",
-      "destination": "/index.html"
+      "destination": "/docs/reinforcement/index.html"
     },
     {
       "source": "/docs/reporting",
-      "destination": "/index.html"
+      "destination": "/docs/reporting/index.html"
     },
     {
       "source": "/docs/results",
-      "destination": "/index.html"
+      "destination": "/docs/results/index.html"
     },
     {
       "source": "/docs/search",
-      "destination": "/index.html"
+      "destination": "/docs/search/index.html"
     },
     {
       "source": "/docs/sensitivity",
-      "destination": "/index.html"
+      "destination": "/docs/sensitivity/index.html"
     },
     {
       "source": "/docs/shortcuts",
-      "destination": "/index.html"
+      "destination": "/docs/shortcuts/index.html"
     },
     {
       "source": "/docs/theory",
-      "destination": "/index.html"
+      "destination": "/docs/theory/index.html"
     },
     {
       "source": "/docs/tutorials/dam",
-      "destination": "/index.html"
+      "destination": "/docs/tutorials/dam/index.html"
     },
     {
       "source": "/docs/tutorials/first-analysis",
-      "destination": "/index.html"
+      "destination": "/docs/tutorials/first-analysis/index.html"
     },
     {
       "source": "/docs/tutorials",
-      "destination": "/index.html"
+      "destination": "/docs/tutorials/index.html"
     },
     {
       "source": "/docs/tutorials/layered",
-      "destination": "/index.html"
+      "destination": "/docs/tutorials/layered/index.html"
     },
     {
       "source": "/docs/tutorials/partial-factors",
-      "destination": "/index.html"
+      "destination": "/docs/tutorials/partial-factors/index.html"
     },
     {
       "source": "/docs/tutorials/probabilistic",
-      "destination": "/index.html"
+      "destination": "/docs/tutorials/probabilistic/index.html"
     },
     {
       "source": "/docs/tutorials/reporting",
-      "destination": "/index.html"
+      "destination": "/docs/tutorials/reporting/index.html"
     },
     {
       "source": "/docs/tutorials/soil-nails",
-      "destination": "/index.html"
+      "destination": "/docs/tutorials/soil-nails/index.html"
     },
     {
       "source": "/docs/tutorials/water-table",
-      "destination": "/index.html"
+      "destination": "/docs/tutorials/water-table/index.html"
     },
     {
       "source": "/docs/water",
-      "destination": "/index.html"
+      "destination": "/docs/water/index.html"
     }
   ],
   "headers": [

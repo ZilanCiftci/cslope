@@ -1,6 +1,6 @@
 // @vitest-environment node
 import { describe, expect, it } from "vitest";
-import { siteOrigin } from "../vite.config";
+import { siteOrigin } from "./site-origin";
 
 describe("siteOrigin", () => {
   it("prefers VITE_SITE_URL and strips a trailing slash", () => {

@@ -18,7 +18,10 @@ function ThemeToggle() {
       onClick={() => setTheme(dark ? "light" : "dark")}
       aria-label={dark ? "Switch to light theme" : "Switch to dark theme"}
     >
-      {dark ? <Sun className="h-[18px] w-[18px]" /> : <Moon className="h-[18px] w-[18px]" />}
+      {/* Both icons, chosen by the class index.html sets before the first
+          paint, so that a pre-rendered page shows the right one at once. */}
+      <Sun className="hidden h-[18px] w-[18px] dark:block" aria-hidden="true" />
+      <Moon className="h-[18px] w-[18px] dark:hidden" aria-hidden="true" />
     </Button>
   );
 }
@@ -154,7 +157,7 @@ function SiteFooter() {
       </div>
       <div className="border-t">
         <p className="mx-auto max-w-6xl px-4 py-5 text-xs text-muted-foreground sm:px-6">
-          © {new Date().getFullYear()} {SITE.company.name}. cSlope is released under the {SITE.licence} licence.
+          © {__BUILD_YEAR__} {SITE.company.name}. cSlope is released under the {SITE.licence} licence.
         </p>
       </div>
     </footer>

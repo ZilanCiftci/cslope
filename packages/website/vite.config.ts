@@ -8,42 +8,8 @@ import remarkMdxFrontmatter from "remark-mdx-frontmatter";
 import rehypeSlug from "rehype-slug";
 import remarkMath from "remark-math";
 import rehypeKatex from "rehype-katex";
-import { copyFileSync } from "node:fs";
+import { siteOrigin } from "./scripts/site-origin";
 import path from "path";
-
-/**
- * dist/404.html: Vercel serves it with a 404 status for URLs that are not
- * rewritten to index.html (see vercel.json), and the app renders NotFound.
- */
-function notFoundPage(): Plugin {
-  let outDir = "dist";
-  return {
-    name: "not-found-page",
-    apply: "build",
-    configResolved(config) {
-      outDir = path.resolve(config.root, config.build.outDir);
-    },
-    closeBundle() {
-      copyFileSync(path.join(outDir, "index.html"), path.join(outDir, "404.html"));
-    },
-  };
-}
-
-/**
- * The site's public origin, for the absolute URLs that link previews need
- * (og:image). VITE_SITE_URL wins; on Vercel, previews use their own URL and
- * production builds the production URL. Without an origin the tags are left
- * out rather than given a relative URL, which crawlers ignore.
- */
-export function siteOrigin(env: Record<string, string | undefined>): string {
-  const host =
-    env.VITE_SITE_URL ||
-    (env.VERCEL_ENV === "production" ? env.VERCEL_PROJECT_PRODUCTION_URL : env.VERCEL_URL) ||
-    env.VERCEL_PROJECT_PRODUCTION_URL ||
-    "";
-  if (!host) return "";
-  return (/^https?:\/\//.test(host) ? host : `https://${host}`).replace(/\/+$/, "");
-}
 
 function shareImage(origin: string): Plugin {
   return {
@@ -59,14 +25,19 @@ function shareImage(origin: string): Plugin {
         meta("og:image", `${origin}/og-image.png`),
         meta("og:image:width", "1200"),
         meta("og:image:height", "630"),
-        meta("og:url", origin),
         meta("twitter:card", "summary_large_image", "name"),
       ];
     },
   };
 }
 
-export default defineConfig(({ mode }) => ({
+export default defineConfig(({ mode, isSsrBuild }) => ({
+  // The client manifest tells scripts/prerender.ts which stylesheets the
+  // lazily loaded docs need, so that pre-rendered docs pages link them.
+  build: { manifest: !isSsrBuild },
+  // The year in the footer, fixed at build time so that a pre-rendered page
+  // hydrates without a mismatch after New Year.
+  define: { __BUILD_YEAR__: JSON.stringify(new Date().getFullYear()) },
   plugins: [
     // Documentation pages: Markdown with JSX, frontmatter exported as `frontmatter`.
     {
@@ -81,7 +52,6 @@ export default defineConfig(({ mode }) => ({
     },
     tailwindcss(),
     react({ include: /\.(mdx|js|jsx|ts|tsx)$/ }),
-    notFoundPage(),
     shareImage(siteOrigin(loadEnv(mode, process.cwd(), ""))),
   ],
   resolve: {

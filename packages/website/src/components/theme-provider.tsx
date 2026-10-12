@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
+import { createContext, useContext, useEffect, useRef, useSyncExternalStore, type ReactNode } from "react";
 
 type Theme = "dark" | "light" | "system";
 
@@ -38,23 +38,50 @@ function writeTheme(key: string, theme: Theme) {
   }
 }
 
-const systemDark = () => window.matchMedia?.("(prefers-color-scheme: dark)").matches === true;
+/** Listeners of the chosen theme, and the choice when storage is unavailable. */
+const listeners = new Set<() => void>();
+let memoryTheme: Theme | null = null;
 
+function subscribeTheme(listener: () => void) {
+  listeners.add(listener);
+  return () => listeners.delete(listener);
+}
+
+const DARK_QUERY = "(prefers-color-scheme: dark)";
+
+function subscribeSystem(listener: () => void) {
+  const query = window.matchMedia?.(DARK_QUERY);
+  query?.addEventListener("change", listener);
+  return () => query?.removeEventListener("change", listener);
+}
+
+/**
+ * The colour theme. The state lives outside React (storage and the
+ * operating system), read through useSyncExternalStore so that a
+ * pre-rendered page hydrates with the server's values and then switches.
+ */
 export function ThemeProvider({ children, defaultTheme = "system", storageKey = THEME_STORAGE_KEY }: ThemeProviderProps) {
-  const [theme, setTheme] = useState<Theme>(() => readTheme(storageKey) ?? defaultTheme);
-  const [osDark, setOsDark] = useState(systemDark);
-
-  // Follow the operating system's theme (it matters while the theme is "system").
-  useEffect(() => {
-    const query = window.matchMedia?.("(prefers-color-scheme: dark)");
-    const update = () => setOsDark(query?.matches === true);
-    query?.addEventListener("change", update);
-    return () => query?.removeEventListener("change", update);
-  }, []);
-
+  const theme = useSyncExternalStore(
+    subscribeTheme,
+    () => memoryTheme ?? readTheme(storageKey) ?? defaultTheme,
+    () => defaultTheme,
+  );
+  const osDark = useSyncExternalStore(
+    subscribeSystem,
+    () => window.matchMedia?.(DARK_QUERY).matches === true,
+    () => false,
+  );
   const resolved = theme === "dark" || (theme === "system" && osDark) ? "dark" : "light";
 
+  // index.html has already set the class for the first paint. Hydration
+  // first renders the server's theme ("light"), so the first run is skipped
+  // rather than removing a correct "dark" for a moment.
+  const mounted = useRef(false);
   useEffect(() => {
+    if (!mounted.current) {
+      mounted.current = true;
+      return;
+    }
     document.documentElement.classList.toggle("dark", resolved === "dark");
     document.documentElement.classList.toggle("light", resolved === "light");
   }, [resolved]);
@@ -63,8 +90,9 @@ export function ThemeProvider({ children, defaultTheme = "system", storageKey = 
     theme,
     resolved,
     setTheme: (t) => {
+      memoryTheme = t;
       writeTheme(storageKey, t);
-      setTheme(t);
+      listeners.forEach((l) => l());
     },
   };
 

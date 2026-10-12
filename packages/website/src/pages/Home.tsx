@@ -19,6 +19,7 @@ import { Section, SectionHeading } from "@/components/Section";
 import { Screenshot } from "@/components/Screenshot";
 import { MEDIA } from "@/content/media";
 import { VERIFICATION, homeExamples } from "@/content/verification";
+import { usePageMeta } from "@/lib/page-meta";
 import { SITE } from "@/site";
 
 const formatPercent = (x: number) => `${x >= 0 ? "+" : "−"}${Math.abs(x * 100).toFixed(1)} %`;
@@ -303,6 +304,7 @@ function DownloadBand() {
 }
 
 export function Home() {
+  usePageMeta(null);
   return (
     <>
       <Hero />
