@@ -436,12 +436,14 @@ Varje etapp ska gå att pusha och publicera för sig.
 
 ### Etapp 2: Features, Verification, Download, About (2 dagar)
 
-- [ ] `--public`-läge i verifieringsrapporten.
-- [ ] `/verification` med filtrerbar tabell och PDF.
-- [ ] `/features` med bilder från scenerna.
-- [ ] `release.yml` och första taggen `v0.1.0` (Windows).
-- [ ] `/download`.
-- [ ] `/about` (Ibirico), `/changelog`.
+- [x] `--public`-läge i verifieringsrapporten. Rapporten bifogas varje
+      release i stället för att checkas in.
+- [x] `/verification` med filtrerbar tabell och PDF.
+- [x] `/features` med bilder från scenerna.
+- [x] `release.yml` (Windows). Första taggen `v0.1.0` sätter du när du vill
+      släppa.
+- [x] `/download`.
+- [x] `/about` (Ibirico), `/changelog` (från `CHANGELOG.md` i roten).
 
 ### Etapp 3: Dokumentationsplattform (1–2 dagar)
 

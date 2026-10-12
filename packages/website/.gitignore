@@ -22,3 +22,6 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# The public verification report is attached to each GitHub release.
+public/verification-report.pdf

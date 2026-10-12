@@ -3,7 +3,7 @@ import { fireEvent, render, screen, within } from "@testing-library/react";
 import { MemoryRouter, Route, Routes } from "react-router";
 import { Layout } from "./Layout";
 import { ThemeProvider } from "./theme-provider";
-import { NAV } from "@/site";
+import { FOOTER_PRODUCT, NAV } from "@/site";
 import { routes } from "@/routes";
 
 function renderAt(path: string) {
@@ -28,7 +28,7 @@ beforeEach(() => {
 describe("Layout", () => {
   it("links only to pages that exist", () => {
     const paths = new Set(routes.map((r) => r.path));
-    expect(NAV.filter((l) => !paths.has(l.to))).toEqual([]);
+    expect([...NAV, ...FOOTER_PRODUCT].filter((l) => !paths.has(l.to))).toEqual([]);
   });
 
   it("opens the mobile menu and closes it on navigation", () => {

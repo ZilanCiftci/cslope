@@ -17,4 +17,18 @@ export interface NavLink {
 }
 
 /** The main navigation. Every link must be a page in routes.tsx. */
-export const NAV: NavLink[] = [{ to: "/docs", label: "Docs" }];
+export const NAV: NavLink[] = [
+  { to: "/features", label: "Features" },
+  { to: "/verification", label: "Verification" },
+  { to: "/docs", label: "Docs" },
+  { to: "/changelog", label: "Changelog" },
+];
+
+/** The product links in the footer. Every link must be a page in routes.tsx. */
+export const FOOTER_PRODUCT: NavLink[] = [
+  { to: "/features", label: "Features" },
+  { to: "/verification", label: "Verification" },
+  { to: "/download", label: "Download" },
+  { to: "/docs", label: "Documentation" },
+  { to: "/changelog", label: "Changelog" },
+];

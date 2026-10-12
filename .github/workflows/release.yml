@@ -1,0 +1,64 @@
+name: Release
+
+# Push a tag such as v0.1.0 (it must match packages/desktop/package.json) to
+# build the Windows installer and publish a GitHub release with it, its
+# SHA-256 checksum, the public verification report and the notes from
+# CHANGELOG.md. Tag a commit on main
+# whose CI run is green: the tests are not run again here.
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+
+jobs:
+  windows:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+      - name: Install
+        run: bun install --frozen-lockfile
+      - name: Check the tag against the app version
+        shell: pwsh
+        run: |
+          $version = (Get-Content packages/desktop/package.json | ConvertFrom-Json).version
+          if ("v$version" -ne "${{ github.ref_name }}") {
+            throw "Tag ${{ github.ref_name }} does not match the app version $version"
+          }
+      - name: Build the installer
+        working-directory: packages/desktop
+        # Signing needs the Azure Trusted Signing credentials (see sign.cjs);
+        # until they are set up in CI the installer is unsigned.
+        env:
+          CSLOPE_ALLOW_UNSIGNED: "1"
+        run: |
+          bunx tsc -b
+          bunx vite build
+          bunx electron-builder --win --publish never
+      - name: Checksum and release notes
+        shell: pwsh
+        run: |
+          $version = (Get-Content packages/desktop/package.json | ConvertFrom-Json).version
+          $installer = "packages/desktop/release/$version/cSlope-Windows-$version-Setup.exe"
+          $hash = (Get-FileHash $installer -Algorithm SHA256).Hash.ToLower()
+          "$hash  cSlope-Windows-$version-Setup.exe" | Out-File -Encoding ascii "$installer.sha256"
+          bun packages/website/scripts/changelog.ts $version release-notes.md
+          "INSTALLER=$installer" | Out-File -Append -Encoding utf8 $env:GITHUB_ENV
+      - name: Verification report
+        working-directory: packages/desktop
+        # The public edition (no other program named), attached to the release
+        # and linked from the website's verification page.
+        run: bun scripts/verification-report.ts ../../cSlope-verification-report.pdf --public
+      - name: Publish the release
+        uses: softprops/action-gh-release@v2
+        with:
+          name: cSlope ${{ github.ref_name }}
+          body_path: release-notes.md
+          files: |
+            ${{ env.INSTALLER }}
+            ${{ env.INSTALLER }}.sha256
+            cSlope-verification-report.pdf

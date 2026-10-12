@@ -2,7 +2,8 @@
 // Called by electron-builder for each executable/DLL that needs to be signed.
 // Requires env vars: AZURE_CODE_SIGNING_DLIB, AZURE_METADATA_JSON,
 //   AZURE_CLIENT_ID, AZURE_CLIENT_SECRET, AZURE_TENANT_ID
-//   and optionally SIGNTOOL_PATH.
+//   and optionally SIGNTOOL_PATH. Without them the build fails, unless
+//   CSLOPE_ALLOW_UNSIGNED=1 asks for an unsigned installer.
 
 const { execSync } = require("child_process");
 const path = require("path");
@@ -39,6 +40,11 @@ exports.default = async function sign(configuration) {
   const metadata = process.env.AZURE_METADATA_JSON;
 
   if (!dlib || !metadata) {
+    // CI builds without signing credentials opt in to an unsigned installer.
+    if (process.env.CSLOPE_ALLOW_UNSIGNED === "1") {
+      console.warn(`Not signing ${path.basename(configuration.path)}: no signing credentials (CSLOPE_ALLOW_UNSIGNED=1).`);
+      return;
+    }
     throw new Error(
       "Azure Trusted Signing requires AZURE_CODE_SIGNING_DLIB and AZURE_METADATA_JSON env vars",
     );

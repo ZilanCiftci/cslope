@@ -84,11 +84,12 @@ export function buildData(
   fos: Record<string, (number | null)[]>,
   reliabilityResults: Record<string, number[]>,
 ): VerificationData {
+  const ids = VERIFICATION_CASES.map((c) => c.id);
   const problems: VerificationProblem[] = VERIFICATION_CASES.map((c) => {
     const ref = anonymiseReference(c.reference);
     return {
       id: publicId(c.id),
-      title: anonymiseTitle(c.title),
+      title: anonymiseTitle(c.title, ids),
       reference: ref.text,
       literature: ref.literature,
       commercial: ref.commercial,
@@ -116,7 +117,7 @@ export function buildData(
   const reliability: ReliabilityProblem[] = RELIABILITY_CASES.map((c) => ({
     id: publicId(c.id),
     // The engine's id follows a vendor's numbering, so it is never shown.
-    title: anonymiseTitle(VERIFICATION_CASES.find((v) => v.id === c.id)?.title ?? `Probabilistic problem ${publicId(c.id)}`),
+    title: anonymiseTitle(VERIFICATION_CASES.find((v) => v.id === c.id)?.title ?? `Probabilistic problem ${publicId(c.id)}`, ids),
     checks: c.checks.map(([quantity, published, publishedBy, tolerance], j) => {
       const value = reliabilityResults[c.id]?.[j];
       const raw = value == null || !Number.isFinite(value) ? null : value;

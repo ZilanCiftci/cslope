@@ -1,6 +1,7 @@
 // @vitest-environment node
 import { describe, expect, it } from "vitest";
 import { join } from "node:path";
+import { execFileSync } from "node:child_process";
 import { checkNames } from "./check-names";
 import { findForbiddenNames } from "./forbidden-names";
 
@@ -30,5 +31,23 @@ describe("forbidden names", () => {
 
   it("do not appear in the site sources", () => {
     expect(checkNames(["src", "public", "index.html"].map((p) => join(root, p)))).toEqual([]);
+  });
+});
+
+/** The text of a PDF, or null where poppler's pdftotext is not installed. */
+function pdfText(file: string): string | null {
+  try {
+    return execFileSync("pdftotext", [file, "-"], { encoding: "utf8", maxBuffer: 64 * 1024 * 1024 });
+  } catch {
+    return null;
+  }
+}
+
+describe("the public verification report, when generated locally", () => {
+  // bun scripts/verification-report.ts ../website/public/verification-report.pdf --public
+  const text = pdfText(join(root, "public/verification-report.pdf"));
+  it.skipIf(text == null)("names no other program and shows no engine id", () => {
+    expect(findForbiddenNames("verification-report.pdf", text!).map((h) => h.context)).toEqual([]);
+    expect(text!.match(/\b(?:VP|GS)\d[\w.-]*/g)).toBeNull();
   });
 });

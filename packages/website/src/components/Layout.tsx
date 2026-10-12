@@ -5,7 +5,7 @@ import { Github, Menu, Moon, Sun, X } from "lucide-react";
 import { CslopeWordmark } from "@/components/CslopeLogo";
 import { Button } from "@/components/ui/button";
 import { useTheme } from "@/components/theme-provider";
-import { NAV, SITE } from "@/site";
+import { FOOTER_PRODUCT, NAV, SITE } from "@/site";
 import { cn } from "@/lib/utils";
 
 function ThemeToggle() {
@@ -62,9 +62,7 @@ function SiteHeader() {
             </a>
           </Button>
           <Button asChild size="sm" className="ml-2 hidden md:inline-flex">
-            <a href={SITE.releases} target="_blank" rel="noopener noreferrer">
-              Download
-            </a>
+            <Link to="/download">Download</Link>
           </Button>
           <Button
             variant="ghost"
@@ -92,9 +90,7 @@ function SiteHeader() {
               GitHub
             </a>
             <Button asChild size="sm" className="mt-2">
-              <a href={SITE.releases} target="_blank" rel="noopener noreferrer">
-                Download
-              </a>
+              <Link to="/download">Download</Link>
             </Button>
           </div>
         </nav>
@@ -126,18 +122,13 @@ function SiteFooter() {
         <div>
           <h2 className="text-sm font-semibold">Product</h2>
           <ul className="mt-3 space-y-2 text-sm text-muted-foreground">
-            {NAV.map((l) => (
+            {FOOTER_PRODUCT.map((l) => (
               <li key={l.to}>
                 <Link to={l.to} className="hover:text-foreground">
                   {l.label}
                 </Link>
               </li>
             ))}
-            <li>
-              <a href={SITE.releases} target="_blank" rel="noopener noreferrer" className="hover:text-foreground">
-                Releases
-              </a>
-            </li>
           </ul>
         </div>
         <div>
@@ -152,6 +143,11 @@ function SiteFooter() {
               <a href={SITE.issues} target="_blank" rel="noopener noreferrer" className="hover:text-foreground">
                 Report an issue
               </a>
+            </li>
+            <li>
+              <Link to="/about" className="hover:text-foreground">
+                About
+              </Link>
             </li>
           </ul>
         </div>

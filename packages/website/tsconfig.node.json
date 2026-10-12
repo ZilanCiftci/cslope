@@ -22,5 +22,5 @@
     "noFallthroughCasesInSwitch": true,
     "noUncheckedSideEffectImports": true
   },
-  "include": ["vite.config.ts", "vitest.config.ts", "scripts", "src/content/verification-types.ts", "src/content/media.ts"]
+  "include": ["vite.config.ts", "vitest.config.ts", "scripts", "src/content/verification-types.ts", "src/content/media.ts", "src/content/changelog.ts"]
 }

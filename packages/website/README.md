@@ -56,6 +56,29 @@ bun scripts/generate-data.ts --cached   # reuse the last run, e.g. after editing
 `bun run test` fails when the file no longer matches the problems in the
 engine.
 
+## Verification report
+
+The verification page links to the public edition of the verification
+report (no other program named), which the release workflow attaches to
+every GitHub release. To check it locally:
+
+```bash
+cd packages/desktop && bun scripts/verification-report.ts ../website/public/verification-report.pdf --public
+```
+
+It runs every problem (about 15 minutes) and stops if any text would still
+name another program or show an engine id. `bun run test` then checks the
+file's text as well (with poppler's `pdftotext`). The file is not committed.
+
+## Releases and the download page
+
+The download page links to the latest GitHub release. To publish one, set
+the version in `packages/desktop/package.json`, add its section to
+`CHANGELOG.md`, and push a tag `v<version>` on a commit whose CI is green.
+`.github/workflows/release.yml` builds the Windows installer and publishes
+the release with its SHA-256 checksum, the public verification report
+and the changelog section.
+
 ## Share image
 
 `public/og-image.png` is rendered from `scripts/og-image.html`:

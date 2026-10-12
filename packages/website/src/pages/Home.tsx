@@ -47,10 +47,10 @@ function Hero() {
           </p>
           <div className="mt-8 flex flex-col gap-3 sm:flex-row">
             <Button asChild size="lg">
-              <a href={SITE.releases} target="_blank" rel="noopener noreferrer">
+              <Link to="/download">
                 <Download className="mr-2 h-4 w-4" />
                 Download for Windows
-              </a>
+              </Link>
             </Button>
             <Button asChild size="lg" variant="outline">
               <Link to="/docs">
@@ -141,10 +141,16 @@ function Capabilities() {
           </div>
         ))}
       </div>
-      <p className="mt-6 flex items-center gap-2 text-sm text-muted-foreground">
-        <Search className="h-4 w-4" aria-hidden="true" />
-        Sensitivity analysis and probabilistic analysis (Taylor series and Monte Carlo) are built in.
-      </p>
+      <div className="mt-6 flex flex-col gap-3 text-sm text-muted-foreground sm:flex-row sm:items-center sm:justify-between">
+        <p className="flex items-center gap-2">
+          <Search className="h-4 w-4" aria-hidden="true" />
+          Sensitivity analysis and probabilistic analysis (Taylor series and Monte Carlo) are built in.
+        </p>
+        <Link to="/features" className="inline-flex items-center font-medium text-primary hover:underline">
+          All features
+          <ArrowRight className="ml-1 h-4 w-4" />
+        </Link>
+      </div>
     </Section>
   );
 }
@@ -170,8 +176,12 @@ function Verification() {
             <ShieldCheck className="h-4 w-4 text-pass" aria-hidden="true" />
             {s.passed} of {s.checks} checks within their tolerance.
           </p>
+          <Link to="/verification" className="mt-4 inline-flex items-center text-sm font-medium text-primary hover:underline">
+            Every problem and result
+            <ArrowRight className="ml-1 h-4 w-4" />
+          </Link>
         </div>
-        <div className="overflow-x-auto rounded-lg border bg-card">
+        <div className="relative overflow-x-auto rounded-lg border bg-card">
           <table className="w-full min-w-[32rem] text-left text-sm">
             <caption className="sr-only">Examples of published and computed factors of safety</caption>
             <thead className="border-b bg-surface text-xs uppercase tracking-wide text-muted-foreground">
@@ -278,10 +288,10 @@ function DownloadBand() {
         </div>
         <div className="flex shrink-0 flex-col gap-3 sm:flex-row">
           <Button asChild size="lg">
-            <a href={SITE.releases} target="_blank" rel="noopener noreferrer">
+            <Link to="/download">
               <Download className="mr-2 h-4 w-4" />
               Download
-            </a>
+            </Link>
           </Button>
           <Button asChild size="lg" variant="outline">
             <Link to="/docs">Get started</Link>

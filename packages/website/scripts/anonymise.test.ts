@@ -1,7 +1,15 @@
 // @vitest-environment node
 import { describe, expect, it } from "vitest";
 import { RELIABILITY_CASES, VERIFICATION_CASES } from "@cslope/engine";
-import { COMMERCIAL_REFERENCE, anonymiseReference, anonymiseSource, anonymiseTitle, publicId } from "./anonymise";
+import {
+  COMMERCIAL_REFERENCE,
+  anonymiseReference,
+  anonymiseSource,
+  anonymiseText,
+  anonymiseTitle,
+  publicId,
+  replaceIds,
+} from "./anonymise";
 import { findForbiddenNames } from "./forbidden-names";
 
 describe("anonymisation", () => {
@@ -61,15 +69,62 @@ describe("anonymisation", () => {
     expect(new Set(ids).size).toBe(ids.length);
   });
 
+  it("credits program output to the program, not to the author of the example", () => {
+    expect(anonymiseText("zone length 7.6 m (XSTABL 345 kN)")).toBe("zone length 7.6 m (program F 345 kN)");
+    expect(anonymiseTitle("XSTABL slope over bedrock")).toBe("Sharma (1996) slope over bedrock");
+  });
+
+  it("drops a vendor manual's problem numbers from free text", () => {
+    expect(anonymiseText("The three Slide models #64–66 differ.")).toBe("The three commercial program A models differ.");
+    expect(anonymiseText("Soil #1 over Soil #2")).toBe("Soil #1 over Soil #2");
+  });
+
+  it("replaces vendors and programs in free text", () => {
+    expect(anonymiseText("As drawn in Slide2's Fig. 2.1; GEO-SLOPE/Seequent manual, via xslope (github.com/njones61/xslope).")).toBe(
+      "As drawn in commercial program A's Fig. 2.1; the vendor of commercial program B manual, via program D.",
+    );
+  });
+
+  it("replaces the engine's ids in text with the public ones", () => {
+    const ids = ["VP80a", "VP106b", "VP106e", "VP28-Ex2-L2", "VP28a"];
+    expect(replaceIds("As VP80a, deeper.", ids)).toBe(`As ${publicId("VP80a")}, deeper.`);
+    const all = ["VP106b", "VP106c", "VP106d", "VP106e", "VP12", "VP13"];
+    expect(replaceIds("see VP106b–e", all)).toBe(
+      `see ${publicId("VP106b")}, ${publicId("VP106c")}, ${publicId("VP106d")} and ${publicId("VP106e")}`,
+    );
+    expect(replaceIds("same as VP12-VP13", all)).toBe(`same as ${publicId("VP12")}-${publicId("VP13")}`);
+    expect(replaceIds("VP28-Ex2-L2 and VP28a", ids)).toBe(`${publicId("VP28-Ex2-L2")} and ${publicId("VP28a")}`);
+    expect(replaceIds("unlike VP21 (two cases)", ids)).toBe("unlike a related problem (two cases)");
+  });
+
   it("leaves no program name in any published field of any problem", () => {
     const text = [
       ...VERIFICATION_CASES.flatMap((c) => [
         anonymiseTitle(c.title),
         anonymiseReference(c.reference).text,
-        ...c.checks.flatMap((k) => [k.label, anonymiseSource(k.publishedBy)]),
+        anonymiseText(c.description),
+        ...(c.notes ?? []).map((n) => anonymiseText(n)),
+        ...c.checks.flatMap((k) => [
+          anonymiseText(k.label),
+          anonymiseSource(k.publishedBy),
+          anonymiseText(k.note ?? ""),
+          anonymiseText(k.pending ?? ""),
+        ]),
       ]),
       ...RELIABILITY_CASES.flatMap((c) => c.checks.map((k) => anonymiseSource(k[2]))),
     ].join("\n");
     expect(findForbiddenNames("data", text).map((h) => h.context)).toEqual([]);
+  });
+
+  it("leaves no engine id in any free text once the ids are replaced", () => {
+    const ids = VERIFICATION_CASES.map((c) => c.id);
+    const text = VERIFICATION_CASES.flatMap((c) => [
+      anonymiseTitle(c.title, ids),
+      anonymiseText(c.description, ids),
+      ...(c.notes ?? []).map((n) => anonymiseText(n, ids)),
+      ...c.checks.map((k) => anonymiseText(k.note ?? "", ids)),
+    ]).join("\n");
+    expect(text.match(/\b(?:VP|GS)\d[\w.-]*/g)).toBeNull();
+    expect(text.match(/\b(?:models?|problems?|examples?)\s+#\d/gi)).toBeNull();
   });
 });
