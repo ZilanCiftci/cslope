@@ -41,7 +41,7 @@ describe("verification filter", () => {
     const n = (ps: typeof lit) => ps.reduce((a, p) => a + p.checks.length, 0);
     expect(n(lit) + n(com) + n(same)).toBe(VERIFICATION.summary.checks);
     expect(n(same)).toBeGreaterThan(0);
-    expect(com.flatMap((p) => p.checks).every((k) => /\bprogram [A-Z]\b/i.test(k.source))).toBe(true);
+    expect(com.flatMap((p) => p.checks).every((k) => /\b[Pp]rogram [A-Z]\b/.test(k.source))).toBe(true);
     expect(lit.every((p) => p.checks.length > 0)).toBe(true);
   });
 

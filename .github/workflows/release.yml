@@ -32,6 +32,9 @@ jobs:
       - name: Check the tag against the app version
         shell: pwsh
         run: |
+          # Stop at the first failing command, as bash does.
+          $ErrorActionPreference = "Stop"
+          $PSNativeCommandUseErrorActionPreference = $true
           $version = (Get-Content packages/desktop/package.json | ConvertFrom-Json).version
           if ("v$version" -ne "${{ github.ref_name }}") {
             throw "Tag ${{ github.ref_name }} does not match the app version $version"
@@ -43,7 +46,9 @@ jobs:
         env:
           CSLOPE_ALLOW_UNSIGNED: "1"
         # The app bundle must not carry other programs' names (the
-        # verification data, which cites them, is not part of it).
+        # verification data, which cites them, is not part of it). Bash
+        # stops at the first failing command; pwsh would carry on.
+        shell: bash
         run: |
           bunx tsc -b
           bunx vite build
@@ -52,6 +57,9 @@ jobs:
       - name: Checksum and release notes
         shell: pwsh
         run: |
+          # Stop at the first failing command, as bash does.
+          $ErrorActionPreference = "Stop"
+          $PSNativeCommandUseErrorActionPreference = $true
           $version = (Get-Content packages/desktop/package.json | ConvertFrom-Json).version
           $installer = "packages/desktop/release/$version/cSlope-Windows-$version-Setup.exe"
           $hash = (Get-FileHash $installer -Algorithm SHA256).Hash.ToLower()

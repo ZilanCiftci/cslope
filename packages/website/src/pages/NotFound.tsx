@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { usePageMeta } from "@/lib/page-meta";
 
 export function NotFound() {
-  usePageMeta("Page not found", "The page you are looking for does not exist or has moved.");
+  usePageMeta("Page not found", "The page you are looking for does not exist or has moved.", { canonical: false });
   return (
     <div className="container mx-auto flex max-w-xl flex-col items-center px-4 py-24 text-center">
       <p className="font-mono text-sm text-muted-foreground">404</p>

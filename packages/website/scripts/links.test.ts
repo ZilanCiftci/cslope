@@ -86,10 +86,13 @@ function headingIds(path: string): Set<string> | null {
   if (!file) return null;
   const seen = new Map<string, number>();
   const ids = new Set<string>();
-  for (const m of readFileSync(file, "utf8").matchAll(/^#{1,6}\s+(.+?)\s*$/gm)) {
+  // Headings outside code blocks.
+  const text = readFileSync(file, "utf8").replace(/^```[\s\S]*?^```/gm, "");
+  for (const m of text.matchAll(/^#{1,6}\s+(.+?)\s*$/gm)) {
     const text = m[1]
       .replace(/\[([^\]]*)\]\([^)]*\)/g, "$1")
-      .replace(/[*_`]/g, "")
+      // Emphasis and code marks go; underscores stay, as in github-slugger.
+      .replace(/[*`]/g, "")
       .replace(/\$[^$]*\$/g, (x) => x.slice(1, -1));
     const base = text.toLowerCase().replace(/[^\p{L}\p{N}\p{M}\s_-]/gu, "").replace(/\s/g, "-");
     const n = seen.get(base) ?? 0;

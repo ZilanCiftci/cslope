@@ -8,15 +8,15 @@
 export const FORBIDDEN_NAMES: RegExp[] = [
   // "Slide2", "Slide 6.0", "Slide3D"; not a CSS animation ("slide 1.2s")
   // or a slide counter ("slide 3 of 10").
-  /\bslide\s?\d+(?:\.\d+)?d?\b(?!\.\d|\s+of\b)/gi,
+  /\bslide\s?\d+(?:\.\d+)?d?\b(?!\.\d|\s+of\s+\d)/gi,
   /\brocscience\b/gi,
   /\bgeo[\s-]?studio\b/gi,
   /\bslope\s?[/∕-]\s?w\b/gi,
   /\bslopew\b/gi,
   /\bgeo[\s-]?slope\b/gi,
   /\bseequent\b/gi,
-  // The vendor, not the author name ("Bentley et al.").
-  /\bbentley\b(?!\s+et\s+al)/gi,
+  // The vendor, not the author name ("Bentley et al.", "Bentley (1998)").
+  /\bbentley\s+systems\b/gi,
   /\bplaxis\b/gi,
   /\bgeo\s?suite\b/gi,
   /\bnovapoint\b/gi,
@@ -31,7 +31,8 @@ export const FORBIDDEN_NAMES: RegExp[] = [
   /\bgeo\s?5\b/gi,
   /\bfine\s+(?:software|spol)\b/gi,
   /\b(?:rs2|rs3|phase2|settle3|swedge|rocplane|rocdata)\b/gi,
-  /\bflac(?:\/slope|2d|3d)?\b/gi,
+  // Not the audio format ("audio/flac").
+  /(?<!audio\/)\bflac(?:\/slope|2d|3d)?\b/gi,
   /\bitasca\b/gi,
   /\bmidas\s?(?:gts|gen)\b/gi,
   /\bsoilworks\b/gi,
@@ -42,15 +43,17 @@ export const FORBIDDEN_NAMES: RegExp[] = [
   // Capitalised, as a name: "Slide's circle", "SLIDE", "the Slide manual".
   /\bSlide's\b/g,
   /\bSLIDE\b/g,
-  /\bSlide\s+(?:Spencer|Bishop|Janbu|value|verification|example|manual|problem|tutorial)\b/gi,
+  // Case-sensitive: "a slide problem" is ordinary English.
+  /\bSlide\s+(?:Spencer|Bishop|Janbu|value|verification|example|manual|problem|tutorial)\b/g,
+  /\bSlide\s+(?:Verification|Manual|Problem|Example)\b/g,
 ];
 
 /**
- * Text as a reader sees it: without HTML comments (React writes
+ * Text as a reader sees it: without React's empty comments (it writes
  * "Slide<!-- -->2" for adjacent text), soft hyphens and zero-width
  * characters, which would otherwise split a name.
  */
-export const visibleText = (s: string) => s.replace(/<!--.*?-->/g, "").replace(/[\u00ad\u200b-\u200d\u2060\ufeff]/g, "");
+export const visibleText = (s: string) => s.replace(/<!--\s*-->/g, "").replace(/[\u00ad\u200b-\u200d\u2060\ufeff]/g, "");
 
 export interface NameHit {
   file: string;

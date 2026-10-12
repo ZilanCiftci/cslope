@@ -112,7 +112,7 @@ function ProblemTable() {
           options={[
             ["all", "All sources"],
             ["literature", "Literature"],
-            ["commercial", "Commercial programs"],
+            ["commercial", "Other programs"],
             ["same-input", "Same input"],
           ]}
         />
@@ -273,7 +273,10 @@ export function Verification() {
   );
   const s = VERIFICATION.summary;
   const counts = checkCounts();
-  const literatureChecks = VERIFICATION.problems.flatMap((p) => p.checks).filter((k) => sourceKind(k) === "literature").length;
+  // Published in the literature; closed-form solutions are counted apart (see the lead).
+  const literatureChecks = VERIFICATION.problems
+    .flatMap((p) => p.checks)
+    .filter((k) => sourceKind(k) === "literature" && !/^theory\b/i.test(k.source)).length;
   return (
     <>
       <PageHeader
@@ -315,10 +318,11 @@ export function Verification() {
             </p>
           </li>
           <li className="rounded-lg border bg-card p-4">
-            <p className="font-medium text-foreground">Commercial programs</p>
+            <p className="font-medium text-foreground">Other programs</p>
             <p className="mt-1">
-              Some values come from the verification manuals of established commercial programs. They are shown as
-              program A, B and so on: one letter per program, so differences between programs stay visible.
+              Some values come from the verification and reference manuals of other slope stability programs, most
+              of them commercial. They are shown as program A, B and so on: one letter per program, so differences
+              between programs stay visible.
             </p>
           </li>
           <li className="rounded-lg border bg-card p-4">

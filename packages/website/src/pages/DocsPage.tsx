@@ -99,7 +99,9 @@ export function DocsPage() {
   useEscape(menuOpen, () => setMenuOpen(false));
   // Tutorials share titles with reference pages ("Reporting"): say which.
   const tutorial = doc?.section === "Tutorials" && doc.slug !== "tutorials" ? "Tutorial: " : "";
-  usePageMeta(doc ? (doc.slug ? `${tutorial}${doc.title} · Docs` : "Documentation") : "Page not found", doc?.description);
+  usePageMeta(doc ? (doc.slug ? `${tutorial}${doc.title} · Docs` : "Documentation") : "Page not found", doc?.description, {
+    canonical: doc != null,
+  });
 
   if (!doc) return <NotFound />;
   const i = DOCS.indexOf(doc);

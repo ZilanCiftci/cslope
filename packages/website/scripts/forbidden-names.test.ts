@@ -25,6 +25,9 @@ describe("forbidden names", () => {
     const text = "a slide of the slope; slope stability; Bishop; Bentley et al. (1998); slope with a berm";
     expect(findForbiddenNames("x", text)).toEqual([]);
     expect(findForbiddenNames("x", "animation: slide 1.2s ease-in-out; slide 3 of 10")).toEqual([]);
+    const prose = "the slide problem, a slide example; Bentley (1998); Bentley and Smith; audio/flac";
+    expect(findForbiddenNames("x", prose)).toEqual([]);
+    expect(findForbiddenNames("x", "Slide2 of the manual").map((h) => h.match)).toEqual(["Slide2"]);
   });
 
   it("catch spelling variants, names with digits and names split by markup", () => {

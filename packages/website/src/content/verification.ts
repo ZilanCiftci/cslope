@@ -73,8 +73,8 @@ export function checkCounts(d: VerificationData = VERIFICATION) {
  */
 export function sourceKind(k: VerificationCheck): SourceKind {
   if (/same input/i.test(k.source)) return "same-input";
-  // "Commercial program A", and the other programs ("program F").
-  if (/\bprogram [A-Z]\b/i.test(k.source)) return "commercial";
+  // "Commercial program A", and the other programs ("Program H").
+  if (/\b[Pp]rogram [A-Z]\b/.test(k.source)) return "commercial";
   return "literature";
 }
 
