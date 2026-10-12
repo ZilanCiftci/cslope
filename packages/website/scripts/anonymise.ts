@@ -20,6 +20,18 @@ const PROGRAMS: [RegExp, string][] = [
   [/\bRS2\b/g, "commercial program E"],
   [/\bXSTABL\b/g, "program F"],
   [/\bUTEXAS\d*\b/g, "program G"],
+  [/\bSNAILZ\b/g, "program H"],
+];
+
+/**
+ * Details in a source label that would point to one program's own terms or
+ * manual ("surface altering", its figure and surface numbers), made generic.
+ */
+const SOURCE_DETAILS: [RegExp, string][] = [
+  [/\(particle swarm \+ surface altering\)/g, "(optimised)"],
+  [/\(RI lognormal\)/g, "(lognormal)"],
+  [/\s*\(surface \w+\)/g, ""],
+  [/\(Fig\. \d+, moment FS at λ = 0\)/g, "(moment equilibrium, λ = 0)"],
 ];
 
 /** Vendor names in free text. */
@@ -49,6 +61,7 @@ export function anonymiseText(text: string, ids: readonly string[] = []): string
 export function anonymiseSource(publishedBy: string): string {
   let s = publishedBy;
   for (const [re, label] of PROGRAMS) s = s.replace(re, label);
+  for (const [re, to] of SOURCE_DETAILS) s = s.replace(re, to);
   return s.charAt(0).toUpperCase() + s.slice(1);
 }
 
@@ -96,10 +109,15 @@ export function anonymiseReference(reference: string): { text: string; commercia
 
 /** Titles that name a program, rewritten. */
 const TITLE_FIXES: [RegExp, string][] = [
-  [/\bSlide2 tutorial \d+ slope\b/g, "Tutorial slope"],
+  [/\bSlide2 tutorial \d+ slope\b/g, "Example slope"],
+  [/\bSNAILZ nailed wall\b/g, "Nailed wall"],
+  [/ \(SNAILZ\)/g, ""],
   [/\bSlide's circle\b/g, "the reference circle"],
   [/\bSlide (Spencer|Bishop) value\b/g, "reference $1 value"],
   [/\bon Slide's\b/g, "on the reference"],
+  // A literature value computed with a finite-difference program.
+  [/ \(FLAC\)/g, " (finite difference)"],
+  [/\bFLAC (\d)/g, "finite difference $1"],
   [/ \(SLOPE\/W domain\)/g, " (alternative domain)"],
   [/ \(SLOPE\/W\)/g, " (reference values)"],
   [/\bSLOPE\/W (geometry|model|crack depth)\b/g, "reference $1"],

@@ -56,12 +56,25 @@ export function methodFamily(label: string): Exclude<MethodFilter, "all"> {
 }
 
 /**
+ * The checks by kind of reference value: factors of safety published in
+ * the literature or in a verification manual, closed-form theory, and
+ * another program run on the same input.
+ */
+export function checkCounts(d: VerificationData = VERIFICATION) {
+  const checks = d.problems.flatMap((p) => p.checks);
+  const sameInput = checks.filter((k) => sourceKind(k) === "same-input").length;
+  const theory = checks.filter((k) => /^theory\b/i.test(k.source)).length;
+  return { published: checks.length - sameInput - theory, sameInput, theory };
+}
+
+/**
  * Where a check's published value comes from: the literature, a commercial
  * program's verification manual, or another program run on the same input.
  */
 export function sourceKind(k: VerificationCheck): SourceKind {
   if (/same input/i.test(k.source)) return "same-input";
-  if (/commercial program/i.test(k.source)) return "commercial";
+  // "Commercial program A", and the other programs ("program F").
+  if (/\bprogram [A-Z]\b/i.test(k.source)) return "commercial";
   return "literature";
 }
 

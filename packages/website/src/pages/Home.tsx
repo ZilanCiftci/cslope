@@ -18,7 +18,7 @@ import { Button } from "@/components/ui/button";
 import { Section, SectionHeading } from "@/components/Section";
 import { Screenshot } from "@/components/Screenshot";
 import { MEDIA } from "@/content/media";
-import { VERIFICATION, homeExamples } from "@/content/verification";
+import { VERIFICATION, checkCounts, homeExamples } from "@/content/verification";
 import { usePageMeta } from "@/lib/page-meta";
 import { SITE } from "@/site";
 
@@ -104,7 +104,7 @@ const CAPABILITIES: { icon: ReactNode; title: string; text: string }[] = [
   {
     icon: <Layers className="h-5 w-5" />,
     title: "Materials",
-    text: "Mohr–Coulomb, undrained, strength increasing with depth or from a datum with a cutoff, anisotropic, spatially varying and lime-cement columns.",
+    text: "Mohr–Coulomb, undrained, strength increasing with depth or from a datum with a cutoff, anisotropic, spatially varying, lime-cement columns, and high-strength and impenetrable (bedrock) layers.",
   },
   {
     icon: <Droplets className="h-5 w-5" />,
@@ -159,6 +159,7 @@ function Capabilities() {
 function Verification() {
   const examples = homeExamples();
   const s = VERIFICATION.summary;
+  const counts = checkCounts();
   return (
     <Section id="verification" surface>
       <div className="grid gap-12 lg:grid-cols-[1fr_1.3fr] lg:items-start">
@@ -169,7 +170,9 @@ function Verification() {
             lead={
               <>
                 {s.problems} problems from the geotechnical literature and from verification manuals of established
-                programs, {s.checks} published factors of safety. The checks run on every change to the code.
+                programs: {counts.published} published factors of safety, plus {counts.sameInput + counts.theory}{" "}
+                checks against theory or another program on identical input. The checks run on every change to the
+                code.
               </>
             }
           />

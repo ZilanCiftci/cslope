@@ -9,7 +9,34 @@ import rehypeSlug from "rehype-slug";
 import remarkMath from "remark-math";
 import rehypeKatex from "rehype-katex";
 import { siteOrigin } from "./scripts/site-origin";
+import license from "rollup-plugin-license";
+import { appendFileSync, existsSync, readFileSync } from "node:fs";
+import { createRequire } from "node:module";
 import path from "path";
+
+/**
+ * Packages that reach the site only as stylesheets and fonts, which the
+ * licence plugin (it follows JavaScript modules) does not see.
+ */
+const CSS_PACKAGES = ["katex", "@fontsource-variable/inter", "@fontsource/ibm-plex-mono"];
+
+function cssLicenses(file: string): Plugin {
+  return {
+    name: "css-licenses",
+    apply: "build",
+    closeBundle() {
+      if (!existsSync(file)) return;
+      const require = createRequire(import.meta.url);
+      for (const name of CSS_PACKAGES) {
+        const pkgFile = require.resolve(`${name}/package.json`);
+        const pkg = JSON.parse(readFileSync(pkgFile, "utf8")) as { version: string; license: string };
+        const licence = path.join(path.dirname(pkgFile), "LICENSE");
+        const text = existsSync(licence) ? readFileSync(licence, "utf8").trim() : "";
+        appendFileSync(file, `\n---\n\nName: ${name}\nVersion: ${pkg.version}\nLicense: ${pkg.license}\n\n${text}\n`);
+      }
+    },
+  };
+}
 
 function shareImage(origin: string): Plugin {
   return {
@@ -53,6 +80,16 @@ export default defineConfig(({ mode, isSsrBuild }) => ({
     tailwindcss(),
     react({ include: /\.(mdx|js|jsx|ts|tsx)$/ }),
     shareImage(siteOrigin(loadEnv(mode, process.cwd(), ""))),
+    // The licences of the third-party code and fonts in the client bundle,
+    // published as /third-party-licenses.txt (linked from the footer).
+    !isSsrBuild &&
+      license({
+        thirdParty: {
+          includePrivate: false,
+          output: { file: path.resolve(__dirname, "dist/third-party-licenses.txt") },
+        },
+      }),
+    !isSsrBuild && cssLicenses(path.resolve(__dirname, "dist/third-party-licenses.txt")),
   ],
   resolve: {
     alias: {

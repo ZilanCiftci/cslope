@@ -13,7 +13,7 @@ After an analysis the canvas switches to **result mode**. It shows a print sheet
 
 The result sidebar on the right (toggle it on the strip at the window edge) has three parts: **Summary**, **Annotations** and **Properties**. The summary shows:
 
-- **Min FOS**: the lowest factor of safety found, coloured red below 1.0, amber below 1.5 and green above. With partial factors it reads *Min FOS (design values)*.
+- **Min FOS**: the lowest factor of safety found, coloured red below 1.0, amber below 1.5 and green above. With partial factors it reads *Min FOS (design values)* and has no amber: 1.0 and above is green.
 - **Method** used.
 - **Surfaces**: how many surfaces were analysed and how many of them have a factor of safety below 1.0.
 - **Elapsed**: the time the analysis took.
@@ -44,9 +44,9 @@ With **All surfaces**, each surface is coloured by its factor of safety, from re
 **Results › Plots › Results Plot** opens a window with plots of the analysed surfaces:
 
 - **Slip Surface Variables**: a quantity along a slip surface, against the slice number or x. The quantities are shear strength, friction angle, cohesion, base cohesion, pore pressure, pore water force, slice weight, cohesion strength, resisting force and pulling force. Choose the surface in **Slip surface**: the critical one or any other analysed surface, listed with its factor of safety.
-- **Lambda vs Fm/Ff** (Morgenstern–Price only): the factors of safety from moment and force equilibrium against λ. Their intersection is the factor of safety.
+- **Lambda vs Fm/Ff** (Morgenstern–Price only): the factors of safety from moment and force equilibrium against λ. The factor of safety is where they agree within the tolerance.
 
-<Figure src="/media/tutorials/dam/04-lambda.png" alt="Fm and Ff against lambda for the critical surface of a dam" caption="Lambda vs Fm/Ff: the two factors of safety meet at the result." />
+<Figure src="/media/tutorials/dam/04-lambda.png" alt="Fm and Ff against lambda for the critical surface of a dam" caption="Lambda vs Fm/Ff: the two factors of safety agree at the result." />
 
 ## Slice data
 

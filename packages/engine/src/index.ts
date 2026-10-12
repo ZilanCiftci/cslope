@@ -202,18 +202,6 @@ export {
 export type { SlopeOrientation } from "./model/canonical";
 
 // ── Verification problems ──────────────────────────────────────
-export {
-  VERIFICATION_CASES,
-  VERIFICATION_OPTIONS,
-  runVerification,
-  runReliabilityCase,
-} from "./verification/cases";
-export { RELIABILITY_CASES } from "./verification/reliability-cases";
-export type { ReliabilityCaseData, ReliabilityQuantity } from "./verification/reliability-cases";
-export { FHWA_PULLOUT_TABLES } from "./verification/pullout-tables";
-export type { PulloutTable } from "./verification/pullout-tables";
-export type {
-  VerificationCase,
-  VerificationCheck,
-  ReliabilityCheckResult,
-} from "./verification/cases";
+// Exported from "@cslope/engine/verification" (src/verification/index.ts),
+// not from here: the problems cite their sources, and the app imports only
+// this entry, so they stay out of the shipped bundle.

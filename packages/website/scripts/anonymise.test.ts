@@ -1,6 +1,6 @@
 // @vitest-environment node
 import { describe, expect, it } from "vitest";
-import { RELIABILITY_CASES, VERIFICATION_CASES } from "@cslope/engine";
+import { RELIABILITY_CASES, VERIFICATION_CASES } from "@cslope/engine/verification";
 import {
   COMMERCIAL_REFERENCE,
   anonymiseReference,

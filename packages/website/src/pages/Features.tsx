@@ -56,7 +56,7 @@ const AREAS: Area[] = [
       "Exterior and interior boundaries with snapping, undo and redo; DXF import.",
       "Parameters and expressions for coordinates and properties.",
       "Mohr–Coulomb, undrained, strength increasing with depth (from the ground or from the top of the layer) or from a datum, with a strength cutoff.",
-      "Anisotropic and spatially varying strength, lime-cement columns, saturated unit weight below the water table.",
+      "Anisotropic and spatially varying strength, lime-cement columns, high-strength and impenetrable (bedrock) layers, saturated unit weight below the water table.",
     ],
     media: MEDIA.materials,
     caption: "Material regions of a non-homogeneous slope",

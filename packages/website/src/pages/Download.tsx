@@ -11,7 +11,7 @@ import { SITE } from "@/site";
 const STEPS = [
   {
     title: "Download the installer",
-    text: `Get ${WINDOWS_INSTALLER} from the latest release. The release page also lists its SHA-256 checksum.`,
+    text: `Get ${WINDOWS_INSTALLER} from the latest release. Its SHA-256 checksum is in the file next to it, ${WINDOWS_INSTALLER}.sha256.`,
   },
   {
     title: "Run it",

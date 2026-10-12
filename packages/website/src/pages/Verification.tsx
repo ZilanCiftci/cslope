@@ -6,6 +6,7 @@ import { Section, SectionHeading } from "@/components/Section";
 import { Button } from "@/components/ui/button";
 import {
   VERIFICATION,
+  checkCounts,
   filterProblems,
   sourceKind,
   type Filter,
@@ -261,20 +262,21 @@ export function Verification() {
     `cSlope against ${VERIFICATION.summary.problems} published slope stability problems: published and computed factors of safety, problem by problem.`,
   );
   const s = VERIFICATION.summary;
+  const counts = checkCounts();
   const literatureChecks = VERIFICATION.problems.flatMap((p) => p.checks).filter((k) => sourceKind(k) === "literature").length;
   return (
     <>
       <PageHeader
         eyebrow="Verification"
         title="Every result, next to the published one"
-        lead={`cSlope is checked against ${s.problems} published problems with ${s.checks} published factors of safety. The same problems run in the automated tests on every change to the code, so this table is what the program computes today.`}
+        lead={`cSlope is checked against ${s.problems} problems with ${s.checks} reference values: ${counts.published} published factors of safety, ${counts.theory} closed-form solutions and ${counts.sameInput} results of another program on identical input. The same problems run in the automated tests on every change to the code, so this table is what the program computes today.`}
       >
         <dl className="mt-10 grid max-w-3xl grid-cols-2 gap-6 sm:grid-cols-4">
           {[
             [String(s.problems), "problems"],
             [`${s.passed}/${s.checks}`, "checks pass"],
             [String(literatureChecks), "values from the literature"],
-            [String(s.reliabilityChecks), "probabilistic checks"],
+            [String(s.reliabilityChecks), "probabilistic checks (β, Pf)"],
           ].map(([v, l]) => (
             <div key={l} className="flex flex-col-reverse">
               <dt className="mt-1 text-sm text-muted-foreground">{l}</dt>
@@ -312,8 +314,8 @@ export function Verification() {
           <li className="rounded-lg border bg-card p-4">
             <p className="font-medium text-foreground">Same input</p>
             <p className="mt-1">
-              A few checks compare with another program run on identical input. They confirm the implementation
-              rather than the published problem.
+              {counts.sameInput} checks compare with another program run on identical input. They confirm the
+              implementation rather than the published problem.
             </p>
           </li>
         </ul>

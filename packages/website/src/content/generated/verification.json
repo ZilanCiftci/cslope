@@ -4,7 +4,7 @@
   "checks": 365,
   "passed": 365,
   "literatureProblems": 161,
-  "reliabilityChecks": 35
+  "reliabilityChecks": 29
  },
  "problems": [
   {
@@ -1820,7 +1820,7 @@
   },
   {
    "id": "P-7C97D1",
-   "title": "SNAILZ nailed wall, 14 rows, deep wedge",
+   "title": "Nailed wall, 14 rows, deep wedge",
    "reference": "Caltrans soil nail reference manual.",
    "literature": true,
    "commercial": true,
@@ -1830,7 +1830,7 @@
     {
      "method": "Janbu corrected (f0)",
      "published": 1.46,
-     "source": "SNAILZ",
+     "source": "Program H",
      "tolerance": 0.015,
      "computed": 1.4486,
      "deviation": -0.00781,
@@ -2221,7 +2221,7 @@
   },
   {
    "id": "P-6D3B0C",
-   "title": "Soldier-pile tieback wall (SNAILZ)",
+   "title": "Soldier-pile tieback wall",
    "reference": "Caltrans soil nail reference manual.",
    "literature": true,
    "commercial": true,
@@ -2702,7 +2702,7 @@
     {
      "method": "Bishop simplified",
      "published": 2.551,
-     "source": "Commercial program A (surface 7A)",
+     "source": "Commercial program A",
      "tolerance": 0.015,
      "computed": 2.53,
      "deviation": -0.00823,
@@ -3260,7 +3260,7 @@
   },
   {
    "id": "P-FC2971",
-   "title": "Tutorial slope without seismic load",
+   "title": "Example slope without seismic load",
    "reference": "Verification manual of a commercial slope stability program.",
    "literature": false,
    "commercial": true,
@@ -4283,7 +4283,7 @@
     {
      "method": "Bishop simplified",
      "published": 0.992,
-     "source": "Commercial program B (Fig. 3, moment FS at λ = 0)",
+     "source": "Commercial program B (moment equilibrium, λ = 0)",
      "tolerance": 0.01,
      "computed": 0.9845,
      "deviation": -0.00756,
@@ -5224,7 +5224,7 @@
     {
      "method": "Spencer (M-P, constant f(x))",
      "published": 1.215,
-     "source": "Commercial program A (particle swarm + surface altering)",
+     "source": "Commercial program A (optimised)",
      "tolerance": 0.01,
      "computed": 1.2165,
      "deviation": 0.00123,
@@ -5244,7 +5244,7 @@
     {
      "method": "Spencer (M-P, constant f(x))",
      "published": 1.29,
-     "source": "Commercial program A (particle swarm + surface altering)",
+     "source": "Commercial program A (optimised)",
      "tolerance": 0.01,
      "computed": 1.2914,
      "deviation": 0.00109,
@@ -5264,7 +5264,7 @@
     {
      "method": "Spencer (M-P, constant f(x))",
      "published": 1.315,
-     "source": "Commercial program A (particle swarm + surface altering)",
+     "source": "Commercial program A (optimised)",
      "tolerance": 0.01,
      "computed": 1.317,
      "deviation": 0.00152,
@@ -5297,7 +5297,7 @@
     {
      "quantity": "beta-mc",
      "published": 0.65,
-     "source": "Commercial program A (RI lognormal)",
+     "source": "Commercial program A (lognormal)",
      "tolerance": 0.04,
      "computed": 0.6714,
      "pass": true
@@ -5327,7 +5327,7 @@
     {
      "quantity": "beta-mc",
      "published": 0.537,
-     "source": "Commercial program A (RI lognormal)",
+     "source": "Commercial program A (lognormal)",
      "tolerance": 0.04,
      "computed": 0.5531,
      "pass": true
@@ -5357,7 +5357,7 @@
     {
      "quantity": "beta-mc",
      "published": 0.799,
-     "source": "Commercial program A (RI lognormal)",
+     "source": "Commercial program A (lognormal)",
      "tolerance": 0.04,
      "computed": 0.8106,
      "pass": true
@@ -5411,7 +5411,7 @@
     {
      "quantity": "beta-mc",
      "published": 0.82,
-     "source": "Commercial program A (RI lognormal)",
+     "source": "Commercial program A (lognormal)",
      "tolerance": 0.04,
      "computed": 0.7887,
      "pass": true
@@ -5501,7 +5501,7 @@
     {
      "quantity": "beta-mc",
      "published": 10.953,
-     "source": "Commercial program A (RI lognormal)",
+     "source": "Commercial program A (lognormal)",
      "tolerance": 0.219,
      "computed": 11.0347,
      "pass": true
@@ -5515,7 +5515,7 @@
     {
      "quantity": "beta-mc",
      "published": 4.351,
-     "source": "Commercial program A (RI lognormal)",
+     "source": "Commercial program A (lognormal)",
      "tolerance": 0.087,
      "computed": 4.4012,
      "pass": true
@@ -5529,7 +5529,7 @@
     {
      "quantity": "beta-mc",
      "published": 4.263,
-     "source": "Commercial program A (RI lognormal)",
+     "source": "Commercial program A (lognormal)",
      "tolerance": 0.085,
      "computed": 4.3243,
      "pass": true
@@ -5543,7 +5543,7 @@
     {
      "quantity": "beta-mc",
      "published": 11.092,
-     "source": "Commercial program A (RI lognormal)",
+     "source": "Commercial program A (lognormal)",
      "tolerance": 0.222,
      "computed": 11.0764,
      "pass": true
@@ -5557,7 +5557,7 @@
     {
      "quantity": "beta-mc",
      "published": 10.281,
-     "source": "Commercial program A (RI lognormal)",
+     "source": "Commercial program A (lognormal)",
      "tolerance": 0.206,
      "computed": 10.3295,
      "pass": true
@@ -5571,7 +5571,7 @@
     {
      "quantity": "beta-mc",
      "published": 4.858,
-     "source": "Commercial program A (RI lognormal)",
+     "source": "Commercial program A (lognormal)",
      "tolerance": 0.097,
      "computed": 4.9325,
      "pass": true
@@ -5585,7 +5585,7 @@
     {
      "quantity": "beta-mc",
      "published": 5.485,
-     "source": "Commercial program A (RI lognormal)",
+     "source": "Commercial program A (lognormal)",
      "tolerance": 0.11,
      "computed": 5.5275,
      "pass": true
@@ -5599,7 +5599,7 @@
     {
      "quantity": "beta-mc",
      "published": 5.563,
-     "source": "Commercial program A (RI lognormal)",
+     "source": "Commercial program A (lognormal)",
      "tolerance": 0.111,
      "computed": 5.4902,
      "pass": true
@@ -5613,7 +5613,7 @@
     {
      "quantity": "beta-mc",
      "published": 6.394,
-     "source": "Commercial program A (RI lognormal)",
+     "source": "Commercial program A (lognormal)",
      "tolerance": 0.128,
      "computed": 6.4314,
      "pass": true

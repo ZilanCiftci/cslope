@@ -133,7 +133,7 @@ export function DocsPage() {
           <p className="text-sm font-medium text-primary">{doc.section}</p>
           <article
             ref={article}
-            className="prose prose-slate mt-2 max-w-none dark:prose-invert prose-headings:scroll-mt-24 prose-headings:font-semibold prose-headings:tracking-tight prose-a:text-primary prose-a:no-underline hover:prose-a:underline prose-code:before:content-none prose-code:after:content-none prose-img:rounded-lg"
+            className="prose prose-slate mt-2 max-w-none dark:prose-invert prose-headings:font-semibold prose-headings:tracking-tight prose-a:text-primary prose-a:no-underline hover:prose-a:underline prose-code:before:content-none prose-code:after:content-none prose-img:rounded-lg"
           >
             <h1>{doc.title}</h1>
             <p className="lead">{doc.description}</p>

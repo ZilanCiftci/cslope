@@ -21,24 +21,26 @@ import path from "node:path";
 import { execFileSync } from "node:child_process";
 import { jsPDF } from "jspdf";
 import {
-  RELIABILITY_CASES,
-  VERIFICATION_CASES,
-  VERIFICATION_OPTIONS,
-  runReliabilityCase,
   analyseSlope,
   buildSlope,
   isPointInPolygon,
   polygonizeRegions,
-  runVerification,
   toCanonicalSlopeDefinition,
   type AnalysisMethod,
   type AnalysisOptions,
   type MaterialModel,
-  type ReliabilityCheckResult,
   type SlopeDefinition,
+} from "@cslope/engine";
+import {
+  RELIABILITY_CASES,
+  VERIFICATION_CASES,
+  VERIFICATION_OPTIONS,
+  runReliabilityCase,
+  runVerification,
+  type ReliabilityCheckResult,
   type VerificationCase,
   type VerificationCheck,
-} from "@cslope/engine";
+} from "@cslope/engine/verification";
 import type { Slope } from "@cslope/engine";
 import { BENCHMARK_MODELS, PUBLISHED_BENCHMARKS } from "../src/store/benchmarks";
 import {
@@ -53,7 +55,8 @@ import { buildSlopeDTOFromModel } from "../src/store/helpers";
 
 type Pt = [number, number];
 
-const HERE = path.dirname(new URL(import.meta.url).pathname);
+// import.meta.dirname, not the URL pathname: on Windows that is "/D:/…".
+const HERE = import.meta.dirname;
 const REPO = path.resolve(HERE, "../../..");
 const ARGS = process.argv.slice(2);
 const PUBLIC = ARGS.includes("--public");
@@ -87,6 +90,7 @@ const RELIABILITY = PUBLIC
   ? RELIABILITY_CASES.map((c) => ({
       ...c,
       id: publicId(c.id),
+      title: anonymiseTitle(c.title, ENGINE_IDS),
       checks: c.checks.map(([q, v, by, tol]) => [q, v, anonymiseSource(by), tol] as typeof c.checks[number]),
     }))
   : RELIABILITY_CASES;
@@ -133,6 +137,12 @@ const MATERIAL_FILLS: [number, number, number][] = [
 ];
 
 const pdf = new jsPDF({ unit: "mm", format: "a4", orientation: "portrait" });
+pdf.setProperties({
+  title: "cSlope verification report",
+  subject: "Verification of cSlope against published slope stability problems",
+  author: "Ibirico",
+  creator: "cSlope",
+});
 if (PUBLIC) {
   // Every string on the page passes the guard, before and after it is
   // wrapped into lines (a name could be split at a line break).

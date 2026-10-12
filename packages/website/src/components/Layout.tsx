@@ -157,7 +157,12 @@ function SiteFooter() {
       </div>
       <div className="border-t">
         <p className="mx-auto max-w-6xl px-4 py-5 text-xs text-muted-foreground sm:px-6">
-          © {__BUILD_YEAR__} {SITE.company.name}. cSlope is released under the {SITE.licence} licence.
+          © {__BUILD_YEAR__} {SITE.company.name}. cSlope is released under the {SITE.licence} licence. The site uses
+          open source software and fonts:{" "}
+          <a href="/third-party-licenses.txt" className="underline-offset-2 hover:text-foreground hover:underline">
+            third-party licences
+          </a>
+          . Windows is a trademark of Microsoft Corporation.
         </p>
       </div>
     </footer>
@@ -175,15 +180,29 @@ export function Layout({ children }: { children: ReactNode }) {
       window.scrollTo(0, 0);
       return;
     }
-    // The target may render a moment later (a lazily loaded page).
+    let id = hash.slice(1);
+    try {
+      id = decodeURIComponent(id);
+    } catch {
+      // A malformed escape: look for the fragment as written.
+    }
+    const target = () => document.getElementById(id);
+    if (target()) {
+      target()!.scrollIntoView();
+      return;
+    }
+    // The target may render later (a lazily loaded page on a slow
+    // connection): start at the top meanwhile, and keep looking for a few
+    // seconds. A fragment that never appears leaves the page at the top.
+    window.scrollTo(0, 0);
     let tries = 0;
     let frame = 0;
     const scroll = () => {
-      const el = document.getElementById(decodeURIComponent(hash.slice(1)));
+      const el = target();
       if (el) el.scrollIntoView();
-      else if (++tries < 30) frame = requestAnimationFrame(scroll);
+      else if (++tries < 300) frame = requestAnimationFrame(scroll);
     };
-    scroll();
+    frame = requestAnimationFrame(scroll);
     return () => cancelAnimationFrame(frame);
   }, [pathname, hash, navigation]);
 

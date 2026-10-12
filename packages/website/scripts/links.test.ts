@@ -60,7 +60,44 @@ describe("internal links", () => {
     }
     expect(broken).toEqual([]);
   });
+
+  it("to a heading point at a heading that exists", () => {
+    const broken: string[] = [];
+    for (const f of all) {
+      for (const m of readFileSync(f, "utf8").matchAll(LINK)) {
+        const [path, fragment] = (m[1] ?? m[2]).split("#");
+        if (!fragment || !(path === "/docs" || path.startsWith("/docs/"))) continue;
+        const ids = headingIds(path);
+        if (ids && !ids.has(fragment)) broken.push(`${rel(src, f)}: ${path}#${fragment}`);
+      }
+    }
+    expect(broken).toEqual([]);
+  });
 });
+
+/**
+ * The ids rehype-slug gives a doc's headings (GitHub's slugs: lower case,
+ * punctuation removed, spaces to hyphens, "-1" for repeats), or null when
+ * the path is not a doc.
+ */
+function headingIds(path: string): Set<string> | null {
+  const docPath = (f: string) => ("/docs/" + rel(join(src, "docs"), f).replace(/\.mdx$/, "").replace(/(^|\/)index$/, "")).replace(/\/$/, "");
+  const file = all.find((f) => f.endsWith(".mdx") && rel(src, f).startsWith("docs/") && docPath(f) === path.replace(/\/$/, ""));
+  if (!file) return null;
+  const seen = new Map<string, number>();
+  const ids = new Set<string>();
+  for (const m of readFileSync(file, "utf8").matchAll(/^#{1,6}\s+(.+?)\s*$/gm)) {
+    const text = m[1]
+      .replace(/\[([^\]]*)\]\([^)]*\)/g, "$1")
+      .replace(/[*_`]/g, "")
+      .replace(/\$[^$]*\$/g, (x) => x.slice(1, -1));
+    const base = text.toLowerCase().replace(/[^\p{L}\p{N}\p{M}\s_-]/gu, "").replace(/\s/g, "-");
+    const n = seen.get(base) ?? 0;
+    seen.set(base, n + 1);
+    ids.add(n ? `${base}-${n}` : base);
+  }
+  return ids;
+}
 
 describe("vercel.json", () => {
   const vercel = JSON.parse(readFileSync(join(src, "../vercel.json"), "utf8")) as {

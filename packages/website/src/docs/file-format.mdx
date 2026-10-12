@@ -31,12 +31,14 @@ Files from earlier versions of cSlope are converted when they are opened.
 
 **Help › Benchmarks** replaces the project with five well-known published problems:
 
-| Model | Published factor of safety |
+| Model | Reference factor of safety |
 | --- | --- |
-| T-ACADS Simple | 0.984 (Morgenstern–Price), 0.985 (Bishop), 0.938 (Janbu) |
-| T-ACADS Non-Homogeneous | 1.373 (Morgenstern–Price) |
-| Arai & Tagyo (1985) | 1.138 (Arai & Tagyo) |
-| Talbingo Dam | 1.95 (Morgenstern–Price) |
-| Talbingo Dam (Single Circle) | 2.29 (Morgenstern–Price, one given circle) |
+| T-ACADS Simple | 1.00 (ACADS referee answer, Giam & Donald 1989). Reference values 0.984 (Morgenstern–Price), 0.985 (Bishop), 0.938 (Janbu, uncorrected) |
+| T-ACADS Non-Homogeneous | 1.39 (ACADS referee answer). Reference value 1.373 (Morgenstern–Price) |
+| Arai & Tagyo (1985) | 1.138 (Bishop, Arai & Tagyo 1985). Reference value 1.118 (Bishop, from the verification manual of a commercial program) |
+| Talbingo Dam | 1.95 (ACADS referee answer, Giam & Donald 1989) |
+| Talbingo Dam (Single Circle) | 2.29 (ACADS referee answer, on one given circle) |
+
+cSlope checks the benchmarks against the reference values with the method given in brackets.
 
 They are a quick way to see a complete model and to check the program. The [verification](/verification) page compares cSlope with many more published problems.

@@ -17,7 +17,7 @@ The first public release.
 ### Model
 
 - Exterior and interior boundaries with snapping, DXF import, and parameters with expressions.
-- Material models: Mohr–Coulomb, undrained, strength increasing with depth (from the ground or from the top of the layer) or from a datum, with a strength cutoff, anisotropic, spatially varying, and lime-cement columns. Saturated unit weight below the water table.
+- Material models: Mohr–Coulomb, undrained, strength increasing with depth (from the ground or from the top of the layer) or from a datum, with a strength cutoff, anisotropic, spatially varying, lime-cement columns, and high-strength and impenetrable (bedrock) layers. Saturated unit weight below the water table.
 - Water: several piezometric lines with one per material if needed, ponded water above the ground.
 - Distributed and line loads; anchors, grouted tiebacks, soil nails, geosynthetics, pile rows and sheet pile walls.
 
@@ -28,4 +28,4 @@ The first public release.
 
 ### Verification
 
-- 180 published verification problems with 365 checks, run by the automated tests on every change.
+- 180 verification problems with 365 checks (published factors of safety, closed-form solutions and comparisons on identical input), run by the automated tests on every change.

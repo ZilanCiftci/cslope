@@ -1,5 +1,6 @@
 // @vitest-environment node
 import { describe, expect, it } from "vitest";
+import { existsSync } from "node:fs";
 import { join } from "node:path";
 import { execFileSync } from "node:child_process";
 import { checkNames } from "./check-names";
@@ -21,8 +22,24 @@ describe("forbidden names", () => {
   });
 
   it("leave ordinary words and author names alone", () => {
-    const text = "a slide of the slope; slope stability; Bishop; Bentley et al. (1998)";
+    const text = "a slide of the slope; slope stability; Bishop; Bentley et al. (1998); slope with a berm";
     expect(findForbiddenNames("x", text)).toEqual([]);
+    expect(findForbiddenNames("x", "animation: slide 1.2s ease-in-out; slide 3 of 10")).toEqual([]);
+  });
+
+  it("catch spelling variants, names with digits and names split by markup", () => {
+    const text = "Geo-Studio, SLOPE-W, GEO 5, STABL5, PCSTABL, the Slide manual, SLIDE, Slide<!-- -->2, Geo\u00adStudio";
+    expect(findForbiddenNames("x", text).map((h) => h.match)).toEqual([
+      "Slide2",
+      "Geo-Studio",
+      "GeoStudio",
+      "SLOPE-W",
+      "STABL5",
+      "PCSTABL",
+      "GEO 5",
+      "SLIDE",
+      "Slide manual",
+    ]);
   });
 
   it("report a missing directory clearly", () => {
@@ -36,6 +53,7 @@ describe("forbidden names", () => {
 
 /** The text of a PDF, or null where poppler's pdftotext is not installed. */
 function pdfText(file: string): string | null {
+  if (!existsSync(file)) return null;
   try {
     return execFileSync("pdftotext", [file, "-"], { encoding: "utf8", maxBuffer: 64 * 1024 * 1024 });
   } catch {

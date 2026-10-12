@@ -35,9 +35,12 @@ jobs:
         # until they are set up in CI the installer is unsigned.
         env:
           CSLOPE_ALLOW_UNSIGNED: "1"
+        # The app bundle must not carry other programs' names (the
+        # verification data, which cites them, is not part of it).
         run: |
           bunx tsc -b
           bunx vite build
+          bun ../website/scripts/check-names.ts dist dist-electron
           bunx electron-builder --win --publish never
       - name: Checksum and release notes
         shell: pwsh
@@ -47,11 +50,13 @@ jobs:
           $hash = (Get-FileHash $installer -Algorithm SHA256).Hash.ToLower()
           "$hash  cSlope-Windows-$version-Setup.exe" | Out-File -Encoding ascii "$installer.sha256"
           bun packages/website/scripts/changelog.ts $version release-notes.md
+          bun packages/website/scripts/check-names.ts release-notes.md
           "INSTALLER=$installer" | Out-File -Append -Encoding utf8 $env:GITHUB_ENV
       - name: Verification report
         working-directory: packages/desktop
-        # The public edition (no other program named), attached to the release
-        # and linked from the website's verification page.
+        # The public edition, attached to the release and linked from the
+        # website's verification page. Every string it writes passes the
+        # forbidden-names guard, so a name stops the release here.
         run: bun scripts/verification-report.ts ../../cSlope-verification-report.pdf --public
       - name: Publish the release
         uses: softprops/action-gh-release@v2

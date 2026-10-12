@@ -24,7 +24,7 @@ Choose the model in the **Material Model** list. Changing the model resets the s
 | **Anisotropic Function** | γ, φ, c, modifier table | Strength that depends on the inclination of the slip surface. |
 | **Spatial Mohr-Coulomb** | γ, interpolation, data points | Strength that varies from point to point in the section. |
 | **Lime-cement columns** | γ, area ratio, soil and column strengths | Ground improved with lime-cement columns. |
-| **High Strength** | γ | Material the slip surface may pass through but never fails in. |
+| **High Strength** | γ | Strong material that may lie in the sliding mass; slip surfaces may not run through it. |
 | **Impenetrable (Bedrock)** | γ | Material slip surfaces cannot enter. |
 
 For the undrained models the friction angle is zero and the strength at the base of each slice is the undrained shear strength $S_u$.
@@ -66,7 +66,7 @@ Mohr-Coulomb strength in which c and φ are both multiplied by a factor that dep
 
 ### Spatial Mohr-Coulomb
 
-c, φ and γ given at data points (X, Y). Between the points cSlope interpolates by **IDW** (inverse distance weighting), **Nearest** or **Linear**.
+c, φ and γ given at data points (X, Y). Between the points cSlope interpolates by **IDW** (inverse distance weighting, power 2), **Linear** (inverse distance weighting, power 1) or **Nearest** (the value of the nearest point).
 
 ### Lime-cement columns
 
@@ -76,11 +76,11 @@ $$
 \tau = a\,\tau_\text{col} + (1 - a)\,c_{u,\text{soil}}
 $$
 
-where **Area ratio a** is the share of the area taken by columns (0–1). The soil strength is **Su soil**, increasing by **Su soil increase** per metre below **Su soil at level**; the column strength is **Su columns**. Tick **Drained limit of the column strength** to also limit the column strength by drained parameters **c′ columns** and **φ′ columns**. The cutoff applies to the soil between the columns only.
+where **Area ratio a** is the share of the area taken by columns (0–1). The soil strength is **Su soil**, increasing by **Su soil increase** per metre below **Su soil at level**; the column strength is **Su columns**. Tick **Drained limit of the column strength** to also limit the column strength by drained parameters **c′ columns** and **φ′ columns**. The cutoff applies to the soil between the columns only. With [partial factors](/docs/analysis#partial-factors), the strength of soil and columns (including c′ columns) is divided by γcu and tan φ′ columns by γφ′.
 
 ### High Strength and Bedrock
 
-**High Strength** material is so strong that it never governs: slip surfaces can pass through it. **Impenetrable (Bedrock)** stops slip surfaces: a surface that would enter it is not analysed. Both are drawn with a hatch on the canvas (HS and BR).
+**High Strength** material is so strong that the slip surface cannot run through it: a surface with a slice base in it is not analysed. The material can lie inside the sliding mass, above the slip surface, where it adds its weight. **Impenetrable (Bedrock)** stops slip surfaces: a surface that would enter it is not analysed. Both are drawn with a hatch on the canvas (HS and BR).
 
 ## Saturated unit weight
 

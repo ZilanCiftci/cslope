@@ -35,7 +35,7 @@ $$
 f_0 = 1 + b_1\left[\frac{d}{L} - 1.4\left(\frac{d}{L}\right)^2\right]
 $$
 
-where $L$ is the length of the chord between the ends of the slip surface and $d$ the largest depth of the surface below that chord. $b_1 = 0.69$ for purely cohesive soil ($\varphi = 0$), $0.31$ for purely frictional soil ($c = 0$) and $0.50$ when both contribute. With the correction switched on, the reported factor of safety is $f_0 F$.
+where $L$ is the length of the chord between the ends of the slip surface and $d$ the largest depth of the surface below that chord, measured perpendicular to the chord. $b_1 = 0.69$ for purely cohesive soil ($\varphi = 0$), $0.31$ for purely frictional soil ($c = 0$) and $0.50$ when both contribute. With the correction switched on, the reported factor of safety is $f_0 F$.
 
 ## Morgenstern–Price
 
@@ -68,7 +68,7 @@ Pore pressure comes from a piezometric line: at a point below the line, the pres
 - **Vertical head** (default): $h$ is the vertical distance from the point to the line. This is the usual convention.
 - **Phreatic correction**: $h$ is the vertical distance multiplied by $\cos^2\theta$, where $\theta$ is the inclination of the line above the slice. This assumes a free phreatic surface with flow parallel to it, and gives lower pore pressures, and so a higher $F$, below a steep line.
 
-A material can have its own piezometric line; slices in that material then use it instead of the main line. Where the main line rises above the ground surface, the water standing on the slope acts on it as a load (ponded water).
+A material can have its own piezometric line; slices in that material then use it instead of the main line. Where the main line rises above the ground surface, the water standing on the slope acts on it as a load (ponded water). This applies while **Free water above ground (ponding)** is ticked in the Piezometric Lines window, which it is by default.
 
 ## Tension cracks
 
@@ -86,16 +86,16 @@ where $q$ is any surcharge on the crest (distributed loads and ponded water).
 
 ## Partial factors
 
-With partial factors switched on, cSlope divides the strength parameters by their factors before the analysis ($c'/\gamma_c$, $\tan\varphi'/\gamma_\varphi$, $S_u/\gamma_{cu}$) and multiplies the loads by theirs. The resulting factor of safety is then an over-design factor: a value of 1.0 or more means the design meets the limit state. See [Analysis options](/docs/analysis) for the factor sets.
+With partial factors switched on, cSlope divides the strength parameters by their factors before the analysis ($c'/\gamma_c$, $\tan\varphi'/\gamma_\varphi$, $S_u/\gamma_{cu}$) and multiplies the loads by theirs. A Mohr-Coulomb material with $\varphi = 0$ is treated as undrained and takes $\gamma_{cu}$. For lime-cement columns the strength, including $c'$ of the columns, takes $\gamma_{cu}$ and $\tan\varphi'$ takes $\gamma_\varphi$. The resulting factor of safety is then an over-design factor: a value of 1.0 or more means the design meets the limit state. See [Analysis options](/docs/analysis) for the factor sets.
 
 ## Reliability
 
 The probabilistic analysis treats selected material properties as random variables with a mean and a standard deviation.
 
-- The **Taylor series** method evaluates $F$ at the mean values and with each variable shifted up and down by one standard deviation, and combines the changes into the standard deviation of $F$.
+- The **Taylor series** method evaluates $F$ at the mean values and with each variable shifted up and down by one standard deviation, and combines the changes into the standard deviation of $F$. It refuses to run when the mean minus one standard deviation of a strength or unit weight is negative.
 - The **Monte Carlo** method samples the variables many times and analyses each sample on the critical surface found at the mean values.
 
-Both report the reliability index $\beta$, assuming a lognormal distribution of $F$, and the probability of failure $P_f$, the probability that $F < 1$.
+Both report the reliability index $\beta$, assuming a lognormal distribution of $F$, and the probability of failure $P_f$, the probability that $F < 1$. They also report the normal reliability index $\beta = (\mu_F - 1)/\sigma_F$.
 
 ## Further reading
 

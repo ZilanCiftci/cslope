@@ -21,7 +21,7 @@ Each nail runs from **end 1**, the head at the face, to **end 2**, the embedded 
 
 <Figure src="/media/tutorials/soil-nails/01-reinforcement.png" alt="The Reinforcement window with three soil nails" caption="Three soil nails with the soil nail defaults: T = 100 kN, spacing S = 1.5 m." />
 
-A soil nail starts with a tensile capacity **T** of 100 kN, an out-of-plane spacing **S** of 1.5 m and a bond strength of 15 kN/m along its whole length. It is passive: its force is mobilised together with the soil and divided by the factor of safety. Click a row to see and change these properties.
+A soil nail starts with a tensile capacity **T** of 100 kN, an out-of-plane spacing **S** of 1.5 m, a bond strength of 15 kN/m along its whole length and a 50 kN plate at the head. It is passive: its force is mobilised together with the soil and divided by the factor of safety. Click a row to see and change these properties.
 
 <Figure src="/media/tutorials/soil-nails/02-model.png" alt="The slope with three nails drawn from the face into the slope" caption="The nails on the edit canvas." />
 
@@ -31,7 +31,7 @@ Click **▶ Run**.
 
 <Figure src="/media/tutorials/soil-nails/03-result.png" alt="The result with the critical circle and the force in each nail" caption="The factor of safety rises from 0.984 to 1.188. Each nail shows the force it carries on the critical surface, per metre run." />
 
-Where the critical surface crosses a nail, the force is the smallest of the tensile capacity and the pullout resistance on either side of the crossing, divided by the spacing. The upper nail, with the longest anchorage behind the surface, carries the most.
+Where the critical surface crosses a nail, the force is the smallest of the tensile capacity, the pullout resistance on the head side (bond plus the plate) and the pullout resistance on the embedded side (bond), divided by the spacing. The upper nail, with the longest anchorage behind the surface, carries the most.
 
 ## 3. Try it
 

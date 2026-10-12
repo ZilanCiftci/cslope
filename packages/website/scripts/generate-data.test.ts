@@ -1,6 +1,6 @@
 // @vitest-environment node
 import { describe, expect, it } from "vitest";
-import { RELIABILITY_CASES, VERIFICATION_CASES } from "@cslope/engine";
+import { RELIABILITY_CASES, VERIFICATION_CASES } from "@cslope/engine/verification";
 import data from "../src/content/generated/verification.json";
 import type { VerificationData } from "../src/content/verification-types";
 import { buildData } from "./generate-data";
@@ -32,7 +32,7 @@ describe("generated/verification.json", () => {
   it("marks a check as passed exactly when it is within tolerance (to rounding)", () => {
     for (const k of file.problems.flatMap((p) => p.checks)) {
       if (k.deviation == null) expect(k.pass).toBe(false);
-      else if (Math.abs(Math.abs(k.deviation) - k.tolerance) > 1e-3) expect(k.pass).toBe(Math.abs(k.deviation) <= k.tolerance);
+      else if (Math.abs(Math.abs(k.deviation) - k.tolerance) > 1e-5) expect(k.pass).toBe(Math.abs(k.deviation) <= k.tolerance);
     }
   });
 

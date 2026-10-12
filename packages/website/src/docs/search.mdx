@@ -28,7 +28,7 @@ The size of the search is set in **Model › Analysis › Options**:
 
 | Setting | Range | Default | Meaning |
 | --- | --- | --- | --- |
-| **Iterations** | 500–100 000 | 1000 | Number of entry/exit combinations analysed |
+| **Iterations** | 500–100 000 | 1000 | Approximate number of trial circles: entry points × exit points × radii per pair (at least 5 radii per pair) |
 | **Refined Iterations** | 0–100 000 | 500 | Additional surfaces around the best ones |
 
 More iterations give a more thorough search and take longer. For a final analysis, check that doubling the iterations no longer lowers the factor of safety noticeably.
@@ -59,4 +59,13 @@ Custom surfaces are analysed together with the search. Tick **Custom planes only
 
 ## Surfaces that are not analysed
 
-A surface is skipped when it enters bedrock, has no driving force, or does not reach equilibrium. The result summary counts surfaces discarded for a weak equilibrium fit.
+A surface is skipped when it:
+
+- enters bedrock (Impenetrable) or has a slice base in High Strength material,
+- has no driving force in the sliding direction,
+- does not reach equilibrium,
+- is shallower than **Min. slip depth** or smaller than **Min. sliding area** (surfaces shallower than 0.1 % of the model height are always skipped),
+- gives a negative factor of safety, or
+- has a slice with $m_\alpha \le 0$ (see [Bishop simplified](/docs/theory#bishop-simplified)), where the normal force on the base has no meaning.
+
+The result summary counts surfaces discarded for a weak equilibrium fit.

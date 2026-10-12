@@ -24,7 +24,7 @@ import {
   VERIFICATION_CASES,
   runReliabilityCase,
   runVerification,
-} from "@cslope/engine";
+} from "@cslope/engine/verification";
 import { anonymiseReference, anonymiseSource, anonymiseTitle, publicId } from "./anonymise";
 import { findForbiddenNames } from "./forbidden-names";
 import type { VerificationData, VerificationProblem, ReliabilityProblem } from "../src/content/verification-types";
@@ -64,6 +64,7 @@ async function runAllShards(): Promise<{
         const child = spawn(process.execPath, [import.meta.filename, "--shard", `${k}/${shards}`, file], {
           stdio: "inherit",
         });
+        child.on("error", reject);
         child.on("exit", (code) => (code === 0 ? resolve() : reject(new Error(`shard ${k} exited with ${code}`))));
       });
     }),
@@ -143,7 +144,8 @@ export function buildData(
       checks: checks.length,
       passed: checks.filter((k) => k.pass).length,
       literatureProblems: problems.filter((p) => p.literature).length,
-      reliabilityChecks: reliability.reduce((n, r) => n + r.checks.length, 0),
+      // β and Pf; a probabilistic problem's mean factor of safety is not counted.
+      reliabilityChecks: reliability.reduce((n, r) => n + r.checks.filter((k) => k.quantity !== "fos").length, 0),
     },
     problems,
     reliability,
@@ -161,6 +163,11 @@ if (import.meta.main) {
     let raw: Awaited<ReturnType<typeof runAllShards>>;
     if (process.argv.includes("--cached") && existsSync(CACHE)) {
       raw = JSON.parse(readFileSync(CACHE, "utf8"));
+      // A cache from an older set of problems would publish them as failed.
+      const stale =
+        VERIFICATION_CASES.filter((c) => raw.fos[c.id]?.length !== c.checks.length).length +
+        RELIABILITY_CASES.filter((c) => raw.reliability[c.id]?.length !== c.checks.length).length;
+      if (stale) throw new Error(`The cache misses ${stale} problem(s) or checks; run without --cached.`);
     } else {
       raw = await runAllShards();
       mkdirSync(join(CACHE, ".."), { recursive: true });

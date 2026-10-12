@@ -24,7 +24,7 @@ A narrow strip on the far left toggles the **Explorer** (the list of models). In
 | --- | --- |
 | **File** | New, Open, Import DXF, Save, Save As, Exit |
 | **Model** | Boundaries (Exterior, Interior), Materials (Define, Assign), External loads (UDL, Line loads), Support (Reinforcement), Water Pressure (Piezometric Lines), Parameters (Define), Analysis (Search limits, Custom planes, Options) |
-| **Results** | Plots (Results Plot, Sensitivity, Probabilistic), Display options, Annotations, Templates, Export |
+| **Results** | Plots (Results Plot, Sensitivity, Probabilistic), Display, Annotations, Templates, Export |
 | **Help** | Benchmarks, About |
 
 Hover over a button to see its shortcut, if it has one.
@@ -55,6 +55,7 @@ A project holds one or more **models**, listed in the Explorer under *Models*. E
 - Click a model to make it active. A model that has a result opens in result mode.
 - Double-click a model to rename it.
 - Drag models to reorder them.
+- <Kbd>Ctrl</Kbd>+click or <Kbd>Shift</Kbd>+click to select several models; right-click them for *Delete Selected*.
 - Right-click for *Properties*, *Rename*, *Duplicate* and *Delete*.
 
 *Duplicate* is the way to try a variant of a model, for example with a different water level, and compare the results. *File › Import DXF* also adds a model.
@@ -63,7 +64,7 @@ A project holds one or more **models**, listed in the Explorer under *Models*. E
 
 ## Undo and redo
 
-<Kbd>Ctrl</Kbd>+<Kbd>Z</Kbd> undoes the last change, <Kbd>Ctrl</Kbd>+<Kbd>Shift</Kbd>+<Kbd>Z</Kbd> or <Kbd>Ctrl</Kbd>+<Kbd>Y</Kbd> redoes it. Each model keeps its own history of the last 50 changes. Dragging a point counts as one change. The history is cleared when you switch models or open a project.
+<Kbd>Ctrl</Kbd>+<Kbd>Z</Kbd> undoes the last change, <Kbd>Ctrl</Kbd>+<Kbd>Shift</Kbd>+<Kbd>Z</Kbd> or <Kbd>Ctrl</Kbd>+<Kbd>Y</Kbd> redoes it. There is one history, of the last 50 changes to the active model. Dragging a point counts as one change. The history is cleared when you switch models or open a project.
 
 ## Units
 
