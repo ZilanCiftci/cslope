@@ -168,6 +168,24 @@ describe("ViewSettingsDialogApp", () => {
     expect(vl.topRight[1]).toBeCloseTo(-1 + 32 / ar, 9);
     expect(lastSent().resultViewSettings.viewLock).toEqual(vl);
   });
+  it("fits a tall, narrow model whole instead of cutting off its top", async () => {
+    render(<ViewSettingsDialogApp />);
+    const base = structuredClone(useAppStore.getState().resultViewSettings);
+    const tall: [number, number][] = [[0, 0], [5, 0], [5, 40], [0, 40]];
+    bridge.emit("onViewSettingsState", {
+      resultViewSettings: { ...base, paperFrame: { ...base.paperFrame, paperSize: "A4", landscape: true } },
+      coordinates: tall,
+      resultViewScale: 2,
+      resultViewOffset: [0, 0],
+    });
+    await userEvent.click(screen.getByRole("button", { name: "Use Model Bounds" }));
+    const vl = rvs().viewLock!;
+    expect(vl.topRight[1]).toBeGreaterThanOrEqual(41 - 1e-9);
+    expect(vl.bottomLeft[1]).toBeCloseTo(-1, 9);
+    const ar = getPlotAspectRatio("A4", true);
+    expect((vl.topRight[0] - vl.bottomLeft[0]) / (vl.topRight[1] - vl.bottomLeft[1])).toBeCloseTo(ar, 9);
+  });
+
   it("creates a view lock from the shown extents when there is none", async () => {
     render(<ViewSettingsDialogApp />);
     // E.g. after importing a view template without a locked view.

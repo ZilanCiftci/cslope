@@ -4,6 +4,7 @@ import { isElectron } from "../../utils/is-electron";
 import { useAppStore, PAPER_DIMENSIONS } from "../../store/app-store";
 import type { ResultViewSettings, PaperSize } from "../../store/types";
 import { getPlotAspectRatio as getSharedPlotAspectRatio } from "../view/paper";
+import { viewLockForModel } from "../view/viewLock";
 
 interface ViewSettingsStatePayload {
   resultViewSettings: ResultViewSettings;
@@ -152,30 +153,13 @@ export function ViewSettingsDialogApp() {
     const coords = state.coordinates;
     const ar = getPlotAspectRatio();
 
-    let bl: [number, number] = [-1, -1];
-    let tr: [number, number] = [21, -1 + 22 / ar];
-    if (coords.length >= 2) {
-      const xs = coords.map((c) => c[0]);
-      const ys = coords.map((c) => c[1]);
-      const xMin = Math.min(...xs);
-      const xMax = Math.max(...xs);
-      const yMin = Math.min(...ys);
-
-      const left = xMin - 1;
-      const right = xMax + 1;
-      const bottom = yMin - 1;
-      const width = right - left;
-      const height = width / ar;
-      const top = bottom + height;
-
-      bl = [left, bottom];
-      tr = [right, top];
-    }
+    // The same lock as the main window's "Use model bounds": a tall model
+    // is widened instead of having its top cut off.
     setRvs({
-      viewLock: {
-        bottomLeft: bl,
-        topRight: tr,
-      },
+      viewLock:
+        coords.length >= 2
+          ? viewLockForModel(coords, ar)
+          : { bottomLeft: [-1, -1], topRight: [21, -1 + 22 / ar] },
     });
   };
 
