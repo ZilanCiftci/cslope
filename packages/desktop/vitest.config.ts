@@ -7,9 +7,26 @@ export default defineConfig({
   plugins: [tailwindcss(), react()],
   test: {
     globals: true,
-    environment: "jsdom",
-    setupFiles: ["./src/test/setup.ts"],
-    include: ["src/**/*.{test,spec}.{ts,tsx}"],
+    projects: [
+      {
+        extends: true,
+        test: {
+          name: "renderer",
+          environment: "jsdom",
+          setupFiles: ["./src/test/setup.ts"],
+          include: ["src/**/*.{test,spec}.{ts,tsx}"],
+        },
+      },
+      {
+        // Electron main process and preload, with `electron` mocked.
+        extends: true,
+        test: {
+          name: "electron",
+          environment: "node",
+          include: ["electron/**/*.{test,spec}.ts"],
+        },
+      },
+    ],
     coverage: {
       provider: "v8",
       reporter: ["text", "html", "lcov"],
