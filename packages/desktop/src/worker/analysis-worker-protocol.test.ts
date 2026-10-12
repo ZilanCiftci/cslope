@@ -210,4 +210,16 @@ describe("worker protocol", () => {
     // Points left of the crack are not drawn.
     expect(surf.points!.every((q) => q[0] >= first[0] - 1e-9)).toBe(true);
   });
+
+  it("with both directions, a face without any valid surface reports no other FOS", () => {
+    // The opposite face of this slope is a vertical wall with no surface.
+    const own = analyse(T_ACADS);
+    const both = analyse(T_ACADS, { bothDirections: true });
+    if (own.type !== "analysis-complete" || both.type !== "analysis-complete") {
+      throw new Error("analysis failed");
+    }
+    expect(both.result.slidingDirection).toBe("ltr");
+    expect(both.result.otherDirectionMinFOS).toBeNull();
+    expect(both.result.minFOS).toBeCloseTo(own.result.minFOS, 9);
+  });
 });
