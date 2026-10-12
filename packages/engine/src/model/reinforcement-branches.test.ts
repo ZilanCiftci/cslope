@@ -8,7 +8,7 @@ import { Material } from "../types/index";
 import type { MaterialModel } from "../types/material-models";
 import type { Reinforcement, Pile } from "../types/reinforcement";
 import { Slope } from "./slope";
-import { buildEnvelope, envelopeAt, pulloutBeyond, pileForce, buildPileProfile, effectiveVerticalStress, pileForceDirection } from "./reinforcement";
+import { buildEnvelope, envelopeAt, pulloutBeyond, pileForce, buildPileProfile, effectiveVerticalStress, pileForceDirection, applyReinforcement } from "./reinforcement";
 import { getSlices } from "./slices";
 
 const BOUNDARY: [number, number][] = [[0, -10], [0, 10], [10, 10], [25, 0], [40, 0], [40, -10]];
@@ -176,5 +176,19 @@ describe("piles", () => {
     // Movement perpendicular to the normal: the normal pointing to +x is flipped.
     const [qx] = pileForceDirection({ ...pile, direction: "perpendicular" }, 0, -1);
     expect(qx).toBeLessThan(0);
+  });
+});
+
+describe("degenerate elements", () => {
+  it("no slices, a pile of no length and a pile beside the surface give no forces", () => {
+    const s = slopeOf();
+    s.setReinforcements([nail]);
+    expect(applyReinforcement(s, [], 22, 18)).toEqual([]);
+    s.setReinforcements([]);
+    s.setPiles([{ x1: 20, y1: 0, x2: 20, y2: 0, force: 50 }, { x1: 38, y1: 0, x2: 38, y2: -8, force: 50 }]);
+    s.updateAnalysisOptions({ slices: 20 });
+    const ints = s.getCircleExternalIntersection(22, 18, 18.5);
+    const slices = getSlices(s, ints[0][0], ints[ints.length - 1][0], 22, 18, 18.5);
+    expect(slices.flatMap((q) => q.reinforcementForces ?? [])).toEqual([]);
   });
 });
