@@ -41,8 +41,8 @@ export interface AnalysisOptions {
   intersliceDataPoints?: [number, number][];
   /**
    * Pore pressure head below an inclined piezometric line:
-   * - "vertical" (default): full vertical head, as Slide and SLOPE/W use
-   *   for a piezometric line.
+   * - "vertical" (default): full vertical head, as commercial programs
+   *   use for a piezometric line.
    * - "phreatic-correction": vertical head × cos²θ of the line's
    *   inclination (equipotentials normal to a straight phreatic line).
    *   Gives lower pore pressure, i.e. a higher FOS, below a steep line.

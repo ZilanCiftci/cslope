@@ -26,6 +26,9 @@ jobs:
         run: bun run typecheck
       - name: Lint
         run: bun run lint
+      # The repository is public: no other program is named in any file.
+      - name: Check names
+        run: bun packages/website/scripts/check-names.ts --repo
       - name: Test website
         run: bun run --filter @cslope/website test
       # Also fails when another product is named on the site.

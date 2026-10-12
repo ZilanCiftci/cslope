@@ -357,7 +357,7 @@ function nonNegative(value: number): number {
 }
 
 /**
- * Strength cutoff (Slide2 "Cutoff", SLOPE/W "C-max"). Every rate here is
+ * Strength cutoff (an upper or lower limit on Su). Every rate here is
  * positive where strength increases with depth; then (and for a constant
  * strength) the cutoff is a maximum, for a negative rate a minimum. A cutoff
  * that is not a positive number (rejected by validation) is ignored.

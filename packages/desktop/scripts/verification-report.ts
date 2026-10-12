@@ -3,18 +3,18 @@
  *
  * Runs every published verification problem (packages/engine/src/
  * verification/cases.ts) and the benchmark models bundled with the app
- * through the engine and writes a PDF in the style of the Slide2 / SLOPE/W
- * verification manuals: summary table, then one section per problem with
+ * through the engine and writes a PDF in the style of the verification
+ * manuals of commercial programs: summary table, then one section per problem with
  * a figure (geometry, materials, water, loads, critical surface), the
  * material table and published vs computed factors of safety.
  *
  *   bun run verification-report            (from packages/desktop)
  *   bun scripts/verification-report.ts [output.pdf] [--public]
  *
- * --public writes the edition published on the website: no other program
- * or vendor is named. Ids, titles, references, sources, descriptions and
- * notes go through the website's anonymisation, and any text that still
- * names a program stops the run (see packages/website/scripts).
+ * --public writes the edition published on the website: no tolerances or
+ * pass marks, only the reference and the computed value. The problems
+ * carry cSlope's own ids and anonymous sources; any text that still names
+ * another program stops the run (see packages/website/scripts).
  */
 import fs from "node:fs";
 import path from "node:path";
@@ -44,13 +44,6 @@ import {
 } from "@cslope/engine/verification";
 import type { Slope } from "@cslope/engine";
 import { BENCHMARK_MODELS, PUBLISHED_BENCHMARKS } from "../src/store/benchmarks";
-import {
-  anonymiseReference,
-  anonymiseSource,
-  anonymiseText,
-  anonymiseTitle,
-  publicId,
-} from "../../website/scripts/anonymise";
 import { findForbiddenNames } from "../../website/scripts/forbidden-names";
 import { buildSlopeDTOFromModel } from "../src/store/helpers";
 
@@ -65,36 +58,10 @@ const OUT =
   ARGS.find((a) => !a.startsWith("--")) ??
   path.join(REPO, "docs", "verification", PUBLIC ? "cSlope-verification-report-public.pdf" : "cSlope-verification-report.pdf");
 
-/** A problem as the public edition shows it. */
-const ENGINE_IDS = VERIFICATION_CASES.map((c) => c.id);
-
-function publicCase(c: VerificationCase): VerificationCase {
-  return {
-    ...c,
-    id: publicId(c.id),
-    title: anonymiseTitle(c.title, ENGINE_IDS),
-    reference: anonymiseReference(c.reference).text,
-    description: anonymiseText(c.description, ENGINE_IDS),
-    notes: c.notes?.map((n) => anonymiseText(n, ENGINE_IDS)),
-    checks: c.checks.map((k) => ({
-      ...k,
-      label: anonymiseText(k.label, ENGINE_IDS),
-      publishedBy: anonymiseSource(k.publishedBy),
-      note: k.note && anonymiseText(k.note, ENGINE_IDS),
-      pending: k.pending && anonymiseText(k.pending, ENGINE_IDS),
-    })),
-  };
-}
-
-const CASES = PUBLIC ? VERIFICATION_CASES.map(publicCase) : VERIFICATION_CASES;
-const RELIABILITY = PUBLIC
-  ? RELIABILITY_CASES.map((c) => ({
-      ...c,
-      id: publicId(c.id),
-      title: anonymiseTitle(c.title, ENGINE_IDS),
-      checks: c.checks.map(([q, v, by, tol]) => [q, v, anonymiseSource(by), tol] as typeof c.checks[number]),
-    }))
-  : RELIABILITY_CASES;
+// The data names no other program (problems.ts): both editions show it as
+// it is; the public one leaves out the tolerances and pass marks.
+const CASES = VERIFICATION_CASES;
+const RELIABILITY = RELIABILITY_CASES;
 
 /** In the public edition, stop at any text that still names a program. */
 function guard(text: string): string {
@@ -626,11 +593,12 @@ const caseResults = CASES.map((c) => {
 
 // Probabilistic problems: reliability index and probability of failure.
 console.log(`Running ${RELIABILITY.length} probabilistic problems…`);
-const reliabilityResults = new Map<string, ReliabilityCheckResult[]>();
-for (const c of RELIABILITY) {
-  const r = runReliabilityCase(c);
-  reliabilityResults.set(c.id, r);
-  console.log(`  ${c.id.padEnd(8)} ${r.map((x) => `${x.quantity} ${fmt(x.computed)}`).join("  ")}`);
+/** The probabilistic analyses of each problem (a problem can have more than one). */
+const reliabilityResults = new Map<string, { rc: (typeof RELIABILITY)[number]; results: ReliabilityCheckResult[] }[]>();
+for (const rc of RELIABILITY) {
+  const results = runReliabilityCase(rc);
+  reliabilityResults.set(rc.id, [...(reliabilityResults.get(rc.id) ?? []), { rc, results }]);
+  console.log(`  ${rc.id.padEnd(8)} ${results.map((x) => `${x.quantity} ${fmt(x.computed)}`).join("  ")}`);
 }
 const RELIABILITY_LABELS: Record<ReliabilityCheckResult["quantity"], string> = {
   fos: "FOS",
@@ -679,7 +647,7 @@ const today = new Date().toISOString().slice(0, 10);
 
 const allChecks = caseResults.flatMap((r) => r.results);
 const benchRows = benchResults.flatMap((b) => b.rows);
-const reliabilityRows = [...reliabilityResults.values()].flat().filter((r) => r.quantity !== "fos");
+const reliabilityRows = [...reliabilityResults.values()].flat().flatMap((e) => e.results).filter((r) => r.quantity !== "fos");
 const nChecks = allChecks.length + benchRows.length + reliabilityRows.length;
 const nPass = allChecks.filter((r) => r.pass).length + benchRows.filter((r) => r.pass).length + reliabilityRows.filter((r) => r.pass).length;
 // Failing checks that wait for an engine change (counted as not passing).
@@ -699,9 +667,7 @@ font(11, "normal", [220, 232, 242]);
 pdf.text("Limit equilibrium slope stability analysis — comparison with published results", M, 68);
 y = 112;
 paragraph(
-  PUBLIC
-    ? `This document compares factors of safety computed by cSlope with values published for ${CASES.length} verification problems from the geotechnical literature and from the verification manuals of commercial slope stability programs, and with the ${benchResults.length} benchmark models bundled with the program.`
-    : `This document compares factors of safety computed by cSlope with values published for ${CASES.length} verification problems from the literature and the Slide2 and SLOPE/W verification sets, and with the ${benchResults.length} benchmark models bundled with the program.`,
+  `This document compares factors of safety computed by cSlope with values published for ${CASES.length} verification problems from the geotechnical literature and from the verification manuals of commercial slope stability programs, and with the ${benchResults.length} benchmark models bundled with the program.`,
   11,
 );
 y += 4;
@@ -733,7 +699,7 @@ pdf.text("Generated automatically by packages/desktop/scripts/verification-repor
 newPage();
 heading("1  Introduction", 1);
 paragraph(
-  "Each problem below is defined once in the engine's verification data (packages/engine/src/verification/cases.ts). The same definitions are run by the automated test suite on every change, so the values in this report are the values the program computes.",
+  "Each problem below is defined once in the engine's verification data (packages/engine/src/verification/problems.ts). The same definitions are run by the automated test suite on every change, so the values in this report are the values the program computes.",
 );
 y += 2;
 heading("Analysis settings", 2);
@@ -750,7 +716,7 @@ table(
     ["Methods", "Bishop simplified, Janbu simplified (uncorrected unless stated), Morgenstern-Price with half-sine interslice function; Spencer = Morgenstern-Price with a constant interslice function"],
     [
       "Pore pressure",
-      `Piezometric line; head = vertical distance below the line (default${PUBLIC ? ", the usual convention" : ", as Slide2 and SLOPE/W"}). Checks marked "phreatic correction" use vertical distance × cos²θ.`,
+      `Piezometric line; head = vertical distance below the line (default, the usual convention). Checks marked "phreatic correction" use vertical distance × cos²θ.`,
     ],
     ["Unit weight of water", "9.81 kN/m³"],
   ],
@@ -758,7 +724,7 @@ table(
 if (!PUBLIC) {
   heading("Acceptance", 2);
   paragraph(
-    `A result passes when its relative difference from the published value is within the tolerance stated for the problem (0.5–2.5 %). Tighter tolerances are used where the input is exactly known; wider ones for searches, whose result depends on the search grid of each program, and for problems whose input (e.g. a digitised water table) is only approximately known, as stated in the notes. Reliability indices and probabilities of failure are compared with absolute tolerances, and the bundled benchmark models with an absolute tolerance on the factor of safety. Checks marked "${PUBLIC ? "program D" : "xslope"} (same input)" compare with another program run on the identical input, not with a publication.`,
+    `A result passes when its relative difference from the published value is within its tolerance: 1 % on a given surface and 2 % for a search, plus half a unit of the reference's last digit, plus 1 % where the input or the reference value is read from a figure; 5 % against finite-element results. Reliability indices and probabilities of failure are compared with absolute tolerances, and the bundled benchmark models with an absolute tolerance on the factor of safety. Tolerances follow one rule from what is known about each problem before it is analysed (packages/engine/src/verification/tolerance.ts).`,
   );
   y += 2;
 }
@@ -769,9 +735,7 @@ paragraph(
 y += 2;
 heading("Source of the input data", 2);
 paragraph(
-  PUBLIC
-    ? "The input data were transcribed from the publications and from the verification manuals of commercial slope stability programs, and cross-checked against an independent open-source transcription of the same problems. Values that only a commercial program's manual gives are attributed to \"commercial program A\", \"B\" and so on, one letter per program. Each published value is labelled with its source; where a figure had to be digitised or an input inferred, the notes of the problem say so. Checks marked \"pending\" wait for an engine change named in the notes."
-    : "Most input data were first transcribed via the open-source xslope project (github.com/njones61/xslope, docs/verification), which reproduces the problem definitions of the Slide2 and SLOPE/W verification manuals, and then checked against the manuals themselves (Rocscience Slide2 Slope Stability Verification Manual, 2022; GEO-SLOPE/Seequent Slope Stability Verification Manual, October 2022). Further surfaces, methods and problems were transcribed from the manuals directly. Each published value is labelled with the source that prints it; where a figure had to be digitised or an input inferred, the notes of the problem say so. Checks marked \"pending\" wait for an engine change named in the notes.",
+  "The input data were transcribed from the publications and from the verification manuals of commercial slope stability programs, and cross-checked against an independent open-source transcription of the same problems. Values that only a commercial program's manual gives are attributed to \"commercial program A\", \"B\" and so on, one letter per program. Each published value is labelled with its source; where a figure had to be digitised or an input inferred, the notes of the problem say so. Checks marked \"pending\" wait for an engine change named in the notes. Problem ids are cSlope's own: a number is one slope, a letter a variant of it.",
   9.5,
   "normal",
 );
@@ -793,8 +757,8 @@ const summaryRows: Cell[][] = [
     b.rows.map((x): Cell[] => ["Bundled", b.name, methodName(x.method), fmt(x.published), fmt(x.fos ?? NaN), pct(x.diff), statusCell(x.pass)]),
   ),
   // Reliability (β, Pf): absolute differences.
-  ...RELIABILITY.flatMap((c) =>
-    (reliabilityResults.get(c.id) ?? [])
+  ...[...reliabilityResults.values()].flat().flatMap(({ rc: c, results }) =>
+    results
       .filter((x) => x.quantity !== "fos")
       .map((x): Cell[] => [
         c.id,
@@ -917,9 +881,9 @@ caseResults.forEach((r, i) => {
       ]),
     );
   }
-  const reliability = reliabilityResults.get(c.id)?.filter((x) => x.quantity !== "fos");
-  if (reliability?.length) {
-    const rc = RELIABILITY.find((x) => x.id === c.id)!;
+  for (const { rc, results } of reliabilityResults.get(c.id) ?? []) {
+    const reliability = results.filter((x) => x.quantity !== "fos");
+    if (!reliability.length) continue;
     paragraph(
       `Probabilistic analysis on the same surface: ${rc.variables.length} normal variables (${rc.correlations?.length ? rc.correlations.map((k) => `ρ = ${k.rho}`).join(", ") + " between pairs" : "independent"}); Taylor series (mean ± σ) and Monte Carlo with ${rc.samples} samples (seed ${rc.seed}). Differences in β and Pf are absolute.`,
       8.5,

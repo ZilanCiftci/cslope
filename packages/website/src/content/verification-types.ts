@@ -12,7 +12,7 @@ export interface VerificationCheck {
 }
 
 export interface VerificationProblem {
-  /** Neutral id, e.g. "P-3FA21C". */
+  /** cSlope's own id, e.g. "V021a": the number is the slope, the letter the variant. */
   id: string;
   title: string;
   reference: string;

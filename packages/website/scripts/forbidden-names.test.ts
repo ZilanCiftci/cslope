@@ -4,21 +4,25 @@ import { existsSync } from "node:fs";
 import { join } from "node:path";
 import { execFileSync } from "node:child_process";
 import { checkNames } from "./check-names";
-import { findForbiddenNames } from "./forbidden-names";
+import { FORBIDDEN_NAMES, findForbiddenNames, rot13 } from "./forbidden-names";
 
 const root = join(import.meta.dirname, "..");
 
+/** The names in these tests are ROT13 (see forbidden-names.ts), so that the
+ * repository does not spell them out; the rest of each text is plain. */
+const n = rot13;
+
 describe("forbidden names", () => {
   it("are found regardless of case and spacing", () => {
-    const text = "ok\nas in GeoStudio and slide 2\nSLOPE/W";
+    const text = `ok\nas in ${n("TrbFghqvb")} and ${n("fyvqr 2")}\n${n("FYBCR/J")}`;
     const hits = findForbiddenNames("x", text).map((h) => `${h.line}:${h.match}`);
-    expect(hits.sort()).toEqual(["2:GeoStudio", "2:slide 2", "3:SLOPE/W"]);
+    expect(hits.sort()).toEqual([`2:${n("TrbFghqvb")}`, `2:${n("fyvqr 2")}`, `3:${n("FYBCR/J")}`]);
   });
 
   it("catch version and dimension suffixes, and every occurrence on a line", () => {
-    const hits = findForbiddenNames("x", "Slide2D, Slide 6.0 and slide2 again").map((h) => h.match);
-    expect(hits).toEqual(["Slide2D", "Slide 6.0", "slide2"]);
-    expect(findForbiddenNames("x", "a  GeoStudio b")[0]).toMatchObject({ line: 1, column: 4 });
+    const hits = findForbiddenNames("x", `${n("Fyvqr2Q")}, ${n("Fyvqr 6.0")} and ${n("fyvqr2")} again`).map((h) => h.match);
+    expect(hits).toEqual([n("Fyvqr2Q"), n("Fyvqr 6.0"), n("fyvqr2")]);
+    expect(findForbiddenNames("x", `a  ${n("TrbFghqvb")} b`)[0]).toMatchObject({ line: 1, column: 4 });
   });
 
   it("leave ordinary words and author names alone", () => {
@@ -27,22 +31,20 @@ describe("forbidden names", () => {
     expect(findForbiddenNames("x", "animation: slide 1.2s ease-in-out; slide 3 of 10")).toEqual([]);
     const prose = "the slide problem, a slide example; Bentley (1998); Bentley and Smith; audio/flac";
     expect(findForbiddenNames("x", prose)).toEqual([]);
-    expect(findForbiddenNames("x", "Slide2 of the manual").map((h) => h.match)).toEqual(["Slide2"]);
+    expect(findForbiddenNames("x", `${n("Fyvqr2")} of the manual`).map((h) => h.match)).toEqual([n("Fyvqr2")]);
   });
 
   it("catch spelling variants, names with digits and names split by markup", () => {
-    const text = "Geo-Studio, SLOPE-W, GEO 5, STABL5, PCSTABL, the Slide manual, SLIDE, Slide<!-- -->2, Geo\u00adStudio";
-    expect(findForbiddenNames("x", text).map((h) => h.match)).toEqual([
-      "Slide2",
-      "Geo-Studio",
-      "GeoStudio",
-      "SLOPE-W",
-      "STABL5",
-      "PCSTABL",
-      "GEO 5",
-      "SLIDE",
-      "Slide manual",
-    ]);
+    const names = ["Trb-Fghqvb", "FYBCR-J", "TRB 5", "FGNOY5", "CPFGNOY"].map(n).join(", ");
+    const text = `${names}, the ${n("Fyvqr")} manual, ${n("FYVQR")}, ${n("Fyvqr")}<!-- -->2, ${n("Trb")}\u00ad${n("Fghqvb")}`;
+    expect(findForbiddenNames("x", text).map((h) => h.match)).toEqual(
+      ["Fyvqr2", "Trb-Fghqvb", "TrbFghqvb", "FYBCR-J", "FGNOY5", "CPFGNOY", "TRB 5", "FYVQR", "Fyvqr znahny"].map(n),
+    );
+  });
+
+  it("decode to readable patterns", () => {
+    expect(rot13(rot13("Abc-xyz 2"))).toBe("Abc-xyz 2");
+    expect(FORBIDDEN_NAMES.every((re) => re.source.startsWith("\\b") || re.source.startsWith("(?<!"))).toBe(true);
   });
 
   it("report a missing directory clearly", () => {

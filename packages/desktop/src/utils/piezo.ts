@@ -4,7 +4,7 @@ type Pt = [number, number];
 
 /**
  * Horizontal continuations of a piezometric line beyond its end points to
- * the model edges, as the engine applies them (like Slide and SLOPE/W).
+ * the model edges, as the engine applies them (as is common practice).
  * Drawn dashed so the user sees the water the analysis actually uses.
  */
 export function piezoExtensions(line: Pt[], model: Pt[]): [Pt, Pt][] {

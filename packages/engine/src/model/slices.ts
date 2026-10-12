@@ -99,8 +99,8 @@ export function createSlice(
   // Base length consistent with the base inclination the solvers use
   // (the equilibrium equations assume a straight base of length b/cos α).
   // The arc length over-credited cohesion on steep slices: on a nearly
-  // vertical entry slice by ~40 %, e.g. +5 % FOS at 50 slices on Slide
-  // VP23 compared with a converged slice count.
+  // vertical entry slice by ~40 %, e.g. +5 % FOS at 50 slices on
+  // V068 compared with a converged slice count.
   const baseLength = width / Math.cos(alpha);
 
   // Pore water pressure
@@ -295,9 +295,9 @@ export function createSlice(
 
 /**
  * A water line that does not reach a slice. Water lines are continued
- * horizontally to the model edges (as in SLOPE/W), so this does not happen
- * for a line set on the slope; should it, the surface is invalid (Slide2:
- * no FOS where the water table does not span the slip surface) instead of
+ * horizontally to the model edges (as is common practice), so this does not
+ * happen for a line set on the slope; should it, the surface is invalid (as
+ * commercial programs give no FOS where the water table does not span the slip surface) instead of
  * silently getting no pore pressure there.
  */
 export const WATER_LINE_GAP = "The water table does not span the slip surface.";
@@ -834,7 +834,7 @@ function findCrackX(
  * weight acts as a vertical load and, on an inclined surface, it pushes
  * horizontally. Without this the base carried the full pore pressure of
  * the water depth but nothing balanced it, and a fully submerged slope
- * gave about half its FOS. Slide and SLOPE/W apply this automatically.
+ * gave about half its FOS. Commercial programs apply this automatically.
  *
  * The pressure γw·g(x), with g the water depth above the surface, is
  * integrated over the wet part of the slice top: vertical load ∫p dx,

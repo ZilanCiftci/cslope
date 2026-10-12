@@ -1,706 +1,17 @@
 {
  "summary": {
-  "problems": 177,
+  "problems": 164,
   "checks": 356,
-  "literatureProblems": 158,
+  "literatureProblems": 154,
   "reliabilityChecks": 29
  },
  "problems": [
   {
-   "id": "P-0C6403",
-   "title": "Fredlund & Krahn (1977), dry",
-   "reference": "Fredlund, D.G. & Krahn, J. (1977). Comparison of slope stability methods of analysis. Can. Geotech. J. 14(3).",
-   "literature": true,
-   "commercial": true,
-   "surface": "fixed",
-   "units": "imperial",
-   "checks": [
-    {
-     "method": "Bishop simplified",
-     "published": 2.08,
-     "source": "Fredlund & Krahn",
-     "computed": 2.0757,
-     "deviation": -0.00207
-    },
-    {
-     "method": "Morgenstern-Price (half-sine)",
-     "published": 2.076,
-     "source": "Fredlund & Krahn",
-     "computed": 2.0716,
-     "deviation": -0.00212
-    }
-   ]
-  },
-  {
-   "id": "P-82F1CA",
-   "title": "Fredlund & Krahn (1977), with water table",
-   "reference": "Fredlund, D.G. & Krahn, J. (1977). Can. Geotech. J. 14(3).",
-   "literature": true,
-   "commercial": true,
-   "surface": "fixed",
-   "units": "SI",
-   "checks": [
-    {
-     "method": "Bishop simplified",
-     "published": 1.834,
-     "source": "Fredlund & Krahn",
-     "computed": 1.8286,
-     "deviation": -0.00294
-    },
-    {
-     "method": "Morgenstern-Price (half-sine)",
-     "published": 1.832,
-     "source": "Fredlund & Krahn",
-     "computed": 1.8266,
-     "deviation": -0.00295
-    }
-   ]
-  },
-  {
-   "id": "P-5FEF96",
-   "title": "USACE EM 1110-2-1902, example F-5",
-   "reference": "US Army Corps of Engineers (2003). Slope Stability, EM 1110-2-1902, Appendix F.",
-   "literature": true,
-   "commercial": true,
-   "surface": "fixed",
-   "units": "imperial",
-   "checks": [
-    {
-     "method": "Bishop simplified",
-     "published": 1.332,
-     "source": "Commercial program A",
-     "computed": 1.3204,
-     "deviation": -0.00871
-    },
-    {
-     "method": "Spencer (M-P, constant f(x))",
-     "published": 1.328,
-     "source": "Commercial program A",
-     "computed": 1.3166,
-     "deviation": -0.00858
-    },
-    {
-     "method": "Janbu corrected (f0)",
-     "published": 1.345,
-     "source": "Commercial program A",
-     "computed": 1.3404,
-     "deviation": -0.00342
-    }
-   ]
-  },
-  {
-   "id": "P-F255B4",
-   "title": "Duncan & Wright fig. 14.5, R = 87 ft",
-   "reference": "Duncan & Wright, Soil Strength and Slope Stability, fig. 14.5.",
-   "literature": true,
-   "commercial": true,
-   "surface": "fixed",
-   "units": "imperial",
-   "checks": [
-    {
-     "method": "Bishop simplified",
-     "published": 2.549,
-     "source": "Commercial program A",
-     "computed": 2.5333,
-     "deviation": -0.00616
-    },
-    {
-     "method": "Spencer (M-P, constant f(x))",
-     "published": 2.545,
-     "source": "Commercial program A",
-     "computed": 2.5307,
-     "deviation": -0.00562
-    },
-    {
-     "method": "Spencer (M-P, constant f(x))",
-     "published": 2.56,
-     "source": "Duncan & Wright (reference)",
-     "computed": 2.5307,
-     "deviation": -0.01145
-    }
-   ]
-  },
-  {
-   "id": "P-68E000",
-   "title": "Duncan & Wright fig. 14.5, R = 102 ft",
-   "reference": "Duncan & Wright, Soil Strength and Slope Stability, fig. 14.5.",
-   "literature": true,
-   "commercial": true,
-   "surface": "fixed",
-   "units": "imperial",
-   "checks": [
-    {
-     "method": "Bishop simplified",
-     "published": 1.398,
-     "source": "Commercial program A",
-     "computed": 1.3888,
-     "deviation": -0.00658
-    },
-    {
-     "method": "Spencer (M-P, constant f(x))",
-     "published": 1.359,
-     "source": "Commercial program A",
-     "computed": 1.353,
-     "deviation": -0.00442
-    },
-    {
-     "method": "Spencer (M-P, constant f(x))",
-     "published": 1.35,
-     "source": "Duncan & Wright (reference)",
-     "computed": 1.353,
-     "deviation": 0.00222
-    }
-   ]
-  },
-  {
-   "id": "P-9AC965",
-   "title": "Eurocode 7 cutting with surcharge",
-   "reference": "Verification manual of a commercial slope stability program.",
-   "literature": false,
-   "commercial": true,
-   "surface": "fixed",
-   "units": "SI",
-   "checks": [
-    {
-     "method": "Bishop simplified (vertical head)",
-     "published": 1.173,
-     "source": "Commercial program B",
-     "computed": 1.1715,
-     "deviation": -0.00128
-    }
-   ]
-  },
-  {
-   "id": "P-67FF1C",
-   "title": "Eurocode 7 cutting, partial factors applied by cSlope",
-   "reference": "Verification manual of a commercial slope stability program.",
-   "literature": false,
-   "commercial": true,
-   "surface": "fixed",
-   "units": "SI",
-   "checks": [
-    {
-     "method": "Bishop simplified, design values",
-     "published": 1.173,
-     "source": "Commercial program B",
-     "computed": 1.1717,
-     "deviation": -0.00111
-    },
-    {
-     "method": "Spencer, design values",
-     "published": 1.174,
-     "source": "Commercial program B",
-     "computed": 1.1736,
-     "deviation": -0.00034
-    }
-   ]
-  },
-  {
-   "id": "P-BA97F4",
-   "title": "Arai & Tagyo (1985) example 2, three layers",
-   "reference": "Arai & Tagyo (1985), example 2.",
-   "literature": true,
-   "commercial": true,
-   "surface": "search",
-   "units": "SI",
-   "checks": [
-    {
-     "method": "Bishop simplified",
-     "published": 0.42,
-     "source": "Commercial program A",
-     "computed": 0.4192,
-     "deviation": -0.0019
-    },
-    {
-     "method": "Spencer (M-P, constant f(x))",
-     "published": 0.414,
-     "source": "Commercial program A (non-circular)",
-     "computed": 0.4089,
-     "deviation": -0.01232
-    }
-   ]
-  },
-  {
-   "id": "P-18039F",
-   "title": "Yamagami & Ueta (1988)",
-   "reference": "Yamagami & Ueta (1988).",
-   "literature": true,
-   "commercial": true,
-   "surface": "search",
-   "units": "SI",
-   "checks": [
-    {
-     "method": "Bishop simplified",
-     "published": 1.344,
-     "source": "Commercial program A",
-     "computed": 1.3424,
-     "deviation": -0.00119
-    },
-    {
-     "method": "Spencer (M-P, constant f(x))",
-     "published": 1.325,
-     "source": "Commercial program A (non-circular)",
-     "computed": 1.3244,
-     "deviation": -0.00045
-    }
-   ]
-  },
-  {
-   "id": "P-CF9E0E",
-   "title": "Duncan & Wright fig. 14.20b, Su = 200 + 15·depth",
-   "reference": "Duncan & Wright, Soil Strength and Slope Stability, fig. 14.20b.",
-   "literature": true,
-   "commercial": true,
-   "surface": "search",
-   "units": "imperial",
-   "checks": [
-    {
-     "method": "Bishop simplified",
-     "published": 1.313,
-     "source": "Commercial program A",
-     "computed": 1.3054,
-     "deviation": -0.00579
-    },
-    {
-     "method": "Spencer (M-P, constant f(x))",
-     "published": 1.3,
-     "source": "Duncan & Wright (reference)",
-     "computed": 1.2759,
-     "deviation": -0.01854
-    },
-    {
-     "method": "Spencer (M-P, constant f(x))",
-     "published": 1.262,
-     "source": "Commercial program A (non-circular)",
-     "computed": 1.2607,
-     "deviation": -0.00103
-    }
-   ]
-  },
-  {
-   "id": "P-3CD9C5",
-   "title": "Duncan & Wright fig. 14.20b, Su = 300 psf",
-   "reference": "Duncan & Wright, Soil Strength and Slope Stability, fig. 14.20b.",
-   "literature": true,
-   "commercial": true,
-   "surface": "search",
-   "units": "imperial",
-   "checks": [
-    {
-     "method": "Bishop simplified",
-     "published": 1.335,
-     "source": "Commercial program A",
-     "computed": 1.3294,
-     "deviation": -0.00419
-    },
-    {
-     "method": "Spencer (M-P, constant f(x))",
-     "published": 1.312,
-     "source": "Duncan & Wright (reference)",
-     "computed": 1.3276,
-     "deviation": 0.01189
-    },
-    {
-     "method": "Spencer (M-P, constant f(x))",
-     "published": 1.182,
-     "source": "Commercial program A (non-circular)",
-     "computed": 1.172,
-     "deviation": -0.00846
-    }
-   ]
-  },
-  {
-   "id": "P-A1792C",
-   "title": "Duncan & Wright fig. 14.20a, water table",
-   "reference": "Duncan & Wright, Soil Strength and Slope Stability, fig. 14.20a.",
-   "literature": true,
-   "commercial": true,
-   "surface": "search",
-   "units": "SI",
-   "checks": [
-    {
-     "method": "Bishop simplified",
-     "published": 1.533,
-     "source": "Commercial program A",
-     "computed": 1.5201,
-     "deviation": -0.00841
-    },
-    {
-     "method": "Spencer (M-P, constant f(x))",
-     "published": 1.535,
-     "source": "Duncan & Wright (reference)",
-     "computed": 1.5325,
-     "deviation": -0.00163
-    },
-    {
-     "method": "Spencer (M-P, constant f(x))",
-     "published": 1.534,
-     "source": "Commercial program A (non-circular)",
-     "computed": 1.5238,
-     "deviation": -0.00665
-    }
-   ]
-  },
-  {
-   "id": "P-1F3F21",
-   "title": "Duncan & Wright fig. 14.3, undrained clay",
-   "reference": "Duncan & Wright, Soil Strength and Slope Stability, fig. 14.3.",
-   "literature": true,
-   "commercial": true,
-   "surface": "search",
-   "units": "imperial",
-   "checks": [
-    {
-     "method": "Bishop simplified",
-     "published": 1.126,
-     "source": "Commercial program A",
-     "computed": 1.1225,
-     "deviation": -0.00311
-    },
-    {
-     "method": "Spencer (M-P, constant f(x))",
-     "published": 1.124,
-     "source": "Duncan & Wright (reference)",
-     "computed": 1.1323,
-     "deviation": 0.00738
-    }
-   ]
-  },
-  {
-   "id": "P-9DDA4D",
-   "title": "Duncan & Wright fig. 14.4",
-   "reference": "Duncan & Wright, Soil Strength and Slope Stability, fig. 14.4.",
-   "literature": true,
-   "commercial": true,
-   "surface": "search",
-   "units": "imperial",
-   "checks": [
-    {
-     "method": "Bishop simplified",
-     "published": 1.412,
-     "source": "Commercial program A",
-     "computed": 1.408,
-     "deviation": -0.00283
-    },
-    {
-     "method": "Spencer (M-P, constant f(x))",
-     "published": 1.4,
-     "source": "Duncan & Wright (reference)",
-     "computed": 1.3987,
-     "deviation": -0.00093
-    }
-   ]
-  },
-  {
-   "id": "P-0D297F",
-   "title": "Duncan & Wright fig. 7.12, embankment on clay",
-   "reference": "Duncan & Wright, Soil Strength and Slope Stability, fig. 7.12.",
-   "literature": true,
-   "commercial": true,
-   "surface": "search",
-   "units": "imperial",
-   "checks": [
-    {
-     "method": "Bishop simplified",
-     "published": 1.228,
-     "source": "Commercial program A",
-     "computed": 1.2188,
-     "deviation": -0.00749
-    },
-    {
-     "method": "Bishop simplified",
-     "published": 1.22,
-     "source": "Duncan & Wright",
-     "computed": 1.2188,
-     "deviation": -0.00098
-    },
-    {
-     "method": "Spencer (M-P, constant f(x))",
-     "published": 1.19,
-     "source": "Commercial program A (non-circular)",
-     "computed": 1.168,
-     "deviation": -0.01849
-    }
-   ]
-  },
-  {
-   "id": "P-DF4644",
-   "title": "Low (1989), layered undrained clay",
-   "reference": "Low (1989).",
-   "literature": true,
-   "commercial": true,
-   "surface": "search",
-   "units": "SI",
-   "checks": [
-    {
-     "method": "Bishop simplified",
-     "published": 1.439,
-     "source": "Commercial program A",
-     "computed": 1.4358,
-     "deviation": -0.00222
-    }
-   ]
-  },
-  {
-   "id": "P-5C5E51",
-   "title": "Clarence Cannon Dam, surface 7A",
-   "reference": "Hassan & Wolff (1999).",
-   "literature": true,
-   "commercial": true,
-   "surface": "fixed",
-   "units": "SI",
-   "checks": [
-    {
-     "method": "Bishop simplified",
-     "published": 2.56,
-     "source": "Commercial program B",
-     "computed": 2.5485,
-     "deviation": -0.00449
-    },
-    {
-     "method": "Bishop simplified",
-     "published": 2.551,
-     "source": "Commercial program A",
-     "computed": 2.5485,
-     "deviation": -0.00098
-    }
-   ]
-  },
-  {
-   "id": "P-19BF93",
-   "title": "Clarence Cannon Dam, surface 7B",
-   "reference": "Hassan & Wolff (1999).",
-   "literature": true,
-   "commercial": true,
-   "surface": "fixed",
-   "units": "SI",
-   "checks": [
-    {
-     "method": "Bishop simplified",
-     "published": 2.806,
-     "source": "Commercial program B",
-     "computed": 2.8154,
-     "deviation": 0.00335
-    },
-    {
-     "method": "Bishop simplified",
-     "published": 2.82,
-     "source": "Commercial program A",
-     "computed": 2.8154,
-     "deviation": -0.00163
-    }
-   ]
-  },
-  {
-   "id": "P-F44AA0",
-   "title": "Clarence Cannon Dam, surface 7C",
-   "reference": "Hassan & Wolff (1999).",
-   "literature": true,
-   "commercial": true,
-   "surface": "fixed",
-   "units": "SI",
-   "checks": [
-    {
-     "method": "Bishop simplified",
-     "published": 2.771,
-     "source": "Commercial program B",
-     "computed": 2.7791,
-     "deviation": 0.00292
-    },
-    {
-     "method": "Bishop simplified",
-     "published": 2.777,
-     "source": "Commercial program A",
-     "computed": 2.7791,
-     "deviation": 0.00076
-    }
-   ]
-  },
-  {
-   "id": "P-323DBA",
-   "title": "Clarence Cannon Dam, surface 7D",
-   "reference": "Hassan & Wolff (1999).",
-   "literature": true,
-   "commercial": true,
-   "surface": "fixed",
-   "units": "SI",
-   "checks": [
-    {
-     "method": "Bishop simplified",
-     "published": 2.589,
-     "source": "Commercial program B",
-     "computed": 2.5768,
-     "deviation": -0.00471
-    },
-    {
-     "method": "Bishop simplified",
-     "published": 2.583,
-     "source": "Commercial program A",
-     "computed": 2.5768,
-     "deviation": -0.0024
-    }
-   ]
-  },
-  {
-   "id": "P-ECE1E8",
-   "title": "Clarence Cannon Dam, surface 7E",
-   "reference": "Hassan & Wolff (1999).",
-   "literature": true,
-   "commercial": true,
-   "surface": "fixed",
-   "units": "SI",
-   "checks": [
-    {
-     "method": "Bishop simplified",
-     "published": 2.703,
-     "source": "Commercial program B",
-     "computed": 2.6898,
-     "deviation": -0.00488
-    },
-    {
-     "method": "Bishop simplified",
-     "published": 2.692,
-     "source": "Commercial program A",
-     "computed": 2.6898,
-     "deviation": -0.00082
-    }
-   ]
-  },
-  {
-   "id": "P-C7BC46",
-   "title": "Clarence Cannon Dam, surface 8B",
-   "reference": "Hassan & Wolff (1999).",
-   "literature": true,
-   "commercial": true,
-   "surface": "fixed",
-   "units": "SI",
-   "checks": [
-    {
-     "method": "Bishop simplified",
-     "published": 2.673,
-     "source": "Commercial program B",
-     "computed": 2.6731,
-     "deviation": 0.00004
-    },
-    {
-     "method": "Bishop simplified",
-     "published": 2.672,
-     "source": "Commercial program A",
-     "computed": 2.6731,
-     "deviation": 0.00041
-    }
-   ]
-  },
-  {
-   "id": "P-4BDBC4",
-   "title": "Clarence Cannon Dam, surface 8F",
-   "reference": "Hassan & Wolff (1999).",
-   "literature": true,
-   "commercial": true,
-   "surface": "fixed",
-   "units": "SI",
-   "checks": [
-    {
-     "method": "Bishop simplified",
-     "published": 3.586,
-     "source": "Commercial program B",
-     "computed": 3.5917,
-     "deviation": 0.00159
-    },
-    {
-     "method": "Bishop simplified",
-     "published": 3.598,
-     "source": "Commercial program A",
-     "computed": 3.5917,
-     "deviation": -0.00175
-    }
-   ]
-  },
-  {
-   "id": "P-259D32",
-   "title": "Clarence Cannon Dam, surface 8G",
-   "reference": "Hassan & Wolff (1999).",
-   "literature": true,
-   "commercial": true,
-   "surface": "fixed",
-   "units": "SI",
-   "checks": [
-    {
-     "method": "Bishop simplified",
-     "published": 6.069,
-     "source": "Commercial program B",
-     "computed": 6.0628,
-     "deviation": -0.00102
-    },
-    {
-     "method": "Bishop simplified",
-     "published": 6.074,
-     "source": "Commercial program A",
-     "computed": 6.0628,
-     "deviation": -0.00184
-    }
-   ]
-  },
-  {
-   "id": "P-354B22",
-   "title": "Clarence Cannon Dam, surface 8H",
-   "reference": "Hassan & Wolff (1999).",
-   "literature": true,
-   "commercial": true,
-   "surface": "fixed",
-   "units": "SI",
-   "checks": [
-    {
-     "method": "Bishop simplified",
-     "published": 11.583,
-     "source": "Commercial program B",
-     "computed": 11.5666,
-     "deviation": -0.00142
-    }
-   ]
-  },
-  {
-   "id": "P-0752A5",
-   "title": "Sharma (1996) reinforcement example, unreinforced",
-   "reference": "Sharma (1996).",
-   "literature": true,
-   "commercial": true,
-   "surface": "fixed",
-   "units": "SI",
-   "checks": [
-    {
-     "method": "Bishop simplified",
-     "published": 0.764,
-     "source": "Commercial program A",
-     "computed": 0.7604,
-     "deviation": -0.00471
-    }
-   ]
-  },
-  {
-   "id": "P-D5383B",
-   "title": "Yamagami micro-pile slope, no pile",
-   "reference": "Yamagami micro-pile slope example.",
-   "literature": true,
-   "commercial": true,
-   "surface": "fixed",
-   "units": "SI",
-   "checks": [
-    {
-     "method": "Bishop simplified",
-     "published": 1.102,
-     "source": "Commercial program A",
-     "computed": 1.1004,
-     "deviation": -0.00145
-    }
-   ]
-  },
-  {
-   "id": "P-4EFF6C",
+   "id": "V001",
    "title": "Arai & Tagyo (1985) example 1",
    "reference": "Arai & Tagyo (1985), example 1.",
    "literature": true,
-   "commercial": true,
+   "commercial": false,
    "surface": "search",
    "units": "SI",
    "checks": [
@@ -742,25 +53,71 @@
    ]
   },
   {
-   "id": "P-E7CFD9",
-   "title": "Baker (2003) example 1, Mohr-Coulomb fit",
-   "reference": "Baker (2003), example 1.",
+   "id": "V002",
+   "title": "Arai & Tagyo (1985) example 2, three layers",
+   "reference": "Arai & Tagyo (1985), example 2.",
    "literature": true,
-   "commercial": true,
+   "commercial": false,
    "surface": "search",
    "units": "SI",
    "checks": [
     {
-     "method": "Spencer (M-P, constant f(x))",
-     "published": 1.536,
+     "method": "Bishop simplified",
+     "published": 0.42,
      "source": "Commercial program A",
-     "computed": 1.5186,
-     "deviation": -0.01133
+     "computed": 0.4192,
+     "deviation": -0.0019
+    },
+    {
+     "method": "Spencer (M-P, constant f(x))",
+     "published": 0.414,
+     "source": "Commercial program A (non-circular)",
+     "computed": 0.4089,
+     "deviation": -0.01232
     }
    ]
   },
   {
-   "id": "P-E7759E",
+   "id": "V003",
+   "title": "Arai & Tagyo (1985) example 3, water table",
+   "reference": "Arai & Tagyo (1985), Soils and Foundations 25(1).",
+   "literature": true,
+   "commercial": false,
+   "surface": "search",
+   "units": "SI",
+   "checks": [
+    {
+     "method": "Bishop simplified",
+     "published": 1.118,
+     "source": "Commercial program A",
+     "computed": 1.1123,
+     "deviation": -0.0051
+    },
+    {
+     "method": "Spencer (M-P, constant f(x))",
+     "published": 1.118,
+     "source": "Commercial program A",
+     "computed": 1.1134,
+     "deviation": -0.00411
+    },
+    {
+     "method": "Janbu corrected (f0)",
+     "published": 1.131,
+     "source": "Commercial program A",
+     "computed": 1.1244,
+     "deviation": -0.00584
+    },
+    {
+     "method": "Bishop simplified",
+     "published": 1.112,
+     "source": "Program D",
+     "computed": 1.1123,
+     "deviation": 0.00027
+    }
+   ]
+  },
+  {
+   "id": "V004a",
    "title": "4:1 slope, Mohr-Coulomb fit",
    "reference": "Verification manual of a commercial slope stability program.",
    "literature": false,
@@ -785,386 +142,61 @@
    ]
   },
   {
-   "id": "P-BE9935",
-   "title": "Duncan & Wright fig. 6.38, piezometric line",
-   "reference": "Duncan & Wright, Soil Strength and Slope Stability, fig. 6.38.",
-   "literature": true,
+   "id": "V004b",
+   "title": "Baker (2003) ex. 2 slope, Mohr-Coulomb iteration parameters",
+   "reference": "Verification manual of a commercial slope stability program.",
+   "literature": false,
    "commercial": true,
+   "surface": "search",
+   "units": "SI",
+   "checks": [
+    {
+     "method": "Janbu simplified (uncorrected)",
+     "published": 2.61,
+     "source": "Commercial program A",
+     "computed": 2.6091,
+     "deviation": -0.00034
+    },
+    {
+     "method": "Spencer (M-P, constant f(x))",
+     "published": 2.696,
+     "source": "Commercial program A",
+     "computed": 2.6664,
+     "deviation": -0.01098
+    }
+   ]
+  },
+  {
+   "id": "V005",
+   "title": "Baker (1993) dam, end of construction, infinite-slope face",
+   "reference": "Baker (1993).",
+   "literature": true,
+   "commercial": false,
    "surface": "search",
    "units": "SI",
    "checks": [
     {
      "method": "Bishop simplified",
-     "published": 1.142,
-     "source": "Commercial program A",
-     "computed": 1.1319,
-     "deviation": -0.00884
+     "published": 2.5,
+     "source": "Theory (infinite slope)",
+     "computed": 2.5096,
+     "deviation": 0.00384
     },
     {
      "method": "Spencer (M-P, constant f(x))",
-     "published": 1.142,
-     "source": "Commercial program A",
-     "computed": 1.1325,
-     "deviation": -0.00832
+     "published": 2.5,
+     "source": "Theory (infinite slope)",
+     "computed": 2.5096,
+     "deviation": 0.00384
     }
    ]
   },
   {
-   "id": "P-95F8E4",
-   "title": "Duncan & Wright fig. 14.7, deep circle",
-   "reference": "Duncan & Wright, Soil Strength and Slope Stability, fig. 14.7.",
-   "literature": true,
-   "commercial": true,
-   "surface": "search",
-   "units": "imperial",
-   "checks": [
-    {
-     "method": "Bishop simplified",
-     "published": 1.23,
-     "source": "Commercial program A",
-     "computed": 1.2235,
-     "deviation": -0.00528
-    },
-    {
-     "method": "Spencer (M-P, constant f(x))",
-     "published": 1.209,
-     "source": "Commercial program A",
-     "computed": 1.2045,
-     "deviation": -0.00372
-    },
-    {
-     "method": "Spencer (M-P, constant f(x))",
-     "published": 1.21,
-     "source": "Duncan & Wright (reference)",
-     "computed": 1.2045,
-     "deviation": -0.00455
-    }
-   ]
-  },
-  {
-   "id": "P-4CE837",
-   "title": "Cai & Ugai (2000) slope, no pile (see P-BF95F1, P-7E5692, P-E1C4F6 and P-14C8CC for the pile rows)",
-   "reference": "Cai & Ugai (2000).",
-   "literature": true,
-   "commercial": true,
-   "surface": "search",
-   "units": "SI",
-   "checks": [
-    {
-     "method": "Bishop simplified",
-     "published": 1.14,
-     "source": "Commercial program A",
-     "computed": 1.142,
-     "deviation": 0.00175
-    },
-    {
-     "method": "Bishop simplified",
-     "published": 1.13,
-     "source": "Cai & Ugai",
-     "computed": 1.142,
-     "deviation": 0.01062
-    }
-   ]
-  },
-  {
-   "id": "P-570744",
-   "title": "Pockoski & Duncan (2000) slope 1",
-   "reference": "Pockoski & Duncan (2000), slope 1.",
-   "literature": true,
-   "commercial": true,
-   "surface": "fixed",
-   "units": "SI",
-   "checks": [
-    {
-     "method": "Bishop simplified (vertical head)",
-     "published": 1.293,
-     "source": "Commercial program A",
-     "computed": 1.2887,
-     "deviation": -0.00333
-    },
-    {
-     "method": "Spencer (vertical head)",
-     "published": 1.3,
-     "source": "Commercial program A",
-     "computed": 1.2963,
-     "deviation": -0.00285
-    }
-   ]
-  },
-  {
-   "id": "P-0E578B",
-   "title": "Morgenstern (1963) complete drawdown, 3:1",
-   "reference": "Morgenstern, N. (1963). Stability charts for earth slopes during rapid drawdown. Géotechnique 13(2).",
-   "literature": true,
-   "commercial": true,
-   "surface": "search",
-   "units": "SI",
-   "checks": [
-    {
-     "method": "Bishop simplified (vertical head)",
-     "published": 1.2,
-     "source": "Morgenstern (chart)",
-     "computed": 1.1993,
-     "deviation": -0.00058
-    },
-    {
-     "method": "Spencer (vertical head)",
-     "published": 1.2,
-     "source": "Morgenstern (chart)",
-     "computed": 1.2053,
-     "deviation": 0.00442
-    }
-   ]
-  },
-  {
-   "id": "P-24468F",
-   "title": "Greco (1996) example 5 / Chen & Shao (1988)",
-   "reference": "Greco (1996), example 5; Chen & Shao (1988).",
-   "literature": true,
-   "commercial": true,
-   "surface": "search",
-   "units": "SI",
-   "checks": [
-    {
-     "method": "Bishop simplified (vertical head)",
-     "published": 1.087,
-     "source": "Commercial program A",
-     "computed": 1.0843,
-     "deviation": -0.00248
-    },
-    {
-     "method": "Spencer (vertical head)",
-     "published": 1.093,
-     "source": "Commercial program A",
-     "computed": 1.0912,
-     "deviation": -0.00165
-    }
-   ]
-  },
-  {
-   "id": "P-A6CCE7",
-   "title": "ACADS 1(b), water-filled tension crack",
-   "reference": "Giam & Donald (1989), ACADS problem 1(b).",
-   "literature": true,
-   "commercial": true,
-   "surface": "search",
-   "units": "SI",
-   "checks": [
-    {
-     "method": "Bishop simplified",
-     "published": 1.596,
-     "source": "Commercial program A",
-     "computed": 1.5866,
-     "deviation": -0.00589
-    },
-    {
-     "method": "Spencer (M-P, constant f(x))",
-     "published": 1.592,
-     "source": "Commercial program A",
-     "computed": 1.5824,
-     "deviation": -0.00603
-    },
-    {
-     "method": "Janbu corrected (f0)",
-     "published": 1.489,
-     "source": "Commercial program A",
-     "computed": 1.4741,
-     "deviation": -0.01001
-    }
-   ]
-  },
-  {
-   "id": "P-316A95",
-   "title": "ACADS 3(b), weak layer, specified non-circular surface",
-   "reference": "Giam & Donald (1989), ACADS problem 3(b).",
-   "literature": true,
-   "commercial": true,
-   "surface": "fixed",
-   "units": "SI",
-   "checks": [
-    {
-     "method": "Janbu corrected (f0)",
-     "published": 1.294,
-     "source": "Commercial program A",
-     "computed": 1.2938,
-     "deviation": -0.00015
-    },
-    {
-     "method": "Spencer (M-P, constant f(x))",
-     "published": 1.277,
-     "source": "Commercial program A",
-     "computed": 1.2759,
-     "deviation": -0.00086
-    },
-    {
-     "method": "Morgenstern-Price (half-sine)",
-     "published": 1.261,
-     "source": "Commercial program B",
-     "computed": 1.2605,
-     "deviation": -0.0004
-    }
-   ]
-  },
-  {
-   "id": "P-E2C713",
-   "title": "ACADS 3(a), weak layer, non-circular search",
-   "reference": "Giam & Donald (1989), ACADS problem 3(a).",
-   "literature": true,
-   "commercial": true,
-   "surface": "search",
-   "units": "SI",
-   "checks": [
-    {
-     "method": "Morgenstern-Price (half-sine)",
-     "published": 1.261,
-     "source": "Commercial program B",
-     "computed": 1.2602,
-     "deviation": -0.00063
-    },
-    {
-     "method": "Spencer (M-P, constant f(x))",
-     "published": 1.246,
-     "source": "Commercial program A",
-     "computed": 1.2642,
-     "deviation": 0.01461
-    }
-   ]
-  },
-  {
-   "id": "P-4D2F77",
-   "title": "USACE example E-10, ponded water",
-   "reference": "USACE EM 1110-2-1902, example E-10.",
-   "literature": true,
-   "commercial": true,
-   "surface": "fixed",
-   "units": "SI",
-   "checks": [
-    {
-     "method": "Bishop simplified",
-     "published": 1.241,
-     "source": "Commercial program A",
-     "computed": 1.2348,
-     "deviation": -0.005
-    },
-    {
-     "method": "Spencer (M-P, constant f(x))",
-     "published": 1.241,
-     "source": "Commercial program A",
-     "computed": 1.2348,
-     "deviation": -0.005
-    },
-    {
-     "method": "Morgenstern-Price (half-sine)",
-     "published": 1.244,
-     "source": "Commercial program A (GLE)",
-     "computed": 1.2348,
-     "deviation": -0.0074
-    },
-    {
-     "method": "Janbu corrected (f0)",
-     "published": 1.385,
-     "source": "Commercial program A",
-     "computed": 1.3799,
-     "deviation": -0.00368
-    }
-   ]
-  },
-  {
-   "id": "P-36F92F",
-   "title": "Yamagami & Ueta (1988) four-layer slope, non-circular",
-   "reference": "Greco (1996) example 4; Yamagami & Ueta (1988).",
-   "literature": true,
-   "commercial": true,
-   "surface": "search",
-   "units": "SI",
-   "checks": [
-    {
-     "method": "Spencer (M-P, constant f(x))",
-     "published": 1.398,
-     "source": "Commercial program A (Monte Carlo)",
-     "computed": 1.4005,
-     "deviation": 0.00179
-    }
-   ]
-  },
-  {
-   "id": "P-972A5D",
-   "title": "Low (1989), stiff crust over soft clays, published circle",
-   "reference": "Low (1989).",
-   "literature": true,
-   "commercial": true,
-   "surface": "fixed",
-   "units": "SI",
-   "checks": [
-    {
-     "method": "Bishop simplified",
-     "published": 1.192,
-     "source": "Commercial program A",
-     "computed": 1.1974,
-     "deviation": 0.00453
-    }
-   ]
-  },
-  {
-   "id": "P-9FCAFA",
-   "title": "Prandtl bearing mechanism on a 60° slope",
-   "reference": "Chen & Shao (1988).",
-   "literature": true,
-   "commercial": true,
-   "surface": "fixed",
-   "units": "SI",
-   "checks": [
-    {
-     "method": "Spencer (M-P, constant f(x))",
-     "published": 1.051,
-     "source": "Commercial program A",
-     "computed": 1.0521,
-     "deviation": 0.00105
-    }
-   ]
-  },
-  {
-   "id": "P-469616",
-   "title": "Baker & Leshchinsky clay-core dam, reservoir and crest crack",
-   "reference": "Baker & Leshchinsky (2001).",
-   "literature": true,
-   "commercial": true,
-   "surface": "fixed",
-   "units": "SI",
-   "checks": [
-    {
-     "method": "Spencer (M-P, constant f(x))",
-     "published": 1.925,
-     "source": "Commercial program A",
-     "computed": 1.9257,
-     "deviation": 0.00036
-    }
-   ]
-  },
-  {
-   "id": "P-538468",
-   "title": "Baker & Leshchinsky dam, Baker's non-circular surface",
-   "reference": "Baker & Leshchinsky (2001).",
-   "literature": true,
-   "commercial": true,
-   "surface": "fixed",
-   "units": "SI",
-   "checks": [
-    {
-     "method": "Spencer (M-P, constant f(x))",
-     "published": 1.91,
-     "source": "Baker & Leshchinsky",
-     "computed": 1.8817,
-     "deviation": -0.01482
-    }
-   ]
-  },
-  {
-   "id": "P-88C79E",
+   "id": "V006",
    "title": "Baker (2001) planar surface",
    "reference": "Baker (2001).",
    "literature": true,
-   "commercial": true,
+   "commercial": false,
    "surface": "fixed",
    "units": "SI",
    "checks": [
@@ -1185,86 +217,90 @@
    ]
   },
   {
-   "id": "P-C24F6E",
-   "title": "Priest (1993) rigid block on a plane, water-filled crack",
-   "reference": "Priest (1993).",
-   "literature": true,
+   "id": "V007a",
+   "title": "Baker (2003) ex. 1, Mohr-Coulomb, Janbu simplified on the reference circle",
+   "reference": "Verification manual of a commercial slope stability program.",
+   "literature": false,
    "commercial": true,
    "surface": "fixed",
    "units": "SI",
    "checks": [
     {
-     "method": "Janbu simplified",
-     "published": 1.049,
-     "source": "Commercial program A, commercial program C, Priest",
-     "computed": 1.0483,
-     "deviation": -0.00067
-    },
-    {
-     "method": "Spencer (M-P, constant f(x))",
-     "published": 1.049,
-     "source": "Commercial program A, commercial program C, Priest",
-     "computed": 1.0507,
-     "deviation": 0.00162
+     "method": "Janbu simplified (uncorrected)",
+     "published": 1.469,
+     "source": "Commercial program A",
+     "computed": 1.4675,
+     "deviation": -0.00102
     }
    ]
   },
   {
-   "id": "P-3FA84D",
-   "title": "Pockoski & Duncan test slope 2, dry tension crack",
-   "reference": "Pockoski & Duncan (2000).",
-   "literature": true,
-   "commercial": true,
-   "surface": "fixed",
-   "units": "SI",
-   "checks": [
-    {
-     "method": "Bishop simplified",
-     "published": 1.285,
-     "source": "Commercial program A",
-     "computed": 1.2812,
-     "deviation": -0.00296
-    },
-    {
-     "method": "Spencer (M-P, constant f(x))",
-     "published": 1.29,
-     "source": "Commercial program A",
-     "computed": 1.2875,
-     "deviation": -0.00194
-    }
-   ]
-  },
-  {
-   "id": "P-E2FFFC",
-   "title": "Pockoski & Duncan test slope 3, clay seam and dry crack",
-   "reference": "Pockoski & Duncan (2000).",
-   "literature": true,
+   "id": "V007b",
+   "title": "Baker (2003) ex. 1 slope, Mohr-Coulomb iteration parameters",
+   "reference": "Verification manual of a commercial slope stability program.",
+   "literature": false,
    "commercial": true,
    "surface": "search",
    "units": "SI",
    "checks": [
     {
-     "method": "Bishop simplified",
-     "published": 1.417,
-     "source": "Commercial program A (circles)",
-     "computed": 1.4092,
-     "deviation": -0.0055
+     "method": "Janbu simplified (uncorrected)",
+     "published": 0.957,
+     "source": "Commercial program A",
+     "computed": 0.9553,
+     "deviation": -0.00178
     },
     {
      "method": "Spencer (M-P, constant f(x))",
-     "published": 1.422,
-     "source": "Commercial program A (circles)",
-     "computed": 1.4148,
-     "deviation": -0.00506
+     "published": 0.981,
+     "source": "Commercial program A",
+     "computed": 0.9777,
+     "deviation": -0.00336
     }
    ]
   },
   {
-   "id": "P-B7CB53",
+   "id": "V007c",
+   "title": "Baker (2003) ex. 3, Janbu simplified",
+   "reference": "Verification manual of a commercial slope stability program.",
+   "literature": false,
+   "commercial": true,
+   "surface": "search",
+   "units": "SI",
+   "checks": [
+    {
+     "method": "Janbu simplified (uncorrected)",
+     "published": 1.291,
+     "source": "Commercial program A",
+     "computed": 1.2897,
+     "deviation": -0.00101
+    }
+   ]
+  },
+  {
+   "id": "V008a",
+   "title": "Baker (2003) example 1, Mohr-Coulomb fit",
+   "reference": "Baker (2003), example 1.",
+   "literature": true,
+   "commercial": false,
+   "surface": "search",
+   "units": "SI",
+   "checks": [
+    {
+     "method": "Spencer (M-P, constant f(x))",
+     "published": 1.536,
+     "source": "Commercial program A",
+     "computed": 1.5186,
+     "deviation": -0.01133
+    }
+   ]
+  },
+  {
+   "id": "V008b",
    "title": "Baker (2003) London clay slope, Mohr-Coulomb fit",
    "reference": "Baker (2003) example 3.",
    "literature": true,
-   "commercial": true,
+   "commercial": false,
    "surface": "search",
    "units": "SI",
    "checks": [
@@ -1278,574 +314,65 @@
    ]
   },
   {
-   "id": "P-F355E7",
-   "title": "USACE example F-6, steady-seepage dam",
-   "reference": "USACE EM 1110-2-1902, example F-6.",
+   "id": "V009a",
+   "title": "Baker & Leshchinsky clay-core dam, reservoir and crest crack",
+   "reference": "Baker & Leshchinsky (2001).",
    "literature": true,
-   "commercial": true,
-   "surface": "fixed",
-   "units": "SI",
-   "checks": [
-    {
-     "method": "Bishop simplified",
-     "published": 2.011,
-     "source": "Commercial program A",
-     "computed": 1.9975,
-     "deviation": -0.00671
-    },
-    {
-     "method": "Spencer (M-P, constant f(x))",
-     "published": 2.026,
-     "source": "Commercial program A",
-     "computed": 2.012,
-     "deviation": -0.00691
-    },
-    {
-     "method": "Janbu corrected (f0)",
-     "published": 1.83,
-     "source": "Commercial program A",
-     "computed": 1.8328,
-     "deviation": 0.00153
-    }
-   ]
-  },
-  {
-   "id": "P-BC201E",
-   "title": "Bradwell excavated slope, stiff-fissured London clay",
-   "reference": "Skempton & LaRochelle (1965); Duncan & Wright, Soil Strength and Slope Stability.",
-   "literature": true,
-   "commercial": true,
-   "surface": "search",
-   "units": "imperial",
-   "checks": [
-    {
-     "method": "Bishop simplified",
-     "published": 1.762,
-     "source": "Commercial program A",
-     "computed": 1.7588,
-     "deviation": -0.00182
-    },
-    {
-     "method": "Spencer (M-P, constant f(x))",
-     "published": 1.758,
-     "source": "Commercial program A",
-     "computed": 1.7588,
-     "deviation": 0.00046
-    },
-    {
-     "method": "Janbu corrected (f0)",
-     "published": 1.736,
-     "source": "Commercial program A",
-     "computed": 1.7345,
-     "deviation": -0.00086
-    }
-   ]
-  },
-  {
-   "id": "P-842F36",
-   "title": "Borges & Cardoso embankment 3, H = 7 m, circle A",
-   "reference": "Borges & Cardoso (2002), Geotextiles and Geomembranes 20(6).",
-   "literature": true,
-   "commercial": true,
-   "surface": "fixed",
-   "units": "SI",
-   "checks": [
-    {
-     "method": "Bishop simplified",
-     "published": 1.23,
-     "source": "Commercial program A",
-     "computed": 1.2191,
-     "deviation": -0.00886
-    }
-   ]
-  },
-  {
-   "id": "P-87EB11",
-   "title": "Borges & Cardoso embankment 3, H = 7 m, circle B",
-   "reference": "Borges & Cardoso (2002), Geotextiles and Geomembranes 20(6).",
-   "literature": true,
-   "commercial": true,
-   "surface": "fixed",
-   "units": "SI",
-   "checks": [
-    {
-     "method": "Bishop simplified",
-     "published": 1.22,
-     "source": "Commercial program A",
-     "computed": 1.2163,
-     "deviation": -0.00303
-    }
-   ]
-  },
-  {
-   "id": "P-3EB6F8",
-   "title": "Borges & Cardoso embankment 3, H = 8.75 m, circle C",
-   "reference": "Borges & Cardoso (2002), Geotextiles and Geomembranes 20(6).",
-   "literature": true,
-   "commercial": true,
-   "surface": "fixed",
-   "units": "SI",
-   "checks": [
-    {
-     "method": "Bishop simplified",
-     "published": 0.98,
-     "source": "Commercial program A",
-     "computed": 0.9814,
-     "deviation": 0.00143
-    }
-   ]
-  },
-  {
-   "id": "P-513CFC",
-   "title": "Tandjiria embankment, clay fill, geosynthetic T = 169 kN/m",
-   "reference": "Tandjiria (2002).",
-   "literature": true,
-   "commercial": true,
+   "commercial": false,
    "surface": "fixed",
    "units": "SI",
    "checks": [
     {
      "method": "Spencer (M-P, constant f(x))",
-     "published": 1.35,
+     "published": 1.925,
      "source": "Commercial program A",
-     "computed": 1.3328,
-     "deviation": -0.01274
-    },
-    {
-     "method": "Spencer (M-P, constant f(x))",
-     "published": 1.332,
-     "source": "Program D",
-     "computed": 1.3328,
-     "deviation": 0.0006
+     "computed": 1.9257,
+     "deviation": 0.00036
     }
    ]
   },
   {
-   "id": "P-007C89",
-   "title": "Soil-nailed wall in clay (Amherst test wall)",
-   "reference": "Sheahan & Ho (2003).",
+   "id": "V009b",
+   "title": "Baker & Leshchinsky dam, Baker's non-circular surface",
+   "reference": "Baker & Leshchinsky (2001).",
    "literature": true,
-   "commercial": true,
-   "surface": "fixed",
-   "units": "SI",
-   "checks": [
-    {
-     "method": "Janbu corrected (f0)",
-     "published": 0.89,
-     "source": "Commercial program A",
-     "computed": 0.8989,
-     "deviation": 0.01
-    }
-   ]
-  },
-  {
-   "id": "P-C0D404",
-   "title": "Soil-nailed wall in sand (Clouterre test wall)",
-   "reference": "Sheahan & Ho (2003).",
-   "literature": true,
-   "commercial": true,
-   "surface": "fixed",
-   "units": "SI",
-   "checks": [
-    {
-     "method": "Janbu corrected (f0)",
-     "published": 0.989,
-     "source": "Commercial program A",
-     "computed": 0.9893,
-     "deviation": 0.0003
-    }
-   ]
-  },
-  {
-   "id": "P-423C46",
-   "title": "Soil-nailed wall in sand (Clouterre test wall), 45° plane",
-   "reference": "Sheahan & Ho (2003).",
-   "literature": true,
-   "commercial": true,
-   "surface": "fixed",
-   "units": "SI",
-   "checks": [
-    {
-     "method": "Janbu corrected (f0)",
-     "published": 1.123,
-     "source": "Commercial program A",
-     "computed": 1.1248,
-     "deviation": 0.0016
-    }
-   ]
-  },
-  {
-   "id": "P-F1668F",
-   "title": "Soil-nailed wall in sand (Clouterre test wall), 50° plane",
-   "reference": "Sheahan & Ho (2003).",
-   "literature": true,
-   "commercial": true,
-   "surface": "fixed",
-   "units": "SI",
-   "checks": [
-    {
-     "method": "Janbu corrected (f0)",
-     "published": 1.043,
-     "source": "Commercial program A",
-     "computed": 1.0442,
-     "deviation": 0.00115
-    }
-   ]
-  },
-  {
-   "id": "P-18EAE9",
-   "title": "Soil-nailed wall in sand (Clouterre test wall), 60° plane",
-   "reference": "Sheahan & Ho (2003).",
-   "literature": true,
-   "commercial": true,
-   "surface": "fixed",
-   "units": "SI",
-   "checks": [
-    {
-     "method": "Janbu corrected (f0)",
-     "published": 0.945,
-     "source": "Commercial program A",
-     "computed": 0.9451,
-     "deviation": 0.00011
-    }
-   ]
-  },
-  {
-   "id": "P-DF0840",
-   "title": "Soil-nailed wall in sand (Clouterre test wall), 65° plane",
-   "reference": "Sheahan & Ho (2003).",
-   "literature": true,
-   "commercial": true,
-   "surface": "fixed",
-   "units": "SI",
-   "checks": [
-    {
-     "method": "Janbu corrected (f0)",
-     "published": 0.922,
-     "source": "Commercial program A",
-     "computed": 0.9205,
-     "deviation": -0.00163
-    }
-   ]
-  },
-  {
-   "id": "P-7B7386",
-   "title": "Soil-nailed wall in sand (Clouterre test wall), 70° plane",
-   "reference": "Sheahan & Ho (2003).",
-   "literature": true,
-   "commercial": true,
-   "surface": "fixed",
-   "units": "SI",
-   "checks": [
-    {
-     "method": "Janbu corrected (f0)",
-     "published": 0.923,
-     "source": "Commercial program A",
-     "computed": 0.9207,
-     "deviation": -0.00249
-    }
-   ]
-  },
-  {
-   "id": "P-7C97D1",
-   "title": "Nailed wall, 14 rows, deep wedge",
-   "reference": "Caltrans soil nail reference manual.",
-   "literature": true,
-   "commercial": true,
-   "surface": "fixed",
-   "units": "SI",
-   "checks": [
-    {
-     "method": "Janbu corrected (f0)",
-     "published": 1.46,
-     "source": "Program H",
-     "computed": 1.4486,
-     "deviation": -0.00781
-    },
-    {
-     "method": "Janbu corrected (f0)",
-     "published": 1.448,
-     "source": "Program D",
-     "computed": 1.4486,
-     "deviation": 0.00041
-    },
-    {
-     "method": "Spencer (M-P, constant f(x))",
-     "published": 1.576,
-     "source": "Program D",
-     "computed": 1.5745,
-     "deviation": -0.00095
-    }
-   ]
-  },
-  {
-   "id": "P-89489A",
-   "title": "Tied-back wall in layered soil",
-   "reference": "Pockoski & Duncan (2000), Comparison of computer programs for analysis of reinforced slopes. Virginia Tech.",
-   "literature": true,
-   "commercial": true,
-   "surface": "fixed",
-   "units": "SI",
-   "checks": [
-    {
-     "method": "Bishop simplified",
-     "published": 1.147,
-     "source": "Commercial program A",
-     "computed": 1.1424,
-     "deviation": -0.00401
-    },
-    {
-     "method": "Spencer (M-P, constant f(x))",
-     "published": 1.145,
-     "source": "Commercial program A",
-     "computed": 1.1404,
-     "deviation": -0.00402
-    }
-   ]
-  },
-  {
-   "id": "P-F3A5C8",
-   "title": "Tieback wall in sand, drawdown water table",
-   "reference": "Pockoski & Duncan (2000), Comparison of computer programs for analysis of reinforced slopes. Virginia Tech.",
-   "literature": true,
-   "commercial": true,
-   "surface": "fixed",
-   "units": "SI",
-   "checks": [
-    {
-     "method": "Janbu corrected (f0)",
-     "published": 0.579,
-     "source": "Program D",
-     "computed": 0.5776,
-     "deviation": -0.00242
-    }
-   ]
-  },
-  {
-   "id": "P-2637F0",
-   "title": "Soil-nailed wall with tension crack and surcharges",
-   "reference": "Pockoski & Duncan (2000), Comparison of computer programs for analysis of reinforced slopes. Virginia Tech.",
-   "literature": true,
-   "commercial": true,
+   "commercial": false,
    "surface": "fixed",
    "units": "SI",
    "checks": [
     {
      "method": "Spencer (M-P, constant f(x))",
-     "published": 1.009,
-     "source": "Commercial program A",
-     "computed": 1.01,
-     "deviation": 0.00099
-    },
-    {
-     "method": "Janbu corrected (f0)",
-     "published": 1.073,
-     "source": "Program D",
-     "computed": 1.0748,
-     "deviation": 0.00168
+     "published": 1.91,
+     "source": "Baker & Leshchinsky",
+     "computed": 1.8817,
+     "deviation": -0.01482
     }
    ]
   },
   {
-   "id": "P-47AA3D",
-   "title": "Duncan & Wright tieback, active",
-   "reference": "Duncan & Wright, Soil Strength and Slope Stability, fig. 6.34.",
+   "id": "V009c",
+   "title": "Baker & Leshchinsky clay-core dam, critical surface search",
+   "reference": "Baker & Leshchinsky (2001).",
    "literature": true,
-   "commercial": true,
-   "surface": "fixed",
-   "units": "SI",
-   "checks": [
-    {
-     "method": "Morgenstern-Price (half-sine)",
-     "published": 1.575,
-     "source": "Commercial program A (GLE)",
-     "computed": 1.5677,
-     "deviation": -0.00463
-    }
-   ]
-  },
-  {
-   "id": "P-DBB05D",
-   "title": "Duncan & Wright tieback, passive",
-   "reference": "Duncan & Wright, Soil Strength and Slope Stability, fig. 6.34.",
-   "literature": true,
-   "commercial": true,
-   "surface": "fixed",
-   "units": "SI",
-   "checks": [
-    {
-     "method": "Bishop simplified",
-     "published": 1.324,
-     "source": "Commercial program A",
-     "computed": 1.3194,
-     "deviation": -0.00347
-    },
-    {
-     "method": "Bishop simplified",
-     "published": 1.32,
-     "source": "Duncan & Wright",
-     "computed": 1.3194,
-     "deviation": -0.00045
-    }
-   ]
-  },
-  {
-   "id": "P-1571FD",
-   "title": "Geogrid-reinforced fill on rock (D&W fig. 7.28)",
-   "reference": "Duncan & Wright, Soil Strength and Slope Stability, fig. 7.28.",
-   "literature": true,
-   "commercial": true,
+   "commercial": false,
    "surface": "search",
    "units": "SI",
    "checks": [
     {
-     "method": "Bishop simplified",
-     "published": 1.629,
-     "source": "Commercial program A",
-     "computed": 1.6117,
-     "deviation": -0.01062
-    },
-    {
      "method": "Spencer (M-P, constant f(x))",
-     "published": 1.62,
-     "source": "Commercial program A",
-     "computed": 1.6073,
-     "deviation": -0.00784
+     "published": 1.868,
+     "source": "Commercial program B (optimised non-circular)",
+     "computed": 1.8698,
+     "deviation": 0.00096
     }
    ]
   },
   {
-   "id": "P-0945C6",
-   "title": "Leshchinsky & Han three-tier MSE wall, baseline",
-   "reference": "Leshchinsky & Han (2004), J. Geotech. Geoenviron. Eng. 130(12).",
-   "literature": true,
-   "commercial": true,
-   "surface": "fixed",
-   "units": "SI",
-   "checks": [
-    {
-     "method": "Bishop simplified",
-     "published": 1.04,
-     "source": "Commercial program A",
-     "computed": 1.0288,
-     "deviation": -0.01077
-    }
-   ]
-  },
-  {
-   "id": "P-9F8AC0",
-   "title": "Leshchinsky & Han MSE wall, L = 4.2 m",
-   "reference": "Leshchinsky & Han (2004), J. Geotech. Geoenviron. Eng. 130(12).",
-   "literature": true,
-   "commercial": true,
-   "surface": "fixed",
-   "units": "SI",
-   "checks": [
-    {
-     "method": "Spencer (M-P, constant f(x))",
-     "published": 1.011,
-     "source": "Program D",
-     "computed": 1.0109,
-     "deviation": -0.0001
-    }
-   ]
-  },
-  {
-   "id": "P-B28839",
-   "title": "Leshchinsky & Han MSE wall, two reinforcement types",
-   "reference": "Leshchinsky & Han (2004), J. Geotech. Geoenviron. Eng. 130(12).",
-   "literature": true,
-   "commercial": true,
-   "surface": "fixed",
-   "units": "SI",
-   "checks": [
-    {
-     "method": "Bishop simplified",
-     "published": 1.004,
-     "source": "Commercial program A",
-     "computed": 1.0097,
-     "deviation": 0.00568
-    }
-   ]
-  },
-  {
-   "id": "P-A4DE7B",
-   "title": "Leshchinsky & Han MSE wall, weak foundation",
-   "reference": "Leshchinsky & Han (2004), J. Geotech. Geoenviron. Eng. 130(12).",
-   "literature": true,
-   "commercial": true,
-   "surface": "fixed",
-   "units": "SI",
-   "checks": [
-    {
-     "method": "Spencer (M-P, constant f(x))",
-     "published": 0.964,
-     "source": "Commercial program A",
-     "computed": 0.9611,
-     "deviation": -0.00301
-    }
-   ]
-  },
-  {
-   "id": "P-E05169",
-   "title": "Leshchinsky & Han MSE wall, water hw = 3 m",
-   "reference": "Leshchinsky & Han (2004), J. Geotech. Geoenviron. Eng. 130(12).",
-   "literature": true,
-   "commercial": true,
-   "surface": "fixed",
-   "units": "SI",
-   "checks": [
-    {
-     "method": "Bishop simplified",
-     "published": 1.01,
-     "source": "Program D",
-     "computed": 1.0076,
-     "deviation": -0.00238
-    }
-   ]
-  },
-  {
-   "id": "P-17A702",
-   "title": "Leshchinsky & Han MSE wall, surcharge",
-   "reference": "Leshchinsky & Han (2004), J. Geotech. Geoenviron. Eng. 130(12).",
-   "literature": true,
-   "commercial": true,
-   "surface": "fixed",
-   "units": "SI",
-   "checks": [
-    {
-     "method": "Bishop simplified",
-     "published": 0.958,
-     "source": "Commercial program A",
-     "computed": 0.9589,
-     "deviation": 0.00094
-    }
-   ]
-  },
-  {
-   "id": "P-2EEEDD",
-   "title": "Leshchinsky & Han MSE wall, five tiers",
-   "reference": "Leshchinsky & Han (2004), J. Geotech. Geoenviron. Eng. 130(12).",
-   "literature": true,
-   "commercial": true,
-   "surface": "fixed",
-   "units": "SI",
-   "checks": [
-    {
-     "method": "Bishop simplified",
-     "published": 1.02,
-     "source": "Program D",
-     "computed": 1.0153,
-     "deviation": -0.00461
-    }
-   ]
-  },
-  {
-   "id": "P-A9DEC1",
+   "id": "V010",
    "title": "Borges & Cardoso embankment 2 (geosynthetic)",
    "reference": "Borges & Cardoso (2002), Geotextiles and Geomembranes 20(6).",
    "literature": true,
-   "commercial": true,
+   "commercial": false,
    "surface": "fixed",
    "units": "SI",
    "checks": [
@@ -1873,11 +400,194 @@
    ]
   },
   {
-   "id": "P-6D3B0C",
+   "id": "V011a",
+   "title": "Borges & Cardoso embankment 3, H = 7 m, circle A",
+   "reference": "Borges & Cardoso (2002), Geotextiles and Geomembranes 20(6).",
+   "literature": true,
+   "commercial": false,
+   "surface": "fixed",
+   "units": "SI",
+   "checks": [
+    {
+     "method": "Bishop simplified",
+     "published": 1.23,
+     "source": "Commercial program A",
+     "computed": 1.2191,
+     "deviation": -0.00886
+    }
+   ]
+  },
+  {
+   "id": "V011b",
+   "title": "Borges & Cardoso embankment 3, H = 7 m, circle B",
+   "reference": "Borges & Cardoso (2002), Geotextiles and Geomembranes 20(6).",
+   "literature": true,
+   "commercial": false,
+   "surface": "fixed",
+   "units": "SI",
+   "checks": [
+    {
+     "method": "Bishop simplified",
+     "published": 1.22,
+     "source": "Commercial program A",
+     "computed": 1.2163,
+     "deviation": -0.00303
+    }
+   ]
+  },
+  {
+   "id": "V012",
+   "title": "Borges & Cardoso embankment 3, H = 8.75 m, circle C",
+   "reference": "Borges & Cardoso (2002), Geotextiles and Geomembranes 20(6).",
+   "literature": true,
+   "commercial": false,
+   "surface": "fixed",
+   "units": "SI",
+   "checks": [
+    {
+     "method": "Bishop simplified",
+     "published": 0.98,
+     "source": "Commercial program A",
+     "computed": 0.9814,
+     "deviation": 0.00143
+    }
+   ]
+  },
+  {
+   "id": "V013a",
+   "title": "Cai & Ugai (2000) slope, no pile (see V013b, V013c, V013d and V013e for the pile rows)",
+   "reference": "Cai & Ugai (2000).",
+   "literature": true,
+   "commercial": false,
+   "surface": "search",
+   "units": "SI",
+   "checks": [
+    {
+     "method": "Bishop simplified",
+     "published": 1.14,
+     "source": "Commercial program A",
+     "computed": 1.142,
+     "deviation": 0.00175
+    },
+    {
+     "method": "Bishop simplified",
+     "published": 1.13,
+     "source": "Cai & Ugai",
+     "computed": 1.142,
+     "deviation": 0.01062
+    }
+   ]
+  },
+  {
+   "id": "V013b",
+   "title": "Cai & Ugai slope, pile row D1/D = 2",
+   "reference": "Cai & Ugai (2000), Géotechnique 50(2).",
+   "literature": true,
+   "commercial": false,
+   "surface": "search",
+   "units": "SI",
+   "checks": [
+    {
+     "method": "Bishop simplified",
+     "published": 1.54,
+     "source": "Commercial program A",
+     "computed": 1.5403,
+     "deviation": 0.00019
+    }
+   ]
+  },
+  {
+   "id": "V013c",
+   "title": "Cai & Ugai slope, pile row D1/D = 3",
+   "reference": "Cai & Ugai (2000), Géotechnique 50(2).",
+   "literature": true,
+   "commercial": false,
+   "surface": "search",
+   "units": "SI",
+   "checks": [
+    {
+     "method": "Bishop simplified",
+     "published": 1.43,
+     "source": "Commercial program A",
+     "computed": 1.4493,
+     "deviation": 0.0135
+    }
+   ]
+  },
+  {
+   "id": "V013d",
+   "title": "Cai & Ugai slope, pile row D1/D = 4",
+   "reference": "Cai & Ugai (2000), Géotechnique 50(2).",
+   "literature": true,
+   "commercial": false,
+   "surface": "search",
+   "units": "SI",
+   "checks": [
+    {
+     "method": "Bishop simplified",
+     "published": 1.33,
+     "source": "Commercial program A",
+     "computed": 1.341,
+     "deviation": 0.00827
+    }
+   ]
+  },
+  {
+   "id": "V013e",
+   "title": "Cai & Ugai slope, pile row D1/D = 6",
+   "reference": "Cai & Ugai (2000), Géotechnique 50(2).",
+   "literature": true,
+   "commercial": false,
+   "surface": "search",
+   "units": "SI",
+   "checks": [
+    {
+     "method": "Bishop simplified",
+     "published": 1.25,
+     "source": "Commercial program A",
+     "computed": 1.2591,
+     "deviation": 0.00728
+    }
+   ]
+  },
+  {
+   "id": "V014",
+   "title": "Nailed wall, 14 rows, deep wedge",
+   "reference": "Caltrans soil nail reference manual.",
+   "literature": true,
+   "commercial": false,
+   "surface": "fixed",
+   "units": "SI",
+   "checks": [
+    {
+     "method": "Janbu corrected (f0)",
+     "published": 1.46,
+     "source": "Program H",
+     "computed": 1.4486,
+     "deviation": -0.00781
+    },
+    {
+     "method": "Janbu corrected (f0)",
+     "published": 1.448,
+     "source": "Program D",
+     "computed": 1.4486,
+     "deviation": 0.00041
+    },
+    {
+     "method": "Spencer (M-P, constant f(x))",
+     "published": 1.576,
+     "source": "Program D",
+     "computed": 1.5745,
+     "deviation": -0.00095
+    }
+   ]
+  },
+  {
+   "id": "V015",
    "title": "Soldier-pile tieback wall",
    "reference": "Caltrans soil nail reference manual.",
    "literature": true,
-   "commercial": true,
+   "commercial": false,
    "surface": "fixed",
    "units": "SI",
    "checks": [
@@ -1898,119 +608,1633 @@
    ]
   },
   {
-   "id": "P-DC2888",
-   "title": "Homogeneous slope, no micro piles",
-   "reference": "Yamagami et al. (2000).",
+   "id": "V016a",
+   "title": "Stepped gabion wall, equivalent cohesion",
+   "reference": "Cao et al. (2016); Grodecki (2017).",
    "literature": true,
-   "commercial": true,
+   "commercial": false,
    "surface": "fixed",
    "units": "SI",
    "checks": [
     {
      "method": "Bishop simplified",
-     "published": 1.102,
+     "published": 1.787,
      "source": "Commercial program A",
-     "computed": 1.1004,
-     "deviation": -0.00145
+     "computed": 1.7901,
+     "deviation": 0.00173
+    },
+    {
+     "method": "Spencer (M-P, constant f(x))",
+     "published": 1.791,
+     "source": "Commercial program A",
+     "computed": 1.7974,
+     "deviation": 0.00357
+    },
+    {
+     "method": "Bishop simplified",
+     "published": 1.79,
+     "source": "Program D",
+     "computed": 1.7901,
+     "deviation": 0.00006
     }
    ]
   },
   {
-   "id": "P-F71494",
-   "title": "Homogeneous slope with a micro-pile row",
-   "reference": "Yamagami et al. (2000).",
+   "id": "V016b",
+   "title": "Stepped gabion wall, mesh as geosynthetic supports",
+   "reference": "Cao et al. (2016); Grodecki (2017).",
    "literature": true,
-   "commercial": true,
+   "commercial": false,
    "surface": "fixed",
    "units": "SI",
    "checks": [
     {
      "method": "Bishop simplified",
-     "published": 1.193,
+     "published": 1.835,
      "source": "Commercial program A",
-     "computed": 1.1954,
-     "deviation": 0.00201
+     "computed": 1.8299,
+     "deviation": -0.00278
+    },
+    {
+     "method": "Spencer (M-P, constant f(x))",
+     "published": 1.839,
+     "source": "Commercial program A",
+     "computed": 1.8353,
+     "deviation": -0.00201
+    },
+    {
+     "method": "Bishop simplified",
+     "published": 1.83,
+     "source": "Program D",
+     "computed": 1.8299,
+     "deviation": -0.00005
     }
    ]
   },
   {
-   "id": "P-BF95F1",
-   "title": "Cai & Ugai slope, pile row D1/D = 2",
-   "reference": "Cai & Ugai (2000), Géotechnique 50(2).",
+   "id": "V016c",
+   "title": "Gabion wall with weak joint layers",
+   "reference": "Cao et al. (2016); Grodecki (2017).",
    "literature": true,
-   "commercial": true,
+   "commercial": false,
+   "surface": "fixed",
+   "units": "SI",
+   "checks": [
+    {
+     "method": "Bishop simplified",
+     "published": 1.799,
+     "source": "Commercial program A",
+     "computed": 1.7901,
+     "deviation": -0.00495
+    },
+    {
+     "method": "Spencer (M-P, constant f(x))",
+     "published": 1.803,
+     "source": "Commercial program A",
+     "computed": 1.7973,
+     "deviation": -0.00316
+    },
+    {
+     "method": "Bishop simplified",
+     "published": 1.79,
+     "source": "Program D",
+     "computed": 1.7901,
+     "deviation": 0.00006
+    }
+   ]
+  },
+  {
+   "id": "V017a",
+   "title": "Vancouver gabion wall, equivalent cohesion",
+   "reference": "Cao et al. (2016); Grodecki (2017).",
+   "literature": true,
+   "commercial": false,
+   "surface": "fixed",
+   "units": "SI",
+   "checks": [
+    {
+     "method": "Bishop simplified",
+     "published": 1.373,
+     "source": "Commercial program A",
+     "computed": 1.3812,
+     "deviation": 0.00597
+    },
+    {
+     "method": "Spencer (M-P, constant f(x))",
+     "published": 1.386,
+     "source": "Commercial program A",
+     "computed": 1.3982,
+     "deviation": 0.0088
+    },
+    {
+     "method": "Bishop simplified",
+     "published": 1.382,
+     "source": "Program D",
+     "computed": 1.3812,
+     "deviation": -0.00058
+    }
+   ]
+  },
+  {
+   "id": "V017b",
+   "title": "Vancouver gabion wall, mesh as geosynthetic supports",
+   "reference": "Cao et al. (2016); Grodecki (2017).",
+   "literature": true,
+   "commercial": false,
+   "surface": "fixed",
+   "units": "SI",
+   "checks": [
+    {
+     "method": "Bishop simplified",
+     "published": 1.378,
+     "source": "Commercial program A",
+     "computed": 1.3812,
+     "deviation": 0.00232
+    },
+    {
+     "method": "Bishop simplified",
+     "published": 1.382,
+     "source": "Program D",
+     "computed": 1.3812,
+     "deviation": -0.00058
+    }
+   ]
+  },
+  {
+   "id": "V018",
+   "title": "Chen & Shao (1988) frictionless 60° slope, Prandtl mechanism",
+   "reference": "Chen & Shao (1988).",
+   "literature": true,
+   "commercial": false,
+   "surface": "fixed",
+   "units": "SI",
+   "checks": [
+    {
+     "method": "Spencer (M-P, constant f(x))",
+     "published": 1.051,
+     "source": "Commercial program A",
+     "computed": 1.0521,
+     "deviation": 0.00105
+    },
+    {
+     "method": "Morgenstern-Price (half-sine)",
+     "published": 1.009,
+     "source": "Commercial program A",
+     "computed": 1.0084,
+     "deviation": -0.00059
+    },
+    {
+     "method": "Morgenstern-Price (half-sine)",
+     "published": 1.017,
+     "source": "Commercial program B",
+     "computed": 1.0084,
+     "deviation": -0.00846
+    }
+   ]
+  },
+  {
+   "id": "V019",
+   "title": "Cheng et al. 11 m homogeneous slope",
+   "reference": "Cheng, Lansivaara & Wei (2007), Computers and Geotechnics 34.",
+   "literature": true,
+   "commercial": false,
+   "surface": "search",
+   "units": "SI",
+   "checks": [
+    {
+     "method": "Spencer (M-P, constant f(x))",
+     "published": 1.38,
+     "source": "Commercial program A",
+     "computed": 1.3984,
+     "deviation": 0.01333
+    },
+    {
+     "method": "Spencer (M-P, constant f(x))",
+     "published": 1.383,
+     "source": "Cheng et al.",
+     "computed": 1.3984,
+     "deviation": 0.01114
+    },
+    {
+     "method": "Spencer (M-P, constant f(x))",
+     "published": 1.398,
+     "source": "Program D",
+     "computed": 1.3984,
+     "deviation": 0.00029
+    },
+    {
+     "method": "Bishop simplified",
+     "published": 1.401,
+     "source": "Program D",
+     "computed": 1.3995,
+     "deviation": -0.00107
+    }
+   ]
+  },
+  {
+   "id": "V020",
+   "title": "Cheng et al. benched slope, global minimum",
+   "reference": "Cheng, Lansivaara & Wei (2007), Computers and Geotechnics 34.",
+   "literature": true,
+   "commercial": false,
+   "surface": "search",
+   "units": "SI",
+   "checks": [
+    {
+     "method": "Spencer (M-P, constant f(x))",
+     "published": 1.336,
+     "source": "Commercial program A",
+     "computed": 1.3381,
+     "deviation": 0.00157
+    },
+    {
+     "method": "Spencer (M-P, constant f(x))",
+     "published": 1.327,
+     "source": "Cheng et al.",
+     "computed": 1.3381,
+     "deviation": 0.00836
+    },
+    {
+     "method": "Spencer (M-P, constant f(x))",
+     "published": 1.338,
+     "source": "Program D",
+     "computed": 1.3381,
+     "deviation": 0.00007
+    },
+    {
+     "method": "Bishop simplified",
+     "published": 1.342,
+     "source": "Program D",
+     "computed": 1.3412,
+     "deviation": -0.0006
+    }
+   ]
+  },
+  {
+   "id": "V021a",
+   "title": "Chowdhury & Xu (1995) example 1, Congress Street cut, circle tangent to the base of clay 2",
+   "reference": "Chowdhury & Xu (1995); Ireland (1954).",
+   "literature": true,
+   "commercial": false,
+   "surface": "fixed",
+   "units": "SI",
+   "checks": [
+    {
+     "method": "Morgenstern-Price (half-sine)",
+     "published": 1.132,
+     "source": "Commercial program B",
+     "computed": 1.1282,
+     "deviation": -0.00336
+    },
+    {
+     "method": "Bishop simplified",
+     "published": 1.128,
+     "source": "Chowdhury & Xu",
+     "computed": 1.1282,
+     "deviation": 0.00018
+    },
+    {
+     "method": "Bishop simplified",
+     "published": 1.128,
+     "source": "Commercial program A",
+     "computed": 1.1282,
+     "deviation": 0.00018
+    }
+   ]
+  },
+  {
+   "id": "V021b",
+   "title": "Chowdhury & Xu (1995) example 1, Congress Street cut, circle tangent to the base of clay 3",
+   "reference": "Chowdhury & Xu (1995); Ireland (1954).",
+   "literature": true,
+   "commercial": false,
+   "surface": "fixed",
+   "units": "SI",
+   "checks": [
+    {
+     "method": "Morgenstern-Price (half-sine)",
+     "published": 1.116,
+     "source": "Commercial program B",
+     "computed": 1.1098,
+     "deviation": -0.00556
+    },
+    {
+     "method": "Bishop simplified",
+     "published": 1.109,
+     "source": "Chowdhury & Xu",
+     "computed": 1.1098,
+     "deviation": 0.00072
+    },
+    {
+     "method": "Bishop simplified",
+     "published": 1.109,
+     "source": "Commercial program A",
+     "computed": 1.1098,
+     "deviation": 0.00072
+    }
+   ]
+  },
+  {
+   "id": "V021c",
+   "title": "Chowdhury & Xu (1995) example 2, Congress Street cut, circle tangent to the base of clay 2",
+   "reference": "Chowdhury & Xu (1995); Ireland (1954).",
+   "literature": true,
+   "commercial": false,
+   "surface": "fixed",
+   "units": "SI",
+   "checks": [
+    {
+     "method": "Morgenstern-Price (half-sine)",
+     "published": 1.11,
+     "source": "Commercial program B",
+     "computed": 1.1083,
+     "deviation": -0.00153
+    },
+    {
+     "method": "Bishop simplified",
+     "published": 1.1096,
+     "source": "Chowdhury & Xu",
+     "computed": 1.1083,
+     "deviation": -0.00117
+    },
+    {
+     "method": "Bishop simplified",
+     "published": 1.108,
+     "source": "Commercial program A",
+     "computed": 1.1083,
+     "deviation": 0.00027
+    }
+   ]
+  },
+  {
+   "id": "V021d",
+   "title": "Chowdhury & Xu (1995) example 2, Congress Street cut, circle tangent to the base of clay 3",
+   "reference": "Chowdhury & Xu (1995); Ireland (1954).",
+   "literature": true,
+   "commercial": false,
+   "surface": "fixed",
+   "units": "SI",
+   "checks": [
+    {
+     "method": "Morgenstern-Price (half-sine)",
+     "published": 1.063,
+     "source": "Commercial program B",
+     "computed": 1.058,
+     "deviation": -0.0047
+    },
+    {
+     "method": "Bishop simplified",
+     "published": 1.0639,
+     "source": "Chowdhury & Xu",
+     "computed": 1.058,
+     "deviation": -0.00555
+    },
+    {
+     "method": "Bishop simplified",
+     "published": 1.058,
+     "source": "Commercial program A",
+     "computed": 1.058,
+     "deviation": 0
+    }
+   ]
+  },
+  {
+   "id": "V021e",
+   "title": "Chowdhury & Xu (1995) example 3, Congress Street cut, circle tangent to the base of clay 2",
+   "reference": "Chowdhury & Xu (1995); Ireland (1954).",
+   "literature": true,
+   "commercial": false,
+   "surface": "fixed",
+   "units": "SI",
+   "checks": [
+    {
+     "method": "Morgenstern-Price (half-sine)",
+     "published": 2.248,
+     "source": "Commercial program B",
+     "computed": 2.2448,
+     "deviation": -0.00142
+    },
+    {
+     "method": "Bishop simplified",
+     "published": 2.2343,
+     "source": "Chowdhury & Xu",
+     "computed": 2.2448,
+     "deviation": 0.0047
+    },
+    {
+     "method": "Bishop simplified",
+     "published": 2.245,
+     "source": "Commercial program A",
+     "computed": 2.2448,
+     "deviation": -0.00009
+    }
+   ]
+  },
+  {
+   "id": "V021f",
+   "title": "Chowdhury & Xu (1995) example 3, Congress Street cut, circle tangent to the base of clay 3",
+   "reference": "Chowdhury & Xu (1995); Ireland (1954).",
+   "literature": true,
+   "commercial": false,
+   "surface": "fixed",
+   "units": "SI",
+   "checks": [
+    {
+     "method": "Morgenstern-Price (half-sine)",
+     "published": 2.138,
+     "source": "Commercial program B",
+     "computed": 2.1281,
+     "deviation": -0.00463
+    },
+    {
+     "method": "Bishop simplified",
+     "published": 2.1396,
+     "source": "Chowdhury & Xu",
+     "computed": 2.1281,
+     "deviation": -0.00537
+    },
+    {
+     "method": "Bishop simplified",
+     "published": 2.128,
+     "source": "Commercial program A",
+     "computed": 2.1281,
+     "deviation": 0.00005
+    }
+   ]
+  },
+  {
+   "id": "V021g",
+   "title": "Chowdhury & Xu (1995) example 4, Congress Street cut, circle tangent to the base of clay 2",
+   "reference": "Chowdhury & Xu (1995); Ireland (1954).",
+   "literature": true,
+   "commercial": false,
+   "surface": "fixed",
+   "units": "SI",
+   "checks": [
+    {
+     "method": "Morgenstern-Price (half-sine)",
+     "published": 1.422,
+     "source": "Commercial program B",
+     "computed": 1.428,
+     "deviation": 0.00422
+    },
+    {
+     "method": "Bishop simplified",
+     "published": 1.4239,
+     "source": "Chowdhury & Xu",
+     "computed": 1.4278,
+     "deviation": 0.00274
+    }
+   ]
+  },
+  {
+   "id": "V022a",
+   "title": "Chowdhury & Xu (1995) example 5, embankment on soft clay, circle tangent to y = 15",
+   "reference": "Chowdhury & Xu (1995).",
+   "literature": true,
+   "commercial": false,
+   "surface": "fixed",
+   "units": "SI",
+   "checks": [
+    {
+     "method": "Morgenstern-Price (half-sine)",
+     "published": 1.158,
+     "source": "Commercial program B",
+     "computed": 1.1571,
+     "deviation": -0.00078
+    },
+    {
+     "method": "Bishop simplified",
+     "published": 1.1625,
+     "source": "Chowdhury & Xu",
+     "computed": 1.1583,
+     "deviation": -0.00361
+    },
+    {
+     "method": "Bishop simplified",
+     "published": 1.16,
+     "source": "Commercial program A",
+     "computed": 1.1583,
+     "deviation": -0.00147
+    }
+   ]
+  },
+  {
+   "id": "V022b",
+   "title": "Chowdhury & Xu (1995) example 5, embankment on soft clay, circle tangent to y = 5",
+   "reference": "Chowdhury & Xu (1995).",
+   "literature": true,
+   "commercial": false,
+   "surface": "fixed",
+   "units": "SI",
+   "checks": [
+    {
+     "method": "Morgenstern-Price (half-sine)",
+     "published": 1.178,
+     "source": "Commercial program B",
+     "computed": 1.1744,
+     "deviation": -0.00306
+    },
+    {
+     "method": "Bishop simplified",
+     "published": 1.185,
+     "source": "Commercial program A",
+     "computed": 1.1771,
+     "deviation": -0.00667
+    }
+   ]
+  },
+  {
+   "id": "V023",
+   "title": "LASH terminal trench, Duncan's Taylor series example",
+   "reference": "Duncan (2000), J. Geotech. Geoenviron. Eng. 126(4).",
+   "literature": true,
+   "commercial": false,
+   "surface": "fixed",
+   "units": "SI",
+   "checks": [
+    {
+     "method": "Spencer (M-P, constant f(x))",
+     "published": 1.145,
+     "source": "Program D",
+     "computed": 1.1381,
+     "deviation": -0.00603
+    }
+   ]
+  },
+  {
+   "id": "V024",
+   "title": "Dam on a layered foundation with artesian uplift, piezometric line (D&W fig. 6.39)",
+   "reference": "Duncan & Wright, Soil Strength and Slope Stability, figs. 6.39–6.40.",
+   "literature": true,
+   "commercial": false,
+   "surface": "fixed",
+   "units": "SI",
+   "checks": [
+    {
+     "method": "Bishop simplified",
+     "published": 1.563,
+     "source": "Commercial program A",
+     "computed": 1.5712,
+     "deviation": 0.00525
+    },
+    {
+     "method": "Spencer (M-P, constant f(x))",
+     "published": 1.557,
+     "source": "Commercial program A",
+     "computed": 1.5624,
+     "deviation": 0.00347
+    },
+    {
+     "method": "Bishop simplified",
+     "published": 1.57,
+     "source": "Duncan & Wright",
+     "computed": 1.5712,
+     "deviation": 0.00076
+    },
+    {
+     "method": "Bishop simplified",
+     "published": 1.572,
+     "source": "Program D",
+     "computed": 1.5712,
+     "deviation": -0.00051
+    }
+   ]
+  },
+  {
+   "id": "V025",
+   "title": "Duncan & Wright fig. 6.38, piezometric line",
+   "reference": "Duncan & Wright, Soil Strength and Slope Stability, fig. 6.38.",
+   "literature": true,
+   "commercial": false,
    "surface": "search",
    "units": "SI",
    "checks": [
     {
      "method": "Bishop simplified",
-     "published": 1.54,
+     "published": 1.142,
      "source": "Commercial program A",
-     "computed": 1.5403,
-     "deviation": 0.00019
+     "computed": 1.1319,
+     "deviation": -0.00884
+    },
+    {
+     "method": "Spencer (M-P, constant f(x))",
+     "published": 1.142,
+     "source": "Commercial program A",
+     "computed": 1.1325,
+     "deviation": -0.00832
     }
    ]
   },
   {
-   "id": "P-7E5692",
-   "title": "Cai & Ugai slope, pile row D1/D = 3",
-   "reference": "Cai & Ugai (2000), Géotechnique 50(2).",
+   "id": "V026",
+   "title": "Duncan & Wright fig. 7.12, embankment on clay",
+   "reference": "Duncan & Wright, Soil Strength and Slope Stability, fig. 7.12.",
+   "literature": true,
+   "commercial": false,
+   "surface": "search",
+   "units": "imperial",
+   "checks": [
+    {
+     "method": "Bishop simplified",
+     "published": 1.228,
+     "source": "Commercial program A",
+     "computed": 1.2188,
+     "deviation": -0.00749
+    },
+    {
+     "method": "Bishop simplified",
+     "published": 1.22,
+     "source": "Duncan & Wright",
+     "computed": 1.2188,
+     "deviation": -0.00098
+    },
+    {
+     "method": "Spencer (M-P, constant f(x))",
+     "published": 1.19,
+     "source": "Commercial program A (non-circular)",
+     "computed": 1.168,
+     "deviation": -0.01849
+    }
+   ]
+  },
+  {
+   "id": "V027",
+   "title": "Duncan & Wright fig. 14.3, undrained clay",
+   "reference": "Duncan & Wright, Soil Strength and Slope Stability, fig. 14.3.",
+   "literature": true,
+   "commercial": false,
+   "surface": "search",
+   "units": "imperial",
+   "checks": [
+    {
+     "method": "Bishop simplified",
+     "published": 1.126,
+     "source": "Commercial program A",
+     "computed": 1.1225,
+     "deviation": -0.00311
+    },
+    {
+     "method": "Spencer (M-P, constant f(x))",
+     "published": 1.124,
+     "source": "Duncan & Wright (reference)",
+     "computed": 1.1323,
+     "deviation": 0.00738
+    }
+   ]
+  },
+  {
+   "id": "V028",
+   "title": "Duncan & Wright fig. 14.3, undrained clay on a 46.5 ft foundation",
+   "reference": "Verification manual of a commercial slope stability program.",
+   "literature": false,
+   "commercial": true,
+   "surface": "search",
+   "units": "imperial",
+   "checks": [
+    {
+     "method": "Bishop simplified",
+     "published": 1.126,
+     "source": "Commercial program A",
+     "computed": 1.1219,
+     "deviation": -0.00364
+    },
+    {
+     "method": "Spencer (M-P, constant f(x))",
+     "published": 1.124,
+     "source": "Duncan & Wright (reference)",
+     "computed": 1.1219,
+     "deviation": -0.00187
+    }
+   ]
+  },
+  {
+   "id": "V029",
+   "title": "Duncan & Wright fig. 14.3, undrained clay on a 60 ft foundation",
+   "reference": "Verification manual of a commercial slope stability program.",
+   "literature": false,
+   "commercial": true,
+   "surface": "search",
+   "units": "imperial",
+   "checks": [
+    {
+     "method": "Bishop simplified",
+     "published": 1.125,
+     "source": "Commercial program A",
+     "computed": 1.1188,
+     "deviation": -0.00551
+    },
+    {
+     "method": "Spencer (M-P, constant f(x))",
+     "published": 1.124,
+     "source": "Duncan & Wright (reference)",
+     "computed": 1.1188,
+     "deviation": -0.00463
+    }
+   ]
+  },
+  {
+   "id": "V030",
+   "title": "Duncan & Wright fig. 14.4",
+   "reference": "Duncan & Wright, Soil Strength and Slope Stability, fig. 14.4.",
+   "literature": true,
+   "commercial": false,
+   "surface": "search",
+   "units": "imperial",
+   "checks": [
+    {
+     "method": "Bishop simplified",
+     "published": 1.412,
+     "source": "Commercial program A",
+     "computed": 1.408,
+     "deviation": -0.00283
+    },
+    {
+     "method": "Spencer (M-P, constant f(x))",
+     "published": 1.4,
+     "source": "Duncan & Wright (reference)",
+     "computed": 1.3987,
+     "deviation": -0.00093
+    }
+   ]
+  },
+  {
+   "id": "V031a",
+   "title": "Duncan & Wright fig. 14.5, R = 87 ft",
+   "reference": "Duncan & Wright, Soil Strength and Slope Stability, fig. 14.5.",
+   "literature": true,
+   "commercial": false,
+   "surface": "fixed",
+   "units": "imperial",
+   "checks": [
+    {
+     "method": "Bishop simplified",
+     "published": 2.549,
+     "source": "Commercial program A",
+     "computed": 2.5333,
+     "deviation": -0.00616
+    },
+    {
+     "method": "Spencer (M-P, constant f(x))",
+     "published": 2.545,
+     "source": "Commercial program A",
+     "computed": 2.5307,
+     "deviation": -0.00562
+    },
+    {
+     "method": "Spencer (M-P, constant f(x))",
+     "published": 2.56,
+     "source": "Duncan & Wright (reference)",
+     "computed": 2.5307,
+     "deviation": -0.01145
+    }
+   ]
+  },
+  {
+   "id": "V031b",
+   "title": "Duncan & Wright fig. 14.5, R = 102 ft",
+   "reference": "Duncan & Wright, Soil Strength and Slope Stability, fig. 14.5.",
+   "literature": true,
+   "commercial": false,
+   "surface": "fixed",
+   "units": "imperial",
+   "checks": [
+    {
+     "method": "Bishop simplified",
+     "published": 1.398,
+     "source": "Commercial program A",
+     "computed": 1.3888,
+     "deviation": -0.00658
+    },
+    {
+     "method": "Spencer (M-P, constant f(x))",
+     "published": 1.359,
+     "source": "Commercial program A",
+     "computed": 1.353,
+     "deviation": -0.00442
+    },
+    {
+     "method": "Spencer (M-P, constant f(x))",
+     "published": 1.35,
+     "source": "Duncan & Wright (reference)",
+     "computed": 1.353,
+     "deviation": 0.00222
+    }
+   ]
+  },
+  {
+   "id": "V032a",
+   "title": "Duncan & Wright fig. 14.7, deep circle",
+   "reference": "Duncan & Wright, Soil Strength and Slope Stability, fig. 14.7.",
+   "literature": true,
+   "commercial": false,
+   "surface": "search",
+   "units": "imperial",
+   "checks": [
+    {
+     "method": "Bishop simplified",
+     "published": 1.23,
+     "source": "Commercial program A",
+     "computed": 1.2235,
+     "deviation": -0.00528
+    },
+    {
+     "method": "Spencer (M-P, constant f(x))",
+     "published": 1.209,
+     "source": "Commercial program A",
+     "computed": 1.2045,
+     "deviation": -0.00372
+    },
+    {
+     "method": "Spencer (M-P, constant f(x))",
+     "published": 1.21,
+     "source": "Duncan & Wright (reference)",
+     "computed": 1.2045,
+     "deviation": -0.00455
+    }
+   ]
+  },
+  {
+   "id": "V032b",
+   "title": "Duncan & Wright fig. 14.7, infinite-slope mechanism",
+   "reference": "Duncan & Wright, Soil Strength and Slope Stability, fig. 14.7. Verification manual of a commercial slope stability program.",
    "literature": true,
    "commercial": true,
+   "surface": "search",
+   "units": "imperial",
+   "checks": [
+    {
+     "method": "Bishop simplified",
+     "published": 1.155,
+     "source": "Commercial program A",
+     "computed": 1.1559,
+     "deviation": 0.00078
+    },
+    {
+     "method": "Spencer (M-P, constant f(x))",
+     "published": 1.155,
+     "source": "Commercial program A",
+     "computed": 1.1559,
+     "deviation": 0.00078
+    },
+    {
+     "method": "Spencer (M-P, constant f(x))",
+     "published": 1.15,
+     "source": "Duncan & Wright (reference)",
+     "computed": 1.1559,
+     "deviation": 0.00513
+    }
+   ]
+  },
+  {
+   "id": "V033",
+   "title": "Duncan & Wright fig. 14.20a, water table",
+   "reference": "Duncan & Wright, Soil Strength and Slope Stability, fig. 14.20a.",
+   "literature": true,
+   "commercial": false,
    "surface": "search",
    "units": "SI",
    "checks": [
     {
      "method": "Bishop simplified",
-     "published": 1.43,
+     "published": 1.533,
      "source": "Commercial program A",
-     "computed": 1.4493,
-     "deviation": 0.0135
+     "computed": 1.5201,
+     "deviation": -0.00841
+    },
+    {
+     "method": "Spencer (M-P, constant f(x))",
+     "published": 1.535,
+     "source": "Duncan & Wright (reference)",
+     "computed": 1.5325,
+     "deviation": -0.00163
+    },
+    {
+     "method": "Spencer (M-P, constant f(x))",
+     "published": 1.534,
+     "source": "Commercial program A (non-circular)",
+     "computed": 1.5238,
+     "deviation": -0.00665
     }
    ]
   },
   {
-   "id": "P-E1C4F6",
-   "title": "Cai & Ugai slope, pile row D1/D = 4",
-   "reference": "Cai & Ugai (2000), Géotechnique 50(2).",
+   "id": "V034a",
+   "title": "Duncan & Wright fig. 14.20b, Su = 200 + 15·depth",
+   "reference": "Duncan & Wright, Soil Strength and Slope Stability, fig. 14.20b.",
    "literature": true,
-   "commercial": true,
+   "commercial": false,
+   "surface": "search",
+   "units": "imperial",
+   "checks": [
+    {
+     "method": "Bishop simplified",
+     "published": 1.313,
+     "source": "Commercial program A",
+     "computed": 1.3054,
+     "deviation": -0.00579
+    },
+    {
+     "method": "Spencer (M-P, constant f(x))",
+     "published": 1.3,
+     "source": "Duncan & Wright (reference)",
+     "computed": 1.2759,
+     "deviation": -0.01854
+    },
+    {
+     "method": "Spencer (M-P, constant f(x))",
+     "published": 1.262,
+     "source": "Commercial program A (non-circular)",
+     "computed": 1.2607,
+     "deviation": -0.00103
+    }
+   ]
+  },
+  {
+   "id": "V034b",
+   "title": "Duncan & Wright fig. 14.20b, Su = 300 psf",
+   "reference": "Duncan & Wright, Soil Strength and Slope Stability, fig. 14.20b.",
+   "literature": true,
+   "commercial": false,
+   "surface": "search",
+   "units": "imperial",
+   "checks": [
+    {
+     "method": "Bishop simplified",
+     "published": 1.335,
+     "source": "Commercial program A",
+     "computed": 1.3294,
+     "deviation": -0.00419
+    },
+    {
+     "method": "Spencer (M-P, constant f(x))",
+     "published": 1.312,
+     "source": "Duncan & Wright (reference)",
+     "computed": 1.3276,
+     "deviation": 0.01189
+    },
+    {
+     "method": "Spencer (M-P, constant f(x))",
+     "published": 1.182,
+     "source": "Commercial program A (non-circular)",
+     "computed": 1.172,
+     "deviation": -0.00846
+    }
+   ]
+  },
+  {
+   "id": "V035a",
+   "title": "Duncan & Wright tieback, active",
+   "reference": "Duncan & Wright, Soil Strength and Slope Stability, fig. 6.34.",
+   "literature": true,
+   "commercial": false,
+   "surface": "fixed",
+   "units": "SI",
+   "checks": [
+    {
+     "method": "Morgenstern-Price (half-sine)",
+     "published": 1.575,
+     "source": "Commercial program A (GLE)",
+     "computed": 1.5677,
+     "deviation": -0.00463
+    }
+   ]
+  },
+  {
+   "id": "V035b",
+   "title": "Duncan & Wright tieback, passive",
+   "reference": "Duncan & Wright, Soil Strength and Slope Stability, fig. 6.34.",
+   "literature": true,
+   "commercial": false,
+   "surface": "fixed",
+   "units": "SI",
+   "checks": [
+    {
+     "method": "Bishop simplified",
+     "published": 1.324,
+     "source": "Commercial program A",
+     "computed": 1.3194,
+     "deviation": -0.00347
+    },
+    {
+     "method": "Bishop simplified",
+     "published": 1.32,
+     "source": "Duncan & Wright",
+     "computed": 1.3194,
+     "deviation": -0.00045
+    }
+   ]
+  },
+  {
+   "id": "V036a",
+   "title": "Embankment on an undrained foundation, cz = 0 (D&W fig. 15.9)",
+   "reference": "Duncan & Wright, Soil Strength and Slope Stability, fig. 15.9.",
+   "literature": true,
+   "commercial": false,
    "surface": "search",
    "units": "SI",
    "checks": [
     {
      "method": "Bishop simplified",
-     "published": 1.33,
+     "published": 0.761,
      "source": "Commercial program A",
-     "computed": 1.341,
-     "deviation": 0.00827
+     "computed": 0.7561,
+     "deviation": -0.00644
+    },
+    {
+     "method": "Spencer (M-P, constant f(x))",
+     "published": 0.756,
+     "source": "Commercial program A",
+     "computed": 0.7519,
+     "deviation": -0.00542
+    },
+    {
+     "method": "Spencer (M-P, constant f(x))",
+     "published": 0.75,
+     "source": "Duncan & Wright (reference)",
+     "computed": 0.7519,
+     "deviation": 0.00253
+    },
+    {
+     "method": "Spencer (M-P, constant f(x))",
+     "published": 0.74,
+     "source": "Commercial program A (non-circular)",
+     "computed": 0.739,
+     "deviation": -0.00135
     }
    ]
   },
   {
-   "id": "P-14C8CC",
-   "title": "Cai & Ugai slope, pile row D1/D = 6",
-   "reference": "Cai & Ugai (2000), Géotechnique 50(2).",
+   "id": "V036b",
+   "title": "Embankment on an undrained foundation, cz = 5 psf/ft",
+   "reference": "Duncan & Wright, Soil Strength and Slope Stability, fig. 15.9.",
    "literature": true,
-   "commercial": true,
+   "commercial": false,
    "surface": "search",
    "units": "SI",
    "checks": [
     {
      "method": "Bishop simplified",
-     "published": 1.25,
+     "published": 0.909,
      "source": "Commercial program A",
-     "computed": 1.2591,
-     "deviation": 0.00728
+     "computed": 0.9052,
+     "deviation": -0.00418
+    },
+    {
+     "method": "Spencer (M-P, constant f(x))",
+     "published": 0.898,
+     "source": "Commercial program A",
+     "computed": 0.8978,
+     "deviation": -0.00022
+    },
+    {
+     "method": "Spencer (M-P, constant f(x))",
+     "published": 0.9,
+     "source": "Duncan & Wright (reference)",
+     "computed": 0.8978,
+     "deviation": -0.00244
+    },
+    {
+     "method": "Spencer (M-P, constant f(x))",
+     "published": 0.903,
+     "source": "Commercial program A (non-circular)",
+     "computed": 0.884,
+     "deviation": -0.02104
     }
    ]
   },
   {
-   "id": "P-8C9E0A",
+   "id": "V036c",
+   "title": "Embankment on an undrained foundation, cz = 10 psf/ft",
+   "reference": "Duncan & Wright, Soil Strength and Slope Stability, fig. 15.9.",
+   "literature": true,
+   "commercial": false,
+   "surface": "search",
+   "units": "SI",
+   "checks": [
+    {
+     "method": "Bishop simplified",
+     "published": 1.045,
+     "source": "Commercial program A",
+     "computed": 1.0417,
+     "deviation": -0.00316
+    },
+    {
+     "method": "Spencer (M-P, constant f(x))",
+     "published": 1.032,
+     "source": "Commercial program A",
+     "computed": 1.0282,
+     "deviation": -0.00368
+    },
+    {
+     "method": "Spencer (M-P, constant f(x))",
+     "published": 1.03,
+     "source": "Duncan & Wright (reference)",
+     "computed": 1.0282,
+     "deviation": -0.00175
+    },
+    {
+     "method": "Spencer (M-P, constant f(x))",
+     "published": 1.018,
+     "source": "Commercial program A (non-circular)",
+     "computed": 1.0168,
+     "deviation": -0.00118
+    }
+   ]
+  },
+  {
+   "id": "V036d",
+   "title": "Embankment on an undrained foundation, cz = 15 psf/ft",
+   "reference": "Duncan & Wright, Soil Strength and Slope Stability, fig. 15.9.",
+   "literature": true,
+   "commercial": false,
+   "surface": "search",
+   "units": "SI",
+   "checks": [
+    {
+     "method": "Bishop simplified",
+     "published": 1.154,
+     "source": "Commercial program A",
+     "computed": 1.1515,
+     "deviation": -0.00217
+    },
+    {
+     "method": "Spencer (M-P, constant f(x))",
+     "published": 1.134,
+     "source": "Commercial program A",
+     "computed": 1.1311,
+     "deviation": -0.00256
+    },
+    {
+     "method": "Spencer (M-P, constant f(x))",
+     "published": 1.13,
+     "source": "Duncan & Wright (reference)",
+     "computed": 1.1311,
+     "deviation": 0.00097
+    },
+    {
+     "method": "Spencer (M-P, constant f(x))",
+     "published": 1.116,
+     "source": "Commercial program A (non-circular)",
+     "computed": 1.118,
+     "deviation": 0.00179
+    }
+   ]
+  },
+  {
+   "id": "V037",
+   "title": "Geogrid-reinforced fill on rock (D&W fig. 7.28)",
+   "reference": "Duncan & Wright, Soil Strength and Slope Stability, fig. 7.28.",
+   "literature": true,
+   "commercial": false,
+   "surface": "search",
+   "units": "SI",
+   "checks": [
+    {
+     "method": "Bishop simplified",
+     "published": 1.629,
+     "source": "Commercial program A",
+     "computed": 1.6117,
+     "deviation": -0.01062
+    },
+    {
+     "method": "Spencer (M-P, constant f(x))",
+     "published": 1.62,
+     "source": "Commercial program A",
+     "computed": 1.6073,
+     "deviation": -0.00784
+    }
+   ]
+  },
+  {
+   "id": "V038",
+   "title": "Homogeneous dam with a piezometric line (D&W fig. 7.19)",
+   "reference": "Duncan & Wright, Soil Strength and Slope Stability, fig. 7.19.",
+   "literature": true,
+   "commercial": false,
+   "surface": "search",
+   "units": "SI",
+   "checks": [
+    {
+     "method": "Bishop simplified",
+     "published": 1.09,
+     "source": "Commercial program A",
+     "computed": 1.0687,
+     "deviation": -0.01954
+    },
+    {
+     "method": "Spencer (M-P, constant f(x))",
+     "published": 1.1,
+     "source": "Commercial program A",
+     "computed": 1.0768,
+     "deviation": -0.02109
+    },
+    {
+     "method": "Bishop simplified",
+     "published": 1.07,
+     "source": "Program D",
+     "computed": 1.0687,
+     "deviation": -0.00121
+    }
+   ]
+  },
+  {
+   "id": "V039",
+   "title": "James Bay dyke (Duncan & Wright fig. 7.16)",
+   "reference": "Duncan & Wright, Soil Strength and Slope Stability, fig. 7.16.",
+   "literature": true,
+   "commercial": false,
+   "surface": "search",
+   "units": "SI",
+   "checks": [
+    {
+     "method": "Bishop simplified",
+     "published": 1.45,
+     "source": "Duncan & Wright (reference)",
+     "computed": 1.4242,
+     "deviation": -0.01779
+    },
+    {
+     "method": "Spencer (M-P, constant f(x))",
+     "published": 1.45,
+     "source": "Duncan & Wright (reference)",
+     "computed": 1.4211,
+     "deviation": -0.01993
+    },
+    {
+     "method": "Spencer (M-P, constant f(x))",
+     "published": 1.167,
+     "source": "Commercial program A (non-circular)",
+     "computed": 1.1563,
+     "deviation": -0.00917
+    },
+    {
+     "method": "Spencer (M-P, constant f(x))",
+     "published": 1.17,
+     "source": "Duncan & Wright (reference), non-circular",
+     "computed": 1.1563,
+     "deviation": -0.01171
+    }
+   ]
+  },
+  {
+   "id": "V040",
+   "title": "James Bay dyke, reference model (deterministic)",
+   "reference": "El-Ramly et al. (2002); Duncan & Wright fig. 7.16.",
+   "literature": true,
+   "commercial": false,
+   "surface": "search",
+   "units": "SI",
+   "checks": [
+    {
+     "method": "Bishop simplified",
+     "published": 1.461,
+     "source": "Commercial program B",
+     "computed": 1.4325,
+     "deviation": -0.01951
+    }
+   ]
+  },
+  {
+   "id": "V041a",
+   "title": "Submerged slope, pool 30 ft above the crest (D&W fig. 6.27)",
+   "reference": "Duncan & Wright, Soil Strength and Slope Stability, fig. 6.27.",
+   "literature": true,
+   "commercial": false,
+   "surface": "search",
+   "units": "SI",
+   "checks": [
+    {
+     "method": "Bishop simplified",
+     "published": 1.603,
+     "source": "Commercial program A",
+     "computed": 1.5964,
+     "deviation": -0.00412
+    },
+    {
+     "method": "Spencer (M-P, constant f(x))",
+     "published": 1.599,
+     "source": "Commercial program A",
+     "computed": 1.594,
+     "deviation": -0.00313
+    },
+    {
+     "method": "Spencer (M-P, constant f(x))",
+     "published": 1.6,
+     "source": "Duncan & Wright (reference)",
+     "computed": 1.594,
+     "deviation": -0.00375
+    },
+    {
+     "method": "Spencer (M-P, constant f(x))",
+     "published": 1.592,
+     "source": "Commercial program A (non-circular)",
+     "computed": 1.5919,
+     "deviation": -0.00006
+    }
+   ]
+  },
+  {
+   "id": "V041b",
+   "title": "Submerged slope, pool 60 ft above the crest (D&W fig. 6.27)",
+   "reference": "Duncan & Wright, Soil Strength and Slope Stability, fig. 6.27.",
+   "literature": true,
+   "commercial": false,
+   "surface": "search",
+   "units": "SI",
+   "checks": [
+    {
+     "method": "Bishop simplified",
+     "published": 1.603,
+     "source": "Commercial program A",
+     "computed": 1.5963,
+     "deviation": -0.00418
+    },
+    {
+     "method": "Spencer (M-P, constant f(x))",
+     "published": 1.599,
+     "source": "Commercial program A",
+     "computed": 1.5935,
+     "deviation": -0.00344
+    },
+    {
+     "method": "Spencer (M-P, constant f(x))",
+     "published": 1.6,
+     "source": "Duncan & Wright (reference)",
+     "computed": 1.5935,
+     "deviation": -0.00406
+    },
+    {
+     "method": "Spencer (M-P, constant f(x))",
+     "published": 1.59,
+     "source": "Commercial program A (non-circular)",
+     "computed": 1.5898,
+     "deviation": -0.00013
+    }
+   ]
+  },
+  {
+   "id": "V042",
+   "title": "Thick-core dam with a piezometric line (D&W fig. 7.24)",
+   "reference": "Duncan & Wright, Soil Strength and Slope Stability, fig. 7.24.",
+   "literature": true,
+   "commercial": false,
+   "surface": "fixed",
+   "units": "SI",
+   "checks": [
+    {
+     "method": "Bishop simplified",
+     "published": 1.584,
+     "source": "Commercial program A",
+     "computed": 1.591,
+     "deviation": 0.00442
+    },
+    {
+     "method": "Spencer (M-P, constant f(x))",
+     "published": 1.648,
+     "source": "Commercial program A",
+     "computed": 1.6576,
+     "deviation": 0.00583
+    },
+    {
+     "method": "Bishop simplified",
+     "published": 1.591,
+     "source": "Program D",
+     "computed": 1.591,
+     "deviation": 0
+    },
+    {
+     "method": "Morgenstern-Price (half-sine)",
+     "published": 1.67,
+     "source": "Program D",
+     "computed": 1.6688,
+     "deviation": -0.00072
+    }
+   ]
+  },
+  {
+   "id": "V043",
+   "title": "Syncrude tailings dyke (El-Ramly et al.), composite circle",
+   "reference": "El-Ramly, Morgenstern & Cruden (2003), Can. Geotech. J. 40.",
+   "literature": true,
+   "commercial": false,
+   "surface": "fixed",
+   "units": "SI",
+   "checks": [
+    {
+     "method": "Bishop simplified",
+     "published": 1.31,
+     "source": "El-Ramly et al.",
+     "computed": 1.3192,
+     "deviation": 0.00702
+    },
+    {
+     "method": "Bishop simplified",
+     "published": 1.32,
+     "source": "Program D",
+     "computed": 1.3192,
+     "deviation": -0.00061
+    }
+   ]
+  },
+  {
+   "id": "V044",
+   "title": "Fredlund & Krahn (1977), dry",
+   "reference": "Fredlund, D.G. & Krahn, J. (1977). Comparison of slope stability methods of analysis. Can. Geotech. J. 14(3).",
+   "literature": true,
+   "commercial": false,
+   "surface": "fixed",
+   "units": "imperial",
+   "checks": [
+    {
+     "method": "Bishop simplified",
+     "published": 2.08,
+     "source": "Fredlund & Krahn",
+     "computed": 2.0757,
+     "deviation": -0.00207
+    },
+    {
+     "method": "Morgenstern-Price (half-sine)",
+     "published": 2.076,
+     "source": "Fredlund & Krahn",
+     "computed": 2.0716,
+     "deviation": -0.00212
+    }
+   ]
+  },
+  {
+   "id": "V045",
+   "title": "Fredlund & Krahn (1977), with water table",
+   "reference": "Fredlund, D.G. & Krahn, J. (1977). Can. Geotech. J. 14(3).",
+   "literature": true,
+   "commercial": false,
+   "surface": "fixed",
+   "units": "SI",
+   "checks": [
+    {
+     "method": "Bishop simplified",
+     "published": 1.834,
+     "source": "Fredlund & Krahn",
+     "computed": 1.8286,
+     "deviation": -0.00294
+    },
+    {
+     "method": "Morgenstern-Price (half-sine)",
+     "published": 1.832,
+     "source": "Fredlund & Krahn",
+     "computed": 1.8266,
+     "deviation": -0.00295
+    }
+   ]
+  },
+  {
+   "id": "V046",
+   "title": "Fredlund & Krahn slope on a weak seam, composite surface",
+   "reference": "Fredlund, D.G. & Krahn, J. (1977). Can. Geotech. J. 14(3).",
+   "literature": true,
+   "commercial": false,
+   "surface": "fixed",
+   "units": "imperial",
+   "checks": [
+    {
+     "method": "Bishop simplified",
+     "published": 1.382,
+     "source": "Commercial program A",
+     "computed": 1.3798,
+     "deviation": -0.00159
+    },
+    {
+     "method": "Spencer (M-P, constant f(x))",
+     "published": 1.382,
+     "source": "Commercial program A",
+     "computed": 1.3793,
+     "deviation": -0.00195
+    },
+    {
+     "method": "Morgenstern-Price (half-sine)",
+     "published": 1.37,
+     "source": "Fredlund & Krahn",
+     "computed": 1.3699,
+     "deviation": -0.00007
+    }
+   ]
+  },
+  {
+   "id": "V047a",
+   "title": "ACADS 1(a), homogeneous slope, dry",
+   "reference": "Giam & Donald (1989).",
+   "literature": true,
+   "commercial": false,
+   "surface": "search",
+   "units": "SI",
+   "checks": [
+    {
+     "method": "Bishop simplified",
+     "published": 0.987,
+     "source": "Commercial program A",
+     "computed": 0.9845,
+     "deviation": -0.00253
+    },
+    {
+     "method": "Spencer (M-P, constant f(x))",
+     "published": 0.986,
+     "source": "Commercial program A",
+     "computed": 0.9842,
+     "deviation": -0.00183
+    },
+    {
+     "method": "Janbu corrected (f0)",
+     "published": 0.99,
+     "source": "Commercial program A",
+     "computed": 0.9855,
+     "deviation": -0.00455
+    },
+    {
+     "method": "Morgenstern-Price (half-sine)",
+     "published": 0.991,
+     "source": "Commercial program B",
+     "computed": 0.9841,
+     "deviation": -0.00696
+    },
+    {
+     "method": "Bishop simplified",
+     "published": 0.992,
+     "source": "Commercial program B (moment equilibrium, λ = 0)",
+     "computed": 0.9845,
+     "deviation": -0.00756
+    },
+    {
+     "method": "Spencer (M-P, constant f(x))",
+     "published": 1,
+     "source": "ACADS",
+     "computed": 0.9842,
+     "deviation": -0.0158
+    }
+   ]
+  },
+  {
+   "id": "V047b",
+   "title": "ACADS tension crack, reference crack depth 3.6 m (results correspond to a dry crack)",
+   "reference": "Giam & Donald (1989), ACADS problem 1(b).",
+   "literature": true,
+   "commercial": false,
+   "surface": "search",
+   "units": "SI",
+   "checks": [
+    {
+     "method": "Bishop simplified",
+     "published": 1.664,
+     "source": "Commercial program B",
+     "computed": 1.6581,
+     "deviation": -0.00355
+    },
+    {
+     "method": "Morgenstern-Price (half-sine)",
+     "published": 1.66,
+     "source": "Commercial program B",
+     "computed": 1.6552,
+     "deviation": -0.00289
+    }
+   ]
+  },
+  {
+   "id": "V048",
+   "title": "ACADS 1(b), water-filled tension crack",
+   "reference": "Giam & Donald (1989), ACADS problem 1(b).",
+   "literature": true,
+   "commercial": false,
+   "surface": "search",
+   "units": "SI",
+   "checks": [
+    {
+     "method": "Bishop simplified",
+     "published": 1.596,
+     "source": "Commercial program A",
+     "computed": 1.5866,
+     "deviation": -0.00589
+    },
+    {
+     "method": "Spencer (M-P, constant f(x))",
+     "published": 1.592,
+     "source": "Commercial program A",
+     "computed": 1.5824,
+     "deviation": -0.00603
+    },
+    {
+     "method": "Janbu corrected (f0)",
+     "published": 1.489,
+     "source": "Commercial program A",
+     "computed": 1.4741,
+     "deviation": -0.01001
+    }
+   ]
+  },
+  {
+   "id": "V049",
    "title": "ACADS 1(c), three-layer slope",
    "reference": "Giam & Donald (1989), ACADS slope stability programs review.",
    "literature": true,
-   "commercial": true,
+   "commercial": false,
    "surface": "search",
    "units": "SI",
    "checks": [
@@ -2052,11 +2276,86 @@
    ]
   },
   {
-   "id": "P-8B4372",
+   "id": "V050a",
+   "title": "ACADS 3(b), weak layer, specified non-circular surface",
+   "reference": "Giam & Donald (1989), ACADS problem 3(b).",
+   "literature": true,
+   "commercial": false,
+   "surface": "fixed",
+   "units": "SI",
+   "checks": [
+    {
+     "method": "Janbu corrected (f0)",
+     "published": 1.294,
+     "source": "Commercial program A",
+     "computed": 1.2938,
+     "deviation": -0.00015
+    },
+    {
+     "method": "Spencer (M-P, constant f(x))",
+     "published": 1.277,
+     "source": "Commercial program A",
+     "computed": 1.2759,
+     "deviation": -0.00086
+    },
+    {
+     "method": "Morgenstern-Price (half-sine)",
+     "published": 1.261,
+     "source": "Commercial program B",
+     "computed": 1.2605,
+     "deviation": -0.0004
+    }
+   ]
+  },
+  {
+   "id": "V050b",
+   "title": "ACADS 3(a), weak layer, non-circular search",
+   "reference": "Giam & Donald (1989), ACADS problem 3(a).",
+   "literature": true,
+   "commercial": false,
+   "surface": "search",
+   "units": "SI",
+   "checks": [
+    {
+     "method": "Morgenstern-Price (half-sine)",
+     "published": 1.261,
+     "source": "Commercial program B",
+     "computed": 1.2602,
+     "deviation": -0.00063
+    },
+    {
+     "method": "Spencer (M-P, constant f(x))",
+     "published": 1.246,
+     "source": "Commercial program A",
+     "computed": 1.2642,
+     "deviation": 0.01461
+    }
+   ]
+  },
+  {
+   "id": "V051",
+   "title": "ACADS 4, weak layer, water table and surcharges",
+   "reference": "Giam & Donald (1989), ACADS slope stability programs review.",
+   "literature": true,
+   "commercial": false,
+   "surface": "search",
+   "units": "SI",
+   "checks": [
+    {
+     "method": "Spencer (M-P, constant f(x))",
+     "published": 0.707,
+     "source": "Commercial program A (optimised)",
+     "computed": 0.7175,
+     "deviation": 0.01485
+    }
+   ]
+  },
+  {
+   "id": "V052a",
    "title": "Talbingo Dam, end of construction",
    "reference": "Giam & Donald (1989), ACADS slope stability programs review.",
    "literature": true,
-   "commercial": true,
+   "commercial": false,
    "surface": "search",
    "units": "SI",
    "checks": [
@@ -2091,11 +2390,11 @@
    ]
   },
   {
-   "id": "P-E033A8",
+   "id": "V052b",
    "title": "Talbingo Dam, specified circle",
    "reference": "Giam & Donald (1989), ACADS slope stability programs review.",
    "literature": true,
-   "commercial": true,
+   "commercial": false,
    "surface": "fixed",
    "units": "SI",
    "checks": [
@@ -2130,111 +2429,269 @@
    ]
   },
   {
-   "id": "P-665619",
-   "title": "ACADS 4, weak layer, water table and surcharges",
-   "reference": "Giam & Donald (1989), ACADS slope stability programs review.",
+   "id": "V053",
+   "title": "Greco (1996) ex. 5 / Chen & Shao weak-layer slope, reference geometry",
+   "reference": "Greco (1996) example 5; Chen & Shao (1988).",
    "literature": true,
-   "commercial": true,
+   "commercial": false,
    "surface": "search",
    "units": "SI",
    "checks": [
     {
      "method": "Spencer (M-P, constant f(x))",
-     "published": 0.707,
-     "source": "Commercial program A (optimised)",
-     "computed": 0.7175,
-     "deviation": 0.01485
+     "published": 1.054,
+     "source": "Commercial program B",
+     "computed": 1.0316,
+     "deviation": -0.02125
     }
    ]
   },
   {
-   "id": "P-F37FFB",
-   "title": "Arai & Tagyo (1985) example 3, water table",
-   "reference": "Arai & Tagyo (1985), Soils and Foundations 25(1).",
+   "id": "V054",
+   "title": "Greco (1996) example 5 / Chen & Shao (1988)",
+   "reference": "Greco (1996), example 5; Chen & Shao (1988).",
    "literature": true,
-   "commercial": true,
+   "commercial": false,
    "surface": "search",
    "units": "SI",
    "checks": [
     {
-     "method": "Bishop simplified",
-     "published": 1.118,
+     "method": "Bishop simplified (vertical head)",
+     "published": 1.087,
      "source": "Commercial program A",
-     "computed": 1.1123,
-     "deviation": -0.0051
+     "computed": 1.0843,
+     "deviation": -0.00248
+    },
+    {
+     "method": "Spencer (vertical head)",
+     "published": 1.093,
+     "source": "Commercial program A",
+     "computed": 1.0912,
+     "deviation": -0.00165
+    }
+   ]
+  },
+  {
+   "id": "V055",
+   "title": "Griffiths & Lane example 2, slope with a foundation layer",
+   "reference": "Griffiths & Lane (1999), Géotechnique 49(3).",
+   "literature": true,
+   "commercial": false,
+   "surface": "search",
+   "units": "SI",
+   "checks": [
+    {
+     "method": "Spencer (M-P, constant f(x))",
+     "published": 1.4,
+     "source": "Griffiths & Lane (FE)",
+     "computed": 1.3661,
+     "deviation": -0.02421
     },
     {
      "method": "Spencer (M-P, constant f(x))",
-     "published": 1.118,
-     "source": "Commercial program A",
-     "computed": 1.1134,
-     "deviation": -0.00411
-    },
+     "published": 1.366,
+     "source": "Program D",
+     "computed": 1.3661,
+     "deviation": 0.00007
+    }
+   ]
+  },
+  {
+   "id": "V056",
+   "title": "Griffiths & Lane example 3, thin weak layer, cu2/cu1 = 0.2",
+   "reference": "Griffiths & Lane (1999), Géotechnique 49(3).",
+   "literature": true,
+   "commercial": false,
+   "surface": "fixed",
+   "units": "SI",
+   "checks": [
     {
      "method": "Janbu corrected (f0)",
-     "published": 1.131,
-     "source": "Commercial program A",
-     "computed": 1.1244,
-     "deviation": -0.00584
-    },
-    {
-     "method": "Bishop simplified",
-     "published": 1.112,
-     "source": "Program D",
-     "computed": 1.1123,
-     "deviation": 0.00027
+     "published": 0.485,
+     "source": "Griffiths & Lane (Janbu wedge, Fig. 7)",
+     "computed": 0.4996,
+     "deviation": 0.0301
     }
    ]
   },
   {
-   "id": "P-818BEC",
-   "title": "Prandtl bearing capacity on level ground",
-   "reference": "Prandtl (1920)",
+   "id": "V057a",
+   "title": "Griffiths & Lane example 4, cu2/cu1 = 1 (deep base circle)",
+   "reference": "Griffiths & Lane (1999), Géotechnique 49(3).",
    "literature": true,
-   "commercial": true,
-   "surface": "fixed",
+   "commercial": false,
+   "surface": "search",
    "units": "SI",
    "checks": [
     {
      "method": "Spencer (M-P, constant f(x))",
-     "published": 0.94,
-     "source": "Commercial program A",
-     "computed": 0.9403,
-     "deviation": 0.00032
+     "published": 1.46,
+     "source": "Griffiths & Lane (LE curve)",
+     "computed": 1.4705,
+     "deviation": 0.00719
+    },
+    {
+     "method": "Spencer (M-P, constant f(x))",
+     "published": 1.468,
+     "source": "Program D",
+     "computed": 1.4705,
+     "deviation": 0.0017
     }
    ]
   },
   {
-   "id": "P-1FF0B8",
-   "title": "Syncrude tailings dyke (El-Ramly et al.), composite circle",
-   "reference": "El-Ramly, Morgenstern & Cruden (2003), Can. Geotech. J. 40.",
+   "id": "V057b",
+   "title": "Griffiths & Lane example 4, cu2/cu1 = 2 (toe circle)",
+   "reference": "Griffiths & Lane (1999), Géotechnique 49(3).",
    "literature": true,
-   "commercial": true,
+   "commercial": false,
+   "surface": "search",
+   "units": "SI",
+   "checks": [
+    {
+     "method": "Spencer (M-P, constant f(x))",
+     "published": 2.04,
+     "source": "Griffiths & Lane (LE curve)",
+     "computed": 2.0231,
+     "deviation": -0.00828
+    },
+    {
+     "method": "Spencer (M-P, constant f(x))",
+     "published": 2.022,
+     "source": "Program D",
+     "computed": 2.0231,
+     "deviation": 0.00054
+    }
+   ]
+  },
+  {
+   "id": "V058",
+   "title": "Griffiths & Lane example 6, earth dam with full reservoir",
+   "reference": "Griffiths & Lane (1999), Géotechnique 49(3).",
+   "literature": true,
+   "commercial": false,
+   "surface": "search",
+   "units": "SI",
+   "checks": [
+    {
+     "method": "Spencer (M-P, constant f(x))",
+     "published": 1.9,
+     "source": "Griffiths & Lane (FE)",
+     "computed": 1.9152,
+     "deviation": 0.008
+    },
+    {
+     "method": "Spencer (M-P, constant f(x))",
+     "published": 1.915,
+     "source": "Program D",
+     "computed": 1.9152,
+     "deviation": 0.0001
+    }
+   ]
+  },
+  {
+   "id": "V059a",
+   "title": "Guo & Griffiths two-layer undrained slope, cu2/cu1 = 1.4",
+   "reference": "Guo & Griffiths (2020), Can. Geotech. J. 57.",
+   "literature": true,
+   "commercial": false,
+   "surface": "search",
+   "units": "SI",
+   "checks": [
+    {
+     "method": "Spencer (M-P, constant f(x))",
+     "published": 1.215,
+     "source": "Commercial program A (optimised)",
+     "computed": 1.2165,
+     "deviation": 0.00123
+    }
+   ]
+  },
+  {
+   "id": "V059b",
+   "title": "Guo & Griffiths two-layer undrained slope, cu2/cu1 = 1.5",
+   "reference": "Guo & Griffiths (2020), Can. Geotech. J. 57.",
+   "literature": true,
+   "commercial": false,
+   "surface": "search",
+   "units": "SI",
+   "checks": [
+    {
+     "method": "Spencer (M-P, constant f(x))",
+     "published": 1.29,
+     "source": "Commercial program A (optimised)",
+     "computed": 1.2914,
+     "deviation": 0.00109
+    }
+   ]
+  },
+  {
+   "id": "V059c",
+   "title": "Guo & Griffiths two-layer undrained slope, cu2/cu1 = 1.6",
+   "reference": "Guo & Griffiths (2020), Can. Geotech. J. 57.",
+   "literature": true,
+   "commercial": false,
+   "surface": "search",
+   "units": "SI",
+   "checks": [
+    {
+     "method": "Spencer (M-P, constant f(x))",
+     "published": 1.315,
+     "source": "Commercial program A (optimised)",
+     "computed": 1.317,
+     "deviation": 0.00152
+    }
+   ]
+  },
+  {
+   "id": "V060a",
+   "title": "Cannon Dam end of construction (Hassan & Wolff), critical circle",
+   "reference": "Hassan & Wolff (1999), J. Geotech. Geoenviron. Eng. 125(4).",
+   "literature": true,
+   "commercial": false,
+   "surface": "search",
+   "units": "SI",
+   "checks": [
+    {
+     "method": "Bishop simplified",
+     "published": 2.551,
+     "source": "Commercial program A",
+     "computed": 2.53,
+     "deviation": -0.00823
+    },
+    {
+     "method": "Bishop simplified",
+     "published": 2.529,
+     "source": "Program D",
+     "computed": 2.53,
+     "deviation": 0.0004
+    }
+   ]
+  },
+  {
+   "id": "V060b",
+   "title": "Cannon Dam end of construction (Hassan & Wolff), reliability on the minimum-β circle",
+   "reference": "Hassan & Wolff (1999), J. Geotech. Geoenviron. Eng. 125(4).",
+   "literature": true,
+   "commercial": false,
    "surface": "fixed",
    "units": "SI",
    "checks": [
     {
      "method": "Bishop simplified",
-     "published": 1.31,
-     "source": "El-Ramly et al.",
-     "computed": 1.3192,
-     "deviation": 0.00702
-    },
-    {
-     "method": "Bishop simplified",
-     "published": 1.32,
+     "published": 2.973,
      "source": "Program D",
-     "computed": 1.3192,
-     "deviation": -0.00061
+     "computed": 2.9741,
+     "deviation": 0.00037
     }
    ]
   },
   {
-   "id": "P-D70E3A",
+   "id": "V061",
    "title": "Clarence Cannon Dam (Wolff & Harr), specified surface",
    "reference": "Wolff & Harr (1987).",
    "literature": true,
-   "commercial": true,
+   "commercial": false,
    "surface": "fixed",
    "units": "SI",
    "checks": [
@@ -2262,233 +2719,439 @@
    ]
   },
   {
-   "id": "P-2DCE9C",
-   "title": "Cannon Dam end of construction (Hassan & Wolff), critical circle",
-   "reference": "Hassan & Wolff (1999), J. Geotech. Geoenviron. Eng. 125(4).",
+   "id": "V062a",
+   "title": "Clarence Cannon Dam, surface 7A",
+   "reference": "Hassan & Wolff (1999).",
    "literature": true,
-   "commercial": true,
-   "surface": "search",
+   "commercial": false,
+   "surface": "fixed",
    "units": "SI",
    "checks": [
+    {
+     "method": "Bishop simplified",
+     "published": 2.56,
+     "source": "Commercial program B",
+     "computed": 2.5485,
+     "deviation": -0.00449
+    },
     {
      "method": "Bishop simplified",
      "published": 2.551,
      "source": "Commercial program A",
-     "computed": 2.53,
-     "deviation": -0.00823
-    },
-    {
-     "method": "Bishop simplified",
-     "published": 2.529,
-     "source": "Program D",
-     "computed": 2.53,
-     "deviation": 0.0004
+     "computed": 2.5485,
+     "deviation": -0.00098
     }
    ]
   },
   {
-   "id": "P-67ECCA",
-   "title": "Zhu & Lee heterogeneous slope, dry, deep circle",
-   "reference": "Zhu & Lee (2002).",
+   "id": "V062b",
+   "title": "Clarence Cannon Dam, surface 7B",
+   "reference": "Hassan & Wolff (1999).",
    "literature": true,
-   "commercial": true,
-   "surface": "search",
-   "units": "SI",
-   "checks": [
-    {
-     "method": "Bishop simplified",
-     "published": 1.804,
-     "source": "Commercial program A",
-     "computed": 1.7931,
-     "deviation": -0.00604
-    },
-    {
-     "method": "Spencer (M-P, constant f(x))",
-     "published": 1.804,
-     "source": "Commercial program A",
-     "computed": 1.7942,
-     "deviation": -0.00543
-    }
-   ]
-  },
-  {
-   "id": "P-B945CD",
-   "title": "Zhu & Lee heterogeneous slope with a water table, deep circle",
-   "reference": "Zhu & Lee (2002).",
-   "literature": true,
-   "commercial": true,
-   "surface": "search",
-   "units": "SI",
-   "checks": [
-    {
-     "method": "Bishop simplified",
-     "published": 1.176,
-     "source": "Commercial program A",
-     "computed": 1.1727,
-     "deviation": -0.00281
-    },
-    {
-     "method": "Spencer (M-P, constant f(x))",
-     "published": 1.189,
-     "source": "Commercial program A",
-     "computed": 1.1869,
-     "deviation": -0.00177
-    }
-   ]
-  },
-  {
-   "id": "P-4BEFF0",
-   "title": "Submerged slope, pool 30 ft above the crest (D&W fig. 6.27)",
-   "reference": "Duncan & Wright, Soil Strength and Slope Stability, fig. 6.27.",
-   "literature": true,
-   "commercial": true,
-   "surface": "search",
-   "units": "SI",
-   "checks": [
-    {
-     "method": "Bishop simplified",
-     "published": 1.603,
-     "source": "Commercial program A",
-     "computed": 1.5964,
-     "deviation": -0.00412
-    },
-    {
-     "method": "Spencer (M-P, constant f(x))",
-     "published": 1.599,
-     "source": "Commercial program A",
-     "computed": 1.594,
-     "deviation": -0.00313
-    },
-    {
-     "method": "Spencer (M-P, constant f(x))",
-     "published": 1.6,
-     "source": "Duncan & Wright (reference)",
-     "computed": 1.594,
-     "deviation": -0.00375
-    },
-    {
-     "method": "Spencer (M-P, constant f(x))",
-     "published": 1.592,
-     "source": "Commercial program A (non-circular)",
-     "computed": 1.5919,
-     "deviation": -0.00006
-    }
-   ]
-  },
-  {
-   "id": "P-3A9821",
-   "title": "Submerged slope, pool 60 ft above the crest (D&W fig. 6.27)",
-   "reference": "Duncan & Wright, Soil Strength and Slope Stability, fig. 6.27.",
-   "literature": true,
-   "commercial": true,
-   "surface": "search",
-   "units": "SI",
-   "checks": [
-    {
-     "method": "Bishop simplified",
-     "published": 1.603,
-     "source": "Commercial program A",
-     "computed": 1.5963,
-     "deviation": -0.00418
-    },
-    {
-     "method": "Spencer (M-P, constant f(x))",
-     "published": 1.599,
-     "source": "Commercial program A",
-     "computed": 1.5935,
-     "deviation": -0.00344
-    },
-    {
-     "method": "Spencer (M-P, constant f(x))",
-     "published": 1.6,
-     "source": "Duncan & Wright (reference)",
-     "computed": 1.5935,
-     "deviation": -0.00406
-    },
-    {
-     "method": "Spencer (M-P, constant f(x))",
-     "published": 1.59,
-     "source": "Commercial program A (non-circular)",
-     "computed": 1.5898,
-     "deviation": -0.00013
-    }
-   ]
-  },
-  {
-   "id": "P-D56A4F",
-   "title": "Dam on a layered foundation with artesian uplift, piezometric line (D&W fig. 6.39)",
-   "reference": "Duncan & Wright, Soil Strength and Slope Stability, figs. 6.39–6.40.",
-   "literature": true,
-   "commercial": true,
+   "commercial": false,
    "surface": "fixed",
    "units": "SI",
    "checks": [
     {
      "method": "Bishop simplified",
-     "published": 1.563,
-     "source": "Commercial program A",
-     "computed": 1.5712,
-     "deviation": 0.00525
-    },
-    {
-     "method": "Spencer (M-P, constant f(x))",
-     "published": 1.557,
-     "source": "Commercial program A",
-     "computed": 1.5624,
-     "deviation": 0.00347
+     "published": 2.806,
+     "source": "Commercial program B",
+     "computed": 2.8154,
+     "deviation": 0.00335
     },
     {
      "method": "Bishop simplified",
-     "published": 1.57,
-     "source": "Duncan & Wright",
-     "computed": 1.5712,
+     "published": 2.82,
+     "source": "Commercial program A",
+     "computed": 2.8154,
+     "deviation": -0.00163
+    }
+   ]
+  },
+  {
+   "id": "V062c",
+   "title": "Clarence Cannon Dam, surface 7C",
+   "reference": "Hassan & Wolff (1999).",
+   "literature": true,
+   "commercial": false,
+   "surface": "fixed",
+   "units": "SI",
+   "checks": [
+    {
+     "method": "Bishop simplified",
+     "published": 2.771,
+     "source": "Commercial program B",
+     "computed": 2.7791,
+     "deviation": 0.00292
+    },
+    {
+     "method": "Bishop simplified",
+     "published": 2.777,
+     "source": "Commercial program A",
+     "computed": 2.7791,
      "deviation": 0.00076
-    },
-    {
-     "method": "Bishop simplified",
-     "published": 1.572,
-     "source": "Program D",
-     "computed": 1.5712,
-     "deviation": -0.00051
     }
    ]
   },
   {
-   "id": "P-105EEC",
-   "title": "Homogeneous dam with a piezometric line (D&W fig. 7.19)",
-   "reference": "Duncan & Wright, Soil Strength and Slope Stability, fig. 7.19.",
+   "id": "V062d",
+   "title": "Clarence Cannon Dam, surface 7D",
+   "reference": "Hassan & Wolff (1999).",
    "literature": true,
-   "commercial": true,
+   "commercial": false,
+   "surface": "fixed",
+   "units": "SI",
+   "checks": [
+    {
+     "method": "Bishop simplified",
+     "published": 2.589,
+     "source": "Commercial program B",
+     "computed": 2.5768,
+     "deviation": -0.00471
+    },
+    {
+     "method": "Bishop simplified",
+     "published": 2.583,
+     "source": "Commercial program A",
+     "computed": 2.5768,
+     "deviation": -0.0024
+    }
+   ]
+  },
+  {
+   "id": "V062e",
+   "title": "Clarence Cannon Dam, surface 7E",
+   "reference": "Hassan & Wolff (1999).",
+   "literature": true,
+   "commercial": false,
+   "surface": "fixed",
+   "units": "SI",
+   "checks": [
+    {
+     "method": "Bishop simplified",
+     "published": 2.703,
+     "source": "Commercial program B",
+     "computed": 2.6898,
+     "deviation": -0.00488
+    },
+    {
+     "method": "Bishop simplified",
+     "published": 2.692,
+     "source": "Commercial program A",
+     "computed": 2.6898,
+     "deviation": -0.00082
+    }
+   ]
+  },
+  {
+   "id": "V062f",
+   "title": "Clarence Cannon Dam, surface 8B",
+   "reference": "Hassan & Wolff (1999).",
+   "literature": true,
+   "commercial": false,
+   "surface": "fixed",
+   "units": "SI",
+   "checks": [
+    {
+     "method": "Bishop simplified",
+     "published": 2.673,
+     "source": "Commercial program B",
+     "computed": 2.6731,
+     "deviation": 0.00004
+    },
+    {
+     "method": "Bishop simplified",
+     "published": 2.672,
+     "source": "Commercial program A",
+     "computed": 2.6731,
+     "deviation": 0.00041
+    }
+   ]
+  },
+  {
+   "id": "V062g",
+   "title": "Clarence Cannon Dam, surface 8F",
+   "reference": "Hassan & Wolff (1999).",
+   "literature": true,
+   "commercial": false,
+   "surface": "fixed",
+   "units": "SI",
+   "checks": [
+    {
+     "method": "Bishop simplified",
+     "published": 3.586,
+     "source": "Commercial program B",
+     "computed": 3.5917,
+     "deviation": 0.00159
+    },
+    {
+     "method": "Bishop simplified",
+     "published": 3.598,
+     "source": "Commercial program A",
+     "computed": 3.5917,
+     "deviation": -0.00175
+    }
+   ]
+  },
+  {
+   "id": "V062h",
+   "title": "Clarence Cannon Dam, surface 8G",
+   "reference": "Hassan & Wolff (1999).",
+   "literature": true,
+   "commercial": false,
+   "surface": "fixed",
+   "units": "SI",
+   "checks": [
+    {
+     "method": "Bishop simplified",
+     "published": 6.069,
+     "source": "Commercial program B",
+     "computed": 6.0628,
+     "deviation": -0.00102
+    },
+    {
+     "method": "Bishop simplified",
+     "published": 6.074,
+     "source": "Commercial program A",
+     "computed": 6.0628,
+     "deviation": -0.00184
+    }
+   ]
+  },
+  {
+   "id": "V062i",
+   "title": "Clarence Cannon Dam, surface 8H",
+   "reference": "Hassan & Wolff (1999).",
+   "literature": true,
+   "commercial": false,
+   "surface": "fixed",
+   "units": "SI",
+   "checks": [
+    {
+     "method": "Bishop simplified",
+     "published": 11.583,
+     "source": "Commercial program B",
+     "computed": 11.5666,
+     "deviation": -0.00142
+    }
+   ]
+  },
+  {
+   "id": "V063",
+   "title": "Huang & Jia earth dam, dry",
+   "reference": "Huang & Jia (2008).",
+   "literature": true,
+   "commercial": false,
+   "surface": "search",
+   "units": "SI",
+   "checks": [
+    {
+     "method": "Spencer (M-P, constant f(x))",
+     "published": 2.455,
+     "source": "Commercial program A",
+     "computed": 2.451,
+     "deviation": -0.00163
+    },
+    {
+     "method": "Spencer (M-P, constant f(x))",
+     "published": 2.43,
+     "source": "Huang & Jia (FE strength reduction)",
+     "computed": 2.451,
+     "deviation": 0.00864
+    }
+   ]
+  },
+  {
+   "id": "V064",
+   "title": "Leshchinsky & Han MSE wall, five tiers",
+   "reference": "Leshchinsky & Han (2004), J. Geotech. Geoenviron. Eng. 130(12).",
+   "literature": true,
+   "commercial": false,
+   "surface": "fixed",
+   "units": "SI",
+   "checks": [
+    {
+     "method": "Bishop simplified",
+     "published": 1.02,
+     "source": "Program D",
+     "computed": 1.0153,
+     "deviation": -0.00461
+    }
+   ]
+  },
+  {
+   "id": "V065",
+   "title": "Leshchinsky & Han MSE wall, weak foundation",
+   "reference": "Leshchinsky & Han (2004), J. Geotech. Geoenviron. Eng. 130(12).",
+   "literature": true,
+   "commercial": false,
+   "surface": "fixed",
+   "units": "SI",
+   "checks": [
+    {
+     "method": "Spencer (M-P, constant f(x))",
+     "published": 0.964,
+     "source": "Commercial program A",
+     "computed": 0.9611,
+     "deviation": -0.00301
+    }
+   ]
+  },
+  {
+   "id": "V066a",
+   "title": "Leshchinsky & Han three-tier MSE wall, baseline",
+   "reference": "Leshchinsky & Han (2004), J. Geotech. Geoenviron. Eng. 130(12).",
+   "literature": true,
+   "commercial": false,
+   "surface": "fixed",
+   "units": "SI",
+   "checks": [
+    {
+     "method": "Bishop simplified",
+     "published": 1.04,
+     "source": "Commercial program A",
+     "computed": 1.0288,
+     "deviation": -0.01077
+    }
+   ]
+  },
+  {
+   "id": "V066b",
+   "title": "Leshchinsky & Han MSE wall, L = 4.2 m",
+   "reference": "Leshchinsky & Han (2004), J. Geotech. Geoenviron. Eng. 130(12).",
+   "literature": true,
+   "commercial": false,
+   "surface": "fixed",
+   "units": "SI",
+   "checks": [
+    {
+     "method": "Spencer (M-P, constant f(x))",
+     "published": 1.011,
+     "source": "Program D",
+     "computed": 1.0109,
+     "deviation": -0.0001
+    }
+   ]
+  },
+  {
+   "id": "V066c",
+   "title": "Leshchinsky & Han MSE wall, two reinforcement types",
+   "reference": "Leshchinsky & Han (2004), J. Geotech. Geoenviron. Eng. 130(12).",
+   "literature": true,
+   "commercial": false,
+   "surface": "fixed",
+   "units": "SI",
+   "checks": [
+    {
+     "method": "Bishop simplified",
+     "published": 1.004,
+     "source": "Commercial program A",
+     "computed": 1.0097,
+     "deviation": 0.00568
+    }
+   ]
+  },
+  {
+   "id": "V066d",
+   "title": "Leshchinsky & Han MSE wall, water hw = 3 m",
+   "reference": "Leshchinsky & Han (2004), J. Geotech. Geoenviron. Eng. 130(12).",
+   "literature": true,
+   "commercial": false,
+   "surface": "fixed",
+   "units": "SI",
+   "checks": [
+    {
+     "method": "Bishop simplified",
+     "published": 1.01,
+     "source": "Program D",
+     "computed": 1.0076,
+     "deviation": -0.00238
+    }
+   ]
+  },
+  {
+   "id": "V066e",
+   "title": "Leshchinsky & Han MSE wall, surcharge",
+   "reference": "Leshchinsky & Han (2004), J. Geotech. Geoenviron. Eng. 130(12).",
+   "literature": true,
+   "commercial": false,
+   "surface": "fixed",
+   "units": "SI",
+   "checks": [
+    {
+     "method": "Bishop simplified",
+     "published": 0.958,
+     "source": "Commercial program A",
+     "computed": 0.9589,
+     "deviation": 0.00094
+    }
+   ]
+  },
+  {
+   "id": "V067",
+   "title": "Low (1989), layered undrained clay",
+   "reference": "Low (1989).",
+   "literature": true,
+   "commercial": false,
    "surface": "search",
    "units": "SI",
    "checks": [
     {
      "method": "Bishop simplified",
-     "published": 1.09,
+     "published": 1.439,
      "source": "Commercial program A",
-     "computed": 1.0687,
-     "deviation": -0.01954
-    },
-    {
-     "method": "Spencer (M-P, constant f(x))",
-     "published": 1.1,
-     "source": "Commercial program A",
-     "computed": 1.0768,
-     "deviation": -0.02109
-    },
-    {
-     "method": "Bishop simplified",
-     "published": 1.07,
-     "source": "Program D",
-     "computed": 1.0687,
-     "deviation": -0.00121
+     "computed": 1.4358,
+     "deviation": -0.00222
     }
    ]
   },
   {
-   "id": "P-3D5E48",
-   "title": "Thick-core dam with a piezometric line (D&W fig. 7.24)",
-   "reference": "Duncan & Wright, Soil Strength and Slope Stability, fig. 7.24.",
+   "id": "V068",
+   "title": "Low (1989), stiff crust over soft clays, published circle",
+   "reference": "Low (1989).",
+   "literature": true,
+   "commercial": false,
+   "surface": "fixed",
+   "units": "SI",
+   "checks": [
+    {
+     "method": "Bishop simplified",
+     "published": 1.192,
+     "source": "Commercial program A",
+     "computed": 1.1974,
+     "deviation": 0.00453
+    }
+   ]
+  },
+  {
+   "id": "V069a",
+   "title": "Morgenstern (1963) complete drawdown, 3:1",
+   "reference": "Morgenstern, N. (1963). Stability charts for earth slopes during rapid drawdown. Géotechnique 13(2).",
+   "literature": true,
+   "commercial": false,
+   "surface": "search",
+   "units": "SI",
+   "checks": [
+    {
+     "method": "Bishop simplified (vertical head)",
+     "published": 1.2,
+     "source": "Morgenstern (chart)",
+     "computed": 1.1993,
+     "deviation": -0.00058
+    },
+    {
+     "method": "Spencer (vertical head)",
+     "published": 1.2,
+     "source": "Morgenstern (chart)",
+     "computed": 1.2053,
+     "deviation": 0.00442
+    }
+   ]
+  },
+  {
+   "id": "V069b",
+   "title": "Morgenstern complete drawdown, the reference circle",
+   "reference": "Morgenstern, N. (1963). Stability charts for earth slopes during rapid drawdown. Géotechnique 13(2). Verification manual of a commercial slope stability program.",
    "literature": true,
    "commercial": true,
    "surface": "fixed",
@@ -2496,196 +3159,19 @@
    "checks": [
     {
      "method": "Bishop simplified",
-     "published": 1.584,
+     "published": 1.212,
      "source": "Commercial program A",
-     "computed": 1.591,
-     "deviation": 0.00442
-    },
-    {
-     "method": "Spencer (M-P, constant f(x))",
-     "published": 1.648,
-     "source": "Commercial program A",
-     "computed": 1.6576,
-     "deviation": 0.00583
-    },
-    {
-     "method": "Bishop simplified",
-     "published": 1.591,
-     "source": "Program D",
-     "computed": 1.591,
-     "deviation": 0
-    },
-    {
-     "method": "Morgenstern-Price (half-sine)",
-     "published": 1.67,
-     "source": "Program D",
-     "computed": 1.6688,
-     "deviation": -0.00072
+     "computed": 1.209,
+     "deviation": -0.00248
     }
    ]
   },
   {
-   "id": "P-64810A",
-   "title": "Embankment on an undrained foundation, cz = 0 (D&W fig. 15.9)",
-   "reference": "Duncan & Wright, Soil Strength and Slope Stability, fig. 15.9.",
-   "literature": true,
-   "commercial": true,
-   "surface": "search",
-   "units": "SI",
-   "checks": [
-    {
-     "method": "Bishop simplified",
-     "published": 0.761,
-     "source": "Commercial program A",
-     "computed": 0.7561,
-     "deviation": -0.00644
-    },
-    {
-     "method": "Spencer (M-P, constant f(x))",
-     "published": 0.756,
-     "source": "Commercial program A",
-     "computed": 0.7519,
-     "deviation": -0.00542
-    },
-    {
-     "method": "Spencer (M-P, constant f(x))",
-     "published": 0.75,
-     "source": "Duncan & Wright (reference)",
-     "computed": 0.7519,
-     "deviation": 0.00253
-    },
-    {
-     "method": "Spencer (M-P, constant f(x))",
-     "published": 0.74,
-     "source": "Commercial program A (non-circular)",
-     "computed": 0.739,
-     "deviation": -0.00135
-    }
-   ]
-  },
-  {
-   "id": "P-7A0CB5",
-   "title": "Embankment on an undrained foundation, cz = 5 psf/ft",
-   "reference": "Duncan & Wright, Soil Strength and Slope Stability, fig. 15.9.",
-   "literature": true,
-   "commercial": true,
-   "surface": "search",
-   "units": "SI",
-   "checks": [
-    {
-     "method": "Bishop simplified",
-     "published": 0.909,
-     "source": "Commercial program A",
-     "computed": 0.9052,
-     "deviation": -0.00418
-    },
-    {
-     "method": "Spencer (M-P, constant f(x))",
-     "published": 0.898,
-     "source": "Commercial program A",
-     "computed": 0.8978,
-     "deviation": -0.00022
-    },
-    {
-     "method": "Spencer (M-P, constant f(x))",
-     "published": 0.9,
-     "source": "Duncan & Wright (reference)",
-     "computed": 0.8978,
-     "deviation": -0.00244
-    },
-    {
-     "method": "Spencer (M-P, constant f(x))",
-     "published": 0.903,
-     "source": "Commercial program A (non-circular)",
-     "computed": 0.884,
-     "deviation": -0.02104
-    }
-   ]
-  },
-  {
-   "id": "P-101485",
-   "title": "Embankment on an undrained foundation, cz = 10 psf/ft",
-   "reference": "Duncan & Wright, Soil Strength and Slope Stability, fig. 15.9.",
-   "literature": true,
-   "commercial": true,
-   "surface": "search",
-   "units": "SI",
-   "checks": [
-    {
-     "method": "Bishop simplified",
-     "published": 1.045,
-     "source": "Commercial program A",
-     "computed": 1.0417,
-     "deviation": -0.00316
-    },
-    {
-     "method": "Spencer (M-P, constant f(x))",
-     "published": 1.032,
-     "source": "Commercial program A",
-     "computed": 1.0282,
-     "deviation": -0.00368
-    },
-    {
-     "method": "Spencer (M-P, constant f(x))",
-     "published": 1.03,
-     "source": "Duncan & Wright (reference)",
-     "computed": 1.0282,
-     "deviation": -0.00175
-    },
-    {
-     "method": "Spencer (M-P, constant f(x))",
-     "published": 1.018,
-     "source": "Commercial program A (non-circular)",
-     "computed": 1.0168,
-     "deviation": -0.00118
-    }
-   ]
-  },
-  {
-   "id": "P-E9AB2E",
-   "title": "Embankment on an undrained foundation, cz = 15 psf/ft",
-   "reference": "Duncan & Wright, Soil Strength and Slope Stability, fig. 15.9.",
-   "literature": true,
-   "commercial": true,
-   "surface": "search",
-   "units": "SI",
-   "checks": [
-    {
-     "method": "Bishop simplified",
-     "published": 1.154,
-     "source": "Commercial program A",
-     "computed": 1.1515,
-     "deviation": -0.00217
-    },
-    {
-     "method": "Spencer (M-P, constant f(x))",
-     "published": 1.134,
-     "source": "Commercial program A",
-     "computed": 1.1311,
-     "deviation": -0.00256
-    },
-    {
-     "method": "Spencer (M-P, constant f(x))",
-     "published": 1.13,
-     "source": "Duncan & Wright (reference)",
-     "computed": 1.1311,
-     "deviation": 0.00097
-    },
-    {
-     "method": "Spencer (M-P, constant f(x))",
-     "published": 1.116,
-     "source": "Commercial program A (non-circular)",
-     "computed": 1.118,
-     "deviation": 0.00179
-    }
-   ]
-  },
-  {
-   "id": "P-8471FA",
+   "id": "V070",
    "title": "Partial drawdown, B̄ = 1 (Morgenstern chart)",
    "reference": "Morgenstern (1963).",
    "literature": true,
-   "commercial": true,
+   "commercial": false,
    "surface": "search",
    "units": "SI",
    "checks": [
@@ -2713,699 +3199,35 @@
    ]
   },
   {
-   "id": "P-B1629A",
-   "title": "Huang & Jia earth dam, dry",
-   "reference": "Huang & Jia (2008).",
-   "literature": true,
-   "commercial": true,
-   "surface": "search",
-   "units": "SI",
-   "checks": [
-    {
-     "method": "Spencer (M-P, constant f(x))",
-     "published": 2.455,
-     "source": "Commercial program A",
-     "computed": 2.451,
-     "deviation": -0.00163
-    },
-    {
-     "method": "Spencer (M-P, constant f(x))",
-     "published": 2.43,
-     "source": "Huang & Jia (FE strength reduction)",
-     "computed": 2.451,
-     "deviation": 0.00864
-    }
-   ]
-  },
-  {
-   "id": "P-FC2971",
-   "title": "Example slope without seismic load",
-   "reference": "Verification manual of a commercial slope stability program.",
-   "literature": false,
-   "commercial": true,
-   "surface": "search",
-   "units": "SI",
-   "checks": [
-    {
-     "method": "Spencer (M-P, constant f(x))",
-     "published": 1.36,
-     "source": "Commercial program A",
-     "computed": 1.3706,
-     "deviation": 0.00779
-    },
-    {
-     "method": "Spencer (M-P, constant f(x))",
-     "published": 1.372,
-     "source": "Program D",
-     "computed": 1.3706,
-     "deviation": -0.00102
-    }
-   ]
-  },
-  {
-   "id": "P-D2E5ED",
-   "title": "Vancouver gabion wall, equivalent cohesion",
-   "reference": "Cao et al. (2016); Grodecki (2017).",
-   "literature": true,
-   "commercial": true,
-   "surface": "fixed",
-   "units": "SI",
-   "checks": [
-    {
-     "method": "Bishop simplified",
-     "published": 1.373,
-     "source": "Commercial program A",
-     "computed": 1.3812,
-     "deviation": 0.00597
-    },
-    {
-     "method": "Spencer (M-P, constant f(x))",
-     "published": 1.386,
-     "source": "Commercial program A",
-     "computed": 1.3982,
-     "deviation": 0.0088
-    },
-    {
-     "method": "Bishop simplified",
-     "published": 1.382,
-     "source": "Program D",
-     "computed": 1.3812,
-     "deviation": -0.00058
-    }
-   ]
-  },
-  {
-   "id": "P-C021E7",
-   "title": "Vancouver gabion wall, mesh as geosynthetic supports",
-   "reference": "Cao et al. (2016); Grodecki (2017).",
-   "literature": true,
-   "commercial": true,
-   "surface": "fixed",
-   "units": "SI",
-   "checks": [
-    {
-     "method": "Bishop simplified",
-     "published": 1.378,
-     "source": "Commercial program A",
-     "computed": 1.3812,
-     "deviation": 0.00232
-    },
-    {
-     "method": "Bishop simplified",
-     "published": 1.382,
-     "source": "Program D",
-     "computed": 1.3812,
-     "deviation": -0.00058
-    }
-   ]
-  },
-  {
-   "id": "P-CDA3CB",
-   "title": "Stepped gabion wall, equivalent cohesion",
-   "reference": "Cao et al. (2016); Grodecki (2017).",
-   "literature": true,
-   "commercial": true,
-   "surface": "fixed",
-   "units": "SI",
-   "checks": [
-    {
-     "method": "Bishop simplified",
-     "published": 1.787,
-     "source": "Commercial program A",
-     "computed": 1.7901,
-     "deviation": 0.00173
-    },
-    {
-     "method": "Spencer (M-P, constant f(x))",
-     "published": 1.791,
-     "source": "Commercial program A",
-     "computed": 1.7974,
-     "deviation": 0.00357
-    },
-    {
-     "method": "Bishop simplified",
-     "published": 1.79,
-     "source": "Program D",
-     "computed": 1.7901,
-     "deviation": 0.00006
-    }
-   ]
-  },
-  {
-   "id": "P-255911",
-   "title": "Stepped gabion wall, mesh as geosynthetic supports",
-   "reference": "Cao et al. (2016); Grodecki (2017).",
-   "literature": true,
-   "commercial": true,
-   "surface": "fixed",
-   "units": "SI",
-   "checks": [
-    {
-     "method": "Bishop simplified",
-     "published": 1.835,
-     "source": "Commercial program A",
-     "computed": 1.8299,
-     "deviation": -0.00278
-    },
-    {
-     "method": "Spencer (M-P, constant f(x))",
-     "published": 1.839,
-     "source": "Commercial program A",
-     "computed": 1.8353,
-     "deviation": -0.00201
-    },
-    {
-     "method": "Bishop simplified",
-     "published": 1.83,
-     "source": "Program D",
-     "computed": 1.8299,
-     "deviation": -0.00005
-    }
-   ]
-  },
-  {
-   "id": "P-1FC6CD",
-   "title": "Gabion wall with weak joint layers",
-   "reference": "Cao et al. (2016); Grodecki (2017).",
-   "literature": true,
-   "commercial": true,
-   "surface": "fixed",
-   "units": "SI",
-   "checks": [
-    {
-     "method": "Bishop simplified",
-     "published": 1.799,
-     "source": "Commercial program A",
-     "computed": 1.7901,
-     "deviation": -0.00495
-    },
-    {
-     "method": "Spencer (M-P, constant f(x))",
-     "published": 1.803,
-     "source": "Commercial program A",
-     "computed": 1.7973,
-     "deviation": -0.00316
-    },
-    {
-     "method": "Bishop simplified",
-     "published": 1.79,
-     "source": "Program D",
-     "computed": 1.7901,
-     "deviation": 0.00006
-    }
-   ]
-  },
-  {
-   "id": "P-354AE6",
-   "title": "Cheng et al. benched slope, global minimum",
-   "reference": "Cheng, Lansivaara & Wei (2007), Computers and Geotechnics 34.",
-   "literature": true,
-   "commercial": true,
-   "surface": "search",
-   "units": "SI",
-   "checks": [
-    {
-     "method": "Spencer (M-P, constant f(x))",
-     "published": 1.336,
-     "source": "Commercial program A",
-     "computed": 1.3381,
-     "deviation": 0.00157
-    },
-    {
-     "method": "Spencer (M-P, constant f(x))",
-     "published": 1.327,
-     "source": "Cheng et al.",
-     "computed": 1.3381,
-     "deviation": 0.00836
-    },
-    {
-     "method": "Spencer (M-P, constant f(x))",
-     "published": 1.338,
-     "source": "Program D",
-     "computed": 1.3381,
-     "deviation": 0.00007
-    },
-    {
-     "method": "Bishop simplified",
-     "published": 1.342,
-     "source": "Program D",
-     "computed": 1.3412,
-     "deviation": -0.0006
-    }
-   ]
-  },
-  {
-   "id": "P-BD788D",
-   "title": "Cheng et al. 11 m homogeneous slope",
-   "reference": "Cheng, Lansivaara & Wei (2007), Computers and Geotechnics 34.",
-   "literature": true,
-   "commercial": true,
-   "surface": "search",
-   "units": "SI",
-   "checks": [
-    {
-     "method": "Spencer (M-P, constant f(x))",
-     "published": 1.38,
-     "source": "Commercial program A",
-     "computed": 1.3984,
-     "deviation": 0.01333
-    },
-    {
-     "method": "Spencer (M-P, constant f(x))",
-     "published": 1.383,
-     "source": "Cheng et al.",
-     "computed": 1.3984,
-     "deviation": 0.01114
-    },
-    {
-     "method": "Spencer (M-P, constant f(x))",
-     "published": 1.398,
-     "source": "Program D",
-     "computed": 1.3984,
-     "deviation": 0.00029
-    },
-    {
-     "method": "Bishop simplified",
-     "published": 1.401,
-     "source": "Program D",
-     "computed": 1.3995,
-     "deviation": -0.00107
-    }
-   ]
-  },
-  {
-   "id": "P-251840",
-   "title": "Griffiths & Lane example 2, slope with a foundation layer",
-   "reference": "Griffiths & Lane (1999), Géotechnique 49(3).",
-   "literature": true,
-   "commercial": false,
-   "surface": "search",
-   "units": "SI",
-   "checks": [
-    {
-     "method": "Spencer (M-P, constant f(x))",
-     "published": 1.4,
-     "source": "Griffiths & Lane (FE)",
-     "computed": 1.3661,
-     "deviation": -0.02421
-    },
-    {
-     "method": "Spencer (M-P, constant f(x))",
-     "published": 1.366,
-     "source": "Program D",
-     "computed": 1.3661,
-     "deviation": 0.00007
-    }
-   ]
-  },
-  {
-   "id": "P-8433D6",
-   "title": "Griffiths & Lane example 3, thin weak layer, cu2/cu1 = 0.2",
-   "reference": "Griffiths & Lane (1999), Géotechnique 49(3).",
+   "id": "V071a",
+   "title": "Pockoski & Duncan (2000) slope 1",
+   "reference": "Pockoski & Duncan (2000), slope 1.",
    "literature": true,
    "commercial": false,
    "surface": "fixed",
    "units": "SI",
    "checks": [
     {
-     "method": "Janbu corrected (f0)",
-     "published": 0.485,
-     "source": "Griffiths & Lane (Janbu wedge, Fig. 7)",
-     "computed": 0.4996,
-     "deviation": 0.0301
-    }
-   ]
-  },
-  {
-   "id": "P-48EEB8",
-   "title": "Griffiths & Lane example 4, cu2/cu1 = 1 (deep base circle)",
-   "reference": "Griffiths & Lane (1999), Géotechnique 49(3).",
-   "literature": true,
-   "commercial": false,
-   "surface": "search",
-   "units": "SI",
-   "checks": [
-    {
-     "method": "Spencer (M-P, constant f(x))",
-     "published": 1.46,
-     "source": "Griffiths & Lane (LE curve)",
-     "computed": 1.4705,
-     "deviation": 0.00719
+     "method": "Bishop simplified (vertical head)",
+     "published": 1.293,
+     "source": "Commercial program A",
+     "computed": 1.2887,
+     "deviation": -0.00333
     },
     {
-     "method": "Spencer (M-P, constant f(x))",
-     "published": 1.468,
-     "source": "Program D",
-     "computed": 1.4705,
-     "deviation": 0.0017
+     "method": "Spencer (vertical head)",
+     "published": 1.3,
+     "source": "Commercial program A",
+     "computed": 1.2963,
+     "deviation": -0.00285
     }
    ]
   },
   {
-   "id": "P-5E37A4",
-   "title": "Griffiths & Lane example 4, cu2/cu1 = 2 (toe circle)",
-   "reference": "Griffiths & Lane (1999), Géotechnique 49(3).",
-   "literature": true,
-   "commercial": false,
-   "surface": "search",
-   "units": "SI",
-   "checks": [
-    {
-     "method": "Spencer (M-P, constant f(x))",
-     "published": 2.04,
-     "source": "Griffiths & Lane (LE curve)",
-     "computed": 2.0231,
-     "deviation": -0.00828
-    },
-    {
-     "method": "Spencer (M-P, constant f(x))",
-     "published": 2.022,
-     "source": "Program D",
-     "computed": 2.0231,
-     "deviation": 0.00054
-    }
-   ]
-  },
-  {
-   "id": "P-55610C",
-   "title": "Griffiths & Lane example 6, earth dam with full reservoir",
-   "reference": "Griffiths & Lane (1999), Géotechnique 49(3).",
-   "literature": true,
-   "commercial": false,
-   "surface": "search",
-   "units": "SI",
-   "checks": [
-    {
-     "method": "Spencer (M-P, constant f(x))",
-     "published": 1.9,
-     "source": "Griffiths & Lane (FE)",
-     "computed": 1.9152,
-     "deviation": 0.008
-    },
-    {
-     "method": "Spencer (M-P, constant f(x))",
-     "published": 1.915,
-     "source": "Program D",
-     "computed": 1.9152,
-     "deviation": 0.0001
-    }
-   ]
-  },
-  {
-   "id": "P-47CC72",
-   "title": "ACADS 1(a), homogeneous slope, dry",
-   "reference": "Giam & Donald (1989).",
-   "literature": true,
-   "commercial": true,
-   "surface": "search",
-   "units": "SI",
-   "checks": [
-    {
-     "method": "Bishop simplified",
-     "published": 0.987,
-     "source": "Commercial program A",
-     "computed": 0.9845,
-     "deviation": -0.00253
-    },
-    {
-     "method": "Spencer (M-P, constant f(x))",
-     "published": 0.986,
-     "source": "Commercial program A",
-     "computed": 0.9842,
-     "deviation": -0.00183
-    },
-    {
-     "method": "Janbu corrected (f0)",
-     "published": 0.99,
-     "source": "Commercial program A",
-     "computed": 0.9855,
-     "deviation": -0.00455
-    }
-   ]
-  },
-  {
-   "id": "P-415153",
-   "title": "Prandtl slope, GLE with Chen & Shao interslice function",
-   "reference": "Verification manual of a commercial slope stability program.",
-   "literature": false,
-   "commercial": true,
-   "surface": "fixed",
-   "units": "SI",
-   "checks": [
-    {
-     "method": "Morgenstern-Price (half-sine)",
-     "published": 1.009,
-     "source": "Commercial program A",
-     "computed": 1.0084,
-     "deviation": -0.00059
-    }
-   ]
-  },
-  {
-   "id": "P-E09083",
-   "title": "Sharma (1996) slope, 11 ft dry tension crack instead of the zero-strength cap",
-   "reference": "Verification manual of a commercial slope stability program.",
-   "literature": false,
-   "commercial": true,
-   "surface": "fixed",
-   "units": "SI",
-   "checks": [
-    {
-     "method": "Bishop simplified",
-     "published": 1.532,
-     "source": "Commercial program A",
-     "computed": 1.5038,
-     "deviation": -0.01841
-    },
-    {
-     "method": "Spencer (M-P, constant f(x))",
-     "published": 1.532,
-     "source": "Commercial program A",
-     "computed": 1.5032,
-     "deviation": -0.0188
-    },
-    {
-     "method": "Morgenstern-Price (half-sine)",
-     "published": 1.532,
-     "source": "Commercial program A",
-     "computed": 1.5032,
-     "deviation": -0.0188
-    }
-   ]
-  },
-  {
-   "id": "P-7DD770",
-   "title": "Sharma (1996) slope, 11 ft tension crack with 6 ft of water",
-   "reference": "Verification manual of a commercial slope stability program.",
-   "literature": false,
-   "commercial": true,
-   "surface": "fixed",
-   "units": "SI",
-   "checks": [
-    {
-     "method": "Bishop simplified",
-     "published": 1.511,
-     "source": "Commercial program A",
-     "computed": 1.4831,
-     "deviation": -0.01846
-    },
-    {
-     "method": "Spencer (M-P, constant f(x))",
-     "published": 1.51,
-     "source": "Commercial program A",
-     "computed": 1.4824,
-     "deviation": -0.01828
-    }
-   ]
-  },
-  {
-   "id": "P-379DAE",
-   "title": "Congress Street cut (Chowdhury & Xu), example 2, tangent to clay 2",
-   "reference": "Verification manual of a commercial slope stability program.",
-   "literature": false,
-   "commercial": true,
-   "surface": "fixed",
-   "units": "SI",
-   "checks": [
-    {
-     "method": "Bishop simplified",
-     "published": 1.108,
-     "source": "Commercial program A",
-     "computed": 1.1077,
-     "deviation": -0.00027
-    }
-   ]
-  },
-  {
-   "id": "P-DBEC81",
-   "title": "Congress Street cut (Chowdhury & Xu), example 2, tangent to clay 3",
-   "reference": "Verification manual of a commercial slope stability program.",
-   "literature": false,
-   "commercial": true,
-   "surface": "fixed",
-   "units": "SI",
-   "checks": [
-    {
-     "method": "Bishop simplified",
-     "published": 1.058,
-     "source": "Commercial program A",
-     "computed": 1.058,
-     "deviation": 0
-    }
-   ]
-  },
-  {
-   "id": "P-F862D3",
-   "title": "Congress Street cut (Chowdhury & Xu), example 3, tangent to clay 2",
-   "reference": "Verification manual of a commercial slope stability program.",
-   "literature": false,
-   "commercial": true,
-   "surface": "fixed",
-   "units": "SI",
-   "checks": [
-    {
-     "method": "Bishop simplified",
-     "published": 2.245,
-     "source": "Commercial program A",
-     "computed": 2.2441,
-     "deviation": -0.0004
-    }
-   ]
-  },
-  {
-   "id": "P-AFC945",
-   "title": "Congress Street cut (Chowdhury & Xu), example 3, tangent to clay 3",
-   "reference": "Verification manual of a commercial slope stability program.",
-   "literature": false,
-   "commercial": true,
-   "surface": "fixed",
-   "units": "SI",
-   "checks": [
-    {
-     "method": "Bishop simplified",
-     "published": 2.128,
-     "source": "Commercial program A",
-     "computed": 2.1283,
-     "deviation": 0.00014
-    }
-   ]
-  },
-  {
-   "id": "P-A41750",
-   "title": "Sharma (1996) slope with a reinforced zone (φ = 54.93°)",
-   "reference": "37.2, 37.4).",
-   "literature": true,
-   "commercial": true,
-   "surface": "fixed",
-   "units": "SI",
-   "checks": [
-    {
-     "method": "Bishop simplified",
-     "published": 1.504,
-     "source": "Commercial program A",
-     "computed": 1.4996,
-     "deviation": -0.00293
-    }
-   ]
-  },
-  {
-   "id": "P-2A7BE5",
-   "title": "Baker (2003) ex. 1, Mohr-Coulomb, Janbu simplified on the reference circle",
-   "reference": "44.3).",
-   "literature": true,
-   "commercial": true,
-   "surface": "fixed",
-   "units": "SI",
-   "checks": [
-    {
-     "method": "Janbu simplified (uncorrected)",
-     "published": 1.469,
-     "source": "Commercial program A",
-     "computed": 1.4675,
-     "deviation": -0.00102
-    }
-   ]
-  },
-  {
-   "id": "P-8C543B",
-   "title": "Baker (2003) ex. 1 slope, Mohr-Coulomb iteration parameters",
-   "reference": "Verification manual of a commercial slope stability program.",
-   "literature": false,
-   "commercial": true,
-   "surface": "search",
-   "units": "SI",
-   "checks": [
-    {
-     "method": "Janbu simplified (uncorrected)",
-     "published": 0.957,
-     "source": "Commercial program A",
-     "computed": 0.9553,
-     "deviation": -0.00178
-    },
-    {
-     "method": "Spencer (M-P, constant f(x))",
-     "published": 0.981,
-     "source": "Commercial program A",
-     "computed": 0.9777,
-     "deviation": -0.00336
-    }
-   ]
-  },
-  {
-   "id": "P-D45E81",
-   "title": "Baker (2003) ex. 2 slope, Mohr-Coulomb iteration parameters",
-   "reference": "Verification manual of a commercial slope stability program.",
-   "literature": false,
-   "commercial": true,
-   "surface": "search",
-   "units": "SI",
-   "checks": [
-    {
-     "method": "Janbu simplified (uncorrected)",
-     "published": 2.61,
-     "source": "Commercial program A",
-     "computed": 2.6091,
-     "deviation": -0.00034
-    },
-    {
-     "method": "Spencer (M-P, constant f(x))",
-     "published": 2.696,
-     "source": "Commercial program A",
-     "computed": 2.6664,
-     "deviation": -0.01098
-    }
-   ]
-  },
-  {
-   "id": "P-A9ED74",
-   "title": "Zhu & Lee slope, surface 3 (the reference circle), dry, 1 m crack",
-   "reference": "52.4).",
-   "literature": true,
-   "commercial": true,
-   "surface": "fixed",
-   "units": "SI",
-   "checks": [
-    {
-     "method": "Spencer (M-P, constant f(x))",
-     "published": 1.804,
-     "source": "Commercial program A",
-     "computed": 1.7995,
-     "deviation": -0.00249
-    },
-    {
-     "method": "Bishop simplified",
-     "published": 1.804,
-     "source": "Commercial program A",
-     "computed": 1.7987,
-     "deviation": -0.00294
-    }
-   ]
-  },
-  {
-   "id": "P-556DB1",
+   "id": "V071b",
    "title": "Pockoski & Duncan slope 1, circular search",
-   "reference": "Verification manual of a commercial slope stability program.",
-   "literature": false,
+   "reference": "Pockoski & Duncan (2000), slope 1. Verification manual of a commercial slope stability program.",
+   "literature": true,
    "commercial": true,
    "surface": "search",
    "units": "SI",
@@ -3434,10 +3256,35 @@
    ]
   },
   {
-   "id": "P-D34243",
+   "id": "V072a",
+   "title": "Pockoski & Duncan test slope 2, dry tension crack",
+   "reference": "Pockoski & Duncan (2000).",
+   "literature": true,
+   "commercial": false,
+   "surface": "fixed",
+   "units": "SI",
+   "checks": [
+    {
+     "method": "Bishop simplified",
+     "published": 1.285,
+     "source": "Commercial program A",
+     "computed": 1.2812,
+     "deviation": -0.00296
+    },
+    {
+     "method": "Spencer (M-P, constant f(x))",
+     "published": 1.29,
+     "source": "Commercial program A",
+     "computed": 1.2875,
+     "deviation": -0.00194
+    }
+   ]
+  },
+  {
+   "id": "V072b",
    "title": "Pockoski & Duncan slope 2, circular search",
-   "reference": "Verification manual of a commercial slope stability program.",
-   "literature": false,
+   "reference": "Pockoski & Duncan (2000). Verification manual of a commercial slope stability program.",
+   "literature": true,
    "commercial": true,
    "surface": "search",
    "units": "SI",
@@ -3466,14 +3313,71 @@
    ]
   },
   {
-   "id": "P-5F77AA",
-   "title": "Tieback wall in sand, reference Spencer value",
-   "reference": "59.2).",
+   "id": "V073",
+   "title": "Pockoski & Duncan test slope 3, clay seam and dry crack",
+   "reference": "Pockoski & Duncan (2000).",
    "literature": true,
-   "commercial": true,
+   "commercial": false,
+   "surface": "search",
+   "units": "SI",
+   "checks": [
+    {
+     "method": "Bishop simplified",
+     "published": 1.417,
+     "source": "Commercial program A (circles)",
+     "computed": 1.4092,
+     "deviation": -0.0055
+    },
+    {
+     "method": "Spencer (M-P, constant f(x))",
+     "published": 1.422,
+     "source": "Commercial program A (circles)",
+     "computed": 1.4148,
+     "deviation": -0.00506
+    }
+   ]
+  },
+  {
+   "id": "V074",
+   "title": "Soil-nailed wall with tension crack and surcharges",
+   "reference": "Pockoski & Duncan (2000), Comparison of computer programs for analysis of reinforced slopes. Virginia Tech.",
+   "literature": true,
+   "commercial": false,
    "surface": "fixed",
    "units": "SI",
    "checks": [
+    {
+     "method": "Spencer (M-P, constant f(x))",
+     "published": 1.009,
+     "source": "Commercial program A",
+     "computed": 1.01,
+     "deviation": 0.00099
+    },
+    {
+     "method": "Janbu corrected (f0)",
+     "published": 1.073,
+     "source": "Program D",
+     "computed": 1.0748,
+     "deviation": 0.00168
+    }
+   ]
+  },
+  {
+   "id": "V075",
+   "title": "Tieback wall in sand, drawdown water table",
+   "reference": "Pockoski & Duncan (2000), Comparison of computer programs for analysis of reinforced slopes. Virginia Tech.",
+   "literature": true,
+   "commercial": false,
+   "surface": "fixed",
+   "units": "SI",
+   "checks": [
+    {
+     "method": "Janbu corrected (f0)",
+     "published": 0.579,
+     "source": "Program D",
+     "computed": 0.5776,
+     "deviation": -0.00242
+    },
     {
      "method": "Spencer (M-P, constant f(x))",
      "published": 0.596,
@@ -3484,240 +3388,54 @@
    ]
   },
   {
-   "id": "P-6E9D5F",
-   "title": "Baker (2003) ex. 3, Janbu simplified",
-   "reference": "Verification manual of a commercial slope stability program.",
-   "literature": false,
-   "commercial": true,
-   "surface": "search",
-   "units": "SI",
-   "checks": [
-    {
-     "method": "Janbu simplified (uncorrected)",
-     "published": 1.291,
-     "source": "Commercial program A",
-     "computed": 1.2897,
-     "deviation": -0.00101
-    }
-   ]
-  },
-  {
-   "id": "P-8BBEF6",
-   "title": "Duncan & Wright fig. 14.3, undrained clay on a 46.5 ft foundation",
-   "reference": "Verification manual of a commercial slope stability program.",
-   "literature": false,
-   "commercial": true,
-   "surface": "search",
-   "units": "imperial",
-   "checks": [
-    {
-     "method": "Bishop simplified",
-     "published": 1.126,
-     "source": "Commercial program A",
-     "computed": 1.1219,
-     "deviation": -0.00364
-    },
-    {
-     "method": "Spencer (M-P, constant f(x))",
-     "published": 1.124,
-     "source": "Duncan & Wright (reference)",
-     "computed": 1.1219,
-     "deviation": -0.00187
-    }
-   ]
-  },
-  {
-   "id": "P-50B5ED",
-   "title": "Duncan & Wright fig. 14.3, undrained clay on a 60 ft foundation",
-   "reference": "Verification manual of a commercial slope stability program.",
-   "literature": false,
-   "commercial": true,
-   "surface": "search",
-   "units": "imperial",
-   "checks": [
-    {
-     "method": "Bishop simplified",
-     "published": 1.125,
-     "source": "Commercial program A",
-     "computed": 1.1188,
-     "deviation": -0.00551
-    },
-    {
-     "method": "Spencer (M-P, constant f(x))",
-     "published": 1.124,
-     "source": "Duncan & Wright (reference)",
-     "computed": 1.1188,
-     "deviation": -0.00463
-    }
-   ]
-  },
-  {
-   "id": "P-E47F14",
-   "title": "Duncan & Wright fig. 14.7, infinite-slope mechanism",
-   "reference": "Verification manual of a commercial slope stability program.",
-   "literature": false,
-   "commercial": true,
-   "surface": "search",
-   "units": "imperial",
-   "checks": [
-    {
-     "method": "Bishop simplified",
-     "published": 1.155,
-     "source": "Commercial program A",
-     "computed": 1.1559,
-     "deviation": 0.00078
-    },
-    {
-     "method": "Spencer (M-P, constant f(x))",
-     "published": 1.155,
-     "source": "Commercial program A",
-     "computed": 1.1559,
-     "deviation": 0.00078
-    },
-    {
-     "method": "Spencer (M-P, constant f(x))",
-     "published": 1.15,
-     "source": "Duncan & Wright (reference)",
-     "computed": 1.1559,
-     "deviation": 0.00513
-    }
-   ]
-  },
-  {
-   "id": "P-07497B",
-   "title": "Morgenstern complete drawdown, the reference circle",
-   "reference": "100.2).",
+   "id": "V076",
+   "title": "Tied-back wall in layered soil",
+   "reference": "Pockoski & Duncan (2000), Comparison of computer programs for analysis of reinforced slopes. Virginia Tech.",
    "literature": true,
-   "commercial": true,
+   "commercial": false,
    "surface": "fixed",
    "units": "SI",
    "checks": [
     {
      "method": "Bishop simplified",
-     "published": 1.212,
+     "published": 1.147,
      "source": "Commercial program A",
-     "computed": 1.209,
-     "deviation": -0.00248
-    }
-   ]
-  },
-  {
-   "id": "P-181B02",
-   "title": "ACADS simple slope (alternative domain)",
-   "reference": "Giam & Donald (1989), ACADS problem 1(a).",
-   "literature": true,
-   "commercial": true,
-   "surface": "search",
-   "units": "SI",
-   "checks": [
-    {
-     "method": "Morgenstern-Price (half-sine)",
-     "published": 0.991,
-     "source": "Commercial program B",
-     "computed": 0.9841,
-     "deviation": -0.00696
-    },
-    {
-     "method": "Bishop simplified",
-     "published": 0.992,
-     "source": "Commercial program B (moment equilibrium, λ = 0)",
-     "computed": 0.9845,
-     "deviation": -0.00756
+     "computed": 1.1424,
+     "deviation": -0.00401
     },
     {
      "method": "Spencer (M-P, constant f(x))",
-     "published": 1,
-     "source": "ACADS",
-     "computed": 0.9842,
-     "deviation": -0.0158
+     "published": 1.145,
+     "source": "Commercial program A",
+     "computed": 1.1404,
+     "deviation": -0.00402
     }
    ]
   },
   {
-   "id": "P-1A9F74",
-   "title": "ACADS tension crack, reference crack depth 3.6 m (results correspond to a dry crack)",
-   "reference": "Giam & Donald (1989), ACADS problem 1(b).",
+   "id": "V077",
+   "title": "Prandtl bearing capacity on level ground",
+   "reference": "Prandtl (1920)",
    "literature": true,
-   "commercial": true,
-   "surface": "search",
-   "units": "SI",
-   "checks": [
-    {
-     "method": "Bishop simplified",
-     "published": 1.664,
-     "source": "Commercial program B",
-     "computed": 1.6581,
-     "deviation": -0.00355
-    },
-    {
-     "method": "Morgenstern-Price (half-sine)",
-     "published": 1.66,
-     "source": "Commercial program B",
-     "computed": 1.6552,
-     "deviation": -0.00289
-    }
-   ]
-  },
-  {
-   "id": "P-D698F1",
-   "title": "Greco (1996) ex. 4 / Yamagami & Ueta layered slope, reference geometry",
-   "reference": "Greco (1996) example 4; Yamagami & Ueta (1988).",
-   "literature": true,
-   "commercial": true,
-   "surface": "search",
-   "units": "SI",
-   "checks": [
-    {
-     "method": "Morgenstern-Price (half-sine)",
-     "published": 1.389,
-     "source": "Commercial program B",
-     "computed": 1.393,
-     "deviation": 0.00288
-    }
-   ]
-  },
-  {
-   "id": "P-5165C8",
-   "title": "Greco (1996) ex. 5 / Chen & Shao weak-layer slope, reference geometry",
-   "reference": "Greco (1996) example 5; Chen & Shao (1988).",
-   "literature": true,
-   "commercial": true,
-   "surface": "search",
-   "units": "SI",
-   "checks": [
-    {
-     "method": "Spencer (M-P, constant f(x))",
-     "published": 1.054,
-     "source": "Commercial program B",
-     "computed": 1.0316,
-     "deviation": -0.02125
-    }
-   ]
-  },
-  {
-   "id": "P-0DEF41",
-   "title": "Chen & Shao (1988) frictionless slope, M-P with the custom f(x) (reference values)",
-   "reference": "Chen & Shao (1988).",
-   "literature": true,
-   "commercial": true,
+   "commercial": false,
    "surface": "fixed",
    "units": "SI",
    "checks": [
     {
-     "method": "Morgenstern-Price (half-sine)",
-     "published": 1.017,
-     "source": "Commercial program B",
-     "computed": 1.0084,
-     "deviation": -0.00846
+     "method": "Spencer (M-P, constant f(x))",
+     "published": 0.94,
+     "source": "Commercial program A",
+     "computed": 0.9403,
+     "deviation": 0.00032
     }
    ]
   },
   {
-   "id": "P-1E644B",
+   "id": "V078",
    "title": "Prandtl bearing capacity, fully specified Prandtl surface (reference values)",
    "reference": "Prandtl (1921).",
    "literature": true,
-   "commercial": true,
+   "commercial": false,
    "surface": "fixed",
    "units": "SI",
    "checks": [
@@ -3731,247 +3449,36 @@
    ]
   },
   {
-   "id": "P-FCB101",
-   "title": "Chowdhury & Xu (1995) example 1, Congress Street cut, circle tangent to the base of clay 2",
-   "reference": "Chowdhury & Xu (1995); Ireland (1954).",
+   "id": "V079",
+   "title": "Priest (1993) rigid block on a plane, water-filled crack",
+   "reference": "Priest (1993).",
    "literature": true,
-   "commercial": true,
+   "commercial": false,
    "surface": "fixed",
    "units": "SI",
    "checks": [
     {
-     "method": "Morgenstern-Price (half-sine)",
-     "published": 1.132,
-     "source": "Commercial program B",
-     "computed": 1.1282,
-     "deviation": -0.00336
+     "method": "Janbu simplified",
+     "published": 1.049,
+     "source": "Commercial program A, commercial program C, Priest",
+     "computed": 1.0483,
+     "deviation": -0.00067
     },
-    {
-     "method": "Bishop simplified",
-     "published": 1.128,
-     "source": "Chowdhury & Xu",
-     "computed": 1.1282,
-     "deviation": 0.00018
-    }
-   ]
-  },
-  {
-   "id": "P-CC4571",
-   "title": "Chowdhury & Xu (1995) example 1, Congress Street cut, circle tangent to the base of clay 3",
-   "reference": "Chowdhury & Xu (1995); Ireland (1954).",
-   "literature": true,
-   "commercial": true,
-   "surface": "fixed",
-   "units": "SI",
-   "checks": [
-    {
-     "method": "Morgenstern-Price (half-sine)",
-     "published": 1.116,
-     "source": "Commercial program B",
-     "computed": 1.1098,
-     "deviation": -0.00556
-    },
-    {
-     "method": "Bishop simplified",
-     "published": 1.109,
-     "source": "Chowdhury & Xu",
-     "computed": 1.1098,
-     "deviation": 0.00072
-    }
-   ]
-  },
-  {
-   "id": "P-A753B1",
-   "title": "Chowdhury & Xu (1995) example 2, Congress Street cut, circle tangent to the base of clay 2",
-   "reference": "Chowdhury & Xu (1995); Ireland (1954).",
-   "literature": true,
-   "commercial": true,
-   "surface": "fixed",
-   "units": "SI",
-   "checks": [
-    {
-     "method": "Morgenstern-Price (half-sine)",
-     "published": 1.11,
-     "source": "Commercial program B",
-     "computed": 1.1083,
-     "deviation": -0.00153
-    },
-    {
-     "method": "Bishop simplified",
-     "published": 1.1096,
-     "source": "Chowdhury & Xu",
-     "computed": 1.1083,
-     "deviation": -0.00117
-    }
-   ]
-  },
-  {
-   "id": "P-B4C056",
-   "title": "Chowdhury & Xu (1995) example 2, Congress Street cut, circle tangent to the base of clay 3",
-   "reference": "Chowdhury & Xu (1995); Ireland (1954).",
-   "literature": true,
-   "commercial": true,
-   "surface": "fixed",
-   "units": "SI",
-   "checks": [
-    {
-     "method": "Morgenstern-Price (half-sine)",
-     "published": 1.063,
-     "source": "Commercial program B",
-     "computed": 1.058,
-     "deviation": -0.0047
-    },
-    {
-     "method": "Bishop simplified",
-     "published": 1.0639,
-     "source": "Chowdhury & Xu",
-     "computed": 1.058,
-     "deviation": -0.00555
-    }
-   ]
-  },
-  {
-   "id": "P-CBAC3A",
-   "title": "Chowdhury & Xu (1995) example 3, Congress Street cut, circle tangent to the base of clay 2",
-   "reference": "Chowdhury & Xu (1995); Ireland (1954).",
-   "literature": true,
-   "commercial": true,
-   "surface": "fixed",
-   "units": "SI",
-   "checks": [
-    {
-     "method": "Morgenstern-Price (half-sine)",
-     "published": 2.248,
-     "source": "Commercial program B",
-     "computed": 2.2448,
-     "deviation": -0.00142
-    },
-    {
-     "method": "Bishop simplified",
-     "published": 2.2343,
-     "source": "Chowdhury & Xu",
-     "computed": 2.2448,
-     "deviation": 0.0047
-    }
-   ]
-  },
-  {
-   "id": "P-C6ECB9",
-   "title": "Chowdhury & Xu (1995) example 3, Congress Street cut, circle tangent to the base of clay 3",
-   "reference": "Chowdhury & Xu (1995); Ireland (1954).",
-   "literature": true,
-   "commercial": true,
-   "surface": "fixed",
-   "units": "SI",
-   "checks": [
-    {
-     "method": "Morgenstern-Price (half-sine)",
-     "published": 2.138,
-     "source": "Commercial program B",
-     "computed": 2.1281,
-     "deviation": -0.00463
-    },
-    {
-     "method": "Bishop simplified",
-     "published": 2.1396,
-     "source": "Chowdhury & Xu",
-     "computed": 2.1281,
-     "deviation": -0.00537
-    }
-   ]
-  },
-  {
-   "id": "P-66865A",
-   "title": "Chowdhury & Xu (1995) example 4, Congress Street cut, circle tangent to the base of clay 2",
-   "reference": "Chowdhury & Xu (1995); Ireland (1954).",
-   "literature": true,
-   "commercial": true,
-   "surface": "fixed",
-   "units": "SI",
-   "checks": [
-    {
-     "method": "Morgenstern-Price (half-sine)",
-     "published": 1.422,
-     "source": "Commercial program B",
-     "computed": 1.428,
-     "deviation": 0.00422
-    },
-    {
-     "method": "Bishop simplified",
-     "published": 1.4239,
-     "source": "Chowdhury & Xu",
-     "computed": 1.4278,
-     "deviation": 0.00274
-    }
-   ]
-  },
-  {
-   "id": "P-E2B459",
-   "title": "Chowdhury & Xu (1995) example 5, embankment on soft clay, circle tangent to y = 15",
-   "reference": "Chowdhury & Xu (1995).",
-   "literature": true,
-   "commercial": true,
-   "surface": "fixed",
-   "units": "SI",
-   "checks": [
-    {
-     "method": "Morgenstern-Price (half-sine)",
-     "published": 1.158,
-     "source": "Commercial program B",
-     "computed": 1.1571,
-     "deviation": -0.00078
-    },
-    {
-     "method": "Bishop simplified",
-     "published": 1.1625,
-     "source": "Chowdhury & Xu",
-     "computed": 1.1583,
-     "deviation": -0.00361
-    }
-   ]
-  },
-  {
-   "id": "P-577120",
-   "title": "Chowdhury & Xu (1995) example 5, embankment on soft clay, circle tangent to y = 5",
-   "reference": "Chowdhury & Xu (1995).",
-   "literature": true,
-   "commercial": true,
-   "surface": "fixed",
-   "units": "SI",
-   "checks": [
-    {
-     "method": "Morgenstern-Price (half-sine)",
-     "published": 1.178,
-     "source": "Commercial program B",
-     "computed": 1.1744,
-     "deviation": -0.00306
-    }
-   ]
-  },
-  {
-   "id": "P-341079",
-   "title": "Baker & Leshchinsky clay-core dam, critical surface search",
-   "reference": "Baker & Leshchinsky (2001).",
-   "literature": true,
-   "commercial": true,
-   "surface": "search",
-   "units": "SI",
-   "checks": [
     {
      "method": "Spencer (M-P, constant f(x))",
-     "published": 1.868,
-     "source": "Commercial program B (optimised non-circular)",
-     "computed": 1.8698,
-     "deviation": 0.00096
+     "published": 1.049,
+     "source": "Commercial program A, commercial program C, Priest",
+     "computed": 1.0507,
+     "deviation": 0.00162
     }
    ]
   },
   {
-   "id": "P-8C5F57",
+   "id": "V080",
    "title": "Priest (1993) rigid block, reference geometry (60° face)",
    "reference": "Priest (1993).",
    "literature": true,
-   "commercial": true,
+   "commercial": false,
    "surface": "fixed",
    "units": "SI",
    "checks": [
@@ -3992,45 +3499,27 @@
    ]
   },
   {
-   "id": "P-1FE2F0",
-   "title": "James Bay dyke, reference model (deterministic)",
-   "reference": "El-Ramly et al. (2002); Duncan & Wright fig. 7.16.",
+   "id": "V081a",
+   "title": "Sharma (1996) reinforcement example, unreinforced",
+   "reference": "Sharma (1996).",
    "literature": true,
-   "commercial": true,
-   "surface": "search",
-   "units": "SI",
-   "checks": [
-    {
-     "method": "Bishop simplified",
-     "published": 1.461,
-     "source": "Commercial program B",
-     "computed": 1.4325,
-     "deviation": -0.01951
-    }
-   ]
-  },
-  {
-   "id": "P-489AC1",
-   "title": "Congress Street cut, probabilistic (tangent to clay 2)",
-   "reference": "Chowdhury & Xu (1995), Reliability Engineering & System Safety 47.",
-   "literature": true,
-   "commercial": true,
+   "commercial": false,
    "surface": "fixed",
    "units": "SI",
    "checks": [
     {
      "method": "Bishop simplified",
-     "published": 1.128,
+     "published": 0.764,
      "source": "Commercial program A",
-     "computed": 1.1326,
-     "deviation": 0.00408
+     "computed": 0.7604,
+     "deviation": -0.00471
     }
    ]
   },
   {
-   "id": "P-41737B",
-   "title": "Congress Street cut, probabilistic (tangent to clay 3)",
-   "reference": "Chowdhury & Xu (1995), Reliability Engineering & System Safety 47.",
+   "id": "V081b",
+   "title": "Sharma (1996) slope with a reinforced zone (φ = 54.93°)",
+   "reference": "Sharma (1996). Verification manual of a commercial slope stability program.",
    "literature": true,
    "commercial": true,
    "surface": "fixed",
@@ -4038,17 +3527,17 @@
    "checks": [
     {
      "method": "Bishop simplified",
-     "published": 1.109,
+     "published": 1.504,
      "source": "Commercial program A",
-     "computed": 1.1123,
-     "deviation": 0.00298
+     "computed": 1.4996,
+     "deviation": -0.00293
     }
    ]
   },
   {
-   "id": "P-49884F",
-   "title": "Embankment on soft clay, probabilistic (tangent to the interface)",
-   "reference": "Chowdhury & Xu (1995), Reliability Engineering & System Safety 47.",
+   "id": "V082a",
+   "title": "Sharma (1996) slope, 11 ft dry tension crack instead of the zero-strength cap",
+   "reference": "Sharma (1996); Malkawi et al. (2001). Verification manual of a commercial slope stability program.",
    "literature": true,
    "commercial": true,
    "surface": "fixed",
@@ -4056,105 +3545,58 @@
    "checks": [
     {
      "method": "Bishop simplified",
-     "published": 1.16,
+     "published": 1.532,
      "source": "Commercial program A",
-     "computed": 1.1584,
-     "deviation": -0.00138
-    }
-   ]
-  },
-  {
-   "id": "P-057F8F",
-   "title": "Embankment on soft clay, probabilistic (tangent to the clay base)",
-   "reference": "Chowdhury & Xu (1995), Reliability Engineering & System Safety 47.",
-   "literature": true,
-   "commercial": true,
-   "surface": "fixed",
-   "units": "SI",
-   "checks": [
-    {
-     "method": "Bishop simplified",
-     "published": 1.185,
-     "source": "Commercial program A",
-     "computed": 1.1781,
-     "deviation": -0.00582
-    }
-   ]
-  },
-  {
-   "id": "P-A54026",
-   "title": "Cannon Dam end of construction (Hassan & Wolff), reliability on the minimum-β circle",
-   "reference": "Hassan & Wolff (1999), J. Geotech. Geoenviron. Eng. 125(4).",
-   "literature": true,
-   "commercial": true,
-   "surface": "fixed",
-   "units": "SI",
-   "checks": [
-    {
-     "method": "Bishop simplified",
-     "published": 2.973,
-     "source": "Program D",
-     "computed": 2.9741,
-     "deviation": 0.00037
-    }
-   ]
-  },
-  {
-   "id": "P-6FE759",
-   "title": "LASH terminal trench, Duncan's Taylor series example",
-   "reference": "Duncan (2000), J. Geotech. Geoenviron. Eng. 126(4).",
-   "literature": true,
-   "commercial": true,
-   "surface": "fixed",
-   "units": "SI",
-   "checks": [
-    {
-     "method": "Spencer (M-P, constant f(x))",
-     "published": 1.145,
-     "source": "Program D",
-     "computed": 1.1381,
-     "deviation": -0.00603
-    }
-   ]
-  },
-  {
-   "id": "P-CDC191",
-   "title": "Fredlund & Krahn slope on a weak seam, composite surface",
-   "reference": "Fredlund, D.G. & Krahn, J. (1977). Can. Geotech. J. 14(3).",
-   "literature": true,
-   "commercial": true,
-   "surface": "fixed",
-   "units": "imperial",
-   "checks": [
-    {
-     "method": "Bishop simplified",
-     "published": 1.382,
-     "source": "Commercial program A",
-     "computed": 1.3798,
-     "deviation": -0.00159
+     "computed": 1.5038,
+     "deviation": -0.01841
     },
     {
      "method": "Spencer (M-P, constant f(x))",
-     "published": 1.382,
+     "published": 1.532,
      "source": "Commercial program A",
-     "computed": 1.3793,
-     "deviation": -0.00195
+     "computed": 1.5032,
+     "deviation": -0.0188
     },
     {
      "method": "Morgenstern-Price (half-sine)",
-     "published": 1.37,
-     "source": "Fredlund & Krahn",
-     "computed": 1.3699,
-     "deviation": -0.00007
+     "published": 1.532,
+     "source": "Commercial program A",
+     "computed": 1.5032,
+     "deviation": -0.0188
     }
    ]
   },
   {
-   "id": "P-7C7CC5",
+   "id": "V082b",
+   "title": "Sharma (1996) slope, 11 ft tension crack with 6 ft of water",
+   "reference": "Sharma (1996); Malkawi et al. (2001). Verification manual of a commercial slope stability program.",
+   "literature": true,
+   "commercial": true,
+   "surface": "fixed",
+   "units": "SI",
+   "checks": [
+    {
+     "method": "Bishop simplified",
+     "published": 1.511,
+     "source": "Commercial program A",
+     "computed": 1.4831,
+     "deviation": -0.01846
+    },
+    {
+     "method": "Spencer (M-P, constant f(x))",
+     "published": 1.51,
+     "source": "Commercial program A",
+     "computed": 1.4824,
+     "deviation": -0.01828
+    }
+   ]
+  },
+  {
+   "id": "V082c",
    "title": "Sharma (1996) slope over undulating bedrock, zero-strength cap",
    "reference": "Sharma (1996); Malkawi et al. (2001).",
    "literature": true,
-   "commercial": true,
+   "commercial": false,
    "surface": "fixed",
    "units": "SI",
    "checks": [
@@ -4189,11 +3631,194 @@
    ]
   },
   {
-   "id": "P-8D4801",
+   "id": "V083",
+   "title": "Soil-nailed wall in clay (Amherst test wall)",
+   "reference": "Sheahan & Ho (2003).",
+   "literature": true,
+   "commercial": false,
+   "surface": "fixed",
+   "units": "SI",
+   "checks": [
+    {
+     "method": "Janbu corrected (f0)",
+     "published": 0.89,
+     "source": "Commercial program A",
+     "computed": 0.8989,
+     "deviation": 0.01
+    }
+   ]
+  },
+  {
+   "id": "V084a",
+   "title": "Soil-nailed wall in sand (Clouterre test wall)",
+   "reference": "Sheahan & Ho (2003).",
+   "literature": true,
+   "commercial": false,
+   "surface": "fixed",
+   "units": "SI",
+   "checks": [
+    {
+     "method": "Janbu corrected (f0)",
+     "published": 0.989,
+     "source": "Commercial program A",
+     "computed": 0.9893,
+     "deviation": 0.0003
+    }
+   ]
+  },
+  {
+   "id": "V084b",
+   "title": "Soil-nailed wall in sand (Clouterre test wall), 45° plane",
+   "reference": "Sheahan & Ho (2003).",
+   "literature": true,
+   "commercial": false,
+   "surface": "fixed",
+   "units": "SI",
+   "checks": [
+    {
+     "method": "Janbu corrected (f0)",
+     "published": 1.123,
+     "source": "Commercial program A",
+     "computed": 1.1248,
+     "deviation": 0.0016
+    }
+   ]
+  },
+  {
+   "id": "V084c",
+   "title": "Soil-nailed wall in sand (Clouterre test wall), 50° plane",
+   "reference": "Sheahan & Ho (2003).",
+   "literature": true,
+   "commercial": false,
+   "surface": "fixed",
+   "units": "SI",
+   "checks": [
+    {
+     "method": "Janbu corrected (f0)",
+     "published": 1.043,
+     "source": "Commercial program A",
+     "computed": 1.0442,
+     "deviation": 0.00115
+    }
+   ]
+  },
+  {
+   "id": "V084d",
+   "title": "Soil-nailed wall in sand (Clouterre test wall), 60° plane",
+   "reference": "Sheahan & Ho (2003).",
+   "literature": true,
+   "commercial": false,
+   "surface": "fixed",
+   "units": "SI",
+   "checks": [
+    {
+     "method": "Janbu corrected (f0)",
+     "published": 0.945,
+     "source": "Commercial program A",
+     "computed": 0.9451,
+     "deviation": 0.00011
+    }
+   ]
+  },
+  {
+   "id": "V084e",
+   "title": "Soil-nailed wall in sand (Clouterre test wall), 65° plane",
+   "reference": "Sheahan & Ho (2003).",
+   "literature": true,
+   "commercial": false,
+   "surface": "fixed",
+   "units": "SI",
+   "checks": [
+    {
+     "method": "Janbu corrected (f0)",
+     "published": 0.922,
+     "source": "Commercial program A",
+     "computed": 0.9205,
+     "deviation": -0.00163
+    }
+   ]
+  },
+  {
+   "id": "V084f",
+   "title": "Soil-nailed wall in sand (Clouterre test wall), 70° plane",
+   "reference": "Sheahan & Ho (2003).",
+   "literature": true,
+   "commercial": false,
+   "surface": "fixed",
+   "units": "SI",
+   "checks": [
+    {
+     "method": "Janbu corrected (f0)",
+     "published": 0.923,
+     "source": "Commercial program A",
+     "computed": 0.9207,
+     "deviation": -0.00249
+    }
+   ]
+  },
+  {
+   "id": "V085",
+   "title": "Bradwell excavated slope, stiff-fissured London clay",
+   "reference": "Skempton & LaRochelle (1965); Duncan & Wright, Soil Strength and Slope Stability.",
+   "literature": true,
+   "commercial": false,
+   "surface": "search",
+   "units": "imperial",
+   "checks": [
+    {
+     "method": "Bishop simplified",
+     "published": 1.762,
+     "source": "Commercial program A",
+     "computed": 1.7588,
+     "deviation": -0.00182
+    },
+    {
+     "method": "Spencer (M-P, constant f(x))",
+     "published": 1.758,
+     "source": "Commercial program A",
+     "computed": 1.7588,
+     "deviation": 0.00046
+    },
+    {
+     "method": "Janbu corrected (f0)",
+     "published": 1.736,
+     "source": "Commercial program A",
+     "computed": 1.7345,
+     "deviation": -0.00086
+    }
+   ]
+  },
+  {
+   "id": "V086a",
+   "title": "Tandjiria embankment, clay fill, geosynthetic T = 169 kN/m",
+   "reference": "Tandjiria (2002).",
+   "literature": true,
+   "commercial": false,
+   "surface": "fixed",
+   "units": "SI",
+   "checks": [
+    {
+     "method": "Spencer (M-P, constant f(x))",
+     "published": 1.35,
+     "source": "Commercial program A",
+     "computed": 1.3328,
+     "deviation": -0.01274
+    },
+    {
+     "method": "Spencer (M-P, constant f(x))",
+     "published": 1.332,
+     "source": "Program D",
+     "computed": 1.3328,
+     "deviation": 0.0006
+    }
+   ]
+  },
+  {
+   "id": "V086b",
    "title": "Tandjiria embankment, clay fill, water-filled crack",
    "reference": "Tandjiria (2002).",
    "literature": true,
-   "commercial": true,
+   "commercial": false,
    "surface": "search",
    "units": "SI",
    "checks": [
@@ -4214,11 +3839,11 @@
    ]
   },
   {
-   "id": "P-7B05BC",
+   "id": "V086c",
    "title": "Tandjiria embankment, sand fill, dry crack",
    "reference": "Tandjiria (2002).",
    "literature": true,
-   "commercial": true,
+   "commercial": false,
    "surface": "search",
    "units": "SI",
    "checks": [
@@ -4232,100 +3857,11 @@
    ]
   },
   {
-   "id": "P-C8A0C5",
-   "title": "Baker (1993) dam, end of construction, infinite-slope face",
-   "reference": "Baker (1993).",
-   "literature": true,
-   "commercial": true,
-   "surface": "search",
-   "units": "SI",
-   "checks": [
-    {
-     "method": "Bishop simplified",
-     "published": 2.5,
-     "source": "Theory (infinite slope)",
-     "computed": 2.5096,
-     "deviation": 0.00384
-    },
-    {
-     "method": "Spencer (M-P, constant f(x))",
-     "published": 2.5,
-     "source": "Theory (infinite slope)",
-     "computed": 2.5096,
-     "deviation": 0.00384
-    }
-   ]
-  },
-  {
-   "id": "P-7E62F1",
-   "title": "USACE dam, end of construction (EM 1110-2-1902 fig. 4-1)",
-   "reference": "USACE EM 1110-2-1902 (2003), fig. 4-1.",
-   "literature": true,
-   "commercial": true,
-   "surface": "fixed",
-   "units": "SI",
-   "checks": [
-    {
-     "method": "Spencer (M-P, constant f(x))",
-     "published": 2.445,
-     "source": "Commercial program A",
-     "computed": 2.4416,
-     "deviation": -0.00139
-    },
-    {
-     "method": "Bishop simplified",
-     "published": 2.447,
-     "source": "Commercial program A",
-     "computed": 2.4422,
-     "deviation": -0.00196
-    },
-    {
-     "method": "Janbu corrected (f0)",
-     "published": 2.43,
-     "source": "Commercial program A",
-     "computed": 2.4435,
-     "deviation": 0.00556
-    }
-   ]
-  },
-  {
-   "id": "P-17E26D",
-   "title": "USACE dam, upstream low pool (EM 1110-2-1902 fig. 4-2)",
-   "reference": "USACE EM 1110-2-1902 (2003), fig. 4-2.",
-   "literature": true,
-   "commercial": true,
-   "surface": "fixed",
-   "units": "SI",
-   "checks": [
-    {
-     "method": "Bishop simplified",
-     "published": 2.716,
-     "source": "Commercial program A",
-     "computed": 2.6981,
-     "deviation": -0.00659
-    },
-    {
-     "method": "Spencer (M-P, constant f(x))",
-     "published": 2.736,
-     "source": "Commercial program A",
-     "computed": 2.7208,
-     "deviation": -0.00556
-    },
-    {
-     "method": "Janbu corrected (f0)",
-     "published": 2.65,
-     "source": "Commercial program A",
-     "computed": 2.6479,
-     "deviation": -0.00079
-    }
-   ]
-  },
-  {
-   "id": "P-EBED39",
+   "id": "V087",
    "title": "USACE dam, chart-check properties (EM 1110-2-1902 fig. 4-3)",
    "reference": "USACE EM 1110-2-1902 (2003), fig. 4-3.",
    "literature": true,
-   "commercial": true,
+   "commercial": false,
    "surface": "fixed",
    "units": "SI",
    "checks": [
@@ -4353,110 +3889,425 @@
    ]
   },
   {
-   "id": "P-C8FED1",
-   "title": "James Bay dyke (Duncan & Wright fig. 7.16)",
-   "reference": "Duncan & Wright, Soil Strength and Slope Stability, fig. 7.16.",
+   "id": "V088",
+   "title": "USACE dam, end of construction (EM 1110-2-1902 fig. 4-1)",
+   "reference": "USACE EM 1110-2-1902 (2003), fig. 4-1.",
    "literature": true,
-   "commercial": true,
+   "commercial": false,
+   "surface": "fixed",
+   "units": "SI",
+   "checks": [
+    {
+     "method": "Spencer (M-P, constant f(x))",
+     "published": 2.445,
+     "source": "Commercial program A",
+     "computed": 2.4416,
+     "deviation": -0.00139
+    },
+    {
+     "method": "Bishop simplified",
+     "published": 2.447,
+     "source": "Commercial program A",
+     "computed": 2.4422,
+     "deviation": -0.00196
+    },
+    {
+     "method": "Janbu corrected (f0)",
+     "published": 2.43,
+     "source": "Commercial program A",
+     "computed": 2.4435,
+     "deviation": 0.00556
+    }
+   ]
+  },
+  {
+   "id": "V089",
+   "title": "USACE dam, upstream low pool (EM 1110-2-1902 fig. 4-2)",
+   "reference": "USACE EM 1110-2-1902 (2003), fig. 4-2.",
+   "literature": true,
+   "commercial": false,
+   "surface": "fixed",
+   "units": "SI",
+   "checks": [
+    {
+     "method": "Bishop simplified",
+     "published": 2.716,
+     "source": "Commercial program A",
+     "computed": 2.6981,
+     "deviation": -0.00659
+    },
+    {
+     "method": "Spencer (M-P, constant f(x))",
+     "published": 2.736,
+     "source": "Commercial program A",
+     "computed": 2.7208,
+     "deviation": -0.00556
+    },
+    {
+     "method": "Janbu corrected (f0)",
+     "published": 2.65,
+     "source": "Commercial program A",
+     "computed": 2.6479,
+     "deviation": -0.00079
+    }
+   ]
+  },
+  {
+   "id": "V090",
+   "title": "USACE EM 1110-2-1902, example F-5",
+   "reference": "US Army Corps of Engineers (2003). Slope Stability, EM 1110-2-1902, Appendix F.",
+   "literature": true,
+   "commercial": false,
+   "surface": "fixed",
+   "units": "imperial",
+   "checks": [
+    {
+     "method": "Bishop simplified",
+     "published": 1.332,
+     "source": "Commercial program A",
+     "computed": 1.3204,
+     "deviation": -0.00871
+    },
+    {
+     "method": "Spencer (M-P, constant f(x))",
+     "published": 1.328,
+     "source": "Commercial program A",
+     "computed": 1.3166,
+     "deviation": -0.00858
+    },
+    {
+     "method": "Janbu corrected (f0)",
+     "published": 1.345,
+     "source": "Commercial program A",
+     "computed": 1.3404,
+     "deviation": -0.00342
+    }
+   ]
+  },
+  {
+   "id": "V091",
+   "title": "USACE example E-10, ponded water",
+   "reference": "USACE EM 1110-2-1902, example E-10.",
+   "literature": true,
+   "commercial": false,
+   "surface": "fixed",
+   "units": "SI",
+   "checks": [
+    {
+     "method": "Bishop simplified",
+     "published": 1.241,
+     "source": "Commercial program A",
+     "computed": 1.2348,
+     "deviation": -0.005
+    },
+    {
+     "method": "Spencer (M-P, constant f(x))",
+     "published": 1.241,
+     "source": "Commercial program A",
+     "computed": 1.2348,
+     "deviation": -0.005
+    },
+    {
+     "method": "Morgenstern-Price (half-sine)",
+     "published": 1.244,
+     "source": "Commercial program A (GLE)",
+     "computed": 1.2348,
+     "deviation": -0.0074
+    },
+    {
+     "method": "Janbu corrected (f0)",
+     "published": 1.385,
+     "source": "Commercial program A",
+     "computed": 1.3799,
+     "deviation": -0.00368
+    }
+   ]
+  },
+  {
+   "id": "V092",
+   "title": "USACE example F-6, steady-seepage dam",
+   "reference": "USACE EM 1110-2-1902, example F-6.",
+   "literature": true,
+   "commercial": false,
+   "surface": "fixed",
+   "units": "SI",
+   "checks": [
+    {
+     "method": "Bishop simplified",
+     "published": 2.011,
+     "source": "Commercial program A",
+     "computed": 1.9975,
+     "deviation": -0.00671
+    },
+    {
+     "method": "Spencer (M-P, constant f(x))",
+     "published": 2.026,
+     "source": "Commercial program A",
+     "computed": 2.012,
+     "deviation": -0.00691
+    },
+    {
+     "method": "Janbu corrected (f0)",
+     "published": 1.83,
+     "source": "Commercial program A",
+     "computed": 1.8328,
+     "deviation": 0.00153
+    }
+   ]
+  },
+  {
+   "id": "V093",
+   "title": "Yamagami & Ueta (1988)",
+   "reference": "Yamagami & Ueta (1988).",
+   "literature": true,
+   "commercial": false,
    "surface": "search",
    "units": "SI",
    "checks": [
     {
      "method": "Bishop simplified",
-     "published": 1.45,
-     "source": "Duncan & Wright (reference)",
-     "computed": 1.4242,
-     "deviation": -0.01779
+     "published": 1.344,
+     "source": "Commercial program A",
+     "computed": 1.3424,
+     "deviation": -0.00119
     },
     {
      "method": "Spencer (M-P, constant f(x))",
-     "published": 1.45,
-     "source": "Duncan & Wright (reference)",
-     "computed": 1.4211,
-     "deviation": -0.01993
-    },
-    {
-     "method": "Spencer (M-P, constant f(x))",
-     "published": 1.167,
+     "published": 1.325,
      "source": "Commercial program A (non-circular)",
-     "computed": 1.1563,
-     "deviation": -0.00917
+     "computed": 1.3244,
+     "deviation": -0.00045
+    }
+   ]
+  },
+  {
+   "id": "V094",
+   "title": "Yamagami & Ueta (1988) four-layer slope, non-circular",
+   "reference": "Greco (1996) example 4; Yamagami & Ueta (1988).",
+   "literature": true,
+   "commercial": false,
+   "surface": "search",
+   "units": "SI",
+   "checks": [
+    {
+     "method": "Spencer (M-P, constant f(x))",
+     "published": 1.398,
+     "source": "Commercial program A (Monte Carlo)",
+     "computed": 1.4005,
+     "deviation": 0.00179
+    },
+    {
+     "method": "Morgenstern-Price (half-sine)",
+     "published": 1.389,
+     "source": "Commercial program B",
+     "computed": 1.3912,
+     "deviation": 0.00158
+    }
+   ]
+  },
+  {
+   "id": "V095a",
+   "title": "Yamagami micro-pile slope, no pile",
+   "reference": "Yamagami micro-pile slope example.",
+   "literature": true,
+   "commercial": false,
+   "surface": "fixed",
+   "units": "SI",
+   "checks": [
+    {
+     "method": "Bishop simplified",
+     "published": 1.102,
+     "source": "Commercial program A",
+     "computed": 1.1004,
+     "deviation": -0.00145
+    }
+   ]
+  },
+  {
+   "id": "V095b",
+   "title": "Homogeneous slope, no micro piles",
+   "reference": "Yamagami et al. (2000).",
+   "literature": true,
+   "commercial": false,
+   "surface": "fixed",
+   "units": "SI",
+   "checks": [
+    {
+     "method": "Bishop simplified",
+     "published": 1.102,
+     "source": "Commercial program A",
+     "computed": 1.1004,
+     "deviation": -0.00145
+    }
+   ]
+  },
+  {
+   "id": "V095c",
+   "title": "Homogeneous slope with a micro-pile row",
+   "reference": "Yamagami et al. (2000).",
+   "literature": true,
+   "commercial": false,
+   "surface": "fixed",
+   "units": "SI",
+   "checks": [
+    {
+     "method": "Bishop simplified",
+     "published": 1.193,
+     "source": "Commercial program A",
+     "computed": 1.1954,
+     "deviation": 0.00201
+    }
+   ]
+  },
+  {
+   "id": "V096a",
+   "title": "Zhu & Lee heterogeneous slope, dry, deep circle",
+   "reference": "Zhu & Lee (2002).",
+   "literature": true,
+   "commercial": false,
+   "surface": "search",
+   "units": "SI",
+   "checks": [
+    {
+     "method": "Bishop simplified",
+     "published": 1.804,
+     "source": "Commercial program A",
+     "computed": 1.7931,
+     "deviation": -0.00604
     },
     {
      "method": "Spencer (M-P, constant f(x))",
-     "published": 1.17,
-     "source": "Duncan & Wright (reference), non-circular",
-     "computed": 1.1563,
-     "deviation": -0.01171
+     "published": 1.804,
+     "source": "Commercial program A",
+     "computed": 1.7942,
+     "deviation": -0.00543
     }
    ]
   },
   {
-   "id": "P-AD3670",
-   "title": "Guo & Griffiths two-layer undrained slope, cu2/cu1 = 1.4",
-   "reference": "Guo & Griffiths (2020), Can. Geotech. J. 57.",
+   "id": "V096b",
+   "title": "Zhu & Lee heterogeneous slope with a water table, deep circle",
+   "reference": "Zhu & Lee (2002).",
    "literature": true,
+   "commercial": false,
+   "surface": "search",
+   "units": "SI",
+   "checks": [
+    {
+     "method": "Bishop simplified",
+     "published": 1.176,
+     "source": "Commercial program A",
+     "computed": 1.1727,
+     "deviation": -0.00281
+    },
+    {
+     "method": "Spencer (M-P, constant f(x))",
+     "published": 1.189,
+     "source": "Commercial program A",
+     "computed": 1.1869,
+     "deviation": -0.00177
+    }
+   ]
+  },
+  {
+   "id": "V096c",
+   "title": "Zhu & Lee slope, surface 3 (the reference circle), dry, 1 m crack",
+   "reference": "Zhu & Lee (2002). Verification manual of a commercial slope stability program.",
+   "literature": true,
+   "commercial": true,
+   "surface": "fixed",
+   "units": "SI",
+   "checks": [
+    {
+     "method": "Spencer (M-P, constant f(x))",
+     "published": 1.804,
+     "source": "Commercial program A",
+     "computed": 1.7995,
+     "deviation": -0.00249
+    },
+    {
+     "method": "Bishop simplified",
+     "published": 1.804,
+     "source": "Commercial program A",
+     "computed": 1.7987,
+     "deviation": -0.00294
+    }
+   ]
+  },
+  {
+   "id": "V097a",
+   "title": "Eurocode 7 cutting with surcharge",
+   "reference": "Verification manual of a commercial slope stability program.",
+   "literature": false,
+   "commercial": true,
+   "surface": "fixed",
+   "units": "SI",
+   "checks": [
+    {
+     "method": "Bishop simplified (vertical head)",
+     "published": 1.173,
+     "source": "Commercial program B",
+     "computed": 1.1715,
+     "deviation": -0.00128
+    }
+   ]
+  },
+  {
+   "id": "V097b",
+   "title": "Eurocode 7 cutting, partial factors applied by cSlope",
+   "reference": "Verification manual of a commercial slope stability program.",
+   "literature": false,
+   "commercial": true,
+   "surface": "fixed",
+   "units": "SI",
+   "checks": [
+    {
+     "method": "Bishop simplified, design values",
+     "published": 1.173,
+     "source": "Commercial program B",
+     "computed": 1.1717,
+     "deviation": -0.00111
+    },
+    {
+     "method": "Spencer, design values",
+     "published": 1.174,
+     "source": "Commercial program B",
+     "computed": 1.1736,
+     "deviation": -0.00034
+    }
+   ]
+  },
+  {
+   "id": "V098",
+   "title": "Example slope without seismic load",
+   "reference": "Verification manual of a commercial slope stability program.",
+   "literature": false,
    "commercial": true,
    "surface": "search",
    "units": "SI",
    "checks": [
     {
      "method": "Spencer (M-P, constant f(x))",
-     "published": 1.215,
-     "source": "Commercial program A (optimised)",
-     "computed": 1.2165,
-     "deviation": 0.00123
-    }
-   ]
-  },
-  {
-   "id": "P-57988E",
-   "title": "Guo & Griffiths two-layer undrained slope, cu2/cu1 = 1.5",
-   "reference": "Guo & Griffiths (2020), Can. Geotech. J. 57.",
-   "literature": true,
-   "commercial": true,
-   "surface": "search",
-   "units": "SI",
-   "checks": [
+     "published": 1.36,
+     "source": "Commercial program A",
+     "computed": 1.3706,
+     "deviation": 0.00779
+    },
     {
      "method": "Spencer (M-P, constant f(x))",
-     "published": 1.29,
-     "source": "Commercial program A (optimised)",
-     "computed": 1.2914,
-     "deviation": 0.00109
-    }
-   ]
-  },
-  {
-   "id": "P-178E47",
-   "title": "Guo & Griffiths two-layer undrained slope, cu2/cu1 = 1.6",
-   "reference": "Guo & Griffiths (2020), Can. Geotech. J. 57.",
-   "literature": true,
-   "commercial": true,
-   "surface": "search",
-   "units": "SI",
-   "checks": [
-    {
-     "method": "Spencer (M-P, constant f(x))",
-     "published": 1.315,
-     "source": "Commercial program A (optimised)",
-     "computed": 1.317,
-     "deviation": 0.00152
+     "published": 1.372,
+     "source": "Program D",
+     "computed": 1.3706,
+     "deviation": -0.00102
     }
    ]
   }
  ],
  "reliability": [
   {
-   "id": "P-489AC1",
-   "title": "Congress Street cut, probabilistic (tangent to clay 2)",
+   "id": "V021a",
+   "title": "Chowdhury & Xu (1995) example 1, Congress Street cut, circle tangent to the base of clay 2",
    "checks": [
-    {
-     "quantity": "fos",
-     "published": 1.128,
-     "source": "Commercial program A",
-     "computed": 1.1326
-    },
     {
      "quantity": "pf-mc",
      "published": 0.2461,
@@ -4472,15 +4323,9 @@
    ]
   },
   {
-   "id": "P-41737B",
-   "title": "Congress Street cut, probabilistic (tangent to clay 3)",
+   "id": "V021b",
+   "title": "Chowdhury & Xu (1995) example 1, Congress Street cut, circle tangent to the base of clay 3",
    "checks": [
-    {
-     "quantity": "fos",
-     "published": 1.109,
-     "source": "Commercial program A",
-     "computed": 1.1123
-    },
     {
      "quantity": "pf-mc",
      "published": 0.2789,
@@ -4496,15 +4341,9 @@
    ]
   },
   {
-   "id": "P-49884F",
-   "title": "Embankment on soft clay, probabilistic (tangent to the interface)",
+   "id": "V022a",
+   "title": "Chowdhury & Xu (1995) example 5, embankment on soft clay, circle tangent to y = 15",
    "checks": [
-    {
-     "quantity": "fos",
-     "published": 1.16,
-     "source": "Commercial program A",
-     "computed": 1.1584
-    },
     {
      "quantity": "pf-mc",
      "published": 0.2117,
@@ -4538,15 +4377,9 @@
    ]
   },
   {
-   "id": "P-057F8F",
-   "title": "Embankment on soft clay, probabilistic (tangent to the clay base)",
+   "id": "V022b",
+   "title": "Chowdhury & Xu (1995) example 5, embankment on soft clay, circle tangent to y = 5",
    "checks": [
-    {
-     "quantity": "fos",
-     "published": 1.185,
-     "source": "Commercial program A",
-     "computed": 1.1781
-    },
     {
      "quantity": "pf-mc",
      "published": 0.1992,
@@ -4580,15 +4413,9 @@
    ]
   },
   {
-   "id": "P-A54026",
+   "id": "V060b",
    "title": "Cannon Dam end of construction (Hassan & Wolff), reliability on the minimum-β circle",
    "checks": [
-    {
-     "quantity": "fos",
-     "published": 2.973,
-     "source": "Program D",
-     "computed": 2.9741
-    },
     {
      "quantity": "beta-taylor",
      "published": 3.353,
@@ -4598,15 +4425,9 @@
    ]
   },
   {
-   "id": "P-6FE759",
+   "id": "V023",
    "title": "LASH terminal trench, Duncan's Taylor series example",
    "checks": [
-    {
-     "quantity": "fos",
-     "published": 1.145,
-     "source": "Program D",
-     "computed": 1.1381
-    },
     {
      "quantity": "beta-taylor",
      "published": 0.9,
@@ -4622,7 +4443,7 @@
    ]
   },
   {
-   "id": "P-5C5E51",
+   "id": "V062a",
    "title": "Clarence Cannon Dam, surface 7A",
    "checks": [
     {
@@ -4634,7 +4455,7 @@
    ]
   },
   {
-   "id": "P-19BF93",
+   "id": "V062b",
    "title": "Clarence Cannon Dam, surface 7B",
    "checks": [
     {
@@ -4646,7 +4467,7 @@
    ]
   },
   {
-   "id": "P-F44AA0",
+   "id": "V062c",
    "title": "Clarence Cannon Dam, surface 7C",
    "checks": [
     {
@@ -4658,7 +4479,7 @@
    ]
   },
   {
-   "id": "P-323DBA",
+   "id": "V062d",
    "title": "Clarence Cannon Dam, surface 7D",
    "checks": [
     {
@@ -4670,7 +4491,7 @@
    ]
   },
   {
-   "id": "P-ECE1E8",
+   "id": "V062e",
    "title": "Clarence Cannon Dam, surface 7E",
    "checks": [
     {
@@ -4682,7 +4503,7 @@
    ]
   },
   {
-   "id": "P-C7BC46",
+   "id": "V062f",
    "title": "Clarence Cannon Dam, surface 8B",
    "checks": [
     {
@@ -4694,7 +4515,7 @@
    ]
   },
   {
-   "id": "P-4BDBC4",
+   "id": "V062g",
    "title": "Clarence Cannon Dam, surface 8F",
    "checks": [
     {
@@ -4706,7 +4527,7 @@
    ]
   },
   {
-   "id": "P-259D32",
+   "id": "V062h",
    "title": "Clarence Cannon Dam, surface 8G",
    "checks": [
     {
@@ -4718,7 +4539,7 @@
    ]
   },
   {
-   "id": "P-354B22",
+   "id": "V062i",
    "title": "Clarence Cannon Dam, surface 8H",
    "checks": [
     {
@@ -4730,7 +4551,7 @@
    ]
   },
   {
-   "id": "P-FCB101",
+   "id": "V021a",
    "title": "Chowdhury & Xu (1995) example 1, Congress Street cut, circle tangent to the base of clay 2",
    "checks": [
     {
@@ -4742,7 +4563,7 @@
    ]
   },
   {
-   "id": "P-E2B459",
+   "id": "V022a",
    "title": "Chowdhury & Xu (1995) example 5, embankment on soft clay, circle tangent to y = 15",
    "checks": [
     {
@@ -4754,7 +4575,7 @@
    ]
   },
   {
-   "id": "P-577120",
+   "id": "V022b",
    "title": "Chowdhury & Xu (1995) example 5, embankment on soft clay, circle tangent to y = 5",
    "checks": [
     {

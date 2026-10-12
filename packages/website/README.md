@@ -82,7 +82,7 @@ engine or the problems:
 
 ```bash
 bun scripts/generate-data.ts            # runs the engine (about 2 minutes)
-bun scripts/generate-data.ts --cached   # reuse the last run, e.g. after editing anonymise.ts
+bun scripts/generate-data.ts --cached   # reuse the last run, e.g. after changing the output format
 ```
 
 `bun run test` fails when the file no longer matches the problems in the

@@ -1,6 +1,6 @@
 /**
  * Piles (Ito & Matsui, capacity limits) and lime-cement columns. The
- * Slide2 problems are in verification/pile-cases.ts (VP49, VP54, VP106).
+ * published problems are in verification/problems.ts (V013, V015, V095).
  */
 import { describe, it, expect } from "vitest";
 import { layered, mc, su, runVerification } from "../verification/cases";

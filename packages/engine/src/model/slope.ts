@@ -85,7 +85,7 @@ interface WaterLineInput {
  * A water line needs two finite points (it is then continued
  * horizontally beyond its ends; two points at one x make a vertical
  * step). With fewer, slices in a material assigned to it would silently
- * get no pore pressure; Slide2 likewise calculates no FOS where a water
+ * get no pore pressure; commercial programs likewise give no FOS where a water
  * table does not span the slip surface.
  */
 function checkWaterLine(coordinates: [number, number][]): void {
@@ -419,7 +419,7 @@ export class Slope {
   /**
    * Interslice function points in canonical coordinates. The user enters
    * them with x = 0 at the LEFT end of the slip surface in model space,
-   * whatever the sliding direction (as in Slide2), so for a mirrored
+   * whatever the sliding direction (as is usual), so for a mirrored
    * (right-to-left) model they are mirrored here: x → 1 − x.
    */
   get intersliceDataPoints(): [number, number][] {
@@ -736,7 +736,7 @@ export class Slope {
       wy = [...wy].reverse();
     }
     // Beyond its end points a piezometric line continues horizontally to
-    // the model edges (as in Slide and SLOPE/W); previously slices past
+    // the model edges (as is common practice); previously slices past
     // the ends of a short line got no pore pressure at all.
     if (this._externalBoundaryPx.length >= 3) {
       const order = wx.map((_, i) => i).sort((a, b) => wx[a] - wx[b]);

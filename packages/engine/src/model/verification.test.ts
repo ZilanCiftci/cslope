@@ -46,11 +46,42 @@ describe("Verification data", () => {
     expect(VERIFICATION_CASES.filter((c) => c.checks.length === 0).map((c) => c.id)).toEqual([]);
   });
 
-  it("probabilistic problems have unique ids and add to a deterministic problem", () => {
-    const ids = RELIABILITY_CASES.map((c) => c.id);
+  it("problems have unique ids of cSlope's own form (V, number, variant letter)", () => {
+    const ids = VERIFICATION_CASES.map((c) => c.id);
     expect(ids.filter((id, i) => ids.indexOf(id) !== i)).toEqual([]);
+    expect(ids.filter((id) => !/^V\d{3}[a-z]?$/.test(id))).toEqual([]);
+  });
+
+  it("probabilistic analyses each belong to a deterministic problem", () => {
     const deterministic = new Set(VERIFICATION_CASES.map((c) => c.id));
-    expect(ids.filter((id) => !deterministic.has(id))).toEqual([]);
+    expect(RELIABILITY_CASES.map((c) => c.id).filter((id) => !deterministic.has(id))).toEqual([]);
+  });
+
+  it("no two problems are the same analysis of the same input", () => {
+    const key = (c: (typeof VERIFICATION_CASES)[number], k: (typeof c.checks)[number]) =>
+      JSON.stringify([c.definition, k.method, k.options ?? {}]);
+    const seen = new Map<string, string>();
+    const duplicates: string[] = [];
+    for (const c of VERIFICATION_CASES)
+      for (const k of c.checks) {
+        const other = seen.get(key(c, k));
+        if (other && other !== c.id) duplicates.push(`${other} and ${c.id}`);
+        seen.set(key(c, k), c.id);
+      }
+    expect(duplicates).toEqual([]);
+  });
+
+  it("no two problems have the same input", () => {
+    const seen = new Map<string, string>();
+    const duplicates: string[] = [];
+    for (const c of VERIFICATION_CASES) {
+      const k = JSON.stringify(c.definition);
+      // Variants of one problem (same input, other analysis options) share a number.
+      const other = seen.get(k);
+      if (other && other.slice(0, 4) !== c.id.slice(0, 4)) duplicates.push(`${other} and ${c.id}`);
+      seen.set(k, c.id);
+    }
+    expect(duplicates).toEqual([]);
   });
 
   it("tolerances (tolerance.ts) stay within 1–6 % and published values are positive", () => {
@@ -65,8 +96,8 @@ describe("Verification data", () => {
 });
 
 describe("Slice-count convergence", () => {
-  it("VP23 geometry: a nearly vertical entry slice in a stiff crust does not inflate FOS", () => {
-    // Low (1989) / Slide VP23 layering with the lower clay simplified to a
+  it("V068 geometry: a nearly vertical entry slice in a stiff crust does not inflate FOS", () => {
+    // Low (1989) / V068 layering with the lower clay simplified to a
     // constant Su. With the arc length as base length, 50 slices gave 1.469
     // against 1.40 at 500 slices (independent 2000-slice check: 1.389).
     const def = layered(
@@ -87,11 +118,11 @@ describe("Slice-count convergence", () => {
 });
 
 describe("Search convergence", () => {
-  it("VP24: the local search reaches the minimum between grid points", () => {
+  it("V067: the local search reaches the minimum between grid points", () => {
     // The one-pass refinement stopped at the grid resolution: 1.455 with
     // 4000 grid surfaces but 1.447 with 2000. A dense brute-force search
-    // gives 1.438 (Slide2 1.439).
-    const c = VERIFICATION_CASES.find((v) => v.id === "VP24")!;
+    // gives 1.438 (a commercial program 1.439).
+    const c = VERIFICATION_CASES.find((v) => v.id === "V067")!;
     const coarse = runVerification(c.definition, "Bishop", { iterations: 2000, refinedIterations: 1000 }).fos!;
     const fine = runVerification(c.definition, "Bishop", { iterations: 4000, refinedIterations: 2000 }).fos!;
     expect(Math.abs(coarse / fine - 1)).toBeLessThanOrEqual(0.002);

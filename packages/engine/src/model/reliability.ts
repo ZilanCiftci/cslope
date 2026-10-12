@@ -9,8 +9,8 @@
  *   σF = √Σ(ΔFᵢ/2)² (with correlation terms), COV = σF/F, lognormal
  *   reliability index β = ln(F/√(1+COV²))/√ln(1+COV²) and Pf = Φ(−β). The
  *   critical surface can be searched again for every evaluation.
- * - Monte Carlo on the critical surface at the mean values (Slide2's
- *   "Global Minimum" method; its "Overall Slope" method repeats the search
+ * - Monte Carlo on the critical surface at the mean values (commonly
+ *   called the "Global Minimum" method; its "Overall Slope" method repeats the search
  *   for every sample, which is not done here): sampled parameters (normal
  *   or lognormal, truncated, optionally correlated), Pf = share of samples
  *   with F < 1.

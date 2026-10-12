@@ -1,15 +1,15 @@
 /**
  * Runs every published verification problem through the engine and writes
  * src/content/generated/verification.json for the site: the verification
- * table, the key figures on the home page and the examples there. Sources
- * are anonymised (see anonymise.ts) and the result is checked for
- * forbidden names before it is written.
+ * table, the key figures on the home page and the examples there. The
+ * problems carry cSlope's own ids and anonymous sources already; the result
+ * is still checked for forbidden names before it is written.
  *
  *   bun scripts/generate-data.ts            (all problems, in parallel)
  *   bun scripts/generate-data.ts --cached   (reuse the last engine results)
  *
  * The raw engine results are cached in node_modules/.cache, so a change to
- * the anonymisation or the output format does not need a new engine run.
+ * the output format does not need a new engine run.
  *
  * The file is checked in, so the site builds without running the engine.
  * Regenerate it after changing the engine or the verification problems;
@@ -26,7 +26,6 @@ import {
   runReliabilityCase,
   runVerification,
 } from "@cslope/engine/verification";
-import { anonymiseReference, anonymiseSource, anonymiseTitle, publicId } from "./anonymise";
 import { findForbiddenNames } from "./forbidden-names";
 import type { VerificationData, VerificationProblem, ReliabilityProblem } from "../src/content/verification-types";
 
@@ -43,11 +42,12 @@ function runShard(shard: number, shards: number): Record<string, (number | null)
   return out;
 }
 
+/** Keyed by index: a problem can have more than one probabilistic analysis. */
 function runReliability(shard: number, shards: number): Record<string, number[]> {
   const out: Record<string, number[]> = {};
   RELIABILITY_CASES.forEach((c, i) => {
     if (i % shards !== shard) return;
-    out[c.id] = runReliabilityCase(c).map((r) => r.computed);
+    out[i] = runReliabilityCase(c).map((r) => r.computed);
   });
   return out;
 }
@@ -82,45 +82,44 @@ async function runAllShards(): Promise<{
 
 const round = (x: number, digits = 4) => Number(x.toFixed(digits));
 
+/** A reference that is only a program's verification manual. */
+const COMMERCIAL_ONLY = /^Verification manual of a commercial slope stability program\.$/;
+const COMMERCIAL = /commercial slope stability program/i;
+
 export function buildData(
   fos: Record<string, (number | null)[]>,
   reliabilityResults: Record<string, number[]>,
 ): VerificationData {
-  const ids = VERIFICATION_CASES.map((c) => c.id);
-  const problems: VerificationProblem[] = VERIFICATION_CASES.map((c) => {
-    const ref = anonymiseReference(c.reference);
-    return {
-      id: publicId(c.id),
-      title: anonymiseTitle(c.title, ids),
-      reference: ref.text,
-      literature: ref.literature,
-      commercial: ref.commercial,
-      surface: c.surface,
-      units: c.units,
-      // The reference and the computed value only: the site shows no
-      // tolerances or pass marks (the engine's tests keep those).
-      checks: c.checks.map((k, j) => {
-        const raw = fos[c.id]?.[j] ?? null;
-        const computed = raw == null ? null : round(raw);
-        const deviation = computed == null ? null : (computed - k.published) / k.published;
-        return {
-          method: k.label,
-          published: k.published,
-          source: anonymiseSource(k.publishedBy),
-          computed,
-          deviation: deviation == null ? null : round(deviation, 5),
-        };
-      }),
-    };
-  });
-  const reliability: ReliabilityProblem[] = RELIABILITY_CASES.map((c) => ({
-    id: publicId(c.id),
-    // The engine's id follows a vendor's numbering, so it is never shown.
-    title: anonymiseTitle(VERIFICATION_CASES.find((v) => v.id === c.id)?.title ?? `Probabilistic problem ${publicId(c.id)}`, ids),
+  const problems: VerificationProblem[] = VERIFICATION_CASES.map((c) => ({
+    id: c.id,
+    title: c.title,
+    reference: c.reference,
+    literature: !COMMERCIAL_ONLY.test(c.reference),
+    commercial: COMMERCIAL.test(c.reference),
+    surface: c.surface,
+    units: c.units,
+    // The reference and the computed value only: the site shows no
+    // tolerances or pass marks (the engine's tests keep those).
+    checks: c.checks.map((k, j) => {
+      const raw = fos[c.id]?.[j] ?? null;
+      const computed = raw == null ? null : round(raw);
+      const deviation = computed == null ? null : (computed - k.published) / k.published;
+      return {
+        method: k.label,
+        published: k.published,
+        source: k.publishedBy,
+        computed,
+        deviation: deviation == null ? null : round(deviation, 5),
+      };
+    }),
+  }));
+  const reliability: ReliabilityProblem[] = RELIABILITY_CASES.map((c, i) => ({
+    id: c.id,
+    title: VERIFICATION_CASES.find((v) => v.id === c.id)?.title ?? `Probabilistic problem ${c.id}`,
     checks: c.checks.map(([quantity, published, publishedBy], j) => {
-      const value = reliabilityResults[c.id]?.[j];
+      const value = reliabilityResults[i]?.[j];
       const raw = value == null || !Number.isFinite(value) ? null : value;
-      return { quantity, published, source: anonymiseSource(publishedBy), computed: raw == null ? null : round(raw) };
+      return { quantity, published, source: publishedBy, computed: raw == null ? null : round(raw) };
     }),
   }));
   const checks = problems.flatMap((p) => p.checks);
@@ -157,7 +156,7 @@ if (import.meta.main) {
       // A cache from an older set of problems would publish them as failed.
       const stale =
         VERIFICATION_CASES.filter((c) => raw.fos[c.id]?.length !== c.checks.length).length +
-        RELIABILITY_CASES.filter((c) => raw.reliability[c.id]?.length !== c.checks.length).length;
+        RELIABILITY_CASES.filter((c, i) => raw.reliability[i]?.length !== c.checks.length).length;
       if (stale) throw new Error(`The cache misses ${stale} problem(s) or checks; run without --cached.`);
     } else {
       raw = await runAllShards();
@@ -169,7 +168,7 @@ if (import.meta.main) {
     const hits = findForbiddenNames("verification.json", json);
     if (hits.length) {
       for (const h of hits) console.error(`line ${h.line}: "${h.match}" in …${h.context}…`);
-      throw new Error("Anonymisation left a program name in the data; extend anonymise.ts.");
+      throw new Error("A program name is left in the verification problems.");
     }
     mkdirSync(join(OUT, ".."), { recursive: true });
     writeFileSync(OUT, json);

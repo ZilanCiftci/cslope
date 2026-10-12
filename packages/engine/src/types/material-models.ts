@@ -56,7 +56,7 @@ export interface UndrainedModel extends MaterialModelBase {
   /** Reference ELEVATION y (m, despite the name) where Su = `undrainedShearStrength`. */
   suRefDepth?: number;
   /**
-   * Strength cutoff (kPa), as Slide2's "Cutoff" / SLOPE/W's "C-max".
+   * Strength cutoff (kPa), as commercial programs offer it.
    * With `suRateOfChange` ≥ 0 (Su constant or increasing with depth) it is a
    * MAXIMUM: Su = min(Su, suMax). With a negative rate (Su decreasing with
    * depth) it is a MINIMUM: Su = max(Su, suMax). Not set: no cutoff.
@@ -147,13 +147,12 @@ export interface StrengthFromDepthModel extends MaterialModelBase {
    * What the depth is measured from:
    * - "ground": the ground surface above the slice base;
    * - "layer-top": the top of the region of this material directly above
-   *   the slice base (Slide2 "Depth from Top of Layer", SLOPE/W "relative
-   *   to top of soil layer"); for the uppermost layer this is the ground.
+   *   the slice base (as commercial programs offer it); for the uppermost layer this is the ground.
    * Not set: "ground" (models saved before the option existed).
    */
   depthReference?: DepthReference;
   /**
-   * Strength cutoff (kPa), as Slide2's "Cutoff" / SLOPE/W's "C-max".
+   * Strength cutoff (kPa), as commercial programs offer it.
    * With `rate` ≥ 0 (Su constant or increasing with depth) it is a MAXIMUM:
    * Su = min(Su, suMax). With a negative rate (Su decreasing with depth) it
    * is a MINIMUM: Su = max(Su, suMax). Not set: no cutoff.
@@ -166,7 +165,7 @@ export interface StrengthFromDepthModel extends MaterialModelBase {
  *
  * φ = 0; Su = suRef + (yRef − y) × rate,
  * where y is the elevation of the slice base: a positive rate increases
- * Su with depth below the datum, as in Slide and SLOPE/W.
+ * Su with depth below the datum, as in commercial programs.
  */
 export interface StrengthFromDatumModel extends MaterialModelBase {
   kind: "s-f-datum";
@@ -177,7 +176,7 @@ export interface StrengthFromDatumModel extends MaterialModelBase {
   /** Increase of Su per metre below yRef (kPa/m). */
   rate: number;
   /**
-   * Strength cutoff (kPa), as Slide2's "Cutoff" / SLOPE/W's "C-max".
+   * Strength cutoff (kPa), as commercial programs offer it.
    * With `rate` ≥ 0 (Su constant or increasing below the datum) it is a
    * MAXIMUM: Su = min(Su, suMax). With a negative rate (Su decreasing
    * downwards) it is a MINIMUM: Su = max(Su, suMax). Not set: no cutoff.

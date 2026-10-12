@@ -3,7 +3,7 @@
  * tables of MSE walls — the resistance each reinforcement layer develops
  * beyond the design failure surface (Pr = F*·α·σ′v·Le·C·Rc), and the
  * capacity available there (with rupture and the facing connection).
- * Inputs transcribed via the xslope corpus (Apache-2.0); converted to SI.
+ * Inputs transcribed from FHWA's examples; converted to SI.
  */
 import type { SlopeDefinition } from "../types/slope-definition";
 

@@ -167,7 +167,7 @@ export interface PileRow {
   /** Tilt of the force above horizontal (°), for direction "angle". */
   angle: number;
   /**
-   * Direction of the force: along the slip surface ("tangent", Slide2's
+   * Direction of the force: along the slip surface ("tangent", the usual
    * default and that of a new pile row), perpendicular to the pile, or
    * tilted by `angle`. Absent (older files): by `angle`.
    */

@@ -2,13 +2,11 @@ import { describe, it, expect } from "vitest";
 import { buildSlope } from "./build-slope";
 import { toCanonicalSlopeDefinition } from "./canonical";
 import { VERIFICATION_CASES, runVerification } from "../verification/cases";
-import { CORPUS_CASES } from "../verification/corpus-cases";
 import { analyseReliability } from "./reliability";
 import { fitPolylineToGround } from "./surface";
 import { Slope } from "./slope";
 import { getSlices } from "./slices";
 import { buildEnvelope, envelopeAt, pileForceDirection } from "./reinforcement";
-import { PILE_CASES } from "../verification/pile-cases";
 import type { Pile } from "../types/reinforcement";
 import type { AnalysisOptions } from "../types/analysis";
 import { Material } from "../types/index";
@@ -22,10 +20,10 @@ const caseById = (id: string) => {
 
 describe("interslice data points of a right-to-left model", () => {
   it("are given with x = 0 at the left end of the surface in model space", () => {
-    // VP25 (Prandtl mechanism) slides right to left. An asymmetric f(x)
+    // V018 (Prandtl mechanism) slides right to left. An asymmetric f(x)
     // must give the same FOS as on the explicitly mirrored left-to-right
     // model with the mirrored function.
-    const vp25 = caseById("VP25").definition;
+    const vp25 = caseById("V018").definition;
     const points: [number, number][] = [[0, 0], [0.3, 1], [1, 0.2]];
     const mirrored = points.map(([x, f]) => [1 - x, f] as [number, number]);
     const opts = { intersliceFunction: "data-point-specified" as const };
@@ -39,7 +37,7 @@ describe("interslice data points of a right-to-left model", () => {
   });
 
   it("are mirrored only on a mirrored model", () => {
-    const slope = buildSlope(toCanonicalSlopeDefinition(caseById("VP25").definition));
+    const slope = buildSlope(toCanonicalSlopeDefinition(caseById("V018").definition));
     slope.updateAnalysisOptions({ intersliceDataPoints: [[0, 0], [0.25, 1]] });
     expect(slope.intersliceDataPoints).toEqual([[0.75, 1], [1, 0]]);
     slope.setMirrored(false);
@@ -48,7 +46,7 @@ describe("interslice data points of a right-to-left model", () => {
 });
 
 describe("Morgenstern-Price λ iteration", () => {
-  // Non-circular surface the optimisation reached on VP15 (canonical
+  // Non-circular surface the optimisation reached on V002 (canonical
   // coordinates). Fm(λ) and Ff(λ) run parallel; beyond λ ≈ −0.95 the force
   // iteration no longer converges and its value dropped onto Fm, which was
   // taken for the Spencer solution (0.326 against Bishop 0.447).
@@ -56,7 +54,7 @@ describe("Morgenstern-Price λ iteration", () => {
 
   it("does not take an unconverged force solution for the intersection", () => {
     const def = {
-      ...toCanonicalSlopeDefinition(caseById("VP15").definition),
+      ...toCanonicalSlopeDefinition(caseById("V002").definition),
       orientation: "ltr" as const,
       customSurfaces: [{ points: surface }],
       customPlanesOnly: true,
@@ -67,11 +65,11 @@ describe("Morgenstern-Price λ iteration", () => {
     expect(spencer).toBeGreaterThan(0.4);
   });
 
-  it("keeps the VP15 non-circular Spencer search within the published range", () => {
-    // Slide2 0.414, literature 0.39–0.44; the spurious intersections gave
+  it("keeps the V002 non-circular Spencer search within the published range", () => {
+    // A commercial program 0.414, literature 0.39–0.44; the spurious intersections gave
     // 0.27–0.39 with exit segments of −60° and steeper (0.387 and −63°
     // with these settings).
-    const { fos, slope } = runVerification(caseById("VP15").definition, "Morgenstern-Price", {
+    const { fos, slope } = runVerification(caseById("V002").definition, "Morgenstern-Price", {
       intersliceFunction: "constant",
       nonCircularOptimization: true,
     });
@@ -85,9 +83,9 @@ describe("Morgenstern-Price λ iteration", () => {
 });
 
 describe("Monte Carlo on a specified non-circular surface", () => {
-  const vp34 = CORPUS_CASES.find((c) => c.id === "VP34")!;
+  const vp34 = caseById("V061");
   const def = toCanonicalSlopeDefinition(vp34.definition);
-  const options = { ...vp34.options, method: "Morgenstern-Price" as const, intersliceFunction: "constant" as const };
+  const options = { ...vp34.checks[0].options, method: "Morgenstern-Price" as const, intersliceFunction: "constant" as const };
 
   it("fits an already fitted polyline to the same surface", () => {
     // The printed surface ends just above the ground; once fitted its exit
@@ -101,7 +99,7 @@ describe("Monte Carlo on a specified non-circular surface", () => {
     expect(refit!.length).toBe(fitted.length);
   });
 
-  it("samples VP34's printed surface", () => {
+  it("samples V061's printed surface", () => {
     const r = analyseReliability(def, options, [{ material: 0, field: "cohesion", sd: 1e-6 }], {
       method: "monte-carlo",
       samples: 20,
@@ -194,26 +192,26 @@ describe("reinforcement coverage", () => {
 });
 
 describe("pile force direction", () => {
-  // The VP54b input as it was when the Slide2 cross-check was made (the
+  // The V095c input as it was when the commercial cross-check was made (the
   // no-pile circle, an Ito & Matsui pile capped at 10.7 kN); the
-  // verification case itself now uses Slide2's with-pile circle.
-  const vp54b = PILE_CASES.find((c) => c.id === "VP54b")!;
+  // verification case itself now uses the program's with-pile circle.
+  const pileCase = caseById("V095c");
   const definition: SlopeDefinition = {
-    ...vp54b.definition,
+    ...pileCase.definition,
     piles: [{ x1: 9, y1: 4, x2: 9, y2: -2, spacing: 1, diameter: 0.3, shearCapacity: 10.7, momentCapacity: 1000000 }],
     customSearchPlanes: [{ cx: 2.674, cy: 7.573, radius: 8.031 }],
     customPlanesOnly: true,
   };
   const run = (extra: Partial<Pile>) =>
-    runVerification({ ...definition, piles: [{ ...definition.piles![0], ...extra }] }, "Bishop", vp54b.options as Partial<AnalysisOptions>).fos!;
+    runVerification({ ...definition, piles: [{ ...definition.piles![0], ...extra }] }, "Bishop", pileCase.checks[0].options as Partial<AnalysisOptions>).fos!;
 
   it("keeps the given angle when no direction is set", () => {
     expect(run({})).toBeCloseTo(run({ direction: "angle" }), 9);
     expect(run({ angle: 10 })).not.toBeCloseTo(run({}), 3);
   });
 
-  it("acts along the slip surface with direction tangent (Slide2 default)", () => {
-    // Slide2 on cSlope's VP54b input, pile passive and tangential: 1.1989.
+  it("acts along the slip surface with direction tangent (the usual default)", () => {
+    // A commercial program on cSlope's V095c input, pile passive and tangential: 1.1989.
     expect(run({ application: "passive", direction: "tangent" })).toBeCloseTo(1.1989, 3);
   });
 

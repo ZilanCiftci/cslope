@@ -1,7 +1,6 @@
 /**
  * S = f(depth) with the depth measured from the top of the material layer
- * (Slide2 "Depth from Top of Layer", SLOPE/W "relative to top of soil
- * layer") and the strength cutoff (Slide2 "Cutoff", SLOPE/W "C-max").
+ * (as commercial programs offer it) and the strength cutoff.
  */
 
 import { describe, it, expect } from "vitest";

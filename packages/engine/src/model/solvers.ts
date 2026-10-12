@@ -711,7 +711,7 @@ export function analyseMorgensternPrice(
   // Fm(λ) and Ff(λ) are evaluated more precisely than the λ search
   // needs: near the root the gap Fm − Ff is of the order of `tol`, and
   // evaluation noise of that size sent the secant step the wrong way
-  // (e.g. Slide VP37, where Fm hardly depends on λ).
+  // (e.g. V081a, where Fm hardly depends on λ).
   const evalTol = tol * 0.1;
 
   // Step 1: Initial Bishop solution (lambda = 0)
@@ -879,7 +879,7 @@ export function analyseMorgensternPrice(
         return [FSm, lffArray, pushingF, resistingF, true];
     } else {
       // An unconverged moment or force solution is no point of the
-      // Fm(λ), Ff(λ) curves: far out in λ (e.g. λ ≈ −1 on VP15's
+      // Fm(λ), Ff(λ) curves: far out in λ (e.g. λ ≈ −1 on V002's
       // non-circular surface) the force iteration drifts and its value
       // dropped onto Fm, a spurious "intersection" with a far too low FOS.
       unconvergedLambdas.push(lambdaNew);

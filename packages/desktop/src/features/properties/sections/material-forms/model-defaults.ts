@@ -5,7 +5,7 @@
  * model-specific fields to sensible defaults.
  *
  * A new S = f(depth) material measures depth from the top of its layer, as
- * Slide2 and SLOPE/W do; a saved model without `depthReference` keeps the
+ * is common practice; a saved model without `depthReference` keeps the
  * ground surface (the engine default).
  */
 

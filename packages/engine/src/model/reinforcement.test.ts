@@ -1,7 +1,7 @@
 /**
  * Reinforcement: capacity envelope, force direction and application,
  * against closed-form solutions and FHWA's published pullout tables. The
- * Slide2 / SLOPE/W problems are in verification/reinforcement-cases.ts.
+ * published problems are in verification/problems.ts.
  */
 import { describe, it, expect } from "vitest";
 import { layered, mc, runVerification } from "../verification/cases";
@@ -12,7 +12,7 @@ import { buildEnvelope, effectiveVerticalStress, envelopeAt, pulloutBeyond } fro
 import type { Reinforcement } from "../types/reinforcement";
 import type { SlopeDefinition } from "../types/slope-definition";
 
-// Homogeneous 10 m slope on Baker's 49.6° plane from the toe (VP43): a
+// Homogeneous 10 m slope on Baker's 49.6° plane from the toe (V006): a
 // rigid block, so every method gives the closed-form block solution.
 const W = 600; // kN/m: 30 m² × 20 kN/m³
 const PSI = Math.atan2(10, 8.5);

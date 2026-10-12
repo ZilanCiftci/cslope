@@ -7,7 +7,7 @@
  * force is applied to the sliding mass at the crossing point. Its size is
  * the capacity envelope there (tensile capacity, pullout from either end,
  * end anchorage), its direction and whether it is divided by the factor of
- * safety follow the Slide2 conventions:
+ * safety follow common conventions:
  *
  * - direction "axial": along the element (rigid supports: nails,
  *   tiebacks, anchors); "tangent": along the slip surface (flexible
@@ -31,8 +31,8 @@ export type ReinforcementApplication = "active" | "passive";
  *   pore pressure) and Rc the coverage ratio (1 for a continuous sheet,
  *   strip width / spacing for strips; FHWA's F*·α·σ′v·C·Rc). Rc only sets
  *   the width of soil contact: the tensile and end capacities are per
- *   element (per strip), so they are not multiplied by it. Slide2's
- *   geosynthetic "coverage" A scales all strengths given per metre of
+ *   element (per strip), so they are not multiplied by it. A
+ *   geosynthetic "coverage" A (as commercial programs define it) scales all strengths given per metre of
  *   material width (T·A, (C + 2·L·τ)·A); there enter the tensile and end
  *   capacities × A with spacing 1 (per metre of slope), and coverage A;
  * - "development": the tensile capacity develops linearly over the given
@@ -52,8 +52,8 @@ export interface Reinforcement {
   y2: number;
   /**
    * Tensile capacity per element (kN), or per metre with spacing 1. Per
-   * element means per strip or bar; a sheet with partial coverage (Slide2
-   * coverage A) is entered as T·A per metre with spacing 1.
+   * element means per strip or bar; a sheet with partial coverage (coverage
+   * A) is entered as T·A per metre with spacing 1.
    */
   tensileCapacity: number;
   /** Out-of-plane spacing (m); all capacities are divided by it. Default 1. */
@@ -78,7 +78,7 @@ export interface Reinforcement {
  * Direction of a pile's force on the sliding mass, always against the
  * movement:
  * - "angle": tilted `angle` degrees above horizontal (0: horizontal);
- * - "tangent": along the slip surface where it crosses the pile (Slide2's
+ * - "tangent": along the slip surface where it crosses the pile (the usual
  *   default, "tangential");
  * - "perpendicular": perpendicular to the pile axis (horizontal for a
  *   vertical pile).
@@ -115,7 +115,7 @@ export interface Pile {
   angle?: number;
   /**
    * Direction of the force. Default "angle" (with `angle`), so that saved
-   * models keep their result; Slide2 defaults to "tangent".
+   * models keep their result; the usual default elsewhere is "tangent".
    */
   direction?: PileForceDirection;
   /** Default "active". */

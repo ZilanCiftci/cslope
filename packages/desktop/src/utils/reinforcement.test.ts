@@ -136,7 +136,7 @@ describe("pile rows", () => {
   });
 });
 
-describe("support defaults as in Slide2", () => {
+describe("support defaults by type", () => {
   it("geosynthetics and piles are passive, anchors and tiebacks active", () => {
     expect(reinforcementPreset("geosynthetic").application).toBe("passive");
     expect(reinforcementPreset("nail").application).toBe("passive");

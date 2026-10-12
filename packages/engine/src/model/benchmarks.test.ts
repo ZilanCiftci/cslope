@@ -271,7 +271,7 @@ describe("Arai & Tagyo with water table", () => {
     analyseSlope(s);
 
     const fos = s.getMinFOS();
-    // Vertical head: 1.114. Slide2 1.118 (VP16), Arai & Tagyo 1.138;
+    // Vertical head: 1.114. A commercial program 1.118 (V003), Arai & Tagyo 1.138;
     // with the cos²θ phreatic correction cSlope gives 1.158.
     expect(fos).toBeGreaterThan(1.1);
     expect(fos).toBeLessThan(1.13);

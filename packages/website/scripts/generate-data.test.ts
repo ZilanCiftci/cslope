@@ -12,7 +12,7 @@ function computedFromFile() {
   const fos: Record<string, (number | null)[]> = {};
   VERIFICATION_CASES.forEach((c, i) => (fos[c.id] = file.problems[i].checks.map((k) => k.computed)));
   const reliability: Record<string, number[]> = {};
-  RELIABILITY_CASES.forEach((c, i) => (reliability[c.id] = file.reliability[i].checks.map((k) => k.computed ?? NaN)));
+  RELIABILITY_CASES.forEach((_, i) => (reliability[i] = file.reliability[i].checks.map((k) => k.computed ?? NaN)));
   return { fos, reliability };
 }
 

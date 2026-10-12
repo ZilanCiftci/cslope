@@ -10,7 +10,7 @@ export const REINFORCEMENT_TYPE_LABELS: Record<ReinforcementType, string> = {
 };
 
 /**
- * Defaults per type, following the Slide2 conventions: rigid supports act
+ * Defaults per type, following common conventions: rigid supports act
  * along their axis, geosynthetics along the slip surface; tiebacks and
  * anchors are pre-tensioned (active), nails and geosynthetics mobilise
  * with the soil (passive, which gives the lower FOS).
@@ -171,7 +171,7 @@ export const PILE_DIRECTION_LABELS: Record<PileForceDirection, string> = {
 
 /**
  * Defaults: a pile row with the Ito & Matsui force, passive and tangent to
- * the slip surface (as in Slide2), or a sheet pile wall with a given shear
+ * the slip surface (the usual default), or a sheet pile wall with a given shear
  * force per metre (active, at angle θ).
  */
 export function pilePreset(type: PileType): Omit<PileRow, "id" | "x1" | "y1" | "x2" | "y2" | "label"> {

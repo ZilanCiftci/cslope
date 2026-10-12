@@ -1,5 +1,5 @@
 /**
- * Probabilistic analysis. The published problems (Slide2 VP28, VP29) are
+ * Probabilistic analysis. The published problems (V021, V022, V023) are
  * in verification/reliability-cases.ts.
  */
 import { describe, it, expect } from "vitest";
@@ -70,7 +70,7 @@ describe("Taylor series", { timeout: 30_000 }, () => {
   });
 
   it("right-to-left models: the canonical definition, surface mapped back", () => {
-    const c = RELIABILITY_CASES.find((x) => x.id === "VP28b")!;
+    const c = RELIABILITY_CASES.find((x) => x.id === "V022a")!;
     const def = toCanonicalSlopeDefinition(c.definition);
     const r = analyseReliability(def, { ...options, slices: 60 }, c.variables, { method: "taylor", search: false });
     expect(r.fos).toBeCloseTo(runVerification(c.definition, "Bishop", { slices: 60 }).fos!, 9);

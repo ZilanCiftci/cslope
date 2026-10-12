@@ -246,11 +246,11 @@ menyer:
 - Inledning: vad som verifieras och mot vad (publicerade artiklar och
   böcker, verifieringsmanualer för kommersiella program, utan namn).
 - Tabell: id, titel, metod, vårt värde, publicerat värde, källa, avvikelse.
-  Filtrerbar på källtyp och metod. Genereras från engine-data vid bygge,
-  med källfältet mappat genom en anonymiseringstabell (§7.4).
+  Filtrerbar på källtyp och metod. Genereras från engine-data, där
+  källfältet redan är anonymt (§7.4).
 - Länk till verifieringsrapporten i PDF. Rapportgeneratorn
   (`bun run verification-report` i desktop-paketet) får ett läge
-  `--public` som använder samma anonymisering. Den publicerade PDF:en
+  `--public` utan toleranser och andra programs namn. Den publicerade PDF:en
   byggs bara i det läget.
 - Avsnitt om testning: antal tester, täckning, CI.
 
@@ -295,11 +295,11 @@ Två typer av sidor:
 | 1 | Your first analysis in 10 minutes | T-ACADS Simple | 10 |
 | 2 | Layered slope with a water table | Arai & Tagyo | 8 |
 | 3 | Importing geometry from DXF | egen | 5 |
-| 4 | Non-circular slip surfaces | VP15-liknande | 6 |
+| 4 | Non-circular slip surfaces | V002-liknande | 6 |
 | 5 | Reinforcing a slope with nails and geosynthetics | egen | 8 |
 | 6 | Dam cross-section with zoned materials | Talbingo Dam | 8 |
 | 7 | Partial factors to Eurocode 7 | T-ACADS | 5 |
-| 8 | Probabilistic analysis | VP28 | 6 |
+| 8 | Probabilistic analysis | V021 | 6 |
 | 9 | Reporting: annotations, templates and PDF export | Arai & Tagyo | 8 |
 | 10 | Checking a result against a benchmark | valfri | 4 |
 
@@ -363,11 +363,11 @@ bygger tabellen från filen. Nyckeltalen på startsidan läses från samma
 fil. Filen checkas in så att `bun run build` inte behöver köra engine.
 Ett CI-steg kontrollerar att filen är aktuell.
 
-Källfältet (`publishedBy` i engine) går genom en anonymiseringstabell i
-skriptet: litteraturkällor behålls, leverantörsnamn ersätts med
-"commercial program A/B/…" så att läsaren ändå ser att två olika program
-gav olika värden. Tabellen är den enda platsen där de riktiga namnen finns
-i website-paketet, och den ligger utanför `src/` så att den inte byggs in.
+Källfältet (`publishedBy` i engine) är anonymt redan i datan:
+litteraturkällor anges med författare och år, program som
+"Commercial program A/B/…" så att läsaren ändå ser att två olika program
+gav olika värden. Problemen har cSlopes egna id:n (`V###` + variantbokstav,
+grupperade per slänt).
 
 ### 7.5 Deploy
 
@@ -431,7 +431,7 @@ Varje etapp ska gå att pusha och publicera för sig.
       `public/media/generated/`).
 - [x] Startsida enligt §5.1.
 - [x] Ta bort framer-motion.
-- [x] `generate-data.ts` med anonymisering och `verification.json`
+- [x] `generate-data.ts` och `verification.json`
       (flyttad hit från etapp 2: startsidans siffror behöver den).
 
 ### Etapp 2: Features, Verification, Download, About (2 dagar)
