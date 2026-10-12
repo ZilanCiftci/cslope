@@ -23,6 +23,7 @@ import { REINFORCEMENT_COLOR, PILE_COLOR } from "./reinforcement-draw";
 import { newPile, newReinforcement } from "../../utils/reinforcement";
 import { fosColor } from "../../utils/fos-color";
 import type { Annotation, ResultViewSettings } from "../../store/types";
+import { computeRegions } from "../../utils/regions";
 
 const W = 800;
 const H = 600;
@@ -195,6 +196,55 @@ describe("drawCanvas — edit mode", () => {
   it("does not fill the soil when soil colours are hidden", () => {
     const rec = draw({ resultViewSettings: rvs({ showSoilColor: false }) });
     expect(rec.fills(DEFAULT_MATERIAL.color)).toHaveLength(0);
+  });
+
+  it("fills a ring around a closed lens even-odd and the lens in its own material", () => {
+    const sand = { ...DEFAULT_MATERIAL, id: "sand", color: "#eedd88" };
+    const lens = {
+      id: "lens",
+      coordinates: [
+        [5, 2],
+        [10, 2],
+        [10, 4],
+        [5, 4],
+        [5, 2],
+      ] as [number, number][],
+    };
+    const rec = draw({
+      materials: [{ ...DEFAULT_MATERIAL }, sand],
+      materialBoundaries: [lens],
+      regionMaterials: [{ point: [7, 3], materialId: "sand" }],
+    });
+    const outer = rec.fills(DEFAULT_MATERIAL.color);
+    expect(outer).toHaveLength(1);
+    expect(outer[0].fillRule).toBe("evenodd");
+    // The hole's vertices are part of the outer path.
+    expect(pathPoints(outer[0]).some((p) => close(p, toC(5, 2)))).toBe(true);
+    const inner = rec.fills("#eedd88");
+    expect(inner).toHaveLength(1);
+    expect(inner[0].fillRule).toBe("nonzero");
+  });
+
+  it("outlines the selected region only while assigning materials", () => {
+    const lens = {
+      id: "lens",
+      coordinates: [
+        [5, 2],
+        [10, 2],
+        [10, 4],
+        [5, 4],
+        [5, 2],
+      ] as [number, number][],
+    };
+    const regions = computeRegions(COORDS, [lens], [], DEFAULT_MATERIAL.id);
+    const ring = regions.find((r) => r.holes?.length)!;
+    const selected = draw({ materialBoundaries: [lens], selectedRegionKey: ring.regionKey, editingAssignment: true });
+    const outline = selected.strokes().filter((p) => p.state.lineWidth === 6);
+    expect(outline).toHaveLength(1);
+    // Clipped to the region (even-odd so the hole stays clear).
+    expect(selected.paths.some((p) => p.kind === "clip" && p.fillRule === "evenodd")).toBe(true);
+    const idle = draw({ materialBoundaries: [lens], selectedRegionKey: ring.regionKey, editingAssignment: false });
+    expect(idle.strokes().filter((p) => p.state.lineWidth === 6)).toHaveLength(0);
   });
 
   it("hatches and labels high-strength materials", () => {
