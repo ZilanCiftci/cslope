@@ -4,9 +4,12 @@ on:
   push:
   pull_request:
 
+# The three jobs run in parallel. The engine is platform-independent
+# TypeScript and runs on the faster Linux runner; the desktop app (Electron
+# main process, file paths) is tested on Windows, where it ships.
 jobs:
   check:
-    runs-on: windows-latest
+    runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v6
@@ -18,6 +21,29 @@ jobs:
         run: bun run typecheck
       - name: Lint
         run: bun run lint
-      # Fails when coverage drops below the thresholds in vitest.config.ts.
+
+  # Each test job fails when coverage drops below the thresholds in its
+  # package's vitest.config.ts.
+  engine:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+      - name: Install
+        run: bun install
       - name: Test with coverage
-        run: bun run test:coverage
+        run: bun run --filter @cslope/engine test:coverage
+
+  desktop:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+      - name: Install
+        run: bun install
+      - name: Test with coverage
+        run: bun run --filter @cslope/desktop test:coverage

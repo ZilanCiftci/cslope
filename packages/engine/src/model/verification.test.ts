@@ -1,8 +1,10 @@
 /**
  * Published verification problems (see verification/cases.ts for the data
- * and sources). The same cases produce the verification report.
+ * and sources). The same cases produce the verification report. The
+ * published checks themselves run in verification-problems-*.test.ts.
  */
 import { describe, it, expect } from "vitest";
+import { SHARDS } from "./verification-shard";
 import { getSlices } from "./slices";
 import { defaultAxisPoint, isAdmissiblePolyline } from "./surface";
 import { validateMaterialModel } from "../types/validation";
@@ -14,7 +16,6 @@ import { RELIABILITY_CASES } from "../verification/reliability-cases";
 import type { Slice } from "../types/geometry";
 import {
   VERIFICATION_CASES,
-  runReliabilityCase,
   circle,
   layered,
   mc,
@@ -22,11 +23,23 @@ import {
   su,
 } from "../verification/cases";
 
+declare global {
+  interface ImportMeta {
+    glob(pattern: string): Record<string, unknown>;
+  }
+}
+
 describe("Verification data", () => {
   it("every problem has a unique id", () => {
     const ids = VERIFICATION_CASES.map((c) => c.id);
     const duplicates = ids.filter((id, i) => ids.indexOf(id) !== i);
     expect(duplicates).toEqual([]);
+  });
+
+  it("every check runs: one verification-problems-<k>.test.ts per shard", () => {
+    // Vite resolves the pattern at build time; the loaders are never called.
+    const files = Object.keys(import.meta.glob("./verification-problems-*.test.ts")).map((f) => f.slice(2));
+    expect(files.sort()).toEqual(Array.from({ length: SHARDS }, (_, k) => `verification-problems-${k + 1}.test.ts`).sort());
   });
 
   it("every problem has at least one check", () => {
@@ -49,37 +62,6 @@ describe("Verification data", () => {
       }
     }
   });
-});
-
-describe("Verification problems", () => {
-  for (const c of VERIFICATION_CASES) {
-    for (const check of c.checks) {
-      // Searches with non-circular optimisation take a few seconds. A check
-      // marked pending waits for an engine change and fails until it lands.
-      const pending = check.pending ? ` [pending: ${check.pending}]` : "";
-      it(`${c.id} ${c.title}: ${check.label} ${check.published} (${check.publishedBy})${pending}`, { timeout: 60000 }, () => {
-        const { fos } = runVerification(c.definition, check.method, check.options);
-        expect(fos).not.toBeNull();
-        expect(Math.abs(fos! - check.published) / check.published).toBeLessThanOrEqual(check.tolerance);
-      });
-    }
-  }
-});
-
-describe("Probabilistic verification problems", () => {
-  for (const c of RELIABILITY_CASES) {
-    // One run per case (Taylor series and Monte Carlo), one test per check.
-    let results: ReturnType<typeof runReliabilityCase> | null = null;
-    const run = () => (results ??= runReliabilityCase(c));
-    c.checks.forEach(([quantity, published, publishedBy, tolerance], i) => {
-      if (quantity === "fos") return; // in VERIFICATION_CASES
-      it(`${c.id} ${c.title}: ${quantity} ${published} (${publishedBy})`, { timeout: 120000 }, () => {
-        const r = run()[i];
-        expect(r.quantity).toBe(quantity);
-        expect(Math.abs(r.computed - published)).toBeLessThanOrEqual(tolerance + 1e-9);
-      });
-    });
-  }
 });
 
 describe("Slice-count convergence", () => {
