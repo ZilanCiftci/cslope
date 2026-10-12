@@ -298,3 +298,34 @@ describe("lenses", () => {
     }
   }, 30_000);
 });
+
+describe("locality", () => {
+  it("extending the model beyond the sliding mass (deeper, longer toe, longer crest) changes nothing", () => {
+    const r = rng(612);
+    for (let i = 0; i < 8; i++) {
+      const g = randomCase(r, { water: i % 2 === 0 });
+      const def = onCircle({ ...g.def, udls: [{ magnitude: 10, x1: 0.5, x2: g.shape.crest * 0.5 }] }, g.circle);
+      const [x0, xEnd] = [0, Math.max(...def.coordinates.map((c) => c[0]))];
+      const yBot = Math.min(...def.coordinates.map((c) => c[1]));
+      const extra = uniform(r, 2, 20);
+      const grown: SlopeDefinition = {
+        ...def,
+        coordinates: def.coordinates.map(([x, y]) => [
+          x === x0 ? x0 - extra : x === xEnd ? xEnd + extra : x,
+          y === yBot ? yBot - extra : y,
+        ] as [number, number]),
+        // Layer boundaries and water lines continue horizontally to the new edges.
+        materialBoundaries: def.materialBoundaries?.map((b) => ({
+          ...b,
+          coordinates: [[x0 - extra, b.coordinates[0][1]], ...b.coordinates, [xEnd + extra, b.coordinates[b.coordinates.length - 1][1]]],
+        })),
+      };
+      for (const method of METHODS) {
+        const a = fosOf(def, method);
+        const b = fosOf(grown, method);
+        expect(b === null, `seed 612 case ${i} ${method}`).toBe(a === null);
+        if (a !== null && b !== null) expect(relDiff(a, b), `seed 612 case ${i} ${method}: ${a} vs ${b}`).toBeLessThan(1e-9);
+      }
+    }
+  }, 30_000);
+});
