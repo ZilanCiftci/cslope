@@ -224,8 +224,8 @@ function Verification() {
 const GALLERY = [
   { media: MEDIA.materials, caption: "Material regions of a non-homogeneous slope" },
   { media: MEDIA.allSurfaces, caption: "Every analysed surface, coloured by factor of safety" },
-  { media: MEDIA.showcase, caption: "Layered slope with a water table, a crest load and soil nails" },
-  { media: MEDIA.showcaseResult, caption: "Critical surface with the nail forces" },
+  { media: MEDIA.showcase, caption: "Layered slope with a water table and a crest load" },
+  { media: MEDIA.showcaseResult, caption: "Critical surface under the whole crest load" },
 ];
 
 function Gallery() {

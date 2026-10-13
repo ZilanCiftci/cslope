@@ -48,19 +48,15 @@ const MATERIAL_TABLE_LEFT: [string, ...unknown[]] = [
 
 /**
  * The layered benchmark slope made into a fuller problem for the home page:
- * a water table, a load on the crest and three soil nails.
+ * a water table and a load on the crest, with the circles entering behind
+ * the load so that the slip mass carries all of it.
  */
 const SHOWCASE: [string, ...unknown[]][] = [
-  ["setProjectInfo", { title: "Layered slope", subtitle: "Water table, 20 kPa crest load and three soil nails" }],
+  ["setProjectInfo", { title: "Layered slope", subtitle: "Water table and a 20 kPa load on the crest" }],
   ["addPiezoLine", [[0, -2], [16, -2.5], [24, -4.5], [32, -7.5], [40, -10], [50, -10]]],
   ["addUdl"],
   ["updateUdl", "$last:udls", { magnitude: 20, x1: 6, x2: 16 }],
-  ["addReinforcement", "nail"],
-  ["updateReinforcement", "$last:reinforcements", { x1: 24, y1: -2, x2: 14.341, y2: -4.588 }],
-  ["addReinforcement", "nail"],
-  ["updateReinforcement", "$last:reinforcements", { x1: 29, y1: -4.5, x2: 19.341, y2: -7.088 }],
-  ["addReinforcement", "nail"],
-  ["updateReinforcement", "$last:reinforcements", { x1: 34, y1: -7, x2: 24.341, y2: -9.588 }],
+  ["setAnalysisLimits", { entryLeftX: 2, entryRightX: 6 }],
 ];
 
 export const scenes: Scene[] = [
@@ -96,8 +92,8 @@ export const scenes: Scene[] = [
 
   {
     id: "edit-showcase",
-    title: "Layered Slope with Water, Load and Nails",
-    description: "Three soil layers, a water table, a load on the crest and three soil nails",
+    title: "Layered Slope with Water and Load",
+    description: "Three soil layers, a water table and a load on the crest",
     benchmark: "T-ACADS Non-Homogeneous",
     setup: { mode: "edit", onlyModel: true, actions: SHOWCASE },
     output: { type: "png", filename: "edit-showcase.png", crop: "canvas" },
@@ -218,13 +214,14 @@ export const scenes: Scene[] = [
   {
     id: "result-showcase",
     title: "Layered Slope Result",
-    description: "The critical surface of the layered slope with water, the crest load and the nail forces",
+    description: "The critical surface of the layered slope with water, under the whole crest load",
     benchmark: "T-ACADS Non-Homogeneous",
     setup: {
       mode: "result",
       onlyModel: true,
       runAnalysis: true,
-      actions: [...SHOWCASE, MATERIAL_TABLE_LEFT],
+      // The table stays at the top right, clear of this circle and its radii.
+      actions: SHOWCASE,
       resultView: {
         showSlices: true,
         showSoilColor: true,
