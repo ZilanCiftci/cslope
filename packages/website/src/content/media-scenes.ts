@@ -46,19 +46,6 @@ const MATERIAL_TABLE_LEFT: [string, ...unknown[]] = [
   { x: 0.11, y: 0.25, anchor: "top-left" },
 ];
 
-/**
- * The layered benchmark slope made into a fuller problem for the home page:
- * a water table and a load on the crest, with the circles entering behind
- * the load so that the slip mass carries all of it.
- */
-const SHOWCASE: [string, ...unknown[]][] = [
-  ["setProjectInfo", { title: "Layered slope", subtitle: "Water table and a 20 kPa load on the crest" }],
-  ["addPiezoLine", [[0, -2], [16, -2.5], [24, -4.5], [32, -7.5], [40, -10], [50, -10]]],
-  ["addUdl"],
-  ["updateUdl", "$last:udls", { magnitude: 20, x1: 6, x2: 16 }],
-  ["setAnalysisLimits", { entryLeftX: 2, entryRightX: 6 }],
-];
-
 export const scenes: Scene[] = [
   // ── Edit-mode scenes ──────────────────────────────────────────
 
@@ -92,10 +79,10 @@ export const scenes: Scene[] = [
 
   {
     id: "edit-showcase",
-    title: "Layered Slope with Water and Load",
-    description: "Three soil layers, a water table and a load on the crest",
-    benchmark: "T-ACADS Non-Homogeneous",
-    setup: { mode: "edit", onlyModel: true, actions: SHOWCASE },
+    title: "Slope with a Weak Layer",
+    description: "Arai & Tagyo's slope with a weak middle layer between a stronger upper layer and a strong base",
+    benchmark: "Arai & Tagyo (1985), weak layer",
+    setup: { mode: "edit", onlyModel: true },
     output: { type: "png", filename: "edit-showcase.png", crop: "canvas" },
   },
 
@@ -213,20 +200,18 @@ export const scenes: Scene[] = [
 
   {
     id: "result-showcase",
-    title: "Layered Slope Result",
-    description: "The critical surface of the layered slope with water, under the whole crest load",
-    benchmark: "T-ACADS Non-Homogeneous",
+    title: "Non-Circular Surface along a Weak Layer",
+    description: "The optimised non-circular surface of Arai & Tagyo's slope, following the weak layer",
+    benchmark: "Arai & Tagyo (1985), weak layer",
     setup: {
       mode: "result",
       onlyModel: true,
       runAnalysis: true,
-      // The table stays at the top right, clear of this circle and its radii.
-      actions: SHOWCASE,
       resultView: {
         showSlices: true,
         showSoilColor: true,
         showFosLabel: true,
-        showCentreMarker: true,
+        showCentreMarker: false,
         surfaceDisplay: "critical",
       },
     },

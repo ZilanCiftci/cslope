@@ -397,6 +397,111 @@ const ARAI_TAGYO: ModelEntry = {
 };
 
 // ────────────────────────────────────────────────────────────────
+// 4. Arai & Tagyo — weak middle layer, non-circular surface
+//    Verification problem V002 (Arai & Tagyo 1985, example 2), mirrored
+//    so that it slides left to right like the other examples.
+// ────────────────────────────────────────────────────────────────
+
+const ARAI_TAGYO_LAYERED_COORDS: [number, number][] = [
+  [0, 0],
+  [0, 35],
+  [48, 35],
+  [78, 15],
+  [96, 15],
+  [96, 0],
+];
+
+const ARAI_TAGYO_LAYERED: ModelEntry = {
+  id: "example-arai-tagyo-layered",
+  name: "Arai & Tagyo (1985), weak layer",
+  projectInfo: {
+    title: "Arai & Tagyo (1985), weak layer",
+    subtitle: "Published FOS: 0.414 (non-circular, Spencer); 0.39–0.44 in the literature",
+    client: "",
+    projectNumber: "",
+    revision: "0",
+    author: "",
+    checker: "",
+    date: "",
+    description: "",
+    canvasWidth: 1000,
+    canvasHeight: 1000,
+  },
+  orientation: "ltr",
+  coordinates: ARAI_TAGYO_LAYERED_COORDS,
+  materials: [
+    {
+      id: "mat-ex4a",
+      name: "Upper",
+      color: "#8c731a",
+      model: { kind: "mohr-coulomb", unitWeight: 18.82, frictionAngle: 12, cohesion: 29.4 },
+    },
+    {
+      id: "mat-ex4b",
+      name: "Weak layer",
+      color: "#9a3b2e",
+      model: { kind: "mohr-coulomb", unitWeight: 18.82, frictionAngle: 5, cohesion: 9.8 },
+    },
+    {
+      id: "mat-ex4c",
+      name: "Lower",
+      color: "#636d2a",
+      model: { kind: "mohr-coulomb", unitWeight: 18.82, frictionAngle: 40, cohesion: 294 },
+    },
+  ],
+  materialBoundaries: [
+    {
+      id: "bnd-ex4a",
+      coordinates: [
+        [72, 19],
+        [24, 35],
+      ],
+    },
+    {
+      id: "bnd-ex4b",
+      coordinates: [
+        [96, 3],
+        [0, 35],
+      ],
+    },
+  ],
+  regionMaterials: [
+    { point: [36, 34], materialId: "mat-ex4a" },
+    { point: [36, 25], materialId: "mat-ex4b" },
+    { point: [36, 5], materialId: "mat-ex4c" },
+  ],
+  piezometricLine: {
+    enabled: false,
+    lines: [],
+    activeLineId: null,
+    materialAssignment: {},
+  },
+  udls: [],
+  lineLoads: [],
+  customSearchPlanes: [],
+  customPlanesOnly: false,
+  options: {
+    slices: 30,
+    iterations: 1000,
+    refinedIterations: 500,
+    minFailureDist: 0,
+    tolerance: 0.005,
+    maxIterations: 15,
+    method: "Morgenstern-Price",
+    intersliceFunction: "constant",
+    nonCircularOptimization: true,
+  } satisfies AnalysisOptions,
+  analysisLimits: {
+    enabled: true,
+    entryLeftX: 10,
+    entryRightX: 48,
+    exitLeftX: 78,
+    exitRightX: 96,
+  },
+  resultViewSettings: createExampleResultViewSettings(ARAI_TAGYO_LAYERED_COORDS),
+};
+
+// ────────────────────────────────────────────────────────────────
 // 4. Talbingo Dam — RTL validation model
 // ────────────────────────────────────────────────────────────────
 
@@ -663,6 +768,7 @@ export const BENCHMARK_MODELS: ModelEntry[] = [
   //TACADS_NONHOMOGENEOUS_RTL,
   ARAI_TAGYO,
   //ARAI_TAGYO_RTL,
+  ARAI_TAGYO_LAYERED,
   TALBINGO_DAM_RTL,
   TALBINGO_SINGLE_CIRCLE,
 ];
@@ -728,6 +834,18 @@ export const PUBLISHED_BENCHMARKS: PublishedBenchmark[] = [
     name: "Arai & Tagyo (1985)",
     method: "Bishop",
     publishedFos: 1.118,
+    tolerance: 0.015,
+  },
+
+  // Arai & Tagyo (1985), example 2 — weak middle layer (verification
+  // problem V002): Spencer on the optimised non-circular surface, 0.414
+  // from a commercial program's verification manual (0.39–0.44 in the
+  // literature).
+  {
+    modelId: "example-arai-tagyo-layered",
+    name: "Arai & Tagyo (1985), weak layer",
+    method: "Morgenstern-Price",
+    publishedFos: 0.414,
     tolerance: 0.015,
   },
 

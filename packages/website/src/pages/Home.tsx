@@ -224,8 +224,8 @@ function Verification() {
 const GALLERY = [
   { media: MEDIA.materials, caption: "Material regions of a non-homogeneous slope" },
   { media: MEDIA.allSurfaces, caption: "Every analysed surface, coloured by factor of safety" },
-  { media: MEDIA.showcase, caption: "Layered slope with a water table and a crest load" },
-  { media: MEDIA.showcaseResult, caption: "Critical surface under the whole crest load" },
+  { media: MEDIA.showcase, caption: "Slope with a weak layer (Arai & Tagyo, 1985)" },
+  { media: MEDIA.showcaseResult, caption: "Non-circular surface along the weak layer" },
 ];
 
 function Gallery() {
