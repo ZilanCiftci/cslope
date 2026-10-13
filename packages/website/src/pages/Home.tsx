@@ -224,8 +224,8 @@ function Verification() {
 const GALLERY = [
   { media: MEDIA.materials, caption: "Material regions of a non-homogeneous slope" },
   { media: MEDIA.allSurfaces, caption: "Every analysed surface, coloured by factor of safety" },
-  { media: MEDIA.dam, caption: "Zoned embankment dam" },
-  { media: MEDIA.damResult, caption: "Critical surface through the dam" },
+  { media: MEDIA.showcase, caption: "Layered slope with a water table, a crest load and soil nails" },
+  { media: MEDIA.showcaseResult, caption: "Critical surface with the nail forces" },
 ];
 
 function Gallery() {

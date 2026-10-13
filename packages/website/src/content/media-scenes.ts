@@ -46,6 +46,23 @@ const MATERIAL_TABLE_LEFT: [string, ...unknown[]] = [
   { x: 0.11, y: 0.25, anchor: "top-left" },
 ];
 
+/**
+ * The layered benchmark slope made into a fuller problem for the home page:
+ * a water table, a load on the crest and three soil nails.
+ */
+const SHOWCASE: [string, ...unknown[]][] = [
+  ["setProjectInfo", { title: "Layered slope", subtitle: "Water table, 20 kPa crest load and three soil nails" }],
+  ["addPiezoLine", [[0, -2], [16, -2.5], [24, -4.5], [32, -7.5], [40, -10], [50, -10]]],
+  ["addUdl"],
+  ["updateUdl", "$last:udls", { magnitude: 20, x1: 6, x2: 16 }],
+  ["addReinforcement", "nail"],
+  ["updateReinforcement", "$last:reinforcements", { x1: 24, y1: -2, x2: 14.341, y2: -4.588 }],
+  ["addReinforcement", "nail"],
+  ["updateReinforcement", "$last:reinforcements", { x1: 29, y1: -4.5, x2: 19.341, y2: -7.088 }],
+  ["addReinforcement", "nail"],
+  ["updateReinforcement", "$last:reinforcements", { x1: 34, y1: -7, x2: 24.341, y2: -9.588 }],
+];
+
 export const scenes: Scene[] = [
   // ── Edit-mode scenes ──────────────────────────────────────────
 
@@ -78,12 +95,12 @@ export const scenes: Scene[] = [
   },
 
   {
-    id: "edit-dam",
-    title: "Dam Cross-Section",
-    description: "Complex dam geometry with multiple material zones",
-    benchmark: "Talbingo Dam",
-    setup: { mode: "edit" },
-    output: { type: "png", filename: "edit-dam.png", crop: "canvas" },
+    id: "edit-showcase",
+    title: "Layered Slope with Water, Load and Nails",
+    description: "Three soil layers, a water table, a load on the crest and three soil nails",
+    benchmark: "T-ACADS Non-Homogeneous",
+    setup: { mode: "edit", onlyModel: true, actions: SHOWCASE },
+    output: { type: "png", filename: "edit-showcase.png", crop: "canvas" },
   },
 
   // ── Result-mode scenes ────────────────────────────────────────
@@ -180,6 +197,7 @@ export const scenes: Scene[] = [
   },
 
   {
+    // Used by the dam tutorial (docs/tutorials/dam.mdx).
     id: "result-dam",
     title: "Dam Analysis",
     description: "Talbingo Dam result with critical surface through zones",
@@ -195,6 +213,27 @@ export const scenes: Scene[] = [
       },
     },
     output: { type: "png", filename: "result-dam.png", crop: "canvas" },
+  },
+
+  {
+    id: "result-showcase",
+    title: "Layered Slope Result",
+    description: "The critical surface of the layered slope with water, the crest load and the nail forces",
+    benchmark: "T-ACADS Non-Homogeneous",
+    setup: {
+      mode: "result",
+      onlyModel: true,
+      runAnalysis: true,
+      actions: [...SHOWCASE, MATERIAL_TABLE_LEFT],
+      resultView: {
+        showSlices: true,
+        showSoilColor: true,
+        showFosLabel: true,
+        showCentreMarker: true,
+        surfaceDisplay: "critical",
+      },
+    },
+    output: { type: "png", filename: "result-showcase.png", crop: "canvas" },
   },
 
   // ── Tutorial: Your first analysis ─────────────────────────────

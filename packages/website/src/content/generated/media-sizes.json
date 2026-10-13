@@ -1,13 +1,13 @@
 {
- "/media/generated/edit-dam.png": [
-  2284,
-  1479
- ],
  "/media/generated/edit-geometry.png": [
   2284,
   1479
  ],
  "/media/generated/edit-materials.png": [
+  2284,
+  1479
+ ],
+ "/media/generated/edit-showcase.png": [
   2284,
   1479
  ],
@@ -32,6 +32,10 @@
   1479
  ],
  "/media/generated/result-dam.png": [
+  1724,
+  1479
+ ],
+ "/media/generated/result-showcase.png": [
   1724,
   1479
  ],
