@@ -30,7 +30,7 @@ function Hero() {
         aria-hidden="true"
         className="pointer-events-none absolute inset-0 bg-[linear-gradient(to_right,hsl(var(--border)/0.5)_1px,transparent_1px),linear-gradient(to_bottom,hsl(var(--border)/0.5)_1px,transparent_1px)] bg-[size:32px_32px] [mask-image:linear-gradient(to_bottom,black,transparent_85%)]"
       />
-      <div className="relative mx-auto grid max-w-6xl items-center gap-12 px-4 py-16 sm:px-6 sm:py-24 lg:grid-cols-[1fr_1.15fr]">
+      <div className="relative mx-auto grid max-w-6xl gap-12 px-4 py-16 sm:px-6 sm:py-24">
         <div className="animate-fade-up">
           <p className="inline-flex items-center gap-2 rounded-full border bg-background px-3 py-1 text-xs font-medium text-muted-foreground">
             <span className="h-1.5 w-1.5 rounded-full bg-pass" aria-hidden="true" />
@@ -60,7 +60,8 @@ function Hero() {
           </div>
           <p className="mt-4 text-sm text-muted-foreground">Free and open source under the {SITE.licence} licence.</p>
         </div>
-        <Screenshot {...MEDIA.criticalSurface} priority className="animate-fade-up shadow-xl [animation-delay:120ms]" />
+        {/* The whole program, wide enough to read: below the text, not beside it. */}
+        <Screenshot {...MEDIA.app} priority className="animate-fade-up shadow-xl [animation-delay:120ms]" />
       </div>
     </section>
   );

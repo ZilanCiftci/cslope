@@ -24,6 +24,7 @@ export function media(src: string, alt: string): Media {
 const generated = (file: string, alt: string): Media => media(`/media/generated/${file}`, alt);
 
 export const MEDIA = {
+  app: generated("result-app.png", "The cSlope window: the critical slip surface of a homogeneous slope with its centre, slices and factor of safety, the models, the ribbon and the summary of the analysis"),
   criticalSurface: generated("result-critical-surface.png", "Result view: the critical slip surface of a homogeneous slope with its slices, factor of safety and material table",
   ),
   allSurfaces: generated("result-all-surfaces.png", "Result view: every analysed slip surface coloured by its factor of safety",

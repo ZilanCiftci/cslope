@@ -35,6 +35,17 @@ function tutorial(name: string, benchmark: string, common: SceneSetup, list: Tut
   }));
 }
 
+/**
+ * The benchmark models put the material table at the top right, where the
+ * centre of a slope's critical circle often lies; this moves it under the
+ * title instead.
+ */
+const MATERIAL_TABLE_LEFT: [string, ...unknown[]] = [
+  "updateAnnotation",
+  "anno-benchmark-material-table",
+  { x: 0.11, y: 0.25, anchor: "top-left" },
+];
+
 export const scenes: Scene[] = [
   // ── Edit-mode scenes ──────────────────────────────────────────
 
@@ -92,12 +103,34 @@ export const scenes: Scene[] = [
         showCentreMarker: true,
         surfaceDisplay: "critical",
       },
+      actions: [MATERIAL_TABLE_LEFT],
     },
     output: {
       type: "png",
       filename: "result-critical-surface.png",
       crop: "canvas",
     },
+  },
+
+  {
+    id: "result-app",
+    title: "The Program",
+    description: "The whole program window with the critical slip surface, its centre and the summary",
+    benchmark: "T-ACADS Simple",
+    setup: {
+      mode: "result",
+      runAnalysis: true,
+      ribbonTab: "Results",
+      resultView: {
+        showSlices: true,
+        showSoilColor: true,
+        showFosLabel: true,
+        showCentreMarker: true,
+        surfaceDisplay: "critical",
+      },
+      actions: [MATERIAL_TABLE_LEFT],
+    },
+    output: { type: "png", filename: "result-app.png", crop: "full" },
   },
 
   {
