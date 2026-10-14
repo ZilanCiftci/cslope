@@ -35,6 +35,8 @@ import {
   RELIABILITY_CASES,
   VERIFICATION_CASES,
   VERIFICATION_OPTIONS,
+  FULL_VERIFICATION_OPTIONS,
+  NON_CIRCULAR_VERIFICATION_OPTIONS,
   runReliabilityCase,
   runVerification,
   type ReliabilityCheckResult,
@@ -52,6 +54,10 @@ type Pt = [number, number];
 // import.meta.dirname, not the URL pathname: on Windows that is "/D:/…".
 const HERE = import.meta.dirname;
 const REPO = path.resolve(HERE, "../../..");
+// The report is published: it uses the full search, like the website's table
+// (the test suite runs a shorter one on circular problems).
+process.env.CSLOPE_VERIFICATION_FULL = "1";
+
 const ARGS = process.argv.slice(2);
 const PUBLIC = ARGS.includes("--public");
 const OUT =
@@ -711,8 +717,8 @@ table(
   [
     ["Slip surfaces", "Circular, or the non-circular surface the source gives. Fixed surfaces where the source gives one, otherwise a critical-circle search (with non-circular optimisation where stated)."],
     ["Number of slices", `${VERIFICATION_OPTIONS.slices} unless the problem states otherwise`],
-    ["Search", `${VERIFICATION_OPTIONS.iterations} entry/exit combinations plus ${VERIFICATION_OPTIONS.refinedIterations} refined around the best surfaces`],
-    ["Convergence tolerance", "0.005 on the factor of safety (default)"],
+    ["Search", `${FULL_VERIFICATION_OPTIONS.iterations} entry/exit combinations plus ${FULL_VERIFICATION_OPTIONS.refinedIterations} refined around the best surfaces`],
+    ["Convergence tolerance", `${VERIFICATION_OPTIONS.tolerance} on the factor of safety; ${NON_CIRCULAR_VERIFICATION_OPTIONS.tolerance} with non-circular optimisation`],
     ["Methods", "Bishop simplified, Janbu simplified (uncorrected unless stated), Morgenstern-Price with half-sine interslice function; Spencer = Morgenstern-Price with a constant interslice function"],
     [
       "Pore pressure",

@@ -168,12 +168,52 @@ export const PSF = 0.04788026; // kPa
 export const PCF = 0.15708746; // kN/m³
 export const ft = (p: Pt[]): Pt[] => p.map(([x, y]) => [x * FT, y * FT]);
 
-/** Search settings used for all verification runs. */
+/**
+ * Search settings for the verification runs. 1000 trial surfaces with 1000
+ * refined around the best give the same minimum as 4000 + 2000 on the
+ * circular problems (lower on some: the refinement matters more than the
+ * first pass), in about half the time.
+ */
 export const VERIFICATION_OPTIONS: Partial<AnalysisOptions> = {
   slices: 50,
+  iterations: 1000,
+  refinedIterations: 1000,
+  tolerance: 0.001,
+};
+
+/**
+ * Non-circular optimisation ends in a different local minimum with fewer
+ * trial surfaces or a tighter tolerance (on thin weak layers it then finds
+ * surfaces well below the published values), so it keeps the full search.
+ */
+export const NON_CIRCULAR_VERIFICATION_OPTIONS: Partial<AnalysisOptions> = {
+  iterations: 4000,
+  refinedIterations: 2000,
+  tolerance: 0.005,
+};
+
+/**
+ * The full search, for the published report and table and a weekly CI run
+ * (CSLOPE_VERIFICATION_FULL=1): it catches an engine change after which the
+ * shorter search misses the minimum.
+ */
+export const FULL_VERIFICATION_OPTIONS: Partial<AnalysisOptions> = {
   iterations: 4000,
   refinedIterations: 2000,
 };
+
+const fullSearch = () => (globalThis as { process?: { env?: Record<string, string | undefined> } }).process?.env?.CSLOPE_VERIFICATION_FULL === "1";
+
+/** The analysis options of one verification run: the settings above, then the check's own. */
+export function verificationOptions(method: AnalysisMethod, options: Partial<AnalysisOptions> = {}): Partial<AnalysisOptions> {
+  return {
+    method,
+    ...VERIFICATION_OPTIONS,
+    ...(fullSearch() ? FULL_VERIFICATION_OPTIONS : {}),
+    ...(options.nonCircularOptimization ? NON_CIRCULAR_VERIFICATION_OPTIONS : {}),
+    ...options,
+  };
+}
 
 /** Run one check; returns the minimum FOS and the analysed slope. */
 export function runVerification(
@@ -182,11 +222,7 @@ export function runVerification(
   options: Partial<AnalysisOptions> = {},
 ): { fos: number | null; slope: Slope } {
   const slope = buildSlope(toCanonicalSlopeDefinition(definition));
-  slope.updateAnalysisOptions({
-    method,
-    ...VERIFICATION_OPTIONS,
-    ...options,
-  });
+  slope.updateAnalysisOptions(verificationOptions(method, options));
   return { fos: analyseSlope(slope), slope };
 }
 

@@ -7,6 +7,9 @@
 export {
   VERIFICATION_CASES,
   VERIFICATION_OPTIONS,
+  NON_CIRCULAR_VERIFICATION_OPTIONS,
+  FULL_VERIFICATION_OPTIONS,
+  verificationOptions,
   runVerification,
   runReliabilityCase,
 } from "./cases";

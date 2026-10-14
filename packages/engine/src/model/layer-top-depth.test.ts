@@ -29,7 +29,8 @@ const embankment = (clay: MaterialModel, extra: Partial<SlopeDefinition> = {}) =
     { name: "Clay", topY: 0, model: clay },
   ], extra);
 
-const SEARCH = { slices: 30, iterations: 400, refinedIterations: 200 };
+// The tolerance the pinned value below was computed with.
+const SEARCH = { slices: 30, iterations: 400, refinedIterations: 200, tolerance: 0.005 };
 const fos = (def: SlopeDefinition) => runVerification(def, "Bishop", SEARCH).fos!;
 
 /** Mirror a definition about x = 30 (a right-to-left model). */

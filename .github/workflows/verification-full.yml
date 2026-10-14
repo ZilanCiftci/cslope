@@ -1,0 +1,31 @@
+name: Full verification
+
+# The test suite runs the circular verification problems with a shorter
+# search (1000 + 1000 trial surfaces). Once a week, and on demand, they run
+# with the full search used for the published report and table, so that an
+# engine change after which the shorter search misses the minimum is caught.
+on:
+  schedule:
+    - cron: "17 3 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  verification:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version-file: package.json
+      - name: Install
+        run: bun install --frozen-lockfile
+      - name: Verification problems, full search
+        working-directory: packages/engine
+        env:
+          CSLOPE_VERIFICATION_FULL: "1"
+        run: bunx vitest run src/model/verification-problems

@@ -817,7 +817,7 @@ export const PROBLEMS: RawCase[] = [
     description: "Homogeneous undrained clay slope (φ = 0); critical circle search.",
     definition: {"coordinates":[[0,0],[0,30],[90,30],[130,80],[240,80],[240,0]],"materials":[{"name":"Clay","unitWeight":100,"frictionAngle":0,"cohesion":0,"model":{"kind":"mohr-coulomb","unitWeight":100,"cohesion":1000,"frictionAngle":0}}],"materialBoundaries":[],"regionAssignments":[{"point":[2.4,0.05],"materialName":"Clay"}]},
     checks: [
-      {"method":"Bishop","label":"Bishop simplified","published":1.126,"publishedBy":"Commercial program A"},
+      {"method":"Bishop","label":"Bishop simplified","published":1.126,"publishedBy":"Commercial program A","options":{"iterations":4000,"refinedIterations":2000}},
       {"method":"Morgenstern-Price","label":"Spencer (M-P, constant f(x))","published":1.124,"publishedBy":"Duncan & Wright (reference)","options":{"intersliceFunction":"constant"}},
     ],
     notes: [
@@ -1120,9 +1120,9 @@ export const PROBLEMS: RawCase[] = [
     description: "Homogeneous embankment (c′ = 100 psf, φ′ = 30°, γ = 100 pcf) with the pool at el. 40 ft and commercial program A's piezometric line; critical-circle search. Converted to SI.",
     definition: {"materials":[{"name":"Material 1","unitWeight":15.70875,"frictionAngle":30,"cohesion":4.78803,"model":{"kind":"mohr-coulomb","unitWeight":15.70875,"cohesion":4.78803,"frictionAngle":30}}],"coordinates":[[0,0],[0,0],[30.48,12.192],[36.576,14.6304],[41.148,14.6304],[77.724,0],[77.724,0]],"materialBoundaries":[],"regionAssignments":[{"point":[38.862,14.1304],"materialName":"Material 1"}],"waterTable":{"mode":"custom","value":[[0,12.192],[30.48,12.192],[31.15361,11.86495],[36.7854,10.85576],[41.148,10.08888],[54.09651,7.56178],[62.5477,5.64459],[65.09187,4.98531],[77.724,0]],"followBoundary":false}},
     checks: [
-      {"method":"Bishop","label":"Bishop simplified","published":1.09,"publishedBy":"Commercial program A","options":{"porePressureHead":"vertical","slices":40}},
+      {"method":"Bishop","label":"Bishop simplified","published":1.09,"publishedBy":"Commercial program A","options":{"porePressureHead":"vertical","slices":40,"iterations":4000,"refinedIterations":2000}},
       {"method":"Morgenstern-Price","label":"Spencer (M-P, constant f(x))","published":1.1,"publishedBy":"Commercial program A","options":{"intersliceFunction":"constant","porePressureHead":"vertical","slices":40}},
-      {"method":"Bishop","label":"Bishop simplified","published":1.07,"publishedBy":"Program D","options":{"porePressureHead":"vertical","slices":40}},
+      {"method":"Bishop","label":"Bishop simplified","published":1.07,"publishedBy":"Program D","options":{"porePressureHead":"vertical","slices":40,"iterations":4000,"refinedIterations":2000}},
     ],
     notes: [
       "commercial program A 1.068/1.075 and program D 1.065/1.072 with FE seepage; D&W chart 1.16.",

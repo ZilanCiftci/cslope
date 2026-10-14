@@ -29,6 +29,11 @@ import {
 import { findForbiddenNames } from "./forbidden-names";
 import type { VerificationData, VerificationProblem, ReliabilityProblem } from "../src/content/verification-types";
 
+// The table is published: it uses the full search, like the verification
+// report (the test suite runs a shorter one on circular problems). The
+// shards inherit the setting.
+process.env.CSLOPE_VERIFICATION_FULL = "1";
+
 const OUT = join(import.meta.dirname, "../src/content/generated/verification.json");
 const CACHE = join(import.meta.dirname, "../node_modules/.cache/cslope-verification-raw.json");
 
