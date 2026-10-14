@@ -68,11 +68,6 @@ export interface SearchPlane {
    */
   points?: [number, number][];
   /**
-   * A candidate of the non-circular optimisation: its Morgenstern-Price
-   * solution must pass the interslice acceptability check.
-   */
-  optimised?: boolean;
-  /**
    * Bottom of the tension crack [x, y] on the arc, where the surface was
    * cut off; the sliding mass starts here instead of at `lc`.
    */

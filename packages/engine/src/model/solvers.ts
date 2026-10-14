@@ -7,7 +7,7 @@
 import type { Slice } from "../types/index";
 import { getIntersliceFunctionValue, extrapolateLambda } from "../math/index";
 import type { Slope, SearchPlane } from "./slope";
-import { getSlices, verticalSectionStrength } from "./slices";
+import { getSlices } from "./slices";
 import {
   setEntryExitPlanes,
   generateRefinedPlanes,
@@ -47,12 +47,6 @@ interface SliceArrays {
   funcs: Float64Array;
   /** The slices themselves: the solvers note which strength governed. */
   slices: Slice[];
-  /**
-   * Interslice normal force E on the right of each slice (< 0: compression)
-   * from the last force-equilibrium pass, and the λ it was computed with.
-   */
-  eRights: Float64Array;
-  eLambda: number;
 }
 
 function getSlicePropertyArrays(
@@ -143,40 +137,8 @@ function getSlicePropertyArrays(
     dxs,
     funcs,
     slices,
-    eRights: new Float64Array(n),
-    eLambda: NaN,
   };
 }
-
-/**
- * Largest ratio, over the interslice boundaries, of the interslice shear
- * X = λ·f(x)·E to the shear strength available on the vertical boundary,
- * (∫c dz + E′·tan φ̄)/F with E′ the compressive normal force: above 1 the
- * side forces cannot be carried by the soil (the acceptability criterion
- * of Morgenstern & Price, 1965, and Duncan & Wright). The strength is
- * integrated over the height of the boundary through all layers; pore
- * pressure on the boundary is not deducted.
- */
-export function intersliceShearRatio(slope: Slope, p: SliceArrays, fos: number): number {
-  let worst = 0;
-  const n = p.weights.length;
-  for (let i = 0; i < n - 1; i++) {
-    const e = p.eRights[i];
-    const shear = Math.abs(p.eLambda * p.funcs[i] * e);
-    if (!(shear > 0)) continue;
-    const a = p.slices[i];
-    const b = p.slices[i + 1];
-    const yBase = (a.yBottom + b.yBottom) / 2;
-    const st = verticalSectionStrength(slope, a.xRight, yBase);
-    const available = (st.cohesion + Math.max(0, -e) * st.tanPhi) / fos;
-    if (!(available < Infinity)) continue;
-    worst = Math.max(worst, shear / Math.max(available, 1e-9));
-  }
-  return worst;
-}
-
-/** Above this ratio (see intersliceShearRatio) a Morgenstern-Price solution is rejected. */
-export const INTERSLICE_SHEAR_LIMIT = 1;
 
 // ────────────────────────────────────────────────────────────────
 // Low-level iterative solvers
@@ -393,7 +355,6 @@ function solveFOSGenericForceCircular(
   let resisting = 0;
   let nonPositive = 0;
 
-  p.eLambda = lambdaVal;
   for (let outer = 0; outer < numOuterIters; outer++) {
     let innerConverged = false;
     for (let iter = 0; iter < maxIters; iter++) {
@@ -463,7 +424,6 @@ function solveFOSGenericForceCircular(
         pushing += N * sinA + H - p.passiveH[i] * kP;
         passiveForce += p.passiveH[i];
         nCurrent[i] = N;
-        p.eRights[i] = eRight;
         eLeft = eRight;
         xLeft = xRight;
       }
@@ -725,7 +685,6 @@ const MP_MAX_STEPS = 10;
 export function analyseMorgensternPrice(
   slope: Slope,
   slices: Slice[],
-  checkInterslice = false,
 ): [
   fos: number | null,
   lffArray: [number, number, number, number][] | null,
@@ -803,20 +762,11 @@ export function analyseMorgensternPrice(
     if (FSf == null) return [FSm, null, pushingF, resistingF, false];
   }
 
-  // For a candidate of the non-circular optimisation (checkInterslice), a
-  // solution whose interslice shear the soil cannot carry is rejected: the
-  // optimisation can drive the surface to where Fm(λ) and Ff(λ) run nearly
-  // parallel and meet only far out in λ (V002: 0.344 at λ = −0.94 against a
-  // published 0.414). Circles and given surfaces are not checked: published
-  // solutions on them (reinforced walls, cuts in clay) often exceed it and
-  // are accepted as they are by other programs.
-  const admissible = (fs: number): number | null =>
-    checkInterslice && intersliceShearRatio(slope, props, fs) > INTERSLICE_SHEAR_LIMIT ? null : fs;
   const lffArray: [number, number, number, number][] = [
     [0, FSm, FSf, Math.abs(FSm - FSf)],
   ];
   if (Math.abs(FSm - FSf) < tol)
-    return [admissible(FSm), lffArray, pushingF, resistingF, true];
+    return [FSm, lffArray, pushingF, resistingF, true];
 
   // Step 2: Second point (lambda = 0.1)
   const lambda2 = 0.1;
@@ -848,7 +798,7 @@ export function analyseMorgensternPrice(
   lffArray.push([lambda2, FSm, FSf, Math.abs(FSm - FSf)]);
   lffArray.sort((a, b) => a[0] - b[0]);
   if (Math.abs(FSm - FSf) < tol)
-    return [admissible(FSm), lffArray, pushingF, resistingF, true];
+    return [FSm, lffArray, pushingF, resistingF, true];
 
   // Step 3: Iterative extrapolation
   const unconvergedLambdas: number[] = [];
@@ -926,7 +876,7 @@ export function analyseMorgensternPrice(
       lffArray.sort((a, b) => a[0] - b[0]);
 
       if (Math.abs(FSm - FSf) < tol)
-        return [admissible(FSm), lffArray, pushingF, resistingF, true];
+        return [FSm, lffArray, pushingF, resistingF, true];
     } else {
       // An unconverged moment or force solution is no point of the
       // Fm(λ), Ff(λ) curves: far out in λ (e.g. λ ≈ −1 on V002's
@@ -968,14 +918,14 @@ export function analyseMorgensternPrice(
       const equilibriumGap = Math.abs(FSm - FSf);
       lffArray.push([bestLambda, FSm, FSf, equilibriumGap]);
 
-      const convergedBest =
-        convergedBestM && convergedBestF && equilibriumGap <= mpEquilibriumTolerance;
       return [
-        convergedBest ? admissible(FSm) : FSm,
+        FSm,
         lffArray,
         pushing0,
         resisting0,
-        convergedBest,
+        convergedBestM &&
+          convergedBestF &&
+          equilibriumGap <= mpEquilibriumTolerance,
       ];
     }
   }
@@ -1177,7 +1127,7 @@ function evaluatePlanes(slope: Slope, allPlanes: SearchPlane[]): void {
         break;
       }
       case "Morgenstern-Price": {
-        const [f, lff, , , cvg] = analyseMorgensternPrice(slope, slices, plane.optimised === true);
+        const [f, lff, , , cvg] = analyseMorgensternPrice(slope, slices);
         fos = f;
         plane.lffArray = lff ?? undefined;
         converged = cvg;
