@@ -73,6 +73,7 @@ function makePlane(points: Pt[], axis: Pt): SearchPlane {
     cy: axis[1],
     radius: 0,
     points,
+    optimised: true,
     fos: null,
     slices: null,
   };

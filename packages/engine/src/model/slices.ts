@@ -745,6 +745,56 @@ function applyMaterialFactors(s: Slice, f: PartialFactors): void {
  * standing on the ground at x. A combined material uses its drained c′,
  * which is what governs near the surface.
  */
+/**
+ * Shear strength of the vertical section at x from the slip surface (yBottom)
+ * up to the ground, for the interslice acceptability check: the cohesion
+ * integrated over the height and the height-weighted mean tan φ (design
+ * values with partial factors). Sampled every 0.5 m or so.
+ */
+export function verticalSectionStrength(
+  slope: Slope,
+  x: number,
+  yBottom: number,
+): { cohesion: number; tanPhi: number; height: number } {
+  const surf = slope.surfaceLineXY;
+  const yGround = surf ? getYAtX(surf.x, surf.y, x) : NaN;
+  const height = yGround - yBottom;
+  if (!Number.isFinite(height) || height <= 0) return { cohesion: 0, tanPhi: 0, height: 0 };
+  const n = Math.min(40, Math.max(4, Math.ceil(height / 0.5)));
+  const dz = height / n;
+  const f = slope.partialFactors;
+  let cohesion = 0;
+  let tanPhiSum = 0;
+  for (let k = 0; k < n; k++) {
+    const y = yBottom + (k + 0.5) * dz;
+    const geo = slope.materialGeometries.find((g) => isPointInPolygon(x, y, g.px, g.py));
+    if (!geo) continue;
+    const model = geo.material.model;
+    // Rock and very strong material carry any interslice shear.
+    if (model.kind === "high-strength" || model.kind === "impenetrable") return { cohesion: Infinity, tanPhi: Infinity, height };
+    const yLayerTop = needsLayerTop(model)
+      ? (materialLayerTopAt(slope.materialGeometries, geo.material, x, y) ?? undefined)
+      : undefined;
+    const st = resolveStrength(model, { yBottom: y, x, yGround, yLayerTop, alpha: 0 });
+    let c = st.cohesion;
+    let tanPhi = Math.tan((st.frictionAngle * Math.PI) / 180);
+    if (f) {
+      const undrained =
+        model.kind === "undrained" ||
+        model.kind === "s-f-depth" ||
+        model.kind === "s-f-datum" ||
+        model.kind === "lime-cement-columns" ||
+        (st.frictionAngle === 0 && !st.isCombined);
+      c /= undrained ? f.cu : f.cohesion;
+      if (!undrained || model.kind === "lime-cement-columns") tanPhi /= f.tanPhi;
+    }
+    if (!Number.isFinite(c) || !Number.isFinite(tanPhi)) return { cohesion: Infinity, tanPhi: Infinity, height };
+    cohesion += c * dz;
+    tanPhiSum += tanPhi * dz;
+  }
+  return { cohesion, tanPhi: tanPhiSum / height, height };
+}
+
 export function rankineCrackDepth(slope: Slope, x: number): number {
   const surf = slope.surfaceLineXY;
   if (!surf) return 0;
