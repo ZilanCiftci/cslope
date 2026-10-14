@@ -24,7 +24,7 @@ export const PROBLEMS: RawCase[] = [
     surface: "search",
     units: "SI",
     description: "Homogeneous 1.5:1 slope, 20 m high; critical circle search.",
-    definition: {"coordinates":[[-30,0],[-30,15],[18,15],[48,35],[100,35],[100,0]],"materials":[{"name":"Soil","unitWeight":18.82,"frictionAngle":0,"cohesion":0,"model":{"kind":"mohr-coulomb","unitWeight":18.82,"cohesion":41.65,"frictionAngle":15}}],"materialBoundaries":[],"regionAssignments":[{"point":[-28.7,0.05],"materialName":"Soil"}]},
+    definition: {"coordinates":[[-30,0],[-30,15],[18,15],[48,35],[100,35],[100,0]],"materials":[{"name":"Soil","unitWeight":18.82,"frictionAngle":0,"cohesion":0,"model":{"kind":"mohr-coulomb","unitWeight":18.82,"cohesion":41.65,"frictionAngle":15}}],"materialBoundaries":[],"regionAssignments":[{"point":[-28.7,0.05],"materialName":"Soil"}],"analysisLimits":{"entryLeftX":0,"entryRightX":66,"exitLeftX":0,"exitRightX":66}},
     checks: [
       {"method":"Bishop","label":"Bishop simplified","published":1.409,"publishedBy":"Commercial program A"},
       {"method":"Morgenstern-Price","label":"Morgenstern-Price (half-sine)","published":1.414,"publishedBy":"Commercial program A (GLE)"},
@@ -33,6 +33,7 @@ export const PROBLEMS: RawCase[] = [
       {"method":"Morgenstern-Price","label":"Spencer (M-P, constant f(x))","published":1.386,"publishedBy":"Commercial program A (non-circular)","options":{"intersliceFunction":"constant","nonCircularOptimization":true}},
     ],
     notes: [
+      "Search limited to x = 0–66, the model of the source (ours extends to −30 and 100).",
       "commercial program A Janbu corrected 1.407 (circle); non-circular: Janbu simplified 1.253, corrected 1.346. Arai & Tagyo: Bishop 1.451; Janbu simplified 1.265, corrected 1.357 (non-circular).",
     ],
   },
@@ -106,12 +107,13 @@ export const PROBLEMS: RawCase[] = [
     surface: "search",
     units: "SI",
     description: "Compacted-clay embankment (c′ = 6.5 kPa, φ′ = 40°) on a deep natural-clay foundation (c′ = 0, φ′ = 32°) whose 4H:1V downstream face governs; dry; circular search. Theoretical (infinite slope) FOS tan 32°/tan 14.04° = 2.50.",
-    definition: {"coordinates":[[0,0],[0,95],[80,95],[100,101],[128,95],[148,90],[220,90],[220,0]],"materials":[{"name":"Compacted clay","unitWeight":18,"frictionAngle":0,"cohesion":0,"model":{"kind":"mohr-coulomb","unitWeight":18,"cohesion":6.5,"frictionAngle":40}},{"name":"Natural clay","unitWeight":18,"frictionAngle":0,"cohesion":0,"model":{"kind":"mohr-coulomb","unitWeight":18,"cohesion":0,"frictionAngle":32}}],"materialBoundaries":[{"coordinates":[[0,95],[80,95],[128,95],[148,90],[220,90]],"materialName":""}],"regionAssignments":[{"point":[98,99.9],"materialName":"Compacted clay"},{"point":[40,94.5],"materialName":"Natural clay"}]},
+    definition: {"coordinates":[[0,0],[0,95],[80,95],[100,101],[128,95],[148,90],[220,90],[220,0]],"materials":[{"name":"Compacted clay","unitWeight":18,"frictionAngle":0,"cohesion":0,"model":{"kind":"mohr-coulomb","unitWeight":18,"cohesion":6.5,"frictionAngle":40}},{"name":"Natural clay","unitWeight":18,"frictionAngle":0,"cohesion":0,"model":{"kind":"mohr-coulomb","unitWeight":18,"cohesion":0,"frictionAngle":32}}],"materialBoundaries":[{"coordinates":[[0,95],[80,95],[128,95],[148,90],[220,90]],"materialName":""}],"regionAssignments":[{"point":[98,99.9],"materialName":"Compacted clay"},{"point":[40,94.5],"materialName":"Natural clay"}],"analysisLimits":{"entryLeftX":100,"entryRightX":148,"exitLeftX":100,"exitRightX":148}},
     checks: [
       {"method":"Bishop","label":"Bishop simplified","published":2.5,"publishedBy":"Theory (infinite slope)"},
       {"method":"Morgenstern-Price","label":"Spencer (M-P, constant f(x))","published":2.5,"publishedBy":"Theory (infinite slope)","options":{"intersliceFunction":"constant"}},
     ],
     notes: [
+      "Search limited to the downstream face, x = 100–148, as in the source.",
       "The critical surfaces are shallow slabs on the cohesionless face; a minimum sliding area in proportion to the model area (here 20 000 m²) would skip them and read 3 % high.",
       "commercial program A 2.534 (noncircular, minimum depth 5 m); Baker 2.41.",
     ],
@@ -168,11 +170,12 @@ export const PROBLEMS: RawCase[] = [
     surface: "search",
     units: "SI",
     description: "The V008b London clay slope (c′ = 6 kPa, φ′ = 32°) with Janbu simplified (uncorrected); critical-circle search.",
-    definition: {"coordinates":[[0,0],[0,0],[6.43,6],[20,6],[20,0]],"materials":[{"name":"Soil","unitWeight":18,"frictionAngle":0,"cohesion":0,"model":{"kind":"mohr-coulomb","unitWeight":18,"cohesion":6,"frictionAngle":32}}],"materialBoundaries":[],"regionAssignments":[{"point":[0.2,0.05],"materialName":"Soil"}],"orientation":"rtl"},
+    definition: {"coordinates":[[0,0],[0,0],[6.43,6],[20,6],[20,0]],"materials":[{"name":"Soil","unitWeight":18,"frictionAngle":0,"cohesion":0,"model":{"kind":"mohr-coulomb","unitWeight":18,"cohesion":6,"frictionAngle":32}}],"materialBoundaries":[],"regionAssignments":[{"point":[0.2,0.05],"materialName":"Soil"}],"orientation":"rtl","analysisLimits":{"entryLeftX":0,"entryRightX":13.7,"exitLeftX":0,"exitRightX":13.7}},
     checks: [
       {"method":"Janbu","label":"Janbu simplified (uncorrected)","published":1.291,"publishedBy":"Commercial program A","options":{"janbuCorrection":false}},
     ],
     notes: [
+      "Search limited to x = 0–13.7 (toe to the crest), as in the source.",
       "commercial program A geometry: no toe flat, base at toe level (results identical).",
       "Baker (2003) M-C 1.35.",
     ],
@@ -184,9 +187,12 @@ export const PROBLEMS: RawCase[] = [
     surface: "search",
     units: "SI",
     description: "6 m high slope at about 43° in soil with a linear Mohr-Coulomb fit to a curved envelope; critical circle search.",
-    definition: {"coordinates":[[-6,-4],[-6,0],[0,0],[6.43,6],[20,6],[20,-4]],"materials":[{"name":"Soil","unitWeight":18,"frictionAngle":0,"cohesion":0,"model":{"kind":"mohr-coulomb","unitWeight":18,"cohesion":11.64,"frictionAngle":24.7}}],"materialBoundaries":[],"regionAssignments":[{"point":[-5.74,-3.95],"materialName":"Soil"}]},
+    definition: {"coordinates":[[-6,-4],[-6,0],[0,0],[6.43,6],[20,6],[20,-4]],"materials":[{"name":"Soil","unitWeight":18,"frictionAngle":0,"cohesion":0,"model":{"kind":"mohr-coulomb","unitWeight":18,"cohesion":11.64,"frictionAngle":24.7}}],"materialBoundaries":[],"regionAssignments":[{"point":[-5.74,-3.95],"materialName":"Soil"}],"analysisLimits":{"entryLeftX":0,"entryRightX":20,"exitLeftX":0,"exitRightX":20}},
     checks: [
       {"method":"Morgenstern-Price","label":"Spencer (M-P, constant f(x))","published":1.536,"publishedBy":"Commercial program A","options":{"intersliceFunction":"constant"}},
+    ],
+    notes: [
+      "Search limited to x = 0–20, the model of the source; the level ground left of the toe is not searched.",
     ],
   },
   {
@@ -196,9 +202,12 @@ export const PROBLEMS: RawCase[] = [
     surface: "search",
     units: "SI",
     description: "43° slope, 6 m high, with the Mohr-Coulomb envelope fitted to London clay data (c' = 6 kPa, φ' = 32°); critical circle search.",
-    definition: {"coordinates":[[-6,-4],[-6,0],[0,0],[6.43,6],[20,6],[20,-4]],"materials":[{"name":"London clay","unitWeight":18,"frictionAngle":0,"cohesion":0,"model":{"kind":"mohr-coulomb","unitWeight":18,"cohesion":6,"frictionAngle":32}}],"materialBoundaries":[],"regionAssignments":[{"point":[-5.74,-3.95],"materialName":"London clay"}],"orientation":"rtl"},
+    definition: {"coordinates":[[-6,-4],[-6,0],[0,0],[6.43,6],[20,6],[20,-4]],"materials":[{"name":"London clay","unitWeight":18,"frictionAngle":0,"cohesion":0,"model":{"kind":"mohr-coulomb","unitWeight":18,"cohesion":6,"frictionAngle":32}}],"materialBoundaries":[],"regionAssignments":[{"point":[-5.74,-3.95],"materialName":"London clay"}],"orientation":"rtl","analysisLimits":{"entryLeftX":0,"entryRightX":13.7,"exitLeftX":0,"exitRightX":13.7}},
     checks: [
       {"method":"Morgenstern-Price","label":"Spencer (M-P, constant f(x))","published":1.366,"publishedBy":"Commercial program A","options":{"intersliceFunction":"constant"}},
+    ],
+    notes: [
+      "Search limited to x = 0–13.7 (toe to the crest), as in the source; the level ground left of the toe is not searched.",
     ],
   },
   {
@@ -839,12 +848,13 @@ export const PROBLEMS: RawCase[] = [
     surface: "search",
     units: "imperial",
     description: "As V028 with a 60 ft thick foundation (Tables 78.6–78.7).",
-    definition: {"coordinates":[[0,-30],[0,30],[90,30],[130,80],[240,80],[240,-30]],"materials":[{"name":"Clay","unitWeight":100,"frictionAngle":0,"cohesion":0,"model":{"kind":"mohr-coulomb","unitWeight":100,"cohesion":1000,"frictionAngle":0}}],"materialBoundaries":[],"regionAssignments":[{"point":[2.4,-29.95],"materialName":"Clay"}],"orientation":"rtl"},
+    definition: {"coordinates":[[-10,-30],[-10,30],[90,30],[130,80],[270,80],[270,-30]],"materials":[{"name":"Clay","unitWeight":100,"frictionAngle":0,"cohesion":0,"model":{"kind":"mohr-coulomb","unitWeight":100,"cohesion":1000,"frictionAngle":0}}],"materialBoundaries":[],"regionAssignments":[{"point":[2.4,-29.95],"materialName":"Clay"}],"orientation":"rtl"},
     checks: [
       {"method":"Bishop","label":"Bishop simplified","published":1.125,"publishedBy":"Commercial program A"},
       {"method":"Morgenstern-Price","label":"Spencer (M-P, constant f(x))","published":1.124,"publishedBy":"Duncan & Wright (reference)","options":{"intersliceFunction":"constant"}},
     ],
     notes: [
+      "The model runs from x = −10 to 270 ft, as in the source, whose base-tangent circle starts at x = −4.8 ft.",
       "commercial program A's base-tangent circle gives 1.125 (Bishop), 1.124 (Spencer).",
     ],
   },
@@ -1092,7 +1102,7 @@ export const PROBLEMS: RawCase[] = [
     surface: "search",
     units: "SI",
     description: "24 ft fill slope (φ′ = 37°) on a strong rock foundation with five 800 lb/ft geogrids, 20 ft long, every 4 ft; circular search for surfaces through the toe. Converted to SI.",
-    definition: {"materials":[{"name":"fill","unitWeight":20.42137,"frictionAngle":37,"cohesion":0,"model":{"kind":"mohr-coulomb","unitWeight":20.42137,"cohesion":0,"frictionAngle":37}}],"coordinates":[[0,0],[9.144,7.3152],[22.86,7.3152],[22.86,0]],"materialBoundaries":[],"regionAssignments":[{"point":[16.002,6.8152],"materialName":"fill"}],"reinforcements":[{"x1":1.524,"y1":1.2192,"x2":7.62,"y2":1.2192,"tensileCapacity":3.55858,"spacing":0.3048,"end1Capacity":0,"end2Capacity":0,"direction":"axial","application":"active"},{"x1":3.048,"y1":2.4384,"x2":9.144,"y2":2.4384,"tensileCapacity":3.55858,"spacing":0.3048,"end1Capacity":0,"end2Capacity":0,"direction":"axial","application":"active"},{"x1":4.572,"y1":3.6576,"x2":10.668,"y2":3.6576,"tensileCapacity":3.55858,"spacing":0.3048,"end1Capacity":0,"end2Capacity":0,"direction":"axial","application":"active"},{"x1":6.096,"y1":4.8768,"x2":12.192,"y2":4.8768,"tensileCapacity":3.55858,"spacing":0.3048,"end1Capacity":0,"end2Capacity":0,"direction":"axial","application":"active"},{"x1":7.62,"y1":6.096,"x2":13.716,"y2":6.096,"tensileCapacity":3.55858,"spacing":0.3048,"end1Capacity":0,"end2Capacity":0,"direction":"axial","application":"active"}],"analysisLimits":{"entryLeftX":9.144,"entryRightX":22.86,"exitLeftX":0,"exitRightX":0.3}},
+    definition: {"materials":[{"name":"fill","unitWeight":20.42137,"frictionAngle":37,"cohesion":0,"model":{"kind":"mohr-coulomb","unitWeight":20.42137,"cohesion":0,"frictionAngle":37}}],"coordinates":[[0,0],[9.144,7.3152],[22.86,7.3152],[22.86,0]],"materialBoundaries":[],"regionAssignments":[{"point":[16.002,6.8152],"materialName":"fill"}],"reinforcements":[{"x1":1.524,"y1":1.2192,"x2":7.62,"y2":1.2192,"tensileCapacity":3.55858,"spacing":0.3048,"end1Capacity":0,"end2Capacity":0,"direction":"axial","application":"active"},{"x1":3.048,"y1":2.4384,"x2":9.144,"y2":2.4384,"tensileCapacity":3.55858,"spacing":0.3048,"end1Capacity":0,"end2Capacity":0,"direction":"axial","application":"active"},{"x1":4.572,"y1":3.6576,"x2":10.668,"y2":3.6576,"tensileCapacity":3.55858,"spacing":0.3048,"end1Capacity":0,"end2Capacity":0,"direction":"axial","application":"active"},{"x1":6.096,"y1":4.8768,"x2":12.192,"y2":4.8768,"tensileCapacity":3.55858,"spacing":0.3048,"end1Capacity":0,"end2Capacity":0,"direction":"axial","application":"active"},{"x1":7.62,"y1":6.096,"x2":13.716,"y2":6.096,"tensileCapacity":3.55858,"spacing":0.3048,"end1Capacity":0,"end2Capacity":0,"direction":"axial","application":"active"}],"analysisLimits":{"entryLeftX":9.144,"entryRightX":22.86,"exitLeftX":0,"exitRightX":0.9144}},
     checks: [
       {"method":"Bishop","label":"Bishop simplified","published":1.629,"publishedBy":"Commercial program A","options":{"porePressureHead":"vertical","slices":50}},
       {"method":"Morgenstern-Price","label":"Spencer (M-P, constant f(x))","published":1.62,"publishedBy":"Commercial program A","options":{"intersliceFunction":"constant","porePressureHead":"vertical","slices":50}},
@@ -1287,12 +1297,13 @@ export const PROBLEMS: RawCase[] = [
     surface: "search",
     units: "SI",
     description: "ACADS 1(b) as commercial program B models it: c′ = 32 kPa, φ′ = 10°, a 3.6 m tension crack (dry, see the notes); critical-circle search.",
-    definition: {"coordinates":[[20,20],[20,25],[30,25],[50,35],[70,35],[70,20]],"materials":[{"name":"Soil","unitWeight":20,"frictionAngle":0,"cohesion":0,"model":{"kind":"mohr-coulomb","unitWeight":20,"cohesion":32,"frictionAngle":10}}],"materialBoundaries":[],"regionAssignments":[{"point":[20.5,20.05],"materialName":"Soil"}],"orientation":"rtl"},
+    definition: {"coordinates":[[20,20],[20,25],[30,25],[50,35],[70,35],[70,20]],"materials":[{"name":"Soil","unitWeight":20,"frictionAngle":0,"cohesion":0,"model":{"kind":"mohr-coulomb","unitWeight":20,"cohesion":32,"frictionAngle":10}}],"materialBoundaries":[],"regionAssignments":[{"point":[20.5,20.05],"materialName":"Soil"}],"orientation":"rtl","analysisLimits":{"entryLeftX":49.9,"entryRightX":55.2,"exitLeftX":26.9,"exitRightX":30.2}},
     checks: [
       {"method":"Bishop","label":"Bishop simplified","published":1.664,"publishedBy":"Commercial program B","options":{"slices":50,"tensionCrackDepth":3.6,"tensionCrackWater":0}},
       {"method":"Morgenstern-Price","label":"Morgenstern-Price (half-sine)","published":1.66,"publishedBy":"Commercial program B","options":{"slices":50,"tensionCrackDepth":3.6,"tensionCrackWater":0}},
     ],
     notes: [
+      "Entry on the crest (x = 49.9–55.2) and exit at the toe (x = 26.9–30.2), as in the source.",
       "The manual quotes 'about 3.6 m' for 2c/(γ√Ka); the formula gives 3.814 m (V048 uses 3.814). commercial program B Janbu (uncorrected) 1.471. ACADS band 1.65–1.70.",
       "The text says the crack is water-filled, but commercial program B's 1.664 / 1.660 are reproduced only with a DRY 3.6 m crack (cSlope 1.658 / 1.655). With the crack full of water cSlope gives 1.593 / 1.589 (3.6 m) and 1.589 / 1.586 (3.814 m, = V048; commercial program A 1.596 / 1.592). Without a crack 1.685 / 1.683.",
     ],
@@ -1304,13 +1315,14 @@ export const PROBLEMS: RawCase[] = [
     surface: "search",
     units: "SI",
     description: "The ACADS 1(a) slope (10 m high, 2:1) with c' = 32 kPa, φ' = 10° and a water-filled tension crack 4 m deep, the crack zone of commercial program A's Fig. 2.1 (35 → 31 m; the formula 2c/(γ√Ka) gives 3.814 m); critical circle search.",
-    definition: {"coordinates":[[0,20],[0,25],[30,25],[50,35],[90,35],[90,20]],"materials":[{"name":"Soil","unitWeight":20,"frictionAngle":0,"cohesion":0,"model":{"kind":"mohr-coulomb","unitWeight":20,"cohesion":32,"frictionAngle":10}}],"materialBoundaries":[],"regionAssignments":[{"point":[0.9,20.05],"materialName":"Soil"}],"orientation":"rtl"},
+    definition: {"coordinates":[[0,20],[0,25],[30,25],[50,35],[90,35],[90,20]],"materials":[{"name":"Soil","unitWeight":20,"frictionAngle":0,"cohesion":0,"model":{"kind":"mohr-coulomb","unitWeight":20,"cohesion":32,"frictionAngle":10}}],"materialBoundaries":[],"regionAssignments":[{"point":[0.9,20.05],"materialName":"Soil"}],"orientation":"rtl","analysisLimits":{"entryLeftX":20,"entryRightX":70,"exitLeftX":20,"exitRightX":70}},
     checks: [
       {"method":"Bishop","label":"Bishop simplified","published":1.596,"publishedBy":"Commercial program A","options":{"tensionCrackDepth":4,"tensionCrackWater":1}},
       {"method":"Morgenstern-Price","label":"Spencer (M-P, constant f(x))","published":1.592,"publishedBy":"Commercial program A","options":{"intersliceFunction":"constant","tensionCrackDepth":4,"tensionCrackWater":1}},
       {"method":"Janbu","label":"Janbu corrected (f0)","published":1.489,"publishedBy":"Commercial program A","options":{"tensionCrackDepth":4,"tensionCrackWater":1,"janbuCorrection":true},"note":"Janbu corrected: 1.5 % for a search whose critical circle (and so f0) differs from Bishop's."},
     ],
     notes: [
+      "Search limited to x = 20–70, the model of the source.",
       "With the 3.814 m crack of the formula cSlope gives 1.590 / 1.585 / 1.481; the 4 m crack of the figure lowers them by 0.2–0.5 %.",
       "commercial program B's 1.664 (V047b) corresponds to a dry 3.6 m crack; the ACADS reference band is 1.65–1.70 (Giam 1.65). program D 1.589 with the 3.814 m crack.",
     ],
@@ -1322,7 +1334,7 @@ export const PROBLEMS: RawCase[] = [
     surface: "search",
     units: "SI",
     description: "Non-homogeneous three-layer slope (ACADS 1c); critical-circle search.",
-    definition: {"materials":[{"name":"Soil #1","unitWeight":19.5,"frictionAngle":38,"cohesion":0,"model":{"kind":"mohr-coulomb","unitWeight":19.5,"cohesion":0,"frictionAngle":38}},{"name":"Soil #2","unitWeight":19.5,"frictionAngle":23,"cohesion":5.3,"model":{"kind":"mohr-coulomb","unitWeight":19.5,"cohesion":5.3,"frictionAngle":23}},{"name":"Soil #3","unitWeight":19.5,"frictionAngle":20,"cohesion":7.2,"model":{"kind":"mohr-coulomb","unitWeight":19.5,"cohesion":7.2,"frictionAngle":20}}],"coordinates":[[0,20],[0,25],[30,25],[40,30],[50,35],[52,35],[54,35],[90,35],[90,20]],"materialBoundaries":[{"coordinates":[[0,25],[30,25],[50,29],[54,31],[90,31]],"materialName":""},{"coordinates":[[0,25],[30,25],[40,27],[52,24],[90,24]],"materialName":""}],"regionAssignments":[{"point":[48,33.5],"materialName":"Soil #1"},{"point":[72,30.5],"materialName":"Soil #2"},{"point":[39,26.3],"materialName":"Soil #3"}]},
+    definition: {"materials":[{"name":"Soil #1","unitWeight":19.5,"frictionAngle":38,"cohesion":0,"model":{"kind":"mohr-coulomb","unitWeight":19.5,"cohesion":0,"frictionAngle":38}},{"name":"Soil #2","unitWeight":19.5,"frictionAngle":23,"cohesion":5.3,"model":{"kind":"mohr-coulomb","unitWeight":19.5,"cohesion":5.3,"frictionAngle":23}},{"name":"Soil #3","unitWeight":19.5,"frictionAngle":20,"cohesion":7.2,"model":{"kind":"mohr-coulomb","unitWeight":19.5,"cohesion":7.2,"frictionAngle":20}}],"coordinates":[[0,20],[0,25],[30,25],[40,30],[50,35],[52,35],[54,35],[90,35],[90,20]],"materialBoundaries":[{"coordinates":[[0,25],[30,25],[50,29],[54,31],[90,31]],"materialName":""},{"coordinates":[[0,25],[30,25],[40,27],[52,24],[90,24]],"materialName":""}],"regionAssignments":[{"point":[48,33.5],"materialName":"Soil #1"},{"point":[72,30.5],"materialName":"Soil #2"},{"point":[39,26.3],"materialName":"Soil #3"}],"analysisLimits":{"entryLeftX":20,"entryRightX":70,"exitLeftX":20,"exitRightX":70}},
     checks: [
       {"method":"Bishop","label":"Bishop simplified","published":1.405,"publishedBy":"Commercial program A","options":{"porePressureHead":"vertical","slices":40}},
       {"method":"Morgenstern-Price","label":"Spencer (M-P, constant f(x))","published":1.375,"publishedBy":"Commercial program A","options":{"intersliceFunction":"constant","porePressureHead":"vertical","slices":40}},
@@ -1331,6 +1343,7 @@ export const PROBLEMS: RawCase[] = [
       {"method":"Bishop","label":"Bishop simplified","published":1.403,"publishedBy":"Program D","options":{"porePressureHead":"vertical","slices":40}},
     ],
     notes: [
+      "Search limited to x = 20–70, the model of the source.",
       "ACADS 1.39; commercial program B Bishop 1.414.",
     ],
   },
@@ -1426,11 +1439,12 @@ export const PROBLEMS: RawCase[] = [
     units: "SI",
     inputFromFigure: true,
     description: "Greco's weak-seam slope (V054) with commercial program B's geometry and water table; circular search with non-circular optimisation, vertical pore-pressure head.",
-    definition: {"orientation":"rtl","coordinates":[[0,0],[0,20],[55,20],[75,30],[95,40],[100,40],[145,70],[240,70],[240,15],[150,15]],"materials":[{"name":"Layer 1","unitWeight":20,"frictionAngle":0,"cohesion":0,"model":{"kind":"mohr-coulomb","unitWeight":20,"cohesion":9.8,"frictionAngle":35}},{"name":"Layer 2","unitWeight":19,"frictionAngle":0,"cohesion":0,"model":{"kind":"mohr-coulomb","unitWeight":19,"cohesion":58.8,"frictionAngle":25}},{"name":"Layer 3","unitWeight":21.5,"frictionAngle":0,"cohesion":0,"model":{"kind":"mohr-coulomb","unitWeight":21.5,"cohesion":19.8,"frictionAngle":30}},{"name":"Layer 4","unitWeight":21.5,"frictionAngle":0,"cohesion":0,"model":{"kind":"mohr-coulomb","unitWeight":21.5,"cohesion":9.8,"frictionAngle":16}}],"materialBoundaries":[{"coordinates":[[100,40],[190,55],[241,55]],"materialName":""},{"coordinates":[[75,30],[241,30]],"materialName":""},{"coordinates":[[-1,0.4],[150,15.5],[241,15.5]],"materialName":""}],"regionAssignments":[{"point":[200,62],"materialName":"Layer 1"},{"point":[200,45],"materialName":"Layer 2"},{"point":[100,20],"materialName":"Layer 3"},{"point":[100,10.25],"materialName":"Layer 4"}],"waterTable":{"mode":"custom","value":[[0,20],[55,20],[75,30],[95,40],[100,40],[190,55],[240,55]],"followBoundary":false}},
+    definition: {"orientation":"rtl","coordinates":[[0,0],[0,20],[55,20],[75,30],[95,40],[100,40],[145,70],[240,70],[240,15],[150,15]],"materials":[{"name":"Layer 1","unitWeight":20,"frictionAngle":0,"cohesion":0,"model":{"kind":"mohr-coulomb","unitWeight":20,"cohesion":9.8,"frictionAngle":35}},{"name":"Layer 2","unitWeight":19,"frictionAngle":0,"cohesion":0,"model":{"kind":"mohr-coulomb","unitWeight":19,"cohesion":58.8,"frictionAngle":25}},{"name":"Layer 3","unitWeight":21.5,"frictionAngle":0,"cohesion":0,"model":{"kind":"mohr-coulomb","unitWeight":21.5,"cohesion":19.8,"frictionAngle":30}},{"name":"Layer 4","unitWeight":21.5,"frictionAngle":0,"cohesion":0,"model":{"kind":"mohr-coulomb","unitWeight":21.5,"cohesion":9.8,"frictionAngle":16}}],"materialBoundaries":[{"coordinates":[[100,40],[190,55],[241,55]],"materialName":""},{"coordinates":[[75,30],[241,30]],"materialName":""},{"coordinates":[[-1,0.4],[150,15.5],[241,15.5]],"materialName":""}],"regionAssignments":[{"point":[200,62],"materialName":"Layer 1"},{"point":[200,45],"materialName":"Layer 2"},{"point":[100,20],"materialName":"Layer 3"},{"point":[100,10.25],"materialName":"Layer 4"}],"waterTable":{"mode":"custom","value":[[0,20],[55,20],[75,30],[95,40],[100,40],[190,55],[240,55]],"followBoundary":false},"analysisLimits":{"entryLeftX":145,"entryRightX":240,"exitLeftX":0,"exitRightX":55}},
     checks: [
       {"method":"Morgenstern-Price","label":"Spencer (M-P, constant f(x))","published":1.054,"publishedBy":"Commercial program B","options":{"intersliceFunction":"constant","slices":50,"porePressureHead":"vertical","nonCircularOptimization":true}},
     ],
     notes: [
+      "Entry on the crest (x = 145–240) and exit on the level ground (x = 0–55), as in the source.",
       "Fig. 40: base (0,0)–(150,15)–(240,15) under a 0.5 m Layer 4 whose top is (0,0.5)–(150,15.5)–(240,15.5); the thickness of Layer 4 is read from the label (0, 0.5) only partly legible. V054 (commercial program A) has the base rising to (240,16).",
       "commercial program B Janbu (uncorrected) 0.896, Bishop 1.040 (axis-dependent on a non-circular surface, not checked). Greco 1.08.",
       "cSlope's optimised surface (Spencer 1.032) is below commercial program B's 1.054; on the commercial program A geometry (V054) cSlope's optimisation also gives 1.032 and commercial program A's block search 1.010, Chen & Shao 1.01–1.03: a search difference, not a model one.",
@@ -1443,12 +1457,13 @@ export const PROBLEMS: RawCase[] = [
     surface: "search",
     units: "SI",
     description: "Four layers including a weak seam, with a water table; critical circle search, vertical pore-pressure head.",
-    definition: {"coordinates":[[0,0],[0,20],[55,20],[75,30],[95,40],[100,40],[145,70],[240,70],[240,16],[150,15]],"materials":[{"name":"Layer 1","unitWeight":20,"frictionAngle":0,"cohesion":0,"model":{"kind":"mohr-coulomb","unitWeight":20,"cohesion":9.8,"frictionAngle":35}},{"name":"Layer 2","unitWeight":19,"frictionAngle":0,"cohesion":0,"model":{"kind":"mohr-coulomb","unitWeight":19,"cohesion":58.8,"frictionAngle":25}},{"name":"Layer 3","unitWeight":21.5,"frictionAngle":0,"cohesion":0,"model":{"kind":"mohr-coulomb","unitWeight":21.5,"cohesion":19.8,"frictionAngle":30}},{"name":"Seam","unitWeight":21.5,"frictionAngle":0,"cohesion":0,"model":{"kind":"mohr-coulomb","unitWeight":21.5,"cohesion":9.8,"frictionAngle":16}}],"materialBoundaries":[{"coordinates":[[100,40],[190,55],[241,55]],"materialName":""},{"coordinates":[[75,30],[241,30]],"materialName":""},{"coordinates":[[-1,0.4],[150,15.5],[241,16.51]],"materialName":""}],"regionAssignments":[{"point":[200,62],"materialName":"Layer 1"},{"point":[200,45],"materialName":"Layer 2"},{"point":[100,20],"materialName":"Layer 3"},{"point":[100,10.25],"materialName":"Seam"}],"waterTable":{"mode":"custom","value":[[0,20],[55,20],[75,30],[95,40],[100,40],[190,55],[240,55]]}},
+    definition: {"coordinates":[[0,0],[0,20],[55,20],[75,30],[95,40],[100,40],[145,70],[240,70],[240,16],[150,15]],"materials":[{"name":"Layer 1","unitWeight":20,"frictionAngle":0,"cohesion":0,"model":{"kind":"mohr-coulomb","unitWeight":20,"cohesion":9.8,"frictionAngle":35}},{"name":"Layer 2","unitWeight":19,"frictionAngle":0,"cohesion":0,"model":{"kind":"mohr-coulomb","unitWeight":19,"cohesion":58.8,"frictionAngle":25}},{"name":"Layer 3","unitWeight":21.5,"frictionAngle":0,"cohesion":0,"model":{"kind":"mohr-coulomb","unitWeight":21.5,"cohesion":19.8,"frictionAngle":30}},{"name":"Seam","unitWeight":21.5,"frictionAngle":0,"cohesion":0,"model":{"kind":"mohr-coulomb","unitWeight":21.5,"cohesion":9.8,"frictionAngle":16}}],"materialBoundaries":[{"coordinates":[[100,40],[190,55],[241,55]],"materialName":""},{"coordinates":[[75,30],[241,30]],"materialName":""},{"coordinates":[[-1,0.4],[150,15.5],[241,16.51]],"materialName":""}],"regionAssignments":[{"point":[200,62],"materialName":"Layer 1"},{"point":[200,45],"materialName":"Layer 2"},{"point":[100,20],"materialName":"Layer 3"},{"point":[100,10.25],"materialName":"Seam"}],"waterTable":{"mode":"custom","value":[[0,20],[55,20],[75,30],[95,40],[100,40],[190,55],[240,55]]},"analysisLimits":{"entryLeftX":55,"entryRightX":240,"exitLeftX":55,"exitRightX":55}},
     checks: [
       {"method":"Bishop","label":"Bishop simplified (vertical head)","published":1.087,"publishedBy":"Commercial program A","options":{"porePressureHead":"vertical"}},
       {"method":"Morgenstern-Price","label":"Spencer (vertical head)","published":1.093,"publishedBy":"Commercial program A","options":{"intersliceFunction":"constant","porePressureHead":"vertical"}},
     ],
     notes: [
+      "Circles pass through the toe (55, 20), as in the source.",
       "With the phreatic correction (cos²θ) cSlope gives 1.141 (Bishop).",
     ],
   },
@@ -1766,12 +1781,13 @@ export const PROBLEMS: RawCase[] = [
     surface: "search",
     units: "SI",
     description: "Homogeneous earth dam (c′ = 13.8 kPa, φ′ = 37°, γ = 18.2 kN/m³) before the reservoir is filled; circular search.",
-    definition: {"materials":[{"name":"Material 1","unitWeight":18.2,"frictionAngle":37,"cohesion":13.8,"model":{"kind":"mohr-coulomb","unitWeight":18.2,"cohesion":13.8,"frictionAngle":37}}],"coordinates":[[0,0],[0,7.3],[33.5,7.3],[86.657,24.391],[99.75,28.6],[107.05,28.6],[157.9,7.3],[191.4,7.3],[191.4,0]],"materialBoundaries":[],"regionAssignments":[{"point":[103.4,28.1],"materialName":"Material 1"}]},
+    definition: {"materials":[{"name":"Material 1","unitWeight":18.2,"frictionAngle":37,"cohesion":13.8,"model":{"kind":"mohr-coulomb","unitWeight":18.2,"cohesion":13.8,"frictionAngle":37}}],"coordinates":[[0,0],[0,7.3],[33.5,7.3],[86.657,24.391],[99.75,28.6],[107.05,28.6],[157.9,7.3],[191.4,7.3],[191.4,0]],"materialBoundaries":[],"regionAssignments":[{"point":[103.4,28.1],"materialName":"Material 1"}],"analysisLimits":{"entryLeftX":101.7,"entryRightX":185.6,"exitLeftX":101.7,"exitRightX":185.6}},
     checks: [
       {"method":"Morgenstern-Price","label":"Spencer (M-P, constant f(x))","published":2.455,"publishedBy":"Commercial program A","options":{"intersliceFunction":"constant","porePressureHead":"vertical","slices":40}},
       {"method":"Morgenstern-Price","label":"Spencer (M-P, constant f(x))","published":2.43,"publishedBy":"Huang & Jia (FE strength reduction)","options":{"intersliceFunction":"constant","porePressureHead":"vertical","slices":40}},
     ],
     notes: [
+      "Search limited to x = 101.7–185.6 (crest to the downstream berm), as in the source.",
       "commercial program A reports the Spencer value only. The steady-seepage and drawdown stages need a seepage analysis.",
     ],
   },
@@ -2002,12 +2018,13 @@ export const PROBLEMS: RawCase[] = [
     surface: "search",
     units: "SI",
     description: "Sandy clay over a 5 ft highly plastic clay seam on the model base, water table and a dry 6 ft tension crack; circular search. Converted to SI.",
-    definition: {"coordinates":[[-21.336000000000002,25.908],[-21.336000000000002,30.48],[0,30.48],[38.1,45.72],[60.96,45.72],[60.96,25.908]],"materials":[{"name":"Sandy clay","unitWeight":20.4213698,"frictionAngle":0,"cohesion":0,"model":{"kind":"mohr-coulomb","unitWeight":20.4213698,"cohesion":14.364078000000001,"frictionAngle":35}},{"name":"Plastic clay seam","unitWeight":20.4213698,"frictionAngle":0,"cohesion":0,"model":{"kind":"mohr-coulomb","unitWeight":20.4213698,"cohesion":0,"frictionAngle":25}}],"materialBoundaries":[{"coordinates":[[-22.336000000000002,27.432000000000002],[61.96,27.432000000000002]],"materialName":""}],"regionAssignments":[{"point":[-20.513040000000004,27.482000000000003],"materialName":"Sandy clay"},{"point":[-20.513040000000004,26.67],"materialName":"Plastic clay seam"}],"orientation":"rtl","waterTable":{"mode":"custom","value":[[-21.336000000000002,30.48],[0,30.48],[38.1,42.672000000000004],[60.96,42.672000000000004]]}},
+    definition: {"coordinates":[[-21.336000000000002,25.908],[-21.336000000000002,30.48],[0,30.48],[38.1,45.72],[60.96,45.72],[60.96,25.908]],"materials":[{"name":"Sandy clay","unitWeight":20.4213698,"frictionAngle":0,"cohesion":0,"model":{"kind":"mohr-coulomb","unitWeight":20.4213698,"cohesion":14.364078000000001,"frictionAngle":35}},{"name":"Plastic clay seam","unitWeight":20.4213698,"frictionAngle":0,"cohesion":0,"model":{"kind":"mohr-coulomb","unitWeight":20.4213698,"cohesion":0,"frictionAngle":25}}],"materialBoundaries":[{"coordinates":[[-22.336000000000002,27.432000000000002],[61.96,27.432000000000002]],"materialName":""}],"regionAssignments":[{"point":[-20.513040000000004,27.482000000000003],"materialName":"Sandy clay"},{"point":[-20.513040000000004,26.67],"materialName":"Plastic clay seam"}],"orientation":"rtl","waterTable":{"mode":"custom","value":[[-21.336000000000002,30.48],[0,30.48],[38.1,42.672000000000004],[60.96,42.672000000000004]]},"analysisLimits":{"entryLeftX":-15.24,"entryRightX":50,"exitLeftX":-15.24,"exitRightX":50}},
     checks: [
       {"method":"Bishop","label":"Bishop simplified","published":1.417,"publishedBy":"Commercial program A (circles)","options":{"tensionCrackDepth":1.8288000000000002}},
       {"method":"Morgenstern-Price","label":"Spencer (M-P, constant f(x))","published":1.422,"publishedBy":"Commercial program A (circles)","options":{"intersliceFunction":"constant","tensionCrackDepth":1.8288000000000002}},
     ],
     notes: [
+      "Search limited to x = −15.24 to 50 m (−50 to 164 ft: the toe bench to the crest), as in the source.",
       "commercial program A's composite surfaces (circles cut off at the base) give 1.392 / 1.400; cSlope's non-circular optimisation, which is not restricted to that shape, finds 1.353 / 1.369 along the seam.",
     ],
   },
@@ -2329,6 +2346,7 @@ export const PROBLEMS: RawCase[] = [
     ],
     notes: [
       "Without limits the search finds shallower mechanisms: a sliver in the cohesionless 1:1 fill (0.74) and, with the crack, a surface through the fill and Marsh clay (1.15). The published value is the deep failure.",
+      "The source searches the whole model and models the fill as a tension-crack zone, so its circles start at the base of the fill; these limits stand in for that.",
     ],
   },
   {
@@ -2510,12 +2528,13 @@ export const PROBLEMS: RawCase[] = [
     surface: "search",
     units: "SI",
     description: "Four-layer slope without water whose critical surface is non-circular; circular search followed by non-circular optimisation.",
-    definition: {"coordinates":[[0,0],[0,40],[60,40],[180,100],[200,100],[260,70],[260,0]],"materials":[{"name":"Upper layer","unitWeight":20.38,"frictionAngle":0,"cohesion":0,"model":{"kind":"mohr-coulomb","unitWeight":20.38,"cohesion":49,"frictionAngle":29}},{"name":"Layer 2","unitWeight":17.64,"frictionAngle":0,"cohesion":0,"model":{"kind":"mohr-coulomb","unitWeight":17.64,"cohesion":0,"frictionAngle":30}},{"name":"Layer 3","unitWeight":20.38,"frictionAngle":0,"cohesion":0,"model":{"kind":"mohr-coulomb","unitWeight":20.38,"cohesion":7.84,"frictionAngle":20}},{"name":"Bottom layer","unitWeight":17.64,"frictionAngle":0,"cohesion":0,"model":{"kind":"mohr-coulomb","unitWeight":17.64,"cohesion":0,"frictionAngle":30}}],"materialBoundaries":[{"coordinates":[[-1,40],[261,40]],"materialName":""},{"coordinates":[[-1,35],[261,35]],"materialName":""},{"coordinates":[[-1,26],[261,26]],"materialName":""}],"regionAssignments":[{"point":[61.1,40.05],"materialName":"Upper layer"},{"point":[2.6,37.5],"materialName":"Layer 2"},{"point":[2.6,30.5],"materialName":"Layer 3"},{"point":[2.6,13],"materialName":"Bottom layer"}],"orientation":"rtl"},
+    definition: {"coordinates":[[0,0],[0,40],[60,40],[180,100],[200,100],[260,70],[260,0]],"materials":[{"name":"Upper layer","unitWeight":20.38,"frictionAngle":0,"cohesion":0,"model":{"kind":"mohr-coulomb","unitWeight":20.38,"cohesion":49,"frictionAngle":29}},{"name":"Layer 2","unitWeight":17.64,"frictionAngle":0,"cohesion":0,"model":{"kind":"mohr-coulomb","unitWeight":17.64,"cohesion":0,"frictionAngle":30}},{"name":"Layer 3","unitWeight":20.38,"frictionAngle":0,"cohesion":0,"model":{"kind":"mohr-coulomb","unitWeight":20.38,"cohesion":7.84,"frictionAngle":20}},{"name":"Bottom layer","unitWeight":17.64,"frictionAngle":0,"cohesion":0,"model":{"kind":"mohr-coulomb","unitWeight":17.64,"cohesion":0,"frictionAngle":30}}],"materialBoundaries":[{"coordinates":[[-1,40],[261,40]],"materialName":""},{"coordinates":[[-1,35],[261,35]],"materialName":""},{"coordinates":[[-1,26],[261,26]],"materialName":""}],"regionAssignments":[{"point":[61.1,40.05],"materialName":"Upper layer"},{"point":[2.6,37.5],"materialName":"Layer 2"},{"point":[2.6,30.5],"materialName":"Layer 3"},{"point":[2.6,13],"materialName":"Bottom layer"}],"orientation":"rtl","analysisLimits":{"entryLeftX":0,"entryRightX":200,"exitLeftX":0,"exitRightX":200}},
     checks: [
       {"method":"Morgenstern-Price","label":"Spencer (M-P, constant f(x))","published":1.398,"publishedBy":"Commercial program A (Monte Carlo)","options":{"intersliceFunction":"constant","nonCircularOptimization":true}},
       {"method":"Morgenstern-Price","label":"Morgenstern-Price (half-sine)","published":1.389,"publishedBy":"Commercial program B","options":{"slices":50,"nonCircularOptimization":true}},
     ],
     notes: [
+      "Search limited to x = 0–200; the down-slope beyond the crest is not searched, as in the source.",
       "Greco publishes 1.40–1.42 for the non-circular surface; the best circle gives 1.430.",
     ],
   },
@@ -2569,12 +2588,13 @@ export const PROBLEMS: RawCase[] = [
     surface: "search",
     units: "SI",
     description: "Four horizontal layers under a two-bench slope with a dry tension crack 1.015 m deep at the crest (Fig. 52.1; the depth of commercial program A's surface end below the crest), dry; the circular search lands in the deep family (surface 3).",
-    definition: {"materials":[{"name":"Layer 1 (top)","unitWeight":18.8,"frictionAngle":18,"cohesion":20,"model":{"kind":"mohr-coulomb","unitWeight":18.8,"cohesion":20,"frictionAngle":18}},{"name":"Layer 2","unitWeight":18.5,"frictionAngle":22,"cohesion":40,"model":{"kind":"mohr-coulomb","unitWeight":18.5,"cohesion":40,"frictionAngle":22}},{"name":"Layer 3","unitWeight":18.4,"frictionAngle":26,"cohesion":25,"model":{"kind":"mohr-coulomb","unitWeight":18.4,"cohesion":25,"frictionAngle":26}},{"name":"Layer 4 (bottom)","unitWeight":18,"frictionAngle":12,"cohesion":10,"model":{"kind":"mohr-coulomb","unitWeight":18,"cohesion":10,"frictionAngle":12}}],"coordinates":[[-20,-9],[-20,0],[0,0],[6,3],[18,9],[30,15],[50,15],[50,-9]],"materialBoundaries":[{"coordinates":[[-20,0],[0,0],[6,3],[18,9],[50,9]],"materialName":""},{"coordinates":[[-20,0],[0,0],[6,3],[50,3]],"materialName":""},{"coordinates":[[-20,-6],[50,-6]],"materialName":""}],"regionAssignments":[{"point":[40,14.5],"materialName":"Layer 1 (top)"},{"point":[34,8.5],"materialName":"Layer 2"},{"point":[28,2.5],"materialName":"Layer 3"},{"point":[15,-6.5],"materialName":"Layer 4 (bottom)"}]},
+    definition: {"materials":[{"name":"Layer 1 (top)","unitWeight":18.8,"frictionAngle":18,"cohesion":20,"model":{"kind":"mohr-coulomb","unitWeight":18.8,"cohesion":20,"frictionAngle":18}},{"name":"Layer 2","unitWeight":18.5,"frictionAngle":22,"cohesion":40,"model":{"kind":"mohr-coulomb","unitWeight":18.5,"cohesion":40,"frictionAngle":22}},{"name":"Layer 3","unitWeight":18.4,"frictionAngle":26,"cohesion":25,"model":{"kind":"mohr-coulomb","unitWeight":18.4,"cohesion":25,"frictionAngle":26}},{"name":"Layer 4 (bottom)","unitWeight":18,"frictionAngle":12,"cohesion":10,"model":{"kind":"mohr-coulomb","unitWeight":18,"cohesion":10,"frictionAngle":12}}],"coordinates":[[-20,-9],[-20,0],[0,0],[6,3],[18,9],[30,15],[50,15],[50,-9]],"materialBoundaries":[{"coordinates":[[-20,0],[0,0],[6,3],[18,9],[50,9]],"materialName":""},{"coordinates":[[-20,0],[0,0],[6,3],[50,3]],"materialName":""},{"coordinates":[[-20,-6],[50,-6]],"materialName":""}],"regionAssignments":[{"point":[40,14.5],"materialName":"Layer 1 (top)"},{"point":[34,8.5],"materialName":"Layer 2"},{"point":[28,2.5],"materialName":"Layer 3"},{"point":[15,-6.5],"materialName":"Layer 4 (bottom)"}],"analysisLimits":{"entryLeftX":33.1,"entryRightX":50,"exitLeftX":-20,"exitRightX":-4.3}},
     checks: [
       {"method":"Bishop","label":"Bishop simplified","published":1.804,"publishedBy":"Commercial program A","options":{"porePressureHead":"vertical","slices":50,"tensionCrackDepth":1.015}},
       {"method":"Morgenstern-Price","label":"Spencer (M-P, constant f(x))","published":1.804,"publishedBy":"Commercial program A","options":{"intersliceFunction":"constant","porePressureHead":"vertical","slices":50,"tensionCrackDepth":1.015}},
     ],
     notes: [
+      "Entry on the upper bench (x = 33.1–50) and exit on the lower bench (x = −20 to −4.3), as in the source.",
       "Zhu & Lee (surface 3): Spencer 1.836, M-P 1.823. program D 1.796 (Bishop) without the crack. V096c checks the reference circle itself.",
     ],
   },
@@ -2585,12 +2605,13 @@ export const PROBLEMS: RawCase[] = [
     surface: "search",
     units: "SI",
     description: "As V096a (dry 1.015 m crack) with the water table of Table 52.2.",
-    definition: {"materials":[{"name":"Layer 1 (top)","unitWeight":18.8,"frictionAngle":18,"cohesion":20,"model":{"kind":"mohr-coulomb","unitWeight":18.8,"cohesion":20,"frictionAngle":18}},{"name":"Layer 2","unitWeight":18.5,"frictionAngle":22,"cohesion":40,"model":{"kind":"mohr-coulomb","unitWeight":18.5,"cohesion":40,"frictionAngle":22}},{"name":"Layer 3","unitWeight":18.4,"frictionAngle":26,"cohesion":25,"model":{"kind":"mohr-coulomb","unitWeight":18.4,"cohesion":25,"frictionAngle":26}},{"name":"Layer 4 (bottom)","unitWeight":18,"frictionAngle":12,"cohesion":10,"model":{"kind":"mohr-coulomb","unitWeight":18,"cohesion":10,"frictionAngle":12}}],"coordinates":[[-20,-9],[-20,0],[0,0],[6,3],[18,9],[30,15],[50,15],[50,-9]],"materialBoundaries":[{"coordinates":[[-20,0],[0,0],[6,3],[18,9],[50,9]],"materialName":""},{"coordinates":[[-20,0],[0,0],[6,3],[50,3]],"materialName":""},{"coordinates":[[-20,-6],[50,-6]],"materialName":""}],"regionAssignments":[{"point":[40,14.5],"materialName":"Layer 1 (top)"},{"point":[34,8.5],"materialName":"Layer 2"},{"point":[28,2.5],"materialName":"Layer 3"},{"point":[15,-6.5],"materialName":"Layer 4 (bottom)"}],"waterTable":{"mode":"custom","value":[[-20,0],[0,0],[6,3],[10.568,5.284],[25.314,9.002],[39.149,10.269],[50,10.269]],"followBoundary":false}},
+    definition: {"materials":[{"name":"Layer 1 (top)","unitWeight":18.8,"frictionAngle":18,"cohesion":20,"model":{"kind":"mohr-coulomb","unitWeight":18.8,"cohesion":20,"frictionAngle":18}},{"name":"Layer 2","unitWeight":18.5,"frictionAngle":22,"cohesion":40,"model":{"kind":"mohr-coulomb","unitWeight":18.5,"cohesion":40,"frictionAngle":22}},{"name":"Layer 3","unitWeight":18.4,"frictionAngle":26,"cohesion":25,"model":{"kind":"mohr-coulomb","unitWeight":18.4,"cohesion":25,"frictionAngle":26}},{"name":"Layer 4 (bottom)","unitWeight":18,"frictionAngle":12,"cohesion":10,"model":{"kind":"mohr-coulomb","unitWeight":18,"cohesion":10,"frictionAngle":12}}],"coordinates":[[-20,-9],[-20,0],[0,0],[6,3],[18,9],[30,15],[50,15],[50,-9]],"materialBoundaries":[{"coordinates":[[-20,0],[0,0],[6,3],[18,9],[50,9]],"materialName":""},{"coordinates":[[-20,0],[0,0],[6,3],[50,3]],"materialName":""},{"coordinates":[[-20,-6],[50,-6]],"materialName":""}],"regionAssignments":[{"point":[40,14.5],"materialName":"Layer 1 (top)"},{"point":[34,8.5],"materialName":"Layer 2"},{"point":[28,2.5],"materialName":"Layer 3"},{"point":[15,-6.5],"materialName":"Layer 4 (bottom)"}],"waterTable":{"mode":"custom","value":[[-20,0],[0,0],[6,3],[10.568,5.284],[25.314,9.002],[39.149,10.269],[50,10.269]],"followBoundary":false},"analysisLimits":{"entryLeftX":33.1,"entryRightX":50,"exitLeftX":-20,"exitRightX":-4.3}},
     checks: [
       {"method":"Bishop","label":"Bishop simplified","published":1.176,"publishedBy":"Commercial program A","options":{"porePressureHead":"vertical","slices":50,"tensionCrackDepth":1.015}},
       {"method":"Morgenstern-Price","label":"Spencer (M-P, constant f(x))","published":1.189,"publishedBy":"Commercial program A","options":{"intersliceFunction":"constant","porePressureHead":"vertical","slices":50,"tensionCrackDepth":1.015}},
     ],
     notes: [
+      "Entry on the upper bench (x = 33.1–50) and exit on the lower bench (x = −20 to −4.3), as in the source.",
       "Zhu & Lee (surface 3): Spencer 1.211, M-P 1.197. program D 1.189 (Spencer) without the crack.",
     ],
   },

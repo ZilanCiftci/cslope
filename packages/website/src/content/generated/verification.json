@@ -47,8 +47,8 @@
      "method": "Spencer (M-P, constant f(x))",
      "published": 1.386,
      "source": "Commercial program A (non-circular)",
-     "computed": 1.3857,
-     "deviation": -0.00022
+     "computed": 1.3858,
+     "deviation": -0.00014
     }
    ]
   },
@@ -179,15 +179,15 @@
      "method": "Bishop simplified",
      "published": 2.5,
      "source": "Theory (infinite slope)",
-     "computed": 2.5096,
-     "deviation": 0.00384
+     "computed": 2.5228,
+     "deviation": 0.00912
     },
     {
      "method": "Spencer (M-P, constant f(x))",
      "published": 2.5,
      "source": "Theory (infinite slope)",
-     "computed": 2.5096,
-     "deviation": 0.00384
+     "computed": 2.5229,
+     "deviation": 0.00916
     }
    ]
   },
@@ -290,8 +290,8 @@
      "method": "Spencer (M-P, constant f(x))",
      "published": 1.536,
      "source": "Commercial program A",
-     "computed": 1.5186,
-     "deviation": -0.01133
+     "computed": 1.5191,
+     "deviation": -0.011
     }
    ]
   },
@@ -1321,15 +1321,15 @@
      "method": "Bishop simplified",
      "published": 1.125,
      "source": "Commercial program A",
-     "computed": 1.1188,
-     "deviation": -0.00551
+     "computed": 1.117,
+     "deviation": -0.00711
     },
     {
      "method": "Spencer (M-P, constant f(x))",
      "published": 1.124,
      "source": "Duncan & Wright (reference)",
-     "computed": 1.1188,
-     "deviation": -0.00463
+     "computed": 1.117,
+     "deviation": -0.00623
     }
    ]
   },
@@ -2185,15 +2185,15 @@
      "method": "Bishop simplified",
      "published": 1.664,
      "source": "Commercial program B",
-     "computed": 1.6581,
-     "deviation": -0.00355
+     "computed": 1.6589,
+     "deviation": -0.00306
     },
     {
      "method": "Morgenstern-Price (half-sine)",
      "published": 1.66,
      "source": "Commercial program B",
-     "computed": 1.6552,
-     "deviation": -0.00289
+     "computed": 1.6559,
+     "deviation": -0.00247
     }
    ]
   },
@@ -2224,8 +2224,8 @@
      "method": "Janbu corrected (f0)",
      "published": 1.489,
      "source": "Commercial program A",
-     "computed": 1.4741,
-     "deviation": -0.01001
+     "computed": 1.4742,
+     "deviation": -0.00994
     }
    ]
   },
@@ -2441,8 +2441,8 @@
      "method": "Spencer (M-P, constant f(x))",
      "published": 1.054,
      "source": "Commercial program B",
-     "computed": 1.0316,
-     "deviation": -0.02125
+     "computed": 1.0486,
+     "deviation": -0.00512
     }
    ]
   },
@@ -3325,15 +3325,15 @@
      "method": "Bishop simplified",
      "published": 1.417,
      "source": "Commercial program A (circles)",
-     "computed": 1.4092,
-     "deviation": -0.0055
+     "computed": 1.4091,
+     "deviation": -0.00558
     },
     {
      "method": "Spencer (M-P, constant f(x))",
      "published": 1.422,
      "source": "Commercial program A (circles)",
-     "computed": 1.4148,
-     "deviation": -0.00506
+     "computed": 1.4146,
+     "deviation": -0.0052
     }
    ]
   },
@@ -4093,15 +4093,15 @@
      "method": "Spencer (M-P, constant f(x))",
      "published": 1.398,
      "source": "Commercial program A (Monte Carlo)",
-     "computed": 1.4005,
-     "deviation": 0.00179
+     "computed": 1.4006,
+     "deviation": 0.00186
     },
     {
      "method": "Morgenstern-Price (half-sine)",
      "published": 1.389,
      "source": "Commercial program B",
-     "computed": 1.3912,
-     "deviation": 0.00158
+     "computed": 1.3935,
+     "deviation": 0.00324
     }
    ]
   },
@@ -4172,15 +4172,15 @@
      "method": "Bishop simplified",
      "published": 1.804,
      "source": "Commercial program A",
-     "computed": 1.7931,
-     "deviation": -0.00604
+     "computed": 1.7929,
+     "deviation": -0.00615
     },
     {
      "method": "Spencer (M-P, constant f(x))",
      "published": 1.804,
      "source": "Commercial program A",
-     "computed": 1.7942,
-     "deviation": -0.00543
+     "computed": 1.7941,
+     "deviation": -0.00549
     }
    ]
   },
@@ -4204,8 +4204,8 @@
      "method": "Spencer (M-P, constant f(x))",
      "published": 1.189,
      "source": "Commercial program A",
-     "computed": 1.1869,
-     "deviation": -0.00177
+     "computed": 1.1868,
+     "deviation": -0.00185
     }
    ]
   },
