@@ -1076,6 +1076,11 @@ function evaluatePlanes(slope: Slope, allPlanes: SearchPlane[]): void {
         // only within the gap. Reported so that it is not mistaken for a
         // complete-equilibrium solution.
         plane.equilibriumGap = gap != null && gap >= slope.tolerance ? gap : undefined;
+        // A candidate of the non-circular optimisation is kept only with a
+        // crossing: the optimisation is a minimum over thousands of
+        // surfaces and finds every one where the closest pair reads low.
+        // The surface is abandoned, as in UTEXAS2 (para. 101).
+        if (plane.optimised && plane.equilibriumGap != null) fos = null;
         converged = cvg;
         break;
       }

@@ -67,6 +67,8 @@ export interface SearchPlane {
    * solution exists on the surface). Absent when they crossed.
    */
   equilibriumGap?: number;
+  /** A candidate of the non-circular optimisation. */
+  optimised?: boolean;
   /**
    * Non-circular surface: polyline from entry to exit (x increasing).
    * (cx, cy) is then the axis point for moment equilibrium and `radius`
