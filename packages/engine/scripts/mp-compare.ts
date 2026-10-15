@@ -151,6 +151,20 @@ function report(rows: Row[]): string {
   out.push(`| full search: within the reference tolerance | ${rows.filter((r) => within(r.search.old, r)).length} | ${rows.filter((r) => within(r.search.new, r)).length} |`);
   out.push(`| full search: no result | ${rows.filter((r) => r.search.old == null).length} | ${rows.filter((r) => r.search.new == null).length} |`);
   out.push(`| full search: total s | ${rows.reduce((s, r) => s + r.search.oldS, 0).toFixed(0)} | ${rows.reduce((s, r) => s + r.search.newS, 0).toFixed(0)} |`);
+  // Deviation from the published value over the analyses both solvers answer.
+  const both = rows.filter((r) => r.search.old != null && r.search.new != null);
+  const devs = (pick: (r: Row) => number | null) => both.map((r) => (pick(r)! / r.published - 1) * 100);
+  const stats = (d: number[]) => {
+    const abs = d.map(Math.abs);
+    return `mean ${(d.reduce((a, b) => a + b, 0) / d.length).toFixed(2)} %, mean |dev| ${(abs.reduce((a, b) => a + b, 0) / abs.length).toFixed(2)} %, median |dev| ${median(abs).toFixed(2)} %, max |dev| ${Math.max(...abs).toFixed(2)} %`;
+  };
+  const groups: [string, (r: Row) => boolean][] = [["all", () => true], ["circular", (r) => !r.nonCircular], ["non-circular", (r) => r.nonCircular]];
+  for (const [name, f] of groups) {
+    const sub = both.filter(f);
+    if (!sub.length) continue;
+    out.push(`| deviation from published, ${name} (${sub.length}): iterative | ${stats(devs((r) => r.search.old).filter((_, i) => f(both[i])))} | |`);
+    out.push(`| deviation from published, ${name} (${sub.length}): march | | ${stats(devs((r) => r.search.new).filter((_, i) => f(both[i])))} |`);
+  }
   out.push("", `## Per analysis`, "");
   out.push(`| Problem | Published | Same surface: iterative (gap) | march (λ) | roots | holes | Search: iterative | march | s old / new |`);
   out.push(`|---|---|---|---|---|---|---|---|---|`);

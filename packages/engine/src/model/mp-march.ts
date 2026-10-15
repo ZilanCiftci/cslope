@@ -195,7 +195,17 @@ function brent(f: (x: number) => number, a: number, b: number, fa: number, fb: n
  */
 export const MIN_DENOMINATOR = 0.2;
 
-const F_MIN = 0.05;
+/**
+ * Limits on the interslice force inclination θ = atan(λ f), from UTEXAS2
+ * (Edris & Wright 1987, vol. I para. 107): the solution is terminated
+ * when θ is less than −10° or steeper than +80° for a left-facing slope.
+ * λ is the scale of f(x), so with f = 1 (Spencer) λ = tan θ.
+ */
+export const LAMBDA_MIN = Math.tan((-10 * Math.PI) / 180);
+export const LAMBDA_MAX = Math.tan((80 * Math.PI) / 180);
+
+/** F is not allowed below 0.10 (UTEXAS2 vol. I para. 104). */
+const F_MIN = 0.1;
 const F_MAX = 50;
 const F_GRID = 24;
 const F_TOL = 1e-7;
@@ -288,7 +298,7 @@ export interface MpRoot {
 export type RootRule = "nearest-zero" | "largest" | "smallest";
 
 export interface MpMarchOptions {
-  /** λ is scanned on [lambdaMin, lambdaMax]; lambdaMin defaults to −lambdaMax. */
+  /** λ is scanned on [lambdaMin, lambdaMax] (defaults LAMBDA_MIN, LAMBDA_MAX). */
   lambdaMax?: number;
   lambdaMin?: number;
   /** Scan step in λ. */
@@ -363,8 +373,8 @@ function newton2d(p: SliceArrays, F0: number, lambda0: number): MpRoot | null {
 
 /** Solve M-P on prepared slice arrays. `F0` seeds F_f (e.g. the Ordinary F). */
 export function solveMorgensternPriceMarch(p: SliceArrays, F0: number, options: MpMarchOptions = {}): MpMarchResult {
-  const lambdaMax = options.lambdaMax ?? 2.5;
-  const lambdaMin = options.lambdaMin ?? -lambdaMax;
+  const lambdaMax = options.lambdaMax ?? LAMBDA_MAX;
+  const lambdaMin = options.lambdaMin ?? LAMBDA_MIN;
   const step = options.lambdaStep ?? 0.1;
   const rule = options.rule ?? "nearest-zero";
   const minDenom = options.minDenominator ?? MIN_DENOMINATOR;
@@ -378,9 +388,16 @@ export function solveMorgensternPriceMarch(p: SliceArrays, F0: number, options: 
   const side = (sign: 1 | -1) => {
     let seed = F0;
     const pts: { l: number; F: number | null; h: number }[] = [];
-    for (let k = sign > 0 ? 0 : 1; k * step <= lambdaMax + 1e-12; k++) {
-      const l = sign * k * step;
-      if (l < lambdaMin - 1e-12) break;
+    for (let k = sign > 0 ? 0 : 1; ; k++) {
+      let l = sign * k * step;
+      if (sign > 0 && l > lambdaMax + 1e-12) break;
+      if (sign < 0) {
+        if (l < lambdaMin - 1e-12) {
+          // One point at the limit itself, so a root just inside it is bracketed.
+          if (pts.length && pts[pts.length - 1].l > lambdaMin + 1e-12) l = lambdaMin;
+          else break;
+        }
+      }
       const r = ff(l, seed);
       if (!r) { holes++; pts.push({ l, F: null, h: NaN }); continue; }
       if (r.count > 1) multiFf++;
@@ -414,7 +431,7 @@ export function solveMorgensternPriceMarch(p: SliceArrays, F0: number, options: 
   }
 
   let newton = options.scanOnly ? null : newton2d(p, F0, 0);
-  if (newton && (newton.minDenom < minDenom || newton.lambda < lambdaMin)) newton = null;
+  if (newton && (newton.minDenom < minDenom || newton.lambda < lambdaMin || newton.lambda > lambdaMax)) newton = null;
 
   let chosen: MpRoot | null = null;
   if (roots.length > 0) {
@@ -427,16 +444,24 @@ export function solveMorgensternPriceMarch(p: SliceArrays, F0: number, options: 
 }
 
 /**
- * Newton first, the λ scan only when Newton fails: the fast path for a
- * search. The scan is the reference; `solveMorgensternPriceMarch` runs it
- * always, for comparisons.
+ * Newton first, then a short scan of the λ between the lower limit and
+ * Newton's root: Newton from (F₀, 0) can land on the farther of two roots
+ * (V033, V094 in the verification set), and the reported root is the one
+ * nearest λ = 0. The full scan runs only when Newton fails. The full scan
+ * is the reference; `solveMorgensternPriceMarch` runs it always.
  */
 export function solveMorgensternPriceFast(p: SliceArrays, F0: number, options: MpMarchOptions = {}): MpMarchResult {
   const minDenom = options.minDenominator ?? MIN_DENOMINATOR;
-  const lambdaMin = options.lambdaMin ?? -(options.lambdaMax ?? 2.5);
+  const lambdaMin = options.lambdaMin ?? LAMBDA_MIN;
+  const lambdaMax = options.lambdaMax ?? LAMBDA_MAX;
   const newton = options.scanOnly ? null : newton2d(p, F0, 0);
-  if (newton && newton.minDenom >= minDenom && newton.lambda >= lambdaMin) {
-    return { roots: [newton], rejected: [], newton, chosen: newton, holes: 0, multiFf: 0, evaluations: 0 };
+  if (newton && newton.minDenom >= minDenom && newton.lambda >= lambdaMin && newton.lambda <= lambdaMax) {
+    // Any root nearer λ = 0 lies in [lambdaMin, |λ_N|] on either side.
+    const near = Math.abs(newton.lambda);
+    const r = solveMorgensternPriceMarch(p, F0, { ...options, scanOnly: true, lambdaMin: Math.max(lambdaMin, -near), lambdaMax: Math.min(lambdaMax, near) });
+    const roots = [...r.roots.filter((x) => Math.abs(x.lambda - newton.lambda) > 1e-4), newton].sort((a, b) => a.lambda - b.lambda);
+    const chosen = roots.reduce((best, x) => (Math.abs(x.lambda) < Math.abs(best.lambda) ? x : best), newton);
+    return { roots, rejected: r.rejected, newton, chosen, holes: r.holes, multiFf: r.multiFf, evaluations: r.evaluations };
   }
   return solveMorgensternPriceMarch(p, F0, { ...options, scanOnly: true });
 }
