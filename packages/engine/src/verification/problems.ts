@@ -2059,6 +2059,7 @@ export const PROBLEMS: RawCase[] = [
     notes: [
       "commercial program A (Table 59.3): Spencer 0.596, Bishop 0.582, Janbu simplified 0.583, each on its own critical surface (V075 checks the Spencer circle). Pockoski & Duncan (2000), as quoted there: program G 0.65 / 0.56 / 0.64 and commercial program B 0.60 / 0.60 / 0.61 (Spencer / Bishop / Janbu); the commercial program B 2022 verification manual (§2.36) prints commercial program B 0.57 / 0.53 / 0.58.",
       "Surface = commercial program A's Spencer circle (-30.872, 31.315, R 43.975 ft). commercial program A's Bishop 0.582 / Janbu 0.583 belong to their own critical circles.",
+      "No complete-equilibrium solution exists on this surface: moment equilibrium needs F >= 0.600 for every interslice inclination, force equilibrium gives at most 0.583 (at 45 deg). The base is inclined 45-81 deg, above the active limit 45 + phi/2 = 60 deg over the upper 29 slices, with an anchor force of 198 kN against a weight of 294 kN. The published 0.596 is a value accepted with a gap; cSlope reports the closest pair (gap 0.020 at lambda 1.6) and flags it (equilibriumGap).",
     ],
   },
   {

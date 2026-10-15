@@ -20,6 +20,8 @@ export interface GeometryWithMaterial {
   xMin?: number;
   /** Cached maximum X bound (undefined for clipped fragments). */
   xMax?: number;
+  /** Cached maximum Y bound (undefined for clipped fragments). */
+  yMax?: number;
 }
 
 /**

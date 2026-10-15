@@ -689,6 +689,12 @@ export function analyseMorgensternPrice(
   pushing: number | null,
   resisting: number | null,
   converged: boolean,
+  /**
+   * |Fm − Ff| of an accepted solution where the two never met within the
+   * tolerance (the closest pair, at most `mpEquilibriumTolerance`); 0 or
+   * absent when they did.
+   */
+  equilibriumGap?: number,
 ] {
   const FSord = analyseOrdinary(slope, slices);
   if (FSord == null) return [FSord, null, null, null, true];
@@ -857,6 +863,7 @@ export function analyseMorgensternPrice(
         convergedBestM &&
           convergedBestF &&
           equilibriumGap <= mpEquilibriumTolerance,
+        equilibriumGap,
       ];
     }
   }
@@ -1058,12 +1065,17 @@ function evaluatePlanes(slope: Slope, allPlanes: SearchPlane[]): void {
         break;
       }
       case "Morgenstern-Price": {
-        const [f, lff, , , cvg] =
+        const [f, lff, , , cvg, gap] =
           morgensternPriceSolver === "march"
             ? analyseMorgensternPriceMarch(slope, slices)
             : analyseMorgensternPrice(slope, slices);
         fos = f;
         plane.lffArray = lff ?? undefined;
+        // A solution accepted with the closest pair, not a crossing: the
+        // factor of safety satisfies moment equilibrium, force equilibrium
+        // only within the gap. Reported so that it is not mistaken for a
+        // complete-equilibrium solution.
+        plane.equilibriumGap = gap != null && gap >= slope.tolerance ? gap : undefined;
         converged = cvg;
         break;
       }

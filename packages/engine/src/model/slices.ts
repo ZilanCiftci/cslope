@@ -11,9 +11,6 @@ import {
   getYAtX,
   getYAtXMany,
   calculateAllLoads,
-  calculatePolygonArea,
-  clipPolygonVertical,
-  clipPolygonHalfplane,
   isPointInPolygon,
 } from "../math/index";
 import type { Slope } from "./slope";
@@ -25,6 +22,124 @@ import { applyReinforcement } from "./reinforcement";
 
 /** Grid of the local origin for clipping material regions (see createSlice). */
 const LOCAL_ORIGIN_GRID = 4096;
+
+// ── Clipping buffers ──────────────────────────────────────────────
+// A slice clips every material polygon four times (the vertical strip,
+// then the two slip-surface edges). Done with fresh arrays and `map`
+// passes, the allocation was a fifth of a whole search. The clips below
+// write into two reused buffers instead, with the same arithmetic in the
+// same order, so the results are identical to the last bit.
+
+let bufAx = new Float64Array(64);
+let bufAy = new Float64Array(64);
+let bufBx = new Float64Array(64);
+let bufBy = new Float64Array(64);
+
+/** Make both buffers hold at least `n` vertices. */
+function ensureClipCapacity(n: number): void {
+  if (bufAx.length >= n) return;
+  let cap = bufAx.length;
+  while (cap < n) cap *= 2;
+  bufAx = new Float64Array(cap);
+  bufAy = new Float64Array(cap);
+  bufBx = new Float64Array(cap);
+  bufBy = new Float64Array(cap);
+}
+
+/**
+ * Clip the polygon in (inX, inY)[0..n) by the half-plane ax + by + c ≥ 0
+ * (Sutherland–Hodgman) into (outX, outY); returns the vertex count. Same
+ * arithmetic as `clipPolygonHalfplane` in math/polygon.ts.
+ */
+function clipHalfplaneInto(
+  inX: ArrayLike<number>,
+  inY: ArrayLike<number>,
+  n: number,
+  a: number,
+  b: number,
+  c: number,
+  outX: Float64Array,
+  outY: Float64Array,
+): number {
+  let m = 0;
+  for (let i = 0; i < n; i++) {
+    const k = i + 1 === n ? 0 : i + 1;
+    const p1x = inX[i],
+      p1y = inY[i];
+    const p2x = inX[k],
+      p2y = inY[k];
+    const d1 = a * p1x + b * p1y + c;
+    const d2 = a * p2x + b * p2y + c;
+    const in1 = d1 >= -1e-12;
+    const in2 = d2 >= -1e-12;
+    if (in1) {
+      if (in2) {
+        outX[m] = p2x;
+        outY[m++] = p2y;
+      } else {
+        const dx = p2x - p1x;
+        const dy = p2y - p1y;
+        const denom = a * dx + b * dy;
+        if (Math.abs(denom) > 1e-14) {
+          const t = -d1 / denom;
+          outX[m] = p1x + t * dx;
+          outY[m++] = p1y + t * dy;
+        }
+      }
+    } else if (in2) {
+      const dx = p2x - p1x;
+      const dy = p2y - p1y;
+      const denom = a * dx + b * dy;
+      if (Math.abs(denom) > 1e-14) {
+        const t = -d1 / denom;
+        outX[m] = p1x + t * dx;
+        outY[m++] = p1y + t * dy;
+      }
+      outX[m] = p2x;
+      outY[m++] = p2y;
+    }
+  }
+  return m;
+}
+
+/** Shoelace area of the first `n` vertices (as `calculatePolygonArea`). */
+function polygonAreaN(x: Float64Array, y: Float64Array, n: number): number {
+  if (n < 3) return 0.0;
+  let area = 0.0;
+  for (let i = 0; i < n; i++) {
+    const j = i + 1 === n ? 0 : i + 1;
+    area += x[i] * y[j];
+    area -= x[j] * y[i];
+  }
+  return Math.abs(area) / 2.0;
+}
+
+/**
+ * Ray-casting point test on the polygon shifted by (−sx, −sy), the same
+ * arithmetic as `isPointInPolygon` on the shifted arrays.
+ */
+function pointInShiftedPolygon(
+  px: number,
+  py: number,
+  polyX: Float64Array,
+  polyY: Float64Array,
+  n: number,
+  sx: number,
+  sy: number,
+): boolean {
+  let inside = false;
+  for (let i = 0; i < n; i++) {
+    const j = i + 1 === n ? 0 : i + 1;
+    const xi = polyX[i] - sx,
+      yi = polyY[i] - sy;
+    const xj = polyX[j] - sx,
+      yj = polyY[j] - sy;
+    if (yi > py !== yj > py && px < ((xj - xi) * (py - yi)) / (yj - yi + 1e-15) + xi) {
+      inside = !inside;
+    }
+  }
+  return inside;
+}
 
 /**
  * Create a single Slice from its geometric parameters.
@@ -142,7 +257,7 @@ export function createSlice(
   let baseMaterial: GeometryWithMaterial["material"] | null = null;
   // Base material found inside its fragment (not the fallback below).
   let baseInside = false;
-  const intersectedMaterials: GeometryWithMaterial[] = [];
+  let firstIntersected: GeometryWithMaterial["material"] | null = null;
   let totalWeight = 0;
   let totalArea = 0;
 
@@ -152,39 +267,47 @@ export function createSlice(
       if (m.xMax < x0 || m.xMin > x1) continue;
     }
 
-    // Step 1: Vertical clip
-    let mpx: number[];
-    let mpy: number[];
-    [mpx, mpy] = clipPolygonVertical(m.px, m.py, x0, x1);
-    if (mpx.length < 3) continue;
+    // Step 1: Vertical clip (global coordinates), as clipPolygonVertical.
+    const nIn = m.px.length;
+    ensureClipCapacity(2 * nIn + 8);
+    let n = clipHalfplaneInto(m.px, m.py, nIn, 1.0, 0.0, -x0, bufAx, bufAy);
+    if (n > 0) n = clipHalfplaneInto(bufAx, bufAy, n, -1.0, 0.0, x1, bufBx, bufBy);
+    if (n < 3) continue;
 
     // Step 2: Clip by slip-surface edges (in local coordinates)
-    let lx = mpx.map((v) => v - ox);
-    let ly = mpy.map((v) => v - oy);
+    for (let i = 0; i < n; i++) {
+      bufBx[i] = bufBx[i] - ox;
+      bufBy[i] = bufBy[i] - oy;
+    }
+    // Ping-pong between the buffers: the result ends in (lx, ly).
+    let lx = bufBx, ly = bufBy, tx = bufAx, ty = bufAy;
     let valid = true;
     for (const [a, b, c] of edgeCoeffs) {
-      [lx, ly] = clipPolygonHalfplane(lx, ly, a, b, c);
-      if (lx.length < 3) {
+      n = clipHalfplaneInto(lx, ly, n, a, b, c, tx, ty);
+      [lx, ly, tx, ty] = [tx, ty, lx, ly];
+      if (n < 3) {
         valid = false;
         break;
       }
     }
     if (!valid) continue;
-    mpx = lx.map((v) => v + ox);
-    mpy = ly.map((v) => v + oy);
-
-    // Create clipped material fragment
-    const mFrag: GeometryWithMaterial = {
-      px: mpx,
-      py: mpy,
-      material: m.material,
-    };
-    intersectedMaterials.push(mFrag);
+    if (firstIntersected === null) firstIntersected = m.material;
 
     // Calculate area and weight
-    const area = calculatePolygonArea(lx, ly);
+    const area = polygonAreaN(lx, ly, n);
     totalArea += area;
-    const gamma = fragmentUnitWeight(m.material, mpx, mpy, area);
+    let gamma = m.material.unitWeight;
+    if (m.material.model.kind === "spatial-mohr-coulomb") {
+      // The fragment in global coordinates, only for a spatially varying
+      // unit weight (its centroid).
+      const mpx: number[] = new Array(n);
+      const mpy: number[] = new Array(n);
+      for (let i = 0; i < n; i++) {
+        mpx[i] = lx[i] + ox;
+        mpy[i] = ly[i] + oy;
+      }
+      gamma = fragmentUnitWeight(m.material, mpx, mpy, area);
+    }
     totalWeight += area * gamma;
     const gammaSat = m.material.model.unitWeightSat;
     if (gammaSat !== undefined && gammaSat !== gamma && waterForWeight) {
@@ -193,9 +316,9 @@ export function createSlice(
       const w = waterForWeight(m.material);
       if (w) {
         const s = (w[1] - w[0]) / (x1 - x0);
-        const [bx, by] = clipPolygonHalfplane(lx, ly, s, -1, w[0] - oy - s * (x0 - ox));
-        if (bx.length >= 3) {
-          totalWeight += calculatePolygonArea(bx, by) * (gammaSat - gamma);
+        const nb = clipHalfplaneInto(lx, ly, n, s, -1, w[0] - oy - s * (x0 - ox), tx, ty);
+        if (nb >= 3) {
+          totalWeight += polygonAreaN(tx, ty, nb) * (gammaSat - gamma);
         }
       }
     }
@@ -204,23 +327,14 @@ export function createSlice(
     // Test in coordinates local to the slice base: with real-world
     // eastings (~1e5..1e7) a fixed 1e-10 offset is below the floating
     // point resolution and the base material was missed.
-    if (
-      isPointInPolygon(
-        0,
-        lift,
-        lx.map((v) => v - (x - ox)),
-        ly.map((v) => v - (yBottom - oy)),
-      )
-    ) {
+    if (pointInShiftedPolygon(0, lift, lx, ly, n, x - ox, yBottom - oy)) {
       baseMaterial = m.material;
       baseInside = true;
     }
   }
 
   // Fallback: use first intersected material if base not found
-  if (baseMaterial === null && intersectedMaterials.length > 0) {
-    baseMaterial = intersectedMaterials[0].material;
-  }
+  if (baseMaterial === null) baseMaterial = firstIntersected;
 
   if (baseMaterial === null) return null; // No material → invalid slice
 

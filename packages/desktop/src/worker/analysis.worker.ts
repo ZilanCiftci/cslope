@@ -195,6 +195,7 @@ function analyse(
       exitPoint: crit.rc,
       converged: crit.converged,
       lffArray: crit.lffArray,
+      equilibriumGap: crit.equilibriumGap,
       points: displayPoints(crit),
       reinforcementForces: crit.slices?.flatMap((s) => s.reinforcementForces ?? []),
     };
@@ -240,6 +241,7 @@ function analyse(
         exitPoint: p.rc,
         converged: p.converged,
         lffArray: p.lffArray,
+        equilibriumGap: p.equilibriumGap,
         points: displayPoints(p),
       });
     }

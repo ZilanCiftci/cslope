@@ -172,6 +172,13 @@ export interface SlipSurfaceResult {
   /** Lambda-Fm-Ff-gap rows for this surface (Morgenstern-Price only). */
   lffArray?: [number, number, number, number][];
   /**
+   * Morgenstern-Price: |Fm − Ff| where the moment and force equilibrium
+   * curves never crossed and the closest pair was accepted (no
+   * complete-equilibrium solution exists on this surface). Absent when
+   * they crossed.
+   */
+  equilibriumGap?: number;
+  /**
    * Non-circular surface: its points from entry to exit (then cx, cy is
    * the moment axis and radius 0). Absent for a circle.
    */

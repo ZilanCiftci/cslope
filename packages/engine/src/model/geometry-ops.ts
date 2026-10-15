@@ -458,6 +458,7 @@ export function createGeometryWithMaterial(
   if (calculateBounds && px.length > 0) {
     gm.xMin = Math.min(...px);
     gm.xMax = Math.max(...px);
+    gm.yMax = Math.max(...py);
   }
   return gm;
 }

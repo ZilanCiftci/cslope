@@ -62,6 +62,12 @@ export interface SearchPlane {
   /** Whether iterative solver converged for this surface. */
   converged?: boolean;
   /**
+   * Morgenstern-Price: |Fm − Ff| of a solution accepted as the closest
+   * pair because the curves never crossed (no complete-equilibrium
+   * solution exists on the surface). Absent when they crossed.
+   */
+  equilibriumGap?: number;
+  /**
    * Non-circular surface: polyline from entry to exit (x increasing).
    * (cx, cy) is then the axis point for moment equilibrium and `radius`
    * is 0.
