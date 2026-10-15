@@ -15,6 +15,17 @@ import {
   planeKey,
 } from "./search";
 import { optimiseNonCircular } from "./optimize";
+import { analyseMorgensternPriceMarch } from "./mp-march";
+
+/**
+ * Which Morgenstern-Price solver `analyseSlope` runs: the iterative one
+ * (default) or the experimental march solver (`mp-march.ts`), for
+ * comparison runs. Not an analysis option: set by scripts and tests.
+ */
+let morgensternPriceSolver: "iterative" | "march" = "iterative";
+export function setMorgensternPriceSolver(solver: "iterative" | "march"): void {
+  morgensternPriceSolver = solver;
+}
 
 // ────────────────────────────────────────────────────────────────
 // Slice property arrays (replaces _get_slice_property_arrays)
@@ -49,7 +60,7 @@ interface SliceArrays {
   slices: Slice[];
 }
 
-function getSlicePropertyArrays(
+export function getSlicePropertyArrays(
   slices: Slice[],
   x0: number,
   x1: number,
@@ -163,7 +174,7 @@ const MAX_NON_POSITIVE = 12;
  * @param tanPhi tan of the friction angle governing the slice
  * @returns [N, E_right, X_right]
  */
-function solveSliceNormal(
+export function solveSliceNormal(
   W: number,
   xLeft: number,
   eLeft: number,
@@ -1127,7 +1138,10 @@ function evaluatePlanes(slope: Slope, allPlanes: SearchPlane[]): void {
         break;
       }
       case "Morgenstern-Price": {
-        const [f, lff, , , cvg] = analyseMorgensternPrice(slope, slices);
+        const [f, lff, , , cvg] =
+          morgensternPriceSolver === "march"
+            ? analyseMorgensternPriceMarch(slope, slices)
+            : analyseMorgensternPrice(slope, slices);
         fos = f;
         plane.lffArray = lff ?? undefined;
         converged = cvg;
