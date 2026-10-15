@@ -61,8 +61,10 @@ describe("S = f(depth) from the top of the layer", () => {
 
   it("leaves the ground reference unchanged (and the default)", () => {
     expect(fos(embankment(sfDepth({ depthReference: "ground" })))).toBe(fromGround);
-    // Value before the layer-top option was added.
-    expect(fromGround).toBeCloseTo(1.0887393585, 8);
+    // Value before the layer-top option was added (1.0887393585 with the
+    // relaxed fixed-point inner loop; the secant inner loop converges to
+    // a slightly different point within the 0.005 tolerance).
+    expect(fromGround).toBeCloseTo(1.0890157398, 8);
   });
 
   it("works on a right-to-left model", () => {

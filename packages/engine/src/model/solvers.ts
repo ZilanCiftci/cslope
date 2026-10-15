@@ -15,7 +15,7 @@ import {
   planeKey,
 } from "./search";
 import { optimiseNonCircular } from "./optimize";
-import { analyseMorgensternPriceMarch } from "./mp-march";
+import { analyseMorgensternPriceMarch, LAMBDA_MAX, LAMBDA_MIN } from "./mp-march";
 
 /**
  * Which Morgenstern-Price solver `analyseSlope` runs: the iterative one
@@ -26,6 +26,7 @@ let morgensternPriceSolver: "iterative" | "march" = "iterative";
 export function setMorgensternPriceSolver(solver: "iterative" | "march"): void {
   morgensternPriceSolver = solver;
 }
+
 
 // ────────────────────────────────────────────────────────────────
 // Slice property arrays (replaces _get_slice_property_arrays)
@@ -204,22 +205,21 @@ function solveFOSGenericMoment(
   p: SliceArrays,
   lambdaVal: number,
   initialFOS: number,
-  initialNs: Float64Array,
   maxIters: number,
   tolerance: number,
-  numOuterIters: number,
 ): SolverResult {
   const n = p.weights.length;
-  const nPrev = new Float64Array(initialNs);
   const nCurrent = new Float64Array(n);
   let prevFOS = initialFOS;
   let fos = initialFOS;
   let pushing = 0;
   let resisting = 0;
   let nonPositive = 0;
+  let secF = 0;
+  let secR = 0;
 
-  for (let outer = 0; outer < numOuterIters; outer++) {
-    let innerConverged = false;
+  let innerConverged = false;
+  {
     for (let iter = 0; iter < maxIters; iter++) {
       pushing = 0;
       resisting = 0;
@@ -318,31 +318,25 @@ function solveFOSGenericMoment(
       }
 
       fos = resisting / pushing;
-      if (iter > 3 && Math.abs(prevFOS - fos) < tolerance) {
+      if (Math.abs(prevFOS - fos) < tolerance) {
         innerConverged = true;
         break;
       }
-      prevFOS = prevFOS + 0.5 * (fos - prevFOS);
+      // Secant on r(F) = R(F)/D(F) − F, whose root is the fixed point: it
+      // converges in a few iterations where the relaxed fixed-point step
+      // F ← F + ½(R/D − F) needed 10–15. A step that leaves F ≤ 0.05 or
+      // is not finite falls back to the plain fixed-point step.
+      const r = fos - prevFOS;
+      let next = fos;
+      if (iter > 0 && r !== secR) next = prevFOS - (r * (prevFOS - secF)) / (r - secR);
+      if (!(next > 0.05) || !Number.isFinite(next)) next = fos;
+      secF = prevFOS;
+      secR = r;
+      prevFOS = next;
     }
 
-    if (numOuterIters === 1) {
-      return [fos, pushing, resisting, nCurrent, innerConverged];
-    }
-
-    // Outer convergence check on N values
-    let maxNDiff = 0;
-    for (let i = 0; i < n; i++) {
-      const diff = Math.abs(nPrev[i] - nCurrent[i]);
-      if (diff > maxNDiff) maxNDiff = diff;
-    }
-    if (maxNDiff < tolerance)
-      return [fos, pushing, resisting, nCurrent, innerConverged];
-
-    prevFOS = fos;
-    for (let i = 0; i < n; i++) nPrev[i] = nCurrent[i];
   }
-
-  return [fos, pushing, resisting, nCurrent, false];
+  return [fos, pushing, resisting, nCurrent, innerConverged];
 }
 
 /**
@@ -352,22 +346,21 @@ function solveFOSGenericForceCircular(
   p: SliceArrays,
   lambdaVal: number,
   initialFOS: number,
-  initialNs: Float64Array,
   maxIters: number,
   tolerance: number,
-  numOuterIters: number,
 ): SolverResult {
   const n = p.weights.length;
-  const nPrev = new Float64Array(initialNs);
   const nCurrent = new Float64Array(n);
   let prevFOS = initialFOS;
   let fos = initialFOS;
   let pushing = 0;
   let resisting = 0;
   let nonPositive = 0;
+  let secF = 0;
+  let secR = 0;
 
-  for (let outer = 0; outer < numOuterIters; outer++) {
-    let innerConverged = false;
+  let innerConverged = false;
+  {
     for (let iter = 0; iter < maxIters; iter++) {
       pushing = 0;
       resisting = 0;
@@ -449,31 +442,25 @@ function solveFOSGenericForceCircular(
       }
 
       fos = resisting / pushing;
-      if (iter > 3 && Math.abs(prevFOS - fos) < tolerance) {
+      if (Math.abs(prevFOS - fos) < tolerance) {
         innerConverged = true;
         break;
       }
-      prevFOS = prevFOS + 0.5 * (fos - prevFOS);
+      // Secant on r(F) = R(F)/D(F) − F, whose root is the fixed point: it
+      // converges in a few iterations where the relaxed fixed-point step
+      // F ← F + ½(R/D − F) needed 10–15. A step that leaves F ≤ 0.05 or
+      // is not finite falls back to the plain fixed-point step.
+      const r = fos - prevFOS;
+      let next = fos;
+      if (iter > 0 && r !== secR) next = prevFOS - (r * (prevFOS - secF)) / (r - secR);
+      if (!(next > 0.05) || !Number.isFinite(next)) next = fos;
+      secF = prevFOS;
+      secR = r;
+      prevFOS = next;
     }
 
-    if (numOuterIters === 1) {
-      return [fos, pushing, resisting, nCurrent, innerConverged];
-    }
-
-    // Outer convergence check on N values
-    let maxNDiff = 0;
-    for (let i = 0; i < n; i++) {
-      const diff = Math.abs(nPrev[i] - nCurrent[i]);
-      if (diff > maxNDiff) maxNDiff = diff;
-    }
-    if (maxNDiff < tolerance)
-      return [fos, pushing, resisting, nCurrent, innerConverged];
-
-    prevFOS = fos;
-    for (let i = 0; i < n; i++) nPrev[i] = nCurrent[i];
   }
-
-  return [fos, pushing, resisting, nCurrent, false];
+  return [fos, pushing, resisting, nCurrent, innerConverged];
 }
 
 // ────────────────────────────────────────────────────────────────
@@ -558,16 +545,12 @@ export function analyseBishop(
     slope.intersliceFunction,
     slope.intersliceDataPoints,
   );
-  const initialNs = new Float64Array(slices.length);
-
   const [fos, pushing, resisting, , converged] = solveFOSGenericMoment(
     props,
     0, // lambda = 0
     FS,
-    initialNs,
     slope.maxIterations,
     slope.tolerance,
-    1, // numOuterIters = 1 when lambda = 0
   );
 
   if (fos == null) return [null, null, null, false];
@@ -666,16 +649,12 @@ export function analyseJanbu(
     slope.intersliceFunction,
     slope.intersliceDataPoints,
   );
-  const initialNs = new Float64Array(slices.length);
-
   const [fos, pushing, resisting, , converged] = solveFOSGenericForceCircular(
     props,
     0, // lambda = 0
     FS,
-    initialNs,
     slope.maxIterations,
     slope.tolerance,
-    1, // numOuterIters = 1 when lambda = 0
   );
 
   if (fos == null) return [null, null, null, false];
@@ -688,7 +667,15 @@ export function analyseJanbu(
 }
 
 /** λ extrapolation steps before falling back to the closest pair. */
-const MP_MAX_STEPS = 10;
+const MP_MAX_STEPS = 30;
+
+/**
+ * Largest change of λ between two points. Fredlund (1984) moves λ by 0.1
+ * per step; a larger jump can land the force iteration on another root of
+ * the force equation (a near-pole root at λ = 0.4 on V017a, where the
+ * step 0.3 was used).
+ */
+const MP_MAX_LAMBDA_STEP = 0.1;
 
 /**
  * Morgenstern-Price Method.
@@ -715,7 +702,6 @@ export function analyseMorgensternPrice(
     slope.intersliceFunction,
     slope.intersliceDataPoints,
   );
-  const n = slices.length;
   const maxIters = slope.maxIterations;
   const tol = slope.tolerance;
   const mpEquilibriumTolerance = Math.max(tol * 4, 0.02);
@@ -726,48 +712,19 @@ export function analyseMorgensternPrice(
   const evalTol = tol * 0.1;
 
   // Step 1: Initial Bishop solution (lambda = 0)
-  let Nm: Float64Array = new Float64Array(n);
   // The first pushing/resisting values are replaced before they are read.
   // eslint-disable-next-line no-useless-assignment
-  let [FSm, pushing0, resisting0, NmOut] = solveFOSGenericMoment(
-    props,
-    0,
-    FSord,
-    Nm,
-    maxIters,
-    evalTol,
-    1,
-  );
-  Nm = new Float64Array(NmOut);
+  let [FSm, pushing0, resisting0] = solveFOSGenericMoment(props, 0, FSord, maxIters, evalTol);
 
   if (FSm == null) return [null, null, null, null, false];
 
   // Step 1b: Initial force solution (lambda = 0)
-  let Nf: Float64Array = new Float64Array(n);
-  let [FSf, pushingF, resistingF, NfOut] = solveFOSGenericForceCircular(
-    props,
-    0,
-    FSord,
-    Nf,
-    maxIters,
-    evalTol,
-    1,
-  );
-  Nf = new Float64Array(NfOut);
+  let [FSf, pushingF, resistingF] = solveFOSGenericForceCircular(props, 0, FSord, maxIters, evalTol);
 
   if (FSf == null) {
     // Retry with different initial FS values
     for (const fact of [2, 0.5, 1.5, 0.75, 1.1, 0.9]) {
-      [FSf, pushingF, resistingF, NfOut] = solveFOSGenericForceCircular(
-        props,
-        0,
-        FSord * fact,
-        new Float64Array(n),
-        maxIters,
-        evalTol,
-        1,
-      );
-      Nf = new Float64Array(NfOut);
+      [FSf, pushingF, resistingF] = solveFOSGenericForceCircular(props, 0, FSord * fact, maxIters, evalTol);
       if (FSf != null) break;
     }
     if (FSf == null) return [FSm, null, pushingF, resistingF, false];
@@ -781,28 +738,10 @@ export function analyseMorgensternPrice(
 
   // Step 2: Second point (lambda = 0.1)
   const lambda2 = 0.1;
-  [FSm, pushing0, resisting0, NmOut] = solveFOSGenericMoment(
-    props,
-    lambda2,
-    FSm,
-    Nm,
-    maxIters,
-    evalTol,
-    maxIters,
-  );
-  Nm = new Float64Array(NmOut);
+  [FSm, pushing0, resisting0] = solveFOSGenericMoment(props, lambda2, FSm, maxIters, evalTol);
   if (FSm == null) return [null, lffArray, pushing0, resisting0, false];
 
-  [FSf, pushingF, resistingF, NfOut] = solveFOSGenericForceCircular(
-    props,
-    lambda2,
-    FSf,
-    Nf,
-    maxIters,
-    evalTol,
-    maxIters,
-  );
-  Nf = new Float64Array(NfOut);
+  [FSf, pushingF, resistingF] = solveFOSGenericForceCircular(props, lambda2, FSf, maxIters, evalTol);
 
   if (FSf == null) return [FSm, lffArray, pushingF, resistingF, false];
 
@@ -827,8 +766,8 @@ export function analyseMorgensternPrice(
 
     // Limit step size; the extrapolated FOS belongs to the unlimited λ,
     // so a limited step starts from the last moment FOS instead.
-    if (Math.abs(lambdaNew - prevLambda) > 0.3) {
-      lambdaNew = lambdaNew > prevLambda ? prevLambda + 0.3 : prevLambda - 0.3;
+    if (Math.abs(lambdaNew - prevLambda) > MP_MAX_LAMBDA_STEP) {
+      lambdaNew = lambdaNew > prevLambda ? prevLambda + MP_MAX_LAMBDA_STEP : prevLambda - MP_MAX_LAMBDA_STEP;
       fsExtrap = FSm;
     }
     if (!(fsExtrap > 0)) fsExtrap = FSm;
@@ -852,78 +791,59 @@ export function analyseMorgensternPrice(
       lambdaNew += lambdaNew >= prevLambda ? 0.05 : -0.05;
       if (++nudgeCount > 50) break;
     }
-
-    const [trialM, trialPushM, trialResM, trialNm, convergedM] =
-      solveFOSGenericMoment(
-        props,
-        lambdaNew,
-        fsExtrap,
-        Nm,
-        maxIters,
-        evalTol,
-        maxIters,
-      );
-    if (trialM == null) return [null, lffArray, trialPushM, trialResM, false];
-
-    const [trialF, trialPushF, trialResF, trialNf, convergedF] =
-      solveFOSGenericForceCircular(
-        props,
-        lambdaNew,
-        FSf,
-        Nf,
-        maxIters,
-        evalTol,
-        maxIters,
-      );
-
-    if (trialF == null) return [trialM, lffArray, trialPushF, trialResF, false];
-
-    if (convergedM && convergedF) {
-      [FSm, pushing0, resisting0] = [trialM, trialPushM, trialResM];
-      [FSf, pushingF, resistingF] = [trialF, trialPushF, trialResF];
-      Nm = new Float64Array(trialNm);
-      Nf = new Float64Array(trialNf);
-      lffArray.push([lambdaNew, FSm, FSf, Math.abs(FSm - FSf)]);
-      lffArray.sort((a, b) => a[0] - b[0]);
-
-      if (Math.abs(FSm - FSf) < tol)
-        return [FSm, lffArray, pushingF, resistingF, true];
-    } else {
-      // An unconverged moment or force solution is no point of the
-      // Fm(λ), Ff(λ) curves: far out in λ (e.g. λ ≈ −1 on V002's
-      // non-circular surface) the force iteration drifts and its value
-      // dropped onto Fm, a spurious "intersection" with a far too low FOS.
-      unconvergedLambdas.push(lambdaNew);
+    // The interslice inclination stays between −10° and +80° (UTEXAS2):
+    // beyond that the force equation has roots that are no solution. A
+    // walk that wants to leave the range has no crossing inside it.
+    let exhausted = false;
+    if (lambdaNew < LAMBDA_MIN || lambdaNew > LAMBDA_MAX) {
+      const limit = lambdaNew < LAMBDA_MIN ? LAMBDA_MIN : LAMBDA_MAX;
+      if (lffArray.some((x) => x[0] === limit)) {
+        exhausted = true;
+      } else {
+        lambdaNew = limit;
+        fsExtrap = FSm;
+      }
     }
 
-    if (ii >= MP_MAX_STEPS) {
+    if (!exhausted) {
+      const [trialM, trialPushM, trialResM, , convergedM] =
+        solveFOSGenericMoment(props, lambdaNew, fsExtrap, maxIters, evalTol);
+      if (trialM == null) return [null, lffArray, trialPushM, trialResM, false];
+
+      const [trialF, trialPushF, trialResF, , convergedF] =
+        solveFOSGenericForceCircular(props, lambdaNew, FSf, maxIters, evalTol);
+
+      if (trialF == null) return [trialM, lffArray, trialPushF, trialResF, false];
+
+      if (convergedM && convergedF) {
+        [FSm, pushing0, resisting0] = [trialM, trialPushM, trialResM];
+        [FSf, pushingF, resistingF] = [trialF, trialPushF, trialResF];
+        lffArray.push([lambdaNew, FSm, FSf, Math.abs(FSm - FSf)]);
+        lffArray.sort((a, b) => a[0] - b[0]);
+
+        if (Math.abs(FSm - FSf) < tol)
+          return [FSm, lffArray, pushingF, resistingF, true];
+      } else {
+        // An unconverged moment or force solution is no point of the
+        // Fm(λ), Ff(λ) curves: far out in λ (e.g. λ ≈ −1 on V002's
+        // non-circular surface) the force iteration drifts and its value
+        // dropped onto Fm, a spurious "intersection" with a far too low FOS.
+        unconvergedLambdas.push(lambdaNew);
+      }
+    }
+
+    if (exhausted || ii >= MP_MAX_STEPS) {
       // Fallback: pick closest match
       const sorted = [...lffArray].sort((a, b) => a[3] - b[3]);
       const [bestLambda, bestFS] = sorted[0];
       let convergedBestM: boolean;
       [FSm, pushing0, resisting0, , convergedBestM] =
-        solveFOSGenericMoment(
-          props,
-          bestLambda,
-          bestFS,
-          Nm,
-          maxIters,
-          evalTol,
-          maxIters,
-        );
+        solveFOSGenericMoment(props, bestLambda, bestFS, maxIters, evalTol);
       if (FSm == null) return [null, lffArray, pushing0, resisting0, false];
 
       let convergedBestF: boolean;
       [FSf, pushingF, resistingF, , convergedBestF] =
-        solveFOSGenericForceCircular(
-          props,
-          bestLambda,
-          bestFS,
-          Nf,
-          maxIters,
-          evalTol,
-          maxIters,
-        );
+        solveFOSGenericForceCircular(props, bestLambda, bestFS, maxIters, evalTol);
       if (FSf == null) return [FSm, lffArray, pushingF, resistingF, false];
 
       const equilibriumGap = Math.abs(FSm - FSf);
