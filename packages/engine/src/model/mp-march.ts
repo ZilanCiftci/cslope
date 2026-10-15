@@ -67,8 +67,12 @@ export interface March {
   undrained: Uint8Array;
 }
 
+/** Marches performed since the module loaded (for cost measurements). */
+export const marchCounter = { count: 0 };
+
 /** Same per-slice equations as the iterative solvers, evaluated once. */
 export function march(p: SliceArrays, lambda: number, F: number): March {
+  marchCounter.count++;
   const n = p.weights.length;
   const N = new Float64Array(n);
   const E = new Float64Array(n);
@@ -193,7 +197,7 @@ export const MIN_DENOMINATOR = 0.2;
 
 const F_MIN = 0.05;
 const F_MAX = 50;
-const F_GRID = 60;
+const F_GRID = 24;
 const F_TOL = 1e-7;
 
 /** Residual of force equilibrium at F, or NaN outside the band. */
@@ -203,19 +207,48 @@ function gfInBand(p: SliceArrays, lambda: number, F: number): number {
 }
 
 /**
+ * The pole-free band in F at a given λ, in closed form: each slice's
+ * denominator is a + b/F with a = cos α + λf sin α and b = tan φ (sin α −
+ * λf cos α), positive for F on one side of its pole −b/a. Combined-method
+ * slices, whose tan φ depends on the solution, are left out; the march
+ * still checks every slice. Returns [lo, hi] within [F_MIN, F_MAX], empty
+ * (lo ≥ hi) when no F keeps every denominator positive.
+ */
+export function forceBand(p: SliceArrays, lambda: number): [number, number] {
+  let lo = F_MIN, hi = F_MAX;
+  for (let i = 0; i < p.weights.length && lo < hi; i++) {
+    if (p.materialCodes[i] === 1) continue;
+    const sf = lambda * p.funcs[i];
+    const cosA = Math.cos(p.alphas[i]), sinA = Math.sin(p.alphas[i]);
+    const a = cosA + sf * sinA;
+    const b = Math.tan(p.phis[i]) * (sinA - sf * cosA);
+    if (a > 0) { if (b < 0) lo = Math.max(lo, -b / a); }
+    else if (a < 0) { if (b > 0) hi = Math.min(hi, -b / a); else return [1, 0]; }
+    else if (b <= 0) return [1, 0];
+  }
+  return [lo, hi];
+}
+
+/**
  * F_f(λ): the F closing force equilibrium at λ, inside the pole-free band.
  * Secant from the seed first; a bracketed scan of F when that fails.
  * Returns null when no such F exists (a hole in h(λ)). `count` is how
  * many roots the scan found in the band (normally one).
  */
 export function solveForceF(p: SliceArrays, lambda: number, seed: number): { F: number; count: number } | null {
-  // Secant from the seed.
-  let a = Math.max(seed, F_MIN), b = a * 1.05;
+  const [lo, hi] = forceBand(p, lambda);
+  if (!(hi > lo)) return null;
+  // Keep clear of the poles at the ends of the band.
+  const margin = 1e-6 * (hi - lo);
+  const lo2 = lo + margin, hi2 = hi - margin;
+  const inside = (F: number) => F > lo2 && F < hi2;
+  // Secant from the seed, moved into the band.
+  let a = Math.min(Math.max(seed, lo2), hi2), b = inside(a * 1.05) ? a * 1.05 : a * 0.95;
   let fa = gfInBand(p, lambda, a), fb = gfInBand(p, lambda, b);
   for (let iter = 0; iter < 40 && Number.isFinite(fa) && Number.isFinite(fb); iter++) {
     if (fb === fa) break;
     const c = b - (fb * (b - a)) / (fb - fa);
-    if (!(c > F_MIN && c < F_MAX)) break;
+    if (!inside(c)) break;
     a = b; fa = fb; b = c; fb = gfInBand(p, lambda, b);
     if (Math.abs(b - a) < F_TOL && Number.isFinite(fb)) {
       const m = march(p, lambda, b);
@@ -223,12 +256,12 @@ export function solveForceF(p: SliceArrays, lambda: number, seed: number): { F: 
       break;
     }
   }
-  // Bracketed scan: geometric F grid, brackets with both ends in the band.
+  // Bracketed scan: geometric F grid over the band.
   const roots: number[] = [];
-  let prevF = F_MIN, prevG = gfInBand(p, lambda, prevF);
-  const ratio = Math.pow(F_MAX / F_MIN, 1 / (F_GRID - 1));
+  let prevF = lo2, prevG = gfInBand(p, lambda, prevF);
+  const ratio = Math.pow(hi2 / lo2, 1 / (F_GRID - 1));
   for (let k = 1; k < F_GRID; k++) {
-    const F = F_MIN * Math.pow(ratio, k);
+    const F = k === F_GRID - 1 ? hi2 : lo2 * Math.pow(ratio, k);
     const g = gfInBand(p, lambda, F);
     if (Number.isFinite(prevG) && Number.isFinite(g) && prevG * g <= 0) {
       const r = prevG === 0 ? prevF : brent((x) => gfInBand(p, lambda, x), prevF, F, prevG, g, F_TOL);
