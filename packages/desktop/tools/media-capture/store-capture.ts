@@ -12,6 +12,34 @@
 import type { BrowserContext, CDPSession, Page } from "playwright";
 import type { Scene } from "../../../website/src/content/media-scene-types";
 import { RENDER_SETTLE_MS, ANALYSIS_TIMEOUT_MS, CAPTURE_DPR } from "./capture-config";
+import {
+  FULL_VERIFICATION_OPTIONS,
+  NON_CIRCULAR_VERIFICATION_OPTIONS,
+  VERIFICATION_CASES,
+  VERIFICATION_OPTIONS,
+} from "@cslope/engine/verification";
+import { modelFromDefinition } from "../../src/store/definition-model";
+
+/**
+ * A verification problem as an app model, with the options of one check
+ * and the full search, as the published verification table runs it.
+ */
+function verificationModel(id: string, check: number) {
+  const c = VERIFICATION_CASES.find((v) => v.id === id);
+  const k = c?.checks[check];
+  if (!c || !k) throw new Error(`No verification problem ${id} check ${check}`);
+  return modelFromDefinition(c.definition, {
+    id: `verification-${id}`,
+    name: c.title,
+    options: {
+      method: k.method,
+      ...VERIFICATION_OPTIONS,
+      ...FULL_VERIFICATION_OPTIONS,
+      ...(k.options?.nonCircularOptimization ? NON_CIRCULAR_VERIFICATION_OPTIONS : {}),
+      ...k.options,
+    },
+  });
+}
 
 /** Apply store actions ([name, ...args]) in the renderer. */
 async function applyActions(page: Page, actions: [string, ...unknown[]][] | undefined) {
@@ -171,8 +199,13 @@ async function findWindow(context: BrowserContext, title: string, timeoutMs = 15
 export async function captureScene(page: Page, scene: Scene): Promise<Buffer> {
   const { setup, output } = scene;
 
+  if (!scene.benchmark === !scene.verification) {
+    throw new Error(`Scene "${scene.id}" needs a benchmark or a verification problem`);
+  }
+  const model = scene.verification ? verificationModel(scene.verification.id, scene.verification.check) : null;
+
   await page.evaluate(
-    ({ benchmarkName, setup }) => {
+    ({ benchmarkName, model, setup }) => {
       const store = (window as any).__CSLOPE_STORE__;
       if (!store) throw new Error("Store bridge not available — is VITE_CAPTURE_MODE set?");
       // Nothing carries over from the previous scene: no selection, no focus.
@@ -180,9 +213,10 @@ export async function captureScene(page: Page, scene: Scene): Promise<Buffer> {
       store.getState().setSelectedResultObject?.(null);
       store.getState().setSelectedAnnotations?.([]);
       store.getState().setActiveSection?.("Exterior Boundary");
-      store.getState().loadBenchmarks();
+      if (model) store.getState().loadProject({ models: [model], activeModelId: model.id });
+      else store.getState().loadBenchmarks();
       const state = store.getState();
-      const target = state.models.find((m: any) => m.name === benchmarkName);
+      const target = model ?? state.models.find((m: any) => m.name === benchmarkName);
       if (!target) {
         const names = state.models.map((m: any) => m.name).join(", ");
         throw new Error(`Benchmark "${benchmarkName}" not found. Available: ${names}`);
@@ -197,7 +231,7 @@ export async function captureScene(page: Page, scene: Scene): Promise<Buffer> {
         store.getState().setResultViewSettings({ ...current, ...setup.resultView });
       }
     },
-    { benchmarkName: scene.benchmark, setup },
+    { benchmarkName: scene.benchmark, model, setup },
   );
   await applyActions(page, setup.actions);
 
@@ -254,6 +288,12 @@ export async function captureScene(page: Page, scene: Scene): Promise<Buffer> {
     }
     if (output.fitHeight !== false) await fitWindowHeight(win);
     return win.screenshot({ type: "png" });
+  }
+
+  if (output.crop === "export") {
+    const exported = await page.evaluate(() => (window as any).__CSLOPE_EXPORT_PNG__() as string | null);
+    if (!exported) throw new Error(`Nothing to export for "${scene.id}"`);
+    return Buffer.from(exported.replace(/^data:image\/png;base64,/, ""), "base64");
   }
 
   const dataUrl = await page.evaluate(() => {

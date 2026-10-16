@@ -15,6 +15,7 @@ import {
 import { RibbonButton, RibbonGroup, RibbonSep } from "./RibbonParts";
 import type { SurfaceDisplayMode } from "../../../store/types";
 import { buildSliceTable, toCsv } from "../../../features/export/sliceTable";
+import { paperPngDataUrl } from "../../../features/export/paper-png";
 import { buildXlsx } from "../../../utils/xlsx";
 import { downloadFile, safeFileName } from "../../../utils/download";
 import { useSensitivityStore } from "../../../features/sensitivity/store";
@@ -92,45 +93,11 @@ export function ResultsMenu({ isOpen, onActivate, panelHost }: Props) {
   };
 
   const copyCanvasToPng = () => {
-    const canvas = document.querySelector<HTMLCanvasElement>(
-      "[data-testid='slope-canvas']",
-    );
-    if (!canvas) return;
-
-    const dpr = window.devicePixelRatio || 1;
-    const { paperFrame } = useAppStore.getState().resultViewSettings;
-    const cssW = canvas.width / dpr;
-    const cssH = canvas.height / dpr;
-    const pf = computePaperFrame(
-      cssW,
-      cssH,
-      paperFrame.paperSize,
-      paperFrame.landscape,
-      paperFrame.zoom ?? 1,
-      paperFrame.offsetX ?? 0,
-      paperFrame.offsetY ?? 0,
-    );
-
-    const sx = pf.x * dpr;
-    const sy = pf.y * dpr;
-    const sw = pf.w * dpr;
-    const sh = pf.h * dpr;
-
-    const exportCanvas = document.createElement("canvas");
-    exportCanvas.width = sw;
-    exportCanvas.height = sh;
-    const ctx = exportCanvas.getContext("2d");
-    if (!ctx) return;
-    ctx.fillStyle = "#ffffff";
-    ctx.fillRect(0, 0, sw, sh);
-    ctx.drawImage(canvas, sx, sy, sw, sh, 0, 0, sw, sh);
-
+    const href = paperPngDataUrl();
+    if (!href) return;
     const link = document.createElement("a");
-    link.download = buildExportFilename(
-      useAppStore.getState().projectInfo,
-      "png",
-    );
-    link.href = exportCanvas.toDataURL("image/png");
+    link.download = buildExportFilename(useAppStore.getState().projectInfo, "png");
+    link.href = href;
     link.click();
   };
 

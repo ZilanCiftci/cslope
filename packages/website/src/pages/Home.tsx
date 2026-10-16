@@ -16,11 +16,8 @@ import type { ReactNode } from "react";
 import { Button } from "@/components/ui/button";
 import { Section, SectionHeading } from "@/components/Section";
 import { Screenshot } from "@/components/Screenshot";
-import { SlopePlot } from "@/components/SlopePlot";
-import { MEDIA } from "@/content/media";
+import { MEDIA, homeExampleImage } from "@/content/media";
 import { VERIFICATION, checkCounts, homeExamples } from "@/content/verification";
-import plots from "@/content/generated/home-plots.json";
-import type { HomePlots } from "@/content/verification-types";
 import { usePageMeta } from "@/lib/page-meta";
 import { SITE } from "@/site";
 
@@ -158,7 +155,14 @@ function Capabilities() {
   );
 }
 
-const PLOTS = plots as unknown as HomePlots;
+/** An exported result plot, small; it opens full size. */
+function ExampleImage({ src, alt, width, height }: { src: string; alt: string; width: number; height: number }) {
+  return (
+    <a href={src} target="_blank" rel="noopener" className="block shrink-0 overflow-hidden rounded border bg-white hover:ring-2 hover:ring-ring">
+      <img src={src} alt={alt} width={width} height={height} loading="lazy" decoding="async" className="block h-auto w-32 sm:w-40" />
+    </a>
+  );
+}
 
 function Verification() {
   const examples = homeExamples();
@@ -210,13 +214,7 @@ function Verification() {
                 <tr key={problem.id}>
                   <td className="px-4 py-3">
                     <div className="flex flex-col items-start gap-2 sm:flex-row sm:items-center sm:gap-4">
-                      {PLOTS[problem.id] && (
-                        <SlopePlot
-                          plot={PLOTS[problem.id]}
-                          label={`Critical slip surface found by cSlope for ${problem.title}`}
-                          className="h-10 w-24 shrink-0 sm:h-14 sm:w-28"
-                        />
-                      )}
+                      <ExampleImage {...homeExampleImage(problem.id, problem.title)} />
                       <div>
                         <div className="font-medium">{problem.title}</div>
                         <div className="text-xs text-muted-foreground">

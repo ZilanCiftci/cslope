@@ -56,9 +56,10 @@ export interface SceneOutput {
   filename: string;
   /**
    * "canvas": the drawing canvas only; "full": the whole main window;
-   * "window": the dialog window whose title is `window`.
+   * "window": the dialog window whose title is `window`; "export": the
+   * result plot as the app's "Export PNG" saves it (the paper, on white).
    */
-  crop: "canvas" | "full" | "window";
+  crop: "canvas" | "full" | "window" | "export";
   /** The dialog window's title, for crop "window". */
   window?: string;
   /**
@@ -78,7 +79,12 @@ export interface Scene {
   /** Short description of what this scene shows. */
   description: string;
   /** Name of the benchmark model to load (must match a name in BENCHMARK_MODELS). */
-  benchmark: string;
+  benchmark?: string;
+  /**
+   * Instead of a benchmark: a verification problem opened in the app, run
+   * with the options of one of its checks (as the verification table).
+   */
+  verification?: { id: string; check: number };
   /** Setup steps applied after loading the benchmark. */
   setup: SceneSetup;
   /** Output configuration. */

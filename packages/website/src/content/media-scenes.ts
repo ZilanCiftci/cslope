@@ -46,6 +46,39 @@ const MATERIAL_TABLE_LEFT: [string, ...unknown[]] = [
   { x: 0.11, y: 0.25, anchor: "top-left" },
 ];
 
+/**
+ * The verification examples on the home page, opened in the app and run
+ * with the check the page shows: images in media/home/<id>.png, exported
+ * as "Export PNG" saves them.
+ */
+export const HOME_EXAMPLE_SCENES: { id: string; check: number }[] = [
+  { id: "V044", check: 0 },
+  { id: "V027", check: 1 },
+  { id: "V055", check: 0 },
+];
+
+function homeExample({ id, check }: { id: string; check: number }): Scene {
+  return {
+    id: `home-${id}`,
+    title: `Verification example ${id}`,
+    description: `Critical surface of verification problem ${id}`,
+    verification: { id, check },
+    setup: {
+      mode: "result",
+      runAnalysis: true,
+      resultView: {
+        showSlices: true,
+        showSoilColor: true,
+        showFosLabel: true,
+        showCentreMarker: true,
+        showGrid: false,
+        surfaceDisplay: "critical",
+      },
+    },
+    output: { type: "png", filename: `${id}.png`, crop: "export", dir: "home" },
+  };
+}
+
 export const scenes: Scene[] = [
   // ── Edit-mode scenes ──────────────────────────────────────────
 
@@ -428,4 +461,8 @@ export const scenes: Scene[] = [
       crop: "full",
     },
   ]),
+
+  // ── Home page: the verification examples ──────────────────────
+
+  ...HOME_EXAMPLE_SCENES.map(homeExample),
 ];

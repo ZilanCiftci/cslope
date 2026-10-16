@@ -48,23 +48,3 @@ export interface VerificationData {
   problems: VerificationProblem[];
   reliability: ReliabilityProblem[];
 }
-
-/**
- * A small drawing of a problem's result for the home page (see
- * scripts/generate-data.ts): model coordinates, y up.
- */
-export interface SlopePlot {
-  /** [xMin, yMin, xMax, yMax] of the model. */
-  bounds: [number, number, number, number];
-  /** Material regions; `material` indexes the problem's materials in order of definition. */
-  regions: { material: number; points: [number, number][] }[];
-  /** Piezometric line, when there is one. */
-  water: [number, number][] | null;
-  /** Critical slip surface, entry to exit. */
-  surface: [number, number][];
-  /** The sliding mass: the slip surface and the ground above it, closed. */
-  mass: [number, number][];
-}
-
-/** generated/home-plots.json: a plot per home-page example, keyed by problem id. */
-export type HomePlots = Record<string, SlopePlot>;

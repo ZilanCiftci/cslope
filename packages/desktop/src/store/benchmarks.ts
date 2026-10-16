@@ -17,7 +17,8 @@ type ExamplePaperOptions = {
   landscape?: boolean;
 };
 
-function createExampleResultViewSettings(
+/** Result view of an example: the paper fitted to the model, with a title and a material table. */
+export function createExampleResultViewSettings(
   coordinates: [number, number][],
   paperOptions: ExamplePaperOptions = {},
 ): ModelEntry["resultViewSettings"] {

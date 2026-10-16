@@ -23,6 +23,14 @@ export function media(src: string, alt: string): Media {
 
 const generated = (file: string, alt: string): Media => media(`/media/generated/${file}`, alt);
 
+/**
+ * The result plot of each verification example on the home page, exported
+ * from the app (scenes home-<id> in media-scenes.ts), by problem id.
+ */
+export function homeExampleImage(id: string, title: string): Media {
+  return media(`/media/home/${id}.png`, `cSlope's critical slip surface for ${title}, with its slices and factor of safety`);
+}
+
 export const MEDIA = {
   app: generated("result-app.png", "The cSlope window: the critical slip surface of a homogeneous slope with its centre, slices and factor of safety, the models, the ribbon and the summary of the analysis"),
   criticalSurface: generated("result-critical-surface.png", "Result view: the critical slip surface of a homogeneous slope with its slices, factor of safety and material table",
