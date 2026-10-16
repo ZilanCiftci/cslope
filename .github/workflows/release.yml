@@ -42,12 +42,47 @@ jobs:
           if ("v$version" -ne "${{ github.ref_name }}") {
             throw "Tag ${{ github.ref_name }} does not match the app version $version"
           }
+      - name: Set up Azure Trusted Signing
+        # sign.cjs signs with signtool and Microsoft's signing dlib, which
+        # reads the account from a metadata file and logs in with the
+        # AZURE_CLIENT_* secrets (an app registration with the role
+        # "Trusted Signing Certificate Profile Signer").
+        shell: pwsh
+        env:
+          AZURE_SIGNING_ENDPOINT: ${{ secrets.AZURE_SIGNING_ENDPOINT }}
+          AZURE_SIGNING_ACCOUNT: ${{ secrets.AZURE_SIGNING_ACCOUNT }}
+          AZURE_SIGNING_PROFILE: ${{ secrets.AZURE_SIGNING_PROFILE }}
+        run: |
+          $ErrorActionPreference = "Stop"
+          $PSNativeCommandUseErrorActionPreference = $true
+          foreach ($name in "AZURE_SIGNING_ENDPOINT", "AZURE_SIGNING_ACCOUNT", "AZURE_SIGNING_PROFILE") {
+            if (-not (Get-Item "env:$name" -ErrorAction SilentlyContinue).Value) { throw "Repository secret $name is not set" }
+          }
+          $dir = "$env:RUNNER_TEMP\trusted-signing"
+          nuget install Microsoft.Trusted.Signing.Client -OutputDirectory $dir -ExcludeVersion -NonInteractive
+          $dlib = "$dir\Microsoft.Trusted.Signing.Client\bin\x64\Azure.CodeSigning.Dlib.dll"
+          if (-not (Test-Path $dlib)) { throw "Signing dlib not found at $dlib" }
+          $metadata = "$dir\metadata.json"
+          @{
+            Endpoint               = $env:AZURE_SIGNING_ENDPOINT
+            CodeSigningAccountName = $env:AZURE_SIGNING_ACCOUNT
+            CertificateProfileName = $env:AZURE_SIGNING_PROFILE
+          } | ConvertTo-Json | Out-File -Encoding utf8 $metadata
+          # The newest x64 signtool of the installed Windows SDKs.
+          $signtool = Get-ChildItem "${env:ProgramFiles(x86)}\Windows Kits\10\bin\*\x64\signtool.exe" |
+            Sort-Object FullName -Descending | Select-Object -First 1
+          if (-not $signtool) { throw "signtool.exe not found" }
+          "AZURE_CODE_SIGNING_DLIB=$dlib" | Out-File -Append -Encoding utf8 $env:GITHUB_ENV
+          "AZURE_METADATA_JSON=$metadata" | Out-File -Append -Encoding utf8 $env:GITHUB_ENV
+          "SIGNTOOL_PATH=$($signtool.FullName)" | Out-File -Append -Encoding utf8 $env:GITHUB_ENV
       - name: Build the installer
         working-directory: packages/desktop
-        # Signing needs the Azure Trusted Signing credentials (see sign.cjs);
-        # until they are set up in CI the installer is unsigned.
+        # Signed with Azure Trusted Signing (sign.cjs): without the
+        # credentials the build fails rather than ship an unsigned installer.
         env:
-          CSLOPE_ALLOW_UNSIGNED: "1"
+          AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+          AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+          AZURE_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
         # The app bundle must not carry other programs' names (the
         # verification data, which cites them, is not part of it). Bash
         # stops at the first failing command; pwsh would carry on.
@@ -57,6 +92,15 @@ jobs:
           bunx vite build
           bun ../website/scripts/check-names.ts dist dist-electron
           bunx electron-builder --win --publish never
+      - name: Check the signature
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+          $version = (Get-Content packages/desktop/package.json | ConvertFrom-Json).version
+          $installer = "packages/desktop/release/$version/cSlope-Windows-$version-Setup.exe"
+          $sig = Get-AuthenticodeSignature $installer
+          if ($sig.Status -ne "Valid") { throw "Installer signature: $($sig.Status) $($sig.StatusMessage)" }
+          "Signed by $($sig.SignerCertificate.Subject)"
       - name: Checksum and release notes
         shell: pwsh
         run: |
