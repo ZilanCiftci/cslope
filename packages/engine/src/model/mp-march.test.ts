@@ -1,7 +1,11 @@
 import { describe, it, expect } from "vitest";
 import { VERIFICATION_CASES, runVerification } from "../verification";
-import { analyseOrdinary, getSlicePropertyArrays } from "./solvers";
-import { march, solveMorgensternPriceMarch } from "./mp-march";
+import { Material } from "../types/index";
+import { Slope } from "./slope";
+import { getSlices } from "./slices";
+import { addSingleCircularPlane } from "./search";
+import { analyseMorgensternPrice, analyseOrdinary, getSlicePropertyArrays, setMorgensternPriceSolver } from "./solvers";
+import { analyseMorgensternPriceMarch, march, setMarchSearchOptions, solveMorgensternPriceFast, solveMorgensternPriceMarch } from "./mp-march";
 
 /** The critical surface of the iterative search for a verification problem. */
 function critical(id: string) {
@@ -50,5 +54,63 @@ describe("Morgenstern-Price march solver", () => {
     const r = solveMorgensternPriceMarch(props, F0);
     expect(r.roots.length).toBe(0);
     expect(r.chosen).toBeNull();
+  });
+
+  it("the fast solver, the scan alone and every rule give the same single root (V001)", () => {
+    const { props, F0 } = critical("V001");
+    const full = solveMorgensternPriceMarch(props, F0);
+    const fast = solveMorgensternPriceFast(props, F0);
+    expect(fast.newton).not.toBeNull();
+    expect(Math.abs(fast.chosen!.F - full.chosen!.F)).toBeLessThan(1e-5);
+    const scan = solveMorgensternPriceFast(props, F0, { scanOnly: true });
+    expect(scan.newton).toBeNull();
+    expect(Math.abs(scan.chosen!.F - full.chosen!.F)).toBeLessThan(1e-5);
+    for (const rule of ["largest", "smallest"] as const) {
+      const r = solveMorgensternPriceMarch(props, F0, { rule });
+      expect(r.chosen!.F).toBe(full.chosen!.F);
+    }
+  });
+
+  it("as the search solver it reproduces the iterative search (V001) and gives no answer without a root (V027)", () => {
+    const run = (id: string) => {
+      const c = VERIFICATION_CASES.find((x) => x.id === id)!;
+      const k = c.checks.find((x) => x.method === "Morgenstern-Price")!;
+      return runVerification(c.definition, "Morgenstern-Price", k.options);
+    };
+    const iterative = run("V001").fos!;
+    // The iterative search's critical surface of V027 has no root (above).
+    const v027 = run("V027");
+    const p27 = v027.slope.search.find((p) => p.fos != null && p.slices)!;
+    setMorgensternPriceSolver("march");
+    setMarchSearchOptions({});
+    try {
+      const { fos, slope } = run("V001");
+      expect(Math.abs(fos! / iterative - 1)).toBeLessThan(0.005);
+      // The drop-in solver on the critical surface: one root, reported as the FOS.
+      const plane = slope.search.find((p) => p.fos != null && p.slices)!;
+      const [f, lff, , , converged] = analyseMorgensternPriceMarch(slope, plane.slices!);
+      expect(converged).toBe(true);
+      expect(Math.abs(f! - fos!)).toBeLessThan(1e-6);
+      expect(lff!.length).toBe(1);
+      expect(analyseMorgensternPriceMarch(v027.slope, p27.slices!)[0]).toBeNull();
+    } finally {
+      setMorgensternPriceSolver("iterative");
+    }
+  });
+
+  it("a combined material: the undrained strength governs where it is lower, as in the iterative solver", () => {
+    const s = new Slope();
+    s.addMaterial(new Material({ name: "C", unitWeight: 19, cohesion: 5, frictionAngle: 30, cohesionUndrained: 25, cFactor: 1 }));
+    s.setExternalBoundary([[0, -10], [0, 10], [10, 10], [25, 0], [40, 0], [40, -10]]);
+    s.updateAnalysisOptions({ slices: 30, tolerance: 1e-4, maxIterations: 50 });
+    addSingleCircularPlane(s, 22, 18, 18.5);
+    const p = s.individualPlanes[0];
+    const slices = getSlices(s, p.lc[0], p.rc[0], p.cx, p.cy, p.radius);
+    const [iterative] = analyseMorgensternPrice(s, slices);
+    const [f] = analyseMorgensternPriceMarch(s, slices);
+    expect(f).not.toBeNull();
+    expect(Math.abs(f! - iterative!)).toBeLessThan(0.002);
+    expect(slices.some((x) => x.undrainedGoverns)).toBe(true);
+    expect(slices.some((x) => !x.undrainedGoverns)).toBe(true);
   });
 });

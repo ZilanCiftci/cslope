@@ -290,7 +290,7 @@ function layerSeeds(slope: Slope, evaluate: Evaluate): { points: Pt[]; axis: Pt;
 
 /**
  * Moves the vertices of `points` by the alternating-variable method until
- * no shift helps. `start` is the evaluated plane of `points` when known.
+ * no shift helps. `startPlane` is the evaluated plane of `points`.
  */
 function optimisePoints(
   slope: Slope,
@@ -298,18 +298,11 @@ function optimisePoints(
   axis: Pt,
   evaluate: Evaluate,
   budget: number,
-  startPlane?: SearchPlane,
+  startPlane: SearchPlane,
 ): SearchPlane | null {
   let points = start;
   let used = 0;
-  let best: SearchPlane;
-  if (startPlane) best = startPlane;
-  else {
-    best = makePlane(points, axis);
-    evaluate([best]);
-    used++;
-    if (best.fos == null) return null;
-  }
+  let best = startPlane;
 
   const groundAt = (x: number) => slope.getExternalYIntersection(x);
   const [entryL, entryR, exitL, exitR] = slope.limits;
