@@ -47,6 +47,8 @@ import {
   PIEZO_BAR_GAP2_PX,
   PIEZO_BAR_W_PX,
   PIEZO_COLOR,
+  POND_COLOR,
+  POND_OPACITY,
   PIEZO_TRI_HALF_PX,
   PIEZO_TRI_H_PX,
   SLICE_LINE_OPACITY,
@@ -542,8 +544,8 @@ export function drawPiezometricLines(
   // Free water standing on the ground (from the main line), as on canvas.
   const mainLine = mainPiezoLine({ lines, mainLineId });
   if (freeWater && mainLine) {
-    pdf.setFillColor(...PIEZO_COLOR.rgb);
-    setOpacity(pdf, 0.15);
+    pdf.setFillColor(...POND_COLOR.rgb);
+    setOpacity(pdf, POND_OPACITY);
     for (const poly of freeWaterPolygons(mainLine.coordinates, modelCoordinates)) {
       const pts = poly.map(([wx, wy]) => tf.worldToPdf(wx, wy));
       pdfPath(pdf, buildPolylinePath(pts, true), "f");

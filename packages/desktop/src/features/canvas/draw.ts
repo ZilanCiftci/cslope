@@ -60,6 +60,8 @@ import {
   PIEZO_BAR_GAP2_PX,
   PIEZO_BAR_W_PX,
   PIEZO_COLOR,
+  POND_COLOR,
+  POND_OPACITY,
   PIEZO_TRI_HALF_PX,
   PIEZO_TRI_H_PX,
   SLICE_LINE_OPACITY,
@@ -902,8 +904,8 @@ export function drawCanvas(
     const piezoBlue = PIEZO_COLOR.hex;
     // Free water standing on the ground (from the main line).
     if (piezometricLine.freeWater !== false) {
-      ctx.fillStyle = piezoBlue;
-      ctx.globalAlpha = 0.15;
+      ctx.fillStyle = POND_COLOR.hex;
+      ctx.globalAlpha = POND_OPACITY;
       for (const poly of freeWaterPolygons(
         mainPiezoLine(piezometricLine)!.coordinates,
         coordinates,

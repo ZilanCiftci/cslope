@@ -32,4 +32,12 @@ describe("freeWaterPolygons", () => {
     expect(Math.max(...xs)).toBeCloseTo(28);
     expect(polys[0].every(([, y]) => y <= 4 + 1e-9 && y >= -1e-9)).toBe(true);
   });
+
+  it("leaves out slivers: water on a vertical face or lying on the ground", () => {
+    // A cut with a vertical face from (20, 0) to (20, 10).
+    const cut: [number, number][] = [[0, -5], [0, 0], [20, 0], [20, 10], [60, 10], [60, -5]];
+    expect(freeWaterPolygons([[0, 0.0001], [20, 0.0001], [20, 10], [60, 10]], cut)).toEqual([]);
+    expect(freeWaterPolygons([[0, 0], [20, 0], [20, 10], [60, 10]], cut)).toEqual([]);
+    expect(freeWaterPolygons([[0, 2], [60, 2]], cut)).toHaveLength(1);
+  });
 });

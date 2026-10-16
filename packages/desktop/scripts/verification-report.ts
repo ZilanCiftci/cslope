@@ -19,7 +19,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { execFileSync } from "node:child_process";
-import { jsPDF } from "jspdf";
+import { GState, jsPDF } from "jspdf";
 import {
   analyseSlope,
   buildSlope,
@@ -53,6 +53,8 @@ import type { Slope } from "@cslope/engine";
 import { BENCHMARK_MODELS, PUBLISHED_BENCHMARKS } from "../src/store/benchmarks";
 import { findForbiddenNames } from "../../website/scripts/forbidden-names";
 import { buildSlopeDTOFromModel } from "../src/store/helpers";
+import { freeWaterPolygons } from "../src/utils/piezo";
+import { POND_COLOR, POND_OPACITY } from "../src/features/rendering/style-spec";
 
 type Pt = [number, number];
 
@@ -345,7 +347,14 @@ function figure(def: SlopeDefinition, slope: Slope, plane: Plane | null, label: 
   let x0 = xMinM;
   let x1 = xMaxM;
   let y0 = Math.min(...ys0);
-  let y1 = Math.max(...ys0);
+  // Ponded water above the ground (the main water line, unless it follows
+  // the ground), filled as in the program.
+  const mainWater =
+    canon.waterTable && canon.waterTable.mode === "custom" && Array.isArray(canon.waterTable.value) && canon.waterTable.followBoundary !== true
+      ? [...(canon.waterTable.value as Pt[])].sort((a, b) => a[0] - b[0])
+      : null;
+  const ponds = mainWater ? freeWaterPolygons(mainWater, canon.coordinates as Pt[]) : [];
+  let y1 = Math.max(...ys0, ...ponds.flat().map((p) => p[1]));
   const modelH = y1 - y0;
   if (plane && plane.cy - y1 < 0.8 * Math.max(modelH, (x1 - x0) * 0.3)) {
     y1 = Math.max(y1, plane.cy);
@@ -414,6 +423,24 @@ function figure(def: SlopeDefinition, slope: Slope, plane: Plane | null, label: 
         pdf.line(a[0], a[1], b[0], b[1]);
       }
     }
+  }
+
+  if (ponds.length) {
+    pdf.saveGraphicsState();
+    pdf.setGState(new GState({ opacity: POND_OPACITY }));
+    pdf.setFillColor(...POND_COLOR.rgb);
+    for (const pond of ponds) {
+      const pts = pond.map(([px, py]) => P(px, py));
+      pdf.lines(
+        pts.slice(1).map((p, i) => [p[0] - pts[i][0], p[1] - pts[i][1]]),
+        pts[0][0],
+        pts[0][1],
+        [1, 1],
+        "F",
+        true,
+      );
+    }
+    pdf.restoreGraphicsState();
   }
 
   // Water lines (continued horizontally to the model edges, as analysed).

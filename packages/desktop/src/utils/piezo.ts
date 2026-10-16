@@ -41,6 +41,16 @@ function lineYAt(line: Pt[], x: number): number {
   return pts[pts.length - 1][1];
 }
 
+function polygonArea(poly: Pt[]): number {
+  let a = 0;
+  for (let i = 0; i < poly.length; i++) {
+    const [x0, y0] = poly[i];
+    const [x1, y1] = poly[(i + 1) % poly.length];
+    a += x0 * y1 - x1 * y0;
+  }
+  return Math.abs(a) / 2;
+}
+
 /**
  * Areas where the water line lies above the ground: the free water the
  * analysis loads the slope with. Each polygon runs along the water surface
@@ -58,8 +68,13 @@ export function freeWaterPolygons(line: Pt[], model: Pt[]): Pt[][] {
   const polygons: Pt[][] = [];
   let water: Pt[] = [];
   let ground: Pt[] = [];
+  // Slivers (water on a vertical face, or a line lying on the ground) are
+  // no pond: below 1e-4 of the model width squared, under a pixel at any
+  // plot size.
+  const minArea = 1e-4 * (xMax - xMin) ** 2;
   const close = () => {
-    if (water.length >= 2) polygons.push([...water, ...ground.reverse()]);
+    const poly = [...water, ...ground.reverse()];
+    if (water.length >= 2 && polygonArea(poly) > minArea) polygons.push(poly);
     water = [];
     ground = [];
   };

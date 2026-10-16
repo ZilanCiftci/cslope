@@ -16,6 +16,8 @@ import {
   EXIT_DOT_COLOR,
   LINE_LOAD_COLOR,
   PIEZO_COLOR,
+  POND_COLOR,
+  POND_OPACITY,
   SLIP_SURFACE_OPACITY,
   UDL_LOAD_COLOR,
 } from "../rendering/style-spec";
@@ -496,7 +498,7 @@ describe("drawCanvas — edit mode", () => {
         activeLineId: "a",
       },
     });
-    const water = rec.fills(PIEZO_COLOR.hex).filter((p) => p.state.globalAlpha === 0.15);
+    const water = rec.fills(POND_COLOR.hex).filter((p) => p.state.globalAlpha === POND_OPACITY);
     expect(water).toHaveLength(1);
     // The pond lies over the toe (x ≥ 16 where the ground is below y = 7).
     const xs = pathPoints(water[0]).map(([x]) => canvasToWorld(x, 0, W, H)[0]);

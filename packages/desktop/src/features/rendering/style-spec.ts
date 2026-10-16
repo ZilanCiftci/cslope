@@ -31,6 +31,10 @@ export const EXIT_DOT_COLOR: DualColor = { hex: "#cc0000", rgb: [204, 0, 0] };
 export const MARKER_COLOR: DualColor = { hex: "#000000", rgb: [0, 0, 0] };
 /** Piezometric line colour (dark blue). */
 export const PIEZO_COLOR: DualColor = { hex: "#1a3a8a", rgb: [26, 58, 138] };
+/** Ponded water above the ground (light blue), filled with POND_OPACITY. */
+export const POND_COLOR: DualColor = { hex: "#4aa8e8", rgb: [74, 168, 232] };
+/** Opacity of the pond fill: the ground line and the slip surface show through. */
+export const POND_OPACITY = 0.35;
 /** UDL load colour (red). */
 export const UDL_LOAD_COLOR: DualColor = { hex: "#cc0000", rgb: [204, 0, 0] };
 /** Line-load colour (blue). */
