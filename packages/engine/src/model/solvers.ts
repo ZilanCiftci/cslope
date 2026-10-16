@@ -797,7 +797,7 @@ export function analyseMorgensternPrice(
       lambdaNew += lambdaNew >= prevLambda ? 0.05 : -0.05;
       if (++nudgeCount > 50) break;
     }
-    // The interslice inclination stays between −10° and +80° (UTEXAS2):
+    // The interslice inclination stays between −10° and +80° (Edris & Wright 1987):
     // beyond that the force equation has roots that are no solution. A
     // walk that wants to leave the range has no crossing inside it.
     let exhausted = false;
@@ -1079,7 +1079,7 @@ function evaluatePlanes(slope: Slope, allPlanes: SearchPlane[]): void {
         // A candidate of the non-circular optimisation is kept only with a
         // crossing: the optimisation is a minimum over thousands of
         // surfaces and finds every one where the closest pair reads low.
-        // The surface is abandoned, as in UTEXAS2 (para. 101).
+        // The surface is abandoned, as in Edris & Wright (1987, para. 101).
         if (plane.optimised && plane.equilibriumGap != null) fos = null;
         converged = cvg;
         break;

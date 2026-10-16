@@ -4,7 +4,7 @@
  * The best circles of the search, and block-shaped surfaces through the
  * buried material layers, are polylines whose vertices are moved by the
  * alternating-variable method of Celestino & Duncan (1981), as built in
- * UTEXAS2 (Edris & Wright 1987, paras 87–89):
+ * the Corps of Engineers manual of Edris & Wright (1987, paras 87–89):
  *
  * - Each interior vertex is shifted a distance Δ in both directions
  *   normal to the surface (the bisector at a kink); the entry and exit
@@ -146,8 +146,8 @@ function polygonYExtentAt(px: readonly number[], py: readonly number[], x: numbe
 /**
  * Block surfaces along the middle of each buried layer: down from the
  * entry at the active angle 45° + φ/2, along the layer, up to the exit at
- * the passive angle 45° − φ/2 (Coulomb; UTEXAS2 vol. II fig. 6), with the
- * entry and exit of each circle seed. UTEXAS2 (para. 86): the initial
+ * the passive angle 45° − φ/2 (Coulomb; Wright 1988, fig. 6), with the
+ * entry and exit of each circle seed. Edris & Wright (1987, para. 86): the initial
  * surface "should be input so that it passes through the weaker material".
  */
 function layerSeeds(slope: Slope, circleSeeds: readonly SearchPlane[]): { points: Pt[]; axis: Pt }[] {

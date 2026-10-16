@@ -28,8 +28,8 @@
  *
  * Sources: Fredlund (1984) recommends Newton–Raphson on (F, λ); the
  * F_f/F_m crossing is Fredlund & Krahn (1977); the pole-free band is
- * Morgenstern & Price's (1965) positivity rule in slice form, the form
- * xslope (Jones, 2026) uses. Selection among several roots is left to the
+ * Morgenstern & Price's (1965) positivity rule in slice form, the form an
+ * open implementation (Jones 2026) uses. Selection among several roots is left to the
  * caller (`RootRule`); the roots are all reported.
  */
 
@@ -196,15 +196,15 @@ function brent(f: (x: number) => number, a: number, b: number, fa: number, fb: n
 export const MIN_DENOMINATOR = 0.2;
 
 /**
- * Limits on the interslice force inclination θ = atan(λ f), from UTEXAS2
- * (Edris & Wright 1987, vol. I para. 107): the solution is terminated
+ * Limits on the interslice force inclination θ = atan(λ f), from the Corps of
+ * Engineers manual of Edris & Wright (1987, vol. I para. 107): the solution is terminated
  * when θ is less than −10° or steeper than +80° for a left-facing slope.
  * λ is the scale of f(x), so with f = 1 (Spencer) λ = tan θ.
  */
 export const LAMBDA_MIN = Math.tan((-10 * Math.PI) / 180);
 export const LAMBDA_MAX = Math.tan((80 * Math.PI) / 180);
 
-/** F is not allowed below 0.10 (UTEXAS2 vol. I para. 104). */
+/** F is not allowed below 0.10 (Edris & Wright 1987, vol. I para. 104). */
 const F_MIN = 0.1;
 const F_MAX = 50;
 const F_GRID = 24;
