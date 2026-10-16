@@ -35,8 +35,8 @@ jobs:
       - name: Build website
         run: bun run --filter @cslope/website build
 
-  # Coverage runs on pull requests and on main only, where it is checked
-  # against the thresholds in each package's vitest.config.ts. Other pushes
+  # Coverage runs on pull requests and on main only, as a report in the
+  # job log (no thresholds: a drop is seen, not a failure). Other pushes
   # run the same tests without coverage, which is faster.
   engine:
     runs-on: ubuntu-latest

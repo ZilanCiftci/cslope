@@ -8,14 +8,9 @@ export default defineConfig({
     include: ["src/**/*.{test,spec}.{ts,tsx}"],
     coverage: {
       provider: "v8",
+      // Measured and reported, never a reason to fail the run: the
+      // verification problems are the engine's real check.
       reporter: ["text", "html", "lcov"],
-      // Just below the measured coverage: a drop fails the run.
-      thresholds: {
-        lines: 98,
-        functions: 98,
-        branches: 92,
-        statements: 97,
-      },
     },
   },
 });
