@@ -23,6 +23,5 @@ dist-ssr
 *.sln
 *.sw?
 
-# The public verification report: written by the deploy build (build:deploy)
-# and attached to each GitHub release; `bun run report` makes it locally.
-public/cSlope-verification-report.pdf
+# The public verification report is attached to each GitHub release.
+public/verification-report.pdf
