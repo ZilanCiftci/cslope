@@ -14,6 +14,7 @@
  * The file is checked in, so the site builds without running the engine.
  * Regenerate it after changing the engine or the verification problems;
  * generate-data.test.ts fails when the problems no longer match the file.
+ * Regenerate the PDF report the site serves at the same time: bun run report.
  */
 import { spawn } from "node:child_process";
 import { existsSync, mkdtempSync, readFileSync, writeFileSync, mkdirSync } from "node:fs";

@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { fireEvent, render, screen } from "@testing-library/react";
 import { MemoryRouter } from "react-router";
 import { Verification } from "./Verification";
+import { REPORT } from "@/content/report";
 import { VERIFICATION } from "@/content/verification";
 
 const renderPage = () =>
@@ -43,5 +44,12 @@ describe("Verification page", () => {
   it("names the document title", () => {
     renderPage();
     expect(document.title).toBe("Verification · cSlope");
+  });
+
+  it("links the verification report the site serves (scripts/report.test.ts checks the file)", () => {
+    renderPage();
+    const link = screen.getByRole("link", { name: "Verification report (PDF)" });
+    expect(link.getAttribute("href")).toBe(REPORT);
+    expect(link.hasAttribute("download")).toBe(true);
   });
 });

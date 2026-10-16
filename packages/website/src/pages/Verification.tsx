@@ -12,14 +12,12 @@ import {
   type MethodFilter,
   type SourceFilter,
 } from "@/content/verification";
-import { LATEST } from "@/content/release";
+import { REPORT } from "@/content/report";
 import { usePageMeta } from "@/lib/page-meta";
 import { cn } from "@/lib/utils";
 
 const num = (x: number | null, digits = 3) => (x == null ? "–" : x.toFixed(digits));
 
-/** The public edition of the report, attached to every release (none before the first). */
-const REPORT = LATEST?.report;
 
 function Select<T extends string>({
   label,
@@ -249,19 +247,12 @@ export function Verification() {
             </div>
           ))}
         </dl>
-        {REPORT ? (
-          <Button asChild variant="outline" className="mt-10">
-            <a href={REPORT}>
-              <FileDown className="mr-2 h-4 w-4" />
-              Verification report (PDF)
-            </a>
-          </Button>
-        ) : (
-          <p className="mt-10 flex items-center gap-2 text-sm text-muted-foreground">
-            <FileDown className="h-4 w-4" aria-hidden="true" />
-            The verification report (PDF) is attached to every release, from the first release on.
-          </p>
-        )}
+        <Button asChild variant="outline" className="mt-10">
+          <a href={REPORT} download>
+            <FileDown className="mr-2 h-4 w-4" />
+            Verification report (PDF)
+          </a>
+        </Button>
       </PageHeader>
 
       <Section>
