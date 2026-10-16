@@ -103,7 +103,9 @@ export function toEngineReinforcement(row: ReinforcementRow): Reinforcement {
         }
       : row.pullout === "interface"
         ? { kind: "interface", adhesion: row.adhesion, frictionAngle: row.interfaceFriction }
-        : undefined;
+        : row.pullout === "development"
+          ? { kind: "development", length1: row.developmentLength1 ?? 0, length2: row.developmentLength2 ?? 0 }
+          : undefined;
   return {
     x1: row.x1,
     y1: row.y1,
@@ -142,7 +144,10 @@ export function sanitizeReinforcement(raw: unknown, id: string): ReinforcementRo
     y2: r.y2 as number,
     tensileCapacity: num(r.tensileCapacity, preset.tensileCapacity),
     spacing: finite(r.spacing) && (r.spacing as number) > 0 ? (r.spacing as number) : preset.spacing,
-    pullout: pick(r.pullout, ["none", "bond", "interface"] as const, preset.pullout),
+    pullout: pick(r.pullout, ["none", "bond", "interface", "development"] as const, preset.pullout),
+    ...(r.pullout === "development"
+      ? { developmentLength1: num(r.developmentLength1, 0), developmentLength2: num(r.developmentLength2, 0) }
+      : {}),
     bondStrength: num(r.bondStrength, preset.bondStrength),
     bondedLength: num(r.bondedLength, preset.bondedLength),
     adhesion: num(r.adhesion, preset.adhesion),

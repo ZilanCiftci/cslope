@@ -12,35 +12,14 @@
 import type { BrowserContext, CDPSession, Page } from "playwright";
 import type { Scene } from "../../../website/src/content/media-scene-types";
 import { RENDER_SETTLE_MS, ANALYSIS_TIMEOUT_MS, CAPTURE_DPR } from "./capture-config";
-import {
-  FULL_VERIFICATION_OPTIONS,
-  NON_CIRCULAR_VERIFICATION_OPTIONS,
-  VERIFICATION_CASES,
-  VERIFICATION_OPTIONS,
-  presentedAnalyses,
-} from "@cslope/engine/verification";
-import { modelFromDefinition } from "../../src/store/definition-model";
+import { VERIFICATION_CASES } from "@cslope/engine/verification";
+import { verificationModel as fromCase } from "../../src/store/verification-models";
 
-/**
- * A verification problem as an app model, run as one of its analyses (by
- * cSlope's name for it) with the full search, as the published
- * verification table runs it.
- */
+/** A verification problem as an app model, run as one of its analyses (cSlope's name for it). */
 function verificationModel(id: string, method: string) {
   const c = VERIFICATION_CASES.find((v) => v.id === id);
-  const a = c && presentedAnalyses(c).find((x) => x.label === method);
-  if (!c || !a) throw new Error(`No verification problem ${id} with the analysis "${method}"`);
-  return modelFromDefinition(c.definition, {
-    id: `verification-${id}`,
-    name: c.title,
-    options: {
-      method: a.method,
-      ...VERIFICATION_OPTIONS,
-      ...FULL_VERIFICATION_OPTIONS,
-      ...(a.options.nonCircularOptimization ? NON_CIRCULAR_VERIFICATION_OPTIONS : {}),
-      ...a.options,
-    },
-  });
+  if (!c) throw new Error(`No verification problem ${id}`);
+  return fromCase(c, method);
 }
 
 /** Apply store actions ([name, ...args]) in the renderer. */

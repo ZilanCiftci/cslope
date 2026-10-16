@@ -447,6 +447,7 @@ export function ReinforcementDialogApp() {
                 <option value="none">None — ends fully anchored</option>
                 <option value="bond">Bond strength along the element</option>
                 <option value="interface">Interface friction (overburden)</option>
+                <option value="development">Development length from each end</option>
               </select>
             </Field>
             {selected.pullout === "bond" && (
@@ -470,6 +471,26 @@ export function ReinforcementDialogApp() {
                     label="Interface friction angle"
                     min={0}
                     onValue={(v) => v < 90 && update(selected.id, { interfaceFriction: v })}
+                  />
+                </Field>
+              </>
+            )}
+            {selected.pullout === "development" && (
+              <>
+                <Field label="Development length at end 1 (m)" title="The tensile capacity develops linearly over this length; 0 = end fully anchored">
+                  <NumberCell
+                    value={selected.developmentLength1 ?? 0}
+                    label="Development length at end 1"
+                    min={0}
+                    onValue={(v) => update(selected.id, { developmentLength1: v })}
+                  />
+                </Field>
+                <Field label="Development length at end 2 (m)" title="The tensile capacity develops linearly over this length; 0 = end fully anchored">
+                  <NumberCell
+                    value={selected.developmentLength2 ?? 0}
+                    label="Development length at end 2"
+                    min={0}
+                    onValue={(v) => update(selected.id, { developmentLength2: v })}
                   />
                 </Field>
               </>

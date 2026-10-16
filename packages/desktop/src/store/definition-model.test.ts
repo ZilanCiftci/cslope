@@ -14,6 +14,27 @@ function analysed(d: SlopeDefinition) {
     boundaries: (d.materialBoundaries ?? []).map((b) => JSON.stringify(b.coordinates)).sort(),
     regions: d.regionAssignments ?? [],
     water: d.waterTable?.value ?? null,
+    // The water line each material uses (its own, or the main one).
+    materialWater: d.materials.map((m) =>
+      m.waterTableId ? (d.waterTables ?? []).find((w) => w.id === m.waterTableId)?.coordinates : d.waterTable?.value ?? null,
+    ),
+    // With engine defaults filled in, and without what the analysis does
+    // not use: end capacities of fully anchored elements, the diameter of
+    // a pile with a given force.
+    reinforcements: (d.reinforcements ?? []).map(({ end1Capacity, end2Capacity, ...r }) => ({
+      ...r,
+      spacing: r.spacing ?? 1,
+      direction: r.direction ?? "axial",
+      application: r.application ?? "active",
+      ...(r.pullout ? { end1Capacity: end1Capacity ?? 0, end2Capacity: end2Capacity ?? 0 } : {}),
+    })),
+    piles: (d.piles ?? []).map(({ diameter, ...p }) => ({
+      ...p,
+      ...(p.force == null ? { diameter } : {}),
+      spacing: p.spacing ?? 1,
+      angle: p.angle ?? 0,
+      application: p.application ?? "active",
+    })),
     udls: d.udls ?? [],
     lineLoads: d.lineLoads ?? [],
     limits: d.analysisLimits ?? null,
@@ -23,21 +44,9 @@ function analysed(d: SlopeDefinition) {
   };
 }
 
-const convertible = VERIFICATION_CASES.filter((c) => {
-  try {
-    modelFromDefinition(c.definition, { id: c.id, name: c.title });
-    return true;
-  } catch {
-    return false;
-  }
-});
 
 describe("modelFromDefinition", () => {
-  it("converts most verification problems", () => {
-    expect(convertible.length).toBeGreaterThan(VERIFICATION_CASES.length / 2);
-  });
-
-  it.each(convertible.map((c) => [c.id, c] as const))("%s: the app sends the analysis the same slope", (_, c) => {
+  it.each(VERIFICATION_CASES.map((c) => [c.id, c] as const))("%s: the app sends the analysis the same slope", (_, c) => {
     const model = modelFromDefinition(c.definition, { id: c.id, name: c.title });
     const back = buildSlopeDTOFromModel(model);
     // The app sends the canonical form (right-to-left slopes mirrored).

@@ -119,9 +119,10 @@ export interface ReinforcementRow {
   spacing: number;
   /**
    * Pullout along the element: none (fully anchored ends), constant bond
-   * (kN/m), or interface friction from the overburden (geosynthetics).
+   * (kN/m), interface friction from the overburden (geosynthetics), or the
+   * tensile capacity developing linearly over a length from each end.
    */
-  pullout: "none" | "bond" | "interface";
+  pullout: "none" | "bond" | "interface" | "development";
   /** Bond strength (kN per m of element). */
   bondStrength: number;
   /** Bonded length at end 2 (m); 0 = the whole element (nails). */
@@ -129,6 +130,9 @@ export interface ReinforcementRow {
   /** Interface adhesion (kPa) and friction angle (°), both faces. */
   adhesion: number;
   interfaceFriction: number;
+  /** Development lengths from end 1 and end 2 (m); 0 = that end fully anchored. */
+  developmentLength1?: number;
+  developmentLength2?: number;
   /** Plate / facing connection capacity at end 1 (kN per element). */
   end1Capacity: number;
   /** Anchorage capacity at end 2 (kN per element). */

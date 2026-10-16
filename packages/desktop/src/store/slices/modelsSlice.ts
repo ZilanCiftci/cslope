@@ -1,6 +1,7 @@
 import { DEFAULT_ANALYSIS_OPTIONS } from "@cslope/engine";
 import { DEFAULT_MODEL_NAME } from "../../constants";
 import { BENCHMARK_MODELS } from "../benchmarks";
+import { verificationModels } from "../verification-models";
 import { LOVO_MODELS } from "../lovo";
 import {
   DEFAULT_ANALYSIS_LIMITS,
@@ -473,7 +474,8 @@ export const createModelsSlice: SliceCreator<ModelsSlice> = (
 
   loadBenchmarks: () => {
     abortAllAnalyses();
-    const models = BENCHMARK_MODELS.map(cloneModelEntry);
+    // The bundled examples, then every verification problem.
+    const models = [...BENCHMARK_MODELS.map(cloneModelEntry), ...verificationModels()];
     if (models.length === 0) return;
     const first = models[0];
     set({
