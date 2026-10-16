@@ -67,9 +67,12 @@ process.env.CSLOPE_VERIFICATION_FULL = "1";
 
 const ARGS = process.argv.slice(2);
 const PUBLIC = ARGS.includes("--public");
-const OUT =
+// Absolute, so creating its directory works for any argument (on Windows,
+// Bun's recursive mkdir throws EEXIST for an existing relative "..\..").
+const OUT = path.resolve(
   ARGS.find((a) => !a.startsWith("--")) ??
-  path.join(REPO, "docs", "verification", PUBLIC ? "cSlope-verification-report-public.pdf" : "cSlope-verification-report.pdf");
+  path.join(REPO, "docs", "verification", PUBLIC ? "cSlope-verification-report-public.pdf" : "cSlope-verification-report.pdf"),
+);
 
 // The data names no other program (problems.ts); the internal edition labels
 // them "commercial program A" and so on. The public one names none, not
@@ -1152,7 +1155,7 @@ for (let p = 2; p <= pages; p++) {
   pdf.text(`Page ${p} of ${pages}`, PAGE_W / 2, PAGE_H - 10, { align: "center" });
 }
 
-fs.mkdirSync(path.dirname(OUT), { recursive: true });
+if (!fs.existsSync(path.dirname(OUT))) fs.mkdirSync(path.dirname(OUT), { recursive: true });
 fs.writeFileSync(OUT, Buffer.from(pdf.output("arraybuffer")));
 console.log(`\n${nPass}/${nChecks} checks within tolerance (not shown in the public edition). Wrote ${path.relative(process.cwd(), OUT)} (${pages} pages).`);
 if (nPass < nChecks) process.exitCode = 1;
