@@ -1373,11 +1373,11 @@ export const PROBLEMS: RawCase[] = [
     description: "As V050a, with a circular search followed by non-circular optimisation; the critical surface slides along the weak layer with a back scarp to the crest.",
     definition: {"coordinates":[[20,20],[20,27.75],[43,27.75],[67.5,40],[84,40],[84,20]],"materials":[{"name":"Soil 1","unitWeight":18.84,"frictionAngle":0,"cohesion":0,"model":{"kind":"mohr-coulomb","unitWeight":18.84,"cohesion":28.5,"frictionAngle":20}},{"name":"Weak layer","unitWeight":18.84,"frictionAngle":0,"cohesion":0,"model":{"kind":"mohr-coulomb","unitWeight":18.84,"cohesion":0,"frictionAngle":10}},{"name":"Soil 1 below","unitWeight":18.84,"frictionAngle":0,"cohesion":0,"model":{"kind":"mohr-coulomb","unitWeight":18.84,"cohesion":28.5,"frictionAngle":20}}],"materialBoundaries":[{"coordinates":[[19,27],[85,27]],"materialName":""},{"coordinates":[[19,26.5],[85,26.5]],"materialName":""}],"regionAssignments":[{"point":[20.64,27.05],"materialName":"Soil 1"},{"point":[20.64,26.75],"materialName":"Weak layer"},{"point":[20.64,23.25],"materialName":"Soil 1 below"}],"orientation":"rtl","waterTable":{"mode":"custom","value":[[20,26.5],[84,26.5]]}},
     checks: [
-      {"method":"Morgenstern-Price","label":"Morgenstern-Price (half-sine)","published":1.261,"publishedBy":"Commercial program B","options":{"nonCircularOptimization":true}},
       {"method":"Morgenstern-Price","label":"Spencer (M-P, constant f(x))","published":1.246,"publishedBy":"Commercial program A","options":{"intersliceFunction":"constant","nonCircularOptimization":true}},
     ],
     notes: [
-      "The best circle gives 1.51; the optimised surface follows the base of the weak layer. ACADS accepts about 1.24–1.27.",
+      "The best circle gives 1.51; the optimised surface follows the weak layer with a wedge up to the crest. ACADS accepts about 1.24–1.27.",
+      "Known gap: commercial program B's optimised Morgenstern-Price (half-sine) reports 1.261, the value of the specified surface of 3(b) (V050a), so its search found nothing lower; cSlope's search finds 1.218 (half-sine) and 1.228 (Spencer), a complete-equilibrium solution with one root that holds at 50, 100 and 200 slices. A search difference, not a model one: not a check.",
     ],
   },
   {
@@ -1441,13 +1441,13 @@ export const PROBLEMS: RawCase[] = [
     description: "Greco's weak-seam slope (V054) with commercial program B's geometry and water table; circular search with non-circular optimisation, vertical pore-pressure head.",
     definition: {"orientation":"rtl","coordinates":[[0,0],[0,20],[55,20],[75,30],[95,40],[100,40],[145,70],[240,70],[240,15],[150,15]],"materials":[{"name":"Layer 1","unitWeight":20,"frictionAngle":0,"cohesion":0,"model":{"kind":"mohr-coulomb","unitWeight":20,"cohesion":9.8,"frictionAngle":35}},{"name":"Layer 2","unitWeight":19,"frictionAngle":0,"cohesion":0,"model":{"kind":"mohr-coulomb","unitWeight":19,"cohesion":58.8,"frictionAngle":25}},{"name":"Layer 3","unitWeight":21.5,"frictionAngle":0,"cohesion":0,"model":{"kind":"mohr-coulomb","unitWeight":21.5,"cohesion":19.8,"frictionAngle":30}},{"name":"Layer 4","unitWeight":21.5,"frictionAngle":0,"cohesion":0,"model":{"kind":"mohr-coulomb","unitWeight":21.5,"cohesion":9.8,"frictionAngle":16}}],"materialBoundaries":[{"coordinates":[[100,40],[190,55],[241,55]],"materialName":""},{"coordinates":[[75,30],[241,30]],"materialName":""},{"coordinates":[[-1,0.4],[150,15.5],[241,15.5]],"materialName":""}],"regionAssignments":[{"point":[200,62],"materialName":"Layer 1"},{"point":[200,45],"materialName":"Layer 2"},{"point":[100,20],"materialName":"Layer 3"},{"point":[100,10.25],"materialName":"Layer 4"}],"waterTable":{"mode":"custom","value":[[0,20],[55,20],[75,30],[95,40],[100,40],[190,55],[240,55]],"followBoundary":false},"analysisLimits":{"entryLeftX":145,"entryRightX":240,"exitLeftX":0,"exitRightX":55}},
     checks: [
-      {"method":"Morgenstern-Price","label":"Spencer (M-P, constant f(x))","published":1.054,"publishedBy":"Commercial program B","options":{"intersliceFunction":"constant","slices":50,"porePressureHead":"vertical","nonCircularOptimization":true}},
+      {"method":"Morgenstern-Price","label":"Spencer (M-P, constant f(x))","published":1.010,"publishedBy":"Commercial program A (block search)","options":{"intersliceFunction":"constant","slices":50,"porePressureHead":"vertical","nonCircularOptimization":true}},
     ],
     notes: [
       "Entry on the crest (x = 145–240) and exit on the level ground (x = 0–55), as in the source.",
       "Fig. 40: base (0,0)–(150,15)–(240,15) under a 0.5 m Layer 4 whose top is (0,0.5)–(150,15.5)–(240,15.5); the thickness of Layer 4 is read from the label (0, 0.5) only partly legible. V054 (commercial program A) has the base rising to (240,16).",
       "commercial program B Janbu (uncorrected) 0.896, Bishop 1.040 (axis-dependent on a non-circular surface, not checked). Greco 1.08.",
-      "cSlope's optimised surface (Spencer 1.032) is below commercial program B's 1.054; on the commercial program A geometry (V054) cSlope's optimisation also gives 1.032 and commercial program A's block search 1.010, Chen & Shao 1.01–1.03: a search difference, not a model one.",
+      "The reference is commercial program A's block search (1.010, on its own geometry with the base rising to (240, 16)), the same kind of search as cSlope's: the critical surface slides along Layer 4 with a wedge up to the crest and a wedge out to the level ground, and Chen & Shao give 1.01–1.03. Commercial program B's optimised search on this geometry reports 1.054, which cSlope's search passes below (1.009): a search difference, not a model one.",
     ],
   },
   {
