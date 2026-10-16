@@ -1,5 +1,6 @@
 import data from "./generated/verification.json";
 import type { VerificationData, VerificationProblem, VerificationCheck } from "./verification-types";
+import { HOME_EXAMPLES } from "./home-examples";
 
 export const VERIFICATION = data as VerificationData;
 
@@ -8,33 +9,13 @@ export interface Example {
   check: VerificationCheck;
 }
 
-/**
- * Well-known literature problems for the home page, found by reference so
- * that regenerating the data cannot change which ones are shown. Only
- * values the literature itself gives (not a program's) are used.
- */
-const EXAMPLES: { reference: RegExp; method: RegExp }[] = [
-  { reference: /^Fredlund, D\.G\. & Krahn/, method: /Bishop/ },
-  { reference: /^Duncan & Wright.*fig\. 14\.3\./, method: /Spencer/ },
-  { reference: /^Griffiths & Lane/, method: /.*/ },
-];
-
-
+/** The home page's examples (home-examples.ts) with their data; missing ones are skipped. */
 export function homeExamples(d: VerificationData = VERIFICATION): Example[] {
-  const out: Example[] = [];
-  for (const e of EXAMPLES) {
-    for (const problem of d.problems) {
-      if (!problem.literature || !e.reference.test(problem.reference)) continue;
-      const check = problem.checks.find(
-        (k) => e.method.test(k.method) && sourceKind(k) === "literature" && k.computed != null,
-      );
-      if (check) {
-        out.push({ problem, check });
-        break;
-      }
-    }
-  }
-  return out;
+  return HOME_EXAMPLES.flatMap(({ id, check }) => {
+    const problem = d.problems.find((p) => p.id === id);
+    const k = problem?.checks[check];
+    return problem && k && k.computed != null ? [{ problem, check: k }] : [];
+  });
 }
 
 export type SourceKind = "literature" | "program";

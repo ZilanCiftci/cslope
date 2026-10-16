@@ -6,6 +6,7 @@
  */
 
 import type { Scene, SceneOutput, SceneSetup } from "./media-scene-types";
+import { HOME_EXAMPLES } from "./home-examples";
 
 interface TutorialScene {
   id: string;
@@ -47,16 +48,9 @@ const MATERIAL_TABLE_LEFT: [string, ...unknown[]] = [
 ];
 
 /**
- * The verification examples on the home page, opened in the app and run
- * with the check the page shows: images in media/home/<id>.png, exported
- * as "Export PNG" saves them.
+ * A home-page example (home-examples.ts) opened in the app and run with
+ * the check the page shows: media/home/<id>.png, as "Export PNG" saves it.
  */
-export const HOME_EXAMPLE_SCENES: { id: string; check: number }[] = [
-  { id: "V044", check: 0 },
-  { id: "V027", check: 1 },
-  { id: "V055", check: 0 },
-];
-
 function homeExample({ id, check }: { id: string; check: number }): Scene {
   return {
     id: `home-${id}`,
@@ -464,5 +458,5 @@ export const scenes: Scene[] = [
 
   // ── Home page: the verification examples ──────────────────────
 
-  ...HOME_EXAMPLE_SCENES.map(homeExample),
+  ...HOME_EXAMPLES.map(homeExample),
 ];

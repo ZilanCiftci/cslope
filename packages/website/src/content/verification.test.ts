@@ -1,21 +1,23 @@
 import { describe, expect, it } from "vitest";
 import { VERIFICATION, filterProblems, homeExamples, methodFamily } from "./verification";
+import { HOME_EXAMPLES } from "./home-examples";
 
 describe("home page examples", () => {
-  it("finds three literature problems with a literature value", () => {
+  it("are the chosen problems and checks, each with a computed value", () => {
     const examples = homeExamples();
-    expect(examples).toHaveLength(3);
-    for (const { problem, check } of examples) {
-      expect(problem.literature).toBe(true);
-      expect(check.source).not.toMatch(/program/i);
+    expect(examples.map((e) => e.problem.id)).toEqual(HOME_EXAMPLES.map((e) => e.id));
+    for (const [i, { problem, check }] of examples.entries()) {
+      expect(problem.checks.indexOf(check)).toBe(HOME_EXAMPLES[i].check);
       expect(check.computed).not.toBeNull();
     }
   });
 
-  it("skips a problem whose value comes from a program", () => {
+  it("skip a problem that is missing or has no computed value", () => {
     const d = structuredClone(VERIFICATION);
-    for (const p of d.problems) for (const k of p.checks) k.source = "Commercial program A";
-    expect(homeExamples(d)).toEqual([]);
+    d.problems = d.problems.filter((p) => p.id !== HOME_EXAMPLES[0].id);
+    const second = d.problems.find((p) => p.id === HOME_EXAMPLES[1].id)!;
+    second.checks[HOME_EXAMPLES[1].check].computed = null;
+    expect(homeExamples(d).map((e) => e.problem.id)).toEqual(HOME_EXAMPLES.slice(2).map((e) => e.id));
   });
 });
 

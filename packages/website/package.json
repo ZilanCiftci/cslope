@@ -10,6 +10,7 @@
     "typecheck": "tsc --noEmit -p tsconfig.app.json && tsc --noEmit -p tsconfig.node.json",
     "test": "vitest run",
     "report": "bun ../desktop/scripts/verification-report.ts public/cSlope-verification-report.pdf --public",
+    "build:deploy": "bun scripts/generate-data.ts && bun run report && bun run build",
     "preview": "vite preview"
   },
   "dependencies": {
