@@ -375,7 +375,10 @@ export interface ModelsSlice {
   saveCurrentModel: () => void;
   loadProject: (data: { models: ModelEntry[]; activeModelId?: string }) => void;
   newProject: () => void;
+  /** Help → Benchmarks: every verification problem. */
   loadBenchmarks: () => void;
+  /** The bundled example models (tutorials and the website's images). */
+  loadExamples: () => void;
   loadLovoModels: () => void;
   /** Set after loadProject / loadBenchmarks so the canvas auto-fits. */
   _pendingFitToScreen: boolean;

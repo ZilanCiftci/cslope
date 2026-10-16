@@ -195,7 +195,7 @@ export async function captureScene(page: Page, scene: Scene): Promise<Buffer> {
       store.getState().setSelectedAnnotations?.([]);
       store.getState().setActiveSection?.("Exterior Boundary");
       if (model) store.getState().loadProject({ models: [model], activeModelId: model.id });
-      else store.getState().loadBenchmarks();
+      else store.getState().loadExamples();
       const state = store.getState();
       const target = model ?? state.models.find((m: any) => m.name === benchmarkName);
       if (!target) {

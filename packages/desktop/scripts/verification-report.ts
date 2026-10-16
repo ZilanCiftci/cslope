@@ -2,8 +2,7 @@
  * cSlope verification report.
  *
  * Runs every published verification problem (packages/engine/src/
- * verification/cases.ts) and the benchmark models bundled with the app
- * through the engine and writes a PDF in the style of the verification
+ * verification/cases.ts) through the engine and writes a PDF in the style of the verification
  * manuals of commercial programs: summary table, then one section per problem with
  * a figure (geometry, materials, water, loads, critical surface), the
  * material table and published vs computed factors of safety.
@@ -21,13 +20,9 @@ import path from "node:path";
 import { execFileSync } from "node:child_process";
 import { GState, jsPDF } from "jspdf";
 import {
-  analyseSlope,
-  buildSlope,
   isPointInPolygon,
   polygonizeRegions,
   toCanonicalSlopeDefinition,
-  type AnalysisMethod,
-  type AnalysisOptions,
   type MaterialModel,
   type SlopeDefinition,
 } from "@cslope/engine";
@@ -50,9 +45,7 @@ import {
   presentedAnalyses,
 } from "@cslope/engine/verification";
 import type { Slope } from "@cslope/engine";
-import { BENCHMARK_MODELS, PUBLISHED_BENCHMARKS } from "../src/store/benchmarks";
 import { findForbiddenNames } from "../../website/scripts/forbidden-names";
-import { buildSlopeDTOFromModel } from "../src/store/helpers";
 import { freeWaterPolygons } from "../src/utils/piezo";
 import { POND_COLOR, POND_OPACITY } from "../src/features/rendering/style-spec";
 
@@ -268,8 +261,6 @@ function table(columns: Column[], rows: Cell[][], size = 8.5) {
 
 const fmt = (v: number, d = 3) => (Number.isFinite(v) ? v.toFixed(d) : "–");
 const pct = (v: number) => `${v >= 0 ? "+" : "−"}${Math.abs(v).toFixed(2)} %`;
-const methodName = (m: AnalysisMethod) =>
-  m === "Morgenstern-Price" ? "Morgenstern-Price" : m === "Janbu" ? "Janbu simplified" : "Bishop simplified";
 
 interface Units {
   length: string;
@@ -677,32 +668,6 @@ function reliabilityPresentation(results: ReliabilityCheckResult[]) {
   });
 }
 
-// Bundled benchmark models of the app, through the app's request builder.
-interface BenchResult {
-  name: string;
-  def: SlopeDefinition;
-  rows: { method: AnalysisMethod; published: number; fos: number | null; diff: number; tol: number; pass: boolean }[];
-  slope: Slope;
-  plane: Plane | null;
-}
-const benchResults: BenchResult[] = [];
-for (const model of BENCHMARK_MODELS) {
-  const published = PUBLISHED_BENCHMARKS.filter((b) => b.modelId === model.id);
-  if (published.length === 0) continue;
-  const def = buildSlopeDTOFromModel(model) as SlopeDefinition;
-  let firstSlope: Slope | null = null;
-  const rows = published.map((b) => {
-    const slope = buildSlope(def);
-    slope.updateAnalysisOptions({ ...(model.options as Partial<AnalysisOptions>), method: b.method as AnalysisMethod });
-    const fos = analyseSlope(slope);
-    firstSlope ??= slope;
-    const diff = fos == null ? NaN : ((fos - b.publishedFos) / b.publishedFos) * 100;
-    return { method: b.method as AnalysisMethod, published: b.publishedFos, fos, diff, tol: b.tolerance, pass: fos != null && Math.abs(fos - b.publishedFos) <= b.tolerance + 1e-9 };
-  });
-  benchResults.push({ name: model.name, def, rows, slope: firstSlope!, plane: criticalPlane(firstSlope!) });
-  console.log(`  ${model.name}: ${rows.map((r) => fmt(r.fos ?? NaN)).join(", ")}`);
-}
-
 // ── Document ─────────────────────────────────────────────────────────
 
 const pkg = JSON.parse(fs.readFileSync(path.join(REPO, "packages/desktop/package.json"), "utf-8")) as { version?: string };
@@ -715,13 +680,12 @@ try {
 const today = new Date().toISOString().slice(0, 10);
 
 const allChecks = caseResults.flatMap((r) => r.results);
-const benchRows = benchResults.flatMap((b) => b.rows);
 const reliabilityRows = [...reliabilityResults.values()].flat().flatMap((e) => e.results).filter((r) => r.quantity !== "fos");
-const nChecks = allChecks.length + benchRows.length + reliabilityRows.length;
-const nPass = allChecks.filter((r) => r.pass).length + benchRows.filter((r) => r.pass).length + reliabilityRows.filter((r) => r.pass).length;
+const nChecks = allChecks.length + reliabilityRows.length;
+const nPass = allChecks.filter((r) => r.pass).length + reliabilityRows.filter((r) => r.pass).length;
 // Failing checks that wait for an engine change (counted as not passing).
 const nPending = allChecks.filter((r) => !r.pass && r.check.pending).length;
-const absDiffs = [...allChecks, ...benchRows].map((r) => Math.abs(r.diff)).filter(Number.isFinite);
+const absDiffs = allChecks.map((r) => Math.abs(r.diff)).filter(Number.isFinite);
 const meanAbs = absDiffs.reduce((a, b) => a + b, 0) / absDiffs.length;
 // The public edition presents, per problem, the sources' values, the other
 // programs' range and cSlope's result for each analysis (presentation.ts).
@@ -748,8 +712,8 @@ pdf.text("Limit equilibrium slope stability analysis — comparison with publish
 y = 112;
 paragraph(
   PUBLIC
-    ? `This document presents factors of safety computed by cSlope for ${CASES.length} verification problems from the geotechnical literature and from the verification manuals of other slope stability programs, next to the values the sources publish and the range of other programs' results, and for the ${benchResults.length} benchmark models bundled with the program.`
-    : `This document compares factors of safety computed by cSlope with values published for ${CASES.length} verification problems from the geotechnical literature and from the verification manuals of commercial slope stability programs, and with the ${benchResults.length} benchmark models bundled with the program.`,
+    ? `This document presents factors of safety computed by cSlope for ${CASES.length} verification problems from the geotechnical literature and from the verification manuals of other slope stability programs, next to the values the sources publish and the range of other programs' results.`
+    : `This document compares factors of safety computed by cSlope with values published for ${CASES.length} verification problems from the geotechnical literature and from the verification manuals of commercial slope stability programs.`,
   11,
 );
 y += 4;
@@ -812,7 +776,7 @@ table(
 if (!PUBLIC) {
   heading("Acceptance", 2);
   paragraph(
-    `A result passes when its relative difference from the published value is within its tolerance: 1 % on a given surface and 2 % for a search, plus half a unit of the reference's last digit, plus 1 % where the input or the reference value is read from a figure; 5 % against finite-element results. Reliability indices and probabilities of failure are compared with absolute tolerances, and the bundled benchmark models with an absolute tolerance on the factor of safety. Tolerances follow one rule from what is known about each problem before it is analysed (packages/engine/src/verification/tolerance.ts).`,
+    `A result passes when its relative difference from the published value is within its tolerance: 1 % on a given surface and 2 % for a search, plus half a unit of the reference's last digit, plus 1 % where the input or the reference value is read from a figure; 5 % against finite-element results. Reliability indices and probabilities of failure are compared with absolute tolerances. Tolerances follow one rule from what is known about each problem before it is analysed (packages/engine/src/verification/tolerance.ts).`,
   );
   y += 2;
 }
@@ -842,9 +806,6 @@ const statusCell = (pass: boolean, pending?: string) =>
 const summaryRows: Cell[][] = [
   ...caseResults.flatMap((r) =>
     r.results.map((x): Cell[] => [r.c.id, r.c.title, x.check.label, fmt(x.check.published), fmt(x.fos ?? NaN), pct(x.diff), statusCell(x.pass, x.check.pending)]),
-  ),
-  ...benchResults.flatMap((b) =>
-    b.rows.map((x): Cell[] => ["Bundled", b.name, methodName(x.method), fmt(x.published), fmt(x.fos ?? NaN), pct(x.diff), statusCell(x.pass)]),
   ),
   // Reliability (β, Pf): absolute differences.
   ...[...reliabilityResults.values()].flat().flatMap(({ rc: c, results }) =>
@@ -1069,76 +1030,6 @@ caseResults.forEach((r, i) => {
     pdf.text("Notes", M, y, { baseline: "top" });
     y += 4.5;
     for (const n of notes) paragraph(`•  ${n}`, 8.5, "normal", INK, CONTENT_W - 4, M + 2);
-  }
-});
-
-// Bundled benchmarks.
-newPage();
-heading("4  Benchmark models bundled with cSlope", 1);
-paragraph(
-  PUBLIC
-    ? "These models are shipped with the program (Help → Benchmarks). They are run through the same request builder as the user interface, with the analysis options saved in each model. They repeat problems of section 3, where the published values are given."
-    : "These models are shipped with the program (Help → Benchmarks). They are run through the same request builder as the user interface, with the analysis options saved in each model.",
-);
-benchResults.forEach((b, i) => {
-  if (i > 0) newPage();
-  else y += 3;
-  heading(`4.${i + 1}  ${b.name}`, 2);
-  const opts = BENCHMARK_MODELS.find((m) => m.name === b.name)?.options;
-  paragraph(
-    `Bundled model "${b.name}"  ·  Units: SI (m, kPa, kN/m³)  ·  ${b.def.customPlanesOnly ? "Fixed circle" : "Critical circle search"}${opts ? `  ·  ${opts.slices} slices, ${opts.iterations} + ${opts.refinedIterations} search iterations` : ""}`,
-    8.5,
-    "bold",
-  );
-  y += 1;
-  const benchIndex = figure(
-    b.def,
-    b.slope,
-    b.plane,
-    `Figure ${caseResults.length + i + 1}. ${b.name}: critical circle (${methodName(b.rows[0].method)}, FOS = ${fmt(b.rows[0].fos ?? NaN)}).`,
-    SI,
-    80,
-    true,
-  );
-  table(
-    [
-      { title: "Material", width: 34 },
-      { title: "Model", width: 36 },
-      { title: "γ (kN/m³)", width: 20, align: "right" },
-      { title: "Strength (kPa)", width: CONTENT_W - 34 - 36 - 20 - 18 },
-      { title: "φ", width: 18, align: "right" },
-    ],
-    b.def.materials.map((m) => {
-      const d = describeModel(m.model, SI);
-      return [
-        { text: m.name, swatch: MATERIAL_FILLS[benchIndex(m.name) % MATERIAL_FILLS.length] },
-        d.kind,
-        d.gamma,
-        d.strength,
-        d.phi,
-      ];
-    }),
-  );
-  if (PUBLIC) {
-    table(
-      [
-        { title: "Method", width: 80 },
-        { title: "cSlope", width: CONTENT_W - 80, align: "right" },
-      ],
-      b.rows.map((x) => [methodName(x.method), fmt(x.fos ?? NaN)]),
-    );
-  } else {
-    table(
-      [
-        { title: "Method", width: 56 },
-        { title: "Published", width: 24, align: "right" },
-        { title: "cSlope", width: 22, align: "right" },
-        { title: "Difference", width: 24, align: "right" },
-        { title: "Tolerance (abs.)", width: 26, align: "right" },
-        { title: "", width: CONTENT_W - 152, align: "center" },
-      ],
-      b.rows.map((x) => [methodName(x.method), fmt(x.published), fmt(x.fos ?? NaN), pct(x.diff), `± ${x.tol.toFixed(3)}`, statusCell(x.pass)]),
-    );
   }
 });
 

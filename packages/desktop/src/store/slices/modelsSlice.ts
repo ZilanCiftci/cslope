@@ -474,8 +474,23 @@ export const createModelsSlice: SliceCreator<ModelsSlice> = (
 
   loadBenchmarks: () => {
     abortAllAnalyses();
-    // The bundled examples, then every verification problem.
-    const models = [...BENCHMARK_MODELS.map(cloneModelEntry), ...verificationModels()];
+    // Every verification problem (the bundled examples repeat some of them).
+    const models = verificationModels();
+    if (models.length === 0) return;
+    const first = models[0];
+    set({
+      models,
+      activeModelId: first.id,
+      ...mapModelToState(first),
+      _pendingFitToScreen: true,
+    });
+    clearUndoHistory(api);
+    markProjectClean(get());
+  },
+
+  loadExamples: () => {
+    abortAllAnalyses();
+    const models = BENCHMARK_MODELS.map(cloneModelEntry);
     if (models.length === 0) return;
     const first = models[0];
     set({

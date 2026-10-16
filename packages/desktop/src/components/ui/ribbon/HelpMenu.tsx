@@ -12,7 +12,7 @@ async function confirmReplace(question: string): Promise<boolean> {
 }
 import { isElectron } from "../../../utils/is-electron";
 import { RibbonGroup, RibbonButton } from "./RibbonParts";
-import { BenchmarkIcon, InfoIcon } from "../../icons/HelpIcons";
+import { BenchmarkIcon, ExamplesIcon, InfoIcon } from "../../icons/HelpIcons";
 
 interface Props {
   isOpen: boolean;
@@ -21,17 +21,20 @@ interface Props {
 }
 
 export function HelpMenu({ isOpen, onActivate, panelHost }: Props) {
-  const handleLoadBenchmarks = async () => {
-    const ok = await confirmReplace(
-      "Load benchmark models into the current workspace? This will replace current models.",
-    );
+  // Replace the project with a set of models, as a new unsaved project.
+  const loadModels = async (what: string, load: () => void) => {
+    const ok = await confirmReplace(`Load ${what} into the current workspace? This will replace current models.`);
     if (!ok) return;
-    useAppStore.getState().loadBenchmarks();
+    load();
     useAppStore.temporal.getState().clear();
     // The examples are a new, unsaved project: Ctrl+S must not write them
     // over the file that was open before.
     if (isElectron) window.cslope.menuNew();
   };
+
+  const handleLoadExamples = () => loadModels("the example models", () => useAppStore.getState().loadExamples());
+  const handleLoadBenchmarks = () =>
+    loadModels("the verification problems", () => useAppStore.getState().loadBenchmarks());
 
   const handleAbout = () => {
     if (isElectron) {
@@ -72,6 +75,11 @@ export function HelpMenu({ isOpen, onActivate, panelHost }: Props) {
         createPortal(
           <div className="h-full flex items-center gap-0" role="menu">
             <RibbonGroup label="Help">
+              <RibbonButton
+                icon={<ExamplesIcon />}
+                label="Examples"
+                onClick={handleLoadExamples}
+              />
               <RibbonButton
                 icon={<BenchmarkIcon />}
                 label="Benchmarks"

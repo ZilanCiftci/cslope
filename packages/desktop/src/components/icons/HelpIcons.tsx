@@ -18,6 +18,16 @@ export function BenchmarkIcon({ size = 20 }: IconProps) {
   );
 }
 
+/** An open book: the example models the tutorials use. */
+export function ExamplesIcon({ size = 20 }: IconProps) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <path d="M12 6c-2-1.5-5-2-8-1.5v13c3-.5 6 0 8 1.5V6Z" fill="#42a5f5" opacity="0.15" stroke="#42a5f5" strokeWidth="1.5" strokeLinejoin="round" />
+      <path d="M12 6c2-1.5 5-2 8-1.5v13c-3-.5-6 0-8 1.5V6Z" fill="#66bb6a" opacity="0.15" stroke="#66bb6a" strokeWidth="1.5" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
 export function InfoIcon({ size = 20 }: IconProps) {
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none">

@@ -300,7 +300,7 @@ function DownloadBand() {
         <div className="max-w-xl">
           <h2 className="text-2xl font-semibold tracking-tight sm:text-3xl">Try it on your next section</h2>
           <p className="mt-3 text-muted-foreground">
-            Install cSlope on Windows and open one of the built-in benchmark models from Help &gt; Benchmarks to see a
+            Install cSlope on Windows and open one of the example models from Help &gt; Examples to see a
             complete analysis in a minute.
           </p>
         </div>

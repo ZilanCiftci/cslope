@@ -19,7 +19,7 @@ const STEPS = [
   },
   {
     title: "Start cSlope",
-    text: "Open it from the Start menu. Help > Benchmarks opens a complete example model to explore.",
+    text: "Open it from the Start menu. Help > Examples opens complete example models to explore.",
   },
 ];
 

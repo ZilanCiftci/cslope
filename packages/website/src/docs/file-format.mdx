@@ -1,6 +1,6 @@
 ---
 title: Project files
-description: What a cSlope project file contains, how to open and save it, and the built-in benchmark models.
+description: What a cSlope project file contains, how to open and save it, and the built-in example and benchmark models.
 section: Reference
 order: 2
 ---
@@ -11,7 +11,7 @@ order: 2
 - **File › Open** (<Kbd>Ctrl</Kbd>+<Kbd>O</Kbd>) opens a project. You can also drop a project file onto the window.
 - **File › New** (<Kbd>Ctrl</Kbd>+<Kbd>N</Kbd>) starts a new project with one example model, a homogeneous slope, to adapt.
 
-Project files have the extension `.json` or `.cslope`; both are the same format. Before New, Open, opening the benchmarks or closing the window, cSlope asks whether to save unsaved changes. Changes to zoom, the canvas mode or results do not count as changes.
+Project files have the extension `.json` or `.cslope`; both are the same format. Before New, Open, opening the examples or benchmarks or closing the window, cSlope asks whether to save unsaved changes. Changes to zoom, the canvas mode or results do not count as changes.
 
 ## What a project contains
 
@@ -27,19 +27,17 @@ Because the result is saved with the model, a project opens with its results, re
 
 Files from earlier versions of cSlope are converted when they are opened.
 
-## Benchmark models
+## Examples and benchmarks
 
-**Help › Benchmarks** replaces the project with six well-known published problems:
+**Help › Examples** replaces the project with six example models from well-known published problems. The [tutorials](/docs/tutorials) use them, and they come set up with search limits, a title block and a material table:
 
-| Model | Reference factor of safety |
+| Model | Problem |
 | --- | --- |
-| T-ACADS Simple | 1.00 (ACADS referee answer, Giam & Donald 1989). Reference values 0.984 (Morgenstern–Price), 0.985 (Bishop), 0.938 (Janbu, uncorrected) |
-| T-ACADS Non-Homogeneous | 1.39 (ACADS referee answer). Reference value 1.373 (Morgenstern–Price) |
-| Arai & Tagyo (1985) | 1.138 (Bishop, Arai & Tagyo 1985). Reference value 1.118 (Bishop, from the verification manual of a commercial program) |
-| Arai & Tagyo (1985), weak layer | 0.39–0.44 (literature) for the non-circular surface along the weak layer. Reference value 0.414 (Spencer, non-circular, from the verification manual of a commercial program) |
-| Talbingo Dam | 1.95 (ACADS referee answer, Giam & Donald 1989) |
-| Talbingo Dam (Single Circle) | 2.29 (ACADS referee answer, on one given circle) |
+| T-ACADS Simple | ACADS problem 1(a), homogeneous slope (Giam & Donald 1989) |
+| T-ACADS Non-Homogeneous | ACADS problem 1(c), three soils |
+| Arai & Tagyo (1985) | Arai & Tagyo (1985), example 3, with a water table |
+| Arai & Tagyo (1985), weak layer | Arai & Tagyo (1985), example 2, a weak layer between stronger soils |
+| Talbingo Dam | ACADS problem 2(a), rockfill dam with a clay core |
+| Talbingo Dam (Single Circle) | ACADS problem 2(b), the same dam on one given circle |
 
-cSlope checks the benchmarks against the reference values with the method given in brackets.
-
-They are a quick way to see a complete model and to check the program. The [verification](/verification) page compares cSlope with many more published problems.
+**Help › Benchmarks** replaces the project with every verification problem, named by its id and title (for example *V001 Arai & Tagyo (1985) example 1*). Each is set up with the input and the analysis of the [verification](/verification) table, so running it gives the factor of safety published there, next to the values the sources publish.
