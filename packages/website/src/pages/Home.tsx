@@ -17,7 +17,7 @@ import { Button } from "@/components/ui/button";
 import { Section, SectionHeading } from "@/components/Section";
 import { Screenshot } from "@/components/Screenshot";
 import { MEDIA, homeExampleImage } from "@/content/media";
-import { VERIFICATION, checkCounts, homeExamples } from "@/content/verification";
+import { VERIFICATION, formatPublished, formatRange, homeExamples } from "@/content/verification";
 import { usePageMeta } from "@/lib/page-meta";
 import { SITE } from "@/site";
 
@@ -34,7 +34,7 @@ function Hero() {
         <div className="animate-fade-up">
           <p className="inline-flex items-center gap-2 rounded-full border bg-background px-3 py-1 text-xs font-medium text-muted-foreground">
             <span className="h-1.5 w-1.5 rounded-full bg-pass" aria-hidden="true" />
-            {s.problems} verification problems, {s.checks} reference values
+            {s.problems} verification problems, {s.publishedValues} published values
           </p>
           <h1 className="mt-6 text-4xl font-semibold tracking-tight text-balance sm:text-5xl">
             Slope stability analysis you can verify
@@ -71,7 +71,7 @@ function KeyFigures() {
   const s = VERIFICATION.summary;
   const figures = [
     { value: String(s.problems), label: "published verification problems" },
-    { value: String(s.checks), label: "reference values" },
+    { value: String(s.publishedValues), label: "values published by the sources" },
     { value: "3", label: "limit equilibrium methods" },
     { value: SITE.licence, label: "licence, no licence server" },
   ];
@@ -159,7 +159,7 @@ function Capabilities() {
 function ExampleImage({ src, alt, width, height }: { src: string; alt: string; width: number; height: number }) {
   return (
     <a href={src} target="_blank" rel="noopener" className="block shrink-0 overflow-hidden rounded border bg-white hover:ring-2 hover:ring-ring">
-      <img src={src} alt={alt} width={width} height={height} loading="lazy" decoding="async" className="block h-auto w-32 sm:w-40" />
+      <img src={src} alt={alt} width={width} height={height} loading="lazy" decoding="async" className="block h-auto w-32 sm:w-44" />
     </a>
   );
 }
@@ -167,19 +167,19 @@ function ExampleImage({ src, alt, width, height }: { src: string; alt: string; w
 function Verification() {
   const examples = homeExamples();
   const s = VERIFICATION.summary;
-  const counts = checkCounts();
   return (
     <Section id="verification" surface>
       <div className="grid gap-12 lg:grid-cols-[1fr_1.3fr] lg:items-start">
         <div>
           <SectionHeading
             eyebrow="Verification"
-            title="Checked against published solutions"
+            title="Run on published problems"
             lead={
               <>
                 {s.problems} problems from the geotechnical literature and from verification manuals of established
-                programs: {counts.literature} reference values from the literature, {counts.theory} from analytical
-                solutions and {counts.programs} from other programs. The tests run them on every change to the code.
+                programs, {s.problemsWithPublished} of them with a value published by the source. Each result is shown
+                next to the source&apos;s value and the range of other programs&apos; results. The tests run them on
+                every change to the code.
               </>
             }
           />
@@ -192,17 +192,20 @@ function Verification() {
           className="relative overflow-x-auto rounded-lg border bg-card [&_td]:px-3 [&_th]:px-3 sm:[&_td]:px-4 sm:[&_th]:px-4"
           tabIndex={0}
           role="region"
-          aria-label="Examples of reference and computed factors of safety"
+          aria-label="Examples of published and computed factors of safety"
         >
           <table className="w-full text-left text-sm">
-            <caption className="sr-only">Examples of reference and computed factors of safety</caption>
+            <caption className="sr-only">Examples of published and computed factors of safety</caption>
             <thead className="border-b bg-surface text-xs uppercase tracking-wide text-muted-foreground">
               <tr>
                 <th scope="col" className="px-4 py-3 font-medium">
                   Problem
                 </th>
                 <th scope="col" className="px-4 py-3 text-right font-medium">
-                  Reference
+                  Published
+                </th>
+                <th scope="col" className="px-4 py-3 text-right font-medium">
+                  Other programs
                 </th>
                 <th scope="col" className="px-4 py-3 text-right font-medium">
                   cSlope
@@ -210,21 +213,25 @@ function Verification() {
               </tr>
             </thead>
             <tbody className="divide-y">
-              {examples.map(({ problem, check }) => (
+              {examples.map(({ problem, result, published }) => (
                 <tr key={problem.id}>
                   <td className="px-4 py-3">
-                    <div className="flex flex-col items-start gap-2 sm:flex-row sm:items-center sm:gap-4">
+                    <div className="flex flex-col items-start gap-2">
                       <ExampleImage {...homeExampleImage(problem.id, problem.title)} />
                       <div>
                         <div className="font-medium">{problem.title}</div>
-                        <div className="text-xs text-muted-foreground">
-                          {check.method} · {check.source}
-                        </div>
+                        <div className="text-xs text-muted-foreground">{result.method}</div>
                       </div>
                     </div>
                   </td>
-                  <td className="px-4 py-3 text-right font-mono tabular">{check.published.toFixed(3)}</td>
-                  <td className="px-4 py-3 text-right font-mono tabular">{check.computed?.toFixed(3)}</td>
+                  <td className="px-4 py-3 text-right align-middle">
+                    <div className="font-mono tabular">{published ? formatPublished(published) : "–"}</div>
+                    {published && <div className="text-xs text-muted-foreground">{published.source}</div>}
+                  </td>
+                  <td className="px-4 py-3 text-right font-mono tabular whitespace-nowrap text-muted-foreground">
+                    {formatRange(result.programs)}
+                  </td>
+                  <td className="px-4 py-3 text-right font-mono tabular">{result.computed?.toFixed(3)}</td>
                 </tr>
               ))}
             </tbody>

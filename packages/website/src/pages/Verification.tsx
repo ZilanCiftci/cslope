@@ -6,12 +6,14 @@ import { Section, SectionHeading } from "@/components/Section";
 import { Button } from "@/components/ui/button";
 import {
   VERIFICATION,
-  checkCounts,
   filterProblems,
+  formatPublished,
+  formatRange,
   type Filter,
   type MethodFilter,
-  type SourceFilter,
+  type PublishedFilter,
 } from "@/content/verification";
+import type { PublishedValue } from "@/content/verification-types";
 import { REPORT } from "@/content/report";
 import { usePageMeta } from "@/lib/page-meta";
 import { cn } from "@/lib/utils";
@@ -51,15 +53,33 @@ function Select<T extends string>({
 /** Problems shown at first, and added by each "Show more". */
 const PAGE = 30;
 
+/** The values a problem's sources publish, one per line. */
+function Published({ values }: { values: PublishedValue[] }) {
+  if (values.length === 0) return <p className="text-xs text-muted-foreground">No value published by the source.</p>;
+  return (
+    <ul className="space-y-1">
+      {values.map((v, i) => (
+        <li key={i} className="text-xs leading-relaxed">
+          <span className="font-mono tabular text-foreground">{formatPublished(v)}</span>{" "}
+          <span className="text-muted-foreground">
+            {v.method ? `${v.method} · ` : ""}
+            {v.source}
+          </span>
+        </li>
+      ))}
+    </ul>
+  );
+}
+
 function ProblemTable() {
-  const [filter, setFilterState] = useState<Filter>({ query: "", source: "all", method: "all" });
+  const [filter, setFilterState] = useState<Filter>({ query: "", published: "all", method: "all" });
   const [limit, setLimit] = useState(PAGE);
   const setFilter = (f: Filter) => {
     setFilterState(f);
     setLimit(PAGE);
   };
   const problems = useMemo(() => filterProblems(VERIFICATION.problems, filter), [filter]);
-  const shown = problems.reduce((n, p) => n + p.checks.length, 0);
+  const shown = problems.reduce((n, p) => n + p.results.length, 0);
   const visible = problems.slice(0, limit);
 
   return (
@@ -87,19 +107,19 @@ function ProblemTable() {
             ["Morgenstern-Price", "Morgenstern–Price"],
           ]}
         />
-        <Select<SourceFilter>
-          label="Published by"
-          value={filter.source}
-          onChange={(source) => setFilter({ ...filter, source })}
+        <Select<PublishedFilter>
+          label="Published value"
+          value={filter.published}
+          onChange={(published) => setFilter({ ...filter, published })}
           options={[
-            ["all", "All sources"],
-            ["literature", "Literature"],
-            ["program", "Other programs"],
+            ["all", "All problems"],
+            ["with", "Source publishes a value"],
+            ["without", "No published value"],
           ]}
         />
       </div>
       <p className="mt-4 text-sm text-muted-foreground" aria-live="polite">
-        {shown} of {VERIFICATION.summary.checks} checks in {problems.length} problems
+        {shown} of {VERIFICATION.summary.results} analyses in {problems.length} problems
       </p>
 
       <div
@@ -108,18 +128,20 @@ function ProblemTable() {
         role="region"
         aria-label="Verification problems"
       >
-        <table className="w-full min-w-[36rem] text-left text-sm">
-          <caption className="sr-only">Verification problems: reference and computed factors of safety</caption>
+        <table className="w-full min-w-[40rem] text-left text-sm">
+          <caption className="sr-only">
+            Verification problems: the sources' values, other programs' results and cSlope's results
+          </caption>
           <thead className="border-b bg-surface text-xs uppercase tracking-wide text-muted-foreground">
             <tr>
               <th scope="col" className="px-4 py-3 font-medium">
-                Problem
+                Problem · published values
               </th>
               <th scope="col" className="px-4 py-3 font-medium">
-                Method · source
+                cSlope analysis
               </th>
               <th scope="col" className="px-4 py-3 text-right font-medium">
-                Reference
+                Other programs
               </th>
               <th scope="col" className="px-4 py-3 text-right font-medium">
                 cSlope
@@ -128,21 +150,23 @@ function ProblemTable() {
           </thead>
           {visible.map((p) => (
             <tbody key={p.id} className="border-b last:border-b-0">
-              {p.checks.map((k, i) => (
+              {p.results.map((r, i) => (
                 <tr key={i} className={cn(i > 0 && "border-t border-dashed")}>
                   {i === 0 && (
-                    <th scope="rowgroup" rowSpan={p.checks.length} className="w-[34%] px-4 py-3 align-top font-normal">
+                    <th scope="rowgroup" rowSpan={p.results.length} className="w-[42%] px-4 py-3 align-top font-normal">
                       <div className="font-medium">{p.title}</div>
                       <div className="mt-1 text-xs leading-relaxed text-muted-foreground">{p.reference}</div>
                       <div className="mt-1 font-mono text-[11px] text-muted-foreground">{p.id}</div>
+                      <div className="mt-3">
+                        <Published values={p.published} />
+                      </div>
                     </th>
                   )}
-                  <td className="px-4 py-3 align-top">
-                    <div>{k.method}</div>
-                    <div className="text-xs text-muted-foreground">{k.source}</div>
+                  <td className="px-4 py-3 align-top">{r.method}</td>
+                  <td className="px-4 py-3 text-right align-top font-mono tabular whitespace-nowrap text-muted-foreground">
+                    {formatRange(r.programs)}
                   </td>
-                  <td className="px-4 py-3 text-right align-top font-mono tabular whitespace-nowrap">{num(k.published)}</td>
-                  <td className="px-4 py-3 text-right align-top font-mono tabular">{num(k.computed)}</td>
+                  <td className="px-4 py-3 text-right align-top font-mono tabular">{num(r.computed)}</td>
                 </tr>
               ))}
             </tbody>
@@ -173,9 +197,7 @@ const QUANTITY: Record<string, string> = {
 };
 
 function ReliabilityTable() {
-  const rows = VERIFICATION.reliability.flatMap((r) =>
-    r.checks.filter((k) => k.quantity !== "fos").map((k) => ({ r, k })),
-  );
+  const rows = VERIFICATION.reliability.flatMap((r) => r.rows.map((k) => ({ r, k })));
   return (
     <div
       className="mt-8 relative overflow-x-auto rounded-lg border bg-card"
@@ -183,7 +205,7 @@ function ReliabilityTable() {
       role="region"
       aria-label="Probabilistic verification problems"
     >
-      <table className="w-full min-w-[32rem] text-left text-sm">
+      <table className="w-full min-w-[40rem] text-left text-sm">
         <caption className="sr-only">Probabilistic verification problems</caption>
         <thead className="border-b bg-surface text-xs uppercase tracking-wide text-muted-foreground">
           <tr>
@@ -191,10 +213,10 @@ function ReliabilityTable() {
               Problem
             </th>
             <th scope="col" className="px-4 py-3 font-medium">
-              Quantity · source
+              Quantity · published values
             </th>
             <th scope="col" className="px-4 py-3 text-right font-medium">
-              Reference
+              Other programs
             </th>
             <th scope="col" className="px-4 py-3 text-right font-medium">
               cSlope
@@ -204,14 +226,19 @@ function ReliabilityTable() {
         <tbody className="divide-y">
           {rows.map(({ r, k }, i) => (
             <tr key={`${r.id}-${i}`}>
-              <td className="px-4 py-3">{r.title}</td>
-              <td className="px-4 py-3">
+              <td className="px-4 py-3 align-top">{r.title}</td>
+              <td className="px-4 py-3 align-top">
                 <div>{QUANTITY[k.quantity] ?? k.quantity}</div>
-                <div className="text-xs text-muted-foreground">{k.source}</div>
+                {k.published.map((v, j) => (
+                  <div key={j} className="text-xs text-muted-foreground">
+                    <span className="font-mono tabular text-foreground">{v.value}</span> {v.source}
+                  </div>
+                ))}
               </td>
-              <td className="px-4 py-3 text-right font-mono tabular">{num(k.published, 4)}</td>
-              <td className="px-4 py-3 text-right font-mono tabular">{num(k.computed, 4)}</td>
-
+              <td className="px-4 py-3 text-right align-top font-mono tabular text-muted-foreground">
+                {formatRange(k.programs, 4)}
+              </td>
+              <td className="px-4 py-3 text-right align-top font-mono tabular">{num(k.computed, 4)}</td>
             </tr>
           ))}
         </tbody>
@@ -223,23 +250,22 @@ function ReliabilityTable() {
 export function Verification() {
   usePageMeta(
     "Verification",
-    `cSlope against ${VERIFICATION.summary.problems} published slope stability problems: reference and computed factors of safety, problem by problem.`,
+    `cSlope on ${VERIFICATION.summary.problems} published slope stability problems: the sources' values, other programs' results and cSlope's results, problem by problem.`,
   );
   const s = VERIFICATION.summary;
-  const counts = checkCounts();
   return (
     <>
       <PageHeader
         eyebrow="Verification"
-        title="Every result, next to the reference"
-        lead={`cSlope is tested against ${s.problems} problems with ${s.checks} reference values: ${counts.literature} from the literature, ${counts.theory} from analytical solutions and ${counts.programs} from other programs. The automated tests run the same problems on every change to the code, so the table shows what the program computes today.`}
+        title="Every result, next to the published ones"
+        lead={`cSlope is run on ${s.problems} problems from the literature and from verification manuals. For each problem the table shows what the source publishes, with the method where the source names one, the range of other programs' results and cSlope's result. It presents the results; it does not mark them as passed or failed.`}
       >
         <dl className="mt-10 grid max-w-3xl grid-cols-2 gap-6 sm:grid-cols-4">
           {[
             [String(s.problems), "problems"],
-            [String(s.checks), "reference values"],
-            [String(counts.literature), "from the literature"],
-            [String(s.reliabilityChecks), "probabilistic values (β, Pf)"],
+            [String(s.problemsWithPublished), "with a value from the source"],
+            [String(s.results), "cSlope analyses"],
+            [String(s.reliabilityQuantities), "probabilistic results (β, Pf)"],
           ].map(([v, l]) => (
             <div key={l} className="flex flex-col-reverse">
               <dt className="mt-1 text-sm text-muted-foreground">{l}</dt>
@@ -257,22 +283,30 @@ export function Verification() {
 
       <Section>
         <SectionHeading
-          title="How the problems are checked"
-          lead="Each problem is entered from its source: geometry, materials, water and loads. cSlope then analyses the surface the source gives, or searches for the critical one where the source did, with the method the source used. The tables show the reference value next to cSlope's."
+          title="What the table shows"
+          lead="Each problem is entered from its source: geometry, materials, water and loads. cSlope then analyses the surface the source gives, or searches for the critical one where the source did."
         />
-        <ul className="mt-8 grid gap-4 text-sm text-muted-foreground md:grid-cols-2">
+        <ul className="mt-8 grid gap-4 text-sm text-muted-foreground md:grid-cols-3">
           <li className="rounded-lg border bg-card p-4">
-            <p className="font-medium text-foreground">Literature</p>
+            <p className="font-medium text-foreground">Published values</p>
             <p className="mt-1">
-              Values from papers and textbooks are cited by author and year. They are the primary reference.
+              What the paper, book or design manual gives, cited by author and year, with the method where the source
+              names one. Some are hand calculations, charts, trial wedges or finite elements rather than the method of
+              slices.
             </p>
           </li>
           <li className="rounded-lg border bg-card p-4">
             <p className="font-medium text-foreground">Other programs</p>
             <p className="mt-1">
-              Some values come from the verification and reference manuals of other slope stability programs, most
-              of them commercial. They are shown as program A, B and so on: one letter per program, so differences
-              between programs stay visible.
+              The range of results that other slope stability programs, most of them commercial, publish in their
+              verification manuals for the same analysis. The programs are not named.
+            </p>
+          </li>
+          <li className="rounded-lg border bg-card p-4">
+            <p className="font-medium text-foreground">cSlope</p>
+            <p className="mt-1">
+              cSlope&apos;s result for each analysis, as the program computes it today: the automated tests run the same
+              problems on every change to the code.
             </p>
           </li>
         </ul>
@@ -288,7 +322,7 @@ export function Verification() {
       <Section id="probabilistic">
         <SectionHeading
           title="Probabilistic analysis"
-          lead="Reliability index β and probability of failure from the Taylor series and Monte Carlo methods, next to the reference values."
+          lead="Reliability index β and probability of failure from the Taylor series and Monte Carlo methods."
         />
         <ReliabilityTable />
       </Section>

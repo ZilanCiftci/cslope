@@ -1,14 +1,28 @@
-/** The shape of generated/verification.json (see scripts/generate-data.ts). */
+/**
+ * The shape of generated/verification.json (see scripts/generate-data.ts).
+ * Results are presented, not judged: the values the sources publish, the
+ * range of other programs' results and cSlope's result. No program is
+ * named.
+ */
 
-export interface VerificationCheck {
-  /** Method as the source names it, e.g. "Spencer (M-P, constant f(x))". */
-  method: string;
-  published: number;
-  /** Who published the value: literature, or "Commercial program A" etc. */
+/** A value a paper, book, design manual or theory publishes. */
+export interface PublishedValue {
+  value: number;
+  /** Upper end when the source gives a range. */
+  upper?: number;
+  /** Method as the source names it; absent when the source does not say. */
+  method?: string;
+  /** e.g. "Arai & Tagyo (1985)". */
   source: string;
+}
+
+/** One analysis cSlope runs for a problem. */
+export interface VerificationResult {
+  /** cSlope's name for the analysis, e.g. "Spencer, non-circular". */
+  method: string;
   computed: number | null;
-  /** (computed − published) / published. */
-  deviation: number | null;
+  /** Range of other programs' published values for the same analysis. */
+  programs: { min: number; max: number } | null;
 }
 
 export interface VerificationProblem {
@@ -22,28 +36,36 @@ export interface VerificationProblem {
   commercial: boolean;
   surface: "fixed" | "search";
   units: "SI" | "imperial";
-  checks: VerificationCheck[];
+  published: PublishedValue[];
+  results: VerificationResult[];
 }
 
-export interface ReliabilityCheck {
+/** One quantity of a probabilistic problem (β or Pf, by Taylor series or Monte Carlo). */
+export interface ReliabilityRow {
   quantity: string;
-  published: number;
-  source: string;
   computed: number | null;
+  published: { value: number; source: string }[];
+  programs: { min: number; max: number } | null;
 }
 
 export interface ReliabilityProblem {
   id: string;
   title: string;
-  checks: ReliabilityCheck[];
+  rows: ReliabilityRow[];
 }
 
 export interface VerificationData {
   summary: {
     problems: number;
-    checks: number;
+    /** cSlope analyses over all problems. */
+    results: number;
+    /** Values published by papers, books and theory. */
+    publishedValues: number;
+    /** Problems with at least one published value. */
+    problemsWithPublished: number;
     literatureProblems: number;
-    reliabilityChecks: number;
+    /** β and Pf quantities of the probabilistic problems. */
+    reliabilityQuantities: number;
   };
   problems: VerificationProblem[];
   reliability: ReliabilityProblem[];

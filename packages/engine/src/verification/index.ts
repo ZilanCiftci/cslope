@@ -19,3 +19,12 @@ export { FHWA_PULLOUT_TABLES } from "./pullout-tables";
 export type { PulloutTable } from "./pullout-tables";
 export type { VerificationCase, VerificationCheck, ReliabilityCheckResult } from "./cases";
 export { agrees, referenceTolerance } from "./tolerance";
+export {
+  analysisLabel,
+  formatPaperValue,
+  formatRange,
+  isProgramSource,
+  paperValues,
+  presentedAnalyses,
+} from "./presentation";
+export type { PaperValue, PresentedAnalysis } from "./presentation";

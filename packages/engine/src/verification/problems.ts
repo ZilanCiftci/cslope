@@ -32,6 +32,7 @@ export const PROBLEMS: RawCase[] = [
       {"method":"Morgenstern-Price","label":"Morgenstern-Price (half-sine)","published":1.414,"publishedBy":"Commercial program B"},
       {"method":"Morgenstern-Price","label":"Spencer (M-P, constant f(x))","published":1.386,"publishedBy":"Commercial program A (non-circular)","options":{"intersliceFunction":"constant","nonCircularOptimization":true}},
     ],
+    paper: [{"value": 1.451, "method": "Bishop simplified", "source": "Arai & Tagyo (1985)"}, {"value": 1.265, "method": "Janbu simplified, non-circular", "source": "Arai & Tagyo (1985)"}, {"value": 1.357, "method": "Janbu corrected, non-circular", "source": "Arai & Tagyo (1985)"}],
     notes: [
       "Search limited to x = 0–66, the model of the source (ours extends to −30 and 100).",
       "commercial program A Janbu corrected 1.407 (circle); non-circular: Janbu simplified 1.253, corrected 1.346. Arai & Tagyo: Bishop 1.451; Janbu simplified 1.265, corrected 1.357 (non-circular).",
@@ -49,6 +50,7 @@ export const PROBLEMS: RawCase[] = [
       {"method":"Bishop","label":"Bishop simplified","published":0.42,"publishedBy":"Commercial program A"},
       {"method":"Morgenstern-Price","label":"Spencer (M-P, constant f(x))","published":0.414,"publishedBy":"Commercial program A (non-circular)","options":{"intersliceFunction":"constant","nonCircularOptimization":true}},
     ],
+    paper: [{"value": 0.417, "method": "Bishop simplified", "source": "Arai & Tagyo (1985)"}, {"value": 0.405, "method": "Janbu simplified, non-circular", "source": "Arai & Tagyo (1985)"}, {"value": 0.43, "method": "Janbu corrected, non-circular", "source": "Arai & Tagyo (1985)"}, {"value": 0.43, "method": "Bishop simplified", "source": "Kim et al. (2002)"}, {"value": 0.39, "upper": 0.44, "method": "Spencer, non-circular", "source": "Kim et al. (2002)"}, {"value": 0.39, "method": "Spencer, non-circular", "source": "Greco (1996)"}],
     notes: [
       "Non-circular: commercial program A 0.414 (random search with optimisation); Greco 0.39, Kim et al. 0.39–0.44. Before the Morgenstern-Price λ iteration ignored unconverged solutions, cSlope's optimisation reached 0.27–0.39 on surfaces where the force and moment curves never cross.",
     ],
@@ -67,6 +69,7 @@ export const PROBLEMS: RawCase[] = [
       {"method":"Janbu","label":"Janbu corrected (f0)","published":1.131,"publishedBy":"Commercial program A","options":{"porePressureHead":"vertical","slices":40,"janbuCorrection":true}},
       {"method":"Bishop","label":"Bishop simplified","published":1.112,"publishedBy":"Program D","options":{"porePressureHead":"vertical","slices":40}},
     ],
+    paper: [{"value": 1.138, "method": "Bishop simplified", "source": "Arai & Tagyo (1985)"}, {"value": 0.995, "method": "Janbu simplified, non-circular", "source": "Arai & Tagyo (1985)"}, {"value": 1.071, "method": "Janbu corrected, non-circular", "source": "Arai & Tagyo (1985)"}],
     notes: [
       "Arai & Tagyo 1.138; commercial program B 1.190.",
     ],
@@ -83,6 +86,7 @@ export const PROBLEMS: RawCase[] = [
       {"method":"Morgenstern-Price","label":"Spencer (M-P, constant f(x))","published":2.794,"publishedBy":"Commercial program A","options":{"intersliceFunction":"constant"}},
       {"method":"Janbu","label":"Janbu simplified (uncorrected)","published":2.662,"publishedBy":"Commercial program A"},
     ],
+    paper: [{"value": 2.66, "method": "Mohr-Coulomb strength", "source": "Baker (2003)"}],
   },
   {
     id: "V004b",
@@ -96,6 +100,7 @@ export const PROBLEMS: RawCase[] = [
       {"method":"Janbu","label":"Janbu simplified (uncorrected)","published":2.61,"publishedBy":"Commercial program A","options":{"janbuCorrection":false}},
       {"method":"Morgenstern-Price","label":"Spencer (M-P, constant f(x))","published":2.696,"publishedBy":"Commercial program A","options":{"intersliceFunction":"constant"}},
     ],
+    paper: [{"value": 2.64, "method": "non-linear strength envelope", "source": "Baker (2003)"}, {"value": 2.66, "method": "Mohr-Coulomb strength", "source": "Baker (2003)"}],
     notes: [
       "Baker (2003) non-linear 2.64.",
     ],
@@ -130,6 +135,7 @@ export const PROBLEMS: RawCase[] = [
       {"method":"Morgenstern-Price","label":"Spencer (M-P, constant f(x))","published":1.351,"publishedBy":"Commercial program C","options":{"intersliceFunction":"constant"}},
       {"method":"Janbu","label":"Janbu simplified","published":1.351,"publishedBy":"Commercial program C"},
     ],
+    paper: [{"value": 1.35, "method": "Culmann (planar wedge)", "source": "Baker (2001)"}],
   },
   {
     id: "V007a",
@@ -142,6 +148,7 @@ export const PROBLEMS: RawCase[] = [
     checks: [
       {"method":"Janbu","label":"Janbu simplified (uncorrected)","published":1.469,"publishedBy":"Commercial program A","options":{"janbuCorrection":false}},
     ],
+    paper: [{"value": 1.5, "method": "Mohr-Coulomb strength", "source": "Baker (2003)"}],
     notes: [
       "Confirms V008a's strength (c′ = 11.64 kPa, φ′ = 24.7°, γ = 18 kN/m³): the manual's Table 44.1 lists other soils by mistake. Baker (2003) M-C 1.50.",
     ],
@@ -158,6 +165,7 @@ export const PROBLEMS: RawCase[] = [
       {"method":"Janbu","label":"Janbu simplified (uncorrected)","published":0.957,"publishedBy":"Commercial program A","options":{"janbuCorrection":false}},
       {"method":"Morgenstern-Price","label":"Spencer (M-P, constant f(x))","published":0.981,"publishedBy":"Commercial program A","options":{"intersliceFunction":"constant"}},
     ],
+    paper: [{"value": 0.97, "method": "non-linear strength envelope", "source": "Baker (2003)"}, {"value": 1.5, "method": "Mohr-Coulomb strength", "source": "Baker (2003)"}],
     notes: [
       "commercial program A geometry (0,0)-(6.43,6)-(20,6)-(20,0): no toe flat, base at toe level.",
       "Baker (2003) non-linear 0.97.",
@@ -174,6 +182,7 @@ export const PROBLEMS: RawCase[] = [
     checks: [
       {"method":"Janbu","label":"Janbu simplified (uncorrected)","published":1.291,"publishedBy":"Commercial program A","options":{"janbuCorrection":false}},
     ],
+    paper: [{"value": 1.35, "method": "Mohr-Coulomb strength", "source": "Baker (2003)"}],
     notes: [
       "Search limited to x = 0–13.7 (toe to the crest), as in the source.",
       "commercial program A geometry: no toe flat, base at toe level (results identical).",
@@ -191,6 +200,7 @@ export const PROBLEMS: RawCase[] = [
     checks: [
       {"method":"Morgenstern-Price","label":"Spencer (M-P, constant f(x))","published":1.536,"publishedBy":"Commercial program A","options":{"intersliceFunction":"constant"}},
     ],
+    paper: [{"value": 1.5, "method": "Mohr-Coulomb strength", "source": "Baker (2003)"}],
     notes: [
       "Search limited to x = 0–20, the model of the source; the level ground left of the toe is not searched.",
     ],
@@ -206,6 +216,7 @@ export const PROBLEMS: RawCase[] = [
     checks: [
       {"method":"Morgenstern-Price","label":"Spencer (M-P, constant f(x))","published":1.366,"publishedBy":"Commercial program A","options":{"intersliceFunction":"constant"}},
     ],
+    paper: [{"value": 1.35, "method": "Mohr-Coulomb strength", "source": "Baker (2003)"}],
     notes: [
       "Search limited to x = 0–13.7 (toe to the crest), as in the source; the level ground left of the toe is not searched.",
     ],
@@ -216,7 +227,7 @@ export const PROBLEMS: RawCase[] = [
     reference: "Baker & Leshchinsky (2001).",
     surface: "fixed",
     units: "SI",
-    description: "Granular dam with a diamond clay core on a hard base, half-full reservoir standing on the face (free water), phreatic surface through the core and a 5 m dry tension crack at the crest; commercial program A's critical circle.",
+    description: "Granular dam with a diamond clay core on a hard base, half-full reservoir standing on the face (free water), phreatic surface through the core and a 5 m dry tension crack at the crest; a commercial program's critical circle.",
     definition: {"coordinates":[[0,-10],[0,0],[110,54],[130,54],[265,0],[265,-10]],"materials":[{"name":"Granular fill","unitWeight":21.5,"frictionAngle":0,"cohesion":0,"model":{"kind":"mohr-coulomb","unitWeight":21.5,"cohesion":0,"frictionAngle":40}},{"name":"Clay core","unitWeight":20,"frictionAngle":0,"cohesion":0,"model":{"kind":"mohr-coulomb","unitWeight":20,"cohesion":20,"frictionAngle":20}},{"name":"Granular fill below core","unitWeight":21.5,"frictionAngle":0,"cohesion":0,"model":{"kind":"mohr-coulomb","unitWeight":21.5,"cohesion":0,"frictionAngle":40}},{"name":"Hard base","unitWeight":24,"frictionAngle":0,"cohesion":0,"model":{"kind":"mohr-coulomb","unitWeight":24,"cohesion":200,"frictionAngle":45}}],"materialBoundaries":[{"coordinates":[[0,0],[265,0]],"materialName":""},{"coordinates":[[88,16],[110,49],[130,49],[152,18],[88,16]],"materialName":""},{"coordinates":[[88,16],[110,0]],"materialName":""},{"coordinates":[[152,18],[130,0]],"materialName":""}],"regionAssignments":[{"point":[100,-5],"materialName":"Hard base"},{"point":[120,30],"materialName":"Clay core"},{"point":[120,8],"materialName":"Granular fill below core"},{"point":[50,10],"materialName":"Granular fill"}],"waterTable":{"mode":"custom","value":[[0,0],[15.82035,2.035683],[86.71558,6.05312],[88,16],[110,22.3],[130,25.8],[145,30],[265,30]],"followBoundary":false},"orientation":"ltr","customSearchPlanes":[{"cx":233.762,"cy":188.495,"radius":187.195}],"customPlanesOnly":true},
     checks: [
       {"method":"Morgenstern-Price","label":"Spencer (M-P, constant f(x))","published":1.925,"publishedBy":"Commercial program A","options":{"intersliceFunction":"constant","tensionCrackDepth":5}},
@@ -249,6 +260,7 @@ export const PROBLEMS: RawCase[] = [
     checks: [
       {"method":"Morgenstern-Price","label":"Spencer (M-P, constant f(x))","published":1.868,"publishedBy":"Commercial program B (optimised non-circular)","options":{"intersliceFunction":"constant","slices":50,"tensionCrackDepth":5,"nonCircularOptimization":true}},
     ],
+    paper: [{"value": 1.91, "method": "Spencer, non-circular", "source": "Baker & Leshchinsky (2001)"}],
     notes: [
       "V009a definition without the fixed circle. Baker & Leshchinsky 1.91 on their own surface is checked in V009b.",
     ],
@@ -260,7 +272,7 @@ export const PROBLEMS: RawCase[] = [
     surface: "fixed",
     units: "SI",
     inputFromFigure: true,
-    description: "5 m embankment (φ′ = 35°) on four soft clays with Su increasing with depth (Table 55: clay 3 from 16 to 18.4 kPa, clay 4 from 18.4 to 55.1 kPa), a 200 kN/m geosynthetic at y = 1 m (axial, active, not anchored, interface friction 33.7° on both faces); commercial program B's critical circle.",
+    description: "5 m embankment (φ′ = 35°) on four soft clays with Su increasing with depth (Table 55: clay 3 from 16 to 18.4 kPa, clay 4 from 18.4 to 55.1 kPa), a 200 kN/m geosynthetic at y = 1 m (axial, active, not anchored, interface friction 33.7° on both faces); a commercial program's critical circle.",
     definition: {"materials":[{"name":"Embankment","unitWeight":20,"frictionAngle":35,"cohesion":0,"model":{"kind":"mohr-coulomb","unitWeight":20,"cohesion":0,"frictionAngle":35}},{"name":"Clay 1","unitWeight":17,"frictionAngle":0,"cohesion":0,"model":{"kind":"undrained","unitWeight":17,"undrainedShearStrength":33,"suRefDepth":0,"suRateOfChange":0}},{"name":"Clay 2","unitWeight":17,"frictionAngle":0,"cohesion":0,"model":{"kind":"undrained","unitWeight":17,"undrainedShearStrength":16,"suRefDepth":-1,"suRateOfChange":0}},{"name":"Clay 3","unitWeight":17,"frictionAngle":0,"cohesion":0,"model":{"kind":"undrained","unitWeight":17,"undrainedShearStrength":16,"suRefDepth":-4.5,"suRateOfChange":0.95}},{"name":"Clay 4","unitWeight":17,"frictionAngle":0,"cohesion":0,"model":{"kind":"undrained","unitWeight":17,"undrainedShearStrength":18.375,"suRefDepth":-7,"suRateOfChange":2.625}}],"coordinates":[[-30,-21],[-30,0],[0,0],[6.15,5],[36.41,5],[42.56,0],[45,0],[45,-21]],"materialBoundaries":[{"coordinates":[[-30,0],[45,0]],"materialName":""},{"coordinates":[[-30,-1],[45,-1]],"materialName":""},{"coordinates":[[-30,-4.5],[45,-4.5]],"materialName":""},{"coordinates":[[-30,-7],[45,-7]],"materialName":""}],"regionAssignments":[{"point":[21.28,4.5],"materialName":"Embankment"},{"point":[7.5,-0.5],"materialName":"Clay 1"},{"point":[7.5,-1.5],"materialName":"Clay 2"},{"point":[7.5,-5],"materialName":"Clay 3"},{"point":[7.5,-7.5],"materialName":"Clay 4"}],"reinforcements":[{"x1":1.23,"y1":1,"x2":41.33,"y2":1,"tensileCapacity":200,"spacing":1,"end1Capacity":0,"end2Capacity":0,"direction":"axial","application":"active","pullout":{"kind":"interface","adhesion":0,"frictionAngle":33.7}}],"orientation":"rtl","customSearchPlanes":[{"cx":3.46552,"cy":5.66415,"radius":13.27611}],"customPlanesOnly":true},
     checks: [
       {"method":"Morgenstern-Price","label":"Morgenstern-Price (half-sine)","published":1.171,"publishedBy":"Commercial program B","options":{"porePressureHead":"vertical","slices":60}},
@@ -279,11 +291,12 @@ export const PROBLEMS: RawCase[] = [
     reference: "Borges & Cardoso (2002), Geotextiles and Geomembranes 20(6).",
     surface: "fixed",
     units: "SI",
-    description: "Granular fill (two stages) on five soft clay layers with a T = 200 kN/m geosynthetic at y = 0.9 m (axial, passive as in commercial program A, pullout over 1.3 m from each end); Bishop on circle A of the paper.",
+    description: "Granular fill (two stages) on five soft clay layers with a T = 200 kN/m geosynthetic at y = 0.9 m (axial, passive as in a commercial program, pullout over 1.3 m from each end); Bishop on circle A of the paper.",
     definition: {"materials":[{"name":"Upper embankment","unitWeight":21.9,"frictionAngle":35,"cohesion":0,"model":{"kind":"mohr-coulomb","unitWeight":21.9,"cohesion":0,"frictionAngle":35}},{"name":"Lower embankment","unitWeight":17.2,"frictionAngle":33,"cohesion":0,"model":{"kind":"mohr-coulomb","unitWeight":17.2,"cohesion":0,"frictionAngle":33}},{"name":"Clay 1","unitWeight":18,"frictionAngle":0,"cohesion":0,"model":{"kind":"undrained","unitWeight":18,"undrainedShearStrength":43}},{"name":"Clay 2","unitWeight":16.6,"frictionAngle":0,"cohesion":0,"model":{"kind":"undrained","unitWeight":16.6,"undrainedShearStrength":31}},{"name":"Clay 3","unitWeight":13.5,"frictionAngle":0,"cohesion":0,"model":{"kind":"undrained","unitWeight":13.5,"undrainedShearStrength":30}},{"name":"Clay 4","unitWeight":17,"frictionAngle":0,"cohesion":0,"model":{"kind":"undrained","unitWeight":17,"undrainedShearStrength":32}},{"name":"Clay 5","unitWeight":17.5,"frictionAngle":0,"cohesion":0,"model":{"kind":"undrained","unitWeight":17.5,"undrainedShearStrength":32}}],"coordinates":[[-50,-24],[-50,4],[-35.605,4],[-31.915,7],[-8.61,7],[-1.23,1],[-1.107,0.9],[0,0],[40,0],[40,-24]],"materialBoundaries":[{"coordinates":[[-50,1],[-1.23,1],[0,0],[40,0]],"materialName":""},{"coordinates":[[-50,0],[40,0]],"materialName":""},{"coordinates":[[-50,-1],[40,-1]],"materialName":""},{"coordinates":[[-50,-3],[40,-3]],"materialName":""},{"coordinates":[[-50,-7],[40,-7]],"materialName":""},{"coordinates":[[-50,-18],[40,-18]],"materialName":""}],"regionAssignments":[{"point":[-20.2625,6.5],"materialName":"Upper embankment"},{"point":[-25.615,0.5],"materialName":"Lower embankment"},{"point":[-5,-0.5],"materialName":"Clay 1"},{"point":[-5,-1.5],"materialName":"Clay 2"},{"point":[-5,-3.5],"materialName":"Clay 3"},{"point":[-5,-7.5],"materialName":"Clay 4"},{"point":[-5,-18.5],"materialName":"Clay 5"}],"reinforcements":[{"x1":-50,"y1":0.9,"x2":-1.107,"y2":0.9,"tensileCapacity":200,"spacing":1,"end1Capacity":0,"end2Capacity":0,"direction":"axial","application":"passive","pullout":{"kind":"development","length1":1.3,"length2":1.3}}],"customSearchPlanes":[{"cx":-4.8,"cy":8,"radius":21.83}],"customPlanesOnly":true},
     checks: [
       {"method":"Bishop","label":"Bishop simplified","published":1.23,"publishedBy":"Commercial program A","options":{"porePressureHead":"vertical","slices":60}},
     ],
+    paper: [{"value": 1.25, "source": "Borges & Cardoso (2002)"}],
     notes: [
       "Borges & Cardoso 1.25; program D 1.218 on the same input. commercial program A reports Bishop only (the authors' moment method).",
     ],
@@ -299,6 +312,7 @@ export const PROBLEMS: RawCase[] = [
     checks: [
       {"method":"Bishop","label":"Bishop simplified","published":1.22,"publishedBy":"Commercial program A","options":{"porePressureHead":"vertical","slices":60}},
     ],
+    paper: [{"value": 1.19, "source": "Borges & Cardoso (2002)"}],
     notes: [
       "Borges & Cardoso 1.19; program D 1.216.",
     ],
@@ -314,6 +328,7 @@ export const PROBLEMS: RawCase[] = [
     checks: [
       {"method":"Bishop","label":"Bishop simplified","published":0.98,"publishedBy":"Commercial program A","options":{"porePressureHead":"vertical","slices":60}},
     ],
+    paper: [{"value": 0.99, "source": "Borges & Cardoso (2002)"}],
     notes: [
       "Borges & Cardoso 0.99; program D 0.981.",
     ],
@@ -345,6 +360,7 @@ export const PROBLEMS: RawCase[] = [
     checks: [
       {"method":"Bishop","label":"Bishop simplified","published":1.54,"publishedBy":"Commercial program A","options":{"porePressureHead":"vertical","slices":40}},
     ],
+    paper: [{"value": 1.54, "source": "Cai & Ugai (2000)"}],
     notes: [
       "The critical circle passes through the pile head and carries no pile force; Cai & Ugai 1.54 on a surface through the pile.",
     ],
@@ -360,6 +376,7 @@ export const PROBLEMS: RawCase[] = [
     checks: [
       {"method":"Bishop","label":"Bishop simplified","published":1.43,"publishedBy":"Commercial program A","options":{"porePressureHead":"vertical","slices":40}},
     ],
+    paper: [{"value": 1.37, "source": "Cai & Ugai (2000)"}],
     notes: [
       "program D 1.451; Cai & Ugai 1.37.",
     ],
@@ -375,6 +392,7 @@ export const PROBLEMS: RawCase[] = [
     checks: [
       {"method":"Bishop","label":"Bishop simplified","published":1.33,"publishedBy":"Commercial program A","options":{"porePressureHead":"vertical","slices":40}},
     ],
+    paper: [{"value": 1.31, "source": "Cai & Ugai (2000)"}],
     notes: [
       "Cai & Ugai 1.31.",
     ],
@@ -390,6 +408,7 @@ export const PROBLEMS: RawCase[] = [
     checks: [
       {"method":"Bishop","label":"Bishop simplified","published":1.25,"publishedBy":"Commercial program A","options":{"porePressureHead":"vertical","slices":40}},
     ],
+    paper: [{"value": 1.25, "source": "Cai & Ugai (2000)"}],
     notes: [
       "Cai & Ugai 1.25.",
     ],
@@ -417,7 +436,7 @@ export const PROBLEMS: RawCase[] = [
     reference: "Caltrans soil nail reference manual.",
     surface: "fixed",
     units: "SI",
-    description: "Two-layer slope cut by a soldier-pile wall with two grouted tieback rows (8 ft spacing); the soldier pile is a shear force of 5900 lb/ft where the surface passes, as commercial program A models it; the manual's bilinear wedge from the wall toe. Converted to SI.",
+    description: "Two-layer slope cut by a soldier-pile wall with two grouted tieback rows (8 ft spacing); the soldier pile is a shear force of 5900 lb/ft where the surface passes, as a commercial program models it; the manual's bilinear wedge from the wall toe. Converted to SI.",
     definition: {"materials":[{"name":"Layer 1","unitWeight":18.8505,"frictionAngle":24,"cohesion":28.72816,"model":{"kind":"mohr-coulomb","unitWeight":18.8505,"cohesion":28.72816,"frictionAngle":24}},{"name":"Layer 2","unitWeight":20.42137,"frictionAngle":34,"cohesion":14.36408,"model":{"kind":"mohr-coulomb","unitWeight":20.42137,"cohesion":14.36408,"frictionAngle":34}}],"coordinates":[[-6.096,-6.096],[-6.096,0],[0,0],[0,9.144],[8.8392,15.5448],[10.0584,16.1544],[18.288,20.1168],[24.0792,21.6408],[54.2544,24.384],[59.436,24.384],[59.436,-6.096]],"materialBoundaries":[{"coordinates":[[-6.096,0],[0,0],[0,9.144],[8.8392,15.5448],[59.436,7.9248]],"materialName":""}],"regionAssignments":[{"point":[58.91784,23.884],"materialName":"Layer 1"},{"point":[9.144,3.048],"materialName":"Layer 2"}],"reinforcements":[{"x1":0,"y1":6.096,"x2":9.66849,"y2":1.58751,"tensileCapacity":66.91507,"spacing":0.3048,"end1Capacity":0,"end2Capacity":0,"direction":"axial","application":"active","pullout":{"kind":"development","length1":0,"length2":2.70277}},{"x1":0,"y1":2.4384,"x2":9.11601,"y2":-1.81246,"tensileCapacity":91.30933,"spacing":0.3048,"end1Capacity":0,"end2Capacity":0,"direction":"axial","application":"active","pullout":{"kind":"development","length1":0,"length2":3.68808}}],"piles":[{"x1":0.1524,"y1":9.144,"x2":0.1524,"y2":-2.1336,"spacing":0.3048,"force":26.2445,"diameter":0.1524,"application":"active"}],"customSurfaces":[{"points":[[0,0],[11.2776,10.24128],[18.5928,20.44263]]}],"customPlanesOnly":true},
     checks: [
       {"method":"Janbu","label":"Janbu corrected (f0)","published":1.479,"publishedBy":"Commercial program A","options":{"porePressureHead":"vertical","slices":60,"janbuCorrection":true}},
@@ -516,6 +535,7 @@ export const PROBLEMS: RawCase[] = [
       {"method":"Morgenstern-Price","label":"Morgenstern-Price (half-sine)","published":1.009,"publishedBy":"Commercial program A","options":{"intersliceFunction":"data-point-specified","intersliceDataPoints":[[0,1],[0.3,1],[0.6,0],[1,0]]}},
       {"method":"Morgenstern-Price","label":"Morgenstern-Price (half-sine)","published":1.017,"publishedBy":"Commercial program B","options":{"slices":50,"intersliceFunction":"data-point-specified","intersliceDataPoints":[[0,1],[0.3,1],[0.6,0],[1,0]]}},
     ],
+    paper: [{"value": 1.05, "method": "Spencer", "source": "Chen & Shao (1988)"}],
     notes: [
       "Chen & Shao give 1.05 with the method of slices; limit equilibrium on this mechanism is about 5 % above the plasticity solution.",
       "f(x) as printed: (0, 1), (0.3, 1), (0.6, 0), (1, 0) with x from the toe end of the slip surface (model space). Until the data points are mirrored for a right-to-left model cSlope reads them from the crest end and gives 1.079 (+6.9 %); entered reversed it gives 1.008.",
@@ -565,7 +585,7 @@ export const PROBLEMS: RawCase[] = [
     surface: "fixed",
     units: "SI",
     inputFromFigure: true,
-    description: "Chowdhury & Xu example 1, the Congress Street cut as commercial program B models it (Su = 55, 43, 56 kPa under a strengthless sand cap, digitised piezometric line), on the critical circle tangent to the base of clay 2.",
+    description: "Chowdhury & Xu example 1, the Congress Street cut as a commercial program models it (Su = 55, 43, 56 kPa under a strengthless sand cap, digitised piezometric line), on the critical circle tangent to the base of clay 2.",
     definition: {"coordinates":[[-56.525,-14.993],[-56.525,4.579],[-35.51,4.58],[-30.96,1.23],[-28.19,-0.81],[-26.3,-0.81],[-21.533,-3.04],[-8.329,-9.14],[-7.13,-9.68],[5,-9.68],[5,-14.993]],"materials":[{"name":"Sand","unitWeight":22,"frictionAngle":0,"cohesion":0,"model":{"kind":"undrained","unitWeight":22,"undrainedShearStrength":0,"suRefDepth":0,"suRateOfChange":0}},{"name":"Clay 1","unitWeight":21,"frictionAngle":0,"cohesion":0,"model":{"kind":"undrained","unitWeight":21,"undrainedShearStrength":55,"suRefDepth":0,"suRateOfChange":0}},{"name":"Clay 2","unitWeight":22,"frictionAngle":0,"cohesion":0,"model":{"kind":"undrained","unitWeight":22,"undrainedShearStrength":43,"suRefDepth":0,"suRateOfChange":0}},{"name":"Clay 3","unitWeight":22,"frictionAngle":0,"cohesion":0,"model":{"kind":"undrained","unitWeight":22,"undrainedShearStrength":56,"suRefDepth":0,"suRateOfChange":0}},{"name":"Bed","unitWeight":22,"frictionAngle":0,"cohesion":0,"model":{"kind":"mohr-coulomb","unitWeight":22,"cohesion":200,"frictionAngle":35}}],"materialBoundaries":[{"coordinates":[[-57.525,1.229],[6,1.229]],"materialName":""},{"coordinates":[[-57.525,-3.041],[6,-3.041]],"materialName":""},{"coordinates":[[-57.525,-9.141],[6,-9.141]],"materialName":""},{"coordinates":[[-57.525,-12.19],[6,-12.19]],"materialName":""}],"regionAssignments":[{"point":[-55.90975,1.279],"materialName":"Sand"},{"point":[-55.90975,-0.906],"materialName":"Clay 1"},{"point":[-55.90975,-6.091],"materialName":"Clay 2"},{"point":[-55.90975,-10.6655],"materialName":"Clay 3"},{"point":[-55.90975,-13.5915],"materialName":"Bed"}],"orientation":"ltr","waterTable":{"mode":"custom","value":[[-56.525,2.43],[-32.59,2.43],[-30.96,1.23],[-28.19,-0.81],[-26.3,-0.81],[-21.533,-3.04],[-8.329,-9.14],[-7.13,-9.68],[5,-9.68]],"followBoundary":false},"customSearchPlanes":[{"cx":-22.188,"cy":20.908,"radius":30.049}],"customPlanesOnly":true},
     checks: [
       {"method":"Morgenstern-Price","label":"Morgenstern-Price (half-sine)","published":1.132,"publishedBy":"Commercial program B","options":{"slices":50}},
@@ -737,6 +757,7 @@ export const PROBLEMS: RawCase[] = [
       {"method":"Morgenstern-Price","label":"Morgenstern-Price (half-sine)","published":1.178,"publishedBy":"Commercial program B","options":{"slices":50}},
       {"method":"Bishop","label":"Bishop simplified","published":1.185,"publishedBy":"Commercial program A","options":{"slices":60}},
     ],
+    paper: [{"value": 1.1479, "method": "Bishop simplified", "source": "Chowdhury & Xu (1995)"}],
     notes: [
       "Fixed circle = cSlope's critical M-P circle among circles tangent to the base of the clay layer (cSlope has no tangent-line search; commercial program B's own circle is not printed), so the comparison is that of two searches within the same circle family.",
       "commercial program B PF 21.39 %, C&X PF 19.733 %. Geometry of V022a/c (the manual prints no figure for example 5).",
@@ -750,11 +771,12 @@ export const PROBLEMS: RawCase[] = [
     reference: "Duncan (2000), J. Geotech. Geoenviron. Eng. 126(4).",
     surface: "fixed",
     units: "SI",
-    description: "Underwater trench in San Francisco Bay Mud: Su = 100 psf at el. −20 ft increasing 9.8 psf/ft, γ = 100 pcf, water at el. 0. Duncan's surface as a circle, Spencer; σγ = 3.3 pcf and σ of the Su gradient 1.2 psf/ft (commercial program A's Table 29.2). Converted to SI.",
+    description: "Underwater trench in San Francisco Bay Mud: Su = 100 psf at el. −20 ft increasing 9.8 psf/ft, γ = 100 pcf, water at el. 0. Duncan's surface as a circle, Spencer; σγ = 3.3 pcf and σ of the Su gradient 1.2 psf/ft (a commercial program's Table 29.2). Converted to SI.",
     definition: {"materials":[{"name":"San Francisco Bay Mud","unitWeight":15.70875,"frictionAngle":0,"cohesion":0,"model":{"kind":"undrained","unitWeight":15.70875,"undrainedShearStrength":4.78803,"suRefDepth":-6.096,"suRateOfChange":1.53946}}],"coordinates":[[-8.5344,-43.5864],[-8.5344,-12.192],[0,-12.192],[21.6408,-36.576],[42.0624,-36.576],[69.4944,-5.4864],[86.2584,-5.1816],[106.68,-2.4384],[118.5672,6.7056],[140.5128,6.7056],[140.5128,-43.5864]],"materialBoundaries":[],"regionAssignments":[{"point":[129.54,6.2056],"materialName":"San Francisco Bay Mud"}],"waterTable":{"mode":"custom","value":[[-8.5344,0],[140.5128,0]],"followBoundary":false},"customSearchPlanes":[{"cx":-2.00833,"cy":125.03841,"radius":167.5129}],"customPlanesOnly":true},
     checks: [
       {"method":"Morgenstern-Price","label":"Spencer (M-P, constant f(x))","published":1.145,"publishedBy":"Program D","options":{"intersliceFunction":"constant","slices":60,"porePressureHead":"vertical"}},
     ],
+    paper: [{"value": 1.17, "source": "Duncan (2000)"}],
     notes: [
       "Above el. −20 ft cSlope extrapolates Su linearly (below 100 psf); program D keeps 100 psf there (F = 1.146, β = 0.947 when cSlope does the same). Duncan's F is 1.17; commercial program A's Latin hypercube Monte Carlo gives Pf = 14 % with a rate-only σ.",
     ],
@@ -765,7 +787,7 @@ export const PROBLEMS: RawCase[] = [
     reference: "Duncan & Wright, Soil Strength and Slope Stability, figs. 6.39–6.40.",
     surface: "fixed",
     units: "SI",
-    description: "Symmetric dam with a narrow clay core on 30 ft of clay over permeable sand; commercial program A's piezometric line from the underseepage; the circle tangent to el. 197 ft. Converted to SI.",
+    description: "Symmetric dam with a narrow clay core on 30 ft of clay over permeable sand; a commercial program's piezometric line from the underseepage; the circle tangent to el. 197 ft. Converted to SI.",
     definition: {"materials":[{"name":"Outer shell","unitWeight":19.63593,"frictionAngle":34,"cohesion":0,"model":{"kind":"mohr-coulomb","unitWeight":19.63593,"cohesion":0,"frictionAngle":34}},{"name":"Clay core","unitWeight":19.16467,"frictionAngle":26,"cohesion":4.78803,"model":{"kind":"mohr-coulomb","unitWeight":19.16467,"cohesion":4.78803,"frictionAngle":26}},{"name":"Foundation clay","unitWeight":19.32176,"frictionAngle":24,"cohesion":0,"model":{"kind":"mohr-coulomb","unitWeight":19.32176,"cohesion":0,"frictionAngle":24}},{"name":"Foundation sand","unitWeight":19.95011,"frictionAngle":32,"cohesion":0,"model":{"kind":"mohr-coulomb","unitWeight":19.95011,"cohesion":0,"frictionAngle":32}}],"coordinates":[[0,55.4736],[0,69.1896],[48.768,69.1896],[121.158,93.3196],[131.064,96.6216],[134.112,96.6216],[141.732,96.6216],[144.78,96.6216],[154.686,93.3196],[227.076,69.1896],[275.844,69.1896],[275.844,55.4736]],"materialBoundaries":[{"coordinates":[[121.158,69.1896],[134.112,95.0976],[141.732,95.0976],[154.686,69.1896]],"materialName":""},{"coordinates":[[0,69.1896],[275.844,69.1896]],"materialName":""},{"coordinates":[[0,60.0456],[275.844,60.0456]],"materialName":""}],"regionAssignments":[{"point":[122.8344,93.3784],"materialName":"Outer shell"},{"point":[137.922,94.5976],"materialName":"Clay core"},{"point":[137.922,68.6896],"materialName":"Foundation clay"},{"point":[137.922,59.5456],"materialName":"Foundation sand"}],"waterTable":{"mode":"custom","value":[[0,92.0496],[117.348,92.0496],[132.98424,91.83624],[143.74368,83.42376],[151.4856,71.68896],[194.03568,71.04888],[227.47224,69.1896],[275.844,69.1896]],"followBoundary":false},"customSearchPlanes":[{"cx":211.836,"cy":118.872,"radius":58.8264}],"customPlanesOnly":true},
     checks: [
       {"method":"Bishop","label":"Bishop simplified","published":1.563,"publishedBy":"Commercial program A","options":{"porePressureHead":"vertical","slices":60}},
@@ -789,6 +811,7 @@ export const PROBLEMS: RawCase[] = [
       {"method":"Bishop","label":"Bishop simplified","published":1.142,"publishedBy":"Commercial program A"},
       {"method":"Morgenstern-Price","label":"Spencer (M-P, constant f(x))","published":1.142,"publishedBy":"Commercial program A","options":{"intersliceFunction":"constant"}},
     ],
+    paper: [{"value": 1.141, "source": "Duncan & Wright"}],
   },
   {
     id: "V026",
@@ -1001,6 +1024,7 @@ export const PROBLEMS: RawCase[] = [
     checks: [
       {"method":"Morgenstern-Price","label":"Morgenstern-Price (half-sine)","published":1.575,"publishedBy":"Commercial program A (GLE)","options":{"porePressureHead":"vertical","slices":60}},
     ],
+    paper: [{"value": 1.51, "source": "Duncan & Wright"}],
     notes: [
       "commercial program A's Bishop (1.531) and Spencer (1.884) belong to their own critical circles; on this circle cSlope's Bishop is 1.568. Duncan & Wright 1.51.",
     ],
@@ -1107,6 +1131,7 @@ export const PROBLEMS: RawCase[] = [
       {"method":"Bishop","label":"Bishop simplified","published":1.629,"publishedBy":"Commercial program A","options":{"porePressureHead":"vertical","slices":50}},
       {"method":"Morgenstern-Price","label":"Spencer (M-P, constant f(x))","published":1.62,"publishedBy":"Commercial program A","options":{"intersliceFunction":"constant","porePressureHead":"vertical","slices":50}},
     ],
+    paper: [{"value": 1.61, "source": "Duncan & Wright"}],
     notes: [
       "Duncan & Wright 1.61. Without the exit limit the search finds a shallower surface between two geogrid layers (FOS ≈ 1.19), which the published analyses do not consider.",
     ],
@@ -1117,13 +1142,14 @@ export const PROBLEMS: RawCase[] = [
     reference: "Duncan & Wright, Soil Strength and Slope Stability, fig. 7.19.",
     surface: "search",
     units: "SI",
-    description: "Homogeneous embankment (c′ = 100 psf, φ′ = 30°, γ = 100 pcf) with the pool at el. 40 ft and commercial program A's piezometric line; critical-circle search. Converted to SI.",
+    description: "Homogeneous embankment (c′ = 100 psf, φ′ = 30°, γ = 100 pcf) with the pool at el. 40 ft and a commercial program's piezometric line; critical-circle search. Converted to SI.",
     definition: {"materials":[{"name":"Material 1","unitWeight":15.70875,"frictionAngle":30,"cohesion":4.78803,"model":{"kind":"mohr-coulomb","unitWeight":15.70875,"cohesion":4.78803,"frictionAngle":30}}],"coordinates":[[0,0],[0,0],[30.48,12.192],[36.576,14.6304],[41.148,14.6304],[77.724,0],[77.724,0]],"materialBoundaries":[],"regionAssignments":[{"point":[38.862,14.1304],"materialName":"Material 1"}],"waterTable":{"mode":"custom","value":[[0,12.192],[30.48,12.192],[31.15361,11.86495],[36.7854,10.85576],[41.148,10.08888],[54.09651,7.56178],[62.5477,5.64459],[65.09187,4.98531],[77.724,0]],"followBoundary":false}},
     checks: [
       {"method":"Bishop","label":"Bishop simplified","published":1.09,"publishedBy":"Commercial program A","options":{"porePressureHead":"vertical","slices":40,"iterations":4000,"refinedIterations":2000}},
       {"method":"Morgenstern-Price","label":"Spencer (M-P, constant f(x))","published":1.1,"publishedBy":"Commercial program A","options":{"intersliceFunction":"constant","porePressureHead":"vertical","slices":40}},
       {"method":"Bishop","label":"Bishop simplified","published":1.07,"publishedBy":"Program D","options":{"porePressureHead":"vertical","slices":40,"iterations":4000,"refinedIterations":2000}},
     ],
+    paper: [{"value": 1.16, "source": "Duncan & Wright"}],
     notes: [
       "commercial program A 1.068/1.075 and program D 1.065/1.072 with FE seepage; D&W chart 1.16.",
     ],
@@ -1153,7 +1179,7 @@ export const PROBLEMS: RawCase[] = [
     surface: "search",
     units: "SI",
     inputFromFigure: true,
-    description: "The James Bay dyke as commercial program B models it (crest 36 m, berm at 30 m, clay crust Su = 43 kPa, till below y = 5); critical-circle search, deterministic.",
+    description: "The James Bay dyke as a commercial program models it (crest 36 m, berm at 30 m, clay crust Su = 43 kPa, till below y = 5); critical-circle search, deterministic.",
     definition: {"coordinates":[[0,5],[0,36],[40,36],[58,30],[114,30],[132,24],[165,24],[165,5]],"materials":[{"name":"Embankment","unitWeight":20,"frictionAngle":0,"cohesion":0,"model":{"kind":"mohr-coulomb","unitWeight":20,"cohesion":0,"frictionAngle":30}},{"name":"Clay crust","unitWeight":18.8,"frictionAngle":0,"cohesion":0,"model":{"kind":"undrained","unitWeight":18.8,"undrainedShearStrength":43,"suRefDepth":0,"suRateOfChange":0}},{"name":"Marine clay","unitWeight":18.8,"frictionAngle":0,"cohesion":0,"model":{"kind":"undrained","unitWeight":18.8,"undrainedShearStrength":34.5,"suRefDepth":0,"suRateOfChange":0}},{"name":"Lacustrine clay","unitWeight":20.3,"frictionAngle":0,"cohesion":0,"model":{"kind":"undrained","unitWeight":20.3,"undrainedShearStrength":31.2,"suRefDepth":0,"suRateOfChange":0}}],"materialBoundaries":[{"coordinates":[[-1,24],[166,24]],"materialName":""},{"coordinates":[[-1,20],[166,20]],"materialName":""},{"coordinates":[[-1,12],[166,12]],"materialName":""}],"regionAssignments":[{"point":[1.65,24.05],"materialName":"Embankment"},{"point":[1.65,22],"materialName":"Clay crust"},{"point":[1.65,16],"materialName":"Marine clay"},{"point":[1.65,8.5],"materialName":"Lacustrine clay"}],"orientation":"ltr"},
     checks: [
       {"method":"Bishop","label":"Bishop simplified","published":1.461,"publishedBy":"Commercial program B","options":{"slices":50}},
@@ -1200,7 +1226,7 @@ export const PROBLEMS: RawCase[] = [
     reference: "Duncan & Wright, Soil Strength and Slope Stability, fig. 7.24.",
     surface: "fixed",
     units: "SI",
-    description: "Symmetric dam with a thick clay core (φ′ = 20°) in a shell (φ′ = 38°), pond at el. 315 ft, commercial program A's piezometric line; the deep circle. Converted to SI.",
+    description: "Symmetric dam with a thick clay core (φ′ = 20°) in a shell (φ′ = 38°), pond at el. 315 ft, a commercial program's piezometric line; the deep circle. Converted to SI.",
     definition: {"materials":[{"name":"Shell","unitWeight":21.99224,"frictionAngle":38,"cohesion":0,"model":{"kind":"mohr-coulomb","unitWeight":21.99224,"cohesion":0,"frictionAngle":38}},{"name":"Core","unitWeight":18.8505,"frictionAngle":20,"cohesion":0,"model":{"kind":"mohr-coulomb","unitWeight":18.8505,"cohesion":0,"frictionAngle":20}}],"coordinates":[[0,38.7096],[0,38.7096],[89.535,71.26778],[176.8602,103.0224],[181.4322,103.0224],[196.6722,103.0224],[201.2442,103.0224],[288.5694,71.26778],[378.1044,38.7096],[378.1044,38.7096]],"materialBoundaries":[{"coordinates":[[0,38.7096],[89.535,38.7096],[181.4322,99.9744],[196.6722,99.9744],[288.5694,38.7096],[378.1044,38.7096]],"materialName":""}],"regionAssignments":[{"point":[88.4301,70.366],"materialName":"Shell"},{"point":[189.0522,99.4744],"materialName":"Core"}],"waterTable":{"mode":"custom","value":[[0,96.012],[157.5816,96.012],[174.3456,95.21952],[254.508,56.0832],[270.0528,49.53],[273.7104,48.64608],[360.36504,45.1104],[378.1044,38.7096]],"followBoundary":false},"customSearchPlanes":[{"cx":316.33577,"cy":216.7003,"radius":177.9907}],"customPlanesOnly":true},
     checks: [
       {"method":"Bishop","label":"Bishop simplified","published":1.584,"publishedBy":"Commercial program A","options":{"porePressureHead":"vertical","slices":60}},
@@ -1208,6 +1234,7 @@ export const PROBLEMS: RawCase[] = [
       {"method":"Bishop","label":"Bishop simplified","published":1.591,"publishedBy":"Program D","options":{"porePressureHead":"vertical","slices":60}},
       {"method":"Morgenstern-Price","label":"Morgenstern-Price (half-sine)","published":1.67,"publishedBy":"Program D","options":{"porePressureHead":"vertical","slices":60}},
     ],
+    paper: [{"value": 1.67, "source": "Duncan & Wright"}],
     notes: [
       "With FE seepage: commercial program A 1.658/1.724.",
     ],
@@ -1296,12 +1323,13 @@ export const PROBLEMS: RawCase[] = [
     reference: "Giam & Donald (1989), ACADS problem 1(b).",
     surface: "search",
     units: "SI",
-    description: "ACADS 1(b) as commercial program B models it: c′ = 32 kPa, φ′ = 10°, a 3.6 m tension crack (dry, see the notes); critical-circle search.",
+    description: "ACADS 1(b) as a commercial program models it: c′ = 32 kPa, φ′ = 10°, a 3.6 m tension crack (dry); critical-circle search.",
     definition: {"coordinates":[[20,20],[20,25],[30,25],[50,35],[70,35],[70,20]],"materials":[{"name":"Soil","unitWeight":20,"frictionAngle":0,"cohesion":0,"model":{"kind":"mohr-coulomb","unitWeight":20,"cohesion":32,"frictionAngle":10}}],"materialBoundaries":[],"regionAssignments":[{"point":[20.5,20.05],"materialName":"Soil"}],"orientation":"rtl","analysisLimits":{"entryLeftX":49.9,"entryRightX":55.2,"exitLeftX":26.9,"exitRightX":30.2}},
     checks: [
       {"method":"Bishop","label":"Bishop simplified","published":1.664,"publishedBy":"Commercial program B","options":{"slices":50,"tensionCrackDepth":3.6,"tensionCrackWater":0}},
       {"method":"Morgenstern-Price","label":"Morgenstern-Price (half-sine)","published":1.66,"publishedBy":"Commercial program B","options":{"slices":50,"tensionCrackDepth":3.6,"tensionCrackWater":0}},
     ],
+    paper: [{"value": 1.65, "upper": 1.7, "source": "Giam & Donald (1989), ACADS"}],
     notes: [
       "Entry on the crest (x = 49.9–55.2) and exit at the toe (x = 26.9–30.2), as in the source.",
       "The manual quotes 'about 3.6 m' for 2c/(γ√Ka); the formula gives 3.814 m (V048 uses 3.814). commercial program B Janbu (uncorrected) 1.471. ACADS band 1.65–1.70.",
@@ -1314,13 +1342,14 @@ export const PROBLEMS: RawCase[] = [
     reference: "Giam & Donald (1989), ACADS problem 1(b).",
     surface: "search",
     units: "SI",
-    description: "The ACADS 1(a) slope (10 m high, 2:1) with c' = 32 kPa, φ' = 10° and a water-filled tension crack 4 m deep, the crack zone of commercial program A's Fig. 2.1 (35 → 31 m; the formula 2c/(γ√Ka) gives 3.814 m); critical circle search.",
+    description: "The ACADS 1(a) slope (10 m high, 2:1) with c' = 32 kPa, φ' = 10° and a water-filled tension crack 4 m deep, the crack zone of a commercial program's Fig. 2.1 (35 → 31 m; the formula 2c/(γ√Ka) gives 3.814 m); critical circle search.",
     definition: {"coordinates":[[0,20],[0,25],[30,25],[50,35],[90,35],[90,20]],"materials":[{"name":"Soil","unitWeight":20,"frictionAngle":0,"cohesion":0,"model":{"kind":"mohr-coulomb","unitWeight":20,"cohesion":32,"frictionAngle":10}}],"materialBoundaries":[],"regionAssignments":[{"point":[0.9,20.05],"materialName":"Soil"}],"orientation":"rtl","analysisLimits":{"entryLeftX":20,"entryRightX":70,"exitLeftX":20,"exitRightX":70}},
     checks: [
       {"method":"Bishop","label":"Bishop simplified","published":1.596,"publishedBy":"Commercial program A","options":{"tensionCrackDepth":4,"tensionCrackWater":1}},
       {"method":"Morgenstern-Price","label":"Spencer (M-P, constant f(x))","published":1.592,"publishedBy":"Commercial program A","options":{"intersliceFunction":"constant","tensionCrackDepth":4,"tensionCrackWater":1}},
       {"method":"Janbu","label":"Janbu corrected (f0)","published":1.489,"publishedBy":"Commercial program A","options":{"tensionCrackDepth":4,"tensionCrackWater":1,"janbuCorrection":true},"note":"Janbu corrected: 1.5 % for a search whose critical circle (and so f0) differs from Bishop's."},
     ],
+    paper: [{"value": 1.65, "source": "Giam & Donald (1989), ACADS"}],
     notes: [
       "Search limited to x = 20–70, the model of the source.",
       "With the 3.814 m crack of the formula cSlope gives 1.590 / 1.585 / 1.481; the 4 m crack of the figure lowers them by 0.2–0.5 %.",
@@ -1342,6 +1371,7 @@ export const PROBLEMS: RawCase[] = [
       {"method":"Morgenstern-Price","label":"Morgenstern-Price (half-sine)","published":1.382,"publishedBy":"Commercial program B","options":{"porePressureHead":"vertical","slices":40}},
       {"method":"Bishop","label":"Bishop simplified","published":1.403,"publishedBy":"Program D","options":{"porePressureHead":"vertical","slices":40}},
     ],
+    paper: [{"value": 1.39, "source": "Giam & Donald (1989), ACADS"}],
     notes: [
       "Search limited to x = 20–70, the model of the source.",
       "ACADS 1.39; commercial program B Bishop 1.414.",
@@ -1360,6 +1390,7 @@ export const PROBLEMS: RawCase[] = [
       {"method":"Morgenstern-Price","label":"Spencer (M-P, constant f(x))","published":1.277,"publishedBy":"Commercial program A","options":{"intersliceFunction":"constant"}},
       {"method":"Morgenstern-Price","label":"Morgenstern-Price (half-sine)","published":1.261,"publishedBy":"Commercial program B"},
     ],
+    paper: [{"value": 1.34, "source": "Giam & Donald (1989), ACADS"}],
     notes: [
       "Bishop on a non-circular surface depends on the moment axis; cSlope gives 1.250 about its default axis, commercial program B 1.259.",
     ],
@@ -1375,6 +1406,7 @@ export const PROBLEMS: RawCase[] = [
     checks: [
       {"method":"Morgenstern-Price","label":"Spencer (M-P, constant f(x))","published":1.246,"publishedBy":"Commercial program A","options":{"intersliceFunction":"constant","nonCircularOptimization":true}},
     ],
+    paper: [{"value": 1.24, "upper": 1.27, "source": "Giam & Donald (1989), ACADS"}],
     notes: [
       "The best circle gives 1.51; the optimised surface follows the weak layer with a wedge up to the crest. ACADS accepts about 1.24–1.27.",
       "Known gap: commercial program B's optimised Morgenstern-Price (half-sine) reports 1.261, the value of the specified surface of 3(b) (V050a), so its search found nothing lower; cSlope's search finds 1.218 (half-sine) and 1.228 (Spencer), a complete-equilibrium solution with one root that holds at 50, 100 and 200 slices. A search difference, not a model one: not a check.",
@@ -1391,6 +1423,7 @@ export const PROBLEMS: RawCase[] = [
     checks: [
       {"method":"Morgenstern-Price","label":"Spencer (M-P, constant f(x))","published":0.707,"publishedBy":"Commercial program A (optimised)","options":{"intersliceFunction":"constant","porePressureHead":"vertical","slices":50,"nonCircularOptimization":true}},
     ],
+    paper: [{"value": 0.78, "source": "Giam & Donald (1989), ACADS"}],
     notes: [
       "Known gap: commercial program A's optimised Janbu corrected is 0.699 (Table 9.5), cSlope's optimised Janbu corrected 0.754 (+7.8 %); the 0.734 of Table 9.4 is commercial program A's block search without optimisation and is not comparable with an optimised search. The search is sensitive to the method: Morgenstern-Price (half-sine) finds 0.718 against commercial program B's 0.689 and Spencer 0.718 against commercial program A's 0.707. commercial program A's optimised band 0.683–0.707; ACADS Slope 2000 (GLE) 0.688; commercial program A block search 0.760 (Spencer); program D's search 0.724 (Spencer) / 0.718 (Janbu); commercial program B Bishop 0.699; ACADS 20-program mean 0.808.",
     ],
@@ -1409,6 +1442,7 @@ export const PROBLEMS: RawCase[] = [
       {"method":"Janbu","label":"Janbu corrected (f0)","published":1.949,"publishedBy":"Commercial program A","options":{"porePressureHead":"vertical","slices":60,"janbuCorrection":true}},
       {"method":"Bishop","label":"Bishop simplified","published":1.951,"publishedBy":"Commercial program B","options":{"porePressureHead":"vertical","slices":60}},
     ],
+    paper: [{"value": 1.95, "source": "Giam & Donald (1989), ACADS"}],
     notes: [
       "Giam 1.95; infinite-slope limit 1.9475; program D 1.955.",
     ],
@@ -1427,6 +1461,7 @@ export const PROBLEMS: RawCase[] = [
       {"method":"Janbu","label":"Janbu corrected (f0)","published":2.073,"publishedBy":"Commercial program A","options":{"porePressureHead":"vertical","slices":60,"janbuCorrection":true}},
       {"method":"Morgenstern-Price","label":"Morgenstern-Price (half-sine)","published":2.299,"publishedBy":"Commercial program B","options":{"porePressureHead":"vertical","slices":60}},
     ],
+    paper: [{"value": 2.29, "source": "Giam & Donald (1989), ACADS"}],
     notes: [
       "Giam 2.29.",
     ],
@@ -1438,11 +1473,12 @@ export const PROBLEMS: RawCase[] = [
     surface: "search",
     units: "SI",
     inputFromFigure: true,
-    description: "Greco's weak-seam slope (V054) with commercial program B's geometry and water table; circular search with non-circular optimisation, vertical pore-pressure head.",
+    description: "Greco's weak-seam slope (V054) with a commercial program's geometry and water table; circular search with non-circular optimisation, vertical pore-pressure head.",
     definition: {"orientation":"rtl","coordinates":[[0,0],[0,20],[55,20],[75,30],[95,40],[100,40],[145,70],[240,70],[240,15],[150,15]],"materials":[{"name":"Layer 1","unitWeight":20,"frictionAngle":0,"cohesion":0,"model":{"kind":"mohr-coulomb","unitWeight":20,"cohesion":9.8,"frictionAngle":35}},{"name":"Layer 2","unitWeight":19,"frictionAngle":0,"cohesion":0,"model":{"kind":"mohr-coulomb","unitWeight":19,"cohesion":58.8,"frictionAngle":25}},{"name":"Layer 3","unitWeight":21.5,"frictionAngle":0,"cohesion":0,"model":{"kind":"mohr-coulomb","unitWeight":21.5,"cohesion":19.8,"frictionAngle":30}},{"name":"Layer 4","unitWeight":21.5,"frictionAngle":0,"cohesion":0,"model":{"kind":"mohr-coulomb","unitWeight":21.5,"cohesion":9.8,"frictionAngle":16}}],"materialBoundaries":[{"coordinates":[[100,40],[190,55],[241,55]],"materialName":""},{"coordinates":[[75,30],[241,30]],"materialName":""},{"coordinates":[[-1,0.4],[150,15.5],[241,15.5]],"materialName":""}],"regionAssignments":[{"point":[200,62],"materialName":"Layer 1"},{"point":[200,45],"materialName":"Layer 2"},{"point":[100,20],"materialName":"Layer 3"},{"point":[100,10.25],"materialName":"Layer 4"}],"waterTable":{"mode":"custom","value":[[0,20],[55,20],[75,30],[95,40],[100,40],[190,55],[240,55]],"followBoundary":false},"analysisLimits":{"entryLeftX":145,"entryRightX":240,"exitLeftX":0,"exitRightX":55}},
     checks: [
       {"method":"Morgenstern-Price","label":"Spencer (M-P, constant f(x))","published":1.010,"publishedBy":"Commercial program A (block search)","options":{"intersliceFunction":"constant","slices":50,"porePressureHead":"vertical","nonCircularOptimization":true}},
     ],
+    paper: [{"value": 1.01, "upper": 1.03, "method": "Spencer, non-circular", "source": "Chen & Shao (1988)"}, {"value": 1.08, "source": "Greco (1996)"}],
     notes: [
       "Entry on the crest (x = 145–240) and exit on the level ground (x = 0–55), as in the source.",
       "Fig. 40: base (0,0)–(150,15)–(240,15) under a 0.5 m Layer 4 whose top is (0,0.5)–(150,15.5)–(240,15.5); the thickness of Layer 4 is read from the label (0, 0.5) only partly legible. V054 (commercial program A) has the base rising to (240,16).",
@@ -1462,6 +1498,7 @@ export const PROBLEMS: RawCase[] = [
       {"method":"Bishop","label":"Bishop simplified (vertical head)","published":1.087,"publishedBy":"Commercial program A","options":{"porePressureHead":"vertical"}},
       {"method":"Morgenstern-Price","label":"Spencer (vertical head)","published":1.093,"publishedBy":"Commercial program A","options":{"intersliceFunction":"constant","porePressureHead":"vertical"}},
     ],
+    paper: [{"value": 1.08, "method": "Spencer, nearly circular surface", "source": "Greco (1996)"}],
     notes: [
       "Circles pass through the toe (55, 20), as in the source.",
       "With the phreatic correction (cos²θ) cSlope gives 1.141 (Bishop).",
@@ -1604,7 +1641,7 @@ export const PROBLEMS: RawCase[] = [
     reference: "Hassan & Wolff (1999), J. Geotech. Geoenviron. Eng. 125(4).",
     surface: "fixed",
     units: "SI",
-    description: "The V060a dam on the circle of minimum reliability index: Phase I fill φ = 8.5° ± 8.5°, c = 117.8 ± 58.9 kPa; Phase II fill c = 143.6 ± 79 kPa, φ = 15° ± 9°, treated as independent normal variables (program D's Taylor series has no correlation term); Bishop.",
+    description: "The V060a dam on the circle of minimum reliability index: Phase I fill φ = 8.5° ± 8.5°, c = 117.8 ± 58.9 kPa; Phase II fill c = 143.6 ± 79 kPa, φ = 15° ± 9°, treated as independent normal variables (another program's Taylor series has no correlation term); Bishop.",
     definition: {"orientation":"ltr","materials":[{"name":"Phase II clay fill","unitWeight":22,"frictionAngle":15,"cohesion":143.64,"model":{"kind":"mohr-coulomb","unitWeight":22,"cohesion":143.64,"frictionAngle":15}},{"name":"Sand filter","unitWeight":22,"frictionAngle":35,"cohesion":0,"model":{"kind":"mohr-coulomb","unitWeight":22,"cohesion":0,"frictionAngle":35}},{"name":"Spoil fill","unitWeight":25,"frictionAngle":35,"cohesion":5,"model":{"kind":"mohr-coulomb","unitWeight":25,"cohesion":5,"frictionAngle":35}},{"name":"Phase I clay fill","unitWeight":22,"frictionAngle":8.5,"cohesion":117.79,"model":{"kind":"mohr-coulomb","unitWeight":22,"cohesion":117.79,"frictionAngle":8.5}},{"name":"Foundation sand","unitWeight":20,"frictionAngle":18,"cohesion":5,"model":{"kind":"mohr-coulomb","unitWeight":20,"cohesion":5,"frictionAngle":18}},{"name":"Limestone","unitWeight":23,"frictionAngle":45,"cohesion":1000,"model":{"kind":"mohr-coulomb","unitWeight":23,"cohesion":1000,"frictionAngle":45}}],"coordinates":[[40,121.92],[477.5,121.92],[477.5,140.21],[477.5,156.97],[477.5,167.4],[402.4,169.16],[364.3,176.17],[308.7,186.23],[269.4,199.34],[261.4,199.34],[208,184.1],[146.02,178.31],[109.45,166.12],[82,156.97],[40,156.97],[40,140.21]],"materialBoundaries":[{"coordinates":[[402.4,169.16],[410,166.12]],"materialName":""},{"coordinates":[[410,166.12],[269.1,166.12]],"materialName":""},{"coordinates":[[410,166.12],[432.88,156.97]],"materialName":""},{"coordinates":[[269.1,166.12],[268.6,199],[264.4,199],[263.9,166.12]],"materialName":""},{"coordinates":[[269.1,166.12],[263.9,166.12]],"materialName":""},{"coordinates":[[263.9,166.12],[109.45,166.12]],"materialName":""},{"coordinates":[[432.88,156.97],[477.5,156.97]],"materialName":""},{"coordinates":[[432.88,156.97],[307.7,156.97],[282,140.21]],"materialName":""},{"coordinates":[[282,140.21],[254,140.21]],"materialName":""},{"coordinates":[[282,140.21],[477.5,140.21]],"materialName":""},{"coordinates":[[254,140.21],[220.5,156.97],[82,156.97]],"materialName":""},{"coordinates":[[254,140.21],[40,140.21]],"materialName":""}],"regionAssignments":[{"point":[196.54226,172.665],"materialName":"Phase II clay fill"},{"point":[266.5,182.56],"materialName":"Sand filter"},{"point":[449.47,161.545],"materialName":"Spoil fill"},{"point":[266.05,148.59],"materialName":"Phase I clay fill"},{"point":[138.625,148.59],"materialName":"Foundation sand"},{"point":[386.175,148.59],"materialName":"Foundation sand"},{"point":[258.75,131.065],"materialName":"Limestone"}],"customSearchPlanes":[{"cx":340.248,"cy":283.967,"radius":125.967}],"customPlanesOnly":true},
     checks: [
       {"method":"Bishop","label":"Bishop simplified","published":2.973,"publishedBy":"Program D","options":{"slices":60}},
@@ -1642,6 +1679,7 @@ export const PROBLEMS: RawCase[] = [
       {"method":"Bishop","label":"Bishop simplified","published":2.56,"publishedBy":"Commercial program B"},
       {"method":"Bishop","label":"Bishop simplified","published":2.551,"publishedBy":"Commercial program A"},
     ],
+    paper: [{"value": 2.753, "source": "Hassan & Wolff (1999)"}],
     notes: [
       "Both programs use Bishop's method here (commercial program B §2.22, commercial program A Table 35.2). commercial program B's values come from its own model of the dam, with the circles placed by its own digitisation, and differ from commercial program A's by up to 0.5 % on the same nominal circle. commercial program B's manual prints commercial program A's values under the heading \"Hassan and Wolff\"; Hassan & Wolff's own factors of safety differ (e.g. 2.753 on 7A).",
     ],
@@ -1658,6 +1696,7 @@ export const PROBLEMS: RawCase[] = [
       {"method":"Bishop","label":"Bishop simplified","published":2.806,"publishedBy":"Commercial program B"},
       {"method":"Bishop","label":"Bishop simplified","published":2.82,"publishedBy":"Commercial program A"},
     ],
+    paper: [{"value": 2.352, "source": "Hassan & Wolff (1999)"}],
     notes: [
       "Both programs use Bishop's method here (commercial program B §2.22, commercial program A Table 35.2). commercial program B's values come from its own model of the dam, with the circles placed by its own digitisation, and differ from commercial program A's by up to 0.5 % on the same nominal circle. commercial program B's manual prints commercial program A's values under the heading \"Hassan and Wolff\"; Hassan & Wolff's own factors of safety differ (e.g. 2.753 on 7A).",
     ],
@@ -1674,6 +1713,7 @@ export const PROBLEMS: RawCase[] = [
       {"method":"Bishop","label":"Bishop simplified","published":2.771,"publishedBy":"Commercial program B"},
       {"method":"Bishop","label":"Bishop simplified","published":2.777,"publishedBy":"Commercial program A"},
     ],
+    paper: [{"value": 2.523, "source": "Hassan & Wolff (1999)"}],
     notes: [
       "Both programs use Bishop's method here (commercial program B §2.22, commercial program A Table 35.2). commercial program B's values come from its own model of the dam, with the circles placed by its own digitisation, and differ from commercial program A's by up to 0.5 % on the same nominal circle. commercial program B's manual prints commercial program A's values under the heading \"Hassan and Wolff\"; Hassan & Wolff's own factors of safety differ (e.g. 2.753 on 7A).",
     ],
@@ -1690,6 +1730,7 @@ export const PROBLEMS: RawCase[] = [
       {"method":"Bishop","label":"Bishop simplified","published":2.589,"publishedBy":"Commercial program B"},
       {"method":"Bishop","label":"Bishop simplified","published":2.583,"publishedBy":"Commercial program A"},
     ],
+    paper: [{"value": 2.457, "source": "Hassan & Wolff (1999)"}],
     notes: [
       "Both programs use Bishop's method here (commercial program B §2.22, commercial program A Table 35.2). commercial program B's values come from its own model of the dam, with the circles placed by its own digitisation, and differ from commercial program A's by up to 0.5 % on the same nominal circle. commercial program B's manual prints commercial program A's values under the heading \"Hassan and Wolff\"; Hassan & Wolff's own factors of safety differ (e.g. 2.753 on 7A).",
     ],
@@ -1706,6 +1747,7 @@ export const PROBLEMS: RawCase[] = [
       {"method":"Bishop","label":"Bishop simplified","published":2.703,"publishedBy":"Commercial program B"},
       {"method":"Bishop","label":"Bishop simplified","published":2.692,"publishedBy":"Commercial program A"},
     ],
+    paper: [{"value": 2.602, "source": "Hassan & Wolff (1999)"}],
     notes: [
       "Both programs use Bishop's method here (commercial program B §2.22, commercial program A Table 35.2). commercial program B's values come from its own model of the dam, with the circles placed by its own digitisation, and differ from commercial program A's by up to 0.5 % on the same nominal circle. commercial program B's manual prints commercial program A's values under the heading \"Hassan and Wolff\"; Hassan & Wolff's own factors of safety differ (e.g. 2.753 on 7A).",
     ],
@@ -1722,6 +1764,7 @@ export const PROBLEMS: RawCase[] = [
       {"method":"Bishop","label":"Bishop simplified","published":2.673,"publishedBy":"Commercial program B"},
       {"method":"Bishop","label":"Bishop simplified","published":2.672,"publishedBy":"Commercial program A"},
     ],
+    paper: [{"value": 2.995, "source": "Hassan & Wolff (1999)"}],
     notes: [
       "Both programs use Bishop's method here (commercial program B §2.22, commercial program A Table 35.2). commercial program B's values come from its own model of the dam, with the circles placed by its own digitisation, and differ from commercial program A's by up to 0.5 % on the same nominal circle. commercial program B's manual prints commercial program A's values under the heading \"Hassan and Wolff\"; Hassan & Wolff's own factors of safety differ (e.g. 2.753 on 7A).",
     ],
@@ -1738,6 +1781,7 @@ export const PROBLEMS: RawCase[] = [
       {"method":"Bishop","label":"Bishop simplified","published":3.586,"publishedBy":"Commercial program B"},
       {"method":"Bishop","label":"Bishop simplified","published":3.598,"publishedBy":"Commercial program A"},
     ],
+    paper: [{"value": 3.916, "source": "Hassan & Wolff (1999)"}],
     notes: [
       "Both programs use Bishop's method here (commercial program B §2.22, commercial program A Table 35.2). commercial program B's values come from its own model of the dam, with the circles placed by its own digitisation, and differ from commercial program A's by up to 0.5 % on the same nominal circle. commercial program B's manual prints commercial program A's values under the heading \"Hassan and Wolff\"; Hassan & Wolff's own factors of safety differ (e.g. 2.753 on 7A).",
     ],
@@ -1754,6 +1798,7 @@ export const PROBLEMS: RawCase[] = [
       {"method":"Bishop","label":"Bishop simplified","published":6.069,"publishedBy":"Commercial program B"},
       {"method":"Bishop","label":"Bishop simplified","published":6.074,"publishedBy":"Commercial program A"},
     ],
+    paper: [{"value": 10.576, "source": "Hassan & Wolff (1999)"}],
     notes: [
       "Both programs use Bishop's method here (commercial program B §2.22, commercial program A Table 35.2). commercial program B's values come from its own model of the dam, with the circles placed by its own digitisation, and differ from commercial program A's by up to 0.5 % on the same nominal circle. commercial program B's manual prints commercial program A's values under the heading \"Hassan and Wolff\"; Hassan & Wolff's own factors of safety differ (e.g. 2.753 on 7A).",
     ],
@@ -1769,6 +1814,7 @@ export const PROBLEMS: RawCase[] = [
     checks: [
       {"method":"Bishop","label":"Bishop simplified","published":11.583,"publishedBy":"Commercial program B"},
     ],
+    paper: [{"value": 6.293, "source": "Hassan & Wolff (1999)"}],
     notes: [
       "Both programs use Bishop's method here (commercial program B §2.22, commercial program A Table 35.2). commercial program B's values come from its own model of the dam, with the circles placed by its own digitisation, and differ from commercial program A's by up to 0.5 % on the same nominal circle. commercial program B's manual prints commercial program A's values under the heading \"Hassan and Wolff\"; Hassan & Wolff's own factors of safety differ (e.g. 2.753 on 7A).",
       "commercial program A's Bishop value for 8H (11.23) disagrees with commercial program B (11.583) and two other codes and is not used.",
@@ -1802,6 +1848,7 @@ export const PROBLEMS: RawCase[] = [
     checks: [
       {"method":"Bishop","label":"Bishop simplified","published":1.02,"publishedBy":"Program D","options":{"porePressureHead":"vertical","slices":50}},
     ],
+    paper: [{"value": 1.0, "method": "Bishop simplified, circular", "source": "Leshchinsky & Han (2004)"}, {"value": 1.0, "method": "finite differences", "source": "Leshchinsky & Han (2004)"}],
   },
   {
     id: "V065",
@@ -1814,6 +1861,7 @@ export const PROBLEMS: RawCase[] = [
     checks: [
       {"method":"Morgenstern-Price","label":"Spencer (M-P, constant f(x))","published":0.964,"publishedBy":"Commercial program A","options":{"intersliceFunction":"constant","porePressureHead":"vertical","slices":50}},
     ],
+    paper: [{"value": 1.0, "method": "Bishop simplified, circular", "source": "Leshchinsky & Han (2004)"}, {"value": 0.86, "method": "finite differences", "source": "Leshchinsky & Han (2004)"}],
   },
   {
     id: "V066a",
@@ -1821,11 +1869,12 @@ export const PROBLEMS: RawCase[] = [
     reference: "Leshchinsky & Han (2004), J. Geotech. Geoenviron. Eng. 130(12).",
     surface: "fixed",
     units: "SI",
-    description: "Three 3 m tiers offset 1.2 m, block facing, geotextiles every 0.6 m (L = 6.3 m, Ta = 10 kN/m, applied horizontally, passive), commercial program A's critical circle.",
+    description: "Three 3 m tiers offset 1.2 m, block facing, geotextiles every 0.6 m (L = 6.3 m, Ta = 10 kN/m, applied horizontally, passive), a commercial program's critical circle.",
     definition: {"materials":[{"name":"Reinforced and retained fill","unitWeight":18,"frictionAngle":34,"cohesion":0,"model":{"kind":"mohr-coulomb","unitWeight":18,"cohesion":0,"frictionAngle":34}},{"name":"Foundation soil","unitWeight":18,"frictionAngle":34,"cohesion":10,"model":{"kind":"mohr-coulomb","unitWeight":18,"cohesion":10,"frictionAngle":34}},{"name":"Blocks","unitWeight":18,"frictionAngle":34,"cohesion":2.5,"model":{"kind":"mohr-coulomb","unitWeight":18,"cohesion":2.5,"frictionAngle":34}}],"coordinates":[[0,0],[24,0],[24,6],[24,15],[8.7,15],[8.4,15],[8.4,12],[7.5,12],[7.2,12],[7.2,9],[6.3,9],[6,9],[6,6],[0,6]],"materialBoundaries":[{"coordinates":[[6.3,6],[24,6]],"materialName":""},{"coordinates":[[6.3,6],[6.3,9]],"materialName":""},{"coordinates":[[6.3,6],[6,6]],"materialName":""},{"coordinates":[[8.7,15],[8.7,12],[8.4,12]],"materialName":""},{"coordinates":[[7.5,12],[7.5,9],[7.2,9]],"materialName":""}],"regionAssignments":[{"point":[15.15,7.5],"materialName":"Reinforced and retained fill"},{"point":[12,3],"materialName":"Foundation soil"},{"point":[6.15,7.5],"materialName":"Blocks"},{"point":[7.35,10.5],"materialName":"Blocks"},{"point":[8.55,13.5],"materialName":"Blocks"}],"reinforcements":[{"x1":6.05,"y1":6.3,"x2":12.3,"y2":6.3,"tensileCapacity":10,"spacing":1,"end1Capacity":0,"end2Capacity":0,"direction":"axial","application":"passive","pullout":{"kind":"development","length1":0.19066,"length2":0.05917}},{"x1":6.05,"y1":6.9,"x2":12.3,"y2":6.9,"tensileCapacity":10,"spacing":1,"end1Capacity":0,"end2Capacity":0,"direction":"axial","application":"passive","pullout":{"kind":"development","length1":0.24513,"length2":0.06355}},{"x1":6.05,"y1":7.5,"x2":12.3,"y2":7.5,"tensileCapacity":10,"spacing":1,"end1Capacity":0,"end2Capacity":0,"direction":"axial","application":"passive","pullout":{"kind":"development","length1":0.34319,"length2":0.06864}},{"x1":6.05,"y1":8.1,"x2":12.3,"y2":8.1,"tensileCapacity":10,"spacing":1,"end1Capacity":0,"end2Capacity":0,"direction":"axial","application":"passive","pullout":{"kind":"development","length1":0.57198,"length2":0.07461}},{"x1":6.05,"y1":8.7,"x2":12.3,"y2":8.7,"tensileCapacity":10,"spacing":1,"end1Capacity":0,"end2Capacity":0,"direction":"axial","application":"passive","pullout":{"kind":"development","length1":1.71593,"length2":0.08171}},{"x1":7.25,"y1":9.3,"x2":13.5,"y2":9.3,"tensileCapacity":10,"spacing":1,"end1Capacity":0,"end2Capacity":0,"direction":"axial","application":"passive","pullout":{"kind":"development","length1":0.19066,"length2":0.09031}},{"x1":7.25,"y1":9.9,"x2":13.5,"y2":9.9,"tensileCapacity":10,"spacing":1,"end1Capacity":0,"end2Capacity":0,"direction":"axial","application":"passive","pullout":{"kind":"development","length1":0.24513,"length2":0.10094}},{"x1":7.25,"y1":10.5,"x2":13.5,"y2":10.5,"tensileCapacity":10,"spacing":1,"end1Capacity":0,"end2Capacity":0,"direction":"axial","application":"passive","pullout":{"kind":"development","length1":0.34319,"length2":0.1144}},{"x1":7.25,"y1":11.1,"x2":13.5,"y2":11.1,"tensileCapacity":10,"spacing":1,"end1Capacity":0,"end2Capacity":0,"direction":"axial","application":"passive","pullout":{"kind":"development","length1":0.57198,"length2":0.13199}},{"x1":7.25,"y1":11.7,"x2":13.5,"y2":11.7,"tensileCapacity":10,"spacing":1,"end1Capacity":0,"end2Capacity":0,"direction":"axial","application":"passive","pullout":{"kind":"development","length1":1.71593,"length2":0.15599}},{"x1":8.45,"y1":12.3,"x2":14.7,"y2":12.3,"tensileCapacity":10,"spacing":1,"end1Capacity":0,"end2Capacity":0,"direction":"axial","application":"passive","pullout":{"kind":"development","length1":0.19066,"length2":0.19066}},{"x1":8.45,"y1":12.9,"x2":14.7,"y2":12.9,"tensileCapacity":10,"spacing":1,"end1Capacity":0,"end2Capacity":0,"direction":"axial","application":"passive","pullout":{"kind":"development","length1":0.24513,"length2":0.24513}},{"x1":8.45,"y1":13.5,"x2":14.7,"y2":13.5,"tensileCapacity":10,"spacing":1,"end1Capacity":0,"end2Capacity":0,"direction":"axial","application":"passive","pullout":{"kind":"development","length1":0.34319,"length2":0.34319}},{"x1":8.45,"y1":14.1,"x2":14.7,"y2":14.1,"tensileCapacity":10,"spacing":1,"end1Capacity":0,"end2Capacity":0,"direction":"axial","application":"passive","pullout":{"kind":"development","length1":0.57198,"length2":0.57198}},{"x1":8.45,"y1":14.7,"x2":14.7,"y2":14.7,"tensileCapacity":10,"spacing":1,"end1Capacity":0,"end2Capacity":0,"direction":"axial","application":"passive","pullout":{"kind":"development","length1":1.71593,"length2":1.71593}}],"customSearchPlanes":[{"cx":-5.713,"cy":20.432,"radius":18.547}],"customPlanesOnly":true},
     checks: [
       {"method":"Bishop","label":"Bishop simplified","published":1.04,"publishedBy":"Commercial program A","options":{"porePressureHead":"vertical","slices":50}},
     ],
+    paper: [{"value": 1.0, "method": "Bishop simplified, circular", "source": "Leshchinsky & Han (2004)"}, {"value": 0.99, "method": "finite differences", "source": "Leshchinsky & Han (2004)"}],
     notes: [
       "L&H finite difference 0.99.",
     ],
@@ -1841,6 +1890,7 @@ export const PROBLEMS: RawCase[] = [
     checks: [
       {"method":"Morgenstern-Price","label":"Spencer (M-P, constant f(x))","published":1.011,"publishedBy":"Program D","options":{"intersliceFunction":"constant","porePressureHead":"vertical","slices":50}},
     ],
+    paper: [{"value": 1.0, "method": "Bishop simplified, circular", "source": "Leshchinsky & Han (2004)"}, {"value": 0.98, "method": "finite differences", "source": "Leshchinsky & Han (2004)"}],
     notes: [
       "commercial program A reports 0.971 (Spencer) and 0.976 (Bishop) with the same Ta = 11.4 kN/m (Table 89.2); cSlope and program D are 4 % higher on the reference circle. The difference is not explained (the reinforcement model of the tiers is the likely cause), so the commercial program A value is not used as a check. L&H 0.98 (finite difference).",
     ],
@@ -1856,6 +1906,7 @@ export const PROBLEMS: RawCase[] = [
     checks: [
       {"method":"Bishop","label":"Bishop simplified","published":1.004,"publishedBy":"Commercial program A","options":{"porePressureHead":"vertical","slices":50}},
     ],
+    paper: [{"value": 1.0, "method": "Bishop simplified, circular", "source": "Leshchinsky & Han (2004)"}, {"value": 1.01, "method": "finite differences", "source": "Leshchinsky & Han (2004)"}],
   },
   {
     id: "V066d",
@@ -1863,11 +1914,12 @@ export const PROBLEMS: RawCase[] = [
     reference: "Leshchinsky & Han (2004), J. Geotech. Geoenviron. Eng. 130(12).",
     surface: "fixed",
     units: "SI",
-    description: "As V066a with the water table 3 m above the toe: pore pressure in the foundation only (drained fill); Ta = 9.25 kN/m. The pond in front of the wall is left out of this comparison: program D's water loads apply no pressure to the vertical facing, whereas cSlope does.",
+    description: "As V066a with the water table 3 m above the toe: pore pressure in the foundation only (drained fill); Ta = 9.25 kN/m. The pond in front of the wall is left out of this comparison: another program's water loads apply no pressure to the vertical facing, whereas cSlope does.",
     definition: {"materials":[{"name":"Reinforced and retained fill","unitWeight":18,"frictionAngle":34,"cohesion":0,"model":{"kind":"mohr-coulomb","unitWeight":18,"cohesion":0,"frictionAngle":34},"waterTableId":"dry"},{"name":"Foundation soil","unitWeight":18,"frictionAngle":34,"cohesion":10,"model":{"kind":"mohr-coulomb","unitWeight":18,"cohesion":10,"frictionAngle":34}},{"name":"Blocks","unitWeight":18,"frictionAngle":34,"cohesion":2.5,"model":{"kind":"mohr-coulomb","unitWeight":18,"cohesion":2.5,"frictionAngle":34},"waterTableId":"dry"}],"coordinates":[[0,0],[24,0],[24,6],[24,15],[8.7,15],[8.4,15],[8.4,12],[7.5,12],[7.2,12],[7.2,9],[6.3,9],[6,9],[6,6],[0,6]],"materialBoundaries":[{"coordinates":[[6.3,6],[24,6]],"materialName":""},{"coordinates":[[6.3,6],[6.3,9]],"materialName":""},{"coordinates":[[6.3,6],[6,6]],"materialName":""},{"coordinates":[[8.7,15],[8.7,12],[8.4,12]],"materialName":""},{"coordinates":[[7.5,12],[7.5,9],[7.2,9]],"materialName":""}],"regionAssignments":[{"point":[15.15,7.5],"materialName":"Reinforced and retained fill"},{"point":[12,3],"materialName":"Foundation soil"},{"point":[6.15,7.5],"materialName":"Blocks"},{"point":[7.35,10.5],"materialName":"Blocks"},{"point":[8.55,13.5],"materialName":"Blocks"}],"waterTables":[{"id":"dry","coordinates":[[0,-100],[24,-100]],"followBoundary":false}],"waterTable":{"mode":"custom","value":[[0,6],[6,6],[6,9],[24,9]],"followBoundary":false},"reinforcements":[{"x1":6.05,"y1":6.3,"x2":12.3,"y2":6.3,"tensileCapacity":9.25,"spacing":1,"end1Capacity":0,"end2Capacity":0,"direction":"axial","application":"passive","pullout":{"kind":"development","length1":0.17636,"length2":0.05473}},{"x1":6.05,"y1":6.9,"x2":12.3,"y2":6.9,"tensileCapacity":9.25,"spacing":1,"end1Capacity":0,"end2Capacity":0,"direction":"axial","application":"passive","pullout":{"kind":"development","length1":0.22675,"length2":0.05879}},{"x1":6.05,"y1":7.5,"x2":12.3,"y2":7.5,"tensileCapacity":9.25,"spacing":1,"end1Capacity":0,"end2Capacity":0,"direction":"axial","application":"passive","pullout":{"kind":"development","length1":0.31745,"length2":0.06349}},{"x1":6.05,"y1":8.1,"x2":12.3,"y2":8.1,"tensileCapacity":9.25,"spacing":1,"end1Capacity":0,"end2Capacity":0,"direction":"axial","application":"passive","pullout":{"kind":"development","length1":0.52908,"length2":0.06901}},{"x1":6.05,"y1":8.7,"x2":12.3,"y2":8.7,"tensileCapacity":9.25,"spacing":1,"end1Capacity":0,"end2Capacity":0,"direction":"axial","application":"passive","pullout":{"kind":"development","length1":1.58723,"length2":0.07558}},{"x1":7.25,"y1":9.3,"x2":13.5,"y2":9.3,"tensileCapacity":9.25,"spacing":1,"end1Capacity":0,"end2Capacity":0,"direction":"axial","application":"passive","pullout":{"kind":"development","length1":0.17636,"length2":0.08354}},{"x1":7.25,"y1":9.9,"x2":13.5,"y2":9.9,"tensileCapacity":9.25,"spacing":1,"end1Capacity":0,"end2Capacity":0,"direction":"axial","application":"passive","pullout":{"kind":"development","length1":0.22675,"length2":0.09337}},{"x1":7.25,"y1":10.5,"x2":13.5,"y2":10.5,"tensileCapacity":9.25,"spacing":1,"end1Capacity":0,"end2Capacity":0,"direction":"axial","application":"passive","pullout":{"kind":"development","length1":0.31745,"length2":0.10582}},{"x1":7.25,"y1":11.1,"x2":13.5,"y2":11.1,"tensileCapacity":9.25,"spacing":1,"end1Capacity":0,"end2Capacity":0,"direction":"axial","application":"passive","pullout":{"kind":"development","length1":0.52908,"length2":0.12209}},{"x1":7.25,"y1":11.7,"x2":13.5,"y2":11.7,"tensileCapacity":9.25,"spacing":1,"end1Capacity":0,"end2Capacity":0,"direction":"axial","application":"passive","pullout":{"kind":"development","length1":1.58723,"length2":0.14429}},{"x1":8.45,"y1":12.3,"x2":14.7,"y2":12.3,"tensileCapacity":9.25,"spacing":1,"end1Capacity":0,"end2Capacity":0,"direction":"axial","application":"passive","pullout":{"kind":"development","length1":0.17636,"length2":0.17636}},{"x1":8.45,"y1":12.9,"x2":14.7,"y2":12.9,"tensileCapacity":9.25,"spacing":1,"end1Capacity":0,"end2Capacity":0,"direction":"axial","application":"passive","pullout":{"kind":"development","length1":0.22675,"length2":0.22675}},{"x1":8.45,"y1":13.5,"x2":14.7,"y2":13.5,"tensileCapacity":9.25,"spacing":1,"end1Capacity":0,"end2Capacity":0,"direction":"axial","application":"passive","pullout":{"kind":"development","length1":0.31745,"length2":0.31745}},{"x1":8.45,"y1":14.1,"x2":14.7,"y2":14.1,"tensileCapacity":9.25,"spacing":1,"end1Capacity":0,"end2Capacity":0,"direction":"axial","application":"passive","pullout":{"kind":"development","length1":0.52908,"length2":0.52908}},{"x1":8.45,"y1":14.7,"x2":14.7,"y2":14.7,"tensileCapacity":9.25,"spacing":1,"end1Capacity":0,"end2Capacity":0,"direction":"axial","application":"passive","pullout":{"kind":"development","length1":1.58723,"length2":1.58723}}],"customSearchPlanes":[{"cx":-4.903,"cy":20.532,"radius":18.112}],"customPlanesOnly":true},
     checks: [
       {"method":"Bishop","label":"Bishop simplified","published":1.01,"publishedBy":"Program D","options":{"porePressureHead":"vertical","slices":50}},
     ],
+    paper: [{"value": 1.0, "method": "Bishop simplified, circular", "source": "Leshchinsky & Han (2004)"}, {"value": 1.01, "method": "finite differences", "source": "Leshchinsky & Han (2004)"}],
     notes: [
       "commercial program A reports 1.037 (Bishop) with the same Ta = 9.25 kN/m (Table 92.2) and the pond in front of the wall; the difference is not explained, so it is not used as a check. L&H 1.01 (finite difference).",
       "With the pond against the lower tier (water at el. 9 in front of the wall) the hydrostatic thrust on the facing resists the sliding and cSlope gives 1.18.",
@@ -1884,6 +1936,7 @@ export const PROBLEMS: RawCase[] = [
     checks: [
       {"method":"Bishop","label":"Bishop simplified","published":0.958,"publishedBy":"Commercial program A","options":{"porePressureHead":"vertical","slices":50}},
     ],
+    paper: [{"value": 1.0, "method": "Bishop simplified, circular", "source": "Leshchinsky & Han (2004)"}, {"value": 1.02, "method": "finite differences", "source": "Leshchinsky & Han (2004)"}],
   },
   {
     id: "V067",
@@ -1896,6 +1949,7 @@ export const PROBLEMS: RawCase[] = [
     checks: [
       {"method":"Bishop","label":"Bishop simplified","published":1.439,"publishedBy":"Commercial program A"},
     ],
+    paper: [{"value": 1.44, "method": "Ordinary", "source": "Low (1989)"}, {"value": 1.44, "method": "Bishop simplified", "source": "Low (1989)"}],
   },
   {
     id: "V068",
@@ -1903,11 +1957,12 @@ export const PROBLEMS: RawCase[] = [
     reference: "Low (1989).",
     surface: "fixed",
     units: "SI",
-    description: "Stiff upper slope on two undrained clays, the lowest with Su increasing linearly with depth (S = f(datum)), on the circle that carries commercial program A's published values.",
+    description: "Stiff upper slope on two undrained clays, the lowest with Su increasing linearly with depth (S = f(datum)), on the circle that carries a commercial program's published values.",
     definition: {"coordinates":[[0,0],[0,8],[10,8],[26,16],[40,16],[40,0]],"materials":[{"name":"Upper","unitWeight":20,"frictionAngle":0,"cohesion":0,"model":{"kind":"mohr-coulomb","unitWeight":20,"cohesion":95,"frictionAngle":15}},{"name":"Middle","unitWeight":20,"frictionAngle":0,"cohesion":0,"model":{"kind":"mohr-coulomb","unitWeight":20,"cohesion":15,"frictionAngle":0}},{"name":"Lower","unitWeight":20,"frictionAngle":0,"cohesion":0,"model":{"kind":"s-f-datum","unitWeight":20,"suRef":15,"yRef":4,"rate":3.75}}],"materialBoundaries":[{"coordinates":[[-1,8],[41,8]],"materialName":""},{"coordinates":[[-1,4],[41,4]],"materialName":""}],"regionAssignments":[{"point":[10.2,8.05],"materialName":"Upper"},{"point":[0.4,6],"materialName":"Middle"},{"point":[0.4,2],"materialName":"Lower"}],"customSearchPlanes":[{"cx":19,"cy":18.5,"radius":18}],"customPlanesOnly":true,"orientation":"rtl"},
     checks: [
       {"method":"Bishop","label":"Bishop simplified","published":1.192,"publishedBy":"Commercial program A"},
     ],
+    paper: [{"value": 1.36, "method": "Ordinary", "source": "Low (1989)"}, {"value": 1.14, "method": "Bishop simplified", "source": "Low (1989)"}, {"value": 1.17, "source": "Kim (2002)"}],
   },
   {
     id: "V069a",
@@ -1936,6 +1991,7 @@ export const PROBLEMS: RawCase[] = [
     checks: [
       {"method":"Bishop","label":"Bishop simplified","published":1.212,"publishedBy":"Commercial program A","options":{"porePressureHead":"vertical"}},
     ],
+    paper: [{"value": 1.2, "method": "stability chart", "source": "Morgenstern (1963)"}],
   },
   {
     id: "V070",
@@ -1957,7 +2013,7 @@ export const PROBLEMS: RawCase[] = [
     reference: "Pockoski & Duncan (2000), slope 1.",
     surface: "fixed",
     units: "SI",
-    description: "2:1 slope with a water table, on the circle published by commercial program A; pore pressure from the vertical head below the piezometric line. Converted to SI.",
+    description: "2:1 slope with a water table, on the circle published by a commercial program; pore pressure from the vertical head below the piezometric line. Converted to SI.",
     definition: {"coordinates":[[-22.86,22.86],[-22.86,30.48],[0,30.48],[30.48,45.72],[51.816,45.72],[51.816,22.86]],"materials":[{"name":"Sandy clay","unitWeight":18.8504952,"frictionAngle":0,"cohesion":0,"model":{"kind":"mohr-coulomb","unitWeight":18.8504952,"cohesion":14.364078000000001,"frictionAngle":30}}],"materialBoundaries":[],"regionAssignments":[{"point":[-22.11324,22.91],"materialName":"Sandy clay"}],"customSearchPlanes":[{"cx":7.346594400000001,"cy":59.514028800000006,"radius":30.561076800000002}],"customPlanesOnly":true,"waterTable":{"mode":"custom","value":[[-22.86,30.48],[0,30.48],[30.48,42.672000000000004],[51.816,42.672000000000004]]}},
     checks: [
       {"method":"Bishop","label":"Bishop simplified (vertical head)","published":1.293,"publishedBy":"Commercial program A","options":{"porePressureHead":"vertical"}},
@@ -2068,7 +2124,7 @@ export const PROBLEMS: RawCase[] = [
     reference: "Pockoski & Duncan (2000), Comparison of computer programs for analysis of reinforced slopes. Virginia Tech.",
     surface: "fixed",
     units: "SI",
-    description: "44 ft tied-back excavation in eight layers, water table at grade in front of the wall and at el. 102.5 behind it (a vertical step at the wall), three tieback rows at 20° (88 ft, 40 ft bond). commercial program A's critical circle. Converted to SI.",
+    description: "44 ft tied-back excavation in eight layers, water table at grade in front of the wall and at el. 102.5 behind it (a vertical step at the wall), three tieback rows at 20° (88 ft, 40 ft bond). a commercial program's critical circle. Converted to SI.",
     definition: {"materials":[{"name":"Granular Fill","unitWeight":18.91333,"frictionAngle":30,"cohesion":0,"model":{"kind":"mohr-coulomb","unitWeight":18.91333,"cohesion":0,"frictionAngle":30}},{"name":"Cohesive Fill","unitWeight":18.01793,"frictionAngle":30,"cohesion":0,"model":{"kind":"mohr-coulomb","unitWeight":18.01793,"cohesion":0,"frictionAngle":30}},{"name":"Organic Silt","unitWeight":17.31104,"frictionAngle":0,"cohesion":0,"model":{"kind":"undrained","unitWeight":17.31104,"undrainedShearStrength":43.09223}},{"name":"OC Crust","unitWeight":18.5049,"frictionAngle":0,"cohesion":0,"model":{"kind":"undrained","unitWeight":18.5049,"undrainedShearStrength":118.98244}},{"name":"Upper Marine Clay","unitWeight":18.5049,"frictionAngle":0,"cohesion":0,"model":{"kind":"undrained","unitWeight":18.5049,"undrainedShearStrength":79.96003}},{"name":"Middle Marine Clay","unitWeight":18.5049,"frictionAngle":0,"cohesion":0,"model":{"kind":"undrained","unitWeight":18.5049,"undrainedShearStrength":45.96505}},{"name":"Lower Marine Clay","unitWeight":18.5049,"frictionAngle":0,"cohesion":0,"model":{"kind":"undrained","unitWeight":18.5049,"undrainedShearStrength":51.95008}},{"name":"Glaciomarine Deposits","unitWeight":23.10757,"frictionAngle":0,"cohesion":0,"model":{"kind":"undrained","unitWeight":23.10757,"undrainedShearStrength":71.82039}}],"coordinates":[[15.24,0],[15.24,21.0312],[60.96,21.0312],[60.96,34.4424],[106.68,34.4424],[106.68,0]],"materialBoundaries":[{"coordinates":[[60.96,33.2232],[106.68,33.2232]],"materialName":""},{"coordinates":[[60.96,28.3464],[106.68,28.3464]],"materialName":""},{"coordinates":[[60.96,26.2128],[106.68,26.2128]],"materialName":""},{"coordinates":[[60.96,25.146],[106.68,25.146]],"materialName":""},{"coordinates":[[15.24,21.0312],[60.96,21.0312],[106.68,21.0312]],"materialName":""},{"coordinates":[[15.24,12.192],[106.68,12.192]],"materialName":""},{"coordinates":[[15.24,7.3152],[106.68,7.3152]],"materialName":""}],"regionAssignments":[{"point":[83.82,33.9424],"materialName":"Granular Fill"},{"point":[83.82,32.7232],"materialName":"Cohesive Fill"},{"point":[83.82,27.8464],"materialName":"Organic Silt"},{"point":[83.82,25.7128],"materialName":"OC Crust"},{"point":[83.82,24.646],"materialName":"Upper Marine Clay"},{"point":[38.1,20.5312],"materialName":"Middle Marine Clay"},{"point":[60.96,11.692],"materialName":"Lower Marine Clay"},{"point":[60.96,6.8152],"materialName":"Glaciomarine Deposits"}],"waterTable":{"mode":"custom","value":[[15.24,21.0312],[60.96,21.0312],[60.96,31.242],[106.68,31.242]],"followBoundary":false},"reinforcements":[{"x1":60.96,"y1":31.6992,"x2":86.16481,"y2":22.5254,"tensileCapacity":177.9288,"spacing":0.3048,"end1Capacity":0,"end2Capacity":0,"direction":"axial","application":"active","pullout":{"kind":"development","length1":0,"length2":12.192}},{"x1":60.96,"y1":27.2796,"x2":86.16481,"y2":18.1058,"tensileCapacity":177.9288,"spacing":0.3048,"end1Capacity":0,"end2Capacity":0,"direction":"axial","application":"active","pullout":{"kind":"development","length1":0,"length2":12.192}},{"x1":60.96,"y1":22.86,"x2":86.16481,"y2":13.6862,"tensileCapacity":177.9288,"spacing":0.3048,"end1Capacity":0,"end2Capacity":0,"direction":"axial","application":"active","pullout":{"kind":"development","length1":0,"length2":12.192}}],"customSearchPlanes":[{"cx":63.4938,"cy":45.30486,"radius":37.98966}],"customPlanesOnly":true},
     checks: [
       {"method":"Bishop","label":"Bishop simplified","published":1.147,"publishedBy":"Commercial program A","options":{"porePressureHead":"vertical","slices":60}},
@@ -2089,6 +2145,7 @@ export const PROBLEMS: RawCase[] = [
     checks: [
       {"method":"Morgenstern-Price","label":"Spencer (M-P, constant f(x))","published":0.94,"publishedBy":"Commercial program A","options":{"intersliceFunction":"constant","porePressureHead":"vertical","slices":60}},
     ],
+    paper: [{"value": 1.0, "method": "plasticity theory", "source": "Prandtl (1920)"}],
     notes: [
       "Theoretical factor of safety 1.0; limit equilibrium with slices gives 6 % less on this mechanism (commercial program A and cSlope alike).",
       "program D 1.043 on an earlier transcription whose fan was a single kink at (5, 3.9645).",
@@ -2100,11 +2157,12 @@ export const PROBLEMS: RawCase[] = [
     reference: "Prandtl (1921).",
     surface: "fixed",
     units: "SI",
-    description: "Prandtl bearing capacity as commercial program B specifies it: weightless c = 20 kPa soil, 102.83 kPa over 10 m, the fully specified Prandtl surface (active wedge, 90° fan about the load edge, passive wedge).",
+    description: "Prandtl bearing capacity as a commercial program specifies it: weightless c = 20 kPa soil, 102.83 kPa over 10 m, the fully specified Prandtl surface (active wedge, 90° fan about the load edge, passive wedge).",
     definition: {"orientation":"ltr","coordinates":[[-20,-20],[-20,0],[40,0],[40,-20]],"materials":[{"name":"Soil","unitWeight":0.000001,"frictionAngle":0,"cohesion":0,"model":{"kind":"undrained","unitWeight":0.000001,"undrainedShearStrength":20,"suRefDepth":0,"suRateOfChange":0}}],"regionAssignments":[{"point":[0,-1],"materialName":"Soil"}],"udls":[{"magnitude":102.83,"x1":0,"x2":10}],"customSurfaces":[{"points":[[-0.05,0.05],[5,-5],[5.45481,-5.41675],[5.9442,-5.79228],[6.46447,-6.12372],[7.01164,-6.40856],[7.58155,-6.64463],[8.16987,-6.83013],[8.77212,-6.96364],[9.38372,-7.04416],[10,-7.07107],[10.61628,-7.04416],[11.22788,-6.96364],[11.83013,-6.83013],[12.41845,-6.64463],[12.98836,-6.40856],[13.53553,-6.12372],[14.0558,-5.79228],[14.54519,-5.41675],[15,-5],[20.05,0.05]]}],"customPlanesOnly":true},
     checks: [
       {"method":"Morgenstern-Price","label":"Morgenstern-Price (half-sine)","published":0.96,"publishedBy":"Commercial program B","options":{"slices":60}},
     ],
+    paper: [{"value": 1.0, "method": "plasticity theory", "source": "Prandtl (1921)"}],
     notes: [
       "Strip load 102.83 kPa = c(π + 2) over 10 m; the domain size is not given in the manual (irrelevant for a weightless soil on a fixed surface).",
       "Surface: active wedge under the load (apex at x = 5, 5 m deep), fan centred on the load's right edge (R = 7.071 m), passive wedge to x = 20 — the mechanism drawn in Fig. 49. commercial program B Janbu (uncorrected) 0.895; entry-exit search: Bishop 1.056, Janbu 1.031, M-P 1.08. Theory 1.0.",
@@ -2123,6 +2181,7 @@ export const PROBLEMS: RawCase[] = [
       {"method":"Janbu","label":"Janbu simplified","published":1.049,"publishedBy":"Commercial program A, commercial program C, Priest","options":{"tensionCrackDepth":15,"tensionCrackWater":0.25}},
       {"method":"Morgenstern-Price","label":"Spencer (M-P, constant f(x))","published":1.049,"publishedBy":"Commercial program A, commercial program C, Priest","options":{"intersliceFunction":"constant","tensionCrackDepth":15,"tensionCrackWater":0.25}},
     ],
+    paper: [{"value": 1.049, "source": "Priest (1993)"}],
   },
   {
     id: "V080",
@@ -2130,7 +2189,7 @@ export const PROBLEMS: RawCase[] = [
     reference: "Priest (1993).",
     surface: "fixed",
     units: "SI",
-    description: "Priest's rigid block on a 30° plane with commercial program B's 60° face (crest at x = 17.321): 15 m tension crack with 3.75 m of water and a water table along the plane.",
+    description: "Priest's rigid block on a 30° plane with a commercial program's 60° face (crest at x = 17.321): 15 m tension crack with 3.75 m of water and a water table along the plane.",
     definition: {"coordinates":[[-25,-15],[-25,0],[0,0],[17.321,30],[60,30],[60,-15]],"materials":[{"name":"Block","unitWeight":25,"frictionAngle":0,"cohesion":0,"model":{"kind":"mohr-coulomb","unitWeight":25,"cohesion":20,"frictionAngle":30}}],"materialBoundaries":[],"regionAssignments":[{"point":[-24.15,-14.95],"materialName":"Block"}],"orientation":"rtl","waterTable":{"mode":"custom","value":[[-25,0],[0,0],[25.981,18.75],[60,18.75]]},"customSurfaces":[{"points":[[0,0],[51.962,30]]}],"customPlanesOnly":true},
     checks: [
       {"method":"Morgenstern-Price","label":"Morgenstern-Price (half-sine)","published":1.049,"publishedBy":"Commercial program B","options":{"slices":50,"tensionCrackDepth":15,"tensionCrackWater":0.25}},
@@ -2237,6 +2296,7 @@ export const PROBLEMS: RawCase[] = [
     checks: [
       {"method":"Janbu","label":"Janbu corrected (f0)","published":0.89,"publishedBy":"Commercial program A","options":{"porePressureHead":"vertical","slices":50,"janbuCorrection":true}},
     ],
+    paper: [{"value": 0.887, "method": "force-equilibrium trial wedge", "source": "Sheahan & Ho (2003)"}],
     notes: [
       "Sheahan (trial wedge) 0.887; program D 0.899.",
     ],
@@ -2252,6 +2312,7 @@ export const PROBLEMS: RawCase[] = [
     checks: [
       {"method":"Janbu","label":"Janbu corrected (f0)","published":0.989,"publishedBy":"Commercial program A","options":{"porePressureHead":"vertical","slices":50,"janbuCorrection":true}},
     ],
+    paper: [{"value": 0.989, "method": "force-equilibrium trial wedge", "source": "Sheahan & Ho (2003)"}],
     notes: [
       "Table 48.2 lists an out-of-plane spacing of 1.5 m; 1.15 m (the Clouterre wall) reproduces commercial program A's results at all six plane angles and is used here.",
       "Sheahan & Ho 0.989 at 55° (force-equilibrium trial wedge).",
@@ -2268,6 +2329,7 @@ export const PROBLEMS: RawCase[] = [
     checks: [
       {"method":"Janbu","label":"Janbu corrected (f0)","published":1.123,"publishedBy":"Commercial program A","options":{"porePressureHead":"vertical","slices":50,"janbuCorrection":true}},
     ],
+    paper: [{"value": 1.176, "method": "force-equilibrium trial wedge", "source": "Sheahan & Ho (2003)"}],
     notes: [
       "Sheahan & Ho 1.176 (force-equilibrium trial wedge).",
     ],
@@ -2283,6 +2345,7 @@ export const PROBLEMS: RawCase[] = [
     checks: [
       {"method":"Janbu","label":"Janbu corrected (f0)","published":1.043,"publishedBy":"Commercial program A","options":{"porePressureHead":"vertical","slices":50,"janbuCorrection":true}},
     ],
+    paper: [{"value": 1.07, "method": "force-equilibrium trial wedge", "source": "Sheahan & Ho (2003)"}],
     notes: [
       "Sheahan & Ho 1.070 (force-equilibrium trial wedge).",
     ],
@@ -2298,6 +2361,7 @@ export const PROBLEMS: RawCase[] = [
     checks: [
       {"method":"Janbu","label":"Janbu corrected (f0)","published":0.945,"publishedBy":"Commercial program A","options":{"porePressureHead":"vertical","slices":50,"janbuCorrection":true}},
     ],
+    paper: [{"value": 0.929, "method": "force-equilibrium trial wedge", "source": "Sheahan & Ho (2003)"}],
     notes: [
       "Sheahan & Ho 0.929 (force-equilibrium trial wedge).",
     ],
@@ -2313,6 +2377,7 @@ export const PROBLEMS: RawCase[] = [
     checks: [
       {"method":"Janbu","label":"Janbu corrected (f0)","published":0.922,"publishedBy":"Commercial program A","options":{"porePressureHead":"vertical","slices":50,"janbuCorrection":true}},
     ],
+    paper: [{"value": 0.893, "method": "force-equilibrium trial wedge", "source": "Sheahan & Ho (2003)"}],
     notes: [
       "Sheahan & Ho 0.893 (force-equilibrium trial wedge).",
     ],
@@ -2328,6 +2393,7 @@ export const PROBLEMS: RawCase[] = [
     checks: [
       {"method":"Janbu","label":"Janbu corrected (f0)","published":0.923,"publishedBy":"Commercial program A","options":{"porePressureHead":"vertical","slices":50,"janbuCorrection":true}},
     ],
+    paper: [{"value": 0.887, "method": "force-equilibrium trial wedge", "source": "Sheahan & Ho (2003)"}],
     notes: [
       "Sheahan & Ho 0.887 (force-equilibrium trial wedge).",
     ],
@@ -2345,6 +2411,7 @@ export const PROBLEMS: RawCase[] = [
       {"method":"Morgenstern-Price","label":"Spencer (M-P, constant f(x))","published":1.758,"publishedBy":"Commercial program A","options":{"intersliceFunction":"constant","tensionCrackDepth":11.4}},
       {"method":"Janbu","label":"Janbu corrected (f0)","published":1.736,"publishedBy":"Commercial program A","options":{"tensionCrackDepth":11.4,"janbuCorrection":true}},
     ],
+    paper: [{"value": 1.76, "method": "Bishop simplified", "source": "Duncan & Wright"}, {"value": 1.63, "method": "Janbu simplified", "source": "Duncan & Wright"}, {"value": 1.74, "method": "Janbu corrected", "source": "Duncan & Wright"}, {"value": 1.76, "method": "Spencer", "source": "Duncan & Wright"}],
     notes: [
       "Without limits the search finds shallower mechanisms: a sliver in the cohesionless 1:1 fill (0.74) and, with the crack, a surface through the fill and Marsh clay (1.15). The published value is the deep failure.",
       "The source searches the whole model and models the fill as a tension-crack zone, so its circles start at the base of the fill; these limits stand in for that.",
@@ -2362,6 +2429,7 @@ export const PROBLEMS: RawCase[] = [
       {"method":"Morgenstern-Price","label":"Spencer (M-P, constant f(x))","published":1.35,"publishedBy":"Commercial program A","options":{"intersliceFunction":"constant","porePressureHead":"vertical","slices":60,"tensionCrackDepth":2,"tensionCrackWater":1}},
       {"method":"Morgenstern-Price","label":"Spencer (M-P, constant f(x))","published":1.332,"publishedBy":"Program D","options":{"intersliceFunction":"constant","porePressureHead":"vertical","slices":60,"tensionCrackDepth":2,"tensionCrackWater":1}},
     ],
+    paper: [{"value": 1.35, "method": "Spencer, at T = 170 kN/m", "source": "Tandjiria (2002)"}],
   },
   {
     id: "V086b",
@@ -2375,6 +2443,7 @@ export const PROBLEMS: RawCase[] = [
       {"method":"Morgenstern-Price","label":"Spencer (M-P, constant f(x))","published":0.975,"publishedBy":"Commercial program A","options":{"intersliceFunction":"constant","tensionCrackDepth":2,"tensionCrackWater":1}},
       {"method":"Morgenstern-Price","label":"Spencer (M-P, constant f(x))","published":0.975,"publishedBy":"Commercial program A","options":{"intersliceFunction":"constant","tensionCrackAuto":true,"tensionCrackWater":1},"note":"Automatic crack depth 2c/γ = 2.06 m instead of the given 2 m."},
     ],
+    paper: [{"value": 0.981, "method": "Spencer", "source": "Tandjiria (2002)"}],
     notes: [
       "program D gives 0.968 on the reference circle, as cSlope does; Tandjiria 0.981.",
     ],
@@ -2390,6 +2459,7 @@ export const PROBLEMS: RawCase[] = [
     checks: [
       {"method":"Morgenstern-Price","label":"Spencer (M-P, constant f(x))","published":1.209,"publishedBy":"Commercial program A","options":{"intersliceFunction":"constant","tensionCrackDepth":2}},
     ],
+    paper: [{"value": 1.219, "method": "Spencer", "source": "Tandjiria (2002)"}],
     notes: [
       "program D gives 1.200 on the reference circle; Tandjiria 1.219.",
     ],
@@ -2408,6 +2478,7 @@ export const PROBLEMS: RawCase[] = [
       {"method":"Bishop","label":"Bishop simplified","published":2.254,"publishedBy":"Program D","options":{"porePressureHead":"vertical"}},
       {"method":"Janbu","label":"Janbu corrected (f0)","published":2.29,"publishedBy":"Commercial program A","options":{"porePressureHead":"vertical","janbuCorrection":true}},
     ],
+    paper: [{"value": 2.3, "source": "USACE EM 1110-2-1902"}],
     notes: [
       "The three commercial program A models carry slightly different digitisations of the same dam; program D reads about 2 % below commercial program A here on the same input, as cSlope does. USACE 2.30; commercial program A GLE 2.309.",
       "An independent Bishop calculation on commercial program A's circle (R = 169.0 ft) gives 2.243, as cSlope does; commercial program A's 2.307 (Bishop and Spencer) is not explained and is not used as a check.",
@@ -2427,6 +2498,7 @@ export const PROBLEMS: RawCase[] = [
       {"method":"Bishop","label":"Bishop simplified","published":2.447,"publishedBy":"Commercial program A","options":{"porePressureHead":"vertical","tensionCrackDepth":2.1336}},
       {"method":"Janbu","label":"Janbu corrected (f0)","published":2.43,"publishedBy":"Commercial program A","options":{"porePressureHead":"vertical","tensionCrackDepth":2.1336,"janbuCorrection":true}},
     ],
+    paper: [{"value": 2.44, "method": "Spencer", "source": "USACE EM 1110-2-1902"}],
     notes: [
       "Neither figure labels its vertices. The crest (±12 ft) and toes (±206.18 ft) are inferred from commercial program A's printed exit point (161.895, 11.403 ft), which lies on this face; commercial program A GLE 2.447, USACE 2.44.",
       "The earlier outline after program D (crest ±17 ft, toes ±217 ft, from USACE's slice table) misses that exit point by 2.4 ft and gave 2.489 / 2.488 (program D and cSlope alike, 1.8 % above commercial program A).",
@@ -2446,6 +2518,7 @@ export const PROBLEMS: RawCase[] = [
       {"method":"Morgenstern-Price","label":"Spencer (M-P, constant f(x))","published":2.736,"publishedBy":"Commercial program A","options":{"intersliceFunction":"constant","porePressureHead":"vertical"}},
       {"method":"Janbu","label":"Janbu corrected (f0)","published":2.65,"publishedBy":"Commercial program A","options":{"porePressureHead":"vertical","janbuCorrection":true}},
     ],
+    paper: [{"value": 2.71, "method": "Bishop simplified", "source": "USACE EM 1110-2-1902"}],
     notes: [
       "Outline from commercial program A's printed slip-surface endpoints (Fig. 65.2): 45 ft high, crest ±15 ft, toes ±200 ft; the pool line ends on the upstream face at x = 117.778 ft. commercial program A GLE 2.744, USACE 2.71 (Bishop).",
       "Table 65.1 prints φ = 35° for the embankment, which gives 3.10–3.14; φ = 25° (USACE fig. 4-2) reproduces commercial program A's results and is used.",
@@ -2465,6 +2538,7 @@ export const PROBLEMS: RawCase[] = [
       {"method":"Morgenstern-Price","label":"Spencer (M-P, constant f(x))","published":1.328,"publishedBy":"Commercial program A","options":{"intersliceFunction":"constant"}},
       {"method":"Janbu","label":"Janbu corrected (f0)","published":1.345,"publishedBy":"Commercial program A","options":{"janbuCorrection":true}},
     ],
+    paper: [{"value": 1.33, "source": "USACE EM 1110-2-1902"}],
     notes: [
       "USACE's reference value is 1.33 (two digits); commercial program A GLE 1.327.",
     ],
@@ -2475,7 +2549,7 @@ export const PROBLEMS: RawCase[] = [
     reference: "USACE EM 1110-2-1902, example E-10.",
     surface: "fixed",
     units: "SI",
-    description: "Undrained three-layer slope with 8 ft of water ponded against its toe (pool el. 0), on commercial program A's circle (48.262, 28, R = 47.683 ft; Fig. 68.2). Converted to SI.",
+    description: "Undrained three-layer slope with 8 ft of water ponded against its toe (pool el. 0), on a commercial program's circle (48.262, 28, R = 47.683 ft; Fig. 68.2). Converted to SI.",
     definition: {"coordinates":[[0,-6.096],[0,-2.4384],[12.192,-2.4384],[15.24,1.2192],[18.288,4.8768],[30.48,4.8768],[30.48,-6.096]],"materials":[{"name":"Soil 1","unitWeight":18.8504952,"frictionAngle":0,"cohesion":0,"model":{"kind":"undrained","unitWeight":18.8504952,"undrainedShearStrength":28.728156000000002,"suRefDepth":0,"suRateOfChange":0}},{"name":"Soil 2","unitWeight":15.708746000000001,"frictionAngle":0,"cohesion":0,"model":{"kind":"undrained","unitWeight":15.708746000000001,"undrainedShearStrength":19.152104,"suRefDepth":0,"suRateOfChange":0}},{"name":"Soil 3","unitWeight":16.4941833,"frictionAngle":0,"cohesion":0,"model":{"kind":"undrained","unitWeight":16.4941833,"undrainedShearStrength":23.94013,"suRefDepth":0,"suRateOfChange":0}}],"materialBoundaries":[{"coordinates":[[-1,1.2192],[31.48,1.2192]],"materialName":""},{"coordinates":[[-1,-2.4384],[31.48,-2.4384]],"materialName":""}],"regionAssignments":[{"point":[15.3924,1.2692],"materialName":"Soil 1"},{"point":[13.8684,-0.6096],"materialName":"Soil 2"},{"point":[0.3048,-4.2672],"materialName":"Soil 3"}],"customSearchPlanes":[{"cx":14.7102576,"cy":8.5344,"radius":14.533778400000001}],"customPlanesOnly":true,"orientation":"rtl","waterTable":{"mode":"custom","value":[[0,0],[30.48,0]],"followBoundary":false}},
     checks: [
       {"method":"Bishop","label":"Bishop simplified","published":1.241,"publishedBy":"Commercial program A"},
@@ -2483,6 +2557,7 @@ export const PROBLEMS: RawCase[] = [
       {"method":"Morgenstern-Price","label":"Morgenstern-Price (half-sine)","published":1.244,"publishedBy":"Commercial program A (GLE)"},
       {"method":"Janbu","label":"Janbu corrected (f0)","published":1.385,"publishedBy":"Commercial program A","options":{"janbuCorrection":true}},
     ],
+    paper: [{"value": 1.33, "source": "USACE EM 1110-2-1902"}],
     notes: [
       "The text describes USACE's circle (centre 8.4 ft right of and 36 ft above the toe, tangent to the base of soil 3: 48.4, 28, R = 48); commercial program A's printed circle is slightly smaller. cSlope gives the same FOS on both (1.235).",
       "The water above the toe acts as a load on the ground surface; the published USACE chart value is 1.33.",
@@ -2502,6 +2577,7 @@ export const PROBLEMS: RawCase[] = [
       {"method":"Morgenstern-Price","label":"Spencer (M-P, constant f(x))","published":2.026,"publishedBy":"Commercial program A","options":{"intersliceFunction":"constant"}},
       {"method":"Janbu","label":"Janbu corrected (f0)","published":1.83,"publishedBy":"Commercial program A","options":{"janbuCorrection":true}},
     ],
+    paper: [{"value": 2.01, "source": "USACE EM 1110-2-1902"}],
     notes: [
       "The kink of the piezometric line is located from the figure to about a foot; program D also reads 0.6 % low.",
     ],
@@ -2518,6 +2594,7 @@ export const PROBLEMS: RawCase[] = [
       {"method":"Bishop","label":"Bishop simplified","published":1.344,"publishedBy":"Commercial program A"},
       {"method":"Morgenstern-Price","label":"Spencer (M-P, constant f(x))","published":1.325,"publishedBy":"Commercial program A (non-circular)","options":{"intersliceFunction":"constant","nonCircularOptimization":true}},
     ],
+    paper: [{"value": 1.348, "method": "Bishop simplified", "source": "Yamagami & Ueta (1988)"}, {"value": 1.282, "method": "Ordinary", "source": "Yamagami & Ueta (1988)"}, {"value": 1.185, "method": "Janbu simplified, non-circular", "source": "Yamagami & Ueta (1988)"}, {"value": 1.339, "method": "Spencer, non-circular", "source": "Yamagami & Ueta (1988)"}, {"value": 1.33, "method": "Spencer, non-circular", "source": "Greco (1996)"}],
     notes: [
       "Yamagami & Ueta: Bishop 1.348, Spencer 1.339 (non-circular); Greco 1.33.",
     ],
@@ -2534,6 +2611,7 @@ export const PROBLEMS: RawCase[] = [
       {"method":"Morgenstern-Price","label":"Spencer (M-P, constant f(x))","published":1.398,"publishedBy":"Commercial program A (Monte Carlo)","options":{"intersliceFunction":"constant","nonCircularOptimization":true}},
       {"method":"Morgenstern-Price","label":"Morgenstern-Price (half-sine)","published":1.389,"publishedBy":"Commercial program B","options":{"slices":50,"nonCircularOptimization":true}},
     ],
+    paper: [{"value": 1.4, "upper": 1.42, "method": "Spencer, non-circular", "source": "Greco (1996)"}],
     notes: [
       "Search limited to x = 0–200; the down-slope beyond the crest is not searched, as in the source.",
       "Greco publishes 1.40–1.42 for the non-circular surface; the best circle gives 1.430.",
@@ -2550,6 +2628,7 @@ export const PROBLEMS: RawCase[] = [
     checks: [
       {"method":"Bishop","label":"Bishop simplified","published":1.102,"publishedBy":"Commercial program A"},
     ],
+    paper: [{"value": 1.1, "source": "Yamagami et al. (2000)"}],
   },
   {
     id: "V095b",
@@ -2562,6 +2641,7 @@ export const PROBLEMS: RawCase[] = [
     checks: [
       {"method":"Bishop","label":"Bishop simplified","published":1.102,"publishedBy":"Commercial program A","options":{"porePressureHead":"vertical","slices":50}},
     ],
+    paper: [{"value": 1.1, "source": "Yamagami et al. (2000)"}],
     notes: [
       "Yamagami 1.10, commercial program B 1.102.",
     ],
@@ -2577,6 +2657,7 @@ export const PROBLEMS: RawCase[] = [
     checks: [
       {"method":"Bishop","label":"Bishop simplified","published":1.193,"publishedBy":"Commercial program A","options":{"porePressureHead":"vertical","slices":50}},
     ],
+    paper: [{"value": 1.2, "source": "Yamagami et al. (2000)"}],
     notes: [
       "Yamagami 1.20, commercial program B 1.223; program D 1.185 (Ito & Matsui force, active, on the no-pile circle).",
       "On this circle the 10.7 kN passive force gives 1.172 horizontal and 1.195 tilted 51.3° (the base inclination where the circle crosses the pile).",
@@ -2588,12 +2669,13 @@ export const PROBLEMS: RawCase[] = [
     reference: "Zhu & Lee (2002).",
     surface: "search",
     units: "SI",
-    description: "Four horizontal layers under a two-bench slope with a dry tension crack 1.015 m deep at the crest (Fig. 52.1; the depth of commercial program A's surface end below the crest), dry; the circular search lands in the deep family (surface 3).",
+    description: "Four horizontal layers under a two-bench slope with a dry tension crack 1.015 m deep at the crest (Fig. 52.1; the depth of a commercial program's surface end below the crest), dry; the circular search lands in the deep family (surface 3).",
     definition: {"materials":[{"name":"Layer 1 (top)","unitWeight":18.8,"frictionAngle":18,"cohesion":20,"model":{"kind":"mohr-coulomb","unitWeight":18.8,"cohesion":20,"frictionAngle":18}},{"name":"Layer 2","unitWeight":18.5,"frictionAngle":22,"cohesion":40,"model":{"kind":"mohr-coulomb","unitWeight":18.5,"cohesion":40,"frictionAngle":22}},{"name":"Layer 3","unitWeight":18.4,"frictionAngle":26,"cohesion":25,"model":{"kind":"mohr-coulomb","unitWeight":18.4,"cohesion":25,"frictionAngle":26}},{"name":"Layer 4 (bottom)","unitWeight":18,"frictionAngle":12,"cohesion":10,"model":{"kind":"mohr-coulomb","unitWeight":18,"cohesion":10,"frictionAngle":12}}],"coordinates":[[-20,-9],[-20,0],[0,0],[6,3],[18,9],[30,15],[50,15],[50,-9]],"materialBoundaries":[{"coordinates":[[-20,0],[0,0],[6,3],[18,9],[50,9]],"materialName":""},{"coordinates":[[-20,0],[0,0],[6,3],[50,3]],"materialName":""},{"coordinates":[[-20,-6],[50,-6]],"materialName":""}],"regionAssignments":[{"point":[40,14.5],"materialName":"Layer 1 (top)"},{"point":[34,8.5],"materialName":"Layer 2"},{"point":[28,2.5],"materialName":"Layer 3"},{"point":[15,-6.5],"materialName":"Layer 4 (bottom)"}],"analysisLimits":{"entryLeftX":33.1,"entryRightX":50,"exitLeftX":-20,"exitRightX":-4.3}},
     checks: [
       {"method":"Bishop","label":"Bishop simplified","published":1.804,"publishedBy":"Commercial program A","options":{"porePressureHead":"vertical","slices":50,"tensionCrackDepth":1.015}},
       {"method":"Morgenstern-Price","label":"Spencer (M-P, constant f(x))","published":1.804,"publishedBy":"Commercial program A","options":{"intersliceFunction":"constant","porePressureHead":"vertical","slices":50,"tensionCrackDepth":1.015}},
     ],
+    paper: [{"value": 1.836, "method": "Spencer", "source": "Zhu & Lee (2002)"}, {"value": 1.823, "method": "Morgenstern-Price", "source": "Zhu & Lee (2002)"}, {"value": 1.429, "method": "Bishop simplified", "source": "Zhu & Lee (2002)"}, {"value": 1.229, "method": "Ordinary", "source": "Zhu & Lee (2002)"}],
     notes: [
       "Entry on the upper bench (x = 33.1–50) and exit on the lower bench (x = −20 to −4.3), as in the source.",
       "Zhu & Lee (surface 3): Spencer 1.836, M-P 1.823. program D 1.796 (Bishop) without the crack. V096c checks the reference circle itself.",
@@ -2611,6 +2693,7 @@ export const PROBLEMS: RawCase[] = [
       {"method":"Bishop","label":"Bishop simplified","published":1.176,"publishedBy":"Commercial program A","options":{"porePressureHead":"vertical","slices":50,"tensionCrackDepth":1.015}},
       {"method":"Morgenstern-Price","label":"Spencer (M-P, constant f(x))","published":1.189,"publishedBy":"Commercial program A","options":{"intersliceFunction":"constant","porePressureHead":"vertical","slices":50,"tensionCrackDepth":1.015}},
     ],
+    paper: [{"value": 1.211, "method": "Spencer", "source": "Zhu & Lee (2002)"}, {"value": 1.197, "method": "Morgenstern-Price", "source": "Zhu & Lee (2002)"}],
     notes: [
       "Entry on the upper bench (x = 33.1–50) and exit on the lower bench (x = −20 to −4.3), as in the source.",
       "Zhu & Lee (surface 3): Spencer 1.211, M-P 1.197. program D 1.189 (Spencer) without the crack.",
@@ -2628,6 +2711,7 @@ export const PROBLEMS: RawCase[] = [
       {"method":"Morgenstern-Price","label":"Spencer (M-P, constant f(x))","published":1.804,"publishedBy":"Commercial program A","options":{"intersliceFunction":"constant","tensionCrackDepth":1.015}},
       {"method":"Bishop","label":"Bishop simplified","published":1.804,"publishedBy":"Commercial program A","options":{"tensionCrackDepth":1.015}},
     ],
+    paper: [{"value": 1.836, "method": "Spencer", "source": "Zhu & Lee (2002)"}, {"value": 1.823, "method": "Morgenstern-Price", "source": "Zhu & Lee (2002)"}, {"value": 1.429, "method": "Bishop simplified", "source": "Zhu & Lee (2002)"}, {"value": 1.229, "method": "Ordinary", "source": "Zhu & Lee (2002)"}],
     notes: [
       "Crack depth from commercial program A's right endpoint (41.663, 13.985) under the 15 m crest.",
       "Zhu & Lee: Spencer 1.836, M-P 1.823.",

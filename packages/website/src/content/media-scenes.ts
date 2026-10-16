@@ -49,14 +49,14 @@ const MATERIAL_TABLE_LEFT: [string, ...unknown[]] = [
 
 /**
  * A home-page example (home-examples.ts) opened in the app and run with
- * the check the page shows: media/home/<id>.png, as "Export PNG" saves it.
+ * the analysis the page shows: media/home/<id>.png, as "Export PNG" saves it.
  */
-function homeExample({ id, check }: { id: string; check: number }): Scene {
+function homeExample({ id, method }: { id: string; method: string }): Scene {
   return {
     id: `home-${id}`,
     title: `Verification example ${id}`,
     description: `Critical surface of verification problem ${id}`,
-    verification: { id, check },
+    verification: { id, method },
     setup: {
       mode: "result",
       runAnalysis: true,

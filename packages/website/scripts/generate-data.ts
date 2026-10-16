@@ -1,9 +1,11 @@
 /**
  * Runs every published verification problem through the engine and writes
  * src/content/generated/verification.json for the site: the verification
- * table, the key figures on the home page and the examples there. The
- * problems carry cSlope's own ids and anonymous sources already; the result
- * is still checked for forbidden names before it is written.
+ * table, the key figures on the home page and the examples there. Per
+ * problem: the values its sources publish, and for each analysis cSlope
+ * runs, cSlope's result and the range of other programs' results, without
+ * naming any program and without marking results as passed. The result is
+ * checked for forbidden names before it is written.
  *
  *   bun scripts/generate-data.ts            (all problems, in parallel)
  *   bun scripts/generate-data.ts --cached   (reuse the last engine results)
@@ -24,11 +26,14 @@ import {
   RELIABILITY_CASES,
   VERIFICATION_CASES,
   agrees,
+  isProgramSource,
+  paperValues,
+  presentedAnalyses,
   runReliabilityCase,
   runVerification,
 } from "@cslope/engine/verification";
 import { findForbiddenNames } from "./forbidden-names";
-import type { VerificationData, VerificationProblem, ReliabilityProblem } from "../src/content/verification-types";
+import type { ReliabilityProblem, VerificationData, VerificationProblem } from "../src/content/verification-types";
 
 // The table is published: it uses the full search, like the verification
 // report (the test suite runs a shorter one on circular problems). The
@@ -96,6 +101,7 @@ export function buildData(
   fos: Record<string, (number | null)[]>,
   reliabilityResults: Record<string, number[]>,
 ): VerificationData {
+  const value = (raw: number | null | undefined) => (raw == null || !Number.isFinite(raw) ? null : round(raw));
   const problems: VerificationProblem[] = VERIFICATION_CASES.map((c) => ({
     id: c.id,
     title: c.title,
@@ -104,38 +110,43 @@ export function buildData(
     commercial: COMMERCIAL.test(c.reference),
     surface: c.surface,
     units: c.units,
-    // The reference and the computed value only: the site shows no
-    // tolerances or pass marks (the engine's tests keep those).
-    checks: c.checks.map((k, j) => {
-      const raw = fos[c.id]?.[j] ?? null;
-      const computed = raw == null ? null : round(raw);
-      const deviation = computed == null ? null : (computed - k.published) / k.published;
-      return {
-        method: k.label,
-        published: k.published,
-        source: k.publishedBy,
-        computed,
-        deviation: deviation == null ? null : round(deviation, 5),
-      };
-    }),
+    published: paperValues(c),
+    // Each analysis once, with cSlope's result (that of its first check:
+    // the checks of one analysis run the same input) and the other
+    // programs' range. No pass marks: the engine's tests keep those.
+    results: presentedAnalyses(c).map((a) => ({
+      method: a.label,
+      computed: value(fos[c.id]?.[a.checks[0]]),
+      programs: a.programs && { min: a.programs.min, max: a.programs.max },
+    })),
   }));
-  const reliability: ReliabilityProblem[] = RELIABILITY_CASES.map((c, i) => ({
-    id: c.id,
-    title: VERIFICATION_CASES.find((v) => v.id === c.id)?.title ?? `Probabilistic problem ${c.id}`,
-    checks: c.checks.map(([quantity, published, publishedBy], j) => {
-      const value = reliabilityResults[i]?.[j];
-      const raw = value == null || !Number.isFinite(value) ? null : value;
-      return { quantity, published, source: publishedBy, computed: raw == null ? null : round(raw) };
-    }),
-  }));
-  const checks = problems.flatMap((p) => p.checks);
+  const reliability: ReliabilityProblem[] = RELIABILITY_CASES.map((c, i) => {
+    const quantities = [...new Set(c.checks.map(([q]) => q))].filter((q) => q !== "fos");
+    return {
+      id: c.id,
+      title: VERIFICATION_CASES.find((v) => v.id === c.id)?.title ?? `Probabilistic problem ${c.id}`,
+      rows: quantities.map((quantity) => {
+        const checks = c.checks.map((k, j) => ({ k, j })).filter(({ k }) => k[0] === quantity);
+        const programs = checks.filter(({ k }) => isProgramSource(k[2])).map(({ k }) => k[1]);
+        return {
+          quantity,
+          computed: value(reliabilityResults[i]?.[checks[0].j]),
+          published: checks
+            .filter(({ k }) => !isProgramSource(k[2]))
+            .map(({ k }) => ({ value: k[1], source: k[2] })),
+          programs: programs.length ? { min: Math.min(...programs), max: Math.max(...programs) } : null,
+        };
+      }),
+    };
+  });
   return {
     summary: {
       problems: problems.length,
-      checks: checks.length,
+      results: problems.reduce((n, p) => n + p.results.length, 0),
+      publishedValues: problems.reduce((n, p) => n + p.published.length, 0),
+      problemsWithPublished: problems.filter((p) => p.published.length > 0).length,
       literatureProblems: problems.filter((p) => p.literature).length,
-      // β and Pf; a probabilistic problem's mean factor of safety is not counted.
-      reliabilityChecks: reliability.reduce((n, r) => n + r.checks.filter((k) => k.quantity !== "fos").length, 0),
+      reliabilityQuantities: reliability.reduce((n, r) => n + r.rows.length, 0),
     },
     problems,
     reliability,

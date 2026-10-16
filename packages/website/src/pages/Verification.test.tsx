@@ -33,12 +33,21 @@ describe("Verification page", () => {
     expect(screen.getByText("No problems match the filter.")).toBeInTheDocument();
   });
 
-  it("counts the checks shown", () => {
+  it("counts the analyses shown", () => {
     renderPage();
     const s = VERIFICATION.summary;
-    expect(screen.getByText(`${s.checks} of ${s.checks} checks in ${s.problems} problems`)).toBeInTheDocument();
-    fireEvent.change(screen.getByLabelText("Published by"), { target: { value: "literature" } });
-    expect(screen.queryByText(`${s.checks} of ${s.checks} checks in ${s.problems} problems`)).toBeNull();
+    const all = `${s.results} of ${s.results} analyses in ${s.problems} problems`;
+    expect(screen.getByText(all)).toBeInTheDocument();
+    fireEvent.change(screen.getByLabelText("Published value"), { target: { value: "without" } });
+    expect(screen.queryByText(all)).toBeNull();
+  });
+
+  it("presents results without pass marks and without naming programs", () => {
+    renderPage();
+    const text = document.body.textContent ?? "";
+    expect(text).not.toMatch(/\b[Pp]rogram [A-Z]\b/);
+    expect(text).not.toMatch(/within tolerance|deviation|\u2713|\u2717/i);
+    expect(screen.getAllByText("Other programs").length).toBeGreaterThan(0);
   });
 
   it("names the document title", () => {

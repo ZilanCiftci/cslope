@@ -18,6 +18,7 @@ import type { SlopeDefinition } from "../types/slope-definition";
 import type { MaterialModel } from "../types/material-models";
 import type { AnalysisMethod, AnalysisOptions } from "../types/analysis";
 import type { ReliabilityCaseData, ReliabilityQuantity } from "./reliability-cases";
+import type { PaperValue } from "./presentation";
 import { PROBLEMS } from "./problems";
 import { analyseReliability } from "../model/reliability";
 import { referenceTolerance } from "./tolerance";
@@ -55,6 +56,11 @@ export interface VerificationCase {
   description: string;
   definition: SlopeDefinition;
   checks: VerificationCheck[];
+  /**
+   * Values the sources publish that are not checks (the tests compare with
+   * the other programs' values), shown in the report and on the website.
+   */
+  paper?: PaperValue[];
   notes?: string[];
   /** Input digitised from a figure (a surface, a water table); see tolerance.ts. */
   inputFromFigure?: boolean;

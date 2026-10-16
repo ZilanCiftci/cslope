@@ -17,26 +17,28 @@ import {
   NON_CIRCULAR_VERIFICATION_OPTIONS,
   VERIFICATION_CASES,
   VERIFICATION_OPTIONS,
+  presentedAnalyses,
 } from "@cslope/engine/verification";
 import { modelFromDefinition } from "../../src/store/definition-model";
 
 /**
- * A verification problem as an app model, with the options of one check
- * and the full search, as the published verification table runs it.
+ * A verification problem as an app model, run as one of its analyses (by
+ * cSlope's name for it) with the full search, as the published
+ * verification table runs it.
  */
-function verificationModel(id: string, check: number) {
+function verificationModel(id: string, method: string) {
   const c = VERIFICATION_CASES.find((v) => v.id === id);
-  const k = c?.checks[check];
-  if (!c || !k) throw new Error(`No verification problem ${id} check ${check}`);
+  const a = c && presentedAnalyses(c).find((x) => x.label === method);
+  if (!c || !a) throw new Error(`No verification problem ${id} with the analysis "${method}"`);
   return modelFromDefinition(c.definition, {
     id: `verification-${id}`,
     name: c.title,
     options: {
-      method: k.method,
+      method: a.method,
       ...VERIFICATION_OPTIONS,
       ...FULL_VERIFICATION_OPTIONS,
-      ...(k.options?.nonCircularOptimization ? NON_CIRCULAR_VERIFICATION_OPTIONS : {}),
-      ...k.options,
+      ...(a.options.nonCircularOptimization ? NON_CIRCULAR_VERIFICATION_OPTIONS : {}),
+      ...a.options,
     },
   });
 }
@@ -202,7 +204,7 @@ export async function captureScene(page: Page, scene: Scene): Promise<Buffer> {
   if (!scene.benchmark === !scene.verification) {
     throw new Error(`Scene "${scene.id}" needs a benchmark or a verification problem`);
   }
-  const model = scene.verification ? verificationModel(scene.verification.id, scene.verification.check) : null;
+  const model = scene.verification ? verificationModel(scene.verification.id, scene.verification.method) : null;
 
   await page.evaluate(
     ({ benchmarkName, model, setup }) => {

@@ -1,34 +1,38 @@
 import data from "./generated/verification.json";
-import type { VerificationData, VerificationProblem, VerificationCheck } from "./verification-types";
+import type { PublishedValue, VerificationData, VerificationProblem, VerificationResult } from "./verification-types";
 import { HOME_EXAMPLES } from "./home-examples";
 
 export const VERIFICATION = data as VerificationData;
 
 export interface Example {
   problem: VerificationProblem;
-  check: VerificationCheck;
+  /** The analysis shown (cSlope's result and the other programs' range). */
+  result: VerificationResult;
+  /** The source's value shown next to it, if the problem has one. */
+  published: PublishedValue | null;
 }
 
 /** The home page's examples (home-examples.ts) with their data; missing ones are skipped. */
 export function homeExamples(d: VerificationData = VERIFICATION): Example[] {
-  return HOME_EXAMPLES.flatMap(({ id, check }) => {
+  return HOME_EXAMPLES.flatMap(({ id, method }) => {
     const problem = d.problems.find((p) => p.id === id);
-    const k = problem?.checks[check];
-    return problem && k && k.computed != null ? [{ problem, check: k }] : [];
+    const result = problem?.results.find((r) => r.method === method);
+    return problem && result && result.computed != null
+      ? [{ problem, result, published: problem.published[0] ?? null }]
+      : [];
   });
 }
 
-export type SourceKind = "literature" | "program";
-export type SourceFilter = "all" | SourceKind;
+export type PublishedFilter = "all" | "with" | "without";
 export type MethodFilter = "all" | "Bishop" | "Janbu" | "Spencer" | "Morgenstern-Price";
 
 export interface Filter {
   query: string;
-  source: SourceFilter;
+  published: PublishedFilter;
   method: MethodFilter;
 }
 
-/** The method family of a check, from the source's name for it. */
+/** The method family of an analysis, from cSlope's name for it. */
 export function methodFamily(label: string): Exclude<MethodFilter, "all"> {
   if (/spencer/i.test(label)) return "Spencer";
   if (/janbu/i.test(label)) return "Janbu";
@@ -36,39 +40,34 @@ export function methodFamily(label: string): Exclude<MethodFilter, "all"> {
   return "Morgenstern-Price";
 }
 
+/** A value as the source prints it: "1.24–1.27" or "1.451". */
+export function formatPublished(v: Pick<PublishedValue, "value" | "upper">): string {
+  const f = (x: number) => {
+    const s = String(x);
+    const dot = s.indexOf(".");
+    return x.toFixed(Math.min(4, Math.max(2, dot < 0 ? 0 : s.length - dot - 1)));
+  };
+  return v.upper != null ? `${f(v.value)}–${f(v.upper)}` : f(v.value);
+}
+
+/** A range of other programs' values: "1.409–1.417", or one value. */
+export function formatRange(r: { min: number; max: number } | null, digits = 3): string {
+  if (!r) return "–";
+  return r.min === r.max ? r.min.toFixed(digits) : `${r.min.toFixed(digits)}–${r.max.toFixed(digits)}`;
+}
+
 /**
- * The reference values by kind: from the literature (analytical solutions
- * counted apart) and from other programs.
+ * The problems that match the filter, with only the analyses of the chosen
+ * method family; problems left without an analysis are dropped.
  */
-export function checkCounts(d: VerificationData = VERIFICATION) {
-  const checks = d.problems.flatMap((p) => p.checks);
-  const theory = checks.filter((k) => /^theory\b/i.test(k.source)).length;
-  const programs = checks.filter((k) => sourceKind(k) === "program").length;
-  return { literature: checks.length - programs - theory, theory, programs };
-}
-
-/** Where a check's reference value comes from: the literature or another program. */
-export function sourceKind(k: VerificationCheck): SourceKind {
-  // "Commercial program A", and the other programs ("Program D").
-  if (/\b[Pp]rogram [A-Z]\b/.test(k.source)) return "program";
-  return "literature";
-}
-
-/** The problems and checks that match the filter; problems with no matching check are left out. */
 export function filterProblems(problems: VerificationProblem[], f: Filter): VerificationProblem[] {
   const words = f.query.toLowerCase().split(/\s+/).filter(Boolean);
   return problems
     .filter((p) => {
-      const text = `${p.id} ${p.title} ${p.reference}`.toLowerCase();
+      const text = `${p.id} ${p.title} ${p.reference} ${p.published.map((v) => v.source).join(" ")}`.toLowerCase();
       return words.every((w) => text.includes(w));
     })
-    .map((p) => ({
-      ...p,
-      checks: p.checks.filter(
-        (k) =>
-          (f.method === "all" || methodFamily(k.method) === f.method) &&
-          (f.source === "all" || sourceKind(k) === f.source),
-      ),
-    }))
-    .filter((p) => p.checks.length > 0);
+    .filter((p) => f.published === "all" || (f.published === "with") === p.published.length > 0)
+    .map((p) => ({ ...p, results: p.results.filter((r) => f.method === "all" || methodFamily(r.method) === f.method) }))
+    .filter((p) => p.results.length > 0);
 }

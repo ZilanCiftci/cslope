@@ -1,9 +1,11 @@
 {
  "summary": {
   "problems": 164,
-  "checks": 355,
+  "results": 293,
+  "publishedValues": 170,
+  "problemsWithPublished": 134,
   "literatureProblems": 154,
-  "reliabilityChecks": 29
+  "reliabilityQuantities": 25
  },
  "problems": [
   {
@@ -14,41 +16,47 @@
    "commercial": false,
    "surface": "search",
    "units": "SI",
-   "checks": [
+   "published": [
+    {
+     "value": 1.451,
+     "method": "Bishop simplified",
+     "source": "Arai & Tagyo (1985)"
+    },
+    {
+     "value": 1.265,
+     "method": "Janbu simplified, non-circular",
+     "source": "Arai & Tagyo (1985)"
+    },
+    {
+     "value": 1.357,
+     "method": "Janbu corrected, non-circular",
+     "source": "Arai & Tagyo (1985)"
+    }
+   ],
+   "results": [
     {
      "method": "Bishop simplified",
-     "published": 1.409,
-     "source": "Commercial program A",
      "computed": 1.4041,
-     "deviation": -0.00348
+     "programs": {
+      "min": 1.409,
+      "max": 1.417
+     }
     },
     {
      "method": "Morgenstern-Price (half-sine)",
-     "published": 1.414,
-     "source": "Commercial program A (GLE)",
      "computed": 1.4009,
-     "deviation": -0.00926
+     "programs": {
+      "min": 1.414,
+      "max": 1.414
+     }
     },
     {
-     "method": "Bishop simplified",
-     "published": 1.417,
-     "source": "Commercial program B",
-     "computed": 1.4041,
-     "deviation": -0.0091
-    },
-    {
-     "method": "Morgenstern-Price (half-sine)",
-     "published": 1.414,
-     "source": "Commercial program B",
-     "computed": 1.4009,
-     "deviation": -0.00926
-    },
-    {
-     "method": "Spencer (M-P, constant f(x))",
-     "published": 1.386,
-     "source": "Commercial program A (non-circular)",
+     "method": "Spencer, non-circular",
      "computed": 1.3855,
-     "deviation": -0.00036
+     "programs": {
+      "min": 1.386,
+      "max": 1.386
+     }
     }
    ]
   },
@@ -60,20 +68,55 @@
    "commercial": false,
    "surface": "search",
    "units": "SI",
-   "checks": [
+   "published": [
     {
+     "value": 0.417,
      "method": "Bishop simplified",
-     "published": 0.42,
-     "source": "Commercial program A",
-     "computed": 0.4192,
-     "deviation": -0.0019
+     "source": "Arai & Tagyo (1985)"
     },
     {
-     "method": "Spencer (M-P, constant f(x))",
-     "published": 0.414,
-     "source": "Commercial program A (non-circular)",
+     "value": 0.405,
+     "method": "Janbu simplified, non-circular",
+     "source": "Arai & Tagyo (1985)"
+    },
+    {
+     "value": 0.43,
+     "method": "Janbu corrected, non-circular",
+     "source": "Arai & Tagyo (1985)"
+    },
+    {
+     "value": 0.43,
+     "method": "Bishop simplified",
+     "source": "Kim et al. (2002)"
+    },
+    {
+     "value": 0.39,
+     "upper": 0.44,
+     "method": "Spencer, non-circular",
+     "source": "Kim et al. (2002)"
+    },
+    {
+     "value": 0.39,
+     "method": "Spencer, non-circular",
+     "source": "Greco (1996)"
+    }
+   ],
+   "results": [
+    {
+     "method": "Bishop simplified",
+     "computed": 0.4192,
+     "programs": {
+      "min": 0.42,
+      "max": 0.42
+     }
+    },
+    {
+     "method": "Spencer, non-circular",
      "computed": 0.4119,
-     "deviation": -0.00507
+     "programs": {
+      "min": 0.414,
+      "max": 0.414
+     }
     }
    ]
   },
@@ -85,34 +128,47 @@
    "commercial": false,
    "surface": "search",
    "units": "SI",
-   "checks": [
+   "published": [
     {
+     "value": 1.138,
      "method": "Bishop simplified",
-     "published": 1.118,
-     "source": "Commercial program A",
-     "computed": 1.1128,
-     "deviation": -0.00465
+     "source": "Arai & Tagyo (1985)"
     },
     {
-     "method": "Spencer (M-P, constant f(x))",
-     "published": 1.118,
-     "source": "Commercial program A",
+     "value": 0.995,
+     "method": "Janbu simplified, non-circular",
+     "source": "Arai & Tagyo (1985)"
+    },
+    {
+     "value": 1.071,
+     "method": "Janbu corrected, non-circular",
+     "source": "Arai & Tagyo (1985)"
+    }
+   ],
+   "results": [
+    {
+     "method": "Bishop simplified",
+     "computed": 1.1128,
+     "programs": {
+      "min": 1.112,
+      "max": 1.118
+     }
+    },
+    {
+     "method": "Spencer",
      "computed": 1.1134,
-     "deviation": -0.00411
+     "programs": {
+      "min": 1.118,
+      "max": 1.118
+     }
     },
     {
-     "method": "Janbu corrected (f0)",
-     "published": 1.131,
-     "source": "Commercial program A",
+     "method": "Janbu corrected",
      "computed": 1.1244,
-     "deviation": -0.00584
-    },
-    {
-     "method": "Bishop simplified",
-     "published": 1.112,
-     "source": "Program D",
-     "computed": 1.1128,
-     "deviation": 0.00072
+     "programs": {
+      "min": 1.131,
+      "max": 1.131
+     }
     }
    ]
   },
@@ -124,20 +180,29 @@
    "commercial": true,
    "surface": "search",
    "units": "SI",
-   "checks": [
+   "published": [
     {
-     "method": "Spencer (M-P, constant f(x))",
-     "published": 2.794,
-     "source": "Commercial program A",
+     "value": 2.66,
+     "method": "Mohr-Coulomb strength",
+     "source": "Baker (2003)"
+    }
+   ],
+   "results": [
+    {
+     "method": "Spencer",
      "computed": 2.8019,
-     "deviation": 0.00283
+     "programs": {
+      "min": 2.794,
+      "max": 2.794
+     }
     },
     {
-     "method": "Janbu simplified (uncorrected)",
-     "published": 2.662,
-     "source": "Commercial program A",
+     "method": "Janbu simplified",
      "computed": 2.6767,
-     "deviation": 0.00552
+     "programs": {
+      "min": 2.662,
+      "max": 2.662
+     }
     }
    ]
   },
@@ -149,20 +214,34 @@
    "commercial": true,
    "surface": "search",
    "units": "SI",
-   "checks": [
+   "published": [
     {
-     "method": "Janbu simplified (uncorrected)",
-     "published": 2.61,
-     "source": "Commercial program A",
-     "computed": 2.6091,
-     "deviation": -0.00034
+     "value": 2.64,
+     "method": "non-linear strength envelope",
+     "source": "Baker (2003)"
     },
     {
-     "method": "Spencer (M-P, constant f(x))",
-     "published": 2.696,
-     "source": "Commercial program A",
+     "value": 2.66,
+     "method": "Mohr-Coulomb strength",
+     "source": "Baker (2003)"
+    }
+   ],
+   "results": [
+    {
+     "method": "Janbu simplified",
+     "computed": 2.6091,
+     "programs": {
+      "min": 2.61,
+      "max": 2.61
+     }
+    },
+    {
+     "method": "Spencer",
      "computed": 2.6665,
-     "deviation": -0.01094
+     "programs": {
+      "min": 2.696,
+      "max": 2.696
+     }
     }
    ]
   },
@@ -174,20 +253,23 @@
    "commercial": false,
    "surface": "search",
    "units": "SI",
-   "checks": [
+   "published": [
+    {
+     "value": 2.5,
+     "source": "Theory",
+     "method": "infinite slope"
+    }
+   ],
+   "results": [
     {
      "method": "Bishop simplified",
-     "published": 2.5,
-     "source": "Theory (infinite slope)",
      "computed": 2.5228,
-     "deviation": 0.00912
+     "programs": null
     },
     {
-     "method": "Spencer (M-P, constant f(x))",
-     "published": 2.5,
-     "source": "Theory (infinite slope)",
+     "method": "Spencer",
      "computed": 2.5229,
-     "deviation": 0.00916
+     "programs": null
     }
    ]
   },
@@ -199,20 +281,29 @@
    "commercial": false,
    "surface": "fixed",
    "units": "SI",
-   "checks": [
+   "published": [
     {
-     "method": "Spencer (M-P, constant f(x))",
-     "published": 1.351,
-     "source": "Commercial program C",
+     "value": 1.35,
+     "method": "Culmann (planar wedge)",
+     "source": "Baker (2001)"
+    }
+   ],
+   "results": [
+    {
+     "method": "Spencer",
      "computed": 1.3518,
-     "deviation": 0.00059
+     "programs": {
+      "min": 1.351,
+      "max": 1.351
+     }
     },
     {
      "method": "Janbu simplified",
-     "published": 1.351,
-     "source": "Commercial program C",
      "computed": 1.352,
-     "deviation": 0.00074
+     "programs": {
+      "min": 1.351,
+      "max": 1.351
+     }
     }
    ]
   },
@@ -224,13 +315,21 @@
    "commercial": true,
    "surface": "fixed",
    "units": "SI",
-   "checks": [
+   "published": [
     {
-     "method": "Janbu simplified (uncorrected)",
-     "published": 1.469,
-     "source": "Commercial program A",
+     "value": 1.5,
+     "method": "Mohr-Coulomb strength",
+     "source": "Baker (2003)"
+    }
+   ],
+   "results": [
+    {
+     "method": "Janbu simplified",
      "computed": 1.4676,
-     "deviation": -0.00095
+     "programs": {
+      "min": 1.469,
+      "max": 1.469
+     }
     }
    ]
   },
@@ -242,20 +341,34 @@
    "commercial": true,
    "surface": "search",
    "units": "SI",
-   "checks": [
+   "published": [
     {
-     "method": "Janbu simplified (uncorrected)",
-     "published": 0.957,
-     "source": "Commercial program A",
-     "computed": 0.9553,
-     "deviation": -0.00178
+     "value": 0.97,
+     "method": "non-linear strength envelope",
+     "source": "Baker (2003)"
     },
     {
-     "method": "Spencer (M-P, constant f(x))",
-     "published": 0.981,
-     "source": "Commercial program A",
+     "value": 1.5,
+     "method": "Mohr-Coulomb strength",
+     "source": "Baker (2003)"
+    }
+   ],
+   "results": [
+    {
+     "method": "Janbu simplified",
+     "computed": 0.9553,
+     "programs": {
+      "min": 0.957,
+      "max": 0.957
+     }
+    },
+    {
+     "method": "Spencer",
      "computed": 0.9776,
-     "deviation": -0.00347
+     "programs": {
+      "min": 0.981,
+      "max": 0.981
+     }
     }
    ]
   },
@@ -267,13 +380,21 @@
    "commercial": true,
    "surface": "search",
    "units": "SI",
-   "checks": [
+   "published": [
     {
-     "method": "Janbu simplified (uncorrected)",
-     "published": 1.291,
-     "source": "Commercial program A",
+     "value": 1.35,
+     "method": "Mohr-Coulomb strength",
+     "source": "Baker (2003)"
+    }
+   ],
+   "results": [
+    {
+     "method": "Janbu simplified",
      "computed": 1.2897,
-     "deviation": -0.00101
+     "programs": {
+      "min": 1.291,
+      "max": 1.291
+     }
     }
    ]
   },
@@ -285,13 +406,21 @@
    "commercial": false,
    "surface": "search",
    "units": "SI",
-   "checks": [
+   "published": [
     {
-     "method": "Spencer (M-P, constant f(x))",
-     "published": 1.536,
-     "source": "Commercial program A",
+     "value": 1.5,
+     "method": "Mohr-Coulomb strength",
+     "source": "Baker (2003)"
+    }
+   ],
+   "results": [
+    {
+     "method": "Spencer",
      "computed": 1.5192,
-     "deviation": -0.01094
+     "programs": {
+      "min": 1.536,
+      "max": 1.536
+     }
     }
    ]
   },
@@ -303,13 +432,21 @@
    "commercial": false,
    "surface": "search",
    "units": "SI",
-   "checks": [
+   "published": [
     {
-     "method": "Spencer (M-P, constant f(x))",
-     "published": 1.366,
-     "source": "Commercial program A",
+     "value": 1.35,
+     "method": "Mohr-Coulomb strength",
+     "source": "Baker (2003)"
+    }
+   ],
+   "results": [
+    {
+     "method": "Spencer",
      "computed": 1.3646,
-     "deviation": -0.00102
+     "programs": {
+      "min": 1.366,
+      "max": 1.366
+     }
     }
    ]
   },
@@ -321,13 +458,15 @@
    "commercial": false,
    "surface": "fixed",
    "units": "SI",
-   "checks": [
+   "published": [],
+   "results": [
     {
-     "method": "Spencer (M-P, constant f(x))",
-     "published": 1.925,
-     "source": "Commercial program A",
+     "method": "Spencer",
      "computed": 1.9262,
-     "deviation": 0.00062
+     "programs": {
+      "min": 1.925,
+      "max": 1.925
+     }
     }
    ]
   },
@@ -339,13 +478,18 @@
    "commercial": false,
    "surface": "fixed",
    "units": "SI",
-   "checks": [
+   "published": [
     {
-     "method": "Spencer (M-P, constant f(x))",
-     "published": 1.91,
+     "value": 1.91,
      "source": "Baker & Leshchinsky",
+     "method": "Spencer"
+    }
+   ],
+   "results": [
+    {
+     "method": "Spencer",
      "computed": 1.8817,
-     "deviation": -0.01482
+     "programs": null
     }
    ]
   },
@@ -357,13 +501,21 @@
    "commercial": false,
    "surface": "search",
    "units": "SI",
-   "checks": [
+   "published": [
     {
-     "method": "Spencer (M-P, constant f(x))",
-     "published": 1.868,
-     "source": "Commercial program B (optimised non-circular)",
+     "value": 1.91,
+     "method": "Spencer, non-circular",
+     "source": "Baker & Leshchinsky (2001)"
+    }
+   ],
+   "results": [
+    {
+     "method": "Spencer, non-circular",
      "computed": 1.868,
-     "deviation": 0
+     "programs": {
+      "min": 1.868,
+      "max": 1.868
+     }
     }
    ]
   },
@@ -375,27 +527,29 @@
    "commercial": false,
    "surface": "fixed",
    "units": "SI",
-   "checks": [
+   "published": [
+    {
+     "value": 1.15,
+     "source": "Borges & Cardoso",
+     "method": "Morgenstern-Price (half-sine)"
+    }
+   ],
+   "results": [
     {
      "method": "Morgenstern-Price (half-sine)",
-     "published": 1.171,
-     "source": "Commercial program B",
      "computed": 1.1624,
-     "deviation": -0.00734
+     "programs": {
+      "min": 1.171,
+      "max": 1.171
+     }
     },
     {
      "method": "Bishop simplified",
-     "published": 1.17,
-     "source": "Commercial program B",
      "computed": 1.1637,
-     "deviation": -0.00538
-    },
-    {
-     "method": "Morgenstern-Price (half-sine)",
-     "published": 1.15,
-     "source": "Borges & Cardoso",
-     "computed": 1.1624,
-     "deviation": 0.01078
+     "programs": {
+      "min": 1.17,
+      "max": 1.17
+     }
     }
    ]
   },
@@ -407,13 +561,20 @@
    "commercial": false,
    "surface": "fixed",
    "units": "SI",
-   "checks": [
+   "published": [
+    {
+     "value": 1.25,
+     "source": "Borges & Cardoso (2002)"
+    }
+   ],
+   "results": [
     {
      "method": "Bishop simplified",
-     "published": 1.23,
-     "source": "Commercial program A",
      "computed": 1.2193,
-     "deviation": -0.0087
+     "programs": {
+      "min": 1.23,
+      "max": 1.23
+     }
     }
    ]
   },
@@ -425,13 +586,20 @@
    "commercial": false,
    "surface": "fixed",
    "units": "SI",
-   "checks": [
+   "published": [
+    {
+     "value": 1.19,
+     "source": "Borges & Cardoso (2002)"
+    }
+   ],
+   "results": [
     {
      "method": "Bishop simplified",
-     "published": 1.22,
-     "source": "Commercial program A",
      "computed": 1.2164,
-     "deviation": -0.00295
+     "programs": {
+      "min": 1.22,
+      "max": 1.22
+     }
     }
    ]
   },
@@ -443,13 +611,20 @@
    "commercial": false,
    "surface": "fixed",
    "units": "SI",
-   "checks": [
+   "published": [
+    {
+     "value": 0.99,
+     "source": "Borges & Cardoso (2002)"
+    }
+   ],
+   "results": [
     {
      "method": "Bishop simplified",
-     "published": 0.98,
-     "source": "Commercial program A",
      "computed": 0.9815,
-     "deviation": 0.00153
+     "programs": {
+      "min": 0.98,
+      "max": 0.98
+     }
     }
    ]
   },
@@ -461,20 +636,21 @@
    "commercial": false,
    "surface": "search",
    "units": "SI",
-   "checks": [
+   "published": [
     {
-     "method": "Bishop simplified",
-     "published": 1.14,
-     "source": "Commercial program A",
-     "computed": 1.1429,
-     "deviation": 0.00254
-    },
-    {
-     "method": "Bishop simplified",
-     "published": 1.13,
+     "value": 1.13,
      "source": "Cai & Ugai",
+     "method": "Bishop simplified"
+    }
+   ],
+   "results": [
+    {
+     "method": "Bishop simplified",
      "computed": 1.1429,
-     "deviation": 0.01142
+     "programs": {
+      "min": 1.14,
+      "max": 1.14
+     }
     }
    ]
   },
@@ -486,13 +662,20 @@
    "commercial": false,
    "surface": "search",
    "units": "SI",
-   "checks": [
+   "published": [
+    {
+     "value": 1.54,
+     "source": "Cai & Ugai (2000)"
+    }
+   ],
+   "results": [
     {
      "method": "Bishop simplified",
-     "published": 1.54,
-     "source": "Commercial program A",
      "computed": 1.5407,
-     "deviation": 0.00045
+     "programs": {
+      "min": 1.54,
+      "max": 1.54
+     }
     }
    ]
   },
@@ -504,13 +687,20 @@
    "commercial": false,
    "surface": "search",
    "units": "SI",
-   "checks": [
+   "published": [
+    {
+     "value": 1.37,
+     "source": "Cai & Ugai (2000)"
+    }
+   ],
+   "results": [
     {
      "method": "Bishop simplified",
-     "published": 1.43,
-     "source": "Commercial program A",
      "computed": 1.4499,
-     "deviation": 0.01392
+     "programs": {
+      "min": 1.43,
+      "max": 1.43
+     }
     }
    ]
   },
@@ -522,13 +712,20 @@
    "commercial": false,
    "surface": "search",
    "units": "SI",
-   "checks": [
+   "published": [
+    {
+     "value": 1.31,
+     "source": "Cai & Ugai (2000)"
+    }
+   ],
+   "results": [
     {
      "method": "Bishop simplified",
-     "published": 1.33,
-     "source": "Commercial program A",
      "computed": 1.3417,
-     "deviation": 0.0088
+     "programs": {
+      "min": 1.33,
+      "max": 1.33
+     }
     }
    ]
   },
@@ -540,13 +737,20 @@
    "commercial": false,
    "surface": "search",
    "units": "SI",
-   "checks": [
+   "published": [
+    {
+     "value": 1.25,
+     "source": "Cai & Ugai (2000)"
+    }
+   ],
+   "results": [
     {
      "method": "Bishop simplified",
-     "published": 1.25,
-     "source": "Commercial program A",
      "computed": 1.2598,
-     "deviation": 0.00784
+     "programs": {
+      "min": 1.25,
+      "max": 1.25
+     }
     }
    ]
   },
@@ -558,27 +762,23 @@
    "commercial": false,
    "surface": "fixed",
    "units": "SI",
-   "checks": [
+   "published": [],
+   "results": [
     {
-     "method": "Janbu corrected (f0)",
-     "published": 1.46,
-     "source": "Program H",
+     "method": "Janbu corrected",
      "computed": 1.4482,
-     "deviation": -0.00808
+     "programs": {
+      "min": 1.448,
+      "max": 1.46
+     }
     },
     {
-     "method": "Janbu corrected (f0)",
-     "published": 1.448,
-     "source": "Program D",
-     "computed": 1.4482,
-     "deviation": 0.00014
-    },
-    {
-     "method": "Spencer (M-P, constant f(x))",
-     "published": 1.576,
-     "source": "Program D",
+     "method": "Spencer",
      "computed": 1.5749,
-     "deviation": -0.0007
+     "programs": {
+      "min": 1.576,
+      "max": 1.576
+     }
     }
    ]
   },
@@ -590,20 +790,23 @@
    "commercial": false,
    "surface": "fixed",
    "units": "SI",
-   "checks": [
+   "published": [],
+   "results": [
     {
-     "method": "Janbu corrected (f0)",
-     "published": 1.479,
-     "source": "Commercial program A",
+     "method": "Janbu corrected",
      "computed": 1.4763,
-     "deviation": -0.00183
+     "programs": {
+      "min": 1.479,
+      "max": 1.479
+     }
     },
     {
-     "method": "Janbu simplified (uncorrected)",
-     "published": 1.446,
-     "source": "Commercial program A",
+     "method": "Janbu simplified",
      "computed": 1.4418,
-     "deviation": -0.0029
+     "programs": {
+      "min": 1.446,
+      "max": 1.446
+     }
     }
    ]
   },
@@ -615,27 +818,23 @@
    "commercial": false,
    "surface": "fixed",
    "units": "SI",
-   "checks": [
+   "published": [],
+   "results": [
     {
      "method": "Bishop simplified",
-     "published": 1.787,
-     "source": "Commercial program A",
      "computed": 1.7905,
-     "deviation": 0.00196
+     "programs": {
+      "min": 1.787,
+      "max": 1.79
+     }
     },
     {
-     "method": "Spencer (M-P, constant f(x))",
-     "published": 1.791,
-     "source": "Commercial program A",
+     "method": "Spencer",
      "computed": 1.7974,
-     "deviation": 0.00357
-    },
-    {
-     "method": "Bishop simplified",
-     "published": 1.79,
-     "source": "Program D",
-     "computed": 1.7905,
-     "deviation": 0.00028
+     "programs": {
+      "min": 1.791,
+      "max": 1.791
+     }
     }
    ]
   },
@@ -647,27 +846,23 @@
    "commercial": false,
    "surface": "fixed",
    "units": "SI",
-   "checks": [
+   "published": [],
+   "results": [
     {
      "method": "Bishop simplified",
-     "published": 1.835,
-     "source": "Commercial program A",
      "computed": 1.8302,
-     "deviation": -0.00262
+     "programs": {
+      "min": 1.83,
+      "max": 1.835
+     }
     },
     {
-     "method": "Spencer (M-P, constant f(x))",
-     "published": 1.839,
-     "source": "Commercial program A",
+     "method": "Spencer",
      "computed": 1.8353,
-     "deviation": -0.00201
-    },
-    {
-     "method": "Bishop simplified",
-     "published": 1.83,
-     "source": "Program D",
-     "computed": 1.8302,
-     "deviation": 0.00011
+     "programs": {
+      "min": 1.839,
+      "max": 1.839
+     }
     }
    ]
   },
@@ -679,27 +874,23 @@
    "commercial": false,
    "surface": "fixed",
    "units": "SI",
-   "checks": [
+   "published": [],
+   "results": [
     {
      "method": "Bishop simplified",
-     "published": 1.799,
-     "source": "Commercial program A",
      "computed": 1.7905,
-     "deviation": -0.00472
+     "programs": {
+      "min": 1.79,
+      "max": 1.799
+     }
     },
     {
-     "method": "Spencer (M-P, constant f(x))",
-     "published": 1.803,
-     "source": "Commercial program A",
+     "method": "Spencer",
      "computed": 1.7973,
-     "deviation": -0.00316
-    },
-    {
-     "method": "Bishop simplified",
-     "published": 1.79,
-     "source": "Program D",
-     "computed": 1.7905,
-     "deviation": 0.00028
+     "programs": {
+      "min": 1.803,
+      "max": 1.803
+     }
     }
    ]
   },
@@ -711,27 +902,23 @@
    "commercial": false,
    "surface": "fixed",
    "units": "SI",
-   "checks": [
+   "published": [],
+   "results": [
     {
      "method": "Bishop simplified",
-     "published": 1.373,
-     "source": "Commercial program A",
      "computed": 1.3822,
-     "deviation": 0.0067
+     "programs": {
+      "min": 1.373,
+      "max": 1.382
+     }
     },
     {
-     "method": "Spencer (M-P, constant f(x))",
-     "published": 1.386,
-     "source": "Commercial program A",
+     "method": "Spencer",
      "computed": 1.3982,
-     "deviation": 0.0088
-    },
-    {
-     "method": "Bishop simplified",
-     "published": 1.382,
-     "source": "Program D",
-     "computed": 1.3822,
-     "deviation": 0.00014
+     "programs": {
+      "min": 1.386,
+      "max": 1.386
+     }
     }
    ]
   },
@@ -743,20 +930,15 @@
    "commercial": false,
    "surface": "fixed",
    "units": "SI",
-   "checks": [
+   "published": [],
+   "results": [
     {
      "method": "Bishop simplified",
-     "published": 1.378,
-     "source": "Commercial program A",
      "computed": 1.3822,
-     "deviation": 0.00305
-    },
-    {
-     "method": "Bishop simplified",
-     "published": 1.382,
-     "source": "Program D",
-     "computed": 1.3822,
-     "deviation": 0.00014
+     "programs": {
+      "min": 1.378,
+      "max": 1.382
+     }
     }
    ]
   },
@@ -768,27 +950,29 @@
    "commercial": false,
    "surface": "fixed",
    "units": "SI",
-   "checks": [
+   "published": [
     {
-     "method": "Spencer (M-P, constant f(x))",
-     "published": 1.051,
-     "source": "Commercial program A",
+     "value": 1.05,
+     "method": "Spencer",
+     "source": "Chen & Shao (1988)"
+    }
+   ],
+   "results": [
+    {
+     "method": "Spencer",
      "computed": 1.0521,
-     "deviation": 0.00105
+     "programs": {
+      "min": 1.051,
+      "max": 1.051
+     }
     },
     {
-     "method": "Morgenstern-Price (half-sine)",
-     "published": 1.009,
-     "source": "Commercial program A",
+     "method": "Morgenstern-Price (specified f(x))",
      "computed": 1.0078,
-     "deviation": -0.00119
-    },
-    {
-     "method": "Morgenstern-Price (half-sine)",
-     "published": 1.017,
-     "source": "Commercial program B",
-     "computed": 1.0078,
-     "deviation": -0.00905
+     "programs": {
+      "min": 1.009,
+      "max": 1.017
+     }
     }
    ]
   },
@@ -800,34 +984,29 @@
    "commercial": false,
    "surface": "search",
    "units": "SI",
-   "checks": [
+   "published": [
     {
-     "method": "Spencer (M-P, constant f(x))",
-     "published": 1.38,
-     "source": "Commercial program A",
-     "computed": 1.3984,
-     "deviation": 0.01333
-    },
-    {
-     "method": "Spencer (M-P, constant f(x))",
-     "published": 1.383,
+     "value": 1.383,
      "source": "Cheng et al.",
-     "computed": 1.3984,
-     "deviation": 0.01114
-    },
+     "method": "Spencer"
+    }
+   ],
+   "results": [
     {
-     "method": "Spencer (M-P, constant f(x))",
-     "published": 1.398,
-     "source": "Program D",
+     "method": "Spencer",
      "computed": 1.3984,
-     "deviation": 0.00029
+     "programs": {
+      "min": 1.38,
+      "max": 1.398
+     }
     },
     {
      "method": "Bishop simplified",
-     "published": 1.401,
-     "source": "Program D",
      "computed": 1.4009,
-     "deviation": -0.00007
+     "programs": {
+      "min": 1.401,
+      "max": 1.401
+     }
     }
    ]
   },
@@ -839,34 +1018,29 @@
    "commercial": false,
    "surface": "search",
    "units": "SI",
-   "checks": [
+   "published": [
     {
-     "method": "Spencer (M-P, constant f(x))",
-     "published": 1.336,
-     "source": "Commercial program A",
-     "computed": 1.3382,
-     "deviation": 0.00165
-    },
-    {
-     "method": "Spencer (M-P, constant f(x))",
-     "published": 1.327,
+     "value": 1.327,
      "source": "Cheng et al.",
-     "computed": 1.3382,
-     "deviation": 0.00844
-    },
+     "method": "Spencer"
+    }
+   ],
+   "results": [
     {
-     "method": "Spencer (M-P, constant f(x))",
-     "published": 1.338,
-     "source": "Program D",
+     "method": "Spencer",
      "computed": 1.3382,
-     "deviation": 0.00015
+     "programs": {
+      "min": 1.336,
+      "max": 1.338
+     }
     },
     {
      "method": "Bishop simplified",
-     "published": 1.342,
-     "source": "Program D",
      "computed": 1.3427,
-     "deviation": 0.00052
+     "programs": {
+      "min": 1.342,
+      "max": 1.342
+     }
     }
    ]
   },
@@ -878,27 +1052,34 @@
    "commercial": false,
    "surface": "fixed",
    "units": "SI",
-   "checks": [
+   "published": [
+    {
+     "value": 1.128,
+     "source": "Chowdhury & Xu",
+     "method": "Bishop simplified"
+    }
+   ],
+   "results": [
     {
      "method": "Morgenstern-Price (half-sine)",
-     "published": 1.132,
-     "source": "Commercial program B",
      "computed": 1.1282,
-     "deviation": -0.00336
+     "programs": {
+      "min": 1.132,
+      "max": 1.132
+     }
     },
     {
      "method": "Bishop simplified",
-     "published": 1.128,
-     "source": "Chowdhury & Xu",
      "computed": 1.1282,
-     "deviation": 0.00018
+     "programs": null
     },
     {
-     "method": "Bishop simplified",
-     "published": 1.128,
-     "source": "Commercial program A",
+     "method": "Bishop simplified (60 slices)",
      "computed": 1.1282,
-     "deviation": 0.00018
+     "programs": {
+      "min": 1.128,
+      "max": 1.128
+     }
     }
    ]
   },
@@ -910,27 +1091,34 @@
    "commercial": false,
    "surface": "fixed",
    "units": "SI",
-   "checks": [
+   "published": [
+    {
+     "value": 1.109,
+     "source": "Chowdhury & Xu",
+     "method": "Bishop simplified"
+    }
+   ],
+   "results": [
     {
      "method": "Morgenstern-Price (half-sine)",
-     "published": 1.116,
-     "source": "Commercial program B",
      "computed": 1.1098,
-     "deviation": -0.00556
+     "programs": {
+      "min": 1.116,
+      "max": 1.116
+     }
     },
     {
      "method": "Bishop simplified",
-     "published": 1.109,
-     "source": "Chowdhury & Xu",
      "computed": 1.1098,
-     "deviation": 0.00072
+     "programs": null
     },
     {
-     "method": "Bishop simplified",
-     "published": 1.109,
-     "source": "Commercial program A",
+     "method": "Bishop simplified (60 slices)",
      "computed": 1.1098,
-     "deviation": 0.00072
+     "programs": {
+      "min": 1.109,
+      "max": 1.109
+     }
     }
    ]
   },
@@ -942,27 +1130,29 @@
    "commercial": false,
    "surface": "fixed",
    "units": "SI",
-   "checks": [
+   "published": [
+    {
+     "value": 1.1096,
+     "source": "Chowdhury & Xu",
+     "method": "Bishop simplified"
+    }
+   ],
+   "results": [
     {
      "method": "Morgenstern-Price (half-sine)",
-     "published": 1.11,
-     "source": "Commercial program B",
      "computed": 1.1083,
-     "deviation": -0.00153
+     "programs": {
+      "min": 1.11,
+      "max": 1.11
+     }
     },
     {
      "method": "Bishop simplified",
-     "published": 1.1096,
-     "source": "Chowdhury & Xu",
      "computed": 1.1083,
-     "deviation": -0.00117
-    },
-    {
-     "method": "Bishop simplified",
-     "published": 1.108,
-     "source": "Commercial program A",
-     "computed": 1.1083,
-     "deviation": 0.00027
+     "programs": {
+      "min": 1.108,
+      "max": 1.108
+     }
     }
    ]
   },
@@ -974,27 +1164,29 @@
    "commercial": false,
    "surface": "fixed",
    "units": "SI",
-   "checks": [
+   "published": [
+    {
+     "value": 1.0639,
+     "source": "Chowdhury & Xu",
+     "method": "Bishop simplified"
+    }
+   ],
+   "results": [
     {
      "method": "Morgenstern-Price (half-sine)",
-     "published": 1.063,
-     "source": "Commercial program B",
      "computed": 1.058,
-     "deviation": -0.0047
+     "programs": {
+      "min": 1.063,
+      "max": 1.063
+     }
     },
     {
      "method": "Bishop simplified",
-     "published": 1.0639,
-     "source": "Chowdhury & Xu",
      "computed": 1.058,
-     "deviation": -0.00555
-    },
-    {
-     "method": "Bishop simplified",
-     "published": 1.058,
-     "source": "Commercial program A",
-     "computed": 1.058,
-     "deviation": 0
+     "programs": {
+      "min": 1.058,
+      "max": 1.058
+     }
     }
    ]
   },
@@ -1006,27 +1198,29 @@
    "commercial": false,
    "surface": "fixed",
    "units": "SI",
-   "checks": [
+   "published": [
+    {
+     "value": 2.2343,
+     "source": "Chowdhury & Xu",
+     "method": "Bishop simplified"
+    }
+   ],
+   "results": [
     {
      "method": "Morgenstern-Price (half-sine)",
-     "published": 2.248,
-     "source": "Commercial program B",
      "computed": 2.2448,
-     "deviation": -0.00142
+     "programs": {
+      "min": 2.248,
+      "max": 2.248
+     }
     },
     {
      "method": "Bishop simplified",
-     "published": 2.2343,
-     "source": "Chowdhury & Xu",
      "computed": 2.2448,
-     "deviation": 0.0047
-    },
-    {
-     "method": "Bishop simplified",
-     "published": 2.245,
-     "source": "Commercial program A",
-     "computed": 2.2448,
-     "deviation": -0.00009
+     "programs": {
+      "min": 2.245,
+      "max": 2.245
+     }
     }
    ]
   },
@@ -1038,27 +1232,29 @@
    "commercial": false,
    "surface": "fixed",
    "units": "SI",
-   "checks": [
+   "published": [
+    {
+     "value": 2.1396,
+     "source": "Chowdhury & Xu",
+     "method": "Bishop simplified"
+    }
+   ],
+   "results": [
     {
      "method": "Morgenstern-Price (half-sine)",
-     "published": 2.138,
-     "source": "Commercial program B",
      "computed": 2.1281,
-     "deviation": -0.00463
+     "programs": {
+      "min": 2.138,
+      "max": 2.138
+     }
     },
     {
      "method": "Bishop simplified",
-     "published": 2.1396,
-     "source": "Chowdhury & Xu",
      "computed": 2.1281,
-     "deviation": -0.00537
-    },
-    {
-     "method": "Bishop simplified",
-     "published": 2.128,
-     "source": "Commercial program A",
-     "computed": 2.1281,
-     "deviation": 0.00005
+     "programs": {
+      "min": 2.128,
+      "max": 2.128
+     }
     }
    ]
   },
@@ -1070,20 +1266,26 @@
    "commercial": false,
    "surface": "fixed",
    "units": "SI",
-   "checks": [
+   "published": [
+    {
+     "value": 1.4239,
+     "source": "Chowdhury & Xu",
+     "method": "Bishop simplified"
+    }
+   ],
+   "results": [
     {
      "method": "Morgenstern-Price (half-sine)",
-     "published": 1.422,
-     "source": "Commercial program B",
      "computed": 1.428,
-     "deviation": 0.00422
+     "programs": {
+      "min": 1.422,
+      "max": 1.422
+     }
     },
     {
      "method": "Bishop simplified",
-     "published": 1.4239,
-     "source": "Chowdhury & Xu",
      "computed": 1.4279,
-     "deviation": 0.00281
+     "programs": null
     }
    ]
   },
@@ -1095,27 +1297,34 @@
    "commercial": false,
    "surface": "fixed",
    "units": "SI",
-   "checks": [
+   "published": [
+    {
+     "value": 1.1625,
+     "source": "Chowdhury & Xu",
+     "method": "Bishop simplified"
+    }
+   ],
+   "results": [
     {
      "method": "Morgenstern-Price (half-sine)",
-     "published": 1.158,
-     "source": "Commercial program B",
      "computed": 1.1571,
-     "deviation": -0.00078
+     "programs": {
+      "min": 1.158,
+      "max": 1.158
+     }
     },
     {
      "method": "Bishop simplified",
-     "published": 1.1625,
-     "source": "Chowdhury & Xu",
      "computed": 1.1585,
-     "deviation": -0.00344
+     "programs": null
     },
     {
-     "method": "Bishop simplified",
-     "published": 1.16,
-     "source": "Commercial program A",
+     "method": "Bishop simplified (60 slices)",
      "computed": 1.1585,
-     "deviation": -0.00129
+     "programs": {
+      "min": 1.16,
+      "max": 1.16
+     }
     }
    ]
   },
@@ -1127,20 +1336,29 @@
    "commercial": false,
    "surface": "fixed",
    "units": "SI",
-   "checks": [
+   "published": [
+    {
+     "value": 1.1479,
+     "method": "Bishop simplified",
+     "source": "Chowdhury & Xu (1995)"
+    }
+   ],
+   "results": [
     {
      "method": "Morgenstern-Price (half-sine)",
-     "published": 1.178,
-     "source": "Commercial program B",
      "computed": 1.1744,
-     "deviation": -0.00306
+     "programs": {
+      "min": 1.178,
+      "max": 1.178
+     }
     },
     {
      "method": "Bishop simplified",
-     "published": 1.185,
-     "source": "Commercial program A",
      "computed": 1.1772,
-     "deviation": -0.00658
+     "programs": {
+      "min": 1.185,
+      "max": 1.185
+     }
     }
    ]
   },
@@ -1152,13 +1370,20 @@
    "commercial": false,
    "surface": "fixed",
    "units": "SI",
-   "checks": [
+   "published": [
     {
-     "method": "Spencer (M-P, constant f(x))",
-     "published": 1.145,
-     "source": "Program D",
+     "value": 1.17,
+     "source": "Duncan (2000)"
+    }
+   ],
+   "results": [
+    {
+     "method": "Spencer",
      "computed": 1.1381,
-     "deviation": -0.00603
+     "programs": {
+      "min": 1.145,
+      "max": 1.145
+     }
     }
    ]
   },
@@ -1170,34 +1395,29 @@
    "commercial": false,
    "surface": "fixed",
    "units": "SI",
-   "checks": [
+   "published": [
     {
-     "method": "Bishop simplified",
-     "published": 1.563,
-     "source": "Commercial program A",
-     "computed": 1.5719,
-     "deviation": 0.00569
-    },
-    {
-     "method": "Spencer (M-P, constant f(x))",
-     "published": 1.557,
-     "source": "Commercial program A",
-     "computed": 1.5623,
-     "deviation": 0.0034
-    },
-    {
-     "method": "Bishop simplified",
-     "published": 1.57,
+     "value": 1.57,
      "source": "Duncan & Wright",
-     "computed": 1.5719,
-     "deviation": 0.00121
-    },
+     "method": "Bishop simplified"
+    }
+   ],
+   "results": [
     {
      "method": "Bishop simplified",
-     "published": 1.572,
-     "source": "Program D",
      "computed": 1.5719,
-     "deviation": -0.00006
+     "programs": {
+      "min": 1.563,
+      "max": 1.572
+     }
+    },
+    {
+     "method": "Spencer",
+     "computed": 1.5623,
+     "programs": {
+      "min": 1.557,
+      "max": 1.557
+     }
     }
    ]
   },
@@ -1209,20 +1429,28 @@
    "commercial": false,
    "surface": "search",
    "units": "SI",
-   "checks": [
+   "published": [
+    {
+     "value": 1.141,
+     "source": "Duncan & Wright"
+    }
+   ],
+   "results": [
     {
      "method": "Bishop simplified",
-     "published": 1.142,
-     "source": "Commercial program A",
      "computed": 1.1323,
-     "deviation": -0.00849
+     "programs": {
+      "min": 1.142,
+      "max": 1.142
+     }
     },
     {
-     "method": "Spencer (M-P, constant f(x))",
-     "published": 1.142,
-     "source": "Commercial program A",
+     "method": "Spencer",
      "computed": 1.1325,
-     "deviation": -0.00832
+     "programs": {
+      "min": 1.142,
+      "max": 1.142
+     }
     }
    ]
   },
@@ -1234,27 +1462,29 @@
    "commercial": false,
    "surface": "search",
    "units": "imperial",
-   "checks": [
+   "published": [
     {
-     "method": "Bishop simplified",
-     "published": 1.228,
-     "source": "Commercial program A",
-     "computed": 1.2198,
-     "deviation": -0.00668
-    },
-    {
-     "method": "Bishop simplified",
-     "published": 1.22,
+     "value": 1.22,
      "source": "Duncan & Wright",
+     "method": "Bishop simplified"
+    }
+   ],
+   "results": [
+    {
+     "method": "Bishop simplified",
      "computed": 1.2198,
-     "deviation": -0.00016
+     "programs": {
+      "min": 1.228,
+      "max": 1.228
+     }
     },
     {
-     "method": "Spencer (M-P, constant f(x))",
-     "published": 1.19,
-     "source": "Commercial program A (non-circular)",
+     "method": "Spencer, non-circular",
      "computed": 1.1735,
-     "deviation": -0.01387
+     "programs": {
+      "min": 1.19,
+      "max": 1.19
+     }
     }
    ]
   },
@@ -1266,20 +1496,26 @@
    "commercial": false,
    "surface": "search",
    "units": "imperial",
-   "checks": [
+   "published": [
+    {
+     "value": 1.124,
+     "source": "Duncan & Wright",
+     "method": "Spencer"
+    }
+   ],
+   "results": [
     {
      "method": "Bishop simplified",
-     "published": 1.126,
-     "source": "Commercial program A",
      "computed": 1.1225,
-     "deviation": -0.00311
+     "programs": {
+      "min": 1.126,
+      "max": 1.126
+     }
     },
     {
-     "method": "Spencer (M-P, constant f(x))",
-     "published": 1.124,
-     "source": "Duncan & Wright (reference)",
+     "method": "Spencer",
      "computed": 1.1323,
-     "deviation": 0.00738
+     "programs": null
     }
    ]
   },
@@ -1291,20 +1527,26 @@
    "commercial": true,
    "surface": "search",
    "units": "imperial",
-   "checks": [
+   "published": [
+    {
+     "value": 1.124,
+     "source": "Duncan & Wright",
+     "method": "Spencer"
+    }
+   ],
+   "results": [
     {
      "method": "Bishop simplified",
-     "published": 1.126,
-     "source": "Commercial program A",
      "computed": 1.1219,
-     "deviation": -0.00364
+     "programs": {
+      "min": 1.126,
+      "max": 1.126
+     }
     },
     {
-     "method": "Spencer (M-P, constant f(x))",
-     "published": 1.124,
-     "source": "Duncan & Wright (reference)",
+     "method": "Spencer",
      "computed": 1.1219,
-     "deviation": -0.00187
+     "programs": null
     }
    ]
   },
@@ -1316,20 +1558,26 @@
    "commercial": true,
    "surface": "search",
    "units": "imperial",
-   "checks": [
+   "published": [
+    {
+     "value": 1.124,
+     "source": "Duncan & Wright",
+     "method": "Spencer"
+    }
+   ],
+   "results": [
     {
      "method": "Bishop simplified",
-     "published": 1.125,
-     "source": "Commercial program A",
      "computed": 1.117,
-     "deviation": -0.00711
+     "programs": {
+      "min": 1.125,
+      "max": 1.125
+     }
     },
     {
-     "method": "Spencer (M-P, constant f(x))",
-     "published": 1.124,
-     "source": "Duncan & Wright (reference)",
+     "method": "Spencer",
      "computed": 1.117,
-     "deviation": -0.00623
+     "programs": null
     }
    ]
   },
@@ -1341,20 +1589,26 @@
    "commercial": false,
    "surface": "search",
    "units": "imperial",
-   "checks": [
+   "published": [
+    {
+     "value": 1.4,
+     "source": "Duncan & Wright",
+     "method": "Spencer"
+    }
+   ],
+   "results": [
     {
      "method": "Bishop simplified",
-     "published": 1.412,
-     "source": "Commercial program A",
      "computed": 1.4082,
-     "deviation": -0.00269
+     "programs": {
+      "min": 1.412,
+      "max": 1.412
+     }
     },
     {
-     "method": "Spencer (M-P, constant f(x))",
-     "published": 1.4,
-     "source": "Duncan & Wright (reference)",
+     "method": "Spencer",
      "computed": 1.3987,
-     "deviation": -0.00093
+     "programs": null
     }
    ]
   },
@@ -1366,27 +1620,29 @@
    "commercial": false,
    "surface": "fixed",
    "units": "imperial",
-   "checks": [
+   "published": [
+    {
+     "value": 2.56,
+     "source": "Duncan & Wright",
+     "method": "Spencer"
+    }
+   ],
+   "results": [
     {
      "method": "Bishop simplified",
-     "published": 2.549,
-     "source": "Commercial program A",
      "computed": 2.5337,
-     "deviation": -0.006
+     "programs": {
+      "min": 2.549,
+      "max": 2.549
+     }
     },
     {
-     "method": "Spencer (M-P, constant f(x))",
-     "published": 2.545,
-     "source": "Commercial program A",
+     "method": "Spencer",
      "computed": 2.5306,
-     "deviation": -0.00566
-    },
-    {
-     "method": "Spencer (M-P, constant f(x))",
-     "published": 2.56,
-     "source": "Duncan & Wright (reference)",
-     "computed": 2.5306,
-     "deviation": -0.01148
+     "programs": {
+      "min": 2.545,
+      "max": 2.545
+     }
     }
    ]
   },
@@ -1398,27 +1654,29 @@
    "commercial": false,
    "surface": "fixed",
    "units": "imperial",
-   "checks": [
+   "published": [
+    {
+     "value": 1.35,
+     "source": "Duncan & Wright",
+     "method": "Spencer"
+    }
+   ],
+   "results": [
     {
      "method": "Bishop simplified",
-     "published": 1.398,
-     "source": "Commercial program A",
      "computed": 1.3894,
-     "deviation": -0.00615
+     "programs": {
+      "min": 1.398,
+      "max": 1.398
+     }
     },
     {
-     "method": "Spencer (M-P, constant f(x))",
-     "published": 1.359,
-     "source": "Commercial program A",
+     "method": "Spencer",
      "computed": 1.352,
-     "deviation": -0.00515
-    },
-    {
-     "method": "Spencer (M-P, constant f(x))",
-     "published": 1.35,
-     "source": "Duncan & Wright (reference)",
-     "computed": 1.352,
-     "deviation": 0.00148
+     "programs": {
+      "min": 1.359,
+      "max": 1.359
+     }
     }
    ]
   },
@@ -1430,27 +1688,29 @@
    "commercial": false,
    "surface": "search",
    "units": "imperial",
-   "checks": [
+   "published": [
+    {
+     "value": 1.21,
+     "source": "Duncan & Wright",
+     "method": "Spencer"
+    }
+   ],
+   "results": [
     {
      "method": "Bishop simplified",
-     "published": 1.23,
-     "source": "Commercial program A",
      "computed": 1.2239,
-     "deviation": -0.00496
+     "programs": {
+      "min": 1.23,
+      "max": 1.23
+     }
     },
     {
-     "method": "Spencer (M-P, constant f(x))",
-     "published": 1.209,
-     "source": "Commercial program A",
+     "method": "Spencer",
      "computed": 1.2049,
-     "deviation": -0.00339
-    },
-    {
-     "method": "Spencer (M-P, constant f(x))",
-     "published": 1.21,
-     "source": "Duncan & Wright (reference)",
-     "computed": 1.2049,
-     "deviation": -0.00421
+     "programs": {
+      "min": 1.209,
+      "max": 1.209
+     }
     }
    ]
   },
@@ -1462,27 +1722,29 @@
    "commercial": true,
    "surface": "search",
    "units": "imperial",
-   "checks": [
+   "published": [
+    {
+     "value": 1.15,
+     "source": "Duncan & Wright",
+     "method": "Spencer"
+    }
+   ],
+   "results": [
     {
      "method": "Bishop simplified",
-     "published": 1.155,
-     "source": "Commercial program A",
      "computed": 1.1558,
-     "deviation": 0.00069
+     "programs": {
+      "min": 1.155,
+      "max": 1.155
+     }
     },
     {
-     "method": "Spencer (M-P, constant f(x))",
-     "published": 1.155,
-     "source": "Commercial program A",
+     "method": "Spencer",
      "computed": 1.1559,
-     "deviation": 0.00078
-    },
-    {
-     "method": "Spencer (M-P, constant f(x))",
-     "published": 1.15,
-     "source": "Duncan & Wright (reference)",
-     "computed": 1.1559,
-     "deviation": 0.00513
+     "programs": {
+      "min": 1.155,
+      "max": 1.155
+     }
     }
    ]
   },
@@ -1494,27 +1756,34 @@
    "commercial": false,
    "surface": "search",
    "units": "SI",
-   "checks": [
+   "published": [
+    {
+     "value": 1.535,
+     "source": "Duncan & Wright",
+     "method": "Spencer"
+    }
+   ],
+   "results": [
     {
      "method": "Bishop simplified",
-     "published": 1.533,
-     "source": "Commercial program A",
      "computed": 1.5208,
-     "deviation": -0.00796
+     "programs": {
+      "min": 1.533,
+      "max": 1.533
+     }
     },
     {
-     "method": "Spencer (M-P, constant f(x))",
-     "published": 1.535,
-     "source": "Duncan & Wright (reference)",
+     "method": "Spencer",
      "computed": 1.5327,
-     "deviation": -0.0015
+     "programs": null
     },
     {
-     "method": "Spencer (M-P, constant f(x))",
-     "published": 1.534,
-     "source": "Commercial program A (non-circular)",
+     "method": "Spencer, non-circular",
      "computed": 1.5239,
-     "deviation": -0.00658
+     "programs": {
+      "min": 1.534,
+      "max": 1.534
+     }
     }
    ]
   },
@@ -1526,27 +1795,34 @@
    "commercial": false,
    "surface": "search",
    "units": "imperial",
-   "checks": [
+   "published": [
+    {
+     "value": 1.3,
+     "source": "Duncan & Wright",
+     "method": "Spencer"
+    }
+   ],
+   "results": [
     {
      "method": "Bishop simplified",
-     "published": 1.313,
-     "source": "Commercial program A",
      "computed": 1.306,
-     "deviation": -0.00533
+     "programs": {
+      "min": 1.313,
+      "max": 1.313
+     }
     },
     {
-     "method": "Spencer (M-P, constant f(x))",
-     "published": 1.3,
-     "source": "Duncan & Wright (reference)",
+     "method": "Spencer",
      "computed": 1.2763,
-     "deviation": -0.01823
+     "programs": null
     },
     {
-     "method": "Spencer (M-P, constant f(x))",
-     "published": 1.262,
-     "source": "Commercial program A (non-circular)",
+     "method": "Spencer, non-circular",
      "computed": 1.2688,
-     "deviation": 0.00539
+     "programs": {
+      "min": 1.262,
+      "max": 1.262
+     }
     }
    ]
   },
@@ -1558,27 +1834,34 @@
    "commercial": false,
    "surface": "search",
    "units": "imperial",
-   "checks": [
+   "published": [
+    {
+     "value": 1.312,
+     "source": "Duncan & Wright",
+     "method": "Spencer"
+    }
+   ],
+   "results": [
     {
      "method": "Bishop simplified",
-     "published": 1.335,
-     "source": "Commercial program A",
      "computed": 1.3295,
-     "deviation": -0.00412
+     "programs": {
+      "min": 1.335,
+      "max": 1.335
+     }
     },
     {
-     "method": "Spencer (M-P, constant f(x))",
-     "published": 1.312,
-     "source": "Duncan & Wright (reference)",
+     "method": "Spencer",
      "computed": 1.3276,
-     "deviation": 0.01189
+     "programs": null
     },
     {
-     "method": "Spencer (M-P, constant f(x))",
-     "published": 1.182,
-     "source": "Commercial program A (non-circular)",
+     "method": "Spencer, non-circular",
      "computed": 1.1732,
-     "deviation": -0.00745
+     "programs": {
+      "min": 1.182,
+      "max": 1.182
+     }
     }
    ]
   },
@@ -1590,13 +1873,20 @@
    "commercial": false,
    "surface": "fixed",
    "units": "SI",
-   "checks": [
+   "published": [
+    {
+     "value": 1.51,
+     "source": "Duncan & Wright"
+    }
+   ],
+   "results": [
     {
      "method": "Morgenstern-Price (half-sine)",
-     "published": 1.575,
-     "source": "Commercial program A (GLE)",
      "computed": 1.5677,
-     "deviation": -0.00463
+     "programs": {
+      "min": 1.575,
+      "max": 1.575
+     }
     }
    ]
   },
@@ -1608,20 +1898,21 @@
    "commercial": false,
    "surface": "fixed",
    "units": "SI",
-   "checks": [
+   "published": [
     {
-     "method": "Bishop simplified",
-     "published": 1.324,
-     "source": "Commercial program A",
-     "computed": 1.3194,
-     "deviation": -0.00347
-    },
-    {
-     "method": "Bishop simplified",
-     "published": 1.32,
+     "value": 1.32,
      "source": "Duncan & Wright",
+     "method": "Bishop simplified"
+    }
+   ],
+   "results": [
+    {
+     "method": "Bishop simplified",
      "computed": 1.3194,
-     "deviation": -0.00045
+     "programs": {
+      "min": 1.324,
+      "max": 1.324
+     }
     }
    ]
   },
@@ -1633,34 +1924,37 @@
    "commercial": false,
    "surface": "search",
    "units": "SI",
-   "checks": [
+   "published": [
+    {
+     "value": 0.75,
+     "source": "Duncan & Wright",
+     "method": "Spencer"
+    }
+   ],
+   "results": [
     {
      "method": "Bishop simplified",
-     "published": 0.761,
-     "source": "Commercial program A",
      "computed": 0.7565,
-     "deviation": -0.00591
+     "programs": {
+      "min": 0.761,
+      "max": 0.761
+     }
     },
     {
-     "method": "Spencer (M-P, constant f(x))",
-     "published": 0.756,
-     "source": "Commercial program A",
+     "method": "Spencer",
      "computed": 0.7519,
-     "deviation": -0.00542
+     "programs": {
+      "min": 0.756,
+      "max": 0.756
+     }
     },
     {
-     "method": "Spencer (M-P, constant f(x))",
-     "published": 0.75,
-     "source": "Duncan & Wright (reference)",
-     "computed": 0.7519,
-     "deviation": 0.00253
-    },
-    {
-     "method": "Spencer (M-P, constant f(x))",
-     "published": 0.74,
-     "source": "Commercial program A (non-circular)",
+     "method": "Spencer, non-circular",
      "computed": 0.7375,
-     "deviation": -0.00338
+     "programs": {
+      "min": 0.74,
+      "max": 0.74
+     }
     }
    ]
   },
@@ -1672,34 +1966,37 @@
    "commercial": false,
    "surface": "search",
    "units": "SI",
-   "checks": [
+   "published": [
+    {
+     "value": 0.9,
+     "source": "Duncan & Wright",
+     "method": "Spencer"
+    }
+   ],
+   "results": [
     {
      "method": "Bishop simplified",
-     "published": 0.909,
-     "source": "Commercial program A",
      "computed": 0.9057,
-     "deviation": -0.00363
+     "programs": {
+      "min": 0.909,
+      "max": 0.909
+     }
     },
     {
-     "method": "Spencer (M-P, constant f(x))",
-     "published": 0.898,
-     "source": "Commercial program A",
+     "method": "Spencer",
      "computed": 0.898,
-     "deviation": 0
+     "programs": {
+      "min": 0.898,
+      "max": 0.898
+     }
     },
     {
-     "method": "Spencer (M-P, constant f(x))",
-     "published": 0.9,
-     "source": "Duncan & Wright (reference)",
-     "computed": 0.898,
-     "deviation": -0.00222
-    },
-    {
-     "method": "Spencer (M-P, constant f(x))",
-     "published": 0.903,
-     "source": "Commercial program A (non-circular)",
+     "method": "Spencer, non-circular",
      "computed": 0.8844,
-     "deviation": -0.0206
+     "programs": {
+      "min": 0.903,
+      "max": 0.903
+     }
     }
    ]
   },
@@ -1711,34 +2008,37 @@
    "commercial": false,
    "surface": "search",
    "units": "SI",
-   "checks": [
+   "published": [
+    {
+     "value": 1.03,
+     "source": "Duncan & Wright",
+     "method": "Spencer"
+    }
+   ],
+   "results": [
     {
      "method": "Bishop simplified",
-     "published": 1.045,
-     "source": "Commercial program A",
      "computed": 1.0424,
-     "deviation": -0.00249
+     "programs": {
+      "min": 1.045,
+      "max": 1.045
+     }
     },
     {
-     "method": "Spencer (M-P, constant f(x))",
-     "published": 1.032,
-     "source": "Commercial program A",
+     "method": "Spencer",
      "computed": 1.0285,
-     "deviation": -0.00339
+     "programs": {
+      "min": 1.032,
+      "max": 1.032
+     }
     },
     {
-     "method": "Spencer (M-P, constant f(x))",
-     "published": 1.03,
-     "source": "Duncan & Wright (reference)",
-     "computed": 1.0285,
-     "deviation": -0.00146
-    },
-    {
-     "method": "Spencer (M-P, constant f(x))",
-     "published": 1.018,
-     "source": "Commercial program A (non-circular)",
+     "method": "Spencer, non-circular",
      "computed": 1.0165,
-     "deviation": -0.00147
+     "programs": {
+      "min": 1.018,
+      "max": 1.018
+     }
     }
    ]
   },
@@ -1750,34 +2050,37 @@
    "commercial": false,
    "surface": "search",
    "units": "SI",
-   "checks": [
+   "published": [
+    {
+     "value": 1.13,
+     "source": "Duncan & Wright",
+     "method": "Spencer"
+    }
+   ],
+   "results": [
     {
      "method": "Bishop simplified",
-     "published": 1.154,
-     "source": "Commercial program A",
      "computed": 1.152,
-     "deviation": -0.00173
+     "programs": {
+      "min": 1.154,
+      "max": 1.154
+     }
     },
     {
-     "method": "Spencer (M-P, constant f(x))",
-     "published": 1.134,
-     "source": "Commercial program A",
+     "method": "Spencer",
      "computed": 1.1316,
-     "deviation": -0.00212
+     "programs": {
+      "min": 1.134,
+      "max": 1.134
+     }
     },
     {
-     "method": "Spencer (M-P, constant f(x))",
-     "published": 1.13,
-     "source": "Duncan & Wright (reference)",
-     "computed": 1.1316,
-     "deviation": 0.00142
-    },
-    {
-     "method": "Spencer (M-P, constant f(x))",
-     "published": 1.116,
-     "source": "Commercial program A (non-circular)",
+     "method": "Spencer, non-circular",
      "computed": 1.1206,
-     "deviation": 0.00412
+     "programs": {
+      "min": 1.116,
+      "max": 1.116
+     }
     }
    ]
   },
@@ -1789,20 +2092,28 @@
    "commercial": false,
    "surface": "search",
    "units": "SI",
-   "checks": [
+   "published": [
+    {
+     "value": 1.61,
+     "source": "Duncan & Wright"
+    }
+   ],
+   "results": [
     {
      "method": "Bishop simplified",
-     "published": 1.629,
-     "source": "Commercial program A",
      "computed": 1.6134,
-     "deviation": -0.00958
+     "programs": {
+      "min": 1.629,
+      "max": 1.629
+     }
     },
     {
-     "method": "Spencer (M-P, constant f(x))",
-     "published": 1.62,
-     "source": "Commercial program A",
+     "method": "Spencer",
      "computed": 1.6073,
-     "deviation": -0.00784
+     "programs": {
+      "min": 1.62,
+      "max": 1.62
+     }
     }
    ]
   },
@@ -1814,27 +2125,28 @@
    "commercial": false,
    "surface": "search",
    "units": "SI",
-   "checks": [
+   "published": [
+    {
+     "value": 1.16,
+     "source": "Duncan & Wright"
+    }
+   ],
+   "results": [
     {
      "method": "Bishop simplified",
-     "published": 1.09,
-     "source": "Commercial program A",
      "computed": 1.0695,
-     "deviation": -0.01881
+     "programs": {
+      "min": 1.07,
+      "max": 1.09
+     }
     },
     {
-     "method": "Spencer (M-P, constant f(x))",
-     "published": 1.1,
-     "source": "Commercial program A",
+     "method": "Spencer",
      "computed": 1.0768,
-     "deviation": -0.02109
-    },
-    {
-     "method": "Bishop simplified",
-     "published": 1.07,
-     "source": "Program D",
-     "computed": 1.0695,
-     "deviation": -0.00047
+     "programs": {
+      "min": 1.1,
+      "max": 1.1
+     }
     }
    ]
   },
@@ -1846,34 +2158,36 @@
    "commercial": false,
    "surface": "search",
    "units": "SI",
-   "checks": [
+   "published": [
+    {
+     "value": 1.45,
+     "source": "Duncan & Wright",
+     "method": "Bishop simplified"
+    },
+    {
+     "value": 1.17,
+     "source": "Duncan & Wright",
+     "method": "Spencer, non-circular"
+    }
+   ],
+   "results": [
     {
      "method": "Bishop simplified",
-     "published": 1.45,
-     "source": "Duncan & Wright (reference)",
      "computed": 1.4243,
-     "deviation": -0.01772
+     "programs": null
     },
     {
-     "method": "Spencer (M-P, constant f(x))",
-     "published": 1.45,
-     "source": "Duncan & Wright (reference)",
+     "method": "Spencer",
      "computed": 1.4209,
-     "deviation": -0.02007
+     "programs": null
     },
     {
-     "method": "Spencer (M-P, constant f(x))",
-     "published": 1.167,
-     "source": "Commercial program A (non-circular)",
+     "method": "Spencer, non-circular",
      "computed": 1.1549,
-     "deviation": -0.01037
-    },
-    {
-     "method": "Spencer (M-P, constant f(x))",
-     "published": 1.17,
-     "source": "Duncan & Wright (reference), non-circular",
-     "computed": 1.1549,
-     "deviation": -0.01291
+     "programs": {
+      "min": 1.167,
+      "max": 1.167
+     }
     }
    ]
   },
@@ -1885,13 +2199,15 @@
    "commercial": false,
    "surface": "search",
    "units": "SI",
-   "checks": [
+   "published": [],
+   "results": [
     {
      "method": "Bishop simplified",
-     "published": 1.461,
-     "source": "Commercial program B",
      "computed": 1.4326,
-     "deviation": -0.01944
+     "programs": {
+      "min": 1.461,
+      "max": 1.461
+     }
     }
    ]
   },
@@ -1903,34 +2219,37 @@
    "commercial": false,
    "surface": "search",
    "units": "SI",
-   "checks": [
+   "published": [
+    {
+     "value": 1.6,
+     "source": "Duncan & Wright",
+     "method": "Spencer"
+    }
+   ],
+   "results": [
     {
      "method": "Bishop simplified",
-     "published": 1.603,
-     "source": "Commercial program A",
      "computed": 1.5969,
-     "deviation": -0.00381
+     "programs": {
+      "min": 1.603,
+      "max": 1.603
+     }
     },
     {
-     "method": "Spencer (M-P, constant f(x))",
-     "published": 1.599,
-     "source": "Commercial program A",
+     "method": "Spencer",
      "computed": 1.594,
-     "deviation": -0.00313
+     "programs": {
+      "min": 1.599,
+      "max": 1.599
+     }
     },
     {
-     "method": "Spencer (M-P, constant f(x))",
-     "published": 1.6,
-     "source": "Duncan & Wright (reference)",
-     "computed": 1.594,
-     "deviation": -0.00375
-    },
-    {
-     "method": "Spencer (M-P, constant f(x))",
-     "published": 1.592,
-     "source": "Commercial program A (non-circular)",
+     "method": "Spencer, non-circular",
      "computed": 1.5914,
-     "deviation": -0.00038
+     "programs": {
+      "min": 1.592,
+      "max": 1.592
+     }
     }
    ]
   },
@@ -1942,34 +2261,37 @@
    "commercial": false,
    "surface": "search",
    "units": "SI",
-   "checks": [
+   "published": [
+    {
+     "value": 1.6,
+     "source": "Duncan & Wright",
+     "method": "Spencer"
+    }
+   ],
+   "results": [
     {
      "method": "Bishop simplified",
-     "published": 1.603,
-     "source": "Commercial program A",
      "computed": 1.5967,
-     "deviation": -0.00393
+     "programs": {
+      "min": 1.603,
+      "max": 1.603
+     }
     },
     {
-     "method": "Spencer (M-P, constant f(x))",
-     "published": 1.599,
-     "source": "Commercial program A",
+     "method": "Spencer",
      "computed": 1.5935,
-     "deviation": -0.00344
+     "programs": {
+      "min": 1.599,
+      "max": 1.599
+     }
     },
     {
-     "method": "Spencer (M-P, constant f(x))",
-     "published": 1.6,
-     "source": "Duncan & Wright (reference)",
-     "computed": 1.5935,
-     "deviation": -0.00406
-    },
-    {
-     "method": "Spencer (M-P, constant f(x))",
-     "published": 1.59,
-     "source": "Commercial program A (non-circular)",
+     "method": "Spencer, non-circular",
      "computed": 1.5894,
-     "deviation": -0.00038
+     "programs": {
+      "min": 1.59,
+      "max": 1.59
+     }
     }
    ]
   },
@@ -1981,34 +2303,36 @@
    "commercial": false,
    "surface": "fixed",
    "units": "SI",
-   "checks": [
+   "published": [
+    {
+     "value": 1.67,
+     "source": "Duncan & Wright"
+    }
+   ],
+   "results": [
     {
      "method": "Bishop simplified",
-     "published": 1.584,
-     "source": "Commercial program A",
      "computed": 1.5912,
-     "deviation": 0.00455
+     "programs": {
+      "min": 1.584,
+      "max": 1.591
+     }
     },
     {
-     "method": "Spencer (M-P, constant f(x))",
-     "published": 1.648,
-     "source": "Commercial program A",
+     "method": "Spencer",
      "computed": 1.6585,
-     "deviation": 0.00637
-    },
-    {
-     "method": "Bishop simplified",
-     "published": 1.591,
-     "source": "Program D",
-     "computed": 1.5912,
-     "deviation": 0.00013
+     "programs": {
+      "min": 1.648,
+      "max": 1.648
+     }
     },
     {
      "method": "Morgenstern-Price (half-sine)",
-     "published": 1.67,
-     "source": "Program D",
      "computed": 1.6699,
-     "deviation": -0.00006
+     "programs": {
+      "min": 1.67,
+      "max": 1.67
+     }
     }
    ]
   },
@@ -2020,20 +2344,21 @@
    "commercial": false,
    "surface": "fixed",
    "units": "SI",
-   "checks": [
+   "published": [
     {
-     "method": "Bishop simplified",
-     "published": 1.31,
+     "value": 1.31,
      "source": "El-Ramly et al.",
-     "computed": 1.32,
-     "deviation": 0.00763
-    },
+     "method": "Bishop simplified"
+    }
+   ],
+   "results": [
     {
      "method": "Bishop simplified",
-     "published": 1.32,
-     "source": "Program D",
      "computed": 1.32,
-     "deviation": 0
+     "programs": {
+      "min": 1.32,
+      "max": 1.32
+     }
     }
    ]
   },
@@ -2045,20 +2370,28 @@
    "commercial": false,
    "surface": "fixed",
    "units": "imperial",
-   "checks": [
+   "published": [
+    {
+     "value": 2.08,
+     "source": "Fredlund & Krahn",
+     "method": "Bishop simplified"
+    },
+    {
+     "value": 2.076,
+     "source": "Fredlund & Krahn",
+     "method": "Morgenstern-Price (half-sine)"
+    }
+   ],
+   "results": [
     {
      "method": "Bishop simplified",
-     "published": 2.08,
-     "source": "Fredlund & Krahn",
      "computed": 2.0759,
-     "deviation": -0.00197
+     "programs": null
     },
     {
      "method": "Morgenstern-Price (half-sine)",
-     "published": 2.076,
-     "source": "Fredlund & Krahn",
      "computed": 2.0716,
-     "deviation": -0.00212
+     "programs": null
     }
    ]
   },
@@ -2070,20 +2403,28 @@
    "commercial": false,
    "surface": "fixed",
    "units": "SI",
-   "checks": [
+   "published": [
+    {
+     "value": 1.834,
+     "source": "Fredlund & Krahn",
+     "method": "Bishop simplified"
+    },
+    {
+     "value": 1.832,
+     "source": "Fredlund & Krahn",
+     "method": "Morgenstern-Price (half-sine)"
+    }
+   ],
+   "results": [
     {
      "method": "Bishop simplified",
-     "published": 1.834,
-     "source": "Fredlund & Krahn",
      "computed": 1.8289,
-     "deviation": -0.00278
+     "programs": null
     },
     {
      "method": "Morgenstern-Price (half-sine)",
-     "published": 1.832,
-     "source": "Fredlund & Krahn",
      "computed": 1.8266,
-     "deviation": -0.00295
+     "programs": null
     }
    ]
   },
@@ -2095,27 +2436,34 @@
    "commercial": false,
    "surface": "fixed",
    "units": "imperial",
-   "checks": [
+   "published": [
+    {
+     "value": 1.37,
+     "source": "Fredlund & Krahn",
+     "method": "Morgenstern-Price (half-sine)"
+    }
+   ],
+   "results": [
     {
      "method": "Bishop simplified",
-     "published": 1.382,
-     "source": "Commercial program A",
      "computed": 1.3804,
-     "deviation": -0.00116
+     "programs": {
+      "min": 1.382,
+      "max": 1.382
+     }
     },
     {
-     "method": "Spencer (M-P, constant f(x))",
-     "published": 1.382,
-     "source": "Commercial program A",
+     "method": "Spencer",
      "computed": 1.3794,
-     "deviation": -0.00188
+     "programs": {
+      "min": 1.382,
+      "max": 1.382
+     }
     },
     {
      "method": "Morgenstern-Price (half-sine)",
-     "published": 1.37,
-     "source": "Fredlund & Krahn",
      "computed": 1.3699,
-     "deviation": -0.00007
+     "programs": null
     }
    ]
   },
@@ -2127,48 +2475,45 @@
    "commercial": false,
    "surface": "search",
    "units": "SI",
-   "checks": [
+   "published": [
+    {
+     "value": 1,
+     "source": "ACADS",
+     "method": "Spencer"
+    }
+   ],
+   "results": [
     {
      "method": "Bishop simplified",
-     "published": 0.987,
-     "source": "Commercial program A",
      "computed": 0.9851,
-     "deviation": -0.00193
+     "programs": {
+      "min": 0.987,
+      "max": 0.992
+     }
     },
     {
-     "method": "Spencer (M-P, constant f(x))",
-     "published": 0.986,
-     "source": "Commercial program A",
+     "method": "Spencer",
      "computed": 0.9841,
-     "deviation": -0.00193
+     "programs": {
+      "min": 0.986,
+      "max": 0.986
+     }
     },
     {
-     "method": "Janbu corrected (f0)",
-     "published": 0.99,
-     "source": "Commercial program A",
+     "method": "Janbu corrected",
      "computed": 0.9856,
-     "deviation": -0.00444
+     "programs": {
+      "min": 0.99,
+      "max": 0.99
+     }
     },
     {
      "method": "Morgenstern-Price (half-sine)",
-     "published": 0.991,
-     "source": "Commercial program B",
      "computed": 0.9841,
-     "deviation": -0.00696
-    },
-    {
-     "method": "Bishop simplified",
-     "published": 0.992,
-     "source": "Commercial program B (moment equilibrium, λ = 0)",
-     "computed": 0.9851,
-     "deviation": -0.00696
-    },
-    {
-     "method": "Spencer (M-P, constant f(x))",
-     "published": 1,
-     "source": "ACADS",
-     "computed": 0.9841,
-     "deviation": -0.0159
+     "programs": {
+      "min": 0.991,
+      "max": 0.991
+     }
     }
    ]
   },
@@ -2180,20 +2525,29 @@
    "commercial": false,
    "surface": "search",
    "units": "SI",
-   "checks": [
+   "published": [
+    {
+     "value": 1.65,
+     "upper": 1.7,
+     "source": "Giam & Donald (1989), ACADS"
+    }
+   ],
+   "results": [
     {
      "method": "Bishop simplified",
-     "published": 1.664,
-     "source": "Commercial program B",
      "computed": 1.659,
-     "deviation": -0.003
+     "programs": {
+      "min": 1.664,
+      "max": 1.664
+     }
     },
     {
      "method": "Morgenstern-Price (half-sine)",
-     "published": 1.66,
-     "source": "Commercial program B",
      "computed": 1.6559,
-     "deviation": -0.00247
+     "programs": {
+      "min": 1.66,
+      "max": 1.66
+     }
     }
    ]
   },
@@ -2205,27 +2559,36 @@
    "commercial": false,
    "surface": "search",
    "units": "SI",
-   "checks": [
+   "published": [
+    {
+     "value": 1.65,
+     "source": "Giam & Donald (1989), ACADS"
+    }
+   ],
+   "results": [
     {
      "method": "Bishop simplified",
-     "published": 1.596,
-     "source": "Commercial program A",
      "computed": 1.5868,
-     "deviation": -0.00576
+     "programs": {
+      "min": 1.596,
+      "max": 1.596
+     }
     },
     {
-     "method": "Spencer (M-P, constant f(x))",
-     "published": 1.592,
-     "source": "Commercial program A",
+     "method": "Spencer",
      "computed": 1.5824,
-     "deviation": -0.00603
+     "programs": {
+      "min": 1.592,
+      "max": 1.592
+     }
     },
     {
-     "method": "Janbu corrected (f0)",
-     "published": 1.489,
-     "source": "Commercial program A",
+     "method": "Janbu corrected",
      "computed": 1.475,
-     "deviation": -0.0094
+     "programs": {
+      "min": 1.489,
+      "max": 1.489
+     }
     }
    ]
   },
@@ -2237,41 +2600,44 @@
    "commercial": false,
    "surface": "search",
    "units": "SI",
-   "checks": [
+   "published": [
+    {
+     "value": 1.39,
+     "source": "Giam & Donald (1989), ACADS"
+    }
+   ],
+   "results": [
     {
      "method": "Bishop simplified",
-     "published": 1.405,
-     "source": "Commercial program A",
      "computed": 1.403,
-     "deviation": -0.00142
+     "programs": {
+      "min": 1.403,
+      "max": 1.405
+     }
     },
     {
-     "method": "Spencer (M-P, constant f(x))",
-     "published": 1.375,
-     "source": "Commercial program A",
+     "method": "Spencer",
      "computed": 1.3721,
-     "deviation": -0.00211
+     "programs": {
+      "min": 1.375,
+      "max": 1.375
+     }
     },
     {
-     "method": "Janbu corrected (f0)",
-     "published": 1.357,
-     "source": "Commercial program A",
+     "method": "Janbu corrected",
      "computed": 1.3553,
-     "deviation": -0.00125
+     "programs": {
+      "min": 1.357,
+      "max": 1.357
+     }
     },
     {
      "method": "Morgenstern-Price (half-sine)",
-     "published": 1.382,
-     "source": "Commercial program B",
      "computed": 1.3717,
-     "deviation": -0.00745
-    },
-    {
-     "method": "Bishop simplified",
-     "published": 1.403,
-     "source": "Program D",
-     "computed": 1.403,
-     "deviation": 0
+     "programs": {
+      "min": 1.382,
+      "max": 1.382
+     }
     }
    ]
   },
@@ -2283,27 +2649,36 @@
    "commercial": false,
    "surface": "fixed",
    "units": "SI",
-   "checks": [
+   "published": [
     {
-     "method": "Janbu corrected (f0)",
-     "published": 1.294,
-     "source": "Commercial program A",
+     "value": 1.34,
+     "source": "Giam & Donald (1989), ACADS"
+    }
+   ],
+   "results": [
+    {
+     "method": "Janbu corrected",
      "computed": 1.2937,
-     "deviation": -0.00023
+     "programs": {
+      "min": 1.294,
+      "max": 1.294
+     }
     },
     {
-     "method": "Spencer (M-P, constant f(x))",
-     "published": 1.277,
-     "source": "Commercial program A",
+     "method": "Spencer",
      "computed": 1.2764,
-     "deviation": -0.00047
+     "programs": {
+      "min": 1.277,
+      "max": 1.277
+     }
     },
     {
      "method": "Morgenstern-Price (half-sine)",
-     "published": 1.261,
-     "source": "Commercial program B",
      "computed": 1.2605,
-     "deviation": -0.0004
+     "programs": {
+      "min": 1.261,
+      "max": 1.261
+     }
     }
    ]
   },
@@ -2315,13 +2690,21 @@
    "commercial": false,
    "surface": "search",
    "units": "SI",
-   "checks": [
+   "published": [
     {
-     "method": "Spencer (M-P, constant f(x))",
-     "published": 1.246,
-     "source": "Commercial program A",
+     "value": 1.24,
+     "upper": 1.27,
+     "source": "Giam & Donald (1989), ACADS"
+    }
+   ],
+   "results": [
+    {
+     "method": "Spencer, non-circular",
      "computed": 1.2282,
-     "deviation": -0.01429
+     "programs": {
+      "min": 1.246,
+      "max": 1.246
+     }
     }
    ]
   },
@@ -2333,13 +2716,20 @@
    "commercial": false,
    "surface": "search",
    "units": "SI",
-   "checks": [
+   "published": [
     {
-     "method": "Spencer (M-P, constant f(x))",
-     "published": 0.707,
-     "source": "Commercial program A (optimised)",
+     "value": 0.78,
+     "source": "Giam & Donald (1989), ACADS"
+    }
+   ],
+   "results": [
+    {
+     "method": "Spencer, non-circular",
      "computed": 0.6975,
-     "deviation": -0.01344
+     "programs": {
+      "min": 0.707,
+      "max": 0.707
+     }
     }
    ]
   },
@@ -2351,34 +2741,36 @@
    "commercial": false,
    "surface": "search",
    "units": "SI",
-   "checks": [
+   "published": [
+    {
+     "value": 1.95,
+     "source": "Giam & Donald (1989), ACADS"
+    }
+   ],
+   "results": [
     {
      "method": "Bishop simplified",
-     "published": 1.948,
-     "source": "Commercial program A",
      "computed": 1.9636,
-     "deviation": 0.00801
+     "programs": {
+      "min": 1.948,
+      "max": 1.951
+     }
     },
     {
-     "method": "Spencer (M-P, constant f(x))",
-     "published": 1.948,
-     "source": "Commercial program A",
+     "method": "Spencer",
      "computed": 1.9636,
-     "deviation": 0.00801
+     "programs": {
+      "min": 1.948,
+      "max": 1.948
+     }
     },
     {
-     "method": "Janbu corrected (f0)",
-     "published": 1.949,
-     "source": "Commercial program A",
+     "method": "Janbu corrected",
      "computed": 1.9741,
-     "deviation": 0.01288
-    },
-    {
-     "method": "Bishop simplified",
-     "published": 1.951,
-     "source": "Commercial program B",
-     "computed": 1.9636,
-     "deviation": 0.00646
+     "programs": {
+      "min": 1.949,
+      "max": 1.949
+     }
     }
    ]
   },
@@ -2390,34 +2782,44 @@
    "commercial": false,
    "surface": "fixed",
    "units": "SI",
-   "checks": [
+   "published": [
+    {
+     "value": 2.29,
+     "source": "Giam & Donald (1989), ACADS"
+    }
+   ],
+   "results": [
     {
      "method": "Bishop simplified",
-     "published": 2.208,
-     "source": "Commercial program A",
      "computed": 2.2064,
-     "deviation": -0.00072
+     "programs": {
+      "min": 2.208,
+      "max": 2.208
+     }
     },
     {
-     "method": "Spencer (M-P, constant f(x))",
-     "published": 2.292,
-     "source": "Commercial program A",
+     "method": "Spencer",
      "computed": 2.2901,
-     "deviation": -0.00083
+     "programs": {
+      "min": 2.292,
+      "max": 2.292
+     }
     },
     {
-     "method": "Janbu corrected (f0)",
-     "published": 2.073,
-     "source": "Commercial program A",
+     "method": "Janbu corrected",
      "computed": 2.073,
-     "deviation": 0
+     "programs": {
+      "min": 2.073,
+      "max": 2.073
+     }
     },
     {
      "method": "Morgenstern-Price (half-sine)",
-     "published": 2.299,
-     "source": "Commercial program B",
      "computed": 2.2994,
-     "deviation": 0.00017
+     "programs": {
+      "min": 2.299,
+      "max": 2.299
+     }
     }
    ]
   },
@@ -2429,13 +2831,26 @@
    "commercial": false,
    "surface": "search",
    "units": "SI",
-   "checks": [
+   "published": [
     {
-     "method": "Spencer (M-P, constant f(x))",
-     "published": 1.01,
-     "source": "Commercial program A (block search)",
+     "value": 1.01,
+     "upper": 1.03,
+     "method": "Spencer, non-circular",
+     "source": "Chen & Shao (1988)"
+    },
+    {
+     "value": 1.08,
+     "source": "Greco (1996)"
+    }
+   ],
+   "results": [
+    {
+     "method": "Spencer, non-circular",
      "computed": 1.0089,
-     "deviation": -0.00109
+     "programs": {
+      "min": 1.01,
+      "max": 1.01
+     }
     }
    ]
   },
@@ -2447,20 +2862,29 @@
    "commercial": false,
    "surface": "search",
    "units": "SI",
-   "checks": [
+   "published": [
     {
-     "method": "Bishop simplified (vertical head)",
-     "published": 1.087,
-     "source": "Commercial program A",
+     "value": 1.08,
+     "method": "Spencer, nearly circular surface",
+     "source": "Greco (1996)"
+    }
+   ],
+   "results": [
+    {
+     "method": "Bishop simplified",
      "computed": 1.0855,
-     "deviation": -0.00138
+     "programs": {
+      "min": 1.087,
+      "max": 1.087
+     }
     },
     {
-     "method": "Spencer (vertical head)",
-     "published": 1.093,
-     "source": "Commercial program A",
+     "method": "Spencer",
      "computed": 1.0913,
-     "deviation": -0.00156
+     "programs": {
+      "min": 1.093,
+      "max": 1.093
+     }
     }
    ]
   },
@@ -2472,20 +2896,21 @@
    "commercial": false,
    "surface": "search",
    "units": "SI",
-   "checks": [
+   "published": [
     {
-     "method": "Spencer (M-P, constant f(x))",
-     "published": 1.4,
-     "source": "Griffiths & Lane (FE)",
-     "computed": 1.3662,
-     "deviation": -0.02414
-    },
+     "value": 1.4,
+     "source": "Griffiths & Lane",
+     "method": "finite elements"
+    }
+   ],
+   "results": [
     {
-     "method": "Spencer (M-P, constant f(x))",
-     "published": 1.366,
-     "source": "Program D",
+     "method": "Spencer",
      "computed": 1.3662,
-     "deviation": 0.00015
+     "programs": {
+      "min": 1.366,
+      "max": 1.366
+     }
     }
    ]
   },
@@ -2497,13 +2922,18 @@
    "commercial": false,
    "surface": "fixed",
    "units": "SI",
-   "checks": [
+   "published": [
     {
-     "method": "Janbu corrected (f0)",
-     "published": 0.485,
-     "source": "Griffiths & Lane (Janbu wedge, Fig. 7)",
+     "value": 0.485,
+     "source": "Griffiths & Lane",
+     "method": "Janbu wedge"
+    }
+   ],
+   "results": [
+    {
+     "method": "Janbu corrected",
      "computed": 0.4994,
-     "deviation": 0.02969
+     "programs": null
     }
    ]
   },
@@ -2515,20 +2945,21 @@
    "commercial": false,
    "surface": "search",
    "units": "SI",
-   "checks": [
+   "published": [
     {
-     "method": "Spencer (M-P, constant f(x))",
-     "published": 1.46,
-     "source": "Griffiths & Lane (LE curve)",
-     "computed": 1.4705,
-     "deviation": 0.00719
-    },
+     "value": 1.46,
+     "source": "Griffiths & Lane",
+     "method": "limit-equilibrium chart"
+    }
+   ],
+   "results": [
     {
-     "method": "Spencer (M-P, constant f(x))",
-     "published": 1.468,
-     "source": "Program D",
+     "method": "Spencer",
      "computed": 1.4705,
-     "deviation": 0.0017
+     "programs": {
+      "min": 1.468,
+      "max": 1.468
+     }
     }
    ]
   },
@@ -2540,20 +2971,21 @@
    "commercial": false,
    "surface": "search",
    "units": "SI",
-   "checks": [
+   "published": [
     {
-     "method": "Spencer (M-P, constant f(x))",
-     "published": 2.04,
-     "source": "Griffiths & Lane (LE curve)",
-     "computed": 2.0231,
-     "deviation": -0.00828
-    },
+     "value": 2.04,
+     "source": "Griffiths & Lane",
+     "method": "limit-equilibrium chart"
+    }
+   ],
+   "results": [
     {
-     "method": "Spencer (M-P, constant f(x))",
-     "published": 2.022,
-     "source": "Program D",
+     "method": "Spencer",
      "computed": 2.0231,
-     "deviation": 0.00054
+     "programs": {
+      "min": 2.022,
+      "max": 2.022
+     }
     }
    ]
   },
@@ -2565,20 +2997,21 @@
    "commercial": false,
    "surface": "search",
    "units": "SI",
-   "checks": [
+   "published": [
     {
-     "method": "Spencer (M-P, constant f(x))",
-     "published": 1.9,
-     "source": "Griffiths & Lane (FE)",
-     "computed": 1.9152,
-     "deviation": 0.008
-    },
+     "value": 1.9,
+     "source": "Griffiths & Lane",
+     "method": "finite elements"
+    }
+   ],
+   "results": [
     {
-     "method": "Spencer (M-P, constant f(x))",
-     "published": 1.915,
-     "source": "Program D",
+     "method": "Spencer",
      "computed": 1.9152,
-     "deviation": 0.0001
+     "programs": {
+      "min": 1.915,
+      "max": 1.915
+     }
     }
    ]
   },
@@ -2590,13 +3023,15 @@
    "commercial": false,
    "surface": "search",
    "units": "SI",
-   "checks": [
+   "published": [],
+   "results": [
     {
-     "method": "Spencer (M-P, constant f(x))",
-     "published": 1.215,
-     "source": "Commercial program A (optimised)",
+     "method": "Spencer, non-circular",
      "computed": 1.2162,
-     "deviation": 0.00099
+     "programs": {
+      "min": 1.215,
+      "max": 1.215
+     }
     }
    ]
   },
@@ -2608,13 +3043,15 @@
    "commercial": false,
    "surface": "search",
    "units": "SI",
-   "checks": [
+   "published": [],
+   "results": [
     {
-     "method": "Spencer (M-P, constant f(x))",
-     "published": 1.29,
-     "source": "Commercial program A (optimised)",
+     "method": "Spencer, non-circular",
      "computed": 1.2923,
-     "deviation": 0.00178
+     "programs": {
+      "min": 1.29,
+      "max": 1.29
+     }
     }
    ]
   },
@@ -2626,13 +3063,15 @@
    "commercial": false,
    "surface": "search",
    "units": "SI",
-   "checks": [
+   "published": [],
+   "results": [
     {
-     "method": "Spencer (M-P, constant f(x))",
-     "published": 1.315,
-     "source": "Commercial program A (optimised)",
+     "method": "Spencer, non-circular",
      "computed": 1.3139,
-     "deviation": -0.00084
+     "programs": {
+      "min": 1.315,
+      "max": 1.315
+     }
     }
    ]
   },
@@ -2644,20 +3083,15 @@
    "commercial": false,
    "surface": "search",
    "units": "SI",
-   "checks": [
+   "published": [],
+   "results": [
     {
      "method": "Bishop simplified",
-     "published": 2.551,
-     "source": "Commercial program A",
      "computed": 2.5301,
-     "deviation": -0.00819
-    },
-    {
-     "method": "Bishop simplified",
-     "published": 2.529,
-     "source": "Program D",
-     "computed": 2.5301,
-     "deviation": 0.00043
+     "programs": {
+      "min": 2.529,
+      "max": 2.551
+     }
     }
    ]
   },
@@ -2669,13 +3103,15 @@
    "commercial": false,
    "surface": "fixed",
    "units": "SI",
-   "checks": [
+   "published": [],
+   "results": [
     {
      "method": "Bishop simplified",
-     "published": 2.973,
-     "source": "Program D",
      "computed": 2.9742,
-     "deviation": 0.0004
+     "programs": {
+      "min": 2.973,
+      "max": 2.973
+     }
     }
    ]
   },
@@ -2687,27 +3123,29 @@
    "commercial": false,
    "surface": "fixed",
    "units": "SI",
-   "checks": [
+   "published": [
     {
-     "method": "Morgenstern-Price (half-sine)",
-     "published": 2.36,
+     "value": 2.36,
      "source": "Wolff & Harr",
-     "computed": 2.3837,
-     "deviation": 0.01004
-    },
-    {
-     "method": "Spencer (M-P, constant f(x))",
-     "published": 2.423,
-     "source": "Program D",
-     "computed": 2.4233,
-     "deviation": 0.00012
-    },
+     "method": "Morgenstern-Price (half-sine)"
+    }
+   ],
+   "results": [
     {
      "method": "Morgenstern-Price (half-sine)",
-     "published": 2.384,
-     "source": "Program D",
      "computed": 2.3837,
-     "deviation": -0.00013
+     "programs": {
+      "min": 2.384,
+      "max": 2.384
+     }
+    },
+    {
+     "method": "Spencer",
+     "computed": 2.4233,
+     "programs": {
+      "min": 2.423,
+      "max": 2.423
+     }
     }
    ]
   },
@@ -2719,20 +3157,20 @@
    "commercial": false,
    "surface": "fixed",
    "units": "SI",
-   "checks": [
+   "published": [
+    {
+     "value": 2.753,
+     "source": "Hassan & Wolff (1999)"
+    }
+   ],
+   "results": [
     {
      "method": "Bishop simplified",
-     "published": 2.56,
-     "source": "Commercial program B",
      "computed": 2.5486,
-     "deviation": -0.00445
-    },
-    {
-     "method": "Bishop simplified",
-     "published": 2.551,
-     "source": "Commercial program A",
-     "computed": 2.5486,
-     "deviation": -0.00094
+     "programs": {
+      "min": 2.551,
+      "max": 2.56
+     }
     }
    ]
   },
@@ -2744,20 +3182,20 @@
    "commercial": false,
    "surface": "fixed",
    "units": "SI",
-   "checks": [
+   "published": [
+    {
+     "value": 2.352,
+     "source": "Hassan & Wolff (1999)"
+    }
+   ],
+   "results": [
     {
      "method": "Bishop simplified",
-     "published": 2.806,
-     "source": "Commercial program B",
      "computed": 2.8155,
-     "deviation": 0.00339
-    },
-    {
-     "method": "Bishop simplified",
-     "published": 2.82,
-     "source": "Commercial program A",
-     "computed": 2.8155,
-     "deviation": -0.0016
+     "programs": {
+      "min": 2.806,
+      "max": 2.82
+     }
     }
    ]
   },
@@ -2769,20 +3207,20 @@
    "commercial": false,
    "surface": "fixed",
    "units": "SI",
-   "checks": [
+   "published": [
+    {
+     "value": 2.523,
+     "source": "Hassan & Wolff (1999)"
+    }
+   ],
+   "results": [
     {
      "method": "Bishop simplified",
-     "published": 2.771,
-     "source": "Commercial program B",
      "computed": 2.7791,
-     "deviation": 0.00292
-    },
-    {
-     "method": "Bishop simplified",
-     "published": 2.777,
-     "source": "Commercial program A",
-     "computed": 2.7791,
-     "deviation": 0.00076
+     "programs": {
+      "min": 2.771,
+      "max": 2.777
+     }
     }
    ]
   },
@@ -2794,20 +3232,20 @@
    "commercial": false,
    "surface": "fixed",
    "units": "SI",
-   "checks": [
+   "published": [
+    {
+     "value": 2.457,
+     "source": "Hassan & Wolff (1999)"
+    }
+   ],
+   "results": [
     {
      "method": "Bishop simplified",
-     "published": 2.589,
-     "source": "Commercial program B",
      "computed": 2.5769,
-     "deviation": -0.00467
-    },
-    {
-     "method": "Bishop simplified",
-     "published": 2.583,
-     "source": "Commercial program A",
-     "computed": 2.5769,
-     "deviation": -0.00236
+     "programs": {
+      "min": 2.583,
+      "max": 2.589
+     }
     }
    ]
   },
@@ -2819,20 +3257,20 @@
    "commercial": false,
    "surface": "fixed",
    "units": "SI",
-   "checks": [
+   "published": [
+    {
+     "value": 2.602,
+     "source": "Hassan & Wolff (1999)"
+    }
+   ],
+   "results": [
     {
      "method": "Bishop simplified",
-     "published": 2.703,
-     "source": "Commercial program B",
      "computed": 2.6899,
-     "deviation": -0.00485
-    },
-    {
-     "method": "Bishop simplified",
-     "published": 2.692,
-     "source": "Commercial program A",
-     "computed": 2.6899,
-     "deviation": -0.00078
+     "programs": {
+      "min": 2.692,
+      "max": 2.703
+     }
     }
    ]
   },
@@ -2844,20 +3282,20 @@
    "commercial": false,
    "surface": "fixed",
    "units": "SI",
-   "checks": [
+   "published": [
+    {
+     "value": 2.995,
+     "source": "Hassan & Wolff (1999)"
+    }
+   ],
+   "results": [
     {
      "method": "Bishop simplified",
-     "published": 2.673,
-     "source": "Commercial program B",
      "computed": 2.6731,
-     "deviation": 0.00004
-    },
-    {
-     "method": "Bishop simplified",
-     "published": 2.672,
-     "source": "Commercial program A",
-     "computed": 2.6731,
-     "deviation": 0.00041
+     "programs": {
+      "min": 2.672,
+      "max": 2.673
+     }
     }
    ]
   },
@@ -2869,20 +3307,20 @@
    "commercial": false,
    "surface": "fixed",
    "units": "SI",
-   "checks": [
+   "published": [
+    {
+     "value": 3.916,
+     "source": "Hassan & Wolff (1999)"
+    }
+   ],
+   "results": [
     {
      "method": "Bishop simplified",
-     "published": 3.586,
-     "source": "Commercial program B",
      "computed": 3.5917,
-     "deviation": 0.00159
-    },
-    {
-     "method": "Bishop simplified",
-     "published": 3.598,
-     "source": "Commercial program A",
-     "computed": 3.5917,
-     "deviation": -0.00175
+     "programs": {
+      "min": 3.586,
+      "max": 3.598
+     }
     }
    ]
   },
@@ -2894,20 +3332,20 @@
    "commercial": false,
    "surface": "fixed",
    "units": "SI",
-   "checks": [
+   "published": [
+    {
+     "value": 10.576,
+     "source": "Hassan & Wolff (1999)"
+    }
+   ],
+   "results": [
     {
      "method": "Bishop simplified",
-     "published": 6.069,
-     "source": "Commercial program B",
      "computed": 6.0629,
-     "deviation": -0.00101
-    },
-    {
-     "method": "Bishop simplified",
-     "published": 6.074,
-     "source": "Commercial program A",
-     "computed": 6.0629,
-     "deviation": -0.00183
+     "programs": {
+      "min": 6.069,
+      "max": 6.074
+     }
     }
    ]
   },
@@ -2919,13 +3357,20 @@
    "commercial": false,
    "surface": "fixed",
    "units": "SI",
-   "checks": [
+   "published": [
+    {
+     "value": 6.293,
+     "source": "Hassan & Wolff (1999)"
+    }
+   ],
+   "results": [
     {
      "method": "Bishop simplified",
-     "published": 11.583,
-     "source": "Commercial program B",
      "computed": 11.5666,
-     "deviation": -0.00142
+     "programs": {
+      "min": 11.583,
+      "max": 11.583
+     }
     }
    ]
   },
@@ -2937,20 +3382,21 @@
    "commercial": false,
    "surface": "search",
    "units": "SI",
-   "checks": [
+   "published": [
     {
-     "method": "Spencer (M-P, constant f(x))",
-     "published": 2.455,
-     "source": "Commercial program A",
-     "computed": 2.4511,
-     "deviation": -0.00159
-    },
+     "value": 2.43,
+     "source": "Huang & Jia",
+     "method": "finite-element strength reduction"
+    }
+   ],
+   "results": [
     {
-     "method": "Spencer (M-P, constant f(x))",
-     "published": 2.43,
-     "source": "Huang & Jia (FE strength reduction)",
+     "method": "Spencer",
      "computed": 2.4511,
-     "deviation": 0.00868
+     "programs": {
+      "min": 2.455,
+      "max": 2.455
+     }
     }
    ]
   },
@@ -2962,13 +3408,21 @@
    "commercial": false,
    "surface": "fixed",
    "units": "SI",
-   "checks": [
+   "published": [
+    {
+     "value": 1,
+     "method": "Bishop simplified, circular",
+     "source": "Leshchinsky & Han (2004)"
+    }
+   ],
+   "results": [
     {
      "method": "Bishop simplified",
-     "published": 1.02,
-     "source": "Program D",
      "computed": 1.0171,
-     "deviation": -0.00284
+     "programs": {
+      "min": 1.02,
+      "max": 1.02
+     }
     }
    ]
   },
@@ -2980,13 +3434,26 @@
    "commercial": false,
    "surface": "fixed",
    "units": "SI",
-   "checks": [
+   "published": [
     {
-     "method": "Spencer (M-P, constant f(x))",
-     "published": 0.964,
-     "source": "Commercial program A",
+     "value": 1,
+     "method": "Bishop simplified, circular",
+     "source": "Leshchinsky & Han (2004)"
+    },
+    {
+     "value": 0.86,
+     "method": "finite differences",
+     "source": "Leshchinsky & Han (2004)"
+    }
+   ],
+   "results": [
+    {
+     "method": "Spencer",
      "computed": 0.9607,
-     "deviation": -0.00342
+     "programs": {
+      "min": 0.964,
+      "max": 0.964
+     }
     }
    ]
   },
@@ -2998,13 +3465,26 @@
    "commercial": false,
    "surface": "fixed",
    "units": "SI",
-   "checks": [
+   "published": [
+    {
+     "value": 1,
+     "method": "Bishop simplified, circular",
+     "source": "Leshchinsky & Han (2004)"
+    },
+    {
+     "value": 0.99,
+     "method": "finite differences",
+     "source": "Leshchinsky & Han (2004)"
+    }
+   ],
+   "results": [
     {
      "method": "Bishop simplified",
-     "published": 1.04,
-     "source": "Commercial program A",
      "computed": 1.0305,
-     "deviation": -0.00913
+     "programs": {
+      "min": 1.04,
+      "max": 1.04
+     }
     }
    ]
   },
@@ -3016,13 +3496,26 @@
    "commercial": false,
    "surface": "fixed",
    "units": "SI",
-   "checks": [
+   "published": [
     {
-     "method": "Spencer (M-P, constant f(x))",
-     "published": 1.011,
-     "source": "Program D",
+     "value": 1,
+     "method": "Bishop simplified, circular",
+     "source": "Leshchinsky & Han (2004)"
+    },
+    {
+     "value": 0.98,
+     "method": "finite differences",
+     "source": "Leshchinsky & Han (2004)"
+    }
+   ],
+   "results": [
+    {
+     "method": "Spencer",
      "computed": 1.0106,
-     "deviation": -0.0004
+     "programs": {
+      "min": 1.011,
+      "max": 1.011
+     }
     }
    ]
   },
@@ -3034,13 +3527,26 @@
    "commercial": false,
    "surface": "fixed",
    "units": "SI",
-   "checks": [
+   "published": [
+    {
+     "value": 1,
+     "method": "Bishop simplified, circular",
+     "source": "Leshchinsky & Han (2004)"
+    },
+    {
+     "value": 1.01,
+     "method": "finite differences",
+     "source": "Leshchinsky & Han (2004)"
+    }
+   ],
+   "results": [
     {
      "method": "Bishop simplified",
-     "published": 1.004,
-     "source": "Commercial program A",
      "computed": 1.0115,
-     "deviation": 0.00747
+     "programs": {
+      "min": 1.004,
+      "max": 1.004
+     }
     }
    ]
   },
@@ -3052,13 +3558,26 @@
    "commercial": false,
    "surface": "fixed",
    "units": "SI",
-   "checks": [
+   "published": [
+    {
+     "value": 1,
+     "method": "Bishop simplified, circular",
+     "source": "Leshchinsky & Han (2004)"
+    },
+    {
+     "value": 1.01,
+     "method": "finite differences",
+     "source": "Leshchinsky & Han (2004)"
+    }
+   ],
+   "results": [
     {
      "method": "Bishop simplified",
-     "published": 1.01,
-     "source": "Program D",
      "computed": 1.01,
-     "deviation": 0
+     "programs": {
+      "min": 1.01,
+      "max": 1.01
+     }
     }
    ]
   },
@@ -3070,13 +3589,26 @@
    "commercial": false,
    "surface": "fixed",
    "units": "SI",
-   "checks": [
+   "published": [
+    {
+     "value": 1,
+     "method": "Bishop simplified, circular",
+     "source": "Leshchinsky & Han (2004)"
+    },
+    {
+     "value": 1.02,
+     "method": "finite differences",
+     "source": "Leshchinsky & Han (2004)"
+    }
+   ],
+   "results": [
     {
      "method": "Bishop simplified",
-     "published": 0.958,
-     "source": "Commercial program A",
      "computed": 0.961,
-     "deviation": 0.00313
+     "programs": {
+      "min": 0.958,
+      "max": 0.958
+     }
     }
    ]
   },
@@ -3088,13 +3620,21 @@
    "commercial": false,
    "surface": "search",
    "units": "SI",
-   "checks": [
+   "published": [
+    {
+     "value": 1.44,
+     "method": "Ordinary",
+     "source": "Low (1989)"
+    }
+   ],
+   "results": [
     {
      "method": "Bishop simplified",
-     "published": 1.439,
-     "source": "Commercial program A",
      "computed": 1.4358,
-     "deviation": -0.00222
+     "programs": {
+      "min": 1.439,
+      "max": 1.439
+     }
     }
    ]
   },
@@ -3106,13 +3646,30 @@
    "commercial": false,
    "surface": "fixed",
    "units": "SI",
-   "checks": [
+   "published": [
+    {
+     "value": 1.36,
+     "method": "Ordinary",
+     "source": "Low (1989)"
+    },
+    {
+     "value": 1.14,
+     "method": "Bishop simplified",
+     "source": "Low (1989)"
+    },
+    {
+     "value": 1.17,
+     "source": "Kim (2002)"
+    }
+   ],
+   "results": [
     {
      "method": "Bishop simplified",
-     "published": 1.192,
-     "source": "Commercial program A",
      "computed": 1.1968,
-     "deviation": 0.00403
+     "programs": {
+      "min": 1.192,
+      "max": 1.192
+     }
     }
    ]
   },
@@ -3124,20 +3681,23 @@
    "commercial": false,
    "surface": "search",
    "units": "SI",
-   "checks": [
+   "published": [
     {
-     "method": "Bishop simplified (vertical head)",
-     "published": 1.2,
-     "source": "Morgenstern (chart)",
+     "value": 1.2,
+     "source": "Morgenstern",
+     "method": "stability chart"
+    }
+   ],
+   "results": [
+    {
+     "method": "Bishop simplified",
      "computed": 1.1999,
-     "deviation": -0.00008
+     "programs": null
     },
     {
-     "method": "Spencer (vertical head)",
-     "published": 1.2,
-     "source": "Morgenstern (chart)",
+     "method": "Spencer",
      "computed": 1.2053,
-     "deviation": 0.00442
+     "programs": null
     }
    ]
   },
@@ -3149,13 +3709,21 @@
    "commercial": true,
    "surface": "fixed",
    "units": "SI",
-   "checks": [
+   "published": [
+    {
+     "value": 1.2,
+     "method": "stability chart",
+     "source": "Morgenstern (1963)"
+    }
+   ],
+   "results": [
     {
      "method": "Bishop simplified",
-     "published": 1.212,
-     "source": "Commercial program A",
      "computed": 1.2095,
-     "deviation": -0.00206
+     "programs": {
+      "min": 1.212,
+      "max": 1.212
+     }
     }
    ]
   },
@@ -3167,27 +3735,29 @@
    "commercial": false,
    "surface": "search",
    "units": "SI",
-   "checks": [
+   "published": [
+    {
+     "value": 1.41,
+     "source": "Morgenstern",
+     "method": "stability chart"
+    }
+   ],
+   "results": [
     {
      "method": "Bishop simplified",
-     "published": 1.417,
-     "source": "Commercial program A",
      "computed": 1.4147,
-     "deviation": -0.00162
+     "programs": {
+      "min": 1.417,
+      "max": 1.417
+     }
     },
     {
-     "method": "Bishop simplified",
-     "published": 1.41,
-     "source": "Morgenstern chart",
-     "computed": 1.4147,
-     "deviation": 0.00333
-    },
-    {
-     "method": "Spencer (M-P, constant f(x))",
-     "published": 1.422,
-     "source": "Program D",
+     "method": "Spencer",
      "computed": 1.4209,
-     "deviation": -0.00077
+     "programs": {
+      "min": 1.422,
+      "max": 1.422
+     }
     }
    ]
   },
@@ -3199,20 +3769,23 @@
    "commercial": false,
    "surface": "fixed",
    "units": "SI",
-   "checks": [
+   "published": [],
+   "results": [
     {
-     "method": "Bishop simplified (vertical head)",
-     "published": 1.293,
-     "source": "Commercial program A",
+     "method": "Bishop simplified",
      "computed": 1.2896,
-     "deviation": -0.00263
+     "programs": {
+      "min": 1.293,
+      "max": 1.293
+     }
     },
     {
-     "method": "Spencer (vertical head)",
-     "published": 1.3,
-     "source": "Commercial program A",
+     "method": "Spencer",
      "computed": 1.2964,
-     "deviation": -0.00277
+     "programs": {
+      "min": 1.3,
+      "max": 1.3
+     }
     }
    ]
   },
@@ -3224,27 +3797,31 @@
    "commercial": true,
    "surface": "search",
    "units": "SI",
-   "checks": [
+   "published": [],
+   "results": [
     {
      "method": "Bishop simplified",
-     "published": 1.293,
-     "source": "Commercial program A",
      "computed": 1.2884,
-     "deviation": -0.00356
+     "programs": {
+      "min": 1.293,
+      "max": 1.293
+     }
     },
     {
-     "method": "Spencer (M-P, constant f(x))",
-     "published": 1.3,
-     "source": "Commercial program A",
+     "method": "Spencer",
      "computed": 1.2943,
-     "deviation": -0.00438
+     "programs": {
+      "min": 1.3,
+      "max": 1.3
+     }
     },
     {
-     "method": "Janbu simplified (uncorrected)",
-     "published": 1.151,
-     "source": "Commercial program A",
+     "method": "Janbu simplified",
      "computed": 1.1467,
-     "deviation": -0.00374
+     "programs": {
+      "min": 1.151,
+      "max": 1.151
+     }
     }
    ]
   },
@@ -3256,20 +3833,23 @@
    "commercial": false,
    "surface": "fixed",
    "units": "SI",
-   "checks": [
+   "published": [],
+   "results": [
     {
      "method": "Bishop simplified",
-     "published": 1.285,
-     "source": "Commercial program A",
      "computed": 1.2821,
-     "deviation": -0.00226
+     "programs": {
+      "min": 1.285,
+      "max": 1.285
+     }
     },
     {
-     "method": "Spencer (M-P, constant f(x))",
-     "published": 1.29,
-     "source": "Commercial program A",
+     "method": "Spencer",
      "computed": 1.2875,
-     "deviation": -0.00194
+     "programs": {
+      "min": 1.29,
+      "max": 1.29
+     }
     }
    ]
   },
@@ -3281,27 +3861,31 @@
    "commercial": true,
    "surface": "search",
    "units": "SI",
-   "checks": [
+   "published": [],
+   "results": [
     {
      "method": "Bishop simplified",
-     "published": 1.285,
-     "source": "Commercial program A",
      "computed": 1.2815,
-     "deviation": -0.00272
+     "programs": {
+      "min": 1.285,
+      "max": 1.285
+     }
     },
     {
-     "method": "Spencer (M-P, constant f(x))",
-     "published": 1.29,
-     "source": "Commercial program A",
+     "method": "Spencer",
      "computed": 1.2871,
-     "deviation": -0.00225
+     "programs": {
+      "min": 1.29,
+      "max": 1.29
+     }
     },
     {
-     "method": "Janbu simplified (uncorrected)",
-     "published": 1.141,
-     "source": "Commercial program A",
+     "method": "Janbu simplified",
      "computed": 1.1351,
-     "deviation": -0.00517
+     "programs": {
+      "min": 1.141,
+      "max": 1.141
+     }
     }
    ]
   },
@@ -3313,20 +3897,23 @@
    "commercial": false,
    "surface": "search",
    "units": "SI",
-   "checks": [
+   "published": [],
+   "results": [
     {
      "method": "Bishop simplified",
-     "published": 1.417,
-     "source": "Commercial program A (circles)",
      "computed": 1.41,
-     "deviation": -0.00494
+     "programs": {
+      "min": 1.417,
+      "max": 1.417
+     }
     },
     {
-     "method": "Spencer (M-P, constant f(x))",
-     "published": 1.422,
-     "source": "Commercial program A (circles)",
+     "method": "Spencer",
      "computed": 1.4146,
-     "deviation": -0.0052
+     "programs": {
+      "min": 1.422,
+      "max": 1.422
+     }
     }
    ]
   },
@@ -3338,20 +3925,23 @@
    "commercial": false,
    "surface": "fixed",
    "units": "SI",
-   "checks": [
+   "published": [],
+   "results": [
     {
-     "method": "Spencer (M-P, constant f(x))",
-     "published": 1.009,
-     "source": "Commercial program A",
+     "method": "Spencer",
      "computed": 1.01,
-     "deviation": 0.00099
+     "programs": {
+      "min": 1.009,
+      "max": 1.009
+     }
     },
     {
-     "method": "Janbu corrected (f0)",
-     "published": 1.073,
-     "source": "Program D",
+     "method": "Janbu corrected",
      "computed": 1.0747,
-     "deviation": 0.00158
+     "programs": {
+      "min": 1.073,
+      "max": 1.073
+     }
     }
    ]
   },
@@ -3363,20 +3953,23 @@
    "commercial": false,
    "surface": "fixed",
    "units": "SI",
-   "checks": [
+   "published": [],
+   "results": [
     {
-     "method": "Janbu corrected (f0)",
-     "published": 0.579,
-     "source": "Program D",
+     "method": "Janbu corrected",
      "computed": 0.578,
-     "deviation": -0.00173
+     "programs": {
+      "min": 0.579,
+      "max": 0.579
+     }
     },
     {
-     "method": "Spencer (M-P, constant f(x))",
-     "published": 0.596,
-     "source": "Commercial program A",
+     "method": "Spencer",
      "computed": 0.5994,
-     "deviation": 0.0057
+     "programs": {
+      "min": 0.596,
+      "max": 0.596
+     }
     }
    ]
   },
@@ -3388,20 +3981,23 @@
    "commercial": false,
    "surface": "fixed",
    "units": "SI",
-   "checks": [
+   "published": [],
+   "results": [
     {
      "method": "Bishop simplified",
-     "published": 1.147,
-     "source": "Commercial program A",
      "computed": 1.1424,
-     "deviation": -0.00401
+     "programs": {
+      "min": 1.147,
+      "max": 1.147
+     }
     },
     {
-     "method": "Spencer (M-P, constant f(x))",
-     "published": 1.145,
-     "source": "Commercial program A",
+     "method": "Spencer",
      "computed": 1.1403,
-     "deviation": -0.0041
+     "programs": {
+      "min": 1.145,
+      "max": 1.145
+     }
     }
    ]
   },
@@ -3413,13 +4009,21 @@
    "commercial": false,
    "surface": "fixed",
    "units": "SI",
-   "checks": [
+   "published": [
     {
-     "method": "Spencer (M-P, constant f(x))",
-     "published": 0.94,
-     "source": "Commercial program A",
+     "value": 1,
+     "method": "plasticity theory",
+     "source": "Prandtl (1920)"
+    }
+   ],
+   "results": [
+    {
+     "method": "Spencer",
      "computed": 0.9427,
-     "deviation": 0.00287
+     "programs": {
+      "min": 0.94,
+      "max": 0.94
+     }
     }
    ]
   },
@@ -3431,13 +4035,21 @@
    "commercial": false,
    "surface": "fixed",
    "units": "SI",
-   "checks": [
+   "published": [
+    {
+     "value": 1,
+     "method": "plasticity theory",
+     "source": "Prandtl (1921)"
+    }
+   ],
+   "results": [
     {
      "method": "Morgenstern-Price (half-sine)",
-     "published": 0.96,
-     "source": "Commercial program B",
      "computed": 0.9566,
-     "deviation": -0.00354
+     "programs": {
+      "min": 0.96,
+      "max": 0.96
+     }
     }
    ]
   },
@@ -3449,20 +4061,28 @@
    "commercial": false,
    "surface": "fixed",
    "units": "SI",
-   "checks": [
+   "published": [
+    {
+     "value": 1.049,
+     "source": "Priest (1993)"
+    }
+   ],
+   "results": [
     {
      "method": "Janbu simplified",
-     "published": 1.049,
-     "source": "Commercial program A, commercial program C, Priest",
      "computed": 1.0483,
-     "deviation": -0.00067
+     "programs": {
+      "min": 1.049,
+      "max": 1.049
+     }
     },
     {
-     "method": "Spencer (M-P, constant f(x))",
-     "published": 1.049,
-     "source": "Commercial program A, commercial program C, Priest",
+     "method": "Spencer",
      "computed": 1.0485,
-     "deviation": -0.00048
+     "programs": {
+      "min": 1.049,
+      "max": 1.049
+     }
     }
    ]
   },
@@ -3474,20 +4094,26 @@
    "commercial": false,
    "surface": "fixed",
    "units": "SI",
-   "checks": [
+   "published": [
+    {
+     "value": 1.049,
+     "source": "Priest",
+     "method": "Spencer"
+    }
+   ],
+   "results": [
     {
      "method": "Morgenstern-Price (half-sine)",
-     "published": 1.049,
-     "source": "Commercial program B",
      "computed": 1.0493,
-     "deviation": 0.00029
+     "programs": {
+      "min": 1.049,
+      "max": 1.049
+     }
     },
     {
-     "method": "Spencer (M-P, constant f(x))",
-     "published": 1.049,
-     "source": "Priest",
+     "method": "Spencer",
      "computed": 1.0492,
-     "deviation": 0.00019
+     "programs": null
     }
    ]
   },
@@ -3499,13 +4125,15 @@
    "commercial": false,
    "surface": "fixed",
    "units": "SI",
-   "checks": [
+   "published": [],
+   "results": [
     {
      "method": "Bishop simplified",
-     "published": 0.764,
-     "source": "Commercial program A",
      "computed": 0.7642,
-     "deviation": 0.00026
+     "programs": {
+      "min": 0.764,
+      "max": 0.764
+     }
     }
    ]
   },
@@ -3517,13 +4145,15 @@
    "commercial": true,
    "surface": "fixed",
    "units": "SI",
-   "checks": [
+   "published": [],
+   "results": [
     {
      "method": "Bishop simplified",
-     "published": 1.504,
-     "source": "Commercial program A",
      "computed": 1.5011,
-     "deviation": -0.00193
+     "programs": {
+      "min": 1.504,
+      "max": 1.504
+     }
     }
    ]
   },
@@ -3535,27 +4165,31 @@
    "commercial": true,
    "surface": "fixed",
    "units": "SI",
-   "checks": [
+   "published": [],
+   "results": [
     {
      "method": "Bishop simplified",
-     "published": 1.532,
-     "source": "Commercial program A",
      "computed": 1.5039,
-     "deviation": -0.01834
+     "programs": {
+      "min": 1.532,
+      "max": 1.532
+     }
     },
     {
-     "method": "Spencer (M-P, constant f(x))",
-     "published": 1.532,
-     "source": "Commercial program A",
+     "method": "Spencer",
      "computed": 1.5032,
-     "deviation": -0.0188
+     "programs": {
+      "min": 1.532,
+      "max": 1.532
+     }
     },
     {
      "method": "Morgenstern-Price (half-sine)",
-     "published": 1.532,
-     "source": "Commercial program A",
      "computed": 1.5032,
-     "deviation": -0.0188
+     "programs": {
+      "min": 1.532,
+      "max": 1.532
+     }
     }
    ]
   },
@@ -3567,20 +4201,23 @@
    "commercial": true,
    "surface": "fixed",
    "units": "SI",
-   "checks": [
+   "published": [],
+   "results": [
     {
      "method": "Bishop simplified",
-     "published": 1.511,
-     "source": "Commercial program A",
      "computed": 1.4832,
-     "deviation": -0.0184
+     "programs": {
+      "min": 1.511,
+      "max": 1.511
+     }
     },
     {
-     "method": "Spencer (M-P, constant f(x))",
-     "published": 1.51,
-     "source": "Commercial program A",
+     "method": "Spencer",
      "computed": 1.4824,
-     "deviation": -0.01828
+     "programs": {
+      "min": 1.51,
+      "max": 1.51
+     }
     }
    ]
   },
@@ -3592,34 +4229,23 @@
    "commercial": false,
    "surface": "fixed",
    "units": "SI",
-   "checks": [
+   "published": [],
+   "results": [
     {
      "method": "Bishop simplified",
-     "published": 1.396,
-     "source": "Commercial program A",
      "computed": 1.3691,
-     "deviation": -0.01927
+     "programs": {
+      "min": 1.369,
+      "max": 1.396
+     }
     },
     {
-     "method": "Spencer (M-P, constant f(x))",
-     "published": 1.402,
-     "source": "Commercial program A",
+     "method": "Spencer",
      "computed": 1.3755,
-     "deviation": -0.0189
-    },
-    {
-     "method": "Bishop simplified",
-     "published": 1.369,
-     "source": "Program D",
-     "computed": 1.3691,
-     "deviation": 0.00007
-    },
-    {
-     "method": "Spencer (M-P, constant f(x))",
-     "published": 1.375,
-     "source": "Program D",
-     "computed": 1.3755,
-     "deviation": 0.00036
+     "programs": {
+      "min": 1.375,
+      "max": 1.402
+     }
     }
    ]
   },
@@ -3631,13 +4257,21 @@
    "commercial": false,
    "surface": "fixed",
    "units": "SI",
-   "checks": [
+   "published": [
     {
-     "method": "Janbu corrected (f0)",
-     "published": 0.89,
-     "source": "Commercial program A",
+     "value": 0.887,
+     "method": "force-equilibrium trial wedge",
+     "source": "Sheahan & Ho (2003)"
+    }
+   ],
+   "results": [
+    {
+     "method": "Janbu corrected",
      "computed": 0.8989,
-     "deviation": 0.01
+     "programs": {
+      "min": 0.89,
+      "max": 0.89
+     }
     }
    ]
   },
@@ -3649,13 +4283,21 @@
    "commercial": false,
    "surface": "fixed",
    "units": "SI",
-   "checks": [
+   "published": [
     {
-     "method": "Janbu corrected (f0)",
-     "published": 0.989,
-     "source": "Commercial program A",
+     "value": 0.989,
+     "method": "force-equilibrium trial wedge",
+     "source": "Sheahan & Ho (2003)"
+    }
+   ],
+   "results": [
+    {
+     "method": "Janbu corrected",
      "computed": 0.9884,
-     "deviation": -0.00061
+     "programs": {
+      "min": 0.989,
+      "max": 0.989
+     }
     }
    ]
   },
@@ -3667,13 +4309,21 @@
    "commercial": false,
    "surface": "fixed",
    "units": "SI",
-   "checks": [
+   "published": [
     {
-     "method": "Janbu corrected (f0)",
-     "published": 1.123,
-     "source": "Commercial program A",
+     "value": 1.176,
+     "method": "force-equilibrium trial wedge",
+     "source": "Sheahan & Ho (2003)"
+    }
+   ],
+   "results": [
+    {
+     "method": "Janbu corrected",
      "computed": 1.1243,
-     "deviation": 0.00116
+     "programs": {
+      "min": 1.123,
+      "max": 1.123
+     }
     }
    ]
   },
@@ -3685,13 +4335,21 @@
    "commercial": false,
    "surface": "fixed",
    "units": "SI",
-   "checks": [
+   "published": [
     {
-     "method": "Janbu corrected (f0)",
-     "published": 1.043,
-     "source": "Commercial program A",
+     "value": 1.07,
+     "method": "force-equilibrium trial wedge",
+     "source": "Sheahan & Ho (2003)"
+    }
+   ],
+   "results": [
+    {
+     "method": "Janbu corrected",
      "computed": 1.0433,
-     "deviation": 0.00029
+     "programs": {
+      "min": 1.043,
+      "max": 1.043
+     }
     }
    ]
   },
@@ -3703,13 +4361,21 @@
    "commercial": false,
    "surface": "fixed",
    "units": "SI",
-   "checks": [
+   "published": [
     {
-     "method": "Janbu corrected (f0)",
-     "published": 0.945,
-     "source": "Commercial program A",
+     "value": 0.929,
+     "method": "force-equilibrium trial wedge",
+     "source": "Sheahan & Ho (2003)"
+    }
+   ],
+   "results": [
+    {
+     "method": "Janbu corrected",
      "computed": 0.9443,
-     "deviation": -0.00074
+     "programs": {
+      "min": 0.945,
+      "max": 0.945
+     }
     }
    ]
   },
@@ -3721,13 +4387,21 @@
    "commercial": false,
    "surface": "fixed",
    "units": "SI",
-   "checks": [
+   "published": [
     {
-     "method": "Janbu corrected (f0)",
-     "published": 0.922,
-     "source": "Commercial program A",
+     "value": 0.893,
+     "method": "force-equilibrium trial wedge",
+     "source": "Sheahan & Ho (2003)"
+    }
+   ],
+   "results": [
+    {
+     "method": "Janbu corrected",
      "computed": 0.9199,
-     "deviation": -0.00228
+     "programs": {
+      "min": 0.922,
+      "max": 0.922
+     }
     }
    ]
   },
@@ -3739,13 +4413,21 @@
    "commercial": false,
    "surface": "fixed",
    "units": "SI",
-   "checks": [
+   "published": [
     {
-     "method": "Janbu corrected (f0)",
-     "published": 0.923,
-     "source": "Commercial program A",
+     "value": 0.887,
+     "method": "force-equilibrium trial wedge",
+     "source": "Sheahan & Ho (2003)"
+    }
+   ],
+   "results": [
+    {
+     "method": "Janbu corrected",
      "computed": 0.9205,
-     "deviation": -0.00271
+     "programs": {
+      "min": 0.923,
+      "max": 0.923
+     }
     }
    ]
   },
@@ -3757,27 +4439,47 @@
    "commercial": false,
    "surface": "search",
    "units": "imperial",
-   "checks": [
+   "published": [
+    {
+     "value": 1.76,
+     "method": "Bishop simplified",
+     "source": "Duncan & Wright"
+    },
+    {
+     "value": 1.63,
+     "method": "Janbu simplified",
+     "source": "Duncan & Wright"
+    },
+    {
+     "value": 1.74,
+     "method": "Janbu corrected",
+     "source": "Duncan & Wright"
+    }
+   ],
+   "results": [
     {
      "method": "Bishop simplified",
-     "published": 1.762,
-     "source": "Commercial program A",
      "computed": 1.7588,
-     "deviation": -0.00182
+     "programs": {
+      "min": 1.762,
+      "max": 1.762
+     }
     },
     {
-     "method": "Spencer (M-P, constant f(x))",
-     "published": 1.758,
-     "source": "Commercial program A",
+     "method": "Spencer",
      "computed": 1.7588,
-     "deviation": 0.00046
+     "programs": {
+      "min": 1.758,
+      "max": 1.758
+     }
     },
     {
-     "method": "Janbu corrected (f0)",
-     "published": 1.736,
-     "source": "Commercial program A",
+     "method": "Janbu corrected",
      "computed": 1.7352,
-     "deviation": -0.00046
+     "programs": {
+      "min": 1.736,
+      "max": 1.736
+     }
     }
    ]
   },
@@ -3789,20 +4491,21 @@
    "commercial": false,
    "surface": "fixed",
    "units": "SI",
-   "checks": [
+   "published": [
     {
-     "method": "Spencer (M-P, constant f(x))",
-     "published": 1.35,
-     "source": "Commercial program A",
-     "computed": 1.3328,
-     "deviation": -0.01274
-    },
+     "value": 1.35,
+     "method": "Spencer, at T = 170 kN/m",
+     "source": "Tandjiria (2002)"
+    }
+   ],
+   "results": [
     {
-     "method": "Spencer (M-P, constant f(x))",
-     "published": 1.332,
-     "source": "Program D",
+     "method": "Spencer",
      "computed": 1.3328,
-     "deviation": 0.0006
+     "programs": {
+      "min": 1.332,
+      "max": 1.35
+     }
     }
    ]
   },
@@ -3814,20 +4517,29 @@
    "commercial": false,
    "surface": "search",
    "units": "SI",
-   "checks": [
+   "published": [
     {
-     "method": "Spencer (M-P, constant f(x))",
-     "published": 0.975,
-     "source": "Commercial program A",
+     "value": 0.981,
+     "method": "Spencer",
+     "source": "Tandjiria (2002)"
+    }
+   ],
+   "results": [
+    {
+     "method": "Spencer (2 m tension crack)",
      "computed": 0.9681,
-     "deviation": -0.00708
+     "programs": {
+      "min": 0.975,
+      "max": 0.975
+     }
     },
     {
-     "method": "Spencer (M-P, constant f(x))",
-     "published": 0.975,
-     "source": "Commercial program A",
+     "method": "Spencer (tension crack of automatic depth)",
      "computed": 0.9663,
-     "deviation": -0.00892
+     "programs": {
+      "min": 0.975,
+      "max": 0.975
+     }
     }
    ]
   },
@@ -3839,13 +4551,21 @@
    "commercial": false,
    "surface": "search",
    "units": "SI",
-   "checks": [
+   "published": [
     {
-     "method": "Spencer (M-P, constant f(x))",
-     "published": 1.209,
-     "source": "Commercial program A",
+     "value": 1.219,
+     "method": "Spencer",
+     "source": "Tandjiria (2002)"
+    }
+   ],
+   "results": [
+    {
+     "method": "Spencer",
      "computed": 1.2063,
-     "deviation": -0.00223
+     "programs": {
+      "min": 1.209,
+      "max": 1.209
+     }
     }
    ]
   },
@@ -3857,27 +4577,36 @@
    "commercial": false,
    "surface": "fixed",
    "units": "SI",
-   "checks": [
+   "published": [
     {
-     "method": "Spencer (M-P, constant f(x))",
-     "published": 2.258,
-     "source": "Program D",
+     "value": 2.3,
+     "source": "USACE EM 1110-2-1902"
+    }
+   ],
+   "results": [
+    {
+     "method": "Spencer",
      "computed": 2.2581,
-     "deviation": 0.00004
+     "programs": {
+      "min": 2.258,
+      "max": 2.258
+     }
     },
     {
      "method": "Bishop simplified",
-     "published": 2.254,
-     "source": "Program D",
      "computed": 2.2545,
-     "deviation": 0.00022
+     "programs": {
+      "min": 2.254,
+      "max": 2.254
+     }
     },
     {
-     "method": "Janbu corrected (f0)",
-     "published": 2.29,
-     "source": "Commercial program A",
+     "method": "Janbu corrected",
      "computed": 2.2583,
-     "deviation": -0.01384
+     "programs": {
+      "min": 2.29,
+      "max": 2.29
+     }
     }
    ]
   },
@@ -3889,27 +4618,37 @@
    "commercial": false,
    "surface": "fixed",
    "units": "SI",
-   "checks": [
+   "published": [
     {
-     "method": "Spencer (M-P, constant f(x))",
-     "published": 2.445,
-     "source": "Commercial program A",
+     "value": 2.44,
+     "method": "Spencer",
+     "source": "USACE EM 1110-2-1902"
+    }
+   ],
+   "results": [
+    {
+     "method": "Spencer",
      "computed": 2.4416,
-     "deviation": -0.00139
+     "programs": {
+      "min": 2.445,
+      "max": 2.445
+     }
     },
     {
      "method": "Bishop simplified",
-     "published": 2.447,
-     "source": "Commercial program A",
      "computed": 2.4422,
-     "deviation": -0.00196
+     "programs": {
+      "min": 2.447,
+      "max": 2.447
+     }
     },
     {
-     "method": "Janbu corrected (f0)",
-     "published": 2.43,
-     "source": "Commercial program A",
+     "method": "Janbu corrected",
      "computed": 2.444,
-     "deviation": 0.00576
+     "programs": {
+      "min": 2.43,
+      "max": 2.43
+     }
     }
    ]
   },
@@ -3921,27 +4660,37 @@
    "commercial": false,
    "surface": "fixed",
    "units": "SI",
-   "checks": [
+   "published": [
+    {
+     "value": 2.71,
+     "method": "Bishop simplified",
+     "source": "USACE EM 1110-2-1902"
+    }
+   ],
+   "results": [
     {
      "method": "Bishop simplified",
-     "published": 2.716,
-     "source": "Commercial program A",
      "computed": 2.6982,
-     "deviation": -0.00655
+     "programs": {
+      "min": 2.716,
+      "max": 2.716
+     }
     },
     {
-     "method": "Spencer (M-P, constant f(x))",
-     "published": 2.736,
-     "source": "Commercial program A",
+     "method": "Spencer",
      "computed": 2.7208,
-     "deviation": -0.00556
+     "programs": {
+      "min": 2.736,
+      "max": 2.736
+     }
     },
     {
-     "method": "Janbu corrected (f0)",
-     "published": 2.65,
-     "source": "Commercial program A",
+     "method": "Janbu corrected",
      "computed": 2.6477,
-     "deviation": -0.00087
+     "programs": {
+      "min": 2.65,
+      "max": 2.65
+     }
     }
    ]
   },
@@ -3953,27 +4702,36 @@
    "commercial": false,
    "surface": "fixed",
    "units": "imperial",
-   "checks": [
+   "published": [
+    {
+     "value": 1.33,
+     "source": "USACE EM 1110-2-1902"
+    }
+   ],
+   "results": [
     {
      "method": "Bishop simplified",
-     "published": 1.332,
-     "source": "Commercial program A",
      "computed": 1.3204,
-     "deviation": -0.00871
+     "programs": {
+      "min": 1.332,
+      "max": 1.332
+     }
     },
     {
-     "method": "Spencer (M-P, constant f(x))",
-     "published": 1.328,
-     "source": "Commercial program A",
+     "method": "Spencer",
      "computed": 1.3167,
-     "deviation": -0.00851
+     "programs": {
+      "min": 1.328,
+      "max": 1.328
+     }
     },
     {
-     "method": "Janbu corrected (f0)",
-     "published": 1.345,
-     "source": "Commercial program A",
+     "method": "Janbu corrected",
      "computed": 1.3406,
-     "deviation": -0.00327
+     "programs": {
+      "min": 1.345,
+      "max": 1.345
+     }
     }
    ]
   },
@@ -3985,34 +4743,44 @@
    "commercial": false,
    "surface": "fixed",
    "units": "SI",
-   "checks": [
+   "published": [
+    {
+     "value": 1.33,
+     "source": "USACE EM 1110-2-1902"
+    }
+   ],
+   "results": [
     {
      "method": "Bishop simplified",
-     "published": 1.241,
-     "source": "Commercial program A",
      "computed": 1.2348,
-     "deviation": -0.005
+     "programs": {
+      "min": 1.241,
+      "max": 1.241
+     }
     },
     {
-     "method": "Spencer (M-P, constant f(x))",
-     "published": 1.241,
-     "source": "Commercial program A",
+     "method": "Spencer",
      "computed": 1.2348,
-     "deviation": -0.005
+     "programs": {
+      "min": 1.241,
+      "max": 1.241
+     }
     },
     {
      "method": "Morgenstern-Price (half-sine)",
-     "published": 1.244,
-     "source": "Commercial program A (GLE)",
      "computed": 1.2348,
-     "deviation": -0.0074
+     "programs": {
+      "min": 1.244,
+      "max": 1.244
+     }
     },
     {
-     "method": "Janbu corrected (f0)",
-     "published": 1.385,
-     "source": "Commercial program A",
+     "method": "Janbu corrected",
      "computed": 1.3802,
-     "deviation": -0.00347
+     "programs": {
+      "min": 1.385,
+      "max": 1.385
+     }
     }
    ]
   },
@@ -4024,27 +4792,36 @@
    "commercial": false,
    "surface": "fixed",
    "units": "SI",
-   "checks": [
+   "published": [
+    {
+     "value": 2.01,
+     "source": "USACE EM 1110-2-1902"
+    }
+   ],
+   "results": [
     {
      "method": "Bishop simplified",
-     "published": 2.011,
-     "source": "Commercial program A",
      "computed": 1.998,
-     "deviation": -0.00646
+     "programs": {
+      "min": 2.011,
+      "max": 2.011
+     }
     },
     {
-     "method": "Spencer (M-P, constant f(x))",
-     "published": 2.026,
-     "source": "Commercial program A",
+     "method": "Spencer",
      "computed": 2.0121,
-     "deviation": -0.00686
+     "programs": {
+      "min": 2.026,
+      "max": 2.026
+     }
     },
     {
-     "method": "Janbu corrected (f0)",
-     "published": 1.83,
-     "source": "Commercial program A",
+     "method": "Janbu corrected",
      "computed": 1.8324,
-     "deviation": 0.00131
+     "programs": {
+      "min": 1.83,
+      "max": 1.83
+     }
     }
    ]
   },
@@ -4056,20 +4833,49 @@
    "commercial": false,
    "surface": "search",
    "units": "SI",
-   "checks": [
+   "published": [
     {
+     "value": 1.348,
      "method": "Bishop simplified",
-     "published": 1.344,
-     "source": "Commercial program A",
-     "computed": 1.3427,
-     "deviation": -0.00097
+     "source": "Yamagami & Ueta (1988)"
     },
     {
-     "method": "Spencer (M-P, constant f(x))",
-     "published": 1.325,
-     "source": "Commercial program A (non-circular)",
+     "value": 1.282,
+     "method": "Ordinary",
+     "source": "Yamagami & Ueta (1988)"
+    },
+    {
+     "value": 1.185,
+     "method": "Janbu simplified, non-circular",
+     "source": "Yamagami & Ueta (1988)"
+    },
+    {
+     "value": 1.339,
+     "method": "Spencer, non-circular",
+     "source": "Yamagami & Ueta (1988)"
+    },
+    {
+     "value": 1.33,
+     "method": "Spencer, non-circular",
+     "source": "Greco (1996)"
+    }
+   ],
+   "results": [
+    {
+     "method": "Bishop simplified",
+     "computed": 1.3427,
+     "programs": {
+      "min": 1.344,
+      "max": 1.344
+     }
+    },
+    {
+     "method": "Spencer, non-circular",
      "computed": 1.3242,
-     "deviation": -0.0006
+     "programs": {
+      "min": 1.325,
+      "max": 1.325
+     }
     }
    ]
   },
@@ -4081,20 +4887,30 @@
    "commercial": false,
    "surface": "search",
    "units": "SI",
-   "checks": [
+   "published": [
     {
-     "method": "Spencer (M-P, constant f(x))",
-     "published": 1.398,
-     "source": "Commercial program A (Monte Carlo)",
+     "value": 1.4,
+     "upper": 1.42,
+     "method": "Spencer, non-circular",
+     "source": "Greco (1996)"
+    }
+   ],
+   "results": [
+    {
+     "method": "Spencer, non-circular",
      "computed": 1.4011,
-     "deviation": 0.00222
+     "programs": {
+      "min": 1.398,
+      "max": 1.398
+     }
     },
     {
-     "method": "Morgenstern-Price (half-sine)",
-     "published": 1.389,
-     "source": "Commercial program B",
+     "method": "Morgenstern-Price (half-sine), non-circular",
      "computed": 1.3946,
-     "deviation": 0.00403
+     "programs": {
+      "min": 1.389,
+      "max": 1.389
+     }
     }
    ]
   },
@@ -4106,13 +4922,20 @@
    "commercial": false,
    "surface": "fixed",
    "units": "SI",
-   "checks": [
+   "published": [
+    {
+     "value": 1.1,
+     "source": "Yamagami et al. (2000)"
+    }
+   ],
+   "results": [
     {
      "method": "Bishop simplified",
-     "published": 1.102,
-     "source": "Commercial program A",
      "computed": 1.1007,
-     "deviation": -0.00118
+     "programs": {
+      "min": 1.102,
+      "max": 1.102
+     }
     }
    ]
   },
@@ -4124,13 +4947,20 @@
    "commercial": false,
    "surface": "fixed",
    "units": "SI",
-   "checks": [
+   "published": [
+    {
+     "value": 1.1,
+     "source": "Yamagami et al. (2000)"
+    }
+   ],
+   "results": [
     {
      "method": "Bishop simplified",
-     "published": 1.102,
-     "source": "Commercial program A",
      "computed": 1.1007,
-     "deviation": -0.00118
+     "programs": {
+      "min": 1.102,
+      "max": 1.102
+     }
     }
    ]
   },
@@ -4142,13 +4972,20 @@
    "commercial": false,
    "surface": "fixed",
    "units": "SI",
-   "checks": [
+   "published": [
+    {
+     "value": 1.2,
+     "source": "Yamagami et al. (2000)"
+    }
+   ],
+   "results": [
     {
      "method": "Bishop simplified",
-     "published": 1.193,
-     "source": "Commercial program A",
      "computed": 1.1957,
-     "deviation": 0.00226
+     "programs": {
+      "min": 1.193,
+      "max": 1.193
+     }
     }
    ]
   },
@@ -4160,20 +4997,44 @@
    "commercial": false,
    "surface": "search",
    "units": "SI",
-   "checks": [
+   "published": [
     {
-     "method": "Bishop simplified",
-     "published": 1.804,
-     "source": "Commercial program A",
-     "computed": 1.7933,
-     "deviation": -0.00593
+     "value": 1.836,
+     "method": "Spencer",
+     "source": "Zhu & Lee (2002)"
     },
     {
-     "method": "Spencer (M-P, constant f(x))",
-     "published": 1.804,
-     "source": "Commercial program A",
+     "value": 1.823,
+     "method": "Morgenstern-Price",
+     "source": "Zhu & Lee (2002)"
+    },
+    {
+     "value": 1.429,
+     "method": "Bishop simplified",
+     "source": "Zhu & Lee (2002)"
+    },
+    {
+     "value": 1.229,
+     "method": "Ordinary",
+     "source": "Zhu & Lee (2002)"
+    }
+   ],
+   "results": [
+    {
+     "method": "Bishop simplified",
+     "computed": 1.7933,
+     "programs": {
+      "min": 1.804,
+      "max": 1.804
+     }
+    },
+    {
+     "method": "Spencer",
      "computed": 1.7941,
-     "deviation": -0.00549
+     "programs": {
+      "min": 1.804,
+      "max": 1.804
+     }
     }
    ]
   },
@@ -4185,20 +5046,34 @@
    "commercial": false,
    "surface": "search",
    "units": "SI",
-   "checks": [
+   "published": [
     {
-     "method": "Bishop simplified",
-     "published": 1.176,
-     "source": "Commercial program A",
-     "computed": 1.173,
-     "deviation": -0.00255
+     "value": 1.211,
+     "method": "Spencer",
+     "source": "Zhu & Lee (2002)"
     },
     {
-     "method": "Spencer (M-P, constant f(x))",
-     "published": 1.189,
-     "source": "Commercial program A",
+     "value": 1.197,
+     "method": "Morgenstern-Price",
+     "source": "Zhu & Lee (2002)"
+    }
+   ],
+   "results": [
+    {
+     "method": "Bishop simplified",
+     "computed": 1.173,
+     "programs": {
+      "min": 1.176,
+      "max": 1.176
+     }
+    },
+    {
+     "method": "Spencer",
      "computed": 1.1865,
-     "deviation": -0.0021
+     "programs": {
+      "min": 1.189,
+      "max": 1.189
+     }
     }
    ]
   },
@@ -4210,20 +5085,44 @@
    "commercial": true,
    "surface": "fixed",
    "units": "SI",
-   "checks": [
+   "published": [
     {
-     "method": "Spencer (M-P, constant f(x))",
-     "published": 1.804,
-     "source": "Commercial program A",
+     "value": 1.836,
+     "method": "Spencer",
+     "source": "Zhu & Lee (2002)"
+    },
+    {
+     "value": 1.823,
+     "method": "Morgenstern-Price",
+     "source": "Zhu & Lee (2002)"
+    },
+    {
+     "value": 1.429,
+     "method": "Bishop simplified",
+     "source": "Zhu & Lee (2002)"
+    },
+    {
+     "value": 1.229,
+     "method": "Ordinary",
+     "source": "Zhu & Lee (2002)"
+    }
+   ],
+   "results": [
+    {
+     "method": "Spencer",
      "computed": 1.7994,
-     "deviation": -0.00255
+     "programs": {
+      "min": 1.804,
+      "max": 1.804
+     }
     },
     {
      "method": "Bishop simplified",
-     "published": 1.804,
-     "source": "Commercial program A",
      "computed": 1.799,
-     "deviation": -0.00277
+     "programs": {
+      "min": 1.804,
+      "max": 1.804
+     }
     }
    ]
   },
@@ -4235,13 +5134,15 @@
    "commercial": true,
    "surface": "fixed",
    "units": "SI",
-   "checks": [
+   "published": [],
+   "results": [
     {
-     "method": "Bishop simplified (vertical head)",
-     "published": 1.173,
-     "source": "Commercial program B",
+     "method": "Bishop simplified",
      "computed": 1.1721,
-     "deviation": -0.00077
+     "programs": {
+      "min": 1.173,
+      "max": 1.173
+     }
     }
    ]
   },
@@ -4253,20 +5154,23 @@
    "commercial": true,
    "surface": "fixed",
    "units": "SI",
-   "checks": [
+   "published": [],
+   "results": [
     {
-     "method": "Bishop simplified, design values",
-     "published": 1.173,
-     "source": "Commercial program B",
+     "method": "Bishop simplified",
      "computed": 1.1723,
-     "deviation": -0.0006
+     "programs": {
+      "min": 1.173,
+      "max": 1.173
+     }
     },
     {
-     "method": "Spencer, design values",
-     "published": 1.174,
-     "source": "Commercial program B",
+     "method": "Spencer",
      "computed": 1.1736,
-     "deviation": -0.00034
+     "programs": {
+      "min": 1.174,
+      "max": 1.174
+     }
     }
    ]
   },
@@ -4278,20 +5182,15 @@
    "commercial": true,
    "surface": "search",
    "units": "SI",
-   "checks": [
+   "published": [],
+   "results": [
     {
-     "method": "Spencer (M-P, constant f(x))",
-     "published": 1.36,
-     "source": "Commercial program A",
+     "method": "Spencer",
      "computed": 1.3721,
-     "deviation": 0.0089
-    },
-    {
-     "method": "Spencer (M-P, constant f(x))",
-     "published": 1.372,
-     "source": "Program D",
-     "computed": 1.3721,
-     "deviation": 0.00007
+     "programs": {
+      "min": 1.36,
+      "max": 1.372
+     }
     }
    ]
   }
@@ -4300,282 +5199,337 @@
   {
    "id": "V021a",
    "title": "Chowdhury & Xu (1995) example 1, Congress Street cut, circle tangent to the base of clay 2",
-   "checks": [
+   "rows": [
     {
      "quantity": "pf-mc",
-     "published": 0.2461,
-     "source": "Commercial program A",
-     "computed": 0.239
+     "computed": 0.239,
+     "published": [],
+     "programs": {
+      "min": 0.2461,
+      "max": 0.2461
+     }
     },
     {
      "quantity": "beta-mc",
-     "published": 0.65,
-     "source": "Commercial program A (lognormal)",
-     "computed": 0.6714
+     "computed": 0.6714,
+     "published": [],
+     "programs": {
+      "min": 0.65,
+      "max": 0.65
+     }
     }
    ]
   },
   {
    "id": "V021b",
    "title": "Chowdhury & Xu (1995) example 1, Congress Street cut, circle tangent to the base of clay 3",
-   "checks": [
+   "rows": [
     {
      "quantity": "pf-mc",
-     "published": 0.2789,
-     "source": "Commercial program A",
-     "computed": 0.2818
+     "computed": 0.2818,
+     "published": [],
+     "programs": {
+      "min": 0.2789,
+      "max": 0.2789
+     }
     },
     {
      "quantity": "beta-mc",
-     "published": 0.537,
-     "source": "Commercial program A (lognormal)",
-     "computed": 0.5531
+     "computed": 0.5531,
+     "published": [],
+     "programs": {
+      "min": 0.537,
+      "max": 0.537
+     }
     }
    ]
   },
   {
    "id": "V022a",
    "title": "Chowdhury & Xu (1995) example 5, embankment on soft clay, circle tangent to y = 15",
-   "checks": [
+   "rows": [
     {
      "quantity": "pf-mc",
-     "published": 0.2117,
-     "source": "Commercial program A",
-     "computed": 0.206
+     "computed": 0.206,
+     "published": [],
+     "programs": {
+      "min": 0.206,
+      "max": 0.2117
+     }
     },
     {
      "quantity": "beta-mc",
-     "published": 0.799,
-     "source": "Commercial program A (lognormal)",
-     "computed": 0.8116
+     "computed": 0.8116,
+     "published": [],
+     "programs": {
+      "min": 0.799,
+      "max": 0.8
+     }
     },
     {
      "quantity": "beta-taylor",
-     "published": 0.787,
-     "source": "Program D",
-     "computed": 0.7883
-    },
-    {
-     "quantity": "beta-mc",
-     "published": 0.8,
-     "source": "Program D",
-     "computed": 0.8116
-    },
-    {
-     "quantity": "pf-mc",
-     "published": 0.206,
-     "source": "Program D",
-     "computed": 0.206
+     "computed": 0.7883,
+     "published": [],
+     "programs": {
+      "min": 0.787,
+      "max": 0.787
+     }
     }
    ]
   },
   {
    "id": "V022b",
    "title": "Chowdhury & Xu (1995) example 5, embankment on soft clay, circle tangent to y = 5",
-   "checks": [
+   "rows": [
     {
      "quantity": "pf-mc",
-     "published": 0.1992,
-     "source": "Commercial program A",
-     "computed": 0.212
+     "computed": 0.212,
+     "published": [],
+     "programs": {
+      "min": 0.1992,
+      "max": 0.209
+     }
     },
     {
      "quantity": "beta-mc",
-     "published": 0.82,
-     "source": "Commercial program A (lognormal)",
-     "computed": 0.7891
+     "computed": 0.7891,
+     "published": [],
+     "programs": {
+      "min": 0.789,
+      "max": 0.82
+     }
     },
     {
      "quantity": "beta-taylor",
-     "published": 0.798,
-     "source": "Program D",
-     "computed": 0.8021
-    },
-    {
-     "quantity": "beta-mc",
-     "published": 0.789,
-     "source": "Program D",
-     "computed": 0.7891
-    },
-    {
-     "quantity": "pf-mc",
-     "published": 0.209,
-     "source": "Program D",
-     "computed": 0.212
+     "computed": 0.8021,
+     "published": [],
+     "programs": {
+      "min": 0.798,
+      "max": 0.798
+     }
     }
    ]
   },
   {
    "id": "V060b",
    "title": "Cannon Dam end of construction (Hassan & Wolff), reliability on the minimum-β circle",
-   "checks": [
+   "rows": [
     {
      "quantity": "beta-taylor",
-     "published": 3.353,
-     "source": "Program D",
-     "computed": 3.3535
+     "computed": 3.3535,
+     "published": [],
+     "programs": {
+      "min": 3.353,
+      "max": 3.353
+     }
     }
    ]
   },
   {
    "id": "V023",
    "title": "LASH terminal trench, Duncan's Taylor series example",
-   "checks": [
+   "rows": [
     {
      "quantity": "beta-taylor",
-     "published": 0.9,
-     "source": "Duncan (2000)",
-     "computed": 0.8919
+     "computed": 0.8919,
+     "published": [
+      {
+       "value": 0.9,
+       "source": "Duncan (2000)"
+      }
+     ],
+     "programs": null
     },
     {
      "quantity": "pf-taylor",
-     "published": 0.18,
-     "source": "Duncan (2000)",
-     "computed": 0.1862
+     "computed": 0.1862,
+     "published": [
+      {
+       "value": 0.18,
+       "source": "Duncan (2000)"
+      }
+     ],
+     "programs": null
     }
    ]
   },
   {
    "id": "V062a",
    "title": "Clarence Cannon Dam, surface 7A",
-   "checks": [
+   "rows": [
     {
      "quantity": "beta-mc",
-     "published": 10.953,
-     "source": "Commercial program A (lognormal)",
-     "computed": 11.0344
+     "computed": 11.0344,
+     "published": [],
+     "programs": {
+      "min": 10.953,
+      "max": 10.953
+     }
     }
    ]
   },
   {
    "id": "V062b",
    "title": "Clarence Cannon Dam, surface 7B",
-   "checks": [
+   "rows": [
     {
      "quantity": "beta-mc",
-     "published": 4.351,
-     "source": "Commercial program A (lognormal)",
-     "computed": 4.4017
+     "computed": 4.4017,
+     "published": [],
+     "programs": {
+      "min": 4.351,
+      "max": 4.351
+     }
     }
    ]
   },
   {
    "id": "V062c",
    "title": "Clarence Cannon Dam, surface 7C",
-   "checks": [
+   "rows": [
     {
      "quantity": "beta-mc",
-     "published": 4.263,
-     "source": "Commercial program A (lognormal)",
-     "computed": 4.3247
+     "computed": 4.3247,
+     "published": [],
+     "programs": {
+      "min": 4.263,
+      "max": 4.263
+     }
     }
    ]
   },
   {
    "id": "V062d",
    "title": "Clarence Cannon Dam, surface 7D",
-   "checks": [
+   "rows": [
     {
      "quantity": "beta-mc",
-     "published": 11.092,
-     "source": "Commercial program A (lognormal)",
-     "computed": 11.0761
+     "computed": 11.0761,
+     "published": [],
+     "programs": {
+      "min": 11.092,
+      "max": 11.092
+     }
     }
    ]
   },
   {
    "id": "V062e",
    "title": "Clarence Cannon Dam, surface 7E",
-   "checks": [
+   "rows": [
     {
      "quantity": "beta-mc",
-     "published": 10.281,
-     "source": "Commercial program A (lognormal)",
-     "computed": 10.3293
+     "computed": 10.3293,
+     "published": [],
+     "programs": {
+      "min": 10.281,
+      "max": 10.281
+     }
     }
    ]
   },
   {
    "id": "V062f",
    "title": "Clarence Cannon Dam, surface 8B",
-   "checks": [
+   "rows": [
     {
      "quantity": "beta-mc",
-     "published": 4.858,
-     "source": "Commercial program A (lognormal)",
-     "computed": 4.933
+     "computed": 4.933,
+     "published": [],
+     "programs": {
+      "min": 4.858,
+      "max": 4.858
+     }
     }
    ]
   },
   {
    "id": "V062g",
    "title": "Clarence Cannon Dam, surface 8F",
-   "checks": [
+   "rows": [
     {
      "quantity": "beta-mc",
-     "published": 5.485,
-     "source": "Commercial program A (lognormal)",
-     "computed": 5.5278
+     "computed": 5.5278,
+     "published": [],
+     "programs": {
+      "min": 5.485,
+      "max": 5.485
+     }
     }
    ]
   },
   {
    "id": "V062h",
    "title": "Clarence Cannon Dam, surface 8G",
-   "checks": [
+   "rows": [
     {
      "quantity": "beta-mc",
-     "published": 5.563,
-     "source": "Commercial program A (lognormal)",
-     "computed": 5.4903
+     "computed": 5.4903,
+     "published": [],
+     "programs": {
+      "min": 5.563,
+      "max": 5.563
+     }
     }
    ]
   },
   {
    "id": "V062i",
    "title": "Clarence Cannon Dam, surface 8H",
-   "checks": [
+   "rows": [
     {
      "quantity": "beta-mc",
-     "published": 6.394,
-     "source": "Commercial program A (lognormal)",
-     "computed": 6.4314
+     "computed": 6.4314,
+     "published": [],
+     "programs": {
+      "min": 6.394,
+      "max": 6.394
+     }
     }
    ]
   },
   {
    "id": "V021a",
    "title": "Chowdhury & Xu (1995) example 1, Congress Street cut, circle tangent to the base of clay 2",
-   "checks": [
+   "rows": [
     {
      "quantity": "pf-mc",
-     "published": 0.2531,
-     "source": "Commercial program B",
-     "computed": 0.2453
+     "computed": 0.2453,
+     "published": [],
+     "programs": {
+      "min": 0.2531,
+      "max": 0.2531
+     }
     }
    ]
   },
   {
    "id": "V022a",
    "title": "Chowdhury & Xu (1995) example 5, embankment on soft clay, circle tangent to y = 15",
-   "checks": [
+   "rows": [
     {
      "quantity": "pf-mc",
-     "published": 0.2098,
-     "source": "Commercial program B",
-     "computed": 0.2079
+     "computed": 0.2079,
+     "published": [],
+     "programs": {
+      "min": 0.2098,
+      "max": 0.2098
+     }
     }
    ]
   },
   {
    "id": "V022b",
    "title": "Chowdhury & Xu (1995) example 5, embankment on soft clay, circle tangent to y = 5",
-   "checks": [
+   "rows": [
     {
      "quantity": "pf-mc",
-     "published": 0.2139,
-     "source": "Commercial program B",
-     "computed": 0.2159
+     "computed": 0.2159,
+     "published": [],
+     "programs": {
+      "min": 0.2139,
+      "max": 0.2139
+     }
     }
    ]
   }

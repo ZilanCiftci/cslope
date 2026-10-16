@@ -43,6 +43,11 @@ import {
   type VerificationCase,
   type VerificationCheck,
   agrees,
+  formatPaperValue,
+  formatRange,
+  isProgramSource,
+  paperValues,
+  presentedAnalyses,
 } from "@cslope/engine/verification";
 import type { Slope } from "@cslope/engine";
 import { BENCHMARK_MODELS, PUBLISHED_BENCHMARKS } from "../src/store/benchmarks";
@@ -64,8 +69,9 @@ const OUT =
   ARGS.find((a) => !a.startsWith("--")) ??
   path.join(REPO, "docs", "verification", PUBLIC ? "cSlope-verification-report-public.pdf" : "cSlope-verification-report.pdf");
 
-// The data names no other program (problems.ts): both editions show it as
-// it is; the public one leaves out the tolerances and pass marks.
+// The data names no other program (problems.ts); the internal edition labels
+// them "commercial program A" and so on. The public one names none, not
+// even by letter, and leaves out the tolerances, pass marks and notes.
 const CASES = VERIFICATION_CASES;
 const RELIABILITY = RELIABILITY_CASES;
 
@@ -74,6 +80,8 @@ function guard(text: string): string {
   if (PUBLIC) {
     const hits = findForbiddenNames("report", text);
     if (hits.length) throw new Error(`The public report would name "${hits[0].match}": …${hits[0].context}…`);
+    const letter = text.match(/\b[Pp]rogram [A-Z]\b/);
+    if (letter) throw new Error(`The public report would name "${letter[0]}" in: ${text}`);
     const id = text.match(/\b(?:VP|GS)\d[\w.-]*|\b(?:models?|problems?|examples?)\s+#\d+/i);
     if (id) throw new Error(`The public report would show the engine id "${id[0]}" in: ${text}`);
   }
@@ -614,6 +622,24 @@ const RELIABILITY_LABELS: Record<ReliabilityCheckResult["quantity"], string> = {
   "pf-mc": "Pf, share FOS < 1 (Monte Carlo)",
 };
 
+/**
+ * A probabilistic analysis's results by quantity, as the public edition
+ * shows them: cSlope's value, the sources' values, the other programs' range.
+ */
+function reliabilityPresentation(results: ReliabilityCheckResult[]) {
+  const quantities = [...new Set(results.map((x) => x.quantity))].filter((q) => q !== "fos");
+  return quantities.map((quantity) => {
+    const rows = results.filter((x) => x.quantity === quantity);
+    const programs = rows.filter((x) => isProgramSource(x.publishedBy)).map((x) => x.published);
+    return {
+      quantity,
+      computed: rows[0].computed,
+      published: rows.filter((x) => !isProgramSource(x.publishedBy)),
+      programs: programs.length ? { min: Math.min(...programs), max: Math.max(...programs) } : null,
+    };
+  });
+}
+
 // Bundled benchmark models of the app, through the app's request builder.
 interface BenchResult {
   name: string;
@@ -660,6 +686,13 @@ const nPass = allChecks.filter((r) => r.pass).length + benchRows.filter((r) => r
 const nPending = allChecks.filter((r) => !r.pass && r.check.pending).length;
 const absDiffs = [...allChecks, ...benchRows].map((r) => Math.abs(r.diff)).filter(Number.isFinite);
 const meanAbs = absDiffs.reduce((a, b) => a + b, 0) / absDiffs.length;
+// The public edition presents, per problem, the sources' values, the other
+// programs' range and cSlope's result for each analysis (presentation.ts).
+const nPublished = CASES.reduce((n, c) => n + paperValues(c).length, 0);
+const nAnalyses = CASES.reduce((n, c) => n + presentedAnalyses(c).length, 0);
+/** cSlope's result for each analysis: that of the analysis's first check. */
+const analysisRows = (r: CaseResult) =>
+  presentedAnalyses(r.c).map((a) => ({ a, fos: r.results[a.checks[0]].fos }));
 const maxAbs = Math.max(...absDiffs);
 
 // Cover.
@@ -673,7 +706,9 @@ font(11, "normal", [220, 232, 242]);
 pdf.text("Limit equilibrium slope stability analysis — comparison with published results", M, 68);
 y = 112;
 paragraph(
-  `This document compares factors of safety computed by cSlope with values published for ${CASES.length} verification problems from the geotechnical literature and from the verification manuals of commercial slope stability programs, and with the ${benchResults.length} benchmark models bundled with the program.`,
+  PUBLIC
+    ? `This document presents factors of safety computed by cSlope for ${CASES.length} verification problems from the geotechnical literature and from the verification manuals of other slope stability programs, next to the values the sources publish and the range of other programs' results, and for the ${benchResults.length} benchmark models bundled with the program.`
+    : `This document compares factors of safety computed by cSlope with values published for ${CASES.length} verification problems from the geotechnical literature and from the verification manuals of commercial slope stability programs, and with the ${benchResults.length} benchmark models bundled with the program.`,
   11,
 );
 y += 4;
@@ -685,7 +720,13 @@ table(
   [
     ["Program version", `cSlope ${pkg.version ?? ""} (commit ${commit})`],
     ["Report generated", today],
-    ["Reference values", String(nChecks)],
+    ...(PUBLIC
+      ? [
+          ["Problems", String(CASES.length)],
+          ["Values published by the sources", String(nPublished)],
+          ["cSlope analyses", String(nAnalyses)],
+        ]
+      : [["Reference values", String(nChecks)]]),
     // The public edition shows the reference and the computed values only.
     ...(PUBLIC
       ? []
@@ -741,7 +782,9 @@ paragraph(
 y += 2;
 heading("Source of the input data", 2);
 paragraph(
-  "The input data were transcribed from the publications and from the verification manuals of commercial slope stability programs, and cross-checked against an independent open-source transcription of the same problems. Values that only a commercial program's manual gives are attributed to \"commercial program A\", \"B\" and so on, one letter per program. Each published value is labelled with its source; where a figure had to be digitised or an input inferred, the notes of the problem say so. Checks marked \"pending\" wait for an engine change named in the notes. Problem ids are cSlope's own: a number is one slope, a letter a variant of it.",
+  PUBLIC
+    ? "The input data were transcribed from the publications and from the verification manuals of other slope stability programs, most of them commercial, and cross-checked against an independent open-source transcription of the same problems. For each problem the report lists the values the source publishes, with the method where the source names one; some are hand calculations, charts, trial wedges or finite elements rather than the method of slices. For each analysis cSlope runs, it gives the range of results that other programs publish in their verification manuals, without naming the programs, and cSlope's result. The report presents the results; it does not mark them as passed or failed. Problem ids are cSlope's own: a number is one slope, a letter a variant of it."
+    : "The input data were transcribed from the publications and from the verification manuals of commercial slope stability programs, and cross-checked against an independent open-source transcription of the same problems. Values that only a commercial program's manual gives are attributed to \"commercial program A\", \"B\" and so on, one letter per program. Each published value is labelled with its source; where a figure had to be digitised or an input inferred, the notes of the problem say so. Checks marked \"pending\" wait for an engine change named in the notes. Problem ids are cSlope's own: a number is one slope, a letter a variant of it.",
   9.5,
   "normal",
 );
@@ -778,16 +821,40 @@ const summaryRows: Cell[][] = [
   ),
 ];
 if (PUBLIC) {
+  // One row per analysis; the sources' values on the problem's first row.
+  const publicRows: Cell[][] = [
+    ...caseResults.flatMap((r) =>
+      analysisRows(r).map(({ a, fos }, j): Cell[] => [
+        j === 0 ? r.c.id : "",
+        j === 0 ? r.c.title : "",
+        j === 0 ? paperValues(r.c).map(formatPaperValue).join("; ") || "–" : "",
+        a.label,
+        a.programs ? formatRange(a.programs) : "–",
+        fmt(fos ?? NaN),
+      ]),
+    ),
+    ...[...reliabilityResults.values()].flat().flatMap(({ rc: c, results }) =>
+      reliabilityPresentation(results).map((x): Cell[] => [
+        c.id,
+        c.title,
+        x.published.map((v) => v.published.toFixed(3)).join("; ") || "–",
+        RELIABILITY_LABELS[x.quantity],
+        x.programs ? formatRange(x.programs) : "–",
+        x.computed.toFixed(3),
+      ]),
+    ),
+  ];
   table(
     [
-      { title: "Problem", width: 20 },
-      { title: "Description", width: 70 },
-      { title: "Method", width: 46 },
-      { title: "Reference", width: 22, align: "right" },
-      { title: "cSlope", width: CONTENT_W - 158, align: "right" },
+      { title: "Problem", width: 16 },
+      { title: "Description", width: 58 },
+      { title: "Published", width: 26, align: "right" },
+      { title: "cSlope analysis", width: 38 },
+      { title: "Other programs", width: 22, align: "right" },
+      { title: "cSlope", width: CONTENT_W - 160, align: "right" },
     ],
-    summaryRows.map((row) => row.slice(0, 5)),
-    7.6,
+    publicRows,
+    7.2,
   );
 } else {
   table(
@@ -833,7 +900,7 @@ caseResults.forEach((r, i) => {
     c.definition,
     r.slope,
     r.plane,
-    `Figure ${i + 1}. ${c.id}: ${c.surface === "fixed" ? (nonCircular ? "analysed surface" : "analysed circle") : (nonCircular ? "critical surface" : "critical circle")} (${first.check.label}, FOS = ${fmt(first.fos ?? NaN)}).`,
+    `Figure ${i + 1}. ${c.id}: ${c.surface === "fixed" ? (nonCircular ? "analysed surface" : "analysed circle") : (nonCircular ? "critical surface" : "critical circle")} (${PUBLIC ? analysisRows(r)[0].a.label : first.check.label}, FOS = ${fmt(first.fos ?? NaN)}).`,
     units,
   );
   table(
@@ -856,14 +923,27 @@ caseResults.forEach((r, i) => {
     }),
   );
   if (PUBLIC) {
+    const published = paperValues(c);
+    if (published.length) {
+      table(
+        [
+          { title: "Published value", width: 32, align: "right" },
+          { title: "Method", width: 70 },
+          { title: "Source", width: CONTENT_W - 102 },
+        ],
+        published.map((v) => [formatPaperValue(v), v.method ?? "not stated", v.source]),
+      );
+    } else {
+      paragraph("The source publishes no factor of safety for this problem.", 8.5, "italic", MUTED);
+      y += 1;
+    }
     table(
       [
-        { title: "Method", width: 64 },
-        { title: "Published by", width: 50 },
-        { title: "Reference", width: 26, align: "right" },
-        { title: "cSlope", width: CONTENT_W - 140, align: "right" },
+        { title: "cSlope analysis", width: 80 },
+        { title: "Other programs", width: 40, align: "right" },
+        { title: "cSlope", width: CONTENT_W - 120, align: "right" },
       ],
-      r.results.map((x) => [x.check.label, x.check.publishedBy, fmt(x.check.published), fmt(x.fos ?? NaN)]),
+      analysisRows(r).map(({ a, fos }) => [a.label, a.programs ? formatRange(a.programs) : "–", fmt(fos ?? NaN)]),
     );
   } else {
     table(
@@ -897,12 +977,17 @@ caseResults.forEach((r, i) => {
     if (PUBLIC) {
       table(
         [
-          { title: "Quantity", width: 64 },
-          { title: "Published by", width: 50 },
-          { title: "Reference", width: 26, align: "right" },
+          { title: "Quantity", width: 50 },
+          { title: "Published", width: 54 },
+          { title: "Other programs", width: 36, align: "right" },
           { title: "cSlope", width: CONTENT_W - 140, align: "right" },
         ],
-        reliability.map((x) => [RELIABILITY_LABELS[x.quantity], x.publishedBy, x.published.toFixed(3), x.computed.toFixed(3)]),
+        reliabilityPresentation(results).map((x) => [
+          RELIABILITY_LABELS[x.quantity],
+          x.published.map((v) => `${v.published.toFixed(3)} ${v.publishedBy}`).join("; ") || "–",
+          x.programs ? formatRange(x.programs) : "–",
+          x.computed.toFixed(3),
+        ]),
       );
     } else {
       table(
@@ -934,7 +1019,8 @@ caseResults.forEach((r, i) => {
       x.check.pending ? [`${x.check.label} (${x.check.publishedBy}) is pending: it waits for the engine change "${x.check.pending}".`] : [],
     ),
   ];
-  if (notes.length > 0) {
+  // The public edition leaves the notes out: they name the other programs.
+  if (!PUBLIC && notes.length > 0) {
     font(9, "bold", INK);
     ensure(6);
     pdf.text("Notes", M, y, { baseline: "top" });
@@ -947,7 +1033,9 @@ caseResults.forEach((r, i) => {
 newPage();
 heading("4  Benchmark models bundled with cSlope", 1);
 paragraph(
-  "These models are shipped with the program (Help → Benchmarks). They are run through the same request builder as the user interface, with the analysis options saved in each model.",
+  PUBLIC
+    ? "These models are shipped with the program (Help → Benchmarks). They are run through the same request builder as the user interface, with the analysis options saved in each model. They repeat problems of section 3, where the published values are given."
+    : "These models are shipped with the program (Help → Benchmarks). They are run through the same request builder as the user interface, with the analysis options saved in each model.",
 );
 benchResults.forEach((b, i) => {
   if (i > 0) newPage();
@@ -992,10 +1080,9 @@ benchResults.forEach((b, i) => {
     table(
       [
         { title: "Method", width: 80 },
-        { title: "Reference", width: 40, align: "right" },
-        { title: "cSlope", width: CONTENT_W - 120, align: "right" },
+        { title: "cSlope", width: CONTENT_W - 80, align: "right" },
       ],
-      b.rows.map((x) => [methodName(x.method), fmt(x.published), fmt(x.fos ?? NaN)]),
+      b.rows.map((x) => [methodName(x.method), fmt(x.fos ?? NaN)]),
     );
   } else {
     table(
@@ -1027,5 +1114,5 @@ for (let p = 2; p <= pages; p++) {
 
 fs.mkdirSync(path.dirname(OUT), { recursive: true });
 fs.writeFileSync(OUT, Buffer.from(pdf.output("arraybuffer")));
-console.log(`\n${nPass}/${nChecks} within tolerance. Wrote ${path.relative(process.cwd(), OUT)} (${pages} pages).`);
+console.log(`\n${nPass}/${nChecks} checks within tolerance (not shown in the public edition). Wrote ${path.relative(process.cwd(), OUT)} (${pages} pages).`);
 if (nPass < nChecks) process.exitCode = 1;

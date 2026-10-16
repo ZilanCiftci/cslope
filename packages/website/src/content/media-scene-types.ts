@@ -82,9 +82,10 @@ export interface Scene {
   benchmark?: string;
   /**
    * Instead of a benchmark: a verification problem opened in the app, run
-   * with the options of one of its checks (as the verification table).
+   * as one of its analyses (cSlope's name for it, as the verification table
+   * shows it).
    */
-  verification?: { id: string; check: number };
+  verification?: { id: string; method: string };
   /** Setup steps applied after loading the benchmark. */
   setup: SceneSetup;
   /** Output configuration. */
