@@ -20,7 +20,7 @@
  * without a complete-equilibrium solution gets no factor of safety.
  */
 
-import type { GeometryWithMaterial } from "../types/index";
+import { resolveStrength, type GeometryWithMaterial } from "../types/index";
 import type { Slope, SearchPlane } from "./slope";
 import { circleToPolyline, isAdmissiblePolyline, type Pt } from "./surface";
 
@@ -186,39 +186,50 @@ function layerSeeds(slope: Slope, evaluate: Evaluate): { points: Pt[]; axis: Pt;
   const [entryL, entryR, exitL, exitR] = slope.limits;
   const span = Math.max(exitR - entryL, 1);
   const geometries = slope.materialGeometries;
-  /** Strength proxy c + σ′ tan φ at depth d (σ′ from the mean unit weight). */
-  const strength = (mat: GeometryWithMaterial["material"], depth: number) => {
-    const gamma = mat.unitWeight > 0 ? mat.unitWeight : 18;
-    return mat.cohesion + gamma * depth * Math.tan((mat.frictionAngle * Math.PI) / 180);
+  /** c and φ (rad) of a material at the point (x, y), as the slices see them. */
+  const params = (m: GeometryWithMaterial, x: number, y: number, g: number) => {
+    const r = resolveStrength(m.material.model, { yBottom: y, x, yGround: g, alpha: 0 });
+    return { c: r.cohesion, phi: (r.frictionAngle * Math.PI) / 180 };
   };
-  /** True when no material above the layer at x is weaker than it. */
+  /**
+   * True when every material above the layer at x is stronger than it at
+   * the layer's own effective stress (Mohr-Coulomb: c + σ′ tan φ, each
+   * material with its own parameters, σ′ from the overburden). Comparing
+   * at one stress keeps a shallow layer from looking weaker just because
+   * the stress is lower there.
+   */
   const weakest = (m: GeometryWithMaterial, x: number): boolean => {
     const ext = polygonYExtentAt(m.px, m.py, x);
     const g = groundAt(x);
     if (!ext || !Number.isFinite(g)) return false;
     const mid = (ext[0] + ext[1]) / 2;
-    const own = strength(m.material, g - mid);
+    const gamma = m.material.unitWeight > 0 ? m.material.unitWeight : 18;
+    const sigma = gamma * (g - mid);
+    const own = params(m, x, mid, g);
+    const ownStrength = own.c + sigma * Math.tan(own.phi);
     for (const o of geometries) {
       if (o === m) continue;
       const e = polygonYExtentAt(o.px, o.py, x);
       if (!e || e[0] < mid) continue; // not above the layer's middle
-      if (strength(o.material, g - (e[0] + e[1]) / 2) <= own) return false;
+      const p = params(o, x, (e[0] + e[1]) / 2, g);
+      if (p.c + sigma * Math.tan(p.phi) <= ownStrength) return false;
     }
     return true;
   };
-  /** Friction angle of the material directly above the layer at x. */
+  /** Friction angle (rad) of the material directly above the layer at x. */
   const phiAbove = (m: GeometryWithMaterial, x: number, top: number): number => {
-    let phi = m.material.frictionAngle;
-    let bottom = Infinity;
+    const g = groundAt(x);
+    let above: GeometryWithMaterial | null = null;
+    let aboveExt: [number, number] | null = null;
     for (const o of geometries) {
       if (o === m) continue;
       const e = polygonYExtentAt(o.px, o.py, x);
-      if (e && e[0] >= top - 1e-6 && e[0] < bottom) {
-        bottom = e[0];
-        phi = o.material.frictionAngle;
+      if (e && e[0] >= top - 1e-6 && (!aboveExt || e[0] < aboveExt[0])) {
+        above = o;
+        aboveExt = e;
       }
     }
-    return (phi * Math.PI) / 180;
+    return above && aboveExt ? params(above, x, (aboveExt[0] + aboveExt[1]) / 2, g).phi : params(m, x, top, g).phi;
   };
   const distinct = (a: Pt[], b: Pt[]) =>
     Math.abs(a[0][0] - b[0][0]) > 0.05 * span || Math.abs(a[a.length - 1][0] - b[b.length - 1][0]) > 0.05 * span;
