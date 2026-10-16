@@ -1,7 +1,7 @@
 {
  "summary": {
   "problems": 164,
-  "checks": 356,
+  "checks": 355,
   "literatureProblems": 154,
   "reliabilityChecks": 29
  },
@@ -19,8 +19,8 @@
      "method": "Bishop simplified",
      "published": 1.409,
      "source": "Commercial program A",
-     "computed": 1.404,
-     "deviation": -0.00355
+     "computed": 1.4041,
+     "deviation": -0.00348
     },
     {
      "method": "Morgenstern-Price (half-sine)",
@@ -33,8 +33,8 @@
      "method": "Bishop simplified",
      "published": 1.417,
      "source": "Commercial program B",
-     "computed": 1.404,
-     "deviation": -0.00917
+     "computed": 1.4041,
+     "deviation": -0.0091
     },
     {
      "method": "Morgenstern-Price (half-sine)",
@@ -47,8 +47,8 @@
      "method": "Spencer (M-P, constant f(x))",
      "published": 1.386,
      "source": "Commercial program A (non-circular)",
-     "computed": 1.3858,
-     "deviation": -0.00014
+     "computed": 1.3855,
+     "deviation": -0.00036
     }
    ]
   },
@@ -72,8 +72,8 @@
      "method": "Spencer (M-P, constant f(x))",
      "published": 0.414,
      "source": "Commercial program A (non-circular)",
-     "computed": 0.4089,
-     "deviation": -0.01232
+     "computed": 0.4119,
+     "deviation": -0.00507
     }
    ]
   },
@@ -90,8 +90,8 @@
      "method": "Bishop simplified",
      "published": 1.118,
      "source": "Commercial program A",
-     "computed": 1.1127,
-     "deviation": -0.00474
+     "computed": 1.1128,
+     "deviation": -0.00465
     },
     {
      "method": "Spencer (M-P, constant f(x))",
@@ -111,8 +111,8 @@
      "method": "Bishop simplified",
      "published": 1.112,
      "source": "Program D",
-     "computed": 1.1127,
-     "deviation": 0.00063
+     "computed": 1.1128,
+     "deviation": 0.00072
     }
    ]
   },
@@ -161,8 +161,8 @@
      "method": "Spencer (M-P, constant f(x))",
      "published": 2.696,
      "source": "Commercial program A",
-     "computed": 2.6664,
-     "deviation": -0.01098
+     "computed": 2.6665,
+     "deviation": -0.01094
     }
    ]
   },
@@ -204,8 +204,8 @@
      "method": "Spencer (M-P, constant f(x))",
      "published": 1.351,
      "source": "Commercial program C",
-     "computed": 1.3519,
-     "deviation": 0.00067
+     "computed": 1.3518,
+     "deviation": 0.00059
     },
     {
      "method": "Janbu simplified",
@@ -229,8 +229,8 @@
      "method": "Janbu simplified (uncorrected)",
      "published": 1.469,
      "source": "Commercial program A",
-     "computed": 1.4675,
-     "deviation": -0.00102
+     "computed": 1.4676,
+     "deviation": -0.00095
     }
    ]
   },
@@ -290,8 +290,8 @@
      "method": "Spencer (M-P, constant f(x))",
      "published": 1.536,
      "source": "Commercial program A",
-     "computed": 1.5191,
-     "deviation": -0.011
+     "computed": 1.5192,
+     "deviation": -0.01094
     }
    ]
   },
@@ -326,8 +326,8 @@
      "method": "Spencer (M-P, constant f(x))",
      "published": 1.925,
      "source": "Commercial program A",
-     "computed": 1.9257,
-     "deviation": 0.00036
+     "computed": 1.9262,
+     "deviation": 0.00062
     }
    ]
   },
@@ -362,8 +362,8 @@
      "method": "Spencer (M-P, constant f(x))",
      "published": 1.868,
      "source": "Commercial program B (optimised non-circular)",
-     "computed": 1.8698,
-     "deviation": 0.00096
+     "computed": 1.868,
+     "deviation": 0
     }
    ]
   },
@@ -387,8 +387,8 @@
      "method": "Bishop simplified",
      "published": 1.17,
      "source": "Commercial program B",
-     "computed": 1.1638,
-     "deviation": -0.0053
+     "computed": 1.1637,
+     "deviation": -0.00538
     },
     {
      "method": "Morgenstern-Price (half-sine)",
@@ -466,15 +466,15 @@
      "method": "Bishop simplified",
      "published": 1.14,
      "source": "Commercial program A",
-     "computed": 1.1427,
-     "deviation": 0.00237
+     "computed": 1.1429,
+     "deviation": 0.00254
     },
     {
      "method": "Bishop simplified",
      "published": 1.13,
      "source": "Cai & Ugai",
-     "computed": 1.1427,
-     "deviation": 0.01124
+     "computed": 1.1429,
+     "deviation": 0.01142
     }
    ]
   },
@@ -491,8 +491,8 @@
      "method": "Bishop simplified",
      "published": 1.54,
      "source": "Commercial program A",
-     "computed": 1.5406,
-     "deviation": 0.00039
+     "computed": 1.5407,
+     "deviation": 0.00045
     }
    ]
   },
@@ -509,8 +509,8 @@
      "method": "Bishop simplified",
      "published": 1.43,
      "source": "Commercial program A",
-     "computed": 1.4498,
-     "deviation": 0.01385
+     "computed": 1.4499,
+     "deviation": 0.01392
     }
    ]
   },
@@ -527,8 +527,8 @@
      "method": "Bishop simplified",
      "published": 1.33,
      "source": "Commercial program A",
-     "computed": 1.3416,
-     "deviation": 0.00872
+     "computed": 1.3417,
+     "deviation": 0.0088
     }
    ]
   },
@@ -545,8 +545,8 @@
      "method": "Bishop simplified",
      "published": 1.25,
      "source": "Commercial program A",
-     "computed": 1.2597,
-     "deviation": 0.00776
+     "computed": 1.2598,
+     "deviation": 0.00784
     }
    ]
   },
@@ -563,22 +563,22 @@
      "method": "Janbu corrected (f0)",
      "published": 1.46,
      "source": "Program H",
-     "computed": 1.4483,
-     "deviation": -0.00801
+     "computed": 1.4482,
+     "deviation": -0.00808
     },
     {
      "method": "Janbu corrected (f0)",
      "published": 1.448,
      "source": "Program D",
-     "computed": 1.4483,
-     "deviation": 0.00021
+     "computed": 1.4482,
+     "deviation": 0.00014
     },
     {
      "method": "Spencer (M-P, constant f(x))",
      "published": 1.576,
      "source": "Program D",
-     "computed": 1.5755,
-     "deviation": -0.00032
+     "computed": 1.5749,
+     "deviation": -0.0007
     }
    ]
   },
@@ -602,8 +602,8 @@
      "method": "Janbu simplified (uncorrected)",
      "published": 1.446,
      "source": "Commercial program A",
-     "computed": 1.4417,
-     "deviation": -0.00297
+     "computed": 1.4418,
+     "deviation": -0.0029
     }
    ]
   },
@@ -620,8 +620,8 @@
      "method": "Bishop simplified",
      "published": 1.787,
      "source": "Commercial program A",
-     "computed": 1.7904,
-     "deviation": 0.0019
+     "computed": 1.7905,
+     "deviation": 0.00196
     },
     {
      "method": "Spencer (M-P, constant f(x))",
@@ -634,8 +634,8 @@
      "method": "Bishop simplified",
      "published": 1.79,
      "source": "Program D",
-     "computed": 1.7904,
-     "deviation": 0.00022
+     "computed": 1.7905,
+     "deviation": 0.00028
     }
    ]
   },
@@ -684,8 +684,8 @@
      "method": "Bishop simplified",
      "published": 1.799,
      "source": "Commercial program A",
-     "computed": 1.7904,
-     "deviation": -0.00478
+     "computed": 1.7905,
+     "deviation": -0.00472
     },
     {
      "method": "Spencer (M-P, constant f(x))",
@@ -698,8 +698,8 @@
      "method": "Bishop simplified",
      "published": 1.79,
      "source": "Program D",
-     "computed": 1.7904,
-     "deviation": 0.00022
+     "computed": 1.7905,
+     "deviation": 0.00028
     }
    ]
   },
@@ -716,8 +716,8 @@
      "method": "Bishop simplified",
      "published": 1.373,
      "source": "Commercial program A",
-     "computed": 1.382,
-     "deviation": 0.00655
+     "computed": 1.3822,
+     "deviation": 0.0067
     },
     {
      "method": "Spencer (M-P, constant f(x))",
@@ -730,8 +730,8 @@
      "method": "Bishop simplified",
      "published": 1.382,
      "source": "Program D",
-     "computed": 1.382,
-     "deviation": 0
+     "computed": 1.3822,
+     "deviation": 0.00014
     }
    ]
   },
@@ -748,15 +748,15 @@
      "method": "Bishop simplified",
      "published": 1.378,
      "source": "Commercial program A",
-     "computed": 1.382,
-     "deviation": 0.0029
+     "computed": 1.3822,
+     "deviation": 0.00305
     },
     {
      "method": "Bishop simplified",
      "published": 1.382,
      "source": "Program D",
-     "computed": 1.382,
-     "deviation": 0
+     "computed": 1.3822,
+     "deviation": 0.00014
     }
    ]
   },
@@ -773,8 +773,8 @@
      "method": "Spencer (M-P, constant f(x))",
      "published": 1.051,
      "source": "Commercial program A",
-     "computed": 1.052,
-     "deviation": 0.00095
+     "computed": 1.0521,
+     "deviation": 0.00105
     },
     {
      "method": "Morgenstern-Price (half-sine)",
@@ -826,8 +826,8 @@
      "method": "Bishop simplified",
      "published": 1.401,
      "source": "Program D",
-     "computed": 1.4007,
-     "deviation": -0.00021
+     "computed": 1.4009,
+     "deviation": -0.00007
     }
    ]
   },
@@ -844,29 +844,29 @@
      "method": "Spencer (M-P, constant f(x))",
      "published": 1.336,
      "source": "Commercial program A",
-     "computed": 1.3381,
-     "deviation": 0.00157
+     "computed": 1.3382,
+     "deviation": 0.00165
     },
     {
      "method": "Spencer (M-P, constant f(x))",
      "published": 1.327,
      "source": "Cheng et al.",
-     "computed": 1.3381,
-     "deviation": 0.00836
+     "computed": 1.3382,
+     "deviation": 0.00844
     },
     {
      "method": "Spencer (M-P, constant f(x))",
      "published": 1.338,
      "source": "Program D",
-     "computed": 1.3381,
-     "deviation": 0.00007
+     "computed": 1.3382,
+     "deviation": 0.00015
     },
     {
      "method": "Bishop simplified",
      "published": 1.342,
      "source": "Program D",
-     "computed": 1.3424,
-     "deviation": 0.0003
+     "computed": 1.3427,
+     "deviation": 0.00052
     }
    ]
   },
@@ -1175,8 +1175,8 @@
      "method": "Bishop simplified",
      "published": 1.563,
      "source": "Commercial program A",
-     "computed": 1.5717,
-     "deviation": 0.00557
+     "computed": 1.5719,
+     "deviation": 0.00569
     },
     {
      "method": "Spencer (M-P, constant f(x))",
@@ -1189,15 +1189,15 @@
      "method": "Bishop simplified",
      "published": 1.57,
      "source": "Duncan & Wright",
-     "computed": 1.5717,
-     "deviation": 0.00108
+     "computed": 1.5719,
+     "deviation": 0.00121
     },
     {
      "method": "Bishop simplified",
      "published": 1.572,
      "source": "Program D",
-     "computed": 1.5717,
-     "deviation": -0.00019
+     "computed": 1.5719,
+     "deviation": -0.00006
     }
    ]
   },
@@ -1214,8 +1214,8 @@
      "method": "Bishop simplified",
      "published": 1.142,
      "source": "Commercial program A",
-     "computed": 1.1322,
-     "deviation": -0.00858
+     "computed": 1.1323,
+     "deviation": -0.00849
     },
     {
      "method": "Spencer (M-P, constant f(x))",
@@ -1239,22 +1239,22 @@
      "method": "Bishop simplified",
      "published": 1.228,
      "source": "Commercial program A",
-     "computed": 1.2196,
-     "deviation": -0.00684
+     "computed": 1.2198,
+     "deviation": -0.00668
     },
     {
      "method": "Bishop simplified",
      "published": 1.22,
      "source": "Duncan & Wright",
-     "computed": 1.2196,
-     "deviation": -0.00033
+     "computed": 1.2198,
+     "deviation": -0.00016
     },
     {
      "method": "Spencer (M-P, constant f(x))",
      "published": 1.19,
      "source": "Commercial program A (non-circular)",
-     "computed": 1.168,
-     "deviation": -0.01849
+     "computed": 1.1735,
+     "deviation": -0.01387
     }
    ]
   },
@@ -1346,8 +1346,8 @@
      "method": "Bishop simplified",
      "published": 1.412,
      "source": "Commercial program A",
-     "computed": 1.4081,
-     "deviation": -0.00276
+     "computed": 1.4082,
+     "deviation": -0.00269
     },
     {
      "method": "Spencer (M-P, constant f(x))",
@@ -1371,8 +1371,8 @@
      "method": "Bishop simplified",
      "published": 2.549,
      "source": "Commercial program A",
-     "computed": 2.5336,
-     "deviation": -0.00604
+     "computed": 2.5337,
+     "deviation": -0.006
     },
     {
      "method": "Spencer (M-P, constant f(x))",
@@ -1403,8 +1403,8 @@
      "method": "Bishop simplified",
      "published": 1.398,
      "source": "Commercial program A",
-     "computed": 1.3891,
-     "deviation": -0.00637
+     "computed": 1.3894,
+     "deviation": -0.00615
     },
     {
      "method": "Spencer (M-P, constant f(x))",
@@ -1467,8 +1467,8 @@
      "method": "Bishop simplified",
      "published": 1.155,
      "source": "Commercial program A",
-     "computed": 1.1559,
-     "deviation": 0.00078
+     "computed": 1.1558,
+     "deviation": 0.00069
     },
     {
      "method": "Spencer (M-P, constant f(x))",
@@ -1499,8 +1499,8 @@
      "method": "Bishop simplified",
      "published": 1.533,
      "source": "Commercial program A",
-     "computed": 1.5207,
-     "deviation": -0.00802
+     "computed": 1.5208,
+     "deviation": -0.00796
     },
     {
      "method": "Spencer (M-P, constant f(x))",
@@ -1513,8 +1513,8 @@
      "method": "Spencer (M-P, constant f(x))",
      "published": 1.534,
      "source": "Commercial program A (non-circular)",
-     "computed": 1.5238,
-     "deviation": -0.00665
+     "computed": 1.5239,
+     "deviation": -0.00658
     }
    ]
   },
@@ -1531,8 +1531,8 @@
      "method": "Bishop simplified",
      "published": 1.313,
      "source": "Commercial program A",
-     "computed": 1.3059,
-     "deviation": -0.00541
+     "computed": 1.306,
+     "deviation": -0.00533
     },
     {
      "method": "Spencer (M-P, constant f(x))",
@@ -1545,8 +1545,8 @@
      "method": "Spencer (M-P, constant f(x))",
      "published": 1.262,
      "source": "Commercial program A (non-circular)",
-     "computed": 1.2607,
-     "deviation": -0.00103
+     "computed": 1.2688,
+     "deviation": 0.00539
     }
    ]
   },
@@ -1563,8 +1563,8 @@
      "method": "Bishop simplified",
      "published": 1.335,
      "source": "Commercial program A",
-     "computed": 1.3294,
-     "deviation": -0.00419
+     "computed": 1.3295,
+     "deviation": -0.00412
     },
     {
      "method": "Spencer (M-P, constant f(x))",
@@ -1577,8 +1577,8 @@
      "method": "Spencer (M-P, constant f(x))",
      "published": 1.182,
      "source": "Commercial program A (non-circular)",
-     "computed": 1.172,
-     "deviation": -0.00846
+     "computed": 1.1732,
+     "deviation": -0.00745
     }
    ]
   },
@@ -1638,8 +1638,8 @@
      "method": "Bishop simplified",
      "published": 0.761,
      "source": "Commercial program A",
-     "computed": 0.7564,
-     "deviation": -0.00604
+     "computed": 0.7565,
+     "deviation": -0.00591
     },
     {
      "method": "Spencer (M-P, constant f(x))",
@@ -1659,8 +1659,8 @@
      "method": "Spencer (M-P, constant f(x))",
      "published": 0.74,
      "source": "Commercial program A (non-circular)",
-     "computed": 0.739,
-     "deviation": -0.00135
+     "computed": 0.7375,
+     "deviation": -0.00338
     }
    ]
   },
@@ -1677,8 +1677,8 @@
      "method": "Bishop simplified",
      "published": 0.909,
      "source": "Commercial program A",
-     "computed": 0.9056,
-     "deviation": -0.00374
+     "computed": 0.9057,
+     "deviation": -0.00363
     },
     {
      "method": "Spencer (M-P, constant f(x))",
@@ -1698,8 +1698,8 @@
      "method": "Spencer (M-P, constant f(x))",
      "published": 0.903,
      "source": "Commercial program A (non-circular)",
-     "computed": 0.884,
-     "deviation": -0.02104
+     "computed": 0.8844,
+     "deviation": -0.0206
     }
    ]
   },
@@ -1716,8 +1716,8 @@
      "method": "Bishop simplified",
      "published": 1.045,
      "source": "Commercial program A",
-     "computed": 1.0423,
-     "deviation": -0.00258
+     "computed": 1.0424,
+     "deviation": -0.00249
     },
     {
      "method": "Spencer (M-P, constant f(x))",
@@ -1737,8 +1737,8 @@
      "method": "Spencer (M-P, constant f(x))",
      "published": 1.018,
      "source": "Commercial program A (non-circular)",
-     "computed": 1.0168,
-     "deviation": -0.00118
+     "computed": 1.0165,
+     "deviation": -0.00147
     }
    ]
   },
@@ -1755,8 +1755,8 @@
      "method": "Bishop simplified",
      "published": 1.154,
      "source": "Commercial program A",
-     "computed": 1.1519,
-     "deviation": -0.00182
+     "computed": 1.152,
+     "deviation": -0.00173
     },
     {
      "method": "Spencer (M-P, constant f(x))",
@@ -1776,8 +1776,8 @@
      "method": "Spencer (M-P, constant f(x))",
      "published": 1.116,
      "source": "Commercial program A (non-circular)",
-     "computed": 1.118,
-     "deviation": 0.00179
+     "computed": 1.1206,
+     "deviation": 0.00412
     }
    ]
   },
@@ -1794,8 +1794,8 @@
      "method": "Bishop simplified",
      "published": 1.629,
      "source": "Commercial program A",
-     "computed": 1.6131,
-     "deviation": -0.00976
+     "computed": 1.6134,
+     "deviation": -0.00958
     },
     {
      "method": "Spencer (M-P, constant f(x))",
@@ -1819,8 +1819,8 @@
      "method": "Bishop simplified",
      "published": 1.09,
      "source": "Commercial program A",
-     "computed": 1.0693,
-     "deviation": -0.01899
+     "computed": 1.0695,
+     "deviation": -0.01881
     },
     {
      "method": "Spencer (M-P, constant f(x))",
@@ -1833,8 +1833,8 @@
      "method": "Bishop simplified",
      "published": 1.07,
      "source": "Program D",
-     "computed": 1.0693,
-     "deviation": -0.00065
+     "computed": 1.0695,
+     "deviation": -0.00047
     }
    ]
   },
@@ -1865,15 +1865,15 @@
      "method": "Spencer (M-P, constant f(x))",
      "published": 1.167,
      "source": "Commercial program A (non-circular)",
-     "computed": 1.1563,
-     "deviation": -0.00917
+     "computed": 1.1549,
+     "deviation": -0.01037
     },
     {
      "method": "Spencer (M-P, constant f(x))",
      "published": 1.17,
      "source": "Duncan & Wright (reference), non-circular",
-     "computed": 1.1563,
-     "deviation": -0.01171
+     "computed": 1.1549,
+     "deviation": -0.01291
     }
    ]
   },
@@ -1908,8 +1908,8 @@
      "method": "Bishop simplified",
      "published": 1.603,
      "source": "Commercial program A",
-     "computed": 1.5967,
-     "deviation": -0.00393
+     "computed": 1.5969,
+     "deviation": -0.00381
     },
     {
      "method": "Spencer (M-P, constant f(x))",
@@ -1929,8 +1929,8 @@
      "method": "Spencer (M-P, constant f(x))",
      "published": 1.592,
      "source": "Commercial program A (non-circular)",
-     "computed": 1.5919,
-     "deviation": -0.00006
+     "computed": 1.5914,
+     "deviation": -0.00038
     }
    ]
   },
@@ -1947,8 +1947,8 @@
      "method": "Bishop simplified",
      "published": 1.603,
      "source": "Commercial program A",
-     "computed": 1.5966,
-     "deviation": -0.00399
+     "computed": 1.5967,
+     "deviation": -0.00393
     },
     {
      "method": "Spencer (M-P, constant f(x))",
@@ -1968,8 +1968,8 @@
      "method": "Spencer (M-P, constant f(x))",
      "published": 1.59,
      "source": "Commercial program A (non-circular)",
-     "computed": 1.5898,
-     "deviation": -0.00013
+     "computed": 1.5894,
+     "deviation": -0.00038
     }
    ]
   },
@@ -1993,8 +1993,8 @@
      "method": "Spencer (M-P, constant f(x))",
      "published": 1.648,
      "source": "Commercial program A",
-     "computed": 1.6586,
-     "deviation": 0.00643
+     "computed": 1.6585,
+     "deviation": 0.00637
     },
     {
      "method": "Bishop simplified",
@@ -2025,15 +2025,15 @@
      "method": "Bishop simplified",
      "published": 1.31,
      "source": "El-Ramly et al.",
-     "computed": 1.3199,
-     "deviation": 0.00756
+     "computed": 1.32,
+     "deviation": 0.00763
     },
     {
      "method": "Bishop simplified",
      "published": 1.32,
      "source": "Program D",
-     "computed": 1.3199,
-     "deviation": -0.00008
+     "computed": 1.32,
+     "deviation": 0
     }
    ]
   },
@@ -2050,8 +2050,8 @@
      "method": "Bishop simplified",
      "published": 2.08,
      "source": "Fredlund & Krahn",
-     "computed": 2.0758,
-     "deviation": -0.00202
+     "computed": 2.0759,
+     "deviation": -0.00197
     },
     {
      "method": "Morgenstern-Price (half-sine)",
@@ -2075,8 +2075,8 @@
      "method": "Bishop simplified",
      "published": 1.834,
      "source": "Fredlund & Krahn",
-     "computed": 1.8288,
-     "deviation": -0.00284
+     "computed": 1.8289,
+     "deviation": -0.00278
     },
     {
      "method": "Morgenstern-Price (half-sine)",
@@ -2100,8 +2100,8 @@
      "method": "Bishop simplified",
      "published": 1.382,
      "source": "Commercial program A",
-     "computed": 1.3803,
-     "deviation": -0.00123
+     "computed": 1.3804,
+     "deviation": -0.00116
     },
     {
      "method": "Spencer (M-P, constant f(x))",
@@ -2132,8 +2132,8 @@
      "method": "Bishop simplified",
      "published": 0.987,
      "source": "Commercial program A",
-     "computed": 0.985,
-     "deviation": -0.00203
+     "computed": 0.9851,
+     "deviation": -0.00193
     },
     {
      "method": "Spencer (M-P, constant f(x))",
@@ -2146,8 +2146,8 @@
      "method": "Janbu corrected (f0)",
      "published": 0.99,
      "source": "Commercial program A",
-     "computed": 0.9855,
-     "deviation": -0.00455
+     "computed": 0.9856,
+     "deviation": -0.00444
     },
     {
      "method": "Morgenstern-Price (half-sine)",
@@ -2160,8 +2160,8 @@
      "method": "Bishop simplified",
      "published": 0.992,
      "source": "Commercial program B (moment equilibrium, λ = 0)",
-     "computed": 0.985,
-     "deviation": -0.00706
+     "computed": 0.9851,
+     "deviation": -0.00696
     },
     {
      "method": "Spencer (M-P, constant f(x))",
@@ -2224,8 +2224,8 @@
      "method": "Janbu corrected (f0)",
      "published": 1.489,
      "source": "Commercial program A",
-     "computed": 1.4749,
-     "deviation": -0.00947
+     "computed": 1.475,
+     "deviation": -0.0094
     }
    ]
   },
@@ -2242,15 +2242,15 @@
      "method": "Bishop simplified",
      "published": 1.405,
      "source": "Commercial program A",
-     "computed": 1.4028,
-     "deviation": -0.00157
+     "computed": 1.403,
+     "deviation": -0.00142
     },
     {
      "method": "Spencer (M-P, constant f(x))",
      "published": 1.375,
      "source": "Commercial program A",
-     "computed": 1.3723,
-     "deviation": -0.00196
+     "computed": 1.3721,
+     "deviation": -0.00211
     },
     {
      "method": "Janbu corrected (f0)",
@@ -2263,15 +2263,15 @@
      "method": "Morgenstern-Price (half-sine)",
      "published": 1.382,
      "source": "Commercial program B",
-     "computed": 1.3716,
-     "deviation": -0.00753
+     "computed": 1.3717,
+     "deviation": -0.00745
     },
     {
      "method": "Bishop simplified",
      "published": 1.403,
      "source": "Program D",
-     "computed": 1.4028,
-     "deviation": -0.00014
+     "computed": 1.403,
+     "deviation": 0
     }
    ]
   },
@@ -2288,15 +2288,15 @@
      "method": "Janbu corrected (f0)",
      "published": 1.294,
      "source": "Commercial program A",
-     "computed": 1.2938,
-     "deviation": -0.00015
+     "computed": 1.2937,
+     "deviation": -0.00023
     },
     {
      "method": "Spencer (M-P, constant f(x))",
      "published": 1.277,
      "source": "Commercial program A",
-     "computed": 1.2759,
-     "deviation": -0.00086
+     "computed": 1.2764,
+     "deviation": -0.00047
     },
     {
      "method": "Morgenstern-Price (half-sine)",
@@ -2317,18 +2317,11 @@
    "units": "SI",
    "checks": [
     {
-     "method": "Morgenstern-Price (half-sine)",
-     "published": 1.261,
-     "source": "Commercial program B",
-     "computed": 1.2602,
-     "deviation": -0.00063
-    },
-    {
      "method": "Spencer (M-P, constant f(x))",
      "published": 1.246,
      "source": "Commercial program A",
-     "computed": 1.2642,
-     "deviation": 0.01461
+     "computed": 1.2282,
+     "deviation": -0.01429
     }
    ]
   },
@@ -2345,8 +2338,8 @@
      "method": "Spencer (M-P, constant f(x))",
      "published": 0.707,
      "source": "Commercial program A (optimised)",
-     "computed": 0.7175,
-     "deviation": 0.01485
+     "computed": 0.6975,
+     "deviation": -0.01344
     }
    ]
   },
@@ -2363,15 +2356,15 @@
      "method": "Bishop simplified",
      "published": 1.948,
      "source": "Commercial program A",
-     "computed": 1.9634,
-     "deviation": 0.00791
+     "computed": 1.9636,
+     "deviation": 0.00801
     },
     {
      "method": "Spencer (M-P, constant f(x))",
      "published": 1.948,
      "source": "Commercial program A",
-     "computed": 1.9696,
-     "deviation": 0.01109
+     "computed": 1.9636,
+     "deviation": 0.00801
     },
     {
      "method": "Janbu corrected (f0)",
@@ -2384,8 +2377,8 @@
      "method": "Bishop simplified",
      "published": 1.951,
      "source": "Commercial program B",
-     "computed": 1.9634,
-     "deviation": 0.00636
+     "computed": 1.9636,
+     "deviation": 0.00646
     }
    ]
   },
@@ -2423,8 +2416,8 @@
      "method": "Morgenstern-Price (half-sine)",
      "published": 2.299,
      "source": "Commercial program B",
-     "computed": 2.2993,
-     "deviation": 0.00013
+     "computed": 2.2994,
+     "deviation": 0.00017
     }
    ]
   },
@@ -2439,10 +2432,10 @@
    "checks": [
     {
      "method": "Spencer (M-P, constant f(x))",
-     "published": 1.054,
-     "source": "Commercial program B",
-     "computed": 1.0486,
-     "deviation": -0.00512
+     "published": 1.01,
+     "source": "Commercial program A (block search)",
+     "computed": 1.0089,
+     "deviation": -0.00109
     }
    ]
   },
@@ -2459,8 +2452,8 @@
      "method": "Bishop simplified (vertical head)",
      "published": 1.087,
      "source": "Commercial program A",
-     "computed": 1.0852,
-     "deviation": -0.00166
+     "computed": 1.0855,
+     "deviation": -0.00138
     },
     {
      "method": "Spencer (vertical head)",
@@ -2509,8 +2502,8 @@
      "method": "Janbu corrected (f0)",
      "published": 0.485,
      "source": "Griffiths & Lane (Janbu wedge, Fig. 7)",
-     "computed": 0.4996,
-     "deviation": 0.0301
+     "computed": 0.4994,
+     "deviation": 0.02969
     }
    ]
   },
@@ -2602,8 +2595,8 @@
      "method": "Spencer (M-P, constant f(x))",
      "published": 1.215,
      "source": "Commercial program A (optimised)",
-     "computed": 1.2165,
-     "deviation": 0.00123
+     "computed": 1.2162,
+     "deviation": 0.00099
     }
    ]
   },
@@ -2620,8 +2613,8 @@
      "method": "Spencer (M-P, constant f(x))",
      "published": 1.29,
      "source": "Commercial program A (optimised)",
-     "computed": 1.2914,
-     "deviation": 0.00109
+     "computed": 1.2923,
+     "deviation": 0.00178
     }
    ]
   },
@@ -2638,8 +2631,8 @@
      "method": "Spencer (M-P, constant f(x))",
      "published": 1.315,
      "source": "Commercial program A (optimised)",
-     "computed": 1.317,
-     "deviation": 0.00152
+     "computed": 1.3139,
+     "deviation": -0.00084
     }
    ]
   },
@@ -2756,15 +2749,15 @@
      "method": "Bishop simplified",
      "published": 2.806,
      "source": "Commercial program B",
-     "computed": 2.8154,
-     "deviation": 0.00335
+     "computed": 2.8155,
+     "deviation": 0.00339
     },
     {
      "method": "Bishop simplified",
      "published": 2.82,
      "source": "Commercial program A",
-     "computed": 2.8154,
-     "deviation": -0.00163
+     "computed": 2.8155,
+     "deviation": -0.0016
     }
    ]
   },
@@ -2974,8 +2967,8 @@
      "method": "Bishop simplified",
      "published": 1.02,
      "source": "Program D",
-     "computed": 1.0168,
-     "deviation": -0.00314
+     "computed": 1.0171,
+     "deviation": -0.00284
     }
    ]
   },
@@ -3010,8 +3003,8 @@
      "method": "Bishop simplified",
      "published": 1.04,
      "source": "Commercial program A",
-     "computed": 1.0302,
-     "deviation": -0.00942
+     "computed": 1.0305,
+     "deviation": -0.00913
     }
    ]
   },
@@ -3046,8 +3039,8 @@
      "method": "Bishop simplified",
      "published": 1.004,
      "source": "Commercial program A",
-     "computed": 1.0112,
-     "deviation": 0.00717
+     "computed": 1.0115,
+     "deviation": 0.00747
     }
    ]
   },
@@ -3064,8 +3057,8 @@
      "method": "Bishop simplified",
      "published": 1.01,
      "source": "Program D",
-     "computed": 1.0095,
-     "deviation": -0.0005
+     "computed": 1.01,
+     "deviation": 0
     }
    ]
   },
@@ -3082,8 +3075,8 @@
      "method": "Bishop simplified",
      "published": 0.958,
      "source": "Commercial program A",
-     "computed": 0.9606,
-     "deviation": 0.00271
+     "computed": 0.961,
+     "deviation": 0.00313
     }
    ]
   },
@@ -3136,8 +3129,8 @@
      "method": "Bishop simplified (vertical head)",
      "published": 1.2,
      "source": "Morgenstern (chart)",
-     "computed": 1.1998,
-     "deviation": -0.00017
+     "computed": 1.1999,
+     "deviation": -0.00008
     },
     {
      "method": "Spencer (vertical head)",
@@ -3161,8 +3154,8 @@
      "method": "Bishop simplified",
      "published": 1.212,
      "source": "Commercial program A",
-     "computed": 1.2094,
-     "deviation": -0.00215
+     "computed": 1.2095,
+     "deviation": -0.00206
     }
    ]
   },
@@ -3179,15 +3172,15 @@
      "method": "Bishop simplified",
      "published": 1.417,
      "source": "Commercial program A",
-     "computed": 1.4146,
-     "deviation": -0.00169
+     "computed": 1.4147,
+     "deviation": -0.00162
     },
     {
      "method": "Bishop simplified",
      "published": 1.41,
      "source": "Morgenstern chart",
-     "computed": 1.4146,
-     "deviation": 0.00326
+     "computed": 1.4147,
+     "deviation": 0.00333
     },
     {
      "method": "Spencer (M-P, constant f(x))",
@@ -3211,8 +3204,8 @@
      "method": "Bishop simplified (vertical head)",
      "published": 1.293,
      "source": "Commercial program A",
-     "computed": 1.2894,
-     "deviation": -0.00278
+     "computed": 1.2896,
+     "deviation": -0.00263
     },
     {
      "method": "Spencer (vertical head)",
@@ -3236,8 +3229,8 @@
      "method": "Bishop simplified",
      "published": 1.293,
      "source": "Commercial program A",
-     "computed": 1.2881,
-     "deviation": -0.00379
+     "computed": 1.2884,
+     "deviation": -0.00356
     },
     {
      "method": "Spencer (M-P, constant f(x))",
@@ -3268,8 +3261,8 @@
      "method": "Bishop simplified",
      "published": 1.285,
      "source": "Commercial program A",
-     "computed": 1.2819,
-     "deviation": -0.00241
+     "computed": 1.2821,
+     "deviation": -0.00226
     },
     {
      "method": "Spencer (M-P, constant f(x))",
@@ -3293,8 +3286,8 @@
      "method": "Bishop simplified",
      "published": 1.285,
      "source": "Commercial program A",
-     "computed": 1.2813,
-     "deviation": -0.00288
+     "computed": 1.2815,
+     "deviation": -0.00272
     },
     {
      "method": "Spencer (M-P, constant f(x))",
@@ -3307,8 +3300,8 @@
      "method": "Janbu simplified (uncorrected)",
      "published": 1.141,
      "source": "Commercial program A",
-     "computed": 1.1352,
-     "deviation": -0.00508
+     "computed": 1.1351,
+     "deviation": -0.00517
     }
    ]
   },
@@ -3325,8 +3318,8 @@
      "method": "Bishop simplified",
      "published": 1.417,
      "source": "Commercial program A (circles)",
-     "computed": 1.4097,
-     "deviation": -0.00515
+     "computed": 1.41,
+     "deviation": -0.00494
     },
     {
      "method": "Spencer (M-P, constant f(x))",
@@ -3357,8 +3350,8 @@
      "method": "Janbu corrected (f0)",
      "published": 1.073,
      "source": "Program D",
-     "computed": 1.0748,
-     "deviation": 0.00168
+     "computed": 1.0747,
+     "deviation": 0.00158
     }
    ]
   },
@@ -3375,15 +3368,15 @@
      "method": "Janbu corrected (f0)",
      "published": 0.579,
      "source": "Program D",
-     "computed": 0.5778,
-     "deviation": -0.00207
+     "computed": 0.578,
+     "deviation": -0.00173
     },
     {
      "method": "Spencer (M-P, constant f(x))",
      "published": 0.596,
      "source": "Commercial program A",
-     "computed": 0.6002,
-     "deviation": 0.00705
+     "computed": 0.5994,
+     "deviation": 0.0057
     }
    ]
   },
@@ -3468,8 +3461,8 @@
      "method": "Spencer (M-P, constant f(x))",
      "published": 1.049,
      "source": "Commercial program A, commercial program C, Priest",
-     "computed": 1.0486,
-     "deviation": -0.00038
+     "computed": 1.0485,
+     "deviation": -0.00048
     }
    ]
   },
@@ -3486,15 +3479,15 @@
      "method": "Morgenstern-Price (half-sine)",
      "published": 1.049,
      "source": "Commercial program B",
-     "computed": 1.0491,
-     "deviation": 0.0001
+     "computed": 1.0493,
+     "deviation": 0.00029
     },
     {
      "method": "Spencer (M-P, constant f(x))",
      "published": 1.049,
      "source": "Priest",
-     "computed": 1.0493,
-     "deviation": 0.00029
+     "computed": 1.0492,
+     "deviation": 0.00019
     }
    ]
   },
@@ -3511,8 +3504,8 @@
      "method": "Bishop simplified",
      "published": 0.764,
      "source": "Commercial program A",
-     "computed": 0.7633,
-     "deviation": -0.00092
+     "computed": 0.7642,
+     "deviation": 0.00026
     }
    ]
   },
@@ -3529,8 +3522,8 @@
      "method": "Bishop simplified",
      "published": 1.504,
      "source": "Commercial program A",
-     "computed": 1.5009,
-     "deviation": -0.00206
+     "computed": 1.5011,
+     "deviation": -0.00193
     }
    ]
   },
@@ -3611,8 +3604,8 @@
      "method": "Spencer (M-P, constant f(x))",
      "published": 1.402,
      "source": "Commercial program A",
-     "computed": 1.3754,
-     "deviation": -0.01897
+     "computed": 1.3755,
+     "deviation": -0.0189
     },
     {
      "method": "Bishop simplified",
@@ -3625,8 +3618,8 @@
      "method": "Spencer (M-P, constant f(x))",
      "published": 1.375,
      "source": "Program D",
-     "computed": 1.3754,
-     "deviation": 0.00029
+     "computed": 1.3755,
+     "deviation": 0.00036
     }
    ]
   },
@@ -3661,8 +3654,8 @@
      "method": "Janbu corrected (f0)",
      "published": 0.989,
      "source": "Commercial program A",
-     "computed": 0.9885,
-     "deviation": -0.00051
+     "computed": 0.9884,
+     "deviation": -0.00061
     }
    ]
   },
@@ -3679,8 +3672,8 @@
      "method": "Janbu corrected (f0)",
      "published": 1.123,
      "source": "Commercial program A",
-     "computed": 1.1244,
-     "deviation": 0.00125
+     "computed": 1.1243,
+     "deviation": 0.00116
     }
    ]
   },
@@ -3697,8 +3690,8 @@
      "method": "Janbu corrected (f0)",
      "published": 1.043,
      "source": "Commercial program A",
-     "computed": 1.0436,
-     "deviation": 0.00058
+     "computed": 1.0433,
+     "deviation": 0.00029
     }
    ]
   },
@@ -3715,8 +3708,8 @@
      "method": "Janbu corrected (f0)",
      "published": 0.945,
      "source": "Commercial program A",
-     "computed": 0.9444,
-     "deviation": -0.00063
+     "computed": 0.9443,
+     "deviation": -0.00074
     }
    ]
   },
@@ -3733,8 +3726,8 @@
      "method": "Janbu corrected (f0)",
      "published": 0.922,
      "source": "Commercial program A",
-     "computed": 0.9201,
-     "deviation": -0.00206
+     "computed": 0.9199,
+     "deviation": -0.00228
     }
    ]
   },
@@ -3751,8 +3744,8 @@
      "method": "Janbu corrected (f0)",
      "published": 0.923,
      "source": "Commercial program A",
-     "computed": 0.9207,
-     "deviation": -0.00249
+     "computed": 0.9205,
+     "deviation": -0.00271
     }
    ]
   },
@@ -3915,8 +3908,8 @@
      "method": "Janbu corrected (f0)",
      "published": 2.43,
      "source": "Commercial program A",
-     "computed": 2.4439,
-     "deviation": 0.00572
+     "computed": 2.444,
+     "deviation": 0.00576
     }
    ]
   },
@@ -3979,8 +3972,8 @@
      "method": "Janbu corrected (f0)",
      "published": 1.345,
      "source": "Commercial program A",
-     "computed": 1.3405,
-     "deviation": -0.00335
+     "computed": 1.3406,
+     "deviation": -0.00327
     }
    ]
   },
@@ -4018,8 +4011,8 @@
      "method": "Janbu corrected (f0)",
      "published": 1.385,
      "source": "Commercial program A",
-     "computed": 1.3799,
-     "deviation": -0.00368
+     "computed": 1.3802,
+     "deviation": -0.00347
     }
    ]
   },
@@ -4036,8 +4029,8 @@
      "method": "Bishop simplified",
      "published": 2.011,
      "source": "Commercial program A",
-     "computed": 1.9978,
-     "deviation": -0.00656
+     "computed": 1.998,
+     "deviation": -0.00646
     },
     {
      "method": "Spencer (M-P, constant f(x))",
@@ -4050,8 +4043,8 @@
      "method": "Janbu corrected (f0)",
      "published": 1.83,
      "source": "Commercial program A",
-     "computed": 1.8325,
-     "deviation": 0.00137
+     "computed": 1.8324,
+     "deviation": 0.00131
     }
    ]
   },
@@ -4068,15 +4061,15 @@
      "method": "Bishop simplified",
      "published": 1.344,
      "source": "Commercial program A",
-     "computed": 1.3426,
-     "deviation": -0.00104
+     "computed": 1.3427,
+     "deviation": -0.00097
     },
     {
      "method": "Spencer (M-P, constant f(x))",
      "published": 1.325,
      "source": "Commercial program A (non-circular)",
-     "computed": 1.3244,
-     "deviation": -0.00045
+     "computed": 1.3242,
+     "deviation": -0.0006
     }
    ]
   },
@@ -4093,15 +4086,15 @@
      "method": "Spencer (M-P, constant f(x))",
      "published": 1.398,
      "source": "Commercial program A (Monte Carlo)",
-     "computed": 1.4006,
-     "deviation": 0.00186
+     "computed": 1.4011,
+     "deviation": 0.00222
     },
     {
      "method": "Morgenstern-Price (half-sine)",
      "published": 1.389,
      "source": "Commercial program B",
-     "computed": 1.3935,
-     "deviation": 0.00324
+     "computed": 1.3946,
+     "deviation": 0.00403
     }
    ]
   },
@@ -4154,8 +4147,8 @@
      "method": "Bishop simplified",
      "published": 1.193,
      "source": "Commercial program A",
-     "computed": 1.1956,
-     "deviation": 0.00218
+     "computed": 1.1957,
+     "deviation": 0.00226
     }
    ]
   },
@@ -4172,8 +4165,8 @@
      "method": "Bishop simplified",
      "published": 1.804,
      "source": "Commercial program A",
-     "computed": 1.7932,
-     "deviation": -0.00599
+     "computed": 1.7933,
+     "deviation": -0.00593
     },
     {
      "method": "Spencer (M-P, constant f(x))",
@@ -4229,8 +4222,8 @@
      "method": "Bishop simplified",
      "published": 1.804,
      "source": "Commercial program A",
-     "computed": 1.7989,
-     "deviation": -0.00283
+     "computed": 1.799,
+     "deviation": -0.00277
     }
    ]
   },
@@ -4247,8 +4240,8 @@
      "method": "Bishop simplified (vertical head)",
      "published": 1.173,
      "source": "Commercial program B",
-     "computed": 1.172,
-     "deviation": -0.00085
+     "computed": 1.1721,
+     "deviation": -0.00077
     }
    ]
   },
@@ -4265,8 +4258,8 @@
      "method": "Bishop simplified, design values",
      "published": 1.173,
      "source": "Commercial program B",
-     "computed": 1.1721,
-     "deviation": -0.00077
+     "computed": 1.1723,
+     "deviation": -0.0006
     },
     {
      "method": "Spencer, design values",
@@ -4290,15 +4283,15 @@
      "method": "Spencer (M-P, constant f(x))",
      "published": 1.36,
      "source": "Commercial program A",
-     "computed": 1.3723,
-     "deviation": 0.00904
+     "computed": 1.3721,
+     "deviation": 0.0089
     },
     {
      "method": "Spencer (M-P, constant f(x))",
      "published": 1.372,
      "source": "Program D",
-     "computed": 1.3723,
-     "deviation": 0.00022
+     "computed": 1.3721,
+     "deviation": 0.00007
     }
    ]
   }
@@ -4348,31 +4341,31 @@
      "quantity": "pf-mc",
      "published": 0.2117,
      "source": "Commercial program A",
-     "computed": 0.2063
+     "computed": 0.206
     },
     {
      "quantity": "beta-mc",
      "published": 0.799,
      "source": "Commercial program A (lognormal)",
-     "computed": 0.8114
+     "computed": 0.8116
     },
     {
      "quantity": "beta-taylor",
      "published": 0.787,
      "source": "Program D",
-     "computed": 0.7879
+     "computed": 0.7883
     },
     {
      "quantity": "beta-mc",
      "published": 0.8,
      "source": "Program D",
-     "computed": 0.8114
+     "computed": 0.8116
     },
     {
      "quantity": "pf-mc",
      "published": 0.206,
      "source": "Program D",
-     "computed": 0.2063
+     "computed": 0.206
     }
    ]
   },
@@ -4390,19 +4383,19 @@
      "quantity": "beta-mc",
      "published": 0.82,
      "source": "Commercial program A (lognormal)",
-     "computed": 0.789
+     "computed": 0.7891
     },
     {
      "quantity": "beta-taylor",
      "published": 0.798,
      "source": "Program D",
-     "computed": 0.802
+     "computed": 0.8021
     },
     {
      "quantity": "beta-mc",
      "published": 0.789,
      "source": "Program D",
-     "computed": 0.789
+     "computed": 0.7891
     },
     {
      "quantity": "pf-mc",
@@ -4450,7 +4443,7 @@
      "quantity": "beta-mc",
      "published": 10.953,
      "source": "Commercial program A (lognormal)",
-     "computed": 11.0345
+     "computed": 11.0344
     }
    ]
   },
@@ -4462,7 +4455,7 @@
      "quantity": "beta-mc",
      "published": 4.351,
      "source": "Commercial program A (lognormal)",
-     "computed": 4.4016
+     "computed": 4.4017
     }
    ]
   },
@@ -4474,7 +4467,7 @@
      "quantity": "beta-mc",
      "published": 4.263,
      "source": "Commercial program A (lognormal)",
-     "computed": 4.3246
+     "computed": 4.3247
     }
    ]
   },
@@ -4486,7 +4479,7 @@
      "quantity": "beta-mc",
      "published": 11.092,
      "source": "Commercial program A (lognormal)",
-     "computed": 11.0762
+     "computed": 11.0761
     }
    ]
   },
@@ -4498,7 +4491,7 @@
      "quantity": "beta-mc",
      "published": 10.281,
      "source": "Commercial program A (lognormal)",
-     "computed": 10.3294
+     "computed": 10.3293
     }
    ]
   },
@@ -4510,7 +4503,7 @@
      "quantity": "beta-mc",
      "published": 4.858,
      "source": "Commercial program A (lognormal)",
-     "computed": 4.9329
+     "computed": 4.933
     }
    ]
   },
