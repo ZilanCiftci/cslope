@@ -1,7 +1,7 @@
 {
   "name": "@cslope/desktop",
   "private": true,
-  "version": "0.1.0-rc.1",
+  "version": "0.1.0-beta.1",
   "description": "cSlope — Slope Stability Analysis",
   "author": "Zilan Ciftci",
   "type": "module",

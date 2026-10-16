@@ -2,9 +2,9 @@
 
 All notable changes to cSlope. Versions follow [semantic versioning](https://semver.org).
 
-## [0.1.0-rc.1] - 2026-10-16
+## [0.1.0-beta.1] - 2026-10-16
 
-Release candidate for 0.1.0, to test the signed Windows installer before the first public release. It has the contents listed under 0.1.0 in CHANGELOG.md.
+Beta of 0.1.0, to test the program and the signed Windows installer before the first public release. It has the contents listed under 0.1.0 in CHANGELOG.md.
 
 ## [0.1.0] - Unreleased
 
