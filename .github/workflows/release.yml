@@ -59,8 +59,10 @@ jobs:
             if (-not (Get-Item "env:$name" -ErrorAction SilentlyContinue).Value) { throw "Repository secret $name is not set" }
           }
           $dir = "$env:RUNNER_TEMP\trusted-signing"
-          nuget install Microsoft.Trusted.Signing.Client -OutputDirectory $dir -ExcludeVersion -NonInteractive
-          $dlib = "$dir\Microsoft.Trusted.Signing.Client\bin\x64\Azure.CodeSigning.Dlib.dll"
+          # The client was renamed with the service (Trusted Signing is now Artifact Signing);
+          # the old package is unlisted. Pinned, so a release builds the same way.
+          nuget install Microsoft.ArtifactSigning.Client -Version 1.0.128 -OutputDirectory $dir -ExcludeVersion -NonInteractive
+          $dlib = "$dir\Microsoft.ArtifactSigning.Client\bin\x64\Azure.CodeSigning.Dlib.dll"
           if (-not (Test-Path $dlib)) { throw "Signing dlib not found at $dlib" }
           $metadata = "$dir\metadata.json"
           @{
