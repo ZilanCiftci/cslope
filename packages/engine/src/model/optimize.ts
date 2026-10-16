@@ -1,7 +1,7 @@
 /**
  * Non-circular optimisation of critical slip surfaces.
  *
- * The best circles of the search, and block-shaped surfaces through the
+ * The best circles of the search, and the best block surfaces through the
  * buried material layers, are polylines whose vertices are moved by the
  * alternating-variable method of Celestino & Duncan (1981), as built in
  * the Corps of Engineers manual of Edris & Wright (1987, paras 87–89):
@@ -65,8 +65,8 @@ export function optimiseNonCircular(
     const result = optimiseCircleSeed(slope, seed, evaluate, budgetPerSeed);
     if (result) out.push(result);
   }
-  for (const seed of layerSeeds(slope, seeds)) {
-    const result = optimisePoints(slope, seed.points, seed.axis, evaluate, budgetPerSeed);
+  for (const seed of layerSeeds(slope, evaluate)) {
+    const result = optimisePoints(slope, seed.points, seed.axis, evaluate, budgetPerSeed, seed.plane);
     if (result) out.push(result);
   }
   return out;
@@ -143,17 +143,48 @@ function polygonYExtentAt(px: readonly number[], py: readonly number[], x: numbe
   return hi > lo ? [lo, hi] : null;
 }
 
+/** Grid positions along a layer for the start and the end of the run. */
+const RUN_GRID = 7;
+/** Block surfaces per layer carried on to the alternating-variable search. */
+const LAYER_SEEDS = 3;
+
+/** First point where the ray from (x0, y0) in direction (dx, dy) meets the ground. */
+function rayToGround(ground: { x: readonly number[]; y: readonly number[] }, x0: number, y0: number, dx: number, dy: number): Pt | null {
+  let best = Infinity;
+  let hit: Pt | null = null;
+  for (let i = 0; i + 1 < ground.x.length; i++) {
+    const ax = ground.x[i], ay = ground.y[i];
+    const ex = ground.x[i + 1] - ax, ey = ground.y[i + 1] - ay;
+    const den = dx * ey - dy * ex;
+    if (Math.abs(den) < 1e-12) continue;
+    const t = ((ax - x0) * ey - (ay - y0) * ex) / den;
+    const u = ((ax - x0) * dy - (ay - y0) * dx) / den;
+    if (t > 1e-9 && u >= -1e-9 && u <= 1 + 1e-9 && t < best) {
+      best = t;
+      hit = [x0 + t * dx, y0 + t * dy];
+    }
+  }
+  return hit;
+}
+
 /**
- * Block surfaces along the middle of each buried layer: down from the
- * entry at the active angle 45° + φ/2, along the layer, up to the exit at
- * the passive angle 45° − φ/2 (Coulomb; Wright 1988, fig. 6), with the
- * entry and exit of each circle seed. Edris & Wright (1987, para. 86): the initial
- * surface "should be input so that it passes through the weaker material".
+ * Block surfaces along the middle of each buried layer, in the manner of a
+ * block search: a grid of positions along the layer for the start and the
+ * end of the run; from the start the active wedge rises at 45° + φ/2 to
+ * the entry, from the end the passive wedge at 45° − φ/2 to the exit
+ * (Coulomb; Wright 1988, fig. 6), φ of the material the wedge cuts. Every
+ * grid combination within the search limits is evaluated once, and the
+ * best few go on to the alternating-variable search. Edris & Wright (1987,
+ * para. 86): the initial surface "should be input so that it passes
+ * through the weaker material".
  */
-function layerSeeds(slope: Slope, circleSeeds: readonly SearchPlane[]): { points: Pt[]; axis: Pt }[] {
-  const out: { points: Pt[]; axis: Pt }[] = [];
+function layerSeeds(slope: Slope, evaluate: Evaluate): { points: Pt[]; axis: Pt; plane: SearchPlane }[] {
+  const out: { points: Pt[]; axis: Pt; plane: SearchPlane }[] = [];
+  const ground = slope.surfaceLineXY;
+  if (!ground) return out;
   const groundAt = (x: number) => slope.getExternalYIntersection(x);
-  const seen: number[] = [];
+  const [entryL, entryR, exitL, exitR] = slope.limits;
+  const span = Math.max(exitR - entryL, 1);
   const geometries = slope.materialGeometries;
   /** Strength proxy c + σ′ tan φ at depth d (σ′ from the mean unit weight). */
   const strength = (mat: GeometryWithMaterial["material"], depth: number) => {
@@ -175,64 +206,82 @@ function layerSeeds(slope: Slope, circleSeeds: readonly SearchPlane[]): { points
     }
     return true;
   };
-  for (const m of geometries) {
-    const phi = (m.material.frictionAngle * Math.PI) / 180;
-    const tanA = Math.tan(Math.PI / 4 + phi / 2);
-    const tanP = Math.tan(Math.PI / 4 - phi / 2);
-    for (const seed of circleSeeds) {
-      const [xe, ye] = seed.lc;
-      const [xx, yx] = seed.rc;
-      const mid = (x: number) => {
-        const ext = polygonYExtentAt(m.px, m.py, x);
-        return ext ? (ext[0] + ext[1]) / 2 : NaN;
-      };
-      // A buried layer: its top lies below the ground between entry and
-      // exit (the layer at the surface is covered by the circle seeds).
-      const buried = (x: number) => {
-        const ext = polygonYExtentAt(m.px, m.py, x);
-        return ext != null && ext[1] < groundAt(x) - 1e-6;
-      };
-      if (!buried(xe + 0.25 * (xx - xe)) || !buried(xx - 0.25 * (xx - xe))) continue;
-      if (!weakest(m, (xe + xx) / 2)) continue;
-      // Where a wedge at the given inclination from the entry (exit) meets
-      // the layer: the depth there sets the wedge length, so iterate.
-      const wedge = (xEnd: number, yEnd: number, tan: number, sign: 1 | -1): Pt | null => {
-        let x = xEnd + sign * 0.25 * (xx - xe);
-        for (let i = 0; i < 8; i++) {
-          const y = mid(x);
-          if (!Number.isFinite(y) || !(y < yEnd)) return null;
-          const next = xEnd + (sign * (yEnd - y)) / tan;
-          if (Math.abs(next - x) < 1e-6) {
-            x = next;
-            break;
-          }
-          x = next;
-        }
-        const y = mid(x);
-        return Number.isFinite(y) && y < yEnd ? [x, y] : null;
-      };
-      const a = wedge(xe, ye, tanA, 1);
-      const b = wedge(xx, yx, tanP, -1);
-      if (!a || !b) continue;
-      const [xa, ya] = a;
-      const [xb, yb] = b;
-      if (!(xb - xa > 0.1 * (xx - xe))) continue;
-      // One seed per distinct layer depth under this entry/exit pair.
-      const key = Math.round(((ya + yb) / 2) * 100) / 100 + 1e6 * Math.round(xe * 10) + 1e9 * Math.round(xx * 10);
-      if (seen.includes(key)) continue;
-      seen.push(key);
-      const points: Pt[] = [[xe, ye], [xa, ya]];
-      const runs = START_VERTICES - 4;
-      for (let i = 1; i < runs; i++) {
-        const x = xa + ((xb - xa) * i) / runs;
-        const y = mid(x);
-        if (!Number.isFinite(y)) break;
-        points.push([x, y]);
+  /** Friction angle of the material directly above the layer at x. */
+  const phiAbove = (m: GeometryWithMaterial, x: number, top: number): number => {
+    let phi = m.material.frictionAngle;
+    let bottom = Infinity;
+    for (const o of geometries) {
+      if (o === m) continue;
+      const e = polygonYExtentAt(o.px, o.py, x);
+      if (e && e[0] >= top - 1e-6 && e[0] < bottom) {
+        bottom = e[0];
+        phi = o.material.frictionAngle;
       }
-      points.push([xb, yb], [xx, yx]);
-      if (!isAdmissiblePolyline(slope, points)) continue;
-      out.push({ points, axis: [seed.cx, seed.cy] });
     }
+    return (phi * Math.PI) / 180;
+  };
+  const distinct = (a: Pt[], b: Pt[]) =>
+    Math.abs(a[0][0] - b[0][0]) > 0.05 * span || Math.abs(a[a.length - 1][0] - b[b.length - 1][0]) > 0.05 * span;
+
+  for (const m of geometries) {
+    const xMin = Math.max(Math.min(...m.px), entryL);
+    const xMax = Math.min(Math.max(...m.px), exitR);
+    if (!(xMax - xMin > 0.1 * span)) continue;
+    const mid = (x: number) => {
+      const ext = polygonYExtentAt(m.px, m.py, x);
+      return ext ? (ext[0] + ext[1]) / 2 : NaN;
+    };
+    // A buried layer: its top below the ground (a layer at the surface is
+    // covered by the circle seeds).
+    const buried = (x: number) => {
+      const ext = polygonYExtentAt(m.px, m.py, x);
+      return ext != null && ext[1] < groundAt(x) - 1e-6;
+    };
+    // Grid positions along the layer, inside it and buried.
+    const grid: { x: number; y: number; top: number }[] = [];
+    for (let i = 0; i < RUN_GRID; i++) {
+      const x = xMin + ((xMax - xMin) * (i + 0.5)) / RUN_GRID;
+      const ext = polygonYExtentAt(m.px, m.py, x);
+      if (!ext || !buried(x)) continue;
+      grid.push({ x, y: (ext[0] + ext[1]) / 2, top: ext[1] });
+    }
+    if (grid.length < 2 || !weakest(m, grid[Math.floor(grid.length / 2)].x)) continue;
+
+    const candidates: { points: Pt[]; axis: Pt; plane: SearchPlane }[] = [];
+    for (const a of grid) {
+      const phiA = phiAbove(m, a.x, a.top);
+      const entry = rayToGround(ground, a.x, a.y, -1, Math.tan(Math.PI / 4 + phiA / 2));
+      if (!entry || entry[0] < entryL - 1e-9 || entry[0] > entryR + 1e-9) continue;
+      for (const b of grid) {
+        if (!(b.x - a.x > 0.1 * span)) continue;
+        const phiB = phiAbove(m, b.x, b.top);
+        const exit = rayToGround(ground, b.x, b.y, 1, Math.tan(Math.PI / 4 - phiB / 2));
+        if (!exit || exit[0] < exitL - 1e-9 || exit[0] > exitR + 1e-9) continue;
+        const points: Pt[] = [entry, [a.x, a.y]];
+        const runs = START_VERTICES - 4;
+        for (let i = 1; i < runs; i++) {
+          const x = a.x + ((b.x - a.x) * i) / runs;
+          const y = mid(x);
+          if (!Number.isFinite(y)) break;
+          points.push([x, y]);
+        }
+        points.push([b.x, b.y], exit);
+        if (!isAdmissiblePolyline(slope, points)) continue;
+        // Moment axis above the middle of the surface, as a circle centre would be.
+        const axis: Pt = [(entry[0] + exit[0]) / 2, Math.max(entry[1], exit[1]) + (exit[0] - entry[0]) / 2];
+        candidates.push({ points, axis, plane: makePlane(points, axis) });
+      }
+    }
+    evaluate(candidates.map((c) => c.plane));
+    const solved = candidates
+      .filter((c) => c.plane.fos != null && Number.isFinite(c.plane.fos))
+      .sort((a, b) => a.plane.fos! - b.plane.fos!);
+    const chosen: typeof solved = [];
+    for (const c of solved) {
+      if (chosen.length >= LAYER_SEEDS) break;
+      if (chosen.every((s) => distinct(s.points, c.points))) chosen.push(c);
+    }
+    out.push(...chosen);
   }
   return out;
 }

@@ -183,13 +183,15 @@ export const VERIFICATION_OPTIONS: Partial<AnalysisOptions> = {
 
 /**
  * Non-circular optimisation ends in a different local minimum with fewer
- * trial surfaces or a tighter tolerance (on thin weak layers it then finds
- * surfaces well below the published values), so it keeps the full search.
+ * trial surfaces, so it keeps the full search. The tolerance is the tight
+ * one: with a looser tolerance the optimisation exploits the solver's slack
+ * and lands a few tenths of a percent below the surface's true value
+ * (Fredlund, Krahn & Pufahl 1981).
  */
 export const NON_CIRCULAR_VERIFICATION_OPTIONS: Partial<AnalysisOptions> = {
   iterations: 4000,
   refinedIterations: 2000,
-  tolerance: 0.005,
+  tolerance: 0.001,
 };
 
 /**
