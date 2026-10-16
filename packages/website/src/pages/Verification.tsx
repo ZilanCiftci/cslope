@@ -65,6 +65,13 @@ function Published({ values }: { values: PublishedValue[] }) {
             {v.method ? `${v.method} · ` : ""}
             {v.source}
           </span>
+          {v.computed != null && (
+            <span className="whitespace-nowrap text-muted-foreground">
+              {" "}
+              · cSlope{v.analysis && v.analysis !== v.method ? ` (${v.analysis})` : ""}{" "}
+              <span className="font-mono tabular text-foreground">{num(v.computed)}</span>
+            </span>
+          )}
         </li>
       ))}
     </ul>
@@ -160,6 +167,7 @@ function ProblemTable() {
                       <div className="mt-3">
                         <Published values={p.published} />
                       </div>
+                      {p.note && <p className="mt-2 text-xs leading-relaxed text-muted-foreground">{p.note}</p>}
                     </th>
                   )}
                   <td className="px-4 py-3 align-top">{r.method}</td>

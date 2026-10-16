@@ -61,6 +61,12 @@ export interface VerificationCase {
    * the other programs' values), shown in the report and on the website.
    */
   paper?: PaperValue[];
+  /**
+   * A short note for the public report and the website, naming no program:
+   * why the published values and the programs' results differ, or why the
+   * source publishes none. The `notes` are internal.
+   */
+  publicNote?: string;
   notes?: string[];
   /** Input digitised from a figure (a surface, a water table); see tolerance.ts. */
   inputFromFigure?: boolean;

@@ -14,6 +14,10 @@ export interface PublishedValue {
   method?: string;
   /** e.g. "Arai & Tagyo (1985)". */
   source: string;
+  /** cSlope's analysis for this value (a `results` method), when cSlope has the method. */
+  analysis?: string;
+  /** cSlope's result of that analysis; null when cSlope does not have the method. */
+  computed: number | null;
 }
 
 /** One analysis cSlope runs for a problem. */
@@ -38,6 +42,8 @@ export interface VerificationProblem {
   units: "SI" | "imperial";
   published: PublishedValue[];
   results: VerificationResult[];
+  /** Why the published values and the programs differ, where they do. */
+  note?: string;
 }
 
 /** One quantity of a probabilistic problem (β or Pf, by Taylor series or Monte Carlo). */

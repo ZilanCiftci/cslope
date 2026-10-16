@@ -33,6 +33,7 @@ export const PROBLEMS: RawCase[] = [
       {"method":"Morgenstern-Price","label":"Spencer (M-P, constant f(x))","published":1.386,"publishedBy":"Commercial program A (non-circular)","options":{"intersliceFunction":"constant","nonCircularOptimization":true}},
     ],
     paper: [{"value": 1.451, "method": "Bishop simplified", "source": "Arai & Tagyo (1985)"}, {"value": 1.265, "method": "Janbu simplified, non-circular", "source": "Arai & Tagyo (1985)"}, {"value": 1.357, "method": "Janbu corrected, non-circular", "source": "Arai & Tagyo (1985)"}],
+    publicNote: "Arai & Tagyo's Bishop value 1.451 is 2–3 % above the other programs (1.409–1.417) and cSlope on the same slope; their non-circular Janbu values are within 1 % of cSlope's.",
     notes: [
       "Search limited to x = 0–66, the model of the source (ours extends to −30 and 100).",
       "commercial program A Janbu corrected 1.407 (circle); non-circular: Janbu simplified 1.253, corrected 1.346. Arai & Tagyo: Bishop 1.451; Janbu simplified 1.265, corrected 1.357 (non-circular).",
@@ -70,6 +71,7 @@ export const PROBLEMS: RawCase[] = [
       {"method":"Bishop","label":"Bishop simplified","published":1.112,"publishedBy":"Program D","options":{"porePressureHead":"vertical","slices":40}},
     ],
     paper: [{"value": 1.138, "method": "Bishop simplified", "source": "Arai & Tagyo (1985)"}, {"value": 0.995, "method": "Janbu simplified, non-circular", "source": "Arai & Tagyo (1985)"}, {"value": 1.071, "method": "Janbu corrected, non-circular", "source": "Arai & Tagyo (1985)"}],
+    publicNote: "Arai & Tagyo's Bishop value 1.138 is about 2 % above the other programs (1.112–1.118 with Bishop).",
     notes: [
       "Arai & Tagyo 1.138; commercial program B 1.190.",
     ],
@@ -87,6 +89,7 @@ export const PROBLEMS: RawCase[] = [
       {"method":"Janbu","label":"Janbu simplified (uncorrected)","published":2.662,"publishedBy":"Commercial program A"},
     ],
     paper: [{"value": 2.66, "method": "Mohr-Coulomb strength", "source": "Baker (2003)"}],
+    publicNote: "Baker (2003) gives the factor of safety for the Mohr-Coulomb fit and for the non-linear envelope without naming the slice method.",
   },
   {
     id: "V004b",
@@ -101,6 +104,7 @@ export const PROBLEMS: RawCase[] = [
       {"method":"Morgenstern-Price","label":"Spencer (M-P, constant f(x))","published":2.696,"publishedBy":"Commercial program A","options":{"intersliceFunction":"constant"}},
     ],
     paper: [{"value": 2.64, "method": "non-linear strength envelope", "source": "Baker (2003)"}, {"value": 2.66, "method": "Mohr-Coulomb strength", "source": "Baker (2003)"}],
+    publicNote: "Baker (2003) gives the factor of safety for the Mohr-Coulomb fit and for the non-linear envelope without naming the slice method.",
     notes: [
       "Baker (2003) non-linear 2.64.",
     ],
@@ -149,6 +153,7 @@ export const PROBLEMS: RawCase[] = [
       {"method":"Janbu","label":"Janbu simplified (uncorrected)","published":1.469,"publishedBy":"Commercial program A","options":{"janbuCorrection":false}},
     ],
     paper: [{"value": 1.5, "method": "Mohr-Coulomb strength", "source": "Baker (2003)"}],
+    publicNote: "Baker (2003) gives the factor of safety for the Mohr-Coulomb fit and for the non-linear envelope without naming the slice method.",
     notes: [
       "Confirms V008a's strength (c′ = 11.64 kPa, φ′ = 24.7°, γ = 18 kN/m³): the manual's Table 44.1 lists other soils by mistake. Baker (2003) M-C 1.50.",
     ],
@@ -166,6 +171,7 @@ export const PROBLEMS: RawCase[] = [
       {"method":"Morgenstern-Price","label":"Spencer (M-P, constant f(x))","published":0.981,"publishedBy":"Commercial program A","options":{"intersliceFunction":"constant"}},
     ],
     paper: [{"value": 0.97, "method": "non-linear strength envelope", "source": "Baker (2003)"}, {"value": 1.5, "method": "Mohr-Coulomb strength", "source": "Baker (2003)"}],
+    publicNote: "Baker (2003) gives the factor of safety for the Mohr-Coulomb fit and for the non-linear envelope without naming the slice method; 1.50 is his Mohr-Coulomb value for the same slope.",
     notes: [
       "commercial program A geometry (0,0)-(6.43,6)-(20,6)-(20,0): no toe flat, base at toe level.",
       "Baker (2003) non-linear 0.97.",
@@ -183,6 +189,7 @@ export const PROBLEMS: RawCase[] = [
       {"method":"Janbu","label":"Janbu simplified (uncorrected)","published":1.291,"publishedBy":"Commercial program A","options":{"janbuCorrection":false}},
     ],
     paper: [{"value": 1.35, "method": "Mohr-Coulomb strength", "source": "Baker (2003)"}],
+    publicNote: "Baker (2003) gives the factor of safety for the Mohr-Coulomb fit without naming the slice method.",
     notes: [
       "Search limited to x = 0–13.7 (toe to the crest), as in the source.",
       "commercial program A geometry: no toe flat, base at toe level (results identical).",
@@ -201,6 +208,7 @@ export const PROBLEMS: RawCase[] = [
       {"method":"Morgenstern-Price","label":"Spencer (M-P, constant f(x))","published":1.536,"publishedBy":"Commercial program A","options":{"intersliceFunction":"constant"}},
     ],
     paper: [{"value": 1.5, "method": "Mohr-Coulomb strength", "source": "Baker (2003)"}],
+    publicNote: "Baker (2003) gives the factor of safety for the Mohr-Coulomb fit without naming the slice method.",
     notes: [
       "Search limited to x = 0–20, the model of the source; the level ground left of the toe is not searched.",
     ],
@@ -217,6 +225,7 @@ export const PROBLEMS: RawCase[] = [
       {"method":"Morgenstern-Price","label":"Spencer (M-P, constant f(x))","published":1.366,"publishedBy":"Commercial program A","options":{"intersliceFunction":"constant"}},
     ],
     paper: [{"value": 1.35, "method": "Mohr-Coulomb strength", "source": "Baker (2003)"}],
+    publicNote: "Baker (2003) gives the factor of safety for the Mohr-Coulomb fit without naming the slice method.",
     notes: [
       "Search limited to x = 0–13.7 (toe to the crest), as in the source; the level ground left of the toe is not searched.",
     ],
@@ -232,6 +241,7 @@ export const PROBLEMS: RawCase[] = [
     checks: [
       {"method":"Morgenstern-Price","label":"Spencer (M-P, constant f(x))","published":1.925,"publishedBy":"Commercial program A","options":{"intersliceFunction":"constant","tensionCrackDepth":5}},
     ],
+    publicNote: "The published 1.91 belongs to Baker & Leshchinsky's own non-circular surface (V009b), not to this circle.",
   },
   {
     id: "V009b",
@@ -261,6 +271,7 @@ export const PROBLEMS: RawCase[] = [
       {"method":"Morgenstern-Price","label":"Spencer (M-P, constant f(x))","published":1.868,"publishedBy":"Commercial program B (optimised non-circular)","options":{"intersliceFunction":"constant","slices":50,"tensionCrackDepth":5,"nonCircularOptimization":true}},
     ],
     paper: [{"value": 1.91, "method": "Spencer, non-circular", "source": "Baker & Leshchinsky (2001)"}],
+    publicNote: "Baker & Leshchinsky's 1.91 is for their own surface (V009b); searches find lower surfaces.",
     notes: [
       "V009a definition without the fixed circle. Baker & Leshchinsky 1.91 on their own surface is checked in V009b.",
     ],
@@ -297,6 +308,7 @@ export const PROBLEMS: RawCase[] = [
       {"method":"Bishop","label":"Bishop simplified","published":1.23,"publishedBy":"Commercial program A","options":{"porePressureHead":"vertical","slices":60}},
     ],
     paper: [{"value": 1.25, "source": "Borges & Cardoso (2002)"}],
+    publicNote: "Borges & Cardoso print two decimals and do not name the method; the other programs differ from them by up to 2.5 %.",
     notes: [
       "Borges & Cardoso 1.25; program D 1.218 on the same input. commercial program A reports Bishop only (the authors' moment method).",
     ],
@@ -313,6 +325,7 @@ export const PROBLEMS: RawCase[] = [
       {"method":"Bishop","label":"Bishop simplified","published":1.22,"publishedBy":"Commercial program A","options":{"porePressureHead":"vertical","slices":60}},
     ],
     paper: [{"value": 1.19, "source": "Borges & Cardoso (2002)"}],
+    publicNote: "Borges & Cardoso print two decimals and do not name the method; the other programs differ from them by up to 2.5 %.",
     notes: [
       "Borges & Cardoso 1.19; program D 1.216.",
     ],
@@ -329,6 +342,7 @@ export const PROBLEMS: RawCase[] = [
       {"method":"Bishop","label":"Bishop simplified","published":0.98,"publishedBy":"Commercial program A","options":{"porePressureHead":"vertical","slices":60}},
     ],
     paper: [{"value": 0.99, "source": "Borges & Cardoso (2002)"}],
+    publicNote: "Borges & Cardoso print two decimals and do not name the method.",
     notes: [
       "Borges & Cardoso 0.99; program D 0.981.",
     ],
@@ -361,6 +375,7 @@ export const PROBLEMS: RawCase[] = [
       {"method":"Bishop","label":"Bishop simplified","published":1.54,"publishedBy":"Commercial program A","options":{"porePressureHead":"vertical","slices":40}},
     ],
     paper: [{"value": 1.54, "source": "Cai & Ugai (2000)"}],
+    publicNote: "Cai & Ugai's values are for surfaces through the pile row; the programs search their own critical surfaces, which can differ.",
     notes: [
       "The critical circle passes through the pile head and carries no pile force; Cai & Ugai 1.54 on a surface through the pile.",
     ],
@@ -377,6 +392,7 @@ export const PROBLEMS: RawCase[] = [
       {"method":"Bishop","label":"Bishop simplified","published":1.43,"publishedBy":"Commercial program A","options":{"porePressureHead":"vertical","slices":40}},
     ],
     paper: [{"value": 1.37, "source": "Cai & Ugai (2000)"}],
+    publicNote: "Cai & Ugai's values are for surfaces through the pile row; the programs search their own critical surfaces, which can differ.",
     notes: [
       "program D 1.451; Cai & Ugai 1.37.",
     ],
@@ -393,6 +409,7 @@ export const PROBLEMS: RawCase[] = [
       {"method":"Bishop","label":"Bishop simplified","published":1.33,"publishedBy":"Commercial program A","options":{"porePressureHead":"vertical","slices":40}},
     ],
     paper: [{"value": 1.31, "source": "Cai & Ugai (2000)"}],
+    publicNote: "Cai & Ugai's values are for surfaces through the pile row; the programs search their own critical surfaces, which can differ.",
     notes: [
       "Cai & Ugai 1.31.",
     ],
@@ -409,6 +426,7 @@ export const PROBLEMS: RawCase[] = [
       {"method":"Bishop","label":"Bishop simplified","published":1.25,"publishedBy":"Commercial program A","options":{"porePressureHead":"vertical","slices":40}},
     ],
     paper: [{"value": 1.25, "source": "Cai & Ugai (2000)"}],
+    publicNote: "Cai & Ugai's values are for surfaces through the pile row; the programs search their own critical surfaces, which can differ.",
     notes: [
       "Cai & Ugai 1.25.",
     ],
@@ -426,6 +444,7 @@ export const PROBLEMS: RawCase[] = [
       {"method":"Janbu","label":"Janbu corrected (f0)","published":1.448,"publishedBy":"Program D","options":{"porePressureHead":"vertical","slices":60,"janbuCorrection":true}},
       {"method":"Morgenstern-Price","label":"Spencer (M-P, constant f(x))","published":1.576,"publishedBy":"Program D","options":{"intersliceFunction":"constant","porePressureHead":"vertical","slices":60}},
     ],
+    publicNote: "The reference results come from design programs quoted in the soil nail manual; no independent value is published.",
     notes: [
       "commercial program A 1.417; commercial program B M-P 1.606.",
     ],
@@ -442,6 +461,7 @@ export const PROBLEMS: RawCase[] = [
       {"method":"Janbu","label":"Janbu corrected (f0)","published":1.479,"publishedBy":"Commercial program A","options":{"porePressureHead":"vertical","slices":60,"janbuCorrection":true}},
       {"method":"Janbu","label":"Janbu simplified (uncorrected)","published":1.446,"publishedBy":"Commercial program A","options":{"porePressureHead":"vertical","slices":60,"janbuCorrection":false}},
     ],
+    publicNote: "The reference results come from design programs quoted in the soil nail manual; no independent value is published.",
     notes: [
       "Layer boundary from (29, 51) ft and ground vertex (79, 71) ft as labelled in Fig. 49.1 (the earlier transcription had (33, 53) and (70, 71)). program H 1.52.",
       "program D 1.469 (Janbu corrected) and 1.439 (Spencer) on the earlier outline, where cSlope agreed to 0.1 %.",
@@ -460,6 +480,7 @@ export const PROBLEMS: RawCase[] = [
       {"method":"Morgenstern-Price","label":"Spencer (M-P, constant f(x))","published":1.791,"publishedBy":"Commercial program A","options":{"intersliceFunction":"constant","porePressureHead":"vertical","slices":60}},
       {"method":"Bishop","label":"Bishop simplified","published":1.79,"publishedBy":"Program D","options":{"porePressureHead":"vertical","slices":60}},
     ],
+    publicNote: "The paper gives its results in figures only; the comparison is with the other programs.",
   },
   {
     id: "V016b",
@@ -474,6 +495,7 @@ export const PROBLEMS: RawCase[] = [
       {"method":"Morgenstern-Price","label":"Spencer (M-P, constant f(x))","published":1.839,"publishedBy":"Commercial program A","options":{"intersliceFunction":"constant","porePressureHead":"vertical","slices":60}},
       {"method":"Bishop","label":"Bishop simplified","published":1.83,"publishedBy":"Program D","options":{"porePressureHead":"vertical","slices":60}},
     ],
+    publicNote: "The paper gives its results in figures only; the comparison is with the other programs.",
   },
   {
     id: "V016c",
@@ -488,6 +510,7 @@ export const PROBLEMS: RawCase[] = [
       {"method":"Morgenstern-Price","label":"Spencer (M-P, constant f(x))","published":1.803,"publishedBy":"Commercial program A","options":{"intersliceFunction":"constant","porePressureHead":"vertical","slices":60}},
       {"method":"Bishop","label":"Bishop simplified","published":1.79,"publishedBy":"Program D","options":{"porePressureHead":"vertical","slices":60}},
     ],
+    publicNote: "The paper gives its results in figures only; the comparison is with the other programs.",
     notes: [
       "commercial program A's block search along the joints gives 1.516 at the wall face.",
     ],
@@ -505,6 +528,7 @@ export const PROBLEMS: RawCase[] = [
       {"method":"Morgenstern-Price","label":"Spencer (M-P, constant f(x))","published":1.386,"publishedBy":"Commercial program A","options":{"intersliceFunction":"constant","porePressureHead":"vertical","slices":60}},
       {"method":"Bishop","label":"Bishop simplified","published":1.382,"publishedBy":"Program D","options":{"porePressureHead":"vertical","slices":60}},
     ],
+    publicNote: "The paper gives its results in figures only; the comparison is with the other programs.",
     notes: [
       "commercial program A's unfiltered minima along the wall face: 1.032–1.034.",
     ],
@@ -521,6 +545,7 @@ export const PROBLEMS: RawCase[] = [
       {"method":"Bishop","label":"Bishop simplified","published":1.378,"publishedBy":"Commercial program A","options":{"porePressureHead":"vertical","slices":60}},
       {"method":"Bishop","label":"Bishop simplified","published":1.382,"publishedBy":"Program D","options":{"porePressureHead":"vertical","slices":60}},
     ],
+    publicNote: "The paper gives its results in figures only; the comparison is with the other programs.",
   },
   {
     id: "V018",
@@ -758,6 +783,7 @@ export const PROBLEMS: RawCase[] = [
       {"method":"Bishop","label":"Bishop simplified","published":1.185,"publishedBy":"Commercial program A","options":{"slices":60}},
     ],
     paper: [{"value": 1.1479, "method": "Bishop simplified", "source": "Chowdhury & Xu (1995)"}],
+    publicNote: "Chowdhury & Xu's 1.1479 is about 2.5 % below the other programs on this family of circles.",
     notes: [
       "Fixed circle = cSlope's critical M-P circle among circles tangent to the base of the clay layer (cSlope has no tangent-line search; commercial program B's own circle is not printed), so the comparison is that of two searches within the same circle family.",
       "commercial program B PF 21.39 %, C&X PF 19.733 %. Geometry of V022a/c (the manual prints no figure for example 5).",
@@ -777,6 +803,7 @@ export const PROBLEMS: RawCase[] = [
       {"method":"Morgenstern-Price","label":"Spencer (M-P, constant f(x))","published":1.145,"publishedBy":"Program D","options":{"intersliceFunction":"constant","slices":60,"porePressureHead":"vertical"}},
     ],
     paper: [{"value": 1.17, "source": "Duncan (2000)"}],
+    publicNote: "Duncan (2000) prints two decimals; the other programs give 1.145 on the same input.",
     notes: [
       "Above el. −20 ft cSlope extrapolates Su linearly (below 100 psf); program D keeps 100 psf there (F = 1.146, β = 0.947 when cSlope does the same). Duncan's F is 1.17; commercial program A's Latin hypercube Monte Carlo gives Pf = 14 % with a rate-only σ.",
     ],
@@ -1025,6 +1052,7 @@ export const PROBLEMS: RawCase[] = [
       {"method":"Morgenstern-Price","label":"Morgenstern-Price (half-sine)","published":1.575,"publishedBy":"Commercial program A (GLE)","options":{"porePressureHead":"vertical","slices":60}},
     ],
     paper: [{"value": 1.51, "source": "Duncan & Wright"}],
+    publicNote: "Duncan & Wright's 1.51 is about 4 % below the other programs on this surface.",
     notes: [
       "commercial program A's Bishop (1.531) and Spencer (1.884) belong to their own critical circles; on this circle cSlope's Bishop is 1.568. Duncan & Wright 1.51.",
     ],
@@ -1150,6 +1178,7 @@ export const PROBLEMS: RawCase[] = [
       {"method":"Bishop","label":"Bishop simplified","published":1.07,"publishedBy":"Program D","options":{"porePressureHead":"vertical","slices":40,"iterations":4000,"refinedIterations":2000}},
     ],
     paper: [{"value": 1.16, "source": "Duncan & Wright"}],
+    publicNote: "Duncan & Wright's 1.16 is 5–8 % above the other programs (1.07–1.10) on the same input.",
     notes: [
       "commercial program A 1.068/1.075 and program D 1.065/1.072 with FE seepage; D&W chart 1.16.",
     ],
@@ -1350,6 +1379,7 @@ export const PROBLEMS: RawCase[] = [
       {"method":"Janbu","label":"Janbu corrected (f0)","published":1.489,"publishedBy":"Commercial program A","options":{"tensionCrackDepth":4,"tensionCrackWater":1,"janbuCorrection":true},"note":"Janbu corrected: 1.5 % for a search whose critical circle (and so f0) differs from Bishop's."},
     ],
     paper: [{"value": 1.65, "source": "Giam & Donald (1989), ACADS"}],
+    publicNote: "The ACADS reference 1.65 corresponds to a dry tension crack; with the crack filled with water the programs give about 1.59–1.60.",
     notes: [
       "Search limited to x = 20–70, the model of the source.",
       "With the 3.814 m crack of the formula cSlope gives 1.590 / 1.585 / 1.481; the 4 m crack of the figure lowers them by 0.2–0.5 %.",
@@ -1391,6 +1421,7 @@ export const PROBLEMS: RawCase[] = [
       {"method":"Morgenstern-Price","label":"Morgenstern-Price (half-sine)","published":1.261,"publishedBy":"Commercial program B"},
     ],
     paper: [{"value": 1.34, "source": "Giam & Donald (1989), ACADS"}],
+    publicNote: "The ACADS referee value comes from the 1989 survey; programs today give 1.26–1.29 on the specified surface.",
     notes: [
       "Bishop on a non-circular surface depends on the moment axis; cSlope gives 1.250 about its default axis, commercial program B 1.259.",
     ],
@@ -1407,6 +1438,7 @@ export const PROBLEMS: RawCase[] = [
       {"method":"Morgenstern-Price","label":"Spencer (M-P, constant f(x))","published":1.246,"publishedBy":"Commercial program A","options":{"intersliceFunction":"constant","nonCircularOptimization":true}},
     ],
     paper: [{"value": 1.24, "upper": 1.27, "source": "Giam & Donald (1989), ACADS"}],
+    publicNote: "ACADS accepted 1.24–1.27; cSlope's search finds a surface along the weak layer at 1.228 (Spencer), unchanged at 50, 100 and 200 slices.",
     notes: [
       "The best circle gives 1.51; the optimised surface follows the weak layer with a wedge up to the crest. ACADS accepts about 1.24–1.27.",
       "Known gap: commercial program B's optimised Morgenstern-Price (half-sine) reports 1.261, the value of the specified surface of 3(b) (V050a), so its search found nothing lower; cSlope's search finds 1.218 (half-sine) and 1.228 (Spencer), a complete-equilibrium solution with one root that holds at 50, 100 and 200 slices. A search difference, not a model one: not a check.",
@@ -1424,6 +1456,7 @@ export const PROBLEMS: RawCase[] = [
       {"method":"Morgenstern-Price","label":"Spencer (M-P, constant f(x))","published":0.707,"publishedBy":"Commercial program A (optimised)","options":{"intersliceFunction":"constant","porePressureHead":"vertical","slices":50,"nonCircularOptimization":true}},
     ],
     paper: [{"value": 0.78, "source": "Giam & Donald (1989), ACADS"}],
+    publicNote: "The ACADS referee value 0.78 comes from the 1989 survey, where the participating programs averaged 0.81; optimised non-circular searches today give about 0.68–0.71.",
     notes: [
       "Known gap: commercial program A's optimised Janbu corrected is 0.699 (Table 9.5), cSlope's optimised Janbu corrected 0.754 (+7.8 %); the 0.734 of Table 9.4 is commercial program A's block search without optimisation and is not comparable with an optimised search. The search is sensitive to the method: Morgenstern-Price (half-sine) finds 0.718 against commercial program B's 0.689 and Spencer 0.718 against commercial program A's 0.707. commercial program A's optimised band 0.683–0.707; ACADS Slope 2000 (GLE) 0.688; commercial program A block search 0.760 (Spencer); program D's search 0.724 (Spencer) / 0.718 (Janbu); commercial program B Bishop 0.699; ACADS 20-program mean 0.808.",
     ],
@@ -1479,6 +1512,7 @@ export const PROBLEMS: RawCase[] = [
       {"method":"Morgenstern-Price","label":"Spencer (M-P, constant f(x))","published":1.010,"publishedBy":"Commercial program A (block search)","options":{"intersliceFunction":"constant","slices":50,"porePressureHead":"vertical","nonCircularOptimization":true}},
     ],
     paper: [{"value": 1.01, "upper": 1.03, "method": "Spencer, non-circular", "source": "Chen & Shao (1988)"}, {"value": 1.08, "source": "Greco (1996)"}],
+    publicNote: "Chen & Shao give 1.01–1.03 for a surface sliding along the weak layer; Greco's 1.08 is for the surface of his own search.",
     notes: [
       "Entry on the crest (x = 145–240) and exit on the level ground (x = 0–55), as in the source.",
       "Fig. 40: base (0,0)–(150,15)–(240,15) under a 0.5 m Layer 4 whose top is (0,0.5)–(150,15.5)–(240,15.5); the thickness of Layer 4 is read from the label (0, 0.5) only partly legible. V054 (commercial program A) has the base rising to (240,16).",
@@ -1594,6 +1628,7 @@ export const PROBLEMS: RawCase[] = [
     checks: [
       {"method":"Morgenstern-Price","label":"Spencer (M-P, constant f(x))","published":1.215,"publishedBy":"Commercial program A (optimised)","options":{"intersliceFunction":"constant","nonCircularOptimization":true}},
     ],
+    publicNote: "The paper gives its results in figures only; the comparison is with the other programs.",
   },
   {
     id: "V059b",
@@ -1606,6 +1641,7 @@ export const PROBLEMS: RawCase[] = [
     checks: [
       {"method":"Morgenstern-Price","label":"Spencer (M-P, constant f(x))","published":1.29,"publishedBy":"Commercial program A (optimised)","options":{"intersliceFunction":"constant","nonCircularOptimization":true}},
     ],
+    publicNote: "The paper gives its results in figures only; the comparison is with the other programs.",
   },
   {
     id: "V059c",
@@ -1618,6 +1654,7 @@ export const PROBLEMS: RawCase[] = [
     checks: [
       {"method":"Morgenstern-Price","label":"Spencer (M-P, constant f(x))","published":1.315,"publishedBy":"Commercial program A (optimised)","options":{"intersliceFunction":"constant","nonCircularOptimization":true}},
     ],
+    publicNote: "The paper gives its results in figures only; the comparison is with the other programs.",
   },
   {
     id: "V060a",
@@ -1631,6 +1668,7 @@ export const PROBLEMS: RawCase[] = [
       {"method":"Bishop","label":"Bishop simplified","published":2.551,"publishedBy":"Commercial program A","options":{"porePressureHead":"vertical","slices":50}},
       {"method":"Bishop","label":"Bishop simplified","published":2.529,"publishedBy":"Program D","options":{"porePressureHead":"vertical","slices":50}},
     ],
+    publicNote: "Hassan & Wolff give 2.753 on a fixed circle (V062a), not a search result.",
     notes: [
       "2.551 is commercial program A's Bishop value on Hassan & Wolff's surface 7A (Table 35.2), the lowest of the published circles, not a search result; cSlope's search finds 2.530 (V062a checks the circle itself). Hassan & Wolff 2.753 on 7A (their own LEM).",
     ],
@@ -1646,6 +1684,7 @@ export const PROBLEMS: RawCase[] = [
     checks: [
       {"method":"Bishop","label":"Bishop simplified","published":2.973,"publishedBy":"Program D","options":{"slices":60}},
     ],
+    publicNote: "The source gives reliability indices on fixed circles; no factor of safety is published for the minimum-β circle.",
     notes: [
       "commercial program A's reliability indices on Hassan & Wolff's nine circles, with the correlations of Table 35.1, are checked in V062a … V062i; the critical factor of safety at the means is V060a.",
     ],
@@ -1680,6 +1719,7 @@ export const PROBLEMS: RawCase[] = [
       {"method":"Bishop","label":"Bishop simplified","published":2.551,"publishedBy":"Commercial program A"},
     ],
     paper: [{"value": 2.753, "source": "Hassan & Wolff (1999)"}],
+    publicNote: "Hassan & Wolff's own factors of safety differ from all programs by 3–75 %, while the programs agree with each other within 0.5 %.",
     notes: [
       "Both programs use Bishop's method here (commercial program B §2.22, commercial program A Table 35.2). commercial program B's values come from its own model of the dam, with the circles placed by its own digitisation, and differ from commercial program A's by up to 0.5 % on the same nominal circle. commercial program B's manual prints commercial program A's values under the heading \"Hassan and Wolff\"; Hassan & Wolff's own factors of safety differ (e.g. 2.753 on 7A).",
     ],
@@ -1697,6 +1737,7 @@ export const PROBLEMS: RawCase[] = [
       {"method":"Bishop","label":"Bishop simplified","published":2.82,"publishedBy":"Commercial program A"},
     ],
     paper: [{"value": 2.352, "source": "Hassan & Wolff (1999)"}],
+    publicNote: "Hassan & Wolff's own factors of safety differ from all programs by 3–75 %, while the programs agree with each other within 0.5 %.",
     notes: [
       "Both programs use Bishop's method here (commercial program B §2.22, commercial program A Table 35.2). commercial program B's values come from its own model of the dam, with the circles placed by its own digitisation, and differ from commercial program A's by up to 0.5 % on the same nominal circle. commercial program B's manual prints commercial program A's values under the heading \"Hassan and Wolff\"; Hassan & Wolff's own factors of safety differ (e.g. 2.753 on 7A).",
     ],
@@ -1714,6 +1755,7 @@ export const PROBLEMS: RawCase[] = [
       {"method":"Bishop","label":"Bishop simplified","published":2.777,"publishedBy":"Commercial program A"},
     ],
     paper: [{"value": 2.523, "source": "Hassan & Wolff (1999)"}],
+    publicNote: "Hassan & Wolff's own factors of safety differ from all programs by 3–75 %, while the programs agree with each other within 0.5 %.",
     notes: [
       "Both programs use Bishop's method here (commercial program B §2.22, commercial program A Table 35.2). commercial program B's values come from its own model of the dam, with the circles placed by its own digitisation, and differ from commercial program A's by up to 0.5 % on the same nominal circle. commercial program B's manual prints commercial program A's values under the heading \"Hassan and Wolff\"; Hassan & Wolff's own factors of safety differ (e.g. 2.753 on 7A).",
     ],
@@ -1731,6 +1773,7 @@ export const PROBLEMS: RawCase[] = [
       {"method":"Bishop","label":"Bishop simplified","published":2.583,"publishedBy":"Commercial program A"},
     ],
     paper: [{"value": 2.457, "source": "Hassan & Wolff (1999)"}],
+    publicNote: "Hassan & Wolff's own factors of safety differ from all programs by 3–75 %, while the programs agree with each other within 0.5 %.",
     notes: [
       "Both programs use Bishop's method here (commercial program B §2.22, commercial program A Table 35.2). commercial program B's values come from its own model of the dam, with the circles placed by its own digitisation, and differ from commercial program A's by up to 0.5 % on the same nominal circle. commercial program B's manual prints commercial program A's values under the heading \"Hassan and Wolff\"; Hassan & Wolff's own factors of safety differ (e.g. 2.753 on 7A).",
     ],
@@ -1748,6 +1791,7 @@ export const PROBLEMS: RawCase[] = [
       {"method":"Bishop","label":"Bishop simplified","published":2.692,"publishedBy":"Commercial program A"},
     ],
     paper: [{"value": 2.602, "source": "Hassan & Wolff (1999)"}],
+    publicNote: "Hassan & Wolff's own factors of safety differ from all programs by 3–75 %, while the programs agree with each other within 0.5 %.",
     notes: [
       "Both programs use Bishop's method here (commercial program B §2.22, commercial program A Table 35.2). commercial program B's values come from its own model of the dam, with the circles placed by its own digitisation, and differ from commercial program A's by up to 0.5 % on the same nominal circle. commercial program B's manual prints commercial program A's values under the heading \"Hassan and Wolff\"; Hassan & Wolff's own factors of safety differ (e.g. 2.753 on 7A).",
     ],
@@ -1765,6 +1809,7 @@ export const PROBLEMS: RawCase[] = [
       {"method":"Bishop","label":"Bishop simplified","published":2.672,"publishedBy":"Commercial program A"},
     ],
     paper: [{"value": 2.995, "source": "Hassan & Wolff (1999)"}],
+    publicNote: "Hassan & Wolff's own factors of safety differ from all programs by 3–75 %, while the programs agree with each other within 0.5 %.",
     notes: [
       "Both programs use Bishop's method here (commercial program B §2.22, commercial program A Table 35.2). commercial program B's values come from its own model of the dam, with the circles placed by its own digitisation, and differ from commercial program A's by up to 0.5 % on the same nominal circle. commercial program B's manual prints commercial program A's values under the heading \"Hassan and Wolff\"; Hassan & Wolff's own factors of safety differ (e.g. 2.753 on 7A).",
     ],
@@ -1782,6 +1827,7 @@ export const PROBLEMS: RawCase[] = [
       {"method":"Bishop","label":"Bishop simplified","published":3.598,"publishedBy":"Commercial program A"},
     ],
     paper: [{"value": 3.916, "source": "Hassan & Wolff (1999)"}],
+    publicNote: "Hassan & Wolff's own factors of safety differ from all programs by 3–75 %, while the programs agree with each other within 0.5 %.",
     notes: [
       "Both programs use Bishop's method here (commercial program B §2.22, commercial program A Table 35.2). commercial program B's values come from its own model of the dam, with the circles placed by its own digitisation, and differ from commercial program A's by up to 0.5 % on the same nominal circle. commercial program B's manual prints commercial program A's values under the heading \"Hassan and Wolff\"; Hassan & Wolff's own factors of safety differ (e.g. 2.753 on 7A).",
     ],
@@ -1799,6 +1845,7 @@ export const PROBLEMS: RawCase[] = [
       {"method":"Bishop","label":"Bishop simplified","published":6.074,"publishedBy":"Commercial program A"},
     ],
     paper: [{"value": 10.576, "source": "Hassan & Wolff (1999)"}],
+    publicNote: "Hassan & Wolff's own factors of safety differ from all programs by 3–75 %, while the programs agree with each other within 0.5 %.",
     notes: [
       "Both programs use Bishop's method here (commercial program B §2.22, commercial program A Table 35.2). commercial program B's values come from its own model of the dam, with the circles placed by its own digitisation, and differ from commercial program A's by up to 0.5 % on the same nominal circle. commercial program B's manual prints commercial program A's values under the heading \"Hassan and Wolff\"; Hassan & Wolff's own factors of safety differ (e.g. 2.753 on 7A).",
     ],
@@ -1815,6 +1862,7 @@ export const PROBLEMS: RawCase[] = [
       {"method":"Bishop","label":"Bishop simplified","published":11.583,"publishedBy":"Commercial program B"},
     ],
     paper: [{"value": 6.293, "source": "Hassan & Wolff (1999)"}],
+    publicNote: "Hassan & Wolff's own factors of safety differ from all programs by 3–75 %, while the programs agree with each other within 0.5 %.",
     notes: [
       "Both programs use Bishop's method here (commercial program B §2.22, commercial program A Table 35.2). commercial program B's values come from its own model of the dam, with the circles placed by its own digitisation, and differ from commercial program A's by up to 0.5 % on the same nominal circle. commercial program B's manual prints commercial program A's values under the heading \"Hassan and Wolff\"; Hassan & Wolff's own factors of safety differ (e.g. 2.753 on 7A).",
       "commercial program A's Bishop value for 8H (11.23) disagrees with commercial program B (11.583) and two other codes and is not used.",
@@ -1849,6 +1897,7 @@ export const PROBLEMS: RawCase[] = [
       {"method":"Bishop","label":"Bishop simplified","published":1.02,"publishedBy":"Program D","options":{"porePressureHead":"vertical","slices":50}},
     ],
     paper: [{"value": 1.0, "method": "Bishop simplified, circular", "source": "Leshchinsky & Han (2004)"}, {"value": 1.0, "method": "finite differences", "source": "Leshchinsky & Han (2004)"}],
+    publicNote: "Leshchinsky & Han give 1.00 with Bishop's method for every variant of the wall (the reinforcement was designed for that value), and a finite-difference value.",
   },
   {
     id: "V065",
@@ -1862,6 +1911,7 @@ export const PROBLEMS: RawCase[] = [
       {"method":"Morgenstern-Price","label":"Spencer (M-P, constant f(x))","published":0.964,"publishedBy":"Commercial program A","options":{"intersliceFunction":"constant","porePressureHead":"vertical","slices":50}},
     ],
     paper: [{"value": 1.0, "method": "Bishop simplified, circular", "source": "Leshchinsky & Han (2004)"}, {"value": 0.86, "method": "finite differences", "source": "Leshchinsky & Han (2004)"}],
+    publicNote: "Leshchinsky & Han give 1.00 with Bishop's method for every variant of the wall (the reinforcement was designed for that value), and a finite-difference value.",
   },
   {
     id: "V066a",
@@ -1875,6 +1925,7 @@ export const PROBLEMS: RawCase[] = [
       {"method":"Bishop","label":"Bishop simplified","published":1.04,"publishedBy":"Commercial program A","options":{"porePressureHead":"vertical","slices":50}},
     ],
     paper: [{"value": 1.0, "method": "Bishop simplified, circular", "source": "Leshchinsky & Han (2004)"}, {"value": 0.99, "method": "finite differences", "source": "Leshchinsky & Han (2004)"}],
+    publicNote: "Leshchinsky & Han give 1.00 with Bishop's method for every variant of the wall (the reinforcement was designed for that value), and a finite-difference value.",
     notes: [
       "L&H finite difference 0.99.",
     ],
@@ -1891,6 +1942,7 @@ export const PROBLEMS: RawCase[] = [
       {"method":"Morgenstern-Price","label":"Spencer (M-P, constant f(x))","published":1.011,"publishedBy":"Program D","options":{"intersliceFunction":"constant","porePressureHead":"vertical","slices":50}},
     ],
     paper: [{"value": 1.0, "method": "Bishop simplified, circular", "source": "Leshchinsky & Han (2004)"}, {"value": 0.98, "method": "finite differences", "source": "Leshchinsky & Han (2004)"}],
+    publicNote: "Leshchinsky & Han give 1.00 with Bishop's method for every variant of the wall (the reinforcement was designed for that value), and a finite-difference value.",
     notes: [
       "commercial program A reports 0.971 (Spencer) and 0.976 (Bishop) with the same Ta = 11.4 kN/m (Table 89.2); cSlope and program D are 4 % higher on the reference circle. The difference is not explained (the reinforcement model of the tiers is the likely cause), so the commercial program A value is not used as a check. L&H 0.98 (finite difference).",
     ],
@@ -1907,6 +1959,7 @@ export const PROBLEMS: RawCase[] = [
       {"method":"Bishop","label":"Bishop simplified","published":1.004,"publishedBy":"Commercial program A","options":{"porePressureHead":"vertical","slices":50}},
     ],
     paper: [{"value": 1.0, "method": "Bishop simplified, circular", "source": "Leshchinsky & Han (2004)"}, {"value": 1.01, "method": "finite differences", "source": "Leshchinsky & Han (2004)"}],
+    publicNote: "Leshchinsky & Han give 1.00 with Bishop's method for every variant of the wall (the reinforcement was designed for that value), and a finite-difference value.",
   },
   {
     id: "V066d",
@@ -1920,6 +1973,7 @@ export const PROBLEMS: RawCase[] = [
       {"method":"Bishop","label":"Bishop simplified","published":1.01,"publishedBy":"Program D","options":{"porePressureHead":"vertical","slices":50}},
     ],
     paper: [{"value": 1.0, "method": "Bishop simplified, circular", "source": "Leshchinsky & Han (2004)"}, {"value": 1.01, "method": "finite differences", "source": "Leshchinsky & Han (2004)"}],
+    publicNote: "Leshchinsky & Han give 1.00 with Bishop's method for every variant of the wall (the reinforcement was designed for that value), and a finite-difference value.",
     notes: [
       "commercial program A reports 1.037 (Bishop) with the same Ta = 9.25 kN/m (Table 92.2) and the pond in front of the wall; the difference is not explained, so it is not used as a check. L&H 1.01 (finite difference).",
       "With the pond against the lower tier (water at el. 9 in front of the wall) the hydrostatic thrust on the facing resists the sliding and cSlope gives 1.18.",
@@ -1937,6 +1991,7 @@ export const PROBLEMS: RawCase[] = [
       {"method":"Bishop","label":"Bishop simplified","published":0.958,"publishedBy":"Commercial program A","options":{"porePressureHead":"vertical","slices":50}},
     ],
     paper: [{"value": 1.0, "method": "Bishop simplified, circular", "source": "Leshchinsky & Han (2004)"}, {"value": 1.02, "method": "finite differences", "source": "Leshchinsky & Han (2004)"}],
+    publicNote: "Leshchinsky & Han give 1.00 with Bishop's method for every variant of the wall (the reinforcement was designed for that value), and a finite-difference value.",
   },
   {
     id: "V067",
@@ -1963,6 +2018,7 @@ export const PROBLEMS: RawCase[] = [
       {"method":"Bishop","label":"Bishop simplified","published":1.192,"publishedBy":"Commercial program A"},
     ],
     paper: [{"value": 1.36, "method": "Ordinary", "source": "Low (1989)"}, {"value": 1.14, "method": "Bishop simplified", "source": "Low (1989)"}, {"value": 1.17, "source": "Kim (2002)"}],
+    publicNote: "Low's Bishop value 1.14 is about 4 % below the other programs (1.19); Kim (2002) gives 1.17.",
   },
   {
     id: "V069a",
@@ -1992,6 +2048,7 @@ export const PROBLEMS: RawCase[] = [
       {"method":"Bishop","label":"Bishop simplified","published":1.212,"publishedBy":"Commercial program A","options":{"porePressureHead":"vertical"}},
     ],
     paper: [{"value": 1.2, "method": "stability chart", "source": "Morgenstern (1963)"}],
+    publicNote: "Morgenstern's 1.2 is read from a stability chart.",
   },
   {
     id: "V070",
@@ -2019,6 +2076,7 @@ export const PROBLEMS: RawCase[] = [
       {"method":"Bishop","label":"Bishop simplified (vertical head)","published":1.293,"publishedBy":"Commercial program A","options":{"porePressureHead":"vertical"}},
       {"method":"Morgenstern-Price","label":"Spencer (vertical head)","published":1.3,"publishedBy":"Commercial program A","options":{"intersliceFunction":"constant","porePressureHead":"vertical"}},
     ],
+    publicNote: "Pockoski & Duncan compare computer programs and publish no independent value.",
     notes: [
       "With the phreatic correction (cos²θ) cSlope gives 1.381 (+6.8 %).",
     ],
@@ -2036,6 +2094,7 @@ export const PROBLEMS: RawCase[] = [
       {"method":"Morgenstern-Price","label":"Spencer (M-P, constant f(x))","published":1.3,"publishedBy":"Commercial program A","options":{"intersliceFunction":"constant","porePressureHead":"vertical"}},
       {"method":"Janbu","label":"Janbu simplified (uncorrected)","published":1.151,"publishedBy":"Commercial program A","options":{"porePressureHead":"vertical","janbuCorrection":false}},
     ],
+    publicNote: "Pockoski & Duncan compare computer programs and publish no independent value.",
     notes: [
       "program G and commercial program B (Pockoski & Duncan 2000): 1.30 / 1.29 / 1.15 (Spencer / Bishop / Janbu simplified).",
     ],
@@ -2052,6 +2111,7 @@ export const PROBLEMS: RawCase[] = [
       {"method":"Bishop","label":"Bishop simplified","published":1.285,"publishedBy":"Commercial program A","options":{"tensionCrackDepth":1.6764000000000001}},
       {"method":"Morgenstern-Price","label":"Spencer (M-P, constant f(x))","published":1.29,"publishedBy":"Commercial program A","options":{"intersliceFunction":"constant","tensionCrackDepth":1.6764000000000001}},
     ],
+    publicNote: "Pockoski & Duncan compare computer programs and publish no independent value.",
   },
   {
     id: "V072b",
@@ -2066,6 +2126,7 @@ export const PROBLEMS: RawCase[] = [
       {"method":"Morgenstern-Price","label":"Spencer (M-P, constant f(x))","published":1.29,"publishedBy":"Commercial program A","options":{"intersliceFunction":"constant","tensionCrackDepth":1.6764}},
       {"method":"Janbu","label":"Janbu simplified (uncorrected)","published":1.141,"publishedBy":"Commercial program A","options":{"tensionCrackDepth":1.6764,"janbuCorrection":false}},
     ],
+    publicNote: "Pockoski & Duncan compare computer programs and publish no independent value.",
   },
   {
     id: "V073",
@@ -2079,6 +2140,7 @@ export const PROBLEMS: RawCase[] = [
       {"method":"Bishop","label":"Bishop simplified","published":1.417,"publishedBy":"Commercial program A (circles)","options":{"tensionCrackDepth":1.8288000000000002}},
       {"method":"Morgenstern-Price","label":"Spencer (M-P, constant f(x))","published":1.422,"publishedBy":"Commercial program A (circles)","options":{"intersliceFunction":"constant","tensionCrackDepth":1.8288000000000002}},
     ],
+    publicNote: "Pockoski & Duncan compare computer programs and publish no independent value.",
     notes: [
       "Search limited to x = −15.24 to 50 m (−50 to 164 ft: the toe bench to the crest), as in the source.",
       "commercial program A's composite surfaces (circles cut off at the base) give 1.392 / 1.400; cSlope's non-circular optimisation, which is not restricted to that shape, finds 1.353 / 1.369 along the seam.",
@@ -2096,6 +2158,7 @@ export const PROBLEMS: RawCase[] = [
       {"method":"Morgenstern-Price","label":"Spencer (M-P, constant f(x))","published":1.009,"publishedBy":"Commercial program A","options":{"intersliceFunction":"constant","porePressureHead":"vertical","slices":60,"tensionCrackDepth":2.1336}},
       {"method":"Janbu","label":"Janbu corrected (f0)","published":1.073,"publishedBy":"Program D","options":{"porePressureHead":"vertical","slices":60,"tensionCrackDepth":2.1336,"janbuCorrection":true}},
     ],
+    publicNote: "Pockoski & Duncan compare computer programs and publish no independent value.",
     notes: [
       "commercial program A (Table 60.3): Spencer 1.009, Bishop 0.997, Janbu simplified 1.041. Pockoski & Duncan (2000), as quoted there: program G 1.02 / 1.00 and commercial program B 1.02 / 1.01 (Spencer / Bishop); the commercial program B 2022 verification manual (§2.37) prints commercial program B 1.00 / 0.995.",
     ],
@@ -2112,6 +2175,7 @@ export const PROBLEMS: RawCase[] = [
       {"method":"Janbu","label":"Janbu corrected (f0)","published":0.579,"publishedBy":"Program D","options":{"porePressureHead":"phreatic-correction","slices":60,"janbuCorrection":true}},
       {"method":"Morgenstern-Price","label":"Spencer (M-P, constant f(x))","published":0.596,"publishedBy":"Commercial program A","options":{"intersliceFunction":"constant","porePressureHead":"phreatic-correction","slices":60}},
     ],
+    publicNote: "Pockoski & Duncan compare computer programs and publish no independent value.",
     notes: [
       "commercial program A (Table 59.3): Spencer 0.596, Bishop 0.582, Janbu simplified 0.583, each on its own critical surface (V075 checks the Spencer circle). Pockoski & Duncan (2000), as quoted there: program G 0.65 / 0.56 / 0.64 and commercial program B 0.60 / 0.60 / 0.61 (Spencer / Bishop / Janbu); the commercial program B 2022 verification manual (§2.36) prints commercial program B 0.57 / 0.53 / 0.58.",
       "Surface = commercial program A's Spencer circle (-30.872, 31.315, R 43.975 ft). commercial program A's Bishop 0.582 / Janbu 0.583 belong to their own critical circles.",
@@ -2130,6 +2194,7 @@ export const PROBLEMS: RawCase[] = [
       {"method":"Bishop","label":"Bishop simplified","published":1.147,"publishedBy":"Commercial program A","options":{"porePressureHead":"vertical","slices":60}},
       {"method":"Morgenstern-Price","label":"Spencer (M-P, constant f(x))","published":1.145,"publishedBy":"Commercial program A","options":{"intersliceFunction":"constant","porePressureHead":"vertical","slices":60}},
     ],
+    publicNote: "Pockoski & Duncan compare computer programs and publish no independent value.",
     notes: [
       "program G and commercial program B 1.14.",
     ],
@@ -2146,6 +2211,7 @@ export const PROBLEMS: RawCase[] = [
       {"method":"Morgenstern-Price","label":"Spencer (M-P, constant f(x))","published":0.94,"publishedBy":"Commercial program A","options":{"intersliceFunction":"constant","porePressureHead":"vertical","slices":60}},
     ],
     paper: [{"value": 1.0, "method": "plasticity theory", "source": "Prandtl (1920)"}],
+    publicNote: "The theoretical factor of safety is 1.0; limit equilibrium with slices gives about 6 % less on this mechanism.",
     notes: [
       "Theoretical factor of safety 1.0; limit equilibrium with slices gives 6 % less on this mechanism (commercial program A and cSlope alike).",
       "program D 1.043 on an earlier transcription whose fan was a single kink at (5, 3.9645).",
@@ -2163,6 +2229,7 @@ export const PROBLEMS: RawCase[] = [
       {"method":"Morgenstern-Price","label":"Morgenstern-Price (half-sine)","published":0.96,"publishedBy":"Commercial program B","options":{"slices":60}},
     ],
     paper: [{"value": 1.0, "method": "plasticity theory", "source": "Prandtl (1921)"}],
+    publicNote: "The theoretical factor of safety is 1.0; limit equilibrium with slices gives about 4 % less on this mechanism.",
     notes: [
       "Strip load 102.83 kPa = c(π + 2) over 10 m; the domain size is not given in the manual (irrelevant for a weightless soil on a fixed surface).",
       "Surface: active wedge under the load (apex at x = 5, 5 m deep), fan centred on the load's right edge (R = 7.071 m), passive wedge to x = 20 — the mechanism drawn in Fig. 49. commercial program B Janbu (uncorrected) 0.895; entry-exit search: Bishop 1.056, Janbu 1.031, M-P 1.08. Theory 1.0.",
@@ -2210,6 +2277,7 @@ export const PROBLEMS: RawCase[] = [
     checks: [
       {"method":"Bishop","label":"Bishop simplified","published":0.764,"publishedBy":"Commercial program A"},
     ],
+    publicNote: "The source compares programs and publishes no independent value.",
     notes: [
       "commercial program A reports the Bishop value only (Fig. 37.3); cSlope's Spencer is 0.764 as well. V081b is the slope with the reinforced zone.",
     ],
@@ -2225,6 +2293,7 @@ export const PROBLEMS: RawCase[] = [
     checks: [
       {"method":"Bishop","label":"Bishop simplified","published":1.504,"publishedBy":"Commercial program A"},
     ],
+    publicNote: "The source compares programs and publishes no independent value.",
     notes: [
       "φ = 36° and γ = 20 kN/m³ of the slope are not printed in the manual (tan 54.93° = 1.96 tan 36°; γ as V081a). Zone base (5, 5)–(12.6, 5), back face parallel to the slope face; 40 kPa from x = 17 to 30.",
       "commercial program A's required force 351 kN and zone length 7.6 m (program F 345 kN, 7.5 m) give FOS 1.504 against the target 1.5.",
@@ -2244,6 +2313,7 @@ export const PROBLEMS: RawCase[] = [
       {"method":"Morgenstern-Price","label":"Spencer (M-P, constant f(x))","published":1.532,"publishedBy":"Commercial program A","options":{"intersliceFunction":"constant","porePressureHead":"phreatic-correction","tensionCrackDepth":3.3528}},
       {"method":"Morgenstern-Price","label":"Morgenstern-Price (half-sine)","published":1.532,"publishedBy":"Commercial program A","options":{"porePressureHead":"phreatic-correction","tensionCrackDepth":3.3528}},
     ],
+    publicNote: "The source compares programs and publishes no independent value.",
     notes: [
       "Same 1.8–1.9 % offset as V082c (the water table is traced from the figure).",
     ],
@@ -2261,6 +2331,7 @@ export const PROBLEMS: RawCase[] = [
       {"method":"Bishop","label":"Bishop simplified","published":1.511,"publishedBy":"Commercial program A","options":{"porePressureHead":"phreatic-correction","tensionCrackDepth":3.3528,"tensionCrackWater":0.54545}},
       {"method":"Morgenstern-Price","label":"Spencer (M-P, constant f(x))","published":1.51,"publishedBy":"Commercial program A","options":{"intersliceFunction":"constant","porePressureHead":"phreatic-correction","tensionCrackDepth":3.3528,"tensionCrackWater":0.54545}},
     ],
+    publicNote: "The source compares programs and publishes no independent value.",
     notes: [
       "Same 1.8 % offset as V082c and V082a (water table traced from the figure).",
     ],
@@ -2280,6 +2351,7 @@ export const PROBLEMS: RawCase[] = [
       {"method":"Bishop","label":"Bishop simplified","published":1.369,"publishedBy":"Program D","options":{"porePressureHead":"phreatic-correction"}},
       {"method":"Morgenstern-Price","label":"Spencer (M-P, constant f(x))","published":1.375,"publishedBy":"Program D","options":{"intersliceFunction":"constant","porePressureHead":"phreatic-correction"}},
     ],
+    publicNote: "The source compares programs and publishes no independent value.",
     notes: [
       "The water table is traced from the manual's figure to about ±2 ft; program D reads 1.9 % below commercial program A for every method on the same input, as cSlope does. V082a and V082b are the tension-crack variants of Table 27.4.",
       "commercial program A's circular search with exit limits (Table 27.3: Bishop 1.376, Spencer 1.382, Janbu corrected 1.345) is not checked: cSlope's search on this input is 4.2 % lower, beyond the offset explained by the traced water table.",
@@ -2297,6 +2369,7 @@ export const PROBLEMS: RawCase[] = [
       {"method":"Janbu","label":"Janbu corrected (f0)","published":0.89,"publishedBy":"Commercial program A","options":{"porePressureHead":"vertical","slices":50,"janbuCorrection":true}},
     ],
     paper: [{"value": 0.887, "method": "force-equilibrium trial wedge", "source": "Sheahan & Ho (2003)"}],
+    publicNote: "Sheahan & Ho use a force-equilibrium trial wedge; Janbu's method on the same planes differs by up to 4 %.",
     notes: [
       "Sheahan (trial wedge) 0.887; program D 0.899.",
     ],
@@ -2313,6 +2386,7 @@ export const PROBLEMS: RawCase[] = [
       {"method":"Janbu","label":"Janbu corrected (f0)","published":0.989,"publishedBy":"Commercial program A","options":{"porePressureHead":"vertical","slices":50,"janbuCorrection":true}},
     ],
     paper: [{"value": 0.989, "method": "force-equilibrium trial wedge", "source": "Sheahan & Ho (2003)"}],
+    publicNote: "Sheahan & Ho use a force-equilibrium trial wedge; Janbu's method on the same planes differs by up to 4 %.",
     notes: [
       "Table 48.2 lists an out-of-plane spacing of 1.5 m; 1.15 m (the Clouterre wall) reproduces commercial program A's results at all six plane angles and is used here.",
       "Sheahan & Ho 0.989 at 55° (force-equilibrium trial wedge).",
@@ -2330,6 +2404,7 @@ export const PROBLEMS: RawCase[] = [
       {"method":"Janbu","label":"Janbu corrected (f0)","published":1.123,"publishedBy":"Commercial program A","options":{"porePressureHead":"vertical","slices":50,"janbuCorrection":true}},
     ],
     paper: [{"value": 1.176, "method": "force-equilibrium trial wedge", "source": "Sheahan & Ho (2003)"}],
+    publicNote: "Sheahan & Ho use a force-equilibrium trial wedge; Janbu's method on the same planes differs by up to 5 %.",
     notes: [
       "Sheahan & Ho 1.176 (force-equilibrium trial wedge).",
     ],
@@ -2346,6 +2421,7 @@ export const PROBLEMS: RawCase[] = [
       {"method":"Janbu","label":"Janbu corrected (f0)","published":1.043,"publishedBy":"Commercial program A","options":{"porePressureHead":"vertical","slices":50,"janbuCorrection":true}},
     ],
     paper: [{"value": 1.07, "method": "force-equilibrium trial wedge", "source": "Sheahan & Ho (2003)"}],
+    publicNote: "Sheahan & Ho use a force-equilibrium trial wedge; Janbu's method on the same planes differs by up to 4 %.",
     notes: [
       "Sheahan & Ho 1.070 (force-equilibrium trial wedge).",
     ],
@@ -2362,6 +2438,7 @@ export const PROBLEMS: RawCase[] = [
       {"method":"Janbu","label":"Janbu corrected (f0)","published":0.945,"publishedBy":"Commercial program A","options":{"porePressureHead":"vertical","slices":50,"janbuCorrection":true}},
     ],
     paper: [{"value": 0.929, "method": "force-equilibrium trial wedge", "source": "Sheahan & Ho (2003)"}],
+    publicNote: "Sheahan & Ho use a force-equilibrium trial wedge; Janbu's method on the same planes differs by up to 4 %.",
     notes: [
       "Sheahan & Ho 0.929 (force-equilibrium trial wedge).",
     ],
@@ -2378,6 +2455,7 @@ export const PROBLEMS: RawCase[] = [
       {"method":"Janbu","label":"Janbu corrected (f0)","published":0.922,"publishedBy":"Commercial program A","options":{"porePressureHead":"vertical","slices":50,"janbuCorrection":true}},
     ],
     paper: [{"value": 0.893, "method": "force-equilibrium trial wedge", "source": "Sheahan & Ho (2003)"}],
+    publicNote: "Sheahan & Ho use a force-equilibrium trial wedge; Janbu's method on the same planes differs by up to 4 %.",
     notes: [
       "Sheahan & Ho 0.893 (force-equilibrium trial wedge).",
     ],
@@ -2394,6 +2472,7 @@ export const PROBLEMS: RawCase[] = [
       {"method":"Janbu","label":"Janbu corrected (f0)","published":0.923,"publishedBy":"Commercial program A","options":{"porePressureHead":"vertical","slices":50,"janbuCorrection":true}},
     ],
     paper: [{"value": 0.887, "method": "force-equilibrium trial wedge", "source": "Sheahan & Ho (2003)"}],
+    publicNote: "Sheahan & Ho use a force-equilibrium trial wedge; Janbu's method on the same planes differs by up to 4 %.",
     notes: [
       "Sheahan & Ho 0.887 (force-equilibrium trial wedge).",
     ],
@@ -2558,6 +2637,7 @@ export const PROBLEMS: RawCase[] = [
       {"method":"Janbu","label":"Janbu corrected (f0)","published":1.385,"publishedBy":"Commercial program A","options":{"janbuCorrection":true}},
     ],
     paper: [{"value": 1.33, "source": "USACE EM 1110-2-1902"}],
+    publicNote: "The USACE value 1.33 is read from a chart; on the circle the example describes, the programs give about 1.24.",
     notes: [
       "The text describes USACE's circle (centre 8.4 ft right of and 36 ft above the toe, tangent to the base of soil 3: 48.4, 28, R = 48); commercial program A's printed circle is slightly smaller. cSlope gives the same FOS on both (1.235).",
       "The water above the toe acts as a load on the ground surface; the published USACE chart value is 1.33.",
@@ -2676,6 +2756,7 @@ export const PROBLEMS: RawCase[] = [
       {"method":"Morgenstern-Price","label":"Spencer (M-P, constant f(x))","published":1.804,"publishedBy":"Commercial program A","options":{"intersliceFunction":"constant","porePressureHead":"vertical","slices":50,"tensionCrackDepth":1.015}},
     ],
     paper: [{"value": 1.836, "method": "Spencer", "source": "Zhu & Lee (2002)"}, {"value": 1.823, "method": "Morgenstern-Price", "source": "Zhu & Lee (2002)"}, {"value": 1.429, "method": "Bishop simplified", "source": "Zhu & Lee (2002)"}, {"value": 1.229, "method": "Ordinary", "source": "Zhu & Lee (2002)"}],
+    publicNote: "Zhu & Lee's Bishop value 1.429 is about 20 % below their own Spencer and Morgenstern-Price values; the programs give about 1.80 with both methods.",
     notes: [
       "Entry on the upper bench (x = 33.1–50) and exit on the lower bench (x = −20 to −4.3), as in the source.",
       "Zhu & Lee (surface 3): Spencer 1.836, M-P 1.823. program D 1.796 (Bishop) without the crack. V096c checks the reference circle itself.",
@@ -2712,6 +2793,7 @@ export const PROBLEMS: RawCase[] = [
       {"method":"Bishop","label":"Bishop simplified","published":1.804,"publishedBy":"Commercial program A","options":{"tensionCrackDepth":1.015}},
     ],
     paper: [{"value": 1.836, "method": "Spencer", "source": "Zhu & Lee (2002)"}, {"value": 1.823, "method": "Morgenstern-Price", "source": "Zhu & Lee (2002)"}, {"value": 1.429, "method": "Bishop simplified", "source": "Zhu & Lee (2002)"}, {"value": 1.229, "method": "Ordinary", "source": "Zhu & Lee (2002)"}],
+    publicNote: "Zhu & Lee's Bishop value 1.429 is about 20 % below their own Spencer and Morgenstern-Price values; the programs give about 1.80 with both methods.",
     notes: [
       "Crack depth from commercial program A's right endpoint (41.663, 13.985) under the 15 m crest.",
       "Zhu & Lee: Spencer 1.836, M-P 1.823.",
@@ -2728,6 +2810,7 @@ export const PROBLEMS: RawCase[] = [
     checks: [
       {"method":"Bishop","label":"Bishop simplified (vertical head)","published":1.173,"publishedBy":"Commercial program B","options":{"porePressureHead":"vertical"}},
     ],
+    publicNote: "The problem comes from a program manual only; no independent value is published.",
   },
   {
     id: "V097b",
@@ -2741,6 +2824,7 @@ export const PROBLEMS: RawCase[] = [
       {"method":"Bishop","label":"Bishop simplified, design values","published":1.173,"publishedBy":"Commercial program B","options":{"partialFactors":{"cu":1.4,"cohesion":1.25,"tanPhi":1.25,"variableLoad":1}}},
       {"method":"Morgenstern-Price","label":"Spencer, design values","published":1.174,"publishedBy":"Commercial program B","options":{"intersliceFunction":"constant","partialFactors":{"cu":1.4,"cohesion":1.25,"tanPhi":1.25,"variableLoad":1}}},
     ],
+    publicNote: "The problem comes from a program manual only; no independent value is published.",
   },
   {
     id: "V098",
@@ -2754,6 +2838,7 @@ export const PROBLEMS: RawCase[] = [
       {"method":"Morgenstern-Price","label":"Spencer (M-P, constant f(x))","published":1.36,"publishedBy":"Commercial program A","options":{"intersliceFunction":"constant","porePressureHead":"vertical","slices":40}},
       {"method":"Morgenstern-Price","label":"Spencer (M-P, constant f(x))","published":1.372,"publishedBy":"Program D","options":{"intersliceFunction":"constant","porePressureHead":"vertical","slices":40}},
     ],
+    publicNote: "The problem comes from a program manual only; no independent value is published.",
     notes: [
       "commercial program A multi-modal optimisation 1.359. The k = 0.15 and yield-acceleration cases need a seismic coefficient.",
     ],

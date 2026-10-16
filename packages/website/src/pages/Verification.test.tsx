@@ -50,6 +50,15 @@ describe("Verification page", () => {
     expect(screen.getAllByText("Other programs").length).toBeGreaterThan(0);
   });
 
+  it("gives cSlope's result next to a published value and the problem's note", () => {
+    renderPage();
+    fireEvent.change(screen.getByRole("searchbox"), { target: { value: "V001" } });
+    const v001 = VERIFICATION.problems.find((p) => p.id === "V001")!;
+    const row = document.querySelector("#problems tbody")!;
+    expect(row.textContent).toContain(`cSlope ${v001.published[0].computed!.toFixed(3)}`);
+    expect(row.textContent).toContain(v001.note!);
+  });
+
   it("names the document title", () => {
     renderPage();
     expect(document.title).toBe("Verification · cSlope");

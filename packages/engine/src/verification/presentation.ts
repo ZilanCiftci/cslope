@@ -21,7 +21,15 @@ export interface PaperValue {
   method?: string;
   /** Who published it, e.g. "Arai & Tagyo (1985)". */
   source: string;
+  /**
+   * The cSlope analysis with the same method (its label in
+   * presentedAnalyses), when cSlope has that method; set by paperValues.
+   */
+  analysis?: string;
 }
+
+/** A problem as the presentation needs it. */
+type Presentable = Pick<VerificationCase, "checks"> & { paper?: PaperValue[] };
 
 /** One analysis cSlope runs for a problem, with the other programs' results for it. */
 export interface PresentedAnalysis {
@@ -56,7 +64,106 @@ export function analysisLabel(method: AnalysisMethod, options: Partial<AnalysisO
 /** Options as the analysis runs them, so that a default and its explicit value are one analysis. */
 function effectiveOptions(options: Partial<AnalysisOptions> = {}): Partial<AnalysisOptions> {
   const o: Partial<AnalysisOptions> = { slices: VERIFICATION_OPTIONS.slices, ...options };
-  return Object.fromEntries(Object.entries(o).sort(([a], [b]) => a.localeCompare(b))) as Partial<AnalysisOptions>;
+  return Object.fromEntries(
+    Object.entries(o)
+      .filter(([, v]) => v !== undefined)
+      .sort(([a], [b]) => a.localeCompare(b)),
+  ) as Partial<AnalysisOptions>;
+}
+
+/** Options that choose the method rather than describe the problem. */
+const METHOD_OPTIONS = ["intersliceFunction", "intersliceDataPoints", "janbuCorrection", "nonCircularOptimization"] as const;
+
+/**
+ * The cSlope analysis for a method as a source names it ("Bishop
+ * simplified", "Spencer, non-circular", "Janbu corrected"), on the input of
+ * the problem's first check; null for a method cSlope does not have
+ * (finite elements, charts, trial wedges, Ordinary, ...).
+ */
+function analysisForMethod(
+  text: string,
+  base: Partial<AnalysisOptions>,
+): { method: AnalysisMethod; options: Partial<AnalysisOptions> } | null {
+  const t = text.toLowerCase();
+  let method: AnalysisMethod;
+  let own: Partial<AnalysisOptions> = {};
+  if (t.startsWith("bishop")) method = "Bishop";
+  else if (t.startsWith("spencer")) {
+    method = "Morgenstern-Price";
+    own = { intersliceFunction: "constant" };
+  } else if (t.startsWith("morgenstern-price")) method = "Morgenstern-Price";
+  else if (t.startsWith("janbu corrected")) {
+    method = "Janbu";
+    own = { janbuCorrection: true };
+  } else if (t.startsWith("janbu simplified")) method = "Janbu";
+  else return null;
+  const options: Partial<AnalysisOptions> = { ...base, ...own };
+  if (/non-circular/.test(t)) options.nonCircularOptimization = true;
+  return { method, options };
+}
+
+interface Analyses {
+  list: (PresentedAnalysis & { values: number[] })[];
+  /** Index into `list` of each check. */
+  ofCheck: number[];
+  /** Index into `list` of each value of `paper`, or -1. */
+  ofPaper: number[];
+}
+
+/**
+ * The analyses of a problem: one per distinct method and options among its
+ * checks, then one for each published value whose method cSlope has and
+ * no check runs (they are run for the presentation, not tested).
+ */
+function analyses(c: Presentable): Analyses {
+  const list: Analyses["list"] = [];
+  const index = new Map<string, number>();
+  const add = (method: AnalysisMethod, options: Partial<AnalysisOptions>): number => {
+    const eff = effectiveOptions(options);
+    const key = method + JSON.stringify(eff);
+    let i = index.get(key);
+    if (i == null) {
+      i = list.length;
+      index.set(key, i);
+      list.push({ label: analysisLabel(method, eff), method, options, programs: null, checks: [], values: [] });
+    }
+    return i;
+  };
+  const ofCheck = c.checks.map((k, j) => {
+    const i = add(k.method, k.options ?? {});
+    list[i].checks.push(j);
+    if (isProgramSource(k.publishedBy)) list[i].values.push(k.published);
+    return i;
+  });
+  const base = Object.fromEntries(
+    Object.entries(c.checks[0]?.options ?? {}).filter(([key]) => !(METHOD_OPTIONS as readonly string[]).includes(key)),
+  ) as Partial<AnalysisOptions>;
+  // A published value goes with the problem's own analysis of that method
+  // when one exists (whatever its slices or crack), else with a new one.
+  const sameMethod = (a: { method: AnalysisMethod; options: Partial<AnalysisOptions> }) =>
+    list.findIndex(
+      (x) =>
+        x.checks.length > 0 &&
+        x.method === a.method &&
+        METHOD_OPTIONS.every((key) => (key === "intersliceDataPoints" ? true : !!x.options[key] === !!a.options[key])) &&
+        (x.options.intersliceFunction ?? "half-sine") === (a.options.intersliceFunction ?? "half-sine"),
+    );
+  const ofPaper = (c.paper ?? []).map((v) => {
+    const a = v.method ? analysisForMethod(v.method, base) : null;
+    if (!a) return -1;
+    const existing = sameMethod(a);
+    return existing >= 0 ? existing : add(a.method, a.options);
+  });
+  // Two analyses with the same name: say what differs.
+  const counts = new Map<string, number>();
+  for (const a of list) counts.set(a.label, (counts.get(a.label) ?? 0) + 1);
+  for (const a of list) {
+    if ((counts.get(a.label) ?? 0) > 1) {
+      const q = qualifier(effectiveOptions(a.options));
+      if (q) a.label += ` (${q})`;
+    }
+  }
+  return { list, ofCheck, ofPaper };
 }
 
 /** What tells two analyses with the same name apart. */
@@ -70,33 +177,13 @@ function qualifier(options: Partial<AnalysisOptions>): string {
 }
 
 /**
- * The analyses of a problem, in the order of its checks: one per distinct
- * method and options, with the range of the other programs' values for it.
+ * The analyses of a problem, in the order of its checks and then of its
+ * published values: one per distinct method and options, with the range of
+ * the other programs' values for it. Analyses without checks are run for
+ * the presentation only.
  */
-export function presentedAnalyses(c: Pick<VerificationCase, "checks">): PresentedAnalysis[] {
-  const byKey = new Map<string, PresentedAnalysis & { values: number[] }>();
-  c.checks.forEach((k, i) => {
-    const options = effectiveOptions(k.options);
-    const key = k.method + JSON.stringify(options);
-    let a = byKey.get(key);
-    if (!a) {
-      a = { label: analysisLabel(k.method, options), method: k.method, options: k.options ?? {}, programs: null, checks: [], values: [] };
-      byKey.set(key, a);
-    }
-    a.checks.push(i);
-    if (isProgramSource(k.publishedBy)) a.values.push(k.published);
-  });
-  const list = [...byKey.values()];
-  // Two analyses with the same name: say what differs.
-  const counts = new Map<string, number>();
-  for (const a of list) counts.set(a.label, (counts.get(a.label) ?? 0) + 1);
-  for (const a of list) {
-    if ((counts.get(a.label) ?? 0) > 1) {
-      const q = qualifier(effectiveOptions(a.options));
-      if (q) a.label += ` (${q})`;
-    }
-  }
-  return list.map(({ values, ...a }) => ({
+export function presentedAnalyses(c: Presentable): PresentedAnalysis[] {
+  return analyses(c).list.map(({ values, ...a }) => ({
     ...a,
     programs: values.length ? { min: Math.min(...values), max: Math.max(...values), count: values.length } : null,
   }));
@@ -107,12 +194,18 @@ export function presentedAnalyses(c: Pick<VerificationCase, "checks">): Presente
  * book or a theory, and the further values of `paper` (cases.ts) that are
  * not checked. Duplicates (same value and source) are listed once.
  */
-export function paperValues(c: Pick<VerificationCase, "checks"> & { paper?: PaperValue[] }): PaperValue[] {
-  const fromChecks = c.checks
-    .filter((k: VerificationCheck) => !isProgramSource(k.publishedBy))
-    .map((k): PaperValue => ({ value: k.published, ...sourceAndMethod(k.publishedBy, k.label) }));
+export function paperValues(c: Presentable): PaperValue[] {
+  const { list, ofCheck, ofPaper } = analyses(c);
+  const fromChecks = c.checks.flatMap((k: VerificationCheck, j): PaperValue[] => {
+    if (isProgramSource(k.publishedBy)) return [];
+    const v: PaperValue = { value: k.published, ...sourceAndMethod(k.publishedBy, k.label) };
+    // A check from a finite-element, chart or theory source is compared
+    // with cSlope's analysis all the same: that is what the check runs.
+    return [{ ...v, analysis: list[ofCheck[j]].label }];
+  });
+  const fromPaper = (c.paper ?? []).map((v, j): PaperValue => (ofPaper[j] >= 0 ? { ...v, analysis: list[ofPaper[j]].label } : { ...v }));
   const out: PaperValue[] = [];
-  for (const v of [...fromChecks, ...(c.paper ?? [])]) {
+  for (const v of [...fromChecks, ...fromPaper]) {
     if (!out.some((o) => o.value === v.value && o.upper === v.upper && o.source === v.source)) out.push(v);
   }
   return out;

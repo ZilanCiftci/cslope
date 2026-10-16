@@ -1,7 +1,7 @@
 {
  "summary": {
   "problems": 164,
-  "results": 293,
+  "results": 306,
   "publishedValues": 170,
   "problemsWithPublished": 134,
   "literatureProblems": 154,
@@ -20,17 +20,23 @@
     {
      "value": 1.451,
      "method": "Bishop simplified",
-     "source": "Arai & Tagyo (1985)"
+     "source": "Arai & Tagyo (1985)",
+     "analysis": "Bishop simplified",
+     "computed": 1.4041
     },
     {
      "value": 1.265,
      "method": "Janbu simplified, non-circular",
-     "source": "Arai & Tagyo (1985)"
+     "source": "Arai & Tagyo (1985)",
+     "analysis": "Janbu simplified, non-circular",
+     "computed": 1.2529
     },
     {
      "value": 1.357,
      "method": "Janbu corrected, non-circular",
-     "source": "Arai & Tagyo (1985)"
+     "source": "Arai & Tagyo (1985)",
+     "analysis": "Janbu corrected, non-circular",
+     "computed": 1.346
     }
    ],
    "results": [
@@ -57,8 +63,19 @@
       "min": 1.386,
       "max": 1.386
      }
+    },
+    {
+     "method": "Janbu simplified, non-circular",
+     "computed": 1.2529,
+     "programs": null
+    },
+    {
+     "method": "Janbu corrected, non-circular",
+     "computed": 1.346,
+     "programs": null
     }
-   ]
+   ],
+   "note": "Arai & Tagyo's Bishop value 1.451 is 2–3 % above the other programs (1.409–1.417) and cSlope on the same slope; their non-circular Janbu values are within 1 % of cSlope's."
   },
   {
    "id": "V002",
@@ -72,33 +89,45 @@
     {
      "value": 0.417,
      "method": "Bishop simplified",
-     "source": "Arai & Tagyo (1985)"
+     "source": "Arai & Tagyo (1985)",
+     "analysis": "Bishop simplified",
+     "computed": 0.4192
     },
     {
      "value": 0.405,
      "method": "Janbu simplified, non-circular",
-     "source": "Arai & Tagyo (1985)"
+     "source": "Arai & Tagyo (1985)",
+     "analysis": "Janbu simplified, non-circular",
+     "computed": 0.3927
     },
     {
      "value": 0.43,
      "method": "Janbu corrected, non-circular",
-     "source": "Arai & Tagyo (1985)"
+     "source": "Arai & Tagyo (1985)",
+     "analysis": "Janbu corrected, non-circular",
+     "computed": 0.4126
     },
     {
      "value": 0.43,
      "method": "Bishop simplified",
-     "source": "Kim et al. (2002)"
+     "source": "Kim et al. (2002)",
+     "analysis": "Bishop simplified",
+     "computed": 0.4192
     },
     {
      "value": 0.39,
      "upper": 0.44,
      "method": "Spencer, non-circular",
-     "source": "Kim et al. (2002)"
+     "source": "Kim et al. (2002)",
+     "analysis": "Spencer, non-circular",
+     "computed": 0.4119
     },
     {
      "value": 0.39,
      "method": "Spencer, non-circular",
-     "source": "Greco (1996)"
+     "source": "Greco (1996)",
+     "analysis": "Spencer, non-circular",
+     "computed": 0.4119
     }
    ],
    "results": [
@@ -117,6 +146,16 @@
       "min": 0.414,
       "max": 0.414
      }
+    },
+    {
+     "method": "Janbu simplified, non-circular",
+     "computed": 0.3927,
+     "programs": null
+    },
+    {
+     "method": "Janbu corrected, non-circular",
+     "computed": 0.4126,
+     "programs": null
     }
    ]
   },
@@ -132,17 +171,23 @@
     {
      "value": 1.138,
      "method": "Bishop simplified",
-     "source": "Arai & Tagyo (1985)"
+     "source": "Arai & Tagyo (1985)",
+     "analysis": "Bishop simplified",
+     "computed": 1.1128
     },
     {
      "value": 0.995,
      "method": "Janbu simplified, non-circular",
-     "source": "Arai & Tagyo (1985)"
+     "source": "Arai & Tagyo (1985)",
+     "analysis": "Janbu simplified, non-circular",
+     "computed": 0.9671
     },
     {
      "value": 1.071,
      "method": "Janbu corrected, non-circular",
-     "source": "Arai & Tagyo (1985)"
+     "source": "Arai & Tagyo (1985)",
+     "analysis": "Janbu corrected, non-circular",
+     "computed": 1.0481
     }
    ],
    "results": [
@@ -169,8 +214,19 @@
       "min": 1.131,
       "max": 1.131
      }
+    },
+    {
+     "method": "Janbu simplified, non-circular",
+     "computed": 0.9671,
+     "programs": null
+    },
+    {
+     "method": "Janbu corrected, non-circular",
+     "computed": 1.0481,
+     "programs": null
     }
-   ]
+   ],
+   "note": "Arai & Tagyo's Bishop value 1.138 is about 2 % above the other programs (1.112–1.118 with Bishop)."
   },
   {
    "id": "V004a",
@@ -184,7 +240,8 @@
     {
      "value": 2.66,
      "method": "Mohr-Coulomb strength",
-     "source": "Baker (2003)"
+     "source": "Baker (2003)",
+     "computed": null
     }
    ],
    "results": [
@@ -204,7 +261,8 @@
       "max": 2.662
      }
     }
-   ]
+   ],
+   "note": "Baker (2003) gives the factor of safety for the Mohr-Coulomb fit and for the non-linear envelope without naming the slice method."
   },
   {
    "id": "V004b",
@@ -218,12 +276,14 @@
     {
      "value": 2.64,
      "method": "non-linear strength envelope",
-     "source": "Baker (2003)"
+     "source": "Baker (2003)",
+     "computed": null
     },
     {
      "value": 2.66,
      "method": "Mohr-Coulomb strength",
-     "source": "Baker (2003)"
+     "source": "Baker (2003)",
+     "computed": null
     }
    ],
    "results": [
@@ -243,7 +303,8 @@
       "max": 2.696
      }
     }
-   ]
+   ],
+   "note": "Baker (2003) gives the factor of safety for the Mohr-Coulomb fit and for the non-linear envelope without naming the slice method."
   },
   {
    "id": "V005",
@@ -257,7 +318,9 @@
     {
      "value": 2.5,
      "source": "Theory",
-     "method": "infinite slope"
+     "method": "infinite slope",
+     "analysis": "Bishop simplified",
+     "computed": 2.5228
     }
    ],
    "results": [
@@ -285,7 +348,8 @@
     {
      "value": 1.35,
      "method": "Culmann (planar wedge)",
-     "source": "Baker (2001)"
+     "source": "Baker (2001)",
+     "computed": null
     }
    ],
    "results": [
@@ -319,7 +383,8 @@
     {
      "value": 1.5,
      "method": "Mohr-Coulomb strength",
-     "source": "Baker (2003)"
+     "source": "Baker (2003)",
+     "computed": null
     }
    ],
    "results": [
@@ -331,7 +396,8 @@
       "max": 1.469
      }
     }
-   ]
+   ],
+   "note": "Baker (2003) gives the factor of safety for the Mohr-Coulomb fit and for the non-linear envelope without naming the slice method."
   },
   {
    "id": "V007b",
@@ -345,12 +411,14 @@
     {
      "value": 0.97,
      "method": "non-linear strength envelope",
-     "source": "Baker (2003)"
+     "source": "Baker (2003)",
+     "computed": null
     },
     {
      "value": 1.5,
      "method": "Mohr-Coulomb strength",
-     "source": "Baker (2003)"
+     "source": "Baker (2003)",
+     "computed": null
     }
    ],
    "results": [
@@ -370,7 +438,8 @@
       "max": 0.981
      }
     }
-   ]
+   ],
+   "note": "Baker (2003) gives the factor of safety for the Mohr-Coulomb fit and for the non-linear envelope without naming the slice method; 1.50 is his Mohr-Coulomb value for the same slope."
   },
   {
    "id": "V007c",
@@ -384,7 +453,8 @@
     {
      "value": 1.35,
      "method": "Mohr-Coulomb strength",
-     "source": "Baker (2003)"
+     "source": "Baker (2003)",
+     "computed": null
     }
    ],
    "results": [
@@ -396,7 +466,8 @@
       "max": 1.291
      }
     }
-   ]
+   ],
+   "note": "Baker (2003) gives the factor of safety for the Mohr-Coulomb fit without naming the slice method."
   },
   {
    "id": "V008a",
@@ -410,7 +481,8 @@
     {
      "value": 1.5,
      "method": "Mohr-Coulomb strength",
-     "source": "Baker (2003)"
+     "source": "Baker (2003)",
+     "computed": null
     }
    ],
    "results": [
@@ -422,7 +494,8 @@
       "max": 1.536
      }
     }
-   ]
+   ],
+   "note": "Baker (2003) gives the factor of safety for the Mohr-Coulomb fit without naming the slice method."
   },
   {
    "id": "V008b",
@@ -436,7 +509,8 @@
     {
      "value": 1.35,
      "method": "Mohr-Coulomb strength",
-     "source": "Baker (2003)"
+     "source": "Baker (2003)",
+     "computed": null
     }
    ],
    "results": [
@@ -448,7 +522,8 @@
       "max": 1.366
      }
     }
-   ]
+   ],
+   "note": "Baker (2003) gives the factor of safety for the Mohr-Coulomb fit without naming the slice method."
   },
   {
    "id": "V009a",
@@ -468,7 +543,8 @@
       "max": 1.925
      }
     }
-   ]
+   ],
+   "note": "The published 1.91 belongs to Baker & Leshchinsky's own non-circular surface (V009b), not to this circle."
   },
   {
    "id": "V009b",
@@ -482,7 +558,9 @@
     {
      "value": 1.91,
      "source": "Baker & Leshchinsky",
-     "method": "Spencer"
+     "method": "Spencer",
+     "analysis": "Spencer",
+     "computed": 1.8817
     }
    ],
    "results": [
@@ -505,7 +583,9 @@
     {
      "value": 1.91,
      "method": "Spencer, non-circular",
-     "source": "Baker & Leshchinsky (2001)"
+     "source": "Baker & Leshchinsky (2001)",
+     "analysis": "Spencer, non-circular",
+     "computed": 1.868
     }
    ],
    "results": [
@@ -517,7 +597,8 @@
       "max": 1.868
      }
     }
-   ]
+   ],
+   "note": "Baker & Leshchinsky's 1.91 is for their own surface (V009b); searches find lower surfaces."
   },
   {
    "id": "V010",
@@ -531,7 +612,9 @@
     {
      "value": 1.15,
      "source": "Borges & Cardoso",
-     "method": "Morgenstern-Price (half-sine)"
+     "method": "Morgenstern-Price (half-sine)",
+     "analysis": "Morgenstern-Price (half-sine)",
+     "computed": 1.1624
     }
    ],
    "results": [
@@ -564,7 +647,8 @@
    "published": [
     {
      "value": 1.25,
-     "source": "Borges & Cardoso (2002)"
+     "source": "Borges & Cardoso (2002)",
+     "computed": null
     }
    ],
    "results": [
@@ -576,7 +660,8 @@
       "max": 1.23
      }
     }
-   ]
+   ],
+   "note": "Borges & Cardoso print two decimals and do not name the method; the other programs differ from them by up to 2.5 %."
   },
   {
    "id": "V011b",
@@ -589,7 +674,8 @@
    "published": [
     {
      "value": 1.19,
-     "source": "Borges & Cardoso (2002)"
+     "source": "Borges & Cardoso (2002)",
+     "computed": null
     }
    ],
    "results": [
@@ -601,7 +687,8 @@
       "max": 1.22
      }
     }
-   ]
+   ],
+   "note": "Borges & Cardoso print two decimals and do not name the method; the other programs differ from them by up to 2.5 %."
   },
   {
    "id": "V012",
@@ -614,7 +701,8 @@
    "published": [
     {
      "value": 0.99,
-     "source": "Borges & Cardoso (2002)"
+     "source": "Borges & Cardoso (2002)",
+     "computed": null
     }
    ],
    "results": [
@@ -626,7 +714,8 @@
       "max": 0.98
      }
     }
-   ]
+   ],
+   "note": "Borges & Cardoso print two decimals and do not name the method."
   },
   {
    "id": "V013a",
@@ -640,7 +729,9 @@
     {
      "value": 1.13,
      "source": "Cai & Ugai",
-     "method": "Bishop simplified"
+     "method": "Bishop simplified",
+     "analysis": "Bishop simplified",
+     "computed": 1.1429
     }
    ],
    "results": [
@@ -665,7 +756,8 @@
    "published": [
     {
      "value": 1.54,
-     "source": "Cai & Ugai (2000)"
+     "source": "Cai & Ugai (2000)",
+     "computed": null
     }
    ],
    "results": [
@@ -677,7 +769,8 @@
       "max": 1.54
      }
     }
-   ]
+   ],
+   "note": "Cai & Ugai's values are for surfaces through the pile row; the programs search their own critical surfaces, which can differ."
   },
   {
    "id": "V013c",
@@ -690,7 +783,8 @@
    "published": [
     {
      "value": 1.37,
-     "source": "Cai & Ugai (2000)"
+     "source": "Cai & Ugai (2000)",
+     "computed": null
     }
    ],
    "results": [
@@ -702,7 +796,8 @@
       "max": 1.43
      }
     }
-   ]
+   ],
+   "note": "Cai & Ugai's values are for surfaces through the pile row; the programs search their own critical surfaces, which can differ."
   },
   {
    "id": "V013d",
@@ -715,7 +810,8 @@
    "published": [
     {
      "value": 1.31,
-     "source": "Cai & Ugai (2000)"
+     "source": "Cai & Ugai (2000)",
+     "computed": null
     }
    ],
    "results": [
@@ -727,7 +823,8 @@
       "max": 1.33
      }
     }
-   ]
+   ],
+   "note": "Cai & Ugai's values are for surfaces through the pile row; the programs search their own critical surfaces, which can differ."
   },
   {
    "id": "V013e",
@@ -740,7 +837,8 @@
    "published": [
     {
      "value": 1.25,
-     "source": "Cai & Ugai (2000)"
+     "source": "Cai & Ugai (2000)",
+     "computed": null
     }
    ],
    "results": [
@@ -752,7 +850,8 @@
       "max": 1.25
      }
     }
-   ]
+   ],
+   "note": "Cai & Ugai's values are for surfaces through the pile row; the programs search their own critical surfaces, which can differ."
   },
   {
    "id": "V014",
@@ -780,7 +879,8 @@
       "max": 1.576
      }
     }
-   ]
+   ],
+   "note": "The reference results come from design programs quoted in the soil nail manual; no independent value is published."
   },
   {
    "id": "V015",
@@ -808,7 +908,8 @@
       "max": 1.446
      }
     }
-   ]
+   ],
+   "note": "The reference results come from design programs quoted in the soil nail manual; no independent value is published."
   },
   {
    "id": "V016a",
@@ -836,7 +937,8 @@
       "max": 1.791
      }
     }
-   ]
+   ],
+   "note": "The paper gives its results in figures only; the comparison is with the other programs."
   },
   {
    "id": "V016b",
@@ -864,7 +966,8 @@
       "max": 1.839
      }
     }
-   ]
+   ],
+   "note": "The paper gives its results in figures only; the comparison is with the other programs."
   },
   {
    "id": "V016c",
@@ -892,7 +995,8 @@
       "max": 1.803
      }
     }
-   ]
+   ],
+   "note": "The paper gives its results in figures only; the comparison is with the other programs."
   },
   {
    "id": "V017a",
@@ -920,7 +1024,8 @@
       "max": 1.386
      }
     }
-   ]
+   ],
+   "note": "The paper gives its results in figures only; the comparison is with the other programs."
   },
   {
    "id": "V017b",
@@ -940,7 +1045,8 @@
       "max": 1.382
      }
     }
-   ]
+   ],
+   "note": "The paper gives its results in figures only; the comparison is with the other programs."
   },
   {
    "id": "V018",
@@ -954,7 +1060,9 @@
     {
      "value": 1.05,
      "method": "Spencer",
-     "source": "Chen & Shao (1988)"
+     "source": "Chen & Shao (1988)",
+     "analysis": "Spencer",
+     "computed": 1.0521
     }
    ],
    "results": [
@@ -988,7 +1096,9 @@
     {
      "value": 1.383,
      "source": "Cheng et al.",
-     "method": "Spencer"
+     "method": "Spencer",
+     "analysis": "Spencer",
+     "computed": 1.3984
     }
    ],
    "results": [
@@ -1022,7 +1132,9 @@
     {
      "value": 1.327,
      "source": "Cheng et al.",
-     "method": "Spencer"
+     "method": "Spencer",
+     "analysis": "Spencer",
+     "computed": 1.3382
     }
    ],
    "results": [
@@ -1056,7 +1168,9 @@
     {
      "value": 1.128,
      "source": "Chowdhury & Xu",
-     "method": "Bishop simplified"
+     "method": "Bishop simplified",
+     "analysis": "Bishop simplified",
+     "computed": 1.1282
     }
    ],
    "results": [
@@ -1095,7 +1209,9 @@
     {
      "value": 1.109,
      "source": "Chowdhury & Xu",
-     "method": "Bishop simplified"
+     "method": "Bishop simplified",
+     "analysis": "Bishop simplified",
+     "computed": 1.1098
     }
    ],
    "results": [
@@ -1134,7 +1250,9 @@
     {
      "value": 1.1096,
      "source": "Chowdhury & Xu",
-     "method": "Bishop simplified"
+     "method": "Bishop simplified",
+     "analysis": "Bishop simplified",
+     "computed": 1.1083
     }
    ],
    "results": [
@@ -1168,7 +1286,9 @@
     {
      "value": 1.0639,
      "source": "Chowdhury & Xu",
-     "method": "Bishop simplified"
+     "method": "Bishop simplified",
+     "analysis": "Bishop simplified",
+     "computed": 1.058
     }
    ],
    "results": [
@@ -1202,7 +1322,9 @@
     {
      "value": 2.2343,
      "source": "Chowdhury & Xu",
-     "method": "Bishop simplified"
+     "method": "Bishop simplified",
+     "analysis": "Bishop simplified",
+     "computed": 2.2448
     }
    ],
    "results": [
@@ -1236,7 +1358,9 @@
     {
      "value": 2.1396,
      "source": "Chowdhury & Xu",
-     "method": "Bishop simplified"
+     "method": "Bishop simplified",
+     "analysis": "Bishop simplified",
+     "computed": 2.1281
     }
    ],
    "results": [
@@ -1270,7 +1394,9 @@
     {
      "value": 1.4239,
      "source": "Chowdhury & Xu",
-     "method": "Bishop simplified"
+     "method": "Bishop simplified",
+     "analysis": "Bishop simplified",
+     "computed": 1.4279
     }
    ],
    "results": [
@@ -1301,7 +1427,9 @@
     {
      "value": 1.1625,
      "source": "Chowdhury & Xu",
-     "method": "Bishop simplified"
+     "method": "Bishop simplified",
+     "analysis": "Bishop simplified",
+     "computed": 1.1585
     }
    ],
    "results": [
@@ -1340,7 +1468,9 @@
     {
      "value": 1.1479,
      "method": "Bishop simplified",
-     "source": "Chowdhury & Xu (1995)"
+     "source": "Chowdhury & Xu (1995)",
+     "analysis": "Bishop simplified",
+     "computed": 1.1772
     }
    ],
    "results": [
@@ -1360,7 +1490,8 @@
       "max": 1.185
      }
     }
-   ]
+   ],
+   "note": "Chowdhury & Xu's 1.1479 is about 2.5 % below the other programs on this family of circles."
   },
   {
    "id": "V023",
@@ -1373,7 +1504,8 @@
    "published": [
     {
      "value": 1.17,
-     "source": "Duncan (2000)"
+     "source": "Duncan (2000)",
+     "computed": null
     }
    ],
    "results": [
@@ -1385,7 +1517,8 @@
       "max": 1.145
      }
     }
-   ]
+   ],
+   "note": "Duncan (2000) prints two decimals; the other programs give 1.145 on the same input."
   },
   {
    "id": "V024",
@@ -1399,7 +1532,9 @@
     {
      "value": 1.57,
      "source": "Duncan & Wright",
-     "method": "Bishop simplified"
+     "method": "Bishop simplified",
+     "analysis": "Bishop simplified",
+     "computed": 1.5719
     }
    ],
    "results": [
@@ -1432,7 +1567,8 @@
    "published": [
     {
      "value": 1.141,
-     "source": "Duncan & Wright"
+     "source": "Duncan & Wright",
+     "computed": null
     }
    ],
    "results": [
@@ -1466,7 +1602,9 @@
     {
      "value": 1.22,
      "source": "Duncan & Wright",
-     "method": "Bishop simplified"
+     "method": "Bishop simplified",
+     "analysis": "Bishop simplified",
+     "computed": 1.2198
     }
    ],
    "results": [
@@ -1500,7 +1638,9 @@
     {
      "value": 1.124,
      "source": "Duncan & Wright",
-     "method": "Spencer"
+     "method": "Spencer",
+     "analysis": "Spencer",
+     "computed": 1.1323
     }
    ],
    "results": [
@@ -1531,7 +1671,9 @@
     {
      "value": 1.124,
      "source": "Duncan & Wright",
-     "method": "Spencer"
+     "method": "Spencer",
+     "analysis": "Spencer",
+     "computed": 1.1219
     }
    ],
    "results": [
@@ -1562,7 +1704,9 @@
     {
      "value": 1.124,
      "source": "Duncan & Wright",
-     "method": "Spencer"
+     "method": "Spencer",
+     "analysis": "Spencer",
+     "computed": 1.117
     }
    ],
    "results": [
@@ -1593,7 +1737,9 @@
     {
      "value": 1.4,
      "source": "Duncan & Wright",
-     "method": "Spencer"
+     "method": "Spencer",
+     "analysis": "Spencer",
+     "computed": 1.3987
     }
    ],
    "results": [
@@ -1624,7 +1770,9 @@
     {
      "value": 2.56,
      "source": "Duncan & Wright",
-     "method": "Spencer"
+     "method": "Spencer",
+     "analysis": "Spencer",
+     "computed": 2.5306
     }
    ],
    "results": [
@@ -1658,7 +1806,9 @@
     {
      "value": 1.35,
      "source": "Duncan & Wright",
-     "method": "Spencer"
+     "method": "Spencer",
+     "analysis": "Spencer",
+     "computed": 1.352
     }
    ],
    "results": [
@@ -1692,7 +1842,9 @@
     {
      "value": 1.21,
      "source": "Duncan & Wright",
-     "method": "Spencer"
+     "method": "Spencer",
+     "analysis": "Spencer",
+     "computed": 1.2049
     }
    ],
    "results": [
@@ -1726,7 +1878,9 @@
     {
      "value": 1.15,
      "source": "Duncan & Wright",
-     "method": "Spencer"
+     "method": "Spencer",
+     "analysis": "Spencer",
+     "computed": 1.1559
     }
    ],
    "results": [
@@ -1760,7 +1914,9 @@
     {
      "value": 1.535,
      "source": "Duncan & Wright",
-     "method": "Spencer"
+     "method": "Spencer",
+     "analysis": "Spencer",
+     "computed": 1.5327
     }
    ],
    "results": [
@@ -1799,7 +1955,9 @@
     {
      "value": 1.3,
      "source": "Duncan & Wright",
-     "method": "Spencer"
+     "method": "Spencer",
+     "analysis": "Spencer",
+     "computed": 1.2763
     }
    ],
    "results": [
@@ -1838,7 +1996,9 @@
     {
      "value": 1.312,
      "source": "Duncan & Wright",
-     "method": "Spencer"
+     "method": "Spencer",
+     "analysis": "Spencer",
+     "computed": 1.3276
     }
    ],
    "results": [
@@ -1876,7 +2036,8 @@
    "published": [
     {
      "value": 1.51,
-     "source": "Duncan & Wright"
+     "source": "Duncan & Wright",
+     "computed": null
     }
    ],
    "results": [
@@ -1888,7 +2049,8 @@
       "max": 1.575
      }
     }
-   ]
+   ],
+   "note": "Duncan & Wright's 1.51 is about 4 % below the other programs on this surface."
   },
   {
    "id": "V035b",
@@ -1902,7 +2064,9 @@
     {
      "value": 1.32,
      "source": "Duncan & Wright",
-     "method": "Bishop simplified"
+     "method": "Bishop simplified",
+     "analysis": "Bishop simplified",
+     "computed": 1.3194
     }
    ],
    "results": [
@@ -1928,7 +2092,9 @@
     {
      "value": 0.75,
      "source": "Duncan & Wright",
-     "method": "Spencer"
+     "method": "Spencer",
+     "analysis": "Spencer",
+     "computed": 0.7519
     }
    ],
    "results": [
@@ -1970,7 +2136,9 @@
     {
      "value": 0.9,
      "source": "Duncan & Wright",
-     "method": "Spencer"
+     "method": "Spencer",
+     "analysis": "Spencer",
+     "computed": 0.898
     }
    ],
    "results": [
@@ -2012,7 +2180,9 @@
     {
      "value": 1.03,
      "source": "Duncan & Wright",
-     "method": "Spencer"
+     "method": "Spencer",
+     "analysis": "Spencer",
+     "computed": 1.0285
     }
    ],
    "results": [
@@ -2054,7 +2224,9 @@
     {
      "value": 1.13,
      "source": "Duncan & Wright",
-     "method": "Spencer"
+     "method": "Spencer",
+     "analysis": "Spencer",
+     "computed": 1.1316
     }
    ],
    "results": [
@@ -2095,7 +2267,8 @@
    "published": [
     {
      "value": 1.61,
-     "source": "Duncan & Wright"
+     "source": "Duncan & Wright",
+     "computed": null
     }
    ],
    "results": [
@@ -2128,7 +2301,8 @@
    "published": [
     {
      "value": 1.16,
-     "source": "Duncan & Wright"
+     "source": "Duncan & Wright",
+     "computed": null
     }
    ],
    "results": [
@@ -2148,7 +2322,8 @@
       "max": 1.1
      }
     }
-   ]
+   ],
+   "note": "Duncan & Wright's 1.16 is 5–8 % above the other programs (1.07–1.10) on the same input."
   },
   {
    "id": "V039",
@@ -2162,12 +2337,16 @@
     {
      "value": 1.45,
      "source": "Duncan & Wright",
-     "method": "Bishop simplified"
+     "method": "Bishop simplified",
+     "analysis": "Bishop simplified",
+     "computed": 1.4243
     },
     {
      "value": 1.17,
      "source": "Duncan & Wright",
-     "method": "Spencer, non-circular"
+     "method": "Spencer, non-circular",
+     "analysis": "Spencer, non-circular",
+     "computed": 1.1549
     }
    ],
    "results": [
@@ -2223,7 +2402,9 @@
     {
      "value": 1.6,
      "source": "Duncan & Wright",
-     "method": "Spencer"
+     "method": "Spencer",
+     "analysis": "Spencer",
+     "computed": 1.594
     }
    ],
    "results": [
@@ -2265,7 +2446,9 @@
     {
      "value": 1.6,
      "source": "Duncan & Wright",
-     "method": "Spencer"
+     "method": "Spencer",
+     "analysis": "Spencer",
+     "computed": 1.5935
     }
    ],
    "results": [
@@ -2306,7 +2489,8 @@
    "published": [
     {
      "value": 1.67,
-     "source": "Duncan & Wright"
+     "source": "Duncan & Wright",
+     "computed": null
     }
    ],
    "results": [
@@ -2348,7 +2532,9 @@
     {
      "value": 1.31,
      "source": "El-Ramly et al.",
-     "method": "Bishop simplified"
+     "method": "Bishop simplified",
+     "analysis": "Bishop simplified",
+     "computed": 1.32
     }
    ],
    "results": [
@@ -2374,12 +2560,16 @@
     {
      "value": 2.08,
      "source": "Fredlund & Krahn",
-     "method": "Bishop simplified"
+     "method": "Bishop simplified",
+     "analysis": "Bishop simplified",
+     "computed": 2.0759
     },
     {
      "value": 2.076,
      "source": "Fredlund & Krahn",
-     "method": "Morgenstern-Price (half-sine)"
+     "method": "Morgenstern-Price (half-sine)",
+     "analysis": "Morgenstern-Price (half-sine)",
+     "computed": 2.0716
     }
    ],
    "results": [
@@ -2407,12 +2597,16 @@
     {
      "value": 1.834,
      "source": "Fredlund & Krahn",
-     "method": "Bishop simplified"
+     "method": "Bishop simplified",
+     "analysis": "Bishop simplified",
+     "computed": 1.8289
     },
     {
      "value": 1.832,
      "source": "Fredlund & Krahn",
-     "method": "Morgenstern-Price (half-sine)"
+     "method": "Morgenstern-Price (half-sine)",
+     "analysis": "Morgenstern-Price (half-sine)",
+     "computed": 1.8266
     }
    ],
    "results": [
@@ -2440,7 +2634,9 @@
     {
      "value": 1.37,
      "source": "Fredlund & Krahn",
-     "method": "Morgenstern-Price (half-sine)"
+     "method": "Morgenstern-Price (half-sine)",
+     "analysis": "Morgenstern-Price (half-sine)",
+     "computed": 1.3699
     }
    ],
    "results": [
@@ -2479,7 +2675,9 @@
     {
      "value": 1,
      "source": "ACADS",
-     "method": "Spencer"
+     "method": "Spencer",
+     "analysis": "Spencer",
+     "computed": 0.9841
     }
    ],
    "results": [
@@ -2529,7 +2727,8 @@
     {
      "value": 1.65,
      "upper": 1.7,
-     "source": "Giam & Donald (1989), ACADS"
+     "source": "Giam & Donald (1989), ACADS",
+     "computed": null
     }
    ],
    "results": [
@@ -2562,7 +2761,8 @@
    "published": [
     {
      "value": 1.65,
-     "source": "Giam & Donald (1989), ACADS"
+     "source": "Giam & Donald (1989), ACADS",
+     "computed": null
     }
    ],
    "results": [
@@ -2590,7 +2790,8 @@
       "max": 1.489
      }
     }
-   ]
+   ],
+   "note": "The ACADS reference 1.65 corresponds to a dry tension crack; with the crack filled with water the programs give about 1.59–1.60."
   },
   {
    "id": "V049",
@@ -2603,7 +2804,8 @@
    "published": [
     {
      "value": 1.39,
-     "source": "Giam & Donald (1989), ACADS"
+     "source": "Giam & Donald (1989), ACADS",
+     "computed": null
     }
    ],
    "results": [
@@ -2652,7 +2854,8 @@
    "published": [
     {
      "value": 1.34,
-     "source": "Giam & Donald (1989), ACADS"
+     "source": "Giam & Donald (1989), ACADS",
+     "computed": null
     }
    ],
    "results": [
@@ -2680,7 +2883,8 @@
       "max": 1.261
      }
     }
-   ]
+   ],
+   "note": "The ACADS referee value comes from the 1989 survey; programs today give 1.26–1.29 on the specified surface."
   },
   {
    "id": "V050b",
@@ -2694,7 +2898,8 @@
     {
      "value": 1.24,
      "upper": 1.27,
-     "source": "Giam & Donald (1989), ACADS"
+     "source": "Giam & Donald (1989), ACADS",
+     "computed": null
     }
    ],
    "results": [
@@ -2706,7 +2911,8 @@
       "max": 1.246
      }
     }
-   ]
+   ],
+   "note": "ACADS accepted 1.24–1.27; cSlope's search finds a surface along the weak layer at 1.228 (Spencer), unchanged at 50, 100 and 200 slices."
   },
   {
    "id": "V051",
@@ -2719,7 +2925,8 @@
    "published": [
     {
      "value": 0.78,
-     "source": "Giam & Donald (1989), ACADS"
+     "source": "Giam & Donald (1989), ACADS",
+     "computed": null
     }
    ],
    "results": [
@@ -2731,7 +2938,8 @@
       "max": 0.707
      }
     }
-   ]
+   ],
+   "note": "The ACADS referee value 0.78 comes from the 1989 survey, where the participating programs averaged 0.81; optimised non-circular searches today give about 0.68–0.71."
   },
   {
    "id": "V052a",
@@ -2744,7 +2952,8 @@
    "published": [
     {
      "value": 1.95,
-     "source": "Giam & Donald (1989), ACADS"
+     "source": "Giam & Donald (1989), ACADS",
+     "computed": null
     }
    ],
    "results": [
@@ -2785,7 +2994,8 @@
    "published": [
     {
      "value": 2.29,
-     "source": "Giam & Donald (1989), ACADS"
+     "source": "Giam & Donald (1989), ACADS",
+     "computed": null
     }
    ],
    "results": [
@@ -2836,11 +3046,14 @@
      "value": 1.01,
      "upper": 1.03,
      "method": "Spencer, non-circular",
-     "source": "Chen & Shao (1988)"
+     "source": "Chen & Shao (1988)",
+     "analysis": "Spencer, non-circular",
+     "computed": 1.0089
     },
     {
      "value": 1.08,
-     "source": "Greco (1996)"
+     "source": "Greco (1996)",
+     "computed": null
     }
    ],
    "results": [
@@ -2852,7 +3065,8 @@
       "max": 1.01
      }
     }
-   ]
+   ],
+   "note": "Chen & Shao give 1.01–1.03 for a surface sliding along the weak layer; Greco's 1.08 is for the surface of his own search."
   },
   {
    "id": "V054",
@@ -2866,7 +3080,9 @@
     {
      "value": 1.08,
      "method": "Spencer, nearly circular surface",
-     "source": "Greco (1996)"
+     "source": "Greco (1996)",
+     "analysis": "Spencer",
+     "computed": 1.0913
     }
    ],
    "results": [
@@ -2900,7 +3116,9 @@
     {
      "value": 1.4,
      "source": "Griffiths & Lane",
-     "method": "finite elements"
+     "method": "finite elements",
+     "analysis": "Spencer",
+     "computed": 1.3662
     }
    ],
    "results": [
@@ -2926,7 +3144,9 @@
     {
      "value": 0.485,
      "source": "Griffiths & Lane",
-     "method": "Janbu wedge"
+     "method": "Janbu wedge",
+     "analysis": "Janbu corrected",
+     "computed": 0.4994
     }
    ],
    "results": [
@@ -2949,7 +3169,9 @@
     {
      "value": 1.46,
      "source": "Griffiths & Lane",
-     "method": "limit-equilibrium chart"
+     "method": "limit-equilibrium chart",
+     "analysis": "Spencer",
+     "computed": 1.4705
     }
    ],
    "results": [
@@ -2975,7 +3197,9 @@
     {
      "value": 2.04,
      "source": "Griffiths & Lane",
-     "method": "limit-equilibrium chart"
+     "method": "limit-equilibrium chart",
+     "analysis": "Spencer",
+     "computed": 2.0231
     }
    ],
    "results": [
@@ -3001,7 +3225,9 @@
     {
      "value": 1.9,
      "source": "Griffiths & Lane",
-     "method": "finite elements"
+     "method": "finite elements",
+     "analysis": "Spencer",
+     "computed": 1.9152
     }
    ],
    "results": [
@@ -3033,7 +3259,8 @@
       "max": 1.215
      }
     }
-   ]
+   ],
+   "note": "The paper gives its results in figures only; the comparison is with the other programs."
   },
   {
    "id": "V059b",
@@ -3053,7 +3280,8 @@
       "max": 1.29
      }
     }
-   ]
+   ],
+   "note": "The paper gives its results in figures only; the comparison is with the other programs."
   },
   {
    "id": "V059c",
@@ -3073,7 +3301,8 @@
       "max": 1.315
      }
     }
-   ]
+   ],
+   "note": "The paper gives its results in figures only; the comparison is with the other programs."
   },
   {
    "id": "V060a",
@@ -3093,7 +3322,8 @@
       "max": 2.551
      }
     }
-   ]
+   ],
+   "note": "Hassan & Wolff give 2.753 on a fixed circle (V062a), not a search result."
   },
   {
    "id": "V060b",
@@ -3113,7 +3343,8 @@
       "max": 2.973
      }
     }
-   ]
+   ],
+   "note": "The source gives reliability indices on fixed circles; no factor of safety is published for the minimum-β circle."
   },
   {
    "id": "V061",
@@ -3127,7 +3358,9 @@
     {
      "value": 2.36,
      "source": "Wolff & Harr",
-     "method": "Morgenstern-Price (half-sine)"
+     "method": "Morgenstern-Price (half-sine)",
+     "analysis": "Morgenstern-Price (half-sine)",
+     "computed": 2.3837
     }
    ],
    "results": [
@@ -3160,7 +3393,8 @@
    "published": [
     {
      "value": 2.753,
-     "source": "Hassan & Wolff (1999)"
+     "source": "Hassan & Wolff (1999)",
+     "computed": null
     }
    ],
    "results": [
@@ -3172,7 +3406,8 @@
       "max": 2.56
      }
     }
-   ]
+   ],
+   "note": "Hassan & Wolff's own factors of safety differ from all programs by 3–75 %, while the programs agree with each other within 0.5 %."
   },
   {
    "id": "V062b",
@@ -3185,7 +3420,8 @@
    "published": [
     {
      "value": 2.352,
-     "source": "Hassan & Wolff (1999)"
+     "source": "Hassan & Wolff (1999)",
+     "computed": null
     }
    ],
    "results": [
@@ -3197,7 +3433,8 @@
       "max": 2.82
      }
     }
-   ]
+   ],
+   "note": "Hassan & Wolff's own factors of safety differ from all programs by 3–75 %, while the programs agree with each other within 0.5 %."
   },
   {
    "id": "V062c",
@@ -3210,7 +3447,8 @@
    "published": [
     {
      "value": 2.523,
-     "source": "Hassan & Wolff (1999)"
+     "source": "Hassan & Wolff (1999)",
+     "computed": null
     }
    ],
    "results": [
@@ -3222,7 +3460,8 @@
       "max": 2.777
      }
     }
-   ]
+   ],
+   "note": "Hassan & Wolff's own factors of safety differ from all programs by 3–75 %, while the programs agree with each other within 0.5 %."
   },
   {
    "id": "V062d",
@@ -3235,7 +3474,8 @@
    "published": [
     {
      "value": 2.457,
-     "source": "Hassan & Wolff (1999)"
+     "source": "Hassan & Wolff (1999)",
+     "computed": null
     }
    ],
    "results": [
@@ -3247,7 +3487,8 @@
       "max": 2.589
      }
     }
-   ]
+   ],
+   "note": "Hassan & Wolff's own factors of safety differ from all programs by 3–75 %, while the programs agree with each other within 0.5 %."
   },
   {
    "id": "V062e",
@@ -3260,7 +3501,8 @@
    "published": [
     {
      "value": 2.602,
-     "source": "Hassan & Wolff (1999)"
+     "source": "Hassan & Wolff (1999)",
+     "computed": null
     }
    ],
    "results": [
@@ -3272,7 +3514,8 @@
       "max": 2.703
      }
     }
-   ]
+   ],
+   "note": "Hassan & Wolff's own factors of safety differ from all programs by 3–75 %, while the programs agree with each other within 0.5 %."
   },
   {
    "id": "V062f",
@@ -3285,7 +3528,8 @@
    "published": [
     {
      "value": 2.995,
-     "source": "Hassan & Wolff (1999)"
+     "source": "Hassan & Wolff (1999)",
+     "computed": null
     }
    ],
    "results": [
@@ -3297,7 +3541,8 @@
       "max": 2.673
      }
     }
-   ]
+   ],
+   "note": "Hassan & Wolff's own factors of safety differ from all programs by 3–75 %, while the programs agree with each other within 0.5 %."
   },
   {
    "id": "V062g",
@@ -3310,7 +3555,8 @@
    "published": [
     {
      "value": 3.916,
-     "source": "Hassan & Wolff (1999)"
+     "source": "Hassan & Wolff (1999)",
+     "computed": null
     }
    ],
    "results": [
@@ -3322,7 +3568,8 @@
       "max": 3.598
      }
     }
-   ]
+   ],
+   "note": "Hassan & Wolff's own factors of safety differ from all programs by 3–75 %, while the programs agree with each other within 0.5 %."
   },
   {
    "id": "V062h",
@@ -3335,7 +3582,8 @@
    "published": [
     {
      "value": 10.576,
-     "source": "Hassan & Wolff (1999)"
+     "source": "Hassan & Wolff (1999)",
+     "computed": null
     }
    ],
    "results": [
@@ -3347,7 +3595,8 @@
       "max": 6.074
      }
     }
-   ]
+   ],
+   "note": "Hassan & Wolff's own factors of safety differ from all programs by 3–75 %, while the programs agree with each other within 0.5 %."
   },
   {
    "id": "V062i",
@@ -3360,7 +3609,8 @@
    "published": [
     {
      "value": 6.293,
-     "source": "Hassan & Wolff (1999)"
+     "source": "Hassan & Wolff (1999)",
+     "computed": null
     }
    ],
    "results": [
@@ -3372,7 +3622,8 @@
       "max": 11.583
      }
     }
-   ]
+   ],
+   "note": "Hassan & Wolff's own factors of safety differ from all programs by 3–75 %, while the programs agree with each other within 0.5 %."
   },
   {
    "id": "V063",
@@ -3386,7 +3637,9 @@
     {
      "value": 2.43,
      "source": "Huang & Jia",
-     "method": "finite-element strength reduction"
+     "method": "finite-element strength reduction",
+     "analysis": "Spencer",
+     "computed": 2.4511
     }
    ],
    "results": [
@@ -3412,7 +3665,9 @@
     {
      "value": 1,
      "method": "Bishop simplified, circular",
-     "source": "Leshchinsky & Han (2004)"
+     "source": "Leshchinsky & Han (2004)",
+     "analysis": "Bishop simplified",
+     "computed": 1.0171
     }
    ],
    "results": [
@@ -3424,7 +3679,8 @@
       "max": 1.02
      }
     }
-   ]
+   ],
+   "note": "Leshchinsky & Han give 1.00 with Bishop's method for every variant of the wall (the reinforcement was designed for that value), and a finite-difference value."
   },
   {
    "id": "V065",
@@ -3438,12 +3694,15 @@
     {
      "value": 1,
      "method": "Bishop simplified, circular",
-     "source": "Leshchinsky & Han (2004)"
+     "source": "Leshchinsky & Han (2004)",
+     "analysis": "Bishop simplified",
+     "computed": 0.9791
     },
     {
      "value": 0.86,
      "method": "finite differences",
-     "source": "Leshchinsky & Han (2004)"
+     "source": "Leshchinsky & Han (2004)",
+     "computed": null
     }
    ],
    "results": [
@@ -3454,8 +3713,14 @@
       "min": 0.964,
       "max": 0.964
      }
+    },
+    {
+     "method": "Bishop simplified",
+     "computed": 0.9791,
+     "programs": null
     }
-   ]
+   ],
+   "note": "Leshchinsky & Han give 1.00 with Bishop's method for every variant of the wall (the reinforcement was designed for that value), and a finite-difference value."
   },
   {
    "id": "V066a",
@@ -3469,12 +3734,15 @@
     {
      "value": 1,
      "method": "Bishop simplified, circular",
-     "source": "Leshchinsky & Han (2004)"
+     "source": "Leshchinsky & Han (2004)",
+     "analysis": "Bishop simplified",
+     "computed": 1.0305
     },
     {
      "value": 0.99,
      "method": "finite differences",
-     "source": "Leshchinsky & Han (2004)"
+     "source": "Leshchinsky & Han (2004)",
+     "computed": null
     }
    ],
    "results": [
@@ -3486,7 +3754,8 @@
       "max": 1.04
      }
     }
-   ]
+   ],
+   "note": "Leshchinsky & Han give 1.00 with Bishop's method for every variant of the wall (the reinforcement was designed for that value), and a finite-difference value."
   },
   {
    "id": "V066b",
@@ -3500,12 +3769,15 @@
     {
      "value": 1,
      "method": "Bishop simplified, circular",
-     "source": "Leshchinsky & Han (2004)"
+     "source": "Leshchinsky & Han (2004)",
+     "analysis": "Bishop simplified",
+     "computed": 1.0126
     },
     {
      "value": 0.98,
      "method": "finite differences",
-     "source": "Leshchinsky & Han (2004)"
+     "source": "Leshchinsky & Han (2004)",
+     "computed": null
     }
    ],
    "results": [
@@ -3516,8 +3788,14 @@
       "min": 1.011,
       "max": 1.011
      }
+    },
+    {
+     "method": "Bishop simplified",
+     "computed": 1.0126,
+     "programs": null
     }
-   ]
+   ],
+   "note": "Leshchinsky & Han give 1.00 with Bishop's method for every variant of the wall (the reinforcement was designed for that value), and a finite-difference value."
   },
   {
    "id": "V066c",
@@ -3531,12 +3809,15 @@
     {
      "value": 1,
      "method": "Bishop simplified, circular",
-     "source": "Leshchinsky & Han (2004)"
+     "source": "Leshchinsky & Han (2004)",
+     "analysis": "Bishop simplified",
+     "computed": 1.0115
     },
     {
      "value": 1.01,
      "method": "finite differences",
-     "source": "Leshchinsky & Han (2004)"
+     "source": "Leshchinsky & Han (2004)",
+     "computed": null
     }
    ],
    "results": [
@@ -3548,7 +3829,8 @@
       "max": 1.004
      }
     }
-   ]
+   ],
+   "note": "Leshchinsky & Han give 1.00 with Bishop's method for every variant of the wall (the reinforcement was designed for that value), and a finite-difference value."
   },
   {
    "id": "V066d",
@@ -3562,12 +3844,15 @@
     {
      "value": 1,
      "method": "Bishop simplified, circular",
-     "source": "Leshchinsky & Han (2004)"
+     "source": "Leshchinsky & Han (2004)",
+     "analysis": "Bishop simplified",
+     "computed": 1.01
     },
     {
      "value": 1.01,
      "method": "finite differences",
-     "source": "Leshchinsky & Han (2004)"
+     "source": "Leshchinsky & Han (2004)",
+     "computed": null
     }
    ],
    "results": [
@@ -3579,7 +3864,8 @@
       "max": 1.01
      }
     }
-   ]
+   ],
+   "note": "Leshchinsky & Han give 1.00 with Bishop's method for every variant of the wall (the reinforcement was designed for that value), and a finite-difference value."
   },
   {
    "id": "V066e",
@@ -3593,12 +3879,15 @@
     {
      "value": 1,
      "method": "Bishop simplified, circular",
-     "source": "Leshchinsky & Han (2004)"
+     "source": "Leshchinsky & Han (2004)",
+     "analysis": "Bishop simplified",
+     "computed": 0.961
     },
     {
      "value": 1.02,
      "method": "finite differences",
-     "source": "Leshchinsky & Han (2004)"
+     "source": "Leshchinsky & Han (2004)",
+     "computed": null
     }
    ],
    "results": [
@@ -3610,7 +3899,8 @@
       "max": 0.958
      }
     }
-   ]
+   ],
+   "note": "Leshchinsky & Han give 1.00 with Bishop's method for every variant of the wall (the reinforcement was designed for that value), and a finite-difference value."
   },
   {
    "id": "V067",
@@ -3624,7 +3914,8 @@
     {
      "value": 1.44,
      "method": "Ordinary",
-     "source": "Low (1989)"
+     "source": "Low (1989)",
+     "computed": null
     }
    ],
    "results": [
@@ -3650,16 +3941,20 @@
     {
      "value": 1.36,
      "method": "Ordinary",
-     "source": "Low (1989)"
+     "source": "Low (1989)",
+     "computed": null
     },
     {
      "value": 1.14,
      "method": "Bishop simplified",
-     "source": "Low (1989)"
+     "source": "Low (1989)",
+     "analysis": "Bishop simplified",
+     "computed": 1.1968
     },
     {
      "value": 1.17,
-     "source": "Kim (2002)"
+     "source": "Kim (2002)",
+     "computed": null
     }
    ],
    "results": [
@@ -3671,7 +3966,8 @@
       "max": 1.192
      }
     }
-   ]
+   ],
+   "note": "Low's Bishop value 1.14 is about 4 % below the other programs (1.19); Kim (2002) gives 1.17."
   },
   {
    "id": "V069a",
@@ -3685,7 +3981,9 @@
     {
      "value": 1.2,
      "source": "Morgenstern",
-     "method": "stability chart"
+     "method": "stability chart",
+     "analysis": "Bishop simplified",
+     "computed": 1.1999
     }
    ],
    "results": [
@@ -3713,7 +4011,8 @@
     {
      "value": 1.2,
      "method": "stability chart",
-     "source": "Morgenstern (1963)"
+     "source": "Morgenstern (1963)",
+     "computed": null
     }
    ],
    "results": [
@@ -3725,7 +4024,8 @@
       "max": 1.212
      }
     }
-   ]
+   ],
+   "note": "Morgenstern's 1.2 is read from a stability chart."
   },
   {
    "id": "V070",
@@ -3739,7 +4039,9 @@
     {
      "value": 1.41,
      "source": "Morgenstern",
-     "method": "stability chart"
+     "method": "stability chart",
+     "analysis": "Bishop simplified",
+     "computed": 1.4147
     }
    ],
    "results": [
@@ -3787,7 +4089,8 @@
       "max": 1.3
      }
     }
-   ]
+   ],
+   "note": "Pockoski & Duncan compare computer programs and publish no independent value."
   },
   {
    "id": "V071b",
@@ -3823,7 +4126,8 @@
       "max": 1.151
      }
     }
-   ]
+   ],
+   "note": "Pockoski & Duncan compare computer programs and publish no independent value."
   },
   {
    "id": "V072a",
@@ -3851,7 +4155,8 @@
       "max": 1.29
      }
     }
-   ]
+   ],
+   "note": "Pockoski & Duncan compare computer programs and publish no independent value."
   },
   {
    "id": "V072b",
@@ -3887,7 +4192,8 @@
       "max": 1.141
      }
     }
-   ]
+   ],
+   "note": "Pockoski & Duncan compare computer programs and publish no independent value."
   },
   {
    "id": "V073",
@@ -3915,7 +4221,8 @@
       "max": 1.422
      }
     }
-   ]
+   ],
+   "note": "Pockoski & Duncan compare computer programs and publish no independent value."
   },
   {
    "id": "V074",
@@ -3943,7 +4250,8 @@
       "max": 1.073
      }
     }
-   ]
+   ],
+   "note": "Pockoski & Duncan compare computer programs and publish no independent value."
   },
   {
    "id": "V075",
@@ -3971,7 +4279,8 @@
       "max": 0.596
      }
     }
-   ]
+   ],
+   "note": "Pockoski & Duncan compare computer programs and publish no independent value."
   },
   {
    "id": "V076",
@@ -3999,7 +4308,8 @@
       "max": 1.145
      }
     }
-   ]
+   ],
+   "note": "Pockoski & Duncan compare computer programs and publish no independent value."
   },
   {
    "id": "V077",
@@ -4013,7 +4323,8 @@
     {
      "value": 1,
      "method": "plasticity theory",
-     "source": "Prandtl (1920)"
+     "source": "Prandtl (1920)",
+     "computed": null
     }
    ],
    "results": [
@@ -4025,7 +4336,8 @@
       "max": 0.94
      }
     }
-   ]
+   ],
+   "note": "The theoretical factor of safety is 1.0; limit equilibrium with slices gives about 6 % less on this mechanism."
   },
   {
    "id": "V078",
@@ -4039,7 +4351,8 @@
     {
      "value": 1,
      "method": "plasticity theory",
-     "source": "Prandtl (1921)"
+     "source": "Prandtl (1921)",
+     "computed": null
     }
    ],
    "results": [
@@ -4051,7 +4364,8 @@
       "max": 0.96
      }
     }
-   ]
+   ],
+   "note": "The theoretical factor of safety is 1.0; limit equilibrium with slices gives about 4 % less on this mechanism."
   },
   {
    "id": "V079",
@@ -4064,7 +4378,8 @@
    "published": [
     {
      "value": 1.049,
-     "source": "Priest (1993)"
+     "source": "Priest (1993)",
+     "computed": null
     }
    ],
    "results": [
@@ -4098,7 +4413,9 @@
     {
      "value": 1.049,
      "source": "Priest",
-     "method": "Spencer"
+     "method": "Spencer",
+     "analysis": "Spencer",
+     "computed": 1.0492
     }
    ],
    "results": [
@@ -4135,7 +4452,8 @@
       "max": 0.764
      }
     }
-   ]
+   ],
+   "note": "The source compares programs and publishes no independent value."
   },
   {
    "id": "V081b",
@@ -4155,7 +4473,8 @@
       "max": 1.504
      }
     }
-   ]
+   ],
+   "note": "The source compares programs and publishes no independent value."
   },
   {
    "id": "V082a",
@@ -4191,7 +4510,8 @@
       "max": 1.532
      }
     }
-   ]
+   ],
+   "note": "The source compares programs and publishes no independent value."
   },
   {
    "id": "V082b",
@@ -4219,7 +4539,8 @@
       "max": 1.51
      }
     }
-   ]
+   ],
+   "note": "The source compares programs and publishes no independent value."
   },
   {
    "id": "V082c",
@@ -4247,7 +4568,8 @@
       "max": 1.402
      }
     }
-   ]
+   ],
+   "note": "The source compares programs and publishes no independent value."
   },
   {
    "id": "V083",
@@ -4261,7 +4583,8 @@
     {
      "value": 0.887,
      "method": "force-equilibrium trial wedge",
-     "source": "Sheahan & Ho (2003)"
+     "source": "Sheahan & Ho (2003)",
+     "computed": null
     }
    ],
    "results": [
@@ -4273,7 +4596,8 @@
       "max": 0.89
      }
     }
-   ]
+   ],
+   "note": "Sheahan & Ho use a force-equilibrium trial wedge; Janbu's method on the same planes differs by up to 4 %."
   },
   {
    "id": "V084a",
@@ -4287,7 +4611,8 @@
     {
      "value": 0.989,
      "method": "force-equilibrium trial wedge",
-     "source": "Sheahan & Ho (2003)"
+     "source": "Sheahan & Ho (2003)",
+     "computed": null
     }
    ],
    "results": [
@@ -4299,7 +4624,8 @@
       "max": 0.989
      }
     }
-   ]
+   ],
+   "note": "Sheahan & Ho use a force-equilibrium trial wedge; Janbu's method on the same planes differs by up to 4 %."
   },
   {
    "id": "V084b",
@@ -4313,7 +4639,8 @@
     {
      "value": 1.176,
      "method": "force-equilibrium trial wedge",
-     "source": "Sheahan & Ho (2003)"
+     "source": "Sheahan & Ho (2003)",
+     "computed": null
     }
    ],
    "results": [
@@ -4325,7 +4652,8 @@
       "max": 1.123
      }
     }
-   ]
+   ],
+   "note": "Sheahan & Ho use a force-equilibrium trial wedge; Janbu's method on the same planes differs by up to 5 %."
   },
   {
    "id": "V084c",
@@ -4339,7 +4667,8 @@
     {
      "value": 1.07,
      "method": "force-equilibrium trial wedge",
-     "source": "Sheahan & Ho (2003)"
+     "source": "Sheahan & Ho (2003)",
+     "computed": null
     }
    ],
    "results": [
@@ -4351,7 +4680,8 @@
       "max": 1.043
      }
     }
-   ]
+   ],
+   "note": "Sheahan & Ho use a force-equilibrium trial wedge; Janbu's method on the same planes differs by up to 4 %."
   },
   {
    "id": "V084d",
@@ -4365,7 +4695,8 @@
     {
      "value": 0.929,
      "method": "force-equilibrium trial wedge",
-     "source": "Sheahan & Ho (2003)"
+     "source": "Sheahan & Ho (2003)",
+     "computed": null
     }
    ],
    "results": [
@@ -4377,7 +4708,8 @@
       "max": 0.945
      }
     }
-   ]
+   ],
+   "note": "Sheahan & Ho use a force-equilibrium trial wedge; Janbu's method on the same planes differs by up to 4 %."
   },
   {
    "id": "V084e",
@@ -4391,7 +4723,8 @@
     {
      "value": 0.893,
      "method": "force-equilibrium trial wedge",
-     "source": "Sheahan & Ho (2003)"
+     "source": "Sheahan & Ho (2003)",
+     "computed": null
     }
    ],
    "results": [
@@ -4403,7 +4736,8 @@
       "max": 0.922
      }
     }
-   ]
+   ],
+   "note": "Sheahan & Ho use a force-equilibrium trial wedge; Janbu's method on the same planes differs by up to 4 %."
   },
   {
    "id": "V084f",
@@ -4417,7 +4751,8 @@
     {
      "value": 0.887,
      "method": "force-equilibrium trial wedge",
-     "source": "Sheahan & Ho (2003)"
+     "source": "Sheahan & Ho (2003)",
+     "computed": null
     }
    ],
    "results": [
@@ -4429,7 +4764,8 @@
       "max": 0.923
      }
     }
-   ]
+   ],
+   "note": "Sheahan & Ho use a force-equilibrium trial wedge; Janbu's method on the same planes differs by up to 4 %."
   },
   {
    "id": "V085",
@@ -4443,17 +4779,23 @@
     {
      "value": 1.76,
      "method": "Bishop simplified",
-     "source": "Duncan & Wright"
+     "source": "Duncan & Wright",
+     "analysis": "Bishop simplified",
+     "computed": 1.7588
     },
     {
      "value": 1.63,
      "method": "Janbu simplified",
-     "source": "Duncan & Wright"
+     "source": "Duncan & Wright",
+     "analysis": "Janbu simplified",
+     "computed": 1.6268
     },
     {
      "value": 1.74,
      "method": "Janbu corrected",
-     "source": "Duncan & Wright"
+     "source": "Duncan & Wright",
+     "analysis": "Janbu corrected",
+     "computed": 1.7352
     }
    ],
    "results": [
@@ -4480,6 +4822,11 @@
       "min": 1.736,
       "max": 1.736
      }
+    },
+    {
+     "method": "Janbu simplified",
+     "computed": 1.6268,
+     "programs": null
     }
    ]
   },
@@ -4495,7 +4842,9 @@
     {
      "value": 1.35,
      "method": "Spencer, at T = 170 kN/m",
-     "source": "Tandjiria (2002)"
+     "source": "Tandjiria (2002)",
+     "analysis": "Spencer",
+     "computed": 1.3328
     }
    ],
    "results": [
@@ -4521,7 +4870,9 @@
     {
      "value": 0.981,
      "method": "Spencer",
-     "source": "Tandjiria (2002)"
+     "source": "Tandjiria (2002)",
+     "analysis": "Spencer (2 m tension crack)",
+     "computed": 0.9681
     }
    ],
    "results": [
@@ -4555,7 +4906,9 @@
     {
      "value": 1.219,
      "method": "Spencer",
-     "source": "Tandjiria (2002)"
+     "source": "Tandjiria (2002)",
+     "analysis": "Spencer",
+     "computed": 1.2063
     }
    ],
    "results": [
@@ -4580,7 +4933,8 @@
    "published": [
     {
      "value": 2.3,
-     "source": "USACE EM 1110-2-1902"
+     "source": "USACE EM 1110-2-1902",
+     "computed": null
     }
    ],
    "results": [
@@ -4622,7 +4976,9 @@
     {
      "value": 2.44,
      "method": "Spencer",
-     "source": "USACE EM 1110-2-1902"
+     "source": "USACE EM 1110-2-1902",
+     "analysis": "Spencer",
+     "computed": 2.4416
     }
    ],
    "results": [
@@ -4664,7 +5020,9 @@
     {
      "value": 2.71,
      "method": "Bishop simplified",
-     "source": "USACE EM 1110-2-1902"
+     "source": "USACE EM 1110-2-1902",
+     "analysis": "Bishop simplified",
+     "computed": 2.6982
     }
    ],
    "results": [
@@ -4705,7 +5063,8 @@
    "published": [
     {
      "value": 1.33,
-     "source": "USACE EM 1110-2-1902"
+     "source": "USACE EM 1110-2-1902",
+     "computed": null
     }
    ],
    "results": [
@@ -4746,7 +5105,8 @@
    "published": [
     {
      "value": 1.33,
-     "source": "USACE EM 1110-2-1902"
+     "source": "USACE EM 1110-2-1902",
+     "computed": null
     }
    ],
    "results": [
@@ -4782,7 +5142,8 @@
       "max": 1.385
      }
     }
-   ]
+   ],
+   "note": "The USACE value 1.33 is read from a chart; on the circle the example describes, the programs give about 1.24."
   },
   {
    "id": "V092",
@@ -4795,7 +5156,8 @@
    "published": [
     {
      "value": 2.01,
-     "source": "USACE EM 1110-2-1902"
+     "source": "USACE EM 1110-2-1902",
+     "computed": null
     }
    ],
    "results": [
@@ -4837,27 +5199,36 @@
     {
      "value": 1.348,
      "method": "Bishop simplified",
-     "source": "Yamagami & Ueta (1988)"
+     "source": "Yamagami & Ueta (1988)",
+     "analysis": "Bishop simplified",
+     "computed": 1.3427
     },
     {
      "value": 1.282,
      "method": "Ordinary",
-     "source": "Yamagami & Ueta (1988)"
+     "source": "Yamagami & Ueta (1988)",
+     "computed": null
     },
     {
      "value": 1.185,
      "method": "Janbu simplified, non-circular",
-     "source": "Yamagami & Ueta (1988)"
+     "source": "Yamagami & Ueta (1988)",
+     "analysis": "Janbu simplified, non-circular",
+     "computed": 1.1776
     },
     {
      "value": 1.339,
      "method": "Spencer, non-circular",
-     "source": "Yamagami & Ueta (1988)"
+     "source": "Yamagami & Ueta (1988)",
+     "analysis": "Spencer, non-circular",
+     "computed": 1.3242
     },
     {
      "value": 1.33,
      "method": "Spencer, non-circular",
-     "source": "Greco (1996)"
+     "source": "Greco (1996)",
+     "analysis": "Spencer, non-circular",
+     "computed": 1.3242
     }
    ],
    "results": [
@@ -4876,6 +5247,11 @@
       "min": 1.325,
       "max": 1.325
      }
+    },
+    {
+     "method": "Janbu simplified, non-circular",
+     "computed": 1.1776,
+     "programs": null
     }
    ]
   },
@@ -4892,7 +5268,9 @@
      "value": 1.4,
      "upper": 1.42,
      "method": "Spencer, non-circular",
-     "source": "Greco (1996)"
+     "source": "Greco (1996)",
+     "analysis": "Spencer, non-circular",
+     "computed": 1.4011
     }
    ],
    "results": [
@@ -4925,7 +5303,8 @@
    "published": [
     {
      "value": 1.1,
-     "source": "Yamagami et al. (2000)"
+     "source": "Yamagami et al. (2000)",
+     "computed": null
     }
    ],
    "results": [
@@ -4950,7 +5329,8 @@
    "published": [
     {
      "value": 1.1,
-     "source": "Yamagami et al. (2000)"
+     "source": "Yamagami et al. (2000)",
+     "computed": null
     }
    ],
    "results": [
@@ -4975,7 +5355,8 @@
    "published": [
     {
      "value": 1.2,
-     "source": "Yamagami et al. (2000)"
+     "source": "Yamagami et al. (2000)",
+     "computed": null
     }
    ],
    "results": [
@@ -5001,22 +5382,29 @@
     {
      "value": 1.836,
      "method": "Spencer",
-     "source": "Zhu & Lee (2002)"
+     "source": "Zhu & Lee (2002)",
+     "analysis": "Spencer",
+     "computed": 1.7941
     },
     {
      "value": 1.823,
      "method": "Morgenstern-Price",
-     "source": "Zhu & Lee (2002)"
+     "source": "Zhu & Lee (2002)",
+     "analysis": "Morgenstern-Price (half-sine)",
+     "computed": 1.7796
     },
     {
      "value": 1.429,
      "method": "Bishop simplified",
-     "source": "Zhu & Lee (2002)"
+     "source": "Zhu & Lee (2002)",
+     "analysis": "Bishop simplified",
+     "computed": 1.7933
     },
     {
      "value": 1.229,
      "method": "Ordinary",
-     "source": "Zhu & Lee (2002)"
+     "source": "Zhu & Lee (2002)",
+     "computed": null
     }
    ],
    "results": [
@@ -5035,8 +5423,14 @@
       "min": 1.804,
       "max": 1.804
      }
+    },
+    {
+     "method": "Morgenstern-Price (half-sine)",
+     "computed": 1.7796,
+     "programs": null
     }
-   ]
+   ],
+   "note": "Zhu & Lee's Bishop value 1.429 is about 20 % below their own Spencer and Morgenstern-Price values; the programs give about 1.80 with both methods."
   },
   {
    "id": "V096b",
@@ -5050,12 +5444,16 @@
     {
      "value": 1.211,
      "method": "Spencer",
-     "source": "Zhu & Lee (2002)"
+     "source": "Zhu & Lee (2002)",
+     "analysis": "Spencer",
+     "computed": 1.1865
     },
     {
      "value": 1.197,
      "method": "Morgenstern-Price",
-     "source": "Zhu & Lee (2002)"
+     "source": "Zhu & Lee (2002)",
+     "analysis": "Morgenstern-Price (half-sine)",
+     "computed": 1.1716
     }
    ],
    "results": [
@@ -5074,6 +5472,11 @@
       "min": 1.189,
       "max": 1.189
      }
+    },
+    {
+     "method": "Morgenstern-Price (half-sine)",
+     "computed": 1.1716,
+     "programs": null
     }
    ]
   },
@@ -5089,22 +5492,29 @@
     {
      "value": 1.836,
      "method": "Spencer",
-     "source": "Zhu & Lee (2002)"
+     "source": "Zhu & Lee (2002)",
+     "analysis": "Spencer",
+     "computed": 1.7994
     },
     {
      "value": 1.823,
      "method": "Morgenstern-Price",
-     "source": "Zhu & Lee (2002)"
+     "source": "Zhu & Lee (2002)",
+     "analysis": "Morgenstern-Price (half-sine)",
+     "computed": 1.7851
     },
     {
      "value": 1.429,
      "method": "Bishop simplified",
-     "source": "Zhu & Lee (2002)"
+     "source": "Zhu & Lee (2002)",
+     "analysis": "Bishop simplified",
+     "computed": 1.799
     },
     {
      "value": 1.229,
      "method": "Ordinary",
-     "source": "Zhu & Lee (2002)"
+     "source": "Zhu & Lee (2002)",
+     "computed": null
     }
    ],
    "results": [
@@ -5123,8 +5533,14 @@
       "min": 1.804,
       "max": 1.804
      }
+    },
+    {
+     "method": "Morgenstern-Price (half-sine)",
+     "computed": 1.7851,
+     "programs": null
     }
-   ]
+   ],
+   "note": "Zhu & Lee's Bishop value 1.429 is about 20 % below their own Spencer and Morgenstern-Price values; the programs give about 1.80 with both methods."
   },
   {
    "id": "V097a",
@@ -5144,7 +5560,8 @@
       "max": 1.173
      }
     }
-   ]
+   ],
+   "note": "The problem comes from a program manual only; no independent value is published."
   },
   {
    "id": "V097b",
@@ -5172,7 +5589,8 @@
       "max": 1.174
      }
     }
-   ]
+   ],
+   "note": "The problem comes from a program manual only; no independent value is published."
   },
   {
    "id": "V098",
@@ -5192,7 +5610,8 @@
       "max": 1.372
      }
     }
-   ]
+   ],
+   "note": "The problem comes from a program manual only; no independent value is published."
   }
  ],
  "reliability": [

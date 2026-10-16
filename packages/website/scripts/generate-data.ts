@@ -43,12 +43,16 @@ process.env.CSLOPE_VERIFICATION_FULL = "1";
 const OUT = join(import.meta.dirname, "../src/content/generated/verification.json");
 const CACHE = join(import.meta.dirname, "../node_modules/.cache/cslope-verification-raw.json");
 
-/** The computed FOS of every check of the problems in this shard. */
+/**
+ * cSlope's FOS for every analysis of the problems in this shard, in the
+ * order of presentedAnalyses (the checks' analyses, then those run only for
+ * a published value).
+ */
 function runShard(shard: number, shards: number): Record<string, (number | null)[]> {
   const out: Record<string, (number | null)[]> = {};
   VERIFICATION_CASES.forEach((c, i) => {
     if (i % shards !== shard) return;
-    out[c.id] = c.checks.map((k) => runVerification(c.definition, k.method, k.options).fos);
+    out[c.id] = presentedAnalyses(c).map((a) => runVerification(c.definition, a.method, a.options).fos);
   });
   return out;
 }
@@ -110,15 +114,19 @@ export function buildData(
     commercial: COMMERCIAL.test(c.reference),
     surface: c.surface,
     units: c.units,
-    published: paperValues(c),
-    // Each analysis once, with cSlope's result (that of its first check:
-    // the checks of one analysis run the same input) and the other
-    // programs' range. No pass marks: the engine's tests keep those.
-    results: presentedAnalyses(c).map((a) => ({
+    // Each published value with cSlope's result for the same method, when
+    // cSlope has it; each analysis once, with cSlope's result and the
+    // other programs' range. No pass marks: the engine's tests keep those.
+    published: paperValues(c).map(({ analysis, ...v }) => {
+      const j = presentedAnalyses(c).findIndex((a) => a.label === analysis);
+      return j >= 0 ? { ...v, analysis, computed: value(fos[c.id]?.[j]) } : { ...v, computed: null };
+    }),
+    results: presentedAnalyses(c).map((a, j) => ({
       method: a.label,
-      computed: value(fos[c.id]?.[a.checks[0]]),
+      computed: value(fos[c.id]?.[j]),
       programs: a.programs && { min: a.programs.min, max: a.programs.max },
     })),
+    ...(c.publicNote ? { note: c.publicNote } : {}),
   }));
   const reliability: ReliabilityProblem[] = RELIABILITY_CASES.map((c, i) => {
     const quantities = [...new Set(c.checks.map(([q]) => q))].filter((q) => q !== "fos");
@@ -153,9 +161,15 @@ export function buildData(
   };
 }
 
-/** How many checks agree with their reference by the engine's rule (tolerance.ts). */
+/**
+ * How many checks agree with their reference by the engine's rule
+ * (tolerance.ts), from the results per analysis.
+ */
 export function agreement(fos: Record<string, (number | null)[]>): { agree: number; total: number } {
-  const checks = VERIFICATION_CASES.flatMap((c) => c.checks.map((k, j) => ({ k, value: fos[c.id]?.[j] ?? null })));
+  const checks = VERIFICATION_CASES.flatMap((c) => {
+    const analyses = presentedAnalyses(c);
+    return c.checks.map((k, j) => ({ k, value: fos[c.id]?.[analyses.findIndex((a) => a.checks.includes(j))] ?? null }));
+  });
   return { agree: checks.filter(({ k, value }) => value != null && agrees(k, value)).length, total: checks.length };
 }
 
@@ -172,7 +186,7 @@ if (import.meta.main) {
       raw = JSON.parse(readFileSync(CACHE, "utf8"));
       // A cache from an older set of problems would publish them as failed.
       const stale =
-        VERIFICATION_CASES.filter((c) => raw.fos[c.id]?.length !== c.checks.length).length +
+        VERIFICATION_CASES.filter((c) => raw.fos[c.id]?.length !== presentedAnalyses(c).length).length +
         RELIABILITY_CASES.filter((c, i) => raw.reliability[i]?.length !== c.checks.length).length;
       if (stale) throw new Error(`The cache misses ${stale} problem(s) or checks; run without --cached.`);
     } else {

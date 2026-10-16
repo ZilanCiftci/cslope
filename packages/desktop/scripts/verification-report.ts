@@ -579,6 +579,8 @@ interface CheckResult {
 interface CaseResult {
   c: VerificationCase;
   results: CheckResult[];
+  /** cSlope's result for each presented analysis (presentation.ts), by index. */
+  analyses: (number | null)[];
   slope: Slope;
   plane: Plane | null;
 }
@@ -591,11 +593,16 @@ function evaluate(c: VerificationCase): CaseResult {
     const diff = fos == null ? NaN : ((fos - check.published) / check.published) * 100;
     return { check, fos, diff, pass: fos != null && agrees(check, fos) };
   });
+  // An analysis without checks runs a published value's method: run it
+  // for the public edition, which shows it next to that value.
+  const analyses = presentedAnalyses(c).map((a) =>
+    a.checks.length ? results[a.checks[0]].fos : PUBLIC ? runVerification(c.definition, a.method, a.options).fos : null,
+  );
   const plane = criticalPlane(firstSlope!);
   // The figure needs the geometry and the critical surface only: drop the
   // thousands of searched surfaces (with their slices) kept for every case.
   firstSlope!.setSearchResults([]);
-  return { c, results, slope: firstSlope!, plane };
+  return { c, results, analyses, slope: firstSlope!, plane };
 }
 
 console.log(`Running ${CASES.length} verification problems…`);
@@ -690,9 +697,13 @@ const meanAbs = absDiffs.reduce((a, b) => a + b, 0) / absDiffs.length;
 // programs' range and cSlope's result for each analysis (presentation.ts).
 const nPublished = CASES.reduce((n, c) => n + paperValues(c).length, 0);
 const nAnalyses = CASES.reduce((n, c) => n + presentedAnalyses(c).length, 0);
-/** cSlope's result for each analysis: that of the analysis's first check. */
-const analysisRows = (r: CaseResult) =>
-  presentedAnalyses(r.c).map((a) => ({ a, fos: r.results[a.checks[0]].fos }));
+/** cSlope's result for each analysis. */
+const analysisRows = (r: CaseResult) => presentedAnalyses(r.c).map((a, j) => ({ a, fos: r.analyses[j] }));
+/** cSlope's result for a published value, when cSlope has its method. */
+function paperResult(r: CaseResult, analysis: string | undefined): string {
+  const row = analysisRows(r).find(({ a }) => a.label === analysis);
+  return row ? fmt(row.fos ?? NaN) : "–";
+}
 const maxAbs = Math.max(...absDiffs);
 
 // Cover.
@@ -927,11 +938,12 @@ caseResults.forEach((r, i) => {
     if (published.length) {
       table(
         [
-          { title: "Published value", width: 32, align: "right" },
-          { title: "Method", width: 70 },
-          { title: "Source", width: CONTENT_W - 102 },
+          { title: "Published value", width: 30, align: "right" },
+          { title: "Method", width: 62 },
+          { title: "Source", width: CONTENT_W - 112 },
+          { title: "cSlope", width: 20, align: "right" },
         ],
-        published.map((v) => [formatPaperValue(v), v.method ?? "not stated", v.source]),
+        published.map((v) => [formatPaperValue(v), v.method ?? "not stated", v.source, paperResult(r, v.analysis)]),
       );
     } else {
       paragraph("The source publishes no factor of safety for this problem.", 8.5, "italic", MUTED);
@@ -945,6 +957,7 @@ caseResults.forEach((r, i) => {
       ],
       analysisRows(r).map(({ a, fos }) => [a.label, a.programs ? formatRange(a.programs) : "–", fmt(fos ?? NaN)]),
     );
+    if (c.publicNote) paragraph(c.publicNote, 8.5, "italic", MUTED);
   } else {
     table(
       [

@@ -1,6 +1,6 @@
 // @vitest-environment node
 import { describe, expect, it } from "vitest";
-import { RELIABILITY_CASES, VERIFICATION_CASES, presentedAnalyses } from "@cslope/engine/verification";
+import { RELIABILITY_CASES, VERIFICATION_CASES } from "@cslope/engine/verification";
 import data from "../src/content/generated/verification.json";
 import type { VerificationData } from "../src/content/verification-types";
 import { findForbiddenNames } from "./forbidden-names";
@@ -8,16 +8,10 @@ import { agreement, buildData } from "./generate-data";
 
 const file = data as VerificationData;
 
-/** The computed values in the checked-in file, per check as the generator keys them. */
+/** The computed values in the checked-in file, per analysis as the generator keys them. */
 function computedFromFile() {
   const fos: Record<string, (number | null)[]> = {};
-  VERIFICATION_CASES.forEach((c, i) => {
-    const values: (number | null)[] = c.checks.map(() => null);
-    presentedAnalyses(c).forEach((a, j) => {
-      for (const k of a.checks) values[k] = file.problems[i].results[j].computed;
-    });
-    fos[c.id] = values;
-  });
+  VERIFICATION_CASES.forEach((c, i) => (fos[c.id] = file.problems[i].results.map((r) => r.computed)));
   const reliability: Record<string, number[]> = {};
   RELIABILITY_CASES.forEach((c, i) => {
     reliability[i] = c.checks.map(([q]) => file.reliability[i].rows.find((r) => r.quantity === q)?.computed ?? NaN);

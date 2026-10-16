@@ -50,7 +50,12 @@ describe("verification presentation", () => {
 
   it("lists the papers' values: the literature checks and the further values, once each", () => {
     const v = paperValues(byId("V001"));
-    expect(v[0]).toEqual({ value: 1.451, method: "Bishop simplified", source: "Arai & Tagyo (1985)" });
+    expect(v[0]).toEqual({
+      value: 1.451,
+      method: "Bishop simplified",
+      source: "Arai & Tagyo (1985)",
+      analysis: "Bishop simplified",
+    });
     expect(paperValues(byId("V021d")).some((x) => x.source === "Chowdhury & Xu" && x.value === 1.0639)).toBe(true);
     const fe = paperValues(byId("V055")).find((x) => x.source === "Griffiths & Lane");
     expect(fe?.method).toBe("finite elements");
@@ -71,8 +76,25 @@ describe("verification presentation", () => {
 
   it("names no program in what is published", () => {
     const text = JSON.stringify(
-      VERIFICATION_CASES.map((c) => [c.title, c.description, paperValues(c), presentedAnalyses(c).map((a) => a.label)]),
+      VERIFICATION_CASES.map((c) => [c.title, c.description, c.publicNote, paperValues(c), presentedAnalyses(c).map((a) => a.label)]),
     );
     expect(text).not.toMatch(/\b[Pp]rogram [A-Z]\b/);
+  });
+
+  it("gives each published value with a method cSlope has an analysis, adding the missing ones untested", () => {
+    const c = byId("V001");
+    const a = presentedAnalyses(c);
+    const janbu = a.find((x) => x.label === "Janbu corrected, non-circular")!;
+    expect(janbu.checks).toEqual([]);
+    expect(janbu.options).toMatchObject({ janbuCorrection: true, nonCircularOptimization: true });
+    for (const v of paperValues(c)) expect(a.map((x) => x.label)).toContain(v.analysis);
+    // A method cSlope does not have gets none.
+    expect(paperValues(byId("V084b"))[0].analysis).toBeUndefined();
+    expect(paperValues(byId("V067")).find((v) => v.method === "Ordinary")?.analysis).toBeUndefined();
+    // Every analysis label a published value names exists.
+    for (const p of VERIFICATION_CASES) {
+      const labels = presentedAnalyses(p).map((x) => x.label);
+      for (const v of paperValues(p)) if (v.analysis) expect(labels, p.id).toContain(v.analysis);
+    }
   });
 });
