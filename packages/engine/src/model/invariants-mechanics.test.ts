@@ -21,7 +21,7 @@ import {
   relDiff,
   groundY,
   PROPERTY_OPTIONS,
-  type Method,
+  type Method, mc,
 } from "./property-helpers";
 
 const METHODS: Method[] = ["Ordinary", "Bishop", "Janbu", "Morgenstern-Price"];
@@ -40,8 +40,8 @@ function withStrength(def: SlopeDefinition, f: (c: number, phi: number) => [numb
   return {
     ...def,
     materials: def.materials.map((m) => {
-      const [c, phi] = f(m.cohesion, m.frictionAngle);
-      return { ...m, cohesion: c, frictionAngle: phi, model: mohrCoulomb(m.unitWeight, c, phi) };
+      const [c, phi] = f(mc(m).cohesion, mc(m).frictionAngle);
+      return { ...m, model: mohrCoulomb(mc(m).unitWeight, c, phi) };
     }),
   };
 }
@@ -50,8 +50,8 @@ function withUnitWeight(def: SlopeDefinition, f: (g: number) => number): SlopeDe
   return {
     ...def,
     materials: def.materials.map((m) => {
-      const g = f(m.unitWeight);
-      return { ...m, unitWeight: g, model: mohrCoulomb(g, m.cohesion, m.frictionAngle) };
+      const g = f(mc(m).unitWeight);
+      return { ...m, model: mohrCoulomb(g, mc(m).cohesion, mc(m).frictionAngle) };
     }),
   };
 }
@@ -106,9 +106,9 @@ describe("strength of one material, reinforcement capacity", () => {
         ...def,
         materials: def.materials.map((m, j) => {
           if (j !== k) return m;
-          const c = m.cohesion + uniform(r, 0, 10);
-          const phi = m.frictionAngle + uniform(r, 0, 6);
-          return { ...m, cohesion: c, frictionAngle: phi, model: mohrCoulomb(m.unitWeight, c, phi) };
+          const c = mc(m).cohesion + uniform(r, 0, 10);
+          const phi = mc(m).frictionAngle + uniform(r, 0, 6);
+          return { ...m, model: mohrCoulomb(mc(m).unitWeight, c, phi) };
         }),
       };
       for (const method of METHODS) {
@@ -299,8 +299,8 @@ describe("Janbu correction factor", () => {
       {
         ...g.def,
         materials: [
-          { ...g.def.materials[0], cohesion: 20, frictionAngle: 0, model: mohrCoulomb(g.def.materials[0].unitWeight, 20, 0) },
-          { ...g.def.materials[1], cohesion: 0, frictionAngle: 32, model: mohrCoulomb(g.def.materials[1].unitWeight, 0, 32) },
+          { ...g.def.materials[0], model: mohrCoulomb(mc(g.def.materials[0]).unitWeight, 20, 0) },
+          { ...g.def.materials[1], model: mohrCoulomb(mc(g.def.materials[1]).unitWeight, 0, 32) },
         ],
       },
       g.circle,
@@ -378,9 +378,9 @@ describe("planar block", () => {
         q ? { ...g.def, udls: [{ magnitude: q, x1: xa, x2: xc }] } : g.def,
         [a, b],
       );
-      const W = area * m.unitWeight + q * (xc - xa);
-      const tanPhi = Math.tan((m.frictionAngle * Math.PI) / 180);
-      const exact = (m.cohesion * L + W * Math.cos(beta) * tanPhi) / (W * Math.sin(beta));
+      const W = area * mc(m).unitWeight + q * (xc - xa);
+      const tanPhi = Math.tan((mc(m).frictionAngle * Math.PI) / 180);
+      const exact = (mc(m).cohesion * L + W * Math.cos(beta) * tanPhi) / (W * Math.sin(beta));
       for (const method of ["Ordinary", "Janbu", "Spencer", "Morgenstern-Price"] as Method[]) {
         const f = fos(def, method)!;
         expect(relDiff(f, exact), `seed 1729 case ${i} ${method}: ${f} vs ${exact}`).toBeLessThan(1e-4);
@@ -398,7 +398,7 @@ describe("planar block", () => {
       const a: [number, number] = [xa, shape.H];
       const b: [number, number] = [xb, groundY(shape, xb)];
       const beta = Math.atan2(a[1] - b[1], b[0] - a[0]);
-      const exact = Math.tan((g.def.materials[0].frictionAngle * Math.PI) / 180) / Math.tan(beta);
+      const exact = Math.tan((mc(g.def.materials[0]).frictionAngle * Math.PI) / 180) / Math.tan(beta);
       const def = onPolyline(g.def, [a, b]);
       for (const method of ALL_METHODS) {
         expect(relDiff(fos(def, method)!, exact), `case ${i} ${method}`).toBeLessThan(1e-4);

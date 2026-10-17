@@ -1,5 +1,5 @@
 import type { AnalysisResult, AnalysisLimits } from "../types/analysis";
-import type { SlopeDefinition } from "../types/slope-definition";
+import { withMaterialModel, type SlopeDefinition } from "../types/slope-definition";
 
 export type SlopeOrientation = "ltr" | "rtl";
 
@@ -105,8 +105,10 @@ export function toCanonicalSlopeDefinition(
     slopeDefinition.coordinates,
   );
 
+  // Every material by its model (older definitions give flat fields).
+  const materials = slopeDefinition.materials.map(withMaterialModel);
   if (orientation === "ltr") {
-    return { ...slopeDefinition, orientation };
+    return { ...slopeDefinition, orientation, materials };
   }
 
   const [xMin, xMax] = getDomainX(slopeDefinition.coordinates);
@@ -116,7 +118,7 @@ export function toCanonicalSlopeDefinition(
     orientation,
     coordinates: mirrorPoints(slopeDefinition.coordinates, xMin, xMax),
     // Spatially varying strength is given at model-space points.
-    materials: slopeDefinition.materials.map((m) => {
+    materials: materials.map((m) => {
       const model = m.model;
       if (model?.kind !== "spatial-mohr-coulomb") return m;
       return {

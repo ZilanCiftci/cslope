@@ -10,6 +10,67 @@ import type { SlopeOrientation } from "../model/canonical";
 import type { MaterialModel } from "./material-models";
 import type { Pile, Reinforcement } from "./reinforcement";
 
+/** A material of a slope definition. */
+export interface SlopeMaterialDefinition {
+  name: string;
+  /**
+   * The material: unit weight and strength. The only source of them; see
+   * `materialModelOf` for definitions written before models existed.
+   */
+  model?: MaterialModel;
+  /**
+   * @deprecated Older definitions without `model` gave a Mohr-Coulomb
+   * material in these flat fields. Read only when `model` is absent.
+   */
+  unitWeight?: number;
+  /** @deprecated See `unitWeight`. */
+  frictionAngle?: number;
+  /** @deprecated See `unitWeight`. */
+  cohesion?: number;
+  /** @deprecated See `unitWeight`. */
+  cohesionRefDepth?: number;
+  /** @deprecated See `unitWeight`. */
+  cohesionRateOfChange?: number;
+  /** @deprecated See `unitWeight`. */
+  cohesionUndrained?: number;
+  /** Depth range [top, bottom] in m for this material. */
+  depthRange?: [number, number];
+  color?: string;
+  /**
+   * Id of an entry in `waterTables` that governs pore pressure in this
+   * material.  When absent (or unknown) the default `waterTable` is used.
+   */
+  waterTableId?: string;
+}
+
+/**
+ * The model of a definition's material: its `model`, or for an older
+ * definition a Mohr-Coulomb model from the flat fields.
+ */
+export function materialModelOf(m: SlopeMaterialDefinition): MaterialModel {
+  if (m.model) return m.model;
+  if (typeof m.unitWeight !== "number") throw new Error(`Material "${m.name}" has no model.`);
+  return {
+    kind: "mohr-coulomb",
+    unitWeight: m.unitWeight,
+    cohesion: m.cohesion ?? 0,
+    frictionAngle: m.frictionAngle ?? 0,
+    ...(m.cohesionRefDepth !== undefined ? { cohesionRefDepth: m.cohesionRefDepth } : {}),
+    ...(m.cohesionRateOfChange !== undefined ? { cohesionRateOfChange: m.cohesionRateOfChange } : {}),
+    ...(m.cohesionUndrained !== undefined ? { cohesionUndrained: m.cohesionUndrained } : {}),
+  };
+}
+
+/** The flat fields of older definitions (and their material type). */
+const FLAT_FIELDS = ["unitWeight", "frictionAngle", "cohesion", "cohesionRefDepth", "cohesionRateOfChange", "cohesionUndrained", "materialType"];
+
+/** A definition's material with its model and without the flat fields. */
+export function withMaterialModel(m: SlopeMaterialDefinition): SlopeMaterialDefinition {
+  const out: Record<string, unknown> = { ...m, model: materialModelOf(m) };
+  for (const key of FLAT_FIELDS) delete out[key];
+  return out as unknown as SlopeMaterialDefinition;
+}
+
 /** Slope definition sent from the UI to the engine / worker. */
 export interface SlopeDefinition {
   /** Model orientation used for canonical mirroring. */
@@ -17,30 +78,7 @@ export interface SlopeDefinition {
   /** Boundary coordinates [[x,y], ...]. */
   coordinates: [number, number][];
   /** Material assignments. */
-  materials: Array<{
-    name: string;
-    unitWeight: number;
-    frictionAngle: number;
-    cohesion: number;
-    cohesionRefDepth?: number;
-    cohesionRateOfChange?: number;
-    cohesionUndrained?: number;
-    materialType?: string;
-    /**
-     * Full material model definition.
-     * When present, this is the source of truth for strength resolution.
-     * When absent, a MohrCoulombModel is synthesised from the flat fields.
-     */
-    model?: MaterialModel;
-    /** Depth range [top, bottom] in m for this material. */
-    depthRange?: [number, number];
-    color?: string;
-    /**
-     * Id of an entry in `waterTables` that governs pore pressure in this
-     * material.  When absent (or unknown) the default `waterTable` is used.
-     */
-    waterTableId?: string;
-  }>;
+  materials: SlopeMaterialDefinition[];
   /** Water table definition (optional). */
   waterTable?: {
     mode: "height" | "depth" | "custom";

@@ -361,7 +361,6 @@ export function createSlice(
     alpha,
   });
 
-  const materialType = baseMaterial.materialType;
   const cohesion = strength.cohesion;
   const cohesionUndrained = strength.cohesionUndrained;
   const frictionAngle = strength.frictionAngle;
@@ -391,7 +390,6 @@ export function createSlice(
     ll: llForce,
     isValid: true,
     baseMaterial,
-    materialType,
     cohesion,
     cohesionUndrained,
     frictionAngle,

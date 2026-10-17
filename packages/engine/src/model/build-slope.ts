@@ -5,10 +5,8 @@
  * and also available for testing without worker context.
  */
 
-import type { SlopeDefinition } from "../types/slope-definition";
-import type { MaterialType } from "../types/material";
+import { materialModelOf, type SlopeDefinition } from "../types/slope-definition";
 import { Material, Udl, LineLoad } from "../types/index";
-import type { MohrCoulombModel } from "../types/material-models";
 import { validateMaterialModel } from "../types/validation";
 import { Slope } from "./slope";
 import { addSingleCircularPlane } from "./search";
@@ -69,19 +67,7 @@ export function buildSlope(def: SlopeDefinition): Slope {
     throw new Error("The model needs at least one material.");
   }
   for (const m of def.materials) {
-    // When a full MaterialModel is provided, use it directly.
-    // Otherwise, fall back to constructing from flat fields (backward compat).
-    const model =
-      m.model ??
-      ({
-        kind: "mohr-coulomb" as const,
-        unitWeight: m.unitWeight,
-        cohesion: m.cohesion,
-        frictionAngle: m.frictionAngle,
-        cohesionRefDepth: m.cohesionRefDepth,
-        cohesionRateOfChange: m.cohesionRateOfChange,
-        cohesionUndrained: m.cohesionUndrained,
-      } satisfies MohrCoulombModel);
+    const model = materialModelOf(m);
 
     // Validate the model before constructing the Material.
     const validationErrors = validateMaterialModel(model);
@@ -91,19 +77,7 @@ export function buildSlope(def: SlopeDefinition): Slope {
       );
     }
 
-    const mat = new Material({
-      name: m.name,
-      // The model is the source of truth (and the validated value).
-      unitWeight: model.unitWeight,
-      frictionAngle: m.frictionAngle,
-      cohesion: m.cohesion,
-      cohesionRefDepth: m.cohesionRefDepth,
-      cohesionRateOfChange: m.cohesionRateOfChange,
-      cohesionUndrained: m.cohesionUndrained,
-      materialType: m.materialType as MaterialType | undefined,
-      color: m.color,
-      model,
-    });
+    const mat = new Material({ name: m.name, color: m.color, model });
     materialsByName.set(m.name, mat);
   }
 

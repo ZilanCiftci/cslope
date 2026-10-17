@@ -76,7 +76,7 @@ describe("resolveStrength — mohr-coulomb", () => {
       cohesionRateOfChange: 2,
     });
     const r = resolveStrength(legacy.model, ctx({ yBottom: 3 }));
-    expect(r.cohesion).toBe(legacy.getCohesion(3));
+    expect(r.cohesion).toBe(legacy.getStrength({ yBottom: 3, x: 0, yGround: 0, alpha: 0 }).cohesion);
   });
 
   it("matches legacy Material.getCohesion() at ref depth", () => {
@@ -87,7 +87,7 @@ describe("resolveStrength — mohr-coulomb", () => {
       cohesionRateOfChange: 2,
     });
     expect(resolveStrength(legacy.model, ctx({ yBottom: 5 })).cohesion).toBe(
-      legacy.getCohesion(5),
+      legacy.getStrength({ yBottom: 5, x: 0, yGround: 0, alpha: 0 }).cohesion,
     );
   });
 
@@ -100,7 +100,7 @@ describe("resolveStrength — mohr-coulomb", () => {
       cohesionUndrained: 20,
     });
     const r = resolveStrength(legacy.model, ctx({ yBottom: 3 }));
-    expect(r.cohesionUndrained).toBe(legacy.getCohesionUndrained(3));
+    expect(r.cohesionUndrained).toBe(legacy.getStrength({ yBottom: 3, x: 0, yGround: 0, alpha: 0 }).cohesionUndrained);
   });
 });
 
@@ -639,9 +639,9 @@ describe("Material.model", () => {
       cohesionRateOfChange: 2,
     });
     // At depth 3: c = 10 + (5-3)*2 = 14
-    expect(m.getCohesion(3)).toBe(14);
+    expect(m.getStrength({ yBottom: 3, x: 0, yGround: 0, alpha: 0 }).cohesion).toBe(14);
     // At depth 5 (ref): c = 10
-    expect(m.getCohesion(5)).toBe(10);
+    expect(m.getStrength({ yBottom: 5, x: 0, yGround: 0, alpha: 0 }).cohesion).toBe(10);
   });
 
   it("getStrength returns full ResolvedStrength", () => {

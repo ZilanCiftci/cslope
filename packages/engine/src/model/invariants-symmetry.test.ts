@@ -18,7 +18,7 @@ import {
   transformDefinition,
   relDiff,
   type Method,
-  decorate,
+  decorate, mc,
 } from "./property-helpers";
 
 const METHODS: Method[] = ["Ordinary", "Bishop", "Janbu", "Morgenstern-Price"];
@@ -106,7 +106,7 @@ describe("mirror symmetry: surfaces, water and strength given per point", () => 
           waterTableId: "p",
           model: {
             kind: "spatial-mohr-coulomb",
-            unitWeight: def.materials[1].unitWeight,
+            unitWeight: mc(def.materials[1]).unitWeight,
             dataPoints: [
               [0, 0, 5, 25, 18],
               [xEnd * 0.5, -shape.depth * 0.5, 15, 30, 19],

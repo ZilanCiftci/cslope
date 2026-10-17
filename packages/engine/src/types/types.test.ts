@@ -14,15 +14,13 @@ describe("Material", () => {
     const m = new Material({ name: "Clay" });
     expect(m.name).toBe("Clay");
     expect(m.unitWeight).toBe(20);
-    expect(m.frictionAngle).toBe(35);
-    expect(m.cohesion).toBe(2);
-    expect(m.materialType).toBe("Mohr-Coulomb");
+    expect(m.model).toMatchObject({ kind: "mohr-coulomb", unitWeight: 20, frictionAngle: 35, cohesion: 2 });
   });
 
   it("getCohesion returns base cohesion when rateOfChange is 0", () => {
     const m = new Material({ name: "Sand", cohesion: 5 });
-    expect(m.getCohesion(10)).toBe(5);
-    expect(m.getCohesion(0)).toBe(5);
+    expect(m.getStrength({ yBottom: 10, x: 0, yGround: 0, alpha: 0 }).cohesion).toBe(5);
+    expect(m.getStrength({ yBottom: 0, x: 0, yGround: 0, alpha: 0 }).cohesion).toBe(5);
   });
 
   it("getCohesion increases with depth when rateOfChange > 0", () => {
@@ -33,9 +31,9 @@ describe("Material", () => {
       cohesionRateOfChange: 2,
     });
     // At depth 5 (ref depth) → cohesion = 10
-    expect(m.getCohesion(5)).toBe(10);
+    expect(m.getStrength({ yBottom: 5, x: 0, yGround: 0, alpha: 0 }).cohesion).toBe(10);
     // At depth 3 (below ref depth) → cohesion = 10 + 2 * (5 - 3) = 14
-    expect(m.getCohesion(3)).toBe(14);
+    expect(m.getStrength({ yBottom: 3, x: 0, yGround: 0, alpha: 0 }).cohesion).toBe(14);
   });
 
   it("throws for invalid unit weight", () => {

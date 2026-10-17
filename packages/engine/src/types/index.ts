@@ -4,7 +4,7 @@
 
 // Domain types
 export { Material } from "./material";
-export type { MaterialParams, MaterialType } from "./material";
+export type { MaterialParams } from "./material";
 
 // Material model types
 export type {
@@ -71,7 +71,8 @@ export type {
 } from "./geometry";
 
 // Slope definition DTO
-export type { SlopeDefinition } from "./slope-definition";
+export type { SlopeDefinition, SlopeMaterialDefinition } from "./slope-definition";
+export { materialModelOf, withMaterialModel } from "./slope-definition";
 
 // Constants
 export {

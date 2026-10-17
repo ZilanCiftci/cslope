@@ -6,7 +6,7 @@
 
 // ── Types ─────────────────────────────────────────────────────────
 export { Material } from "./types/material";
-export type { MaterialParams, MaterialType } from "./types/material";
+export type { MaterialParams } from "./types/material";
 
 export { Udl, LineLoad } from "./types/loads";
 export type { UdlParams, LineLoadParams } from "./types/loads";
@@ -32,7 +32,8 @@ export type {
   SliceSolverState,
 } from "./types/geometry";
 
-export type { SlopeDefinition } from "./types/slope-definition";
+export type { SlopeDefinition, SlopeMaterialDefinition } from "./types/slope-definition";
+export { materialModelOf, withMaterialModel } from "./types/slope-definition";
 
 export type {
   Reinforcement,

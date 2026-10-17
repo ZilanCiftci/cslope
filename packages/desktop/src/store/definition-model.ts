@@ -6,7 +6,7 @@
  * without an orientation gets the one the engine infers from its geometry.
  */
 
-import { resolveOrientation, type AnalysisOptions, type SlopeDefinition } from "@cslope/engine";
+import { materialModelOf, resolveOrientation, type AnalysisOptions, type SlopeDefinition } from "@cslope/engine";
 import type { Pile, Reinforcement } from "@cslope/engine";
 import type { ModelEntry, PileRow, ReinforcementRow } from "./types";
 import { APP_DEFAULT_ANALYSIS_OPTIONS, DEFAULT_PIEZO_LINE, MATERIAL_COLORS, PIEZO_COLORS } from "./defaults";
@@ -144,7 +144,7 @@ export function modelFromDefinition(def: SlopeDefinition, info: DefinitionModelI
       name: m.name,
       color: m.color ?? MATERIAL_COLORS[i % MATERIAL_COLORS.length],
       ...(m.depthRange ? { depthRange: m.depthRange } : {}),
-      model: m.model ?? { kind: "mohr-coulomb", unitWeight: m.unitWeight, cohesion: m.cohesion, frictionAngle: m.frictionAngle },
+      model: materialModelOf(m),
     })),
     materialBoundaries: (def.materialBoundaries ?? []).map((b, i) => ({
       // Ids sort in definition order (the analysis applies boundaries by id).

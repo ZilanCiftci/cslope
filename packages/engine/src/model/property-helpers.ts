@@ -9,8 +9,8 @@
  */
 
 import type { AnalysisMethod, AnalysisOptions } from "../types/analysis";
-import type { SlopeDefinition } from "../types/slope-definition";
-import type { MaterialModel } from "../types/material-models";
+import { materialModelOf, withMaterialModel, type SlopeDefinition, type SlopeMaterialDefinition } from "../types/slope-definition";
+import type { MohrCoulombModel } from "../types/material-models";
 import type { ReinforcementPullout } from "../types/reinforcement";
 import { buildSlope } from "./build-slope";
 import { analyseSlope, analyseOrdinary } from "./solvers";
@@ -134,7 +134,14 @@ export function randomCircle(r: () => number, s: SlopeShape): Circle {
   throw new Error("No admissible circle");
 }
 
-export function mohrCoulomb(gamma: number, c: number, phi: number, gammaSat?: number): MaterialModel {
+/** The Mohr-Coulomb model of a generated material. */
+export function mc(m: SlopeMaterialDefinition): MohrCoulombModel {
+  const model = materialModelOf(m);
+  if (model.kind !== "mohr-coulomb") throw new Error(`Material "${m.name}" is not Mohr-Coulomb`);
+  return model;
+}
+
+export function mohrCoulomb(gamma: number, c: number, phi: number, gammaSat?: number): MohrCoulombModel {
   return {
     kind: "mohr-coulomb",
     unitWeight: gamma,
@@ -155,7 +162,7 @@ export function randomCase(r: () => number, opts: GenerateOptions = {}): Generat
     const gamma = uniform(r, 16, 21);
     const c = uniform(r, cLo, cHi);
     const phi = uniform(r, pLo, pHi);
-    return { name, unitWeight: gamma, cohesion: c, frictionAngle: phi, model: mohrCoulomb(gamma, c, phi) };
+    return { name, model: mohrCoulomb(gamma, c, phi) };
   };
   const materials = [mat("Upper")];
   const def: SlopeDefinition = { orientation: "ltr", coordinates, materials };
@@ -315,22 +322,17 @@ export function transformDefinition(
         : { ...p, adhesion: p.adhesion * s };
   const out: SlopeDefinition = { ...def, coordinates: def.coordinates.map(P) };
   out.materials = def.materials.map((m) => {
-    const model = m.model;
-    if (model && model.kind !== "mohr-coulomb") throw new Error("transformDefinition: Mohr-Coulomb only");
-    const scaled = {
-      ...m,
-      unitWeight: (m.unitWeight * s) / k,
-      cohesion: m.cohesion * s,
-    };
-    if (model) {
-      scaled.model = {
+    const model = materialModelOf(m);
+    if (model.kind !== "mohr-coulomb") throw new Error("transformDefinition: Mohr-Coulomb only");
+    return {
+      ...withMaterialModel(m),
+      model: {
         ...model,
         unitWeight: (model.unitWeight * s) / k,
         cohesion: model.cohesion * s,
         ...(model.unitWeightSat !== undefined ? { unitWeightSat: (model.unitWeightSat * s) / k } : {}),
-      };
-    }
-    return scaled;
+      },
+    };
   });
   if (def.materialBoundaries) {
     out.materialBoundaries = def.materialBoundaries.map((b) => ({ ...b, coordinates: b.coordinates.map(P) }));

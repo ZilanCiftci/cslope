@@ -17,7 +17,7 @@
  */
 
 import type { AnalysisOptions } from "../types/analysis";
-import type { SlopeDefinition } from "../types/slope-definition";
+import { materialModelOf, withMaterialModel, type SlopeDefinition } from "../types/slope-definition";
 import type { Material } from "../types/material";
 import { buildSlope } from "./build-slope";
 import { analyseSlope } from "./solvers";
@@ -165,8 +165,7 @@ function correlationMatrix(n: number, correlations: ReliabilityOptions["correlat
 function modelValue(def: SlopeDefinition, v: RandomVariable): number {
   const m = def.materials[v.material];
   if (!m) throw new Error(`Random variable: no material ${v.material + 1}.`);
-  const model = (m.model ?? {}) as unknown as Record<string, unknown>;
-  const value = v.field === "unitWeight" ? (model.unitWeight ?? m.unitWeight) : model[v.field];
+  const value = (materialModelOf(m) as unknown as Record<string, unknown>)[v.field];
   if (typeof value !== "number" || !Number.isFinite(value)) {
     throw new Error(`Random variable: material "${m.name}" has no ${v.field}.`);
   }
@@ -175,19 +174,15 @@ function modelValue(def: SlopeDefinition, v: RandomVariable): number {
 
 /** The definition with the variables at the given values. */
 function definitionWith(def: SlopeDefinition, variables: RandomVariable[], values: number[]): SlopeDefinition {
-  const materials = def.materials.map((m) => ({ ...m, model: m.model ? { ...m.model } : undefined }));
+  const materials = def.materials.map((m) => ({ ...withMaterialModel(m), model: { ...materialModelOf(m) } }));
   variables.forEach((v, i) => {
-    const m = materials[v.material];
-    const model = m.model as unknown as Record<string, number> | undefined;
+    const model = materials[v.material].model as unknown as Record<string, number>;
     if (v.field === "unitWeight") {
       // γsat keeps its difference to γ.
-      const delta = values[i] - (model?.unitWeight ?? m.unitWeight);
-      m.unitWeight = values[i];
-      if (model) {
-        model.unitWeight = values[i];
-        if (typeof model.unitWeightSat === "number") model.unitWeightSat += delta;
-      }
-    } else if (model) {
+      const delta = values[i] - model.unitWeight;
+      model.unitWeight = values[i];
+      if (typeof model.unitWeightSat === "number") model.unitWeightSat += delta;
+    } else {
       model[v.field] = values[i];
     }
   });
@@ -309,7 +304,7 @@ export function analyseReliability(
   const materialsByIndex = def.materials.map((m) =>
     slope.materialGeometries.map((g) => g.material).find((mat) => mat.name === m.name) ?? null,
   );
-  const baseModels = materialsByIndex.map((m) => (m ? { model: m.model, unitWeight: m.unitWeight } : null));
+  const baseModels = materialsByIndex.map((m) => m?.model ?? null);
   const params = variables.map((v, i) => {
     const mean = means[i];
     const lognormal = v.distribution === "lognormal" && mean > 0;
@@ -373,30 +368,26 @@ export function analyseReliability(
 /** Set the variables on the slope's materials (from their base models). */
 function applyValues(
   materials: (Material | null)[],
-  base: ({ model: Material["model"]; unitWeight: number } | null)[],
+  base: (Material["model"] | null)[],
   variables: RandomVariable[],
   values: number[],
 ): void {
-  const next = new Map<number, { model: Record<string, unknown>; unitWeight: number }>();
+  const next = new Map<number, Record<string, unknown>>();
   variables.forEach((v, i) => {
     const b = base[v.material];
     if (!b || !materials[v.material]) return;
-    const entry = next.get(v.material) ?? { model: { ...b.model }, unitWeight: b.unitWeight };
+    const model = next.get(v.material) ?? { ...b };
     if (v.field === "unitWeight") {
-      const delta = values[i] - b.unitWeight;
-      entry.unitWeight = values[i];
-      entry.model.unitWeight = values[i];
-      if (typeof b.model.unitWeightSat === "number") entry.model.unitWeightSat = b.model.unitWeightSat + delta;
+      // γsat keeps its difference to γ.
+      model.unitWeight = values[i];
+      if (typeof b.unitWeightSat === "number") model.unitWeightSat = b.unitWeightSat + values[i] - b.unitWeight;
     } else {
-      entry.model[v.field] = values[i];
+      model[v.field] = values[i];
     }
-    next.set(v.material, entry);
+    next.set(v.material, model);
   });
-  for (const [index, entry] of next) {
-    const m = materials[index]! as { model: unknown; unitWeight: number };
-    m.model = entry.model;
-    m.unitWeight = entry.unitWeight;
-  }
+  // The samples change the materials in place (the slope is built once).
+  for (const [index, model] of next) (materials[index] as unknown as { model: unknown }).model = model;
 }
 
 /**

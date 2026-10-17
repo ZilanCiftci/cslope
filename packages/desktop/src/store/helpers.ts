@@ -4,7 +4,6 @@ import type { AnalysisResponse, SlopeDefinition } from "../worker/messages";
 import { toCanonicalSlopeDefinition } from "@cslope/engine";
 import type { AppState, ModelEntry, ModelsSlice } from "./types";
 import { DEFAULT_ANALYSIS_LIMITS, DEFAULT_PIEZO_LINE } from "./defaults";
-import { flatFieldsFromModel } from "../features/properties/sections/material-forms/model-defaults";
 import { mainPiezoLine } from "../utils/piezo";
 import { toEnginePile, toEngineReinforcement } from "../utils/reinforcement";
 
@@ -48,12 +47,8 @@ export function buildSlopeDTOFromModel(model: ModelEntry): SlopeDefinition {
     orientation: model.orientation ?? "ltr",
     coordinates: model.coordinates,
     materials: materials.map((m) => {
-      const flat = flatFieldsFromModel(m.model);
       return {
         name: engineNameById.get(m.id) ?? m.name,
-        unitWeight: flat.unitWeight,
-        frictionAngle: flat.frictionAngle,
-        cohesion: flat.cohesion,
         color: m.color,
         depthRange: m.depthRange,
         model: m.model,

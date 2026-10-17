@@ -8,7 +8,7 @@ import type { SlopeDefinition } from "../types/slope-definition";
 import { WATER_UNIT_WEIGHT } from "../types/constants";
 import { buildSlope } from "./build-slope";
 import { getSlices } from "./slices";
-import { rng, uniform, onCircle, fosOf, mirrorDefinition, relDiff, mohrCoulomb, type Method, type Circle } from "./property-helpers";
+import { rng, uniform, onCircle, fosOf, mirrorDefinition, relDiff, mohrCoulomb, type Method, type Circle, mc } from "./property-helpers";
 
 interface Stepped {
   def: SlopeDefinition;
@@ -84,8 +84,8 @@ describe("vertical faces with free water", () => {
       const def = onCircle(s.def, s.circle);
       const m = def.materials[0];
       const sub: SlopeDefinition = { ...def, waterTable: { mode: "height", value: s.H + uniform(r, 0.5, 5), followBoundary: false } };
-      const g = m.unitWeight - WATER_UNIT_WEIGHT;
-      const buoyant: SlopeDefinition = { ...def, materials: [{ ...m, unitWeight: g, model: mohrCoulomb(g, m.cohesion, m.frictionAngle) }] };
+      const g = mc(m).unitWeight - WATER_UNIT_WEIGHT;
+      const buoyant: SlopeDefinition = { ...def, materials: [{ ...m, model: mohrCoulomb(g, mc(m).cohesion, mc(m).frictionAngle) }] };
       for (const method of ["Bishop", "Janbu"] as Method[]) {
         const a = fosOf(sub, method, { slices: 80 })!;
         const b = fosOf(buoyant, method, { slices: 80 })!;
@@ -151,7 +151,7 @@ describe("water against a face the slip surface leaves through (regression)", ()
   it("submerged equals buoyant (the thrust below the surface made Bishop a third too high)", () => {
     const sub = onCircle({ ...def, waterTable: { mode: "height", value: 15.53, followBoundary: false } }, circle);
     const g = 19 - WATER_UNIT_WEIGHT;
-    const buoyant = onCircle({ ...def, materials: [{ ...def.materials[0], unitWeight: g, model: mohrCoulomb(g, 10, 25) }] }, circle);
+    const buoyant = onCircle({ ...def, materials: [{ ...def.materials[0], model: mohrCoulomb(g, 10, 25) }] }, circle);
     for (const method of ["Bishop", "Janbu"] as Method[]) {
       expect(relDiff(fosOf(sub, method, { slices: 80 })!, fosOf(buoyant, method, { slices: 80 })!), method).toBeLessThan(1e-3);
     }
@@ -213,8 +213,8 @@ describe("a step up at the toe (the surface leaves through a rising face)", () =
       }
       if (level > b.H) {
         const m = b.def.materials[0];
-        const g = m.unitWeight - WATER_UNIT_WEIGHT;
-        const buoyant = onCircle({ ...b.def, materials: [{ ...m, unitWeight: g, model: mohrCoulomb(g, m.cohesion, m.frictionAngle) }] }, b.circle);
+        const g = mc(m).unitWeight - WATER_UNIT_WEIGHT;
+        const buoyant = onCircle({ ...b.def, materials: [{ ...m, model: mohrCoulomb(g, mc(m).cohesion, mc(m).frictionAngle) }] }, b.circle);
         for (const method of ["Bishop", "Janbu"] as Method[]) {
           const x = fosOf(wet, method, { slices: 80 })!;
           const y = fosOf(buoyant, method, { slices: 80 })!;

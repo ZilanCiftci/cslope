@@ -6,7 +6,7 @@
 import { describe, it, expect } from "vitest";
 import type { SlopeDefinition } from "../types/slope-definition";
 import type { MaterialModel } from "../types/material-models";
-import { rng, uniform, randomCase, onCircle, fosOf, relDiff, mohrCoulomb, groundY, type Method } from "./property-helpers";
+import { rng, uniform, randomCase, onCircle, fosOf, relDiff, mohrCoulomb, groundY, type Method, mc } from "./property-helpers";
 import { buildSlope } from "./build-slope";
 import { getSlices } from "./slices";
 
@@ -35,21 +35,21 @@ describe("material models that reduce to Mohr-Coulomb", () => {
       for (const interpolation of ["nearest", "linear", "idw"] as const) {
         const spatial = withModel(def, (m) => ({
           kind: "spatial-mohr-coulomb",
-          unitWeight: m.unitWeight,
+          unitWeight: mc(m).unitWeight,
           interpolation,
           dataPoints: [
-            [0, 0, m.cohesion, m.frictionAngle, m.unitWeight],
-            [xEnd, -5, m.cohesion, m.frictionAngle, m.unitWeight],
-            [xEnd / 2, 10, m.cohesion, m.frictionAngle, m.unitWeight],
+            [0, 0, mc(m).cohesion, mc(m).frictionAngle, mc(m).unitWeight],
+            [xEnd, -5, mc(m).cohesion, mc(m).frictionAngle, mc(m).unitWeight],
+            [xEnd / 2, 10, mc(m).cohesion, mc(m).frictionAngle, mc(m).unitWeight],
           ],
         }));
         expectSame(def, spatial, `seed 600 case ${i} spatial ${interpolation}`, 1e-9);
       }
       const aniso = withModel(def, (m) => ({
         kind: "anisotropic-function",
-        unitWeight: m.unitWeight,
-        cohesion: m.cohesion,
-        frictionAngle: m.frictionAngle,
+        unitWeight: mc(m).unitWeight,
+        cohesion: mc(m).cohesion,
+        frictionAngle: mc(m).frictionAngle,
         modifierFunction: [[-90, 1], [0, 1], [90, 1]],
       }));
       expectSame(def, aniso, `seed 600 case ${i} anisotropic`);
@@ -62,12 +62,12 @@ describe("material models that reduce to Mohr-Coulomb", () => {
       const g = randomCase(r, { phi: [0, 0], c: [15, 40] });
       const def = onCircle(g.def, g.circle);
       const variants: [string, (m: SlopeDefinition["materials"][number]) => MaterialModel][] = [
-        ["undrained", (m) => ({ kind: "undrained", unitWeight: m.unitWeight, undrainedShearStrength: m.cohesion })],
-        ["s-f-depth", (m) => ({ kind: "s-f-depth", unitWeight: m.unitWeight, suRef: m.cohesion, depthRef: 3, rate: 0 })],
-        ["s-f-datum", (m) => ({ kind: "s-f-datum", unitWeight: m.unitWeight, suRef: m.cohesion, yRef: -2, rate: 0 })],
-        ["lime-cement", (m) => ({ kind: "lime-cement-columns", unitWeight: m.unitWeight, soilSu: m.cohesion, columnSu: 500, areaRatio: 0 })],
+        ["undrained", (m) => ({ kind: "undrained", unitWeight: mc(m).unitWeight, undrainedShearStrength: mc(m).cohesion })],
+        ["s-f-depth", (m) => ({ kind: "s-f-depth", unitWeight: mc(m).unitWeight, suRef: mc(m).cohesion, depthRef: 3, rate: 0 })],
+        ["s-f-datum", (m) => ({ kind: "s-f-datum", unitWeight: mc(m).unitWeight, suRef: mc(m).cohesion, yRef: -2, rate: 0 })],
+        ["lime-cement", (m) => ({ kind: "lime-cement-columns", unitWeight: mc(m).unitWeight, soilSu: mc(m).cohesion, columnSu: 500, areaRatio: 0 })],
         // Columns of the soil's own strength change nothing at any ratio.
-        ["lime-cement same", (m) => ({ kind: "lime-cement-columns", unitWeight: m.unitWeight, soilSu: m.cohesion, columnSu: m.cohesion, areaRatio: 0.4 })],
+        ["lime-cement same", (m) => ({ kind: "lime-cement-columns", unitWeight: mc(m).unitWeight, soilSu: mc(m).cohesion, columnSu: mc(m).cohesion, areaRatio: 0.4 })],
       ];
       for (const [name, f] of variants) expectSame(def, withModel(def, f), `seed 601 case ${i} ${name}`);
     }
@@ -80,13 +80,13 @@ describe("material models that reduce to Mohr-Coulomb", () => {
       const def = onCircle(g.def, g.circle);
       const rate = uniform(r, 0.5, 3);
       const yRef = g.shape.H;
-      const su = withModel(def, (m) => ({ kind: "undrained", unitWeight: m.unitWeight, undrainedShearStrength: m.cohesion, suRefDepth: yRef, suRateOfChange: rate }));
-      const datum = withModel(def, (m) => ({ kind: "s-f-datum", unitWeight: m.unitWeight, suRef: m.cohesion, yRef, rate }));
-      const mc = withModel(def, (m) => ({ kind: "mohr-coulomb", unitWeight: m.unitWeight, cohesion: m.cohesion, frictionAngle: 0, cohesionRefDepth: yRef, cohesionRateOfChange: rate }));
+      const su = withModel(def, (m) => ({ kind: "undrained", unitWeight: mc(m).unitWeight, undrainedShearStrength: mc(m).cohesion, suRefDepth: yRef, suRateOfChange: rate }));
+      const datum = withModel(def, (m) => ({ kind: "s-f-datum", unitWeight: mc(m).unitWeight, suRef: mc(m).cohesion, yRef, rate }));
+      const mcModel = withModel(def, (m) => ({ kind: "mohr-coulomb", unitWeight: mc(m).unitWeight, cohesion: mc(m).cohesion, frictionAngle: 0, cohesionRefDepth: yRef, cohesionRateOfChange: rate }));
       expectSame(su, datum, `seed 602 case ${i} undrained vs datum`);
-      expectSame(su, mc, `seed 602 case ${i} undrained vs MC`);
+      expectSame(su, mcModel, `seed 602 case ${i} undrained vs MC`);
       // On a horizontal crest, depth below the ground is yRef − y as well.
-      const depth = withModel(def, (m) => ({ kind: "s-f-depth", unitWeight: m.unitWeight, suRef: m.cohesion, depthRef: 0, rate }));
+      const depth = withModel(def, (m) => ({ kind: "s-f-depth", unitWeight: mc(m).unitWeight, suRef: mc(m).cohesion, depthRef: 0, rate }));
       expect(fosOf(depth, "Bishop")!).toBeLessThanOrEqual(fosOf(su, "Bishop")! * (1 + 1e-9));
     }
   }, 30_000);
@@ -156,14 +156,14 @@ describe("geometry and water given in different ways", () => {
       const g = randomCase(r, { layers: 1 });
       const def = onCircle(g.def, g.circle);
       const m = def.materials[0];
-      const sat = (gs: number): SlopeDefinition => ({ ...def, materials: [{ ...m, model: mohrCoulomb(m.unitWeight, m.cohesion, m.frictionAngle, gs) }] });
+      const sat = (gs: number): SlopeDefinition => ({ ...def, materials: [{ ...m, model: mohrCoulomb(mc(m).unitWeight, mc(m).cohesion, mc(m).frictionAngle, gs) }] });
       // Water table below the whole model.
       const deep = { mode: "height" as const, value: -g.shape.depth - 5 };
-      expectSame({ ...def, waterTable: deep }, { ...sat(m.unitWeight + 3), waterTable: deep }, `seed 606 case ${i} deep`);
+      expectSame({ ...def, waterTable: deep }, { ...sat(mc(m).unitWeight + 3), waterTable: deep }, `seed 606 case ${i} deep`);
       const wet = { mode: "height" as const, value: g.shape.H * 0.5 };
-      expectSame({ ...def, waterTable: wet }, { ...sat(m.unitWeight), waterTable: wet }, `seed 606 case ${i} γsat = γ`);
+      expectSame({ ...def, waterTable: wet }, { ...sat(mc(m).unitWeight), waterTable: wet }, `seed 606 case ${i} γsat = γ`);
       // Heavier saturated soil below the water: never a different null-ness and finite.
-      const f = fosOf({ ...sat(m.unitWeight + 3), waterTable: wet }, "Bishop");
+      const f = fosOf({ ...sat(mc(m).unitWeight + 3), waterTable: wet }, "Bishop");
       expect(f === null || Number.isFinite(f)).toBe(true);
     }
   }, 30_000);
@@ -275,11 +275,11 @@ describe("lenses", () => {
       const { g, lens, area, ok } = lensCase(r);
       if (!ok) continue;
       const m = g.def.materials[0];
-      const g2 = m.unitWeight + uniform(r, 2, 8);
+      const g2 = mc(m).unitWeight + uniform(r, 2, 8);
       const base = onCircle(g.def, g.circle);
       const withLens: SlopeDefinition = {
         ...base,
-        materials: [m, { ...m, name: "Lens", unitWeight: g2, model: mohrCoulomb(g2, m.cohesion, m.frictionAngle) }],
+        materials: [m, { ...m, name: "Lens", unitWeight: g2, model: mohrCoulomb(g2, mc(m).cohesion, mc(m).frictionAngle) }],
         materialBoundaries: [{ coordinates: lens, materialName: "Lens" }],
         regionAssignments: [{ point: [lens[0][0] + 0.05, lens[0][1] + 0.05], materialName: "Lens" }, { point: [0.5, 0.5], materialName: m.name }],
       };
@@ -294,7 +294,7 @@ describe("lenses", () => {
         ...withLens,
         materials: [m, { ...m, name: "Lens" }],
       };
-      expect(weight(withLens) - weight(sameWeight), `seed 611 case ${i}`).toBeCloseTo((g2 - m.unitWeight) * area, 6);
+      expect(weight(withLens) - weight(sameWeight), `seed 611 case ${i}`).toBeCloseTo((g2 - mc(m).unitWeight) * area, 6);
     }
   }, 30_000);
 });

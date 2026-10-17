@@ -12,7 +12,7 @@
 import { describe, it, expect } from "vitest";
 import type { SlopeDefinition } from "../types/slope-definition";
 import type { AnalysisOptions, PartialFactors } from "../types/analysis";
-import { rng, uniform, randomCase, onCircle, fosOf, mohrCoulomb, relDiff, decorate, type Method } from "./property-helpers";
+import { rng, uniform, randomCase, onCircle, fosOf, mohrCoulomb, relDiff, decorate, type Method, mc } from "./property-helpers";
 
 const METHODS: Method[] = ["Bishop", "Janbu", "Morgenstern-Price"];
 const strengthFactors = (k: number): PartialFactors => ({ cu: k, cohesion: k, tanPhi: k, variableLoad: 1 });
@@ -22,7 +22,7 @@ function withSat(def: SlopeDefinition, extra: number): SlopeDefinition {
     ...def,
     materials: def.materials.map((m) => ({
       ...m,
-      model: mohrCoulomb(m.unitWeight, m.cohesion, m.frictionAngle, m.unitWeight + extra),
+      model: mohrCoulomb(mc(m).unitWeight, mc(m).cohesion, mc(m).frictionAngle, mc(m).unitWeight + extra),
     })),
   };
 }

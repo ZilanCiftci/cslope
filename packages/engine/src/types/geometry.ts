@@ -105,11 +105,6 @@ export interface Slice {
   isValid: boolean;
   /** Base material at the slice bottom. */
   baseMaterial: Material | null;
-  /**
-   * Material type at base.
-   * @deprecated Use `isCombined` flag instead of checking `=== "Combined"`.
-   */
-  materialType?: string;
   /** Effective cohesion at base (kPa). */
   cohesion: number;
   /** Undrained cohesion at base (kPa). */
