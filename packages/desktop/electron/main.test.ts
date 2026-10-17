@@ -225,6 +225,8 @@ vi.mock("electron", () => {
     session: fake.session,
     ipcRenderer: fake.ipcRenderer,
     contextBridge: fake.contextBridge,
+    // Every File has a native path here (a dropped file).
+    webUtils: { getPathForFile: () => "/dropped/project.json" },
   };
   return { ...mod, default: mod };
 });

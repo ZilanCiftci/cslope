@@ -27,13 +27,18 @@ const fake = vi.hoisted(() => {
   const emit = (channel: string, ...args: any[]) => {
     for (const fn of listeners.get(channel) ?? []) fn(...args);
   };
-  return { ipcRenderer, contextBridge, exposed, listeners, emit };
+  // The native path of a dropped file ("" for a File made by the page).
+  const webUtils = {
+    getPathForFile: vi.fn((file: any) => (typeof file === "string" ? "/dropped/" + file : (file?.nativePath ?? ""))),
+  };
+  return { ipcRenderer, contextBridge, webUtils, exposed, listeners, emit };
 });
 
 vi.mock("electron", () => ({
   ipcRenderer: fake.ipcRenderer,
   contextBridge: fake.contextBridge,
-  default: { ipcRenderer: fake.ipcRenderer, contextBridge: fake.contextBridge },
+  webUtils: fake.webUtils,
+  default: { ipcRenderer: fake.ipcRenderer, contextBridge: fake.contextBridge, webUtils: fake.webUtils },
 }));
 
 // ── Expected API ──────────────────────────────────────────────────
@@ -41,7 +46,7 @@ vi.mock("electron", () => ({
 type Kind = "send" | "invoke" | "on";
 const EXPECTED: Record<string, [Kind, string]> = {
   openFile: ["invoke", "dialog:openFile"],
-  openFilePath: ["invoke", "file:openPath"],
+  openDroppedFile: ["invoke", "file:openPath"],
   confirmFileOpened: ["send", "file:openConfirmed"],
   askUnsavedChanges: ["invoke", "dialog:unsavedChanges"],
   closeGuardReady: ["send", "app:closeGuardReady"],
@@ -166,8 +171,13 @@ describe("preload", () => {
     expect(call[0]).toBe(channel);
   });
 
+  it("reads a dropped file by the native path of the File, never one the page names", async () => {
+    await expect(api.openDroppedFile({ nativePath: "" })).resolves.toBeNull();
+    expect(fake.ipcRenderer.invoke).not.toHaveBeenCalled();
+  });
+
   it("passes the path and content to the file handlers", async () => {
-    await api.openFilePath("/tmp/a.json");
+    await api.openDroppedFile({ nativePath: "/tmp/a.json" });
     await api.saveFile("content");
     await api.saveFileAs("content2");
     expect(fake.ipcRenderer.invoke.mock.calls).toEqual([

@@ -90,7 +90,8 @@ declare global {
     cslope: {
       // File dialogs
       openFile: () => Promise<string | null>;
-      openFilePath: (filePath: string) => Promise<string | null>;
+      /** Read a dropped project file by its native path (null if it has none). */
+      openDroppedFile: (file: File) => Promise<string | null>;
       /** Make the file just read by openFile/openFilePath the save target. */
       confirmFileOpened: () => void;
       /** Native Save / Don't Save / Cancel prompt for unsaved changes. */

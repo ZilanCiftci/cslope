@@ -1,4 +1,4 @@
-import { ipcRenderer, contextBridge } from "electron";
+import { ipcRenderer, contextBridge, webUtils } from "electron";
 import type { IpcRendererEvent } from "electron";
 
 /**
@@ -28,8 +28,13 @@ function subscribe(
 contextBridge.exposeInMainWorld("cslope", {
   // File dialogs
   openFile: () => ipcRenderer.invoke("dialog:openFile"),
-  openFilePath: (filePath: string) =>
-    ipcRenderer.invoke("file:openPath", filePath),
+  // A dropped file, by its native path. The path is looked up here, from
+  // the File the user dropped (File.path is gone since Electron 32): the
+  // page cannot name a file to read.
+  openDroppedFile: (file: File) => {
+    const filePath = webUtils.getPathForFile(file);
+    return filePath ? ipcRenderer.invoke("file:openPath", filePath) : Promise.resolve(null);
+  },
   confirmFileOpened: () => ipcRenderer.send("file:openConfirmed"),
   // Unsaved changes
   askUnsavedChanges: () => ipcRenderer.invoke("dialog:unsavedChanges"),

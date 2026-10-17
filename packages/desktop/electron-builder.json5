@@ -16,9 +16,24 @@
     icon: "build/icon.png",
     artifactName: "${productName}-Mac-${version}-Installer.${ext}",
   },
+  // Electron fuses, set in the packaged binary: the signed cSlope.exe cannot
+  // be used to run arbitrary Node scripts (ELECTRON_RUN_AS_NODE,
+  // NODE_OPTIONS, --inspect), loads the app only from its asar archive and
+  // encrypts cookies. (Embedded asar integrity is left off until it is
+  // verified on a Windows build.)
+  electronFuses: {
+    runAsNode: false,
+    enableNodeOptionsEnvironmentVariable: false,
+    enableNodeCliInspectArguments: false,
+    onlyLoadAppFromAsar: true,
+    enableCookieEncryption: true,
+  },
   win: {
     icon: "build/icon.png",
-    sign: "./sign.cjs",
+    // Azure Trusted Signing (see sign.cjs).
+    signtoolOptions: {
+      sign: "./sign.cjs",
+    },
     target: [
       {
         target: "nsis",

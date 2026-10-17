@@ -31,9 +31,10 @@ export function useDragDrop() {
       try {
         let contents: string | null = null;
 
-        if (isElectron && "path" in file && typeof file.path === "string") {
-          // Electron exposes the native file path on dropped File objects
-          contents = await window.cslope.openFilePath(file.path);
+        if (isElectron) {
+          // Read by the main process from the native path (then a save
+          // writes back to that file).
+          contents = await window.cslope.openDroppedFile(file);
         } else {
           // Browser fallback: read via FileReader
           contents = await new Promise<string>((resolve, reject) => {

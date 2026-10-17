@@ -91,15 +91,14 @@ describe("useDragDrop", () => {
   it("reads the native path in the desktop app and confirms the open", async () => {
     electron.value = true;
     const text = projectText(-80);
-    const openFilePath = vi.fn(async () => text);
+    const openDroppedFile = vi.fn(async () => text);
     const confirmFileOpened = vi.fn();
-    (window as unknown as { cslope: unknown }).cslope = { openFilePath, confirmFileOpened };
+    (window as unknown as { cslope: unknown }).cslope = { openDroppedFile, confirmFileOpened };
     renderHook(() => useDragDrop());
     const file = new File([""], "native.cslope");
-    Object.defineProperty(file, "path", { value: "C:\\models\\native.cslope" });
     drop(file);
     await waitFor(() => expect(firstX()).toBe(-80));
-    expect(openFilePath).toHaveBeenCalledWith("C:\\models\\native.cslope");
+    expect(openDroppedFile).toHaveBeenCalledWith(file);
     expect(confirmFileOpened).toHaveBeenCalled();
   });
 
