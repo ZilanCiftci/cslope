@@ -249,9 +249,12 @@ describe("parseProjectFile: models", () => {
       runState: "idle",
       progress: 0,
     });
+    const result = { minFOS: 1.3, criticalSurface: null, allSurfaces: [], criticalSlices: [] };
     expect(
-      parseOne({ runState: "done", progress: 1, result: { minFOS: 1.3 } }),
+      parseOne({ runState: "done", progress: 1, result }),
     ).toMatchObject({ runState: "done", progress: 1, result: { minFOS: 1.3 } });
+    // A result the app cannot show is dropped.
+    expect(parseOne({ runState: "done", result: { minFOS: 1.3 } })).toMatchObject({ runState: "idle", result: null });
     expect(parseOne({ runState: "error", errorMessage: "x" })).toMatchObject({
       runState: "error",
       progress: 0,
