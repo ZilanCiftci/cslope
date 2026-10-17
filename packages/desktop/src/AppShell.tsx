@@ -93,7 +93,10 @@ export function AppShell() {
       }
     });
     window.cslope.closeGuardReady();
-    return unsubscribe;
+    return () => {
+      unsubscribe();
+      window.cslope.closeGuardReleased();
+    };
   }, []);
 
   useEffect(() => {

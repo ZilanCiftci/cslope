@@ -2,6 +2,7 @@ import { app, BrowserWindow, Menu, dialog, ipcMain, session } from "electron";
 import { fileURLToPath } from "node:url";
 import path from "node:path";
 import fs from "node:fs";
+import { randomBytes } from "node:crypto";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -17,7 +18,8 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 process.env.APP_ROOT = path.join(__dirname, "..");
 
 // 🚧 Use ['ENV_NAME'] avoid vite:define plugin - Vite@2.x
-export const VITE_DEV_SERVER_URL = process.env["VITE_DEV_SERVER_URL"];
+// Development only: a packaged app never loads a page named by the environment.
+export const VITE_DEV_SERVER_URL = app.isPackaged ? undefined : process.env["VITE_DEV_SERVER_URL"];
 export const MAIN_DIST = path.join(process.env.APP_ROOT, "dist-electron");
 export const RENDERER_DIST = path.join(process.env.APP_ROOT, "dist");
 
@@ -1091,6 +1093,12 @@ ipcMain.on("app:closeGuardReady", (event) => {
   if (event.sender === win?.webContents) closeGuardReady = true;
 });
 
+// The renderer's guard is gone (it unmounted, e.g. after a render error):
+// nobody would answer a close request, so closing must not wait for one.
+ipcMain.on("app:closeGuardReleased", (event) => {
+  if (event.sender === win?.webContents) closeGuardReady = false;
+});
+
 ipcMain.on("app:closeConfirmed", (event) => {
   if (event.sender !== win?.webContents) return;
   closeConfirmed = true;
@@ -1214,9 +1222,11 @@ async function saveToPath(filePath: string, content: string) {
   } catch (err) {
     if ((err as NodeJS.ErrnoException).code !== "ENOENT") throw err;
   }
-  const tmp = `${target}.tmp-${process.pid}`;
+  // An unguessable name, created exclusively: a file or link planted
+  // under a predictable name in a shared folder is never written through.
+  const tmp = `${target}.tmp-${randomBytes(8).toString("hex")}`;
   try {
-    const fd = fs.openSync(tmp, "w", mode);
+    const fd = fs.openSync(tmp, "wx", mode);
     try {
       fs.writeFileSync(fd, content, "utf-8");
       fs.fsyncSync(fd);
@@ -1347,6 +1357,9 @@ app.on("activate", () => {
 
 app.whenReady().then(() => {
   setupCSP();
+  // The app needs no camera, microphone, location or notifications.
+  session.defaultSession.setPermissionRequestHandler((_webContents, _permission, callback) => callback(false));
+  session.defaultSession.setPermissionCheckHandler(() => false);
   buildMenu();
   if (!process.env.CSLOPE_CAPTURE) {
     createSplash();

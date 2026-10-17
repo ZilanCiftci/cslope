@@ -58,3 +58,8 @@ export function resolveTickStep(
   }
   return userSpacing;
 }
+
+/** Minor ruler ticks between labels: a whole number from 0 to 20 (a huge count made the tick loops endless). */
+export function clampMinorTicks(n: number): number {
+  return Number.isFinite(n) ? Math.max(0, Math.min(20, Math.round(n))) : 0;
+}

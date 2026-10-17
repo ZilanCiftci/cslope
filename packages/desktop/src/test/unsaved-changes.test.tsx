@@ -15,6 +15,7 @@ const bridge = {
   saveFileAs: vi.fn<(json: string) => Promise<boolean>>(),
   confirmClose: vi.fn(),
   closeGuardReady: vi.fn(),
+  closeGuardReleased: vi.fn(),
   menuNew: vi.fn(),
 };
 

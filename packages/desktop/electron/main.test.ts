@@ -153,7 +153,11 @@ const fake = vi.hoisted(() => {
   };
 
   const session = {
-    defaultSession: { webRequest: { onHeadersReceived: vi.fn() } },
+    defaultSession: {
+      webRequest: { onHeadersReceived: vi.fn() },
+      setPermissionRequestHandler: vi.fn(),
+      setPermissionCheckHandler: vi.fn(),
+    },
   };
   const Menu = { setApplicationMenu: vi.fn() };
   // Preload side, for the channel contract test.
@@ -1350,7 +1354,9 @@ describe("saving", () => {
     });
     expect(await saveAsTo(file, "new")).toBe(true);
     expect(order).toEqual(["fsync", "rename"]);
-    expect(open.mock.calls[0][0]).toBe(`${file}.tmp-${process.pid}`);
+    // An unguessable temporary name, created exclusively.
+    expect(open.mock.calls[0][0]).toMatch(new RegExp(`^${file.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\.tmp-[0-9a-f]{16}$`));
+    expect(open.mock.calls[0][1]).toBe("wx");
     expect(fs.readFileSync(file, "utf-8")).toBe("new");
     expect(leftovers()).toEqual([]);
   });
@@ -1464,7 +1470,7 @@ describe("saving", () => {
     });
     const unlink = vi.spyOn(fs, "unlinkSync");
     await expect(saveAsTo(file, "new")).rejects.toThrow("EMFILE");
-    expect(unlink).toHaveBeenCalledWith(`${file}.tmp-${process.pid}`);
+    expect(unlink).toHaveBeenCalledWith(expect.stringMatching(/\.tmp-[0-9a-f]{16}$/));
   });
 });
 

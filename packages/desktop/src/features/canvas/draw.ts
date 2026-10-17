@@ -23,6 +23,7 @@ import {
 } from "./constants";
 import { GRID_RAW_STEP_PX } from "../../constants";
 import {
+  clampMinorTicks,
   computeRulerStep,
   formatRulerLabel,
   resolveTickStep,
@@ -1589,7 +1590,7 @@ export function drawCanvas(
         resultViewSettings.gridSpacing,
         computeRulerStep(worldSpan, innerFrameWidthMm, paperWidthMm),
       );
-      const minorTickCount = resultViewSettings.minorTicks ?? 0;
+      const minorTickCount = clampMinorTicks(resultViewSettings.minorTicks ?? 0);
 
       ctx.save();
       ctx.fillStyle = PAPER_TICK_COLOR;

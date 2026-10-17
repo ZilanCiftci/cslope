@@ -9,7 +9,7 @@
 import { materialModelOf, resolveOrientation, type AnalysisOptions, type SlopeDefinition } from "@cslope/engine";
 import type { Pile, Reinforcement } from "@cslope/engine";
 import type { ModelEntry, PileRow, ReinforcementRow } from "./types";
-import { APP_DEFAULT_ANALYSIS_OPTIONS, DEFAULT_PIEZO_LINE, MATERIAL_COLORS, PIEZO_COLORS } from "./defaults";
+import { APP_DEFAULT_ANALYSIS_OPTIONS, DEFAULT_PIEZO_LINE, MATERIAL_COLORS, PIEZO_COLORS, createDefaultProjectInfo } from "./defaults";
 import { createExampleResultViewSettings } from "./benchmarks";
 
 export interface DefinitionModelInfo {
@@ -137,6 +137,9 @@ export function modelFromDefinition(def: SlopeDefinition, info: DefinitionModelI
   return {
     id: info.id,
     name: info.name,
+    // A project block of its own: switching to the model would otherwise
+    // write a default one into it and count as an unsaved change.
+    projectInfo: { ...createDefaultProjectInfo(), title: info.name },
     orientation: resolveOrientation(def.orientation, def.coordinates),
     coordinates: def.coordinates.map(([x, y]) => [x, y]),
     materials: def.materials.map((m, i) => ({

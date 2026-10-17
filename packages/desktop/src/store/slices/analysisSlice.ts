@@ -472,7 +472,14 @@ export const createAnalysisSlice: SliceCreator<AnalysisSlice> = (set, get) => ({
           set({ ...RUN_RESET });
           return;
         }
-        set({ ...outcome, progress: outcome.runState === "done" ? 1 : 0 });
+        const progress = outcome.runState === "done" ? 1 : 0;
+        // The model's entry as well: the explorer reads it, and a Run All
+        // that finishes later restores the displayed state from it.
+        set({
+          ...outcome,
+          progress,
+          models: s.models.map((m) => (m.id === runModelId ? { ...m, ...outcome, progress } : m)),
+        });
         return;
       }
       const entry = s.models.find((m) => m.id === runModelId);
@@ -753,6 +760,8 @@ export const createAnalysisSlice: SliceCreator<AnalysisSlice> = (set, get) => ({
     if (!isCurrentBatch()) return;
 
     const currentActiveId = get().activeModelId;
+    // A single run started on the active model meanwhile owns its display.
+    if (activeRunModelId === currentActiveId) return;
     const refreshedActive = get().models.find((m) => m.id === currentActiveId);
     if (refreshedActive) {
       set({

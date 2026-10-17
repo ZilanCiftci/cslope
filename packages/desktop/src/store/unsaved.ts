@@ -6,7 +6,19 @@
  * mode, and analysis status and results.  Zooming or running an analysis
  * therefore does not count as an unsaved change.
  */
-import type { AppState, ModelEntry } from "./types";
+import type { AppState, ModelEntry, ResultViewSettings } from "./types";
+
+/**
+ * Result view settings without the zoom and pan of the paper on screen:
+ * how the user looks at the paper, not what is on it.
+ */
+export function withoutPaperViewport(settings: ResultViewSettings): ResultViewSettings {
+  const paperFrame = { ...settings.paperFrame };
+  delete paperFrame.zoom;
+  delete paperFrame.offsetX;
+  delete paperFrame.offsetY;
+  return { ...settings, paperFrame };
+}
 
 /** Model entry fields that do not make a project "unsaved". */
 const VOLATILE_FIELDS = [
@@ -61,11 +73,18 @@ export function projectContentSignature(state: AppState): string {
       coordinateExpressions: entry.coordinateExpressions ?? [],
       reinforcements: entry.reinforcements ?? [],
       piles: entry.piles ?? [],
+      ...(entry.resultViewSettings ? { resultViewSettings: withoutPaperViewport(entry.resultViewSettings) } : {}),
     };
     for (const key of VOLATILE_FIELDS) delete content[key];
     return content;
   });
-  return JSON.stringify(models);
+  // Keys in a fixed order: writing a model back (switching models)
+  // rebuilds its object in another key order with the same content.
+  return JSON.stringify(models, (_key, value: unknown) =>
+    value && typeof value === "object" && !Array.isArray(value)
+      ? Object.fromEntries(Object.keys(value).sort().map((k) => [k, (value as Record<string, unknown>)[k]]))
+      : value,
+  );
 }
 
 /** Record the project in `state` as saved (after open, new or save). */

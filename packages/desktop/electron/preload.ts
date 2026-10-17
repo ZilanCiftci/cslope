@@ -34,6 +34,7 @@ contextBridge.exposeInMainWorld("cslope", {
   // Unsaved changes
   askUnsavedChanges: () => ipcRenderer.invoke("dialog:unsavedChanges"),
   closeGuardReady: () => ipcRenderer.send("app:closeGuardReady"),
+  closeGuardReleased: () => ipcRenderer.send("app:closeGuardReleased"),
   confirmClose: () => ipcRenderer.send("app:closeConfirmed"),
   onCloseRequested: (listener: (event: unknown) => void) =>
     subscribe("app:closeRequested", listener),

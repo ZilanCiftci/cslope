@@ -10,6 +10,7 @@ import {
 } from "@cslope/engine";
 import { DEFAULT_MODEL_NAME } from "../constants";
 import { nextId } from "./helpers";
+import { clampMinorTicks } from "../utils/ruler";
 import {
   APP_DEFAULT_ANALYSIS_OPTIONS,
   DEFAULT_ANALYSIS_LIMITS,
@@ -290,20 +291,7 @@ function normalizeModelEntry(raw: unknown): ModelEntry {
     resultViewSettings: normalizeResultView(model.resultViewSettings),
     viewOffset: pointOrUndefined(model.viewOffset),
     viewScale: positiveOrUndefined(model.viewScale),
-    // A run cannot survive a save/load: no worker exists for it any more.
-    ...(model.runState === "running"
-      ? { runState: "idle" as const, progress: 0 }
-      : {
-          runState:
-            model.runState === "done" || model.runState === "error"
-              ? model.runState
-              : ("idle" as const),
-          progress: Number.isFinite(model.progress)
-            ? (model.progress as number)
-            : 0,
-        }),
-    result: (model.result as ModelEntry["result"]) ?? null,
-    errorMessage: (model.errorMessage as ModelEntry["errorMessage"]) ?? null,
+    ...savedRun(model),
     mode:
       model.mode === "edit" || model.mode === "result"
         ? model.mode
@@ -399,6 +387,31 @@ function normalizeProjectInfo(raw: unknown): ProjectInfo {
   };
 }
 
+/**
+ * The saved outcome of a run, if it is one the app can show: a result
+ * with its factor of safety and surface lists, or an error message. A run
+ * cannot survive a save/load (no worker exists for it any more), and an
+ * outcome of another shape (a crafted or damaged file) is dropped: the
+ * result view would otherwise fail to render.
+ */
+function savedRun(model: Record<string, unknown>): Pick<ModelEntry, "runState" | "progress" | "result" | "errorMessage"> {
+  const idle = { runState: "idle" as const, progress: 0, result: null, errorMessage: null };
+  const r = model.result as Record<string, unknown> | null | undefined;
+  const result =
+    r &&
+    typeof r === "object" &&
+    Number.isFinite(r.minFOS) &&
+    Array.isArray(r.allSurfaces) &&
+    Array.isArray(r.criticalSlices) &&
+    (r.criticalSurface === null || typeof r.criticalSurface === "object")
+      ? (r as unknown as NonNullable<ModelEntry["result"]>)
+      : null;
+  const errorMessage = typeof model.errorMessage === "string" ? model.errorMessage : null;
+  if (model.runState === "done" && result) return { runState: "done", progress: 1, result, errorMessage: null };
+  if (model.runState === "error" && errorMessage) return { runState: "error", progress: 0, result: null, errorMessage };
+  return idle;
+}
+
 /** Also used for imported view templates. */
 export function normalizeResultView(raw: unknown): ResultViewSettings {
   if (!raw || typeof raw !== "object") {
@@ -468,7 +481,10 @@ export function normalizeResultView(raw: unknown): ResultViewSettings {
     ...(Number.isFinite(view.gridSpacing)
       ? { gridSpacing: view.gridSpacing }
       : {}),
-    ...(Number.isFinite(view.minorTicks) ? { minorTicks: view.minorTicks } : {}),
+    // A whole number of ticks: a huge count made the ruler loops endless.
+    ...(Number.isFinite(view.minorTicks)
+      ? { minorTicks: clampMinorTicks(view.minorTicks as number) }
+      : {}),
     annotations,
     paperFrame: { ...paperFrame },
     viewLock:

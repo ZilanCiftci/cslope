@@ -35,6 +35,7 @@ import {
   drawUdlLoads,
 } from "./pdf-drawing";
 import type { PdfTransform } from "./pdf-helpers";
+import { clampMinorTicks } from "../../utils/ruler";
 
 interface PdfViewBounds {
   xMin: number;
@@ -401,7 +402,7 @@ export function exportVectorPdf(data: PdfExportData): void {
       viewScale,
       innerFrame,
       rvs.gridSpacing,
-      rvs.minorTicks,
+      clampMinorTicks(rvs.minorTicks ?? 0),
     );
 
     pdf.save(buildPdfFilename(projectInfo));

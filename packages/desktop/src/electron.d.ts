@@ -97,6 +97,7 @@ declare global {
       askUnsavedChanges: () => Promise<"save" | "discard" | "cancel">;
       /** The renderer handles close requests (enables the close guard). */
       closeGuardReady: () => void;
+      closeGuardReleased: () => void;
       /** Close the main window after the unsaved-changes check passed. */
       confirmClose: () => void;
       onCloseRequested: (listener: (event: unknown) => void) => () => void;

@@ -1,7 +1,7 @@
 import { create } from "zustand";
 import { temporal } from "zundo";
 import type { AppState } from "./types";
-import { markProjectClean } from "./unsaved";
+import { markProjectClean, withoutPaperViewport } from "./unsaved";
 import {
   viewLockContains,
   viewLockForModel,
@@ -85,8 +85,11 @@ export const useAppStore = create<AppState>()(
         resultViewSettings: state.resultViewSettings,
       }),
       limit: 50,
+      // Panning and zooming the result paper is no edit: a pan would
+      // otherwise push one step per pointer move and evict real edits.
       equality: (pastState, currentState) =>
-        JSON.stringify(pastState) === JSON.stringify(currentState),
+        JSON.stringify({ ...pastState, resultViewSettings: withoutPaperViewport(pastState.resultViewSettings) }) ===
+        JSON.stringify({ ...currentState, resultViewSettings: withoutPaperViewport(currentState.resultViewSettings) }),
     },
   ),
 );
@@ -119,11 +122,20 @@ useAppStore.subscribe((state, prev) => {
     !viewLockContains(lock, state.coordinates)
   ) {
     const { paperSize, landscape } = state.resultViewSettings.paperFrame;
-    state.setResultViewSettings({
-      viewLock: viewLockForModel(
-        state.coordinates,
-        getPlotAspectRatio(paperSize, landscape),
-      ),
-    });
+    // Part of the edit that grew the model, not an undo step of its own
+    // (which would also clear the redo stack when a redo grows it again).
+    const history = useAppStore.temporal.getState();
+    const tracking = history.isTracking;
+    history.pause();
+    try {
+      state.setResultViewSettings({
+        viewLock: viewLockForModel(
+          state.coordinates,
+          getPlotAspectRatio(paperSize, landscape),
+        ),
+      });
+    } finally {
+      if (tracking) history.resume();
+    }
   }
 });
