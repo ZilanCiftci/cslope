@@ -630,9 +630,9 @@ describe("drawAnnotations", () => {
     expect(rec.texts()).toEqual(expect.arrayContaining(["A", "B", "FOS", "No slice data"].slice(0, 3)));
   });
 
-  it("writes the colour bar ticks with an ASCII '>=' on a capped scale", () => {
+  it("writes the colour bar ticks with '≥' on a capped scale", () => {
     const capped = draw([{ id: "c", type: "color-bar", x: 0.8, y: 0.2 }], result({ maxFOS: 10 }));
-    expect(capped.texts()).toContain(">= 2.47");
+    expect(capped.texts()).toContain("≥ 2.47");
     expect(capped.texts()).toContain("1.23");
     const plain = draw([{ id: "c", type: "color-bar", x: 0.8, y: 0.2 }]);
     expect(plain.texts().some((t) => t.startsWith(">="))).toBe(false);

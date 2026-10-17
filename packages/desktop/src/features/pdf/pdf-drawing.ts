@@ -1,11 +1,12 @@
 import { jsPDF } from "jspdf";
+import { PDF_SANS, setSansFont } from "./pdf-fonts";
 import type { ReinforcementForce } from "@cslope/engine";
 import type { PileRow, ReinforcementRow } from "../../store/types";
 import { bondedSpan, formatReinforcementForce } from "../canvas/reinforcement-draw";
 import { fosColor, fosScaleRange, fosTickLabel } from "../../utils/fos-color";
 
-/** "≥" is not in the standard PDF fonts. */
-const PDF_GE = ">= ";
+/** "≥" (in the embedded font). */
+const PDF_GE = "≥ ";
 import {
   fosLabelAnchor,
   sameSurface,
@@ -172,7 +173,7 @@ export function drawRulerFrame(
   const minorTickCount = minorTicks ?? 0;
 
   pdf.setFontSize(FONT_SIZE);
-  pdf.setFont("helvetica", "normal");
+  setSansFont(pdf, "normal");
   pdf.setTextColor(50, 50, 50);
   pdf.setDrawColor(50, 50, 50);
 
@@ -404,7 +405,7 @@ export function drawUdlLoads(
     }
 
     pdf.setFontSize(9);
-    pdf.setFont("helvetica", "bold");
+    setSansFont(pdf, "bold");
     pdf.setTextColor(...UDL_LOAD_COLOR.rgb);
     const labelX = (px1 + px2) / 2;
     const labelY = Math.min(py1, py2) - arrowH - 1.5;
@@ -434,7 +435,7 @@ export function drawLineLoads(
     pdf.triangle(px, py, px - headW, py - headL, px + headW, py - headL, "F");
 
     pdf.setFontSize(9);
-    pdf.setFont("helvetica", "bold");
+    setSansFont(pdf, "bold");
     pdf.setTextColor(...LINE_LOAD_COLOR.rgb);
     pdf.text(`P = ${ll.magnitude} kN/m`, px, py - arrowH - 1.5, {
       align: "center",
@@ -477,7 +478,7 @@ export function drawReinforcementsPdf(
       pdf.rect(bx - 0.8, by - 0.8, 1.6, 1.6, "F");
     }
     pdf.setFontSize(8);
-    pdf.setFont("helvetica", "bold");
+    setSansFont(pdf, "bold");
     pdf.setTextColor(...REINFORCEMENT_RGB);
     pdf.text(String(i + 1), ax - ux * 2.5, ay - uy * 2.5, { align: "center", baseline: "middle" });
   });
@@ -492,7 +493,7 @@ export function drawPilesPdf(pdf: jsPDF, tf: PdfTransform, rows: readonly PileRo
     pdf.setLineWidth(p.type === "sheet-pile" ? 1 : 0.8);
     pdf.line(ax, ay, bx, by);
     pdf.setFontSize(8);
-    pdf.setFont("helvetica", "bold");
+    setSansFont(pdf, "bold");
     pdf.setTextColor(93, 64, 55);
     pdf.text(`P${i + 1}`, ax, ay - 1.2, { align: "center" });
   });
@@ -510,7 +511,7 @@ export function drawReinforcementForcesPdf(
   pdf.setFillColor(...REINFORCEMENT_RGB);
   pdf.setTextColor(...REINFORCEMENT_RGB);
   pdf.setFontSize(7);
-  pdf.setFont("helvetica", "bold");
+  setSansFont(pdf, "bold");
   for (const f of forces) {
     const n = Math.hypot(f.fx, f.fy);
     if (!(n > 0)) continue;
@@ -599,7 +600,7 @@ export function drawPiezometricLines(
       pdf.line(mx - barW, my + barGap2, mx + barW, my + barGap2);
 
       if (multiLine) {
-        pdf.setFont("helvetica", "bold");
+        setSansFont(pdf, "bold");
         pdf.setFontSize(8);
         pdf.setTextColor(...PIEZO_COLOR.rgb);
         pdf.text(String(lineIdx + 1), mx, triTop - 1, { align: "center" });
@@ -872,7 +873,7 @@ export function drawCriticalSurface(
     const labelX = ccx + 3;
 
     pdf.setFontSize(10);
-    pdf.setFont("helvetica", "bold");
+    setSansFont(pdf, "bold");
     const tw = pdf.getTextWidth(fosText);
     pdf.setFillColor(...FOS_LABEL_BG_COLOR.rgb);
     pdf.rect(labelX - 0.5, ccy - 4.5, tw + 1, 5.5, "F");
@@ -898,7 +899,8 @@ function measureTextAnnotationPdf(
   const ptSize = fontSize / 0.3528;
   const family = mapFont(anno.fontFamily ?? ANNOTATION_DEFAULT_FONT_FAMILY);
   const style = mapFontStyle(anno.bold, anno.italic);
-  pdf.setFont(family, style);
+  if (family === PDF_SANS) setSansFont(pdf, style);
+  else pdf.setFont(family, style);
   pdf.setFontSize(ptSize);
   const resolved = resolveAnnotationText({
     text: anno.text ?? "",
@@ -923,7 +925,7 @@ function layoutColorBarPdf(pdf: jsPDF, result: AnalysisResult, scale: number) {
   const labelMm = 11 * scale;
   const labelPt = labelMm / 0.3528;
   const titleExtraTop = labelMm + 4 * scale;
-  pdf.setFont("helvetica", "normal");
+  setSansFont(pdf, "normal");
   pdf.setFontSize(labelPt);
   let maxLabelW = 0;
   const fosScale = fosScaleRange(result);
@@ -994,7 +996,7 @@ function layoutMaterialTablePdf(
   const swatchW = 10 * scale * f;
   const headerLineH = Math.max(fontMm * 1.1, 11 * scale * f);
 
-  pdf.setFont("helvetica", "bold");
+  setSansFont(pdf, "bold");
   pdf.setFontSize(headerPt);
   const headerLines = header.map((h, c) =>
     c <= 1
@@ -1178,7 +1180,7 @@ function drawPlotAnnotationPdf(
   pdf.setLineWidth(0.2);
   pdf.rect(x, y, w, h, "FD");
 
-  pdf.setFont("helvetica", "normal");
+  setSansFont(pdf, "normal");
   pdf.setFontSize(titleMm / 0.3528);
   pdf.setTextColor(120, 144, 156);
   pdf.text(plot.title, x + 6 * scale, y + pad, { baseline: "top" });
@@ -1318,11 +1320,11 @@ function drawColorBarAnnotation(
   pdf.rect(x, barY, barW, barH, "S");
 
   pdf.setFontSize(labelPt);
-  pdf.setFont("helvetica", "bold");
+  setSansFont(pdf, "bold");
   pdf.setTextColor(...MARKER_COLOR.rgb);
   pdf.text("FOS", x, barY - 4 * scale, { baseline: "bottom" });
 
-  pdf.setFont("helvetica", "normal");
+  setSansFont(pdf, "normal");
   const labelX = x + barW + 5 * scale;
   for (let t = 0; t <= COLOR_BAR_NUM_TICKS; t++) {
     const frac = t / COLOR_BAR_NUM_TICKS;
@@ -1387,7 +1389,7 @@ function drawTablePdf(
   pdf.setLineWidth(0.35);
   pdf.line(x, y + headerH, x + totalW, y + headerH);
 
-  pdf.setFont("helvetica", "bold");
+  setSansFont(pdf, "bold");
   pdf.setFontSize(headerPt);
   pdf.setTextColor(0, 0, 0);
   let cx = x;
@@ -1402,7 +1404,7 @@ function drawTablePdf(
     cx += colW[c];
   }
 
-  pdf.setFont("helvetica", "normal");
+  setSansFont(pdf, "normal");
   pdf.setFontSize(bodyPt);
   for (let r = 0; r < rows.length; r++) {
     const ry = y + headerH + r * rowH;

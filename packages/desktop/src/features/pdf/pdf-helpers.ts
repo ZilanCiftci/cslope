@@ -1,5 +1,6 @@
 import { jsPDF, GState } from "jspdf";
 import chroma from "chroma-js";
+import { PDF_SANS } from "./pdf-fonts";
 
 export type PathOp = { op: string; c: number[] };
 
@@ -109,7 +110,8 @@ export function mapFont(family: string): string {
   const f = family.toLowerCase();
   if (f.includes("serif") && !f.includes("sans")) return "times";
   if (f.includes("mono") || f.includes("courier")) return "courier";
-  return "helvetica";
+  // Sans-serif text uses the embedded font (Greek letters and symbols).
+  return PDF_SANS;
 }
 
 /** Map font style string for jsPDF. */

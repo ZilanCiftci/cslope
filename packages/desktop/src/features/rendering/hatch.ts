@@ -6,6 +6,7 @@
  */
 
 import type { HatchPattern } from "./style-spec";
+import { setSansFont } from "../pdf/pdf-fonts";
 
 // ── Geometry helpers ───────────────────────────────────────────
 
@@ -216,7 +217,7 @@ export function drawPdfHatchLabel(
 
   // Same size as the canvas label (10 px); a 6 mm floor made it ~17 pt.
   const fontSize = 10 * mmPerPx;
-  pdf.setFont("helvetica", "bold");
+  setSansFont(pdf, "bold");
   pdf.setFontSize(fontSize / 0.3528);
 
   const tw = pdf.getTextWidth(label);

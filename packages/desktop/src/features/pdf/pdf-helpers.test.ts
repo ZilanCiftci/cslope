@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { PDF_SANS } from "./pdf-fonts";
 import {
   hexToRgb,
   parseColor,
@@ -107,9 +108,9 @@ describe("buildPolylinePath", () => {
 });
 
 describe("mapFont", () => {
-  it("maps sans-serif to helvetica", () => {
-    expect(mapFont("sans-serif")).toBe("helvetica");
-    expect(mapFont("Arial")).toBe("helvetica");
+  it("maps sans-serif to the embedded sans font", () => {
+    expect(mapFont("sans-serif")).toBe(PDF_SANS);
+    expect(mapFont("Arial")).toBe(PDF_SANS);
   });
 
   it("maps serif (but not sans-serif) to times", () => {
@@ -117,9 +118,9 @@ describe("mapFont", () => {
     expect(mapFont("Georgia serif")).toBe("times");
   });
 
-  it("falls back to helvetica for font names without serif/mono keywords", () => {
+  it("falls back to the embedded sans font for font names without serif/mono keywords", () => {
     // "Times New Roman" doesn't contain the keyword "serif"
-    expect(mapFont("Times New Roman")).toBe("helvetica");
+    expect(mapFont("Times New Roman")).toBe(PDF_SANS);
   });
 
   it("maps monospace/courier to courier", () => {
@@ -127,10 +128,10 @@ describe("mapFont", () => {
     expect(mapFont("Courier New")).toBe("courier");
   });
 
-  it("defaults unknown families to helvetica", () => {
-    expect(mapFont("Papyrus")).toBe("helvetica");
-    expect(mapFont("Comic Sans")).toBe("helvetica");
-    expect(mapFont("")).toBe("helvetica");
+  it("defaults unknown families to the embedded sans font", () => {
+    expect(mapFont("Papyrus")).toBe(PDF_SANS);
+    expect(mapFont("Comic Sans")).toBe(PDF_SANS);
+    expect(mapFont("")).toBe(PDF_SANS);
   });
 });
 

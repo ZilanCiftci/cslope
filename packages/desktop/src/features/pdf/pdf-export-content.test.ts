@@ -8,6 +8,15 @@ vi.mock("jspdf", async (importOriginal) => {
   class RecordingJsPdf extends actual.jsPDF {
     constructor(...args: ConstructorParameters<typeof actual.jsPDF>) {
       super(...args);
+      // The text written, with its position: with the embedded font the
+      // stream holds glyph ids, not the characters.
+      const texts: { text: string; x: number; y: number }[] = [];
+      (this as unknown as { recordedTexts: typeof texts }).recordedTexts = texts;
+      const text = this.text.bind(this);
+      this.text = ((t: string | string[], x: number, y: number, ...rest: unknown[]) => {
+        for (const line of Array.isArray(t) ? t : [t]) texts.push({ text: String(line), x, y });
+        return (text as (...a: unknown[]) => unknown)(t, x, y, ...rest);
+      }) as unknown as typeof this.text;
       this.save = ((filename: string) => {
         saved.push({ doc: this, filename });
         return this;
@@ -131,8 +140,12 @@ function pageStream(doc: jsPDF): string {
 }
 
 /** Text shown on the page (string operands of Tj operators). */
+function recordedTexts(doc: jsPDF): { text: string; x: number; y: number }[] {
+  return (doc as unknown as { recordedTexts: { text: string; x: number; y: number }[] }).recordedTexts;
+}
+
 function pageTexts(doc: jsPDF): string[] {
-  return [...pageStream(doc).matchAll(/\((.*?)\) Tj/g)].map((m) => m[1]);
+  return recordedTexts(doc).map((t) => t.text);
 }
 
 describe("exportVectorPdf — full model", () => {
@@ -173,7 +186,7 @@ describe("exportVectorPdf — full model", () => {
       ]),
     );
     // Capped colour scale (maxFOS 5 > 2 × 1.234) with an ASCII ">=".
-    expect(texts.some((t) => t.startsWith(">= 2.47"))).toBe(true);
+    expect(texts.some((t) => t.startsWith("≥ 2.47"))).toBe(true);
   });
 
   it("names the file from the project number when there is no title", () => {
@@ -199,10 +212,9 @@ describe("exportVectorPdf — full model", () => {
     // A lock much wider than the plot area (e.g. from a file): the canvas
     // (computeViewLockFit) puts y = yMin on the bottom of the plot frame.
     const { doc } = exportDoc(data({ viewBounds: { xMin: 10, xMax: 80, yMin: 0, yMax: 10 } }));
-    const stream = pageStream(doc);
-    const m = /([\d.]+) ([\d.]+) Td\n\(0\) Tj/.exec(stream);
-    expect(m).not.toBeNull();
-    const yFromTopMm = 210 - (Number(m![2]) * 25.4) / 72;
+    const label = recordedTexts(doc).find((t) => t.text === "0");
+    expect(label).toBeDefined();
+    const yFromTopMm = label!.y;
     // Left ruler label of y = 0 sits at the frame bottom (+ its baseline shift).
     expect(yFromTopMm).toBeCloseTo(210 * (1 - PLOT_MARGINS.B) + 9 * 0.12, 2);
   });
