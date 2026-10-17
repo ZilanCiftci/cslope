@@ -22,7 +22,7 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
-import { buildSlopeDTOFromModel } from "../../store/helpers";
+import { resultDefinition } from "./result-definition";
 import { isElectron } from "../../utils/is-electron";
 import { sameSurface } from "../../utils/arc";
 
@@ -214,13 +214,13 @@ export function ResultsPlotDialogApp() {
     if (!snapshot?.result || !selectedSurface) return [];
 
     try {
-      const slopeDef = buildSlopeDTOFromModel(snapshot.model);
+      const { slopeDef, orientation } = resultDefinition(snapshot.model, snapshot.result);
       const slope = buildSlope(slopeDef);
       slope.updateAnalysisOptions(snapshot.model.options);
 
       const canonical = toCanonicalSurface(
         selectedSurface,
-        snapshot.model.orientation,
+        orientation,
         snapshot.model.coordinates,
       );
 
@@ -238,7 +238,7 @@ export function ResultsPlotDialogApp() {
       // model coordinates so it matches the canvas.
       const [xMin, xMax] = getDomainX(snapshot.model.coordinates);
       const toModelX = (x: number) =>
-        snapshot.model.orientation === "rtl" ? mirrorX(x, xMin, xMax) : x;
+        orientation === "rtl" ? mirrorX(x, xMin, xMax) : x;
 
       // The method's own base normal forces at this surface's FOS.
       const solved = solvedEffectiveNormals(slope, slices, selectedSurface.fos, selectedSurface.lffArray);

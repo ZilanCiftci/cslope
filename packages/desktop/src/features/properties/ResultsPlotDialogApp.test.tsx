@@ -6,6 +6,7 @@ import type { AnalysisResult, SlipSurfaceResult } from "@cslope/engine";
 vi.mock("../../utils/is-electron", () => ({ isElectron: true }));
 
 import { ResultsPlotDialogApp } from "./ResultsPlotDialogApp";
+import { resultDefinition } from "./result-definition";
 import { useAppStore } from "../../store/app-store";
 import { installFakeBridge, type FakeBridge } from "../../test/fake-bridge";
 import type { ModelEntry } from "../../store/types";
@@ -257,5 +258,41 @@ describe("ResultsPlotDialogApp", () => {
     bridge.emit("onResultsPlotState", { model, result: result([surface]) });
     const slices = screen.getByText(/^Slices: \d+$/);
     expect(Number(slices.textContent!.split(": ")[1])).toBeGreaterThan(0);
+  });
+
+  it("derives slices in the opposite direction when that direction governs", () => {
+    // A ridge drawn left-to-right whose steeper left face governs: the
+    // critical surface slides left, entry on the crest at the right.
+    const model = activeModel();
+    model.coordinates = [[0, -15], [0, -10], [10, -10], [20, 0], [30, 0], [40, -10], [50, -10], [50, -15]];
+    model.orientation = "ltr";
+    const cx = 257 / 26;
+    const surface: SlipSurfaceResult = {
+      cx,
+      cy: 10,
+      radius: Math.hypot(25 - cx, 10),
+      fos: 1.2,
+      entryPoint: [25, 0],
+      exitPoint: [12, -8],
+    };
+    const governing = { ...result([surface]), slidingDirection: "rtl" as const };
+
+    const { slopeDef, orientation } = resultDefinition(model, governing);
+    expect(orientation).toBe("rtl");
+    // Canonical space of the opposite direction: the model mirrored.
+    expect(slopeDef.coordinates[0]).toEqual([50, -15]);
+
+    render(<ResultsPlotDialogApp />);
+    bridge.emit("onResultsPlotState", { model, result: governing });
+    const slices = screen.getByText(/^Slices: \d+$/);
+    expect(Number(slices.textContent!.split(": ")[1])).toBeGreaterThan(0);
+  });
+
+  it("keeps the model's own direction when it governs", () => {
+    const model = activeModel();
+    const own = { ...result([surfaceThroughSlope(model, 1.3)]), slidingDirection: "ltr" as const };
+    const { slopeDef, orientation } = resultDefinition(model, own);
+    expect(orientation).toBe("ltr");
+    expect(slopeDef.coordinates).toEqual(model.coordinates);
   });
 });
