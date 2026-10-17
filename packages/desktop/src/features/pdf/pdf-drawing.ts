@@ -1347,14 +1347,16 @@ function drawTablePdf(
   piezometricLine: PiezometricLineState,
   scale: number,
 ) {
+  // A shortened cell ends in "..." (the standard PDF fonts have no "…",
+  // which dropped silently and left a cut-off number looking complete).
   const fitTextPdf = (text: string, maxWidth: number): string => {
     if (maxWidth <= 0) return "";
     if (pdf.getTextWidth(text) <= maxWidth) return text;
     let out = text;
-    while (out.length > 1 && pdf.getTextWidth(`${out}\u2026`) > maxWidth) {
+    while (out.length > 1 && pdf.getTextWidth(`${out}...`) > maxWidth) {
       out = out.slice(0, -1);
     }
-    return `${out}\u2026`;
+    return `${out}...`;
   };
 
   const {

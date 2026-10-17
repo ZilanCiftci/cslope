@@ -11,3 +11,12 @@ export function surfaceCountText(result: { allSurfaces: { fos: number }[] }): st
   const below = result.allSurfaces.filter((s) => s.fos < 1).length;
   return below > 0 ? `${n} (${below} below 1.0)` : `${n}`;
 }
+
+/**
+ * The warning for a Morgenstern-Price solution accepted at the closest
+ * pair of moment and force factors: no λ satisfies both, so the factor of
+ * safety meets moment equilibrium and force equilibrium only within the gap.
+ */
+export function equilibriumGapText(gap: number): string {
+  return `No complete equilibrium: force equilibrium met within ${gap.toFixed(3)} (closest λ)`;
+}

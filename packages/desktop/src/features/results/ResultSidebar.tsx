@@ -20,7 +20,7 @@ import {
   anchoredTopLeft,
   anchorPointFromTopLeft,
 } from "../annotations/anchorPosition";
-import { surfaceCountText } from "../../utils/result-summary";
+import { equilibriumGapText, surfaceCountText } from "../../utils/result-summary";
 import { viewLockForModel } from "../view/viewLock";
 import type {
   MaterialTableColumnKey,
@@ -521,6 +521,11 @@ export function ResultSidebar() {
               <p style={{ color: "var(--color-vsc-warning)" }}>
                 {result.nonConvergedSurfaces} surface(s) with weak equilibrium
                 fit were discarded
+              </p>
+            )}
+            {result.criticalSurface?.equilibriumGap != null && (
+              <p style={{ color: "var(--color-vsc-warning)" }}>
+                {equilibriumGapText(result.criticalSurface.equilibriumGap)}
               </p>
             )}
             {(result.splitFailureCount ?? 0) > 0 && (
