@@ -42,6 +42,18 @@ describe("undo history", () => {
     expect(useAppStore.getState().materials[0].name).not.toBe("Edited");
   });
 
+  it("keeps the paper zoom and pan when an edit is undone", () => {
+    const s = useAppStore.getState();
+    s.updateMaterial(s.materials[0].id, { name: "Edited" });
+    const pf = useAppStore.getState().resultViewSettings.paperFrame;
+    useAppStore.getState().setResultViewSettings({ paperFrame: { ...pf, zoom: 4, offsetX: 99 } });
+    performUndo();
+    expect(useAppStore.getState().materials[0].name).not.toBe("Edited");
+    expect(useAppStore.getState().resultViewSettings.paperFrame).toMatchObject({ zoom: 4, offsetX: 99 });
+    performRedo();
+    expect(useAppStore.getState().materials[0].name).toBe("Edited");
+  });
+
   it("makes the view-lock update part of the edit that grew the model, and keeps redo", () => {
     const st = useAppStore.getState();
     const xs = st.coordinates.map((c) => c[0]);
@@ -131,9 +143,14 @@ describe("loading a damaged or crafted project file", () => {
 
   it("gives two models with one id distinct ids", () => {
     const file = JSON.parse(JSON.stringify(serializeProject(useAppStore.getState())));
-    file.models.push({ ...file.models[0], name: "Copy" });
-    const ids = parseProjectFile(JSON.stringify(file)).models.map((m) => m.id);
+    const first = file.models[0];
+    file.models = [first, { ...first, name: "Dup" }, { ...first, id: `${first.id}-2`, name: "Other" }];
+    file.activeModelId = `${first.id}-2`;
+    const parsed = parseProjectFile(JSON.stringify(file));
+    const ids = parsed.models.map((m) => m.id);
     expect(new Set(ids).size).toBe(ids.length);
+    // The model that had the id keeps it (and stays active).
+    expect(parsed.models.find((m) => m.id === parsed.activeModelId)?.name).toBe("Other");
   });
 
   it("keeps the development lengths of an element whose pullout is another kind", () => {

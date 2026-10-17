@@ -137,10 +137,25 @@ export function useCanvasActions() {
  * Undo the last temporal state, resetting analysis results if the
  * analysis-relevant inputs changed.
  */
+/**
+ * Run an undo or redo, keeping how the result paper is zoomed and panned
+ * on screen: that view is no edit and no undo step, so restoring an older
+ * step must not move it back.
+ */
+function keepingPaperViewport(step: () => void): void {
+  const { zoom, offsetX, offsetY } = useAppStore.getState().resultViewSettings.paperFrame;
+  step();
+  const s = useAppStore.getState();
+  const pf = s.resultViewSettings.paperFrame;
+  if (pf.zoom !== zoom || pf.offsetX !== offsetX || pf.offsetY !== offsetY) {
+    s.setResultViewSettings({ paperFrame: { ...pf, zoom, offsetX, offsetY } });
+  }
+}
+
 export function performUndo(): void {
   const before = getAnalysisInputSignature(useAppStore.getState());
   useAppStore.temporal.getState().resume();
-  useAppStore.temporal.getState().undo();
+  keepingPaperViewport(() => useAppStore.temporal.getState().undo());
   const after = getAnalysisInputSignature(useAppStore.getState());
   if (before !== after) {
     useAppStore.getState().invalidateAnalysis();
@@ -154,7 +169,7 @@ export function performUndo(): void {
 export function performRedo(): void {
   const before = getAnalysisInputSignature(useAppStore.getState());
   useAppStore.temporal.getState().resume();
-  useAppStore.temporal.getState().redo();
+  keepingPaperViewport(() => useAppStore.temporal.getState().redo());
   const after = getAnalysisInputSignature(useAppStore.getState());
   if (before !== after) {
     useAppStore.getState().invalidateAnalysis();

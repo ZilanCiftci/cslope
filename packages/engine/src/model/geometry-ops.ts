@@ -666,7 +666,7 @@ function polygonizeOnce(
   ring: [number, number][],
   lines: [number, number][][],
   grid: number | null,
-): RegionFace[] {
+): { faces: RegionFace[]; dangles: number } {
   const lineStrings = [
     gf.createLineString(ring.map(([x, y]) => new Coordinate(x, y))),
     ...lines.map((l) => gf.createLineString(l.map(([x, y]) => new Coordinate(x, y)))),
@@ -699,7 +699,10 @@ function polygonizeOnce(
     for (let h = 0; h < p.getNumInteriorRing(); h++) holes.push(toXY(p.getInteriorRingN(h)));
     faces.push({ outer: toXY(p.getExteriorRing()), holes });
   }
-  return faces;
+  // A boundary end not exactly on the outline or another boundary is a
+  // dangle: plain noding leaves it unsplit (and the faces still cover the
+  // slope, so only the dangle shows it).
+  return { faces, dangles: polygonizer.getDangles().size() };
 }
 
 /** Area of the faces (outer rings less holes). */
@@ -750,16 +753,38 @@ export function polygonizeRegionsDetailed(
   const parentArea = Math.abs(signedArea(ring));
   const covers = (faces: RegionFace[]) =>
     faces.length > 0 && Math.abs(facesArea(faces) - parentArea) <= COVERAGE_TOLERANCE * parentArea;
-  // Plain noding first (exact where it works), then snap rounding when it
-  // throws or the faces do not cover the slope (a face was lost).
-  for (const grid of [null, SNAP_ROUNDING_GRID * size]) {
-    try {
-      const faces = polygonizeOnce(polygon, ring, usable, grid);
-      if (covers(faces)) return { faces, failed: false };
-    } catch {
-      // try the next noding
+
+  // Plain noding first: exact where it works (no dangles, the slope
+  // covered).
+  let plain: RegionFace[] | null = null;
+  try {
+    const r = polygonizeOnce(polygon, ring, usable, null);
+    if (covers(r.faces)) {
+      if (r.dangles === 0) return { faces: r.faces, failed: false };
+      plain = r.faces;
     }
+  } catch {
+    // snap rounding below
   }
+  // Snap rounding where plain noding throws, loses a face or leaves a
+  // boundary end unsplit (an end on a sloping edge or on another boundary
+  // is off it by a rounding error). It runs about a local origin, so that
+  // the grid suits the model's size also at large map coordinates. A
+  // dangle left after it is a boundary that really ends inside a region.
+  try {
+    const [ox, oy] = [Math.min(...xs), Math.min(...ys)];
+    const local = (pts: [number, number][]) => pts.map(([x, y]): [number, number] => [x - ox, y - oy]);
+    const back = (pts: [number, number][]) => pts.map(([x, y]): [number, number] => [x + ox, y + oy]);
+    const localPolygon = gf.createPolygon(gf.createLinearRing(local(ring).map(([x, y]) => new Coordinate(x, y))));
+    const r = polygonizeOnce(localPolygon, local(ring), usable.map(local), SNAP_ROUNDING_GRID * size);
+    const faces = r.faces.map((f) => ({ outer: back(f.outer), holes: f.holes.map(back) }));
+    // Taken only when it splits more than plain noding did: a boundary
+    // that really ends inside a region keeps the exact plain faces.
+    if (covers(faces) && (!plain || faces.length > plain.length)) return { faces, failed: false };
+  } catch {
+    // fall back to the plain faces, if they cover the slope
+  }
+  if (plain) return { faces: plain, failed: false };
   console.warn("polygonizeRegions failed; using the unsplit slope.");
   return toFace(ring, true);
 }

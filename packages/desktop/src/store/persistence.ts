@@ -84,9 +84,17 @@ export function parseProjectFile(contents: string): ProjectFile {
     .map(normalizeModelEntry);
   // Model ids are unique (every edit finds its model by id: two models
   // with one id were both changed by an edit to either).
+  // A repeated id gets a suffix no model of the file uses; the active
+  // model stays the first one with the requested id.
+  const usedIds = new Set(models.map((m) => m.id));
   const seenIds = new Set<string>();
   for (const m of models) {
-    while (seenIds.has(m.id)) m.id = `${m.id}-${seenIds.size + 1}`;
+    if (seenIds.has(m.id)) {
+      let k = 2;
+      while (usedIds.has(`${m.id}-${k}`)) k++;
+      m.id = `${m.id}-${k}`;
+      usedIds.add(m.id);
+    }
     seenIds.add(m.id);
   }
   const requestedActiveId =
