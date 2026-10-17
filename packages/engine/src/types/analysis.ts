@@ -206,7 +206,7 @@ export interface SliceData {
   cohesion: number;
   /** Friction angle at the base (degrees). */
   frictionAngle: number;
-  /** Effective base normal force N' = (W + loads)·cos α − u·l (kN). */
+  /** Effective base normal force N′ = N − u·l (kN) from the method's equilibrium at the FOS (solvedEffectiveNormals). */
   normalForce: number;
   /** Pore water pressure at the base (kPa). */
   porePressure: number;

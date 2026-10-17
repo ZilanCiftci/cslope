@@ -7,7 +7,7 @@
 import type { Slice } from "../types/index";
 import { getIntersliceFunctionValue, extrapolateLambda } from "../math/index";
 import type { Slope, SearchPlane } from "./slope";
-import { getSlices } from "./slices";
+import { getSlices, WATER_LINE_GAP } from "./slices";
 import {
   setEntryExitPlanes,
   generateRefinedPlanes,
@@ -666,6 +666,47 @@ export function analyseJanbu(
   return [correctedFos, pushing, resisting, converged];
 }
 
+/**
+ * Effective base normal force N′ = N − u·l (kN) of each slice of a solved
+ * surface, as the method's own equilibrium gives it at its factor of
+ * safety: Bishop at λ = 0 (moment equation), Janbu at λ = 0 (force
+ * equation, with the uncorrected factor), Morgenstern–Price at the accepted
+ * λ (the point of `lffArray` with the smallest gap). Null when the slices
+ * cannot be solved at that factor. N′ can be negative (tension at the base
+ * in cohesive soil without a tension crack).
+ */
+export function solvedEffectiveNormals(
+  slope: Slope,
+  slices: Slice[],
+  fos: number,
+  lffArray?: readonly (readonly [number, number, number, number])[] | null,
+): number[] | null {
+  if (slices.length === 0 || !Number.isFinite(fos)) return null;
+  const props = getSlicePropertyArrays(
+    slices,
+    slices[0].xLeft,
+    slices[slices.length - 1].xRight,
+    slope.intersliceFunction,
+    slope.intersliceDataPoints,
+  );
+  let normals: Float64Array;
+  if (slope.method === "Janbu") {
+    const f = slope.janbuCorrection ? fos / janbuCorrectionFactor(slices) : fos;
+    const [solved, , , n] = solveFOSGenericForceCircular(props, 0, f, slope.maxIterations, slope.tolerance);
+    if (solved == null) return null;
+    normals = n;
+  } else {
+    let lambda = 0;
+    if (slope.method === "Morgenstern-Price" && lffArray && lffArray.length > 0) {
+      lambda = [...lffArray].sort((a, b) => a[3] - b[3])[0][0];
+    }
+    const [solved, , , n] = solveFOSGenericMoment(props, lambda, fos, slope.maxIterations, slope.tolerance);
+    if (solved == null) return null;
+    normals = n;
+  }
+  return Array.from(normals, (N, i) => N - props.Us[i] * props.baseLengths[i]);
+}
+
 /** λ extrapolation steps before falling back to the closest pair. */
 const MP_MAX_STEPS = 30;
 
@@ -969,6 +1010,13 @@ export function analyseSlope(slope: Slope): number | null {
 /** Surfaces shallower than this fraction of the model height are degenerate. */
 const DEGENERATE_DEPTH = 1e-3;
 
+/** The errors getSlices raises for a surface that has no valid slices. */
+const SURFACE_GEOMETRY_ERRORS = new Set([WATER_LINE_GAP, "x0 must be less than x1", "Surface line not defined"]);
+
+function isSurfaceGeometryError(error: unknown): boolean {
+  return error instanceof Error && SURFACE_GEOMETRY_ERRORS.has(error.message);
+}
+
 function evaluatePlanes(slope: Slope, allPlanes: SearchPlane[]): void {
   for (const plane of allPlanes) {
     let slices: Slice[];
@@ -982,7 +1030,11 @@ function evaluatePlanes(slope: Slope, allPlanes: SearchPlane[]): void {
         plane.radius,
         plane.points,
       );
-    } catch {
+    } catch (error) {
+      // A surface the slices cannot be built for is no candidate; any other
+      // error is a fault that must not silently remove surfaces (and so
+      // raise the minimum).
+      if (!isSurfaceGeometryError(error)) throw error;
       plane.fos = null;
       continue;
     }
@@ -1050,6 +1102,8 @@ function evaluatePlanes(slope: Slope, allPlanes: SearchPlane[]): void {
 
     let fos: number | null;
     let converged: boolean;
+    /** The factor the slice normal forces were solved with, when not `fos`. */
+    let solvedFos: number | null = null;
 
     switch (slope.method) {
       case "Bishop": {
@@ -1061,6 +1115,9 @@ function evaluatePlanes(slope: Slope, allPlanes: SearchPlane[]): void {
       case "Janbu": {
         const [f, , , cvg] = analyseJanbu(slope, slices);
         fos = f;
+        // The normal forces are those of the uncorrected factor: the f₀
+        // correction scales the result, not the slice equilibrium.
+        if (f != null && slope.janbuCorrection) solvedFos = f / janbuCorrectionFactor(slices);
         converged = cvg;
         break;
       }
@@ -1097,7 +1154,7 @@ function evaluatePlanes(slope: Slope, allPlanes: SearchPlane[]): void {
     // m_α = cos α + sin α·tan φ / F ≤ 0 on a slice makes its normal force
     // meaningless (infinite or negative): raising strength could then
     // lower the FOS. Such surfaces are rejected, as is common practice.
-    if (fos != null && slices.some((s) => mAlpha(s, fos!) <= 0)) {
+    if (fos != null && slices.some((s) => mAlpha(s, solvedFos ?? fos!) <= 0)) {
       fos = null;
     }
 

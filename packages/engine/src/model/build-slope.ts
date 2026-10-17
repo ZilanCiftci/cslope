@@ -133,9 +133,9 @@ export function buildSlope(def: SlopeDefinition): Slope {
   if (def.regionAssignments && def.regionAssignments.length > 0) {
     for (const ra of [...def.regionAssignments].reverse()) {
       const mat = materialsByName.get(ra.materialName);
-      if (mat) {
-        slope.assignMaterial(ra.point, mat);
-      }
+      // An unknown name left the region with the first material.
+      if (!mat) throw new Error(`Region assigned to an unknown material "${ra.materialName}".`);
+      slope.assignMaterial(ra.point, mat);
     }
   }
 

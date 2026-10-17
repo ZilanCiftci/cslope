@@ -5,6 +5,7 @@ import {
   getSlices,
   mirrorPoints,
   mirrorX,
+  solvedEffectiveNormals,
   type AnalysisResult,
   type SlipSurfaceResult,
 } from "@cslope/engine";
@@ -239,11 +240,13 @@ export function ResultsPlotDialogApp() {
       const toModelX = (x: number) =>
         snapshot.model.orientation === "rtl" ? mirrorX(x, xMin, xMax) : x;
 
+      // The method's own base normal forces at this surface's FOS.
+      const solved = solvedEffectiveNormals(slope, slices, selectedSurface.fos, selectedSurface.lffArray);
       return slices.map((slice, index) => {
         const totalWeight =
           slice.weight + slice.udl + slice.ll + (slice.waterLoad ?? 0);
         const normalEffective =
-          totalWeight * Math.cos(slice.alpha) - slice.U * slice.baseLength;
+          solved?.[index] ?? totalWeight * Math.cos(slice.alpha) - slice.U * slice.baseLength;
         const frictionStrength =
           Math.max(normalEffective, 0) * Math.tan(slice.phi);
         const frictionAngle = (slice.phi * 180) / Math.PI;

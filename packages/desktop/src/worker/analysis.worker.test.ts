@@ -48,19 +48,26 @@ const T_ACADS: SlopeDefinition = {
 };
 
 describe("analysis worker result", () => {
-  it("sends the effective normal force and surface load for each slice", () => {
-    const msg = run(T_ACADS);
+  it("sends the method's own effective normal force for each slice", () => {
+    // Bishop on a circle, no loads: moment equilibrium about the centre
+    // gives F = Σ (c·l + N′·tan φ) / Σ W·sin α with the solved N′ (the
+    // ordinary-method estimate did not add up to the FOS).
+    const msg = run({ ...T_ACADS, udls: [], lineLoads: [] }, { method: "Bishop" });
     expect(msg.type).toBe("analysis-complete");
     if (msg.type !== "analysis-complete") return;
     const slices = msg.result.criticalSlices;
     expect(slices.length).toBeGreaterThan(0);
-    expect(slices.some((s) => s.normalForce > 0)).toBe(true);
+    let resisting = 0;
+    let driving = 0;
     for (const s of slices) {
-      const expected =
-        (s.weight + (s.surfaceLoad ?? 0)) * Math.cos(s.alpha) -
-        s.porePressure * s.baseLength;
-      expect(s.normalForce).toBeCloseTo(expected, 9);
+      resisting += s.cohesion * s.baseLength + s.normalForce * Math.tan((s.frictionAngle * Math.PI) / 180);
+      driving += (s.weight + (s.surfaceLoad ?? 0)) * Math.sin(s.alpha);
+      expect(Number.isFinite(s.normalForce)).toBe(true);
     }
+    // Within the solver tolerance (0.005 by default).
+    expect(Math.abs(resisting / driving - msg.result.minFOS)).toBeLessThan(0.005 * msg.result.minFOS);
+    const ordinary = slices.map((s) => (s.weight + (s.surfaceLoad ?? 0)) * Math.cos(s.alpha) - s.porePressure * s.baseLength);
+    expect(slices.some((s, i) => Math.abs(s.normalForce - ordinary[i]) > 1)).toBe(true);
   });
 
   it("reports an error instead of FOS 0 when no surface is valid", () => {

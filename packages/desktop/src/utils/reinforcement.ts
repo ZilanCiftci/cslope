@@ -145,7 +145,9 @@ export function sanitizeReinforcement(raw: unknown, id: string): ReinforcementRo
     tensileCapacity: num(r.tensileCapacity, preset.tensileCapacity),
     spacing: finite(r.spacing) && (r.spacing as number) > 0 ? (r.spacing as number) : preset.spacing,
     pullout: pick(r.pullout, ["none", "bond", "interface", "development"] as const, preset.pullout),
-    ...(r.pullout === "development"
+    // Kept with any pullout, like the other pullout fields, so switching
+    // back to development finds them again.
+    ...(r.developmentLength1 !== undefined || r.developmentLength2 !== undefined
       ? { developmentLength1: num(r.developmentLength1, 0), developmentLength2: num(r.developmentLength2, 0) }
       : {}),
     bondStrength: num(r.bondStrength, preset.bondStrength),

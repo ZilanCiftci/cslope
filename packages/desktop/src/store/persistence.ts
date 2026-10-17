@@ -82,6 +82,13 @@ export function parseProjectFile(contents: string): ProjectFile {
     .map((m) => (fileVersion < 2 ? migrateModelFromV1(m) : m))
     .map((m) => (fileVersion < 3 ? migrateModelFromV2(m) : m))
     .map(normalizeModelEntry);
+  // Model ids are unique (every edit finds its model by id: two models
+  // with one id were both changed by an edit to either).
+  const seenIds = new Set<string>();
+  for (const m of models) {
+    while (seenIds.has(m.id)) m.id = `${m.id}-${seenIds.size + 1}`;
+    seenIds.add(m.id);
+  }
   const requestedActiveId =
     typeof root.activeModelId === "string" ? root.activeModelId : undefined;
   const activeModelId =

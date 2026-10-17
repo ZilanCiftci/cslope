@@ -167,6 +167,7 @@ export {
   analyseSlope,
   sliceDrivingMoment,
   sliceVerticalLoad,
+  solvedEffectiveNormals,
 } from "./model/solvers";
 
 export { buildSlope } from "./model/build-slope";

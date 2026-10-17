@@ -129,6 +129,24 @@ describe("loading a damaged or crafted project file", () => {
     expect(withModel({ runState: "error", errorMessage: "No surface" }).models[0].errorMessage).toBe("No surface");
   });
 
+  it("gives two models with one id distinct ids", () => {
+    const file = JSON.parse(JSON.stringify(serializeProject(useAppStore.getState())));
+    file.models.push({ ...file.models[0], name: "Copy" });
+    const ids = parseProjectFile(JSON.stringify(file)).models.map((m) => m.id);
+    expect(new Set(ids).size).toBe(ids.length);
+  });
+
+  it("keeps the development lengths of an element whose pullout is another kind", () => {
+    const element = {
+      id: "r1", type: "nail", x1: 1, y1: 9, x2: 8, y2: 7, tensileCapacity: 100, spacing: 1.5,
+      pullout: "bond", bondStrength: 15, bondedLength: 0, adhesion: 0, interfaceFriction: 0,
+      developmentLength1: 1, developmentLength2: 2, end1Capacity: 50, end2Capacity: 0, direction: "axial", application: "passive",
+    };
+    const r = withModel({ reinforcements: [element] }).models[0].reinforcements![0];
+    expect(r.developmentLength1).toBe(1);
+    expect(r.developmentLength2).toBe(2);
+  });
+
   it("limits the minor ruler ticks to a whole number from 0 to 20", () => {
     const view = useAppStore.getState().resultViewSettings;
     const m = withModel({ resultViewSettings: { ...view, minorTicks: 1e16 } }).models[0];

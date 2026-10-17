@@ -20,6 +20,7 @@ import {
   resolveOrientation,
   sliceDrivingMoment,
   sliceVerticalLoad,
+  solvedEffectiveNormals,
   type SearchPlane,
   type Slice,
   type AnalysisOptions,
@@ -202,7 +203,11 @@ function analyse(
 
     // Convert slices for critical surface
     if (crit.slices) {
-      for (const s of crit.slices) {
+      // The method's own base normal forces at the critical FOS (the
+      // ordinary-method estimate (W + Q)·cos α − u·l did not add up to the
+      // FOS of Bishop, Janbu or Morgenstern–Price).
+      const solvedNormals = solvedEffectiveNormals(slope, crit.slices, crit.fos!, crit.lffArray);
+      for (const [i, s] of crit.slices.entries()) {
         const surfaceLoad = sliceVerticalLoad(s) - s.weight;
         criticalSlices.push({
           x: s.x,
@@ -219,10 +224,9 @@ function analyse(
           surfaceLoad,
           cohesion: s.cohesion,
           frictionAngle: s.frictionAngle,
-          // Same effective normal force as the results plot dialog.
           normalForce:
-            (s.weight + surfaceLoad) * Math.cos(s.alpha) -
-            s.U * s.baseLength,
+            solvedNormals?.[i] ??
+            (s.weight + surfaceLoad) * Math.cos(s.alpha) - s.U * s.baseLength,
           porePressure: s.U,
           baseMaterial: s.baseMaterial!,
         });

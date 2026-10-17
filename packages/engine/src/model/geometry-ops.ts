@@ -11,6 +11,9 @@ import GeometryFactory from "jsts/org/locationtech/jts/geom/GeometryFactory.js";
 import Coordinate from "jsts/org/locationtech/jts/geom/Coordinate.js";
 import Polygonizer from "jsts/org/locationtech/jts/operation/polygonize/Polygonizer.js";
 import UnaryUnionOp from "jsts/org/locationtech/jts/operation/union/UnaryUnionOp.js";
+import GeometryNoder from "jsts/org/locationtech/jts/noding/snapround/GeometryNoder.js";
+import PrecisionModel from "jsts/org/locationtech/jts/geom/PrecisionModel.js";
+import ArrayList from "jsts/java/util/ArrayList.js";
 // Side-effect import: patches Geometry.prototype with union/contains/intersects/etc.
 import "jsts/org/locationtech/jts/monkey.js";
 import { getYAtX } from "../math/index";
@@ -615,6 +618,98 @@ export function polygonizeRegions(
   return polygonizeRegionsDetailed(px, py, lines).faces;
 }
 
+/**
+ * Relative tolerances of the region split (fractions of the model size).
+ * A boundary end this close to the outline is put on it: an end short of
+ * the model edge by a rounding error left the boundary dangling, and the
+ * layer below it was silently not split off. Snap rounding uses a grid of
+ * this size when plain noding fails.
+ */
+const END_SNAP_TOLERANCE = 1e-6;
+const SNAP_ROUNDING_GRID = 1e-9;
+/** The faces must cover the slope to this fraction of its area. */
+const COVERAGE_TOLERANCE = 1e-6;
+
+/** A JTS ArrayList of the items (GeometryNoder takes a Java collection). */
+function arrayListOf<T>(items: T[]): unknown {
+  const list = new (ArrayList as unknown as new () => { add(item: unknown): void })();
+  for (const item of items) list.add(item);
+  return list;
+}
+
+/** The point of the ring nearest to (x, y), and its distance. */
+function nearestOnRing(ring: [number, number][], x: number, y: number): { p: [number, number]; d: number } {
+  let best: { p: [number, number]; d: number } = { p: [x, y], d: Infinity };
+  for (let i = 0; i + 1 < ring.length; i++) {
+    const [ax, ay] = ring[i];
+    const [bx, by] = ring[i + 1];
+    const dx = bx - ax;
+    const dy = by - ay;
+    const len2 = dx * dx + dy * dy;
+    const t = len2 > 0 ? Math.max(0, Math.min(1, ((x - ax) * dx + (y - ay) * dy) / len2)) : 0;
+    const p: [number, number] = [ax + t * dx, ay + t * dy];
+    const d = Math.hypot(x - p[0], y - p[1]);
+    if (d < best.d) best = { p, d };
+  }
+  return best;
+}
+
+/**
+ * Cut the ring by the lines: node all linework, polygonize, and keep the
+ * faces inside the ring. With `grid`, noding is by snap rounding on that
+ * grid (Hobby 1999, as JTS implements it), which is robust where plain
+ * floating-point noding throws or loses faces (a boundary vertex on the
+ * outline, a boundary through a vertex of the outline).
+ */
+function polygonizeOnce(
+  polygon: unknown,
+  ring: [number, number][],
+  lines: [number, number][][],
+  grid: number | null,
+): RegionFace[] {
+  const lineStrings = [
+    gf.createLineString(ring.map(([x, y]) => new Coordinate(x, y))),
+    ...lines.map((l) => gf.createLineString(l.map(([x, y]) => new Coordinate(x, y)))),
+  ];
+  const polygonizer = new Polygonizer();
+  if (grid === null) {
+    // One unary union nodes everything at once (a union per line was
+    // quadratic: 150 ms for 50 layers, recomputed while dragging).
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    polygonizer.add((UnaryUnionOp as any).union(gf.createMultiLineString(lineStrings)));
+  } else {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const noded: any = new GeometryNoder(new PrecisionModel(1 / grid)).node(arrayListOf(lineStrings));
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const merged: any = (UnaryUnionOp as any).union(gf.createMultiLineString(noded.toArray()));
+    polygonizer.add(merged);
+  }
+  const parentArea = Math.abs(signedArea(ring));
+  const faces: RegionFace[] = [];
+  const arr = polygonizer.getPolygons().array;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const toXY = (r: any): [number, number][] => r.getCoordinates().map((c: InstanceType<typeof Coordinate>) => [c.x, c.y]);
+  for (let i = 0; i < arr.length; i++) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const p = arr[i] as any;
+    if (p.getArea() <= 1e-9 * Math.max(1, parentArea)) continue;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    if (!(polygon as any).contains(p.getInteriorPoint())) continue;
+    const holes: [number, number][][] = [];
+    for (let h = 0; h < p.getNumInteriorRing(); h++) holes.push(toXY(p.getInteriorRingN(h)));
+    faces.push({ outer: toXY(p.getExteriorRing()), holes });
+  }
+  return faces;
+}
+
+/** Area of the faces (outer rings less holes). */
+function facesArea(faces: RegionFace[]): number {
+  return faces.reduce(
+    (sum, f) => sum + Math.abs(signedArea(f.outer)) - f.holes.reduce((h, r) => h + Math.abs(signedArea(r)), 0),
+    0,
+  );
+}
+
 /** polygonizeRegions that also reports a failed split. */
 export function polygonizeRegionsDetailed(
   px: number[],
@@ -637,47 +732,34 @@ export function polygonizeRegionsDetailed(
   const polygon = gf.createPolygon(
     gf.createLinearRing(ring.map(([x, y]) => new Coordinate(x, y))),
   );
-  const usable = lines.filter((l) => l.length >= 2);
+  const xs = ring.map((p) => p[0]);
+  const ys = ring.map((p) => p[1]);
+  const size = Math.max(Math.max(...xs) - Math.min(...xs), Math.max(...ys) - Math.min(...ys), 1e-9);
+  // Boundary ends a rounding error away from the outline are put on it.
+  const usable = lines
+    .filter((l) => l.length >= 2)
+    .map((l) =>
+      l.map((pt, i): [number, number] => {
+        if (i !== 0 && i !== l.length - 1) return pt;
+        const { p, d } = nearestOnRing(ring, pt[0], pt[1]);
+        return d > 0 && d <= END_SNAP_TOLERANCE * size ? p : pt;
+      }),
+    );
   if (usable.length === 0) return toFace(ring);
 
-  try {
-    // One unary union nodes everything at once (a union per line was
-    // quadratic: 150 ms for 50 layers, recomputed while dragging).
-    const lineStrings = [
-      gf.createLineString(ring.map(([x, y]) => new Coordinate(x, y))),
-      ...usable.map((l) =>
-        gf.createLineString(l.map(([x, y]) => new Coordinate(x, y))),
-      ),
-    ];
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const noded: any = (UnaryUnionOp as any).union(
-      gf.createMultiLineString(lineStrings),
-    );
-    const polygonizer = new Polygonizer();
-    polygonizer.add(noded);
-    const parentArea = Math.abs(signedArea(ring));
-    const faces: RegionFace[] = [];
-    const arr = polygonizer.getPolygons().array;
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const toXY = (r: any): [number, number][] =>
-      r
-        .getCoordinates()
-        .map((c: InstanceType<typeof Coordinate>) => [c.x, c.y]);
-    for (let i = 0; i < arr.length; i++) {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const p = arr[i] as any;
-      if (p.getArea() <= 1e-9 * Math.max(1, parentArea)) continue;
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      if (!(polygon as any).contains(p.getInteriorPoint())) continue;
-      const holes: [number, number][][] = [];
-      for (let h = 0; h < p.getNumInteriorRing(); h++) {
-        holes.push(toXY(p.getInteriorRingN(h)));
-      }
-      faces.push({ outer: toXY(p.getExteriorRing()), holes });
+  const parentArea = Math.abs(signedArea(ring));
+  const covers = (faces: RegionFace[]) =>
+    faces.length > 0 && Math.abs(facesArea(faces) - parentArea) <= COVERAGE_TOLERANCE * parentArea;
+  // Plain noding first (exact where it works), then snap rounding when it
+  // throws or the faces do not cover the slope (a face was lost).
+  for (const grid of [null, SNAP_ROUNDING_GRID * size]) {
+    try {
+      const faces = polygonizeOnce(polygon, ring, usable, grid);
+      if (covers(faces)) return { faces, failed: false };
+    } catch {
+      // try the next noding
     }
-    return faces.length > 0 ? { faces, failed: false } : toFace(ring, true);
-  } catch (error) {
-    console.warn("polygonizeRegions failed; using the unsplit slope.", error);
-    return toFace(ring, true);
   }
+  console.warn("polygonizeRegions failed; using the unsplit slope.");
+  return toFace(ring, true);
 }

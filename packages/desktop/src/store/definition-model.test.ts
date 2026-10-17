@@ -14,6 +14,8 @@ function analysed(d: SlopeDefinition) {
     boundaries: (d.materialBoundaries ?? []).map((b) => JSON.stringify(b.coordinates)).sort(),
     regions: d.regionAssignments ?? [],
     water: d.waterTable?.value ?? null,
+    // Clipped at the ground unless stated otherwise (the engine's default).
+    clipped: d.waterTable ? d.waterTable.followBoundary !== false : null,
     // The water line each material uses (its own, or the main one).
     materialWater: d.materials.map((m) =>
       m.waterTableId ? (d.waterTables ?? []).find((w) => w.id === m.waterTableId)?.coordinates : d.waterTable?.value ?? null,

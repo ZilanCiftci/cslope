@@ -230,7 +230,7 @@ export function fitPolylineToGround(
 /**
  * Kinematic and geometric admissibility of a polyline surface: x strictly
  * increasing, interior vertices below the ground and inside the model,
- * and concave (the base inclination never increases towards the exit),
+ * no segment above the ground, and concave (the base inclination never increases towards the exit),
  * within `concavityTolDeg`.
  */
 export function isAdmissiblePolyline(
@@ -255,6 +255,19 @@ export function isAdmissiblePolyline(
     const [x, y] = points[i];
     if (!(y < getYAtX(surf.x, surf.y, x) - 1e-6)) return false;
     if (!slope.isInsideExternalBoundary(x, y + 1e-6)) return false;
+  }
+  // Between its vertices a segment must stay below the ground too: with
+  // both ends below, it can only rise above it at a ground vertex (the
+  // foot of a vertical face, a bench edge), so those are checked.
+  for (let i = 0; i < points.length - 1; i++) {
+    const [ax, ay] = points[i];
+    const [bx, by] = points[i + 1];
+    for (let k = 0; k < surf.x.length; k++) {
+      const gx = surf.x[k];
+      if (gx <= ax + 1e-9 || gx >= bx - 1e-9) continue;
+      const segY = ay + ((gx - ax) / (bx - ax)) * (by - ay);
+      if (segY > surf.y[k] + 1e-6) return false;
+    }
   }
   return true;
 }

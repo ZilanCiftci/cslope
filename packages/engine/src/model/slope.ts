@@ -574,8 +574,14 @@ export class Slope {
       this._externalBoundaryPy,
       lines,
     );
-    // Reported in the result panel ("split operation(s) failed").
-    if (failed) this._splitFailureCount += 1;
+    // An unsplit slope would be analysed as the first material throughout:
+    // a wrong result, not a degraded one.
+    if (failed) {
+      this._splitFailureCount += 1;
+      throw new Error(
+        "The material boundaries could not be split into regions. Check boundaries that touch or nearly touch the outline or each other.",
+      );
+    }
     this._materialGeometries = faces.map((face) => {
       const ring = keyholeRing(face.outer, face.holes);
       return createGeometryWithMaterial(
@@ -902,6 +908,13 @@ export class Slope {
    * @param opts Partial analysis options to update.
    */
   updateAnalysisOptions(opts: Partial<AnalysisOptions> = {}): void {
+    // A NaN count or tolerance passed the clamps below unchanged and gave a
+    // different analysis (or none) without an error.
+    for (const key of ["slices", "iterations", "refinedIterations", "maxIterations", "tolerance", "minFailureDist"] as const) {
+      const v = opts[key];
+      if (v !== undefined && !Number.isFinite(v)) throw new Error(`Analysis option ${key} must be a finite number.`);
+    }
+    if (opts.tolerance !== undefined && !(opts.tolerance > 0)) throw new Error("Analysis option tolerance must be positive.");
     if (opts.method !== undefined) {
       if (!["Bishop", "Janbu", "Morgenstern-Price"].includes(opts.method)) {
         throw new Error(
@@ -913,7 +926,7 @@ export class Slope {
     if (opts.slices !== undefined) {
       this._slices = Math.max(
         SLICES_RANGE.min,
-        Math.min(SLICES_RANGE.max, opts.slices),
+        Math.min(SLICES_RANGE.max, Math.round(opts.slices)),
       );
     }
     if (opts.iterations !== undefined) {

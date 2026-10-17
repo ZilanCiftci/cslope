@@ -71,13 +71,10 @@ export function validateMaterialModel(model: MaterialModel): string[] {
           "Both c and φ are zero — the material has no strength. Set at least one.",
         );
       }
-      if (
-        model.cohesionUndrained !== undefined &&
-        model.cFactor !== undefined &&
-        model.cFactor > 0
-      ) {
-        // Combined method — validate Su
+      if (model.cFactor !== undefined && model.cFactor > 0) {
+        // Combined method — needs its own Su (it fell back to c′ silently).
         if (
+          model.cohesionUndrained === undefined ||
           !Number.isFinite(model.cohesionUndrained) ||
           model.cohesionUndrained < 0
         ) {

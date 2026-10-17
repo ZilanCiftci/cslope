@@ -238,8 +238,8 @@ describe("closed material boundaries (lenses)", () => {
 });
 
 describe("region polygonization failures", () => {
-  it("counts a failed split instead of failing silently", () => {
-    const slope = buildSlope({
+  it("stops with an error instead of analysing the unsplit slope", () => {
+    expect(() => buildSlope({
       coordinates: [[0, 0], [0, 10], [20, 10], [20, 0]],
       materials: [
         { name: "A", unitWeight: 20, frictionAngle: 30, cohesion: 5 },
@@ -247,7 +247,6 @@ describe("region polygonization failures", () => {
       ],
       materialBoundaries: [{ coordinates: [[-1, 5], [Number.NaN, 5], [21, 5]], materialName: "" }],
       regionAssignments: [{ point: [5, 1], materialName: "B" }],
-    });
-    expect(slope.splitFailureCount).toBeGreaterThan(0);
+    })).toThrow(/could not be split into regions/);
   });
 });

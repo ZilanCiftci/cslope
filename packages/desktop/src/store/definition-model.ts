@@ -90,8 +90,9 @@ function piezometricLine(def: SlopeDefinition, id: string, materialId: (i: numbe
   const extra = def.waterTables ?? [];
   if (!main && extra.length) throw new Error("Further water tables without a main one are not supported");
   if (!main) return { ...DEFAULT_PIEZO_LINE, lines: [] };
-  const followBoundary = def.waterTable?.followBoundary === true;
-  if (extra.some((w) => (w.followBoundary === true) !== followBoundary)) {
+  // Unset means clipped at the ground, as in the engine.
+  const followBoundary = def.waterTable?.followBoundary !== false;
+  if (extra.some((w) => (w.followBoundary !== false) !== followBoundary)) {
     throw new Error("Water tables that differ in free water are not supported");
   }
   const mainId = `${id}-water`;

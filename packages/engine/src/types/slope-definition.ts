@@ -49,12 +49,15 @@ export interface SlopeMaterialDefinition {
  */
 export function materialModelOf(m: SlopeMaterialDefinition): MaterialModel {
   if (m.model) return m.model;
-  if (typeof m.unitWeight !== "number") throw new Error(`Material "${m.name}" has no model.`);
+  // Older definitions gave all three; a missing one is an error, not 0.
+  if (typeof m.unitWeight !== "number" || typeof m.cohesion !== "number" || typeof m.frictionAngle !== "number") {
+    throw new Error(`Material "${m.name}" has no model.`);
+  }
   return {
     kind: "mohr-coulomb",
     unitWeight: m.unitWeight,
-    cohesion: m.cohesion ?? 0,
-    frictionAngle: m.frictionAngle ?? 0,
+    cohesion: m.cohesion,
+    frictionAngle: m.frictionAngle,
     ...(m.cohesionRefDepth !== undefined ? { cohesionRefDepth: m.cohesionRefDepth } : {}),
     ...(m.cohesionRateOfChange !== undefined ? { cohesionRateOfChange: m.cohesionRateOfChange } : {}),
     ...(m.cohesionUndrained !== undefined ? { cohesionUndrained: m.cohesionUndrained } : {}),
