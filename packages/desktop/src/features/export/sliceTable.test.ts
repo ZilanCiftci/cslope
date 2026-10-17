@@ -33,6 +33,27 @@ describe("slice table export", () => {
     expect(slice[18]).toBeCloseTo(5 * 2.31 + 50 * Math.tan(Math.PI / 6), 3);
   });
 
+  it("states characteristic values without partial factors", () => {
+    const rows = buildSliceTable(result, { modelName: "M" });
+    expect(rows).toContainEqual(["Values", "characteristic (no partial factors)"]);
+    expect(rows.find((r) => r[0] === "Slice")).toContain("Cohesion c (kPa)");
+  });
+
+  it("marks design values and lists the partial factors", () => {
+    const rows = buildSliceTable(result, {
+      modelName: "M",
+      partialFactors: { cu: 1.5, cohesion: 1.3, tanPhi: 1.3, variableLoad: 1.3 },
+    });
+    expect(rows).toContainEqual(["Over-design factor (design values)", 1.2346]);
+    expect(rows).toContainEqual(["γcu", 1.5]);
+    expect(rows).toContainEqual(["γQ", 1.3]);
+    const header = rows.find((r) => r[0] === "Slice")!;
+    expect(header).toContain("Design cohesion c_d (kPa)");
+    expect(header).toContain("Design friction angle φ_d (°)");
+    expect(header).toContain("Surface load, design (kN/m)");
+    expect(header).not.toContain("Cohesion c (kPa)");
+  });
+
   it("writes CSV with quoting, and the Swedish variant with ; and decimal commas", () => {
     const rows = [["Clay, soft", 1.5], ['He said "hi"', -0.25]];
     expect(toCsv(rows)).toBe('"Clay, soft",1.5\r\n"He said ""hi""",-0.25\r\n');

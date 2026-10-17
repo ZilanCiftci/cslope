@@ -15,6 +15,8 @@ import {
 import { RibbonButton, RibbonGroup, RibbonSep } from "./RibbonParts";
 import type { SurfaceDisplayMode } from "../../../store/types";
 import { buildSliceTable, toCsv } from "../../../features/export/sliceTable";
+import { buildAnalysisSummary } from "../../../features/export/analysisSummary";
+import { APP_VERSION } from "../../../utils/app-version";
 import { paperPngDataUrl } from "../../../features/export/paper-png";
 import { buildXlsx } from "../../../utils/xlsx";
 import { downloadFile, safeFileName } from "../../../utils/download";
@@ -138,6 +140,29 @@ export function ResultsMenu({ isOpen, onActivate, panelHost }: Props) {
       projectInfo: state.projectInfo,
       parameters: state.parameters,
       viewBounds,
+      summary: {
+        sections: buildAnalysisSummary({
+          result: state.result,
+          options: state.options,
+          analysisLimits: state.analysisLimits,
+          orientation: state.orientation,
+          piezometricLine: state.piezometricLine,
+          materials: state.materials,
+          udls: state.udls,
+          lineLoads: state.lineLoads,
+          reinforcements: state.reinforcements,
+          piles: state.piles,
+          // Only with surfaces to analyse (as buildSlopeDTOFromModel).
+          customPlanesOnly: state.customPlanesOnly && state.customSearchPlanes.length > 0,
+          customSurfaceCount: state.customSearchPlanes.length,
+        }),
+        header: {
+          projectInfo: state.projectInfo,
+          modelName: state.models.find((m) => m.id === state.activeModelId)?.name,
+          version: APP_VERSION,
+          date: new Date().toISOString().slice(0, 10),
+        },
+      },
     });
   };
 
@@ -571,6 +596,7 @@ function exportSliceData(format: "xlsx" | "csv" | "csv-se"): void {
   const rows = buildSliceTable(result, {
     modelName,
     date: new Date().toISOString().slice(0, 10),
+    partialFactors: state.options.partialFactors ?? null,
   });
   const base = `${modelName} slices`;
   if (format === "xlsx") {

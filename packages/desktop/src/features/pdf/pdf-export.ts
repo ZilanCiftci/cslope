@@ -35,6 +35,8 @@ import {
   drawUdlLoads,
 } from "./pdf-drawing";
 import type { PdfTransform } from "./pdf-helpers";
+import { drawSummaryPages, type SummaryHeader } from "./pdf-summary";
+import type { SummarySection } from "../export/analysisSummary";
 import { clampMinorTicks } from "../../utils/ruler";
 
 interface PdfViewBounds {
@@ -99,6 +101,8 @@ export interface PdfExportData {
   projectInfo?: ProjectInfo;
   parameters?: ParameterDef[];
   viewBounds?: PdfViewBounds;
+  /** Analysis summary, appended as text pages after the drawing. */
+  summary?: { sections: SummarySection[]; header: SummaryHeader };
 }
 
 function createTransform(
@@ -150,6 +154,7 @@ export function exportVectorPdf(data: PdfExportData): void {
       projectInfo,
       parameters,
       viewBounds,
+      summary,
     } = data;
 
     const hasSurfaces =
@@ -303,7 +308,10 @@ export function exportVectorPdf(data: PdfExportData): void {
     };
     const pdfInternal = pdf.internal as PdfInternalWithOut;
 
-    pdf.internal.events.subscribe("putPage", function () {
+    // Scale and viewport belong to the drawing (page 1), not to the
+    // summary pages after it.
+    pdf.internal.events.subscribe("putPage", function (page: { pageNumber?: number }) {
+      if (page?.pageNumber !== undefined && page.pageNumber !== 1) return;
       pdfInternal.out(`/Measure ${measureDict}`);
       pdfInternal.out(
         `/VP [ << /Type /Viewport /Name (Model Space) /BBox [${pdfNum(bboxX0, 4)} ${pdfNum(bboxY0, 4)} ${pdfNum(bboxX1, 4)} ${pdfNum(bboxY1, 4)}] /Measure ${measureDict} >> ]`,
@@ -404,6 +412,14 @@ export function exportVectorPdf(data: PdfExportData): void {
       rvs.gridSpacing,
       clampMinorTicks(rvs.minorTicks ?? 0),
     );
+
+    if (summary) {
+      drawSummaryPages(pdf, summary.sections, summary.header, {
+        w: tf.paperW,
+        h: tf.paperH,
+        landscape,
+      });
+    }
 
     pdf.save(buildPdfFilename(projectInfo));
   } catch (error) {

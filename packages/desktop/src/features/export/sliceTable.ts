@@ -1,4 +1,4 @@
-import type { AnalysisResult } from "@cslope/engine";
+import type { AnalysisResult, PartialFactors } from "@cslope/engine";
 import type { XlsxCell } from "../../utils/xlsx";
 import { sliceShearStrength } from "../annotations/slicePlotData";
 
@@ -6,6 +6,11 @@ export interface SliceTableMeta {
   modelName: string;
   /** Export date, written in the header block. */
   date?: string;
+  /**
+   * Partial factors of the run. The slices then carry design values:
+   * strengths divided and surface loads multiplied by the factors.
+   */
+  partialFactors?: PartialFactors | null;
 }
 
 const HEADERS = [
@@ -39,11 +44,23 @@ export function buildSliceTable(
   meta: SliceTableMeta,
 ): XlsxCell[][] {
   const cs = result.criticalSurface;
+  const pf = meta.partialFactors ?? null;
   const rows: XlsxCell[][] = [
     ["Model", meta.modelName],
     ["Method", result.method],
-    ["Minimum FOS", round(result.minFOS, 4)],
+    [pf ? "Over-design factor (design values)" : "Minimum FOS", round(result.minFOS, 4)],
   ];
+  if (pf) {
+    rows.push(
+      ["Values", "design values: strengths divided, surface loads multiplied by the partial factors"],
+      ["γcu", pf.cu],
+      ["γc'", pf.cohesion],
+      ["γφ' (on tan φ')", pf.tanPhi],
+      ["γQ", pf.variableLoad],
+    );
+  } else {
+    rows.push(["Values", "characteristic (no partial factors)"]);
+  }
   if (cs) {
     if (cs.points) {
       rows.push(["Critical surface", `non-circular, ${cs.points.length} points`]);
@@ -56,7 +73,7 @@ export function buildSliceTable(
     );
   }
   if (meta.date) rows.push(["Exported", meta.date]);
-  rows.push([], HEADERS);
+  rows.push([], pf ? HEADERS.map(designHeader) : HEADERS);
   // Slices are numbered from the entry (crest) to the exit (toe).
   result.criticalSlices.forEach((s, i) => {
     const phi = s.frictionAngle;
@@ -84,6 +101,15 @@ export function buildSliceTable(
     ]);
   });
   return rows;
+}
+
+/** Column header of a value that is a design value under partial factors. */
+function designHeader(h: string): string {
+  if (h.startsWith("Surface load")) return "Surface load, design (kN/m)";
+  if (h.startsWith("Cohesion c")) return "Design cohesion c_d (kPa)";
+  if (h.startsWith("Friction angle")) return "Design friction angle φ_d (°)";
+  if (h.startsWith("Shear strength")) return "Design shear strength c_d·l + N'·tan φ_d (kN/m)";
+  return h;
 }
 
 function round(v: number, digits: number): number | null {

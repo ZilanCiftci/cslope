@@ -27,6 +27,8 @@ vi.mock("jspdf", async (importOriginal) => {
 });
 
 import { buildExportFilename, exportVectorPdf, type PdfExportData } from "./pdf-export";
+import { buildAnalysisSummary } from "../export/analysisSummary";
+import { DEFAULT_ANALYSIS_OPTIONS } from "@cslope/engine";
 import {
   DEFAULT_ANALYSIS_LIMITS,
   DEFAULT_MATERIAL,
@@ -187,6 +189,42 @@ describe("exportVectorPdf — full model", () => {
     );
     // Capped colour scale (maxFOS 5 > 2 × 1.234) with an ASCII ">=".
     expect(texts.some((t) => t.startsWith("≥ 2.47"))).toBe(true);
+  });
+
+  it("appends the analysis summary after the drawing, with the scale on the drawing only", () => {
+    const d = data();
+    const sections = buildAnalysisSummary({
+      ...d,
+      options: { ...DEFAULT_ANALYSIS_OPTIONS, partialFactors: { cu: 1.5, cohesion: 1.3, tanPhi: 1.3, variableLoad: 1.3 } },
+    });
+    const { alert, error, doc } = exportDoc({
+      ...d,
+      summary: { sections, header: { projectInfo: d.projectInfo, modelName: "Section A", version: "9.9.9", date: "2026-10-17" } },
+    });
+    expect(alert).not.toHaveBeenCalled();
+    expect(error).not.toHaveBeenCalled();
+    expect(doc.getNumberOfPages()).toBeGreaterThanOrEqual(2);
+    const texts = pageTexts(doc);
+    expect(texts).toEqual(
+      expect.arrayContaining([
+        "Analysis summary",
+        "Result",
+        "Over-design factor (design values)",
+        "Bishop simplified (moment equilibrium)",
+        "Partial factors",
+        "Materials (characteristic values)",
+        "Summary page 1",
+      ]),
+    );
+    expect(texts.some((t) => t.startsWith("cSlope 9.9.9"))).toBe(true);
+    // Every summary line lies inside the page.
+    const [w, h] = [doc.internal.pageSize.getWidth(), doc.internal.pageSize.getHeight()];
+    for (const t of recordedTexts(doc)) {
+      expect(t.y).toBeLessThanOrEqual(h);
+      expect(t.x).toBeLessThanOrEqual(w);
+    }
+    const out = doc.output();
+    expect(out.match(/\/VP \[/g)).toHaveLength(1);
   });
 
   it("names the file from the project number when there is no title", () => {
