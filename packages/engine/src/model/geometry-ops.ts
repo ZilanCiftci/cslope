@@ -599,6 +599,13 @@ export interface RegionFacesResult {
   faces: RegionFace[];
   /** True when the boundaries could not be noded (slope left unsplit). */
   failed: boolean;
+  /**
+   * Indices (into the given lines) of boundaries with an end that lies
+   * inside the slope, off the outline and off every other boundary, after
+   * snapping (see END_SNAP_TOLERANCE). Such an end does not split the
+   * region it lies in.
+   */
+  danglingBoundaries: number[];
 }
 
 /**
@@ -620,12 +627,23 @@ export function polygonizeRegions(
 
 /**
  * Relative tolerances of the region split (fractions of the model size).
- * A boundary end this close to the outline is put on it: an end short of
- * the model edge by a rounding error left the boundary dangling, and the
- * layer below it was silently not split off. Snap rounding uses a grid of
- * this size when plain noding fails.
+ *
+ * END_SNAP_TOLERANCE: a boundary end this close to the outline or to
+ * another boundary is put on the nearest point of it. An end short of the
+ * model edge or of the boundary it meets (by a rounding error, or a
+ * millimetre in a hand-edited or imported file) left the boundary
+ * dangling, and the layer below it was silently not split off: one
+ * region, the first material throughout. 1e-3 of the model size (4 cm on
+ * a 40 m model) is a geometric tolerance of the drawing, as in the
+ * endpoint snapping of CAD and GIS line cleaning; it is not fitted to any
+ * result. An end farther away is left as drawn and reported in
+ * `danglingBoundaries`.
+ *
+ * SNAP_ROUNDING_GRID: the grid of snap rounding when plain noding fails.
+ * DANGLE_TOLERANCE: an end this close to a line counts as on it.
  */
-const END_SNAP_TOLERANCE = 1e-6;
+const END_SNAP_TOLERANCE = 1e-3;
+const DANGLE_TOLERANCE = 1e-9;
 const SNAP_ROUNDING_GRID = 1e-9;
 /** The faces must cover the slope to this fraction of its area. */
 const COVERAGE_TOLERANCE = 1e-6;
@@ -652,6 +670,98 @@ function nearestOnRing(ring: [number, number][], x: number, y: number): { p: [nu
     if (d < best.d) best = { p, d };
   }
   return best;
+}
+
+/**
+ * The point of the other lines nearest to the end `which` of line k (its
+ * own segments count too, except the one the end belongs to, so that a
+ * lens drawn with a small gap closes).
+ */
+function nearestOnLines(
+  lines: [number, number][][],
+  k: number,
+  which: "first" | "last",
+): { p: [number, number]; d: number } {
+  const l = lines[k];
+  const [x, y] = which === "first" ? l[0] : l[l.length - 1];
+  let best: { p: [number, number]; d: number } = { p: [x, y], d: Infinity };
+  for (let j = 0; j < lines.length; j++) {
+    let line = lines[j];
+    if (j === k) {
+      line = which === "first" ? l.slice(1) : l.slice(0, -1);
+      if (line.length < 2) continue;
+    }
+    const r = nearestOnRing(line, x, y);
+    if (r.d < best.d) best = r;
+  }
+  return best;
+}
+
+/** True when the polyline is closed (a lens); a closed line has no ends. */
+function isClosedLine(l: [number, number][]): boolean {
+  return l.length > 2 && l[0][0] === l[l.length - 1][0] && l[0][1] === l[l.length - 1][1];
+}
+
+/**
+ * Put each boundary end within `tol` of the outline or of another boundary
+ * on the nearest point of it. Ends nearest the outline are snapped first,
+ * then ends nearest a boundary, onto the boundaries as already snapped (a
+ * T-junction then meets the line it ends on where that line now runs).
+ */
+function snapBoundaryEnds(
+  ring: [number, number][],
+  lines: [number, number][][],
+  tol: number,
+): [number, number][][] {
+  const out = lines.map((l) => l.map((p): [number, number] => [p[0], p[1]]));
+  const endOf = (l: [number, number][], which: "first" | "last") => (which === "first" ? l[0] : l[l.length - 1]);
+  const set = (k: number, which: "first" | "last", p: [number, number]) => {
+    out[k][which === "first" ? 0 : out[k].length - 1] = p;
+  };
+  const toLines: { k: number; which: "first" | "last" }[] = [];
+  for (let k = 0; k < out.length; k++) {
+    if (isClosedLine(out[k])) continue;
+    for (const which of ["first", "last"] as const) {
+      const [x, y] = endOf(out[k], which);
+      const onRing = nearestOnRing(ring, x, y);
+      const onLine = nearestOnLines(lines, k, which);
+      if (onRing.d <= onLine.d) {
+        if (onRing.d > 0 && onRing.d <= tol) set(k, which, onRing.p);
+      } else if (onLine.d > 0 && onLine.d <= tol) {
+        toLines.push({ k, which });
+      }
+    }
+  }
+  for (const { k, which } of toLines) {
+    const { p, d } = nearestOnLines(out, k, which);
+    if (d > 0 && d <= tol) set(k, which, p);
+  }
+  return out;
+}
+
+/**
+ * Indices of the lines with an end strictly inside the polygon and more
+ * than `tol` from the outline and from every other line.
+ */
+function danglingLines(
+  polygon: unknown,
+  ring: [number, number][],
+  lines: [number, number][][],
+  tol: number,
+): number[] {
+  const result: number[] = [];
+  for (let k = 0; k < lines.length; k++) {
+    const l = lines[k];
+    if (isClosedLine(l)) continue;
+    const dangles = (["first", "last"] as const).some((which) => {
+      const [x, y] = which === "first" ? l[0] : l[l.length - 1];
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      if (!(polygon as any).contains(gf.createPoint(new Coordinate(x, y)))) return false;
+      return nearestOnRing(ring, x, y).d > tol && nearestOnLines(lines, k, which).d > tol;
+    });
+    if (dangles) result.push(k);
+  }
+  return result;
 }
 
 /**
@@ -727,27 +837,22 @@ export function polygonizeRegionsDetailed(
   ) {
     ring.push([ring[0][0], ring[0][1]]);
   }
-  const toFace = (outer: [number, number][], failed = false) => ({
-    faces: [{ outer, holes: [] }] as RegionFace[],
-    failed,
-  });
-  if (ring.length < 4) return { faces: [], failed: false };
+  if (ring.length < 4) return { faces: [], failed: false, danglingBoundaries: [] };
   const polygon = gf.createPolygon(
     gf.createLinearRing(ring.map(([x, y]) => new Coordinate(x, y))),
   );
   const xs = ring.map((p) => p[0]);
   const ys = ring.map((p) => p[1]);
   const size = Math.max(Math.max(...xs) - Math.min(...xs), Math.max(...ys) - Math.min(...ys), 1e-9);
-  // Boundary ends a rounding error away from the outline are put on it.
-  const usable = lines
-    .filter((l) => l.length >= 2)
-    .map((l) =>
-      l.map((pt, i): [number, number] => {
-        if (i !== 0 && i !== l.length - 1) return pt;
-        const { p, d } = nearestOnRing(ring, pt[0], pt[1]);
-        return d > 0 && d <= END_SNAP_TOLERANCE * size ? p : pt;
-      }),
-    );
+  // Boundary ends near the outline or another boundary are put on it.
+  const indices = lines.map((_, i) => i).filter((i) => lines[i].length >= 2);
+  const usable = snapBoundaryEnds(ring, indices.map((i) => lines[i]), END_SNAP_TOLERANCE * size);
+  const dangling = danglingLines(polygon, ring, usable, DANGLE_TOLERANCE * size).map((k) => indices[k]);
+  const toFace = (outer: [number, number][], failed = false): RegionFacesResult => ({
+    faces: [{ outer, holes: [] }],
+    failed,
+    danglingBoundaries: dangling,
+  });
   if (usable.length === 0) return toFace(ring);
 
   const parentArea = Math.abs(signedArea(ring));
@@ -760,7 +865,7 @@ export function polygonizeRegionsDetailed(
   try {
     const r = polygonizeOnce(polygon, ring, usable, null);
     if (covers(r.faces)) {
-      if (r.dangles === 0) return { faces: r.faces, failed: false };
+      if (r.dangles === 0) return { faces: r.faces, failed: false, danglingBoundaries: dangling };
       plain = r.faces;
     }
   } catch {
@@ -780,11 +885,13 @@ export function polygonizeRegionsDetailed(
     const faces = r.faces.map((f) => ({ outer: back(f.outer), holes: f.holes.map(back) }));
     // Taken only when it splits more than plain noding did: a boundary
     // that really ends inside a region keeps the exact plain faces.
-    if (covers(faces) && (!plain || faces.length > plain.length)) return { faces, failed: false };
+    if (covers(faces) && (!plain || faces.length > plain.length)) {
+      return { faces, failed: false, danglingBoundaries: dangling };
+    }
   } catch {
     // fall back to the plain faces, if they cover the slope
   }
-  if (plain) return { faces: plain, failed: false };
+  if (plain) return { faces: plain, failed: false, danglingBoundaries: dangling };
   console.warn("polygonizeRegions failed; using the unsplit slope.");
   return toFace(ring, true);
 }

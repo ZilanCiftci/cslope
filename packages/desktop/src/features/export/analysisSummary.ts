@@ -211,6 +211,7 @@ export function buildAnalysisSummary(input: AnalysisSummaryInput): SummarySectio
   if (cs && cs.converged === false) {
     res.push({ label: "Warning", value: "The critical surface did not converge within the iteration limit" });
   }
+  for (const w of result.warnings ?? []) res.push({ label: "Warning", value: w.message });
   sections.push({ title: "Result", rows: res });
 
   // ── Search ──

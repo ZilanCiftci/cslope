@@ -128,7 +128,7 @@ describe("splitting polygons", () => {
 
 describe("regions cut by all boundaries", () => {
   it("degenerate inputs: too few points, no usable lines", () => {
-    expect(polygonizeRegionsDetailed([0, 1], [0, 1], [])).toEqual({ faces: [], failed: false });
+    expect(polygonizeRegionsDetailed([0, 1], [0, 1], [])).toEqual({ faces: [], failed: false, danglingBoundaries: [] });
     const whole = polygonizeRegions([0, 10, 10, 0], [0, 0, 10, 10], [[[1, 1]]]);
     expect(whole).toHaveLength(1);
     expect(whole[0].outer).toHaveLength(5);

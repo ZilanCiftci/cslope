@@ -56,6 +56,8 @@ export type {
   PartialFactors,
   AnalysisOptions,
   AnalysisResult,
+  AnalysisWarning,
+  AnalysisWarningCode,
   AnalysisLimits,
   SlipSurfaceResult,
   SliceData,

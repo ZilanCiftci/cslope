@@ -196,6 +196,7 @@ export class Slope {
   private _customPlanesOnly = false;
   private _fixedSlices: number[] | null = null;
   private _splitFailureCount = 0;
+  private _danglingBoundaries: number[] = [];
 
   // ── Cache for y-intersections ─────────────────────────────────
   private _externalYCache = new Map<number, number>();
@@ -459,6 +460,15 @@ export class Slope {
     return this._splitFailureCount > 0;
   }
 
+  /**
+   * Indices of the material boundaries (as given to setMaterialBoundaries)
+   * with an end inside a region, off the outline and every other boundary
+   * even after snapping: they do not split that region.
+   */
+  get danglingBoundaries(): readonly number[] {
+    return this._danglingBoundaries;
+  }
+
   // ────────────────────────────────────────────────────────────────
   // Mutable setters for the solver (used by search/solver code)
   // ────────────────────────────────────────────────────────────────
@@ -551,6 +561,7 @@ export class Slope {
 
     // Reset results
     this._splitFailureCount = 0;
+    this._danglingBoundaries = [];
     this._resetResults();
   }
 
@@ -569,7 +580,7 @@ export class Slope {
       throw new Error("External boundary must be set before boundaries");
     }
     const material = this._materialGeometries[0].material;
-    const { faces, failed } = polygonizeRegionsDetailed(
+    const { faces, failed, danglingBoundaries } = polygonizeRegionsDetailed(
       this._externalBoundaryPx,
       this._externalBoundaryPy,
       lines,
@@ -582,6 +593,7 @@ export class Slope {
         "The material boundaries could not be split into regions. Check boundaries that touch or nearly touch the outline or each other.",
       );
     }
+    this._danglingBoundaries = danglingBoundaries;
     this._materialGeometries = faces.map((face) => {
       const ring = keyholeRing(face.outer, face.holes);
       return createGeometryWithMaterial(

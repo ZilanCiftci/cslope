@@ -573,7 +573,7 @@ export function analyseBishop(
  *   φ-only soil (c=0): b₁ = 0.31
  *   c-φ soil:          b₁ = 0.50
  */
-function janbuCorrectionFactor(slices: Slice[]): number {
+export function janbuCorrectionFactor(slices: Slice[]): number {
   if (slices.length === 0) return 1;
 
   // Entry and exit points on the failure surface

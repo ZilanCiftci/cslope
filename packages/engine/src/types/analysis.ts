@@ -220,6 +220,25 @@ export interface SliceData {
   baseMaterial: Material;
 }
 
+/** Kind of a result warning (see analysisWarnings). */
+export type AnalysisWarningCode =
+  | "dangling-boundary"
+  | "negative-effective-normal"
+  | "low-m-alpha";
+
+/**
+ * Something about the input or the critical surface that the factor of
+ * safety alone does not show, in English for display.
+ */
+export interface AnalysisWarning {
+  code: AnalysisWarningCode;
+  message: string;
+  /** Slices of the critical surface concerned (the slice warnings). */
+  count?: number;
+  /** Index into materialBoundaries (dangling-boundary). */
+  boundaryIndex?: number;
+}
+
 /** Full analysis result. */
 export interface AnalysisResult {
   /** Minimum Factor of Safety found. */
@@ -248,6 +267,8 @@ export interface AnalysisResult {
   nonConvergedSurfaces?: number;
   /** Number of geometry split operations that failed and fell back to unsplit. */
   splitFailureCount?: number;
+  /** Warnings on the input and the critical surface (none: omitted or empty). */
+  warnings?: AnalysisWarning[];
   /**
    * Sliding direction of the reported surfaces in model space: "ltr" =
    * towards +x. Set when both directions were analysed.

@@ -112,6 +112,25 @@ describe("analysis summary", () => {
     expect(value(custom, "Search", "Search limits")).toBeUndefined();
   });
 
+  it("lists the result warnings", () => {
+    const s = buildAnalysisSummary(
+      input({
+        result: {
+          ...RESULT,
+          warnings: [
+            { code: "dangling-boundary", message: "Material boundary 2 ends inside a region and does not split it; check its end points.", boundaryIndex: 1 },
+            { code: "low-m-alpha", message: "3 slices of the critical surface have m_α below 0.2 (steep base); the factor of safety may be unreliable.", count: 3 },
+          ],
+        },
+      }),
+    );
+    const warnings = section(s, "Result").rows!.filter((r) => r.label === "Warning").map((r) => r.value);
+    expect(warnings).toEqual([
+      "Material boundary 2 ends inside a region and does not split it; check its end points.",
+      "3 slices of the critical surface have m_α below 0.2 (steep base); the factor of safety may be unreliable.",
+    ]);
+  });
+
   it("writes the strength of each material model", () => {
     expect(strengthText({ kind: "mohr-coulomb", unitWeight: 18, cohesion: 5, frictionAngle: 30 })).toBe("c' = 5 kPa, φ' = 30°");
     expect(
