@@ -60,6 +60,8 @@ export interface PiezoLayoutOptions {
   slipMass?: readonly Pt[] | null;
   /** Lines a symbol had better not cross (material boundaries). */
   softLines?: readonly Seg[];
+  /** Vertex markers (see piezoObstacles); those of the line itself are no obstacle to its own symbols. */
+  vertexObstacles?: readonly VertexObstacle[];
   /** The line number is drawn above the ▽ (several lines). */
   numbered?: boolean;
 }
@@ -120,7 +122,11 @@ export function piezoSymbolLayout(
   const modelXs = opts.model.map(([x, y]) => toScreen(x, y)[0]);
   const edgeL = modelXs.length >= 3 ? Math.min(...modelXs) : -Infinity;
   const edgeR = modelXs.length >= 3 ? Math.max(...modelXs) : Infinity;
-  const soft = [...ground, ...(opts.softLines ?? [])];
+  // The line's own vertices do not block its symbols: dense ones would leave no spot.
+  const ownVertex = new Set(line.map(([x, y]) => `${x},${y}`));
+  const vertexObstacles = (opts.vertexObstacles ?? []).filter((v) => !ownVertex.has(`${v.at[0]},${v.at[1]}`));
+  const avoid = [...(opts.avoid ?? []), ...vertexObstacles.map((v) => v.box)];
+  const soft = [...ground, ...(opts.softLines ?? []), ...vertexObstacles.flatMap((v) => v.ring)];
   const mass = opts.slipMass && opts.slipMass.length >= 3 ? opts.slipMass : null;
   const massX = mass?.map((p) => p[0]) ?? [];
   const massY = mass?.map((p) => p[1]) ?? [];
@@ -204,7 +210,7 @@ export function piezoSymbolLayout(
       steep ||
       critSegs.some(near) ||
       (opts.avoidLines ?? []).some(near) ||
-      (opts.avoid ?? []).some(overlaps) ||
+      avoid.some(overlaps) ||
       critDots.some(([dx, dy]) => dx > tri.left - dotR && dx < tri.right + dotR && dy > tri.top - dotR && dy < ticks.bottom + dotR);
     // The symbol crossing the ground or a boundary line, or within a few
     // px of one (a thin layer between two), hides a little of it; squeezed
@@ -218,8 +224,21 @@ export function piezoSymbolLayout(
     return { s, x, y, blocked, tier, cost, bars };
   };
 
+  // Spots every `step`, worked out every other one first: halfway between
+  // two open neighbours (2 steps apart) of the same class and cost nothing
+  // changes, as anything in the way blocks or costs a stretch of several
+  // spots; next to a blocked one (a gap between two obstacles may be
+  // narrow) or between two that differ the spot is worked out too.
   const spots: Spot[] = [];
-  for (let s = 0; s <= total; s += step) spots.push(at(s));
+  const alike = (a: Spot, b: Spot) => !a.blocked && !b.blocked && a.tier === b.tier && a.cost === b.cost && a.bars === b.bars;
+  let prev: Spot | null = null;
+  for (let s = 0; s <= total; s += 2 * step) {
+    const p = at(s);
+    if (prev && !alike(prev, p)) spots.push(at(s - step));
+    spots.push(p);
+    prev = p;
+  }
+  if (prev && prev.s + step <= total) spots.push(at(prev.s + step));
   const free = (p: Spot, own: readonly Pt[]) =>
     taken.every(([tx, ty]) => Math.hypot(tx - p.x, ty - p.y) >= crossGap) &&
     own.every(([tx, ty]) => Math.hypot(tx - p.x, ty - p.y) >= ownGap);
@@ -292,10 +311,18 @@ export interface PiezoScene {
   critical?: (DrawableSurface & { crack?: unknown }) | null;
 }
 
+/** A vertex marker in the way of the symbols: at a world point, its box and a ring around it (drawing units). */
+export interface VertexObstacle {
+  at: Pt;
+  box: Box;
+  ring: Seg[];
+}
+
 export interface PiezoObstacles {
   avoid: Box[];
   avoidLines: Seg[];
   softLines: Seg[];
+  vertexObstacles: VertexObstacle[];
   slipMass: Pt[] | null;
 }
 
@@ -303,7 +330,7 @@ export interface PiezoObstacles {
  * The obstacles of a scene for piezoSymbolLayout, in drawing units: the
  * loads (arrows, bands and the room for their labels), the search-limit
  * markers and dotted ranges (as layoutLimitMarkers and layoutRangeDots
- * draw them), the vertex markers, the parts of the prescribed surfaces
+ * draw them), the vertex markers (apart, see VertexObstacle), the parts of the prescribed surfaces
  * inside the model, the material boundaries and the sliding mass.
  */
 export function piezoObstacles(scene: PiezoScene, toD: (x: number, y: number) => Pt, unit: number): PiezoObstacles {
@@ -347,18 +374,22 @@ export function piezoObstacles(scene: PiezoScene, toD: (x: number, y: number) =>
   }
   // Vertex dots: the dot (up to 6 px and its outline) and a little room
   // around it kept clear; a symbol just beside one reads as belonging to
-  // it, so a ring around it is better not crossed either.
-  const nearVertex: Seg[] = [];
+  // it, so a ring around it is better not crossed either (kept apart:
+  // a line's own vertices do not block its symbols).
+  const vertexObstacles: VertexObstacle[] = [];
   for (const [x, y] of scene.vertices ?? []) {
     const [cx, cy] = toD(x, y);
-    avoid.push(box(cx - 9 * unit, cy - 9 * unit, cx + 9 * unit, cy + 9 * unit));
     const r = 14 * unit;
-    nearVertex.push(
-      [cx - r, cy - r, cx + r, cy - r],
-      [cx + r, cy - r, cx + r, cy + r],
-      [cx + r, cy + r, cx - r, cy + r],
-      [cx - r, cy + r, cx - r, cy - r],
-    );
+    vertexObstacles.push({
+      at: [x, y],
+      box: box(cx - 9 * unit, cy - 9 * unit, cx + 9 * unit, cy + 9 * unit),
+      ring: [
+        [cx - r, cy - r, cx + r, cy - r],
+        [cx + r, cy - r, cx + r, cy + r],
+        [cx + r, cy + r, cx - r, cy + r],
+        [cx - r, cy + r, cx - r, cy - r],
+      ],
+    });
   }
   // Prescribed surfaces are drawn clipped to the model: only the part
   // through the soil is in the way.
@@ -389,15 +420,12 @@ export function piezoObstacles(scene: PiezoScene, toD: (x: number, y: number) =>
     const [, cb] = toD(x, bottom);
     avoid.push(box(cx - 4 * unit, Math.min(ct, cb), cx + 4 * unit, Math.max(ct, cb)));
   }
-  const softLines = [
-    ...(scene.materialBoundaries ?? []).flatMap((b) =>
-      b.coordinates.length < 2 ? [] : polylineSegments(b.coordinates.map(([x, y]) => toD(x, y))),
-    ),
-    ...nearVertex,
-  ];
+  const softLines = (scene.materialBoundaries ?? []).flatMap((b) =>
+    b.coordinates.length < 2 ? [] : polylineSegments(b.coordinates.map(([x, y]) => toD(x, y))),
+  );
   const slipMass =
     scene.critical && coordinates.length >= 3
       ? slipMassPolygon(coordinates, scene.critical, surfacePoints(scene.critical)).map(([x, y]) => toD(x, y))
       : null;
-  return { avoid, avoidLines, softLines, slipMass };
+  return { avoid, avoidLines, softLines, vertexObstacles, slipMass };
 }

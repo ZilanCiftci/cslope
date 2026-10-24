@@ -705,6 +705,7 @@ export function drawPiezometricLines(
           avoid: [...avoid.placed, ...obstacles.avoid],
           avoidLines: [...avoid.obstacles, ...obstacles.avoidLines],
           softLines: obstacles.softLines,
+          vertexObstacles: obstacles.vertexObstacles,
           slipMass: obstacles.slipMass,
           numbered: multiLine,
         }),

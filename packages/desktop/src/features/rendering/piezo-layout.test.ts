@@ -117,7 +117,7 @@ describe("piezoObstacles", () => {
     // The UDL band reaches up past its arrows and label.
     expect(o.avoid.some((b) => b.left < 100 && b.right > 200 && b.top < -40 && b.bottom >= 0)).toBe(true);
     expect(o.avoid.some((b) => b.left < 500 && b.right > 500)).toBe(true);
-    expect(o.avoid.some((b) => b.left < 0 && b.right > 0 && b.top < 0 && b.bottom > 0)).toBe(true);
+    expect(o.vertexObstacles.some(({ box: b }) => b.left < 0 && b.right > 0 && b.top < 0 && b.bottom > 0)).toBe(true);
     // Dots between 300 and 400.
     expect(o.avoid.some((b) => b.left > 300 && b.right < 400)).toBe(true);
     // Only the lower half of the circle is inside the model.
@@ -149,5 +149,17 @@ describe("piezoSymbolLayout clearances", () => {
     const obstacles = piezoObstacles({ coordinates: model, vertices: [[50, -20]] }, toScreen, 1);
     const [s] = piezoSymbolLayout([[0, -20], [100, -20]], toScreen, { unit: 1, model, ...obstacles });
     expect(Math.abs(s.x - 50)).toBeGreaterThan(14 + 7);
+  });
+
+  it("is not blocked by the dense vertices of its own line", () => {
+    // A line with a vertex every 10 px: its own dots leave a symbol room.
+    const line = Array.from({ length: 31 }, (_, i): [number, number] => [100 + 10 * i, -20]);
+    const obstacles = piezoObstacles({ coordinates: model, vertices: line }, toScreen, 1);
+    const syms = piezoSymbolLayout(line, toScreen, { unit: 1, model, ...obstacles });
+    expect(syms).toHaveLength(2);
+    syms.forEach((s, i) => expect(Math.abs(s.x - (175 + 150 * i))).toBeLessThan(10));
+    // Another line's vertices there still keep it away.
+    const [other] = piezoSymbolLayout([[0, -20], [200, -20]], toScreen, { unit: 1, model, ...obstacles });
+    expect(other.x).toBeLessThan(100 - 14);
   });
 });

@@ -3,6 +3,7 @@ import type { AnalysisLimitsState, PileRow, ReinforcementRow } from "../../store
 import {
   pointSegmentDistance,
   polylineSegments,
+  segmentBoxGap,
   segmentDistance,
   segmentHitsBox,
   stackPositions,
@@ -666,35 +667,48 @@ export function layoutReinforcementForces(
     const up = sideCandidates(1);
     const down = sideCandidates(-1);
     /**
-     * Clearance from the lines, beyond what the shaft and the head need
-     * (`relax`: half for boundary and water lines). Its own element counts
-     * too: an arrow across it (a force at an angle to a pile) or on it hides it.
+     * Clearance from the lines, beyond what the shaft and the head need,
+     * strict and relaxed (half for boundary and water lines). Its own
+     * element counts too: an arrow across it (a force at an angle to a
+     * pile) or on it hides it. Worked out once a candidate; a line whose
+     * box is farther off than the clearance found so far is passed over.
      */
-    const score = ([fx, fy, tx, ty]: Seg, relax: boolean): number => {
+    const scores = new Map<Seg, { strict: number; relaxed: number }>();
+    const scoreOf = (c: Seg): { strict: number; relaxed: number } => {
+      const known = scores.get(c);
+      if (known) return known;
+      const [fx, fy, tx, ty] = c;
       const neckX = tx - ux * headLen;
       const neckY = ty - uy * headLen;
-      let sc = Infinity;
-      const near = (o: Seg, kc: number) => {
-        sc = Math.min(
-          sc,
-          segmentDistance([fx, fy, neckX, neckY], o) - kc * size.clear,
-          segmentDistance([neckX, neckY, tx, ty], o) - kc * (headHalf + size.clear),
-        );
+      const shaft: Seg = [fx, fy, neckX, neckY];
+      const tip: Seg = [neckX, neckY, tx, ty];
+      // Least clearance to a line, kept clear by kc times the clearance.
+      const near = (o: Seg, kc: number, sc: number): number => {
+        if (segmentBoxGap(c, o) - kc * (headHalf + size.clear) >= sc) return sc;
+        return Math.min(sc, segmentDistance(shaft, o) - kc * size.clear, segmentDistance(tip, o) - kc * (headHalf + size.clear));
       };
-      for (const o of others) near(o, 1);
-      for (const o of ownSegs) near(o, 0.5 * k);
-      for (const o of extra) near(o, relax ? 0.5 : 1);
-      return sc;
+      let base = Infinity;
+      for (const o of others) base = near(o, 1, base);
+      for (const o of ownSegs) base = near(o, 0.5 * k, base);
+      let strict = base;
+      let relaxed = base;
+      for (const o of extra) {
+        strict = near(o, 1, strict);
+        relaxed = near(o, 0.5, relaxed);
+      }
+      const s = { strict, relaxed };
+      scores.set(c, s);
+      return s;
     };
     // Up the page where it is clear, or only touches a boundary or water
     // line (all arrows on the same side of their elements read best); else
     // down; else the clearest.
     const best =
-      up.find((c) => score(c, false) >= 0) ??
-      up.find((c) => score(c, true) >= 0) ??
-      down.find((c) => score(c, false) >= 0) ??
-      down.find((c) => score(c, true) >= 0) ??
-      [...up, ...down].reduce((a, b) => (score(b, true) > score(a, true) ? b : a));
+      up.find((c) => scoreOf(c).strict >= 0) ??
+      up.find((c) => scoreOf(c).relaxed >= 0) ??
+      down.find((c) => scoreOf(c).strict >= 0) ??
+      down.find((c) => scoreOf(c).relaxed >= 0) ??
+      [...up, ...down].reduce((a, b) => (scoreOf(b).relaxed > scoreOf(a).relaxed ? b : a));
     arrows.push(best);
     heads.push([headLen, headHalf]);
   }
@@ -784,7 +798,7 @@ export function layoutReinforcementForces(
         const len = Math.hypot(ax - sx, ay - sy);
         const t = Math.max(0, 1 - size.gap / len);
         const run: Seg = [sx, sy, sx + (ax - sx) * t, sy + (ay - sy) * t];
-        for (const s of lineSegs) if (segmentDistance(run, s) < 1e-9) n++;
+        for (const s of lineSegs) if (segmentBoxGap(run, s) < 1e-9 && segmentDistance(run, s) < 1e-9) n++;
       }
     }
     return n;
@@ -1022,23 +1036,9 @@ export function layoutReinforcementForces(
   }));
 }
 
-/**
- * Reinforcement forces on the critical surface: an arrow beside the
- * element in the direction of the force on the sliding mass, and its size
- * on a plate of the background colour at the element's head, with a
- * leader when it had to move (see layoutReinforcementForces).
- */
-export function drawReinforcementForces(
-  ctx: CanvasRenderingContext2D,
-  forces: readonly ReinforcementForce[],
-  toCanvas: (x: number, y: number) => [number, number],
-  zoom = 1,
-  options: { context?: ForceLabelContext; plate?: string } = {},
-): void {
-  const em = 10 * zoom;
-  ctx.save();
-  ctx.font = `bold ${em}px sans-serif`;
-  const size: ForceSize = {
+/** Sizes of the force arrows and labels on the canvas; the labels are measured in the font `ctx` has. */
+function canvasForceSize(ctx: CanvasRenderingContext2D, zoom: number): ForceSize {
+  return {
     arrow: 28 * zoom,
     head: 5.5 * zoom,
     headHalf: 2.5 * zoom,
@@ -1046,10 +1046,45 @@ export function drawReinforcementForces(
     clear: 1.5 * zoom,
     gap: 3 * zoom,
     pad: 1 * zoom,
-    textH: em,
+    textH: 10 * zoom,
     measure: (t) => ctx.measureText(t).width,
   };
-  const layout = layoutReinforcementForces(forces, toCanvas, size, options.context);
+}
+
+/** The force arrows and labels as drawReinforcementForces draws them (layoutReinforcementForces at canvas sizes). */
+export function canvasForceLayout(
+  ctx: CanvasRenderingContext2D,
+  forces: readonly ReinforcementForce[],
+  toCanvas: (x: number, y: number) => [number, number],
+  zoom = 1,
+  context?: ForceLabelContext,
+): ForceLayout[] {
+  ctx.save();
+  ctx.font = `bold ${10 * zoom}px sans-serif`;
+  const layout = layoutReinforcementForces(forces, toCanvas, canvasForceSize(ctx, zoom), context);
+  ctx.restore();
+  return layout;
+}
+
+/**
+ * Reinforcement forces on the critical surface: an arrow beside the
+ * element in the direction of the force on the sliding mass, and its size
+ * on a plate of the background colour at the element's head, with a
+ * leader when it had to move (see layoutReinforcementForces; `layout`:
+ * from canvasForceLayout, laid out before).
+ */
+export function drawReinforcementForces(
+  ctx: CanvasRenderingContext2D,
+  forces: readonly ReinforcementForce[],
+  toCanvas: (x: number, y: number) => [number, number],
+  zoom = 1,
+  options: { context?: ForceLabelContext; plate?: string; layout?: readonly ForceLayout[] } = {},
+): void {
+  const em = 10 * zoom;
+  ctx.save();
+  ctx.font = `bold ${em}px sans-serif`;
+  const size = canvasForceSize(ctx, zoom);
+  const layout = options.layout ?? layoutReinforcementForces(forces, toCanvas, size, options.context);
   ctx.strokeStyle = REINFORCEMENT_COLOR;
   ctx.fillStyle = REINFORCEMENT_COLOR;
   ctx.lineCap = "butt";

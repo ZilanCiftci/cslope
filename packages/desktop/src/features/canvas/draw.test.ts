@@ -734,6 +734,30 @@ describe("drawCanvas — edit mode", () => {
     expect(bars).toHaveLength(0);
   });
 
+  it("keeps the water-table symbols on a mouse move and moves them with the view", () => {
+    const piezometricLine = {
+      ...DEFAULT_PIEZO_LINE,
+      lines: [{ id: "a", name: "a", color: "#000", coordinates: [[0, 8], [30, 6]] as [number, number][] }],
+      activeLineId: "a",
+    };
+    const tips = (rec: ReturnType<typeof draw>) =>
+      rec
+        .fills(PIEZO_COLOR.hex)
+        .filter((p) => p.segments.length === 4)
+        .map((p) => pathPoints(p)[2]);
+    const first = tips(draw({ piezometricLine }));
+    expect(first.length).toBeGreaterThan(0);
+    // The layout is kept while only the mouse moves (a new transform function, the same view).
+    expect(tips(draw({ piezometricLine, mouseWorld: [3, 4], worldToCanvas: (x, y, w, h) => worldToCanvas(x, y, w, h) }))).toEqual(first);
+    // Panned by 40 px: laid out again for the new view.
+    const panned = tips(draw({ piezometricLine, worldToCanvas: (x, y, w, h) => [worldToCanvas(x, y, w, h)[0] + 40, worldToCanvas(x, y, w, h)[1]] }));
+    expect(panned).toHaveLength(first.length);
+    panned.forEach((p, i) => expect(p[0]).toBeCloseTo(first[i][0] + 40, 6));
+    // Another line: laid out again.
+    const moved = { ...piezometricLine, lines: [{ ...piezometricLine.lines[0], coordinates: [[0, 7], [30, 5.5]] as [number, number][] }] };
+    expect(tips(draw({ piezometricLine: moved }))).not.toEqual(first);
+  });
+
   it("draws touching UDL strips as one load with one label and heights by magnitude", () => {
     // A ramp from 10 to 20 kPa in four strips on the toe (y = 5), and a
     // separate 40 kPa load on the crest.
@@ -1303,6 +1327,7 @@ describe("drawCanvas — result mode", () => {
     const denseLines = thin.strokes().filter((p) => p.state.globalAlpha < 1 && pathPoints(p).length === 2);
     expect(denseLines.length).toBe(21);
     expect(denseLines[0].state.globalAlpha).toBeLessThan(0.6);
+
 
     // Coincident boundaries of neighbouring slices: one line, not two.
     const twin = drawResult({

@@ -32,6 +32,15 @@ export function boxesOverlap(a: Box, b: Box, clearance = CLEARANCE): boolean {
 
 /** Whether a segment passes through a box (Liang–Barsky clipping). */
 export function segmentHitsBox([x1, y1, x2, y2]: Seg, b: Box): boolean {
+  // Cheap reject first: the segment's own box clear of the box.
+  if (
+    (x1 < b.left && x2 < b.left) ||
+    (x1 > b.right && x2 > b.right) ||
+    (y1 < b.top && y2 < b.top) ||
+    (y1 > b.bottom && y2 > b.bottom)
+  ) {
+    return false;
+  }
   const dx = x2 - x1;
   const dy = y2 - y1;
   const p = [-dx, dx, -dy, dy];
