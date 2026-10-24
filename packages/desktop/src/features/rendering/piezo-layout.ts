@@ -9,9 +9,10 @@
  * part; of the rest, open water above the ground with room for the ≡ is
  * best, then a shallow spot (the ≡ left out, as drawings do at a
  * shoreline), then the line in the soil, then the line on the ground
- * surface, and inside the sliding mass only when there is nowhere else. Each line gets about one symbol per
- * PIEZO_SYMBOL_SPACING_PX of its length from the best class it has, and at
- * least one.
+ * surface, and inside the sliding mass only when there is nowhere else.
+ * A line gets one symbol, two when it is longer than about 1.5 times
+ * PIEZO_SYMBOL_SPACING_PX, from the best class it has (inside the
+ * sliding mass only the one it must have).
  *
  * Everything works in drawing units (canvas px or PDF mm) with y down;
  * `unit` converts the canvas pixel sizes of the style spec to them.
@@ -64,6 +65,8 @@ export interface PiezoLayoutOptions {
 
 /** Arc length between symbols, in canvas pixels. */
 export const PIEZO_SYMBOL_SPACING_PX = 200;
+/** Most symbols on one line. */
+const MAX_SYMBOLS_PER_LINE = 2;
 /** Steepest segment (|dy/dx|) a symbol is put on. */
 const PIEZO_MAX_SLOPE = 1;
 /** Height of a line number above the ▽, canvas px. */
@@ -168,8 +171,8 @@ export function piezoSymbolLayout(
         if (depth >= -u) {
           tier = AT_GROUND;
           bars = false;
-        } else if (sy < 0 ? toY(gC) > y - triH : toY(gC) < y + triH) {
-          // The ▽ reaches up through the ground surface.
+        } else if (sy < 0 ? toY(gC) > y - triH - 3 * u : toY(gC) < y + triH + 3 * u) {
+          // The ▽ reaches up to (or through) the ground surface.
           tier = AT_GROUND;
         }
       }
@@ -188,8 +191,8 @@ export function piezoSymbolLayout(
     const hits = (sg: Seg) => segmentHitsBox(sg, tri) || (bars && segmentHitsBox(sg, ticks));
     // Lines the reader must see (slip and prescribed surfaces) keep a clear gap.
     const grow = (b: Box, d: number): Box => ({ left: b.left - d, top: b.top - d, right: b.right + d, bottom: b.bottom + d });
-    const triFar = grow(tri, 3 * u);
-    const ticksFar = grow(ticks, 3 * u);
+    const triFar = grow(tri, 5 * u);
+    const ticksFar = grow(ticks, 5 * u);
     const near = (sg: Seg) => segmentHitsBox(sg, triFar) || (bars && segmentHitsBox(sg, ticksFar));
     const overlaps = (b: Box) => boxesOverlap(b, tri, 0) || (bars && boxesOverlap(b, ticks, 0));
     const dotR = 5 * u;
@@ -219,7 +222,9 @@ export function piezoSymbolLayout(
   };
   const open = spots.filter((p) => !p.blocked && free(p, []));
   const best = Math.min(...open.map((p) => p.tier));
-  const n = Math.max(1, Math.round(total / (PIEZO_SYMBOL_SPACING_PX * u)));
+  // At most two symbols a line (one for a short line): enough to mark it,
+  // few enough to find room in open water.
+  const n = Math.min(MAX_SYMBOLS_PER_LINE, Math.max(1, Math.round(total / (PIEZO_SYMBOL_SPACING_PX * u))));
   const win = total / n;
   // Inside the sliding mass only the one symbol a line must have (below).
   for (let k = 0; k < n && best < IN_MASS; k++) {

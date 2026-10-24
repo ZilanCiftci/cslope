@@ -534,7 +534,7 @@ describe("drawPiezometricLines", () => {
   });
 
   it("spaces the symbols along the line as on the canvas, clear of the critical surface", () => {
-    // 30 m = 150 mm = 600 canvas px: three symbols.
+    // 30 m = 150 mm = 600 canvas px: two symbols (at most two a line).
     const tips = (critical: Parameters<typeof drawPiezometricLines>[6] = null) => {
       const rec = recorder();
       drawPiezometricLines(rec.pdf, tf, [line("a", 4)], COORDS, false, undefined, critical);
@@ -543,7 +543,7 @@ describe("drawPiezometricLines", () => {
         c.name === "fill" ? [rec.calls.slice(0, i).filter((d) => d.name === "lineTo").pop()!.args[0] as number] : [],
       );
     };
-    expect(tips()).toHaveLength(3);
+    expect(tips()).toHaveLength(2);
     // A circle crossing the line at x = 15 m (75 + 20 mm): no symbol on it.
     const xs = tips({ cx: 15, cy: 14, radius: 10, entryPoint: [5, 14], exitPoint: [25, 14] });
     expect(xs.length).toBeGreaterThan(0);

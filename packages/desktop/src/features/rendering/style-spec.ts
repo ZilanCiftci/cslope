@@ -67,7 +67,7 @@ export const MARKER_BAR_H_PX = 10;
 /** Dot spacing along entry/exit surfaces. */
 export const ENTRY_EXIT_DOT_SPACING_PX = 12;
 /** Dot radius on entry/exit surfaces. */
-export const ENTRY_EXIT_DOT_RADIUS_PX = 2.5;
+export const ENTRY_EXIT_DOT_RADIUS_PX = 2;
 
 // ── Piezometric line geometry (logical px) ─────────────────────
 

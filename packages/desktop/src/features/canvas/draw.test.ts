@@ -648,18 +648,17 @@ describe("drawCanvas — edit mode", () => {
     });
     const stroke = single.strokes(PIEZO_COLOR.hex).find((p) => p.state.lineWidth === 1.5)!;
     expect(pathPoints(stroke)).toEqual([toC(0, 4), toC(30, 4)]);
-    // Inverted triangles with their tips on the line, about one per 200 px
-    // of its length (600 px here), evenly spread.
+    // Inverted triangles with their tips on the line: at most two a line
+    // (600 px here), one in each half.
     const tips = single
       .fills(PIEZO_COLOR.hex)
       .filter((p) => p.segments.length === 4)
       .map((p) => pathPoints(p)[2]);
-    expect(tips).toHaveLength(3);
+    expect(tips).toHaveLength(2);
     for (const [, y] of tips) expect(y).toBeCloseTo(toC(0, 4)[1], 9);
     const xs = tips.map(([x]) => canvasToWorld(x, 0, W, H)[0]).sort((a, b) => a - b);
-    expect(xs[0]).toBeCloseTo(5, 0);
-    expect(xs[1]).toBeCloseTo(15, 0);
-    expect(xs[2]).toBeCloseTo(25, 0);
+    expect(xs[0]).toBeCloseTo(7.5, 0);
+    expect(xs[1]).toBeCloseTo(22.5, 0);
     expect(single.texts.some((t) => t.text === "1")).toBe(false);
 
     const multi = draw({

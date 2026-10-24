@@ -11,10 +11,10 @@ const model: [number, number][] = [
 ];
 
 describe("piezoSymbolLayout", () => {
-  it("puts about one symbol per 200 px of line, at least one", () => {
+  it("puts one or two symbols on a line", () => {
     const long = piezoSymbolLayout([[0, -20], [1000, -20]], toScreen, { unit: 1, model });
-    expect(long).toHaveLength(5);
-    long.forEach((s, i) => expect(Math.abs(s.x - (100 + 200 * i))).toBeLessThan(3));
+    expect(long).toHaveLength(2);
+    long.forEach((s, i) => expect(Math.abs(s.x - (250 + 500 * i))).toBeLessThan(3));
     expect(piezoSymbolLayout([[0, -20], [50, -20]], toScreen, { unit: 1, model })).toHaveLength(1);
   });
 
