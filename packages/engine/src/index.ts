@@ -152,13 +152,15 @@ export {
 } from "./model/geometry-ops";
 export type { RegionFace } from "./model/geometry-ops";
 
-export { createSlice, getSlices, rankineCrackDepth } from "./model/slices";
+export { createSlice, findCrackX, getSlices, rankineCrackDepth } from "./model/slices";
 
 export {
   generatePlanes,
   setEntryExitPlanes,
   addSingleEntryExitPlane,
   addSingleCircularPlane,
+  isPlaneWithinExternalBoundary,
+  selectEntryExit,
 } from "./model/search";
 
 export {

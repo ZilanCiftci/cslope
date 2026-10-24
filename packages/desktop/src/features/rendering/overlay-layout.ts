@@ -41,6 +41,16 @@ export function segmentDistance(a: Seg, b: Seg): number {
 }
 
 /**
+ * Distance between the boxes around two segments: never more than their
+ * segmentDistance, and far cheaper, so a far segment can be passed over.
+ */
+export function segmentBoxGap(a: Seg, b: Seg): number {
+  const dx = Math.max(0, Math.min(b[0], b[2]) - Math.max(a[0], a[2]), Math.min(a[0], a[2]) - Math.max(b[0], b[2]));
+  const dy = Math.max(0, Math.min(b[1], b[3]) - Math.max(a[1], a[3]), Math.min(a[1], a[3]) - Math.max(b[1], b[3]));
+  return Math.hypot(dx, dy);
+}
+
+/**
  * Positions for a row of labels along one axis, each wanting to sit at
  * `desired` (ascending), at least `pitch` apart, in the same order, with
  * the least squared movement (isotonic regression by pooling adjacent

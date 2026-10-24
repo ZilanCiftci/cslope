@@ -6,6 +6,7 @@ import {
   groupTouchingStrips,
   loadHeightFraction,
   placeLabel,
+  segmentBoxGap,
   segmentDistance,
   segmentHitsBox,
   stackPositions,
@@ -111,5 +112,29 @@ describe("segmentDistance", () => {
     expect(segmentDistance([0, 0, 10, 10], [0, 10, 10, 0])).toBe(0);
     expect(segmentDistance([0, 0, 10, 0], [0, 3, 10, 3])).toBe(3);
     expect(segmentDistance([0, 0, 10, 0], [13, 4, 20, 4])).toBe(5);
+  });
+});
+
+describe("segment prefilters", () => {
+  it("segmentHitsBox: a segment beside the box misses it, one touching its edge hits it", () => {
+    const b = box(0, 0, 10, 10);
+    expect(segmentHitsBox([11, -5, 11, 15], b)).toBe(false);
+    expect(segmentHitsBox([-5, 12, 15, 12], b)).toBe(false);
+    expect(segmentHitsBox([10, -5, 10, 15], b)).toBe(true);
+    // Its box overlaps, the segment itself passes the corner.
+    expect(segmentHitsBox([8, -5, 15, 2], b)).toBe(false);
+    expect(segmentHitsBox([-5, 5, 15, 5], b)).toBe(true);
+  });
+
+  it("segmentBoxGap is never more than segmentDistance", () => {
+    const segs: [number, number, number, number][] = [
+      [0, 0, 10, 0],
+      [3, 4, 8, 9],
+      [20, -5, 25, 30],
+      [-10, -10, -3, 2],
+      [12, 1, 30, 1],
+    ];
+    for (const a of segs) for (const b of segs) expect(segmentBoxGap(a, b)).toBeLessThanOrEqual(segmentDistance(a, b) + 1e-12);
+    expect(segmentBoxGap([0, 0, 10, 0], [13, 4, 20, 9])).toBeCloseTo(5);
   });
 });

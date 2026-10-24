@@ -512,6 +512,14 @@ describe("drawCanvas — edit mode", () => {
     const miss = draw({ customSearchPlanes: [{ id: "c2", cx: 15, cy: 30, radius: 5 }] });
     const faint = miss.strokes().find((p) => p.state.lineDash.length > 0 && p.segments.some((g) => g.op === "arc"))!;
     expect(faint.state.globalAlpha).toBeLessThan(0.5);
+    // So does a polyline that never reaches the crack depth, as it was given.
+    const shallow = [[5, 10], [15, 9], [25, 5]] as [number, number][];
+    const noCrack = draw({
+      customSearchPlanes: [{ id: "p2", cx: 0, cy: 0, radius: 0, points: shallow }],
+      options: { ...DEFAULT_ANALYSIS_OPTIONS, tensionCrackDepth: 2 },
+    });
+    const faintLine = noCrack.strokes().find((p) => p.state.lineDash.length > 0 && hasPoints(p, shallow.map(([x, y]) => toC(x, y))))!;
+    expect(faintLine.state.globalAlpha).toBeLessThan(0.5);
   });
 
   it("starts a prescribed circle at a fixed-depth crack, the crack dimension standing there", () => {
@@ -732,6 +740,30 @@ describe("drawCanvas — edit mode", () => {
     const bars = atGround.strokes(PIEZO_COLOR.hex).filter((p) => p.state.lineWidth === 1.2);
     expect(atGround.fills(PIEZO_COLOR.hex).filter((p) => p.segments.length === 4).length).toBeGreaterThan(0);
     expect(bars).toHaveLength(0);
+  });
+
+  it("keeps the water-table symbols on a mouse move and moves them with the view", () => {
+    const piezometricLine = {
+      ...DEFAULT_PIEZO_LINE,
+      lines: [{ id: "a", name: "a", color: "#000", coordinates: [[0, 8], [30, 6]] as [number, number][] }],
+      activeLineId: "a",
+    };
+    const tips = (rec: ReturnType<typeof draw>) =>
+      rec
+        .fills(PIEZO_COLOR.hex)
+        .filter((p) => p.segments.length === 4)
+        .map((p) => pathPoints(p)[2]);
+    const first = tips(draw({ piezometricLine }));
+    expect(first.length).toBeGreaterThan(0);
+    // The layout is kept while only the mouse moves (a new transform function, the same view).
+    expect(tips(draw({ piezometricLine, mouseWorld: [3, 4], worldToCanvas: (x, y, w, h) => worldToCanvas(x, y, w, h) }))).toEqual(first);
+    // Panned by 40 px: laid out again for the new view.
+    const panned = tips(draw({ piezometricLine, worldToCanvas: (x, y, w, h) => [worldToCanvas(x, y, w, h)[0] + 40, worldToCanvas(x, y, w, h)[1]] }));
+    expect(panned).toHaveLength(first.length);
+    panned.forEach((p, i) => expect(p[0]).toBeCloseTo(first[i][0] + 40, 6));
+    // Another line: laid out again.
+    const moved = { ...piezometricLine, lines: [{ ...piezometricLine.lines[0], coordinates: [[0, 7], [30, 5.5]] as [number, number][] }] };
+    expect(tips(draw({ piezometricLine: moved }))).not.toEqual(first);
   });
 
   it("draws touching UDL strips as one load with one label and heights by magnitude", () => {
@@ -1303,6 +1335,16 @@ describe("drawCanvas — result mode", () => {
     const denseLines = thin.strokes().filter((p) => p.state.globalAlpha < 1 && pathPoints(p).length === 2);
     expect(denseLines.length).toBe(21);
     expect(denseLines[0].state.globalAlpha).toBeLessThan(0.6);
+
+    // At paper zoom 2 (the model drawn twice as large, 4 px apart) the same lines: thinning goes by the paper.
+    const zoomed = drawResult({
+      result: result({ criticalSlices: dense }),
+      resultViewSettings: rvs({ showSlices: true, paperFrame: { ...DEFAULT_RESULT_VIEW_SETTINGS.paperFrame, zoom: 2 } }),
+      worldToCanvas: (x, y, w, h) => [w / 2 + (x - CX) * 2 * SCALE, h / 2 - (y - CY) * 2 * SCALE],
+    });
+    const zoomedLines = zoomed.strokes().filter((p) => p.state.globalAlpha < 1 && pathPoints(p).length === 2);
+    expect(zoomedLines).toHaveLength(21);
+    expect(zoomedLines[0].state.globalAlpha).toBeCloseTo(denseLines[0].state.globalAlpha, 9);
 
     // Coincident boundaries of neighbouring slices: one line, not two.
     const twin = drawResult({

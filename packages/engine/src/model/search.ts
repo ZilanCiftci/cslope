@@ -67,7 +67,7 @@ function getSearchGridSpec(slope: Slope): SearchGridSpec {
  *    off.
  * Returns null when the circle has no such entry/exit pair.
  */
-function selectEntryExit(
+export function selectEntryExit(
   slope: Slope,
   cx: number,
   cy: number,
@@ -99,7 +99,12 @@ function selectEntryExit(
   return null;
 }
 
-function isPlaneWithinExternalBoundary(
+/**
+ * True when a circular plane from its entry to its exit stays inside the
+ * model (a prescribed circle that leaves it, e.g. through its base, is not
+ * analysed).
+ */
+export function isPlaneWithinExternalBoundary(
   slope: Slope,
   plane: Pick<SearchPlane, "lc" | "rc" | "cx" | "cy" | "radius">,
 ): boolean {

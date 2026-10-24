@@ -181,6 +181,31 @@ describe("prescribedPath", () => {
     expect(mp.crack!.x).toBeCloseTo(26, 6);
     expect(mp.points.slice(1)).toEqual([[22, 4], [8, 5]]);
   });
+
+  it("has no surface for a polyline that never reaches the crack depth", () => {
+    // At most 1 m below the ground: no crack of 2 m, as the analysis finds.
+    const shallow = { cx: 0, cy: 0, radius: 0, points: [[2, 10], [8, 9], [22, 5]] as [number, number][] };
+    const p = prescribedPath(model, shallow, 2);
+    expect(p.unusable).toBe(true);
+    expect(p.crack).toBeNull();
+    expect(prescribedPath(model, shallow, 0.5).unusable).toBe(false);
+  });
+
+  it("has no surface for a circle that leaves the model through its base", () => {
+    // Both ends on the ground, the lowest point 0.5 m below the base (y 0).
+    const deep = { cx: 15, cy: 14, radius: 14.5 };
+    expect(circleEntryExit(model, deep.cx, deep.cy, deep.radius)).not.toBeNull();
+    expect(prescribedPath(model, deep, 0).unusable).toBe(true);
+    expect(prescribedPath(model.map(([x, y]): [number, number] => [30 - x, y]), { ...deep, cx: 15 }, 0, true).unusable).toBe(true);
+    // 1 m above the base: a surface.
+    expect(prescribedPath(model, { ...deep, radius: 13 }, 0).unusable).toBe(false);
+    // As the analysis: no plane for the first, one for the second.
+    const planes = (c: typeof deep) =>
+      buildSlope({ coordinates: model, materials: [{ name: "M", unitWeight: 20, frictionAngle: 30, cohesion: 5 }], customSearchPlanes: [c] })
+        .individualPlanes.length;
+    expect(planes(deep)).toBe(0);
+    expect(planes({ ...deep, radius: 13 })).toBe(1);
+  });
 });
 
 describe("crackCutX", () => {

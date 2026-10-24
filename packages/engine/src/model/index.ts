@@ -13,13 +13,15 @@ export {
   createGeometryWithMaterial,
 } from "./geometry-ops";
 
-export { createSlice, getSlices, rankineCrackDepth } from "./slices";
+export { createSlice, findCrackX, getSlices, rankineCrackDepth } from "./slices";
 
 export {
   generatePlanes,
   setEntryExitPlanes,
   addSingleEntryExitPlane,
   addSingleCircularPlane,
+  isPlaneWithinExternalBoundary,
+  selectEntryExit,
 } from "./search";
 
 export {

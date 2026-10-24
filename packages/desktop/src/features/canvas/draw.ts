@@ -80,6 +80,7 @@ import {
 } from "../rendering/style-spec";
 import { drawCanvasHatch, drawCanvasHatchLabel } from "../rendering/hatch";
 import {
+  canvasForceLayout,
   drawPiles,
   drawReinforcementForces,
   drawReinforcements,
@@ -88,6 +89,7 @@ import {
   forceLabelContext,
   limitMarkerObstacles,
   loadObstacleBoxes,
+  type ForceLayout,
 } from "./reinforcement-draw";
 import {
   LOAD_LABEL_FONT_PX,
@@ -427,6 +429,31 @@ function getCachedRegions(
   return regions;
 }
 
+/** The last value of a layout and the inputs it was computed from. */
+interface LayoutMemo<T> {
+  key: readonly unknown[] | null;
+  value: T | null;
+}
+
+/**
+ * The value for `key` (compared item by item, Object.is): the last one
+ * when the inputs are the same, else computed. The canvas is drawn again
+ * on every mouse move; the layouts below depend only on the model, the
+ * result and the view, so they are not worked out again then.
+ */
+function memoLayout<T>(memo: LayoutMemo<T>, key: readonly unknown[], compute: () => T): T {
+  const k = memo.key;
+  if (memo.value !== null && k !== null && k.length === key.length && k.every((v, i) => Object.is(v, key[i]))) {
+    return memo.value;
+  }
+  memo.value = compute();
+  memo.key = key;
+  return memo.value;
+}
+
+const piezoSymbolMemo: LayoutMemo<PiezoSymbol[][]> = { key: null, value: null };
+const forceLayoutMemo: LayoutMemo<ForceLayout[]> = { key: null, value: null };
+
 function getArcCache(result: AppState["result"]) {
   if (!result || typeof result !== "object") return null;
   const key = result as object;
@@ -754,6 +781,9 @@ export function drawCanvas(
     mode === "result" && result
       ? Math.max(0.25, resultViewSettings.paperFrame.zoom ?? 1)
       : 1;
+  // The view as numbers (worldToCanvas is a new function every frame):
+  // where two world points land fixes the scale and offset.
+  const viewProbe = [...worldToCanvas(0, 0, w, h), ...worldToCanvas(1, 1, w, h)];
 
   const rawStep = GRID_RAW_STEP_PX / effectiveScale;
   const mag = Math.pow(10, Math.floor(Math.log10(rawStep)));
@@ -1149,6 +1179,9 @@ export function drawCanvas(
         const pts = world.map(([x, y]) => worldToCanvas(x, y, w, h));
         strokeDashed(polyPath(pts), 1);
         for (const seg of segmentsInside(pts, extC, inModel)) labelLines.push({ seg, pad: 2 });
+      } else if (s.points) {
+        // A polyline the analysis has no surface for, faint as it was given.
+        strokeDashed(polyPath(s.points.map(([x, y]) => worldToCanvas(x, y, w, h))), 0.4);
       } else {
         const [cx, cy] = worldToCanvas(s.cx, s.cy, w, h);
         const [ex] = worldToCanvas(s.cx + s.radius, s.cy, w, h);
@@ -1277,33 +1310,62 @@ export function drawCanvas(
   const searchShown =
     analysisLimits.enabled &&
     !(customPlanesOnly && (mode === "result" || (customSearchPlanes?.length ?? 0) > 0));
+  // On the inputs, not the mouse: the vertex dots follow from the model,
+  // the editing flags and the view.
+  const piezoCritical = mode === "result" ? (result?.criticalSurface ?? null) : null;
   const drawnPiezoSymbols =
     piezometricLine.lines.length > 0
-      ? layoutPiezoSymbols(
-          { w, h, coordinates, worldToCanvas, surfaceYAtX },
-          piezometricLine,
-          reinforcements,
-          piles,
-          paperZoom,
-          mode === "result" ? (result?.criticalSurface ?? null) : null,
-          {
+      ? memoLayout(
+          piezoSymbolMemo,
+          [
+            w,
+            h,
+            ...viewProbe,
+            paperZoom,
+            mode,
+            coordinates,
+            piezometricLine,
+            reinforcements,
+            piles,
+            piezoCritical,
             materialBoundaries,
             udls,
             lineLoads,
-            analysisLimits: searchShown ? analysisLimits : null,
-            prescribed: mode !== "result" ? customSearchPlanes : undefined,
-            // The crack-depth dimension where the crack block below draws it.
-            crackMarker: editCrackMarker,
-            vertices:
-              mode !== "result"
-                ? [
-                    ...coordinates,
-                    ...materialBoundaries.flatMap((b) => b.coordinates),
-                    ...piezometricLine.lines.flatMap((l) => l.coordinates),
-                  ]
-                : undefined,
-            vertexDots,
-          },
+            searchShown ? analysisLimits : null,
+            mode !== "result" ? customSearchPlanes : undefined,
+            editCrackMarker?.x,
+            editCrackMarker?.top,
+            editCrackMarker?.bottom,
+            editingExterior,
+            editingBoundaries,
+          ],
+          () =>
+            layoutPiezoSymbols(
+              { w, h, coordinates, worldToCanvas, surfaceYAtX },
+              piezometricLine,
+              reinforcements,
+              piles,
+              paperZoom,
+              piezoCritical,
+              {
+                materialBoundaries,
+                udls,
+                lineLoads,
+                analysisLimits: searchShown ? analysisLimits : null,
+                prescribed: mode !== "result" ? customSearchPlanes : undefined,
+                // The crack-depth dimension where the crack block below draws it.
+                crackMarker: editCrackMarker,
+                vertices:
+                  mode !== "result"
+                    ? [
+                        ...coordinates,
+                        ...materialBoundaries.flatMap((b) => b.coordinates),
+                        ...piezometricLine.lines.flatMap((l) => l.coordinates),
+                      ]
+                    : undefined,
+                vertexDots,
+              },
+            ),
         )
       : [];
   if (piezometricLine.lines.length > 0) {
@@ -1847,10 +1909,11 @@ export function drawCanvas(
         const arcYAtX = (x: number): number | null => surfaceBaseYAt(cs, x);
         // Boundaries closer than 2.5 px as one line (closer read as a
         // thick double line); every other line left out where they lie
-        // closer than 3 px.
+        // closer than 3 px. In px of the paper at zoom 1, as the line
+        // widths scale with the paper zoom: the same lines at every zoom.
         const { xs: xBounds, density } = sliceLines(
           result.criticalSlices,
-          (x) => worldToCanvas(x, 0, w, h)[0],
+          (x) => worldToCanvas(x, 0, w, h)[0] / paperZoom,
         );
         const sliceRegions =
           rvs.showSoilColor !== false
@@ -1973,31 +2036,63 @@ export function drawCanvas(
         // Labels stay inside the plot frame (the geometry clip).
         const pf = resultViewSettings.paperFrame;
         const fr = computePaperFrame(w, h, pf.paperSize, pf.landscape, pf.zoom ?? 1, pf.offsetX ?? 0, pf.offsetY ?? 0);
-        drawReinforcementForces(ctx, cs.reinforcementForces, toC, paperZoom, {
-          context: forceLabelContext(toC, {
+        const forces = cs.reinforcementForces;
+        // Laid out again only when what it depends on changes (not on a mouse move).
+        const layout = memoLayout(
+          forceLayoutMemo,
+          [
+            w,
+            h,
+            ...viewProbe,
+            paperZoom,
+            cs,
             reinforcements,
             piles,
-            surface: surfacePoints(cs),
-            numberSize: 11 * paperZoom,
-            model: coordinates,
-            water: piezometricLine.lines.map((l) => l.coordinates),
-            boundaries: materialBoundaries.map((b) => b.coordinates),
-            loads: [
-              ...loadObstacleBoxes(toC, coordinates, udls, lineLoads, ARROW_HEIGHT_PX * paperZoom),
-              ...loads.labels.map((l) => l.box),
-            ],
-            markers: limitsShown ? limitMarkerObstacles(analysisLimits, coordinates, toC, paperZoom, 2 * paperZoom) : [],
-            numberScene,
-            // A margin inside the plot frame.
-            bounds: {
-              left: fr.x + fr.w * PLOT_MARGINS.L + FORCE_LABEL_MARGIN_PX * paperZoom,
-              top: fr.y + fr.h * PLOT_MARGINS.T + FORCE_LABEL_MARGIN_PX * paperZoom,
-              right: fr.x + fr.w * (1 - PLOT_MARGINS.R) - FORCE_LABEL_MARGIN_PX * paperZoom,
-              bottom: fr.y + fr.h * (1 - PLOT_MARGINS.B) - FORCE_LABEL_MARGIN_PX * paperZoom,
-            },
-          }),
-          plate: PAPER_FILL_COLOR || BG_COLOR,
-        });
+            coordinates,
+            piezometricLine,
+            materialBoundaries,
+            udls,
+            lineLoads,
+            ...loads.labels.flatMap((l) => [l.box.left, l.box.top, l.box.right, l.box.bottom]),
+            limitsShown,
+            analysisLimits,
+            customPlanesOnly,
+            fr.x,
+            fr.y,
+            fr.w,
+            fr.h,
+          ],
+          () =>
+            canvasForceLayout(
+              ctx,
+              forces,
+              toC,
+              paperZoom,
+              forceLabelContext(toC, {
+                reinforcements,
+                piles,
+                surface: surfacePoints(cs),
+                numberSize: 11 * paperZoom,
+                model: coordinates,
+                water: piezometricLine.lines.map((l) => l.coordinates),
+                boundaries: materialBoundaries.map((b) => b.coordinates),
+                loads: [
+                  ...loadObstacleBoxes(toC, coordinates, udls, lineLoads, ARROW_HEIGHT_PX * paperZoom),
+                  ...loads.labels.map((l) => l.box),
+                ],
+                markers: limitsShown ? limitMarkerObstacles(analysisLimits, coordinates, toC, paperZoom, 2 * paperZoom) : [],
+                numberScene,
+                // A margin inside the plot frame.
+                bounds: {
+                  left: fr.x + fr.w * PLOT_MARGINS.L + FORCE_LABEL_MARGIN_PX * paperZoom,
+                  top: fr.y + fr.h * PLOT_MARGINS.T + FORCE_LABEL_MARGIN_PX * paperZoom,
+                  right: fr.x + fr.w * (1 - PLOT_MARGINS.R) - FORCE_LABEL_MARGIN_PX * paperZoom,
+                  bottom: fr.y + fr.h * (1 - PLOT_MARGINS.B) - FORCE_LABEL_MARGIN_PX * paperZoom,
+                },
+              }),
+            ),
+        );
+        drawReinforcementForces(ctx, forces, toC, paperZoom, { layout, plate: PAPER_FILL_COLOR || BG_COLOR });
       }
 
       // FOS label to the right of the circle centre

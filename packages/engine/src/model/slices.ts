@@ -1040,7 +1040,7 @@ export function rankineCrackDepth(slope: Slope, x: number): number {
  * x of the tension crack: the first point from the entry where the slip
  * surface lies `depth` below the ground, or null if it never does.
  */
-function findCrackX(
+export function findCrackX(
   surf: { x: number[]; y: number[] },
   xEntry: number,
   xExit: number,

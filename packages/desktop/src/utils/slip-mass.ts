@@ -305,10 +305,16 @@ export function sliceBoundaries(
     if (xs.length > 0) {
       const d = gapTo(x, xs.length - 1);
       if (d < minGap) {
-        // The last boundary (the end of the mass) replaces an inner one.
-        if (i === sorted.length - 1 && xs.length > 1) {
-          xs[xs.length - 1] = x;
-          spacings[spacings.length - 1] = gapTo(x, xs.length - 2);
+        // The last boundary (the end of the mass) replaces an inner one;
+        // next to the first (the near end) both ends are kept.
+        if (i === sorted.length - 1) {
+          if (xs.length > 1) {
+            xs[xs.length - 1] = x;
+            spacings[spacings.length - 1] = gapTo(x, xs.length - 2);
+          } else {
+            spacings.push(d);
+            xs.push(x);
+          }
         }
         continue;
       }

@@ -1,4 +1,4 @@
-import { getCircleLineIntersections, getSurfaceLine, isPointInPolygon } from "@cslope/engine";
+import { findCrackX, isPlaneWithinExternalBoundary, selectEntryExit, Slope } from "@cslope/engine";
 import { surfaceYAtX } from "../features/view/surface";
 import { circleArcPoints } from "./arc";
 import type { ModelOrientation } from "../store/types";
@@ -62,13 +62,41 @@ export function defaultCustomCircle(
 }
 
 /**
+ * The model as the analysis sees it, for its own entry/exit, crack and
+ * boundary checks: its external boundary, mirrored (x → −x) for a
+ * right-to-left model, which the analysis takes mirrored. Kept per
+ * coordinates array (the canvas asks every frame). Null without a usable
+ * boundary.
+ */
+const slopeCache = new WeakMap<readonly Pt[], { ltr?: Slope | null; rtl?: Slope | null }>();
+
+function boundarySlope(coordinates: readonly Pt[], mirrored: boolean): Slope | null {
+  if (coordinates.length < 3) return null;
+  const entry = slopeCache.get(coordinates) ?? {};
+  const key = mirrored ? "rtl" : "ltr";
+  if (entry[key] === undefined) {
+    try {
+      const slope = new Slope();
+      slope.setExternalBoundary(coordinates.map(([x, y]): Pt => [mirrored ? -x : x, y]));
+      entry[key] = slope;
+    } catch {
+      entry[key] = null;
+    }
+    slopeCache.set(coordinates, entry);
+  }
+  return entry[key] ?? null;
+}
+
+const mirrorPt = ([x, y]: Pt): Pt => [-x, y];
+
+/**
  * Where a prescribed circle enters and leaves the ground, as the analysis
- * takes them: of the circle's crossings with the ground surface on its
- * lower half (by x), the first where the lower arc goes from air into the
- * soil and the next where it comes out again. Null when there is no such
- * pair (the analysis then has no surface for the circle). A right-to-left
- * model (`mirrored`) is analysed mirrored, so its crossings are taken from
- * the right.
+ * takes them (the engine's selectEntryExit): of the circle's crossings
+ * with the ground surface on its lower half (by x), the first where the
+ * lower arc goes from air into the soil and the next where it comes out
+ * again. Null when there is no such pair (the analysis then has no surface
+ * for the circle). A right-to-left model (`mirrored`) is analysed
+ * mirrored, so its crossings are taken from the right.
  */
 export function circleEntryExit(
   coordinates: readonly Pt[],
@@ -77,53 +105,21 @@ export function circleEntryExit(
   radius: number,
   mirrored = false,
 ): [Pt, Pt] | null {
-  if (mirrored) {
-    const ends = circleEntryExit(
-      coordinates.map(([x, y]) => [-x, y] as Pt),
-      -cx,
-      cy,
-      radius,
-    );
-    return ends && [[-ends[0][0], ends[0][1]], [-ends[1][0], ends[1][1]]];
-  }
-  if (coordinates.length < 3 || !(radius > 0)) return null;
-  const px = coordinates.map((c) => c[0]);
-  const py = coordinates.map((c) => c[1]);
-  let surface: { x: number[]; y: number[] };
-  try {
-    surface = getSurfaceLine(px, py);
-  } catch {
-    return null;
-  }
-  const tol = 1e-9 * Math.max(1, radius);
-  const all = getCircleLineIntersections(cx, cy, radius, surface.x, surface.y).sort((a, b) => a[0] - b[0]);
-  const crossings = all
-    .filter((p, i) => i === 0 || Math.abs(p[0] - all[i - 1][0]) > 1e-9 || Math.abs(p[1] - all[i - 1][1]) > 1e-9)
-    .filter((p) => p[1] <= cy + tol);
-  if (crossings.length < 2) return null;
-  const eps = 1e-6 * Math.max(1, radius);
-  const arcInSoil = (x: number): boolean => {
-    const term = radius ** 2 - (x - cx) ** 2;
-    if (term < 0) return false;
-    return isPointInPolygon(x, cy - Math.sqrt(term), px, py);
-  };
-  for (let i = 0; i < crossings.length - 1; i++) {
-    const [ex] = crossings[i];
-    if (arcInSoil(ex - eps) || !arcInSoil(ex + eps)) continue;
-    for (let j = i + 1; j < crossings.length; j++) {
-      if (!arcInSoil(crossings[j][0] + eps)) return [crossings[i], crossings[j]];
-    }
-    return null;
-  }
-  return null;
+  if (!(radius > 0)) return null;
+  const slope = boundarySlope(coordinates, mirrored);
+  if (!slope) return null;
+  const ends = selectEntryExit(slope, mirrored ? -cx : cx, cy, radius);
+  if (!ends) return null;
+  return mirrored ? [mirrorPt(ends[0]), mirrorPt(ends[1])] : [ends[0], ends[1]];
 }
 
 /**
  * Where a tension crack of fixed `depth` cuts a slip surface, as the
- * analysis finds it: walking from the entry towards the exit, the first x
- * where the surface (`baseY`) lies `depth` below the ground. Null when it
- * never gets that deep before the exit (the analysis then has no surface).
- * Works in either direction (a right-to-left model enters from the right).
+ * analysis finds it (the engine's findCrackX): walking from the entry
+ * towards the exit, the first x where the surface (`baseY`) lies `depth`
+ * below the ground. Null when it never gets that deep before the exit (the
+ * analysis then has no surface). Works in either direction (a right-to-left
+ * model enters from the right).
  */
 export function crackCutX(
   coordinates: readonly Pt[],
@@ -132,27 +128,11 @@ export function crackCutX(
   xExit: number,
   depth: number,
 ): number | null {
-  const below = (x: number) => {
-    const g = surfaceYAtX(coordinates as Pt[], x);
-    return g === null ? -Infinity : g - baseY(x) - depth;
-  };
-  const steps = 200;
-  let prev = xEntry;
-  for (let k = 1; k <= steps; k++) {
-    const x = xEntry + ((xExit - xEntry) * k) / steps;
-    if (below(x) >= 0) {
-      let lo = prev;
-      let hi = x;
-      for (let it = 0; it < 50; it++) {
-        const mid = (lo + hi) / 2;
-        if (below(mid) >= 0) hi = mid;
-        else lo = mid;
-      }
-      return (hi - xExit) * Math.sign(xExit - xEntry) < 0 ? hi : null;
-    }
-    prev = x;
-  }
-  return null;
+  const m = xExit < xEntry ? -1 : 1;
+  const surf = boundarySlope(coordinates, m < 0)?.surfaceLineXY;
+  if (!surf) return null;
+  const xc = findCrackX(surf, m * xEntry, m * xExit, (x) => baseY(m * x), () => depth);
+  return xc === null ? null : m * xc;
 }
 
 /** y of a polyline at x (linear between its points, null outside them). */
@@ -173,7 +153,7 @@ export interface PrescribedPath {
   points: Pt[];
   /** The tension crack it starts at: x, the ground there and the crack's base. */
   crack: { x: number; top: number; bottom: number } | null;
-  /** The analysis has no surface for it (no entry and exit, or it never reaches the crack depth). */
+  /** The analysis has no surface for it (no entry and exit, it leaves the model, or it never reaches the crack depth). */
   unusable: boolean;
 }
 
@@ -182,8 +162,11 @@ export interface PrescribedPath {
  * from its entry to its exit (circleEntryExit), a polyline as given; with
  * a tension crack of fixed `crackDepth`, cut where it lies that deep
  * below the ground on the entry side (crackCutX): the surface enters at
- * the crack's base. `mirrored`: a right-to-left model, entered from the
- * right.
+ * the crack's base. Unusable, as the analysis has no surface for it: a
+ * circle without an entry and exit or that leaves the model (through its
+ * base; the engine's isPlaneWithinExternalBoundary), and a surface that
+ * never reaches the crack depth. `mirrored`: a right-to-left model,
+ * entered from the right.
  */
 export function prescribedPath(
   coordinates: readonly Pt[],
@@ -199,7 +182,7 @@ export function prescribedPath(
     const baseY = (x: number) => polylineY(pts, x) ?? Infinity;
     const xc = crackCutX(coordinates, baseY, xEntry, xExit, crackDepth);
     const gc = xc === null ? null : surfaceYAtX(coordinates as Pt[], xc);
-    if (xc === null || gc === null) return { points: pts, crack: null, unusable: false };
+    if (xc === null || gc === null) return { points: pts, crack: null, unusable: true };
     // In order from the entry: the crack's base, then the points beyond it.
     const ordered = (xs[0] <= xs[xs.length - 1]) === !mirrored ? pts : [...pts].reverse();
     const beyond = ordered.filter(([x]) => (x - xc) * Math.sign(xExit - xEntry) > 0);
@@ -207,6 +190,13 @@ export function prescribedPath(
   }
   const ends = plane.radius > 0 ? circleEntryExit(coordinates, plane.cx, plane.cy, plane.radius, mirrored) : null;
   if (!ends) return { points: [], crack: null, unusable: true };
+  // A circle that leaves the model between its ends (through its base) is not analysed.
+  const slope = boundarySlope(coordinates, mirrored);
+  const [lc, rc] = mirrored ? [mirrorPt(ends[0]), mirrorPt(ends[1])] : ends;
+  const inside =
+    slope !== null &&
+    isPlaneWithinExternalBoundary(slope, { lc, rc, cx: mirrored ? -plane.cx : plane.cx, cy: plane.cy, radius: plane.radius });
+  if (!inside) return { points: [], crack: null, unusable: true };
   if (!(crackDepth > 0)) {
     return { points: circleArcPoints(plane.cx, plane.cy, plane.radius, ends[0], ends[1], 90), crack: null, unusable: false };
   }

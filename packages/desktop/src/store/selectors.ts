@@ -5,7 +5,7 @@
  * reducing boilerplate and preventing drift between components.
  */
 
-import { useAppStore } from "./app-store";
+import { restoringHistoryStep, useAppStore } from "./app-store";
 import { getAnalysisInputSignature } from "./helpers";
 import type { AppState } from "./types";
 
@@ -162,7 +162,7 @@ function keepingPaperViewport(step: () => void): void {
 export function performUndo(): void {
   const before = getAnalysisInputSignature(useAppStore.getState());
   useAppStore.temporal.getState().resume();
-  keepingPaperViewport(() => useAppStore.temporal.getState().undo());
+  keepingPaperViewport(() => restoringHistoryStep(() => useAppStore.temporal.getState().undo()));
   const after = getAnalysisInputSignature(useAppStore.getState());
   if (before !== after) {
     useAppStore.getState().invalidateAnalysis();
@@ -176,7 +176,7 @@ export function performUndo(): void {
 export function performRedo(): void {
   const before = getAnalysisInputSignature(useAppStore.getState());
   useAppStore.temporal.getState().resume();
-  keepingPaperViewport(() => useAppStore.temporal.getState().redo());
+  keepingPaperViewport(() => restoringHistoryStep(() => useAppStore.temporal.getState().redo()));
   const after = getAnalysisInputSignature(useAppStore.getState());
   if (before !== after) {
     useAppStore.getState().invalidateAnalysis();
