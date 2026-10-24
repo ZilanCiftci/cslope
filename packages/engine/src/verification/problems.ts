@@ -2210,8 +2210,8 @@ export const PROBLEMS: RawCase[] = [
     reference: "Prandtl (1920)",
     surface: "fixed",
     units: "SI",
-    description: "Weightless (γ = 0.01 kN/m³) c = 20 kPa soil (φ = 0) loaded by a strip load of 102.83 kPa = c·(2 + π) over 10 m, the exact bearing capacity. Analysed on the Prandtl mechanism of Fig. 26.2: active wedge under the load, a 90° fan arc of radius 7.071 m about the load's edge (5, 10), lowest point 2.929, and the passive wedge.",
-    definition: {"materials":[{"name":"soil","model":{"kind":"undrained","unitWeight":0.01,"undrainedShearStrength":20}}],"coordinates":[[-20,0],[-20,10],[20,10],[20,0]],"materialBoundaries":[],"regionAssignments":[{"point":[0,9.5],"materialName":"soil"}],"udls":[{"magnitude":102.83,"x1":-5,"x2":5}],"customSurfaces":[{"points":[[-5.05,10.05],[0,5],[0.33772,4.68369],[0.69541,4.39014],[1.07153,4.12062],[1.46447,3.87628],[1.87255,3.65815],[2.29402,3.46719],[2.72708,3.30419],[3.16987,3.16987],[3.6205,3.0648],[4.07704,2.98943],[4.53753,2.94407],[5,2.92893],[5.46247,2.94407],[5.92296,2.98943],[6.3795,3.0648],[6.83013,3.16987],[7.27292,3.30419],[7.70598,3.46719],[8.12745,3.65815],[8.53553,3.87628],[8.92847,4.12062],[9.30459,4.39014],[9.66228,4.68369],[10,5],[15.05,10.05]]}],"customPlanesOnly":true},
+    description: "Weightless (γ = 1e-6 kN/m³) c = 20 kPa soil (φ = 0) loaded by a strip load of 102.83 kPa = c·(2 + π) over 10 m, the exact bearing capacity. Analysed on the Prandtl mechanism of Fig. 26.2: active wedge under the load, a 90° fan arc of radius 7.071 m about the load's edge (5, 10), lowest point 2.929, and the passive wedge.",
+    definition: {"materials":[{"name":"soil","model":{"kind":"undrained","unitWeight":0.000001,"undrainedShearStrength":20}}],"coordinates":[[-20,0],[-20,10],[20,10],[20,0]],"materialBoundaries":[],"regionAssignments":[{"point":[0,9.5],"materialName":"soil"}],"udls":[{"magnitude":102.83,"x1":-5,"x2":5}],"customSurfaces":[{"points":[[-5.05,10.05],[0,5],[0.33772,4.68369],[0.69541,4.39014],[1.07153,4.12062],[1.46447,3.87628],[1.87255,3.65815],[2.29402,3.46719],[2.72708,3.30419],[3.16987,3.16987],[3.6205,3.0648],[4.07704,2.98943],[4.53753,2.94407],[5,2.92893],[5.46247,2.94407],[5.92296,2.98943],[6.3795,3.0648],[6.83013,3.16987],[7.27292,3.30419],[7.70598,3.46719],[8.12745,3.65815],[8.53553,3.87628],[8.92847,4.12062],[9.30459,4.39014],[9.66228,4.68369],[10,5],[15.05,10.05]]}],"customPlanesOnly":true},
     checks: [
       {"method":"Morgenstern-Price","label":"Spencer (M-P, constant f(x))","published":0.94,"publishedBy":"Commercial program A","options":{"intersliceFunction":"constant","porePressureHead":"vertical","slices":60}},
     ],
@@ -2220,6 +2220,7 @@ export const PROBLEMS: RawCase[] = [
     notes: [
       "Theoretical factor of safety 1.0; limit equilibrium with slices gives 6 % less on this mechanism (commercial program A and cSlope alike).",
       "program D 1.043 on an earlier transcription whose fan was a single kink at (5, 3.9645).",
+      "Unit weight 1e-6 kN/m³ as in commercial program A's Table 26.1 (was 0.01; the result is the same to four decimals).",
     ],
   },
   {
