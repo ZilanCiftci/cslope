@@ -747,6 +747,21 @@ ipcMain.on("app:ready", () => {
   showMainWindow();
 });
 
+// A dialog window opens at a fixed height and, once laid out, asks to
+// shrink to its content so short dialogs aren't mostly empty. Only ever
+// shrinks, and only dialog windows; the user can still resize.
+ipcMain.on("window:fitDialogHeight", (event, height: unknown) => {
+  const dialog = BrowserWindow.fromWebContents(event.sender);
+  if (!dialog || dialog === win || typeof height !== "number" || !Number.isFinite(height)) return;
+  const [width, current] = dialog.getContentSize();
+  const target = Math.round(Math.max(240, height));
+  if (target >= current) return;
+  const frame = dialog.getSize()[1] - current;
+  const [minWidth, minHeight] = dialog.getMinimumSize();
+  if (minHeight > target + frame) dialog.setMinimumSize(minWidth, target + frame);
+  dialog.setContentSize(width, target);
+});
+
 // ── Content Security Policy ──────────────────────────────────
 
 function setupCSP() {

@@ -129,6 +129,8 @@ declare global {
       onMaximized: (listener: (event: unknown, isMax: unknown) => void) => () => void;
       // App lifecycle
       appReady: () => void;
+      /** Shrink this dialog window to the given content height (never grows it). */
+      fitDialogHeight: (height: number) => void;
       // Menu actions
       menuNew: () => void;
       menuAbout: () => void;

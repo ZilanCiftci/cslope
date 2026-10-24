@@ -65,6 +65,7 @@ const EXPECTED: Record<string, [Kind, string]> = {
   isMaximized: ["invoke", "window:isMaximized"],
   onMaximized: ["on", "window:maximized"],
   appReady: ["send", "app:ready"],
+  fitDialogHeight: ["send", "window:fitDialogHeight"],
   menuNew: ["send", "menu:new"],
   menuAbout: ["send", "menu:about"],
   toggleDevTools: ["send", "dev:toggle-devtools"],
