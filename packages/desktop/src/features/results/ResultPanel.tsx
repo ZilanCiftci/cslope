@@ -4,7 +4,12 @@
 
 import type { ReactNode } from "react";
 import { useAppStore } from "../../store/app-store";
-import { equilibriumGapText, surfaceCountText } from "../../utils/result-summary";
+import {
+  equilibriumGapText,
+  NON_CONVERGED_TITLE,
+  nonConvergedText,
+  surfaceCountText,
+} from "../../utils/result-summary";
 
 function Row({ label, children }: { label: string; children: ReactNode }) {
   return (
@@ -108,9 +113,11 @@ export function ResultPanel({ showTitle = true }: { showTitle?: boolean }) {
           </Row>
           {(result.nonConvergedSurfaces ?? 0) > 0 && (
             <Row label="Convergence">
-              <span style={{ color: "var(--color-vsc-warning)" }}>
-                {result.nonConvergedSurfaces} surface(s) with weak equilibrium
-                fit were discarded
+              <span
+                style={{ color: "var(--color-vsc-warning)" }}
+                title={NON_CONVERGED_TITLE}
+              >
+                {nonConvergedText(result.nonConvergedSurfaces ?? 0)}
               </span>
             </Row>
           )}

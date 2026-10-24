@@ -75,11 +75,11 @@ function SensitivityPanelBody() {
     <PopupPanel
       title="Sensitivity analysis"
       onClose={() => setOpen(false)}
-      width={460}
+      width={480}
       footer={
         <div className="flex items-center gap-2 text-[11px]">
           {running ? (
-            <button onClick={cancel} className="px-2 py-1 rounded cursor-pointer" style={buttonStyle}>
+            <button onClick={cancel} className="px-3 py-1 rounded cursor-pointer" style={buttonStyle}>
               Cancel
             </button>
           ) : (
@@ -94,13 +94,13 @@ function SensitivityPanelBody() {
                 )
               }
               disabled={!selected || from === to}
-              className="px-2 py-1 rounded cursor-pointer"
-              style={buttonStyle}
+              className="px-4 py-1 rounded cursor-pointer font-medium disabled:opacity-40 disabled:cursor-not-allowed"
+              style={primaryButtonStyle}
             >
               Run
             </button>
           )}
-          <span style={{ color: "var(--color-vsc-text-muted)" }}>
+          <span className="whitespace-nowrap" style={{ color: "var(--color-vsc-text-muted)" }}>
             {running ? `${points.length} / ${total}` : points.length > 0 ? `${data.length} of ${points.length} values gave a FOS` : ""}
           </span>
           <span className="flex-1" />
@@ -115,11 +115,15 @@ function SensitivityPanelBody() {
                 )
               }
               disabled={points.length === 0 || running}
-              className="px-2 py-1 rounded cursor-pointer"
+              className="px-2 py-1 rounded cursor-pointer whitespace-nowrap disabled:opacity-40 disabled:cursor-not-allowed"
               style={buttonStyle}
-              title={swedish ? "Semicolons and decimal commas (Swedish Excel)" : "Commas and decimal points"}
+              title={
+                swedish
+                  ? "CSV with semicolons and decimal commas, for Excel set to a decimal-comma locale"
+                  : "CSV with commas and decimal points"
+              }
             >
-              {swedish ? "CSV (; ,)" : "Export CSV"}
+              {swedish ? "CSV (decimal comma)" : "Export CSV"}
             </button>
           ))}
         </div>
@@ -241,6 +245,13 @@ function SensitivityPanelBody() {
     </PopupPanel>
   );
 }
+
+/** The panel's main action (Run), styled like the dialogs' Close button. */
+const primaryButtonStyle: React.CSSProperties = {
+  background: "var(--color-vsc-accent)",
+  border: "1px solid var(--color-vsc-accent)",
+  color: "#fff",
+};
 
 const buttonStyle: React.CSSProperties = {
   background: "var(--color-vsc-input-bg)",

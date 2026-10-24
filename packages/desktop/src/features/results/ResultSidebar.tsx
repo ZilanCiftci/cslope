@@ -20,7 +20,13 @@ import {
   anchoredTopLeft,
   anchorPointFromTopLeft,
 } from "../annotations/anchorPosition";
-import { equilibriumGapText, surfaceCountText } from "../../utils/result-summary";
+import {
+  equilibriumGapText,
+  NON_CONVERGED_TITLE,
+  nonConvergedText,
+  surfaceCountText,
+} from "../../utils/result-summary";
+import { resolveAnnotationText } from "../annotations/resolveAnnotationText";
 import { viewLockForModel } from "../view/viewLock";
 import type {
   MaterialTableColumnKey,
@@ -120,6 +126,14 @@ export function ResultSidebar() {
   const setSelectedAnnotations = useAppStore((s) => s.setSelectedAnnotations);
   const toggleAnnotationSelection = useAppStore(
     (s) => s.toggleAnnotationSelection,
+  );
+  const projectInfo = useAppStore((s) => s.projectInfo);
+  const parameters = useAppStore((s) => s.parameters);
+  // Text as the sheet shows it: #Title, {{expressions}} and \n resolved.
+  const resolveText = useCallback(
+    (text: string) =>
+      resolveAnnotationText({ text, projectInfo, result, parameters }),
+    [projectInfo, result, parameters],
   );
 
   const [openSections, setOpenSections] = useState<
@@ -518,9 +532,11 @@ export function ResultSidebar() {
               </span>
             </div>
             {(result.nonConvergedSurfaces ?? 0) > 0 && (
-              <p style={{ color: "var(--color-vsc-warning)" }}>
-                {result.nonConvergedSurfaces} surface(s) with weak equilibrium
-                fit were discarded
+              <p
+                style={{ color: "var(--color-vsc-warning)" }}
+                title={NON_CONVERGED_TITLE}
+              >
+                {nonConvergedText(result.nonConvergedSurfaces ?? 0)}
               </p>
             )}
             {result.criticalSurface?.equilibriumGap != null && (
@@ -571,6 +587,18 @@ export function ResultSidebar() {
 
           {rvs.annotations.map((anno) => {
             const isSelected = selectedAnnotationIds.includes(anno.id);
+            const shown =
+              anno.type === "text"
+                ? resolveText(anno.text ?? "").replace(/\s+/g, " ").trim()
+                : "";
+            const name =
+              anno.type === "color-bar"
+                ? "Color Bar"
+                : anno.type === "material-table"
+                  ? "Material Table"
+                  : anno.type === "plot"
+                    ? "Plot"
+                    : shown || "Text (empty)";
             return (
               <div
                 key={anno.id}
@@ -594,14 +622,9 @@ export function ResultSidebar() {
                 <span
                   className="text-[10px] flex-1 min-w-0 truncate"
                   style={{ color: "var(--color-vsc-text)" }}
+                  title={anno.type === "text" ? `Text: ${shown}` : undefined}
                 >
-                  {anno.type === "color-bar"
-                    ? "Color Bar"
-                    : anno.type === "material-table"
-                      ? "Material Table"
-                      : anno.type === "plot"
-                        ? "Plot"
-                        : "Text"}
+                  {name}
                 </span>
                 <button
                   onClick={(e) => {
@@ -1086,6 +1109,24 @@ export function ResultSidebar() {
                   border: "1px solid var(--color-vsc-border)",
                 }}
               />
+              {textValue !== undefined &&
+                resolveText(textValue) !== textValue && (
+                  // A template (#Title, {{H*2}}): what the sheet shows.
+                  <div className="mt-0.5" aria-label="Text on the sheet">
+                    <span
+                      className="text-[10px]"
+                      style={{ color: "var(--color-vsc-text-muted)" }}
+                    >
+                      On the sheet:
+                    </span>
+                    <p
+                      className="text-[11px] whitespace-pre-wrap break-words"
+                      style={{ color: "var(--color-vsc-text)" }}
+                    >
+                      {resolveText(textValue)}
+                    </p>
+                  </div>
+                )}
             </div>
 
             <div>

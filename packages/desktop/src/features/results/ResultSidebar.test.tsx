@@ -82,7 +82,9 @@ describe("ResultSidebar summary", () => {
     expect(screen.getByText("Min FOS (design values)")).toBeInTheDocument();
     expect(screen.getByText("← left")).toBeInTheDocument();
     expect(screen.getByText("Other direction").nextSibling!.textContent).toBe("no surface");
-    expect(screen.getByText(/3 surface\(s\) with weak equilibrium/)).toBeInTheDocument();
+    expect(
+      screen.getByText("3 surfaces were discarded because they did not reach equilibrium"),
+    ).toHaveAttribute("title", expect.stringMatching(/equilibrium/));
     expect(screen.getByText(/1 material boundary split\(s\) failed/)).toBeInTheDocument();
   });
 
@@ -106,7 +108,9 @@ describe("ResultSidebar summary", () => {
 describe("ResultSidebar annotations list", () => {
   it("lists annotations by type, selects, multi-selects and removes them", () => {
     render(<ResultSidebar />);
-    expect(screen.getAllByText("Text")).toHaveLength(2);
+    // Text annotations by their text.
+    expect(screen.getByText("Title")).toBeInTheDocument();
+    expect(screen.getByText("Sub")).toBeInTheDocument();
     expect(screen.getByText("Material Table")).toBeInTheDocument();
     expect(screen.getByText("Plot")).toBeInTheDocument();
     expect(screen.getByText("Color Bar")).toBeInTheDocument();
@@ -118,6 +122,28 @@ describe("ResultSidebar annotations list", () => {
 
     fireEvent.click(screen.getAllByTitle("Remove annotation")[4]);
     expect(annotations().map((a) => a.id)).toEqual(["t1", "t2", "m", "p"]);
+  });
+
+  it("lists a text annotation by its text as the sheet shows it", () => {
+    act(() => {
+      useAppStore.setState({
+        projectInfo: { ...useAppStore.getState().projectInfo, title: "T-ACADS Non-Homogeneous" },
+        resultViewSettings: {
+          ...DEFAULT_RESULT_VIEW_SETTINGS,
+          annotations: [
+            { id: "a", type: "text", x: 0, y: 0, text: "#Title\\nFOS {{1+1}}" },
+            { id: "b", type: "text", x: 0, y: 0, text: "   " },
+          ],
+        },
+        selectedAnnotationIds: ["a"],
+      });
+    });
+    render(<ResultSidebar />);
+    expect(screen.getByText("T-ACADS Non-Homogeneous FOS 2", { selector: "span" })).toBeInTheDocument();
+    expect(screen.getByText("Text (empty)")).toBeInTheDocument();
+    // The properties keep the template and preview the result.
+    expect(field("Text").value).toBe("#Title\\nFOS {{1+1}}");
+    expect(screen.getByLabelText("Text on the sheet")).toHaveTextContent("T-ACADS Non-Homogeneous FOS 2");
   });
 
   it("says when there are no annotations", () => {
