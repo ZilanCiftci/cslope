@@ -153,6 +153,7 @@ export {
 export type { RegionFace } from "./model/geometry-ops";
 
 export { createSlice, findCrackX, getSlices, rankineCrackDepth } from "./model/slices";
+export { fitPolylineToGround, isAdmissiblePolyline } from "./model/surface";
 
 export {
   generatePlanes,

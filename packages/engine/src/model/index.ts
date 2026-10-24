@@ -14,6 +14,7 @@ export {
 } from "./geometry-ops";
 
 export { createSlice, findCrackX, getSlices, rankineCrackDepth } from "./slices";
+export { fitPolylineToGround, isAdmissiblePolyline } from "./surface";
 
 export {
   generatePlanes,

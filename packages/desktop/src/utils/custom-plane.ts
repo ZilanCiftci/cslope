@@ -1,4 +1,11 @@
-import { findCrackX, isPlaneWithinExternalBoundary, selectEntryExit, Slope } from "@cslope/engine";
+import {
+  findCrackX,
+  fitPolylineToGround,
+  isAdmissiblePolyline,
+  isPlaneWithinExternalBoundary,
+  selectEntryExit,
+  Slope,
+} from "@cslope/engine";
 import { surfaceYAtX } from "../features/view/surface";
 import { circleArcPoints } from "./arc";
 import type { ModelOrientation } from "../store/types";
@@ -159,13 +166,17 @@ export interface PrescribedPath {
 
 /**
  * The path of a prescribed surface as the analysis takes it: a circle
- * from its entry to its exit (circleEntryExit), a polyline as given; with
+ * from its entry to its exit (circleEntryExit), a polyline fitted to the
+ * ground (the engine's fitPolylineToGround: from where it first passes
+ * below the ground to where it comes out, its ends extended); with
  * a tension crack of fixed `crackDepth`, cut where it lies that deep
  * below the ground on the entry side (crackCutX): the surface enters at
  * the crack's base. Unusable, as the analysis has no surface for it: a
  * circle without an entry and exit or that leaves the model (through its
- * base; the engine's isPlaneWithinExternalBoundary), and a surface that
- * never reaches the crack depth. `mirrored`: a right-to-left model,
+ * base; the engine's isPlaneWithinExternalBoundary), a polyline that
+ * gives no sliding mass or is not admissible (isAdmissiblePolyline, as
+ * the analysis checks a prescribed one), and a surface that never reaches
+ * the crack depth. `mirrored`: a right-to-left model,
  * entered from the right.
  */
 export function prescribedPath(
@@ -175,8 +186,15 @@ export function prescribedPath(
   mirrored = false,
 ): PrescribedPath {
   if (plane.points) {
-    const pts = plane.points.map(([x, y]): Pt => [x, y]);
-    if (!(crackDepth > 0) || pts.length < 2) return { points: pts, crack: null, unusable: false };
+    const given = plane.points.map(([x, y]): Pt => [x, y]);
+    const slope = boundarySlope(coordinates, mirrored);
+    const fitted = slope ? fitPolylineToGround(slope, mirrored ? given.map(mirrorPt) : given) : null;
+    // As build-slope checks a prescribed polyline: any concavity allowed.
+    if (!slope || !fitted || !isAdmissiblePolyline(slope, fitted, Infinity)) {
+      return { points: given, crack: null, unusable: true };
+    }
+    const pts = mirrored ? fitted.map(mirrorPt).reverse() : fitted;
+    if (!(crackDepth > 0)) return { points: pts, crack: null, unusable: false };
     const xs = pts.map((p) => p[0]);
     const [xEntry, xExit] = mirrored ? [Math.max(...xs), Math.min(...xs)] : [Math.min(...xs), Math.max(...xs)];
     const baseY = (x: number) => polylineY(pts, x) ?? Infinity;

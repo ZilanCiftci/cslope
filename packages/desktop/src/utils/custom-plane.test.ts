@@ -191,6 +191,17 @@ describe("prescribedPath", () => {
     expect(prescribedPath(model, shallow, 0.5).unusable).toBe(false);
   });
 
+  it("fits a polyline to the ground and rejects one the analysis would not take", () => {
+    // Starts 1 m below the crest: extended along its first segment to the ground.
+    const p = prescribedPath(model, { cx: 0, cy: 0, radius: 0, points: [[4, 9], [8, 4], [22, 5]] }, 0);
+    expect(p.unusable).toBe(false);
+    expect(p.points[0][1]).toBeCloseTo(surfaceYAtX(model, p.points[0][0])!, 6);
+    expect(p.points[0][0]).toBeLessThan(4);
+    // A vertex above the ground: no surface.
+    const above = prescribedPath(model, { cx: 0, cy: 0, radius: 0, points: [[2, 10], [8, 12], [22, 5]] }, 0);
+    expect(above.unusable).toBe(true);
+  });
+
   it("has no surface for a circle that leaves the model through its base", () => {
     // Both ends on the ground, the lowest point 0.5 m below the base (y 0).
     const deep = { cx: 15, cy: 14, radius: 14.5 };
