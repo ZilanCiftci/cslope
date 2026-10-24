@@ -51,3 +51,27 @@ describe("OptionsSection inputs", () => {
     ]);
   });
 });
+
+describe("OptionsSection Bishop hint", () => {
+  const hint = /Bishop's method is defined for circular surfaces/;
+
+  beforeEach(() => {
+    useAppStore.getState().newProject();
+  });
+
+  it("shows when Bishop is used with non-circular optimisation", () => {
+    useAppStore.getState().setOptions({ method: "Bishop", nonCircularOptimization: true });
+    render(<OptionsSection plain />);
+    expect(screen.getByText(hint)).toBeTruthy();
+  });
+
+  it("is hidden for a circular search or another method", () => {
+    useAppStore.getState().setOptions({ method: "Bishop", nonCircularOptimization: false });
+    const { unmount } = render(<OptionsSection plain />);
+    expect(screen.queryByText(hint)).toBeNull();
+    unmount();
+    useAppStore.getState().setOptions({ method: "Morgenstern-Price", nonCircularOptimization: true });
+    render(<OptionsSection plain />);
+    expect(screen.queryByText(hint)).toBeNull();
+  });
+});

@@ -234,7 +234,8 @@ export interface SliceData {
 export type AnalysisWarningCode =
   | "dangling-boundary"
   | "negative-effective-normal"
-  | "low-m-alpha";
+  | "low-m-alpha"
+  | "bishop-non-circular";
 
 /**
  * Something about the input or the critical surface that the factor of

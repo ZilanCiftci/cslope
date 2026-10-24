@@ -421,6 +421,17 @@ export function OptionsSection({ plain = false }: OptionsSectionProps) {
             />
             <Label>Non-circular optimisation</Label>
           </label>
+          {options.method === "Bishop" &&
+            options.nonCircularOptimization === true && (
+              <p
+                className="col-span-2 text-[10px] italic"
+                style={{ color: "var(--color-vsc-text-muted)" }}
+              >
+                Bishop&apos;s method is defined for circular surfaces; on a
+                non-circular surface its FOS depends on the moment axis. Use
+                Morgenstern-Price (constant function for Spencer).
+              </p>
+            )}
           <label className="flex flex-col gap-0.5">
             <Label>Min. slip depth (m)</Label>
             <DraftNumberInput

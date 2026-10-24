@@ -23,6 +23,10 @@ Open **Model › Analysis › Options**. The settings apply to the active model.
 
 The [theory](/docs/theory) page gives the equations. The **Tolerance** is the convergence limit on the factor of safety.
 
+<Callout type="warning" title="Bishop on non-circular surfaces">
+  Bishop's simplified method is defined for circular surfaces (Bishop 1955). On a non-circular surface (a polyline you draw, or one from non-circular optimisation) cSlope takes the moments about an axis point, and because the method does not satisfy horizontal force equilibrium the factor of safety depends on where that point is. On a composite surface along a weak seam it ranges from 1.36 to 1.41 for different axis points, while Spencer's method gives 1.379 for all of them. cSlope still computes it, and the results then show a warning. Use Spencer or Morgenstern-Price for non-circular surfaces.
+</Callout>
+
 <Callout type="tip">
   Thirty slices are enough for most slopes. With thin layers, a steep face or a tension crack, check that more slices do not change the result.
 </Callout>
