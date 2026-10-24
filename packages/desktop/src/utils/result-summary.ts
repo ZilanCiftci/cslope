@@ -20,3 +20,18 @@ export function surfaceCountText(result: { allSurfaces: { fos: number }[] }): st
 export function equilibriumGapText(gap: number): string {
   return `No complete equilibrium: force equilibrium met within ${gap.toFixed(3)} (closest λ)`;
 }
+
+/**
+ * The note for trial surfaces left out of the search because their
+ * solution did not converge, e.g. "453 surfaces were discarded because
+ * they did not reach equilibrium".
+ */
+export function nonConvergedText(count: number): string {
+  return count === 1
+    ? "1 surface was discarded because it did not reach equilibrium"
+    : `${count} surfaces were discarded because they did not reach equilibrium`;
+}
+
+/** Tooltip for {@link nonConvergedText}. */
+export const NON_CONVERGED_TITLE =
+  "For these trial surfaces the method found no factor of safety that satisfies equilibrium within the iteration limits, so they are left out of the minimum. A few are normal; many can point to a search range that reaches unrealistic surfaces.";

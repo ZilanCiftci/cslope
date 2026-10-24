@@ -84,15 +84,15 @@ function ReliabilityPanelBody() {
       footer={
         <div className="flex items-center gap-2 text-[11px]">
           {running ? (
-            <button onClick={cancel} className="px-2 py-1 rounded cursor-pointer" style={buttonStyle}>
+            <button onClick={cancel} className="px-3 py-1 rounded cursor-pointer" style={buttonStyle}>
               Cancel
             </button>
           ) : (
             <button
               onClick={start}
               disabled={variables.length === 0}
-              className="px-2 py-1 rounded cursor-pointer"
-              style={buttonStyle}
+              className="px-4 py-1 rounded cursor-pointer font-medium disabled:opacity-40 disabled:cursor-not-allowed"
+              style={primaryButtonStyle}
             >
               Run
             </button>
@@ -113,11 +113,15 @@ function ReliabilityPanelBody() {
                 )
               }
               disabled={!result || running}
-              className="px-2 py-1 rounded cursor-pointer"
+              className="px-2 py-1 rounded cursor-pointer whitespace-nowrap disabled:opacity-40 disabled:cursor-not-allowed"
               style={buttonStyle}
-              title={swedish ? "Semicolons and decimal commas (Swedish Excel)" : "Commas and decimal points"}
+              title={
+                swedish
+                  ? "CSV with semicolons and decimal commas, for Excel set to a decimal-comma locale"
+                  : "CSV with commas and decimal points"
+              }
             >
-              {swedish ? "CSV (; ,)" : "Export CSV"}
+              {swedish ? "CSV (decimal comma)" : "Export CSV"}
             </button>
           ))}
         </div>
@@ -128,13 +132,19 @@ function ReliabilityPanelBody() {
           <p style={{ color: "var(--color-vsc-text-muted)" }}>The model has no material values to vary.</p>
         ) : (
           <>
-            <table className="w-full text-[11px]" aria-label="Random variables">
+            <table className="w-full table-fixed text-[11px]" aria-label="Random variables">
+              <colgroup>
+                <col />
+                <col className="w-[76px]" />
+                <col className="w-[104px]" />
+                <col className="w-[28px]" />
+              </colgroup>
               <thead>
                 <tr style={{ color: "var(--color-vsc-text-muted)" }}>
-                  <th className="text-left font-normal">Variable (mean = model value)</th>
-                  <th className="text-left font-normal w-[70px]">σ</th>
-                  <th className="text-left font-normal w-[86px]">Distribution</th>
-                  <th className="w-[20px]" />
+                  <th className="text-left font-normal pr-1">Variable</th>
+                  <th className="text-left font-normal pr-1">σ</th>
+                  <th className="text-left font-normal pr-1">Distribution</th>
+                  <th />
                 </tr>
               </thead>
               <tbody>
@@ -142,7 +152,7 @@ function ReliabilityPanelBody() {
                   const options = candidates.filter((c) => c.key === row.key || !rows.some((r) => r.key === c.key));
                   return (
                     <tr key={row.key}>
-                      <td>
+                      <td className="pr-1">
                         <select
                           value={row.key}
                           onChange={(e) => chooseKey(i, e.target.value)}
@@ -156,21 +166,23 @@ function ReliabilityPanelBody() {
                           ))}
                         </select>
                       </td>
-                      <td>
+                      <td className="pr-1">
                         <DraftNumberInput
                           value={row.sd}
                           min={0}
                           onValueChange={(v) => v >= 0 && updateRow(i, { sd: v })}
                           aria-label={`Standard deviation ${i + 1}`}
+                          className="w-full"
                         />
                       </td>
-                      <td>
+                      <td className="pr-1">
                         <select
                           value={row.distribution}
                           onChange={(e) => updateRow(i, { distribution: e.target.value as RandomRow["distribution"] })}
                           aria-label={`Distribution ${i + 1}`}
                           disabled={method === "taylor"}
                           title={method === "taylor" ? "The Taylor series uses only the mean and σ" : undefined}
+                          className="w-full"
                         >
                           <option value="normal">Normal</option>
                           <option value="lognormal">Lognormal</option>
@@ -180,7 +192,9 @@ function ReliabilityPanelBody() {
                         <button
                           onClick={() => setRows((rs) => rs.filter((_, j) => j !== i))}
                           aria-label={`Remove variable ${i + 1}`}
-                          className="px-1 cursor-pointer"
+                          title="Remove variable"
+                          className="w-6 h-6 flex items-center justify-center rounded cursor-pointer text-[16px] leading-none hover:bg-[var(--color-vsc-list-hover)]"
+                          style={{ color: "var(--color-vsc-text-muted)" }}
                         >
                           ×
                         </button>
@@ -190,6 +204,9 @@ function ReliabilityPanelBody() {
                 })}
               </tbody>
             </table>
+            <p className="text-[10px] -mt-1" style={{ color: "var(--color-vsc-text-muted)" }}>
+              The mean of each variable is its value in the model; σ is its standard deviation.
+            </p>
             <div>
               <button
                 onClick={() => {
@@ -344,6 +361,13 @@ function ResultRow({ label, value, bold }: { label: string; value: string; bold?
     </tr>
   );
 }
+
+/** The panel's main action (Run), styled like the dialogs' Close button. */
+const primaryButtonStyle: React.CSSProperties = {
+  background: "var(--color-vsc-accent)",
+  border: "1px solid var(--color-vsc-accent)",
+  color: "#fff",
+};
 
 const buttonStyle: React.CSSProperties = {
   background: "var(--color-vsc-input-bg)",

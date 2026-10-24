@@ -40,9 +40,24 @@ describe("MenuBar", () => {
     expect(screen.queryByTitle("New (Ctrl+N)")).toBeNull();
     expect(screen.getByTitle("Exterior")).toBeInTheDocument();
     await userEvent.click(tab("Results"));
-    expect(screen.getByTitle("Results Plot")).toBeInTheDocument();
+    expect(screen.getByRole("menuitem", { name: "Results Plot" })).toBeInTheDocument();
     await userEvent.click(tab("Help"));
     expect(screen.getByTitle("About")).toBeInTheDocument();
+  });
+
+  it("follows the mode: Results in result mode, Model again back in edit mode", async () => {
+    act(() => store().setMode("edit"));
+    render(<MenuBar />);
+    await userEvent.click(tab("Model"));
+    act(() => store().setMode("result"));
+    expect(tab("Results")).toHaveAttribute("aria-expanded", "true");
+    act(() => store().setMode("edit"));
+    expect(tab("Model")).toHaveAttribute("aria-expanded", "true");
+    // A tab other than Results stays when going back to edit mode.
+    act(() => store().setMode("result"));
+    await userEvent.click(tab("Help"));
+    act(() => store().setMode("edit"));
+    expect(tab("Help")).toHaveAttribute("aria-expanded", "true");
   });
 });
 
@@ -54,7 +69,7 @@ describe("Model ribbon", () => {
     ["UDL", "openUdlDialog", "Loads"],
     ["Line loads", "openLineLoadsDialog", "Loads"],
     ["Reinforcement", "openReinforcementDialog", "Loads"],
-    ["Piezometric Lines", "openPiezoDialog", "Piezometric Lines"],
+    ["Piezometric lines", "openPiezoDialog", "Piezometric Lines"],
     ["Search limits", "openSearchLimitsDialog", "Search Limits"],
     ["Custom planes", "openCustomSearchPlanesDialog", "Custom Search Planes"],
     ["Options", "openOptionsDialog", "Options"],
@@ -69,9 +84,8 @@ describe("Model ribbon", () => {
   it("opens the materials and parameters windows", async () => {
     render(<MenuBar />);
     await userEvent.click(tab("Model"));
-    const defines = screen.getAllByTitle("Define");
-    await userEvent.click(defines[0]);
-    await userEvent.click(defines[1]);
+    await userEvent.click(screen.getByTitle("Materials"));
+    await userEvent.click(screen.getByTitle("Parameters"));
     expect(bridge.callNames()).toEqual(
       expect.arrayContaining(["openMaterialsDialog", "openParametersDialog"]),
     );
@@ -156,6 +170,19 @@ describe("Help ribbon", () => {
     await userEvent.click(tab("Help"));
     await userEvent.click(screen.getByTitle("About"));
     expect(bridge.callNames()).toContain("menuAbout");
+  });
+
+  it("opens the documentation and lists the keyboard shortcuts", async () => {
+    render(<MenuBar />);
+    await userEvent.click(tab("Help"));
+    await userEvent.click(screen.getByTitle("Documentation"));
+    expect(bridge.callNames()).toContain("openDocumentation");
+    await userEvent.click(screen.getByTitle("Keyboard shortcuts"));
+    const list = screen.getByRole("table", { name: "Keyboard shortcuts" });
+    expect(list).toHaveTextContent("Ctrl+Shift+S");
+    expect(list).toHaveTextContent("Run the analysis");
+    await userEvent.click(screen.getByTitle("Close"));
+    expect(screen.queryByRole("table", { name: "Keyboard shortcuts" })).toBeNull();
   });
 
   it("loads the benchmarks only after confirmation", async () => {

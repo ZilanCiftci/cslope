@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { createPortal } from "react-dom";
 import { isProjectDirty, useAppStore } from "../../../store/app-store";
 import { confirmUnsavedChanges } from "../../../features/project/unsavedGuard";
@@ -11,8 +12,32 @@ async function confirmReplace(question: string): Promise<boolean> {
   return window.confirm(question);
 }
 import { isElectron } from "../../../utils/is-electron";
+import { PopupPanel } from "../PopupPanel";
 import { RibbonGroup, RibbonButton } from "./RibbonParts";
-import { BenchmarkIcon, ExamplesIcon, InfoIcon } from "../../icons/HelpIcons";
+import {
+  BenchmarkIcon,
+  DocsIcon,
+  ExamplesIcon,
+  InfoIcon,
+  KeyboardIcon,
+} from "../../icons/HelpIcons";
+
+/** The online documentation (the website's /docs pages). */
+const DOCS_URL = "https://cslope.com/docs";
+
+/** The keyboard shortcuts of the main window, as listed in Help. */
+const KEYBOARD_SHORTCUTS: [keys: string, action: string][] = [
+  ["Ctrl+N", "New project"],
+  ["Ctrl+O", "Open project"],
+  ["Ctrl+S", "Save"],
+  ["Ctrl+Shift+S", "Save as"],
+  ["Ctrl+Z", "Undo"],
+  ["Ctrl+Y or Ctrl+Shift+Z", "Redo"],
+  ["F5 or Ctrl+Enter", "Run the analysis"],
+  ["Delete", "Delete the selected point or annotations"],
+  ["Arrow keys", "Move the selected annotations (Shift: smaller steps)"],
+  ["Esc", "Close a menu or popup"],
+];
 
 interface Props {
   isOpen: boolean;
@@ -21,6 +46,8 @@ interface Props {
 }
 
 export function HelpMenu({ isOpen, onActivate, panelHost }: Props) {
+  const [shortcutsOpen, setShortcutsOpen] = useState(false);
+
   // Replace the project with a set of models, as a new unsaved project.
   const loadModels = async (what: string, load: () => void) => {
     const ok = await confirmReplace(`Load ${what} into the current workspace? This will replace current models.`);
@@ -42,6 +69,11 @@ export function HelpMenu({ isOpen, onActivate, panelHost }: Props) {
     } else {
       window.alert("cSlope — Slope Stability Analysis\nhttps://cslope.com");
     }
+  };
+
+  const handleDocs = () => {
+    if (isElectron) window.cslope.openDocumentation();
+    else window.open(DOCS_URL, "_blank", "noopener");
   };
 
   return (
@@ -74,7 +106,18 @@ export function HelpMenu({ isOpen, onActivate, panelHost }: Props) {
         panelHost &&
         createPortal(
           <div className="h-full flex items-center gap-0" role="menu">
-            <RibbonGroup label="Help">
+            <RibbonGroup label="Resources">
+              <RibbonButton
+                icon={<DocsIcon />}
+                label="Documentation"
+                onClick={handleDocs}
+              />
+              <RibbonButton
+                icon={<KeyboardIcon />}
+                label="Shortcuts"
+                tooltip="Keyboard shortcuts"
+                onClick={() => setShortcutsOpen(true)}
+              />
               <RibbonButton
                 icon={<ExamplesIcon />}
                 label="Examples"
@@ -94,6 +137,36 @@ export function HelpMenu({ isOpen, onActivate, panelHost }: Props) {
           </div>,
           panelHost,
         )}
+
+      {shortcutsOpen && (
+        <PopupPanel
+          title="Keyboard shortcuts"
+          onClose={() => setShortcutsOpen(false)}
+          width={380}
+        >
+          <table className="w-full text-[11px]" aria-label="Keyboard shortcuts">
+            <tbody>
+              {KEYBOARD_SHORTCUTS.map(([keys, action]) => (
+                <tr key={keys}>
+                  <td
+                    className="py-0.5 pr-3 whitespace-nowrap align-top font-medium"
+                    style={{ color: "var(--color-vsc-text-bright)" }}
+                  >
+                    {keys}
+                  </td>
+                  <td className="py-0.5" style={{ color: "var(--color-vsc-text)" }}>
+                    {action}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          <p className="text-[10px]" style={{ color: "var(--color-vsc-text-muted)" }}>
+            On macOS, Cmd instead of Ctrl. The mouse actions are listed in
+            the documentation, under Keyboard and mouse.
+          </p>
+        </PopupPanel>
+      )}
     </div>
   );
 }

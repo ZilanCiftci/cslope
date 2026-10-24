@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useAppStore } from "../../../store/app-store";
 import { DevMenu } from "./DevMenu";
 import { EditMenu } from "./EditMenu";
 import { FileMenu } from "./FileMenu";
@@ -16,6 +17,16 @@ type MenuKey = "file" | "edit" | "results" | "help" | "dev";
 export function MenuBar({ activeModelName }: Props) {
   const [activeMenu, setActiveMenu] = useState<MenuKey>("file");
   const [panelHost, setPanelHost] = useState<HTMLDivElement | null>(null);
+
+  // Follow the mode: entering result mode shows the Results tab, and going
+  // back to edit mode from it shows the Model tab again.
+  const mode = useAppStore((s) => s.mode);
+  const [shownMode, setShownMode] = useState(mode);
+  if (mode !== shownMode) {
+    setShownMode(mode);
+    if (mode === "result") setActiveMenu("results");
+    else if (activeMenu === "results") setActiveMenu("edit");
+  }
 
   const effectiveMenu = activeMenu;
 

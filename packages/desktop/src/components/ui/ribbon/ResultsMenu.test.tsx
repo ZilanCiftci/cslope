@@ -80,8 +80,13 @@ describe("ResultsMenu", () => {
 
   it("disables the results plot and export without a result", () => {
     renderMenu({ withResult: false });
-    expect(screen.getByTitle("Results Plot")).toHaveAttribute("aria-disabled", "true");
-    expect(screen.getByTitle("Export PDF")).toBeDisabled();
+    // The tooltip says why.
+    const plot = screen.getByRole("menuitem", { name: "Results Plot" });
+    expect(plot).toHaveAttribute("aria-disabled", "true");
+    expect(plot).toHaveAttribute("title", "Run the analysis first");
+    const pdf = screen.getByRole("menuitem", { name: "Export PDF" });
+    expect(pdf).toBeDisabled();
+    expect(pdf).toHaveAttribute("title", "Run the analysis first");
     expect(screen.getByTitle("More export options")).toBeDisabled();
   });
 
@@ -156,7 +161,7 @@ describe("ResultsMenu", () => {
 
   it("exports the view settings as a template", async () => {
     renderMenu();
-    await userEvent.click(screen.getByTitle("Export"));
+    await userEvent.click(screen.getByTitle("Export template"));
     expect(mocks.downloadFile).toHaveBeenCalledTimes(1);
     const [name, data, type] = mocks.downloadFile.mock.calls[0];
     expect(name).toBe("view-template.json");
@@ -186,7 +191,7 @@ describe("ResultsMenu", () => {
       });
     };
 
-    await userEvent.click(screen.getByTitle("Import"));
+    await userEvent.click(screen.getByTitle("Import template"));
     expect(pickers.at(-1)!.accept).toBe(".json");
     const template = { ...JSON.parse(JSON.stringify(rvs())), showGrid: !rvs().showGrid };
     delete template.gridSpacing;
@@ -198,11 +203,11 @@ describe("ResultsMenu", () => {
     expect(rvs().gridSpacing).toBeUndefined();
     expect(rvs().minorTicks).toBeUndefined();
 
-    await userEvent.click(screen.getByTitle("Import"));
+    await userEvent.click(screen.getByTitle("Import template"));
     choose("{ not json");
     await waitFor(() => expect(alert).toHaveBeenCalledWith("Invalid template file."));
     alert.mockClear();
-    await userEvent.click(screen.getByTitle("Import"));
+    await userEvent.click(screen.getByTitle("Import template"));
     choose(JSON.stringify({ version: 1 }));
     await waitFor(() => expect(alert).toHaveBeenCalledWith("Invalid template file."));
   });
@@ -254,7 +259,7 @@ describe("ResultsMenu", () => {
     };
     await pick("Slice data (Excel)");
     await pick("Slice data (CSV)");
-    await pick("Slice data (CSV, ; and ,)");
+    await pick("Slice data (CSV, decimal comma)");
     const calls = mocks.downloadFile.mock.calls;
     expect(calls.map((c) => c[0])).toEqual([
       `${name} slices.xlsx`,

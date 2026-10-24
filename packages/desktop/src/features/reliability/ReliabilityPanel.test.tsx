@@ -164,7 +164,7 @@ describe("ReliabilityPanel", () => {
     expect(terms.getByText("Clay: c (kPa)")).toBeInTheDocument();
     expect(terms.getByText("1.700")).toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole("button", { name: "CSV (; ,)" }));
+    fireEvent.click(screen.getByRole("button", { name: "CSV (decimal comma)" }));
     const [filename, data, type] = vi.mocked(downloadFile).mock.calls[0];
     expect(filename).toBe(`${useAppStore.getState().models[0].name} probabilistic.csv`);
     expect(String(data).startsWith("﻿")).toBe(true);

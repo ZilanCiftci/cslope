@@ -12,7 +12,12 @@ import {
   computeInnerFrame,
   computePaperFrame,
 } from "../../../features/view/paper";
-import { RibbonButton, RibbonGroup, RibbonSep } from "./RibbonParts";
+import {
+  RibbonButton,
+  RibbonGroup,
+  RibbonSep,
+  RibbonSmallButton,
+} from "./RibbonParts";
 import type { SurfaceDisplayMode } from "../../../store/types";
 import { buildSliceTable, toCsv } from "../../../features/export/sliceTable";
 import { buildAnalysisSummary } from "../../../features/export/analysisSummary";
@@ -36,6 +41,9 @@ export function ResultsMenu({ isOpen, onActivate, panelHost }: Props) {
   const rvs = useAppStore((s) => s.resultViewSettings);
   const setRvs = useAppStore((s) => s.setResultViewSettings);
   const [exportMenuOpen, setExportMenuOpen] = useState(false);
+  // The export menu opens under its button, to the right; near the right
+  // edge of the window it opens to the left instead.
+  const [exportMenuToLeft, setExportMenuToLeft] = useState(false);
   const exportMenuRef = useRef<HTMLDivElement | null>(null);
   const [displayMenuOpen, setDisplayMenuOpen] = useState(false);
   const displayMenuRef = useRef<HTMLDivElement | null>(null);
@@ -250,6 +258,7 @@ export function ResultsMenu({ isOpen, onActivate, panelHost }: Props) {
                 label="Results Plot"
                 onClick={openResultsPlot}
                 disabled={!hasResult}
+                disabledTitle="Run the analysis first"
               />
               <RibbonButton
                 icon={<SensitivityIcon />}
@@ -264,119 +273,119 @@ export function ResultsMenu({ isOpen, onActivate, panelHost }: Props) {
             </RibbonGroup>
             <RibbonSep />
             <RibbonGroup label="Display">
-              <div className="flex flex-col gap-0.5">
-                <div className="flex items-center gap-0.5">
-                  <div className="relative" ref={displayMenuRef}>
-                    <SmallButton
-                      icon={<SurfaceDisplayIcon />}
-                      title={`Surfaces: ${rvs.surfaceDisplay === "critical" ? "Critical" : rvs.surfaceDisplay === "all" ? "All" : "Filter"}`}
-                      onClick={() => setDisplayMenuOpen((o) => !o)}
-                      active={false}
-                      hasDropdown
-                    />
-                    {displayMenuOpen && (
-                      <div
-                        className="absolute top-[1.7rem] left-0 rounded py-1 z-20"
-                        style={{
-                          background: "var(--color-vsc-panel)",
-                          border: "1px solid var(--color-vsc-border)",
-                          minWidth: 110,
-                          boxShadow: "0 6px 16px rgba(0,0,0,0.2)",
-                        }}
-                        role="menu"
-                      >
-                        {(
-                          [
-                            { value: "critical", label: "Critical only" },
-                            { value: "all", label: "All surfaces" },
-                            { value: "filter", label: "Filter by FOS" },
-                          ] as { value: SurfaceDisplayMode; label: string }[]
-                        ).map((item) => (
-                          <button
-                            key={item.value}
-                            onClick={() => {
-                              setRvs({ surfaceDisplay: item.value });
-                              setDisplayMenuOpen(false);
+              <div className="grid grid-cols-[repeat(3,auto)] gap-x-0.5 gap-y-0.5">
+                <div className="relative" ref={displayMenuRef}>
+                  <RibbonSmallButton
+                    icon={<SurfaceDisplayIcon />}
+                    label="Surfaces"
+                    title={`Surfaces: ${rvs.surfaceDisplay === "critical" ? "Critical" : rvs.surfaceDisplay === "all" ? "All" : "Filter"}`}
+                    onClick={() => setDisplayMenuOpen((o) => !o)}
+                    hasDropdown
+                  />
+                  {displayMenuOpen && (
+                    <div
+                      className="absolute top-[1.7rem] left-0 rounded py-1 z-20"
+                      style={{
+                        background: "var(--color-vsc-panel)",
+                        border: "1px solid var(--color-vsc-border)",
+                        minWidth: 110,
+                        boxShadow: "0 6px 16px rgba(0,0,0,0.2)",
+                      }}
+                      role="menu"
+                    >
+                      {(
+                        [
+                          { value: "critical", label: "Critical only" },
+                          { value: "all", label: "All surfaces" },
+                          { value: "filter", label: "Filter by FOS" },
+                        ] as { value: SurfaceDisplayMode; label: string }[]
+                      ).map((item) => (
+                        <button
+                          key={item.value}
+                          onClick={() => {
+                            setRvs({ surfaceDisplay: item.value });
+                            setDisplayMenuOpen(false);
+                          }}
+                          className="w-full text-left px-3 py-1.5 text-[11px] cursor-pointer flex items-center gap-2 whitespace-nowrap"
+                          style={{
+                            background:
+                              rvs.surfaceDisplay === item.value
+                                ? "var(--color-vsc-list-active)"
+                                : "transparent",
+                            border: "none",
+                            color: "var(--color-vsc-text)",
+                          }}
+                        >
+                          {item.label}
+                        </button>
+                      ))}
+                      {rvs.surfaceDisplay === "filter" && (
+                        <label
+                          className="flex items-center gap-2 px-3 py-1.5 text-[11px]"
+                          style={{
+                            color: "var(--color-vsc-text)",
+                            borderTop: "1px solid var(--color-vsc-border)",
+                          }}
+                        >
+                          FOS ≤
+                          <DraftNumberInput
+                            min={0.01}
+                            step={0.05}
+                            value={rvs.fosFilterMax}
+                            onValueChange={(value) => {
+                              if (value > 0) setRvs({ fosFilterMax: value });
                             }}
-                            className="w-full text-left px-3 py-1.5 text-[11px] cursor-pointer flex items-center gap-2"
+                            aria-label="Maximum FOS shown"
+                            className="w-16 text-[11px] px-1 py-0.5 rounded tabular-nums"
                             style={{
-                              background:
-                                rvs.surfaceDisplay === item.value
-                                  ? "var(--color-vsc-list-active)"
-                                  : "transparent",
-                              border: "none",
+                              background: "var(--color-vsc-bg)",
                               color: "var(--color-vsc-text)",
+                              border: "1px solid var(--color-vsc-border)",
                             }}
-                          >
-                            {item.label}
-                          </button>
-                        ))}
-                        {rvs.surfaceDisplay === "filter" && (
-                          <label
-                            className="flex items-center gap-2 px-3 py-1.5 text-[11px]"
-                            style={{
-                              color: "var(--color-vsc-text)",
-                              borderTop: "1px solid var(--color-vsc-border)",
-                            }}
-                          >
-                            FOS ≤
-                            <DraftNumberInput
-                              min={0.01}
-                              step={0.05}
-                              value={rvs.fosFilterMax}
-                              onValueChange={(value) => {
-                                if (value > 0) setRvs({ fosFilterMax: value });
-                              }}
-                              aria-label="Maximum FOS shown"
-                              className="w-16 text-[11px] px-1 py-0.5 rounded tabular-nums"
-                              style={{
-                                background: "var(--color-vsc-bg)",
-                                color: "var(--color-vsc-text)",
-                                border: "1px solid var(--color-vsc-border)",
-                              }}
-                            />
-                          </label>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                  <SmallButton
-                    icon={<SlicesIcon />}
-                    title="Show slices"
-                    onClick={() => setRvs({ showSlices: !rvs.showSlices })}
-                    active={rvs.showSlices}
-                  />
-                  <SmallButton
-                    icon={<FosLabelIcon />}
-                    title="Show FOS label"
-                    onClick={() => setRvs({ showFosLabel: !rvs.showFosLabel })}
-                    active={rvs.showFosLabel}
-                  />
+                          />
+                        </label>
+                      )}
+                    </div>
+                  )}
                 </div>
-                <div className="flex items-center gap-0.5">
-                  <SmallButton
-                    icon={<CentreMarkIcon />}
-                    title="Show centre mark"
-                    onClick={() =>
-                      setRvs({ showCentreMarker: !rvs.showCentreMarker })
-                    }
-                    active={rvs.showCentreMarker}
-                  />
-                  <SmallButton
-                    icon={<GridIcon />}
-                    title="Grid lines"
-                    onClick={() => setRvs({ showGrid: !rvs.showGrid })}
-                    active={rvs.showGrid}
-                  />
-                  <SmallButton
-                    icon={<SoilColorIcon />}
-                    title="Soil colors"
-                    onClick={() =>
-                      setRvs({ showSoilColor: !(rvs.showSoilColor ?? true) })
-                    }
-                    active={rvs.showSoilColor ?? true}
-                  />
-                </div>
+                <RibbonSmallButton
+                  icon={<SlicesIcon />}
+                  label="Slices"
+                  title="Show slices"
+                  onClick={() => setRvs({ showSlices: !rvs.showSlices })}
+                  active={rvs.showSlices}
+                />
+                <RibbonSmallButton
+                  icon={<FosLabelIcon />}
+                  label="FOS label"
+                  title="Show FOS label"
+                  onClick={() => setRvs({ showFosLabel: !rvs.showFosLabel })}
+                  active={rvs.showFosLabel}
+                />
+                <RibbonSmallButton
+                  icon={<CentreMarkIcon />}
+                  label="Centre"
+                  title="Show centre mark"
+                  onClick={() =>
+                    setRvs({ showCentreMarker: !rvs.showCentreMarker })
+                  }
+                  active={rvs.showCentreMarker}
+                />
+                <RibbonSmallButton
+                  icon={<GridIcon />}
+                  label="Grid"
+                  title="Grid lines"
+                  onClick={() => setRvs({ showGrid: !rvs.showGrid })}
+                  active={rvs.showGrid}
+                />
+                <RibbonSmallButton
+                  icon={<SoilColorIcon />}
+                  label="Soil colors"
+                  onClick={() =>
+                    setRvs({ showSoilColor: !(rvs.showSoilColor ?? true) })
+                  }
+                  active={rvs.showSoilColor ?? true}
+                />
               </div>
               <RibbonButton
                 icon={<ViewSettingsIcon />}
@@ -386,36 +395,38 @@ export function ResultsMenu({ isOpen, onActivate, panelHost }: Props) {
             </RibbonGroup>
             <RibbonSep />
             <RibbonGroup label="Annotations">
-              <SmallButton
-                icon={<AnnoTextIcon />}
-                title="Add Text"
-                onClick={() => addAnnotation("text")}
-                active={false}
-              />
-              <SmallButton
-                icon={<AnnoPlotIcon />}
-                title="Add Plot"
-                onClick={() => addAnnotation("plot")}
-                active={false}
-              />
-              <SmallButton
-                icon={<AnnoTableIcon />}
-                title="Add Material Table"
-                onClick={() => addAnnotation("material-table")}
-                active={false}
-              />
-              <SmallButton
-                icon={<AnnoColorBarIcon />}
-                title="Add Color Bar"
-                onClick={() => addAnnotation("color-bar")}
-                active={false}
-              />
+              <div className="grid grid-cols-[repeat(2,auto)] gap-x-0.5 gap-y-0.5">
+                <RibbonSmallButton
+                  icon={<AnnoTextIcon />}
+                  label="Text"
+                  title="Add Text"
+                  onClick={() => addAnnotation("text")}
+                />
+                <RibbonSmallButton
+                  icon={<AnnoPlotIcon />}
+                  label="Plot"
+                  title="Add Plot"
+                  onClick={() => addAnnotation("plot")}
+                />
+                <RibbonSmallButton
+                  icon={<AnnoTableIcon />}
+                  label="Material table"
+                  title="Add Material Table"
+                  onClick={() => addAnnotation("material-table")}
+                />
+                <RibbonSmallButton
+                  icon={<AnnoColorBarIcon />}
+                  label="Color bar"
+                  title="Add Color Bar"
+                  onClick={() => addAnnotation("color-bar")}
+                />
+              </div>
             </RibbonGroup>
             <RibbonSep />
             <RibbonGroup label="Templates">
               <RibbonButton
                 icon={<TemplateSaveIcon />}
-                label="Export"
+                label="Export template"
                 onClick={() => {
                   const template = {
                     version: 1,
@@ -430,7 +441,7 @@ export function ResultsMenu({ isOpen, onActivate, panelHost }: Props) {
               />
               <RibbonButton
                 icon={<TemplateLoadIcon />}
-                label="Import"
+                label="Import template"
                 onClick={() => {
                   const input = document.createElement("input");
                   input.type = "file";
@@ -484,7 +495,8 @@ export function ResultsMenu({ isOpen, onActivate, panelHost }: Props) {
                     filter: hasResult ? "none" : "grayscale(1)",
                     border: "none",
                   }}
-                  title="Export PDF"
+                  title={hasResult ? "Export PDF" : "Run the analysis first"}
+                  aria-label="Export PDF"
                   role="menuitem"
                   aria-disabled={!hasResult}
                 >
@@ -495,7 +507,15 @@ export function ResultsMenu({ isOpen, onActivate, panelHost }: Props) {
                 </button>
 
                 <button
-                  onClick={() => setExportMenuOpen((open) => !open)}
+                  onClick={() => {
+                    if (!exportMenuOpen) {
+                      const box = exportMenuRef.current?.getBoundingClientRect();
+                      setExportMenuToLeft(
+                        !!box && box.left + EXPORT_MENU_WIDTH > window.innerWidth - 8,
+                      );
+                    }
+                    setExportMenuOpen(!exportMenuOpen);
+                  }}
                   disabled={!hasResult}
                   className="absolute bottom-0 right-0 w-4 h-4 flex items-center justify-center cursor-pointer"
                   style={{
@@ -514,11 +534,11 @@ export function ResultsMenu({ isOpen, onActivate, panelHost }: Props) {
 
                 {exportMenuOpen && hasResult && (
                   <div
-                    className="absolute top-[3.2rem] right-0 rounded py-1 z-20"
+                    className={`absolute top-[3.2rem] ${exportMenuToLeft ? "right-0" : "left-0"} rounded py-1 z-20`}
                     style={{
                       background: "var(--color-vsc-panel)",
                       border: "1px solid var(--color-vsc-border)",
-                      minWidth: 120,
+                      minWidth: 160,
                       boxShadow: "0 6px 16px rgba(0,0,0,0.2)",
                     }}
                     role="menu"
@@ -528,7 +548,7 @@ export function ResultsMenu({ isOpen, onActivate, panelHost }: Props) {
                         setExportMenuOpen(false);
                         handleExportPdf();
                       }}
-                      className="w-full text-left px-3 py-1.5 text-[11px] cursor-pointer"
+                      className="w-full text-left px-3 py-1.5 text-[11px] cursor-pointer whitespace-nowrap"
                       style={{
                         background: "transparent",
                         border: "none",
@@ -542,7 +562,7 @@ export function ResultsMenu({ isOpen, onActivate, panelHost }: Props) {
                         setExportMenuOpen(false);
                         handleExportPng();
                       }}
-                      className="w-full text-left px-3 py-1.5 text-[11px] cursor-pointer"
+                      className="w-full text-left px-3 py-1.5 text-[11px] cursor-pointer whitespace-nowrap"
                       style={{
                         background: "transparent",
                         border: "none",
@@ -553,24 +573,24 @@ export function ResultsMenu({ isOpen, onActivate, panelHost }: Props) {
                     </button>
                     {(
                       [
-                        ["xlsx", "Slice data (Excel)"],
-                        ["csv", "Slice data (CSV)"],
-                        ["csv-se", "Slice data (CSV, ; and ,)"],
+                        ["xlsx", "Slice data (Excel)", "Slices of the critical surface as an Excel workbook"],
+                        ["csv", "Slice data (CSV)", "Slices of the critical surface; comma separator, decimal point"],
+                        ["csv-se", "Slice data (CSV, decimal comma)", "Slices of the critical surface; semicolon separator, decimal comma (Excel with a comma locale)"],
                       ] as const
-                    ).map(([format, label]) => (
+                    ).map(([format, label, tip]) => (
                       <button
                         key={format}
                         onClick={() => {
                           setExportMenuOpen(false);
                           exportSliceData(format);
                         }}
-                        className="w-full text-left px-3 py-1.5 text-[11px] cursor-pointer"
+                        className="w-full text-left px-3 py-1.5 text-[11px] cursor-pointer whitespace-nowrap"
                         style={{
                           background: "transparent",
                           border: "none",
                           color: "var(--color-vsc-text)",
                         }}
-                        title="Slices of the critical surface as a table"
+                        title={tip}
                       >
                         {label}
                       </button>
@@ -585,6 +605,9 @@ export function ResultsMenu({ isOpen, onActivate, panelHost }: Props) {
     </div>
   );
 }
+
+/** About the export menu's width, to keep it inside the window. */
+const EXPORT_MENU_WIDTH = 220;
 
 /** Export the critical surface's slices of the active model. */
 function exportSliceData(format: "xlsx" | "csv" | "csv-se"): void {
@@ -716,44 +739,6 @@ function ViewSettingsIcon({ size = 28 }: { size?: number }) {
       {/* Center accent dot */}
       <circle cx="12" cy="12" r="1.5" fill="#42a5f5" />
     </svg>
-  );
-}
-
-// ── Small toggle button for ribbon ──
-
-function SmallButton({
-  icon,
-  title,
-  onClick,
-  active,
-  hasDropdown,
-}: {
-  icon: React.ReactNode;
-  title: string;
-  onClick: () => void;
-  active: boolean;
-  hasDropdown?: boolean;
-}) {
-  return (
-    <button
-      title={title}
-      onClick={onClick}
-      className="h-[22px] rounded flex items-center justify-center cursor-pointer"
-      style={{
-        width: hasDropdown ? 30 : 22,
-        color: active
-          ? "var(--color-vsc-text-bright)"
-          : "var(--color-vsc-text-muted)",
-        background: active ? "var(--color-vsc-list-active)" : "transparent",
-        border: "1px solid",
-        borderColor: active ? "var(--color-vsc-accent)" : "transparent",
-      }}
-    >
-      {icon}
-      {hasDropdown && (
-        <span style={{ fontSize: 7, marginLeft: 1, opacity: 0.6 }}>▾</span>
-      )}
-    </button>
   );
 }
 

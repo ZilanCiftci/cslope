@@ -1,4 +1,4 @@
-import { app, BrowserWindow, Menu, dialog, ipcMain, session } from "electron";
+import { app, BrowserWindow, Menu, dialog, ipcMain, session, shell } from "electron";
 import { fileURLToPath } from "node:url";
 import path from "node:path";
 import fs from "node:fs";
@@ -1331,6 +1331,13 @@ ipcMain.on("menu:about", () => {
   // Modal to the main window so it cannot open behind it.
   if (win) dialog.showMessageBox(win, options);
   else dialog.showMessageBox(options);
+});
+
+// Help › Documentation: the website's documentation in the default
+// browser. The address is fixed here; the renderer cannot pass one.
+ipcMain.on("help:openDocumentation", (event) => {
+  if (event.sender !== win?.webContents) return;
+  void shell.openExternal("https://cslope.com/docs");
 });
 
 // Quit when all windows are closed, except on macOS. There, it's common

@@ -160,6 +160,7 @@ const fake = vi.hoisted(() => {
     },
   };
   const Menu = { setApplicationMenu: vi.fn() };
+  const shell = { openExternal: vi.fn(async () => {}) };
   // Preload side, for the channel contract test.
   const ipcRenderer = {
     send: vi.fn(),
@@ -180,7 +181,7 @@ const fake = vi.hoisted(() => {
     state.appListeners.clear();
     FakeBrowserWindow.instances = [];
     app.isPackaged = false;
-    for (const group of [ipcMain, app, dialog, Menu]) {
+    for (const group of [ipcMain, app, dialog, Menu, shell]) {
       for (const fn of Object.values(group)) {
         if (typeof fn === "function" && "mockClear" in fn) {
           (fn as any).mockClear();
@@ -209,6 +210,7 @@ const fake = vi.hoisted(() => {
     dialog,
     session,
     Menu,
+    shell,
     ipcRenderer,
     contextBridge,
     exposed,
@@ -223,6 +225,7 @@ vi.mock("electron", () => {
     dialog: fake.dialog,
     ipcMain: fake.ipcMain,
     session: fake.session,
+    shell: fake.shell,
     ipcRenderer: fake.ipcRenderer,
     contextBridge: fake.contextBridge,
     // Every File has a native path here (a dropped file).
@@ -485,6 +488,14 @@ describe("window controls", () => {
       expect.objectContaining({ title: "About cSlope" }),
     );
     expect(fake.dialog.showMessageBox.mock.calls[0]).toHaveLength(1);
+  });
+
+  it("opens the documentation in the browser, for the main window only", async () => {
+    await loadMain();
+    send("help:openDocumentation", stranger());
+    expect(fake.shell.openExternal).not.toHaveBeenCalled();
+    send("help:openDocumentation", mainWin().webContents);
+    expect(fake.shell.openExternal).toHaveBeenCalledWith("https://cslope.com/docs");
   });
 
   it("shows the About box modal to the main window", async () => {

@@ -134,6 +134,8 @@ declare global {
       // Menu actions
       menuNew: () => void;
       menuAbout: () => void;
+      /** Open the online documentation in the default browser. */
+      openDocumentation: () => void;
       toggleDevTools: () => void;
       // Materials dialog sync
       requestMaterialsState: () => void;

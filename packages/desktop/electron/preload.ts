@@ -82,6 +82,7 @@ contextBridge.exposeInMainWorld("cslope", {
   // Menu actions
   menuNew: () => ipcRenderer.send("menu:new"),
   menuAbout: () => ipcRenderer.send("menu:about"),
+  openDocumentation: () => ipcRenderer.send("help:openDocumentation"),
   toggleDevTools: () => ipcRenderer.send("dev:toggle-devtools"),
   // Materials dialog sync
   requestMaterialsState: () => ipcRenderer.send("materials:requestState"),
