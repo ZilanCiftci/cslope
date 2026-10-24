@@ -512,6 +512,14 @@ describe("drawCanvas — edit mode", () => {
     const miss = draw({ customSearchPlanes: [{ id: "c2", cx: 15, cy: 30, radius: 5 }] });
     const faint = miss.strokes().find((p) => p.state.lineDash.length > 0 && p.segments.some((g) => g.op === "arc"))!;
     expect(faint.state.globalAlpha).toBeLessThan(0.5);
+    // So does a polyline that never reaches the crack depth, as it was given.
+    const shallow = [[5, 10], [15, 9], [25, 5]] as [number, number][];
+    const noCrack = draw({
+      customSearchPlanes: [{ id: "p2", cx: 0, cy: 0, radius: 0, points: shallow }],
+      options: { ...DEFAULT_ANALYSIS_OPTIONS, tensionCrackDepth: 2 },
+    });
+    const faintLine = noCrack.strokes().find((p) => p.state.lineDash.length > 0 && hasPoints(p, shallow.map(([x, y]) => toC(x, y))))!;
+    expect(faintLine.state.globalAlpha).toBeLessThan(0.5);
   });
 
   it("starts a prescribed circle at a fixed-depth crack, the crack dimension standing there", () => {

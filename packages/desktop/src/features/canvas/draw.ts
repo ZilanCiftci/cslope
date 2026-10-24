@@ -1179,6 +1179,9 @@ export function drawCanvas(
         const pts = world.map(([x, y]) => worldToCanvas(x, y, w, h));
         strokeDashed(polyPath(pts), 1);
         for (const seg of segmentsInside(pts, extC, inModel)) labelLines.push({ seg, pad: 2 });
+      } else if (s.points) {
+        // A polyline the analysis has no surface for, faint as it was given.
+        strokeDashed(polyPath(s.points.map(([x, y]) => worldToCanvas(x, y, w, h))), 0.4);
       } else {
         const [cx, cy] = worldToCanvas(s.cx, s.cy, w, h);
         const [ex] = worldToCanvas(s.cx + s.radius, s.cy, w, h);
