@@ -105,6 +105,28 @@ markProjectClean(useAppStore.getState());
 // clipped to the old extent). A deliberate zoom to part of the model is
 // left alone.
 useAppStore.subscribe((state, prev) => {
+  // A result whose circle centre or FOS label (newly shown) falls outside a locked
+  // view that shows the whole model: widen the frame to take them in.
+  const marksShown = (s: AppState) => [s.resultViewSettings.showCentreMarker, s.resultViewSettings.showFosLabel].join();
+  if (
+    state.result &&
+    state.activeModelId === prev.activeModelId &&
+    (state.result !== prev.result || marksShown(state) !== marksShown(prev))
+  ) {
+    const lock = state.resultViewSettings.viewLock;
+    const content = paperContentOf(state);
+    const marks = content.marks ?? [];
+    if (lock && marks.length > 0 && viewLockContains(lock, state.coordinates) && !viewLockContains(lock, marks.map((m) => m.at))) {
+      const history = useAppStore.temporal.getState();
+      const tracking = history.isTracking;
+      history.pause();
+      try {
+        state.setResultViewSettings({ viewLock: modelViewLock(content, state.resultViewSettings) });
+      } finally {
+        if (tracking) history.resume();
+      }
+    }
+  }
   if (
     state.coordinates === prev.coordinates ||
     state.activeModelId !== prev.activeModelId ||

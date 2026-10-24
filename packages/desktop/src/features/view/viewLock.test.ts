@@ -168,3 +168,30 @@ describe("paperViewLock", () => {
     expect(lock.topRight[0]).toBeGreaterThan(14);
   });
 });
+
+describe("critical centre and FOS label on the paper", () => {
+  const coordinates: [number, number][] = [[0, 0], [0, 10], [10, 10], [20, 5], [30, 5], [30, 0]];
+  const surface = { cx: 12, cy: 40, radius: 36, fos: 1.2, entryPoint: [5, 10], exitPoint: [28, 5] } as never;
+
+  it("takes them into the content only when they are shown", () => {
+    const shown = paperContentOf({ coordinates, result: { criticalSurface: surface }, resultViewSettings: { showFosLabel: true } });
+    expect(shown.marks?.[0].at).toEqual([12, 40]);
+    const hidden = paperContentOf({ coordinates, result: { criticalSurface: surface }, resultViewSettings: {} });
+    expect(hidden.marks).toEqual([]);
+    expect(paperContentBounds(shown, 0.1)!.yMax).toBeGreaterThan(40);
+  });
+
+  it("widens a locked view after a run whose centre falls outside it", () => {
+    const rvs = { ...DEFAULT_RESULT_VIEW_SETTINGS, showFosLabel: true, showCentreMarker: true };
+    useAppStore.setState({
+      coordinates,
+      result: null,
+      resultViewSettings: { ...rvs, viewLock: modelViewLock({ coordinates }, rvs) },
+    });
+    expect(useAppStore.getState().resultViewSettings.viewLock!.topRight[1]).toBeLessThan(40);
+    useAppStore.setState({ result: { criticalSurface: surface } as never });
+    const lock = useAppStore.getState().resultViewSettings.viewLock!;
+    expect(lock.topRight[1]).toBeGreaterThan(40);
+    expect(viewLockContains(lock, coordinates)).toBe(true);
+  });
+});

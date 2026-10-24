@@ -248,6 +248,8 @@ describe("ResultSidebar paper frame properties", () => {
           [10, 30],
           [10, 0],
         ],
+        // The result's centre and FOS label are not shown here.
+        resultViewSettings: { ...useAppStore.getState().resultViewSettings, showFosLabel: false, showCentreMarker: false },
       }),
     );
     render(<ResultSidebar />);

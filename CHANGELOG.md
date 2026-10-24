@@ -28,6 +28,7 @@ The first public release.
 - Edit view: coordinate labels sit outside the fill, clear of the boundary lines, entry/exit dots, elements, water lines and custom surfaces, and points off the screen get none; vertex dots are drawn over the search-limit markers; a custom circle shows only from where it enters the ground to where it leaves it, on a halo that keeps it visible on dark layers; a fixed tension-crack depth shows as a labelled dimension on the crest instead of a dashed line along the whole ground; with only custom surfaces analysed the search limits are hidden; long ruler labels are set smaller instead of left out, and load handles are picked over the arrow height as drawn.
 
 ### Results and reporting
+- The paper takes in the critical circle's centre and FOS label when they are shown, widening a fitted frame after a run if needed.
 
 - Critical surface, all surfaces or a factor-of-safety filter, slices, annotations and templates.
 - Plots of slice data and of Fm and Ff against λ; export to PDF and PNG, slice data to Excel and CSV.

@@ -5,6 +5,7 @@
  */
 
 import { surfaceYAtX } from "./surface";
+import { fosLabelAnchor, type DrawableSurface } from "../../utils/arc";
 import { formatMagnitude, formatRange, groupTouchingStrips } from "../rendering/overlay-layout";
 
 type Pt = [number, number];
@@ -73,6 +74,12 @@ export interface PaperContent {
   lineLoads?: { x: number; magnitude: number }[];
   reinforcements?: { x1: number; y1: number; x2: number; y2: number }[];
   piles?: { x1: number; y1: number; x2: number; y2: number }[];
+  /**
+   * Points drawn with a symbol of fixed screen size next to them: the
+   * critical circle's centre with its FOS label (`rightPx` wide to the
+   * right, `upPx` tall above).
+   */
+  marks?: { at: Pt; rightPx: number; upPx: number }[];
 }
 
 /** What a model (or the app state of one) draws on the paper. */
@@ -83,8 +90,19 @@ export function paperContentOf(model: {
   lineLoads?: PaperContent["lineLoads"];
   reinforcements?: PaperContent["reinforcements"];
   piles?: PaperContent["piles"];
+  result?: { criticalSurface: DrawableSurface | null } | null;
+  resultViewSettings?: { showCentreMarker?: boolean; showFosLabel?: boolean };
 }): PaperContent {
+  // The centre and FOS label of the critical surface, when they are shown,
+  // so the paper doesn't cut them off. A circle's centre is drawn only
+  // with the centre marker; the label sits 10 px right of its anchor.
+  const cs = model.result?.criticalSurface ?? null;
+  const rvs = model.resultViewSettings;
+  const marks: PaperContent["marks"] = [];
+  if (cs && rvs?.showFosLabel) marks.push({ at: fosLabelAnchor(cs), rightPx: FOS_LABEL_WIDTH_PX, upPx: 14 });
+  else if (cs && rvs?.showCentreMarker && !cs.points) marks.push({ at: [cs.cx, cs.cy], rightPx: 6, upPx: 6 });
   return {
+    marks,
     coordinates: model.coordinates,
     waterLines: (model.piezometricLine?.lines ?? []).map((l) => l.coordinates),
     udls: (model.udls ?? []).map(({ x1, x2, magnitude }) => ({ x1, x2, magnitude })),
@@ -106,6 +124,8 @@ const LOAD_LABEL_LINE_PX = 15;
 const LOAD_LABEL_CHAR_PX = 8;
 const LOAD_ARROW_HEAD_PX = 8;
 const WATER_SYMBOL_HEIGHT_PX = 16;
+/** "1.234" in bold 12 px with its 10 px gap from the anchor. */
+const FOS_LABEL_WIDTH_PX = 10 + 40;
 
 /**
  * Extents of the content on the paper. `worldPerPx` converts the symbols
@@ -154,6 +174,10 @@ export function paperContentBounds(content: PaperContent, worldPerPx: number): B
 
   for (const r of [...(content.reinforcements ?? []), ...(content.piles ?? [])]) {
     pts.push([r.x1, r.y1], [r.x2, r.y2]);
+  }
+
+  for (const m of content.marks ?? []) {
+    pts.push(m.at, [m.at[0] + m.rightPx * px, m.at[1] + m.upPx * px]);
   }
 
   return boundsOf(pts);
