@@ -42,7 +42,7 @@ export function SearchLimitsSection({
           </div>
           <div className="grid grid-cols-2 gap-2 text-[12px]">
             <label className="flex flex-col gap-0.5">
-              <Label>Min X</Label>
+              <Label>Min X (m)</Label>
               <DraftNumberInput
                 step="0.5"
                 value={limits.entryLeftX}
@@ -51,7 +51,7 @@ export function SearchLimitsSection({
               />
             </label>
             <label className="flex flex-col gap-0.5">
-              <Label>Max X</Label>
+              <Label>Max X (m)</Label>
               <DraftNumberInput
                 step="0.5"
                 value={limits.entryRightX}
@@ -68,7 +68,7 @@ export function SearchLimitsSection({
           </div>
           <div className="grid grid-cols-2 gap-2 text-[12px]">
             <label className="flex flex-col gap-0.5">
-              <Label>Min X</Label>
+              <Label>Min X (m)</Label>
               <DraftNumberInput
                 step="0.5"
                 value={limits.exitLeftX}
@@ -77,7 +77,7 @@ export function SearchLimitsSection({
               />
             </label>
             <label className="flex flex-col gap-0.5">
-              <Label>Max X</Label>
+              <Label>Max X (m)</Label>
               <DraftNumberInput
                 step="0.5"
                 value={limits.exitRightX}
@@ -90,7 +90,7 @@ export function SearchLimitsSection({
             className="text-[10px]"
             style={{ color: "var(--color-vsc-text-muted)" }}
           >
-            X range: {xMin} – {xMax}
+            Model X range: {xMin} – {xMax} m
           </div>
         </div>
       )}

@@ -76,55 +76,200 @@ import {
 import { drawCanvasHatch, drawCanvasHatchLabel } from "../rendering/hatch";
 import { drawPiles, drawReinforcementForces, drawReinforcements } from "./reinforcement-draw";
 import { freeWaterPolygons, mainPiezoLine, piezoExtensions } from "../../utils/piezo";
+import { boxAround, distanceToSegment, LabelLayout, pointLabelCandidates, type Box } from "./label-layout";
 
 const arcPointCache = new WeakMap<object, Map<string, [number, number][]>>();
 
-/** The part of the canvas not covered by the axis rulers (left and bottom). */
-export interface LabelBounds {
-  left: number;
-  top: number;
-  right: number;
-  bottom: number;
+/** A vertex coordinate label waiting to be placed. */
+export interface PointLabel {
+  text: string;
+  px: number;
+  py: number;
+  /** Prefer below the point (its space above is inside the boundary). */
+  below: boolean;
+  /** Hovered or selected: shown even when every position is taken. */
+  force?: boolean;
 }
 
+const POINT_LABEL_FONT = "10px 'Segoe UI', sans-serif";
+const POINT_LABEL_PAD_X = 3;
+const POINT_LABEL_H = 13;
+/** Opacity of the background-coloured plate under a point label. */
+export const POINT_LABEL_PLATE_ALPHA = 0.9;
+
 /**
- * Draws a point's coordinate label above it, or below when `below` is set
- * (points at the bottom of a shape, so the label sits outside the fill).
- * The label is moved inward to stay inside `bounds`, so rulers and the
- * canvas edge don't clip it, and drawn on a plate of the background colour
- * so grid lines, fills and markers under it don't hide it.
+ * Draws a point's coordinate label at the first free position around the
+ * point (see `pointLabelCandidates`): above it, or below for points whose
+ * space above is inside the boundary, then the other side, right, left and
+ * the diagonals. Positions are moved inside the layout bounds, so rulers
+ * and the canvas edge don't clip a label. A label with no free position is
+ * left out unless `force` is set; then it goes to its preferred position.
+ * It sits on a plate of the background colour so grid lines, fills and
+ * markers under it don't hide it. Returns whether it was drawn.
  */
 export function drawPointLabel(
   ctx: CanvasRenderingContext2D,
-  text: string,
-  px: number,
-  py: number,
-  below: boolean,
-  bounds: LabelBounds,
+  label: PointLabel,
+  layout: LabelLayout,
   colors: { text: string; plate: string },
-) {
-  ctx.font = "10px 'Segoe UI', sans-serif";
-  const tw = ctx.measureText(text).width;
-  const padX = 3;
-  const boxW = tw + padX * 2;
-  const boxH = 13;
-  const gap = 7;
-  let top = below ? py + gap : py - gap - boxH;
-  // Flip to the other side when this side leaves the visible area.
-  if (top < bounds.top) top = py + gap;
-  if (top + boxH > bounds.bottom) top = py - gap - boxH;
-  top = Math.max(bounds.top, Math.min(top, bounds.bottom - boxH));
-  const left = Math.max(bounds.left, Math.min(px - boxW / 2, bounds.right - boxW));
+): boolean {
+  ctx.font = POINT_LABEL_FONT;
+  const boxW = ctx.measureText(label.text).width + POINT_LABEL_PAD_X * 2;
+  const box = layout.place(
+    pointLabelCandidates(label.px, label.py, boxW, POINT_LABEL_H, label.below, POINT_RADIUS),
+    label.force,
+  );
+  if (!box) return false;
   ctx.save();
-  ctx.globalAlpha = 0.8;
+  ctx.globalAlpha = POINT_LABEL_PLATE_ALPHA;
   ctx.fillStyle = colors.plate;
-  ctx.fillRect(left, top, boxW, boxH);
+  ctx.fillRect(box.left, box.top, boxW, POINT_LABEL_H);
   ctx.restore();
   ctx.fillStyle = colors.text;
   ctx.textAlign = "left";
   ctx.textBaseline = "middle";
-  ctx.fillText(text, left + padX, top + boxH / 2 + 0.5);
+  ctx.fillText(label.text, box.left + POINT_LABEL_PAD_X, box.top + POINT_LABEL_H / 2 + 0.5);
   ctx.textBaseline = "alphabetic";
+  return true;
+}
+
+/**
+ * Places point labels greedily in their order; hovered and selected labels
+ * that find no free position are drawn last, over the others, at their
+ * preferred position (so hovering doesn't shuffle the other labels). A
+ * label repeating one already drawn (coincident points) is left out.
+ */
+export function drawPointLabels(
+  ctx: CanvasRenderingContext2D,
+  labels: readonly PointLabel[],
+  layout: LabelLayout,
+  colors: { text: string; plate: string },
+): void {
+  const late: PointLabel[] = [];
+  const drawn = new Set<string>();
+  for (const l of labels) {
+    if (drawn.has(l.text) && !l.force) continue;
+    if (drawPointLabel(ctx, { ...l, force: false }, layout, colors)) drawn.add(l.text);
+    else if (l.force) late.push(l);
+  }
+  for (const l of late) drawPointLabel(ctx, l, layout, colors);
+}
+
+/**
+ * Boxes of the symbols and labels drawn over the model in edit view that
+ * vertex labels keep clear of: search-limit markers, load arrows and their
+ * labels, water-table symbols, reinforcement numbers and pile labels.
+ */
+export function editOverlayBoxes(
+  ctx: CanvasRenderingContext2D,
+  p: Pick<
+    DrawCanvasParams,
+    | "w"
+    | "h"
+    | "coordinates"
+    | "orientation"
+    | "analysisLimits"
+    | "udls"
+    | "lineLoads"
+    | "piezometricLine"
+    | "reinforcements"
+    | "piles"
+    | "worldToCanvas"
+    | "surfaceYAtX"
+  >,
+): Box[] {
+  const { w, h, coordinates, surfaceYAtX } = p;
+  const toC = (x: number, y: number) => p.worldToCanvas(x, y, w, h);
+  const boxes: Box[] = [];
+  const textBox = (text: string, font: string, cx: number, bottom: number, height: number) => {
+    ctx.font = font;
+    const tw = ctx.measureText(text).width;
+    boxes.push({ left: cx - tw / 2, top: bottom - height, right: cx + tw / 2, bottom });
+  };
+  const arrow = (cx: number, cy: number) => {
+    boxes.push({ left: cx - 1.5, top: cy - ARROW_HEIGHT_PX, right: cx + 1.5, bottom: cy });
+    boxes.push({ left: cx - ARROW_HEAD_PX, top: cy - ARROW_HEAD_LEN_PX, right: cx + ARROW_HEAD_PX, bottom: cy });
+  };
+  if (coordinates.length >= 3) {
+    // Search-limit markers: a bar across the surface and a triangle on the
+    // side given by the handle (as drawn in the markers block).
+    const lim = p.analysisLimits;
+    if (lim.enabled) {
+      const leftDir = p.orientation === "rtl" ? "left" : "right";
+      const rightDir = p.orientation === "rtl" ? "right" : "left";
+      const markers: [number, string][] = [
+        [lim.entryLeftX, leftDir],
+        [lim.entryRightX, rightDir],
+        [lim.exitLeftX, leftDir],
+        [lim.exitRightX, rightDir],
+      ];
+      for (const [x, dir] of markers) {
+        const y = surfaceYAtX(x);
+        if (y === null) continue;
+        const [cx, cy] = toC(x, y);
+        boxes.push({ left: cx - 1.5, top: cy - MARKER_BAR_H_PX, right: cx + 1.5, bottom: cy + MARKER_BAR_H_PX });
+        const tipX = dir === "right" ? cx - MARKER_SZ_PX * 2 : cx + MARKER_SZ_PX * 2;
+        boxes.push({
+          left: Math.min(cx, tipX),
+          top: cy - MARKER_SZ_PX,
+          right: Math.max(cx, tipX),
+          bottom: cy + MARKER_SZ_PX,
+        });
+      }
+    }
+    // Loads: arrows at the ends of a UDL and at a line load, labels above.
+    const loadFont = "bold 13px sans-serif";
+    for (const u of p.udls) {
+      const y1 = surfaceYAtX(u.x1);
+      const y2 = surfaceYAtX(u.x2);
+      if (y1 === null || y2 === null) continue;
+      const [cx1, cy1] = toC(u.x1, y1);
+      const [cx2, cy2] = toC(u.x2, y2);
+      arrow(cx1, cy1);
+      arrow(cx2, cy2);
+      const top = Math.min(cy1, cy2) - ARROW_HEIGHT_PX;
+      textBox(`q = ${u.magnitude} kPa`, loadFont, (cx1 + cx2) / 2, top - 8, 15);
+    }
+    for (const ll of p.lineLoads) {
+      const y = surfaceYAtX(ll.x);
+      if (y === null) continue;
+      const [cx, cy] = toC(ll.x, y);
+      arrow(cx, cy);
+      textBox(`P = ${ll.magnitude} kN/m`, loadFont, cx, cy - ARROW_HEIGHT_PX - 4, 15);
+    }
+  }
+  // Water-table symbols at the middle of each segment, numbered above when
+  // there are several lines.
+  const lines = p.piezometricLine.lines;
+  for (const line of lines) {
+    for (let i = 0; i + 1 < line.coordinates.length; i++) {
+      const [ax, ay] = toC(line.coordinates[i][0], line.coordinates[i][1]);
+      const [bx, by] = toC(line.coordinates[i + 1][0], line.coordinates[i + 1][1]);
+      const mx = (ax + bx) / 2;
+      const my = (ay + by) / 2;
+      boxes.push({
+        left: mx - PIEZO_BAR_W_PX,
+        top: my - PIEZO_TRI_H_PX - (lines.length > 1 ? 14 : 0),
+        right: mx + PIEZO_BAR_W_PX,
+        bottom: my + PIEZO_BAR_GAP2_PX + 1,
+      });
+    }
+  }
+  // Reinforcement numbers beyond the head, pile labels above the head.
+  const numberFont = "bold 11px sans-serif";
+  (p.reinforcements ?? []).forEach((r, i) => {
+    const [ax, ay] = toC(r.x1, r.y1);
+    const [bx, by] = toC(r.x2, r.y2);
+    const len = Math.hypot(bx - ax, by - ay);
+    if (!(len > 0)) return;
+    const cy = ay - ((by - ay) / len) * 10;
+    textBox(String(i + 1), numberFont, ax - ((bx - ax) / len) * 10, cy + 7, 14);
+  });
+  (p.piles ?? []).forEach((pile, i) => {
+    const [ax, ay] = toC(pile.x1, pile.y1);
+    textBox(`P${i + 1}`, numberFont, ax, ay - 4, 13);
+  });
+  return boxes;
 }
 
 type ArcSurface = DrawableSurface;
@@ -218,6 +363,8 @@ export interface DrawCanvasParams {
   reinforcements?: AppState["reinforcements"];
   piles?: AppState["piles"];
   piezometricLine: AppState["piezometricLine"];
+  /** Prescribed slip surfaces, drawn faintly in edit view. */
+  customSearchPlanes?: AppState["customSearchPlanes"];
   viewScale: number;
   mouseWorld: [number, number] | null;
   hoverHit: PointHit | null;
@@ -267,6 +414,7 @@ export function drawCanvas(
     reinforcements,
     piles,
     piezometricLine,
+    customSearchPlanes,
     viewScale,
     mouseWorld,
     hoverHit,
@@ -289,7 +437,6 @@ export function drawCanvas(
   const POLY_STROKE = cssVar("--color-canvas-poly-stroke");
   const STROKE_ACTIVE = cssVar("--color-canvas-stroke-active");
   const STROKE_INACTIVE = cssVar("--color-canvas-stroke-inactive");
-  const LABEL_COLOR = cssVar("--color-canvas-label");
   const REGION_SELECT = cssVar("--color-canvas-region-select");
   const CROSSHAIR_COLOR = cssVar("--color-canvas-crosshair");
   const PAPER_OUTSIDE_COLOR = cssVar("--color-canvas-paper-outside");
@@ -299,10 +446,13 @@ export function drawCanvas(
   const PAPER_BORDER_COLOR = cssVar("--color-canvas-paper-border");
   const SELECTED_BOUNDARY_COLOR = "#f59e0b";
   const MARKER_BASE = cssVar("--color-canvas-marker") || MARKER_COLOR.hex;
-  const labelBounds: LabelBounds = { left: RULER_SIZE_PX + 2, top: 2, right: w - 2, bottom: h - RULER_SIZE_PX - 2 };
-  const labelColors = { text: LABEL_COLOR, plate: BG_COLOR };
-  // Point labels are drawn after the search-limit markers so no marker covers them.
-  const pointLabels: (() => void)[] = [];
+  // Point labels stay off the rulers (left and bottom) and the canvas edge.
+  const labelBounds: Box = { left: RULER_SIZE_PX + 2, top: 2, right: w - 2, bottom: h - RULER_SIZE_PX - 2 };
+  const labelColors = { text: STROKE_ACTIVE, plate: BG_COLOR };
+  // Point labels are placed after the search-limit markers so no marker
+  // covers them, clear of the point symbols collected here.
+  const pointLabels: PointLabel[] = [];
+  const pointSymbols: Box[] = [];
 
   // Background
   ctx.fillStyle = BG_COLOR;
@@ -712,36 +862,93 @@ export function drawCanvas(
     materialBoundaries.length > 0 &&
     coordinates.length >= 3
   ) {
-    for (const b of materialBoundaries) {
-      if (b.coordinates.length < 2) continue;
-      const isSelectedBoundary =
-        interiorBoundariesDialogOpen &&
-        selectedMaterialBoundaryId !== null &&
-        b.id === selectedMaterialBoundaryId;
-      // Draw polyline
-      ctx.strokeStyle = isSelectedBoundary
-        ? SELECTED_BOUNDARY_COLOR
-        : POLY_STROKE;
-      ctx.lineWidth = isSelectedBoundary ? 2 : 1;
+    // Only the part inside the exterior boundary divides the soil, so the
+    // lines are clipped to it. Definitions often run past the model (to
+    // x = -1, or wider than the ground); while the boundaries are edited the
+    // outside part is shown faint and dashed so the points out there stay
+    // connected to their line, otherwise it is left out.
+    const exteriorPath = () => {
+      coordinates.forEach(([x, y], i) => {
+        const [px, py] = worldToCanvas(x, y, w, h);
+        if (i === 0) ctx.moveTo(px, py);
+        else ctx.lineTo(px, py);
+      });
+      ctx.closePath();
+    };
+    const strokeBoundaries = () => {
+      for (const b of materialBoundaries) {
+        if (b.coordinates.length < 2) continue;
+        const isSelectedBoundary =
+          interiorBoundariesDialogOpen &&
+          selectedMaterialBoundaryId !== null &&
+          b.id === selectedMaterialBoundaryId;
+        ctx.strokeStyle = isSelectedBoundary
+          ? SELECTED_BOUNDARY_COLOR
+          : POLY_STROKE;
+        ctx.lineWidth = isSelectedBoundary ? 2 : 1;
+        ctx.beginPath();
+        b.coordinates.forEach(([x, y], i) => {
+          const [px, py] = worldToCanvas(x, y, w, h);
+          if (i === 0) ctx.moveTo(px, py);
+          else ctx.lineTo(px, py);
+        });
+        ctx.stroke();
+      }
+    };
+    ctx.save();
+    ctx.beginPath();
+    exteriorPath();
+    ctx.clip();
+    strokeBoundaries();
+    ctx.restore();
+    if (editingBoundaries) {
+      ctx.save();
       ctx.beginPath();
-      const [sx, sy] = worldToCanvas(
-        b.coordinates[0][0],
-        b.coordinates[0][1],
-        w,
-        h,
-      );
-      ctx.moveTo(sx, sy);
-      for (let i = 1; i < b.coordinates.length; i++) {
-        const [px, py] = worldToCanvas(
-          b.coordinates[i][0],
-          b.coordinates[i][1],
-          w,
-          h,
-        );
-        ctx.lineTo(px, py);
+      ctx.rect(0, 0, w, h);
+      exteriorPath();
+      ctx.clip("evenodd");
+      ctx.globalAlpha = 0.45;
+      ctx.setLineDash([4, 4]);
+      strokeBoundaries();
+      ctx.restore();
+    }
+  }
+
+  // ── Prescribed slip surfaces (edit view) ────────────────
+  // Custom circles and polylines, faint and dashed, clipped to the model:
+  // the part through the soil is what the analysis checks.
+  if (mode !== "result" && customSearchPlanes?.length && coordinates.length >= 3) {
+    ctx.save();
+    ctx.beginPath();
+    coordinates.forEach(([x, y], i) => {
+      const [px, py] = worldToCanvas(x, y, w, h);
+      if (i === 0) ctx.moveTo(px, py);
+      else ctx.lineTo(px, py);
+    });
+    ctx.closePath();
+    ctx.clip();
+    ctx.strokeStyle = MARKER_BASE;
+    ctx.globalAlpha = 0.6;
+    ctx.lineWidth = 1.5;
+    ctx.setLineDash([8, 5]);
+    for (const s of customSearchPlanes) {
+      ctx.beginPath();
+      if (s.points) {
+        if (s.points.length < 2) continue;
+        s.points.forEach(([x, y], i) => {
+          const [px, py] = worldToCanvas(x, y, w, h);
+          if (i === 0) ctx.moveTo(px, py);
+          else ctx.lineTo(px, py);
+        });
+      } else {
+        if (!(s.radius > 0)) continue;
+        const [cx, cy] = worldToCanvas(s.cx, s.cy, w, h);
+        const [ex] = worldToCanvas(s.cx + s.radius, s.cy, w, h);
+        ctx.arc(cx, cy, Math.abs(ex - cx), 0, Math.PI * 2);
       }
       ctx.stroke();
     }
+    ctx.restore();
   }
 
   // ── UDL loads ────────────────────────────────────────────
@@ -1087,17 +1294,14 @@ export function drawCanvas(
           ctx.stroke();
 
           if (editingPiezo && isActive) {
-            pointLabels.push(() =>
-              drawPointLabel(
-                ctx,
-                `(${plCoords[i][0].toFixed(1)}, ${plCoords[i][1].toFixed(1)})`,
-                px,
-                py,
-                false,
-                labelBounds,
-                labelColors,
-              ),
-            );
+            pointSymbols.push(boxAround(px, py, piezoRadius));
+            pointLabels.push({
+              text: `(${plCoords[i][0].toFixed(1)}, ${plCoords[i][1].toFixed(1)})`,
+              px,
+              py,
+              below: false,
+              force: isHover,
+            });
           }
         }
       }
@@ -1144,17 +1348,14 @@ export function drawCanvas(
 
       // Coordinate label — only when editing.
       if (editingExterior) {
-        pointLabels.push(() =>
-          drawPointLabel(
-            ctx,
-            `(${coordinates[i][0].toFixed(1)}, ${coordinates[i][1].toFixed(1)})`,
-            px,
-            py,
-            labelBelow(px, py),
-            labelBounds,
-            labelColors,
-          ),
-        );
+        pointSymbols.push(boxAround(px, py, extRadius));
+        pointLabels.push({
+          text: `(${coordinates[i][0].toFixed(1)}, ${coordinates[i][1].toFixed(1)})`,
+          px,
+          py,
+          below: labelBelow(px, py),
+          force: isSelected || isHover,
+        });
       }
     }
   }
@@ -1162,6 +1363,13 @@ export function drawCanvas(
   // ── Material boundary points (interactive) ──────────
   if (mode !== "result") {
     const bndRadius = editingBoundaries ? POINT_RADIUS - 1 : 3;
+    // Outside the model a boundary point divides nothing; it is shown (and
+    // can be picked) only while the boundaries are edited.
+    const ext = coordinates.map(([x, y]) => worldToCanvas(x, y, w, h));
+    const onModel = (px: number, py: number) =>
+      ext.length < 3 ||
+      isPointInPolygon(px, py, ext.map((c) => c[0]), ext.map((c) => c[1])) ||
+      ext.some((a, k) => distanceToSegment(px, py, a, ext[(k + 1) % ext.length]) <= 1.5);
     for (const b of materialBoundaries) {
       const color = materials[0]?.color ?? "#888";
       const isSelectedBoundary =
@@ -1179,6 +1387,7 @@ export function drawCanvas(
           w,
           h,
         );
+        if (!editingBoundaries && !onModel(px, py)) continue;
         const isHover =
           editingBoundaries &&
           hoverHit?.kind === "boundary" &&
@@ -1393,7 +1602,25 @@ export function drawCanvas(
     }
   }
 
-  for (const drawLabel of pointLabels) drawLabel();
+  if (pointLabels.length > 0) {
+    const layout = new LabelLayout(labelBounds);
+    for (const b of pointSymbols) layout.reserve(b);
+    for (const b of editOverlayBoxes(ctx, {
+      w,
+      h,
+      coordinates,
+      orientation,
+      analysisLimits,
+      udls,
+      lineLoads,
+      piezometricLine,
+      reinforcements,
+      piles,
+      worldToCanvas,
+      surfaceYAtX,
+    })) layout.reserve(b);
+    drawPointLabels(ctx, pointLabels, layout, labelColors);
+  }
 
   // ── Analysis result surfaces ─────────────────────────
   if (mode === "result" && result) {

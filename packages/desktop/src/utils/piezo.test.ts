@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { freeWaterPolygons, piezoExtensions } from "./piezo";
+import { freeWaterPolygons, nextPiezoPoint, piezoExtensions } from "./piezo";
 
 describe("piezoExtensions", () => {
   const model: [number, number][] = [[0, 0], [0, 10], [10, 10], [20, 5], [30, 5], [30, 0]];
@@ -39,5 +39,32 @@ describe("freeWaterPolygons", () => {
     expect(freeWaterPolygons([[0, 0.0001], [20, 0.0001], [20, 10], [60, 10]], cut)).toEqual([]);
     expect(freeWaterPolygons([[0, 0], [20, 0], [20, 10], [60, 10]], cut)).toEqual([]);
     expect(freeWaterPolygons([[0, 2], [60, 2]], cut)).toHaveLength(1);
+  });
+});
+
+describe("nextPiezoPoint", () => {
+  const model: [number, number][] = [[0, 0], [0, 10], [50, 10], [50, 0]];
+
+  it("starts an empty line at the left edge at mid height", () => {
+    expect(nextPiezoPoint([], model)).toEqual({ index: 0, point: [0, 5] });
+  });
+
+  it("continues a short line 5 m, at most to the right edge", () => {
+    expect(nextPiezoPoint([[0, 4], [30, 4]], model)).toEqual({ index: 2, point: [35, 4] });
+    expect(nextPiezoPoint([[0, 4], [48, 3]], model)).toEqual({ index: 2, point: [50, 3] });
+  });
+
+  it("fills the widest gap once the line reaches the right edge", () => {
+    expect(nextPiezoPoint([[0, 4], [50, 8]], model)).toEqual({ index: 1, point: [25, 6] });
+    const line: [number, number][] = [[0, 4], [10, 4], [40, 6], [50, 6]];
+    expect(nextPiezoPoint(line, model)).toEqual({ index: 2, point: [25, 5] });
+    // Repeated presses never leave the model.
+    let pts = [[0, 4], [50, 8]] as [number, number][];
+    for (let i = 0; i < 6; i++) {
+      const { index, point } = nextPiezoPoint(pts, model);
+      pts = [...pts.slice(0, index), point, ...pts.slice(index)];
+    }
+    expect(Math.max(...pts.map((p) => p[0]))).toBe(50);
+    expect(Math.min(...pts.map((p) => p[0]))).toBe(0);
   });
 });

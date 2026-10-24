@@ -408,14 +408,25 @@ export function ResultsPlotDialogApp() {
           </p>
         </div>
         <div
-          className="text-[10px] px-2 py-1 rounded"
-          style={{
-            background: "var(--color-vsc-surface-tint)",
-            border: "1px solid var(--color-vsc-border)",
-            color: "var(--color-vsc-text-muted)",
-          }}
+          role="status"
+          className="text-[10px] flex items-center gap-1.5 shrink-0"
+          style={{ color: "var(--color-vsc-text-muted)" }}
+          title={
+            isHydrated
+              ? "Showing the main window's latest result"
+              : "Waiting for the main window"
+          }
         >
-          {isHydrated ? "Synced" : "Waiting for state"}
+          <span
+            aria-hidden="true"
+            className="inline-block w-1.5 h-1.5 rounded-full"
+            style={{
+              background: isHydrated
+                ? "var(--color-vsc-success, #3fb950)"
+                : "var(--color-vsc-text-muted)",
+            }}
+          />
+          <span>{isHydrated ? "Synced" : "Waiting for state"}</span>
         </div>
       </div>
 
@@ -484,7 +495,7 @@ export function ResultsPlotDialogApp() {
                       key={`${surface.cx}-${surface.cy}-${surface.radius}-${idx}`}
                       value={idx}
                     >
-                      {tag} - FoS {formatNumber(surface.fos, 4)}
+                      {tag} - FOS {formatNumber(surface.fos, 3)}
                     </option>
                   );
                 })}
@@ -549,7 +560,7 @@ export function ResultsPlotDialogApp() {
           >
             {plotMode === "slipSurface" ? (
               <>
-                <span>FoS: {formatNumber(selectedSurface.fos, 4)}</span>
+                <span>FOS: {formatNumber(selectedSurface.fos, 3)}</span>
                 <span>Slices: {plotData.length}</span>
                 <span>
                   {hasCritical ? "Critical surface" : "Non-critical surface"}
@@ -643,7 +654,7 @@ export function ResultsPlotDialogApp() {
                         const numeric = toFiniteNumber(value);
                         return numeric == null
                           ? `- ${metricMeta.unit}`
-                          : `${formatNumber(numeric, 4)} ${metricMeta.unit}`;
+                          : `${formatNumber(numeric, 3)} ${metricMeta.unit}`;
                       }}
                       labelFormatter={(label) => {
                         const numeric = toFiniteNumber(label);
@@ -658,6 +669,7 @@ export function ResultsPlotDialogApp() {
                     <Line
                       type="monotone"
                       dataKey={metric}
+                      name={metricMeta.label}
                       stroke="#26a69a"
                       strokeWidth={2.2}
                       dot={{ r: 2.5, strokeWidth: 1.2 }}
@@ -739,7 +751,7 @@ export function ResultsPlotDialogApp() {
                       if (numeric == null) {
                         return ["-", name];
                       }
-                      return [formatNumber(numeric, 4), name];
+                      return [formatNumber(numeric, 3), name];
                     }}
                     labelFormatter={(label) => {
                       const numeric = toFiniteNumber(label);

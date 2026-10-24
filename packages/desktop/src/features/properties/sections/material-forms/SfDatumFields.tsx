@@ -3,6 +3,7 @@ import { ExpressionNumericInput } from "../../../../components/ui/ExpressionNume
 import type { StrengthFromDatumModel } from "@cslope/engine";
 import type { MaterialExpressions } from "../../../../store/types";
 import { CutoffField } from "./CutoffField";
+import { UnitWeightSatField } from "./UnitWeightSatField";
 
 interface Props {
   model: StrengthFromDatumModel;
@@ -38,8 +39,12 @@ export function SfDatumFields({
             aria-label="γ (kN/m³)"
           />
         </label>
+        <UnitWeightSatField
+          value={model.unitWeightSat}
+          onChange={(unitWeightSat) => onChange({ unitWeightSat })}
+        />
         <label className="flex flex-col gap-0.5">
-          <Label>Su ref (kPa)</Label>
+          <Label>Su at reference level (kPa)</Label>
           <ExpressionNumericInput
             value={model.suRef}
             expression={modelExpressions?.suRef}
@@ -49,11 +54,13 @@ export function SfDatumFields({
             min={0}
             fallbackValue={0}
             allowNegative={false}
-            aria-label="Su ref (kPa)"
+            aria-label="Su at reference level (kPa)"
           />
         </label>
         <label className="flex flex-col gap-0.5">
-          <Label>Y ref (m)</Label>
+          <Label title="Elevation y where Su has its reference value.">
+            Reference level y (m)
+          </Label>
           <ExpressionNumericInput
             value={model.yRef}
             expression={modelExpressions?.yRef}
@@ -61,12 +68,12 @@ export function SfDatumFields({
             onValueChange={(yRef) => onChange({ yRef })}
             onExpressionChange={(expr) => onExpressionChange("yRef", expr)}
             fallbackValue={0}
-            aria-label="Y ref (m)"
+            aria-label="Reference level y (m)"
           />
         </label>
         <label className="flex flex-col gap-0.5">
-          <Label title="Su = Su ref + (Y ref − y) × rate. A positive rate makes Su increase with depth below the datum.">
-            Rate (kPa/m, + = increase with depth)
+          <Label title="Su = Su at reference level + (reference level − y) × rate. A positive rate makes Su increase with depth below the reference level; a negative one, decrease.">
+            Su increase rate (kPa/m)
           </Label>
           <ExpressionNumericInput
             value={model.rate}
@@ -75,11 +82,12 @@ export function SfDatumFields({
             onValueChange={(rate) => onChange({ rate })}
             onExpressionChange={(expr) => onExpressionChange("rate", expr)}
             fallbackValue={0}
-            aria-label="Rate (kPa/m)"
+            aria-label="Su increase rate (kPa/m)"
           />
         </label>
         <CutoffField
           value={model.suMax}
+          rate={model.rate}
           onChange={(suMax) => onChange({ suMax })}
         />
       </div>

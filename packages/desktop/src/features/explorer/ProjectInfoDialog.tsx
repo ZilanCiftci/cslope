@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import type { ProjectInfo } from "../../store/app-store";
 
 interface Props {
@@ -94,6 +94,19 @@ export function ProjectInfoDialog({ initialInfos, onSave, onClose }: Props) {
     onSave(patch);
   };
 
+  // Escape acts as Cancel.  Captured on the window so the canvas and other
+  // document-level shortcuts underneath the modal do not also react to it.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== "Escape") return;
+      e.preventDefault();
+      e.stopPropagation();
+      onClose();
+    };
+    window.addEventListener("keydown", onKey, true);
+    return () => window.removeEventListener("keydown", onKey, true);
+  }, [onClose]);
+
   const inputClassName =
     "w-full px-2 py-1.5 text-xs rounded border bg-[var(--color-vsc-input-bg)] text-[var(--color-vsc-text)] focus:border-[var(--color-vsc-accent)] outline-none";
 
@@ -117,8 +130,11 @@ export function ProjectInfoDialog({ initialInfos, onSave, onClose }: Props) {
   );
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 backdrop-blur-sm">
       <div
+        role="dialog"
+        aria-modal="true"
+        aria-label="Model Properties"
         className="w-[480px] rounded-lg shadow-2xl flex flex-col max-h-[90vh]"
         style={{
           background: "var(--color-vsc-bg)",
@@ -136,6 +152,8 @@ export function ProjectInfoDialog({ initialInfos, onSave, onClose }: Props) {
           </div>
           <button
             onClick={onClose}
+            aria-label="Close"
+            title="Close (Esc)"
             className="w-6 h-6 flex items-center justify-center hover:bg-[var(--color-vsc-list-hover)] rounded"
           >
             ✕

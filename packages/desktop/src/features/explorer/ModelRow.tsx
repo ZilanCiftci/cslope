@@ -164,7 +164,9 @@ export function ModelRow({
           onClick={(e) => e.stopPropagation()}
         />
       ) : (
-        <span className="truncate flex-1">{model.name}</span>
+        <span className="truncate flex-1" title={model.name}>
+          {model.name}
+        </span>
       )}
     </div>
   );
