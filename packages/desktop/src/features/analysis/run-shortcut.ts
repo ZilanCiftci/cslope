@@ -7,15 +7,14 @@ export function isRunShortcut(e: KeyboardEvent): boolean {
   return e.key === "Enter" && (e.ctrlKey || e.metaKey);
 }
 
+/** Input types that take no typed text: their keys can be app shortcuts. */
+const NON_TEXT_INPUTS = new Set(["checkbox", "radio", "range", "button", "submit", "reset", "color", "file", "image"]);
+
 /** A field the user types into: its keys are not app shortcuts. */
 function isTypingTarget(target: EventTarget | null): boolean {
   if (!(target instanceof HTMLElement)) return false;
-  return (
-    target.tagName === "INPUT" ||
-    target.tagName === "TEXTAREA" ||
-    target.tagName === "SELECT" ||
-    target.isContentEditable
-  );
+  if (target instanceof HTMLInputElement) return !NON_TEXT_INPUTS.has(target.type);
+  return target.tagName === "TEXTAREA" || target.isContentEditable;
 }
 
 /**

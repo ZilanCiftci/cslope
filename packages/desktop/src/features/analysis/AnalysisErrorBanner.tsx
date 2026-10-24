@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useAppStore } from "../../store/app-store";
 import { isElectron } from "../../utils/is-electron";
 import { isNoSlipSurfaceError } from "./analysis-error";
@@ -13,12 +13,22 @@ export function AnalysisErrorBanner() {
   const errorMessage = useAppStore((s) => s.errorMessage);
   const activeModelId = useAppStore((s) => s.activeModelId);
   const setActiveSection = useAppStore((s) => s.setActiveSection);
+  // The "click a region to assign" hint sits at the top centre too.
+  const assigning = useAppStore((s) => s.assigningMaterialId !== null);
 
   const errorKey =
     runState === "error" ? `${activeModelId}\n${errorMessage ?? ""}` : null;
   const [dismissedKey, setDismissedKey] = useState<string | null>(null);
-  // A new run shows its error again, even when it is the same message.
-  if (runState === "running" && dismissedKey !== null) setDismissedKey(null);
+  // A new run shows its error again, even when it is the same message. The
+  // store is watched directly: a run that fails at once (an expression
+  // error) sets "running" and "error" in one call, so no render sees it.
+  useEffect(
+    () =>
+      useAppStore.subscribe((s, prev) => {
+        if (s.runState === "running" && prev.runState !== "running") setDismissedKey(null);
+      }),
+    [],
+  );
 
   if (mode !== "edit" || errorKey === null || dismissedKey === errorKey) {
     return null;
@@ -33,7 +43,7 @@ export function AnalysisErrorBanner() {
     <div
       role="alert"
       data-testid="analysis-error-banner"
-      className="absolute top-3 left-1/2 -translate-x-1/2 z-20 flex items-start gap-2.5 pl-3 pr-1.5 py-2 rounded-md shadow-lg text-[12px]"
+      className={`absolute ${assigning ? "top-14" : "top-3"} left-1/2 -translate-x-1/2 z-20 flex items-start gap-2.5 pl-3 pr-1.5 py-2 rounded-md shadow-lg text-[12px]`}
       style={{
         width: "min(640px, calc(100% - 32px))",
         background:

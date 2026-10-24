@@ -44,6 +44,16 @@ describe("run shortcut", () => {
     expect(run).toHaveBeenCalledTimes(2);
   });
 
+  it("runs from a checkbox, which takes no typed text", () => {
+    const run = vi.fn();
+    render(<Harness run={run} />);
+    const box = document.createElement("input");
+    box.type = "checkbox";
+    document.body.appendChild(box);
+    key({ key: "F5" }, box);
+    expect(run).toHaveBeenCalledTimes(1);
+  });
+
   it("does not run while typing, on key repeat or under a modal", () => {
     const run = vi.fn();
     render(<Harness run={run} />);

@@ -63,6 +63,19 @@ describe("AnalysisErrorBanner", () => {
     expect(screen.getByRole("alert")).toBeInTheDocument();
   });
 
+  it("shows again after a new run that fails at once with the same error", () => {
+    render(<AnalysisErrorBanner />);
+    fail(NO_SURFACE);
+    fireEvent.click(screen.getByRole("button", { name: "Dismiss" }));
+    // "running" and "error" in one store update batch, as runAnalysis does
+    // when the inputs can't be built: no render sees "running".
+    act(() => {
+      useAppStore.setState({ runState: "running", errorMessage: null });
+      useAppStore.setState({ runState: "error", errorMessage: NO_SURFACE });
+    });
+    expect(screen.getByRole("alert")).toBeInTheDocument();
+  });
+
   it("recognises the no-slip-surface error", () => {
     expect(isNoSlipSurfaceError(NO_SURFACE)).toBe(true);
     expect(isNoSlipSurfaceError("No valid slip surface at the mean values.")).toBe(true);

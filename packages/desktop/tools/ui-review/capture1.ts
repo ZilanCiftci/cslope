@@ -63,9 +63,9 @@ await page.waitForTimeout(500);
 for (const t of ["File", "Model", "Results", "Help"]) await step("tab " + t, async () => { await tab(t); await shot(page, `01-tab-${t}`); });
 
 const modelButtons: [string, number, string][] = [
-  ["Exterior", 0, "geometry"], ["Interior", 0, "interior"], ["Define", 0, "materials"], ["Assign", 0, "assign"],
-  ["UDL", 0, "udl"], ["Line loads", 0, "lineloads"], ["Reinforcement", 0, "reinforcement"], ["Piezometric Lines", 0, "piezo"],
-  ["Define", 1, "parameters"], ["Search limits", 0, "searchlimits"], ["Custom planes", 0, "customplanes"], ["Options", 0, "options"],
+  ["Exterior", 0, "geometry"], ["Interior", 0, "interior"], ["Materials", 0, "materials"], ["Assign", 0, "assign"],
+  ["UDL", 0, "udl"], ["Line loads", 0, "lineloads"], ["Reinforcement", 0, "reinforcement"], ["Piezometric lines", 0, "piezo"],
+  ["Parameters", 0, "parameters"], ["Search limits", 0, "searchlimits"], ["Custom planes", 0, "customplanes"], ["Options", 0, "options"],
 ];
 for (const [text, nth, name] of modelButtons) {
   await step("dialog " + name, async () => {

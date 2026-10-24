@@ -138,7 +138,7 @@ function MoveMenu({
   return (
     <div
       ref={ref}
-      className="fixed z-50 py-1 rounded-md shadow-xl min-w-[160px]"
+      className="fixed z-[100] py-1 rounded-md shadow-xl min-w-[160px]"
       style={{
         left: x,
         top: y,

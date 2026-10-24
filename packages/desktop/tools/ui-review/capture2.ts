@@ -33,12 +33,12 @@ await step("udl/lineloads filled", async () => {
   w = await openDialog("Model", "Line loads"); await clickAll(w, "+ Add Line Load", 2); await shotWindow(w, "52-dlg-lineloads-filled"); await truncation(w, "lineloads");
 });
 await step("piezo filled", async () => {
-  const w = await openDialog("Model", "Piezometric Lines"); await clickAll(w, "Add", 2); await w.waitForTimeout(300);
+  const w = await openDialog("Model", "Piezometric lines"); await clickAll(w, "Add", 2); await w.waitForTimeout(300);
   await clickAll(w, "+ Add Point", 3);
   await shotWindow(w, "53-dlg-piezo-filled"); await truncation(w, "piezo");
 });
 await step("parameters filled", async () => {
-  const w = await openDialog("Model", "Define", 1); await clickAll(w, "+ Add Parameter", 3); await shotWindow(w, "54-dlg-parameters-filled"); await truncation(w, "parameters");
+  const w = await openDialog("Model", "Parameters"); await clickAll(w, "+ Add Parameter", 3); await shotWindow(w, "54-dlg-parameters-filled"); await truncation(w, "parameters");
 });
 await step("custom planes filled", async () => {
   const w = await openDialog("Model", "Custom planes"); await clickAll(w, "+ Add Search Plane", 2); await clickAll(w, "+ Add Non-circular Surface", 1);
@@ -50,7 +50,7 @@ await step("options all on", async () => {
   const w = await openDialog("Model", "Options"); await shotWindow(w, "57-dlg-options-all"); await truncation(w, "options");
 });
 await step("materials every model", async () => {
-  const w = await openDialog("Model", "Define");
+  const w = await openDialog("Model", "Materials");
   await shotWindow(w, "58-dlg-materials-long"); await truncation(w, "materials-list");
   const sel = w.locator("label").filter({ has: w.getByText("Material Model", { exact: true }) }).locator("select").first();
   const fallback = w.locator("select").first();

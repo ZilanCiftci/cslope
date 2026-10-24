@@ -24,7 +24,7 @@ await step("rename", async () => { await page.getByText("T-ACADS Simple", { exac
 
 // Empty project and an error run
 await step("new project", async () => { await S((s) => s.newProject()); await page.waitForTimeout(500); await shot("84-new-project"); });
-await step("new project dialogs", async () => { const w = await openDialog("Model", "Define"); await shotWindow(w, "84-new-materials"); });
+await step("new project dialogs", async () => { const w = await openDialog("Model", "Materials"); await shotWindow(w, "84-new-materials"); });
 await step("run error", async () => {
   await S((s) => { s.setAnalysisLimits?.({ enabled: true, entryLeftX: 49, entryRightX: 50, exitLeftX: 0, exitRightX: 1 }); s.runAnalysis(); });
   await page.waitForTimeout(3000); await shot("85-run-error");
@@ -53,7 +53,7 @@ await step("dark", async () => {
   await page.getByRole("button", { name: "Switch to dark mode" }).click(); await page.waitForTimeout(500);
   await tab("Model"); await shot("88-dark-result");
   await S((s) => s.setMode("edit")); await page.waitForTimeout(300); await shot("88-dark-edit");
-  for (const [t, b, n] of [["Model", "Define", "materials"], ["Model", "Options", "options"], ["Model", "Reinforcement", "reinforcement"]] as const) {
+  for (const [t, b, n] of [["Model", "Materials", "materials"], ["Model", "Options", "options"], ["Model", "Reinforcement", "reinforcement"]] as const) {
     const w = await openDialog(t, b); await shotWindow(w, `88-dark-dlg-${n}`, false); await H.closeOthers();
   }
   await tab("Results"); await page.mouse.click(642, 110).catch(() => {});

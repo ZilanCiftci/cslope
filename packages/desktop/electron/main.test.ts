@@ -63,6 +63,8 @@ const fake = vi.hoisted(() => {
     static instances: FakeBrowserWindow[] = [];
     static getAllWindows = () =>
       FakeBrowserWindow.instances.filter((w) => !w.destroyed);
+    static fromWebContents = (wc: unknown) =>
+      FakeBrowserWindow.instances.find((w) => w.webContents === wc) ?? null;
     options: any;
     webContents = new FakeWebContents();
     destroyed = false;
@@ -81,6 +83,18 @@ const fake = vi.hoisted(() => {
       this.maximized = false;
     });
     isMaximized = () => this.maximized;
+    /** Content size and a 30 px frame, as the window options give them. */
+    contentHeight = 0;
+    minHeight = 0;
+    getContentSize = () => [this.options?.width ?? 0, this.contentHeight];
+    getSize = () => [this.options?.width ?? 0, this.contentHeight + 30];
+    setContentSize = vi.fn((_w: number, h: number) => {
+      this.contentHeight = h;
+    });
+    getMinimumSize = () => [this.options?.minWidth ?? 0, this.minHeight];
+    setMinimumSize = vi.fn((_w: number, h: number) => {
+      this.minHeight = h;
+    });
     isDestroyed = () => this.destroyed;
     setTitle = vi.fn((t: string) => {
       this.title = t;
@@ -102,6 +116,8 @@ const fake = vi.hoisted(() => {
     constructor(options: any) {
       super();
       this.options = options;
+      this.contentHeight = options?.height ?? 0;
+      this.minHeight = options?.minHeight ?? 0;
       FakeBrowserWindow.instances.push(this);
       state.appListeners.get("browser-window-created")?.forEach((fn) =>
         fn({}, this),
@@ -651,6 +667,47 @@ const PAIRS: [prefix: string, openChannel: string][] = [
   ["parameters", "window:openParametersDialog"],
   ["viewSettings", "window:openViewSettingsDialog"],
 ];
+
+describe("dialog window height", () => {
+  it("fits a dialog to its content, within its opening height", async () => {
+    await loadMain();
+    const dlg = openDialog("window:openOptionsDialog");
+    const open = dlg.contentHeight;
+    send("window:fitDialogHeight", dlg.webContents, 300);
+    expect(dlg.contentHeight).toBe(300);
+    expect(dlg.minHeight).toBeLessThanOrEqual(330);
+    // Content grows again (rows added): back up, but not past the opening height.
+    send("window:fitDialogHeight", dlg.webContents, 5000);
+    expect(dlg.contentHeight).toBe(open);
+    // Never below 240 px.
+    send("window:fitDialogHeight", dlg.webContents, 10);
+    expect(dlg.contentHeight).toBe(240);
+  });
+
+  it("ignores the main window, other senders and non-numbers", async () => {
+    await loadMain();
+    const win = mainWin();
+    const before = win.contentHeight;
+    send("window:fitDialogHeight", win.webContents, 300);
+    send("window:fitDialogHeight", stranger(), 300);
+    expect(win.contentHeight).toBe(before);
+    const dlg = openDialog("window:openOptionsDialog");
+    const open = dlg.contentHeight;
+    for (const bad of [Number.NaN, Infinity, "300", null]) {
+      send("window:fitDialogHeight", dlg.webContents, bad);
+    }
+    expect(dlg.contentHeight).toBe(open);
+  });
+
+  it("stops fitting once the user has resized the window", async () => {
+    await loadMain();
+    const dlg = openDialog("window:openOptionsDialog");
+    send("window:fitDialogHeight", dlg.webContents, 300);
+    dlg.emit("will-resize", {});
+    send("window:fitDialogHeight", dlg.webContents, 500);
+    expect(dlg.contentHeight).toBe(300);
+  });
+});
 
 describe("dialog state routing", () => {
   it.each(PAIRS)(

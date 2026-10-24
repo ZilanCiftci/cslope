@@ -43,7 +43,7 @@ await step("dark", async () => {
   await page.getByRole("button", { name: "Switch to dark mode" }).click(); await page.waitForTimeout(500);
   await tab("Results"); await shot("94-dark-result");
   await S((s) => s.setMode("edit")); await page.waitForTimeout(300); await tab("Model"); await shot("94-dark-edit");
-  for (const [b, n] of [["Define", "materials"], ["Options", "options"], ["Piezometric Lines", "piezo"]] as const) {
+  for (const [b, n] of [["Materials", "materials"], ["Options", "options"], ["Piezometric lines", "piezo"]] as const) {
     const w = await openDialog("Model", b); await shotWindow(w, `94-dark-dlg-${n}`, false); await H.closeOthers();
   }
   await S((s) => s.setMode("result")); await page.waitForTimeout(300);

@@ -8,8 +8,10 @@
  * body's own height swapped for the height of what is in it. Null when the
  * page doesn't have that layout.
  */
+export const DIALOG_BODY_SELECTOR = ".h-screen > .flex-1.overflow-y-auto";
+
 export function naturalDialogHeight(doc: Document, windowHeight: number): number | null {
-  const body = doc.querySelector<HTMLElement>(".h-screen > .flex-1.overflow-y-auto");
+  const body = doc.querySelector<HTMLElement>(DIALOG_BODY_SELECTOR);
   if (!body) return null;
   const top = body.getBoundingClientRect().top;
   let bottom = top;

@@ -34,7 +34,7 @@ import type {
   ResultViewSettings,
   UdlRow,
 } from "./store/types";
-import { naturalDialogHeight } from "./utils/dialog-height";
+import { DIALOG_BODY_SELECTOR, naturalDialogHeight } from "./utils/dialog-height";
 
 interface LoadsStatePayload {
   udls: UdlRow[];
@@ -325,17 +325,45 @@ function App() {
   }, [isAnyDialogWindow]);
 
   useEffect(() => {
-    // Dialog windows open at a fixed height; once the dialog has its state
-    // and has laid out, shrink the window to the content. Dialogs whose
-    // content grows a lot as it's edited keep their height.
+    // Dialog windows open at a fixed height. Fit the window to the content
+    // once it has laid out, and again whenever the content changes size
+    // (its state arriving, rows added or removed); the main process keeps
+    // it within the opening height. Dialogs whose content changes a lot
+    // with the selection keep their height.
     const keepsHeight =
       isMaterialsDialogWindow || isReinforcementDialogWindow || isResultsPlotDialogWindow;
     if (!isElectron || !isAnyDialogWindow || keepsHeight) return;
-    const timer = setTimeout(() => {
-      const height = naturalDialogHeight(document, window.innerHeight);
-      if (height) window.cslope.fitDialogHeight(height);
-    }, 400);
-    return () => clearTimeout(timer);
+    if (typeof ResizeObserver === "undefined") return;
+    let sent = 0;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const fit = () => {
+      clearTimeout(timer);
+      timer = setTimeout(() => {
+        const height = naturalDialogHeight(document, window.innerHeight);
+        if (height && Math.abs(height - sent) > 2) {
+          sent = height;
+          window.cslope.fitDialogHeight(height);
+        }
+      }, 150);
+    };
+    const sizes = new ResizeObserver(fit);
+    const watchBody = () => {
+      sizes.disconnect();
+      const body = document.querySelector(DIALOG_BODY_SELECTOR);
+      for (const child of Array.from(body?.children ?? [])) sizes.observe(child);
+    };
+    const tree = new MutationObserver(() => {
+      watchBody();
+      fit();
+    });
+    tree.observe(document.body, { childList: true, subtree: true });
+    watchBody();
+    fit();
+    return () => {
+      clearTimeout(timer);
+      sizes.disconnect();
+      tree.disconnect();
+    };
   }, [
     isAnyDialogWindow,
     isMaterialsDialogWindow,

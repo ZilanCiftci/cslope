@@ -747,19 +747,29 @@ ipcMain.on("app:ready", () => {
   showMainWindow();
 });
 
-// A dialog window opens at a fixed height and, once laid out, asks to
-// shrink to its content so short dialogs aren't mostly empty. Only ever
-// shrinks, and only dialog windows; the user can still resize.
+// A dialog window opens at a fixed height. Once laid out, and again when
+// its content changes (rows added or removed), it asks to fit its content,
+// so short dialogs aren't mostly empty and growing ones grow back. Never
+// taller than it opened, never below 240 px, only dialog windows, and no
+// longer once the user has resized the window.
+const dialogOpenHeight = new WeakMap<BrowserWindow, number>();
+const userSizedDialogs = new WeakSet<BrowserWindow>();
 ipcMain.on("window:fitDialogHeight", (event, height: unknown) => {
-  const dialog = BrowserWindow.fromWebContents(event.sender);
-  if (!dialog || dialog === win || typeof height !== "number" || !Number.isFinite(height)) return;
-  const [width, current] = dialog.getContentSize();
-  const target = Math.round(Math.max(240, height));
-  if (target >= current) return;
-  const frame = dialog.getSize()[1] - current;
-  const [minWidth, minHeight] = dialog.getMinimumSize();
-  if (minHeight > target + frame) dialog.setMinimumSize(minWidth, target + frame);
-  dialog.setContentSize(width, target);
+  const child = BrowserWindow.fromWebContents(event.sender);
+  if (!child || child === win || typeof height !== "number" || !Number.isFinite(height)) return;
+  if (userSizedDialogs.has(child)) return;
+  const [width, current] = child.getContentSize();
+  if (!dialogOpenHeight.has(child)) {
+    dialogOpenHeight.set(child, current);
+    // Emitted for resizes by the user only (not for setContentSize).
+    child.on("will-resize", () => userSizedDialogs.add(child));
+  }
+  const target = Math.round(Math.min(dialogOpenHeight.get(child)!, Math.max(240, height)));
+  if (Math.abs(target - current) < 2) return;
+  const frame = child.getSize()[1] - current;
+  const [minWidth, minHeight] = child.getMinimumSize();
+  if (minHeight > target + frame) child.setMinimumSize(minWidth, target + frame);
+  child.setContentSize(width, target);
 });
 
 // ── Content Security Policy ──────────────────────────────────
