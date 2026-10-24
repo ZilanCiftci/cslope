@@ -31,6 +31,10 @@ The first public release.
 - Plots of slice data and of Fm and Ff against λ; export to PDF and PNG, slice data to Excel and CSV.
 - The PDF report ends with an analysis summary: method, search, water and tension crack, partial factors, materials and loads. With partial factors, the PDF and the slice data mark design values.
 
+### Interface
+
+- A failed run shows its error over the edit canvas and in the status bar, with a shortcut to the search limits when no slip surface was found. F5 or Ctrl+Enter runs the analysis; Escape closes the dialog windows and Model Properties. A new project starts with a neutral "Model 1" instead of an example's name and title.
+
 ### Verification
 
 - 177 verification problems with 356 reference values from the literature and from other programs, run by the automated tests on every change.

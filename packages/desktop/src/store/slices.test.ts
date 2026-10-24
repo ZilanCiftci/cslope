@@ -69,7 +69,7 @@ describe("store slices", () => {
     const initial = useAppStore.getState();
     const initialId = initial.activeModelId;
     expect(initial.models.find((m) => m.id === initialId)?.name).toBe(
-      "T-ACADS Simple",
+      "Model 1",
     );
 
     initial.addModel("Model B");
@@ -441,9 +441,18 @@ describe("store slices", () => {
     const next = useAppStore.getState();
     expect(next.models).toHaveLength(1);
     expect(next.models.find((m) => m.id === next.activeModelId)?.name).toBe(
-      "T-ACADS Simple",
+      "Model 1",
     );
     expect(next.runState).toBe("idle");
+    // A new project carries no example's identity into exported headers.
+    const model = next.models[0];
+    for (const info of [next.projectInfo, model.projectInfo!]) {
+      expect(info.title).not.toMatch(/T-ACADS/);
+      expect(info.subtitle).toBe("");
+      expect(info.author).toBe("");
+      expect(JSON.stringify(info)).not.toMatch(/Published|FOS/);
+    }
+    expect(next.coordinates.length).toBeGreaterThan(2);
   });
 
   // ── modelsSlice: loadProject ─────────────────────────────────────

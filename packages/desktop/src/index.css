@@ -172,6 +172,18 @@
     accent-color: var(--color-vsc-accent);
   }
 
+  /* ── Focus ring: keyboard navigation only ─────────────── */
+  /* In the accent colour instead of the system one.  After a click it stays
+     hidden even when a key is pressed, until a navigation key moves focus
+     (utils/focus-source.ts). */
+  :focus-visible {
+    outline: 2px solid var(--color-vsc-accent);
+    outline-offset: -2px;
+  }
+  html[data-focus-source="pointer"] :focus-visible {
+    outline: none;
+  }
+
   /* ── Buttons — universal transitions ──────────────────── */
   button {
     transition: background 0.15s ease, color 0.15s ease,

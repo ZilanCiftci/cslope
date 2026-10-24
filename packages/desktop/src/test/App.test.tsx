@@ -9,7 +9,7 @@ describe("App — VS Code dark layout", () => {
     const state = useAppStore.getState();
     return (
       state.models.find((m) => m.id === state.activeModelId)?.name ??
-      "T-ACADS Simple"
+      "Model 1"
     );
   };
 

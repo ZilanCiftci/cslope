@@ -104,19 +104,29 @@ export const mapModelToState = (model: ModelEntry) => ({
 });
 
 export const INITIAL_MODEL_ID = "model-initial";
-const STARTER_MODEL_NAME = "T-ACADS Simple";
+/** Name of the one model in a new project. */
+export const STARTER_MODEL_NAME = "Model 1";
+/** The example whose simple geometry a new project starts from. */
+const STARTER_GEOMETRY_EXAMPLE = "T-ACADS Simple";
 
+/**
+ * The model of a new project: the geometry, material and settings of a
+ * simple example, without the example's identity (name, title, published
+ * result, author), which would otherwise end up in exported headers.
+ */
 function createStarterModel(id: string): ModelEntry {
   const starter =
-    BENCHMARK_MODELS.find((m) => m.name === STARTER_MODEL_NAME) ??
+    BENCHMARK_MODELS.find((m) => m.name === STARTER_GEOMETRY_EXAMPLE) ??
     BENCHMARK_MODELS[0];
   if (!starter) {
-    return createDefaultModel(id, DEFAULT_MODEL_NAME);
+    return createDefaultModel(id, STARTER_MODEL_NAME);
   }
 
   return {
     ...cloneModelEntry(starter),
     id,
+    name: STARTER_MODEL_NAME,
+    projectInfo: createDefaultProjectInfo(),
     mode: "edit",
     runState: "idle",
     progress: 0,
