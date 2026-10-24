@@ -29,6 +29,7 @@ import {
   EXIT_DOT_COLOR,
   LINE_LOAD_COLOR,
   PIEZO_COLOR,
+  POND_ARROW_WIDTH_PX,
   UDL_LOAD_COLOR,
 } from "../rendering/style-spec";
 
@@ -507,8 +508,24 @@ describe("drawPiezometricLines", () => {
     const rec = recorder();
     drawPiezometricLines(rec.pdf, tf, [line("a", 7)], COORDS, true, "a");
     expect(rec.balanced()).toBe(true);
-    expect(rec.of("setGState")).toHaveLength(1);
+    expect(rec.of("setGState")).toHaveLength(2); // pond, load arrows
     expect(rec.of("fill").length).toBeGreaterThanOrEqual(2); // pond + symbol
+  });
+
+  it("draws load arrows in the pond with their tips on the ground", () => {
+    const rec = recorder();
+    drawPiezometricLines(rec.pdf, tf, [line("a", 7)], COORDS, true, "a");
+    const width = rec.of("setLineWidth").findIndex((c) => c.args[0] === POND_ARROW_WIDTH_PX * tf.mmPerPx);
+    expect(width).toBeGreaterThanOrEqual(0);
+    const shafts = rec.linesIn(PIEZO_COLOR.rgb).filter((l) => Math.abs(l[3] - l[1]) > 1e-9 || l[0] !== l[2]);
+    // Pond over the toe, 10 mm (40 px) deep: shafts at most 20 px, pointing down at the ground.
+    const arrows = shafts.filter(([x0, y0, x1, y1]) => y1 > y0 && Math.hypot(x1 - x0, y1 - y0) <= 20 * tf.mmPerPx);
+    expect(arrows.length).toBeGreaterThanOrEqual(4);
+    for (const [, y0] of arrows) expect(y0).toBeGreaterThan(150 - 7 * 5);
+    expect(rec.balanced()).toBe(true);
+    const dry = recorder();
+    drawPiezometricLines(dry.pdf, tf, [line("a", 7)], COORDS, false, "a");
+    expect(dry.of("setLineWidth").some((c) => c.args[0] === POND_ARROW_WIDTH_PX * tf.mmPerPx)).toBe(false);
   });
 
   it("dashes the horizontal continuation and resets the dash", () => {

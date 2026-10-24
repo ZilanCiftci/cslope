@@ -51,12 +51,23 @@ function polygonArea(poly: Pt[]): number {
   return Math.abs(a) / 2;
 }
 
+/** A pond: its water surface and the ground under it, both left to right. */
+export interface Pond {
+  water: Pt[];
+  ground: Pt[];
+}
+
 /**
  * Areas where the water line lies above the ground: the free water the
  * analysis loads the slope with. Each polygon runs along the water surface
  * and back along the ground.
  */
 export function freeWaterPolygons(line: Pt[], model: Pt[]): Pt[][] {
+  return freeWaterPonds(line, model).map((p) => [...p.water, ...[...p.ground].reverse()]);
+}
+
+/** The free water of freeWaterPolygons, with the water surface and the ground apart. */
+export function freeWaterPonds(line: Pt[], model: Pt[]): Pond[] {
   if (line.length < 2 || model.length < 3) return [];
   const xs = model.map((p) => p[0]);
   const xMin = Math.min(...xs);
@@ -65,7 +76,7 @@ export function freeWaterPolygons(line: Pt[], model: Pt[]): Pt[][] {
   const breaks = [...new Set([...xs, ...line.map((p) => p[0])])]
     .filter((x) => x >= xMin && x <= xMax)
     .sort((a, b) => a - b);
-  const polygons: Pt[][] = [];
+  const ponds: Pond[] = [];
   let water: Pt[] = [];
   let ground: Pt[] = [];
   // Slivers (water on a vertical face, or a line lying on the ground) are
@@ -73,8 +84,8 @@ export function freeWaterPolygons(line: Pt[], model: Pt[]): Pt[][] {
   // plot size.
   const minArea = 1e-4 * (xMax - xMin) ** 2;
   const close = () => {
-    const poly = [...water, ...ground.reverse()];
-    if (water.length >= 2 && polygonArea(poly) > minArea) polygons.push(poly);
+    const poly = [...water, ...[...ground].reverse()];
+    if (water.length >= 2 && polygonArea(poly) > minArea) ponds.push({ water, ground });
     water = [];
     ground = [];
   };
@@ -116,7 +127,7 @@ export function freeWaterPolygons(line: Pt[], model: Pt[]): Pt[][] {
     if (db <= 0) close();
   }
   close();
-  return polygons;
+  return ponds;
 }
 
 /**

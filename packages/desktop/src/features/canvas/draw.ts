@@ -67,6 +67,8 @@ import {
   PIEZO_BAR_W_PX,
   PIEZO_COLOR,
   POND_COLOR,
+  POND_ARROW_OPACITY,
+  POND_ARROW_WIDTH_PX,
   POND_OPACITY,
   PIEZO_TRI_HALF_PX,
   PIEZO_TRI_H_PX,
@@ -97,7 +99,8 @@ import {
 import type { PiezoSymbol } from "../rendering/piezo-layout";
 import { layoutLimitMarkers, layoutRangeDots } from "../rendering/search-markers";
 import { crackMarkerPosition, limitMarkerBoxes, limitMarkerGeometry, rangeMarkerEnds } from "./marker-geometry";
-import { freeWaterPolygons, mainPiezoLine, piezoExtensions } from "../../utils/piezo";
+import { freeWaterPonds, mainPiezoLine, piezoExtensions } from "../../utils/piezo";
+import { pondArrowLayout, type PondArrow } from "../rendering/pond-arrows";
 import {
   isDarkFill,
   meanThickness,
@@ -339,6 +342,25 @@ function getArcCache(result: AppState["result"]) {
   const created = new Map<string, [number, number][]>();
   arcPointCache.set(key, created);
   return created;
+}
+
+/** Load arrows in ponded water (pondArrowLayout), in the water line's colour. */
+function drawPondArrows(ctx: CanvasRenderingContext2D, arrows: PondArrow[], paperZoom: number) {
+  ctx.strokeStyle = PIEZO_COLOR.hex;
+  ctx.fillStyle = PIEZO_COLOR.hex;
+  ctx.lineWidth = POND_ARROW_WIDTH_PX * paperZoom;
+  for (const a of arrows) {
+    ctx.beginPath();
+    ctx.moveTo(a.tail[0], a.tail[1]);
+    ctx.lineTo(a.base[0], a.base[1]);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(a.tip[0], a.tip[1]);
+    ctx.lineTo(a.b1[0], a.b1[1]);
+    ctx.lineTo(a.b2[0], a.b2[1]);
+    ctx.closePath();
+    ctx.fill();
+  }
 }
 
 function getArcKey(surf: ArcSurface): string {
@@ -1137,14 +1159,12 @@ export function drawCanvas(
     const piezoBlue = PIEZO_COLOR.hex;
     // Free water standing on the ground (from the main line).
     if (piezometricLine.freeWater !== false) {
+      const ponds = freeWaterPonds(mainPiezoLine(piezometricLine)!.coordinates, coordinates);
       ctx.fillStyle = POND_COLOR.hex;
       ctx.globalAlpha = POND_OPACITY;
-      for (const poly of freeWaterPolygons(
-        mainPiezoLine(piezometricLine)!.coordinates,
-        coordinates,
-      )) {
+      for (const { water, ground } of ponds) {
         ctx.beginPath();
-        poly.forEach(([x, y], i) => {
+        [...water, ...[...ground].reverse()].forEach(([x, y], i) => {
           const [px, py] = worldToCanvas(x, y, w, h);
           if (i === 0) ctx.moveTo(px, py);
           else ctx.lineTo(px, py);
@@ -1152,6 +1172,18 @@ export function drawCanvas(
         ctx.closePath();
         ctx.fill();
       }
+      // Load arrows onto the ground, clear of the water-table symbols.
+      ctx.globalAlpha = POND_ARROW_OPACITY;
+      drawPondArrows(
+        ctx,
+        pondArrowLayout(
+          ponds,
+          (x, y) => worldToCanvas(x, y, w, h),
+          paperZoom,
+          drawnPiezoSymbols.flat().map((sym) => piezoSymbolBox(sym, paperZoom, multiLine)),
+        ),
+        paperZoom,
+      );
       ctx.globalAlpha = 1;
     }
     for (let lineIdx = 0; lineIdx < piezometricLine.lines.length; lineIdx++) {

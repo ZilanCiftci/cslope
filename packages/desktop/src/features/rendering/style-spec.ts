@@ -82,6 +82,26 @@ export const PIEZO_BAR_GAP1_PX = 3;
 /** Piezometric bar gap 2 (between first and second bar). */
 export const PIEZO_BAR_GAP2_PX = 6;
 
+// ── Load arrows in ponded water (logical px) ───────────────────
+
+/** Arc length along the ground between the arrows. */
+export const POND_ARROW_SPACING_PX = 50;
+/** Longest arrow. */
+export const POND_ARROW_MAX_PX = 20;
+/** Arrow length as a fraction of the local water depth. */
+export const POND_ARROW_DEPTH_FRACTION = 0.7;
+/** No arrow where the water is shallower than this. */
+export const POND_ARROW_MIN_DEPTH_PX = 8;
+/** Arrowhead length and half-width. */
+export const POND_ARROW_HEAD_PX = 4;
+export const POND_ARROW_HEAD_HALF_PX = 2;
+/** Shaft width. */
+export const POND_ARROW_WIDTH_PX = 0.8;
+/** Gap kept to a water-table symbol. */
+export const POND_ARROW_CLEARANCE_PX = 3;
+/** Opacity of the arrows (PIEZO_COLOR): subtle, under the result. */
+export const POND_ARROW_OPACITY = 0.6;
+
 // ── Slip surface / critical surface ────────────────────────────
 
 /** Opacity for non-critical slip surface arcs. */

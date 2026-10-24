@@ -71,6 +71,8 @@ import {
   PIEZO_BAR_W_PX,
   PIEZO_COLOR,
   POND_COLOR,
+  POND_ARROW_OPACITY,
+  POND_ARROW_WIDTH_PX,
   POND_OPACITY,
   PIEZO_TRI_HALF_PX,
   PIEZO_TRI_H_PX,
@@ -82,7 +84,9 @@ import {
   MODEL_HATCH_PATTERNS,
 } from "../rendering/style-spec";
 import { drawPdfHatch, drawPdfHatchLabel } from "../rendering/hatch";
-import { freeWaterPolygons, mainPiezoLine, piezoExtensions } from "../../utils/piezo";
+import { freeWaterPonds, mainPiezoLine, piezoExtensions } from "../../utils/piezo";
+import { pondArrowLayout } from "../rendering/pond-arrows";
+import { piezoSymbolBox } from "../canvas/overlay-geometry";
 import type { AnalysisOptions, AnalysisResult } from "@cslope/engine";
 import type {
   AnalysisLimitsState,
@@ -675,15 +679,60 @@ export function drawPiezometricLines(
   const taken: [number, number][] = [];
 
   // Free water standing on the ground (from the main line), as on canvas.
+  // Water-table symbols spaced along each line, as on the canvas (placed
+  // first: the load arrows in the water keep clear of them).
+  const symbolsOf = lines.map((line) =>
+    line.coordinates.length < 2
+      ? []
+      : piezoSymbolLayout(line.coordinates, tf.worldToPdf, {
+          unit: tf.mmPerPx,
+          model: modelCoordinates,
+          critical,
+          taken,
+          avoid: [...avoid.placed, ...obstacles.avoid],
+          avoidLines: [...avoid.obstacles, ...obstacles.avoidLines],
+          softLines: obstacles.softLines,
+          slipMass: obstacles.slipMass,
+          numbered: multiLine,
+        }),
+  );
   const mainLine = mainPiezoLine({ lines, mainLineId });
   if (freeWater && mainLine) {
+    const ponds = freeWaterPonds(mainLine.coordinates, modelCoordinates);
     pdf.setFillColor(...POND_COLOR.rgb);
     setOpacity(pdf, POND_OPACITY);
-    for (const poly of freeWaterPolygons(mainLine.coordinates, modelCoordinates)) {
-      const pts = poly.map(([wx, wy]) => tf.worldToPdf(wx, wy));
+    for (const { water, ground } of ponds) {
+      const pts = [...water, ...[...ground].reverse()].map(([wx, wy]) => tf.worldToPdf(wx, wy));
       pdfPath(pdf, buildPolylinePath(pts, true), "f");
     }
     resetOpacity(pdf);
+    // Load arrows onto the ground, as on the canvas.
+    const arrows = pondArrowLayout(
+      ponds,
+      tf.worldToPdf,
+      tf.mmPerPx,
+      symbolsOf.flat().map((sym) => piezoSymbolBox(sym, tf.mmPerPx, multiLine)),
+    );
+    if (arrows.length > 0) {
+      setOpacity(pdf, POND_ARROW_OPACITY);
+      pdf.setDrawColor(...PIEZO_COLOR.rgb);
+      pdf.setFillColor(...PIEZO_COLOR.rgb);
+      pdf.setLineWidth(POND_ARROW_WIDTH_PX * tf.mmPerPx);
+      for (const a of arrows) {
+        pdf.line(a.tail[0], a.tail[1], a.base[0], a.base[1]);
+        pdfPath(
+          pdf,
+          [
+            { op: "m", c: a.tip },
+            { op: "l", c: a.b1 },
+            { op: "l", c: a.b2 },
+            { op: "h", c: [] },
+          ],
+          "f",
+        );
+      }
+      resetOpacity(pdf);
+    }
   }
 
   for (let lineIdx = 0; lineIdx < lines.length; lineIdx++) {
@@ -712,18 +761,7 @@ export function drawPiezometricLines(
     const barGap1 = PIEZO_BAR_GAP1_PX * tf.mmPerPx;
     const barGap2 = PIEZO_BAR_GAP2_PX * tf.mmPerPx;
 
-    // Water-table symbols spaced along the line, as on the canvas.
-    for (const { x: mx, y: my, bars } of piezoSymbolLayout(line.coordinates, tf.worldToPdf, {
-      unit: tf.mmPerPx,
-      model: modelCoordinates,
-      critical,
-      taken,
-      avoid: [...avoid.placed, ...obstacles.avoid],
-      avoidLines: [...avoid.obstacles, ...obstacles.avoidLines],
-      softLines: obstacles.softLines,
-      slipMass: obstacles.slipMass,
-      numbered: multiLine,
-    })) {
+    for (const { x: mx, y: my, bars } of symbolsOf[lineIdx]) {
       const triTop = my - triH;
       pdf.setFillColor(...PIEZO_COLOR.rgb);
       const triOps: PathOp[] = [

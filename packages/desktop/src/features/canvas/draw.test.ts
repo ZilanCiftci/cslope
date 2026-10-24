@@ -21,6 +21,8 @@ import {
   MARKER_COLOR,
   PIEZO_COLOR,
   POND_COLOR,
+  POND_ARROW_OPACITY,
+  POND_ARROW_WIDTH_PX,
   POND_OPACITY,
   SLIP_SURFACE_OPACITY,
   UDL_LOAD_COLOR,
@@ -819,6 +821,36 @@ describe("drawCanvas — edit mode", () => {
     const xs = pathPoints(water[0]).map(([x]) => canvasToWorld(x, 0, W, H)[0]);
     expect(Math.min(...xs)).toBeCloseTo(16, 6);
     expect(Math.max(...xs)).toBeCloseTo(30, 6);
+  });
+
+  it("draws load arrows in the pond pointing at the ground", () => {
+    const piezometricLine = {
+      ...DEFAULT_PIEZO_LINE,
+      lines: [{ id: "a", name: "a", color: "#000", coordinates: [[0, 7], [30, 7]] as [number, number][] }],
+      activeLineId: "a",
+    };
+    const rec = draw({ piezometricLine });
+    const heads = rec
+      .fills(PIEZO_COLOR.hex)
+      .filter((p) => p.state.globalAlpha === POND_ARROW_OPACITY && p.segments.length === 4);
+    expect(heads.length).toBeGreaterThanOrEqual(4);
+    for (const head of heads) {
+      const [tx, ty] = canvasToWorld(...pathPoints(head)[0], W, H);
+      expect(ty).toBeCloseTo(surfaceYAtXFromCoordinates(COORDS, tx)!, 6); // tip on the ground
+    }
+    // Shafts: at most 20 px, within the 40 px deep water over the flat toe.
+    const shafts = rec
+      .strokes(PIEZO_COLOR.hex)
+      .filter((p) => p.state.globalAlpha === POND_ARROW_OPACITY && p.state.lineWidth === POND_ARROW_WIDTH_PX);
+    expect(shafts).toHaveLength(heads.length);
+    for (const sh of shafts) {
+      const [a, b] = pathPoints(sh);
+      expect(Math.hypot(b[0] - a[0], b[1] - a[1])).toBeLessThanOrEqual(20);
+      expect(canvasToWorld(...a, W, H)[1]).toBeLessThan(7);
+    }
+    // None without free water.
+    const dry = draw({ piezometricLine: { ...piezometricLine, freeWater: false } });
+    expect(dry.fills(PIEZO_COLOR.hex).filter((p) => p.state.globalAlpha === POND_ARROW_OPACITY)).toHaveLength(0);
   });
 
   it("draws entry/exit markers pointing into each range in any orientation and data order", () => {
