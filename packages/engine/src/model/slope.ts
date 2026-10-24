@@ -250,6 +250,11 @@ export class Slope {
     return { x: this._surfaceLineX, y: this._surfaceLineY };
   }
 
+  /** Vertices of the external boundary polygon. */
+  get externalBoundaryXY(): { x: readonly number[]; y: readonly number[] } {
+    return { x: this._externalBoundaryPx, y: this._externalBoundaryPy };
+  }
+
   get waterRLXY(): { x: number[]; y: number[] } | null {
     return this._waterRLXY;
   }

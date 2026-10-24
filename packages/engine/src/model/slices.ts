@@ -635,6 +635,18 @@ export function getSlices(
   const bArray = slicesX.slice(0, -1).map((v, i) => slicesX[i + 1] - v);
   const sxArray = slicesX.slice(0, -1).map((v, i) => (v + slicesX[i + 1]) / 2);
 
+  // A slice whose base lies below the ground but outside the model (below
+  // its base) has no soil to take its strength from: the surface is not
+  // admissible. The slices are cut at every crossing with the material
+  // regions, so a base is wholly inside or wholly outside, and its centre
+  // decides. A base above the ground (where a circle leaves the soil
+  // through a face and re-enters it below) is left to the slices.
+  const baseLift = 1e-6 * Math.max(1, slope.modelHeight);
+  for (const sx of sxArray) {
+    const y = baseY(sx);
+    if (y < slope.getExternalYIntersection(sx) - baseLift && !slope.isInsideExternalBoundary(sx, y + baseLift)) return [];
+  }
+
   // Batch compute loads
   const udlData: [number, number, number][] = slope.udls.map((u) => [
     u.x1,

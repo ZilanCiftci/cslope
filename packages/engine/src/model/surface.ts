@@ -269,7 +269,131 @@ export function isAdmissiblePolyline(
       if (segY > surf.y[k] + 1e-6) return false;
     }
   }
+  // Nor may it pass below the model: at a re-entrant corner of the base
+  // both ends can be inside with the segment outside between them.
+  if (boundaryCornerInMass(slope, points[0][0], points[points.length - 1][0], (x) => polylineYAt(points, x))) {
+    return false;
+  }
   return true;
+}
+
+/**
+ * The part of the external boundary that is not ground: its corners and
+ * its edges (an edge between two ground vertices is ground), with the
+ * x-range of the ground and a length tolerance. Cached per slope.
+ */
+interface BelowGround {
+  corners: Pt[];
+  edges: [Pt, Pt][];
+  xMin: number;
+  xMax: number;
+  tol: number;
+}
+
+const belowGroundCache = new WeakMap<Slope, { px: readonly number[]; sx: readonly number[]; value: BelowGround }>();
+
+function belowGroundBoundary(slope: Slope, surf: { x: number[]; y: number[] }): BelowGround {
+  const { x: bx, y: by } = slope.externalBoundaryXY;
+  const cached = belowGroundCache.get(slope);
+  if (cached && cached.px === bx && cached.sx === surf.x) return cached.value;
+  const onGround = new Set(surf.x.map((x, i) => `${x},${surf.y[i]}`));
+  const ground = bx.map((x, k) => onGround.has(`${x},${by[k]}`));
+  const n = bx.length;
+  const value: BelowGround = {
+    corners: [],
+    edges: [],
+    xMin: Math.min(...surf.x),
+    xMax: Math.max(...surf.x),
+    tol: 1e-6 * Math.max(1, slope.modelHeight),
+  };
+  for (let k = 0; k < n; k++) {
+    if (!ground[k]) value.corners.push([bx[k], by[k]]);
+    const j = (k + 1) % n;
+    if (!(ground[k] && ground[j])) value.edges.push([[bx[k], by[k]], [bx[j], by[j]]]);
+  }
+  belowGroundCache.set(slope, { px: bx, sx: surf.x, value });
+  return value;
+}
+
+/** Strictly below the ground at x (at a vertical face below its lower end). */
+function isBelowGround(surf: { x: number[]; y: number[] }, x: number, y: number, tol: number): boolean {
+  return y < Math.min(polylineYFrom(surf.x, surf.y, x, "left"), polylineYFrom(surf.x, surf.y, x, "right")) - tol;
+}
+
+/**
+ * True when a corner of the model's external boundary (other than one on
+ * the ground) lies strictly inside the sliding mass, between the slip
+ * surface `baseY` and the ground from x0 to x1. Next to any boundary point
+ * lies ground outside the model, so the mass then is not wholly inside it:
+ * the surface leaves the model, typically below a re-entrant corner of its
+ * base, where the vertices of a polyline and samples along a circle can
+ * all lie inside. For a polyline this is exact: a straight segment between
+ * two points inside the model leaves it only around a corner.
+ */
+export function boundaryCornerInMass(
+  slope: Slope,
+  x0: number,
+  x1: number,
+  baseY: (x: number) => number,
+): boolean {
+  const surf = slope.surfaceLineXY;
+  if (!surf) return false;
+  const { corners, xMin, xMax, tol } = belowGroundBoundary(slope, surf);
+  for (const [x, y] of corners) {
+    if (x <= x0 + 1e-9 || x >= x1 - 1e-9 || x <= xMin || x >= xMax) continue;
+    if (y > baseY(x) + tol && isBelowGround(surf, x, y, tol)) return true;
+  }
+  return false;
+}
+
+/**
+ * True when a circular surface from x0 to x1 passes outside the model:
+ * a boundary corner lies in the sliding mass (boundaryCornerInMass), or
+ * a point of a boundary edge below the ground lies strictly inside the
+ * circle. The second catches a circle that cuts a little below a sloping
+ * base between the points sampled along it, where it touches no corner.
+ * On a straight edge the points inside the circle, if any, include the
+ * point nearest the centre, so that point decides.
+ */
+export function circleLeavesModel(
+  slope: Slope,
+  cx: number,
+  cy: number,
+  radius: number,
+  x0: number,
+  x1: number,
+): boolean {
+  const arcY = (x: number) => cy - Math.sqrt(Math.max(0, radius ** 2 - (x - cx) ** 2));
+  if (boundaryCornerInMass(slope, x0, x1, arcY)) return true;
+  const surf = slope.surfaceLineXY;
+  if (!surf) return false;
+  const { edges, tol } = belowGroundBoundary(slope, surf);
+  const lo = x0 + 1e-9;
+  const hi = x1 - 1e-9;
+  for (const [[ax, ay], [bx, by]] of edges) {
+    const dx = bx - ax;
+    const dy = by - ay;
+    // The part of the edge within the span, as a parameter range.
+    let t0 = 0;
+    let t1 = 1;
+    if (Math.abs(dx) < 1e-12) {
+      if (ax <= lo || ax >= hi) continue;
+    } else {
+      const ta = (lo - ax) / dx;
+      const tb = (hi - ax) / dx;
+      t0 = Math.max(0, Math.min(ta, tb));
+      t1 = Math.min(1, Math.max(ta, tb));
+      if (t0 > t1) continue;
+    }
+    const len2 = dx * dx + dy * dy;
+    if (len2 === 0) continue;
+    const t = Math.min(t1, Math.max(t0, ((cx - ax) * dx + (cy - ay) * dy) / len2));
+    const px = ax + t * dx;
+    const py = ay + t * dy;
+    if (Math.hypot(px - cx, py - cy) >= radius - tol) continue;
+    if (isBelowGround(surf, px, py, tol)) return true;
+  }
+  return false;
 }
 
 /** Points of a circular arc between entry and exit as a polyline. */

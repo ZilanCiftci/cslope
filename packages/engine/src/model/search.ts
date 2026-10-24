@@ -12,6 +12,7 @@ import { isPointInPolygon } from "../math/polygon";
 import { getYAtX } from "../math/interpolation";
 import type { Material } from "../types/index";
 import type { Slope, SearchPlane } from "./slope";
+import { circleLeavesModel } from "./surface";
 
 interface SearchGridSpec {
   numCircles: number;
@@ -124,9 +125,12 @@ function isPlaneWithinExternalBoundary(
   // The lowest point, where a circle tangent to the base touches it.
   const [x0, x1] = [Math.min(plane.lc[0], plane.rc[0]), Math.max(plane.lc[0], plane.rc[0])];
   if (plane.cx > x0 && plane.cx < x1) {
-    return slope.isInsideExternalBoundary(plane.cx, plane.cy - plane.radius + 1e-6);
+    if (!slope.isInsideExternalBoundary(plane.cx, plane.cy - plane.radius + 1e-6)) return false;
   }
-  return true;
+  // Between the samples the arc can pass below a re-entrant corner of the
+  // base, or a little below a sloping base (V053: 751 of 3015 first-pass
+  // circles more than 0.1 mm below it, up to 8.7 cm).
+  return !circleLeavesModel(slope, plane.cx, plane.cy, plane.radius, x0, x1);
 }
 
 /**
