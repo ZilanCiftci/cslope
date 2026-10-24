@@ -76,7 +76,8 @@ describe("constants", () => {
   it("has correct default analysis options", () => {
     expect(DEFAULT_ANALYSIS_OPTIONS.slices).toBe(25);
     expect(DEFAULT_ANALYSIS_OPTIONS.iterations).toBe(1000);
-    expect(DEFAULT_ANALYSIS_OPTIONS.refinedIterations).toBe(0);
+    // As the desktop app (store defaults): refinement on.
+    expect(DEFAULT_ANALYSIS_OPTIONS.refinedIterations).toBe(500);
     expect(DEFAULT_ANALYSIS_OPTIONS.tolerance).toBe(0.005);
     expect(DEFAULT_ANALYSIS_OPTIONS.maxIterations).toBe(15);
     expect(DEFAULT_ANALYSIS_OPTIONS.method).toBe("Bishop");

@@ -23,7 +23,7 @@ export interface AnalysisOptions {
   slices: number;
   /** Number of search iterations (500–100,000, default: 1000). */
   iterations: number;
-  /** Extra second-pass refinement iterations around critical candidates (0–100,000). */
+  /** Extra second-pass refinement iterations around critical candidates (0–100,000, default: 500). */
   refinedIterations: number;
   /** Minimum horizontal distance between entry and exit points (m). */
   minFailureDist: number;
@@ -124,7 +124,9 @@ export type PorePressureHead = "phreatic-correction" | "vertical";
 export const DEFAULT_ANALYSIS_OPTIONS: AnalysisOptions = {
   slices: 25,
   iterations: 1000,
-  refinedIterations: 0,
+  // As in the desktop app: without refinement the minimum of the first
+  // grid is 0.5–4 % too high.
+  refinedIterations: 500,
   minFailureDist: 0,
   tolerance: 0.005,
   maxIterations: 15,
