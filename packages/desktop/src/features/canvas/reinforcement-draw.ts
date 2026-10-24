@@ -347,15 +347,15 @@ export function forceLabelPieces(
 
 /** The ÷ sign centred at (cx, cy): a bar (with its stroke width) and two dots. */
 export function divideSign(cx: number, cy: number, em: number): { bar: Seg; width: number; dots: Pt[]; r: number } {
-  const half = 0.26 * em;
+  const half = 0.27 * em;
   return {
     bar: [cx - half, cy, cx + half, cy],
-    width: 0.11 * em,
+    width: 0.12 * em,
     dots: [
-      [cx, cy - 0.29 * em],
-      [cx, cy + 0.29 * em],
+      [cx, cy - 0.33 * em],
+      [cx, cy + 0.33 * em],
     ],
-    r: 0.1 * em,
+    r: 0.13 * em,
   };
 }
 

@@ -299,7 +299,7 @@ describe("drawReinforcementForces", () => {
     const [[d1x, d1y]] = pathPoints(dots[0]);
     const [[d2x, d2y]] = pathPoints(dots[1]);
     expect(d1x).toBeCloseTo(d2x, 9);
-    expect(Math.abs(d1y - d2y)).toBeCloseTo(0.58 * 20, 9);
+    expect(Math.abs(d1y - d2y)).toBeCloseTo(0.66 * 20, 9);
     expect(d1x).toBeGreaterThan(value.x);
     expect(d1x).toBeLessThan(fos.x);
     // Arrow 56 px long (28 × zoom) to the left, moved 11 px (5.5 × zoom) up.
