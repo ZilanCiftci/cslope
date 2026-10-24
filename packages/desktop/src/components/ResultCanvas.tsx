@@ -97,6 +97,8 @@ export function ResultCanvas() {
     gridSnapSize,
     projectInfo,
     parameters,
+    options,
+    customPlanesOnly,
   } = useCanvasModelState();
   const setRvs = useAppStore((s) => s.setResultViewSettings);
   const {
@@ -409,6 +411,8 @@ export function ResultCanvas() {
       projectInfo,
       parameters,
       analysisLimits,
+      options,
+      customPlanesOnly,
       udls,
       lineLoads,
       reinforcements,
@@ -461,6 +465,8 @@ export function ResultCanvas() {
       selectedResultObject,
       projectInfo,
       parameters,
+      options,
+      customPlanesOnly,
     ],
   );
 

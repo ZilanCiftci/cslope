@@ -82,6 +82,8 @@ export function EditCanvas() {
     gridSnapSize,
     projectInfo,
     parameters,
+    options,
+    customPlanesOnly,
   } = useCanvasModelState();
   const activeSection = useAppStore((s) => s.activeSection);
   const {
@@ -273,6 +275,8 @@ export function EditCanvas() {
       projectInfo,
       parameters,
       analysisLimits,
+      options,
+      customPlanesOnly,
       udls,
       lineLoads,
       reinforcements,
@@ -325,6 +329,8 @@ export function EditCanvas() {
       selectedResultObject,
       projectInfo,
       parameters,
+      options,
+      customPlanesOnly,
     ],
   );
 

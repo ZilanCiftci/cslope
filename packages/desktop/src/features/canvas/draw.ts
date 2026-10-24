@@ -48,6 +48,8 @@ import {
   ANNOTATION_LINE_HEIGHT,
   ANNOTATION_SCALE_DIVISOR,
   COLOR_BAR_NUM_TICKS,
+  CRACK_WATER_OPACITY,
+  CRACK_WATER_WIDTH_PX,
   CRITICAL_SURFACE_COLOR,
   ENTRY_DOT_COLOR,
   ENTRY_EXIT_DOT_RADIUS_PX,
@@ -59,6 +61,8 @@ import {
   MARKER_BAR_H_PX,
   MARKER_COLOR,
   MARKER_SZ_PX,
+  MIN_SLIP_MASS_BAND_OPACITY,
+  MIN_SLIP_MASS_PX,
   PIEZO_BAR_GAP1_PX,
   PIEZO_BAR_GAP2_PX,
   PIEZO_BAR_W_PX,
@@ -67,6 +71,7 @@ import {
   POND_OPACITY,
   PIEZO_TRI_HALF_PX,
   PIEZO_TRI_H_PX,
+  SLICE_LINE_ON_DARK_COLOR,
   SLICE_LINE_OPACITY,
   SLICE_LINE_WIDTH_PX,
   SLIP_SURFACE_OPACITY,
@@ -76,6 +81,18 @@ import {
 import { drawCanvasHatch, drawCanvasHatchLabel } from "../rendering/hatch";
 import { drawPiles, drawReinforcementForces, drawReinforcements } from "./reinforcement-draw";
 import { freeWaterPolygons, mainPiezoLine, piezoExtensions } from "../../utils/piezo";
+import {
+  groundBetween,
+  isDarkFill,
+  meanThickness,
+  sameRange,
+  searchRange,
+  sliceBoundaries,
+  sliceDensityFactor,
+  slipMassPolygon,
+  splitVerticalByRegion,
+  tensionCrackFace,
+} from "../../utils/slip-mass";
 
 const arcPointCache = new WeakMap<object, Map<string, [number, number][]>>();
 
@@ -213,6 +230,13 @@ export interface DrawCanvasParams {
   projectInfo: AppState["projectInfo"];
   parameters: AppState["parameters"];
   analysisLimits: AppState["analysisLimits"];
+  /** Analysis options (tension crack); optional for callers without one. */
+  options?: AppState["options"];
+  /**
+   * Only prescribed surfaces are analysed (no search): the result shows no
+   * search limits.
+   */
+  customPlanesOnly?: boolean;
   udls: AppState["udls"];
   lineLoads: AppState["lineLoads"];
   reinforcements?: AppState["reinforcements"];
@@ -250,7 +274,6 @@ export function drawCanvas(
     mode,
     result,
     resultViewSettings,
-    orientation,
     coordinates,
     materials,
     materialBoundaries,
@@ -262,6 +285,8 @@ export function drawCanvas(
     projectInfo,
     parameters,
     analysisLimits,
+    options,
+    customPlanesOnly = false,
     udls,
     lineLoads,
     reinforcements,
@@ -1203,24 +1228,72 @@ export function drawCanvas(
     }
   }
 
+  // ── Tension crack depth (edit mode) ─────────────────────
+  // A crack of fixed depth shows as a dashed line at that depth under the
+  // ground surface. (An automatic depth depends on the soil where the
+  // crack opens; the result shows that crack.)
+  const editCrackDepth = options?.tensionCrackAuto ? 0 : (options?.tensionCrackDepth ?? 0);
+  if (mode !== "result" && editCrackDepth > 0 && coordinates.length >= 3) {
+    const xs = coordinates.map((c) => c[0]);
+    const ground = groundBetween(coordinates, Math.min(...xs), Math.max(...xs));
+    if (ground.length >= 2) {
+      ctx.save();
+      // Inside the model only (a crack deeper than a step stays in the soil).
+      ctx.beginPath();
+      coordinates.forEach(([bx, by], i) => {
+        const [px, py] = worldToCanvas(bx, by, w, h);
+        if (i === 0) ctx.moveTo(px, py);
+        else ctx.lineTo(px, py);
+      });
+      ctx.closePath();
+      ctx.clip();
+      ctx.strokeStyle = LABEL_COLOR;
+      ctx.globalAlpha = 0.7;
+      ctx.lineWidth = 1;
+      ctx.setLineDash([6, 4]);
+      ctx.beginPath();
+      ground.forEach(([gx, gy], i) => {
+        const [px, py] = worldToCanvas(gx, gy - editCrackDepth, w, h);
+        if (i === 0) ctx.moveTo(px, py);
+        else ctx.lineTo(px, py);
+      });
+      ctx.stroke();
+      ctx.restore();
+    }
+  }
+
   // ── Entry / Exit range markers ──────────────────────────
-  if (analysisLimits.enabled && coordinates.length >= 3) {
-    // Helper: draw an arrow marker on the surface.
-    //   dir = "right" means >|   dir = "left" means |<
+  // Not in the result of an analysis of prescribed surfaces only (nothing
+  // was searched). In the result they are lighter and drawn before the
+  // sliding mass, so the critical surface stays on top of them.
+  if (
+    analysisLimits.enabled &&
+    coordinates.length >= 3 &&
+    !(mode === "result" && customPlanesOnly)
+  ) {
+    type LimitHandle = "entryLeftX" | "entryRightX" | "exitLeftX" | "exitRightX";
+    const markerAlpha = mode === "result" ? 0.55 : 1;
+
+    // Bar on the surface with a triangle outside the range pointing into
+    // it, towards `towardCanvasX` (the range's other end on screen):
+    // >|  at the start of a range, |<  at its end, in any orientation.
+    // Only the bar for a range of zero width (towardCanvasX null).
     const drawArrow = (
       worldX: number,
       worldY: number,
-      dir: "left" | "right",
-      handle: "entryLeftX" | "entryRightX" | "exitLeftX" | "exitRightX",
-      baseColor: string = MARKER_BASE,
-      activeColor: string = EXIT_DOT_COLOR.hex,
+      towardCanvasX: number | null,
+      handles: LimitHandle[],
+      activeColor: string,
     ) => {
       const [cx, cy] = worldToCanvas(worldX, worldY, w, h);
-      const isHover = hoverHit?.kind === "limit" && hoverHit.handle === handle;
+      const isHover =
+        hoverHit?.kind === "limit" && handles.includes(hoverHit.handle);
       const sz = MARKER_SZ_PX * paperZoom;
       const barH = MARKER_BAR_H_PX * paperZoom;
 
-      const color = isHover ? activeColor : baseColor;
+      const color = isHover ? activeColor : MARKER_BASE;
+      ctx.save();
+      ctx.globalAlpha = markerAlpha;
       ctx.strokeStyle = color;
       ctx.fillStyle = color;
       ctx.lineWidth = (isHover ? 2.5 : 2) * paperZoom;
@@ -1231,27 +1304,33 @@ export function drawCanvas(
       ctx.lineTo(cx, cy + barH);
       ctx.stroke();
 
-      // Triangle arrowhead pointing inward
-      const tipX = dir === "right" ? cx - sz * 2 : cx + sz * 2;
-      ctx.beginPath();
-      ctx.moveTo(cx, cy); // tip at the bar
-      ctx.lineTo(tipX, cy - sz);
-      ctx.lineTo(tipX, cy + sz);
-      ctx.closePath();
-      ctx.fill();
+      if (towardCanvasX !== null) {
+        const inward = towardCanvasX >= cx ? 1 : -1;
+        const baseX = cx - inward * sz * 2;
+        ctx.beginPath();
+        ctx.moveTo(cx, cy); // tip at the bar
+        ctx.lineTo(baseX, cy - sz);
+        ctx.lineTo(baseX, cy + sz);
+        ctx.closePath();
+        ctx.fill();
+      }
+      ctx.restore();
     };
 
-    // Helper: draw dotted markers along the surface between two Xs
-    const drawDottedRange = (surfPts: [number, number][], color: string) => {
+    // Dots along the ground between the range's ends, in turn in each of
+    // `colors` (two colours when the entry and exit ranges coincide).
+    const drawDottedRange = (surfPts: [number, number][], colors: string[]) => {
       if (surfPts.length < 2) return;
       const canvasPts = surfPts.map(([sx, sy]) => worldToCanvas(sx, sy, w, h));
       const spacing = ENTRY_EXIT_DOT_SPACING_PX * paperZoom;
-      const radius = ENTRY_EXIT_DOT_RADIUS_PX * paperZoom;
+      const radius =
+        ENTRY_EXIT_DOT_RADIUS_PX * paperZoom * (mode === "result" ? 0.8 : 1);
 
-      ctx.fillStyle = color;
-
-      // Always place dots at endpoints
+      ctx.save();
+      ctx.globalAlpha = markerAlpha;
+      let k = 0;
       const placeDot = (x: number, y: number) => {
+        ctx.fillStyle = colors[k++ % colors.length];
         ctx.beginPath();
         ctx.arc(x, y, radius, 0, Math.PI * 2);
         ctx.fill();
@@ -1270,126 +1349,54 @@ export function drawCanvas(
         // Start placing dots only after skipping spacing, preventing overlap with end markings
         while (t < segLen - 0.1) {
           const frac = t / segLen;
-          const cx = x1 + dx * frac;
-          const cy = y1 + dy * frac;
-          placeDot(cx, cy);
+          placeDot(x1 + dx * frac, y1 + dy * frac);
           t += spacing;
         }
         carry = (carry + segLen) % spacing;
       }
+      ctx.restore();
     };
 
-    const leftHandleDir: "left" | "right" =
-      orientation === "rtl" ? "left" : "right";
-    const rightHandleDir: "left" | "right" =
-      orientation === "rtl" ? "right" : "left";
+    const entry = searchRange(analysisLimits.entryLeftX, analysisLimits.entryRightX);
+    const exit = searchRange(analysisLimits.exitLeftX, analysisLimits.exitRightX);
+    const coincide = sameRange(entry, exit);
 
-    // Entry range markers
-    const entryLeftY = surfaceYAtX(analysisLimits.entryLeftX);
-    const entryRightY = surfaceYAtX(analysisLimits.entryRightX);
-
-    // Red dotted line between entry arrows along the surface
-    if (entryLeftY !== null && entryRightY !== null) {
-      // Walk along the surface segments between entryLeftX and entryRightX
-      const leftX = Math.min(
-        analysisLimits.entryLeftX,
-        analysisLimits.entryRightX,
-      );
-      const rightX = Math.max(
-        analysisLimits.entryLeftX,
-        analysisLimits.entryRightX,
-      );
-
-      // Collect surface points in the range
-      const surfPts: [number, number][] = [];
-      surfPts.push([leftX, surfaceYAtX(leftX)!]);
-      for (const [cx, cy] of coordinates) {
-        if (cx > leftX && cx < rightX) {
-          // Only include if it's on the top surface
-          const topY = surfaceYAtX(cx);
-          if (topY !== null && Math.abs(cy - topY) < 0.001) {
-            surfPts.push([cx, cy]);
-          }
-        }
+    const drawRange = (
+      a: LimitHandle,
+      b: LimitHandle,
+      activeColor: string,
+      dotColors: string[] | null,
+    ) => {
+      const xa = analysisLimits[a];
+      const xb = analysisLimits[b];
+      const ya = surfaceYAtX(xa);
+      const yb = surfaceYAtX(xb);
+      const range = searchRange(xa, xb);
+      if (range.point) {
+        if (ya !== null) drawArrow(xa, ya, null, [a, b], activeColor);
+        return;
       }
-      surfPts.push([rightX, surfaceYAtX(rightX)!]);
-      surfPts.sort((a, b) => a[0] - b[0]);
-
-      drawDottedRange(surfPts, ENTRY_DOT_COLOR.hex);
-    }
-
-    if (entryLeftY !== null) {
-      drawArrow(
-        analysisLimits.entryLeftX,
-        entryLeftY,
-        leftHandleDir,
-        "entryLeftX",
-        MARKER_BASE,
-        ENTRY_DOT_COLOR.hex,
-      );
-    }
-    if (entryRightY !== null) {
-      drawArrow(
-        analysisLimits.entryRightX,
-        entryRightY,
-        rightHandleDir,
-        "entryRightX",
-        MARKER_BASE,
-        ENTRY_DOT_COLOR.hex,
-      );
-    }
-
-    // Exit range markers
-    const exitLeftY = surfaceYAtX(analysisLimits.exitLeftX);
-    const exitRightY = surfaceYAtX(analysisLimits.exitRightX);
-
-    // Red dotted line between exit arrows along the surface
-    if (exitLeftY !== null && exitRightY !== null) {
-      const leftX = Math.min(
-        analysisLimits.exitLeftX,
-        analysisLimits.exitRightX,
-      );
-      const rightX = Math.max(
-        analysisLimits.exitLeftX,
-        analysisLimits.exitRightX,
-      );
-
-      const surfPts: [number, number][] = [];
-      surfPts.push([leftX, surfaceYAtX(leftX)!]);
-      for (const [cx, cy] of coordinates) {
-        if (cx > leftX && cx < rightX) {
-          const topY = surfaceYAtX(cx);
-          if (topY !== null && Math.abs(cy - topY) < 0.001) {
-            surfPts.push([cx, cy]);
-          }
-        }
+      if (dotColors && ya !== null && yb !== null) {
+        drawDottedRange(groundBetween(coordinates, range.lo, range.hi), dotColors);
       }
-      surfPts.push([rightX, surfaceYAtX(rightX)!]);
-      surfPts.sort((a, b) => a[0] - b[0]);
+      const [loCanvasX] = worldToCanvas(range.lo, 0, w, h);
+      const [hiCanvasX] = worldToCanvas(range.hi, 0, w, h);
+      if (ya !== null) drawArrow(xa, ya, xa <= xb ? hiCanvasX : loCanvasX, [a], activeColor);
+      if (yb !== null) drawArrow(xb, yb, xb < xa ? hiCanvasX : loCanvasX, [b], activeColor);
+    };
 
-      drawDottedRange(surfPts, EXIT_DOT_COLOR.hex);
-    }
-
-    if (exitLeftY !== null) {
-      drawArrow(
-        analysisLimits.exitLeftX,
-        exitLeftY,
-        leftHandleDir,
-        "exitLeftX",
-        MARKER_BASE,
-        EXIT_DOT_COLOR.hex,
-      );
-    }
-    if (exitRightY !== null) {
-      drawArrow(
-        analysisLimits.exitRightX,
-        exitRightY,
-        rightHandleDir,
-        "exitRightX",
-        MARKER_BASE,
-        EXIT_DOT_COLOR.hex,
-      );
-    }
+    drawRange(
+      "entryLeftX",
+      "entryRightX",
+      ENTRY_DOT_COLOR.hex,
+      coincide ? [ENTRY_DOT_COLOR.hex, EXIT_DOT_COLOR.hex] : [ENTRY_DOT_COLOR.hex],
+    );
+    drawRange(
+      "exitLeftX",
+      "exitRightX",
+      EXIT_DOT_COLOR.hex,
+      coincide ? null : [EXIT_DOT_COLOR.hex],
+    );
   }
 
   for (const drawLabel of pointLabels) drawLabel();
@@ -1444,103 +1451,119 @@ export function drawCanvas(
       const cs = result.criticalSurface;
       const arcPts = getArcPoints(cs);
 
-      // Draw the failure mass region (area between slope surface and arc)
-      // with semi-transparent fill
+      // The sliding mass: the ground from the entry to the exit (both
+      // corners of every vertical face, and the crack face at a tension
+      // crack), then back along the slip surface; semi-transparent fill.
+      const massPx = slipMassPolygon(coordinates, cs, arcPts).map(([mx, my]) =>
+        worldToCanvas(mx, my, w, h),
+      );
       ctx.save();
       ctx.globalAlpha = FAILURE_MASS_FILL_OPACITY;
       ctx.fillStyle = FAILURE_MASS_COLOR.hex;
       ctx.beginPath();
-      // Top edge: walk the slope surface from entry to exit
-      const entryX = cs.entryPoint[0];
-      const exitX = cs.exitPoint[0];
-      const minX = Math.min(entryX, exitX);
-      const maxX = Math.max(entryX, exitX);
-
-      // Find surface points between entry and exit
-      const surfacePts: [number, number][] = [];
-      // Add the ground above the entry point (the entry is below it at a
-      // tension crack; the fill then closes up the crack face)
-      surfacePts.push([entryX, surfaceYAtX(entryX) ?? cs.entryPoint[1]]);
-      // Add intermediate boundary points that lie between entry and exit X
-      for (let i = 0; i < coordinates.length; i++) {
-        const [bx, by] = coordinates[i];
-        if (bx > minX && bx < maxX) {
-          surfacePts.push([bx, by]);
-        }
-      }
-      // Add exit point
-      surfacePts.push(cs.exitPoint);
-      // Sort by X
-      surfacePts.sort((a, b) => a[0] - b[0]);
-
-      // Keep top-edge direction as entry -> exit to avoid polygon self-intersection
-      // when entry X is greater than exit X (e.g. mirrored/oriented views).
-      const topForward = cs.entryPoint[0] <= cs.exitPoint[0];
-
-      const topPtsOrdered = [...surfacePts].filter(([x, y]) => {
-        const topY = surfaceYAtX(x);
-        return topY !== null && Math.abs(y - topY) < 0.001;
-      });
-      topPtsOrdered.sort((a, b) => (topForward ? a[0] - b[0] : b[0] - a[0]));
-
-      // Draw: surface line (entry -> exit) -> then arc back (exit -> entry)
-      for (let i = 0; i < topPtsOrdered.length; i++) {
-        const [px, py] = worldToCanvas(
-          topPtsOrdered[i][0],
-          topPtsOrdered[i][1],
-          w,
-          h,
-        );
+      massPx.forEach(([px, py], i) => {
         if (i === 0) ctx.moveTo(px, py);
         else ctx.lineTo(px, py);
-      }
-      // Arc back (reverse)
-      for (let i = arcPts.length - 1; i >= 0; i--) {
-        const [px, py] = worldToCanvas(arcPts[i][0], arcPts[i][1], w, h);
-        ctx.lineTo(px, py);
-      }
+      });
       ctx.closePath();
       ctx.fill();
+      // A very thin mass (a shallow slab) gets a band of minimum width
+      // along it, so it doesn't disappear into the ground line.
+      if (meanThickness(massPx) < MIN_SLIP_MASS_PX * paperZoom) {
+        ctx.globalAlpha = MIN_SLIP_MASS_BAND_OPACITY;
+        ctx.strokeStyle = FAILURE_MASS_COLOR.hex;
+        ctx.lineWidth = MIN_SLIP_MASS_PX * paperZoom;
+        ctx.lineJoin = "round";
+        ctx.stroke();
+      }
       ctx.restore();
 
-      // Slice lines (vertical lines within the failure mass)
+      // Slice lines (vertical lines within the failure mass): black, or
+      // white over a dark material, and thinner and fainter where the
+      // slices lie close together on screen.
       if (rvs.showSlices && result.criticalSlices.length > 0) {
-        ctx.strokeStyle = CRITICAL_SURFACE_COLOR.hex;
-        ctx.lineWidth = SLICE_LINE_WIDTH_PX * paperZoom;
-        ctx.globalAlpha = SLICE_LINE_OPACITY;
-
         // Surface y at a given x (lower arc of a circle, or the polyline)
         const arcYAtX = (x: number): number | null => surfaceBaseYAt(cs, x);
+        const { xs: xBounds, spacings } = sliceBoundaries(
+          result.criticalSlices,
+          (x) => worldToCanvas(x, 0, w, h)[0],
+        );
+        const density = sliceDensityFactor(spacings);
+        const sliceRegions =
+          rvs.showSoilColor !== false
+            ? getCachedRegions(
+                coordinates,
+                materialBoundaries,
+                regionMaterials,
+                materials[0]?.id ?? "",
+              )
+            : [];
+        const regionDark = new Map(
+          sliceRegions.map((r) => [
+            r,
+            isDarkFill(materials.find((m) => m.id === r.materialId)?.color),
+          ]),
+        );
 
-        // Collect all unique X boundaries from slices
-        const xBounds = new Set<number>();
-        for (const slice of result.criticalSlices) {
-          xBounds.add(slice.xLeft);
-          xBounds.add(slice.xRight);
-        }
-
-        // Draw vertical lines at each slice boundary
+        ctx.save();
+        ctx.lineWidth = SLICE_LINE_WIDTH_PX * paperZoom * Math.max(0.6, density);
+        ctx.globalAlpha = SLICE_LINE_OPACITY * density;
         for (const x of xBounds) {
           const topY = surfaceYAtX(x);
           const botY = arcYAtX(x);
           if (topY === null || botY === null) continue;
-          const [sx, sy] = worldToCanvas(x, topY, w, h);
-          const [, ey] = worldToCanvas(x, botY, w, h);
-          ctx.beginPath();
-          ctx.moveTo(sx, sy);
-          ctx.lineTo(sx, ey);
-          ctx.stroke();
+          for (const part of splitVerticalByRegion(sliceRegions, x, botY, topY)) {
+            const dark = part.region !== null && regionDark.get(part.region) === true;
+            ctx.strokeStyle = dark ? SLICE_LINE_ON_DARK_COLOR.hex : CRITICAL_SURFACE_COLOR.hex;
+            const [sx, sy] = worldToCanvas(x, part.y1, w, h);
+            const [, ey] = worldToCanvas(x, part.y0, w, h);
+            ctx.beginPath();
+            ctx.moveTo(sx, sy);
+            ctx.lineTo(sx, ey);
+            ctx.stroke();
+          }
         }
-        ctx.globalAlpha = 1.0;
+        ctx.restore();
       }
 
-      // Arc stroke (bold black like reference image)
+      // Water in a tension crack: a blue band on the open side of the
+      // crack face, from the crack bottom up to the water level.
+      const crack = tensionCrackFace(coordinates, cs);
+      const crackWater = Math.min(1, Math.max(0, options?.tensionCrackWater ?? 0));
+      if (crack && crackWater > 0) {
+        const hw = (crack.top - crack.bottom) * crackWater;
+        const [bx, by] = worldToCanvas(crack.x, crack.bottom, w, h);
+        const [, wy] = worldToCanvas(crack.x, crack.bottom + hw, w, h);
+        const bandW = CRACK_WATER_WIDTH_PX * paperZoom;
+        // The open side is away from the sliding mass on screen.
+        const [massX] = worldToCanvas(crack.x + crack.massSide, crack.bottom, w, h);
+        const left = massX > bx ? bx - bandW : bx;
+        ctx.save();
+        ctx.globalAlpha = CRACK_WATER_OPACITY;
+        ctx.fillStyle = POND_COLOR.hex;
+        ctx.fillRect(left, wy, bandW, by - wy);
+        ctx.globalAlpha = 1;
+        ctx.strokeStyle = PIEZO_COLOR.hex;
+        ctx.lineWidth = 1 * paperZoom;
+        ctx.beginPath();
+        ctx.moveTo(left, wy);
+        ctx.lineTo(left + bandW, wy);
+        ctx.stroke();
+        ctx.restore();
+      }
+
+      // Arc stroke (bold black like reference image), from the top of the
+      // tension crack (its face is part of the slip surface) to the exit.
       ctx.strokeStyle = CRITICAL_SURFACE_COLOR.hex;
       ctx.lineWidth = 2 * paperZoom;
       ctx.beginPath();
+      if (crack) {
+        const [tx, ty] = worldToCanvas(crack.x, crack.top, w, h);
+        ctx.moveTo(tx, ty);
+      }
       for (let i = 0; i < arcPts.length; i++) {
         const [px, py] = worldToCanvas(arcPts[i][0], arcPts[i][1], w, h);
-        if (i === 0) ctx.moveTo(px, py);
+        if (i === 0 && !crack) ctx.moveTo(px, py);
         else ctx.lineTo(px, py);
       }
       ctx.stroke();

@@ -136,6 +136,8 @@ export function ResultsMenu({ isOpen, onActivate, panelHost }: Props) {
       reinforcements: state.reinforcements,
       piles: state.piles,
       analysisLimits: state.analysisLimits,
+      options: state.options,
+      customPlanesOnly: state.customPlanesOnly && state.customSearchPlanes.length > 0,
       orientation: state.orientation,
       projectInfo: state.projectInfo,
       parameters: state.parameters,

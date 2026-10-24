@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { AnalysisResult, SliceData, SlipSurfaceResult } from "@cslope/engine";
+import { DEFAULT_ANALYSIS_OPTIONS } from "@cslope/engine";
 import { drawCanvas, type DrawCanvasParams } from "./draw";
 import { createRecordingContext, pathPoints, type PaintedPath } from "../../test/recording-context";
 import {
@@ -531,7 +532,7 @@ describe("drawCanvas — edit mode", () => {
     expect(Math.max(...xs)).toBeCloseTo(30, 6);
   });
 
-  it("draws entry/exit markers pointing inwards, mirrored for right-to-left models", () => {
+  it("draws entry/exit markers pointing into each range in any orientation and data order", () => {
     const limits = { enabled: true, entryLeftX: 2, entryRightX: 8, exitLeftX: 21, exitRightX: 28 };
     const tipOffset = (rec: ReturnType<typeof draw>, x: number, y: number) => {
       const [cx, cy] = toC(x, y);
@@ -540,12 +541,14 @@ describe("drawCanvas — edit mode", () => {
         .find((p) => p.segments.length === 4 && close(pathPoints(p)[0], [cx, cy]))!;
       return pathPoints(head)[1][0] - cx;
     };
+    const swapped = { ...limits, entryLeftX: 8, entryRightX: 2, exitLeftX: 28, exitRightX: 21 };
     const ltr = draw({ analysisLimits: limits });
-    expect(tipOffset(ltr, 2, 10)).toBeLessThan(0); // ">|" on the left handle
-    expect(tipOffset(ltr, 8, 10)).toBeGreaterThan(0); // "|<" on the right handle
-    const rtl = draw({ analysisLimits: limits, orientation: "rtl" });
-    expect(tipOffset(rtl, 2, 10)).toBeGreaterThan(0);
-    expect(tipOffset(rtl, 8, 10)).toBeLessThan(0);
+    for (const rec of [ltr, draw({ analysisLimits: limits, orientation: "rtl" }), draw({ analysisLimits: swapped })]) {
+      expect(tipOffset(rec, 2, 10)).toBeLessThan(0); // ">|" at the start of the range
+      expect(tipOffset(rec, 8, 10)).toBeGreaterThan(0); // "|<" at its end
+      expect(tipOffset(rec, 21, 5)).toBeLessThan(0);
+      expect(tipOffset(rec, 28, 5)).toBeGreaterThan(0);
+    }
 
     // Dotted ranges: green between the entry handles, red between the exit handles.
     const entryDots = ltr.fills(ENTRY_DOT_COLOR.hex).filter((p) => p.segments[0].op === "arc");
@@ -558,6 +561,64 @@ describe("drawCanvas — edit mode", () => {
       expect(wx).toBeLessThan(8);
       expect(wy).toBeCloseTo(10, 6);
     }
+  });
+
+  it("draws a single bar, no bow-tie, for a range of zero width", () => {
+    const rec = draw({
+      analysisLimits: { enabled: true, entryLeftX: 2, entryRightX: 8, exitLeftX: 25, exitRightX: 25 },
+    });
+    const [cx, cy] = toC(25, 5);
+    expect(rec.fills().filter((p) => p.segments.length === 4 && close(pathPoints(p)[0], [cx, cy]))).toHaveLength(0);
+    const bars = rec.strokes().filter((p) => close(pathPoints(p)[0], [cx, cy - 10]));
+    expect(bars).toHaveLength(1);
+  });
+
+  it("alternates entry and exit colours along coinciding ranges", () => {
+    const rec = draw({
+      analysisLimits: { enabled: true, entryLeftX: 2, entryRightX: 8, exitLeftX: 2, exitRightX: 8 },
+    });
+    const isDot = (p: PaintedPath) =>
+      p.segments[0].op === "arc" && [ENTRY_DOT_COLOR.hex, EXIT_DOT_COLOR.hex].includes(p.state.fillStyle);
+    const dots = rec.fills().filter(isDot);
+    const colours = dots.map((d) => d.state.fillStyle);
+    expect(colours).toContain(ENTRY_DOT_COLOR.hex);
+    expect(colours).toContain(EXIT_DOT_COLOR.hex);
+    for (let i = 1; i < colours.length; i++) expect(colours[i]).not.toBe(colours[i - 1]);
+    // One row of dots, not two on top of each other.
+    const xs = dots.map((d) => pathPoints(d)[0][0]);
+    expect(new Set(xs).size).toBe(xs.length);
+  });
+
+  it("dots the range along both corners of a vertical face", () => {
+    const stepped: [number, number][] = [
+      [0, 0],
+      [0, 4],
+      [10, 4],
+      [10, 10],
+      [20, 10],
+      [20, 0],
+    ];
+    const rec = draw({
+      coordinates: stepped,
+      surfaceYAtX: (x) => surfaceYAtXFromCoordinates(stepped, x),
+      analysisLimits: { enabled: true, entryLeftX: 2, entryRightX: 18, exitLeftX: 2, exitRightX: 18 },
+    });
+    const dots = rec
+      .fills()
+      .filter((p) => p.segments[0].op === "arc" && [ENTRY_DOT_COLOR.hex, EXIT_DOT_COLOR.hex].includes(p.state.fillStyle))
+      .map((d) => canvasToWorld(...pathPoints(d)[0], W, H));
+    // Some dots run down the face at x = 10, none float in the air left of it.
+    expect(dots.some(([x, y]) => Math.abs(x - 10) < 1e-6 && y > 4.5 && y < 9.5)).toBe(true);
+    for (const [x, y] of dots) if (x < 10 - 1e-6) expect(y).toBeCloseTo(4, 6);
+  });
+
+  it("shows a fixed-depth tension crack as a dashed line under the ground", () => {
+    const rec = draw({ options: { ...DEFAULT_ANALYSIS_OPTIONS, tensionCrackDepth: 2 } });
+    const crack = rec.strokes().find((p) => p.state.lineDash.length === 2)!;
+    const pts = pathPoints(crack).map(([x, y]) => canvasToWorld(x, y, W, H));
+    expect(pts.some((p) => close(p, [10, 8]))).toBe(true);
+    expect(pts.some((p) => close(p, [20, 3]))).toBe(true);
+    expect(draw().strokes().some((p) => p.state.lineDash.length === 2)).toBe(false);
   });
 
   it("highlights a hovered limit handle", () => {
@@ -725,6 +786,92 @@ describe("drawCanvas — result mode", () => {
     const at12 = lines.find(([a]) => Math.abs(a[0] - 12) < 1e-9)!;
     expect(at12[0][1]).toBeCloseTo(9, 6); // ground on the slope
     expect(at12[1][1]).toBeCloseTo(CIRCLE.cy - Math.sqrt(R * R - 9), 6);
+  });
+
+  it("draws search limits lighter and under the sliding mass, and none for prescribed surfaces only", () => {
+    const limits = { enabled: true, entryLeftX: 2, entryRightX: 8, exitLeftX: 21, exitRightX: 28 };
+    const rec = drawResult({ analysisLimits: limits });
+    const massIndex = rec.paths.findIndex((p) => p.kind === "fill" && p.state.globalAlpha === 0.12);
+    const dotIndex = rec.paths.findIndex((p) => p.kind === "fill" && p.state.fillStyle === EXIT_DOT_COLOR.hex);
+    expect(dotIndex).toBeGreaterThanOrEqual(0);
+    expect(dotIndex).toBeLessThan(massIndex);
+    expect(rec.paths[dotIndex].state.globalAlpha).toBeLessThan(1);
+
+    const only = drawResult({ analysisLimits: limits, customPlanesOnly: true });
+    expect(only.fills(EXIT_DOT_COLOR.hex)).toHaveLength(0);
+    // In edit mode the limits stay (they belong to the model).
+    expect(draw({ analysisLimits: limits, customPlanesOnly: true }).fills(EXIT_DOT_COLOR.hex).length).toBeGreaterThan(0);
+  });
+
+  it("fills the mass behind a vertical wall face without spilling into the air", () => {
+    const stepped: [number, number][] = [
+      [0, 0],
+      [0, 4],
+      [10, 4],
+      [10, 10],
+      [20, 10],
+      [20, 0],
+    ];
+    const cs = surface({ points: [[16, 10], [10, 2], [4, 4]], entryPoint: [16, 10], exitPoint: [4, 4] });
+    const rec = drawResult({
+      coordinates: stepped,
+      surfaceYAtX: (x) => surfaceYAtXFromCoordinates(stepped, x),
+      result: result({ criticalSurface: cs, allSurfaces: [cs] }),
+    });
+    const pts = pathPoints(rec.fills().find((p) => p.state.globalAlpha === 0.12)!).map(([x, y]) =>
+      canvasToWorld(x, y, W, H),
+    );
+    expect(pts.some((p) => close(p, [10, 10]))).toBe(true);
+    expect(pts.some((p) => close(p, [10, 4]))).toBe(true);
+    for (const [x, y] of pts) if (x < 10 - 1e-6) expect(y).toBeLessThanOrEqual(4 + 1e-6);
+  });
+
+  it("draws a tension crack face as part of the critical surface, with the water in it", () => {
+    // Entry 3 m below the ground at x = 6 (a crack).
+    const cs = surface({ points: [[6, 7], [12, 4], [22, 5]], entryPoint: [6, 7], exitPoint: [22, 5] });
+    const rec = drawResult({
+      result: result({ criticalSurface: cs, allSurfaces: [cs] }),
+      options: { ...DEFAULT_ANALYSIS_OPTIONS, tensionCrackDepth: 3, tensionCrackWater: 0.5 },
+    });
+    const line = rec.strokes().find((p) => p.state.lineWidth === 2 && pathPoints(p).length === 4)!;
+    expect(pathPoints(line)[0]).toEqual(toC(6, 10));
+    expect(pathPoints(line)[1]).toEqual(toC(6, 7));
+    // Water from the crack bottom up to half the crack depth, on the side away from the mass.
+    const water = rec.fills(POND_COLOR.hex).find((p) => p.segments[0].op === "rect")!;
+    const seg = water.segments[0] as { x: number; y: number; w: number; h: number };
+    expect(seg.x + seg.w).toBeCloseTo(toC(6, 0)[0], 9);
+    expect(seg.y).toBeCloseTo(toC(0, 8.5)[1], 9);
+    expect(seg.y + seg.h).toBeCloseTo(toC(0, 7)[1], 9);
+
+    const dry = drawResult({ result: result({ criticalSurface: cs, allSurfaces: [cs] }) });
+    expect(dry.fills(POND_COLOR.hex)).toHaveLength(0);
+  });
+
+  it("gives a very shallow sliding mass a band of minimum width", () => {
+    const slab = surface({ points: [[10, 10], [15, 7.49], [20, 5]], entryPoint: [10, 10], exitPoint: [20, 5] });
+    const rec = drawResult({ result: result({ criticalSurface: slab, allSurfaces: [slab] }) });
+    expect(rec.strokes().some((p) => p.state.lineWidth === 5 && p.state.globalAlpha < 1)).toBe(true);
+    // Not for a mass of normal depth.
+    expect(drawResult().strokes().some((p) => p.state.lineWidth === 5)).toBe(false);
+  });
+
+  it("draws slice lines white over a dark material and thins dense slices", () => {
+    const dark = { ...DEFAULT_MATERIAL, color: "#3a3a4a" };
+    const rec = drawResult({
+      materials: [dark],
+      result: result({ criticalSlices: [slice(8, 12), slice(12, 16)] }),
+      resultViewSettings: rvs({ showSlices: true }),
+    });
+    const sliceLines = rec.strokes().filter((p) => p.state.globalAlpha < 1 && pathPoints(p).length === 2);
+    expect(sliceLines.length).toBe(3);
+    for (const p of sliceLines) expect(p.state.strokeStyle).toBe("#ffffff");
+
+    // 0.1 m slices are 2 px apart on screen: thinner and fainter.
+    const dense = Array.from({ length: 40 }, (_, i) => slice(8 + i * 0.1, 8.1 + i * 0.1));
+    const thin = drawResult({ result: result({ criticalSlices: dense }), resultViewSettings: rvs({ showSlices: true }) });
+    const denseLines = thin.strokes().filter((p) => p.state.globalAlpha < 1 && pathPoints(p).length === 2);
+    expect(denseLines.length).toBeGreaterThan(30);
+    expect(denseLines[0].state.globalAlpha).toBeLessThan(0.6 * 0.5);
   });
 
   it("draws other surfaces by FOS colour, filters them, and never redraws the critical one", () => {

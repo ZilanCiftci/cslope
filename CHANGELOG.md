@@ -30,6 +30,7 @@ The first public release.
 - Critical surface, all surfaces or a factor-of-safety filter, slices, annotations and templates.
 - Plots of slice data and of Fm and Ff against λ; export to PDF and PNG, slice data to Excel and CSV.
 - The PDF report ends with an analysis summary: method, search, water and tension crack, partial factors, materials and loads. With partial factors, the PDF and the slice data mark design values.
+- Result plot: the sliding mass follows stepped and vertical faces, a tension crack is drawn as part of the critical surface with the water in it, slice lines show on dark layers, and the search limits point into their ranges under the result.
 
 ### Verification
 
