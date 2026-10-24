@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useStore } from "zustand";
 import { ActivityBar } from "./components/ActivityBar";
 import { StatusBar } from "./components/StatusBar";
@@ -22,6 +22,8 @@ import { confirmUnsavedChanges } from "./features/project/unsavedGuard";
 import { isElectron } from "./utils/is-electron";
 import { useDragDrop } from "./features/canvas/hooks/useDragDrop";
 import { SensitivityPanel } from "./features/sensitivity/SensitivityPanel";
+import { AnalysisErrorBanner } from "./features/analysis/AnalysisErrorBanner";
+import { useRunShortcut } from "./features/analysis/run-shortcut";
 import { ReliabilityPanel } from "./features/reliability/ReliabilityPanel";
 
 export function AppShell() {
@@ -44,6 +46,7 @@ export function AppShell() {
   const runAnalysis = useAppStore((s) => s.runAnalysis);
   const cancelAnalysis = useAppStore((s) => s.cancelAnalysis);
   const result = useAppStore((s) => s.result);
+  const errorMessage = useAppStore((s) => s.errorMessage);
   const models = useAppStore((s) => s.models);
   const activeModelId = useAppStore((s) => s.activeModelId);
   const snapToGrid = useAppStore((s) => s.snapToGrid);
@@ -122,6 +125,16 @@ export function AppShell() {
     setMode("result");
   };
 
+  // F5 / Ctrl+Enter: the toolbar's Run, unless a run is going on.
+  useRunShortcut(
+    useCallback(() => {
+      const s = useAppStore.getState();
+      if (s.runState === "running") return;
+      s.runAnalysis();
+      s.setMode("result");
+    }, []),
+  );
+
   const handleRunAll = () => {
     void runAllAnalyses();
     setMode("result");
@@ -192,6 +205,7 @@ export function AppShell() {
         <div className="flex-1 min-w-0 flex flex-col">
           <div className="flex-1 min-h-0 relative">
             {mode === "result" ? <ResultCanvas /> : <EditCanvas />}
+            <AnalysisErrorBanner />
             <FloatingToolbar
               mode={mode}
               setMode={setMode}
@@ -235,6 +249,7 @@ export function AppShell() {
         mode={mode}
         runState={runState}
         result={result}
+        errorMessage={errorMessage}
         snapToGrid={snapToGrid}
         gridSnapSize={gridSnapSize}
         setSnapToGrid={setSnapToGrid}
