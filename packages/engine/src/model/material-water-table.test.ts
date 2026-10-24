@@ -5,6 +5,7 @@ import { analyseSlope } from "./solvers";
 import { toCanonicalSlopeDefinition } from "./canonical";
 import { WATER_UNIT_WEIGHT } from "../types/constants";
 import type { SlopeDefinition } from "../types/slope-definition";
+import { runVerification } from "../verification/cases";
 
 const BASE: SlopeDefinition = {
   coordinates: [
@@ -114,5 +115,73 @@ describe("per-material water tables", () => {
       [60, -14],
       [0, -14],
     ]);
+  });
+});
+
+// Free water above the ground comes from the line of the material at the
+// ground, the same line that gives that material its pore pressure: weight
+// on the ground and pore pressure at the base must come from one water
+// level (Duncan & Wright 2014, ch. 6).
+describe("free water from a material's own line", () => {
+  // V041a (D&W fig. 6.27): submerged slope, pool 30 ft above the crest.
+  const soil = { name: "Soil", model: { kind: "mohr-coulomb", unitWeight: 20.10719, cohesion: 4.78803, frictionAngle: 20 } } as const;
+  const dry: SlopeDefinition = {
+    materials: [soil],
+    coordinates: [[0, 0], [0, 4.572], [9.144, 4.572], [32.004, 13.716], [42.672, 13.716], [42.672, 0]],
+    materialBoundaries: [],
+    regionAssignments: [{ point: [37.338, 13.216], materialName: "Soil" }],
+  };
+  const pool: [number, number][] = [[0, 22.86], [42.672, 22.86]];
+  const low: [number, number][] = [[0, -1], [42.672, -1]];
+  const own = { ...dry, materials: [{ ...soil, waterTableId: "p" }] };
+  const fos = (def: SlopeDefinition) =>
+    runVerification(def, "Bishop", { porePressureHead: "vertical", slices: 40 }).fos;
+
+  it("gives the pool as the material's line the FOS of the pool as the main line", () => {
+    const main = fos({ ...dry, waterTable: { mode: "custom", value: pool, followBoundary: false } })!;
+    expect(main).toBeCloseTo(1.597, 3);
+    expect(fos({ ...own, waterTables: [{ id: "p", coordinates: pool, followBoundary: false }] })).toBeCloseTo(main, 6);
+    expect(
+      fos({
+        ...own,
+        waterTable: { mode: "custom", value: low, followBoundary: false },
+        waterTables: [{ id: "p", coordinates: pool, followBoundary: false }],
+      }),
+    ).toBeCloseTo(main, 6);
+  });
+
+  it("puts no pool weight on a material whose own line is below the ground", () => {
+    // The main line ponds but the soil's own line is below the slip
+    // surface: no pore pressure and no water load, as dry.
+    const d = fos(dry)!;
+    expect(d).toBeCloseTo(1.337, 3);
+    expect(
+      fos({
+        ...own,
+        waterTable: { mode: "custom", value: pool, followBoundary: false },
+        waterTables: [{ id: "p", coordinates: low, followBoundary: false }],
+      }),
+    ).toBeCloseTo(d, 6);
+  });
+
+  it("loads only the slices whose surface material has the ponding line", () => {
+    // Lower (the ground from x = 32 on) ponds 2 m at the toe from its own
+    // line; Upper takes the main line, below the ground.
+    const def: SlopeDefinition = {
+      ...BASE,
+      materials: [BASE.materials[0], { ...BASE.materials[1], waterTableId: "toe" }],
+      waterTable: { mode: "custom", value: [[0, -12], [60, -12]], followBoundary: false },
+      waterTables: [{ id: "toe", coordinates: [[0, -8], [60, -8]], followBoundary: false }],
+    };
+    const slices = deepSlices(def);
+    const wet = slices.filter((s) => s.xLeft >= 36 - 1e-9);
+    expect(wet.length).toBeGreaterThan(0);
+    for (const s of wet) {
+      const depth = (-8 - s.y0Top + (-8 - s.y1Top)) / 2;
+      expect(s.waterLoad).toBeCloseTo(WATER_UNIT_WEIGHT * (s.xRight - s.xLeft) * depth, 9);
+    }
+    for (const s of slices.filter((s) => s.xRight <= 36 + 1e-9)) {
+      expect(s.waterLoad ?? 0).toBe(0);
+    }
   });
 });

@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { freeWaterPolygons, nextPiezoPoint, piezoExtensions } from "./piezo";
+import { freeWaterPolygons, nextPiezoPoint, piezoExtensions, piezoPonds } from "./piezo";
+import type { Region } from "./regions";
 
 describe("piezoExtensions", () => {
   const model: [number, number][] = [[0, 0], [0, 10], [10, 10], [20, 5], [30, 5], [30, 0]];
@@ -89,5 +90,50 @@ describe("nextPiezoPoint", () => {
     for (let i = 1; i < pts.length; i++) expect(pts[i][0]).toBeLessThan(pts[i - 1][0]);
     expect(pts[0][0]).toBe(50);
     expect(pts.at(-1)![0]).toBe(0);
+  });
+});
+
+describe("piezoPonds", () => {
+  // The slope of freeWaterPolygons split at x = 30: "toe" left, "crest" right.
+  const model: [number, number][] = [[0, -5], [0, 0], [20, 0], [40, 10], [60, 10], [60, -5]];
+  const regions: Region[] = [
+    { px: [0, 0, 20, 30, 30], py: [-5, 0, 0, 5, -5], materialId: "toe", regionKey: "r0" },
+    { px: [30, 30, 40, 60, 60], py: [-5, 5, 10, 10, -5], materialId: "crest", regionKey: "r1" },
+  ];
+  const span = (ponds: ReturnType<typeof piezoPonds>) =>
+    ponds.map((p) => [p.water[0][0], p.water[p.water.length - 1][0]]);
+  const high = { id: "high", coordinates: [[0, 8], [60, 8]] as [number, number][] };
+  const low = { id: "low", coordinates: [[0, -1], [60, -1]] as [number, number][] };
+
+  it("ponds the line of the material at the ground, as the analysis loads it", () => {
+    // The toe material's own line ponds, the main line is below the ground.
+    const ponds = piezoPonds(
+      { lines: [low, high], mainLineId: "low", materialAssignment: { toe: "high" } },
+      model,
+      regions,
+    );
+    expect(span(ponds)).toHaveLength(1);
+    expect(span(ponds)[0][0]).toBeCloseTo(0);
+    expect(span(ponds)[0][1]).toBeCloseTo(30);
+    expect(ponds[0].water.every(([, y]) => y === 8)).toBe(true);
+  });
+
+  it("puts no pond on a material whose own line is below the ground", () => {
+    // The main line ponds, but only the crest material takes it: water from
+    // x = 30 to where the face reaches y = 8 (x = 36).
+    const ponds = piezoPonds(
+      { lines: [high, low], mainLineId: "high", materialAssignment: { toe: "low" } },
+      model,
+      regions,
+    );
+    expect(span(ponds)).toHaveLength(1);
+    expect(span(ponds)[0][0]).toBeCloseTo(30);
+    expect(span(ponds)[0][1]).toBeCloseTo(36);
+  });
+
+  it("is the main line's water without assigned lines", () => {
+    const lines = { lines: [high, low], mainLineId: "high", materialAssignment: {} };
+    expect(piezoPonds(lines, model, regions)).toEqual(piezoPonds({ lines: [high] }, model));
+    expect(span(piezoPonds(lines, model, regions))[0][1]).toBeCloseTo(36);
   });
 });

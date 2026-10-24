@@ -129,8 +129,8 @@ export const PROBLEMS: RawCase[] = [
   },
   {
     id: "V006",
-    title: "Baker (2001) planar surface",
-    reference: "Baker (2001).",
+    title: "Baker & Leshchinsky (2001) planar surface",
+    reference: "Baker & Leshchinsky (2001).",
     surface: "fixed",
     units: "SI",
     description: "Homogeneous 10 m slope on the critical plane from the toe to the crest at 49.6°.",
@@ -139,7 +139,7 @@ export const PROBLEMS: RawCase[] = [
       {"method":"Morgenstern-Price","label":"Spencer (M-P, constant f(x))","published":1.351,"publishedBy":"Commercial program C","options":{"intersliceFunction":"constant"}},
       {"method":"Janbu","label":"Janbu simplified","published":1.351,"publishedBy":"Commercial program C"},
     ],
-    paper: [{"value": 1.35, "method": "Culmann (planar wedge)", "source": "Baker (2001)"}],
+    paper: [{"value": 1.35, "method": "Culmann (planar wedge)", "source": "Baker & Leshchinsky (2001)"}],
   },
   {
     id: "V007a",
@@ -366,7 +366,7 @@ export const PROBLEMS: RawCase[] = [
   {
     id: "V013b",
     title: "Cai & Ugai slope, pile row D1/D = 2",
-    reference: "Cai & Ugai (2000), Géotechnique 50(2).",
+    reference: "Cai & Ugai (2000), Soils and Foundations 40(1).",
     surface: "search",
     units: "SI",
     description: "A row of 0.8 m piles at mid-slope, centre-to-centre 1.6 m, with the Ito & Matsui force (passive); Bishop search.",
@@ -383,7 +383,7 @@ export const PROBLEMS: RawCase[] = [
   {
     id: "V013c",
     title: "Cai & Ugai slope, pile row D1/D = 3",
-    reference: "Cai & Ugai (2000), Géotechnique 50(2).",
+    reference: "Cai & Ugai (2000), Soils and Foundations 40(1).",
     surface: "search",
     units: "SI",
     description: "As V013b at 2.4 m spacing.",
@@ -400,7 +400,7 @@ export const PROBLEMS: RawCase[] = [
   {
     id: "V013d",
     title: "Cai & Ugai slope, pile row D1/D = 4",
-    reference: "Cai & Ugai (2000), Géotechnique 50(2).",
+    reference: "Cai & Ugai (2000), Soils and Foundations 40(1).",
     surface: "search",
     units: "SI",
     description: "As V013b at 3.2 m spacing.",
@@ -417,7 +417,7 @@ export const PROBLEMS: RawCase[] = [
   {
     id: "V013e",
     title: "Cai & Ugai slope, pile row D1/D = 6",
-    reference: "Cai & Ugai (2000), Géotechnique 50(2).",
+    reference: "Cai & Ugai (2000), Soils and Foundations 40(1).",
     surface: "search",
     units: "SI",
     description: "As V013b at 4.8 m spacing.",
@@ -1871,7 +1871,7 @@ export const PROBLEMS: RawCase[] = [
   {
     id: "V063",
     title: "Huang & Jia earth dam, dry",
-    reference: "Huang & Jia (2008).",
+    reference: "Huang & Jia (2009).",
     surface: "search",
     units: "SI",
     description: "Homogeneous earth dam (c′ = 13.8 kPa, φ′ = 37°, γ = 18.2 kN/m³) before the reservoir is filled; circular search.",
@@ -2499,7 +2499,7 @@ export const PROBLEMS: RawCase[] = [
   {
     id: "V086a",
     title: "Tandjiria embankment, clay fill, geosynthetic T = 169 kN/m",
-    reference: "Tandjiria (2002).",
+    reference: "Tandjiria, Low & Teh (2002).",
     surface: "fixed",
     units: "SI",
     description: "The V086b clay-fill embankment with a 169 kN/m geosynthetic at its base (axial, active, fully anchored) and the water-filled 2 m crack, on the critical circle.",
@@ -2508,12 +2508,12 @@ export const PROBLEMS: RawCase[] = [
       {"method":"Morgenstern-Price","label":"Spencer (M-P, constant f(x))","published":1.35,"publishedBy":"Commercial program A","options":{"intersliceFunction":"constant","porePressureHead":"vertical","slices":60,"tensionCrackDepth":2,"tensionCrackWater":1}},
       {"method":"Morgenstern-Price","label":"Spencer (M-P, constant f(x))","published":1.332,"publishedBy":"Program D","options":{"intersliceFunction":"constant","porePressureHead":"vertical","slices":60,"tensionCrackDepth":2,"tensionCrackWater":1}},
     ],
-    paper: [{"value": 1.35, "method": "Spencer, at T = 170 kN/m", "source": "Tandjiria (2002)"}],
+    paper: [{"value": 1.35, "method": "Spencer, at T = 170 kN/m", "source": "Tandjiria, Low & Teh (2002)"}],
   },
   {
     id: "V086b",
     title: "Tandjiria embankment, clay fill, water-filled crack",
-    reference: "Tandjiria (2002).",
+    reference: "Tandjiria, Low & Teh (2002).",
     surface: "search",
     units: "SI",
     description: "Half-embankment (9 m crest, 10 m wide crest, 1V:1.67H face) of clay fill (Su = 20 kPa) on soft clay (Su = 20 kPa), γ = 19.4; 2 m water-filled tension crack, unreinforced; circular search. Also run with the automatic (Rankine) crack depth.",
@@ -2522,7 +2522,7 @@ export const PROBLEMS: RawCase[] = [
       {"method":"Morgenstern-Price","label":"Spencer (M-P, constant f(x))","published":0.975,"publishedBy":"Commercial program A","options":{"intersliceFunction":"constant","tensionCrackDepth":2,"tensionCrackWater":1}},
       {"method":"Morgenstern-Price","label":"Spencer (M-P, constant f(x))","published":0.975,"publishedBy":"Commercial program A","options":{"intersliceFunction":"constant","tensionCrackAuto":true,"tensionCrackWater":1},"note":"Automatic crack depth 2c/γ = 2.06 m instead of the given 2 m."},
     ],
-    paper: [{"value": 0.981, "method": "Spencer", "source": "Tandjiria (2002)"}],
+    paper: [{"value": 0.981, "method": "Spencer", "source": "Tandjiria, Low & Teh (2002)"}],
     notes: [
       "program D gives 0.968 on the reference circle, as cSlope does; Tandjiria 0.981.",
     ],
@@ -2530,7 +2530,7 @@ export const PROBLEMS: RawCase[] = [
   {
     id: "V086c",
     title: "Tandjiria embankment, sand fill, dry crack",
-    reference: "Tandjiria (2002).",
+    reference: "Tandjiria, Low & Teh (2002).",
     surface: "search",
     units: "SI",
     description: "The V086 embankment as a sand fill (φ′ = 37°, γ = 17) on soft clay (Su = 20 kPa, γ = 20) with a dry 2 m tension crack, unreinforced; circular search.",
@@ -2538,7 +2538,7 @@ export const PROBLEMS: RawCase[] = [
     checks: [
       {"method":"Morgenstern-Price","label":"Spencer (M-P, constant f(x))","published":1.209,"publishedBy":"Commercial program A","options":{"intersliceFunction":"constant","tensionCrackDepth":2}},
     ],
-    paper: [{"value": 1.219, "method": "Spencer", "source": "Tandjiria (2002)"}],
+    paper: [{"value": 1.219, "method": "Spencer", "source": "Tandjiria, Low & Teh (2002)"}],
     notes: [
       "program D gives 1.200 on the reference circle; Tandjiria 1.219.",
     ],

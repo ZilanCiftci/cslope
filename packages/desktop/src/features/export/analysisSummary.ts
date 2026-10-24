@@ -274,7 +274,7 @@ export function buildAnalysisSummary(input: AnalysisSummaryInput): SummarySectio
   } else {
     water.push({ label: "Piezometric lines", value: lines.map((l) => l.name).join(", ") });
     if (lines.length > 1 && main) {
-      water.push({ label: "Main line", value: `${main.name} (free water, materials without a line)` });
+      water.push({ label: "Main line", value: `${main.name} (materials without a line of their own)` });
     }
     water.push({
       label: "Pore pressure",
@@ -287,7 +287,7 @@ export function buildAnalysisSummary(input: AnalysisSummaryInput): SummarySectio
       label: "Water above ground",
       value:
         piezo.freeWater !== false
-          ? "free water: its weight acts on the ground"
+          ? "free water: its weight acts on the ground (from the line of the material at the ground)"
           : "line clipped to the ground",
     });
   }
