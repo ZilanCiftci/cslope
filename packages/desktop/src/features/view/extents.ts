@@ -5,6 +5,7 @@
  */
 
 import { surfaceYAtX } from "./surface";
+import { formatMagnitude, formatRange, groupTouchingStrips } from "../rendering/overlay-layout";
 
 type Pt = [number, number];
 
@@ -74,10 +75,13 @@ export interface PaperContent {
 
 /*
  * Screen sizes (px at paper zoom 1) of the symbols drawn at a fixed size,
- * from draw.ts: a load is a 38 px arrow (ARROW_HEIGHT_PX) with a bold 13 px
- * label above it; the water-table triangle stands about 14 px above its line.
+ * from canvas/overlay-geometry.ts: a load is at most a 38 px arrow
+ * (ARROW_HEIGHT_PX) with a bold 13 px label 8 px above it, moved up a
+ * 15 px line for each label it would overlap (at most three); the
+ * water-table triangle stands about 14 px above its line.
  */
 const LOAD_SYMBOL_HEIGHT_PX = 38 + 8 + 13 + 3;
+const LOAD_LABEL_LINE_PX = 15;
 const LOAD_LABEL_CHAR_PX = 8;
 const LOAD_ARROW_HEAD_PX = 8;
 const WATER_SYMBOL_HEIGHT_PX = 16;
@@ -101,19 +105,31 @@ export function paperContentBounds(content: PaperContent, worldPerPx: number): B
     if (top) pts.push([top.xMin, top.yMax + WATER_SYMBOL_HEIGHT_PX * px]);
   }
 
+  // Labels as layoutLoads places them: one per group of touching UDL
+  // strips, raised past the labels before it that it would overlap.
+  const labelSpans: [number, number][] = [];
   const load = (x: number, label: string) => {
     const y = surfaceYAtX(coordinates, x);
     if (y === null) return;
     const halfLabel = Math.max(LOAD_ARROW_HEAD_PX, (label.length * LOAD_LABEL_CHAR_PX) / 2) * px;
-    pts.push([x - halfLabel, y + LOAD_SYMBOL_HEIGHT_PX * px], [x + halfLabel, y + LOAD_SYMBOL_HEIGHT_PX * px]);
+    let raise = 0;
+    if (label) {
+      raise = Math.min(3, labelSpans.filter(([a, b]) => a < x + halfLabel && x - halfLabel < b).length);
+      labelSpans.push([x - halfLabel, x + halfLabel]);
+    }
+    const top = y + (LOAD_SYMBOL_HEIGHT_PX + raise * LOAD_LABEL_LINE_PX) * px;
+    pts.push([x - halfLabel, top], [x + halfLabel, top]);
   };
-  for (const u of content.udls ?? []) {
-    // The label is centred over the load, the box spans x1..x2.
-    load((u.x1 + u.x2) / 2, `q = ${u.magnitude} kPa`);
-    load(u.x1, "");
-    load(u.x2, "");
+  const onModel = (content.udls ?? []).filter(
+    (u) => surfaceYAtX(coordinates, u.x1) !== null && surfaceYAtX(coordinates, u.x2) !== null,
+  );
+  for (const g of groupTouchingStrips(onModel)) {
+    // The label is centred over the group, the boxes span its strips.
+    load((g.lo + g.hi) / 2, formatRange(g.qMin, g.qMax, "q", "kPa"));
+    load(g.lo, "");
+    load(g.hi, "");
   }
-  for (const l of content.lineLoads ?? []) load(l.x, `P = ${l.magnitude} kN/m`);
+  for (const l of content.lineLoads ?? []) load(l.x, `P = ${formatMagnitude(l.magnitude)} kN/m`);
 
   for (const r of [...(content.reinforcements ?? []), ...(content.piles ?? [])]) {
     pts.push([r.x1, r.y1], [r.x2, r.y2]);
