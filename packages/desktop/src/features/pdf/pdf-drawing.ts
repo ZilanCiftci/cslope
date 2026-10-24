@@ -34,7 +34,7 @@ import {
   surfacePoints,
   type DrawableSurface,
 } from "../../utils/arc";
-import { computeRegions } from "../../utils/regions";
+import { computeRegions, type Region } from "../../utils/regions";
 import {
   computeRulerStep,
   formatRulerLabel,
@@ -85,7 +85,7 @@ import {
   MODEL_HATCH_PATTERNS,
 } from "../rendering/style-spec";
 import { drawPdfHatch, drawPdfHatchLabel } from "../rendering/hatch";
-import { freeWaterPonds, mainPiezoLine, piezoExtensions } from "../../utils/piezo";
+import { piezoExtensions, piezoPonds } from "../../utils/piezo";
 import { pondArrowLayout } from "../rendering/pond-arrows";
 import { piezoSymbolBox } from "../canvas/overlay-geometry";
 import type { AnalysisOptions, AnalysisResult } from "@cslope/engine";
@@ -682,13 +682,16 @@ export function drawPiezometricLines(
   avoid: ForceLabelContext = { obstacles: [], placed: [] },
   /** What else is drawn around the lines (loads, search markers; see piezoObstacles). */
   scene: Omit<PiezoScene, "coordinates" | "critical"> = {},
+  /** Which line ponds where: the material regions and their assigned lines (see piezoPonds). */
+  ponding: { regions?: readonly Region[]; materialAssignment?: Record<string, string> } = {},
 ) {
   const multiLine = lines.length > 1;
   const obstacles = piezoObstacles({ ...scene, coordinates: modelCoordinates, critical }, tf.worldToPdf, tf.mmPerPx);
   // Symbols placed so far, so lines don't put theirs on top of each other.
   const taken: [number, number][] = [];
 
-  // Free water standing on the ground (from the main line), as on canvas.
+  // Free water standing on the ground (the line of the material at the
+  // ground, as the analysis takes it), as on canvas.
   // Water-table symbols spaced along each line, as on the canvas (placed
   // first: the load arrows in the water keep clear of them).
   const symbolsOf = lines.map((line) =>
@@ -706,9 +709,12 @@ export function drawPiezometricLines(
           numbered: multiLine,
         }),
   );
-  const mainLine = mainPiezoLine({ lines, mainLineId });
-  if (freeWater && mainLine) {
-    const ponds = freeWaterPonds(mainLine.coordinates, modelCoordinates);
+  if (freeWater) {
+    const ponds = piezoPonds(
+      { lines, mainLineId, materialAssignment: ponding.materialAssignment },
+      modelCoordinates,
+      ponding.regions,
+    );
     pdf.setFillColor(...POND_COLOR.rgb);
     setOpacity(pdf, POND_OPACITY);
     for (const { water, ground } of ponds) {

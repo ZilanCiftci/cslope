@@ -34,14 +34,14 @@ How $h$ is measured is set in **Model › Analysis › Options**, under *Pore pr
 
 With two or more lines, the window shows two more settings:
 
-- **Main line**: the line that gives the pore pressure of materials without a line of their own, and the free water above the ground. By default the first line.
+- **Main line**: the line that gives the pore pressure, and the free water above the ground, of materials without a line of their own. By default the first line.
 - **Material Assignment**: one line per material. Use it for perched water tables or a separate pressure level in an aquifer below a clay layer.
 
 A material's line is also the level below which its [saturated unit weight](/docs/materials#saturated-unit-weight) applies.
 
 ## Free water above the ground
 
-**Free water above ground (ponding)** is on by default. Where the main line lies above the ground surface, for example at the toe of a slope in a river or a reservoir, the water stands on the slope. Its weight acts on the slices below it, and against a vertical face it pushes horizontally. This is the usual way to model a submerged toe or a full reservoir.
+**Free water above ground (ponding)** is on by default. Where the line of the material at the ground (its own line, else the main line) lies above the ground surface, for example at the toe of a slope in a river or a reservoir, the water stands on the slope. Its weight acts on the slices below it, and against a vertical face it pushes horizontally. This is the usual way to model a submerged toe or a full reservoir.
 
 With the box unticked, the lines are clipped to the ground surface and no water stands on the slope.
 

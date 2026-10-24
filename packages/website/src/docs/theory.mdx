@@ -68,7 +68,7 @@ Pore pressure comes from a piezometric line: at a point below the line, the pres
 - **Vertical head** (default): $h$ is the vertical distance from the point to the line. This is the usual convention.
 - **Phreatic correction**: $h$ is the vertical distance multiplied by $\cos^2\theta$, where $\theta$ is the inclination of the line above the slice. This assumes a free phreatic surface with flow parallel to it, and gives lower pore pressures, and so a higher $F$, below a steep line.
 
-A material can have its own piezometric line; slices in that material then use it instead of the main line. Where the main line rises above the ground surface, the water standing on the slope acts on it as a load (ponded water). This applies while **Free water above ground (ponding)** is ticked in the Piezometric Lines window, which it is by default.
+A material can have its own piezometric line; slices in that material then use it instead of the main line. Where a line rises above the ground surface, the water standing on the slope acts on it as a load (ponded water). The water over a stretch of ground comes from the line of the material at the ground there, the line that also gives that material its pore pressure, so that the weight of the water and the pore pressure under it come from one water level (Duncan and Wright 2014, ch. 6). This applies while **Free water above ground (ponding)** is ticked in the Piezometric Lines window, which it is by default.
 
 ## Tension cracks
 

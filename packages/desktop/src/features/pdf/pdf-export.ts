@@ -48,6 +48,7 @@ import { surfacePoints } from "../../utils/arc";
 import { drawSummaryPages, type SummaryHeader } from "./pdf-summary";
 import type { SummarySection } from "../export/analysisSummary";
 import { clampMinorTicks } from "../../utils/ruler";
+import { computeRegions } from "../../utils/regions";
 
 interface PdfViewBounds {
   xMin: number;
@@ -408,6 +409,10 @@ export function exportVectorPdf(data: PdfExportData): void {
           udls,
           lineLoads,
           analysisLimits: analysisLimits.enabled && !customPlanesOnly ? analysisLimits : null,
+        },
+        {
+          regions: computeRegions(coordinates, materialBoundaries, regionMaterials, materials[0]?.id ?? ""),
+          materialAssignment: piezometricLine.materialAssignment,
         },
       );
     }

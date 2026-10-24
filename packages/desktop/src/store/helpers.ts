@@ -97,7 +97,8 @@ export function buildSlopeDTOFromModel(model: ModelEntry): SlopeDefinition {
   }
 
   if (piezometricLine.lines.length > 0) {
-    // Free water above the ground comes from the main line; a clipped
+    // Free water above the ground comes from the line of the material at
+    // the ground (the main line for one without its own); a clipped
     // line never rises above the surface.
     const followBoundary = piezometricLine.freeWater === false;
     // A main line still being drawn (under two points) cannot carry the
@@ -237,7 +238,7 @@ export function getAnalysisInputSignature(state: AppState): string {
       })),
       materialAssignment: piezo.materialAssignment,
       freeWater: piezo.freeWater,
-      // Free water and the default pore pressure come from the main line.
+      // The default pore pressure (and free water) comes from the main line.
       mainLineId: piezo.mainLineId,
     },
     udls: state.udls,

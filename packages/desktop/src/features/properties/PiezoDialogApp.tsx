@@ -388,7 +388,7 @@ export function PiezoDialogApp() {
             {pl.lines.length > 1 && (
               <label
                 className="flex items-center gap-2 text-[11px]"
-                title="The line that gives the free water above the ground and the pore pressure of materials without a line of their own."
+                title="The line that gives the pore pressure, and the free water above the ground, of materials without a line of their own."
               >
                 <span>Main line</span>
                 <select

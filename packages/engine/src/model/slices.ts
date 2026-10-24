@@ -443,6 +443,31 @@ function waterAtSlice(
 const lineYFrom = (line: { x: number[]; y: number[] }, x: number, side: "left" | "right") =>
   polylineYFrom(line.x, line.y, x, side);
 
+/**
+ * Water line that gives the free water standing on the ground at x: the
+ * line governing pore pressure in the material just below the ground
+ * there (its own line, else the main line), or null without water. x must
+ * not lie on a vertical face of the ground.
+ *
+ * External water is a load on the ground plus hydrostatic pore pressure
+ * below it, and the two must come from the same water level, else the
+ * base carries the pore pressure of a pond whose weight is missing (or the
+ * reverse) and the FOS is wrong by about the whole water load (Duncan &
+ * Wright 2014, ch. 6). The water at the ground surface is the water of
+ * the surface material, so that material's line decides both.
+ */
+function freeWaterLineAt(slope: Slope, x: number): { x: number[]; y: number[] } | null {
+  if (!slope.hasMaterialWaterTables) return slope.hasWaterTable ? slope.waterRLXY : null;
+  const surf = slope.surfaceLineXY;
+  const yGround = surf ? getYAtX(surf.x, surf.y, x) : Number.NaN;
+  let material: GeometryWithMaterial["material"] | null = null;
+  if (surf && Number.isFinite(yGround)) {
+    const y = yGround - 1e-6 * Math.max(1, Math.abs(surf.x[surf.x.length - 1] - surf.x[0]));
+    material = slope.materialGeometries.find((g) => isPointInPolygon(x, y, g.px, g.py))?.material ?? null;
+  }
+  return slope.getWaterLineForMaterial(material);
+}
+
 // ── getSlices ─────────────────────────────────────────────────────
 
 /**
@@ -649,6 +674,25 @@ export function getSlices(
     waterYMid = getYAtXMany(slope.waterRLXY.x, slope.waterRLXY.y, sxArray);
   }
 
+  // Free water on the ground: the line of the surface material of each
+  // slice (freeWaterLineAt), at the slice edges from the slice's side.
+  const freeLines = sxArray.map((x) => freeWaterLineAt(slope, x));
+  const freeYsCache = new Map<{ x: number[]; y: number[] }, [number[], number[]]>();
+  const freeYs = (line: { x: number[]; y: number[] }) => {
+    let ys = freeYsCache.get(line);
+    if (!ys) {
+      ys = [
+        slicesX.slice(0, -1).map((x) => lineYFrom(line, x, "right")),
+        slicesX.slice(1).map((x) => lineYFrom(line, x, "left")),
+      ];
+      freeYsCache.set(line, ys);
+    }
+    return ys;
+  };
+  const freeYL = freeLines.map((line, i) => (line ? freeYs(line)[0][i] : Number.NaN));
+  const freeYR = freeLines.map((line, i) => (line ? freeYs(line)[1][i] : Number.NaN));
+  const hasFreeWater = freeLines.some((line) => line !== null);
+
   // A non-circular surface must stay below the ground between entry and
   // exit; a segment cutting through the air is no slip surface.
   if (poly) {
@@ -745,7 +789,7 @@ export function getSlices(
 
     if (s !== null && s.isValid) {
       if (factors) applyMaterialFactors(s, factors);
-      if (waterYL && waterYR) applyFreeWater(s, waterYL[i], waterYR[i], cy);
+      if (freeLines[i]) applyFreeWater(s, freeYL[i], freeYR[i], cy);
       results.push(s);
     }
   }
@@ -754,9 +798,13 @@ export function getSlices(
   // slice tops never include the face, so its horizontal pressure is
   // applied here, toward the higher side, like the inclined-face thrust
   // in applyFreeWater.
-  if (waterYL && waterYR && results.length > 0) {
-    const w = slope.waterRLXY!;
+  if (hasFreeWater && results.length > 0) {
     const tol = 1e-6 * Math.max(1, x1 - x0);
+    // Water just outside an end of the mass (the surface material there).
+    const outsideY = (x: number, side: "left" | "right") => {
+      const line = freeWaterLineAt(slope, side === "left" ? x - tol : x + tol);
+      return line ? lineYFrom(line, x, side) : Number.NaN;
+    };
     for (let k = 0; k <= nSlices; k++) {
       // Ground on each side of the boundary; outside the mass at its ends.
       const yL = k > 0 ? yTopsR[k - 1] : surfaceYFrom(x0, "left");
@@ -772,10 +820,11 @@ export function getSlices(
       const yLo = Math.max(Math.min(yL, yR), baseY(slicesX[k]));
       const yHi = Math.max(yL, yR);
       if (yHi - yLo <= tol) continue;
-      // Water on the low side, read from that side.
+      // Water on the low side, read from that side (the line of the
+      // surface material there).
       const wy = highLeft
-        ? k < nSlices ? waterYL[k] : lineYFrom(w, x1, "right")
-        : k > 0 ? waterYR[k - 1] : lineYFrom(w, x0, "left");
+        ? k < nSlices ? freeYL[k] : outsideY(x1, "right")
+        : k > 0 ? freeYR[k - 1] : outsideY(x0, "left");
       if (!Number.isFinite(wy) || wy <= yLo) continue;
       const h1 = wy - yLo;
       const h2 = Math.max(wy - yHi, 0);
@@ -899,8 +948,9 @@ export function rankineCrackDepth(slope: Slope, x: number): number {
     if (x >= Math.min(u.x1, u.x2) && x <= Math.max(u.x1, u.x2)) q += u.magnitude * loadFactor;
   }
   // Free water standing on the ground is a surcharge too (a clipped line
-  // never rises above the ground).
-  const water = slope.hasWaterTable ? slope.waterRLXY : null;
+  // never rises above the ground): the line of the material at the ground,
+  // as in getSlices (freeWaterLineAt).
+  const water = slope.getWaterLineForMaterial(geo.material);
   if (water) {
     const wy = getYAtX(water.x, water.y, x);
     if (Number.isFinite(wy) && wy > yGround) q += WATER_UNIT_WEIGHT * (wy - yGround);

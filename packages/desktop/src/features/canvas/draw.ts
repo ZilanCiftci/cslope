@@ -108,7 +108,7 @@ import {
   type CrackMarker,
   type MarkerDot,
 } from "./marker-geometry";
-import { freeWaterPonds, mainPiezoLine, piezoExtensions } from "../../utils/piezo";
+import { piezoExtensions, piezoPonds } from "../../utils/piezo";
 import { pondArrowLayout, type PondArrow } from "../rendering/pond-arrows";
 import {
   isDarkFill,
@@ -1309,9 +1309,14 @@ export function drawCanvas(
   if (piezometricLine.lines.length > 0) {
     const multiLine = piezometricLine.lines.length > 1;
     const piezoBlue = PIEZO_COLOR.hex;
-    // Free water standing on the ground (from the main line).
+    // Free water standing on the ground (from the line of the material at
+    // the ground, as the analysis takes it).
     if (piezometricLine.freeWater !== false) {
-      const ponds = freeWaterPonds(mainPiezoLine(piezometricLine)!.coordinates, coordinates);
+      const ponds = piezoPonds(
+        piezometricLine,
+        coordinates,
+        getCachedRegions(coordinates, materialBoundaries, regionMaterials, materials[0]?.id ?? ""),
+      );
       ctx.fillStyle = POND_COLOR.hex;
       ctx.globalAlpha = POND_OPACITY;
       for (const { water, ground } of ponds) {
