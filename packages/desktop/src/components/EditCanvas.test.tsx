@@ -4,6 +4,7 @@ import { EditCanvas } from "./EditCanvas";
 import { useAppStore } from "../store/app-store";
 import { DEFAULT_MATERIAL } from "../store/defaults";
 import { createRecordingContext } from "../test/recording-context";
+import { FLOATING_TOOLBAR_RESERVE_PX, RULER_SIZE_PX } from "../features/canvas/constants";
 
 const W = 800;
 const H = 600;
@@ -142,15 +143,33 @@ describe("EditCanvas toolbar", () => {
     useAppStore.setState({ editViewScale: 3, editViewOffset: [50, 50] });
     renderCanvas();
     act(() => toolbar().onFitToScreen());
-    // The whole model lies inside the canvas, centred horizontally.
+    // The whole model lies right of the ruler and above the floating
+    // toolbar, centred horizontally in that free area.
     for (const c of COORDS) {
       const [sx, sy] = toScreen(c);
-      expect(sx).toBeGreaterThan(0);
+      expect(sx).toBeGreaterThan(RULER_SIZE_PX);
       expect(sx).toBeLessThan(W);
       expect(sy).toBeGreaterThan(0);
-      expect(sy).toBeLessThan(H);
+      expect(sy).toBeLessThan(H - FLOATING_TOOLBAR_RESERVE_PX);
     }
-    expect((toScreen([0, 0])[0] + toScreen([30, 0])[0]) / 2).toBeCloseTo(W / 2, 6);
+    expect((toScreen([0, 0])[0] + toScreen([30, 0])[0]) / 2).toBeCloseTo((W + RULER_SIZE_PX) / 2, 6);
+  });
+
+  it("fits to the model, not to a water line far below it", () => {
+    useAppStore.setState({ editViewScale: 3, editViewOffset: [50, 50] });
+    renderCanvas();
+    act(() => toolbar().onFitToScreen());
+    const plain = view().scale;
+    act(() =>
+      useAppStore.setState({
+        piezometricLine: {
+          ...useAppStore.getState().piezometricLine,
+          lines: [{ id: "dry", name: "Dry", color: "#3b82f6", coordinates: [[-200, -100], [200, -100]] }],
+        },
+      }),
+    );
+    act(() => toolbar().onFitToScreen());
+    expect(view().scale).toBeCloseTo(plain, 9);
   });
 
   it("shows the zoom relative to fit-width and sets a zoom percentage", () => {

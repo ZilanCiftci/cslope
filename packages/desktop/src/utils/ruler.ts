@@ -1,16 +1,66 @@
+/** Smallest spacing of labelled ticks on the paper, in mm on an A4-wide sheet. */
+export const MIN_TICK_SPACING_MM = 15;
+/** Free space between two tick labels, in mm on an A4-wide sheet. */
+const TICK_LABEL_GAP_MM = 5;
+/**
+ * Width of a tick-label character (about 10 px type on the paper on screen,
+ * 9 pt in the PDF), in mm on an A4-wide sheet; a point or minus sign is
+ * narrower.
+ */
+const TICK_DIGIT_MM = 2.2;
+const TICK_PUNCT_MM = 1.2;
+/** Smallest tick step: centimetres in a model in metres. */
+const MIN_TICK_STEP = 0.01;
+
+function labelWidthMm(label: string): number {
+  let w = 0;
+  for (const ch of label) w += /[0-9]/.test(ch) ? TICK_DIGIT_MM : TICK_PUNCT_MM;
+  return w;
+}
+
+/**
+ * Spacing of the labelled ticks along the paper frame: the smallest "nice"
+ * step (1, 2, 2.5 or 5 times a power of ten) whose ticks lie at least
+ * MIN_TICK_SPACING_MM apart on the paper and leave room for their labels.
+ * The labels' width comes from the values at the ends of `labelRange`
+ * (world x from left to right; 0 to the span when not given).
+ *
+ * Sizes are taken on an A4-wide sheet: the screen fits any paper size to
+ * the window, so a larger sheet shows the same labels relatively smaller.
+ */
 export function computeRulerStep(
   worldSpan: number,
   innerFrameWidthMm: number,
   paperWidthMm: number,
+  labelRange?: [number, number],
 ): number {
-  const safeWorldSpan = Math.max(Math.abs(worldSpan), 1e-9);
-  const safeInnerFrameWidthMm = Math.max(Math.abs(innerFrameWidthMm), 1e-9);
-  const rulerRawStep =
-    (10 * safeWorldSpan * (paperWidthMm / 297)) / safeInnerFrameWidthMm;
-  const rawStep = Math.max(rulerRawStep, 0.5);
-  const mag = Math.pow(10, Math.floor(Math.log10(rawStep)));
-  const stepOptions = [1, 2, 5, 10];
-  return Math.max(0.5, stepOptions.find((s) => s * mag >= rawStep)! * mag);
+  const span = Math.max(Math.abs(worldSpan), 1e-9);
+  const frameMm =
+    (Math.abs(innerFrameWidthMm) * 297) / Math.max(Math.abs(paperWidthMm), 1e-9);
+  const mmPerUnit = frameMm / span;
+  const [lo, hi] = labelRange
+    ? [Math.min(...labelRange), Math.max(...labelRange)]
+    : [0, span];
+  const spacingNeeded = (step: number) => {
+    const first = Math.ceil(lo / step - 1e-9) * step;
+    const last = Math.floor(hi / step + 1e-9) * step;
+    const label = Math.max(
+      labelWidthMm(formatRulerLabel(first, step)),
+      labelWidthMm(formatRulerLabel(last, step)),
+    );
+    return Math.max(MIN_TICK_SPACING_MM, label + TICK_LABEL_GAP_MM);
+  };
+  if (!(mmPerUnit > 0) || !Number.isFinite(mmPerUnit)) return Math.max(MIN_TICK_STEP, span);
+  const rough = Math.max(MIN_TICK_STEP, MIN_TICK_SPACING_MM / mmPerUnit);
+  let mag = Math.pow(10, Math.floor(Math.log10(rough)));
+  for (let decade = 0; decade < 6; decade++, mag *= 10) {
+    for (const m of [1, 2, 2.5, 5]) {
+      const step = m * mag;
+      if (step < MIN_TICK_STEP - 1e-12) continue;
+      if (step * mmPerUnit >= spacingNeeded(step)) return step;
+    }
+  }
+  return mag;
 }
 
 /** Number of decimals needed to write `step` exactly (at most 6). */

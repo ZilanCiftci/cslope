@@ -21,6 +21,7 @@ import { useNonPassiveWheel } from "../features/canvas/hooks/useNonPassiveWheel"
 import { drawCanvas, type DrawCanvasParams } from "../features/canvas/draw";
 import {
   ARROW_HEIGHT_PX,
+  FLOATING_TOOLBAR_RESERVE_PX,
   RULER_SIZE_PX,
   cssVar,
   VIEW_SCALE_MAX,
@@ -33,6 +34,9 @@ import {
 import { ContextMenuOverlay } from "../features/canvas/ContextMenuOverlay";
 import { MaterialPickerMenu } from "../features/canvas/MaterialPickerMenu";
 import { AxisOverlay } from "../features/canvas/AxisOverlay";
+
+/** Gap kept around the model by zoom-to-fit, besides the rulers and the toolbar. */
+const FIT_PAD_PX = 16;
 
 export function EditCanvas() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -414,19 +418,18 @@ export function EditCanvas() {
     const container = containerRef.current;
     const canvas = canvasRef.current;
     const rect = container?.getBoundingClientRect();
-    const rulerPadding = RULER_SIZE_PX + 16; // ruler band + extra margin
-    const w =
-      (rect?.width ?? canvas?.getBoundingClientRect().width ?? 0) -
-      rulerPadding;
-    const h =
-      (rect?.height ?? canvas?.getBoundingClientRect().height ?? 0) -
-      rulerPadding;
-    if (w <= 0 || h <= 0) return;
-
-    const fitW = w;
-    const fitH = h;
-    const targetCx = w / 2;
-    const targetCy = h / 2;
+    const w = rect?.width ?? canvas?.getBoundingClientRect().width ?? 0;
+    const h = rect?.height ?? canvas?.getBoundingClientRect().height ?? 0;
+    // The free area: right of the ruler on the left, above the floating
+    // toolbar (which covers the bottom ruler too), with a small gap.
+    const pad = FIT_PAD_PX;
+    const left = RULER_SIZE_PX + pad;
+    const top = pad;
+    const fitW = w - left - pad;
+    const fitH = h - top - Math.max(FLOATING_TOOLBAR_RESERVE_PX, RULER_SIZE_PX + pad);
+    if (fitW <= 0 || fitH <= 0) return;
+    const targetCx = left + fitW / 2;
+    const targetCy = top + fitH / 2;
 
     const modelBounds = collectModelFitBounds({
       coordinates,
@@ -519,10 +522,11 @@ export function EditCanvas() {
     const container = containerRef.current;
     const canvas = canvasRef.current;
     const rect = container?.getBoundingClientRect();
-    const rulerPadding = RULER_SIZE_PX + 16;
+    // The same free width as Fit (handleFitToScreen).
     const w =
       (rect?.width ?? canvas?.getBoundingClientRect().width ?? 0) -
-      rulerPadding;
+      RULER_SIZE_PX -
+      2 * FIT_PAD_PX;
     if (w <= 0) return null;
 
     const modelBounds = collectModelFitBounds({

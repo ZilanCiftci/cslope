@@ -110,7 +110,10 @@ export function drawGrid(
   // separately rounded automatic steps used to differ.
   const gridStep = resolveTickStep(
     gridSpacing,
-    computeRulerStep(worldRight - worldLeft, clip.w, tf.paperW),
+    computeRulerStep(worldRight - worldLeft, clip.w, tf.paperW, [
+      worldLeft,
+      worldRight,
+    ]),
   );
 
   pdf.setDrawColor(220, 220, 220);
@@ -168,7 +171,10 @@ export function drawRulerFrame(
   const worldSpan = worldRight - worldLeft;
   const rulerStep = resolveTickStep(
     gridSpacing,
-    computeRulerStep(worldSpan, innerFrame.w, tf.paperW),
+    computeRulerStep(worldSpan, innerFrame.w, tf.paperW, [
+      worldLeft,
+      worldRight,
+    ]),
   );
   const minorTickCount = minorTicks ?? 0;
 

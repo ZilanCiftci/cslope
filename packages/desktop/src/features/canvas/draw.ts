@@ -436,6 +436,7 @@ export function drawCanvas(
         innerRightX - innerLeftX,
         paperWidthMm * (1 - PLOT_MARGINS.L - PLOT_MARGINS.R),
         paperWidthMm,
+        [innerLeftX, innerRightX],
       ),
     );
     const virtualW = 1200;
@@ -1659,7 +1660,10 @@ export function drawCanvas(
         paperWidthMm * (1 - PLOT_MARGINS.L - PLOT_MARGINS.R);
       const rulerStep = resolveTickStep(
         resultViewSettings.gridSpacing,
-        computeRulerStep(worldSpan, innerFrameWidthMm, paperWidthMm),
+        computeRulerStep(worldSpan, innerFrameWidthMm, paperWidthMm, [
+          worldLeftTick,
+          worldRightTick,
+        ]),
       );
       const minorTickCount = clampMinorTicks(resultViewSettings.minorTicks ?? 0);
 

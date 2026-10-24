@@ -30,6 +30,7 @@ The first public release.
 - Critical surface, all surfaces or a factor-of-safety filter, slices, annotations and templates.
 - Plots of slice data and of Fm and Ff against λ; export to PDF and PNG, slice data to Excel and CSV.
 - The PDF report ends with an analysis summary: method, search, water and tension crack, partial factors, materials and loads. With partial factors, the PDF and the slice data mark design values.
+- The paper frames the model at true scale with a margin, including water lines, loads and reinforcement, and spaces its axis ticks for their labels; PNG export is 2400 px wide on white. Fit in the edit view ignores water lines far below the model and keeps clear of the toolbar.
 
 ### Verification
 
