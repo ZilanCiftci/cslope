@@ -2017,13 +2017,16 @@ export const PROBLEMS: RawCase[] = [
     reference: "Low (1989).",
     surface: "fixed",
     units: "SI",
-    description: "Stiff upper slope on two undrained clays, the lowest with Su increasing linearly with depth (S = f(datum)), on the circle that carries a commercial program's published values.",
-    definition: {"coordinates":[[0,0],[0,8],[10,8],[26,16],[40,16],[40,0]],"materials":[{"name":"Upper","model":{"kind":"mohr-coulomb","unitWeight":20,"cohesion":95,"frictionAngle":15}},{"name":"Middle","model":{"kind":"mohr-coulomb","unitWeight":20,"cohesion":15,"frictionAngle":0}},{"name":"Lower","model":{"kind":"s-f-datum","unitWeight":20,"suRef":15,"yRef":4,"rate":3.75}}],"materialBoundaries":[{"coordinates":[[-1,8],[41,8]],"materialName":""},{"coordinates":[[-1,4],[41,4]],"materialName":""}],"regionAssignments":[{"point":[10.2,8.05],"materialName":"Upper"},{"point":[0.4,6],"materialName":"Middle"},{"point":[0.4,2],"materialName":"Lower"}],"customSearchPlanes":[{"cx":19,"cy":18.5,"radius":18}],"customPlanesOnly":true,"orientation":"rtl"},
+    description: "Stiff upper slope on two undrained clays, the lowest with Su increasing linearly with depth (S = f(datum)), on the critical circle a commercial program prints with its Bishop value (centre (18.001, 16.000), R 15.556).",
+    definition: {"coordinates":[[0,0],[0,8],[10,8],[26,16],[40,16],[40,0]],"materials":[{"name":"Upper","model":{"kind":"mohr-coulomb","unitWeight":20,"cohesion":95,"frictionAngle":15}},{"name":"Middle","model":{"kind":"mohr-coulomb","unitWeight":20,"cohesion":15,"frictionAngle":0}},{"name":"Lower","model":{"kind":"s-f-datum","unitWeight":20,"suRef":15,"yRef":4,"rate":3.75}}],"materialBoundaries":[{"coordinates":[[-1,8],[41,8]],"materialName":""},{"coordinates":[[-1,4],[41,4]],"materialName":""}],"regionAssignments":[{"point":[10.2,8.05],"materialName":"Upper"},{"point":[0.4,6],"materialName":"Middle"},{"point":[0.4,2],"materialName":"Lower"}],"customSearchPlanes":[{"cx":18.001,"cy":16,"radius":15.556}],"customPlanesOnly":true,"orientation":"rtl"},
     checks: [
       {"method":"Bishop","label":"Bishop simplified","published":1.192,"publishedBy":"Commercial program A"},
     ],
     paper: [{"value": 1.36, "method": "Ordinary", "source": "Low (1989)"}, {"value": 1.14, "method": "Bishop simplified", "source": "Low (1989)"}, {"value": 1.17, "source": "Kim (2002)"}],
-    publicNote: "Low's Bishop value 1.14 is about 4 % below the other programs (1.19); Kim (2002) gives 1.17.",
+    publicNote: "The comparison program's 1.19 is not reproduced on the circle it prints with that value: cSlope gives 1.13 there, close to Low's Bishop value 1.14; Kim (2002) gives 1.17.",
+    notes: [
+      "Input audit 2026-10-24: the circle was (19, 18.5, R 18), on which cSlope gives 1.197; commercial program A's Fig. 23.3 prints centre (18.001, 16.000), R 15.556 (end points (4.659, 8) and (33.557, 16)) with its Bishop 1.192. On that circle cSlope gives 1.134 (1.128 / 1.138 / 1.140 with 25 / 100 / 200 slices), and an independent spreadsheet Bishop calculation 1.13-1.15 (it depends on the slicing of the vertical scarp, since the centre lies at crest level). The input agrees with commercial program A otherwise: its Ordinary value 1.370 on its Ordinary circle (Fig. 23.2: (17.201, 21.770), R 21.493) is reproduced by the same spreadsheet (1.374). So commercial program A's 1.192 is not reproduced on its own circle; cSlope's 1.134 is close to Low's Bishop 1.14. The check now fails (-4.9 %).",
+    ],
   },
   {
     id: "V069a",
