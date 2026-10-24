@@ -1,5 +1,5 @@
 import { DEFAULT_ANALYSIS_OPTIONS } from "@cslope/engine";
-import { DEFAULT_MODEL_NAME } from "../../constants";
+import { MODEL_NAME_PREFIX } from "../../constants";
 import { BENCHMARK_MODELS } from "../benchmarks";
 import { verificationModels } from "../verification-models";
 import { LOVO_MODELS } from "../lovo";
@@ -105,7 +105,16 @@ export const mapModelToState = (model: ModelEntry) => ({
 
 export const INITIAL_MODEL_ID = "model-initial";
 /** Name of the one model in a new project. */
-export const STARTER_MODEL_NAME = "Model 1";
+export const STARTER_MODEL_NAME = `${MODEL_NAME_PREFIX} 1`;
+
+/** "Model n" for the next model, n one past the count unless taken. */
+function nextModelName(models: ModelEntry[]): string {
+  const taken = new Set(models.map((m) => m.name));
+  let n = models.length + 1;
+  while (taken.has(`${MODEL_NAME_PREFIX} ${n}`)) n++;
+  return `${MODEL_NAME_PREFIX} ${n}`;
+}
+
 /** The example whose simple geometry a new project starts from. */
 const STARTER_GEOMETRY_EXAMPLE = "T-ACADS Simple";
 
@@ -186,7 +195,7 @@ export const createModelsSlice: SliceCreator<ModelsSlice> = (
     const id = nextId("model");
     const entry = createDefaultModel(
       id,
-      name ?? `${DEFAULT_MODEL_NAME} ${get().models.length + 1}`,
+      name ?? nextModelName(get().models),
     );
     set((s) => ({ models: [...s.models, entry] }));
     get().switchModel(id);

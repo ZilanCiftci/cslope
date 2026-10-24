@@ -1,6 +1,11 @@
 import { describe, expect, it } from "vitest";
 import { circleEntryExit, defaultCustomCircle } from "./custom-plane";
 import { surfaceYAtX } from "../features/view/surface";
+import {
+  analyseSlope,
+  buildSlope,
+  toCanonicalSlopeDefinition,
+} from "@cslope/engine";
 
 describe("defaultCustomCircle", () => {
   it("puts the centre above the middle of the slope face", () => {
@@ -41,6 +46,56 @@ describe("defaultCustomCircle", () => {
     expect(c.cx).toBe(25);
     expect(c.cy).toBeGreaterThan(10);
     expect(c.cy - c.radius).toBeLessThan(10);
+  });
+
+  describe("on an embankment, the face falling in the sliding direction", () => {
+    // Rising face x 10-20, crest y 10 from x 20 to 30, falling face x 30-40.
+    const embankment: [number, number][] = [
+      [0, 0],
+      [0, 5],
+      [10, 5],
+      [20, 10],
+      [30, 10],
+      [40, 5],
+      [50, 5],
+      [50, 0],
+    ];
+
+    function fosOnlyThisPlane(orientation: "ltr" | "rtl") {
+      const plane = defaultCustomCircle(embankment, orientation);
+      // The engine works on the canonical (left to right) definition.
+      const slope = buildSlope(
+        toCanonicalSlopeDefinition({
+          orientation,
+          coordinates: embankment,
+          materials: [
+            { name: "Fill", unitWeight: 19, cohesion: 5, frictionAngle: 30 },
+          ],
+          customSearchPlanes: [plane],
+          customPlanesOnly: true,
+        }),
+      );
+      return { plane, fos: analyseSlope(slope) };
+    }
+
+    it("left to right: the right face (ground drops as x increases)", () => {
+      const { plane, fos } = fosOnlyThisPlane("ltr");
+      expect(plane.cx).toBe(35);
+      expect(plane.cy).toBeGreaterThan(10);
+      expect(plane.cy - plane.radius).toBeLessThan(5);
+      expect(plane.cy - plane.radius).toBeGreaterThan(0);
+      expect(fos).not.toBeNull();
+      expect(fos!).toBeGreaterThan(0);
+    });
+
+    it("right to left: the left face (ground drops as x decreases)", () => {
+      const { plane, fos } = fosOnlyThisPlane("rtl");
+      expect(plane.cx).toBe(15);
+      expect(plane.cy).toBeGreaterThan(10);
+      expect(plane.cy - plane.radius).toBeLessThan(5);
+      expect(fos).not.toBeNull();
+      expect(fos!).toBeGreaterThan(0);
+    });
   });
 
   it("keeps the old default without a model", () => {

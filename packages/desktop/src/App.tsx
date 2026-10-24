@@ -35,6 +35,7 @@ import type {
   UdlRow,
 } from "./store/types";
 import { DIALOG_BODY_SELECTOR, naturalDialogHeight } from "./utils/dialog-height";
+import { paperContentOf, type PaperContent } from "./features/view/extents";
 
 interface LoadsStatePayload {
   udls: UdlRow[];
@@ -92,6 +93,8 @@ interface ViewSettingsStatePayload {
   coordinates: [number, number][];
   resultViewScale: number;
   resultViewOffset: [number, number];
+  /** What the model draws, for the dialog's "Use model bounds". */
+  paperContent?: PaperContent;
 }
 
 /** Store fields that are also persisted on the active model entry. */
@@ -884,6 +887,7 @@ function App() {
         coordinates: state.coordinates,
         resultViewScale: state.resultViewScale,
         resultViewOffset: state.resultViewOffset,
+        paperContent: paperContentOf(state),
       });
     };
 
@@ -920,8 +924,9 @@ function App() {
       coordinates,
       resultViewScale: useAppStore.getState().resultViewScale,
       resultViewOffset: useAppStore.getState().resultViewOffset,
+      paperContent: paperContentOf({ coordinates, piezometricLine, udls, lineLoads, reinforcements, piles }),
     });
-  }, [resultViewSettings, coordinates, isAnyDialogWindow]);
+  }, [resultViewSettings, coordinates, piezometricLine, udls, lineLoads, reinforcements, piles, isAnyDialogWindow]);
 
   useEffect(() => {
     if (!isElectron || isAnyDialogWindow) return;

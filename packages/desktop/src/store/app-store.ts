@@ -2,11 +2,8 @@ import { create } from "zustand";
 import { temporal } from "zundo";
 import type { AppState } from "./types";
 import { markProjectClean, withoutPaperViewport } from "./unsaved";
-import {
-  viewLockContains,
-  viewLockForModel,
-} from "../features/view/viewLock";
-import { getPlotAspectRatio } from "../features/view/paper";
+import { modelViewLock, viewLockContains } from "../features/view/viewLock";
+import { paperContentOf } from "../features/view/extents";
 import { createAnalysisSlice } from "./slices/analysisSlice";
 import { createCanvasToolbarSlice } from "./slices/canvasToolbarSlice";
 import { createGeometrySlice } from "./slices/geometrySlice";
@@ -121,18 +118,15 @@ useAppStore.subscribe((state, prev) => {
     viewLockContains(lock, prev.coordinates) &&
     !viewLockContains(lock, state.coordinates)
   ) {
-    const { paperSize, landscape } = state.resultViewSettings.paperFrame;
     // Part of the edit that grew the model, not an undo step of its own
     // (which would also clear the redo stack when a redo grows it again).
     const history = useAppStore.temporal.getState();
     const tracking = history.isTracking;
     history.pause();
     try {
+      // The frame the model started with and "Use model bounds" gives.
       state.setResultViewSettings({
-        viewLock: viewLockForModel(
-          state.coordinates,
-          getPlotAspectRatio(paperSize, landscape),
-        ),
+        viewLock: modelViewLock(paperContentOf(state), state.resultViewSettings),
       });
     } finally {
       if (tracking) history.resume();

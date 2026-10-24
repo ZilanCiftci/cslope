@@ -6,6 +6,8 @@ import { ResultSidebar } from "./ResultSidebar";
 import { useAppStore } from "../../store/app-store";
 import { DEFAULT_RESULT_VIEW_SETTINGS } from "../../store/defaults";
 import { getPlotAspectRatio } from "../view/paper";
+import { modelViewLock, viewLockContains } from "../view/viewLock";
+import { paperContentOf } from "../view/extents";
 import type { Annotation } from "../../store/types";
 
 const surface = (fos: number) => ({ cx: 10, cy: 12, radius: 10, fos, entryPoint: [2, 8], exitPoint: [18, 2] });
@@ -216,7 +218,7 @@ describe("ResultSidebar paper frame properties", () => {
     expect(rvs().viewLock!.topRight[0]).toBe(50);
   });
 
-  it("fits the locked view to the model bounds", () => {
+  it("fits the locked view to the model as it starts, loads and title block included", () => {
     act(() =>
       useAppStore.setState({
         coordinates: [
@@ -225,14 +227,16 @@ describe("ResultSidebar paper frame properties", () => {
           [40, 5],
           [40, 0],
         ],
+        lineLoads: [{ id: "l1", x: 20, magnitude: 50 }],
       }),
     );
     render(<ResultSidebar />);
     fireEvent.click(screen.getByRole("button", { name: "Use model bounds" }));
+    const state = useAppStore.getState();
     const lock = rvs().viewLock!;
-    expect(lock.bottomLeft).toEqual([-1, -1]);
-    expect(lock.topRight[0]).toBe(41);
-    expect(lock.topRight[1]).toBeCloseTo(-1 + 42 / getPlotAspectRatio("A4", true), 9);
+    expect(lock).toEqual(modelViewLock(paperContentOf(state), state.resultViewSettings));
+    const plain = modelViewLock({ coordinates: state.coordinates }, state.resultViewSettings);
+    expect(lock.topRight[1]).toBeGreaterThan(plain.topRight[1]);
   });
 
   it("fits a tall, narrow model without cutting off its top", () => {
@@ -250,12 +254,8 @@ describe("ResultSidebar paper frame properties", () => {
     fireEvent.click(screen.getByRole("button", { name: "Use model bounds" }));
     const lock = rvs().viewLock!;
     const ar = getPlotAspectRatio("A4", true);
-    // The whole model (with the 1 m margin) is inside the lock…
-    expect(lock.topRight[1]).toBeGreaterThanOrEqual(31 - 1e-9);
-    expect(lock.bottomLeft[1]).toBe(-1);
-    expect(lock.bottomLeft[0]).toBeLessThanOrEqual(-1);
-    expect(lock.topRight[0]).toBeGreaterThanOrEqual(11);
-    // …centred horizontally, with the plot's aspect ratio.
+    expect(viewLockContains(lock, [[0, 0], [0, 30], [10, 30], [10, 0]])).toBe(true);
+    // Centred horizontally, with the plot's aspect ratio.
     expect((lock.bottomLeft[0] + lock.topRight[0]) / 2).toBeCloseTo(5, 9);
     expect((lock.topRight[0] - lock.bottomLeft[0]) / (lock.topRight[1] - lock.bottomLeft[1])).toBeCloseTo(ar, 9);
   });

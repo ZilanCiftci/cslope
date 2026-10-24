@@ -82,27 +82,8 @@ export function ResultsMenu({ isOpen, onActivate, panelHost }: Props) {
     return { xMin, xMax, yMin, yMax };
   };
 
+  // The paper drawn again for the PNG, without the selection outlines.
   const handleExportPng = () => {
-    // Selection outlines are drawn on the same canvas: hide them, let the
-    // canvas redraw, copy it, then restore the selection.
-    const { selectedAnnotationIds, selectedResultObject } =
-      useAppStore.getState();
-    useAppStore.setState({
-      selectedAnnotationIds: [],
-      selectedResultObject: null,
-    });
-    requestAnimationFrame(() =>
-      requestAnimationFrame(() => {
-        try {
-          copyCanvasToPng();
-        } finally {
-          useAppStore.setState({ selectedAnnotationIds, selectedResultObject });
-        }
-      }),
-    );
-  };
-
-  const copyCanvasToPng = () => {
     const href = paperPngDataUrl();
     if (!href) return;
     const link = document.createElement("a");

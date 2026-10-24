@@ -38,7 +38,11 @@ const PILE_DIRECTIONS = Object.keys(PILE_DIRECTION_LABELS) as NonNullable<PileRo
 /** Why the analysis would refuse a pile row, if it would. */
 function pileProblem(p: PileRow): string | null {
   if (p.mode !== "ito-matsui") return null;
-  if (Math.abs(p.x2 - p.x1) > 1e-6) return "Ito & Matsui needs a vertical pile (x1 = x2); give the force of an inclined pile.";
+  if (Math.abs(p.x2 - p.x1) > 1e-6) {
+    // The list rounds to 2 decimals; show the ends as far as they differ.
+    const [x1, x2] = formatDistinct(p.x1, p.x2);
+    return `Ito & Matsui needs a vertical pile (x1 = x2, here x1 = ${x1} m, x2 = ${x2} m); give the force of an inclined pile.`;
+  }
   if (!(p.spacing > p.diameter)) return "Ito & Matsui needs a spacing larger than the diameter; use a given force for a wall.";
   return null;
 }
@@ -51,6 +55,19 @@ function pileProblem(p: PileRow): string | null {
 function formatNumber(value: number, digits?: number): string {
   const shown = digits === undefined ? Number(value.toPrecision(12)) : Number(value.toFixed(digits));
   return String(shown === 0 ? 0 : shown);
+}
+
+/**
+ * Two different numbers with as many decimals (at least `min`) as it takes
+ * for them to read differently.
+ */
+function formatDistinct(a: number, b: number, min = 2): [string, string] {
+  for (let d = min; d <= 15; d++) {
+    const sa = a.toFixed(d);
+    const sb = b.toFixed(d);
+    if (sa !== sb) return [sa, sb];
+  }
+  return [String(a), String(b)];
 }
 
 /** Point as shown in the lists: "x, y" with 2 decimals. */
@@ -177,6 +194,7 @@ function ElementList<T extends { id: string }>({
   selectedId,
   onSelect,
   empty,
+  label,
 }: {
   rows: T[];
   headers: string[];
@@ -184,13 +202,25 @@ function ElementList<T extends { id: string }>({
   selectedId: string | undefined;
   onSelect: (id: string) => void;
   empty: string;
+  /** Accessible name of the list. */
+  label: string;
 }) {
+  const bodyRef = useRef<HTMLTableSectionElement>(null);
+  // One row is in the tab order (the selected one, else the first); the
+  // arrow keys move the selection and the focus with it.
+  const focusIndex = Math.max(0, rows.findIndex((r) => r.id === selectedId));
+  const moveTo = (index: number) => {
+    const k = Math.min(rows.length - 1, Math.max(0, index));
+    if (!rows[k]) return;
+    onSelect(rows[k].id);
+    bodyRef.current?.querySelectorAll<HTMLElement>("tr[data-row-id]")[k]?.focus();
+  };
   return (
     <div
       className="flex-1 min-w-0 rounded border overflow-auto max-h-[212px]"
       style={{ borderColor: "var(--color-vsc-border)" }}
     >
-      <table className="w-full text-[11px] whitespace-nowrap">
+      <table role="grid" aria-label={label} className="w-full text-[11px] whitespace-nowrap">
         <thead className="sticky top-0" style={{ background: "var(--color-vsc-bg)" }}>
           <tr style={{ background: "var(--color-vsc-surface-tint)", color: "var(--color-vsc-text-muted)" }}>
             {headers.map((h) => (
@@ -200,7 +230,7 @@ function ElementList<T extends { id: string }>({
             ))}
           </tr>
         </thead>
-        <tbody>
+        <tbody ref={bodyRef}>
           {rows.length === 0 && (
             <tr>
               <td colSpan={headers.length} className="px-2 py-2" style={{ color: "var(--color-vsc-text-muted)" }}>
@@ -213,9 +243,23 @@ function ElementList<T extends { id: string }>({
             return (
               <tr
                 key={row.id}
+                data-row-id={row.id}
+                tabIndex={i === focusIndex ? 0 : -1}
                 onClick={() => onSelect(row.id)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" || e.key === " ") {
+                    e.preventDefault();
+                    onSelect(row.id);
+                  } else if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+                    e.preventDefault();
+                    moveTo(i + (e.key === "ArrowDown" ? 1 : -1));
+                  } else if (e.key === "Home" || e.key === "End") {
+                    e.preventDefault();
+                    moveTo(e.key === "Home" ? 0 : rows.length - 1);
+                  }
+                }}
                 aria-selected={isSelected}
-                className="cursor-pointer transition-colors"
+                className="cursor-pointer transition-colors focus-visible:outline focus-visible:outline-1 focus-visible:-outline-offset-1"
                 style={{
                   background: isSelected ? "var(--color-vsc-list-active)" : "transparent",
                   color: isSelected ? "var(--color-vsc-text-bright)" : "var(--color-vsc-text)",
@@ -380,6 +424,7 @@ export function ReinforcementDialogApp() {
               selectedId={selected?.id}
               onSelect={setSelectedId}
               empty="No reinforcement. Choose a type and click Add."
+              label="Reinforcement elements list"
             />
             <div className="flex flex-col gap-1.5 w-44 shrink-0">
               <select
@@ -602,6 +647,7 @@ export function ReinforcementDialogApp() {
               selectedId={pile?.id}
               onSelect={setSelectedPileId}
               empty="No piles. Choose a type and click Add."
+              label="Piles list"
             />
             <div className="flex flex-col gap-1.5 w-44 shrink-0">
               <select

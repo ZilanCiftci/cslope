@@ -1,19 +1,31 @@
 import { describe, expect, it } from "vitest";
 import { useAppStore } from "../../store/app-store";
-import { PAPER_MARGIN_FRACTION, paperViewLock, viewLockContains, viewLockForModel } from "./viewLock";
-import { waterLineFitPoints } from "./extents";
+import {
+  modelViewLock,
+  PAPER_MARGIN_FRACTION,
+  paperTopBand,
+  paperViewLock,
+  REFERENCE_PAPER_WIDTH_PX,
+  viewLockContains,
+} from "./viewLock";
+import { paperContentBounds, paperContentOf, waterLineFitPoints, type PaperContent } from "./extents";
+import { getPlotAspectRatio } from "./paper";
+import { DEFAULT_RESULT_VIEW_SETTINGS, PLOT_MARGINS } from "../../store/defaults";
+import { createExampleResultViewSettings } from "../../store/benchmarks";
 import type { ViewLock } from "../../store/types";
 
 describe("view lock follows a growing model", () => {
   it("refits a lock that showed the whole model, keeps a deliberate zoom", () => {
     useAppStore.getState().newProject();
     const s = useAppStore.getState();
-    const lock = viewLockForModel(s.coordinates, 1.4);
-    s.setResultViewSettings({ viewLock: lock });
+    s.setResultViewSettings({ viewLock: modelViewLock(paperContentOf(s), s.resultViewSettings) });
     const bigger = s.coordinates.map(([x, y]) => [x * 2, y * 2] as [number, number]);
     useAppStore.getState().setCoordinates(bigger);
-    const after = useAppStore.getState().resultViewSettings.viewLock!;
+    const state = useAppStore.getState();
+    const after = state.resultViewSettings.viewLock!;
     expect(viewLockContains(after, bigger)).toBe(true);
+    // The same frame as the model started with and "Use model bounds" gives.
+    expect(after).toEqual(modelViewLock(paperContentOf(state), state.resultViewSettings));
 
     // A lock on part of the model stays as the user set it.
     const zoom = { bottomLeft: [0, 0] as [number, number], topRight: [1, 1] as [number, number] };
@@ -23,16 +35,61 @@ describe("view lock follows a growing model", () => {
   });
 });
 
-describe("viewLockForModel", () => {
-  it("keeps a 1 m margin with the base on the bottom", () => {
-    const lock = viewLockForModel([[0, 0], [20, 0], [20, 5], [0, 5]], 2);
-    expect(lock).toEqual({ bottomLeft: [-1, -1], topRight: [21, 10] });
+describe("modelViewLock", () => {
+  const paper = DEFAULT_RESULT_VIEW_SETTINGS;
+  const aspect = getPlotAspectRatio(paper.paperFrame.paperSize, paper.paperFrame.landscape);
+  const plotWidthPx = REFERENCE_PAPER_WIDTH_PX * (1 - PLOT_MARGINS.L - PLOT_MARGINS.R);
+  const width = (l: ViewLock) => l.topRight[0] - l.bottomLeft[0];
+  const height = (l: ViewLock) => l.topRight[1] - l.bottomLeft[1];
+  /** What the paper shows of the content, at the lock's scale. */
+  const drawn = (content: PaperContent, lock: ViewLock) => paperContentBounds(content, width(lock) / plotWidthPx)!;
+
+  it("frames an example as it starts", () => {
+    const coordinates: [number, number][] = [[0, -15], [0, 0], [20, 0], [40, -10], [50, -10], [50, -15]];
+    const initial = createExampleResultViewSettings(coordinates)!;
+    expect(modelViewLock({ coordinates }, initial)).toEqual(initial.viewLock);
+    const bare = createExampleResultViewSettings(coordinates, { annotations: false })!;
+    expect(modelViewLock({ coordinates }, bare)).toEqual(bare.viewLock);
   });
 
-  it("widens for a tall model", () => {
-    const lock = viewLockForModel([[0, 0], [2, 0], [2, 20]], 2);
-    expect(lock.topRight[1]).toBe(21);
-    expect(lock.topRight[0] - lock.bottomLeft[0]).toBeCloseTo(44, 9);
+  it("keeps the load on a tall wall on the paper, below the title block", () => {
+    // A 2 m wide, 20 m tall wall with a line load on its crest.
+    const content: PaperContent = {
+      coordinates: [[0, 0], [0, 20], [2, 20], [2, 0]],
+      lineLoads: [{ x: 1, magnitude: 100 }],
+    };
+    const lock = modelViewLock(content, paper);
+    const b = drawn(content, lock);
+    expect(b.yMax).toBeGreaterThan(20);
+    const band = paperTopBand(paper.annotations);
+    expect(band).toBeGreaterThan(0);
+    expect(b.yMax).toBeLessThanOrEqual(lock.topRight[1] - band * height(lock) + 1e-9);
+    expect(b.yMin).toBeGreaterThanOrEqual(lock.bottomLeft[1]);
+    expect(b.xMin).toBeGreaterThanOrEqual(lock.bottomLeft[0]);
+    expect(b.xMax).toBeLessThanOrEqual(lock.topRight[0]);
+    expect(width(lock) / height(lock)).toBeCloseTo(aspect, 9);
+  });
+
+  it("frames a tiny model by its own size", () => {
+    const content: PaperContent = { coordinates: [[0, 0], [0.3, 0], [0.3, 0.1], [0, 0.1]] };
+    const lock = modelViewLock(content, { ...paper, annotations: [] });
+    // A share of its span on each side, not a fixed metre.
+    expect(lock.bottomLeft[0]).toBeCloseTo(-0.3 * PAPER_MARGIN_FRACTION, 9);
+    expect(lock.topRight[0]).toBeCloseTo(0.3 * (1 + PAPER_MARGIN_FRACTION), 9);
+  });
+
+  it("gives a placeholder view without geometry", () => {
+    const lock = modelViewLock({ coordinates: [] }, paper);
+    expect(lock.bottomLeft).toEqual([-1, -1]);
+    expect(width(lock) / height(lock)).toBeCloseTo(aspect, 9);
+  });
+});
+
+describe("paperTopBand", () => {
+  it("keeps the title block free when annotations sit at the top of the paper", () => {
+    expect(paperTopBand(DEFAULT_RESULT_VIEW_SETTINGS.annotations)).toBeGreaterThan(0);
+    expect(paperTopBand([])).toBe(0);
+    expect(paperTopBand([{ y: 0.9 }])).toBe(0);
   });
 });
 
@@ -45,6 +102,10 @@ describe("waterLineFitPoints", () => {
 
   it("drops a line wholly below the model", () => {
     expect(waterLineFitPoints([[0, -100], [10, -100]], model)).toEqual([]);
+  });
+
+  it("raises the part of a line below the model's base to the base", () => {
+    expect(waterLineFitPoints([[0, -100], [10, 4]], model)).toEqual([[0, 0], [10, 4]]);
   });
 });
 
@@ -77,6 +138,12 @@ describe("paperViewLock", () => {
     expect(lock.topRight[1]).toBeGreaterThan(32);
     // Widened for the height, centred on the model, not on the line.
     expect((lock.bottomLeft[0] + lock.topRight[0]) / 2).toBeCloseTo(5, 9);
+  });
+
+  it("does not reach below the base for a line partly below it", () => {
+    const plain = paperViewLock({ coordinates: flat }, aspect)!;
+    const lock = paperViewLock({ coordinates: flat, waterLines: [[[0, -100], [10, 2]]] }, aspect)!;
+    expect(lock).toEqual(plain);
   });
 
   it("leaves out a dry water line below the model", () => {
