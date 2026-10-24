@@ -1901,6 +1901,9 @@ export const PROBLEMS: RawCase[] = [
     ],
     paper: [{"value": 1.0, "method": "Bishop simplified, circular", "source": "Leshchinsky & Han (2004)"}, {"value": 1.0, "method": "finite differences", "source": "Leshchinsky & Han (2004)"}],
     publicNote: "Leshchinsky & Han give 1.00 with Bishop's method for every variant of the wall (the reinforcement was designed for that value), and a finite-difference value.",
+    notes: [
+      "The circle is commercial program A's critical Bishop circle (Fig. 94.2: centre (-5.537, 20.452), radius 18.45). Commercial program A gives 1.040 on it (Table 94.3); cSlope 1.017 (-2.2 %); on the other tiered walls cSlope differs from commercial program A by -0.9 % (V066a) and +4 % (V066b). The reinforcement model of the tiers (pull-out from the 80 % interface, the facing connection) is the likely cause, so commercial program A's value is not a check. Commercial program A's figures show the reinforcement running from the back of each tier's blocks for 6.3 m (to x = 12.6 … 15.0), cSlope's from inside the blocks to x = 12.3 … 14.7; extending them by 0.3 m does not change the factor of safety on this circle.",
+    ],
   },
   {
     id: "V065",
