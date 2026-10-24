@@ -2166,6 +2166,7 @@ export const PROBLEMS: RawCase[] = [
     publicNote: "Pockoski & Duncan compare computer programs and publish no independent value.",
     notes: [
       "commercial program A (Table 60.3): Spencer 1.009, Bishop 0.997, Janbu simplified 1.041. Pockoski & Duncan (2000), as quoted there: program G 1.02 / 1.00 and commercial program B 1.02 / 1.01 (Spencer / Bishop); the commercial program B 2022 verification manual (§2.37) prints commercial program B 1.00 / 0.995.",
+      "Unresolved (input audit 2026-10-24): the surcharges here (500 psf over the first 7.3 ft on top of 250 psf over the whole crest) were chosen because they reproduce commercial program A; neither manual draws them so. Commercial program A's Fig. 60.1 draws 500 psf over x = 0-5 ft beside 250 psf over 5-50 ft (cSlope 1.066 on this surface); commercial program B's Fig. 117 draws the 500 psf over 0-5 ft above a 250 psf band that starts at the wall (cSlope 1.037). Both figures also draw the nail heads about 0.5 ft lower (22.5 ... 2.5 ft) and the two lowest nails about 1 ft shorter (some 32 and 24 ft, here 33 and 25.5 ft). With the drawn loads and nails cSlope is 6-12 % above commercial program A's 1.009 on its printed surface, so some other part of that model (perhaps the tension-crack zone, which Fig. 60.1 bounds by the top nail) is not known; the input is left as it was. Program D's 1.073 was computed on this same reconstructed input.",
     ],
   },
   {
