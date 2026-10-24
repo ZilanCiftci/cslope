@@ -373,6 +373,21 @@ describe("loads", () => {
     expect(rec.of("setDrawColor")[0].args).toEqual(LINE_LOAD_COLOR.rgb);
     expect(rec.texts()).toEqual(["P = 80 kN/m"]);
   });
+
+  it("draws touching UDL strips as one load: arrows at its ends, one rounded label", () => {
+    const rec = recorder();
+    // Ramp on the toe (y = 5) in 1 m strips: 5 mm each, closer than the arrow spacing.
+    const ramp = [10.04, 12.5, 15, 17.5, 20].map((q, i) => ({ x1: 21 + i, x2: 22 + i, magnitude: q }));
+    drawUdlLoads(rec.pdf, tf, ramp, COORDS);
+    expect(rec.texts()).toEqual(["q = 10.0–20.0 kPa"]);
+    const tips = rec.of("triangle").map((c) => c.args[0]);
+    expect(tips).toEqual([20 + 21 * 5, 20 + 26 * 5]);
+    // The left end (10 of 20 kPa) is half the height of the right end.
+    const shafts = rec.linesIn(UDL_LOAD_COLOR.rgb).slice(0, 2);
+    const headL = 12 * 0.25;
+    expect(shafts[0][3] - shafts[0][1]).toBeCloseTo(38 * 0.25 * 0.502 - headL, 2);
+    expect(shafts[1][3] - shafts[1][1]).toBeCloseTo(38 * 0.25 - headL, 9);
+  });
 });
 
 describe("reinforcement", () => {
@@ -400,20 +415,31 @@ describe("reinforcement", () => {
     expect(rec.of("text")[0].args.slice(0, 3)).toEqual(["P1", 40, 100 - 1.2]);
   });
 
-  it("draws force arrows with their size, on the side they point to", () => {
+  it("draws force arrows beside their line, with their size on a white plate beside them", () => {
     const rec = recorder();
     drawReinforcementForcesPdf(rec.pdf, tf, [
       { index: 0, x: 10, y: 6, fx: 0, fy: 0, force: 0, passive: false },
       { index: 1, x: 10, y: 6, fx: -30, fy: 0, force: 30, passive: false },
       { index: 2, x: 10, y: 6, fx: 0, fy: 150, force: 150, passive: true },
+      { index: 3, x: 10, y: 6, fx: 0.02, fy: 0, force: 0.02, passive: false },
     ]);
-    const [left, up] = rec.of("text");
-    expect(left.args[0]).toBe("30.0 kN/m");
-    expect(left.args[1]).toBeCloseTo(70 - 7 - 1, 9);
-    expect((left.args[3] as { align: string }).align).toBe("right");
-    expect(up.args[0]).toBe("150 kN/m /F");
-    expect(up.args[2]).toBeCloseTo(120 - 7, 9); // up on paper = smaller y
+    expect(rec.balanced()).toBe(true);
+    // Zero and 0.0 kN/m forces are left out.
     expect(rec.of("triangle")).toHaveLength(2);
+    expect(rec.texts()).toEqual(["30.0 kN/m", "150 kN/m ÷ FOS"]);
+    // The leftward arrow runs 1 mm above the crossing at (70, 120).
+    const shaft = rec.of("line")[0].args as number[];
+    expect(shaft[0]).toBe(70);
+    expect(shaft[1]).toBeCloseTo(119, 9);
+    // Each label is centred in its plate, and no plate covers the crossing.
+    const rects = rec.of("rect").map((c) => c.args as number[]);
+    expect(rects).toHaveLength(2);
+    for (const [i, t] of rec.of("text").entries()) {
+      const [x, y, w, h] = rects[i];
+      expect(t.args[1]).toBeCloseTo(x + w / 2, 9);
+      expect(t.args[2]).toBeCloseTo(y + h / 2, 9);
+      expect(70 > x && 70 < x + w && 120 > y && 120 < y + h).toBe(false);
+    }
   });
 });
 
@@ -458,7 +484,24 @@ describe("drawPiezometricLines", () => {
     expect(one.texts()).toEqual([]);
     const two = recorder();
     drawPiezometricLines(two.pdf, tf, [line("a", 4), line("b", 2), { id: "c", coordinates: [[0, 1]] }], COORDS);
-    expect(two.texts()).toEqual(["1", "2"]);
+    expect([...new Set(two.texts())]).toEqual(["1", "2"]);
+  });
+
+  it("spaces the symbols along the line as on the canvas, clear of the critical surface", () => {
+    // 30 m = 150 mm = 600 canvas px: three symbols.
+    const tips = (critical: Parameters<typeof drawPiezometricLines>[6] = null) => {
+      const rec = recorder();
+      drawPiezometricLines(rec.pdf, tf, [line("a", 4)], COORDS, false, undefined, critical);
+      // Each filled triangle ends with a line to its tip.
+      return rec.calls.flatMap((c, i) =>
+        c.name === "fill" ? [rec.calls.slice(0, i).filter((d) => d.name === "lineTo").pop()!.args[0] as number] : [],
+      );
+    };
+    expect(tips()).toHaveLength(3);
+    // A circle crossing the line at x = 15 m (75 + 20 mm): no symbol on it.
+    const xs = tips({ cx: 15, cy: 14, radius: 10, entryPoint: [5, 14], exitPoint: [25, 14] });
+    expect(xs.length).toBeGreaterThan(0);
+    for (const x of xs) expect(Math.abs(x - 95)).toBeGreaterThan(2);
   });
 });
 

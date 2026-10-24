@@ -16,7 +16,7 @@ import {
   piezoSymbolLayout,
   placeLabel,
   type Box,
-} from "../rendering/label-layout";
+} from "../rendering/overlay-layout";
 import { fosColor, fosScaleRange, fosTickLabel } from "../../utils/fos-color";
 
 /** "≥" (in the embedded font). */
@@ -378,9 +378,14 @@ function drawLoadLabelPdf(pdf: jsPDF, text: string, cx: number, bottom: number, 
   setSansFont(pdf, "bold");
   const tw = pdf.getTextWidth(text);
   const lh = 9 * MM_PER_PT * 1.15;
-  const candidates: Box[] = [0, 1, 2, 3].map((k) => ({ x: cx - tw / 2, y: bottom - lh * (k + 1), w: tw, h: lh }));
+  const candidates: Box[] = [0, 1, 2, 3].map((k) => ({
+    left: cx - tw / 2,
+    top: bottom - lh * (k + 1),
+    right: cx + tw / 2,
+    bottom: bottom - lh * k,
+  }));
   const box = placeLabel(candidates, placed, [], 0.5);
-  if (box) pdf.text(text, cx, box.y + box.h, { align: "center" });
+  if (box) pdf.text(text, cx, box.bottom, { align: "center" });
 }
 
 /**
@@ -566,9 +571,9 @@ export function drawReinforcementForcesPdf(
     if (!label) continue;
     pdf.setFillColor(255, 255, 255);
     setOpacity(pdf, 0.85);
-    pdf.rect(label.x, label.y, label.w, label.h, "F");
+    pdf.rect(label.left, label.top, label.right - label.left, label.bottom - label.top, "F");
     resetOpacity(pdf);
-    pdf.text(text, label.x + label.w / 2, label.y + label.h / 2, { align: "center", baseline: "middle" });
+    pdf.text(text, (label.left + label.right) / 2, (label.top + label.bottom) / 2, { align: "center", baseline: "middle" });
   }
 }
 

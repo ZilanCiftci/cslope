@@ -11,30 +11,21 @@
 import { surfaceYAtX } from "../view/surface";
 import { surfacePoints, type DrawableSurface } from "../../utils/arc";
 import { PIEZO_BAR_GAP2_PX, PIEZO_TRI_HALF_PX, PIEZO_TRI_H_PX } from "./style-spec";
+import { boxesOverlap, distanceToSegment, type Box } from "../canvas/label-layout";
+
+export type { Box };
 
 type Pt = [number, number];
 
-/** Axis-aligned box, top-left corner and size. */
-export interface Box {
-  x: number;
-  y: number;
-  w: number;
-  h: number;
-}
-
 /** A line segment [x1, y1, x2, y2]. */
 export type Seg = readonly [number, number, number, number];
-
-export function boxesOverlap(a: Box, b: Box, gap = 0): boolean {
-  return a.x < b.x + b.w + gap && b.x < a.x + a.w + gap && a.y < b.y + b.h + gap && b.y < a.y + a.h + gap;
-}
 
 /** Whether a segment passes through a box (Liang–Barsky clipping). */
 export function segmentHitsBox([x1, y1, x2, y2]: Seg, b: Box): boolean {
   const dx = x2 - x1;
   const dy = y2 - y1;
   const p = [-dx, dx, -dy, dy];
-  const q = [x1 - b.x, b.x + b.w - x1, y1 - b.y, b.y + b.h - y1];
+  const q = [x1 - b.left, b.right - x1, y1 - b.top, b.bottom - y1];
   let t0 = 0;
   let t1 = 1;
   for (let i = 0; i < 4; i++) {
@@ -56,11 +47,7 @@ export function segmentHitsBox([x1, y1, x2, y2]: Seg, b: Box): boolean {
 
 /** Distance from a point to a segment. */
 export function pointSegmentDistance(px: number, py: number, [x1, y1, x2, y2]: Seg): number {
-  const dx = x2 - x1;
-  const dy = y2 - y1;
-  const l2 = dx * dx + dy * dy;
-  const t = l2 > 0 ? Math.max(0, Math.min(1, ((px - x1) * dx + (py - y1) * dy) / l2)) : 0;
-  return Math.hypot(px - (x1 + t * dx), py - (y1 + t * dy));
+  return distanceToSegment(px, py, [x1, y1], [x2, y2]);
 }
 
 /** Segments of an open polyline. */
@@ -118,9 +105,17 @@ export function formatMagnitude(v: number): string {
 
 /** "q = 20 kPa", or the range of a group of strips "q = 20–40 kPa". */
 export function formatRange(lo: number, hi: number, symbol: string, unit: string): string {
-  const a = formatMagnitude(lo);
-  const b = formatMagnitude(hi);
-  return a === b ? `${symbol} = ${a} ${unit}` : `${symbol} = ${a}–${b} ${unit}`;
+  // Both ends with the decimals formatMagnitude gives the larger one;
+  // trailing zeros dropped only when neither end has more digits.
+  const big = Math.max(Math.abs(lo), Math.abs(hi));
+  const decimals = big >= 99.95 ? 0 : big >= 9.995 ? 1 : 2;
+  const exact = (v: number) => Math.abs(Number(v.toFixed(decimals)) - v) < 1e-9 * Math.max(1, Math.abs(v));
+  const a = lo.toFixed(decimals);
+  const b = hi.toFixed(decimals);
+  if (a === b) return `${symbol} = ${formatMagnitude(hi)} ${unit}`;
+  return exact(lo) && exact(hi)
+    ? `${symbol} = ${formatMagnitude(lo)}–${formatMagnitude(hi)} ${unit}`
+    : `${symbol} = ${a}–${b} ${unit}`;
 }
 
 /**
@@ -265,7 +260,7 @@ export function piezoSymbolLayout(
     const x = ax + t * (bx - ax);
     const y = ay + t * (by - ay);
     const steep = Math.abs(by - ay) > PIEZO_MAX_SLOPE * Math.abs(bx - ax);
-    const box: Box = { x: x - triHalf - 2 * u, y: y - triH - 2 * u, w: 2 * triHalf + 4 * u, h: triH + barGap2 + 4 * u };
+    const box: Box = { left: x - triHalf - 2 * u, top: y - triH - 2 * u, right: x + triHalf + 2 * u, bottom: y + barGap2 + 2 * u };
     const wx = line[i - 1][0] + t * (line[i][0] - line[i - 1][0]);
     const gy = surfaceYAtX(opts.model as Pt[], wx);
     const groundY = gy === null ? null : toScreen(wx, gy)[1];
@@ -276,8 +271,8 @@ export function piezoSymbolLayout(
     if (
       critSegs.some((sg) => segmentHitsBox(sg, box)) ||
       (opts.avoidLines ?? []).some((sg) => segmentHitsBox(sg, box)) ||
-      (opts.avoid ?? []).some((b) => boxesOverlap(b, box)) ||
-      critDots.some(([dx, dy]) => dx > box.x - dotR && dx < box.x + box.w + dotR && dy > box.y - dotR && dy < box.y + box.h + dotR)
+      (opts.avoid ?? []).some((b) => boxesOverlap(b, box, 0)) ||
+      critDots.some(([dx, dy]) => dx > box.left - dotR && dx < box.right + dotR && dy > box.top - dotR && dy < box.bottom + dotR)
     ) {
       tier = 2;
     }

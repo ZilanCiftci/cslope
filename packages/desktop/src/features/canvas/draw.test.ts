@@ -546,9 +546,18 @@ describe("drawCanvas — edit mode", () => {
     });
     const stroke = single.strokes(PIEZO_COLOR.hex).find((p) => p.state.lineWidth === 1.5)!;
     expect(pathPoints(stroke)).toEqual([toC(0, 4), toC(30, 4)]);
-    // Inverted triangle with its tip on the line at the segment midpoint.
-    const tri = single.fills(PIEZO_COLOR.hex).find((p) => p.segments.length === 4)!;
-    expect(pathPoints(tri)[2]).toEqual(toC(15, 4));
+    // Inverted triangles with their tips on the line, about one per 200 px
+    // of its length (600 px here), evenly spread.
+    const tips = single
+      .fills(PIEZO_COLOR.hex)
+      .filter((p) => p.segments.length === 4)
+      .map((p) => pathPoints(p)[2]);
+    expect(tips).toHaveLength(3);
+    for (const [, y] of tips) expect(y).toBeCloseTo(toC(0, 4)[1], 9);
+    const xs = tips.map(([x]) => canvasToWorld(x, 0, W, H)[0]).sort((a, b) => a - b);
+    expect(xs[0]).toBeCloseTo(5, 0);
+    expect(xs[1]).toBeCloseTo(15, 0);
+    expect(xs[2]).toBeCloseTo(25, 0);
     expect(single.texts.some((t) => t.text === "1")).toBe(false);
 
     const multi = draw({
@@ -559,6 +568,72 @@ describe("drawCanvas — edit mode", () => {
       },
     });
     expect(multi.textStrings()).toEqual(expect.arrayContaining(["1", "2"]));
+  });
+
+  it("puts no water-table symbol on a steep segment and leaves out the bars at the ground", () => {
+    const symbols = (coordinates: [number, number][]) =>
+      draw({
+        piezometricLine: {
+          ...DEFAULT_PIEZO_LINE,
+          lines: [{ id: "a", name: "a", color: "#000", coordinates }],
+          activeLineId: "a",
+        },
+      });
+    // A short flat part, then a vertical drop of 4 m (80 px): the symbol
+    // goes on the flat part, not at the middle of the drop.
+    const steep = symbols([
+      [21, 4],
+      [24, 4],
+      [24, 0],
+    ]);
+    const tips = steep
+      .fills(PIEZO_COLOR.hex)
+      .filter((p) => p.segments.length === 4)
+      .map((p) => pathPoints(p)[2]);
+    expect(tips).toHaveLength(1);
+    expect(tips[0][1]).toBeCloseTo(toC(0, 4)[1], 9);
+    // Along the toe surface (y = 5) the bars would go into the ground.
+    const atGround = symbols([
+      [21, 5],
+      [29, 5],
+    ]);
+    const bars = atGround.strokes(PIEZO_COLOR.hex).filter((p) => p.state.lineWidth === 1.2);
+    expect(atGround.fills(PIEZO_COLOR.hex).filter((p) => p.segments.length === 4).length).toBeGreaterThan(0);
+    expect(bars).toHaveLength(0);
+  });
+
+  it("draws touching UDL strips as one load with one label and heights by magnitude", () => {
+    // A ramp from 10 to 20 kPa in four strips on the toe (y = 5), and a
+    // separate 40 kPa load on the crest.
+    const ramp = [10, 13.33333, 16.66667, 20].map((q, i) => ({ id: `r${i}`, magnitude: q, x1: 21 + i, x2: 22 + i }));
+    const rec = draw({ udls: [...ramp, { id: "c", magnitude: 40, x1: 2, x2: 6 }] });
+    const labels = rec.texts.filter((t) => t.text.startsWith("q =")).map((t) => t.text);
+    expect(labels.sort()).toEqual(["q = 10–20 kPa", "q = 40 kPa"]);
+    // Arrows only at the ends of the ramp (4 strips of 20 px are closer than
+    // the arrow spacing) and at the crest load.
+    const shafts = rec.strokes(UDL_LOAD_COLOR.hex).filter((p) => p.state.lineWidth === 2).map(pathPoints);
+    expect(shafts).toHaveLength(4);
+    const lift = (x: number) => {
+      const s = shafts.find(([[sx]]) => Math.abs(sx - toC(x, 5)[0]) < 1e-6 || Math.abs(sx - toC(x, 10)[0]) < 1e-6)!;
+      return s[1][1] - s[0][1];
+    };
+    expect(lift(2)).toBeCloseTo(38, 6); // the largest load: full height
+    expect(lift(25)).toBeCloseTo(38 * 0.5, 6); // 20 of 40 kPa
+    expect(lift(21)).toBeCloseTo(38 * 0.4, 6); // 10 of 40, raised to the minimum
+  });
+
+  it("rounds load magnitudes and keeps overlapping load labels apart", () => {
+    const rec = draw({
+      udls: [
+        { id: "a", magnitude: 23.94013, x1: 2, x2: 6 },
+        { id: "b", magnitude: 11.97006, x1: 2, x2: 9 },
+      ],
+      lineLoads: [{ id: "l", magnitude: 12.3456, x: 25 }],
+    });
+    const a = rec.findText("q = 23.9 kPa")!;
+    const b = rec.findText("q = 12.0 kPa")!;
+    expect(rec.findText("P = 12.3 kN/m")).toBeDefined();
+    expect(Math.abs(a.y - b.y)).toBeGreaterThanOrEqual(13);
   });
 
   it("highlights the active piezometric line and labels its vertices while editing", () => {
@@ -869,8 +944,8 @@ describe("drawCanvas — result mode", () => {
       reinforcementForces: [{ index: 0, x: 12, y: 6, fx: -40, fy: 10, force: 41.2, passive: true }],
     });
     const rec = drawResult({ result: result({ criticalSurface: cs, allSurfaces: [cs] }) });
-    const label = rec.findText("41.2 kN/m /F")!;
-    expect(label.state.textAlign).toBe("right");
+    const label = rec.findText("41.2 kN/m ÷ FOS")!;
+    expect(label.state.textAlign).toBe("center");
     expect(label.x).toBeLessThan(toC(12, 6)[0]);
   });
 

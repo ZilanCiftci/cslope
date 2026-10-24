@@ -36,7 +36,7 @@ import {
 } from "./pdf-drawing";
 import type { PdfTransform } from "./pdf-helpers";
 import { forceLabelContext } from "../canvas/reinforcement-draw";
-import type { Box } from "../rendering/label-layout";
+import type { Box } from "../rendering/overlay-layout";
 import { surfacePoints } from "../../utils/arc";
 import { drawSummaryPages, type SummaryHeader } from "./pdf-summary";
 import type { SummarySection } from "../export/analysisSummary";

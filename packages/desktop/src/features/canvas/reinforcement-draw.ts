@@ -1,6 +1,7 @@
 import type { ReinforcementForce } from "@cslope/engine";
 import type { PileRow, ReinforcementRow } from "../../store/types";
-import { placeLabel, pointSegmentDistance, polylineSegments, type Box, type Seg } from "../rendering/label-layout";
+import { placeLabel, pointSegmentDistance, polylineSegments, type Seg } from "../rendering/overlay-layout";
+import { boxAround, type Box } from "./label-layout";
 
 export const REINFORCEMENT_COLOR = "#8e44ad";
 
@@ -121,19 +122,19 @@ export function forceLabelContext(
     const [ax, ay] = toScreen(r.x1, r.y1);
     const [bx, by] = toScreen(r.x2, r.y2);
     obstacles.push([ax, ay, bx, by]);
-    placed.push({ x: ax - s / 2, y: ay - s / 2, w: s, h: s }); // head plate
+    placed.push(boxAround(ax, ay, s / 2)); // head plate
     const len = Math.hypot(bx - ax, by - ay);
     if (len > 0) {
       const cx = ax - ((bx - ax) / len) * s;
       const cy = ay - ((by - ay) / len) * s;
-      placed.push({ x: cx - s / 2, y: cy - s / 2, w: s, h: s });
+      placed.push(boxAround(cx, cy, s / 2));
     }
   }
   for (const p of opts.piles ?? []) {
     const [ax, ay] = toScreen(p.x1, p.y1);
     const [bx, by] = toScreen(p.x2, p.y2);
     obstacles.push([ax, ay, bx, by]);
-    placed.push({ x: ax - s, y: ay - s * 1.4, w: 2 * s, h: s });
+    placed.push({ left: ax - s, top: ay - s * 1.4, right: ax + s, bottom: ay - s * 0.4 });
   }
   if (opts.surface) obstacles.push(...polylineSegments(opts.surface.map(([x, y]) => toScreen(x, y))));
   return { obstacles, placed };
@@ -186,7 +187,7 @@ export function layoutReinforcementForces(
   return items.map((it, k) => {
     const w = size.measure(it.text) + 2 * size.pad;
     const h = size.textH + 2 * size.pad;
-    const boxAt = (cx: number, cy: number): Box => ({ x: cx - w / 2, y: cy - h / 2, w, h });
+    const boxAt = (cx: number, cy: number): Box => boxAround(cx, cy, w / 2, h / 2);
     const candidates: Box[] = [];
     const sideOf: number[] = [];
     const beside = (side: number, along: number, extra: number) => {
@@ -214,8 +215,8 @@ export function layoutReinforcementForces(
     ];
     const drawnArrows = arrows.map((a, j) => shifted(a, items[j].nx, items[j].ny));
     const ownArrow = (b: Box) => {
-      const cx = b.x + b.w / 2;
-      const cy = b.y + b.h / 2;
+      const cx = (b.left + b.right) / 2;
+      const cy = (b.top + b.bottom) / 2;
       const side = sideOf[candidates.indexOf(b)];
       const own = pointSegmentDistance(cx, cy, shifted(arrows[k], it.nx * side, it.ny * side));
       const same = (a: Seg) => a.every((v, i) => Math.abs(v - arrows[k][i]) < 1e-6);
@@ -286,10 +287,10 @@ export function drawReinforcementForces(
     if (!label) continue;
     ctx.globalAlpha = 0.85;
     ctx.fillStyle = options.plate ?? "#ffffff";
-    ctx.fillRect(label.x, label.y, label.w, label.h);
+    ctx.fillRect(label.left, label.top, label.right - label.left, label.bottom - label.top);
     ctx.globalAlpha = 1;
     ctx.fillStyle = REINFORCEMENT_COLOR;
-    ctx.fillText(text, label.x + label.w / 2, label.y + label.h / 2 + 0.5 * zoom);
+    ctx.fillText(text, (label.left + label.right) / 2, (label.top + label.bottom) / 2 + 0.5 * zoom);
   }
   ctx.restore();
 }
