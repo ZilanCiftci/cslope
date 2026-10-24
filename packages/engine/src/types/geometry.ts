@@ -109,6 +109,12 @@ export interface Slice {
   cohesion: number;
   /** Undrained cohesion at base (kPa). */
   cohesionUndrained: number;
+  /**
+   * Part of the characteristic `cohesion` that is undrained shear strength
+   * (lime-cement columns in their drained limit: (1 − a)·cu,soil), which
+   * takes γcu when design values are formed. Not set: 0.
+   */
+  cohesionUndrainedPart?: number;
   /** Friction angle at base (deg). */
   frictionAngle: number;
   /** Friction angle at base (rad). */

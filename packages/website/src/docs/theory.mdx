@@ -86,7 +86,7 @@ where $q$ is any surcharge on the crest (distributed loads and ponded water).
 
 ## Partial factors
 
-With partial factors switched on, cSlope divides the strength parameters by their factors before the analysis ($c'/\gamma_c$, $\tan\varphi'/\gamma_\varphi$, $S_u/\gamma_{cu}$) and multiplies the loads by theirs. A Mohr-Coulomb material with $\varphi = 0$ is treated as undrained and takes $\gamma_{cu}$. For lime-cement columns the strength, including $c'$ of the columns, takes $\gamma_{cu}$ and $\tan\varphi'$ takes $\gamma_\varphi$. The resulting factor of safety is then an over-design factor: a value of 1.0 or more means the design meets the limit state. See [Analysis options](/docs/analysis) for the factor sets.
+With partial factors switched on, cSlope divides the strength parameters by their factors before the analysis ($c'/\gamma_c$, $\tan\varphi'/\gamma_\varphi$, $S_u/\gamma_{cu}$) and multiplies the loads by theirs. A Mohr-Coulomb material with $\varphi = 0$ is treated as undrained and takes $\gamma_{cu}$. For lime-cement columns each part takes its own factor: the undrained strength of soil and columns $\gamma_{cu}$, $c'$ of the columns $\gamma_c$ and $\tan\varphi'$ $\gamma_\varphi$, so the drained limit is $(1 - a)\,c_{u,\text{soil}}/\gamma_{cu} + a\,c'/\gamma_c + \sigma'\,a\tan\varphi'/\gamma_\varphi$. The resulting factor of safety is then an over-design factor: a value of 1.0 or more means the design meets the limit state. See [Analysis options](/docs/analysis) for the factor sets.
 
 ## Reliability
 
