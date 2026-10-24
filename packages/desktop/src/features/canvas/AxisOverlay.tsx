@@ -12,6 +12,8 @@ import { GRID_RAW_STEP_PX } from "../../constants";
 const RULER_SIZE = RULER_SIZE_PX;
 const TICK_LEN = 6;
 const FONT = "10px 'Segoe UI', sans-serif";
+/** Half the height of a ruler label (10 px text). */
+const LABEL_HALF_H = 6;
 
 /** Resolve the mode-dependent viewport from current store state. */
 function getViewportFromStore() {
@@ -159,7 +161,12 @@ export function AxisOverlay({ containerRef, canvasRef }: Props) {
         ctx.lineTo(px, h - RULER_SIZE + TICK_LEN);
         ctx.strokeStyle = AXIS_COLOR;
         ctx.stroke();
-        ctx.fillText(formatLabel(gx), px, h - RULER_SIZE + TICK_LEN + 2);
+        // A label the corner box or the right edge would cut is left out:
+        // "-6" losing its minus would read as 6.
+        const label = formatLabel(gx);
+        const half = ctx.measureText(label).width / 2;
+        if (px - half < RULER_SIZE + 1 || px + half > w - 1) continue;
+        ctx.fillText(label, px, h - RULER_SIZE + TICK_LEN + 2);
       }
       ctx.restore();
 
@@ -191,7 +198,13 @@ export function AxisOverlay({ containerRef, canvasRef }: Props) {
         ctx.lineTo(RULER_SIZE - TICK_LEN, py);
         ctx.strokeStyle = AXIS_COLOR;
         ctx.stroke();
-        ctx.fillText(formatLabel(gy), RULER_SIZE - TICK_LEN - 2, py);
+        // Likewise a label cut by the top edge, the bottom ruler or the
+        // left edge.
+        const label = formatLabel(gy);
+        const right = RULER_SIZE - TICK_LEN - 2;
+        if (py - LABEL_HALF_H < 0 || py + LABEL_HALF_H > h - RULER_SIZE) continue;
+        if (right - ctx.measureText(label).width < 0) continue;
+        ctx.fillText(label, right, py);
       }
       ctx.restore();
 

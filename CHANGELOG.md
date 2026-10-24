@@ -24,6 +24,7 @@ The first public release.
 - Material models: Mohr–Coulomb, undrained, strength increasing with depth (from the ground or from the top of the layer) or from a datum, with a strength cutoff, anisotropic, spatially varying, lime-cement columns, and high-strength and impenetrable (bedrock) layers. Saturated unit weight below the water table.
 - Water: several piezometric lines with one per material if needed, ponded water above the ground.
 - Distributed and line loads; anchors, grouted tiebacks, soil nails, geosynthetics, pile rows and sheet pile walls.
+- Edit view: coordinate labels find a free place around their point, clear of other labels, markers, loads and water symbols; interior boundaries are drawn only inside the model; custom slip surfaces show dashed; rulers leave out labels the edge would cut.
 
 ### Results and reporting
 

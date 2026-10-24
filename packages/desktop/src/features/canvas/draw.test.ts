@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { AnalysisResult, SliceData, SlipSurfaceResult } from "@cslope/engine";
-import { drawCanvas, type DrawCanvasParams } from "./draw";
+import { drawCanvas, POINT_LABEL_PLATE_ALPHA, type DrawCanvasParams } from "./draw";
 import { createRecordingContext, pathPoints, type PaintedPath } from "../../test/recording-context";
 import {
   DEFAULT_ANALYSIS_LIMITS,
@@ -302,6 +302,120 @@ describe("drawCanvas — edit mode", () => {
       expect(x).toBeLessThan(W - 20);
       expect(y).toBeLessThan(H - RULER_SIZE_PX);
     }
+  });
+
+  /** Boxes of the drawn coordinate labels (6 px per character, 3 px padding). */
+  const labelBoxes = (rec: ReturnType<typeof draw>) =>
+    rec.texts
+      .filter((t) => t.text.startsWith("("))
+      .map((t) => ({ text: t.text, left: t.x - 3, right: t.x + t.text.length * 6 + 3, top: t.y - 7, bottom: t.y + 6 }));
+  const overlap = (a: { left: number; right: number; top: number; bottom: number }, b: typeof a) =>
+    a.left < b.right && b.left < a.right && a.top < b.bottom && b.top < a.bottom;
+
+  it("places labels of close points so they don't overlap, leaving out those with no room", () => {
+    // Steps 0.4 m (8 px) apart along the crest: the labels can't all sit above.
+    const coordinates: [number, number][] = [
+      [0, 0],
+      [0, 10],
+      [10, 10],
+      [10.4, 10],
+      [10.8, 10],
+      [11.2, 10],
+      [11.6, 10],
+      [20, 5],
+      [30, 5],
+      [30, 0],
+    ];
+    const rec = draw({ editingExterior: true, coordinates });
+    const boxes = labelBoxes(rec);
+    expect(boxes.length).toBeGreaterThan(5);
+    expect(boxes.length).toBeLessThan(coordinates.length);
+    for (let i = 0; i < boxes.length; i++) {
+      for (let j = i + 1; j < boxes.length; j++) expect(overlap(boxes[i], boxes[j])).toBe(false);
+    }
+    // Labels don't cover a vertex.
+    for (const b of boxes) {
+      for (const [x, y] of coordinates) {
+        const [px, py] = toC(x, y);
+        expect(overlap(b, { left: px - 5, right: px + 5, top: py - 5, bottom: py + 5 })).toBe(false);
+      }
+    }
+    // A hovered point always shows its label.
+    for (let i = 2; i <= 6; i++) {
+      const hovered = draw({ editingExterior: true, coordinates, hoverHit: { kind: "external", index: i } });
+      expect(hovered.textStrings()).toContain(`(${coordinates[i][0].toFixed(1)}, ${coordinates[i][1].toFixed(1)})`);
+      const selected = draw({ editingExterior: true, coordinates, selectedPointIndex: i });
+      expect(selected.textStrings()).toContain(`(${coordinates[i][0].toFixed(1)}, ${coordinates[i][1].toFixed(1)})`);
+    }
+  });
+
+  it("keeps coordinate labels off search-limit markers, loads and water-table symbols", () => {
+    const rec = draw({
+      editingExterior: true,
+      analysisLimits: { enabled: true, entryLeftX: 10, entryRightX: 8, exitLeftX: 20, exitRightX: 28 },
+      lineLoads: [{ id: "l1", x: 30, magnitude: 50 }],
+      piezometricLine: {
+        ...DEFAULT_PIEZO_LINE,
+        lines: [{ id: "w1", name: "W1", color: "#1a3a8a", coordinates: [[0, 8], [20, 5]] }],
+        activeLineId: "w1",
+      },
+    });
+    const [mx, my] = toC(10, 10);
+    const [lx, ly] = toC(30, 5);
+    const [wx, wy] = toC(10, 6.5);
+    const keepOut = [
+      { left: mx - 1, right: mx + 1, top: my - 10, bottom: my + 10 }, // marker bar at the crest vertex
+      { left: lx - 1, right: lx + 1, top: ly - 38, bottom: ly }, // line-load shaft at the toe vertex
+      { left: wx - 6, right: wx + 6, top: wy - 10, bottom: wy }, // water-table symbol
+    ];
+    const boxes = labelBoxes(rec);
+    expect(boxes.map((b) => b.text)).toContain("(10.0, 10.0)");
+    for (const b of boxes) for (const k of keepOut) expect(overlap(b, k)).toBe(false);
+  });
+
+  it("puts each coordinate label on a near-opaque plate of the background colour", () => {
+    const rec = draw({ editingExterior: true });
+    const plates = rec.callsOf("fillRect").filter((c) => c.state.globalAlpha === POINT_LABEL_PLATE_ALPHA);
+    expect(plates).toHaveLength(COORDS.length);
+    expect(POINT_LABEL_PLATE_ALPHA).toBeGreaterThanOrEqual(0.9);
+  });
+
+  it("clips interior boundaries to the model; outside parts only while editing them", () => {
+    // Runs from x = -5 to 35, past the model on both sides.
+    const boundary = { id: "b1", coordinates: [[-5, 4], [35, 4]] as [number, number][] };
+    const strokesOf = (rec: ReturnType<typeof draw>) =>
+      rec.strokes().filter((p) => hasPoints(p, [toC(-5, 4), toC(35, 4)]));
+    const idle = draw({ materialBoundaries: [boundary] });
+    const inside = strokesOf(idle);
+    expect(inside).toHaveLength(1);
+    // Drawn inside a clip to the exterior boundary.
+    const clipIndex = idle.paths.findIndex((p) => p.kind === "clip" && hasPoints(p, COORDS.map(([x, y]) => toC(x, y))));
+    expect(clipIndex).toBeGreaterThanOrEqual(0);
+    expect(idle.paths.indexOf(inside[0])).toBeGreaterThan(clipIndex);
+    // Its end points off the model are hidden when not editing boundaries.
+    expect(idle.callsOf("arc").filter((c) => c.args[0] === toC(-5, 4)[0])).toHaveLength(0);
+
+    const editing = draw({ materialBoundaries: [boundary], editingBoundaries: true });
+    const both = strokesOf(editing);
+    expect(both).toHaveLength(2);
+    expect(both[1].state.lineDash.length).toBeGreaterThan(0);
+    expect(both[1].state.globalAlpha).toBeLessThan(1);
+    expect(editing.paths.some((p) => p.kind === "clip" && p.fillRule === "evenodd")).toBe(true);
+    expect(editing.callsOf("arc").filter((c) => c.args[2] === POINT_RADIUS - 1)).toHaveLength(2);
+  });
+
+  it("draws prescribed slip surfaces faint and dashed in the edit view only", () => {
+    const customSearchPlanes = [
+      { id: "c1", cx: 15, cy: 14, radius: 10 },
+      { id: "p1", cx: 0, cy: 0, radius: 0, points: [[5, 10], [15, 3], [25, 5]] as [number, number][] },
+    ];
+    const rec = draw({ customSearchPlanes });
+    const dashed = rec.strokes().filter((p) => p.state.lineDash.length > 0 && p.state.globalAlpha < 1);
+    const circle = dashed.find((p) => p.segments.some((s) => s.op === "arc"));
+    expect(circle?.segments.find((s) => s.op === "arc")).toMatchObject({ x: toC(15, 14)[0], y: toC(15, 14)[1], r: 200 });
+    expect(dashed.some((p) => hasPoints(p, [toC(5, 10), toC(15, 3), toC(25, 5)]))).toBe(true);
+    const result = draw({ customSearchPlanes, mode: "result" });
+    expect(result.strokes().some((p) => p.segments.some((s) => s.op === "arc" && s.r === 200))).toBe(false);
   });
 
   it("colours the selected and hovered vertices", () => {
