@@ -10,7 +10,7 @@ import {
   DEFAULT_RESULT_VIEW_SETTINGS,
 } from "../../store/defaults";
 import { surfaceYAtXFromCoordinates } from "./helpers";
-import { POINT_COLOR, POINT_COLOR_HOVER, POINT_COLOR_SELECTED, POINT_RADIUS } from "./constants";
+import { POINT_COLOR, POINT_COLOR_HOVER, POINT_COLOR_SELECTED, POINT_RADIUS, RULER_SIZE_PX } from "./constants";
 import {
   ENTRY_DOT_COLOR,
   EXIT_DOT_COLOR,
@@ -271,12 +271,37 @@ describe("drawCanvas — edit mode", () => {
     expect(dots).toHaveLength(COORDS.length);
     expect(dots.every((c) => c.args[2] === POINT_RADIUS)).toBe(true);
     expect(editing.textStrings()).toContain("(20.0, 5.0)");
+    // Upper points are labelled above, centred on the point.
+    const [px, py] = toC(20, 5);
     const label = editing.findText("(20.0, 5.0)")!;
-    expect([label.x, label.y]).toEqual([toC(20, 5)[0], toC(20, 5)[1] - 12]);
+    expect(label.y).toBeLessThan(py);
+    expect(label.x).toBeLessThan(px);
+    expect(label.x).toBeGreaterThan(px - 60);
+    // Points at the bottom of the boundary are labelled below, outside the fill.
+    expect(editing.findText("(30.0, 0.0)")!.y).toBeGreaterThan(toC(30, 0)[1]);
 
     const idle = draw();
     expect(idle.callsOf("arc").every((c) => c.args[2] === 3)).toBe(true);
     expect(idle.textStrings().some((t) => t.startsWith("("))).toBe(false);
+  });
+
+  it("keeps coordinate labels clear of the rulers and the canvas edge", () => {
+    // Points pushed to the left and bottom edges of the canvas.
+    const coordinates: [number, number][] = [
+      canvasToWorld(4, H - 4, W, H),
+      canvasToWorld(4, 300, W, H),
+      canvasToWorld(W - 4, 300, W, H),
+      canvasToWorld(W - 4, H - 4, W, H),
+    ];
+    const rec = draw({ editingExterior: true, coordinates });
+    const labels = rec.callsOf("fillText").filter((c) => String(c.args[0]).startsWith("("));
+    expect(labels).toHaveLength(4);
+    for (const c of labels) {
+      const [, x, y] = c.args as [string, number, number];
+      expect(x).toBeGreaterThanOrEqual(RULER_SIZE_PX);
+      expect(x).toBeLessThan(W - 20);
+      expect(y).toBeLessThan(H - RULER_SIZE_PX);
+    }
   });
 
   it("colours the selected and hovered vertices", () => {

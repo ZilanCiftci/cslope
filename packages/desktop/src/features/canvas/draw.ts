@@ -1,3 +1,4 @@
+import { isPointInPolygon } from "@cslope/engine";
 import { PAPER_DIMENSIONS, PLOT_MARGINS } from "../../store/app-store";
 import type { AppState } from "../../store/types";
 import {
@@ -20,6 +21,7 @@ import {
   POINT_COLOR_SELECTED,
   POINT_RADIUS,
   cssVar,
+  RULER_SIZE_PX,
 } from "./constants";
 import { GRID_RAW_STEP_PX } from "../../constants";
 import {
@@ -76,6 +78,54 @@ import { drawPiles, drawReinforcementForces, drawReinforcements } from "./reinfo
 import { freeWaterPolygons, mainPiezoLine, piezoExtensions } from "../../utils/piezo";
 
 const arcPointCache = new WeakMap<object, Map<string, [number, number][]>>();
+
+/** The part of the canvas not covered by the axis rulers (left and bottom). */
+export interface LabelBounds {
+  left: number;
+  top: number;
+  right: number;
+  bottom: number;
+}
+
+/**
+ * Draws a point's coordinate label above it, or below when `below` is set
+ * (points at the bottom of a shape, so the label sits outside the fill).
+ * The label is moved inward to stay inside `bounds`, so rulers and the
+ * canvas edge don't clip it, and drawn on a plate of the background colour
+ * so grid lines, fills and markers under it don't hide it.
+ */
+export function drawPointLabel(
+  ctx: CanvasRenderingContext2D,
+  text: string,
+  px: number,
+  py: number,
+  below: boolean,
+  bounds: LabelBounds,
+  colors: { text: string; plate: string },
+) {
+  ctx.font = "10px 'Segoe UI', sans-serif";
+  const tw = ctx.measureText(text).width;
+  const padX = 3;
+  const boxW = tw + padX * 2;
+  const boxH = 13;
+  const gap = 7;
+  let top = below ? py + gap : py - gap - boxH;
+  // Flip to the other side when this side leaves the visible area.
+  if (top < bounds.top) top = py + gap;
+  if (top + boxH > bounds.bottom) top = py - gap - boxH;
+  top = Math.max(bounds.top, Math.min(top, bounds.bottom - boxH));
+  const left = Math.max(bounds.left, Math.min(px - boxW / 2, bounds.right - boxW));
+  ctx.save();
+  ctx.globalAlpha = 0.8;
+  ctx.fillStyle = colors.plate;
+  ctx.fillRect(left, top, boxW, boxH);
+  ctx.restore();
+  ctx.fillStyle = colors.text;
+  ctx.textAlign = "left";
+  ctx.textBaseline = "middle";
+  ctx.fillText(text, left + padX, top + boxH / 2 + 0.5);
+  ctx.textBaseline = "alphabetic";
+}
 
 type ArcSurface = DrawableSurface;
 
@@ -248,6 +298,11 @@ export function drawCanvas(
   const PAPER_TICK_COLOR = cssVar("--color-canvas-paper-ticks");
   const PAPER_BORDER_COLOR = cssVar("--color-canvas-paper-border");
   const SELECTED_BOUNDARY_COLOR = "#f59e0b";
+  const MARKER_BASE = cssVar("--color-canvas-marker") || MARKER_COLOR.hex;
+  const labelBounds: LabelBounds = { left: RULER_SIZE_PX + 2, top: 2, right: w - 2, bottom: h - RULER_SIZE_PX - 2 };
+  const labelColors = { text: LABEL_COLOR, plate: BG_COLOR };
+  // Point labels are drawn after the search-limit markers so no marker covers them.
+  const pointLabels: (() => void)[] = [];
 
   // Background
   ctx.fillStyle = BG_COLOR;
@@ -1031,13 +1086,16 @@ export function drawCanvas(
           ctx.stroke();
 
           if (editingPiezo && isActive) {
-            ctx.fillStyle = LABEL_COLOR;
-            ctx.font = "10px 'Segoe UI', sans-serif";
-            ctx.textAlign = "center";
-            ctx.fillText(
-              `(${plCoords[i][0].toFixed(1)}, ${plCoords[i][1].toFixed(1)})`,
-              px,
-              py - 12,
+            pointLabels.push(() =>
+              drawPointLabel(
+                ctx,
+                `(${plCoords[i][0].toFixed(1)}, ${plCoords[i][1].toFixed(1)})`,
+                px,
+                py,
+                false,
+                labelBounds,
+                labelColors,
+              ),
             );
           }
         }
@@ -1048,6 +1106,14 @@ export function drawCanvas(
   // ── External boundary points ─────────────────────────
   if (mode !== "result") {
     const extRadius = editingExterior ? POINT_RADIUS : 3;
+    const extCanvas = coordinates.map(([x, y]) => worldToCanvas(x, y, w, h));
+    const extXs = extCanvas.map((c) => c[0]);
+    const extYs = extCanvas.map((c) => c[1]);
+    // A label goes below its point when more of the space above is inside
+    // the boundary than below, so it sits outside the fill.
+    const insideCount = (px: number, y: number) =>
+      [-15, 0, 15].filter((dx) => isPointInPolygon(px + dx, y, extXs, extYs)).length;
+    const labelBelow = (px: number, py: number) => insideCount(px, py - 13) > insideCount(px, py + 13);
     for (let i = 0; i < coordinates.length; i++) {
       const [px, py] = worldToCanvas(
         coordinates[i][0],
@@ -1075,15 +1141,18 @@ export function drawCanvas(
       ctx.lineWidth = editingExterior ? 1.5 : 1;
       ctx.stroke();
 
-      // Coordinate label — only when editing
+      // Coordinate label — only when editing.
       if (editingExterior) {
-        ctx.fillStyle = LABEL_COLOR;
-        ctx.font = "10px 'Segoe UI', sans-serif";
-        ctx.textAlign = "center";
-        ctx.fillText(
-          `(${coordinates[i][0].toFixed(1)}, ${coordinates[i][1].toFixed(1)})`,
-          px,
-          py - 12,
+        pointLabels.push(() =>
+          drawPointLabel(
+            ctx,
+            `(${coordinates[i][0].toFixed(1)}, ${coordinates[i][1].toFixed(1)})`,
+            px,
+            py,
+            labelBelow(px, py),
+            labelBounds,
+            labelColors,
+          ),
         );
       }
     }
@@ -1143,7 +1212,7 @@ export function drawCanvas(
       worldY: number,
       dir: "left" | "right",
       handle: "entryLeftX" | "entryRightX" | "exitLeftX" | "exitRightX",
-      baseColor: string = MARKER_COLOR.hex,
+      baseColor: string = MARKER_BASE,
       activeColor: string = EXIT_DOT_COLOR.hex,
     ) => {
       const [cx, cy] = worldToCanvas(worldX, worldY, w, h);
@@ -1255,7 +1324,7 @@ export function drawCanvas(
         entryLeftY,
         leftHandleDir,
         "entryLeftX",
-        MARKER_COLOR.hex,
+        MARKER_BASE,
         ENTRY_DOT_COLOR.hex,
       );
     }
@@ -1265,7 +1334,7 @@ export function drawCanvas(
         entryRightY,
         rightHandleDir,
         "entryRightX",
-        MARKER_COLOR.hex,
+        MARKER_BASE,
         ENTRY_DOT_COLOR.hex,
       );
     }
@@ -1307,7 +1376,7 @@ export function drawCanvas(
         exitLeftY,
         leftHandleDir,
         "exitLeftX",
-        MARKER_COLOR.hex,
+        MARKER_BASE,
         EXIT_DOT_COLOR.hex,
       );
     }
@@ -1317,11 +1386,13 @@ export function drawCanvas(
         exitRightY,
         rightHandleDir,
         "exitRightX",
-        MARKER_COLOR.hex,
+        MARKER_BASE,
         EXIT_DOT_COLOR.hex,
       );
     }
   }
+
+  for (const drawLabel of pointLabels) drawLabel();
 
   // ── Analysis result surfaces ─────────────────────────
   if (mode === "result" && result) {
