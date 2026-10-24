@@ -5,27 +5,13 @@ import { useAppStore, PAPER_DIMENSIONS } from "../../store/app-store";
 import type { ResultViewSettings, PaperSize } from "../../store/types";
 import { getPlotAspectRatio as getSharedPlotAspectRatio } from "../view/paper";
 import { viewLockForModel } from "../view/viewLock";
+import { GroupHeading } from "./GroupHeading";
 
 interface ViewSettingsStatePayload {
   resultViewSettings: ResultViewSettings;
   coordinates: [number, number][];
   resultViewScale: number;
   resultViewOffset: [number, number];
-}
-
-function GroupHeading({ children }: { children: React.ReactNode }) {
-  return (
-    <h3
-      className="text-[10px] font-semibold uppercase tracking-wider mt-4 mb-2 pb-1"
-      style={{
-        color: "var(--color-vsc-text-secondary, var(--color-vsc-text))",
-        opacity: 0.6,
-        borderBottom: "1px solid var(--color-vsc-border)",
-      }}
-    >
-      {children}
-    </h3>
-  );
 }
 
 function FieldRow({
@@ -247,6 +233,9 @@ export function ViewSettingsDialogApp() {
         color: "var(--color-vsc-text)",
       }}
     >
+      <div className="pb-2">
+        <h2 className="text-[12px] font-semibold">View Settings</h2>
+      </div>
       <div className="flex-1 overflow-y-auto pr-1">
         {/* ── Paper ────────────────────────────────────── */}
         <GroupHeading>Paper</GroupHeading>
@@ -263,11 +252,11 @@ export function ViewSettingsDialogApp() {
               })
             }
             style={selectStyle}
-            className="w-28"
+            className="w-44"
           >
             {(Object.keys(PAPER_DIMENSIONS) as PaperSize[]).map((size) => (
               <option key={size} value={size}>
-                {size} ({PAPER_DIMENSIONS[size].w}×{PAPER_DIMENSIONS[size].h}mm)
+                {size} ({PAPER_DIMENSIONS[size].w} × {PAPER_DIMENSIONS[size].h} mm)
               </option>
             ))}
           </select>
@@ -298,7 +287,7 @@ export function ViewSettingsDialogApp() {
               setRvs(updates);
             }}
             style={selectStyle}
-            className="w-28"
+            className="w-44"
           >
             <option value="portrait">Portrait</option>
             <option value="landscape">Landscape</option>
@@ -318,7 +307,7 @@ export function ViewSettingsDialogApp() {
               setRvs({ gridSpacing: value > 0 ? value : undefined })
             }
             onClear={() => setRvs({ gridSpacing: undefined })}
-            style={{ ...inputStyle, width: 80 }}
+            style={{ ...inputStyle, width: 176 }}
           />
         </FieldRow>
 
@@ -342,7 +331,7 @@ export function ViewSettingsDialogApp() {
               const value = Math.max(0, Math.min(20, Math.round(parsed)));
               setRvs({ minorTicks: value || undefined });
             }}
-            style={{ ...inputStyle, width: 80 }}
+            style={{ ...inputStyle, width: 176 }}
           />
         </FieldRow>
 

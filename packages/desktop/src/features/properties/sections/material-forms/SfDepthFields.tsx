@@ -3,6 +3,7 @@ import { ExpressionNumericInput } from "../../../../components/ui/ExpressionNume
 import type { DepthReference, StrengthFromDepthModel } from "@cslope/engine";
 import type { MaterialExpressions } from "../../../../store/types";
 import { CutoffField } from "./CutoffField";
+import { UnitWeightSatField } from "./UnitWeightSatField";
 
 interface Props {
   model: StrengthFromDepthModel;
@@ -38,8 +39,12 @@ export function SfDepthFields({
             aria-label="γ (kN/m³)"
           />
         </label>
+        <UnitWeightSatField
+          value={model.unitWeightSat}
+          onChange={(unitWeightSat) => onChange({ unitWeightSat })}
+        />
         <label className="flex flex-col gap-0.5">
-          <Label>Su ref (kPa)</Label>
+          <Label>Su at reference depth (kPa)</Label>
           <ExpressionNumericInput
             value={model.suRef}
             expression={modelExpressions?.suRef}
@@ -49,11 +54,13 @@ export function SfDepthFields({
             min={0}
             fallbackValue={0}
             allowNegative={false}
-            aria-label="Su ref (kPa)"
+            aria-label="Su at reference depth (kPa)"
           />
         </label>
         <label className="flex flex-col gap-0.5">
-          <Label>Depth ref (m)</Label>
+          <Label title="Depth below the ground or the top of the layer (see Depth measured from) where Su has its reference value.">
+            Reference depth (m)
+          </Label>
           <ExpressionNumericInput
             value={model.depthRef}
             expression={modelExpressions?.depthRef}
@@ -61,11 +68,13 @@ export function SfDepthFields({
             onValueChange={(depthRef) => onChange({ depthRef })}
             onExpressionChange={(expr) => onExpressionChange("depthRef", expr)}
             fallbackValue={0}
-            aria-label="Depth ref (m)"
+            aria-label="Reference depth (m)"
           />
         </label>
         <label className="flex flex-col gap-0.5">
-          <Label>Rate (kPa/m)</Label>
+          <Label title="Change of Su per metre of depth: positive, Su increases downwards; negative, it decreases.">
+            Su increase rate (kPa/m)
+          </Label>
           <ExpressionNumericInput
             value={model.rate}
             expression={modelExpressions?.rate}
@@ -73,7 +82,7 @@ export function SfDepthFields({
             onValueChange={(rate) => onChange({ rate })}
             onExpressionChange={(expr) => onExpressionChange("rate", expr)}
             fallbackValue={0}
-            aria-label="Rate (kPa/m)"
+            aria-label="Su increase rate (kPa/m)"
           />
         </label>
         <label
@@ -94,6 +103,7 @@ export function SfDepthFields({
         </label>
         <CutoffField
           value={model.suMax}
+          rate={model.rate}
           onChange={(suMax) => onChange({ suMax })}
         />
       </div>

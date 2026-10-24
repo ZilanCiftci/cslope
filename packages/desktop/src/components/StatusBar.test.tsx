@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 import { render, screen, fireEvent } from "@testing-library/react";
 import { StatusBar } from "./StatusBar";
 import type { AnalysisResult } from "../store/types";
+import { APP_VERSION } from "../utils/app-version";
 
 const noop = () => {};
 
@@ -132,8 +133,37 @@ describe("StatusBar", () => {
     expect(select).toBeDisabled();
   });
 
-  it("shows version info", () => {
+  it("shows the app version", () => {
     render(<StatusBar {...defaultProps} />);
-    expect(screen.getByText("cSlope v0.1")).toBeInTheDocument();
+    expect(
+      screen.getByText(APP_VERSION ? `cSlope v${APP_VERSION}` : "cSlope"),
+    ).toBeInTheDocument();
+    expect(screen.queryByText("cSlope v0.1")).toBeNull();
+  });
+
+  it("gives the snap sizes in metres", () => {
+    render(<StatusBar {...defaultProps} snapToGrid gridSnapSize={0.5} />);
+    const select = screen.getByRole("combobox") as HTMLSelectElement;
+    expect(select.selectedOptions[0].textContent).toBe("0.5 m");
+  });
+
+  it("shows the error of a failed run", () => {
+    render(
+      <StatusBar
+        {...defaultProps}
+        runState="error"
+        errorMessage="No valid slip surface was found."
+      />,
+    );
+    const status = screen.getByTestId("status-run-error");
+    expect(status).toHaveTextContent(
+      "Analysis failed: No valid slip surface was found.",
+    );
+    expect(status).toHaveAttribute("title", "No valid slip surface was found.");
+  });
+
+  it("shows no error unless the run failed", () => {
+    render(<StatusBar {...defaultProps} errorMessage="stale" />);
+    expect(screen.queryByTestId("status-run-error")).toBeNull();
   });
 });

@@ -56,7 +56,7 @@ export function ContextMenu({
     disabled?: boolean;
   }[] = [
     {
-      label: "Properties",
+      label: "Model Properties…",
       icon: "M10 20a10 10 0 100-20 10 10 0 000 20zm0-2a8 8 0 100-16 8 8 0 000 16zm-1-11a1 1 0 112 0 1 1 0 01-2 0zm0 4a1 1 0 112 0v5a1 1 0 11-2 0V11z",
       action: () => {
         onProperties();
@@ -98,7 +98,7 @@ export function ContextMenu({
   return (
     <div
       ref={menuRef}
-      className="fixed z-50 py-1 rounded-md shadow-xl min-w-[160px]"
+      className="fixed z-[100] py-1 rounded-md shadow-xl min-w-[160px] whitespace-nowrap"
       style={{
         left: pos.x,
         top: pos.y,

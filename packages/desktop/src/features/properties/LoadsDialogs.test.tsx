@@ -86,6 +86,20 @@ describe("UdlDialogApp", () => {
     ).toEqual([]);
   });
 
+  it("places each new row just beyond the last one instead of stacking", async () => {
+    render(<UdlDialogApp />);
+    hydrate([{ id: "u1", magnitude: 12, x1: 1, x2: 3 }]);
+    await userEvent.click(screen.getByRole("button", { name: "+ Add UDL" }));
+    await userEvent.click(screen.getByRole("button", { name: "+ Add UDL" }));
+    expect(
+      useAppStore.getState().udls.map(({ magnitude, x1, x2 }) => [magnitude, x1, x2]),
+    ).toEqual([
+      [12, 1, 3],
+      [12, 3, 5],
+      [12, 5, 7],
+    ]);
+  });
+
   it("evaluates parameter expressions and stores the expression text", async () => {
     render(<UdlDialogApp />);
     hydrate([{ id: "u1", magnitude: 12, x1: 1, x2: 3 }]);
@@ -147,6 +161,19 @@ describe("UdlDialogApp", () => {
 });
 
 describe("LineLoadsDialogApp", () => {
+  it("adds new line loads 5 m beyond the last one", async () => {
+    render(<LineLoadsDialogApp />);
+    hydrate([], []);
+    await userEvent.click(screen.getByRole("button", { name: "+ Add Line Load" }));
+    await userEvent.click(screen.getByRole("button", { name: "+ Add Line Load" }));
+    expect(
+      useAppStore.getState().lineLoads.map(({ magnitude, x }) => [magnitude, x]),
+    ).toEqual([
+      [50, 10],
+      [50, 15],
+    ]);
+  });
+
   it("shows, edits and removes line loads", async () => {
     render(<LineLoadsDialogApp />);
     hydrate([], [{ id: "l1", magnitude: 50, x: 10 }]);

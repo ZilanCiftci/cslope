@@ -130,3 +130,34 @@ export function mainPiezoLine<L extends { id: string }>(pl: {
 }): L | undefined {
   return pl.lines.find((l) => l.id === pl.mainLineId) ?? pl.lines[0];
 }
+
+/**
+ * Where "Add point" puts a new point of a piezometric line, always inside
+ * the model's x extent: an empty line starts at the left edge at mid
+ * height; a line that stops short of the right edge is continued 5 m (at
+ * most to the edge); otherwise the point goes in the middle of the widest
+ * gap between neighbouring points. `index` is where to insert it.
+ */
+export function nextPiezoPoint(line: Pt[], model: Pt[]): { index: number; point: Pt } {
+  const xs = model.map((c) => c[0]);
+  const ys = model.map((c) => c[1]);
+  const xMin = xs.length ? Math.min(...xs) : 0;
+  const xMax = xs.length ? Math.max(...xs) : 50;
+  const midY = ys.length ? (Math.min(...ys) + Math.max(...ys)) / 2 : 0;
+  if (line.length === 0) return { index: 0, point: [xMin, midY] };
+  const last = line[line.length - 1];
+  const eps = 1e-6;
+  if (last[0] < xMax - eps) {
+    return { index: line.length, point: [Math.min(last[0] + 5, xMax), last[1]] };
+  }
+  if (line.length === 1) {
+    return { index: 0, point: [Math.max(last[0] - 5, xMin), last[1]] };
+  }
+  let widest = 0;
+  for (let i = 1; i < line.length - 1; i++) {
+    if (Math.abs(line[i + 1][0] - line[i][0]) > Math.abs(line[widest + 1][0] - line[widest][0])) widest = i;
+  }
+  const [a, b] = [line[widest], line[widest + 1]];
+  const round = (v: number) => Math.round(v * 100) / 100;
+  return { index: widest + 1, point: [round((a[0] + b[0]) / 2), round((a[1] + b[1]) / 2)] };
+}

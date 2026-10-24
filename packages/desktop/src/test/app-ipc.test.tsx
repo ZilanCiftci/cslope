@@ -267,27 +267,47 @@ describe("dialog windows", () => {
     expect(handlers.get("onMaterialsRequestState") ?? []).toHaveLength(0);
   });
 
-  it("closes on Escape, but only blurs a focused field first", () => {
-    window.location.hash = "#parameters-dialog";
-    const close = vi.spyOn(window, "close").mockImplementation(() => {});
-    render(<App />);
-    expect(calls).not.toContain("appReady");
-    const input = document.createElement("input");
-    document.body.appendChild(input);
-    input.focus();
-    act(() => {
-      input.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
-    });
-    expect(close).not.toHaveBeenCalled();
-    expect(document.activeElement).not.toBe(input);
-    input.remove();
-    act(() => {
-      window.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape" }));
-    });
-    expect(close).toHaveBeenCalledTimes(1);
-    act(() => {
-      window.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter" }));
-    });
-    expect(close).toHaveBeenCalledTimes(1);
+  it("closes on Escape, also from a field, after leaving the field", () => {
+    vi.useFakeTimers();
+    try {
+      window.location.hash = "#parameters-dialog";
+      const close = vi.spyOn(window, "close").mockImplementation(() => {});
+      render(<App />);
+      expect(calls).not.toContain("appReady");
+      const input = document.createElement("input");
+      const blurred = vi.fn();
+      input.addEventListener("blur", blurred);
+      document.body.appendChild(input);
+      input.focus();
+      act(() => {
+        input.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
+      });
+      // The field is left first (it commits on blur), the window closes after.
+      expect(blurred).toHaveBeenCalledTimes(1);
+      expect(document.activeElement).not.toBe(input);
+      act(() => vi.advanceTimersByTime(200));
+      expect(close).toHaveBeenCalledTimes(1);
+      input.remove();
+      // A key the field already used (preventDefault) does not close.
+      const used = new KeyboardEvent("keydown", { key: "Escape", cancelable: true });
+      used.preventDefault();
+      act(() => {
+        window.dispatchEvent(used);
+        vi.advanceTimersByTime(200);
+      });
+      expect(close).toHaveBeenCalledTimes(1);
+      act(() => {
+        window.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter" }));
+        vi.advanceTimersByTime(200);
+      });
+      expect(close).toHaveBeenCalledTimes(1);
+      act(() => {
+        window.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape" }));
+        vi.advanceTimersByTime(200);
+      });
+      expect(close).toHaveBeenCalledTimes(2);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });

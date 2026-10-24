@@ -37,7 +37,7 @@ describe("parameter actions", () => {
     });
     store().addParameter();
     const [p] = store().parameters;
-    expect(p).toMatchObject({ name: "", expression: "0" });
+    expect(p).toMatchObject({ name: "p1", expression: "0" });
     store().updateParameter(p.id, { name: "q", expression: "25" });
     expect(store().udls[0].magnitude).toBe(25);
     expect(active().parameters).toEqual([{ id: p.id, name: "q", expression: "25" }]);

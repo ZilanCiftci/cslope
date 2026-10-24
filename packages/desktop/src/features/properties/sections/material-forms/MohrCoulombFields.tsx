@@ -2,6 +2,7 @@ import { Label } from "../../../../components/ui/Label";
 import { ExpressionNumericInput } from "../../../../components/ui/ExpressionNumericInput";
 import type { MohrCoulombModel } from "@cslope/engine";
 import type { MaterialExpressions } from "../../../../store/types";
+import { UnitWeightSatField } from "./UnitWeightSatField";
 
 interface Props {
   model: MohrCoulombModel;
@@ -20,7 +21,7 @@ export function MohrCoulombFields({
 }: Props) {
   return (
     <>
-      <div className="grid grid-cols-3 gap-2">
+      <div className="grid grid-cols-2 gap-2">
         <label className="flex flex-col gap-0.5">
           <Label>γ (kN/m³)</Label>
           <ExpressionNumericInput
@@ -43,6 +44,10 @@ export function MohrCoulombFields({
             }
           />
         </label>
+        <UnitWeightSatField
+          value={model.unitWeightSat}
+          onChange={(unitWeightSat) => onChange({ unitWeightSat })}
+        />
         <label className="flex flex-col gap-0.5">
           <Label>φ (°)</Label>
           <ExpressionNumericInput

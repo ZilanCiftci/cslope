@@ -5,10 +5,14 @@ import App from "./App.tsx";
 import { ErrorBoundary } from "./components/ErrorBoundary";
 import { useAppStore } from "./store/app-store";
 import { paperPngDataUrl } from "./features/export/paper-png";
+import { installFocusSource } from "./utils/focus-source";
 
 // Set initial theme before first render (respect saved preference, default to light)
 document.documentElement.dataset.theme =
   localStorage.getItem("cslope-theme") || "light";
+
+// Focus ring for keyboard navigation only (see index.css).
+installFocusSource();
 
 // Expose the app store for automated media capture tooling.
 // Keeping this always-on avoids brittle build-time env coupling.

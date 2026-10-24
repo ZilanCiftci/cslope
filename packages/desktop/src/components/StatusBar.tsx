@@ -1,9 +1,12 @@
 import type { AnalysisResult, RunState } from "../store/types";
+import { APP_VERSION } from "../utils/app-version";
 
 interface Props {
   mode: "edit" | "result";
   runState: RunState;
   result: AnalysisResult | null;
+  /** The error of a failed run (shown while `runState` is "error"). */
+  errorMessage?: string | null;
   snapToGrid: boolean;
   gridSnapSize: number;
   setSnapToGrid: (value: boolean) => void;
@@ -16,6 +19,7 @@ export function StatusBar({
   mode,
   runState,
   result,
+  errorMessage = null,
   snapToGrid,
   gridSnapSize,
   setSnapToGrid,
@@ -33,7 +37,7 @@ export function StatusBar({
         color: "var(--color-vsc-text)",
       }}
     >
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-3 min-w-0">
         <span className="flex items-center gap-1">
           <div
             className="w-1.5 h-1.5 rounded-full"
@@ -77,9 +81,23 @@ export function StatusBar({
             </span>
           </>
         )}
+        {runState === "error" && (
+          <>
+            <span style={{ color: "var(--color-vsc-border)" }}>|</span>
+            <span
+              role="status"
+              data-testid="status-run-error"
+              className="truncate"
+              title={errorMessage ?? undefined}
+              style={{ color: "var(--color-vsc-error)", fontWeight: 600 }}
+            >
+              Analysis failed{errorMessage ? `: ${errorMessage}` : ""}
+            </span>
+          </>
+        )}
       </div>
       <div className="flex-1" />
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-2 shrink-0 pl-3">
         <label className="flex items-center gap-1 cursor-pointer select-none">
           <input
             type="checkbox"
@@ -93,15 +111,17 @@ export function StatusBar({
           value={gridSnapSize}
           onChange={(e) => setGridSnapSize(parseFloat(e.target.value))}
           disabled={!snapToGrid}
+          aria-label="Snap grid size"
+          title="Snap grid size (m)"
           className="bg-transparent border border-(--color-vsc-border) rounded text-[11px] px-1 py-0 cursor-pointer disabled:opacity-40"
           style={{ color: "inherit" }}
         >
-          <option value="0.1">0.1</option>
-          <option value="0.25">0.25</option>
-          <option value="0.5">0.5</option>
-          <option value="1">1.0</option>
-          <option value="2">2.0</option>
-          <option value="5">5.0</option>
+          <option value="0.1">0.1 m</option>
+          <option value="0.25">0.25 m</option>
+          <option value="0.5">0.5 m</option>
+          <option value="1">1.0 m</option>
+          <option value="2">2.0 m</option>
+          <option value="5">5.0 m</option>
         </select>
         <span style={{ color: "var(--color-vsc-border)" }}>|</span>
         {cursorWorld ? (
@@ -134,7 +154,9 @@ export function StatusBar({
           </span>
         )}
         <span style={{ color: "var(--color-vsc-border)" }}>|</span>
-        <span style={{ opacity: 0.6 }}>cSlope v0.1</span>
+        <span style={{ opacity: 0.6 }}>
+          {APP_VERSION ? `cSlope v${APP_VERSION}` : "cSlope"}
+        </span>
       </div>
     </div>
   );
