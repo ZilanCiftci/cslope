@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { useAppStore } from "../../store/app-store";
+import { isProjectDirty, markProjectClean } from "../../store/unsaved";
 import {
   modelViewLock,
   PAPER_MARGIN_FRACTION,
@@ -193,5 +194,14 @@ describe("critical centre and FOS label on the paper", () => {
     const lock = useAppStore.getState().resultViewSettings.viewLock!;
     expect(lock.topRight[1]).toBeGreaterThan(40);
     expect(viewLockContains(lock, coordinates)).toBe(true);
+  });
+
+  it("keeps a clean project clean when the frame widens for a result", () => {
+    const rvs = { ...DEFAULT_RESULT_VIEW_SETTINGS, showFosLabel: true, showCentreMarker: true };
+    useAppStore.setState({ coordinates, result: null, resultViewSettings: { ...rvs, viewLock: modelViewLock({ coordinates }, rvs) } });
+    markProjectClean(useAppStore.getState());
+    useAppStore.setState({ result: { criticalSurface: surface } as never });
+    expect(useAppStore.getState().resultViewSettings.viewLock!.topRight[1]).toBeGreaterThan(40);
+    expect(isProjectDirty(useAppStore.getState())).toBe(false);
   });
 });

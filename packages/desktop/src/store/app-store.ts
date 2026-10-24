@@ -1,7 +1,7 @@
 import { create } from "zustand";
 import { temporal } from "zundo";
 import type { AppState } from "./types";
-import { markProjectClean, withoutPaperViewport } from "./unsaved";
+import { isProjectDirty, markProjectClean, withoutPaperViewport } from "./unsaved";
 import { modelViewLock, viewLockContains } from "../features/view/viewLock";
 import { paperContentOf } from "../features/view/extents";
 import { createAnalysisSlice } from "./slices/analysisSlice";
@@ -119,12 +119,16 @@ useAppStore.subscribe((state, prev) => {
     if (lock && marks.length > 0 && viewLockContains(lock, state.coordinates) && !viewLockContains(lock, marks.map((m) => m.at))) {
       const history = useAppStore.temporal.getState();
       const tracking = history.isTracking;
+      // Running an analysis is not an unsaved change: a clean project
+      // stays clean when its frame widens for the result.
+      const wasClean = !isProjectDirty(prev);
       history.pause();
       try {
         state.setResultViewSettings({ viewLock: modelViewLock(content, state.resultViewSettings) });
       } finally {
         if (tracking) history.resume();
       }
+      if (wasClean) markProjectClean(useAppStore.getState());
     }
   }
   if (

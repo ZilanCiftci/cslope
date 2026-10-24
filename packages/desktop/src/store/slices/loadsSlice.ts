@@ -46,7 +46,8 @@ export function modelXRange(
  * A new UDL: 10 kPa over 0 to 5 m; after existing ones, the same width and
  * magnitude as the last, just beyond it, so new rows do not stack. Within
  * the model's x range when one is given: a load that would stick out is
- * moved back inside (and made no wider than the model).
+ * moved back inside (and made no wider than the model), so once the loads
+ * reach the model's edge new ones overlap the last one there.
  */
 export function nextUdlPlacement(
   udls: Pick<UdlRow, "magnitude" | "x1" | "x2">[],

@@ -32,6 +32,11 @@ describe("verification log", () => {
     expect(m[0].after.computed).toBe(2.1);
   });
 
+  it("keys published values by method, source and value, not by position", () => {
+    const k = points(data(2)).papers[0].key;
+    expect(k).toBe("V1|Bishop|Paper|2");
+  });
+
   it("gives zeros without results", () => {
     expect(stats([])).toEqual({ n: 0, mean: 0, meanAbs: 0, rms: 0, maxAbs: 0 });
   });

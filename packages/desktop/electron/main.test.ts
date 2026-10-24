@@ -707,6 +707,15 @@ describe("dialog window height", () => {
     send("window:fitDialogHeight", dlg.webContents, 500);
     expect(dlg.contentHeight).toBe(300);
   });
+
+  it("notices a user resize without will-resize (Linux) from the changed height", async () => {
+    await loadMain();
+    const dlg = openDialog("window:openOptionsDialog");
+    send("window:fitDialogHeight", dlg.webContents, 300);
+    dlg.contentHeight = 450; // dragged by the user
+    send("window:fitDialogHeight", dlg.webContents, 320);
+    expect(dlg.contentHeight).toBe(450);
+  });
 });
 
 describe("dialog state routing", () => {

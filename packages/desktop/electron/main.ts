@@ -754,11 +754,20 @@ ipcMain.on("app:ready", () => {
 // longer once the user has resized the window.
 const dialogOpenHeight = new WeakMap<BrowserWindow, number>();
 const userSizedDialogs = new WeakSet<BrowserWindow>();
+/** The content height this handler last gave each dialog. */
+const dialogFittedHeight = new WeakMap<BrowserWindow, number>();
 ipcMain.on("window:fitDialogHeight", (event, height: unknown) => {
   const child = BrowserWindow.fromWebContents(event.sender);
   if (!child || child === win || typeof height !== "number" || !Number.isFinite(height)) return;
   if (userSizedDialogs.has(child)) return;
   const [width, current] = child.getContentSize();
+  // A height other than the one set here means the user resized the window
+  // ("will-resize" below is only emitted on Windows and macOS).
+  const fitted = dialogFittedHeight.get(child);
+  if (fitted !== undefined && Math.abs(current - fitted) > 2) {
+    userSizedDialogs.add(child);
+    return;
+  }
   if (!dialogOpenHeight.has(child)) {
     dialogOpenHeight.set(child, current);
     // Emitted for resizes by the user only (not for setContentSize).
@@ -766,6 +775,7 @@ ipcMain.on("window:fitDialogHeight", (event, height: unknown) => {
   }
   const target = Math.round(Math.min(dialogOpenHeight.get(child)!, Math.max(240, height)));
   if (Math.abs(target - current) < 2) return;
+  dialogFittedHeight.set(child, target);
   const frame = child.getSize()[1] - current;
   const [minWidth, minHeight] = child.getMinimumSize();
   if (minHeight > target + frame) child.setMinimumSize(minWidth, target + frame);

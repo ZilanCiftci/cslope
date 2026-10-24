@@ -924,9 +924,10 @@ function App() {
       coordinates,
       resultViewScale: useAppStore.getState().resultViewScale,
       resultViewOffset: useAppStore.getState().resultViewOffset,
-      paperContent: paperContentOf({ coordinates, piezometricLine, udls, lineLoads, reinforcements, piles }),
+      // The whole state, so the critical centre and FOS label count too.
+      paperContent: paperContentOf(useAppStore.getState()),
     });
-  }, [resultViewSettings, coordinates, piezometricLine, udls, lineLoads, reinforcements, piles, isAnyDialogWindow]);
+  }, [resultViewSettings, coordinates, piezometricLine, udls, lineLoads, reinforcements, piles, result, isAnyDialogWindow]);
 
   useEffect(() => {
     if (!isElectron || isAnyDialogWindow) return;

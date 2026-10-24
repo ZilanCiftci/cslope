@@ -198,7 +198,7 @@ if (import.meta.main) {
       mkdirSync(join(CACHE, ".."), { recursive: true });
       writeFileSync(CACHE, JSON.stringify(raw));
       const seconds = (Date.now() - started) / 1000;
-      writeFileSync(RUN_TIME, JSON.stringify({ seconds, workers: availableParallelism(), load: loadAtStart, at: new Date().toISOString() }));
+      writeFileSync(RUN_TIME, JSON.stringify({ seconds, workers: Math.max(1, Math.min(8, availableParallelism())), load: loadAtStart, at: new Date().toISOString() }));
     }
     const { fos, reliability } = raw;
     const json = JSON.stringify(buildData(fos, reliability), null, 1) + "\n";

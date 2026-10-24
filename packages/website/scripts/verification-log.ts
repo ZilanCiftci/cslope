@@ -27,7 +27,7 @@ const SUMMARY_END = "<!-- summary-end -->";
 const ENTRIES = "<!-- entries -->";
 const RUN_TIME = join(ROOT, "packages/website/node_modules/.cache/cslope-verification-run.json");
 
-/** "87 s (16 workers)" for the last full verification run, or "not recorded". */
+/** "87 s (4 workers, load 0.2 at start)" for the last full verification run, or "not recorded". */
 function runTime(): string {
   if (!existsSync(RUN_TIME)) return "not recorded";
   const r = JSON.parse(readFileSync(RUN_TIME, "utf8")) as { seconds: number; workers: number; load?: number };
@@ -61,10 +61,10 @@ export function points(data: VerificationData): { programs: Point[]; papers: Poi
         });
       }
     }
-    (p.published ?? []).forEach((v, i) => {
+    (p.published ?? []).forEach((v) => {
       if (v.computed != null) {
         papers.push({
-          key: `${p.id}|${v.method}|${i}`,
+          key: `${p.id}|${v.method}|${v.source}|${v.value}`,
           label: `${p.id} ${v.method} (${v.source})`,
           computed: v.computed,
           reference: v.value,
@@ -135,7 +135,12 @@ function main() {
   const args = process.argv.slice(2);
   const baseAt = args.indexOf("--base");
   const base = baseAt >= 0 ? args[baseAt + 1] : "HEAD";
-  const title = args.filter((_, i) => baseAt < 0 || (i !== baseAt && i !== baseAt + 1)).join(" ").trim();
+  // A "|" would split the summary table's cells.
+  const title = args
+    .filter((_, i) => baseAt < 0 || (i !== baseAt && i !== baseAt + 1))
+    .join(" ")
+    .replace(/\|/g, "/")
+    .trim();
   if (!title) throw new Error('Usage: bun scripts/verification-log.ts "Description of the change" [--base <rev>]');
 
   const after = JSON.parse(readFileSync(join(ROOT, DATA), "utf8")) as VerificationData;
@@ -171,8 +176,9 @@ function main() {
   const nl = log.includes("\r\n") ? "\r\n" : "\n";
   const fix = (s: string) => s.replace(/\r?\n/g, nl);
   if (!log.includes(SUMMARY_END) || !log.includes(ENTRIES)) throw new Error(`${LOG} lacks its markers`);
-  log = log.replace(SUMMARY_END, fix(`${row}\n${SUMMARY_END}`));
-  log = log.replace(ENTRIES, fix(`${ENTRIES}\n\n${entry}`));
+  // Replacer functions: a "$" in the title must not be read as a pattern.
+  log = log.replace(SUMMARY_END, () => fix(`${row}\n${SUMMARY_END}`));
+  log = log.replace(ENTRIES, () => fix(`${ENTRIES}\n\n${entry}`));
   writeFileSync(LOG, log);
   console.log(`Added "${title}" to VERIFICATION-LOG.md`);
 }
