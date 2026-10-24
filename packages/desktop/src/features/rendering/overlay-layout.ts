@@ -8,39 +8,15 @@
  * Everything works in drawing units (canvas px or PDF mm) with y down;
  * `unit` converts the canvas pixel sizes of the style spec to them.
  */
-import { boxesOverlap, distanceToSegment, type Box } from "../canvas/label-layout";
+import { boxesOverlap, distanceToSegment, segmentHitsBox, type Box } from "../canvas/label-layout";
 
 export type { Box };
+export { segmentHitsBox };
 
 type Pt = [number, number];
 
 /** A line segment [x1, y1, x2, y2]. */
 export type Seg = readonly [number, number, number, number];
-
-/** Whether a segment passes through a box (Liang–Barsky clipping). */
-export function segmentHitsBox([x1, y1, x2, y2]: Seg, b: Box): boolean {
-  const dx = x2 - x1;
-  const dy = y2 - y1;
-  const p = [-dx, dx, -dy, dy];
-  const q = [x1 - b.left, b.right - x1, y1 - b.top, b.bottom - y1];
-  let t0 = 0;
-  let t1 = 1;
-  for (let i = 0; i < 4; i++) {
-    if (p[i] === 0) {
-      if (q[i] < 0) return false;
-      continue;
-    }
-    const r = q[i] / p[i];
-    if (p[i] < 0) {
-      if (r > t1) return false;
-      if (r > t0) t0 = r;
-    } else {
-      if (r < t0) return false;
-      if (r < t1) t1 = r;
-    }
-  }
-  return true;
-}
 
 /** Distance from a point to a segment. */
 export function pointSegmentDistance(px: number, py: number, [x1, y1, x2, y2]: Seg): number {

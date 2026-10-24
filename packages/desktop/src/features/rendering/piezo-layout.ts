@@ -269,8 +269,8 @@ export interface PiezoScene {
   prescribed?: readonly CustomSearchPlane[];
   /** Points drawn with a marker (vertices in the edit view). */
   vertices?: readonly Pt[];
-  /** Depth of the dashed tension-crack line drawn under the ground (the edit view). */
-  crackDepth?: number;
+  /** The tension-crack depth dimension drawn on the crest (the edit view; world). */
+  crackMarker?: { x: number; top: number; bottom: number } | null;
   /** The critical surface of a result: its sliding mass and the search markers lifted over it. */
   critical?: (DrawableSurface & { crack?: unknown }) | null;
 }
@@ -354,18 +354,12 @@ export function piezoObstacles(scene: PiezoScene, toD: (x: number, y: number) =>
       avoidLines.push([a[0], a[1], b[0], b[1]]);
     }
   }
-  // The dashed crack-depth line, at that depth under the ground inside the model.
-  if (scene.crackDepth && scene.crackDepth > 0 && coordinates.length >= 3) {
-    const xs = coordinates.map((c) => c[0]);
-    const g = groundBetween(coordinates, Math.min(...xs), Math.max(...xs)).map(([x, y]): Pt => [x, y - scene.crackDepth!]);
-    for (let i = 1; i < g.length; i++) {
-      const [x0, y0] = g[i - 1];
-      const [x1, y1] = g[i];
-      if (!isPointInPolygon((x0 + x1) / 2, (y0 + y1) / 2, mx, my)) continue;
-      const a = toD(x0, y0);
-      const b = toD(x1, y1);
-      avoidLines.push([a[0], a[1], b[0], b[1]]);
-    }
+  // The crack-depth dimension and its end ticks.
+  if (scene.crackMarker) {
+    const { x, top, bottom } = scene.crackMarker;
+    const [cx, ct] = toD(x, top);
+    const [, cb] = toD(x, bottom);
+    avoid.push(box(cx - 4 * unit, Math.min(ct, cb), cx + 4 * unit, Math.max(ct, cb)));
   }
   const softLines = (scene.materialBoundaries ?? []).flatMap((b) =>
     b.coordinates.length < 2 ? [] : polylineSegments(b.coordinates.map(([x, y]) => toD(x, y))),

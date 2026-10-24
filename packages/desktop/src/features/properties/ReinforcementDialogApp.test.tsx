@@ -206,6 +206,42 @@ describe("ReinforcementDialogApp — elements", () => {
     });
   });
 
+  it("selects elements from the keyboard", async () => {
+    render(<ReinforcementDialogApp />);
+    hydrate([
+      newReinforcement("r0", "nail", COORDS, "ltr"),
+      newReinforcement("r1", "anchor", COORDS, "ltr"),
+      newReinforcement("r2", "geosynthetic", COORDS, "ltr"),
+    ]);
+    const grid = elements().getByRole("grid", { name: "Reinforcement elements list" });
+    const rows = () => within(grid).getAllByRole("row").slice(1);
+    // Only the selected row is in the tab order.
+    expect(rows().map((r) => r.tabIndex)).toEqual([0, -1, -1]);
+    expect(rows()[0]).toHaveAttribute("aria-selected", "true");
+
+    rows()[0].focus();
+    await userEvent.keyboard("{ArrowDown}");
+    expect(screen.getByText("Element 2: Anchor (end-anchored)")).toBeInTheDocument();
+    expect(rows()[1]).toHaveAttribute("aria-selected", "true");
+    expect(rows()[1]).toHaveFocus();
+    expect(rows().map((r) => r.tabIndex)).toEqual([-1, 0, -1]);
+    await userEvent.keyboard("{ArrowDown}{ArrowDown}");
+    expect(rows()[2]).toHaveFocus();
+    expect(rows()[2]).toHaveAttribute("aria-selected", "true");
+    await userEvent.keyboard("{ArrowUp}");
+    expect(rows()[1]).toHaveFocus();
+    expect(screen.getByText("Element 2: Anchor (end-anchored)")).toBeInTheDocument();
+
+    // Enter and Space select the focused row.
+    rows()[0].focus();
+    await userEvent.keyboard("{Enter}");
+    expect(screen.getByText("Element 1: Soil nail")).toBeInTheDocument();
+    rows()[2].focus();
+    await userEvent.keyboard(" ");
+    expect(rows()[2]).toHaveAttribute("aria-selected", "true");
+    expect(rows()[0]).toHaveAttribute("aria-selected", "false");
+  });
+
   it("deletes the selected element and selects the next one", async () => {
     render(<ReinforcementDialogApp />);
     hydrate([
@@ -245,6 +281,17 @@ describe("ReinforcementDialogApp — piles", () => {
     await userEvent.click(pilesRegion().getAllByRole("row")[1]);
     expect(screen.getByText("From the soil (Ito & Matsui)")).toBeInTheDocument();
     expect(screen.queryByLabelText("Shear force per pile")).toBeNull();
+  });
+
+  it("shows pile ends that differ by less than the list rounding", () => {
+    render(<ReinforcementDialogApp />);
+    hydrate([], [{ ...newPile("p1", "pile", COORDS), x1: 12.345, x2: 12.35 }]);
+    // Both ends read 12.35 in the list ...
+    expect(pilesRegion().getAllByText(/^12\.35, /)).toHaveLength(2);
+    // ... so the warning gives them to the digit where they differ.
+    expect(
+      screen.getByText(/needs a vertical pile \(x1 = x2, here x1 = 12\.345 m, x2 = 12\.350 m\)/),
+    ).toBeInTheDocument();
   });
 
   it("warns when Ito & Matsui cannot be applied", async () => {

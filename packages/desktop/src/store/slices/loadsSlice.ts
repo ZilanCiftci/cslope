@@ -31,27 +31,62 @@ const syncActiveModel = (state: LoadsState, patch: Partial<LoadsSlice>) => ({
   ),
 });
 
+/** The model's x extent, or null without a model of some width. */
+export function modelXRange(
+  coordinates: [number, number][],
+): [number, number] | null {
+  if (coordinates.length < 2) return null;
+  const xs = coordinates.map((c) => c[0]);
+  const xMin = Math.min(...xs);
+  const xMax = Math.max(...xs);
+  return xMax > xMin ? [xMin, xMax] : null;
+}
+
 /**
  * A new UDL: 10 kPa over 0 to 5 m; after existing ones, the same width and
- * magnitude as the last, just beyond it, so new rows do not stack.
+ * magnitude as the last, just beyond it, so new rows do not stack. Within
+ * the model's x range when one is given: a load that would stick out is
+ * moved back inside (and made no wider than the model).
  */
 export function nextUdlPlacement(
   udls: Pick<UdlRow, "magnitude" | "x1" | "x2">[],
+  xRange: [number, number] | null = null,
 ): Pick<UdlRow, "magnitude" | "x1" | "x2"> {
   const last = udls[udls.length - 1];
-  if (!last) return { magnitude: 10, x1: 0, x2: 5 };
-  const width = Math.abs(last.x2 - last.x1) || 5;
-  const x1 = Math.max(last.x1, last.x2);
-  return { magnitude: last.magnitude, x1, x2: x1 + width };
+  let magnitude = 10;
+  let x1 = 0;
+  let width = 5;
+  if (last) {
+    magnitude = last.magnitude;
+    width = Math.abs(last.x2 - last.x1) || 5;
+    x1 = Math.max(last.x1, last.x2);
+  }
+  if (xRange) {
+    const [xMin, xMax] = xRange;
+    width = Math.min(width, xMax - xMin);
+    x1 = Math.min(Math.max(x1, xMin), xMax - width);
+  }
+  return { magnitude, x1, x2: x1 + width };
 }
 
-/** A new line load: 50 kN/m at 10 m; after existing ones, 5 m beyond the last. */
+/**
+ * A new line load: 50 kN/m at 10 m; after existing ones, 5 m beyond the
+ * last. Within the model's x range when one is given: at most at its edge,
+ * and the first one in the middle of a model that does not reach x = 10.
+ */
 export function nextLineLoadPlacement(
   lineLoads: Pick<LineLoadRow, "magnitude" | "x">[],
+  xRange: [number, number] | null = null,
 ): Pick<LineLoadRow, "magnitude" | "x"> {
   const last = lineLoads[lineLoads.length - 1];
-  if (!last) return { magnitude: 50, x: 10 };
-  return { magnitude: last.magnitude, x: last.x + 5 };
+  const magnitude = last ? last.magnitude : 50;
+  let x = last ? last.x + 5 : 10;
+  if (xRange) {
+    const [xMin, xMax] = xRange;
+    if (!last && (x < xMin || x > xMax)) x = (xMin + xMax) / 2;
+    x = Math.min(Math.max(x, xMin), xMax);
+  }
+  return { magnitude, x };
 }
 
 export const createLoadsSlice: SliceCreator<LoadsSlice> = (set, get) => ({
@@ -65,7 +100,11 @@ export const createLoadsSlice: SliceCreator<LoadsSlice> = (set, get) => ({
       syncActiveModel(s, {
         udls: [
           ...s.udls,
-          { id: nextId("udl"), ...nextUdlPlacement(s.udls), expressions: {} },
+          {
+            id: nextId("udl"),
+            ...nextUdlPlacement(s.udls, modelXRange(s.coordinates)),
+            expressions: {},
+          },
         ],
       }),
     );
@@ -95,7 +134,11 @@ export const createLoadsSlice: SliceCreator<LoadsSlice> = (set, get) => ({
       syncActiveModel(s, {
         lineLoads: [
           ...s.lineLoads,
-          { id: nextId("ll"), ...nextLineLoadPlacement(s.lineLoads), expressions: {} },
+          {
+            id: nextId("ll"),
+            ...nextLineLoadPlacement(s.lineLoads, modelXRange(s.coordinates)),
+            expressions: {},
+          },
         ],
       }),
     );

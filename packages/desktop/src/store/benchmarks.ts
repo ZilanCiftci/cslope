@@ -10,9 +10,9 @@ import {
   mirrorPoints,
   mirrorX,
 } from "@cslope/engine";
-import { DEFAULT_RESULT_VIEW_SETTINGS, PAPER_DIMENSIONS, PLOT_MARGINS } from "./defaults";
-import { getPlotAspectRatio } from "../features/view/paper";
-import { paperViewLock } from "../features/view/viewLock";
+import { DEFAULT_RESULT_VIEW_SETTINGS, PAPER_DIMENSIONS } from "./defaults";
+import type { Annotation } from "./types";
+import { modelViewLock } from "../features/view/viewLock";
 import type { PaperContent } from "../features/view/extents";
 
 type ExamplePaperOptions = {
@@ -22,11 +22,41 @@ type ExamplePaperOptions = {
   annotations?: boolean;
 };
 
-/**
- * Bottom of the examples' title block (title, subtitle, FOS line) and
- * material table, as a share of the paper height from the top.
- */
-const EXAMPLE_TITLE_BLOCK_BOTTOM = 0.22;
+const EXAMPLE_ANNOTATIONS: Annotation[] = [
+  {
+    id: "anno-8d2aabaf-31cb-43b5-b9a5-980aa7354464",
+    type: "text",
+    x: 0.11,
+    y: 0.08,
+    text: "#Title",
+    fontSize: 24,
+  },
+  {
+    id: "anno-89ddb1d9-0f29-4483-849a-bf5c09ea5076",
+    type: "text",
+    x: 0.11,
+    y: 0.14,
+    text: "#Subtitle",
+    fontSize: 14,
+  },
+  {
+    id: "anno-c4e72f10-8a61-4d2b-9c3e-5f1a0b7d8e92",
+    type: "text",
+    x: 0.11,
+    y: 0.18,
+    text: "Calculated FOS: #FOS",
+    fontSize: 14,
+  },
+  {
+    id: "anno-benchmark-material-table",
+    type: "material-table",
+    x: 0.94,
+    y: 0.065,
+    anchor: "top-right",
+    fontSize: 6,
+    tableColumns: ["model", "unitWeight", "cohesion", "frictionAngle"],
+  },
+];
 
 /**
  * Result view of an example: the paper fitted to the model, with a title
@@ -36,70 +66,37 @@ const EXAMPLE_TITLE_BLOCK_BOTTOM = 0.22;
  * model leaves height to spare. Without annotations (the verification
  * problems) the model is centred vertically on the paper; with them the top
  * of the plot is kept free for the title block and the model is centred in
- * the rest, so neither covers the other. `content` may name the water
- * lines, loads, reinforcement and piles to keep on the paper too.
+ * the rest, so neither covers the other (the same frame "Use model bounds"
+ * gives). `content` may name the water lines, loads, reinforcement and
+ * piles to keep on the paper too.
  */
 export function createExampleResultViewSettings(
   content: [number, number][] | PaperContent,
   paperOptions: ExamplePaperOptions = {},
 ): ModelEntry["resultViewSettings"] {
   const paperContent = Array.isArray(content) ? { coordinates: content } : content;
-  const paperSize =
-    paperOptions.paperSize ?? DEFAULT_RESULT_VIEW_SETTINGS.paperFrame.paperSize;
-  const landscape = paperOptions.landscape ?? true;
-  const withAnnotations = paperOptions.annotations ?? true;
-  const topBand = withAnnotations
-    ? (EXAMPLE_TITLE_BLOCK_BOTTOM - PLOT_MARGINS.T) / (1 - PLOT_MARGINS.T - PLOT_MARGINS.B)
-    : 0;
-  const viewLock = paperViewLock(paperContent, getPlotAspectRatio(paperSize, landscape), { topBand });
+  const paperFrame = {
+    ...DEFAULT_RESULT_VIEW_SETTINGS.paperFrame,
+    paperSize: paperOptions.paperSize ?? DEFAULT_RESULT_VIEW_SETTINGS.paperFrame.paperSize,
+    landscape: paperOptions.landscape ?? true,
+  };
+  const annotations =
+    (paperOptions.annotations ?? true)
+      ? EXAMPLE_ANNOTATIONS.map((a) => ({
+          ...a,
+          ...(a.tableColumns ? { tableColumns: [...a.tableColumns] } : {}),
+        }))
+      : [];
 
   return {
     ...DEFAULT_RESULT_VIEW_SETTINGS,
-    paperFrame: {
-      ...DEFAULT_RESULT_VIEW_SETTINGS.paperFrame,
-      paperSize,
-      landscape,
-    },
-    ...(viewLock ? { viewLock } : {}),
+    paperFrame,
+    viewLock: modelViewLock(paperContent, { paperFrame, annotations }),
     showFosLabel: false,
     showCentreMarker: false,
     showGrid: false,
     showSoilColor: true,
-    annotations: withAnnotations ? [
-      {
-        id: "anno-8d2aabaf-31cb-43b5-b9a5-980aa7354464",
-        type: "text",
-        x: 0.11,
-        y: 0.08,
-        text: "#Title",
-        fontSize: 24,
-      },
-      {
-        id: "anno-89ddb1d9-0f29-4483-849a-bf5c09ea5076",
-        type: "text",
-        x: 0.11,
-        y: 0.14,
-        text: "#Subtitle",
-        fontSize: 14,
-      },
-      {
-        id: "anno-c4e72f10-8a61-4d2b-9c3e-5f1a0b7d8e92",
-        type: "text",
-        x: 0.11,
-        y: 0.18,
-        text: "Calculated FOS: #FOS",
-        fontSize: 14,
-      },
-      {
-        id: "anno-benchmark-material-table",
-        type: "material-table",
-        x: 0.94,
-        y: 0.065,
-        anchor: "top-right",
-        fontSize: 6,
-        tableColumns: ["model", "unitWeight", "cohesion", "frictionAngle"],
-      },
-    ] : [],
+    annotations,
   };
 }
 

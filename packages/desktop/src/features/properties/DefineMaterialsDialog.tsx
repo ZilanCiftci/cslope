@@ -55,10 +55,22 @@ export function DefineMaterialsDialog({ onClose, mode = "popup" }: Props) {
   const [selectedId, setSelectedId] = useState<string>(materials[0]?.id ?? "");
   // A material just switched to another model kind holds that kind's
   // defaults; its validation errors (e.g. no data points yet) are not shown
-  // until the user edits it.
+  // until the user edits any of its fields or selects another material.
   const [freshKindId, setFreshKindId] = useState<string | null>(null);
 
   const selected = materials.find((m) => m.id === selectedId) ?? materials[0];
+
+  /** Select a material; leaving the one just switched shows its errors. */
+  const selectMaterial = (id: string) => {
+    if (id !== selected?.id) setFreshKindId(null);
+    setSelectedId(id);
+  };
+
+  /** Edit a material's name or colour (an edit like any other). */
+  const editMaterial = (id: string, patch: Partial<MaterialRow>) => {
+    setFreshKindId((fresh) => (fresh === id ? null : fresh));
+    updateMaterial(id, patch);
+  };
 
   /** Resolve effective MaterialModel for a row. */
   const getModel = (mat: MaterialRow): MaterialModel => mat.model;
@@ -105,7 +117,7 @@ export function DefineMaterialsDialog({ onClose, mode = "popup" }: Props) {
     // Select newly added material
     const newMats = useAppStore.getState().materials;
     const last = newMats[newMats.length - 1];
-    if (last) setSelectedId(last.id);
+    if (last) selectMaterial(last.id);
   };
 
   const handleDelete = () => {
@@ -114,7 +126,7 @@ export function DefineMaterialsDialog({ onClose, mode = "popup" }: Props) {
     // (e.g. when the Materials window receives the main window's list).
     removeMaterial(selected.id);
     const remaining = useAppStore.getState().materials;
-    if (remaining.length > 0) setSelectedId(remaining[0].id);
+    if (remaining.length > 0) selectMaterial(remaining[0].id);
   };
 
   const model = selected ? getModel(selected) : undefined;
@@ -173,7 +185,7 @@ export function DefineMaterialsDialog({ onClose, mode = "popup" }: Props) {
                 return (
                   <tr
                     key={mat.id}
-                    onClick={() => setSelectedId(mat.id)}
+                    onClick={() => selectMaterial(mat.id)}
                     className="cursor-pointer transition-colors"
                     style={{
                       background: isSelected
@@ -198,10 +210,10 @@ export function DefineMaterialsDialog({ onClose, mode = "popup" }: Props) {
                         type="text"
                         value={mat.name}
                         onChange={(e) =>
-                          updateMaterial(mat.id, { name: e.target.value })
+                          editMaterial(mat.id, { name: e.target.value })
                         }
                         onClick={(e) => e.stopPropagation()}
-                        onFocus={() => setSelectedId(mat.id)}
+                        onFocus={() => selectMaterial(mat.id)}
                         className="w-full text-[11px]"
                         style={{ padding: "2px 6px", borderRadius: 4 }}
                         title="Material name (click to rename)"
@@ -216,7 +228,7 @@ export function DefineMaterialsDialog({ onClose, mode = "popup" }: Props) {
                         type="color"
                         value={mat.color}
                         onChange={(e) =>
-                          updateMaterial(mat.id, { color: e.target.value })
+                          editMaterial(mat.id, { color: e.target.value })
                         }
                         onClick={(e) => e.stopPropagation()}
                         className="w-5 h-5 rounded border cursor-pointer bg-transparent p-0"

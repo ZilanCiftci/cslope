@@ -27,7 +27,8 @@ import {
   surfaceCountText,
 } from "../../utils/result-summary";
 import { resolveAnnotationText } from "../annotations/resolveAnnotationText";
-import { viewLockForModel } from "../view/viewLock";
+import { modelViewLock } from "../view/viewLock";
+import { paperContentOf } from "../view/extents";
 import { fosStatusColor } from "../../utils/fos-color";
 import type {
   MaterialTableColumnKey,
@@ -118,7 +119,6 @@ export function ResultSidebar() {
   const runState = useAppStore((s) => s.runState);
   const errorMessage = useAppStore((s) => s.errorMessage);
   const rvs = useAppStore((s) => s.resultViewSettings);
-  const coordinates = useAppStore((s) => s.coordinates);
   const setRvs = useAppStore((s) => s.setResultViewSettings);
   const removeAnnotation = useAppStore((s) => s.removeAnnotation);
   const updateAnnotation = useAppStore((s) => s.updateAnnotation);
@@ -241,22 +241,12 @@ export function ResultSidebar() {
     setExtentDraft((prev) => ({ ...prev, [field]: raw }));
   };
 
+  // The frame the model starts with (and the automatic refit gives): at
+  // true scale around everything it draws, below the title block.
   const setViewLockToModelBounds = useCallback(() => {
-    const ar = getSharedPlotAspectRatio(
-      rvs.paperFrame.paperSize,
-      rvs.paperFrame.landscape,
-    );
-
-    // Shared with the automatic refit, which also widens the view for a
-    // tall model (this used to size it from the width only and cut off
-    // the top of a tall, narrow model).
-    setRvs({
-      viewLock:
-        coordinates.length >= 2
-          ? viewLockForModel(coordinates, ar)
-          : { bottomLeft: [-1, -1], topRight: [21, -1 + 22 / ar] },
-    });
-  }, [coordinates, rvs.paperFrame.landscape, rvs.paperFrame.paperSize, setRvs]);
+    const state = useAppStore.getState();
+    setRvs({ viewLock: modelViewLock(paperContentOf(state), state.resultViewSettings) });
+  }, [setRvs]);
 
   const toggleSection = useCallback((section: SidebarSection) => {
     setOpenSections((prev) => ({ ...prev, [section]: !prev[section] }));

@@ -4,7 +4,8 @@ import { isElectron } from "../../utils/is-electron";
 import { useAppStore, PAPER_DIMENSIONS } from "../../store/app-store";
 import type { ResultViewSettings, PaperSize } from "../../store/types";
 import { getPlotAspectRatio as getSharedPlotAspectRatio } from "../view/paper";
-import { viewLockForModel } from "../view/viewLock";
+import { modelViewLock } from "../view/viewLock";
+import type { PaperContent } from "../view/extents";
 import { GroupHeading } from "./GroupHeading";
 
 interface ViewSettingsStatePayload {
@@ -12,6 +13,8 @@ interface ViewSettingsStatePayload {
   coordinates: [number, number][];
   resultViewScale: number;
   resultViewOffset: [number, number];
+  /** What the model draws (water, loads, reinforcement), for "Use model bounds". */
+  paperContent?: PaperContent;
 }
 
 function FieldRow({
@@ -40,6 +43,7 @@ export function ViewSettingsDialogApp() {
   const coordinates = useAppStore((s) => s.coordinates);
 
   const [isHydrated, setIsHydrated] = useState(!isElectron);
+  const paperContentRef = useRef<PaperContent | null>(null);
   const suppressNextBroadcastRef = useRef(false);
 
   useEffect(() => {
@@ -53,6 +57,7 @@ export function ViewSettingsDialogApp() {
         resultViewScale: next.resultViewScale,
         resultViewOffset: next.resultViewOffset,
       });
+      if (next.paperContent) paperContentRef.current = next.paperContent;
       setIsHydrated(true);
     };
 
@@ -134,19 +139,12 @@ export function ViewSettingsDialogApp() {
     return getSharedPlotAspectRatio(paperSize, landscape);
   };
 
+  // The same frame as the main window's "Use model bounds", from what the
+  // model draws as the main window sent it.
   const setViewLockToModelBounds = () => {
     const state = useAppStore.getState();
-    const coords = state.coordinates;
-    const ar = getPlotAspectRatio();
-
-    // The same lock as the main window's "Use model bounds": a tall model
-    // is widened instead of having its top cut off.
-    setRvs({
-      viewLock:
-        coords.length >= 2
-          ? viewLockForModel(coords, ar)
-          : { bottomLeft: [-1, -1], topRight: [21, -1 + 22 / ar] },
-    });
+    const content = { ...paperContentRef.current, coordinates: state.coordinates };
+    setRvs({ viewLock: modelViewLock(content, state.resultViewSettings) });
   };
 
   const handleLockUpdate = (
@@ -432,7 +430,7 @@ export function ViewSettingsDialogApp() {
             style={btnStyle}
             className="w-full"
           >
-            Use Model Bounds
+            Use model bounds
           </button>
         </div>
       </div>

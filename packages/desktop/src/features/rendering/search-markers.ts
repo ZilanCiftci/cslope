@@ -14,6 +14,7 @@
 import type { AnalysisLimitsState } from "../../store/types";
 import { surfaceYAtX } from "../view/surface";
 import { groundBetween, sameRange, searchRange } from "../../utils/slip-mass";
+import { limitMarkerGeometry, rangeMarkerEnds } from "../canvas/marker-geometry";
 import {
   ENTRY_EXIT_DOT_SPACING_PX,
   MARKER_BAR_H_PX,
@@ -61,10 +62,13 @@ function groundTopBetween(
 }
 
 /**
- * The markers of both search ranges. A range of zero width gets only the
- * bar. Lifted (over a result), the triangle sits above the ground over
- * its whole width with the bar running up to it from the ground, like a
- * flag, and markers at the same x (a limit both ranges share) merge.
+ * The markers of both search ranges. The ends and their geometry come
+ * from marker-geometry.ts (rangeMarkerEnds, limitMarkerGeometry), as the
+ * edit-view labels reserve them: a bar across the ground and a triangle
+ * outside the range pointing into it, only the bar for a range of zero
+ * width. Lifted (over a result), the triangles move up until they clear
+ * the ground under them, the bar running up to them from the ground like
+ * a flag, and markers at the same x (a limit both ranges share) merge.
  */
 export function layoutLimitMarkers(
   limits: AnalysisLimitsState,
@@ -77,77 +81,61 @@ export function layoutLimitMarkers(
   const barH = MARKER_BAR_H_PX * unit;
   // Drawing units per world unit along x (signed: a mirrored view is negative).
   const sx = toD(1, 0)[0] - toD(0, 0)[0];
-  const ends: { x: number; toward: number | null; handles: LimitHandle[]; kind: "entry" | "exit" }[] = [];
+  const out: LimitMarker[] = [];
+  /** Each marker's triangles as limitMarkerGeometry gives them (on the ground). */
+  const tris = new Map<LimitMarker, [Pt, Pt, Pt][]>();
   const addRange = (a: LimitHandle, b: LimitHandle, kind: "entry" | "exit") => {
-    const xa = limits[a];
-    const xb = limits[b];
-    const r = searchRange(xa, xb);
-    if (r.point) {
-      ends.push({ x: xa, toward: null, handles: [a, b], kind });
-      return;
+    for (const end of rangeMarkerEnds(limits[a], limits[b])) {
+      const gy = surfaceYAtX(coordinates as Pt[], end.x);
+      if (gy === null) continue;
+      const [cx, cy] = toD(end.x, gy);
+      const g = limitMarkerGeometry(cx, cy, end.toward === null ? null : toD(end.toward, gy)[0], unit);
+      const tol = SAME_X * Math.max(1, Math.abs(end.x));
+      const same = lifted ? out.find((m) => Math.abs(m.x - end.x) <= tol) : undefined;
+      const m: LimitMarker = same ?? {
+        x: end.x,
+        handles: [],
+        entry: false,
+        exit: false,
+        cx,
+        barTop: cy - g.barH,
+        barBottom: cy + g.barH,
+        triangles: [],
+      };
+      if (!same) {
+        out.push(m);
+        tris.set(m, []);
+      }
+      m.handles.push(...(end.toward === null ? [a, b] : [end.end === 0 ? a : b]));
+      if (kind === "entry") m.entry = true;
+      else m.exit = true;
+      // A triangle pointing the same way as one already there is the same triangle.
+      const t = g.triangle;
+      const list = tris.get(m)!;
+      if (t && !list.some((o) => Math.sign(o[1][0] - o[0][0]) === Math.sign(t[1][0] - t[0][0]))) list.push(t);
     }
-    ends.push({ x: xa, toward: xa <= xb ? r.hi : r.lo, handles: [a], kind });
-    ends.push({ x: xb, toward: xb < xa ? r.hi : r.lo, handles: [b], kind });
   };
   addRange("entryLeftX", "entryRightX", "entry");
   addRange("exitLeftX", "exitRightX", "exit");
 
-  const out: LimitMarker[] = [];
-  // Direction of each marker's triangles (−1 pointing left on the drawing, +1 right).
-  const dirs = new Map<LimitMarker, number[]>();
-  for (const e of ends) {
-    const gy = surfaceYAtX(coordinates as Pt[], e.x);
-    if (gy === null) continue;
-    const [cx, cy] = toD(e.x, gy);
-    const dir = e.toward === null ? 0 : Math.sign(toD(e.toward, gy)[0] - cx) || 1;
-    const tol = SAME_X * Math.max(1, Math.abs(e.x));
-    const same = lifted ? out.find((m) => Math.abs(m.x - e.x) <= tol) : undefined;
-    const m: LimitMarker = same ?? {
-      x: e.x,
-      handles: [],
-      entry: false,
-      exit: false,
-      cx,
-      barTop: cy - barH,
-      barBottom: cy + barH,
-      triangles: [],
-    };
-    if (!same) {
-      out.push(m);
-      dirs.set(m, []);
-    }
-    m.handles.push(...e.handles);
-    if (e.kind === "entry") m.entry = true;
-    else m.exit = true;
-    const d = dirs.get(m)!;
-    if (dir !== 0 && !d.includes(dir)) d.push(dir);
-  }
-
   for (const m of out) {
-    const d = dirs.get(m)!;
-    const cy = (m.barTop + m.barBottom) / 2;
+    const list = tris.get(m)!;
     if (!lifted) {
-      for (const dir of d) {
-        const baseX = m.cx - dir * sz * 2;
-        m.triangles.push([[m.cx, cy], [baseX, cy - sz], [baseX, cy + sz]]);
-      }
+      m.triangles = list;
       continue;
     }
     // Lift the triangles until their lower edge clears the ground under
     // them (with a small gap); the bar runs from the ground up past them.
+    const cy = (m.barTop + m.barBottom) / 2;
     const gap = 2 * unit;
     let ty = cy - sz - gap;
-    for (const dir of d) {
-      const baseX = m.cx - dir * sz * 2;
-      const top = groundTopBetween(coordinates, toD, m.x, m.x + (baseX - m.cx) / sx);
+    for (const [tip, base] of list) {
+      const top = groundTopBetween(coordinates, toD, m.x, m.x + (base[0] - tip[0]) / sx);
       if (top !== null) ty = Math.min(ty, top - sz - gap);
     }
-    for (const dir of d) {
-      const baseX = m.cx - dir * sz * 2;
-      m.triangles.push([[m.cx, ty], [baseX, ty - sz], [baseX, ty + sz]]);
-    }
+    m.triangles = list.map((t) => t.map(([x, y]): Pt => [x, y + ty - cy]) as [Pt, Pt, Pt]);
     m.barBottom = cy;
-    m.barTop = d.length > 0 ? ty - sz - gap / 2 : cy - 2 * barH;
+    m.barTop = list.length > 0 ? ty - sz - gap / 2 : cy - 2 * barH;
   }
   return out;
 }

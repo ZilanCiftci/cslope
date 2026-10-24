@@ -11,6 +11,7 @@ import type { Pile, Reinforcement } from "@cslope/engine";
 import type { ModelEntry, PileRow, ReinforcementRow } from "./types";
 import { APP_DEFAULT_ANALYSIS_OPTIONS, DEFAULT_PIEZO_LINE, MATERIAL_COLORS, PIEZO_COLORS, createDefaultProjectInfo } from "./defaults";
 import { createExampleResultViewSettings } from "./benchmarks";
+import { paperContentOf } from "../features/view/extents";
 
 export interface DefinitionModelInfo {
   id: string;
@@ -184,16 +185,6 @@ export function modelFromDefinition(def: SlopeDefinition, info: DefinitionModelI
     ...model,
     // The paper fitted to the model and what it draws, without the
     // examples' title and table.
-    resultViewSettings: createExampleResultViewSettings(
-      {
-        coordinates: model.coordinates,
-        waterLines: model.piezometricLine.lines.map((l) => l.coordinates),
-        udls: model.udls,
-        lineLoads: model.lineLoads,
-        reinforcements: model.reinforcements,
-        piles: model.piles,
-      },
-      { annotations: false },
-    ),
+    resultViewSettings: createExampleResultViewSettings(paperContentOf(model), { annotations: false }),
   };
 }

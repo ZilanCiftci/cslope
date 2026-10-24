@@ -5,7 +5,10 @@ import {
   clampBox,
   distanceToSegment,
   LabelLayout,
+  outwardDirection,
   pointLabelCandidates,
+  segmentHitsBox,
+  segmentsInside,
   type Box,
 } from "./label-layout";
 
@@ -56,16 +59,98 @@ describe("label layout", () => {
     expect(boxesOverlap(placed, boxAround(100, 100, 6))).toBe(false);
   });
 
-  it("offers the preferred side first, then the other side, sides and diagonals, all clear of the point", () => {
+  it("offers the preferred direction first, then turning away from it and farther out, all clear of the point", () => {
     const up = pointLabelCandidates(200, 150, 60, 13, false, 6);
-    expect(up[0].bottom).toBeLessThan(150);
+    // Straight above, centred, with a gap over the symbol.
+    expect(up[0].bottom).toBe(150 - 9);
     expect((up[0].left + up[0].right) / 2).toBe(200);
-    expect(up[1].top).toBeGreaterThan(150);
-    expect(up[2].left).toBeGreaterThan(200);
-    expect(up[3].right).toBeLessThan(200);
+    // Then the directions next to it, on either side.
+    expect(up[1].bottom).toBeLessThan(150);
+    expect(up[2].bottom).toBeLessThan(150);
+    expect(Math.sign((up[1].left + up[1].right) / 2 - 200)).toBe(-Math.sign((up[2].left + up[2].right) / 2 - 200));
+    // Straight below comes last among the near ring.
     const down = pointLabelCandidates(200, 150, 60, 13, true, 6);
-    expect(down[0]).toEqual(up[1]);
-    expect(down[1]).toEqual(up[0]);
+    expect(down[0].top).toBe(150 + 9);
+    // A diagonal preference puts the box at the corner.
+    const corner = pointLabelCandidates(200, 150, 60, 13, [Math.SQRT1_2, -Math.SQRT1_2], 6)[0];
+    expect(corner).toEqual({ left: 209, top: 150 - 9 - 13, right: 269, bottom: 141 });
+    // Three rings of 16 directions, none on the point.
+    expect(up).toHaveLength(48);
     for (const c of [...up, ...down]) expect(boxesOverlap(c, boxAround(200, 150, 6), 0)).toBe(false);
+  });
+
+  it("keeps labels off reserved segments by their half-width", () => {
+    const layout = new LabelLayout(BOUNDS);
+    layout.reserveSegment([0, 100, 400, 100], 3);
+    expect(layout.isFree({ left: 10, top: 80, right: 60, bottom: 96 })).toBe(true);
+    expect(layout.isFree({ left: 10, top: 80, right: 60, bottom: 98 })).toBe(false);
+    expect(layout.isFree({ left: 10, top: 90, right: 60, bottom: 110 })).toBe(false);
+    // A closed polyline also reserves its closing segment.
+    const square = new LabelLayout(BOUNDS);
+    square.reservePolyline(
+      [
+        [100, 100],
+        [200, 100],
+        [200, 200],
+        [100, 200],
+      ],
+      2,
+      true,
+    );
+    expect(square.isFree({ left: 90, top: 140, right: 110, bottom: 160 })).toBe(false);
+    expect(square.isFree({ left: 120, top: 120, right: 180, bottom: 180 })).toBe(true);
+    expect(segmentHitsBox([0, 0, 10, 10], { left: 4, top: 4, right: 6, bottom: 6 })).toBe(true);
+  });
+
+  it("points away from the fill at a polygon's vertices", () => {
+    // A square in canvas coordinates (y down).
+    const sq: [number, number][] = [
+      [100, 100],
+      [200, 100],
+      [200, 200],
+      [100, 200],
+    ];
+    const inside = (x: number, y: number) => x > 100 && x < 200 && y > 100 && y < 200;
+    const [dx, dy] = outwardDirection(sq, 0, inside);
+    expect(dx).toBeCloseTo(-Math.SQRT1_2);
+    expect(dy).toBeCloseTo(-Math.SQRT1_2);
+    const [ex, ey] = outwardDirection(sq, 2, inside);
+    expect(ex).toBeCloseTo(Math.SQRT1_2);
+    expect(ey).toBeCloseTo(Math.SQRT1_2);
+    // A straight vertex: perpendicular to the edge, outwards (up).
+    const flat: [number, number][] = [
+      [100, 100],
+      [150, 100],
+      [200, 100],
+      [200, 200],
+      [100, 200],
+    ];
+    const [fx, fy] = outwardDirection(flat, 1, inside);
+    expect(fx).toBeCloseTo(0);
+    expect(fy).toBeCloseTo(-1);
+  });
+
+  it("clips a polyline to the inside of a polygon", () => {
+    const sq: [number, number][] = [
+      [100, 100],
+      [200, 100],
+      [200, 200],
+      [100, 200],
+    ];
+    const inside = (x: number, y: number) => x > 100 && x < 200 && y > 100 && y < 200;
+    const segs = segmentsInside(
+      [
+        [50, 150],
+        [250, 150],
+      ],
+      sq,
+      inside,
+    );
+    expect(segs).toHaveLength(1);
+    expect(segs[0][0]).toBeCloseTo(100);
+    expect(segs[0][2]).toBeCloseTo(200);
+    // Along an edge counts as inside.
+    expect(segmentsInside([[100, 120], [100, 180]], sq, inside)).toHaveLength(1);
+    expect(segmentsInside([[0, 0], [50, 50]], sq, inside)).toHaveLength(0);
   });
 });

@@ -2,7 +2,8 @@ import { useCallback, type RefObject } from "react";
 import { isPointInPolygon } from "@cslope/engine";
 import { computeRegions, isClosedBoundary } from "../../../utils/regions";
 import type { AppState } from "../../../store/types";
-import { ARROW_HEIGHT_PX, EDGE_THRESHOLD, SNAP_THRESHOLD } from "../constants";
+import { EDGE_THRESHOLD, SNAP_THRESHOLD } from "../constants";
+import { loadArrowLifts } from "../overlay-geometry";
 import type { EdgeHit, LimitHandle, PointHit, UdlHandle } from "../types";
 
 function pointToSegmentDist(
@@ -167,17 +168,30 @@ export function useHitTest({
         }
       }
 
+      // Arrow heights as drawn (they follow the magnitude).
+      const lifts =
+        editingLoads && coordinates.length >= 3 ? loadArrowLifts(udls, lineLoads, surfaceYAtX) : null;
+
       // UDL load arrows (only active when loads enabled and Load panel is open)
       // Hit-test the full vertical arrow shaft, not just the tip
-      if (udls.length > 0 && coordinates.length >= 3 && editingLoads) {
+      if (udls.length > 0 && lifts) {
+        // An arrow between touching strips is as tall as the taller one.
+        const edgeLift = (x: number) =>
+          Math.max(
+            0,
+            ...udls
+              .filter((o) => Math.abs(o.x1 - x) <= 1e-9 || Math.abs(o.x2 - x) <= 1e-9)
+              .map((o) => lifts.udl.get(o.id) ?? 0),
+          );
         for (const u of udls) {
+          if (!lifts.udl.has(u.id)) continue;
           const udlHandles: UdlHandle[] = ["x1", "x2"];
           for (const handle of udlHandles) {
             const ux = u[handle];
             const uy = surfaceYAtX(ux);
             if (uy === null) continue;
             const [px, py] = worldToCanvas(ux, uy, rect.width, rect.height);
-            const topPy = py - ARROW_HEIGHT_PX;
+            const topPy = py - edgeLift(ux);
             if (
               Math.abs(px - mx) < SNAP_THRESHOLD + 4 &&
               my >= topPy - 4 &&
@@ -190,12 +204,12 @@ export function useHitTest({
       }
 
       // Line load arrows (only active when loads enabled and Load panel is open)
-      if (lineLoads.length > 0 && coordinates.length >= 3 && editingLoads) {
+      if (lineLoads.length > 0 && lifts) {
         for (const ll of lineLoads) {
           const ly = surfaceYAtX(ll.x);
           if (ly === null) continue;
           const [px, py] = worldToCanvas(ll.x, ly, rect.width, rect.height);
-          const topPy = py - ARROW_HEIGHT_PX;
+          const topPy = py - (lifts.lineLoad.get(ll.id) ?? 0);
           if (
             Math.abs(px - mx) < SNAP_THRESHOLD + 4 &&
             my >= topPy - 4 &&

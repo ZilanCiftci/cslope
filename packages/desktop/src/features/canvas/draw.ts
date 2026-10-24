@@ -2,6 +2,7 @@ import { isPointInPolygon } from "@cslope/engine";
 import { PAPER_DIMENSIONS, PLOT_MARGINS } from "../../store/app-store";
 import type { AppState } from "../../store/types";
 import {
+  circleArcPoints,
   fosLabelAnchor,
   sameSurface,
   surfaceBaseYAt,
@@ -10,6 +11,7 @@ import {
 } from "../../utils/arc";
 import { fosColor, fosScaleRange, fosTickLabel } from "../../utils/fos-color";
 import { computeRegions } from "../../utils/regions";
+import { circleEntryExit } from "../../utils/custom-plane";
 import {
   ARROW_HEAD_LEN_PX,
   ARROW_HEAD_PX,
@@ -56,9 +58,7 @@ import {
   FAILURE_MASS_COLOR,
   FAILURE_MASS_FILL_OPACITY,
   LINE_LOAD_COLOR,
-  MARKER_BAR_H_PX,
   MARKER_COLOR,
-  MARKER_SZ_PX,
   MIN_SLIP_MASS_BAND_OPACITY,
   MIN_SLIP_MASS_PX,
   PIEZO_BAR_GAP1_PX,
@@ -85,22 +85,33 @@ import {
   loadArrowBoxes,
   piezoSymbolBox,
   type LoadArrow,
+  type LoadLayout,
 } from "./overlay-geometry";
 import type { PiezoSymbol } from "../rendering/piezo-layout";
 import { layoutLimitMarkers, layoutRangeDots } from "../rendering/search-markers";
+import { crackMarkerPosition, limitMarkerBoxes, limitMarkerGeometry, rangeMarkerEnds } from "./marker-geometry";
 import { freeWaterPolygons, mainPiezoLine, piezoExtensions } from "../../utils/piezo";
 import {
-  groundBetween,
   isDarkFill,
   meanThickness,
-  searchRange,
   groundProfile,
   sliceLines,
   slipMassPolygon,
   splitVerticalByRegion,
   tensionCrackFace,
 } from "../../utils/slip-mass";
-import { boxAround, distanceToSegment, LabelLayout, pointLabelCandidates, type Box } from "./label-layout";
+import {
+  boxAround,
+  distanceToSegment,
+  growBox,
+  LabelLayout,
+  outwardDirection,
+  pointInBox,
+  pointLabelCandidates,
+  segmentsInside,
+  type Box,
+  type Seg,
+} from "./label-layout";
 
 const arcPointCache = new WeakMap<object, Map<string, [number, number][]>>();
 
@@ -111,6 +122,11 @@ export interface PointLabel {
   py: number;
   /** Prefer below the point (its space above is inside the boundary). */
   below: boolean;
+  /**
+   * Preferred direction from the point (canvas, y down), e.g. away from
+   * the fill at a boundary vertex; overrides `below`.
+   */
+  prefer?: [number, number];
   /** Hovered or selected: shown even when every position is taken. */
   force?: boolean;
 }
@@ -123,9 +139,9 @@ export const POINT_LABEL_PLATE_ALPHA = 0.9;
 
 /**
  * Draws a point's coordinate label at the first free position around the
- * point (see `pointLabelCandidates`): above it, or below for points whose
- * space above is inside the boundary, then the other side, right, left and
- * the diagonals. Positions are moved inside the layout bounds, so rulers
+ * point (see `pointLabelCandidates`): in its preferred direction (away
+ * from the fill), then turning gradually to either side and a little
+ * farther out. Positions are moved inside the layout bounds, so rulers
  * and the canvas edge don't clip a label. A label with no free position is
  * left out unless `force` is set; then it goes to its preferred position.
  * It sits on a plate of the background colour so grid lines, fills and
@@ -140,7 +156,7 @@ export function drawPointLabel(
   ctx.font = POINT_LABEL_FONT;
   const boxW = ctx.measureText(label.text).width + POINT_LABEL_PAD_X * 2;
   const box = layout.place(
-    pointLabelCandidates(label.px, label.py, boxW, POINT_LABEL_H, label.below, POINT_RADIUS),
+    pointLabelCandidates(label.px, label.py, boxW, POINT_LABEL_H, label.prefer ?? label.below, POINT_RADIUS),
     label.force,
   );
   if (!box) return false;
@@ -172,7 +188,11 @@ export function drawPointLabels(
   const late: PointLabel[] = [];
   const drawn = new Set<string>();
   for (const l of labels) {
-    if (drawn.has(l.text) && !l.force) continue;
+    if (drawn.has(l.text)) {
+      // A hovered duplicate shows over the others, taking no space.
+      if (l.force) late.push(l);
+      continue;
+    }
     if (drawPointLabel(ctx, { ...l, force: false }, layout, colors)) drawn.add(l.text);
     else if (l.force) late.push(l);
   }
@@ -181,8 +201,11 @@ export function drawPointLabels(
 
 /**
  * Boxes of the symbols and labels drawn over the model in edit view that
- * vertex labels keep clear of: search-limit markers, load arrows and their
- * labels, water-table symbols, reinforcement numbers and pile labels.
+ * vertex labels keep clear of: search-limit markers, load arrows, load
+ * bands and their labels, water-table symbols, element numbers and pile
+ * labels. `drawn` passes what the frame already laid out (the loads, with
+ * a hovered arrow, and the water-table symbols) and whether the search
+ * limits are shown; without it they are laid out here.
  */
 export function editOverlayBoxes(
   ctx: CanvasRenderingContext2D,
@@ -199,79 +222,60 @@ export function editOverlayBoxes(
     | "piles"
     | "worldToCanvas"
     | "surfaceYAtX"
-  > & {
-    /** The water-table symbols as drawn (else laid out without the scene around them). */
-    piezoSymbols?: PiezoSymbol[][];
-  },
+  >,
+  drawn: { loads?: LoadLayout; piezoSymbols?: PiezoSymbol[][]; showLimits?: boolean } = {},
 ): Box[] {
   const { w, h, coordinates, surfaceYAtX } = p;
   const toC = (x: number, y: number) => p.worldToCanvas(x, y, w, h);
   const boxes: Box[] = [];
-  const textBox = (text: string, font: string, cx: number, bottom: number, height: number) => {
-    ctx.font = font;
-    const tw = ctx.measureText(text).width;
-    boxes.push({ left: cx - tw / 2, top: bottom - height, right: cx + tw / 2, bottom });
-  };
-  if (coordinates.length >= 3) {
-    // Search-limit markers: a bar across the surface and a triangle outside
-    // each range pointing into it, only the bar for a range of zero width
-    // (as drawn in the markers block).
-    const lim = p.analysisLimits;
-    if (lim.enabled) {
-      const pairs: [number, number][] = [
-        [lim.entryLeftX, lim.entryRightX],
-        [lim.exitLeftX, lim.exitRightX],
-      ];
-      for (const [xa, xb] of pairs) {
-        const range = searchRange(xa, xb);
-        const ends: [number, number | null][] = range.point
-          ? [[xa, null]]
-          : [
-              [xa, xa <= xb ? range.hi : range.lo],
-              [xb, xb < xa ? range.hi : range.lo],
-            ];
-        for (const [x, toward] of ends) {
-          const y = surfaceYAtX(x);
-          if (y === null) continue;
-          const [cx, cy] = toC(x, y);
-          boxes.push({ left: cx - 1.5, top: cy - MARKER_BAR_H_PX, right: cx + 1.5, bottom: cy + MARKER_BAR_H_PX });
-          if (toward === null) continue;
-          const inward = toC(toward, y)[0] >= cx ? 1 : -1;
-          const baseX = cx - inward * MARKER_SZ_PX * 2;
-          boxes.push({
-            left: Math.min(cx, baseX),
-            top: cy - MARKER_SZ_PX,
-            right: Math.max(cx, baseX),
-            bottom: cy + MARKER_SZ_PX,
-          });
-        }
+  // Search-limit markers where the markers block draws them.
+  const lim = p.analysisLimits;
+  if ((drawn.showLimits ?? lim.enabled) && coordinates.length >= 3) {
+    const pairs: [number, number][] = [
+      [lim.entryLeftX, lim.entryRightX],
+      [lim.exitLeftX, lim.exitRightX],
+    ];
+    for (const [xa, xb] of pairs) {
+      for (const end of rangeMarkerEnds(xa, xb)) {
+        const y = surfaceYAtX(end.x);
+        if (y === null) continue;
+        const [cx, cy] = toC(end.x, y);
+        const toward = end.toward === null ? null : toC(end.toward, y)[0];
+        boxes.push(...limitMarkerBoxes(limitMarkerGeometry(cx, cy, toward)));
       }
     }
   }
-  // Loads and water-table symbols where drawCanvas puts them.
+  // Loads: arrows (a little wider for the hovered, thicker stroke), the
+  // bands under the UDL tops and the labels.
   const view = { w, h, coordinates, worldToCanvas: p.worldToCanvas, surfaceYAtX };
-  const loads = layoutLoads(ctx, view, p.udls, p.lineLoads, null);
-  for (const a of [...loads.udlGroups.flatMap((g) => g.arrows), ...loads.lineLoads]) boxes.push(...loadArrowBoxes(a));
+  const loads = drawn.loads ?? layoutLoads(ctx, view, p.udls, p.lineLoads, null);
+  for (const a of [...loads.udlGroups.flatMap((g) => g.arrows), ...loads.lineLoads]) {
+    for (const b of loadArrowBoxes(a)) boxes.push(growBox(b, 1.5));
+  }
+  for (const g of loads.udlGroups) {
+    for (const st of g.strips) {
+      for (let i = 1; i < st.top.length; i++) {
+        const xs = [st.top[i - 1][0], st.top[i][0]];
+        const ys = [st.top[i - 1][1], st.top[i][1], st.ground[i - 1][1], st.ground[i][1]];
+        boxes.push({ left: Math.min(...xs), top: Math.min(...ys), right: Math.max(...xs), bottom: Math.max(...ys) });
+      }
+    }
+  }
   for (const l of loads.labels) boxes.push(l.box);
   const numbered = p.piezometricLine.lines.length > 1;
-  for (const line of p.piezoSymbols ?? layoutPiezoSymbols(view, p.piezometricLine, p.reinforcements, p.piles)) {
+  const symbols = drawn.piezoSymbols ?? layoutPiezoSymbols(view, p.piezometricLine, p.reinforcements, p.piles);
+  for (const line of symbols) {
     for (const sym of line) boxes.push(piezoSymbolBox(sym, 1, numbered));
   }
-  // Reinforcement numbers beyond the head, pile labels above the head.
-  const numberFont = "bold 11px sans-serif";
-  (p.reinforcements ?? []).forEach((r, i) => {
-    const [ax, ay] = toC(r.x1, r.y1);
-    const [bx, by] = toC(r.x2, r.y2);
-    const len = Math.hypot(bx - ax, by - ay);
-    if (!(len > 0)) return;
-    const cy = ay - ((by - ay) / len) * 10;
-    textBox(String(i + 1), numberFont, ax - ((bx - ax) / len) * 10, cy + 7, 14);
-  });
-  (p.piles ?? []).forEach((pile, i) => {
-    const [ax, ay] = toC(pile.x1, pile.y1);
-    textBox(`P${i + 1}`, numberFont, ax, ay - 4, 13);
-  });
+  // Element numbers beyond the head, pile labels above the head (as the
+  // force labels and water-table symbols keep clear of them).
+  boxes.push(...forceLabelContext(toC, { reinforcements: p.reinforcements, piles: p.piles, numberSize: 11 }).placed);
   return boxes;
+}
+
+/** A crack depth for its label: one decimal, two below 1 m. */
+function formatCrackDepth(d: number): string {
+  return d < 0.995 ? d.toFixed(2) : d.toFixed(1);
 }
 
 type ArcSurface = DrawableSurface;
@@ -406,6 +410,7 @@ export function drawCanvas(
     mode,
     result,
     resultViewSettings,
+    orientation,
     coordinates,
     materials,
     materialBoundaries,
@@ -460,9 +465,14 @@ export function drawCanvas(
   const labelBounds: Box = { left: RULER_SIZE_PX + 2, top: 2, right: w - 2, bottom: h - RULER_SIZE_PX - 2 };
   const labelColors = { text: STROKE_ACTIVE, plate: BG_COLOR };
   // Point labels are placed after the search-limit markers so no marker
-  // covers them, clear of the point symbols collected here.
+  // covers them, clear of the point symbols, the lines and the edit-only
+  // overlays collected here (canvas px).
   const pointLabels: PointLabel[] = [];
   const pointSymbols: Box[] = [];
+  const labelLines: { seg: Seg; pad: number }[] = [];
+  // Off-screen points get no label (it would be pushed into the view).
+  const labelMargin = POINT_RADIUS;
+  const onScreen = (px: number, py: number) => pointInBox(px, py, { left: 0, top: 0, right: w, bottom: h }, labelMargin);
 
   // Background
   ctx.fillStyle = BG_COLOR;
@@ -930,38 +940,63 @@ export function drawCanvas(
   }
 
   // ── Prescribed slip surfaces (edit view) ────────────────
-  // Custom circles and polylines, faint and dashed, clipped to the model:
-  // the part through the soil is what the analysis checks.
+  // Custom circles and polylines, dashed: a circle from where it enters
+  // the ground to where it leaves it (the entry and exit the analysis
+  // takes), a polyline clipped to the model. A circle the analysis can't
+  // use (no such entry and exit) shows fainter, its part in the soil. A
+  // halo of the background colour keeps them visible on dark fills.
   if (mode !== "result" && customSearchPlanes?.length && coordinates.length >= 3) {
+    const extC = coordinates.map(([x, y]) => worldToCanvas(x, y, w, h));
+    const inModel = (x: number, y: number) =>
+      isPointInPolygon(x, y, extC.map((c) => c[0]), extC.map((c) => c[1]));
+    const strokeDashed = (path: () => void, alpha: number) => {
+      ctx.save();
+      ctx.setLineDash([]);
+      ctx.strokeStyle = BG_COLOR;
+      ctx.globalAlpha = 0.55 * alpha;
+      ctx.lineWidth = 4;
+      ctx.beginPath();
+      path();
+      ctx.stroke();
+      ctx.strokeStyle = MARKER_BASE;
+      ctx.globalAlpha = 0.85 * alpha;
+      ctx.lineWidth = 1.5;
+      ctx.setLineDash([8, 5]);
+      ctx.beginPath();
+      path();
+      ctx.stroke();
+      ctx.restore();
+    };
+    const polyPath = (pts: [number, number][]) => () =>
+      pts.forEach(([px, py], i) => (i === 0 ? ctx.moveTo(px, py) : ctx.lineTo(px, py)));
     ctx.save();
     ctx.beginPath();
-    coordinates.forEach(([x, y], i) => {
-      const [px, py] = worldToCanvas(x, y, w, h);
-      if (i === 0) ctx.moveTo(px, py);
-      else ctx.lineTo(px, py);
-    });
+    extC.forEach(([px, py], i) => (i === 0 ? ctx.moveTo(px, py) : ctx.lineTo(px, py)));
     ctx.closePath();
     ctx.clip();
-    ctx.strokeStyle = MARKER_BASE;
-    ctx.globalAlpha = 0.6;
-    ctx.lineWidth = 1.5;
-    ctx.setLineDash([8, 5]);
     for (const s of customSearchPlanes) {
-      ctx.beginPath();
       if (s.points) {
         if (s.points.length < 2) continue;
-        s.points.forEach(([x, y], i) => {
-          const [px, py] = worldToCanvas(x, y, w, h);
-          if (i === 0) ctx.moveTo(px, py);
-          else ctx.lineTo(px, py);
-        });
+        const pts = s.points.map(([x, y]) => worldToCanvas(x, y, w, h));
+        strokeDashed(polyPath(pts), 1);
+        for (const seg of segmentsInside(pts, extC, inModel)) labelLines.push({ seg, pad: 2 });
+        continue;
+      }
+      if (!(s.radius > 0)) continue;
+      const ends = circleEntryExit(coordinates, s.cx, s.cy, s.radius, orientation === "rtl");
+      if (ends) {
+        const pts = circleArcPoints(s.cx, s.cy, s.radius, ends[0], ends[1], 90).map(([x, y]) =>
+          worldToCanvas(x, y, w, h),
+        );
+        strokeDashed(polyPath(pts), 1);
+        for (let i = 1; i < pts.length; i++) {
+          labelLines.push({ seg: [pts[i - 1][0], pts[i - 1][1], pts[i][0], pts[i][1]], pad: 2 });
+        }
       } else {
-        if (!(s.radius > 0)) continue;
         const [cx, cy] = worldToCanvas(s.cx, s.cy, w, h);
         const [ex] = worldToCanvas(s.cx + s.radius, s.cy, w, h);
-        ctx.arc(cx, cy, Math.abs(ex - cx), 0, Math.PI * 2);
+        strokeDashed(() => ctx.arc(cx, cy, Math.abs(ex - cx), 0, Math.PI * 2), 0.4);
       }
-      ctx.stroke();
     }
     ctx.restore();
   }
@@ -1047,8 +1082,10 @@ export function drawCanvas(
   // ── Piezometric lines ──────────────────────────────────
   // Water-table symbols, clear of what is drawn around them (computed
   // once: the edit-view labels keep clear of them too).
-  const searchShown = analysisLimits.enabled && !(mode === "result" && customPlanesOnly);
-  const piezoSymbols =
+  const searchShown =
+    analysisLimits.enabled &&
+    !(customPlanesOnly && (mode === "result" || (customSearchPlanes?.length ?? 0) > 0));
+  const drawnPiezoSymbols =
     piezometricLine.lines.length > 0
       ? layoutPiezoSymbols(
           { w, h, coordinates, worldToCanvas, surfaceYAtX },
@@ -1063,7 +1100,20 @@ export function drawCanvas(
             lineLoads,
             analysisLimits: searchShown ? analysisLimits : null,
             prescribed: mode !== "result" ? customSearchPlanes : undefined,
-            crackDepth: mode !== "result" && !options?.tensionCrackAuto ? (options?.tensionCrackDepth ?? 0) : 0,
+            // The crack-depth dimension where the crack block below draws it.
+            crackMarker:
+              mode !== "result" && !options?.tensionCrackAuto && (options?.tensionCrackDepth ?? 0) > 0
+                ? crackMarkerPosition(
+                    coordinates,
+                    options?.tensionCrackDepth ?? 0,
+                    orientation === "rtl",
+                    30 / Math.max(viewScale, 1e-9),
+                    analysisLimits.enabled
+                      ? [analysisLimits.entryLeftX, analysisLimits.entryRightX, analysisLimits.exitLeftX, analysisLimits.exitRightX]
+                      : [],
+                    20 / Math.max(viewScale, 1e-9),
+                  )
+                : null,
             vertices:
               mode !== "result"
                 ? [
@@ -1137,7 +1187,7 @@ export function drawCanvas(
       const triH = PIEZO_TRI_H_PX * paperZoom;
       const barW = PIEZO_BAR_W_PX * paperZoom;
       const labelNum = String(lineIdx + 1);
-      const symbols = piezoSymbols[lineIdx];
+      const symbols = drawnPiezoSymbols[lineIdx];
       for (const { x: mx, y: my, bars } of symbols) {
         const triTop = my - triH;
         ctx.beginPath();
@@ -1196,8 +1246,8 @@ export function drawCanvas(
           ctx.lineWidth = editingPiezo ? 1.5 : 1;
           ctx.stroke();
 
-          if (editingPiezo && isActive) {
-            pointSymbols.push(boxAround(px, py, piezoRadius));
+          pointSymbols.push(boxAround(px, py, piezoRadius));
+          if (editingPiezo && isActive && onScreen(px, py)) {
             pointLabels.push({
               text: `(${plCoords[i][0].toFixed(1)}, ${plCoords[i][1].toFixed(1)})`,
               px,
@@ -1211,17 +1261,112 @@ export function drawCanvas(
     }
   }
 
+  // ── Tension crack depth (edit mode) ─────────────────────
+  // A crack of fixed depth shows as a vertical dimension on the crest,
+  // from the ground down to the crack's depth, labelled "crack 2.0 m". (An
+  // automatic depth depends on the soil where the crack opens; the result
+  // shows that crack.) A dashed line along the whole ground read as a
+  // boundary or a prescribed surface and ran through foundations.
+  const editCrackDepth = options?.tensionCrackAuto ? 0 : (options?.tensionCrackDepth ?? 0);
+  let crackLabel: { text: string; x: number; top: number; bottom: number; inward: number } | null = null;
+  if (mode !== "result" && editCrackDepth > 0 && coordinates.length >= 3) {
+    // Clear of the search-limit markers (their triangles reach 14 px).
+    const px = 1 / Math.max(viewScale, 1e-9);
+    const limitXs = analysisLimits.enabled
+      ? [analysisLimits.entryLeftX, analysisLimits.entryRightX, analysisLimits.exitLeftX, analysisLimits.exitRightX]
+      : [];
+    const marker = crackMarkerPosition(coordinates, editCrackDepth, orientation === "rtl", 30 * px, limitXs, 20 * px);
+    if (marker) {
+      const [mx, top] = worldToCanvas(marker.x, marker.top, w, h);
+      const [, bottom] = worldToCanvas(marker.x, marker.bottom, w, h);
+      ctx.save();
+      ctx.strokeStyle = labelColors.text;
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(mx, top);
+      ctx.lineTo(mx, bottom);
+      // Ticks at both ends, as on a dimension.
+      for (const y of [top, bottom]) {
+        ctx.moveTo(mx - 4, y);
+        ctx.lineTo(mx + 4, y);
+      }
+      ctx.stroke();
+      ctx.restore();
+      labelLines.push({ seg: [mx, top, mx, bottom], pad: 2 });
+      pointSymbols.push({ left: mx - 4, top: bottom - 1, right: mx + 4, bottom: bottom + 1 });
+      crackLabel = { text: `crack ${formatCrackDepth(editCrackDepth)} m`, x: mx, top, bottom, inward: marker.inward };
+    }
+  }
+
+  // ── Entry / Exit range markers ──────────────────────────
+  // Not when only prescribed surfaces are analysed (nothing is searched):
+  // in the result, and in edit view once there is a prescribed surface. In
+  // the result they are lighter and drawn before the sliding mass, so the
+  // critical surface stays on top of them.
+  const limitsShown =
+    analysisLimits.enabled &&
+    coordinates.length >= 3 &&
+    !(customPlanesOnly && (mode === "result" || (customSearchPlanes?.length ?? 0) > 0));
+  if (limitsShown) {
+    const markerAlpha = mode === "result" ? 0.55 : 1;
+    const toC = (x: number, y: number) => worldToCanvas(x, y, w, h);
+    const cs = mode === "result" ? (result?.criticalSurface ?? null) : null;
+
+    // Dots along the ground over each range (alternating colours where the
+    // entry and exit ranges coincide), none over the sliding mass.
+    const dotRadius = ENTRY_EXIT_DOT_RADIUS_PX * paperZoom * (mode === "result" ? 0.8 : 1);
+    ctx.save();
+    ctx.globalAlpha = markerAlpha;
+    for (const d of layoutRangeDots(analysisLimits, coordinates, toC, paperZoom, {
+      skip: cs ? [cs.entryPoint[0], cs.exitPoint[0]] : null,
+      radius: dotRadius,
+    })) {
+      ctx.fillStyle = d.range === "entry" ? ENTRY_DOT_COLOR.hex : EXIT_DOT_COLOR.hex;
+      ctx.beginPath();
+      ctx.arc(d.x, d.y, dotRadius, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.restore();
+
+    // Bar on the surface with a triangle outside the range pointing into
+    // it: >|  at the start of a range, |<  at its end, in any orientation;
+    // only the bar for a range of zero width. Over a result the triangle
+    // is lifted clear of the ground and a shared limit is drawn once.
+    for (const m of layoutLimitMarkers(analysisLimits, coordinates, toC, paperZoom, { lifted: mode === "result" })) {
+      const isHover = hoverHit?.kind === "limit" && m.handles.includes(hoverHit.handle);
+      const hoverColor =
+        isHover && hoverHit?.kind === "limit" && hoverHit.handle.startsWith("exit") ? EXIT_DOT_COLOR.hex : ENTRY_DOT_COLOR.hex;
+      const color = isHover ? hoverColor : MARKER_BASE;
+      ctx.save();
+      ctx.globalAlpha = markerAlpha;
+      ctx.strokeStyle = color;
+      ctx.fillStyle = color;
+      ctx.lineWidth = (isHover ? 2.5 : 2) * paperZoom;
+      ctx.beginPath();
+      ctx.moveTo(m.cx, m.barTop);
+      ctx.lineTo(m.cx, m.barBottom);
+      ctx.stroke();
+      for (const [tip, b1, b2] of m.triangles) {
+        ctx.beginPath();
+        ctx.moveTo(tip[0], tip[1]);
+        ctx.lineTo(b1[0], b1[1]);
+        ctx.lineTo(b2[0], b2[1]);
+        ctx.closePath();
+        ctx.fill();
+      }
+      ctx.restore();
+    }
+  }
+
+  // Vertex dots go over the markers and the dotted ranges.
   // ── External boundary points ─────────────────────────
   if (mode !== "result") {
     const extRadius = editingExterior ? POINT_RADIUS : 3;
     const extCanvas = coordinates.map(([x, y]) => worldToCanvas(x, y, w, h));
     const extXs = extCanvas.map((c) => c[0]);
     const extYs = extCanvas.map((c) => c[1]);
-    // A label goes below its point when more of the space above is inside
-    // the boundary than below, so it sits outside the fill.
-    const insideCount = (px: number, y: number) =>
-      [-15, 0, 15].filter((dx) => isPointInPolygon(px + dx, y, extXs, extYs)).length;
-    const labelBelow = (px: number, py: number) => insideCount(px, py - 13) > insideCount(px, py + 13);
+    // A label goes outside the fill: along the bisector of the corner.
+    const insideExt = (x: number, y: number) => isPointInPolygon(x, y, extXs, extYs);
     for (let i = 0; i < coordinates.length; i++) {
       const [px, py] = worldToCanvas(
         coordinates[i][0],
@@ -1250,13 +1395,15 @@ export function drawCanvas(
       ctx.stroke();
 
       // Coordinate label — only when editing.
-      if (editingExterior) {
-        pointSymbols.push(boxAround(px, py, extRadius));
+      pointSymbols.push(boxAround(px, py, extRadius));
+      if (editingExterior && onScreen(px, py)) {
+        const prefer = outwardDirection(extCanvas, i, insideExt);
         pointLabels.push({
           text: `(${coordinates[i][0].toFixed(1)}, ${coordinates[i][1].toFixed(1)})`,
           px,
           py,
-          below: labelBelow(px, py),
+          below: prefer[1] > 0,
+          prefer,
           force: isSelected || isHover,
         });
       }
@@ -1312,121 +1459,89 @@ export function drawCanvas(
           : STROKE_INACTIVE;
         ctx.lineWidth = editingBoundaries ? (isSelectedBoundary ? 2 : 1.5) : 1;
         ctx.stroke();
+        pointSymbols.push(boxAround(px, py, bndRadius));
       }
     }
   }
 
-  // ── Tension crack depth (edit mode) ─────────────────────
-  // A crack of fixed depth shows as a dashed line at that depth under the
-  // ground surface. (An automatic depth depends on the soil where the
-  // crack opens; the result shows that crack.)
-  const editCrackDepth = options?.tensionCrackAuto ? 0 : (options?.tensionCrackDepth ?? 0);
-  if (mode !== "result" && editCrackDepth > 0 && coordinates.length >= 3) {
-    const xs = coordinates.map((c) => c[0]);
-    const ground = groundBetween(coordinates, Math.min(...xs), Math.max(...xs));
-    if (ground.length >= 2) {
-      ctx.save();
-      // Inside the model only (a crack deeper than a step stays in the soil).
-      ctx.beginPath();
-      coordinates.forEach(([bx, by], i) => {
-        const [px, py] = worldToCanvas(bx, by, w, h);
-        if (i === 0) ctx.moveTo(px, py);
-        else ctx.lineTo(px, py);
-      });
-      ctx.closePath();
-      ctx.clip();
-      ctx.strokeStyle = labelColors.text;
-      ctx.globalAlpha = 0.7;
-      ctx.lineWidth = 1;
-      ctx.setLineDash([6, 4]);
-      ctx.beginPath();
-      ground.forEach(([gx, gy], i) => {
-        const [px, py] = worldToCanvas(gx, gy - editCrackDepth, w, h);
-        if (i === 0) ctx.moveTo(px, py);
-        else ctx.lineTo(px, py);
-      });
-      ctx.stroke();
-      ctx.restore();
-    }
-  }
-
-  // ── Entry / Exit range markers ──────────────────────────
-  // Not in the result of an analysis of prescribed surfaces only (nothing
-  // was searched). In the result they are lighter and drawn before the
-  // sliding mass, so the critical surface stays on top of them.
-  if (
-    analysisLimits.enabled &&
-    coordinates.length >= 3 &&
-    !(mode === "result" && customPlanesOnly)
-  ) {
-    const markerAlpha = mode === "result" ? 0.55 : 1;
-    const toC = (x: number, y: number) => worldToCanvas(x, y, w, h);
-    const cs = mode === "result" ? (result?.criticalSurface ?? null) : null;
-
-    // Dots along the ground over each range (alternating colours where the
-    // entry and exit ranges coincide), none over the sliding mass.
-    const dotRadius = ENTRY_EXIT_DOT_RADIUS_PX * paperZoom * (mode === "result" ? 0.8 : 1);
-    ctx.save();
-    ctx.globalAlpha = markerAlpha;
-    for (const d of layoutRangeDots(analysisLimits, coordinates, toC, paperZoom, {
-      skip: cs ? [cs.entryPoint[0], cs.exitPoint[0]] : null,
-      radius: dotRadius,
-    })) {
-      ctx.fillStyle = d.range === "entry" ? ENTRY_DOT_COLOR.hex : EXIT_DOT_COLOR.hex;
-      ctx.beginPath();
-      ctx.arc(d.x, d.y, dotRadius, 0, Math.PI * 2);
-      ctx.fill();
-    }
-    ctx.restore();
-
-    // Bar on the surface with a triangle outside the range pointing into
-    // it: >|  at the start of a range, |<  at its end, in any orientation;
-    // only the bar for a range of zero width. Over a result the triangle
-    // is lifted clear of the ground and a shared limit is drawn once.
-    for (const m of layoutLimitMarkers(analysisLimits, coordinates, toC, paperZoom, { lifted: mode === "result" })) {
-      const isHover = hoverHit?.kind === "limit" && m.handles.includes(hoverHit.handle);
-      const hoverColor =
-        isHover && hoverHit?.kind === "limit" && hoverHit.handle.startsWith("exit") ? EXIT_DOT_COLOR.hex : ENTRY_DOT_COLOR.hex;
-      const color = isHover ? hoverColor : MARKER_BASE;
-      ctx.save();
-      ctx.globalAlpha = markerAlpha;
-      ctx.strokeStyle = color;
-      ctx.fillStyle = color;
-      ctx.lineWidth = (isHover ? 2.5 : 2) * paperZoom;
-      ctx.beginPath();
-      ctx.moveTo(m.cx, m.barTop);
-      ctx.lineTo(m.cx, m.barBottom);
-      ctx.stroke();
-      for (const [tip, b1, b2] of m.triangles) {
-        ctx.beginPath();
-        ctx.moveTo(tip[0], tip[1]);
-        ctx.lineTo(b1[0], b1[1]);
-        ctx.lineTo(b2[0], b2[1]);
-        ctx.closePath();
-        ctx.fill();
-      }
-      ctx.restore();
-    }
-  }
-
-  if (pointLabels.length > 0) {
+  if (pointLabels.length > 0 || crackLabel) {
     const layout = new LabelLayout(labelBounds);
     for (const b of pointSymbols) layout.reserve(b);
-    for (const b of editOverlayBoxes(ctx, {
-      w,
-      h,
-      coordinates,
-      analysisLimits,
-      udls,
-      lineLoads,
-      piezometricLine,
-      reinforcements,
-      piles,
-      worldToCanvas,
-      surfaceYAtX,
-      piezoSymbols,
-    })) layout.reserve(b);
+    for (const b of editOverlayBoxes(
+      ctx,
+      {
+        w,
+        h,
+        coordinates,
+        analysisLimits,
+        udls,
+        lineLoads,
+        piezometricLine,
+        reinforcements,
+        piles,
+        worldToCanvas,
+        surfaceYAtX,
+      },
+      { loads, piezoSymbols: drawnPiezoSymbols, showLimits: limitsShown },
+    ))
+      layout.reserve(b);
+    // Lines labels must not cover: the boundaries (the exterior wide
+    // enough to keep the entry/exit dots on it clear), water lines,
+    // elements and piles, prescribed surfaces, the crack marker.
+    if (coordinates.length >= 3) {
+      const extC = coordinates.map(([x, y]) => worldToCanvas(x, y, w, h));
+      layout.reservePolyline(extC, ENTRY_EXIT_DOT_RADIUS_PX + 1.5, true);
+      const inModel = (x: number, y: number) =>
+        isPointInPolygon(x, y, extC.map((c) => c[0]), extC.map((c) => c[1]));
+      for (const bnd of materialBoundaries) {
+        const pts = bnd.coordinates.map(([x, y]) => worldToCanvas(x, y, w, h));
+        if (editingBoundaries) layout.reservePolyline(pts, 2);
+        else for (const seg of segmentsInside(pts, extC, inModel)) layout.reserveSegment(seg, 2);
+      }
+    }
+    for (const line of piezometricLine.lines) {
+      layout.reservePolyline(line.coordinates.map(([x, y]) => worldToCanvas(x, y, w, h)), 2);
+    }
+    for (const seg of forceLabelContext((x, y) => worldToCanvas(x, y, w, h), { reinforcements, piles, numberSize: 11 })
+      .obstacles)
+      layout.reserveSegment(seg, 3);
+    for (const l of labelLines) layout.reserveSegment(l.seg, l.pad);
     drawPointLabels(ctx, pointLabels, layout, labelColors);
+    // The crack's label beside its dimension, towards the middle of the
+    // crest first, else farther out with a leader line to the dimension;
+    // always shown (it is the dimension's value).
+    if (crackLabel) {
+      ctx.font = POINT_LABEL_FONT;
+      const tw = ctx.measureText(crackLabel.text).width + POINT_LABEL_PAD_X * 2;
+      const midY = (crackLabel.top + crackLabel.bottom) / 2;
+      const prefer: [number, number] = [crackLabel.inward || 1, 0];
+      const box = layout.place(
+        [2, 26, 50].flatMap((r) => pointLabelCandidates(crackLabel!.x, midY, tw, POINT_LABEL_H, prefer, r)),
+        true,
+      )!;
+      const nx = Math.max(box.left, Math.min(crackLabel.x, box.right));
+      const ny = Math.max(box.top, Math.min(midY, box.bottom));
+      if (Math.hypot(nx - crackLabel.x, ny - midY) > 8) {
+        ctx.save();
+        ctx.strokeStyle = labelColors.text;
+        ctx.lineWidth = 0.75;
+        ctx.beginPath();
+        ctx.moveTo(crackLabel.x, midY);
+        ctx.lineTo(nx, ny);
+        ctx.stroke();
+        ctx.restore();
+      }
+      ctx.save();
+      ctx.globalAlpha = POINT_LABEL_PLATE_ALPHA;
+      ctx.fillStyle = labelColors.plate;
+      ctx.fillRect(box.left, box.top, tw, POINT_LABEL_H);
+      ctx.restore();
+      ctx.fillStyle = labelColors.text;
+      ctx.textAlign = "left";
+      ctx.textBaseline = "middle";
+      ctx.fillText(crackLabel.text, box.left + POINT_LABEL_PAD_X, box.top + POINT_LABEL_H / 2 + 0.5);
+      ctx.textBaseline = "alphabetic";
+    }
   }
 
   // ── Analysis result surfaces ─────────────────────────
