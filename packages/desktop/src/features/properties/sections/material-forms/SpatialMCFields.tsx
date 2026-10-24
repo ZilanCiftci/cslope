@@ -3,6 +3,7 @@ import { ExpressionNumericInput } from "../../../../components/ui/ExpressionNume
 import { DataPointTable } from "../../../../components/ui/DataPointTable";
 import type { SpatialMohrCoulombModel } from "@cslope/engine";
 import type { MaterialExpressions } from "../../../../store/types";
+import { UnitWeightSatField } from "./UnitWeightSatField";
 
 interface Props {
   model: SpatialMohrCoulombModel;
@@ -62,6 +63,10 @@ export function SpatialMCFields({
             aria-label="γ (kN/m³)"
           />
         </label>
+        <UnitWeightSatField
+          value={model.unitWeightSat}
+          onChange={(unitWeightSat) => onChange({ unitWeightSat })}
+        />
         <label className="flex flex-col gap-0.5">
           <Label>Interpolation</Label>
           <select
@@ -79,12 +84,12 @@ export function SpatialMCFields({
           </select>
         </label>
       </div>
-      <Label>Data Points</Label>
+      <Label>Data points</Label>
       <DataPointTable
-        headers={["X", "Y", "c (kPa)", "φ (°)", "γ (kN/m³)"]}
+        headers={["X (m)", "Y (m)", "c (kPa)", "φ (°)", "γ (kN/m³)"]}
         rows={rows}
         onChange={handleRowsChange}
-        minRows={1}
+        emptyText="No data points yet: add at least one."
       />
     </div>
   );

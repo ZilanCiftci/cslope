@@ -12,6 +12,8 @@ interface DataPointTableProps {
   onChange: (rows: number[][]) => void;
   /** Minimum number of columns (for validation display). */
   minRows?: number;
+  /** Shown in place of the rows while there are none. */
+  emptyText?: string;
 }
 
 export function DataPointTable({
@@ -19,6 +21,7 @@ export function DataPointTable({
   rows,
   onChange,
   minRows = 0,
+  emptyText,
 }: DataPointTableProps) {
   const [draftCells, setDraftCells] = useState<Record<string, string>>({});
 
@@ -102,6 +105,17 @@ export function DataPointTable({
             </tr>
           </thead>
           <tbody>
+            {rows.length === 0 && emptyText && (
+              <tr>
+                <td
+                  colSpan={headers.length + 1}
+                  className="px-1.5 py-1 text-[11px] italic"
+                  style={{ color: "var(--color-vsc-text-muted)" }}
+                >
+                  {emptyText}
+                </td>
+              </tr>
+            )}
             {rows.map((row, ri) => (
               <tr key={ri}>
                 {row.map((val, ci) => (

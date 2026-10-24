@@ -114,7 +114,12 @@ export function LineLoadsDialogApp() {
       ),
     },
     {
-      header: <Label>P (kN/m)</Label>,
+      header: (
+        <Label title="Vertical line load per metre run of the slope">
+          P (kN/m)
+        </Label>
+      ),
+      widthClassName: "w-[45%]",
       renderCell: (row) => (
         <SpreadsheetExpressionInput
           value={row.magnitude}
@@ -131,7 +136,8 @@ export function LineLoadsDialogApp() {
       ),
     },
     {
-      header: <Label>x</Label>,
+      header: <Label title="Position of the load">x (m)</Label>,
+      widthClassName: "w-[45%]",
       renderCell: (row) => (
         <SpreadsheetExpressionInput
           value={row.x}
