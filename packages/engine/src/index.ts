@@ -18,6 +18,8 @@ export type {
   PartialFactors,
   AnalysisOptions,
   AnalysisResult,
+  AnalysisWarning,
+  AnalysisWarningCode,
   AnalysisLimits,
   SlipSurfaceResult,
   SliceData,
@@ -171,6 +173,7 @@ export {
 } from "./model/solvers";
 
 export { buildSlope } from "./model/build-slope";
+export { analysisWarnings, M_ALPHA_WARNING_LIMIT } from "./model/result-warnings";
 export {
   buildEnvelope,
   envelopeAt,

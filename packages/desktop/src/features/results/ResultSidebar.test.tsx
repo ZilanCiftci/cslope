@@ -77,6 +77,13 @@ describe("ResultSidebar summary", () => {
           otherDirectionMinFOS: undefined,
           nonConvergedSurfaces: 3,
           splitFailureCount: 1,
+          warnings: [
+            {
+              code: "negative-effective-normal",
+              message: "2 slices of the critical surface have negative effective normal force (N′ < 0) at the base.",
+              count: 2,
+            },
+          ],
         } as Partial<AnalysisResult>),
       })),
     );
@@ -88,6 +95,7 @@ describe("ResultSidebar summary", () => {
       screen.getByText("3 surfaces were discarded because they did not reach equilibrium"),
     ).toHaveAttribute("title", expect.stringMatching(/equilibrium/));
     expect(screen.getByText(/1 material boundary split\(s\) failed/)).toBeInTheDocument();
+    expect(screen.getByText(/2 slices of the critical surface have negative effective normal force/)).toBeInTheDocument();
   });
 
   it("reports a failed run, or that there is no result yet", () => {

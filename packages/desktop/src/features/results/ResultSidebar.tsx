@@ -534,6 +534,11 @@ export function ResultSidebar() {
                 check the interior boundaries
               </p>
             )}
+            {result.warnings?.map((w, i) => (
+              <p key={`${w.code}-${i}`} style={{ color: "var(--color-vsc-warning)" }}>
+                {w.message}
+              </p>
+            ))}
           </div>
         ) : runState === "error" ? (
           // Without this a failed run only showed "No results yet".

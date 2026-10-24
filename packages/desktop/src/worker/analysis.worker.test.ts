@@ -48,6 +48,28 @@ const T_ACADS: SlopeDefinition = {
 };
 
 describe("analysis worker result", () => {
+  it("passes on the result warnings: a boundary ending inside a region", () => {
+    const msg = run(
+      {
+        ...T_ACADS,
+        udls: [],
+        materials: [
+          { name: "M1", unitWeight: 20, frictionAngle: 19.6, cohesion: 3 },
+          { name: "M2", unitWeight: 20, frictionAngle: 10, cohesion: 2 },
+        ],
+        materialBoundaries: [{ coordinates: [[0, -5], [45, -12]], materialName: "M2" }],
+        regionAssignments: [{ point: [1, -1], materialName: "M1" }],
+      },
+      { method: "Bishop" },
+    );
+    expect(msg.type).toBe("analysis-complete");
+    if (msg.type !== "analysis-complete") return;
+    expect(msg.result.warnings?.map((w) => w.code)).toContain("dangling-boundary");
+    expect(msg.result.warnings?.find((w) => w.code === "dangling-boundary")?.message).toBe(
+      "Material boundary 1 ends inside a region and does not split it; check its end points.",
+    );
+  });
+
   it("sends the method's own effective normal force for each slice", () => {
     // Bishop on a circle, no loads: moment equilibrium about the centre
     // gives F = Σ (c·l + N′·tan φ) / Σ W·sin α with the solved N′ (the

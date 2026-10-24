@@ -14,6 +14,7 @@ import type {
 } from "@cslope/engine";
 import {
   analyseSlope,
+  analysisWarnings,
   mapAnalysisResultToModelSpace,
   buildSlope,
   oppositeDirectionDefinition,
@@ -176,6 +177,7 @@ function analyse(
   let criticalSurface: SlipSurfaceResult | null = null;
   const allSurfaces: SlipSurfaceResult[] = [];
   const criticalSlices: SliceData[] = [];
+  let solvedNormals: number[] | null = null;
 
   const validSurfaces = slope.search.filter((s) => s.fos != null);
   if (validSurfaces.length === 0) {
@@ -212,7 +214,7 @@ function analyse(
       // The method's own base normal forces at the critical FOS (the
       // ordinary-method estimate (W + Q)·cos α − u·l did not add up to the
       // FOS of Bishop, Janbu or Morgenstern–Price).
-      const solvedNormals = solvedEffectiveNormals(slope, crit.slices, crit.fos!, crit.lffArray);
+      solvedNormals = solvedEffectiveNormals(slope, crit.slices, crit.fos!, crit.lffArray);
       for (const [i, s] of crit.slices.entries()) {
         const surfaceLoad = sliceVerticalLoad(s) - s.weight;
         criticalSlices.push({
@@ -296,6 +298,11 @@ function analyse(
     elapsedMs: performance.now() - start,
     nonConvergedSurfaces,
     splitFailureCount: slope.splitFailureCount,
+    // Checked on the base normal forces reported in the slice table.
+    warnings: analysisWarnings(
+      slope,
+      solvedNormals ?? (criticalSlices.length > 0 ? criticalSlices.map((s) => s.normalForce) : null),
+    ),
   };
 
   return result;

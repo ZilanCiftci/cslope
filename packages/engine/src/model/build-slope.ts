@@ -98,12 +98,10 @@ export function buildSlope(def: SlopeDefinition): Slope {
   // Material boundaries — split the geometry first, then assign materials
   if (def.materialBoundaries && def.materialBoundaries.length > 0) {
     // Cut the slope by all boundaries at once, exactly as the canvas
-    // computes its regions (order independent, no re-splitting).
-    slope.setMaterialBoundaries(
-      def.materialBoundaries
-        .filter((b) => b.coordinates.length >= 2)
-        .map((b) => b.coordinates),
-    );
+    // computes its regions (order independent, no re-splitting). Lines
+    // with fewer than two points are skipped there; all are passed so that
+    // slope.danglingBoundaries indexes def.materialBoundaries.
+    slope.setMaterialBoundaries(def.materialBoundaries.map((b) => b.coordinates));
 
     if (!(def.regionAssignments && def.regionAssignments.length > 0)) {
       // Legacy boundary-name assignment (materialBoundaries carry materialName)
