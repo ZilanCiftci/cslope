@@ -767,7 +767,7 @@ export const PROBLEMS: RawCase[] = [
     reference: "Chowdhury & Xu (1995).",
     surface: "fixed",
     units: "SI",
-    description: "Chowdhury & Xu example 5: embankment fill (c′ = 10 kPa, φ′ = 12°) on soft clay (Su = 40 kPa), the geometry of commercial program A's Fig. 28.2; circle tangent to the fill–clay interface.",
+    description: "Chowdhury & Xu example 5: embankment fill (c′ = 10 kPa, φ′ = 12°) on soft clay (Su = 40 kPa), the geometry as a commercial program's verification manual draws it; circle tangent to the fill–clay interface.",
     definition: {"orientation":"rtl","materials":[{"name":"Layer 1","model":{"kind":"mohr-coulomb","unitWeight":20,"cohesion":10,"frictionAngle":12}},{"name":"Layer 2","model":{"kind":"undrained","unitWeight":18,"undrainedShearStrength":40}},{"name":"Hard layer","model":{"kind":"undrained","unitWeight":20,"undrainedShearStrength":1000}}],"coordinates":[[0,0],[0,15],[30,15],[55,25],[60,25],[80,15],[90,15],[90,0]],"materialBoundaries":[{"coordinates":[[0,15],[90,15]],"materialName":""},{"coordinates":[[0,5],[90,5]],"materialName":""}],"regionAssignments":[{"point":[57.5,24.5],"materialName":"Layer 1"},{"point":[45,14.5],"materialName":"Layer 2"},{"point":[45,4.5],"materialName":"Hard layer"}],"customSearchPlanes":[{"cx":37.396,"cy":41.99,"radius":26.99}],"customPlanesOnly":true},
     checks: [
       {"method":"Morgenstern-Price","label":"Morgenstern-Price (half-sine)","published":1.158,"publishedBy":"Commercial program B","options":{"slices":50}},
