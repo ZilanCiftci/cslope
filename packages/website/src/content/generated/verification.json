@@ -98,14 +98,14 @@
      "method": "Janbu simplified, non-circular",
      "source": "Arai & Tagyo (1985)",
      "analysis": "Janbu simplified, non-circular",
-     "computed": 0.3927
+     "computed": 0.3933
     },
     {
      "value": 0.43,
      "method": "Janbu corrected, non-circular",
      "source": "Arai & Tagyo (1985)",
      "analysis": "Janbu corrected, non-circular",
-     "computed": 0.4126
+     "computed": 0.4157
     },
     {
      "value": 0.43,
@@ -149,12 +149,12 @@
     },
     {
      "method": "Janbu simplified, non-circular",
-     "computed": 0.3927,
+     "computed": 0.3933,
      "programs": null
     },
     {
      "method": "Janbu corrected, non-circular",
-     "computed": 0.4126,
+     "computed": 0.4157,
      "programs": null
     }
    ]
@@ -289,7 +289,7 @@
    "results": [
     {
      "method": "Janbu simplified",
-     "computed": 2.6091,
+     "computed": 2.609,
      "programs": {
       "min": 2.61,
       "max": 2.61
@@ -338,8 +338,8 @@
   },
   {
    "id": "V006",
-   "title": "Baker (2001) planar surface",
-   "reference": "Baker (2001).",
+   "title": "Baker & Leshchinsky (2001) planar surface",
+   "reference": "Baker & Leshchinsky (2001).",
    "literature": true,
    "commercial": false,
    "surface": "fixed",
@@ -348,7 +348,7 @@
     {
      "value": 1.35,
      "method": "Culmann (planar wedge)",
-     "source": "Baker (2001)",
+     "source": "Baker & Leshchinsky (2001)",
      "computed": null
     }
    ],
@@ -488,7 +488,7 @@
    "results": [
     {
      "method": "Spencer",
-     "computed": 1.5192,
+     "computed": 1.5187,
      "programs": {
       "min": 1.536,
       "max": 1.536
@@ -585,13 +585,13 @@
      "method": "Spencer, non-circular",
      "source": "Baker & Leshchinsky (2001)",
      "analysis": "Spencer, non-circular",
-     "computed": 1.868
+     "computed": 1.8683
     }
    ],
    "results": [
     {
      "method": "Spencer, non-circular",
-     "computed": 1.868,
+     "computed": 1.8683,
      "programs": {
       "min": 1.868,
       "max": 1.868
@@ -748,7 +748,7 @@
   {
    "id": "V013b",
    "title": "Cai & Ugai slope, pile row D1/D = 2",
-   "reference": "Cai & Ugai (2000), Géotechnique 50(2).",
+   "reference": "Cai & Ugai (2000), Soils and Foundations 40(1).",
    "literature": true,
    "commercial": false,
    "surface": "search",
@@ -775,7 +775,7 @@
   {
    "id": "V013c",
    "title": "Cai & Ugai slope, pile row D1/D = 3",
-   "reference": "Cai & Ugai (2000), Géotechnique 50(2).",
+   "reference": "Cai & Ugai (2000), Soils and Foundations 40(1).",
    "literature": true,
    "commercial": false,
    "surface": "search",
@@ -802,7 +802,7 @@
   {
    "id": "V013d",
    "title": "Cai & Ugai slope, pile row D1/D = 4",
-   "reference": "Cai & Ugai (2000), Géotechnique 50(2).",
+   "reference": "Cai & Ugai (2000), Soils and Foundations 40(1).",
    "literature": true,
    "commercial": false,
    "surface": "search",
@@ -829,7 +829,7 @@
   {
    "id": "V013e",
    "title": "Cai & Ugai slope, pile row D1/D = 6",
-   "reference": "Cai & Ugai (2000), Géotechnique 50(2).",
+   "reference": "Cai & Ugai (2000), Soils and Foundations 40(1).",
    "literature": true,
    "commercial": false,
    "surface": "search",
@@ -3199,13 +3199,13 @@
      "source": "Griffiths & Lane",
      "method": "limit-equilibrium chart",
      "analysis": "Spencer",
-     "computed": 2.0231
+     "computed": 2.0229
     }
    ],
    "results": [
     {
      "method": "Spencer",
-     "computed": 2.0231,
+     "computed": 2.0229,
      "programs": {
       "min": 2.022,
       "max": 2.022
@@ -3295,7 +3295,7 @@
    "results": [
     {
      "method": "Spencer, non-circular",
-     "computed": 1.3139,
+     "computed": 1.3142,
      "programs": {
       "min": 1.315,
       "max": 1.315
@@ -3628,7 +3628,7 @@
   {
    "id": "V063",
    "title": "Huang & Jia earth dam, dry",
-   "reference": "Huang & Jia (2008).",
+   "reference": "Huang & Jia (2009).",
    "literature": true,
    "commercial": false,
    "surface": "search",
@@ -4833,7 +4833,7 @@
   {
    "id": "V086a",
    "title": "Tandjiria embankment, clay fill, geosynthetic T = 169 kN/m",
-   "reference": "Tandjiria (2002).",
+   "reference": "Tandjiria, Low & Teh (2002).",
    "literature": true,
    "commercial": false,
    "surface": "fixed",
@@ -4842,7 +4842,7 @@
     {
      "value": 1.35,
      "method": "Spencer, at T = 170 kN/m",
-     "source": "Tandjiria (2002)",
+     "source": "Tandjiria, Low & Teh (2002)",
      "analysis": "Spencer",
      "computed": 1.3328
     }
@@ -4861,7 +4861,7 @@
   {
    "id": "V086b",
    "title": "Tandjiria embankment, clay fill, water-filled crack",
-   "reference": "Tandjiria (2002).",
+   "reference": "Tandjiria, Low & Teh (2002).",
    "literature": true,
    "commercial": false,
    "surface": "search",
@@ -4870,7 +4870,7 @@
     {
      "value": 0.981,
      "method": "Spencer",
-     "source": "Tandjiria (2002)",
+     "source": "Tandjiria, Low & Teh (2002)",
      "analysis": "Spencer (2 m tension crack)",
      "computed": 0.9681
     }
@@ -4897,7 +4897,7 @@
   {
    "id": "V086c",
    "title": "Tandjiria embankment, sand fill, dry crack",
-   "reference": "Tandjiria (2002).",
+   "reference": "Tandjiria, Low & Teh (2002).",
    "literature": true,
    "commercial": false,
    "surface": "search",
@@ -4906,7 +4906,7 @@
     {
      "value": 1.219,
      "method": "Spencer",
-     "source": "Tandjiria (2002)",
+     "source": "Tandjiria, Low & Teh (2002)",
      "analysis": "Spencer",
      "computed": 1.2063
     }
@@ -5270,13 +5270,13 @@
      "method": "Spencer, non-circular",
      "source": "Greco (1996)",
      "analysis": "Spencer, non-circular",
-     "computed": 1.4011
+     "computed": 1.4019
     }
    ],
    "results": [
     {
      "method": "Spencer, non-circular",
-     "computed": 1.4011,
+     "computed": 1.4019,
      "programs": {
       "min": 1.398,
       "max": 1.398
@@ -5284,7 +5284,7 @@
     },
     {
      "method": "Morgenstern-Price (half-sine), non-circular",
-     "computed": 1.3946,
+     "computed": 1.391,
      "programs": {
       "min": 1.389,
       "max": 1.389
