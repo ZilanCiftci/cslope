@@ -28,6 +28,7 @@ import {
 } from "../../utils/result-summary";
 import { resolveAnnotationText } from "../annotations/resolveAnnotationText";
 import { viewLockForModel } from "../view/viewLock";
+import { fosStatusColor } from "../../utils/fos-color";
 import type {
   MaterialTableColumnKey,
   AnchorPosition,
@@ -487,14 +488,7 @@ export function ResultSidebar() {
               </Label>
               <span
                 className="font-bold tabular-nums"
-                style={{
-                  color:
-                    result.minFOS < 1.0
-                      ? "var(--color-vsc-error)"
-                      : !designValues && result.minFOS < 1.5
-                        ? "var(--color-vsc-warning)"
-                        : "var(--color-vsc-success)",
-                }}
+                style={{ color: fosStatusColor(result.minFOS, designValues) }}
               >
                 {result.minFOS.toFixed(3)}
               </span>
