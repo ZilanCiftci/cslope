@@ -51,7 +51,9 @@ describe("optimiseNonCircular", () => {
     const { seen, evaluate } = instrumented(s);
     const out = optimiseNonCircular(s, start, evaluate, { budgetPerSeed: 120 });
     expect(out.length).toBeGreaterThan(0);
-    expect(seen.length).toBeLessThanOrEqual(120 * start.length);
+    // The budget of each seed, and twice that for the best surface's
+    // further optimisation.
+    expect(seen.length).toBeLessThanOrEqual(120 * (start.length + 2));
     const [el, er, xl, xr] = s.limits;
     for (const p of seen.slice(3)) {
       const pts = p.points!;

@@ -10,7 +10,7 @@ import { toCanonicalSlopeDefinition } from "./canonical";
 import { analyseSlope } from "./solvers";
 import { setEntryExitPlanes } from "./search";
 import { getSlices } from "./slices";
-import { VERIFICATION_CASES } from "../verification/cases";
+import { VERIFICATION_CASES, runVerification } from "../verification/cases";
 
 const caseDef = (id: string) => VERIFICATION_CASES.find((c) => c.id === id)!.definition;
 
@@ -97,5 +97,24 @@ describe("surfaces leaving the model below a re-entrant corner of its base", () 
     }
     expect(slope.search.length).toBeGreaterThan(1000);
     expect(outside).toBe(0);
+  });
+});
+
+describe("non-circular optimisation runs to its minimum", () => {
+  // Restarting the optimisation from its result lowered V050b from 1.2282
+  // to 1.2249 and V051 from 0.6975 to 0.6950: the search stopped while a
+  // cycle still gained more than the tolerance (0.001).
+  const optimised = (id: string) => {
+    const c = VERIFICATION_CASES.find((x) => x.id === id)!;
+    const check = c.checks.find((k) => k.options?.nonCircularOptimization)!;
+    return runVerification(c.definition, check.method, check.options).fos!;
+  };
+
+  it("V050b reaches the minimum found by restarting from the result", { timeout: 60000 }, () => {
+    expect(optimised("V050b")).toBeLessThan(1.2249 + 0.001);
+  });
+
+  it("V051 reaches the minimum found by restarting from the result", { timeout: 60000 }, () => {
+    expect(optimised("V051")).toBeLessThan(0.695 + 0.001);
   });
 });

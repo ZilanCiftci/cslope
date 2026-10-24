@@ -15,7 +15,11 @@
  *   up to six rounds per step size.
  *
  * Once converged the polyline is refined (vertices doubled) and optimised
- * again. Surfaces stay admissible: below the ground, inside the model,
+ * again. The best surface of all seeds is then optimised further while a
+ * cycle still lowers its FOS by more than the analysis tolerance: refined
+ * once more, then restarted from its result with the first shift (Greco
+ * 1996 repeats the search from the last surface until it no longer
+ * improves). Surfaces stay admissible: below the ground, inside the model,
  * concave, and with entry and exit within the search limits. A candidate
  * without a complete-equilibrium solution gets no factor of safety.
  */
@@ -28,7 +32,15 @@ import { circleToPolyline, isAdmissiblePolyline, type Pt } from "./surface";
 type Evaluate = (planes: SearchPlane[]) => void;
 
 const START_VERTICES = 9;
-const MAX_VERTICES = 17;
+/** Vertices of a seed's surface after its one refinement, at most. */
+const SEED_MAX_VERTICES = 17;
+/** Vertices of the best surface after its further refinement, at most. */
+const MAX_VERTICES = 33;
+/**
+ * Further cycles on the best surface, at most. Each halves its shift from
+ * a tenth of the shortest segment, as the first.
+ */
+const POLISH_CYCLES = 4;
 /** Best circles taken as seeds. */
 const SEEDS = 3;
 /** First shift as a fraction of the shortest segment (Celestino & Duncan). */
@@ -43,7 +55,10 @@ const LAST_SHIFT = 0.02;
 const ROUNDS_PER_SHIFT = 6;
 
 export interface OptimiseOptions {
-  /** Maximum surface evaluations per seed. */
+  /**
+   * Maximum surface evaluations per seed; the further optimisation of the
+   * best surface gets twice this.
+   */
   budgetPerSeed?: number;
 }
 
@@ -60,16 +75,34 @@ export function optimiseNonCircular(
 ): SearchPlane[] {
   const budgetPerSeed = options.budgetPerSeed ?? 1500;
   const seeds = pickSeeds(slope, evaluated);
-  const out: SearchPlane[] = [];
+  const results: Optimised[] = [];
   for (const seed of seeds) {
     const result = optimiseCircleSeed(slope, seed, evaluate, budgetPerSeed);
-    if (result) out.push(result);
+    if (result) results.push(result);
   }
   for (const seed of layerSeeds(slope, evaluate)) {
-    const result = optimisePoints(slope, seed.points, seed.axis, evaluate, budgetPerSeed, seed.plane);
-    if (result) out.push(result);
+    results.push(optimisePoints(slope, seed.points, seed.axis, evaluate, budgetPerSeed, seed.plane));
   }
-  return out;
+  // The best surface, while its last cycle still lowered the FOS by more
+  // than the tolerance: the halved shifts of one cycle (or its budget)
+  // stop before the minimum of a surface whose shape is still changing.
+  // Restarting V050b and V051 from their result lowered them 0.3 %.
+  const best = results
+    .filter((r) => r.plane.fos != null)
+    .sort((a, b) => a.plane.fos! - b.plane.fos!)[0];
+  if (best && best.gain > slope.tolerance) {
+    const polished = optimisePoints(slope, best.points, best.axis, evaluate, 2 * budgetPerSeed, best.plane, best.gain);
+    if (polished.plane !== best.plane) results.push(polished);
+  }
+  return results.map((r) => r.plane);
+}
+
+/** An optimised surface, its points and axis, and what its last cycle gained. */
+interface Optimised {
+  plane: SearchPlane;
+  points: Pt[];
+  axis: Pt;
+  gain: number;
 }
 
 /** Best circles with clearly different entry and exit points. */
@@ -112,9 +145,9 @@ function optimiseCircleSeed(
   seed: SearchPlane,
   evaluate: Evaluate,
   budget: number,
-): SearchPlane | null {
+): Optimised | null {
   const axis: Pt = [seed.cx, seed.cy];
-  for (const vertices of [START_VERTICES, MAX_VERTICES, 2 * MAX_VERTICES - 1]) {
+  for (const vertices of [START_VERTICES, SEED_MAX_VERTICES, 2 * SEED_MAX_VERTICES - 1]) {
     const points = circleToPolyline(seed.cx, seed.cy, seed.radius, seed.lc, seed.rc, vertices);
     const plane = makePlane(points, axis);
     evaluate([plane]);
@@ -302,6 +335,12 @@ function layerSeeds(slope: Slope, evaluate: Evaluate): { points: Pt[]; axis: Pt;
 /**
  * Moves the vertices of `points` by the alternating-variable method until
  * no shift helps. `startPlane` is the evaluated plane of `points`.
+ *
+ * A seed (no `lastGain`): one cycle of shifts, the vertices doubled (up to
+ * SEED_MAX_VERTICES), a second cycle. Continuing a surface whose last
+ * cycle gained `lastGain`: while a cycle gains more than the analysis
+ * tolerance, the vertices are doubled (up to MAX_VERTICES), or else the
+ * cycle restarts from the best surface, and another cycle runs.
  */
 function optimisePoints(
   slope: Slope,
@@ -310,7 +349,8 @@ function optimisePoints(
   evaluate: Evaluate,
   budget: number,
   startPlane: SearchPlane,
-): SearchPlane | null {
+  lastGain?: number,
+): Optimised {
   let points = start;
   let used = 0;
   let best = startPlane;
@@ -372,14 +412,18 @@ function optimisePoints(
     return c;
   };
 
-  for (let stage = 0; stage < 2; stage++) {
+  /**
+   * One cycle: Δ from a tenth of the shortest segment, halved down to
+   * LAST_SHIFT of it. Returns how much it lowered the FOS.
+   */
+  const runCycle = (): number => {
+    const cycleStart = best.fos!;
     let minSegment = Infinity;
     for (let i = 1; i < points.length; i++) {
       minSegment = Math.min(minSegment, Math.hypot(points[i][0] - points[i - 1][0], points[i][1] - points[i - 1][1]));
     }
     const firstShift = FIRST_SHIFT * minSegment;
-    if (!(firstShift > 0)) break;
-
+    if (!(firstShift > 0)) return 0;
     for (let delta = firstShift; delta >= LAST_SHIFT * firstShift && used < budget; delta /= 2) {
       for (let round = 0; round < ROUNDS_PER_SHIFT && used < budget; round++) {
         const f0 = best.fos!;
@@ -436,26 +480,46 @@ function optimisePoints(
         points = moved.points;
       }
     }
+    return cycleStart - best.fos!;
+  };
 
-    if (stage === 0 && points.length < MAX_VERTICES && used < budget) {
-      // Double the vertices for a finer shape and optimise again, keeping
-      // the best surface found: the extra slice boundaries change the FOS
-      // slightly.
-      const refined: Pt[] = [points[0]];
-      for (let i = 1; i < points.length; i++) {
-        const [ax, ay] = points[i - 1];
-        const [bx, by] = points[i];
-        refined.push([(ax + bx) / 2, (ay + by) / 2], [bx, by]);
-      }
-      const plane = makePlane(refined, axis);
-      evaluate([plane]);
-      used++;
-      if (plane.fos == null) break;
-      points = refined;
-      if (plane.fos < best.fos!) best = plane;
-    } else {
-      break;
+  /**
+   * Doubles the vertices for a finer shape (keeping the best surface found:
+   * the extra slice boundaries change the FOS slightly), or, past
+   * `maxVertices`, restarts from the best surface. False when it cannot.
+   */
+  const refine = (maxVertices: number, restart: boolean): boolean => {
+    if (used >= budget) return false;
+    if (2 * points.length - 1 > maxVertices) {
+      if (!restart) return false;
+      if (best.points) points = best.points;
+      return true;
+    }
+    const refined: Pt[] = [points[0]];
+    for (let i = 1; i < points.length; i++) {
+      const [ax, ay] = points[i - 1];
+      const [bx, by] = points[i];
+      refined.push([(ax + bx) / 2, (ay + by) / 2], [bx, by]);
+    }
+    const plane = makePlane(refined, axis);
+    evaluate([plane]);
+    used++;
+    if (plane.fos == null) return false;
+    points = refined;
+    if (plane.fos < best.fos!) best = plane;
+    return true;
+  };
+
+  let gain: number;
+  if (lastGain === undefined) {
+    gain = runCycle();
+    if (refine(SEED_MAX_VERTICES, false)) gain = runCycle();
+  } else {
+    gain = lastGain;
+    const tolerance = slope.tolerance;
+    for (let cycle = 0; cycle < POLISH_CYCLES && gain > tolerance && refine(MAX_VERTICES, true); cycle++) {
+      gain = runCycle();
     }
   }
-  return best;
+  return { plane: best, points: best.points ?? points, axis, gain };
 }

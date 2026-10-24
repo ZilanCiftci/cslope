@@ -1,10 +1,12 @@
 import { describe, it, expect } from "vitest";
-import { VERIFICATION_CASES, runVerification } from "../verification";
+import { VERIFICATION_CASES, runVerification, verificationOptions } from "../verification";
+import { buildSlope } from "./build-slope";
+import { toCanonicalSlopeDefinition } from "./canonical";
 import { Material } from "../types/index";
 import { Slope } from "./slope";
 import { getSlices } from "./slices";
 import { addSingleCircularPlane } from "./search";
-import { analyseMorgensternPrice, analyseOrdinary, getSlicePropertyArrays, setMorgensternPriceSolver } from "./solvers";
+import { analyseMorgensternPrice, analyseOrdinary, analyseSlope, getSlicePropertyArrays, setMorgensternPriceSolver } from "./solvers";
 import { analyseMorgensternPriceMarch, march, setMarchSearchOptions, solveMorgensternPriceFast, solveMorgensternPriceMarch } from "./mp-march";
 
 /** The critical surface of the iterative search for a verification problem. */
@@ -16,6 +18,28 @@ function critical(id: string) {
   const s = plane.slices!;
   const props = getSlicePropertyArrays(s, s[0].xLeft, s[s.length - 1].xRight, slope.intersliceFunction, slope.intersliceDataPoints);
   return { fos: fos!, props, F0: analyseOrdinary(slope, s)!, published: k.published };
+}
+
+/**
+ * V002's critical surface of the optimisation before its best surface was
+ * optimised further (FOS 0.4119), on which the iterative solver reaches a
+ * far root: canonical coordinates, moment axis.
+ */
+const V002_SURFACE = {
+  points: [[32.9006, 35], [34.6453, 31.4463], [38.0925, 28.8535], [41.0822, 26.546], [44.0631, 24.2221], [46.7363, 22.1455], [49.4385, 20.1175], [52.0906, 18.432], [54.8722, 16.9687], [57.6663, 15.7865], [60.551, 14.8205], [63.4418, 13.9426], [66.4016, 13.3364], [69.4227, 13.0618], [72.454, 13.1832], [75.3358, 13.7796], [78.0588, 15]] as [number, number][],
+  axis: [69.7991, 60.2313] as [number, number],
+};
+
+/** A fixed surface of a verification problem, analysed as its Morgenstern-Price check. */
+function onSurface(id: string, surface: { points: [number, number][]; axis: [number, number] }) {
+  const c = VERIFICATION_CASES.find((x) => x.id === id)!;
+  const k = c.checks.find((x) => x.method === "Morgenstern-Price")!;
+  const slope = buildSlope({ ...toCanonicalSlopeDefinition(c.definition), customSurfaces: [surface], customPlanesOnly: true });
+  slope.updateAnalysisOptions({ ...verificationOptions("Morgenstern-Price", k.options), nonCircularOptimization: false });
+  analyseSlope(slope);
+  const s = slope.search.find((p) => p.fos != null && p.slices)!.slices!;
+  const props = getSlicePropertyArrays(s, s[0].xLeft, s[s.length - 1].xRight, slope.intersliceFunction, slope.intersliceDataPoints);
+  return { props, F0: analyseOrdinary(slope, s)!, published: k.published };
 }
 
 describe("Morgenstern-Price march solver", () => {
@@ -38,7 +62,7 @@ describe("Morgenstern-Price march solver", () => {
     // The iterative solver reaches 0.344 at λ ≈ −1.08 on this surface when
     // the tolerance is tight; there every slice's denominator has changed
     // sign. The march solver only roots inside the band.
-    const { props, F0, published } = critical("V002");
+    const { props, F0, published } = onSurface("V002", V002_SURFACE);
     const r = solveMorgensternPriceMarch(props, F0);
     expect(r.roots.length).toBe(1);
     expect(r.roots[0].lambda).toBeGreaterThan(0);
