@@ -182,11 +182,12 @@ describe("exportVectorPdf — full model", () => {
         "P = 40 kN/m",
         "P1",
         "1",
-        "25.5 kN/m",
         "FOS",
         "BR",
       ]),
     );
+    // The force at its element's head (numbered when it needs a leader).
+    expect(texts.some((t) => /^(1: )?25\.5 kN\/m$/.test(t))).toBe(true);
     // Capped colour scale (maxFOS 5 > 2 × 1.234) with an ASCII ">=".
     expect(texts.some((t) => t.startsWith("≥ 2.47"))).toBe(true);
   });

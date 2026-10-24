@@ -7,7 +7,9 @@ import {
   loadHeightFraction,
   piezoSymbolLayout,
   placeLabel,
+  segmentDistance,
   segmentHitsBox,
+  stackPositions,
   type Box,
 } from "./overlay-layout";
 
@@ -141,5 +143,25 @@ describe("piezoSymbolLayout", () => {
     const critical = { cx: 100, cy: 30, radius: 50, entryPoint: [50, 30] as [number, number], exitPoint: [150, 30] as [number, number] };
     const [c] = piezoSymbolLayout([[0, -20], [200, -20]], toScreen, { unit: 1, model, critical });
     expect(Math.abs(c.x - 100)).toBeGreaterThan(8);
+  });
+});
+
+describe("stackPositions", () => {
+  it("keeps labels that fit where they want to be", () => {
+    expect(stackPositions([0, 20, 40], 10)).toEqual([0, 20, 40]);
+  });
+
+  it("spreads a crowd evenly around its centre, in order", () => {
+    expect(stackPositions([0, 1, 2], 10)).toEqual([-9, 1, 11]);
+    // Only the crowd moves; a label far away stays.
+    expect(stackPositions([0, 2, 100], 10)).toEqual([-4, 6, 100]);
+  });
+});
+
+describe("segmentDistance", () => {
+  it("is zero for crossing segments and the nearest gap otherwise", () => {
+    expect(segmentDistance([0, 0, 10, 10], [0, 10, 10, 0])).toBe(0);
+    expect(segmentDistance([0, 0, 10, 0], [0, 3, 10, 3])).toBe(3);
+    expect(segmentDistance([0, 0, 10, 0], [13, 4, 20, 4])).toBe(5);
   });
 });

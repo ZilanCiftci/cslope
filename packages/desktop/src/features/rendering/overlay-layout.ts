@@ -50,6 +50,48 @@ export function pointSegmentDistance(px: number, py: number, [x1, y1, x2, y2]: S
   return distanceToSegment(px, py, [x1, y1], [x2, y2]);
 }
 
+/** Shortest distance between two segments (0 when they cross). */
+export function segmentDistance(a: Seg, b: Seg): number {
+  const cross = (ox: number, oy: number, px: number, py: number, qx: number, qy: number) =>
+    (px - ox) * (qy - oy) - (py - oy) * (qx - ox);
+  const d1 = cross(a[0], a[1], a[2], a[3], b[0], b[1]);
+  const d2 = cross(a[0], a[1], a[2], a[3], b[2], b[3]);
+  const d3 = cross(b[0], b[1], b[2], b[3], a[0], a[1]);
+  const d4 = cross(b[0], b[1], b[2], b[3], a[2], a[3]);
+  if (((d1 > 0 && d2 < 0) || (d1 < 0 && d2 > 0)) && ((d3 > 0 && d4 < 0) || (d3 < 0 && d4 > 0))) return 0;
+  return Math.min(
+    pointSegmentDistance(a[0], a[1], b),
+    pointSegmentDistance(a[2], a[3], b),
+    pointSegmentDistance(b[0], b[1], a),
+    pointSegmentDistance(b[2], b[3], a),
+  );
+}
+
+/**
+ * Positions for a row of labels along one axis, each wanting to sit at
+ * `desired` (ascending), at least `pitch` apart, in the same order, with
+ * the least squared movement (isotonic regression by pooling adjacent
+ * violators): labels that fit stay where they want to be, a crowd spreads
+ * evenly around its centre.
+ */
+export function stackPositions(desired: readonly number[], pitch: number): number[] {
+  const blocks: { sum: number; n: number }[] = [];
+  desired.forEach((d, i) => {
+    blocks.push({ sum: d - i * pitch, n: 1 });
+    while (blocks.length > 1) {
+      const b = blocks[blocks.length - 1];
+      const a = blocks[blocks.length - 2];
+      if (a.sum / a.n <= b.sum / b.n) break;
+      a.sum += b.sum;
+      a.n += b.n;
+      blocks.pop();
+    }
+  });
+  const out: number[] = [];
+  for (const b of blocks) for (let k = 0; k < b.n; k++) out.push(b.sum / b.n + out.length * pitch);
+  return out;
+}
+
 /** Segments of an open polyline. */
 export function polylineSegments(pts: readonly Pt[]): Seg[] {
   const out: Seg[] = [];
