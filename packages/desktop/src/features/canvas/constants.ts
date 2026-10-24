@@ -15,6 +15,11 @@ export const ARROW_HEAD_PX = 8; // arrowhead half-width in pixels
 export const ARROW_HEAD_LEN_PX = 12; // arrowhead length in pixels
 export const HATCH_SPACING_PX = 8; // spacing between hatch lines
 export const RULER_SIZE_PX = 32; // axis overlay ruler band width/height
+/**
+ * Band at the bottom of the canvas that the floating toolbar covers (it sits
+ * 40 px above the bottom and is 36 px high), kept free by zoom-to-fit.
+ */
+export const FLOATING_TOOLBAR_RESERVE_PX = 40 + 36 + 8;
 
 // Load colors — derived from shared style-spec
 export const UDL_COLOR = UDL_LOAD_COLOR.hex;

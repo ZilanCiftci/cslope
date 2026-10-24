@@ -10,35 +10,48 @@ import {
   mirrorPoints,
   mirrorX,
 } from "@cslope/engine";
-import { DEFAULT_RESULT_VIEW_SETTINGS, PAPER_DIMENSIONS } from "./defaults";
+import { DEFAULT_RESULT_VIEW_SETTINGS, PAPER_DIMENSIONS, PLOT_MARGINS } from "./defaults";
+import { getPlotAspectRatio } from "../features/view/paper";
+import { paperViewLock } from "../features/view/viewLock";
+import type { PaperContent } from "../features/view/extents";
 
 type ExamplePaperOptions = {
   paperSize?: keyof typeof PAPER_DIMENSIONS;
   landscape?: boolean;
+  /** Title, FOS and material table at the top of the paper (the examples); false for none. */
+  annotations?: boolean;
 };
 
-/** Result view of an example: the paper fitted to the model, with a title and a material table. */
+/**
+ * Bottom of the examples' title block (title, subtitle, FOS line) and
+ * material table, as a share of the paper height from the top.
+ */
+const EXAMPLE_TITLE_BLOCK_BOTTOM = 0.22;
+
+/**
+ * Result view of an example: the paper fitted to the model, with a title
+ * and a material table (`annotations: false` leaves them out).
+ *
+ * The model is drawn at true scale, so its width sets the scale and a flat
+ * model leaves height to spare. Without annotations (the verification
+ * problems) the model is centred vertically on the paper; with them the top
+ * of the plot is kept free for the title block and the model is centred in
+ * the rest, so neither covers the other. `content` may name the water
+ * lines, loads, reinforcement and piles to keep on the paper too.
+ */
 export function createExampleResultViewSettings(
-  coordinates: [number, number][],
+  content: [number, number][] | PaperContent,
   paperOptions: ExamplePaperOptions = {},
 ): ModelEntry["resultViewSettings"] {
-  const xs = coordinates.map((c) => c[0]);
-  const ys = coordinates.map((c) => c[1]);
-  const xMin = Math.min(...xs);
-  const xMax = Math.max(...xs);
-  const yMin = Math.min(...ys);
+  const paperContent = Array.isArray(content) ? { coordinates: content } : content;
   const paperSize =
     paperOptions.paperSize ?? DEFAULT_RESULT_VIEW_SETTINGS.paperFrame.paperSize;
   const landscape = paperOptions.landscape ?? true;
-  const { w, h } = PAPER_DIMENSIONS[paperSize];
-  const paperWidth = landscape ? Math.max(w, h) : Math.min(w, h);
-  const paperHeight = landscape ? Math.min(w, h) : Math.max(w, h);
-  const margin = Math.floor((xMax - xMin) / 25); // Add 1x margin on each side
-  const bottomLeftX = xMin - margin;
-  const topRightX = xMax + margin;
-  const bottomLeftY = yMin - margin;
-  const xSpan = topRightX - bottomLeftX;
-  const topRightY = bottomLeftY + (xSpan * paperHeight) / paperWidth;
+  const withAnnotations = paperOptions.annotations ?? true;
+  const topBand = withAnnotations
+    ? (EXAMPLE_TITLE_BLOCK_BOTTOM - PLOT_MARGINS.T) / (1 - PLOT_MARGINS.T - PLOT_MARGINS.B)
+    : 0;
+  const viewLock = paperViewLock(paperContent, getPlotAspectRatio(paperSize, landscape), { topBand });
 
   return {
     ...DEFAULT_RESULT_VIEW_SETTINGS,
@@ -47,15 +60,12 @@ export function createExampleResultViewSettings(
       paperSize,
       landscape,
     },
-    viewLock: {
-      bottomLeft: [bottomLeftX, bottomLeftY],
-      topRight: [topRightX, topRightY],
-    },
+    ...(viewLock ? { viewLock } : {}),
     showFosLabel: false,
     showCentreMarker: false,
     showGrid: false,
     showSoilColor: true,
-    annotations: [
+    annotations: withAnnotations ? [
       {
         id: "anno-8d2aabaf-31cb-43b5-b9a5-980aa7354464",
         type: "text",
@@ -83,13 +93,13 @@ export function createExampleResultViewSettings(
       {
         id: "anno-benchmark-material-table",
         type: "material-table",
-        x: 0.95,
-        y: 0.05,
+        x: 0.94,
+        y: 0.065,
         anchor: "top-right",
         fontSize: 6,
         tableColumns: ["model", "unitWeight", "cohesion", "frictionAngle"],
       },
-    ],
+    ] : [],
   };
 }
 
@@ -313,7 +323,7 @@ const ARAI_TAGYO: ModelEntry = {
   name: "Arai & Tagyo (1985)",
   projectInfo: {
     title: "Arai & Tagyo (1985)",
-    subtitle: "Published FOS: 1.118 (verification manual of a commercial program), 1.138 (Arai & Tagyo)",
+    subtitle: "Published FOS: 1.118 (software manual), 1.138 (Arai & Tagyo)",
     client: "",
     projectNumber: "",
     revision: "0",

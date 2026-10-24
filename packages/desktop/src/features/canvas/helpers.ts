@@ -14,6 +14,7 @@ import {
   type DrawableSurface,
 } from "../../utils/arc";
 import { computePaperFrame } from "../view/paper";
+import { waterLineFitPoints } from "../view/extents";
 import { MODEL_SHORT_LABELS } from "../rendering/style-spec";
 import { flatFieldsFromModel } from "../properties/sections/material-forms/model-defaults";
 import { resolveAnnotationText } from "../annotations/resolveAnnotationText";
@@ -600,8 +601,10 @@ export function collectModelFitBounds(params: {
     for (const [x, y] of boundary.coordinates) addPoint(x, y);
   }
 
+  // Only the part of a water line over the model, and none of a line wholly
+  // below it (a far-off "dry" line would otherwise shrink the model).
   for (const line of piezometricLines) {
-    for (const [x, y] of line.coordinates) addPoint(x, y);
+    for (const [x, y] of waterLineFitPoints(line.coordinates, coordinates)) addPoint(x, y);
   }
 
   if (analysisLimits.enabled) {

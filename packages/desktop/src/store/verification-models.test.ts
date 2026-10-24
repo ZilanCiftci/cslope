@@ -4,6 +4,7 @@ import { VERIFICATION_CASES, presentedAnalyses, runVerification } from "@cslope/
 import { useAppStore } from "./app-store";
 import { buildSlopeDTOFromModel } from "./helpers";
 import { verificationModel } from "./verification-models";
+import { viewLockContains } from "../features/view/viewLock";
 
 describe("verification models", () => {
   it("Benchmarks opens every verification problem", () => {
@@ -29,5 +30,26 @@ describe("verification models", () => {
     const { fos } = runVerification(c.definition, a.method, a.options);
     expect(app).not.toBeNull();
     expect(app!).toBeCloseTo(fos!, 6);
+  });
+});
+
+describe("verification paper frame", () => {
+  const model = (id: string) => verificationModel(VERIFICATION_CASES.find((c) => c.id === id)!);
+
+  it("keeps the pool level of V041b on the paper", () => {
+    const m = model("V041b");
+    const lock = m.resultViewSettings!.viewLock!;
+    const poolTop = Math.max(...m.piezometricLine.lines.flatMap((l) => l.coordinates.map(([, y]) => y)));
+    expect(lock.topRight[1]).toBeGreaterThan(poolTop);
+  });
+
+  it("leaves a margin around every model and its reinforcement", () => {
+    for (const c of VERIFICATION_CASES) {
+      const m = verificationModel(c);
+      const lock = m.resultViewSettings!.viewLock!;
+      const ends = (m.reinforcements ?? []).flatMap((r) => [[r.x1, r.y1], [r.x2, r.y2]] as [number, number][]);
+      const inside = { bottomLeft: [lock.bottomLeft[0] + 1e-3, lock.bottomLeft[1] + 1e-3], topRight: [lock.topRight[0] - 1e-3, lock.topRight[1] - 1e-3] } as typeof lock;
+      expect(viewLockContains(inside, [...m.coordinates, ...ends]), c.id).toBe(true);
+    }
   });
 });

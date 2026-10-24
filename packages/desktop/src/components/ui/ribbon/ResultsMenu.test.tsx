@@ -6,11 +6,16 @@ import type { AnalysisResult } from "@cslope/engine";
 const mocks = vi.hoisted(() => ({
   exportVectorPdf: vi.fn(),
   downloadFile: vi.fn(),
+  drawCanvas: vi.fn(),
 }));
 
 vi.mock("../../../features/pdf/pdf-export", async (importOriginal) => ({
   ...(await importOriginal<typeof import("../../../features/pdf/pdf-export")>()),
   exportVectorPdf: mocks.exportVectorPdf,
+}));
+vi.mock("../../../features/canvas/draw", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("../../../features/canvas/draw")>()),
+  drawCanvas: mocks.drawCanvas,
 }));
 vi.mock("../../../utils/download", async (importOriginal) => ({
   ...(await importOriginal<typeof import("../../../utils/download")>()),
@@ -19,6 +24,7 @@ vi.mock("../../../utils/download", async (importOriginal) => ({
 
 import { ResultsMenu } from "./ResultsMenu";
 import { useAppStore } from "../../../store/app-store";
+import { PNG_PAPER_LAYOUT_WIDTH_PX, PNG_SCALE, setPaperDrawSource } from "../../../features/export/paper-png";
 import { useSensitivityStore } from "../../../features/sensitivity/store";
 import { useReliabilityStore } from "../../../features/reliability/store";
 
@@ -276,11 +282,16 @@ describe("ResultsMenu", () => {
       cb(0);
       return 0;
     });
-    const canvas = document.createElement("canvas");
-    canvas.dataset.testid = "slope-canvas";
-    canvas.width = 800;
-    canvas.height = 600;
-    document.body.appendChild(canvas);
+    // The result canvas registers what it draws; the export draws it again.
+    const unregister = setPaperDrawSource(
+      () => ({ w: 800, h: 600, resultViewSettings: rvs() }) as never,
+    );
+    act(() => useAppStore.setState({ resultViewScale: 10, resultViewOffset: [0, 0] }));
+    document.documentElement.dataset.theme = "dark";
+    let themeWhileDrawing: string | undefined;
+    mocks.drawCanvas.mockImplementation(() => {
+      themeWhileDrawing = document.documentElement.dataset.theme;
+    });
     const drawImage = vi.fn();
     const realCreate = document.createElement.bind(document);
     let exportCanvas: HTMLCanvasElement | null = null;
@@ -291,6 +302,7 @@ describe("ResultsMenu", () => {
         exportCanvas = el as HTMLCanvasElement;
         (el as HTMLCanvasElement).getContext = (() => ({
           fillRect: () => {},
+          setTransform: () => {},
           drawImage,
           fillStyle: "",
         })) as unknown as HTMLCanvasElement["getContext"];
@@ -307,7 +319,12 @@ describe("ResultsMenu", () => {
     await userEvent.click(screen.getByTitle("More export options"));
     await userEvent.click(screen.getByRole("button", { name: "Export as PNG" }));
     expect(drawImage).toHaveBeenCalledTimes(1);
-    expect(exportCanvas!.width).toBeGreaterThan(0);
+    // At a fixed size, whatever the screen, in the light theme.
+    expect(exportCanvas!.width).toBe(PNG_PAPER_LAYOUT_WIDTH_PX * PNG_SCALE);
+    expect(themeWhileDrawing).toBe("light");
+    expect(document.documentElement.dataset.theme).toBe("dark");
+    expect(document.documentElement.style.getPropertyValue("--color-canvas-paper")).toBe("");
+    unregister();
     expect(link!.download).toMatch(/\.png$/);
     expect(link!.href).toBe("data:image/png;base64,xx");
     expect(store().selectedAnnotationIds).toEqual(["a1"]);
