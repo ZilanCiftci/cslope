@@ -36,8 +36,9 @@ export function boundsOf(points: Pt[]): Bounds | null {
 /**
  * The part of a water line that a view of the model should show: the line
  * clipped to the model's x range (water lines are often drawn far past the
- * slope), and nothing when that part lies wholly below the model's base
- * (a "dry" line, e.g. at y = -100 under a 15 m model).
+ * slope), raised to the model's base where it lies below it, and nothing
+ * when that part lies wholly below the base (a "dry" line, e.g. at
+ * y = -100 under a 15 m model).
  */
 export function waterLineFitPoints(line: Pt[], model: Pt[]): Pt[] {
   const mb = boundsOf(model);
@@ -60,7 +61,8 @@ export function waterLineFitPoints(line: Pt[], model: Pt[]): Pt[] {
     pts.push([x0, yAt(x0)], [x1, yAt(x1)]);
   }
   if (pts.every(([, y]) => y < mb.yMin)) return [];
-  return pts;
+  // A line partly below the base: what lies below it stays out of view.
+  return pts.map(([x, y]) => [x, Math.max(y, mb.yMin)]);
 }
 
 /** What a model draws on the paper, in world units (loads stand on the ground surface). */
@@ -71,6 +73,25 @@ export interface PaperContent {
   lineLoads?: { x: number; magnitude: number }[];
   reinforcements?: { x1: number; y1: number; x2: number; y2: number }[];
   piles?: { x1: number; y1: number; x2: number; y2: number }[];
+}
+
+/** What a model (or the app state of one) draws on the paper. */
+export function paperContentOf(model: {
+  coordinates: Pt[];
+  piezometricLine?: { lines: { coordinates: Pt[] }[] };
+  udls?: PaperContent["udls"];
+  lineLoads?: PaperContent["lineLoads"];
+  reinforcements?: PaperContent["reinforcements"];
+  piles?: PaperContent["piles"];
+}): PaperContent {
+  return {
+    coordinates: model.coordinates,
+    waterLines: (model.piezometricLine?.lines ?? []).map((l) => l.coordinates),
+    udls: (model.udls ?? []).map(({ x1, x2, magnitude }) => ({ x1, x2, magnitude })),
+    lineLoads: (model.lineLoads ?? []).map(({ x, magnitude }) => ({ x, magnitude })),
+    reinforcements: (model.reinforcements ?? []).map(({ x1, y1, x2, y2 }) => ({ x1, y1, x2, y2 })),
+    piles: (model.piles ?? []).map(({ x1, y1, x2, y2 }) => ({ x1, y1, x2, y2 })),
+  };
 }
 
 /*

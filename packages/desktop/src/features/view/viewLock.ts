@@ -1,5 +1,6 @@
-import type { ViewLock } from "../../store/types";
+import type { Annotation, ResultViewSettings, ViewLock } from "../../store/types";
 import { PLOT_MARGINS } from "../../store/defaults";
+import { getPlotAspectRatio } from "./paper";
 import { boundsOf, paperContentBounds, type Bounds, type PaperContent } from "./extents";
 
 type Pt = [number, number];
@@ -59,15 +60,6 @@ export function fitViewLock(content: Bounds, aspect: number, opts: FitViewLockOp
   return { bottomLeft: [left, bottom], topRight: [right, bottom + height] };
 }
 
-/**
- * Locked view around the model with a 1 m margin and the plot aspect ratio
- * (the "Use Model Bounds" result).
- */
-export function viewLockForModel(coords: Pt[], aspect: number): ViewLock {
-  const b = boundsOf(coords) ?? { xMin: 0, xMax: 0, yMin: 0, yMax: 0 };
-  return fitViewLock(b, aspect, { margin: 1, placement: "bottom" });
-}
-
 /** Margin around the paper content: a share of its larger span. */
 export const PAPER_MARGIN_FRACTION = 0.06;
 
@@ -78,7 +70,7 @@ export const PAPER_MARGIN_FRACTION = 0.06;
  * window, the PDF, the PNG export) has the symbols relatively smaller, so
  * they fit there too.
  */
-const REFERENCE_PAPER_WIDTH_PX = 640;
+export const REFERENCE_PAPER_WIDTH_PX = 640;
 
 /**
  * The locked view that frames a model on the paper: at true scale (equal
@@ -119,4 +111,41 @@ export function paperViewLock(
     if (same) break;
   }
   return lock;
+}
+
+/**
+ * Bottom of the title block (title, subtitle, FOS line) and material table
+ * at the top of the paper in the default result layout, as a share of the
+ * paper height from the top.
+ */
+export const TITLE_BLOCK_BOTTOM = 0.22;
+
+/**
+ * Share of the plot height at its top that `paperViewLock` keeps free of the
+ * model for the annotations at the top of the paper: down to the bottom of
+ * the title block when an annotation sits there (the default layout, the
+ * examples), none otherwise (the verification problems).
+ */
+export function paperTopBand(annotations: readonly Pick<Annotation, "y">[]): number {
+  if (!annotations.some((a) => a.y < TITLE_BLOCK_BOTTOM)) return 0;
+  return (TITLE_BLOCK_BOTTOM - PLOT_MARGINS.T) / (1 - PLOT_MARGINS.T - PLOT_MARGINS.B);
+}
+
+/**
+ * The paper frame of a model for a result view's paper and annotations:
+ * what a model starts with, "Use model bounds" sets and the automatic
+ * refit after the geometry grows. A placeholder view without geometry.
+ */
+export function modelViewLock(
+  content: PaperContent,
+  settings: Pick<ResultViewSettings, "paperFrame" | "annotations">,
+): ViewLock {
+  const { paperSize, landscape } = settings.paperFrame;
+  const aspect = getPlotAspectRatio(paperSize, landscape);
+  return (
+    paperViewLock(content, aspect, { topBand: paperTopBand(settings.annotations) }) ?? {
+      bottomLeft: [-1, -1],
+      topRight: [21, -1 + 22 / aspect],
+    }
+  );
 }

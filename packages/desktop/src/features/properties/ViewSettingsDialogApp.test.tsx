@@ -9,6 +9,8 @@ import { useAppStore } from "../../store/app-store";
 import { installFakeBridge, type FakeBridge } from "../../test/fake-bridge";
 import type { ResultViewSettings } from "../../store/types";
 import { getPlotAspectRatio } from "../view/paper";
+import { modelViewLock, viewLockContains } from "../view/viewLock";
+import type { PaperContent } from "../view/extents";
 
 let bridge: FakeBridge;
 const rvs = () => useAppStore.getState().resultViewSettings;
@@ -19,9 +21,10 @@ const COORDS: [number, number][] = [
   [30, 0],
 ];
 
-function hydrate(patch: Partial<ResultViewSettings> = {}) {
+function hydrate(patch: Partial<ResultViewSettings> = {}, paperContent?: PaperContent) {
   const base = structuredClone(useAppStore.getState().resultViewSettings);
   bridge.emit("onViewSettingsState", {
+    ...(paperContent ? { paperContent } : {}),
     resultViewSettings: {
       ...base,
       paperFrame: { ...base.paperFrame, paperSize: "A4", landscape: true },
@@ -157,17 +160,18 @@ describe("ViewSettingsDialogApp", () => {
     expect(Number(left.value)).toBe(0);
   });
 
-  it("fits the extents to the model bounds with a 1 m margin", async () => {
+  it("fits the extents to the model as the main window does, with what it draws", async () => {
     render(<ViewSettingsDialogApp />);
-    hydrate();
+    // The main window sends the loads, water and reinforcement along.
+    const content: PaperContent = { coordinates: COORDS, lineLoads: [{ x: 15, magnitude: 80 }] };
+    hydrate({}, content);
     await userEvent.click(screen.getByRole("button", { name: "Use Model Bounds" }));
-    const ar = getPlotAspectRatio("A4", true);
     const vl = rvs().viewLock!;
-    expect(vl.bottomLeft).toEqual([-1, -1]);
-    expect(vl.topRight[0]).toBe(31);
-    expect(vl.topRight[1]).toBeCloseTo(-1 + 32 / ar, 9);
+    expect(vl).toEqual(modelViewLock(content, rvs()));
+    expect(vl.topRight[1]).toBeGreaterThan(modelViewLock({ coordinates: COORDS }, rvs()).topRight[1]);
     expect(lastSent().resultViewSettings.viewLock).toEqual(vl);
   });
+
   it("fits a tall, narrow model whole instead of cutting off its top", async () => {
     render(<ViewSettingsDialogApp />);
     const base = structuredClone(useAppStore.getState().resultViewSettings);
@@ -180,8 +184,7 @@ describe("ViewSettingsDialogApp", () => {
     });
     await userEvent.click(screen.getByRole("button", { name: "Use Model Bounds" }));
     const vl = rvs().viewLock!;
-    expect(vl.topRight[1]).toBeGreaterThanOrEqual(41 - 1e-9);
-    expect(vl.bottomLeft[1]).toBeCloseTo(-1, 9);
+    expect(viewLockContains(vl, tall)).toBe(true);
     const ar = getPlotAspectRatio("A4", true);
     expect((vl.topRight[0] - vl.bottomLeft[0]) / (vl.topRight[1] - vl.bottomLeft[1])).toBeCloseTo(ar, 9);
   });

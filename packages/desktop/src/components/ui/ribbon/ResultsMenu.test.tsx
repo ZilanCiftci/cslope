@@ -24,7 +24,12 @@ vi.mock("../../../utils/download", async (importOriginal) => ({
 
 import { ResultsMenu } from "./ResultsMenu";
 import { useAppStore } from "../../../store/app-store";
-import { PNG_PAPER_LAYOUT_WIDTH_PX, PNG_SCALE, setPaperDrawSource } from "../../../features/export/paper-png";
+import {
+  PNG_PAPER_LAYOUT_WIDTH_PX,
+  PNG_SCALE,
+  paperPngDataUrl,
+  setPaperDrawSource,
+} from "../../../features/export/paper-png";
 import { useSensitivityStore } from "../../../features/sensitivity/store";
 import { useReliabilityStore } from "../../../features/reliability/store";
 
@@ -277,20 +282,32 @@ describe("ResultsMenu", () => {
     expect(calls[1][2]).toBe("text/csv;charset=utf-8");
   });
 
-  it("exports a PNG of the paper area and restores the selection", async () => {
-    vi.spyOn(window, "requestAnimationFrame").mockImplementation((cb) => {
-      cb(0);
-      return 0;
-    });
+  it("gives no paper PNG without a result (the canvas has no paper then)", () => {
+    const unregister = setPaperDrawSource(
+      () => ({ w: 800, h: 600, resultViewSettings: rvs(), result: null }) as never,
+    );
+    act(() => useAppStore.setState({ resultViewScale: 10, resultViewOffset: [0, 0] }));
+    const draws = mocks.drawCanvas.mock.calls.length;
+    try {
+      expect(paperPngDataUrl()).toBeNull();
+      expect(mocks.drawCanvas.mock.calls.length).toBe(draws);
+    } finally {
+      unregister();
+    }
+  });
+
+  it("exports a PNG of the paper drawn again without the selection", async () => {
     // The result canvas registers what it draws; the export draws it again.
     const unregister = setPaperDrawSource(
-      () => ({ w: 800, h: 600, resultViewSettings: rvs() }) as never,
+      () => ({ w: 800, h: 600, resultViewSettings: rvs(), result: store().result }) as never,
     );
     act(() => useAppStore.setState({ resultViewScale: 10, resultViewOffset: [0, 0] }));
     document.documentElement.dataset.theme = "dark";
     let themeWhileDrawing: string | undefined;
-    mocks.drawCanvas.mockImplementation(() => {
+    let selectionWhileDrawing: unknown;
+    mocks.drawCanvas.mockImplementation((_ctx: unknown, params: { selectedAnnotationIds: string[] }) => {
       themeWhileDrawing = document.documentElement.dataset.theme;
+      selectionWhileDrawing = params.selectedAnnotationIds;
     });
     const drawImage = vi.fn();
     const realCreate = document.createElement.bind(document);
@@ -319,6 +336,8 @@ describe("ResultsMenu", () => {
     await userEvent.click(screen.getByTitle("More export options"));
     await userEvent.click(screen.getByRole("button", { name: "Export as PNG" }));
     expect(drawImage).toHaveBeenCalledTimes(1);
+    // Drawn without the selection, which the view keeps.
+    expect(selectionWhileDrawing).toEqual([]);
     // At a fixed size, whatever the screen, in the light theme.
     expect(exportCanvas!.width).toBe(PNG_PAPER_LAYOUT_WIDTH_PX * PNG_SCALE);
     expect(themeWhileDrawing).toBe("light");
