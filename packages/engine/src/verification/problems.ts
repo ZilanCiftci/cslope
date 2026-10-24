@@ -2651,8 +2651,8 @@ export const PROBLEMS: RawCase[] = [
     surface: "fixed",
     units: "SI",
     inputFromFigure: true,
-    description: "112 ft embankment on a granular foundation under steady seepage: piezometric line from the pool through the chimney drain to the tailwater, which stands on the downstream toe (free water). USACE's circle. Converted to SI.",
-    definition: {"coordinates":[[0,-22.86],[0,30.48],[11.704320000000001,30.48],[18.53184,34.1376],[24.6888,34.1376],[59.40552,22.46376],[121.92,0],[137.16,0],[137.16,-22.86]],"materials":[{"name":"Embankment","model":{"kind":"mohr-coulomb","unitWeight":20.4213698,"cohesion":0,"frictionAngle":34}},{"name":"Foundation","model":{"kind":"mohr-coulomb","unitWeight":19.635932500000003,"cohesion":0,"frictionAngle":35}}],"materialBoundaries":[{"coordinates":[[-1,0],[138.16,0]],"materialName":""}],"regionAssignments":[{"point":[1.3716,0.05],"materialName":"Embankment"},{"point":[1.3716,-11.43],"materialName":"Foundation"}],"waterTable":{"mode":"custom","value":[[0,30.48],[11.704320000000001,30.48],[36.91128,21.031200000000002],[54.68112000000001,6.8580000000000005],[137.16,6.8580000000000005]],"followBoundary":false},"customSearchPlanes":[{"cx":81.9912,"cy":75.5904,"radius":85.34400000000001}],"customPlanesOnly":true},
+    description: "112 ft embankment on a granular foundation under steady seepage: piezometric line from the pool through the chimney drain to the tailwater, which stands on the downstream toe (free water). The upstream face rises from (30.2, 100) ft to the crest (60.8, 112). USACE's circle. Converted to SI.",
+    definition: {"coordinates":[[0,-22.86],[0,30.48],[9.20496,30.48],[18.53184,34.1376],[24.6888,34.1376],[59.40552,22.46376],[121.92,0],[137.16,0],[137.16,-22.86]],"materials":[{"name":"Embankment","model":{"kind":"mohr-coulomb","unitWeight":20.4213698,"cohesion":0,"frictionAngle":34}},{"name":"Foundation","model":{"kind":"mohr-coulomb","unitWeight":19.635932500000003,"cohesion":0,"frictionAngle":35}}],"materialBoundaries":[{"coordinates":[[-1,0],[138.16,0]],"materialName":""}],"regionAssignments":[{"point":[1.3716,0.05],"materialName":"Embankment"},{"point":[1.3716,-11.43],"materialName":"Foundation"}],"waterTable":{"mode":"custom","value":[[0,30.48],[11.704320000000001,30.48],[36.91128,21.031200000000002],[54.68112000000001,6.8580000000000005],[137.16,6.8580000000000005]],"followBoundary":false},"customSearchPlanes":[{"cx":81.9912,"cy":75.5904,"radius":85.34400000000001}],"customPlanesOnly":true},
     checks: [
       {"method":"Bishop","label":"Bishop simplified","published":2.011,"publishedBy":"Commercial program A"},
       {"method":"Morgenstern-Price","label":"Spencer (M-P, constant f(x))","published":2.026,"publishedBy":"Commercial program A","options":{"intersliceFunction":"constant"}},
@@ -2661,6 +2661,7 @@ export const PROBLEMS: RawCase[] = [
     paper: [{"value": 2.01, "source": "USACE EM 1110-2-1902"}],
     notes: [
       "The kink of the piezometric line is located from the figure to about a foot; program D also reads 0.6 % low.",
+      "The upstream face starts at x = 30.2 ft, not 38.4 ft: commercial program A prints its slip surface entering at (31.096, 100.345), which lies on the face from (30.2, 100) to the crest (60.8, 112) but above the level ground of a face starting at 38.4 ft, and its Fig. 69.1 shows the face starting at about 30 ft (vertices calibrated on the labelled section) with the piezometric line leaving el. 100 at the second vertex, 38.4 ft. USACE's slices (Fig. F-17: widths 31 and 21 ft up to the crest corner) agree. On the corrected outline cSlope gives Bishop 1.990, Spencer 2.005, Janbu corrected 1.824 (before: 1.998 / 2.012 / 1.833).",
     ],
   },
   {
