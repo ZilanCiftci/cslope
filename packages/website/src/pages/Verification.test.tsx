@@ -33,6 +33,14 @@ describe("Verification page", () => {
     expect(screen.getByText("No problems match the filter.")).toBeInTheDocument();
   });
 
+  it("marks a disputed published value with its reason", () => {
+    renderPage();
+    fireEvent.change(screen.getByRole("searchbox"), { target: { value: "Zhu & Lee heterogeneous slope, dry" } });
+    const mark = screen.getByText("disputed");
+    expect(mark.tagName).toBe("ABBR");
+    expect(mark.getAttribute("title")).toMatch(/Table II/);
+  });
+
   it("counts the analyses shown", () => {
     renderPage();
     const s = VERIFICATION.summary;

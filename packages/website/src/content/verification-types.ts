@@ -14,6 +14,8 @@ export interface PublishedValue {
   method?: string;
   /** e.g. "Arai & Tagyo (1985)". */
   source: string;
+  /** Why the value is shown but not counted in the error statistics. */
+  disputed?: string;
   /** cSlope's analysis for this value (a `results` method), when cSlope has the method. */
   analysis?: string;
   /** cSlope's result of that analysis; null when cSlope does not have the method. */

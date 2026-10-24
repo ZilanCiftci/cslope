@@ -5397,6 +5397,7 @@
      "value": 1.429,
      "method": "Bishop simplified",
      "source": "Zhu & Lee (2002)",
+     "disputed": "Confirmed in Zhu & Lee (2002), Table II, which also gives Spencer 1.836 and Morgenstern-Price 1.823 for the same circle; the authors read the gap as simplified Bishop underestimating deep circles by up to 18 %. On a circle simplified Bishop satisfies moment equilibrium about the centre as the rigorous methods do and normally comes within a few per cent of them; the programs and cSlope give about 1.80 with both. Not counted in the error statistics.",
      "analysis": "Bishop simplified",
      "computed": 1.7933
     },
@@ -5430,7 +5431,7 @@
      "programs": null
     }
    ],
-   "note": "Zhu & Lee's Bishop value 1.429 is about 20 % below their own Spencer and Morgenstern-Price values; the programs give about 1.80 with both methods."
+   "note": "Zhu & Lee's simplified Bishop value 1.429 (their Table II) is 22 % below their own Spencer (1.836) and Morgenstern-Price (1.823) values for the same circle; the programs and cSlope give about 1.80 with both methods, as expected on a circle. The value is shown but not counted in the error statistics. The paper has no tension crack and gives the surface only in a figure; the crack and the circle here follow a program's version of the problem."
   },
   {
    "id": "V096b",
@@ -5507,6 +5508,7 @@
      "value": 1.429,
      "method": "Bishop simplified",
      "source": "Zhu & Lee (2002)",
+     "disputed": "Confirmed in Zhu & Lee (2002), Table II, which also gives Spencer 1.836 and Morgenstern-Price 1.823 for the same circle; the authors read the gap as simplified Bishop underestimating deep circles by up to 18 %. On a circle simplified Bishop satisfies moment equilibrium about the centre as the rigorous methods do and normally comes within a few per cent of them; the programs and cSlope give about 1.80 with both. Not counted in the error statistics.",
      "analysis": "Bishop simplified",
      "computed": 1.799
     },
@@ -5540,7 +5542,7 @@
      "programs": null
     }
    ],
-   "note": "Zhu & Lee's Bishop value 1.429 is about 20 % below their own Spencer and Morgenstern-Price values; the programs give about 1.80 with both methods."
+   "note": "Zhu & Lee's simplified Bishop value 1.429 (their Table II) is 22 % below their own Spencer (1.836) and Morgenstern-Price (1.823) values for the same circle; the programs and cSlope give about 1.80 with both methods, as expected on a circle. The value is shown but not counted in the error statistics. The paper has no tension crack and gives the surface only in a figure; the crack and the circle here follow a program's version of the problem."
   },
   {
    "id": "V097a",

@@ -22,6 +22,13 @@ export interface PaperValue {
   /** Who published it, e.g. "Arai & Tagyo (1985)". */
   source: string;
   /**
+   * Why the value is shown but left out of the error statistics: a value
+   * confirmed in the source that disagrees with the source's own rigorous
+   * results for the same surface and with every program, so it measures
+   * the source rather than cSlope.
+   */
+  disputed?: string;
+  /**
    * The cSlope analysis with the same method (its label in
    * presentedAnalyses), when cSlope has that method; set by paperValues.
    */

@@ -64,6 +64,14 @@ function Published({ values }: { values: PublishedValue[] }) {
           <span className="text-muted-foreground">
             {v.method ? `${v.method} · ` : ""}
             {v.source}
+            {v.disputed && (
+              <>
+                {" · "}
+                <abbr title={v.disputed} className="cursor-help">
+                  disputed
+                </abbr>
+              </>
+            )}
           </span>
           {v.computed != null && (
             <span className="whitespace-nowrap text-muted-foreground">

@@ -934,7 +934,12 @@ caseResults.forEach((r, i) => {
           { title: "Source", width: CONTENT_W - 112 },
           { title: "cSlope", width: 20, align: "right" },
         ],
-        published.map((v) => [formatPaperValue(v), v.method ?? "not stated", v.source, paperResult(r, v.analysis)]),
+        published.map((v) => [
+          formatPaperValue(v),
+          v.method ?? "not stated",
+          v.disputed ? `${v.source} (disputed: see the note)` : v.source,
+          paperResult(r, v.analysis),
+        ]),
       );
     } else {
       paragraph("The source publishes no factor of safety for this problem.", 8.5, "italic", MUTED);

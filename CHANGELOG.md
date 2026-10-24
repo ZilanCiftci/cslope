@@ -54,3 +54,4 @@ The first public release.
 ### Verification
 
 - 177 verification problems with 356 reference values from the literature and from other programs, run by the automated tests on every change.
+- A published value that is confirmed in its source but contradicts the source's own rigorous results for the same surface is shown as disputed, with the reason, and left out of the error statistics (Zhu & Lee's simplified Bishop value 1.429 for surface 3).

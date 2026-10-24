@@ -37,6 +37,12 @@ describe("verification log", () => {
     expect(k).toBe("V1|Bishop|Paper|2");
   });
 
+  it("leaves disputed published values out of the statistics", () => {
+    const d = data(2);
+    d.problems[0].published.push({ value: 1.4, method: "Bishop", source: "Other", computed: 2, disputed: "why" });
+    expect(points(d).papers.map((p) => p.key)).toEqual(["V1|Bishop|Paper|2"]);
+  });
+
   it("gives zeros without results", () => {
     expect(stats([])).toEqual({ n: 0, mean: 0, meanAbs: 0, rms: 0, maxAbs: 0 });
   });

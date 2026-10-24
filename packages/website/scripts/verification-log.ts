@@ -62,7 +62,8 @@ export function points(data: VerificationData): { programs: Point[]; papers: Poi
       }
     }
     (p.published ?? []).forEach((v) => {
-      if (v.computed != null) {
+      // A disputed value measures its source, not cSlope (see its reason).
+      if (v.computed != null && !v.disputed) {
         papers.push({
           key: `${p.id}|${v.method}|${v.source}|${v.value}`,
           label: `${p.id} ${v.method} (${v.source})`,
