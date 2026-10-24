@@ -1026,6 +1026,7 @@ function isSurfaceGeometryError(error: unknown): boolean {
 
 function evaluatePlanes(slope: Slope, allPlanes: SearchPlane[]): void {
   for (const plane of allPlanes) {
+    delete plane.belowMinSize;
     let slices: Slice[];
     try {
       slices = getSlices(
@@ -1059,7 +1060,15 @@ function evaluatePlanes(slope: Slope, allPlanes: SearchPlane[]): void {
     // only scratch the ground (thinner than 0.1 % of the model height) are
     // always skipped: their FOS grows without bound as c/(γ·depth) and
     // tells nothing about the slope.
-    const minDepth = Math.max(slope.minSlipDepth, DEGENERATE_DEPTH * slope.modelHeight);
+    const degenerateDepth = DEGENERATE_DEPTH * slope.modelHeight;
+    const minDepth = Math.max(slope.minSlipDepth, degenerateDepth);
+    // Surfaces left out by the minimum depth or area are counted (reported
+    // as AnalysisResult.discardedBySize), so that a local failure the
+    // filters hide is not hidden silently. Not counted: the degenerate ones
+    // and those that would be rejected anyway (high-strength or
+    // impenetrable material).
+    const countAsSmall = () =>
+      !slices.some((s) => s.skipSurface || s.impenetrable) || undefined;
     if (minDepth > 0) {
       let maxDepth = 0;
       for (const s of slices) {
@@ -1069,12 +1078,14 @@ function evaluatePlanes(slope: Slope, allPlanes: SearchPlane[]): void {
         plane.fos = null;
         plane.slices = slices;
         plane.converged = true;
+        if (maxDepth >= degenerateDepth) plane.belowMinSize = countAsSmall();
         continue;
       }
     }
 
     // Minimum size of the sliding mass (micro-surfaces are of no interest
-    // and their FOS is arbitrarily high in cohesive soil).
+    // and their FOS is arbitrarily high in cohesive soil). The automatic
+    // default has no basis in the literature; see Slope.minSlipArea.
     const minArea = slope.minSlipArea;
     if (minArea > 0) {
       let area = 0;
@@ -1083,6 +1094,7 @@ function evaluatePlanes(slope: Slope, allPlanes: SearchPlane[]): void {
         plane.fos = null;
         plane.slices = slices;
         plane.converged = true;
+        plane.belowMinSize = countAsSmall();
         continue;
       }
     }

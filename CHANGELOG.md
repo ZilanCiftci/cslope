@@ -14,6 +14,7 @@ The first public release.
 
 - Bishop simplified, Janbu simplified with the f₀ correction, and Morgenstern–Price with constant (Spencer), half-sine, clipped-sine, trapezoidal and user-defined interslice functions.
 - Circular and non-circular slip surfaces: search between entry and exit ranges, custom circles and polylines, non-circular optimisation, minimum slip depth and minimum sliding area, analysis in both slip directions.
+- Circular search: for each entry and exit pair also the circles tangent to every material interface (the top of a stronger, high-strength or impenetrable layer), and the refinement and local search start from the best circle of each basin besides the best overall, so a toe circle above a stronger layer is not lost to a deep circle of nearly the same FOS. The number of surfaces left out by the minimum slip area or depth is shown in the results and the PDF summary.
 - Tension cracks with a fixed or automatic (Rankine) depth, dry or water-filled.
 - Partial factors on strength and loads, with presets for Swedish practice (EKS/IEG) and EN 1997-1 DA3.
 - Sensitivity analysis, and probabilistic analysis with the Taylor series and Monte Carlo methods.

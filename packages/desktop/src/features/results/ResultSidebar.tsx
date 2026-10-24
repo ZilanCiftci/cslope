@@ -25,6 +25,8 @@ import {
   NON_CONVERGED_TITLE,
   nonConvergedText,
   surfaceCountText,
+  discardedBySizeText,
+  DISCARDED_BY_SIZE_TITLE,
 } from "../../utils/result-summary";
 import { resolveAnnotationText } from "../annotations/resolveAnnotationText";
 import { modelViewLock } from "../view/viewLock";
@@ -521,6 +523,11 @@ export function ResultSidebar() {
                 title={NON_CONVERGED_TITLE}
               >
                 {nonConvergedText(result.nonConvergedSurfaces ?? 0)}
+              </p>
+            )}
+            {(result.discardedBySize ?? 0) > 0 && (
+              <p title={DISCARDED_BY_SIZE_TITLE}>
+                {discardedBySizeText(result.discardedBySize ?? 0)}
               </p>
             )}
             {closestPairWarning(result.criticalSurface) && (

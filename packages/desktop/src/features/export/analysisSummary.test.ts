@@ -38,6 +38,11 @@ describe("analysis summary", () => {
     expect(value(s, "Result", "Method")).toBe("Bishop simplified (moment equilibrium)");
     expect(value(s, "Result", "Critical surface")).toBe("circle, centre (10, 20) m, radius 15 m");
     expect(value(s, "Result", "Surfaces analysed")).toBe("3 (1 below 1.0)");
+    expect(value(s, "Result", "Below minimum size")).toBeUndefined();
+    const small = buildAnalysisSummary(input({ result: { ...RESULT, discardedBySize: 7 } }));
+    expect(value(small, "Result", "Below minimum size")).toBe(
+      "7 surfaces smaller than the minimum slip area or depth were skipped",
+    );
     expect(value(s, "Search", "Search limits")).toBe("automatic");
     expect(value(s, "Partial factors", "Values")).toBe("characteristic (no partial factors)");
     expect(value(s, "Water and tension crack", "Piezometric lines")).toBe("none (no pore pressure)");

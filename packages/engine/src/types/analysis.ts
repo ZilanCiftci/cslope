@@ -280,6 +280,11 @@ export interface AnalysisResult {
   /** Warnings on the input and the critical surface (none: omitted or empty). */
   warnings?: AnalysisWarning[];
   /**
+   * Number of trial surfaces not analysed because they are shallower than
+   * the minimum slip depth or smaller than the minimum slip area.
+   */
+  discardedBySize?: number;
+  /**
    * Sliding direction of the reported surfaces in model space: "ltr" =
    * towards +x. Set when both directions were analysed.
    */

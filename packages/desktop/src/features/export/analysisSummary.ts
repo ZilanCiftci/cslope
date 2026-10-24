@@ -15,7 +15,7 @@ import type {
   ReinforcementRow,
 } from "../../store/types";
 import { mainPiezoLine } from "../../utils/piezo";
-import { closestPairWarning, surfaceCountText } from "../../utils/result-summary";
+import { closestPairWarning, discardedBySizeText, surfaceCountText } from "../../utils/result-summary";
 
 /**
  * What an analysis was run with and what it found, as text for the summary
@@ -204,6 +204,9 @@ export function buildAnalysisSummary(input: AnalysisSummaryInput): SummarySectio
   res.push({ label: "Surfaces analysed", value: surfaceCountText(result) });
   if (result.nonConvergedSurfaces) {
     res.push({ label: "Not converged", value: `${result.nonConvergedSurfaces} surfaces (no factor)` });
+  }
+  if (result.discardedBySize) {
+    res.push({ label: "Below minimum size", value: discardedBySizeText(result.discardedBySize) });
   }
   const closestPair = closestPairWarning(cs);
   if (closestPair) {

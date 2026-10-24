@@ -302,6 +302,7 @@ function analyse(
     elapsedMs: performance.now() - start,
     nonConvergedSurfaces,
     splitFailureCount: slope.splitFailureCount,
+    discardedBySize: slope.search.reduce((count, plane) => count + (plane.belowMinSize ? 1 : 0), 0),
     // Checked on the base normal forces reported in the slice table.
     warnings: analysisWarnings(
       slope,

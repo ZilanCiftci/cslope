@@ -90,6 +90,13 @@ export interface SearchPlane {
    * cut off; the sliding mass starts here instead of at `lc`.
    */
   crack?: [number, number];
+  /** Generated tangent to this material interface (search.ts). */
+  tangentTo?: number;
+  /**
+   * Not analysed: shallower than the minimum slip depth or smaller than
+   * the minimum slip area.
+   */
+  belowMinSize?: boolean;
 }
 
 /** A water line as given, with its clipping rule. */
@@ -398,6 +405,13 @@ export class Slope {
    * default 1 % of the squared ground relief (1 m² for a 10 m slope).
    * Scaled by the relief rather than the model area so that deep models
    * do not filter out the shallow surfaces that govern in friction soil.
+   *
+   * The automatic default has no basis in the literature: it is a
+   * practical filter against micro-surfaces, whose FOS in cohesive soil
+   * grows without bound, and it can hide a real local failure (a low cut
+   * at the toe of a high slope). It is kept because changing it moves
+   * verified results; instead the surfaces it leaves out are counted and
+   * reported (AnalysisResult.discardedBySize), and it can be set to 0.
    */
   get minSlipArea(): number {
     return this._minSlipArea ?? AUTO_MIN_SLIP_AREA * this.groundRelief ** 2;
