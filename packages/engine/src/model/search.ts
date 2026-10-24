@@ -43,7 +43,10 @@ function getSearchGridSpec(slope: Slope): SearchGridSpec {
     numPointsBot += 1;
   }
 
-  numPointsTop = numPointsTop - slope.lineLoads.length - slope.udls.length;
+  // The entry points next to loads (setEntryExitPlanes) come on top of
+  // this grid. Taking them out of it coarsened the grid by one point per
+  // load, also for loads outside the search limits, whose points are then
+  // all filtered out.
   if (numPointsTop < 2) numPointsTop = 2;
 
   return { numCircles, numPointsTop, numPointsBot };
@@ -813,13 +816,15 @@ export function setEntryExitPlanes(slope: Slope): void {
     rightCoords.push([x, slope.getExternalYIntersection(x)]);
   }
 
-  // Add coordinates adjacent to loads
-  for (const ll of slope.lineLoads) {
-    const x = ll.x - 0.001;
-    leftCoords.push([x, slope.getExternalYIntersection(x)]);
-  }
-  for (const udl of slope.udls) {
-    const x = Math.min(udl.x1, udl.x2) - 0.001;
+  // Entry points just behind each load, on top of the grid (within the
+  // entry limits: outside them a point gives no admissible entry).
+  const loadEdges = [
+    ...slope.lineLoads.map((ll) => ll.x),
+    ...slope.udls.map((udl) => Math.min(udl.x1, udl.x2)),
+  ];
+  for (const edge of loadEdges) {
+    const x = edge - 0.001;
+    if (x < entryLeftX || x > entryRightX) continue;
     leftCoords.push([x, slope.getExternalYIntersection(x)]);
   }
 
