@@ -2,7 +2,21 @@ import { jsPDF } from "jspdf";
 import { PDF_SANS, setSansFont } from "./pdf-fonts";
 import type { ReinforcementForce } from "@cslope/engine";
 import type { PileRow, ReinforcementRow } from "../../store/types";
-import { bondedSpan, formatReinforcementForce } from "../canvas/reinforcement-draw";
+import {
+  bondedSpan,
+  layoutReinforcementForces,
+  type ForceLabelContext,
+} from "../canvas/reinforcement-draw";
+import {
+  arrowEdges,
+  formatMagnitude,
+  formatRange,
+  groupTouchingStrips,
+  loadHeightFraction,
+  piezoSymbolLayout,
+  placeLabel,
+  type Box,
+} from "../rendering/label-layout";
 import { fosColor, fosScaleRange, fosTickLabel } from "../../utils/fos-color";
 
 /** "≥" (in the embedded font). */
@@ -12,6 +26,7 @@ import {
   sameSurface,
   surfaceBaseYAt,
   surfacePoints,
+  type DrawableSurface,
 } from "../../utils/arc";
 import { computeRegions } from "../../utils/regions";
 import {
@@ -357,59 +372,74 @@ export function drawOpenPolyline(
   pdfPath(pdf, ops, "S");
 }
 
+/** Load label above (cx, bottom); moved up past labels placed before it, left out when there is no room. */
+function drawLoadLabelPdf(pdf: jsPDF, text: string, cx: number, bottom: number, placed: Box[]) {
+  pdf.setFontSize(9);
+  setSansFont(pdf, "bold");
+  const tw = pdf.getTextWidth(text);
+  const lh = 9 * MM_PER_PT * 1.15;
+  const candidates: Box[] = [0, 1, 2, 3].map((k) => ({ x: cx - tw / 2, y: bottom - lh * (k + 1), w: tw, h: lh }));
+  const box = placeLabel(candidates, placed, [], 0.5);
+  if (box) pdf.text(text, cx, box.y + box.h, { align: "center" });
+}
+
+/**
+ * UDLs as on the canvas: strips that touch end to end are one load with
+ * arrows at its ends (and at a readable spacing) and one label; heights
+ * follow the magnitude relative to the largest load. `placed` collects the
+ * load labels so line-load labels can keep clear of them.
+ */
 export function drawUdlLoads(
   pdf: jsPDF,
   tf: PdfTransform,
   udls: { x1: number; x2: number; magnitude: number }[],
   coordinates: [number, number][],
+  placed: Box[] = [],
 ) {
   // Same proportions as the canvas arrows.
   const arrowH = ARROW_HEIGHT_PX * tf.mmPerPx;
   const headW = ARROW_HEAD_PX * tf.mmPerPx;
   const headL = ARROW_HEAD_LEN_PX * tf.mmPerPx;
+  const onModel = udls.filter((u) => surfaceYAtX(coordinates, u.x1) !== null && surfaceYAtX(coordinates, u.x2) !== null);
+  const qMaxAll = Math.max(0, ...onModel.map((u) => Math.abs(u.magnitude)));
+  const groundAt = (x: number) => tf.worldToPdf(x, surfaceYAtX(coordinates, x)!);
 
-  for (const u of udls) {
-    const x1 = Math.min(u.x1, u.x2);
-    const x2 = Math.max(u.x1, u.x2);
-    const y1 = surfaceYAtX(coordinates, x1);
-    const y2 = surfaceYAtX(coordinates, x2);
-    if (y1 === null || y2 === null) continue;
-
-    const [px1, py1] = tf.worldToPdf(x1, y1);
-    const [px2, py2] = tf.worldToPdf(x2, y2);
+  for (const g of groupTouchingStrips(onModel)) {
+    const strips = g.strips.map((u) => {
+      const lo = Math.min(u.x1, u.x2);
+      const hi = Math.max(u.x1, u.x2);
+      // Top edge follows the ground surface (a straight line between the
+      // end arrows cut through the ground over a crest).
+      const xs = [lo, ...coordinates.map((c) => c[0]).filter((x) => x > lo && x < hi), hi].sort((a, b) => a - b);
+      const lift = arrowH * loadHeightFraction(u.magnitude, qMaxAll);
+      return { lo, hi, lift, top: xs.map((x) => groundAt(x)).map(([px, py]) => [px, py - lift] as [number, number]) };
+    });
 
     pdf.setDrawColor(...UDL_LOAD_COLOR.rgb);
     pdf.setLineWidth(0.4);
     pdf.setFillColor(...UDL_LOAD_COLOR.rgb);
-    for (const [px, py] of [[px1, py1], [px2, py2]]) {
-      pdf.line(px, py - arrowH, px, py - headL);
+    const edges = [strips[0].lo, ...strips.map((s) => s.hi)];
+    const edgePts = edges.map(groundAt);
+    const edgeLift = (i: number) => Math.max(i > 0 ? strips[i - 1].lift : 0, i < strips.length ? strips[i].lift : 0);
+    for (const i of arrowEdges(edgePts.map(([x]) => x), 60 * tf.mmPerPx)) {
+      const [px, py] = edgePts[i];
+      pdf.line(px, py - edgeLift(i), px, py - headL);
       pdf.triangle(px, py, px - headW, py - headL, px + headW, py - headL, "F");
     }
 
-    // Top edge follows the ground surface (a straight line between the end
-    // arrows cut through the ground over a crest).
-    const topXs = [
-      x1,
-      ...coordinates.map((c) => c[0]).filter((x) => x > x1 && x < x2),
-      x2,
-    ].sort((a, b) => a - b);
-    const topPts: [number, number][] = [];
-    for (const x of topXs) {
-      const y = surfaceYAtX(coordinates, x);
-      if (y === null) continue;
-      const [px, py] = tf.worldToPdf(x, y);
-      topPts.push([px, py - arrowH]);
-    }
-    for (let i = 1; i < topPts.length; i++) {
-      pdf.line(topPts[i - 1][0], topPts[i - 1][1], topPts[i][0], topPts[i][1]);
+    // Top edges, with a step between strips of different size.
+    let prev: [number, number] | null = null;
+    for (const s of strips) {
+      for (const pt of s.top) {
+        if (prev && (prev[0] !== pt[0] || prev[1] !== pt[1])) pdf.line(prev[0], prev[1], pt[0], pt[1]);
+        prev = pt;
+      }
     }
 
-    pdf.setFontSize(9);
-    setSansFont(pdf, "bold");
     pdf.setTextColor(...UDL_LOAD_COLOR.rgb);
-    const labelX = (px1 + px2) / 2;
-    const labelY = Math.min(py1, py2) - arrowH - 1.5;
-    pdf.text(`q = ${u.magnitude} kPa`, labelX, labelY, { align: "center" });
+    const labelX = (edgePts[0][0] + edgePts[edgePts.length - 1][0]) / 2;
+    const topMost = Math.min(...strips.flatMap((s) => s.top.map(([, y]) => y)));
+    drawLoadLabelPdf(pdf, formatRange(g.qMin, g.qMax, "q", "kPa"), labelX, topMost - 1.5, placed);
   }
 }
 
@@ -418,28 +448,27 @@ export function drawLineLoads(
   tf: PdfTransform,
   lineLoads: { x: number; magnitude: number }[],
   coordinates: [number, number][],
+  placed: Box[] = [],
 ) {
   const arrowH = ARROW_HEIGHT_PX * tf.mmPerPx;
   const headW = ARROW_HEAD_PX * tf.mmPerPx;
   const headL = ARROW_HEAD_LEN_PX * tf.mmPerPx;
+  const pMaxAll = Math.max(0, ...lineLoads.map((ll) => Math.abs(ll.magnitude)));
 
   for (const ll of lineLoads) {
     const sy = surfaceYAtX(coordinates, ll.x);
     if (sy === null) continue;
 
     const [px, py] = tf.worldToPdf(ll.x, sy);
+    const lift = arrowH * loadHeightFraction(ll.magnitude, pMaxAll);
     pdf.setDrawColor(...LINE_LOAD_COLOR.rgb);
     pdf.setLineWidth(0.4);
-    pdf.line(px, py - arrowH, px, py - headL);
+    pdf.line(px, py - lift, px, py - headL);
     pdf.setFillColor(...LINE_LOAD_COLOR.rgb);
     pdf.triangle(px, py, px - headW, py - headL, px + headW, py - headL, "F");
 
-    pdf.setFontSize(9);
-    setSansFont(pdf, "bold");
     pdf.setTextColor(...LINE_LOAD_COLOR.rgb);
-    pdf.text(`P = ${ll.magnitude} kN/m`, px, py - arrowH - 1.5, {
-      align: "center",
-    });
+    drawLoadLabelPdf(pdf, `P = ${formatMagnitude(ll.magnitude)} kN/m`, px, py - lift - 1.5, placed);
   }
 }
 
@@ -499,36 +528,47 @@ export function drawPilesPdf(pdf: jsPDF, tf: PdfTransform, rows: readonly PileRo
   });
 }
 
-/** Reinforcement forces on the critical surface (arrow and size). */
+/**
+ * Reinforcement forces on the critical surface, as on the canvas: arrow
+ * beside the line it acts along, size on a white plate clear of the
+ * elements, the slip line and the other labels (layoutReinforcementForces).
+ */
 export function drawReinforcementForcesPdf(
   pdf: jsPDF,
   tf: PdfTransform,
   forces: readonly ReinforcementForce[],
+  context?: ForceLabelContext,
 ) {
-  const ARROW = 7;
   const HEAD = 1.5;
-  pdf.setDrawColor(...REINFORCEMENT_RGB);
-  pdf.setFillColor(...REINFORCEMENT_RGB);
-  pdf.setTextColor(...REINFORCEMENT_RGB);
   pdf.setFontSize(7);
   setSansFont(pdf, "bold");
-  for (const f of forces) {
-    const n = Math.hypot(f.fx, f.fy);
-    if (!(n > 0)) continue;
-    const [px, py] = tf.worldToPdf(f.x, f.y);
-    const ux = f.fx / n;
-    const uy = -f.fy / n;
-    const ex = px + ux * ARROW;
-    const ey = py + uy * ARROW;
-    pdf.setLineWidth(0.4);
-    pdf.line(px, py, ex - ux * HEAD, ey - uy * HEAD);
+  const layout = layoutReinforcementForces(
+    forces,
+    tf.worldToPdf,
+    { arrow: 7, offset: 1, gap: 0.7, pad: 0.5, textH: 7 * MM_PER_PT, measure: (t) => pdf.getTextWidth(t) },
+    context,
+  );
+  pdf.setDrawColor(...REINFORCEMENT_RGB);
+  pdf.setFillColor(...REINFORCEMENT_RGB);
+  pdf.setLineWidth(0.4);
+  for (const { from, to, ux, uy } of layout) {
+    const [ex, ey] = to;
+    pdf.line(from[0], from[1], ex - ux * HEAD, ey - uy * HEAD);
     pdf.triangle(
       ex, ey,
       ex - ux * HEAD - uy * HEAD * 0.6, ey - uy * HEAD + ux * HEAD * 0.6,
       ex - ux * HEAD + uy * HEAD * 0.6, ey - uy * HEAD - ux * HEAD * 0.6,
       "F",
     );
-    pdf.text(formatReinforcementForce(f), ex + (ux >= 0 ? 1 : -1), ey, { align: ux >= 0 ? "left" : "right", baseline: "middle" });
+  }
+  pdf.setTextColor(...REINFORCEMENT_RGB);
+  for (const { label, text } of layout) {
+    if (!label) continue;
+    pdf.setFillColor(255, 255, 255);
+    setOpacity(pdf, 0.85);
+    pdf.rect(label.x, label.y, label.w, label.h, "F");
+    resetOpacity(pdf);
+    pdf.text(text, label.x + label.w / 2, label.y + label.h / 2, { align: "center", baseline: "middle" });
   }
 }
 
@@ -539,8 +579,14 @@ export function drawPiezometricLines(
   modelCoordinates: [number, number][] = [],
   freeWater = false,
   mainLineId?: string,
+  /** Critical slip surface, kept clear of the water-table symbols. */
+  critical: DrawableSurface | null = null,
+  /** Kept clear of the symbols: element heads and numbers (`placed`) and bars (`obstacles`). */
+  avoid: ForceLabelContext = { obstacles: [], placed: [] },
 ) {
   const multiLine = lines.length > 1;
+  // Symbols placed so far, so lines don't put theirs on top of each other.
+  const taken: [number, number][] = [];
 
   // Free water standing on the ground (from the main line), as on canvas.
   const mainLine = mainPiezoLine({ lines, mainLineId });
@@ -580,10 +626,15 @@ export function drawPiezometricLines(
     const barGap1 = PIEZO_BAR_GAP1_PX * tf.mmPerPx;
     const barGap2 = PIEZO_BAR_GAP2_PX * tf.mmPerPx;
 
-    for (let i = 0; i < pts.length - 1; i++) {
-      const mx = (pts[i][0] + pts[i + 1][0]) / 2;
-      const my = (pts[i][1] + pts[i + 1][1]) / 2;
-
+    // Water-table symbols spaced along the line, as on the canvas.
+    for (const { x: mx, y: my, bars } of piezoSymbolLayout(line.coordinates, tf.worldToPdf, {
+      unit: tf.mmPerPx,
+      model: modelCoordinates,
+      critical,
+      taken,
+      avoid: avoid.placed,
+      avoidLines: avoid.obstacles,
+    })) {
       const triTop = my - triH;
       pdf.setFillColor(...PIEZO_COLOR.rgb);
       const triOps: PathOp[] = [
@@ -594,10 +645,12 @@ export function drawPiezometricLines(
       ];
       pdfPath(pdf, triOps, "f");
 
-      pdf.setDrawColor(...PIEZO_COLOR.rgb);
-      pdf.setLineWidth(0.25);
-      pdf.line(mx - barW, my + barGap1, mx + barW, my + barGap1);
-      pdf.line(mx - barW, my + barGap2, mx + barW, my + barGap2);
+      if (bars) {
+        pdf.setDrawColor(...PIEZO_COLOR.rgb);
+        pdf.setLineWidth(0.25);
+        pdf.line(mx - barW, my + barGap1, mx + barW, my + barGap1);
+        pdf.line(mx - barW, my + barGap2, mx + barW, my + barGap2);
+      }
 
       if (multiLine) {
         setSansFont(pdf, "bold");

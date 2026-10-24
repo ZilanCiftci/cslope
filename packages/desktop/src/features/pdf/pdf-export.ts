@@ -35,6 +35,9 @@ import {
   drawUdlLoads,
 } from "./pdf-drawing";
 import type { PdfTransform } from "./pdf-helpers";
+import { forceLabelContext } from "../canvas/reinforcement-draw";
+import type { Box } from "../rendering/label-layout";
+import { surfacePoints } from "../../utils/arc";
 import { drawSummaryPages, type SummaryHeader } from "./pdf-summary";
 import type { SummarySection } from "../export/analysisSummary";
 import { clampMinorTicks } from "../../utils/ruler";
@@ -353,12 +356,14 @@ export function exportVectorPdf(data: PdfExportData): void {
       }
     }
 
+    // Load labels placed so far, so later ones keep clear of them.
+    const loadLabels: Box[] = [];
     if (udls.length > 0 && coordinates.length >= 3) {
-      drawUdlLoads(pdf, tf, udls, coordinates);
+      drawUdlLoads(pdf, tf, udls, coordinates, loadLabels);
     }
 
     if (lineLoads.length > 0 && coordinates.length >= 3) {
-      drawLineLoads(pdf, tf, lineLoads, coordinates);
+      drawLineLoads(pdf, tf, lineLoads, coordinates, loadLabels);
     }
 
     if (reinforcements.length > 0) {
@@ -376,6 +381,8 @@ export function exportVectorPdf(data: PdfExportData): void {
         coordinates,
         piezometricLine.freeWater !== false,
         piezometricLine.mainLineId,
+        result.criticalSurface ?? null,
+        forceLabelContext(tf.worldToPdf, { reinforcements, piles, numberSize: 2.8 }),
       );
     }
 
@@ -387,7 +394,13 @@ export function exportVectorPdf(data: PdfExportData): void {
 
     drawCriticalSurface(pdf, tf, result, rvs, coordinates);
     if (result.criticalSurface?.reinforcementForces?.length) {
-      drawReinforcementForcesPdf(pdf, tf, result.criticalSurface.reinforcementForces);
+      const cs = result.criticalSurface;
+      drawReinforcementForcesPdf(
+        pdf,
+        tf,
+        cs.reinforcementForces!,
+        forceLabelContext(tf.worldToPdf, { reinforcements, piles, surface: surfacePoints(cs), numberSize: 2.8 }),
+      );
     }
 
     pdf.restoreGraphicsState();

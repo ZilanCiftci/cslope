@@ -74,7 +74,17 @@ import {
   MODEL_HATCH_PATTERNS,
 } from "../rendering/style-spec";
 import { drawCanvasHatch, drawCanvasHatchLabel } from "../rendering/hatch";
-import { drawPiles, drawReinforcementForces, drawReinforcements } from "./reinforcement-draw";
+import { drawPiles, drawReinforcementForces, drawReinforcements, forceLabelContext } from "./reinforcement-draw";
+import {
+  arrowEdges,
+  formatRange,
+  groupTouchingStrips,
+  loadHeightFraction,
+  piezoSymbolLayout,
+  formatMagnitude,
+  placeLabel,
+  type Box,
+} from "../rendering/label-layout";
 import { freeWaterPolygons, mainPiezoLine, piezoExtensions } from "../../utils/piezo";
 
 const arcPointCache = new WeakMap<object, Map<string, [number, number][]>>();
@@ -744,64 +754,75 @@ export function drawCanvas(
   }
 
   // ── UDL loads ────────────────────────────────────────────
+  // Strips that touch end to end (a ramp entered as many strips) are drawn
+  // as one load: outline around the whole, arrows at its ends and at a
+  // readable spacing, one label. Heights follow the magnitude relative to
+  // the largest load, so overlapping surcharges stay apart. Load labels
+  // that would overlap one placed before move up, else are left out.
+  const loadLabels: Box[] = [];
+  const loadFont = `bold ${13 * paperZoom}px sans-serif`;
+  const drawLoadLabel = (text: string, color: string, cx: number, bottom: number) => {
+    ctx.font = loadFont;
+    const tw = ctx.measureText(text).width;
+    const lh = 15 * paperZoom;
+    const candidates: Box[] = [0, 1, 2, 3].map((k) => ({ x: cx - tw / 2, y: bottom - lh * (k + 1), w: tw, h: lh }));
+    const box = placeLabel(candidates, loadLabels, [], 2 * paperZoom);
+    if (!box) return;
+    ctx.fillStyle = color;
+    ctx.textAlign = "center";
+    ctx.textBaseline = "bottom";
+    ctx.fillText(text, cx, box.y + box.h);
+  };
+  const drawDownArrow = (cx: number, cy: number, top: number, color: string, lineWidth: number) => {
+    ctx.strokeStyle = color;
+    ctx.lineWidth = lineWidth * paperZoom;
+    ctx.beginPath();
+    ctx.moveTo(cx, top);
+    ctx.lineTo(cx, cy);
+    ctx.stroke();
+    ctx.fillStyle = color;
+    ctx.beginPath();
+    ctx.moveTo(cx, cy); // tip on the ground
+    ctx.lineTo(cx - ARROW_HEAD_PX * paperZoom, cy - ARROW_HEAD_LEN_PX * paperZoom);
+    ctx.lineTo(cx + ARROW_HEAD_PX * paperZoom, cy - ARROW_HEAD_LEN_PX * paperZoom);
+    ctx.closePath();
+    ctx.fill();
+  };
   if (udls.length > 0 && coordinates.length >= 3) {
-    for (const u of udls) {
-      const y1 = surfaceYAtX(u.x1);
-      const y2 = surfaceYAtX(u.x2);
-      if (y1 === null || y2 === null) continue;
+    const onModel = udls.filter((u) => surfaceYAtX(u.x1) !== null && surfaceYAtX(u.x2) !== null);
+    const qMaxAll = Math.max(0, ...onModel.map((u) => Math.abs(u.magnitude)));
+    const loadH = (q: number) => ARROW_HEIGHT_PX * paperZoom * loadHeightFraction(q, qMaxAll);
+    // Ground between two x (canvas), through the surface vertices.
+    const groundCanvas = (lo: number, hi: number): [number, number][] => {
+      const xs = [lo, ...coordinates.map(([cx]) => cx).filter((cx) => cx > lo && cx < hi), hi].sort((a, b) => a - b);
+      return xs.map((x) => worldToCanvas(x, surfaceYAtX(x)!, w, h));
+    };
+    for (const g of groupTouchingStrips(onModel)) {
+      const strips = g.strips.map((u) => {
+        const lo = Math.min(u.x1, u.x2);
+        const hi = Math.max(u.x1, u.x2);
+        const ground = groundCanvas(lo, hi);
+        const lift = loadH(u.magnitude);
+        return { u, lo, hi, ground, lift, top: ground.map(([sx, sy]) => [sx, sy - lift] as [number, number]) };
+      });
 
-      // Collect surface points between x1 and x2 (following the slope)
-      const leftX = Math.min(u.x1, u.x2);
-      const rightX = Math.max(u.x1, u.x2);
-      const surfPts: [number, number][] = [];
-      surfPts.push([leftX, surfaceYAtX(leftX)!]);
-      for (const [cx, cy] of coordinates) {
-        if (cx > leftX && cx < rightX) {
-          const topY = surfaceYAtX(cx);
-          if (topY !== null && Math.abs(cy - topY) < 0.001) {
-            surfPts.push([cx, cy]);
-          }
-        }
-      }
-      surfPts.push([rightX, surfaceYAtX(rightX)!]);
-      surfPts.sort((a, b) => a[0] - b[0]);
-
-      // Convert surface points to canvas coords
-      const surfCanvas = surfPts.map(([sx, sy]) => worldToCanvas(sx, sy, w, h));
-      // Top edge: offset each surface point upward by ARROW_HEIGHT_PX
-      const topCanvas = surfCanvas.map(
-        ([sx, sy]) =>
-          [sx, sy - ARROW_HEIGHT_PX * paperZoom] as [number, number],
-      );
-
-      // ── Draw hatched area between the arrows ──
+      // ── Hatched area under the top edge ──
       ctx.save();
-      // Build clip path: top edge (left→right) then surface edge (right→left)
       ctx.beginPath();
-      for (let i = 0; i < topCanvas.length; i++) {
-        const [px, py] = topCanvas[i];
-        if (i === 0) ctx.moveTo(px, py);
-        else ctx.lineTo(px, py);
+      for (const s of strips) {
+        s.top.forEach(([px, py], i) => (i === 0 ? ctx.moveTo(px, py) : ctx.lineTo(px, py)));
+        for (let i = s.ground.length - 1; i >= 0; i--) ctx.lineTo(s.ground[i][0], s.ground[i][1]);
+        ctx.closePath();
       }
-      for (let i = surfCanvas.length - 1; i >= 0; i--) {
-        ctx.lineTo(surfCanvas[i][0], surfCanvas[i][1]);
-      }
-      ctx.closePath();
       ctx.clip();
-
-      // Draw diagonal hatch lines (top-left to bottom-right pattern)
       ctx.strokeStyle = UDL_LOAD_COLOR.hex;
       ctx.lineWidth = 1 * paperZoom;
       ctx.globalAlpha = 0.5;
-      const allXs = surfCanvas.map(([x]) => x);
-      const allYs = [
-        ...surfCanvas.map(([, y]) => y),
-        ...topCanvas.map(([, y]) => y),
-      ];
-      const minX = Math.min(...allXs);
-      const maxX = Math.max(...allXs);
-      const minY = Math.min(...allYs);
-      const maxY = Math.max(...allYs);
+      const allPts = strips.flatMap((s) => [...s.ground, ...s.top]);
+      const minX = Math.min(...allPts.map(([x]) => x));
+      const maxX = Math.max(...allPts.map(([x]) => x));
+      const minY = Math.min(...allPts.map(([, y]) => y));
+      const maxY = Math.max(...allPts.map(([, y]) => y));
       const span = maxX - minX + (maxY - minY);
       for (let d = -span; d < span; d += HATCH_SPACING_PX * paperZoom) {
         ctx.beginPath();
@@ -812,137 +833,60 @@ export function drawCanvas(
       ctx.globalAlpha = 1.0;
       ctx.restore();
 
-      // ── Outline the hatched area ──
+      // ── Outline: up the left end, along the tops (stepping between
+      // strips of different size), down the right end, back along the ground ──
       ctx.strokeStyle = UDL_LOAD_COLOR.hex;
       ctx.lineWidth = 1.5 * paperZoom;
       ctx.beginPath();
-      // Top edge (left→right)
-      for (let i = 0; i < topCanvas.length; i++) {
-        const [px, py] = topCanvas[i];
-        if (i === 0) ctx.moveTo(px, py);
-        else ctx.lineTo(px, py);
+      ctx.moveTo(strips[0].ground[0][0], strips[0].ground[0][1]);
+      for (const s of strips) for (const [px, py] of s.top) ctx.lineTo(px, py);
+      const lastStrip = strips[strips.length - 1];
+      const groundAll = strips.flatMap((s) => s.ground);
+      ctx.lineTo(lastStrip.ground[lastStrip.ground.length - 1][0], lastStrip.ground[lastStrip.ground.length - 1][1]);
+      for (let i = groundAll.length - 2; i >= 0; i--) ctx.lineTo(groundAll[i][0], groundAll[i][1]);
+      ctx.closePath();
+      ctx.stroke();
+
+      // ── Arrows at the ends and the edges picked for spacing; a hovered
+      // handle is drawn highlighted wherever it is ──
+      const edges = [strips[0].lo, ...strips.map((s) => s.hi)];
+      const edgeLift = (i: number) => Math.max(i > 0 ? strips[i - 1].lift : 0, i < strips.length ? strips[i].lift : 0);
+      const edgeCanvas = edges.map((x) => worldToCanvas(x, surfaceYAtX(x)!, w, h));
+      const hovered =
+        hoverHit?.kind === "udl" ? strips.find((s) => s.u.id === hoverHit.udlId) : undefined;
+      const hoverX = hovered && hoverHit?.kind === "udl" ? (hoverHit.handle === "x1" ? hovered.u.x1 : hovered.u.x2) : null;
+      const tol = 1e-6 * Math.max(1, Math.abs(g.lo), Math.abs(g.hi));
+      const hoverEdge = hoverX === null ? -1 : edges.findIndex((x) => Math.abs(x - hoverX) <= tol);
+      for (const i of arrowEdges(edgeCanvas.map(([x]) => x), 60 * paperZoom)) {
+        if (i === hoverEdge) continue;
+        const [cx, cy] = edgeCanvas[i];
+        drawDownArrow(cx, cy, cy - edgeLift(i), UDL_LOAD_COLOR.hex, 2);
       }
-      // Right vertical down to surface
-      const last = surfCanvas.length - 1;
-      ctx.lineTo(surfCanvas[last][0], surfCanvas[last][1]);
-      // Surface edge (right→left)
-      for (let i = last - 1; i >= 0; i--) {
-        ctx.lineTo(surfCanvas[i][0], surfCanvas[i][1]);
+      if (hoverEdge >= 0) {
+        const [cx, cy] = edgeCanvas[hoverEdge];
+        drawDownArrow(cx, cy, cy - edgeLift(hoverEdge), "#ff0000", 3);
       }
-      // Left vertical back up
-      ctx.closePath();
-      ctx.stroke();
 
-      // ── Draw downward arrow at x1 ──
-      const [cx1, cy1] = worldToCanvas(u.x1, y1, w, h);
-      const topY1 = cy1 - ARROW_HEIGHT_PX * paperZoom;
-      const hoverX1 =
-        hoverHit?.kind === "udl" &&
-        hoverHit.udlId === u.id &&
-        hoverHit.handle === "x1";
-      const arrowColor1 = hoverX1 ? "#ff0000" : UDL_LOAD_COLOR.hex;
-      ctx.strokeStyle = arrowColor1;
-      ctx.lineWidth = (hoverX1 ? 3 : 2) * paperZoom;
-      ctx.beginPath();
-      ctx.moveTo(cx1, topY1);
-      ctx.lineTo(cx1, cy1);
-      ctx.stroke();
-      // Arrowhead
-      ctx.fillStyle = arrowColor1;
-      ctx.beginPath();
-      ctx.moveTo(cx1, cy1); // tip
-      ctx.lineTo(
-        cx1 - ARROW_HEAD_PX * paperZoom,
-        cy1 - ARROW_HEAD_LEN_PX * paperZoom,
-      );
-      ctx.lineTo(
-        cx1 + ARROW_HEAD_PX * paperZoom,
-        cy1 - ARROW_HEAD_LEN_PX * paperZoom,
-      );
-      ctx.closePath();
-      ctx.fill();
-
-      // ── Draw downward arrow at x2 ──
-      const [cx2, cy2] = worldToCanvas(u.x2, y2, w, h);
-      const topY2 = cy2 - ARROW_HEIGHT_PX * paperZoom;
-      const hoverX2 =
-        hoverHit?.kind === "udl" &&
-        hoverHit.udlId === u.id &&
-        hoverHit.handle === "x2";
-      const arrowColor2 = hoverX2 ? "#ff0000" : UDL_LOAD_COLOR.hex;
-      ctx.strokeStyle = arrowColor2;
-      ctx.lineWidth = (hoverX2 ? 3 : 2) * paperZoom;
-      ctx.beginPath();
-      ctx.moveTo(cx2, topY2);
-      ctx.lineTo(cx2, cy2);
-      ctx.stroke();
-      ctx.fillStyle = arrowColor2;
-      ctx.beginPath();
-      ctx.moveTo(cx2, cy2); // tip
-      ctx.lineTo(
-        cx2 - ARROW_HEAD_PX * paperZoom,
-        cy2 - ARROW_HEAD_LEN_PX * paperZoom,
-      );
-      ctx.lineTo(
-        cx2 + ARROW_HEAD_PX * paperZoom,
-        cy2 - ARROW_HEAD_LEN_PX * paperZoom,
-      );
-      ctx.closePath();
-      ctx.fill();
-
-      // ── Label above ──
-      const labelX = (cx1 + cx2) / 2;
-      const labelY = Math.min(topY1, topY2) - 8 * paperZoom;
-      ctx.fillStyle = UDL_LOAD_COLOR.hex;
-      ctx.font = `bold ${13 * paperZoom}px sans-serif`;
-      ctx.textAlign = "center";
-      ctx.textBaseline = "bottom";
-      ctx.fillText(`q = ${u.magnitude} kPa`, labelX, labelY);
+      // ── One label above the group ──
+      const cxMid = (edgeCanvas[0][0] + edgeCanvas[edgeCanvas.length - 1][0]) / 2;
+      const topMost = Math.min(...strips.flatMap((s) => s.top.map(([, y]) => y)));
+      drawLoadLabel(formatRange(g.qMin, g.qMax, "q", "kPa"), UDL_LOAD_COLOR.hex, cxMid, topMost - 8 * paperZoom);
     }
   }
 
   // ── Line loads ──────────────────────────────────────────
   if (lineLoads.length > 0 && coordinates.length >= 3) {
+    const pMaxAll = Math.max(0, ...lineLoads.map((ll) => Math.abs(ll.magnitude)));
     for (const ll of lineLoads) {
       const sy = surfaceYAtX(ll.x);
       if (sy === null) continue;
 
       const [cx, cy] = worldToCanvas(ll.x, sy, w, h);
-      const topY = cy - ARROW_HEIGHT_PX * paperZoom;
-
-      const isHover =
-        hoverHit?.kind === "lineLoad" && hoverHit.loadId === ll.id;
+      const topY = cy - ARROW_HEIGHT_PX * paperZoom * loadHeightFraction(ll.magnitude, pMaxAll);
+      const isHover = hoverHit?.kind === "lineLoad" && hoverHit.loadId === ll.id;
       const color = isHover ? "#3b82f6" : LINE_LOAD_COLOR.hex;
-
-      // Shaft
-      ctx.strokeStyle = color;
-      ctx.lineWidth = (isHover ? 3 : 2) * paperZoom;
-      ctx.beginPath();
-      ctx.moveTo(cx, topY);
-      ctx.lineTo(cx, cy);
-      ctx.stroke();
-
-      // Arrowhead
-      ctx.fillStyle = color;
-      ctx.beginPath();
-      ctx.moveTo(cx, cy); // tip
-      ctx.lineTo(
-        cx - ARROW_HEAD_PX * paperZoom,
-        cy - ARROW_HEAD_LEN_PX * paperZoom,
-      );
-      ctx.lineTo(
-        cx + ARROW_HEAD_PX * paperZoom,
-        cy - ARROW_HEAD_LEN_PX * paperZoom,
-      );
-      ctx.closePath();
-      ctx.fill();
-
-      // Label above
-      ctx.fillStyle = color;
-      ctx.font = `bold ${13 * paperZoom}px sans-serif`;
-      ctx.textAlign = "center";
-      ctx.textBaseline = "bottom";
-      ctx.fillText(`P = ${ll.magnitude} kN/m`, cx, topY - 4 * paperZoom);
+      drawDownArrow(cx, cy, topY, color, isHover ? 3 : 2);
+      drawLoadLabel(`P = ${formatMagnitude(ll.magnitude)} kN/m`, color, cx, topY - 4 * paperZoom);
     }
   }
 
@@ -977,6 +921,14 @@ export function drawCanvas(
       }
       ctx.globalAlpha = 1;
     }
+    // Symbols placed so far, so lines don't put theirs on top of each other.
+    const piezoTaken: [number, number][] = [];
+    // Elements, their numbers and pile names, kept clear of the symbols.
+    const piezoAvoid = forceLabelContext((x, y) => worldToCanvas(x, y, w, h), {
+      reinforcements,
+      piles,
+      numberSize: 11 * paperZoom,
+    });
     for (let lineIdx = 0; lineIdx < piezometricLine.lines.length; lineIdx++) {
       const line = piezometricLine.lines[lineIdx];
       if (line.coordinates.length < 2) continue;
@@ -1010,24 +962,23 @@ export function drawCanvas(
       }
       ctx.setLineDash([]);
 
-      // Symbol at the midpoint of each segment:
-      // inverted triangle with bottom vertex on the line + two horizontal lines below
+      // Water-table symbols: an inverted triangle with its tip on the line
+      // and two bars below, spaced along the line on its flat parts, clear
+      // of the critical surface and of each other (see piezoSymbolLayout).
       const triHalf = PIEZO_TRI_HALF_PX * paperZoom;
       const triH = PIEZO_TRI_H_PX * paperZoom;
+      const barW = PIEZO_BAR_W_PX * paperZoom;
       const labelNum = String(lineIdx + 1);
-      for (let i = 0; i < plCoords.length - 1; i++) {
-        const [ax, ay] = worldToCanvas(plCoords[i][0], plCoords[i][1], w, h);
-        const [bx, by] = worldToCanvas(
-          plCoords[i + 1][0],
-          plCoords[i + 1][1],
-          w,
-          h,
-        );
-        const mx = (ax + bx) / 2;
-        const my = (ay + by) / 2;
-
-        // Triangle: top-left, top-right, bottom-center (bottom vertex sits on the line)
-        const triTop = my - triH; // top edge of triangle
+      const symbols = piezoSymbolLayout(plCoords, (x, y) => worldToCanvas(x, y, w, h), {
+        unit: paperZoom,
+        model: coordinates,
+        critical: mode === "result" ? result?.criticalSurface : null,
+        taken: piezoTaken,
+        avoid: piezoAvoid.placed,
+        avoidLines: piezoAvoid.obstacles,
+      });
+      for (const { x: mx, y: my, bars } of symbols) {
+        const triTop = my - triH;
         ctx.beginPath();
         ctx.moveTo(mx - triHalf, triTop);
         ctx.lineTo(mx + triHalf, triTop);
@@ -1036,18 +987,17 @@ export function drawCanvas(
         ctx.fillStyle = piezoBlue;
         ctx.fill();
 
-        // Two horizontal lines below the triangle tip
-        const barW = PIEZO_BAR_W_PX * paperZoom;
-        ctx.strokeStyle = piezoBlue;
-        ctx.lineWidth = 1.2 * paperZoom;
-        ctx.beginPath();
-        ctx.moveTo(mx - barW, my + PIEZO_BAR_GAP1_PX * paperZoom);
-        ctx.lineTo(mx + barW, my + PIEZO_BAR_GAP1_PX * paperZoom);
-        ctx.stroke();
-        ctx.beginPath();
-        ctx.moveTo(mx - barW, my + PIEZO_BAR_GAP2_PX * paperZoom);
-        ctx.lineTo(mx + barW, my + PIEZO_BAR_GAP2_PX * paperZoom);
-        ctx.stroke();
+        // Two bars below the tip (left out where they would go into the ground).
+        if (bars) {
+          ctx.strokeStyle = piezoBlue;
+          ctx.lineWidth = 1.2 * paperZoom;
+          for (const gap of [PIEZO_BAR_GAP1_PX, PIEZO_BAR_GAP2_PX]) {
+            ctx.beginPath();
+            ctx.moveTo(mx - barW, my + gap * paperZoom);
+            ctx.lineTo(mx + barW, my + gap * paperZoom);
+            ctx.stroke();
+          }
+        }
 
         // Line number above the triangle (only if multiple lines)
         if (multiLine) {
@@ -1583,7 +1533,16 @@ export function drawCanvas(
 
       // Reinforcement forces on the sliding mass
       if (cs.reinforcementForces?.length) {
-        drawReinforcementForces(ctx, cs.reinforcementForces, (x, y) => worldToCanvas(x, y, w, h), paperZoom);
+        const toC = (x: number, y: number) => worldToCanvas(x, y, w, h);
+        drawReinforcementForces(ctx, cs.reinforcementForces, toC, paperZoom, {
+          context: forceLabelContext(toC, {
+            reinforcements,
+            piles,
+            surface: surfacePoints(cs),
+            numberSize: 11 * paperZoom,
+          }),
+          plate: PAPER_FILL_COLOR || BG_COLOR,
+        });
       }
 
       // FOS label to the right of the circle centre
