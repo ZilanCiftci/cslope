@@ -1298,7 +1298,15 @@ describe("store slices", () => {
     const next = useAppStore.getState();
     expect(next.models).toHaveLength(prevCount + 1);
     const newModel = next.models.find((m) => m.id === next.activeModelId);
-    expect(newModel?.name).toContain("Untitled");
+    // Numbered like the first model of a new project.
+    expect(newModel?.name).toBe(`Model ${prevCount + 1}`);
+    // A taken number is skipped.
+    useAppStore.getState().renameModel(newModel!.id, `Model ${prevCount + 2}`);
+    useAppStore.getState().addModel();
+    const last = useAppStore.getState();
+    expect(last.models.find((m) => m.id === last.activeModelId)?.name).toBe(
+      `Model ${prevCount + 3}`,
+    );
   });
 
   // ── modelsSlice: switchModel with legacy viewOffset fields ──────

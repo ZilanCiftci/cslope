@@ -86,6 +86,32 @@ describe("UdlDialogApp", () => {
     ).toEqual([]);
   });
 
+  it("keeps new rows inside the model the main window sends", async () => {
+    render(<UdlDialogApp />);
+    bridge.emit("onLoadsState", {
+      udls: [{ id: "u1", magnitude: 12, x1: 14, x2: 18 }],
+      lineLoads: [],
+      coordinates: [[0, 0], [0, 10], [20, 10], [20, 0]],
+    });
+    await userEvent.click(screen.getByRole("button", { name: "+ Add UDL" }));
+    expect(
+      useAppStore.getState().udls.map(({ x1, x2 }) => [x1, x2]),
+    ).toEqual([
+      [14, 18],
+      [16, 20],
+    ]);
+    // The first row of a model left of x = 0 starts at its left edge.
+    bridge.emit("onLoadsState", {
+      udls: [],
+      lineLoads: [],
+      coordinates: [[-40, 0], [-40, 10], [-38, 10], [-38, 0]],
+    });
+    await userEvent.click(screen.getByRole("button", { name: "+ Add UDL" }));
+    expect(
+      useAppStore.getState().udls.map(({ x1, x2 }) => [x1, x2]),
+    ).toEqual([[-40, -38]]);
+  });
+
   it("places each new row just beyond the last one instead of stacking", async () => {
     render(<UdlDialogApp />);
     hydrate([{ id: "u1", magnitude: 12, x1: 1, x2: 3 }]);
@@ -206,6 +232,27 @@ describe("LineLoadsDialogApp", () => {
       screen.getByRole("button", { name: "Remove line load 1" }),
     );
     expect(useAppStore.getState().lineLoads).toEqual([]);
+  });
+
+  it("keeps new line loads inside the model the main window sends", async () => {
+    render(<LineLoadsDialogApp />);
+    bridge.emit("onLoadsState", {
+      udls: [],
+      lineLoads: [{ id: "l1", magnitude: 30, x: 18 }],
+      coordinates: [[0, 0], [0, 10], [20, 10], [20, 0]],
+    });
+    const add = screen.getByRole("button", { name: "+ Add Line Load" });
+    await userEvent.click(add);
+    await userEvent.click(add);
+    expect(useAppStore.getState().lineLoads.map((l) => l.x)).toEqual([18, 20, 20]);
+    // A model that does not reach x = 10: the first load goes in its middle.
+    bridge.emit("onLoadsState", {
+      udls: [],
+      lineLoads: [],
+      coordinates: [[100, 0], [100, 10], [140, 10], [140, 0]],
+    });
+    await userEvent.click(add);
+    expect(useAppStore.getState().lineLoads.map((l) => l.x)).toEqual([120]);
   });
 
   it("adds a line load with defaults", async () => {

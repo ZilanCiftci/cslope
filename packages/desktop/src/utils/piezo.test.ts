@@ -67,4 +67,27 @@ describe("nextPiezoPoint", () => {
     expect(Math.max(...pts.map((p) => p[0]))).toBe(50);
     expect(Math.min(...pts.map((p) => p[0]))).toBe(0);
   });
+
+  it("continues a line entered right to left towards the left edge", () => {
+    expect(nextPiezoPoint([[50, 4], [30, 2]], model)).toEqual({ index: 2, point: [25, 2] });
+    expect(nextPiezoPoint([[50, 4], [3, 2]], model)).toEqual({ index: 2, point: [0, 2] });
+  });
+
+  it("fills the widest gap of a right-to-left line that reaches the left edge", () => {
+    // Not a point after the last one, which would double the line back.
+    expect(nextPiezoPoint([[50, 4], [30, 2], [0, 1]], model)).toEqual({
+      index: 2,
+      point: [15, 1.5],
+    });
+    // Repeated presses keep the line running one way, inside the model.
+    let pts = [[50, 4], [30, 2], [0, 1]] as [number, number][];
+    for (let i = 0; i < 6; i++) {
+      const { index, point } = nextPiezoPoint(pts, model);
+      pts = [...pts.slice(0, index), point, ...pts.slice(index)];
+    }
+    expect(pts).toHaveLength(9);
+    for (let i = 1; i < pts.length; i++) expect(pts[i][0]).toBeLessThan(pts[i - 1][0]);
+    expect(pts[0][0]).toBe(50);
+    expect(pts.at(-1)![0]).toBe(0);
+  });
 });
