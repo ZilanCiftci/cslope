@@ -13,7 +13,7 @@
  */
 
 import type { Material, Slice } from "../types/index";
-import { needsLayerTop, resolveStrength, resolveUnitWeight } from "../types/index";
+import { designStrength, needsLayerTop, resolveStrength, resolveUnitWeight } from "../types/index";
 import { WATER_UNIT_WEIGHT } from "../types/constants";
 import type { Pile, Reinforcement, ReinforcementForce } from "../types/reinforcement";
 import { getYAtX, isPointInPolygon } from "../math/index";
@@ -435,17 +435,8 @@ export function buildPileProfile(slope: Slope, p: Pile): PileProfile | null {
       const st = resolveStrength(m.model, { yBottom: yy, x, yGround, yLayerTop, alpha: 0 });
       // High-strength or bedrock: no soil to squeeze between the piles.
       if (Number.isFinite(st.cohesion) && !st.impenetrable) {
-        let c = st.cohesion;
-        let tanPhi = Math.tan((st.frictionAngle * Math.PI) / 180);
-        const kind = m.model.kind;
-        const undrained =
-          kind === "undrained" || kind === "s-f-depth" || kind === "s-f-datum" || kind === "lime-cement-columns" ||
-          (st.frictionAngle === 0 && !st.isCombined);
-        if (f) {
-          c /= undrained ? f.cu : f.cohesion;
-          tanPhi /= f.tanPhi;
-        }
-        const [A1, A2] = itoMatsuiCoefficients(D1, D, (Math.atan(tanPhi) * 180) / Math.PI);
+        const d = designStrength(m.model.kind, st, f);
+        const [A1, A2] = itoMatsuiCoefficients(D1, D, (Math.atan(d.tanPhi) * 180) / Math.PI);
         // The overburden term is the effective vertical stress σ′v = γz − u
         // of the soil squeezed between the piles: Ito & Matsui (1975) with
         // effective parameters, γ′ below the water table as in Poulos
@@ -453,7 +444,17 @@ export function buildPileProfile(slope: Slope, p: Pile): PileProfile | null {
         // on both faces of the pile and gives it no net force. An undrained
         // strength is a total-stress parameter, so there the overburden is
         // the total vertical stress (Ito & Matsui's φ = 0 case).
-        pz = c * A1 + verticalStress(slope, x, yy, !undrained) * A2;
+        pz = d.cohesion * A1 + verticalStress(slope, x, yy, !d.undrained) * A2;
+        if (st.isCombined) {
+          // A combined material (lime-cement columns in their drained
+          // limit, Mohr-Coulomb with cFactor) is as strong as the lower of
+          // its drained and undrained strength, as on the slice bases
+          // (solvers): the soil between the piles then flows at the
+          // undrained pressure, Ito & Matsui's φ = 0 case with the total
+          // vertical stress.
+          const [A1u, A2u] = itoMatsuiCoefficients(D1, D, 0);
+          pz = Math.min(pz, d.cohesionUndrained * A1u + verticalStress(slope, x, yy, false) * A2u);
+        }
       }
     }
     z[k + 1] = zTop + (k + 1) * dz;

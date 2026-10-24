@@ -46,6 +46,10 @@ export interface AnalysisOptions {
    * - "phreatic-correction": vertical head × cos²θ of the line's
    *   inclination (equipotentials normal to a straight phreatic line).
    *   Gives lower pore pressure, i.e. a higher FOS, below a steep line.
+   *   The correction belongs to a free phreatic surface with seepage
+   *   parallel to it, not to a piezometric line, and the option applies to
+   *   every water line of the model. A vertical step in a line (a wall or
+   *   a sheet pile) gets no correction.
    */
   porePressureHead?: PorePressureHead;
   /**

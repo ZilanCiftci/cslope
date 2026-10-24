@@ -17,7 +17,7 @@ cd packages/website
 bun scripts/verification-log.ts "Short description of the change"   # compares with the committed table
 ```
 
-Report the summary row to the user.
+Run generate-data.ts while the machine is otherwise idle (no other test runs or agents working), so the recorded run times are comparable; the log notes the load at the start. Report the summary row to the user.
 
 The home page's example images are exported from the app and also go stale. Recapture them, then update the image sizes:
 

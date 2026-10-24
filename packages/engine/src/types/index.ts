@@ -27,11 +27,12 @@ export { MATERIAL_MODEL_LABELS } from "./material-models";
 // Strength resolution
 export {
   resolveStrength,
+  designStrength,
   resolveUnitWeight,
   needsLayerTop,
   interpolateFunction,
 } from "./strength";
-export type { ResolvedStrength, StrengthContext } from "./strength";
+export type { DesignStrength, ResolvedStrength, StrengthContext } from "./strength";
 
 // Validation
 export { validateMaterialModel } from "./validation";

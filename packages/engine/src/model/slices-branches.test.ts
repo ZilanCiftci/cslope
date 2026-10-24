@@ -57,7 +57,7 @@ describe("rankineCrackDepth", () => {
     expect(rankineCrackDepth(new Slope(), 5)).toBe(0);
   });
 
-  it("lime-cement columns take γcu on c and γφ′ on tan φ′; S = f(depth) from the layer top", () => {
+  it("lime-cement columns: γcu on the soil's cu, γc′ on the columns' c′, γφ′ on tan φ′; S = f(depth) from the layer top", () => {
     const lcc = slopeOf({
       kind: "lime-cement-columns",
       unitWeight: 16,
@@ -72,7 +72,7 @@ describe("rankineCrackDepth", () => {
     const z = (cc: number, t: number) => (2 * cc) / (16 * Math.tan(Math.PI / 4 - Math.atan(t) / 2));
     expect(rankineCrackDepth(lcc, 5)).toBeCloseTo(z(c, tanPhi), 9);
     lcc.updateAnalysisOptions({ partialFactors: F });
-    expect(rankineCrackDepth(lcc, 5)).toBeCloseTo(z(c / 1.4, tanPhi / 1.2), 9);
+    expect(rankineCrackDepth(lcc, 5)).toBeCloseTo(z((0.8 * 10) / 1.4 + (0.2 * 20) / 1.25, tanPhi / 1.2), 9);
     const sfd = slopeOf({ kind: "s-f-depth", unitWeight: 18, suRef: 18, depthRef: 0, rate: 0, depthReference: "layer-top" });
     expect(rankineCrackDepth(sfd, 5)).toBeCloseTo(2, 6);
   });
@@ -108,10 +108,16 @@ describe("design strength of the slices", () => {
     expect(combined.isCombined).toBe(true);
     expect(combined.cohesion).toBeCloseTo(8, 12);
     expect(combined.cohesionUndrained).toBeCloseTo(20, 12);
-    // Columns: c with γcu, tan φ′ with γφ′.
+    // Columns, drained limit: (1 − a)·cu,soil with γcu, a·c′ with γc′, tan φ′
+    // with γφ′, the undrained a·cu,col + (1 − a)·cu,soil with γcu.
     const lcc = slicesOf({ kind: "lime-cement-columns", unitWeight: 16, soilSu: 10, columnSu: 100, areaRatio: 0.2, columnCohesion: 20, columnFrictionAngle: 30 })[0];
-    expect(lcc.cohesion).toBeCloseTo(12 / 1.4, 12);
+    expect(lcc.cohesion).toBeCloseTo((0.8 * 10) / 1.4 + (0.2 * 20) / 1.25, 12);
     expect(Math.tan(lcc.phi)).toBeCloseTo((0.2 * Math.tan(Math.PI / 6)) / 1.2, 12);
+    expect(lcc.cohesionUndrained).toBeCloseTo((0.2 * 100 + 0.8 * 10) / 1.4, 12);
+    // Undrained columns: all of it with γcu.
+    const lccU = slicesOf({ kind: "lime-cement-columns", unitWeight: 16, soilSu: 10, columnSu: 100, areaRatio: 0.2 })[0];
+    expect(lccU.cohesion).toBeCloseTo((0.2 * 100 + 0.8 * 10) / 1.4, 12);
+    expect(lccU.phi).toBe(0);
     // Strong rock is not factored (and the surface is skipped).
     const rock = slicesOf({ kind: "high-strength", unitWeight: 25 })[0];
     expect(rock.skipSurface).toBe(true);

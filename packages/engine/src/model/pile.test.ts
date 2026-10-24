@@ -159,6 +159,31 @@ describe("Lime-cement columns", () => {
     expect(st.cohesionUndrained).toBeCloseTo(0.25 * 120 + 0.75 * 16, 9);
   });
 
+  it("Ito & Matsui pressure in the drained limit: the lower of the drained and undrained branch", () => {
+    // Drained c 21 kPa, tan φ 0.144, undrained 42 kPa (as on the slices).
+    const model: LimeCementColumnModel = { ...kc, soilSu: 16, suRateOfChange: 0, columnCohesion: 36, columnFrictionAngle: 30 };
+    const slope = buildSlope(layered(ground, -10, [{ name: "KC", topY: null, model }]));
+    const pile: Pile = { x1: 5, y1: 10, x2: 5, y2: -10, diameter: 0.8, spacing: 2.4 };
+    const [A1u, A2u] = itoMatsuiCoefficients(1.6, 0.8, 0);
+    expect(A2u).toBe(0.8);
+    const phi = (Math.atan(0.25 * Math.tan(Math.PI / 6)) * 180) / Math.PI;
+    const [A1, A2] = itoMatsuiCoefficients(1.6, 0.8, phi);
+    const pd = (z: number) => 21 * A1 + 16 * z * A2;
+    const pu = (z: number) => 42 * A1u + 16 * z * A2u;
+    for (const zf of [1, 4, 10, 18]) {
+      const force = pileForce(slope, pile, 5, 10 - zf).perPile;
+      // Never above the undrained pressure p(z) ≤ cu·A1(φ = 0) + γz·D.
+      expect(force).toBeLessThanOrEqual(42 * A1u * zf + (16 * 0.8 * zf * zf) / 2 + 1e-6);
+      let expected = 0;
+      const n = 20000;
+      for (let k = 0; k < n; k++) {
+        const z = ((k + 0.5) * zf) / n;
+        expected += (Math.min(pd(z), pu(z)) * zf) / n;
+      }
+      expect(force).toBeCloseTo(expected, 0);
+    }
+  });
+
   it("validates its parameters", () => {
     expect(validateMaterialModel(kc)).toEqual([]);
     expect(validateMaterialModel({ ...kc, areaRatio: 1.2 }).length).toBe(1);

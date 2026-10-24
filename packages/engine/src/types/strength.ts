@@ -7,7 +7,8 @@
  * they only consume the `ResolvedStrength` output.
  */
 
-import type { MaterialModel } from "./material-models";
+import type { MaterialModel, MaterialModelKind } from "./material-models";
+import type { PartialFactors } from "./analysis";
 import {
   interpolateIDW,
   interpolateNearest,
@@ -24,6 +25,13 @@ export interface ResolvedStrength {
   frictionAngle: number;
   /** Undrained cohesion for Combined-method FOS (kPa). */
   cohesionUndrained: number;
+  /**
+   * Part of `cohesion` that is an undrained shear strength, so takes γcu
+   * when design values are formed; the rest is drained c′ (γc′). Set by
+   * lime-cement columns in their drained limit, whose cohesion
+   * (1 − a)·cu,soil + a·c′ mixes the two. Not set: 0.
+   */
+  cohesionUndrainedPart?: number;
   /**
    * When `true`, any slip surface passing through this material
    * should be treated as infinitely stable (FOS → ∞) and excluded
@@ -192,6 +200,9 @@ function resolveLimeCementColumns(
   const tanPhi = a * Math.tan((model.columnFrictionAngle * Math.PI) / 180);
   return {
     cohesion: (1 - a) * soil + a * model.columnCohesion,
+    // The soil between the columns stays undrained: it takes γcu, the
+    // columns' c′ γc′ (designStrength).
+    cohesionUndrainedPart: (1 - a) * soil,
     frictionAngle: (Math.atan(tanPhi) * 180) / Math.PI,
     cohesionUndrained: undrained,
     isCombined: true,
@@ -214,6 +225,64 @@ function resolveUndrained(
     cohesion: su,
     frictionAngle: 0,
     cohesionUndrained: su,
+  };
+}
+
+/** Design shear strength at one point (see `designStrength`). */
+export interface DesignStrength {
+  /** Cohesion of the drained (or only) branch (kPa). */
+  cohesion: number;
+  /** tan φ of the drained (or only) branch. */
+  tanPhi: number;
+  /** Undrained strength, the other branch of a combined material (kPa). */
+  cohesionUndrained: number;
+  /**
+   * The only strength is undrained (total stress, φ = 0): Su,
+   * S = f(depth/datum), undrained lime-cement columns and any model
+   * entered with φ = 0, the common way to give undrained clay as
+   * Mohr-Coulomb.
+   */
+  undrained: boolean;
+}
+
+/**
+ * Design strength: each characteristic parameter divided by its own
+ * partial factor, as EN 1997-1 (2004) 2.4.6.2 and Annex A set them per
+ * parameter: γcu on undrained shear strength, γc′ on effective cohesion,
+ * γφ′ on tan φ′. A strength summed from parts of both kinds factors each
+ * part on its own: lime-cement columns in their drained limit,
+ * (1 − a)·cu,soil + a·c′col, give (1 − a)·cu,soil/γcu + a·c′col/γc′ (the
+ * composite strength of soil and columns in the Swedish guidance on deep
+ * mixing, SGF Report 2:2000 and TK Geo 13, with the Eurocode factor of
+ * each part). The undrained branch of a combined material takes γcu.
+ * Without factors (and for high-strength and bedrock) the characteristic
+ * values are returned.
+ *
+ * The one place design strength is formed: the slices, the Rankine crack
+ * depth and the Ito & Matsui pile pressure all use it.
+ */
+export function designStrength(
+  kind: MaterialModelKind | undefined,
+  st: Pick<ResolvedStrength, "cohesion" | "frictionAngle" | "cohesionUndrained" | "isCombined" | "cohesionUndrainedPart">,
+  f: PartialFactors | null | undefined,
+): DesignStrength {
+  const undrained =
+    kind === "undrained" ||
+    kind === "s-f-depth" ||
+    kind === "s-f-datum" ||
+    (st.frictionAngle === 0 && !st.isCombined);
+  const tanPhi = undrained ? 0 : Math.tan((st.frictionAngle * Math.PI) / 180);
+  if (!f || kind === "high-strength" || kind === "impenetrable") {
+    return { cohesion: st.cohesion, tanPhi, cohesionUndrained: st.cohesionUndrained, undrained };
+  }
+  const cohesionUndrained = st.cohesionUndrained / f.cu;
+  if (undrained) return { cohesion: st.cohesion / f.cu, tanPhi, cohesionUndrained, undrained };
+  const part = Math.min(st.cohesion, st.cohesionUndrainedPart ?? 0);
+  return {
+    cohesion: part / f.cu + (st.cohesion - part) / f.cohesion,
+    tanPhi: tanPhi / f.tanPhi,
+    cohesionUndrained,
+    undrained,
   };
 }
 

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { resolveStrength, interpolateFunction, needsLayerTop } from "./strength";
+import { designStrength, resolveStrength, interpolateFunction, needsLayerTop } from "./strength";
 import type {
   MohrCoulombModel,
   UndrainedModel,
@@ -941,5 +941,53 @@ describe("resolveStrength — strength cutoff", () => {
   it("no cutoff when suMax is not set", () => {
     const m: StrengthFromDatumModel = { kind: "s-f-datum", unitWeight: 18, suRef: 40, yRef: 10, rate: 4 };
     expect(resolveStrength(m, ctx({ yBottom: -100 })).cohesion).toBeCloseTo(480, 9);
+  });
+});
+
+// ── Design strength ────────────────────────────────────────────
+
+describe("designStrength", () => {
+  const F = { cu: 1.4, cohesion: 1.25, tanPhi: 1.25, variableLoad: 1 };
+
+  it("lime-cement columns: each part of the composite strength takes its own factor (EN 1997-1)", () => {
+    // a 0.2, cu,soil 20, cu,col 150, c′col 30, φ′col 30°, γcu 1.4, γc′ 1.25.
+    const m: LimeCementColumnModel = {
+      kind: "lime-cement-columns",
+      unitWeight: 16,
+      soilSu: 20,
+      columnSu: 150,
+      areaRatio: 0.2,
+      columnCohesion: 30,
+      columnFrictionAngle: 30,
+    };
+    const st = resolveStrength(m, ctx());
+    expect(st.cohesion).toBeCloseTo(22, 12);
+    const d = designStrength(m.kind, st, F);
+    // 0.8·20/1.4 + 0.2·30/1.25 = 16.23 (all with γcu would give 15.71).
+    expect(d.cohesion).toBeCloseTo((0.8 * 20) / 1.4 + (0.2 * 30) / 1.25, 12);
+    expect(d.cohesion).toBeCloseTo(16.23, 2);
+    expect(d.tanPhi).toBeCloseTo((0.2 * Math.tan(Math.PI / 6)) / 1.25, 12);
+    expect(d.cohesionUndrained).toBeCloseTo((0.2 * 150 + 0.8 * 20) / 1.4, 12);
+    expect(d.undrained).toBe(false);
+    // Undrained columns: all of it is undrained strength.
+    const u = designStrength(m.kind, resolveStrength({ ...m, columnCohesion: undefined }, ctx()), F);
+    expect(u.cohesion).toBeCloseTo((0.2 * 150 + 0.8 * 20) / 1.4, 12);
+    expect(u.undrained).toBe(true);
+  });
+
+  it("other models: γcu on undrained strength, γc′ and γφ′ on drained; no factors: unchanged", () => {
+    const su: UndrainedModel = { kind: "undrained", unitWeight: 18, undrainedShearStrength: 28 };
+    expect(designStrength(su.kind, resolveStrength(su, ctx()), F)).toEqual({
+      cohesion: 20,
+      tanPhi: 0,
+      cohesionUndrained: 20,
+      undrained: true,
+    });
+    const mc: MohrCoulombModel = { kind: "mohr-coulomb", unitWeight: 18, cohesion: 10, frictionAngle: 30, cFactor: 1, cohesionUndrained: 28 };
+    const d = designStrength(mc.kind, resolveStrength(mc, ctx()), F);
+    expect(d.cohesion).toBeCloseTo(8, 12);
+    expect(d.tanPhi).toBeCloseTo(Math.tan(Math.PI / 6) / 1.25, 12);
+    expect(d.cohesionUndrained).toBeCloseTo(20, 12);
+    expect(designStrength(mc.kind, resolveStrength(mc, ctx()), null).cohesion).toBe(10);
   });
 });

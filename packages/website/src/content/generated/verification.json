@@ -201,7 +201,7 @@
     },
     {
      "method": "Spencer",
-     "computed": 1.1134,
+     "computed": 1.1135,
      "programs": {
       "min": 1.118,
       "max": 1.118
@@ -1010,7 +1010,7 @@
    "results": [
     {
      "method": "Bishop simplified",
-     "computed": 1.3822,
+     "computed": 1.3821,
      "programs": {
       "min": 1.373,
       "max": 1.382
@@ -1018,7 +1018,7 @@
     },
     {
      "method": "Spencer",
-     "computed": 1.3982,
+     "computed": 1.3981,
      "programs": {
       "min": 1.386,
       "max": 1.386
@@ -1039,7 +1039,7 @@
    "results": [
     {
      "method": "Bishop simplified",
-     "computed": 1.3822,
+     "computed": 1.3821,
      "programs": {
       "min": 1.378,
       "max": 1.382
@@ -1360,13 +1360,13 @@
      "source": "Chowdhury & Xu",
      "method": "Bishop simplified",
      "analysis": "Bishop simplified",
-     "computed": 2.1281
+     "computed": 2.128
     }
    ],
    "results": [
     {
      "method": "Morgenstern-Price (half-sine)",
-     "computed": 2.1281,
+     "computed": 2.128,
      "programs": {
       "min": 2.138,
       "max": 2.138
@@ -1374,7 +1374,7 @@
     },
     {
      "method": "Bishop simplified",
-     "computed": 2.1281,
+     "computed": 2.128,
      "programs": {
       "min": 2.128,
       "max": 2.128
@@ -1402,7 +1402,7 @@
    "results": [
     {
      "method": "Morgenstern-Price (half-sine)",
-     "computed": 1.428,
+     "computed": 1.4281,
      "programs": {
       "min": 1.422,
       "max": 1.422
@@ -1534,13 +1534,13 @@
      "source": "Duncan & Wright",
      "method": "Bishop simplified",
      "analysis": "Bishop simplified",
-     "computed": 1.5719
+     "computed": 1.5718
     }
    ],
    "results": [
     {
      "method": "Bishop simplified",
-     "computed": 1.5719,
+     "computed": 1.5718,
      "programs": {
       "min": 1.563,
       "max": 1.572
@@ -1548,7 +1548,7 @@
     },
     {
      "method": "Spencer",
-     "computed": 1.5623,
+     "computed": 1.5622,
      "programs": {
       "min": 1.557,
       "max": 1.557
@@ -1574,7 +1574,7 @@
    "results": [
     {
      "method": "Bishop simplified",
-     "computed": 1.1323,
+     "computed": 1.1324,
      "programs": {
       "min": 1.142,
       "max": 1.142
@@ -1916,13 +1916,13 @@
      "source": "Duncan & Wright",
      "method": "Spencer",
      "analysis": "Spencer",
-     "computed": 1.5327
+     "computed": 1.5328
     }
    ],
    "results": [
     {
      "method": "Bishop simplified",
-     "computed": 1.5208,
+     "computed": 1.5209,
      "programs": {
       "min": 1.533,
       "max": 1.533
@@ -1930,12 +1930,12 @@
     },
     {
      "method": "Spencer",
-     "computed": 1.5327,
+     "computed": 1.5328,
      "programs": null
     },
     {
      "method": "Spencer, non-circular",
-     "computed": 1.5239,
+     "computed": 1.5238,
      "programs": {
       "min": 1.534,
       "max": 1.534
@@ -2496,7 +2496,7 @@
    "results": [
     {
      "method": "Bishop simplified",
-     "computed": 1.5912,
+     "computed": 1.5913,
      "programs": {
       "min": 1.584,
       "max": 1.591
@@ -2512,7 +2512,7 @@
     },
     {
      "method": "Morgenstern-Price (half-sine)",
-     "computed": 1.6699,
+     "computed": 1.67,
      "programs": {
       "min": 1.67,
       "max": 1.67
@@ -2932,7 +2932,7 @@
    "results": [
     {
      "method": "Spencer, non-circular",
-     "computed": 0.6975,
+     "computed": 0.6976,
      "programs": {
       "min": 0.707,
       "max": 0.707
@@ -4488,7 +4488,7 @@
    "results": [
     {
      "method": "Bishop simplified",
-     "computed": 1.5039,
+     "computed": 1.504,
      "programs": {
       "min": 1.532,
       "max": 1.532
@@ -4525,7 +4525,7 @@
    "results": [
     {
      "method": "Bishop simplified",
-     "computed": 1.4832,
+     "computed": 1.4833,
      "programs": {
       "min": 1.511,
       "max": 1.511
@@ -4533,7 +4533,7 @@
     },
     {
      "method": "Spencer",
-     "computed": 1.4824,
+     "computed": 1.4825,
      "programs": {
       "min": 1.51,
       "max": 1.51
@@ -4554,7 +4554,7 @@
    "results": [
     {
      "method": "Bishop simplified",
-     "computed": 1.3691,
+     "computed": 1.3692,
      "programs": {
       "min": 1.369,
       "max": 1.396
@@ -5163,7 +5163,7 @@
    "results": [
     {
      "method": "Bishop simplified",
-     "computed": 1.998,
+     "computed": 1.9981,
      "programs": {
       "min": 2.011,
       "max": 2.011
@@ -5171,7 +5171,7 @@
     },
     {
      "method": "Spencer",
-     "computed": 2.0121,
+     "computed": 2.0122,
      "programs": {
       "min": 2.026,
       "max": 2.026
@@ -5179,7 +5179,7 @@
     },
     {
      "method": "Janbu corrected",
-     "computed": 1.8324,
+     "computed": 1.8325,
      "programs": {
       "min": 1.83,
       "max": 1.83
@@ -5284,7 +5284,7 @@
     },
     {
      "method": "Morgenstern-Price (half-sine), non-circular",
-     "computed": 1.391,
+     "computed": 1.3907,
      "programs": {
       "min": 1.389,
       "max": 1.389
@@ -5459,7 +5459,7 @@
    "results": [
     {
      "method": "Bishop simplified",
-     "computed": 1.173,
+     "computed": 1.1731,
      "programs": {
       "min": 1.176,
       "max": 1.176
@@ -5913,7 +5913,7 @@
    "rows": [
     {
      "quantity": "pf-mc",
-     "computed": 0.2453,
+     "computed": 0.2454,
      "published": [],
      "programs": {
       "min": 0.2531,
