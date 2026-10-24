@@ -124,7 +124,7 @@ function main() {
   const args = process.argv.slice(2);
   const baseAt = args.indexOf("--base");
   const base = baseAt >= 0 ? args[baseAt + 1] : "HEAD";
-  const title = args.filter((_, i) => i !== baseAt && i !== baseAt + 1).join(" ").trim();
+  const title = args.filter((_, i) => baseAt < 0 || (i !== baseAt && i !== baseAt + 1)).join(" ").trim();
   if (!title) throw new Error('Usage: bun scripts/verification-log.ts "Description of the change" [--base <rev>]');
 
   const after = JSON.parse(readFileSync(join(ROOT, DATA), "utf8")) as VerificationData;
