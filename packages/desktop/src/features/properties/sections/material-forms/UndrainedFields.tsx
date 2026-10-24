@@ -3,6 +3,7 @@ import { ExpressionNumericInput } from "../../../../components/ui/ExpressionNume
 import type { UndrainedModel } from "@cslope/engine";
 import type { MaterialExpressions } from "../../../../store/types";
 import { CutoffField } from "./CutoffField";
+import { UnitWeightSatField } from "./UnitWeightSatField";
 
 interface Props {
   model: UndrainedModel;
@@ -35,6 +36,10 @@ export function UndrainedFields({
           aria-label="γ (kN/m³)"
         />
       </label>
+      <UnitWeightSatField
+        value={model.unitWeightSat}
+        onChange={(unitWeightSat) => onChange({ unitWeightSat })}
+      />
       <label className="flex flex-col gap-0.5">
         <Label>Su (kPa)</Label>
         <ExpressionNumericInput
@@ -55,6 +60,7 @@ export function UndrainedFields({
       </label>
       <CutoffField
         value={model.suMax}
+        rate={model.suRateOfChange ?? 0}
         onChange={(suMax) => onChange({ suMax })}
       />
     </div>

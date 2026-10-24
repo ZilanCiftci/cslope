@@ -78,7 +78,7 @@ describe("ResultsPlotDialogApp", () => {
     ).toBeInTheDocument();
   });
 
-  it("lists surfaces sorted by FoS with the critical one first", () => {
+  it("lists surfaces sorted by FOS with the critical one first", () => {
     const model = activeModel();
     render(<ResultsPlotDialogApp />);
     bridge.emit("onResultsPlotState", {
@@ -94,11 +94,11 @@ describe("ResultsPlotDialogApp", () => {
       (surfaceSelect as HTMLSelectElement).options,
     ).map((o) => o.textContent);
     expect(labels).toEqual([
-      "Critical - FoS 1.2500",
-      "2 - FoS 1.5000",
-      "3 - FoS 1.8000",
+      "Critical - FOS 1.250",
+      "2 - FOS 1.500",
+      "3 - FOS 1.800",
     ]);
-    expect(screen.getByText("FoS: 1.2500")).toBeInTheDocument();
+    expect(screen.getByText("FOS: 1.250")).toBeInTheDocument();
     expect(screen.getByText("Critical surface")).toBeInTheDocument();
     expect(screen.getByText("Metric unit: kPa")).toBeInTheDocument();
     // The slices of the default model are derived for the surface.
@@ -120,7 +120,7 @@ describe("ResultsPlotDialogApp", () => {
       screen.getByRole("combobox", { name: "Slip surface" }),
       "1",
     );
-    expect(screen.getByText("FoS: 1.5000")).toBeInTheDocument();
+    expect(screen.getByText("FOS: 1.500")).toBeInTheDocument();
     expect(screen.getByText("Non-critical surface")).toBeInTheDocument();
 
     await userEvent.selectOptions(
@@ -154,12 +154,12 @@ describe("ResultsPlotDialogApp", () => {
       screen.getByRole("combobox", { name: "Slip surface" }),
       "2",
     );
-    expect(screen.getByText("FoS: 1.7000")).toBeInTheDocument();
+    expect(screen.getByText("FOS: 1.700")).toBeInTheDocument();
     bridge.emit("onResultsPlotChanged", {
       model,
       result: result([surfaceThroughSlope(model, 1.1)]),
     });
-    expect(screen.getByText("FoS: 1.1000")).toBeInTheDocument();
+    expect(screen.getByText("FOS: 1.100")).toBeInTheDocument();
   });
 
   it("offers the lambda plot only for Morgenstern-Price runs", async () => {
@@ -211,7 +211,7 @@ describe("ResultsPlotDialogApp", () => {
     expect(
       (screen.getByRole("combobox", { name: "Plot" }) as HTMLSelectElement).value,
     ).toBe("slipSurface");
-    expect(screen.getByText("FoS: 1.3000")).toBeInTheDocument();
+    expect(screen.getByText("FOS: 1.300")).toBeInTheDocument();
   });
 
   it("explains when a Morgenstern-Price surface has no lambda data", async () => {

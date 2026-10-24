@@ -37,7 +37,7 @@ export function CustomSearchPlanesSection({
             onChange={(e) => setCustomPlanesOnly(e.target.checked)}
             className="accent-blue-500"
           />
-          Custom planes only (skip random search)
+          Only analyse these surfaces (skip the search)
         </label>
       )}
       {planes.map((p) => {
@@ -45,7 +45,7 @@ export function CustomSearchPlanesSection({
           return (
             <div key={p.id} className="flex items-end gap-1 text-[12px]">
               <label className="flex flex-col flex-1 min-w-0">
-                <Label>Points x,y; x,y; …</Label>
+                <Label>Points x, y (m); x, y; …</Label>
                 <PolylineInput
                   points={p.points}
                   onChange={(points) => updatePlane(p.id, { points })}
@@ -66,27 +66,27 @@ export function CustomSearchPlanesSection({
         return (
           <div key={p.id} className="flex items-end gap-1 text-[12px]">
             <label className="flex flex-col">
-              <Label>cx</Label>
+              <Label>cx (m)</Label>
               <DraftNumberInput
                 step="0.5"
                 value={p.cx}
                 onValueChange={(v) => updatePlane(p.id, { cx: v })}
-                className="w-16"
+                className="w-20"
                 aria-label="Circle centre X"
               />
             </label>
             <label className="flex flex-col">
-              <Label>cy</Label>
+              <Label>cy (m)</Label>
               <DraftNumberInput
                 step="0.5"
                 value={p.cy}
                 onValueChange={(v) => updatePlane(p.id, { cy: v })}
-                className="w-16"
+                className="w-20"
                 aria-label="Circle centre Y"
               />
             </label>
             <label className="flex flex-col">
-              <Label>R</Label>
+              <Label>R (m)</Label>
               <DraftNumberInput
                 step="0.5"
                 min="0.1"
@@ -104,7 +104,7 @@ export function CustomSearchPlanesSection({
                     ? { borderColor: "var(--color-vsc-error)" }
                     : undefined
                 }
-                className="w-16"
+                className="w-20"
                 aria-label="Circle radius"
               />
             </label>
@@ -154,9 +154,11 @@ function PolylineInput({
   onChange: (points: [number, number][]) => void;
 }) {
   const [draft, setDraft] = useState<string | null>(null);
+  // A new, empty surface is not flagged until something is typed.
+  const [touched, setTouched] = useState(points.length > 0);
   const text = draft ?? formatPolyline(points);
   const parsed = parsePolyline(text);
-  const invalid = parsed === null || parsed.length < 2;
+  const invalid = touched && (parsed === null || parsed.length < 2);
   return (
     <input
       type="text"
@@ -164,6 +166,7 @@ function PolylineInput({
       placeholder="e.g. 10, 5; 18, 1; 30, 2; 38, 9"
       onChange={(e) => {
         setDraft(e.target.value);
+        setTouched(true);
         const next = parsePolyline(e.target.value);
         // A surface needs two points; a single pair is still being typed.
         if (next && next.length >= 2) onChange(next);

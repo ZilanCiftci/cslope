@@ -94,6 +94,41 @@ describe("AxisOverlay", () => {
     expect(coarse[1] - coarse[0]).toBeGreaterThanOrEqual(100);
   });
 
+  it("leaves out ruler labels the edges or the corner would cut", () => {
+    // Ticks every 2 m (50 px). The -6 tick two pixels right of the ruler, the
+    // 140 tick three pixels below the top, then the 110 tick at the right edge.
+    const scale = 25;
+    const at = (x: number, px: number) => (px - W / 2) / scale - x;
+    const atY = (y: number, py: number) => (H / 2 - py) / scale - y;
+    // 6 px per character in the recording context.
+    const check = () => {
+      const xLabels = rec.texts.filter((t) => t.state.textBaseline === "top");
+      const yLabels = rec.texts.filter((t) => t.state.textAlign === "right");
+      expect(xLabels.length).toBeGreaterThan(3);
+      expect(yLabels.length).toBeGreaterThan(3);
+      for (const t of xLabels) {
+        expect(t.x - (t.text.length * 6) / 2).toBeGreaterThanOrEqual(RULER_SIZE_PX);
+        expect(t.x + (t.text.length * 6) / 2).toBeLessThanOrEqual(W);
+      }
+      for (const t of yLabels) expect(t.y).toBeGreaterThanOrEqual(6);
+      return { x: xLabels.map((t) => t.text), y: yLabels.map((t) => t.text) };
+    };
+    useAppStore.setState({ editViewScale: scale, editViewOffset: [at(-6, RULER_SIZE_PX + 2), atY(140, 3)] });
+    renderOverlay();
+    const first = check();
+    expect(first.x).not.toContain("-6");
+    expect(first.x).toContain("-4");
+    expect(first.y).not.toContain("140");
+    expect(first.y).toContain("138");
+    rec.reset();
+    cleanup();
+    useAppStore.setState({ editViewScale: scale, editViewOffset: [at(110, W - 3), atY(140, 3)] });
+    renderOverlay();
+    const second = check();
+    expect(second.x).not.toContain("110");
+    expect(second.x).toContain("108");
+  });
+
   it("redraws when the viewport changes", () => {
     renderOverlay();
     const before = rec.findText("10")!.x;

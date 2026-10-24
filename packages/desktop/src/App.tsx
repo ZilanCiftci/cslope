@@ -303,16 +303,21 @@ function App() {
     isViewSettingsDialogWindow;
 
   useEffect(() => {
-    // Escape closes a dialog window (unless a field or menu handles it).
+    // Escape closes a dialog window, as its Close button does, also from
+    // inside a field.  A field or menu that uses Escape itself (an open
+    // drop-down list, an edit it cancels) keeps it: it calls
+    // preventDefault(), and an open native list never passes the key on.
     if (!isAnyDialogWindow) return;
     const onKey = (e: KeyboardEvent) => {
-      if (e.key !== "Escape" || e.defaultPrevented) return;
-      const t = e.target as HTMLElement | null;
-      if (t && ["INPUT", "TEXTAREA", "SELECT"].includes(t.tagName)) {
-        t.blur();
-        return;
+      if (e.key !== "Escape" || e.defaultPrevented || e.isComposing) return;
+      e.preventDefault();
+      // Leave the field first so a value typed into it is committed and
+      // sent to the main window (fields commit on blur), then close.
+      const active = document.activeElement;
+      if (active instanceof HTMLElement && active !== document.body) {
+        active.blur();
       }
-      window.close();
+      setTimeout(() => window.close(), 100);
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);

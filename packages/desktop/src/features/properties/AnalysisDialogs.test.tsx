@@ -236,7 +236,7 @@ describe("SearchLimitsDialogApp", () => {
     hydrate({ analysisLimits: { enabled: true }, orientation: "rtl" });
     expect(screen.getByText("Entry Range (crest side — right)")).toBeInTheDocument();
     expect(screen.getByText("Exit Range (toe side — left)")).toBeInTheDocument();
-    expect(screen.getByText("X range: 0 – 40")).toBeInTheDocument();
+    expect(screen.getByText("Model X range: 0 – 40 m")).toBeInTheDocument();
   });
 
   it("restricts the ranges and sends the limits", async () => {
@@ -260,16 +260,19 @@ describe("CustomSearchPlanesDialogApp", () => {
   it("adds a circle and edits its centre and radius", async () => {
     render(<CustomSearchPlanesDialogApp />);
     hydrate();
-    expect(screen.queryByText(/Custom planes only/)).toBeNull();
+    expect(screen.queryByText(/Only analyse these surfaces/)).toBeNull();
     await userEvent.click(screen.getByRole("button", { name: "+ Add Search Plane" }));
     expect(store().customSearchPlanes).toHaveLength(1);
+    // A new circle starts inside the model: centre above the middle of the
+    // slope face (x 30 to 40), reaching down to just above the base.
+    expect(store().customSearchPlanes[0]).toMatchObject({ cx: 35, cy: 15, radius: 14.5 });
     const cx = screen.getByLabelText("Circle centre X");
     await userEvent.clear(cx);
     await userEvent.type(cx, "15");
     const cy = screen.getByLabelText("Circle centre Y");
     await userEvent.clear(cy);
     await userEvent.type(cy, "-2");
-    expect(store().customSearchPlanes[0]).toMatchObject({ cx: 15, cy: -2, radius: 10 });
+    expect(store().customSearchPlanes[0]).toMatchObject({ cx: 15, cy: -2, radius: 14.5 });
     expect(lastSent().customSearchPlanes[0]).toMatchObject({ cx: 15, cy: -2 });
   });
 
@@ -288,7 +291,7 @@ describe("CustomSearchPlanesDialogApp", () => {
   it("restricts the search to custom planes", async () => {
     render(<CustomSearchPlanesDialogApp />);
     hydrate({ customSearchPlanes: [{ id: "c1", cx: 10, cy: 20, radius: 12 }] });
-    await userEvent.click(screen.getByRole("checkbox", { name: /Custom planes only/ }));
+    await userEvent.click(screen.getByRole("checkbox", { name: /Only analyse these surfaces/ }));
     expect(store().customPlanesOnly).toBe(true);
     expect(lastSent().customPlanesOnly).toBe(true);
   });
@@ -300,7 +303,8 @@ describe("CustomSearchPlanesDialogApp", () => {
       screen.getByRole("button", { name: "+ Add Non-circular Surface" }),
     );
     const pts = screen.getByLabelText("Non-circular surface points") as HTMLInputElement;
-    expect(pts).toHaveAttribute("aria-invalid", "true");
+    // Not flagged before anything is typed.
+    expect(pts).toHaveAttribute("aria-invalid", "false");
     await userEvent.type(pts, "5, 10; 20, 2");
     expect(store().customSearchPlanes[0].points).toEqual([
       [5, 10],

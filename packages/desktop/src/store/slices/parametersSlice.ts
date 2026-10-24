@@ -193,6 +193,14 @@ function resolveLineLoadRow(
   };
 }
 
+/** First free name (p1, p2 and so on) for a new parameter. */
+export function nextParameterName(parameters: { name: string }[]): string {
+  const used = new Set(parameters.map((p) => p.name.trim()));
+  let n = 1;
+  while (used.has(`p${n}`)) n++;
+  return `p${n}`;
+}
+
 export const createParametersSlice: SliceCreator<ParametersSlice> = (
   set,
   get,
@@ -205,7 +213,7 @@ export const createParametersSlice: SliceCreator<ParametersSlice> = (
         ...s.parameters,
         {
           id: nextId("param"),
-          name: "",
+          name: nextParameterName(s.parameters),
           expression: "0",
         },
       ]),

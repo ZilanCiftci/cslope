@@ -14,7 +14,7 @@ import {
 } from "../../components/ui/SpreadsheetTable";
 import { SpreadsheetExpressionInput } from "../../components/ui/SpreadsheetExpressionInput";
 import { resolveParameters } from "../../utils/expression";
-import { mainPiezoLine } from "../../utils/piezo";
+import { mainPiezoLine, nextPiezoPoint } from "../../utils/piezo";
 
 interface PiezoStatePayload {
   piezometricLine: PiezometricLineState;
@@ -48,6 +48,7 @@ export function PiezoDialogApp() {
   const setActivePiezoLine = useAppStore((s) => s.setActivePiezoLine);
   const setPiezoCoordinate = useAppStore((s) => s.setPiezoCoordinate);
   const addPiezoPoint = useAppStore((s) => s.addPiezoPoint);
+  const insertPiezoPointAt = useAppStore((s) => s.insertPiezoPointAt);
   const removePiezoPoint = useAppStore((s) => s.removePiezoPoint);
   const setPiezoMaterialAssignment = useAppStore(
     (s) => s.setPiezoMaterialAssignment,
@@ -153,7 +154,7 @@ export function PiezoDialogApp() {
       ),
     },
     {
-      header: <Label>X</Label>,
+      header: <Label>X (m)</Label>,
       renderCell: ([x, y], i) => (
         <SpreadsheetExpressionInput
           value={x}
@@ -169,7 +170,7 @@ export function PiezoDialogApp() {
       ),
     },
     {
-      header: <Label>Y</Label>,
+      header: <Label>Y (m)</Label>,
       renderCell: ([x, y], i) => (
         <SpreadsheetExpressionInput
           value={y}
@@ -204,15 +205,9 @@ export function PiezoDialogApp() {
 
   const addDefaultPoint = () => {
     if (!activeLine) return;
-    const allX = coordinates.map((c) => c[0]);
-    const allY = coordinates.map((c) => c[1]);
-    const midY = (Math.min(...allY) + Math.max(...allY)) / 2;
-    if (activeLine.coordinates.length === 0) {
-      addPiezoPoint([Math.min(...allX), midY]);
-    } else {
-      const last = activeLine.coordinates[activeLine.coordinates.length - 1];
-      addPiezoPoint([last[0] + 5, last[1]]);
-    }
+    const next = nextPiezoPoint(activeLine.coordinates, coordinates);
+    if (next.index >= activeLine.coordinates.length) addPiezoPoint(next.point);
+    else insertPiezoPointAt(next.index, next.point);
   };
 
   const handleAddLine = () => {

@@ -24,6 +24,7 @@ The first public release.
 - Material models: Mohr–Coulomb, undrained, strength increasing with depth (from the ground or from the top of the layer) or from a datum, with a strength cutoff, anisotropic, spatially varying, lime-cement columns, and high-strength and impenetrable (bedrock) layers. Saturated unit weight below the water table.
 - Water: several piezometric lines with one per material if needed, ponded water above the ground.
 - Distributed and line loads; anchors, grouted tiebacks, soil nails, geosynthetics, pile rows and sheet pile walls.
+- Edit view: coordinate labels find a free place around their point, clear of other labels, markers, loads and water symbols; interior boundaries are drawn only inside the model; custom slip surfaces show dashed; rulers leave out labels the edge would cut.
 
 ### Results and reporting
 
@@ -31,6 +32,10 @@ The first public release.
 - Plots of slice data and of Fm and Ff against λ; export to PDF and PNG, slice data to Excel and CSV.
 - The PDF report ends with an analysis summary: method, search, water and tension crack, partial factors, materials and loads. With partial factors, the PDF and the slice data mark design values.
 - Result plot: the sliding mass follows stepped and vertical faces, a tension crack is drawn as part of the critical surface with the water in it, slice lines show on dark layers, and the search limits point into their ranges under the result.
+
+### Interface
+
+- A failed run shows its error over the edit canvas and in the status bar, with a shortcut to the search limits when no slip surface was found. F5 or Ctrl+Enter runs the analysis; Escape closes the dialog windows and Model Properties. A new project starts with a neutral "Model 1" instead of an example's name and title.
 
 ### Verification
 

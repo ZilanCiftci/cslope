@@ -14,6 +14,7 @@ import { buildSlopeDTOFromModel, nextId, RUN_RESET } from "../helpers";
 import type { AnalysisSlice, AppState, ModelEntry } from "../types";
 import { DEFAULT_ANALYSIS_LIMITS } from "../defaults";
 import { ANALYSIS_TIMEOUT_MS } from "../../constants";
+import { defaultCustomCircle } from "../../utils/custom-plane";
 
 // ── Shared worker execution ────────────────────────────────────────
 
@@ -317,7 +318,7 @@ export const createAnalysisSlice: SliceCreator<AnalysisSlice> = (set, get) => ({
       const plane =
         kind === "polyline"
           ? { id: nextId("csp"), cx: 0, cy: 0, radius: 0, points: [] }
-          : { id: nextId("csp"), cx: 0, cy: 0, radius: 10 };
+          : { id: nextId("csp"), ...defaultCustomCircle(s.coordinates) };
       const customSearchPlanes = [...s.customSearchPlanes, plane];
       return {
         customSearchPlanes,

@@ -156,7 +156,7 @@ describe("FloatingToolbar", () => {
     act(() => {
       vi.advanceTimersByTime(3000);
     });
-    expect(toolbar.style.opacity).toBe("0.4");
+    expect(toolbar.style.opacity).toBe("0.7");
     fireEvent.pointerEnter(toolbar);
     expect(toolbar.style.opacity).toBe("1");
     act(() => {
@@ -171,7 +171,7 @@ describe("FloatingToolbar", () => {
     act(() => {
       vi.advanceTimersByTime(1);
     });
-    expect(toolbar.style.opacity).toBe("0.4");
+    expect(toolbar.style.opacity).toBe("0.7");
   });
 
   it("collapses to icons when the canvas is narrow", () => {
