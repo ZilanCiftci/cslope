@@ -15,6 +15,8 @@ interface LoadsStatePayload {
   udls: UdlRow[];
   lineLoads: LineLoadRow[];
   parameters?: ParameterDef[];
+  /** From the main window: keeps new loads inside the model. */
+  coordinates?: [number, number][];
 }
 
 function normalizeLoadsPayload(
@@ -50,6 +52,7 @@ export function LineLoadsDialogApp() {
         udls: UdlRow[];
         lineLoads: LineLoadRow[];
         parameters?: ParameterDef[];
+        coordinates?: [number, number][];
       } = {
         udls: normalized.udls,
         lineLoads: normalized.lineLoads,
@@ -57,6 +60,9 @@ export function LineLoadsDialogApp() {
 
       if (Array.isArray(normalized.parameters)) {
         patch.parameters = normalized.parameters;
+      }
+      if (Array.isArray(normalized.coordinates)) {
+        patch.coordinates = normalized.coordinates;
       }
 
       useAppStore.setState(patch);

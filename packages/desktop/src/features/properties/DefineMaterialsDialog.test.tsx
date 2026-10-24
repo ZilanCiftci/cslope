@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { MaterialModel } from "@cslope/engine";
 
@@ -199,6 +199,28 @@ describe("DefineMaterialsDialog — switching the model", () => {
     expect((model() as { suMax?: number }).suMax).toBeUndefined();
   });
 
+  it("keeps a cutoff on constant Su while it is retyped", async () => {
+    render(<DefineMaterialsDialog onClose={() => {}} />);
+    await userEvent.selectOptions(kindSelect(), "undrained");
+    act(() => {
+      store().updateMaterial(mats()[0].id, {
+        model: { ...model(), suRateOfChange: 0, suMax: 30 } as MaterialModel,
+      });
+    });
+    // Constant Su with a cutoff set: shown so it can be cleared.
+    const cutoff = screen.getByLabelText("Max Su (cutoff) (kPa)");
+    await userEvent.clear(cutoff);
+    // Emptied while focused: still there to type the new value into.
+    expect(screen.getByLabelText("Max Su (cutoff) (kPa)")).toBe(cutoff);
+    await userEvent.type(cutoff, "25");
+    expect(model()).toMatchObject({ suMax: 25 });
+    // Cleared and left: no cutoff, and the field goes.
+    await userEvent.clear(cutoff);
+    await userEvent.tab();
+    expect((model() as { suMax?: number }).suMax).toBeUndefined();
+    expect(screen.queryByLabelText("Max Su (cutoff) (kPa)")).toBeNull();
+  });
+
   it("edits S = f(depth) fields", async () => {
     render(<DefineMaterialsDialog onClose={() => {}} />);
     await userEvent.selectOptions(kindSelect(), "s-f-depth");
@@ -284,6 +306,33 @@ describe("DefineMaterialsDialog — switching the model", () => {
     // Removing the last point is an error once the user has edited it.
     await userEvent.click(screen.getByRole("button", { name: "Remove row 1" }));
     expect(screen.getByRole("alert", { name: "Validation errors" })).toBeInTheDocument();
+  });
+
+  it("shows a switched material's errors once it is renamed or left", async () => {
+    store().addMaterial();
+    render(<DefineMaterialsDialog onClose={() => {}} />);
+    const alert = () => screen.queryByRole("alert", { name: "Validation errors" });
+    const [first] = mats();
+    const listRow = (i: number) =>
+      within(screen.getAllByRole("table")[0]).getAllByRole("row")[i + 1];
+    await userEvent.selectOptions(kindSelect(), "spatial-mohr-coulomb");
+    expect(alert()).toBeNull();
+    // Renaming is an edit of the material.
+    const name = screen.getAllByLabelText("Material name")[0];
+    await userEvent.type(name, "x");
+    expect(mats()[0].name).toBe(`${first.name}x`);
+    expect(alert()).toBeInTheDocument();
+
+    // Selecting another material and coming back shows them too.
+    await userEvent.selectOptions(kindSelect(), "undrained");
+    await userEvent.selectOptions(kindSelect(), "spatial-mohr-coulomb");
+    expect(alert()).toBeNull();
+    await userEvent.click(within(listRow(1)).getAllByRole("cell")[1]);
+    expect(mats()[1].model.kind).toBe("mohr-coulomb");
+    expect(alert()).toBeNull();
+    await userEvent.click(within(listRow(0)).getAllByRole("cell")[1]);
+    expect(screen.getByText("No data points yet: add at least one.")).toBeInTheDocument();
+    expect(alert()).toBeInTheDocument();
   });
 
   it.each(["high-strength", "impenetrable"])(

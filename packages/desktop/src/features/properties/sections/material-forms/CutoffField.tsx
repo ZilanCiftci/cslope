@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Label } from "../../../../components/ui/Label";
 import { DraftNumberInput } from "../../../../components/ui/DraftNumberInput";
 import { NO_SPINNER } from "./styles";
@@ -14,10 +15,12 @@ interface Props {
  * Optional Su cutoff; an empty field means none. A maximum when Su
  * increases with depth, a minimum when it decreases. It is shown only when
  * Su varies with depth, or when a cutoff is already set (so it can be
- * cleared).
+ * cleared). While the field is being edited it stays, so clearing it to
+ * type a new cutoff does not remove it from under the cursor.
  */
 export function CutoffField({ value, rate, onChange }: Props) {
-  if (rate === 0 && value === undefined) return null;
+  const [editing, setEditing] = useState(false);
+  if (rate === 0 && value === undefined && !editing) return null;
   const minimum = rate < 0;
   const label = minimum ? "Min Su (cutoff) (kPa)" : "Max Su (cutoff) (kPa)";
   const hint = minimum
@@ -35,6 +38,8 @@ export function CutoffField({ value, rate, onChange }: Props) {
           if (v > 0) onChange(v);
         }}
         onClear={() => onChange(undefined)}
+        onFocus={() => setEditing(true)}
+        onBlur={() => setEditing(false)}
         aria-label={label}
       />
     </label>
