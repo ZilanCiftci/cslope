@@ -903,11 +903,12 @@ export const PROBLEMS: RawCase[] = [
     definition: {"coordinates":[[-10,-30],[-10,30],[90,30],[130,80],[270,80],[270,-30]],"materials":[{"name":"Clay","model":{"kind":"mohr-coulomb","unitWeight":100,"cohesion":1000,"frictionAngle":0}}],"materialBoundaries":[],"regionAssignments":[{"point":[2.4,-29.95],"materialName":"Clay"}],"orientation":"rtl"},
     checks: [
       {"method":"Bishop","label":"Bishop simplified","published":1.125,"publishedBy":"Commercial program A"},
-      {"method":"Morgenstern-Price","label":"Spencer (M-P, constant f(x))","published":1.124,"publishedBy":"Duncan & Wright (reference)","options":{"intersliceFunction":"constant"}},
+      {"method":"Morgenstern-Price","label":"Spencer (M-P, constant f(x))","published":1.119,"publishedBy":"Duncan & Wright (reference)","options":{"intersliceFunction":"constant"}},
     ],
     notes: [
       "The model runs from x = −10 to 270 ft, as in the source, whose base-tangent circle starts at x = −4.8 ft.",
       "commercial program A's base-tangent circle gives 1.125 (Bishop), 1.124 (Spencer).",
+      "Duncan & Wright's reference for the 60 ft foundation is 1.119 for the circle tangent to the base and 1.124 for the toe circle (commercial program A's Tables 78.6 and 78.7). The search finds the base-tangent circle, so the check is 1.119; it was 1.124, the toe-circle value, until 2026-10-24. On commercial program A's printed base-tangent circle (centre (111.147, 112.308) in these coordinates, R 142.208, endpoints as printed) exact integration gives 1.1187 and cSlope 1.1173 with 60 slices.",
     ],
   },
   {
