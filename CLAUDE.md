@@ -10,6 +10,15 @@ bun scripts/generate-data.ts   # verification table (src/content/generated/verif
 bun run report                 # public PDF report (public/cSlope-verification-report.pdf), about 3 min
 ```
 
+Then record the effect of the change in VERIFICATION-LOG.md, before committing, for traceability: which verification results moved and the mean, mean absolute, RMS and largest error before and after. Do this after every major change, also when nothing moved:
+
+```
+cd packages/website
+bun scripts/verification-log.ts "Short description of the change"   # compares with the committed table
+```
+
+Report the summary row to the user.
+
 The home page's example images are exported from the app and also go stale. Recapture them, then update the image sizes:
 
 ```
