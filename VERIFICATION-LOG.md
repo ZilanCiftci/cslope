@@ -25,11 +25,53 @@ The script compares the regenerated verification table with the committed one an
 | 2026-10-24 | Final review: slicing with dense water lines, weaker soil on a layer boundary, pile pond water | 2 | 0.408 → 0.407 | 0.590 → 0.589 | 1.673 → 1.673 | 4.014 → 4.014 | 91 s (4 workers, load 0.9 at start) |
 | 2026-10-24 | Zhu & Lee's simplified Bishop value for surface 3 (V096a, V096c) marked disputed and left out of the statistics; confirmed in the paper | 0 | 0.407 → 0.407 | 0.589 → 0.589 | 1.673 → 1.178 | 4.014 → 1.684 | 88 s (4 workers, load 0.2 at start) |
 | 2026-10-24 | Inputs corrected from the night investigation (V082a-c water table, V039/V040 clay 6.5 m, V051 phreatic correction, V087 R = 169.0 ft); Morgenstern-Price returns the interpolated crossing; default tolerance 0.001 | 54 | 0.407 → 0.354 | 0.589 → 0.501 | 1.178 → 1.146 | 1.684 → 1.660 | 88 s (4 workers, load 0.9 at start) |
+| 2026-10-24 | Input audit of all verification problems: V005, V009a-c, V017a/b, V029, V042, V060a, V061, V065, V066c, V068, V075, V077, V083, V092, V098 corrected against their sources | 18 | 0.354 → 0.358 | 0.501 → 0.509 | 1.146 → 1.092 | 1.660 → 1.581 | 87 s (4 workers, load 0.9 at start) |
 <!-- summary-end -->
 
 ## Entries
 
 <!-- entries -->
+
+### 2026-10-24: Input audit of all verification problems: V005, V009a-c, V017a/b, V029, V042, V060a, V061, V065, V066c, V068, V075, V077, V083, V092, V098 corrected against their sources
+
+Compared with 34358d4. Errors are relative to the reference, in percent. Verification run time: 87 s (4 workers, load 0.9 at start).
+
+**Against other programs (midpoint of their range):** 14 moved (3 closer to the reference, 11 further).
+
+| Result | Reference | Before | After | Error before | Error after |
+|---|---|---|---|---|---|
+| V083 Janbu corrected | 0.890 | 0.8989 | 0.8845 | +1.000 % | -0.618 % |
+| V075 Spencer | 0.570 | 0.5994 | 0.5777 | +0.570 % | +1.351 % |
+| V042 Spencer | 1.648 | 1.6587 | 1.6491 | +0.649 % | +0.067 % |
+| V092 Janbu corrected | 1.830 | 1.8325 | 1.8237 | +0.137 % | -0.344 % |
+| V092 Bishop simplified | 2.011 | 1.9981 | 1.9905 | -0.641 % | -1.019 % |
+| V092 Spencer | 2.026 | 2.0122 | 2.0047 | -0.681 % | -1.051 % |
+| V042 Bishop simplified | 1.584 | 1.5913 | 1.5820 | +0.239 % | -0.126 % |
+| V017a Bishop simplified | 1.373 | 1.3821 | 1.3823 | +0.334 % | +0.677 % |
+| V061 Morgenstern-Price (half-sine) | 2.343 | 2.3837 | 2.3483 | -0.013 % | +0.226 % |
+| V061 Spencer | 2.383 | 2.4233 | 2.3879 | +0.012 % | +0.206 % |
+| V065 Spencer | 0.964 | 0.9607 | 0.9591 | -0.342 % | -0.508 % |
+| V017b Bishop simplified | 1.378 | 1.3821 | 1.3823 | +0.152 % | +0.312 % |
+| V009c Spencer, non-circular | 1.868 | 1.8669 | 1.8666 | -0.059 % | -0.075 % |
+| V017a Spencer | 1.386 | 1.3981 | 1.3983 | +0.873 % | +0.887 % |
+| **Mean error (n = 266)** | | | | -0.204 % | -0.219 % |
+| **Mean absolute error** | | | | 0.354 % | 0.358 % |
+| **RMS error** | | | | 0.501 % | 0.509 % |
+| **Largest error** | | | | 2.215 % | 2.215 % |
+
+**Against the papers:** 4 moved (1 closer to the reference, 3 further).
+
+| Result | Reference | Before | After | Error before | Error after |
+|---|---|---|---|---|---|
+| V061 Morgenstern-Price (half-sine) (Wolff & Harr) | 2.360 | 2.3837 | 2.3483 | +1.004 % | -0.496 % |
+| V065 Bishop simplified, circular (Leshchinsky & Han (2004)) | 1.000 | 0.9791 | 0.9775 | -2.090 % | -2.250 % |
+| V005 infinite slope (Theory) | 2.500 | 2.5228 | 2.5237 | +0.912 % | +0.948 % |
+| V009c Spencer, non-circular (Baker & Leshchinsky (2001)) | 1.910 | 1.8669 | 1.8666 | -2.257 % | -2.272 % |
+| **Mean error (n = 97)** | | | | -0.222 % | -0.291 % |
+| **Mean absolute error** | | | | 1.146 % | 1.092 % |
+| **RMS error** | | | | 1.660 % | 1.581 % |
+| **Largest error** | | | | 5.385 % | 5.385 % |
+
 
 ### 2026-10-24: Inputs corrected from the night investigation (V082a-c water table, V039/V040 clay 6.5 m, V051 phreatic correction, V087 R = 169.0 ft); Morgenstern-Price returns the interpolated crossing; default tolerance 0.001
 
