@@ -39,11 +39,6 @@ export interface ReinforcementEnvelope {
   development?: [number, number];
 }
 
-/**
- * Effective vertical stress at (x, y): the weight of the soil column
- * between the ground and the point (γsat below a material's water line)
- * less the pore pressure there.
- */
 function materialAt(slope: Slope, x: number, y: number): Material | null {
   return slope.materialGeometries.find((g) => isPointInPolygon(x, y, g.px, g.py))?.material ?? null;
 }
@@ -63,6 +58,11 @@ function unitWeightAt(slope: Slope, m: Material, x: number, y: number): number {
   return resolveUnitWeight(m.model, m.unitWeight, x, y);
 }
 
+/**
+ * Effective vertical stress at (x, y): the weight of the soil column
+ * between the ground and the point (γsat below a material's water line)
+ * less the pore pressure there.
+ */
 export function effectiveVerticalStress(slope: Slope, x: number, y: number): number {
   const surf = slope.surfaceLineXY;
   if (!surf) return 0;
@@ -385,7 +385,8 @@ export function itoMatsuiCoefficients(D1: number, D: number, phiDeg: number): [n
  * Ito & Matsui pressure on a vertical pile, integrated down from its head
  * (or the ground, if lower): at depths z[k] below the ground, the force
  * F[k] = ∫p dz and the moment Q[k] = ∫p·z dz per pile. Strength as in the
- * analysis (design values with partial factors), γ as the slices weigh it.
+ * analysis (design values with partial factors), γz as the effective
+ * vertical stress (γ as the slices weigh it, less the pore pressure).
  */
 export interface PileProfile {
   z: Float64Array;
@@ -435,7 +436,14 @@ export function buildPileProfile(slope: Slope, p: Pile): PileProfile | null {
           tanPhi /= f.tanPhi;
         }
         const [A1, A2] = itoMatsuiCoefficients(D1, D, (Math.atan(tanPhi) * 180) / Math.PI);
-        pz = c * A1 + unitWeightAt(slope, m, x, yy) * zm * A2;
+        // The overburden term is the effective vertical stress σ′v = γz − u
+        // of the soil squeezed between the piles: Ito & Matsui (1975) with
+        // effective parameters, γ′ below the water table as in Poulos
+        // (1995) and Hassiotis et al. (1997). With total stress (γsat·z)
+        // the force was the same with and without a water table. The pore
+        // pressure itself acts on both faces of the pile and gives it no
+        // net force.
+        pz = c * A1 + effectiveVerticalStress(slope, x, yy) * A2;
       }
     }
     z[k + 1] = zTop + (k + 1) * dz;

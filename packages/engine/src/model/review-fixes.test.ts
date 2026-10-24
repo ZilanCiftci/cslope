@@ -256,3 +256,30 @@ describe("strength cutoff as a floor", () => {
   });
 });
 
+describe("Morgenstern-Price closest pair", () => {
+  // V027 (φ = 0 circle): Fm hardly depends on λ and Ff never reaches it,
+  // so no λ gives Fm = Ff, the definition of the solution (Morgenstern &
+  // Price 1965, Fredlund & Krahn 1977). The closest pair is kept for its
+  // moment-equilibrium factor but must not be reported as converged.
+  it("reports the critical surface of V027 as not converged, with its gap", () => {
+    const c = caseById("V027");
+    const k = c.checks.find((x) => x.method === "Morgenstern-Price")!;
+    const { fos, slope } = runVerification(c.definition, "Morgenstern-Price", k.options);
+    expect(Math.abs(fos! - k.published)).toBeLessThan(0.01);
+    const crit = slope.search.find((p) => p.fos != null)!;
+    expect(crit.fos).toBe(fos);
+    expect(crit.converged).toBe(false);
+    expect(crit.closestPair).toBe(true);
+    expect(crit.equilibriumGap!).toBeGreaterThan(slope.tolerance);
+    expect(crit.equilibriumGap!).toBeLessThanOrEqual(0.02);
+    // A crossing still reports converged without a gap.
+    const v001 = caseById("V001");
+    const k1 = v001.checks.find((x) => x.method === "Morgenstern-Price")!;
+    const r1 = runVerification(v001.definition, "Morgenstern-Price", k1.options);
+    const c1 = r1.slope.search.find((p) => p.fos != null)!;
+    expect(c1.converged).toBe(true);
+    expect(c1.closestPair).toBeUndefined();
+    expect(c1.equilibriumGap).toBeUndefined();
+  });
+});
+

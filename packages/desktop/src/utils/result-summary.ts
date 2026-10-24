@@ -22,6 +22,20 @@ export function equilibriumGapText(gap: number): string {
 }
 
 /**
+ * The closest-pair warning for a surface, or null when it has complete
+ * equilibrium. The engine marks such a Morgenstern-Price surface as not
+ * converged (`converged: false`, `closestPair: true`) with its gap.
+ */
+export function closestPairWarning(
+  surface: { closestPair?: boolean; equilibriumGap?: number } | null | undefined,
+): string | null {
+  if (!surface || (!surface.closestPair && surface.equilibriumGap == null)) return null;
+  return surface.equilibriumGap != null
+    ? equilibriumGapText(surface.equilibriumGap)
+    : "No complete equilibrium: moment and force factors never met (closest λ)";
+}
+
+/**
  * The note for trial surfaces left out of the search because their
  * solution did not converge, e.g. "453 surfaces were discarded because
  * they did not reach equilibrium".

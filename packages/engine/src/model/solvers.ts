@@ -729,13 +729,25 @@ export function analyseMorgensternPrice(
   lffArray: [number, number, number, number][] | null,
   pushing: number | null,
   resisting: number | null,
+  /**
+   * Complete equilibrium: Fm = Ff within the tolerance at some λ. False for
+   * a closest-pair solution (see `closestPair`).
+   */
   converged: boolean,
   /**
-   * |Fm − Ff| of an accepted solution where the two never met within the
-   * tolerance (the closest pair, at most `mpEquilibriumTolerance`); 0 or
-   * absent when they did.
+   * |Fm − Ff| of the closest pair when the two never met within the
+   * tolerance; 0 or absent when they did.
    */
   equilibriumGap?: number,
+  /**
+   * The curves never met and the closest pair is accepted: both
+   * iterations converged and the gap is at most `mpEquilibriumTolerance`.
+   * The factor then satisfies moment equilibrium, force equilibrium only
+   * within the gap, so it is no complete-equilibrium solution in the sense
+   * of Morgenstern & Price (1965), Spencer (1967) and Fredlund & Krahn
+   * (1977), which define it by Fm = Ff; `converged` is false.
+   */
+  closestPair?: boolean,
 ] {
   const FSord = analyseOrdinary(slope, slices);
   if (FSord == null) return [FSord, null, null, null, true];
@@ -896,16 +908,11 @@ export function analyseMorgensternPrice(
       const equilibriumGap = Math.abs(FSm - FSf);
       lffArray.push([bestLambda, FSm, FSf, equilibriumGap]);
 
-      return [
-        FSm,
-        lffArray,
-        pushing0,
-        resisting0,
-        convergedBestM &&
-          convergedBestF &&
-          equilibriumGap <= mpEquilibriumTolerance,
-        equilibriumGap,
-      ];
+      const iterationsConverged = convergedBestM && convergedBestF;
+      // Re-solved at the best λ the pair may meet within the tolerance.
+      const complete = iterationsConverged && equilibriumGap < tol;
+      const closestPair = iterationsConverged && !complete && equilibriumGap <= mpEquilibriumTolerance;
+      return [FSm, lffArray, pushing0, resisting0, complete, equilibriumGap, closestPair];
     }
   }
 
@@ -1104,6 +1111,8 @@ function evaluatePlanes(slope: Slope, allPlanes: SearchPlane[]): void {
     let converged: boolean;
     /** The factor the slice normal forces were solved with, when not `fos`. */
     let solvedFos: number | null = null;
+    /** Morgenstern-Price closest pair: not converged, but its factor is kept. */
+    let acceptedClosestPair = false;
 
     switch (slope.method) {
       case "Bishop": {
@@ -1122,7 +1131,7 @@ function evaluatePlanes(slope: Slope, allPlanes: SearchPlane[]): void {
         break;
       }
       case "Morgenstern-Price": {
-        const [f, lff, , , cvg, gap] =
+        const [f, lff, , , cvg, gap, closest] =
           morgensternPriceSolver === "march"
             ? analyseMorgensternPriceMarch(slope, slices)
             : analyseMorgensternPrice(slope, slices);
@@ -1130,14 +1139,18 @@ function evaluatePlanes(slope: Slope, allPlanes: SearchPlane[]): void {
         plane.lffArray = lff ?? undefined;
         // A solution accepted with the closest pair, not a crossing: the
         // factor of safety satisfies moment equilibrium, force equilibrium
-        // only within the gap. Reported so that it is not mistaken for a
-        // complete-equilibrium solution.
-        plane.equilibriumGap = gap != null && gap >= slope.tolerance ? gap : undefined;
+        // only within the gap. It keeps its factor (on a φ = 0 circle, e.g.
+        // V027, moment equilibrium alone fixes F) but is reported as not
+        // converged, with the gap, so that it is not mistaken for a
+        // complete-equilibrium solution (Fm = Ff; Morgenstern & Price 1965).
+        plane.closestPair = closest === true || undefined;
+        plane.equilibriumGap = closest && gap != null ? gap : undefined;
+        acceptedClosestPair = closest === true;
         // A candidate of the non-circular optimisation is kept only with a
         // crossing: the optimisation is a minimum over thousands of
         // surfaces and finds every one where the closest pair reads low.
         // The surface is abandoned, as in Edris & Wright (1987, para. 101).
-        if (plane.optimised && plane.equilibriumGap != null) fos = null;
+        if (plane.optimised && closest) fos = null;
         converged = cvg;
         break;
       }
@@ -1148,7 +1161,7 @@ function evaluatePlanes(slope: Slope, allPlanes: SearchPlane[]): void {
     // Discard non-converged or negative FoS — these arise from
     // degenerate surfaces (e.g. flat terrain with near-zero driving
     // moment) where the iterative solver produces meaningless values.
-    if (fos != null && (!converged || fos < 0)) {
+    if (fos != null && ((!converged && !acceptedClosestPair) || fos < 0)) {
       fos = null;
     }
     // m_α = cos α + sin α·tan φ / F ≤ 0 on a slice makes its normal force

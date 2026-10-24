@@ -26,6 +26,27 @@ describe("Ito & Matsui pile force", () => {
     expect(f.governs).toBe("soil");
   });
 
+  it("uses the effective overburden γ′z below the water table (Ito & Matsui 1975, Poulos 1995)", () => {
+    // Saturated c′–φ′ soil, water table at the ground, slip surface 6 m down.
+    const model = { ...mc(5, 25, 20), unitWeightSat: 20 };
+    const dry = buildSlope(layered(ground, -10, [{ name: "S", topY: null, model }]));
+    const wet = buildSlope(
+      layered(ground, -10, [{ name: "S", topY: null, model }], {
+        waterTable: { mode: "custom", value: ground, followBoundary: false },
+      }),
+    );
+    const pile: Pile = { x1: 5, y1: 10, x2: 5, y2: -10, diameter: 0.8, spacing: 2.4 };
+    const zf = 6;
+    const [A1, A2] = itoMatsuiCoefficients(1.6, 0.8, 25);
+    const perPile = (gamma: number) => 5 * A1 * zf + (gamma * A2 * zf * zf) / 2;
+    const fDry = pileForce(dry, pile, 5, 10 - zf).perPile;
+    const fWet = pileForce(wet, pile, 5, 10 - zf).perPile;
+    expect(fDry).toBeCloseTo(perPile(20), 1);
+    expect(fDry).toBeCloseTo(1053, 0);
+    expect(fWet).toBeCloseTo(perPile(20 - 9.81), 1);
+    expect(fWet).toBeCloseTo(593, 0);
+  });
+
   it("loads the pile only from its head down, with design strength", () => {
     const slope = buildSlope(layered(ground, -10, [{ name: "S", topY: null, model: mc(10, 20, 20) }]));
     const [A1, A2] = itoMatsuiCoefficients(1.6, 0.8, 20);

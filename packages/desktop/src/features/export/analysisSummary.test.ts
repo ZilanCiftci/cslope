@@ -43,6 +43,16 @@ describe("analysis summary", () => {
     expect(value(s, "Water and tension crack", "Piezometric lines")).toBe("none (no pore pressure)");
   });
 
+  it("warns of a Morgenstern-Price closest pair, not of an iteration limit", () => {
+    const cs = { ...RESULT.criticalSurface!, converged: false, closestPair: true, equilibriumGap: 0.0196 };
+    const s = buildAnalysisSummary(input({ result: { ...RESULT, criticalSurface: cs } }));
+    const warnings = section(s, "Result").rows!.filter((r) => r.label === "Warning").map((r) => r.value);
+    expect(warnings).toEqual(["No complete equilibrium: force equilibrium met within 0.020 (closest λ)"]);
+    const unconverged = { ...RESULT.criticalSurface!, converged: false };
+    const s2 = buildAnalysisSummary(input({ result: { ...RESULT, criticalSurface: unconverged } }));
+    expect(value(s2, "Result", "Warning")).toBe("The critical surface did not converge within the iteration limit");
+  });
+
   it("names the method options a checker needs", () => {
     expect(methodText({ ...DEFAULT_ANALYSIS_OPTIONS, method: "Janbu", janbuCorrection: true })).toContain("with correction factor f0");
     expect(methodText({ ...DEFAULT_ANALYSIS_OPTIONS, method: "Morgenstern-Price", intersliceFunction: "constant" })).toBe(

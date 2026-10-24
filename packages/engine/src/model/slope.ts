@@ -59,8 +59,18 @@ export interface SearchPlane {
   slices: Slice[] | null;
   /** Lambda-FS-FForce array for Morgenstern-Price. */
   lffArray?: [number, number, number, number][];
-  /** Whether iterative solver converged for this surface. */
+  /**
+   * Whether the solver converged for this surface (for Morgenstern-Price:
+   * a crossing Fm = Ff; false for a closest pair, see `closestPair`).
+   */
   converged?: boolean;
+  /**
+   * Morgenstern-Price: the moment and force factors never met and the
+   * closest pair was accepted (gap in `equilibriumGap`). The factor meets
+   * moment equilibrium and force equilibrium only within the gap; the
+   * surface is not converged but keeps its factor.
+   */
+  closestPair?: boolean;
   /**
    * Morgenstern-Price: |Fm − Ff| of a solution accepted as the closest
    * pair because the curves never crossed (no complete-equilibrium

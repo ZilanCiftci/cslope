@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { equilibriumGapText, surfaceCountText } from "./result-summary";
+import { closestPairWarning, equilibriumGapText, surfaceCountText } from "./result-summary";
 
 describe("surfaceCountText", () => {
   it("adds the number of surfaces below 1.0", () => {
@@ -11,5 +11,14 @@ describe("surfaceCountText", () => {
 describe("equilibriumGapText", () => {
   it("says that only the closest pair was found, with the gap", () => {
     expect(equilibriumGapText(0.0196)).toBe("No complete equilibrium: force equilibrium met within 0.020 (closest λ)");
+  });
+});
+
+describe("closestPairWarning", () => {
+  it("warns from the closest-pair status, with the gap", () => {
+    expect(closestPairWarning({ closestPair: true, equilibriumGap: 0.0135 })).toBe(equilibriumGapText(0.0135));
+    expect(closestPairWarning({ closestPair: true })).toMatch(/^No complete equilibrium/);
+    expect(closestPairWarning({})).toBeNull();
+    expect(closestPairWarning(null)).toBeNull();
   });
 });

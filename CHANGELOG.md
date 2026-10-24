@@ -17,6 +17,7 @@ The first public release.
 - Tension cracks with a fixed or automatic (Rankine) depth, dry or water-filled.
 - Partial factors on strength and loads, with presets for Swedish practice (EKS/IEG) and EN 1997-1 DA3.
 - Sensitivity analysis, and probabilistic analysis with the Taylor series and Monte Carlo methods.
+- Ito & Matsui pile rows take the effective overburden (γ′ below the water table) instead of the total; a Morgenstern–Price surface where moment and force equilibrium never meet keeps its closest-pair factor but is reported as not converged, with the gap in the sidebar, result panel and PDF summary.
 
 ### Model
 
