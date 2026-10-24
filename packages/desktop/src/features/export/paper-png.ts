@@ -56,11 +56,14 @@ function withExportTheme<T>(draw: () => T): T {
  * it, drawn again at PNG_PAPER_LAYOUT_WIDTH_PX × PNG_SCALE pixels wide
  * (2400 px; the height follows the paper size), on white, without the
  * paper's border and shadow. This is what "Export PNG" saves, and what the
- * website's result images are captured with. Null without a result view.
+ * website's result images are captured with. It is drawn again without
+ * the selection or the hover highlight, so the view needs no redraw first.
+ * Null without a result view or without a result (the canvas has no paper
+ * then).
  */
 export function paperPngDataUrl(): string | null {
   const args = drawSource?.();
-  if (!args || args.w <= 0 || args.h <= 0) return null;
+  if (!args?.result || args.w <= 0 || args.h <= 0) return null;
 
   const state = useAppStore.getState();
   const scale = state.resultViewScale;

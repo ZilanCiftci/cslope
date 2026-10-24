@@ -17,6 +17,7 @@ import type {
   ResultViewSettings,
   UdlRow,
 } from "./store/types";
+import type { PaperContent } from "./features/view/extents";
 
 interface MaterialAssignmentStatePayload {
   coordinates: [number, number][];
@@ -83,6 +84,8 @@ interface ViewSettingsStatePayload {
   coordinates: [number, number][];
   resultViewScale: number;
   resultViewOffset: [number, number];
+  /** What the model draws (main window to the dialog only). */
+  paperContent?: PaperContent;
 }
 
 declare global {

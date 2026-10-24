@@ -189,6 +189,25 @@ describe("collectModelFitBounds", () => {
     expect(bounds!.yMax).toBe(15);
   });
 
+  it("keeps the edit fit at the base for a water line partly below it", () => {
+    const bounds = collectModelFitBounds({
+      coordinates: coords,
+      materialBoundaries: [],
+      piezometricLines: [{ coordinates: [[0, -100], [25, 8]] as [number, number][] }],
+      analysisLimits: {
+        enabled: false,
+        entryLeftX: 0,
+        entryRightX: 0,
+        exitLeftX: 0,
+        exitRightX: 0,
+      },
+      udls: [],
+      lineLoads: [],
+      surfaceYAtX: mockSurfaceYAtX,
+    });
+    expect(bounds).toEqual({ xMin: 0, xMax: 25, yMin: 0, yMax: 10 });
+  });
+
   it("includes analysis limit points when enabled", () => {
     const bounds = collectModelFitBounds({
       coordinates: coords,

@@ -237,3 +237,26 @@ describe("findSnapTarget", () => {
     expect(hit.findSnapTarget(5.2, 8.6, { kind: "piezo", lineId: "w", index: 0 })).toBeNull();
   });
 });
+
+describe("load hit areas", () => {
+  it("follow the drawn arrow heights, which scale with the magnitude", () => {
+    // The smaller load's arrows are 40 % of 38 px (15.2 px = 1.52 m at 10 px/m).
+    const hit = setup({
+      editingLoads: true,
+      udls: [
+        { id: "big", magnitude: 50, x1: 2, x2: 4 },
+        { id: "small", magnitude: 10, x1: 6, x2: 8 },
+      ],
+      lineLoads: [
+        { id: "P", magnitude: 100, x: 25 },
+        { id: "p", magnitude: 10, x: 28 },
+      ],
+    });
+    expect(hit.findNearPointUnified(2, 13.5)).toEqual({ kind: "udl", udlId: "big", handle: "x1" });
+    expect(hit.findNearPointUnified(8, 11.5)).toEqual({ kind: "udl", udlId: "small", handle: "x2" });
+    expect(hit.findNearPointUnified(8, 12.5)).toBeNull();
+    expect(hit.findNearPointUnified(25, 8.5)).toEqual({ kind: "lineLoad", loadId: "P" });
+    expect(hit.findNearPointUnified(28, 7.5)).toBeNull();
+    expect(hit.findNearPointUnified(28, 6.3)).toEqual({ kind: "lineLoad", loadId: "p" });
+  });
+});

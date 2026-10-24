@@ -106,7 +106,7 @@ export function layoutLoads(
   };
 
   const onModel = udls.filter((u) => surfaceYAtX(u.x1) !== null && surfaceYAtX(u.x2) !== null);
-  const qMaxAll = Math.max(0, ...onModel.map((u) => Math.abs(u.magnitude)));
+  const lifts = loadArrowLifts(udls, lineLoads, surfaceYAtX, zoom);
   const ground = (lo: number, hi: number): Pt[] =>
     [lo, ...coordinates.map(([cx]) => cx).filter((cx) => cx > lo && cx < hi), hi]
       .sort((a, b) => a - b)
@@ -116,7 +116,7 @@ export function layoutLoads(
       const lo = Math.min(u.x1, u.x2);
       const hi = Math.max(u.x1, u.x2);
       const gr = ground(lo, hi);
-      const lift = ARROW_HEIGHT_PX * zoom * loadHeightFraction(u.magnitude, qMaxAll);
+      const lift = lifts.udl.get(u.id) ?? 0;
       return { u, lo, hi, lift, ground: gr, top: gr.map(([sx, sy]) => [sx, sy - lift] as Pt) };
     });
     const edges = [strips[0].lo, ...strips.map((s) => s.hi)];
@@ -143,18 +143,37 @@ export function layoutLoads(
     );
   }
 
-  const pMaxAll = Math.max(0, ...lineLoads.map((ll) => Math.abs(ll.magnitude)));
   for (const ll of lineLoads) {
     const sy = surfaceYAtX(ll.x);
     if (sy === null) continue;
     const [cx, cy] = toC(ll.x, sy);
-    const top = cy - ARROW_HEIGHT_PX * zoom * loadHeightFraction(ll.magnitude, pMaxAll);
+    const top = cy - (lifts.lineLoad.get(ll.id) ?? 0);
     const hover = hoverHit?.kind === "lineLoad" && hoverHit.loadId === ll.id;
     out.lineLoads.push({ cx, cy, top, hover });
     label(`P = ${formatMagnitude(ll.magnitude)} kN/m`, "lineLoad", hover, cx, top - 4 * zoom);
   }
   ctx.restore();
   return out;
+}
+
+/**
+ * Arrow heights (px) of each UDL strip and line load by id, as drawn:
+ * relative to the largest load of the kind (UDLs on the model only), at
+ * least 40 % of the full height. Shared with the hit test of the arrows.
+ */
+export function loadArrowLifts(
+  udls: AppState["udls"],
+  lineLoads: AppState["lineLoads"],
+  surfaceYAtX: (x: number) => number | null,
+  zoom = 1,
+): { udl: Map<string, number>; lineLoad: Map<string, number> } {
+  const onModel = udls.filter((u) => surfaceYAtX(u.x1) !== null && surfaceYAtX(u.x2) !== null);
+  const qMax = Math.max(0, ...onModel.map((u) => Math.abs(u.magnitude)));
+  const pMax = Math.max(0, ...lineLoads.map((ll) => Math.abs(ll.magnitude)));
+  return {
+    udl: new Map(onModel.map((u) => [u.id, ARROW_HEIGHT_PX * zoom * loadHeightFraction(u.magnitude, qMax)])),
+    lineLoad: new Map(lineLoads.map((ll) => [ll.id, ARROW_HEIGHT_PX * zoom * loadHeightFraction(ll.magnitude, pMax)])),
+  };
 }
 
 /** Boxes covering a load arrow: its shaft and its head. */

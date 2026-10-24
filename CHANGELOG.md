@@ -25,13 +25,14 @@ The first public release.
 - Water: several piezometric lines with one per material if needed, ponded water above the ground.
 - Distributed and line loads; anchors, grouted tiebacks, soil nails, geosynthetics, pile rows and sheet pile walls.
 - Edit view: coordinate labels find a free place around their point, clear of other labels, markers, loads and water symbols; interior boundaries are drawn only inside the model; custom slip surfaces show dashed; rulers leave out labels the edge would cut.
+- Edit view: coordinate labels sit outside the fill, clear of the boundary lines, entry/exit dots, elements, water lines and custom surfaces, and points off the screen get none; vertex dots are drawn over the search-limit markers; a custom circle shows only from where it enters the ground to where it leaves it, on a halo that keeps it visible on dark layers; a fixed tension-crack depth shows as a labelled dimension on the crest instead of a dashed line along the whole ground; with only custom surfaces analysed the search limits are hidden; long ruler labels are set smaller instead of left out, and load handles are picked over the arrow height as drawn.
 
 ### Results and reporting
 
 - Critical surface, all surfaces or a factor-of-safety filter, slices, annotations and templates.
 - Plots of slice data and of Fm and Ff against λ; export to PDF and PNG, slice data to Excel and CSV.
 - The PDF report ends with an analysis summary: method, search, water and tension crack, partial factors, materials and loads. With partial factors, the PDF and the slice data mark design values.
-- The paper frames the model at true scale with a margin, including water lines, loads and reinforcement, and spaces its axis ticks for their labels; PNG export is 2400 px wide on white. Fit in the edit view ignores water lines far below the model and keeps clear of the toolbar.
+- The paper frames the model at true scale with a margin, including water lines, loads and reinforcement, and spaces its axis ticks for their labels; PNG export is 2400 px wide on white. "Use model bounds" and the refit after the geometry grows give the same frame the model starts with, below the title block. Fit in the edit view ignores water lines far below the model, and the parts of a water line below its base, and keeps clear of the toolbar.
 - Result plot: the sliding mass follows stepped and vertical faces, a tension crack is drawn as part of the critical surface with the water in it, slice lines show on dark layers, and the search limits point into their ranges under the result.
 - Loads, reinforcement forces and water symbols on the canvas and in the PDF: touching load strips draw as one load with one label ("q = 20–40 kPa"), box heights follow the magnitude and magnitudes are rounded; force arrows sit beside the line they act along with their size on a plate next to them, clear of each other ("÷ FOS" marks a force divided by the factor of safety; forces of 0.0 kN/m are left out); water-table symbols are spaced along each line on its flat parts, clear of the critical surface and the anchors.
 

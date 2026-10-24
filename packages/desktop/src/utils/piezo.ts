@@ -134,9 +134,11 @@ export function mainPiezoLine<L extends { id: string }>(pl: {
 /**
  * Where "Add point" puts a new point of a piezometric line, always inside
  * the model's x extent: an empty line starts at the left edge at mid
- * height; a line that stops short of the right edge is continued 5 m (at
- * most to the edge); otherwise the point goes in the middle of the widest
- * gap between neighbouring points. `index` is where to insert it.
+ * height; a line that stops short of the model edge it runs towards (the
+ * right edge for a line entered left to right, the left edge for one
+ * entered right to left) is continued 5 m that way, at most to the edge;
+ * otherwise the point goes in the middle of the widest gap between
+ * neighbouring points. `index` is where to insert it.
  */
 export function nextPiezoPoint(line: Pt[], model: Pt[]): { index: number; point: Pt } {
   const xs = model.map((c) => c[0]);
@@ -147,7 +149,12 @@ export function nextPiezoPoint(line: Pt[], model: Pt[]): { index: number; point:
   if (line.length === 0) return { index: 0, point: [xMin, midY] };
   const last = line[line.length - 1];
   const eps = 1e-6;
-  if (last[0] < xMax - eps) {
+  // The direction the line was entered in (one point: left to right).
+  if (last[0] < line[0][0]) {
+    if (last[0] > xMin + eps) {
+      return { index: line.length, point: [Math.max(last[0] - 5, xMin), last[1]] };
+    }
+  } else if (last[0] < xMax - eps) {
     return { index: line.length, point: [Math.min(last[0] + 5, xMax), last[1]] };
   }
   if (line.length === 1) {

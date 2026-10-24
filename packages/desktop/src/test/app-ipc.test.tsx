@@ -6,6 +6,7 @@ vi.mock("../utils/is-electron", () => ({ isElectron: true }));
 
 import App from "../App";
 import { useAppStore } from "../store/app-store";
+import { paperContentOf } from "../features/view/extents";
 import { DEFAULT_MATERIAL } from "../store/defaults";
 
 type Handler = (event: unknown, payload?: unknown) => void;
@@ -79,7 +80,12 @@ describe("main window IPC", () => {
       ["onPiezoRequestState", "sendPiezoState", { piezometricLine: s.piezometricLine }],
       ["onParametersRequestState", "sendParametersState", { parameters: s.parameters }],
       ["onAnalysisRequestState", "sendAnalysisState", { options: s.options, analysisLimits: s.analysisLimits }],
-      ["onViewSettingsRequestState", "sendViewSettingsState", { resultViewSettings: s.resultViewSettings }],
+      [
+        "onViewSettingsRequestState",
+        "sendViewSettingsState",
+        // What the model draws, for the dialog's "Use model bounds".
+        { resultViewSettings: s.resultViewSettings, paperContent: paperContentOf(s) },
+      ],
     ];
     for (const [request, response, expected] of cases) {
       emit(request);
