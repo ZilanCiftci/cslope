@@ -430,7 +430,7 @@ export function ViewSettingsDialogApp() {
             style={btnStyle}
             className="w-full"
           >
-            Use Model Bounds
+            Use model bounds
           </button>
         </div>
       </div>

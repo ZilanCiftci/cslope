@@ -165,7 +165,7 @@ describe("ViewSettingsDialogApp", () => {
     // The main window sends the loads, water and reinforcement along.
     const content: PaperContent = { coordinates: COORDS, lineLoads: [{ x: 15, magnitude: 80 }] };
     hydrate({}, content);
-    await userEvent.click(screen.getByRole("button", { name: "Use Model Bounds" }));
+    await userEvent.click(screen.getByRole("button", { name: "Use model bounds" }));
     const vl = rvs().viewLock!;
     expect(vl).toEqual(modelViewLock(content, rvs()));
     expect(vl.topRight[1]).toBeGreaterThan(modelViewLock({ coordinates: COORDS }, rvs()).topRight[1]);
@@ -182,7 +182,7 @@ describe("ViewSettingsDialogApp", () => {
       resultViewScale: 2,
       resultViewOffset: [0, 0],
     });
-    await userEvent.click(screen.getByRole("button", { name: "Use Model Bounds" }));
+    await userEvent.click(screen.getByRole("button", { name: "Use model bounds" }));
     const vl = rvs().viewLock!;
     expect(viewLockContains(vl, tall)).toBe(true);
     const ar = getPlotAspectRatio("A4", true);
