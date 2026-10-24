@@ -8,16 +8,16 @@ bun scripts/generate-data.ts
 bun scripts/verification-log.ts "Short description of the change"
 ```
 
-The script compares the regenerated verification table with the committed one. Errors are relative, in percent: against the other programs, the reference is the midpoint of their range for that analysis; against the papers, the published value. The summary lists the changes oldest first; the entries below are newest first.
+The script compares the regenerated verification table with the committed one and records how long the verification run took (wall time; it depends on the machine and its load). Errors are relative, in percent: against the other programs, the reference is the midpoint of their range for that analysis; against the papers, the published value. The summary lists the changes oldest first; the entries below are newest first.
 
 ## Summary
 
-| Date | Change | Results moved | Mean abs. error vs programs | RMS vs programs | Mean abs. error vs papers | RMS vs papers |
-|---|---|---|---|---|---|---|
-| 2026-10-24 | Circular search: circles tangent to material interfaces, seeds per basin (review A3) | 12 | 0.399 → 0.398 | 0.570 → 0.570 | 1.661 → 1.653 | 4.014 → 4.007 |
-| 2026-10-24 | Warning for Bishop on non-circular surfaces (review B1) | 0 | 0.398 → 0.398 | 0.570 → 0.570 | 1.653 → 1.653 | 4.007 → 4.007 |
-| 2026-10-24 | Lime-cement columns: each strength part takes its own partial factor; pile force takes the weaker branch (review B3, B9) | 0 | 0.398 → 0.398 | 0.570 → 0.570 | 1.653 → 1.653 | 4.007 → 4.007 |
-| 2026-10-24 | Slices: water-line corners as slice edges, no head correction at a vertical step; a base on a layer boundary takes the layer below (review B4, C3) | 27 | 0.398 → 0.398 | 0.570 → 0.570 | 1.653 → 1.653 | 4.007 → 4.007 |
+| Date | Change | Results moved | Mean abs. error vs programs | RMS vs programs | Mean abs. error vs papers | RMS vs papers | Verification run time |
+|---|---|---|---|---|---|---|---|
+| 2026-10-24 | Circular search: circles tangent to material interfaces, seeds per basin (review A3) | 12 | 0.399 → 0.398 | 0.570 → 0.570 | 1.661 → 1.653 | 4.014 → 4.007 | not recorded |
+| 2026-10-24 | Warning for Bishop on non-circular surfaces (review B1) | 0 | 0.398 → 0.398 | 0.570 → 0.570 | 1.653 → 1.653 | 4.007 → 4.007 | 168 s (4 workers) |
+| 2026-10-24 | Lime-cement columns: each strength part takes its own partial factor; pile force takes the weaker branch (review B3, B9) | 0 | 0.398 → 0.398 | 0.570 → 0.570 | 1.653 → 1.653 | 4.007 → 4.007 | 216 s (4 workers) |
+| 2026-10-24 | Slices: water-line corners as slice edges, no head correction at a vertical step; a base on a layer boundary takes the layer below (review B4, C3) | 27 | 0.398 → 0.398 | 0.570 → 0.570 | 1.653 → 1.653 | 4.007 → 4.007 | 87 s (4 workers) |
 <!-- summary-end -->
 
 ## Entries
@@ -26,7 +26,7 @@ The script compares the regenerated verification table with the committed one. E
 
 ### 2026-10-24: Slices: water-line corners as slice edges, no head correction at a vertical step; a base on a layer boundary takes the layer below (review B4, C3)
 
-Compared with 433b9b3. Errors are relative to the reference, in percent.
+Compared with 433b9b3. Errors are relative to the reference, in percent. Verification run time: 87 s (4 workers).
 
 **Against other programs (midpoint of their range):** 24 moved (19 closer to the reference, 5 further).
 
@@ -76,7 +76,7 @@ Compared with 433b9b3. Errors are relative to the reference, in percent.
 
 ### 2026-10-24: Lime-cement columns: each strength part takes its own partial factor; pile force takes the weaker branch (review B3, B9)
 
-Compared with d556b3c. Errors are relative to the reference, in percent.
+Compared with d556b3c. Errors are relative to the reference, in percent. Verification run time: 216 s (4 workers).
 
 **Against other programs (midpoint of their range):** 0 moved (0 closer to the reference, 0 further).
 
@@ -99,7 +99,7 @@ Compared with d556b3c. Errors are relative to the reference, in percent.
 
 ### 2026-10-24: Warning for Bishop on non-circular surfaces (review B1)
 
-Compared with 80138ca. Errors are relative to the reference, in percent.
+Compared with 80138ca. Errors are relative to the reference, in percent. Verification run time: 168 s (4 workers).
 
 **Against other programs (midpoint of their range):** 0 moved (0 closer to the reference, 0 further).
 
@@ -122,7 +122,7 @@ Compared with 80138ca. Errors are relative to the reference, in percent.
 
 ### 2026-10-24: Circular search: circles tangent to material interfaces, seeds per basin (review A3)
 
-Compared with f9cdd21. Errors are relative to the reference, in percent.
+Compared with f9cdd21. Errors are relative to the reference, in percent. Verification run time: not recorded.
 
 **Against other programs (midpoint of their range):** 7 moved (3 closer to the reference, 4 further).
 

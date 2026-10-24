@@ -42,6 +42,8 @@ process.env.CSLOPE_VERIFICATION_FULL = "1";
 
 const OUT = join(import.meta.dirname, "../src/content/generated/verification.json");
 const CACHE = join(import.meta.dirname, "../node_modules/.cache/cslope-verification-raw.json");
+/** Wall time of the last full engine run, read by scripts/verification-log.ts. */
+export const RUN_TIME = join(import.meta.dirname, "../node_modules/.cache/cslope-verification-run.json");
 
 /**
  * cSlope's FOS for every analysis of the problems in this shard, in the
@@ -193,6 +195,8 @@ if (import.meta.main) {
       raw = await runAllShards();
       mkdirSync(join(CACHE, ".."), { recursive: true });
       writeFileSync(CACHE, JSON.stringify(raw));
+      const seconds = (Date.now() - started) / 1000;
+      writeFileSync(RUN_TIME, JSON.stringify({ seconds, workers: availableParallelism(), at: new Date().toISOString() }));
     }
     const { fos, reliability } = raw;
     const json = JSON.stringify(buildData(fos, reliability), null, 1) + "\n";

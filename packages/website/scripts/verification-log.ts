@@ -10,11 +10,13 @@
  * the base revision. The entry lists every result that moved and, below,
  * the error statistics over all results before and after, against the
  * other programs (the midpoint of their range per analysis) and against the
- * values the papers publish. A change that moves nothing still gets an
+ * values the papers publish, and the wall time of the verification run
+ * that produced the table (from generate-data.ts; it depends on the
+ * machine's cores and load). A change that moves nothing still gets an
  * entry, so the log shows it was checked.
  */
 import { execFileSync } from "node:child_process";
-import { readFileSync, writeFileSync } from "node:fs";
+import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 import type { VerificationData } from "../src/content/verification-types";
 
@@ -23,6 +25,14 @@ const DATA = "packages/website/src/content/generated/verification.json";
 const LOG = join(ROOT, "VERIFICATION-LOG.md");
 const SUMMARY_END = "<!-- summary-end -->";
 const ENTRIES = "<!-- entries -->";
+const RUN_TIME = join(ROOT, "packages/website/node_modules/.cache/cslope-verification-run.json");
+
+/** "87 s (16 workers)" for the last full verification run, or "not recorded". */
+function runTime(): string {
+  if (!existsSync(RUN_TIME)) return "not recorded";
+  const r = JSON.parse(readFileSync(RUN_TIME, "utf8")) as { seconds: number; workers: number };
+  return `${Math.round(r.seconds)} s (${r.workers} workers)`;
+}
 
 /** One compared value: cSlope's result and the reference it is compared with. */
 interface Point {
@@ -133,13 +143,14 @@ function main() {
   ) as VerificationData;
   const rev = execFileSync("git", ["rev-parse", "--short", base], { cwd: ROOT, encoding: "utf8" }).trim();
   const date = new Date().toISOString().slice(0, 10);
+  const time = runTime();
 
   const b = points(before);
   const a = points(after);
   const entry = [
     `### ${date}: ${title}`,
     "",
-    `Compared with ${rev}. Errors are relative to the reference, in percent.`,
+    `Compared with ${rev}. Errors are relative to the reference, in percent. Verification run time: ${time}.`,
     "",
     section("Against other programs (midpoint of their range)", b.programs, a.programs),
     "",
@@ -153,7 +164,7 @@ function main() {
   const row =
     `| ${date} | ${title} | ${moved(b.programs, a.programs).length + moved(b.papers, a.papers).length} | ` +
     `${arrow(sp[0], sp[1], (s) => s.meanAbs)} | ${arrow(sp[0], sp[1], (s) => s.rms)} | ` +
-    `${arrow(sl[0], sl[1], (s) => s.meanAbs)} | ${arrow(sl[0], sl[1], (s) => s.rms)} |`;
+    `${arrow(sl[0], sl[1], (s) => s.meanAbs)} | ${arrow(sl[0], sl[1], (s) => s.rms)} | ${time} |`;
 
   let log = readFileSync(LOG, "utf8");
   const nl = log.includes("\r\n") ? "\r\n" : "\n";
