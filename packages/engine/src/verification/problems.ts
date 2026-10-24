@@ -2399,6 +2399,7 @@ export const PROBLEMS: RawCase[] = [
     notes: [
       "Table 48.2 lists an out-of-plane spacing of 1.5 m; 1.15 m (the Clouterre wall) reproduces commercial program A's results at all six plane angles and is used here.",
       "Sheahan & Ho 0.989 at 55° (force-equilibrium trial wedge).",
+      "Input audit 2026-10-24: commercial program B (§2.28, Table 77) also lists 1.5 m, with the same nails (rows from 1.5 m at 1 m, lengths 6, 8, 7.5, 8, 8, 8, 6 m); its values 1.159 / 1.051 / 0.971 / 0.917 / 0.880 / 0.876 (45-70°) lie 1-2 % below Sheahan & Ho's. With 1.5 m cSlope is 5-10 % below commercial program A at every angle (0.919 at 55°). The 1.15 m spacing is not printed in either manual, so it remains an assumption that rests on the agreement.",
     ],
   },
   {
