@@ -22,11 +22,37 @@ The script compares the regenerated verification table with the committed one an
 | 2026-10-24 | Surfaces leaving the model through its base are rejected (review C2) | 0 | 0.398 → 0.398 | 0.570 → 0.570 | 1.653 → 1.653 | 4.007 → 4.007 | not recorded |
 | 2026-10-24 | Non-circular optimisation: the best surface is optimised further while it still improves (review C2) | 35 | 0.398 → 0.408 | 0.570 → 0.590 | 1.653 → 1.673 | 4.007 → 4.014 | 90 s (4 workers, load 2.1 at start) |
 | 2026-10-24 | Engine default: 500 refined iterations, as the desktop app (review C2) | 0 | 0.408 → 0.408 | 0.590 → 0.590 | 1.673 → 1.673 | 4.014 → 4.014 | 91 s (4 workers, load 3.2 at start) |
+| 2026-10-24 | Final review: slicing with dense water lines, weaker soil on a layer boundary, pile pond water | 2 | 0.408 → 0.407 | 0.590 → 0.589 | 1.673 → 1.673 | 4.014 → 4.014 | 91 s (4 workers, load 0.9 at start) |
 <!-- summary-end -->
 
 ## Entries
 
 <!-- entries -->
+
+### 2026-10-24: Final review: slicing with dense water lines, weaker soil on a layer boundary, pile pond water
+
+Compared with 6b587e5. Errors are relative to the reference, in percent. Verification run time: 91 s (4 workers, load 0.9 at start).
+
+**Against other programs (midpoint of their range):** 2 moved (2 closer to the reference, 0 further).
+
+| Result | Reference | Before | After | Error before | Error after |
+|---|---|---|---|---|---|
+| V051 Spencer, non-circular | 0.707 | 0.6949 | 0.6952 | -1.711 % | -1.669 % |
+| V094 Morgenstern-Price (half-sine), non-circular | 1.389 | 1.3881 | 1.3885 | -0.065 % | -0.036 % |
+| **Mean error (n = 268)** | | | | -0.269 % | -0.269 % |
+| **Mean absolute error** | | | | 0.408 % | 0.407 % |
+| **RMS error** | | | | 0.590 % | 0.589 % |
+| **Largest error** | | | | 2.226 % | 2.226 % |
+
+**Against the papers:** 0 moved (0 closer to the reference, 0 further).
+
+| Result | Reference | Before | After | Error before | Error after |
+|---|---|---|---|---|---|
+| **Mean error (n = 99)** | | | | +0.274 % | +0.274 % |
+| **Mean absolute error** | | | | 1.673 % | 1.673 % |
+| **RMS error** | | | | 4.014 % | 4.014 % |
+| **Largest error** | | | | 25.892 % | 25.892 % |
+
 
 ### 2026-10-24: Engine default: 500 refined iterations, as the desktop app (review C2)
 
