@@ -92,6 +92,16 @@ export const FAILURE_MASS_FILL_OPACITY = 0.12;
 export const SLICE_LINE_OPACITY = 0.6;
 /** Slice wall line width (logical px; PDF scales by mmPerPx). */
 export const SLICE_LINE_WIDTH_PX = 0.8;
+/** Slice wall colour over a dark material fill (white). */
+export const SLICE_LINE_ON_DARK_COLOR: DualColor = { hex: "#ffffff", rgb: [255, 255, 255] };
+/** A sliding mass thinner than this on screen gets a band of this width along it. */
+export const MIN_SLIP_MASS_PX = 5;
+/** Opacity of that band (FAILURE_MASS_COLOR). */
+export const MIN_SLIP_MASS_BAND_OPACITY = 0.3;
+/** Width of the water band in a water-filled tension crack (logical px). */
+export const CRACK_WATER_WIDTH_PX = 5;
+/** Opacity of that band (POND_COLOR). */
+export const CRACK_WATER_OPACITY = 0.85;
 
 // ── Annotations ────────────────────────────────────────────────
 

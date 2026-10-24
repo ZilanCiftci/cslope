@@ -1,5 +1,5 @@
 import { jsPDF } from "jspdf";
-import type { AnalysisResult } from "@cslope/engine";
+import type { AnalysisOptions, AnalysisResult } from "@cslope/engine";
 import type {
   AnalysisLimitsState,
   MaterialBoundaryRow,
@@ -97,6 +97,10 @@ export interface PdfExportData {
   reinforcements?: ReinforcementRow[];
   piles?: PileRow[];
   analysisLimits: AnalysisLimitsState;
+  /** Analysis options (the water in a tension crack). */
+  options?: Pick<AnalysisOptions, "tensionCrackWater">;
+  /** Only prescribed surfaces were analysed: no search limits are drawn. */
+  customPlanesOnly?: boolean;
   orientation: ModelOrientation;
   projectInfo?: ProjectInfo;
   parameters?: ParameterDef[];
@@ -150,7 +154,8 @@ export function exportVectorPdf(data: PdfExportData): void {
       reinforcements = [],
       piles = [],
       analysisLimits,
-      orientation,
+      options,
+      customPlanesOnly = false,
       projectInfo,
       parameters,
       viewBounds,
@@ -379,13 +384,19 @@ export function exportVectorPdf(data: PdfExportData): void {
       );
     }
 
-    if (analysisLimits.enabled && coordinates.length >= 3) {
-      drawEntryExitMarkers(pdf, tf, analysisLimits, coordinates, orientation);
+    // Not for an analysis of prescribed surfaces only (nothing was searched).
+    if (analysisLimits.enabled && coordinates.length >= 3 && !customPlanesOnly) {
+      drawEntryExitMarkers(pdf, tf, analysisLimits, coordinates);
     }
 
     drawSlipSurfaces(pdf, tf, result, rvs);
 
-    drawCriticalSurface(pdf, tf, result, rvs, coordinates);
+    drawCriticalSurface(pdf, tf, result, rvs, coordinates, {
+      options,
+      materials,
+      materialBoundaries,
+      regionMaterials,
+    });
     if (result.criticalSurface?.reinforcementForces?.length) {
       drawReinforcementForcesPdf(pdf, tf, result.criticalSurface.reinforcementForces);
     }

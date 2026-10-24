@@ -59,6 +59,11 @@ export function useCanvasModelState() {
   const gridSnapSize = useAppStore((s) => s.gridSnapSize);
   const projectInfo = useAppStore((s) => s.projectInfo);
   const parameters = useAppStore((s) => s.parameters);
+  const options = useAppStore((s) => s.options);
+  // Only prescribed surfaces are analysed (as buildSlopeDTOFromModel).
+  const customPlanesOnly = useAppStore(
+    (s) => s.customPlanesOnly && s.customSearchPlanes.length > 0,
+  );
 
   return {
     result,
@@ -86,6 +91,8 @@ export function useCanvasModelState() {
     gridSnapSize,
     projectInfo,
     parameters,
+    options,
+    customPlanesOnly,
   };
 }
 
