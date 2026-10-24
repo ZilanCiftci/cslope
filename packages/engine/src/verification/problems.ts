@@ -2834,15 +2834,16 @@ export const PROBLEMS: RawCase[] = [
     reference: "Verification manual of a commercial slope stability program.",
     surface: "search",
     units: "SI",
-    description: "10 m, 2:1 slope in three layers over a horizontal base, dry, no seismic load; Spencer search.",
+    description: "10 m, 2:1 slope in three layers over a horizontal base, dry, no seismic load; Spencer search, circular and non-circular.",
     definition: {"materials":[{"name":"soil1","model":{"kind":"mohr-coulomb","unitWeight":19.5,"cohesion":0,"frictionAngle":38}},{"name":"soil2","model":{"kind":"mohr-coulomb","unitWeight":19.5,"cohesion":5.3,"frictionAngle":23}},{"name":"soil3","model":{"kind":"mohr-coulomb","unitWeight":19.5,"cohesion":7.2,"frictionAngle":20}}],"coordinates":[[20,20],[70,20],[70,24],[70,31],[70,35],[50,35],[30,25],[20,25]],"materialBoundaries":[{"coordinates":[[70,31],[54,31],[50,29],[40,27]],"materialName":""},{"coordinates":[[40,27],[30,25]],"materialName":""},{"coordinates":[[40,27],[52,24],[70,24]],"materialName":""}],"regionAssignments":[{"point":[58,33],"materialName":"soil1"},{"point":[58,25.5],"materialName":"soil2"},{"point":[45,22],"materialName":"soil3"}]},
     checks: [
-      {"method":"Morgenstern-Price","label":"Spencer (M-P, constant f(x))","published":1.36,"publishedBy":"Commercial program A","options":{"intersliceFunction":"constant","porePressureHead":"vertical","slices":40}},
+      {"method":"Morgenstern-Price","label":"Spencer (M-P, constant f(x))","published":1.36,"publishedBy":"Commercial program A (non-circular)","options":{"intersliceFunction":"constant","porePressureHead":"vertical","slices":40,"nonCircularOptimization":true}},
       {"method":"Morgenstern-Price","label":"Spencer (M-P, constant f(x))","published":1.372,"publishedBy":"Program D","options":{"intersliceFunction":"constant","porePressureHead":"vertical","slices":40}},
     ],
     publicNote: "The problem comes from a program manual only; no independent value is published.",
     notes: [
       "commercial program A multi-modal optimisation 1.359. The k = 0.15 and yield-acceleration cases need a seismic coefficient.",
+      "Commercial program A's 1.360 is a non-circular result: its manual runs both columns with a particle-swarm search plus surface-altering optimisation (multi-modal and uni-modal), so it is now checked against cSlope's non-circular search (1.357); before it was compared with the circular search (1.372, +0.9 %), as program D's circular 1.372 still is.",
     ],
   },
 ];
