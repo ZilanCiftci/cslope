@@ -21,7 +21,7 @@ import {
   anchorPointFromTopLeft,
 } from "../annotations/anchorPosition";
 import {
-  equilibriumGapText,
+  closestPairWarning,
   NON_CONVERGED_TITLE,
   nonConvergedText,
   surfaceCountText,
@@ -523,9 +523,9 @@ export function ResultSidebar() {
                 {nonConvergedText(result.nonConvergedSurfaces ?? 0)}
               </p>
             )}
-            {result.criticalSurface?.equilibriumGap != null && (
+            {closestPairWarning(result.criticalSurface) && (
               <p style={{ color: "var(--color-vsc-warning)" }}>
-                {equilibriumGapText(result.criticalSurface.equilibriumGap)}
+                {closestPairWarning(result.criticalSurface)}
               </p>
             )}
             {(result.splitFailureCount ?? 0) > 0 && (

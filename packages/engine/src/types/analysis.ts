@@ -167,8 +167,18 @@ export interface SlipSurfaceResult {
   entryPoint: [number, number];
   /** Exit point [x, y]. */
   exitPoint: [number, number];
-  /** Whether iterative solver converged for this surface. */
+  /**
+   * Whether the solver converged for this surface (for Morgenstern-Price:
+   * a crossing Fm = Ff; false for a closest pair, see `closestPair`).
+   */
   converged?: boolean;
+  /**
+   * Morgenstern-Price: the moment and force factors never met and the
+   * closest pair was accepted (gap in `equilibriumGap`). The factor meets
+   * moment equilibrium and force equilibrium only within the gap; the
+   * surface is not converged but keeps its factor.
+   */
+  closestPair?: boolean;
   /** Lambda-Fm-Ff-gap rows for this surface (Morgenstern-Price only). */
   lffArray?: [number, number, number, number][];
   /**

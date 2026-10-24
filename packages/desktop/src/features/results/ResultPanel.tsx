@@ -5,7 +5,7 @@
 import type { ReactNode } from "react";
 import { useAppStore } from "../../store/app-store";
 import {
-  equilibriumGapText,
+  closestPairWarning,
   NON_CONVERGED_TITLE,
   nonConvergedText,
   surfaceCountText,
@@ -121,10 +121,10 @@ export function ResultPanel({ showTitle = true }: { showTitle?: boolean }) {
               </span>
             </Row>
           )}
-          {result.criticalSurface?.equilibriumGap != null && (
+          {closestPairWarning(result.criticalSurface) && (
             <Row label="Equilibrium">
               <span style={{ color: "var(--color-vsc-warning)" }}>
-                {equilibriumGapText(result.criticalSurface.equilibriumGap)}
+                {closestPairWarning(result.criticalSurface)}
               </span>
             </Row>
           )}

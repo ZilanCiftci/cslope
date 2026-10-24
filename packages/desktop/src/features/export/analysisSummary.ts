@@ -15,7 +15,7 @@ import type {
   ReinforcementRow,
 } from "../../store/types";
 import { mainPiezoLine } from "../../utils/piezo";
-import { equilibriumGapText, surfaceCountText } from "../../utils/result-summary";
+import { closestPairWarning, surfaceCountText } from "../../utils/result-summary";
 
 /**
  * What an analysis was run with and what it found, as text for the summary
@@ -205,10 +205,10 @@ export function buildAnalysisSummary(input: AnalysisSummaryInput): SummarySectio
   if (result.nonConvergedSurfaces) {
     res.push({ label: "Not converged", value: `${result.nonConvergedSurfaces} surfaces (no factor)` });
   }
-  if (cs?.equilibriumGap !== undefined && cs.equilibriumGap !== null) {
-    res.push({ label: "Warning", value: equilibriumGapText(cs.equilibriumGap) });
-  }
-  if (cs && cs.converged === false) {
+  const closestPair = closestPairWarning(cs);
+  if (closestPair) {
+    res.push({ label: "Warning", value: closestPair });
+  } else if (cs && cs.converged === false) {
     res.push({ label: "Warning", value: "The critical surface did not converge within the iteration limit" });
   }
   sections.push({ title: "Result", rows: res });

@@ -195,6 +195,7 @@ function analyse(
       entryPoint: crit.crack ?? crit.lc,
       exitPoint: crit.rc,
       converged: crit.converged,
+      closestPair: crit.closestPair,
       lffArray: crit.lffArray,
       equilibriumGap: crit.equilibriumGap,
       points: displayPoints(crit),
@@ -250,6 +251,7 @@ function analyse(
         entryPoint: p.crack ?? p.lc,
         exitPoint: p.rc,
         converged: p.converged,
+        closestPair: p.closestPair,
         lffArray: p.lffArray,
         equilibriumGap: p.equilibriumGap,
         points: displayPoints(p),
@@ -271,8 +273,10 @@ function analyse(
       ? criticalPushingMoment * criticalSurface.fos
       : null;
 
+  // Surfaces left without a factor; a Morgenstern-Price closest pair is
+  // not converged either but keeps its factor (and is flagged by its gap).
   const nonConvergedSurfaces = slope.search.reduce(
-    (count, plane) => count + (plane.converged === false ? 1 : 0),
+    (count, plane) => count + (plane.converged === false && plane.fos == null ? 1 : 0),
     0,
   );
 
