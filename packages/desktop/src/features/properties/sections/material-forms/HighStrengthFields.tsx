@@ -2,6 +2,7 @@ import { Label } from "../../../../components/ui/Label";
 import { ExpressionNumericInput } from "../../../../components/ui/ExpressionNumericInput";
 import type { HighStrengthModel } from "@cslope/engine";
 import type { MaterialExpressions } from "../../../../store/types";
+import { UnitWeightSatField } from "./UnitWeightSatField";
 
 interface Props {
   model: HighStrengthModel;
@@ -19,7 +20,7 @@ export function HighStrengthFields({
   onExpressionChange,
 }: Props) {
   return (
-    <div className="grid grid-cols-1 gap-2">
+    <div className="grid grid-cols-2 gap-2">
       <label className="flex flex-col gap-0.5">
         <Label>γ (kN/m³)</Label>
         <ExpressionNumericInput
@@ -34,8 +35,12 @@ export function HighStrengthFields({
           aria-label="γ (kN/m³)"
         />
       </label>
+      <UnitWeightSatField
+        value={model.unitWeightSat}
+        onChange={(unitWeightSat) => onChange({ unitWeightSat })}
+      />
       <p
-        className="text-[10px] italic"
+        className="col-span-2 text-[10px] italic"
         style={{ color: "var(--color-vsc-text-muted)" }}
       >
         Infinite strength — slip surfaces passing through this material are

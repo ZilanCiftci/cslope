@@ -19,8 +19,6 @@ import {
   createDefaultModel,
 } from "./sections/material-forms";
 import { PopupPanel } from "../../components/ui/PopupPanel";
-import { DraftNumberInput } from "../../components/ui/DraftNumberInput";
-import { Label } from "../../components/ui/Label";
 import type { MaterialRow } from "../../store/types";
 import { resolveParameters } from "../../utils/expression";
 
@@ -55,6 +53,10 @@ export function DefineMaterialsDialog({ onClose, mode = "popup" }: Props) {
   const parameters = useAppStore((s) => s.parameters);
 
   const [selectedId, setSelectedId] = useState<string>(materials[0]?.id ?? "");
+  // A material just switched to another model kind holds that kind's
+  // defaults; its validation errors (e.g. no data points yet) are not shown
+  // until the user edits it.
+  const [freshKindId, setFreshKindId] = useState<string | null>(null);
 
   const selected = materials.find((m) => m.id === selectedId) ?? materials[0];
 
@@ -73,6 +75,7 @@ export function DefineMaterialsDialog({ onClose, mode = "popup" }: Props) {
     patch: Partial<MaterialModel>,
   ) => {
     const merged = { ...currentModel, ...patch } as MaterialModel;
+    setFreshKindId(null);
     setModel(matId, merged);
   };
 
@@ -94,6 +97,7 @@ export function DefineMaterialsDialog({ onClose, mode = "popup" }: Props) {
       model: newModel,
       modelExpressions: unitWeightExpr ? { unitWeight: unitWeightExpr } : {},
     });
+    setFreshKindId(matId);
   };
 
   const handleAdd = () => {
@@ -127,6 +131,7 @@ export function DefineMaterialsDialog({ onClose, mode = "popup" }: Props) {
     const material = materials.find((m) => m.id === matId);
     if (!material) return;
 
+    setFreshKindId(null);
     const nextExpressions = { ...(material.modelExpressions ?? {}) };
     if (!expression || expression.trim().length === 0) {
       delete nextExpressions[field];
@@ -155,7 +160,7 @@ export function DefineMaterialsDialog({ onClose, mode = "popup" }: Props) {
               >
                 <th className="text-left px-2 py-1.5 font-semibold">Name</th>
                 <th className="text-left px-2 py-1.5 font-semibold">
-                  Material Model
+                  Material model
                 </th>
                 <th className="text-center px-2 py-1.5 font-semibold w-12">
                   Color
@@ -196,8 +201,11 @@ export function DefineMaterialsDialog({ onClose, mode = "popup" }: Props) {
                           updateMaterial(mat.id, { name: e.target.value })
                         }
                         onClick={(e) => e.stopPropagation()}
-                        className="w-full bg-transparent border-none outline-none text-[11px]"
-                        style={{ color: "inherit" }}
+                        onFocus={() => setSelectedId(mat.id)}
+                        className="w-full text-[11px]"
+                        style={{ padding: "2px 6px", borderRadius: 4 }}
+                        title="Material name (click to rename)"
+                        aria-label="Material name"
                       />
                     </td>
                     <td className="px-2 py-1.5">
@@ -235,7 +243,6 @@ export function DefineMaterialsDialog({ onClose, mode = "popup" }: Props) {
       {/* ── Selected material detail ── */}
       {selected && model && (
         <div className="space-y-3">
-          {/* Slope Stability section */}
           <div
             className="p-3 rounded space-y-3"
             style={{
@@ -243,17 +250,10 @@ export function DefineMaterialsDialog({ onClose, mode = "popup" }: Props) {
               border: "1px solid var(--color-vsc-border)",
             }}
           >
-            <h4
-              className="text-[10px] font-bold uppercase tracking-[0.1em]"
-              style={{ color: "var(--color-vsc-text-muted)" }}
-            >
-              Slope Stability
-            </h4>
-
             {/* Model kind selector */}
             <div>
               <label className="block text-[10px] font-medium mb-1 opacity-70">
-                Material Model
+                Material model
               </label>
               <select
                 value={model.kind}
@@ -290,30 +290,8 @@ export function DefineMaterialsDialog({ onClose, mode = "popup" }: Props) {
               }
             />
 
-            {model.kind !== "impenetrable" && (
-              <label
-                className="flex flex-col gap-0.5"
-                title="Unit weight of the soil below the material's piezometric line. Empty: γ throughout."
-              >
-                <Label>γsat below water (kN/m³)</Label>
-                <DraftNumberInput
-                  value={model.unitWeightSat}
-                  min={0.01}
-                  step={0.5}
-                  placeholder="= γ"
-                  onValueChange={(v) =>
-                    v > 0 && patchModel(selected.id, model, { unitWeightSat: v })
-                  }
-                  onClear={() =>
-                    patchModel(selected.id, model, { unitWeightSat: undefined })
-                  }
-                  aria-label="Saturated unit weight"
-                />
-              </label>
-            )}
-
             {/* Inline validation errors */}
-            <ValidationErrors model={model} />
+            {freshKindId !== selected.id && <ValidationErrors model={model} />}
           </div>
         </div>
       )}

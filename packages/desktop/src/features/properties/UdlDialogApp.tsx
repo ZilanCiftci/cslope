@@ -116,9 +116,10 @@ export function UdlDialogApp() {
     {
       header: (
         <Label title="Vertical pressure per horizontal metre between x1 and x2">
-          q (kPa, per horiz. m)
+          q (kPa)
         </Label>
       ),
+      widthClassName: "w-[30%]",
       renderCell: (row) => (
         <SpreadsheetExpressionInput
           value={row.magnitude}
@@ -135,7 +136,8 @@ export function UdlDialogApp() {
       ),
     },
     {
-      header: <Label>x1</Label>,
+      header: <Label title="Start of the load">x1 (m)</Label>,
+      widthClassName: "w-[30%]",
       renderCell: (row) => (
         <SpreadsheetExpressionInput
           value={row.x1}
@@ -148,7 +150,8 @@ export function UdlDialogApp() {
       ),
     },
     {
-      header: <Label>x2</Label>,
+      header: <Label title="End of the load">x2 (m)</Label>,
+      widthClassName: "w-[30%]",
       renderCell: (row) => (
         <SpreadsheetExpressionInput
           value={row.x2}

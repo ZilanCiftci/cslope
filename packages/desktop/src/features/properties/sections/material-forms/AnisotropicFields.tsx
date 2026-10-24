@@ -3,6 +3,7 @@ import { ExpressionNumericInput } from "../../../../components/ui/ExpressionNume
 import { DataPointTable } from "../../../../components/ui/DataPointTable";
 import type { AnisotropicFunctionModel } from "@cslope/engine";
 import type { MaterialExpressions } from "../../../../store/types";
+import { UnitWeightSatField } from "./UnitWeightSatField";
 
 interface Props {
   model: AnisotropicFunctionModel;
@@ -29,7 +30,7 @@ export function AnisotropicFields({
 
   return (
     <div className="space-y-2">
-      <div className="grid grid-cols-3 gap-2">
+      <div className="grid grid-cols-2 gap-2">
         <label className="flex flex-col gap-0.5">
           <Label>γ (kN/m³)</Label>
           <ExpressionNumericInput
@@ -46,6 +47,10 @@ export function AnisotropicFields({
             aria-label="γ (kN/m³)"
           />
         </label>
+        <UnitWeightSatField
+          value={model.unitWeightSat}
+          onChange={(unitWeightSat) => onChange({ unitWeightSat })}
+        />
         <label className="flex flex-col gap-0.5">
           <Label>φ (°)</Label>
           <ExpressionNumericInput
@@ -77,7 +82,7 @@ export function AnisotropicFields({
           />
         </label>
       </div>
-      <Label>Modifier Function (α° → factor)</Label>
+      <Label>Modifier function (α° → factor)</Label>
       <DataPointTable
         headers={["α (°)", "Factor"]}
         rows={rows}

@@ -184,6 +184,13 @@ describe("DefineMaterialsDialog — switching the model", () => {
     render(<DefineMaterialsDialog onClose={() => {}} />);
     await userEvent.selectOptions(kindSelect(), "undrained");
     await setField("Su (kPa)", "35");
+    // Constant Su: no cutoff field.
+    expect(screen.queryByLabelText("Max Su (cutoff) (kPa)")).toBeNull();
+    act(() => {
+      store().updateMaterial(mats()[0].id, {
+        model: { ...model(), suRateOfChange: 2 } as MaterialModel,
+      });
+    });
     const cutoff = screen.getByLabelText("Max Su (cutoff) (kPa)");
     await userEvent.type(cutoff, "80");
     expect(model()).toMatchObject({ undrainedShearStrength: 35, suMax: 80 });
@@ -195,9 +202,11 @@ describe("DefineMaterialsDialog — switching the model", () => {
   it("edits S = f(depth) fields", async () => {
     render(<DefineMaterialsDialog onClose={() => {}} />);
     await userEvent.selectOptions(kindSelect(), "s-f-depth");
-    await setField("Su ref (kPa)", "20");
-    await setField("Depth ref (m)", "-2");
-    await setField("Rate (kPa/m)", "1.5");
+    await setField("Su at reference depth (kPa)", "20");
+    await setField("Reference depth (m)", "-2");
+    expect(screen.queryByLabelText(/Su \(cutoff\)/)).toBeNull();
+    await setField("Su increase rate (kPa/m)", "1.5");
+    expect(screen.getByLabelText("Max Su (cutoff) (kPa)")).toBeInTheDocument();
     await userEvent.selectOptions(screen.getByLabelText("Depth measured from"), "ground");
     expect(model()).toMatchObject({
       kind: "s-f-depth",
@@ -211,10 +220,12 @@ describe("DefineMaterialsDialog — switching the model", () => {
   it("edits S = f(datum) fields", async () => {
     render(<DefineMaterialsDialog onClose={() => {}} />);
     await userEvent.selectOptions(kindSelect(), "s-f-datum");
-    await setField("Su ref (kPa)", "15");
-    await setField("Y ref (m)", "4");
-    await setField("Rate (kPa/m)", "-0.5");
+    await setField("Su at reference level (kPa)", "15");
+    await setField("Reference level y (m)", "4");
+    await setField("Su increase rate (kPa/m)", "-0.5");
     expect(model()).toMatchObject({ kind: "s-f-datum", suRef: 15, yRef: 4, rate: -0.5 });
+    // Su decreasing with depth: the cutoff is a minimum.
+    expect(screen.getByLabelText("Min Su (cutoff) (kPa)")).toBeInTheDocument();
   });
 
   it("edits lime-cement column fields and the drained limit", async () => {
@@ -223,7 +234,7 @@ describe("DefineMaterialsDialog — switching the model", () => {
     await setField("Area ratio a (–)", "1.5");
     expect(model()).toMatchObject({ areaRatio: 1 });
     await setField("Su columns (kPa)", "150");
-    await setField("Su soil at level (m)", "-3");
+    await setField("Reference level y (m)", "-3");
     expect(model()).toMatchObject({ columnSu: 150, suRefDepth: -3 });
 
     expect(screen.queryByLabelText("c′ columns (kPa)")).toBeNull();
@@ -258,7 +269,9 @@ describe("DefineMaterialsDialog — switching the model", () => {
   it("edits spatial Mohr-Coulomb data points and interpolation", async () => {
     render(<DefineMaterialsDialog onClose={() => {}} />);
     await userEvent.selectOptions(kindSelect(), "spatial-mohr-coulomb");
-    expect(screen.getByRole("alert", { name: "Validation errors" })).toBeInTheDocument();
+    // No errors before the user has entered anything.
+    expect(screen.queryByRole("alert", { name: "Validation errors" })).toBeNull();
+    expect(screen.getByText("No data points yet: add at least one.")).toBeInTheDocument();
     await userEvent.click(screen.getByRole("button", { name: "+ Add Row" }));
     const c = screen.getByLabelText("c (kPa) row 1");
     await userEvent.clear(c);
@@ -268,6 +281,9 @@ describe("DefineMaterialsDialog — switching the model", () => {
     expect(dp).toEqual([[0, 0, 12, 0, 0]]);
     await userEvent.selectOptions(screen.getByLabelText("Interpolation method"), "nearest");
     expect(model()).toMatchObject({ interpolation: "nearest" });
+    // Removing the last point is an error once the user has edited it.
+    await userEvent.click(screen.getByRole("button", { name: "Remove row 1" }));
+    expect(screen.getByRole("alert", { name: "Validation errors" })).toBeInTheDocument();
   });
 
   it.each(["high-strength", "impenetrable"])(
@@ -296,8 +312,8 @@ describe("DefineMaterialsDialog — switching the model", () => {
 
   it.each([
     ["undrained", ["Su (kPa)"], { undrainedShearStrength: "g" }],
-    ["s-f-depth", ["Su ref (kPa)", "Depth ref (m)", "Rate (kPa/m)"], { suRef: "g", depthRef: "g", rate: "g" }],
-    ["s-f-datum", ["Su ref (kPa)", "Y ref (m)", "Rate (kPa/m)"], { suRef: "g", yRef: "g", rate: "g" }],
+    ["s-f-depth", ["Su at reference depth (kPa)", "Reference depth (m)", "Su increase rate (kPa/m)"], { suRef: "g", depthRef: "g", rate: "g" }],
+    ["s-f-datum", ["Su at reference level (kPa)", "Reference level y (m)", "Su increase rate (kPa/m)"], { suRef: "g", yRef: "g", rate: "g" }],
   ] as const)("stores parameter expressions for %s strength fields", async (kind, labels, expected) => {
     render(<DefineMaterialsDialog onClose={() => {}} />);
     await userEvent.selectOptions(kindSelect(), kind);
@@ -306,10 +322,15 @@ describe("DefineMaterialsDialog — switching the model", () => {
     for (const key of Object.keys(expected)) {
       expect((model() as unknown as Record<string, number>)[key]).toBe(19);
     }
-    // γ and the strength cutoff can be set for these kinds too.
     await setField("γ (kN/m³)", "17.5");
+    expect(model()).toMatchObject({ unitWeight: 17.5 });
+    // The strength cutoff only where Su varies with depth.
+    if (kind === "undrained") {
+      expect(screen.queryByLabelText("Max Su (cutoff) (kPa)")).toBeNull();
+      return;
+    }
     await userEvent.type(screen.getByLabelText("Max Su (cutoff) (kPa)"), "120");
-    expect(model()).toMatchObject({ unitWeight: 17.5, suMax: 120 });
+    expect(model()).toMatchObject({ suMax: 120 });
   });
 
   it("shows validation errors for invalid values", async () => {
