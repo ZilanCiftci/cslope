@@ -25,6 +25,7 @@ The first public release.
 - Water: several piezometric lines with one per material if needed, ponded water above the ground.
 - Distributed and line loads; anchors, grouted tiebacks, soil nails, geosynthetics, pile rows and sheet pile walls.
 - Edit view: coordinate labels find a free place around their point, clear of other labels, markers, loads and water symbols; interior boundaries are drawn only inside the model; custom slip surfaces show dashed; rulers leave out labels the edge would cut.
+- Edit view: coordinate labels sit outside the fill, clear of the boundary lines, entry/exit dots, elements, water lines and custom surfaces, and points off the screen get none; vertex dots are drawn over the search-limit markers; a custom circle shows only from where it enters the ground to where it leaves it, on a halo that keeps it visible on dark layers; a fixed tension-crack depth shows as a labelled dimension on the crest instead of a dashed line along the whole ground; with only custom surfaces analysed the search limits are hidden; long ruler labels are set smaller instead of left out, and load handles are picked over the arrow height as drawn.
 
 ### Results and reporting
 

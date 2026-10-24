@@ -2,6 +2,8 @@ import { describe, expect, it } from "vitest";
 import type { AnalysisResult, SliceData, SlipSurfaceResult } from "@cslope/engine";
 import { DEFAULT_ANALYSIS_OPTIONS } from "@cslope/engine";
 import { drawCanvas, editOverlayBoxes, POINT_LABEL_PLATE_ALPHA, type DrawCanvasParams } from "./draw";
+import { segmentHitsBox } from "./label-layout";
+import { layoutLoads } from "./overlay-geometry";
 import { createRecordingContext, pathPoints, type PaintedPath } from "../../test/recording-context";
 import {
   DEFAULT_ANALYSIS_LIMITS,
@@ -272,14 +274,21 @@ describe("drawCanvas — edit mode", () => {
     expect(dots).toHaveLength(COORDS.length);
     expect(dots.every((c) => c.args[2] === POINT_RADIUS)).toBe(true);
     expect(editing.textStrings()).toContain("(20.0, 5.0)");
-    // Upper points are labelled above, centred on the point.
+    // Upper points are labelled above, outside the fill, clear of the
+    // boundary next to the point (here up and right, off the slope face).
     const [px, py] = toC(20, 5);
     const label = editing.findText("(20.0, 5.0)")!;
     expect(label.y).toBeLessThan(py);
-    expect(label.x).toBeLessThan(px);
     expect(label.x).toBeGreaterThan(px - 60);
     // Points at the bottom of the boundary are labelled below, outside the fill.
     expect(editing.findText("(30.0, 0.0)")!.y).toBeGreaterThan(toC(30, 0)[1]);
+    // No plate crosses a boundary edge.
+    const plates = editing.callsOf("fillRect").filter((c) => c.state.globalAlpha === POINT_LABEL_PLATE_ALPHA);
+    const edges = COORDS.map((a, i) => [...toC(...a), ...toC(...COORDS[(i + 1) % COORDS.length])] as const);
+    for (const c of plates) {
+      const [x, y, w, h] = c.args as number[];
+      for (const e of edges) expect(segmentHitsBox(e, { left: x, top: y, right: x + w, bottom: y + h })).toBe(false);
+    }
 
     const idle = draw();
     expect(idle.callsOf("arc").every((c) => c.args[2] === 3)).toBe(true);
@@ -314,19 +323,9 @@ describe("drawCanvas — edit mode", () => {
     a.left < b.right && b.left < a.right && a.top < b.bottom && b.top < a.bottom;
 
   it("places labels of close points so they don't overlap, leaving out those with no room", () => {
-    // Steps 0.4 m (8 px) apart along the crest: the labels can't all sit above.
-    const coordinates: [number, number][] = [
-      [0, 0],
-      [0, 10],
-      [10, 10],
-      [10.4, 10],
-      [10.8, 10],
-      [11.2, 10],
-      [11.6, 10],
-      [20, 5],
-      [30, 5],
-      [30, 0],
-    ];
+    // Steps 0.2 m (4 px) apart along the crest: the labels can't all fit.
+    const crest = Array.from({ length: 14 }, (_, k) => [10 + 0.2 * k, 10] as [number, number]);
+    const coordinates: [number, number][] = [[0, 0], [0, 10], ...crest, [20, 5], [30, 5], [30, 0]];
     const rec = draw({ editingExterior: true, coordinates });
     const boxes = labelBoxes(rec);
     expect(boxes.length).toBeGreaterThan(5);
@@ -348,6 +347,78 @@ describe("drawCanvas — edit mode", () => {
       const selected = draw({ editingExterior: true, coordinates, selectedPointIndex: i });
       expect(selected.textStrings()).toContain(`(${coordinates[i][0].toFixed(1)}, ${coordinates[i][1].toFixed(1)})`);
     }
+  });
+
+  it("keeps coordinate labels off the ground line, its entry/exit dots and interior boundaries", () => {
+    const rec = draw({
+      editingExterior: true,
+      analysisLimits: { enabled: true, entryLeftX: 1, entryRightX: 9, exitLeftX: 21, exitRightX: 29 },
+      materialBoundaries: [{ id: "b", coordinates: [[0, 6], [16, 6], [30, 3]] }],
+    });
+    const dots = rec
+      .fills()
+      .filter((p) => p.segments[0].op === "arc" && [ENTRY_DOT_COLOR.hex, EXIT_DOT_COLOR.hex].includes(p.state.fillStyle))
+      .map((p) => pathPoints(p)[0]);
+    expect(dots.length).toBeGreaterThan(10);
+    const boundary = [toC(0, 6), toC(16, 6), toC(30, 3)];
+    const lines = [
+      ...COORDS.map((a, i) => [...toC(...a), ...toC(...COORDS[(i + 1) % COORDS.length])] as const),
+      [...boundary[0], ...boundary[1]] as const,
+      [...boundary[1], ...boundary[2]] as const,
+    ];
+    const boxes = labelBoxes(rec);
+    expect(boxes).toHaveLength(COORDS.length);
+    for (const b of boxes) {
+      for (const [x, y] of dots) expect(overlap(b, { left: x - 2.5, right: x + 2.5, top: y - 2.5, bottom: y + 2.5 })).toBe(false);
+      for (const l of lines) expect(segmentHitsBox(l, b)).toBe(false);
+    }
+  });
+
+  it("draws vertex dots over the search-limit markers", () => {
+    const rec = draw({
+      editingExterior: true,
+      analysisLimits: { enabled: true, entryLeftX: 0, entryRightX: 8, exitLeftX: 21, exitRightX: 30 },
+    });
+    const [vx, vy] = toC(0, 10);
+    const triangle = rec.paths.findIndex((p) => p.kind === "fill" && p.segments.length === 4 && close(pathPoints(p)[0], [vx, vy]));
+    const dot = rec.paths.findIndex((p) => p.kind === "fill" && p.segments[0].op === "arc" && close(pathPoints(p)[0], [vx, vy]));
+    expect(triangle).toBeGreaterThanOrEqual(0);
+    expect(dot).toBeGreaterThan(triangle);
+  });
+
+  it("leaves out the labels of points off the screen instead of stacking them at the edge", () => {
+    // Zoomed in on the toe: the crest corners are far outside the view.
+    const zoom = 200;
+    const toZ = (wx: number, wy: number, w: number, h: number): [number, number] => [w / 2 + (wx - 20) * zoom, h / 2 - (wy - 5) * zoom];
+    const fromZ = (cx: number, cy: number, w: number, h: number): [number, number] => [(cx - w / 2) / zoom + 20, -(cy - h / 2) / zoom + 5];
+    const rec = draw({ editingExterior: true, worldToCanvas: toZ, canvasToWorld: fromZ, viewScale: zoom });
+    expect(rec.textStrings().filter((t) => t.startsWith("("))).toEqual(["(20.0, 5.0)"]);
+  });
+
+  it("lets a hovered duplicate label show without taking space from the others", () => {
+    // Two coincident vertices: one label; hovering the second doesn't move the rest.
+    const coordinates: [number, number][] = [[0, 0], [0, 10], [10, 10], [10, 10], [20, 5], [30, 5], [30, 0]];
+    const plain = draw({ editingExterior: true, coordinates });
+    const hovered = draw({ editingExterior: true, coordinates, hoverHit: { kind: "external", index: 3 } });
+    const pos = (rec: ReturnType<typeof draw>) =>
+      rec.texts.filter((t) => t.text.startsWith("(") && t.text !== "(10.0, 10.0)").map((t) => [t.text, t.x, t.y]);
+    expect(pos(hovered)).toEqual(pos(plain));
+    expect(hovered.texts.filter((t) => t.text === "(10.0, 10.0)").length).toBe(2);
+  });
+
+  it("reserves the hovered UDL edge arrow drawn between the spaced arrows", () => {
+    // Touching strips: the arrow at x = 4 is drawn only while hovered.
+    const udls = [
+      { id: "u1", x1: 1, x2: 4, magnitude: 10 },
+      { id: "u2", x1: 4, x2: 8, magnitude: 10 },
+    ];
+    const p = baseParams({ udls, hoverHit: { kind: "udl", udlId: "u2", handle: "x1" } });
+    const ctx = createRecordingContext(W, H).ctx;
+    const loads = layoutLoads(ctx, { w: W, h: H, coordinates: COORDS, worldToCanvas, surfaceYAtX: p.surfaceYAtX }, udls, [], p.hoverHit);
+    const hoveredArrow = loads.udlGroups[0].arrows.find((a) => a.hover)!;
+    expect(hoveredArrow).toBeDefined();
+    const boxes = editOverlayBoxes(ctx, p, { loads });
+    expect(boxes.some((b) => b.left <= hoveredArrow.cx && b.right >= hoveredArrow.cx && b.bottom >= hoveredArrow.cy)).toBe(true);
   });
 
   it("keeps coordinate labels off search-limit markers, loads and water-table symbols", () => {
@@ -405,18 +476,47 @@ describe("drawCanvas — edit mode", () => {
     expect(editing.callsOf("arc").filter((c) => c.args[2] === POINT_RADIUS - 1)).toHaveLength(2);
   });
 
-  it("draws prescribed slip surfaces faint and dashed in the edit view only", () => {
+  it("draws prescribed slip surfaces dashed on a halo in the edit view only, a circle between its ground crossings", () => {
     const customSearchPlanes = [
       { id: "c1", cx: 15, cy: 14, radius: 10 },
       { id: "p1", cx: 0, cy: 0, radius: 0, points: [[5, 10], [15, 3], [25, 5]] as [number, number][] },
     ];
     const rec = draw({ customSearchPlanes });
-    const dashed = rec.strokes().filter((p) => p.state.lineDash.length > 0 && p.state.globalAlpha < 1);
-    const circle = dashed.find((p) => p.segments.some((s) => s.op === "arc"));
-    expect(circle?.segments.find((s) => s.op === "arc")).toMatchObject({ x: toC(15, 14)[0], y: toC(15, 14)[1], r: 200 });
+    const dashed = rec.strokes().filter((p) => p.state.lineDash.length > 0 && p.state.lineWidth === 1.5);
+    // The circle: an arc from where it enters the crest to where it leaves the slope.
+    const [ccx, ccy] = toC(15, 14);
+    const circle = dashed.find((p) => pathPoints(p).length > 20)!;
+    const pts = pathPoints(circle);
+    for (const [x, y] of pts) expect(Math.hypot(x - ccx, y - ccy)).toBeCloseTo(200, 6);
+    const ends = [pts[0], pts[pts.length - 1]].map(([x, y]) => canvasToWorld(x, y, W, H));
+    const entry = ends.find((e) => e[0] < 10)!;
+    const exit = ends.find((e) => e[0] > 10)!;
+    expect(entry[0]).toBeCloseTo(15 - Math.sqrt(84), 6);
+    expect(entry[1]).toBeCloseTo(10, 6);
+    expect(exit[1]).toBeCloseTo(surfaceYAtXFromCoordinates(COORDS, exit[0])!, 6);
+    expect(exit[0]).toBeGreaterThan(19);
+    expect(exit[0]).toBeLessThan(20);
     expect(dashed.some((p) => hasPoints(p, [toC(5, 10), toC(15, 3), toC(25, 5)]))).toBe(true);
+    // Each on a wider solid halo of the background colour.
+    const halos = rec.strokes().filter((p) => p.state.lineDash.length === 0 && p.state.lineWidth === 4);
+    expect(halos.length).toBe(2);
     const result = draw({ customSearchPlanes, mode: "result" });
-    expect(result.strokes().some((p) => p.segments.some((s) => s.op === "arc" && s.r === 200))).toBe(false);
+    expect(result.strokes().some((p) => p.state.lineDash.length > 0 && p.state.lineWidth === 1.5)).toBe(false);
+    // A circle the analysis can't use (it doesn't reach the ground) shows faint, whole.
+    const miss = draw({ customSearchPlanes: [{ id: "c2", cx: 15, cy: 30, radius: 5 }] });
+    const faint = miss.strokes().find((p) => p.state.lineDash.length > 0 && p.segments.some((g) => g.op === "arc"))!;
+    expect(faint.state.globalAlpha).toBeLessThan(0.5);
+  });
+
+  it("hides the search limits in edit view when only prescribed surfaces are analysed", () => {
+    const analysisLimits = { enabled: true, entryLeftX: 2, entryRightX: 8, exitLeftX: 21, exitRightX: 28 };
+    const marker = (rec: ReturnType<typeof draw>) =>
+      rec.strokes().some((p) => close(pathPoints(p)[0], [toC(2, 10)[0], toC(2, 10)[1] - 10]));
+    const circle = [{ id: "c1", cx: 15, cy: 14, radius: 10 }];
+    expect(marker(draw({ analysisLimits }))).toBe(true);
+    expect(marker(draw({ analysisLimits, customPlanesOnly: true }))).toBe(true);
+    expect(marker(draw({ analysisLimits, customSearchPlanes: circle }))).toBe(true);
+    expect(marker(draw({ analysisLimits, customPlanesOnly: true, customSearchPlanes: circle }))).toBe(false);
   });
 
   it("colours the selected and hovered vertices", () => {
@@ -815,13 +915,27 @@ describe("drawCanvas — edit mode", () => {
     for (const [x, y] of dots) if (x < 10 - 1e-6) expect(y).toBeCloseTo(4, 6);
   });
 
-  it("shows a fixed-depth tension crack as a dashed line under the ground", () => {
+  it("shows a fixed-depth tension crack as a labelled dimension on the crest", () => {
     const rec = draw({ options: { ...DEFAULT_ANALYSIS_OPTIONS, tensionCrackDepth: 2 } });
-    const crack = rec.strokes().find((p) => p.state.lineDash.length === 2)!;
-    const pts = pathPoints(crack).map(([x, y]) => canvasToWorld(x, y, W, H));
-    expect(pts.some((p) => close(p, [10, 8]))).toBe(true);
-    expect(pts.some((p) => close(p, [20, 3]))).toBe(true);
-    expect(draw().strokes().some((p) => p.state.lineDash.length === 2)).toBe(false);
+    expect(rec.textStrings()).toContain("crack 2.0 m");
+    // A vertical line from the crest down 2 m, a little in from the crest's
+    // edge (x = 10, the slope falls to the right), with ticks at both ends.
+    const dim = rec.strokes().find((p) => {
+      const q = pathPoints(p);
+      return q.length === 6 && q[0][0] === q[1][0] && q[1][1] - q[0][1] === 2 * SCALE;
+    })!;
+    const [top, bottom] = pathPoints(dim).map(([x, y]) => canvasToWorld(x, y, W, H));
+    expect(top[1]).toBeCloseTo(10, 6);
+    expect(bottom[1]).toBeCloseTo(8, 6);
+    expect(top[0]).toBeCloseTo(10 - 30 / SCALE, 6);
+    expect(dim.state.lineDash).toHaveLength(0);
+    // Its label sits beside the line.
+    const label = rec.findText("crack 2.0 m")!;
+    expect(Math.abs(label.x - toC(top[0], 0)[0])).toBeLessThan(80);
+    // Nothing without a crack, or with an automatic depth.
+    expect(draw().textStrings().some((t) => t.startsWith("crack"))).toBe(false);
+    const auto = draw({ options: { ...DEFAULT_ANALYSIS_OPTIONS, tensionCrackDepth: 2, tensionCrackAuto: true } });
+    expect(auto.textStrings().some((t) => t.startsWith("crack"))).toBe(false);
   });
 
   it("highlights a hovered limit handle", () => {

@@ -193,18 +193,26 @@ export function AxisOverlay({ containerRef, canvasRef }: Props) {
       for (let gy = startY; gy <= worldTop; gy += gridStep) {
         const [, py] = w2c(0, gy, fullW, fullH, viewOffset, viewScale);
         if (py < 0 || py > h - RULER_SIZE) continue;
+        // Likewise a label cut by the top edge or the bottom ruler. A long
+        // label (-1000, 125.5) is set smaller and may reach over the tick,
+        // which is then shortened; one that still doesn't fit is left out
+        // rather than cut.
+        const label = formatLabel(gy);
+        const fit =
+          py - LABEL_HALF_H < 0 || py + LABEL_HALF_H > h - RULER_SIZE
+            ? null
+            : fitYLabel((font) => {
+                ctx.font = font;
+                return ctx.measureText(label).width;
+              });
         ctx.beginPath();
         ctx.moveTo(RULER_SIZE, py);
-        ctx.lineTo(RULER_SIZE - TICK_LEN, py);
+        ctx.lineTo(RULER_SIZE - (fit?.overTick ? SHORT_TICK_LEN : TICK_LEN), py);
         ctx.strokeStyle = AXIS_COLOR;
         ctx.stroke();
-        // Likewise a label cut by the top edge, the bottom ruler or the
-        // left edge.
-        const label = formatLabel(gy);
-        const right = RULER_SIZE - TICK_LEN - 2;
-        if (py - LABEL_HALF_H < 0 || py + LABEL_HALF_H > h - RULER_SIZE) continue;
-        if (right - ctx.measureText(label).width < 0) continue;
-        ctx.fillText(label, right, py);
+        if (!fit) continue;
+        ctx.font = fit.font;
+        ctx.fillText(label, fit.right, py);
       }
       ctx.restore();
 
@@ -244,6 +252,31 @@ export function AxisOverlay({ containerRef, canvasRef }: Props) {
       }}
     />
   );
+}
+
+/** Fonts tried for a y label too wide for the ruler, largest first. */
+const Y_LABEL_FONTS = [FONT, "9px 'Segoe UI', sans-serif", "8px 'Segoe UI', sans-serif"];
+/** Tick length beside a label that reaches over the tick area. */
+const SHORT_TICK_LEN = 2;
+
+/**
+ * Font and right edge of a y-ruler label of width `measure(font)`: the
+ * normal font left of the tick when it fits, else the largest smaller
+ * font that fits there, else one that fits when the label reaches over
+ * the tick area (overTick). Null when even that is too narrow.
+ */
+function fitYLabel(
+  measure: (font: string) => number,
+): { font: string; right: number; overTick: boolean } | null {
+  const beside = RULER_SIZE - TICK_LEN - 2;
+  const over = RULER_SIZE - SHORT_TICK_LEN - 2;
+  for (const font of Y_LABEL_FONTS) {
+    if (measure(font) <= beside) return { font, right: beside, overTick: false };
+  }
+  for (const font of Y_LABEL_FONTS) {
+    if (measure(font) <= over) return { font, right: over, overTick: true };
+  }
+  return null;
 }
 
 function formatLabel(value: number): string {

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { defaultCustomCircle } from "./custom-plane";
+import { circleEntryExit, defaultCustomCircle } from "./custom-plane";
 import { surfaceYAtX } from "../features/view/surface";
 
 describe("defaultCustomCircle", () => {
@@ -45,5 +45,35 @@ describe("defaultCustomCircle", () => {
 
   it("keeps the old default without a model", () => {
     expect(defaultCustomCircle([])).toEqual({ cx: 0, cy: 0, radius: 10 });
+  });
+});
+
+describe("circleEntryExit", () => {
+  const model: [number, number][] = [
+    [0, 0],
+    [0, 10],
+    [10, 10],
+    [20, 5],
+    [30, 5],
+    [30, 0],
+  ];
+
+  it("gives where the lower arc enters the ground and leaves it again", () => {
+    const ends = circleEntryExit(model, 15, 14, 10)!;
+    expect(ends[0][0]).toBeCloseTo(15 - Math.sqrt(84), 9);
+    expect(ends[0][1]).toBeCloseTo(10, 9);
+    expect(ends[1][0]).toBeGreaterThan(19);
+    expect(ends[1][0]).toBeLessThan(20);
+    expect(ends[1][1]).toBeCloseTo(surfaceYAtX(model, ends[1][0])!, 9);
+    // The same, mirrored, for a right-to-left model.
+    const mirrored = circleEntryExit(model, 15, 14, 10, true)!;
+    expect(mirrored[0][0]).toBeCloseTo(ends[1][0], 9);
+    expect(mirrored[1][0]).toBeCloseTo(ends[0][0], 9);
+  });
+
+  it("is null for a circle that misses the ground or has no radius", () => {
+    expect(circleEntryExit(model, 15, 30, 5)).toBeNull();
+    expect(circleEntryExit(model, 15, 14, 0)).toBeNull();
+    expect(circleEntryExit([], 15, 14, 10)).toBeNull();
   });
 });

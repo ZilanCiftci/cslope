@@ -129,6 +129,22 @@ describe("AxisOverlay", () => {
     expect(second.x).toContain("108");
   });
 
+  it("sets long y labels smaller instead of leaving them out, never cut", () => {
+    // Ticks every 1000 m: "-1000", "-2000" are too wide for the 10 px font.
+    useAppStore.setState({ editViewScale: 0.05, editViewOffset: [0, 0] });
+    renderOverlay();
+    const yLabels = rec.texts.filter((t) => t.state.textAlign === "right");
+    expect(yLabels.map((t) => t.text)).toEqual(expect.arrayContaining(["-1000", "1000", "0"]));
+    for (const t of yLabels) {
+      const size = Number(/(\d+)px/.exec(t.state.font)![1]);
+      // 6 px per character at 10 px in the recording context.
+      expect(t.x - t.text.length * 6 * (size / 10)).toBeGreaterThanOrEqual(0);
+      expect(t.x).toBeLessThanOrEqual(RULER_SIZE_PX);
+      if (t.text.length <= 4) expect(size).toBe(10);
+      else expect(size).toBeLessThan(10);
+    }
+  });
+
   it("redraws when the viewport changes", () => {
     renderOverlay();
     const before = rec.findText("10")!.x;
