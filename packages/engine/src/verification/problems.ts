@@ -2695,8 +2695,8 @@ export const PROBLEMS: RawCase[] = [
     surface: "fixed",
     units: "SI",
     inputFromFigure: true,
-    description: "112 ft embankment on a granular foundation under steady seepage: piezometric line from the pool through the chimney drain to the tailwater, which stands on the downstream toe (free water). USACE's circle. Converted to SI.",
-    definition: {"coordinates":[[0,-22.86],[0,30.48],[11.704320000000001,30.48],[18.53184,34.1376],[24.6888,34.1376],[59.40552,22.46376],[121.92,0],[137.16,0],[137.16,-22.86]],"materials":[{"name":"Embankment","model":{"kind":"mohr-coulomb","unitWeight":20.4213698,"cohesion":0,"frictionAngle":34}},{"name":"Foundation","model":{"kind":"mohr-coulomb","unitWeight":19.635932500000003,"cohesion":0,"frictionAngle":35}}],"materialBoundaries":[{"coordinates":[[-1,0],[138.16,0]],"materialName":""}],"regionAssignments":[{"point":[1.3716,0.05],"materialName":"Embankment"},{"point":[1.3716,-11.43],"materialName":"Foundation"}],"waterTable":{"mode":"custom","value":[[0,30.48],[11.704320000000001,30.48],[36.91128,21.031200000000002],[54.68112000000001,6.8580000000000005],[137.16,6.8580000000000005]],"followBoundary":false},"customSearchPlanes":[{"cx":81.9912,"cy":75.5904,"radius":85.34400000000001}],"customPlanesOnly":true},
+    description: "112 ft embankment on a granular foundation under steady seepage: piezometric line from the pool through the chimney drain to the tailwater, which stands on the downstream toe (free water). The upstream face rises from (30.2, 100) ft to the crest (60.8, 112). USACE's circle. Converted to SI.",
+    definition: {"coordinates":[[0,-22.86],[0,30.48],[9.20496,30.48],[18.53184,34.1376],[24.6888,34.1376],[59.40552,22.46376],[121.92,0],[137.16,0],[137.16,-22.86]],"materials":[{"name":"Embankment","model":{"kind":"mohr-coulomb","unitWeight":20.4213698,"cohesion":0,"frictionAngle":34}},{"name":"Foundation","model":{"kind":"mohr-coulomb","unitWeight":19.635932500000003,"cohesion":0,"frictionAngle":35}}],"materialBoundaries":[{"coordinates":[[-1,0],[138.16,0]],"materialName":""}],"regionAssignments":[{"point":[1.3716,0.05],"materialName":"Embankment"},{"point":[1.3716,-11.43],"materialName":"Foundation"}],"waterTable":{"mode":"custom","value":[[0,30.48],[11.704320000000001,30.48],[36.91128,21.031200000000002],[54.68112000000001,6.8580000000000005],[137.16,6.8580000000000005]],"followBoundary":false},"customSearchPlanes":[{"cx":81.9912,"cy":75.5904,"radius":85.34400000000001}],"customPlanesOnly":true},
     checks: [
       {"method":"Bishop","label":"Bishop simplified","published":2.011,"publishedBy":"Commercial program A"},
       {"method":"Morgenstern-Price","label":"Spencer (M-P, constant f(x))","published":2.026,"publishedBy":"Commercial program A","options":{"intersliceFunction":"constant"}},
@@ -2705,6 +2705,7 @@ export const PROBLEMS: RawCase[] = [
     paper: [{"value": 2.01, "source": "USACE EM 1110-2-1902"}],
     notes: [
       "The kink of the piezometric line is located from the figure to about a foot; program D also reads 0.6 % low.",
+      "The upstream face starts at x = 30.2 ft, not 38.4 ft: commercial program A prints its slip surface entering at (31.096, 100.345), which lies on the face from (30.2, 100) to the crest (60.8, 112) but above the level ground of a face starting at 38.4 ft, and its Fig. 69.1 shows the face starting at about 30 ft (vertices calibrated on the labelled section) with the piezometric line leaving el. 100 at the second vertex, 38.4 ft. USACE's slices (Fig. F-17: widths 31 and 21 ft up to the crest corner) agree. On the corrected outline cSlope gives Bishop 1.990, Spencer 2.005, Janbu corrected 1.824 (before: 1.998 / 2.012 / 1.833).",
     ],
   },
   {
@@ -2855,7 +2856,7 @@ export const PROBLEMS: RawCase[] = [
     checks: [
       {"method":"Bishop","label":"Bishop simplified (vertical head)","published":1.173,"publishedBy":"Commercial program B","options":{"porePressureHead":"vertical"}},
     ],
-    publicNote: "The problem comes from a program manual only; no independent value is published.",
+    publicNote: "The problem comes from a program manual only. The manual cites 1.193 (Bishop) from the textbook example it is based on, but its water table is approximate because the book gives no coordinates, so that value is not used as a check.",
   },
   {
     id: "V097b",
@@ -2869,7 +2870,7 @@ export const PROBLEMS: RawCase[] = [
       {"method":"Bishop","label":"Bishop simplified, design values","published":1.173,"publishedBy":"Commercial program B","options":{"partialFactors":{"cu":1.4,"cohesion":1.25,"tanPhi":1.25,"variableLoad":1}}},
       {"method":"Morgenstern-Price","label":"Spencer, design values","published":1.174,"publishedBy":"Commercial program B","options":{"intersliceFunction":"constant","partialFactors":{"cu":1.4,"cohesion":1.25,"tanPhi":1.25,"variableLoad":1}}},
     ],
-    publicNote: "The problem comes from a program manual only; no independent value is published.",
+    publicNote: "The problem comes from a program manual only. The manual cites 1.193 (Bishop) from the textbook example it is based on, but its water table is approximate because the book gives no coordinates, so that value is not used as a check.",
   },
   {
     id: "V098",
@@ -2877,15 +2878,16 @@ export const PROBLEMS: RawCase[] = [
     reference: "Verification manual of a commercial slope stability program.",
     surface: "search",
     units: "SI",
-    description: "10 m, 2:1 slope in three layers over a horizontal base, dry, no seismic load; Spencer search.",
+    description: "10 m, 2:1 slope in three layers over a horizontal base, dry, no seismic load; Spencer search, circular and non-circular.",
     definition: {"materials":[{"name":"soil1","model":{"kind":"mohr-coulomb","unitWeight":19.5,"cohesion":0,"frictionAngle":38}},{"name":"soil2","model":{"kind":"mohr-coulomb","unitWeight":19.5,"cohesion":5.3,"frictionAngle":23}},{"name":"soil3","model":{"kind":"mohr-coulomb","unitWeight":19.5,"cohesion":7.2,"frictionAngle":20}}],"coordinates":[[20,20],[70,20],[70,24],[70,31],[70,35],[50,35],[30,25],[20,25]],"materialBoundaries":[{"coordinates":[[70,31],[54,31],[50,29],[40,27]],"materialName":""},{"coordinates":[[40,27],[30,25]],"materialName":""},{"coordinates":[[40,27],[52,24],[70,24]],"materialName":""}],"regionAssignments":[{"point":[58,33],"materialName":"soil1"},{"point":[58,25.5],"materialName":"soil2"},{"point":[45,22],"materialName":"soil3"}]},
     checks: [
-      {"method":"Morgenstern-Price","label":"Spencer (M-P, constant f(x))","published":1.36,"publishedBy":"Commercial program A","options":{"intersliceFunction":"constant","porePressureHead":"vertical","slices":40}},
+      {"method":"Morgenstern-Price","label":"Spencer (M-P, constant f(x))","published":1.36,"publishedBy":"Commercial program A (non-circular)","options":{"intersliceFunction":"constant","porePressureHead":"vertical","slices":40,"nonCircularOptimization":true}},
       {"method":"Morgenstern-Price","label":"Spencer (M-P, constant f(x))","published":1.372,"publishedBy":"Program D","options":{"intersliceFunction":"constant","porePressureHead":"vertical","slices":40}},
     ],
     publicNote: "The problem comes from a program manual only; no independent value is published.",
     notes: [
       "commercial program A multi-modal optimisation 1.359. The k = 0.15 and yield-acceleration cases need a seismic coefficient.",
+      "Commercial program A's 1.360 is a non-circular result: its manual runs both columns with a particle-swarm search plus surface-altering optimisation (multi-modal and uni-modal), so it is now checked against cSlope's non-circular search (1.357); before it was compared with the circular search (1.372, +0.9 %), as program D's circular 1.372 still is.",
     ],
   },
 ];
