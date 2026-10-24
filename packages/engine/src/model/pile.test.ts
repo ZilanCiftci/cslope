@@ -47,6 +47,19 @@ describe("Ito & Matsui pile force", () => {
     expect(fWet).toBeCloseTo(593, 0);
   });
 
+  it("keeps the total overburden for an undrained (total-stress) soil below the water table", () => {
+    const model = { kind: "undrained" as const, unitWeight: 18, unitWeightSat: 20, undrainedShearStrength: 30 };
+    const wet = buildSlope(
+      layered(ground, -10, [{ name: "S", topY: null, model }], {
+        waterTable: { mode: "custom", value: ground, followBoundary: false },
+      }),
+    );
+    const pile: Pile = { x1: 5, y1: 10, x2: 5, y2: -10, diameter: 0.8, spacing: 2.4 };
+    const zf = 6;
+    const [A1, A2] = itoMatsuiCoefficients(1.6, 0.8, 0);
+    expect(pileForce(wet, pile, 5, 10 - zf).perPile).toBeCloseTo(30 * A1 * zf + (20 * A2 * zf * zf) / 2, 1);
+  });
+
   it("loads the pile only from its head down, with design strength", () => {
     const slope = buildSlope(layered(ground, -10, [{ name: "S", topY: null, model: mc(10, 20, 20) }]));
     const [A1, A2] = itoMatsuiCoefficients(1.6, 0.8, 20);

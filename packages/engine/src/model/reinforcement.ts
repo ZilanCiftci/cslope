@@ -64,6 +64,15 @@ function unitWeightAt(slope: Slope, m: Material, x: number, y: number): number {
  * less the pore pressure there.
  */
 export function effectiveVerticalStress(slope: Slope, x: number, y: number): number {
+  return verticalStress(slope, x, y, true);
+}
+
+/**
+ * Vertical stress at (x, y) from the soil column (and ponded water) above
+ * it: effective (σv − u) or total (σv, for undrained strengths, which are
+ * total-stress parameters).
+ */
+export function verticalStress(slope: Slope, x: number, y: number, effective: boolean): number {
   const surf = slope.surfaceLineXY;
   if (!surf) return 0;
   const yGround = getYAtX(surf.x, surf.y, x);
@@ -80,6 +89,7 @@ export function effectiveVerticalStress(slope: Slope, x: number, y: number): num
   // Ponded water above the ground weighs on the column.
   const wl = waterLineAt(slope, materialAt(slope, x, y), x);
   sigma += Math.max(0, wl - yGround) * WATER_UNIT_WEIGHT;
+  if (!effective) return sigma;
   const u = Math.max(0, wl - y) * WATER_UNIT_WEIGHT;
   return Math.max(0, sigma - u);
 }
@@ -427,11 +437,11 @@ export function buildPileProfile(slope: Slope, p: Pile): PileProfile | null {
       if (Number.isFinite(st.cohesion) && !st.impenetrable) {
         let c = st.cohesion;
         let tanPhi = Math.tan((st.frictionAngle * Math.PI) / 180);
+        const kind = m.model.kind;
+        const undrained =
+          kind === "undrained" || kind === "s-f-depth" || kind === "s-f-datum" || kind === "lime-cement-columns" ||
+          (st.frictionAngle === 0 && !st.isCombined);
         if (f) {
-          const kind = m.model.kind;
-          const undrained =
-            kind === "undrained" || kind === "s-f-depth" || kind === "s-f-datum" || kind === "lime-cement-columns" ||
-            (st.frictionAngle === 0 && !st.isCombined);
           c /= undrained ? f.cu : f.cohesion;
           tanPhi /= f.tanPhi;
         }
@@ -439,11 +449,11 @@ export function buildPileProfile(slope: Slope, p: Pile): PileProfile | null {
         // The overburden term is the effective vertical stress σ′v = γz − u
         // of the soil squeezed between the piles: Ito & Matsui (1975) with
         // effective parameters, γ′ below the water table as in Poulos
-        // (1995) and Hassiotis et al. (1997). With total stress (γsat·z)
-        // the force was the same with and without a water table. The pore
-        // pressure itself acts on both faces of the pile and gives it no
-        // net force.
-        pz = c * A1 + effectiveVerticalStress(slope, x, yy) * A2;
+        // (1995) and Hassiotis et al. (1997). The pore pressure itself acts
+        // on both faces of the pile and gives it no net force. An undrained
+        // strength is a total-stress parameter, so there the overburden is
+        // the total vertical stress (Ito & Matsui's φ = 0 case).
+        pz = c * A1 + verticalStress(slope, x, yy, !undrained) * A2;
       }
     }
     z[k + 1] = zTop + (k + 1) * dz;
