@@ -135,7 +135,7 @@ export function modelFromDefinition(def: SlopeDefinition, info: DefinitionModelI
   const idByName = new Map(def.materials.map((m, i) => [m.name, materialId(i)]));
   const xs = def.coordinates.map((c) => c[0]);
 
-  return {
+  const model: Omit<ModelEntry, "resultViewSettings"> = {
     id: info.id,
     name: info.name,
     // A project block of its own: switching to the model would otherwise
@@ -179,7 +179,21 @@ export function modelFromDefinition(def: SlopeDefinition, info: DefinitionModelI
     analysisLimits: def.analysisLimits
       ? { enabled: true, ...def.analysisLimits }
       : { enabled: false, entryLeftX: Math.min(...xs), entryRightX: Math.max(...xs), exitLeftX: Math.min(...xs), exitRightX: Math.max(...xs) },
-    // The paper fitted to the model, without the examples' title and table.
-    resultViewSettings: { ...createExampleResultViewSettings(def.coordinates)!, annotations: [] },
+  };
+  return {
+    ...model,
+    // The paper fitted to the model and what it draws, without the
+    // examples' title and table.
+    resultViewSettings: createExampleResultViewSettings(
+      {
+        coordinates: model.coordinates,
+        waterLines: model.piezometricLine.lines.map((l) => l.coordinates),
+        udls: model.udls,
+        lineLoads: model.lineLoads,
+        reinforcements: model.reinforcements,
+        piles: model.piles,
+      },
+      { annotations: false },
+    ),
   };
 }

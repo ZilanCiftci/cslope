@@ -203,7 +203,7 @@ describe("ResultPanel", () => {
     });
     render(<ResultPanel />);
     expect(
-      screen.getByText(/3 surface\(s\) with weak equilibrium/),
+      screen.getByText("3 surfaces were discarded because they did not reach equilibrium"),
     ).toBeInTheDocument();
   });
 

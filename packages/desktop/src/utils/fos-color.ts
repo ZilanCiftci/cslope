@@ -3,6 +3,18 @@ import chroma from "chroma-js";
 /** Shared FOS-to-color mapper used across canvas, plot, and PDF export. */
 const FOS_SCALE = chroma.scale(["red", "yellow", "green", "blue"]);
 
+/**
+ * Colour of the governing FOS in the summary and the status bar: red below
+ * 1.0, amber below 1.5 and green otherwise. With partial factors the FOS is
+ * an over-design factor on design values, where 1.0 already satisfies the
+ * design, so there is no amber band.
+ */
+export function fosStatusColor(fos: number, designValues: boolean): string {
+  if (fos < 1.0) return "var(--color-vsc-error)";
+  if (!designValues && fos < 1.5) return "var(--color-vsc-warning)";
+  return "var(--color-vsc-success)";
+}
+
 export function fosColor(fos: number, minFos = 0.5, maxFos = 3.0): string {
   const t = (fos - minFos) / (maxFos - minFos || 1);
   return FOS_SCALE(Math.max(0, Math.min(1, t))).hex();

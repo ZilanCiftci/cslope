@@ -78,9 +78,11 @@ contextBridge.exposeInMainWorld("cslope", {
     subscribe("window:maximized", listener),
   // App lifecycle
   appReady: () => ipcRenderer.send("app:ready"),
+  fitDialogHeight: (height: number) => ipcRenderer.send("window:fitDialogHeight", height),
   // Menu actions
   menuNew: () => ipcRenderer.send("menu:new"),
   menuAbout: () => ipcRenderer.send("menu:about"),
+  openDocumentation: () => ipcRenderer.send("help:openDocumentation"),
   toggleDevTools: () => ipcRenderer.send("dev:toggle-devtools"),
   // Materials dialog sync
   requestMaterialsState: () => ipcRenderer.send("materials:requestState"),

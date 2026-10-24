@@ -264,7 +264,7 @@ export const scenes: Scene[] = [
     {
       id: "03-materials",
       title: "Define Materials window",
-      setup: { mode: "edit", click: ["Model", "Define"] },
+      setup: { mode: "edit", click: ["Model", "Materials"] },
       crop: "window",
       window: "Define Materials",
     },
@@ -303,7 +303,7 @@ export const scenes: Scene[] = [
     {
       id: "02-piezo",
       title: "Piezometric Lines window",
-      setup: { mode: "edit", click: ["Model", "Piezometric Lines"] },
+      setup: { mode: "edit", click: ["Model", "Piezometric lines"] },
       crop: "window",
       window: "Piezometric Lines",
     },
@@ -332,7 +332,7 @@ export const scenes: Scene[] = [
     {
       id: "03-materials",
       title: "Define Materials window",
-      setup: { mode: "edit", click: ["Model", "Define"] },
+      setup: { mode: "edit", click: ["Model", "Materials"] },
       crop: "window",
       window: "Define Materials",
     },
@@ -353,7 +353,7 @@ export const scenes: Scene[] = [
     {
       id: "02-materials",
       title: "Dam materials",
-      setup: { mode: "edit", click: ["Model", "Define"] },
+      setup: { mode: "edit", click: ["Model", "Materials"] },
       crop: "window",
       window: "Define Materials",
     },

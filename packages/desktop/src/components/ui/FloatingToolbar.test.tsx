@@ -78,7 +78,7 @@ describe("FloatingToolbar", () => {
     expect(screen.getByTitle("More run options")).toBeDisabled();
   });
 
-  it("offers Run all, Reset and Reset all in the run menu", () => {
+  it("offers Run all, Clear results and Clear all results in the run menu", () => {
     const { props } = setup();
     click(screen.getByTitle("More run options"));
     click(screen.getByRole("button", { name: "Run all" }));
@@ -87,26 +87,26 @@ describe("FloatingToolbar", () => {
     expect(screen.queryByRole("button", { name: "Run all" })).toBeNull();
 
     click(screen.getByTitle("More run options"));
-    click(screen.getByRole("button", { name: "Reset" }));
+    click(screen.getByRole("button", { name: "Clear results" }));
     expect(props.onReset).toHaveBeenCalled();
 
     click(screen.getByTitle("More run options"));
-    click(screen.getByRole("button", { name: "Reset all" }));
+    click(screen.getByRole("button", { name: "Clear all results" }));
     expect(props.onResetAll).toHaveBeenCalled();
   });
 
   it("disables Reset without a result and closes the menu on an outside click", () => {
     setup({ hasResult: false });
     click(screen.getByTitle("More run options"));
-    expect(screen.getByRole("button", { name: "Reset" }).style.pointerEvents).toBe("none");
+    expect(screen.getByRole("button", { name: "Clear results" }).style.pointerEvents).toBe("none");
     fireEvent.pointerDown(document.body);
-    expect(screen.queryByRole("button", { name: "Reset all" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Clear all results" })).toBeNull();
   });
 
   it("does not reset from the keyboard while Reset is disabled", async () => {
     const { props } = setup({ hasResult: false });
     click(screen.getByTitle("More run options"));
-    const reset = screen.getByRole("button", { name: "Reset" });
+    const reset = screen.getByRole("button", { name: "Clear results" });
     expect(reset).toBeDisabled();
     reset.focus();
     await userEvent.keyboard("{Enter}");

@@ -131,7 +131,7 @@ export function EditMenu({ isOpen, onActivate, panelHost }: Props) {
             <RibbonGroup label="Materials">
               <RibbonButton
                 icon={<RibbonMaterialsIcon />}
-                label="Define"
+                label="Materials"
                 onClick={() => window.cslope.openMaterialsDialog()}
               />
               <RibbonButton
@@ -146,7 +146,7 @@ export function EditMenu({ isOpen, onActivate, panelHost }: Props) {
 
             <RibbonSep />
 
-            <RibbonGroup label="External loads">
+            <RibbonGroup label="Loads & support">
               <RibbonButton
                 icon={<RibbonUdlIcon />}
                 label="UDL"
@@ -163,11 +163,6 @@ export function EditMenu({ isOpen, onActivate, panelHost }: Props) {
                   window.cslope.openLineLoadsDialog();
                 }}
               />
-            </RibbonGroup>
-
-            <RibbonSep />
-
-            <RibbonGroup label="Support">
               <RibbonButton
                 icon={<RibbonReinforcementIcon />}
                 label="Reinforcement"
@@ -180,23 +175,18 @@ export function EditMenu({ isOpen, onActivate, panelHost }: Props) {
 
             <RibbonSep />
 
-            <RibbonGroup label="Water Pressure">
+            <RibbonGroup label="Water & parameters">
               <RibbonButton
                 icon={<RibbonPiezoLineIcon />}
-                label="Piezometric Lines"
+                label="Piezometric lines"
                 onClick={() => {
                   setActiveSection("Piezometric Lines");
                   window.cslope.openPiezoDialog();
                 }}
               />
-            </RibbonGroup>
-
-            <RibbonSep />
-
-            <RibbonGroup label="Parameters">
               <RibbonButton
                 icon={<RibbonParametersIcon />}
-                label="Define"
+                label="Parameters"
                 onClick={() => {
                   setActiveSection("Parameters");
                   window.cslope.openParametersDialog();

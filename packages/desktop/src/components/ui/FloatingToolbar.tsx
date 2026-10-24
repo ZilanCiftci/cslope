@@ -270,7 +270,7 @@ export function FloatingToolbar({
                 style={{ borderTop: "1px solid var(--color-vsc-border)" }}
               />
               <DropdownItem
-                label="Reset"
+                label="Clear results"
                 disabled={!hasResult}
                 onClick={() => {
                   setRunMenuOpen(false);
@@ -278,7 +278,7 @@ export function FloatingToolbar({
                 }}
               />
               <DropdownItem
-                label="Reset all"
+                label="Clear all results"
                 onClick={() => {
                   setRunMenuOpen(false);
                   onResetAll();

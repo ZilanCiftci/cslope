@@ -47,6 +47,7 @@ export function AppShell() {
   const cancelAnalysis = useAppStore((s) => s.cancelAnalysis);
   const result = useAppStore((s) => s.result);
   const errorMessage = useAppStore((s) => s.errorMessage);
+  const designValues = useAppStore((s) => !!s.options.partialFactors);
   const models = useAppStore((s) => s.models);
   const activeModelId = useAppStore((s) => s.activeModelId);
   const snapToGrid = useAppStore((s) => s.snapToGrid);
@@ -249,6 +250,7 @@ export function AppShell() {
         mode={mode}
         runState={runState}
         result={result}
+        designValues={designValues}
         errorMessage={errorMessage}
         snapToGrid={snapToGrid}
         gridSnapSize={gridSnapSize}

@@ -24,7 +24,13 @@ import type { Annotation, MaterialRow, ResultViewSettings } from "../../store/ty
 import { newPile, newReinforcement } from "../../utils/reinforcement";
 import { fosColor } from "../../utils/fos-color";
 import { parseColor } from "./pdf-helpers";
-import { LINE_LOAD_COLOR, PIEZO_COLOR, UDL_LOAD_COLOR } from "../rendering/style-spec";
+import {
+  ENTRY_DOT_COLOR,
+  EXIT_DOT_COLOR,
+  LINE_LOAD_COLOR,
+  PIEZO_COLOR,
+  UDL_LOAD_COLOR,
+} from "../rendering/style-spec";
 
 const COORDS: [number, number][] = [
   [0, 0],
@@ -508,25 +514,36 @@ describe("drawPiezometricLines", () => {
 describe("drawEntryExitMarkers", () => {
   const limits = { enabled: true, entryLeftX: 2, entryRightX: 8, exitLeftX: 21, exitRightX: 28 };
 
-  const tipOffsets = (orientation: "ltr" | "rtl") => {
+  /** Each triangle as [bar x, base x − bar x]: negative when it points right. */
+  const triangles = (lim: typeof limits) => {
     const rec = recorder();
-    drawEntryExitMarkers(rec.pdf, tf, limits, COORDS, orientation);
-    const out: number[] = [];
+    drawEntryExitMarkers(rec.pdf, tf, lim, COORDS);
     const moves = rec.of("moveTo");
     const lines = rec.of("lineTo");
-    for (let i = 0; i < moves.length; i++) out.push((lines[2 * i].args[0] as number) - (moves[i].args[0] as number));
+    const out = moves.map((m, i) => {
+      const x = m.args[0] as number;
+      return [x, (lines[2 * i].args[0] as number) - x];
+    });
+    out.sort((a, b) => a[0] - b[0]);
     return { out, rec };
   };
 
-  it("points the handles inwards and mirrors them for right-to-left models", () => {
-    const ltr = tipOffsets("ltr");
-    expect(ltr.out.map(Math.sign)).toEqual([-1, 1, -1, 1]);
-    const rtl = tipOffsets("rtl");
-    expect(rtl.out.map(Math.sign)).toEqual([1, -1, 1, -1]);
+  it("points the triangles into each range whatever the order of its ends", () => {
+    const signs = (lim: typeof limits) => triangles(lim).out.map(([, d]) => Math.sign(d));
+    expect(signs(limits)).toEqual([-1, 1, -1, 1]);
+    const swapped = { ...limits, entryLeftX: 8, entryRightX: 2, exitLeftX: 28, exitRightX: 21 };
+    expect(signs(swapped)).toEqual([-1, 1, -1, 1]);
+  });
+
+  it("draws only a bar for a range of zero width", () => {
+    const { out, rec } = triangles({ ...limits, exitLeftX: 25, exitRightX: 25 });
+    expect(out).toHaveLength(2); // the entry range's triangles only
+    // Two entry bars and one exit bar.
+    expect(rec.of("line")).toHaveLength(3);
   });
 
   it("dots the ranges along the ground including both ends", () => {
-    const { rec } = tipOffsets("ltr");
+    const { rec } = triangles(limits);
     const dots = rec.of("circle").map((c) => c.args as number[]);
     expect(dots.length).toBeGreaterThan(6);
     const entry = dots.filter(([x]) => x <= 20 + 8 * 5);
@@ -535,9 +552,26 @@ describe("drawEntryExitMarkers", () => {
     for (const [, y] of entry) expect(y).toBe(100);
   });
 
+  it("alternates the colours of the dots when the entry and exit ranges coincide", () => {
+    const rec = recorder();
+    drawEntryExitMarkers(rec.pdf, tf, { ...limits, exitLeftX: 2, exitRightX: 8 }, COORDS);
+    const colours = rec.of("setFillColor").map((c) => c.args.join(","));
+    expect(colours).toContain(ENTRY_DOT_COLOR.rgb.join(","));
+    expect(colours).toContain(EXIT_DOT_COLOR.rgb.join(","));
+    // One set of dots, not two on top of each other.
+    const xs = rec.of("circle").map((c) => c.args[0] as number);
+    expect(new Set(xs).size).toBe(xs.length);
+  });
+
+  it("is drawn lighter than the result and keeps the graphics state balanced", () => {
+    const { rec } = triangles(limits);
+    expect(rec.of("setGState")).toHaveLength(1);
+    expect(rec.balanced()).toBe(true);
+  });
+
   it("skips handles off the ground", () => {
     const rec = recorder();
-    drawEntryExitMarkers(rec.pdf, tf, { ...limits, entryLeftX: -5, exitRightX: 50 }, COORDS, "ltr");
+    drawEntryExitMarkers(rec.pdf, tf, { ...limits, entryLeftX: -5, exitRightX: 50 }, COORDS);
     expect(rec.of("moveTo")).toHaveLength(2);
     expect(rec.of("circle")).toHaveLength(0);
   });
@@ -649,6 +683,89 @@ describe("drawCriticalSurface", () => {
     // The arc stroke follows the polyline points.
     const lastStrokeMoves = rec.of("moveTo").at(-1)!.args;
     expect(lastStrokeMoves).toEqual(tf.worldToPdf(ENTRY_X, 10));
+  });
+
+  /** The failure-mass fill path (world coordinates), from the first opacity change to its fill. */
+  const fillPath = (rec: ReturnType<typeof recorder>) => {
+    const start = rec.calls.findIndex((c) => c.name === "setGState");
+    const end = rec.calls.findIndex((c, i) => i > start && c.name === "fill");
+    return rec.calls
+      .slice(start, end)
+      .filter((c) => c.name === "moveTo" || c.name === "lineTo")
+      .map((c) => {
+        const [x, y] = c.args as [number, number];
+        return [(x - 20) / 5, (150 - y) / 5];
+      });
+  };
+
+  it("fills the mass behind a vertical wall face without spilling into the air", () => {
+    // Stepped wall: ground at y = 10 for x ≥ 10, vertical face down to y = 4,
+    // toe at y = 4 to the left. The surface enters at (16, 10) and exits at (4, 4).
+    const stepped: [number, number][] = [
+      [0, 0],
+      [0, 4],
+      [10, 4],
+      [10, 10],
+      [20, 10],
+      [20, 0],
+    ];
+    const cs = surface({ points: [[16, 10], [10, 2], [4, 4]], entryPoint: [16, 10], exitPoint: [4, 4] });
+    const rec = recorder();
+    drawCriticalSurface(rec.pdf, tf, result({ criticalSurface: cs }), rvs(), stepped);
+    const path = fillPath(rec);
+    for (const corner of [[10, 10], [10, 4]]) {
+      expect(path.some(([x, y]) => Math.abs(x - corner[0]) < 1e-9 && Math.abs(y - corner[1]) < 1e-9)).toBe(true);
+    }
+    // Nothing above the ground left of the wall.
+    for (const [x, y] of path) if (x < 10 - 1e-9) expect(y).toBeLessThanOrEqual(4 + 1e-9);
+  });
+
+  it("draws the tension crack face as part of the surface and the water in it", () => {
+    // Entry 3 m below the ground at x = 6 (a crack), half filled with water.
+    const cs = surface({ points: [[6, 7], [12, 4], [22, 5]], entryPoint: [6, 7], exitPoint: [22, 5] });
+    const rec = recorder();
+    drawCriticalSurface(rec.pdf, tf, result({ criticalSurface: cs }), rvs(), COORDS, {
+      options: { tensionCrackWater: 0.5 },
+    });
+    // The bold surface line starts at the top of the crack.
+    expect(rec.of("moveTo").at(-1)!.args).toEqual(tf.worldToPdf(6, 10));
+    // Water band from the crack bottom (y = 7) up to y = 8.5, on the side away from the mass.
+    const band = rec.of("rect").find((c) => c.args[4] === "F")!;
+    const [x, y, wBand, hBand] = band.args as number[];
+    expect(x + wBand).toBeCloseTo(tf.worldToPdf(6, 0)[0], 9);
+    expect(y).toBeCloseTo(tf.worldToPdf(0, 8.5)[1], 9);
+    expect(y + hBand).toBeCloseTo(tf.worldToPdf(0, 7)[1], 9);
+  });
+
+  it("draws no water without water in the crack", () => {
+    const cs = surface({ points: [[6, 7], [12, 4], [22, 5]], entryPoint: [6, 7], exitPoint: [22, 5] });
+    const rec = recorder();
+    drawCriticalSurface(rec.pdf, tf, result({ criticalSurface: cs }), rvs(), COORDS);
+    expect(rec.of("rect")).toHaveLength(0);
+  });
+
+  it("draws slice lines white over a dark material and black over a light one", () => {
+    const dark: MaterialRow = { ...DEFAULT_MATERIAL, id: "dark", color: "#3a3a4a" };
+    const rec = recorder();
+    drawCriticalSurface(
+      rec.pdf,
+      tf,
+      result({ criticalSlices: [slice(8, 12), slice(12, 16)] }),
+      rvs({ showSlices: true }),
+      COORDS,
+      { materials: [dark], materialBoundaries: [], regionMaterials: [] },
+    );
+    expect(rec.linesIn([255, 255, 255]).length).toBeGreaterThan(0);
+    expect(rec.linesIn([0, 0, 0])).toHaveLength(0);
+  });
+
+  it("gives a very thin sliding mass a band of minimum width", () => {
+    // A slab 0.05 m deep under the slope face from (10, 10) to (20, 5).
+    const cs = surface({ points: [[10, 10], [15, 7.45], [20, 5]], entryPoint: [10, 10], exitPoint: [20, 5] });
+    const rec = recorder();
+    drawCriticalSurface(rec.pdf, tf, result({ criticalSurface: cs }), rvs(), COORDS);
+    expect(rec.of("setGState")).toHaveLength(2); // fill + band
+    expect(rec.balanced()).toBe(true);
   });
 });
 

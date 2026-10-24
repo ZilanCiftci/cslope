@@ -34,6 +34,7 @@ import type {
   ResultViewSettings,
   UdlRow,
 } from "./store/types";
+import { naturalDialogHeight } from "./utils/dialog-height";
 
 interface LoadsStatePayload {
   udls: UdlRow[];
@@ -322,6 +323,25 @@ function App() {
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [isAnyDialogWindow]);
+
+  useEffect(() => {
+    // Dialog windows open at a fixed height; once the dialog has its state
+    // and has laid out, shrink the window to the content. Dialogs whose
+    // content grows a lot as it's edited keep their height.
+    const keepsHeight =
+      isMaterialsDialogWindow || isReinforcementDialogWindow || isResultsPlotDialogWindow;
+    if (!isElectron || !isAnyDialogWindow || keepsHeight) return;
+    const timer = setTimeout(() => {
+      const height = naturalDialogHeight(document, window.innerHeight);
+      if (height) window.cslope.fitDialogHeight(height);
+    }, 400);
+    return () => clearTimeout(timer);
+  }, [
+    isAnyDialogWindow,
+    isMaterialsDialogWindow,
+    isReinforcementDialogWindow,
+    isResultsPlotDialogWindow,
+  ]);
 
   useEffect(() => {
     // Tell the main process the renderer has mounted so it can

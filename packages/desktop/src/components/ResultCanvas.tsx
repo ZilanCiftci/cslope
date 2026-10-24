@@ -37,6 +37,7 @@ import {
 } from "../features/canvas/helpers";
 import { ContextMenuOverlay } from "../features/canvas/ContextMenuOverlay";
 import { AxisOverlay } from "../features/canvas/AxisOverlay";
+import { setPaperDrawSource } from "../features/export/paper-png";
 
 export function ResultCanvas() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -97,6 +98,8 @@ export function ResultCanvas() {
     gridSnapSize,
     projectInfo,
     parameters,
+    options,
+    customPlanesOnly,
   } = useCanvasModelState();
   const setRvs = useAppStore((s) => s.setResultViewSettings);
   const {
@@ -409,6 +412,8 @@ export function ResultCanvas() {
       projectInfo,
       parameters,
       analysisLimits,
+      options,
+      customPlanesOnly,
       udls,
       lineLoads,
       reinforcements,
@@ -461,6 +466,8 @@ export function ResultCanvas() {
       selectedResultObject,
       projectInfo,
       parameters,
+      options,
+      customPlanesOnly,
     ],
   );
 
@@ -474,6 +481,9 @@ export function ResultCanvas() {
     drawArgs,
     themeToken: theme,
   });
+
+  // What the paper PNG export draws again at its own size.
+  useEffect(() => setPaperDrawSource(() => drawArgsRef.current), []);
 
   useEffect(() => {
     const canvas = crosshairCanvasRef.current;

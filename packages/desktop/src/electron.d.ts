@@ -129,9 +129,13 @@ declare global {
       onMaximized: (listener: (event: unknown, isMax: unknown) => void) => () => void;
       // App lifecycle
       appReady: () => void;
+      /** Shrink this dialog window to the given content height (never grows it). */
+      fitDialogHeight: (height: number) => void;
       // Menu actions
       menuNew: () => void;
       menuAbout: () => void;
+      /** Open the online documentation in the default browser. */
+      openDocumentation: () => void;
       toggleDevTools: () => void;
       // Materials dialog sync
       requestMaterialsState: () => void;

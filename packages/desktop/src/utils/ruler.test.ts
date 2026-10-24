@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { computeRulerStep, formatRulerLabel, resolveTickStep } from "./ruler";
+import { MIN_TICK_SPACING_MM, computeRulerStep, formatRulerLabel, resolveTickStep } from "./ruler";
 
 describe("computeRulerStep", () => {
   it("returns a reasonable step for a typical A4 slope model", () => {
@@ -7,9 +7,9 @@ describe("computeRulerStep", () => {
     const step = computeRulerStep(25, 240, 297);
     expect(step).toBeGreaterThanOrEqual(0.5);
     expect(step).toBeLessThanOrEqual(25);
-    // Step should be a "nice" number (1, 2, 5, 10, 20, 50, ...)
+    // Step should be a "nice" number (1, 2, 2.5, 5 times a power of ten)
     const normalised = step / Math.pow(10, Math.floor(Math.log10(step)));
-    expect([1, 2, 5, 10]).toContain(normalised);
+    expect([1, 2, 2.5, 5, 10]).toContain(normalised);
   });
 
   it("returns a reasonable step for a large world span", () => {
@@ -18,14 +18,13 @@ describe("computeRulerStep", () => {
     expect(step).toBeLessThanOrEqual(500);
   });
 
-  it("returns minimum 0.5 for a very small world span", () => {
-    const step = computeRulerStep(0.1, 240, 297);
-    expect(step).toBe(0.5);
+  it("returns at least 0.01 for a very small world span", () => {
+    expect(computeRulerStep(0.1, 240, 297)).toBe(0.01);
   });
 
   it("handles zero world span without throwing", () => {
     const step = computeRulerStep(0, 240, 297);
-    expect(step).toBeGreaterThanOrEqual(0.5);
+    expect(step).toBeGreaterThanOrEqual(0.01);
     expect(Number.isFinite(step)).toBe(true);
   });
 
@@ -33,6 +32,27 @@ describe("computeRulerStep", () => {
     const step = computeRulerStep(25, 0, 297);
     expect(Number.isFinite(step)).toBe(true);
     expect(step).toBeGreaterThanOrEqual(0.5);
+  });
+
+  it("spaces the labelled ticks far enough apart on the paper", () => {
+    // A4 landscape plot area: 267 mm wide.
+    // 0..240 m: every 20 (it was every 10, 11 mm apart).
+    expect(computeRulerStep(269, 267, 297, [-14.5, 254.5])).toBe(20);
+    // -3..20 m: every 2 (it was every 1).
+    expect(computeRulerStep(25.8, 267, 297, [-4.4, 21.4])).toBe(2);
+    // About 13 m: every 1 (it was every 0.5).
+    expect(computeRulerStep(14.6, 267, 297, [3.8, 18.4])).toBe(1);
+    for (const [span, lo] of [[3, 0], [25, -2], [130, 5], [700, -30]] as const) {
+      const step = computeRulerStep(span, 267, 297, [lo, lo + span]);
+      expect((step * 267) / span).toBeGreaterThanOrEqual(MIN_TICK_SPACING_MM - 1e-9);
+    }
+  });
+
+  it("uses 2.5 steps and widens the spacing for long labels", () => {
+    // 15 mm needs 2.2 m here: 2.5 is the next nice step.
+    expect(computeRulerStep(39, 267, 297, [0, 39])).toBe(2.5);
+    // Labels like 123402.5 need more than 15 mm.
+    expect(computeRulerStep(39, 267, 297, [123400, 123439])).toBe(5);
   });
 
   it("handles negative inputs by taking absolute values", () => {

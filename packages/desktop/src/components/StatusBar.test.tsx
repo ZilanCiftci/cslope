@@ -66,6 +66,20 @@ describe("StatusBar", () => {
     expect(fosEl.style.color).toContain("warning");
   });
 
+  it("has no warning band for an FOS on design values, as the summary", () => {
+    const result: AnalysisResult = {
+      minFOS: 1.172,
+      maxFOS: 1.4,
+      criticalSurface: null as never,
+      allSurfaces: [],
+      criticalSlices: [],
+      method: "Bishop",
+      elapsedMs: 50,
+    };
+    render(<StatusBar {...defaultProps} result={result} designValues />);
+    expect(screen.getByText("1.172").style.color).toContain("success");
+  });
+
   it("shows FOS with error color when FOS < 1.0", () => {
     const result: AnalysisResult = {
       minFOS: 0.85,

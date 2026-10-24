@@ -6,11 +6,16 @@ import type { AnalysisResult } from "@cslope/engine";
 const mocks = vi.hoisted(() => ({
   exportVectorPdf: vi.fn(),
   downloadFile: vi.fn(),
+  drawCanvas: vi.fn(),
 }));
 
 vi.mock("../../../features/pdf/pdf-export", async (importOriginal) => ({
   ...(await importOriginal<typeof import("../../../features/pdf/pdf-export")>()),
   exportVectorPdf: mocks.exportVectorPdf,
+}));
+vi.mock("../../../features/canvas/draw", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("../../../features/canvas/draw")>()),
+  drawCanvas: mocks.drawCanvas,
 }));
 vi.mock("../../../utils/download", async (importOriginal) => ({
   ...(await importOriginal<typeof import("../../../utils/download")>()),
@@ -19,6 +24,7 @@ vi.mock("../../../utils/download", async (importOriginal) => ({
 
 import { ResultsMenu } from "./ResultsMenu";
 import { useAppStore } from "../../../store/app-store";
+import { PNG_PAPER_LAYOUT_WIDTH_PX, PNG_SCALE, setPaperDrawSource } from "../../../features/export/paper-png";
 import { useSensitivityStore } from "../../../features/sensitivity/store";
 import { useReliabilityStore } from "../../../features/reliability/store";
 
@@ -80,8 +86,13 @@ describe("ResultsMenu", () => {
 
   it("disables the results plot and export without a result", () => {
     renderMenu({ withResult: false });
-    expect(screen.getByTitle("Results Plot")).toHaveAttribute("aria-disabled", "true");
-    expect(screen.getByTitle("Export PDF")).toBeDisabled();
+    // The tooltip says why.
+    const plot = screen.getByRole("menuitem", { name: "Results Plot" });
+    expect(plot).toHaveAttribute("aria-disabled", "true");
+    expect(plot).toHaveAttribute("title", "Run the analysis first");
+    const pdf = screen.getByRole("menuitem", { name: "Export PDF" });
+    expect(pdf).toBeDisabled();
+    expect(pdf).toHaveAttribute("title", "Run the analysis first");
     expect(screen.getByTitle("More export options")).toBeDisabled();
   });
 
@@ -156,7 +167,7 @@ describe("ResultsMenu", () => {
 
   it("exports the view settings as a template", async () => {
     renderMenu();
-    await userEvent.click(screen.getByTitle("Export"));
+    await userEvent.click(screen.getByTitle("Export template"));
     expect(mocks.downloadFile).toHaveBeenCalledTimes(1);
     const [name, data, type] = mocks.downloadFile.mock.calls[0];
     expect(name).toBe("view-template.json");
@@ -186,7 +197,7 @@ describe("ResultsMenu", () => {
       });
     };
 
-    await userEvent.click(screen.getByTitle("Import"));
+    await userEvent.click(screen.getByTitle("Import template"));
     expect(pickers.at(-1)!.accept).toBe(".json");
     const template = { ...JSON.parse(JSON.stringify(rvs())), showGrid: !rvs().showGrid };
     delete template.gridSpacing;
@@ -198,11 +209,11 @@ describe("ResultsMenu", () => {
     expect(rvs().gridSpacing).toBeUndefined();
     expect(rvs().minorTicks).toBeUndefined();
 
-    await userEvent.click(screen.getByTitle("Import"));
+    await userEvent.click(screen.getByTitle("Import template"));
     choose("{ not json");
     await waitFor(() => expect(alert).toHaveBeenCalledWith("Invalid template file."));
     alert.mockClear();
-    await userEvent.click(screen.getByTitle("Import"));
+    await userEvent.click(screen.getByTitle("Import template"));
     choose(JSON.stringify({ version: 1 }));
     await waitFor(() => expect(alert).toHaveBeenCalledWith("Invalid template file."));
   });
@@ -254,7 +265,7 @@ describe("ResultsMenu", () => {
     };
     await pick("Slice data (Excel)");
     await pick("Slice data (CSV)");
-    await pick("Slice data (CSV, ; and ,)");
+    await pick("Slice data (CSV, decimal comma)");
     const calls = mocks.downloadFile.mock.calls;
     expect(calls.map((c) => c[0])).toEqual([
       `${name} slices.xlsx`,
@@ -271,11 +282,16 @@ describe("ResultsMenu", () => {
       cb(0);
       return 0;
     });
-    const canvas = document.createElement("canvas");
-    canvas.dataset.testid = "slope-canvas";
-    canvas.width = 800;
-    canvas.height = 600;
-    document.body.appendChild(canvas);
+    // The result canvas registers what it draws; the export draws it again.
+    const unregister = setPaperDrawSource(
+      () => ({ w: 800, h: 600, resultViewSettings: rvs() }) as never,
+    );
+    act(() => useAppStore.setState({ resultViewScale: 10, resultViewOffset: [0, 0] }));
+    document.documentElement.dataset.theme = "dark";
+    let themeWhileDrawing: string | undefined;
+    mocks.drawCanvas.mockImplementation(() => {
+      themeWhileDrawing = document.documentElement.dataset.theme;
+    });
     const drawImage = vi.fn();
     const realCreate = document.createElement.bind(document);
     let exportCanvas: HTMLCanvasElement | null = null;
@@ -286,6 +302,7 @@ describe("ResultsMenu", () => {
         exportCanvas = el as HTMLCanvasElement;
         (el as HTMLCanvasElement).getContext = (() => ({
           fillRect: () => {},
+          setTransform: () => {},
           drawImage,
           fillStyle: "",
         })) as unknown as HTMLCanvasElement["getContext"];
@@ -302,7 +319,12 @@ describe("ResultsMenu", () => {
     await userEvent.click(screen.getByTitle("More export options"));
     await userEvent.click(screen.getByRole("button", { name: "Export as PNG" }));
     expect(drawImage).toHaveBeenCalledTimes(1);
-    expect(exportCanvas!.width).toBeGreaterThan(0);
+    // At a fixed size, whatever the screen, in the light theme.
+    expect(exportCanvas!.width).toBe(PNG_PAPER_LAYOUT_WIDTH_PX * PNG_SCALE);
+    expect(themeWhileDrawing).toBe("light");
+    expect(document.documentElement.dataset.theme).toBe("dark");
+    expect(document.documentElement.style.getPropertyValue("--color-canvas-paper")).toBe("");
+    unregister();
     expect(link!.download).toMatch(/\.png$/);
     expect(link!.href).toBe("data:image/png;base64,xx");
     expect(store().selectedAnnotationIds).toEqual(["a1"]);

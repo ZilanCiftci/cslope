@@ -1,10 +1,13 @@
 import type { AnalysisResult, RunState } from "../store/types";
 import { APP_VERSION } from "../utils/app-version";
+import { fosStatusColor } from "../utils/fos-color";
 
 interface Props {
   mode: "edit" | "result";
   runState: RunState;
   result: AnalysisResult | null;
+  /** The FOS is on design values (partial factors applied). */
+  designValues?: boolean;
   /** The error of a failed run (shown while `runState` is "error"). */
   errorMessage?: string | null;
   snapToGrid: boolean;
@@ -19,6 +22,7 @@ export function StatusBar({
   mode,
   runState,
   result,
+  designValues = false,
   errorMessage = null,
   snapToGrid,
   gridSnapSize,
@@ -58,14 +62,7 @@ export function StatusBar({
             <span>
               FOS:{" "}
               <strong
-                style={{
-                  color:
-                    result.minFOS < 1.0
-                      ? "var(--color-vsc-error)"
-                      : result.minFOS < 1.5
-                        ? "var(--color-vsc-warning)"
-                        : "var(--color-vsc-success)",
-                }}
+                style={{ color: fosStatusColor(result.minFOS, designValues) }}
               >
                 {result.minFOS.toFixed(3)}
               </strong>{" "}
