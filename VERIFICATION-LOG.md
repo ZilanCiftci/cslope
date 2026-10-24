@@ -16,11 +16,35 @@ The script compares the regenerated verification table with the committed one. E
 |---|---|---|---|---|---|---|
 | 2026-10-24 | Circular search: circles tangent to material interfaces, seeds per basin (review A3) | 12 | 0.399 → 0.398 | 0.570 → 0.570 | 1.661 → 1.653 | 4.014 → 4.007 |
 | 2026-10-24 | Warning for Bishop on non-circular surfaces (review B1) | 0 | 0.398 → 0.398 | 0.570 → 0.570 | 1.653 → 1.653 | 4.007 → 4.007 |
+| 2026-10-24 | Lime-cement columns: each strength part takes its own partial factor; pile force takes the weaker branch (review B3, B9) | 0 | 0.398 → 0.398 | 0.570 → 0.570 | 1.653 → 1.653 | 4.007 → 4.007 |
 <!-- summary-end -->
 
 ## Entries
 
 <!-- entries -->
+
+### 2026-10-24: Lime-cement columns: each strength part takes its own partial factor; pile force takes the weaker branch (review B3, B9)
+
+Compared with d556b3c. Errors are relative to the reference, in percent.
+
+**Against other programs (midpoint of their range):** 0 moved (0 closer to the reference, 0 further).
+
+| Result | Reference | Before | After | Error before | Error after |
+|---|---|---|---|---|---|
+| **Mean error (n = 268)** | | | | -0.250 % | -0.250 % |
+| **Mean absolute error** | | | | 0.398 % | 0.398 % |
+| **RMS error** | | | | 0.570 % | 0.570 % |
+| **Largest error** | | | | 2.109 % | 2.109 % |
+
+**Against the papers:** 0 moved (0 closer to the reference, 0 further).
+
+| Result | Reference | Before | After | Error before | Error after |
+|---|---|---|---|---|---|
+| **Mean error (n = 99)** | | | | +0.303 % | +0.303 % |
+| **Mean absolute error** | | | | 1.653 % | 1.653 % |
+| **RMS error** | | | | 4.007 % | 4.007 % |
+| **Largest error** | | | | 25.892 % | 25.892 % |
+
 
 ### 2026-10-24: Warning for Bishop on non-circular surfaces (review B1)
 

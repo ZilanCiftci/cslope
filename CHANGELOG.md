@@ -20,6 +20,7 @@ The first public release.
 - Sensitivity analysis, and probabilistic analysis with the Taylor series and Monte Carlo methods.
 - Ito & Matsui pile rows take the effective overburden (γ′ below the water table) instead of the total; a Morgenstern–Price surface where moment and force equilibrium never meet keeps its closest-pair factor but is reported as not converged, with the gap in the sidebar, result panel and PDF summary.
 - Bishop on a non-circular critical surface (a custom polyline or non-circular optimisation) gives a result warning, and the Options window a hint, that its factor of safety depends on the moment axis; Spencer or Morgenstern–Price is recommended there.
+- Lime-cement columns with partial factors: each part of the strength takes its own factor (γcu on the undrained strength of soil and columns, γc′ on the columns' c′, γφ′ on tan φ′) instead of γcu on the whole cohesion, in the slices, the Rankine crack depth and the Ito & Matsui pile force; the pile force of a combined material (lime-cement columns in their drained limit, Mohr–Coulomb with a c-factor) is the lower of the drained and undrained pressure, as on the slice bases.
 
 ### Model
 

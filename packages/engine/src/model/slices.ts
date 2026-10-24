@@ -3,7 +3,7 @@
  */
 
 import type { GeometryWithMaterial, PartialFactors, Slice } from "../types/index";
-import { needsLayerTop, resolveStrength, resolveUnitWeight } from "../types/index";
+import { designStrength, needsLayerTop, resolveStrength, resolveUnitWeight } from "../types/index";
 import { WATER_UNIT_WEIGHT, SLICE_DEDUP_TOLERANCE } from "../types/constants";
 import {
   getCircleYCoordinateAtX,
@@ -392,6 +392,9 @@ export function createSlice(
     baseMaterial,
     cohesion,
     cohesionUndrained,
+    ...(strength.cohesionUndrainedPart !== undefined
+      ? { cohesionUndrainedPart: strength.cohesionUndrainedPart }
+      : {}),
     frictionAngle,
     phi,
     U,
@@ -865,35 +868,17 @@ export function getSlices(
 }
 
 /**
- * Design strength: characteristic strength divided by the partial factor.
- * Undrained strength (Su, S = f(depth/datum), and any model entered with
- * φ = 0, the common way to give undrained clay as Mohr-Coulomb) takes γcu;
- * drained strength takes γc' on c' and γφ' on tan φ'. The undrained
- * strength of a combined material takes γcu.
+ * Design strength of the slice base: each characteristic parameter divided
+ * by its own partial factor (designStrength).
  */
 function applyMaterialFactors(s: Slice, f: PartialFactors): void {
   const kind = s.baseMaterial?.model.kind;
-  const undrained =
-    kind === "undrained" ||
-    kind === "s-f-depth" ||
-    kind === "s-f-datum" ||
-    (s.frictionAngle === 0 && !s.isCombined);
   if (kind === "high-strength" || kind === "impenetrable") return;
-  s.cohesionUndrained /= f.cu;
-  if (kind === "lime-cement-columns") {
-    // Column-improved clay: Su of soil and columns take γcu, also in the
-    // drained limit of the columns; tan φ′ takes γφ′.
-    s.cohesion /= f.cu;
-    s.phi = Math.atan(Math.tan(s.phi) / f.tanPhi);
-    s.frictionAngle = (s.phi * 180) / Math.PI;
-    return;
-  }
-  if (undrained) {
-    s.cohesion /= f.cu;
-    return;
-  }
-  s.cohesion /= f.cohesion;
-  s.phi = Math.atan(Math.tan(s.phi) / f.tanPhi);
+  const d = designStrength(kind, s, f);
+  s.cohesion = d.cohesion;
+  s.cohesionUndrained = d.cohesionUndrained;
+  if (d.undrained) return;
+  s.phi = Math.atan(d.tanPhi);
   s.frictionAngle = (s.phi * 180) / Math.PI;
 }
 
@@ -920,24 +905,8 @@ export function rankineCrackDepth(slope: Slope, x: number): number {
     ? (materialLayerTopAt(slope.materialGeometries, geo.material, x, y) ?? undefined)
     : undefined;
   const strength = resolveStrength(model, { yBottom: y, x, yGround, yLayerTop, alpha: 0 });
-  let c = strength.cohesion;
-  let tanPhi = Math.tan((strength.frictionAngle * Math.PI) / 180);
   const f = slope.partialFactors;
-  if (f) {
-    const undrained =
-      model.kind === "undrained" ||
-      model.kind === "s-f-depth" ||
-      model.kind === "s-f-datum" ||
-      model.kind === "lime-cement-columns" ||
-      (strength.frictionAngle === 0 && !strength.isCombined);
-    if (undrained) {
-      c /= f.cu;
-      if (model.kind === "lime-cement-columns") tanPhi /= f.tanPhi;
-    } else {
-      c /= f.cohesion;
-      tanPhi /= f.tanPhi;
-    }
-  }
+  const { cohesion: c, tanPhi } = designStrength(model.kind, strength, f);
   const gamma = resolveUnitWeight(model, geo.material.unitWeight, x, y);
   if (!(c > 0) || !(gamma > 0)) return 0;
   const phi = Math.atan(tanPhi);
