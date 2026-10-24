@@ -8,6 +8,7 @@ import {
   outwardDirection,
   pointLabelCandidates,
   segmentHitsBox,
+  segmentsCross,
   segmentsInside,
   type Box,
 } from "./label-layout";
@@ -152,5 +153,23 @@ describe("label layout", () => {
     // Along an edge counts as inside.
     expect(segmentsInside([[100, 120], [100, 180]], sq, inside)).toHaveLength(1);
     expect(segmentsInside([[0, 0], [50, 50]], sq, inside)).toHaveLength(0);
+  });
+});
+
+describe("leader lines", () => {
+  it("tells whether two segments cross", () => {
+    expect(segmentsCross([0, 0, 10, 10], [0, 10, 10, 0])).toBe(true);
+    expect(segmentsCross([0, 0, 10, 0], [0, 1, 10, 1])).toBe(false);
+    expect(segmentsCross([0, 0, 10, 0], [5, 0, 15, 0])).toBe(true);
+    expect(segmentsCross([0, 0, 4, 0], [5, -1, 5, 1])).toBe(false);
+  });
+
+  it("finds a leader crossing a reserved line or box", () => {
+    const layout = new LabelLayout({ left: 0, top: 0, right: 100, bottom: 100 });
+    layout.reserveSegment([50, 0, 50, 100]);
+    layout.reserve({ left: 10, top: 80, right: 20, bottom: 90 });
+    expect(layout.crossesLine([40, 10, 60, 10])).toBe(true);
+    expect(layout.crossesLine([0, 85, 30, 85])).toBe(true);
+    expect(layout.crossesLine([10, 10, 40, 40])).toBe(false);
   });
 });

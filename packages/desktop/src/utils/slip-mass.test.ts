@@ -179,6 +179,21 @@ describe("colours and density", () => {
     expect(spacings).toEqual([10, 10, 10]);
   });
 
+  it("merges boundaries closer than 2.5 px into one line, keeping the ends of the mass", () => {
+    const slices = [
+      { xLeft: 0, xRight: 1 },
+      { xLeft: 1, xRight: 1.2 }, // a break 2 px beside a regular boundary
+      { xLeft: 1.2, xRight: 2 },
+      { xLeft: 2, xRight: 2.9 },
+      { xLeft: 2.9, xRight: 3 }, // the last boundary 1 px from the one before
+    ];
+    const { xs, spacings } = sliceBoundaries(slices, (x) => x * 10);
+    expect(xs).toEqual([0, 1, 2, 3]);
+    expect(spacings).toEqual([10, 10, 10]);
+    // A smaller threshold keeps them apart.
+    expect(sliceLines(slices, (x) => x * 10, 3, 0.5).xs).toEqual([0, 1, 1.2, 2, 2.9, 3]);
+  });
+
   it("leaves out every other slice line while they lie closer than 3 px", () => {
     const slices = Array.from({ length: 40 }, (_, i) => ({ xLeft: i, xRight: i + 1 }));
     const dense = sliceLines(slices, (x) => x * 2);

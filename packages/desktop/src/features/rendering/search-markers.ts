@@ -14,7 +14,7 @@
 import type { AnalysisLimitsState } from "../../store/types";
 import { surfaceYAtX } from "../view/surface";
 import { groundBetween, sameRange, searchRange } from "../../utils/slip-mass";
-import { limitMarkerGeometry, rangeMarkerEnds } from "../canvas/marker-geometry";
+import { limitMarkerGeometry, rangeMarkerEnds, type MarkerDot } from "../canvas/marker-geometry";
 import {
   ENTRY_EXIT_DOT_SPACING_PX,
   MARKER_BAR_H_PX,
@@ -44,6 +44,8 @@ export interface LimitMarker {
 export interface LimitMarkerOptions {
   /** Over a result: triangles lifted clear of the ground, shared limits once. */
   lifted: boolean;
+  /** Vertex dots drawn over the markers (drawing units): triangles move off them. */
+  dots?: readonly MarkerDot[];
 }
 
 /** Same limit when this close (world units, relative). */
@@ -75,7 +77,7 @@ export function layoutLimitMarkers(
   coordinates: readonly Pt[],
   toD: (x: number, y: number) => Pt,
   unit: number,
-  { lifted }: LimitMarkerOptions,
+  { lifted, dots = [] }: LimitMarkerOptions,
 ): LimitMarker[] {
   const sz = MARKER_SZ_PX * unit;
   const barH = MARKER_BAR_H_PX * unit;
@@ -89,7 +91,7 @@ export function layoutLimitMarkers(
       const gy = surfaceYAtX(coordinates as Pt[], end.x);
       if (gy === null) continue;
       const [cx, cy] = toD(end.x, gy);
-      const g = limitMarkerGeometry(cx, cy, end.toward === null ? null : toD(end.toward, gy)[0], unit);
+      const g = limitMarkerGeometry(cx, cy, end.toward === null ? null : toD(end.toward, gy)[0], unit, dots);
       const tol = SAME_X * Math.max(1, Math.abs(end.x));
       const same = lifted ? out.find((m) => Math.abs(m.x - end.x) <= tol) : undefined;
       const m: LimitMarker = same ?? {

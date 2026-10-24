@@ -55,6 +55,28 @@ export function segmentHitsBox([x1, y1, x2, y2]: Seg, b: Box): boolean {
   return true;
 }
 
+/** Whether two segments intersect (touching counts). */
+export function segmentsCross(a: Seg, b: Seg): boolean {
+  const orient = (px: number, py: number, qx: number, qy: number, rx: number, ry: number) =>
+    Math.sign((qx - px) * (ry - py) - (qy - py) * (rx - px));
+  const [ax, ay, bx, by] = a;
+  const [cx, cy, dx, dy] = b;
+  const o1 = orient(ax, ay, bx, by, cx, cy);
+  const o2 = orient(ax, ay, bx, by, dx, dy);
+  const o3 = orient(cx, cy, dx, dy, ax, ay);
+  const o4 = orient(cx, cy, dx, dy, bx, by);
+  if (o1 !== o2 && o3 !== o4) return true;
+  // Collinear overlaps.
+  const within = (px: number, py: number, qx: number, qy: number, rx: number, ry: number) =>
+    Math.min(px, qx) <= rx && rx <= Math.max(px, qx) && Math.min(py, qy) <= ry && ry <= Math.max(py, qy);
+  return (
+    (o1 === 0 && within(ax, ay, bx, by, cx, cy)) ||
+    (o2 === 0 && within(ax, ay, bx, by, dx, dy)) ||
+    (o3 === 0 && within(cx, cy, dx, dy, ax, ay)) ||
+    (o4 === 0 && within(cx, cy, dx, dy, bx, by))
+  );
+}
+
 /** Distance from (x, y) to the segment a–b. */
 export function distanceToSegment(
   x: number,
@@ -144,6 +166,15 @@ export class LabelLayout {
       const b = pts[i % n];
       this.reserveSegment([a[0], a[1], b[0], b[1]], pad);
     }
+  }
+
+  /**
+   * Whether a segment (a leader line) crosses one of the reserved lines
+   * or passes through a reserved box.
+   */
+  crossesLine(seg: Seg): boolean {
+    if (this.taken.some((t) => segmentHitsBox(seg, t))) return true;
+    return this.lines.some((l) => segmentsCross(seg, l.seg));
   }
 
   isFree(b: Box): boolean {

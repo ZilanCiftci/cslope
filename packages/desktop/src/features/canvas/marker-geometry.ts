@@ -6,6 +6,7 @@
  */
 import { MARKER_BAR_H_PX, MARKER_SZ_PX } from "../rendering/style-spec";
 import { searchRange, groundBetween } from "../../utils/slip-mass";
+import { surfaceYAtX } from "../view/surface";
 import type { Box } from "./label-layout";
 
 type Pt = [number, number];
@@ -36,23 +37,52 @@ export interface LimitMarker {
   triangle: [Pt, Pt, Pt] | null;
 }
 
+/** A round point marker (a vertex dot) in canvas px: centre and radius. */
+export interface MarkerDot {
+  x: number;
+  y: number;
+  r: number;
+}
+
+/** Gap kept between a vertex dot and a limit triangle moved off it, px. */
+const DOT_GAP_PX = 2;
+
 /**
  * The marker at canvas (cx, cy): a bar, and unless `towardCanvasX` is null
  * a triangle outside the range pointing into it, towards that canvas x
  * (>| at the start of a range, |< at its end, in any orientation).
+ *
+ * A triangle that a vertex dot in `dots` would cover (a limit at a
+ * vertex: the dots are drawn over the markers) moves outward, away from
+ * the range, until it starts `DOT_GAP_PX` beyond the dot; the bar stays
+ * at the limit.
  */
-export function limitMarkerGeometry(cx: number, cy: number, towardCanvasX: number | null, zoom = 1): LimitMarker {
+export function limitMarkerGeometry(
+  cx: number,
+  cy: number,
+  towardCanvasX: number | null,
+  zoom = 1,
+  dots: readonly MarkerDot[] = [],
+): LimitMarker {
   const barH = MARKER_BAR_H_PX * zoom;
   if (towardCanvasX === null) return { x: cx, y: cy, barH, triangle: null };
   const sz = MARKER_SZ_PX * zoom;
   const inward = towardCanvasX >= cx ? 1 : -1;
-  const baseX = cx - inward * sz * 2;
+  // Outward offset of the tip: past every dot over the triangle's span.
+  let gap = 0;
+  for (const d of [...dots].sort((a, b) => (a.x - b.x) * -inward)) {
+    const out = (d.x - cx) * -inward;
+    if (Math.abs(d.y - cy) >= sz + d.r || out + d.r <= gap || out - d.r >= gap + 2 * sz) continue;
+    gap = Math.max(gap, out + d.r + DOT_GAP_PX * zoom);
+  }
+  const tipX = cx - inward * gap;
+  const baseX = tipX - inward * sz * 2;
   return {
     x: cx,
     y: cy,
     barH,
     triangle: [
-      [cx, cy],
+      [tipX, cy],
       [baseX, cy - sz],
       [baseX, cy + sz],
     ],
@@ -81,6 +111,27 @@ export interface CrackMarker {
   inward: 1 | -1 | 0;
 }
 
+/** A world line segment [x1, y1, x2, y2]. */
+type WSeg = readonly [number, number, number, number];
+
+export interface CrackMarkerOptions {
+  /** Lines the bottom tick must not end on (material boundaries, world). */
+  lines?: readonly WSeg[];
+  /** Least distance (world) from the bottom tick to those lines. */
+  lineClear?: number;
+  /** Half the bottom tick's width (world). */
+  tickHalf?: number;
+}
+
+/** Distance from (x, y) to a segment. */
+function distToSeg(x: number, y: number, [x1, y1, x2, y2]: WSeg): number {
+  const dx = x2 - x1;
+  const dy = y2 - y1;
+  const len2 = dx * dx + dy * dy;
+  const t = len2 > 0 ? Math.max(0, Math.min(1, ((x - x1) * dx + (y - y1) * dy) / len2)) : 0;
+  return Math.hypot(x - (x1 + t * dx), y - (y1 + t * dy));
+}
+
 /**
  * A vertical dimension showing a fixed tension-crack depth, standing on
  * the crest: the highest stretch of ground, a little in from its edge
@@ -89,7 +140,11 @@ export interface CrackMarker {
  * on that side). `inset` is the largest distance in from the edge (world
  * units). It moves farther in, at most to the middle of the crest, while
  * it is closer than `clear` to one of `avoid` (x of the search-limit
- * markers). Null without ground.
+ * markers). Its bottom tick must not end on one of `opts.lines` (a
+ * material boundary at the crack depth would read as the end of the
+ * crack): it moves along the crest, or just past its edge onto the
+ * slope, to the nearest place clear of them, and stays where it was
+ * when there is none. Null without ground.
  */
 export function crackMarkerPosition(
   coordinates: readonly Pt[],
@@ -98,6 +153,7 @@ export function crackMarkerPosition(
   inset: number,
   avoid: readonly number[] = [],
   clear = 0,
+  opts: CrackMarkerOptions = {},
 ): CrackMarker | null {
   if (coordinates.length < 3 || !(depth > 0)) return null;
   const xs = coordinates.map((c) => c[0]);
@@ -138,14 +194,43 @@ export function crackMarkerPosition(
     if ((next - mid) * inward > 0) break;
     x = next;
   }
-  // Not below the model's base.
-  let base = Infinity;
-  const n = coordinates.length;
-  for (let i = 0; i < n; i++) {
-    const [x0, y0] = coordinates[i];
-    const [x1, y1] = coordinates[(i + 1) % n];
-    if (x0 === x1 || x < Math.min(x0, x1) || x > Math.max(x0, x1)) continue;
-    base = Math.min(base, y0 + ((x - x0) / (x1 - x0)) * (y1 - y0));
+  // The ground and the model's base at x (the crack ends at the base).
+  const at = (px: number): { top: number; bottom: number } | null => {
+    const top = surfaceYAtX(coordinates as Pt[], px);
+    if (top === null) return null;
+    let base = Infinity;
+    const n = coordinates.length;
+    for (let i = 0; i < n; i++) {
+      const [x0, y0] = coordinates[i];
+      const [x1, y1] = coordinates[(i + 1) % n];
+      if (x0 === x1 || px < Math.min(x0, x1) || px > Math.max(x0, x1)) continue;
+      base = Math.min(base, y0 + ((px - x0) / (x1 - x0)) * (y1 - y0));
+    }
+    return { top, bottom: Math.max(top - depth, Number.isFinite(base) ? base : top - depth) };
+  };
+  const lines = opts.lines ?? [];
+  const lineClear = opts.lineClear ?? 0;
+  const tickHalf = opts.tickHalf ?? 0;
+  const onLine = (px: number, bottom: number) =>
+    lines.some((sg) => [-tickHalf, 0, tickHalf].some((o) => distToSeg(px + o, bottom, sg) < lineClear));
+  const nearMarker = (px: number) => avoid.some((a) => Math.abs(a - px) < clear);
+  const here = at(x);
+  if (here && lines.length > 0 && lineClear > 0 && onLine(x, here.bottom)) {
+    // The nearest place along the crest whose bottom tick is clear, else
+    // the nearest just past its downslope edge (up to `inset`), onto the
+    // slope.
+    const lo = xa - (edge === "left" ? Math.max(inset, d) : 0);
+    const hi = xb + (edge === "right" ? Math.max(inset, d) : 0);
+    const dx = Math.max((hi - lo) / 400, 1e-9);
+    const spots: number[] = [];
+    for (let px = lo; px <= hi + dx / 2; px += dx) spots.push(px);
+    const onCrest = (px: number) => px >= xa - tol && px <= xb + tol;
+    spots.sort((p, q) => Number(onCrest(q)) - Number(onCrest(p)) || Math.abs(p - x) - Math.abs(q - x));
+    for (const px of spots) {
+      if (nearMarker(px)) continue;
+      const p = at(px);
+      if (p && !onLine(px, p.bottom)) return { x: px, top: p.top, bottom: p.bottom, inward };
+    }
   }
-  return { x, top: gTop, bottom: Math.max(gTop - depth, Number.isFinite(base) ? base : gTop - depth), inward };
+  return here ? { x, top: here.top, bottom: here.bottom, inward } : { x, top: gTop, bottom: gTop - depth, inward };
 }
