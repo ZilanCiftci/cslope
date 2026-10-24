@@ -2812,7 +2812,7 @@ export const PROBLEMS: RawCase[] = [
     checks: [
       {"method":"Bishop","label":"Bishop simplified (vertical head)","published":1.173,"publishedBy":"Commercial program B","options":{"porePressureHead":"vertical"}},
     ],
-    publicNote: "The problem comes from a program manual only; no independent value is published.",
+    publicNote: "The problem comes from a program manual only. The manual cites 1.193 (Bishop) from the textbook example it is based on, but its water table is approximate because the book gives no coordinates, so that value is not used as a check.",
   },
   {
     id: "V097b",
@@ -2826,7 +2826,7 @@ export const PROBLEMS: RawCase[] = [
       {"method":"Bishop","label":"Bishop simplified, design values","published":1.173,"publishedBy":"Commercial program B","options":{"partialFactors":{"cu":1.4,"cohesion":1.25,"tanPhi":1.25,"variableLoad":1}}},
       {"method":"Morgenstern-Price","label":"Spencer, design values","published":1.174,"publishedBy":"Commercial program B","options":{"intersliceFunction":"constant","partialFactors":{"cu":1.4,"cohesion":1.25,"tanPhi":1.25,"variableLoad":1}}},
     ],
-    publicNote: "The problem comes from a program manual only; no independent value is published.",
+    publicNote: "The problem comes from a program manual only. The manual cites 1.193 (Bishop) from the textbook example it is based on, but its water table is approximate because the book gives no coordinates, so that value is not used as a check.",
   },
   {
     id: "V098",
