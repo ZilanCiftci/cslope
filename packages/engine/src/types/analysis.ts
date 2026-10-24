@@ -32,7 +32,7 @@ export interface AnalysisOptions {
   refinedIterations: number;
   /** Minimum horizontal distance between entry and exit points (m). */
   minFailureDist: number;
-  /** FOS convergence tolerance (default: 0.005). */
+  /** FOS convergence tolerance (default: 0.001). */
   tolerance: number;
   /** Max inner-loop FOS iterations (default: 15). */
   maxIterations: number;
@@ -133,7 +133,10 @@ export const DEFAULT_ANALYSIS_OPTIONS: AnalysisOptions = {
   // grid is 0.5–4 % too high.
   refinedIterations: 500,
   minFailureDist: 0,
-  tolerance: 0.005,
+  // Morgenstern-Price accepts |Fm − Ff| below it: at 0.005 the factor on a
+  // fixed non-circular surface was up to 0.2 % off the solution, at 0.001
+  // within 0.02 %, for a search 0–25 % slower.
+  tolerance: 0.001,
   maxIterations: 15,
   method: "Bishop",
   janbuCorrection: false,

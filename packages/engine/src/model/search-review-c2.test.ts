@@ -103,7 +103,8 @@ describe("surfaces leaving the model below a re-entrant corner of its base", () 
 describe("non-circular optimisation runs to its minimum", () => {
   // Restarting the optimisation from its result lowered V050b from 1.2282
   // to 1.2249 and V051 from 0.6975 to 0.6950: the search stopped while a
-  // cycle still gained more than the tolerance (0.001).
+  // cycle still gained more than the tolerance (0.001). V051 is checked
+  // with the phreatic correction since (0.7137; vertical head 0.6950).
   const optimised = (id: string) => {
     const c = VERIFICATION_CASES.find((x) => x.id === id)!;
     const check = c.checks.find((k) => k.options?.nonCircularOptimization)!;
@@ -115,6 +116,6 @@ describe("non-circular optimisation runs to its minimum", () => {
   });
 
   it("V051 reaches the minimum found by restarting from the result", { timeout: 60000 }, () => {
-    expect(optimised("V051")).toBeLessThan(0.695 + 0.001);
+    expect(optimised("V051")).toBeLessThan(0.7137 + 0.001);
   });
 });

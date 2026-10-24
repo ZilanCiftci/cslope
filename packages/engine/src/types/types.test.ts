@@ -78,7 +78,7 @@ describe("constants", () => {
     expect(DEFAULT_ANALYSIS_OPTIONS.iterations).toBe(1000);
     // As the desktop app (store defaults): refinement on.
     expect(DEFAULT_ANALYSIS_OPTIONS.refinedIterations).toBe(500);
-    expect(DEFAULT_ANALYSIS_OPTIONS.tolerance).toBe(0.005);
+    expect(DEFAULT_ANALYSIS_OPTIONS.tolerance).toBe(0.001);
     expect(DEFAULT_ANALYSIS_OPTIONS.maxIterations).toBe(15);
     expect(DEFAULT_ANALYSIS_OPTIONS.method).toBe("Bishop");
     expect(DEFAULT_ANALYSIS_OPTIONS.intersliceFunction).toBe("half-sine");
@@ -87,6 +87,6 @@ describe("constants", () => {
   it("has correct numerical constants", () => {
     expect(MATERIAL_EPSILON).toBe(1e-10);
     expect(WATER_UNIT_WEIGHT).toBe(9.81);
-    expect(FOS_TOLERANCE).toBe(0.005);
+    expect(FOS_TOLERANCE).toBe(0.001);
   });
 });

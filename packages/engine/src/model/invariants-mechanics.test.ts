@@ -434,11 +434,13 @@ describe("Morgenstern-Price solution", () => {
         slope.updateAnalysisOptions({ ...PROPERTY_OPTIONS, method: "Morgenstern-Price", intersliceFunction: fn, tolerance: 1e-6 });
         const f = analyseSlope(slope);
         if (f === null) continue;
+        // The factor is the crossing interpolated next to the accepted
+        // pair (crossingFOS): within the tolerance of that pair's Fm.
         const lff = slope.search[0].lffArray!;
-        const at = lff.find((e) => Math.abs(e[1] - f) < 1e-9);
-        expect(at, `seed 9191 case ${i} ${fn}`).toBeDefined();
+        const at = lff.reduce((a, e) => (Math.abs(e[1] - f) < Math.abs(a[1] - f) ? e : a));
+        expect(Math.abs(at[1] - f), `seed 9191 case ${i} ${fn}`).toBeLessThan(1e-5);
         // Converged: Fm and Ff agree to the solver tolerance there.
-        expect(at![3], `seed 9191 case ${i} ${fn} λ ${at![0]}`).toBeLessThan(1e-5);
+        expect(at[3], `seed 9191 case ${i} ${fn} λ ${at[0]}`).toBeLessThan(1e-5);
         checked++;
       }
     }

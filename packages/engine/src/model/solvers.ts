@@ -719,6 +719,39 @@ const MP_MAX_STEPS = 30;
 const MP_MAX_LAMBDA_STEP = 0.1;
 
 /**
+ * The factor where Fm(λ) and Ff(λ) meet, once the pair at `lambda` is
+ * within the tolerance: the zero of Fm − Ff interpolated linearly in λ
+ * between that pair and its nearest neighbour on the curves, and Fm
+ * there. Fm at the accepted λ alone is off the crossing by up to about the
+ * tolerance (0.7 % at the default 0.005 on fixed non-circular surfaces,
+ * against a solution to 1e-9); near the root the curves are smooth, so the
+ * secant through two points brings it to the precision of the pairs. With
+ * no neighbour, or one that would extrapolate past it, the mean of the
+ * pair.
+ */
+function crossingFOS(
+  lffArray: readonly [number, number, number, number][],
+  lambda: number,
+  fm: number,
+  ff: number,
+): number {
+  let near: [number, number, number, number] | null = null;
+  for (const e of lffArray) {
+    if (e[0] !== lambda && (!near || Math.abs(e[0] - lambda) < Math.abs(near[0] - lambda))) near = e;
+  }
+  const mean = (fm + ff) / 2;
+  if (!near) return mean;
+  const d = fm - ff;
+  const dn = near[1] - near[2];
+  if (dn === d) return mean;
+  // Fraction of the way from `lambda` to the neighbour.
+  const t = -d / (dn - d);
+  if (!(Math.abs(t) <= 1)) return mean;
+  const f = fm + t * (near[1] - fm);
+  return f > 0 && Number.isFinite(f) ? f : mean;
+}
+
+/**
  * Morgenstern-Price Method.
  */
 export function analyseMorgensternPrice(
@@ -793,7 +826,7 @@ export function analyseMorgensternPrice(
     [0, FSm, FSf, Math.abs(FSm - FSf)],
   ];
   if (Math.abs(FSm - FSf) < tol)
-    return [FSm, lffArray, pushingF, resistingF, true];
+    return [crossingFOS(lffArray, 0, FSm, FSf), lffArray, pushingF, resistingF, true];
 
   // Step 2: Second point (lambda = 0.1)
   const lambda2 = 0.1;
@@ -807,7 +840,7 @@ export function analyseMorgensternPrice(
   lffArray.push([lambda2, FSm, FSf, Math.abs(FSm - FSf)]);
   lffArray.sort((a, b) => a[0] - b[0]);
   if (Math.abs(FSm - FSf) < tol)
-    return [FSm, lffArray, pushingF, resistingF, true];
+    return [crossingFOS(lffArray, lambda2, FSm, FSf), lffArray, pushingF, resistingF, true];
 
   // Step 3: Iterative extrapolation
   const unconvergedLambdas: number[] = [];
@@ -881,7 +914,7 @@ export function analyseMorgensternPrice(
         lffArray.sort((a, b) => a[0] - b[0]);
 
         if (Math.abs(FSm - FSf) < tol)
-          return [FSm, lffArray, pushingF, resistingF, true];
+          return [crossingFOS(lffArray, lambdaNew, FSm, FSf), lffArray, pushingF, resistingF, true];
       } else {
         // An unconverged moment or force solution is no point of the
         // Fm(λ), Ff(λ) curves: far out in λ (e.g. λ ≈ −1 on V002's
@@ -912,7 +945,9 @@ export function analyseMorgensternPrice(
       // Re-solved at the best λ the pair may meet within the tolerance.
       const complete = iterationsConverged && equilibriumGap < tol;
       const closestPair = iterationsConverged && !complete && equilibriumGap <= mpEquilibriumTolerance;
-      return [FSm, lffArray, pushing0, resisting0, complete, equilibriumGap, closestPair];
+      // The pushed pair is the last entry: the neighbour is another λ.
+      const fos = complete ? crossingFOS(lffArray.slice(0, -1), bestLambda, FSm, FSf) : FSm;
+      return [fos, lffArray, pushing0, resisting0, complete, equilibriumGap, closestPair];
     }
   }
 

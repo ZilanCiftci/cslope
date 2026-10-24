@@ -12,7 +12,7 @@ export const DEFAULT_SLICES = 25;
 export const DEFAULT_ITERATIONS = 1000;
 
 /** FOS convergence tolerance. */
-export const FOS_TOLERANCE = 0.005;
+export const FOS_TOLERANCE = 0.001;
 
 /** Maximum FOS iterations (inner loop). */
 export const MAX_FOS_ITERATIONS = 15;
