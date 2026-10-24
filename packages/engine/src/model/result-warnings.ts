@@ -24,6 +24,9 @@ export const M_ALPHA_WARNING_LIMIT = 0.2;
  */
 const NEGATIVE_NORMAL_TOLERANCE = 1e-6;
 
+const BISHOP_NON_CIRCULAR_MESSAGE =
+  "Bishop's simplified method is defined for circular surfaces (Bishop 1955); on a non-circular surface its factor of safety depends on the moment axis. Use Spencer or Morgenstern-Price for non-circular surfaces.";
+
 /** m_α of a slice at the factor of safety F (as the solvers form it). */
 function mAlpha(s: Slice, fos: number): number {
   // A combined-method slice in equilibrium with its undrained strength has
@@ -47,6 +50,15 @@ const slicesText = (n: number, verb: [string, string]) =>
  *   Wright 2014, ch. 6 and 14).
  * - "low-m-alpha": slices of the critical surface with m_α below
  *   M_ALPHA_WARNING_LIMIT (Whitman and Bailey 1967).
+ * - "bishop-non-circular": Bishop's simplified method on a non-circular
+ *   critical surface (a custom polyline or the non-circular optimisation).
+ *   Bishop (1955) derived the method for a circle, on which the base
+ *   normal forces pass through the centre. On a polyline the moment
+ *   equation is taken about an axis point and the normal forces have
+ *   moment arms (Fredlund and Krahn 1977); with no interslice shear,
+ *   horizontal force equilibrium is not satisfied, so the factor depends
+ *   on the axis. Spencer (1967) and Morgenstern and Price (1965) satisfy
+ *   both and do not.
  *
  * Only the critical surface is checked. `effectiveNormals` are its base
  * N′ when the caller already has them (solvedEffectiveNormals); otherwise
@@ -66,6 +78,9 @@ export function analysisWarnings(
   }
 
   const crit = slope.search.find((p) => p.fos != null);
+  if (crit && slope.method === "Bishop" && crit.points) {
+    warnings.push({ code: "bishop-non-circular", message: BISHOP_NON_CIRCULAR_MESSAGE });
+  }
   const slices = crit?.slices;
   if (!crit || !slices || slices.length === 0) return warnings;
   const fos = crit.fos!;

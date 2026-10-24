@@ -20,6 +20,7 @@ The first public release.
 - Partial factors on strength and loads, with presets for Swedish practice (EKS/IEG) and EN 1997-1 DA3.
 - Sensitivity analysis, and probabilistic analysis with the Taylor series and Monte Carlo methods.
 - Ito & Matsui pile rows take the effective overburden (γ′ below the water table) instead of the total; a Morgenstern–Price surface where moment and force equilibrium never meet keeps its closest-pair factor but is reported as not converged, with the gap in the sidebar, result panel and PDF summary.
+- Bishop on a non-circular critical surface (a custom polyline or non-circular optimisation) gives a result warning, and the Options window a hint, that its factor of safety depends on the moment axis; Spencer or Morgenstern–Price is recommended there.
 
 ### Model
 

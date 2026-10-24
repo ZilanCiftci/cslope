@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { Slice } from "../types/index";
 import type { SlopeDefinition } from "../types/slope-definition";
+import { VERIFICATION_CASES, runVerification } from "../verification/cases";
 import { buildSlope } from "./build-slope";
 import { polygonizeRegionsDetailed } from "./geometry-ops";
 import { analysisWarnings, M_ALPHA_WARNING_LIMIT } from "./result-warnings";
@@ -123,5 +124,64 @@ describe("analysisWarnings on the critical surface", () => {
     expect(negative).toBeGreaterThan(0);
     const w = analysisWarnings(slope).find((x) => x.code === "negative-effective-normal");
     expect(w?.count).toBe(negative);
+  });
+});
+
+describe("Bishop on a non-circular surface", () => {
+  // V046: Fredlund and Krahn's (1977) composite surface along a weak seam.
+  const v046 = VERIFICATION_CASES.find((c) => c.id === "V046")!.definition;
+  const points = v046.customSurfaces![0].points;
+  // The default axis (defaultAxisPoint), the published circle's centre and
+  // other points above the sliding mass.
+  const axes: ([number, number] | undefined)[] = [undefined, [120, 90], [100, 110], [140, 100], [110, 70], [90, 120]];
+  const withAxis = (axis?: [number, number]) => ({ ...v046, customSurfaces: [{ points, axis }] });
+  const hasWarning = (slope: Slope) => analysisWarnings(slope).some((w) => w.code === "bishop-non-circular");
+
+  it("Morgenstern-Price and Spencer do not depend on the moment axis", () => {
+    // Both satisfy moment and force equilibrium, so the factor is the same
+    // about any point (Fredlund and Krahn 1977). Tight tolerance: the
+    // invariance holds to the solver's convergence.
+    for (const intersliceFunction of ["half-sine", "constant"] as const) {
+      const fos = axes.map((axis) =>
+        runVerification(withAxis(axis), "Morgenstern-Price", { intersliceFunction, tolerance: 1e-5 }).fos!,
+      );
+      expect(Math.max(...fos) - Math.min(...fos)).toBeLessThan(1e-4);
+    }
+  });
+
+  it("Bishop depends on the moment axis and is flagged", () => {
+    // λ = 0 leaves horizontal force equilibrium unsatisfied, so the moment
+    // factor moves with the axis (1.363 to 1.406 here).
+    const runs = axes.map((axis) => runVerification(withAxis(axis), "Bishop"));
+    const fos = runs.map((r) => r.fos!);
+    expect(Math.max(...fos) - Math.min(...fos)).toBeGreaterThan(0.02);
+    for (const { slope } of runs) {
+      const w = analysisWarnings(slope).filter((x) => x.code === "bishop-non-circular");
+      expect(w).toHaveLength(1);
+      expect(w[0].message).toMatch(/depends on the moment axis/);
+    }
+  });
+
+  it("is not flagged for Morgenstern-Price on the polyline", () => {
+    expect(hasWarning(runVerification(withAxis(), "Morgenstern-Price").slope)).toBe(false);
+  });
+
+  it("is not flagged for Bishop on a circle", () => {
+    const circleOnly = { ...v046, customSurfaces: undefined, customPlanesOnly: false };
+    const { slope } = runVerification(circleOnly, "Bishop", { iterations: 200, refinedIterations: 0 });
+    expect(slope.search.find((p) => p.fos != null)?.points).toBeUndefined();
+    expect(hasWarning(slope)).toBe(false);
+  });
+
+  it("is flagged for Bishop after the non-circular optimisation", () => {
+    const circleOnly = { ...v046, customSurfaces: undefined, customPlanesOnly: false };
+    const { slope } = runVerification(circleOnly, "Bishop", {
+      iterations: 200,
+      refinedIterations: 0,
+      nonCircularOptimization: true,
+    });
+    // The optimised surface follows the weak seam.
+    expect(slope.search.find((p) => p.fos != null)?.points).toBeDefined();
+    expect(hasWarning(slope)).toBe(true);
   });
 });
