@@ -2366,15 +2366,16 @@ export const PROBLEMS: RawCase[] = [
     reference: "Sheahan & Ho (2003).",
     surface: "fixed",
     units: "SI",
-    description: "6 m vertical cut in undrained clay (Su = 25 kPa) with two nail rows at 20° (tensile 118 kN, plate 86 kN, bond 15 kN/m, spacing 1.5 m; axial, passive) and the facing weight as a line load; critical plane at 44.5°.",
-    definition: {"materials":[{"name":"Amherst Clay","model":{"kind":"undrained","unitWeight":18.9,"undrainedShearStrength":25}}],"coordinates":[[-6,-2],[-6,0],[0,0],[0,0.0006],[0.001,5.9994],[0.001,6],[11,6],[11,-2]],"materialBoundaries":[],"regionAssignments":[{"point":[5.5005,5.5],"materialName":"Amherst Clay"}],"lineLoads":[{"magnitude":14.6,"x":0.3}],"reinforcements":[{"x1":0.001,"y1":5,"x2":4.60549,"y2":3.3241,"tensileCapacity":118,"spacing":1.5,"end1Capacity":86,"end2Capacity":0,"direction":"axial","application":"passive","pullout":{"kind":"development","length1":7.86667,"length2":7.86667}},{"x1":0.001,"y1":3.5,"x2":4.60549,"y2":1.8241,"tensileCapacity":118,"spacing":1.5,"end1Capacity":86,"end2Capacity":0,"direction":"axial","application":"passive","pullout":{"kind":"development","length1":7.86667,"length2":7.86667}}],"customSurfaces":[{"points":[[-0.3,0.21],[0,0],[6.10564,6],[6.40564,6.21]]}],"customPlanesOnly":true},
+    description: "6.1 m vertical cut in undrained clay (Su = 25 kPa) with two nail rows at 20° (tensile 118 kN, plate 86 kN, bond 15 kN/m, spacing 1.5 m; axial, passive) and the facing weight as a line load; the critical plane printed by a commercial program, from the toe (0, 0) to the crest (6.279, 6.1), 44.2°.",
+    definition: {"materials":[{"name":"Amherst Clay","model":{"kind":"undrained","unitWeight":18.9,"undrainedShearStrength":25}}],"coordinates":[[-6,-2],[-6,0],[0,0],[0,0.0006],[0.001,6.0994],[0.001,6.1],[11,6.1],[11,-2]],"materialBoundaries":[],"regionAssignments":[{"point":[5.5005,5.5],"materialName":"Amherst Clay"}],"lineLoads":[{"magnitude":14.6,"x":0.3}],"reinforcements":[{"x1":0.001,"y1":5,"x2":4.60549,"y2":3.3241,"tensileCapacity":118,"spacing":1.5,"end1Capacity":86,"end2Capacity":0,"direction":"axial","application":"passive","pullout":{"kind":"development","length1":7.86667,"length2":7.86667}},{"x1":0.001,"y1":3.5,"x2":4.60549,"y2":1.8241,"tensileCapacity":118,"spacing":1.5,"end1Capacity":86,"end2Capacity":0,"direction":"axial","application":"passive","pullout":{"kind":"development","length1":7.86667,"length2":7.86667}}],"customSurfaces":[{"points":[[-0.3,0.21],[0,0],[6.279,6.1],[6.579,6.31]]}],"customPlanesOnly":true},
     checks: [
       {"method":"Janbu","label":"Janbu corrected (f0)","published":0.89,"publishedBy":"Commercial program A","options":{"porePressureHead":"vertical","slices":50,"janbuCorrection":true}},
     ],
     paper: [{"value": 0.887, "method": "force-equilibrium trial wedge", "source": "Sheahan & Ho (2003)"}],
     publicNote: "Sheahan & Ho use a force-equilibrium trial wedge; Janbu's method on the same planes differs by up to 4 %.",
     notes: [
-      "Sheahan (trial wedge) 0.887; program D 0.899.",
+      "Sheahan (trial wedge) 0.887; program D 0.899 on the earlier input (6 m wall, plane at 44.5°).",
+      "Wall height 6.1 m and plane from commercial program A's critical surface (Fig. 47.2: left and right slope intercepts (0, 6.100) and (6.279, 6.100)); the figure labels (0, 6) and (11, 6) are rounded, as everywhere in that manual. Before this correction the wall was 6 m high and the plane ran to (6.106, 6): cSlope 0.899 (+1.0 %); now 0.885 (-0.6 %).",
     ],
   },
   {
