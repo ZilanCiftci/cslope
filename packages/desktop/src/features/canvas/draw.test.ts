@@ -1328,6 +1328,15 @@ describe("drawCanvas — result mode", () => {
     expect(denseLines.length).toBe(21);
     expect(denseLines[0].state.globalAlpha).toBeLessThan(0.6);
 
+    // At paper zoom 2 (the model drawn twice as large, 4 px apart) the same lines: thinning goes by the paper.
+    const zoomed = drawResult({
+      result: result({ criticalSlices: dense }),
+      resultViewSettings: rvs({ showSlices: true, paperFrame: { ...DEFAULT_RESULT_VIEW_SETTINGS.paperFrame, zoom: 2 } }),
+      worldToCanvas: (x, y, w, h) => [w / 2 + (x - CX) * 2 * SCALE, h / 2 - (y - CY) * 2 * SCALE],
+    });
+    const zoomedLines = zoomed.strokes().filter((p) => p.state.globalAlpha < 1 && pathPoints(p).length === 2);
+    expect(zoomedLines).toHaveLength(21);
+    expect(zoomedLines[0].state.globalAlpha).toBeCloseTo(denseLines[0].state.globalAlpha, 9);
 
     // Coincident boundaries of neighbouring slices: one line, not two.
     const twin = drawResult({

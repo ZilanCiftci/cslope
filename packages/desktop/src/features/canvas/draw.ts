@@ -1906,10 +1906,11 @@ export function drawCanvas(
         const arcYAtX = (x: number): number | null => surfaceBaseYAt(cs, x);
         // Boundaries closer than 2.5 px as one line (closer read as a
         // thick double line); every other line left out where they lie
-        // closer than 3 px.
+        // closer than 3 px. In px of the paper at zoom 1, as the line
+        // widths scale with the paper zoom: the same lines at every zoom.
         const { xs: xBounds, density } = sliceLines(
           result.criticalSlices,
-          (x) => worldToCanvas(x, 0, w, h)[0],
+          (x) => worldToCanvas(x, 0, w, h)[0] / paperZoom,
         );
         const sliceRegions =
           rvs.showSoilColor !== false

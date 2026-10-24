@@ -194,6 +194,16 @@ describe("colours and density", () => {
     expect(sliceLines(slices, (x) => x * 10, 3, 0.5).xs).toEqual([0, 1, 1.2, 2, 2.9, 3]);
   });
 
+  it("keeps both ends of a mass narrower than the merge distance", () => {
+    // One slice 2 px wide, and two that together are: the near and the far end.
+    expect(sliceBoundaries([{ xLeft: 0, xRight: 0.2 }], (x) => x * 10)).toEqual({ xs: [0, 0.2], spacings: [2] });
+    const two = [
+      { xLeft: 0, xRight: 0.1 },
+      { xLeft: 0.1, xRight: 0.2 },
+    ];
+    expect(sliceBoundaries(two, (x) => x * 10).xs).toEqual([0, 0.2]);
+  });
+
   it("leaves out every other slice line while they lie closer than 3 px", () => {
     const slices = Array.from({ length: 40 }, (_, i) => ({ xLeft: i, xRight: i + 1 }));
     const dense = sliceLines(slices, (x) => x * 2);
