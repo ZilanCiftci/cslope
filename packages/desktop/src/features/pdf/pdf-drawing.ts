@@ -5,6 +5,7 @@ import type { PileRow, ReinforcementRow } from "../../store/types";
 import {
   bondedSpan,
   divideSign,
+  elementNumberBox,
   forceLabelPieces,
   layoutReinforcementForces,
   type ForceLabelContext,
@@ -539,7 +540,8 @@ export function drawReinforcementsPdf(
     pdf.setFontSize(8);
     setSansFont(pdf, "bold");
     pdf.setTextColor(...REINFORCEMENT_RGB);
-    pdf.text(String(i + 1), ax - ux * 2.5, ay - uy * 2.5, { align: "center", baseline: "middle" });
+    const num = elementNumberBox(ax, ay, -ux, -uy, i, 2.8);
+    pdf.text(String(i + 1), num.x, num.y, { align: "center", baseline: "middle" });
   });
 }
 

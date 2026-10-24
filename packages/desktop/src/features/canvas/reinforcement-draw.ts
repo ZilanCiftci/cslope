@@ -44,6 +44,30 @@ export function bondedSpan(r: ReinforcementRow): [number, number] | null {
 }
 
 /**
+ * Where an element's number goes: out from the head (`ox`, `oy`: unit
+ * vector away from the element) on its line, far enough that the number
+ * (text size `size`) clears a vertex dot at the head, as the head often is
+ * a vertex of the model. Centre, its distance from the head, half sizes
+ * and box.
+ */
+export function elementNumberBox(
+  ax: number,
+  ay: number,
+  ox: number,
+  oy: number,
+  index: number,
+  size: number,
+): { x: number; y: number; d: number; hw: number; hh: number; box: Box } {
+  const hw = size * (0.15 * String(index + 1).length + 0.35);
+  const hh = size / 2;
+  // Vertex dot (6 px for 11 px text) and a gap, then half the number.
+  const d = 0.7 * size + Math.abs(ox) * hw + Math.abs(oy) * hh;
+  const x = ax + ox * d;
+  const y = ay + oy * d;
+  return { x, y, d, hw, hh, box: boxAround(x, y, hw, hh) };
+}
+
+/**
  * Draw reinforcement elements: the bar, a plate at the head (end 1), the
  * bonded part as a wider translucent band and, without pullout, anchor
  * blocks at both ends; numbered at the head.
@@ -99,7 +123,8 @@ export function drawReinforcements(
     ctx.font = `bold ${11 * zoom}px sans-serif`;
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
-    ctx.fillText(String(i + 1), ax - ux * 10 * zoom, ay - uy * 10 * zoom);
+    const num = elementNumberBox(ax, ay, -ux, -uy, i, 11 * zoom);
+    ctx.fillText(String(i + 1), num.x, num.y);
   });
   ctx.restore();
 }
@@ -184,10 +209,9 @@ export function forceLabelContext(
     if (!(len > 0)) return null;
     const ox = (ax - bx) / len;
     const oy = (ay - by) / len;
-    const hw = s * (0.15 * String(i + 1).length + 0.35);
-    const hh = s / 2;
-    placed.push(boxAround(ax + ox * 0.9 * s, ay + oy * 0.9 * s, hw, hh));
-    const d = 0.9 * s + Math.abs(ox) * hw + Math.abs(oy) * hh + gap;
+    const num = elementNumberBox(ax, ay, ox, oy, i, s);
+    placed.push(num.box);
+    const d = num.d + Math.abs(ox) * num.hw + Math.abs(oy) * num.hh + gap;
     return { head: [ax, ay], tail: [bx, by], out: [ox, oy], anchor: [ax + ox * d, ay + oy * d] };
   });
   const piles = (opts.piles ?? []).map((p, i): ElementHead | null => {

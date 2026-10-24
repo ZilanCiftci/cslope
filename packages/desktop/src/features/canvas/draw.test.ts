@@ -1219,9 +1219,11 @@ describe("drawCanvas — result mode", () => {
       reinforcementForces: [{ index: 0, x: 12, y: 6, fx: -40, fy: 10, force: 41.2, passive: true }],
     });
     const rec = drawResult({ result: result({ criticalSurface: cs, allSurfaces: [cs] }) });
-    const label = rec.findText("41.2 kN/m ÷ FOS")!;
-    expect(label.state.textAlign).toBe("center");
+    const label = rec.findText(/41\.2 kN\/m$/)!;
+    expect(label.state.textAlign).toBe("left");
     expect(label.x).toBeLessThan(toC(12, 6)[0]);
+    // Passive: "FOS" after a drawn ÷.
+    expect(rec.findText("FOS")!.x).toBeGreaterThan(label.x);
   });
 
   it("puts axis tick labels at round values inside the plot frame, with minor ticks", () => {

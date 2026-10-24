@@ -140,10 +140,12 @@ describe("drawReinforcements", () => {
     const geo = rec.strokes(REINFORCEMENT_COLOR).find((p) => p.state.lineWidth === 3)!;
     expect(geo.state.lineDash).toEqual([12, 6]);
     expect(rec.textStrings()).toEqual(["1", "2"]);
-    // Element 1 points to +x, so its label sits 20 px (10 × zoom) left of the head.
-    expect(rec.findText("1")).toMatchObject({ x: 130, y: 450 });
-    // Element 2 points to -x: label to the right of its head at x = 250.
-    expect(rec.findText("2")).toMatchObject({ x: 270, y: 450 });
+    // Element 1 points to +x, so its number sits left of the head, clear of
+    // a vertex dot there: 0.7 × 22 px plus half its width (11 px).
+    expect(rec.findText("1")!.x).toBeCloseTo(150 - 26.4, 9);
+    expect(rec.findText("1")!.y).toBe(450);
+    // Element 2 points to -x: number to the right of its head at x = 250.
+    expect(rec.findText("2")!.x).toBeCloseTo(250 + 26.4, 9);
     expect(rec.findText("1")!.state.font).toBe("bold 22px sans-serif");
   });
 
@@ -198,9 +200,9 @@ describe("drawReinforcementForces", () => {
     const context = forceLabelContext(toCanvas, { reinforcements: rows, numberSize: 11 });
     drawReinforcementForces(rec.ctx, [force({ index: 0, y: 5 })], toCanvas, 1, { context });
     const [[x, y, w, h]] = plates(rec);
-    // Head at (150, 450), out to the left; beyond its number (centred 9.9 px
-    // out, 5.5 px half width) and a gap: right edge at 131.3.
-    expect(x + w).toBeCloseTo(131.3, 9);
+    // Head at (150, 450), out to the left; beyond its number (centred 13.2 px
+    // out, 5.5 px half width) and a gap: right edge at 128.
+    expect(x + w).toBeCloseTo(128, 9);
     expect(y + h / 2).toBeCloseTo(450, 9);
     expect(leaders(rec)).toHaveLength(0);
     expect(rec.findText("50.0 kN/m")).toBeDefined();
@@ -231,7 +233,7 @@ describe("drawReinforcementForces", () => {
     expect(ls).toHaveLength(5);
     const ends = ls.map(([, end]) => end);
     for (const [ex, ey] of ends) {
-      expect(ex).toBeCloseTo(131.3, 9);
+      expect(ex).toBeCloseTo(128, 9);
       expect(rows.some((r) => Math.abs(toCanvas(0, r.y1)[1] - ey) < 1e-9)).toBe(true);
     }
     const byStart = [...ls].sort((a, b) => a[0][1] - b[0][1]);
@@ -255,7 +257,7 @@ describe("drawReinforcementForces", () => {
     const [[, y, , h]] = plates(rec);
     expect(450 > y && 450 < y + h).toBe(false);
     const [leader] = leaders(rec);
-    expect(pathPoints(leader)[1][0]).toBeCloseTo(131.3, 9);
+    expect(pathPoints(leader)[1][0]).toBeCloseTo(128, 9);
     expect(pathPoints(leader)[1][1]).toBeCloseTo(450, 9);
   });
 
@@ -370,9 +372,9 @@ describe("forceLabelContext", () => {
     expect(ctx.slip).toHaveLength(2);
     // Head plate and number of the element, name of the pile.
     expect(ctx.placed).toHaveLength(3);
-    expect(ctx.placed[1]).toEqual({ left: 136, top: 445, right: 146, bottom: 455 });
+    expect(ctx.placed[1]).toEqual({ left: 133, top: 445, right: 143, bottom: 455 });
     // Element label anchor beyond its number; pile label anchor above its name.
-    expect(ctx.heads!.reinforcements[0]!.anchor).toEqual([133, 450]);
+    expect(ctx.heads!.reinforcements[0]!.anchor).toEqual([130, 450]);
     expect(ctx.heads!.piles[0]!.anchor).toEqual([120, 383]);
   });
 
