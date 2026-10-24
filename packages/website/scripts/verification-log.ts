@@ -30,8 +30,9 @@ const RUN_TIME = join(ROOT, "packages/website/node_modules/.cache/cslope-verific
 /** "87 s (16 workers)" for the last full verification run, or "not recorded". */
 function runTime(): string {
   if (!existsSync(RUN_TIME)) return "not recorded";
-  const r = JSON.parse(readFileSync(RUN_TIME, "utf8")) as { seconds: number; workers: number };
-  return `${Math.round(r.seconds)} s (${r.workers} workers)`;
+  const r = JSON.parse(readFileSync(RUN_TIME, "utf8")) as { seconds: number; workers: number; load?: number };
+  const load = r.load === undefined ? "" : `, load ${r.load.toFixed(1)} at start`;
+  return `${Math.round(r.seconds)} s (${r.workers} workers${load})`;
 }
 
 /** One compared value: cSlope's result and the reference it is compared with. */

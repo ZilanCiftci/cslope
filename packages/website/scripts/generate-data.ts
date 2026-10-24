@@ -20,7 +20,7 @@
  */
 import { spawn } from "node:child_process";
 import { existsSync, mkdtempSync, readFileSync, writeFileSync, mkdirSync } from "node:fs";
-import { availableParallelism, tmpdir } from "node:os";
+import { availableParallelism, loadavg, tmpdir } from "node:os";
 import { join } from "node:path";
 import {
   RELIABILITY_CASES,
@@ -183,6 +183,8 @@ if (import.meta.main) {
     writeFileSync(file, JSON.stringify({ fos: runShard(k, n), reliability: runReliability(k, n) }));
   } else {
     const started = Date.now();
+    // Other work on the machine at the start, so run times stay comparable.
+    const loadAtStart = loadavg()[0];
     let raw: Awaited<ReturnType<typeof runAllShards>>;
     if (process.argv.includes("--cached") && existsSync(CACHE)) {
       raw = JSON.parse(readFileSync(CACHE, "utf8"));
@@ -196,7 +198,7 @@ if (import.meta.main) {
       mkdirSync(join(CACHE, ".."), { recursive: true });
       writeFileSync(CACHE, JSON.stringify(raw));
       const seconds = (Date.now() - started) / 1000;
-      writeFileSync(RUN_TIME, JSON.stringify({ seconds, workers: availableParallelism(), at: new Date().toISOString() }));
+      writeFileSync(RUN_TIME, JSON.stringify({ seconds, workers: availableParallelism(), load: loadAtStart, at: new Date().toISOString() }));
     }
     const { fos, reliability } = raw;
     const json = JSON.stringify(buildData(fos, reliability), null, 1) + "\n";
