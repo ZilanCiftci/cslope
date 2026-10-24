@@ -113,7 +113,10 @@ export interface Slice {
   frictionAngle: number;
   /** Friction angle at base (rad). */
   phi: number;
-  /** Pore water pressure force (kN). */
+  /**
+   * Pore water pressure at the base centre (kPa), not a force: the force on
+   * the base is U · baseLength.
+   */
   U: number;
   /** Weight of free water standing on the slice top (kN). */
   waterLoad?: number;

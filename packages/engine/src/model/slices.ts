@@ -121,8 +121,8 @@ function polygonAreaN(x: Float64Array, y: Float64Array, n: number): number {
 function pointInShiftedPolygon(
   px: number,
   py: number,
-  polyX: Float64Array,
-  polyY: Float64Array,
+  polyX: ArrayLike<number>,
+  polyY: ArrayLike<number>,
   n: number,
   sx: number,
   sy: number,
@@ -227,6 +227,8 @@ export function createSlice(
   // ── Material intersection and weight calculation ─────────────
   // Build the clipping polygon for material intersection
   // geometry_for_area: [(x0, 10000), (x1, 10000), (x1, y1_bottom), (xm, ym_bottom), (x0, y0_bottom)]
+  // The top at y = 10000 is a fixed ceiling: material above it is not
+  // counted, so model elevations must stay below 10000 m.
   const clipPoly: [number, number][] = [
     [x0, 10000],
     [x1, 10000],
@@ -333,6 +335,30 @@ export function createSlice(
     }
   }
 
+  // A base exactly on a layer boundary (a polyline run along it, a circle
+  // grazing it at the slice centre): the point just above the base lies in
+  // the upper material, which a surface 1 mm lower would not see at all.
+  // Soil below soil: the base takes the lower material, so a surface along
+  // a weak layer's top is analysed in the weak layer. Not when the lower
+  // material is bedrock or high-strength: a surface on the rock head runs
+  // in the soil above it, so a circle tangent to the rock stays analysable
+  // instead of being rejected as entering the rock.
+  let liftBelow = false;
+  if (baseInside && baseMaterial !== null) {
+    const above = baseMaterial;
+    const holdsBelow = (g: GeometryWithMaterial) =>
+      (g.xMin === undefined || g.xMax === undefined || (x >= g.xMin && x <= g.xMax)) &&
+      pointInShiftedPolygon(0, -lift, g.px, g.py, g.px.length, x, yBottom);
+    if (!materialGeometries.some((g) => g.material === above && holdsBelow(g))) {
+      const below = materialGeometries.find((g) => g.material !== above && holdsBelow(g))?.material;
+      const kind = below?.model.kind;
+      if (below && kind !== "impenetrable" && kind !== "high-strength") {
+        baseMaterial = below;
+        liftBelow = true;
+      }
+    }
+  }
+
   // Fallback: use first intersected material if base not found
   if (baseMaterial === null) baseMaterial = firstIntersected;
 
@@ -348,7 +374,7 @@ export function createSlice(
   let yLayerTop: number | undefined;
   if (baseInside && needsLayerTop(baseMaterial.model)) {
     yLayerTop =
-      materialLayerTopAt(materialGeometries, baseMaterial, x, yBottom + lift) ??
+      materialLayerTopAt(materialGeometries, baseMaterial, x, yBottom + (liftBelow ? -lift : lift)) ??
       undefined;
   }
 
@@ -433,11 +459,33 @@ function waterAtSlice(
   if (!Number.isFinite(wy1) || !Number.isFinite(wy2) || !Number.isFinite(wyMid)) {
     throw new Error(WATER_LINE_GAP);
   }
-  const h =
-    !verticalHead && wy1 !== wy2
-      ? Math.cos(Math.atan((wy2 - wy1) / (xRight - xLeft))) ** 2
-      : 1;
-  return { yMean: wyMid, h };
+  return { yMean: wyMid, h: headFactor(line, wy1, wy2, xLeft, xRight, verticalHead) };
+}
+
+/**
+ * Factor h on the vertical head over a slice base, u = γw·(yw − yb)·h:
+ * cos²θ with θ the inclination of the water line across the slice (the
+ * equipotentials of seepage parallel to a straight phreatic surface are
+ * normal to it, Duncan & Wright 2014, ch. 6), or 1 with vertical head.
+ * Also 1 where the line has a vertical segment inside the slice: a step in
+ * the line is a wall or a sheet pile between two water levels, not a
+ * seepage gradient, and the secant across it is no flow line. (Water-line
+ * vertices are slice edges, so this is only a safeguard.)
+ */
+export function headFactor(
+  line: { x: number[]; y: number[] },
+  wyLeft: number,
+  wyRight: number,
+  xLeft: number,
+  xRight: number,
+  verticalHead: boolean,
+): number {
+  if (verticalHead || wyLeft === wyRight) return 1;
+  for (let k = 1; k < line.x.length; k++) {
+    const xs = line.x[k];
+    if (xs === line.x[k - 1] && line.y[k] !== line.y[k - 1] && xs > xLeft && xs < xRight) return 1;
+  }
+  return Math.cos(Math.atan((wyRight - wyLeft) / (xRight - xLeft))) ** 2;
 }
 
 const lineYFrom = (line: { x: number[]; y: number[] }, x: number, side: "left" | "right") =>
@@ -541,8 +589,11 @@ export function getSlices(
     for (const fx of slope.fixedSlices) {
       if (fx > x0 && fx < x1) allSlicesSet.add(fx);
     }
-  } else {
-    // Determine geometry-critical points
+  }
+  // Geometry-critical points, also with fixed slices: the fixed
+  // boundaries are added to them, so that a slice still has one material
+  // and a straight water line along its base.
+  {
     const radiusSq = radius ** 2;
     for (const mg of slope.materialGeometries) {
       // Polygon corner points within the sliding mass
@@ -590,6 +641,28 @@ export function getSlices(
       for (const ix of waterIntersections) {
         if (ix > x0 && ix < x1) {
           allSlicesSet.add(ix);
+        }
+      }
+      // The line's own kinks above the slip surface: between slice edges
+      // the line is then straight, so the pore pressure at the slice centre
+      // is the slice's mean, the γsat part and the free water on the ground
+      // are exact, and a vertical step (a wall, a sheet pile) lies on a
+      // slice edge instead of being read as a steep line across a slice.
+      // A vertex on a straight run (or an end continuing horizontally)
+      // changes nothing and is left out.
+      const wx = waterXY.x, wy = waterXY.y, nw = wx.length;
+      for (let k = 0; k < nw; k++) {
+        const vx = wx[k];
+        if (!(vx > x0 && vx < x1) || wy[k] < baseY(vx) - 1e-9) continue;
+        // Neighbours, past repeated points.
+        let p = k - 1;
+        while (p >= 0 && wx[p] === vx && wy[p] === wy[k]) p--;
+        let q = k + 1;
+        while (q < nw && wx[q] === vx && wy[q] === wy[k]) q++;
+        const ax = p >= 0 ? vx - wx[p] : 1, ay = p >= 0 ? wy[k] - wy[p] : 0;
+        const bx = q < nw ? wx[q] - vx : 1, by = q < nw ? wy[q] - wy[k] : 0;
+        if (Math.abs(ax * by - ay * bx) > 1e-12 * Math.hypot(ax, ay) * Math.hypot(bx, by)) {
+          allSlicesSet.add(vx);
         }
       }
     }
@@ -667,11 +740,12 @@ export function getSlices(
   let waterYL: number[] | null = null;
   let waterYR: number[] | null = null;
   let waterYMid: number[] | null = null;
-  if (slope.hasWaterTable && slope.waterRLXY) {
-    const w = slope.waterRLXY;
+  const mainLine = slope.hasWaterTable ? slope.waterRLXY : null;
+  if (mainLine) {
+    const w = mainLine;
     waterYL = slicesX.slice(0, -1).map((x) => lineYFrom(w, x, "right"));
     waterYR = slicesX.slice(1).map((x) => lineYFrom(w, x, "left"));
-    waterYMid = getYAtXMany(slope.waterRLXY.x, slope.waterRLXY.y, sxArray);
+    waterYMid = getYAtXMany(w.x, w.y, sxArray);
   }
 
   // Free water on the ground: the line of the surface material of each
@@ -732,7 +806,7 @@ export function getSlices(
     let waterYMean: number | null = null;
     let waterH: number | null = null;
 
-    if (waterYL && waterYR && waterYMid) {
+    if (mainLine && waterYL && waterYR && waterYMid) {
       const wy1 = waterYL[i];
       const wy2 = waterYR[i];
       const wyMid = waterYMid[i];
@@ -746,10 +820,7 @@ export function getSlices(
         throw new Error(WATER_LINE_GAP);
       }
       waterYMean = wyMid;
-      waterH =
-        !verticalHead && wy1 !== wy2
-          ? Math.cos(Math.atan((wy2 - wy1) / bArray[i])) ** 2
-          : 1;
+      waterH = headFactor(mainLine, wy1, wy2, slicesX[i], slicesX[i + 1], verticalHead);
     }
 
     const s = createSlice(

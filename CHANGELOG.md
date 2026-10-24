@@ -20,6 +20,7 @@ The first public release.
 - Sensitivity analysis, and probabilistic analysis with the Taylor series and Monte Carlo methods.
 - Ito & Matsui pile rows take the effective overburden (γ′ below the water table) instead of the total; a Morgenstern–Price surface where moment and force equilibrium never meet keeps its closest-pair factor but is reported as not converged, with the gap in the sidebar, result panel and PDF summary.
 - Bishop on a non-circular critical surface (a custom polyline or non-circular optimisation) gives a result warning, and the Options window a hint, that its factor of safety depends on the moment axis; Spencer or Morgenstern–Price is recommended there.
+- Slices: the kinks and vertical steps of every water line above the slip surface are slice edges, so the pore pressure, the saturated weight and ponded water are exact per slice and a step (a wall, a sheet pile) gets no cos²θ correction; a slice base exactly on a layer boundary takes the layer below unless it is high-strength or impenetrable; fixed slices are also split at layer and water crossings.
 
 ### Model
 

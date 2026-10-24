@@ -42,7 +42,12 @@ export interface MohrCoulombModel extends MaterialModelBase {
   cohesionRateOfChange?: number;
   /** Undrained cohesion Su (kPa). Used by Combined method. */
   cohesionUndrained?: number;
-  /** Combined-method c-factor. 0 = not combined. */
+  /**
+   * Combined-method c-factor: the drained c′ is `cohesion` × cFactor.
+   * 0 = not combined, so cFactor = 0 cannot give a combined material
+   * with c′ = 0; that takes `cohesion` = 0, any other cFactor and
+   * `cohesionUndrained` set.
+   */
   cFactor?: number;
 }
 
@@ -97,7 +102,11 @@ export interface SpatialMohrCoulombModel extends MaterialModelBase {
   kind: "spatial-mohr-coulomb";
   /** Data points: [x, y, c (kPa), φ (°), γ (kN/m³)]. */
   dataPoints: [number, number, number, number, number][];
-  /** Interpolation method (default: "idw"). */
+  /**
+   * Interpolation method (default: "idw", inverse distance weighting with
+   * power 2). "linear" is inverse distance weighting with power 1, not a
+   * linear (triangulated) interpolation.
+   */
   interpolation?: "nearest" | "linear" | "idw";
 }
 
@@ -107,6 +116,8 @@ export interface SpatialMohrCoulombModel extends MaterialModelBase {
  * Base c and φ are multiplied by a modifier that is a function of the
  * slice base inclination angle α.  The modifier function is supplied
  * as an array of (α_deg, factor) pairs and linearly interpolated.
+ * The factor scales φ in degrees, not tan φ: 0.8 on φ = 30° gives
+ * 24.0°, where 0.8·tan 30° would give 24.8°.
  */
 export interface AnisotropicFunctionModel extends MaterialModelBase {
   kind: "anisotropic-function";
