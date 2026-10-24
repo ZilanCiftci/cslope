@@ -4,8 +4,12 @@ import type { ReinforcementForce } from "@cslope/engine";
 import type { PileRow, ReinforcementRow } from "../../store/types";
 import {
   bondedSpan,
+  divideSign,
+  elementNumberBox,
+  forceLabelPieces,
   layoutReinforcementForces,
   type ForceLabelContext,
+  type ForceSize,
 } from "../canvas/reinforcement-draw";
 import {
   arrowEdges,
@@ -565,7 +569,8 @@ export function drawReinforcementsPdf(
     pdf.setFontSize(8);
     setSansFont(pdf, "bold");
     pdf.setTextColor(...REINFORCEMENT_RGB);
-    pdf.text(String(i + 1), ax - ux * 2.5, ay - uy * 2.5, { align: "center", baseline: "middle" });
+    const num = elementNumberBox(ax, ay, -ux, -uy, i, 2.8);
+    pdf.text(String(i + 1), num.x, num.y, { align: "center", baseline: "middle" });
   });
 }
 
@@ -586,8 +591,8 @@ export function drawPilesPdf(pdf: jsPDF, tf: PdfTransform, rows: readonly PileRo
 
 /**
  * Reinforcement forces on the critical surface, as on the canvas: arrow
- * beside the line it acts along, size on a white plate clear of the
- * elements, the slip line and the other labels (layoutReinforcementForces).
+ * beside the element, size on a white plate at the element's head, with a
+ * leader when it had to move (layoutReinforcementForces).
  */
 export function drawReinforcementForcesPdf(
   pdf: jsPDF,
@@ -595,36 +600,58 @@ export function drawReinforcementForcesPdf(
   forces: readonly ReinforcementForce[],
   context?: ForceLabelContext,
 ) {
-  const HEAD = 1.5;
   pdf.setFontSize(7);
   setSansFont(pdf, "bold");
-  const layout = layoutReinforcementForces(
-    forces,
-    tf.worldToPdf,
-    { arrow: 7, offset: 1, gap: 0.7, pad: 0.5, textH: 7 * MM_PER_PT, measure: (t) => pdf.getTextWidth(t) },
-    context,
-  );
+  const em = 7 * MM_PER_PT;
+  const size: ForceSize = {
+    arrow: 7,
+    head: 1.4,
+    headHalf: 0.6,
+    offset: 1.4,
+    clear: 0.4,
+    gap: 0.75,
+    pad: 0.25,
+    textH: em,
+    measure: (t) => pdf.getTextWidth(t),
+  };
+  const layout = layoutReinforcementForces(forces, tf.worldToPdf, size, context);
   pdf.setDrawColor(...REINFORCEMENT_RGB);
   pdf.setFillColor(...REINFORCEMENT_RGB);
-  pdf.setLineWidth(0.4);
   for (const { from, to, ux, uy } of layout) {
     const [ex, ey] = to;
-    pdf.line(from[0], from[1], ex - ux * HEAD, ey - uy * HEAD);
+    const neckX = ex - ux * size.head;
+    const neckY = ey - uy * size.head;
+    pdf.setLineWidth(0.45);
+    pdf.line(from[0], from[1], neckX, neckY);
     pdf.triangle(
       ex, ey,
-      ex - ux * HEAD - uy * HEAD * 0.6, ey - uy * HEAD + ux * HEAD * 0.6,
-      ex - ux * HEAD + uy * HEAD * 0.6, ey - uy * HEAD - ux * HEAD * 0.6,
+      neckX - uy * size.headHalf, neckY + ux * size.headHalf,
+      neckX + uy * size.headHalf, neckY - ux * size.headHalf,
       "F",
     );
   }
-  pdf.setTextColor(...REINFORCEMENT_RGB);
-  for (const { label, text } of layout) {
-    if (!label) continue;
+  pdf.setLineWidth(0.18);
+  for (const { leader } of layout) {
+    if (leader) pdf.line(leader[0], leader[1], leader[2], leader[3]);
+  }
+  for (const l of layout) {
+    const { label } = l;
     pdf.setFillColor(255, 255, 255);
     setOpacity(pdf, 0.85);
     pdf.rect(label.left, label.top, label.right - label.left, label.bottom - label.top, "F");
     resetOpacity(pdf);
-    pdf.text(text, (label.left + label.right) / 2, (label.top + label.bottom) / 2, { align: "center", baseline: "middle" });
+    pdf.setTextColor(...REINFORCEMENT_RGB);
+    pdf.setFillColor(...REINFORCEMENT_RGB);
+    const cy = (label.top + label.bottom) / 2;
+    const p = forceLabelPieces(l, size.pad, size.measure, em);
+    pdf.text(l.value, p.valueX, cy, { baseline: "middle" });
+    if (p.divideX !== null && p.fosX !== null) {
+      const d = divideSign(p.divideX, cy - 0.04 * em, em);
+      pdf.setLineWidth(d.width);
+      pdf.line(d.bar[0], d.bar[1], d.bar[2], d.bar[3]);
+      for (const [dx, dy] of d.dots) pdf.circle(dx, dy, d.r, "F");
+      pdf.text("FOS", p.fosX, cy, { baseline: "middle" });
+    }
   }
 }
 

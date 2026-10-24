@@ -15,6 +15,7 @@ import { circleEntryExit } from "../../utils/custom-plane";
 import {
   ARROW_HEAD_LEN_PX,
   ARROW_HEAD_PX,
+  ARROW_HEIGHT_PX,
   GRID_STEP_MIN,
   HATCH_SPACING_PX,
   POINT_COLOR,
@@ -77,7 +78,13 @@ import {
   MODEL_HATCH_PATTERNS,
 } from "../rendering/style-spec";
 import { drawCanvasHatch, drawCanvasHatchLabel } from "../rendering/hatch";
-import { drawPiles, drawReinforcementForces, drawReinforcements, forceLabelContext } from "./reinforcement-draw";
+import {
+  drawPiles,
+  drawReinforcementForces,
+  drawReinforcements,
+  forceLabelContext,
+  loadObstacleBoxes,
+} from "./reinforcement-draw";
 import {
   LOAD_LABEL_FONT_PX,
   layoutLoads,
@@ -1767,12 +1774,27 @@ export function drawCanvas(
       // Reinforcement forces on the sliding mass
       if (cs.reinforcementForces?.length) {
         const toC = (x: number, y: number) => worldToCanvas(x, y, w, h);
+        // Labels stay inside the plot frame (the geometry clip).
+        const pf = resultViewSettings.paperFrame;
+        const fr = computePaperFrame(w, h, pf.paperSize, pf.landscape, pf.zoom ?? 1, pf.offsetX ?? 0, pf.offsetY ?? 0);
         drawReinforcementForces(ctx, cs.reinforcementForces, toC, paperZoom, {
           context: forceLabelContext(toC, {
             reinforcements,
             piles,
             surface: surfacePoints(cs),
             numberSize: 11 * paperZoom,
+            model: coordinates,
+            water: piezometricLine.lines.map((l) => l.coordinates),
+            loads: [
+              ...loadObstacleBoxes(toC, coordinates, udls, lineLoads, ARROW_HEIGHT_PX * paperZoom),
+              ...loads.labels.map((l) => l.box),
+            ],
+            bounds: {
+              left: fr.x + fr.w * PLOT_MARGINS.L + 2,
+              top: fr.y + fr.h * PLOT_MARGINS.T + 2,
+              right: fr.x + fr.w * (1 - PLOT_MARGINS.R) - 2,
+              bottom: fr.y + fr.h * (1 - PLOT_MARGINS.B) - 2,
+            },
           }),
           plate: PAPER_FILL_COLOR || BG_COLOR,
         });

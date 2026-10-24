@@ -461,7 +461,7 @@ describe("reinforcement", () => {
     expect(rec.of("text")[0].args.slice(0, 3)).toEqual(["P1", 40, 100 - 1.2]);
   });
 
-  it("draws force arrows beside their line, with their size on a white plate beside them", () => {
+  it("draws force arrows beside their line, with their size on a white plate, as on the canvas", () => {
     const rec = recorder();
     drawReinforcementForcesPdf(rec.pdf, tf, [
       { index: 0, x: 10, y: 6, fx: 0, fy: 0, force: 0, passive: false },
@@ -472,17 +472,22 @@ describe("reinforcement", () => {
     expect(rec.balanced()).toBe(true);
     // Zero and 0.0 kN/m forces are left out.
     expect(rec.of("triangle")).toHaveLength(2);
-    expect(rec.texts()).toEqual(["30.0 kN/m", "150 kN/m ÷ FOS"]);
-    // The leftward arrow runs 1 mm above the crossing at (70, 120).
+    // The passive marker: "FOS" after a drawn ÷ (a bar and two dots).
+    expect(rec.texts()).toEqual(["30.0 kN/m", "150 kN/m", "FOS"]);
+    expect(rec.of("circle")).toHaveLength(2);
+    // The leftward arrow runs 1.4 mm above the crossing at (70, 120).
     const shaft = rec.of("line")[0].args as number[];
     expect(shaft[0]).toBe(70);
-    expect(shaft[1]).toBeCloseTo(119, 9);
-    // Each label is centred in its plate, and no plate covers the crossing.
+    expect(shaft[1]).toBeCloseTo(118.6, 9);
+    // Each text starts inside its plate, and no plate covers the crossing.
     const rects = rec.of("rect").map((c) => c.args as number[]);
     expect(rects).toHaveLength(2);
-    for (const [i, t] of rec.of("text").entries()) {
-      const [x, y, w, h] = rects[i];
-      expect(t.args[1]).toBeCloseTo(x + w / 2, 9);
+    const [t30, t150] = rec.of("text");
+    for (const [t, [x, y, w, h]] of [
+      [t30, rects[0]],
+      [t150, rects[1]],
+    ] as const) {
+      expect(t.args[1]).toBeCloseTo(x + 0.25, 9);
       expect(t.args[2]).toBeCloseTo(y + h / 2, 9);
       expect(70 > x && 70 < x + w && 120 > y && 120 < y + h).toBe(false);
     }

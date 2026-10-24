@@ -35,7 +35,8 @@ import {
   drawUdlLoads,
 } from "./pdf-drawing";
 import type { PdfTransform } from "./pdf-helpers";
-import { forceLabelContext } from "../canvas/reinforcement-draw";
+import { forceLabelContext, loadObstacleBoxes } from "../canvas/reinforcement-draw";
+import { ARROW_HEIGHT_PX } from "../canvas/constants";
 import type { Box } from "../rendering/overlay-layout";
 import { surfacePoints } from "../../utils/arc";
 import { drawSummaryPages, type SummaryHeader } from "./pdf-summary";
@@ -416,7 +417,24 @@ export function exportVectorPdf(data: PdfExportData): void {
         pdf,
         tf,
         cs.reinforcementForces!,
-        forceLabelContext(tf.worldToPdf, { reinforcements, piles, surface: surfacePoints(cs), numberSize: 2.8 }),
+        forceLabelContext(tf.worldToPdf, {
+          reinforcements,
+          piles,
+          surface: surfacePoints(cs),
+          numberSize: 2.8,
+          model: coordinates,
+          water: piezometricLine.lines.map((l) => l.coordinates),
+          loads: [
+            ...loadObstacleBoxes(tf.worldToPdf, coordinates, udls, lineLoads, ARROW_HEIGHT_PX * tf.mmPerPx),
+            ...loadLabels,
+          ],
+          bounds: {
+            left: innerFrame.x + 1,
+            top: innerFrame.y + 1,
+            right: innerFrame.x + innerFrame.w - 1,
+            bottom: innerFrame.y + innerFrame.h - 1,
+          },
+        }),
       );
     }
 

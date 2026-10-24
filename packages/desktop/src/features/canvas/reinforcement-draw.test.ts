@@ -10,7 +10,10 @@ import {
   forceLabelContext,
   forceRoundsToZero,
   formatReinforcementForce,
+  layoutReinforcementForces,
+  loadObstacleBoxes,
 } from "./reinforcement-draw";
+import { segmentDistance } from "../rendering/overlay-layout";
 import { createRecordingContext, pathPoints } from "../../test/recording-context";
 import { newPile, newReinforcement } from "../../utils/reinforcement";
 import type { ReinforcementRow } from "../../store/types";
@@ -137,10 +140,12 @@ describe("drawReinforcements", () => {
     const geo = rec.strokes(REINFORCEMENT_COLOR).find((p) => p.state.lineWidth === 3)!;
     expect(geo.state.lineDash).toEqual([12, 6]);
     expect(rec.textStrings()).toEqual(["1", "2"]);
-    // Element 1 points to +x, so its label sits 20 px (10 × zoom) left of the head.
-    expect(rec.findText("1")).toMatchObject({ x: 130, y: 450 });
-    // Element 2 points to -x: label to the right of its head at x = 250.
-    expect(rec.findText("2")).toMatchObject({ x: 270, y: 450 });
+    // Element 1 points to +x, so its number sits left of the head, clear of
+    // a vertex dot there: 0.7 × 22 px plus half its width (11 px).
+    expect(rec.findText("1")!.x).toBeCloseTo(150 - 26.4, 9);
+    expect(rec.findText("1")!.y).toBe(450);
+    // Element 2 points to -x: number to the right of its head at x = 250.
+    expect(rec.findText("2")!.x).toBeCloseTo(250 + 26.4, 9);
     expect(rec.findText("1")!.state.font).toBe("bold 22px sans-serif");
   });
 
@@ -156,63 +161,65 @@ describe("drawReinforcements", () => {
 describe("drawReinforcementForces", () => {
   const plates = (rec: ReturnType<typeof createRecordingContext>) =>
     rec.callsOf("fillRect").map((c) => c.args as [number, number, number, number]);
+  const leaders = (rec: ReturnType<typeof createRecordingContext>) =>
+    rec.strokes(REINFORCEMENT_COLOR).filter((s) => s.state.lineWidth === 0.75);
 
-  it("draws the arrow along the force, beside the line it acts along", () => {
+  it("draws a short arrow along the force, clear of the line it acts along", () => {
     const rec = createRecordingContext();
     drawReinforcementForces(rec.ctx, [force({ fx: 50, fy: 0, force: 50 })], toCanvas);
     expect(rec.depth()).toBe(0);
     const [shaft] = rec.strokes(REINFORCEMENT_COLOR);
-    const [[px, py], [ex, ey]] = pathPoints(shaft);
-    // Crossing at (200, 450); 28 px to +x, moved 4 px up off the element line.
-    expect([px, py]).toEqual([200, 446]);
-    expect(ex).toBeCloseTo(228, 9);
-    expect(ey).toBeCloseTo(446, 9);
+    const [[px, py], [nx, ny]] = pathPoints(shaft);
+    // Crossing at (200, 450); moved 5.5 px up off the element; 28 px long,
+    // the shaft ending where the head begins.
+    expect([px, py]).toEqual([200, 444.5]);
+    expect(nx).toBeCloseTo(222.5, 9);
+    expect(ny).toBeCloseTo(444.5, 9);
     const head = rec.fills(REINFORCEMENT_COLOR)[0];
-    expect(pathPoints(head)[0]).toEqual([ex, ey]);
+    expect(pathPoints(head)[0][0]).toBeCloseTo(228, 9);
+    // The head stays clear of the element line (y = 450).
+    for (const [, y] of pathPoints(head)) expect(450 - y).toBeGreaterThan(2);
   });
 
-  it("labels the force beside its arrow on a plate of the background colour", () => {
+  it("labels a force without an element beyond the arrow tip, on a plate of the background colour", () => {
     const rec = createRecordingContext();
-    drawReinforcementForces(rec.ctx, [force({ fx: 30, fy: 40, force: 50 })], toCanvas, 1, { plate: "#abcdef" });
+    drawReinforcementForces(rec.ctx, [force({ fx: 50, fy: 0, force: 50 })], toCanvas, 1, { plate: "#abcdef" });
     const label = rec.findText("50.0 kN/m")!;
-    expect(label.state.textAlign).toBe("center");
+    expect(label.state.textAlign).toBe("left");
     const [[x, y, w, h]] = plates(rec);
     expect(rec.callsOf("fillRect")[0].state.fillStyle).toBe("#abcdef");
-    expect(label.x).toBeCloseTo(x + w / 2, 9);
-    // Beside the arrow, not on it: the arrow from (200, 450) along (0.6, -0.8) misses the plate.
-    const arrowHits = [0, 0.25, 0.5, 0.75, 1].some((t) => {
-      const ax = 200 + 0.6 * 28 * t;
-      const ay = 450 - 0.8 * 28 * t;
-      return ax > x && ax < x + w && ay > y && ay < y + h;
-    });
-    expect(arrowHits).toBe(false);
+    expect(x).toBeCloseTo(231, 9); // tip + gap
+    expect(y + h / 2).toBeCloseTo(444.5, 9);
+    expect(label.x).toBeCloseTo(x + 1, 9);
+    expect(w).toBeCloseTo(9 * 6 + 2, 9);
   });
 
-  it("keeps labels off the element line and off each other", () => {
+  it("puts the value at the element's head, outside, on the line through the head", () => {
     const rec = createRecordingContext();
-    // Two parallel horizontal elements 3 m apart, forces along them.
-    const rows = [row({ x1: 5, y1: 5, x2: 15, y2: 5 }), row({ x1: 5, y1: 8, x2: 15, y2: 8 })];
-    const forces = [force({ index: 0, y: 5 }), force({ index: 1, y: 8 })];
+    const rows = [row({ x1: 5, y1: 5, x2: 15, y2: 5 })];
+    const context = forceLabelContext(toCanvas, { reinforcements: rows, numberSize: 11 });
+    drawReinforcementForces(rec.ctx, [force({ index: 0, y: 5 })], toCanvas, 1, { context });
+    const [[x, y, w, h]] = plates(rec);
+    // Head at (150, 450), out to the left; beyond its number (centred 13.2 px
+    // out, 5.5 px half width) and a gap: right edge at 128.
+    expect(x + w).toBeCloseTo(128, 9);
+    expect(y + h / 2).toBeCloseTo(450, 9);
+    expect(leaders(rec)).toHaveLength(0);
+    expect(rec.findText("50.0 kN/m")).toBeDefined();
+  });
+
+  it("never leaves a value out: a crowd becomes a numbered column with a leader to each head", () => {
+    const rec = createRecordingContext();
+    // Five parallel elements 5 px apart, closer than the label height.
+    const rows = [0, 1, 2, 3, 4].map((i) => row({ x1: 5, y1: 5 + i * 0.5, x2: 15, y2: 5 + i * 0.5 }));
+    const forces = rows.map((_, i) => force({ index: i, y: 5 + i * 0.5 }));
     const context = forceLabelContext(toCanvas, { reinforcements: rows, numberSize: 11 });
     drawReinforcementForces(rec.ctx, forces, toCanvas, 1, { context });
+    expect(rec.strokes(REINFORCEMENT_COLOR).filter((s) => s.state.lineWidth === 1.75)).toHaveLength(5);
+    // Every value, each carrying its element number.
+    for (let i = 1; i <= 5; i++) expect(rec.findText(`${i}: 50.0 kN/m`)).toBeDefined();
     const boxes = plates(rec);
-    expect(boxes).toHaveLength(2);
-    for (const [, y, , h] of boxes) {
-      // Neither element line (y = 450 and 420) passes through a label.
-      for (const ly of [450, 420]) expect(ly > y && ly < y + h).toBe(false);
-    }
-    const [a, b] = boxes;
-    expect(a[1] + a[3] <= b[1] || b[1] + b[3] <= a[1] || a[0] + a[2] <= b[0] || b[0] + b[2] <= a[0]).toBe(true);
-  });
-
-  it("leaves a label out rather than stacking it on another", () => {
-    const rec = createRecordingContext();
-    // Five identical forces 0.5 px apart: one label fits next to the bundle.
-    const forces = [0, 1, 2, 3, 4].map((i) => force({ index: i, y: 5 + i * 0.05 }));
-    drawReinforcementForces(rec.ctx, forces, toCanvas);
-    expect(rec.strokes(REINFORCEMENT_COLOR)).toHaveLength(5);
-    expect(rec.texts.length).toBeLessThan(5);
-    const boxes = plates(rec);
+    expect(boxes).toHaveLength(5);
     for (let i = 0; i < boxes.length; i++) {
       for (let j = i + 1; j < boxes.length; j++) {
         const [ax, ay, aw, ah] = boxes[i];
@@ -220,18 +227,86 @@ describe("drawReinforcementForces", () => {
         expect(ax < bx + bw && bx < ax + aw && ay < by + bh && by < ay + ah).toBe(false);
       }
     }
+    // One column, a leader from each label to its own head's anchor, in order (no crossings).
+    expect(new Set(boxes.map(([x, , w]) => (x + w).toFixed(6))).size).toBe(1);
+    const ls = leaders(rec).map((s) => pathPoints(s));
+    expect(ls).toHaveLength(5);
+    const ends = ls.map(([, end]) => end);
+    for (const [ex, ey] of ends) {
+      expect(ex).toBeCloseTo(128, 9);
+      expect(rows.some((r) => Math.abs(toCanvas(0, r.y1)[1] - ey) < 1e-9)).toBe(true);
+    }
+    const byStart = [...ls].sort((a, b) => a[0][1] - b[0][1]);
+    for (let i = 1; i < byStart.length; i++) expect(byStart[i][1][1]).toBeGreaterThan(byStart[i - 1][1][1]);
   });
 
-  it("marks passive forces and scales with the zoom", () => {
+  it("moves a label off a line through its spot, with a leader", () => {
+    const rec = createRecordingContext();
+    const rows = [row({ x1: 5, y1: 5, x2: 15, y2: 5 })];
+    const context = forceLabelContext(toCanvas, {
+      reinforcements: rows,
+      numberSize: 11,
+      water: [
+        [
+          [-5, 5],
+          [4, 5],
+        ],
+      ],
+    });
+    drawReinforcementForces(rec.ctx, [force({ index: 0, y: 5 })], toCanvas, 1, { context });
+    const [[, y, , h]] = plates(rec);
+    expect(450 > y && 450 < y + h).toBe(false);
+    const [leader] = leaders(rec);
+    expect(pathPoints(leader)[1][0]).toBeCloseTo(128, 9);
+    expect(pathPoints(leader)[1][1]).toBeCloseTo(450, 9);
+  });
+
+  it("keeps labels inside the frame", () => {
+    const rec = createRecordingContext();
+    const rows = [row({ x1: 5, y1: 5, x2: 15, y2: 5 })];
+    const bounds = { left: 120, top: 0, right: 1000, bottom: 1000 };
+    const context = forceLabelContext(toCanvas, { reinforcements: rows, numberSize: 11, bounds });
+    drawReinforcementForces(rec.ctx, [force({ index: 0, y: 5 })], toCanvas, 1, { context });
+    const [[x, y, , h]] = plates(rec);
+    expect(x).toBeGreaterThanOrEqual(120);
+    // Moved off the element line it would now cover, with a leader.
+    expect(450 > y && 450 < y + h).toBe(false);
+    expect(leaders(rec)).toHaveLength(1);
+  });
+
+  it("never draws an arrow longer than its element or past its ends", () => {
+    const rec = createRecordingContext();
+    const rows = [row({ x1: 5, y1: 5, x2: 6, y2: 5 })];
+    const context = forceLabelContext(toCanvas, { reinforcements: rows, numberSize: 11 });
+    drawReinforcementForces(rec.ctx, [force({ index: 0, x: 5.5, y: 5 })], toCanvas, 1, { context });
+    const [shaft] = rec.strokes(REINFORCEMENT_COLOR);
+    const head = rec.fills(REINFORCEMENT_COLOR)[0];
+    const xs = [...pathPoints(shaft), pathPoints(head)[0]].map(([x]) => x);
+    expect(Math.min(...xs)).toBeGreaterThanOrEqual(150 - 1e-9);
+    expect(Math.max(...xs)).toBeLessThanOrEqual(160 + 1e-9);
+  });
+
+  it("marks passive forces with a drawn ÷ sign and scales with the zoom", () => {
     const rec = createRecordingContext();
     drawReinforcementForces(rec.ctx, [force({ fx: -120, fy: 0, force: 120, passive: true })], toCanvas, 2);
-    const label = rec.findText("120 kN/m ÷ FOS")!;
-    expect(label.state.font).toBe("bold 20px sans-serif");
-    // Arrow 56 px long (28 × zoom) to the left, moved 8 px (4 × zoom) to the side.
-    const [[px, py], [ex]] = pathPoints(rec.strokes(REINFORCEMENT_COLOR)[0]);
-    expect(Math.abs(py - 450)).toBeCloseTo(8, 9);
+    const value = rec.findText("120 kN/m")!;
+    expect(value.state.font).toBe("bold 20px sans-serif");
+    const fos = rec.findText("FOS")!;
+    expect(fos.x).toBeGreaterThan(value.x);
+    // ÷: a bar between two dots, between the value and "FOS".
+    const dots = rec.fills(REINFORCEMENT_COLOR).filter((p) => p.segments.some((s) => s.op === "arc"));
+    expect(dots).toHaveLength(2);
+    const [[d1x, d1y]] = pathPoints(dots[0]);
+    const [[d2x, d2y]] = pathPoints(dots[1]);
+    expect(d1x).toBeCloseTo(d2x, 9);
+    expect(Math.abs(d1y - d2y)).toBeCloseTo(0.66 * 20, 9);
+    expect(d1x).toBeGreaterThan(value.x);
+    expect(d1x).toBeLessThan(fos.x);
+    // Arrow 56 px long (28 × zoom) to the left, moved 11 px (5.5 × zoom) up.
+    const [[px, py]] = pathPoints(rec.strokes(REINFORCEMENT_COLOR)[0]);
+    expect(py).toBeCloseTo(439, 9);
     expect(px).toBe(200);
-    expect(ex).toBeCloseTo(144, 9);
+    expect(pathPoints(rec.fills(REINFORCEMENT_COLOR)[0])[0][0]).toBeCloseTo(144, 9);
   });
 
   it("skips zero forces and forces that show as 0.0 kN/m", () => {
@@ -246,8 +321,42 @@ describe("drawReinforcementForces", () => {
   });
 });
 
+describe("layoutReinforcementForces", () => {
+  const size = {
+    arrow: 28,
+    head: 5.5,
+    headHalf: 2.5,
+    offset: 5.5,
+    clear: 1.5,
+    gap: 3,
+    pad: 1,
+    textH: 10,
+    measure: (t: string) => t.length * 6,
+  };
+
+  it("keeps an arrow along the slip line off it, on one side", () => {
+    // A tangent force: the arrow would lie on the slip line from (0, 0) to (20, 10).
+    const surface: [number, number][] = [
+      [0, 0],
+      [20, 10],
+    ];
+    const context = forceLabelContext(toCanvas, { surface, numberSize: 11 });
+    const n = Math.hypot(2, 1);
+    const [l] = layoutReinforcementForces([force({ x: 10, y: 5, fx: 2 / n, fy: 1 / n, force: 1 })], toCanvas, size, context);
+    const slip: [number, number, number, number] = [...toCanvas(0, 0), ...toCanvas(20, 10)];
+    expect(segmentDistance([...l.from, ...l.to], slip)).toBeGreaterThan(size.headHalf + size.clear - 1e-9);
+  });
+
+  it("keeps an arrow clear of other arrows", () => {
+    // Two forces at the same spot: the second goes to the other side or is moved.
+    const forces = [force({ index: 0 }), force({ index: 1 })];
+    const [a, b] = layoutReinforcementForces(forces, toCanvas, size);
+    expect(segmentDistance([...a.from, ...a.to], [...b.from, ...b.to])).toBeGreaterThan(2 * size.headHalf);
+  });
+});
+
 describe("forceLabelContext", () => {
-  it("collects element and pile lines, the slip surface, and boxes for numbers and pile names", () => {
+  it("collects element and pile lines, the slip surface, boxes for numbers and pile names, and head anchors", () => {
     const ctx = forceLabelContext(toCanvas, {
       reinforcements: [row({})],
       piles: [{ ...newPile("p", "pile", COORDS), x1: 2, y1: 10, x2: 2, y2: 0 }],
@@ -260,9 +369,42 @@ describe("forceLabelContext", () => {
     });
     expect(ctx.obstacles).toHaveLength(4);
     expect(ctx.obstacles[0]).toEqual([150, 450, 250, 450]);
+    expect(ctx.slip).toHaveLength(2);
     // Head plate and number of the element, name of the pile.
     expect(ctx.placed).toHaveLength(3);
-    expect(ctx.placed[1]).toEqual({ left: 135, top: 445, right: 145, bottom: 455 });
+    expect(ctx.placed[1]).toEqual({ left: 133, top: 445, right: 143, bottom: 455 });
+    // Element label anchor beyond its number; pile label anchor above its name.
+    expect(ctx.heads!.reinforcements[0]!.anchor).toEqual([130, 450]);
+    expect(ctx.heads!.piles[0]!.anchor).toEqual([120, 383]);
+  });
+
+  it("adds the model boundary and water lines as lines to keep clear of, loads as boxes", () => {
+    const load = { left: 0, top: 0, right: 10, bottom: 10 };
+    const ctx = forceLabelContext(toCanvas, {
+      numberSize: 10,
+      model: COORDS,
+      water: [
+        [
+          [0, 5],
+          [10, 5],
+        ],
+      ],
+      loads: [load],
+    });
+    expect(ctx.extra).toHaveLength(COORDS.length + 1);
+    expect(ctx.placed).toEqual([load]);
+    expect(ctx.area).toHaveLength(COORDS.length);
+  });
+});
+
+describe("loadObstacleBoxes", () => {
+  it("covers each ground segment under a UDL and a line load arrow", () => {
+    const boxes = loadObstacleBoxes(toCanvas, COORDS, [{ x1: 5, x2: 15 }], [{ x: 2 }], 38);
+    // UDL over the crest (10, 10) and down the slope: two segments.
+    expect(boxes).toHaveLength(3);
+    expect(boxes[0]).toEqual({ left: 150, top: 400 - 38, right: 200, bottom: 400 });
+    expect(boxes[2].bottom).toBe(400);
+    expect(boxes[2].top).toBe(400 - 38);
   });
 });
 
