@@ -238,7 +238,7 @@ export function buildSlope(def: SlopeDefinition): Slope {
     }
   }
 
-  // Custom-planes-only mode: skip random search generation
+  // Custom-planes-only mode: no search surfaces are generated
   if (def.customPlanesOnly) {
     slope.customPlanesOnly = true;
   }

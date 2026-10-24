@@ -1569,7 +1569,7 @@ export const PROBLEMS: RawCase[] = [
     ],
     notes: [
       "Geometry as Fig. 6 (H = 50 ft, cu1/γH = 0.25, the layer 0.2H thick). The wedge runs along the middle of the layer; the paper shows its mechanism but gives no coordinates. Its factor of safety is read from Fig. 7 (\"Slope program—wedges\", Janbu's method) as 0.485; the paper does not say whether Janbu's correction factor f0 is applied: without it cSlope gives 0.458. FE 0.60.",
-      "Spencer on the wedge 0.515; program D's non-circular search from this wedge reaches 0.462. cSlope's circular-seeded optimisation does not find the wedge (0.72); a circular search gives 1.24 (the paper: ≈1.3).",
+      "Spencer on the wedge 0.515; program D's non-circular search from this wedge reaches 0.462. cSlope's search with non-circular optimisation, whose block seeds run along the weak layer, finds surfaces below the paper's wedge: Janbu corrected 0.455 (0.499 on the wedge), Spencer 0.453. A circular search gives 1.24 (the paper: ≈1.3).",
     ],
   },
   {

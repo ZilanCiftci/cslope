@@ -133,6 +133,6 @@ export interface SlopeDefinition {
    * (the circle centre an optimised surface was derived from).
    */
   customSurfaces?: Array<{ points: [number, number][]; axis?: [number, number] }>;
-  /** When true, only analyse custom search planes (skip random search). */
+  /** When true, only the custom surfaces are analysed (no search). */
   customPlanesOnly?: boolean;
 }
