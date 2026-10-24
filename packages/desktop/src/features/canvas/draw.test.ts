@@ -16,6 +16,7 @@ import {
   ENTRY_DOT_COLOR,
   EXIT_DOT_COLOR,
   LINE_LOAD_COLOR,
+  MARKER_COLOR,
   PIEZO_COLOR,
   POND_COLOR,
   POND_OPACITY,
@@ -1006,6 +1007,37 @@ describe("drawCanvas — result mode", () => {
     expect(draw({ analysisLimits: limits, customPlanesOnly: true }).fills(EXIT_DOT_COLOR.hex).length).toBeGreaterThan(0);
   });
 
+  it("keeps the search markers off the result: triangles above the ground, shared limits once, no dots on the mass", () => {
+    const limits = { enabled: true, entryLeftX: 2, entryRightX: 8, exitLeftX: 21, exitRightX: 28 };
+    const triangles = (rec: ReturnType<typeof draw>) =>
+      rec.fills().filter((p) => pathPoints(p).length === 3 && p.state.fillStyle === MARKER_COLOR.hex);
+    const rec = drawResult({ analysisLimits: limits });
+    const tris = triangles(rec);
+    expect(tris).toHaveLength(4);
+    for (const t of tris) {
+      for (const [px, py] of pathPoints(t)) {
+        const [wx] = canvasToWorld(px, py, W, H);
+        const gy = toC(wx, surfaceYAtXFromCoordinates(COORDS, wx)!)[1];
+        expect(py).toBeLessThan(gy); // above the ground
+      }
+    }
+    // No dots over the sliding mass (entry ≈ 4.3 to exit 22).
+    const dots = rec.fills().filter((p) => p.segments[0].op === "arc" && (p.state.fillStyle === ENTRY_DOT_COLOR.hex || p.state.fillStyle === EXIT_DOT_COLOR.hex));
+    expect(dots.length).toBeGreaterThan(0);
+    for (const d of dots) {
+      const [wx] = canvasToWorld(pathPoints(d)[0][0], pathPoints(d)[0][1], W, H);
+      expect(wx < ENTRY_X || wx > 22).toBe(true);
+    }
+    // In the edit view they stand on the ground.
+    const edit = triangles(draw({ analysisLimits: limits }));
+    expect(edit.some((t) => pathPoints(t).some(([, py]) => py > toC(0, 10)[1]))).toBe(true);
+
+    // Coinciding ranges: each limit once over a result (two triangles, not four).
+    const same = { enabled: true, entryLeftX: 2, entryRightX: 28, exitLeftX: 2, exitRightX: 28 };
+    expect(triangles(drawResult({ analysisLimits: same }))).toHaveLength(2);
+    expect(triangles(draw({ analysisLimits: same }))).toHaveLength(4);
+  });
+
   it("fills the mass behind a vertical wall face without spilling into the air", () => {
     const stepped: [number, number][] = [
       [0, 0],
@@ -1030,8 +1062,9 @@ describe("drawCanvas — result mode", () => {
   });
 
   it("draws a tension crack face as part of the critical surface, with the water in it", () => {
-    // Entry 3 m below the ground at x = 6 (a crack).
-    const cs = surface({ points: [[6, 7], [12, 4], [22, 5]], entryPoint: [6, 7], exitPoint: [22, 5] });
+    // The analysis reports a crack at x = 6 from the ground (10) down to 7.
+    const crack = { x: 6, top: 10, bottom: 7 };
+    const cs = surface({ points: [[6, 7], [12, 4], [22, 5]], entryPoint: [6, 7], exitPoint: [22, 5], crack });
     const rec = drawResult({
       result: result({ criticalSurface: cs, allSurfaces: [cs] }),
       options: { ...DEFAULT_ANALYSIS_OPTIONS, tensionCrackDepth: 3, tensionCrackWater: 0.5 },
@@ -1039,23 +1072,44 @@ describe("drawCanvas — result mode", () => {
     const line = rec.strokes().find((p) => p.state.lineWidth === 2 && pathPoints(p).length === 4)!;
     expect(pathPoints(line)[0]).toEqual(toC(6, 10));
     expect(pathPoints(line)[1]).toEqual(toC(6, 7));
-    // Water from the crack bottom up to half the crack depth, on the side away from the mass.
+    // Water from the crack bottom up to half the crack depth, in the crack:
+    // against the face on the side of the sliding mass.
     const water = rec.fills(POND_COLOR.hex).find((p) => p.segments[0].op === "rect")!;
     const seg = water.segments[0] as { x: number; y: number; w: number; h: number };
-    expect(seg.x + seg.w).toBeCloseTo(toC(6, 0)[0], 9);
+    expect(seg.x).toBeCloseTo(toC(6, 0)[0], 9);
+    expect(seg.w).toBeGreaterThan(0);
     expect(seg.y).toBeCloseTo(toC(0, 8.5)[1], 9);
     expect(seg.y + seg.h).toBeCloseTo(toC(0, 7)[1], 9);
 
     const dry = drawResult({ result: result({ criticalSurface: cs, allSurfaces: [cs] }) });
     expect(dry.fills(POND_COLOR.hex)).toHaveLength(0);
+
+    // An entry below the ground without a reported crack (a result saved
+    // before cracks were reported, an entry on a face) draws no crack.
+    const { crack: _omit, ...plain } = cs;
+    void _omit;
+    const none = drawResult({
+      result: result({ criticalSurface: plain, allSurfaces: [plain] }),
+      options: { ...DEFAULT_ANALYSIS_OPTIONS, tensionCrackDepth: 3, tensionCrackWater: 0.5 },
+    });
+    expect(none.strokes().some((p) => p.state.lineWidth === 2 && close(pathPoints(p)[0], toC(6, 10)))).toBe(false);
+    expect(none.fills(POND_COLOR.hex).filter((p) => p.segments[0].op === "rect")).toHaveLength(0);
   });
 
   it("gives a very shallow sliding mass a band of minimum width", () => {
     const slab = surface({ points: [[10, 10], [15, 7.49], [20, 5]], entryPoint: [10, 10], exitPoint: [20, 5] });
     const rec = drawResult({ result: result({ criticalSurface: slab, allSurfaces: [slab] }) });
-    expect(rec.strokes().some((p) => p.state.lineWidth === 5 && p.state.globalAlpha < 1)).toBe(true);
+    // The ground over the mass stroked twice as wide and clipped to the
+    // soil: a band under the ground only, none of it in the air.
+    const band = rec.strokes().find((p) => p.state.lineWidth === 10 && p.state.globalAlpha < 1)!;
+    expect(band).toBeDefined();
+    expect(pathPoints(band)[0]).toEqual(toC(10, 10));
+    expect(pathPoints(band)[pathPoints(band).length - 1]).toEqual(toC(20, 5));
+    const clipIndex = rec.paths.findIndex((p) => p.kind === "clip" && hasPoints(p, COORDS.map(([x, y]) => toC(x, y))));
+    expect(clipIndex).toBeGreaterThanOrEqual(0);
+    expect(rec.paths.indexOf(band)).toBeGreaterThan(clipIndex);
     // Not for a mass of normal depth.
-    expect(drawResult().strokes().some((p) => p.state.lineWidth === 5)).toBe(false);
+    expect(drawResult().strokes().some((p) => p.state.lineWidth === 10)).toBe(false);
   });
 
   it("draws slice lines white over a dark material and thins dense slices", () => {
@@ -1069,12 +1123,19 @@ describe("drawCanvas — result mode", () => {
     expect(sliceLines.length).toBe(3);
     for (const p of sliceLines) expect(p.state.strokeStyle).toBe("#ffffff");
 
-    // 0.1 m slices are 2 px apart on screen: thinner and fainter.
+    // 0.1 m slices are 2 px apart on screen: every other line, fainter.
     const dense = Array.from({ length: 40 }, (_, i) => slice(8 + i * 0.1, 8.1 + i * 0.1));
     const thin = drawResult({ result: result({ criticalSlices: dense }), resultViewSettings: rvs({ showSlices: true }) });
     const denseLines = thin.strokes().filter((p) => p.state.globalAlpha < 1 && pathPoints(p).length === 2);
-    expect(denseLines.length).toBeGreaterThan(30);
-    expect(denseLines[0].state.globalAlpha).toBeLessThan(0.6 * 0.5);
+    expect(denseLines.length).toBe(21);
+    expect(denseLines[0].state.globalAlpha).toBeLessThan(0.6);
+
+    // Coincident boundaries of neighbouring slices: one line, not two.
+    const twin = drawResult({
+      result: result({ criticalSlices: [slice(8, 12), slice(12 + 1e-7, 16)] }),
+      resultViewSettings: rvs({ showSlices: true }),
+    });
+    expect(twin.strokes().filter((p) => p.state.globalAlpha < 1 && pathPoints(p).length === 2)).toHaveLength(3);
   });
 
   it("draws other surfaces by FOS colour, filters them, and never redraws the critical one", () => {

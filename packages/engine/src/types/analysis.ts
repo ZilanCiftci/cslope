@@ -185,6 +185,13 @@ export interface SlipSurfaceResult {
   points?: [number, number][];
   /** Reinforcement forces on the sliding mass (critical surface only). */
   reinforcementForces?: ReinforcementForce[];
+  /**
+   * The tension crack the analysis cut the surface off at (critical
+   * surface only): its x, the ground level there (`top`) and the crack
+   * bottom on the surface (`bottom`, = entryPoint's y). Absent without a
+   * crack.
+   */
+  crack?: { x: number; top: number; bottom: number };
 }
 
 /** Slice data for detailed output. */

@@ -52,7 +52,6 @@ import {
   CRITICAL_SURFACE_COLOR,
   ENTRY_DOT_COLOR,
   ENTRY_EXIT_DOT_RADIUS_PX,
-  ENTRY_EXIT_DOT_SPACING_PX,
   EXIT_DOT_COLOR,
   FAILURE_MASS_COLOR,
   FAILURE_MASS_FILL_OPACITY,
@@ -87,15 +86,16 @@ import {
   piezoSymbolBox,
   type LoadArrow,
 } from "./overlay-geometry";
+import type { PiezoSymbol } from "../rendering/piezo-layout";
+import { layoutLimitMarkers, layoutRangeDots } from "../rendering/search-markers";
 import { freeWaterPolygons, mainPiezoLine, piezoExtensions } from "../../utils/piezo";
 import {
   groundBetween,
   isDarkFill,
   meanThickness,
-  sameRange,
   searchRange,
-  sliceBoundaries,
-  sliceDensityFactor,
+  groundProfile,
+  sliceLines,
   slipMassPolygon,
   splitVerticalByRegion,
   tensionCrackFace,
@@ -199,7 +199,10 @@ export function editOverlayBoxes(
     | "piles"
     | "worldToCanvas"
     | "surfaceYAtX"
-  >,
+  > & {
+    /** The water-table symbols as drawn (else laid out without the scene around them). */
+    piezoSymbols?: PiezoSymbol[][];
+  },
 ): Box[] {
   const { w, h, coordinates, surfaceYAtX } = p;
   const toC = (x: number, y: number) => p.worldToCanvas(x, y, w, h);
@@ -251,7 +254,7 @@ export function editOverlayBoxes(
   for (const a of [...loads.udlGroups.flatMap((g) => g.arrows), ...loads.lineLoads]) boxes.push(...loadArrowBoxes(a));
   for (const l of loads.labels) boxes.push(l.box);
   const numbered = p.piezometricLine.lines.length > 1;
-  for (const line of layoutPiezoSymbols(view, p.piezometricLine, p.reinforcements, p.piles)) {
+  for (const line of p.piezoSymbols ?? layoutPiezoSymbols(view, p.piezometricLine, p.reinforcements, p.piles)) {
     for (const sym of line) boxes.push(piezoSymbolBox(sym, 1, numbered));
   }
   // Reinforcement numbers beyond the head, pile labels above the head.
@@ -747,7 +750,9 @@ export function drawCanvas(
       if (mode === "result") {
         ctx.strokeStyle = POLY_STROKE;
         ctx.lineWidth = 0.6 * paperZoom;
+        ctx.lineJoin = "round"; // no mitre spikes at sharp corners
         ctx.stroke();
+        ctx.lineJoin = "miter";
       }
 
       // ── Hatch pattern overlay for special model kinds ──
@@ -860,7 +865,10 @@ export function drawCanvas(
     ctx.closePath();
     ctx.strokeStyle = POLY_STROKE;
     ctx.lineWidth = 1 * paperZoom;
+    // Round joins: a mitre at a sharp toe sticks out far past the corner.
+    ctx.lineJoin = "round";
     ctx.stroke();
+    ctx.lineJoin = "miter";
   }
 
   // ── Material boundary lines ─────────────────────────────
@@ -1037,6 +1045,36 @@ export function drawCanvas(
   }
 
   // ── Piezometric lines ──────────────────────────────────
+  // Water-table symbols, clear of what is drawn around them (computed
+  // once: the edit-view labels keep clear of them too).
+  const searchShown = analysisLimits.enabled && !(mode === "result" && customPlanesOnly);
+  const piezoSymbols =
+    piezometricLine.lines.length > 0
+      ? layoutPiezoSymbols(
+          { w, h, coordinates, worldToCanvas, surfaceYAtX },
+          piezometricLine,
+          reinforcements,
+          piles,
+          paperZoom,
+          mode === "result" ? (result?.criticalSurface ?? null) : null,
+          {
+            materialBoundaries,
+            udls,
+            lineLoads,
+            analysisLimits: searchShown ? analysisLimits : null,
+            prescribed: mode !== "result" ? customSearchPlanes : undefined,
+            crackDepth: mode !== "result" && !options?.tensionCrackAuto ? (options?.tensionCrackDepth ?? 0) : 0,
+            vertices:
+              mode !== "result"
+                ? [
+                    ...coordinates,
+                    ...materialBoundaries.flatMap((b) => b.coordinates),
+                    ...piezometricLine.lines.flatMap((l) => l.coordinates),
+                  ]
+                : undefined,
+          },
+        )
+      : [];
   if (piezometricLine.lines.length > 0) {
     const multiLine = piezometricLine.lines.length > 1;
     const piezoBlue = PIEZO_COLOR.hex;
@@ -1059,14 +1097,6 @@ export function drawCanvas(
       }
       ctx.globalAlpha = 1;
     }
-    const piezoSymbols = layoutPiezoSymbols(
-      { w, h, coordinates, worldToCanvas, surfaceYAtX },
-      piezometricLine,
-      reinforcements,
-      piles,
-      paperZoom,
-      mode === "result" ? (result?.criticalSurface ?? null) : null,
-    );
     for (let lineIdx = 0; lineIdx < piezometricLine.lines.length; lineIdx++) {
       const line = piezometricLine.lines[lineIdx];
       if (line.coordinates.length < 2) continue;
@@ -1102,7 +1132,7 @@ export function drawCanvas(
 
       // Water-table symbols: an inverted triangle with its tip on the line
       // and two bars below, spaced along the line on its flat parts, clear
-      // of the critical surface and of each other (see layoutPiezoSymbols).
+      // of what is drawn around them (see piezoSymbolLayout).
       const triHalf = PIEZO_TRI_HALF_PX * paperZoom;
       const triH = PIEZO_TRI_H_PX * paperZoom;
       const barW = PIEZO_BAR_W_PX * paperZoom;
@@ -1329,132 +1359,54 @@ export function drawCanvas(
     coordinates.length >= 3 &&
     !(mode === "result" && customPlanesOnly)
   ) {
-    type LimitHandle = "entryLeftX" | "entryRightX" | "exitLeftX" | "exitRightX";
     const markerAlpha = mode === "result" ? 0.55 : 1;
+    const toC = (x: number, y: number) => worldToCanvas(x, y, w, h);
+    const cs = mode === "result" ? (result?.criticalSurface ?? null) : null;
+
+    // Dots along the ground over each range (alternating colours where the
+    // entry and exit ranges coincide), none over the sliding mass.
+    const dotRadius = ENTRY_EXIT_DOT_RADIUS_PX * paperZoom * (mode === "result" ? 0.8 : 1);
+    ctx.save();
+    ctx.globalAlpha = markerAlpha;
+    for (const d of layoutRangeDots(analysisLimits, coordinates, toC, paperZoom, {
+      skip: cs ? [cs.entryPoint[0], cs.exitPoint[0]] : null,
+      radius: dotRadius,
+    })) {
+      ctx.fillStyle = d.range === "entry" ? ENTRY_DOT_COLOR.hex : EXIT_DOT_COLOR.hex;
+      ctx.beginPath();
+      ctx.arc(d.x, d.y, dotRadius, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.restore();
 
     // Bar on the surface with a triangle outside the range pointing into
-    // it, towards `towardCanvasX` (the range's other end on screen):
-    // >|  at the start of a range, |<  at its end, in any orientation.
-    // Only the bar for a range of zero width (towardCanvasX null).
-    const drawArrow = (
-      worldX: number,
-      worldY: number,
-      towardCanvasX: number | null,
-      handles: LimitHandle[],
-      activeColor: string,
-    ) => {
-      const [cx, cy] = worldToCanvas(worldX, worldY, w, h);
-      const isHover =
-        hoverHit?.kind === "limit" && handles.includes(hoverHit.handle);
-      const sz = MARKER_SZ_PX * paperZoom;
-      const barH = MARKER_BAR_H_PX * paperZoom;
-
-      const color = isHover ? activeColor : MARKER_BASE;
+    // it: >|  at the start of a range, |<  at its end, in any orientation;
+    // only the bar for a range of zero width. Over a result the triangle
+    // is lifted clear of the ground and a shared limit is drawn once.
+    for (const m of layoutLimitMarkers(analysisLimits, coordinates, toC, paperZoom, { lifted: mode === "result" })) {
+      const isHover = hoverHit?.kind === "limit" && m.handles.includes(hoverHit.handle);
+      const hoverColor =
+        isHover && hoverHit?.kind === "limit" && hoverHit.handle.startsWith("exit") ? EXIT_DOT_COLOR.hex : ENTRY_DOT_COLOR.hex;
+      const color = isHover ? hoverColor : MARKER_BASE;
       ctx.save();
       ctx.globalAlpha = markerAlpha;
       ctx.strokeStyle = color;
       ctx.fillStyle = color;
       ctx.lineWidth = (isHover ? 2.5 : 2) * paperZoom;
-
-      // Vertical bar |
       ctx.beginPath();
-      ctx.moveTo(cx, cy - barH);
-      ctx.lineTo(cx, cy + barH);
+      ctx.moveTo(m.cx, m.barTop);
+      ctx.lineTo(m.cx, m.barBottom);
       ctx.stroke();
-
-      if (towardCanvasX !== null) {
-        const inward = towardCanvasX >= cx ? 1 : -1;
-        const baseX = cx - inward * sz * 2;
+      for (const [tip, b1, b2] of m.triangles) {
         ctx.beginPath();
-        ctx.moveTo(cx, cy); // tip at the bar
-        ctx.lineTo(baseX, cy - sz);
-        ctx.lineTo(baseX, cy + sz);
+        ctx.moveTo(tip[0], tip[1]);
+        ctx.lineTo(b1[0], b1[1]);
+        ctx.lineTo(b2[0], b2[1]);
         ctx.closePath();
         ctx.fill();
       }
       ctx.restore();
-    };
-
-    // Dots along the ground between the range's ends, in turn in each of
-    // `colors` (two colours when the entry and exit ranges coincide).
-    const drawDottedRange = (surfPts: [number, number][], colors: string[]) => {
-      if (surfPts.length < 2) return;
-      const canvasPts = surfPts.map(([sx, sy]) => worldToCanvas(sx, sy, w, h));
-      const spacing = ENTRY_EXIT_DOT_SPACING_PX * paperZoom;
-      const radius =
-        ENTRY_EXIT_DOT_RADIUS_PX * paperZoom * (mode === "result" ? 0.8 : 1);
-
-      ctx.save();
-      ctx.globalAlpha = markerAlpha;
-      let k = 0;
-      const placeDot = (x: number, y: number) => {
-        ctx.fillStyle = colors[k++ % colors.length];
-        ctx.beginPath();
-        ctx.arc(x, y, radius, 0, Math.PI * 2);
-        ctx.fill();
-      };
-
-      let carry = 0; // leftover distance from prior segment
-      for (let i = 0; i < canvasPts.length - 1; i++) {
-        const [x1, y1] = canvasPts[i];
-        const [x2, y2] = canvasPts[i + 1];
-        const dx = x2 - x1;
-        const dy = y2 - y1;
-        const segLen = Math.hypot(dx, dy);
-        if (segLen === 0) continue;
-
-        let t = spacing - carry;
-        // Start placing dots only after skipping spacing, preventing overlap with end markings
-        while (t < segLen - 0.1) {
-          const frac = t / segLen;
-          placeDot(x1 + dx * frac, y1 + dy * frac);
-          t += spacing;
-        }
-        carry = (carry + segLen) % spacing;
-      }
-      ctx.restore();
-    };
-
-    const entry = searchRange(analysisLimits.entryLeftX, analysisLimits.entryRightX);
-    const exit = searchRange(analysisLimits.exitLeftX, analysisLimits.exitRightX);
-    const coincide = sameRange(entry, exit);
-
-    const drawRange = (
-      a: LimitHandle,
-      b: LimitHandle,
-      activeColor: string,
-      dotColors: string[] | null,
-    ) => {
-      const xa = analysisLimits[a];
-      const xb = analysisLimits[b];
-      const ya = surfaceYAtX(xa);
-      const yb = surfaceYAtX(xb);
-      const range = searchRange(xa, xb);
-      if (range.point) {
-        if (ya !== null) drawArrow(xa, ya, null, [a, b], activeColor);
-        return;
-      }
-      if (dotColors && ya !== null && yb !== null) {
-        drawDottedRange(groundBetween(coordinates, range.lo, range.hi), dotColors);
-      }
-      const [loCanvasX] = worldToCanvas(range.lo, 0, w, h);
-      const [hiCanvasX] = worldToCanvas(range.hi, 0, w, h);
-      if (ya !== null) drawArrow(xa, ya, xa <= xb ? hiCanvasX : loCanvasX, [a], activeColor);
-      if (yb !== null) drawArrow(xb, yb, xb < xa ? hiCanvasX : loCanvasX, [b], activeColor);
-    };
-
-    drawRange(
-      "entryLeftX",
-      "entryRightX",
-      ENTRY_DOT_COLOR.hex,
-      coincide ? [ENTRY_DOT_COLOR.hex, EXIT_DOT_COLOR.hex] : [ENTRY_DOT_COLOR.hex],
-    );
-    drawRange(
-      "exitLeftX",
-      "exitRightX",
-      EXIT_DOT_COLOR.hex,
-      coincide ? null : [EXIT_DOT_COLOR.hex],
-    );
+    }
   }
 
   if (pointLabels.length > 0) {
@@ -1472,6 +1424,7 @@ export function drawCanvas(
       piles,
       worldToCanvas,
       surfaceYAtX,
+      piezoSymbols,
     })) layout.reserve(b);
     drawPointLabels(ctx, pointLabels, layout, labelColors);
   }
@@ -1543,12 +1496,28 @@ export function drawCanvas(
       ctx.closePath();
       ctx.fill();
       // A very thin mass (a shallow slab) gets a band of minimum width
-      // along it, so it doesn't disappear into the ground line.
-      if (meanThickness(massPx) < MIN_SLIP_MASS_PX * paperZoom) {
+      // under the ground along it, so it doesn't disappear into the ground
+      // line: the ground from the entry to the exit stroked twice as wide
+      // and clipped to the soil, so none of it spills into the air.
+      if (meanThickness(massPx) < MIN_SLIP_MASS_PX * paperZoom && coordinates.length >= 3) {
+        ctx.beginPath();
+        coordinates.forEach(([bx, by], i) => {
+          const [px, py] = worldToCanvas(bx, by, w, h);
+          if (i === 0) ctx.moveTo(px, py);
+          else ctx.lineTo(px, py);
+        });
+        ctx.closePath();
+        ctx.clip();
         ctx.globalAlpha = MIN_SLIP_MASS_BAND_OPACITY;
         ctx.strokeStyle = FAILURE_MASS_COLOR.hex;
-        ctx.lineWidth = MIN_SLIP_MASS_PX * paperZoom;
+        ctx.lineWidth = 2 * MIN_SLIP_MASS_PX * paperZoom;
         ctx.lineJoin = "round";
+        ctx.beginPath();
+        groundProfile(coordinates, cs.entryPoint, cs.exitPoint).forEach(([gx, gy], i) => {
+          const [px, py] = worldToCanvas(gx, gy, w, h);
+          if (i === 0) ctx.moveTo(px, py);
+          else ctx.lineTo(px, py);
+        });
         ctx.stroke();
       }
       ctx.restore();
@@ -1559,11 +1528,12 @@ export function drawCanvas(
       if (rvs.showSlices && result.criticalSlices.length > 0) {
         // Surface y at a given x (lower arc of a circle, or the polyline)
         const arcYAtX = (x: number): number | null => surfaceBaseYAt(cs, x);
-        const { xs: xBounds, spacings } = sliceBoundaries(
+        // Coincident boundaries once; every other line left out where
+        // they lie closer than 3 px.
+        const { xs: xBounds, density } = sliceLines(
           result.criticalSlices,
           (x) => worldToCanvas(x, 0, w, h)[0],
         );
-        const density = sliceDensityFactor(spacings);
         const sliceRegions =
           rvs.showSoilColor !== false
             ? getCachedRegions(
@@ -1601,18 +1571,18 @@ export function drawCanvas(
         ctx.restore();
       }
 
-      // Water in a tension crack: a blue band on the open side of the
-      // crack face, from the crack bottom up to the water level.
-      const crack = tensionCrackFace(coordinates, cs);
+      // Water in a tension crack (the one the analysis reports): a blue
+      // band in the crack, against the face on the side of the sliding
+      // mass, from the crack bottom up to the water level.
+      const crack = tensionCrackFace(cs);
       const crackWater = Math.min(1, Math.max(0, options?.tensionCrackWater ?? 0));
       if (crack && crackWater > 0) {
         const hw = (crack.top - crack.bottom) * crackWater;
         const [bx, by] = worldToCanvas(crack.x, crack.bottom, w, h);
         const [, wy] = worldToCanvas(crack.x, crack.bottom + hw, w, h);
         const bandW = CRACK_WATER_WIDTH_PX * paperZoom;
-        // The open side is away from the sliding mass on screen.
         const [massX] = worldToCanvas(crack.x + crack.massSide, crack.bottom, w, h);
-        const left = massX > bx ? bx - bandW : bx;
+        const left = massX > bx ? bx : bx - bandW;
         ctx.save();
         ctx.globalAlpha = CRACK_WATER_OPACITY;
         ctx.fillStyle = POND_COLOR.hex;

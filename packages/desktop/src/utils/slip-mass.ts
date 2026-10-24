@@ -168,19 +168,20 @@ export interface TensionCrackFace {
 const MIN_CRACK_DEPTH = 1e-4;
 
 /**
- * The tension crack of a surface: its entry lies below the ground (on the
- * side of the sliding mass) when the analysis cut the surface off at a
- * crack. Null when the entry is on the ground.
+ * The tension crack of a surface, as the analysis reported it (`crack` of
+ * the result). Null without one: an entry below the ground alone (on a
+ * vertical face, a ditch wall, the model's side) is no crack, and results
+ * saved before the crack was reported show none.
  */
 export function tensionCrackFace(
-  coordinates: readonly Pt[],
-  surf: Pick<DrawableSurface, "entryPoint" | "exitPoint">,
+  surf: Pick<DrawableSurface, "entryPoint" | "exitPoint"> & {
+    crack?: { x: number; top: number; bottom: number };
+  },
 ): TensionCrackFace | null {
-  const [ex, ey] = surf.entryPoint;
-  const massSide: 1 | -1 = surf.exitPoint[0] >= ex ? 1 : -1;
-  const top = groundYPreferring(coordinates, ex, massSide > 0 ? "right" : "left");
-  if (top === null || top - ey < MIN_CRACK_DEPTH) return null;
-  return { x: ex, top, bottom: ey, massSide };
+  const c = surf.crack;
+  if (!c || !(c.top - c.bottom >= MIN_CRACK_DEPTH)) return null;
+  const massSide: 1 | -1 = surf.exitPoint[0] >= c.x ? 1 : -1;
+  return { x: c.x, top: c.top, bottom: c.bottom, massSide };
 }
 
 /** A part of a vertical line inside one material region. */
@@ -279,16 +280,50 @@ export function sliceDensityFactor(spacings: readonly number[], fullSpacing = 5,
 
 /**
  * The positions of the slice boundaries of a result, sorted, with the
- * on-screen spacing between neighbours (via `toScreenX`).
+ * on-screen spacing between neighbours (via `toScreenX`). Boundaries
+ * closer than `minGap` on screen (coincident sides of neighbouring
+ * slices, slices split at a layer vertex) are one line, not two drawn on
+ * top of each other.
  */
 export function sliceBoundaries(
   slices: readonly { xLeft: number; xRight: number }[],
   toScreenX: (x: number) => number,
+  minGap = 0.5,
 ): { xs: number[]; spacings: number[] } {
-  const xs = [...new Set(slices.flatMap((s) => [s.xLeft, s.xRight]))].sort((a, b) => a - b);
+  const sorted = [...new Set(slices.flatMap((s) => [s.xLeft, s.xRight]))].sort((a, b) => a - b);
+  const xs: number[] = [];
   const spacings: number[] = [];
-  for (let i = 1; i < xs.length; i++) spacings.push(Math.abs(toScreenX(xs[i]) - toScreenX(xs[i - 1])));
+  for (const x of sorted) {
+    if (xs.length > 0) {
+      const d = Math.abs(toScreenX(x) - toScreenX(xs[xs.length - 1]));
+      if (d < minGap) continue;
+      spacings.push(d);
+    }
+    xs.push(x);
+  }
   return { xs, spacings };
+}
+
+/**
+ * The slice lines to draw: the boundaries (see sliceBoundaries) with every
+ * other inner line left out while the typical spacing on screen is below
+ * `minSpacing` (dense slices at a small scale would read as a solid
+ * fill), and the thinning/fading factor for what is left
+ * (sliceDensityFactor).
+ */
+export function sliceLines(
+  slices: readonly { xLeft: number; xRight: number }[],
+  toScreenX: (x: number) => number,
+  minSpacing = 3,
+): { xs: number[]; density: number } {
+  let { xs, spacings } = sliceBoundaries(slices, toScreenX);
+  const median = (v: number[]) => [...v].sort((a, b) => a - b)[Math.floor(v.length / 2)] ?? Infinity;
+  while (xs.length > 3 && median(spacings) < minSpacing) {
+    const kept = xs.filter((_, i) => i % 2 === 0 || i === xs.length - 1);
+    xs = kept;
+    spacings = kept.slice(1).map((x, i) => Math.abs(toScreenX(x) - toScreenX(kept[i])));
+  }
+  return { xs, density: sliceDensityFactor(spacings) };
 }
 
 /** A search range from its two handles: numeric ends, whatever their order. */

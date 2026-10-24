@@ -199,6 +199,12 @@ function analyse(
       equilibriumGap: crit.equilibriumGap,
       points: displayPoints(crit),
       reinforcementForces: crit.slices?.flatMap((s) => s.reinforcementForces ?? []),
+      // The crack the slices start at: its face runs from the ground at
+      // the first slice's left side down to the surface.
+      crack:
+        crit.crack && crit.slices?.length
+          ? { x: crit.crack[0], top: crit.slices[0].y0Top, bottom: crit.crack[1] }
+          : undefined,
     };
 
     // Convert slices for critical surface

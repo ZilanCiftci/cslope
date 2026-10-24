@@ -2,15 +2,12 @@
  * Layout helpers shared by the canvas and the PDF drawing: greedy label
  * placement (cartographic practice: try a few candidate positions, take
  * the first free one, skip the label when none is free), grouping of
- * adjacent load strips, display rounding of load magnitudes and the
- * placement of water-table symbols along a line.
+ * adjacent load strips and display rounding of load magnitudes (the
+ * water-table symbols are placed in piezo-layout.ts).
  *
  * Everything works in drawing units (canvas px or PDF mm) with y down;
  * `unit` converts the canvas pixel sizes of the style spec to them.
  */
-import { surfaceYAtX } from "../view/surface";
-import { surfacePoints, type DrawableSurface } from "../../utils/arc";
-import { PIEZO_BAR_GAP2_PX, PIEZO_TRI_HALF_PX, PIEZO_TRI_H_PX } from "./style-spec";
 import { boxesOverlap, distanceToSegment, type Box } from "../canvas/label-layout";
 
 export type { Box };
@@ -180,138 +177,5 @@ export function arrowEdges(xs: readonly number[], minSpacing: number): number[] 
     }
   }
   if (last > 0) out.push(last);
-  return out;
-}
-
-// ── Water-table symbols ───────────────────────────────────
-
-/** A water-table symbol: tip of the ▽ at (x, y); `bars` false where the "≡" would go into the ground. */
-export interface PiezoSymbol {
-  x: number;
-  y: number;
-  bars: boolean;
-}
-
-export interface PiezoLayoutOptions {
-  /** Drawing units per canvas pixel (paper zoom on the canvas, mm per px in the PDF). */
-  unit: number;
-  /** External boundary of the model (world). */
-  model: readonly Pt[];
-  /** Critical slip surface, kept clear of symbols. */
-  critical?: DrawableSurface | null;
-  /** Symbols already placed (other lines); new ones are added. */
-  taken?: Pt[];
-  /** Boxes and lines to keep clear of (element heads, numbers and bars). */
-  avoid?: readonly Box[];
-  avoidLines?: readonly Seg[];
-}
-
-/** Arc length between symbols, in canvas pixels. */
-export const PIEZO_SYMBOL_SPACING_PX = 200;
-/** Steepest segment (|dy/dx|) a symbol is put on. */
-const PIEZO_MAX_SLOPE = 1;
-
-/**
- * Positions of the water-table symbols along a line: about one per
- * PIEZO_SYMBOL_SPACING_PX of its drawn length (at least one), each moved
- * from its ideal position to the nearest spot on a flat enough segment,
- * clear of the critical surface and of other symbols, preferring open
- * water above the ground. Where the line runs at the ground surface the
- * "≡" is left out so it doesn't go into the ground.
- */
-export function piezoSymbolLayout(
-  line: readonly Pt[],
-  toScreen: (x: number, y: number) => Pt,
-  opts: PiezoLayoutOptions,
-): PiezoSymbol[] {
-  const u = opts.unit;
-  const triH = PIEZO_TRI_H_PX * u;
-  const triHalf = PIEZO_TRI_HALF_PX * u;
-  const barGap2 = PIEZO_BAR_GAP2_PX * u;
-  const minGap = 4 * triHalf;
-  const step = 3 * u;
-  const taken = opts.taken ?? [];
-  const pts = line.map(([x, y]) => toScreen(x, y));
-  const cum = [0];
-  for (let i = 1; i < pts.length; i++) {
-    cum.push(cum[i - 1] + Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1]));
-  }
-  const total = cum[cum.length - 1];
-  if (pts.length < 2 || !(total > 0)) return [];
-
-  const critSegs = opts.critical ? polylineSegments(surfacePoints(opts.critical).map(([x, y]) => toScreen(x, y))) : [];
-  const critDots = opts.critical ? [opts.critical.entryPoint, opts.critical.exitPoint].map(([x, y]) => toScreen(x, y)) : [];
-
-  interface Spot {
-    x: number;
-    y: number;
-    steep: boolean;
-    tier: number;
-    bars: boolean;
-  }
-  const at = (s: number): Spot => {
-    let i = 1;
-    while (i < cum.length - 1 && cum[i] < s) i++;
-    while (i < cum.length - 1 && cum[i] === cum[i - 1]) i++;
-    const segLen = cum[i] - cum[i - 1];
-    const t = segLen > 0 ? Math.max(0, Math.min(1, (s - cum[i - 1]) / segLen)) : 0;
-    const [ax, ay] = pts[i - 1];
-    const [bx, by] = pts[i];
-    const x = ax + t * (bx - ax);
-    const y = ay + t * (by - ay);
-    const steep = Math.abs(by - ay) > PIEZO_MAX_SLOPE * Math.abs(bx - ax);
-    const box: Box = { left: x - triHalf - 2 * u, top: y - triH - 2 * u, right: x + triHalf + 2 * u, bottom: y + barGap2 + 2 * u };
-    const wx = line[i - 1][0] + t * (line[i][0] - line[i - 1][0]);
-    const gy = surfaceYAtX(opts.model as Pt[], wx);
-    const groundY = gy === null ? null : toScreen(wx, gy)[1];
-    // Line at or above the ground with the bars reaching into it.
-    const bars = groundY === null || !(y <= groundY + u && y + barGap2 > groundY - u);
-    let tier = groundY === null || y < groundY - barGap2 - u ? 0 : 1;
-    const dotR = 5 * u;
-    if (
-      critSegs.some((sg) => segmentHitsBox(sg, box)) ||
-      (opts.avoidLines ?? []).some((sg) => segmentHitsBox(sg, box)) ||
-      (opts.avoid ?? []).some((b) => boxesOverlap(b, box, 0)) ||
-      critDots.some(([dx, dy]) => dx > box.left - dotR && dx < box.right + dotR && dy > box.top - dotR && dy < box.bottom + dotR)
-    ) {
-      tier = 2;
-    }
-    return { x, y, steep, tier, bars };
-  };
-  const free = (p: Spot) => taken.every(([tx, ty]) => Math.hypot(tx - p.x, ty - p.y) >= minGap);
-
-  /** Best spot within ±half of `center`, searching outward; null when none qualifies. */
-  const search = (center: number, half: number, maxTier: number, strict: boolean): Spot | null => {
-    let best: Spot | null = null;
-    for (let k = 0; k * step <= half; k++) {
-      for (const sign of k === 0 ? [1] : [1, -1]) {
-        const s = center + sign * k * step;
-        if (s < 0 || s > total) continue;
-        const p = at(s);
-        if (strict && (p.steep || !free(p))) continue;
-        if (p.tier > maxTier) continue;
-        if (!best || p.tier < best.tier) best = p;
-        if (p.tier === 0) return p;
-      }
-    }
-    return best;
-  };
-
-  const n = Math.max(1, Math.round(total / (PIEZO_SYMBOL_SPACING_PX * u)));
-  const win = total / n;
-  const out: PiezoSymbol[] = [];
-  const add = (p: Spot) => {
-    out.push({ x: p.x, y: p.y, bars: p.bars });
-    taken.push([p.x, p.y]);
-  };
-  for (let k = 0; k < n; k++) {
-    const p = search((k + 0.5) * win, win / 2, 1, true);
-    if (p) add(p);
-  }
-  if (out.length === 0) {
-    // At least one symbol per line: anywhere flat and free, else the middle.
-    const p = search(total / 2, total / 2, 2, true) ?? at(total / 2);
-    add(p);
-  }
   return out;
 }

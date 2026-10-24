@@ -5,7 +5,6 @@ import {
   formatRange,
   groupTouchingStrips,
   loadHeightFraction,
-  piezoSymbolLayout,
   placeLabel,
   segmentHitsBox,
   type Box,
@@ -90,56 +89,5 @@ describe("placeLabel", () => {
   it("clips segments against boxes", () => {
     expect(segmentHitsBox([0, 0, 10, 10], box(4, 4, 2, 2))).toBe(true);
     expect(segmentHitsBox([0, 0, 10, 0], box(4, 1, 2, 2))).toBe(false);
-  });
-});
-
-describe("piezoSymbolLayout", () => {
-  // World = screen with y flipped (1 px per metre), ground at y = 0 from x = 0 to 1000.
-  const toScreen = (x: number, y: number): [number, number] => [x, -y];
-  const model: [number, number][] = [
-    [0, -50],
-    [0, 0],
-    [1000, 0],
-    [1000, -50],
-  ];
-
-  it("puts about one symbol per 200 px of line, at least one", () => {
-    const long = piezoSymbolLayout([[0, -20], [1000, -20]], toScreen, { unit: 1, model });
-    expect(long).toHaveLength(5);
-    expect(long.map((s) => Math.round(s.x))).toEqual([100, 300, 500, 700, 900]);
-    expect(piezoSymbolLayout([[0, -20], [50, -20]], toScreen, { unit: 1, model })).toHaveLength(1);
-  });
-
-  it("skips steep segments and prefers open water above the ground", () => {
-    const syms = piezoSymbolLayout(
-      [
-        [100, -20],
-        [100, 80],
-        [300, 80],
-      ],
-      toScreen,
-      { unit: 1, model },
-    );
-    // 300 px of line → two symbols, both on the flat part over the ground.
-    expect(syms).toHaveLength(2);
-    for (const s of syms) {
-      expect(s.y).toBe(-80);
-      expect(s.bars).toBe(true);
-    }
-  });
-
-  it("leaves out the bars where the line runs on the ground", () => {
-    const [s] = piezoSymbolLayout([[100, 0], [200, 0]], toScreen, { unit: 1, model });
-    expect(s.bars).toBe(false);
-  });
-
-  it("keeps clear of symbols already placed and of the critical surface", () => {
-    const taken: [number, number][] = [[100, 20]];
-    const [s] = piezoSymbolLayout([[0, -20], [200, -20]], toScreen, { unit: 1, model, taken });
-    expect(Math.abs(s.x - 100)).toBeGreaterThanOrEqual(24);
-    expect(taken).toHaveLength(2);
-    const critical = { cx: 100, cy: 30, radius: 50, entryPoint: [50, 30] as [number, number], exitPoint: [150, 30] as [number, number] };
-    const [c] = piezoSymbolLayout([[0, -20], [200, -20]], toScreen, { unit: 1, model, critical });
-    expect(Math.abs(c.x - 100)).toBeGreaterThan(8);
   });
 });

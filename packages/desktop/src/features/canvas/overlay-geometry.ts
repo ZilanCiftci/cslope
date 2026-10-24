@@ -15,10 +15,10 @@ import {
   formatRange,
   groupTouchingStrips,
   loadHeightFraction,
-  piezoSymbolLayout,
   placeLabel,
-  type PiezoSymbol,
 } from "../rendering/overlay-layout";
+import { piezoObstacles, piezoSymbolLayout, type PiezoScene, type PiezoSymbol } from "../rendering/piezo-layout";
+import { groundBetween } from "../../utils/slip-mass";
 import {
   PIEZO_BAR_GAP2_PX,
   PIEZO_BAR_W_PX,
@@ -107,10 +107,9 @@ export function layoutLoads(
 
   const onModel = udls.filter((u) => surfaceYAtX(u.x1) !== null && surfaceYAtX(u.x2) !== null);
   const qMaxAll = Math.max(0, ...onModel.map((u) => Math.abs(u.magnitude)));
-  const ground = (lo: number, hi: number): Pt[] =>
-    [lo, ...coordinates.map(([cx]) => cx).filter((cx) => cx > lo && cx < hi), hi]
-      .sort((a, b) => a - b)
-      .map((x) => toC(x, surfaceYAtX(x)!));
+  // The ground under a strip, both corners of a vertical face included
+  // (the top of the face alone would cut the corner of a step).
+  const ground = (lo: number, hi: number): Pt[] => groundBetween(coordinates, lo, hi).map(([x, y]) => toC(x, y));
   for (const g of groupTouchingStrips(onModel)) {
     const strips = g.strips.map((u) => {
       const lo = Math.min(u.x1, u.x2);
@@ -173,7 +172,8 @@ export function loadArrowBoxes(a: LoadArrow, zoom = 1): Box[] {
 /**
  * Water-table symbols of each line (see piezoSymbolLayout): spaced along
  * the line, clear of the critical surface (when given), of the elements
- * and their numbers, and of each other.
+ * and their numbers, of what `scene` adds (loads, search markers, vertex
+ * markers, prescribed surfaces; see piezoObstacles) and of each other.
  */
 export function layoutPiezoSymbols(
   view: CanvasView,
@@ -182,9 +182,12 @@ export function layoutPiezoSymbols(
   piles: AppState["piles"] | undefined,
   zoom = 1,
   critical: DrawableSurface | null = null,
+  scene: Omit<PiezoScene, "coordinates" | "critical"> = {},
 ): PiezoSymbol[][] {
   const toC = (x: number, y: number) => view.worldToCanvas(x, y, view.w, view.h);
   const avoid = forceLabelContext(toC, { reinforcements, piles, numberSize: 11 * zoom });
+  const obstacles = piezoObstacles({ ...scene, coordinates: view.coordinates, critical }, toC, zoom);
+  const numbered = piezometricLine.lines.length > 1;
   const taken: Pt[] = [];
   return piezometricLine.lines.map((line) =>
     line.coordinates.length < 2
@@ -194,8 +197,11 @@ export function layoutPiezoSymbols(
           model: view.coordinates,
           critical,
           taken,
-          avoid: avoid.placed,
-          avoidLines: avoid.obstacles,
+          avoid: [...avoid.placed, ...obstacles.avoid],
+          avoidLines: [...avoid.obstacles, ...obstacles.avoidLines],
+          softLines: obstacles.softLines,
+          slipMass: obstacles.slipMass,
+          numbered,
         }),
   );
 }

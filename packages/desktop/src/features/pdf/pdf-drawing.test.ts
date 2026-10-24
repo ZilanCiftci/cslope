@@ -341,8 +341,22 @@ describe("polylines", () => {
   });
 });
 
+/** The points of each stroked path (moveTo/lineTo up to a stroke). */
+function strokedPaths(rec: ReturnType<typeof recorder>): number[][][] {
+  const out: number[][][] = [];
+  let cur: number[][] = [];
+  for (const c of rec.calls) {
+    if (c.name === "moveTo" || c.name === "lineTo") cur.push(c.args as number[]);
+    else if (c.name === "stroke") {
+      out.push(cur);
+      cur = [];
+    } else if (c.name === "fill" || c.name === "fillEvenOdd" || c.name === "clip") cur = [];
+  }
+  return out;
+}
+
 describe("loads", () => {
-  it("draws UDL arrows with tips on the ground, a top edge following the crest and a label", () => {
+  it("draws UDL arrows with tips on the ground, a hatched band following the crest and a label", () => {
     const rec = recorder();
     drawUdlLoads(rec.pdf, tf, [{ x1: 14, x2: 6, magnitude: 12 }], COORDS);
     const tris = rec.of("triangle").map((c) => c.args);
@@ -352,17 +366,43 @@ describe("loads", () => {
       [90, 110],
     ]);
     const arrowH = 38 * 0.25;
-    const lines = rec.linesIn(UDL_LOAD_COLOR.rgb);
-    // Top edge: (6) → crest (10) → (14), offset up by the arrow height.
-    const top = lines.filter(([, y1, , y2]) => y1 !== y2 || y1 === 100 - arrowH).slice(2);
-    expect(top).toEqual([
-      [50, 100 - arrowH, 70, 100 - arrowH],
-      [70, 100 - arrowH, 90, 110 - arrowH],
+    // Outline as on the canvas: the top edge (6) → crest (10) → (14), offset
+    // up by the arrow height, and back along the ground.
+    const outline = strokedPaths(rec).at(-1)!;
+    expect(outline).toEqual([
+      [50, 100],
+      [50, 100 - arrowH],
+      [70, 100 - arrowH],
+      [90, 110 - arrowH],
+      [90, 110],
+      [70, 100],
+      [50, 100],
     ]);
+    // Hatching inside a clip to the band, the state restored after.
+    expect(rec.of("clip")).toHaveLength(1);
+    expect(rec.balanced()).toBe(true);
     const label = rec.of("text")[0];
     expect(label.args[0]).toBe("q = 12 kPa");
     expect(label.args[1]).toBe(70);
-    expect(label.args[2]).toBeCloseTo(100 - arrowH - 1.5, 9);
+    // The canvas's 8 px gap above the band.
+    expect(label.args[2]).toBeCloseTo(100 - arrowH - 8 * 0.25, 9);
+  });
+
+  it("keeps the band on the ground at a step (both corners of the face)", () => {
+    const stepped: [number, number][] = [
+      [0, 0],
+      [0, 4],
+      [10, 4],
+      [10, 10],
+      [20, 10],
+      [20, 0],
+    ];
+    const rec = recorder();
+    drawUdlLoads(rec.pdf, tf, [{ x1: 5, x2: 15, magnitude: 10 }], stepped);
+    const outline = strokedPaths(rec).at(-1)!;
+    // Ground part: (15, 10) → (10, 10) → (10, 4) → (5, 4).
+    const ground = outline.slice(-4);
+    expect(ground).toEqual([tf.worldToPdf(15, 10), tf.worldToPdf(10, 10), tf.worldToPdf(10, 4), tf.worldToPdf(5, 4)]);
   });
 
   it("skips loads off the model", () => {
@@ -389,7 +429,7 @@ describe("loads", () => {
     const tips = rec.of("triangle").map((c) => c.args[0]);
     expect(tips).toEqual([20 + 21 * 5, 20 + 26 * 5]);
     // The left end (10 of 20 kPa) is half the height of the right end.
-    const shafts = rec.linesIn(UDL_LOAD_COLOR.rgb).slice(0, 2);
+    const shafts = rec.linesIn(UDL_LOAD_COLOR.rgb).filter(([x1, , x2]) => x1 === x2 && tips.includes(x1));
     const headL = 12 * 0.25;
     expect(shafts[0][3] - shafts[0][1]).toBeCloseTo(38 * 0.25 * 0.502 - headL, 2);
     expect(shafts[1][3] - shafts[1][1]).toBeCloseTo(38 * 0.25 - headL, 9);
@@ -542,14 +582,34 @@ describe("drawEntryExitMarkers", () => {
     expect(rec.of("line")).toHaveLength(3);
   });
 
-  it("dots the ranges along the ground including both ends", () => {
+  it("dots the ranges along the ground between the ends, under the markers (as on the canvas)", () => {
     const { rec } = triangles(limits);
     const dots = rec.of("circle").map((c) => c.args as number[]);
     expect(dots.length).toBeGreaterThan(6);
     const entry = dots.filter(([x]) => x <= 20 + 8 * 5);
-    expect(entry[0].slice(0, 2)).toEqual([30, 100]);
-    expect(entry[1].slice(0, 2)).toEqual([60, 100]);
+    // One spacing (12 px = 3 mm) in from the end, none on the ends themselves.
+    expect(entry[0][0]).toBeCloseTo(33, 9);
+    expect(entry.some(([x]) => Math.abs(x - 30) < 1e-9 || Math.abs(x - 60) < 1e-9)).toBe(false);
     for (const [, y] of entry) expect(y).toBe(100);
+    // Dots first, then the markers over them.
+    const lastDot = rec.calls.map((c) => c.name).lastIndexOf("circle");
+    const firstBar = rec.calls.findIndex((c) => c.name === "line");
+    expect(lastDot).toBeLessThan(firstBar);
+  });
+
+  it("keeps the markers off the sliding mass: no dots over it, triangles above the ground", () => {
+    const rec = recorder();
+    drawEntryExitMarkers(rec.pdf, tf, limits, COORDS, { entryPoint: [ENTRY_X, 10], exitPoint: [22, 5] });
+    const xs = rec.of("circle").map((c) => ((c.args[0] as number) - 20) / 5);
+    expect(xs.length).toBeGreaterThan(0);
+    for (const x of xs) expect(x < ENTRY_X || x > 22).toBe(true);
+    // Every triangle corner above the ground under it.
+    for (const c of [...rec.of("moveTo"), ...rec.of("lineTo")]) {
+      const [px, py] = c.args as [number, number];
+      const wx = (px - 20) / 5;
+      const gy = wx <= 10 ? 10 : wx <= 20 ? 10 - (wx - 10) / 2 : 5;
+      expect(py).toBeLessThan(tf.worldToPdf(wx, gy)[1]);
+    }
   });
 
   it("alternates the colours of the dots when the entry and exit ranges coincide", () => {
@@ -721,18 +781,20 @@ describe("drawCriticalSurface", () => {
   });
 
   it("draws the tension crack face as part of the surface and the water in it", () => {
-    // Entry 3 m below the ground at x = 6 (a crack), half filled with water.
-    const cs = surface({ points: [[6, 7], [12, 4], [22, 5]], entryPoint: [6, 7], exitPoint: [22, 5] });
+    // The analysis reports a crack at x = 6 from the ground down to 7, half filled with water.
+    const crack = { x: 6, top: 10, bottom: 7 };
+    const cs = surface({ points: [[6, 7], [12, 4], [22, 5]], entryPoint: [6, 7], exitPoint: [22, 5], crack });
     const rec = recorder();
     drawCriticalSurface(rec.pdf, tf, result({ criticalSurface: cs }), rvs(), COORDS, {
       options: { tensionCrackWater: 0.5 },
     });
     // The bold surface line starts at the top of the crack.
     expect(rec.of("moveTo").at(-1)!.args).toEqual(tf.worldToPdf(6, 10));
-    // Water band from the crack bottom (y = 7) up to y = 8.5, on the side away from the mass.
+    // Water band from the crack bottom (y = 7) up to y = 8.5, in the crack
+    // against the face on the side of the sliding mass.
     const band = rec.of("rect").find((c) => c.args[4] === "F")!;
-    const [x, y, wBand, hBand] = band.args as number[];
-    expect(x + wBand).toBeCloseTo(tf.worldToPdf(6, 0)[0], 9);
+    const [x, y, , hBand] = band.args as number[];
+    expect(x).toBeCloseTo(tf.worldToPdf(6, 0)[0], 9);
     expect(y).toBeCloseTo(tf.worldToPdf(0, 8.5)[1], 9);
     expect(y + hBand).toBeCloseTo(tf.worldToPdf(0, 7)[1], 9);
   });
@@ -766,6 +828,37 @@ describe("drawCriticalSurface", () => {
     drawCriticalSurface(rec.pdf, tf, result({ criticalSurface: cs }), rvs(), COORDS);
     expect(rec.of("setGState")).toHaveLength(2); // fill + band
     expect(rec.balanced()).toBe(true);
+    // Under the ground only: the ground over the mass, twice as wide, clipped to the model.
+    expect(rec.of("clip")).toHaveLength(1);
+    expect(rec.of("setLineWidth").some((c) => Math.abs((c.args[0] as number) - 2 * 5 * 0.25) < 1e-9)).toBe(true);
+    const band = strokedPaths(rec)[0];
+    expect(band[0]).toEqual(tf.worldToPdf(10, 10));
+    expect(band.at(-1)).toEqual(tf.worldToPdf(20, 5));
+  });
+
+  it("draws no crack for an entry below the ground that the analysis did not report as one", () => {
+    const cs = surface({ points: [[6, 7], [12, 4], [22, 5]], entryPoint: [6, 7], exitPoint: [22, 5] });
+    const rec = recorder();
+    drawCriticalSurface(rec.pdf, tf, result({ criticalSurface: cs }), rvs(), COORDS, { options: { tensionCrackWater: 1 } });
+    expect(rec.of("rect")).toHaveLength(0);
+    expect(rec.of("moveTo").at(-1)!.args).toEqual(tf.worldToPdf(6, 7));
+  });
+
+  it("draws coincident slice boundaries once and every other line of dense slices", () => {
+    const rec = recorder();
+    drawCriticalSurface(
+      rec.pdf,
+      tf,
+      result({ criticalSlices: [slice(8, 12), slice(12 + 1e-7, 16)] }),
+      rvs({ showSlices: true }),
+      COORDS,
+    );
+    expect(rec.linesIn([0, 0, 0])).toHaveLength(3);
+    // 0.1 m slices: 0.5 mm = 2 (canvas) px apart → 21 of the 41 lines.
+    const dense = Array.from({ length: 40 }, (_, i) => slice(8 + i * 0.1, 8.1 + i * 0.1));
+    const rec2 = recorder();
+    drawCriticalSurface(rec2.pdf, tf, result({ criticalSlices: dense }), rvs({ showSlices: true }), COORDS);
+    expect(rec2.linesIn([0, 0, 0])).toHaveLength(21);
   });
 });
 

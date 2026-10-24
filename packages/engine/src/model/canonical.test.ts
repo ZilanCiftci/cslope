@@ -99,6 +99,7 @@ describe("canonical helpers", () => {
         fos: 1.2,
         entryPoint: [2, 9],
         exitPoint: [8, 4],
+        crack: { x: 2, top: 10, bottom: 9 },
       },
       allSurfaces: [
         {
@@ -137,6 +138,8 @@ describe("canonical helpers", () => {
     expect(mapped.criticalSurface?.cx).toBe(mirrorX(3, 0, 10));
     expect(mapped.criticalSurface?.entryPoint).toEqual([8, 9]);
     expect(mapped.criticalSurface?.exitPoint).toEqual([2, 4]);
+    // The tension crack is mirrored with the surface.
+    expect(mapped.criticalSurface?.crack).toEqual({ x: 8, top: 10, bottom: 9 });
     expect(mapped.criticalSlices[0].xLeft).toBeLessThan(
       mapped.criticalSlices[0].xRight,
     );

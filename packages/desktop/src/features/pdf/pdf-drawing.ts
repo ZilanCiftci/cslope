@@ -13,10 +13,11 @@ import {
   formatRange,
   groupTouchingStrips,
   loadHeightFraction,
-  piezoSymbolLayout,
   placeLabel,
   type Box,
 } from "../rendering/overlay-layout";
+import { piezoObstacles, piezoSymbolLayout, type PiezoScene } from "../rendering/piezo-layout";
+import { layoutLimitMarkers, layoutRangeDots } from "../rendering/search-markers";
 import { fosColor, fosScaleRange, fosTickLabel } from "../../utils/fos-color";
 
 /** "≥" (in the embedded font). */
@@ -38,6 +39,7 @@ import {
   ARROW_HEAD_LEN_PX,
   ARROW_HEAD_PX,
   ARROW_HEIGHT_PX,
+  HATCH_SPACING_PX,
 } from "../canvas/constants";
 import { buildMaterialTableData } from "../canvas/helpers";
 import {
@@ -52,15 +54,12 @@ import {
   CRITICAL_SURFACE_COLOR,
   ENTRY_DOT_COLOR,
   ENTRY_EXIT_DOT_RADIUS_PX,
-  ENTRY_EXIT_DOT_SPACING_PX,
   EXIT_DOT_COLOR,
   FAILURE_MASS_COLOR,
   FAILURE_MASS_FILL_OPACITY,
   FOS_LABEL_BG_COLOR,
   LINE_LOAD_COLOR,
-  MARKER_BAR_H_PX,
   MARKER_COLOR,
-  MARKER_SZ_PX,
   MIN_SLIP_MASS_BAND_OPACITY,
   MIN_SLIP_MASS_PX,
   PIEZO_BAR_GAP1_PX,
@@ -106,12 +105,10 @@ import {
 import { surfaceYAtX } from "../view/surface";
 import {
   groundBetween,
+  groundProfile,
   isDarkFill,
   meanThickness,
-  sameRange,
-  searchRange,
-  sliceBoundaries,
-  sliceDensityFactor,
+  sliceLines,
   slipMassPolygon,
   splitVerticalByRegion,
   tensionCrackFace,
@@ -295,6 +292,8 @@ export function drawMaterialRegions(
 
   // Clip to model polygon so material colors cannot bleed outside the model
   pdf.saveGraphicsState();
+  // Round joins (restored with the state): no mitre spikes at sharp toes.
+  pdf.setLineJoin("round");
   const clipPts = coordinates.map(([wx, wy]) => tf.worldToPdf(wx, wy));
   const clipOps: PathOp[] = buildPolylinePath(clipPts, true);
   pdfPath(pdf, clipOps, "");
@@ -376,7 +375,10 @@ export function drawClosedPolyline(
   const ops = buildPolylinePath(pts, true);
   pdf.setDrawColor(...color);
   pdf.setLineWidth(lineWidth);
+  // Round joins: a mitre at a sharp toe sticks out far past the corner.
+  pdf.setLineJoin("round");
   pdfPath(pdf, ops, "S");
+  pdf.setLineJoin("miter");
 }
 
 export function drawOpenPolyline(
@@ -391,7 +393,9 @@ export function drawOpenPolyline(
   const ops = buildPolylinePath(pts, false);
   pdf.setDrawColor(...color);
   pdf.setLineWidth(lineWidth);
+  pdf.setLineJoin("round");
   pdfPath(pdf, ops, "S");
+  pdf.setLineJoin("miter");
 }
 
 /** Load label above (cx, bottom); moved up past labels placed before it, left out when there is no room. */
@@ -412,9 +416,10 @@ function drawLoadLabelPdf(pdf: jsPDF, text: string, cx: number, bottom: number, 
 
 /**
  * UDLs as on the canvas: strips that touch end to end are one load with
- * arrows at its ends (and at a readable spacing) and one label; heights
- * follow the magnitude relative to the largest load. `placed` collects the
- * load labels so line-load labels can keep clear of them.
+ * arrows at its ends (and at a readable spacing), a hatched band over the
+ * ground stepping between strips of different size, and one label;
+ * heights follow the magnitude relative to the largest load. `placed`
+ * collects the load labels so line-load labels can keep clear of them.
  */
 export function drawUdlLoads(
   pdf: jsPDF,
@@ -435,12 +440,35 @@ export function drawUdlLoads(
     const strips = g.strips.map((u) => {
       const lo = Math.min(u.x1, u.x2);
       const hi = Math.max(u.x1, u.x2);
-      // Top edge follows the ground surface (a straight line between the
-      // end arrows cut through the ground over a crest).
-      const xs = [lo, ...coordinates.map((c) => c[0]).filter((x) => x > lo && x < hi), hi].sort((a, b) => a - b);
+      // The band follows the ground surface, both corners of a vertical
+      // face included (a straight line between the end arrows would cut
+      // through the ground over a crest, the face's top alone the corner
+      // of a step).
+      const ground = groundBetween(coordinates, lo, hi).map(([wx, wy]) => tf.worldToPdf(wx, wy));
       const lift = arrowH * loadHeightFraction(u.magnitude, qMaxAll);
-      return { lo, hi, lift, top: xs.map((x) => groundAt(x)).map(([px, py]) => [px, py - lift] as [number, number]) };
+      return { lo, hi, lift, ground, top: ground.map(([px, py]) => [px, py - lift] as [number, number]) };
     });
+
+    // Hatched band under the top edges (as on the canvas).
+    const bandOps: PathOp[] = strips.flatMap((s) => buildPolylinePath([...s.top, ...[...s.ground].reverse()], true));
+    pdf.saveGraphicsState();
+    pdfPath(pdf, bandOps, "");
+    pdf.clip();
+    (pdf as unknown as { discardPath?: () => void }).discardPath?.();
+    const all = strips.flatMap((s) => [...s.ground, ...s.top]);
+    const minX = Math.min(...all.map(([x]) => x));
+    const maxX = Math.max(...all.map(([x]) => x));
+    const minY = Math.min(...all.map(([, y]) => y));
+    const maxY = Math.max(...all.map(([, y]) => y));
+    const span = maxX - minX + (maxY - minY);
+    pdf.setDrawColor(...UDL_LOAD_COLOR.rgb);
+    pdf.setLineWidth(0.15);
+    setOpacity(pdf, 1, 0.5);
+    for (let d = -span; d < span; d += HATCH_SPACING_PX * tf.mmPerPx) {
+      pdf.line(minX + d, minY, minX + d + (maxY - minY), maxY);
+    }
+    resetOpacity(pdf);
+    pdf.restoreGraphicsState();
 
     pdf.setDrawColor(...UDL_LOAD_COLOR.rgb);
     pdf.setLineWidth(0.4);
@@ -454,19 +482,19 @@ export function drawUdlLoads(
       pdf.triangle(px, py, px - headW, py - headL, px + headW, py - headL, "F");
     }
 
-    // Top edges, with a step between strips of different size.
-    let prev: [number, number] | null = null;
-    for (const s of strips) {
-      for (const pt of s.top) {
-        if (prev && (prev[0] !== pt[0] || prev[1] !== pt[1])) pdf.line(prev[0], prev[1], pt[0], pt[1]);
-        prev = pt;
-      }
-    }
+    // Outline as on the canvas: up the left end, along the tops (stepping
+    // between strips of different size), down the right end, back along
+    // the ground.
+    const groundAll = strips.flatMap((s) => s.ground);
+    const outline: [number, number][] = [strips[0].ground[0], ...strips.flatMap((s) => s.top), ...[...groundAll].reverse()];
+    pdf.setLineWidth(0.3);
+    pdfPath(pdf, buildPolylinePath(outline, true), "S");
 
     pdf.setTextColor(...UDL_LOAD_COLOR.rgb);
     const labelX = (edgePts[0][0] + edgePts[edgePts.length - 1][0]) / 2;
     const topMost = Math.min(...strips.flatMap((s) => s.top.map(([, y]) => y)));
-    drawLoadLabelPdf(pdf, formatRange(g.qMin, g.qMax, "q", "kPa"), labelX, topMost - 1.5, placed);
+    // The canvas's 8 px gap above the band, in mm.
+    drawLoadLabelPdf(pdf, formatRange(g.qMin, g.qMax, "q", "kPa"), labelX, topMost - 8 * tf.mmPerPx, placed);
   }
 }
 
@@ -495,7 +523,8 @@ export function drawLineLoads(
     pdf.triangle(px, py, px - headW, py - headL, px + headW, py - headL, "F");
 
     pdf.setTextColor(...LINE_LOAD_COLOR.rgb);
-    drawLoadLabelPdf(pdf, `P = ${formatMagnitude(ll.magnitude)} kN/m`, px, py - lift - 1.5, placed);
+    // The canvas's 4 px gap above the arrow, in mm.
+    drawLoadLabelPdf(pdf, `P = ${formatMagnitude(ll.magnitude)} kN/m`, px, py - lift - 4 * tf.mmPerPx, placed);
   }
 }
 
@@ -610,8 +639,11 @@ export function drawPiezometricLines(
   critical: DrawableSurface | null = null,
   /** Kept clear of the symbols: element heads and numbers (`placed`) and bars (`obstacles`). */
   avoid: ForceLabelContext = { obstacles: [], placed: [] },
+  /** What else is drawn around the lines (loads, search markers; see piezoObstacles). */
+  scene: Omit<PiezoScene, "coordinates" | "critical"> = {},
 ) {
   const multiLine = lines.length > 1;
+  const obstacles = piezoObstacles({ ...scene, coordinates: modelCoordinates, critical }, tf.worldToPdf, tf.mmPerPx);
   // Symbols placed so far, so lines don't put theirs on top of each other.
   const taken: [number, number][] = [];
 
@@ -659,8 +691,11 @@ export function drawPiezometricLines(
       model: modelCoordinates,
       critical,
       taken,
-      avoid: avoid.placed,
-      avoidLines: avoid.obstacles,
+      avoid: [...avoid.placed, ...obstacles.avoid],
+      avoidLines: [...avoid.obstacles, ...obstacles.avoidLines],
+      softLines: obstacles.softLines,
+      slipMass: obstacles.slipMass,
+      numbered: multiLine,
     })) {
       const triTop = my - triH;
       pdf.setFillColor(...PIEZO_COLOR.rgb);
@@ -693,105 +728,44 @@ export function drawPiezometricLines(
 const RESULT_MARKER_OPACITY = 0.55;
 
 /**
- * The search limits: dots along the ground over each range and a bar with
- * a triangle outside the range pointing into it at each end (only a bar
- * for a range of zero width). Lighter than the result drawn over them.
+ * The search limits as on the canvas over a result (layoutLimitMarkers,
+ * layoutRangeDots): dots along the ground over each range, none over the
+ * sliding mass of `critical`, then at each limit a bar with a triangle
+ * lifted clear of the ground pointing into the range (only a bar for a
+ * range of zero width), a limit both ranges share drawn once. Lighter
+ * than the result drawn over them.
  */
 export function drawEntryExitMarkers(
   pdf: jsPDF,
   tf: PdfTransform,
   limits: AnalysisLimitsState,
   coordinates: [number, number][],
+  critical: Pick<DrawableSurface, "entryPoint" | "exitPoint"> | null = null,
 ) {
-  const barH = MARKER_BAR_H_PX * tf.mmPerPx;
-  const sz = MARKER_SZ_PX * tf.mmPerPx;
-
-  const drawArrow = (worldX: number, worldY: number, towardX: number | null) => {
-    const [cx, cy] = tf.worldToPdf(worldX, worldY);
-
-    pdf.setDrawColor(...MARKER_COLOR.rgb);
-    pdf.setLineWidth(0.4);
-    pdf.line(cx, cy - barH, cx, cy + barH);
-    if (towardX === null) return;
-
-    const [tx] = tf.worldToPdf(towardX, worldY);
-    const inward = tx >= cx ? 1 : -1;
-    const baseX = cx - inward * sz * 2;
-    pdf.setFillColor(...MARKER_COLOR.rgb);
-    const triOps: PathOp[] = [
-      { op: "m", c: [cx, cy] },
-      { op: "l", c: [baseX, cy - sz] },
-      { op: "l", c: [baseX, cy + sz] },
-      { op: "h", c: [] },
-    ];
-    pdfPath(pdf, triOps, "f");
-  };
-
-  const drawDottedSurfaceLine = (
-    x1: number,
-    x2: number,
-    colors: [number, number, number][],
-  ) => {
-    const surfPts = groundBetween(coordinates, x1, x2);
-    if (surfPts.length < 2) return;
-
-    const pdfPts = surfPts.map(([wx, wy]) => tf.worldToPdf(wx, wy));
-    const spacing = ENTRY_EXIT_DOT_SPACING_PX * tf.mmPerPx;
-    const radius = ENTRY_EXIT_DOT_RADIUS_PX * tf.mmPerPx * 0.8;
-
-    let k = 0;
-    const placeDot = (x: number, y: number) => {
-      pdf.setFillColor(...colors[k++ % colors.length]);
-      pdf.circle(x, y, radius, "F");
-    };
-
-    // Always place dots at endpoints
-    placeDot(pdfPts[0][0], pdfPts[0][1]);
-    placeDot(pdfPts[pdfPts.length - 1][0], pdfPts[pdfPts.length - 1][1]);
-
-    let carry = 0;
-    for (let i = 0; i < pdfPts.length - 1; i++) {
-      const [x1p, y1p] = pdfPts[i];
-      const [x2p, y2p] = pdfPts[i + 1];
-      const dx = x2p - x1p;
-      const dy = y2p - y1p;
-      const segLen = Math.hypot(dx, dy);
-      if (segLen === 0) continue;
-
-      let t = spacing - carry;
-      while (t < segLen - 0.1 * tf.mmPerPx) {
-        const frac = t / segLen;
-        placeDot(x1p + dx * frac, y1p + dy * frac);
-        t += spacing;
-      }
-      carry = (carry + segLen) % spacing;
-    }
-  };
-
-  const entry = searchRange(limits.entryLeftX, limits.entryRightX);
-  const exit = searchRange(limits.exitLeftX, limits.exitRightX);
-  const coincide = sameRange(entry, exit);
-
-  const drawRange = (xa: number, xb: number, dotColors: [number, number, number][] | null) => {
-    const ya = surfaceYAtX(coordinates, xa);
-    const yb = surfaceYAtX(coordinates, xb);
-    const range = searchRange(xa, xb);
-    if (range.point) {
-      if (ya !== null) drawArrow(xa, ya, null);
-      return;
-    }
-    if (ya !== null) drawArrow(xa, ya, xa <= xb ? range.hi : range.lo);
-    if (yb !== null) drawArrow(xb, yb, xb < xa ? range.hi : range.lo);
-    if (dotColors && ya !== null && yb !== null) drawDottedSurfaceLine(xa, xb, dotColors);
-  };
-
   setOpacity(pdf, RESULT_MARKER_OPACITY);
-  drawRange(
-    limits.entryLeftX,
-    limits.entryRightX,
-    coincide ? [ENTRY_DOT_COLOR.rgb, EXIT_DOT_COLOR.rgb] : [ENTRY_DOT_COLOR.rgb],
-  );
-  drawRange(limits.exitLeftX, limits.exitRightX, coincide ? null : [EXIT_DOT_COLOR.rgb]);
+  const radius = ENTRY_EXIT_DOT_RADIUS_PX * tf.mmPerPx * 0.8;
+  for (const d of layoutRangeDots(limits, coordinates, tf.worldToPdf, tf.mmPerPx, {
+    skip: critical ? [critical.entryPoint[0], critical.exitPoint[0]] : null,
+    radius,
+  })) {
+    pdf.setFillColor(...(d.range === "entry" ? ENTRY_DOT_COLOR.rgb : EXIT_DOT_COLOR.rgb));
+    pdf.circle(d.x, d.y, radius, "F");
+  }
+  pdf.setDrawColor(...MARKER_COLOR.rgb);
+  pdf.setFillColor(...MARKER_COLOR.rgb);
+  pdf.setLineWidth(0.4);
+  for (const m of layoutLimitMarkers(limits, coordinates, tf.worldToPdf, tf.mmPerPx, { lifted: true })) {
+    pdf.line(m.cx, m.barTop, m.cx, m.barBottom);
+    for (const [tip, b1, b2] of m.triangles) {
+      const triOps: PathOp[] = [
+        { op: "m", c: tip },
+        { op: "l", c: b1 },
+        { op: "l", c: b2 },
+        { op: "h", c: [] },
+      ];
+      pdfPath(pdf, triOps, "f");
+    }
+  }
   resetOpacity(pdf);
 }
 
@@ -850,7 +824,9 @@ export function drawCriticalSurface(
   if (!cs) return;
 
   const arcPts = surfacePoints(cs);
-  const crack = tensionCrackFace(coordinates, cs);
+  // The crack the analysis reports (none for an entry that merely lies
+  // below the ground, or a result saved without it).
+  const crack = tensionCrackFace(cs);
 
   {
     // The ground from the entry to the exit (both corners of every
@@ -864,24 +840,33 @@ export function drawCriticalSurface(
     setOpacity(pdf, FAILURE_MASS_FILL_OPACITY);
     pdfPath(pdf, ops, "f");
     resetOpacity(pdf);
-    // A very thin mass gets a band of minimum width along it.
+    // A very thin mass gets a band of minimum width under the ground
+    // along it, clipped to the soil (as on the canvas).
     const minWidth = MIN_SLIP_MASS_PX * tf.mmPerPx;
-    if (meanThickness(massPts) < minWidth) {
+    if (meanThickness(massPts) < minWidth && coordinates.length >= 3) {
+      pdf.saveGraphicsState();
+      pdfPath(pdf, buildPolylinePath(coordinates.map(([wx, wy]) => tf.worldToPdf(wx, wy)), true), "");
+      pdf.clip();
+      (pdf as unknown as { discardPath?: () => void }).discardPath?.();
       pdf.setDrawColor(...FAILURE_MASS_COLOR.rgb);
-      pdf.setLineWidth(minWidth);
+      pdf.setLineWidth(2 * minWidth);
+      pdf.setLineJoin("round");
       setOpacity(pdf, 1, MIN_SLIP_MASS_BAND_OPACITY);
-      pdfPath(pdf, ops, "S");
+      const ground = groundProfile(coordinates, cs.entryPoint, cs.exitPoint).map(([wx, wy]) => tf.worldToPdf(wx, wy));
+      pdfPath(pdf, buildPolylinePath(ground, false), "S");
       resetOpacity(pdf);
+      pdf.restoreGraphicsState();
     }
   }
 
   if (rvs.showSlices && result.criticalSlices.length > 0) {
     const arcYAt = (x: number): number | null => surfaceBaseYAt(cs, x);
-    const { xs: xBounds, spacings } = sliceBoundaries(
+    // As on the canvas: coincident boundaries once, every other line left
+    // out where they lie closer than 3 (canvas) px.
+    const { xs: xBounds, density } = sliceLines(
       result.criticalSlices,
       (x) => tf.worldToPdf(x, 0)[0] / tf.mmPerPx,
     );
-    const density = sliceDensityFactor(spacings);
     const { materials = [], materialBoundaries = [], regionMaterials = [] } = context;
     const regions =
       rvs.showSoilColor !== false && materials.length > 0
@@ -909,8 +894,9 @@ export function drawCriticalSurface(
     resetOpacity(pdf);
   }
 
-  // Water in a tension crack: a blue band on the open side of the crack
-  // face, from the crack bottom up to the water level (as on the canvas).
+  // Water in a tension crack: a blue band in the crack against the face
+  // on the side of the sliding mass, from the crack bottom up to the
+  // water level (as on the canvas).
   const crackWater = Math.min(1, Math.max(0, context.options?.tensionCrackWater ?? 0));
   if (crack && crackWater > 0) {
     const hw = (crack.top - crack.bottom) * crackWater;
@@ -918,7 +904,7 @@ export function drawCriticalSurface(
     const [, wy] = tf.worldToPdf(crack.x, crack.bottom + hw);
     const [massX] = tf.worldToPdf(crack.x + crack.massSide, crack.bottom);
     const bandW = CRACK_WATER_WIDTH_PX * tf.mmPerPx;
-    const left = massX > bx ? bx - bandW : bx;
+    const left = massX > bx ? bx : bx - bandW;
     pdf.setFillColor(...POND_COLOR.rgb);
     setOpacity(pdf, CRACK_WATER_OPACITY);
     pdf.rect(left, wy, bandW, by - wy, "F");

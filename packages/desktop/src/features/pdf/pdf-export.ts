@@ -388,12 +388,18 @@ export function exportVectorPdf(data: PdfExportData): void {
         piezometricLine.mainLineId,
         result.criticalSurface ?? null,
         forceLabelContext(tf.worldToPdf, { reinforcements, piles, numberSize: 2.8 }),
+        {
+          materialBoundaries,
+          udls,
+          lineLoads,
+          analysisLimits: analysisLimits.enabled && !customPlanesOnly ? analysisLimits : null,
+        },
       );
     }
 
     // Not for an analysis of prescribed surfaces only (nothing was searched).
     if (analysisLimits.enabled && coordinates.length >= 3 && !customPlanesOnly) {
-      drawEntryExitMarkers(pdf, tf, analysisLimits, coordinates);
+      drawEntryExitMarkers(pdf, tf, analysisLimits, coordinates, result.criticalSurface ?? null);
     }
 
     drawSlipSurfaces(pdf, tf, result, rvs);

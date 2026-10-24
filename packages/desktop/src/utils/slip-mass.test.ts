@@ -8,7 +8,9 @@ import {
   meanThickness,
   sameRange,
   searchRange,
+  sliceBoundaries,
   sliceDensityFactor,
+  sliceLines,
   slipMassPolygon,
   splitVerticalByRegion,
   tensionCrackFace,
@@ -118,14 +120,19 @@ describe("slipMassPolygon", () => {
 });
 
 describe("tensionCrackFace", () => {
-  it("finds a crack where the entry is below the ground", () => {
-    expect(tensionCrackFace(STEPPED, { entryPoint: [12, 8], exitPoint: [1, 2] })).toEqual({
-      x: 12,
-      top: 10,
-      bottom: 8,
-      massSide: -1,
-    });
-    expect(tensionCrackFace(STEPPED, { entryPoint: [12, 10], exitPoint: [1, 2] })).toBeNull();
+  it("takes the crack the analysis reports", () => {
+    expect(
+      tensionCrackFace({ entryPoint: [12, 8], exitPoint: [1, 2], crack: { x: 12, top: 10, bottom: 8 } }),
+    ).toEqual({ x: 12, top: 10, bottom: 8, massSide: -1 });
+    expect(
+      tensionCrackFace({ entryPoint: [3, 8], exitPoint: [20, 2], crack: { x: 3, top: 10, bottom: 8 } })?.massSide,
+    ).toBe(1);
+  });
+
+  it("finds none from the geometry alone (an entry on a vertical face, an old result)", () => {
+    // The entry lies below the ground on the face at x = 8, but no crack was reported.
+    expect(tensionCrackFace({ entryPoint: [8, 8], exitPoint: [1, 2] })).toBeNull();
+    expect(tensionCrackFace({ entryPoint: [12, 10], exitPoint: [1, 2], crack: { x: 12, top: 10, bottom: 10 } })).toBeNull();
   });
 });
 
@@ -158,6 +165,31 @@ describe("colours and density", () => {
     expect(sliceDensityFactor([2, 2, 2])).toBeCloseTo(0.4, 9);
     expect(sliceDensityFactor([0.2, 0.2])).toBe(0.3);
     expect(sliceDensityFactor([])).toBe(1);
+  });
+
+  it("draws coincident slice boundaries once", () => {
+    const slices = [
+      { xLeft: 0, xRight: 1 },
+      { xLeft: 1.0001, xRight: 2 },
+      { xLeft: 2, xRight: 3 },
+    ];
+    // 10 px per metre: 1 and 1.0001 are 0.001 px apart.
+    const { xs, spacings } = sliceBoundaries(slices, (x) => x * 10);
+    expect(xs).toEqual([0, 1, 2, 3]);
+    expect(spacings).toEqual([10, 10, 10]);
+  });
+
+  it("leaves out every other slice line while they lie closer than 3 px", () => {
+    const slices = Array.from({ length: 40 }, (_, i) => ({ xLeft: i, xRight: i + 1 }));
+    const dense = sliceLines(slices, (x) => x * 2);
+    // 2 px apart → every other line: 4 px, the ends kept.
+    expect(dense.xs[0]).toBe(0);
+    expect(dense.xs[dense.xs.length - 1]).toBe(40);
+    expect(dense.xs).toHaveLength(21);
+    expect(dense.density).toBeCloseTo(0.8, 9);
+    const wide = sliceLines(slices, (x) => x * 10);
+    expect(wide.xs).toHaveLength(41);
+    expect(wide.density).toBe(1);
   });
 
   it("measures the mean thickness of a sliver", () => {

@@ -261,6 +261,9 @@ export function mapAnalysisResultToModelSpace(
           reinforcementForces: analysisResult.criticalSurface.reinforcementForces?.map(
             (f) => ({ ...f, x: mirrorX(f.x, xMin, xMax), fx: -f.fx }),
           ),
+          crack: analysisResult.criticalSurface.crack
+            ? { ...analysisResult.criticalSurface.crack, x: mirrorX(analysisResult.criticalSurface.crack.x, xMin, xMax) }
+            : undefined,
         }
       : null,
     allSurfaces: analysisResult.allSurfaces.map((surface) => ({
