@@ -115,14 +115,15 @@ export const PROBLEMS: RawCase[] = [
     reference: "Baker (1993).",
     surface: "search",
     units: "SI",
-    description: "Compacted-clay embankment (c′ = 6.5 kPa, φ′ = 40°) on a deep natural-clay foundation (c′ = 0, φ′ = 32°) whose 4H:1V downstream face governs; dry; circular search. Theoretical (infinite slope) FOS tan 32°/tan 14.04° = 2.50.",
-    definition: {"coordinates":[[0,0],[0,95],[80,95],[100,101],[128,95],[148,90],[220,90],[220,0]],"materials":[{"name":"Compacted clay","model":{"kind":"mohr-coulomb","unitWeight":18,"cohesion":6.5,"frictionAngle":40}},{"name":"Natural clay","model":{"kind":"mohr-coulomb","unitWeight":18,"cohesion":0,"frictionAngle":32}}],"materialBoundaries":[{"coordinates":[[0,95],[80,95],[128,95],[148,90],[220,90]],"materialName":""}],"regionAssignments":[{"point":[98,99.9],"materialName":"Compacted clay"},{"point":[40,94.5],"materialName":"Natural clay"}],"analysisLimits":{"entryLeftX":100,"entryRightX":148,"exitLeftX":100,"exitRightX":148}},
+    description: "Compacted-clay embankment (c′ = 6.5 kPa, φ′ = 40°) on a deep natural-clay foundation (c′ = 0, φ′ = 32°) with a 6 m crest and a straight 4H:1V downstream face, whose natural-clay part governs; dry; circular search. Theoretical (infinite slope) FOS tan 32°/tan 14.04° = 2.50.",
+    definition: {"coordinates":[[0,0],[0,95],[80,95],[98,101],[104,101],[128,95],[148,90],[220,90],[220,0]],"materials":[{"name":"Compacted clay","model":{"kind":"mohr-coulomb","unitWeight":18,"cohesion":6.5,"frictionAngle":40}},{"name":"Natural clay","model":{"kind":"mohr-coulomb","unitWeight":18,"cohesion":0,"frictionAngle":32}}],"materialBoundaries":[{"coordinates":[[0,95],[80,95],[128,95],[148,90],[220,90]],"materialName":""}],"regionAssignments":[{"point":[98,99.9],"materialName":"Compacted clay"},{"point":[40,94.5],"materialName":"Natural clay"}],"analysisLimits":{"entryLeftX":104,"entryRightX":148,"exitLeftX":104,"exitRightX":148}},
     checks: [
       {"method":"Bishop","label":"Bishop simplified","published":2.5,"publishedBy":"Theory (infinite slope)"},
       {"method":"Morgenstern-Price","label":"Spencer (M-P, constant f(x))","published":2.5,"publishedBy":"Theory (infinite slope)","options":{"intersliceFunction":"constant"}},
     ],
     notes: [
-      "Search limited to the downstream face, x = 100–148, as in the source.",
+      "Search limited to the downstream face, x = 104–148, as in the source (the left limit marker sits on the downstream crest vertex).",
+      "Crest corrected from a single apex (100, 101) to the 6 m crest (98, 101)–(104, 101) of commercial program A's Fig. 46.1 (vertices read at 400 dpi: 98.0 and 103.2–104, scale checked on the vertices at x = 80, 128 and 148): upstream face 3:1, downstream face one straight 4:1 line (104, 101)–(128, 95)–(148, 90). The apex had made the compacted-clay part of the downstream face 4.67:1. The critical slabs lie on the natural-clay face (x = 128–148), so neither change moves the answer beyond search scatter: 2.516 → 2.520 with the short search, 2.523 → 2.524 with the full one (theory 2.50).",
       "The critical surfaces are shallow slabs on the cohesionless face; a minimum sliding area in proportion to the model area (here 20 000 m²) would skip them and read 3 % high.",
       "commercial program A 2.534 (noncircular, minimum depth 5 m); Baker 2.41.",
     ],
