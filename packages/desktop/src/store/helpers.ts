@@ -1,7 +1,7 @@
 import type { StateCreator } from "zustand";
 import { isClosedBoundary } from "../utils/regions";
 import type { AnalysisResponse, SlopeDefinition } from "../worker/messages";
-import { toCanonicalSlopeDefinition } from "@cslope/engine";
+import { danglingBoundaryMessage, toCanonicalSlopeDefinition, type AnalysisResult } from "@cslope/engine";
 import type { AppState, ModelEntry, ModelsSlice } from "./types";
 import { DEFAULT_ANALYSIS_LIMITS, DEFAULT_PIEZO_LINE } from "./defaults";
 import { mainPiezoLine } from "../utils/piezo";
@@ -26,6 +26,42 @@ export function nextId(prefix: string): string {
  * single-run (`runAnalysis`) and batch-run (`runAllAnalyses`) paths
  * use this function, ensuring feature parity.
  */
+/**
+ * Boundaries in the order the analysis gets them: the order the canvas
+ * applies them (by id, open boundaries before closed ones), so both split
+ * the same way. Not the store order the dialogs number them by.
+ */
+export function engineBoundaryOrder<T extends { id: string; coordinates: [number, number][] }>(
+  boundaries: readonly T[],
+): T[] {
+  const sorted = [...boundaries].sort((a, b) => a.id.localeCompare(b.id));
+  return [
+    ...sorted.filter((b) => !isClosedBoundary(b.coordinates)),
+    ...sorted.filter((b) => isClosedBoundary(b.coordinates)),
+  ];
+}
+
+/**
+ * The analysis's dangling-boundary warnings numbered as the store (and the
+ * dialogs) number the boundaries instead of by the engine's order.
+ */
+export function boundaryWarningsInStoreOrder(
+  result: AnalysisResult,
+  boundaries: readonly { id: string; coordinates: [number, number][] }[],
+): AnalysisResult {
+  if (!result.warnings?.some((w) => w.code === "dangling-boundary")) return result;
+  const order = engineBoundaryOrder(boundaries);
+  return {
+    ...result,
+    warnings: result.warnings.map((w) => {
+      if (w.code !== "dangling-boundary" || w.boundaryIndex === undefined) return w;
+      const id = order[w.boundaryIndex]?.id;
+      const i = boundaries.findIndex((b) => b.id === id);
+      return i < 0 ? w : { ...w, boundaryIndex: i, message: danglingBoundaryMessage(i + 1) };
+    }),
+  };
+}
+
 export function buildSlopeDTOFromModel(model: ModelEntry): SlopeDefinition {
   const materials = model.materials ?? [];
   const analysisLimits = model.analysisLimits ?? { ...DEFAULT_ANALYSIS_LIMITS };
@@ -58,15 +94,8 @@ export function buildSlopeDTOFromModel(model: ModelEntry): SlopeDefinition {
 
   if (model.materialBoundaries?.length > 0) {
     // Pass boundaries as coordinates-only (materialName not used with
-    // regionAssignments), in the order the canvas applies them (by id,
-    // open boundaries before closed ones) so both split the same way.
-    const sorted = [...model.materialBoundaries].sort((a, b) =>
-      a.id.localeCompare(b.id),
-    );
-    slope.materialBoundaries = [
-      ...sorted.filter((b) => !isClosedBoundary(b.coordinates)),
-      ...sorted.filter((b) => isClosedBoundary(b.coordinates)),
-    ].map((b) => ({
+    // regionAssignments), in the order the canvas applies them.
+    slope.materialBoundaries = engineBoundaryOrder(model.materialBoundaries).map((b) => ({
       coordinates: b.coordinates,
       materialName: "",
     }));

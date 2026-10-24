@@ -338,11 +338,14 @@ export function createSlice(
   // A base exactly on a layer boundary (a polyline run along it, a circle
   // grazing it at the slice centre): the point just above the base lies in
   // the upper material, which a surface 1 mm lower would not see at all.
-  // Soil below soil: the base takes the lower material, so a surface along
-  // a weak layer's top is analysed in the weak layer. Not when the lower
-  // material is bedrock or high-strength: a surface on the rock head runs
-  // in the soil above it, so a circle tangent to the rock stays analysable
-  // instead of being rejected as entering the rock.
+  // Soil on soil: the base takes the weaker of the two, the limit a surface
+  // just inside the weaker layer approaches, so a surface along the top or
+  // the bottom of a weak layer is analysed in the weak layer. The strengths
+  // are compared at the slice's normal stress by the ordinary method of
+  // slices, σ′ = W cos²α / b − u. Not when the lower material is bedrock
+  // or high-strength: a surface on the rock head runs in the soil above it,
+  // so a circle tangent to the rock stays analysable instead of being
+  // rejected as entering the rock.
   let liftBelow = false;
   if (baseInside && baseMaterial !== null) {
     const above = baseMaterial;
@@ -353,8 +356,27 @@ export function createSlice(
       const below = materialGeometries.find((g) => g.material !== above && holdsBelow(g))?.material;
       const kind = below?.model.kind;
       if (below && kind !== "impenetrable" && kind !== "high-strength") {
-        baseMaterial = below;
-        liftBelow = true;
+        const sigma = (totalWeight / width) * Math.cos(alpha) ** 2;
+        const strengthAt = (mat: GeometryWithMaterial["material"], yProbe: number): number => {
+          const k = mat.model.kind;
+          if (k === "impenetrable" || k === "high-strength") return Infinity;
+          const yLT = needsLayerTop(mat.model)
+            ? (materialLayerTopAt(materialGeometries, mat, x, yProbe) ?? undefined)
+            : undefined;
+          const st = resolveStrength(mat.model, { yBottom, x, yGround: yTop, yLayerTop: yLT, alpha });
+          const w = waterForMaterial
+            ? waterForMaterial(mat)
+            : waterYMean !== null && waterH !== null
+              ? { yMean: waterYMean, h: waterH }
+              : null;
+          const u = w ? Math.max(w.yMean - yBottom, 0) * WATER_UNIT_WEIGHT * w.h : 0;
+          const drained = st.cohesion + Math.max(0, sigma - u) * Math.tan((st.frictionAngle * Math.PI) / 180);
+          return st.isCombined ? Math.min(drained, st.cohesionUndrained) : drained;
+        };
+        if (strengthAt(below, yBottom - lift) < strengthAt(above, yBottom + lift)) {
+          baseMaterial = below;
+          liftBelow = true;
+        }
       }
     }
   }
@@ -694,7 +716,11 @@ export function getSlices(
   const largeSum = largeIndices.reduce((s, i) => s + diffs[i], 0);
 
   if (targetFromLarge > 0 && largeSum > 0) {
-    const newB = largeSum / targetFromLarge;
+    // At most the width up to which an interval counts as small: once the
+    // short intervals (a densely digitised water line, many layer edges)
+    // use up the slice count, a long interval is still cut to about the
+    // nominal width instead of staying one wide slice.
+    const newB = Math.min(largeSum / targetFromLarge, 1.5 * b);
     for (const i of largeIndices) {
       const d = diffs[i];
       const n = Math.round(d / newB);

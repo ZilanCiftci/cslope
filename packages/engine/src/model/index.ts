@@ -33,7 +33,7 @@ export {
 } from "./solvers";
 
 export { buildSlope } from "./build-slope";
-export { analysisWarnings, M_ALPHA_WARNING_LIMIT } from "./result-warnings";
+export { analysisWarnings, danglingBoundaryMessage, M_ALPHA_WARNING_LIMIT } from "./result-warnings";
 
 export {
   mirrorX,

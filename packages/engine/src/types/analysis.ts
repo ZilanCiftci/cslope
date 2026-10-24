@@ -21,7 +21,12 @@ export type IntersliceFunctionType =
 export interface AnalysisOptions {
   /** Number of slices (10–500, default: 25). */
   slices: number;
-  /** Number of search iterations (500–100,000, default: 1000). */
+  /**
+   * Number of search iterations (500–100,000, default: 1000). The grid of
+   * entry/exit pairs and circles is sized by it; the circles tangent to the
+   * model base and to each material interface come on top, so a layered
+   * model evaluates more surfaces than this.
+   */
   iterations: number;
   /** Extra second-pass refinement iterations around critical candidates (0–100,000, default: 500). */
   refinedIterations: number;

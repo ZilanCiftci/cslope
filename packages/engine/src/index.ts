@@ -173,7 +173,7 @@ export {
 } from "./model/solvers";
 
 export { buildSlope } from "./model/build-slope";
-export { analysisWarnings, M_ALPHA_WARNING_LIMIT } from "./model/result-warnings";
+export { analysisWarnings, danglingBoundaryMessage, M_ALPHA_WARNING_LIMIT } from "./model/result-warnings";
 export {
   buildEnvelope,
   envelopeAt,

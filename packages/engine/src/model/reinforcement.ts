@@ -43,9 +43,9 @@ function materialAt(slope: Slope, x: number, y: number): Material | null {
   return slope.materialGeometries.find((g) => isPointInPolygon(x, y, g.px, g.py))?.material ?? null;
 }
 
-/** Elevation of a material's water line at x (−∞ without one). */
+/** Elevation of a material's water line at x (no material: the main line; −∞ without one). */
 function waterLineAt(slope: Slope, m: Material | null, x: number): number {
-  const line = m ? slope.getWaterLineForMaterial(m) : null;
+  const line = slope.getWaterLineForMaterial(m);
   if (!line) return -Infinity;
   const wy = getYAtX(line.x, line.y, x);
   return Number.isFinite(wy) ? wy : -Infinity;
@@ -86,11 +86,15 @@ export function verticalStress(slope: Slope, x: number, y: number, effective: bo
     const m = materialAt(slope, x, yy);
     if (m) sigma += unitWeightAt(slope, m, x, yy) * dz;
   }
-  // Ponded water above the ground weighs on the column.
-  const wl = waterLineAt(slope, materialAt(slope, x, y), x);
-  sigma += Math.max(0, wl - yGround) * WATER_UNIT_WEIGHT;
+  // Ponded water above the ground weighs on the column: the line of the
+  // material just below the ground, as the slices and the Rankine depth
+  // take it (freeWaterLineAt in slices.ts); the pore pressure at the point
+  // comes from the line of the material there.
+  const yTop = yGround - 1e-6 * Math.max(1, Math.abs(surf.x[surf.x.length - 1] - surf.x[0]));
+  const pond = waterLineAt(slope, materialAt(slope, x, yTop), x);
+  sigma += Math.max(0, pond - yGround) * WATER_UNIT_WEIGHT;
   if (!effective) return sigma;
-  const u = Math.max(0, wl - y) * WATER_UNIT_WEIGHT;
+  const u = Math.max(0, waterLineAt(slope, materialAt(slope, x, y), x) - y) * WATER_UNIT_WEIGHT;
   return Math.max(0, sigma - u);
 }
 

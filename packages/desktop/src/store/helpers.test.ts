@@ -4,7 +4,9 @@ import {
   buildSlopeDTO,
   RUN_RESET,
   getAnalysisInputSignature,
+  boundaryWarningsInStoreOrder,
 } from "./helpers";
+import { analysisWarnings, buildSlope, toCanonicalSlopeDefinition, type AnalysisResult } from "@cslope/engine";
 import type { AppState } from "./types";
 import {
   DEFAULT_COORDS,
@@ -329,5 +331,33 @@ describe("getAnalysisInputSignature", () => {
     expect(getAnalysisInputSignature(state1)).toBe(
       getAnalysisInputSignature(state2),
     );
+  });
+});
+
+describe("boundaryWarningsInStoreOrder", () => {
+  // Store order: boundary 1 splits the model; boundary 2 ends inside a
+  // region. By id the dangling one comes first in the analysis.
+  const boundaries: { id: string; coordinates: [number, number][] }[] = [
+    { id: "bnd-ffff", coordinates: [[0, -5], [40, -5]] },
+    { id: "bnd-0000", coordinates: [[5, 2], [20, 2]] },
+  ];
+
+  it("numbers a dangling boundary as the dialogs do", () => {
+    const slope = buildSlope(
+      toCanonicalSlopeDefinition({
+        coordinates: [[0, -10], [0, 10], [10, 10], [25, 0], [40, 0], [40, -10]],
+        materials: [{ name: "A", unitWeight: 19, cohesion: 5, frictionAngle: 30 }],
+        materialBoundaries: [
+          { coordinates: [[5, 2], [20, 2]], materialName: "" },
+          { coordinates: [[0, -5], [40, -5]], materialName: "" },
+        ],
+      }),
+    );
+    const engine = analysisWarnings(slope);
+    expect(engine.map((w) => w.boundaryIndex)).toEqual([0]);
+    const result = { minFOS: 1, warnings: engine } as AnalysisResult;
+    const [w] = boundaryWarningsInStoreOrder(result, boundaries).warnings!;
+    expect(w.boundaryIndex).toBe(1);
+    expect(w.message).toMatch(/^Material boundary 2 /);
   });
 });

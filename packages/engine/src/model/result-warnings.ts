@@ -64,6 +64,11 @@ const slicesText = (n: number, verb: [string, string]) =>
  * N′ when the caller already has them (solvedEffectiveNormals); otherwise
  * they are solved here.
  */
+/** Warning text for a dangling boundary, numbered from 1 as the user knows it. */
+export function danglingBoundaryMessage(n: number): string {
+  return `Material boundary ${n} ends inside a region and does not split it; check its end points.`;
+}
+
 export function analysisWarnings(
   slope: Slope,
   effectiveNormals?: readonly number[] | null,
@@ -72,7 +77,7 @@ export function analysisWarnings(
   for (const i of slope.danglingBoundaries) {
     warnings.push({
       code: "dangling-boundary",
-      message: `Material boundary ${i + 1} ends inside a region and does not split it; check its end points.`,
+      message: danglingBoundaryMessage(i + 1),
       boundaryIndex: i,
     });
   }

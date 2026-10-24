@@ -10,7 +10,7 @@ import { findExpressionErrors } from "../expression-check";
 import { DEFAULT_ANALYSIS_OPTIONS } from "@cslope/engine";
 import type { AnalysisResponse, WorkerMessage } from "../../worker/messages";
 import type { SliceCreator } from "../helpers";
-import { buildSlopeDTOFromModel, nextId, RUN_RESET } from "../helpers";
+import { boundaryWarningsInStoreOrder, buildSlopeDTOFromModel, nextId, RUN_RESET } from "../helpers";
 import type { AnalysisSlice, AppState, ModelEntry } from "../types";
 import { DEFAULT_ANALYSIS_LIMITS } from "../defaults";
 import { ANALYSIS_TIMEOUT_MS } from "../../constants";
@@ -54,11 +54,16 @@ export function executeModelAnalysis(
   onProgress?: (progress: number) => void,
 ): AnalysisHandle {
   const { slope, options } = workerInputs(model);
-  return runInWorker<AnalysisResult>(
+  const handle = runInWorker<AnalysisResult>(
     { type: "run-analysis", id: crypto.randomUUID(), slope, options },
     analysisTimeoutMs(options),
     onProgress,
   );
+  const boundaries = model.materialBoundaries ?? [];
+  return {
+    ...handle,
+    promise: handle.promise.then((r) => boundaryWarningsInStoreOrder(r, boundaries)),
+  };
 }
 
 /** A cancellable handle to a running probabilistic analysis. */
