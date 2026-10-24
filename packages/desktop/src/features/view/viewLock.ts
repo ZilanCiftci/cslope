@@ -17,6 +17,15 @@ export function viewLockContains(lock: ViewLock, coords: Pt[]): boolean {
   );
 }
 
+/** Whether two locked views are the same frame (to rounding). */
+export function sameViewLock(a: ViewLock, b: ViewLock): boolean {
+  const span = Math.max(1, Math.abs(a.topRight[0] - a.bottomLeft[0]), Math.abs(a.topRight[1] - a.bottomLeft[1]));
+  const tol = 1e-9 * span;
+  return [0, 1].every(
+    (i) => Math.abs(a.bottomLeft[i] - b.bottomLeft[i]) <= tol && Math.abs(a.topRight[i] - b.topRight[i]) <= tol,
+  );
+}
+
 export interface FitViewLockOptions {
   /** Margin on every side, in world units. */
   margin: number;

@@ -1,8 +1,8 @@
 import { create } from "zustand";
 import { temporal } from "zundo";
-import type { AppState } from "./types";
+import type { AppState, ViewLock } from "./types";
 import { isProjectDirty, markProjectClean, withoutPaperViewport } from "./unsaved";
-import { modelViewLock, viewLockContains } from "../features/view/viewLock";
+import { modelViewLock, sameViewLock, viewLockContains } from "../features/view/viewLock";
 import { paperContentOf } from "../features/view/extents";
 import { createAnalysisSlice } from "./slices/analysisSlice";
 import { createCanvasToolbarSlice } from "./slices/canvasToolbarSlice";
@@ -100,13 +100,29 @@ useAppStore.temporal.getState().clear();
 // The project the app starts with counts as saved.
 markProjectClean(useAppStore.getState());
 
+/** Set while an undo or redo restores a step: the frame it restores is kept as it was. */
+let restoringHistory = false;
+
+/** Runs an undo or redo step; the view lock it restores is not refitted. */
+export function restoringHistoryStep(step: () => void): void {
+  restoringHistory = true;
+  try {
+    step();
+  } finally {
+    restoringHistory = false;
+  }
+}
+
 // A locked result view that showed the whole model keeps doing so when the
 // geometry grows (otherwise the result view and the PDF/PNG exports stayed
 // clipped to the old extent). A deliberate zoom to part of the model is
 // left alone.
 useAppStore.subscribe((state, prev) => {
+  if (restoringHistory) return;
   // A result whose circle centre or FOS label (newly shown) falls outside a locked
-  // view that shows the whole model: widen the frame to take them in.
+  // view that shows the whole model: widen the frame to take them in. Only
+  // a frame the app fitted itself before the change (with the marks shown
+  // then, or without any, as a model starts), not one the user set.
   const marksShown = (s: AppState) => [s.resultViewSettings.showCentreMarker, s.resultViewSettings.showFosLabel].join();
   if (
     state.result &&
@@ -116,7 +132,11 @@ useAppStore.subscribe((state, prev) => {
     const lock = state.resultViewSettings.viewLock;
     const content = paperContentOf(state);
     const marks = content.marks ?? [];
-    if (lock && marks.length > 0 && viewLockContains(lock, state.coordinates) && !viewLockContains(lock, marks.map((m) => m.at))) {
+    const prevContent = paperContentOf(prev);
+    const automatic = (l: ViewLock) =>
+      sameViewLock(l, modelViewLock(prevContent, prev.resultViewSettings)) ||
+      sameViewLock(l, modelViewLock({ ...prevContent, marks: [] }, prev.resultViewSettings));
+    if (lock && marks.length > 0 && !viewLockContains(lock, marks.map((m) => m.at)) && automatic(lock)) {
       const history = useAppStore.temporal.getState();
       const tracking = history.isTracking;
       // Running an analysis is not an unsaved change: a clean project

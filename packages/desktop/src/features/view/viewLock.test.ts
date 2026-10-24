@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { useAppStore } from "../../store/app-store";
+import { restoringHistoryStep, useAppStore } from "../../store/app-store";
+import { performUndo } from "../../store/selectors";
 import { isProjectDirty, markProjectClean } from "../../store/unsaved";
 import {
   modelViewLock,
@@ -203,5 +204,47 @@ describe("critical centre and FOS label on the paper", () => {
     useAppStore.setState({ result: { criticalSurface: surface } as never });
     expect(useAppStore.getState().resultViewSettings.viewLock!.topRight[1]).toBeGreaterThan(40);
     expect(isProjectDirty(useAppStore.getState())).toBe(false);
+  });
+
+  it("leaves a frame the user set as it is", () => {
+    const rvs = { ...DEFAULT_RESULT_VIEW_SETTINGS, showFosLabel: true, showCentreMarker: true };
+    // The whole model, but not the automatic fit: a frame of the user's own.
+    const own: ViewLock = { bottomLeft: [-2, -2], topRight: [34, 20] };
+    useAppStore.setState({ coordinates, result: null, resultViewSettings: { ...rvs, viewLock: own } });
+    useAppStore.setState({ result: { criticalSurface: surface } as never });
+    expect(useAppStore.getState().resultViewSettings.viewLock).toEqual(own);
+    // Nor when the label is shown again.
+    useAppStore.getState().setResultViewSettings({ showFosLabel: false, showCentreMarker: false });
+    useAppStore.getState().setResultViewSettings({ showFosLabel: true });
+    expect(useAppStore.getState().resultViewSettings.viewLock).toEqual(own);
+  });
+
+  it("widens a frame fitted with an earlier result's marks for the next result", () => {
+    const rvs = { ...DEFAULT_RESULT_VIEW_SETTINGS, showFosLabel: true, showCentreMarker: true };
+    useAppStore.setState({ coordinates, result: null, resultViewSettings: { ...rvs, viewLock: modelViewLock({ coordinates }, rvs) } });
+    useAppStore.setState({ result: { criticalSurface: surface } as never });
+    const first = useAppStore.getState().resultViewSettings.viewLock!;
+    const higher = { cx: 12, cy: 60, radius: 56, fos: 1.3, entryPoint: [5, 10], exitPoint: [28, 5] } as never;
+    useAppStore.setState({ result: { criticalSurface: higher } as never });
+    const second = useAppStore.getState().resultViewSettings.viewLock!;
+    expect(second.topRight[1]).toBeGreaterThan(first.topRight[1]);
+    expect(second.topRight[1]).toBeGreaterThan(60);
+  });
+
+  it("does not widen the frame an undo restores", () => {
+    const rvs = { ...DEFAULT_RESULT_VIEW_SETTINGS, showFosLabel: true, showCentreMarker: false };
+    const fit = modelViewLock({ coordinates }, rvs);
+    // The label over the automatic fit of the model (outside it), as an undo could leave it.
+    restoringHistoryStep(() =>
+      useAppStore.setState({ coordinates, result: { criticalSurface: surface } as never, resultViewSettings: { ...rvs, viewLock: fit } }),
+    );
+    useAppStore.temporal.getState().clear();
+    // Hidden, and shown again by an undo: the frame stays.
+    useAppStore.getState().setResultViewSettings({ showFosLabel: false });
+    expect(useAppStore.getState().resultViewSettings.viewLock).toEqual(fit);
+    performUndo();
+    const s = useAppStore.getState();
+    expect(s.resultViewSettings.showFosLabel).toBe(true);
+    expect(s.resultViewSettings.viewLock).toEqual(fit);
   });
 });
