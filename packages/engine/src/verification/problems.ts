@@ -513,7 +513,7 @@ export const PROBLEMS: RawCase[] = [
     reference: "Cao et al. (2016); Grodecki (2017).",
     surface: "fixed",
     units: "SI",
-    description: "The V016 wall with 6 cm weak bands at the course interfaces (φ = 37.8°, c = 20.4 kPa from the joint tensile strength); the reference circle through the joints.",
+    description: "The V016 wall with 6 cm weak bands at the course interfaces (φ = 37.8°, c = 20.4 kPa from the joint tensile strength); the V016a reference circle, which passes below the wall and crosses no joint.",
     definition: {"materials":[{"name":"Soil #1","model":{"kind":"mohr-coulomb","unitWeight":21,"cohesion":5,"frictionAngle":30}},{"name":"Soil #2","model":{"kind":"mohr-coulomb","unitWeight":20,"cohesion":0,"frictionAngle":25}},{"name":"Gabion wall","model":{"kind":"mohr-coulomb","unitWeight":23,"cohesion":59.7,"frictionAngle":42}},{"name":"Weak joint","model":{"kind":"mohr-coulomb","unitWeight":23,"cohesion":20.4,"frictionAngle":37.8}}],"coordinates":[[0,0],[0,5.456],[14.472,5.456],[14.611,6.4465],[15.6015,6.3075],[15.7405,7.298],[16.731,7.159],[16.87,8.1495],[17.8605,8.0105],[17.9995,9.001],[30,9],[30,7],[30,0]],"materialBoundaries":[{"coordinates":[[14.472,5.456],[16.453,5.178]],"materialName":""},{"coordinates":[[16.453,5.178],[0,0]],"materialName":""},{"coordinates":[[16.453,5.178],[18.434,4.9],[18.5647,5.8311]],"materialName":""},{"coordinates":[[18.573,5.8905],[30,7]],"materialName":""},{"coordinates":[[18.573,5.8905],[18.7037,6.8216]],"materialName":""},{"coordinates":[[18.573,5.8905],[18.5647,5.8311]],"materialName":""},{"coordinates":[[18.573,5.8905],[15.6015,6.3075],[15.5932,6.2481],[18.5647,5.8311]],"materialName":""},{"coordinates":[[18.7037,6.8216],[18.712,6.881]],"materialName":""},{"coordinates":[[18.7037,6.8216],[16.7227,7.0996],[16.731,7.159],[18.712,6.881]],"materialName":""},{"coordinates":[[18.712,6.881],[18.8427,7.8121]],"materialName":""},{"coordinates":[[18.8427,7.8121],[18.851,7.8715]],"materialName":""},{"coordinates":[[18.8427,7.8121],[17.8522,7.9511],[17.8605,8.0105],[18.851,7.8715]],"materialName":""},{"coordinates":[[18.851,7.8715],[18.99,8.862],[17.9995,9.001]],"materialName":""}],"regionAssignments":[{"point":[4.11325,2.589],"materialName":"Soil #1"},{"point":[24.46025,8.36675],"materialName":"Soil #1"},{"point":[18.89242,2.45],"materialName":"Soil #2"},{"point":[15.81642,6.0396],"materialName":"Gabion wall"},{"point":[17.15258,6.56455],"materialName":"Gabion wall"},{"point":[17.78683,7.48555],"materialName":"Gabion wall"},{"point":[18.42525,8.43625],"materialName":"Gabion wall"},{"point":[17.0831,6.0693],"materialName":"Weak joint"},{"point":[17.71735,6.9903],"materialName":"Weak joint"},{"point":[18.3516,7.9113],"materialName":"Weak joint"}],"customSearchPlanes":[{"cx":15.956,"cy":10.016,"radius":5.722}],"customPlanesOnly":true},
     checks: [
       {"method":"Bishop","label":"Bishop simplified","published":1.799,"publishedBy":"Commercial program A","options":{"porePressureHead":"vertical","slices":60}},
@@ -523,6 +523,7 @@ export const PROBLEMS: RawCase[] = [
     publicNote: "The paper gives its results in figures only; the comparison is with the other programs.",
     notes: [
       "commercial program A's block search along the joints gives 1.516 at the wall face.",
+      "The circle (V016a's: centre (15.956, 10.016), R 5.722) passes below the wall and crosses no weak layer: with the joints set to c = 0, φ = 5° cSlope still gives 1.7905, the V016a value. commercial program A's 1.799 and 1.803 are block-search (non-circular) minima along the weak layers (its Table 109.2), not values on this circle; the description said the circle ran through the joints until 2026-10-24.",
     ],
   },
   {
@@ -531,16 +532,16 @@ export const PROBLEMS: RawCase[] = [
     reference: "Cao et al. (2016); Grodecki (2017).",
     surface: "fixed",
     units: "SI",
-    description: "6 m battered gabion wall retaining a 30° backfill with a 12 kPa crest surcharge and a water table in the retained slope; the gabion mesh as an equivalent cohesion (100 kPa); the reference circle.",
-    definition: {"materials":[{"name":"Soil #1","model":{"kind":"mohr-coulomb","unitWeight":21,"cohesion":0,"frictionAngle":32}},{"name":"Soil #2","model":{"kind":"mohr-coulomb","unitWeight":20,"cohesion":0,"frictionAngle":30}},{"name":"Gabion wall","model":{"kind":"mohr-coulomb","unitWeight":20,"cohesion":100,"frictionAngle":45}}],"coordinates":[[0,89],[30,89],[30,93.682],[30,101.813],[16.85,101.813],[13.816,100.095],[13.8163,100.095],[12.83,100.26],[12.005,95.3283],[0,95.33]],"materialBoundaries":[{"coordinates":[[15.785,93.682],[30,93.682]],"materialName":""},{"coordinates":[[15.785,93.682],[15.95,94.6683],[14.9637,94.8333],[15.2937,96.806],[14.3075,96.971],[14.6375,98.9437],[13.6512,99.1087],[13.8163,100.095]],"materialName":""},{"coordinates":[[15.785,93.682],[11.84,94.342],[12.005,95.3283]],"materialName":""}],"regionAssignments":[{"point":[22.56435,95.81965],"materialName":"Soil #1"},{"point":[15,91.341],"materialName":"Soil #2"},{"point":[13.64935,96.06715],"materialName":"Gabion wall"}],"waterTable":{"mode":"custom","value":[[0,95.33],[15.68,95.33],[30,101]],"followBoundary":false},"udls":[{"magnitude":12,"x1":16.85,"x2":25.85}],"customSearchPlanes":[{"cx":11.203,"cy":102.816,"radius":10.339}],"customPlanesOnly":true},
+    description: "6 m battered gabion wall retaining a 30° backfill with a 12 kPa crest surcharge and a water table in the retained slope; the gabion mesh as an equivalent cohesion (100 kPa); the reference circle. Courses from the base 4, 3, 2.5, 2, 1.5 and 1 m wide.",
+    definition: {"materials":[{"name":"Soil #1","model":{"kind":"mohr-coulomb","unitWeight":21,"cohesion":0,"frictionAngle":32}},{"name":"Soil #2","model":{"kind":"mohr-coulomb","unitWeight":20,"cohesion":0,"frictionAngle":30}},{"name":"Gabion wall","model":{"kind":"mohr-coulomb","unitWeight":20,"cohesion":100,"frictionAngle":45}}],"coordinates":[[0,89],[30,89],[30,93.682],[30,101.813],[16.85,101.813],[13.816,100.095],[13.8163,100.095],[12.83,100.26],[12.005,95.3283],[0,95.33]],"materialBoundaries":[{"coordinates":[[15.785,93.682],[30,93.682]],"materialName":""},{"coordinates":[[15.785,93.682],[15.95,94.6683],[14.9637,94.8333],[15.1288,95.8197],[14.6357,95.9022],[14.8007,96.8885],[14.3075,96.971],[14.4725,97.9573],[13.9794,98.0398],[14.1444,99.0261],[13.6512,99.1087],[13.8163,100.095]],"materialName":""},{"coordinates":[[15.785,93.682],[11.84,94.342],[12.005,95.3283]],"materialName":""}],"regionAssignments":[{"point":[22.56435,95.81965],"materialName":"Soil #1"},{"point":[15,91.341],"materialName":"Soil #2"},{"point":[13.64935,96.06715],"materialName":"Gabion wall"}],"waterTable":{"mode":"custom","value":[[0,95.33],[15.68,95.33],[30,101]],"followBoundary":false},"udls":[{"magnitude":12,"x1":16.85,"x2":25.85}],"customSearchPlanes":[{"cx":11.203,"cy":102.816,"radius":10.339}],"customPlanesOnly":true},
     checks: [
       {"method":"Bishop","label":"Bishop simplified","published":1.373,"publishedBy":"Commercial program A","options":{"porePressureHead":"vertical","slices":60}},
       {"method":"Morgenstern-Price","label":"Spencer (M-P, constant f(x))","published":1.386,"publishedBy":"Commercial program A","options":{"intersliceFunction":"constant","porePressureHead":"vertical","slices":60}},
-      {"method":"Bishop","label":"Bishop simplified","published":1.382,"publishedBy":"Program D","options":{"porePressureHead":"vertical","slices":60}},
     ],
     publicNote: "The paper gives its results in figures only; the comparison is with the other programs.",
     notes: [
       "commercial program A's unfiltered minima along the wall face: 1.032–1.034.",
+      "Wall corrected from the source drawing (Cao et al., as reproduced in commercial program A's Figs. 107.1, 107.3 and 107.4): the six courses are 4, 3, 2.5, 2, 1.5 and 1 m wide; the model had 4, 3, 3, 2, 2 and 1 m. The circle passes below the wall, so only the weight changes: Bishop 1.3821 → 1.3823, Spencer 1.3981 → 1.3983. Program D's 1.382 was computed on the earlier wall and is no longer a check.",
     ],
   },
   {
@@ -550,12 +551,14 @@ export const PROBLEMS: RawCase[] = [
     surface: "fixed",
     units: "SI",
     description: "As V017a with the steel mesh as geosynthetic supports at every course interface instead of the equivalent cohesion.",
-    definition: {"materials":[{"name":"Soil #1","model":{"kind":"mohr-coulomb","unitWeight":21,"cohesion":0,"frictionAngle":32}},{"name":"Soil #2","model":{"kind":"mohr-coulomb","unitWeight":20,"cohesion":0,"frictionAngle":30}},{"name":"Gabion wall","model":{"kind":"mohr-coulomb","unitWeight":20,"cohesion":0,"frictionAngle":45}}],"coordinates":[[0,89],[30,89],[30,93.682],[30,101.813],[16.85,101.813],[13.816,100.095],[13.8163,100.095],[12.83,100.26],[12.005,95.3283],[0,95.33]],"materialBoundaries":[{"coordinates":[[15.785,93.682],[30,93.682]],"materialName":""},{"coordinates":[[15.785,93.682],[15.95,94.6683],[14.9637,94.8333],[15.2937,96.806],[14.3075,96.971],[14.6375,98.9437],[13.6512,99.1087],[13.8163,100.095]],"materialName":""},{"coordinates":[[15.785,93.682],[11.84,94.342],[12.005,95.3283]],"materialName":""}],"regionAssignments":[{"point":[22.56435,95.81965],"materialName":"Soil #1"},{"point":[15,91.341],"materialName":"Soil #2"},{"point":[13.64935,96.06715],"materialName":"Gabion wall"}],"waterTable":{"mode":"custom","value":[[0,95.33],[15.68,95.33],[30,101]],"followBoundary":false},"udls":[{"magnitude":12,"x1":16.85,"x2":25.85}],"reinforcements":[{"x1":12.005,"y1":95.3283,"x2":14.9637,"y2":94.8333,"tensileCapacity":71,"spacing":1,"end1Capacity":0,"end2Capacity":0,"direction":"tangent","application":"active"},{"x1":12.17,"y1":96.3147,"x2":15.1288,"y2":95.8197,"tensileCapacity":71,"spacing":1,"end1Capacity":0,"end2Capacity":0,"direction":"tangent","application":"active"},{"x1":12.335,"y1":97.301,"x2":14.3075,"y2":96.971,"tensileCapacity":71,"spacing":1,"end1Capacity":0,"end2Capacity":0,"direction":"tangent","application":"active"},{"x1":12.5,"y1":98.2873,"x2":14.4725,"y2":97.9573,"tensileCapacity":71,"spacing":1,"end1Capacity":0,"end2Capacity":0,"direction":"tangent","application":"active"},{"x1":12.665,"y1":99.2737,"x2":13.6512,"y2":99.1087,"tensileCapacity":71,"spacing":1,"end1Capacity":0,"end2Capacity":0,"direction":"tangent","application":"active"}],"customSearchPlanes":[{"cx":11.203,"cy":102.816,"radius":10.339}],"customPlanesOnly":true},
+    definition: {"materials":[{"name":"Soil #1","model":{"kind":"mohr-coulomb","unitWeight":21,"cohesion":0,"frictionAngle":32}},{"name":"Soil #2","model":{"kind":"mohr-coulomb","unitWeight":20,"cohesion":0,"frictionAngle":30}},{"name":"Gabion wall","model":{"kind":"mohr-coulomb","unitWeight":20,"cohesion":0,"frictionAngle":45}}],"coordinates":[[0,89],[30,89],[30,93.682],[30,101.813],[16.85,101.813],[13.816,100.095],[13.8163,100.095],[12.83,100.26],[12.005,95.3283],[0,95.33]],"materialBoundaries":[{"coordinates":[[15.785,93.682],[30,93.682]],"materialName":""},{"coordinates":[[15.785,93.682],[15.95,94.6683],[14.9637,94.8333],[15.1288,95.8197],[14.6357,95.9022],[14.8007,96.8885],[14.3075,96.971],[14.4725,97.9573],[13.9794,98.0398],[14.1444,99.0261],[13.6512,99.1087],[13.8163,100.095]],"materialName":""},{"coordinates":[[15.785,93.682],[11.84,94.342],[12.005,95.3283]],"materialName":""}],"regionAssignments":[{"point":[22.56435,95.81965],"materialName":"Soil #1"},{"point":[15,91.341],"materialName":"Soil #2"},{"point":[13.64935,96.06715],"materialName":"Gabion wall"}],"waterTable":{"mode":"custom","value":[[0,95.33],[15.68,95.33],[30,101]],"followBoundary":false},"udls":[{"magnitude":12,"x1":16.85,"x2":25.85}],"reinforcements":[{"x1":12.005,"y1":95.3283,"x2":14.9637,"y2":94.8333,"tensileCapacity":71,"spacing":1,"end1Capacity":0,"end2Capacity":0,"direction":"tangent","application":"active"},{"x1":12.17,"y1":96.3147,"x2":14.6357,"y2":95.9022,"tensileCapacity":71,"spacing":1,"end1Capacity":0,"end2Capacity":0,"direction":"tangent","application":"active"},{"x1":12.335,"y1":97.301,"x2":14.3075,"y2":96.971,"tensileCapacity":71,"spacing":1,"end1Capacity":0,"end2Capacity":0,"direction":"tangent","application":"active"},{"x1":12.5,"y1":98.2873,"x2":13.9794,"y2":98.0398,"tensileCapacity":71,"spacing":1,"end1Capacity":0,"end2Capacity":0,"direction":"tangent","application":"active"},{"x1":12.665,"y1":99.2737,"x2":13.6512,"y2":99.1087,"tensileCapacity":71,"spacing":1,"end1Capacity":0,"end2Capacity":0,"direction":"tangent","application":"active"}],"customSearchPlanes":[{"cx":11.203,"cy":102.816,"radius":10.339}],"customPlanesOnly":true},
     checks: [
       {"method":"Bishop","label":"Bishop simplified","published":1.378,"publishedBy":"Commercial program A","options":{"porePressureHead":"vertical","slices":60}},
-      {"method":"Bishop","label":"Bishop simplified","published":1.382,"publishedBy":"Program D","options":{"porePressureHead":"vertical","slices":60}},
     ],
     publicNote: "The paper gives its results in figures only; the comparison is with the other programs.",
+    notes: [
+      "Wall corrected as in V017a (courses 4, 3, 2.5, 2, 1.5 and 1 m wide); the mesh layers at the course interfaces span the course above, so the second and fourth are now 2.5 m and 1.5 m long. The circle passes below the wall and misses the mesh: Bishop 1.3821 → 1.3823. Program D's 1.382 was computed on the earlier wall and is no longer a check.",
+    ],
   },
   {
     id: "V018",
@@ -632,6 +635,7 @@ export const PROBLEMS: RawCase[] = [
       "Sand cap strength ignored (Su = 0); its unit weight is not printed: γ = 22 (as commercial program A a related problem / cSlope V021a) reproduces commercial program B to ≤ 0.3 % on example 1, while γ = 21 (program D's reading of the vendor .gsz) gives +1.5 %. Bed (c′ = 200, φ′ = 35°, γ = 22) is never reached. Piezometric line digitised from Fig. 51 (y ≈ 2.43 m, then the ground surface); it matters only for example 4 (φ > 0): without it cSlope is 11–14 % above commercial program B.",
       "A free search is meaningless here (the zero-strength sand gives FOS → 0); the critical circle must be searched within the family tangent to the layer base.",
       "Critical circle (model coordinates): centre (-22.188, 20.908), R 30.049, tangent to y = -9.141.",
+      "On commercial program A's printed circle (Fig. 28.3: centre (−22.151, 20.872), R 30.012) cSlope gives Bishop 1.1283 (commercial program A 1.128).",
     ],
   },
   {
@@ -653,6 +657,7 @@ export const PROBLEMS: RawCase[] = [
       "Sand cap strength ignored (Su = 0); its unit weight is not printed: γ = 22 (as commercial program A a related problem / cSlope V021a) reproduces commercial program B to ≤ 0.3 % on example 1, while γ = 21 (program D's reading of the vendor .gsz) gives +1.5 %. Bed (c′ = 200, φ′ = 35°, γ = 22) is never reached. Piezometric line digitised from Fig. 51 (y ≈ 2.43 m, then the ground surface); it matters only for example 4 (φ > 0): without it cSlope is 11–14 % above commercial program B.",
       "A free search is meaningless here (the zero-strength sand gives FOS → 0); the critical circle must be searched within the family tangent to the layer base.",
       "Critical circle (model coordinates): centre (-19.961, 21.899), R 34.089, tangent to y = -12.19.",
+      "On commercial program A's printed circle (Fig. 28.4: centre (−19.814, 20.872), R 33.062) cSlope gives Bishop 1.1106 (commercial program A 1.109).",
       "commercial program B's probability of failure, 26.15 %, is not checked: cSlope's Monte Carlo on this circle gives 28.6 % (Δ 0.025). On commercial program A's similar circle (V021b) cSlope gives 28.2 % against commercial program A's 27.89 %.",
     ],
   },
@@ -675,6 +680,7 @@ export const PROBLEMS: RawCase[] = [
       "Sand cap strength ignored (Su = 0); its unit weight is not printed: γ = 22 (as commercial program A a related problem / cSlope V021a) reproduces commercial program B to ≤ 0.3 % on example 1, while γ = 21 (program D's reading of the vendor .gsz) gives +1.5 %. Bed (c′ = 200, φ′ = 35°, γ = 22) is never reached. Piezometric line digitised from Fig. 51 (y ≈ 2.43 m, then the ground surface); it matters only for example 4 (φ > 0): without it cSlope is 11–14 % above commercial program B.",
       "A free search is meaningless here (the zero-strength sand gives FOS → 0); the critical circle must be searched within the family tangent to the layer base.",
       "Critical circle (model coordinates): centre (-22.656, 20.174), R 29.315, tangent to y = -9.141.",
+      "On commercial program A's printed circle (Fig. 28.5: centre (−22.618, 19.847), R 28.987) cSlope gives Bishop 1.1085 (commercial program A 1.108).",
     ],
   },
   {
@@ -696,6 +702,7 @@ export const PROBLEMS: RawCase[] = [
       "Sand cap strength ignored (Su = 0); its unit weight is not printed: γ = 22 (as commercial program A a related problem / cSlope V021a) reproduces commercial program B to ≤ 0.3 % on example 1, while γ = 21 (program D's reading of the vendor .gsz) gives +1.5 %. Bed (c′ = 200, φ′ = 35°, γ = 22) is never reached. Piezometric line digitised from Fig. 51 (y ≈ 2.43 m, then the ground surface); it matters only for example 4 (φ > 0): without it cSlope is 11–14 % above commercial program B.",
       "A free search is meaningless here (the zero-strength sand gives FOS → 0); the critical circle must be searched within the family tangent to the layer base.",
       "Critical circle (model coordinates): centre (-19.961, 21.899), R 34.089, tangent to y = -12.19.",
+      "On commercial program A's printed circle (Fig. 28.6: centre (−19.814, 20.872), R 33.062) cSlope gives Bishop 1.0588 (commercial program A 1.058).",
     ],
   },
   {
@@ -717,6 +724,7 @@ export const PROBLEMS: RawCase[] = [
       "Sand cap strength ignored (Su = 0); its unit weight is not printed: γ = 22 (as commercial program A a related problem / cSlope V021a) reproduces commercial program B to ≤ 0.3 % on example 1, while γ = 21 (program D's reading of the vendor .gsz) gives +1.5 %. Bed (c′ = 200, φ′ = 35°, γ = 22) is never reached. Piezometric line digitised from Fig. 51 (y ≈ 2.43 m, then the ground surface); it matters only for example 4 (φ > 0): without it cSlope is 11–14 % above commercial program B.",
       "A free search is meaningless here (the zero-strength sand gives FOS → 0); the critical circle must be searched within the family tangent to the layer base.",
       "Critical circle (model coordinates): centre (-22.656, 20.174), R 29.315, tangent to y = -9.141.",
+      "On commercial program A's printed circle (Fig. 28.7: centre (−22.618, 19.847), R 28.987) cSlope gives Bishop 2.2451 (commercial program A 2.245).",
     ],
   },
   {
@@ -738,6 +746,7 @@ export const PROBLEMS: RawCase[] = [
       "Sand cap strength ignored (Su = 0); its unit weight is not printed: γ = 22 (as commercial program A a related problem / cSlope V021a) reproduces commercial program B to ≤ 0.3 % on example 1, while γ = 21 (program D's reading of the vendor .gsz) gives +1.5 %. Bed (c′ = 200, φ′ = 35°, γ = 22) is never reached. Piezometric line digitised from Fig. 51 (y ≈ 2.43 m, then the ground surface); it matters only for example 4 (φ > 0): without it cSlope is 11–14 % above commercial program B.",
       "A free search is meaningless here (the zero-strength sand gives FOS → 0); the critical circle must be searched within the family tangent to the layer base.",
       "Critical circle (model coordinates): centre (-19.961, 21.899), R 34.089, tangent to y = -12.19.",
+      "On commercial program A's printed circle (Fig. 28.8: centre (−19.814, 20.872), R 33.062) cSlope gives Bishop 2.1297 (commercial program A 2.128).",
     ],
   },
   {
@@ -758,6 +767,7 @@ export const PROBLEMS: RawCase[] = [
       "Sand cap strength ignored (Su = 0); its unit weight is not printed: γ = 22 (as commercial program A a related problem / cSlope V021a) reproduces commercial program B to ≤ 0.3 % on example 1, while γ = 21 (program D's reading of the vendor .gsz) gives +1.5 %. Bed (c′ = 200, φ′ = 35°, γ = 22) is never reached. Piezometric line digitised from Fig. 51 (y ≈ 2.43 m, then the ground surface); it matters only for example 4 (φ > 0): without it cSlope is 11–14 % above commercial program B.",
       "A free search is meaningless here (the zero-strength sand gives FOS → 0); the critical circle must be searched within the family tangent to the layer base.",
       "Critical circle (model coordinates): centre (-20.313, 21.643), R 30.784, tangent to y = -9.141.",
+      "On commercial program A's printed circle (Fig. 28.9: centre (−19.814, 20.530), R 29.670) cSlope gives Bishop 1.4305 (commercial program A 1.422); the 0.6 % is in the pore pressures of example 4 (with the phreatic correction cSlope gives 1.455).",
       "Example 4, layer 3 is left out: no assignment of the piezometric line to the clays reproduces commercial program B's 1.504 (cSlope 1.443, −4 %); the pore-pressure set-up of the vendor model is not printed.",
     ],
   },
@@ -767,7 +777,7 @@ export const PROBLEMS: RawCase[] = [
     reference: "Chowdhury & Xu (1995).",
     surface: "fixed",
     units: "SI",
-    description: "Chowdhury & Xu example 5: embankment fill (c′ = 10 kPa, φ′ = 12°) on soft clay (Su = 40 kPa), the geometry of V022a; circle tangent to the fill–clay interface.",
+    description: "Chowdhury & Xu example 5: embankment fill (c′ = 10 kPa, φ′ = 12°) on soft clay (Su = 40 kPa), the geometry as a commercial program's verification manual draws it; circle tangent to the fill–clay interface.",
     definition: {"orientation":"rtl","materials":[{"name":"Layer 1","model":{"kind":"mohr-coulomb","unitWeight":20,"cohesion":10,"frictionAngle":12}},{"name":"Layer 2","model":{"kind":"undrained","unitWeight":18,"undrainedShearStrength":40}},{"name":"Hard layer","model":{"kind":"undrained","unitWeight":20,"undrainedShearStrength":1000}}],"coordinates":[[0,0],[0,15],[30,15],[55,25],[60,25],[80,15],[90,15],[90,0]],"materialBoundaries":[{"coordinates":[[0,15],[90,15]],"materialName":""},{"coordinates":[[0,5],[90,5]],"materialName":""}],"regionAssignments":[{"point":[57.5,24.5],"materialName":"Layer 1"},{"point":[45,14.5],"materialName":"Layer 2"},{"point":[45,4.5],"materialName":"Hard layer"}],"customSearchPlanes":[{"cx":37.396,"cy":41.99,"radius":26.99}],"customPlanesOnly":true},
     checks: [
       {"method":"Morgenstern-Price","label":"Morgenstern-Price (half-sine)","published":1.158,"publishedBy":"Commercial program B","options":{"slices":50}},
@@ -776,8 +786,9 @@ export const PROBLEMS: RawCase[] = [
     ],
     notes: [
       "Fixed circle = cSlope's critical M-P circle among circles tangent to the base of the clay layer (cSlope has no tangent-line search; commercial program B's own circle is not printed), so the comparison is that of two searches within the same circle family.",
-      "commercial program B PF 20.98 %, C&X PF 20.225 %. Geometry of V022a/c (the manual prints no figure for example 5).",
+      "commercial program B PF 20.98 %, C&X PF 20.225 %. Geometry as commercial program A's Fig. 28.2.",
       "Critical circle (model coordinates): centre (37.396, 41.99), R 26.99, tangent to y = 15.",
+      "On commercial program A's printed circle (Fig. 28.11: centre (37.369, 42.429), R 27.429) cSlope gives Bishop 1.1586 (commercial program A 1.160).",
     ],
   },
   {
@@ -796,8 +807,9 @@ export const PROBLEMS: RawCase[] = [
     publicNote: "Chowdhury & Xu's 1.1479 is about 2.5 % below the other programs on this family of circles.",
     notes: [
       "Fixed circle = cSlope's critical M-P circle among circles tangent to the base of the clay layer (cSlope has no tangent-line search; commercial program B's own circle is not printed), so the comparison is that of two searches within the same circle family.",
-      "commercial program B PF 21.39 %, C&X PF 19.733 %. Geometry of V022a/c (the manual prints no figure for example 5).",
+      "commercial program B PF 21.39 %, C&X PF 19.733 %. Geometry as commercial program A's Fig. 28.2.",
       "Critical circle (model coordinates): centre (40.313, 28.685), R 23.685, tangent to y = 5.",
+      "On commercial program A's printed circle (Fig. 28.12: centre (40.256, 29.437), R 24.437) cSlope gives Bishop 1.1782 (commercial program A 1.185). The circle grazes the hard layer at y = 5: 0.001 m more radius cuts it and gives 1.43, so the printed radius cannot settle the last 0.6 %.",
       "Chowdhury & Xu's 1.1479 is not checked: it is 2.5 % below both commercial program B (1.178) and commercial program A (1.185, V022b) on this circle family.",
     ],
   },
@@ -911,11 +923,12 @@ export const PROBLEMS: RawCase[] = [
     definition: {"coordinates":[[-10,-30],[-10,30],[90,30],[130,80],[270,80],[270,-30]],"materials":[{"name":"Clay","model":{"kind":"mohr-coulomb","unitWeight":100,"cohesion":1000,"frictionAngle":0}}],"materialBoundaries":[],"regionAssignments":[{"point":[2.4,-29.95],"materialName":"Clay"}],"orientation":"rtl"},
     checks: [
       {"method":"Bishop","label":"Bishop simplified","published":1.125,"publishedBy":"Commercial program A"},
-      {"method":"Morgenstern-Price","label":"Spencer (M-P, constant f(x))","published":1.124,"publishedBy":"Duncan & Wright (reference)","options":{"intersliceFunction":"constant"}},
+      {"method":"Morgenstern-Price","label":"Spencer (M-P, constant f(x))","published":1.119,"publishedBy":"Duncan & Wright (reference)","options":{"intersliceFunction":"constant"}},
     ],
     notes: [
       "The model runs from x = −10 to 270 ft, as in the source, whose base-tangent circle starts at x = −4.8 ft.",
       "commercial program A's base-tangent circle gives 1.125 (Bishop), 1.124 (Spencer).",
+      "Duncan & Wright's reference for the 60 ft foundation is 1.119 for the circle tangent to the base and 1.124 for the toe circle (commercial program A's Tables 78.6 and 78.7). The search finds the base-tangent circle, so the check is 1.119; it was 1.124, the toe-circle value, until 2026-10-24. On commercial program A's printed base-tangent circle (centre (111.147, 112.308) in these coordinates, R 142.208, endpoints as printed) exact integration gives 1.1187 and cSlope 1.1173 with 60 slices.",
     ],
   },
   {
@@ -949,6 +962,7 @@ export const PROBLEMS: RawCase[] = [
     ],
     notes: [
       "Duncan & Wright's reference values: Spencer's method, two digits. commercial program A GLE 2.550.",
+      "commercial program A prints its circle as R = 86.728 (endpoints (103.372, 69.349) and (220.440, 110.000)), not 87. On it cSlope gives Bishop 2.5257 and Spencer 2.5227, and an independent Bishop calculation 2.5253: about 0.9 % below commercial program A's 2.549 on the same circle and the same geometry (the endpoints agree to 0.001 ft).",
     ],
   },
   {
@@ -965,7 +979,7 @@ export const PROBLEMS: RawCase[] = [
       {"method":"Morgenstern-Price","label":"Spencer (M-P, constant f(x))","published":1.35,"publishedBy":"Duncan & Wright (reference)","options":{"intersliceFunction":"constant"}},
     ],
     notes: [
-      "Duncan & Wright's 1.35 is a Spencer value (commercial program A: Bishop 1.398, Spencer 1.359, GLE 1.358 on this circle).",
+      "Duncan & Wright's 1.35 is a Spencer value (commercial program A: Bishop 1.398, Spencer 1.359, GLE 1.358 on its circle, printed as R = 101.801; on that circle cSlope gives Bishop 1.3952 and Spencer 1.3575).",
     ],
   },
   {
