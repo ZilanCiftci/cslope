@@ -377,15 +377,18 @@ describe("drawCanvas — edit mode", () => {
     }
   });
 
-  it("draws vertex dots over the search-limit markers", () => {
+  it("draws vertex dots over the search-limit markers, the triangle moved off the dot", () => {
     const rec = draw({
       editingExterior: true,
       analysisLimits: { enabled: true, entryLeftX: 0, entryRightX: 8, exitLeftX: 21, exitRightX: 30 },
     });
     const [vx, vy] = toC(0, 10);
-    const triangle = rec.paths.findIndex((p) => p.kind === "fill" && p.segments.length === 4 && close(pathPoints(p)[0], [vx, vy]));
+    // The dot (POINT_RADIUS and half its outline) and 2 px: the tip outside the range, left of the dot.
+    const tipX = vx - (POINT_RADIUS + 0.75 + 2);
+    const triangle = rec.paths.findIndex((p) => p.kind === "fill" && p.segments.length === 4 && close(pathPoints(p)[0], [tipX, vy]));
     const dot = rec.paths.findIndex((p) => p.kind === "fill" && p.segments[0].op === "arc" && close(pathPoints(p)[0], [vx, vy]));
     expect(triangle).toBeGreaterThanOrEqual(0);
+    expect(Math.max(...pathPoints(rec.paths[triangle]).map((q) => q[0]))).toBeLessThan(vx - POINT_RADIUS);
     expect(dot).toBeGreaterThan(triangle);
   });
 
@@ -509,6 +512,32 @@ describe("drawCanvas — edit mode", () => {
     const miss = draw({ customSearchPlanes: [{ id: "c2", cx: 15, cy: 30, radius: 5 }] });
     const faint = miss.strokes().find((p) => p.state.lineDash.length > 0 && p.segments.some((g) => g.op === "arc"))!;
     expect(faint.state.globalAlpha).toBeLessThan(0.5);
+  });
+
+  it("starts a prescribed circle at a fixed-depth crack, the crack dimension standing there", () => {
+    const customSearchPlanes = [{ id: "c1", cx: 15, cy: 14, radius: 10 }];
+    const rec = draw({ customSearchPlanes, options: { ...DEFAULT_ANALYSIS_OPTIONS, tensionCrackDepth: 2 } });
+    const circle = rec
+      .strokes()
+      .find((p) => p.state.lineDash.length > 0 && p.state.lineWidth === 1.5 && pathPoints(p).length > 20)!;
+    const pts = pathPoints(circle).map(([x, y]) => canvasToWorld(x, y, W, H));
+    // It enters where it lies 2 m below the crest: y = 8 on the circle, left of the centre.
+    const start = pts.reduce((a, b) => (a[0] < b[0] ? a : b));
+    expect(start[1]).toBeCloseTo(8, 4);
+    expect(start[0]).toBeCloseTo(15 - Math.sqrt(64), 4);
+    // The dimension from the crest down to it, labelled next to it (no leader).
+    const dim = rec.strokes().find((p) => {
+      const q = pathPoints(p);
+      return q.length === 6 && q[0][0] === q[1][0] && Math.abs(q[1][1] - q[0][1] - 2 * SCALE) < 1e-6;
+    })!;
+    const [top] = pathPoints(dim).map(([x, y]) => canvasToWorld(x, y, W, H));
+    expect(top[0]).toBeCloseTo(start[0], 4);
+    expect(top[1]).toBeCloseTo(10, 6);
+    const label = rec.findText("crack 2.0 m")!;
+    expect(label).toBeDefined();
+    const [dx] = toC(top[0], 0);
+    expect(rec.strokes().some((p) => p.state.lineWidth === 0.75)).toBe(false);
+    expect(Math.abs(label.x - dx)).toBeLessThan(90);
   });
 
   it("hides the search limits in edit view when only prescribed surfaces are analysed", () => {

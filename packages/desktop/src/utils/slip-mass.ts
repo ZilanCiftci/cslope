@@ -278,25 +278,40 @@ export function sliceDensityFactor(spacings: readonly number[], fullSpacing = 5,
   return Math.max(minFactor, Math.min(1, median / fullSpacing));
 }
 
+/** Slice boundaries closer than this on screen (canvas px) are drawn as one line. */
+export const SLICE_MERGE_PX = 2.5;
+/** The same on paper, mm. */
+export const SLICE_MERGE_MM = 0.7;
+
 /**
  * The positions of the slice boundaries of a result, sorted, with the
  * on-screen spacing between neighbours (via `toScreenX`). Boundaries
  * closer than `minGap` on screen (coincident sides of neighbouring
- * slices, slices split at a layer vertex) are one line, not two drawn on
- * top of each other.
+ * slices, a slice split at a layer vertex or a geometry break a little
+ * beside a regular boundary) are one line: two lines that close read as
+ * one thick double line. The ends of the sliding mass are kept.
  */
 export function sliceBoundaries(
   slices: readonly { xLeft: number; xRight: number }[],
   toScreenX: (x: number) => number,
-  minGap = 0.5,
+  minGap = SLICE_MERGE_PX,
 ): { xs: number[]; spacings: number[] } {
   const sorted = [...new Set(slices.flatMap((s) => [s.xLeft, s.xRight]))].sort((a, b) => a - b);
   const xs: number[] = [];
   const spacings: number[] = [];
-  for (const x of sorted) {
+  const gapTo = (x: number, k: number) => Math.abs(toScreenX(x) - toScreenX(xs[k]));
+  for (let i = 0; i < sorted.length; i++) {
+    const x = sorted[i];
     if (xs.length > 0) {
-      const d = Math.abs(toScreenX(x) - toScreenX(xs[xs.length - 1]));
-      if (d < minGap) continue;
+      const d = gapTo(x, xs.length - 1);
+      if (d < minGap) {
+        // The last boundary (the end of the mass) replaces an inner one.
+        if (i === sorted.length - 1 && xs.length > 1) {
+          xs[xs.length - 1] = x;
+          spacings[spacings.length - 1] = gapTo(x, xs.length - 2);
+        }
+        continue;
+      }
       spacings.push(d);
     }
     xs.push(x);
@@ -315,8 +330,9 @@ export function sliceLines(
   slices: readonly { xLeft: number; xRight: number }[],
   toScreenX: (x: number) => number,
   minSpacing = 3,
+  minGap = SLICE_MERGE_PX,
 ): { xs: number[]; density: number } {
-  let { xs, spacings } = sliceBoundaries(slices, toScreenX);
+  let { xs, spacings } = sliceBoundaries(slices, toScreenX, minGap);
   const median = (v: number[]) => [...v].sort((a, b) => a - b)[Math.floor(v.length / 2)] ?? Infinity;
   while (xs.length > 3 && median(spacings) < minSpacing) {
     const kept = xs.filter((_, i) => i % 2 === 0 || i === xs.length - 1);

@@ -1,5 +1,6 @@
 import { getCircleLineIntersections, getSurfaceLine, isPointInPolygon } from "@cslope/engine";
 import { surfaceYAtX } from "../features/view/surface";
+import { circleArcPoints } from "./arc";
 import type { ModelOrientation } from "../store/types";
 
 type Pt = [number, number];
@@ -115,6 +116,110 @@ export function circleEntryExit(
     return null;
   }
   return null;
+}
+
+/**
+ * Where a tension crack of fixed `depth` cuts a slip surface, as the
+ * analysis finds it: walking from the entry towards the exit, the first x
+ * where the surface (`baseY`) lies `depth` below the ground. Null when it
+ * never gets that deep before the exit (the analysis then has no surface).
+ * Works in either direction (a right-to-left model enters from the right).
+ */
+export function crackCutX(
+  coordinates: readonly Pt[],
+  baseY: (x: number) => number,
+  xEntry: number,
+  xExit: number,
+  depth: number,
+): number | null {
+  const below = (x: number) => {
+    const g = surfaceYAtX(coordinates as Pt[], x);
+    return g === null ? -Infinity : g - baseY(x) - depth;
+  };
+  const steps = 200;
+  let prev = xEntry;
+  for (let k = 1; k <= steps; k++) {
+    const x = xEntry + ((xExit - xEntry) * k) / steps;
+    if (below(x) >= 0) {
+      let lo = prev;
+      let hi = x;
+      for (let it = 0; it < 50; it++) {
+        const mid = (lo + hi) / 2;
+        if (below(mid) >= 0) hi = mid;
+        else lo = mid;
+      }
+      return (hi - xExit) * Math.sign(xExit - xEntry) < 0 ? hi : null;
+    }
+    prev = x;
+  }
+  return null;
+}
+
+/** y of a polyline at x (linear between its points, null outside them). */
+function polylineY(points: readonly Pt[], x: number): number | null {
+  for (let i = 1; i < points.length; i++) {
+    const [x0, y0] = points[i - 1];
+    const [x1, y1] = points[i];
+    if ((x0 <= x && x <= x1) || (x1 <= x && x <= x0)) {
+      return x0 === x1 ? Math.min(y0, y1) : y0 + ((x - x0) / (x1 - x0)) * (y1 - y0);
+    }
+  }
+  return null;
+}
+
+/** A prescribed surface as the analysis takes it, for drawing (world). */
+export interface PrescribedPath {
+  /** The surface from where it enters (the crack's base at a crack) to where it leaves. */
+  points: Pt[];
+  /** The tension crack it starts at: x, the ground there and the crack's base. */
+  crack: { x: number; top: number; bottom: number } | null;
+  /** The analysis has no surface for it (no entry and exit, or it never reaches the crack depth). */
+  unusable: boolean;
+}
+
+/**
+ * The path of a prescribed surface as the analysis takes it: a circle
+ * from its entry to its exit (circleEntryExit), a polyline as given; with
+ * a tension crack of fixed `crackDepth`, cut where it lies that deep
+ * below the ground on the entry side (crackCutX): the surface enters at
+ * the crack's base. `mirrored`: a right-to-left model, entered from the
+ * right.
+ */
+export function prescribedPath(
+  coordinates: readonly Pt[],
+  plane: { cx: number; cy: number; radius: number; points?: readonly Pt[] | null },
+  crackDepth: number,
+  mirrored = false,
+): PrescribedPath {
+  if (plane.points) {
+    const pts = plane.points.map(([x, y]): Pt => [x, y]);
+    if (!(crackDepth > 0) || pts.length < 2) return { points: pts, crack: null, unusable: false };
+    const xs = pts.map((p) => p[0]);
+    const [xEntry, xExit] = mirrored ? [Math.max(...xs), Math.min(...xs)] : [Math.min(...xs), Math.max(...xs)];
+    const baseY = (x: number) => polylineY(pts, x) ?? Infinity;
+    const xc = crackCutX(coordinates, baseY, xEntry, xExit, crackDepth);
+    const gc = xc === null ? null : surfaceYAtX(coordinates as Pt[], xc);
+    if (xc === null || gc === null) return { points: pts, crack: null, unusable: false };
+    // In order from the entry: the crack's base, then the points beyond it.
+    const ordered = (xs[0] <= xs[xs.length - 1]) === !mirrored ? pts : [...pts].reverse();
+    const beyond = ordered.filter(([x]) => (x - xc) * Math.sign(xExit - xEntry) > 0);
+    return { points: [[xc, baseY(xc)], ...beyond], crack: { x: xc, top: gc, bottom: baseY(xc) }, unusable: false };
+  }
+  const ends = plane.radius > 0 ? circleEntryExit(coordinates, plane.cx, plane.cy, plane.radius, mirrored) : null;
+  if (!ends) return { points: [], crack: null, unusable: true };
+  if (!(crackDepth > 0)) {
+    return { points: circleArcPoints(plane.cx, plane.cy, plane.radius, ends[0], ends[1], 90), crack: null, unusable: false };
+  }
+  const baseY = (x: number) => plane.cy - Math.sqrt(Math.max(0, plane.radius ** 2 - (x - plane.cx) ** 2));
+  const xc = crackCutX(coordinates, baseY, ends[0][0], ends[1][0], crackDepth);
+  const gc = xc === null ? null : surfaceYAtX(coordinates as Pt[], xc);
+  if (xc === null || gc === null) return { points: [], crack: null, unusable: true };
+  const start: Pt = [xc, baseY(xc)];
+  return {
+    points: circleArcPoints(plane.cx, plane.cy, plane.radius, start, ends[1], 90),
+    crack: { x: xc, top: gc, bottom: start[1] },
+    unusable: false,
+  };
 }
 
 /**

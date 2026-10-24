@@ -126,3 +126,28 @@ describe("piezoObstacles", () => {
     expect(o.slipMass).toBeNull();
   });
 });
+
+describe("piezoSymbolLayout clearances", () => {
+  it("keeps a symbol its own width from the model's side", () => {
+    // A short line in the soil ending at the right side: its middle is 10 px from it.
+    const [s] = piezoSymbolLayout([[960, -20], [1000, -20]], toScreen, { unit: 1, model });
+    expect(1000 - s.x).toBeGreaterThanOrEqual(3 * 7);
+  });
+
+  it("keeps clear of a material boundary a few px away", () => {
+    // A boundary 2 px above the line from x = 0 to 150: the symbol goes beyond it.
+    const { softLines } = piezoObstacles(
+      { coordinates: model, materialBoundaries: [{ coordinates: [[0, -18], [150, -18]] }] },
+      toScreen,
+      1,
+    );
+    const [s] = piezoSymbolLayout([[0, -20], [250, -20]], toScreen, { unit: 1, model, softLines });
+    expect(s.x).toBeGreaterThan(150 + 7);
+  });
+
+  it("keeps away from a vertex dot", () => {
+    const obstacles = piezoObstacles({ coordinates: model, vertices: [[50, -20]] }, toScreen, 1);
+    const [s] = piezoSymbolLayout([[0, -20], [100, -20]], toScreen, { unit: 1, model, ...obstacles });
+    expect(Math.abs(s.x - 50)).toBeGreaterThan(14 + 7);
+  });
+});

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { circleEntryExit, defaultCustomCircle } from "./custom-plane";
+import { circleEntryExit, crackCutX, defaultCustomCircle, prescribedPath } from "./custom-plane";
 import { surfaceYAtX } from "../features/view/surface";
 import {
   analyseSlope,
@@ -130,5 +130,65 @@ describe("circleEntryExit", () => {
     expect(circleEntryExit(model, 15, 30, 5)).toBeNull();
     expect(circleEntryExit(model, 15, 14, 0)).toBeNull();
     expect(circleEntryExit([], 15, 14, 10)).toBeNull();
+  });
+});
+
+describe("prescribedPath", () => {
+  // Crest at y 10 up to x 10, face down to y 5 at x 20, base at y 0.
+  const model: [number, number][] = [
+    [0, 0],
+    [0, 10],
+    [10, 10],
+    [20, 5],
+    [30, 5],
+    [30, 0],
+  ];
+  const circle = { cx: 18, cy: 16, radius: 13 };
+
+  it("runs a circle from its entry to its exit without a crack", () => {
+    const ends = circleEntryExit(model, circle.cx, circle.cy, circle.radius)!;
+    const p = prescribedPath(model, circle, 0);
+    expect(p.unusable).toBe(false);
+    expect(p.crack).toBeNull();
+    expect(p.points[0][0]).toBeCloseTo(ends[0][0], 6);
+    expect(p.points.at(-1)![0]).toBeCloseTo(ends[1][0], 6);
+  });
+
+  it("starts a circle at the base of a fixed-depth crack, as the analysis does", () => {
+    const p = prescribedPath(model, circle, 2);
+    expect(p.unusable).toBe(false);
+    const { x, top, bottom } = p.crack!;
+    expect(top).toBeCloseTo(surfaceYAtX(model, x)!, 9);
+    expect(top - bottom).toBeCloseTo(2, 6);
+    // The surface enters there, past the circle's own entry.
+    const ends = circleEntryExit(model, circle.cx, circle.cy, circle.radius)!;
+    expect(x).toBeGreaterThan(ends[0][0]);
+    expect(p.points[0][0]).toBeCloseTo(x, 6);
+    expect(p.points[0][1]).toBeCloseTo(bottom, 6);
+    expect(p.points.at(-1)![0]).toBeCloseTo(ends[1][0], 6);
+    // Never that deep: no surface.
+    expect(prescribedPath(model, circle, 50).unusable).toBe(true);
+  });
+
+  it("cuts a polyline at the crack, from the right in a right-to-left model", () => {
+    const poly = { cx: 0, cy: 0, radius: 0, points: [[2, 10], [8, 4], [22, 5]] as [number, number][] };
+    const p = prescribedPath(model, poly, 2);
+    expect(p.crack!.x).toBeCloseTo(4, 6);
+    expect(p.points[0]).toEqual([p.crack!.x, p.crack!.bottom]);
+    expect(p.points.slice(1)).toEqual([[8, 4], [22, 5]]);
+    const mirrored = model.map(([x, y]): [number, number] => [30 - x, y]);
+    const mp = prescribedPath(mirrored, { ...poly, points: poly.points.map(([x, y]): [number, number] => [30 - x, y]) }, 2, true);
+    expect(mp.crack!.x).toBeCloseTo(26, 6);
+    expect(mp.points.slice(1)).toEqual([[22, 4], [8, 5]]);
+  });
+});
+
+describe("crackCutX", () => {
+  it("finds where a surface first lies the crack depth below the ground, from either side", () => {
+    const flat: [number, number][] = [[0, 0], [0, 10], [20, 10], [20, 0]];
+    const v = (x: number) => 10 - Math.min(x, 20 - x); // a V from the ground down to y 0 at x 10
+    expect(crackCutX(flat, v, 0, 20, 3)).toBeCloseTo(3, 6);
+    expect(crackCutX(flat, v, 20, 0, 3)).toBeCloseTo(17, 6);
+    expect(crackCutX(flat, v, 0, 20, 11)).toBeNull();
   });
 });

@@ -850,8 +850,9 @@ describe("drawCriticalSurface", () => {
     drawCriticalSurface(rec.pdf, tf, result({ criticalSurface: cs }), rvs(), COORDS);
     expect(rec.of("setGState")).toHaveLength(2); // fill + band
     expect(rec.balanced()).toBe(true);
-    // Under the ground only: the ground over the mass, twice as wide, clipped to the model.
-    expect(rec.of("clip")).toHaveLength(1);
+    // Under the ground only: the ground over the mass, twice as wide, clipped to the model
+    // and to between the slip line's ends.
+    expect(rec.of("clip")).toHaveLength(2);
     expect(rec.of("setLineWidth").some((c) => Math.abs((c.args[0] as number) - 2 * 5 * 0.25) < 1e-9)).toBe(true);
     const band = strokedPaths(rec)[0];
     expect(band[0]).toEqual(tf.worldToPdf(10, 10));

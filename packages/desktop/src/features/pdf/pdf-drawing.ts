@@ -117,6 +117,7 @@ import {
   isDarkFill,
   meanThickness,
   sliceLines,
+  SLICE_MERGE_MM,
   slipMassPolygon,
   splitVerticalByRegion,
   tensionCrackFace,
@@ -906,11 +907,26 @@ export function drawCriticalSurface(
     pdfPath(pdf, ops, "f");
     resetOpacity(pdf);
     // A very thin mass gets a band of minimum width under the ground
-    // along it, clipped to the soil (as on the canvas).
+    // along it, clipped to the soil and to between the slip line's ends
+    // (as on the canvas).
     const minWidth = MIN_SLIP_MASS_PX * tf.mmPerPx;
     if (meanThickness(massPts) < minWidth && coordinates.length >= 3) {
       pdf.saveGraphicsState();
       pdfPath(pdf, buildPolylinePath(coordinates.map(([wx, wy]) => tf.worldToPdf(wx, wy)), true), "");
+      pdf.clip();
+      (pdf as unknown as { discardPath?: () => void }).discardPath?.();
+      const ex = tf.worldToPdf(cs.entryPoint[0], cs.entryPoint[1])[0];
+      const xx = tf.worldToPdf(cs.exitPoint[0], cs.exitPoint[1])[0];
+      const ys = massPts.map((p) => p[1]);
+      const [x0, x1] = [Math.min(ex, xx), Math.max(ex, xx)];
+      const [y0, y1] = [Math.min(...ys) - 2 * minWidth, Math.max(...ys) + 2 * minWidth];
+      const strip: [number, number][] = [
+        [x0, y0],
+        [x1, y0],
+        [x1, y1],
+        [x0, y1],
+      ];
+      pdfPath(pdf, buildPolylinePath(strip, true), "");
       pdf.clip();
       (pdf as unknown as { discardPath?: () => void }).discardPath?.();
       pdf.setDrawColor(...FAILURE_MASS_COLOR.rgb);
@@ -926,11 +942,14 @@ export function drawCriticalSurface(
 
   if (rvs.showSlices && result.criticalSlices.length > 0) {
     const arcYAt = (x: number): number | null => surfaceBaseYAt(cs, x);
-    // As on the canvas: coincident boundaries once, every other line left
-    // out where they lie closer than 3 (canvas) px.
+    // As on the canvas: boundaries closer than 0.7 mm on paper as one line
+    // (closer read as a thick double line), every other line left out
+    // where they lie closer than 3 (canvas) px.
     const { xs: xBounds, density } = sliceLines(
       result.criticalSlices,
       (x) => tf.worldToPdf(x, 0)[0] / tf.mmPerPx,
+      3,
+      SLICE_MERGE_MM / tf.mmPerPx,
     );
     const { materials = [], materialBoundaries = [], regionMaterials = [] } = context;
     const regions =

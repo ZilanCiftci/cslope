@@ -26,6 +26,7 @@ import { boxesOverlap, type Box } from "../canvas/label-layout";
 import { ARROW_HEAD_PX, ARROW_HEIGHT_PX } from "../canvas/constants";
 import { polylineSegments, segmentHitsBox, type Seg } from "./overlay-layout";
 import { layoutLimitMarkers, layoutRangeDots } from "./search-markers";
+import type { MarkerDot } from "../canvas/marker-geometry";
 import {
   ENTRY_EXIT_DOT_RADIUS_PX,
   PIEZO_BAR_GAP2_PX,
@@ -115,6 +116,10 @@ export function piezoSymbolLayout(
   const critSegs = opts.critical ? polylineSegments(surfacePoints(opts.critical).map(([x, y]) => toScreen(x, y))) : [];
   const critDots = opts.critical ? [opts.critical.entryPoint, opts.critical.exitPoint].map(([x, y]) => toScreen(x, y)) : [];
   const ground = opts.model.length >= 3 ? polylineSegments([...opts.model, opts.model[0]].map(([x, y]) => toScreen(x, y))) : [];
+  // The model's side edges (drawing x): a symbol keeps its own width from them.
+  const modelXs = opts.model.map(([x, y]) => toScreen(x, y)[0]);
+  const edgeL = modelXs.length >= 3 ? Math.min(...modelXs) : -Infinity;
+  const edgeR = modelXs.length >= 3 ? Math.max(...modelXs) : Infinity;
   const soft = [...ground, ...(opts.softLines ?? [])];
   const mass = opts.slipMass && opts.slipMass.length >= 3 ? opts.slipMass : null;
   const massX = mass?.map((p) => p[0]) ?? [];
@@ -188,7 +193,6 @@ export function piezoSymbolLayout(
 
     const tri: Box = { left: x - triHalf - u, top: y - triH - numberH - u, right: x + triHalf + u, bottom: y };
     const ticks: Box = { left: x - barW - u, top: y, right: x + barW + u, bottom: y + (bars ? barGap2 + u : 0) };
-    const hits = (sg: Seg) => segmentHitsBox(sg, tri) || (bars && segmentHitsBox(sg, ticks));
     // Lines the reader must see (slip and prescribed surfaces) keep a clear gap.
     const grow = (b: Box, d: number): Box => ({ left: b.left - d, top: b.top - d, right: b.right + d, bottom: b.bottom + d });
     const triFar = grow(tri, 5 * u);
@@ -202,9 +206,15 @@ export function piezoSymbolLayout(
       (opts.avoidLines ?? []).some(near) ||
       (opts.avoid ?? []).some(overlaps) ||
       critDots.some(([dx, dy]) => dx > tri.left - dotR && dx < tri.right + dotR && dy > tri.top - dotR && dy < ticks.bottom + dotR);
-    // The symbol crossing the ground or a boundary line hides a little of it.
+    // The symbol crossing the ground or a boundary line, or within a few
+    // px of one (a thin layer between two), hides a little of it; squeezed
+    // against the model's side it reads as part of the edge.
+    const triSoft = grow(tri, 3 * u);
+    const ticksSoft = grow(ticks, 3 * u);
     let cost = 0;
-    for (const sg of soft) if (hits(sg)) cost += 30;
+    for (const sg of soft) if (segmentHitsBox(sg, triSoft) || (bars && segmentHitsBox(sg, ticksSoft))) cost += 30;
+    const room = 3 * barW;
+    if (x - edgeL < room || edgeR - x < room) cost += 60;
     return { s, x, y, blocked, tier, cost, bars };
   };
 
@@ -274,6 +284,8 @@ export interface PiezoScene {
   prescribed?: readonly CustomSearchPlane[];
   /** Points drawn with a marker (vertices in the edit view). */
   vertices?: readonly Pt[];
+  /** The vertex dots in drawing units (the search-limit triangles move off them). */
+  vertexDots?: readonly MarkerDot[];
   /** The tension-crack depth dimension drawn on the crest (the edit view; world). */
   crackMarker?: { x: number; top: number; bottom: number } | null;
   /** The critical surface of a result: its sliding mass and the search markers lifted over it. */
@@ -325,7 +337,7 @@ export function piezoObstacles(scene: PiezoScene, toD: (x: number, y: number) =>
   const lim = scene.analysisLimits;
   if (lim?.enabled && coordinates.length >= 3) {
     const lifted = !!scene.critical;
-    for (const m of layoutLimitMarkers(lim, coordinates, toD, unit, { lifted })) {
+    for (const m of layoutLimitMarkers(lim, coordinates, toD, unit, { lifted, dots: scene.vertexDots })) {
       avoid.push(box(m.cx, m.barTop, m.cx, m.barBottom));
       for (const t of m.triangles) avoid.push(box(Math.min(...t.map((p) => p[0])), Math.min(...t.map((p) => p[1])), Math.max(...t.map((p) => p[0])), Math.max(...t.map((p) => p[1]))));
     }
@@ -333,9 +345,20 @@ export function piezoObstacles(scene: PiezoScene, toD: (x: number, y: number) =>
     const r = ENTRY_EXIT_DOT_RADIUS_PX * unit;
     for (const d of layoutRangeDots(lim, coordinates, toD, unit, { skip, radius: r })) avoid.push(box(d.x - r, d.y - r, d.x + r, d.y + r));
   }
+  // Vertex dots: the dot (up to 6 px and its outline) and a little room
+  // around it kept clear; a symbol just beside one reads as belonging to
+  // it, so a ring around it is better not crossed either.
+  const nearVertex: Seg[] = [];
   for (const [x, y] of scene.vertices ?? []) {
     const [cx, cy] = toD(x, y);
-    avoid.push(box(cx - 6 * unit, cy - 6 * unit, cx + 6 * unit, cy + 6 * unit));
+    avoid.push(box(cx - 9 * unit, cy - 9 * unit, cx + 9 * unit, cy + 9 * unit));
+    const r = 14 * unit;
+    nearVertex.push(
+      [cx - r, cy - r, cx + r, cy - r],
+      [cx + r, cy - r, cx + r, cy + r],
+      [cx + r, cy + r, cx - r, cy + r],
+      [cx - r, cy + r, cx - r, cy - r],
+    );
   }
   // Prescribed surfaces are drawn clipped to the model: only the part
   // through the soil is in the way.
@@ -366,9 +389,12 @@ export function piezoObstacles(scene: PiezoScene, toD: (x: number, y: number) =>
     const [, cb] = toD(x, bottom);
     avoid.push(box(cx - 4 * unit, Math.min(ct, cb), cx + 4 * unit, Math.max(ct, cb)));
   }
-  const softLines = (scene.materialBoundaries ?? []).flatMap((b) =>
-    b.coordinates.length < 2 ? [] : polylineSegments(b.coordinates.map(([x, y]) => toD(x, y))),
-  );
+  const softLines = [
+    ...(scene.materialBoundaries ?? []).flatMap((b) =>
+      b.coordinates.length < 2 ? [] : polylineSegments(b.coordinates.map(([x, y]) => toD(x, y))),
+    ),
+    ...nearVertex,
+  ];
   const slipMass =
     scene.critical && coordinates.length >= 3
       ? slipMassPolygon(coordinates, scene.critical, surfacePoints(scene.critical)).map(([x, y]) => toD(x, y))
