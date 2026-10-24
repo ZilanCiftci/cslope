@@ -84,7 +84,10 @@ import {
   drawPiles,
   drawReinforcementForces,
   drawReinforcements,
+  elementNumberScene,
+  FORCE_LABEL_MARGIN_PX,
   forceLabelContext,
+  limitMarkerObstacles,
   loadObstacleBoxes,
 } from "./reinforcement-draw";
 import {
@@ -232,7 +235,8 @@ export function editOverlayBoxes(
     | "piles"
     | "worldToCanvas"
     | "surfaceYAtX"
-  >,
+  > &
+    Partial<Pick<DrawCanvasParams, "materialBoundaries">>,
   drawn: { loads?: LoadLayout; piezoSymbols?: PiezoSymbol[][]; showLimits?: boolean } = {},
 ): Box[] {
   const { w, h, coordinates, surfaceYAtX } = p;
@@ -279,7 +283,14 @@ export function editOverlayBoxes(
   }
   // Element numbers beyond the head, pile labels above the head (as the
   // force labels and water-table symbols keep clear of them).
-  boxes.push(...forceLabelContext(toC, { reinforcements: p.reinforcements, piles: p.piles, numberSize: 11 }).placed);
+  boxes.push(
+    ...forceLabelContext(toC, {
+      reinforcements: p.reinforcements,
+      piles: p.piles,
+      numberSize: 11,
+      numberScene: elementNumberScene(p, true),
+    }).placed,
+  );
   return boxes;
 }
 
@@ -1101,8 +1112,20 @@ export function drawCanvas(
   ctx.textBaseline = "alphabetic";
 
   // ── Reinforcement ───────────────────────────────────────
+  // Element numbers keep off the lines, the vertex dots (edit view) and the
+  // search-limit markers (result); the force labels use the same layout.
+  const numberScene = elementNumberScene(
+    { coordinates, materialBoundaries, piezometricLine },
+    mode !== "result",
+    mode === "result" && analysisLimits.enabled && !customPlanesOnly
+      ? limitMarkerObstacles(analysisLimits, coordinates, (x, y) => worldToCanvas(x, y, w, h), paperZoom, 2 * paperZoom)
+      : [],
+  );
   if (reinforcements && reinforcements.length > 0) {
-    drawReinforcements(ctx, reinforcements, (x, y) => worldToCanvas(x, y, w, h), paperZoom);
+    drawReinforcements(ctx, reinforcements, (x, y) => worldToCanvas(x, y, w, h), paperZoom, {
+      scene: numberScene,
+      halo: (mode === "result" && PAPER_FILL_COLOR) || BG_COLOR,
+    });
   }
   if (piles && piles.length > 0) {
     drawPiles(ctx, piles, (x, y) => worldToCanvas(x, y, w, h), paperZoom);
@@ -1516,6 +1539,7 @@ export function drawCanvas(
         udls,
         lineLoads,
         piezometricLine,
+        materialBoundaries,
         reinforcements,
         piles,
         worldToCanvas,
@@ -1817,15 +1841,19 @@ export function drawCanvas(
             numberSize: 11 * paperZoom,
             model: coordinates,
             water: piezometricLine.lines.map((l) => l.coordinates),
+            boundaries: materialBoundaries.map((b) => b.coordinates),
             loads: [
               ...loadObstacleBoxes(toC, coordinates, udls, lineLoads, ARROW_HEIGHT_PX * paperZoom),
               ...loads.labels.map((l) => l.box),
             ],
+            markers: limitsShown ? limitMarkerObstacles(analysisLimits, coordinates, toC, paperZoom, 2 * paperZoom) : [],
+            numberScene,
+            // A margin inside the plot frame.
             bounds: {
-              left: fr.x + fr.w * PLOT_MARGINS.L + 2,
-              top: fr.y + fr.h * PLOT_MARGINS.T + 2,
-              right: fr.x + fr.w * (1 - PLOT_MARGINS.R) - 2,
-              bottom: fr.y + fr.h * (1 - PLOT_MARGINS.B) - 2,
+              left: fr.x + fr.w * PLOT_MARGINS.L + FORCE_LABEL_MARGIN_PX * paperZoom,
+              top: fr.y + fr.h * PLOT_MARGINS.T + FORCE_LABEL_MARGIN_PX * paperZoom,
+              right: fr.x + fr.w * (1 - PLOT_MARGINS.R) - FORCE_LABEL_MARGIN_PX * paperZoom,
+              bottom: fr.y + fr.h * (1 - PLOT_MARGINS.B) - FORCE_LABEL_MARGIN_PX * paperZoom,
             },
           }),
           plate: PAPER_FILL_COLOR || BG_COLOR,

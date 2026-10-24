@@ -7,7 +7,7 @@ import type { AppState } from "../../store/types";
 import type { DrawableSurface } from "../../utils/arc";
 import { ARROW_HEAD_LEN_PX, ARROW_HEAD_PX, ARROW_HEIGHT_PX } from "./constants";
 import { boxAround, type Box } from "./label-layout";
-import { forceLabelContext } from "./reinforcement-draw";
+import { elementNumberScene, forceLabelContext, limitMarkerObstacles } from "./reinforcement-draw";
 import type { PointHit } from "./types";
 import {
   arrowEdges,
@@ -204,7 +204,18 @@ export function layoutPiezoSymbols(
   scene: Omit<PiezoScene, "coordinates" | "critical"> = {},
 ): PiezoSymbol[][] {
   const toC = (x: number, y: number) => view.worldToCanvas(x, y, view.w, view.h);
-  const avoid = forceLabelContext(toC, { reinforcements, piles, numberSize: 11 * zoom });
+  // Element numbers as drawReinforcements places them (edit view: with vertex dots; result: clear of the markers).
+  const edit = scene.vertices !== undefined;
+  const avoid = forceLabelContext(toC, {
+    reinforcements,
+    piles,
+    numberSize: 11 * zoom,
+    numberScene: elementNumberScene(
+      { coordinates: view.coordinates, materialBoundaries: scene.materialBoundaries, piezometricLine },
+      edit,
+      !edit && scene.analysisLimits ? limitMarkerObstacles(scene.analysisLimits, view.coordinates, toC, zoom, 2 * zoom) : [],
+    ),
+  });
   const obstacles = piezoObstacles({ ...scene, coordinates: view.coordinates, critical }, toC, zoom);
   const numbered = piezometricLine.lines.length > 1;
   const taken: Pt[] = [];

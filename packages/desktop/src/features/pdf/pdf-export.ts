@@ -35,7 +35,13 @@ import {
   drawUdlLoads,
 } from "./pdf-drawing";
 import type { PdfTransform } from "./pdf-helpers";
-import { forceLabelContext, loadObstacleBoxes } from "../canvas/reinforcement-draw";
+import {
+  elementNumberScene,
+  FORCE_LABEL_MARGIN_PX,
+  forceLabelContext,
+  limitMarkerObstacles,
+  loadObstacleBoxes,
+} from "../canvas/reinforcement-draw";
 import { ARROW_HEIGHT_PX } from "../canvas/constants";
 import type { Box } from "../rendering/overlay-layout";
 import { surfacePoints } from "../../utils/arc";
@@ -372,8 +378,16 @@ export function exportVectorPdf(data: PdfExportData): void {
       drawLineLoads(pdf, tf, lineLoads, coordinates, loadLabels);
     }
 
+    // Element numbers keep off the lines and the search-limit markers, as on the canvas.
+    const numberScene = elementNumberScene(
+      { coordinates, materialBoundaries, piezometricLine },
+      false,
+      analysisLimits.enabled && !customPlanesOnly
+        ? limitMarkerObstacles(analysisLimits, coordinates, tf.worldToPdf, tf.mmPerPx, 2 * tf.mmPerPx)
+        : [],
+    );
     if (reinforcements.length > 0) {
-      drawReinforcementsPdf(pdf, tf, reinforcements);
+      drawReinforcementsPdf(pdf, tf, reinforcements, numberScene);
     }
     if (piles.length > 0) {
       drawPilesPdf(pdf, tf, piles);
@@ -388,7 +402,7 @@ export function exportVectorPdf(data: PdfExportData): void {
         piezometricLine.freeWater !== false,
         piezometricLine.mainLineId,
         result.criticalSurface ?? null,
-        forceLabelContext(tf.worldToPdf, { reinforcements, piles, numberSize: 2.8 }),
+        forceLabelContext(tf.worldToPdf, { reinforcements, piles, numberSize: 2.8, numberScene }),
         {
           materialBoundaries,
           udls,
@@ -424,15 +438,22 @@ export function exportVectorPdf(data: PdfExportData): void {
           numberSize: 2.8,
           model: coordinates,
           water: piezometricLine.lines.map((l) => l.coordinates),
+          boundaries: materialBoundaries.map((b) => b.coordinates),
           loads: [
             ...loadObstacleBoxes(tf.worldToPdf, coordinates, udls, lineLoads, ARROW_HEIGHT_PX * tf.mmPerPx),
             ...loadLabels,
           ],
+          markers:
+            analysisLimits.enabled && !customPlanesOnly
+              ? limitMarkerObstacles(analysisLimits, coordinates, tf.worldToPdf, tf.mmPerPx, 2 * tf.mmPerPx)
+              : [],
+          numberScene,
+          // A margin inside the plot frame, as on the canvas.
           bounds: {
-            left: innerFrame.x + 1,
-            top: innerFrame.y + 1,
-            right: innerFrame.x + innerFrame.w - 1,
-            bottom: innerFrame.y + innerFrame.h - 1,
+            left: innerFrame.x + FORCE_LABEL_MARGIN_PX * tf.mmPerPx,
+            top: innerFrame.y + FORCE_LABEL_MARGIN_PX * tf.mmPerPx,
+            right: innerFrame.x + innerFrame.w - FORCE_LABEL_MARGIN_PX * tf.mmPerPx,
+            bottom: innerFrame.y + innerFrame.h - FORCE_LABEL_MARGIN_PX * tf.mmPerPx,
           },
         }),
       );

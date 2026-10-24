@@ -1,16 +1,21 @@
 import type { ReinforcementForce } from "@cslope/engine";
-import type { PileRow, ReinforcementRow } from "../../store/types";
+import type { AnalysisLimitsState, PileRow, ReinforcementRow } from "../../store/types";
 import {
+  pointSegmentDistance,
   polylineSegments,
   segmentDistance,
   segmentHitsBox,
   stackPositions,
   type Seg,
 } from "../rendering/overlay-layout";
+import { layoutLimitMarkers } from "../rendering/search-markers";
 import { surfaceYAtX } from "../view/surface";
 import { boxAround, boxesOverlap, type Box } from "./label-layout";
 
 export const REINFORCEMENT_COLOR = "#8e44ad";
+
+/** Least distance of force labels from the plot frame, in canvas px. */
+export const FORCE_LABEL_MARGIN_PX = 12;
 
 /**
  * Label of a reinforcement force in kN/m. A passive force is an ultimate
@@ -67,6 +72,131 @@ export function elementNumberBox(
   return { x, y, d, hw, hh, box: boxAround(x, y, hw, hh) };
 }
 
+type WorldPt = readonly [number, number];
+
+/**
+ * What element numbers keep off: lines (world polylines: the model
+ * boundary, material boundaries inside the model, water lines), the vertex
+ * dots of the edit view (world points) and boxes (drawing units: the
+ * search-limit markers over a result).
+ */
+export interface NumberScene {
+  lines: readonly (readonly WorldPt[])[];
+  dots: readonly WorldPt[];
+  boxes?: readonly Box[];
+}
+
+/**
+ * The NumberScene of a model, built the same way wherever element numbers
+ * are drawn or reserved: `edit` adds the vertex dots of the edit view
+ * (model, material boundary and water line points), `boxes` the markers.
+ */
+export function elementNumberScene(
+  m: {
+    coordinates: readonly WorldPt[];
+    materialBoundaries?: readonly { coordinates: readonly WorldPt[] }[];
+    piezometricLine?: { lines: readonly { coordinates: readonly WorldPt[] }[] };
+  },
+  edit: boolean,
+  boxes: readonly Box[] = [],
+): NumberScene {
+  const model = m.coordinates;
+  const lines: WorldPt[][] = [];
+  if (model.length > 2) lines.push([...model, model[0]]);
+  const water = (m.piezometricLine?.lines ?? []).map((l) => l.coordinates);
+  lines.push(...water.map((l) => [...l]));
+  // Only the part of a boundary inside the model divides the soil (and is drawn).
+  for (const b of m.materialBoundaries ?? []) {
+    for (let i = 1; i < b.coordinates.length; i++) {
+      const [x1, y1] = b.coordinates[i - 1];
+      const [x2, y2] = b.coordinates[i];
+      if (model.length < 3 || pointInPolygon((x1 + x2) / 2, (y1 + y2) / 2, model as Pt[])) {
+        lines.push([b.coordinates[i - 1], b.coordinates[i]]);
+      }
+    }
+  }
+  const dots = edit ? [...model, ...(m.materialBoundaries ?? []).flatMap((b) => b.coordinates), ...water.flat()] : [];
+  return { lines, dots, boxes };
+}
+
+/**
+ * Where each element's number goes (elementNumberBox), keeping off the
+ * lines, dots and boxes of `scene` and the other elements: of a few spots (on the element's line farther out, then
+ * to either side of it) the first that is clear, else the usual one.
+ * Without a scene, always the usual one. Null for an element of zero length.
+ */
+export function elementNumberLayout(
+  rows: readonly Pick<ReinforcementRow, "x1" | "y1" | "x2" | "y2">[],
+  toScreen: (x: number, y: number) => [number, number],
+  size: number,
+  scene?: NumberScene,
+): ({ x: number; y: number; hw: number; hh: number; box: Box } | null)[] {
+  const ends = rows.map((r) => [toScreen(r.x1, r.y1), toScreen(r.x2, r.y2)] as const);
+  const segs: Seg[] = scene
+    ? [
+        ...ends.map(([[ax, ay], [bx, by]]): Seg => [ax, ay, bx, by]),
+        ...scene.lines.flatMap((l) => polylineSegments(l.map(([x, y]) => toScreen(x, y)))),
+      ]
+    : [];
+  const dotR = 0.55 * size;
+  const taken: readonly Box[] = scene
+    ? [...(scene.boxes ?? []), ...scene.dots.map(([x, y]) => boxAround(...toScreen(x, y), dotR))]
+    : [];
+  const inset = 0.1 * size;
+  const coreOf = (b: Box): Box => ({ left: b.left + inset, top: b.top + inset, right: b.right - inset, bottom: b.bottom - inset });
+  const clear = (b: Box) => {
+    const core = coreOf(b);
+    return !segs.some((sg) => segmentHitsBox(sg, core)) && !taken.some((t) => boxesOverlap(core, t, 0));
+  };
+  const bases = ends.map(([[ax, ay], [bx, by]], i) => {
+    const len = Math.hypot(bx - ax, by - ay);
+    return len > 0 ? elementNumberBox(ax, ay, (ax - bx) / len, (ay - by) / len, i, size) : null;
+  });
+  if (!scene) return bases;
+  // Numbers of close, parallel elements may touch at their usual spots
+  // (they line up, in order); one that has to move keeps off the others.
+  const numbers = bases.flatMap((b) => (b ? [b.box] : []));
+  return ends.map(([[ax, ay], [bx, by]], i) => {
+    const base = bases[i];
+    if (!base) return null;
+    if (clear(base.box)) return base;
+    const len = Math.hypot(bx - ax, by - ay);
+    const ox = (ax - bx) / len;
+    const oy = (ay - by) / len;
+    const { hw, hh } = base;
+    const at = (x: number, y: number) => ({ x, y, hw, hh, box: boxAround(x, y, hw, hh) });
+    // Beside the usual spot (up the page first) or a little farther out
+    // on the line, before farther out still: close to the head.
+    let px = -oy;
+    let py = ox;
+    if (py > 0 || (py === 0 && px < 0)) {
+      px = -px;
+      py = -py;
+    }
+    const across = 0.6 * (Math.abs(px) * 2 * hw + Math.abs(py) * 2 * hh);
+    const spot = (e: number, sd: number) =>
+      at(base.x + ox * e * size + px * sd * across, base.y + oy * e * size + py * sd * across);
+    const cands = [spot(0, 1), spot(0.5, 0), spot(0, -1), spot(0.5, 1), spot(1, 0), spot(0.5, -1), spot(1.5, 0)];
+    const free = (b: Box) => clear(b) && !numbers.some((n) => n !== base.box && boxesOverlap(coreOf(b), coreOf(n), 0));
+    const pick = cands.find((c) => free(c.box));
+    if (!pick) return base;
+    numbers[numbers.indexOf(base.box)] = pick.box;
+    return pick;
+  });
+}
+
+/** A light outline of the background colour behind text, so it reads on dark fills and over lines. */
+export function haloText(ctx: CanvasRenderingContext2D, text: string, x: number, y: number, halo: string, width: number): void {
+  ctx.save();
+  ctx.strokeStyle = halo;
+  ctx.globalAlpha = 0.85;
+  ctx.lineWidth = width;
+  ctx.lineJoin = "round";
+  ctx.strokeText(text, x, y);
+  ctx.restore();
+  ctx.fillText(text, x, y);
+}
+
 /**
  * Draw reinforcement elements: the bar, a plate at the head (end 1), the
  * bonded part as a wider translucent band and, without pullout, anchor
@@ -77,8 +207,11 @@ export function drawReinforcements(
   rows: readonly ReinforcementRow[],
   toCanvas: (x: number, y: number) => [number, number],
   zoom = 1,
+  /** What the numbers keep off (elementNumberLayout) and the colour of their halo. */
+  numbers: { scene?: NumberScene; halo?: string } = {},
 ): void {
   ctx.save();
+  const nums = elementNumberLayout(rows, toCanvas, 11 * zoom, numbers.scene);
   rows.forEach((r, i) => {
     const [ax, ay] = toCanvas(r.x1, r.y1);
     const [bx, by] = toCanvas(r.x2, r.y2);
@@ -123,8 +256,8 @@ export function drawReinforcements(
     ctx.font = `bold ${11 * zoom}px sans-serif`;
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
-    const num = elementNumberBox(ax, ay, -ux, -uy, i, 11 * zoom);
-    ctx.fillText(String(i + 1), num.x, num.y);
+    const num = nums[i];
+    if (num) haloText(ctx, String(i + 1), num.x, num.y, numbers.halo ?? "#ffffff", 3 * zoom);
   });
   ctx.restore();
 }
@@ -153,8 +286,10 @@ export interface ForceLabelContext {
   lines?: { seg: Seg; pile: boolean; index: number }[];
   /** The critical slip surface: arrows keep clear of it. */
   slip?: Seg[];
-  /** More lines labels keep clear of: the model boundary, water lines. */
+  /** More lines arrows and labels keep clear of: the model boundary, water lines. */
   extra?: Seg[];
+  /** Material boundaries: arrows keep clear of them (labels, mostly outside the model, need not). */
+  boundaries?: Seg[];
   /** Labels stay inside this box (the plot frame). */
   bounds?: Box;
   /** The model outline: labels prefer the open space in front of it. */
@@ -189,8 +324,14 @@ export function forceLabelContext(
     numberSize: number;
     model?: readonly (readonly [number, number])[];
     water?: readonly (readonly (readonly [number, number])[])[];
+    /** Material boundaries: lines the arrows keep clear of. */
+    boundaries?: readonly (readonly (readonly [number, number])[])[];
     loads?: readonly Box[];
+    /** More boxes to keep clear of (the search-limit markers). */
+    markers?: readonly Box[];
     bounds?: Box;
+    /** What the element numbers keep off, as where they are drawn (elementNumberLayout). */
+    numberScene?: NumberScene;
   },
 ): ForceLabelContext {
   const obstacles: Seg[] = [];
@@ -198,6 +339,7 @@ export function forceLabelContext(
   const lines: { seg: Seg; pile: boolean; index: number }[] = [];
   const s = opts.numberSize;
   const gap = 0.3 * s;
+  const nums = elementNumberLayout(opts.reinforcements ?? [], toScreen, s, opts.numberScene);
   const reinforcements = (opts.reinforcements ?? []).map((r, i): ElementHead | null => {
     const [ax, ay] = toScreen(r.x1, r.y1);
     const [bx, by] = toScreen(r.x2, r.y2);
@@ -209,10 +351,11 @@ export function forceLabelContext(
     if (!(len > 0)) return null;
     const ox = (ax - bx) / len;
     const oy = (ay - by) / len;
-    const num = elementNumberBox(ax, ay, ox, oy, i, s);
+    const num = nums[i]!;
     placed.push(num.box);
-    const d = num.d + Math.abs(ox) * num.hw + Math.abs(oy) * num.hh + gap;
-    return { head: [ax, ay], tail: [bx, by], out: [ox, oy], anchor: [ax + ox * d, ay + oy * d] };
+    // Beyond the number, out along the element's line.
+    const d = Math.abs(ox) * num.hw + Math.abs(oy) * num.hh + gap;
+    return { head: [ax, ay], tail: [bx, by], out: [ox, oy], anchor: [num.x + ox * d, num.y + oy * d] };
   });
   const piles = (opts.piles ?? []).map((p, i): ElementHead | null => {
     const [ax, ay] = toScreen(p.x1, p.y1);
@@ -235,8 +378,9 @@ export function forceLabelContext(
   const area = opts.model && opts.model.length > 2 ? opts.model.map(([x, y]) => toScreen(x, y)) : undefined;
   if (area) extra.push(...polylineSegments([...area, area[0]]));
   for (const w of opts.water ?? []) extra.push(...polylineSegments(w.map(([x, y]) => toScreen(x, y))));
-  placed.push(...(opts.loads ?? []));
-  return { obstacles, placed, heads: { reinforcements, piles }, lines, slip, extra, bounds: opts.bounds, area };
+  const boundaries = (opts.boundaries ?? []).flatMap((b) => polylineSegments(b.map(([x, y]) => toScreen(x, y))));
+  placed.push(...(opts.loads ?? []), ...(opts.markers ?? []));
+  return { obstacles, placed, heads: { reinforcements, piles }, lines, slip, extra, boundaries, bounds: opts.bounds, area };
 }
 
 /** The box around some points. */
@@ -283,6 +427,30 @@ export function loadObstacleBoxes(
   return out;
 }
 
+/**
+ * Boxes over the search-limit markers as drawn over a result (lifted
+ * triangles and their bars, from layoutLimitMarkers), padded by `pad`:
+ * force labels keep out of them.
+ */
+export function limitMarkerObstacles(
+  limits: AnalysisLimitsState,
+  coordinates: readonly [number, number][],
+  toScreen: (x: number, y: number) => [number, number],
+  unit: number,
+  pad = 0,
+): Box[] {
+  if (!limits.enabled || coordinates.length < 3) return [];
+  const out: Box[] = [];
+  for (const m of layoutLimitMarkers(limits, coordinates, toScreen, unit, { lifted: true })) {
+    out.push({ left: m.cx - pad, top: m.barTop - pad, right: m.cx + pad, bottom: m.barBottom + pad });
+    for (const t of m.triangles) {
+      const b = pointsBox(t);
+      out.push({ left: b.left - pad, top: b.top - pad, right: b.right + pad, bottom: b.bottom + pad });
+    }
+  }
+  return out;
+}
+
 /** Sizes of the force arrows and labels, in drawing units. */
 export interface ForceSize {
   /** Longest arrow. */
@@ -314,6 +482,9 @@ export interface ForceLayout {
   to: [number, number];
   ux: number;
   uy: number;
+  /** Arrowhead length and half width (smaller between close elements). */
+  head: number;
+  headHalf: number;
   label: Box;
   /** Thin line from the label to the element head, when the label is not on the head's line. */
   leader: Seg | null;
@@ -363,20 +534,24 @@ export function divideSign(cx: number, cy: number, em: number): { bar: Seg; widt
  * Lays out the force arrows and labels.
  *
  * Arrow: from the crossing with the slip surface in the direction of the
- * force, moved `offset` to the side (up the page first) so the element and
- * the slip line stay visible; on the other side, moved a little along, or
- * shortened when it would come closer than `clear` to the slip line, other
- * elements or arrows. It never runs past the ends of its element.
+ * force, moved `offset` to the side (up the page first; between close
+ * parallel elements at most 30 % of their spacing, the arrow smaller) so
+ * the element and the slip line stay visible, and along to just past the
+ * slip line or its own element where those cross it; on the other side,
+ * moved a little along, or shortened when it would come closer than
+ * `clear` to the slip line, its own or other elements, boundaries or
+ * arrows. It never runs past the ends of its element.
  *
  * Label: as engineering drawings label many parallel members, each value
  * sits at its element's head, outside, on the element's line extended
  * beyond its number (pile: above its name), so it pairs with its element
- * by position. Labels on the same side are stacked in element order at
+ * by position. Where the arrows are far from the heads (and not crowded)
+ * the values go beside their arrows instead, see below. Labels on the same side are stacked in element order at
  * least a label height apart with the least movement; a crowd that had to
  * move (rows closer than the label height, or a label moved off a line,
  * load or the frame edge) becomes a column just outside the heads, with a
- * thin leader from each label to its own head; the order keeps leaders
- * from crossing. No value is ever left out. Forces without an element
+ * thin leader from each label to its own head's number (not repeated in
+ * the label); the order keeps leaders from crossing. No value is ever left out. Forces without an element
  * (stale results) are labelled beyond the arrow tip. Forces that round to
  * 0.0 kN/m are not drawn.
  */
@@ -401,16 +576,24 @@ export function layoutReinforcementForces(
       ny = -ny;
     }
     const head = (f.pile ? context.heads?.piles : context.heads?.reinforcements)?.[f.index] ?? null;
-    const tag = head ? (f.pile ? `P${f.index + 1}` : `${f.index + 1}`) : "";
-    return [{ f, px, py, ux, uy, nx, ny, head, tag, value: formatForceValue(f) }];
+    return [{ f, px, py, ux, uy, nx, ny, head, value: formatForceValue(f) }];
   });
 
   // ── Arrows ──
   const slip = context.slip ?? [];
   const lines = context.lines ?? [];
   const arrows: Seg[] = [];
+  /** Each arrow's head length and half width (smaller between close elements). */
+  const heads: [number, number][] = [];
+  /** Distance from each crossing to the nearest other element. */
+  const spacings: number[] = [];
   for (const it of items) {
     const { px, py, ux, uy, nx, ny, head } = it;
+    const own = (l: { pile: boolean; index: number }) => l.pile === !!it.f.pile && l.index === it.f.index;
+    let spacing = Infinity;
+    for (const l of lines) if (!own(l)) spacing = Math.min(spacing, pointSegmentDistance(px, py, l.seg));
+    spacings.push(spacing);
+    const ownSegs = head ? lines.filter(own).map((l) => l.seg) : [];
     let len = Infinity;
     let ue = 0;
     let sP = 0;
@@ -423,29 +606,58 @@ export function layoutReinforcementForces(
         sP = ((px - head.head[0]) * dx + (py - head.head[1]) * dy) / len;
       }
     }
+    // An arrow along its element between close elements (a dense wall)
+    // stays within about 30 % of the spacing of its own element, so it
+    // cannot read as the neighbour's; it and its head shrink to fit.
+    const k = Math.abs(ue) >= 0.9 ? Math.max(0.45, Math.min(1, (0.3 * spacing) / size.offset)) : 1;
+    const offset = size.offset * k;
+    const headLen = size.head * Math.max(0.7, k);
+    const headHalf = size.headHalf * k;
     const along = Math.abs(ue) > 1e-6;
     // Arrow parameters t (from the crossing along u) that stay on the element.
     const tLo = !along ? -Infinity : ue > 0 ? -sP / ue : (len - sP) / ue;
     const tHi = !along ? Infinity : ue > 0 ? (len - sP) / ue : -sP / ue;
     const lMax = Math.min(size.arrow, len);
-    const lMin = Math.min(2 * size.head, lMax);
+    const lMin = Math.min(2 * headLen, lMax);
     const base = Math.max(lMin, Math.min(lMax, tHi));
     const lengths = [base, base * 0.7, base * 0.5].filter((l, i) => i === 0 || l >= lMin);
-    const others = [
-      ...slip,
-      ...lines.filter((l) => l.pile !== !!it.f.pile || l.index !== it.f.index).map((l) => l.seg),
-      ...arrows,
-    ];
-    const extra = context.extra ?? [];
+    const others = [...slip, ...lines.filter((l) => !own(l)).map((l) => l.seg), ...arrows];
+    const extra = [...(context.extra ?? []), ...(context.boundaries ?? [])];
     const step = 2 * size.headHalf;
+    /** Where the line from (fx, fy) along the force crosses a segment (parameter along it, and the sine of the angle). */
+    const crossings = (fx: number, fy: number, segs: readonly Seg[]): { t: number; sin: number }[] => {
+      const out: { t: number; sin: number }[] = [];
+      for (const [x1, y1, x2, y2] of segs) {
+        const ex = x2 - x1;
+        const ey = y2 - y1;
+        const den = ux * ey - uy * ex;
+        const el = Math.hypot(ex, ey);
+        if (!(el > 0) || Math.abs(den) < 1e-9 * el) continue;
+        const t = ((x1 - fx) * ey - (y1 - fy) * ex) / den;
+        const s = ((x1 - fx) * uy - (y1 - fy) * ux) / den;
+        if (s >= -0.05 && s <= 1.05) out.push({ t, sin: Math.abs(den) / el });
+      }
+      return out;
+    };
     const sideCandidates = (side: number): Seg[] => {
+      const sx = px + nx * side * offset;
+      const sy = py + ny * side * offset;
+      // Moved along the force a few steps and, where its own line or the
+      // slip line crosses it, to just past the crossing (starting on that
+      // line would hide its tail).
+      const shifts = [0, step, 2 * step, 3 * step];
+      for (const c of crossings(sx, sy, [...slip, ...ownSegs])) {
+        const past = c.t + (size.clear + 0.5 * size.headHalf) / Math.max(c.sin, 0.25);
+        if (past > 0 && c.t < 3 * step + size.arrow) shifts.push(past, past + step / 2);
+      }
+      shifts.sort((a, b) => a - b);
       const out: Seg[] = [];
       for (const L of lengths) {
-        for (const a of [0, step, 2 * step, 3 * step]) {
+        for (const a of shifts) {
           // Back off when the arrow would run past the element's end.
           const shift = Math.max(tLo, Math.min(a, tHi - L));
-          const fx = px + nx * side * size.offset + ux * shift;
-          const fy = py + ny * side * size.offset + uy * shift;
+          const fx = sx + ux * shift;
+          const fy = sy + uy * shift;
           out.push([fx, fy, fx + ux * L, fy + uy * L]);
         }
       }
@@ -453,19 +665,24 @@ export function layoutReinforcementForces(
     };
     const up = sideCandidates(1);
     const down = sideCandidates(-1);
-    /** Clearance from the lines, beyond what the shaft and the head need (`relax`: half for boundary and water lines). */
+    /**
+     * Clearance from the lines, beyond what the shaft and the head need
+     * (`relax`: half for boundary and water lines). Its own element counts
+     * too: an arrow across it (a force at an angle to a pile) or on it hides it.
+     */
     const score = ([fx, fy, tx, ty]: Seg, relax: boolean): number => {
-      const neckX = tx - ux * size.head;
-      const neckY = ty - uy * size.head;
+      const neckX = tx - ux * headLen;
+      const neckY = ty - uy * headLen;
       let sc = Infinity;
-      const near = (o: Seg, k: number) => {
+      const near = (o: Seg, kc: number) => {
         sc = Math.min(
           sc,
-          segmentDistance([fx, fy, neckX, neckY], o) - k * size.clear,
-          segmentDistance([neckX, neckY, tx, ty], o) - k * (size.headHalf + size.clear),
+          segmentDistance([fx, fy, neckX, neckY], o) - kc * size.clear,
+          segmentDistance([neckX, neckY, tx, ty], o) - kc * (headHalf + size.clear),
         );
       };
       for (const o of others) near(o, 1);
+      for (const o of ownSegs) near(o, 0.5 * k);
       for (const o of extra) near(o, relax ? 0.5 : 1);
       return sc;
     };
@@ -479,6 +696,7 @@ export function layoutReinforcementForces(
       down.find((c) => score(c, true) >= 0) ??
       [...up, ...down].reduce((a, b) => (score(b, true) > score(a, true) ? b : a));
     arrows.push(best);
+    heads.push([headLen, headHalf]);
   }
 
   // ── Labels ──
@@ -553,6 +771,7 @@ export function layoutReinforcementForces(
     for (const s of segs) if (segmentHitsBox(s, b)) n++;
     for (const p of context.placed) if (boxesOverlap(b, p, 0)) n += 2;
     for (const p of done) if (boxesOverlap(b, p, 0)) n += 2;
+    for (const p of fixed) if (boxesOverlap(b, p, 0)) n += 2;
     if (bounds && (b.left < bounds.left || b.right > bounds.right || b.top < bounds.top || b.bottom > bounds.bottom)) {
       n += 4;
     }
@@ -572,17 +791,100 @@ export function layoutReinforcementForces(
   };
   const leaders = new Map<number, Seg | null>();
   const finalBox = new Map<number, Box>();
-  const movedSet = new Set<number>();
-  /** Labels with a leader also carry their element's number ("3: 12.0 kN/m"). */
-  const prefixed = new Set<number>();
-  const valueOf = (k: number) => (prefixed.has(k) ? `${items[k].tag}: ${items[k].value}` : items[k].value);
+  const widthOf = (k: number) => forceLabelWidth(items[k].value, items[k].f.passive, size.measure, size.textH) + 2 * size.pad;
+
+  // Where the arrow is far from its element's head (the slip surface
+  // crosses a long element far from its head), a value at the head pairs
+  // poorly with the arrow: those values go beside their arrows instead,
+  // unless the elements or the arrows are too close for a label beside
+  // each arrow (a dense wall), where the stack at the heads reads better. One rule for
+  // all labels on one side of the heads: at the arrows when most of their
+  // arrows (their middles) are farther than `far` from the heads, with room
+  // around them.
+  const far = 9 * size.textH;
+  const sideOf = (k: number) => {
+    const [ox, oy] = items[k].head?.out ?? [items[k].ux, items[k].uy];
+    return Math.abs(ox) >= Math.abs(oy) ? (ox < 0 ? "l" : "r") : oy < 0 ? "u" : "d";
+  };
+  const isFar = items.map(
+    (it, k) =>
+      !!it.head &&
+      spacings[k] >= 2 * h &&
+      arrows.every((a, j) => j === k || segmentDistance(a, arrows[k]) >= 3 * h) &&
+      Math.hypot((arrows[k][0] + arrows[k][2]) / 2 - it.head.head[0], (arrows[k][1] + arrows[k][3]) / 2 - it.head.head[1]) > far,
+  );
+  const sideVotes = new Map<string, number>();
+  items.forEach((it, k) => {
+    if (it.head) sideVotes.set(sideOf(k), (sideVotes.get(sideOf(k)) ?? 0) + (isFar[k] ? 1 : -1));
+  });
+  const atArrow = items.map((it, k) => !!it.head && (sideVotes.get(sideOf(k)) ?? 0) > 0);
+  /** Boxes of the labels placed beside their arrows. */
+  const fixed: Box[] = [];
+  const boxCost = (b: Box): number => {
+    let n = 0;
+    for (const s of segs) if (segmentHitsBox(s, b)) n++;
+    for (const p of context.placed) if (boxesOverlap(b, p, 0)) n += 2;
+    for (const p of fixed) if (boxesOverlap(b, p, 0)) n += 2;
+    if (bounds && (b.left < bounds.left || b.right > bounds.right || b.top < bounds.top || b.bottom > bounds.bottom)) {
+      n += 4;
+    }
+    return n;
+  };
+  items.forEach((it, k) => {
+    if (!atArrow[k]) return;
+    const [fx, fy, tx, ty] = arrows[k];
+    const w = widthOf(k);
+    const { ux, uy } = it;
+    // Away from the element: the side the arrow was moved to.
+    const sd = (fx - it.px) * it.nx + (fy - it.py) * it.ny >= 0 ? 1 : -1;
+    const mx = it.nx * sd;
+    const my = it.ny * sd;
+    const reachU = Math.abs(ux) * (w / 2) + Math.abs(uy) * (h / 2);
+    const reachM = Math.abs(mx) * (w / 2) + Math.abs(my) * (h / 2);
+    const cx = (fx + tx) / 2;
+    const cy = (fy + ty) / 2;
+    // Slid along the arrow: from its tail on, centred, up to its tip.
+    const slide = Math.max(0, reachU - Math.hypot(tx - fx, ty - fy) / 2);
+    let best: { b: Box; cost: number; ring: number } | null = null;
+    for (let ring = 0; ring < 7 && !(best && best.cost === 0); ring++) {
+      const d = size.gap + (ring * h) / 2;
+      const centres: Pt[] = [];
+      // Beside the arrow, away from the element.
+      for (const s of [slide, 0, -slide]) {
+        centres.push([cx + mx * (d + reachM) + ux * s, cy + my * (d + reachM) + uy * s]);
+      }
+      // Beyond the tip, on the arrow's side of the element; behind the tail.
+      centres.push([tx + ux * (d + reachU) + mx * reachM, ty + uy * (d + reachU) + my * reachM]);
+      centres.push([tx + ux * (d + reachU), ty + uy * (d + reachU)]);
+      centres.push([fx - ux * (d + reachU) + mx * reachM, fy - uy * (d + reachU) + my * reachM]);
+      // Across the element.
+      for (const s of [slide, 0, -slide]) {
+        const e = d + reachM + 2 * size.offset;
+        centres.push([cx - mx * e + ux * s, cy - my * e + uy * s]);
+      }
+      for (const [x, y] of centres) {
+        const b = boxAround(x, y, w / 2, h / 2);
+        const cost = boxCost(b);
+        if (!best || cost < best.cost) best = { b, cost, ring };
+        if (cost === 0) break;
+      }
+    }
+    const b = best!.b;
+    fixed.push(b);
+    finalBox.set(k, b);
+    // Moved out from the arrow: a leader to the arrow's middle.
+    if (best!.ring > 0) {
+      const sx = Math.max(b.left, Math.min(b.right, cx));
+      const sy = Math.max(b.top, Math.min(b.bottom, cy));
+      leaders.set(k, Math.hypot(cx - sx, cy - sy) > size.gap ? [sx, sy, cx, cy] : null);
+    }
+  });
+
   const place = () => {
     done.length = 0;
-    leaders.clear();
-    finalBox.clear();
-    movedSet.clear();
-    const labs: Lab[] = items.map((it, k) => {
-      const w = forceLabelWidth(valueOf(k), it.f.passive, size.measure, size.textH) + 2 * size.pad;
+    const labs: Lab[] = items.flatMap((it, k) => {
+      if (atArrow[k]) return [];
+      const w = widthOf(k);
       const tip: Pt = [arrows[k][2], arrows[k][3]];
       const anchor: Pt = it.head ? it.head.anchor : [tip[0] + it.ux * size.gap, tip[1] + it.uy * size.gap];
       const [ox, oy] = it.head ? it.head.out : [it.ux, it.uy];
@@ -596,7 +898,7 @@ export function layoutReinforcementForces(
       l.cross = clampCross(l, a + sign * half);
       l.clamped = Math.abs(l.cross - (a + sign * half)) > 1e-9;
       l.colCross = clampCross(l, a + sign * (h + half));
-      return l;
+      return [l];
     });
 
     // Each label alone: the nearest spot along its stacking axis clear of lines, boxes and the frame edge.
@@ -695,35 +997,26 @@ export function layoutReinforcementForces(
           const b = boxAt(l, l.cross, l.c);
           finalBox.set(l.k, b);
           leaders.set(l.k, moved ? leaderOf(l, b) : null);
-          if (moved) movedSet.add(l.k);
           done.push(b);
         }
       }
     }
   };
   place();
-  if (movedSet.size > 0) {
-    // All labels on that side of the heads, so they read alike.
-    const sideOf = (k: number) => {
-      const [ox, oy] = items[k].head?.out ?? [items[k].ux, items[k].uy];
-      return Math.abs(ox) >= Math.abs(oy) ? (ox < 0 ? "l" : "r") : oy < 0 ? "u" : "d";
-    };
-    const sides = new Set([...movedSet].map(sideOf));
-    items.forEach((it, k) => {
-      if (it.tag && sides.has(sideOf(k))) prefixed.add(k);
-    });
-    if (prefixed.size > 0) place();
-  }
-  context.placed.push(...done);
+  context.placed.push(...fixed, ...done);
 
+  // A label in a column has a leader to its element's number, which it
+  // does not repeat.
   return items.map((it, k) => ({
-    text: `${prefixed.has(k) ? `${it.tag}: ` : ""}${formatReinforcementForce(it.f)}`,
-    value: valueOf(k),
+    text: formatReinforcementForce(it.f),
+    value: it.value,
     passive: it.f.passive,
     from: [arrows[k][0], arrows[k][1]],
     to: [arrows[k][2], arrows[k][3]],
     ux: it.ux,
     uy: it.uy,
+    head: heads[k][0],
+    headHalf: heads[k][1],
     label: finalBox.get(k)!,
     leader: leaders.get(k) ?? null,
   }));
@@ -760,10 +1053,10 @@ export function drawReinforcementForces(
   ctx.strokeStyle = REINFORCEMENT_COLOR;
   ctx.fillStyle = REINFORCEMENT_COLOR;
   ctx.lineCap = "butt";
-  for (const { from, to, ux, uy } of layout) {
+  for (const { from, to, ux, uy, head, headHalf } of layout) {
     const [ex, ey] = to;
-    const neckX = ex - ux * size.head;
-    const neckY = ey - uy * size.head;
+    const neckX = ex - ux * head;
+    const neckY = ey - uy * head;
     ctx.lineWidth = 1.75 * zoom;
     ctx.beginPath();
     ctx.moveTo(from[0], from[1]);
@@ -771,8 +1064,8 @@ export function drawReinforcementForces(
     ctx.stroke();
     ctx.beginPath();
     ctx.moveTo(ex, ey);
-    ctx.lineTo(neckX - uy * size.headHalf, neckY + ux * size.headHalf);
-    ctx.lineTo(neckX + uy * size.headHalf, neckY - ux * size.headHalf);
+    ctx.lineTo(neckX - uy * headHalf, neckY + ux * headHalf);
+    ctx.lineTo(neckX + uy * headHalf, neckY - ux * headHalf);
     ctx.closePath();
     ctx.fill();
   }

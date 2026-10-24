@@ -451,7 +451,14 @@ describe("reinforcement", () => {
     expect(band.args[2]).toBeCloseTo(20 + 15 * 5, 9);
     // Anchor block only for the element without pullout.
     expect(rec.of("rect")).toHaveLength(1);
-    expect(rec.texts()).toEqual(["1", "2"]);
+    // Each number twice: a white halo (stroked), then the number.
+    expect(rec.texts()).toEqual(["1", "1", "2", "2"]);
+    expect(rec.of("text").map((c) => (c.args[3] as { renderingMode?: string }).renderingMode)).toEqual([
+      "stroke",
+      undefined,
+      "stroke",
+      undefined,
+    ]);
   });
 
   it("labels piles P1… above their heads", () => {

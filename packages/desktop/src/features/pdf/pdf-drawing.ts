@@ -5,10 +5,11 @@ import type { PileRow, ReinforcementRow } from "../../store/types";
 import {
   bondedSpan,
   divideSign,
-  elementNumberBox,
+  elementNumberLayout,
   forceLabelPieces,
   layoutReinforcementForces,
   type ForceLabelContext,
+  type NumberScene,
   type ForceSize,
 } from "../canvas/reinforcement-draw";
 import {
@@ -543,7 +544,10 @@ export function drawReinforcementsPdf(
   pdf: jsPDF,
   tf: PdfTransform,
   rows: readonly ReinforcementRow[],
+  /** What the numbers keep off (elementNumberLayout), as on the canvas. */
+  numberScene?: NumberScene,
 ) {
+  const nums = elementNumberLayout(rows, tf.worldToPdf, 2.8, numberScene);
   rows.forEach((r, i) => {
     const [ax, ay] = tf.worldToPdf(r.x1, r.y1);
     const [bx, by] = tf.worldToPdf(r.x2, r.y2);
@@ -572,8 +576,13 @@ export function drawReinforcementsPdf(
     }
     pdf.setFontSize(8);
     setSansFont(pdf, "bold");
+    const num = nums[i];
+    if (!num) return;
+    // A white halo first, so the number reads on dark fills and over lines.
+    pdf.setDrawColor(255, 255, 255);
+    pdf.setLineWidth(0.7);
+    pdf.text(String(i + 1), num.x, num.y, { align: "center", baseline: "middle", renderingMode: "stroke" });
     pdf.setTextColor(...REINFORCEMENT_RGB);
-    const num = elementNumberBox(ax, ay, -ux, -uy, i, 2.8);
     pdf.text(String(i + 1), num.x, num.y, { align: "center", baseline: "middle" });
   });
 }
@@ -621,16 +630,16 @@ export function drawReinforcementForcesPdf(
   const layout = layoutReinforcementForces(forces, tf.worldToPdf, size, context);
   pdf.setDrawColor(...REINFORCEMENT_RGB);
   pdf.setFillColor(...REINFORCEMENT_RGB);
-  for (const { from, to, ux, uy } of layout) {
+  for (const { from, to, ux, uy, head, headHalf } of layout) {
     const [ex, ey] = to;
-    const neckX = ex - ux * size.head;
-    const neckY = ey - uy * size.head;
+    const neckX = ex - ux * head;
+    const neckY = ey - uy * head;
     pdf.setLineWidth(0.45);
     pdf.line(from[0], from[1], neckX, neckY);
     pdf.triangle(
       ex, ey,
-      neckX - uy * size.headHalf, neckY + ux * size.headHalf,
-      neckX + uy * size.headHalf, neckY - ux * size.headHalf,
+      neckX - uy * headHalf, neckY + ux * headHalf,
+      neckX + uy * headHalf, neckY - ux * headHalf,
       "F",
     );
   }

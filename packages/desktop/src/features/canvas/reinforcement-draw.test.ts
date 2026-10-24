@@ -7,8 +7,10 @@ import {
   drawPiles,
   drawReinforcementForces,
   drawReinforcements,
+  elementNumberScene,
   forceLabelContext,
   forceRoundsToZero,
+  limitMarkerObstacles,
   formatReinforcementForce,
   layoutReinforcementForces,
   loadObstacleBoxes,
@@ -149,6 +151,28 @@ describe("drawReinforcements", () => {
     expect(rec.findText("1")!.state.font).toBe("bold 22px sans-serif");
   });
 
+  it("draws each number on a halo and moves it off a line through its spot", () => {
+    const rec = createRecordingContext();
+    // A water line through the usual spot of the number (left of the head at y = 5).
+    const water: [number, number][] = [
+      [-5, 5],
+      [4, 5],
+    ];
+    const scene = elementNumberScene({ coordinates: [], piezometricLine: { lines: [{ coordinates: water }] } }, false);
+    drawReinforcements(rec.ctx, [row({})], toCanvas, 1, { scene, halo: "#fedcba" });
+    const halo = rec.callsOf("strokeText")[0];
+    expect(halo.args[0]).toBe("1");
+    expect(halo.state.strokeStyle).toBe("#fedcba");
+    const num = rec.findText("1")!;
+    expect([num.x, num.y]).toEqual([halo.args[1], halo.args[2]]);
+    // Up the page, clear of the line (y = 450), still by the head.
+    expect(num.y).toBeLessThan(450 - 5.5);
+    expect(Math.abs(num.x - (150 - 13.2))).toBeLessThan(1e-9);
+    // The force labels anchor beyond the number where it is drawn.
+    const ctx = forceLabelContext(toCanvas, { reinforcements: [row({})], numberSize: 11, numberScene: scene });
+    expect(ctx.heads!.reinforcements[0]!.anchor[1]).toBeCloseTo(num.y, 9);
+  });
+
   it("skips elements whose ends coincide on screen", () => {
     const rec = createRecordingContext();
     drawReinforcements(rec.ctx, [row({ x2: 5, y2: 5 })], toCanvas);
@@ -181,6 +205,58 @@ describe("drawReinforcementForces", () => {
     for (const [, y] of pathPoints(head)) expect(450 - y).toBeGreaterThan(2);
   });
 
+  it("keeps each arrow of a dense wall beside its own element, on one side", () => {
+    // Elements 12 px apart: arrows within 30 % of that above their own element.
+    const rows = [0, 1, 2, 3].map((i) => row({ x1: 5, y1: 5 + i * 1.2, x2: 15, y2: 5 + i * 1.2 }));
+    const forces = rows.map((_, i) => force({ index: i, y: 5 + i * 1.2 }));
+    const context = forceLabelContext(toCanvas, { reinforcements: rows, numberSize: 11 });
+    const size = { arrow: 28, head: 5.5, headHalf: 2.5, offset: 5.5, clear: 1.5, gap: 3, pad: 1, textH: 10, measure: (t: string) => t.length * 6 };
+    const layout = layoutReinforcementForces(forces, toCanvas, size, context);
+    layout.forEach((l, i) => {
+      const lineY = toCanvas(0, 5 + i * 1.2)[1];
+      expect(lineY - l.from[1]).toBeGreaterThan(0);
+      expect(lineY - l.from[1]).toBeLessThanOrEqual(0.3 * 12 + 1e-9);
+      expect(l.headHalf).toBeLessThan(size.headHalf);
+    });
+  });
+
+  it("starts an arrow at an angle to its element clear of the element's line", () => {
+    // A vertical pile from (10, 10) down to (10, 0); the force at 45° where the slip crosses it.
+    const piles = [{ ...newPile("p", "pile", COORDS), x1: 10, y1: 10, x2: 10, y2: 0 }];
+    const context = forceLabelContext(toCanvas, { piles, numberSize: 11 });
+    const size = { arrow: 28, head: 5.5, headHalf: 2.5, offset: 5.5, clear: 1.5, gap: 3, pad: 1, textH: 10, measure: (t: string) => t.length * 6 };
+    const [l] = layoutReinforcementForces([force({ index: 0, pile: true, x: 10, y: 5, fx: 1, fy: 1, force: 30 })], toCanvas, size, context);
+    const pile: [number, number, number, number] = [...toCanvas(10, 10), ...toCanvas(10, 0)];
+    expect(segmentDistance([...l.from, ...l.to], pile)).toBeGreaterThan(0.5);
+  });
+
+  it("puts the value beside its arrow when the arrow is far from the element's head", () => {
+    const rec = createRecordingContext();
+    // A 30 m element crossed 25 m (250 px) from its head.
+    const rows = [row({ x1: 0, y1: 5, x2: 30, y2: 5 })];
+    const context = forceLabelContext(toCanvas, { reinforcements: rows, numberSize: 11 });
+    drawReinforcementForces(rec.ctx, [force({ index: 0, x: 25, y: 5 })], toCanvas, 1, { context });
+    const [[x, y, w, h]] = plates(rec);
+    const [shaft] = rec.strokes(REINFORCEMENT_COLOR);
+    const [[sx, sy]] = pathPoints(shaft);
+    // Next to the arrow (within a label height), not at the head (x = 100).
+    expect(Math.abs(y + h / 2 - sy)).toBeLessThan(h + 3);
+    expect(x + w).toBeGreaterThan(sx);
+    expect(leaders(rec)).toHaveLength(0);
+  });
+
+  it("keeps labels off the search-limit markers", () => {
+    const rec = createRecordingContext();
+    const rows = [row({ x1: 5, y1: 5, x2: 15, y2: 5 })];
+    // A marker box over the label's usual spot left of the head.
+    const markers = [{ left: 100, top: 440, right: 130, bottom: 460 }];
+    const context = forceLabelContext(toCanvas, { reinforcements: rows, numberSize: 11, markers });
+    drawReinforcementForces(rec.ctx, [force({ index: 0, y: 5 })], toCanvas, 1, { context });
+    const [[x, y, w, h]] = plates(rec);
+    const m = markers[0];
+    expect(x < m.right && m.left < x + w && y < m.bottom && m.top < y + h).toBe(false);
+  });
+
   it("labels a force without an element beyond the arrow tip, on a plate of the background colour", () => {
     const rec = createRecordingContext();
     drawReinforcementForces(rec.ctx, [force({ fx: 50, fy: 0, force: 50 })], toCanvas, 1, { plate: "#abcdef" });
@@ -208,7 +284,7 @@ describe("drawReinforcementForces", () => {
     expect(rec.findText("50.0 kN/m")).toBeDefined();
   });
 
-  it("never leaves a value out: a crowd becomes a numbered column with a leader to each head", () => {
+  it("never leaves a value out: a crowd becomes a column with a leader to each head's number", () => {
     const rec = createRecordingContext();
     // Five parallel elements 5 px apart, closer than the label height.
     const rows = [0, 1, 2, 3, 4].map((i) => row({ x1: 5, y1: 5 + i * 0.5, x2: 15, y2: 5 + i * 0.5 }));
@@ -216,8 +292,9 @@ describe("drawReinforcementForces", () => {
     const context = forceLabelContext(toCanvas, { reinforcements: rows, numberSize: 11 });
     drawReinforcementForces(rec.ctx, forces, toCanvas, 1, { context });
     expect(rec.strokes(REINFORCEMENT_COLOR).filter((s) => s.state.lineWidth === 1.75)).toHaveLength(5);
-    // Every value, each carrying its element number.
-    for (let i = 1; i <= 5; i++) expect(rec.findText(`${i}: 50.0 kN/m`)).toBeDefined();
+    // Every value, once; the element number is at the head the leader points to, not repeated.
+    expect(rec.textStrings().filter((t) => t === "50.0 kN/m")).toHaveLength(5);
+    expect(rec.textStrings().some((t) => t.includes(":"))).toBe(false);
     const boxes = plates(rec);
     expect(boxes).toHaveLength(5);
     for (let i = 0; i < boxes.length; i++) {
@@ -352,6 +429,18 @@ describe("layoutReinforcementForces", () => {
     const forces = [force({ index: 0 }), force({ index: 1 })];
     const [a, b] = layoutReinforcementForces(forces, toCanvas, size);
     expect(segmentDistance([...a.from, ...a.to], [...b.from, ...b.to])).toBeGreaterThan(2 * size.headHalf);
+  });
+});
+
+describe("limitMarkerObstacles", () => {
+  it("covers the lifted markers as drawn over a result, nothing when the limits are off", () => {
+    const limits = { enabled: true, entryLeftX: 2, entryRightX: 6, exitLeftX: 12, exitRightX: 18 };
+    const boxes = limitMarkerObstacles(limits, COORDS, toCanvas, 1, 2);
+    // A bar and a triangle per limit.
+    expect(boxes).toHaveLength(8);
+    // The triangles stand above the ground (y = 10 on the crest: 400 px).
+    expect(Math.min(...boxes.map((b) => b.top))).toBeLessThan(400);
+    expect(limitMarkerObstacles({ ...limits, enabled: false }, COORDS, toCanvas, 1)).toEqual([]);
   });
 });
 
