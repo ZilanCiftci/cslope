@@ -86,7 +86,7 @@ describe("analysis worker result", () => {
       driving += (s.weight + (s.surfaceLoad ?? 0)) * Math.sin(s.alpha);
       expect(Number.isFinite(s.normalForce)).toBe(true);
     }
-    // Within the solver tolerance (0.005 by default).
+    // Within half a percent (the default solver tolerance is 0.001).
     expect(Math.abs(resisting / driving - msg.result.minFOS)).toBeLessThan(0.005 * msg.result.minFOS);
     const ordinary = slices.map((s) => (s.weight + (s.surfaceLoad ?? 0)) * Math.cos(s.alpha) - s.porePressure * s.baseLength);
     expect(slices.some((s, i) => Math.abs(s.normalForce - ordinary[i]) > 1)).toBe(true);

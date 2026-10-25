@@ -516,14 +516,12 @@ export const PROBLEMS: RawCase[] = [
     description: "The V016 wall with 6 cm weak bands at the course interfaces (φ = 37.8°, c = 20.4 kPa from the joint tensile strength); the V016a reference circle, which passes below the wall and crosses no joint.",
     definition: {"materials":[{"name":"Soil #1","model":{"kind":"mohr-coulomb","unitWeight":21,"cohesion":5,"frictionAngle":30}},{"name":"Soil #2","model":{"kind":"mohr-coulomb","unitWeight":20,"cohesion":0,"frictionAngle":25}},{"name":"Gabion wall","model":{"kind":"mohr-coulomb","unitWeight":23,"cohesion":59.7,"frictionAngle":42}},{"name":"Weak joint","model":{"kind":"mohr-coulomb","unitWeight":23,"cohesion":20.4,"frictionAngle":37.8}}],"coordinates":[[0,0],[0,5.456],[14.472,5.456],[14.611,6.4465],[15.6015,6.3075],[15.7405,7.298],[16.731,7.159],[16.87,8.1495],[17.8605,8.0105],[17.9995,9.001],[30,9],[30,7],[30,0]],"materialBoundaries":[{"coordinates":[[14.472,5.456],[16.453,5.178]],"materialName":""},{"coordinates":[[16.453,5.178],[0,0]],"materialName":""},{"coordinates":[[16.453,5.178],[18.434,4.9],[18.5647,5.8311]],"materialName":""},{"coordinates":[[18.573,5.8905],[30,7]],"materialName":""},{"coordinates":[[18.573,5.8905],[18.7037,6.8216]],"materialName":""},{"coordinates":[[18.573,5.8905],[18.5647,5.8311]],"materialName":""},{"coordinates":[[18.573,5.8905],[15.6015,6.3075],[15.5932,6.2481],[18.5647,5.8311]],"materialName":""},{"coordinates":[[18.7037,6.8216],[18.712,6.881]],"materialName":""},{"coordinates":[[18.7037,6.8216],[16.7227,7.0996],[16.731,7.159],[18.712,6.881]],"materialName":""},{"coordinates":[[18.712,6.881],[18.8427,7.8121]],"materialName":""},{"coordinates":[[18.8427,7.8121],[18.851,7.8715]],"materialName":""},{"coordinates":[[18.8427,7.8121],[17.8522,7.9511],[17.8605,8.0105],[18.851,7.8715]],"materialName":""},{"coordinates":[[18.851,7.8715],[18.99,8.862],[17.9995,9.001]],"materialName":""}],"regionAssignments":[{"point":[4.11325,2.589],"materialName":"Soil #1"},{"point":[24.46025,8.36675],"materialName":"Soil #1"},{"point":[18.89242,2.45],"materialName":"Soil #2"},{"point":[15.81642,6.0396],"materialName":"Gabion wall"},{"point":[17.15258,6.56455],"materialName":"Gabion wall"},{"point":[17.78683,7.48555],"materialName":"Gabion wall"},{"point":[18.42525,8.43625],"materialName":"Gabion wall"},{"point":[17.0831,6.0693],"materialName":"Weak joint"},{"point":[17.71735,6.9903],"materialName":"Weak joint"},{"point":[18.3516,7.9113],"materialName":"Weak joint"}],"customSearchPlanes":[{"cx":15.956,"cy":10.016,"radius":5.722}],"customPlanesOnly":true},
     checks: [
-      {"method":"Bishop","label":"Bishop simplified","published":1.799,"publishedBy":"Commercial program A","options":{"porePressureHead":"vertical","slices":60}},
-      {"method":"Morgenstern-Price","label":"Spencer (M-P, constant f(x))","published":1.803,"publishedBy":"Commercial program A","options":{"intersliceFunction":"constant","porePressureHead":"vertical","slices":60}},
       {"method":"Bishop","label":"Bishop simplified","published":1.79,"publishedBy":"Program D","options":{"porePressureHead":"vertical","slices":60}},
     ],
     publicNote: "The paper gives its results in figures only; the comparison is with the other programs.",
     notes: [
       "commercial program A's block search along the joints gives 1.516 at the wall face.",
-      "The circle (V016a's: centre (15.956, 10.016), R 5.722) passes below the wall and crosses no weak layer: with the joints set to c = 0, φ = 5° cSlope still gives 1.7905, the V016a value. commercial program A's 1.799 and 1.803 are block-search (non-circular) minima along the weak layers (its Table 109.2), not values on this circle; the description said the circle ran through the joints until 2026-10-24.",
+      "The circle (V016a's: centre (15.956, 10.016), R 5.722) passes below the wall and crosses no weak layer: with the joints set to c = 0, φ = 5° cSlope still gives 1.7905, the V016a value. commercial program A's 1.799 and 1.803 are block-search (non-circular) minima along the weak layers (its Table 109.2), not values on this circle; the description said the circle ran through the joints until 2026-10-24. Commercial program A's block search places the surface along polylines on the weak layers with projection angles of ±45° and 135-225° (manual §109.3), a search type cSlope does not have; a free search in cSlope between the same limits goes lower (circular Bishop 1.764, non-circular Spencer 1.711), so commercial program A's 1.799 (Bishop), 1.803 (Spencer), 1.804 (GLE) and 1.610 (Janbu) are not checks (until 2026-10-25 they were checked against the circle, which agreed within 0.5 % by coincidence). The check is program D's Bishop on the circle.",
     ],
   },
   {
@@ -895,6 +893,7 @@ export const PROBLEMS: RawCase[] = [
     notes: [
       "commercial program A's toe circle; its circle tangent to the foundation base gives Bishop 1.141, Spencer 1.139. V028 and V029 are the deeper foundations.",
       "commercial program A's optimised non-circular surface gives 0.878 (Spencer); cSlope's optimisation stops at 0.927 (+5.6 %), so it is not a check.",
+      "Spencer's critical circle (1.132) is deeper than Bishop's toe circle (1.123), although for phi = 0 the two methods agree on any circle where both solve: on the toe circle Fm = 1.1215 for every lambda, but Ff stays above 1.176 for interslice inclinations of -10 to +80 deg (Edris & Wright 1987), so Spencer has no admissible solution there and the circle is rejected; the only formal root lies near -45 deg. An independent GLE solver gives the same curves (2026-10-25). Commercial program A and Duncan & Wright report Spencer about equal to Bishop on a toe circle, so they evidently accept a solution there; cSlope's 1.132 is +0.7 % against Duncan & Wright's 1.124.",
     ],
   },
   {
@@ -1576,7 +1575,7 @@ export const PROBLEMS: RawCase[] = [
       {"method":"Morgenstern-Price","label":"Spencer (M-P, constant f(x))","published":1.366,"publishedBy":"Program D","options":{"intersliceFunction":"constant","porePressureHead":"vertical","slices":40}},
     ],
     notes: [
-      "Bishop & Morgenstern chart 1.380; a circle forced tangent to the foundation base gives 1.70.",
+      "Bishop & Morgenstern (1960) charts, as Griffiths & Lane quote them: 1.380 for the slope without the foundation layer (their example 1, D = 1) and 1.752 with it (D = 1.5), which belongs to a circle tangent to the base of the layer; in cSlope a circle forced tangent to that base gives 1.70. The critical circle is a toe circle, as in Griffiths & Lane's finite-element mechanism, and the factor is essentially that of example 1.",
     ],
   },
   {
@@ -2375,6 +2374,7 @@ export const PROBLEMS: RawCase[] = [
     checks: [
       {"method":"Bishop","label":"Bishop simplified","published":1.511,"publishedBy":"Commercial program A","options":{"porePressureHead":"phreatic-correction","tensionCrackDepth":3.3528,"tensionCrackWater":0.54545}},
       {"method":"Morgenstern-Price","label":"Spencer (M-P, constant f(x))","published":1.51,"publishedBy":"Commercial program A","options":{"intersliceFunction":"constant","porePressureHead":"phreatic-correction","tensionCrackDepth":3.3528,"tensionCrackWater":0.54545}},
+      {"method":"Morgenstern-Price","label":"Morgenstern-Price (half-sine)","published":1.51,"publishedBy":"Commercial program A","options":{"porePressureHead":"phreatic-correction","tensionCrackDepth":3.3528,"tensionCrackWater":0.54545}},
       {"method":"Janbu","label":"Janbu corrected (f0)","published":1.52,"publishedBy":"Commercial program A","options":{"porePressureHead":"phreatic-correction","tensionCrackDepth":3.3528,"tensionCrackWater":0.54545,"janbuCorrection":true}},
     ],
     publicNote: "The source compares programs and publishes no independent value.",
@@ -2395,11 +2395,32 @@ export const PROBLEMS: RawCase[] = [
       {"method":"Bishop","label":"Bishop simplified","published":1.396,"publishedBy":"Commercial program A","options":{"porePressureHead":"phreatic-correction"}},
       {"method":"Morgenstern-Price","label":"Spencer (M-P, constant f(x))","published":1.402,"publishedBy":"Commercial program A","options":{"intersliceFunction":"constant","porePressureHead":"phreatic-correction"}},
       {"method":"Janbu","label":"Janbu corrected (f0)","published":1.391,"publishedBy":"Commercial program A","options":{"porePressureHead":"phreatic-correction","janbuCorrection":true}},
+      {"method":"Morgenstern-Price","label":"Morgenstern-Price (half-sine)","published":1.398,"publishedBy":"Commercial program A","options":{"porePressureHead":"phreatic-correction"}},
     ],
     publicNote: "The source compares programs and publishes no independent value.",
     notes: [
       "The water table is the one in the manual's Fig. 27.1, its node markers read from the figure calibrated on 12 labelled ground vertices (residual at most 0.3 ft): (63, 73), (82.95, 78.08), (103.79, 82.02), (121.66, 84.48), (139.61, 86.93), (200, 92.8) ft. An earlier tracing lay 1.1–1.7 ft higher from x = 75 to 200 ft and gave every method 1.8–1.9 % low. Program D's 1.369 (Bishop) and 1.375 (Spencer) were computed on the earlier tracing and are no longer checks. V082a and V082b are the tension-crack variants of Table 27.4.",
-      "commercial program A's circular search with exit limits (Table 27.3: Bishop 1.376, Spencer 1.382, Janbu corrected 1.345) is not checked: cSlope's search was 4.2 % lower on the earlier water-table tracing; a search without limits drops into the zero-strength cap.",
+      "Commercial program A's circular search with exit limits (Table 27.3) is V082d.",
+    ],
+  },
+  {
+    id: "V082d",
+    title: "Sharma (1996) slope over undulating bedrock, circular search with exit limits",
+    reference: "Sharma (1996); Malkawi et al. (2001).",
+    surface: "search",
+    units: "SI",
+    inputFromFigure: true,
+    description: "The V082c slope (zero-strength cap, water table with phreatic correction) with a circular search whose circles must exit between x = 38 and 70 ft at the toe and 120 and 180 ft at the crest (Table 27.3). Converted to SI.",
+    definition: {"coordinates":[[0,4.572],[8.8392,7.315200000000001],[15.5448,7.9248],[23.7744,17.0688],[28.651200000000003,19.812],[34.4424,19.5072],[40.5384,17.0688],[49.0728,17.6784],[60.96,23.1648],[60.96,30.1752],[60.96,33.528],[42.062400000000004,31.3944],[30.7848,26.822400000000002],[19.2024,22.250400000000003],[11.5824,19.2024],[6.7056000000000004,20.4216],[0,20.7264]],"materials":[{"name":"Soil 1","model":{"kind":"mohr-coulomb","unitWeight":18.284980344,"cohesion":23.94013,"frictionAngle":14,"unitWeightSat":19.510262532000002}},{"name":"Soil 2 (zero strength)","model":{"kind":"undrained","unitWeight":18.284980344,"undrainedShearStrength":0,"suRefDepth":0,"suRateOfChange":0}}],"materialBoundaries":[{"coordinates":[[30.7848,26.822400000000002],[60.96,30.1752]],"materialName":""}],"regionAssignments":[{"point":[9.8298,12.4968],"materialName":"Soil 1"},{"point":[40.386,28.498800000000003],"materialName":"Soil 2 (zero strength)"}],"waterTable":{"mode":"custom","value":[[0.0,20.7264],[6.7056,20.4216],[11.5824,19.2024],[19.2024,22.2504],[25.28316,23.798784],[31.635192,24.999696],[37.081968,25.749504],[42.553128,26.496264],[60.96,28.28544]],"followBoundary":false},"analysisLimits":{"entryLeftX":36.576,"entryRightX":54.864,"exitLeftX":11.5824,"exitRightX":21.336}},
+    checks: [
+      {"method":"Bishop","label":"Bishop simplified","published":1.376,"publishedBy":"Commercial program A","options":{"porePressureHead":"phreatic-correction"}},
+      {"method":"Morgenstern-Price","label":"Spencer (M-P, constant f(x))","published":1.382,"publishedBy":"Commercial program A","options":{"intersliceFunction":"constant","porePressureHead":"phreatic-correction"}},
+      {"method":"Morgenstern-Price","label":"Morgenstern-Price (half-sine)","published":1.378,"publishedBy":"Commercial program A","options":{"porePressureHead":"phreatic-correction"}},
+      {"method":"Janbu","label":"Janbu corrected (f0)","published":1.345,"publishedBy":"Commercial program A","options":{"porePressureHead":"phreatic-correction","janbuCorrection":true}},
+    ],
+    publicNote: "The source compares programs and publishes no independent value.",
+    notes: [
+      "Commercial program A's auto search (Table 27.3) on the water table of V082c. Its critical circle is not printed; cSlope's lies at (138.2, 182.4) ft, R 121.7 ft, from x = 44.3 to 162.0 ft (Bishop). Malkawi et al. (2001) quote a Janbu 1.255 that the manual reproduces only with static pore pressure and uncorrected Janbu; it is not checked.",
     ],
   },
   {
@@ -2536,6 +2557,7 @@ export const PROBLEMS: RawCase[] = [
       {"method":"Bishop","label":"Bishop simplified","published":1.762,"publishedBy":"Commercial program A","options":{"tensionCrackDepth":11.4}},
       {"method":"Morgenstern-Price","label":"Spencer (M-P, constant f(x))","published":1.758,"publishedBy":"Commercial program A","options":{"intersliceFunction":"constant","tensionCrackDepth":11.4}},
       {"method":"Janbu","label":"Janbu corrected (f0)","published":1.736,"publishedBy":"Commercial program A","options":{"tensionCrackDepth":11.4,"janbuCorrection":true}},
+      {"method":"Janbu","label":"Janbu simplified (uncorrected)","published":1.628,"publishedBy":"Commercial program A","options":{"tensionCrackDepth":11.4}},
     ],
     paper: [{"value": 1.76, "method": "Bishop simplified", "source": "Duncan & Wright"}, {"value": 1.63, "method": "Janbu simplified", "source": "Duncan & Wright"}, {"value": 1.74, "method": "Janbu corrected", "source": "Duncan & Wright"}, {"value": 1.76, "method": "Spencer", "source": "Duncan & Wright"}],
     notes: [
@@ -2568,6 +2590,7 @@ export const PROBLEMS: RawCase[] = [
     checks: [
       {"method":"Morgenstern-Price","label":"Spencer (M-P, constant f(x))","published":0.975,"publishedBy":"Commercial program A","options":{"intersliceFunction":"constant","tensionCrackDepth":2,"tensionCrackWater":1}},
       {"method":"Morgenstern-Price","label":"Spencer (M-P, constant f(x))","published":0.975,"publishedBy":"Commercial program A","options":{"intersliceFunction":"constant","tensionCrackAuto":true,"tensionCrackWater":1},"note":"Automatic crack depth 2c/γ = 2.06 m instead of the given 2 m."},
+      {"method":"Morgenstern-Price","label":"Morgenstern-Price (half-sine)","published":0.975,"publishedBy":"Commercial program A","options":{"tensionCrackDepth":2,"tensionCrackWater":1}},
     ],
     paper: [{"value": 0.981, "method": "Spencer", "source": "Tandjiria, Low & Teh (2002)"}],
     notes: [
@@ -2584,6 +2607,7 @@ export const PROBLEMS: RawCase[] = [
     definition: {"coordinates":[[0,0],[0,9],[10,9],[20,3],[30,3],[30,0]],"materials":[{"name":"Fill","model":{"kind":"mohr-coulomb","unitWeight":17,"cohesion":0,"frictionAngle":37}},{"name":"Soft clay","model":{"kind":"undrained","unitWeight":20,"undrainedShearStrength":20,"suRefDepth":0,"suRateOfChange":0}}],"materialBoundaries":[{"coordinates":[[-1,3],[31,3]],"materialName":""}],"regionAssignments":[{"point":[0.3,3.05],"materialName":"Fill"},{"point":[0.3,1.5],"materialName":"Soft clay"}]},
     checks: [
       {"method":"Morgenstern-Price","label":"Spencer (M-P, constant f(x))","published":1.209,"publishedBy":"Commercial program A","options":{"intersliceFunction":"constant","tensionCrackDepth":2}},
+      {"method":"Morgenstern-Price","label":"Morgenstern-Price (half-sine)","published":1.218,"publishedBy":"Commercial program A","options":{"tensionCrackDepth":2}},
     ],
     paper: [{"value": 1.219, "method": "Spencer", "source": "Tandjiria, Low & Teh (2002)"}],
     notes: [
@@ -2621,6 +2645,7 @@ export const PROBLEMS: RawCase[] = [
       {"method":"Morgenstern-Price","label":"Spencer (M-P, constant f(x))","published":2.445,"publishedBy":"Commercial program A","options":{"intersliceFunction":"constant","porePressureHead":"vertical","tensionCrackDepth":2.1336}},
       {"method":"Bishop","label":"Bishop simplified","published":2.447,"publishedBy":"Commercial program A","options":{"porePressureHead":"vertical","tensionCrackDepth":2.1336}},
       {"method":"Janbu","label":"Janbu corrected (f0)","published":2.43,"publishedBy":"Commercial program A","options":{"porePressureHead":"vertical","tensionCrackDepth":2.1336,"janbuCorrection":true}},
+      {"method":"Morgenstern-Price","label":"Morgenstern-Price (half-sine)","published":2.447,"publishedBy":"Commercial program A","options":{"porePressureHead":"vertical","tensionCrackDepth":2.1336}},
     ],
     paper: [{"value": 2.44, "method": "Spencer", "source": "USACE EM 1110-2-1902"}],
     notes: [
@@ -2641,6 +2666,7 @@ export const PROBLEMS: RawCase[] = [
       {"method":"Bishop","label":"Bishop simplified","published":2.716,"publishedBy":"Commercial program A","options":{"porePressureHead":"vertical"}},
       {"method":"Morgenstern-Price","label":"Spencer (M-P, constant f(x))","published":2.736,"publishedBy":"Commercial program A","options":{"intersliceFunction":"constant","porePressureHead":"vertical"}},
       {"method":"Janbu","label":"Janbu corrected (f0)","published":2.65,"publishedBy":"Commercial program A","options":{"porePressureHead":"vertical","janbuCorrection":true}},
+      {"method":"Morgenstern-Price","label":"Morgenstern-Price (half-sine)","published":2.744,"publishedBy":"Commercial program A","options":{"porePressureHead":"vertical"}},
     ],
     paper: [{"value": 2.71, "method": "Bishop simplified", "source": "USACE EM 1110-2-1902"}],
     notes: [
@@ -2661,6 +2687,7 @@ export const PROBLEMS: RawCase[] = [
       {"method":"Bishop","label":"Bishop simplified","published":1.332,"publishedBy":"Commercial program A"},
       {"method":"Morgenstern-Price","label":"Spencer (M-P, constant f(x))","published":1.328,"publishedBy":"Commercial program A","options":{"intersliceFunction":"constant"}},
       {"method":"Janbu","label":"Janbu corrected (f0)","published":1.345,"publishedBy":"Commercial program A","options":{"janbuCorrection":true}},
+      {"method":"Morgenstern-Price","label":"Morgenstern-Price (half-sine)","published":1.327,"publishedBy":"Commercial program A"},
     ],
     paper: [{"value": 1.33, "source": "USACE EM 1110-2-1902"}],
     notes: [
@@ -2701,6 +2728,7 @@ export const PROBLEMS: RawCase[] = [
       {"method":"Bishop","label":"Bishop simplified","published":2.011,"publishedBy":"Commercial program A"},
       {"method":"Morgenstern-Price","label":"Spencer (M-P, constant f(x))","published":2.026,"publishedBy":"Commercial program A","options":{"intersliceFunction":"constant"}},
       {"method":"Janbu","label":"Janbu corrected (f0)","published":1.83,"publishedBy":"Commercial program A","options":{"janbuCorrection":true}},
+      {"method":"Morgenstern-Price","label":"Morgenstern-Price (half-sine)","published":2.027,"publishedBy":"Commercial program A"},
     ],
     paper: [{"value": 2.01, "source": "USACE EM 1110-2-1902"}],
     notes: [
@@ -2719,6 +2747,7 @@ export const PROBLEMS: RawCase[] = [
     checks: [
       {"method":"Bishop","label":"Bishop simplified","published":1.344,"publishedBy":"Commercial program A"},
       {"method":"Morgenstern-Price","label":"Spencer (M-P, constant f(x))","published":1.325,"publishedBy":"Commercial program A (non-circular)","options":{"intersliceFunction":"constant","nonCircularOptimization":true}},
+      {"method":"Janbu","label":"Janbu simplified (uncorrected)","published":1.178,"publishedBy":"Commercial program A (non-circular)","options":{"nonCircularOptimization":true}},
     ],
     paper: [{"value": 1.348, "method": "Bishop simplified", "source": "Yamagami & Ueta (1988)"}, {"value": 1.282, "method": "Ordinary", "source": "Yamagami & Ueta (1988)"}, {"value": 1.185, "method": "Janbu simplified, non-circular", "source": "Yamagami & Ueta (1988)"}, {"value": 1.339, "method": "Spencer, non-circular", "source": "Yamagami & Ueta (1988)"}, {"value": 1.33, "method": "Spencer, non-circular", "source": "Greco (1996)"}],
     notes: [
@@ -2746,7 +2775,7 @@ export const PROBLEMS: RawCase[] = [
   {
     id: "V095a",
     title: "Yamagami micro-pile slope, no pile",
-    reference: "Yamagami micro-pile slope example.",
+    reference: "Yamagami et al. (2000).",
     surface: "fixed",
     units: "SI",
     description: "Homogeneous 2:1 slope, 4 m high, without piles, on the published circle.",
@@ -2755,21 +2784,8 @@ export const PROBLEMS: RawCase[] = [
       {"method":"Bishop","label":"Bishop simplified","published":1.102,"publishedBy":"Commercial program A"},
     ],
     paper: [{"value": 1.1, "source": "Yamagami et al. (2000)"}],
-  },
-  {
-    id: "V095b",
-    title: "Homogeneous slope, no micro piles",
-    reference: "Yamagami et al. (2000).",
-    surface: "fixed",
-    units: "SI",
-    description: "Homogeneous slope on the printed critical circle, unreinforced.",
-    definition: {"materials":[{"name":"Material 1","model":{"kind":"mohr-coulomb","unitWeight":15.68,"cohesion":4.9,"frictionAngle":10}}],"coordinates":[[-6,-5],[-6,0],[0,0],[8,4],[12,4],[12,-5]],"materialBoundaries":[],"regionAssignments":[{"point":[10,3.5],"materialName":"Material 1"}],"reinforcements":[],"customSearchPlanes":[{"cx":2.674,"cy":7.573,"radius":8.031}],"customPlanesOnly":true},
-    checks: [
-      {"method":"Bishop","label":"Bishop simplified","published":1.102,"publishedBy":"Commercial program A","options":{"porePressureHead":"vertical","slices":50}},
-    ],
-    paper: [{"value": 1.1, "source": "Yamagami et al. (2000)"}],
     notes: [
-      "Yamagami 1.10, commercial program B 1.102.",
+      "Yamagami 1.10, commercial program B 1.102. (V095b, the same model, was merged into this problem.)",
     ],
   },
   {
@@ -2800,6 +2816,7 @@ export const PROBLEMS: RawCase[] = [
     checks: [
       {"method":"Bishop","label":"Bishop simplified","published":1.804,"publishedBy":"Commercial program A","options":{"porePressureHead":"vertical","slices":50,"tensionCrackDepth":1.015}},
       {"method":"Morgenstern-Price","label":"Spencer (M-P, constant f(x))","published":1.804,"publishedBy":"Commercial program A","options":{"intersliceFunction":"constant","porePressureHead":"vertical","slices":50,"tensionCrackDepth":1.015}},
+      {"method":"Morgenstern-Price","label":"Morgenstern-Price (half-sine)","published":1.79,"publishedBy":"Commercial program A","options":{"porePressureHead":"vertical","slices":50,"tensionCrackDepth":1.015}},
     ],
     paper: [{"value": 1.836, "method": "Spencer", "source": "Zhu & Lee (2002)"}, {"value": 1.823, "method": "Morgenstern-Price", "source": "Zhu & Lee (2002)"}, {"value": 1.429, "method": "Bishop simplified", "source": "Zhu & Lee (2002)", "disputed": "Confirmed in Zhu & Lee (2002), Table II, which also gives Spencer 1.836 and Morgenstern-Price 1.823 for the same circle; the authors read the gap as simplified Bishop underestimating deep circles by up to 18 %. On a circle simplified Bishop satisfies moment equilibrium about the centre as the rigorous methods do and normally comes within a few per cent of them; the programs and cSlope give about 1.80 with both. Not counted in the error statistics."}, {"value": 1.229, "method": "Ordinary", "source": "Zhu & Lee (2002)"}],
     publicNote: "Zhu & Lee's simplified Bishop value 1.429 (their Table II) is 22 % below their own Spencer (1.836) and Morgenstern-Price (1.823) values for the same circle; the programs and cSlope give about 1.80 with both methods, as expected on a circle. The value is shown but not counted in the error statistics. The paper has no tension crack and gives the surface only in a figure; the crack and the circle here follow a program's version of the problem.",
@@ -2819,6 +2836,7 @@ export const PROBLEMS: RawCase[] = [
     checks: [
       {"method":"Bishop","label":"Bishop simplified","published":1.176,"publishedBy":"Commercial program A","options":{"porePressureHead":"vertical","slices":50,"tensionCrackDepth":1.015}},
       {"method":"Morgenstern-Price","label":"Spencer (M-P, constant f(x))","published":1.189,"publishedBy":"Commercial program A","options":{"intersliceFunction":"constant","porePressureHead":"vertical","slices":50,"tensionCrackDepth":1.015}},
+      {"method":"Morgenstern-Price","label":"Morgenstern-Price (half-sine)","published":1.174,"publishedBy":"Commercial program A","options":{"porePressureHead":"vertical","slices":50,"tensionCrackDepth":1.015}},
     ],
     paper: [{"value": 1.211, "method": "Spencer", "source": "Zhu & Lee (2002)"}, {"value": 1.197, "method": "Morgenstern-Price", "source": "Zhu & Lee (2002)"}],
     notes: [
