@@ -2417,7 +2417,7 @@ export const PROBLEMS: RawCase[] = [
     publicNote: "Sheahan & Ho use a force-equilibrium trial wedge; Janbu's method on the same planes differs by up to 4 %.",
     notes: [
       "Sheahan (trial wedge) 0.887; program D 0.899 on the earlier input (6 m wall, plane at 44.5°).",
-      "Wall height 6.1 m and plane from commercial program A's critical surface (Fig. 47.2: left and right slope intercepts (0, 6.100) and (6.279, 6.100)); the figure labels (0, 6) and (11, 6) are rounded, as everywhere in that manual. Before this correction the wall was 6 m high and the plane ran to (6.106, 6): cSlope 0.899 (+1.0 %); now 0.885 (-0.6 %).",
+      "Wall height 6.1 m and plane from commercial program A's critical surface (Fig. 47.2: left and right slope intercepts (0, 6.100) and (6.279, 6.100)); the figure labels (0, 6) and (11, 6) are rounded, as everywhere in that manual. Before this correction the wall was 6 m high and the plane ran to (6.106, 6): cSlope 0.899 (+1.0 %); now 0.885 (-0.6 %). Sheahan & Ho (2003), Table 1, give the Amherst wall 6.1 m high, with nails 1.5 m apart both ways at 20°, head 86 kN, tensile 118 kN, bond 15 kN/m and shotcrete 14.6 kN/m, as here.",
     ],
   },
   {
@@ -2434,7 +2434,7 @@ export const PROBLEMS: RawCase[] = [
     paper: [{"value": 0.989, "method": "force-equilibrium trial wedge", "source": "Sheahan & Ho (2003)"}],
     publicNote: "Sheahan & Ho use a force-equilibrium trial wedge; Janbu's method on the same planes differs by up to 4 %.",
     notes: [
-      "Out-of-plane spacing 1.15 m, the nail spacing of the Clouterre test wall. Both manuals' tables list 1.5 m, but with 1.15 m cSlope reproduces commercial program A at all six plane angles (45-70 deg) within 0.3 %, and no variant with 1.5 m does: passive nails -4.8 to -9.6 %, active -3.4 to -17.8 %, force along the slip surface -7.5 to -14.4 %, bisector -0.4 to -4.8 % (checked 2026-10-25). The manual's table also says passive, as used here. The 1.5 m in the tables is therefore taken as a misprint.",
+      "Out-of-plane spacing 1.15 m, the nail spacing of the Clouterre test wall. Both manuals' tables list 1.5 m, but with 1.15 m cSlope reproduces commercial program A at all six plane angles (45-70 deg) within 0.3 %, and no variant with 1.5 m does: passive nails -4.8 to -9.6 %, active -3.4 to -17.8 %, force along the slip surface -7.5 to -14.4 %, bisector -0.4 to -4.8 % (checked 2026-10-25). The manual's table also says passive, as used here. Confirmed by Sheahan & Ho (2003), Table 1: the Clouterre wall's horizontal spacing is 1.15 m (vertical 1 m); 1.5 m is the Amherst wall's (V083) in the column beside it, which the manuals' tables evidently took. The other inputs agree with that table: γ = 20 kN/m³, φ′ = 38°, c = 3 kPa, seven rows at 10°, head 59 kN, tensile 15 kN, bond 7.5 kN/m, shotcrete 13.2 kN/m. Sheahan & Ho take a constant 15 kN along each nail (from a pullout test); cSlope reduces it over the 2 m development length at each end.",
       "Sheahan & Ho 0.989 at 55° (force-equilibrium trial wedge).",
       "Input audit 2026-10-24: commercial program B (§2.28, Table 77) also lists 1.5 m, with the same nails (rows from 1.5 m at 1 m, lengths 6, 8, 7.5, 8, 8, 8, 6 m); its values 1.159 / 1.051 / 0.971 / 0.917 / 0.880 / 0.876 (45-70°) lie 1-2 % below Sheahan & Ho's. With 1.5 m cSlope is 5-10 % below commercial program A at every angle (0.919 at 55°).",
     ],
