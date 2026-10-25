@@ -28,11 +28,35 @@ The script compares the regenerated verification table with the committed one an
 | 2026-10-24 | Input audit of all verification problems: V005, V009a-c, V017a/b, V029, V042, V060a, V061, V065, V066c, V068, V075, V077, V083, V092, V098 corrected against their sources | 18 | 0.354 → 0.358 | 0.501 → 0.509 | 1.146 → 1.092 | 1.660 → 1.581 | 87 s (4 workers, load 0.9 at start) |
 | 2026-10-25 | Ito & Matsui pile force at the resultant of the soil pressure; V084a note on the nail spacing | 3 | 0.358 → 0.349 | 0.509 → 0.498 | 1.092 → 1.092 | 1.581 → 1.581 | 81 s (4 workers, load 0.9 at start) |
 | 2026-10-25 | More program values as checks (GLE on V082b/c, V086b/c, V088-V090, V092, V096a/b; Janbu simplified on V085, V093; new V082d search); V095b merged into V095a; V016c block-search values out | 0 | 0.349 → 0.353 | 0.498 → 0.499 | 1.092 → 1.092 | 1.581 → 1.581 | 78 s (4 workers, load 1.0 at start) |
+| 2026-10-25 | Block search (opt-in search method; circular search unchanged) | 0 | 0.353 → 0.353 | 0.499 → 0.499 | 1.092 → 1.092 | 1.581 → 1.581 | 90 s (4 workers, load 1.0 at start) |
 <!-- summary-end -->
 
 ## Entries
 
 <!-- entries -->
+
+### 2026-10-25: Block search (opt-in search method; circular search unchanged)
+
+Compared with 06b9ddb. Errors are relative to the reference, in percent. Verification run time: 90 s (4 workers, load 1.0 at start).
+
+**Against other programs (midpoint of their range):** 0 moved (0 closer to the reference, 0 further).
+
+| Result | Reference | Before | After | Error before | Error after |
+|---|---|---|---|---|---|
+| **Mean error (n = 280)** | | | | -0.236 % | -0.236 % |
+| **Mean absolute error** | | | | 0.353 % | 0.353 % |
+| **RMS error** | | | | 0.499 % | 0.499 % |
+| **Largest error** | | | | 2.215 % | 2.215 % |
+
+**Against the papers:** 0 moved (0 closer to the reference, 0 further).
+
+| Result | Reference | Before | After | Error before | Error after |
+|---|---|---|---|---|---|
+| **Mean error (n = 97)** | | | | -0.291 % | -0.291 % |
+| **Mean absolute error** | | | | 1.092 % | 1.092 % |
+| **RMS error** | | | | 1.581 % | 1.581 % |
+| **Largest error** | | | | 5.385 % | 5.385 % |
+
 
 ### 2026-10-25: More program values as checks (GLE on V082b/c, V086b/c, V088-V090, V092, V096a/b; Janbu simplified on V085, V093; new V082d search); V095b merged into V095a; V016c block-search values out
 
