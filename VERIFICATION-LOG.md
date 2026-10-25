@@ -26,11 +26,38 @@ The script compares the regenerated verification table with the committed one an
 | 2026-10-24 | Zhu & Lee's simplified Bishop value for surface 3 (V096a, V096c) marked disputed and left out of the statistics; confirmed in the paper | 0 | 0.407 → 0.407 | 0.589 → 0.589 | 1.673 → 1.178 | 4.014 → 1.684 | 88 s (4 workers, load 0.2 at start) |
 | 2026-10-24 | Inputs corrected from the night investigation (V082a-c water table, V039/V040 clay 6.5 m, V051 phreatic correction, V087 R = 169.0 ft); Morgenstern-Price returns the interpolated crossing; default tolerance 0.001 | 54 | 0.407 → 0.354 | 0.589 → 0.501 | 1.178 → 1.146 | 1.684 → 1.660 | 88 s (4 workers, load 0.9 at start) |
 | 2026-10-24 | Input audit of all verification problems: V005, V009a-c, V017a/b, V029, V042, V060a, V061, V065, V066c, V068, V075, V077, V083, V092, V098 corrected against their sources | 18 | 0.354 → 0.358 | 0.501 → 0.509 | 1.146 → 1.092 | 1.660 → 1.581 | 87 s (4 workers, load 0.9 at start) |
+| 2026-10-25 | Ito & Matsui pile force at the resultant of the soil pressure; V084a note on the nail spacing | 3 | 0.358 → 0.349 | 0.509 → 0.498 | 1.092 → 1.092 | 1.581 → 1.581 | 81 s (4 workers, load 0.9 at start) |
 <!-- summary-end -->
 
 ## Entries
 
 <!-- entries -->
+
+### 2026-10-25: Ito & Matsui pile force at the resultant of the soil pressure; V084a note on the nail spacing
+
+Compared with 88a95c4. Errors are relative to the reference, in percent. Verification run time: 81 s (4 workers, load 0.9 at start).
+
+**Against other programs (midpoint of their range):** 3 moved (3 closer to the reference, 0 further).
+
+| Result | Reference | Before | After | Error before | Error after |
+|---|---|---|---|---|---|
+| V013c Bishop simplified | 1.430 | 1.4499 | 1.4370 | +1.392 % | +0.490 % |
+| V013d Bishop simplified | 1.330 | 1.3417 | 1.3314 | +0.880 % | +0.105 % |
+| V013e Bishop simplified | 1.250 | 1.2598 | 1.2528 | +0.784 % | +0.224 % |
+| **Mean error (n = 266)** | | | | -0.219 % | -0.227 % |
+| **Mean absolute error** | | | | 0.358 % | 0.349 % |
+| **RMS error** | | | | 0.509 % | 0.498 % |
+| **Largest error** | | | | 2.215 % | 2.215 % |
+
+**Against the papers:** 0 moved (0 closer to the reference, 0 further).
+
+| Result | Reference | Before | After | Error before | Error after |
+|---|---|---|---|---|---|
+| **Mean error (n = 97)** | | | | -0.291 % | -0.291 % |
+| **Mean absolute error** | | | | 1.092 % | 1.092 % |
+| **RMS error** | | | | 1.581 % | 1.581 % |
+| **Largest error** | | | | 5.385 % | 5.385 % |
+
 
 ### 2026-10-24: Input audit of all verification problems: V005, V009a-c, V017a/b, V029, V042, V060a, V061, V065, V066c, V068, V075, V077, V083, V092, V098 corrected against their sources
 

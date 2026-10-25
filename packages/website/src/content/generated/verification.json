@@ -790,7 +790,7 @@
    "results": [
     {
      "method": "Bishop simplified",
-     "computed": 1.4499,
+     "computed": 1.437,
      "programs": {
       "min": 1.43,
       "max": 1.43
@@ -817,7 +817,7 @@
    "results": [
     {
      "method": "Bishop simplified",
-     "computed": 1.3417,
+     "computed": 1.3314,
      "programs": {
       "min": 1.33,
       "max": 1.33
@@ -844,7 +844,7 @@
    "results": [
     {
      "method": "Bishop simplified",
-     "computed": 1.2598,
+     "computed": 1.2528,
      "programs": {
       "min": 1.25,
       "max": 1.25
