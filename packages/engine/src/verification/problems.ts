@@ -37,6 +37,7 @@ export const PROBLEMS: RawCase[] = [
     notes: [
       "Search limited to x = 0–66, the model of the source (ours extends to −30 and 100).",
       "commercial program A Janbu corrected 1.407 (circle); non-circular: Janbu simplified 1.253, corrected 1.346. Arai & Tagyo: Bishop 1.451; Janbu simplified 1.265, corrected 1.357 (non-circular).",
+      "commercial program A's table (auto-refine search) gives Bishop 1.409, Spencer 1.319 and GLE 1.414: the Spencer value lies 6 % below Bishop on a homogeneous circle, so its searches for the rigorous methods are not reliable, and its GLE lies above its own Bishop. On its printed Bishop circle (24.499, 50.278, R 35.906) cSlope gives Bishop 1.4075, Spencer 1.4052 and Morgenstern-Price 1.4045; commercial program B's M-P 1.414 lies 0.2 % below its Bishop 1.417, as cSlope's does.",
     ],
   },
   {
@@ -2692,6 +2693,7 @@ export const PROBLEMS: RawCase[] = [
     paper: [{"value": 1.33, "source": "USACE EM 1110-2-1902"}],
     notes: [
       "USACE's reference value is 1.33 (two digits); commercial program A GLE 1.327.",
+      "commercial program A's figures show the outline, materials and circle used here (R 278.000, endpoints (−0.198, 100.073) and (317.217, 184.259); cSlope's intersections −0.01 and 317.23). An independent Bishop calculation gives 1.3202 (cSlope 1.3204); commercial program A's Bishop 1.332, Spencer 1.328 and GLE 1.327 all lie 0.8–0.9 % above cSlope, the same factor on each method, so the difference is in the input, not the method: +0.9 % needs φ 2° → 2.3° in the foundation, or R 278 → 277.2 ft. USACE's 1.33 (EM 1110-2-1902, fig. F-11) is a ten-slice hand calculation whose slice weights do not match the drawn section (slice 1: 30 kips in the table, 268 kips as drawn).",
     ],
   },
   {
@@ -2713,6 +2715,7 @@ export const PROBLEMS: RawCase[] = [
     notes: [
       "The text describes USACE's circle (centre 8.4 ft right of and 36 ft above the toe, tangent to the base of soil 3: 48.4, 28, R = 48); commercial program A's printed circle is slightly smaller. cSlope gives the same FOS on both (1.235).",
       "The water above the toe acts as a load on the ground surface; the published USACE chart value is 1.33.",
+      "With φ = 0 in every layer the moment equilibrium about the centre does not depend on the interslice forces, so Bishop, Spencer and Morgenstern-Price coincide on a circle (cSlope 1.2348, 1.2348, 1.2349); commercial program A's GLE 1.244 lies 0.24 % above its own Bishop and Spencer 1.241.",
     ],
   },
   {
