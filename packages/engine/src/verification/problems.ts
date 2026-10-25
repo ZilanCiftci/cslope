@@ -52,9 +52,9 @@ export const PROBLEMS: RawCase[] = [
       {"method":"Bishop","label":"Bishop simplified","published":0.42,"publishedBy":"Commercial program A"},
       {"method":"Morgenstern-Price","label":"Spencer (M-P, constant f(x))","published":0.414,"publishedBy":"Commercial program A (non-circular)","options":{"intersliceFunction":"constant","nonCircularOptimization":true}},
     ],
-    paper: [{"value": 0.417, "method": "Bishop simplified", "source": "Arai & Tagyo (1985)"}, {"value": 0.405, "method": "Janbu simplified, non-circular", "source": "Arai & Tagyo (1985)"}, {"value": 0.43, "method": "Janbu corrected, non-circular", "source": "Arai & Tagyo (1985)"}, {"value": 0.43, "method": "Bishop simplified", "source": "Kim et al. (2002)"}, {"value": 0.39, "upper": 0.44, "method": "Spencer, non-circular", "source": "Kim et al. (2002)"}, {"value": 0.39, "method": "Spencer, non-circular", "source": "Greco (1996)"}],
+    paper: [{"value": 0.417, "method": "Bishop simplified", "source": "Arai & Tagyo (1985)"}, {"value": 0.405, "method": "Janbu simplified, non-circular", "source": "Arai & Tagyo (1985)"}, {"value": 0.43, "method": "Janbu corrected, non-circular", "source": "Arai & Tagyo (1985)"}, {"value": 0.43, "method": "Bishop simplified", "source": "Kim et al. (2002)"}, {"value": 0.44, "method": "Spencer, non-circular", "source": "Kim et al. (2002)"}, {"value": 0.4, "upper": 0.45, "method": "limit analysis, lower and upper bound", "source": "Kim et al. (2002)"}, {"value": 0.39, "method": "Spencer, non-circular", "source": "Greco (1996)"}],
     notes: [
-      "Non-circular: commercial program A 0.414 (random search with optimisation); Greco 0.39, Kim et al. 0.39–0.44. Before the Morgenstern-Price λ iteration ignored unconverged solutions, cSlope's optimisation reached 0.27–0.39 on surfaces where the force and moment curves never cross.",
+      "Non-circular: commercial program A 0.414 (random search with optimisation); Greco 0.39; Kim et al. 0.44 (a limit-equilibrium program's random search; their Table 1, where 0.39 is Greco's value in a footnote) and their own limit-analysis bounds 0.40–0.45. Before the Morgenstern-Price λ iteration ignored unconverged solutions, cSlope's optimisation reached 0.27–0.39 on surfaces where the force and moment curves never cross.",
     ],
   },
   {
@@ -90,7 +90,7 @@ export const PROBLEMS: RawCase[] = [
       {"method":"Janbu","label":"Janbu simplified (uncorrected)","published":2.662,"publishedBy":"Commercial program A"},
     ],
     paper: [{"value": 2.66, "method": "Mohr-Coulomb strength", "source": "Baker (2003)"}],
-    publicNote: "Baker (2003) gives the factor of safety for the Mohr-Coulomb fit and for the non-linear envelope without naming the slice method.",
+    publicNote: "Baker (2003) gives the factor of safety for the Mohr-Coulomb fit and for the non-linear envelope with Taylor's stability chart (friction-circle method, critical circle per Baker 2002, Janbu's normal-stress approximation; Baker 2003 pp. 385, 387).",
   },
   {
     id: "V004b",
@@ -105,15 +105,16 @@ export const PROBLEMS: RawCase[] = [
       {"method":"Morgenstern-Price","label":"Spencer (M-P, constant f(x))","published":2.696,"publishedBy":"Commercial program A","options":{"intersliceFunction":"constant"}},
     ],
     paper: [{"value": 2.64, "method": "non-linear strength envelope", "source": "Baker (2003)"}, {"value": 2.66, "method": "Mohr-Coulomb strength", "source": "Baker (2003)"}],
-    publicNote: "Baker (2003) gives the factor of safety for the Mohr-Coulomb fit and for the non-linear envelope without naming the slice method.",
+    publicNote: "Baker (2003) gives the factor of safety for the Mohr-Coulomb fit and for the non-linear envelope with Taylor's stability chart (friction-circle method, critical circle per Baker 2002, Janbu's normal-stress approximation; Baker 2003 pp. 385, 387).",
     notes: [
       "Baker (2003) non-linear 2.64.",
+      "Baker (2003) prints only F = 2.64 and σmax = 78.1 kPa for this example (p. 390, Fig. 5); the iterated parameters c′ = 2.439 kPa, φ′ = 30.392° are a commercial program manual's. Baker's eq. (3) gives c ≈ 2.54, φ ≈ 30.30 (docs/kallor/baker-2003.md).",
     ],
   },
   {
     id: "V005",
     title: "Baker (1993) dam, end of construction, infinite-slope face",
-    reference: "Baker (1993).",
+    reference: "Baker, R., Frydman, S. & Talesnick, M. (1993). Slope stability analysis for undrained loading conditions. Int. J. Numer. Anal. Meth. Geomech. 17, 15–43.",
     surface: "search",
     units: "SI",
     description: "Compacted-clay embankment (c′ = 6.5 kPa, φ′ = 40°) on a deep natural-clay foundation (c′ = 0, φ′ = 32°) with a 6 m crest and a straight 4H:1V downstream face, whose natural-clay part governs; dry; circular search. Theoretical (infinite slope) FOS tan 32°/tan 14.04° = 2.50.",
@@ -122,17 +123,18 @@ export const PROBLEMS: RawCase[] = [
       {"method":"Bishop","label":"Bishop simplified","published":2.5,"publishedBy":"Theory (infinite slope)"},
       {"method":"Morgenstern-Price","label":"Spencer (M-P, constant f(x))","published":2.5,"publishedBy":"Theory (infinite slope)","options":{"intersliceFunction":"constant"}},
     ],
+    paper: [{"value": 2.41, "method": "Spencer, non-circular (dynamic programming)", "source": "Baker, Frydman & Talesnick (1993)"}],
     notes: [
       "Search limited to the downstream face, x = 104–148, as in the source (the left limit marker sits on the downstream crest vertex).",
       "Crest corrected from a single apex (100, 101) to the 6 m crest (98, 101)–(104, 101) of commercial program A's Fig. 46.1 (vertices read at 400 dpi: 98.0 and 103.2–104, scale checked on the vertices at x = 80, 128 and 148): upstream face 3:1, downstream face one straight 4:1 line (104, 101)–(128, 95)–(148, 90). The apex had made the compacted-clay part of the downstream face 4.67:1. The critical slabs lie on the natural-clay face (x = 128–148), so neither change moves the answer beyond search scatter: 2.516 → 2.520 with the short search, 2.523 → 2.524 with the full one (theory 2.50).",
       "The critical surfaces are shallow slabs on the cohesionless face; a minimum sliding area in proportion to the model area (here 20 000 m²) would skip them and read 3 % high.",
-      "commercial program A 2.534 (noncircular, minimum depth 5 m); Baker 2.41.",
+      "commercial program A 2.534 (noncircular, minimum depth 5 m). Baker, Frydman & Talesnick give 2.41 (Spencer, dynamic programming, empty reservoir; p. 37, Fig. 15), below the infinite-slope value 2.50 they do not explain. They call the 4:1 face the upstream (reservoir) face and the 3:1 face the downstream one (p. 32, Fig. 10a); their crest is 5 m wide and the whole profile 2 m lower (crest 99, ground 93 / 88 over a base at 0), with the same 6 m and 11 m heights (docs/kallor/baker-frydman-talesnick-1993.md).",
     ],
   },
   {
     id: "V006",
     title: "Baker & Leshchinsky (2001) planar surface",
-    reference: "Baker & Leshchinsky (2001).",
+    reference: "Baker, R. & Leshchinsky, D. (2001). Spatial distribution of safety factors. J. Geotech. Geoenviron. Eng. 127(2), 135–145.",
     surface: "fixed",
     units: "SI",
     description: "Homogeneous 10 m slope on the critical plane from the toe to the crest at 49.6°.",
@@ -155,7 +157,7 @@ export const PROBLEMS: RawCase[] = [
       {"method":"Janbu","label":"Janbu simplified (uncorrected)","published":1.469,"publishedBy":"Commercial program A","options":{"janbuCorrection":false}},
     ],
     paper: [{"value": 1.5, "method": "Mohr-Coulomb strength", "source": "Baker (2003)"}],
-    publicNote: "Baker (2003) gives the factor of safety for the Mohr-Coulomb fit and for the non-linear envelope without naming the slice method.",
+    publicNote: "Baker (2003) gives the factor of safety for the Mohr-Coulomb fit and for the non-linear envelope with Taylor's stability chart (friction-circle method, critical circle per Baker 2002, Janbu's normal-stress approximation; Baker 2003 pp. 385, 387).",
     notes: [
       "Confirms V008a's strength (c′ = 11.64 kPa, φ′ = 24.7°, γ = 18 kN/m³): the manual's Table 44.1 lists other soils by mistake. Baker (2003) M-C 1.50.",
     ],
@@ -173,10 +175,11 @@ export const PROBLEMS: RawCase[] = [
       {"method":"Morgenstern-Price","label":"Spencer (M-P, constant f(x))","published":0.981,"publishedBy":"Commercial program A","options":{"intersliceFunction":"constant"}},
     ],
     paper: [{"value": 0.97, "method": "non-linear strength envelope", "source": "Baker (2003)"}, {"value": 1.5, "method": "Mohr-Coulomb strength", "source": "Baker (2003)"}],
-    publicNote: "Baker (2003) gives the factor of safety for the Mohr-Coulomb fit and for the non-linear envelope without naming the slice method; 1.50 is his Mohr-Coulomb value for the same slope.",
+    publicNote: "Baker (2003) gives the factor of safety for the Mohr-Coulomb fit and for the non-linear envelope with Taylor's stability chart (friction-circle method, critical circle per Baker 2002, Janbu's normal-stress approximation; Baker 2003 pp. 385, 387); 1.50 is his Mohr-Coulomb value for the same slope.",
     notes: [
       "commercial program A geometry (0,0)-(6.43,6)-(20,6)-(20,0): no toe flat, base at toe level.",
       "Baker (2003) non-linear 0.97.",
+      "Baker's Table I gives φ = 38.6°, his text on p. 388 says 38.7°.",
     ],
   },
   {
@@ -191,11 +194,12 @@ export const PROBLEMS: RawCase[] = [
       {"method":"Janbu","label":"Janbu simplified (uncorrected)","published":1.291,"publishedBy":"Commercial program A","options":{"janbuCorrection":false}},
     ],
     paper: [{"value": 1.35, "method": "Mohr-Coulomb strength", "source": "Baker (2003)"}],
-    publicNote: "Baker (2003) gives the factor of safety for the Mohr-Coulomb fit without naming the slice method.",
+    publicNote: "Baker (2003) gives the factor of safety for the Mohr-Coulomb fit with Taylor's stability chart (friction-circle method, critical circle per Baker 2002, Janbu's normal-stress approximation; Baker 2003 pp. 385, 387).",
     notes: [
       "Search limited to x = 0–13.7 (toe to the crest), as in the source.",
       "commercial program A geometry: no toe flat, base at toe level (results identical).",
       "Baker (2003) M-C 1.35.",
+      "Baker (2003) also gives 1.48 with the non-linear envelope through a local linear approximation in Taylor's chart (p. 393, Fig. 7). The search limits are the program manual's, not Baker's.",
     ],
   },
   {
@@ -210,7 +214,7 @@ export const PROBLEMS: RawCase[] = [
       {"method":"Morgenstern-Price","label":"Spencer (M-P, constant f(x))","published":1.536,"publishedBy":"Commercial program A","options":{"intersliceFunction":"constant"}},
     ],
     paper: [{"value": 1.5, "method": "Mohr-Coulomb strength", "source": "Baker (2003)"}],
-    publicNote: "Baker (2003) gives the factor of safety for the Mohr-Coulomb fit without naming the slice method.",
+    publicNote: "Baker (2003) gives the factor of safety for the Mohr-Coulomb fit with Taylor's stability chart (friction-circle method, critical circle per Baker 2002, Janbu's normal-stress approximation; Baker 2003 pp. 385, 387).",
     notes: [
       "Search limited to x = 0–20, the model of the source; the level ground left of the toe is not searched.",
     ],
@@ -227,15 +231,16 @@ export const PROBLEMS: RawCase[] = [
       {"method":"Morgenstern-Price","label":"Spencer (M-P, constant f(x))","published":1.366,"publishedBy":"Commercial program A","options":{"intersliceFunction":"constant"}},
     ],
     paper: [{"value": 1.35, "method": "Mohr-Coulomb strength", "source": "Baker (2003)"}],
-    publicNote: "Baker (2003) gives the factor of safety for the Mohr-Coulomb fit without naming the slice method.",
+    publicNote: "Baker (2003) gives the factor of safety for the Mohr-Coulomb fit with Taylor's stability chart (friction-circle method, critical circle per Baker 2002, Janbu's normal-stress approximation; Baker 2003 pp. 385, 387).",
     notes: [
       "Search limited to x = 0–13.7 (toe to the crest), as in the source; the level ground left of the toe is not searched.",
+      "Baker (2003) also gives 1.48 for this slope with the non-linear envelope through a local linear approximation in Taylor's chart (p. 393, Fig. 7). The search limits x = 0–13.7 are the program manual's; Baker draws the crest to x ≈ 16 and gives none.",
     ],
   },
   {
     id: "V009a",
     title: "Baker & Leshchinsky clay-core dam, reservoir and crest crack",
-    reference: "Baker & Leshchinsky (2001).",
+    reference: "Baker, R. & Leshchinsky, D. (2001). Spatial distribution of safety factors. J. Geotech. Geoenviron. Eng. 127(2), 135–145.",
     surface: "fixed",
     units: "SI",
     description: "Granular dam with a clay core (a hexagon reaching the base) on a hard base, half-full reservoir standing on the face (free water), phreatic surface through the core and a 5 m dry tension crack at the crest; a commercial program's critical circle.",
@@ -251,7 +256,7 @@ export const PROBLEMS: RawCase[] = [
   {
     id: "V009b",
     title: "Baker & Leshchinsky dam, Baker's non-circular surface",
-    reference: "Baker & Leshchinsky (2001).",
+    reference: "Baker, R. & Leshchinsky, D. (2001). Spatial distribution of safety factors. J. Geotech. Geoenviron. Eng. 127(2), 135–145.",
     surface: "fixed",
     units: "SI",
     inputFromFigure: true,
@@ -263,12 +268,13 @@ export const PROBLEMS: RawCase[] = [
     notes: [
       "program D gives 1.882 on the same surface.",
       "The clay core is the hexagon (88, 16)–(110, 49)–(130, 49)–(152, 18)–(130, 0)–(110, 0) down to the hard base, as both commercial programs draw it (program A Fig. 42.1, program B Fig. 86); the part below (88, 16)–(152, 18) was granular fill before. The check surfaces do not reach it (V009a 1.926 and V009b 1.882 unchanged); the V009c search moves by −0.0003.",
+      "Baker & Leshchinsky give the top 5 m (above the crack depth) γ = 20 kN/m³ (p. 142, item 4), not the fill's 21.5; with that cSlope gives 1.892 on this surface (1.882 now). The programs whose values V009a and V009c check use 21.5, so the input is kept. The dam geometry is read from their Fig. 5 (±1–1.5 m near the crest; the upstream face is \"approximately 20°\" in the text, about 23° in the figure, 21.8° here).",
     ],
   },
   {
     id: "V009c",
     title: "Baker & Leshchinsky clay-core dam, critical surface search",
-    reference: "Baker & Leshchinsky (2001).",
+    reference: "Baker, R. & Leshchinsky, D. (2001). Spatial distribution of safety factors. J. Geotech. Geoenviron. Eng. 127(2), 135–145.",
     surface: "search",
     units: "SI",
     description: "The V009a clay-core dam (reservoir on the face, 5 m dry crest crack) with a circular search and non-circular optimisation.",
@@ -281,32 +287,50 @@ export const PROBLEMS: RawCase[] = [
     notes: [
       "V009a definition without the fixed circle. Baker & Leshchinsky 1.91 on their own surface is checked in V009b.",
       "The clay core is the hexagon (88, 16)–(110, 49)–(130, 49)–(152, 18)–(130, 0)–(110, 0) down to the hard base, as both commercial programs draw it (program A Fig. 42.1, program B Fig. 86); the part below (88, 16)–(152, 18) was granular fill before. The check surfaces do not reach it (V009a 1.926 and V009b 1.882 unchanged); the V009c search moves by −0.0003.",
+      "Baker & Leshchinsky also report a second, shallow minimum of 1.92 (surface ad, pp. 142–143, Fig. 6).",
     ],
   },
   {
     id: "V010",
     title: "Borges & Cardoso embankment 2 (geosynthetic)",
-    reference: "Borges & Cardoso (2002), Geotextiles and Geomembranes 20(6).",
+    reference: "Borges, J.L. & Cardoso, A.S. (2002). Overall stability of geosynthetic-reinforced embankments on soft soils. Geotextiles and Geomembranes 20, 395–421.",
     surface: "fixed",
     units: "SI",
     inputFromFigure: true,
-    description: "5 m embankment (φ′ = 35°) on four soft clays with Su increasing with depth (Table 55: clay 3 from 16 to 18.4 kPa, clay 4 from 18.4 to 55.1 kPa), a 200 kN/m geosynthetic at y = 1 m (axial, active, not anchored, interface friction 33.7° on both faces); a commercial program's critical circle.",
+    description: "5 m embankment (φ′ = 35°) on four soft clays with Su increasing with depth (Borges & Cardoso Table 6, p. 408: clay 3 from 16 to 18.4 kPa, clay 4 from 18.4 to 55.1 kPa), a 200 kN/m geosynthetic at y = 1 m (axial, active, not anchored, interface friction 33.7° on both faces); a commercial program's critical circle.",
     definition: {"materials":[{"name":"Embankment","model":{"kind":"mohr-coulomb","unitWeight":20,"cohesion":0,"frictionAngle":35}},{"name":"Clay 1","model":{"kind":"undrained","unitWeight":17,"undrainedShearStrength":33,"suRefDepth":0,"suRateOfChange":0}},{"name":"Clay 2","model":{"kind":"undrained","unitWeight":17,"undrainedShearStrength":16,"suRefDepth":-1,"suRateOfChange":0}},{"name":"Clay 3","model":{"kind":"undrained","unitWeight":17,"undrainedShearStrength":16,"suRefDepth":-4.5,"suRateOfChange":0.95}},{"name":"Clay 4","model":{"kind":"undrained","unitWeight":17,"undrainedShearStrength":18.375,"suRefDepth":-7,"suRateOfChange":2.625}}],"coordinates":[[-30,-21],[-30,0],[0,0],[6.15,5],[36.41,5],[42.56,0],[45,0],[45,-21]],"materialBoundaries":[{"coordinates":[[-30,0],[45,0]],"materialName":""},{"coordinates":[[-30,-1],[45,-1]],"materialName":""},{"coordinates":[[-30,-4.5],[45,-4.5]],"materialName":""},{"coordinates":[[-30,-7],[45,-7]],"materialName":""}],"regionAssignments":[{"point":[21.28,4.5],"materialName":"Embankment"},{"point":[7.5,-0.5],"materialName":"Clay 1"},{"point":[7.5,-1.5],"materialName":"Clay 2"},{"point":[7.5,-5],"materialName":"Clay 3"},{"point":[7.5,-7.5],"materialName":"Clay 4"}],"reinforcements":[{"x1":1.23,"y1":1,"x2":41.33,"y2":1,"tensileCapacity":200,"spacing":1,"end1Capacity":0,"end2Capacity":0,"direction":"axial","application":"active","pullout":{"kind":"interface","adhesion":0,"frictionAngle":33.7}}],"orientation":"rtl","customSearchPlanes":[{"cx":3.46552,"cy":5.66415,"radius":13.27611}],"customPlanesOnly":true},
     checks: [
       {"method":"Morgenstern-Price","label":"Morgenstern-Price (half-sine)","published":1.171,"publishedBy":"Commercial program B","options":{"porePressureHead":"vertical","slices":60}},
       {"method":"Bishop","label":"Bishop simplified","published":1.17,"publishedBy":"Commercial program B","options":{"porePressureHead":"vertical","slices":60}},
-      {"method":"Morgenstern-Price","label":"Morgenstern-Price (half-sine)","published":1.15,"publishedBy":"Borges & Cardoso","options":{"porePressureHead":"vertical","slices":60}},
     ],
     notes: [
       "Clay 3: 16 → 18.375 kPa, clay 4: 18.375 → 55.125 kPa (2.625 kPa/m), the unrounded values of Table 55. The commercial program B circle is digitised.",
       "The manual gives the geosynthetic's strength and interface friction but not whether commercial program B divides its force by F; as a passive force cSlope gives 1.143 (M-P) / 1.143 (Bishop), 2.4 % below commercial program B, so the active force is kept.",
-      "Borges & Cardoso's 1.15 (two digits, their own limit-equilibrium program) is the reference. program D 1.153 with the earlier input (clay 4 at 1.314 kPa/m).",
+      "Borges & Cardoso's 1.15 belongs to their circle B with the geosynthetic at 0.9 m and its force in the resisting moment; it is checked in V010b on that input. This problem is commercial program B's version. program D 1.153 with the earlier input (clay 4 at 1.314 kPa/m).",
+    ],
+  },
+  {
+    id: "V010b",
+    title: "Borges & Cardoso embankment 2 (geosynthetic), the paper's circle B",
+    reference: "Borges, J.L. & Cardoso, A.S. (2002). Overall stability of geosynthetic-reinforced embankments on soft soils. Geotextiles and Geomembranes 20, 395–421; case 2, Table 11, Fig. 14.",
+    surface: "fixed",
+    units: "SI",
+    inputFromFigure: true,
+    description: "The V010 embankment as Borges & Cardoso analyse it: the 200 kN/m geosynthetic at 0.9 m height (p. 407) with its full horizontal force in the resisting moment (passive), on their circle B (3.0, 8.0, R = 15.04).",
+    definition: {"materials":[{"name":"Embankment","model":{"kind":"mohr-coulomb","unitWeight":20,"cohesion":0,"frictionAngle":35}},{"name":"Clay 1","model":{"kind":"undrained","unitWeight":17,"undrainedShearStrength":33,"suRefDepth":0,"suRateOfChange":0}},{"name":"Clay 2","model":{"kind":"undrained","unitWeight":17,"undrainedShearStrength":16,"suRefDepth":-1,"suRateOfChange":0}},{"name":"Clay 3","model":{"kind":"undrained","unitWeight":17,"undrainedShearStrength":16,"suRefDepth":-4.5,"suRateOfChange":0.95}},{"name":"Clay 4","model":{"kind":"undrained","unitWeight":17,"undrainedShearStrength":18.375,"suRefDepth":-7,"suRateOfChange":2.625}}],"coordinates":[[-30,-21],[-30,0],[0,0],[6.15,5],[36.41,5],[42.56,0],[45,0],[45,-21]],"materialBoundaries":[{"coordinates":[[-30,0],[45,0]],"materialName":""},{"coordinates":[[-30,-1],[45,-1]],"materialName":""},{"coordinates":[[-30,-4.5],[45,-4.5]],"materialName":""},{"coordinates":[[-30,-7],[45,-7]],"materialName":""}],"regionAssignments":[{"point":[21.28,4.5],"materialName":"Embankment"},{"point":[7.5,-0.5],"materialName":"Clay 1"},{"point":[7.5,-1.5],"materialName":"Clay 2"},{"point":[7.5,-5],"materialName":"Clay 3"},{"point":[7.5,-7.5],"materialName":"Clay 4"}],"reinforcements":[{"x1":1.107,"y1":0.9,"x2":41.453,"y2":0.9,"tensileCapacity":200,"spacing":1,"end1Capacity":0,"end2Capacity":0,"direction":"axial","application":"passive","pullout":{"kind":"interface","adhesion":0,"frictionAngle":33.7}}],"orientation":"rtl","customSearchPlanes":[{"cx":3.0,"cy":8.0,"radius":15.04}],"customPlanesOnly":true},
+    checks: [
+      {"method":"Bishop","label":"Bishop simplified","published":1.15,"publishedBy":"Borges & Cardoso","options":{"porePressureHead":"vertical","slices":60}},
+    ],
+    paper: [{"value": 1.19, "method": "authors' moment method, circle A", "source": "Borges & Cardoso (2002)"}, {"value": 1.22, "method": "finite elements, circle A", "source": "Borges & Cardoso (2002)"}],
+    publicNote: "Borges & Cardoso use their own moment-equilibrium method of slices on circles (Kaniraj & Abdullah 1993 with their improvements); simplified Bishop is the nearest of cSlope's methods. Circle B's coordinates and the geosynthetic level are printed in the paper (Table 11, p. 407).",
+    notes: [
+      "Table 11 confirms the level: the reinforcement's resisting moments 820 and 1420 kNm/m are 200 × (Y0 − 0.9) for the two circles. cSlope on circle B: Bishop 1.1585, Morgenstern-Price 1.1582. Circle A gives 1.19 (limit equilibrium) and 1.22 (finite elements) in the paper; cSlope 1.161 on it (docs/kallor/borges-cardoso-2002.md).",
     ],
   },
   {
     id: "V011a",
     title: "Borges & Cardoso embankment 3, H = 7 m, circle A",
-    reference: "Borges & Cardoso (2002), Geotextiles and Geomembranes 20(6).",
+    reference: "Borges, J.L. & Cardoso, A.S. (2002). Overall stability of geosynthetic-reinforced embankments on soft soils. Geotextiles and Geomembranes 20, 395–421.",
     surface: "fixed",
     units: "SI",
     description: "Granular fill (two stages) on five soft clay layers with a T = 200 kN/m geosynthetic at y = 0.9 m (axial, passive as in a commercial program, pullout over 1.3 m from each end); Bishop on circle A of the paper.",
@@ -318,12 +342,13 @@ export const PROBLEMS: RawCase[] = [
     publicNote: "Borges & Cardoso print two decimals and do not name the method; the other programs differ from them by up to 2.5 %.",
     notes: [
       "Borges & Cardoso 1.25; program D 1.218 on the same input. commercial program A reports Bishop only (the authors' moment method).",
+      "Borges & Cardoso's limit-equilibrium values come from their own moment method (section 3, appendix A). Their 1.25 is the limit-equilibrium value on the finite-element critical circle A; the finite-element analysis itself gives 1.15 (Table 12). They model pull-out by interface friction 30.96° without adhesion (p. 408); with that instead of the 1.3 m development length cSlope gives the same FOS on all three circles.",
     ],
   },
   {
     id: "V011b",
     title: "Borges & Cardoso embankment 3, H = 7 m, circle B",
-    reference: "Borges & Cardoso (2002), Geotextiles and Geomembranes 20(6).",
+    reference: "Borges, J.L. & Cardoso, A.S. (2002). Overall stability of geosynthetic-reinforced embankments on soft soils. Geotextiles and Geomembranes 20, 395–421.",
     surface: "fixed",
     units: "SI",
     description: "As V011a on circle B.",
@@ -340,7 +365,7 @@ export const PROBLEMS: RawCase[] = [
   {
     id: "V012",
     title: "Borges & Cardoso embankment 3, H = 8.75 m, circle C",
-    reference: "Borges & Cardoso (2002), Geotextiles and Geomembranes 20(6).",
+    reference: "Borges, J.L. & Cardoso, A.S. (2002). Overall stability of geosynthetic-reinforced embankments on soft soils. Geotextiles and Geomembranes 20, 395–421.",
     surface: "fixed",
     units: "SI",
     description: "The second fill stage (8.75 m crest) on circle C.",
@@ -455,6 +480,7 @@ export const PROBLEMS: RawCase[] = [
     notes: [
       "commercial program A 1.417; commercial program B M-P 1.606.",
       "The nails are passive (their force added to the resistance and divided by F), as the data always had; the description said active. Commercial program A's Table 50.2 heads the nails \"Active\" and gets 1.417; with active nails cSlope gives 1.644 (Janbu corrected) and 1.850 (Spencer), with passive 1.448, within 1 % of program H's 1.46 (the source's own program).",
+      "The Caltrans document available, the 2020 user guide of its soil-nail program, contains neither this example nor the older program version it cites; the reference is a commercial program's manual after an older Caltrans manual not checked here. The 2020 guide subtracts the reduced nail force from the driving forces (p. 45).",
     ],
   },
   {
@@ -473,6 +499,7 @@ export const PROBLEMS: RawCase[] = [
     notes: [
       "Layer boundary from (29, 51) ft and ground vertex (79, 71) ft as labelled in Fig. 49.1 (the earlier transcription had (33, 53) and (70, 71)). program H 1.52.",
       "program D 1.469 (Janbu corrected) and 1.439 (Spencer) on the earlier outline, where cSlope agreed to 0.1 %.",
+      "The Caltrans document available, the 2020 user guide of its soil-nail program, contains neither this example nor the older program version it cites; the reference is a commercial program's manual after an older Caltrans manual not checked here. The 2020 guide subtracts the reduced nail force from the driving forces (p. 45).",
     ],
   },
   {
@@ -489,6 +516,9 @@ export const PROBLEMS: RawCase[] = [
       {"method":"Bishop","label":"Bishop simplified","published":1.79,"publishedBy":"Program D","options":{"porePressureHead":"vertical","slices":60}},
     ],
     publicNote: "The paper gives its results in figures only; the comparison is with the other programs.",
+    notes: [
+      "Cao et al. (2016) contain no 4 m wall and none of these soils; Grodecki (2017) supports only the equivalent-cohesion method. The geometry and materials are a commercial program's verification problem.",
+    ],
   },
   {
     id: "V016b",
@@ -506,6 +536,7 @@ export const PROBLEMS: RawCase[] = [
     publicNote: "The paper gives its results in figures only; the comparison is with the other programs.",
     notes: [
       "Commercial program A's Fig. 108.2 draws a geosynthetic support on every gabion edge (base, course interfaces, step tops, the vertical joints and the faces); only the three internal course interfaces are modelled here. The reference circle passes wholly beneath the wall, so it crosses none of them (cSlope gives 1.830 with and without the supports): the missing lines matter only for a search.",
+      "Cao et al. (2016) contain no 4 m wall and none of these soils; Grodecki (2017) supports only the equivalent-cohesion method. The geometry and materials are a commercial program's verification problem.",
     ],
   },
   {
@@ -523,11 +554,12 @@ export const PROBLEMS: RawCase[] = [
     notes: [
       "commercial program A's block search along the joints gives 1.516 at the wall face.",
       "The circle (V016a's: centre (15.956, 10.016), R 5.722) passes below the wall and crosses no weak layer: with the joints set to c = 0, φ = 5° cSlope still gives 1.7905, the V016a value. commercial program A's 1.799 and 1.803 are block-search (non-circular) minima along the weak layers (its Table 109.2), not values on this circle; the description said the circle ran through the joints until 2026-10-24. Commercial program A's block search places the surface along polylines on the weak layers with projection angles of ±45° and 135-225° (manual §109.3), a search type cSlope does not have; a free search in cSlope between the same limits goes lower (circular Bishop 1.764, non-circular Spencer 1.711), so commercial program A's 1.799 (Bishop), 1.803 (Spencer), 1.804 (GLE) and 1.610 (Janbu) are not checks (until 2026-10-25 they were checked against the circle, which agreed within 0.5 % by coincidence). The check is program D's Bishop on the circle.",
+      "Cao et al. (2016) contain no 4 m wall and none of these soils; Grodecki (2017) supports only the equivalent-cohesion method. The geometry and materials are a commercial program's verification problem.",
     ],
   },
   {
     id: "V017a",
-    title: "Vancouver gabion wall, equivalent cohesion",
+    title: "Ontario gabion wall (Cao et al. 2016), equivalent cohesion",
     reference: "Cao et al. (2016); Grodecki (2017).",
     surface: "fixed",
     units: "SI",
@@ -541,11 +573,12 @@ export const PROBLEMS: RawCase[] = [
     notes: [
       "commercial program A's unfiltered minima along the wall face: 1.032–1.034.",
       "Wall corrected from the source drawing (Cao et al., as reproduced in commercial program A's Figs. 107.1, 107.3 and 107.4): the six courses are 4, 3, 2.5, 2, 1.5 and 1 m wide; the model had 4, 3, 3, 2, 2 and 1 m. The circle passes below the wall, so only the weight changes: Bishop 1.3821 → 1.3823, Spencer 1.3981 → 1.3983. Program D's 1.382 was computed on the earlier wall and is no longer a check.",
+      "Cao, Peaker & Ahmad (2016, GeoVancouver 2016; the wall is in Ontario) give the face batter as 1H:9.5V (6°, text p. 2 and Fig. 2), not 9.5°, and the backfill as 1V:2H; this model is commercial program A's, whose checks it reproduces. With a 6° batter cSlope gives about 1.3 % more. Cao gives FS 1.376 and 1.289 on his own circles (Fig. 3, method not stated) and overall-stability minima 1.34–1.48 (Table 2); the 9.82 kN/m barrier load is omitted, as in his Fig. 3, and he gives no mesh strength (docs/kallor/cao-2016.md).",
     ],
   },
   {
     id: "V017b",
-    title: "Vancouver gabion wall, mesh as geosynthetic supports",
+    title: "Ontario gabion wall (Cao et al. 2016), mesh as geosynthetic supports",
     reference: "Cao et al. (2016); Grodecki (2017).",
     surface: "fixed",
     units: "SI",
@@ -557,62 +590,65 @@ export const PROBLEMS: RawCase[] = [
     publicNote: "The paper gives its results in figures only; the comparison is with the other programs.",
     notes: [
       "Wall corrected as in V017a (courses 4, 3, 2.5, 2, 1.5 and 1 m wide); the mesh layers at the course interfaces span the course above, so the second and fourth are now 2.5 m and 1.5 m long. The circle passes below the wall and misses the mesh: Bishop 1.3821 → 1.3823. Program D's 1.382 was computed on the earlier wall and is no longer a check.",
+      "Cao, Peaker & Ahmad (2016, GeoVancouver 2016; the wall is in Ontario) give the face batter as 1H:9.5V (6°, text p. 2 and Fig. 2), not 9.5°, and the backfill as 1V:2H; this model is commercial program A's, whose checks it reproduces. With a 6° batter cSlope gives about 1.3 % more. Cao gives FS 1.376 and 1.289 on his own circles (Fig. 3, method not stated) and overall-stability minima 1.34–1.48 (Table 2); the 9.82 kN/m barrier load is omitted, as in his Fig. 3, and he gives no mesh strength (docs/kallor/cao-2016.md).",
     ],
   },
   {
     id: "V018",
     title: "Chen & Shao (1988) frictionless 60° slope, Prandtl mechanism",
-    reference: "Chen & Shao (1988).",
+    reference: "Chen, Z. & Shao, C. (1988). Evaluation of minimum factor of safety in slope stability analysis. Can. Geotech. J. 25(4), 735–748.",
     surface: "fixed",
     units: "SI",
     description: "Weightless, frictionless 10 m slope at 60° under the critical strip load (149.31 kPa) on the Prandtl surface (wedge, fan and passive wedge); theoretical FOS 1.0.",
     definition: {"coordinates":[[-3,-2],[-3,0],[0,0],[5.7735026919,10],[20,10],[20,-2]],"materials":[{"name":"Clay","model":{"kind":"mohr-coulomb","unitWeight":0.000001,"cohesion":49,"frictionAngle":0}}],"materialBoundaries":[],"regionAssignments":[{"point":[-2.77,-1.95],"materialName":"Clay"}],"orientation":"rtl","udls":[{"magnitude":149.31,"x1":5.7735026919,"x2":15.7735026919}],"customSurfaces":[{"points":[[-0.05,2.05],[0.773,1.34],[7.6033,3.1698],[7.8995,3.2561],[8.1917,3.3553],[8.4792,3.4671],[8.7616,3.5913],[9.0384,3.7278],[9.3089,3.8762],[9.5727,4.0362],[9.8292,4.2076],[10.078,4.3901],[10.3186,4.5832],[10.5506,4.7866],[10.7735,5],[15.7735,10],[16.0735,10.3]]}],"customPlanesOnly":true},
     checks: [
       {"method":"Morgenstern-Price","label":"Spencer (M-P, constant f(x))","published":1.051,"publishedBy":"Commercial program A","options":{"intersliceFunction":"constant"}},
-      {"method":"Morgenstern-Price","label":"Morgenstern-Price (half-sine)","published":1.009,"publishedBy":"Commercial program A","options":{"intersliceFunction":"data-point-specified","intersliceDataPoints":[[0,1],[0.3,1],[0.6,0],[1,0]]}},
-      {"method":"Morgenstern-Price","label":"Morgenstern-Price (half-sine)","published":1.017,"publishedBy":"Commercial program B","options":{"slices":50,"intersliceFunction":"data-point-specified","intersliceDataPoints":[[0,1],[0.3,1],[0.6,0],[1,0]]}},
+      {"method":"Morgenstern-Price","label":"Morgenstern-Price (data-point f(x))","published":1.009,"publishedBy":"Commercial program A","options":{"intersliceFunction":"data-point-specified","intersliceDataPoints":[[0,1],[0.3,1],[0.6,0],[1,0]]}},
+      {"method":"Morgenstern-Price","label":"Morgenstern-Price (data-point f(x))","published":1.017,"publishedBy":"Commercial program B","options":{"slices":50,"intersliceFunction":"data-point-specified","intersliceDataPoints":[[0,1],[0.3,1],[0.6,0],[1,0]]}},
     ],
     paper: [{"value": 1.05, "method": "Spencer", "source": "Chen & Shao (1988)"}],
     notes: [
       "Chen & Shao give 1.05 with the method of slices; limit equilibrium on this mechanism is about 5 % above the plasticity solution.",
       "f(x) as printed: (0, 1), (0.3, 1), (0.6, 0), (1, 0) with x from the toe end of the slip surface (model space). Until the data points are mirrored for a right-to-left model cSlope reads them from the crest end and gives 1.079 (+6.9 %); entered reversed it gives 1.008.",
-      "Table 35 f(x): (0, 1), (0.3, 1), (0.6, 0), (1, 0) from the toe end (model space). Until the data points are mirrored for a right-to-left model cSlope reads them from the crest end; entered reversed it gives 1.008.",
+      "Chen & Shao also give 1.002 with f0 = 0 and f(x) shaped like the theoretical tan β (Fig. A3c, p. 748) and 1.036 with their assumption 2; their f(x) breaks read about 0.37 and 0.68 from Fig. A3b against the 0.3 and 0.6 of the program manual used here.",
     ],
   },
   {
     id: "V019",
     title: "Cheng et al. 11 m homogeneous slope",
-    reference: "Cheng, Lansivaara & Wei (2007), Computers and Geotechnics 34.",
+    reference: "Cheng, Y.M., Lansivaara, T. & Wei, W.B. (2007). Two-dimensional slope stability analysis by limit equilibrium and strength reduction methods. Computers and Geotechnics 34(3), 137–150.",
     surface: "search",
     units: "SI",
     description: "11 m homogeneous slope (c = 10 kPa, φ = 30°, γ = 20 kN/m³); circular search.",
     definition: {"materials":[{"name":"soil","model":{"kind":"mohr-coulomb","unitWeight":20,"cohesion":10,"frictionAngle":30}}],"coordinates":[[0,0],[46,0],[46,21],[26,21],[16,16],[10,10],[0,10]],"materialBoundaries":[],"regionAssignments":[{"point":[23,5],"materialName":"soil"}]},
     checks: [
       {"method":"Morgenstern-Price","label":"Spencer (M-P, constant f(x))","published":1.38,"publishedBy":"Commercial program A","options":{"intersliceFunction":"constant","porePressureHead":"vertical","slices":40}},
-      {"method":"Morgenstern-Price","label":"Spencer (M-P, constant f(x))","published":1.383,"publishedBy":"Cheng et al.","options":{"intersliceFunction":"constant","porePressureHead":"vertical","slices":40}},
+      {"method":"Morgenstern-Price","label":"Spencer (M-P, constant f(x))","published":1.383,"publishedBy":"Cheng et al.","options":{"intersliceFunction":"constant","porePressureHead":"vertical","slices":50}},
       {"method":"Morgenstern-Price","label":"Spencer (M-P, constant f(x))","published":1.398,"publishedBy":"Program D","options":{"intersliceFunction":"constant","porePressureHead":"vertical","slices":40}},
       {"method":"Bishop","label":"Bishop simplified","published":1.401,"publishedBy":"Program D","options":{"porePressureHead":"vertical","slices":40}},
     ],
     notes: [
       "commercial program E shear strength reduction 1.38.",
+      "Cheng et al. use 50 slices (p. 146) and search general (non-circular) surfaces by simulated annealing; their strength-reduction value is 1.47 and a local minimum 1.3848. cSlope's circular search gives 1.399, its non-circular optimisation 1.377.",
     ],
   },
   {
     id: "V020",
     title: "Cheng et al. benched slope, global minimum",
-    reference: "Cheng, Lansivaara & Wei (2007), Computers and Geotechnics 34.",
+    reference: "Cheng, Y.M., Lansivaara, T. & Wei, W.B. (2007). Two-dimensional slope stability analysis by limit equilibrium and strength reduction methods. Computers and Geotechnics 34(3), 137–150.",
     surface: "search",
     units: "SI",
     description: "Homogeneous benched slope; the global minimum on the mid-lower face by circular search.",
-    definition: {"materials":[{"name":"soil","model":{"kind":"mohr-coulomb","unitWeight":20,"cohesion":5,"frictionAngle":30}}],"coordinates":[[-0.057,0.073],[54.324,0.073],[54.324,26.811],[42.905,26.811],[34.878,22.797],[31.939,19.858],[26.003,19.858],[20.011,14.883],[10.118,9.965],[-0.057,9.965]],"materialBoundaries":[],"regionAssignments":[{"point":[27.1335,5.019],"materialName":"soil"}]},
+    definition: {"materials":[{"name":"soil","model":{"kind":"mohr-coulomb","unitWeight":20,"cohesion":5,"frictionAngle":30}}],"coordinates":[[0,0],[55,0],[55,27],[43,27],[35,23],[32,20],[26,20],[20,15],[10,10],[0,10]],"materialBoundaries":[],"regionAssignments":[{"point":[27.5,5],"materialName":"soil"}]},
     checks: [
       {"method":"Morgenstern-Price","label":"Spencer (M-P, constant f(x))","published":1.336,"publishedBy":"Commercial program A","options":{"intersliceFunction":"constant","porePressureHead":"vertical","slices":40}},
-      {"method":"Morgenstern-Price","label":"Spencer (M-P, constant f(x))","published":1.327,"publishedBy":"Cheng et al.","options":{"intersliceFunction":"constant","porePressureHead":"vertical","slices":40}},
+      {"method":"Morgenstern-Price","label":"Spencer (M-P, constant f(x))","published":1.33,"publishedBy":"Cheng et al.","options":{"intersliceFunction":"constant","porePressureHead":"vertical","slices":40}},
       {"method":"Morgenstern-Price","label":"Spencer (M-P, constant f(x))","published":1.338,"publishedBy":"Program D","options":{"intersliceFunction":"constant","porePressureHead":"vertical","slices":40}},
       {"method":"Bishop","label":"Bishop simplified","published":1.342,"publishedBy":"Program D","options":{"porePressureHead":"vertical","slices":40}},
     ],
     notes: [
       "commercial program E shear strength reduction 1.35.",
+      "Geometry from Cheng et al.'s Fig. 13a (read at 400 dpi): every corner falls on whole metres, (0, 10), (10, 10), (20, 15), (26, 20), (32, 20), (35, 23), (43, 27), (55, 27), base 0; until 2026-10-25 the model used a digitisation 0.06–0.2 m off them. Cheng et al.'s limit-equilibrium global minimum is 1.33 (p. 146, Fig. 13a, simulated-annealing search over general surfaces); 1.327 is their strength-reduction value, which the check carried before. Local minima 1.375, 1.415, 1.40, 1.383 (docs/kallor/cheng-lansivaara-wei-2007.md).",
     ],
   },
   {
@@ -626,7 +662,7 @@ export const PROBLEMS: RawCase[] = [
     definition: {"coordinates":[[-56.525,-14.993],[-56.525,4.579],[-35.51,4.58],[-30.96,1.23],[-28.19,-0.81],[-26.3,-0.81],[-21.533,-3.04],[-8.329,-9.14],[-7.13,-9.68],[5,-9.68],[5,-14.993]],"materials":[{"name":"Sand","model":{"kind":"undrained","unitWeight":22,"undrainedShearStrength":0,"suRefDepth":0,"suRateOfChange":0}},{"name":"Clay 1","model":{"kind":"undrained","unitWeight":21,"undrainedShearStrength":55,"suRefDepth":0,"suRateOfChange":0}},{"name":"Clay 2","model":{"kind":"undrained","unitWeight":22,"undrainedShearStrength":43,"suRefDepth":0,"suRateOfChange":0}},{"name":"Clay 3","model":{"kind":"undrained","unitWeight":22,"undrainedShearStrength":56,"suRefDepth":0,"suRateOfChange":0}},{"name":"Bed","model":{"kind":"mohr-coulomb","unitWeight":22,"cohesion":200,"frictionAngle":35}}],"materialBoundaries":[{"coordinates":[[-57.525,1.229],[6,1.229]],"materialName":""},{"coordinates":[[-57.525,-3.041],[6,-3.041]],"materialName":""},{"coordinates":[[-57.525,-9.141],[6,-9.141]],"materialName":""},{"coordinates":[[-57.525,-12.19],[6,-12.19]],"materialName":""}],"regionAssignments":[{"point":[-55.90975,1.279],"materialName":"Sand"},{"point":[-55.90975,-0.906],"materialName":"Clay 1"},{"point":[-55.90975,-6.091],"materialName":"Clay 2"},{"point":[-55.90975,-10.6655],"materialName":"Clay 3"},{"point":[-55.90975,-13.5915],"materialName":"Bed"}],"orientation":"ltr","waterTable":{"mode":"custom","value":[[-56.525,2.43],[-32.59,2.43],[-30.96,1.23],[-28.19,-0.81],[-26.3,-0.81],[-21.533,-3.04],[-8.329,-9.14],[-7.13,-9.68],[5,-9.68]],"followBoundary":false},"customSearchPlanes":[{"cx":-22.188,"cy":20.908,"radius":30.049}],"customPlanesOnly":true},
     checks: [
       {"method":"Morgenstern-Price","label":"Morgenstern-Price (half-sine)","published":1.132,"publishedBy":"Commercial program B","options":{"slices":50}},
-      {"method":"Bishop","label":"Bishop simplified","published":1.128,"publishedBy":"Chowdhury & Xu","options":{"slices":50}},
+      {"method":"Bishop","label":"Bishop simplified","published":1.1178,"publishedBy":"Chowdhury & Xu","options":{"slices":50}},
       {"method":"Bishop","label":"Bishop simplified","published":1.128,"publishedBy":"Commercial program A","options":{"slices":60}},
     ],
     notes: [
@@ -635,6 +671,7 @@ export const PROBLEMS: RawCase[] = [
       "A free search is meaningless here (the zero-strength sand gives FOS → 0); the critical circle must be searched within the family tangent to the layer base.",
       "Critical circle (model coordinates): centre (-22.188, 20.908), R 30.049, tangent to y = -9.141.",
       "On commercial program A's printed circle (Fig. 28.3: centre (−22.151, 20.872), R 30.012) cSlope gives Bishop 1.1283 (commercial program A 1.128).",
+      "Chowdhury & Xu's own value for example 1 is 1.1178 (their Table 1(b), p. 147); until 2026-10-25 the check carried commercial program A's 1.128. Neither Chowdhury & Xu nor Ireland (1954) give unit weights for this model; Ireland's are 110 / 132 / 128 pcf (17.3 / 20.7 / 20.1 kN/m³) for sand / clay 1 / clays 2–3 (his Fig. 4), against 22 / 21 / 22 here. The lower slope is modelled 63 ft to the centreline of the cut (about 25°); Ireland's Fig. 1 makes it 39.5 ft (36°), with the toe 23.5 ft short of the centreline. Chowdhury & Xu's values are reproduced only with the 63 ft reading, so the input follows them (docs/kallor/ireland-1954.md, chowdhury-xu-1995.md).",
     ],
   },
   {
@@ -648,7 +685,7 @@ export const PROBLEMS: RawCase[] = [
     definition: {"coordinates":[[-56.525,-14.993],[-56.525,4.579],[-35.51,4.58],[-30.96,1.23],[-28.19,-0.81],[-26.3,-0.81],[-21.533,-3.04],[-8.329,-9.14],[-7.13,-9.68],[5,-9.68],[5,-14.993]],"materials":[{"name":"Sand","model":{"kind":"undrained","unitWeight":22,"undrainedShearStrength":0,"suRefDepth":0,"suRateOfChange":0}},{"name":"Clay 1","model":{"kind":"undrained","unitWeight":21,"undrainedShearStrength":55,"suRefDepth":0,"suRateOfChange":0}},{"name":"Clay 2","model":{"kind":"undrained","unitWeight":22,"undrainedShearStrength":43,"suRefDepth":0,"suRateOfChange":0}},{"name":"Clay 3","model":{"kind":"undrained","unitWeight":22,"undrainedShearStrength":56,"suRefDepth":0,"suRateOfChange":0}},{"name":"Bed","model":{"kind":"mohr-coulomb","unitWeight":22,"cohesion":200,"frictionAngle":35}}],"materialBoundaries":[{"coordinates":[[-57.525,1.229],[6,1.229]],"materialName":""},{"coordinates":[[-57.525,-3.041],[6,-3.041]],"materialName":""},{"coordinates":[[-57.525,-9.141],[6,-9.141]],"materialName":""},{"coordinates":[[-57.525,-12.19],[6,-12.19]],"materialName":""}],"regionAssignments":[{"point":[-55.90975,1.279],"materialName":"Sand"},{"point":[-55.90975,-0.906],"materialName":"Clay 1"},{"point":[-55.90975,-6.091],"materialName":"Clay 2"},{"point":[-55.90975,-10.6655],"materialName":"Clay 3"},{"point":[-55.90975,-13.5915],"materialName":"Bed"}],"orientation":"ltr","waterTable":{"mode":"custom","value":[[-56.525,2.43],[-32.59,2.43],[-30.96,1.23],[-28.19,-0.81],[-26.3,-0.81],[-21.533,-3.04],[-8.329,-9.14],[-7.13,-9.68],[5,-9.68]],"followBoundary":false},"customSearchPlanes":[{"cx":-19.961,"cy":21.899,"radius":34.089}],"customPlanesOnly":true},
     checks: [
       {"method":"Morgenstern-Price","label":"Morgenstern-Price (half-sine)","published":1.116,"publishedBy":"Commercial program B","options":{"slices":50}},
-      {"method":"Bishop","label":"Bishop simplified","published":1.109,"publishedBy":"Chowdhury & Xu","options":{"slices":50}},
+      {"method":"Bishop","label":"Bishop simplified","published":1.1088,"publishedBy":"Chowdhury & Xu","options":{"slices":50}},
       {"method":"Bishop","label":"Bishop simplified","published":1.109,"publishedBy":"Commercial program A","options":{"slices":60}},
     ],
     notes: [
@@ -768,6 +805,7 @@ export const PROBLEMS: RawCase[] = [
       "Critical circle (model coordinates): centre (-20.313, 21.643), R 30.784, tangent to y = -9.141.",
       "On commercial program A's printed circle (Fig. 28.9: centre (−19.814, 20.530), R 29.670) cSlope gives Bishop 1.4305 (commercial program A 1.422); the 0.6 % is in the pore pressures of example 4 (with the phreatic correction cSlope gives 1.455).",
       "Example 4, layer 3 is left out: no assignment of the piezometric line to the clays reproduces commercial program B's 1.504 (cSlope 1.443, −4 %); the pore-pressure set-up of the vendor model is not printed.",
+      "Clay 1 has γ = 17 here and 21 in V021a–f; neither Chowdhury & Xu (\"same geometry as Examples 1–3\", p. 147) nor Ireland (132 pcf = 20.7) supports 17. With 21 cSlope gives 1.338, −6 % against 1.4239, so the agreement depends on that unit weight.",
     ],
   },
   {
@@ -846,6 +884,7 @@ export const PROBLEMS: RawCase[] = [
     ],
     notes: [
       "With pore pressures from a seepage analysis (not available here) commercial program A gives 1.312.",
+      "Duncan, Wright & Brandon (2014, Table 6.8, p. 122) name no method for this section. On the circle tangent to el. 197 they give FE 1.37 and 1.36 with two piezometric lines; the overall critical circle gives 1.11 / 1.32 / 1.30.",
     ],
   },
   {
@@ -873,11 +912,13 @@ export const PROBLEMS: RawCase[] = [
     checks: [
       {"method":"Bishop","label":"Bishop simplified","published":1.228,"publishedBy":"Commercial program A"},
       {"method":"Bishop","label":"Bishop simplified","published":1.22,"publishedBy":"Duncan & Wright"},
+      {"method":"Morgenstern-Price","label":"Spencer (M-P, constant f(x))","published":1.19,"publishedBy":"Duncan & Wright","options":{"intersliceFunction":"constant"}},
       {"method":"Morgenstern-Price","label":"Spencer (M-P, constant f(x))","published":1.19,"publishedBy":"Commercial program A (non-circular)","options":{"intersliceFunction":"constant","nonCircularOptimization":true}},
     ],
     notes: [
-      "Duncan & Wright (Table 74.2): Bishop 1.22, Spencer 1.19, Janbu simplified 1.07, corrected 1.16 (two digits). commercial program A Spencer 1.201 (circle).",
+      "Duncan & Wright (Table 7.5 in the 2nd edition, p. 143; a commercial manual's Table 74.2): Bishop 1.22, Spencer 1.19, Janbu simplified 1.07, corrected 1.16 (two digits). commercial program A Spencer 1.201 (circle).",
       "cSlope's optimised non-circular surface is 1.9 % below commercial program A's: a search difference.",
+      "Duncan, Wright & Brandon's Spencer 1.19 is from one of their three programs on circles (the other two give 1.20); their critical circle is (−100, 124), r = 174, which is (500, 174) in this model's frame. Ordinary method 1.08 (Fig. 7.20), strength reduction 1.19.",
     ],
   },
   {
@@ -895,7 +936,7 @@ export const PROBLEMS: RawCase[] = [
     notes: [
       "commercial program A's toe circle; its circle tangent to the foundation base gives Bishop 1.141, Spencer 1.139. V028 and V029 are the deeper foundations.",
       "commercial program A's optimised non-circular surface gives 0.878 (Spencer); cSlope's optimisation stops at 0.927 (+5.6 %), so it is not a check.",
-      "Spencer's critical circle (1.132) is deeper than Bishop's toe circle (1.123), although for phi = 0 the two methods agree on any circle where both solve: on the toe circle Fm = 1.1215 for every lambda, but Ff stays above 1.176 for interslice inclinations of -10 to +80 deg (Edris & Wright 1987), so Spencer has no admissible solution there and the circle is rejected; the only formal root lies near -45 deg. An independent GLE solver gives the same curves (2026-10-25). Commercial program A and Duncan & Wright report Spencer about equal to Bishop on a toe circle, so they evidently accept a solution there; cSlope's 1.132 is +0.7 % against Duncan & Wright's 1.124.",
+      "Spencer's critical circle (1.132) is deeper than Bishop's toe circle (1.123), although for phi = 0 the two methods agree on any circle where both solve: on the toe circle Fm = 1.1215 for every lambda, but Ff stays above 1.176 for interslice inclinations of -10 to +80 deg (Edris & Wright 1987), so Spencer has no admissible solution there and the circle is rejected; the only formal root lies near -45 deg. An independent GLE solver gives the same curves (2026-10-25). Commercial program A reports Spencer about equal to Bishop on a toe circle (Duncan & Wright name no method), so it evidently accepts a solution there; cSlope's 1.132 is +0.7 % against Duncan & Wright's 1.124.",
     ],
   },
   {
@@ -1024,11 +1065,11 @@ export const PROBLEMS: RawCase[] = [
     definition: {"coordinates":[[0,0],[0,18.288],[18.288,18.288],[42.672000000000004,6.096],[60.96,6.096],[60.96,0]],"materials":[{"name":"Fill","model":{"kind":"mohr-coulomb","unitWeight":19.635932500000003,"cohesion":28.728156000000002,"frictionAngle":25}},{"name":"Sand","model":{"kind":"mohr-coulomb","unitWeight":20.73554472,"cohesion":0,"frictionAngle":30}}],"materialBoundaries":[{"coordinates":[[-1,6.096],[61.96,6.096]],"materialName":""}],"regionAssignments":[{"point":[0.6096,6.146],"materialName":"Fill"},{"point":[0.6096,3.048],"materialName":"Sand"}],"waterTable":{"mode":"custom","value":[[0,12.192],[30.48,9.144],[42.672000000000004,6.096],[60.96,6.096]]}},
     checks: [
       {"method":"Bishop","label":"Bishop simplified","published":1.533,"publishedBy":"Commercial program A"},
-      {"method":"Morgenstern-Price","label":"Spencer (M-P, constant f(x))","published":1.535,"publishedBy":"Duncan & Wright (reference)","options":{"intersliceFunction":"constant"}},
+      {"method":"Morgenstern-Price","label":"Spencer (M-P, constant f(x))","published":1.529,"publishedBy":"Duncan & Wright (reference)","options":{"intersliceFunction":"constant"}},
       {"method":"Morgenstern-Price","label":"Spencer (M-P, constant f(x))","published":1.534,"publishedBy":"Commercial program A (non-circular)","options":{"intersliceFunction":"constant","nonCircularOptimization":true}},
     ],
     notes: [
-      "Duncan & Wright's 1.535 is the mean of 1.528–1.542 for different slice counts. commercial program A Spencer 1.540 (circle).",
+      "Duncan, Wright & Brandon (2014, Table 14.1 p. 244) give 1.528–1.542 for side-force inclinations θs of 1° to 10°, 1.529 at the recommended 3°; until 2026-10-25 the check carried 1.535 (the range's midpoint). The book names no method; θs is Spencer's. commercial program A Spencer 1.540 (circle).",
     ],
   },
   {
@@ -1041,11 +1082,11 @@ export const PROBLEMS: RawCase[] = [
     definition: {"coordinates":[[0,0],[0,40],[55,40],[75,30],[140,30],[140,0]],"materials":[{"name":"Fill","model":{"kind":"mohr-coulomb","unitWeight":123,"cohesion":0,"frictionAngle":36}},{"name":"Clay","model":{"kind":"undrained","unitWeight":97,"undrainedShearStrength":200,"suRefDepth":30,"suRateOfChange":15}}],"materialBoundaries":[{"coordinates":[[-1,30],[141,30]],"materialName":""}],"regionAssignments":[{"point":[1.4,30.05],"materialName":"Fill"},{"point":[1.4,15],"materialName":"Clay"}]},
     checks: [
       {"method":"Bishop","label":"Bishop simplified","published":1.313,"publishedBy":"Commercial program A"},
-      {"method":"Morgenstern-Price","label":"Spencer (M-P, constant f(x))","published":1.3,"publishedBy":"Duncan & Wright (reference)","options":{"intersliceFunction":"constant"}},
+      {"method":"Morgenstern-Price","label":"Spencer (M-P, constant f(x))","published":1.276,"publishedBy":"Duncan & Wright (reference)","options":{"intersliceFunction":"constant"}},
       {"method":"Morgenstern-Price","label":"Spencer (M-P, constant f(x))","published":1.262,"publishedBy":"Commercial program A (non-circular)","options":{"intersliceFunction":"constant","nonCircularOptimization":true}},
     ],
     notes: [
-      "Duncan & Wright's 1.300 is the mean of 1.276–1.323 for different slice counts. commercial program A Spencer 1.285 (circle).",
+      "Duncan, Wright & Brandon (2014, Table 14.1) give 1.276 at θs = 1° and 3° and up to 1.323 at larger θs; until 2026-10-25 the check carried 1.300, the midpoint of that range, which is not in the table. Profile I goes with the shallow circle I. commercial program A Spencer 1.285 (circle).",
     ],
   },
   {
@@ -1058,11 +1099,11 @@ export const PROBLEMS: RawCase[] = [
     definition: {"coordinates":[[0,0],[0,40],[55,40],[75,30],[140,30],[140,0]],"materials":[{"name":"Fill","model":{"kind":"mohr-coulomb","unitWeight":123,"cohesion":0,"frictionAngle":36}},{"name":"Clay","model":{"kind":"undrained","unitWeight":97,"undrainedShearStrength":300,"suRefDepth":0,"suRateOfChange":0}}],"materialBoundaries":[{"coordinates":[[-1,30],[141,30]],"materialName":""}],"regionAssignments":[{"point":[1.4,30.05],"materialName":"Fill"},{"point":[1.4,15],"materialName":"Clay"}]},
     checks: [
       {"method":"Bishop","label":"Bishop simplified","published":1.335,"publishedBy":"Commercial program A"},
-      {"method":"Morgenstern-Price","label":"Spencer (M-P, constant f(x))","published":1.312,"publishedBy":"Duncan & Wright (reference)","options":{"intersliceFunction":"constant"}},
+      {"method":"Morgenstern-Price","label":"Spencer (M-P, constant f(x))","published":1.328,"publishedBy":"Duncan & Wright (reference)","options":{"intersliceFunction":"constant"}},
       {"method":"Morgenstern-Price","label":"Spencer (M-P, constant f(x))","published":1.182,"publishedBy":"Commercial program A (non-circular)","options":{"intersliceFunction":"constant","nonCircularOptimization":true}},
     ],
     notes: [
-      "Duncan & Wright's 1.312 is the mean of 1.295–1.328 for different slice counts. commercial program A Spencer 1.330 (circle).",
+      "Duncan, Wright & Brandon (2014, Table 14.1) give 1.328 at θs = 1° and 3° and 1.295–1.332 over all θs; until 2026-10-25 the check carried 1.312, the midpoint. commercial program A Spencer 1.330 (circle).",
     ],
   },
   {
@@ -1080,6 +1121,7 @@ export const PROBLEMS: RawCase[] = [
     publicNote: "Duncan & Wright's 1.51 is about 4 % below the other programs on this surface.",
     notes: [
       "commercial program A's Bishop (1.531) and Spencer (1.884) belong to their own critical circles; on this circle cSlope's Bishop is 1.568. Duncan & Wright 1.51.",
+      "Duncan, Wright & Brandon (2014, Fig. 6.36, p. 116, the 1st edition's fig. 6.34) give no slip surface or method for 1.51; it belongs to their own critical surface. The unreinforced slope gives 0.91; the factor on the anchor force alone 4.82.",
     ],
   },
   {
@@ -1101,7 +1143,6 @@ export const PROBLEMS: RawCase[] = [
     reference: "Duncan & Wright, Soil Strength and Slope Stability, fig. 15.9.",
     surface: "search",
     units: "SI",
-    referenceFromFigure: true,
     description: "Embankment (c′ = 0, φ′ = 35°, γ = 125 pcf) on a 20 ft undrained foundation, cu = 300 psf, constant; circular search. Converted to SI.",
     definition: {"materials":[{"name":"Embankment","model":{"kind":"mohr-coulomb","unitWeight":19.63593,"cohesion":0,"frictionAngle":35}},{"name":"Foundation","model":{"kind":"undrained","unitWeight":15.70875,"undrainedShearStrength":14.36408,"suRefDepth":6.096,"suRateOfChange":0}}],"coordinates":[[0,0],[0,6.096],[12.192,6.096],[27.432,12.192],[42.672,12.192],[42.672,0]],"materialBoundaries":[{"coordinates":[[0,6.096],[42.672,6.096]],"materialName":""}],"regionAssignments":[{"point":[35.052,11.692],"materialName":"Embankment"},{"point":[21.336,5.596],"materialName":"Foundation"}]},
     checks: [
@@ -1111,7 +1152,7 @@ export const PROBLEMS: RawCase[] = [
       {"method":"Morgenstern-Price","label":"Spencer (M-P, constant f(x))","published":0.74,"publishedBy":"Commercial program A (non-circular)","options":{"intersliceFunction":"constant","porePressureHead":"vertical","slices":40,"nonCircularOptimization":true}},
     ],
     notes: [
-      "Duncan & Wright's reference values: Spencer's method, read from fig. 15.9 to two digits.",
+      "Duncan & Wright's reference values: Spencer's method, printed in the table of fig. 15.9 (fig. 15.11, p. 257, in the 2nd edition, 2014), two digits.",
     ],
   },
   {
@@ -1120,18 +1161,17 @@ export const PROBLEMS: RawCase[] = [
     reference: "Duncan & Wright, Soil Strength and Slope Stability, fig. 15.9.",
     surface: "search",
     units: "SI",
-    referenceFromFigure: true,
     description: "As V036a with cu increasing 5 psf/ft with depth.",
     definition: {"materials":[{"name":"Embankment","model":{"kind":"mohr-coulomb","unitWeight":19.63593,"cohesion":0,"frictionAngle":35}},{"name":"Foundation","model":{"kind":"undrained","unitWeight":15.70875,"undrainedShearStrength":14.36408,"suRefDepth":6.096,"suRateOfChange":0.78544}}],"coordinates":[[0,0],[0,6.096],[12.192,6.096],[27.432,12.192],[42.672,12.192],[42.672,0]],"materialBoundaries":[{"coordinates":[[0,6.096],[42.672,6.096]],"materialName":""}],"regionAssignments":[{"point":[35.052,11.692],"materialName":"Embankment"},{"point":[21.336,5.596],"materialName":"Foundation"}]},
     checks: [
       {"method":"Bishop","label":"Bishop simplified","published":0.909,"publishedBy":"Commercial program A","options":{"porePressureHead":"vertical","slices":40}},
       {"method":"Morgenstern-Price","label":"Spencer (M-P, constant f(x))","published":0.898,"publishedBy":"Commercial program A","options":{"intersliceFunction":"constant","porePressureHead":"vertical","slices":40}},
       {"method":"Morgenstern-Price","label":"Spencer (M-P, constant f(x))","published":0.9,"publishedBy":"Duncan & Wright (reference)","options":{"intersliceFunction":"constant","porePressureHead":"vertical","slices":40}},
-      {"method":"Morgenstern-Price","label":"Spencer (M-P, constant f(x))","published":0.903,"publishedBy":"Commercial program A (non-circular)","options":{"intersliceFunction":"constant","porePressureHead":"vertical","slices":40,"nonCircularOptimization":true}},
     ],
     notes: [
-      "Duncan & Wright's reference values: Spencer's method, read from fig. 15.9 to two digits.",
+      "Duncan & Wright's reference values: Spencer's method, printed in the table of fig. 15.9 (fig. 15.11, p. 257, in the 2nd edition, 2014), two digits.",
       "cSlope's optimised non-circular surface is 2 % below commercial program A's: a search difference.",
+      "Commercial program A's non-circular value 0.903 lies above its own circular Spencer value 0.898; an optimisation that starts from the circles cannot end above them, so it is not used as a check (it passed only within the 1 % figure allowance the problem carried until 2026-10-25, when the Duncan & Wright values were found printed in a table). cSlope's non-circular optimisation gives 0.883.",
     ],
   },
   {
@@ -1140,7 +1180,6 @@ export const PROBLEMS: RawCase[] = [
     reference: "Duncan & Wright, Soil Strength and Slope Stability, fig. 15.9.",
     surface: "search",
     units: "SI",
-    referenceFromFigure: true,
     description: "As V036a with cu increasing 10 psf/ft with depth.",
     definition: {"materials":[{"name":"Embankment","model":{"kind":"mohr-coulomb","unitWeight":19.63593,"cohesion":0,"frictionAngle":35}},{"name":"Foundation","model":{"kind":"undrained","unitWeight":15.70875,"undrainedShearStrength":14.36408,"suRefDepth":6.096,"suRateOfChange":1.57087}}],"coordinates":[[0,0],[0,6.096],[12.192,6.096],[27.432,12.192],[42.672,12.192],[42.672,0]],"materialBoundaries":[{"coordinates":[[0,6.096],[42.672,6.096]],"materialName":""}],"regionAssignments":[{"point":[35.052,11.692],"materialName":"Embankment"},{"point":[21.336,5.596],"materialName":"Foundation"}]},
     checks: [
@@ -1150,7 +1189,7 @@ export const PROBLEMS: RawCase[] = [
       {"method":"Morgenstern-Price","label":"Spencer (M-P, constant f(x))","published":1.018,"publishedBy":"Commercial program A (non-circular)","options":{"intersliceFunction":"constant","porePressureHead":"vertical","slices":40,"nonCircularOptimization":true}},
     ],
     notes: [
-      "Duncan & Wright's reference values: Spencer's method, read from fig. 15.9 to two digits.",
+      "Duncan & Wright's reference values: Spencer's method, printed in the table of fig. 15.9 (fig. 15.11, p. 257, in the 2nd edition, 2014), two digits.",
     ],
   },
   {
@@ -1159,7 +1198,6 @@ export const PROBLEMS: RawCase[] = [
     reference: "Duncan & Wright, Soil Strength and Slope Stability, fig. 15.9.",
     surface: "search",
     units: "SI",
-    referenceFromFigure: true,
     description: "As V036a with cu increasing 15 psf/ft with depth.",
     definition: {"materials":[{"name":"Embankment","model":{"kind":"mohr-coulomb","unitWeight":19.63593,"cohesion":0,"frictionAngle":35}},{"name":"Foundation","model":{"kind":"undrained","unitWeight":15.70875,"undrainedShearStrength":14.36408,"suRefDepth":6.096,"suRateOfChange":2.35631}}],"coordinates":[[0,0],[0,6.096],[12.192,6.096],[27.432,12.192],[42.672,12.192],[42.672,0]],"materialBoundaries":[{"coordinates":[[0,6.096],[42.672,6.096]],"materialName":""}],"regionAssignments":[{"point":[35.052,11.692],"materialName":"Embankment"},{"point":[21.336,5.596],"materialName":"Foundation"}]},
     checks: [
@@ -1169,7 +1207,7 @@ export const PROBLEMS: RawCase[] = [
       {"method":"Morgenstern-Price","label":"Spencer (M-P, constant f(x))","published":1.116,"publishedBy":"Commercial program A (non-circular)","options":{"intersliceFunction":"constant","porePressureHead":"vertical","slices":40,"nonCircularOptimization":true}},
     ],
     notes: [
-      "Duncan & Wright's reference values: Spencer's method, read from fig. 15.9 to two digits.",
+      "Duncan & Wright's reference values: Spencer's method, printed in the table of fig. 15.9 (fig. 15.11, p. 257, in the 2nd edition, 2014), two digits.",
     ],
   },
   {
@@ -1184,9 +1222,10 @@ export const PROBLEMS: RawCase[] = [
       {"method":"Bishop","label":"Bishop simplified","published":1.629,"publishedBy":"Commercial program A","options":{"porePressureHead":"vertical","slices":50}},
       {"method":"Morgenstern-Price","label":"Spencer (M-P, constant f(x))","published":1.62,"publishedBy":"Commercial program A","options":{"intersliceFunction":"constant","porePressureHead":"vertical","slices":50}},
     ],
-    paper: [{"value": 1.61, "source": "Duncan & Wright"}],
+    paper: [{"value": 1.62, "method": "Spencer", "source": "Duncan, Wright & Brandon (2014)"}],
     notes: [
       "Duncan & Wright 1.61. Without the exit limit the search finds a shallower surface between two geogrid layers (FOS ≈ 1.19), which the published analyses do not consider.",
+      "Duncan, Wright & Brandon (2014, §8.7, Fig. 8.4, p. 164) give Spencer 1.62 with the reinforcement force not factored (method A, as here) and 1.46 with it divided by F (method B); cSlope gives 1.4485 with passive reinforcement. The 1.61 of earlier entries may be the 1st edition's.",
     ],
   },
   {
@@ -1203,10 +1242,24 @@ export const PROBLEMS: RawCase[] = [
       {"method":"Bishop","label":"Bishop simplified","published":1.07,"publishedBy":"Program D","options":{"porePressureHead":"vertical","slices":40,"iterations":4000,"refinedIterations":2000}},
     ],
     paper: [{"value": 1.16, "source": "Duncan & Wright"}],
-    publicNote: "Duncan & Wright's 1.16 is 5–8 % above the other programs (1.07–1.10) on the same input.",
+    publicNote: "Duncan & Wright's 1.16 is for γ = 125 pcf and their printed phreatic line, not this program input (100 pcf, a 9-point line); on their input cSlope gives 1.157 (V038b).",
     notes: [
-      "commercial program A 1.068/1.075 and program D 1.065/1.072 with FE seepage; D&W chart 1.16.",
+      "commercial program A 1.068/1.075 and program D 1.065/1.072 with FE seepage. Duncan, Wright & Brandon (2014): Spencer 1.16 with the piezometric line in all three of their programs (Table 7.8), 1.19 with FE pore pressures, Ordinary method 1.19 and 1.08 (Figs. 7.34–7.35), Janbu's chart 1.08 (Fig. 7.36). Their figures say γ = 100 pcf but their hand calculations and slice weights use 125; their line (Fig. 7.31) lies 0.3–0.7 ft above this one between x = 120 and 210 ft (docs/kallor/duncan-wright-2005-kap6-7.md).",
     ],
+  },
+  {
+    id: "V038b",
+    title: "Homogeneous dam with a piezometric line, Duncan & Wright's input",
+    reference: "Duncan, J.M., Wright, S.G. & Brandon, T.L. (2014). Soil Strength and Slope Stability, 2nd ed., Wiley; §7.7, Figs. 7.30–7.36, Table 7.8.",
+    surface: "search",
+    units: "SI",
+    description: "The V038 dam with the unit weight Duncan, Wright & Brandon's slice calculations use (125 pcf) and their printed phreatic line (30 points, Fig. 7.31); critical-circle search. Converted to SI.",
+    definition: {"materials":[{"name":"Material 1","model":{"kind":"mohr-coulomb","unitWeight":19.63593,"cohesion":4.78803,"frictionAngle":30}}],"coordinates":[[0,0],[30.48,12.192],[36.576,14.6304],[41.148,14.6304],[77.724,0]],"materialBoundaries":[],"regionAssignments":[{"point":[38.862,14.1304],"materialName":"Material 1"}],"waterTable":{"mode":"custom","value":[[0.0,12.192],[30.48,12.192],[31.18104,11.8872],[32.3088,11.5824],[33.55848,11.33856],[35.052,11.06424],[36.45408,10.8204],[38.37432,10.54608],[39.86784,10.30224],[41.23944,10.0584],[42.73296,9.84504],[44.22648,9.57072],[45.8724,9.32688],[47.45736,9.05256],[48.768,8.80872],[50.32248,8.5344],[51.99888,8.19912],[53.46192,7.89432],[54.95544,7.62],[56.29656,7.3152],[58.0644,6.91896],[59.55792,6.58368],[61.1124,6.21792],[62.6364,5.7912],[63.97752,5.42544],[66.05016,4.66344],[67.17792,4.20624],[68.8848,3.53568],[73.3044,1.76784],[77.724,0.0]],"followBoundary":false}},
+    checks: [
+      {"method":"Morgenstern-Price","label":"Spencer (M-P, constant f(x))","published":1.16,"publishedBy":"Duncan & Wright","options":{"intersliceFunction":"constant","porePressureHead":"vertical","slices":40}},
+    ],
+    paper: [{"value": 1.19, "method": "Spencer, finite-element pore pressures", "source": "Duncan, Wright & Brandon (2014)"}],
+    publicNote: "The book contradicts itself on the unit weight: its figures say 100 pcf, its hand calculations and slice weights use 125 pcf. With 125 pcf and the book's line cSlope reproduces the 1.16 that all three of the book's programs give (Table 7.8); with 100 pcf it gives 1.03.",
   },
   {
     id: "V039",
@@ -1217,14 +1270,14 @@ export const PROBLEMS: RawCase[] = [
     description: "Granular fill embankment with a wide berm (c′ = 0, φ′ = 30°) on a 4 m clay crust (Su = 41), 8 m marine clay (34.5) and 6.5 m lacustrine clay (31.2); circular search. The critical circle is deep and tangent to the base of the lacustrine clay.",
     definition: {"coordinates":[[-17,0.5],[-17,31],[40,31],[58,25],[114,25],[132,19],[168,19],[168,0.5]],"materials":[{"name":"Fill","model":{"kind":"mohr-coulomb","unitWeight":20,"cohesion":0,"frictionAngle":30}},{"name":"Clay crust","model":{"kind":"undrained","unitWeight":20,"undrainedShearStrength":41,"suRefDepth":0,"suRateOfChange":0}},{"name":"Marine clay","model":{"kind":"undrained","unitWeight":18.8,"undrainedShearStrength":34.5,"suRefDepth":0,"suRateOfChange":0}},{"name":"Lacustrine clay","model":{"kind":"undrained","unitWeight":20.3,"undrainedShearStrength":31.2,"suRefDepth":0,"suRateOfChange":0}}],"materialBoundaries":[{"coordinates":[[-18,19],[169,19]],"materialName":""},{"coordinates":[[-18,15],[169,15]],"materialName":""},{"coordinates":[[-18,7],[169,7]],"materialName":""}],"regionAssignments":[{"point":[-15.15,19.05],"materialName":"Fill"},{"point":[-15.15,17],"materialName":"Clay crust"},{"point":[-15.15,11],"materialName":"Marine clay"},{"point":[-15.15,3.5],"materialName":"Lacustrine clay"}]},
     checks: [
-      {"method":"Bishop","label":"Bishop simplified","published":1.45,"publishedBy":"Duncan & Wright (reference)"},
       {"method":"Morgenstern-Price","label":"Spencer (M-P, constant f(x))","published":1.45,"publishedBy":"Duncan & Wright (reference)","options":{"intersliceFunction":"constant"}},
       {"method":"Morgenstern-Price","label":"Spencer (M-P, constant f(x))","published":1.167,"publishedBy":"Commercial program A (non-circular)","options":{"intersliceFunction":"constant","nonCircularOptimization":true}},
-      {"method":"Morgenstern-Price","label":"Spencer (M-P, constant f(x))","published":1.17,"publishedBy":"Duncan & Wright (reference), non-circular","options":{"intersliceFunction":"constant","nonCircularOptimization":true}},
+      {"method":"Morgenstern-Price","label":"Spencer (M-P, constant f(x))","published":1.16,"publishedBy":"Duncan & Wright (reference), non-circular","options":{"intersliceFunction":"constant","nonCircularOptimization":true}},
     ],
     notes: [
       "The lacustrine clay is 6.5 m thick (model base y = 0.5 under the figure's labelled ground and layer tops): commercial program A's own result figures (Figs. 75.2 and 75.3) put the surface ends at y = 30.5 and 18.5 with the critical circle tangent to its base, which fits only 18.5 m of clay below the toe; the vertex labels of its Fig. 75.1 (base at 0 under 31 / 19) contradict its analysed model. The other program's model (V040) has the same 6.5 m. With 7 m every check was 1.6–2.0 % low.",
       "Commercial program A reports 1.468 / 1.464 on its own (not the critical) circle; cSlope gives 1.464 / 1.461 on that circle. Non-circular: commercial program A Bishop 1.105, GLE 1.142. Program D's 1.424 / 1.420 were computed with 7 m of lacustrine clay.",
+      "Duncan, Wright & Brandon (2014): 1.45 is Spencer on circles (p. 147, Fig. 7.25), there is no Bishop value (a Bishop check attributed to them was removed 2026-10-25); 1.16 is the fully optimised non-circular surface (a program's non-circular search, p. 149, Fig. 7.27), while 1.17 belongs to the composite surface of Fig. 7.26 (centre (−46, 55), R 83 m) and their force-equilibrium spreadsheet (Fig. 7.29).",
     ],
   },
   {
@@ -1239,10 +1292,12 @@ export const PROBLEMS: RawCase[] = [
     checks: [
       {"method":"Bishop","label":"Bishop simplified","published":1.461,"publishedBy":"Commercial program B","options":{"slices":50}},
     ],
+    paper: [{"value": 1.46, "method": "Bishop simplified", "source": "El-Ramly et al. (2002)"}],
     notes: [
       "Geometry read from Fig. 131/132 (axes, not labelled vertices): crest y = 36 for 40 m, 3:1 slopes, 56 m berm at y = 30, toe y = 24; layer tops 24/20/12, till (bedrock) below y = 5.5 (5.45 in Fig. 131 and 5.6 in Fig. 132, read from the pixel rows; the lacustrine clay is 6.5 m thick, as in V039) — the model base here. Clay crust Su = 43, γ = 18.8 per Table 111 (V039 uses D&W's 41 kPa, γ = 20).",
       "cSlope's critical circle (centre 85.6, 127.0, R 121.5, entry x = 5.1, exit x = 150.0) is tangent to the till at y = 5.5, as the commercial program B circle of Fig. 132 (entry about 5, exit about 151). With the till at y = 5 the search gave 1.432 (−1.9 %).",
       "Probabilistic (no spatial variability): mean 1.4611, σ 0.21295, PF 1.34 %, β 2.165 with σ(φ fill) = 1°, σ(γ fill) = 1, σ(c marine) = 8.14, σ(c lacustrine) = 8.65.",
+      "El-Ramly et al. (2002) give Bishop 1.46 at mean values on their circle (85.9, 128.3), R 122.8 (Fig. A1–A2, pp. 682–683); cSlope 1.459 on it. Their clay-crust Su is not printed but Fig. A2 implies 41 kPa (here 43, the commercial program's). Their probabilistic results are E[FS] 1.46 with β 2.32 (Monte Carlo with spatial variability), 2.42 (FOSM) and 1.84 (no spatial variability; Table 3); the probabilistic line above uses only Table 1's inherent standard deviations and matches none of them (docs/kallor/el-ramly-2002.md).",
     ],
   },
   {
@@ -1258,6 +1313,9 @@ export const PROBLEMS: RawCase[] = [
       {"method":"Morgenstern-Price","label":"Spencer (M-P, constant f(x))","published":1.599,"publishedBy":"Commercial program A","options":{"intersliceFunction":"constant","porePressureHead":"vertical","slices":40}},
       {"method":"Morgenstern-Price","label":"Spencer (M-P, constant f(x))","published":1.6,"publishedBy":"Duncan & Wright (reference)","options":{"intersliceFunction":"constant","porePressureHead":"vertical","slices":40}},
       {"method":"Morgenstern-Price","label":"Spencer (M-P, constant f(x))","published":1.592,"publishedBy":"Commercial program A (non-circular)","options":{"intersliceFunction":"constant","porePressureHead":"vertical","slices":40,"nonCircularOptimization":true}},
+    ],
+    notes: [
+      "Duncan, Wright & Brandon (2014, Table 6.4, p. 110): Modified Swedish 2.38 / 2.60 with total forces and 1.62 with effective forces, θ = 21.8°.",
     ],
   },
   {
@@ -1291,22 +1349,23 @@ export const PROBLEMS: RawCase[] = [
     notes: [
       "With FE seepage: commercial program A 1.658/1.724.",
       "Piezometric line corrected 2026-10-24: commercial program A's line (verification manual, problem 77, figs. 77.2 and 77.4) has ten vertices; the earlier transcription missed (585, 303.8) ft just downstream of the core's upstream face and (1156, 151.7) ft near the toe, read from fig. 77.4 at 400 dpi. With them cSlope gives 1.582 / 1.649 on the printed circle against the program's 1.584 / 1.648 (before 1.591 / 1.659). Program D's 1.591 (Bishop) and 1.670 (Morgenstern-Price) were computed on the incomplete line and are no longer checks.",
+      "Duncan, Wright & Brandon (2014, Table 7.9, p. 156): 1.67 is Spencer (two of their programs; the third 1.69); their Bishop spreadsheet gives 1.61 (Fig. 7.40). The circle of one of their programs is (−225.3, 748.9), R 621.88 (Fig. 7.38), not this one.",
     ],
   },
   {
     id: "V043",
     title: "Syncrude tailings dyke (El-Ramly et al.), composite circle",
-    reference: "El-Ramly, Morgenstern & Cruden (2003), Can. Geotech. J. 40.",
+    reference: "El-Ramly, H., Morgenstern, N.R. & Cruden, D.M. (2003). Probabilistic stability analysis of a tailings dyke on presheared clay-shale. Can. Geotech. J. 40(1), 192–208.",
     surface: "fixed",
     units: "SI",
-    description: "Cohesionless tailings sand, glacio-fluvial sands and tills (φ = 34°) on a presheared clay-shale (φ = 7.5°) with a water table; the reference circle (327.5, 394, R = 124) reaches below the model base, so the surface follows the base there (composite).",
+    description: "Cohesionless tailings sand, glacio-fluvial sands and tills (φ = 34° here; El-Ramly et al. give the sandy till 35.7°) on a presheared clay-shale (φ = 7.5°) with a water table; the reference circle (327.5, 394, R = 124) reaches below the model base, so the surface follows the base there (composite).",
     definition: {"materials":[{"name":"Tailing sand (TS)","model":{"kind":"mohr-coulomb","unitWeight":20,"cohesion":0,"frictionAngle":34}},{"name":"Glacio-fluvial sand (Pf4)","model":{"kind":"mohr-coulomb","unitWeight":17,"cohesion":0,"frictionAngle":34}},{"name":"Sandy till (Pgs)","model":{"kind":"mohr-coulomb","unitWeight":17,"cohesion":0,"frictionAngle":34}},{"name":"Clayey till (Pgc)","model":{"kind":"mohr-coulomb","unitWeight":17,"cohesion":0,"frictionAngle":7.5}},{"name":"Disturbed clay-shale (Kca)","model":{"kind":"mohr-coulomb","unitWeight":17,"cohesion":0,"frictionAngle":7.5}}],"coordinates":[[125,288.558],[233.679,288.999],[475,289.978],[475,295.748],[475,306.164],[475,309],[394.557,308.346],[372.244,318.063],[360.008,318.063],[274.714,333.179],[125,348.294],[125,302.611],[125,299.722],[125,295.033]],"materialBoundaries":[{"coordinates":[[125,302.611],[394.557,308.346]],"materialName":""},{"coordinates":[[125,299.722],[475,306.164]],"materialName":""},{"coordinates":[[249.262,295.287],[475,295.748]],"materialName":""},{"coordinates":[[249.262,295.287],[125,295.033]],"materialName":""},{"coordinates":[[249.262,295.287],[233.679,288.999]],"materialName":""}],"regionAssignments":[{"point":[221.1805,325.621],"materialName":"Tailing sand (TS)"},{"point":[293.49014,304.3875],"materialName":"Glacio-fluvial sand (Pf4)"},{"point":[387.5,302.943],"materialName":"Sandy till (Pgs)"},{"point":[183.07788,292.016],"materialName":"Clayey till (Pgc)"},{"point":[358.84179,292.6325],"materialName":"Disturbed clay-shale (Kca)"}],"waterTable":{"mode":"custom","value":[[124.28,319.503],[394.557,308.346],[475,309]],"followBoundary":false},"customSurfaces":[{"points":[[216.32858,339.07354],[218.84121,334.25665],[221.35385,329.89856],[223.86648,325.91113],[226.37911,322.23255],[228.89175,318.81747],[231.40438,315.63144],[233.91701,312.64753],[236.42965,309.84425],[238.94228,307.20409],[241.45491,304.71258],[243.96755,302.3576],[246.48018,300.12887],[248.99281,298.0176],[251.50545,296.01619],[254.01808,294.11803],[256.53071,292.31736],[259.04334,290.60906],[261.55598,289.12209],[264.06861,289.13229],[266.58124,289.14248],[269.09388,289.15267],[271.60651,289.16287],[274.11914,289.17306],[276.63178,289.18325],[279.14441,289.19345],[281.65704,289.20364],[284.16968,289.21383],[286.68231,289.22403],[289.19494,289.23422],[291.70758,289.24441],[294.22021,289.25461],[296.73284,289.2648],[299.24547,289.27499],[301.75811,289.28519],[304.27074,289.29538],[306.78337,289.30557],[309.29601,289.31577],[311.80864,289.32596],[314.32127,289.33615],[316.83391,289.34635],[319.34654,289.35654],[321.85917,289.36673],[324.37181,289.37693],[326.88444,289.38712],[329.39707,289.39731],[331.90971,289.40751],[334.42234,289.4177],[336.93497,289.42789],[339.4476,289.43809],[341.96024,289.44828],[344.47287,289.45847],[346.9855,289.46867],[349.49814,289.47886],[352.01077,289.48905],[354.5234,289.49925],[357.03604,289.50944],[359.54867,289.51963],[362.0613,289.52983],[364.57394,289.54002],[367.08657,289.55021],[369.5992,289.56041],[372.11184,289.5706],[374.62447,289.58079],[377.1371,289.59099],[379.64973,289.60118],[382.16237,289.61137],[384.675,289.62157],[387.18763,289.63176],[389.70027,289.64195],[392.2129,289.65215],[394.72553,289.80438],[397.23817,291.46909],[399.7508,293.2239],[402.26343,295.07362],[404.77607,297.02366],[407.2887,299.08023],[409.80133,301.25039],[412.31397,303.54232],[414.8266,305.96555],[417.33923,308.53122]]}],"customPlanesOnly":true},
     checks: [
       {"method":"Bishop","label":"Bishop simplified","published":1.31,"publishedBy":"El-Ramly et al.","options":{"porePressureHead":"vertical","slices":60}},
       {"method":"Bishop","label":"Bishop simplified","published":1.32,"publishedBy":"Program D","options":{"porePressureHead":"vertical","slices":60}},
     ],
     notes: [
-      "commercial program A 1.305 is not used as a check: cSlope is 1.1 % above it and agrees with El-Ramly et al.'s own 1.31.",
+      "commercial program A 1.305 is not used as a check. El-Ramly et al.'s 1.31 is the Monte Carlo mean E[FS] on this (Hassan & Wolff) surface (p. 202); their deterministic minimum, on another surface, is 1.30 (p. 194). Their model differs from this program version: the sandy till Pgs has φ′ = 35.7° (Table 1), there are two water tables (one in the tailings sand, one in Pf4) and ru-based pore pressures in Pgs (0.21–0.40) and the clay-shale (about 0.57), and no unit weights are printed. Their surface is printed as (328.3, 395.6, R 124.8), flat at y = 289.2 (Fig. A1); on it cSlope gives 1.315 (docs/kallor/el-ramly-2003.md).",
     ],
   },
   {
@@ -1567,13 +1626,14 @@ export const PROBLEMS: RawCase[] = [
     checks: [
       {"method":"Morgenstern-Price","label":"Spencer (M-P, constant f(x))","published":1.010,"publishedBy":"Commercial program A (block search)","options":{"intersliceFunction":"constant","slices":50,"porePressureHead":"vertical","nonCircularOptimization":true}},
     ],
-    paper: [{"value": 1.01, "upper": 1.03, "method": "Spencer, non-circular", "source": "Chen & Shao (1988)"}, {"value": 0.97, "method": "Spencer, non-circular (global minimum along the weak layer)", "source": "Greco (1996)"}, {"value": 1.08, "method": "Spencer, local minimum (nearly circular surface from the toe)", "source": "Greco (1996)"}],
-    publicNote: "Chen & Shao give 1.01–1.03 for a surface sliding along the weak layer. Greco's Monte Carlo search finds a global minimum of 0.97 along the weak layer, entering the level ground far from the toe, and a local minimum of 1.08 on a nearly circular surface from the toe; the programs' block searches and cSlope give 1.01 on a commercial program's version of the geometry, 4 % above Greco's global minimum.",
+    paper: [{"value": 1.009, "upper": 1.025, "method": "Spencer, non-circular (test problem 3)", "source": "Chen & Shao (1988)"}, {"value": 0.97, "method": "Spencer, non-circular (global minimum along the weak layer)", "source": "Greco (1996)"}, {"value": 1.08, "method": "Spencer, local minimum (nearly circular surface from the toe)", "source": "Greco (1996)"}],
+    publicNote: "Chen & Shao give 1.009–1.025 with Spencer's assumption for a surface sliding along the weak seam (their test problem 3, Tables 5–6). Greco's Monte Carlo search finds a global minimum of 0.97 along the weak layer, entering the level ground far from the toe, and a local minimum of 1.08 on a nearly circular surface from the toe; the programs' block searches and cSlope give 1.01 on a commercial program's version of the geometry, 4 % above Greco's global minimum.",
     notes: [
       "Entry on the crest (x = 145–240) and exit on the level ground (x = 0–55), as in the source.",
       "Fig. 40: base (0,0)–(150,15)–(240,15) under a 0.5 m Layer 4 whose top is (0,0.5)–(150,15.5)–(240,15.5); the thickness of Layer 4 is read from the label (0, 0.5) only partly legible. V054 (commercial program A) has the base rising to (240,16).",
       "commercial program B Janbu (uncorrected) 0.896, Bishop 1.040 (axis-dependent on a non-circular surface, not checked). Greco (1996), fig. 12 and table 10b: global minimum 0.973–0.974 (13 vertices) along layer 4, from the level ground at about x = 27 to the crest at about x = 175; local minimum 1.08 from the toe. Until 2026-10-25 the entry quoted 1.08 as Greco's search result. Greco's table 9 gives the unit weights in g/cm³ (2.00, 1.90, 2.15, 2.15); the values here (20, 19, 21.5, 21.5) use g = 10, as the programs do. Whether cSlope's block search can reach Greco's 0.97 on his geometry is open (docs/kallor/greco-1996.md).",
       "The reference is commercial program A's block search (1.010, on its own geometry with the base rising to (240, 16)), the same kind of search as cSlope's: the critical surface slides along Layer 4 with a wedge up to the crest and a wedge out to the level ground, and Chen & Shao give 1.01–1.03. Commercial program B's optimised search on this geometry reports 1.054, which cSlope's search passes below (1.009): a search difference, not a model one.",
+      "Chen & Shao (1988, test problem 3, Figs. 10–13) draw layer 4 as a seam line without thickness or density, give no stratum below it and mark water only by a ▽ on the I/II boundary near x = 197; the 0.5 m seam, the water table along the ground and the boundary, and (V054) the base rising to (240, 16) are the programs' modelling. Their Table 4 gives densities in g/cm³ (2.00, 1.90, 2.15); with g = 9.81 the unit weights are 19.62 / 18.64 / 21.09 instead of the programs' 20 / 19 / 21.5, which lowers cSlope's result by 0.4–0.7 % (docs/kallor/chen-shao-1988.md).",
     ],
   },
   {
@@ -1593,6 +1653,7 @@ export const PROBLEMS: RawCase[] = [
     notes: [
       "Circles pass through the toe (55, 20), as in the source.",
       "With the phreatic correction (cos²θ) cSlope gives 1.141 (Bishop).",
+      "Chen & Shao (1988, test problem 3, Figs. 10–13) draw layer 4 as a seam line without thickness or density, give no stratum below it and mark water only by a ▽ on the I/II boundary near x = 197; the 0.5 m seam, the water table along the ground and the boundary, and (V054) the base rising to (240, 16) are the programs' modelling. Their Table 4 gives densities in g/cm³ (2.00, 1.90, 2.15); with g = 9.81 the unit weights are 19.62 / 18.64 / 21.09 instead of the programs' 20 / 19 / 21.5, which lowers cSlope's result by 0.4–0.7 % (docs/kallor/chen-shao-1988.md).",
     ],
   },
   {
@@ -2092,8 +2153,8 @@ export const PROBLEMS: RawCase[] = [
     checks: [
       {"method":"Bishop","label":"Bishop simplified","published":1.14,"publishedBy":"Low (1989)"},
     ],
-    paper: [{"value": 1.36, "method": "Ordinary", "source": "Low (1989)"}, {"value": 1.31, "method": "Ordinary and Bishop with φ = 0 in the bank", "source": "Low (1989)"}, {"value": 1.38, "method": "hand calculation (Low's method)", "source": "Low (1989)"}, {"value": 1.17, "source": "Kim (2002)"}],
-    publicNote: "The comparison program's 1.19 is not reproduced on the circle it prints with that value: cSlope gives 1.13 there, close to Low's Bishop value 1.14, which is the check. Low himself calls that Bishop value misleading, an artefact of negative effective normal stresses in the stiff bank with φ = 15°: with φ = 0 in the bank both Ordinary and Bishop give 1.31, and his own hand method 1.38. Kim (2002) gives 1.17.",
+    paper: [{"value": 1.36, "method": "Ordinary", "source": "Low (1989)"}, {"value": 1.31, "method": "Ordinary and Bishop with φ = 0 in the bank", "source": "Low (1989)"}, {"value": 1.38, "method": "hand calculation (Low's method)", "source": "Low (1989)"}, {"value": 1.17, "method": "Spencer, non-circular (random search)", "source": "Kim et al. (2002)"}, {"value": 1.13, "upper": 1.27, "method": "limit analysis, lower and upper bound", "source": "Kim et al. (2002)"}],
+    publicNote: "The comparison program's 1.19 is not reproduced on the circle it prints with that value: cSlope gives 1.13 there, close to Low's Bishop value 1.14, which is the check. Low himself calls that Bishop value misleading, an artefact of negative effective normal stresses in the stiff bank with φ = 15°: with φ = 0 in the bank both Ordinary and Bishop give 1.31, and his own hand method 1.38. Kim et al. (2002) give 1.17 with Spencer's method on a non-circular surface and limit-analysis bounds of 1.13–1.27.",
     notes: [
       "Input audit 2026-10-24: the circle was (19, 18.5, R 18), on which cSlope gives 1.197; commercial program A's Fig. 23.3 prints centre (18.001, 16.000), R 15.556 (end points (4.659, 8) and (33.557, 16)) with its Bishop 1.192. On that circle cSlope gives 1.134 (1.128 / 1.138 / 1.140 with 25 / 100 / 200 slices), and an independent spreadsheet Bishop calculation 1.13-1.15 (it depends on the slicing of the vertical scarp, since the centre lies at crest level). The input agrees with commercial program A otherwise: its Ordinary value 1.370 on its Ordinary circle (Fig. 23.2: (17.201, 21.770), R 21.493) is reproduced by the same spreadsheet (1.374). So commercial program A's 1.192 is not reproduced on its own circle; cSlope's 1.134 is close to Low's Bishop 1.14, which is the check; commercial program A's 1.192 is not (as on V087, a program value that its own printed input does not reproduce). The circle's centre lies at crest level, so its upper end is a vertical scarp: the factor depends on the slicing there.",
     ],
@@ -2407,6 +2468,7 @@ export const PROBLEMS: RawCase[] = [
     publicNote: "The source compares programs and publishes no independent value.",
     notes: [
       "The water table is the one in the manual's Fig. 27.1, its node markers read from the figure calibrated on 12 labelled ground vertices (residual at most 0.3 ft): (63, 73), (82.95, 78.08), (103.79, 82.02), (121.66, 84.48), (139.61, 86.93), (200, 92.8) ft. An earlier tracing lay 1.1–1.7 ft higher from x = 75 to 200 ft and gave every method 1.8–1.9 % low.",
+      "The Malkawi, Hassan & Sarma (2001) paper on non-circular surfaces (J. Geotech. Geoenviron. Eng. 127(8)) does not contain this slope; the reference is probably their companion paper on circular surfaces in the Can. Geotech. J. (2001), not yet checked. The geometry is Wright & Roecker's (1984) Example F, which V082c's coordinates reproduce in feet.",
     ],
   },
   {
@@ -2427,6 +2489,7 @@ export const PROBLEMS: RawCase[] = [
     publicNote: "The source compares programs and publishes no independent value.",
     notes: [
       "Water table as V082c (read from the manual's figure).",
+      "The Malkawi, Hassan & Sarma (2001) paper on non-circular surfaces (J. Geotech. Geoenviron. Eng. 127(8)) does not contain this slope; the reference is probably their companion paper on circular surfaces in the Can. Geotech. J. (2001), not yet checked. The geometry is Wright & Roecker's (1984) Example F, which V082c's coordinates reproduce in feet.",
     ],
   },
   {
@@ -2448,6 +2511,7 @@ export const PROBLEMS: RawCase[] = [
     notes: [
       "The water table is the one in the manual's Fig. 27.1, its node markers read from the figure calibrated on 12 labelled ground vertices (residual at most 0.3 ft): (63, 73), (82.95, 78.08), (103.79, 82.02), (121.66, 84.48), (139.61, 86.93), (200, 92.8) ft. An earlier tracing lay 1.1–1.7 ft higher from x = 75 to 200 ft and gave every method 1.8–1.9 % low. Program D's 1.369 (Bishop) and 1.375 (Spencer) were computed on the earlier tracing and are no longer checks. V082a and V082b are the tension-crack variants of Table 27.4.",
       "Commercial program A's circular search with exit limits (Table 27.3) is V082d.",
+      "The Malkawi, Hassan & Sarma (2001) paper on non-circular surfaces (J. Geotech. Geoenviron. Eng. 127(8)) does not contain this slope; the reference is probably their companion paper on circular surfaces in the Can. Geotech. J. (2001), not yet checked. The geometry is Wright & Roecker's (1984) Example F, which V082c's coordinates reproduce in feet.",
     ],
   },
   {
@@ -2468,6 +2532,7 @@ export const PROBLEMS: RawCase[] = [
     publicNote: "The source compares programs and publishes no independent value.",
     notes: [
       "Commercial program A's auto search (Table 27.3) on the water table of V082c. Its critical circle is not printed; cSlope's lies at (138.2, 182.4) ft, R 121.7 ft, from x = 44.3 to 162.0 ft (Bishop). Malkawi et al. (2001) quote a Janbu 1.255 that the manual reproduces only with static pore pressure and uncorrected Janbu; it is not checked.",
+      "The Malkawi, Hassan & Sarma (2001) paper on non-circular surfaces (J. Geotech. Geoenviron. Eng. 127(8)) does not contain this slope; the reference is probably their companion paper on circular surfaces in the Can. Geotech. J. (2001), not yet checked. The geometry is Wright & Roecker's (1984) Example F, which V082c's coordinates reproduce in feet.",
     ],
   },
   {
@@ -2595,7 +2660,7 @@ export const PROBLEMS: RawCase[] = [
   {
     id: "V085",
     title: "Bradwell excavated slope, stiff-fissured London clay",
-    reference: "Skempton & LaRochelle (1965); Duncan & Wright, Soil Strength and Slope Stability.",
+    reference: "Skempton, A.W. & La Rochelle, P. (1965). The Bradwell slip: a short-term failure in London clay. Géotechnique 15(3), 221–242; Duncan, Wright & Brandon (2014), Soil Strength and Slope Stability, 2nd ed., §7.7.3.",
     surface: "search",
     units: "imperial",
     description: "Excavation in London clay (six sublayers with Su increasing with depth, S = f(datum)) under Marsh clay and a clay fill cracked to its full depth (11.4 ft); search for the deep failure, entering on the crest and leaving at the excavation toe.",
@@ -2606,16 +2671,17 @@ export const PROBLEMS: RawCase[] = [
       {"method":"Janbu","label":"Janbu corrected (f0)","published":1.736,"publishedBy":"Commercial program A","options":{"tensionCrackDepth":11.4,"janbuCorrection":true}},
       {"method":"Janbu","label":"Janbu simplified (uncorrected)","published":1.628,"publishedBy":"Commercial program A","options":{"tensionCrackDepth":11.4}},
     ],
-    paper: [{"value": 1.76, "method": "Bishop simplified", "source": "Duncan & Wright"}, {"value": 1.63, "method": "Janbu simplified", "source": "Duncan & Wright"}, {"value": 1.74, "method": "Janbu corrected", "source": "Duncan & Wright"}, {"value": 1.76, "method": "Spencer", "source": "Duncan & Wright"}],
+    paper: [{"value": 1.76, "method": "Bishop simplified", "source": "Duncan & Wright"}, {"value": 1.63, "method": "Janbu simplified", "source": "Duncan & Wright"}, {"value": 1.76, "method": "Janbu corrected", "source": "Duncan & Wright"}, {"value": 1.76, "method": "Spencer", "source": "Duncan & Wright"}],
     notes: [
       "Without limits the search finds shallower mechanisms: a sliver in the cohesionless 1:1 fill (0.74) and, with the crack, a surface through the fill and Marsh clay (1.15). The published value is the deep failure.",
       "The source searches the whole model and models the fill as a tension-crack zone, so its circles start at the base of the fill; these limits stand in for that.",
+      "Duncan, Wright & Brandon (2014, Table 7.4 p. 141; text p. 140: 1.08 × 1.63 = 1.76) give Janbu corrected 1.76, Modified Swedish 1.80, strength reduction 1.79; their circle is (81.25, 117.6, R 151.27) in their Fig. 7.13 frame, (126.25, 117.6) here, on which cSlope gives 1.765. Skempton & La Rochelle back-calculate F = 1.0 with the fissured strength; the ratio of the intact to the mobilised average strength is 2000/1120 = 1.79 (\"would be 1.8\", p. 235). Their section has the crest at +17.5 and the base at −31 O.D. and an 11½ ft fill (here 17.4, −31.2, 11.4; under 0.05 % on the result).",
     ],
   },
   {
     id: "V086a",
     title: "Tandjiria embankment, clay fill, geosynthetic T = 169 kN/m",
-    reference: "Tandjiria, Low & Teh (2002).",
+    reference: "Tandjiria, V., Low, B.K. & Teh, C.I. (2002). Effect of reinforcement force distribution on stability of embankments. Geotextiles and Geomembranes 20, 423–443.",
     surface: "fixed",
     units: "SI",
     description: "The V086b clay-fill embankment with a 169 kN/m geosynthetic at its base (axial, active, fully anchored) and the water-filled 2 m crack, on the critical circle.",
@@ -2624,12 +2690,15 @@ export const PROBLEMS: RawCase[] = [
       {"method":"Morgenstern-Price","label":"Spencer (M-P, constant f(x))","published":1.35,"publishedBy":"Commercial program A","options":{"intersliceFunction":"constant","porePressureHead":"vertical","slices":60,"tensionCrackDepth":2,"tensionCrackWater":1}},
       {"method":"Morgenstern-Price","label":"Spencer (M-P, constant f(x))","published":1.332,"publishedBy":"Program D","options":{"intersliceFunction":"constant","porePressureHead":"vertical","slices":60,"tensionCrackDepth":2,"tensionCrackWater":1}},
     ],
-    paper: [{"value": 1.35, "method": "Spencer, at T = 170 kN/m", "source": "Tandjiria, Low & Teh (2002)"}],
+    paper: [{"value": 1.35, "method": "generalized method of slices, at T = 170.5 kN/m", "source": "Tandjiria, Low & Teh (2002)"}],
+    notes: [
+      "Tandjiria et al.'s reinforcement force for F = 1.35 is 170.5 kN/m (Table 2, circular surface, all three force distributions); their circle is drawn only in Fig. 5a (about (14.85, 13.37), R 13.4 when read) and differs from this program circle. On their input (30° face, 2.06 m water-filled crack, T = 170.5) cSlope's Spencer gives 1.346 on that circle. The paper's method is the generalized method of slices; it does not say which side-force function it used.",
+    ],
   },
   {
     id: "V086b",
     title: "Tandjiria embankment, clay fill, water-filled crack",
-    reference: "Tandjiria, Low & Teh (2002).",
+    reference: "Tandjiria, V., Low, B.K. & Teh, C.I. (2002). Effect of reinforcement force distribution on stability of embankments. Geotextiles and Geomembranes 20, 423–443.",
     surface: "search",
     units: "SI",
     description: "Half-embankment (9 m crest, 10 m wide crest, 1V:1.67H face) of clay fill (Su = 20 kPa) on soft clay (Su = 20 kPa), γ = 19.4; 2 m water-filled tension crack, unreinforced; circular search. Also run with the automatic (Rankine) crack depth.",
@@ -2642,12 +2711,13 @@ export const PROBLEMS: RawCase[] = [
     paper: [{"value": 0.981, "method": "Spencer", "source": "Tandjiria, Low & Teh (2002)"}],
     notes: [
       "program D gives 0.968 on the reference circle, as cSlope does; Tandjiria 0.981.",
+      "This is commercial program A's version (face 1V:1.67H, 2 m crack). Tandjiria et al. give a 30° face (1V:1.732H, p. 431, Fig. 4) and a water-filled crack 2c/γ = 2.06 m deep (Table 2 note); their 0.981 is checked on that input in V086d. Their soft-clay unit weight is not printed; 19.4 here and 20 in V086c are assumptions (docs/kallor/tandjiria-low-teh-2002.md).",
     ],
   },
   {
     id: "V086c",
     title: "Tandjiria embankment, sand fill, dry crack",
-    reference: "Tandjiria, Low & Teh (2002).",
+    reference: "Tandjiria, V., Low, B.K. & Teh, C.I. (2002). Effect of reinforcement force distribution on stability of embankments. Geotextiles and Geomembranes 20, 423–443.",
     surface: "search",
     units: "SI",
     description: "The V086 embankment as a sand fill (φ′ = 37°, γ = 17) on soft clay (Su = 20 kPa, γ = 20) with a dry 2 m tension crack, unreinforced; circular search.",
@@ -2659,7 +2729,34 @@ export const PROBLEMS: RawCase[] = [
     paper: [{"value": 1.219, "method": "Spencer", "source": "Tandjiria, Low & Teh (2002)"}],
     notes: [
       "program D gives 1.200 on the reference circle; Tandjiria 1.219.",
+      "Commercial program A's version. Tandjiria et al. give the sand fill no tension crack (it is mentioned only for the clay fill, p. 431, and their Fig. 6a circle reaches the crest) and a 30° face; their 1.219 is checked on that input in V086e.",
     ],
+  },
+  {
+    id: "V086d",
+    title: "Tandjiria embankment, clay fill, the paper's geometry",
+    reference: "Tandjiria, V., Low, B.K. & Teh, C.I. (2002). Effect of reinforcement force distribution on stability of embankments. Geotextiles and Geomembranes 20, 423–443; problem 1, Table 2.",
+    surface: "search",
+    units: "SI",
+    description: "The V086b clay-fill embankment as the paper gives it: a 30° face (p. 431, Fig. 4) and a water-filled tension crack 2c/γ = 2.06 m deep (Table 2 note), unreinforced; circular search.",
+    definition: {"coordinates":[[0,0],[0,9],[9.608,9],[20,3],[30,3],[30,0]],"materials":[{"name":"Fill","model":{"kind":"undrained","unitWeight":19.4,"undrainedShearStrength":20,"suRefDepth":0,"suRateOfChange":0}},{"name":"Soft clay","model":{"kind":"undrained","unitWeight":19.4,"undrainedShearStrength":20,"suRefDepth":0,"suRateOfChange":0}}],"materialBoundaries":[{"coordinates":[[-1,3],[31,3]],"materialName":""}],"regionAssignments":[{"point":[0.3,3.05],"materialName":"Fill"},{"point":[0.3,1.5],"materialName":"Soft clay"}]},
+    checks: [
+      {"method":"Morgenstern-Price","label":"Spencer (M-P, constant f(x))","published":0.981,"publishedBy":"Tandjiria, Low & Teh","options":{"intersliceFunction":"constant","tensionCrackAuto":true,"tensionCrackWater":1}},
+    ],
+    publicNote: "The paper uses the generalized method of slices without naming its side-force function; Spencer's method is cSlope's nearest. The soft clay's unit weight is not printed and is taken as the fill's (19.4).",
+  },
+  {
+    id: "V086e",
+    title: "Tandjiria embankment, sand fill, the paper's geometry",
+    reference: "Tandjiria, V., Low, B.K. & Teh, C.I. (2002). Effect of reinforcement force distribution on stability of embankments. Geotextiles and Geomembranes 20, 423–443; problem 2.",
+    surface: "search",
+    units: "SI",
+    description: "The V086c sand-fill embankment as the paper gives it: a 30° face and no tension crack (the paper mentions one only for the clay fill), unreinforced; circular search.",
+    definition: {"coordinates":[[0,0],[0,9],[9.608,9],[20,3],[30,3],[30,0]],"materials":[{"name":"Fill","model":{"kind":"mohr-coulomb","unitWeight":17,"cohesion":0,"frictionAngle":37}},{"name":"Soft clay","model":{"kind":"undrained","unitWeight":20,"undrainedShearStrength":20,"suRefDepth":0,"suRateOfChange":0}}],"materialBoundaries":[{"coordinates":[[-1,3],[31,3]],"materialName":""}],"regionAssignments":[{"point":[0.3,3.05],"materialName":"Fill"},{"point":[0.3,1.5],"materialName":"Soft clay"}]},
+    checks: [
+      {"method":"Morgenstern-Price","label":"Spencer (M-P, constant f(x))","published":1.219,"publishedBy":"Tandjiria, Low & Teh","options":{"intersliceFunction":"constant"}},
+    ],
+    publicNote: "The paper uses the generalized method of slices without naming its side-force function; Spencer's method is cSlope's nearest. The soft clay's unit weight is not printed; 20 kN/m³ is assumed (17 gives 0.1 % less).",
   },
   {
     id: "V087",

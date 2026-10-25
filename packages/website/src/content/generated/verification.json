@@ -1,10 +1,10 @@
 {
  "summary": {
-  "problems": 167,
-  "results": 328,
-  "publishedValues": 189,
-  "problemsWithPublished": 133,
-  "literatureProblems": 157,
+  "problems": 171,
+  "results": 334,
+  "publishedValues": 199,
+  "problemsWithPublished": 137,
+  "literatureProblems": 161,
   "reliabilityQuantities": 25
  },
  "problems": [
@@ -115,12 +115,18 @@
      "computed": 0.4192
     },
     {
-     "value": 0.39,
-     "upper": 0.44,
+     "value": 0.44,
      "method": "Spencer, non-circular",
      "source": "Kim et al. (2002)",
      "analysis": "Spencer, non-circular",
      "computed": 0.411
+    },
+    {
+     "value": 0.4,
+     "upper": 0.45,
+     "method": "limit analysis, lower and upper bound",
+     "source": "Kim et al. (2002)",
+     "computed": null
     },
     {
      "value": 0.39,
@@ -262,7 +268,7 @@
      }
     }
    ],
-   "note": "Baker (2003) gives the factor of safety for the Mohr-Coulomb fit and for the non-linear envelope without naming the slice method."
+   "note": "Baker (2003) gives the factor of safety for the Mohr-Coulomb fit and for the non-linear envelope with Taylor's stability chart (friction-circle method, critical circle per Baker 2002, Janbu's normal-stress approximation; Baker 2003 pp. 385, 387)."
   },
   {
    "id": "V004b",
@@ -304,12 +310,12 @@
      }
     }
    ],
-   "note": "Baker (2003) gives the factor of safety for the Mohr-Coulomb fit and for the non-linear envelope without naming the slice method."
+   "note": "Baker (2003) gives the factor of safety for the Mohr-Coulomb fit and for the non-linear envelope with Taylor's stability chart (friction-circle method, critical circle per Baker 2002, Janbu's normal-stress approximation; Baker 2003 pp. 385, 387)."
   },
   {
    "id": "V005",
    "title": "Baker (1993) dam, end of construction, infinite-slope face",
-   "reference": "Baker (1993).",
+   "reference": "Baker, R., Frydman, S. & Talesnick, M. (1993). Slope stability analysis for undrained loading conditions. Int. J. Numer. Anal. Meth. Geomech. 17, 15–43.",
    "literature": true,
    "commercial": false,
    "surface": "search",
@@ -321,6 +327,13 @@
      "method": "infinite slope",
      "analysis": "Bishop simplified",
      "computed": 2.5237
+    },
+    {
+     "value": 2.41,
+     "method": "Spencer, non-circular (dynamic programming)",
+     "source": "Baker, Frydman & Talesnick (1993)",
+     "analysis": "Spencer, non-circular",
+     "computed": 2.5023
     }
    ],
    "results": [
@@ -333,13 +346,18 @@
      "method": "Spencer",
      "computed": 2.5237,
      "programs": null
+    },
+    {
+     "method": "Spencer, non-circular",
+     "computed": 2.5023,
+     "programs": null
     }
    ]
   },
   {
    "id": "V006",
    "title": "Baker & Leshchinsky (2001) planar surface",
-   "reference": "Baker & Leshchinsky (2001).",
+   "reference": "Baker, R. & Leshchinsky, D. (2001). Spatial distribution of safety factors. J. Geotech. Geoenviron. Eng. 127(2), 135–145.",
    "literature": true,
    "commercial": false,
    "surface": "fixed",
@@ -397,7 +415,7 @@
      }
     }
    ],
-   "note": "Baker (2003) gives the factor of safety for the Mohr-Coulomb fit and for the non-linear envelope without naming the slice method."
+   "note": "Baker (2003) gives the factor of safety for the Mohr-Coulomb fit and for the non-linear envelope with Taylor's stability chart (friction-circle method, critical circle per Baker 2002, Janbu's normal-stress approximation; Baker 2003 pp. 385, 387)."
   },
   {
    "id": "V007b",
@@ -439,7 +457,7 @@
      }
     }
    ],
-   "note": "Baker (2003) gives the factor of safety for the Mohr-Coulomb fit and for the non-linear envelope without naming the slice method; 1.50 is his Mohr-Coulomb value for the same slope."
+   "note": "Baker (2003) gives the factor of safety for the Mohr-Coulomb fit and for the non-linear envelope with Taylor's stability chart (friction-circle method, critical circle per Baker 2002, Janbu's normal-stress approximation; Baker 2003 pp. 385, 387); 1.50 is his Mohr-Coulomb value for the same slope."
   },
   {
    "id": "V007c",
@@ -467,7 +485,7 @@
      }
     }
    ],
-   "note": "Baker (2003) gives the factor of safety for the Mohr-Coulomb fit without naming the slice method."
+   "note": "Baker (2003) gives the factor of safety for the Mohr-Coulomb fit with Taylor's stability chart (friction-circle method, critical circle per Baker 2002, Janbu's normal-stress approximation; Baker 2003 pp. 385, 387)."
   },
   {
    "id": "V008a",
@@ -495,7 +513,7 @@
      }
     }
    ],
-   "note": "Baker (2003) gives the factor of safety for the Mohr-Coulomb fit without naming the slice method."
+   "note": "Baker (2003) gives the factor of safety for the Mohr-Coulomb fit with Taylor's stability chart (friction-circle method, critical circle per Baker 2002, Janbu's normal-stress approximation; Baker 2003 pp. 385, 387)."
   },
   {
    "id": "V008b",
@@ -523,12 +541,12 @@
      }
     }
    ],
-   "note": "Baker (2003) gives the factor of safety for the Mohr-Coulomb fit without naming the slice method."
+   "note": "Baker (2003) gives the factor of safety for the Mohr-Coulomb fit with Taylor's stability chart (friction-circle method, critical circle per Baker 2002, Janbu's normal-stress approximation; Baker 2003 pp. 385, 387)."
   },
   {
    "id": "V009a",
    "title": "Baker & Leshchinsky clay-core dam, reservoir and crest crack",
-   "reference": "Baker & Leshchinsky (2001).",
+   "reference": "Baker, R. & Leshchinsky, D. (2001). Spatial distribution of safety factors. J. Geotech. Geoenviron. Eng. 127(2), 135–145.",
    "literature": true,
    "commercial": false,
    "surface": "fixed",
@@ -549,7 +567,7 @@
   {
    "id": "V009b",
    "title": "Baker & Leshchinsky dam, Baker's non-circular surface",
-   "reference": "Baker & Leshchinsky (2001).",
+   "reference": "Baker, R. & Leshchinsky, D. (2001). Spatial distribution of safety factors. J. Geotech. Geoenviron. Eng. 127(2), 135–145.",
    "literature": true,
    "commercial": false,
    "surface": "fixed",
@@ -574,7 +592,7 @@
   {
    "id": "V009c",
    "title": "Baker & Leshchinsky clay-core dam, critical surface search",
-   "reference": "Baker & Leshchinsky (2001).",
+   "reference": "Baker, R. & Leshchinsky, D. (2001). Spatial distribution of safety factors. J. Geotech. Geoenviron. Eng. 127(2), 135–145.",
    "literature": true,
    "commercial": false,
    "surface": "search",
@@ -603,20 +621,12 @@
   {
    "id": "V010",
    "title": "Borges & Cardoso embankment 2 (geosynthetic)",
-   "reference": "Borges & Cardoso (2002), Geotextiles and Geomembranes 20(6).",
+   "reference": "Borges, J.L. & Cardoso, A.S. (2002). Overall stability of geosynthetic-reinforced embankments on soft soils. Geotextiles and Geomembranes 20, 395–421.",
    "literature": true,
    "commercial": false,
    "surface": "fixed",
    "units": "SI",
-   "published": [
-    {
-     "value": 1.15,
-     "source": "Borges & Cardoso",
-     "method": "Morgenstern-Price (half-sine)",
-     "analysis": "Morgenstern-Price (half-sine)",
-     "computed": 1.1624
-    }
-   ],
+   "published": [],
    "results": [
     {
      "method": "Morgenstern-Price (half-sine)",
@@ -637,9 +647,47 @@
    ]
   },
   {
+   "id": "V010b",
+   "title": "Borges & Cardoso embankment 2 (geosynthetic), the paper's circle B",
+   "reference": "Borges, J.L. & Cardoso, A.S. (2002). Overall stability of geosynthetic-reinforced embankments on soft soils. Geotextiles and Geomembranes 20, 395–421; case 2, Table 11, Fig. 14.",
+   "literature": true,
+   "commercial": false,
+   "surface": "fixed",
+   "units": "SI",
+   "published": [
+    {
+     "value": 1.15,
+     "source": "Borges & Cardoso",
+     "method": "Bishop simplified",
+     "analysis": "Bishop simplified",
+     "computed": 1.1585
+    },
+    {
+     "value": 1.19,
+     "method": "authors' moment method, circle A",
+     "source": "Borges & Cardoso (2002)",
+     "computed": null
+    },
+    {
+     "value": 1.22,
+     "method": "finite elements, circle A",
+     "source": "Borges & Cardoso (2002)",
+     "computed": null
+    }
+   ],
+   "results": [
+    {
+     "method": "Bishop simplified",
+     "computed": 1.1585,
+     "programs": null
+    }
+   ],
+   "note": "Borges & Cardoso use their own moment-equilibrium method of slices on circles (Kaniraj & Abdullah 1993 with their improvements); simplified Bishop is the nearest of cSlope's methods. Circle B's coordinates and the geosynthetic level are printed in the paper (Table 11, p. 407)."
+  },
+  {
    "id": "V011a",
    "title": "Borges & Cardoso embankment 3, H = 7 m, circle A",
-   "reference": "Borges & Cardoso (2002), Geotextiles and Geomembranes 20(6).",
+   "reference": "Borges, J.L. & Cardoso, A.S. (2002). Overall stability of geosynthetic-reinforced embankments on soft soils. Geotextiles and Geomembranes 20, 395–421.",
    "literature": true,
    "commercial": false,
    "surface": "fixed",
@@ -666,7 +714,7 @@
   {
    "id": "V011b",
    "title": "Borges & Cardoso embankment 3, H = 7 m, circle B",
-   "reference": "Borges & Cardoso (2002), Geotextiles and Geomembranes 20(6).",
+   "reference": "Borges, J.L. & Cardoso, A.S. (2002). Overall stability of geosynthetic-reinforced embankments on soft soils. Geotextiles and Geomembranes 20, 395–421.",
    "literature": true,
    "commercial": false,
    "surface": "fixed",
@@ -693,7 +741,7 @@
   {
    "id": "V012",
    "title": "Borges & Cardoso embankment 3, H = 8.75 m, circle C",
-   "reference": "Borges & Cardoso (2002), Geotextiles and Geomembranes 20(6).",
+   "reference": "Borges, J.L. & Cardoso, A.S. (2002). Overall stability of geosynthetic-reinforced embankments on soft soils. Geotextiles and Geomembranes 20, 395–421.",
    "literature": true,
    "commercial": false,
    "surface": "fixed",
@@ -992,7 +1040,7 @@
   },
   {
    "id": "V017a",
-   "title": "Vancouver gabion wall, equivalent cohesion",
+   "title": "Ontario gabion wall (Cao et al. 2016), equivalent cohesion",
    "reference": "Cao et al. (2016); Grodecki (2017).",
    "literature": true,
    "commercial": false,
@@ -1021,7 +1069,7 @@
   },
   {
    "id": "V017b",
-   "title": "Vancouver gabion wall, mesh as geosynthetic supports",
+   "title": "Ontario gabion wall (Cao et al. 2016), mesh as geosynthetic supports",
    "reference": "Cao et al. (2016); Grodecki (2017).",
    "literature": true,
    "commercial": false,
@@ -1043,7 +1091,7 @@
   {
    "id": "V018",
    "title": "Chen & Shao (1988) frictionless 60° slope, Prandtl mechanism",
-   "reference": "Chen & Shao (1988).",
+   "reference": "Chen, Z. & Shao, C. (1988). Evaluation of minimum factor of safety in slope stability analysis. Can. Geotech. J. 25(4), 735–748.",
    "literature": true,
    "commercial": false,
    "surface": "fixed",
@@ -1079,7 +1127,7 @@
   {
    "id": "V019",
    "title": "Cheng et al. 11 m homogeneous slope",
-   "reference": "Cheng, Lansivaara & Wei (2007), Computers and Geotechnics 34.",
+   "reference": "Cheng, Y.M., Lansivaara, T. & Wei, W.B. (2007). Two-dimensional slope stability analysis by limit equilibrium and strength reduction methods. Computers and Geotechnics 34(3), 137–150.",
    "literature": true,
    "commercial": false,
    "surface": "search",
@@ -1089,18 +1137,23 @@
      "value": 1.383,
      "source": "Cheng et al.",
      "method": "Spencer",
-     "analysis": "Spencer",
+     "analysis": "Spencer (vertical pore-pressure head)",
      "computed": 1.3984
     }
    ],
    "results": [
     {
-     "method": "Spencer",
+     "method": "Spencer (40 slices, vertical pore-pressure head)",
      "computed": 1.3984,
      "programs": {
       "min": 1.38,
       "max": 1.398
      }
+    },
+    {
+     "method": "Spencer (vertical pore-pressure head)",
+     "computed": 1.3984,
+     "programs": null
     },
     {
      "method": "Bishop simplified",
@@ -1115,24 +1168,24 @@
   {
    "id": "V020",
    "title": "Cheng et al. benched slope, global minimum",
-   "reference": "Cheng, Lansivaara & Wei (2007), Computers and Geotechnics 34.",
+   "reference": "Cheng, Y.M., Lansivaara, T. & Wei, W.B. (2007). Two-dimensional slope stability analysis by limit equilibrium and strength reduction methods. Computers and Geotechnics 34(3), 137–150.",
    "literature": true,
    "commercial": false,
    "surface": "search",
    "units": "SI",
    "published": [
     {
-     "value": 1.327,
+     "value": 1.33,
      "source": "Cheng et al.",
      "method": "Spencer",
      "analysis": "Spencer",
-     "computed": 1.3382
+     "computed": 1.3328
     }
    ],
    "results": [
     {
      "method": "Spencer",
-     "computed": 1.3382,
+     "computed": 1.3328,
      "programs": {
       "min": 1.336,
       "max": 1.338
@@ -1140,7 +1193,7 @@
     },
     {
      "method": "Bishop simplified",
-     "computed": 1.3427,
+     "computed": 1.3373,
      "programs": {
       "min": 1.342,
       "max": 1.342
@@ -1158,7 +1211,7 @@
    "units": "SI",
    "published": [
     {
-     "value": 1.128,
+     "value": 1.1178,
      "source": "Chowdhury & Xu",
      "method": "Bishop simplified",
      "analysis": "Bishop simplified",
@@ -1199,7 +1252,7 @@
    "units": "SI",
    "published": [
     {
-     "value": 1.109,
+     "value": 1.1088,
      "source": "Chowdhury & Xu",
      "method": "Bishop simplified",
      "analysis": "Bishop simplified",
@@ -1597,6 +1650,13 @@
      "method": "Bishop simplified",
      "analysis": "Bishop simplified",
      "computed": 1.2198
+    },
+    {
+     "value": 1.19,
+     "source": "Duncan & Wright",
+     "method": "Spencer",
+     "analysis": "Spencer",
+     "computed": 1.195
     }
    ],
    "results": [
@@ -1607,6 +1667,11 @@
       "min": 1.228,
       "max": 1.228
      }
+    },
+    {
+     "method": "Spencer",
+     "computed": 1.195,
+     "programs": null
     },
     {
      "method": "Spencer, non-circular",
@@ -1904,7 +1969,7 @@
    "units": "SI",
    "published": [
     {
-     "value": 1.535,
+     "value": 1.529,
      "source": "Duncan & Wright",
      "method": "Spencer",
      "analysis": "Spencer",
@@ -1945,7 +2010,7 @@
    "units": "imperial",
    "published": [
     {
-     "value": 1.3,
+     "value": 1.276,
      "source": "Duncan & Wright",
      "method": "Spencer",
      "analysis": "Spencer",
@@ -1986,7 +2051,7 @@
    "units": "imperial",
    "published": [
     {
-     "value": 1.312,
+     "value": 1.328,
      "source": "Duncan & Wright",
      "method": "Spencer",
      "analysis": "Spencer",
@@ -2149,14 +2214,6 @@
       "min": 0.898,
       "max": 0.898
      }
-    },
-    {
-     "method": "Spencer, non-circular",
-     "computed": 0.883,
-     "programs": {
-      "min": 0.903,
-      "max": 0.903
-     }
     }
    ]
   },
@@ -2258,9 +2315,11 @@
    "units": "SI",
    "published": [
     {
-     "value": 1.61,
-     "source": "Duncan & Wright",
-     "computed": null
+     "value": 1.62,
+     "method": "Spencer",
+     "source": "Duncan, Wright & Brandon (2014)",
+     "analysis": "Spencer",
+     "computed": 1.6073
     }
    ],
    "results": [
@@ -2315,7 +2374,40 @@
      }
     }
    ],
-   "note": "Duncan & Wright's 1.16 is 5–8 % above the other programs (1.07–1.10) on the same input."
+   "note": "Duncan & Wright's 1.16 is for γ = 125 pcf and their printed phreatic line, not this program input (100 pcf, a 9-point line); on their input cSlope gives 1.157 (V038b)."
+  },
+  {
+   "id": "V038b",
+   "title": "Homogeneous dam with a piezometric line, Duncan & Wright's input",
+   "reference": "Duncan, J.M., Wright, S.G. & Brandon, T.L. (2014). Soil Strength and Slope Stability, 2nd ed., Wiley; §7.7, Figs. 7.30–7.36, Table 7.8.",
+   "literature": true,
+   "commercial": false,
+   "surface": "search",
+   "units": "SI",
+   "published": [
+    {
+     "value": 1.16,
+     "source": "Duncan & Wright",
+     "method": "Spencer",
+     "analysis": "Spencer",
+     "computed": 1.1569
+    },
+    {
+     "value": 1.19,
+     "method": "Spencer, finite-element pore pressures",
+     "source": "Duncan, Wright & Brandon (2014)",
+     "analysis": "Spencer",
+     "computed": 1.1569
+    }
+   ],
+   "results": [
+    {
+     "method": "Spencer",
+     "computed": 1.1569,
+     "programs": null
+    }
+   ],
+   "note": "The book contradicts itself on the unit weight: its figures say 100 pcf, its hand calculations and slice weights use 125 pcf. With 125 pcf and the book's line cSlope reproduces the 1.16 that all three of the book's programs give (Table 7.8); with 100 pcf it gives 1.03."
   },
   {
    "id": "V039",
@@ -2329,12 +2421,12 @@
     {
      "value": 1.45,
      "source": "Duncan & Wright",
-     "method": "Bishop simplified",
-     "analysis": "Bishop simplified",
-     "computed": 1.4507
+     "method": "Spencer",
+     "analysis": "Spencer",
+     "computed": 1.4472
     },
     {
-     "value": 1.17,
+     "value": 1.16,
      "source": "Duncan & Wright",
      "method": "Spencer, non-circular",
      "analysis": "Spencer, non-circular",
@@ -2342,11 +2434,6 @@
     }
    ],
    "results": [
-    {
-     "method": "Bishop simplified",
-     "computed": 1.4507,
-     "programs": null
-    },
     {
      "method": "Spencer",
      "computed": 1.4472,
@@ -2370,7 +2457,15 @@
    "commercial": false,
    "surface": "search",
    "units": "SI",
-   "published": [],
+   "published": [
+    {
+     "value": 1.46,
+     "method": "Bishop simplified",
+     "source": "El-Ramly et al. (2002)",
+     "analysis": "Bishop simplified",
+     "computed": 1.4592
+    }
+   ],
    "results": [
     {
      "method": "Bishop simplified",
@@ -2507,7 +2602,7 @@
   {
    "id": "V043",
    "title": "Syncrude tailings dyke (El-Ramly et al.), composite circle",
-   "reference": "El-Ramly, Morgenstern & Cruden (2003), Can. Geotech. J. 40.",
+   "reference": "El-Ramly, H., Morgenstern, N.R. & Cruden, D.M. (2003). Probabilistic stability analysis of a tailings dyke on presheared clay-shale. Can. Geotech. J. 40(1), 192–208.",
    "literature": true,
    "commercial": false,
    "surface": "fixed",
@@ -3107,9 +3202,9 @@
    "units": "SI",
    "published": [
     {
-     "value": 1.01,
-     "upper": 1.03,
-     "method": "Spencer, non-circular",
+     "value": 1.009,
+     "upper": 1.025,
+     "method": "Spencer, non-circular (test problem 3)",
      "source": "Chen & Shao (1988)",
      "analysis": "Spencer, non-circular",
      "computed": 1.0061
@@ -3144,7 +3239,7 @@
      "programs": null
     }
    ],
-   "note": "Chen & Shao give 1.01–1.03 for a surface sliding along the weak layer. Greco's Monte Carlo search finds a global minimum of 0.97 along the weak layer, entering the level ground far from the toe, and a local minimum of 1.08 on a nearly circular surface from the toe; the programs' block searches and cSlope give 1.01 on a commercial program's version of the geometry, 4 % above Greco's global minimum."
+   "note": "Chen & Shao give 1.009–1.025 with Spencer's assumption for a surface sliding along the weak seam (their test problem 3, Tables 5–6). Greco's Monte Carlo search finds a global minimum of 0.97 along the weak layer, entering the level ground far from the toe, and a local minimum of 1.08 on a nearly circular surface from the toe; the programs' block searches and cSlope give 1.01 on a commercial program's version of the geometry, 4 % above Greco's global minimum."
   },
   {
    "id": "V054",
@@ -4091,7 +4186,16 @@
     },
     {
      "value": 1.17,
-     "source": "Kim (2002)",
+     "method": "Spencer, non-circular (random search)",
+     "source": "Kim et al. (2002)",
+     "analysis": "Spencer, non-circular",
+     "computed": null
+    },
+    {
+     "value": 1.13,
+     "upper": 1.27,
+     "method": "limit analysis, lower and upper bound",
+     "source": "Kim et al. (2002)",
      "computed": null
     }
    ],
@@ -4100,9 +4204,14 @@
      "method": "Bishop simplified",
      "computed": 1.1342,
      "programs": null
+    },
+    {
+     "method": "Spencer, non-circular",
+     "computed": null,
+     "programs": null
     }
    ],
-   "note": "The comparison program's 1.19 is not reproduced on the circle it prints with that value: cSlope gives 1.13 there, close to Low's Bishop value 1.14, which is the check. Low himself calls that Bishop value misleading, an artefact of negative effective normal stresses in the stiff bank with φ = 15°: with φ = 0 in the bank both Ordinary and Bishop give 1.31, and his own hand method 1.38. Kim (2002) gives 1.17."
+   "note": "The comparison program's 1.19 is not reproduced on the circle it prints with that value: cSlope gives 1.13 there, close to Low's Bishop value 1.14, which is the check. Low himself calls that Bishop value misleading, an artefact of negative effective normal stresses in the stiff bank with φ = 15°: with φ = 0 in the bank both Ordinary and Bishop give 1.31, and his own hand method 1.38. Kim et al. (2002) give 1.17 with Spencer's method on a non-circular surface and limit-analysis bounds of 1.13–1.27."
   },
   {
    "id": "V069a",
@@ -5002,7 +5111,7 @@
   {
    "id": "V085",
    "title": "Bradwell excavated slope, stiff-fissured London clay",
-   "reference": "Skempton & LaRochelle (1965); Duncan & Wright, Soil Strength and Slope Stability.",
+   "reference": "Skempton, A.W. & La Rochelle, P. (1965). The Bradwell slip: a short-term failure in London clay. Géotechnique 15(3), 221–242; Duncan, Wright & Brandon (2014), Soil Strength and Slope Stability, 2nd ed., §7.7.3.",
    "literature": true,
    "commercial": false,
    "surface": "search",
@@ -5021,13 +5130,6 @@
      "source": "Duncan & Wright",
      "analysis": "Janbu simplified",
      "computed": 1.6268
-    },
-    {
-     "value": 1.74,
-     "method": "Janbu corrected",
-     "source": "Duncan & Wright",
-     "analysis": "Janbu corrected",
-     "computed": 1.7352
     }
    ],
    "results": [
@@ -5068,7 +5170,7 @@
   {
    "id": "V086a",
    "title": "Tandjiria embankment, clay fill, geosynthetic T = 169 kN/m",
-   "reference": "Tandjiria, Low & Teh (2002).",
+   "reference": "Tandjiria, V., Low, B.K. & Teh, C.I. (2002). Effect of reinforcement force distribution on stability of embankments. Geotextiles and Geomembranes 20, 423–443.",
    "literature": true,
    "commercial": false,
    "surface": "fixed",
@@ -5076,10 +5178,9 @@
    "published": [
     {
      "value": 1.35,
-     "method": "Spencer, at T = 170 kN/m",
+     "method": "generalized method of slices, at T = 170.5 kN/m",
      "source": "Tandjiria, Low & Teh (2002)",
-     "analysis": "Spencer",
-     "computed": 1.3328
+     "computed": null
     }
    ],
    "results": [
@@ -5096,7 +5197,7 @@
   {
    "id": "V086b",
    "title": "Tandjiria embankment, clay fill, water-filled crack",
-   "reference": "Tandjiria, Low & Teh (2002).",
+   "reference": "Tandjiria, V., Low, B.K. & Teh, C.I. (2002). Effect of reinforcement force distribution on stability of embankments. Geotextiles and Geomembranes 20, 423–443.",
    "literature": true,
    "commercial": false,
    "surface": "search",
@@ -5140,7 +5241,7 @@
   {
    "id": "V086c",
    "title": "Tandjiria embankment, sand fill, dry crack",
-   "reference": "Tandjiria, Low & Teh (2002).",
+   "reference": "Tandjiria, V., Low, B.K. & Teh, C.I. (2002). Effect of reinforcement force distribution on stability of embankments. Geotextiles and Geomembranes 20, 423–443.",
    "literature": true,
    "commercial": false,
    "surface": "search",
@@ -5172,6 +5273,58 @@
      }
     }
    ]
+  },
+  {
+   "id": "V086d",
+   "title": "Tandjiria embankment, clay fill, the paper's geometry",
+   "reference": "Tandjiria, V., Low, B.K. & Teh, C.I. (2002). Effect of reinforcement force distribution on stability of embankments. Geotextiles and Geomembranes 20, 423–443; problem 1, Table 2.",
+   "literature": true,
+   "commercial": false,
+   "surface": "search",
+   "units": "SI",
+   "published": [
+    {
+     "value": 0.981,
+     "source": "Tandjiria, Low & Teh",
+     "method": "Spencer",
+     "analysis": "Spencer",
+     "computed": 0.9728
+    }
+   ],
+   "results": [
+    {
+     "method": "Spencer",
+     "computed": 0.9728,
+     "programs": null
+    }
+   ],
+   "note": "The paper uses the generalized method of slices without naming its side-force function; Spencer's method is cSlope's nearest. The soft clay's unit weight is not printed and is taken as the fill's (19.4)."
+  },
+  {
+   "id": "V086e",
+   "title": "Tandjiria embankment, sand fill, the paper's geometry",
+   "reference": "Tandjiria, V., Low, B.K. & Teh, C.I. (2002). Effect of reinforcement force distribution on stability of embankments. Geotextiles and Geomembranes 20, 423–443; problem 2.",
+   "literature": true,
+   "commercial": false,
+   "surface": "search",
+   "units": "SI",
+   "published": [
+    {
+     "value": 1.219,
+     "source": "Tandjiria, Low & Teh",
+     "method": "Spencer",
+     "analysis": "Spencer",
+     "computed": 1.2045
+    }
+   ],
+   "results": [
+    {
+     "method": "Spencer",
+     "computed": 1.2045,
+     "programs": null
+    }
+   ],
+   "note": "The paper uses the generalized method of slices without naming its side-force function; Spencer's method is cSlope's nearest. The soft clay's unit weight is not printed; 20 kN/m³ is assumed (17 gives 0.1 % less)."
   },
   {
    "id": "V087",

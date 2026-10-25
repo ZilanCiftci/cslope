@@ -33,11 +33,37 @@ The script compares the regenerated verification table with the committed one an
 | 2026-10-25 | V091: USACE's chart value is 1.24, not 1.33; V092: USACE's own piezometric line documented; V096d–e: Zhu & Lee's surface 3 on the paper's own circle | 0 | 0.353 → 0.353 | 0.499 → 0.499 | 1.045 → 0.955 | 1.537 → 1.460 | 182 s (4 workers, load 6.0 at start) |
 | 2026-10-25 | Review fixes: USACE's V092 values no longer compared on the program's line, one source string per manual and paper; regenerated at idle load | 0 | 0.353 → 0.353 | 0.499 → 0.499 | 0.955 → 0.955 | 1.460 → 1.464 | 100 s (4 workers, load 0.5 at start) |
 | 2026-10-25 | Round two from the source extracts: V063 check is Bishop, Greco's global minimum 0.97 on V053, tiered-wall reinforcement 6.3 m, Morgenstern and Low reference values, Prandtl 1920 | 2 | 0.353 → 0.353 | 0.499 → 0.499 | 0.955 → 1.008 | 1.464 → 1.543 | 107 s (4 workers, load 1.5 at start) |
+| 2026-10-25 | Round three from 18 new sources: C&X, Cheng, D&W Table 14.1 and 2nd-edition values; new V010b, V038b, V086d-e on the sources' own input; V036 reference values printed, not read | 2 | 0.353 → 0.348 | 0.499 → 0.483 | 1.008 → 1.011 | 1.543 → 1.595 | 103 s (4 workers, load 0.8 at start) |
 <!-- summary-end -->
 
 ## Entries
 
 <!-- entries -->
+
+### 2026-10-25: Round three from 18 new sources: C&X, Cheng, D&W Table 14.1 and 2nd-edition values; new V010b, V038b, V086d-e on the sources' own input; V036 reference values printed, not read
+
+Compared with 12fc2b1. Errors are relative to the reference, in percent. Verification run time: 103 s (4 workers, load 0.8 at start).
+
+**Against other programs (midpoint of their range):** 2 moved (0 closer to the reference, 2 further).
+
+| Result | Reference | Before | After | Error before | Error after |
+|---|---|---|---|---|---|
+| V020 Spencer | 1.337 | 1.3382 | 1.3328 | +0.090 % | -0.314 % |
+| V020 Bishop simplified | 1.342 | 1.3427 | 1.3373 | +0.052 % | -0.350 % |
+| **Mean error (n = 279)** | | | | -0.235 % | -0.231 % |
+| **Mean absolute error** | | | | 0.353 % | 0.348 % |
+| **RMS error** | | | | 0.499 % | 0.483 % |
+| **Largest error** | | | | 2.215 % | 2.100 % |
+
+**Against the papers:** 0 moved (0 closer to the reference, 0 further).
+
+| Result | Reference | Before | After | Error before | Error after |
+|---|---|---|---|---|---|
+| **Mean error (n = 111)** | | | | -0.078 % | -0.167 % |
+| **Mean absolute error** | | | | 1.008 % | 1.011 % |
+| **RMS error** | | | | 1.543 % | 1.595 % |
+| **Largest error** | | | | 5.385 % | 6.591 % |
+
 
 ### 2026-10-25: Round two from the source extracts: V063 check is Bishop, Greco's global minimum 0.97 on V053, tiered-wall reinforcement 6.3 m, Morgenstern and Low reference values, Prandtl 1920
 
