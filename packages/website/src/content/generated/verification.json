@@ -1,9 +1,9 @@
 {
  "summary": {
   "problems": 164,
-  "results": 306,
-  "publishedValues": 170,
-  "problemsWithPublished": 134,
+  "results": 316,
+  "publishedValues": 169,
+  "problemsWithPublished": 133,
   "literatureProblems": 154,
   "reliabilityQuantities": 25
  },
@@ -984,15 +984,7 @@
      "computed": 1.7905,
      "programs": {
       "min": 1.79,
-      "max": 1.799
-     }
-    },
-    {
-     "method": "Spencer",
-     "computed": 1.7973,
-     "programs": {
-      "min": 1.803,
-      "max": 1.803
+      "max": 1.79
      }
     }
    ],
@@ -4526,6 +4518,14 @@
      }
     },
     {
+     "method": "Morgenstern-Price (half-sine)",
+     "computed": 1.5118,
+     "programs": {
+      "min": 1.51,
+      "max": 1.51
+     }
+    },
+    {
      "method": "Janbu corrected",
      "computed": 1.5215,
      "programs": {
@@ -4568,6 +4568,59 @@
      "programs": {
       "min": 1.391,
       "max": 1.391
+     }
+    },
+    {
+     "method": "Morgenstern-Price (half-sine)",
+     "computed": 1.3981,
+     "programs": {
+      "min": 1.398,
+      "max": 1.398
+     }
+    }
+   ],
+   "note": "The source compares programs and publishes no independent value."
+  },
+  {
+   "id": "V082d",
+   "title": "Sharma (1996) slope over undulating bedrock, circular search with exit limits",
+   "reference": "Sharma (1996); Malkawi et al. (2001).",
+   "literature": true,
+   "commercial": false,
+   "surface": "search",
+   "units": "SI",
+   "published": [],
+   "results": [
+    {
+     "method": "Bishop simplified",
+     "computed": 1.3693,
+     "programs": {
+      "min": 1.376,
+      "max": 1.376
+     }
+    },
+    {
+     "method": "Spencer",
+     "computed": 1.3758,
+     "programs": {
+      "min": 1.382,
+      "max": 1.382
+     }
+    },
+    {
+     "method": "Morgenstern-Price (half-sine)",
+     "computed": 1.3709,
+     "programs": {
+      "min": 1.378,
+      "max": 1.378
+     }
+    },
+    {
+     "method": "Janbu corrected",
+     "computed": 1.343,
+     "programs": {
+      "min": 1.345,
+      "max": 1.345
      }
     }
    ],
@@ -4828,7 +4881,10 @@
     {
      "method": "Janbu simplified",
      "computed": 1.6268,
-     "programs": null
+     "programs": {
+      "min": 1.628,
+      "max": 1.628
+     }
     }
    ]
   },
@@ -4893,6 +4949,14 @@
       "min": 0.975,
       "max": 0.975
      }
+    },
+    {
+     "method": "Morgenstern-Price (half-sine)",
+     "computed": 0.9681,
+     "programs": {
+      "min": 0.975,
+      "max": 0.975
+     }
     }
    ]
   },
@@ -4920,6 +4984,14 @@
      "programs": {
       "min": 1.209,
       "max": 1.209
+     }
+    },
+    {
+     "method": "Morgenstern-Price (half-sine)",
+     "computed": 1.215,
+     "programs": {
+      "min": 1.218,
+      "max": 1.218
      }
     }
    ]
@@ -4991,6 +5063,14 @@
       "min": 2.43,
       "max": 2.43
      }
+    },
+    {
+     "method": "Morgenstern-Price (half-sine)",
+     "computed": 2.4416,
+     "programs": {
+      "min": 2.447,
+      "max": 2.447
+     }
     }
    ]
   },
@@ -5035,6 +5115,14 @@
       "min": 2.65,
       "max": 2.65
      }
+    },
+    {
+     "method": "Morgenstern-Price (half-sine)",
+     "computed": 2.727,
+     "programs": {
+      "min": 2.744,
+      "max": 2.744
+     }
     }
    ]
   },
@@ -5076,6 +5164,14 @@
      "programs": {
       "min": 1.345,
       "max": 1.345
+     }
+    },
+    {
+     "method": "Morgenstern-Price (half-sine)",
+     "computed": 1.3163,
+     "programs": {
+      "min": 1.327,
+      "max": 1.327
      }
     }
    ]
@@ -5170,6 +5266,14 @@
       "min": 1.83,
       "max": 1.83
      }
+    },
+    {
+     "method": "Morgenstern-Price (half-sine)",
+     "computed": 2.0048,
+     "programs": {
+      "min": 2.027,
+      "max": 2.027
+     }
     }
    ]
   },
@@ -5237,7 +5341,10 @@
     {
      "method": "Janbu simplified, non-circular",
      "computed": 1.1764,
-     "programs": null
+     "programs": {
+      "min": 1.178,
+      "max": 1.178
+     }
     }
    ]
   },
@@ -5281,32 +5388,6 @@
   {
    "id": "V095a",
    "title": "Yamagami micro-pile slope, no pile",
-   "reference": "Yamagami micro-pile slope example.",
-   "literature": true,
-   "commercial": false,
-   "surface": "fixed",
-   "units": "SI",
-   "published": [
-    {
-     "value": 1.1,
-     "source": "Yamagami et al. (2000)",
-     "computed": null
-    }
-   ],
-   "results": [
-    {
-     "method": "Bishop simplified",
-     "computed": 1.1007,
-     "programs": {
-      "min": 1.102,
-      "max": 1.102
-     }
-    }
-   ]
-  },
-  {
-   "id": "V095b",
-   "title": "Homogeneous slope, no micro piles",
    "reference": "Yamagami et al. (2000).",
    "literature": true,
    "commercial": false,
@@ -5414,7 +5495,10 @@
     {
      "method": "Morgenstern-Price (half-sine)",
      "computed": 1.7796,
-     "programs": null
+     "programs": {
+      "min": 1.79,
+      "max": 1.79
+     }
     }
    ],
    "note": "Zhu & Lee's simplified Bishop value 1.429 (their Table II) is 22 % below their own Spencer (1.836) and Morgenstern-Price (1.823) values for the same circle; the programs and cSlope give about 1.80 with both methods, as expected on a circle. The value is shown but not counted in the error statistics. The paper has no tension crack and gives the surface only in a figure; the crack and the circle here follow a program's version of the problem."
@@ -5463,7 +5547,10 @@
     {
      "method": "Morgenstern-Price (half-sine)",
      "computed": 1.1716,
-     "programs": null
+     "programs": {
+      "min": 1.174,
+      "max": 1.174
+     }
     }
    ]
   },
