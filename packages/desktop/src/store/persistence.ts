@@ -303,6 +303,21 @@ function normalizeModelEntry(raw: unknown): ModelEntry {
       : [],
     customPlanesOnly: (model.customPlanesOnly ===
       true) as ModelEntry["customPlanesOnly"],
+    // Absent in files saved before the block search (read as none).
+    ...(Array.isArray(model.blockSearchObjects)
+      ? {
+          blockSearchObjects: (model.blockSearchObjects as unknown[]).flatMap((raw) => {
+            if (!raw || typeof raw !== "object") return [];
+            const o = raw as Record<string, unknown>;
+            return [
+              {
+                id: typeof o.id === "string" ? o.id : nextId("bso"),
+                points: normalizePoints(o.points),
+              },
+            ];
+          }),
+        }
+      : {}),
     resultViewSettings: normalizeResultView(model.resultViewSettings),
     viewOffset: pointOrUndefined(model.viewOffset),
     viewScale: positiveOrUndefined(model.viewScale),
@@ -822,6 +837,13 @@ function normalizePartialFactors(raw: unknown): PartialFactors | undefined {
   };
 }
 
+/** An angle range [min, max] with 0° < min ≤ max < 90°, as the engine takes it, or null. */
+function angleRangeOrNull(raw: unknown): [number, number] | null {
+  if (!Array.isArray(raw) || raw.length !== 2) return null;
+  const [lo, hi] = raw;
+  return typeof lo === "number" && typeof hi === "number" && lo > 0 && hi < 90 && lo <= hi ? [lo, hi] : null;
+}
+
 function normalizeAnalysisOptions(raw: unknown): AnalysisOptions {
   const base: AnalysisOptions = { ...APP_DEFAULT_ANALYSIS_OPTIONS };
   if (!raw || typeof raw !== "object") return base;
@@ -904,6 +926,9 @@ function normalizeAnalysisOptions(raw: unknown): AnalysisOptions {
       ? { minSlipArea: o.minSlipArea }
       : {}),
     ...(o.tensionCrackAuto === true ? { tensionCrackAuto: true } : {}),
+    ...(o.searchMethod === "block" ? { searchMethod: "block" as const } : {}),
+    ...(angleRangeOrNull(o.blockActiveAngle) ? { blockActiveAngle: angleRangeOrNull(o.blockActiveAngle) } : {}),
+    ...(angleRangeOrNull(o.blockPassiveAngle) ? { blockPassiveAngle: angleRangeOrNull(o.blockPassiveAngle) } : {}),
     tensionCrackDepth: Math.max(
       0,
       finiteOr(o.tensionCrackDepth, base.tensionCrackDepth ?? 0),

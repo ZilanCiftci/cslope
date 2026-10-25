@@ -91,6 +91,7 @@ export function EditCanvas() {
   } = useCanvasModelState();
   const activeSection = useAppStore((s) => s.activeSection);
   const customSearchPlanes = useAppStore((s) => s.customSearchPlanes);
+  const blockSearchObjects = useAppStore((s) => s.blockSearchObjects);
   const {
     setAnalysisLimits,
     updateUdl,
@@ -288,6 +289,7 @@ export function EditCanvas() {
       piles,
       piezometricLine,
       customSearchPlanes,
+      blockSearchObjects,
       viewScale,
       mouseWorld: null,
       hoverHit,
@@ -315,6 +317,7 @@ export function EditCanvas() {
       piles,
       piezometricLine,
       customSearchPlanes,
+      blockSearchObjects,
       viewScale,
       hoverHit,
       selectedPointIndex,

@@ -5,7 +5,7 @@ section: Analysis
 order: 1
 ---
 
-cSlope looks for the **critical slip surface**: the one with the lowest factor of safety. It generates circular surfaces between an entry range near the crest and an exit range near the toe, analyses each, and then refines the search around the best ones.
+cSlope looks for the **critical slip surface**: the one with the lowest factor of safety. By default it generates circular surfaces between an entry range near the crest and an exit range near the toe, analyses each, and then refines the search around the best ones. A [block search](#block-search) tries surfaces through regions you choose instead.
 
 <Figure media="allSurfaces" caption="Every analysed surface, coloured by its factor of safety. The critical surface is the lowest." />
 
@@ -47,6 +47,28 @@ Very shallow surfaces at the ground surface can give a low factor of safety that
 ## Non-circular surfaces
 
 Tick **Non-circular optimisation** in the options to let cSlope refine the best circles into non-circular surfaces. It moves the points of each surface to lower the factor of safety further. Use it where a weak layer or a stiff base makes a non-circular failure likely. The optimised surface is shown in the results like any other.
+
+## Block search
+
+Where the failure is expected to run along a weak layer or a stiff base, a **block search** tries surfaces through regions you choose instead of circles. Set **Search method** to **Block (through search objects)** in the options and add **search objects** below it, each as points `x, y; x, y; …`:
+
+- **one point** is a fixed point every surface passes through,
+- **two points** are a line: each surface passes through a point on it,
+- **three or more points** are a window (a polygon): each surface passes through a point inside it.
+
+<Figure src="/media/tutorials/block-search/01-options.png" alt="The Options window with the block search, two lines and angle ranges" caption="Block search in the options: two lines and the angle ranges of the end segments." />
+
+Each trial surface takes one point from every object, joins them from left to right as the base of the sliding block, and rises from both ends of the base to the ground. The upslope end rises at the **upslope end angle**, the downslope end at the **downslope end angle**. Left empty, these are the Rankine angles of the soil the end segments cut: 45° + φ/2 upslope (active) and 45° − φ/2 downslope (passive). Give a range, for example 45–70, to let the search try angles within it.
+
+The objects are drawn on the canvas, numbered B1, B2, … as in the options. **Iterations** is the number of block surfaces tried; **Refined Iterations** adds surfaces around the best ones, in neighbourhoods that shrink step by step. The draws are repeatable: the same model gives the same result. The search limits apply to block surfaces as to circles. Tick **Non-circular optimisation** to optimise the best block surfaces further; the optimised surfaces may leave the objects.
+
+A typical block search for a weak layer uses two lines or two thin windows along the layer: one under the crest, one under the toe.
+
+<Figure src="/media/tutorials/block-search/02-objects.png" alt="Two block search lines, B1 and B2, along the base of a weak layer" caption="Two lines, B1 and B2, along the base of the weak layer of Arai & Tagyo's example." />
+
+<Figure src="/media/tutorials/block-search/03-result.png" alt="The block surfaces analysed and the critical one along the weak layer" caption="The block surfaces analysed, coloured by factor of safety, and the critical one along the layer (0.450; 0.414 with Non-circular optimisation, the published value)." />
+
+The critical surface often has flatter end segments than the Rankine angles, especially in cohesive soil: on this example the Rankine angles give 0.538, ranges of 25–70° upslope and 5–45° downslope 0.450. Give ranges, or tick **Non-circular optimisation**, for a final analysis.
 
 ## Custom surfaces
 

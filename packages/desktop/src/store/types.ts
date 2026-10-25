@@ -73,6 +73,16 @@ export interface CustomSearchPlane {
   points?: [number, number][];
 }
 
+/**
+ * A block search object: one point (a fixed point), two (a line) or three
+ * or more (a window). Each block surface passes through one point of every
+ * object.
+ */
+export interface BlockSearchObject {
+  id: string;
+  points: [number, number][];
+}
+
 export interface UdlExpressions {
   magnitude?: string;
   x1?: string;
@@ -325,6 +335,8 @@ export interface ModelEntry {
   piles?: PileRow[];
   customSearchPlanes: CustomSearchPlane[];
   customPlanesOnly: boolean;
+  /** Absent in files saved before the block search. */
+  blockSearchObjects?: BlockSearchObject[];
   options: AnalysisOptions;
   analysisLimits: AnalysisLimitsState;
   editViewOffset?: [number, number];
@@ -492,6 +504,7 @@ export interface AnalysisSlice {
   analysisLimits: AnalysisLimitsState;
   customSearchPlanes: CustomSearchPlane[];
   customPlanesOnly: boolean;
+  blockSearchObjects: BlockSearchObject[];
   options: AnalysisOptions;
   runState: RunState;
   progress: number;
@@ -506,6 +519,9 @@ export interface AnalysisSlice {
   ) => void;
   removeCustomSearchPlane: (id: string) => void;
   setCustomPlanesOnly: (value: boolean) => void;
+  addBlockSearchObject: () => void;
+  updateBlockSearchObject: (id: string, points: [number, number][]) => void;
+  removeBlockSearchObject: (id: string) => void;
   setOptions: (opts: Partial<AnalysisOptions>) => void;
   runAnalysis: () => void;
   cancelAnalysis: () => void;

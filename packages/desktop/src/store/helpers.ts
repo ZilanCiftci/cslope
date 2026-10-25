@@ -208,6 +208,13 @@ export function buildSlopeDTOFromModel(model: ModelEntry): SlopeDefinition {
     slope.customPlanesOnly = model.customPlanesOnly ?? false;
   }
 
+  // Block search objects matter only to a block search; objects still
+  // being entered (no point yet) are left out.
+  const blockObjects = (model.blockSearchObjects ?? []).filter((o) => o.points.length > 0);
+  if (model.options?.searchMethod === "block" && blockObjects.length > 0) {
+    slope.blockSearchObjects = blockObjects.map((o) => ({ points: o.points }));
+  }
+
   return toCanonicalSlopeDefinition(slope);
 }
 
@@ -235,6 +242,7 @@ export function buildSlopeDTO(state: AppState): SlopeDefinition {
     piles: state.piles,
     customSearchPlanes: state.customSearchPlanes,
     customPlanesOnly: state.customPlanesOnly,
+    blockSearchObjects: state.blockSearchObjects,
     options: state.options,
     analysisLimits: state.analysisLimits,
   });
@@ -276,6 +284,7 @@ export function getAnalysisInputSignature(state: AppState): string {
     piles: state.piles,
     customSearchPlanes: state.customSearchPlanes,
     customPlanesOnly: state.customPlanesOnly,
+    blockSearchObjects: state.blockSearchObjects,
     analysisLimits: state.analysisLimits,
     options: state.options,
   });

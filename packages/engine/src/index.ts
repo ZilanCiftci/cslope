@@ -15,6 +15,7 @@ export type {
   AnalysisMethod,
   IntersliceFunctionType,
   PorePressureHead,
+  SearchMethod,
   PartialFactors,
   AnalysisOptions,
   AnalysisResult,

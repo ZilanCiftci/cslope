@@ -174,6 +174,10 @@ export function modelFromDefinition(def: SlopeDefinition, info: DefinitionModelI
       })),
     ],
     customPlanesOnly: def.customPlanesOnly ?? false,
+    blockSearchObjects: (def.blockSearchObjects ?? []).map((o, i) => ({
+      id: `${info.id}-block-${i + 1}`,
+      points: o.points.map(([x, y]) => [x, y] as [number, number]),
+    })),
     reinforcements: (def.reinforcements ?? []).map((r, i) => reinforcementRow(r, `${info.id}-reinforcement-${i + 1}`)),
     piles: (def.piles ?? []).map((p, i) => pileRow(p, `${info.id}-pile-${i + 1}`)),
     options: { ...APP_DEFAULT_ANALYSIS_OPTIONS, ...info.options },

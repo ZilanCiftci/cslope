@@ -223,13 +223,28 @@ export function buildAnalysisSummary(input: AnalysisSummaryInput): SummarySectio
   if (input.customPlanesOnly) {
     search.push({ label: "Surfaces", value: `custom surfaces only (${input.customSurfaceCount ?? 0})` });
   } else {
+    const block = options.searchMethod === "block";
+    const angle = (r: [number, number] | null | undefined, rankine: string) =>
+      r ? (r[0] === r[1] ? `${fmt(r[0])}°` : `${fmt(r[0])}–${fmt(r[1])}°`) : rankine;
     search.push({
       label: "Surfaces",
       value:
-        "circular search" +
-        (options.nonCircularOptimization ? ", best circles optimised as non-circular surfaces" : "") +
+        (block ? "block search" : "circular search") +
+        (options.nonCircularOptimization
+          ? block
+            ? ", best block surfaces optimised as non-circular surfaces"
+            : ", best circles optimised as non-circular surfaces"
+          : "") +
         (input.customSurfaceCount ? `, and ${input.customSurfaceCount} custom surfaces` : ""),
     });
+    if (block) {
+      search.push({
+        label: "Block end angles",
+        value:
+          `upslope ${angle(options.blockActiveAngle, "45° + φ/2")}, ` +
+          `downslope ${angle(options.blockPassiveAngle, "45° − φ/2")}`,
+      });
+    }
     search.push({
       label: "Search limits",
       value: lim.enabled

@@ -46,6 +46,7 @@ function createDefaultModel(id: string, name: string): ModelEntry {
     piles: [],
     customSearchPlanes: [],
     customPlanesOnly: false,
+    blockSearchObjects: [],
     options: {
       ...DEFAULT_ANALYSIS_OPTIONS,
       method: "Morgenstern-Price",
@@ -78,6 +79,7 @@ export const mapModelToState = (model: ModelEntry) => ({
   piles: model.piles ?? [],
   customSearchPlanes: model.customSearchPlanes ?? [],
   customPlanesOnly: model.customPlanesOnly ?? false,
+  blockSearchObjects: model.blockSearchObjects ?? [],
   options: model.options ?? {
     ...DEFAULT_ANALYSIS_OPTIONS,
     method: "Morgenstern-Price",
@@ -286,6 +288,10 @@ export const createModelsSlice: SliceCreator<ModelsSlice> = (
         id: nextId("csp"),
       })),
       customPlanesOnly: source.customPlanesOnly ?? false,
+      blockSearchObjects: (source.blockSearchObjects ?? []).map((o) => ({
+        id: nextId("bso"),
+        points: o.points.map(([x, y]) => [x, y] as [number, number]),
+      })),
       options: { ...source.options },
       analysisLimits: { ...source.analysisLimits },
       editViewOffset: source.editViewOffset
@@ -390,6 +396,7 @@ export const createModelsSlice: SliceCreator<ModelsSlice> = (
             piles: s.piles,
             customSearchPlanes: s.customSearchPlanes,
             customPlanesOnly: s.customPlanesOnly,
+            blockSearchObjects: s.blockSearchObjects,
             options: s.options,
             analysisLimits: s.analysisLimits,
             editViewOffset: s.editViewOffset,
@@ -436,6 +443,7 @@ export const createModelsSlice: SliceCreator<ModelsSlice> = (
               piles: s.piles,
               customSearchPlanes: s.customSearchPlanes,
               customPlanesOnly: s.customPlanesOnly,
+              blockSearchObjects: s.blockSearchObjects,
               options: s.options,
               analysisLimits: s.analysisLimits,
               editViewOffset: s.editViewOffset,

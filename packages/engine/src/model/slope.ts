@@ -6,6 +6,7 @@ import type {
   AnalysisLimits,
   IntersliceFunctionType,
   PorePressureHead,
+  SearchMethod,
   PartialFactors,
   AnalysisMethod,
   AnalysisOptions,
@@ -193,6 +194,11 @@ export class Slope {
   private _tensionCrackAuto: boolean;
   private _partialFactors: PartialFactors | null = null;
   private _nonCircularOptimization = false;
+  private _searchMethod: SearchMethod = "circular";
+  private _blockActiveAngle: [number, number] | null = null;
+  private _blockPassiveAngle: [number, number] | null = null;
+  /** Block search objects: one point, a line (two) or a window (three or more). */
+  private _blockSearchObjects: [number, number][][] = [];
   private _minSlipDepth = 0;
   /** Null: automatic (see minSlipArea). */
   private _minSlipArea: number | null = null;
@@ -403,6 +409,48 @@ export class Slope {
 
   get nonCircularOptimization(): boolean {
     return this._nonCircularOptimization;
+  }
+
+  get searchMethod(): SearchMethod {
+    return this._searchMethod;
+  }
+
+  get blockActiveAngle(): Readonly<[number, number]> | null {
+    return this._blockActiveAngle;
+  }
+
+  get blockPassiveAngle(): Readonly<[number, number]> | null {
+    return this._blockPassiveAngle;
+  }
+
+  get blockSearchObjects(): readonly (readonly [number, number][])[] {
+    return this._blockSearchObjects;
+  }
+
+  /**
+   * Set the block search objects. Each is one point (a fixed point), two
+   * (a line) or three or more (a window, a polygon), with finite
+   * coordinates; a window needs an area.
+   */
+  setBlockSearchObjects(objects: readonly (readonly [number, number][])[]): void {
+    const checked = objects.map((points, i) => {
+      if (points.length === 0 || !points.every((p) => Number.isFinite(p[0]) && Number.isFinite(p[1]))) {
+        throw new Error(`Block search object ${i + 1} needs at least one point with finite coordinates.`);
+      }
+      if (points.length === 2 && points[0][0] === points[1][0] && points[0][1] === points[1][1]) {
+        throw new Error(`Block search object ${i + 1}: the two ends of the line coincide.`);
+      }
+      if (points.length >= 3) {
+        let area = 0;
+        for (let k = 0, j = points.length - 1; k < points.length; j = k++) {
+          area += points[j][0] * points[k][1] - points[k][0] * points[j][1];
+        }
+        if (!(Math.abs(area) > 1e-12)) throw new Error(`Block search object ${i + 1}: the window has no area.`);
+      }
+      return points.map(([x, y]) => [x, y] as [number, number]);
+    });
+    this._blockSearchObjects = checked;
+    this._resetResults();
   }
 
   /**
@@ -1028,6 +1076,26 @@ export class Slope {
     }
     if (opts.nonCircularOptimization !== undefined) {
       this._nonCircularOptimization = opts.nonCircularOptimization;
+    }
+    if (opts.searchMethod !== undefined) {
+      if (opts.searchMethod !== "circular" && opts.searchMethod !== "block") {
+        throw new Error("searchMethod must be 'circular' or 'block'");
+      }
+      this._searchMethod = opts.searchMethod;
+    }
+    const angleRange = (name: string, r: [number, number] | null): [number, number] | null => {
+      if (r === null) return null;
+      const [lo, hi] = r;
+      if (!(Number.isFinite(lo) && Number.isFinite(hi) && lo > 0 && hi < 90 && lo <= hi)) {
+        throw new Error(`${name} must be a range [min, max] with 0° < min ≤ max < 90°`);
+      }
+      return [lo, hi];
+    };
+    if (opts.blockActiveAngle !== undefined) {
+      this._blockActiveAngle = angleRange("blockActiveAngle", opts.blockActiveAngle);
+    }
+    if (opts.blockPassiveAngle !== undefined) {
+      this._blockPassiveAngle = angleRange("blockPassiveAngle", opts.blockPassiveAngle);
     }
     if (opts.minSlipDepth !== undefined) {
       if (!Number.isFinite(opts.minSlipDepth) || opts.minSlipDepth < 0) {

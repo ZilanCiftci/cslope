@@ -83,6 +83,32 @@ export function optimiseNonCircular(
   for (const seed of layerSeeds(slope, evaluate)) {
     results.push(optimisePoints(slope, seed.points, seed.axis, evaluate, budgetPerSeed, seed.plane));
   }
+  return polishBest(slope, results, evaluate, budgetPerSeed);
+}
+
+/**
+ * Optimised non-circular surfaces grown from evaluated polylines (the best
+ * block surfaces), each by the alternating-variable search as above. The
+ * optimised surfaces are free to leave the block search objects. Returns
+ * the final surface of each seed (evaluated).
+ */
+export function optimisePolylines(
+  slope: Slope,
+  seeds: readonly SearchPlane[],
+  evaluate: Evaluate,
+  options: OptimiseOptions = {},
+): SearchPlane[] {
+  const budgetPerSeed = options.budgetPerSeed ?? 1500;
+  const results: Optimised[] = [];
+  for (const seed of seeds) {
+    if (!seed.points || seed.fos == null) continue;
+    results.push(optimisePoints(slope, seed.points, [seed.cx, seed.cy], evaluate, budgetPerSeed, seed));
+  }
+  return polishBest(slope, results, evaluate, budgetPerSeed);
+}
+
+/** The optimised surfaces, the best one optimised further (see below). */
+function polishBest(slope: Slope, results: Optimised[], evaluate: Evaluate, budgetPerSeed: number): SearchPlane[] {
   // The best surface, while its last cycle still lowered the FOS by more
   // than the tolerance: the halved shifts of one cycle (or its budget)
   // stop before the minimum of a surface whose shape is still changing.
@@ -182,7 +208,7 @@ const RUN_GRID = 7;
 const LAYER_SEEDS = 3;
 
 /** First point where the ray from (x0, y0) in direction (dx, dy) meets the ground. */
-function rayToGround(ground: { x: readonly number[]; y: readonly number[] }, x0: number, y0: number, dx: number, dy: number): Pt | null {
+export function rayToGround(ground: { x: readonly number[]; y: readonly number[] }, x0: number, y0: number, dx: number, dy: number): Pt | null {
   let best = Infinity;
   let hit: Pt | null = null;
   for (let i = 0; i + 1 < ground.x.length; i++) {

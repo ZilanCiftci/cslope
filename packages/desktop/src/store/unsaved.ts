@@ -60,6 +60,7 @@ export function projectContentSignature(state: AppState): string {
             piles: state.piles,
             customSearchPlanes: state.customSearchPlanes,
             customPlanesOnly: state.customPlanesOnly,
+            blockSearchObjects: state.blockSearchObjects,
             options: state.options,
             analysisLimits: state.analysisLimits,
             resultViewSettings: state.resultViewSettings,
@@ -73,6 +74,7 @@ export function projectContentSignature(state: AppState): string {
       coordinateExpressions: entry.coordinateExpressions ?? [],
       reinforcements: entry.reinforcements ?? [],
       piles: entry.piles ?? [],
+      blockSearchObjects: entry.blockSearchObjects ?? [],
       ...(entry.resultViewSettings ? { resultViewSettings: withoutPaperViewport(entry.resultViewSettings) } : {}),
     };
     for (const key of VOLATILE_FIELDS) delete content[key];

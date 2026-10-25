@@ -197,6 +197,10 @@ export function toCanonicalSlopeDefinition(
       ...(surface.axis ? { axis: mirrorPoint(surface.axis, xMin, xMax) } : {}),
     })),
     customPlanesOnly: slopeDefinition.customPlanesOnly,
+    blockSearchObjects: slopeDefinition.blockSearchObjects?.map((o) => ({
+      ...o,
+      points: mirrorPoints(o.points, xMin, xMax),
+    })),
   };
 }
 
@@ -204,7 +208,8 @@ export function toCanonicalSlopeDefinition(
  * Canonical definition for sliding in the opposite direction to that of
  * `canonical` (itself a canonical definition), without the model's search
  * limits and custom surfaces, which belong to its own direction. Map its
- * results back with the returned definition.
+ * results back with the returned definition. The block search objects are
+ * kept: they mark where the surface may run, in either direction.
  */
 export function oppositeDirectionDefinition(
   canonical: SlopeDefinition,

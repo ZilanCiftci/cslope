@@ -215,6 +215,10 @@ export function buildSlope(def: SlopeDefinition): Slope {
     }
   }
 
+  if (def.blockSearchObjects?.length) {
+    slope.setBlockSearchObjects(def.blockSearchObjects.map((o) => o.points));
+  }
+
   // Custom non-circular surfaces
   if (def.customSurfaces) {
     for (const surface of def.customSurfaces) {

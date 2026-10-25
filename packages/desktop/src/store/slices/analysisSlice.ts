@@ -204,6 +204,7 @@ export function snapshotFromState(state: AppState): ModelEntry {
     piles: state.piles,
     customSearchPlanes: state.customSearchPlanes,
     customPlanesOnly: state.customPlanesOnly,
+    blockSearchObjects: state.blockSearchObjects,
     options: state.options,
     analysisLimits: state.analysisLimits,
   };
@@ -272,6 +273,7 @@ export const createAnalysisSlice: SliceCreator<AnalysisSlice> = (set, get) => ({
   analysisLimits: { ...DEFAULT_ANALYSIS_LIMITS },
   customSearchPlanes: [],
   customPlanesOnly: false,
+  blockSearchObjects: [],
   options: {
     ...DEFAULT_ANALYSIS_OPTIONS,
     method: "Morgenstern-Price",
@@ -372,6 +374,47 @@ export const createAnalysisSlice: SliceCreator<AnalysisSlice> = (set, get) => ({
         m.id === s.activeModelId ? { ...m, customPlanesOnly: value } : m,
       ),
     }));
+    get().invalidateAnalysis();
+  },
+
+  addBlockSearchObject: () => {
+    set((s) => {
+      const blockSearchObjects = [...s.blockSearchObjects, { id: nextId("bso"), points: [] }];
+      return {
+        blockSearchObjects,
+        models: s.models.map((m) =>
+          m.id === s.activeModelId ? { ...m, blockSearchObjects } : m,
+        ),
+      };
+    });
+    get().invalidateAnalysis();
+  },
+
+  updateBlockSearchObject: (id, points) => {
+    set((s) => {
+      const blockSearchObjects = s.blockSearchObjects.map((o) =>
+        o.id === id ? { ...o, points } : o,
+      );
+      return {
+        blockSearchObjects,
+        models: s.models.map((m) =>
+          m.id === s.activeModelId ? { ...m, blockSearchObjects } : m,
+        ),
+      };
+    });
+    get().invalidateAnalysis();
+  },
+
+  removeBlockSearchObject: (id) => {
+    set((s) => {
+      const blockSearchObjects = s.blockSearchObjects.filter((o) => o.id !== id);
+      return {
+        blockSearchObjects,
+        models: s.models.map((m) =>
+          m.id === s.activeModelId ? { ...m, blockSearchObjects } : m,
+        ),
+      };
+    });
     get().invalidateAnalysis();
   },
 

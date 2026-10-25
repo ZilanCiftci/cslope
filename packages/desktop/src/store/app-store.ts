@@ -43,6 +43,7 @@ type UndoableState = Pick<
   | "piles"
   | "customSearchPlanes"
   | "customPlanesOnly"
+  | "blockSearchObjects"
   | "analysisLimits"
   | "options"
   | "resultViewSettings"
@@ -77,6 +78,7 @@ export const useAppStore = create<AppState>()(
         piles: state.piles,
         customSearchPlanes: state.customSearchPlanes,
         customPlanesOnly: state.customPlanesOnly,
+        blockSearchObjects: state.blockSearchObjects,
         analysisLimits: state.analysisLimits,
         options: state.options,
         resultViewSettings: state.resultViewSettings,

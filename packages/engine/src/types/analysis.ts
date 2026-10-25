@@ -91,6 +91,29 @@ export interface AnalysisOptions {
    */
   nonCircularOptimization?: boolean;
   /**
+   * How trial surfaces are generated (default "circular"):
+   * - "circular": the grid of circles through entry and exit points.
+   * - "block": block surfaces through the model's block search objects
+   *   (`SlopeDefinition.blockSearchObjects`), `iterations` of them, then
+   *   `refinedIterations` around the best; with `nonCircularOptimization`
+   *   the best are optimised as polylines.
+   */
+  searchMethod?: SearchMethod;
+  /**
+   * Block search: range [min, max] (°, from the horizontal) of the
+   * inclination of the upslope (active) end segment. Null or not set:
+   * the Rankine active angle 45° + φ/2 of the soil above the first base
+   * point.
+   */
+  blockActiveAngle?: [number, number] | null;
+  /**
+   * Block search: range [min, max] (°, from the horizontal) of the
+   * inclination of the downslope (passive) end segment. Null or not set:
+   * the Rankine passive angle 45° − φ/2 of the soil above the last base
+   * point.
+   */
+  blockPassiveAngle?: [number, number] | null;
+  /**
    * Surfaces less deep than this below the ground (m, vertical) are not
    * analysed (default 0).
    */
@@ -124,6 +147,8 @@ export const EC7_DA3_FACTORS: PartialFactors = {
 };
 
 export type PorePressureHead = "phreatic-correction" | "vertical";
+
+export type SearchMethod = "circular" | "block";
 
 /** Default analysis options. */
 export const DEFAULT_ANALYSIS_OPTIONS: AnalysisOptions = {

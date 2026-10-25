@@ -20,6 +20,7 @@ import type {
   AppState,
   AnalysisLimitsState,
   AnalysisResult,
+  BlockSearchObject,
   CustomSearchPlane,
   LineLoadRow,
   MaterialBoundaryRow,
@@ -85,6 +86,7 @@ interface AnalysisStatePayload {
   analysisLimits: AnalysisLimitsState;
   customSearchPlanes: CustomSearchPlane[];
   customPlanesOnly: boolean;
+  blockSearchObjects: BlockSearchObject[];
   options: ModelEntry["options"];
 }
 
@@ -113,6 +115,7 @@ const MODEL_ENTRY_FIELDS = [
   "piles",
   "customSearchPlanes",
   "customPlanesOnly",
+  "blockSearchObjects",
   "options",
   "analysisLimits",
   "resultViewSettings",
@@ -203,6 +206,7 @@ function buildResultsPlotPayloadFromState(): ResultsPlotStatePayload {
       piles: state.piles,
       customSearchPlanes: state.customSearchPlanes,
       customPlanesOnly: state.customPlanesOnly,
+      blockSearchObjects: state.blockSearchObjects,
       options: state.options,
       analysisLimits: state.analysisLimits,
     },
@@ -229,6 +233,7 @@ function App() {
   const orientation = useAppStore((s) => s.orientation);
   const customSearchPlanes = useAppStore((s) => s.customSearchPlanes);
   const customPlanesOnly = useAppStore((s) => s.customPlanesOnly);
+  const blockSearchObjects = useAppStore((s) => s.blockSearchObjects);
   const options = useAppStore((s) => s.options);
   const analysisLimits = useAppStore((s) => s.analysisLimits);
   const resultViewSettings = useAppStore((s) => s.resultViewSettings);
@@ -823,6 +828,7 @@ function App() {
         analysisLimits: state.analysisLimits,
         customSearchPlanes: state.customSearchPlanes,
         customPlanesOnly: state.customPlanesOnly,
+        blockSearchObjects: state.blockSearchObjects,
         options: state.options,
       });
     };
@@ -838,6 +844,7 @@ function App() {
         analysisLimits: next.analysisLimits,
         customSearchPlanes: next.customSearchPlanes,
         customPlanesOnly: next.customPlanesOnly,
+        blockSearchObjects: next.blockSearchObjects ?? [],
         options: next.options,
       });
     };
@@ -865,6 +872,7 @@ function App() {
       analysisLimits,
       customSearchPlanes,
       customPlanesOnly,
+      blockSearchObjects,
       options,
     });
   }, [
@@ -873,6 +881,7 @@ function App() {
     analysisLimits,
     customSearchPlanes,
     customPlanesOnly,
+    blockSearchObjects,
     options,
     isAnyDialogWindow,
   ]);
@@ -959,6 +968,7 @@ function App() {
     piles,
     customSearchPlanes,
     customPlanesOnly,
+    blockSearchObjects,
     options,
     analysisLimits,
     activeModelId,

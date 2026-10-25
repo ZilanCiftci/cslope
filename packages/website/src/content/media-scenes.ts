@@ -436,6 +436,39 @@ export const scenes: Scene[] = [
     ],
   ),
 
+  // ── Docs: block search (docs/search.mdx) ──────────────────────
+
+  ...tutorial(
+    "block-search",
+    "Arai & Tagyo (1985), weak layer",
+    {
+      onlyModel: true,
+      actions: [
+        ["setOptions", { searchMethod: "block", nonCircularOptimization: false, blockActiveAngle: [25, 70], blockPassiveAngle: [5, 45] }],
+        ["addBlockSearchObject"],
+        ["updateBlockSearchObject", "$last:blockSearchObjects", [[10, 32.17], [40, 22.17]]],
+        ["addBlockSearchObject"],
+        ["updateBlockSearchObject", "$last:blockSearchObjects", [[45, 20.5], [70, 12.17]]],
+      ],
+    },
+    [
+      {
+        id: "01-options",
+        title: "Options with a block search",
+        setup: { mode: "edit", click: ["Model", "Options"] },
+        crop: "window",
+        window: "Options",
+      },
+      { id: "02-objects", title: "Two block search lines along the weak layer", setup: { mode: "edit" }, crop: "canvas" },
+      {
+        id: "03-result",
+        title: "Block search result",
+        setup: { runAnalysis: true, resultView: { surfaceDisplay: "all", showSlices: false } },
+        crop: "canvas",
+      },
+    ],
+  ),
+
   // ── Tutorial: Sensitivity and probability ─────────────────────
 
   ...tutorial("probabilistic", "T-ACADS Simple", { onlyModel: true, runAnalysis: true }, [

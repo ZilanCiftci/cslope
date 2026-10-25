@@ -3,6 +3,7 @@
 import type {
   AnalysisLimitsState,
   AnalysisResult,
+  BlockSearchObject,
   CustomSearchPlane,
   LineLoadRow,
   PileRow,
@@ -76,6 +77,7 @@ interface AnalysisStatePayload {
   analysisLimits: AnalysisLimitsState;
   customSearchPlanes: CustomSearchPlane[];
   customPlanesOnly: boolean;
+  blockSearchObjects: BlockSearchObject[];
   options: ModelEntry["options"];
 }
 

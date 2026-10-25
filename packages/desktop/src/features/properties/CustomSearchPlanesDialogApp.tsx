@@ -4,6 +4,7 @@ import { isElectron } from "../../utils/is-electron";
 import { useAppStore } from "../../store/app-store";
 import type {
   AnalysisLimitsState,
+  BlockSearchObject,
   CustomSearchPlane,
   ModelEntry,
   ModelOrientation,
@@ -15,6 +16,7 @@ interface AnalysisStatePayload {
   analysisLimits: AnalysisLimitsState;
   customSearchPlanes: CustomSearchPlane[];
   customPlanesOnly: boolean;
+  blockSearchObjects: BlockSearchObject[];
   options: ModelEntry["options"];
 }
 
@@ -24,6 +26,7 @@ export function CustomSearchPlanesDialogApp() {
   const analysisLimits = useAppStore((s) => s.analysisLimits);
   const customSearchPlanes = useAppStore((s) => s.customSearchPlanes);
   const customPlanesOnly = useAppStore((s) => s.customPlanesOnly);
+  const blockSearchObjects = useAppStore((s) => s.blockSearchObjects);
   const options = useAppStore((s) => s.options);
 
   const [isHydrated, setIsHydrated] = useState(!isElectron);
@@ -40,6 +43,7 @@ export function CustomSearchPlanesDialogApp() {
         analysisLimits: next.analysisLimits,
         customSearchPlanes: next.customSearchPlanes,
         customPlanesOnly: next.customPlanesOnly,
+        blockSearchObjects: next.blockSearchObjects ?? [],
         options: next.options,
       });
       setIsHydrated(true);
@@ -69,6 +73,7 @@ export function CustomSearchPlanesDialogApp() {
       analysisLimits,
       customSearchPlanes,
       customPlanesOnly,
+      blockSearchObjects,
       options,
     });
   }, [
@@ -77,6 +82,7 @@ export function CustomSearchPlanesDialogApp() {
     analysisLimits,
     customSearchPlanes,
     customPlanesOnly,
+    blockSearchObjects,
     options,
     isHydrated,
   ]);

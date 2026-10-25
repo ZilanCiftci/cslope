@@ -10,6 +10,7 @@ import { Section } from "../../../components/ui/Section";
 import { Label } from "../../../components/ui/Label";
 import { DraftNumberInput } from "../../../components/ui/DraftNumberInput";
 import { GroupHeading } from "../GroupHeading";
+import { BlockSearchSection } from "./BlockSearchSection";
 
 const METHODS: AnalysisMethod[] = ["Bishop", "Janbu", "Morgenstern-Price"];
 const INTERSLICE_FUNCTIONS: IntersliceFunctionType[] = [
@@ -335,6 +336,21 @@ export function OptionsSection({ plain = false }: OptionsSectionProps) {
             />
             <Label>Analyse both sliding directions</Label>
           </label>
+          <label className="col-span-2 flex flex-col gap-0.5">
+            <Label>Search method</Label>
+            <select
+              value={options.searchMethod ?? "circular"}
+              onChange={(e) =>
+                setOptions({ searchMethod: e.target.value as "circular" | "block" })
+              }
+              aria-label="Search method"
+              title="Circular: circles through a grid of entry and exit points. Block: surfaces through block search objects (points, lines, windows), e.g. along a weak layer."
+            >
+              <option value="circular">Circular (grid of entry and exit points)</option>
+              <option value="block">Block (through search objects)</option>
+            </select>
+          </label>
+          {options.searchMethod === "block" && <BlockSearchSection />}
           <label className="flex flex-col gap-0.5">
             <Label>Iterations</Label>
             <input
@@ -409,7 +425,11 @@ export function OptionsSection({ plain = false }: OptionsSectionProps) {
           </label>
           <label
             className="col-span-2 flex items-center gap-1.5"
-            title="After the circular search, optimise the best circles as non-circular surfaces, which can follow weak layers and stiff bases."
+            title={
+              options.searchMethod === "block"
+                ? "After the block search, optimise the best block surfaces as free non-circular surfaces (they may leave the search objects)."
+                : "After the circular search, optimise the best circles as non-circular surfaces, which can follow weak layers and stiff bases."
+            }
           >
             <input
               type="checkbox"

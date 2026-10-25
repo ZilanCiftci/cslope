@@ -14,7 +14,8 @@ import {
   generateLocalPlanes,
   planeKey,
 } from "./search";
-import { optimiseNonCircular } from "./optimize";
+import { optimiseNonCircular, optimisePolylines } from "./optimize";
+import { BLOCK_SEEDS, bestDistinct, blockSearch } from "./block-search";
 import { analyseMorgensternPriceMarch, LAMBDA_MAX, LAMBDA_MIN } from "./mp-march";
 
 /**
@@ -968,14 +969,15 @@ export function analyseMorgensternPrice(
  * @returns Minimum FOS found, or null if no valid surfaces.
  */
 export function analyseSlope(slope: Slope): number | null {
+  const block = slope.searchMethod === "block" && !slope.customPlanesOnly;
   // Generate search planes unless only custom planes are requested
-  if (slope.search.length === 0 && !slope.customPlanesOnly) {
+  if (slope.search.length === 0 && !slope.customPlanesOnly && !block) {
     setEntryExitPlanes(slope);
   }
 
   // Combine search + individual planes
   const combinedPlanes: SearchPlane[] = [
-    ...slope.search.map((p) => ({
+    ...(block ? [] : slope.search).map((p) => ({
       ...p,
       fos: null,
       slices: null,
@@ -1001,7 +1003,20 @@ export function analyseSlope(slope: Slope): number | null {
 
   evaluatePlanes(slope, allPlanes);
 
-  if (slope.refinedIterations > 0 && !slope.customPlanesOnly) {
+  if (block) {
+    // Block search: surfaces through the block search objects, refined
+    // around the best; optimised as polylines on request.
+    const evaluate = (planes: SearchPlane[]) => evaluatePlanes(slope, planes);
+    const blockPlanes = blockSearch(slope, evaluate);
+    allPlanes.push(...blockPlanes);
+    if (slope.nonCircularOptimization) {
+      const ground = slope.surfaceLineXY;
+      const span = ground ? Math.max(...ground.x) - Math.min(...ground.x) : 1;
+      const seeds = bestDistinct(blockPlanes, BLOCK_SEEDS, span);
+      const known = new Set(allPlanes);
+      allPlanes.push(...optimisePolylines(slope, seeds, evaluate).filter((p) => !known.has(p)));
+    }
+  } else if (slope.refinedIterations > 0 && !slope.customPlanesOnly) {
     allPlanes.sort((a, b) => {
       const af = a.fos ?? Number.POSITIVE_INFINITY;
       const bf = b.fos ?? Number.POSITIVE_INFINITY;
@@ -1030,7 +1045,7 @@ export function analyseSlope(slope: Slope): number | null {
   }
 
   // Non-circular optimisation of the best circles.
-  if (slope.nonCircularOptimization && !slope.customPlanesOnly) {
+  if (slope.nonCircularOptimization && !slope.customPlanesOnly && !block) {
     const optimised = optimiseNonCircular(slope, allPlanes, (planes) =>
       evaluatePlanes(slope, planes),
     );

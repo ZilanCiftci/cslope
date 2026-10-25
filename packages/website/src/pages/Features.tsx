@@ -41,7 +41,8 @@ const AREAS: Area[] = [
     points: [
       "Circular search between entry and exit ranges, refined around the best surfaces.",
       "Custom circles and polylines, analysed alone or together with the search.",
-      "Non-circular optimisation starting from the critical circles.",
+      "Block search through points, lines and windows, for failures along weak layers.",
+      "Non-circular optimisation starting from the critical circles or block surfaces.",
       "Minimum slip depth and minimum sliding area to skip shallow surfaces; search limits; both slip directions.",
     ],
     media: MEDIA.allSurfaces,

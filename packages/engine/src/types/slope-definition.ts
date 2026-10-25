@@ -135,4 +135,10 @@ export interface SlopeDefinition {
   customSurfaces?: Array<{ points: [number, number][]; axis?: [number, number] }>;
   /** When true, only the custom surfaces are analysed (no search). */
   customPlanesOnly?: boolean;
+  /**
+   * Block search objects (analysis option `searchMethod: "block"`): each
+   * block surface passes through one point of every object. One point is
+   * a fixed point, two points a line, three or more a window (polygon).
+   */
+  blockSearchObjects?: Array<{ points: [number, number][] }>;
 }

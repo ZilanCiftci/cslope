@@ -527,6 +527,8 @@ export interface DrawCanvasParams {
   piezometricLine: AppState["piezometricLine"];
   /** Prescribed slip surfaces, drawn faintly in edit view. */
   customSearchPlanes?: AppState["customSearchPlanes"];
+  /** Block search objects, drawn in edit view when the block search is selected. */
+  blockSearchObjects?: AppState["blockSearchObjects"];
   viewScale: number;
   mouseWorld: [number, number] | null;
   hoverHit: PointHit | null;
@@ -579,6 +581,7 @@ export function drawCanvas(
     piles,
     piezometricLine,
     customSearchPlanes,
+    blockSearchObjects,
     viewScale,
     mouseWorld,
     hoverHit,
@@ -1187,6 +1190,54 @@ export function drawCanvas(
         const [ex] = worldToCanvas(s.cx + s.radius, s.cy, w, h);
         strokeDashed(() => ctx.arc(cx, cy, Math.abs(ex - cx), 0, Math.PI * 2), 0.4);
       }
+    });
+    ctx.restore();
+  }
+
+  // ── Block search objects (edit view, block search) ──────
+  // Windows shaded with their outline, lines solid, fixed points as small
+  // crosses; each numbered as in the Options dialog.
+  if (mode !== "result" && options?.searchMethod === "block" && blockSearchObjects?.length) {
+    ctx.save();
+    ctx.setLineDash([]);
+    ctx.font = `${10 * paperZoom}px sans-serif`;
+    blockSearchObjects.forEach((o, k) => {
+      if (o.points.length === 0) return;
+      const pts = o.points.map(([x, y]) => worldToCanvas(x, y, w, h));
+      ctx.strokeStyle = MARKER_BASE;
+      ctx.fillStyle = MARKER_BASE;
+      ctx.lineWidth = 1.5 * paperZoom;
+      if (pts.length === 1) {
+        const [px, py] = pts[0];
+        const r = 4 * paperZoom;
+        ctx.beginPath();
+        ctx.moveTo(px - r, py - r);
+        ctx.lineTo(px + r, py + r);
+        ctx.moveTo(px - r, py + r);
+        ctx.lineTo(px + r, py - r);
+        ctx.stroke();
+      } else {
+        ctx.beginPath();
+        pts.forEach(([px, py], i) => (i === 0 ? ctx.moveTo(px, py) : ctx.lineTo(px, py)));
+        if (pts.length >= 3) {
+          ctx.closePath();
+          ctx.globalAlpha = 0.15;
+          ctx.fill();
+          ctx.globalAlpha = 1;
+        }
+        ctx.stroke();
+        if (pts.length === 2) {
+          for (const [px, py] of pts) {
+            ctx.beginPath();
+            ctx.arc(px, py, 2.5 * paperZoom, 0, Math.PI * 2);
+            ctx.fill();
+          }
+        }
+      }
+      const top = pts.reduce((a, b) => (b[1] < a[1] ? b : a));
+      ctx.globalAlpha = 0.9;
+      ctx.fillText(`B${k + 1}`, top[0] + 4 * paperZoom, top[1] - 4 * paperZoom);
+      ctx.globalAlpha = 1;
     });
     ctx.restore();
   }
