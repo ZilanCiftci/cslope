@@ -1,10 +1,10 @@
 {
  "summary": {
-  "problems": 165,
-  "results": 321,
-  "publishedValues": 175,
-  "problemsWithPublished": 134,
-  "literatureProblems": 155,
+  "problems": 167,
+  "results": 326,
+  "publishedValues": 176,
+  "problemsWithPublished": 133,
+  "literatureProblems": 157,
   "reliabilityQuantities": 25
  },
  "problems": [
@@ -5258,16 +5258,17 @@
   },
   {
    "id": "V091",
-   "title": "USACE example E-10, ponded water",
-   "reference": "USACE EM 1110-2-1902, example E-10.",
+   "title": "USACE example E-2 (fig. E-10), ponded water",
+   "reference": "USACE EM 1110-2-1902 (2003), appendix E, example E-2, fig. E-10.",
    "literature": true,
    "commercial": false,
    "surface": "fixed",
    "units": "SI",
    "published": [
     {
-     "value": 1.33,
-     "source": "USACE EM 1110-2-1902",
+     "value": 1.24,
+     "method": "stability chart",
+     "source": "USACE EM 1110-2-1902, example E-2",
      "computed": null
     }
    ],
@@ -5305,7 +5306,7 @@
      }
     }
    ],
-   "note": "The USACE value 1.33 is read from a chart; on the circle the example describes, the programs give about 1.24."
+   "note": "USACE's chart solution for this circle (example E-2, p. E-20) gives 1.24; the programs and cSlope give 1.235–1.244 on it. The manual's shallower circle tangent to el. −8 ft (example E-1) gives 1.14 and is the more critical of the two."
   },
   {
    "id": "V092",
@@ -5318,7 +5319,15 @@
    "published": [
     {
      "value": 2.01,
-     "source": "USACE EM 1110-2-1902",
+     "method": "Bishop simplified",
+     "source": "USACE EM 1110-2-1902, example F-6",
+     "analysis": "Bishop simplified",
+     "computed": 1.9905
+    },
+    {
+     "value": 2.07,
+     "method": "Modified Swedish (θ = 19.7°)",
+     "source": "USACE EM 1110-2-1902, example F-6",
      "computed": null
     }
    ],
@@ -5355,7 +5364,8 @@
       "max": 2.027
      }
     }
-   ]
+   ],
+   "note": "USACE's values are for the manual's own piezometric line, which its slice table (fig. F-17a) places lower than the line of the program version analysed here: the kink at about el. 53 ft instead of 69 ft, and the tailwater level reached 18 ft further upstream. On USACE's line cSlope gives Bishop 2.06 and Spencer 2.08: within 0.2 % of USACE's Modified Swedish value 2.07, and 2.6 % above its nine-slice Bishop hand calculation."
   },
   {
    "id": "V093",
@@ -5520,41 +5530,12 @@
   {
    "id": "V096a",
    "title": "Zhu & Lee heterogeneous slope, dry, deep circle",
-   "reference": "Zhu & Lee (2002).",
+   "reference": "Zhu, D.Y. & Lee, C.F. (2002). Explicit limit equilibrium solution for slope stability. Int. J. Numer. Anal. Meth. Geomech. 26(15), 1573–1590.",
    "literature": true,
    "commercial": false,
    "surface": "search",
    "units": "SI",
-   "published": [
-    {
-     "value": 1.836,
-     "method": "Spencer",
-     "source": "Zhu & Lee (2002)",
-     "analysis": "Spencer",
-     "computed": 1.7941
-    },
-    {
-     "value": 1.823,
-     "method": "Morgenstern-Price",
-     "source": "Zhu & Lee (2002)",
-     "analysis": "Morgenstern-Price (half-sine)",
-     "computed": 1.7796
-    },
-    {
-     "value": 1.429,
-     "method": "Bishop simplified",
-     "source": "Zhu & Lee (2002)",
-     "disputed": "Confirmed in Zhu & Lee (2002), Table II, which also gives Spencer 1.836 and Morgenstern-Price 1.823 for the same circle; the authors read the gap as simplified Bishop underestimating deep circles by up to 18 %. On a circle simplified Bishop satisfies moment equilibrium about the centre as the rigorous methods do and normally comes within a few per cent of them; the programs and cSlope give about 1.80 with both. Not counted in the error statistics.",
-     "analysis": "Bishop simplified",
-     "computed": 1.7933
-    },
-    {
-     "value": 1.229,
-     "method": "Ordinary",
-     "source": "Zhu & Lee (2002)",
-     "computed": null
-    }
-   ],
+   "published": [],
    "results": [
     {
      "method": "Bishop simplified",
@@ -5581,32 +5562,17 @@
      }
     }
    ],
-   "note": "Zhu & Lee's simplified Bishop value 1.429 (their Table II) is 22 % below their own Spencer (1.836) and Morgenstern-Price (1.823) values for the same circle; the programs and cSlope give about 1.80 with both methods, as expected on a circle. The value is shown but not counted in the error statistics. The paper has no tension crack and gives the surface only in a figure; the crack and the circle here follow a program's version of the problem."
+   "note": "The circle and the 1.015 m crack follow a program's version of the problem. The paper gives its surface 3 only in a figure, and it enters the crest about 3 m nearer the slope than the program's circle; the paper's values for it are checked on the paper's own circle in V096d (dry) and V096e (with the water table)."
   },
   {
    "id": "V096b",
    "title": "Zhu & Lee heterogeneous slope with a water table, deep circle",
-   "reference": "Zhu & Lee (2002).",
+   "reference": "Zhu, D.Y. & Lee, C.F. (2002). Explicit limit equilibrium solution for slope stability. Int. J. Numer. Anal. Meth. Geomech. 26(15), 1573–1590.",
    "literature": true,
    "commercial": false,
    "surface": "search",
    "units": "SI",
-   "published": [
-    {
-     "value": 1.211,
-     "method": "Spencer",
-     "source": "Zhu & Lee (2002)",
-     "analysis": "Spencer",
-     "computed": 1.1865
-    },
-    {
-     "value": 1.197,
-     "method": "Morgenstern-Price",
-     "source": "Zhu & Lee (2002)",
-     "analysis": "Morgenstern-Price (half-sine)",
-     "computed": 1.1716
-    }
-   ],
+   "published": [],
    "results": [
     {
      "method": "Bishop simplified",
@@ -5632,46 +5598,18 @@
       "max": 1.174
      }
     }
-   ]
+   ],
+   "note": "As V096a: the paper's values for its surface 3 with the water table are checked on the paper's own circle in V096e."
   },
   {
    "id": "V096c",
    "title": "Zhu & Lee slope, surface 3 (the reference circle), dry, 1 m crack",
-   "reference": "Zhu & Lee (2002). Verification manual of a commercial slope stability program.",
+   "reference": "Zhu & Lee (2002), Int. J. Numer. Anal. Meth. Geomech. 26(15). Verification manual of a commercial slope stability program.",
    "literature": true,
    "commercial": true,
    "surface": "fixed",
    "units": "SI",
-   "published": [
-    {
-     "value": 1.836,
-     "method": "Spencer",
-     "source": "Zhu & Lee (2002)",
-     "analysis": "Spencer",
-     "computed": 1.7994
-    },
-    {
-     "value": 1.823,
-     "method": "Morgenstern-Price",
-     "source": "Zhu & Lee (2002)",
-     "analysis": "Morgenstern-Price (half-sine)",
-     "computed": 1.7851
-    },
-    {
-     "value": 1.429,
-     "method": "Bishop simplified",
-     "source": "Zhu & Lee (2002)",
-     "disputed": "Confirmed in Zhu & Lee (2002), Table II, which also gives Spencer 1.836 and Morgenstern-Price 1.823 for the same circle; the authors read the gap as simplified Bishop underestimating deep circles by up to 18 %. On a circle simplified Bishop satisfies moment equilibrium about the centre as the rigorous methods do and normally comes within a few per cent of them; the programs and cSlope give about 1.80 with both. Not counted in the error statistics.",
-     "analysis": "Bishop simplified",
-     "computed": 1.799
-    },
-    {
-     "value": 1.229,
-     "method": "Ordinary",
-     "source": "Zhu & Lee (2002)",
-     "computed": null
-    }
-   ],
+   "published": [],
    "results": [
     {
      "method": "Spencer",
@@ -5688,14 +5626,135 @@
       "min": 1.804,
       "max": 1.804
      }
+    }
+   ],
+   "note": "The program's reference circle enters the crest at x = 41.9 m, about 3 m further from the slope than the paper's surface 3 as drawn in its fig. 3; the paper's values are checked on the paper's circle in V096d and V096e."
+  },
+  {
+   "id": "V096d",
+   "title": "Zhu & Lee slope, the paper's surface 3, dry",
+   "reference": "Zhu, D.Y. & Lee, C.F. (2002). Explicit limit equilibrium solution for slope stability. Int. J. Numer. Anal. Meth. Geomech. 26(15), 1573–1590.",
+   "literature": true,
+   "commercial": false,
+   "surface": "fixed",
+   "units": "SI",
+   "published": [
+    {
+     "value": 1.836,
+     "source": "Zhu & Lee",
+     "method": "Spencer",
+     "analysis": "Spencer",
+     "computed": 1.8236
+    },
+    {
+     "value": 1.823,
+     "source": "Zhu & Lee",
+     "method": "Morgenstern-Price (half-sine)",
+     "analysis": "Morgenstern-Price (half-sine)",
+     "computed": 1.808
+    },
+    {
+     "value": 1.744,
+     "method": "explicit solution (the paper's method)",
+     "source": "Zhu & Lee (2002)",
+     "computed": null
+    },
+    {
+     "value": 1.429,
+     "method": "Bishop simplified",
+     "source": "Zhu & Lee (2002)",
+     "disputed": "Confirmed in Zhu & Lee (2002), Table II, which also gives Spencer 1.836 and Morgenstern-Price 1.823 for the same circle; the authors read the gap as simplified Bishop underestimating deep circles by up to 18 %. On a circle simplified Bishop satisfies moment equilibrium about the centre as the rigorous methods do and normally comes within a few per cent of them; cSlope gives 1.823 on the paper's circle. Not counted in the error statistics.",
+     "analysis": "Bishop simplified",
+     "computed": 1.8227
+    },
+    {
+     "value": 1.229,
+     "method": "Ordinary",
+     "source": "Zhu & Lee (2002)",
+     "computed": null
+    }
+   ],
+   "results": [
+    {
+     "method": "Spencer",
+     "computed": 1.8236,
+     "programs": null
     },
     {
      "method": "Morgenstern-Price (half-sine)",
-     "computed": 1.7851,
+     "computed": 1.808,
+     "programs": null
+    },
+    {
+     "method": "Bishop simplified",
+     "computed": 1.8227,
      "programs": null
     }
    ],
-   "note": "Zhu & Lee's simplified Bishop value 1.429 (their Table II) is 22 % below their own Spencer (1.836) and Morgenstern-Price (1.823) values for the same circle; the programs and cSlope give about 1.80 with both methods, as expected on a circle. The value is shown but not counted in the error statistics. The paper has no tension crack and gives the surface only in a figure; the crack and the circle here follow a program's version of the problem."
+   "note": "The paper gives surface 3 only in a figure. On the circle fitted to it cSlope comes within 1 % of the paper's Spencer and Morgenstern-Price values (1.836, 1.823), against 2 % on the program's circle of V096c; moving the fitted centre or radius by 0.3 m changes the result by up to 1 %. The paper's simplified Bishop value 1.429 is 22 % below its own rigorous values for the same circle, where cSlope's Bishop gives 1.823 as expected on a circle; it is shown but not counted in the error statistics."
+  },
+  {
+   "id": "V096e",
+   "title": "Zhu & Lee slope, the paper's surface 3, with the water table",
+   "reference": "Zhu, D.Y. & Lee, C.F. (2002). Explicit limit equilibrium solution for slope stability. Int. J. Numer. Anal. Meth. Geomech. 26(15), 1573–1590.",
+   "literature": true,
+   "commercial": false,
+   "surface": "fixed",
+   "units": "SI",
+   "published": [
+    {
+     "value": 1.211,
+     "source": "Zhu & Lee",
+     "method": "Spencer",
+     "analysis": "Spencer",
+     "computed": 1.2122
+    },
+    {
+     "value": 1.197,
+     "source": "Zhu & Lee",
+     "method": "Morgenstern-Price (half-sine)",
+     "analysis": "Morgenstern-Price (half-sine)",
+     "computed": 1.1967
+    },
+    {
+     "value": 1.166,
+     "method": "explicit solution (the paper's method)",
+     "source": "Zhu & Lee (2002)",
+     "computed": null
+    },
+    {
+     "value": 1.079,
+     "method": "Bishop simplified",
+     "source": "Zhu & Lee (2002)",
+     "disputed": "Zhu & Lee (2002), Table II: 11 % below their own Spencer (1.211) and Morgenstern-Price (1.197) for the same circle, as their dry Bishop value is; cSlope gives 1.199 on the paper's circle with the water table. Not counted in the error statistics.",
+     "analysis": "Bishop simplified",
+     "computed": 1.1986
+    },
+    {
+     "value": 0.922,
+     "method": "Ordinary",
+     "source": "Zhu & Lee (2002)",
+     "computed": null
+    }
+   ],
+   "results": [
+    {
+     "method": "Spencer",
+     "computed": 1.2122,
+     "programs": null
+    },
+    {
+     "method": "Morgenstern-Price (half-sine)",
+     "computed": 1.1967,
+     "programs": null
+    },
+    {
+     "method": "Bishop simplified",
+     "computed": 1.1986,
+     "programs": null
+    }
+   ],
+   "note": "On the circle fitted to the paper's figure cSlope reproduces the paper's Spencer and Morgenstern-Price values (1.211, 1.197) within 0.1 %. The paper's simplified Bishop value 1.079 lies 11 % below its own rigorous values for the same circle, as its dry value does; cSlope's Bishop gives 1.199. It is shown but not counted in the error statistics."
   },
   {
    "id": "V097a",

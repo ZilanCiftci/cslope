@@ -35,7 +35,7 @@ describe("Verification page", () => {
 
   it("marks a disputed published value with its reason", () => {
     renderPage();
-    fireEvent.change(screen.getByRole("searchbox"), { target: { value: "Zhu & Lee heterogeneous slope, dry" } });
+    fireEvent.change(screen.getByRole("searchbox"), { target: { value: "Zhu & Lee slope, the paper's surface 3, dry" } });
     const mark = screen.getByText("disputed");
     expect(mark.tagName).toBe("ABBR");
     expect(mark.getAttribute("title")).toMatch(/Table II/);
