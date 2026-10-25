@@ -129,7 +129,7 @@ describe("analysisWarnings on the critical surface", () => {
 
 describe("Bishop on a non-circular surface", () => {
   // V046: Fredlund and Krahn's (1977) composite surface along a weak seam.
-  const v046 = VERIFICATION_CASES.find((c) => c.id === "V046")!.definition;
+  const v046 = VERIFICATION_CASES.find((c) => c.id === "V046a")!.definition;
   const points = v046.customSurfaces![0].points;
   // The default axis (defaultAxisPoint), the published circle's centre and
   // other points above the sliding mass.

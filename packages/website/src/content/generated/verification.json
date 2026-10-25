@@ -1,10 +1,10 @@
 {
  "summary": {
-  "problems": 164,
-  "results": 316,
-  "publishedValues": 169,
-  "problemsWithPublished": 133,
-  "literatureProblems": 154,
+  "problems": 165,
+  "results": 321,
+  "publishedValues": 175,
+  "problemsWithPublished": 134,
+  "literatureProblems": 155,
   "reliabilityQuantities": 25
  },
  "problems": [
@@ -2554,6 +2554,13 @@
      "method": "Morgenstern-Price (half-sine)",
      "analysis": "Morgenstern-Price (half-sine)",
      "computed": 2.0716
+    },
+    {
+     "value": 2.073,
+     "source": "Fredlund & Krahn",
+     "method": "Spencer",
+     "analysis": "Spencer",
+     "computed": 2.072
     }
    ],
    "results": [
@@ -2565,6 +2572,11 @@
     {
      "method": "Morgenstern-Price (half-sine)",
      "computed": 2.0716,
+     "programs": null
+    },
+    {
+     "method": "Spencer",
+     "computed": 2.072,
      "programs": null
     }
    ]
@@ -2591,6 +2603,13 @@
      "method": "Morgenstern-Price (half-sine)",
      "analysis": "Morgenstern-Price (half-sine)",
      "computed": 1.8266
+    },
+    {
+     "value": 1.83,
+     "source": "Fredlund & Krahn",
+     "method": "Spencer",
+     "analysis": "Spencer",
+     "computed": 1.8274
     }
    ],
    "results": [
@@ -2603,11 +2622,16 @@
      "method": "Morgenstern-Price (half-sine)",
      "computed": 1.8266,
      "programs": null
+    },
+    {
+     "method": "Spencer",
+     "computed": 1.8274,
+     "programs": null
     }
    ]
   },
   {
-   "id": "V046",
+   "id": "V046a",
    "title": "Fredlund & Krahn slope on a weak seam, composite surface",
    "reference": "Fredlund, D.G. & Krahn, J. (1977). Can. Geotech. J. 14(3).",
    "literature": true,
@@ -2621,6 +2645,20 @@
      "method": "Morgenstern-Price (half-sine)",
      "analysis": "Morgenstern-Price (half-sine)",
      "computed": 1.3699
+    },
+    {
+     "value": 1.377,
+     "source": "Fredlund & Krahn",
+     "method": "Bishop simplified",
+     "analysis": "Bishop simplified",
+     "computed": 1.3804
+    },
+    {
+     "value": 1.373,
+     "source": "Fredlund & Krahn",
+     "method": "Spencer",
+     "analysis": "Spencer",
+     "computed": 1.3794
     }
    ],
    "results": [
@@ -2643,6 +2681,48 @@
     {
      "method": "Morgenstern-Price (half-sine)",
      "computed": 1.3699,
+     "programs": null
+    }
+   ]
+  },
+  {
+   "id": "V046b",
+   "title": "Fredlund & Krahn slope on a weak seam, with a piezometric line",
+   "reference": "Fredlund, D.G. & Krahn, J. (1977). Can. Geotech. J. 14(3).",
+   "literature": true,
+   "commercial": false,
+   "surface": "fixed",
+   "units": "SI",
+   "published": [
+    {
+     "value": 1.248,
+     "source": "Fredlund & Krahn",
+     "method": "Bishop simplified",
+     "analysis": "Bishop simplified",
+     "computed": 1.2408
+    },
+    {
+     "value": 1.245,
+     "source": "Fredlund & Krahn",
+     "method": "Spencer",
+     "analysis": "Spencer",
+     "computed": 1.2417
+    }
+   ],
+   "results": [
+    {
+     "method": "Bishop simplified",
+     "computed": 1.2408,
+     "programs": null
+    },
+    {
+     "method": "Spencer",
+     "computed": 1.2417,
+     "programs": null
+    },
+    {
+     "method": "Morgenstern-Price (half-sine)",
+     "computed": 1.2349,
      "programs": null
     }
    ]

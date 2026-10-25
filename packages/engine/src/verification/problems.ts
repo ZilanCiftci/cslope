@@ -1320,6 +1320,10 @@ export const PROBLEMS: RawCase[] = [
     checks: [
       {"method":"Bishop","label":"Bishop simplified","published":2.08,"publishedBy":"Fredlund & Krahn"},
       {"method":"Morgenstern-Price","label":"Morgenstern-Price (half-sine)","published":2.076,"publishedBy":"Fredlund & Krahn"},
+      {"method":"Morgenstern-Price","label":"Spencer (M-P, constant f(x))","published":2.073,"publishedBy":"Fredlund & Krahn","options":{"intersliceFunction":"constant"}},
+    ],
+    notes: [
+      "Fredlund & Krahn (1977), Table 2 case 1 (slices 0.5 ft wide, tolerance 0.001): ordinary 1.928, Bishop 2.080, Spencer 2.073 (λ = 0.237), Janbu simplified 2.041, Janbu rigorous 2.008, Morgenstern-Price constant 2.076; Table 3: half-sine 2.076 (Saskatchewan) and 2.085 (Alberta). Their Janbu simplified is close to cSlope's Janbu with the f0 correction (2.021), not without it (1.876). cSlope's results do not change between 50 and 250 slices.",
     ],
   },
   {
@@ -1333,20 +1337,46 @@ export const PROBLEMS: RawCase[] = [
     checks: [
       {"method":"Bishop","label":"Bishop simplified","published":1.834,"publishedBy":"Fredlund & Krahn"},
       {"method":"Morgenstern-Price","label":"Morgenstern-Price (half-sine)","published":1.832,"publishedBy":"Fredlund & Krahn"},
+      {"method":"Morgenstern-Price","label":"Spencer (M-P, constant f(x))","published":1.83,"publishedBy":"Fredlund & Krahn","options":{"intersliceFunction":"constant"}},
+    ],
+    notes: [
+      "Fredlund & Krahn (1977), Table 2 case 5: ordinary 1.693, Bishop 1.834, Spencer 1.830, Janbu simplified 1.827, Janbu rigorous 1.776, Morgenstern-Price constant 1.833; Table 3: half-sine 1.832 (Saskatchewan), 1.837 (Alberta). The piezometric line runs from (0, 40) ft to the toe (Fig. 8).",
     ],
   },
   {
-    id: "V046",
+    id: "V046a",
     title: "Fredlund & Krahn slope on a weak seam, composite surface",
     reference: "Fredlund, D.G. & Krahn, J. (1977). Can. Geotech. J. 14(3).",
     surface: "fixed",
     units: "imperial",
-    description: "The a related problem slope with a 1 ft weak seam (c′ = 0, φ′ = 10°) on the impenetrable base at el. 15; the published circle (120, 90, R = 80) reaches below the base, so the surface follows the arc down to the base, runs along the seam and climbs back on the arc. Dry.",
+    description: "The Fredlund & Krahn slope with a 1 ft weak seam (c′ = 0, φ′ = 10°) on bedrock at el. 15 (their case 2); the published circle (120, 90, R = 80) reaches below the seam, so the surface follows the arc down to the bedrock, runs along the seam and climbs back on the arc. Dry.",
     definition: {"coordinates":[[0,15],[0,60],[60,60],[140,20],[180,20],[180,15]],"materials":[{"name":"Upper soil","model":{"kind":"mohr-coulomb","unitWeight":120,"cohesion":600,"frictionAngle":20}},{"name":"Weak seam","model":{"kind":"mohr-coulomb","unitWeight":120,"cohesion":0,"frictionAngle":10}}],"materialBoundaries":[{"coordinates":[[-1,16],[181,16]],"materialName":""}],"regionAssignments":[{"point":[1.8,16.05],"materialName":"Upper soil"},{"point":[1.8,15.5],"materialName":"Weak seam"}],"customSurfaces":[{"points":[[45.5,60.84952830570318],[47.391666666666666,56.41384317080093],[49.28333333333333,52.5947456156818],[51.175,49.21863936796616],[53.06666666666666,46.18300684792613],[54.958333333333336,43.421232334654626],[56.85,40.88709436410832],[58.74166666666667,38.54694763940411],[60.63333333333333,36.37538914930115],[62.525,34.35267863589479],[64.41666666666667,32.46311569475146],[66.30833333333334,30.693972224102247],[68.2,29.034764004393452],[70.09166666666667,27.47673821777299],[71.98333333333333,26.012503391504502],[73.875,24.63575614297983],[75.76666666666667,23.341075449552733],[77.65833333333333,22.1237651022916],[79.55,20.979731237845797],[81.44166666666666,19.905385866276745],[83.33333333333334,18.897569974328192],[85.225,17.953491583561103],[87.11666666666667,17.07067538439088],[89.00833333333333,16.24692143901909],[90.9,15.480271068662631],[92.79166666666666,15],[94.68333333333334,15],[96.575,15],[98.46666666666667,15],[100.35833333333333,15],[102.25,15],[104.14166666666667,15],[106.03333333333333,15],[107.925,15],[109.81666666666666,15],[111.70833333333333,15],[113.6,15],[115.49166666666666,15],[117.38333333333334,15],[119.275,15],[121.16666666666667,15],[123.05833333333334,15],[124.95,15],[126.84166666666667,15],[128.73333333333335,15],[130.625,15],[132.51666666666665,15],[134.40833333333333,15],[136.3,15],[138.19166666666666,15],[140.08333333333331,15],[141.975,15],[143.86666666666667,15],[145.75833333333333,15],[147.65,15],[149.54166666666669,15.65425411931389],[151.43333333333334,16.43407340653178],[153.325,17.2714335697451],[155.21666666666667,18.168346887400062],[157.10833333333335,19.12707430039154],[159,20.150161059598716]]}],"customPlanesOnly":true},
     checks: [
       {"method":"Bishop","label":"Bishop simplified","published":1.382,"publishedBy":"Commercial program A"},
       {"method":"Morgenstern-Price","label":"Spencer (M-P, constant f(x))","published":1.382,"publishedBy":"Commercial program A","options":{"intersliceFunction":"constant"}},
       {"method":"Morgenstern-Price","label":"Morgenstern-Price (half-sine)","published":1.37,"publishedBy":"Fredlund & Krahn"},
+      {"method":"Bishop","label":"Bishop simplified","published":1.377,"publishedBy":"Fredlund & Krahn"},
+      {"method":"Morgenstern-Price","label":"Spencer (M-P, constant f(x))","published":1.373,"publishedBy":"Fredlund & Krahn","options":{"intersliceFunction":"constant"}},
+    ],
+    notes: [
+      "Fredlund & Krahn (1977), Table 2 case 2: ordinary 1.288, Bishop 1.377, Spencer 1.373, Janbu simplified 1.448, Janbu rigorous 1.432, Morgenstern-Price constant 1.378; Table 3: half-sine 1.370 (Saskatchewan), 1.386 (Alberta). The seam's level is not stated; Fig. 8 draws it near el. 20 with a y-scale that does not match its x-scale (the circle's lowest point, el. 10, is drawn at 13). The seam at 15–16 ft reproduces their factors (Bishop 1.380, half-sine 1.370); at 16–17 ft every method gives 2.8 % less.",
+    ],
+  },
+  {
+    id: "V046b",
+    title: "Fredlund & Krahn slope on a weak seam, with a piezometric line",
+    reference: "Fredlund, D.G. & Krahn, J. (1977). Can. Geotech. J. 14(3).",
+    surface: "fixed",
+    units: "SI",
+    description: "As V046a with the piezometric line of V045 (from (0, 40) ft to the toe) for both materials: Fredlund & Krahn's case 6. Converted to SI.",
+    definition: {"coordinates":[[0.0,4.572],[0.0,18.288],[18.288,18.288],[42.672,6.096],[54.864,6.096],[54.864,4.572]],"materials":[{"name":"Upper soil","model":{"kind":"mohr-coulomb","unitWeight":18.8504956,"cohesion":28.728156,"frictionAngle":20}},{"name":"Weak seam","model":{"kind":"mohr-coulomb","unitWeight":18.8504956,"cohesion":0.0,"frictionAngle":10}}],"materialBoundaries":[{"coordinates":[[-0.3048,4.8768],[55.1688,4.8768]],"materialName":""}],"regionAssignments":[{"point":[0.54864,4.89204],"materialName":"Upper soil"},{"point":[0.54864,4.7244],"materialName":"Weak seam"}],"customSurfaces":[{"points":[[13.8684,18.546936],[14.44498,17.194939],[15.02156,16.030878],[15.59814,15.001841],[16.17472,14.07658],[16.7513,13.234792],[17.32788,12.462386],[17.90446,11.74911],[18.48104,11.087219],[19.05762,10.470696],[19.6342,9.894758],[20.21078,9.355523],[20.78736,8.849796],[21.36394,8.37491],[21.94052,7.928611],[22.5171,7.508978],[23.09368,7.11436],[23.67026,6.743324],[24.24684,6.394622],[24.82342,6.067162],[25.4,5.759979],[25.97658,5.472224],[26.55316,5.203142],[27.12974,4.952062],[27.70632,4.718387],[28.2829,4.572],[28.85948,4.572],[29.43606,4.572],[30.01264,4.572],[30.58922,4.572],[31.1658,4.572],[31.74238,4.572],[32.31896,4.572],[32.89554,4.572],[33.47212,4.572],[34.0487,4.572],[34.62528,4.572],[35.20186,4.572],[35.77844,4.572],[36.35502,4.572],[36.9316,4.572],[37.50818,4.572],[38.08476,4.572],[38.66134,4.572],[39.23792,4.572],[39.8145,4.572],[40.39108,4.572],[40.96766,4.572],[41.54424,4.572],[42.12082,4.572],[42.6974,4.572],[43.27398,4.572],[43.85056,4.572],[44.42714,4.572],[45.00372,4.572],[45.5803,4.771417],[46.15688,5.009106],[46.73346,5.264333],[47.31004,5.537712],[47.88662,5.829932],[48.4632,6.141769]]}],"customPlanesOnly":true,"waterTable":{"mode":"custom","value":[[0.0,12.192],[42.672,6.096],[54.864,6.096]]}},
+    checks: [
+      {"method":"Bishop","label":"Bishop simplified","published":1.248,"publishedBy":"Fredlund & Krahn"},
+      {"method":"Morgenstern-Price","label":"Spencer (M-P, constant f(x))","published":1.245,"publishedBy":"Fredlund & Krahn","options":{"intersliceFunction":"constant"}},
+      {"method":"Morgenstern-Price","label":"Morgenstern-Price (half-sine)","published":1.245,"publishedBy":"Fredlund & Krahn"},
+    ],
+    notes: [
+      "Fredlund & Krahn (1977), Table 2 case 6: ordinary 1.171, Bishop 1.248, Spencer 1.245, Janbu simplified 1.333, Janbu rigorous 1.298, Morgenstern-Price constant 1.250; Table 3: half-sine 1.245 (Saskatchewan; the Alberta program did not converge). Their cases 3 and 4 use a pore-pressure ratio ru = 0.25, which cSlope does not have.",
     ],
   },
   {
