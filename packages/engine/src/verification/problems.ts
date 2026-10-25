@@ -827,6 +827,7 @@ export const PROBLEMS: RawCase[] = [
     publicNote: "Duncan (2000) prints two decimals; the other programs give 1.145 on the same input.",
     notes: [
       "Above el. −20 ft cSlope extrapolates Su linearly (below 100 psf); program D keeps 100 psf there (F = 1.146, β = 0.947 when cSlope does the same). Duncan's F is 1.17; commercial program A's Latin hypercube Monte Carlo gives Pf = 14 % with a rate-only σ.",
+      "commercial program A analyses Duncan's non-circular surface (Spencer 1.157, GLE 1.160, Janbu corrected 1.168, Janbu 1.127). Its polyline, digitised from its fig. 29.2 (300 dpi, calibrated on the printed endpoints (137.767, −120.245) and (350.168, −7.761)), gives in cSlope Spencer 1.174, M-P 1.177, Janbu corrected 1.186, Janbu 1.149: +1.4 to +1.9 % on every method, so the surface's position, not the mechanics. Its interior vertices 2 ft higher give +2.7 %, 2 ft lower −2.2 % (Su grows with depth). Duncan (2000) fig. 4 is a sketch with an elevation axis only; read with the 0.875:1 slopes as scale, its estimated failure surface lies within 2–3 ft of the program's polyline, the drawing's precision, so the 1.5 % cannot be settled from the source. Fig. 2(b) confirms Su = 100 psf at el. −20 ft and 9.8 psf/ft.",
     ],
   },
   {
@@ -2737,6 +2738,7 @@ export const PROBLEMS: RawCase[] = [
     notes: [
       "The kink of the piezometric line is located from the figure to about a foot; program D also reads 0.6 % low.",
       "The upstream face starts at x = 30.2 ft, not 38.4 ft: commercial program A prints its slip surface entering at (31.096, 100.345), which lies on the face from (30.2, 100) to the crest (60.8, 112) but above the level ground of a face starting at 38.4 ft, and its Fig. 69.1 shows the face starting at about 30 ft (vertices calibrated on the labelled section) with the piezometric line leaving el. 100 at the second vertex, 38.4 ft. USACE's slices (Fig. F-17: widths 31 and 21 ft up to the crest corner) agree. On the corrected outline cSlope gives Bishop 1.990, Spencer 2.005, Janbu corrected 1.824 (before: 1.998 / 2.012 / 1.833).",
+      "commercial program A's fig. 69.1 (digitised at 250 dpi, calibrated on the crest 60.8–81 ft and the toe at 400 ft) puts the piezometric line's kinks at (122.4, 69.9) and (182.8, 22.5) against (121.1, 69) and (179.4, 22.5) here; with its kinks cSlope gives Bishop 1.988, so the line does not explain the 1 % gap (middle kink ±2 ft: ∓0.4 %; lower kink ±10 ft in x: ±0.7 %). Its model has two undocumented extra materials, a vertical strip under the crest (x = 61.8–80.1 ft) and the whole downstream part (x > 200 ft), with the tabulated strengths; a drained strip would give 2.039 (+1.4 % over the program), a cos²θ pore-pressure correction 2.084 (+3.6 %), 25–400 slices change < 0.15 %. Program D also lies 0.6 % below program A. USACE's 2.01 (EM 1110-2-1902, fig. F-17) is a nine-slice hand calculation; USACE's Modified Swedish value is 2.07.",
     ],
   },
   {
