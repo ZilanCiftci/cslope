@@ -31,11 +31,35 @@ The script compares the regenerated verification table with the committed one an
 | 2026-10-25 | Block search (opt-in search method; circular search unchanged) | 0 | 0.353 → 0.353 | 0.499 → 0.499 | 1.092 → 1.092 | 1.581 → 1.581 | 90 s (4 workers, load 1.0 at start) |
 | 2026-10-25 | Fredlund & Krahn (1977) checked against the paper: Spencer checks, case 6 added (V046b), V046 renamed V046a | 0 | 0.353 → 0.353 | 0.499 → 0.499 | 1.092 → 1.045 | 1.581 → 1.537 | 107 s (4 workers, load 0.3 at start) |
 | 2026-10-25 | V091: USACE's chart value is 1.24, not 1.33; V092: USACE's own piezometric line documented; V096d–e: Zhu & Lee's surface 3 on the paper's own circle | 0 | 0.353 → 0.353 | 0.499 → 0.499 | 1.045 → 0.955 | 1.537 → 1.460 | 182 s (4 workers, load 6.0 at start) |
+| 2026-10-25 | Review fixes: USACE's V092 values no longer compared on the program's line, one source string per manual and paper; regenerated at idle load | 0 | 0.353 → 0.353 | 0.499 → 0.499 | 0.955 → 0.955 | 1.460 → 1.464 | 100 s (4 workers, load 0.5 at start) |
 <!-- summary-end -->
 
 ## Entries
 
 <!-- entries -->
+
+### 2026-10-25: Review fixes: USACE's V092 values no longer compared on the program's line, one source string per manual and paper; regenerated at idle load
+
+Compared with b3d773c. Errors are relative to the reference, in percent. Verification run time: 100 s (4 workers, load 0.5 at start).
+
+**Against other programs (midpoint of their range):** 0 moved (0 closer to the reference, 0 further).
+
+| Result | Reference | Before | After | Error before | Error after |
+|---|---|---|---|---|---|
+| **Mean error (n = 280)** | | | | -0.236 % | -0.236 % |
+| **Mean absolute error** | | | | 0.353 % | 0.353 % |
+| **RMS error** | | | | 0.499 % | 0.499 % |
+| **Largest error** | | | | 2.215 % | 2.215 % |
+
+**Against the papers:** 0 moved (0 closer to the reference, 0 further).
+
+| Result | Reference | Before | After | Error before | Error after |
+|---|---|---|---|---|---|
+| **Mean error (n = 101)** | | | | -0.177 % | -0.169 % |
+| **Mean absolute error** | | | | 0.955 % | 0.955 % |
+| **RMS error** | | | | 1.460 % | 1.464 % |
+| **Largest error** | | | | 5.385 % | 5.385 % |
+
 
 ### 2026-10-25: V091: USACE's chart value is 1.24, not 1.33; V092: USACE's own piezometric line documented; V096d–e: Zhu & Lee's surface 3 on the paper's own circle
 

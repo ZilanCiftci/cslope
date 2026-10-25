@@ -5267,8 +5267,8 @@
    "published": [
     {
      "value": 1.24,
-     "method": "stability chart",
-     "source": "USACE EM 1110-2-1902, example E-2",
+     "method": "stability chart (example E-2)",
+     "source": "USACE EM 1110-2-1902",
      "computed": null
     }
    ],
@@ -5319,15 +5319,14 @@
    "published": [
     {
      "value": 2.01,
-     "method": "Bishop simplified",
-     "source": "USACE EM 1110-2-1902, example F-6",
-     "analysis": "Bishop simplified",
-     "computed": 1.9905
+     "method": "Simplified Bishop, nine-slice hand calculation on the manual's own piezometric line (example F-6)",
+     "source": "USACE EM 1110-2-1902",
+     "computed": null
     },
     {
      "value": 2.07,
-     "method": "Modified Swedish (θ = 19.7°)",
-     "source": "USACE EM 1110-2-1902, example F-6",
+     "method": "Modified Swedish (θ = 19.7°) on the manual's own piezometric line (example F-6)",
+     "source": "USACE EM 1110-2-1902",
      "computed": null
     }
    ],
@@ -5365,7 +5364,7 @@
      }
     }
    ],
-   "note": "USACE's values are for the manual's own piezometric line, which its slice table (fig. F-17a) places lower than the line of the program version analysed here: the kink at about el. 53 ft instead of 69 ft, and the tailwater level reached 18 ft further upstream. On USACE's line cSlope gives Bishop 2.06 and Spencer 2.08: within 0.2 % of USACE's Modified Swedish value 2.07, and 2.6 % above its nine-slice Bishop hand calculation."
+   "note": "USACE's values are for the manual's own piezometric line, which its slice table (fig. F-17a) places lower than the line of the program version analysed here: the kink at about el. 53–59 ft instead of 69 ft, and the tailwater level reached about 18 ft further upstream. On the manual's line cSlope gives Bishop 2.05–2.06 and Spencer 2.06–2.08, depending on where the table's slices are placed: within 0.5 % of USACE's Modified Swedish value 2.07, and 2–2.6 % above its nine-slice Bishop hand calculation. The manual's values are shown for reference and not compared with cSlope's analyses on the program's line."
   },
   {
    "id": "V093",
