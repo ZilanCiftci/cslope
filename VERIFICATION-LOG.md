@@ -32,11 +32,37 @@ The script compares the regenerated verification table with the committed one an
 | 2026-10-25 | Fredlund & Krahn (1977) checked against the paper: Spencer checks, case 6 added (V046b), V046 renamed V046a | 0 | 0.353 → 0.353 | 0.499 → 0.499 | 1.092 → 1.045 | 1.581 → 1.537 | 107 s (4 workers, load 0.3 at start) |
 | 2026-10-25 | V091: USACE's chart value is 1.24, not 1.33; V092: USACE's own piezometric line documented; V096d–e: Zhu & Lee's surface 3 on the paper's own circle | 0 | 0.353 → 0.353 | 0.499 → 0.499 | 1.045 → 0.955 | 1.537 → 1.460 | 182 s (4 workers, load 6.0 at start) |
 | 2026-10-25 | Review fixes: USACE's V092 values no longer compared on the program's line, one source string per manual and paper; regenerated at idle load | 0 | 0.353 → 0.353 | 0.499 → 0.499 | 0.955 → 0.955 | 1.460 → 1.464 | 100 s (4 workers, load 0.5 at start) |
+| 2026-10-25 | Round two from the source extracts: V063 check is Bishop, Greco's global minimum 0.97 on V053, tiered-wall reinforcement 6.3 m, Morgenstern and Low reference values, Prandtl 1920 | 2 | 0.353 → 0.353 | 0.499 → 0.499 | 0.955 → 1.008 | 1.464 → 1.543 | 107 s (4 workers, load 1.5 at start) |
 <!-- summary-end -->
 
 ## Entries
 
 <!-- entries -->
+
+### 2026-10-25: Round two from the source extracts: V063 check is Bishop, Greco's global minimum 0.97 on V053, tiered-wall reinforcement 6.3 m, Morgenstern and Low reference values, Prandtl 1920
+
+Compared with 990e4e9. Errors are relative to the reference, in percent. Verification run time: 107 s (4 workers, load 1.5 at start).
+
+**Against other programs (midpoint of their range):** 1 moved (1 closer to the reference, 0 further).
+
+| Result | Reference | Before | After | Error before | Error after |
+|---|---|---|---|---|---|
+| V066b Spencer | 1.011 | 1.0105 | 1.0111 | -0.049 % | +0.010 % |
+| **Mean error (n = 280)** | | | | -0.236 % | -0.235 % |
+| **Mean absolute error** | | | | 0.353 % | 0.353 % |
+| **RMS error** | | | | 0.499 % | 0.499 % |
+| **Largest error** | | | | 2.215 % | 2.215 % |
+
+**Against the papers:** 1 moved (0 closer to the reference, 1 further).
+
+| Result | Reference | Before | After | Error before | Error after |
+|---|---|---|---|---|---|
+| V066b Bishop simplified, circular (Leshchinsky & Han (2004)) | 1.000 | 1.0126 | 1.0132 | +1.260 % | +1.320 % |
+| **Mean error (n = 105)** | | | | -0.169 % | -0.078 % |
+| **Mean absolute error** | | | | 0.955 % | 1.008 % |
+| **RMS error** | | | | 1.464 % | 1.543 % |
+| **Largest error** | | | | 5.385 % | 5.385 % |
+
 
 ### 2026-10-25: Review fixes: USACE's V092 values no longer compared on the program's line, one source string per manual and paper; regenerated at idle load
 

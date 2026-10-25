@@ -1,8 +1,8 @@
 {
  "summary": {
   "problems": 167,
-  "results": 326,
-  "publishedValues": 176,
+  "results": 328,
+  "publishedValues": 189,
   "problemsWithPublished": 133,
   "literatureProblems": 157,
   "reliabilityQuantities": 25
@@ -720,7 +720,7 @@
   {
    "id": "V013a",
    "title": "Cai & Ugai (2000) slope, no pile (see V013b, V013c, V013d and V013e for the pile rows)",
-   "reference": "Cai & Ugai (2000).",
+   "reference": "Cai & Ugai (2000), Soils and Foundations 40(1).",
    "literature": true,
    "commercial": false,
    "surface": "search",
@@ -3115,9 +3115,18 @@
      "computed": 1.0061
     },
     {
-     "value": 1.08,
+     "value": 0.97,
+     "method": "Spencer, non-circular (global minimum along the weak layer)",
      "source": "Greco (1996)",
-     "computed": null
+     "analysis": "Spencer, non-circular",
+     "computed": 1.0061
+    },
+    {
+     "value": 1.08,
+     "method": "Spencer, local minimum (nearly circular surface from the toe)",
+     "source": "Greco (1996)",
+     "analysis": "Spencer",
+     "computed": 1.0913
     }
    ],
    "results": [
@@ -3128,9 +3137,14 @@
       "min": 1.01,
       "max": 1.01
      }
+    },
+    {
+     "method": "Spencer",
+     "computed": 1.0913,
+     "programs": null
     }
    ],
-   "note": "Chen & Shao give 1.01–1.03 for a surface sliding along the weak layer; Greco's 1.08 is for the surface of his own search."
+   "note": "Chen & Shao give 1.01–1.03 for a surface sliding along the weak layer. Greco's Monte Carlo search finds a global minimum of 0.97 along the weak layer, entering the level ground far from the toe, and a local minimum of 1.08 on a nearly circular surface from the toe; the programs' block searches and cSlope give 1.01 on a commercial program's version of the geometry, 4 % above Greco's global minimum."
   },
   {
    "id": "V054",
@@ -3143,7 +3157,7 @@
    "published": [
     {
      "value": 1.08,
-     "method": "Spencer, nearly circular surface",
+     "method": "Spencer, local minimum (nearly circular surface from the toe)",
      "source": "Greco (1996)",
      "analysis": "Spencer",
      "computed": 1.0913
@@ -3166,7 +3180,8 @@
       "max": 1.093
      }
     }
-   ]
+   ],
+   "note": "Greco's 1.08 is the local minimum of his search, a nearly circular surface from the toe; his global minimum, 0.97 along the weak layer, is compared in V053."
   },
   {
    "id": "V055",
@@ -3236,6 +3251,18 @@
      "method": "limit-equilibrium chart",
      "analysis": "Spencer",
      "computed": 1.4705
+    },
+    {
+     "value": 1.47,
+     "method": "stability chart (Taylor)",
+     "source": "Griffiths & Lane (1999)",
+     "computed": null
+    },
+    {
+     "value": 1.45,
+     "method": "finite elements",
+     "source": "Griffiths & Lane (1999)",
+     "computed": null
     }
    ],
    "results": [
@@ -3264,6 +3291,18 @@
      "method": "limit-equilibrium chart",
      "analysis": "Spencer",
      "computed": 2.0229
+    },
+    {
+     "value": 2.1,
+     "method": "stability chart (Taylor)",
+     "source": "Griffiths & Lane (1999)",
+     "computed": null
+    },
+    {
+     "value": 2.03,
+     "method": "finite elements",
+     "source": "Griffiths & Lane (1999)",
+     "computed": null
     }
    ],
    "results": [
@@ -3692,7 +3731,7 @@
   {
    "id": "V063",
    "title": "Huang & Jia earth dam, dry",
-   "reference": "Huang & Jia (2009).",
+   "reference": "Huang, M. & Jia, C.-Q. (2009). Strength reduction FEM in stability analysis of soil slopes subjected to transient unsaturated seepage. Computers and Geotechnics 36(1–2), 93–101.",
    "literature": true,
    "commercial": false,
    "surface": "search",
@@ -3701,9 +3740,15 @@
     {
      "value": 2.43,
      "source": "Huang & Jia",
+     "method": "Bishop simplified",
+     "analysis": "Bishop simplified",
+     "computed": 2.4528
+    },
+    {
+     "value": 2.5,
      "method": "finite-element strength reduction",
-     "analysis": "Spencer",
-     "computed": 2.4511
+     "source": "Huang & Jia (2009)",
+     "computed": null
     }
    ],
    "results": [
@@ -3714,8 +3759,14 @@
       "min": 2.455,
       "max": 2.455
      }
+    },
+    {
+     "method": "Bishop simplified",
+     "computed": 2.4528,
+     "programs": null
     }
-   ]
+   ],
+   "note": "Huang & Jia's limit-equilibrium value 2.43 is by Bishop's method (their p. 95 and fig. 3a); their strength-reduction finite-element value is 2.50."
   },
   {
    "id": "V064",
@@ -3767,6 +3818,20 @@
      "method": "finite differences",
      "source": "Leshchinsky & Han (2004)",
      "computed": null
+    },
+    {
+     "value": 0.98,
+     "method": "Bishop simplified, deep circle (read from fig. 7a)",
+     "source": "Leshchinsky & Han (2004)",
+     "analysis": "Bishop simplified",
+     "computed": 0.9775
+    },
+    {
+     "value": 0.92,
+     "method": "Spencer, three-part wedge",
+     "source": "Leshchinsky & Han (2004)",
+     "analysis": "Spencer",
+     "computed": 0.9591
     }
    ],
    "results": [
@@ -3835,7 +3900,7 @@
      "method": "Bishop simplified, circular",
      "source": "Leshchinsky & Han (2004)",
      "analysis": "Bishop simplified",
-     "computed": 1.0126
+     "computed": 1.0132
     },
     {
      "value": 0.98,
@@ -3847,7 +3912,7 @@
    "results": [
     {
      "method": "Spencer",
-     "computed": 1.0105,
+     "computed": 1.0111,
      "programs": {
       "min": 1.011,
       "max": 1.011
@@ -3855,7 +3920,7 @@
     },
     {
      "method": "Bishop simplified",
-     "computed": 1.0126,
+     "computed": 1.0132,
      "programs": null
     }
    ],
@@ -3993,7 +4058,7 @@
   {
    "id": "V068",
    "title": "Low (1989), stiff crust over soft clays, published circle",
-   "reference": "Low (1989).",
+   "reference": "Low, B.K. (1989). Stability analysis of embankments on soft ground. J. Geotech. Eng. 115(2), 211–227; example 2, fig. 11.",
    "literature": true,
    "commercial": false,
    "surface": "fixed",
@@ -4013,6 +4078,18 @@
      "computed": null
     },
     {
+     "value": 1.31,
+     "method": "Ordinary and Bishop with φ = 0 in the bank",
+     "source": "Low (1989)",
+     "computed": null
+    },
+    {
+     "value": 1.38,
+     "method": "hand calculation (Low's method)",
+     "source": "Low (1989)",
+     "computed": null
+    },
+    {
      "value": 1.17,
      "source": "Kim (2002)",
      "computed": null
@@ -4025,7 +4102,7 @@
      "programs": null
     }
    ],
-   "note": "The comparison program's 1.19 is not reproduced on the circle it prints with that value: cSlope gives 1.13 there, close to Low's Bishop value 1.14, which is the check; Kim (2002) gives 1.17."
+   "note": "The comparison program's 1.19 is not reproduced on the circle it prints with that value: cSlope gives 1.13 there, close to Low's Bishop value 1.14, which is the check. Low himself calls that Bishop value misleading, an artefact of negative effective normal stresses in the stiff bank with φ = 15°: with φ = 0 in the bank both Ordinary and Bishop give 1.31, and his own hand method 1.38. Kim (2002) gives 1.17."
   },
   {
    "id": "V069a",
@@ -4100,6 +4177,18 @@
      "method": "stability chart",
      "analysis": "Bishop simplified",
      "computed": 1.4147
+    },
+    {
+     "value": 1.52,
+     "method": "stability chart, circles tangent to the base",
+     "source": "Morgenstern (1963)",
+     "computed": null
+    },
+    {
+     "value": 1.48,
+     "method": "stability chart, circles tangent to H/2",
+     "source": "Morgenstern (1963)",
+     "computed": null
     }
    ],
    "results": [
@@ -4119,7 +4208,8 @@
       "max": 1.422
      }
     }
-   ]
+   ],
+   "note": "Morgenstern's 1.41 is the lowest of three chart readings for circles tangent to the base, to H/2 and to H/4 (1.52, 1.48 and 1.41, the last interpolated), with his remark that a slightly lower value could perhaps be found; a free search may therefore come in below it."
   },
   {
    "id": "V071a",
@@ -4364,7 +4454,7 @@
   {
    "id": "V077",
    "title": "Prandtl bearing capacity on level ground",
-   "reference": "Prandtl (1920)",
+   "reference": "Prandtl (1920). Über die Härte plastischer Körper. Nachr. Ges. Wiss. Göttingen, Math.-phys. Kl., 74–85.",
    "literature": true,
    "commercial": false,
    "surface": "fixed",
@@ -4392,7 +4482,7 @@
   {
    "id": "V078",
    "title": "Prandtl bearing capacity, fully specified Prandtl surface (reference values)",
-   "reference": "Prandtl (1921).",
+   "reference": "Prandtl (1920). Über die Härte plastischer Körper. Nachr. Ges. Wiss. Göttingen, Math.-phys. Kl., 74–85.",
    "literature": true,
    "commercial": false,
    "surface": "fixed",
@@ -4401,7 +4491,7 @@
     {
      "value": 1,
      "method": "plasticity theory",
-     "source": "Prandtl (1921)",
+     "source": "Prandtl (1920)",
      "computed": null
     }
    ],
@@ -4420,7 +4510,7 @@
   {
    "id": "V079",
    "title": "Priest (1993) rigid block on a plane, water-filled crack",
-   "reference": "Priest (1993).",
+   "reference": "Priest, S.D. (1993). Discontinuity Analysis for Rock Engineering. Chapman & Hall, London; example 8.1, pp. 224–225.",
    "literature": true,
    "commercial": false,
    "surface": "fixed",
@@ -4428,6 +4518,7 @@
    "published": [
     {
      "value": 1.049,
+     "method": "rigid block, force equilibrium",
      "source": "Priest (1993)",
      "computed": null
     }
@@ -4454,7 +4545,7 @@
   {
    "id": "V080",
    "title": "Priest (1993) rigid block, reference geometry (60° face)",
-   "reference": "Priest (1993).",
+   "reference": "Priest, S.D. (1993). Discontinuity Analysis for Rock Engineering. Chapman & Hall, London; example 8.1, pp. 224–225.",
    "literature": true,
    "commercial": false,
    "surface": "fixed",
@@ -4466,6 +4557,12 @@
      "method": "Spencer",
      "analysis": "Spencer",
      "computed": 1.049
+    },
+    {
+     "value": 1.049,
+     "method": "rigid block, force equilibrium",
+     "source": "Priest (1993)",
+     "computed": null
     }
    ],
    "results": [
