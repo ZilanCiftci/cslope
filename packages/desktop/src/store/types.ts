@@ -3,6 +3,7 @@ import type {
   AnalysisResult,
   MaterialModel,
   PileForceDirection,
+  PileForceLocation,
 } from "@cslope/engine";
 
 // Export analysis types so UI components can consume them from a single module
@@ -177,6 +178,11 @@ export interface PileRow {
    */
   direction?: PileForceDirection;
   application: "active" | "passive";
+  /**
+   * Where an Ito & Matsui force acts: at the resultant of the soil
+   * pressure (absent: the default) or at the slip surface.
+   */
+  location?: PileForceLocation;
 }
 
 export interface PiezoLine {

@@ -9,8 +9,8 @@ import { buildSlope } from "./build-slope";
 import { toCanonicalSlopeDefinition } from "./canonical";
 import { analyseMorgensternPrice, analyseSlope } from "./solvers";
 import { getSlices } from "./slices";
-import { verticalStress } from "./reinforcement";
-import { layered, runVerification, su } from "../verification/cases";
+import { pileForce, verticalStress } from "./reinforcement";
+import { VERIFICATION_CASES, layered, runVerification, su } from "../verification/cases";
 
 describe("slicing with a densely digitised water line", () => {
   // One material, a curved main water line given by n + 1 vertices.
@@ -94,5 +94,35 @@ describe("Ito & Matsui vertical stress", () => {
     const below = verticalStress(slope, 28, -6.001, false);
     expect(below - above).toBeGreaterThan(0);
     expect(below - above).toBeLessThan(0.1);
+  });
+});
+
+describe("Ito & Matsui pile force location", () => {
+  // Cai & Ugai's slope with a pile row, D1/D = 3 (V013c).
+  const c = VERIFICATION_CASES.find((x) => x.id === "V013c")!;
+  const run = (location?: "centroid" | "slip-surface") => {
+    const def = { ...c.definition, piles: c.definition.piles!.map((p) => ({ ...p, ...(location ? { location } : {}) })) };
+    return runVerification(def, "Bishop", c.checks[0].options ?? {});
+  };
+
+  it("acts at the resultant of the soil pressure by default, at the slip surface as Cai & Ugai on request", () => {
+    const centroid = run().fos!;
+    const crossing = run("slip-surface").fos!;
+    expect(run("centroid").fos).toBe(centroid);
+    // The resultant lies above the crossing: a shorter arm, a lower factor.
+    expect(centroid).toBeLessThan(crossing);
+    expect(centroid).toBeCloseTo(1.4371, 3);
+    expect(crossing).toBeCloseTo(1.4501, 3);
+  });
+
+  it("puts the resultant at the soil pressure's moment over its force above the crossing", () => {
+    const { slope } = run();
+    const p = slope.piles[0];
+    const { perPile, resultantAbove } = pileForce(slope, p, p.x1, 2);
+    expect(perPile).toBeGreaterThan(0);
+    // Below the pile head (y = 5) and above the crossing (y = 2).
+    expect(resultantAbove).toBeGreaterThan(0);
+    expect(resultantAbove).toBeLessThan(3);
+    expect(pileForce(slope, { ...p, force: 100 }, p.x1, 2).resultantAbove).toBe(0);
   });
 });

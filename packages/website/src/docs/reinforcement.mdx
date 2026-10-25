@@ -62,6 +62,8 @@ A pile row or a sheet pile wall resists the sliding mass in shear where the slip
 
 The **Pile row** starts with Ito & Matsui, D = 0.6 m and S = 2 m, tangent and passive. The **Sheet pile wall** starts with a given force of 100 kN, S = 1 m, active and horizontal.
 
+With Ito & Matsui the soil presses on the pile from its head (or the ground) down to the slip surface. The force acts at the resultant of that pressure, by default, so that its moment is the moment of the pressure; **Force acts at** in the pile's details can put it at the slip surface instead, as Cai & Ugai (2000) apply it, which gives it the longest arm and a slightly higher factor of safety. A given force acts at the slip surface.
+
 The Ito & Matsui method needs a vertical pile and a spacing larger than the diameter. The window warns when a pile does not meet these conditions; give the force of such a pile directly.
 
 ## Lime-cement columns

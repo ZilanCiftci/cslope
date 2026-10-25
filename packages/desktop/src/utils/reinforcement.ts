@@ -1,4 +1,4 @@
-import type { Pile, PileForceDirection, Reinforcement } from "@cslope/engine";
+import type { Pile, PileForceDirection, PileForceLocation, Reinforcement } from "@cslope/engine";
 import type { ModelOrientation, PileRow, PileType, ReinforcementRow, ReinforcementType } from "../store/types";
 import { surfaceYAtX } from "../features/view/surface";
 
@@ -176,6 +176,11 @@ export const PILE_DIRECTION_LABELS: Record<PileForceDirection, string> = {
   angle: "At angle θ",
 };
 
+export const PILE_LOCATION_LABELS: Record<PileForceLocation, string> = {
+  centroid: "Resultant of the soil pressure",
+  "slip-surface": "Slip surface (Cai & Ugai)",
+};
+
 /**
  * Defaults: a pile row with the Ito & Matsui force, passive and tangent to
  * the slip surface (the usual default), or a sheet pile wall with a given shear
@@ -231,6 +236,7 @@ export function toEnginePile(row: PileRow): Pile {
     angle: row.angle,
     ...(row.direction ? { direction: row.direction } : {}),
     application: row.application,
+    ...(row.location ? { location: row.location } : {}),
   };
 }
 
@@ -264,5 +270,6 @@ export function sanitizePile(raw: unknown, id: string): PileRow | null {
     // Absent stays absent (force at the angle, as before the option).
     ...(PILE_DIRECTIONS.includes(r.direction as PileForceDirection) ? { direction: r.direction as PileForceDirection } : {}),
     application: r.application === "active" || r.application === "passive" ? r.application : preset.application,
+    ...(r.location === "centroid" || r.location === "slip-surface" ? { location: r.location } : {}),
   };
 }

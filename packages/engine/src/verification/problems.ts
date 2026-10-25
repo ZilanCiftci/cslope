@@ -400,7 +400,7 @@ export const PROBLEMS: RawCase[] = [
     paper: [{"value": 1.37, "source": "Cai & Ugai (2000)"}],
     publicNote: "Cai & Ugai's values are for surfaces through the pile row; the programs search their own critical surfaces, which can differ.",
     notes: [
-      "program D 1.451; Cai & Ugai 1.37.",
+      "The Ito & Matsui force acts at the resultant of the soil pressure on the pile above the slip surface (about 1.2 m above the crossing here), the moment of the pressure acting from the pile head down: 1.437. At the slip surface, as Cai & Ugai (2000, eq. 9) apply it, it has the longest arm and gives 1.450 (+1.4 %); program D 1.451. Commercial program A directs the force along the slip surface by default and gives 1.432 in cSlope with that direction. Cai & Ugai 1.37 (read from their figures, simplex search).",
     ],
   },
   {
@@ -2434,9 +2434,9 @@ export const PROBLEMS: RawCase[] = [
     paper: [{"value": 0.989, "method": "force-equilibrium trial wedge", "source": "Sheahan & Ho (2003)"}],
     publicNote: "Sheahan & Ho use a force-equilibrium trial wedge; Janbu's method on the same planes differs by up to 4 %.",
     notes: [
-      "Table 48.2 lists an out-of-plane spacing of 1.5 m; 1.15 m (the Clouterre wall) reproduces commercial program A's results at all six plane angles and is used here.",
+      "Out-of-plane spacing 1.15 m, the nail spacing of the Clouterre test wall. Both manuals' tables list 1.5 m, but with 1.15 m cSlope reproduces commercial program A at all six plane angles (45-70 deg) within 0.3 %, and no variant with 1.5 m does: passive nails -4.8 to -9.6 %, active -3.4 to -17.8 %, force along the slip surface -7.5 to -14.4 %, bisector -0.4 to -4.8 % (checked 2026-10-25). The manual's table also says passive, as used here. The 1.5 m in the tables is therefore taken as a misprint.",
       "Sheahan & Ho 0.989 at 55° (force-equilibrium trial wedge).",
-      "Input audit 2026-10-24: commercial program B (§2.28, Table 77) also lists 1.5 m, with the same nails (rows from 1.5 m at 1 m, lengths 6, 8, 7.5, 8, 8, 8, 6 m); its values 1.159 / 1.051 / 0.971 / 0.917 / 0.880 / 0.876 (45-70°) lie 1-2 % below Sheahan & Ho's. With 1.5 m cSlope is 5-10 % below commercial program A at every angle (0.919 at 55°). The 1.15 m spacing is not printed in either manual, so it remains an assumption that rests on the agreement.",
+      "Input audit 2026-10-24: commercial program B (§2.28, Table 77) also lists 1.5 m, with the same nails (rows from 1.5 m at 1 m, lengths 6, 8, 7.5, 8, 8, 8, 6 m); its values 1.159 / 1.051 / 0.971 / 0.917 / 0.880 / 0.876 (45-70°) lie 1-2 % below Sheahan & Ho's. With 1.5 m cSlope is 5-10 % below commercial program A at every angle (0.919 at 55°).",
     ],
   },
   {

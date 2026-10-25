@@ -211,8 +211,9 @@ describe("pile force direction", () => {
   });
 
   it("acts along the slip surface with direction tangent (the usual default)", () => {
-    // A commercial program on cSlope's V095c input, pile passive and tangential: 1.1989.
-    expect(run({ application: "passive", direction: "tangent" })).toBeCloseTo(1.1989, 3);
+    // A commercial program on cSlope's V095c input, pile passive and tangential,
+    // the force at the slip surface: 1.1989.
+    expect(run({ application: "passive", direction: "tangent", location: "slip-surface" })).toBeCloseTo(1.1989, 3);
   });
 
   it("is horizontal perpendicular to a vertical pile", () => {

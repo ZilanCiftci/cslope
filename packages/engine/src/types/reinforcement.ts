@@ -86,6 +86,14 @@ export interface Reinforcement {
 export type PileForceDirection = "angle" | "tangent" | "perpendicular";
 
 /**
+ * Where an Ito & Matsui pile force acts: at the resultant of the soil
+ * pressure on the pile above the slip surface ("centroid", the default),
+ * or where the slip surface crosses the pile ("slip-surface", as Cai &
+ * Ugai 2000, eq. 9, apply it). A given force acts at the crossing.
+ */
+export type PileForceLocation = "centroid" | "slip-surface";
+
+/**
  * Pile row (or sheet pile wall) resisting the sliding mass in shear: where
  * a slip surface crosses the pile axis, a force acts against the sliding
  * direction (see `direction`; by default tilted `angle` degrees upwards,
@@ -120,6 +128,8 @@ export interface Pile {
   direction?: PileForceDirection;
   /** Default "active". */
   application?: ReinforcementApplication;
+  /** Where an Ito & Matsui force acts. Default "centroid". */
+  location?: PileForceLocation;
 }
 
 /** Applied reinforcement force, per metre of slope. */

@@ -125,6 +125,15 @@ describe("pile rows", () => {
     expect(p.angle).toBe(0);
   });
 
+  it("carry where the Ito & Matsui force acts, absent meaning the resultant", () => {
+    const pile = newPile("p", "pile", ground);
+    expect(toEnginePile(pile).location).toBeUndefined();
+    expect(toEnginePile({ ...pile, location: "slip-surface" }).location).toBe("slip-surface");
+    const raw = { type: "pile", x1: 0, y1: 0, x2: 0, y2: -5 };
+    expect(sanitizePile({ ...raw, location: "slip-surface" }, "x")!.location).toBe("slip-surface");
+    expect(sanitizePile({ ...raw, location: "middle" }, "x")!.location).toBeUndefined();
+  });
+
   it("are saved with the project and reach the engine", () => {
     useAppStore.getState().newProject();
     useAppStore.getState().addPile("sheet-pile");

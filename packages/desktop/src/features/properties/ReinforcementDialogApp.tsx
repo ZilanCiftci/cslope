@@ -14,6 +14,7 @@ import type {
 } from "../../store/types";
 import {
   PILE_DIRECTION_LABELS,
+  PILE_LOCATION_LABELS,
   PILE_TYPE_LABELS,
   REINFORCEMENT_TYPE_LABELS,
   pilePreset,
@@ -34,6 +35,7 @@ interface LoadsStatePayload {
 const TYPES = Object.keys(REINFORCEMENT_TYPE_LABELS) as ReinforcementType[];
 const PILE_TYPES = Object.keys(PILE_TYPE_LABELS) as PileType[];
 const PILE_DIRECTIONS = Object.keys(PILE_DIRECTION_LABELS) as NonNullable<PileRow["direction"]>[];
+const PILE_LOCATIONS = Object.keys(PILE_LOCATION_LABELS) as NonNullable<PileRow["location"]>[];
 
 /** Why the analysis would refuse a pile row, if it would. */
 function pileProblem(p: PileRow): string | null {
@@ -805,6 +807,26 @@ export function ReinforcementDialogApp() {
                 ) : (
                   <div className="col-span-2" />
                 )}
+                {pile.mode === "ito-matsui" ? (
+                  <Field
+                    label="Force acts at"
+                    title="The soil pressure acts on the pile from its head down to the slip surface: its resultant gives the moment of that pressure. Cai & Ugai (2000) apply the force at the slip surface, which gives it the longest arm."
+                    span={2}
+                  >
+                    <select
+                      value={pile.location ?? "centroid"}
+                      aria-label="Pile force location"
+                      className="w-full"
+                      onChange={(e) => updatePile(pile.id, { location: e.target.value as NonNullable<PileRow["location"]> })}
+                    >
+                      {PILE_LOCATIONS.map((l) => (
+                        <option key={l} value={l}>
+                          {PILE_LOCATION_LABELS[l]}
+                        </option>
+                      ))}
+                    </select>
+                  </Field>
+                ) : null}
                 <Field
                   label="Application"
                   title="Active: a known (allowable) force, not divided by F. Passive: an ultimate capacity mobilised with the soil, divided by F."

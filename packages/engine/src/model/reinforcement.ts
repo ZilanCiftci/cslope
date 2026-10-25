@@ -245,10 +245,12 @@ function addForce(
   force: ReinforcementForce,
   cx: number,
   cy: number,
+  at: [number, number] = [force.x, force.y],
 ): void {
   const fDown = -force.fy;
-  // Moment beyond fDown·dx, which the solvers take with the slice load.
-  const moment = fDown * (cx - force.x) + force.fx * (cy - force.y) - fDown * s.dx;
+  // Moment beyond fDown·dx, which the solvers take with the slice load;
+  // the force acts at `at` (the crossing unless given).
+  const moment = fDown * (cx - at[0]) + force.fx * (cy - at[1]) - fDown * s.dx;
   const load = force.passive ? (s.reinforcementPassive ??= [0, 0, 0]) : (s.reinforcementActive ??= [0, 0, 0]);
   load[0] += fDown;
   load[1] += force.fx;
@@ -327,7 +329,7 @@ export function applyReinforcement(
   const profiles = slope.piles.length > 0 ? slope.pileProfiles : [];
   slope.piles.forEach((p, k) => {
     for (const { slice, px, py, tx, ty } of crossings(slices, p.x1, p.y1, p.x2, p.y2)) {
-      const magnitude = pileForce(slope, p, px, py, profiles[k]).perMetre;
+      const { perMetre: magnitude, resultantAbove } = pileForce(slope, p, px, py, profiles[k]);
       if (!(magnitude > 0)) continue;
       const [ux, uy] = pileForceDirection(p, tx, ty);
       const force: ReinforcementForce = {
@@ -340,7 +342,18 @@ export function applyReinforcement(
         force: magnitude,
         passive: (p.application ?? "active") === "passive",
       };
-      addForce(slice, force, cx, cy);
+      // The soil pressure acts on the pile from its head (or the ground)
+      // down to the slip surface, so its moment about the centre is that
+      // of the resultant, `resultantAbove` up the pile from the crossing:
+      // at the crossing the arm of a horizontal force is the longest it
+      // can be, and the pile's moment came out about 5 % too large (V013c).
+      let at: [number, number] = [px, py];
+      if ((p.location ?? "centroid") === "centroid" && resultantAbove > 0) {
+        const len = Math.hypot(p.x2 - p.x1, p.y2 - p.y1);
+        const up = p.y1 >= p.y2 ? 1 : -1;
+        if (len > 0) at = [px + (up * (p.x1 - p.x2) / len) * resultantAbove, py + (up * (p.y1 - p.y2) / len) * resultantAbove];
+      }
+      addForce(slice, force, cx, cy, at);
       forces.push(force);
     }
   });
@@ -478,7 +491,13 @@ export function pileForce(
   x: number,
   y: number,
   profile: PileProfile | null = buildPileProfile(slope, p),
-): { perPile: number; perMetre: number; governs: "given" | "soil" | "shear" | "bending" } {
+): {
+  perPile: number;
+  perMetre: number;
+  governs: "given" | "soil" | "shear" | "bending";
+  /** Distance of the soil pressure's resultant above the crossing (m); 0 for a given force. */
+  resultantAbove: number;
+} {
   const spacing = p.spacing ?? 1;
   const surf = slope.surfaceLineXY;
   const yGround = surf ? getYAtX(surf.x, surf.y, x) : NaN;
@@ -487,6 +506,7 @@ export function pileForce(
   const zTop = Number.isFinite(yGround) ? Math.max(0, yGround - Math.max(p.y1, p.y2)) : 0;
   let perPile: number;
   let governs: "given" | "soil" | "shear" | "bending";
+  let resultantAbove = 0;
   // Arm of the soil pressure above the slip surface, for the bending limit.
   let arm = Math.max(0, zf - zTop) / 3;
   if (p.force !== undefined || !profile) {
@@ -508,7 +528,7 @@ export function pileForce(
     }
     perPile = force;
     governs = "soil";
-    if (force > 0) arm = moment / force;
+    if (force > 0) arm = resultantAbove = moment / force;
   }
   if (p.shearCapacity !== undefined && p.shearCapacity < perPile) {
     perPile = p.shearCapacity;
@@ -518,5 +538,5 @@ export function pileForce(
     perPile = p.momentCapacity / arm;
     governs = "bending";
   }
-  return { perPile, perMetre: perPile / spacing, governs };
+  return { perPile, perMetre: perPile / spacing, governs, resultantAbove };
 }
