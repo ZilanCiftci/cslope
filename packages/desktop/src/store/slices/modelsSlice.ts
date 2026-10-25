@@ -2,7 +2,7 @@ import { DEFAULT_ANALYSIS_OPTIONS } from "@cslope/engine";
 import { MODEL_NAME_PREFIX } from "../../constants";
 import { BENCHMARK_MODELS } from "../benchmarks";
 import { verificationModels } from "../verification-models";
-import { LOVO_MODELS } from "../lovo";
+import { LOCAL_LOVO_MODELS } from "../local-models";
 import {
   DEFAULT_ANALYSIS_LIMITS,
   DEFAULT_COORDINATE_EXPRESSIONS,
@@ -524,7 +524,7 @@ export const createModelsSlice: SliceCreator<ModelsSlice> = (
 
   loadLovoModels: () => {
     abortAllAnalyses();
-    const models = LOVO_MODELS.map(cloneModelEntry);
+    const models = LOCAL_LOVO_MODELS.map(cloneModelEntry);
     if (models.length === 0) return;
     const first = models[0];
     set({

@@ -1,5 +1,6 @@
 import { createPortal } from "react-dom";
 import { isProjectDirty, useAppStore } from "../../../store/app-store";
+import { LOCAL_LOVO_MODELS } from "../../../store/local-models";
 import { confirmUnsavedChanges } from "../../../features/project/unsavedGuard";
 
 /**
@@ -105,14 +106,18 @@ export function DevMenu({ isOpen, onActivate, panelHost }: Props) {
               )}
             </RibbonGroup>
             <RibbonSep />
-            <RibbonGroup label="Models">
-              <RibbonButton
-                icon={<BenchmarkIcon />}
-                label="Lovö"
-                onClick={handleLoadLovo}
-              />
-            </RibbonGroup>
-            <RibbonSep />
+            {LOCAL_LOVO_MODELS.length > 0 && (
+              <>
+                <RibbonGroup label="Models">
+                  <RibbonButton
+                    icon={<BenchmarkIcon />}
+                    label="Lovö"
+                    onClick={handleLoadLovo}
+                  />
+                </RibbonGroup>
+                <RibbonSep />
+              </>
+            )}
             <RibbonGroup label="Store">
               <RibbonButton
                 icon={<LogIcon />}

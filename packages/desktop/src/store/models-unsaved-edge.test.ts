@@ -3,6 +3,7 @@ import { useAppStore } from "./app-store";
 import { parseProjectFile, serializeProject } from "./persistence";
 import { isProjectDirty, markProjectClean } from "./unsaved";
 import type { ModelEntry } from "./types";
+import { LOCAL_LOVO_MODELS } from "./local-models";
 
 const store = () => useAppStore.getState();
 const entry = (id: string) => store().models.find((m) => m.id === id)!;
@@ -257,7 +258,14 @@ describe("model list actions", () => {
     expect(store().editViewScale).toBe(2);
   });
 
-  it("loads the Lovö example models as a clean project", () => {
+  it("leaves the project alone without the local Lovö models", () => {
+    if (LOCAL_LOVO_MODELS.length > 0) return;
+    const before = store().models;
+    store().loadLovoModels();
+    expect(store().models).toBe(before);
+  });
+
+  it.skipIf(LOCAL_LOVO_MODELS.length === 0)("loads the local Lovö models as a clean project", () => {
     store().loadLovoModels();
     expect(store().models.length).toBeGreaterThan(0);
     expect(store().activeModelId).toBe(store().models[0].id);

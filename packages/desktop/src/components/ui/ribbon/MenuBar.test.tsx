@@ -7,6 +7,7 @@ vi.mock("../../../utils/is-electron", () => ({ isElectron: true }));
 import { MenuBar } from "./MenuBar";
 import { markProjectClean, useAppStore } from "../../../store/app-store";
 import { installFakeBridge, type FakeBridge } from "../../../test/fake-bridge";
+import { LOCAL_LOVO_MODELS } from "../../../store/local-models";
 
 let bridge: FakeBridge;
 const store = () => useAppStore.getState();
@@ -212,7 +213,18 @@ describe("Dev ribbon (development builds)", () => {
     expect(log).toHaveBeenCalledWith("App store state:", expect.any(Object));
   });
 
-  it.runIf(import.meta.env.DEV)("resets the store and loads the Lovö models after confirmation", async () => {
+  it.runIf(import.meta.env.DEV)("resets the store after confirmation", async () => {
+    const confirm = vi.spyOn(window, "confirm").mockReturnValue(true);
+    render(<MenuBar />);
+    await userEvent.click(tab("Dev"));
+    // The local project models are not in the repository: no button for them.
+    if (LOCAL_LOVO_MODELS.length === 0) expect(screen.queryByTitle("Lovö")).toBeNull();
+    await userEvent.click(screen.getByTitle("Reset"));
+    await waitFor(() => expect(store().models).toHaveLength(1));
+    expect(confirm).toHaveBeenCalledTimes(1);
+  });
+
+  it.runIf(import.meta.env.DEV && LOCAL_LOVO_MODELS.length > 0)("resets the store and loads the local Lovö models after confirmation", async () => {
     const confirm = vi.spyOn(window, "confirm").mockReturnValue(true);
     render(<MenuBar />);
     await userEvent.click(tab("Dev"));

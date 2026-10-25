@@ -35,5 +35,9 @@ coverage-final.json
 # Docs (generated), at the repository root only
 /docs/
 
+# Client project data: kept on the developer's machine only
+packages/desktop/src/store/lovo.local.ts
+/lovo-*.json
+
 # Agent files
 .github/*.md
