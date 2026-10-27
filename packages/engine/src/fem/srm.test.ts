@@ -1,0 +1,45 @@
+import { describe, it, expect } from "vitest";
+import { buildSlope } from "../model/build-slope";
+import { toCanonicalSlopeDefinition } from "../model/canonical";
+import type { SlopeDefinition } from "../types/slope-definition";
+import { buildFeModel } from "./model";
+import { davisB, strengthReduction } from "./srm";
+import { PROBLEMS } from "../verification/problems";
+
+const deg = Math.PI / 180;
+
+describe("davisB", () => {
+  it("reproduces the Davis B factors of Sysala et al. (2021, table 1)", () => {
+    // Single material: FS_B solves q_B(FS_B) = FS_associated = 1.52 (φ' = 45°).
+    const solve = (psi: number) => {
+      let a = 1, b = 1.52;
+      for (let k = 0; k < 60; k++) {
+        const m = (a + b) / 2;
+        if (davisB(m, 45 * deg, psi * deg) < 1.52) a = m; else b = m;
+      }
+      return (a + b) / 2;
+    };
+    expect(solve(15)).toBeCloseTo(1.356, 2);
+    expect(solve(0)).toBeCloseTo(1.145, 2);
+  });
+
+  it("is F for associated flow and F / cos φ_F for ψ = 0", () => {
+    expect(davisB(1.3, 30 * deg, 30 * deg)).toBeCloseTo(1.3, 12);
+    const phiF = Math.atan(Math.tan(30 * deg) / 1.3);
+    expect(davisB(1.3, 30 * deg, 0)).toBeCloseTo(1.3 / Math.cos(phiF), 12);
+  });
+});
+
+describe("strengthReduction", () => {
+  it("finds Griffiths & Lane's homogeneous slope near 1.4 on a coarse mesh", () => {
+    // Griffiths & Lane (1999), example 1: 2:1 slope, H = 10 m, c' = 10 kPa,
+    // φ' = 20°, γ = 20 kN/m³, ψ = 0; F = 1.4 by SRFEM, 1.38 by Bishop.
+    const def = PROBLEMS.find((p) => p.id === "V055")!.definition as SlopeDefinition;
+    const slope = buildSlope(toCanonicalSlopeDefinition(def));
+    const model = buildFeModel(slope, { elementSize: 1.25 });
+    const r = strengthReduction(model, { flowRule: "non-associated", fTolerance: 0.02 });
+    expect(r.factorOfSafety).toBeGreaterThan(1.3);
+    expect(r.factorOfSafety).toBeLessThan(1.5);
+    expect(r.failedF - r.factorOfSafety).toBeLessThanOrEqual(0.02);
+  }, 120000);
+});

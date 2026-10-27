@@ -414,9 +414,12 @@ export function meshDomain(input: MeshInput): TriMesh {
     }
     if (blocked && !enc.length) continue;
     if (enc.length) {
+      const n0 = dt.alive.length;
       for (const k of enc) splitSegment(k);
       recoverSegments();
-      for (let s = 0; s < dt.alive.length; s++) if (dt.alive[s]) queue.push(s);
+      // Only the triangles made by the splits are new; the rest were checked.
+      for (let s = n0; s < dt.alive.length; s++) if (dt.alive[s]) queue.push(s);
+      if (dt.alive[t]) queue.push(t);
       continue;
     }
     if (!insideDomain(ux, uy)) continue;
