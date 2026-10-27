@@ -130,13 +130,15 @@ export function analyzeFem(slope: Slope, options: FemAnalysisOptions = {}): FemA
       const marked = dorflerMark(eta, ad.theta ?? 0.3);
       model = buildFeModel(slope, { ...options, sizeField: refinedSizeField(model, marked) });
       const prev = r.factorOfSafety;
-      r = strengthReduction(model, { ...options, flowRule, tensionCutoff, startF: prev, bracketStep: 0.04, fTolerance: coarseTol });
+      // Start below the coarser mesh's factor (a finer mesh gives less) and
+      // step up from converged states.
+      r = strengthReduction(model, { ...options, flowRule, tensionCutoff, startF: 0.85 * prev, bracketStep: 0.04, fTolerance: coarseTol });
       levels.push({ elements: model.elementCount, factorOfSafety: r.factorOfSafety, iterations: r.iterations });
       if (Math.abs(r.factorOfSafety - prev) < tol) break;
     }
     // F to the requested tolerance on the final mesh.
     if (r.factorOfSafety > 0 && Number.isFinite(r.failedF) && r.failedF - r.factorOfSafety > (options.fTolerance ?? 0.005)) {
-      r = strengthReduction(model, { ...options, flowRule, tensionCutoff, startF: r.factorOfSafety, bracketStep: 0.01 });
+      r = strengthReduction(model, { ...options, flowRule, tensionCutoff, startF: 0.95 * r.factorOfSafety, bracketStep: 0.01 });
       levels[levels.length - 1] = { elements: model.elementCount, factorOfSafety: r.factorOfSafety, iterations: levels[levels.length - 1].iterations + r.iterations };
     }
   }

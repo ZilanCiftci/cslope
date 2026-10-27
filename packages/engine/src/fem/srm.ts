@@ -183,6 +183,30 @@ function elementEquations(model: FeModel): Int32Array {
   return out;
 }
 
+/** Body loads ∫ Bᵀ D εp dA of a plastic strain field, per equation. */
+export function plasticBodyLoads(model: FeModel, eqs: Int32Array, ep: Float64Array): Float64Array {
+  const out = new Float64Array(model.eqCount);
+  const { gp, elementCount: ne, elE, elNu } = model;
+  for (let e = 0; e < ne; e++) {
+    const E = elE[e], nu = elNu[e];
+    const lam = (E * nu) / ((1 + nu) * (1 - 2 * nu)), mu = E / (2 * (1 + nu));
+    for (let g = 0; g < 3; g++) {
+      const i = 3 * e + g, o = i * GP_STRIDE, s = 4 * i, w = gp[o + 12];
+      const ex = ep[s], ey = ep[s + 1], gxy = ep[s + 2], ez = ep[s + 3];
+      if (ex === 0 && ey === 0 && gxy === 0 && ez === 0) continue;
+      const tr = ex + ey + ez;
+      const sx = lam * tr + 2 * mu * ex, sy = lam * tr + 2 * mu * ey, txy = mu * gxy;
+      for (let k = 0; k < 6; k++) {
+        const dx = gp[o + k], dy = gp[o + 6 + k];
+        const qx = eqs[12 * e + 2 * k], qy = eqs[12 * e + 2 * k + 1];
+        if (qx >= 0) out[qx] += (dx * sx + dy * txy) * w;
+        if (qy >= 0) out[qy] += (dy * sy + dx * txy) * w;
+      }
+    }
+  }
+  return out;
+}
+
 export function emptyState(model: FeModel): SrmState {
   const ngp = 3 * model.elementCount;
   return {
@@ -351,19 +375,34 @@ export function strengthReduction(model: FeModel, options: SrmOptions = {}): Srm
   let loState: SrmState | null = null;
   let prevState: SrmState | null = null;
   const run = (F: number): boolean => {
-    const st = loState ? cloneState(loState) : emptyState(model);
-    const r = useNewton
+    const warm = loState !== null;
+    let st = loState ? cloneState(loState) : emptyState(model);
+    let r = useNewton
       ? newtonAtF(model, eqs, reduce(model, F, rule, 1), { u: st.u, ep: st.evp, stress: st.stress }, {
           tolerance: options.tolerance,
           maxIterations: options.maxIterations,
           tensionCutoff: options.tensionCutoff,
         })
       : solveAtF(model, F, st, options, eqs);
+    if (useNewton && !r.converged && loState) {
+      // Newton can cycle between the planes of the Mohr–Coulomb pyramid near
+      // collapse. The viscoplastic iteration, which converges wherever a
+      // solution exists, decides such a trial (from the same converged state).
+      iterations += r.iterations;
+      st = cloneState(loState);
+      st.bodyLoads = plasticBodyLoads(model, eqs, st.evp);
+      r = solveAtF(model, F, st, { ...options, tolerance: undefined, maxIterations: undefined }, eqs);
+    }
     iterations += r.iterations;
     const t = { F, converged: r.converged, iterations: r.iterations, maxDisplacement: maxAbs(st.u) };
     trials.push(t);
     options.onTrial?.(t);
-    if (r.converged) { lo = F; prevState = loState; loState = st; } else hi = Math.min(hi, F);
+    // A trial that fails from the unloaded state is no upper bound: with the
+    // full weight applied at once the iteration can fail at an F that a
+    // start from a converged lower F reaches easily (seen with Newton on
+    // refined meshes). Only a failure from a converged state bounds F.
+    if (r.converged) { lo = F; prevState = loState; loState = st; }
+    else if (warm) hi = Math.min(hi, F);
     return r.converged;
   };
 
