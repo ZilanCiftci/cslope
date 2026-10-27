@@ -369,6 +369,17 @@ export function ResultsMenu({ isOpen, onActivate, panelHost }: Props) {
                   }
                   active={rvs.showSoilColor ?? true}
                 />
+                {result?.fem && (
+                  <RibbonSmallButton
+                    icon={<PlasticZoneIcon />}
+                    label="Plastic zone"
+                    title="Shade the plastic zone of the finite element analysis (the failure mechanism)"
+                    onClick={() =>
+                      setRvs({ showFemPlasticZone: !(rvs.showFemPlasticZone ?? true) })
+                    }
+                    active={rvs.showFemPlasticZone ?? true}
+                  />
+                )}
               </div>
               <RibbonButton
                 icon={<ViewSettingsIcon />}
@@ -845,6 +856,15 @@ function GridIcon() {
         strokeWidth="0.7"
         opacity="0.5"
       />
+    </svg>
+  );
+}
+
+function PlasticZoneIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+      <path d="M2 13 L6 13 L14 4 L14 2 L10 2 Z" fill="#d62828" opacity="0.25" />
+      <path d="M4 13 Q8 11 13 3" stroke="#d62828" strokeWidth="2" strokeLinecap="round" />
     </svg>
   );
 }

@@ -3,8 +3,11 @@ import {
   ITERATIONS_RANGE,
   REFINED_ITERATIONS_RANGE,
   SLICES_RANGE,
+  DEFAULT_FEM_SETTINGS,
   resolveOrientation,
   type AnalysisOptions,
+  type FemAnalysisSettings,
+  type FemResultSummary,
   type MaterialModel,
   type PartialFactors,
 } from "@cslope/engine";
@@ -417,6 +420,24 @@ function normalizeProjectInfo(raw: unknown): ProjectInfo {
   };
 }
 
+/** Whether a saved finite element result has the shape the canvas draws. */
+function isFemSummary(raw: unknown): raw is FemResultSummary {
+  if (!raw || typeof raw !== "object") return false;
+  const f = raw as Record<string, unknown>;
+  const nums = (a: unknown) => Array.isArray(a) && a.every((v) => typeof v === "number");
+  if (!Number.isFinite(f.factorOfSafety) || !nums(f.x) || !nums(f.y) || !nums(f.triangles) || !nums(f.plasticShear)) return false;
+  const x = f.x as number[], tri = f.triangles as number[];
+  return (
+    (f.y as number[]).length === x.length &&
+    tri.length % 3 === 0 &&
+    (f.plasticShear as number[]).length === tri.length / 3 &&
+    (f.shearIncrement === undefined || (nums(f.shearIncrement) && (f.shearIncrement as number[]).length === tri.length / 3)) &&
+    tri.every((n) => Number.isInteger(n) && n >= 0 && n < x.length) &&
+    Array.isArray(f.levels) &&
+    Array.isArray(f.warnings)
+  );
+}
+
 /**
  * The saved outcome of a run, if it is one the app can show: a result
  * with its factor of safety and surface lists, or an error message. A run
@@ -436,6 +457,8 @@ function savedRun(model: Record<string, unknown>): Pick<ModelEntry, "runState" |
     (r.criticalSurface === null || typeof r.criticalSurface === "object")
       ? (r as unknown as NonNullable<ModelEntry["result"]>)
       : null;
+  // A finite element result of another shape is dropped; the rest stays.
+  if (result && result.fem !== undefined && !isFemSummary(result.fem)) delete result.fem;
   const errorMessage = typeof model.errorMessage === "string" ? model.errorMessage : null;
   if (model.runState === "done" && result) return { runState: "done", progress: 1, result, errorMessage: null };
   if (model.runState === "error" && errorMessage) return { runState: "error", progress: 0, result: null, errorMessage };
@@ -942,5 +965,23 @@ function normalizeAnalysisOptions(raw: unknown): AnalysisOptions {
       o.porePressureHead === "phreatic-correction"
         ? o.porePressureHead
         : (base.porePressureHead ?? "vertical"),
+    ...(o.fem && typeof o.fem === "object" ? { fem: normalizeFemSettings(o.fem as Record<string, unknown>) } : {}),
+  };
+}
+
+/** Finite element settings from a file: each field checked, the default where it is not valid. */
+function normalizeFemSettings(f: Record<string, unknown>): FemAnalysisSettings {
+  const d = DEFAULT_FEM_SETTINGS;
+  const num = (v: unknown, lo: number, hi: number, fallback: number) =>
+    typeof v === "number" && Number.isFinite(v) && v >= lo && v <= hi ? v : fallback;
+  return {
+    enabled: f.enabled === true,
+    flowRule: f.flowRule === "associated" || f.flowRule === "non-associated" || f.flowRule === "davis-b" ? f.flowRule : d.flowRule,
+    youngsModulus: num(f.youngsModulus, 1, 1e9, d.youngsModulus),
+    poissonsRatio: num(f.poissonsRatio, 0, 0.49, d.poissonsRatio),
+    dilationAngle: num(f.dilationAngle, 0, 60, d.dilationAngle),
+    elementSize: typeof f.elementSize === "number" && Number.isFinite(f.elementSize) && f.elementSize > 0 ? f.elementSize : null,
+    tensionCutoff: f.tensionCutoff === true,
+    refinementLevels: Math.round(num(f.refinementLevels, 0, 3, d.refinementLevels)),
   };
 }

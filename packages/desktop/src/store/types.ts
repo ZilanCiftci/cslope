@@ -308,6 +308,8 @@ export interface ResultViewSettings {
   showCentreMarker: boolean;
   showGrid: boolean;
   showSoilColor?: boolean;
+  /** Shade the plastic zone of a finite element result (default: shown). */
+  showFemPlasticZone?: boolean;
   /** Grid / major-tick spacing in world units. undefined or 0 = auto. */
   gridSpacing?: number;
   /** Number of minor tick subdivisions between major ticks. 0 = none. */

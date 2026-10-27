@@ -1,4 +1,5 @@
 import { isPointInPolygon } from "@cslope/engine";
+import type { AnalysisResult } from "@cslope/engine";
 import { PAPER_DIMENSIONS, PLOT_MARGINS } from "../../store/app-store";
 import type { AppState } from "../../store/types";
 import {
@@ -1871,6 +1872,11 @@ export function drawCanvas(
     // ── Paper background + shadow (drawn first, behind geometry) ──
     // (already drawn before grid above)
 
+    // Plastic zone of the finite element analysis: elements shaded by the
+    // shear strain of the last displacement increment before failure,
+    // relative to the largest, so the failure mechanism shows as a band.
+    if (result.fem && rvs.showFemPlasticZone !== false) drawFemPlasticZone(ctx, result.fem, (x, y) => worldToCanvas(x, y, w, h));
+
     // Non-critical surfaces (when "all" or "filter" mode)
     // Draw in reverse FOS order (high FOS first = behind, low FOS last = on top)
     if (rvs.surfaceDisplay !== "critical" && result.allSurfaces.length > 0) {
@@ -2627,4 +2633,33 @@ export function drawCanvas(
     ctx.stroke();
     ctx.setLineDash([]);
   }
+}
+
+/** The finite element mechanism: shade per element, ∝ √(strain / largest strain). */
+function drawFemPlasticZone(
+  ctx: CanvasRenderingContext2D,
+  fem: NonNullable<AnalysisResult["fem"]>,
+  toC: (x: number, y: number) => [number, number],
+): void {
+  const field = fem.shearIncrement ?? fem.plasticShear;
+  let max = 0;
+  for (const v of field) if (v > max) max = v;
+  if (!(max > 0)) return;
+  ctx.save();
+  const { x, y, triangles: t } = fem;
+  for (let e = 0; e < field.length; e++) {
+    const r = field[e] / max;
+    if (r < 0.02) continue;
+    const [ax, ay] = toC(x[t[3 * e]], y[t[3 * e]]);
+    const [bx, by] = toC(x[t[3 * e + 1]], y[t[3 * e + 1]]);
+    const [cx, cy] = toC(x[t[3 * e + 2]], y[t[3 * e + 2]]);
+    ctx.fillStyle = `rgba(214, 40, 40, ${(0.8 * Math.sqrt(r)).toFixed(3)})`;
+    ctx.beginPath();
+    ctx.moveTo(ax, ay);
+    ctx.lineTo(bx, by);
+    ctx.lineTo(cx, cy);
+    ctx.closePath();
+    ctx.fill();
+  }
+  ctx.restore();
 }

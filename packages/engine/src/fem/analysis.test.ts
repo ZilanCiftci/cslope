@@ -22,6 +22,8 @@ describe("analyzeFem", () => {
     const nc = r.mesh.x.length;
     expect(r.displacement.length).toBe(2 * nc);
     expect(r.plasticShearStrain.length).toBe(r.mesh.triangles.length / 3);
+    expect(r.shearStrainIncrement.length).toBe(r.mesh.triangles.length / 3);
+    expect(Math.max(...r.shearStrainIncrement)).toBeGreaterThan(0);
     expect(r.levels).toHaveLength(1);
     // the mechanism is plastic somewhere
     expect(Math.max(...r.plasticShearStrain)).toBeGreaterThan(0);

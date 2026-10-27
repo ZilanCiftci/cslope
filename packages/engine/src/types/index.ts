@@ -66,7 +66,8 @@ export type {
   SliceData,
   WaterTableInput,
 } from "./analysis";
-export { DEFAULT_ANALYSIS_OPTIONS, EC7_DA3_FACTORS } from "./analysis";
+export { DEFAULT_ANALYSIS_OPTIONS, EC7_DA3_FACTORS, DEFAULT_FEM_SETTINGS } from "./analysis";
+export type { FemAnalysisSettings, FemResultSummary } from "./analysis";
 
 export type {
   GeometryWithMaterial,

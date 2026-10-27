@@ -66,7 +66,7 @@ export interface SrmOptions {
   convergence?: "increment" | "extrapolated";
   /** Convergence tolerance; default 1e-4 (viscoplastic), 1e-6 relative residual (Newton). */
   tolerance?: number;
-  /** Iteration limit per trial (failure when reached); default 1000 (viscoplastic), 40 (Newton). */
+  /** Iteration limit per trial (failure when reached); default 1000 (viscoplastic), 25 (Newton). */
   maxIterations?: number;
   /** Absolute tolerance on F; default 0.005. */
   fTolerance?: number;
@@ -116,6 +116,8 @@ export interface SrmResult {
   trials: SrmTrial[];
   /** State at the factor of safety. */
   state: SrmState;
+  /** The converged state before it (lower F), if any: their difference shows the mechanism. */
+  previousState: SrmState | null;
   /** Total iterations. */
   iterations: number;
   /** Reason when no factor of safety could be bracketed. */
@@ -347,6 +349,7 @@ export function strengthReduction(model: FeModel, options: SrmOptions = {}): Srm
   let iterations = 0;
   let lo = 0, hi = Infinity;
   let loState: SrmState | null = null;
+  let prevState: SrmState | null = null;
   const run = (F: number): boolean => {
     const st = loState ? cloneState(loState) : emptyState(model);
     const r = useNewton
@@ -360,7 +363,7 @@ export function strengthReduction(model: FeModel, options: SrmOptions = {}): Srm
     const t = { F, converged: r.converged, iterations: r.iterations, maxDisplacement: maxAbs(st.u) };
     trials.push(t);
     options.onTrial?.(t);
-    if (r.converged) { lo = F; loState = st; } else hi = Math.min(hi, F);
+    if (r.converged) { lo = F; prevState = loState; loState = st; } else hi = Math.min(hi, F);
     return r.converged;
   };
 
@@ -393,6 +396,7 @@ export function strengthReduction(model: FeModel, options: SrmOptions = {}): Srm
     displacementJumpF: jump,
     trials,
     state: loState ?? emptyState(model),
+    previousState: prevState,
     iterations,
     warning,
   };

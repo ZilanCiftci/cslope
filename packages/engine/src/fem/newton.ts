@@ -229,7 +229,7 @@ export interface NewtonState {
 export interface NewtonOptions {
   /** Relative residual tolerance ‖r‖/‖f‖; default 1e-6. */
   tolerance?: number;
-  /** Newton iterations per trial; default 40. */
+  /** Newton iterations per trial; default 25. */
   maxIterations?: number;
   tensionCutoff?: boolean;
 }
@@ -356,7 +356,9 @@ export function newtonAtF(
   options: NewtonOptions = {},
 ): { converged: boolean; iterations: number } {
   const tol = options.tolerance ?? 1e-6;
-  const limit = options.maxIterations ?? 40;
+  // Away from collapse Newton converges in 5–15 iterations; a trial that
+  // needs more than 25 is within the F tolerance of collapse or beyond it.
+  const limit = options.maxIterations ?? 25;
   const cutoff = options.tensionCutoff ?? false;
   const neq = model.eqCount, ngp = 3 * model.elementCount;
   const fnorm = norm2(model.f);

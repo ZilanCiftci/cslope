@@ -15,6 +15,7 @@ import type {
 import {
   analyseSlope,
   analysisWarnings,
+  runFemSummary,
   mapAnalysisResultToModelSpace,
   buildSlope,
   oppositeDirectionDefinition,
@@ -83,6 +84,15 @@ self.onmessage = (event: MessageEvent<WorkerMessage>) => {
       result = mapAnalysisResultToModelSpace(analyse(slopeDef, options), slopeDef);
     }
     result.elapsedMs = performance.now() - start;
+    // Strength reduction by finite elements, in the model's own sliding direction.
+    if (options.fem?.enabled) {
+      let trials = 0;
+      result.fem = runFemSummary(slopeDef, options.fem, () => {
+        // No measure of the remaining work: report the trials as they pass.
+        trials++;
+        self.postMessage({ type: "analysis-progress", id, progress: Math.min(0.9, 0.3 + 0.03 * trials) } satisfies AnalysisResponse);
+      });
+    }
 
     const completeResponse: AnalysisResponse = {
       type: "analysis-complete",

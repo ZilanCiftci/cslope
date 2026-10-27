@@ -26,7 +26,8 @@ export type {
   SliceData,
   WaterTableInput,
 } from "./types/analysis";
-export { DEFAULT_ANALYSIS_OPTIONS, EC7_DA3_FACTORS } from "./types/analysis";
+export { DEFAULT_ANALYSIS_OPTIONS, EC7_DA3_FACTORS, DEFAULT_FEM_SETTINGS } from "./types/analysis";
+export type { FemAnalysisSettings, FemResultSummary } from "./types/analysis";
 
 export type {
   GeometryWithMaterial,
@@ -210,6 +211,24 @@ export {
   oppositeDirectionDefinition,
 } from "./model/canonical";
 export type { SlopeOrientation } from "./model/canonical";
+
+// ── Finite elements ────────────────────────────────────────────
+// Strength reduction (SRFEM) and lower-bound limit analysis. The lower
+// bound loads HiGHS (WebAssembly) on first use.
+export {
+  analyzeFem,
+  lowerBound,
+  loadHighs,
+  type FemAnalysisOptions,
+  type FemAnalysisResult,
+  type FemMeshView,
+  type FemLevel,
+  type FlowRule,
+  type FeMaterialParameters,
+  type LowerBoundOptions,
+  type LowerBoundResult,
+} from "./fem/index";
+export { runFemSummary } from "./fem/summary";
 
 // ── Verification problems ──────────────────────────────────────
 // Exported from "@cslope/engine/verification" (src/verification/index.ts),

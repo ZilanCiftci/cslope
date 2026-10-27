@@ -32,6 +32,7 @@ import { resolveAnnotationText } from "../annotations/resolveAnnotationText";
 import { modelViewLock } from "../view/viewLock";
 import { paperContentOf } from "../view/extents";
 import { fosStatusColor } from "../../utils/fos-color";
+import type { FemResultSummary } from "@cslope/engine";
 import type {
   MaterialTableColumnKey,
   AnchorPosition,
@@ -517,6 +518,7 @@ export function ResultSidebar() {
                 {result.elapsedMs.toFixed(0)} ms
               </span>
             </div>
+            {result.fem && <FemSummaryRows fem={result.fem} designValues={designValues} />}
             {(result.nonConvergedSurfaces ?? 0) > 0 && (
               <p
                 style={{ color: "var(--color-vsc-warning)" }}
@@ -1440,6 +1442,52 @@ export function ResultSidebar() {
           </div>
         )}
       </Section>
+    </div>
+  );
+}
+
+const FLOW_RULE_NAMES = { "davis-b": "Davis B", associated: "associated", "non-associated": "non-associated" } as const;
+
+/** The finite element strength reduction of the run. */
+function FemSummaryRows({ fem, designValues }: { fem: FemResultSummary; designValues: boolean }) {
+  const last = fem.levels[fem.levels.length - 1];
+  return (
+    <div className="mt-1.5 space-y-1 border-t pt-1.5" style={{ borderColor: "var(--color-vsc-border)" }}>
+      <div className="flex justify-between">
+        <Label title="Strength reduction by finite elements: the largest factor on c and tan φ at which the slope is still in equilibrium. It needs no slip surface; the plastic zone on the canvas shows the mechanism.">
+          FOS, strength reduction (FE)
+        </Label>
+        <span className="font-bold tabular-nums">
+          {Number.isFinite(fem.factorOfSafety) && fem.factorOfSafety > 0 ? fem.factorOfSafety.toFixed(3) : "–"}
+        </span>
+      </div>
+      <div className="flex justify-between">
+        <Label>Flow rule</Label>
+        <span>{FLOW_RULE_NAMES[fem.flowRule]}</span>
+      </div>
+      {last && (
+        <div className="flex justify-between">
+          <Label title={fem.levels.map((l) => `${l.elements} elements: ${l.fos.toFixed(3)}`).join("\n")}>Elements</Label>
+          <span className="tabular-nums">
+            {last.elements}
+            {fem.levels.length > 1 ? ` (${fem.levels.length - 1} refinement${fem.levels.length > 2 ? "s" : ""})` : ""}
+          </span>
+        </div>
+      )}
+      <div className="flex justify-between">
+        <Label>Elapsed (FE)</Label>
+        <span className="tabular-nums">{(fem.elapsedMs / 1000).toFixed(1)} s</span>
+      </div>
+      {designValues && (
+        <p className="text-[11px]" style={{ color: "var(--color-vsc-text-muted)" }}>
+          The finite element factor uses the characteristic strengths, without partial factors.
+        </p>
+      )}
+      {fem.warnings.map((w) => (
+        <p key={w} className="text-[11px]" style={{ color: "var(--color-vsc-warning)" }}>
+          {w}
+        </p>
+      ))}
     </div>
   );
 }

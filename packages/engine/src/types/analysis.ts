@@ -124,6 +124,8 @@ export interface AnalysisOptions {
    * relief. 0: no limit.
    */
   minSlipArea?: number | null;
+  /** Strength reduction by finite elements after the limit equilibrium analysis. */
+  fem?: FemAnalysisSettings;
 }
 
 /** Partial factors applied to characteristic values. */
@@ -289,6 +291,64 @@ export interface AnalysisWarning {
   boundaryIndex?: number;
 }
 
+/**
+ * Strength reduction by finite elements, run after the limit equilibrium
+ * analysis when enabled (src/fem). Stiffness barely affects the factor of
+ * safety; it scales the displacements.
+ */
+export interface FemAnalysisSettings {
+  enabled: boolean;
+  /** Davis B (default), associated, or non-associated with the dilation angle. */
+  flowRule: "davis-b" | "associated" | "non-associated";
+  /** Young's modulus E (kPa) of every soil. */
+  youngsModulus: number;
+  /** Poisson's ratio ν of every soil. */
+  poissonsRatio: number;
+  /** Dilation angle ψ (°), used by Davis B and non-associated flow. */
+  dilationAngle: number;
+  /** Initial element size (m); null: a twentieth of the model height. */
+  elementSize: number | null;
+  /** Rankine tension cut-off at zero effective stress. */
+  tensionCutoff: boolean;
+  /** Adaptive refinements of the mesh (0–3). */
+  refinementLevels: number;
+}
+
+export const DEFAULT_FEM_SETTINGS: FemAnalysisSettings = {
+  enabled: false,
+  flowRule: "davis-b",
+  youngsModulus: 1e5,
+  poissonsRatio: 0.3,
+  dilationAngle: 0,
+  elementSize: null,
+  tensionCutoff: false,
+  refinementLevels: 1,
+};
+
+/** Result of the finite element analysis in model coordinates, as plain arrays (JSON). */
+export interface FemResultSummary {
+  /** Factor of safety by strength reduction (largest converged F). */
+  factorOfSafety: number;
+  /** Smallest F that did not converge. */
+  failedF: number;
+  flowRule: FemAnalysisSettings["flowRule"];
+  /** Elements and F per mesh, coarsest first. */
+  levels: { elements: number; fos: number }[];
+  warnings: string[];
+  elapsedMs: number;
+  /** Corner node coordinates of the final mesh. */
+  x: number[];
+  y: number[];
+  /** Corner nodes of each element (3 per element). */
+  triangles: number[];
+  /** Plastic shear strain per element at the factor of safety. */
+  plasticShear: number[];
+  /** Shear strain of the last displacement increment per element: the failure mechanism. */
+  shearIncrement?: number[];
+  /** Displacement (x, y) per node at the factor of safety (m). */
+  displacement: number[];
+}
+
 /** Full analysis result. */
 export interface AnalysisResult {
   /** Minimum Factor of Safety found. */
@@ -331,4 +391,6 @@ export interface AnalysisResult {
   slidingDirection?: SlopeOrientation;
   /** Minimum FOS in the other direction (null: no valid surface). */
   otherDirectionMinFOS?: number | null;
+  /** Strength reduction by finite elements, when enabled in the options. */
+  fem?: FemResultSummary;
 }

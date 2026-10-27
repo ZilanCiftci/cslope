@@ -13,7 +13,7 @@ import type { SliceCreator } from "../helpers";
 import { boundaryWarningsInStoreOrder, buildSlopeDTOFromModel, nextId, RUN_RESET } from "../helpers";
 import type { AnalysisSlice, AppState, ModelEntry } from "../types";
 import { DEFAULT_ANALYSIS_LIMITS } from "../defaults";
-import { ANALYSIS_TIMEOUT_MS } from "../../constants";
+import { ANALYSIS_TIMEOUT_MS, FEM_TIMEOUT_MS } from "../../constants";
 import { defaultCustomCircle } from "../../utils/custom-plane";
 
 // ── Shared worker execution ────────────────────────────────────────
@@ -39,7 +39,9 @@ class AnalysisCancelledError extends Error {
  */
 function analysisTimeoutMs(options: AnalysisOptions): number {
   const surfaces = (options.iterations ?? 0) + (options.refinedIterations ?? 0);
-  return ANALYSIS_TIMEOUT_MS * Math.max(1, surfaces / 1500);
+  // Strength reduction by finite elements takes minutes on a refined mesh.
+  const fem = options.fem?.enabled ? FEM_TIMEOUT_MS * (1 + (options.fem.refinementLevels ?? 0)) : 0;
+  return ANALYSIS_TIMEOUT_MS * Math.max(1, surfaces / 1500) + fem;
 }
 
 /**

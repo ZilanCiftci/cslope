@@ -4,7 +4,7 @@
  */
 
 import type { Slope } from "../model/slope";
-import { buildFeModel, type FeModel, type FeModelOptions } from "./model";
+import { buildFeModel, gaussStrains, type FeModel, type FeModelOptions } from "./model";
 import { dissipationIndicator, dorflerMark, refinedSizeField, zzIndicator } from "./adapt";
 import { strengthReduction, type SrmOptions, type SrmTrial } from "./srm";
 
@@ -53,9 +53,39 @@ export interface FemAnalysisResult {
    * the failure mechanism is where it concentrates.
    */
   plasticShearStrain: Float64Array;
+  /**
+   * Shear strain of the displacement increment between the last two
+   * converged reductions (γmax per element, the mean of its Gauss points):
+   * the incremental shear strain that shows the failure mechanism as a band,
+   * where the accumulated plastic strain also covers zones that yielded
+   * early and stopped.
+   */
+  shearStrainIncrement: Float64Array;
   /** Factor of safety per mesh, coarsest first (one entry without refinement). */
   levels: FemLevel[];
+  /**
+   * The element size of the final mesh as a size field, to mesh the same
+   * slope again (e.g. for the lower bound, whose mechanism is the same).
+   */
+  sizeField: (x: number, y: number) => number;
   elapsedMs: number;
+}
+
+/** In-plane maximum shear strain of the displacement change between two states, per element. */
+export function shearIncrementPerElement(model: FeModel, u: Float64Array, uPrev: Float64Array | null): Float64Array {
+  const du = uPrev ? u.map((v, i) => v - uPrev[i]) : u;
+  const strain = new Float64Array(4 * 3 * model.elementCount);
+  gaussStrains(model, du, strain);
+  const out = new Float64Array(model.elementCount);
+  for (let e = 0; e < model.elementCount; e++) {
+    let s = 0;
+    for (let g = 0; g < 3; g++) {
+      const o = 4 * (3 * e + g);
+      s += Math.hypot(strain[o] - strain[o + 1], strain[o + 2]);
+    }
+    out[e] = s / 3;
+  }
+  return out;
 }
 
 /** Plastic shear strain (ε₁ − ε₃ of the viscoplastic strain) per element. */
@@ -97,7 +127,7 @@ export function analyzeFem(slope: Slope, options: FemAnalysisOptions = {}): FemA
       const eta = ad.indicator === "zz"
         ? zzIndicator(model, r.state.stress)
         : dissipationIndicator(model, r.state.stress, r.state.evp);
-      const marked = dorflerMark(eta, ad.theta ?? 0.5);
+      const marked = dorflerMark(eta, ad.theta ?? 0.3);
       model = buildFeModel(slope, { ...options, sizeField: refinedSizeField(model, marked) });
       const prev = r.factorOfSafety;
       r = strengthReduction(model, { ...options, flowRule, tensionCutoff, startF: prev, bracketStep: 0.04, fTolerance: coarseTol });
@@ -139,7 +169,9 @@ export function analyzeFem(slope: Slope, options: FemAnalysisOptions = {}): FemA
     },
     displacement,
     plasticShearStrain: plasticShearPerElement(model, r.state.evp),
+    shearStrainIncrement: shearIncrementPerElement(model, r.state.u, r.previousState?.u ?? null),
     levels,
+    sizeField: refinedSizeField(model, new Uint8Array(model.elementCount)),
     elapsedMs: performance.now() - t0,
   };
 }

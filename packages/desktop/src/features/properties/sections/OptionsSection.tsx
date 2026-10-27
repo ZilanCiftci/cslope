@@ -4,7 +4,8 @@ import type {
   IntersliceFunctionType,
   PartialFactors,
 } from "@cslope/engine";
-import { EC7_DA3_FACTORS, ITERATIONS_RANGE } from "@cslope/engine";
+import { DEFAULT_FEM_SETTINGS, EC7_DA3_FACTORS, ITERATIONS_RANGE } from "@cslope/engine";
+import type { FemAnalysisSettings } from "@cslope/engine";
 import { useAppStore } from "../../../store/app-store";
 import { Section } from "../../../components/ui/Section";
 import { Label } from "../../../components/ui/Label";
@@ -566,6 +567,14 @@ export function OptionsSection({ plain = false }: OptionsSectionProps) {
           />
         </div>
       </section>
+
+      <section>
+        <GroupHeading>Finite elements</GroupHeading>
+        <FemFields
+          settings={options.fem ?? DEFAULT_FEM_SETTINGS}
+          onChange={(fem) => setOptions({ fem })}
+        />
+      </section>
     </div>
   );
 
@@ -648,6 +657,136 @@ function PartialFactorsFields({
           </div>
         </>
       )}
+    </div>
+  );
+}
+
+const FLOW_RULE_LABELS: Record<FemAnalysisSettings["flowRule"], string> = {
+  "davis-b": "Davis B (recommended)",
+  associated: "Associated (ψ = φ)",
+  "non-associated": "Non-associated (ψ)",
+};
+
+/**
+ * Strength reduction by finite elements: run after the limit equilibrium
+ * analysis, its factor of safety and plastic zone shown with the result.
+ */
+function FemFields({
+  settings,
+  onChange,
+}: {
+  settings: FemAnalysisSettings;
+  onChange: (s: FemAnalysisSettings) => void;
+}) {
+  const set = (patch: Partial<FemAnalysisSettings>) => onChange({ ...settings, ...patch });
+  const off = !settings.enabled;
+  return (
+    <div className="grid grid-cols-2 gap-x-3 gap-y-2">
+      <label
+        className="col-span-2 flex items-center gap-1.5"
+        title="Reduces c and tan φ by a factor F until the slope can no longer be brought into equilibrium (elastic–perfectly plastic soil, six-node triangles). No slip surface is assumed; the failure mechanism comes out of the analysis. Takes from seconds to minutes."
+      >
+        <input
+          type="checkbox"
+          checked={settings.enabled}
+          onChange={(e) => set({ enabled: e.target.checked })}
+          aria-label="Strength reduction by finite elements"
+        />
+        <Label>Also run strength reduction (FE)</Label>
+      </label>
+      <label className="col-span-2 flex flex-col gap-0.5">
+        <Label>Flow rule</Label>
+        <select
+          value={settings.flowRule}
+          disabled={off}
+          onChange={(e) => set({ flowRule: e.target.value as FemAnalysisSettings["flowRule"] })}
+          aria-label="Flow rule"
+          title="Davis B: associated flow with strengths reduced for the dilation angle (Tschuchnigg et al. 2015); stable at high friction angles. Non-associated flow with ψ < φ can give an oscillating factor of safety above φ ≈ 35°."
+        >
+          {(Object.keys(FLOW_RULE_LABELS) as FemAnalysisSettings["flowRule"][]).map((r) => (
+            <option key={r} value={r}>
+              {FLOW_RULE_LABELS[r]}
+            </option>
+          ))}
+        </select>
+      </label>
+      <label className="flex flex-col gap-0.5">
+        <Label>Dilation angle ψ (°)</Label>
+        <DraftNumberInput
+          value={settings.dilationAngle}
+          min={0}
+          max={60}
+          step={1}
+          disabled={off || settings.flowRule === "associated"}
+          onValueChange={(v) => v >= 0 && v <= 60 && set({ dilationAngle: v })}
+          aria-label="Dilation angle"
+          title="Dilation angle of every soil; at most φ. Usually 0 for clays and φ − 30° for dense sands."
+        />
+      </label>
+      <label className="flex flex-col gap-0.5">
+        <Label>Element size (m)</Label>
+        <DraftNumberInput
+          value={settings.elementSize ?? undefined}
+          min={0}
+          step={0.5}
+          placeholder="Auto"
+          disabled={off}
+          onValueChange={(v) => v > 0 && set({ elementSize: v })}
+          onClear={() => set({ elementSize: null })}
+          aria-label="Element size"
+          title="Size of the first mesh. Empty: a twentieth of the model height, finer in thin layers."
+        />
+      </label>
+      <label className="flex flex-col gap-0.5">
+        <Label>Young&apos;s modulus E (kPa)</Label>
+        <DraftNumberInput
+          value={settings.youngsModulus}
+          min={1}
+          step={1000}
+          disabled={off}
+          onValueChange={(v) => v > 0 && set({ youngsModulus: v })}
+          aria-label="Young's modulus"
+          title="Stiffness of every soil. It scales the displacements and barely affects the factor of safety."
+        />
+      </label>
+      <label className="flex flex-col gap-0.5">
+        <Label>Poisson&apos;s ratio ν</Label>
+        <DraftNumberInput
+          value={settings.poissonsRatio}
+          min={0}
+          max={0.49}
+          step={0.05}
+          disabled={off}
+          onValueChange={(v) => v >= 0 && v < 0.5 && set({ poissonsRatio: v })}
+          aria-label="Poisson's ratio"
+        />
+      </label>
+      <label className="flex flex-col gap-0.5">
+        <Label>Mesh refinements</Label>
+        <DraftNumberInput
+          value={settings.refinementLevels}
+          min={0}
+          max={3}
+          step={1}
+          disabled={off}
+          onValueChange={(v) => v >= 0 && v <= 3 && set({ refinementLevels: Math.round(v) })}
+          aria-label="Mesh refinements"
+          title="Adaptive refinements where the plastic dissipation at failure is largest; stops early when F changes by less than 0.01. Each roughly doubles the run time."
+        />
+      </label>
+      <label
+        className="flex items-center gap-1.5 self-end"
+        title="No tensile effective stress (Rankine cut-off). Without it, cohesive soil carries tension near the crest."
+      >
+        <input
+          type="checkbox"
+          checked={settings.tensionCutoff}
+          disabled={off}
+          onChange={(e) => set({ tensionCutoff: e.target.checked })}
+          aria-label="Tension cut-off"
+        />
+        <Label>Tension cut-off</Label>
+      </label>
     </div>
   );
 }

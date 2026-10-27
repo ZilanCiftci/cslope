@@ -2,6 +2,8 @@
 
 /** Per-analysis timeout in milliseconds (applies to both single and batch runs). */
 export const ANALYSIS_TIMEOUT_MS = 60_000;
+/** Extra time for the finite element analysis, per mesh (the first and each refinement). */
+export const FEM_TIMEOUT_MS = 300_000;
 
 /** New models are named "Model 1", "Model 2", ... */
 export const MODEL_NAME_PREFIX = "Model";
