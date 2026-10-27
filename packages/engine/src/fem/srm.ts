@@ -35,14 +35,24 @@
 
 import { GP_STRIDE } from "./elements";
 import type { FeModel } from "./model";
+import { newtonAtF } from "./newton";
 
 /** Iterations over which the contraction ratio is averaged. */
 const RATIO_WINDOW = 10;
+/** Iterations before a trial may fail by its predicted iteration count. */
+const EARLY_FAIL_AFTER = 200;
 
 export type FlowRule = "davis-b" | "non-associated" | "associated";
 
 export interface SrmOptions {
   flowRule?: FlowRule;
+  /**
+   * "newton" (default for Davis B and associated flow): implicit return and
+   * consistent tangent (newton.ts), which decides convergence sharply;
+   * "viscoplastic": the explicit iteration of Griffiths & Lane, always used
+   * for non-associated flow, whose tangent is not symmetric.
+   */
+  solver?: "newton" | "viscoplastic";
   /** Rankine tension cut-off at zero effective stress; default false. */
   tensionCutoff?: boolean;
   /**
@@ -54,9 +64,9 @@ export interface SrmOptions {
    * against 1.35).
    */
   convergence?: "increment" | "extrapolated";
-  /** Convergence tolerance; default 1e-4. */
+  /** Convergence tolerance; default 1e-4 (viscoplastic), 1e-6 relative residual (Newton). */
   tolerance?: number;
-  /** Iteration limit per trial (failure when reached); default 1000. */
+  /** Iteration limit per trial (failure when reached); default 1000 (viscoplastic), 40 (Newton). */
   maxIterations?: number;
   /** Absolute tolerance on F; default 0.005. */
   fTolerance?: number;
@@ -210,7 +220,7 @@ export function solveAtF(
   const load = new Float64Array(12);
   let converged = false;
   let it = 0;
-  let prevDu = 0, ratioCount = 0;
+  let prevDu = 0, ratioCount = 0, hopeless = 0;
   const logRatio = new Float64Array(RATIO_WINDOW);
   for (; it < limit && !converged; ) {
     it++;
@@ -235,14 +245,24 @@ export function solveAtF(
     }
     prevDu = maxDu;
     let remaining = maxDu;
+    let rate = NaN;
     if (ratioCount >= RATIO_WINDOW) {
       let sum = 0;
       for (const v of logRatio) sum += v;
-      const r = Math.exp(sum / RATIO_WINDOW);
-      remaining = r < 1 ? (maxDu * r) / (1 - r) : Infinity;
+      rate = Math.exp(sum / RATIO_WINDOW);
+      remaining = rate < 1 ? (maxDu * rate) / (1 - rate) : Infinity;
     } else if (ratioCount > 0) remaining = Infinity;
     const err = criterion === "extrapolated" ? Math.max(maxDu, remaining) : maxDu;
     converged = it > 1 && (maxU > 0 ? err / maxU <= tol : true);
+    // Early failure: once the contraction has settled, the iterations still
+    // needed are log(tol·max|u| / Δu) / log r. A trial that would need more
+    // than the limit (with a margin of 50 %, for 20 iterations in a row)
+    // cannot converge in time, so it fails now, as it would at the limit.
+    if (!converged && it >= EARLY_FAIL_AFTER && Number.isFinite(rate) && maxU > 0) {
+      const needed = rate < 1 ? Math.log((tol * maxU) / maxDu) / Math.log(rate) : Infinity;
+      hopeless = it + needed > 1.5 * limit ? hopeless + 1 : 0;
+      if (hopeless >= 20) break;
+    }
 
     for (let e = 0; e < ne; e++) {
       for (let k = 0; k < 12; k++) { const q = eqs[12 * e + k]; ue[k] = q >= 0 ? u[q] : 0; }
@@ -269,29 +289,23 @@ export function solveAtF(
         const rad = Math.sqrt(hd * hd + txy * txy);
         const sA = pm + rad, sB = pm - rad;
         const c2 = rad > 0 ? hd / rad : 1, s2 = rad > 0 ? txy / rad : 0;
-        // indices: 0 = A, 1 = B, 2 = z
-        const pv = [sA, sB, sz];
-        let i1 = 0, i3 = 1;
-        if (sz > sA) i1 = 2;
-        if (sz < sB) i3 = 2;
-        const s1 = pv[i1], s3 = pv[i3];
-        const rate = [0, 0, 0];
+        // Largest (1) and smallest (3) principal stress: 0 = A, 1 = B, 2 = z.
+        const i1 = sz > sA ? 2 : 0, i3 = sz < sB ? 2 : 1;
+        const s1 = i1 === 2 ? sz : sA, s3 = i3 === 2 ? sz : sB;
         const sp = red.sinPhi[i], ssi = red.sinPsi[i];
         const f = (s1 - s3) / 2 + ((s1 + s3) / 2) * sp - red.c[i] * red.cosPhi[i];
-        let yielded = false;
+        let r1 = 0, r3 = 0;
         if (f > 0) {
           const k = f * red.dt[i];
-          rate[i1] += k * (1 + ssi) / 2;
-          rate[i3] += k * (-1 + ssi) / 2;
-          yielded = true;
+          r1 = (k * (1 + ssi)) / 2;
+          r3 = (k * (-1 + ssi)) / 2;
         }
-        if (cutoff && s1 > 0) {
-          rate[i1] += s1 * red.dtT[i];
-          yielded = true;
-        }
-        if (!yielded) continue;
+        if (cutoff && s1 > 0) r1 += s1 * red.dtT[i];
+        if (r1 === 0 && r3 === 0) continue;
         // Back to Cartesian components (engineering shear strain).
-        const eA = rate[0], eB = rate[1], eZ = rate[2];
+        const eA = i1 === 0 ? r1 : 0;
+        const eB = i3 === 1 ? r3 : 0;
+        const eZ = (i1 === 2 ? r1 : 0) + (i3 === 2 ? r3 : 0);
         const dex = (eA * (1 + c2) + eB * (1 - c2)) / 2;
         const dey = (eA * (1 - c2) + eB * (1 + c2)) / 2;
         const dg = (eA - eB) * s2;
@@ -323,13 +337,25 @@ function maxAbs(a: Float64Array): number {
 export function strengthReduction(model: FeModel, options: SrmOptions = {}): SrmResult {
   const eqs = elementEquations(model);
   const fTol = options.fTolerance ?? 0.005;
+  const rule = options.flowRule ?? "davis-b";
+  // Non-associated flow is associated where ψ = φ (φ = 0 in undrained soil).
+  const associated =
+    rule !== "non-associated" ||
+    model.gpPhi.every((phi, i) => model.elElastic[(i / 3) | 0] === 1 || Math.min(model.elPsi[(i / 3) | 0], phi) === phi);
+  const useNewton = associated && (options.solver ?? "newton") === "newton";
   const trials: SrmTrial[] = [];
   let iterations = 0;
   let lo = 0, hi = Infinity;
   let loState: SrmState | null = null;
   const run = (F: number): boolean => {
     const st = loState ? cloneState(loState) : emptyState(model);
-    const r = solveAtF(model, F, st, options, eqs);
+    const r = useNewton
+      ? newtonAtF(model, eqs, reduce(model, F, rule, 1), { u: st.u, ep: st.evp, stress: st.stress }, {
+          tolerance: options.tolerance,
+          maxIterations: options.maxIterations,
+          tensionCutoff: options.tensionCutoff,
+        })
+      : solveAtF(model, F, st, options, eqs);
     iterations += r.iterations;
     const t = { F, converged: r.converged, iterations: r.iterations, maxDisplacement: maxAbs(st.u) };
     trials.push(t);

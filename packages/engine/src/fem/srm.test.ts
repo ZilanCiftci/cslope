@@ -42,4 +42,13 @@ describe("strengthReduction", () => {
     expect(r.factorOfSafety).toBeLessThan(1.5);
     expect(r.failedF - r.factorOfSafety).toBeLessThanOrEqual(0.02);
   }, 120000);
+
+  it("gives the same factor with Newton and the viscoplastic iteration for associated flow", () => {
+    const def = PROBLEMS.find((p) => p.id === "V055")!.definition as SlopeDefinition;
+    const model = buildFeModel(buildSlope(toCanonicalSlopeDefinition(def)), { elementSize: 1.5 });
+    const newton = strengthReduction(model, { flowRule: "associated", fTolerance: 0.01 });
+    const vp = strengthReduction(model, { flowRule: "associated", solver: "viscoplastic", fTolerance: 0.01 });
+    expect(Math.abs(newton.factorOfSafety - vp.factorOfSafety)).toBeLessThan(0.02);
+    expect(newton.iterations).toBeLessThan(vp.iterations);
+  }, 180000);
 });

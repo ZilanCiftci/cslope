@@ -19,3 +19,5 @@ export {
 } from "./srm";
 export { analyzeFem, type FemAnalysisOptions, type FemAnalysisResult, type FemMeshView, type FemLevel } from "./analysis";
 export { zzIndicator, dissipationIndicator, dorflerMark, refinedSizeField } from "./adapt";
+export { newtonAtF, returnMap } from "./newton";
+export { lowerBound, lowerBoundProblem, loadHighs, type LowerBoundOptions, type LowerBoundResult } from "./lower-bound";

@@ -86,9 +86,11 @@ export function analyzeFem(slope: Slope, options: FemAnalysisOptions = {}): FemA
     );
   }
   const tensionCutoff = options.tensionCutoff ?? (slope.tensionCrackDepth > 0 || slope.tensionCrackAuto);
-  let r = strengthReduction(model, { ...options, flowRule, tensionCutoff });
-  const levels: FemLevel[] = [{ elements: model.elementCount, factorOfSafety: r.factorOfSafety, iterations: r.iterations }];
+  // With refinement to follow, the first mesh needs F only roughly.
   const ad = options.adaptive;
+  const coarseTol = ad ? Math.max(options.fTolerance ?? 0.005, 0.02) : options.fTolerance;
+  let r = strengthReduction(model, { ...options, flowRule, tensionCutoff, fTolerance: coarseTol });
+  const levels: FemLevel[] = [{ elements: model.elementCount, factorOfSafety: r.factorOfSafety, iterations: r.iterations }];
   if (ad && r.factorOfSafety > 0 && Number.isFinite(r.failedF)) {
     const maxLevels = ad.levels ?? 3, tol = ad.tolerance ?? 0.01;
     for (let level = 0; level < maxLevels; level++) {
@@ -98,9 +100,14 @@ export function analyzeFem(slope: Slope, options: FemAnalysisOptions = {}): FemA
       const marked = dorflerMark(eta, ad.theta ?? 0.5);
       model = buildFeModel(slope, { ...options, sizeField: refinedSizeField(model, marked) });
       const prev = r.factorOfSafety;
-      r = strengthReduction(model, { ...options, flowRule, tensionCutoff, startF: prev, bracketStep: 0.04 });
+      r = strengthReduction(model, { ...options, flowRule, tensionCutoff, startF: prev, bracketStep: 0.04, fTolerance: coarseTol });
       levels.push({ elements: model.elementCount, factorOfSafety: r.factorOfSafety, iterations: r.iterations });
       if (Math.abs(r.factorOfSafety - prev) < tol) break;
+    }
+    // F to the requested tolerance on the final mesh.
+    if (r.factorOfSafety > 0 && Number.isFinite(r.failedF) && r.failedF - r.factorOfSafety > (options.fTolerance ?? 0.005)) {
+      r = strengthReduction(model, { ...options, flowRule, tensionCutoff, startF: r.factorOfSafety, bracketStep: 0.01 });
+      levels[levels.length - 1] = { elements: model.elementCount, factorOfSafety: r.factorOfSafety, iterations: levels[levels.length - 1].iterations + r.iterations };
     }
   }
   if (model.triangulation.capped) warnings.push("The mesh reached its vertex limit; the element size was not reached everywhere.");

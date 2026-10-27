@@ -40,7 +40,7 @@ export interface FeModelOptions {
   elementSize?: number;
   /** Size field overriding `elementSize`, e.g. from error estimation. */
   sizeField?: (x: number, y: number) => number;
-  /** Parameters per material name. */
+  /** Parameters per material name; "*" for every material not named. */
   materialParameters?: Readonly<Record<string, FeMaterialParameters>>;
   /** Smallest triangle angle (°); default 25. */
   minAngle?: number;
@@ -224,7 +224,11 @@ export function buildFeModel(slope: Slope, options: FeModelOptions = {}): FeMode
   }
 
   // Elastic parameters and behaviour per element.
-  const params = materials.map((m) => options.materialParameters?.[m.name] ?? {});
+  const isRigid = (m: Material) => m.model.kind === "high-strength" || m.model.kind === "impenetrable";
+  // "*" stands for the soils; a rigid material takes parameters only by name.
+  const params = materials.map(
+    (m) => options.materialParameters?.[m.name] ?? (isRigid(m) ? undefined : options.materialParameters?.["*"]) ?? {},
+  );
   const soilE = materials
     .map((m, i) => (m.model.kind === "high-strength" || m.model.kind === "impenetrable" ? Infinity : params[i].youngsModulus ?? DEFAULT_YOUNGS_MODULUS));
   const minSoilE = Math.min(...soilE.filter(Number.isFinite), DEFAULT_YOUNGS_MODULUS);

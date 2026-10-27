@@ -23,6 +23,7 @@
     "vitest": "^4.0.18"
   },
   "dependencies": {
+    "highs": "1.15.3",
     "jsts": "^2.12.1"
   }
 }
