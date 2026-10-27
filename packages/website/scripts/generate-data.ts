@@ -9,6 +9,7 @@
  *
  *   bun scripts/generate-data.ts            (all problems, in parallel)
  *   bun scripts/generate-data.ts --cached   (reuse the last engine results)
+ *   bun scripts/generate-data.ts --fem-fresh   (rerun the cached finite element results)
  *
  * The raw engine results are cached in node_modules/.cache, so a change to
  * the output format does not need a new engine run.
@@ -19,13 +20,16 @@
  * Regenerate the PDF report the site serves at the same time: bun run report.
  */
 import { spawn } from "node:child_process";
-import { existsSync, mkdtempSync, readFileSync, writeFileSync, mkdirSync } from "node:fs";
+import { createHash } from "node:crypto";
+import { existsSync, mkdtempSync, readFileSync, readdirSync, writeFileSync, mkdirSync } from "node:fs";
 import { availableParallelism, loadavg, tmpdir } from "node:os";
 import { join } from "node:path";
 import {
   RELIABILITY_CASES,
   VERIFICATION_CASES,
+  runFemVerification,
   agrees,
+  femAgrees,
   isProgramSource,
   paperValues,
   presentedAnalyses,
@@ -44,6 +48,57 @@ const OUT = join(import.meta.dirname, "../src/content/generated/verification.jso
 const CACHE = join(import.meta.dirname, "../node_modules/.cache/cslope-verification-raw.json");
 /** Wall time of the last full engine run, read by scripts/verification-log.ts. */
 export const RUN_TIME = join(import.meta.dirname, "../node_modules/.cache/cslope-verification-run.json");
+
+/** The analysis label of the finite element results in the table. */
+export const FEM_LABEL = "Strength reduction (FE)";
+
+/** Raw finite element result of a problem (cached with the other results). */
+export interface FemRaw {
+  fos: number;
+  flowRule: string;
+  levels: { elements: number; fos: number }[];
+}
+
+/**
+ * Finite element results are cached by a hash of the problem's input and
+ * of the finite element code (packages/engine/src/fem): they take minutes,
+ * and a change to the limit equilibrium engine does not move them.
+ */
+const FEM_CACHE = join(import.meta.dirname, "../node_modules/.cache/cslope-fem");
+const FEM_SOURCES = join(import.meta.dirname, "../../engine/src/fem");
+
+function femKey(c: (typeof VERIFICATION_CASES)[number]): string {
+  const h = createHash("sha256");
+  h.update(JSON.stringify([c.definition, c.fem]));
+  for (const f of readdirSync(FEM_SOURCES).filter((f) => f.endsWith(".ts") && !f.endsWith(".test.ts")).sort()) {
+    h.update(f);
+    h.update(readFileSync(join(FEM_SOURCES, f)));
+  }
+  h.update(readFileSync(join(import.meta.dirname, "../../engine/src/verification/fem-cases.ts")));
+  return h.digest("hex").slice(0, 32);
+}
+
+/** Finite element results for the problems with a `fem` setup in this shard. */
+function runFemShard(shard: number, shards: number): Record<string, FemRaw> {
+  const out: Record<string, FemRaw> = {};
+  mkdirSync(FEM_CACHE, { recursive: true });
+  VERIFICATION_CASES.filter((c) => c.fem).forEach((c, i) => {
+    if (i % shards !== shard) return;
+    const file = join(FEM_CACHE, `${c.id}-${femKey(c)}.json`);
+    if (existsSync(file) && !process.argv.includes("--fem-fresh")) {
+      out[c.id] = JSON.parse(readFileSync(file, "utf8"));
+      return;
+    }
+    const r = runFemVerification(c.definition, c.fem!);
+    out[c.id] = {
+      fos: r.factorOfSafety,
+      flowRule: c.fem!.flowRule ?? "davis-b",
+      levels: r.levels.map((l) => ({ elements: l.elements, fos: l.factorOfSafety })),
+    };
+    writeFileSync(file, JSON.stringify(out[c.id]));
+  });
+  return out;
+}
 
 /**
  * cSlope's FOS for every analysis of the problems in this shard, in the
@@ -72,6 +127,7 @@ function runReliability(shard: number, shards: number): Record<string, number[]>
 async function runAllShards(): Promise<{
   fos: Record<string, (number | null)[]>;
   reliability: Record<string, number[]>;
+  fem: Record<string, FemRaw>;
 }> {
   const shards = Math.max(1, Math.min(8, availableParallelism()));
   const dir = mkdtempSync(join(tmpdir(), "cslope-data-"));
@@ -79,7 +135,8 @@ async function runAllShards(): Promise<{
     Array.from({ length: shards }, (_, k) => {
       const file = join(dir, `${k}.json`);
       return new Promise<void>((resolve, reject) => {
-        const child = spawn(process.execPath, [import.meta.filename, "--shard", `${k}/${shards}`, file], {
+        const fresh = process.argv.includes("--fem-fresh") ? ["--fem-fresh"] : [];
+        const child = spawn(process.execPath, [import.meta.filename, "--shard", `${k}/${shards}`, file, ...fresh], {
           stdio: "inherit",
         });
         child.on("error", reject);
@@ -89,12 +146,14 @@ async function runAllShards(): Promise<{
   );
   const fos: Record<string, (number | null)[]> = {};
   const reliability: Record<string, number[]> = {};
+  const fem: Record<string, FemRaw> = {};
   for (let k = 0; k < shards; k++) {
     const part = JSON.parse(readFileSync(join(dir, `${k}.json`), "utf8"));
     Object.assign(fos, part.fos);
     Object.assign(reliability, part.reliability);
+    Object.assign(fem, part.fem);
   }
-  return { fos, reliability };
+  return { fos, reliability, fem };
 }
 
 const round = (x: number, digits = 4) => Number(x.toFixed(digits));
@@ -106,6 +165,7 @@ const COMMERCIAL = /commercial slope stability program/i;
 export function buildData(
   fos: Record<string, (number | null)[]>,
   reliabilityResults: Record<string, number[]>,
+  fem: Record<string, FemRaw> = {},
 ): VerificationData {
   const value = (raw: number | null | undefined) => (raw == null || !Number.isFinite(raw) ? null : round(raw));
   const problems: VerificationProblem[] = VERIFICATION_CASES.map((c) => ({
@@ -129,7 +189,7 @@ export function buildData(
       programs: a.programs && { min: a.programs.min, max: a.programs.max },
     })),
     ...(c.publicNote ? { note: c.publicNote } : {}),
-  }));
+  })).map((p, i) => withFem(p, VERIFICATION_CASES[i], fem[p.id], value));
   const reliability: ReliabilityProblem[] = RELIABILITY_CASES.map((c, i) => {
     const quantities = [...new Set(c.checks.map(([q]) => q))].filter((q) => q !== "fos");
     return {
@@ -164,6 +224,39 @@ export function buildData(
 }
 
 /**
+ * Adds the finite element analysis to a problem: a row in its results and
+ * cSlope's value next to the published finite element, finite difference,
+ * limit analysis and theory values it is compared with (fem.references).
+ */
+function withFem(
+  p: VerificationProblem,
+  c: (typeof VERIFICATION_CASES)[number],
+  raw: FemRaw | undefined,
+  value: (x: number | null | undefined) => number | null,
+): VerificationProblem {
+  if (!c.fem) return p;
+  const computed = value(raw?.fos);
+  const published = p.published.slice();
+  for (const r of c.fem.references) {
+    const j = published.findIndex((v) => v.value === r.value && v.source === r.source);
+    if (j >= 0) published[j] = { ...published[j], analysis: FEM_LABEL, computed };
+    else published.push({ value: r.value, ...(r.upper != null ? { upper: r.upper } : {}), method: r.method, source: r.source, analysis: FEM_LABEL, computed });
+  }
+  return {
+    ...p,
+    published,
+    results: [...p.results, { method: FEM_LABEL, computed, programs: null }],
+    fem: { flowRule: raw?.flowRule ?? c.fem.flowRule ?? "davis-b", levels: raw?.levels ?? [] },
+  };
+}
+
+/** How many finite element results lie within their references' tolerance (fem-cases.ts). */
+export function femAgreement(fem: Record<string, FemRaw>): { agree: number; total: number } {
+  const refs = VERIFICATION_CASES.flatMap((c) => (c.fem ? c.fem.references.map((r) => ({ r, fos: fem[c.id]?.fos })) : []));
+  return { agree: refs.filter(({ r, fos }) => fos != null && femAgrees(r, fos)).length, total: refs.length };
+}
+
+/**
  * How many checks agree with their reference by the engine's rule
  * (tolerance.ts), from the results per analysis.
  */
@@ -180,7 +273,7 @@ if (import.meta.main) {
   if (i >= 0) {
     const [k, n] = process.argv[i + 1].split("/").map(Number);
     const file = process.argv[i + 2];
-    writeFileSync(file, JSON.stringify({ fos: runShard(k, n), reliability: runReliability(k, n) }));
+    writeFileSync(file, JSON.stringify({ fos: runShard(k, n), reliability: runReliability(k, n), fem: runFemShard(k, n) }));
   } else {
     const started = Date.now();
     // Other work on the machine at the start, so run times stay comparable.
@@ -191,7 +284,8 @@ if (import.meta.main) {
       // A cache from an older set of problems would publish them as failed.
       const stale =
         VERIFICATION_CASES.filter((c) => raw.fos[c.id]?.length !== presentedAnalyses(c).length).length +
-        RELIABILITY_CASES.filter((c, i) => raw.reliability[i]?.length !== c.checks.length).length;
+        RELIABILITY_CASES.filter((c, i) => raw.reliability[i]?.length !== c.checks.length).length +
+        VERIFICATION_CASES.filter((c) => c.fem && !raw.fem?.[c.id]).length;
       if (stale) throw new Error(`The cache misses ${stale} problem(s) or checks; run without --cached.`);
     } else {
       raw = await runAllShards();
@@ -200,8 +294,8 @@ if (import.meta.main) {
       const seconds = (Date.now() - started) / 1000;
       writeFileSync(RUN_TIME, JSON.stringify({ seconds, workers: Math.max(1, Math.min(8, availableParallelism())), load: loadAtStart, at: new Date().toISOString() }));
     }
-    const { fos, reliability } = raw;
-    const json = JSON.stringify(buildData(fos, reliability), null, 1) + "\n";
+    const { fos, reliability, fem = {} } = raw;
+    const json = JSON.stringify(buildData(fos, reliability, fem), null, 1) + "\n";
     const hits = findForbiddenNames("verification.json", json);
     if (hits.length) {
       for (const h of hits) console.error(`line ${h.line}: "${h.match}" in …${h.context}…`);
@@ -211,6 +305,7 @@ if (import.meta.main) {
     writeFileSync(OUT, json);
     const s = JSON.parse(json).summary;
     const a = agreement(fos);
-    console.log(`${s.problems} problems, ${a.agree}/${a.total} checks agree, ${((Date.now() - started) / 1000).toFixed(0)} s → ${OUT}`);
+    const fa = femAgreement(fem);
+    console.log(`${s.problems} problems, ${a.agree}/${a.total} checks agree, ${fa.agree}/${fa.total} finite element references agree, ${((Date.now() - started) / 1000).toFixed(0)} s → ${OUT}`);
   }
 }

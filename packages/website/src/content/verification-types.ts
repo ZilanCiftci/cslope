@@ -46,6 +46,16 @@ export interface VerificationProblem {
   results: VerificationResult[];
   /** Why the published values and the programs differ, where they do. */
   note?: string;
+  /** Strength reduction by finite elements, when the problem has a finite element reference. */
+  fem?: FemSummary;
+}
+
+/** cSlope's strength reduction by finite elements on a problem. */
+export interface FemSummary {
+  /** The flow rule as run (the source's). */
+  flowRule: string;
+  /** Factor of safety per mesh, coarsest first (adaptive refinement). */
+  levels: { elements: number; fos: number }[];
 }
 
 /** One quantity of a probabilistic problem (β or Pf, by Taylor series or Monte Carlo). */

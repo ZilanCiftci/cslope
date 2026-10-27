@@ -120,6 +120,7 @@ function ProblemTable() {
             ["Janbu", "Janbu"],
             ["Spencer", "Spencer"],
             ["Morgenstern-Price", "Morgenstern–Price"],
+            ["Finite elements", "Strength reduction (FE)"],
           ]}
         />
         <Select<PublishedFilter>

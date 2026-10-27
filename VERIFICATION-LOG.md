@@ -34,11 +34,44 @@ The script compares the regenerated verification table with the committed one an
 | 2026-10-25 | Review fixes: USACE's V092 values no longer compared on the program's line, one source string per manual and paper; regenerated at idle load | 0 | 0.353 → 0.353 | 0.499 → 0.499 | 0.955 → 0.955 | 1.460 → 1.464 | 100 s (4 workers, load 0.5 at start) |
 | 2026-10-25 | Round two from the source extracts: V063 check is Bishop, Greco's global minimum 0.97 on V053, tiered-wall reinforcement 6.3 m, Morgenstern and Low reference values, Prandtl 1920 | 2 | 0.353 → 0.353 | 0.499 → 0.499 | 0.955 → 1.008 | 1.464 → 1.543 | 107 s (4 workers, load 1.5 at start) |
 | 2026-10-25 | Round three from 18 new sources: C&X, Cheng, D&W Table 14.1 and 2nd-edition values; new V010b, V038b, V086d-e on the sources' own input; V036 reference values printed, not read | 2 | 0.353 → 0.348 | 0.499 → 0.483 | 1.008 → 1.011 | 1.543 → 1.595 | 103 s (4 workers, load 0.8 at start) |
+| 2026-10-27 | Strength reduction by finite elements: FE column for 19 problems | 0 | 0.348 → 0.348 | 0.483 → 0.483 | 1.011 → 1.011 | 1.595 → 1.595 | 2418 s (4 workers, load 0.9 at start) |
 <!-- summary-end -->
 
 ## Entries
 
 <!-- entries -->
+
+### 2026-10-27: Strength reduction by finite elements: FE column for 19 problems
+
+Compared with f428b85. Errors are relative to the reference, in percent. Verification run time: 2418 s (4 workers, load 0.9 at start).
+
+**Against other programs (midpoint of their range):** 0 moved (0 closer to the reference, 0 further).
+
+| Result | Reference | Before | After | Error before | Error after |
+|---|---|---|---|---|---|
+| **Mean error (n = 279)** | | | | -0.231 % | -0.231 % |
+| **Mean absolute error** | | | | 0.348 % | 0.348 % |
+| **RMS error** | | | | 0.483 % | 0.483 % |
+| **Largest error** | | | | 2.100 % | 2.100 % |
+
+**Against the papers:** 0 moved (0 closer to the reference, 0 further).
+
+| Result | Reference | Before | After | Error before | Error after |
+|---|---|---|---|---|---|
+| **Mean error (n = 111)** | | | | -0.167 % | -0.167 % |
+| **Mean absolute error** | | | | 1.011 % | 1.011 % |
+| **RMS error** | | | | 1.595 % | 1.595 % |
+| **Largest error** | | | | 6.591 % | 6.591 % |
+
+**Finite elements against their references (FE, finite differences, limit analysis, theory):** 0 moved (0 closer to the reference, 0 further).
+
+| Result | Reference | Before | After | Error before | Error after |
+|---|---|---|---|---|---|
+| **Mean error (n = 19)** | | | | 0.000 % | -1.158 % |
+| **Mean absolute error** | | | | 0.000 % | 2.533 % |
+| **RMS error** | | | | 0.000 % | 3.498 % |
+| **Largest error** | | | | 0.000 % | 10.550 % |
+
 
 ### 2026-10-25: Round three from 18 new sources: C&X, Cheng, D&W Table 14.1 and 2nd-edition values; new V010b, V038b, V086d-e on the sources' own input; V036 reference values printed, not read
 

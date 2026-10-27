@@ -1,9 +1,9 @@
 {
  "summary": {
   "problems": 171,
-  "results": 334,
-  "publishedValues": 199,
-  "problemsWithPublished": 137,
+  "results": 353,
+  "publishedValues": 212,
+  "problemsWithPublished": 140,
   "literatureProblems": 161,
   "reliabilityQuantities": 25
  },
@@ -126,7 +126,8 @@
      "upper": 0.45,
      "method": "limit analysis, lower and upper bound",
      "source": "Kim et al. (2002)",
-     "computed": null
+     "computed": 0.4194,
+     "analysis": "Strength reduction (FE)"
     },
     {
      "value": 0.39,
@@ -162,8 +163,26 @@
      "method": "Janbu corrected, non-circular",
      "computed": 0.4131,
      "programs": null
+    },
+    {
+     "method": "Strength reduction (FE)",
+     "computed": 0.4194,
+     "programs": null
     }
-   ]
+   ],
+   "fem": {
+    "flowRule": "associated",
+    "levels": [
+     {
+      "elements": 2404,
+      "fos": 0.4224
+     },
+     {
+      "elements": 4482,
+      "fos": 0.4193789872937608
+     }
+    ]
+   }
   },
   {
    "id": "V003",
@@ -780,6 +799,13 @@
      "method": "Bishop simplified",
      "analysis": "Bishop simplified",
      "computed": 1.1429
+    },
+    {
+     "value": 1.14,
+     "method": "finite-element strength reduction (3D, without piles)",
+     "source": "Cai & Ugai (2000)",
+     "analysis": "Strength reduction (FE)",
+     "computed": 1.1209
     }
    ],
    "results": [
@@ -790,8 +816,30 @@
       "min": 1.14,
       "max": 1.14
      }
+    },
+    {
+     "method": "Strength reduction (FE)",
+     "computed": 1.1209,
+     "programs": null
     }
-   ]
+   ],
+   "fem": {
+    "flowRule": "non-associated",
+    "levels": [
+     {
+      "elements": 1366,
+      "fos": 1.140625
+     },
+     {
+      "elements": 3382,
+      "fos": 1.1233085240000003
+     },
+     {
+      "elements": 8181,
+      "fos": 1.1208509734129668
+     }
+    ]
+   }
   },
   {
    "id": "V013b",
@@ -1103,6 +1151,13 @@
      "source": "Chen & Shao (1988)",
      "analysis": "Spencer",
      "computed": 1.052
+    },
+    {
+     "value": 1,
+     "method": "plasticity theory (Prandtl mechanism)",
+     "source": "Chen & Shao (1988)",
+     "analysis": "Strength reduction (FE)",
+     "computed": 0.9978
     }
    ],
    "results": [
@@ -1121,8 +1176,26 @@
       "min": 1.009,
       "max": 1.017
      }
+    },
+    {
+     "method": "Strength reduction (FE)",
+     "computed": 0.9978,
+     "programs": null
     }
-   ]
+   ],
+   "fem": {
+    "flowRule": "davis-b",
+    "levels": [
+     {
+      "elements": 1559,
+      "fos": 1
+     },
+     {
+      "elements": 3035,
+      "fos": 0.9978122211889904
+     }
+    ]
+   }
   },
   {
    "id": "V019",
@@ -1139,6 +1212,13 @@
      "method": "Spencer",
      "analysis": "Spencer (vertical pore-pressure head)",
      "computed": 1.3984
+    },
+    {
+     "value": 1.47,
+     "method": "finite-element strength reduction",
+     "source": "Cheng et al. (2007)",
+     "analysis": "Strength reduction (FE)",
+     "computed": 1.408
     }
    ],
    "results": [
@@ -1162,8 +1242,30 @@
       "min": 1.401,
       "max": 1.401
      }
+    },
+    {
+     "method": "Strength reduction (FE)",
+     "computed": 1.408,
+     "programs": null
     }
-   ]
+   ],
+   "fem": {
+    "flowRule": "associated",
+    "levels": [
+     {
+      "elements": 1832,
+      "fos": 1.42578125
+     },
+     {
+      "elements": 3340,
+      "fos": 1.4041356550000004
+     },
+     {
+      "elements": 6273,
+      "fos": 1.408034183018777
+     }
+    ]
+   }
   },
   {
    "id": "V020",
@@ -1180,6 +1282,13 @@
      "method": "Spencer",
      "analysis": "Spencer",
      "computed": 1.3328
+    },
+    {
+     "value": 1.327,
+     "method": "finite-element strength reduction",
+     "source": "Cheng et al. (2007)",
+     "analysis": "Strength reduction (FE)",
+     "computed": 1.3676
     }
    ],
    "results": [
@@ -1198,8 +1307,26 @@
       "min": 1.342,
       "max": 1.342
      }
+    },
+    {
+     "method": "Strength reduction (FE)",
+     "computed": 1.3676,
+     "programs": null
     }
-   ]
+   ],
+   "fem": {
+    "flowRule": "associated",
+    "levels": [
+     {
+      "elements": 1476,
+      "fos": 1.3671875
+     },
+     {
+      "elements": 2844,
+      "fos": 1.3675899195303471
+     }
+    ]
+   }
   },
   {
    "id": "V021a",
@@ -1657,6 +1784,13 @@
      "method": "Spencer",
      "analysis": "Spencer",
      "computed": 1.195
+    },
+    {
+     "value": 1.19,
+     "method": "finite-element strength reduction",
+     "source": "Duncan, Wright & Brandon (2014)",
+     "analysis": "Strength reduction (FE)",
+     "computed": 1.1643
     }
    ],
    "results": [
@@ -1680,8 +1814,30 @@
       "min": 1.19,
       "max": 1.19
      }
+    },
+    {
+     "method": "Strength reduction (FE)",
+     "computed": 1.1643,
+     "programs": null
     }
-   ]
+   ],
+   "fem": {
+    "flowRule": "non-associated",
+    "levels": [
+     {
+      "elements": 3026,
+      "fos": 1.1875
+     },
+     {
+      "elements": 6274,
+      "fos": 1.1694718880000001
+     },
+     {
+      "elements": 13207,
+      "fos": 1.1643463449560234
+     }
+    ]
+   }
   },
   {
    "id": "V027",
@@ -2398,6 +2554,13 @@
      "source": "Duncan, Wright & Brandon (2014)",
      "analysis": "Spencer",
      "computed": 1.1569
+    },
+    {
+     "value": 1.07,
+     "method": "finite-element strength reduction, piezometric line",
+     "source": "Duncan, Wright & Brandon (2014)",
+     "analysis": "Strength reduction (FE)",
+     "computed": 1.0308
     }
    ],
    "results": [
@@ -2405,9 +2568,31 @@
      "method": "Spencer",
      "computed": 1.1569,
      "programs": null
+    },
+    {
+     "method": "Strength reduction (FE)",
+     "computed": 1.0308,
+     "programs": null
     }
    ],
-   "note": "The book contradicts itself on the unit weight: its figures say 100 pcf, its hand calculations and slice weights use 125 pcf. With 125 pcf and the book's line cSlope reproduces the 1.16 that all three of the book's programs give (Table 7.8); with 100 pcf it gives 1.03."
+   "note": "The book contradicts itself on the unit weight: its figures say 100 pcf, its hand calculations and slice weights use 125 pcf. With 125 pcf and the book's line cSlope reproduces the 1.16 that all three of the book's programs give (Table 7.8); with 100 pcf it gives 1.03.",
+   "fem": {
+    "flowRule": "non-associated",
+    "levels": [
+     {
+      "elements": 2978,
+      "fos": 1.078125
+     },
+     {
+      "elements": 5826,
+      "fos": 1.0617573720000002
+     },
+     {
+      "elements": 11474,
+      "fos": 1.0308345724963974
+     }
+    ]
+   }
   },
   {
    "id": "V039",
@@ -2431,6 +2616,13 @@
      "method": "Spencer, non-circular",
      "analysis": "Spencer, non-circular",
      "computed": 1.1618
+    },
+    {
+     "value": 1.26,
+     "method": "finite-element strength reduction",
+     "source": "Duncan, Wright & Brandon (2014)",
+     "analysis": "Strength reduction (FE)",
+     "computed": 1.2347
     }
    ],
    "results": [
@@ -2446,8 +2638,26 @@
       "min": 1.167,
       "max": 1.167
      }
+    },
+    {
+     "method": "Strength reduction (FE)",
+     "computed": 1.2347,
+     "programs": null
     }
-   ]
+   ],
+   "fem": {
+    "flowRule": "non-associated",
+    "levels": [
+     {
+      "elements": 5251,
+      "fos": 1.234375
+     },
+     {
+      "elements": 10872,
+      "fos": 1.2347383273473993
+     }
+    ]
+   }
   },
   {
    "id": "V040",
@@ -3293,6 +3503,13 @@
      "method": "finite elements",
      "analysis": "Spencer",
      "computed": 1.3662
+    },
+    {
+     "value": 1.4,
+     "method": "finite elements",
+     "source": "Griffiths & Lane (1999)",
+     "analysis": "Strength reduction (FE)",
+     "computed": 1.3447
     }
    ],
    "results": [
@@ -3303,8 +3520,26 @@
       "min": 1.366,
       "max": 1.366
      }
+    },
+    {
+     "method": "Strength reduction (FE)",
+     "computed": 1.3447,
+     "programs": null
     }
-   ]
+   ],
+   "fem": {
+    "flowRule": "non-associated",
+    "levels": [
+     {
+      "elements": 2200,
+      "fos": 1.34765625
+     },
+     {
+      "elements": 5361,
+      "fos": 1.3447078762117253
+     }
+    ]
+   }
   },
   {
    "id": "V056",
@@ -3321,6 +3556,13 @@
      "method": "Janbu wedge",
      "analysis": "Janbu corrected",
      "computed": 0.4994
+    },
+    {
+     "value": 0.6,
+     "method": "finite elements (read from fig. 7)",
+     "source": "Griffiths & Lane (1999)",
+     "analysis": "Strength reduction (FE)",
+     "computed": 0.5367
     }
    ],
    "results": [
@@ -3328,8 +3570,30 @@
      "method": "Janbu corrected",
      "computed": 0.4994,
      "programs": null
+    },
+    {
+     "method": "Strength reduction (FE)",
+     "computed": 0.5367,
+     "programs": null
     }
-   ]
+   ],
+   "fem": {
+    "flowRule": "non-associated",
+    "levels": [
+     {
+      "elements": 2738,
+      "fos": 0.4992
+     },
+     {
+      "elements": 5546,
+      "fos": 0.47730229248000006
+     },
+     {
+      "elements": 11087,
+      "fos": 0.5366595035290824
+     }
+    ]
+   }
   },
   {
    "id": "V057a",
@@ -3357,7 +3621,8 @@
      "value": 1.45,
      "method": "finite elements",
      "source": "Griffiths & Lane (1999)",
-     "computed": null
+     "computed": 1.4529,
+     "analysis": "Strength reduction (FE)"
     }
    ],
    "results": [
@@ -3368,8 +3633,26 @@
       "min": 1.468,
       "max": 1.468
      }
+    },
+    {
+     "method": "Strength reduction (FE)",
+     "computed": 1.4529,
+     "programs": null
     }
-   ]
+   ],
+   "fem": {
+    "flowRule": "non-associated",
+    "levels": [
+     {
+      "elements": 2296,
+      "fos": 1.4453125
+     },
+     {
+      "elements": 4671,
+      "fos": 1.4529486673117673
+     }
+    ]
+   }
   },
   {
    "id": "V057b",
@@ -3397,7 +3680,8 @@
      "value": 2.03,
      "method": "finite elements",
      "source": "Griffiths & Lane (1999)",
-     "computed": null
+     "computed": 2.0523,
+     "analysis": "Strength reduction (FE)"
     }
    ],
    "results": [
@@ -3408,8 +3692,30 @@
       "min": 2.022,
       "max": 2.022
      }
+    },
+    {
+     "method": "Strength reduction (FE)",
+     "computed": 2.0523,
+     "programs": null
     }
-   ]
+   ],
+   "fem": {
+    "flowRule": "non-associated",
+    "levels": [
+     {
+      "elements": 2296,
+      "fos": 2.0904541015625
+     },
+     {
+      "elements": 4623,
+      "fos": 2.05871773046875
+     },
+     {
+      "elements": 10137,
+      "fos": 2.0522505438923293
+     }
+    ]
+   }
   },
   {
    "id": "V058",
@@ -3426,6 +3732,13 @@
      "method": "finite elements",
      "analysis": "Spencer",
      "computed": 1.9152
+    },
+    {
+     "value": 1.9,
+     "method": "finite elements",
+     "source": "Griffiths & Lane (1999)",
+     "analysis": "Strength reduction (FE)",
+     "computed": 1.8461
     }
    ],
    "results": [
@@ -3436,8 +3749,30 @@
       "min": 1.915,
       "max": 1.915
      }
+    },
+    {
+     "method": "Strength reduction (FE)",
+     "computed": 1.8461,
+     "programs": null
     }
-   ]
+   ],
+   "fem": {
+    "flowRule": "non-associated",
+    "levels": [
+     {
+      "elements": 3566,
+      "fos": 1.85546875
+     },
+     {
+      "elements": 6871,
+      "fos": 1.68944140625
+     },
+     {
+      "elements": 14360,
+      "fos": 1.8461160512628032
+     }
+    ]
+   }
   },
   {
    "id": "V059a",
@@ -3447,7 +3782,15 @@
    "commercial": false,
    "surface": "search",
    "units": "SI",
-   "published": [],
+   "published": [
+    {
+     "value": 1.28,
+     "method": "finite elements (read from fig. 2)",
+     "source": "Guo & Griffiths (2020)",
+     "analysis": "Strength reduction (FE)",
+     "computed": 1.2826
+    }
+   ],
    "results": [
     {
      "method": "Spencer, non-circular",
@@ -3456,9 +3799,27 @@
       "min": 1.215,
       "max": 1.215
      }
+    },
+    {
+     "method": "Strength reduction (FE)",
+     "computed": 1.2826,
+     "programs": null
     }
    ],
-   "note": "The paper gives its results in figures only; the comparison is with the other programs."
+   "note": "The paper gives its results in figures only; the comparison is with the other programs.",
+   "fem": {
+    "flowRule": "non-associated",
+    "levels": [
+     {
+      "elements": 2046,
+      "fos": 1.26953125
+     },
+     {
+      "elements": 4324,
+      "fos": 1.2826039745309612
+     }
+    ]
+   }
   },
   {
    "id": "V059b",
@@ -3468,7 +3829,15 @@
    "commercial": false,
    "surface": "search",
    "units": "SI",
-   "published": [],
+   "published": [
+    {
+     "value": 1.35,
+     "method": "finite elements",
+     "source": "Guo & Griffiths (2020)",
+     "analysis": "Strength reduction (FE)",
+     "computed": 1.3514
+    }
+   ],
    "results": [
     {
      "method": "Spencer, non-circular",
@@ -3477,9 +3846,27 @@
       "min": 1.29,
       "max": 1.29
      }
+    },
+    {
+     "method": "Strength reduction (FE)",
+     "computed": 1.3514,
+     "programs": null
     }
    ],
-   "note": "The paper gives its results in figures only; the comparison is with the other programs."
+   "note": "The paper gives its results in figures only; the comparison is with the other programs.",
+   "fem": {
+    "flowRule": "non-associated",
+    "levels": [
+     {
+      "elements": 2046,
+      "fos": 1.34765625
+     },
+     {
+      "elements": 4322,
+      "fos": 1.351397965148102
+     }
+    ]
+   }
   },
   {
    "id": "V059c",
@@ -3489,7 +3876,15 @@
    "commercial": false,
    "surface": "search",
    "units": "SI",
-   "published": [],
+   "published": [
+    {
+     "value": 1.36,
+     "method": "finite elements (read from fig. 2)",
+     "source": "Guo & Griffiths (2020)",
+     "analysis": "Strength reduction (FE)",
+     "computed": 1.3729
+    }
+   ],
    "results": [
     {
      "method": "Spencer, non-circular",
@@ -3498,9 +3893,31 @@
       "min": 1.315,
       "max": 1.315
      }
+    },
+    {
+     "method": "Strength reduction (FE)",
+     "computed": 1.3729,
+     "programs": null
     }
    ],
-   "note": "The paper gives its results in figures only; the comparison is with the other programs."
+   "note": "The paper gives its results in figures only; the comparison is with the other programs.",
+   "fem": {
+    "flowRule": "non-associated",
+    "levels": [
+     {
+      "elements": 2046,
+      "fos": 1.38671875
+     },
+     {
+      "elements": 4397,
+      "fos": 1.3656661849999998
+     },
+     {
+      "elements": 9918,
+      "fos": 1.3728815487920398
+     }
+    ]
+   }
   },
   {
    "id": "V060a",
@@ -3843,7 +4260,8 @@
      "value": 2.5,
      "method": "finite-element strength reduction",
      "source": "Huang & Jia (2009)",
-     "computed": null
+     "computed": 2.4056,
+     "analysis": "Strength reduction (FE)"
     }
    ],
    "results": [
@@ -3859,9 +4277,27 @@
      "method": "Bishop simplified",
      "computed": 2.4528,
      "programs": null
+    },
+    {
+     "method": "Strength reduction (FE)",
+     "computed": 2.4056,
+     "programs": null
     }
    ],
-   "note": "Huang & Jia's limit-equilibrium value 2.43 is by Bishop's method (their p. 95 and fig. 3a); their strength-reduction finite-element value is 2.50."
+   "note": "Huang & Jia's limit-equilibrium value 2.43 is by Bishop's method (their p. 95 and fig. 3a); their strength-reduction finite-element value is 2.50.",
+   "fem": {
+    "flowRule": "non-associated",
+    "levels": [
+     {
+      "elements": 3500,
+      "fos": 2.410888671875
+     },
+     {
+      "elements": 8298,
+      "fos": 2.405614180722969
+     }
+    ]
+   }
   },
   {
    "id": "V064",
@@ -4196,7 +4632,8 @@
      "upper": 1.27,
      "method": "limit analysis, lower and upper bound",
      "source": "Kim et al. (2002)",
-     "computed": null
+     "computed": 1.1562,
+     "analysis": "Strength reduction (FE)"
     }
    ],
    "results": [
@@ -4209,9 +4646,31 @@
      "method": "Spencer, non-circular",
      "computed": null,
      "programs": null
+    },
+    {
+     "method": "Strength reduction (FE)",
+     "computed": 1.1562,
+     "programs": null
     }
    ],
-   "note": "The comparison program's 1.19 is not reproduced on the circle it prints with that value: cSlope gives 1.13 there, close to Low's Bishop value 1.14, which is the check. Low himself calls that Bishop value misleading, an artefact of negative effective normal stresses in the stiff bank with φ = 15°: with φ = 0 in the bank both Ordinary and Bishop give 1.31, and his own hand method 1.38. Kim et al. (2002) give 1.17 with Spencer's method on a non-circular surface and limit-analysis bounds of 1.13–1.27."
+   "note": "The comparison program's 1.19 is not reproduced on the circle it prints with that value: cSlope gives 1.13 there, close to Low's Bishop value 1.14, which is the check. Low himself calls that Bishop value misleading, an artefact of negative effective normal stresses in the stiff bank with φ = 15°: with φ = 0 in the bank both Ordinary and Bishop give 1.31, and his own hand method 1.38. Kim et al. (2002) give 1.17 with Spencer's method on a non-circular surface and limit-analysis bounds of 1.13–1.27.",
+   "fem": {
+    "flowRule": "associated",
+    "levels": [
+     {
+      "elements": 2024,
+      "fos": 1.15625
+     },
+     {
+      "elements": 4135,
+      "fos": 1.138696312
+     },
+     {
+      "elements": 9326,
+      "fos": 1.1561596276813193
+     }
+    ]
+   }
   },
   {
    "id": "V069a",
@@ -4573,7 +5032,8 @@
      "value": 1,
      "method": "plasticity theory",
      "source": "Prandtl (1920)",
-     "computed": null
+     "computed": 1.0028,
+     "analysis": "Strength reduction (FE)"
     }
    ],
    "results": [
@@ -4584,9 +5044,27 @@
       "min": 0.94,
       "max": 0.94
      }
+    },
+    {
+     "method": "Strength reduction (FE)",
+     "computed": 1.0028,
+     "programs": null
     }
    ],
-   "note": "The theoretical factor of safety is 1.0; limit equilibrium with slices gives about 6 % less on this mechanism."
+   "note": "The theoretical factor of safety is 1.0; limit equilibrium with slices gives about 6 % less on this mechanism.",
+   "fem": {
+    "flowRule": "davis-b",
+    "levels": [
+     {
+      "elements": 4151,
+      "fos": 1
+     },
+     {
+      "elements": 8263,
+      "fos": 1.0027764610954033
+     }
+    ]
+   }
   },
   {
    "id": "V078",

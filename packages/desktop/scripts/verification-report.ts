@@ -43,6 +43,8 @@ import {
   isProgramSource,
   paperValues,
   presentedAnalyses,
+  femAgrees,
+  femDeviation,
 } from "@cslope/engine/verification";
 import type { Slope } from "@cslope/engine";
 import { findForbiddenNames } from "../../website/scripts/forbidden-names";
@@ -1037,6 +1039,75 @@ caseResults.forEach((r, i) => {
     for (const n of notes) paragraph(`•  ${n}`, 8.5, "normal", INK, CONTENT_W - 4, M + 2);
   }
 });
+
+// Strength reduction by finite elements: the results of the website's table
+// (generate-data.ts runs them; they take minutes), against the published
+// finite element, finite difference, limit analysis and theory values.
+const FEM_DATA = path.join(REPO, "packages/website/src/content/generated/verification.json");
+const FEM_CASES = CASES.filter((c) => c.fem);
+if (FEM_CASES.length && fs.existsSync(FEM_DATA)) {
+  const data = JSON.parse(fs.readFileSync(FEM_DATA, "utf-8")) as {
+    problems: { id: string; results: { method: string; computed: number | null }[]; fem?: { flowRule: string; levels: { elements: number; fos: number }[] } }[];
+  };
+  const byId = new Map(data.problems.map((p) => [p.id, p]));
+  newPage();
+  heading("4  Strength reduction by finite elements", 1);
+  paragraph(
+    "cSlope's finite element analysis reduces c and tan φ by a factor F until the elastic–perfectly plastic slope can no longer be brought into equilibrium. " +
+      "The mesh is of six-node triangles, refined adaptively where the plastic dissipation at failure is largest until F changes by less than 0.01 or twice. " +
+      "Each problem is run with its source's flow rule (Davis B, associated, or non-associated with ψ = 0); the source's elastic parameters do not change F appreciably. " +
+      "The finite element factor is compared with the source's finite element, finite difference, limit analysis or theoretical value: within 2 % of a theoretical value or a pair of bounds, and within 5 % of a published numerical value, which depends on the mesh, the elements and the failure criterion.",
+    9,
+  );
+  y += 2;
+  const rows: Cell[][] = [];
+  let nFem = 0, nFemPass = 0;
+  for (const c of FEM_CASES) {
+    const p = byId.get(c.id);
+    const fos = p?.results.find((r) => r.method === "Strength reduction (FE)")?.computed ?? null;
+    const levels = p?.fem?.levels ?? [];
+    c.fem!.references.forEach((ref, j) => {
+      const pass = fos != null && femAgrees(ref, fos);
+      nFem++;
+      if (pass) nFemPass++;
+      const refText = ref.upper != null ? `${fmt(ref.value, 2)}–${fmt(ref.upper, 2)}` : fmt(ref.value, ref.value < 10 ? 3 : 2).replace(/0+$/, "").replace(/\.$/, ".0");
+      const row: Cell[] = [
+        j === 0 ? c.id : "",
+        `${ref.method}, ${ref.source}`,
+        refText,
+        j === 0 ? (p?.fem?.flowRule ?? c.fem!.flowRule ?? "davis-b") : "",
+        j === 0 ? levels.map((l) => `${l.elements}: ${fmt(l.fos)}`).join(", ") : "",
+        fmt(fos ?? NaN),
+      ];
+      if (!PUBLIC) row.push(fos == null ? "–" : pct(femDeviation(ref, fos) * 100), statusCell(pass));
+      rows.push(row);
+    });
+  }
+  table(
+    PUBLIC
+      ? [
+          { title: "Problem", width: 16 },
+          { title: "Published by", width: 62 },
+          { title: "Published", width: 18, align: "right" },
+          { title: "Flow rule", width: 22 },
+          { title: "Elements: F", width: 36 },
+          { title: "cSlope", width: CONTENT_W - 154, align: "right" },
+        ]
+      : [
+          { title: "Problem", width: 14 },
+          { title: "Published by", width: 52 },
+          { title: "Published", width: 16, align: "right" },
+          { title: "Flow rule", width: 20 },
+          { title: "Elements: F", width: 30 },
+          { title: "cSlope", width: 12, align: "right" },
+          { title: "Diff.", width: 14, align: "right" },
+          { title: "", width: CONTENT_W - 158, align: "center" },
+        ],
+    rows,
+    7.2,
+  );
+  console.log(`${nFemPass}/${nFem} finite element references within tolerance.`);
+}
 
 // Header and footer on every page but the cover.
 const pages = pdf.getNumberOfPages();

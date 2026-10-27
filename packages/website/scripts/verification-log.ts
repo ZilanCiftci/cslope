@@ -46,10 +46,18 @@ interface Point {
 /** Relative error in percent. */
 const err = (p: Point) => ((p.computed - p.reference) / p.reference) * 100;
 
-/** cSlope's results against the other programs and against the papers. */
-export function points(data: VerificationData): { programs: Point[]; papers: Point[] } {
+/** The finite element analysis's label (generate-data.ts), kept apart in the statistics. */
+const FEM_LABEL = "Strength reduction (FE)";
+
+/**
+ * cSlope's results against the other programs and against the papers, and
+ * the finite element results against their references, which are kept
+ * apart so that they do not move the limit equilibrium statistics.
+ */
+export function points(data: VerificationData): { programs: Point[]; papers: Point[]; fem: Point[] } {
   const programs: Point[] = [];
   const papers: Point[] = [];
+  const fem: Point[] = [];
   for (const p of data.problems) {
     for (const r of p.results) {
       if (r.programs && r.computed != null) {
@@ -64,7 +72,7 @@ export function points(data: VerificationData): { programs: Point[]; papers: Poi
     (p.published ?? []).forEach((v) => {
       // A disputed value measures its source, not cSlope (see its reason).
       if (v.computed != null && !v.disputed) {
-        papers.push({
+        (v.analysis === FEM_LABEL ? fem : papers).push({
           key: `${p.id}|${v.method}|${v.source}|${v.value}`,
           label: `${p.id} ${v.method} (${v.source})`,
           computed: v.computed,
@@ -73,7 +81,7 @@ export function points(data: VerificationData): { programs: Point[]; papers: Poi
       }
     });
   }
-  return { programs, papers };
+  return { programs, papers, fem };
 }
 
 export interface Stats {
@@ -163,6 +171,9 @@ function main() {
     "",
     section("Against the papers", b.papers, a.papers),
     "",
+    ...(a.fem.length || b.fem.length
+      ? [section("Finite elements against their references (FE, finite differences, limit analysis, theory)", b.fem, a.fem), ""]
+      : []),
   ].join("\n");
 
   const sp = [stats(b.programs), stats(a.programs)];

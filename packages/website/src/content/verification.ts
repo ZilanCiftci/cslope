@@ -24,7 +24,7 @@ export function homeExamples(d: VerificationData = VERIFICATION): Example[] {
 }
 
 export type PublishedFilter = "all" | "with" | "without";
-export type MethodFilter = "all" | "Bishop" | "Janbu" | "Spencer" | "Morgenstern-Price";
+export type MethodFilter = "all" | "Bishop" | "Janbu" | "Spencer" | "Morgenstern-Price" | "Finite elements";
 
 export interface Filter {
   query: string;
@@ -34,6 +34,7 @@ export interface Filter {
 
 /** The method family of an analysis, from cSlope's name for it. */
 export function methodFamily(label: string): Exclude<MethodFilter, "all"> {
+  if (/\(FE\)|finite element/i.test(label)) return "Finite elements";
   if (/spencer/i.test(label)) return "Spencer";
   if (/janbu/i.test(label)) return "Janbu";
   if (/bishop/i.test(label)) return "Bishop";

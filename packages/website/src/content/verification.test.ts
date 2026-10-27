@@ -53,6 +53,7 @@ describe("verification filter", () => {
     expect(methodFamily("Bishop simplified")).toBe("Bishop");
     expect(methodFamily("Janbu corrected")).toBe("Janbu");
     expect(methodFamily("Morgenstern-Price (half-sine)")).toBe("Morgenstern-Price");
+    expect(methodFamily("Strength reduction (FE)")).toBe("Finite elements");
   });
 
   it("prints values as the sources do, and ranges", () => {

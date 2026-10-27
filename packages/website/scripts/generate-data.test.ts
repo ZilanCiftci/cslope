@@ -4,28 +4,35 @@ import { RELIABILITY_CASES, VERIFICATION_CASES } from "@cslope/engine/verificati
 import data from "../src/content/generated/verification.json";
 import type { VerificationData } from "../src/content/verification-types";
 import { findForbiddenNames } from "./forbidden-names";
-import { agreement, buildData } from "./generate-data";
+import { FEM_LABEL, agreement, buildData, type FemRaw } from "./generate-data";
 
 const file = data as VerificationData;
 
 /** The computed values in the checked-in file, per analysis as the generator keys them. */
 function computedFromFile() {
   const fos: Record<string, (number | null)[]> = {};
-  VERIFICATION_CASES.forEach((c, i) => (fos[c.id] = file.problems[i].results.map((r) => r.computed)));
+  VERIFICATION_CASES.forEach(
+    (c, i) => (fos[c.id] = file.problems[i].results.filter((r) => r.method !== FEM_LABEL).map((r) => r.computed)),
+  );
   const reliability: Record<string, number[]> = {};
   RELIABILITY_CASES.forEach((c, i) => {
     reliability[i] = c.checks.map(([q]) => file.reliability[i].rows.find((r) => r.quantity === q)?.computed ?? NaN);
   });
-  return { fos, reliability };
+  const fem: Record<string, FemRaw> = {};
+  for (const p of file.problems) {
+    if (!p.fem) continue;
+    fem[p.id] = { fos: p.results.find((r) => r.method === FEM_LABEL)?.computed ?? NaN, flowRule: p.fem.flowRule, levels: p.fem.levels };
+  }
+  return { fos, reliability, fem };
 }
 
 describe("generated/verification.json", () => {
   it("matches the engine's problems (regenerate with bun scripts/generate-data.ts)", () => {
     expect(file.problems.length).toBe(VERIFICATION_CASES.length);
     expect(file.reliability.length).toBe(RELIABILITY_CASES.length);
-    const { fos, reliability } = computedFromFile();
+    const { fos, reliability, fem } = computedFromFile();
     // Everything except the engine's results is rebuilt from the problems.
-    expect(buildData(fos, reliability)).toEqual(file);
+    expect(buildData(fos, reliability, fem)).toEqual(file);
   });
 
   it("presents results only: no tolerance, pass mark or deviation", () => {

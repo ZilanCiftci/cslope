@@ -19,6 +19,7 @@ import type { MaterialModel } from "../types/material-models";
 import type { AnalysisMethod, AnalysisOptions } from "../types/analysis";
 import type { ReliabilityCaseData, ReliabilityQuantity } from "./reliability-cases";
 import type { PaperValue } from "./presentation";
+import type { FemSetup } from "./fem-cases";
 import { PROBLEMS } from "./problems";
 import { analyseReliability } from "../model/reliability";
 import { referenceTolerance } from "./tolerance";
@@ -61,6 +62,12 @@ export interface VerificationCase {
    * the other programs' values), shown in the report and on the website.
    */
   paper?: PaperValue[];
+  /**
+   * Strength reduction by finite elements (src/fem), run with the settings
+   * of the source that published the finite element value, and compared
+   * with `fem.references` (fem-cases.ts).
+   */
+  fem?: FemSetup;
   /**
    * A short note for the public report and the website, naming no program:
    * why the published values and the programs' results differ, or why the

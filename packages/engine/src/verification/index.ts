@@ -20,6 +20,14 @@ export type { PulloutTable } from "./pullout-tables";
 export type { VerificationCase, VerificationCheck, ReliabilityCheckResult } from "./cases";
 export { agrees, referenceTolerance } from "./tolerance";
 export {
+  FEM_VERIFICATION_OPTIONS,
+  femAgrees,
+  femDeviation,
+  femInterval,
+  runFemVerification,
+} from "./fem-cases";
+export type { FemReference, FemSetup } from "./fem-cases";
+export {
   analysisLabel,
   formatPaperValue,
   formatRange,

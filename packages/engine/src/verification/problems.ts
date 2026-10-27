@@ -56,6 +56,7 @@ export const PROBLEMS: RawCase[] = [
     notes: [
       "Non-circular: commercial program A 0.414 (random search with optimisation); Greco 0.39; Kim et al. 0.44 (a limit-equilibrium program's random search; their Table 1, where 0.39 is Greco's value in a footnote) and their own limit-analysis bounds 0.40–0.45. Before the Morgenstern-Price λ iteration ignored unconverged solutions, cSlope's optimisation reached 0.27–0.39 on surfaces where the force and moment curves never cross.",
     ],
+    fem: {"flowRule": "associated", "references": [{"value": 0.4, "upper": 0.45, "source": "Kim et al. (2002)", "method": "limit analysis, lower and upper bound", "kind": "bounds"}], "note": "Kim et al.'s finite element limit analysis uses associated flow, so the strength reduction is run with it."},
   },
   {
     id: "V003",
@@ -394,6 +395,7 @@ export const PROBLEMS: RawCase[] = [
     notes: [
       "Both values are Bishop searches, printed to two digits.",
     ],
+    fem: {"flowRule": "non-associated", "materialParameters": {"*": {"youngsModulus": 200000.0, "poissonsRatio": 0.25, "dilationAngle": 0}}, "references": [{"value": 1.14, "source": "Cai & Ugai (2000)", "method": "finite-element strength reduction (3D, without piles)", "kind": "numerical"}], "note": "Cai & Ugai: E = 200 MPa, ν = 0.25, ψ = 0; their mesh is three-dimensional, the slope without piles is uniform across it."},
   },
   {
     id: "V013b",
@@ -612,6 +614,7 @@ export const PROBLEMS: RawCase[] = [
       "f(x) as printed: (0, 1), (0.3, 1), (0.6, 0), (1, 0) with x from the toe end of the slip surface (model space). Until the data points are mirrored for a right-to-left model cSlope reads them from the crest end and gives 1.079 (+6.9 %); entered reversed it gives 1.008.",
       "Chen & Shao also give 1.002 with f0 = 0 and f(x) shaped like the theoretical tan β (Fig. A3c, p. 748) and 1.036 with their assumption 2; their f(x) breaks read about 0.37 and 0.68 from Fig. A3b against the 0.3 and 0.6 of the program manual used here.",
     ],
+    fem: {"references": [{"value": 1.0, "source": "Chen & Shao (1988)", "method": "plasticity theory (Prandtl mechanism)", "kind": "theory"}]},
   },
   {
     id: "V019",
@@ -631,6 +634,7 @@ export const PROBLEMS: RawCase[] = [
       "commercial program E shear strength reduction 1.38.",
       "Cheng et al. use 50 slices (p. 146) and search general (non-circular) surfaces by simulated annealing; their strength-reduction value is 1.47 and a local minimum 1.3848. cSlope's circular search gives 1.399, its non-circular optimisation 1.377.",
     ],
+    fem: {"flowRule": "associated", "materialParameters": {"*": {"youngsModulus": 14000, "poissonsRatio": 0.3}}, "references": [{"value": 1.47, "source": "Cheng et al. (2007)", "method": "finite-element strength reduction", "kind": "numerical"}], "note": "Cheng et al. give 1.47 for associated and non-associated flow alike (E = 14 MPa, ν = 0.3); associated flow is run, whose factor does not depend on the mesh's resolution of a shear band (with ψ = 0 it falls from 1.37 to 1.33 as the mesh is refined)."},
   },
   {
     id: "V020",
@@ -650,6 +654,7 @@ export const PROBLEMS: RawCase[] = [
       "commercial program E shear strength reduction 1.35.",
       "Geometry from Cheng et al.'s Fig. 13a (read at 400 dpi): every corner falls on whole metres, (0, 10), (10, 10), (20, 15), (26, 20), (32, 20), (35, 23), (43, 27), (55, 27), base 0; until 2026-10-25 the model used a digitisation 0.06–0.2 m off them. Cheng et al.'s limit-equilibrium global minimum is 1.33 (p. 146, Fig. 13a, simulated-annealing search over general surfaces); 1.327 is their strength-reduction value, which the check carried before. Local minima 1.375, 1.415, 1.40, 1.383 (docs/kallor/cheng-lansivaara-wei-2007.md).",
     ],
+    fem: {"flowRule": "associated", "materialParameters": {"*": {"youngsModulus": 14000, "poissonsRatio": 0.3}}, "references": [{"value": 1.327, "source": "Cheng et al. (2007)", "method": "finite-element strength reduction", "kind": "numerical"}], "note": "As V019: Cheng et al. find the flow rule makes no difference; associated flow is run."},
   },
   {
     id: "V021a",
@@ -920,6 +925,7 @@ export const PROBLEMS: RawCase[] = [
       "cSlope's optimised non-circular surface is 1.9 % below commercial program A's: a search difference.",
       "Duncan, Wright & Brandon's Spencer 1.19 is from one of their three programs on circles (the other two give 1.20); their critical circle is (−100, 124), r = 174, which is (500, 174) in this model's frame. Ordinary method 1.08 (Fig. 7.20), strength reduction 1.19.",
     ],
+    fem: {"flowRule": "non-associated", "references": [{"value": 1.19, "source": "Duncan, Wright & Brandon (2014)", "method": "finite-element strength reduction", "kind": "numerical"}], "note": "The book's strength reduction comes from a commercial finite element program; flow rule and stiffness are not stated (ψ = 0 assumed)."},
   },
   {
     id: "V027",
@@ -1260,6 +1266,7 @@ export const PROBLEMS: RawCase[] = [
     ],
     paper: [{"value": 1.19, "method": "Spencer, finite-element pore pressures", "source": "Duncan, Wright & Brandon (2014)"}],
     publicNote: "The book contradicts itself on the unit weight: its figures say 100 pcf, its hand calculations and slice weights use 125 pcf. With 125 pcf and the book's line cSlope reproduces the 1.16 that all three of the book's programs give (Table 7.8); with 100 pcf it gives 1.03.",
+    fem: {"flowRule": "non-associated", "references": [{"value": 1.07, "source": "Duncan, Wright & Brandon (2014)", "method": "finite-element strength reduction, piezometric line", "kind": "numerical"}], "note": "The book gives 1.07 with the piezometric line and 1.11 with finite element pore pressures (table 7.8); ψ = 0 assumed."},
   },
   {
     id: "V039",
@@ -1279,6 +1286,7 @@ export const PROBLEMS: RawCase[] = [
       "Commercial program A reports 1.468 / 1.464 on its own (not the critical) circle; cSlope gives 1.464 / 1.461 on that circle. Non-circular: commercial program A Bishop 1.105, GLE 1.142. Program D's 1.424 / 1.420 were computed with 7 m of lacustrine clay.",
       "Duncan, Wright & Brandon (2014): 1.45 is Spencer on circles (p. 147, Fig. 7.25), there is no Bishop value (a Bishop check attributed to them was removed 2026-10-25); 1.16 is the fully optimised non-circular surface (a program's non-circular search, p. 149, Fig. 7.27), while 1.17 belongs to the composite surface of Fig. 7.26 (centre (−46, 55), R 83 m) and their force-equilibrium spreadsheet (Fig. 7.29).",
     ],
+    fem: {"flowRule": "non-associated", "references": [{"value": 1.26, "source": "Duncan, Wright & Brandon (2014)", "method": "finite-element strength reduction", "kind": "numerical"}], "note": "Flow rule and stiffness not stated in the book (ψ = 0 assumed)."},
   },
   {
     id: "V040",
@@ -1671,6 +1679,7 @@ export const PROBLEMS: RawCase[] = [
     notes: [
       "Bishop & Morgenstern (1960) charts, as Griffiths & Lane quote them: 1.380 for the slope without the foundation layer (their example 1, D = 1) and 1.752 with it (D = 1.5), which belongs to a circle tangent to the base of the layer; in cSlope a circle forced tangent to that base gives 1.70. The critical circle is a toe circle, as in Griffiths & Lane's finite-element mechanism, and the factor is essentially that of example 1.",
     ],
+    fem: {"flowRule": "non-associated", "materialParameters": {"*": {"youngsModulus": 100000.0, "poissonsRatio": 0.3, "dilationAngle": 0}}, "references": [{"value": 1.4, "source": "Griffiths & Lane (1999)", "method": "finite elements", "kind": "numerical", "precision": 0.05}], "note": "Griffiths & Lane: ψ = 0, E′ = 10⁵ kPa, ν′ = 0.3, failure as non-convergence in 1000 iterations, F to the nearest 0.05."},
   },
   {
     id: "V056",
@@ -1689,6 +1698,7 @@ export const PROBLEMS: RawCase[] = [
       "Geometry as Fig. 6 (H = 50 ft, cu1/γH = 0.25, the layer 0.2H thick). The wedge runs along the middle of the layer; the paper shows its mechanism but gives no coordinates. Its factor of safety is read from Fig. 7 (\"Slope program—wedges\", Janbu's method) as 0.485; the paper does not say whether Janbu's correction factor f0 is applied: without it cSlope gives 0.458. FE 0.60.",
       "Spencer on the wedge 0.515; program D's non-circular search from this wedge reaches 0.462. cSlope's search with non-circular optimisation, whose block seeds run along the weak layer, finds surfaces below the paper's wedge: Janbu corrected 0.455 (0.499 on the wedge), Spencer 0.453. A circular search gives 1.24 (the paper: ≈1.3).",
     ],
+    fem: {"flowRule": "non-associated", "materialParameters": {"*": {"youngsModulus": 100000.0, "poissonsRatio": 0.3, "dilationAngle": 0}}, "references": [{"value": 0.6, "source": "Griffiths & Lane (1999)", "method": "finite elements (read from fig. 7)", "kind": "numerical", "precision": 0.05}]},
   },
   {
     id: "V057a",
@@ -1706,6 +1716,7 @@ export const PROBLEMS: RawCase[] = [
     notes: [
       "FE 1.45 and the limit-equilibrium 1.46 are read from their fig. 10 (the check's source string says so, which widens its tolerance); the text gives Taylor's chart value 1.47.",
     ],
+    fem: {"flowRule": "non-associated", "materialParameters": {"*": {"youngsModulus": 100000.0, "poissonsRatio": 0.3, "dilationAngle": 0}}, "references": [{"value": 1.45, "source": "Griffiths & Lane (1999)", "method": "finite elements", "kind": "numerical", "precision": 0.05}]},
   },
   {
     id: "V057b",
@@ -1723,6 +1734,7 @@ export const PROBLEMS: RawCase[] = [
     notes: [
       "FE 2.03 and the limit-equilibrium 2.04 are read from their fig. 10; the text gives Taylor's chart value 2.10.",
     ],
+    fem: {"flowRule": "non-associated", "materialParameters": {"*": {"youngsModulus": 100000.0, "poissonsRatio": 0.3, "dilationAngle": 0}}, "references": [{"value": 2.03, "source": "Griffiths & Lane (1999)", "method": "finite elements", "kind": "numerical", "precision": 0.05}]},
   },
   {
     id: "V058",
@@ -1736,6 +1748,7 @@ export const PROBLEMS: RawCase[] = [
       {"method":"Morgenstern-Price","label":"Spencer (M-P, constant f(x))","published":1.9,"publishedBy":"Griffiths & Lane (FE)","options":{"intersliceFunction":"constant","porePressureHead":"vertical","slices":40}},
       {"method":"Morgenstern-Price","label":"Spencer (M-P, constant f(x))","published":1.915,"publishedBy":"Program D","options":{"intersliceFunction":"constant","porePressureHead":"vertical","slices":40}},
     ],
+    fem: {"flowRule": "non-associated", "materialParameters": {"*": {"youngsModulus": 100000.0, "poissonsRatio": 0.3, "dilationAngle": 0}}, "references": [{"value": 1.9, "source": "Griffiths & Lane (1999)", "method": "finite elements", "kind": "numerical", "precision": 0.05}]},
   },
   {
     id: "V059a",
@@ -1749,6 +1762,7 @@ export const PROBLEMS: RawCase[] = [
       {"method":"Morgenstern-Price","label":"Spencer (M-P, constant f(x))","published":1.215,"publishedBy":"Commercial program A (optimised)","options":{"intersliceFunction":"constant","nonCircularOptimization":true}},
     ],
     publicNote: "The paper gives its results in figures only; the comparison is with the other programs.",
+    fem: {"flowRule": "non-associated", "materialParameters": {"*": {"youngsModulus": 100000.0, "poissonsRatio": 0.3, "dilationAngle": 0}}, "references": [{"value": 1.28, "source": "Guo & Griffiths (2020)", "method": "finite elements (read from fig. 2)", "kind": "numerical"}]},
   },
   {
     id: "V059b",
@@ -1762,6 +1776,7 @@ export const PROBLEMS: RawCase[] = [
       {"method":"Morgenstern-Price","label":"Spencer (M-P, constant f(x))","published":1.29,"publishedBy":"Commercial program A (optimised)","options":{"intersliceFunction":"constant","nonCircularOptimization":true}},
     ],
     publicNote: "The paper gives its results in figures only; the comparison is with the other programs.",
+    fem: {"flowRule": "non-associated", "materialParameters": {"*": {"youngsModulus": 100000.0, "poissonsRatio": 0.3, "dilationAngle": 0}}, "references": [{"value": 1.35, "source": "Guo & Griffiths (2020)", "method": "finite elements", "kind": "numerical"}]},
   },
   {
     id: "V059c",
@@ -1775,6 +1790,7 @@ export const PROBLEMS: RawCase[] = [
       {"method":"Morgenstern-Price","label":"Spencer (M-P, constant f(x))","published":1.315,"publishedBy":"Commercial program A (optimised)","options":{"intersliceFunction":"constant","nonCircularOptimization":true}},
     ],
     publicNote: "The paper gives its results in figures only; the comparison is with the other programs.",
+    fem: {"flowRule": "non-associated", "materialParameters": {"*": {"youngsModulus": 100000.0, "poissonsRatio": 0.3, "dilationAngle": 0}}, "references": [{"value": 1.36, "source": "Guo & Griffiths (2020)", "method": "finite elements (read from fig. 2)", "kind": "numerical"}]},
   },
   {
     id: "V060a",
@@ -2008,6 +2024,7 @@ export const PROBLEMS: RawCase[] = [
       "commercial program A reports the Spencer value only. The steady-seepage and drawdown stages need a seepage analysis.",
       "Until 2026-10-25 the 2.43 check was labelled Spencer and attributed to the finite-element analysis; the paper states it is Bishop (LEM) and gives 2.50 for SSRFEM (docs/kallor/huang-jia-2009.md). cSlope Bishop 2.453, Spencer 2.451 on this search.",
     ],
+    fem: {"flowRule": "non-associated", "materialParameters": {"*": {"youngsModulus": 100000.0, "poissonsRatio": 0.3, "dilationAngle": 0}}, "references": [{"value": 2.5, "source": "Huang & Jia (2009)", "method": "finite-element strength reduction", "kind": "numerical"}], "note": "Huang & Jia do not state the flow rule; ψ = 0 as in Griffiths & Lane, whose criterion they follow."},
   },
   {
     id: "V064",
@@ -2158,6 +2175,7 @@ export const PROBLEMS: RawCase[] = [
     notes: [
       "Input audit 2026-10-24: the circle was (19, 18.5, R 18), on which cSlope gives 1.197; commercial program A's Fig. 23.3 prints centre (18.001, 16.000), R 15.556 (end points (4.659, 8) and (33.557, 16)) with its Bishop 1.192. On that circle cSlope gives 1.134 (1.128 / 1.138 / 1.140 with 25 / 100 / 200 slices), and an independent spreadsheet Bishop calculation 1.13-1.15 (it depends on the slicing of the vertical scarp, since the centre lies at crest level). The input agrees with commercial program A otherwise: its Ordinary value 1.370 on its Ordinary circle (Fig. 23.2: (17.201, 21.770), R 21.493) is reproduced by the same spreadsheet (1.374). So commercial program A's 1.192 is not reproduced on its own circle; cSlope's 1.134 is close to Low's Bishop 1.14, which is the check; commercial program A's 1.192 is not (as on V087, a program value that its own printed input does not reproduce). The circle's centre lies at crest level, so its upper end is a vertical scarp: the factor depends on the slicing there.",
     ],
+    fem: {"flowRule": "associated", "references": [{"value": 1.13, "upper": 1.27, "source": "Kim et al. (2002)", "method": "limit analysis, lower and upper bound", "kind": "bounds"}], "note": "Kim et al.'s finite element limit analysis uses associated flow, so the strength reduction is run with it."},
   },
   {
     id: "V069a",
@@ -2363,6 +2381,7 @@ export const PROBLEMS: RawCase[] = [
       "program D 1.043 on an earlier transcription whose fan was a single kink at (5, 3.9645).",
       "Unit weight 1e-6 kN/m³ as in commercial program A's Table 26.1 (was 0.01; the result is the same to four decimals).",
     ],
+    fem: {"references": [{"value": 1.0, "source": "Prandtl (1920)", "method": "plasticity theory", "kind": "theory"}]},
   },
   {
     id: "V078",
@@ -2673,6 +2692,7 @@ export const PROBLEMS: RawCase[] = [
     ],
     paper: [{"value": 1.76, "method": "Bishop simplified", "source": "Duncan & Wright"}, {"value": 1.63, "method": "Janbu simplified", "source": "Duncan & Wright"}, {"value": 1.76, "method": "Janbu corrected", "source": "Duncan & Wright"}, {"value": 1.76, "method": "Spencer", "source": "Duncan & Wright"}],
     notes: [
+      "Not compared with Duncan, Wright & Brandon's strength reduction value 1.79: the clay fill (c = 1 psf, φ = 35°) has a 45° face, which on its own fails at F ≈ tan 35°/tan 45° ≈ 0.7, and the finite element analysis finds that local mechanism (0.83); the limit equilibrium checks keep the surfaces off it with search limits, and the book does not say how its strength reduction did.",
       "Without limits the search finds shallower mechanisms: a sliver in the cohesionless 1:1 fill (0.74) and, with the crack, a surface through the fill and Marsh clay (1.15). The published value is the deep failure.",
       "The source searches the whole model and models the fill as a tension-crack zone, so its circles start at the base of the fill; these limits stand in for that.",
       "Duncan, Wright & Brandon (2014, Table 7.4 p. 141; text p. 140: 1.08 × 1.63 = 1.76) give Janbu corrected 1.76, Modified Swedish 1.80, strength reduction 1.79; their circle is (81.25, 117.6, R 151.27) in their Fig. 7.13 frame, (126.25, 117.6) here, on which cSlope gives 1.765. Skempton & La Rochelle back-calculate F = 1.0 with the fissured strength; the ratio of the intact to the mobilised average strength is 2000/1120 = 1.79 (\"would be 1.8\", p. 235). Their section has the crest at +17.5 and the base at −31 O.D. and an 11½ ft fill (here 17.4, −31.2, 11.4; under 0.05 % on the result).",
