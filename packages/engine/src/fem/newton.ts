@@ -260,7 +260,7 @@ export interface GaussStrength {
  * stresses by return from the trial ε(u) − εp of the last converged state.
  * @returns plastic strain increments are left in `epNew`.
  */
-function evaluate(
+export function evaluate(
   model: FeModel,
   eqs: Int32Array,
   u: Float64Array,
@@ -352,7 +352,7 @@ function evaluate(
 /** Iterations over which the residual must fall by 10 % (see newtonAtF). */
 const STALL_WINDOW = 5;
 
-function norm2(a: Float64Array): number {
+export function norm2(a: Float64Array): number {
   let s = 0;
   for (const v of a) s += v * v;
   return Math.sqrt(s);

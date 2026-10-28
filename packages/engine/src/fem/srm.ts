@@ -61,6 +61,7 @@
 import { GP_STRIDE } from "./elements";
 import type { FeModel } from "./model";
 import { newtonAtF } from "./newton";
+import { bfgsAtF } from "./bfgs";
 import { relaxBars } from "./bars";
 
 /** Iterations over which the contraction ratio is averaged. */
@@ -76,7 +77,7 @@ export interface SrmOptions {
    * "viscoplastic": the explicit iteration of Griffiths & Lane, always used
    * for non-associated flow, whose tangent is not symmetric.
    */
-  solver?: "newton" | "viscoplastic";
+  solver?: "newton" | "bfgs" | "viscoplastic";
   /** Rankine tension cut-off at zero effective stress; default false. */
   tensionCutoff?: boolean;
   /**
@@ -132,7 +133,7 @@ export interface SrmTrial {
   converged: boolean;
   iterations: number;
   /** Solver that decided the trial. */
-  solver: "newton" | "viscoplastic";
+  solver: "newton" | "bfgs" | "viscoplastic";
   /** Largest nodal displacement (m) at the end of the trial. */
   maxDisplacement: number;
 }
@@ -411,8 +412,17 @@ function isAssociated(model: FeModel, rule: FlowRule): boolean {
  */
 export function runTrial(model: FeModel, F: number, start: SrmState | null, options: SrmOptions = {}, eqs: Int32Array = elementEquations(model)): TrialOutcome {
   const rule = options.flowRule ?? "davis-b";
-  const useNewton = isAssociated(model, rule) && (options.solver ?? "newton") === "newton";
+  const solver = isAssociated(model, rule) ? options.solver ?? "newton" : "viscoplastic";
+  const useNewton = solver === "newton";
   const st = start ? cloneState(start) : emptyState(model);
+  if (solver === "bfgs") {
+    const r = bfgsAtF(model, eqs, reduce(model, F, rule, 1), { u: st.u, ep: st.evp, stress: st.stress, barEp: st.barEp, F }, {
+      tolerance: options.tolerance,
+      maxIterations: options.newtonIterations,
+      tensionCutoff: options.tensionCutoff,
+    });
+    return { converged: r.converged, iterations: r.iterations, solver: "bfgs", state: st };
+  }
   if (useNewton) {
     const r = newtonAtF(model, eqs, reduce(model, F, rule, 1), { u: st.u, ep: st.evp, stress: st.stress, barEp: st.barEp, F }, {
       tolerance: options.tolerance,

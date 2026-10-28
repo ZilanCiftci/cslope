@@ -51,6 +51,15 @@ describe("strengthReduction", () => {
     expect(Math.abs(newton.factorOfSafety - vp.factorOfSafety)).toBeLessThan(0.02);
     expect(newton.iterations).toBeLessThan(vp.iterations);
   }, 180000);
+
+  it("gives the same factor with Newton and BFGS (constant stiffness) for associated flow", () => {
+    const def = PROBLEMS.find((p) => p.id === "V055")!.definition as SlopeDefinition;
+    const model = buildFeModel(buildSlope(toCanonicalSlopeDefinition(def)), { elementSize: 2 });
+    const newton = strengthReduction(model, { flowRule: "associated", fTolerance: 0.01 });
+    const bfgs = strengthReduction(model, { flowRule: "associated", solver: "bfgs", fTolerance: 0.01 });
+    expect(bfgs.trials.every((t) => t.solver === "bfgs")).toBe(true);
+    expect(Math.abs(newton.factorOfSafety - bfgs.factorOfSafety)).toBeLessThan(0.02);
+  }, 300000);
 });
 
 describe("strengthReduction with reinforcement", () => {
