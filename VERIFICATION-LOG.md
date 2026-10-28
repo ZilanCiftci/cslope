@@ -37,11 +37,63 @@ The script compares the regenerated verification table with the committed one an
 | 2026-10-27 | Strength reduction by finite elements: FE column for 19 problems | 0 | 0.348 → 0.348 | 0.483 → 0.483 | 1.011 → 1.011 | 1.595 → 1.595 | 2418 s (4 workers, load 0.9 at start) |
 | 2026-10-28 | FE step 3: reinforcement bars, seepage, robust strength reduction search; Leshchinsky & Han walls not compared | 0 | 0.348 → 0.348 | 0.483 → 0.483 | 1.011 → 1.011 | 1.595 → 1.595 | 3193 s (4 workers, load 1.4 at start) |
 | 2026-10-28 | Fixes from the finite element review (lower bound γsat and seepage pore pressures, seepage face, rigid materials, FE cache key) | 0 | 0.348 → 0.348 | 0.483 → 0.483 | 1.011 → 1.011 | 1.595 → 1.595 | 1276 s (4 workers, load 0.8 at start) |
+| 2026-10-28 | Faster finite element strength reduction (sparse Cholesky, collapse estimate, guided refinement) | 0 | 0.348 → 0.348 | 0.483 → 0.483 | 1.011 → 1.011 | 1.595 → 1.595 | 1573 s (4 workers, load 1.2 at start) |
 <!-- summary-end -->
 
 ## Entries
 
 <!-- entries -->
+
+### 2026-10-28: Faster finite element strength reduction (sparse Cholesky, collapse estimate, guided refinement)
+
+Compared with 956b6d6. Errors are relative to the reference, in percent. Verification run time: 1573 s (4 workers, load 1.2 at start).
+
+**Against other programs (midpoint of their range):** 0 moved (0 closer to the reference, 0 further).
+
+| Result | Reference | Before | After | Error before | Error after |
+|---|---|---|---|---|---|
+| **Mean error (n = 279)** | | | | -0.231 % | -0.231 % |
+| **Mean absolute error** | | | | 0.348 % | 0.348 % |
+| **RMS error** | | | | 0.483 % | 0.483 % |
+| **Largest error** | | | | 2.100 % | 2.100 % |
+
+**Against the papers:** 0 moved (0 closer to the reference, 0 further).
+
+| Result | Reference | Before | After | Error before | Error after |
+|---|---|---|---|---|---|
+| **Mean error (n = 111)** | | | | -0.167 % | -0.167 % |
+| **Mean absolute error** | | | | 1.011 % | 1.011 % |
+| **RMS error** | | | | 1.595 % | 1.595 % |
+| **Largest error** | | | | 6.591 % | 6.591 % |
+
+**Finite elements against their references (FE, finite differences, limit analysis, theory):** 19 moved (12 closer to the reference, 7 further).
+
+| Result | Reference | Before | After | Error before | Error after |
+|---|---|---|---|---|---|
+| V013a finite-element strength reduction (3D, without piles) (Cai & Ugai (2000)) | 1.140 | 1.1248 | 1.1394 | -1.333 % | -0.053 % |
+| V020 finite-element strength reduction (Cheng et al. (2007)) | 1.327 | 1.3690 | 1.3632 | +3.165 % | +2.728 % |
+| V055 finite elements (Griffiths & Lane (1999)) | 1.400 | 1.3497 | 1.3444 | -3.593 % | -3.971 % |
+| V063 finite-element strength reduction (Huang & Jia (2009)) | 2.500 | 2.4176 | 2.4082 | -3.296 % | -3.672 % |
+| V057b finite elements (Griffiths & Lane (1999)) | 2.030 | 2.0567 | 2.0640 | +1.315 % | +1.675 % |
+| V002 limit analysis, lower and upper bound (Kim et al. (2002)) | 0.400 | 0.4196 | 0.4182 | +4.900 % | +4.550 % |
+| V026 finite-element strength reduction (Duncan, Wright & Brandon (2014)) | 1.190 | 1.1768 | 1.1727 | -1.109 % | -1.454 % |
+| V038b finite-element strength reduction, piezometric line (Duncan, Wright & Brandon (2014)) | 1.070 | 1.0580 | 1.0616 | -1.121 % | -0.785 % |
+| V077 plasticity theory (Prandtl (1920)) | 1.000 | 1.0032 | 1.0000 | +0.320 % | 0.000 % |
+| V056 finite elements (read from fig. 7) (Griffiths & Lane (1999)) | 0.600 | 0.4762 | 0.4772 | -20.633 % | -20.467 % |
+| V057a finite elements (Griffiths & Lane (1999)) | 1.450 | 1.4574 | 1.4551 | +0.510 % | +0.352 % |
+| V039 finite-element strength reduction (Duncan, Wright & Brandon (2014)) | 1.260 | 1.2424 | 1.2405 | -1.397 % | -1.548 % |
+| V058 finite elements (Griffiths & Lane (1999)) | 1.900 | 1.8387 | 1.8413 | -3.226 % | -3.089 % |
+| V068 limit analysis, lower and upper bound (Kim et al. (2002)) | 1.130 | 1.1600 | 1.1612 | +2.655 % | +2.761 % |
+| V059b finite elements (Guo & Griffiths (2020)) | 1.350 | 1.3520 | 1.3510 | +0.148 % | +0.074 % |
+| V059a finite elements (read from fig. 2) (Guo & Griffiths (2020)) | 1.280 | 1.2834 | 1.2825 | +0.266 % | +0.195 % |
+| V018 plasticity theory (Prandtl mechanism) (Chen & Shao (1988)) | 1.000 | 0.9994 | 1.0000 | -0.060 % | 0.000 % |
+| V059c finite elements (read from fig. 2) (Guo & Griffiths (2020)) | 1.360 | 1.3716 | 1.3721 | +0.853 % | +0.890 % |
+| V019 finite-element strength reduction (Cheng et al. (2007)) | 1.470 | 1.4075 | 1.4080 | -4.252 % | -4.218 % |
+| **Mean error (n = 19)** | | | | -1.363 % | -1.370 % |
+| **Mean absolute error** | | | | 2.850 % | 2.762 % |
+| **RMS error** | | | | 5.273 % | 5.232 % |
+| **Largest error** | | | | 20.633 % | 20.467 % |
+
 
 ### 2026-10-28: Fixes from the finite element review (lower bound γsat and seepage pore pressures, seepage face, rigid materials, FE cache key)
 
