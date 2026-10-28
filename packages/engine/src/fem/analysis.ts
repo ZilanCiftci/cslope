@@ -204,7 +204,7 @@ export function* analyzeFemSearch(slope: Slope, options: FemAnalysisOptions = {}
   const perRound = options.trialsPerRound ?? DEFAULT_TRIALS_PER_ROUND;
   const trialOptions: SrmOptions = {
     flowRule, tensionCutoff, solver: options.solver, tolerance: options.tolerance, maxIterations: options.maxIterations,
-    convergence: options.convergence, relaxation: options.relaxation,
+    convergence: options.convergence, relaxation: options.relaxation, referee: options.referee,
   };
   const search = (m: FeModel, level: number, o: SrmOptions) =>
     onModel(strengthReductionSearch(m, { ...options, ...o, flowRule, tensionCutoff, trialsPerRound: perRound }), m, level, trialOptions);

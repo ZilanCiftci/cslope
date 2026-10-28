@@ -118,6 +118,11 @@ export interface SrmOptions {
    * trials are run.
    */
   trialsPerRound?: number;
+  /**
+   * Whether the viscoplastic iteration decides a trial that Newton does not
+   * converge (default true); false: Newton's convergence decides.
+   */
+  referee?: boolean;
   /** Called after each trial. */
   onTrial?: (trial: SrmTrial) => void;
 }
@@ -438,6 +443,7 @@ export function runTrial(model: FeModel, F: number, start: SrmState | null, opti
       tensionCutoff: options.tensionCutoff,
     });
     if (r.converged) return { converged: true, iterations: r.iterations, solver: "newton", state: st };
+    if (options.referee === false) return { converged: false, iterations: r.iterations, solver: "newton", state: st };
     // Newton can cycle between the planes of the Mohr–Coulomb pyramid near
     // collapse, and from the unloaded state at the apex of cohesionless
     // soil. The viscoplastic iteration, which converges wherever a solution
