@@ -1,18 +1,32 @@
 /**
  * Triangular meshing of a slope for the finite element module.
  *
- * Conforming Delaunay triangulation (Bowyer–Watson insertion) of the
- * planar straight-line graph formed by the external boundary and every
- * material boundary, refined by Ruppert's algorithm (Ruppert 1995,
- * J. Algorithms 18, 548–585; Shewchuk 2002, Comput. Geom. 22, 21–74):
- * encroached segments are split at their midpoints and poor triangles
- * (smallest angle below `minAngle`, or larger than the size field) get
- * a vertex at their circumcentre unless that vertex would encroach a
- * segment, in which case the segment is split instead.
+ * Method and sources:
+ * - Delaunay triangulation by incremental insertion (Bowyer 1981, Comput.
+ *   J. 24(2), 162–166; Watson 1981, Comput. J. 24(2), 167–172) of the
+ *   planar straight-line graph formed by the external boundary and every
+ *   material boundary.
+ * - Delaunay refinement by Ruppert's algorithm (Ruppert 1995, J. Algorithms
+ *   18(3), 548–585; Shewchuk 2002, Comput. Geom. 22, 21–74): encroached
+ *   segments are split, and poor triangles (smallest angle below
+ *   `minAngle`, or larger than the size field) get a vertex at their
+ *   circumcentre unless that vertex would encroach a segment, in which
+ *   case the segment is split instead. A segment with an input vertex at
+ *   one end is split on concentric shells around that vertex (Ruppert 1995;
+ *   Shewchuk 2002), so that the subsegments at a small input angle become
+ *   equally long.
  *
- * Termination with small input angles (thin layers meeting the ground at
- * a shallow angle) is guaranteed by refining for angle only triangles
- * whose circumradius exceeds `minSize`, and by a vertex cap.
+ * Implementation choices (not from the literature), with their reasons:
+ * - Smallest angle 25° by default (Ruppert's guarantee is about 20.7°,
+ *   and the algorithm usually terminates up to about 33°; Shewchuk 2002).
+ * - Small input angles (thin layers meeting the ground at a shallow
+ *   angle), where Ruppert's algorithm need not terminate, are handled by
+ *   refining for angle only triangles whose circumradius exceeds `minSize`
+ *   (default 1/8 of the smallest size at the boundary) and by a vertex cap.
+ * - A triangle is split for size when its longest edge exceeds 1.4 × the
+ *   size field.
+ * - Constraint segments that cross (a reinforcement line through a
+ *   material boundary) get a vertex at the crossing.
  */
 
 export interface MeshInput {

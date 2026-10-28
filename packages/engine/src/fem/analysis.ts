@@ -1,6 +1,22 @@
 /**
  * Strength reduction analysis of a slope by finite elements: builds the
- * model, finds the factor of safety and returns the fields for display.
+ * model, finds the factor of safety (srm.ts) and returns the fields for
+ * display, optionally on adaptively refined meshes (adapt.ts).
+ *
+ * Implementation choices (not from the literature), with their reasons:
+ * - Adaptive loop: up to `levels` refinements, stopping when F changes by
+ *   less than 0.01; F on the coarser meshes to 0.01 (the stop test's
+ *   resolution), on the final mesh to `fTolerance`, continuing the
+ *   bracket of the last search.
+ * - A refined mesh starts its search at 0.6 × the coarser mesh's F with
+ *   steps of 4 %, guided by that F: a finer mesh usually gives a lower
+ *   collapse load (de Borst & Vermeer 1984, Géotechnique 34(2), 199–210),
+ *   and trials rising from converged states avoid the false failures of a
+ *   cold start.
+ * - The failure mechanism is shown by the shear strain of the displacement
+ *   increment between the last two converged reductions, which shows the
+ *   band that moves at failure; the accumulated plastic strain also covers
+ *   zones that yielded early and stopped.
  */
 
 import type { Slope } from "../model/slope";
@@ -10,10 +26,12 @@ import { strengthReduction, type SrmOptions, type SrmTrial } from "./srm";
 
 export interface FemAnalysisOptions extends FeModelOptions, SrmOptions {
   /**
-   * Adaptive refinement (plan section 4.8): after each analysis the mesh is
-   * refined where the Zienkiewicz–Zhu indicator of the stresses at the factor
-   * of safety is largest (Dörfler marking), until F changes less than
-   * `tolerance` or `levels` refinements have been made. Default: off.
+   * Adaptive refinement: after each analysis the mesh is refined where the
+   * indicator at the factor of safety is largest (Dörfler marking, θ
+   * default 0.3), until F changes less than `tolerance` (default 0.01) or
+   * `levels` refinements (default 3) have been made. Indicator: the plastic
+   * dissipation (default) or the Zienkiewicz–Zhu stress error (adapt.ts).
+   * Default: off.
    */
   adaptive?: { levels?: number; theta?: number; tolerance?: number; indicator?: "dissipation" | "zz" };
 }
@@ -141,7 +159,7 @@ export function analyzeFem(slope: Slope, options: FemAnalysisOptions = {}): FemA
     // F to the requested tolerance on the final mesh.
     if (r.factorOfSafety > 0 && Number.isFinite(r.failedF) && r.failedF - r.factorOfSafety > (options.fTolerance ?? 0.005)) {
       const prior = r;
-      r = strengthReduction(model, { ...options, flowRule, tensionCutoff, resume: { lo: prior.factorOfSafety, hi: prior.failedF, state: prior.state, trials: prior.trials } });
+      r = strengthReduction(model, { ...options, flowRule, tensionCutoff, resume: { lo: prior.factorOfSafety, hi: prior.failedF, state: prior.state } });
       r = { ...r, trials: [...prior.trials, ...r.trials], previousState: r.previousState ?? prior.previousState };
       levels[levels.length - 1] = { elements: model.elementCount, factorOfSafety: r.factorOfSafety, iterations: levels[levels.length - 1].iterations + r.iterations };
     }

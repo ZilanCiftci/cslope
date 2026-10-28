@@ -2,21 +2,34 @@
  * Steady seepage by finite elements on the slope's mesh, for pore pressures
  * from flow instead of a drawn water line.
  *
- * Head h on the six-node triangles, ∇·(k ∇h) = 0. Boundary conditions:
+ * Head h on the six-node triangles, ∇·(k ∇h) = 0 (Galerkin finite
+ * elements). Boundary conditions:
  *  - on the ground surface where the water table is at or above the ground
  *    (a reservoir, ponded water, the water level at a downstream toe): the
- *    head of the water there, h = y_w;
+ *    head of the water there, h = y_w, imposed by a large number on the
+ *    diagonal (penalty), as Bathe & Khoshgoftaar (1979) impose prescribed
+ *    heads;
  *  - elsewhere on the ground surface: a seepage face, h = y, at the nodes
- *    where flow would leave the soil with positive pressure, found by
- *    iteration (Neuman & Witherspoon 1970); no flow at the other nodes;
+ *    where water leaves the soil, and no flow at the others. The face is
+ *    found by switching nodes between the two conditions until neither
+ *    inequality is violated (h ≤ y on the no-flow part, outflow on the
+ *    face): Neuman & Witherspoon 1970, Water Resour. Res. 6(3), 889–897;
+ *    Cooley 1983, Water Resour. Res. 19(5), 1271–1285;
  *  - base and sides: no flow.
- * The free surface comes from the variable-permeability method (Bathe &
- * Khoshgoftaar 1979, Comput. Struct. 10, 785–790; Desai 1976): above the
- * phreatic surface (p < 0) the permeability is k·k_r, falling linearly to
- * k_r = 10⁻³ over a pressure head of 2 % of the model height, so a single
- * fixed mesh carries saturated and residual flow; the Picard iteration is
- * under-relaxed and repeats until the heads and the seepage face settle. Pore pressure is
+ *
+ * Free surface on a fixed mesh: the permeability depends on the pressure,
+ * full where p ≥ 0 and small where p < 0, so that one mesh carries the
+ * saturated flow and almost none above the phreatic surface (Bathe &
+ * Khoshgoftaar 1979, Int. J. Numer. Anal. Meth. Geomech. 3(1), 13–22).
+ * The nonlinear problem is solved by Picard iteration on the permeability
+ * with Aitken's dynamic under-relaxation (see below). Pore pressure is
  * u = γw (h − y) ≥ 0; suction is not used for strength (χ = 0).
+ *
+ * Implementation choices (not from the literature): the residual
+ * permeability ratio k_r = 10⁻³ and a linear transition to it over a
+ * pressure head of 2 % of the model height (a step at p = 0 makes the
+ * Picard iteration cycle between two states); at most 80 iterations;
+ * convergence when the relaxed change is below 0.1 % of the heads.
  */
 
 import { WATER_UNIT_WEIGHT } from "../types/constants";
@@ -92,6 +105,8 @@ export function solveSeepage(mesh: SeepageMesh, slope: Slope, maxIterations = 80
   const elK = new Float64Array(36 * ne);
   const N = new Float64Array(6);
   let converged = false, it = 0;
+  let omega = 1;
+  let prevR: Float64Array | null = null;
   for (; it < maxIterations && !converged; it++) {
     const K = pattern.emptyCopy();
     elK.fill(0);
@@ -148,19 +163,31 @@ export function solveSeepage(mesh: SeepageMesh, slope: Slope, maxIterations = 80
       if (!seepFace[n] && rhs[n] > y[n] + tol) { seepFace[n] = 1; changed++; }
       else if (seepFace[n] && flow[n] > 1e-6 * qMax) { seepFace[n] = 0; changed++; }
     }
-    // Pressure signs (and so the permeability) settled and no face change.
-    // Under-relaxed update (Picard iteration on the permeability).
-    // The relaxation shrinks over the iterations, which damps the small
-    // cycles the permeability switch causes near the phreatic surface.
-    const omega = it < 3 ? 1 : Math.max(0.1, 0.6 * 0.93 ** (it - 3));
+    // Under-relaxed Picard update with Aitken's dynamic relaxation factor
+    // (Irons & Tuck 1969, IJNME 1(3), 275–277; Küttler & Wall 2008, Comput.
+    // Mech. 43(1), 61–72): with the residual r_k = h̃_k − h_k of the fixed
+    // point, ω_k = −ω_(k−1) r_(k−1)ᵀ(r_k − r_(k−1)) / |r_k − r_(k−1)|².
+    // Bounding ω to [0.05, 1] is an implementation choice.
+    const r = new Float64Array(nn);
     let maxDh = 0;
     for (let n = 0; n < nn; n++) {
-      maxDh = Math.max(maxDh, Math.abs(rhs[n] - head[n]));
-      rhs[n] = omega * rhs[n] + (1 - omega) * head[n];
+      r[n] = rhs[n] - head[n];
+      maxDh = Math.max(maxDh, Math.abs(r[n]));
     }
+    if (prevR) {
+      let num = 0, den = 0;
+      for (let n = 0; n < nn; n++) {
+        const d = r[n] - prevR[n];
+        num += prevR[n] * d;
+        den += d * d;
+      }
+      if (den > 0) omega = Math.min(1, Math.max(0.05, (-omega * num) / den));
+    }
+    prevR = r;
+    for (let n = 0; n < nn; n++) rhs[n] = head[n] + omega * r[n];
     head = rhs;
-    // Converged when the (relaxed) change is below 0.1 % of the heads; the
-    // unrelaxed solution may keep a cycle of a few centimetres of head.
+    // Converged when the relaxed change is below 0.1 % of the heads and the
+    // seepage face no longer changes.
     let headMax = -Infinity;
     for (const h of head) if (Number.isFinite(h)) headMax = Math.max(headMax, h);
     converged = changed === 0 && omega * maxDh < 1e-3 * (1 + headMax);

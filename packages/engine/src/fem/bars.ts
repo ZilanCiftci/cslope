@@ -1,10 +1,23 @@
 /**
- * Reinforcement bars in the strength reduction: elastic–perfectly plastic in
- * tension, 0 ≤ N ≤ T(s), where T is the capacity envelope of the element
- * (tensile capacity, pullout from either end, end anchorage) per metre of
- * slope, divided by F for passive reinforcement. A bar does not carry
- * compression (geosynthetics, and conservatively bars and nails). The
- * return is exact in one dimension: N = min(T, max(0, EA (ε − εp))).
+ * Reinforcement bars in the strength reduction.
+ *
+ * Method: three-node bar (truss) elements, the one-dimensional element of
+ * the displacement method (Zienkiewicz, Taylor & Zhu 2013), along element
+ * edges and sharing the soil's nodes; elastic–perfectly plastic with the
+ * exact one-dimensional return N = min(T, max(0, EA (ε − εp))), relaxed
+ * like the soil in the viscoplastic iteration (srm.ts) or with its tangent
+ * in Newton's method.
+ *
+ * Implementation choices (not from the literature), with their reasons:
+ * - Perfect bond between bar and soil: slip is represented by the pullout
+ *   part of the capacity, not by an interface.
+ * - 0 ≤ N ≤ T(s), with T the capacity envelope of cSlope's limit
+ *   equilibrium analysis (tensile capacity, pullout from either end, end
+ *   anchorage) per metre of slope, so that both analyses use the same
+ *   reinforcement; no compression (geosynthetics, and conservatively bars
+ *   and nails).
+ * - Passive capacity divided by F, as the limit equilibrium solvers do;
+ *   `reduceReinforcement` = false reduces only the soil.
  */
 
 import type { FeModel } from "./model";

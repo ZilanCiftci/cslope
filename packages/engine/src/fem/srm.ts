@@ -1,36 +1,57 @@
 /**
  * Strength reduction by finite elements (SRFEM).
  *
- * Viscoplastic algorithm of Zienkiewicz & Cormeau (1974) as used for
- * slopes by Griffiths & Lane (1999, Géotechnique 49(3), 387–403) and
- * coded in Smith, Griffiths & Margetts (2014, Programming the Finite
- * Element Method, 5th ed., §6.5): gravity is applied in one increment,
- * the elastic stiffness is factorised once, and at every iteration the
- * stress overshoot beyond the yield surface is relaxed by a viscoplastic
- * strain increment f·∂Q/∂σ·Δt whose body loads enter the next solution.
- * Failure is non-convergence within the iteration limit.
- *
- * Yield: Mohr–Coulomb in principal stresses (tension positive),
- * f = (σ₁ − σ₃)/2 + (σ₁ + σ₃)/2·sin φ − c cos φ, the normalisation of
- * Smith & Griffiths. Their time step Δt = 4(1 + ν)(1 − 2ν)/(E(1 − 2ν + sin²φ))
- * is the stability limit 2/a of the explicit update for associated flow
- * (a = n_fᵀ D n_g); the default here is half of it, Δt = 1/a, which returns
- * a stress on one yield plane to the surface in one step and does not
- * oscillate at the corners of the pyramid. Optional tension cut-off
- * f_t = σ₁ ≤ 0 (Rankine), relaxed in the same way.
- *
- * Reduction (flow rules, after Sysala et al. 2021, eq. 2.1 and 4.6–4.8):
- * - "davis-b" (default): c and tan φ divided by
+ * Method and sources:
+ * - Strength reduction: c and tan φ divided by F until the slope fails;
+ *   F at failure is the factor of safety (Zienkiewicz, Humpheson & Lewis
+ *   1975, Géotechnique 25(4), 671–689; Matsui & San 1992, Soils Found.
+ *   32(1), 59–70; Griffiths & Lane 1999, Géotechnique 49(3), 387–403).
+ * - Viscoplastic algorithm (initial strain method) of Zienkiewicz &
+ *   Cormeau (1974, IJNME 8(4), 821–845) as used for slopes by Griffiths &
+ *   Lane (1999) and coded in Smith, Griffiths & Margetts (2014, Programming
+ *   the Finite Element Method, 5th ed., Wiley, ch. 6): gravity is applied in
+ *   one increment, the elastic stiffness is factorised once, and at every
+ *   iteration the stress overshoot beyond the yield surface is relaxed by a
+ *   viscoplastic strain increment f·∂Q/∂σ·Δt whose body loads enter the
+ *   next solution.
+ * - Failure: non-convergence within the iteration limit (Griffiths & Lane
+ *   1999, 1000 iterations, tolerance on the displacement increment).
+ * - Yield: Mohr–Coulomb in principal stresses (tension positive),
+ *   f = (σ₁ − σ₃)/2 + (σ₁ + σ₃)/2·sin φ − c cos φ, the normalisation of
+ *   Smith & Griffiths; optional Rankine tension cut-off f_t = σ₁ ≤ 0,
+ *   relaxed in the same way.
+ * - Time step: the explicit update is stable for Δt below 2/a, a = n_fᵀ D n_g
+ *   (Cormeau 1975, IJNME 9(1), 109–127; for associated flow this is the
+ *   step of Smith & Griffiths, 4(1 + ν)(1 − 2ν)/(E(1 − 2ν + sin²φ))).
+ * - Flow rules (Sysala, Hrubešová, Michalec & Tschuchnigg 2021,
+ *   arXiv:2101.01005, eq. 2.1 and 4.6–4.8):
+ *   "davis-b" (default): c and tan φ divided by
  *   q_B(F) = F(1 − sin ψ_F sin φ_F)/(cos ψ_F cos φ_F), tan φ_F = tan φ/F,
  *   tan ψ_F = tan ψ/F, with associated flow in the reduced material
- *   (Tschuchnigg, Schweiger & Sloan 2015, Comput. Geotech. 70, 169–177);
- * - "non-associated": c/F, tan φ/F, tan ψ/F, flow with ψ_F (Griffiths & Lane);
- * - "associated": c/F, tan φ/F and ψ = φ_F.
+ *   (Davis 1968; Tschuchnigg, Schweiger & Sloan 2015, Comput. Geotech. 70,
+ *   169–177); "non-associated": c/F, tan φ/F, tan ψ/F, flow with ψ_F
+ *   (Griffiths & Lane 1999); "associated": c/F, tan φ/F and ψ = φ_F.
+ * - Associated flow is solved by Newton's method (newton.ts).
+ * - Search: F is bracketed and bisected (Dawson, Roth & Drescher 1999,
+ *   Géotechnique 49(6), 835–840). A trial above a converged one starts
+ *   from that converged state; with associated flow the limit load does not
+ *   depend on the stress path (the uniqueness theorems of limit analysis),
+ *   with non-associated flow it may, so F then rises in small equal steps
+ *   as in Griffiths & Lane's incremental reduction.
  *
- * F is bracketed and bisected (Dawson, Roth & Drescher 1999, Géotechnique
- * 49(6), 835–840); every trial above a converged one starts from that
- * converged state, which shortens the iterations without changing the
- * limit (the Mohr–Coulomb limit load does not depend on the stress path).
+ * Implementation choices (not from the literature), with their reasons:
+ * - Δt = 1/a, half the stability limit: a stress on one yield plane returns
+ *   to it in one step, and the corners of the pyramid do not oscillate
+ *   (`relaxation` = 1; 2 is the limit).
+ * - Iteration limit 1000·√(elements/2500), at least 1000: Griffiths &
+ *   Lane's 1000 iterations are for meshes of a few hundred elements, and
+ *   plastic flow must cross more elements on a finer mesh. The limit is a
+ *   user parameter in every implementation of the non-convergence
+ *   criterion, and F depends on it.
+ * - When Newton fails, the viscoplastic iteration decides the trial from
+ *   the same starting state (see `strengthReduction`).
+ * - A trial that fails from the unloaded state does not bound F from
+ *   above; only a failure from a converged state does.
  */
 
 import { GP_STRIDE } from "./elements";
@@ -86,9 +107,9 @@ export interface SrmOptions {
   guide?: number;
   /**
    * Continue an earlier search on the same model: its converged F and state
-   * and its smallest failed F, and its trials; only the bisection remains.
+   * and its smallest failed F; only the bisection remains.
    */
-  resume?: { lo: number; hi: number; state: SrmState; trials?: readonly SrmTrial[] };
+  resume?: { lo: number; hi: number; state: SrmState };
   /** Called after each trial. */
   onTrial?: (trial: SrmTrial) => void;
 }
@@ -122,9 +143,12 @@ export interface SrmResult {
   /** Smallest F that failed to converge. */
   failedF: number;
   /**
-   * F at the displacement jump (Huang & Jia 2009, Comput. Geotech. 36, 93–101):
-   * the largest converged F whose displacement is within ten times the
-   * first trial's growth rate; null when there are too few converged trials.
+   * F at the displacement jump (Huang & Jia 2009, Comput. Geotech. 36, 93–101:
+   * failure where a characteristic nodal displacement increases suddenly):
+   * the largest converged F before the growth rate of the largest
+   * displacement exceeds ten times that of the first trials; null when
+   * there are too few converged trials. The factor ten is an
+   * implementation choice: the source judges the jump from the curve.
    */
   displacementJumpF: number | null;
   trials: SrmTrial[];
@@ -279,7 +303,7 @@ export function solveAtF(
     }
     // The iteration converges linearly, Δu_k ≈ r·Δu_(k−1), so the distance to
     // the fixed point is about Δu_k·r/(1 − r) (e.g. Quarteroni, Sacco & Saleri,
-    // Numerical Mathematics, 2007, §6.5); r is the mean contraction over the
+    // Numerical Mathematics, 2nd ed., Springer 2007); r is the mean contraction over the
     // last iterations ("extrapolated" test). The first solve repeats the
     // starting state, so convergence counts only after the stresses have been
     // checked against this F's strength.
@@ -420,36 +444,18 @@ export function strengthReduction(model: FeModel, options: SrmOptions = {}): Srm
     return r.converged;
   };
 
-  // Collapse from the viscoplastic iteration counts. Near collapse the
-  // iteration contracts at a rate 1 − κ(F_c − F), so the iterations grow as
-  // N ≈ a/(F_c − F) and 1/N falls linearly to zero at F_c: the line through
-  // the two highest converged trials estimates F_c. The next trial then
-  // goes just below the estimate, or, once a converged trial lies within
-  // the tolerance below it, just above, where it should fail and close the
-  // bracket: one failed trial instead of the several of a bisection, each of
-  // which runs to the iteration limit.
-  const history = [...(options.resume?.trials ?? [])];
-  let guided = 0;
-  const estimated = (fallback: number, cap: number): number => {
-    if (guided >= 12) return fallback;
-    const vp = [...history, ...trials]
-      .filter((t) => t.converged && t.solver === "viscoplastic" && t.iterations >= 30)
-      .sort((a, b) => a.F - b.F);
-    if (vp.length < 2) return fallback;
-    const a = vp[vp.length - 2], b = vp[vp.length - 1];
-    const ga = 1 / a.iterations, gb = 1 / b.iterations;
-    if (!(gb < ga) || !(b.F > a.F) || b.F < lo) return fallback;
-    const est = b.F + (gb * (b.F - a.F)) / (ga - gb);
-    // A failed trial below the estimate disproves it.
-    if (!(est < hi)) return fallback;
-    const below = est - 0.3 * fTol;
-    const next = below > lo + 0.1 * fTol ? below : lo + 0.95 * fTol;
-    if (!(next > lo && next < hi && next <= cap)) return fallback;
-    guided++;
-    return next;
-  };
-
-  // Bracket: step up from a converged trial, down from a failed one.
+  // Bracket, then bisect (Dawson, Roth & Drescher 1999): step up from a
+  // converged trial, down from a failed one, until a converged F and a
+  // failed F above it are known.
+  //
+  // Implementation choices (not from the literature): the first trial
+  // F = 1, the first step 25 %, a step growing by 1.5 up to 25 % while
+  // associated trials keep converging, F / 1.5 after a failure from the
+  // unloaded state, and the guide steps on refined meshes. They set how
+  // many trials the bracket costs, not the factor found, which is decided
+  // by the bisection to the tolerance; for non-associated flow, whose
+  // state depends on the load path, the steps stay equal and small as in
+  // Griffiths & Lane (1999).
   let F = options.startF ?? 1;
   const guide = options.guide;
   const step = options.bracketStep ?? 0.25;
@@ -460,14 +466,10 @@ export function strengthReduction(model: FeModel, options: SrmOptions = {}): Srm
   let rise = step;
   for (let k = 0; k < 40 && !(lo > 0 && Number.isFinite(hi)); k++) {
     if (run(F)) {
-      if (Number.isFinite(hi)) F = estimated((F + hi) / 2, hi);
+      if (Number.isFinite(hi)) F = (F + hi) / 2;
       else {
-        let next = F * (1 + rise);
-        if (guide !== undefined && F < 1.05 * guide) next = Math.min(next, F < 0.97 * guide ? 0.97 * guide : F + 0.02 * guide);
-        // Non-associated flow keeps its equal steps: its state depends on
-        // the path, and the estimate (fooled by a local yield that later
-        // stabilises) would shorten the path through it.
-        F = nonAssociated ? next : estimated(next, next);
+        F *= 1 + rise;
+        if (guide !== undefined && lo < 1.05 * guide) F = Math.min(F, lo < 0.97 * guide ? 0.97 * guide : lo + 0.02 * guide);
         // With associated flow the limit does not depend on the path, so the
         // step can grow; with non-associated flow the state does, and F
         // rises in equal small steps as in Griffiths & Lane.
@@ -478,7 +480,7 @@ export function strengthReduction(model: FeModel, options: SrmOptions = {}): Srm
     if (F < 0.01) { warning = "no converged trial above F = 0.01"; break; }
   }
   // Bisect.
-  while (lo > 0 && Number.isFinite(hi) && hi - lo > fTol) run(estimated((lo + hi) / 2, hi));
+  while (lo > 0 && Number.isFinite(hi) && hi - lo > fTol) run((lo + hi) / 2);
 
   const conv = trials.filter((t) => t.converged).sort((a, b) => a.F - b.F);
   let jump: number | null = null;

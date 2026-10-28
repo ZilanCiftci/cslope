@@ -4,9 +4,17 @@
  * Node order: corners 0, 1, 2 counter-clockwise, then the midside nodes
  * 3 (edge 0–1), 4 (edge 1–2) and 5 (edge 2–0). Shape functions in area
  * coordinates L1 = 1 − ξ − η, L2 = ξ, L3 = η (Zienkiewicz, Taylor & Zhu,
- * The Finite Element Method, 7th ed., §6.3). Integration by the
- * three-point rule at (1/6, 1/6), (2/3, 1/6), (1/6, 2/3), which is exact
- * for the stiffness of a straight-sided T6 (BᵀDB is quadratic).
+ * The Finite Element Method: Its Basis and Fundamentals, 7th ed., 2013).
+ * Integration by the three-point rule at (1/6, 1/6), (2/3, 1/6),
+ * (1/6, 2/3), exact for quadratics (Strang & Fix, An Analysis of the
+ * Finite Element Method, 1973; Dunavant 1985, IJNME 21(6), 1129–1148), so
+ * exact for the stiffness of a straight-sided T6 (BᵀDB is quadratic).
+ *
+ * Implementation choice: the six-node triangle, which has quadratic
+ * displacements and fits unstructured meshes. Low-order elements can
+ * overestimate collapse loads in plane strain (Sloan & Randolph 1982,
+ * IJNAMG 6(1), 47–76; de Borst & Vermeer 1984, Géotechnique 34(2),
+ * 199–210); adaptive refinement (adapt.ts) reduces that error.
  *
  * Stresses and strains carry four components (x, y, xy, z) so that the
  * out-of-plane stress of plane strain enters the yield criterion

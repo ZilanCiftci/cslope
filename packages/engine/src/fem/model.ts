@@ -1,19 +1,43 @@
 /**
  * Finite element model of a slope: T6 mesh, materials, supports and loads.
  *
- * The domain is the slope's external boundary, meshed with the material
- * boundaries as constraints so that every element lies in one material.
- * Supports follow common practice for slope analysis by finite elements
- * (Griffiths & Lane 1999, Géotechnique 49(3), 387–403): the base is fixed,
- * the vertical sides are on rollers, and the ground surface is free.
+ * Method and sources:
+ * - The domain is the slope's external boundary, meshed with the material
+ *   boundaries as constraints so that every element lies in one material
+ *   (mesh.ts), with six-node triangles (elements.ts).
+ * - Supports as in Griffiths & Lane (1999, Géotechnique 49(3), 387–403):
+ *   the base is fixed, the vertical sides are on rollers, and the ground
+ *   surface is free.
+ * - Gravity is applied in one increment with the total unit weight
+ *   (Griffiths & Lane 1999); E = 10⁵ kPa and ν = 0.3 are their nominal
+ *   values, which barely affect F.
+ * - Effective stress: the pore pressures enter as the equivalent nodal load
+ *   ∫ Bᵀ m u dA, m = (1, 1, 0) in the plane, so that the yield
+ *   criterion sees the effective stress (Terzaghi's principle; Potts &
+ *   Zdravković, Finite Element Analysis in Geotechnical Engineering:
+ *   Theory, Thomas Telford 1999). Pore pressure is hydrostatic below the water line of each
+ *   element's material, u = γw (y_w − y) ≥ 0, or comes from seepage.ts.
+ * - Surface loads: ponded water as a normal pressure, strip loads (kPa per
+ *   horizontal metre) and line loads (kN/m) as vertical tractions,
+ *   integrated with the quadratic edge shape functions.
+ * - Reinforcement: three-node bar (truss) elements along the element edges
+ *   on each reinforcement line, sharing the soil's nodes (perfect bond),
+ *   elastic–perfectly plastic in tension (bars.ts).
+ * - Equations in nested dissection order, factorised by sparse Cholesky
+ *   (sparse.ts).
  *
- * Loads: self-weight with the total unit weight, the pore pressures of the
- * water table as an initial effective-stress load (∫ Bᵀ m u dA; Smith,
- * Griffiths & Margetts 2014, §6.11), ponded water above the ground as a
- * normal pressure on the surface, strip loads (kPa, per horizontal metre)
- * and line loads (kN/m) as vertical tractions on the surface. Pore pressure
- * is hydrostatic below the water line of each element's material,
- * u = γw (y_w − y) ≥ 0.
+ * Implementation choices (not from the literature), with their reasons:
+ * - Element size: a twentieth of the model height by default, and at most
+ *   half the thickness of a thin layer (thickness estimated as 2·area /
+ *   perimeter), so that every layer is crossed by at least two elements.
+ * - Boundary edges: an edge whose midpoint lies on the ground surface is
+ *   free; a non-surface edge with |Δx| ≤ 10⁻³ |Δy| is a vertical side
+ *   (roller); every other non-surface edge is fixed.
+ * - High-strength and impenetrable materials are elastic, 100 times as
+ *   stiff as the stiffest soil, and 10⁻⁴ as permeable as the least
+ *   permeable soil, unless parameters are given for them by name: stiff
+ *   enough not to deform the soil around them, soft enough not to spoil
+ *   the conditioning of the stiffness matrix.
  */
 
 import { WATER_UNIT_WEIGHT } from "../types/constants";

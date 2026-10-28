@@ -10,15 +10,26 @@
  * σ₁ ≥ σ₂ ≥ σ₃ as further planes, so that returns to an edge or the apex
  * of the pyramid come out of the same projection (Clausen, Damkilde &
  * Andersen 2006, IJNME 66, 1036–1059; de Souza Neto, Perić & Owen 2008,
- * Computational Methods for Plasticity, §8.2). The active planes are found
+ * Computational Methods for Plasticity, Wiley 2008, ch. 8). The active planes are found
  * by enumeration (at most four planes in three dimensions).
  *
  * Tangent: in principal space D − D A (Aᵀ D A)⁻¹ Aᵀ D for the active planes
  * A, and in the plane of the principal directions the shear stiffness
  * (σ_A − σ_B) / (2(ε_A − ε_B)) of an isotropic tensor function (de Souza
  * Neto et al. 2008, appendix A), rotated to x, y. With associated flow it is
- * symmetric, so the system is solved by Cholesky; a step is accepted when
- * it reduces the residual (backtracking line search).
+ * symmetric, so the system is solved by Cholesky (sparse.ts).
+ *
+ * Globalisation: backtracking line search on the residual norm, halving
+ * the step until the norm falls (Dennis & Schnabel, Numerical Methods for
+ * Unconstrained Optimization and Nonlinear Equations, 1983, ch. 6;
+ * Nocedal & Wright, Numerical Optimization, 2nd ed., 2006, ch. 3).
+ *
+ * Implementation choices (not from the literature): convergence at a
+ * residual of 10⁻⁶ of the load, at most 25 iterations, and failure when
+ * the residual has not fallen by 10 % over 5 iterations (beyond the limit
+ * load it stagnates). A trial that Newton does not converge is decided by
+ * the viscoplastic iteration (srm.ts), so these limits set the cost, not
+ * the failure criterion.
  */
 
 import { GP_STRIDE } from "./elements";

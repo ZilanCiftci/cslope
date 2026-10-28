@@ -1,15 +1,26 @@
 /**
  * A posteriori error estimation and mesh refinement.
  *
- * Error indicator of Zienkiewicz & Zhu (1987, IJNME 24, 337–357): the
- * finite element stresses are compared with a recovered, continuous stress
- * field σ*, here the area-weighted nodal average of the element stresses
- * interpolated linearly over each element, and
- * η_e² = ∫_e (σ* − σ_h)ᵀ C (σ* − σ_h) dA with C the elastic compliance
- * (approximated by 1/E). Elements are marked by Dörfler's bulk criterion
- * (Dörfler 1996, SIAM J. Numer. Anal. 33, 1106–1124): the smallest set
- * whose indicators sum to a fraction θ of the total. Marked elements get
- * half their size in the next mesh, through a size field on the old mesh.
+ * Method and sources:
+ * - Error indicator of Zienkiewicz & Zhu (1987, IJNME 24(2), 337–357): the
+ *   finite element stresses are compared with a recovered, continuous
+ *   stress field σ*, here the area-weighted nodal average of the element
+ *   stresses interpolated linearly over each element, and
+ *   η_e² = ∫_e (σ* − σ_h)ᵀ C (σ* − σ_h) dA with C the elastic compliance.
+ * - Dissipation indicator (the default in analysis.ts): the plastic
+ *   dissipation per element, after the dissipation-based adaptivity of
+ *   finite element limit analysis (Lyamin, Sloan, Krabbenhøft & Hjiaj
+ *   2005, IJNME 63(14), 1961–1974; Ciria, Peraire & Bonet 2008, IJNME
+ *   75(8), 899–944).
+ * - Marking by Dörfler's bulk criterion (Dörfler 1996, SIAM J. Numer.
+ *   Anal. 33(3), 1106–1124): the smallest set of elements whose indicators
+ *   sum to a fraction θ of the total.
+ *
+ * Implementation choices (not from the literature): C approximated by
+ * 1/E; the dissipation taken from the accumulated viscoplastic strain at
+ * the factor of safety (the limit analysis papers use the dissipation of
+ * the collapse mechanism); marked elements get half their size in the
+ * next mesh, through a size field on the old mesh; θ = 0.3 in analysis.ts.
  */
 
 import { GP_STRIDE } from "./elements";
@@ -126,10 +137,8 @@ export function refinedSizeField(model: FeModel, marked: Uint8Array, minSize = 0
 /**
  * Plastic dissipation per element, ∫_e |σ : ε_vp| dA, from the stresses and
  * accumulated viscoplastic strains at the factor of safety. It concentrates
- * in the failure mechanism, which is where the factor of safety is decided;
- * refining on it follows the dissipation-based adaptivity of finite element
- * limit analysis (Lyamin, Sloan, Krabbenhøft & Hjiaj 2005, IJNME 63,
- * 1961–1974; Ciria, Peraire & Bonet 2008, IJNME 75, 899–944).
+ * in the failure mechanism, which is where the factor of safety is decided
+ * (see the sources in the file header).
  */
 export function dissipationIndicator(model: FeModel, stress: Float64Array, evp: Float64Array): Float64Array {
   const out = new Float64Array(model.elementCount);

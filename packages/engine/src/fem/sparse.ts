@@ -13,9 +13,12 @@
  * times, cost in proportion.
  *
  * The factorisation is the up-looking (row) Cholesky of Davis, Direct
- * Methods for Sparse Linear Systems, SIAM 2006, §4.2–4.3: the elimination
+ * Methods for Sparse Linear Systems, SIAM 2006, ch. 4: the elimination
  * tree gives the pattern of each row of L, computed once (symbolic
  * analysis) and shared by every matrix of the same pattern.
+ *
+ * Implementation choices: parts of at most 32 nodes are not split, and the
+ * separator is the smaller of the two boundary layers along the split.
  */
 
 /** Size below which a part is not split further. */
@@ -135,7 +138,7 @@ export class SparseCholesky {
     const rowCols = new Int32Array(rowPtr[n]);
     for (let i = 0; i < n; i++) rowCols.set(Int32Array.from(rows[i]).sort(), rowPtr[i]);
 
-    // Elimination tree (Davis 2006, §4.1).
+    // Elimination tree (Davis 2006, ch. 4).
     const parent = new Int32Array(n).fill(-1), ancestor = new Int32Array(n).fill(-1);
     for (let k = 0; k < n; k++) {
       for (let p = rowPtr[k]; p < rowPtr[k + 1] - 1; p++) {

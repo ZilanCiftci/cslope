@@ -8,15 +8,24 @@
  * element is in equilibrium with its weight and the pore pressure
  * gradient, the ground surface carries its loads, and at every node the
  * Mohr–Coulomb criterion is replaced by the p-sided polygon inscribed in
- * it (Sloan 1988, eq. 13), so that the stress field is admissible and the
- * load factor a strict lower bound for the mesh. Stresses are effective,
- * tension positive; σ = σ′ − u m.
+ * it (Sloan 1988), so that the stress field is admissible and the load
+ * factor a strict lower bound for the mesh. Stresses are effective,
+ * tension positive; σ = σ′ − u m. The linear programs are solved by HiGHS
+ * (Huangfu & Hall 2018, Math. Program. Comput. 10(1), 119–142).
  *
  * The linear program maximises a load factor λ on every load (weight, pore
  * pressure and surface loads). The factor of safety on strength is the
  * reduction F at which λ(F) = 1: for φ = 0 everywhere λ(F) = λ(1)/F, so
  * F = λ(1) from one program; otherwise F is found by the secant method on
- * log λ (Kim, Salgado & Lee 2002, fig. 3, iterate on the reference load).
+ * log λ (Kim, Salgado & Lee 2002, J. Geotech. Geoenviron. Eng. 128(7),
+ * 546–557, fig. 3: iterate until the reference load is carried).
+ *
+ * Implementation choices (not from the literature): p = 24 sides; the
+ * secant method on log λ, stopping when F changes by less than 0.002 (F is
+ * a lower bound only where λ(F) ≥ 1, so the last step is within that
+ * tolerance of one); the load factor on every load, weight included, as the
+ * strength reduction applies; interior point first and simplex as the
+ * fallback.
  */
 
 import { WATER_UNIT_WEIGHT } from "../types/constants";
