@@ -36,6 +36,7 @@
 import { GP_STRIDE } from "./elements";
 import type { FeModel } from "./model";
 import { newtonAtF } from "./newton";
+import { barBodyLoads, relaxBars } from "./bars";
 
 /** Iterations over which the contraction ratio is averaged. */
 const RATIO_WINDOW = 10;
@@ -100,6 +101,8 @@ export interface SrmState {
   bodyLoads: Float64Array;
   /** Effective stresses per Gauss point (σx, σy, τxy, σz). */
   stress: Float64Array;
+  /** Plastic axial strain of the reinforcement bars (2 per bar). */
+  barEp: Float64Array;
 }
 
 export interface SrmResult {
@@ -214,11 +217,12 @@ export function emptyState(model: FeModel): SrmState {
     evp: new Float64Array(4 * ngp),
     bodyLoads: new Float64Array(model.eqCount),
     stress: new Float64Array(4 * ngp),
+    barEp: new Float64Array(2 * model.bars.count),
   };
 }
 
 function cloneState(s: SrmState): SrmState {
-  return { u: s.u.slice(), evp: s.evp.slice(), bodyLoads: s.bodyLoads.slice(), stress: s.stress.slice() };
+  return { u: s.u.slice(), evp: s.evp.slice(), bodyLoads: s.bodyLoads.slice(), stress: s.stress.slice(), barEp: s.barEp.slice() };
 }
 
 /**
@@ -349,6 +353,7 @@ export function solveAtF(
       }
       if (anyLoad) for (let k = 0; k < 12; k++) { const q = eqs[12 * e + k]; if (q >= 0) bodyLoads[q] += load[k]; }
     }
+    if (model.bars.count) relaxBars(model, u, state.barEp, F, bodyLoads);
   }
   return { converged, iterations: it };
 }
@@ -378,7 +383,7 @@ export function strengthReduction(model: FeModel, options: SrmOptions = {}): Srm
     const warm = loState !== null;
     let st = loState ? cloneState(loState) : emptyState(model);
     let r = useNewton
-      ? newtonAtF(model, eqs, reduce(model, F, rule, 1), { u: st.u, ep: st.evp, stress: st.stress }, {
+      ? newtonAtF(model, eqs, reduce(model, F, rule, 1), { u: st.u, ep: st.evp, stress: st.stress, barEp: st.barEp, F }, {
           tolerance: options.tolerance,
           maxIterations: options.maxIterations,
           tensionCutoff: options.tensionCutoff,
@@ -391,6 +396,7 @@ export function strengthReduction(model: FeModel, options: SrmOptions = {}): Srm
       iterations += r.iterations;
       st = cloneState(loState);
       st.bodyLoads = plasticBodyLoads(model, eqs, st.evp);
+      barBodyLoads(model, st.barEp, st.bodyLoads);
       r = solveAtF(model, F, st, { ...options, tolerance: undefined, maxIterations: undefined }, eqs);
     }
     iterations += r.iterations;

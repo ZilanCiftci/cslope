@@ -1,0 +1,108 @@
+/**
+ * Reinforcement bars in the strength reduction: elastic–perfectly plastic in
+ * tension, 0 ≤ N ≤ T(s), where T is the capacity envelope of the element
+ * (tensile capacity, pullout from either end, end anchorage) per metre of
+ * slope, divided by F for passive reinforcement. A bar does not carry
+ * compression (geosynthetics, and conservatively bars and nails). The
+ * return is exact in one dimension: N = min(T, max(0, EA (ε − εp))).
+ */
+
+import type { FeModel } from "./model";
+import { BAR_GP_STRIDE } from "./model";
+import type { SkylineMatrix } from "./skyline";
+
+function barDofs(model: FeModel, b: number, out: Int32Array): void {
+  for (let k = 0; k < 3; k++) {
+    const n = model.bars.nodes[3 * b + k];
+    out[2 * k] = model.eq[2 * n];
+    out[2 * k + 1] = model.eq[2 * n + 1];
+  }
+}
+
+/** Capacity of a bar Gauss point at reduction F. */
+function capacity(model: FeModel, b: number, g: number, F: number): number {
+  const c = model.bars.capacity[2 * b + g];
+  return model.bars.passive[b] ? c / F : c;
+}
+
+/**
+ * Viscoplastic step for the bars: returns each Gauss point's force to
+ * [0, T] by a plastic strain increment and adds its body load ∫ Bᵀ EA Δεp.
+ * @returns whether any bar yielded.
+ */
+export function relaxBars(model: FeModel, u: Float64Array, barEp: Float64Array, F: number, bodyLoads: Float64Array): boolean {
+  const { bars } = model;
+  const d = new Int32Array(6);
+  let any = false;
+  for (let b = 0; b < bars.count; b++) {
+    barDofs(model, b, d);
+    const ea = bars.stiffness[b];
+    for (let g = 0; g < 2; g++) {
+      const o = (2 * b + g) * BAR_GP_STRIDE, i = 2 * b + g;
+      let eps = 0;
+      for (let k = 0; k < 6; k++) if (d[k] >= 0) eps += bars.gp[o + k] * u[d[k]];
+      const n = ea * (eps - barEp[i]);
+      const t = capacity(model, b, g, F);
+      const excess = n > t ? n - t : n < 0 ? n : 0;
+      if (excess === 0) continue;
+      any = true;
+      barEp[i] += excess / ea;
+      const w = bars.gp[o + 6] * excess;
+      for (let k = 0; k < 6; k++) if (d[k] >= 0) bodyLoads[d[k]] += bars.gp[o + k] * w;
+    }
+  }
+  return any;
+}
+
+/**
+ * Internal forces of the bars (added to `fint`) for Newton, with the new
+ * plastic strains in `barEpNew` and, when given, the tangent in `K`.
+ */
+export function barInternal(
+  model: FeModel,
+  u: Float64Array,
+  barEpOld: Float64Array,
+  F: number,
+  fint: Float64Array,
+  barEpNew: Float64Array,
+  K: SkylineMatrix | null,
+): void {
+  const { bars } = model;
+  const d = new Int32Array(6);
+  for (let b = 0; b < bars.count; b++) {
+    barDofs(model, b, d);
+    const ea = bars.stiffness[b];
+    for (let g = 0; g < 2; g++) {
+      const o = (2 * b + g) * BAR_GP_STRIDE, i = 2 * b + g;
+      let eps = 0;
+      for (let k = 0; k < 6; k++) if (d[k] >= 0) eps += bars.gp[o + k] * u[d[k]];
+      const trial = ea * (eps - barEpOld[i]);
+      const t = capacity(model, b, g, F);
+      const n = Math.min(t, Math.max(0, trial));
+      barEpNew[i] = eps - n / ea;
+      const w = bars.gp[o + 6];
+      for (let k = 0; k < 6; k++) if (d[k] >= 0) fint[d[k]] += bars.gp[o + k] * n * w;
+      if (K && trial > 0 && trial < t) {
+        for (let k = 0; k < 6; k++) {
+          if (d[k] < 0) continue;
+          for (let j = 0; j <= k; j++) if (d[j] >= 0) K.add(d[k], d[j], ea * w * bars.gp[o + k] * bars.gp[o + j]);
+        }
+      }
+    }
+  }
+}
+
+/** Body loads ∫ Bᵀ EA εp of the bars' plastic strains (added to `out`). */
+export function barBodyLoads(model: FeModel, barEp: Float64Array, out: Float64Array): void {
+  const { bars } = model;
+  const d = new Int32Array(6);
+  for (let b = 0; b < bars.count; b++) {
+    barDofs(model, b, d);
+    for (let g = 0; g < 2; g++) {
+      const o = (2 * b + g) * BAR_GP_STRIDE, ep = barEp[2 * b + g];
+      if (ep === 0) continue;
+      const w = bars.gp[o + 6] * bars.stiffness[b] * ep;
+      for (let k = 0; k < 6; k++) if (d[k] >= 0) out[d[k]] += bars.gp[o + k] * w;
+    }
+  }
+}

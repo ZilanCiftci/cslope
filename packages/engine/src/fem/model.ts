@@ -18,7 +18,8 @@
 
 import { WATER_UNIT_WEIGHT } from "../types/constants";
 import type { Material } from "../types/material";
-import { needsLayerTop } from "../types/strength";
+import { needsLayerTop, resolveUnitWeight } from "../types/strength";
+import { envelopeAt } from "../model/reinforcement";
 import type { Slope } from "../model/slope";
 import { getYAtX } from "../math/interpolation";
 import { GAUSS_T6, GP_STRIDE, gaussData, shapeT6, stiffnessT6 } from "./elements";
@@ -46,7 +47,24 @@ export interface FeModelOptions {
   minAngle?: number;
   /** Vertex cap of the mesh; default 60 000. */
   maxVertices?: number;
+  /**
+   * Axial stiffness EA of reinforcement (kN per metre of slope). It sets how
+   * much the soil must strain before the reinforcement carries its capacity:
+   * the default, 10⁶, mobilises the full capacity before the soil fails, as
+   * limit equilibrium assumes; a product's own stiffness (a geosynthetic's J,
+   * often 500–5000 kN/m) gives strain compatibility, and with it a factor
+   * that can be much lower.
+   */
+  reinforcementStiffness?: number;
+  /**
+   * Divide the capacity of passive reinforcement by F, as the limit
+   * equilibrium solvers do (default true); false reduces only the soil's
+   * strength, as a strength reduction program usually does.
+   */
+  reduceReinforcement?: boolean;
 }
+
+export const DEFAULT_REINFORCEMENT_STIFFNESS = 1e6;
 
 export const DEFAULT_YOUNGS_MODULUS = 1e5;
 export const DEFAULT_POISSONS_RATIO = 0.3;
@@ -94,7 +112,32 @@ export interface FeModel {
   surfaceEdges: Int32Array;
   /** The triangulation the mesh was made from. */
   triangulation: TriMesh;
+  /**
+   * Reinforcement as three-node bars along element edges (bonded to the
+   * soil): nodes (end, middle, end) per bar, and per bar Gauss point (two
+   * per bar) the strain–displacement row (6 numbers: x and y of each node),
+   * the weight × length, the tensile capacity per metre of slope (from the
+   * capacity envelope, so pullout is included) and whether it is passive
+   * (divided by F, as the limit equilibrium solvers do).
+   */
+  bars: FeBars;
 }
+
+export interface FeBars {
+  count: number;
+  nodes: Int32Array;
+  /** Reinforcement index of each bar. */
+  source: Int32Array;
+  /** Per Gauss point (2 per bar): B (6), weight (1). */
+  gp: Float64Array;
+  capacity: Float64Array;
+  passive: Uint8Array;
+  /** EA per bar (kN per metre of slope). */
+  stiffness: Float64Array;
+}
+
+/** Per bar Gauss point record: B (6 numbers), weight × length. */
+export const BAR_GP_STRIDE = 7;
 
 /** y of a polyline at x, extended horizontally beyond its ends. */
 export function polylineY(line: { x: readonly number[]; y: readonly number[] }, x: number): number {
@@ -196,6 +239,11 @@ export function buildFeModel(slope: Slope, options: FeModelOptions = {}): FeMode
   });
 
   const segments: [number, number][][] = polys.map((p) => [...p, p[0]]);
+  // Reinforcement lines are mesh constraints, so that bars lie on element edges.
+  const reinf = slope.reinforcements.filter((r) =>
+    pointInPolygon((r.x1 + r.x2) / 2, (r.y1 + r.y2) / 2, bnd) && Math.hypot(r.x2 - r.x1, r.y2 - r.y1) > 0,
+  );
+  for (const r of reinf) segments.push([[r.x1, r.y1], [r.x2, r.y2]]);
   const tm = meshDomain({
     boundary: bnd,
     segments,
@@ -338,6 +386,9 @@ export function buildFeModel(slope: Slope, options: FeModelOptions = {}): FeMode
   }
   if (neq === 0) throw new Error("finite element model has no free degrees of freedom");
 
+  // Reinforcement bars along the element edges on each line.
+  const bars = buildBars(slope, reinf, el, ne, x, y, span, options.reinforcementStiffness ?? DEFAULT_REINFORCEMENT_STIFFNESS, options.reduceReinforcement ?? true);
+
   // Skyline profile and assembly.
   const first = new Int32Array(neq);
   for (let i = 0; i < neq; i++) first[i] = i;
@@ -366,6 +417,17 @@ export function buildFeModel(slope: Slope, options: FeModelOptions = {}): FeMode
       }
     }
   }
+  for (let b = 0; b < bars.count; b++) {
+    const nodes = [bars.nodes[3 * b], bars.nodes[3 * b + 1], bars.nodes[3 * b + 2]];
+    const d = nodes.flatMap((n) => [eq[2 * n], eq[2 * n + 1]]);
+    for (let g = 0; g < 2; g++) {
+      const o = (2 * b + g) * BAR_GP_STRIDE, w = bars.gp[o + 6] * bars.stiffness[b];
+      for (let i = 0; i < 6; i++) {
+        if (d[i] < 0) continue;
+        for (let j = 0; j <= i; j++) if (d[j] >= 0) K.add(d[i], d[j], w * bars.gp[o + i] * bars.gp[o + j]);
+      }
+    }
+  }
   K.factor();
 
   // Loads.
@@ -376,9 +438,14 @@ export function buildFeModel(slope: Slope, options: FeModelOptions = {}): FeMode
     if (iy >= 0) f[iy] += fy;
   };
   for (let e = 0; e < ne; e++) {
-    const gamma = materials[elMaterial[e]].unitWeight;
+    const m = materials[elMaterial[e]], wl = waterLines[elMaterial[e]];
     for (let g = 0; g < 3; g++) {
       const o = (3 * e + g) * GP_STRIDE, w = gp[o + 12], u = gpU[3 * e + g];
+      // Unit weight as the slices take it: γsat below the material's water
+      // line where given, a spatial model's interpolated γ elsewhere.
+      const gx = gpX[3 * e + g], gy = gpY[3 * e + g];
+      const below = wl ? gy < polylineY(wl, gx) : false;
+      const gamma = below && m.model.unitWeightSat !== undefined ? m.model.unitWeightSat : resolveUnitWeight(m.model, m.unitWeight, gx, gy);
       shapeT6(GAUSS_T6[g][0], GAUSS_T6[g][1], N);
       for (let k = 0; k < 6; k++) {
         // self-weight, and ∫ Bᵀ m u: m = (1, 1, 0) in the plane
@@ -440,6 +507,7 @@ export function buildFeModel(slope: Slope, options: FeModelOptions = {}): FeMode
     gp, gpX, gpY, gpC, gpPhi, gpU,
     eq, eqCount: neq, K, f,
     surfaceEdges: Int32Array.from(surfEdges),
+    bars,
     triangulation: tm,
   };
 }
@@ -487,4 +555,70 @@ export function solveElastic(model: FeModel): { u: Float64Array; stress: Float64
     stress[4 * i + 3] = lam * tr;
   }
   return { u, stress };
+}
+
+/** Bars along the mesh edges that lie on the reinforcement lines. */
+function buildBars(
+  slope: Slope,
+  reinf: Slope["reinforcements"],
+  el: Int32Array,
+  ne: number,
+  x: Float64Array,
+  y: Float64Array,
+  span: number,
+  ea: number,
+  reduce: boolean,
+): FeBars {
+  const nodes: number[] = [], source: number[] = [], gpd: number[] = [], cap: number[] = [], passive: number[] = [], stiff: number[] = [];
+  const all = slope.reinforcements;
+  const envelopes = all.length ? slope.reinforcementEnvelopes : [];
+  const tol = 1e-6 * span;
+  const xi = [-1 / Math.sqrt(3), 1 / Math.sqrt(3)];
+  for (const r of reinf) {
+    const k = all.indexOf(r);
+    const env = envelopes[k];
+    const L = Math.hypot(r.x2 - r.x1, r.y2 - r.y1);
+    const c = (r.x2 - r.x1) / L, s = (r.y2 - r.y1) / L;
+    const station = (px: number, py: number) => (px - r.x1) * c + (py - r.y1) * s;
+    const onLine = (n: number) => {
+      const t = station(x[n], y[n]);
+      return t >= -tol && t <= L + tol && Math.abs(-(x[n] - r.x1) * s + (y[n] - r.y1) * c) <= tol;
+    };
+    const seen = new Set<string>();
+    const spacing = r.spacing && r.spacing > 0 ? r.spacing : 1;
+    for (let e = 0; e < ne; e++) {
+      for (let j = 0; j < 3; j++) {
+        let a = el[6 * e + j], b = el[6 * e + ((j + 1) % 3)];
+        const m = el[6 * e + 3 + j];
+        if (!onLine(a) || !onLine(b)) continue;
+        const key = a < b ? `${a},${b}` : `${b},${a}`;
+        if (seen.has(key)) continue;
+        seen.add(key);
+        let sa = station(x[a], y[a]), sb = station(x[b], y[b]);
+        if (sb < sa) { [a, b] = [b, a]; [sa, sb] = [sb, sa]; }
+        const len = sb - sa;
+        nodes.push(a, m, b);
+        source.push(k);
+        stiff.push(ea);
+        passive.push(r.application === "passive" && reduce ? 1 : 0);
+        for (const q of xi) {
+          // dN/dξ of the quadratic bar (nodes at ξ = −1, 0, 1); ds = len/2 dξ
+          const dn = [q - 0.5, -2 * q, q + 0.5].map((v) => (2 * v) / len);
+          for (const v of dn) gpd.push(v * c, v * s);
+          gpd.push(len / 2);
+          const st = sa + ((q + 1) / 2) * len;
+          cap.push((env ? envelopeAt(env, st) : r.tensileCapacity) / spacing);
+        }
+      }
+    }
+  }
+  return {
+    count: source.length,
+    nodes: Int32Array.from(nodes),
+    source: Int32Array.from(source),
+    gp: Float64Array.from(gpd),
+    capacity: Float64Array.from(cap),
+    passive: Uint8Array.from(passive),
+    stiffness: Float64Array.from(stiff),
+  };
 }

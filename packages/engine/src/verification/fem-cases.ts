@@ -39,6 +39,10 @@ export interface FemSetup {
   /** E, ν, ψ per material name, as the source gives them. */
   materialParameters?: Record<string, FeMaterialParameters>;
   tensionCutoff?: boolean;
+  /** Axial stiffness of the reinforcement (kN/m), as the source gives it. */
+  reinforcementStiffness?: number;
+  /** Whether the source reduces the reinforcement's capacity with the soil's strength; default true. */
+  reduceReinforcement?: boolean;
   /** Initial element size (m); default domain height / 20. */
   elementSize?: number;
   references: FemReference[];
@@ -93,5 +97,7 @@ export function runFemVerification(definition: SlopeDefinition, setup: FemSetup)
     materialParameters: setup.materialParameters,
     tensionCutoff: setup.tensionCutoff,
     elementSize: setup.elementSize,
+    reinforcementStiffness: setup.reinforcementStiffness,
+    reduceReinforcement: setup.reduceReinforcement,
   });
 }

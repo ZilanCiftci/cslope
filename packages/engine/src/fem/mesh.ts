@@ -285,6 +285,26 @@ export function meshDomain(input: MeshInput): TriMesh {
   addLine(input.boundary, true);
   for (const s of input.segments) addLine(s, false);
 
+  // Crossing segments (a reinforcement line through a material boundary)
+  // get a vertex at the crossing, so that both are split there below.
+  {
+    const n0 = segs.length;
+    for (let i = 0; i < n0; i++) {
+      const [a, b] = segs[i];
+      for (let j = i + 1; j < n0; j++) {
+        const [c, d] = segs[j];
+        if (a === c || a === d || b === c || b === d) continue;
+        const ax = dt.x[a], ay = dt.y[a], bx = dt.x[b], by = dt.y[b];
+        const cx = dt.x[c], cy = dt.y[c], dx = dt.x[d], dy = dt.y[d];
+        const den = (bx - ax) * (dy - cy) - (by - ay) * (dx - cx);
+        if (Math.abs(den) < 1e-12 * span * span) continue;
+        const t = ((cx - ax) * (dy - cy) - (cy - ay) * (dx - cx)) / den;
+        const u = ((cx - ax) * (by - ay) - (cy - ay) * (bx - ax)) / den;
+        if (t > 1e-9 && t < 1 - 1e-9 && u > 1e-9 && u < 1 - 1e-9) dt.insert(ax + t * (bx - ax), ay + t * (by - ay), tol);
+      }
+    }
+  }
+
   // Split every segment at input vertices lying on it, and drop duplicates.
   const inputVerts = dt.x.length;
   const onSeg = (a: number, b: number, c: number) => {

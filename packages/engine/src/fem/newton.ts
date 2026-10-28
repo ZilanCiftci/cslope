@@ -24,6 +24,7 @@
 import { GP_STRIDE } from "./elements";
 import type { FeModel } from "./model";
 import { SkylineMatrix } from "./skyline";
+import { barInternal } from "./bars";
 
 export interface ReturnResult {
   /** Stress after return (σx, σy, τxy, σz). */
@@ -224,6 +225,10 @@ export interface NewtonState {
   ep: Float64Array;
   /** Stress per Gauss point (σx, σy, τxy, σz). */
   stress: Float64Array;
+  /** Plastic axial strain of the reinforcement bars (2 per bar). */
+  barEp: Float64Array;
+  /** Reduction factor (the bars' passive capacity is divided by it). */
+  F: number;
 }
 
 export interface NewtonOptions {
@@ -365,10 +370,12 @@ export function newtonAtF(
   const u = state.u.slice();
   const fint = new Float64Array(neq), r = new Float64Array(neq), du = new Float64Array(neq);
   const stress = new Float64Array(4 * ngp), ep = new Float64Array(4 * ngp);
+  const barEp = new Float64Array(state.barEp.length);
   const trialU = new Float64Array(neq);
   const K = new SkylineMatrix(model.K.first);
   const residual = (uu: Float64Array, withK: boolean): number => {
     evaluate(model, eqs, uu, state.ep, strength, cutoff, fint, stress, ep, withK ? K : null);
+    if (model.bars.count) barInternal(model, uu, state.barEp, state.F, fint, barEp, withK ? K : null);
     for (let i = 0; i < neq; i++) r[i] = model.f[i] - fint[i];
     return norm2(r);
   };
@@ -376,7 +383,7 @@ export function newtonAtF(
   const history: number[] = [];
   for (let it = 1; it <= limit; it++) {
     if (rn <= tol * fnorm) {
-      state.u.set(u); state.ep.set(ep); state.stress.set(stress);
+      state.u.set(u); state.ep.set(ep); state.stress.set(stress); state.barEp.set(barEp);
       return { converged: true, iterations: it - 1 };
     }
     // Stagnation: beyond the limit load the residual stops falling.
@@ -401,7 +408,7 @@ export function newtonAtF(
     rn = residual(u, true);
   }
   if (rn <= tol * fnorm) {
-    state.u.set(u); state.ep.set(ep); state.stress.set(stress);
+    state.u.set(u); state.ep.set(ep); state.stress.set(stress); state.barEp.set(barEp);
     return { converged: true, iterations: limit };
   }
   return { converged: false, iterations: limit };

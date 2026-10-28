@@ -128,3 +128,26 @@ describe("buildFeModel, elastic gravity", () => {
     expect(worst).toBeLessThan(1e-4);
   });
 });
+
+describe("reinforcement bars", () => {
+  it("meshes a reinforcement line that crosses a material boundary and adds bars along it", () => {
+    const def = {
+      coordinates: [[0, 0], [0, 6], [20, 6], [20, 0]],
+      materials: [
+        { name: "Fill", model: { kind: "mohr-coulomb", unitWeight: 18, cohesion: 0, frictionAngle: 34 } },
+        { name: "Facing", model: { kind: "mohr-coulomb", unitWeight: 18, cohesion: 2.5, frictionAngle: 34 } },
+      ],
+      materialBoundaries: [{ coordinates: [[2, 0], [2, 6]], materialName: "" }],
+      regionAssignments: [{ point: [1, 3], materialName: "Facing" }, { point: [10, 3], materialName: "Fill" }],
+      reinforcements: [{ x1: 1, y1: 3, x2: 12, y2: 3, tensileCapacity: 20, application: "passive" }],
+    } as unknown as SlopeDefinition;
+    const model = buildFeModel(buildSlope(toCanonicalSlopeDefinition(def)), { elementSize: 1 });
+    expect(model.bars.count).toBeGreaterThan(5);
+    // the bars cover the line's length (11 m) once
+    let length = 0;
+    for (let g = 0; g < 2 * model.bars.count; g++) length += model.bars.gp[7 * g + 6];
+    expect(length).toBeCloseTo(11, 6);
+    // capacity per metre of slope, the full tensile capacity (no pullout given)
+    expect(Math.max(...model.bars.capacity)).toBeCloseTo(20, 9);
+  });
+});

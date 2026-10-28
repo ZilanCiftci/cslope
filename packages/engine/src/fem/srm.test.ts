@@ -52,3 +52,21 @@ describe("strengthReduction", () => {
     expect(newton.iterations).toBeLessThan(vp.iterations);
   }, 180000);
 });
+
+describe("strengthReduction with reinforcement", () => {
+  const def = (reinforced: boolean) =>
+    ({
+      coordinates: [[0, 0], [0, 10], [10, 10], [15, 4], [30, 4], [30, 0]],
+      materials: [{ name: "Clay", model: { kind: "undrained", unitWeight: 18, undrainedShearStrength: 25 } }],
+      reinforcements: reinforced
+        ? [5, 6.5, 8].map((y) => ({ x1: 15 - ((y - 4) * 5) / 6, y1: y, x2: 2, y2: y, tensileCapacity: 60, application: "passive" }))
+        : [],
+    }) as unknown as SlopeDefinition;
+  it("raises the factor of safety, with Newton and with the viscoplastic iteration", () => {
+    for (const solver of ["newton", "viscoplastic"] as const) {
+      const plain = strengthReduction(buildFeModel(buildSlope(toCanonicalSlopeDefinition(def(false))), { elementSize: 1.5 }), { solver, fTolerance: 0.02 });
+      const reinf = strengthReduction(buildFeModel(buildSlope(toCanonicalSlopeDefinition(def(true))), { elementSize: 1.5 }), { solver, fTolerance: 0.02 });
+      expect(reinf.factorOfSafety).toBeGreaterThan(plain.factorOfSafety + 0.01);
+    }
+  }, 240000);
+});
