@@ -180,8 +180,11 @@ export function lowerBoundProblem(slope: Slope, options: LowerBoundOptions = {})
         const yw = polylineY(slope.waterRLXY, x[node]);
         pw = Number.isFinite(yw) ? WATER_UNIT_WEIGHT * Math.max(0, yw - y[node]) : 0;
       }
+      // A strip load acts on the edges whose middle it covers: the node at its
+      // end carries it on one side and not on the other (nodes are not shared).
       let q = 0;
-      for (const udl of slope.udls) if (x[node] >= udl.x1 - 1e-9 && x[node] <= udl.x2 + 1e-9) q += udl.magnitude;
+      const mx = (x[a] + x[b]) / 2;
+      for (const udl of slope.udls) if (mx >= udl.x1 && mx <= udl.x2) q += udl.magnitude;
       // traction vector t = −pw n + (0, −q |n_y|); σn,total = t·n, τ = t·s with s = (−ny, nx)
       const tx = -pw * nx, ty = -pw * ny - q * Math.abs(ny);
       const tn = tx * nx + ty * ny, ts = -tx * ny + ty * nx;

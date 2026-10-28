@@ -125,6 +125,34 @@ function polygonArea(px: readonly number[], py: readonly number[]): number {
   return a / 2;
 }
 
+/**
+ * The boundary with a vertex where a strip load starts or ends and under a
+ * line load, so that the load's edge falls on a node: the traction jumps
+ * there (exactly representable in the lower bound, whose stress nodes are
+ * not shared) and no element edge smears it.
+ */
+function withLoadVertices(bnd: [number, number][], slope: Slope): [number, number][] {
+  const surface = slope.surfaceLineXY;
+  if (!surface) return bnd;
+  const xs = new Set<number>();
+  for (const q of slope.udls) { xs.add(q.x1); xs.add(q.x2); }
+  for (const l of slope.lineLoads) xs.add(l.x);
+  let out = bnd;
+  for (const px of xs) {
+    let best = -1, bestY = -Infinity;
+    for (let i = 0; i < out.length; i++) {
+      const [ax, ay] = out[i], [bx, by] = out[(i + 1) % out.length];
+      if (Math.abs(bx - ax) < 1e-9 || px <= Math.min(ax, bx) + 1e-9 || px >= Math.max(ax, bx) - 1e-9) continue;
+      const mx = (ax + bx) / 2, my = (ay + by) / 2;
+      if (distToPolyline(mx, my, surface.x, surface.y) > 1e-6 * (1 + Math.abs(mx) + Math.abs(my))) continue;
+      const py = ay + ((px - ax) / (bx - ax)) * (by - ay);
+      if (py > bestY) { bestY = py; best = i; }
+    }
+    if (best >= 0) out = [...out.slice(0, best + 1), [px, bestY], ...out.slice(best + 1)];
+  }
+  return out;
+}
+
 /** Build the finite element model of a slope and factorise its stiffness. */
 export function buildFeModel(slope: Slope, options: FeModelOptions = {}): FeModel {
   const ext = slope.externalBoundaryXY;
@@ -134,6 +162,7 @@ export function buildFeModel(slope: Slope, options: FeModelOptions = {}): FeMode
     if (fx === lx && fy === ly) bnd = bnd.slice(0, -1);
   }
   if (polygonArea(bnd.map((p) => p[0]), bnd.map((p) => p[1])) < 0) bnd.reverse();
+  bnd = withLoadVertices(bnd, slope);
   let xmin = Infinity, xmax = -Infinity, ymin = Infinity, ymax = -Infinity;
   for (const [px, py] of bnd) {
     xmin = Math.min(xmin, px); xmax = Math.max(xmax, px);
