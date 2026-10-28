@@ -38,11 +38,51 @@ The script compares the regenerated verification table with the committed one an
 | 2026-10-28 | FE step 3: reinforcement bars, seepage, robust strength reduction search; Leshchinsky & Han walls not compared | 0 | 0.348 → 0.348 | 0.483 → 0.483 | 1.011 → 1.011 | 1.595 → 1.595 | 3193 s (4 workers, load 1.4 at start) |
 | 2026-10-28 | Fixes from the finite element review (lower bound γsat and seepage pore pressures, seepage face, rigid materials, FE cache key) | 0 | 0.348 → 0.348 | 0.483 → 0.483 | 1.011 → 1.011 | 1.595 → 1.595 | 1276 s (4 workers, load 0.8 at start) |
 | 2026-10-28 | Faster finite element strength reduction (sparse Cholesky, collapse estimate, guided refinement) | 0 | 0.348 → 0.348 | 0.483 → 0.483 | 1.011 → 1.011 | 1.595 → 1.595 | 1573 s (4 workers, load 1.2 at start) |
+| 2026-10-28 | FE solver review: published methods only (bisection without collapse estimate, Aitken relaxation in seepage) | 0 | 0.348 → 0.348 | 0.483 → 0.483 | 1.011 → 1.011 | 1.595 → 1.595 | 1196 s (4 workers, load 1.3 at start) |
 <!-- summary-end -->
 
 ## Entries
 
 <!-- entries -->
+
+### 2026-10-28: FE solver review: published methods only (bisection without collapse estimate, Aitken relaxation in seepage)
+
+Compared with 68a5095. Errors are relative to the reference, in percent. Verification run time: 1196 s (4 workers, load 1.3 at start).
+
+**Against other programs (midpoint of their range):** 0 moved (0 closer to the reference, 0 further).
+
+| Result | Reference | Before | After | Error before | Error after |
+|---|---|---|---|---|---|
+| **Mean error (n = 279)** | | | | -0.231 % | -0.231 % |
+| **Mean absolute error** | | | | 0.348 % | 0.348 % |
+| **RMS error** | | | | 0.483 % | 0.483 % |
+| **Largest error** | | | | 2.100 % | 2.100 % |
+
+**Against the papers:** 0 moved (0 closer to the reference, 0 further).
+
+| Result | Reference | Before | After | Error before | Error after |
+|---|---|---|---|---|---|
+| **Mean error (n = 111)** | | | | -0.167 % | -0.167 % |
+| **Mean absolute error** | | | | 1.011 % | 1.011 % |
+| **RMS error** | | | | 1.595 % | 1.595 % |
+| **Largest error** | | | | 6.591 % | 6.591 % |
+
+**Finite elements against their references (FE, finite differences, limit analysis, theory):** 7 moved (3 closer to the reference, 4 further).
+
+| Result | Reference | Before | After | Error before | Error after |
+|---|---|---|---|---|---|
+| V013a finite-element strength reduction (3D, without piles) (Cai & Ugai (2000)) | 1.140 | 1.1394 | 1.1207 | -0.053 % | -1.693 % |
+| V057b finite elements (Griffiths & Lane (1999)) | 2.030 | 2.0640 | 2.0485 | +1.675 % | +0.911 % |
+| V058 finite elements (Griffiths & Lane (1999)) | 1.900 | 1.8413 | 1.8508 | -3.089 % | -2.589 % |
+| V063 finite-element strength reduction (Huang & Jia (2009)) | 2.500 | 2.4082 | 2.3974 | -3.672 % | -4.104 % |
+| V020 finite-element strength reduction (Cheng et al. (2007)) | 1.327 | 1.3632 | 1.3666 | +2.728 % | +2.984 % |
+| V039 finite-element strength reduction (Duncan, Wright & Brandon (2014)) | 1.260 | 1.2405 | 1.2436 | -1.548 % | -1.302 % |
+| V055 finite elements (Griffiths & Lane (1999)) | 1.400 | 1.3444 | 1.3443 | -3.971 % | -3.979 % |
+| **Mean error (n = 19)** | | | | -1.370 % | -1.467 % |
+| **Mean absolute error** | | | | 2.762 % | 2.806 % |
+| **RMS error** | | | | 5.232 % | 5.243 % |
+| **Largest error** | | | | 20.467 % | 20.467 % |
+
 
 ### 2026-10-28: Faster finite element strength reduction (sparse Cholesky, collapse estimate, guided refinement)
 
