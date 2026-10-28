@@ -192,6 +192,47 @@ describe("steady seepage", () => {
   });
 });
 
+describe("steady seepage with a water table below the ground", () => {
+  it("holds the water table at the model's sides instead of draining the slope", () => {
+    // natural slope, water table 2 m below the crest, at the toe level downstream
+    const def = {
+      coordinates: [[0, 0], [0, 4], [20, 4], [40, 14], [60, 14], [60, 0]],
+      materials: [{ name: "Soil", model: { kind: "mohr-coulomb", unitWeight: 19, cohesion: 10, frictionAngle: 30 } }],
+      waterTable: { mode: "custom", value: [[0, 4], [20, 4], [40, 12], [60, 12]], followBoundary: false },
+    } as unknown as SlopeDefinition;
+    const slope = buildSlope(toCanonicalSlopeDefinition(def));
+    const m = buildFeModel(slope, { elementSize: 1.5, porePressure: "seepage" });
+    expect(m.seepage?.flow).toBe(true);
+    expect(m.seepage?.converged).toBe(true);
+    // near the side under the crest the head is the drawn water table's
+    // (the model may be mirrored, so both sides are looked at)
+    const headNear = (px: number) => {
+      let best = -1, d = Infinity;
+      for (let i = 0; i < m.gpX.length; i++) {
+        const dd = Math.hypot(m.gpX[i] - px, m.gpY[i] - 5);
+        if (dd < d) { d = dd; best = i; }
+      }
+      return m.gpU[best] / WATER_UNIT_WEIGHT + m.gpY[best];
+    };
+    expect(Math.max(headNear(1), headNear(59))).toBeGreaterThan(11.5);
+    expect(Math.min(headNear(1), headNear(59))).toBeLessThan(4.5);
+  });
+
+  it("keeps each material's water line when no water reaches the boundary", () => {
+    const def = layer({ waterTable: { mode: "custom", value: [[0, -5], [30, -5]], followBoundary: false } });
+    const slope = buildSlope(toCanonicalSlopeDefinition(def));
+    const m = buildFeModel(slope, { elementSize: 2, porePressure: "seepage" });
+    expect(m.seepage?.flow).toBe(false);
+    expect(Math.max(...m.gpU)).toBe(0);
+  });
+
+  it("rejects van Genuchten n ≤ 1", () => {
+    const def = layer({ waterTable: { mode: "custom", value: [[0, 10], [30, 10]], followBoundary: false } });
+    const slope = buildSlope(toCanonicalSlopeDefinition(def));
+    expect(() => buildFeModel(slope, { elementSize: 2, porePressure: "seepage", materialParameters: { "*": { vanGenuchtenN: 0.9 } } })).toThrow(/van Genuchten/);
+  });
+});
+
 describe("rigid materials", () => {
   it("are stiffer than the stiffest soil and nearly impervious", () => {
     const def = {

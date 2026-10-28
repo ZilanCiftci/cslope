@@ -21,18 +21,31 @@
  * 546–557, fig. 3: iterate until the reference load is carried).
  *
  * Implementation choices (not from the literature): p = 24 sides; the
- * secant method on log λ, stopping when F changes by less than 0.002 (F is
- * a lower bound only where λ(F) ≥ 1, so the last step is within that
- * tolerance of one); the load factor on every load, weight included, as the
- * strength reduction applies; interior point first and simplex as the
+ * secant method on log λ with trials tol/2 below its root, returning the
+ * largest evaluated F with λ(F) ≥ 1 once it lies within 0.002 of the root
+ * (only such an F is a lower bound); the load factor on every load, weight
+ * included, as the strength reduction applies; a line load spread over the
+ * two surface edges at its point; interior point first and simplex as the
  * fallback.
  */
 
 import { WATER_UNIT_WEIGHT } from "../types/constants";
 import type { Slope } from "../model/slope";
-import { needsLayerTop } from "../types/strength";
-import { GAUSS_T6 } from "./elements";
+import { designStrength, needsLayerTop } from "../types/strength";
+import { materialLayerTopAt } from "../model/geometry-ops";
 import { buildFeModel, gaussUnitWeight, polylineY, type FeModelOptions } from "./model";
+
+/** Sectors per element at a corner of the ground surface (see lowerBoundProblem). */
+const FAN_SECTORS = 4;
+
+/** Centroids of the 16 sub-triangles of a 4 × 4 subdivision, in area coordinates (r, s). */
+const WEIGHT_POINTS: [number, number][] = [];
+for (let i = 0; i < 4; i++) {
+  for (let j = 0; i + j < 4; j++) {
+    WEIGHT_POINTS.push([(i + 1 / 3) / 4, (j + 1 / 3) / 4]);
+    if (i + j < 3) WEIGHT_POINTS.push([(i + 2 / 3) / 4, (j + 2 / 3) / 4]);
+  }
+}
 
 export interface LowerBoundOptions extends FeModelOptions {
   /** Sides of the inscribed yield polygon; default 24. */
@@ -83,12 +96,99 @@ interface LbProblem {
   variables: number;
   constraints: number;
   warnings: string[];
+  /** The lower bound mesh: corner coordinates and three nodes per element (for inspection). */
+  mesh: { x: Float64Array; y: Float64Array; el: Int32Array };
 }
 
 /** Assemble the lower bound problem of a slope (the parts that do not depend on F). */
 export function lowerBoundProblem(slope: Slope, options: LowerBoundOptions = {}): LbProblem {
   const model = buildFeModel(slope, options);
-  const { x, y, el, elementCount: ne, materials, elMaterial, elElastic } = model;
+  const { materials } = model;
+  // The elements: the model's triangles (corner nodes), except that one with
+  // two edges carrying a traction condition (the free ground surface, or a
+  // vertical side, which carries no shear) is split at its centroid into
+  // three. A linear stress field with both conditions leaves too little
+  // freedom: with no cohesion, a surface edge holds no stress at its nodes,
+  // and in an element that also has a side edge equilibrium then demands
+  // uniaxial vertical compression under an inclined surface, which a
+  // frictional soil cannot carry, or zero stress with two surface edges.
+  const keyOf = (a: number, b: number) => (a < b ? `${a},${b}` : `${b},${a}`);
+  const surfaceKey = new Set<string>();
+  for (let s = 0; s < model.surfaceEdges.length; s += 3) surfaceKey.add(keyOf(model.surfaceEdges[s], model.surfaceEdges[s + 2]));
+  const edgeUse = new Map<string, number>();
+  for (let e = 0; e < model.elementCount; e++) {
+    for (let k = 0; k < 3; k++) {
+      const key = keyOf(model.el[6 * e + k], model.el[6 * e + ((k + 1) % 3)]);
+      edgeUse.set(key, (edgeUse.get(key) ?? 0) + 1);
+    }
+  }
+  const xs = Array.from(model.x), ys = Array.from(model.y);
+  const elList: number[] = [], matList: number[] = [], elasticList: number[] = [];
+  for (let e = 0; e < model.elementCount; e++) {
+    const cn = [model.el[6 * e], model.el[6 * e + 1], model.el[6 * e + 2]];
+    let traction = 0;
+    for (let k = 0; k < 3; k++) {
+      const a = cn[k], b = cn[(k + 1) % 3], key = keyOf(a, b);
+      const side = edgeUse.get(key) === 1 && Math.abs(xs[b] - xs[a]) <= 1e-3 * Math.abs(ys[b] - ys[a]);
+      if (surfaceKey.has(key) || side) traction++;
+    }
+    const tris = [cn];
+    if (traction >= 2) {
+      const g = xs.length;
+      xs.push((xs[cn[0]] + xs[cn[1]] + xs[cn[2]]) / 3);
+      ys.push((ys[cn[0]] + ys[cn[1]] + ys[cn[2]]) / 3);
+      tris[0] = [cn[0], cn[1], g];
+      tris.push([cn[1], cn[2], g], [cn[2], cn[0], g]);
+    }
+    for (const t of tris) { elList.push(...t); matList.push(model.elMaterial[e]); elasticList.push(model.elElastic[e]); }
+  }
+  // Fans at the corners of the ground surface (crest, toe, and its ends at
+  // the sides): the stress there is singular in direction, and a lower
+  // bound needs several stress sectors meeting at the corner (Sloan 1988,
+  // fans of discontinuities at singular points). Each element at a corner
+  // is divided into FAN_SECTORS sectors from the corner by points halfway
+  // towards the opposite edge, so that no new node lies on an edge shared
+  // with another element.
+  const surfNbr = new Map<number, number[]>();
+  for (let s = 0; s < model.surfaceEdges.length; s += 3) {
+    const a = model.surfaceEdges[s], b = model.surfaceEdges[s + 2];
+    surfNbr.set(a, [...(surfNbr.get(a) ?? []), b]);
+    surfNbr.set(b, [...(surfNbr.get(b) ?? []), a]);
+  }
+  const corner = new Set<number>();
+  for (const [v, nb] of surfNbr) {
+    if (nb.length !== 2) { corner.add(v); continue; }
+    const ax = xs[nb[0]] - xs[v], ay = ys[nb[0]] - ys[v], bx = xs[nb[1]] - xs[v], by = ys[nb[1]] - ys[v];
+    // any kink: even a slight one leaves two elements with one stress
+    // field each to meet there (not only a round-off one, 10⁻⁹ rad)
+    if (Math.abs(ax * by - ay * bx) > 1e-9 * Math.sqrt((ax * ax + ay * ay) * (bx * bx + by * by))) corner.add(v);
+  }
+  const fanned: number[] = [], fanMat: number[] = [], fanElastic: number[] = [];
+  for (let t = 0; t < matList.length; t++) {
+    const tri = [elList[3 * t], elList[3 * t + 1], elList[3 * t + 2]];
+    const kv = tri.findIndex((n) => corner.has(n));
+    const out: number[][] = [];
+    if (kv < 0) out.push(tri);
+    else {
+      const v = tri[kv], a = tri[(kv + 1) % 3], b = tri[(kv + 2) % 3];
+      const pts: number[] = [];
+      for (let j = 1; j < FAN_SECTORS; j++) {
+        const qx = xs[a] + (j / FAN_SECTORS) * (xs[b] - xs[a]), qy = ys[a] + (j / FAN_SECTORS) * (ys[b] - ys[a]);
+        pts.push(xs.length);
+        xs.push((xs[v] + qx) / 2);
+        ys.push((ys[v] + qy) / 2);
+      }
+      const ring = [a, ...pts, b];
+      for (let j = 0; j + 1 < ring.length; j++) out.push([v, ring[j], ring[j + 1]]);
+      // the strip between the opposite edge and the inner points
+      out.push([a, b, pts[pts.length - 1]]);
+      for (let j = pts.length - 1; j > 0; j--) out.push([a, pts[j], pts[j - 1]]);
+    }
+    for (const o of out) { fanned.push(...o); fanMat.push(matList[t]); fanElastic.push(elasticList[t]); }
+  }
+  const x = Float64Array.from(xs), y = Float64Array.from(ys);
+  const el = Int32Array.from(fanned), elMaterial = Int32Array.from(fanMat), elElastic = Uint8Array.from(fanElastic);
+  const ne = elMaterial.length;
   const p = options.sides ?? 24;
   const cutoff = options.tensionCutoff ?? false;
   const warnings: string[] = [];
@@ -96,19 +196,20 @@ export function lowerBoundProblem(slope: Slope, options: LowerBoundOptions = {})
   for (let n = 0; n < x.length; n++) { xLo = Math.min(xLo, x[n]); xHi = Math.max(xHi, x[n]); yHi = Math.max(yHi, y[n]); }
   const surface = slope.surfaceLineXY ?? { x: [xLo, xHi], y: [yHi, yHi] };
   const waterLines = materials.map((m) => slope.getWaterLineForMaterial(m));
-  if (slope.lineLoads.length) warnings.push("Line loads are not included in the lower bound analysis.");
   if (model.bars.count > 0) warnings.push("Reinforcement is not included in the lower bound analysis.");
-  const head = model.seepage?.head;
+  const head = model.seepage?.flow ? model.seepage.head : undefined;
 
   // Nodal data per element corner: pore pressure and strength.
   const nU = new Float64Array(3 * ne);
   const nC = new Float64Array(3 * ne);
   const nPhi = new Float64Array(3 * ne);
+  // Undrained cap of a combined material (Infinity where there is none).
+  const nCu = new Float64Array(3 * ne).fill(Infinity);
   let allUndrained = true;
   for (let e = 0; e < ne; e++) {
     const m = materials[elMaterial[e]], wl = waterLines[elMaterial[e]];
     for (let k = 0; k < 3; k++) {
-      const n = el[6 * e + k], i = 3 * e + k;
+      const n = el[3 * e + k], i = 3 * e + k;
       // Pore pressure from the seepage heads when the model has them, else from the water line.
       if (head) nU[i] = Number.isFinite(head[n]) ? Math.max(0, WATER_UNIT_WEIGHT * (head[n] - y[n])) : 0;
       else if (wl) {
@@ -117,12 +218,17 @@ export function lowerBoundProblem(slope: Slope, options: LowerBoundOptions = {})
       }
       if (elElastic[e]) continue;
       // Strength just inside the element (a node on a boundary takes this element's material).
-      const cx = (x[el[6 * e]] + x[el[6 * e + 1]] + x[el[6 * e + 2]]) / 3, cy = (y[el[6 * e]] + y[el[6 * e + 1]] + y[el[6 * e + 2]]) / 3;
+      const cx = (x[el[3 * e]] + x[el[3 * e + 1]] + x[el[3 * e + 2]]) / 3, cy = (y[el[3 * e]] + y[el[3 * e + 1]] + y[el[3 * e + 2]]) / 3;
       const px = x[n] + 1e-6 * (cx - x[n]), py = y[n] + 1e-6 * (cy - y[n]);
       const yGround = polylineY(surface, px);
-      const s = m.getStrength({ yBottom: py, x: px, yGround, alpha: 0, ...(needsLayerTop(m.model) ? { yLayerTop: yGround } : {}) });
-      nC[i] = Math.max(0, s.cohesion);
-      nPhi[i] = (s.frictionAngle * Math.PI) / 180;
+      // Strength as in the strength reduction model (model.ts): depth from
+      // the layer top, design values with the partial factors.
+      const yLayerTop = needsLayerTop(m.model) ? (materialLayerTopAt(slope.materialGeometries, m, px, py) ?? yGround) : undefined;
+      const s = m.getStrength({ yBottom: py, x: px, yGround, alpha: 0, ...(yLayerTop !== undefined ? { yLayerTop } : {}) });
+      const d = designStrength(m.model.kind, s, slope.partialFactors);
+      nC[i] = Math.max(0, d.cohesion);
+      nPhi[i] = d.undrained ? 0 : slope.partialFactors ? Math.atan(d.tanPhi) : (s.frictionAngle * Math.PI) / 180;
+      if (s.isCombined && !d.undrained) nCu[i] = Math.max(0, d.cohesionUndrained);
       if (nPhi[i] > 0) allUndrained = false;
     }
   }
@@ -135,18 +241,21 @@ export function lowerBoundProblem(slope: Slope, options: LowerBoundOptions = {})
   const fixed: string[] = [];
   let row = 0;
   for (let e = 0; e < ne; e++) {
-    const n = [el[6 * e], el[6 * e + 1], el[6 * e + 2]];
+    const n = [el[3 * e], el[3 * e + 1], el[3 * e + 2]];
     const b = [y[n[1]] - y[n[2]], y[n[2]] - y[n[0]], y[n[0]] - y[n[1]]];
     const c = [x[n[2]] - x[n[1]], x[n[0]] - x[n[2]], x[n[1]] - x[n[0]]];
     const area2 = b[0] * c[1] - b[1] * c[0];
-    // Weight: the mean unit weight at the element's three Gauss points
-    // (γsat below the water as in the deformation analysis).
+    // Weight: the mean unit weight over the element (γsat below the water
+    // as in the deformation analysis), by the midpoint rule on 16 equal
+    // sub-triangles, so that an element cut by the water table carries
+    // close to its true weight (the deformation analysis' three Gauss
+    // points weigh it in thirds).
     let gamma = 0;
-    for (let g = 0; g < 3; g++) {
-      const [r, s2] = GAUSS_T6[g], t = 1 - r - s2;
+    for (const [r, s2] of WEIGHT_POINTS) {
+      const t = 1 - r - s2;
       const gx = t * x[n[0]] + r * x[n[1]] + s2 * x[n[2]], gy = t * y[n[0]] + r * y[n[1]] + s2 * y[n[2]];
       const u = t * nU[3 * e] + r * nU[3 * e + 1] + s2 * nU[3 * e + 2];
-      gamma += gaussUnitWeight(materials[elMaterial[e]], waterLines[elMaterial[e]], !!head, u, gx, gy) / 3;
+      gamma += gaussUnitWeight(materials[elMaterial[e]], waterLines[elMaterial[e]], !!head, u, gx, gy) / WEIGHT_POINTS.length;
     }
     let ux = 0, uy = 0;
     for (let k = 0; k < 3; k++) { ux += b[k] * nU[3 * e + k]; uy += c[k] * nU[3 * e + k]; }
@@ -160,7 +269,7 @@ export function lowerBoundProblem(slope: Slope, options: LowerBoundOptions = {})
     fixed.push(` r${row++}:${r2}${term(-(uy + area2 * gamma), "lam")} = 0`);
   }
   // Edges: find each edge's elements by corner pair.
-  const nc = model.cornerCount;
+  const nc = x.length; // key multiplier for node pairs
   const edgeOwner = new Map<number, [number, number]>();
   const surfaceSet = new Set<number>();
   for (let s = 0; s < model.surfaceEdges.length; s += 3) {
@@ -169,7 +278,7 @@ export function lowerBoundProblem(slope: Slope, options: LowerBoundOptions = {})
   }
   for (let e = 0; e < ne; e++) {
     for (let k = 0; k < 3; k++) {
-      const a = el[6 * e + k], b = el[6 * e + ((k + 1) % 3)];
+      const a = el[3 * e + k], b = el[3 * e + ((k + 1) % 3)];
       const key = a < b ? a * nc + b : b * nc + a;
       const len = Math.hypot(x[b] - x[a], y[b] - y[a]);
       const nx = (y[b] - y[a]) / len, ny = -(x[b] - x[a]) / len; // outward for this element
@@ -179,7 +288,7 @@ export function lowerBoundProblem(slope: Slope, options: LowerBoundOptions = {})
       if (other) {
         // continuity of total normal and shear traction at both ends
         const [e2, k2] = other;
-        const a2 = el[6 * e2 + k2];
+        const a2 = el[3 * e2 + k2];
         for (const [kk, node] of [[k, a], [(k + 1) % 3, b]] as [number, number][]) {
           const kk2 = node === a2 ? k2 : (k2 + 1) % 3;
           const du = nU[3 * e + kk] - nU[3 * e2 + kk2];
@@ -198,7 +307,7 @@ export function lowerBoundProblem(slope: Slope, options: LowerBoundOptions = {})
   // so it carries no shear; the base is fixed and carries any traction.
   for (const [key, [e, k]] of edgeOwner) {
     if (surfaceSet.has(key)) continue;
-    const a = el[6 * e + k], b = el[6 * e + ((k + 1) % 3)];
+    const a = el[3 * e + k], b = el[3 * e + ((k + 1) % 3)];
     if (Math.abs(x[b] - x[a]) > 1e-3 * Math.abs(y[b] - y[a])) continue;
     const len = Math.hypot(x[b] - x[a], y[b] - y[a]);
     const nx = (y[b] - y[a]) / len, ny = -(x[b] - x[a]) / len;
@@ -206,24 +315,66 @@ export function lowerBoundProblem(slope: Slope, options: LowerBoundOptions = {})
       fixed.push(` r${row++}:${term(-nx * ny, v(e, kk, 0))}${term(nx * ny, v(e, kk, 1))}${term(nx * nx - ny * ny, v(e, kk, 2))} = 0`);
     }
   }
+  // Line loads: a concentrated load has no bounded traction, so each is
+  // spread as uniform strip loads over the two surface edges meeting at its
+  // point (a mesh vertex, model.ts), in inverse proportion to their
+  // horizontal lengths, which keeps its resultant and its point of action.
+  // Where only one edge with a horizontal extent meets the point (at the
+  // end of the surface or the top of a vertical face) the load is spread
+  // over it linearly from 2P/d at the point to 0, its resultant d/3 from
+  // the point (the tractions are linear on an edge). Per edge and node:
+  const lineQ = new Map<string, number>();
+  const addQ = (edge: number, node: number, q: number) => lineQ.set(`${edge}:${node}`, (lineQ.get(`${edge}:${node}`) ?? 0) + q);
+  // Variable loads take the partial factor γQ, as in the slices.
+  const loadFactor = slope.partialFactors?.variableLoad ?? 1;
+  for (const ll of slope.lineLoads) {
+    let v = -1;
+    for (let s = 0; s < model.surfaceEdges.length; s += 3) {
+      for (const node of [model.surfaceEdges[s], model.surfaceEdges[s + 2]]) {
+        if (Math.abs(x[node] - ll.x) <= 1e-9 * (1 + Math.abs(ll.x)) && (v < 0 || y[node] > y[v])) v = node;
+      }
+    }
+    if (v < 0) { warnings.push(`A line load at x = ${ll.x} is not on the mesh's ground surface and is not included.`); continue; }
+    const adj: [number, number, number][] = []; // edge key, horizontal length, the other node
+    for (let s = 0; s < model.surfaceEdges.length; s += 3) {
+      const a = model.surfaceEdges[s], b = model.surfaceEdges[s + 2];
+      if ((a === v || b === v) && Math.abs(x[b] - x[a]) > 0) adj.push([a < b ? a * nc + b : b * nc + a, Math.abs(x[b] - x[a]), a === v ? b : a]);
+    }
+    const P = ll.magnitude * loadFactor;
+    if (adj.length === 1) {
+      const [k1, d1, o1] = adj[0];
+      addQ(k1, v, (2 * P) / d1);
+      addQ(k1, o1, 0);
+      warnings.push(`The line load at x = ${ll.x} is spread over one element edge; its point of action moves ${(d1 / 3).toFixed(2)} m into the slope.`);
+    } else if (adj.length >= 2) {
+      const [[k1, d1, o1], [k2, d2, o2]] = adj;
+      // P1 = P d2/(d1 + d2) on edge 1 and P2 = P d1/(d1 + d2) on edge 2: P1 d1/2 = P2 d2/2.
+      const q1 = (P * d2) / (d1 + d2) / d1, q2 = (P * d1) / (d1 + d2) / d2;
+      addQ(k1, v, q1); addQ(k1, o1, q1);
+      addQ(k2, v, q2); addQ(k2, o2, q2);
+    }
+  }
   // On the ground surface the traction is prescribed.
   for (const [key, [e, k]] of edgeOwner) {
     if (!surfaceSet.has(key)) continue;
-    const a = el[6 * e + k], b = el[6 * e + ((k + 1) % 3)];
+    const a = el[3 * e + k], b = el[3 * e + ((k + 1) % 3)];
+    // Ponded water: the line of the element's material, as model.ts; with
+    // seepage the water table that drives the flow.
+    const pondLine = head ? slope.waterRLXY : waterLines[elMaterial[e]];
     const len = Math.hypot(x[b] - x[a], y[b] - y[a]);
     const nx = (y[b] - y[a]) / len, ny = -(x[b] - x[a]) / len;
     for (const [kk, node] of [[k, a], [(k + 1) % 3, b]] as [number, number][]) {
       // loads: ponded water (normal pressure) and strip loads (vertical, per horizontal metre)
       let pw = 0;
-      if (slope.waterRLXY) {
-        const yw = polylineY(slope.waterRLXY, x[node]);
+      if (pondLine) {
+        const yw = polylineY(pondLine, x[node]);
         pw = Number.isFinite(yw) ? WATER_UNIT_WEIGHT * Math.max(0, yw - y[node]) : 0;
       }
       // A strip load acts on the edges whose middle it covers: the node at its
       // end carries it on one side and not on the other (nodes are not shared).
-      let q = 0;
+      let q = lineQ.get(`${key}:${node}`) ?? 0;
       const mx = (x[a] + x[b]) / 2;
-      for (const udl of slope.udls) if (mx >= udl.x1 && mx <= udl.x2) q += udl.magnitude;
+      for (const udl of slope.udls) if (mx >= udl.x1 && mx <= udl.x2) q += udl.magnitude * loadFactor;
       // traction vector t = −pw n + (0, −q |n_y|); σn,total = t·n, τ = t·s with s = (−ny, nx)
       const tx = -pw * nx, ty = -pw * ny - q * Math.abs(ny);
       const tn = tx * nx + ty * ny, ts = -tx * ny + ty * nx;
@@ -252,6 +403,14 @@ export function lowerBoundProblem(slope: Slope, options: LowerBoundOptions = {})
           const ax = ct + cp * sp, ay = -ct + cp * sp, at = 2 * st;
           out.push(` r${r++}:${term(ax, v(e, k, 0))}${term(ay, v(e, k, 1))}${term(at, v(e, k, 2))} <= ${fmt(rhs)}`);
         }
+        if (Number.isFinite(nCu[i])) {
+          // the undrained cap: the inscribed Tresca polygon on cu/F
+          const rhsU = (2 * nCu[i] * cp) / F;
+          for (let j = 0; j < p; j++) {
+            const th = (2 * Math.PI * j) / p, ct = Math.cos(th), st = Math.sin(th);
+            out.push(` r${r++}:${term(ct, v(e, k, 0))}${term(-ct, v(e, k, 1))}${term(2 * st, v(e, k, 2))} <= ${fmt(rhsU)}`);
+          }
+        }
         if (cutoff) {
           // σ1 = (σx + σy)/2 + R ≤ 0, R inscribed: ((σx − σy)/2 cos θ + τ sin θ) ≤ −cos(π/p)(σx + σy)/2
           for (let j = 0; j < p; j++) {
@@ -269,7 +428,11 @@ export function lowerBoundProblem(slope: Slope, options: LowerBoundOptions = {})
   const fixedText = fixed.join("\n");
   const boundsText = bounds.join("\n");
   let yieldCount = 0;
-  for (let e = 0; e < ne; e++) if (!elElastic[e]) yieldCount += 3 * p * (cutoff ? 2 : 1);
+  for (let e = 0; e < ne; e++) {
+    if (elElastic[e]) continue;
+    yieldCount += 3 * p * (cutoff ? 2 : 1);
+    for (let k = 0; k < 3; k++) if (Number.isFinite(nCu[3 * e + k])) yieldCount += p;
+  }
   return {
     build: (F) => ["Maximize", " obj: lam", "Subject To", fixedText, yieldRows(F).join("\n"), boundsText, "End"].join("\n"),
     allUndrained,
@@ -277,6 +440,7 @@ export function lowerBoundProblem(slope: Slope, options: LowerBoundOptions = {})
     variables: nVars,
     constraints: fixedRows + yieldCount,
     warnings,
+    mesh: { x, y, el },
   };
 }
 
@@ -295,31 +459,80 @@ export async function lowerBound(slope: Slope, options: LowerBoundOptions = {}, 
     const time_limit = options.timeLimit ?? 300;
     let r = solver.solve(lp, { solver: "ipm", time_limit });
     if (r.Status !== "Optimal" && r.Status !== "Time limit reached") r = solver.solve(lp, { solver: "simplex", time_limit });
-    const lambda = r.Status === "Optimal" ? r.ObjectiveValue : r.Status === "Unbounded" ? Infinity : 0;
+    // Only an optimal program gives a load factor; any other status
+    // (time limit, numerical trouble) gives none, and F is not bounded there.
+    const lambda = r.Status === "Optimal" ? r.ObjectiveValue : r.Status === "Unbounded" ? Infinity : NaN;
     if (r.Status !== "Optimal") warnings.push(`The linear program at F = ${F.toFixed(3)} ended with status "${r.Status}".`);
     trials.push({ F, lambda, seconds: (performance.now() - t0) / 1000 });
     return lambda;
   };
   const tol = options.fTolerance ?? 0.002;
-  let F: number;
   const l1 = lambdaAt(1);
-  if (!(l1 > 0) || !Number.isFinite(l1)) {
-    return { factorOfSafety: NaN, trials, elements: prob.elements, variables: prob.variables, constraints: prob.constraints, warnings: [...warnings, "The linear program has no admissible stress field."] };
+  if (Number.isNaN(l1)) {
+    return { factorOfSafety: NaN, trials, elements: prob.elements, variables: prob.variables, constraints: prob.constraints, warnings: [...warnings, "The linear program at F = 1 was not solved."] };
   }
-  if (prob.allUndrained) F = l1;
-  else {
-    // secant on g(F) = log λ(F), g decreasing, root where λ = 1
-    let fa = 1, ga = Math.log(l1);
-    let fb = l1 > 1 ? Math.min(l1, 1.5) : Math.max(l1, 0.67), gb = Math.log(lambdaAt(fb));
-    F = fb;
-    for (let it = 0; it < 15; it++) {
-      if (Math.abs(gb - ga) < 1e-14) break;
-      const fn = fb - (gb * (fb - fa)) / (gb - ga);
-      F = Math.max(0.05, fn);
-      if (Math.abs(F - fb) < tol) break;
-      fa = fb; ga = gb;
-      fb = F; gb = Math.log(lambdaAt(fb));
+  const fail = (reason: string): LowerBoundResult =>
+    ({ factorOfSafety: NaN, trials, elements: prob.elements, variables: prob.variables, constraints: prob.constraints, warnings: [...warnings, reason] });
+  // A reduction F with λ(F) ≥ 1 carries the loads with the reduced
+  // strength in an admissible stress field: F is a lower bound. The result
+  // is the largest such F evaluated, never an extrapolation.
+  let F: number;
+  if (prob.allUndrained) {
+    if (!(l1 > 0) || !Number.isFinite(l1)) return fail("The linear program has no admissible stress field.");
+    F = l1; // λ(F) = λ(1)/F, so λ(λ(1)) = 1 exactly
+  } else if (l1 === 0 || l1 === Infinity) {
+    // Without cohesion every constraint is homogeneous in the stresses and
+    // λ, so λ is 0 or unbounded: F is found by bisection on whether the
+    // loads can be carried (λ(F) ≥ 1).
+    const ok = (f: number) => { const l = lambdaAt(f); return Number.isNaN(l) ? null : l >= 1; };
+    let lo = 0, hi = Infinity;
+    if (l1 >= 1) lo = 1; else hi = 1;
+    for (let k = 0; k < 20 && (lo === 0 || hi === Infinity); k++) {
+      const f = lo === 0 ? hi / 1.5 : lo * 1.5;
+      if (f < 0.05 || f > 100) break;
+      const r = ok(f);
+      if (r === null) break;
+      if (r) lo = f; else hi = f;
     }
+    while (lo > 0 && Number.isFinite(hi) && hi - lo > tol) {
+      const f = (lo + hi) / 2, r = ok(f);
+      if (r === null) break;
+      if (r) lo = f; else hi = f;
+    }
+    if (!(lo > 0)) {
+      return fail(
+        "No reduction with an admissible stress field carrying the loads was found. Without cohesion the linear stress elements cannot carry the weight at the corners of the ground surface; the lower bound needs some cohesion there.",
+      );
+    }
+    if (!Number.isFinite(hi) || hi - lo > tol) warnings.push(`The bisection stopped with F between ${lo.toFixed(3)} and ${Number.isFinite(hi) ? hi.toFixed(3) : "∞"}; F is the lower of the two.`);
+    F = lo;
+  } else {
+    let best = l1 >= 1 ? 1 : 0;
+    const certify = (f: number, l: number) => { if (l >= 1 && f > best) best = f; };
+    // Secant on g(F) = log λ(F), decreasing, root where λ = 1. The next
+    // trial is placed tol/2 below the secant's root, so that it lands on
+    // the admissible side; the search stops when a certified F lies within
+    // tol of the root estimate.
+    let fa = 1, ga = Math.log(l1);
+    let fb = l1 > 1 ? Math.min(l1, 1.5) : Math.max(l1, 0.67);
+    let lb = lambdaAt(fb);
+    certify(fb, lb);
+    let reached = false, root = NaN;
+    for (let it = 0; it < 15 && Number.isFinite(lb) && lb > 0; it++) {
+      const gb = Math.log(lb);
+      if (Math.abs(gb - ga) < 1e-14) { reached = best > 0 && Math.abs(fb - best) <= tol; break; }
+      root = Math.max(0.05, fb - (gb * (fb - fa)) / (gb - ga));
+      if (best > 0 && best >= root - tol) { reached = true; break; }
+      fa = fb; ga = gb;
+      fb = Math.max(0.05, root - tol / 2);
+      lb = lambdaAt(fb);
+      certify(fb, lb);
+    }
+    if (!(best > 0)) return fail("No reduction with an admissible stress field carrying the loads was found.");
+    if (!reached) {
+      warnings.push(`The search for λ = 1 stopped before converging${Number.isFinite(root) ? ` (estimated root F = ${root.toFixed(3)})` : ""}; F is the largest reduction found to carry the loads.`);
+    }
+    F = best;
   }
   return { factorOfSafety: F, trials, elements: prob.elements, variables: prob.variables, constraints: prob.constraints, warnings };
 }

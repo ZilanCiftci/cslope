@@ -30,9 +30,10 @@ describe("lowerBound", () => {
     const r = await lowerBound(buildSlope(toCanonicalSlopeDefinition(def)), { elementSize: 2.5, fTolerance: 0.01 });
     expect(r.factorOfSafety).toBeGreaterThan(0.8);
     expect(r.factorOfSafety).toBeLessThan(2.5);
-    // λ(F) = 1 at the reported factor
-    const last = r.trials[r.trials.length - 1];
-    expect(Math.abs(last.lambda - 1)).toBeLessThan(0.05);
+    // the reported factor was evaluated and carries the loads: λ(F) ≥ 1, near 1
+    const at = r.trials.find((t) => t.F === r.factorOfSafety)!;
+    expect(at.lambda).toBeGreaterThanOrEqual(1);
+    expect(at.lambda).toBeLessThan(1.05);
     // below the strength reduction factor of the same problem (associated flow)
     const fe = strengthReduction(buildFeModel(buildSlope(toCanonicalSlopeDefinition(def)), { elementSize: 2.5 }), {
       flowRule: "associated",
@@ -40,6 +41,20 @@ describe("lowerBound", () => {
     });
     expect(r.factorOfSafety).toBeLessThanOrEqual(fe.factorOfSafety + 0.01);
   }, 180000);
+
+  it("includes a line load, spread over the edges at its point", async () => {
+    // Undrained slope (one linear program); a line load on the crest lowers the bound.
+    const def = (P: number) =>
+      ({
+        coordinates: [[0, 0], [0, 10], [10, 10], [20, 5], [30, 5], [30, 0]],
+        materials: [{ name: "clay", model: { kind: "undrained", unitWeight: 18, undrainedShearStrength: 40 } }],
+        lineLoads: P > 0 ? [{ magnitude: P, x: 8 }] : [],
+      }) as unknown as SlopeDefinition;
+    const free = await lowerBound(buildSlope(toCanonicalSlopeDefinition(def(0))), { elementSize: 2.5 });
+    const loaded = await lowerBound(buildSlope(toCanonicalSlopeDefinition(def(200))), { elementSize: 2.5 });
+    expect(loaded.warnings).toEqual([]);
+    expect(loaded.factorOfSafety).toBeLessThan(free.factorOfSafety - 0.05);
+  }, 120000);
 
   it("takes the saturated unit weight below the water table", async () => {
     // Undrained slope (one linear program) under a water table at mid-height.
@@ -52,7 +67,8 @@ describe("lowerBound", () => {
       }) as unknown as SlopeDefinition;
     const light = await lowerBound(buildSlope(toCanonicalSlopeDefinition(def(18))), { elementSize: 2.5 });
     const heavy = await lowerBound(buildSlope(toCanonicalSlopeDefinition(def(22))), { elementSize: 2.5 });
-    expect(heavy.factorOfSafety).toBeLessThan(light.factorOfSafety - 0.01);
+    // (the water table lies below the toe, so the difference is small)
+    expect(heavy.factorOfSafety).toBeLessThan(light.factorOfSafety - 0.001);
     expect(light.warnings).toEqual([]); // nothing left out
   }, 120000);
 });

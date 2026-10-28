@@ -68,6 +68,10 @@ export function zzIndicator(model: FeModel, stress: Float64Array): Float64Array 
   return eta2;
 }
 
+function edge(dx: number, dy: number): number {
+  return Math.sqrt(dx * dx + dy * dy);
+}
+
 /** Dörfler marking: the elements with the largest indicators that carry a fraction θ of the total. */
 export function dorflerMark(eta2: Float64Array, theta = 0.5): Uint8Array {
   const order = Array.from(eta2.keys()).sort((a, b) => eta2[b] - eta2[a]);
@@ -84,19 +88,25 @@ export function dorflerMark(eta2: Float64Array, theta = 0.5): Uint8Array {
 }
 
 /**
- * Size field for the next mesh: each element's size (longest edge), halved
- * where marked, never coarser than the element, looked up by point location in the old mesh on a bucket grid.
+ * Size field for the next mesh: the target size the element was made with
+ * (the model's size field at its centroid), halved where marked, looked up
+ * by point location in the old mesh on a bucket grid. A marked element is
+ * also never coarser than half its longest edge.
  */
-export function refinedSizeField(model: FeModel, marked: Uint8Array, minSize = 0): (x: number, y: number) => number {
+export function refinedSizeField(model: FeModel, marked: Uint8Array, minSize = 0): ((x: number, y: number) => number) & { min: number } {
   const { el, elementCount: ne, x, y } = model;
   const size = new Float64Array(ne);
   let xmin = Infinity, xmax = -Infinity, ymin = Infinity, ymax = -Infinity;
   for (let e = 0; e < ne; e++) {
     const a = el[6 * e], b = el[6 * e + 1], c = el[6 * e + 2];
-    const h = Math.max(Math.hypot(x[a] - x[b], y[a] - y[b]), Math.hypot(x[b] - x[c], y[b] - y[c]), Math.hypot(x[c] - x[a], y[c] - y[a]));
-    // The mesher splits triangles with an edge longer than 1.4 × the size
-    // (meshDomain), so h/1.4 keeps an unmarked element's size.
-    size[e] = Math.max(minSize, (marked[e] ? h / 2 : h) / 1.4);
+    // Unmarked elements keep their target size: their real edges lie below
+    // the mesher's split threshold of 1.4 × the target, so a size from the
+    // edge lengths would refine them too.
+    const target = model.sizeField((x[a] + x[b] + x[c]) / 3, (y[a] + y[b] + y[c]) / 3);
+    if (marked[e]) {
+      const h = Math.max(edge(x[a] - x[b], y[a] - y[b]), edge(x[b] - x[c], y[b] - y[c]), edge(x[c] - x[a], y[c] - y[a]));
+      size[e] = Math.max(minSize, Math.min(target, h) / 2);
+    } else size[e] = Math.max(minSize, target);
     for (const n of [a, b, c]) {
       xmin = Math.min(xmin, x[n]); xmax = Math.max(xmax, x[n]);
       ymin = Math.min(ymin, y[n]); ymax = Math.max(ymax, y[n]);
@@ -117,7 +127,9 @@ export function refinedSizeField(model: FeModel, marked: Uint8Array, minSize = 0
   }
   let fallback = 0;
   for (const h of size) fallback = Math.max(fallback, h);
-  return (px: number, py: number) => {
+  let smallest = Infinity;
+  for (const h of size) smallest = Math.min(smallest, h);
+  const field = (px: number, py: number) => {
     const [i, j] = cell(px, py);
     let best = fallback, bestD = Infinity;
     for (const e of buckets[j * nb + i]) {
@@ -132,6 +144,7 @@ export function refinedSizeField(model: FeModel, marked: Uint8Array, minSize = 0
     }
     return best;
   };
+  return Object.assign(field, { min: smallest });
 }
 
 /**

@@ -41,12 +41,10 @@ function capacity(model: FeModel, b: number, g: number, F: number): number {
 /**
  * Viscoplastic step for the bars: returns each Gauss point's force to
  * [0, T] by a plastic strain increment and adds its body load ∫ Bᵀ EA Δεp.
- * @returns whether any bar yielded.
  */
-export function relaxBars(model: FeModel, u: Float64Array, barEp: Float64Array, F: number, bodyLoads: Float64Array): boolean {
+export function relaxBars(model: FeModel, u: Float64Array, barEp: Float64Array, F: number, bodyLoads: Float64Array): void {
   const { bars } = model;
   const d = new Int32Array(6);
-  let any = false;
   for (let b = 0; b < bars.count; b++) {
     barDofs(model, b, d);
     const ea = bars.stiffness[b];
@@ -58,13 +56,11 @@ export function relaxBars(model: FeModel, u: Float64Array, barEp: Float64Array, 
       const t = capacity(model, b, g, F);
       const excess = n > t ? n - t : n < 0 ? n : 0;
       if (excess === 0) continue;
-      any = true;
       barEp[i] += excess / ea;
       const w = bars.gp[o + 6] * excess;
       for (let k = 0; k < 6; k++) if (d[k] >= 0) bodyLoads[d[k]] += bars.gp[o + k] * w;
     }
   }
-  return any;
 }
 
 /**
@@ -101,21 +97,6 @@ export function barInternal(
           for (let j = 0; j <= k; j++) if (d[j] >= 0) K.add(d[k], d[j], ea * w * bars.gp[o + k] * bars.gp[o + j]);
         }
       }
-    }
-  }
-}
-
-/** Body loads ∫ Bᵀ EA εp of the bars' plastic strains (added to `out`). */
-export function barBodyLoads(model: FeModel, barEp: Float64Array, out: Float64Array): void {
-  const { bars } = model;
-  const d = new Int32Array(6);
-  for (let b = 0; b < bars.count; b++) {
-    barDofs(model, b, d);
-    for (let g = 0; g < 2; g++) {
-      const o = (2 * b + g) * BAR_GP_STRIDE, ep = barEp[2 * b + g];
-      if (ep === 0) continue;
-      const w = bars.gp[o + 6] * bars.stiffness[b] * ep;
-      for (let k = 0; k < 6; k++) if (d[k] >= 0) out[d[k]] += bars.gp[o + k] * w;
     }
   }
 }

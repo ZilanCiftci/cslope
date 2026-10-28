@@ -37,6 +37,31 @@ describe("returnMap", () => {
     }
   });
 
+  it("caps a combined material at its undrained strength, with a tangent that matches finite differences", () => {
+    let seed = 11;
+    const rand = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+    const phi = (30 * Math.PI) / 180, c = 5, cu = 12;
+    let capped = 0;
+    for (let t = 0; t < 300; t++) {
+      const eps = [(rand() - 0.7) * 2e-3, (rand() - 0.7) * 2e-3, (rand() - 0.5) * 2e-3, 0];
+      const C = new Float64Array(16);
+      const r = returnMap(elastic(eps), E, nu, c, Math.sin(phi), Math.cos(phi), false, C, cu);
+      const p = principal(r.stress);
+      expect((p[0] - p[2]) / 2 - cu).toBeLessThan(1e-9 * cu);
+      expect((p[0] - p[2]) / 2 + ((p[0] + p[2]) / 2) * Math.sin(phi) - c * Math.cos(phi)).toBeLessThan(1e-9 * c);
+      if (Math.abs((p[0] - p[2]) / 2 - cu) < 1e-6) capped++;
+      if (!r.plastic) continue;
+      for (let j = 0; j < 3; j++) {
+        const h = 1e-9, a = eps.slice(), b = eps.slice();
+        a[j] += h; b[j] -= h;
+        const sa = returnMap(elastic(a), E, nu, c, Math.sin(phi), Math.cos(phi), false, new Float64Array(16), cu).stress;
+        const sb = returnMap(elastic(b), E, nu, c, Math.sin(phi), Math.cos(phi), false, new Float64Array(16), cu).stress;
+        for (let i = 0; i < 3; i++) expect(Math.abs((sa[i] - sb[i]) / (2 * h) - C[4 * i + j])).toBeLessThan(1e-6 * E);
+      }
+    }
+    expect(capped).toBeGreaterThan(10);
+  });
+
   it("returns a Tresca trial stress by half the excess of the shear stress", () => {
     // σ1 = 30, σ2 = 10, σ3 = 0 with c = 10, φ = 0: f = 5, return along (1, 0, −1)/2 → (25, 10, 5)
     const C = new Float64Array(16);

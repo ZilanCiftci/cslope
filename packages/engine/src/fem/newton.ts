@@ -6,12 +6,15 @@
  * Stress return: the closest point, in the energy norm of the elastic
  * compliance, of the trial stress on the yield set in principal stress
  * space: the Mohr–Coulomb plane f = (σ₁ − σ₃)/2 + (σ₁ + σ₃)/2·sin φ − c cos φ
- * ≤ 0 and optionally the Rankine plane σ₁ ≤ 0, with the ordering
+ * ≤ 0, optionally the Rankine plane σ₁ ≤ 0 and, for a combined material
+ * (the lesser of the drained and undrained strength), the Tresca plane
+ * (σ₁ − σ₃)/2 ≤ cu, with the ordering
  * σ₁ ≥ σ₂ ≥ σ₃ as further planes, so that returns to an edge or the apex
  * of the pyramid come out of the same projection (Clausen, Damkilde &
  * Andersen 2006, IJNME 66, 1036–1059; de Souza Neto, Perić & Owen 2008,
  * Computational Methods for Plasticity, Wiley 2008, ch. 8). The active planes are found
- * by enumeration (at most four planes in three dimensions).
+ * by enumeration (at most three of the five planes active in three
+ * dimensions).
  *
  * Tangent: in principal space D − D A (Aᵀ D A)⁻¹ Aᵀ D for the active planes
  * A, and in the plane of the principal directions the shear stiffness
@@ -19,15 +22,18 @@
  * Neto et al. 2008, appendix A), rotated to x, y. With associated flow it is
  * symmetric, so the system is solved by Cholesky (sparse.ts).
  *
- * Globalisation: backtracking line search on the residual norm, halving
- * the step until the norm falls (Dennis & Schnabel, Numerical Methods for
- * Unconstrained Optimization and Nonlinear Equations, 1983, ch. 6;
- * Nocedal & Wright, Numerical Optimization, 2nd ed., 2006, ch. 3).
+ * Globalisation: backtracking line search with the sufficient decrease
+ * (Armijo) condition on ½‖r‖², halving the step (Dennis & Schnabel,
+ * Numerical Methods for Unconstrained Optimization and Nonlinear
+ * Equations, 1983, ch. 6; Nocedal & Wright, Numerical Optimization, 2nd
+ * ed., 2006, ch. 3 and 11). Where the tangent is singular (a mechanism has
+ * formed) the step uses the elastic stiffness (initial stiffness method).
  *
  * Implementation choices (not from the literature): convergence at a
  * residual of 10⁻⁶ of the load, at most 200 iterations, and failure when
- * the residual has not fallen by 10 % over 5 iterations (beyond the limit
- * load it stagnates). A trial that Newton does not converge fails (srm.ts).
+ * no step lowers the residual or it has not fallen by 10 % over 30
+ * iterations (beyond the limit load it stagnates). A trial that Newton
+ * does not converge fails (srm.ts).
  */
 
 import { GP_STRIDE } from "./elements";
@@ -68,9 +74,9 @@ function solveSmall(n: number, a: number[], b: number[]): boolean {
 }
 
 const SUBSETS: number[][] = [];
-for (let mask = 1; mask < 16; mask++) {
+for (let mask = 1; mask < 32; mask++) {
   const s: number[] = [];
-  for (let k = 0; k < 4; k++) if (mask & (1 << k)) s.push(k);
+  for (let k = 0; k < 5; k++) if (mask & (1 << k)) s.push(k);
   if (s.length <= 3) SUBSETS.push(s);
 }
 SUBSETS.sort((a, b) => a.length - b.length);
@@ -87,26 +93,30 @@ function principalReturn(
   sinPhi: number,
   cosPhi: number,
   cutoff: boolean,
+  cu: number,
 ): { s: [number, number, number]; active: number[][] } | null {
-  // planes aᵀσ ≤ b: 0 Mohr–Coulomb, 1 Rankine, 2 σ₂ ≤ σ₁, 3 σ₃ ≤ σ₂
+  // planes aᵀσ ≤ b: 0 Mohr–Coulomb, 1 Rankine, 2 σ₂ ≤ σ₁, 3 σ₃ ≤ σ₂,
+  // 4 Tresca (σ₁ − σ₃)/2 ≤ cu, the undrained cap of a combined material
+  const tresca = Number.isFinite(cu);
   const A = [
     [(1 + sinPhi) / 2, 0, -(1 - sinPhi) / 2],
     [1, 0, 0],
     [-1, 1, 0],
     [0, -1, 1],
+    [0.5, 0, -0.5],
   ];
-  const B = [c * cosPhi, 0, 0, 0];
-  const use = [true, cutoff, true, true];
-  const tolF = 1e-10 * (Math.abs(s[0]) + Math.abs(s[2]) + c + 1);
+  const B = [c * cosPhi, 0, 0, 0, tresca ? cu : 0];
+  const use = [true, cutoff, true, true, tresca];
+  const tolF = 1e-10 * (Math.abs(s[0]) + Math.abs(s[2]) + c + (tresca ? cu : 0) + 1);
   const f = (k: number, v: readonly number[]) => A[k][0] * v[0] + A[k][1] * v[1] + A[k][2] * v[2] - B[k];
-  if (f(0, s) <= tolF && (!cutoff || f(1, s) <= tolF)) return null;
+  if (f(0, s) <= tolF && (!cutoff || f(1, s) <= tolF) && (!tresca || f(4, s) <= tolF)) return null;
   const Dv = (a: number[]) => {
     const tr = a[0] + a[1] + a[2];
     return [lam * tr + 2 * mu * a[0], lam * tr + 2 * mu * a[1], lam * tr + 2 * mu * a[2]];
   };
   for (const S of SUBSETS) {
     if (S.some((k) => !use[k])) continue;
-    if (!S.includes(0) && !S.includes(1)) continue; // ordering alone is not a return
+    if (!S.includes(0) && !S.includes(1) && !S.includes(4)) continue; // ordering alone is not a return
     const n = S.length;
     const DA = S.map((k) => Dv(A[k]));
     const M: number[] = [];
@@ -120,7 +130,7 @@ function principalReturn(
     const out: [number, number, number] = [s[0], s[1], s[2]];
     for (let i = 0; i < n; i++) for (let d = 0; d < 3; d++) out[d] -= DA[i][d] * rhs[i];
     let ok = true;
-    for (let k = 0; k < 4 && ok; k++) if (use[k] && !S.includes(k) && f(k, out) > tolF) ok = false;
+    for (let k = 0; k < 5 && ok; k++) if (use[k] && !S.includes(k) && f(k, out) > tolF) ok = false;
     if (ok) return { s: out, active: S.map((k) => A[k]) };
   }
   throw new Error("stress return failed");
@@ -139,6 +149,7 @@ export function returnMap(
   cosPhi: number,
   cutoff: boolean,
   out: Float64Array,
+  cu = Infinity,
 ): ReturnResult {
   const lam = (E * nu) / ((1 + nu) * (1 - 2 * nu)), mu = E / (2 * (1 + nu));
   const [sx, sy, txy, sz] = trial;
@@ -150,7 +161,7 @@ export function returnMap(
   const pv = [sA, sB, sz];
   const idx = [0, 1, 2].sort((i, j) => pv[j] - pv[i]);
   const sorted: [number, number, number] = [pv[idx[0]], pv[idx[1]], pv[idx[2]]];
-  const r = principalReturn(sorted, lam, mu, c, sinPhi, cosPhi, cutoff);
+  const r = principalReturn(sorted, lam, mu, c, sinPhi, cosPhi, cutoff, cu);
   const elastic = () => {
     out.fill(0);
     const d11 = lam + 2 * mu;
@@ -188,7 +199,9 @@ export function returnMap(
   const ret = [r.s[pos[0]], r.s[pos[1]], r.s[pos[2]]];
   const P = (i: number, j: number) => Dep[3 * pos[i] + pos[j]]; // i, j in A=0, B=1, z=2
   const dTrial = sA - sB;
-  const G = Math.abs(dTrial) > 1e-12 * (Math.abs(sA) + Math.abs(sB) + 1) ? (mu * (ret[0] - ret[1])) / dTrial : mu;
+  // For equal in-plane principal strains the quotient's limit is the
+  // derivative (Dep_AA − Dep_AB)/2 (de Souza Neto et al. 2008, appendix A).
+  const G = Math.abs(dTrial) > 1e-12 * (Math.abs(sA) + Math.abs(sB) + 1) ? (mu * (ret[0] - ret[1])) / dTrial : (P(0, 0) - P(0, 1)) / 2;
   // principal-frame tangent in Voigt (A, B, AB, z)
   const Cp = [
     P(0, 0), P(0, 1), 0, P(0, 2),
@@ -253,6 +266,8 @@ export interface GaussStrength {
   c: Float64Array;
   sinPhi: Float64Array;
   cosPhi: Float64Array;
+  /** Undrained cap (Tresca) of a combined material; Infinity where there is none. */
+  cu: Float64Array;
 }
 
 /**
@@ -301,7 +316,7 @@ export function evaluate(
         C[0] = lam + 2 * mu; C[1] = lam; C[4] = lam; C[5] = lam + 2 * mu; C[10] = mu;
         epNew[s] = epOld[s]; epNew[s + 1] = epOld[s + 1]; epNew[s + 2] = epOld[s + 2]; epNew[s + 3] = epOld[s + 3];
       } else {
-        const r = returnMap(trial, E, nu, strength.c[i], strength.sinPhi[i], strength.cosPhi[i], cutoff, C);
+        const r = returnMap(trial, E, nu, strength.c[i], strength.sinPhi[i], strength.cosPhi[i], cutoff, C, strength.cu[i]);
         sig = r.stress;
         // plastic strain increment = D⁻¹ (σ_trial − σ)
         const d0 = trial[0] - sig[0], d1 = trial[1] - sig[1], d2 = trial[2] - sig[2], d3 = trial[3] - sig[3];
@@ -349,8 +364,26 @@ export function evaluate(
   }
 }
 
-/** Iterations over which the residual must fall by 10 % (see newtonAtF). */
-const STALL_WINDOW = 5;
+/**
+ * Failure by stagnation: the residual has not fallen below STALL_FALL of
+ * its value STALL_WINDOW iterations earlier. Near collapse the line search
+ * takes short steps that lower the residual by 1–3 % per iteration for
+ * 10–25 iterations before quadratic convergence sets in (V056), so the
+ * window must be longer than that.
+ */
+const STALL_WINDOW = 30;
+const STALL_FALL = 0.9;
+/** Line search: at most LS_STEPS trial steps α = 1, ½, …, 2⁻⁹; sufficient decrease constant c (Nocedal & Wright's 10⁻⁴). */
+const LS_STEPS = 10;
+const ARMIJO_C = 1e-4;
+
+/** The tangent matrix of a model, allocated once (trials of one model run one at a time per thread). */
+const tangents = new WeakMap<FeModel, SparseCholesky>();
+function tangentMatrix(model: FeModel): SparseCholesky {
+  let K = tangents.get(model);
+  if (!K) { K = model.K.emptyCopy(); tangents.set(model, K); }
+  return K;
+}
 
 export function norm2(a: Float64Array): number {
   let s = 0;
@@ -371,8 +404,8 @@ export function newtonAtF(
 ): { converged: boolean; iterations: number } {
   const tol = options.tolerance ?? 1e-6;
   // Away from collapse Newton converges in 5–15 iterations; near collapse
-  // the line search can need many more, and the stagnation test below ends
-  // a trial beyond the limit load early.
+  // the line search can need 20–40, and the stagnation test ends a trial
+  // beyond the limit load.
   const limit = options.maxIterations ?? 200;
   const cutoff = options.tensionCutoff ?? false;
   const neq = model.eqCount, ngp = 3 * model.elementCount;
@@ -382,7 +415,7 @@ export function newtonAtF(
   const stress = new Float64Array(4 * ngp), ep = new Float64Array(4 * ngp);
   const barEp = new Float64Array(state.barEp.length);
   const trialU = new Float64Array(neq);
-  const K = model.K.emptyCopy();
+  const K = tangentMatrix(model);
   const residual = (uu: Float64Array, withK: boolean): number => {
     evaluate(model, eqs, uu, state.ep, strength, cutoff, fint, stress, ep, withK ? K : null);
     if (model.bars.count) barInternal(model, uu, state.barEp, state.F, fint, barEp, withK ? K : null);
@@ -398,24 +431,48 @@ export function newtonAtF(
     }
     // Stagnation: beyond the limit load the residual stops falling.
     history.push(rn);
-    if (it > STALL_WINDOW + 5 && rn > 0.9 * history[it - 1 - STALL_WINDOW]) return { converged: false, iterations: it };
+    if (it > STALL_WINDOW && rn > STALL_FALL * history[it - 1 - STALL_WINDOW]) return { converged: false, iterations: it };
+    // The tangent of perfect plasticity is only positive semidefinite along
+    // a mechanism that has formed; where the factorisation meets a pivot
+    // ≤ 0 the step is taken with the elastic stiffness instead (the
+    // initial stiffness method, e.g. Zienkiewicz & Taylor, The Finite
+    // Element Method for Solid and Structural Mechanics, 6th ed., 2005,
+    // ch. 3), which is always positive definite.
+    let tangent = true;
     try {
       K.factor();
     } catch {
-      return { converged: false, iterations: it };
+      tangent = false;
     }
     du.set(r);
-    K.solve(du);
-    // backtracking line search on the residual norm
-    let alpha = 1, accepted = false;
-    for (let ls = 0; ls < 6; ls++) {
+    (tangent ? K : model.K).solve(du);
+    // Backtracking line search with the sufficient decrease (Armijo)
+    // condition on the merit ½‖r‖²: along the Newton direction its slope
+    // is −‖r‖², so a step α is accepted when ‖r(u + αdu)‖² ≤ (1 − 2c·α)‖r‖²
+    // (Dennis & Schnabel 1983, § 6.3 and 6.5; Nocedal & Wright 2006, § 3.1
+    // and 11.2). The elastic stiffness gives no guaranteed descent
+    // direction of the merit (its slope is −rᵀK_t K_e⁻¹ r), so plain
+    // decrease is required then. A step that does not lower the residual
+    // is never taken: if none is found the trial fails.
+    const rn0 = rn;
+    let alpha = 1, accepted = false, bestAlpha = 0, bestRn = rn0;
+    for (let ls = 0; ls < LS_STEPS; ls++) {
       for (let i = 0; i < neq; i++) trialU[i] = u[i] + alpha * du[i];
-      const rt = residual(trialU, false);
-      if (rt < rn || ls === 5) { accepted = rt < rn; u.set(trialU); rn = rt; break; }
+      const rt = residual(trialU, true);
+      if (rt < bestRn) { bestRn = rt; bestAlpha = alpha; }
+      const target = tangent ? Math.sqrt(1 - 2 * ARMIJO_C * alpha) * rn0 : rn0;
+      if (rt <= target) { accepted = true; break; }
       alpha /= 2;
     }
-    if (!accepted && rn > 10 * fnorm) return { converged: false, iterations: it };
-    rn = residual(u, true);
+    if (bestAlpha === 0) return { converged: false, iterations: it };
+    if (!accepted || alpha !== bestAlpha) {
+      // The step with the lowest residual is taken; its stresses and
+      // tangent are evaluated again (the trial points overwrote them).
+      for (let i = 0; i < neq; i++) trialU[i] = u[i] + bestAlpha * du[i];
+      residual(trialU, true);
+    }
+    u.set(trialU);
+    rn = bestRn;
   }
   if (rn <= tol * fnorm) {
     state.u.set(u); state.ep.set(ep); state.stress.set(stress); state.barEp.set(barEp);

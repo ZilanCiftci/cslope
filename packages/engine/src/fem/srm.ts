@@ -55,7 +55,10 @@
  *   user parameter in every implementation of the non-convergence
  *   criterion, and F depends on it.
  * - A trial that fails from the unloaded state does not bound F from
- *   above; only a failure from a converged state does.
+ *   above; only a failure from a converged state does, a converged trial
+ *   overrides failures below it, and the bounding failure is confirmed
+ *   from the final converged state (up to three times per search).
+ * - Viscoplastic convergence must hold in two successive iterations.
  */
 
 import { GP_STRIDE } from "./elements";
@@ -63,6 +66,9 @@ import type { FeModel } from "./model";
 import { newtonAtF } from "./newton";
 import { bfgsAtF } from "./bfgs";
 import { relaxBars } from "./bars";
+
+/** Confirmations of the bounding failure per search (see strengthReductionSearch). */
+const MAX_CONFIRMATIONS = 3;
 
 /** Iterations over which the contraction ratio is averaged. */
 const RATIO_WINDOW = 10;
@@ -104,7 +110,7 @@ export interface SrmOptions {
   relaxation?: number;
   /** First trial F; default 1. */
   startF?: number;
-  /** Relative step while bracketing F; default 0.25. */
+  /** Relative step while bracketing F; default 0.25, and 0.1 (constant) for non-associated flow. */
   bracketStep?: number;
   /**
    * Expected F (a coarser mesh's): while rising towards it the steps stop
@@ -116,7 +122,7 @@ export interface SrmOptions {
    * Continue an earlier search on the same model: its converged F and state
    * and its smallest failed F; only the bisection remains.
    */
-  resume?: { lo: number; hi: number; state: SrmState };
+  resume?: { lo: number; hi: number; state: SrmState; hiFrom?: number };
   /**
    * Trials per round (default 1, bisection): with n > 1 the search tries n
    * reductions per round from the same converged state (multisection), which
@@ -134,6 +140,8 @@ export interface SrmTrial {
   iterations: number;
   /** Solver that decided the trial. */
   solver: "newton" | "bfgs" | "viscoplastic";
+  /** F of the converged state the trial started from; 0 for the unloaded state. */
+  startF: number;
   /** Largest nodal displacement (m) at the end of the trial. */
   maxDisplacement: number;
 }
@@ -154,8 +162,10 @@ export interface SrmState {
 export interface SrmResult {
   /** Factor of safety: the largest converged F (non-convergence criterion). */
   factorOfSafety: number;
-  /** Smallest F that failed to converge. */
+  /** Smallest F that failed to converge from a converged state below it. */
   failedF: number;
+  /** F of the converged state the trial at `failedF` started from. */
+  failedFrom: number;
   /**
    * F at the displacement jump (Huang & Jia 2009, Comput. Geotech. 36, 93–101:
    * failure where a characteristic nodal displacement increases suddenly):
@@ -181,8 +191,12 @@ interface ReducedStrength {
   sinPhi: Float64Array;
   cosPhi: Float64Array;
   sinPsi: Float64Array;
+  /** Undrained cap cu/F of a combined material (Tresca, ψ = φ = 0); Infinity where there is none. */
+  cu: Float64Array;
   dt: Float64Array;
   dtT: Float64Array;
+  /** Viscoplastic step on the Tresca cap, Δt = relax/μ (a = n_fᵀ D n_g = μ). */
+  dtU: Float64Array;
 }
 
 /** Davis B divisor q_B(F) for friction φ and dilation ψ (radians); Sysala et al. 2021 eq. 4.6. */
@@ -195,7 +209,8 @@ function reduce(model: FeModel, F: number, rule: FlowRule, relax: number): Reduc
   const ngp = 3 * model.elementCount;
   const r: ReducedStrength = {
     c: new Float64Array(ngp), sinPhi: new Float64Array(ngp), cosPhi: new Float64Array(ngp),
-    sinPsi: new Float64Array(ngp), dt: new Float64Array(ngp), dtT: new Float64Array(ngp),
+    sinPsi: new Float64Array(ngp), cu: new Float64Array(ngp), dt: new Float64Array(ngp), dtT: new Float64Array(ngp),
+    dtU: new Float64Array(ngp),
   };
   for (let i = 0; i < ngp; i++) {
     const e = (i / 3) | 0;
@@ -206,6 +221,8 @@ function reduce(model: FeModel, F: number, rule: FlowRule, relax: number): Reduc
     if (rule === "non-associated") psiR = Math.atan(Math.tan(psi0) / F);
     else psiR = phiR;
     r.c[i] = c / q;
+    // The undrained cap has φ = ψ = 0, for which Davis B's divisor is F.
+    r.cu[i] = model.gpCu[i] / F;
     r.sinPhi[i] = Math.sin(phiR); r.cosPhi[i] = Math.cos(phiR);
     r.sinPsi[i] = Math.sin(psiR);
     const E = model.elE[e], nu = model.elNu[e];
@@ -218,13 +235,19 @@ function reduce(model: FeModel, F: number, rule: FlowRule, relax: number): Reduc
     const a = lam * sf * sg + mu * (1 + sf * sg);
     r.dt[i] = relax / a;
     r.dtT[i] = relax / (lam + 2 * mu);
+    r.dtU[i] = relax / mu;
   }
   return r;
 }
 
-/** Element dof → equation table (12 per element, −1 for fixed dofs). */
+const equationTables = new WeakMap<FeModel, Int32Array>();
+
+/** Element dof → equation table (12 per element, −1 for fixed dofs), built once per model. */
 function elementEquations(model: FeModel): Int32Array {
+  const cached = equationTables.get(model);
+  if (cached) return cached;
   const out = new Int32Array(12 * model.elementCount);
+  equationTables.set(model, out);
   for (let e = 0; e < model.elementCount; e++) {
     for (let a = 0; a < 6; a++) {
       const n = model.el[6 * e + a];
@@ -278,7 +301,7 @@ export function solveAtF(
   const load = new Float64Array(12);
   let converged = false;
   let it = 0;
-  let prevDu = 0, ratioCount = 0;
+  let prevDu = 0, ratioCount = 0, passedBefore = false;
   const logRatio = new Float64Array(RATIO_WINDOW);
   for (; it < limit && !converged; ) {
     it++;
@@ -310,7 +333,13 @@ export function solveAtF(
       remaining = rate < 1 ? (maxDu * rate) / (1 - rate) : Infinity;
     } else if (ratioCount > 0) remaining = Infinity;
     const err = criterion === "extrapolated" ? Math.max(maxDu, remaining) : maxDu;
-    converged = it > 1 && (maxU > 0 ? err / maxU <= tol : true);
+    // The test must pass in two successive iterations: from a converged
+    // state at a slightly lower F the first relaxation can be small
+    // enough to pass it once although many more follow (implementation
+    // choice; Griffiths & Lane test a single increment).
+    const passed = it > 1 && (maxU > 0 ? err / maxU <= tol : true);
+    converged = passed && passedBefore;
+    passedBefore = passed;
 
     for (let e = 0; e < ne; e++) {
       for (let k = 0; k < 12; k++) { const q = eqs[12 * e + k]; ue[k] = q >= 0 ? u[q] : 0; }
@@ -342,8 +371,15 @@ export function solveAtF(
         const s1 = i1 === 2 ? sz : sA, s3 = i3 === 2 ? sz : sB;
         const sp = red.sinPhi[i], ssi = red.sinPsi[i];
         const f = (s1 - s3) / 2 + ((s1 + s3) / 2) * sp - red.c[i] * red.cosPhi[i];
+        // The undrained cap of a combined material: the surface with the
+        // larger return is relaxed (Tresca flows with ψ = 0).
+        const fU = (s1 - s3) / 2 - red.cu[i];
         let r1 = 0, r3 = 0;
-        if (f > 0) {
+        if (fU > 0 && fU * red.dtU[i] > f * red.dt[i]) {
+          const k = fU * red.dtU[i];
+          r1 = k / 2;
+          r3 = -k / 2;
+        } else if (f > 0) {
           const k = f * red.dt[i];
           r1 = (k * (1 + ssi)) / 2;
           r3 = (k * (-1 + ssi)) / 2;
@@ -462,33 +498,44 @@ export function* strengthReductionSearch(model: FeModel, options: SrmOptions = {
   const perRound = Math.max(1, Math.round(options.trialsPerRound ?? 1));
   const trials: SrmTrial[] = [];
   let iterations = 0;
-  let lo = options.resume?.lo ?? 0, hi = options.resume?.hi ?? Infinity;
+  let lo = options.resume?.lo ?? 0, hi = Infinity, hiFrom = 0;
   let loState: SrmState | null = options.resume ? cloneState(options.resume.state) : null;
   let prevState: SrmState | null = null;
-  // Run a batch from the current converged state (or the unloaded one) and
-  // update the bracket: the lowest failure from a converged state bounds F
-  // from above, and the highest converged F below it becomes the new lower
-  // end, whose state the next trials start from.
+  // Failures from converged states, with the F of the state each started
+  // from. A failure from the unloaded state bounds nothing: with the full
+  // weight applied at once the iteration can fail at an F that a start from
+  // a converged lower F reaches easily (seen with Newton on refined meshes).
+  const failures: { F: number; from: number }[] = [];
+  if (options.resume && Number.isFinite(options.resume.hi)) failures.push({ F: options.resume.hi, from: options.resume.hiFrom ?? lo });
+  // The bracket: the highest converged F is the lower end, whose state the
+  // next trials start from; the lowest failure above it the upper end. A
+  // converged trial is an equilibrium state at its F, so it overrides
+  // failures below it (one that failed from a lower state was a false
+  // failure of the iteration).
+  const update = () => {
+    hi = Infinity; hiFrom = 0;
+    for (const f of failures) {
+      if (f.F > lo && (f.F < hi || (f.F === hi && f.from > hiFrom))) { hi = f.F; hiFrom = f.from; }
+    }
+  };
+  update();
+  // Run a batch from the current converged state (or the unloaded one).
   function* round(Fs: number[]): Generator<TrialBatch, boolean, TrialOutcome[]> {
-    const warm = loState !== null;
+    const warm = loState !== null, from = lo;
     const out = yield { start: loState, F: Fs };
     let best = -1;
     for (let k = 0; k < Fs.length; k++) {
       const r = out[k];
       iterations += r.iterations;
-      const t: SrmTrial = { F: Fs[k], converged: r.converged, iterations: r.iterations, solver: r.solver, maxDisplacement: maxAbs(r.state.u) };
+      const t: SrmTrial = { F: Fs[k], converged: r.converged, iterations: r.iterations, solver: r.solver, startF: warm ? from : 0, maxDisplacement: maxAbs(r.state.u) };
       trials.push(t);
       options.onTrial?.(t);
-      // A trial that fails from the unloaded state is no upper bound: with the
-      // full weight applied at once the iteration can fail at an F that a
-      // start from a converged lower F reaches easily (seen with Newton on
-      // refined meshes). Only a failure from a converged state bounds F.
-      if (!r.converged && warm) hi = Math.min(hi, Fs[k]);
+      if (!r.converged && warm) failures.push({ F: Fs[k], from });
+      if (r.converged && Fs[k] > lo && (best < 0 || Fs[k] > Fs[best])) best = k;
     }
-    for (let k = 0; k < Fs.length; k++) if (out[k].converged && Fs[k] < hi && Fs[k] > lo && (best < 0 || Fs[k] > Fs[best])) best = k;
-    if (best < 0) return false;
-    lo = Fs[best]; prevState = loState; loState = out[best].state;
-    return true;
+    if (best >= 0) { lo = Fs[best]; prevState = loState; loState = out[best].state; }
+    update();
+    return best >= 0;
   }
 
   // Bracket, then bisect (Dawson, Roth & Drescher 1999): step up from a
@@ -507,12 +554,17 @@ export function* strengthReductionSearch(model: FeModel, options: SrmOptions = {
   // unloaded state, and the guide steps on refined meshes. They set how
   // many trials the bracket costs, not the factor found, which is decided
   // by the bisection to the tolerance; for non-associated flow, whose
-  // state depends on the load path, the steps stay equal and small as in
-  // Griffiths & Lane (1999), one trial at a time, and only the bisection
-  // runs several trials per round.
-  let F = options.startF ?? 1;
+  // state depends on the load path, the steps stay equal (10 %) as in
+  // Griffiths & Lane's (1999) incremental reduction, one trial at a time,
+  // and only the bisection runs several trials per round.
+  //
+  // At the end the failure that bounds F is confirmed from the final
+  // converged state when it was decided from a lower one (bisection keeps
+  // the first failure), so that a single false failure of the iteration
+  // cannot set F; if it converges the search goes on above it.
   const guide = options.guide;
-  let rise = options.bracketStep ?? 0.25;
+  let rise = options.bracketStep ?? (nonAssociated ? 0.1 : 0.25);
+  let F = options.resume ? (Number.isFinite(hi) ? (lo + hi) / 2 : lo * (1 + rise)) : options.startF ?? 1;
   let warning: string | undefined;
   // The next reduction while rising from a converged one.
   const nextUp = (from: number, r: number): number => {
@@ -520,50 +572,73 @@ export function* strengthReductionSearch(model: FeModel, options: SrmOptions = {
     if (guide !== undefined && from < 1.05 * guide) next = Math.min(next, from < 0.97 * guide ? 0.97 * guide : from + 0.02 * guide);
     return next;
   };
-  for (let k = 0; k < 40 && !(lo > 0 && Number.isFinite(hi)); k++) {
-    if (loState === null || Number.isFinite(hi) || nonAssociated || perRound === 1) {
-      // One trial: from the unloaded state, or towards a known failure, or
-      // in the equal steps of non-associated flow.
-      const ok = yield* round([F]);
-      if (ok) {
-        if (Number.isFinite(hi)) F = (F + hi) / 2;
-        else {
-          F = nextUp(F, rise);
-          // With associated flow the limit does not depend on the path, so
-          // the step can grow; with non-associated flow the state does, and
-          // F rises in equal small steps as in Griffiths & Lane.
-          if (!nonAssociated) rise = Math.min(0.25, rise * 1.5);
+  for (let confirmations = 0; ; confirmations++) {
+    for (let k = 0; k < 40 && !(lo > 0 && Number.isFinite(hi)); k++) {
+      if (loState === null || Number.isFinite(hi) || nonAssociated || perRound === 1) {
+        // One trial: from the unloaded state, or towards a known failure, or
+        // in the equal steps of non-associated flow.
+        const ok = yield* round([F]);
+        if (ok) {
+          if (Number.isFinite(hi)) F = (F + hi) / 2;
+          else {
+            F = nextUp(F, rise);
+            // With associated flow the limit does not depend on the path, so
+            // the step can grow; with non-associated flow the state does, and
+            // F rises in equal steps as in Griffiths & Lane.
+            if (!nonAssociated) rise = Math.min(0.25, rise * 1.5);
+          }
+        } else F = lo > 0 ? (lo + F) / 2 : F / 1.5;
+      } else {
+        // Associated flow rising from a converged state: the next steps at once.
+        const Fs: number[] = [];
+        const rises: number[] = [];
+        let f = lo, r = rise;
+        for (let n = 0; n < perRound; n++) {
+          f = nextUp(f, r);
+          Fs.push(f);
+          r = Math.min(0.25, r * 1.5);
+          rises.push(r);
         }
-      } else F = lo > 0 ? (lo + F) / 2 : F / 1.5;
-    } else {
-      // Associated flow rising from a converged state: the next steps at once.
-      const Fs: number[] = [];
-      const rises: number[] = [];
-      let f = lo, r = rise;
-      for (let n = 0; n < perRound; n++) {
-        f = nextUp(f, r);
-        Fs.push(f);
-        r = Math.min(0.25, r * 1.5);
-        rises.push(r);
+        yield* round(Fs);
+        if (!Number.isFinite(hi)) {
+          F = nextUp(lo, rises[perRound - 1]);
+          rise = rises[perRound - 1];
+        } else F = (lo + hi) / 2;
       }
-      yield* round(Fs);
-      if (!Number.isFinite(hi)) {
-        F = nextUp(lo, rises[perRound - 1]);
-        rise = rises[perRound - 1];
-      } else F = (lo + hi) / 2;
+      if (F > 100) { warning = "no failure below F = 100"; break; }
+      if (F < 0.01) { warning = "no converged trial above F = 0.01"; break; }
     }
-    if (F > 100) { warning = "no failure below F = 100"; break; }
-    if (F < 0.01) { warning = "no converged trial above F = 0.01"; break; }
-  }
-  // Bisect (multisect): as many points as needed to bring the bracket
-  // within the tolerance in one round, at most `trialsPerRound`.
-  while (lo > 0 && Number.isFinite(hi) && hi - lo > fTol) {
-    const n = Math.min(perRound, Math.max(1, Math.ceil((hi - lo) / fTol) - 1));
-    const Fs = Array.from({ length: n }, (_, k) => lo + ((hi - lo) * (k + 1)) / (n + 1));
-    yield* round(Fs);
+    // Bisect (multisect): as many points as needed to bring the bracket
+    // within the tolerance in one round, at most `trialsPerRound`.
+    while (lo > 0 && Number.isFinite(hi) && hi - lo > fTol) {
+      const n = Math.min(perRound, Math.max(1, Math.ceil((hi - lo) / fTol) - 1));
+      const Fs = Array.from({ length: n }, (_, k) => lo + ((hi - lo) * (k + 1)) / (n + 1));
+      yield* round(Fs);
+    }
+    if (warning || !(lo > 0 && Number.isFinite(hi)) || hiFrom >= lo || confirmations >= MAX_CONFIRMATIONS) break;
+    const failed = hi, failedFrom = hiFrom;
+    yield* round([failed]);
+    if (hi === failed) break;
+    // The failure was false. Other failures decided from the same or a
+    // lower state are suspect too: they are dropped, and the search goes on
+    // above in small steps and finds them again if they are real.
+    for (let k = failures.length - 1; k >= 0; k--) if (failures[k].from <= failedFrom) failures.splice(k, 1);
+    update();
+    rise = Math.min(rise, 0.04);
+    F = Number.isFinite(hi) ? (lo + hi) / 2 : nextUp(lo, rise);
   }
 
-  const conv = trials.filter((t) => t.converged).sort((a, b) => a.F - b.F);
+  if (!warning && lo > 0 && Number.isFinite(hi) && hiFrom < lo) {
+    warning = `the failure at F = ${hi.toFixed(3)} was not confirmed from the converged state at ${lo.toFixed(3)}`;
+  }
+  // Displacements depend on the load path, so only trials that rose from a
+  // converged state are compared (a trial from the unloaded state carries
+  // the whole weight at once); the reference rate is that of the first two.
+  // A reduction converged more than once keeps its first trial.
+  const conv = trials
+    .filter((t) => t.converged && t.startF > 0)
+    .sort((a, b) => a.F - b.F)
+    .filter((t, k, all) => k === 0 || t.F > all[k - 1].F);
   let jump: number | null = null;
   if (conv.length >= 3) {
     const rate0 = (conv[1].maxDisplacement - conv[0].maxDisplacement) / (conv[1].F - conv[0].F);
@@ -576,6 +651,7 @@ export function* strengthReductionSearch(model: FeModel, options: SrmOptions = {
   return {
     factorOfSafety: lo,
     failedF: hi,
+    failedFrom: hiFrom,
     displacementJumpF: jump,
     trials,
     state: loState ?? emptyState(model),

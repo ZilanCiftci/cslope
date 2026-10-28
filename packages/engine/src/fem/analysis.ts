@@ -5,9 +5,10 @@
  *
  * Implementation choices (not from the literature), with their reasons:
  * - Adaptive loop: up to `levels` refinements, stopping when F changes by
- *   less than 0.01; F on the coarser meshes to 0.01 (the stop test's
+ *   less than 0.01; F on the coarser meshes to half that (the stop test's
  *   resolution), on the final mesh to `fTolerance`, continuing the
- *   bracket of the last search.
+ *   bracket of the last search. When no factor is found on a refined mesh,
+ *   the coarser mesh's result stands, with a warning.
  * - A refined mesh starts its search at 0.6 × the coarser mesh's F with
  *   steps of 4 %, guided by that F: a finer mesh usually gives a lower
  *   collapse load (de Borst & Vermeer 1984, Géotechnique 34(2), 199–210),
@@ -93,7 +94,7 @@ export interface FemAnalysisResult {
    * The element size of the final mesh as a size field, to mesh the same
    * slope again (e.g. for the lower bound, whose mechanism is the same).
    */
-  sizeField: (x: number, y: number) => number;
+  sizeField: ((x: number, y: number) => number) & { min?: number };
   elapsedMs: number;
 }
 
@@ -196,11 +197,12 @@ export function* analyzeFemSearch(slope: Slope, options: FemAnalysisOptions = {}
     );
   }
   const tensionCutoff = options.tensionCutoff ?? (slope.tensionCrackDepth > 0 || slope.tensionCrackAuto);
-  // With refinement to follow, the coarser meshes need F only to 0.01: as
-  // fine as the test that stops the refinement (a change below 0.01), so
-  // that the test does not see the bisection's scatter.
+  // With refinement to follow, the coarser meshes need F to half the change
+  // that stops the refinement (0.01 by default), so that the stop test is
+  // not decided by the bisection's scatter, and no finer than the final
+  // tolerance.
   const ad = options.adaptive;
-  const coarseTol = ad ? Math.max(options.fTolerance ?? 0.005, 0.01) : options.fTolerance;
+  const coarseTol = ad ? Math.max(options.fTolerance ?? 0.005, (ad.tolerance ?? 0.01) / 2) : options.fTolerance;
   const perRound = options.trialsPerRound ?? DEFAULT_TRIALS_PER_ROUND;
   const trialOptions: SrmOptions = {
     flowRule, tensionCutoff, solver: options.solver, tolerance: options.tolerance, maxIterations: options.maxIterations,
@@ -210,34 +212,49 @@ export function* analyzeFemSearch(slope: Slope, options: FemAnalysisOptions = {}
     onModel(strengthReductionSearch(m, { ...options, ...o, flowRule, tensionCutoff, trialsPerRound: perRound }), m, level, trialOptions);
   let r = yield* search(model, 0, { fTolerance: coarseTol });
   const levels: FemLevel[] = [{ elements: model.elementCount, factorOfSafety: r.factorOfSafety, iterations: r.iterations }];
+  let capped = model.triangulation.capped;
   if (ad && r.factorOfSafety > 0 && Number.isFinite(r.failedF)) {
     const maxLevels = ad.levels ?? 3, tol = ad.tolerance ?? 0.01;
+    let finalLevel = 0;
     for (let level = 0; level < maxLevels; level++) {
       const eta = ad.indicator === "zz"
         ? zzIndicator(model, r.state.stress)
         : dissipationIndicator(model, r.state.stress, r.state.evp);
       const marked = dorflerMark(eta, ad.theta ?? 0.3);
+      const coarser = model, coarserR = r;
       model = buildFeModel(slope, { ...options, sizeField: refinedSizeField(model, marked) });
       const prev = r.factorOfSafety;
       // Start below the coarser mesh's factor (a finer mesh gives less) and
       // step up from converged states.
       r = yield* search(model, level + 1, { startF: 0.6 * prev, bracketStep: 0.04, guide: prev, fTolerance: coarseTol });
       levels.push({ elements: model.elementCount, factorOfSafety: r.factorOfSafety, iterations: r.iterations });
+      if (!(r.factorOfSafety > 0 && Number.isFinite(r.failedF))) {
+        // No factor on the refined mesh: the result stays the coarser mesh's.
+        warnings.push(
+          `No factor of safety was found on the refined mesh ${level + 1}${r.warning ? ` (${r.warning})` : ""}; the result is that of the coarser mesh.`,
+        );
+        model = coarser; r = coarserR;
+        levels.pop();
+        break;
+      }
+      capped ||= model.triangulation.capped;
+      finalLevel = level + 1;
       if (Math.abs(r.factorOfSafety - prev) < tol) break;
     }
     // F to the requested tolerance on the final mesh.
     if (r.factorOfSafety > 0 && Number.isFinite(r.failedF) && r.failedF - r.factorOfSafety > (options.fTolerance ?? 0.005)) {
       const prior = r;
-      r = yield* search(model, levels.length - 1, { fTolerance: options.fTolerance, resume: { lo: prior.factorOfSafety, hi: prior.failedF, state: prior.state } });
+      r = yield* search(model, finalLevel, { fTolerance: options.fTolerance, resume: { lo: prior.factorOfSafety, hi: prior.failedF, hiFrom: prior.failedFrom, state: prior.state } });
       r = { ...r, trials: [...prior.trials, ...r.trials], previousState: r.previousState ?? prior.previousState };
-      levels[levels.length - 1] = { elements: model.elementCount, factorOfSafety: r.factorOfSafety, iterations: levels[levels.length - 1].iterations + r.iterations };
+      levels[finalLevel] = { elements: model.elementCount, factorOfSafety: r.factorOfSafety, iterations: levels[finalLevel].iterations + r.iterations };
     }
   }
   if (slope.piles.length) {
     warnings.push("Piles are not included in the finite element analysis: a pile row needs beam elements and three-dimensional flow of soil between the piles.");
   }
   if (model.seepage && !model.seepage.converged) warnings.push("The seepage iteration did not converge; the pore pressures are approximate.");
-  if (model.triangulation.capped) warnings.push("The mesh reached its vertex limit; the element size was not reached everywhere.");
+  if (capped) warnings.push("The mesh reached its vertex limit; the element size was not reached everywhere.");
+  if (model.triangulation.missingSegments > 0) warnings.push("A material boundary shorter than the mesh's merge tolerance is not represented in the mesh.");
   if (r.warning) warnings.push(r.warning);
 
   const nc = model.cornerCount;
@@ -268,7 +285,7 @@ export function* analyzeFemSearch(slope: Slope, options: FemAnalysisOptions = {}
     plasticShearStrain: plasticShearPerElement(model, r.state.evp),
     shearStrainIncrement: shearIncrementPerElement(model, r.state.u, r.previousState?.u ?? null),
     levels,
-    sizeField: refinedSizeField(model, new Uint8Array(model.elementCount)),
+    sizeField: model.sizeField,
     elapsedMs: performance.now() - t0,
   };
 }

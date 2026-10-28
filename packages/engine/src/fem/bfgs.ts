@@ -13,7 +13,9 @@
  * - Acceleration: BFGS quasi-Newton updates of the inverse stiffness, with
  *   the elastic stiffness as the initial matrix (Matthies & Strang 1979,
  *   IJNME 14(11), 1613–1626), applied by the two-loop recursion of the
- *   limited-memory form (Nocedal 1980, Math. Comput. 35(151), 773–782).
+ *   limited-memory form (Nocedal 1980, Math. Comput. 35(151), 773–782),
+ *   and the initial matrix scaled by γ = sᵀy / yᵀK⁻¹y at every iteration
+ *   (Nocedal & Wright 2006, eq. 7.20, in the elastic energy norm).
  *   Pairs whose curvature sᵀy is not positive are skipped, which keeps the
  *   update positive definite (Nocedal & Wright, Numerical Optimization,
  *   2nd ed., 2006, ch. 6).
@@ -88,6 +90,12 @@ export function bfgsAtF(
   // L-BFGS pairs: s = Δu, y = r_old − r_new (the change of the gradient −r).
   const S: Float64Array[] = [], Y: Float64Array[] = [], rho: number[] = [];
   const alphaK = new Float64Array(MEMORY);
+  const Ky = new Float64Array(neq), sNew = new Float64Array(neq), yNew = new Float64Array(neq);
+  // Initial matrix H0 = γ K⁻¹ with γ = sᵀy / yᵀK⁻¹y of the latest pair: the
+  // scaling of Nocedal & Wright (2006, eq. 7.20) in the variables K^½ u in
+  // which the elastic stiffness is the identity. Near collapse the secant
+  // stiffness is far below the elastic one and γ ≫ 1.
+  let gamma = 1;
   const direction = () => {
     d.set(r);
     for (let k = S.length - 1; k >= 0; k--) {
@@ -95,6 +103,7 @@ export function bfgsAtF(
       for (let i = 0; i < neq; i++) d[i] -= alphaK[k] * Y[k][i];
     }
     model.K.solve(d);
+    if (gamma !== 1) for (let i = 0; i < neq; i++) d[i] *= gamma;
     for (let k = 0; k < S.length; k++) {
       const beta = rho[k] * dot(Y[k], d);
       for (let i = 0; i < neq; i++) d[i] += (alphaK[k] - beta) * S[k][i];
@@ -137,14 +146,21 @@ export function bfgsAtF(
         if (aHi === MAX_STEP && gHi > 0) break;
       }
     }
-    const s = new Float64Array(neq), y = new Float64Array(neq);
-    for (let i = 0; i < neq; i++) { s[i] = trialU[i] - u[i]; y[i] = rOld[i] - r[i]; }
+    for (let i = 0; i < neq; i++) { sNew[i] = trialU[i] - u[i]; yNew[i] = rOld[i] - r[i]; }
     u.set(trialU);
     rn = rt;
-    const sy = dot(s, y);
-    if (sy > 1e-12 * norm2(s) * norm2(y)) {
-      if (S.length === MEMORY) { S.shift(); Y.shift(); rho.shift(); }
+    const sy = dot(sNew, yNew);
+    if (sy > 1e-12 * norm2(sNew) * norm2(yNew)) {
+      // Once the memory is full the oldest pair's arrays are reused.
+      const full = S.length === MEMORY;
+      const s = full ? S.shift()! : new Float64Array(neq), y = full ? Y.shift()! : new Float64Array(neq);
+      if (full) rho.shift();
+      s.set(sNew); y.set(yNew);
       S.push(s); Y.push(y); rho.push(1 / sy);
+      Ky.set(y);
+      model.K.solve(Ky);
+      const yKy = dot(y, Ky);
+      if (yKy > 0) gamma = sy / yKy;
     }
   }
   if (rn <= tol * fnorm) {

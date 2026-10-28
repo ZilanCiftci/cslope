@@ -22,7 +22,7 @@
  * - Small input angles (thin layers meeting the ground at a shallow
  *   angle), where Ruppert's algorithm need not terminate, are handled by
  *   refining for angle only triangles whose circumradius exceeds `minSize`
- *   (default 1/8 of the smallest size at the boundary) and by a vertex cap.
+ *   (default 1/8 of the smallest size) and by a vertex cap.
  * - A triangle is split for size when its longest edge exceeds 1.4 × the
  *   size field.
  * - Constraint segments that cross (a reinforcement line through a
@@ -38,8 +38,10 @@ export interface MeshInput {
   size: (x: number, y: number) => number;
   /** Smallest acceptable angle in degrees (default 25). */
   minAngle?: number;
-  /** No triangle is split for its angle below this circumradius (default: 1/8 of the smallest size seen at the input vertices). */
+  /** No triangle is split for its angle below this circumradius, and no segment shorter than it for encroachment (default: 1/8 of the smallest size, see `sizeMin`). */
   minSize?: number;
+  /** Smallest value of `size` anywhere, when known (the default minSize also looks at the input vertices). */
+  sizeMin?: number;
   /** Upper bound on the number of vertices (default 60 000). */
   maxVertices?: number;
 }
@@ -54,6 +56,8 @@ export interface TriMesh {
   count: number;
   /** Whether refinement stopped at the vertex cap. */
   capped: boolean;
+  /** Constraint segments missing from the triangulation (shorter than the merge tolerance); normally 0. */
+  missingSegments: number;
 }
 
 function orient(ax: number, ay: number, bx: number, by: number, cx: number, cy: number): number {
@@ -125,15 +129,16 @@ class Delaunay {
       }
       if (!moved) return t;
     }
-    // Fallback: brute force.
+    // Fallback: brute force, with a tolerance relative to the edge and the
+    // point's distance (orient is twice the area, a length squared).
+    const left = (a: number, b: number) => {
+      const ex = this.x[b] - this.x[a], ey = this.y[b] - this.y[a], qx = px - this.x[a], qy = py - this.y[a];
+      return orient(this.x[a], this.y[a], this.x[b], this.y[b], px, py) >= -1e-12 * (ex * ex + ey * ey + qx * qx + qy * qy);
+    };
     for (let s = 0; s < this.alive.length; s++) {
       if (!this.alive[s]) continue;
       const [a, b, c] = [this.v[3 * s], this.v[3 * s + 1], this.v[3 * s + 2]];
-      if (
-        orient(this.x[a], this.y[a], this.x[b], this.y[b], px, py) >= -1e-12 &&
-        orient(this.x[b], this.y[b], this.x[c], this.y[c], px, py) >= -1e-12 &&
-        orient(this.x[c], this.y[c], this.x[a], this.y[a], px, py) >= -1e-12
-      ) return s;
+      if (left(a, b) && left(b, c) && left(c, a)) return s;
     }
     throw new Error("Point location failed");
   }
@@ -173,7 +178,8 @@ class Delaunay {
           const nb = this.n[3 * t + i];
           if (nb < 0 || bad.has(nb)) continue;
           const a = this.v[3 * t + ((i + 1) % 3)], b = this.v[3 * t + ((i + 2) % 3)];
-          const len2 = (this.x[b] - this.x[a]) ** 2 + (this.y[b] - this.y[a]) ** 2;
+          const ex = this.x[b] - this.x[a], ey = this.y[b] - this.y[a];
+          const len2 = ex * ex + ey * ey;
           if (orient(this.x[a], this.y[a], this.x[b], this.y[b], px, py) <= 1e-10 * len2) {
             bad.add(nb);
             grew = true;
@@ -260,21 +266,42 @@ function circumcentre(ax: number, ay: number, bx: number, by: number, cx: number
   const a2 = ax * ax + ay * ay, b2 = bx * bx + by * by, c2 = cx * cx + cy * cy;
   const ux = (a2 * (by - cy) + b2 * (cy - ay) + c2 * (ay - by)) / d;
   const uy = (a2 * (cx - bx) + b2 * (ax - cx) + c2 * (bx - ax)) / d;
-  return [ux, uy, Math.hypot(ax - ux, ay - uy)];
+  return [ux, uy, dist(ax - ux, ay - uy)];
 }
 
-function minAngleOf(ax: number, ay: number, bx: number, by: number, cx: number, cy: number): number {
-  const la = Math.hypot(bx - cx, by - cy), lb = Math.hypot(ax - cx, ay - cy), lc = Math.hypot(ax - bx, ay - by);
+/**
+ * Length of (dx, dy). The mesh uses only +, −, ×, / and √, which IEEE 754
+ * rounds correctly, so that it is the same in every JavaScript engine;
+ * Math.hypot, acos, log2 and ** may differ by an ulp between engines and
+ * would change the mesh.
+ */
+function dist(dx: number, dy: number): number {
+  return Math.sqrt(dx * dx + dy * dy);
+}
+
+/** cos x by its Taylor series in correctly rounded arithmetic (|x| ≤ π/2). */
+function cosine(x: number): number {
+  let term = 1, sum = 1;
+  for (let k = 1; k <= 12; k++) {
+    term *= -(x * x) / ((2 * k - 1) * (2 * k));
+    sum += term;
+  }
+  return sum;
+}
+
+/** Cosine of the smallest angle of a triangle (the angle opposite the shortest side, by the law of cosines). */
+function minAngleCos(ax: number, ay: number, bx: number, by: number, cx: number, cy: number): number {
+  const la = dist(bx - cx, by - cy), lb = dist(ax - cx, ay - cy), lc = dist(ax - bx, ay - by);
   const s = Math.min(la, lb, lc);
-  // Angle opposite the shortest side, by the law of cosines.
   const [p, q] = s === la ? [lb, lc] : s === lb ? [la, lc] : [la, lb];
-  const cos = (p * p + q * q - s * s) / (2 * p * q);
-  return Math.acos(Math.max(-1, Math.min(1, cos)));
+  return (p * p + q * q - s * s) / (2 * p * q);
 }
 
 /** Mesh the domain. Throws if the input is degenerate. */
 export function meshDomain(input: MeshInput): TriMesh {
-  const minAngle = ((input.minAngle ?? 25) * Math.PI) / 180;
+  // A triangle is poor when its smallest angle is below minAngle, i.e. the
+  // cosine of that angle is above cos(minAngle).
+  const cosMinAngle = cosine(((input.minAngle ?? 25) * Math.PI) / 180);
   const maxVertices = input.maxVertices ?? 60000;
   const all = [input.boundary, ...input.segments];
   let xmin = Infinity, ymin = Infinity, xmax = -Infinity, ymax = -Infinity;
@@ -323,7 +350,7 @@ export function meshDomain(input: MeshInput): TriMesh {
   const inputVerts = dt.x.length;
   const onSeg = (a: number, b: number, c: number) => {
     const ax = dt.x[a], ay = dt.y[a], bx = dt.x[b], by = dt.y[b], cx = dt.x[c], cy = dt.y[c];
-    const len2 = (bx - ax) ** 2 + (by - ay) ** 2;
+    const len2 = (bx - ax) * (bx - ax) + (by - ay) * (by - ay);
     const t = ((cx - ax) * (bx - ax) + (cy - ay) * (by - ay)) / len2;
     if (t <= 1e-9 || t >= 1 - 1e-9) return -1;
     const d = Math.abs(orient(ax, ay, bx, by, cx, cy)) / Math.sqrt(len2);
@@ -346,7 +373,12 @@ export function meshDomain(input: MeshInput): TriMesh {
   }
   let segments = [...segSet.values()];
 
-  const size0 = Math.min(...input.boundary.map(([px, py]) => input.size(px, py)));
+  // Smallest size for splitting for angle or encroachment: 1/8 of the
+  // smallest target size, at any input vertex (boundary and constraint
+  // lines) or as given by the size field (`sizeMin`), so that a fine region
+  // inside the domain is not held at the boundary's size.
+  let size0 = input.sizeMin ?? Infinity;
+  for (const line of all) for (const [px, py] of line) size0 = Math.min(size0, input.size(px, py));
   const minSize = input.minSize ?? size0 / 8;
   const boundary = input.boundary;
   const insideDomain = (px: number, py: number) => pointInPolygon(px, py, boundary);
@@ -384,21 +416,30 @@ export function meshDomain(input: MeshInput): TriMesh {
   const input0 = (v: number) => v < inputVerts && isInput[v] === 1;
   const splitSegment = (k: number) => {
     const [a, b] = segments[k];
-    const len = Math.hypot(dt.x[b] - dt.x[a], dt.y[b] - dt.y[a]);
+    const len = dist(dt.x[b] - dt.x[a], dt.y[b] - dt.y[a]);
     let t = 0.5;
     if (input0(a) !== input0(b)) {
-      const d = 2 ** Math.round(Math.log2(len / 2));
+      // The power of two nearest to len/2 (in ratio): d ≤ len/2 < 2d, and
+      // 2d if len/2 ≥ √2·d.
+      const half = len / 2;
+      let d = 1;
+      while (d * 2 <= half) d *= 2;
+      while (d > half) d /= 2;
+      if (half * half >= 2 * d * d) d *= 2;
       const f = d / len;
       t = input0(a) ? f : 1 - f;
       if (t < 0.25 || t > 0.75) t = 0.5;
     }
     const m = dt.insert(dt.x[a] + t * (dt.x[b] - dt.x[a]), dt.y[a] + t * (dt.y[b] - dt.y[a]), tol);
+    // A segment within the merge tolerance of its length cannot be split.
+    if (m === a || m === b) return false;
     segments[k] = [a, m];
     segments.push([m, b]);
+    return true;
   };
   const segLength = (k: number) => {
     const [a, b] = segments[k];
-    return Math.hypot(dt.x[b] - dt.x[a], dt.y[b] - dt.y[a]);
+    return dist(dt.x[b] - dt.x[a], dt.y[b] - dt.y[a]);
   };
   const recoverSegments = () => {
     for (let pass = 0; pass < 100000; pass++) {
@@ -410,8 +451,7 @@ export function meshDomain(input: MeshInput): TriMesh {
         // A present but encroached segment is split only while it is longer
         // than the smallest size; a missing one is always split.
         if (missing || (segLength(k) > minSize && segEncroached(segments[k]))) {
-          splitSegment(k);
-          any = true;
+          if (splitSegment(k)) any = true;
         }
       }
       if (!any) return;
@@ -432,12 +472,12 @@ export function meshDomain(input: MeshInput): TriMesh {
     if (!insideDomain(gx, gy)) continue;
     const [ux, uy, r] = circumcentre(dt.x[a], dt.y[a], dt.x[b], dt.y[b], dt.x[c], dt.y[c]);
     const maxEdge = Math.max(
-      Math.hypot(dt.x[a] - dt.x[b], dt.y[a] - dt.y[b]),
-      Math.hypot(dt.x[b] - dt.x[c], dt.y[b] - dt.y[c]),
-      Math.hypot(dt.x[c] - dt.x[a], dt.y[c] - dt.y[a]),
+      dist(dt.x[a] - dt.x[b], dt.y[a] - dt.y[b]),
+      dist(dt.x[b] - dt.x[c], dt.y[b] - dt.y[c]),
+      dist(dt.x[c] - dt.x[a], dt.y[c] - dt.y[a]),
     );
     const tooBig = maxEdge > 1.4 * input.size(gx, gy);
-    const tooThin = r > minSize && minAngleOf(dt.x[a], dt.y[a], dt.x[b], dt.y[b], dt.x[c], dt.y[c]) < minAngle;
+    const tooThin = r > minSize && minAngleCos(dt.x[a], dt.y[a], dt.x[b], dt.y[b], dt.x[c], dt.y[c]) > cosMinAngle;
     if (!tooBig && !tooThin) continue;
     const enc: number[] = [];
     let blocked = false;
@@ -449,7 +489,9 @@ export function meshDomain(input: MeshInput): TriMesh {
     if (blocked && !enc.length) continue;
     if (enc.length) {
       const n0 = dt.alive.length;
-      for (const k of enc) splitSegment(k);
+      let split = false;
+      for (const k of enc) if (splitSegment(k)) split = true;
+      if (!split) continue;
       recoverSegments();
       // Only the triangles made by the splits are new; the rest were checked.
       for (let s = n0; s < dt.alive.length; s++) if (dt.alive[s]) queue.push(s);
@@ -457,7 +499,11 @@ export function meshDomain(input: MeshInput): TriMesh {
       continue;
     }
     if (!insideDomain(ux, uy)) continue;
+    const before = dt.x.length;
     dt.insert(ux, uy, tol);
+    // The circumcentre merged with an existing vertex: nothing changed, and
+    // re-queueing the triangle would loop.
+    if (dt.x.length === before) continue;
     queue.push(...dt.created);
     if (dt.alive[t]) queue.push(t);
   }
@@ -480,6 +526,8 @@ export function meshDomain(input: MeshInput): TriMesh {
     if (map[v] < 0) { map[v] = xs.length; xs.push(dt.x[v]); ys.push(dt.y[v]); }
     tri[i] = map[v];
   }
+  let missingSegments = 0;
+  for (const [a, b] of segments) if (!dt.findEdge(a, b)) missingSegments++;
   segments = [];
-  return { x: Float64Array.from(xs), y: Float64Array.from(ys), tri, count: keep.length / 3, capped };
+  return { x: Float64Array.from(xs), y: Float64Array.from(ys), tri, count: keep.length / 3, capped, missingSegments };
 }

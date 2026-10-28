@@ -17,6 +17,11 @@
  *   Zdravković, Finite Element Analysis in Geotechnical Engineering:
  *   Theory, Thomas Telford 1999). Pore pressure is hydrostatic below the water line of each
  *   element's material, u = γw (y_w − y) ≥ 0, or comes from seepage.ts.
+ * - Strength at each Gauss point as the slices take it: depth from the top
+ *   of the material's layer where the model needs it, design values with
+ *   the partial factors (EN 1997-1 Annex A, `designStrength`), and for a
+ *   combined material the lesser of the drained and the undrained strength,
+ *   a Tresca cap (σ₁ − σ₃)/2 ≤ cu on Mohr–Coulomb. Variable loads take γQ.
  * - Surface loads: ponded water as a normal pressure, strip loads (kPa per
  *   horizontal metre) and line loads (kN/m) as vertical tractions,
  *   integrated with the quadratic edge shape functions.
@@ -28,8 +33,8 @@
  *
  * Implementation choices (not from the literature), with their reasons:
  * - Element size: a twentieth of the model height by default, and at most
- *   half the thickness of a thin layer (thickness estimated as 2·area /
- *   perimeter), so that every layer is crossed by at least two elements.
+ *   half the local thickness of a thin layer (polygonThicknessSamples), so that every
+ *   layer is crossed by at least two elements.
  * - Boundary edges: an edge whose midpoint lies on the ground surface is
  *   free; a non-surface edge with |Δx| ≤ 10⁻³ |Δy| is a vertical side
  *   (roller); every other non-surface edge is fixed.
@@ -42,7 +47,8 @@
 
 import { WATER_UNIT_WEIGHT } from "../types/constants";
 import type { Material } from "../types/material";
-import { needsLayerTop, resolveUnitWeight } from "../types/strength";
+import { designStrength, needsLayerTop, resolveUnitWeight } from "../types/strength";
+import { materialLayerTopAt } from "../model/geometry-ops";
 import { envelopeAt } from "../model/reinforcement";
 import type { Slope } from "../model/slope";
 import { getYAtX } from "../math/interpolation";
@@ -73,8 +79,8 @@ export interface FeMaterialParameters {
 export interface FeModelOptions {
   /** Target element size (m); default: domain height / 20. */
   elementSize?: number;
-  /** Size field overriding `elementSize`, e.g. from error estimation. */
-  sizeField?: (x: number, y: number) => number;
+  /** Size field overriding `elementSize`, e.g. from error estimation; `min`, when given, is its smallest value. */
+  sizeField?: ((x: number, y: number) => number) & { min?: number };
   /** Parameters per material name; "*" for every material not named. */
   materialParameters?: Readonly<Record<string, FeMaterialParameters>>;
   /** Smallest triangle angle (°); default 25. */
@@ -159,6 +165,12 @@ export interface FeModel {
   gpY: Float64Array;
   /** Strength at each Gauss point: c (kPa) and φ (rad). */
   gpC: Float64Array;
+  /**
+   * Undrained strength cap per Gauss point (kPa) of a combined material,
+   * whose strength is the lesser of the drained and the undrained one
+   * (a Tresca limit on the Mohr–Coulomb one); Infinity elsewhere.
+   */
+  gpCu: Float64Array;
   gpPhi: Float64Array;
   /** Pore pressure at each Gauss point (kPa, compression positive). */
   gpU: Float64Array;
@@ -173,6 +185,8 @@ export interface FeModel {
   surfaceEdges: Int32Array;
   /** The triangulation the mesh was made from. */
   triangulation: TriMesh;
+  /** The target element size the mesh was made with (m). */
+  sizeField: ((x: number, y: number) => number) & { min?: number };
   /** The seepage solution, when the pore pressures come from it. */
   seepage?: SeepageResult;
   /**
@@ -220,7 +234,8 @@ function distToPolyline(px: number, py: number, lx: readonly number[], ly: reado
     const dx = bx - ax, dy = by - ay;
     const l2 = dx * dx + dy * dy;
     const t = l2 > 0 ? Math.max(0, Math.min(1, ((px - ax) * dx + (py - ay) * dy) / l2)) : 0;
-    best = Math.min(best, Math.hypot(px - ax - t * dx, py - ay - t * dy));
+    const ex = px - ax - t * dx, ey = py - ay - t * dy;
+    best = Math.min(best, Math.sqrt(ex * ex + ey * ey));
   }
   return best;
 }
@@ -229,6 +244,59 @@ function polygonArea(px: readonly number[], py: readonly number[]): number {
   let a = 0;
   for (let i = 0, j = px.length - 1; i < px.length; j = i++) a += px[j] * py[i] - px[i] * py[j];
   return a / 2;
+}
+
+/**
+ * Local thickness of a material polygon: from points at a quarter, half and
+ * three quarters of each edge a ray is cast along the inward normal to the
+ * polygon's opposite side; each sample is that point and the distance.
+ * Edges that occur twice in opposite directions (the zero-width bridge
+ * that joins a lens to its surrounding ring, geometry-ops.ts) are neither
+ * sources nor targets. Used for the thin-layer element size (an
+ * implementation choice; 2·area / perimeter overestimates a bent layer and
+ * one value for the whole polygon refines a thick body with a thin tail).
+ */
+export function polygonThicknessSamples(px: readonly number[], py: readonly number[]): { x: number; y: number; t: number }[] {
+  const n = px.length;
+  const sign = polygonArea(px, py) >= 0 ? 1 : -1; // inward normal is to the left of a CCW edge
+  const samples: { x: number; y: number; t: number }[] = [];
+  let span = 0;
+  for (let i = 0; i < n; i++) span = Math.max(span, Math.abs(px[i] - px[0]), Math.abs(py[i] - py[0]));
+  const tol = 1e-9 * span;
+  const same = (a: number, b: number) => Math.abs(px[a] - px[b]) <= tol && Math.abs(py[a] - py[b]) <= tol;
+  const bridge = new Uint8Array(n);
+  for (let i = 0; i < n; i++) {
+    const j = (i + 1) % n;
+    for (let k = 0; k < n && !bridge[i]; k++) {
+      const l = (k + 1) % n;
+      if (k !== i && same(i, l) && same(j, k)) bridge[i] = 1;
+    }
+  }
+  for (let i = 0; i < n; i++) {
+    if (bridge[i]) continue;
+    const j = (i + 1) % n;
+    const ex = px[j] - px[i], ey = py[j] - py[i];
+    const len = Math.sqrt(ex * ex + ey * ey);
+    if (len <= tol) continue;
+    const nx = (-ey / len) * sign, ny = (ex / len) * sign;
+    for (const f of [0.25, 0.5, 0.75]) {
+      const ox = px[i] + f * ex, oy = py[i] + f * ey;
+      let best = Infinity;
+      for (let k = 0; k < n; k++) {
+        if (k === i || bridge[k]) continue;
+        const l = (k + 1) % n;
+        const sx = px[l] - px[k], sy = py[l] - py[k];
+        const den = nx * sy - ny * sx;
+        if (den === 0) continue;
+        const qx = px[k] - ox, qy = py[k] - oy;
+        const t = (qx * sy - qy * sx) / den; // distance along the ray
+        const u = (qx * ny - qy * nx) / den; // position on edge k
+        if (t > tol && u >= 0 && u <= 1 && t < best) best = t;
+      }
+      if (Number.isFinite(best)) samples.push({ x: ox, y: oy, t: best });
+    }
+  }
+  return samples;
 }
 
 /**
@@ -277,15 +345,24 @@ export function buildFeModel(slope: Slope, options: FeModelOptions = {}): FeMode
   const span = Math.max(xmax - xmin, ymax - ymin);
   const geoms = slope.materialGeometries;
 
-  // Size field: the target size, at most half the thickness of a thin layer
-  // (thickness estimated as 2·area / perimeter of the material polygon).
+  // Size field: the target size, at most half the thickness of a thin layer.
   const h0 = options.elementSize ?? (ymax - ymin) / 20;
-  const layerSize = geoms.map((g) => {
-    const a = Math.abs(polygonArea(g.px, g.py));
-    let p = 0;
-    for (let i = 0, j = g.px.length - 1; i < g.px.length; j = i++) p += Math.hypot(g.px[i] - g.px[j], g.py[i] - g.py[j]);
-    return p > 0 ? Math.max((2 * a) / p / 2, h0 / 8) : h0;
-  });
+  // Thin parts of each material polygon: samples of its local thickness t
+  // where t/2 is below the element size. Near such a sample the size is
+  // t/2 (at least h0/8), growing by half the distance beyond t from it, so
+  // the refinement stays local and grades into h0.
+  const thin = geoms.map((g) => polygonThicknessSamples(g.px, g.py).filter((q) => q.t / 2 < h0));
+  const layerSizeAt = (k: number, px: number, py: number): number => {
+    let size = h0;
+    for (const q of thin[k]) {
+      const dx = px - q.x, dy = py - q.y;
+      const d = Math.sqrt(dx * dx + dy * dy);
+      size = Math.min(size, Math.max(q.t / 2, h0 / 8) + 0.5 * Math.max(0, d - q.t));
+    }
+    return size;
+  };
+  let sizeMin = h0;
+  for (const samples of thin) for (const q of samples) sizeMin = Math.min(sizeMin, Math.max(q.t / 2, h0 / 8));
   const boxes = geoms.map((g) => [Math.min(...g.px), Math.max(...g.px), Math.min(...g.py), Math.max(...g.py)]);
   const polys = geoms.map((g) => g.px.map((v, i) => [v, g.py[i]] as [number, number]));
   const regionAtFast = (px: number, py: number): number => {
@@ -298,7 +375,7 @@ export function buildFeModel(slope: Slope, options: FeModelOptions = {}): FeMode
   };
   const size = options.sizeField ?? ((px: number, py: number) => {
     const k = regionAtFast(px, py);
-    return k >= 0 ? Math.min(h0, layerSize[k]) : h0;
+    return k >= 0 ? layerSizeAt(k, px, py) : h0;
   });
 
   const segments: [number, number][][] = polys.map((p) => [...p, p[0]]);
@@ -311,6 +388,7 @@ export function buildFeModel(slope: Slope, options: FeModelOptions = {}): FeMode
     boundary: bnd,
     segments,
     size,
+    sizeMin: options.sizeField ? options.sizeField.min : sizeMin,
     minAngle: options.minAngle,
     maxVertices: options.maxVertices,
   });
@@ -397,6 +475,8 @@ export function buildFeModel(slope: Slope, options: FeModelOptions = {}): FeMode
   const ngp = 3 * ne;
   const gpX = new Float64Array(ngp), gpY = new Float64Array(ngp);
   const gpC = new Float64Array(ngp), gpPhi = new Float64Array(ngp), gpU = new Float64Array(ngp);
+  const gpCu = new Float64Array(ngp).fill(Infinity);
+  const factors = slope.partialFactors;
   const N = new Float64Array(6);
   const surface = slope.surfaceLineXY ?? { x: [xmin, xmax], y: [ymax, ymax] };
   const waterLines = materials.map((m) => slope.getWaterLineForMaterial(m));
@@ -411,9 +491,19 @@ export function buildFeModel(slope: Slope, options: FeModelOptions = {}): FeMode
       if (elElastic[e]) { gpC[i] = Infinity; gpPhi[i] = 0; }
       else {
         const yGround = polylineY(surface, gx);
-        const s = m.getStrength({ yBottom: gy, x: gx, yGround, alpha: 0, ...(needsLayerTop(m.model) ? { yLayerTop: yGround } : {}) });
+        // Depth from the top of the material's layer, as the slices take it.
+        const yLayerTop = needsLayerTop(m.model) ? (materialLayerTopAt(slope.materialGeometries, m, gx, gy) ?? yGround) : undefined;
+        const s = m.getStrength({ yBottom: gy, x: gx, yGround, alpha: 0, ...(yLayerTop !== undefined ? { yLayerTop } : {}) });
         if (s.skipSurface) { gpC[i] = Infinity; gpPhi[i] = 0; elElastic[e] = 1; }
-        else { gpC[i] = Math.max(0, s.cohesion); gpPhi[i] = (s.frictionAngle * Math.PI) / 180; }
+        else {
+          // Design strength with the partial factors, as the slices
+          // (designStrength); the factor of safety is then on it.
+          const d = designStrength(m.model.kind, s, factors);
+          gpC[i] = Math.max(0, d.cohesion);
+          // without factors φ as given, not through atan(tan φ)
+          gpPhi[i] = d.undrained ? 0 : factors ? Math.atan(d.tanPhi) : (s.frictionAngle * Math.PI) / 180;
+          if (s.isCombined && !d.undrained) gpCu[i] = Math.max(0, d.cohesionUndrained);
+        }
       }
       if (wl) {
         const yw = polylineY(wl, gx);
@@ -426,6 +516,8 @@ export function buildFeModel(slope: Slope, options: FeModelOptions = {}): FeMode
   const tolB = 1e-6 * span;
   const fixX = new Uint8Array(nn), fixY = new Uint8Array(nn);
   const surfEdges: number[] = [];
+  const surfEdgeElement: number[] = [];
+  const sideNodes = new Set<number>();
   for (let e = 0; e < ne; e++) {
     for (let k = 0; k < 3; k++) {
       const a = el[6 * e + k], b = el[6 * e + ((k + 1) % 3)], m = el[6 * e + 3 + k];
@@ -433,12 +525,15 @@ export function buildFeModel(slope: Slope, options: FeModelOptions = {}): FeMode
       const mx = x[m], my = y[m];
       if (distToPolyline(mx, my, surface.x, surface.y) <= tolB) {
         surfEdges.push(a, m, b);
+        surfEdgeElement.push(e);
         continue;
       }
       const vertical = Math.abs(x[b] - x[a]) <= 1e-3 * Math.abs(y[b] - y[a]);
       for (const n of [a, m, b]) {
         fixX[n] = 1;
         if (!vertical) fixY[n] = 1;
+        // the model's sides (outer x-extent), not a vertical step in the base
+        else if (Math.abs(x[n] - xmin) <= tolB || Math.abs(x[n] - xmax) <= tolB) sideNodes.add(n);
       }
     }
   }
@@ -452,9 +547,18 @@ export function buildFeModel(slope: Slope, options: FeModelOptions = {}): FeMode
     );
     const vgAlpha = Float64Array.from(elMaterial, (i) => params[i].vanGenuchtenAlpha ?? 3.6);
     const vgN = Float64Array.from(elMaterial, (i) => params[i].vanGenuchtenN ?? 1.56);
-    seepage = solveSeepage({ x, y, nodeCount: nn, el, elementCount: ne, gp, surfaceEdges: Int32Array.from(surfEdges), permeability, vgAlpha, vgN }, slope);
+    materials.forEach((m, i) => {
+      const a = params[i].vanGenuchtenAlpha ?? 3.6, n = params[i].vanGenuchtenN ?? 1.56;
+      if (!(a > 0) || !(n > 1)) throw new RangeError(`invalid van Genuchten parameters for material "${m.name}" (α > 0 and n > 1 are required)`);
+    });
+    seepage = solveSeepage(
+      { x, y, nodeCount: nn, el, elementCount: ne, gp, surfaceEdges: Int32Array.from(surfEdges), sideNodes: Int32Array.from(sideNodes), permeability, vgAlpha, vgN },
+      slope,
+    );
     const head = seepage.head;
-    for (let e = 0; e < ne; e++) {
+    // Without water on the boundary there is no flow, and the pore pressures
+    // stay those of each material's water line (computed above).
+    for (let e = 0; e < ne && seepage.flow; e++) {
       for (let g = 0; g < 3; g++) {
         shapeT6(GAUSS_T6[g][0], GAUSS_T6[g][1], N);
         let h = 0;
@@ -522,7 +626,7 @@ export function buildFeModel(slope: Slope, options: FeModelOptions = {}): FeMode
     const m = materials[elMaterial[e]], wl = waterLines[elMaterial[e]];
     for (let g = 0; g < 3; g++) {
       const o = (3 * e + g) * GP_STRIDE, w = gp[o + 12], u = gpU[3 * e + g];
-      const gamma = gaussUnitWeight(m, wl, !!seepage, u, gpX[3 * e + g], gpY[3 * e + g]);
+      const gamma = gaussUnitWeight(m, wl, !!seepage?.flow, u, gpX[3 * e + g], gpY[3 * e + g]);
       shapeT6(GAUSS_T6[g][0], GAUSS_T6[g][1], N);
       for (let k = 0; k < 6; k++) {
         // self-weight, and ∫ Bᵀ m u: m = (1, 1, 0) in the plane
@@ -530,11 +634,16 @@ export function buildFeModel(slope: Slope, options: FeModelOptions = {}): FeMode
       }
     }
   }
+  // Variable loads (strip and line loads) take the partial factor γQ, as in the slices.
+  const loadFactor = factors?.variableLoad ?? 1;
   // Surface tractions, 4 sub-intervals × 3 Gauss points per edge.
   const GL = [[(1 - Math.sqrt(3 / 5)) / 2, 5 / 18], [0.5, 8 / 18], [(1 + Math.sqrt(3 / 5)) / 2, 5 / 18]];
-  const ponding = slope.waterRLXY;
   for (let s = 0; s < surfEdges.length; s += 3) {
     const a = surfEdges[s], m = surfEdges[s + 1], b = surfEdges[s + 2];
+    // Ponded water: the water line of the material below the edge, as the
+    // slices take it (freeWaterLineAt in slices.ts); with seepage the water
+    // table that drives the flow.
+    const ponding = seepage?.flow ? slope.waterRLXY : waterLines[elMaterial[surfEdgeElement[s / 3]]];
     const dx = x[b] - x[a], dy = y[b] - y[a];
     for (let sub = 0; sub < 4; sub++) {
       for (const [t0, wt] of GL) {
@@ -550,7 +659,7 @@ export function buildFeModel(slope: Slope, options: FeModelOptions = {}): FeMode
         }
         // strip loads: vertical, per horizontal metre (downward on a surface traversed right to left)
         for (const q of slope.udls) {
-          if (px >= q.x1 && px <= q.x2) ty -= q.magnitude * Math.abs(dx);
+          if (px >= q.x1 && px <= q.x2) ty -= q.magnitude * loadFactor * Math.abs(dx);
         }
         if (tx !== 0 || ty !== 0) {
           addF(a, na * tx * w, na * ty * w);
@@ -573,20 +682,22 @@ export function buildFeModel(slope: Slope, options: FeModelOptions = {}): FeMode
     }
     if (best < 0) continue;
     const a = surfEdges[best], m = surfEdges[best + 1], b = surfEdges[best + 2];
-    addF(a, 0, -ll.magnitude * (1 - bt) * (1 - 2 * bt));
-    addF(m, 0, -ll.magnitude * 4 * bt * (1 - bt));
-    addF(b, 0, -ll.magnitude * bt * (2 * bt - 1));
+    const P = ll.magnitude * loadFactor;
+    addF(a, 0, -P * (1 - bt) * (1 - 2 * bt));
+    addF(m, 0, -P * 4 * bt * (1 - bt));
+    addF(b, 0, -P * bt * (2 * bt - 1));
   }
 
   return {
     x, y, nodeCount: nn, cornerCount: nc, el, elementCount: ne,
     materials, elMaterial, elE, elNu, elPsi, elElastic,
-    gp, gpX, gpY, gpC, gpPhi, gpU,
+    gp, gpX, gpY, gpC, gpCu, gpPhi, gpU,
     eq, eqCount: neq, K, f,
     surfaceEdges: Int32Array.from(surfEdges),
     bars,
     seepage,
     triangulation: tm,
+    sizeField: options.sizeField ?? Object.assign(size, { min: sizeMin }),
   };
 }
 

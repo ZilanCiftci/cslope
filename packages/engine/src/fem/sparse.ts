@@ -93,6 +93,8 @@ interface Symbolic {
   Lp: Int32Array;
   Li: Int32Array;
   parent: Int32Array;
+  /** Work arrays of `factor`, shared by the matrices of this pattern (one factorisation at a time per thread). */
+  work?: { x: Float64Array; next: Int32Array; mark: Int32Array; stack: Int32Array; pattern: Int32Array };
 }
 
 export class SparseCholesky {
@@ -199,11 +201,13 @@ export class SparseCholesky {
   factor(): void {
     const { n, rowPtr, rowCols, Lp, Li, parent } = this.sym;
     const a = this.values, Lx = this.Lx;
-    const x = new Float64Array(n);
-    const next = new Int32Array(n);
+    const w = (this.sym.work ??= {
+      x: new Float64Array(n), next: new Int32Array(n), mark: new Int32Array(n), stack: new Int32Array(n), pattern: new Int32Array(n),
+    });
+    const { x, next, mark, stack, pattern } = w;
+    x.fill(0);
     for (let j = 0; j < n; j++) next[j] = Lp[j] + 1;
-    const mark = new Int32Array(n).fill(-1);
-    const stack = new Int32Array(n), pattern = new Int32Array(n);
+    mark.fill(-1);
     for (let k = 0; k < n; k++) {
       // Pattern of row k of L in topological order, and A(k, 0…k) scattered into x.
       let top = n;

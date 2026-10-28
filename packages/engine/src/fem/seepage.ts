@@ -15,7 +15,10 @@
  *    inequality is violated (h ≤ y on the no-flow part, outflow on the
  *    face): Neuman & Witherspoon 1970, Water Resour. Res. 6(3), 889–897;
  *    Cooley 1983, Water Resour. Res. 19(5), 1271–1285;
- *  - base and sides: no flow.
+ *  - vertical sides of the model: the head of the water table, h = y_w,
+ *    below it (far-field hydrostatic water, so that a water table drawn
+ *    below the ground is held at the model's edges), no flow above it;
+ *  - base: no flow.
  *
  * Free surface on a fixed mesh: the permeability depends on the pressure
  * head ψ = h − y (Bathe & Khoshgoftaar 1979, Int. J. Numer. Anal. Meth.
@@ -32,7 +35,11 @@
  *
  * Implementation choices (not from the literature): k_r is bounded below
  * by 10⁻⁶ to keep the system well conditioned; at most 80 iterations;
- * convergence when the relaxed change is below 0.1 % of the heads.
+ * convergence when the unrelaxed change of the heads is below 0.1 % of
+ * the range of heads and elevations; a corner node of the seepage face is
+ * judged by its flow with half of each adjacent face edge's midside flow
+ * (lumped), because the consistent flows of a six-node edge can show
+ * inflow at a corner under outflow from the whole edge.
  */
 
 import { WATER_UNIT_WEIGHT } from "../types/constants";
@@ -50,6 +57,8 @@ export interface SeepageMesh {
   gp: Float64Array;
   /** Surface edges, 3 nodes each (end, middle, end). */
   surfaceEdges: Int32Array;
+  /** Nodes on the vertical sides of the model. */
+  sideNodes: Int32Array;
   /** Permeability per element (m/s). */
   permeability: Float64Array;
   /** van Genuchten α (1/m) and n per element. */
@@ -64,6 +73,8 @@ export interface SeepageResult {
   converged: boolean;
   /** Nodes on a seepage face at the end. */
   seepageFaceNodes: number;
+  /** False when no head is prescribed anywhere: no flow is computed and `head` is the water table. */
+  flow: boolean;
 }
 
 /** Lower bound of the relative permeability (implementation choice). */
@@ -94,12 +105,26 @@ export function solveSeepage(mesh: SeepageMesh, slope: Slope, maxIterations = 80
     const yw = polylineY(water, x[n]);
     if (Number.isFinite(yw) && yw >= y[n] - tol) fixedHead[n] = Math.max(yw, y[n]);
   }
+  if (water) {
+    for (const n of mesh.sideNodes) {
+      const yw = polylineY(water, x[n]);
+      if (Number.isFinite(yw) && yw >= y[n]) fixedHead[n] = yw;
+    }
+  }
   if (!fixedHead.some(Number.isFinite)) {
-    // No water at the ground: no flow, hydrostatic below the water table if any.
+    // No water anywhere on the boundary: no flow.
     const head = new Float64Array(nn);
     for (let n = 0; n < nn; n++) head[n] = water ? polylineY(water, x[n]) : -Infinity;
-    return { head, iterations: 0, converged: true, seepageFaceNodes: 0 };
+    return { head, iterations: 0, converged: true, seepageFaceNodes: 0, flow: false };
   }
+  // Corner nodes of surface edges, and the midside node of each, for the
+  // lumped flows of the seepage face.
+  const surfaceCorner = new Uint8Array(nn);
+  const se = mesh.surfaceEdges;
+  for (let k = 0; k < se.length; k += 3) { surfaceCorner[se[k]] = 1; surfaceCorner[se[k + 2]] = 1; }
+  let hRange = -Infinity;
+  for (let n = 0; n < nn; n++) if (Number.isFinite(fixedHead[n])) hRange = Math.max(hRange, fixedHead[n]);
+  hRange = Math.max(hRange, yMax) - yMin;
   // One unknown per node, in nested dissection order.
   const order = nestedDissection(x, y, nodeGraph(el, ne, nn));
   const eqn = new Int32Array(nn);
@@ -168,12 +193,20 @@ export function solveSeepage(mesh: SeepageMesh, slope: Slope, maxIterations = 80
     let qMax = 0;
     for (let n = 0; n < nn; n++) if (Number.isFinite(fixedHead[n]) || seepFace[n]) qMax = Math.max(qMax, Math.abs(flow[n]));
     // Seepage face: a free surface node with h > y joins it; a face node that
-    // draws water in leaves it (water only leaves the ground there).
+    // draws water in leaves it (water only leaves the ground there). A
+    // corner node is judged by its lumped flow (file header).
+    const lumped = flow.slice();
+    for (let k = 0; k < se.length; k += 3) {
+      const m = se[k + 1];
+      lumped[se[k]] += 0.5 * flow[m];
+      lumped[se[k + 2]] += 0.5 * flow[m];
+    }
     let changed = 0;
     for (let n = 0; n < nn; n++) {
       if (!onSurface[n] || Number.isFinite(fixedHead[n])) continue;
+      const q = surfaceCorner[n] ? lumped[n] : flow[n];
       if (!seepFace[n] && rhs[n] > y[n] + tol) { seepFace[n] = 1; changed++; }
-      else if (seepFace[n] && flow[n] > 1e-6 * qMax) { seepFace[n] = 0; changed++; }
+      else if (seepFace[n] && q > 1e-6 * qMax) { seepFace[n] = 0; changed++; }
     }
     // Under-relaxed Picard update with Aitken's dynamic relaxation factor
     // (Irons & Tuck 1969, IJNME 1(3), 275–277; Küttler & Wall 2008, Comput.
@@ -198,15 +231,14 @@ export function solveSeepage(mesh: SeepageMesh, slope: Slope, maxIterations = 80
     prevR = r;
     for (let n = 0; n < nn; n++) rhs[n] = head[n] + omega * r[n];
     head = rhs;
-    // Converged when the relaxed change is below 0.1 % of the heads and the
-    // seepage face no longer changes.
-    let headMax = -Infinity;
-    for (const h of head) if (Number.isFinite(h)) headMax = Math.max(headMax, h);
-    converged = changed === 0 && omega * maxDh < 1e-3 * (1 + headMax);
+    // Converged when the unrelaxed change (the fixed point residual) is
+    // below 0.1 % of the range of heads and the seepage face no longer
+    // changes; a small relaxation factor does not make the step pass.
+    converged = changed === 0 && maxDh < 1e-3 * (1 + hRange);
   }
   let faces = 0;
   for (const v of seepFace) faces += v;
-  return { head, iterations: it, converged, seepageFaceNodes: faces };
+  return { head, iterations: it, converged, seepageFaceNodes: faces, flow: true };
 }
 
 /** Pore pressure (kPa) at a point from nodal heads interpolated in an element. */
