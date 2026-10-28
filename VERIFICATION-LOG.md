@@ -40,11 +40,62 @@ The script compares the regenerated verification table with the committed one an
 | 2026-10-28 | Faster finite element strength reduction (sparse Cholesky, collapse estimate, guided refinement) | 0 | 0.348 → 0.348 | 0.483 → 0.483 | 1.011 → 1.011 | 1.595 → 1.595 | 1573 s (4 workers, load 1.2 at start) |
 | 2026-10-28 | FE solver review: published methods only (bisection without collapse estimate, Aitken relaxation in seepage) | 0 | 0.348 → 0.348 | 0.483 → 0.483 | 1.011 → 1.011 | 1.595 → 1.595 | 1196 s (4 workers, load 1.3 at start) |
 | 2026-10-28 | Newton decides associated FE trials alone (viscoplastic referee removed); BFGS solver as an option | 0 | 0.348 → 0.348 | 0.483 → 0.483 | 1.011 → 1.011 | 1.595 → 1.595 | 1236 s (4 workers, load 0.7 at start) |
+| 2026-10-28 | FE review fixes: Newton line search and stall test, confirmed failure bounds, local thin-layer size, engine-independent mesh, design strength and Tresca cap in FE, seepage side heads, certified lower bound | 0 | 0.348 → 0.348 | 0.483 → 0.483 | 1.011 → 1.011 | 1.595 → 1.595 | 757 s (4 workers, load 2.9 at start) |
 <!-- summary-end -->
 
 ## Entries
 
 <!-- entries -->
+
+### 2026-10-28: FE review fixes: Newton line search and stall test, confirmed failure bounds, local thin-layer size, engine-independent mesh, design strength and Tresca cap in FE, seepage side heads, certified lower bound
+
+Compared with 00369ee. Errors are relative to the reference, in percent. Verification run time: 757 s (4 workers, load 2.9 at start).
+
+**Against other programs (midpoint of their range):** 0 moved (0 closer to the reference, 0 further).
+
+| Result | Reference | Before | After | Error before | Error after |
+|---|---|---|---|---|---|
+| **Mean error (n = 279)** | | | | -0.231 % | -0.231 % |
+| **Mean absolute error** | | | | 0.348 % | 0.348 % |
+| **RMS error** | | | | 0.483 % | 0.483 % |
+| **Largest error** | | | | 2.100 % | 2.100 % |
+
+**Against the papers:** 0 moved (0 closer to the reference, 0 further).
+
+| Result | Reference | Before | After | Error before | Error after |
+|---|---|---|---|---|---|
+| **Mean error (n = 111)** | | | | -0.167 % | -0.167 % |
+| **Mean absolute error** | | | | 1.011 % | 1.011 % |
+| **RMS error** | | | | 1.595 % | 1.595 % |
+| **Largest error** | | | | 6.591 % | 6.591 % |
+
+**Finite elements against their references (FE, finite differences, limit analysis, theory):** 18 moved (11 closer to the reference, 7 further).
+
+| Result | Reference | Before | After | Error before | Error after |
+|---|---|---|---|---|---|
+| V056 finite elements (read from fig. 7) (Griffiths & Lane (1999)) | 0.600 | 0.4772 | 0.5091 | -20.467 % | -15.150 % |
+| V068 limit analysis, lower and upper bound (Kim et al. (2002)) | 1.130 | 1.1437 | 1.1767 | +1.212 % | +4.133 % |
+| V002 limit analysis, lower and upper bound (Kim et al. (2002)) | 0.400 | 0.4182 | 0.4253 | +4.550 % | +6.325 % |
+| V059c finite elements (read from fig. 2) (Guo & Griffiths (2020)) | 1.360 | 1.3454 | 1.3617 | -1.074 % | +0.125 % |
+| V026 finite-element strength reduction (Duncan, Wright & Brandon (2014)) | 1.190 | 1.1727 | 1.1864 | -1.454 % | -0.303 % |
+| V013a finite-element strength reduction (3D, without piles) (Cai & Ugai (2000)) | 1.140 | 1.1207 | 1.1327 | -1.693 % | -0.640 % |
+| V057b finite elements (Griffiths & Lane (1999)) | 2.030 | 2.0259 | 2.0422 | -0.202 % | +0.601 % |
+| V020 finite-element strength reduction (Cheng et al. (2007)) | 1.327 | 1.3359 | 1.3461 | +0.671 % | +1.439 % |
+| V059a finite elements (read from fig. 2) (Guo & Griffiths (2020)) | 1.280 | 1.2729 | 1.2810 | -0.555 % | +0.078 % |
+| V019 finite-element strength reduction (Cheng et al. (2007)) | 1.470 | 1.3974 | 1.4044 | -4.939 % | -4.463 % |
+| V057a finite elements (Griffiths & Lane (1999)) | 1.450 | 1.4453 | 1.4514 | -0.324 % | +0.097 % |
+| V038b finite-element strength reduction, piezometric line (Duncan, Wright & Brandon (2014)) | 1.070 | 1.0616 | 1.0655 | -0.785 % | -0.421 % |
+| V059b finite elements (Guo & Griffiths (2020)) | 1.350 | 1.3443 | 1.3492 | -0.422 % | -0.059 % |
+| V039 finite-element strength reduction (Duncan, Wright & Brandon (2014)) | 1.260 | 1.2436 | 1.2403 | -1.302 % | -1.563 % |
+| V063 finite-element strength reduction (Huang & Jia (2009)) | 2.500 | 2.3974 | 2.4030 | -4.104 % | -3.880 % |
+| V058 finite elements (Griffiths & Lane (1999)) | 1.900 | 1.8508 | 1.8536 | -2.589 % | -2.442 % |
+| V077 plasticity theory (Prandtl (1920)) | 1.000 | 1.0000 | 1.0014 | 0.000 % | +0.140 % |
+| V055 finite elements (Griffiths & Lane (1999)) | 1.400 | 1.3443 | 1.3424 | -3.979 % | -4.114 % |
+| **Mean error (n = 19)** | | | | -1.971 % | -1.058 % |
+| **Mean absolute error** | | | | 2.648 % | 2.420 % |
+| **RMS error** | | | | 5.203 % | 4.292 % |
+| **Largest error** | | | | 20.467 % | 15.150 % |
+
 
 ### 2026-10-28: Newton decides associated FE trials alone (viscoplastic referee removed); BFGS solver as an option
 
