@@ -138,7 +138,9 @@ export function analyzeFem(slope: Slope, options: FemAnalysisOptions = {}): FemA
     }
     // F to the requested tolerance on the final mesh.
     if (r.factorOfSafety > 0 && Number.isFinite(r.failedF) && r.failedF - r.factorOfSafety > (options.fTolerance ?? 0.005)) {
-      r = strengthReduction(model, { ...options, flowRule, tensionCutoff, startF: 0.95 * r.factorOfSafety, bracketStep: 0.01 });
+      const prior = r;
+      r = strengthReduction(model, { ...options, flowRule, tensionCutoff, resume: { lo: prior.factorOfSafety, hi: prior.failedF, state: prior.state } });
+      r = { ...r, trials: [...prior.trials, ...r.trials], previousState: r.previousState ?? prior.previousState };
       levels[levels.length - 1] = { elements: model.elementCount, factorOfSafety: r.factorOfSafety, iterations: levels[levels.length - 1].iterations + r.iterations };
     }
   }

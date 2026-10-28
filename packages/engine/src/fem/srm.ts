@@ -80,6 +80,11 @@ export interface SrmOptions {
   startF?: number;
   /** Relative step while bracketing F; default 0.25. */
   bracketStep?: number;
+  /**
+   * Continue an earlier search on the same model: its converged F and state
+   * and its smallest failed F; only the bisection remains.
+   */
+  resume?: { lo: number; hi: number; state: SrmState };
   /** Called after each trial. */
   onTrial?: (trial: SrmTrial) => void;
 }
@@ -376,8 +381,8 @@ export function strengthReduction(model: FeModel, options: SrmOptions = {}): Srm
   const useNewton = associated && (options.solver ?? "newton") === "newton";
   const trials: SrmTrial[] = [];
   let iterations = 0;
-  let lo = 0, hi = Infinity;
-  let loState: SrmState | null = null;
+  let lo = options.resume?.lo ?? 0, hi = options.resume?.hi ?? Infinity;
+  let loState: SrmState | null = options.resume ? cloneState(options.resume.state) : null;
   let prevState: SrmState | null = null;
   const run = (F: number): boolean => {
     const warm = loState !== null;
@@ -389,12 +394,13 @@ export function strengthReduction(model: FeModel, options: SrmOptions = {}): Srm
           tensionCutoff: options.tensionCutoff,
         })
       : solveAtF(model, F, st, options, eqs);
-    if (useNewton && !r.converged && loState) {
+    if (useNewton && !r.converged) {
       // Newton can cycle between the planes of the Mohr–Coulomb pyramid near
-      // collapse. The viscoplastic iteration, which converges wherever a
-      // solution exists, decides such a trial (from the same converged state).
+      // collapse, and from the unloaded state at the apex of cohesionless
+      // soil. The viscoplastic iteration, which converges wherever a solution
+      // exists, decides such a trial from the same starting state.
       iterations += r.iterations;
-      st = cloneState(loState);
+      st = loState ? cloneState(loState) : emptyState(model);
       st.bodyLoads = plasticBodyLoads(model, eqs, st.evp);
       barBodyLoads(model, st.barEp, st.bodyLoads);
       r = solveAtF(model, F, st, { ...options, tolerance: undefined, maxIterations: undefined }, eqs);
@@ -416,9 +422,15 @@ export function strengthReduction(model: FeModel, options: SrmOptions = {}): Srm
   let F = options.startF ?? 1;
   const step = options.bracketStep ?? 0.25;
   let warning: string | undefined;
+  // Before any trial has converged a failure says little (the unloaded
+  // start is the hard one), so F falls fast; from converged states it rises
+  // with a step that grows while trials keep converging.
+  let rise = step;
   for (let k = 0; k < 40 && !(lo > 0 && Number.isFinite(hi)); k++) {
-    if (run(F)) F = Number.isFinite(hi) ? (F + hi) / 2 : F * (1 + step);
-    else F = lo > 0 ? (lo + F) / 2 : F / (1 + step);
+    if (run(F)) {
+      if (Number.isFinite(hi)) F = (F + hi) / 2;
+      else { F *= 1 + rise; rise = Math.min(0.25, rise * 1.5); }
+    } else F = lo > 0 ? (lo + F) / 2 : F / 1.5;
     if (F > 100) { warning = "no failure below F = 100"; break; }
     if (F < 0.01) { warning = "no converged trial above F = 0.01"; break; }
   }
