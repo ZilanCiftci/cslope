@@ -440,6 +440,8 @@ export function strengthReduction(model: FeModel, options: SrmOptions = {}): Srm
     const ga = 1 / a.iterations, gb = 1 / b.iterations;
     if (!(gb < ga) || !(b.F > a.F) || b.F < lo) return fallback;
     const est = b.F + (gb * (b.F - a.F)) / (ga - gb);
+    // A failed trial below the estimate disproves it.
+    if (!(est < hi)) return fallback;
     const below = est - 0.3 * fTol;
     const next = below > lo + 0.1 * fTol ? below : lo + 0.95 * fTol;
     if (!(next > lo && next < hi && next <= cap)) return fallback;
@@ -462,7 +464,10 @@ export function strengthReduction(model: FeModel, options: SrmOptions = {}): Srm
       else {
         let next = F * (1 + rise);
         if (guide !== undefined && F < 1.05 * guide) next = Math.min(next, F < 0.97 * guide ? 0.97 * guide : F + 0.02 * guide);
-        F = estimated(next, next);
+        // Non-associated flow keeps its equal steps: its state depends on
+        // the path, and the estimate (fooled by a local yield that later
+        // stabilises) would shorten the path through it.
+        F = nonAssociated ? next : estimated(next, next);
         // With associated flow the limit does not depend on the path, so the
         // step can grow; with non-associated flow the state does, and F
         // rises in equal small steps as in Griffiths & Lane.
