@@ -22,7 +22,15 @@
 import type { Slope } from "../model/slope";
 import { buildFeModel, gaussStrains, type FeModel, type FeModelOptions } from "./model";
 import { dissipationIndicator, dorflerMark, refinedSizeField, zzIndicator } from "./adapt";
-import { strengthReduction, type SrmOptions, type SrmTrial } from "./srm";
+import {
+  runTrial,
+  strengthReductionSearch,
+  type SrmOptions,
+  type SrmResult,
+  type SrmTrial,
+  type TrialBatch,
+  type TrialOutcome,
+} from "./srm";
 
 export interface FemAnalysisOptions extends FeModelOptions, SrmOptions {
   /**
@@ -123,7 +131,60 @@ export function plasticShearPerElement(model: FeModel, evp: Float64Array): Float
   return out;
 }
 
+/** A batch of trials of the analysis, with the model (mesh level) they belong to. */
+export interface FemTrialBatch extends TrialBatch {
+  model: FeModel;
+  /** Mesh level, 0 for the first mesh. */
+  level: number;
+  /** Options of the trials (`runTrial`). */
+  options: SrmOptions;
+}
+
+/** Tag the batches of one search with their model. */
+function* onModel(
+  search: Generator<TrialBatch, SrmResult, TrialOutcome[]>,
+  model: FeModel,
+  level: number,
+  options: SrmOptions,
+): Generator<FemTrialBatch, SrmResult, TrialOutcome[]> {
+  let step = search.next();
+  while (!step.done) step = search.next(yield { ...step.value, model, level, options });
+  return step.value;
+}
+
+/**
+ * Default trials per round: 1, bisection. Measured 2026-10-28, three trials
+ * per round run in parallel shortened the wall time only by 1.2–1.35 ×
+ * (V018, V020) for 1.5–1.8 × the work: every round waits for a failed
+ * trial, which runs to the iteration limit.
+ */
+export const DEFAULT_TRIALS_PER_ROUND = 1;
+
+/** The analysis with its trials run one after another. */
 export function analyzeFem(slope: Slope, options: FemAnalysisOptions = {}): FemAnalysisResult {
+  const search = analyzeFemSearch(slope, options);
+  let step = search.next();
+  while (!step.done) {
+    const b = step.value;
+    step = search.next(b.F.map((F) => runTrial(b.model, F, b.start, b.options)));
+  }
+  return step.value;
+}
+
+/** The analysis with each batch of trials run by `runBatch`, e.g. in parallel workers; the result is that of `analyzeFem`. */
+export async function analyzeFemAsync(
+  slope: Slope,
+  options: FemAnalysisOptions,
+  runBatch: (batch: FemTrialBatch) => Promise<TrialOutcome[]>,
+): Promise<FemAnalysisResult> {
+  const search = analyzeFemSearch(slope, options);
+  let step = search.next();
+  while (!step.done) step = search.next(await runBatch(step.value));
+  return step.value;
+}
+
+/** The analysis as a generator of trial batches (see `strengthReductionSearch`). */
+export function* analyzeFemSearch(slope: Slope, options: FemAnalysisOptions = {}): Generator<FemTrialBatch, FemAnalysisResult, TrialOutcome[]> {
   const t0 = performance.now();
   const warnings: string[] = [];
   let model = buildFeModel(slope, options);
@@ -140,7 +201,14 @@ export function analyzeFem(slope: Slope, options: FemAnalysisOptions = {}): FemA
   // that the test does not see the bisection's scatter.
   const ad = options.adaptive;
   const coarseTol = ad ? Math.max(options.fTolerance ?? 0.005, 0.01) : options.fTolerance;
-  let r = strengthReduction(model, { ...options, flowRule, tensionCutoff, fTolerance: coarseTol });
+  const perRound = options.trialsPerRound ?? DEFAULT_TRIALS_PER_ROUND;
+  const trialOptions: SrmOptions = {
+    flowRule, tensionCutoff, solver: options.solver, tolerance: options.tolerance, maxIterations: options.maxIterations,
+    convergence: options.convergence, relaxation: options.relaxation,
+  };
+  const search = (m: FeModel, level: number, o: SrmOptions) =>
+    onModel(strengthReductionSearch(m, { ...options, ...o, flowRule, tensionCutoff, trialsPerRound: perRound }), m, level, trialOptions);
+  let r = yield* search(model, 0, { fTolerance: coarseTol });
   const levels: FemLevel[] = [{ elements: model.elementCount, factorOfSafety: r.factorOfSafety, iterations: r.iterations }];
   if (ad && r.factorOfSafety > 0 && Number.isFinite(r.failedF)) {
     const maxLevels = ad.levels ?? 3, tol = ad.tolerance ?? 0.01;
@@ -153,14 +221,14 @@ export function analyzeFem(slope: Slope, options: FemAnalysisOptions = {}): FemA
       const prev = r.factorOfSafety;
       // Start below the coarser mesh's factor (a finer mesh gives less) and
       // step up from converged states.
-      r = strengthReduction(model, { ...options, flowRule, tensionCutoff, startF: 0.6 * prev, bracketStep: 0.04, guide: prev, fTolerance: coarseTol });
+      r = yield* search(model, level + 1, { startF: 0.6 * prev, bracketStep: 0.04, guide: prev, fTolerance: coarseTol });
       levels.push({ elements: model.elementCount, factorOfSafety: r.factorOfSafety, iterations: r.iterations });
       if (Math.abs(r.factorOfSafety - prev) < tol) break;
     }
     // F to the requested tolerance on the final mesh.
     if (r.factorOfSafety > 0 && Number.isFinite(r.failedF) && r.failedF - r.factorOfSafety > (options.fTolerance ?? 0.005)) {
       const prior = r;
-      r = strengthReduction(model, { ...options, flowRule, tensionCutoff, resume: { lo: prior.factorOfSafety, hi: prior.failedF, state: prior.state } });
+      r = yield* search(model, levels.length - 1, { fTolerance: options.fTolerance, resume: { lo: prior.factorOfSafety, hi: prior.failedF, state: prior.state } });
       r = { ...r, trials: [...prior.trials, ...r.trials], previousState: r.previousState ?? prior.previousState };
       levels[levels.length - 1] = { elements: model.elementCount, factorOfSafety: r.factorOfSafety, iterations: levels[levels.length - 1].iterations + r.iterations };
     }
