@@ -25,11 +25,9 @@
  * Nocedal & Wright, Numerical Optimization, 2nd ed., 2006, ch. 3).
  *
  * Implementation choices (not from the literature): convergence at a
- * residual of 10⁻⁶ of the load, at most 25 iterations, and failure when
+ * residual of 10⁻⁶ of the load, at most 200 iterations, and failure when
  * the residual has not fallen by 10 % over 5 iterations (beyond the limit
- * load it stagnates). A trial that Newton does not converge is decided by
- * the viscoplastic iteration (srm.ts), so these limits set the cost, not
- * the failure criterion.
+ * load it stagnates). A trial that Newton does not converge fails (srm.ts).
  */
 
 import { GP_STRIDE } from "./elements";
@@ -245,7 +243,7 @@ export interface NewtonState {
 export interface NewtonOptions {
   /** Relative residual tolerance ‖r‖/‖f‖; default 1e-6. */
   tolerance?: number;
-  /** Newton iterations per trial; default 25. */
+  /** Newton iterations per trial; default 200. */
   maxIterations?: number;
   tensionCutoff?: boolean;
 }
@@ -372,9 +370,10 @@ export function newtonAtF(
   options: NewtonOptions = {},
 ): { converged: boolean; iterations: number } {
   const tol = options.tolerance ?? 1e-6;
-  // Away from collapse Newton converges in 5–15 iterations; a trial that
-  // needs more than 25 is within the F tolerance of collapse or beyond it.
-  const limit = options.maxIterations ?? 25;
+  // Away from collapse Newton converges in 5–15 iterations; near collapse
+  // the line search can need many more, and the stagnation test below ends
+  // a trial beyond the limit load early.
+  const limit = options.maxIterations ?? 200;
   const cutoff = options.tensionCutoff ?? false;
   const neq = model.eqCount, ngp = 3 * model.elementCount;
   const fnorm = norm2(model.f);

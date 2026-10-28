@@ -31,7 +31,12 @@
  *   (Davis 1968; Tschuchnigg, Schweiger & Sloan 2015, Comput. Geotech. 70,
  *   169–177); "non-associated": c/F, tan φ/F, tan ψ/F, flow with ψ_F
  *   (Griffiths & Lane 1999); "associated": c/F, tan φ/F and ψ = φ_F.
- * - Associated flow is solved by Newton's method (newton.ts).
+ * - Associated flow is solved by Newton's method (newton.ts); a trial fails
+ *   when Newton does not reach equilibrium, the criterion of implicit
+ *   strength reduction. (A viscoplastic iteration deciding Newton's failed
+ *   trials was tried and removed: its displacement-increment test accepted
+ *   creeping states and raised F, e.g. V068 1.161 against 1.132, and its
+ *   iteration limit failed slowly converging ones, V056.)
  * - Search: F is bracketed and bisected (Dawson, Roth & Drescher 1999,
  *   Géotechnique 49(6), 835–840). A trial above a converged one starts
  *   from that converged state; with associated flow the limit load does not
@@ -49,8 +54,6 @@
  *   plastic flow must cross more elements on a finer mesh. The limit is a
  *   user parameter in every implementation of the non-convergence
  *   criterion, and F depends on it.
- * - When Newton fails, the viscoplastic iteration decides the trial from
- *   the same starting state (see `strengthReduction`).
  * - A trial that fails from the unloaded state does not bound F from
  *   above; only a failure from a converged state does.
  */
@@ -58,7 +61,7 @@
 import { GP_STRIDE } from "./elements";
 import type { FeModel } from "./model";
 import { newtonAtF } from "./newton";
-import { barBodyLoads, relaxBars } from "./bars";
+import { relaxBars } from "./bars";
 
 /** Iterations over which the contraction ratio is averaged. */
 const RATIO_WINDOW = 10;
@@ -87,8 +90,10 @@ export interface SrmOptions {
   convergence?: "increment" | "extrapolated";
   /** Convergence tolerance; default 1e-4 (viscoplastic), 1e-6 relative residual (Newton). */
   tolerance?: number;
-  /** Iteration limit per trial (failure when reached); default 1000 × √(elements/2500), at least 1000 (viscoplastic), 25 (Newton). */
+  /** Viscoplastic iteration limit per trial (failure when reached); default 1000 × √(elements/2500), at least 1000. */
   maxIterations?: number;
+  /** Newton iteration limit per trial; default 200 (newton.ts). */
+  newtonIterations?: number;
   /** Absolute tolerance on F; default 0.005. */
   fTolerance?: number;
   /**
@@ -118,11 +123,6 @@ export interface SrmOptions {
    * trials are run.
    */
   trialsPerRound?: number;
-  /**
-   * Whether the viscoplastic iteration decides a trial that Newton does not
-   * converge (default true); false: Newton's convergence decides.
-   */
-  referee?: boolean;
   /** Called after each trial. */
   onTrial?: (trial: SrmTrial) => void;
 }
@@ -229,30 +229,6 @@ function elementEquations(model: FeModel): Int32Array {
       const n = model.el[6 * e + a];
       out[12 * e + 2 * a] = model.eq[2 * n];
       out[12 * e + 2 * a + 1] = model.eq[2 * n + 1];
-    }
-  }
-  return out;
-}
-
-/** Body loads ∫ Bᵀ D εp dA of a plastic strain field, per equation. */
-export function plasticBodyLoads(model: FeModel, eqs: Int32Array, ep: Float64Array): Float64Array {
-  const out = new Float64Array(model.eqCount);
-  const { gp, elementCount: ne, elE, elNu } = model;
-  for (let e = 0; e < ne; e++) {
-    const E = elE[e], nu = elNu[e];
-    const lam = (E * nu) / ((1 + nu) * (1 - 2 * nu)), mu = E / (2 * (1 + nu));
-    for (let g = 0; g < 3; g++) {
-      const i = 3 * e + g, o = i * GP_STRIDE, s = 4 * i, w = gp[o + 12];
-      const ex = ep[s], ey = ep[s + 1], gxy = ep[s + 2], ez = ep[s + 3];
-      if (ex === 0 && ey === 0 && gxy === 0 && ez === 0) continue;
-      const tr = ex + ey + ez;
-      const sx = lam * tr + 2 * mu * ex, sy = lam * tr + 2 * mu * ey, txy = mu * gxy;
-      for (let k = 0; k < 6; k++) {
-        const dx = gp[o + k], dy = gp[o + 6 + k];
-        const qx = eqs[12 * e + 2 * k], qy = eqs[12 * e + 2 * k + 1];
-        if (qx >= 0) out[qx] += (dx * sx + dy * txy) * w;
-        if (qy >= 0) out[qy] += (dy * sy + dx * txy) * w;
-      }
     }
   }
   return out;
@@ -429,31 +405,21 @@ function isAssociated(model: FeModel, rule: FlowRule): boolean {
 
 /**
  * One trial at reduction F from a starting state (null: unloaded): Newton's
- * method for associated flow, with the viscoplastic iteration deciding the
- * trials Newton does not converge, else the viscoplastic iteration.
+ * method for associated flow, the viscoplastic iteration otherwise. A trial
+ * converges when the solver finds equilibrium; Newton decides its trials
+ * alone, as in implicit strength reduction.
  */
 export function runTrial(model: FeModel, F: number, start: SrmState | null, options: SrmOptions = {}, eqs: Int32Array = elementEquations(model)): TrialOutcome {
   const rule = options.flowRule ?? "davis-b";
   const useNewton = isAssociated(model, rule) && (options.solver ?? "newton") === "newton";
-  let st = start ? cloneState(start) : emptyState(model);
+  const st = start ? cloneState(start) : emptyState(model);
   if (useNewton) {
     const r = newtonAtF(model, eqs, reduce(model, F, rule, 1), { u: st.u, ep: st.evp, stress: st.stress, barEp: st.barEp, F }, {
       tolerance: options.tolerance,
-      maxIterations: options.maxIterations,
+      maxIterations: options.newtonIterations,
       tensionCutoff: options.tensionCutoff,
     });
-    if (r.converged) return { converged: true, iterations: r.iterations, solver: "newton", state: st };
-    if (options.referee === false) return { converged: false, iterations: r.iterations, solver: "newton", state: st };
-    // Newton can cycle between the planes of the Mohr–Coulomb pyramid near
-    // collapse, and from the unloaded state at the apex of cohesionless
-    // soil. The viscoplastic iteration, which converges wherever a solution
-    // exists, decides such a trial from the same starting state.
-    const iterations = r.iterations;
-    st = start ? cloneState(start) : emptyState(model);
-    st.bodyLoads = plasticBodyLoads(model, eqs, st.evp);
-    barBodyLoads(model, st.barEp, st.bodyLoads);
-    const v = solveAtF(model, F, st, { ...options, tolerance: undefined, maxIterations: undefined }, eqs);
-    return { converged: v.converged, iterations: iterations + v.iterations, solver: "viscoplastic", state: st };
+    return { converged: r.converged, iterations: r.iterations, solver: "newton", state: st };
   }
   const v = solveAtF(model, F, st, options, eqs);
   return { converged: v.converged, iterations: v.iterations, solver: "viscoplastic", state: st };
