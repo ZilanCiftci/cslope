@@ -116,9 +116,11 @@ export function analyzeFem(slope: Slope, options: FemAnalysisOptions = {}): FemA
     );
   }
   const tensionCutoff = options.tensionCutoff ?? (slope.tensionCrackDepth > 0 || slope.tensionCrackAuto);
-  // With refinement to follow, the first mesh needs F only roughly.
+  // With refinement to follow, the coarser meshes need F only to 0.01: as
+  // fine as the test that stops the refinement (a change below 0.01), so
+  // that the test does not see the bisection's scatter.
   const ad = options.adaptive;
-  const coarseTol = ad ? Math.max(options.fTolerance ?? 0.005, 0.02) : options.fTolerance;
+  const coarseTol = ad ? Math.max(options.fTolerance ?? 0.005, 0.01) : options.fTolerance;
   let r = strengthReduction(model, { ...options, flowRule, tensionCutoff, fTolerance: coarseTol });
   const levels: FemLevel[] = [{ elements: model.elementCount, factorOfSafety: r.factorOfSafety, iterations: r.iterations }];
   if (ad && r.factorOfSafety > 0 && Number.isFinite(r.failedF)) {
@@ -132,14 +134,14 @@ export function analyzeFem(slope: Slope, options: FemAnalysisOptions = {}): FemA
       const prev = r.factorOfSafety;
       // Start below the coarser mesh's factor (a finer mesh gives less) and
       // step up from converged states.
-      r = strengthReduction(model, { ...options, flowRule, tensionCutoff, startF: 0.6 * prev, bracketStep: 0.04, fTolerance: coarseTol });
+      r = strengthReduction(model, { ...options, flowRule, tensionCutoff, startF: 0.6 * prev, bracketStep: 0.04, guide: prev, fTolerance: coarseTol });
       levels.push({ elements: model.elementCount, factorOfSafety: r.factorOfSafety, iterations: r.iterations });
       if (Math.abs(r.factorOfSafety - prev) < tol) break;
     }
     // F to the requested tolerance on the final mesh.
     if (r.factorOfSafety > 0 && Number.isFinite(r.failedF) && r.failedF - r.factorOfSafety > (options.fTolerance ?? 0.005)) {
       const prior = r;
-      r = strengthReduction(model, { ...options, flowRule, tensionCutoff, resume: { lo: prior.factorOfSafety, hi: prior.failedF, state: prior.state } });
+      r = strengthReduction(model, { ...options, flowRule, tensionCutoff, resume: { lo: prior.factorOfSafety, hi: prior.failedF, state: prior.state, trials: prior.trials } });
       r = { ...r, trials: [...prior.trials, ...r.trials], previousState: r.previousState ?? prior.previousState };
       levels[levels.length - 1] = { elements: model.elementCount, factorOfSafety: r.factorOfSafety, iterations: levels[levels.length - 1].iterations + r.iterations };
     }

@@ -79,10 +79,16 @@ export interface SrmOptions {
   /** Relative step while bracketing F; default 0.25. */
   bracketStep?: number;
   /**
-   * Continue an earlier search on the same model: its converged F and state
-   * and its smallest failed F; only the bisection remains.
+   * Expected F (a coarser mesh's): while rising towards it the steps stop
+   * at 0.97 × guide and then rise by 0.02 × guide, so that F does not
+   * overshoot far and leave failed trials to bisect.
    */
-  resume?: { lo: number; hi: number; state: SrmState };
+  guide?: number;
+  /**
+   * Continue an earlier search on the same model: its converged F and state
+   * and its smallest failed F, and its trials; only the bisection remains.
+   */
+  resume?: { lo: number; hi: number; state: SrmState; trials?: readonly SrmTrial[] };
   /** Called after each trial. */
   onTrial?: (trial: SrmTrial) => void;
 }
@@ -91,6 +97,8 @@ export interface SrmTrial {
   F: number;
   converged: boolean;
   iterations: number;
+  /** Solver that decided the trial. */
+  solver: "newton" | "viscoplastic";
   /** Largest nodal displacement (m) at the end of the trial. */
   maxDisplacement: number;
 }
@@ -379,6 +387,7 @@ export function strengthReduction(model: FeModel, options: SrmOptions = {}): Srm
   const run = (F: number): boolean => {
     const warm = loState !== null;
     let st = loState ? cloneState(loState) : emptyState(model);
+    let solver: SrmTrial["solver"] = useNewton ? "newton" : "viscoplastic";
     let r = useNewton
       ? newtonAtF(model, eqs, reduce(model, F, rule, 1), { u: st.u, ep: st.evp, stress: st.stress, barEp: st.barEp, F }, {
           tolerance: options.tolerance,
@@ -396,9 +405,10 @@ export function strengthReduction(model: FeModel, options: SrmOptions = {}): Srm
       st.bodyLoads = plasticBodyLoads(model, eqs, st.evp);
       barBodyLoads(model, st.barEp, st.bodyLoads);
       r = solveAtF(model, F, st, { ...options, tolerance: undefined, maxIterations: undefined }, eqs);
+      solver = "viscoplastic";
     }
     iterations += r.iterations;
-    const t = { F, converged: r.converged, iterations: r.iterations, maxDisplacement: maxAbs(st.u) };
+    const t: SrmTrial = { F, converged: r.converged, iterations: r.iterations, solver, maxDisplacement: maxAbs(st.u) };
     trials.push(t);
     options.onTrial?.(t);
     // A trial that fails from the unloaded state is no upper bound: with the
@@ -410,8 +420,36 @@ export function strengthReduction(model: FeModel, options: SrmOptions = {}): Srm
     return r.converged;
   };
 
+  // Collapse from the viscoplastic iteration counts. Near collapse the
+  // iteration contracts at a rate 1 − κ(F_c − F), so the iterations grow as
+  // N ≈ a/(F_c − F) and 1/N falls linearly to zero at F_c: the line through
+  // the two highest converged trials estimates F_c. The next trial then
+  // goes just below the estimate, or, once a converged trial lies within
+  // the tolerance below it, just above, where it should fail and close the
+  // bracket: one failed trial instead of the several of a bisection, each of
+  // which runs to the iteration limit.
+  const history = [...(options.resume?.trials ?? [])];
+  let guided = 0;
+  const estimated = (fallback: number, cap: number): number => {
+    if (guided >= 12) return fallback;
+    const vp = [...history, ...trials]
+      .filter((t) => t.converged && t.solver === "viscoplastic" && t.iterations >= 30)
+      .sort((a, b) => a.F - b.F);
+    if (vp.length < 2) return fallback;
+    const a = vp[vp.length - 2], b = vp[vp.length - 1];
+    const ga = 1 / a.iterations, gb = 1 / b.iterations;
+    if (!(gb < ga) || !(b.F > a.F) || b.F < lo) return fallback;
+    const est = b.F + (gb * (b.F - a.F)) / (ga - gb);
+    const below = est - 0.3 * fTol;
+    const next = below > lo + 0.1 * fTol ? below : lo + 0.95 * fTol;
+    if (!(next > lo && next < hi && next <= cap)) return fallback;
+    guided++;
+    return next;
+  };
+
   // Bracket: step up from a converged trial, down from a failed one.
   let F = options.startF ?? 1;
+  const guide = options.guide;
   const step = options.bracketStep ?? 0.25;
   let warning: string | undefined;
   // Before any trial has converged a failure says little (the unloaded
@@ -420,9 +458,11 @@ export function strengthReduction(model: FeModel, options: SrmOptions = {}): Srm
   let rise = step;
   for (let k = 0; k < 40 && !(lo > 0 && Number.isFinite(hi)); k++) {
     if (run(F)) {
-      if (Number.isFinite(hi)) F = (F + hi) / 2;
+      if (Number.isFinite(hi)) F = estimated((F + hi) / 2, hi);
       else {
-        F *= 1 + rise;
+        let next = F * (1 + rise);
+        if (guide !== undefined && F < 1.05 * guide) next = Math.min(next, F < 0.97 * guide ? 0.97 * guide : F + 0.02 * guide);
+        F = estimated(next, next);
         // With associated flow the limit does not depend on the path, so the
         // step can grow; with non-associated flow the state does, and F
         // rises in equal small steps as in Griffiths & Lane.
@@ -433,7 +473,7 @@ export function strengthReduction(model: FeModel, options: SrmOptions = {}): Srm
     if (F < 0.01) { warning = "no converged trial above F = 0.01"; break; }
   }
   // Bisect.
-  while (lo > 0 && Number.isFinite(hi) && hi - lo > fTol) run((lo + hi) / 2);
+  while (lo > 0 && Number.isFinite(hi) && hi - lo > fTol) run(estimated((lo + hi) / 2, hi));
 
   const conv = trials.filter((t) => t.converged).sort((a, b) => a.F - b.F);
   let jump: number | null = null;

@@ -1,5 +1,5 @@
 export { meshDomain, pointInPolygon, type MeshInput, type TriMesh } from "./mesh";
-export { SkylineMatrix, reverseCuthillMcKee } from "./skyline";
+export { SparseCholesky, nestedDissection } from "./sparse";
 export {
   buildFeModel,
   solveElastic,

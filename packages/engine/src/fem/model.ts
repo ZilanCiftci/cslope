@@ -24,7 +24,7 @@ import type { Slope } from "../model/slope";
 import { getYAtX } from "../math/interpolation";
 import { GAUSS_T6, GP_STRIDE, gaussData, shapeT6, stiffnessT6 } from "./elements";
 import { meshDomain, pointInPolygon, type TriMesh } from "./mesh";
-import { reverseCuthillMcKee, SkylineMatrix } from "./skyline";
+import { nestedDissection, nodeGraph, SparseCholesky } from "./sparse";
 import { solveSeepage, type SeepageResult } from "./seepage";
 
 /** Elastic and flow parameters of a material in the finite element analysis. */
@@ -138,7 +138,7 @@ export interface FeModel {
   eq: Int32Array;
   eqCount: number;
   /** Factorised stiffness matrix. */
-  K: SkylineMatrix;
+  K: SparseCholesky;
   /** External load vector per equation (gravity, surface loads, pore pressure term). */
   f: Float64Array;
   /** Surface edges (3 nodes each: end, midside, end), for plotting and loads. */
@@ -435,10 +435,8 @@ export function buildFeModel(slope: Slope, options: FeModelOptions = {}): FeMode
     }
   }
 
-  // Equation numbering in reverse Cuthill–McKee order of the nodes.
-  const nbr: Set<number>[] = Array.from({ length: nn }, () => new Set<number>());
-  for (let e = 0; e < ne; e++) for (let a = 0; a < 6; a++) for (let b = 0; b < 6; b++) if (a !== b) nbr[el[6 * e + a]].add(el[6 * e + b]);
-  const order = reverseCuthillMcKee(nbr.map((s) => Int32Array.from(s)));
+  // Equation numbering in nested dissection order of the nodes.
+  const order = nestedDissection(x, y, nodeGraph(el, ne, nn));
   const eq = new Int32Array(2 * nn).fill(-1);
   let neq = 0;
   for (const n of order) {
@@ -450,21 +448,13 @@ export function buildFeModel(slope: Slope, options: FeModelOptions = {}): FeMode
   // Reinforcement bars along the element edges on each line.
   const bars = buildBars(slope, reinf, el, ne, x, y, span, options.reinforcementStiffness ?? DEFAULT_REINFORCEMENT_STIFFNESS, options.reduceReinforcement ?? true);
 
-  // Skyline profile and assembly.
-  const first = new Int32Array(neq);
-  for (let i = 0; i < neq; i++) first[i] = i;
-  const dofs = new Int32Array(12);
-  const elDofs = (e: number) => {
-    for (let a = 0; a < 6; a++) { dofs[2 * a] = eq[2 * el[6 * e + a]]; dofs[2 * a + 1] = eq[2 * el[6 * e + a] + 1]; }
-    return dofs;
-  };
+  // Sparse pattern and assembly.
+  const allDofs = new Int32Array(12 * ne);
   for (let e = 0; e < ne; e++) {
-    const d = elDofs(e);
-    let lo = Infinity;
-    for (const q of d) if (q >= 0 && q < lo) lo = q;
-    for (const q of d) if (q >= 0 && lo < first[q]) first[q] = lo;
+    for (let a = 0; a < 6; a++) { allDofs[12 * e + 2 * a] = eq[2 * el[6 * e + a]]; allDofs[12 * e + 2 * a + 1] = eq[2 * el[6 * e + a] + 1]; }
   }
-  const K = new SkylineMatrix(first);
+  const elDofs = (e: number) => allDofs.subarray(12 * e, 12 * e + 12);
+  const K = SparseCholesky.fromGroups(neq, allDofs, 12);
   const ke = new Float64Array(144);
   for (let e = 0; e < ne; e++) {
     stiffnessT6(gp, e, elE[e], elNu[e], ke);

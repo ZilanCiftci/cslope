@@ -23,7 +23,7 @@
 
 import { GP_STRIDE } from "./elements";
 import type { FeModel } from "./model";
-import { SkylineMatrix } from "./skyline";
+import type { SparseCholesky } from "./sparse";
 import { barInternal } from "./bars";
 
 export interface ReturnResult {
@@ -261,7 +261,7 @@ function evaluate(
   fint: Float64Array,
   stress: Float64Array,
   epNew: Float64Array,
-  K: SkylineMatrix | null,
+  K: SparseCholesky | null,
 ): void {
   const { gp, elementCount: ne, elE, elNu, elElastic } = model;
   fint.fill(0);
@@ -372,7 +372,7 @@ export function newtonAtF(
   const stress = new Float64Array(4 * ngp), ep = new Float64Array(4 * ngp);
   const barEp = new Float64Array(state.barEp.length);
   const trialU = new Float64Array(neq);
-  const K = new SkylineMatrix(model.K.first);
+  const K = model.K.emptyCopy();
   const residual = (uu: Float64Array, withK: boolean): number => {
     evaluate(model, eqs, uu, state.ep, strength, cutoff, fint, stress, ep, withK ? K : null);
     if (model.bars.count) barInternal(model, uu, state.barEp, state.F, fint, barEp, withK ? K : null);

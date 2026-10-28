@@ -9,7 +9,7 @@
 
 import type { FeModel } from "./model";
 import { BAR_GP_STRIDE } from "./model";
-import type { SkylineMatrix } from "./skyline";
+import type { SparseCholesky } from "./sparse";
 
 function barDofs(model: FeModel, b: number, out: Int32Array): void {
   for (let k = 0; k < 3; k++) {
@@ -65,7 +65,7 @@ export function barInternal(
   F: number,
   fint: Float64Array,
   barEpNew: Float64Array,
-  K: SkylineMatrix | null,
+  K: SparseCholesky | null,
 ): void {
   const { bars } = model;
   const d = new Int32Array(6);

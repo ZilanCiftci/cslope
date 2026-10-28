@@ -23,7 +23,7 @@ import { WATER_UNIT_WEIGHT } from "../types/constants";
 import type { Slope } from "../model/slope";
 import { GP_STRIDE, GAUSS_T6, shapeT6 } from "./elements";
 import { polylineY } from "./model";
-import { reverseCuthillMcKee, SkylineMatrix } from "./skyline";
+import { nestedDissection, nodeGraph, SparseCholesky } from "./sparse";
 
 export interface SeepageMesh {
   x: Float64Array;
@@ -72,14 +72,13 @@ export function solveSeepage(mesh: SeepageMesh, slope: Slope, maxIterations = 80
     for (let n = 0; n < nn; n++) head[n] = water ? polylineY(water, x[n]) : -Infinity;
     return { head, iterations: 0, converged: true, seepageFaceNodes: 0 };
   }
-  // One unknown per node, in reverse Cuthill–McKee order.
-  const nbr: Set<number>[] = Array.from({ length: nn }, () => new Set<number>());
-  for (let e = 0; e < ne; e++) for (let a = 0; a < 6; a++) for (let b = 0; b < 6; b++) if (a !== b) nbr[el[6 * e + a]].add(el[6 * e + b]);
-  const order = reverseCuthillMcKee(nbr.map((q) => Int32Array.from(q)));
+  // One unknown per node, in nested dissection order.
+  const order = nestedDissection(x, y, nodeGraph(el, ne, nn));
   const eqn = new Int32Array(nn);
   order.forEach((n, i) => (eqn[n] = i));
-  const first = new Int32Array(nn);
-  for (let n = 0; n < nn; n++) { let lo = eqn[n]; for (const m of nbr[n]) if (eqn[m] < lo) lo = eqn[m]; first[eqn[n]] = lo; }
+  const elEq = new Int32Array(6 * ne);
+  for (let k = 0; k < 6 * ne; k++) elEq[k] = eqn[el[k]];
+  const pattern = SparseCholesky.fromGroups(nn, elEq, 6);
 
   // Start from the highest prescribed head everywhere.
   let hMax = -Infinity;
@@ -94,7 +93,7 @@ export function solveSeepage(mesh: SeepageMesh, slope: Slope, maxIterations = 80
   const N = new Float64Array(6);
   let converged = false, it = 0;
   for (; it < maxIterations && !converged; it++) {
-    const K = new SkylineMatrix(first);
+    const K = pattern.emptyCopy();
     elK.fill(0);
     for (let e = 0; e < ne; e++) {
       for (let g = 0; g < 3; g++) {

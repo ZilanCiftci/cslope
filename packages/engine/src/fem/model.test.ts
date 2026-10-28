@@ -5,7 +5,7 @@ import type { SlopeDefinition } from "../types/slope-definition";
 import { WATER_UNIT_WEIGHT } from "../types/constants";
 import { buildFeModel, solveElastic } from "./model";
 import { meshDomain } from "./mesh";
-import { reverseCuthillMcKee, SkylineMatrix } from "./skyline";
+import { nestedDissection, SparseCholesky } from "./sparse";
 
 function layer(extra: Partial<SlopeDefinition> = {}): SlopeDefinition {
   return {
@@ -39,42 +39,45 @@ describe("meshDomain", () => {
   });
 });
 
-describe("SkylineMatrix", () => {
-  it("solves a banded positive definite system", () => {
-    const n = 40;
-    const adj = Array.from({ length: n }, (_, i) => Int32Array.from([i - 1, i + 1, i + 7].filter((j) => j >= 0 && j < n)));
-    // symmetric adjacency
-    const sets = adj.map((a) => new Set(a));
-    for (let i = 0; i < n; i++) for (const j of adj[i]) sets[j].add(i);
-    const perm = reverseCuthillMcKee(sets.map((s) => Int32Array.from(s)));
-    expect([...perm].sort((a, b) => a - b)).toEqual([...Array(n).keys()]);
-    const pos = new Int32Array(n);
+describe("SparseCholesky", () => {
+  it("solves a positive definite system on a grid in nested dissection order", () => {
+    // 2 unknowns per node of a 9 × 7 grid, coupled within each cell's 4 nodes.
+    const nx = 9, ny = 7, nn = nx * ny;
+    const x = Float64Array.from({ length: nn }, (_, i) => i % nx), y = Float64Array.from({ length: nn }, (_, i) => Math.floor(i / nx));
+    const cells: number[] = [];
+    for (let j = 0; j + 1 < ny; j++) for (let i = 0; i + 1 < nx; i++) cells.push(j * nx + i, j * nx + i + 1, (j + 1) * nx + i + 1, (j + 1) * nx + i);
+    const adj = Array.from({ length: nn }, () => new Set<number>());
+    for (let c = 0; c < cells.length; c += 4) for (let a = 0; a < 4; a++) for (let b = 0; b < 4; b++) if (a !== b) adj[cells[c + a]].add(cells[c + b]);
+    const perm = nestedDissection(x, y, adj.map((s) => Int32Array.from(s)));
+    expect([...perm].sort((a, b) => a - b)).toEqual([...Array(nn).keys()]);
+    const pos = new Int32Array(nn);
     perm.forEach((v, k) => (pos[v] = k));
+    const n = 2 * nn;
+    const groups = new Int32Array(2 * cells.length);
+    cells.forEach((v, k) => { groups[2 * k] = 2 * pos[v]; groups[2 * k + 1] = 2 * pos[v] + 1; });
+    const K = SparseCholesky.fromGroups(n, groups, 8);
+    // dense reference: diagonally dominant within the pattern
     const dense = Array.from({ length: n }, () => new Float64Array(n));
-    for (let i = 0; i < n; i++) {
-      dense[i][i] = 10;
-      for (const j of sets[i]) dense[i][j] = -1 - ((i + j) % 3) * 0.1;
+    for (let c = 0; c < groups.length; c += 8) {
+      for (let a = 0; a < 8; a++) {
+        for (let b = 0; b < 8; b++) {
+          const i = groups[c + a], j = groups[c + b];
+          dense[i][j] += i === j ? 10 : -0.1 - ((i + 2 * j + i * j) % 3) * 0.05;
+        }
+      }
     }
-    const first = new Int32Array(n);
-    for (let i = 0; i < n; i++) {
-      first[pos[i]] = pos[i];
-    }
-    for (let i = 0; i < n; i++) for (const j of sets[i]) first[pos[i]] = Math.min(first[pos[i]], pos[j]);
-    const K = new SkylineMatrix(first);
-    for (let i = 0; i < n; i++) {
-      K.add(pos[i], pos[i], dense[i][i]);
-      for (const j of sets[i]) if (j < i) K.add(pos[i], pos[j], dense[i][j]);
-    }
+    for (let i = 0; i < n; i++) for (let j = 0; j < i; j++) dense[i][j] = dense[j][i] = (dense[i][j] + dense[j][i]) / 2;
+    for (let i = 0; i < n; i++) for (let j = 0; j <= i; j++) if (dense[i][j] !== 0) K.add(i, j, dense[i][j]);
     K.factor();
     const xTrue = Float64Array.from({ length: n }, (_, i) => Math.sin(i));
     const b = new Float64Array(n);
-    for (let i = 0; i < n; i++) {
-      let s = 0;
-      for (let j = 0; j < n; j++) s += dense[i][j] * xTrue[j];
-      b[pos[i]] = s;
-    }
+    for (let i = 0; i < n; i++) for (let j = 0; j < n; j++) b[i] += dense[i][j] * xTrue[j];
     K.solve(b);
-    for (let i = 0; i < n; i++) expect(b[pos[i]]).toBeCloseTo(xTrue[i], 10);
+    for (let i = 0; i < n; i++) expect(b[i]).toBeCloseTo(xTrue[i], 10);
+    // a copy shares the pattern and starts from zero
+    const K2 = K.emptyCopy();
+    expect(K2.values.every((v) => v === 0)).toBe(true);
+    expect(() => K2.factor()).toThrow(/not positive definite/);
   });
 });
 
