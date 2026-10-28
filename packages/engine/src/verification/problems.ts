@@ -2040,6 +2040,7 @@ export const PROBLEMS: RawCase[] = [
     paper: [{"value": 1.0, "method": "Bishop simplified, circular", "source": "Leshchinsky & Han (2004)"}, {"value": 1.0, "method": "finite differences", "source": "Leshchinsky & Han (2004)"}],
     publicNote: "Leshchinsky & Han give 1.00 with Bishop's method for every variant of the wall (the reinforcement was designed for that value), and a finite-difference value.",
     notes: [
+      "Not compared with Leshchinsky & Han's FLAC strength reduction: on refined meshes cSlope's finite element analysis finds a local failure of the 0.3 m facing blocks into the foundation (V065: 0.86, 0.77 and about 0.27 on three meshes; V066b and V066c give the same factor, so the reinforcement does not take part), which FLAC's grid does not resolve; the comparison tests the facing model, not the reinforcement.",
       "The circle is commercial program A's critical Bishop circle (Fig. 94.2: centre (-5.537, 20.452), radius 18.45). Commercial program A gives 1.040 on it (Table 94.3); cSlope 1.017 (-2.2 %); on the other tiered walls cSlope differs from commercial program A by -0.9 % (V066a) and +4 % (V066b). The reinforcement model of the tiers (pull-out from the 80 % interface, the facing connection) is the likely cause, so commercial program A's value is not a check. The reinforcement runs from inside the blocks (x = 6.05) to 6.3 m behind the back of each tier's blocks (x = 12.6 … 15.0), the length Leshchinsky & Han measure from the back of the facing (their p. 1228, 1230; commercial program A's figures agree). Until 2026-10-25 it ended 0.3 m earlier, which changes no result here by more than 0.001 (checked on all seven tiered-wall problems).",
     ],
   },
@@ -2057,6 +2058,7 @@ export const PROBLEMS: RawCase[] = [
     paper: [{"value": 1.0, "method": "Bishop simplified, circular", "source": "Leshchinsky & Han (2004)"}, {"value": 0.86, "method": "finite differences", "source": "Leshchinsky & Han (2004)"}, {"value": 0.98, "method": "Bishop simplified, deep circle (read from fig. 7a)", "source": "Leshchinsky & Han (2004)"}, {"value": 0.92, "method": "Spencer, three-part wedge", "source": "Leshchinsky & Han (2004)"}],
     publicNote: "Leshchinsky & Han give 1.00 with Bishop's method for every variant of the wall (the reinforcement was designed for that value), and a finite-difference value.",
     notes: [
+      "Not compared with Leshchinsky & Han's FLAC strength reduction: on refined meshes cSlope's finite element analysis finds a local failure of the 0.3 m facing blocks into the foundation (V065: 0.86, 0.77 and about 0.27 on three meshes; V066b and V066c give the same factor, so the reinforcement does not take part), which FLAC's grid does not resolve; the comparison tests the facing model, not the reinforcement.",
       "The circle is commercial program A's critical Spencer circle as printed in its Fig. 91.2: centre (4.658, 15.000), radius 10.934, endpoints (-1.552, 6.000) and (15.592, 15.000). Until the 2026-10-24 input audit the problem had centre (4.658, 15.05) and radius 10.99 (cSlope 0.961 there, 0.959 on the printed circle).",
     ],
   },
@@ -2074,6 +2076,7 @@ export const PROBLEMS: RawCase[] = [
     paper: [{"value": 1.0, "method": "Bishop simplified, circular", "source": "Leshchinsky & Han (2004)"}, {"value": 0.99, "method": "finite differences", "source": "Leshchinsky & Han (2004)"}],
     publicNote: "Leshchinsky & Han give 1.00 with Bishop's method for every variant of the wall (the reinforcement was designed for that value), and a finite-difference value.",
     notes: [
+      "Not compared with Leshchinsky & Han's FLAC strength reduction: on refined meshes cSlope's finite element analysis finds a local failure of the 0.3 m facing blocks into the foundation (V065: 0.86, 0.77 and about 0.27 on three meshes; V066b and V066c give the same factor, so the reinforcement does not take part), which FLAC's grid does not resolve; the comparison tests the facing model, not the reinforcement.",
       "L&H finite difference 0.99.",
     ],
   },
@@ -2091,6 +2094,7 @@ export const PROBLEMS: RawCase[] = [
     paper: [{"value": 1.0, "method": "Bishop simplified, circular", "source": "Leshchinsky & Han (2004)"}, {"value": 0.98, "method": "finite differences", "source": "Leshchinsky & Han (2004)"}],
     publicNote: "Leshchinsky & Han give 1.00 with Bishop's method for every variant of the wall (the reinforcement was designed for that value), and a finite-difference value.",
     notes: [
+      "Not compared with Leshchinsky & Han's FLAC strength reduction: on refined meshes cSlope's finite element analysis finds a local failure of the 0.3 m facing blocks into the foundation (V065: 0.86, 0.77 and about 0.27 on three meshes; V066b and V066c give the same factor, so the reinforcement does not take part), which FLAC's grid does not resolve; the comparison tests the facing model, not the reinforcement.",
       "commercial program A reports 0.971 (Spencer) and 0.976 (Bishop) with the same Ta = 11.4 kN/m (Table 89.2); cSlope and program D are 4 % higher on the reference circle. The difference is not explained (the reinforcement model of the tiers is the likely cause), so the commercial program A value is not used as a check. L&H 0.98 (finite difference).",
     ],
   },
@@ -2108,6 +2112,7 @@ export const PROBLEMS: RawCase[] = [
     paper: [{"value": 1.01, "method": "finite differences", "source": "Leshchinsky & Han (2004)"}],
     publicNote: "Leshchinsky & Han give 1.00 with Bishop's method for every variant of the wall (the reinforcement was designed for that value), and a finite-difference value.",
     notes: [
+      "Not compared with Leshchinsky & Han's FLAC strength reduction: on refined meshes cSlope's finite element analysis finds a local failure of the 0.3 m facing blocks into the foundation (V065: 0.86, 0.77 and about 0.27 on three meshes; V066b and V066c give the same factor, so the reinforcement does not take part), which FLAC's grid does not resolve; the comparison tests the facing model, not the reinforcement.",
       "The circle is commercial program A's critical Spencer circle (Fig. 90.2, \"Solution, using the Spencer method\": factor of safety 1.002, centre (-9.069, 23.079), radius 22.754), with Spencer value 1.002 (Table 90.3); cSlope gives 1.0126 there (+1.06 %). Its Bishop 1.004 belongs to its own critical Bishop circle, which is not printed, and was the check until the 2026-10-24 input audit (cSlope's Bishop on the Spencer circle 1.012). As on V064 and V066b the tiers' reinforcement model (pull-out from the 80 % interface, the facing connection) is the likely cause of the difference, so commercial program A's value is not a check; the check is Leshchinsky & Han's Bishop 1.00, the value the reinforcement was designed for.",
     ],
   },
@@ -2143,6 +2148,7 @@ export const PROBLEMS: RawCase[] = [
     paper: [{"value": 1.0, "method": "Bishop simplified, circular", "source": "Leshchinsky & Han (2004)"}, {"value": 1.02, "method": "finite differences", "source": "Leshchinsky & Han (2004)"}],
     publicNote: "Leshchinsky & Han give 1.00 with Bishop's method for every variant of the wall (the reinforcement was designed for that value), and a finite-difference value. Here the reinforcement keeps the baseline strength of 10 kN/m, as in the program compared with, not the 11.6 kN/m designed for the surcharge, so the published 1.00 is not directly comparable.",
     notes: [
+      "Not compared with Leshchinsky & Han's FLAC strength reduction: on refined meshes cSlope's finite element analysis finds a local failure of the 0.3 m facing blocks into the foundation (V065: 0.86, 0.77 and about 0.27 on three meshes; V066b and V066c give the same factor, so the reinforcement does not take part), which FLAC's grid does not resolve; the comparison tests the facing model, not the reinforcement.",
       "commercial program A's Table 93.2 lists Ta = 11.6 kN/m (L&H's design value for this case), but its 0.958 (Bishop; 0.957 Spencer on the printed circle, Fig. 93.2: centre (-8.825, 23.102), R 22.603) is reproduced with the baseline Ta = 10 kN/m (cSlope 0.961); with 11.6 cSlope gives 1.017 on that circle. Its model evidently kept Ta = 10, and so does this problem (same in V066d: Table 92.2 lists 9.25, its 1.037 needs 10).",
     ],
   },

@@ -126,7 +126,7 @@
      "upper": 0.45,
      "method": "limit analysis, lower and upper bound",
      "source": "Kim et al. (2002)",
-     "computed": 0.4194,
+     "computed": 0.4196,
      "analysis": "Strength reduction (FE)"
     },
     {
@@ -166,7 +166,7 @@
     },
     {
      "method": "Strength reduction (FE)",
-     "computed": 0.4194,
+     "computed": 0.4196,
      "programs": null
     }
    ],
@@ -175,11 +175,11 @@
     "levels": [
      {
       "elements": 2404,
-      "fos": 0.4224
+      "fos": 0.41666666666666663
      },
      {
       "elements": 4482,
-      "fos": 0.4193789872937608
+      "fos": 0.41961208132695305
      }
     ]
    }
@@ -805,7 +805,7 @@
      "method": "finite-element strength reduction (3D, without piles)",
      "source": "Cai & Ugai (2000)",
      "analysis": "Strength reduction (FE)",
-     "computed": 1.1209
+     "computed": 1.1248
     }
    ],
    "results": [
@@ -819,7 +819,7 @@
     },
     {
      "method": "Strength reduction (FE)",
-     "computed": 1.1209,
+     "computed": 1.1248,
      "programs": null
     }
    ],
@@ -832,11 +832,11 @@
      },
      {
       "elements": 3382,
-      "fos": 1.1233085240000003
+      "fos": 1.1285776173197244
      },
      {
-      "elements": 8181,
-      "fos": 1.1208509734129668
+      "elements": 8071,
+      "fos": 1.1247884812358082
      }
     ]
    }
@@ -1157,7 +1157,7 @@
      "method": "plasticity theory (Prandtl mechanism)",
      "source": "Chen & Shao (1988)",
      "analysis": "Strength reduction (FE)",
-     "computed": 0.9978
+     "computed": 0.9994
     }
    ],
    "results": [
@@ -1179,7 +1179,7 @@
     },
     {
      "method": "Strength reduction (FE)",
-     "computed": 0.9978,
+     "computed": 0.9994,
      "programs": null
     }
    ],
@@ -1187,12 +1187,12 @@
     "flowRule": "davis-b",
     "levels": [
      {
-      "elements": 1559,
+      "elements": 1543,
       "fos": 1
      },
      {
-      "elements": 3035,
-      "fos": 0.9978122211889904
+      "elements": 2990,
+      "fos": 0.9993814456031251
      }
     ]
    }
@@ -1218,7 +1218,7 @@
      "method": "finite-element strength reduction",
      "source": "Cheng et al. (2007)",
      "analysis": "Strength reduction (FE)",
-     "computed": 1.408
+     "computed": 1.4075
     }
    ],
    "results": [
@@ -1245,7 +1245,7 @@
     },
     {
      "method": "Strength reduction (FE)",
-     "computed": 1.408,
+     "computed": 1.4075,
      "programs": null
     }
    ],
@@ -1258,11 +1258,11 @@
      },
      {
       "elements": 3340,
-      "fos": 1.4041356550000004
+      "fos": 1.4029777986351568
      },
      {
-      "elements": 6273,
-      "fos": 1.408034183018777
+      "elements": 6310,
+      "fos": 1.407502711243513
      }
     ]
    }
@@ -1288,7 +1288,7 @@
      "method": "finite-element strength reduction",
      "source": "Cheng et al. (2007)",
      "analysis": "Strength reduction (FE)",
-     "computed": 1.3676
+     "computed": 1.369
     }
    ],
    "results": [
@@ -1310,7 +1310,7 @@
     },
     {
      "method": "Strength reduction (FE)",
-     "computed": 1.3676,
+     "computed": 1.369,
      "programs": null
     }
    ],
@@ -1323,7 +1323,7 @@
      },
      {
       "elements": 2844,
-      "fos": 1.3675899195303471
+      "fos": 1.3689694005839081
      }
     ]
    }
@@ -1790,7 +1790,7 @@
      "method": "finite-element strength reduction",
      "source": "Duncan, Wright & Brandon (2014)",
      "analysis": "Strength reduction (FE)",
-     "computed": 1.1643
+     "computed": 1.1768
     }
    ],
    "results": [
@@ -1817,7 +1817,7 @@
     },
     {
      "method": "Strength reduction (FE)",
-     "computed": 1.1643,
+     "computed": 1.1768,
      "programs": null
     }
    ],
@@ -1830,11 +1830,11 @@
      },
      {
       "elements": 6274,
-      "fos": 1.1694718880000001
+      "fos": 1.1749575194013575
      },
      {
-      "elements": 13207,
-      "fos": 1.1643463449560234
+      "elements": 12705,
+      "fos": 1.1767689686188554
      }
     ]
    }
@@ -2560,7 +2560,7 @@
      "method": "finite-element strength reduction, piezometric line",
      "source": "Duncan, Wright & Brandon (2014)",
      "analysis": "Strength reduction (FE)",
-     "computed": 1.0308
+     "computed": 1.058
     }
    ],
    "results": [
@@ -2571,7 +2571,7 @@
     },
     {
      "method": "Strength reduction (FE)",
-     "computed": 1.0308,
+     "computed": 1.058,
      "programs": null
     }
    ],
@@ -2585,11 +2585,11 @@
      },
      {
       "elements": 5826,
-      "fos": 1.0617573720000002
+      "fos": 1.0667377478775482
      },
      {
-      "elements": 11474,
-      "fos": 1.0308345724963974
+      "elements": 11338,
+      "fos": 1.0580325911792983
      }
     ]
    }
@@ -2622,7 +2622,7 @@
      "method": "finite-element strength reduction",
      "source": "Duncan, Wright & Brandon (2014)",
      "analysis": "Strength reduction (FE)",
-     "computed": 1.2347
+     "computed": 1.2424
     }
    ],
    "results": [
@@ -2641,7 +2641,7 @@
     },
     {
      "method": "Strength reduction (FE)",
-     "computed": 1.2347,
+     "computed": 1.2424,
      "programs": null
     }
    ],
@@ -2654,7 +2654,7 @@
      },
      {
       "elements": 10872,
-      "fos": 1.2347383273473993
+      "fos": 1.2424440293493948
      }
     ]
    }
@@ -3509,7 +3509,7 @@
      "method": "finite elements",
      "source": "Griffiths & Lane (1999)",
      "analysis": "Strength reduction (FE)",
-     "computed": 1.3447
+     "computed": 1.3497
     }
    ],
    "results": [
@@ -3523,7 +3523,7 @@
     },
     {
      "method": "Strength reduction (FE)",
-     "computed": 1.3447,
+     "computed": 1.3497,
      "programs": null
     }
    ],
@@ -3536,7 +3536,7 @@
      },
      {
       "elements": 5361,
-      "fos": 1.3447078762117253
+      "fos": 1.349733951380014
      }
     ]
    }
@@ -3562,7 +3562,7 @@
      "method": "finite elements (read from fig. 7)",
      "source": "Griffiths & Lane (1999)",
      "analysis": "Strength reduction (FE)",
-     "computed": 0.5367
+     "computed": 0.4762
     }
    ],
    "results": [
@@ -3573,7 +3573,7 @@
     },
     {
      "method": "Strength reduction (FE)",
-     "computed": 0.5367,
+     "computed": 0.4762,
      "programs": null
     }
    ],
@@ -3582,15 +3582,15 @@
     "levels": [
      {
       "elements": 2738,
-      "fos": 0.4992
+      "fos": 0.5277777777777778
      },
      {
       "elements": 5546,
-      "fos": 0.47730229248000006
+      "fos": 0.48654073327708336
      },
      {
-      "elements": 11087,
-      "fos": 0.5366595035290824
+      "elements": 11177,
+      "fos": 0.47623971165930323
      }
     ]
    }
@@ -3621,7 +3621,7 @@
      "value": 1.45,
      "method": "finite elements",
      "source": "Griffiths & Lane (1999)",
-     "computed": 1.4529,
+     "computed": 1.4574,
      "analysis": "Strength reduction (FE)"
     }
    ],
@@ -3636,7 +3636,7 @@
     },
     {
      "method": "Strength reduction (FE)",
-     "computed": 1.4529,
+     "computed": 1.4574,
      "programs": null
     }
    ],
@@ -3649,7 +3649,11 @@
      },
      {
       "elements": 4671,
-      "fos": 1.4529486673117673
+      "fos": 1.455529407102869
+     },
+     {
+      "elements": 10335,
+      "fos": 1.4574264466094566
      }
     ]
    }
@@ -3680,7 +3684,7 @@
      "value": 2.03,
      "method": "finite elements",
      "source": "Griffiths & Lane (1999)",
-     "computed": 2.0523,
+     "computed": 2.0567,
      "analysis": "Strength reduction (FE)"
     }
    ],
@@ -3695,7 +3699,7 @@
     },
     {
      "method": "Strength reduction (FE)",
-     "computed": 2.0523,
+     "computed": 2.0567,
      "programs": null
     }
    ],
@@ -3708,11 +3712,11 @@
      },
      {
       "elements": 4623,
-      "fos": 2.05871773046875
+      "fos": 2.046195088044491
      },
      {
-      "elements": 10137,
-      "fos": 2.0522505438923293
+      "elements": 10043,
+      "fos": 2.056727074720586
      }
     ]
    }
@@ -3738,7 +3742,7 @@
      "method": "finite elements",
      "source": "Griffiths & Lane (1999)",
      "analysis": "Strength reduction (FE)",
-     "computed": 1.8461
+     "computed": 1.8387
     }
    ],
    "results": [
@@ -3752,7 +3756,7 @@
     },
     {
      "method": "Strength reduction (FE)",
-     "computed": 1.8461,
+     "computed": 1.8387,
      "programs": null
     }
    ],
@@ -3765,11 +3769,11 @@
      },
      {
       "elements": 6871,
-      "fos": 1.68944140625
+      "fos": 1.8358711240646208
      },
      {
-      "elements": 14360,
-      "fos": 1.8461160512628032
+      "elements": 13609,
+      "fos": 1.8387015134669609
      }
     ]
    }
@@ -3788,7 +3792,7 @@
      "method": "finite elements (read from fig. 2)",
      "source": "Guo & Griffiths (2020)",
      "analysis": "Strength reduction (FE)",
-     "computed": 1.2826
+     "computed": 1.2834
     }
    ],
    "results": [
@@ -3802,7 +3806,7 @@
     },
     {
      "method": "Strength reduction (FE)",
-     "computed": 1.2826,
+     "computed": 1.2834,
      "programs": null
     }
    ],
@@ -3816,7 +3820,7 @@
      },
      {
       "elements": 4324,
-      "fos": 1.2826039745309612
+      "fos": 1.2833853525079197
      }
     ]
    }
@@ -3835,7 +3839,7 @@
      "method": "finite elements",
      "source": "Guo & Griffiths (2020)",
      "analysis": "Strength reduction (FE)",
-     "computed": 1.3514
+     "computed": 1.352
     }
    ],
    "results": [
@@ -3849,7 +3853,7 @@
     },
     {
      "method": "Strength reduction (FE)",
-     "computed": 1.3514,
+     "computed": 1.352,
      "programs": null
     }
    ],
@@ -3863,7 +3867,7 @@
      },
      {
       "elements": 4322,
-      "fos": 1.351397965148102
+      "fos": 1.3520027384214757
      }
     ]
    }
@@ -3882,7 +3886,7 @@
      "method": "finite elements (read from fig. 2)",
      "source": "Guo & Griffiths (2020)",
      "analysis": "Strength reduction (FE)",
-     "computed": 1.3729
+     "computed": 1.3716
     }
    ],
    "results": [
@@ -3896,7 +3900,7 @@
     },
     {
      "method": "Strength reduction (FE)",
-     "computed": 1.3729,
+     "computed": 1.3716,
      "programs": null
     }
    ],
@@ -3910,11 +3914,11 @@
      },
      {
       "elements": 4397,
-      "fos": 1.3656661849999998
+      "fos": 1.3645400507273442
      },
      {
-      "elements": 9918,
-      "fos": 1.3728815487920398
+      "elements": 10411,
+      "fos": 1.3715634854512508
      }
     ]
    }
@@ -4260,7 +4264,7 @@
      "value": 2.5,
      "method": "finite-element strength reduction",
      "source": "Huang & Jia (2009)",
-     "computed": 2.4056,
+     "computed": 2.4176,
      "analysis": "Strength reduction (FE)"
     }
    ],
@@ -4280,7 +4284,7 @@
     },
     {
      "method": "Strength reduction (FE)",
-     "computed": 2.4056,
+     "computed": 2.4176,
      "programs": null
     }
    ],
@@ -4294,7 +4298,7 @@
      },
      {
       "elements": 8298,
-      "fos": 2.405614180722969
+      "fos": 2.4176163043956556
      }
     ]
    }
@@ -4632,7 +4636,7 @@
      "upper": 1.27,
      "method": "limit analysis, lower and upper bound",
      "source": "Kim et al. (2002)",
-     "computed": 1.1562,
+     "computed": 1.16,
      "analysis": "Strength reduction (FE)"
     }
    ],
@@ -4649,7 +4653,7 @@
     },
     {
      "method": "Strength reduction (FE)",
-     "computed": 1.1562,
+     "computed": 1.16,
      "programs": null
     }
    ],
@@ -4663,11 +4667,7 @@
      },
      {
       "elements": 4135,
-      "fos": 1.138696312
-     },
-     {
-      "elements": 9326,
-      "fos": 1.1561596276813193
+      "fos": 1.1599791610804544
      }
     ]
    }
@@ -5032,7 +5032,7 @@
      "value": 1,
      "method": "plasticity theory",
      "source": "Prandtl (1920)",
-     "computed": 1.0028,
+     "computed": 1.0032,
      "analysis": "Strength reduction (FE)"
     }
    ],
@@ -5047,7 +5047,7 @@
     },
     {
      "method": "Strength reduction (FE)",
-     "computed": 1.0028,
+     "computed": 1.0032,
      "programs": null
     }
    ],
@@ -5056,12 +5056,12 @@
     "flowRule": "davis-b",
     "levels": [
      {
-      "elements": 4151,
+      "elements": 4162,
       "fos": 1
      },
      {
-      "elements": 8263,
-      "fos": 1.0027764610954033
+      "elements": 8099,
+      "fos": 1.0032252203939063
      }
     ]
    }
