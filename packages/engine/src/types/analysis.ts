@@ -312,6 +312,12 @@ export interface FemAnalysisSettings {
   tensionCutoff: boolean;
   /** Adaptive refinements of the mesh (0–3). */
   refinementLevels: number;
+  /**
+   * Pore pressures: hydrostatic below the water table ("water-table"), or
+   * from steady seepage with the water table as reservoir and tail water
+   * where it lies at or above the ground ("seepage"). Not set: water table.
+   */
+  porePressure?: "water-table" | "seepage";
 }
 
 export const DEFAULT_FEM_SETTINGS: FemAnalysisSettings = {

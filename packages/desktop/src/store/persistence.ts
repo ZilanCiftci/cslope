@@ -983,5 +983,6 @@ function normalizeFemSettings(f: Record<string, unknown>): FemAnalysisSettings {
     elementSize: typeof f.elementSize === "number" && Number.isFinite(f.elementSize) && f.elementSize > 0 ? f.elementSize : null,
     tensionCutoff: f.tensionCutoff === true,
     refinementLevels: Math.round(num(f.refinementLevels, 0, 3, d.refinementLevels)),
+    ...(f.porePressure === "seepage" ? { porePressure: "seepage" as const } : {}),
   };
 }

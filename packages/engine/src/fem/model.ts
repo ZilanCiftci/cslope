@@ -25,6 +25,7 @@ import { getYAtX } from "../math/interpolation";
 import { GAUSS_T6, GP_STRIDE, gaussData, shapeT6, stiffnessT6 } from "./elements";
 import { meshDomain, pointInPolygon, type TriMesh } from "./mesh";
 import { reverseCuthillMcKee, SkylineMatrix } from "./skyline";
+import { solveSeepage, type SeepageResult } from "./seepage";
 
 /** Elastic and flow parameters of a material in the finite element analysis. */
 export interface FeMaterialParameters {
@@ -34,6 +35,8 @@ export interface FeMaterialParameters {
   poissonsRatio?: number;
   /** Dilation angle ψ (°); default 0. */
   dilationAngle?: number;
+  /** Permeability k (m/s) for steady seepage; default 10⁻⁶ (only ratios matter). */
+  permeability?: number;
 }
 
 export interface FeModelOptions {
@@ -62,6 +65,13 @@ export interface FeModelOptions {
    * strength, as a strength reduction program usually does.
    */
   reduceReinforcement?: boolean;
+  /**
+   * Pore pressures: "water-table" (default), hydrostatic below each
+   * material's water line; "seepage", from steady seepage on the mesh
+   * (seepage.ts) with the water table as reservoir and tail water where it
+   * lies at or above the ground.
+   */
+  porePressure?: "water-table" | "seepage";
 }
 
 export const DEFAULT_REINFORCEMENT_STIFFNESS = 1e6;
@@ -112,6 +122,8 @@ export interface FeModel {
   surfaceEdges: Int32Array;
   /** The triangulation the mesh was made from. */
   triangulation: TriMesh;
+  /** The seepage solution, when the pore pressures come from it. */
+  seepage?: SeepageResult;
   /**
    * Reinforcement as three-node bars along element edges (bonded to the
    * soil): nodes (end, middle, end) per bar, and per bar Gauss point (two
@@ -374,6 +386,23 @@ export function buildFeModel(slope: Slope, options: FeModelOptions = {}): FeMode
     }
   }
 
+  // Pore pressures from steady seepage instead of the water lines.
+  let seepage: SeepageResult | undefined;
+  if (options.porePressure === "seepage") {
+    const permeability = Float64Array.from(elMaterial, (i) => params[i].permeability ?? 1e-6);
+    seepage = solveSeepage({ x, y, nodeCount: nn, el, elementCount: ne, gp, surfaceEdges: Int32Array.from(surfEdges), permeability }, slope);
+    const head = seepage.head;
+    for (let e = 0; e < ne; e++) {
+      for (let g = 0; g < 3; g++) {
+        shapeT6(GAUSS_T6[g][0], GAUSS_T6[g][1], N);
+        let h = 0;
+        for (let k = 0; k < 6; k++) h += N[k] * head[el[6 * e + k]];
+        const i = 3 * e + g;
+        gpU[i] = Number.isFinite(h) ? Math.max(0, WATER_UNIT_WEIGHT * (h - gpY[i])) : 0;
+      }
+    }
+  }
+
   // Equation numbering in reverse Cuthill–McKee order of the nodes.
   const nbr: Set<number>[] = Array.from({ length: nn }, () => new Set<number>());
   for (let e = 0; e < ne; e++) for (let a = 0; a < 6; a++) for (let b = 0; b < 6; b++) if (a !== b) nbr[el[6 * e + a]].add(el[6 * e + b]);
@@ -444,7 +473,7 @@ export function buildFeModel(slope: Slope, options: FeModelOptions = {}): FeMode
       // Unit weight as the slices take it: γsat below the material's water
       // line where given, a spatial model's interpolated γ elsewhere.
       const gx = gpX[3 * e + g], gy = gpY[3 * e + g];
-      const below = wl ? gy < polylineY(wl, gx) : false;
+      const below = seepage ? u > 0 : wl ? gy < polylineY(wl, gx) : false;
       const gamma = below && m.model.unitWeightSat !== undefined ? m.model.unitWeightSat : resolveUnitWeight(m.model, m.unitWeight, gx, gy);
       shapeT6(GAUSS_T6[g][0], GAUSS_T6[g][1], N);
       for (let k = 0; k < 6; k++) {
@@ -508,6 +537,7 @@ export function buildFeModel(slope: Slope, options: FeModelOptions = {}): FeMode
     eq, eqCount: neq, K, f,
     surfaceEdges: Int32Array.from(surfEdges),
     bars,
+    seepage,
     triangulation: tm,
   };
 }

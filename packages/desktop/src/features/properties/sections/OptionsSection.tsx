@@ -774,6 +774,19 @@ function FemFields({
           title="Adaptive refinements where the plastic dissipation at failure is largest; stops early when F changes by less than 0.01. Each roughly doubles the run time."
         />
       </label>
+      <label className="col-span-2 flex flex-col gap-0.5">
+        <Label>Pore pressures (FE)</Label>
+        <select
+          value={settings.porePressure ?? "water-table"}
+          disabled={off}
+          onChange={(e) => set({ porePressure: e.target.value as "water-table" | "seepage" })}
+          aria-label="Finite element pore pressures"
+          title="Steady seepage: the water table gives the reservoir and the tail water where it lies at or above the ground; the phreatic surface and the seepage face come from the flow (one permeability for all soils)."
+        >
+          <option value="water-table">From the water table</option>
+          <option value="seepage">Steady seepage (FE)</option>
+        </select>
+      </label>
       <label
         className="flex items-center gap-1.5 self-end"
         title="No tensile effective stress (Rankine cut-off). Without it, cohesive soil carries tension near the crest."

@@ -33,6 +33,7 @@ export function runFemSummary(
     },
     elementSize: settings.elementSize ?? undefined,
     tensionCutoff: settings.tensionCutoff,
+    porePressure: settings.porePressure ?? "water-table",
     adaptive: settings.refinementLevels > 0 ? { levels: Math.min(3, Math.round(settings.refinementLevels)), tolerance: 0.01 } : undefined,
     onTrial,
   });

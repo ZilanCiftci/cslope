@@ -151,3 +151,39 @@ describe("reinforcement bars", () => {
     expect(Math.max(...model.bars.capacity)).toBeCloseTo(20, 9);
   });
 });
+
+describe("steady seepage", () => {
+  it("gives hydrostatic pore pressure under a water table at the ground", () => {
+    const def = layer({ waterTable: { mode: "custom", value: [[0, 10], [30, 10]], followBoundary: false } });
+    const slope = buildSlope(toCanonicalSlopeDefinition(def));
+    const a = buildFeModel(slope, { elementSize: 2 });
+    const b = buildFeModel(slope, { elementSize: 2, porePressure: "seepage" });
+    expect(b.seepage?.converged).toBe(true);
+    let worst = 0;
+    for (let i = 0; i < a.gpU.length; i++) worst = Math.max(worst, Math.abs(a.gpU[i] - b.gpU[i]));
+    expect(worst).toBeLessThan(1e-6 * 100);
+  });
+
+  it("lowers the phreatic surface through an embankment from the reservoir to the tail water", () => {
+    // 2:1 embankment, reservoir 8 m deep on the left, tail water at the ground on the right
+    const def = {
+      coordinates: [[0, 0], [0, 2], [20, 12], [26, 12], [46, 2], [60, 2], [60, 0]],
+      materials: [{ name: "Fill", model: { kind: "mohr-coulomb", unitWeight: 19, cohesion: 10, frictionAngle: 30 } }],
+      waterTable: { mode: "custom", value: [[0, 10], [16, 10], [46, 2], [60, 2]], followBoundary: false },
+    } as unknown as SlopeDefinition;
+    const slope = buildSlope(toCanonicalSlopeDefinition(def));
+    const m = buildFeModel(slope, { elementSize: 1.5, porePressure: "seepage" });
+    expect(m.seepage?.converged).toBe(true);
+    // pressure head under the crest centre: between the tail water and the reservoir
+    let best = -1, d = Infinity;
+    for (let i = 0; i < m.gpX.length; i++) {
+      const dd = Math.hypot(m.gpX[i] - 23, m.gpY[i] - 2.5);
+      if (dd < d) { d = dd; best = i; }
+    }
+    const h = m.gpU[best] / WATER_UNIT_WEIGHT + m.gpY[best];
+    expect(h).toBeGreaterThan(2.5);
+    expect(h).toBeLessThan(10);
+    // no pore pressure at the crest
+    for (let i = 0; i < m.gpX.length; i++) if (m.gpY[i] > 11.5) expect(m.gpU[i]).toBe(0);
+  });
+});

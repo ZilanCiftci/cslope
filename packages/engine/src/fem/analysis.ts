@@ -142,6 +142,10 @@ export function analyzeFem(slope: Slope, options: FemAnalysisOptions = {}): FemA
       levels[levels.length - 1] = { elements: model.elementCount, factorOfSafety: r.factorOfSafety, iterations: levels[levels.length - 1].iterations + r.iterations };
     }
   }
+  if (slope.piles.length) {
+    warnings.push("Piles are not included in the finite element analysis: a pile row needs beam elements and three-dimensional flow of soil between the piles.");
+  }
+  if (model.seepage && !model.seepage.converged) warnings.push("The seepage iteration did not converge; the pore pressures are approximate.");
   if (model.triangulation.capped) warnings.push("The mesh reached its vertex limit; the element size was not reached everywhere.");
   if (r.warning) warnings.push(r.warning);
 
