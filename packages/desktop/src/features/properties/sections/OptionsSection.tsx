@@ -782,7 +782,7 @@ function FemFields({
           disabled={off}
           onChange={(e) => set({ porePressure: e.target.value as "water-table" | "seepage" })}
           aria-label="Finite element pore pressures"
-          title="Steady seepage: the water table gives the reservoir and the tail water where it lies at or above the ground; the phreatic surface and the seepage face come from the flow (one permeability for all soils; rigid materials nearly impervious)."
+          title="Steady seepage: the water table gives the reservoir and the tail water where it lies at or above the ground; the phreatic surface and the seepage face come from the flow (one permeability for all soils, unsaturated flow after van Genuchten–Mualem with loam parameters; rigid materials nearly impervious)."
         >
           <option value="water-table">From the water table</option>
           <option value="seepage">Steady seepage (FE)</option>

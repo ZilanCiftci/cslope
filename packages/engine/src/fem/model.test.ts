@@ -4,6 +4,7 @@ import { toCanonicalSlopeDefinition } from "../model/canonical";
 import type { SlopeDefinition } from "../types/slope-definition";
 import { WATER_UNIT_WEIGHT } from "../types/constants";
 import { buildFeModel, solveElastic } from "./model";
+import { vanGenuchtenMualem } from "./seepage";
 import { meshDomain } from "./mesh";
 import { nestedDissection, SparseCholesky } from "./sparse";
 
@@ -217,3 +218,15 @@ describe("rigid materials", () => {
     expect(s.seepage?.converged).toBe(true);
   });
 });
+describe("van Genuchten–Mualem relative permeability", () => {
+  it("is 1 when saturated and matches the closed form for n = 2", () => {
+    expect(vanGenuchtenMualem(0.5, 3.6, 1.56)).toBe(1);
+    // n = 2, α|ψ| = 1: Se = 2^(−1/2), kr = Se^½ (1 − (1 − Se²)^½)²
+    const se = 2 ** -0.5;
+    expect(vanGenuchtenMualem(-1, 1, 2)).toBeCloseTo(Math.sqrt(se) * (1 - Math.sqrt(1 - se * se)) ** 2, 12);
+    // decreasing with suction, bounded below
+    expect(vanGenuchtenMualem(-2, 3.6, 1.56)).toBeLessThan(vanGenuchtenMualem(-1, 3.6, 1.56));
+    expect(vanGenuchtenMualem(-1e6, 3.6, 1.56)).toBe(1e-6);
+  });
+});
+

@@ -17,18 +17,21 @@
  *    Cooley 1983, Water Resour. Res. 19(5), 1271–1285;
  *  - base and sides: no flow.
  *
- * Free surface on a fixed mesh: the permeability depends on the pressure,
- * full where p ≥ 0 and small where p < 0, so that one mesh carries the
- * saturated flow and almost none above the phreatic surface (Bathe &
- * Khoshgoftaar 1979, Int. J. Numer. Anal. Meth. Geomech. 3(1), 13–22).
- * The nonlinear problem is solved by Picard iteration on the permeability
- * with Aitken's dynamic under-relaxation (see below). Pore pressure is
- * u = γw (h − y) ≥ 0; suction is not used for strength (χ = 0).
+ * Free surface on a fixed mesh: the permeability depends on the pressure
+ * head ψ = h − y (Bathe & Khoshgoftaar 1979, Int. J. Numer. Anal. Meth.
+ * Geomech. 3(1), 13–22), full where ψ ≥ 0 and, above the phreatic surface,
+ * k·k_r(ψ) with the relative permeability of van Genuchten (1980, Soil Sci.
+ * Soc. Am. J. 44(5), 892–898) and Mualem (1976, Water Resour. Res. 12(3),
+ * 513–522): S_e = [1 + (α|ψ|)ⁿ]^(−m), m = 1 − 1/n,
+ * k_r = S_e^½ [1 − (1 − S_e^(1/m))^m]². The default α = 3.6 m⁻¹ and
+ * n = 1.56 are the class averages for loam of Carsel & Parrish (1988,
+ * Water Resour. Res. 24(5), 755–769). The nonlinear problem is solved by
+ * Picard iteration on the permeability with Aitken's dynamic
+ * under-relaxation (see below). Pore pressure is u = γw (h − y) ≥ 0;
+ * suction is not used for strength (χ = 0).
  *
- * Implementation choices (not from the literature): the residual
- * permeability ratio k_r = 10⁻³ and a linear transition to it over a
- * pressure head of 2 % of the model height (a step at p = 0 makes the
- * Picard iteration cycle between two states); at most 80 iterations;
+ * Implementation choices (not from the literature): k_r is bounded below
+ * by 10⁻⁶ to keep the system well conditioned; at most 80 iterations;
  * convergence when the relaxed change is below 0.1 % of the heads.
  */
 
@@ -49,6 +52,9 @@ export interface SeepageMesh {
   surfaceEdges: Int32Array;
   /** Permeability per element (m/s). */
   permeability: Float64Array;
+  /** van Genuchten α (1/m) and n per element. */
+  vgAlpha: Float64Array;
+  vgN: Float64Array;
 }
 
 export interface SeepageResult {
@@ -60,8 +66,17 @@ export interface SeepageResult {
   seepageFaceNodes: number;
 }
 
-/** Relative permeability above the phreatic surface. */
-const RESIDUAL_PERMEABILITY = 1e-3;
+/** Lower bound of the relative permeability (implementation choice). */
+const MIN_RELATIVE_PERMEABILITY = 1e-6;
+
+/** Relative permeability of van Genuchten (1980) and Mualem (1976) at pressure head ψ (m). */
+export function vanGenuchtenMualem(psi: number, alpha: number, n: number): number {
+  if (psi >= 0) return 1;
+  const m = 1 - 1 / n;
+  const se = (1 + (alpha * -psi) ** n) ** -m;
+  const kr = Math.sqrt(se) * (1 - (1 - se ** (1 / m)) ** m) ** 2;
+  return Math.max(MIN_RELATIVE_PERMEABILITY, kr);
+}
 
 /** Steady head field on a mesh, with the water table of `slope` as reservoir and tail water. */
 export function solveSeepage(mesh: SeepageMesh, slope: Slope, maxIterations = 80): SeepageResult {
@@ -99,7 +114,6 @@ export function solveSeepage(mesh: SeepageMesh, slope: Slope, maxIterations = 80
   let head = new Float64Array(nn);
   for (let n = 0; n < nn; n++) head[n] = Number.isFinite(fixedHead[n]) ? fixedHead[n] : hMax;
   const seepFace = new Uint8Array(nn);
-  const band = 0.02 * (yMax - yMin);
   // Element conductivity matrices of the current iteration (6 × 6 each),
   // for the nodal flows of the seepage face.
   const elK = new Float64Array(36 * ne);
@@ -116,9 +130,7 @@ export function solveSeepage(mesh: SeepageMesh, slope: Slope, maxIterations = 80
         shapeT6(GAUSS_T6[g][0], GAUSS_T6[g][1], N);
         let h = 0, yy = 0;
         for (let k = 0; k < 6; k++) { h += N[k] * head[el[6 * e + k]]; yy += N[k] * y[el[6 * e + k]]; }
-        // Linear between full and residual permeability over a pressure head
-        // of `band` below zero: the step at p = 0 makes the iteration cycle.
-        const kr = h >= yy ? 1 : Math.max(RESIDUAL_PERMEABILITY, 1 + (h - yy) / band);
+        const kr = vanGenuchtenMualem(h - yy, mesh.vgAlpha[e], mesh.vgN[e]);
         const kk = mesh.permeability[e] * kr * w;
         for (let a = 0; a < 6; a++) {
           for (let b = 0; b <= a; b++) {

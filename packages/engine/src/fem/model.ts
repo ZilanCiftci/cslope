@@ -64,6 +64,10 @@ export interface FeMaterialParameters {
    * 10⁻⁴ of the least permeable soil for a rigid material (only ratios matter).
    */
   permeability?: number;
+  /** van Genuchten α (1/m) for the unsaturated permeability; default 3.6 (loam, Carsel & Parrish 1988). */
+  vanGenuchtenAlpha?: number;
+  /** van Genuchten n; default 1.56 (loam, Carsel & Parrish 1988). */
+  vanGenuchtenN?: number;
 }
 
 export interface FeModelOptions {
@@ -446,7 +450,9 @@ export function buildFeModel(slope: Slope, options: FeModelOptions = {}): FeMode
       elMaterial,
       (i) => params[i].permeability ?? (isRigid(materials[i]) ? RIGID_PERMEABILITY_FACTOR * minSoilK : DEFAULT_PERMEABILITY),
     );
-    seepage = solveSeepage({ x, y, nodeCount: nn, el, elementCount: ne, gp, surfaceEdges: Int32Array.from(surfEdges), permeability }, slope);
+    const vgAlpha = Float64Array.from(elMaterial, (i) => params[i].vanGenuchtenAlpha ?? 3.6);
+    const vgN = Float64Array.from(elMaterial, (i) => params[i].vanGenuchtenN ?? 1.56);
+    seepage = solveSeepage({ x, y, nodeCount: nn, el, elementCount: ne, gp, surfaceEdges: Int32Array.from(surfEdges), permeability, vgAlpha, vgN }, slope);
     const head = seepage.head;
     for (let e = 0; e < ne; e++) {
       for (let g = 0; g < 3; g++) {
