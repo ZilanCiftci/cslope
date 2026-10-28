@@ -11,10 +11,12 @@
  * exact for the stiffness of a straight-sided T6 (BᵀDB is quadratic).
  *
  * Implementation choice: the six-node triangle, which has quadratic
- * displacements and fits unstructured meshes. Low-order elements can
- * overestimate collapse loads in plane strain (Sloan & Randolph 1982,
- * IJNAMG 6(1), 47–76; de Borst & Vermeer 1984, Géotechnique 34(2),
- * 199–210); adaptive refinement (adapt.ts) reduces that error.
+ * displacements and fits unstructured meshes. Low-order elements can lock
+ * under the constant-volume condition of plastic flow and then
+ * overestimate collapse loads; Sloan & Randolph (1982, IJNAMG 6(1), 47–76)
+ * recommend the 15-node triangle, and de Borst & Vermeer (1984,
+ * Géotechnique 34(2), 199–210) discuss the element choice for frictional
+ * soil. Adaptive refinement (adapt.ts) reduces the error of the T6.
  *
  * Stresses and strains carry four components (x, y, xy, z) so that the
  * out-of-plane stress of plane strain enters the yield criterion

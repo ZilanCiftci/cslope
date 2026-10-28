@@ -128,9 +128,10 @@ export function analyzeFem(slope: Slope, options: FemAnalysisOptions = {}): FemA
   const warnings: string[] = [];
   let model = buildFeModel(slope, options);
   const flowRule = options.flowRule ?? "davis-b";
+  // Implementation choice: the warning from φ > 35°.
   if (flowRule === "non-associated" && model.gpPhi.some((p) => p > (35 * Math.PI) / 180)) {
     warnings.push(
-      "Non-associated flow with friction angles above 35° can give an oscillating or non-unique factor of safety (Tschuchnigg et al. 2015); Davis B is recommended.",
+      "Non-associated flow at high friction angles can give an oscillating or non-unique factor of safety (Tschuchnigg et al. 2015); Davis B is recommended.",
     );
   }
   const tensionCutoff = options.tensionCutoff ?? (slope.tensionCrackDepth > 0 || slope.tensionCrackAuto);

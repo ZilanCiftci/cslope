@@ -36,8 +36,9 @@
  *   Géotechnique 49(6), 835–840). A trial above a converged one starts
  *   from that converged state; with associated flow the limit load does not
  *   depend on the stress path (the uniqueness theorems of limit analysis),
- *   with non-associated flow it may, so F then rises in small equal steps
- *   as in Griffiths & Lane's incremental reduction.
+ *   with non-associated flow the bounding theorems do not apply
+ *   (Zienkiewicz, Humpheson & Lewis 1975) and it may, so F then rises in
+ *   small equal steps as in Griffiths & Lane's incremental reduction.
  *
  * Implementation choices (not from the literature), with their reasons:
  * - Δt = 1/a, half the stability limit: a stress on one yield plane returns

@@ -701,7 +701,7 @@ function FemFields({
           disabled={off}
           onChange={(e) => set({ flowRule: e.target.value as FemAnalysisSettings["flowRule"] })}
           aria-label="Flow rule"
-          title="Davis B: associated flow with strengths reduced for the dilation angle (Tschuchnigg et al. 2015); stable at high friction angles. Non-associated flow with ψ < φ can give an oscillating factor of safety above φ ≈ 35°."
+          title="Davis B: associated flow with strengths reduced for the dilation angle (Tschuchnigg et al. 2015); stable at high friction angles. Non-associated flow with ψ < φ can give an oscillating, non-unique factor of safety at high friction angles (Tschuchnigg et al. 2015)."
         >
           {(Object.keys(FLOW_RULE_LABELS) as FemAnalysisSettings["flowRule"][]).map((r) => (
             <option key={r} value={r}>
@@ -720,7 +720,7 @@ function FemFields({
           disabled={off || settings.flowRule === "associated"}
           onValueChange={(v) => v >= 0 && v <= 60 && set({ dilationAngle: v })}
           aria-label="Dilation angle"
-          title="Dilation angle of every soil; at most φ. Usually 0 for clays and φ − 30° for dense sands."
+          title="Dilation angle of every soil; at most φ. Usually 0 for clays and loose soils; for dense sands Bolton (1986) gives φ_peak − φ_cv ≈ 0.8ψ."
         />
       </label>
       <label className="flex flex-col gap-0.5">
