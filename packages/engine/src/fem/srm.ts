@@ -40,8 +40,6 @@ import { barBodyLoads, relaxBars } from "./bars";
 
 /** Iterations over which the contraction ratio is averaged. */
 const RATIO_WINDOW = 10;
-/** Iterations before a trial may fail by its predicted iteration count. */
-const EARLY_FAIL_AFTER = 200;
 
 export type FlowRule = "davis-b" | "non-associated" | "associated";
 
@@ -67,7 +65,7 @@ export interface SrmOptions {
   convergence?: "increment" | "extrapolated";
   /** Convergence tolerance; default 1e-4 (viscoplastic), 1e-6 relative residual (Newton). */
   tolerance?: number;
-  /** Iteration limit per trial (failure when reached); default 1000 (viscoplastic), 25 (Newton). */
+  /** Iteration limit per trial (failure when reached); default 1000 × √(elements/2500), at least 1000 (viscoplastic), 25 (Newton). */
   maxIterations?: number;
   /** Absolute tolerance on F; default 0.005. */
   fTolerance?: number;
@@ -240,16 +238,15 @@ export function solveAtF(
   state: SrmState,
   options: SrmOptions = {},
   eqs: Int32Array = elementEquations(model),
-  warmStart = true,
 ): { converged: boolean; iterations: number } {
   const rule = options.flowRule ?? "davis-b";
   const tol = options.tolerance ?? 1e-4;
-  const limit = options.maxIterations ?? 1000;
+  // Griffiths & Lane's 1000 iterations are for meshes of a few hundred
+  // elements; plastic flow has to cross more elements on a finer mesh, so
+  // the limit grows with the mesh's linear resolution, √(elements / 2500).
+  const limit = options.maxIterations ?? Math.round(1000 * Math.max(1, Math.sqrt(model.elementCount / 2500)));
   const cutoff = options.tensionCutoff ?? false;
   const criterion = options.convergence ?? "increment";
-  // From the unloaded state the contraction improves late (cohesionless soil
-  // above all), so the prediction is used only from a converged state.
-  const earlyFail = warmStart;
   const red = reduce(model, F, rule, options.relaxation ?? 1);
   const { gp, elementCount: ne, elE, elNu, elElastic } = model;
   const { u, evp, bodyLoads, stress } = state;
@@ -259,7 +256,7 @@ export function solveAtF(
   const load = new Float64Array(12);
   let converged = false;
   let it = 0;
-  let prevDu = 0, ratioCount = 0, hopeless = 0;
+  let prevDu = 0, ratioCount = 0;
   const logRatio = new Float64Array(RATIO_WINDOW);
   for (; it < limit && !converged; ) {
     it++;
@@ -284,24 +281,14 @@ export function solveAtF(
     }
     prevDu = maxDu;
     let remaining = maxDu;
-    let rate = NaN;
     if (ratioCount >= RATIO_WINDOW) {
       let sum = 0;
       for (const v of logRatio) sum += v;
-      rate = Math.exp(sum / RATIO_WINDOW);
+      const rate = Math.exp(sum / RATIO_WINDOW);
       remaining = rate < 1 ? (maxDu * rate) / (1 - rate) : Infinity;
     } else if (ratioCount > 0) remaining = Infinity;
     const err = criterion === "extrapolated" ? Math.max(maxDu, remaining) : maxDu;
     converged = it > 1 && (maxU > 0 ? err / maxU <= tol : true);
-    // Early failure: once the contraction has settled, the iterations still
-    // needed are log(tol·max|u| / Δu) / log r. A trial that would need more
-    // than the limit (with a margin of 50 %, for 20 iterations in a row)
-    // cannot converge in time, so it fails now, as it would at the limit.
-    if (earlyFail && !converged && it >= EARLY_FAIL_AFTER && Number.isFinite(rate) && maxU > 0) {
-      const needed = rate < 1 ? Math.log((tol * maxU) / maxDu) / Math.log(rate) : Infinity;
-      hopeless = it + needed > 1.5 * limit ? hopeless + 1 : 0;
-      if (hopeless >= 20) break;
-    }
 
     for (let e = 0; e < ne; e++) {
       for (let k = 0; k < 12; k++) { const q = eqs[12 * e + k]; ue[k] = q >= 0 ? u[q] : 0; }
@@ -398,7 +385,7 @@ export function strengthReduction(model: FeModel, options: SrmOptions = {}): Srm
           maxIterations: options.maxIterations,
           tensionCutoff: options.tensionCutoff,
         })
-      : solveAtF(model, F, st, options, eqs, warm);
+      : solveAtF(model, F, st, options, eqs);
     if (useNewton && !r.converged) {
       // Newton can cycle between the planes of the Mohr–Coulomb pyramid near
       // collapse, and from the unloaded state at the apex of cohesionless
@@ -408,7 +395,7 @@ export function strengthReduction(model: FeModel, options: SrmOptions = {}): Srm
       st = loState ? cloneState(loState) : emptyState(model);
       st.bodyLoads = plasticBodyLoads(model, eqs, st.evp);
       barBodyLoads(model, st.barEp, st.bodyLoads);
-      r = solveAtF(model, F, st, { ...options, tolerance: undefined, maxIterations: undefined }, eqs, warm);
+      r = solveAtF(model, F, st, { ...options, tolerance: undefined, maxIterations: undefined }, eqs);
     }
     iterations += r.iterations;
     const t = { F, converged: r.converged, iterations: r.iterations, maxDisplacement: maxAbs(st.u) };
