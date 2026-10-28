@@ -104,7 +104,8 @@ export function refinedSizeField(model: FeModel, marked: Uint8Array, minSize = 0
     const [i1, j1] = cell(Math.max(...ns.map((n) => x[n])), Math.max(...ns.map((n) => y[n])));
     for (let i = i0; i <= i1; i++) for (let j = j0; j <= j1; j++) buckets[j * nb + i].push(e);
   }
-  const fallback = Math.max(...size);
+  let fallback = 0;
+  for (const h of size) fallback = Math.max(fallback, h);
   return (px: number, py: number) => {
     const [i, j] = cell(px, py);
     let best = fallback, bestD = Infinity;

@@ -58,7 +58,9 @@ export function solveSeepage(mesh: SeepageMesh, slope: Slope, maxIterations = 80
   const onSurface = new Uint8Array(nn);
   for (const n of mesh.surfaceEdges) onSurface[n] = 1;
   const fixedHead = new Float64Array(nn).fill(NaN);
-  const tol = 1e-6 * (1 + Math.max(...y) - Math.min(...y));
+  let yMin = Infinity, yMax = -Infinity;
+  for (let n = 0; n < nn; n++) { yMin = Math.min(yMin, y[n]); yMax = Math.max(yMax, y[n]); }
+  const tol = 1e-6 * (1 + yMax - yMin);
   for (let n = 0; n < nn; n++) {
     if (!onSurface[n] || !water) continue;
     const yw = polylineY(water, x[n]);
@@ -79,14 +81,21 @@ export function solveSeepage(mesh: SeepageMesh, slope: Slope, maxIterations = 80
   const first = new Int32Array(nn);
   for (let n = 0; n < nn; n++) { let lo = eqn[n]; for (const m of nbr[n]) if (eqn[m] < lo) lo = eqn[m]; first[eqn[n]] = lo; }
 
+  // Start from the highest prescribed head everywhere.
+  let hMax = -Infinity;
+  for (let n = 0; n < nn; n++) if (Number.isFinite(fixedHead[n])) hMax = Math.max(hMax, fixedHead[n]);
   let head = new Float64Array(nn);
-  for (let n = 0; n < nn; n++) head[n] = Number.isFinite(fixedHead[n]) ? fixedHead[n] : Math.max(...Array.from(fixedHead).filter(Number.isFinite));
+  for (let n = 0; n < nn; n++) head[n] = Number.isFinite(fixedHead[n]) ? fixedHead[n] : hMax;
   const seepFace = new Uint8Array(nn);
-  const band = 0.02 * (Math.max(...y) - Math.min(...y));
+  const band = 0.02 * (yMax - yMin);
+  // Element conductivity matrices of the current iteration (6 × 6 each),
+  // for the nodal flows of the seepage face.
+  const elK = new Float64Array(36 * ne);
   const N = new Float64Array(6);
   let converged = false, it = 0;
   for (; it < maxIterations && !converged; it++) {
     const K = new SkylineMatrix(first);
+    elK.fill(0);
     for (let e = 0; e < ne; e++) {
       for (let g = 0; g < 3; g++) {
         const o = (3 * e + g) * GP_STRIDE, w = gp[o + 12];
@@ -101,6 +110,8 @@ export function solveSeepage(mesh: SeepageMesh, slope: Slope, maxIterations = 80
           for (let b = 0; b <= a; b++) {
             const v = kk * (gp[o + a] * gp[o + b] + gp[o + 6 + a] * gp[o + 6 + b]);
             K.add(eqn[el[6 * e + a]], eqn[el[6 * e + b]], v);
+            elK[36 * e + 6 * a + b] += v;
+            if (a !== b) elK[36 * e + 6 * b + a] += v;
           }
         }
       }
@@ -118,12 +129,25 @@ export function solveSeepage(mesh: SeepageMesh, slope: Slope, maxIterations = 80
     K.solve(b);
     const rhs = new Float64Array(nn);
     for (let n = 0; n < nn; n++) rhs[n] = b[eqn[n]];
-    // Seepage face: a free surface node with h > y joins it; a face node whose
-    // reaction draws water in (outflow < 0) leaves it.
+    // Nodal flows K·h: the water a prescribed node supplies (> 0 enters the
+    // ground); zero at a free node.
+    const flow = new Float64Array(nn);
+    for (let e = 0; e < ne; e++) {
+      for (let a = 0; a < 6; a++) {
+        let q = 0;
+        for (let c = 0; c < 6; c++) q += elK[36 * e + 6 * a + c] * rhs[el[6 * e + c]];
+        flow[el[6 * e + a]] += q;
+      }
+    }
+    let qMax = 0;
+    for (let n = 0; n < nn; n++) if (Number.isFinite(fixedHead[n]) || seepFace[n]) qMax = Math.max(qMax, Math.abs(flow[n]));
+    // Seepage face: a free surface node with h > y joins it; a face node that
+    // draws water in leaves it (water only leaves the ground there).
     let changed = 0;
     for (let n = 0; n < nn; n++) {
       if (!onSurface[n] || Number.isFinite(fixedHead[n])) continue;
       if (!seepFace[n] && rhs[n] > y[n] + tol) { seepFace[n] = 1; changed++; }
+      else if (seepFace[n] && flow[n] > 1e-6 * qMax) { seepFace[n] = 0; changed++; }
     }
     // Pressure signs (and so the permeability) settled and no face change.
     // Under-relaxed update (Picard iteration on the permeability).
@@ -138,7 +162,9 @@ export function solveSeepage(mesh: SeepageMesh, slope: Slope, maxIterations = 80
     head = rhs;
     // Converged when the (relaxed) change is below 0.1 % of the heads; the
     // unrelaxed solution may keep a cycle of a few centimetres of head.
-    converged = changed === 0 && omega * maxDh < 1e-3 * (1 + Math.max(...head.filter(Number.isFinite)));
+    let headMax = -Infinity;
+    for (const h of head) if (Number.isFinite(h)) headMax = Math.max(headMax, h);
+    converged = changed === 0 && omega * maxDh < 1e-3 * (1 + headMax);
   }
   let faces = 0;
   for (const v of seepFace) faces += v;

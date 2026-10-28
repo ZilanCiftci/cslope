@@ -742,9 +742,10 @@ function FemFields({
         <DraftNumberInput
           value={settings.youngsModulus}
           min={1}
+          max={1e9}
           step={1000}
           disabled={off}
-          onValueChange={(v) => v > 0 && set({ youngsModulus: v })}
+          onValueChange={(v) => v >= 1 && v <= 1e9 && set({ youngsModulus: v })}
           aria-label="Young's modulus"
           title="Stiffness of every soil. It scales the displacements and barely affects the factor of safety."
         />
@@ -757,7 +758,7 @@ function FemFields({
           max={0.49}
           step={0.05}
           disabled={off}
-          onValueChange={(v) => v >= 0 && v < 0.5 && set({ poissonsRatio: v })}
+          onValueChange={(v) => v >= 0 && v <= 0.49 && set({ poissonsRatio: v })}
           aria-label="Poisson's ratio"
         />
       </label>
@@ -781,7 +782,7 @@ function FemFields({
           disabled={off}
           onChange={(e) => set({ porePressure: e.target.value as "water-table" | "seepage" })}
           aria-label="Finite element pore pressures"
-          title="Steady seepage: the water table gives the reservoir and the tail water where it lies at or above the ground; the phreatic surface and the seepage face come from the flow (one permeability for all soils)."
+          title="Steady seepage: the water table gives the reservoir and the tail water where it lies at or above the ground; the phreatic surface and the seepage face come from the flow (one permeability for all soils; rigid materials nearly impervious)."
         >
           <option value="water-table">From the water table</option>
           <option value="seepage">Steady seepage (FE)</option>

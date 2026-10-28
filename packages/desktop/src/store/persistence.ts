@@ -433,8 +433,14 @@ function isFemSummary(raw: unknown): raw is FemResultSummary {
     (f.plasticShear as number[]).length === tri.length / 3 &&
     (f.shearIncrement === undefined || (nums(f.shearIncrement) && (f.shearIncrement as number[]).length === tri.length / 3)) &&
     tri.every((n) => Number.isInteger(n) && n >= 0 && n < x.length) &&
+    nums(f.displacement) &&
+    (f.displacement as number[]).length === 2 * x.length &&
+    Number.isFinite(f.elapsedMs) &&
+    (f.flowRule === "davis-b" || f.flowRule === "associated" || f.flowRule === "non-associated") &&
     Array.isArray(f.levels) &&
-    Array.isArray(f.warnings)
+    f.levels.every((l) => !!l && typeof l === "object" && Number.isFinite(l.elements) && Number.isFinite(l.fos)) &&
+    Array.isArray(f.warnings) &&
+    f.warnings.every((w) => typeof w === "string")
   );
 }
 
@@ -459,6 +465,7 @@ function savedRun(model: Record<string, unknown>): Pick<ModelEntry, "runState" |
       : null;
   // A finite element result of another shape is dropped; the rest stays.
   if (result && result.fem !== undefined && !isFemSummary(result.fem)) delete result.fem;
+  if (result && result.femError !== undefined && typeof result.femError !== "string") delete result.femError;
   const errorMessage = typeof model.errorMessage === "string" ? model.errorMessage : null;
   if (model.runState === "done" && result) return { runState: "done", progress: 1, result, errorMessage: null };
   if (model.runState === "error" && errorMessage) return { runState: "error", progress: 0, result: null, errorMessage };

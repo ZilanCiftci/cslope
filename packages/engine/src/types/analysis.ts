@@ -399,4 +399,6 @@ export interface AnalysisResult {
   otherDirectionMinFOS?: number | null;
   /** Strength reduction by finite elements, when enabled in the options. */
   fem?: FemResultSummary;
+  /** Why the finite element analysis failed, when it was enabled and did not complete. */
+  femError?: string;
 }

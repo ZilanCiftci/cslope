@@ -85,13 +85,18 @@ self.onmessage = (event: MessageEvent<WorkerMessage>) => {
     }
     result.elapsedMs = performance.now() - start;
     // Strength reduction by finite elements, in the model's own sliding direction.
+    // A failure here keeps the limit equilibrium result and reports the error with it.
     if (options.fem?.enabled) {
       let trials = 0;
-      result.fem = runFemSummary(slopeDef, options.fem, () => {
-        // No measure of the remaining work: report the trials as they pass.
-        trials++;
-        self.postMessage({ type: "analysis-progress", id, progress: Math.min(0.9, 0.3 + 0.03 * trials) } satisfies AnalysisResponse);
-      });
+      try {
+        result.fem = runFemSummary(slopeDef, options.fem, () => {
+          // No measure of the remaining work: report the trials as they pass.
+          trials++;
+          self.postMessage({ type: "analysis-progress", id, progress: Math.min(0.9, 0.3 + 0.03 * trials) } satisfies AnalysisResponse);
+        });
+      } catch (err: unknown) {
+        result.femError = err instanceof Error ? err.message : String(err);
+      }
     }
 
     const completeResponse: AnalysisResponse = {

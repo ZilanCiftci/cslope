@@ -22,7 +22,8 @@
 import { WATER_UNIT_WEIGHT } from "../types/constants";
 import type { Slope } from "../model/slope";
 import { needsLayerTop } from "../types/strength";
-import { buildFeModel, polylineY, type FeModelOptions } from "./model";
+import { GAUSS_T6 } from "./elements";
+import { buildFeModel, gaussUnitWeight, polylineY, type FeModelOptions } from "./model";
 
 export interface LowerBoundOptions extends FeModelOptions {
   /** Sides of the inscribed yield polygon; default 24. */
@@ -82,9 +83,13 @@ export function lowerBoundProblem(slope: Slope, options: LowerBoundOptions = {})
   const p = options.sides ?? 24;
   const cutoff = options.tensionCutoff ?? false;
   const warnings: string[] = [];
-  const surface = slope.surfaceLineXY ?? { x: [Math.min(...x), Math.max(...x)], y: [Math.max(...y), Math.max(...y)] };
+  let xLo = Infinity, xHi = -Infinity, yHi = -Infinity;
+  for (let n = 0; n < x.length; n++) { xLo = Math.min(xLo, x[n]); xHi = Math.max(xHi, x[n]); yHi = Math.max(yHi, y[n]); }
+  const surface = slope.surfaceLineXY ?? { x: [xLo, xHi], y: [yHi, yHi] };
   const waterLines = materials.map((m) => slope.getWaterLineForMaterial(m));
   if (slope.lineLoads.length) warnings.push("Line loads are not included in the lower bound analysis.");
+  if (model.bars.count > 0) warnings.push("Reinforcement is not included in the lower bound analysis.");
+  const head = model.seepage?.head;
 
   // Nodal data per element corner: pore pressure and strength.
   const nU = new Float64Array(3 * ne);
@@ -95,7 +100,9 @@ export function lowerBoundProblem(slope: Slope, options: LowerBoundOptions = {})
     const m = materials[elMaterial[e]], wl = waterLines[elMaterial[e]];
     for (let k = 0; k < 3; k++) {
       const n = el[6 * e + k], i = 3 * e + k;
-      if (wl) {
+      // Pore pressure from the seepage heads when the model has them, else from the water line.
+      if (head) nU[i] = Number.isFinite(head[n]) ? Math.max(0, WATER_UNIT_WEIGHT * (head[n] - y[n])) : 0;
+      else if (wl) {
         const yw = polylineY(wl, x[n]);
         nU[i] = Number.isFinite(yw) ? Math.max(0, WATER_UNIT_WEIGHT * (yw - y[n])) : 0;
       }
@@ -123,7 +130,15 @@ export function lowerBoundProblem(slope: Slope, options: LowerBoundOptions = {})
     const b = [y[n[1]] - y[n[2]], y[n[2]] - y[n[0]], y[n[0]] - y[n[1]]];
     const c = [x[n[2]] - x[n[1]], x[n[0]] - x[n[2]], x[n[1]] - x[n[0]]];
     const area2 = b[0] * c[1] - b[1] * c[0];
-    const gamma = materials[elMaterial[e]].unitWeight;
+    // Weight: the mean unit weight at the element's three Gauss points
+    // (γsat below the water as in the deformation analysis).
+    let gamma = 0;
+    for (let g = 0; g < 3; g++) {
+      const [r, s2] = GAUSS_T6[g], t = 1 - r - s2;
+      const gx = t * x[n[0]] + r * x[n[1]] + s2 * x[n[2]], gy = t * y[n[0]] + r * y[n[1]] + s2 * y[n[2]];
+      const u = t * nU[3 * e] + r * nU[3 * e + 1] + s2 * nU[3 * e + 2];
+      gamma += gaussUnitWeight(materials[elMaterial[e]], waterLines[elMaterial[e]], !!head, u, gx, gy) / 3;
+    }
     let ux = 0, uy = 0;
     for (let k = 0; k < 3; k++) { ux += b[k] * nU[3 * e + k]; uy += c[k] * nU[3 * e + k]; }
     // Σ b σx + c τ − λ Σ b u = 0

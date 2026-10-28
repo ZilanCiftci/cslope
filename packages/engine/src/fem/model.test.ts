@@ -187,3 +187,30 @@ describe("steady seepage", () => {
     for (let i = 0; i < m.gpX.length; i++) if (m.gpY[i] > 11.5) expect(m.gpU[i]).toBe(0);
   });
 });
+
+describe("rigid materials", () => {
+  it("are stiffer than the stiffest soil and nearly impervious", () => {
+    const def = {
+      coordinates: [[0, 0], [0, 10], [30, 10], [30, 0]],
+      materials: [
+        { name: "Soil", model: { kind: "mohr-coulomb", unitWeight: 20, cohesion: 10, frictionAngle: 30 } },
+        { name: "Rock", model: { kind: "impenetrable", unitWeight: 24 } },
+      ],
+      materialBoundaries: [{ coordinates: [[0, 4], [30, 4]], materialName: "" }],
+      regionAssignments: [{ point: [15, 7], materialName: "Soil" }, { point: [15, 2], materialName: "Rock" }],
+      waterTable: { mode: "custom", value: [[0, 10], [30, 10]], followBoundary: false },
+    } as unknown as SlopeDefinition;
+    const slope = buildSlope(toCanonicalSlopeDefinition(def));
+    const m = buildFeModel(slope, { elementSize: 2, materialParameters: { "*": { youngsModulus: 1e7 } } });
+    let rock = 0;
+    for (let e = 0; e < m.elementCount; e++) {
+      if (!m.elElastic[e]) continue;
+      rock++;
+      expect(m.elE[e]).toBeGreaterThanOrEqual(1e9);
+    }
+    expect(rock).toBeGreaterThan(0);
+    // hydrostatic still: the rock carries the water table's pressure
+    const s = buildFeModel(slope, { elementSize: 2, porePressure: "seepage" });
+    expect(s.seepage?.converged).toBe(true);
+  });
+});

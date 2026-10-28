@@ -35,7 +35,10 @@ export interface FeMaterialParameters {
   poissonsRatio?: number;
   /** Dilation angle ψ (°); default 0. */
   dilationAngle?: number;
-  /** Permeability k (m/s) for steady seepage; default 10⁻⁶ (only ratios matter). */
+  /**
+   * Permeability k (m/s) for steady seepage; default 10⁻⁶ for a soil and
+   * 10⁻⁴ of the least permeable soil for a rigid material (only ratios matter).
+   */
   permeability?: number;
 }
 
@@ -76,9 +79,29 @@ export interface FeModelOptions {
 
 export const DEFAULT_REINFORCEMENT_STIFFNESS = 1e6;
 
+/**
+ * Unit weight at a Gauss point as the slices take it: γsat below the
+ * material's water line (or where seepage gives a pore pressure) where
+ * given, a spatial model's interpolated γ elsewhere.
+ */
+export function gaussUnitWeight(
+  m: Material,
+  waterLine: { x: number[]; y: number[] } | null | undefined,
+  seepage: boolean,
+  u: number,
+  gx: number,
+  gy: number,
+): number {
+  const below = seepage ? u > 0 : waterLine ? gy < polylineY(waterLine, gx) : false;
+  return below && m.model.unitWeightSat !== undefined ? m.model.unitWeightSat : resolveUnitWeight(m.model, m.unitWeight, gx, gy);
+}
+
 export const DEFAULT_YOUNGS_MODULUS = 1e5;
+export const DEFAULT_PERMEABILITY = 1e-6;
+/** Permeability of a rigid material (unless given by name) relative to the least permeable soil. */
+const RIGID_PERMEABILITY_FACTOR = 1e-4;
 export const DEFAULT_POISSONS_RATIO = 0.3;
-/** Stiffness of high-strength and impenetrable materials relative to the softest soil. */
+/** Stiffness of high-strength and impenetrable materials relative to the stiffest soil. */
 const RIGID_FACTOR = 100;
 
 /** How a material behaves in the finite element analysis. */
@@ -318,15 +341,21 @@ export function buildFeModel(slope: Slope, options: FeModelOptions = {}): FeMode
   const params = materials.map(
     (m) => options.materialParameters?.[m.name] ?? (isRigid(m) ? undefined : options.materialParameters?.["*"]) ?? {},
   );
-  const soilE = materials
-    .map((m, i) => (m.model.kind === "high-strength" || m.model.kind === "impenetrable" ? Infinity : params[i].youngsModulus ?? DEFAULT_YOUNGS_MODULUS));
-  const minSoilE = Math.min(...soilE.filter(Number.isFinite), DEFAULT_YOUNGS_MODULUS);
+  // A rigid material is stiffer than the stiffest soil, and nearly impervious.
+  let maxSoilE = 0, minSoilK = Infinity;
+  materials.forEach((m, i) => {
+    if (isRigid(m)) return;
+    maxSoilE = Math.max(maxSoilE, params[i].youngsModulus ?? DEFAULT_YOUNGS_MODULUS);
+    minSoilK = Math.min(minSoilK, params[i].permeability ?? DEFAULT_PERMEABILITY);
+  });
+  if (maxSoilE === 0) maxSoilE = DEFAULT_YOUNGS_MODULUS;
+  if (!Number.isFinite(minSoilK)) minSoilK = DEFAULT_PERMEABILITY;
   const elE = new Float64Array(ne), elNu = new Float64Array(ne), elPsi = new Float64Array(ne);
   const elElastic = new Uint8Array(ne);
   for (let e = 0; e < ne; e++) {
     const i = elMaterial[e], m = materials[i], p = params[i];
-    const rigid = m.model.kind === "high-strength" || m.model.kind === "impenetrable";
-    elE[e] = p.youngsModulus ?? (rigid ? RIGID_FACTOR * minSoilE : DEFAULT_YOUNGS_MODULUS);
+    const rigid = isRigid(m);
+    elE[e] = p.youngsModulus ?? (rigid ? RIGID_FACTOR * maxSoilE : DEFAULT_YOUNGS_MODULUS);
     elNu[e] = p.poissonsRatio ?? DEFAULT_POISSONS_RATIO;
     elPsi[e] = ((p.dilationAngle ?? 0) * Math.PI) / 180;
     elElastic[e] = rigid ? 1 : 0;
@@ -389,7 +418,10 @@ export function buildFeModel(slope: Slope, options: FeModelOptions = {}): FeMode
   // Pore pressures from steady seepage instead of the water lines.
   let seepage: SeepageResult | undefined;
   if (options.porePressure === "seepage") {
-    const permeability = Float64Array.from(elMaterial, (i) => params[i].permeability ?? 1e-6);
+    const permeability = Float64Array.from(
+      elMaterial,
+      (i) => params[i].permeability ?? (isRigid(materials[i]) ? RIGID_PERMEABILITY_FACTOR * minSoilK : DEFAULT_PERMEABILITY),
+    );
     seepage = solveSeepage({ x, y, nodeCount: nn, el, elementCount: ne, gp, surfaceEdges: Int32Array.from(surfEdges), permeability }, slope);
     const head = seepage.head;
     for (let e = 0; e < ne; e++) {
@@ -470,11 +502,7 @@ export function buildFeModel(slope: Slope, options: FeModelOptions = {}): FeMode
     const m = materials[elMaterial[e]], wl = waterLines[elMaterial[e]];
     for (let g = 0; g < 3; g++) {
       const o = (3 * e + g) * GP_STRIDE, w = gp[o + 12], u = gpU[3 * e + g];
-      // Unit weight as the slices take it: γsat below the material's water
-      // line where given, a spatial model's interpolated γ elsewhere.
-      const gx = gpX[3 * e + g], gy = gpY[3 * e + g];
-      const below = seepage ? u > 0 : wl ? gy < polylineY(wl, gx) : false;
-      const gamma = below && m.model.unitWeightSat !== undefined ? m.model.unitWeightSat : resolveUnitWeight(m.model, m.unitWeight, gx, gy);
+      const gamma = gaussUnitWeight(m, wl, !!seepage, u, gpX[3 * e + g], gpY[3 * e + g]);
       shapeT6(GAUSS_T6[g][0], GAUSS_T6[g][1], N);
       for (let k = 0; k < 6; k++) {
         // self-weight, and ∫ Bᵀ m u: m = (1, 1, 0) in the plane

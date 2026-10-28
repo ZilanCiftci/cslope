@@ -40,4 +40,19 @@ describe("lowerBound", () => {
     });
     expect(r.factorOfSafety).toBeLessThanOrEqual(fe.factorOfSafety + 0.01);
   }, 180000);
+
+  it("takes the saturated unit weight below the water table", async () => {
+    // Undrained slope (one linear program) under a water table at mid-height.
+    const def = (unitWeightSat: number) =>
+      ({
+        coordinates: [[0, 0], [0, 10], [10, 10], [20, 5], [30, 5], [30, 0]],
+        materials: [{ name: "clay", model: { kind: "undrained", unitWeight: 18, unitWeightSat, undrainedShearStrength: 40 } }],
+        waterTable: { mode: "custom", value: [[0, 4], [30, 4]], followBoundary: false },
+        reinforcements: [],
+      }) as unknown as SlopeDefinition;
+    const light = await lowerBound(buildSlope(toCanonicalSlopeDefinition(def(18))), { elementSize: 2.5 });
+    const heavy = await lowerBound(buildSlope(toCanonicalSlopeDefinition(def(22))), { elementSize: 2.5 });
+    expect(heavy.factorOfSafety).toBeLessThan(light.factorOfSafety - 0.01);
+    expect(light.warnings).toEqual([]); // nothing left out
+  }, 120000);
 });

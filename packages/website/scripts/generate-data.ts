@@ -21,9 +21,9 @@
  */
 import { spawn } from "node:child_process";
 import { createHash } from "node:crypto";
-import { existsSync, mkdtempSync, readFileSync, readdirSync, writeFileSync, mkdirSync } from "node:fs";
+import { existsSync, mkdtempSync, readFileSync, writeFileSync, mkdirSync } from "node:fs";
 import { availableParallelism, loadavg, tmpdir } from "node:os";
-import { join } from "node:path";
+import { dirname, join, normalize } from "node:path";
 import {
   RELIABILITY_CASES,
   VERIFICATION_CASES,
@@ -61,20 +61,43 @@ export interface FemRaw {
 
 /**
  * Finite element results are cached by a hash of the problem's input and
- * of the finite element code (packages/engine/src/fem): they take minutes,
- * and a change to the limit equilibrium engine does not move them.
+ * of every engine source the finite element analysis imports, directly or
+ * not (packages/engine/src/fem and what it uses): they take minutes, and a
+ * change elsewhere in the limit equilibrium engine does not move them.
  */
 const FEM_CACHE = join(import.meta.dirname, "../node_modules/.cache/cslope-fem");
-const FEM_SOURCES = join(import.meta.dirname, "../../engine/src/fem");
+const ENGINE_SRC = join(import.meta.dirname, "../../engine/src");
 
+/** The engine sources reachable by relative imports from the finite element entry points. */
+function femSources(): string[] {
+  const seen = new Set<string>();
+  const stack = ["fem/analysis.ts", "fem/lower-bound.ts", "fem/summary.ts", "verification/fem-cases.ts"].map((f) => join(ENGINE_SRC, f));
+  while (stack.length) {
+    const file = stack.pop()!;
+    if (seen.has(file)) continue;
+    seen.add(file);
+    for (const m of readFileSync(file, "utf8").matchAll(/(?:import|export)[^;]*?from\s+"(\.[^"]+)"/g)) {
+      const base = normalize(join(dirname(file), m[1]));
+      const next = [`${base}.ts`, join(base, "index.ts"), base].find((c) => c.endsWith(".ts") && existsSync(c));
+      if (next) stack.push(next);
+    }
+  }
+  return [...seen].sort();
+}
+
+let femSourceHash: string | undefined;
 function femKey(c: (typeof VERIFICATION_CASES)[number]): string {
+  if (femSourceHash === undefined) {
+    const h = createHash("sha256");
+    for (const f of femSources()) {
+      h.update(f.slice(ENGINE_SRC.length));
+      h.update(readFileSync(f));
+    }
+    femSourceHash = h.digest("hex");
+  }
   const h = createHash("sha256");
   h.update(JSON.stringify([c.definition, c.fem]));
-  for (const f of readdirSync(FEM_SOURCES).filter((f) => f.endsWith(".ts") && !f.endsWith(".test.ts")).sort()) {
-    h.update(f);
-    h.update(readFileSync(join(FEM_SOURCES, f)));
-  }
-  h.update(readFileSync(join(import.meta.dirname, "../../engine/src/verification/fem-cases.ts")));
+  h.update(femSourceHash);
   return h.digest("hex").slice(0, 32);
 }
 

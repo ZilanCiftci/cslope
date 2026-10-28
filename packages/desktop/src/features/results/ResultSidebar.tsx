@@ -519,6 +519,11 @@ export function ResultSidebar() {
               </span>
             </div>
             {result.fem && <FemSummaryRows fem={result.fem} designValues={designValues} />}
+            {!result.fem && result.femError && (
+              <p className="mt-1.5 border-t pt-1.5 text-[11px]" style={{ borderColor: "var(--color-vsc-border)", color: "var(--color-vsc-warning)" }}>
+                Strength reduction (FE) failed: {result.femError}
+              </p>
+            )}
             {(result.nonConvergedSurfaces ?? 0) > 0 && (
               <p
                 style={{ color: "var(--color-vsc-warning)" }}

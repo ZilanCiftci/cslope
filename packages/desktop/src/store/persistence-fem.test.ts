@@ -34,7 +34,7 @@ const result = { minFOS: 1.2, maxFOS: 2, criticalSurface: null, allSurfaces: [],
 describe("persistence of the finite element analysis", () => {
   it("keeps valid settings and replaces invalid fields with defaults", () => {
     const parsed = parseProjectFile(
-      model({ options: { method: "Bishop", fem: { enabled: true, flowRule: "bogus", youngsModulus: 5e4, poissonsRatio: 0.7, refinementLevels: 2 } } }),
+      model({ options: { method: "Bishop", fem: { enabled: true, flowRule: "bogus", youngsModulus: 5e4, poissonsRatio: 0.495, refinementLevels: 2 } } }),
     );
     const f = parsed.models[0].options.fem!;
     expect(f.enabled).toBe(true);
@@ -51,5 +51,23 @@ describe("persistence of the finite element analysis", () => {
     const bad = parseProjectFile(model({ runState: "done", result: { ...result, fem: { ...fem, triangles: [0, 1, 7] } } }));
     expect(bad.models[0].result?.minFOS).toBe(1.2);
     expect(bad.models[0].result?.fem).toBeUndefined();
+    for (const damaged of [
+      { levels: [null] },
+      { levels: [{ elements: "many", fos: 1.3 }] },
+      { warnings: [42] },
+      { flowRule: "bogus" },
+      { displacement: [0, 0] },
+    ]) {
+      const r = parseProjectFile(model({ runState: "done", result: { ...result, fem: { ...fem, ...damaged } } }));
+      expect(r.models[0].result?.fem).toBeUndefined();
+    }
+  });
+
+  it("keeps the error of a failed finite element analysis with the limit equilibrium result", () => {
+    const r = parseProjectFile(model({ runState: "done", result: { ...result, femError: "no free degrees of freedom" } }));
+    expect(r.models[0].result?.minFOS).toBe(1.2);
+    expect(r.models[0].result?.femError).toBe("no free degrees of freedom");
+    const bad = parseProjectFile(model({ runState: "done", result: { ...result, femError: 7 } }));
+    expect(bad.models[0].result?.femError).toBeUndefined();
   });
 });
