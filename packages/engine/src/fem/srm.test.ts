@@ -79,3 +79,15 @@ describe("strengthReduction with reinforcement", () => {
     }
   }, 240000);
 });
+
+describe("viscoplastic iteration beyond the apex", () => {
+  it("converges where a cohesionless layer reaches the ground at the toe (ψ = 0)", () => {
+    // V094 (Yamagami & Ueta): the cohesionless layer 2 is the ground beside the
+    // toe. Without the apex relaxation a tensile point there never returned and
+    // every trial above F ≈ 0.83 failed; associated flow gives 1.40.
+    const p = PROBLEMS.find((q) => q.id === "V094")!;
+    const model = buildFeModel(buildSlope(toCanonicalSlopeDefinition(p.definition as SlopeDefinition)), {});
+    const r = strengthReduction(model, { flowRule: "non-associated", fTolerance: 0.05 });
+    expect(r.factorOfSafety).toBeGreaterThan(1.2);
+  }, 120000);
+});

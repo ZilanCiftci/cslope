@@ -59,6 +59,9 @@
  *   overrides failures below it, and the bounding failure is confirmed
  *   from the final converged state (up to three times per search).
  * - Viscoplastic convergence must hold in two successive iterations.
+ * - Beyond the apex of the Mohr–Coulomb pyramid σ₁ is relaxed towards the
+ *   apex as by the Rankine cut-off (see solveAtF); it does not change the
+ *   yield surface, only lets ψ < φ return a stress from beyond the apex.
  */
 
 import { GP_STRIDE } from "./elements";
@@ -385,6 +388,16 @@ export function solveAtF(
           r3 = (k * (-1 + ssi)) / 2;
         }
         if (cutoff && s1 > 0) r1 += s1 * red.dtT[i];
+        else if (sp > 0 && f > 0) {
+          // Beyond the apex of the pyramid, σ₁ > c cot φ, the deviatoric flow
+          // of ψ < φ cannot return the stress (with c = 0 a tensile point at
+          // the ground stays there and the iteration never converges); σ₁ is
+          // relaxed towards the apex as by the Rankine cut-off. The plane
+          // σ₁ ≤ c cot φ contains the whole pyramid, so the yield surface is
+          // unchanged (implementation choice).
+          const apex = (red.c[i] * red.cosPhi[i]) / sp;
+          if (s1 > apex) r1 += (s1 - apex) * red.dtT[i];
+        }
         if (r1 === 0 && r3 === 0) continue;
         // Back to Cartesian components (engineering shear strain).
         const eA = i1 === 0 ? r1 : 0;
