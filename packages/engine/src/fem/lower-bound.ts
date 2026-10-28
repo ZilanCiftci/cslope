@@ -31,6 +31,8 @@ export interface LowerBoundOptions extends FeModelOptions {
   tensionCutoff?: boolean;
   /** Tolerance on F; default 0.002. */
   fTolerance?: number;
+  /** Time limit per linear program (s); default 300. */
+  timeLimit?: number;
 }
 
 export interface LowerBoundResult {
@@ -167,7 +169,20 @@ export function lowerBoundProblem(slope: Slope, options: LowerBoundOptions = {})
       } else edgeOwner.set(key, [e, k]);
     }
   }
-  // Remaining edges are on the boundary; on the ground surface the traction is prescribed.
+  // Remaining edges are on the boundary. The supports are those of the
+  // strength reduction model (model.ts): a vertical side is a smooth roller,
+  // so it carries no shear; the base is fixed and carries any traction.
+  for (const [key, [e, k]] of edgeOwner) {
+    if (surfaceSet.has(key)) continue;
+    const a = el[6 * e + k], b = el[6 * e + ((k + 1) % 3)];
+    if (Math.abs(x[b] - x[a]) > 1e-3 * Math.abs(y[b] - y[a])) continue;
+    const len = Math.hypot(x[b] - x[a], y[b] - y[a]);
+    const nx = (y[b] - y[a]) / len, ny = -(x[b] - x[a]) / len;
+    for (const kk of [k, (k + 1) % 3]) {
+      fixed.push(` r${row++}:${term(-nx * ny, v(e, kk, 0))}${term(nx * ny, v(e, kk, 1))}${term(nx * nx - ny * ny, v(e, kk, 2))} = 0`);
+    }
+  }
+  // On the ground surface the traction is prescribed.
   for (const [key, [e, k]] of edgeOwner) {
     if (!surfaceSet.has(key)) continue;
     const a = el[6 * e + k], b = el[6 * e + ((k + 1) % 3)];
@@ -253,8 +268,9 @@ export async function lowerBound(slope: Slope, options: LowerBoundOptions = {}, 
     // than simplex on these programs (measured on V077); without presolve it
     // can misreport the status, so simplex is the fallback.
     const lp = prob.build(F);
-    let r = solver.solve(lp, { solver: "ipm" });
-    if (r.Status !== "Optimal") r = solver.solve(lp, { solver: "simplex" });
+    const time_limit = options.timeLimit ?? 300;
+    let r = solver.solve(lp, { solver: "ipm", time_limit });
+    if (r.Status !== "Optimal" && r.Status !== "Time limit reached") r = solver.solve(lp, { solver: "simplex", time_limit });
     const lambda = r.Status === "Optimal" ? r.ObjectiveValue : r.Status === "Unbounded" ? Infinity : 0;
     if (r.Status !== "Optimal") warnings.push(`The linear program at F = ${F.toFixed(3)} ended with status "${r.Status}".`);
     trials.push({ F, lambda, seconds: (performance.now() - t0) / 1000 });

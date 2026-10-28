@@ -3,6 +3,8 @@ import { buildSlope } from "../model/build-slope";
 import { toCanonicalSlopeDefinition } from "../model/canonical";
 import type { SlopeDefinition } from "../types/slope-definition";
 import { lowerBound } from "./lower-bound";
+import { buildFeModel } from "./model";
+import { strengthReduction } from "./srm";
 
 describe("lowerBound", () => {
   it("bounds Prandtl's bearing capacity from below", async () => {
@@ -31,5 +33,11 @@ describe("lowerBound", () => {
     // λ(F) = 1 at the reported factor
     const last = r.trials[r.trials.length - 1];
     expect(Math.abs(last.lambda - 1)).toBeLessThan(0.05);
+    // below the strength reduction factor of the same problem (associated flow)
+    const fe = strengthReduction(buildFeModel(buildSlope(toCanonicalSlopeDefinition(def)), { elementSize: 2.5 }), {
+      flowRule: "associated",
+      fTolerance: 0.01,
+    });
+    expect(r.factorOfSafety).toBeLessThanOrEqual(fe.factorOfSafety + 0.01);
   }, 180000);
 });
