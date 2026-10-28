@@ -39,11 +39,52 @@ The script compares the regenerated verification table with the committed one an
 | 2026-10-28 | Fixes from the finite element review (lower bound γsat and seepage pore pressures, seepage face, rigid materials, FE cache key) | 0 | 0.348 → 0.348 | 0.483 → 0.483 | 1.011 → 1.011 | 1.595 → 1.595 | 1276 s (4 workers, load 0.8 at start) |
 | 2026-10-28 | Faster finite element strength reduction (sparse Cholesky, collapse estimate, guided refinement) | 0 | 0.348 → 0.348 | 0.483 → 0.483 | 1.011 → 1.011 | 1.595 → 1.595 | 1573 s (4 workers, load 1.2 at start) |
 | 2026-10-28 | FE solver review: published methods only (bisection without collapse estimate, Aitken relaxation in seepage) | 0 | 0.348 → 0.348 | 0.483 → 0.483 | 1.011 → 1.011 | 1.595 → 1.595 | 1196 s (4 workers, load 1.3 at start) |
+| 2026-10-28 | Newton decides associated FE trials alone (viscoplastic referee removed); BFGS solver as an option | 0 | 0.348 → 0.348 | 0.483 → 0.483 | 1.011 → 1.011 | 1.595 → 1.595 | 1236 s (4 workers, load 0.7 at start) |
 <!-- summary-end -->
 
 ## Entries
 
 <!-- entries -->
+
+### 2026-10-28: Newton decides associated FE trials alone (viscoplastic referee removed); BFGS solver as an option
+
+Compared with 22fb25d. Errors are relative to the reference, in percent. Verification run time: 1236 s (4 workers, load 0.7 at start).
+
+**Against other programs (midpoint of their range):** 0 moved (0 closer to the reference, 0 further).
+
+| Result | Reference | Before | After | Error before | Error after |
+|---|---|---|---|---|---|
+| **Mean error (n = 279)** | | | | -0.231 % | -0.231 % |
+| **Mean absolute error** | | | | 0.348 % | 0.348 % |
+| **RMS error** | | | | 0.483 % | 0.483 % |
+| **Largest error** | | | | 2.100 % | 2.100 % |
+
+**Against the papers:** 0 moved (0 closer to the reference, 0 further).
+
+| Result | Reference | Before | After | Error before | Error after |
+|---|---|---|---|---|---|
+| **Mean error (n = 111)** | | | | -0.167 % | -0.167 % |
+| **Mean absolute error** | | | | 1.011 % | 1.011 % |
+| **RMS error** | | | | 1.595 % | 1.595 % |
+| **Largest error** | | | | 6.591 % | 6.591 % |
+
+**Finite elements against their references (FE, finite differences, limit analysis, theory):** 8 moved (4 closer to the reference, 4 further).
+
+| Result | Reference | Before | After | Error before | Error after |
+|---|---|---|---|---|---|
+| V020 finite-element strength reduction (Cheng et al. (2007)) | 1.327 | 1.3666 | 1.3359 | +2.984 % | +0.671 % |
+| V059c finite elements (read from fig. 2) (Guo & Griffiths (2020)) | 1.360 | 1.3721 | 1.3454 | +0.890 % | -1.074 % |
+| V068 limit analysis, lower and upper bound (Kim et al. (2002)) | 1.130 | 1.1612 | 1.1437 | +2.761 % | +1.212 % |
+| V057b finite elements (Griffiths & Lane (1999)) | 2.030 | 2.0485 | 2.0259 | +0.911 % | -0.202 % |
+| V059a finite elements (read from fig. 2) (Guo & Griffiths (2020)) | 1.280 | 1.2825 | 1.2729 | +0.195 % | -0.555 % |
+| V019 finite-element strength reduction (Cheng et al. (2007)) | 1.470 | 1.4080 | 1.3974 | -4.218 % | -4.939 % |
+| V057a finite elements (Griffiths & Lane (1999)) | 1.450 | 1.4551 | 1.4453 | +0.352 % | -0.324 % |
+| V059b finite elements (Guo & Griffiths (2020)) | 1.350 | 1.3510 | 1.3443 | +0.074 % | -0.422 % |
+| **Mean error (n = 19)** | | | | -1.467 % | -1.971 % |
+| **Mean absolute error** | | | | 2.806 % | 2.648 % |
+| **RMS error** | | | | 5.243 % | 5.203 % |
+| **Largest error** | | | | 20.467 % | 20.467 % |
+
 
 ### 2026-10-28: FE solver review: published methods only (bisection without collapse estimate, Aitken relaxation in seepage)
 
