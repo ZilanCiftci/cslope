@@ -132,7 +132,7 @@ export function analyzeFem(slope: Slope, options: FemAnalysisOptions = {}): FemA
       const prev = r.factorOfSafety;
       // Start below the coarser mesh's factor (a finer mesh gives less) and
       // step up from converged states.
-      r = strengthReduction(model, { ...options, flowRule, tensionCutoff, startF: 0.85 * prev, bracketStep: 0.04, fTolerance: coarseTol });
+      r = strengthReduction(model, { ...options, flowRule, tensionCutoff, startF: 0.6 * prev, bracketStep: 0.04, fTolerance: coarseTol });
       levels.push({ elements: model.elementCount, factorOfSafety: r.factorOfSafety, iterations: r.iterations });
       if (Math.abs(r.factorOfSafety - prev) < tol) break;
     }

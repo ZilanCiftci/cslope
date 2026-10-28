@@ -240,12 +240,16 @@ export function solveAtF(
   state: SrmState,
   options: SrmOptions = {},
   eqs: Int32Array = elementEquations(model),
+  warmStart = true,
 ): { converged: boolean; iterations: number } {
   const rule = options.flowRule ?? "davis-b";
   const tol = options.tolerance ?? 1e-4;
   const limit = options.maxIterations ?? 1000;
   const cutoff = options.tensionCutoff ?? false;
   const criterion = options.convergence ?? "increment";
+  // From the unloaded state the contraction improves late (cohesionless soil
+  // above all), so the prediction is used only from a converged state.
+  const earlyFail = warmStart;
   const red = reduce(model, F, rule, options.relaxation ?? 1);
   const { gp, elementCount: ne, elE, elNu, elElastic } = model;
   const { u, evp, bodyLoads, stress } = state;
@@ -293,7 +297,7 @@ export function solveAtF(
     // needed are log(tol·max|u| / Δu) / log r. A trial that would need more
     // than the limit (with a margin of 50 %, for 20 iterations in a row)
     // cannot converge in time, so it fails now, as it would at the limit.
-    if (!converged && it >= EARLY_FAIL_AFTER && Number.isFinite(rate) && maxU > 0) {
+    if (earlyFail && !converged && it >= EARLY_FAIL_AFTER && Number.isFinite(rate) && maxU > 0) {
       const needed = rate < 1 ? Math.log((tol * maxU) / maxDu) / Math.log(rate) : Infinity;
       hopeless = it + needed > 1.5 * limit ? hopeless + 1 : 0;
       if (hopeless >= 20) break;
@@ -379,6 +383,7 @@ export function strengthReduction(model: FeModel, options: SrmOptions = {}): Srm
     rule !== "non-associated" ||
     model.gpPhi.every((phi, i) => model.elElastic[(i / 3) | 0] === 1 || Math.min(model.elPsi[(i / 3) | 0], phi) === phi);
   const useNewton = associated && (options.solver ?? "newton") === "newton";
+  const nonAssociated = !associated;
   const trials: SrmTrial[] = [];
   let iterations = 0;
   let lo = options.resume?.lo ?? 0, hi = options.resume?.hi ?? Infinity;
@@ -393,7 +398,7 @@ export function strengthReduction(model: FeModel, options: SrmOptions = {}): Srm
           maxIterations: options.maxIterations,
           tensionCutoff: options.tensionCutoff,
         })
-      : solveAtF(model, F, st, options, eqs);
+      : solveAtF(model, F, st, options, eqs, warm);
     if (useNewton && !r.converged) {
       // Newton can cycle between the planes of the Mohr–Coulomb pyramid near
       // collapse, and from the unloaded state at the apex of cohesionless
@@ -403,7 +408,7 @@ export function strengthReduction(model: FeModel, options: SrmOptions = {}): Srm
       st = loState ? cloneState(loState) : emptyState(model);
       st.bodyLoads = plasticBodyLoads(model, eqs, st.evp);
       barBodyLoads(model, st.barEp, st.bodyLoads);
-      r = solveAtF(model, F, st, { ...options, tolerance: undefined, maxIterations: undefined }, eqs);
+      r = solveAtF(model, F, st, { ...options, tolerance: undefined, maxIterations: undefined }, eqs, warm);
     }
     iterations += r.iterations;
     const t = { F, converged: r.converged, iterations: r.iterations, maxDisplacement: maxAbs(st.u) };
@@ -429,7 +434,13 @@ export function strengthReduction(model: FeModel, options: SrmOptions = {}): Srm
   for (let k = 0; k < 40 && !(lo > 0 && Number.isFinite(hi)); k++) {
     if (run(F)) {
       if (Number.isFinite(hi)) F = (F + hi) / 2;
-      else { F *= 1 + rise; rise = Math.min(0.25, rise * 1.5); }
+      else {
+        F *= 1 + rise;
+        // With associated flow the limit does not depend on the path, so the
+        // step can grow; with non-associated flow the state does, and F
+        // rises in equal small steps as in Griffiths & Lane.
+        if (!nonAssociated) rise = Math.min(0.25, rise * 1.5);
+      }
     } else F = lo > 0 ? (lo + F) / 2 : F / 1.5;
     if (F > 100) { warning = "no failure below F = 100"; break; }
     if (F < 0.01) { warning = "no converged trial above F = 0.01"; break; }
