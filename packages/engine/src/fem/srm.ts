@@ -526,11 +526,12 @@ export function runTrial(
   startF = 0,
 ): TrialOutcome {
   const rule = options.flowRule ?? "davis-b";
+  // Hoek–Brown rock: the instantaneous strength at the starting stresses
+  // (before the solver is chosen, which reads φ)
+  if (model.gpHoekBrown.size) setHoekBrownStrength(model, start ? start.stress : model.stress0);
   const solver = isAssociated(model, rule) ? options.solver ?? "newton" : options.solver === "bfgs" || options.solver === "newton" ? options.solver : "viscoplastic";
   const useNewton = solver === "newton";
   const st = start ? cloneState(start) : emptyState(model);
-  // Hoek–Brown rock: the instantaneous strength at the starting stresses
-  if (model.gpHoekBrown.size) setHoekBrownStrength(model, start ? start.stress : model.stress0);
   if (solver === "bfgs") {
     const r = bfgsAtF(model, eqs, reduce(model, F, rule, 1), { u: st.u, ep: st.evp, stress: st.stress, barEp: st.barEp, F }, {
       tolerance: options.tolerance,

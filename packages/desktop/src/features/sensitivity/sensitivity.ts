@@ -34,6 +34,10 @@ const FIELD_LABELS: Record<string, string> = {
   rate: "Su increase (kPa/m)",
   depthRef: "Reference depth (m)",
   yRef: "Reference level (m)",
+  ucs: "σci (kPa)",
+  gsi: "GSI",
+  mi: "mi",
+  disturbance: "D",
 };
 
 /** Variables of a model: its parameters and the materials' numbers. */

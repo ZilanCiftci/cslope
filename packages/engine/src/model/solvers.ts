@@ -1077,12 +1077,14 @@ function isSurfaceGeometryError(error: unknown): boolean {
 }
 
 /** Passes of the Hoek–Brown fixed point per surface, and its relative tolerance on F (implementation choices). */
-const HB_PASSES = 20;
+const HB_PASSES = 30;
 const HB_TOLERANCE = 1e-4;
 
 /**
  * Each Hoek–Brown slice's instantaneous c and φ at its effective normal
- * stress N′/l (design values with the partial factors).
+ * stress N′/l (design values with the partial factors), halfway from the
+ * present ones: the undamped update can cycle between two states
+ * (implementation choice).
  */
 function updateHoekBrown(slope: Slope, slices: Slice[], normals: readonly number[]): void {
   for (let i = 0; i < slices.length; i++) {
@@ -1090,9 +1092,9 @@ function updateHoekBrown(slope: Slope, slices: Slice[], normals: readonly number
     if (!s.hoekBrown) continue;
     const inst = instantaneousAtNormalStress(s.hoekBrown, normals[i] / s.baseLength);
     const d = designStrength("hoek-brown", { cohesion: inst.cohesion, frictionAngle: inst.frictionAngle, cohesionUndrained: inst.cohesion }, slope.partialFactors);
-    s.cohesion = d.cohesion;
-    s.cohesionUndrained = d.cohesion;
-    s.phi = Math.atan(d.tanPhi);
+    s.cohesion = (s.cohesion + d.cohesion) / 2;
+    s.cohesionUndrained = s.cohesion;
+    s.phi = Math.atan((Math.tan(s.phi) + d.tanPhi) / 2);
     s.frictionAngle = (s.phi * 180) / Math.PI;
   }
 }
@@ -1248,10 +1250,16 @@ function evaluatePlanes(slope: Slope, allPlanes: SearchPlane[]): void {
         default:
           throw new Error(`Unknown method: ${slope.method}`);
       }
-      if (!hoekBrown || fos == null || pass >= HB_PASSES) break;
+      if (!hoekBrown || fos == null) break;
       if (Math.abs(fos - lastHbFos) <= HB_TOLERANCE * Math.abs(fos)) break;
+      if (pass >= HB_PASSES) {
+        // F has not settled: the surface is reported as not converged
+        converged = false;
+        break;
+      }
       lastHbFos = fos;
-      const normals = solvedEffectiveNormals(slope, slices, solvedFos ?? fos, plane.lffArray);
+      // (solvedEffectiveNormals takes the factor as the method reports it, Janbu's corrected one included)
+      const normals = solvedEffectiveNormals(slope, slices, fos, plane.lffArray);
       if (!normals) break;
       updateHoekBrown(slope, slices, normals);
     }

@@ -202,7 +202,15 @@ export function* analyzeFemSearch(slope: Slope, options: FemAnalysisOptions = {}
   const t0 = performance.now();
   const warnings: string[] = [];
   const flowRule = options.flowRule ?? "davis-b";
-  const tensionCutoff = options.tensionCutoff ?? (slope.tensionCrackDepth > 0 || slope.tensionCrackAuto);
+  // Hoek–Brown rock carries no tension here: its instantaneous Mohr–Coulomb
+  // parameters at σ3 = 0 (types/hoek-brown.ts) would give it a tensile
+  // strength c/tan φ far above the rock mass's s σci/mb (e.g. 200 against
+  // 23 kPa), and a steep crest in tension would stand on it.
+  const hoekBrown = slope.materialGeometries.some((g) => g.material.model.kind === "hoek-brown");
+  const tensionCutoff = (options.tensionCutoff ?? (slope.tensionCrackDepth > 0 || slope.tensionCrackAuto)) || hoekBrown;
+  if (hoekBrown && options.tensionCutoff === false) {
+    warnings.push("The tension cut-off is on: Hoek-Brown rock carries no tension in the finite element analysis.");
+  }
   // With refinement to follow, the coarser meshes need F to half the change
   // that stops the refinement (0.01 by default), so that the stop test is
   // not decided by the bisection's scatter, and no finer than the final

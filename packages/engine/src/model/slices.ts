@@ -1016,7 +1016,12 @@ export function rankineCrackDepth(slope: Slope, x: number): number {
     : undefined;
   const strength = resolveStrength(model, { yBottom: y, x, yGround, yLayerTop, alpha: 0 });
   const f = slope.partialFactors;
-  const { cohesion: c, tanPhi } = designStrength(model.kind, strength, f);
+  const { cohesion: cd, tanPhi } = designStrength(model.kind, strength, f);
+  // Hoek–Brown rock: the crack opens where the rock mass's small tensile
+  // strength s σci/mb is exceeded, not that of the tangent at zero stress
+  // (c/tan φ, many times larger)
+  const hb = strength.hoekBrown;
+  const c = hb ? Math.min(cd, ((hb.s * hb.ucs) / hb.mb) * tanPhi) : cd;
   const gamma = resolveUnitWeight(model, geo.material.unitWeight, x, y);
   if (!(c > 0) || !(gamma > 0)) return 0;
   const phi = Math.atan(tanPhi);
