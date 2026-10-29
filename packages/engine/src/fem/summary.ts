@@ -90,8 +90,8 @@ const BOUND_COARSENING = 2;
 const BOUND_TIME_LIMIT = 120;
 /** Time limit of each bound's search in the app (s). */
 const BOUND_SEARCH_TIME_LIMIT = 480;
-/** Time budget of the refinement on the bound gap in the app (s), within the app's 25 minutes for the bounds (analysisSlice.ts). */
-const BOUND_REFINEMENT_TIME_LIMIT = 900;
+/** Time budget of the bounds with their refinement on the bound gap in the app (s), within the app's 25 minutes for the bounds (analysisSlice.ts). */
+const BOUND_REFINEMENT_TIME_LIMIT = 1200;
 
 function femAnalysis(
   definition: SlopeDefinition,

@@ -179,9 +179,10 @@ export interface AdaptiveBoundsOptions extends LowerBoundOptions, UpperBoundOpti
   /** Dörfler fraction of the gap marked per refinement; default 0.6. */
   theta?: number;
   /**
-   * Time budget of the whole refinement (s): a level is not started when
-   * the time so far and three times the last level's would exceed it
-   * (the programs grow with the elements); default none.
+   * Time budget of the whole analysis, every level (s): each search and
+   * linear program gets at most what is left of it, and a refinement is
+   * not started when four times the last level's time is not left (the
+   * gap's two programs and the searches on a larger mesh); default none.
    */
   refinementTimeLimit?: number;
   /** Stop when (upper − lower) / mean is below this; default 0.03. */
@@ -211,37 +212,83 @@ export async function adaptiveBounds(slope: Slope, options: AdaptiveBoundsOption
   const solver = (highs ?? (await loadHighs(module))) as Highs;
   const levels = options.levels ?? 3, theta = options.theta ?? 0.6, tol = options.gapTolerance ?? 0.03;
   const start = performance.now();
+  const budget = options.refinementTimeLimit ?? Infinity;
+  const remaining = () => budget - (performance.now() - start) / 1000;
+  // each search and program within what is left of the budget
+  const limited = (o: AdaptiveBoundsOptions): AdaptiveBoundsOptions => ({
+    ...o,
+    totalTimeLimit: Math.min(o.totalTimeLimit ?? Infinity, Math.max(1, remaining())),
+    timeLimit: Math.min(o.timeLimit ?? 300, Math.max(1, remaining())),
+  });
+  const message = (err: unknown) => (err instanceof Error ? err.message : String(err));
   const warnings: string[] = [];
   const out: AdaptiveBoundsLevel[] = [];
   let opts: AdaptiveBoundsOptions = { ...options };
   let lower = NaN, upper = NaN;
+  let sizeField: AdaptiveBoundsResult["sizeField"] = (opts.sizeField ?? (() => NaN)) as AdaptiveBoundsResult["sizeField"];
+  const result = () => ({ lower, upper, levels: out, sizeField, warnings });
   for (let level = 0; ; level++) {
     const t0 = performance.now();
-    const ubr = await upperBound(slope, { ...opts, startF: Number.isFinite(upper) ? upper : opts.startF }, solver);
-    const lbr = await lowerBound(slope, opts, solver);
-    for (const w of ubr.warnings) warnings.push(`Level ${level}, upper bound: ${w}`);
-    for (const w of lbr.warnings) warnings.push(`Level ${level}, lower bound: ${w}`);
-    // a finer mesh can only tighten the bounds of a nested mesh; the
-    // remeshed ones are not nested, so the best of the levels is kept
-    if (Number.isFinite(ubr.factorOfSafety)) upper = Number.isFinite(upper) ? Math.min(upper, ubr.factorOfSafety) : ubr.factorOfSafety;
-    if (Number.isFinite(lbr.factorOfSafety)) lower = Number.isFinite(lower) ? Math.max(lower, lbr.factorOfSafety) : lbr.factorOfSafety;
-    out.push({ elements: ubr.elements, lower: lbr.factorOfSafety, upper: ubr.factorOfSafety, seconds: (performance.now() - t0) / 1000 });
-    options.onLevel?.(out[out.length - 1]);
-    const model = buildFeModel(slope, opts);
-    const done = Number.isFinite(lower) && Number.isFinite(upper) && (upper - lower) <= tol * (upper + lower) / 2;
-    const elapsed = (performance.now() - start) / 1000, last = out[out.length - 1].seconds;
-    const outOfTime = options.refinementTimeLimit !== undefined && elapsed + 3 * last > options.refinementTimeLimit;
-    if (done || level >= levels || outOfTime || !Number.isFinite(ubr.factorOfSafety)) {
-      if (outOfTime && !done && level < levels) warnings.push(`The refinement stopped after ${level} of ${levels} levels at its time limit of ${options.refinementTimeLimit} s.`);
-      return { lower, upper, levels: out, sizeField: model.sizeField, warnings };
+    // Each bound on its own: a failure of one (or of a refined mesh) keeps
+    // what the other levels and bounds found.
+    let ubF = NaN, lbF = NaN, elements = 0;
+    try {
+      const ubr = await upperBound(slope, limited({ ...opts, startF: Number.isFinite(upper) && upper > 0 ? upper : opts.startF }), solver);
+      for (const w of ubr.warnings) warnings.push(`Level ${level}, upper bound: ${w}`);
+      ubF = ubr.factorOfSafety; elements = ubr.elements;
+    } catch (err) {
+      warnings.push(`Level ${level}, upper bound: ${message(err)}`);
     }
-    const gap = boundGapIndicator(slope, opts, ubr.factorOfSafety, solver);
+    try {
+      const lbr = await lowerBound(slope, limited(opts), solver);
+      for (const w of lbr.warnings) warnings.push(`Level ${level}, lower bound: ${w}`);
+      lbF = lbr.factorOfSafety; elements ||= lbr.elements;
+    } catch (err) {
+      warnings.push(`Level ${level}, lower bound: ${message(err)}`);
+    }
+    // the remeshed levels are not nested, and a bound on a finer mesh can
+    // be worse: the best of the levels is kept
+    if (Number.isFinite(ubF)) upper = Number.isFinite(upper) ? Math.min(upper, ubF) : ubF;
+    if (Number.isFinite(lbF)) lower = Number.isFinite(lower) ? Math.max(lower, lbF) : lbF;
+    out.push({ elements, lower: lbF, upper: ubF, seconds: (performance.now() - t0) / 1000 });
+    options.onLevel?.(out[out.length - 1]);
+    let model;
+    try {
+      model = buildFeModel(slope, opts);
+    } catch (err) {
+      warnings.push(`Level ${level}: ${message(err)}`);
+      return result();
+    }
+    sizeField = model.sizeField;
+    const done = Number.isFinite(lower) && Number.isFinite(upper) && (upper - lower) <= tol * (upper + lower) / 2;
+    if (done || level >= levels || !(ubF > 0) || !Number.isFinite(ubF)) return result();
+    // the next level: the gap's two programs and the two searches on a
+    // larger mesh, about four times this level's searches
+    if (4 * out[out.length - 1].seconds > remaining()) {
+      warnings.push(`The refinement stopped after ${level} of ${levels} levels at its time limit of ${options.refinementTimeLimit} s.`);
+      return result();
+    }
+    let gap: BoundGap | null;
+    try {
+      gap = boundGapIndicator(slope, limited(opts), ubF, solver);
+    } catch (err) {
+      warnings.push(`Level ${level}, bound gap: ${message(err)}`);
+      return result();
+    }
     if (!gap) {
-      warnings.push(`Level ${level}: the upper bound program at F = ${ubr.factorOfSafety.toFixed(3)} gave no mechanism to refine on.`);
-      return { lower, upper, levels: out, sizeField: model.sizeField, warnings };
+      warnings.push(`Level ${level}: the upper bound program at F = ${ubF.toFixed(3)} gave no mechanism to refine on.`);
+      return result();
+    }
+    const eta = gap.eta.map((v) => Math.max(0, v));
+    let total = 0;
+    for (const v of eta) total += v;
+    // a cohesionless soil dissipates nothing at the bounds' F (the
+    // programs are homogeneous): there is no gap to refine on
+    if (!(total > 0)) {
+      warnings.push(`Level ${level}: the bound gap has no element contributions to refine on (no cohesion).`);
+      return result();
     }
     if (!gap.withStress && level === 0) warnings.push("The lower bound program has no finite optimum at the upper bound's F: refined on the dissipation alone.");
-    const eta = gap.eta.map((v) => Math.max(0, v));
     opts = { ...opts, sizeField: refinedSizeField(model, dorflerMark(eta, theta)) };
   }
 }

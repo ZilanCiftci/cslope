@@ -43,3 +43,15 @@ describe("adaptiveBounds", () => {
     expect(r.levels[r.levels.length - 1].elements).toBeGreaterThan(first.elements);
   }, 900000);
 });
+
+describe("adaptiveBounds without cohesion", () => {
+  it("does not repeat a level when the gap has nothing to refine on", async () => {
+    const def = {
+      coordinates: [[0, 0], [0, 10], [10, 10], [25, 5], [35, 5], [35, 0]],
+      materials: [{ name: "sand", model: { kind: "mohr-coulomb", unitWeight: 20, cohesion: 0, frictionAngle: 35 } }],
+    } as unknown as SlopeDefinition;
+    const r = await adaptiveBounds(buildSlope(toCanonicalSlopeDefinition(def)), { elementSize: 2.5, fTolerance: 0.01, levels: 2 });
+    expect(r.levels).toHaveLength(1);
+    expect(r.warnings.some((w) => w.includes("no element contributions"))).toBe(true);
+  }, 600000);
+});
