@@ -23,6 +23,13 @@
  * Appl. 11(3), 430–452), found by a maximum matching with augmenting paths
  * (Kuhn 1955, Nav. Res. Logist. Q. 2, 83–97).
  *
+ * A matrix with an upper triangle of its own (`unsymmetric`, the tangent
+ * of non-associated plasticity) is factorised A = L U without pivoting on
+ * the same symbolic structure (the pattern of A is symmetric, so U has the
+ * pattern of Lᵀ): row k of L and column k of U are the two triangular
+ * solves of the up-looking method (Davis 2006, § 6.1 for the left-looking
+ * form of the same recurrence).
+ *
  * Implementation choices: both coordinate directions are tried and the
  * smaller separator kept, and parts of at most 8 nodes are not split
  * (measured 2026-10-29 on V055, V056, V063, V068: 30 % fewer entries in L
@@ -143,6 +150,8 @@ interface Symbolic {
   parent: Int32Array;
   /** Work arrays of `factor`, shared by the matrices of this pattern (one factorisation at a time per thread). */
   work?: { x: Float64Array; next: Int32Array; mark: Int32Array; stack: Int32Array; pattern: Int32Array };
+  /** Second work vector of the LU factorisation. */
+  workY?: Float64Array;
 }
 
 export class SparseCholesky {
@@ -153,15 +162,24 @@ export class SparseCholesky {
   readonly diag: Int32Array;
   private readonly sym: Symbolic;
   private readonly Lx: Float64Array;
+  /**
+   * Unsymmetric matrices: A(j, i) above the diagonal at the position of
+   * A(i, j) (i > j) in `values`; null for a symmetric matrix.
+   */
+  readonly upper: Float64Array | null;
+  /** U of A = L U by rows, in the layout of Lx (U(j, j) first, then U(j, Li[p])). */
+  private readonly Ux: Float64Array | null;
   factored = false;
 
-  private constructor(sym: Symbolic) {
+  private constructor(sym: Symbolic, unsymmetric = false) {
     this.sym = sym;
     this.n = sym.n;
     this.values = new Float64Array(sym.rowCols.length);
     this.diag = new Int32Array(sym.n);
     for (let i = 0; i < sym.n; i++) this.diag[i] = sym.rowPtr[i + 1] - 1;
     this.Lx = new Float64Array(sym.Li.length);
+    this.upper = unsymmetric ? new Float64Array(sym.rowCols.length) : null;
+    this.Ux = unsymmetric ? new Float64Array(sym.Li.length) : null;
   }
 
   /**
@@ -226,14 +244,16 @@ export class SparseCholesky {
     return new SparseCholesky({ n, rowPtr, rowCols, Lp, Li, parent });
   }
 
-  /** A zero matrix with the same pattern (and symbolic factorisation). */
-  emptyCopy(): SparseCholesky {
-    return new SparseCholesky(this.sym);
+  /** A zero matrix with the same pattern (and symbolic factorisation), with its own upper triangle if `unsymmetric`. */
+  emptyCopy(unsymmetric = false): SparseCholesky {
+    return new SparseCholesky(this.sym, unsymmetric);
   }
 
-  /** Add v to entry (i, j); entries above the diagonal are mirrored. */
+  /** Add v to entries (i, j) and (j, i) (once on the diagonal): a symmetric contribution. */
   add(i: number, j: number, v: number): void {
-    this.values[this.indexOf(i, j)] += v;
+    const p = this.indexOf(i, j);
+    this.values[p] += v;
+    if (this.upper && i !== j) this.upper[p] += v;
   }
 
   /** Position of entry (i, j) (or (j, i)) in `values`; throws outside the pattern. */
@@ -250,8 +270,9 @@ export class SparseCholesky {
     return lo;
   }
 
-  /** Cholesky factorisation A = L Lᵀ. Throws if A is not positive definite. */
+  /** Cholesky factorisation A = L Lᵀ (L U for an unsymmetric matrix). Throws if A is not positive definite (has a zero pivot). */
   factor(): void {
+    if (this.upper) { this.factorLU(); return; }
     const { n, rowPtr, rowCols, Lp, Li, parent } = this.sym;
     const a = this.values, Lx = this.Lx;
     const w = (this.sym.work ??= {
@@ -287,10 +308,75 @@ export class SparseCholesky {
     this.factored = true;
   }
 
-  /** Solve L Lᵀ x = b in place (after `factor`). */
+  /**
+   * A = L U without pivoting, L unit lower triangular. For row k, with the
+   * pattern of row k of L (the reach of A(k, 0…k−1) in the elimination
+   * tree, which is also the pattern of column k of U), in topological order:
+   * L(k, i) = x_i / U(i, i), x_r −= L(k, i)·U(i, r); U(i, k) = y_i,
+   * y_r −= L(r, i)·U(i, k); then U(k, k) = A(k, k) − Σ L(k, i)·U(i, k).
+   */
+  private factorLU(): void {
+    const { n, rowPtr, rowCols, Lp, Li, parent } = this.sym;
+    const a = this.values, au = this.upper!, Lx = this.Lx, Ux = this.Ux!;
+    const w = (this.sym.work ??= {
+      x: new Float64Array(n), next: new Int32Array(n), mark: new Int32Array(n), stack: new Int32Array(n), pattern: new Int32Array(n),
+    });
+    const { x, next, mark, stack, pattern } = w;
+    const y = (this.sym.workY ??= new Float64Array(n));
+    x.fill(0);
+    y.fill(0);
+    for (let j = 0; j < n; j++) { next[j] = Lp[j] + 1; Lx[Lp[j]] = 1; }
+    mark.fill(-1);
+    for (let k = 0; k < n; k++) {
+      let top = n;
+      mark[k] = k;
+      for (let p = rowPtr[k]; p < rowPtr[k + 1] - 1; p++) {
+        let i = rowCols[p], len = 0;
+        x[i] = a[p];
+        y[i] = au[p];
+        for (; mark[i] !== k; i = parent[i]) { stack[len++] = i; mark[i] = k; }
+        while (len > 0) pattern[--top] = stack[--len];
+      }
+      const akk = a[rowPtr[k + 1] - 1];
+      let d = akk;
+      for (; top < n; top++) {
+        const i = pattern[top];
+        const lki = x[i] / Ux[Lp[i]], uik = y[i];
+        x[i] = 0;
+        y[i] = 0;
+        const end = next[i];
+        for (let p = Lp[i] + 1; p < end; p++) {
+          const r = Li[p];
+          x[r] -= Ux[p] * lki;
+          y[r] -= Lx[p] * uik;
+        }
+        d -= lki * uik;
+        Lx[end] = lki;
+        Ux[end] = uik;
+        next[i]++;
+      }
+      if (!(Math.abs(d) > 1e-12 * Math.abs(akk))) throw new Error(`zero pivot at equation ${k}`);
+      Ux[Lp[k]] = d;
+    }
+    this.factored = true;
+  }
+
+  /** Solve A x = b in place (after `factor`). */
   solve(b: Float64Array): void {
     const { n, Lp, Li } = this.sym;
-    const Lx = this.Lx;
+    const Lx = this.Lx, Ux = this.Ux;
+    if (Ux) {
+      for (let j = 0; j < n; j++) {
+        const bj = b[j];
+        if (bj !== 0) for (let p = Lp[j] + 1; p < Lp[j + 1]; p++) b[Li[p]] -= Lx[p] * bj;
+      }
+      for (let j = n - 1; j >= 0; j--) {
+        let s = b[j];
+        for (let p = Lp[j] + 1; p < Lp[j + 1]; p++) s -= Ux[p] * b[Li[p]];
+        b[j] = s / Ux[Lp[j]];
+      }
+      return;
+    }
     for (let j = 0; j < n; j++) {
       const bj = (b[j] /= Lx[Lp[j]]);
       if (bj !== 0) for (let p = Lp[j] + 1; p < Lp[j + 1]; p++) b[Li[p]] -= Lx[p] * bj;

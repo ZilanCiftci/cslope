@@ -323,6 +323,21 @@ export interface FemAnalysisSettings {
    * where it lies at or above the ground ("seepage"). Not set: water table.
    */
   porePressure?: "water-table" | "seepage";
+  /**
+   * Solver of non-associated flow: the viscoplastic iteration of Griffiths
+   * & Lane ("viscoplastic", default) or Newton's method with the
+   * unsymmetric consistent tangent, F raised in increments ("newton", the
+   * implicit method of most finite element programs; similar F, usually
+   * slower). Not set: viscoplastic.
+   */
+  nonAssociatedSolver?: "viscoplastic" | "newton";
+  /**
+   * Convergence test of the viscoplastic iteration: the displacement
+   * increment ("increment", default), or in addition the out-of-balance
+   * force of the stresses returned to the yield surface, at most 0.1 % of
+   * the load ("equilibrium"). Not set: increment.
+   */
+  convergence?: "increment" | "equilibrium";
 }
 
 export const DEFAULT_FEM_SETTINGS: FemAnalysisSettings = {
@@ -358,6 +373,12 @@ export interface FemResultSummary {
   shearIncrement?: number[];
   /** Displacement (x, y) per node at the factor of safety (m). */
   displacement: number[];
+  /**
+   * The converged trials of the final mesh by increasing F: the largest
+   * nodal displacement (m) at each reduction factor (the F–displacement
+   * curve; it turns flat at failure). Absent in results saved before it.
+   */
+  curve?: { F: number; displacement: number }[];
 }
 
 /** Full analysis result. */

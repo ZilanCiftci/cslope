@@ -34,6 +34,8 @@ export function runFemSummary(
     elementSize: settings.elementSize ?? undefined,
     tensionCutoff: settings.tensionCutoff,
     porePressure: settings.porePressure ?? "water-table",
+    solver: settings.flowRule === "non-associated" && settings.nonAssociatedSolver === "newton" ? "newton" : undefined,
+    convergence: settings.convergence === "equilibrium" ? "equilibrium" : undefined,
     adaptive: settings.refinementLevels > 0 ? { levels: Math.min(3, Math.round(settings.refinementLevels)), tolerance: 0.01 } : undefined,
     onTrial,
   });
@@ -61,5 +63,13 @@ export function runFemSummary(
     plasticShear: Array.from(r.plasticShearStrain, round),
     shearIncrement: Array.from(r.shearStrainIncrement, round),
     displacement,
+    curve: forceDisplacementCurve(r.trials),
   };
+}
+
+/** Largest displacement of the converged trials by increasing F, one point per F. */
+function forceDisplacementCurve(trials: readonly SrmTrial[]): { F: number; displacement: number }[] {
+  const byF = new Map<number, number>();
+  for (const t of trials) if (t.converged) byF.set(t.F, t.maxDisplacement);
+  return [...byF].sort((a, b) => a[0] - b[0]).map(([F, d]) => ({ F: round(F), displacement: round(d) }));
 }

@@ -1,7 +1,7 @@
 /**
- * Newton–Raphson solution at one strength reduction factor, for associated
- * flow (Davis B or associated), with implicit stress return and the
- * consistent tangent.
+ * Newton–Raphson solution at one strength reduction factor, with implicit
+ * stress return and the consistent tangent: associated flow (Davis B or
+ * associated) and, as an option, non-associated flow (srm.ts).
  *
  * Stress return: the closest point, in the energy norm of the elastic
  * compliance, of the trial stress on the yield set in principal stress
@@ -20,7 +20,12 @@
  * A, and in the plane of the principal directions the shear stiffness
  * (σ_A − σ_B) / (2(ε_A − ε_B)) of an isotropic tensor function (de Souza
  * Neto et al. 2008, appendix A), rotated to x, y. With associated flow it is
- * symmetric, so the system is solved by Cholesky (sparse.ts).
+ * symmetric, so the system is solved by Cholesky (sparse.ts). With a
+ * dilation angle ψ < φ the plastic flow follows the potential's normal G
+ * and the tangent D − D G (Aᵀ D G)⁻¹ Aᵀ D is unsymmetric (de Souza Neto et
+ * al. 2008, § 8.3), solved by LU on the same pattern; beyond the apex,
+ * which the flow of ψ < φ cannot reach, the stress returns to the apex and
+ * its tangent is zero.
  *
  * Globalisation: backtracking line search with the sufficient decrease
  * (Armijo) condition on ½‖r‖², halving the step (Dennis & Schnabel,
@@ -90,12 +95,15 @@ const SUBSET_MASKS: number[] = [];
 // Work arrays of the stress return (one return at a time per thread): the
 // planes aᵀσ ≤ b (A, 5 × 3; B), the active set and its D·a (DA, 3 × 3), the
 // small systems, and the returned principal stresses.
-const PA = new Float64Array(15), PB = new Float64Array(5);
+const PA = new Float64Array(15), PB = new Float64Array(5), PG = new Float64Array(15);
+const DY = new Float64Array(9);
 const ACT = new Int32Array(3), DA = new Float64Array(9), MS = new Float64Array(9), RHS = new Float64Array(3);
 const RET = new Float64Array(3);
 const DEP = new Float64Array(9), MINV = new Float64Array(9), MC = new Float64Array(9), EC = new Float64Array(3);
 const CP = new Float64Array(16), TT = new Float64Array(16), CT = new Float64Array(16);
 let activeCount = 0;
+/** activeCount of a return to the apex: the stress is fixed there and the principal tangent is zero. */
+const APEX = -1;
 
 function plane(k: number, v0: number, v1: number, v2: number): number {
   return PA[3 * k] * v0 + PA[3 * k + 1] * v1 + PA[3 * k + 2] * v2 - PB[k];
@@ -117,9 +125,14 @@ function principalReturn(
   cosPhi: number,
   cutoff: boolean,
   cu: number,
+  sinPsi: number,
 ): boolean {
   // planes aᵀσ ≤ b: 0 Mohr–Coulomb, 1 Rankine, 2 σ₂ ≤ σ₁, 3 σ₃ ≤ σ₂,
-  // 4 Tresca (σ₁ − σ₃)/2 ≤ cu, the undrained cap of a combined material
+  // 4 Tresca (σ₁ − σ₃)/2 ≤ cu, the undrained cap of a combined material.
+  // The plastic flow is along g (PG): the plane's normal, except for the
+  // Mohr–Coulomb plane with a dilation angle ψ < φ (non-associated flow),
+  // whose potential (σ₁ − σ₃)/2 + (σ₁ + σ₃)/2·sin ψ has the normal
+  // ((1 + sin ψ)/2, 0, −(1 − sin ψ)/2).
   const tresca = Number.isFinite(cu);
   PA[0] = (1 + sinPhi) / 2; PA[1] = 0; PA[2] = -(1 - sinPhi) / 2;
   PA[3] = 1; PA[4] = 0; PA[5] = 0;
@@ -127,6 +140,8 @@ function principalReturn(
   PA[9] = 0; PA[10] = -1; PA[11] = 1;
   PA[12] = 0.5; PA[13] = 0; PA[14] = -0.5;
   PB[0] = c * cosPhi; PB[1] = 0; PB[2] = 0; PB[3] = 0; PB[4] = tresca ? cu : 0;
+  for (let k = 0; k < 15; k++) PG[k] = PA[k];
+  PG[0] = (1 + sinPsi) / 2; PG[2] = -(1 - sinPsi) / 2;
   const useMask = 1 | (cutoff ? 2 : 0) | 4 | 8 | (tresca ? 16 : 0);
   const tolF = 1e-10 * (Math.abs(s0) + Math.abs(s2) + c + (tresca ? cu : 0) + 1);
   if (plane(0, s0, s1, s2) <= tolF && (!cutoff || plane(1, s0, s1, s2) <= tolF) && (!tresca || plane(4, s0, s1, s2) <= tolF)) return false;
@@ -136,10 +151,10 @@ function principalReturn(
     let n = 0;
     for (let k = 0; k < 5; k++) if (mask & (1 << k)) ACT[n++] = k;
     for (let j = 0; j < n; j++) {
-      const a = 3 * ACT[j], tr = PA[a] + PA[a + 1] + PA[a + 2];
-      DA[3 * j] = lam * tr + 2 * mu * PA[a];
-      DA[3 * j + 1] = lam * tr + 2 * mu * PA[a + 1];
-      DA[3 * j + 2] = lam * tr + 2 * mu * PA[a + 2];
+      const a = 3 * ACT[j], tr = PG[a] + PG[a + 1] + PG[a + 2];
+      DA[3 * j] = lam * tr + 2 * mu * PG[a];
+      DA[3 * j + 1] = lam * tr + 2 * mu * PG[a + 1];
+      DA[3 * j + 2] = lam * tr + 2 * mu * PG[a + 2];
     }
     for (let i = 0; i < n; i++) {
       const a = 3 * ACT[i];
@@ -159,6 +174,16 @@ function principalReturn(
       activeCount = n;
       return true;
     }
+  }
+  // Beyond the apex with ψ < φ the deviatoric flow cannot reach the yield
+  // set: the stress returns to the apex σ₁ = σ₂ = σ₃ = c cot φ (or to zero
+  // under the tension cut-off), the apex return of non-associated
+  // Mohr–Coulomb (de Souza Neto, Perić & Owen 2008, § 8.2).
+  if (sinPhi > 0 && sinPsi < sinPhi) {
+    const apex = (c * cosPhi) / sinPhi, v = cutoff ? Math.min(apex, 0) : apex;
+    RET[0] = v; RET[1] = v; RET[2] = v;
+    activeCount = APEX;
+    return true;
   }
   throw new Error("stress return failed");
 }
@@ -193,6 +218,7 @@ export function returnMapInto(
   cu: number,
   sOut: Float64Array,
   tangent: Float64Array | null,
+  sinPsi: number = sinPhi,
 ): boolean {
   const lam = (E * nu) / ((1 + nu) * (1 - 2 * nu)), mu = E / (2 * (1 + nu));
   const pm = (sx + sy) / 2, hd = (sx - sy) / 2;
@@ -206,7 +232,7 @@ export function returnMapInto(
   else if (sz > sB) { idx0 = 0; idx1 = 2; idx2 = 1; }
   else { idx0 = 0; idx1 = 1; idx2 = 2; }
   const v0 = idx0 === 0 ? sA : sz, v1 = idx1 === 0 ? sA : idx1 === 1 ? sB : sz, v2 = idx2 === 1 ? sB : sz;
-  const plastic = principalReturn(v0, v1, v2, lam, mu, c, sinPhi, cosPhi, cutoff, cu);
+  const plastic = principalReturn(v0, v1, v2, lam, mu, c, sinPhi, cosPhi, cutoff, cu, sinPsi);
   if (!plastic) {
     sOut[0] = sx; sOut[1] = sy; sOut[2] = txy; sOut[3] = sz;
     if (tangent) elasticTangent(lam, mu, tangent);
@@ -222,13 +248,18 @@ export function returnMapInto(
   sOut[2] = (rA - rB) * sc;
   sOut[3] = rZ;
   if (!tangent) return true;
-  // tangent in sorted principal space: D − D A (Aᵀ D A)⁻¹ Aᵀ D
+  // tangent in sorted principal space: D − D G (Aᵀ D G)⁻¹ Aᵀ D, with the
+  // flow directions G (= A for associated flow, then symmetric)
   const d11 = lam + 2 * mu;
   for (let p = 0; p < 3; p++) for (let q = 0; q < 3; q++) DEP[3 * p + q] = p === q ? d11 : lam;
   const n = activeCount;
+  if (n === APEX) DEP.fill(0);
   for (let j = 0; j < n; j++) {
     const a = 3 * ACT[j];
-    for (let i = 0; i < 3; i++) DA[3 * j + i] = DEP[3 * i] * PA[a] + DEP[3 * i + 1] * PA[a + 1] + DEP[3 * i + 2] * PA[a + 2];
+    for (let i = 0; i < 3; i++) {
+      DA[3 * j + i] = DEP[3 * i] * PG[a] + DEP[3 * i + 1] * PG[a + 1] + DEP[3 * i + 2] * PG[a + 2];
+      DY[3 * j + i] = DEP[3 * i] * PA[a] + DEP[3 * i + 1] * PA[a + 1] + DEP[3 * i + 2] * PA[a + 2];
+    }
   }
   for (let i = 0; i < n; i++) {
     const a = 3 * ACT[i];
@@ -243,7 +274,7 @@ export function returnMapInto(
   }
   for (let p = 0; p < 3; p++) for (let q = 0; q < 3; q++) {
     let s = 0;
-    for (let i = 0; i < n; i++) for (let j = 0; j < n; j++) s += DA[3 * i + p] * MINV[i * n + j] * DA[3 * j + q];
+    for (let i = 0; i < n; i++) for (let j = 0; j < n; j++) s += DA[3 * i + p] * MINV[i * n + j] * DY[3 * j + q];
     DEP[3 * p + q] -= s;
   }
   // back to (A, B, z) order: Paa = Dep in the rows/columns of A, B, z
@@ -325,6 +356,8 @@ export interface GaussStrength {
   cosPhi: Float64Array;
   /** Undrained cap (Tresca) of a combined material; Infinity where there is none. */
   cu: Float64Array;
+  /** sin ψ of the plastic potential (non-associated flow); absent: associated (ψ = φ). */
+  sinPsi?: Float64Array;
 }
 
 /**
@@ -346,10 +379,11 @@ export function evaluate(
 ): void {
   const { gp, elementCount: ne, elE, elNu, elElastic } = model;
   fint.fill(0);
-  if (K) K.values.fill(0);
+  if (K) { K.values.fill(0); K.upper?.fill(0); }
   const scatter = K ? scatterIndex(model, eqs, K) : null;
-  const kv = K ? K.values : null;
+  const kv = K ? K.values : null, ku = K ? K.upper : null;
   const ue = EV_UE, C = EV_C, ke = EV_KE, fe = EV_FE, sig = EV_SIG;
+  const sinPsi = strength.sinPsi;
   for (let e = 0; e < ne; e++) {
     for (let k = 0; k < 12; k++) { const q = eqs[12 * e + k]; ue[k] = q >= 0 ? u[q] : 0; }
     const E = elE[e], nu = elNu[e];
@@ -371,7 +405,7 @@ export function evaluate(
         if (K) { C.fill(0); C[0] = lam + 2 * mu; C[1] = lam; C[4] = lam; C[5] = lam + 2 * mu; C[10] = mu; }
         epNew[s] = epOld[s]; epNew[s + 1] = epOld[s + 1]; epNew[s + 2] = epOld[s + 2]; epNew[s + 3] = epOld[s + 3];
       } else {
-        returnMapInto(t0, t1, t2, t3, E, nu, strength.c[i], strength.sinPhi[i], strength.cosPhi[i], cutoff, strength.cu[i], sig, K ? C : null);
+        returnMapInto(t0, t1, t2, t3, E, nu, strength.c[i], strength.sinPhi[i], strength.cosPhi[i], cutoff, strength.cu[i], sig, K ? C : null, sinPsi ? sinPsi[i] : strength.sinPhi[i]);
         // plastic strain increment = D⁻¹ (σ_trial − σ)
         const d0 = t0 - sig[0], d1 = t1 - sig[1], d2 = t2 - sig[2], d3 = t3 - sig[3];
         const dm = (d0 + d1 + d3) * nu / E;
@@ -386,7 +420,23 @@ export function evaluate(
         fe[2 * k] += (dx * sig[0] + dy * sig[2]) * w;
         fe[2 * k + 1] += (dy * sig[1] + dx * sig[2]) * w;
       }
-      if (K) {
+      if (K && ku) {
+        // unsymmetric tangent (non-associated flow): the whole of
+        // ke += Bᵀ C B w, B rows (εx, εy, γxy)
+        for (let a = 0; a < 6; a++) {
+          const ax = gp[o + a], ay = gp[o + 6 + a];
+          const rx0 = ax * C[0] + ay * C[8], rx1 = ax * C[1] + ay * C[9], rx2 = ax * C[2] + ay * C[10];
+          const ry0 = ay * C[4] + ax * C[8], ry1 = ay * C[5] + ax * C[9], ry2 = ay * C[6] + ax * C[10];
+          const rowX = 24 * a, rowY = 24 * a + 12;
+          for (let b = 0; b < 6; b++) {
+            const bx = gp[o + b], by = gp[o + 6 + b];
+            ke[rowX + 2 * b] += w * (rx0 * bx + rx2 * by);
+            ke[rowX + 2 * b + 1] += w * (rx1 * by + rx2 * bx);
+            ke[rowY + 2 * b] += w * (ry0 * bx + ry2 * by);
+            ke[rowY + 2 * b + 1] += w * (ry1 * by + ry2 * bx);
+          }
+        }
+      } else if (K) {
         // ke += Bᵀ C B w with B rows (εx, εy, γxy); εz = 0. The in-plane
         // part of C is symmetric (associated flow); it is symmetrised
         // against round-off and only the lower triangle of ke is formed.
@@ -412,7 +462,22 @@ export function evaluate(
       }
     }
     for (let k = 0; k < 12; k++) { const q = eqs[12 * e + k]; if (q >= 0) fint[q] += fe[k]; }
-    if (kv && scatter) {
+    if (kv && ku && scatter) {
+      // ke(a, b) is A(ia, ib): below the diagonal into `values`, above it
+      // into `upper`, both at the position of the lower-triangle entry
+      let t = 78 * e;
+      for (let a = 0; a < 12; a++) {
+        const ia = eqs[12 * e + a];
+        for (let b = 0; b <= a; b++, t++) {
+          const at = scatter[t];
+          if (at < 0) continue;
+          const lo = ke[12 * a + b], hi = ke[12 * b + a];
+          if (ia > eqs[12 * e + b]) { kv[at] += lo; if (a !== b) ku[at] += hi; }
+          else if (ia < eqs[12 * e + b]) { kv[at] += hi; ku[at] += lo; }
+          else kv[at] += lo;
+        }
+      }
+    } else if (kv && scatter) {
       let t = 78 * e;
       for (let a = 0; a < 12; a++) {
         for (let b = 0; b <= a; b++, t++) {
@@ -465,11 +530,12 @@ const STALL_FALL = 0.9;
 const LS_STEPS = 10;
 const ARMIJO_C = 1e-4;
 
-/** The tangent matrix of a model, allocated once (trials of one model run one at a time per thread). */
-const tangents = new WeakMap<FeModel, SparseCholesky>();
-function tangentMatrix(model: FeModel): SparseCholesky {
-  let K = tangents.get(model);
-  if (!K) { K = model.K.emptyCopy(); tangents.set(model, K); }
+/** The tangent matrices of a model (symmetric, unsymmetric), allocated once (trials of one model run one at a time per thread). */
+const tangents = new WeakMap<FeModel, SparseCholesky>(), unsymmetricTangents = new WeakMap<FeModel, SparseCholesky>();
+function tangentMatrix(model: FeModel, unsymmetric: boolean): SparseCholesky {
+  const cache = unsymmetric ? unsymmetricTangents : tangents;
+  let K = cache.get(model);
+  if (!K) { K = model.K.emptyCopy(unsymmetric); cache.set(model, K); }
   return K;
 }
 
@@ -503,7 +569,12 @@ export function newtonAtF(
   const stress = new Float64Array(4 * ngp), ep = new Float64Array(4 * ngp);
   const barEp = new Float64Array(state.barEp.length);
   const trialU = new Float64Array(neq);
-  const K = tangentMatrix(model);
+  // With a dilation angle below the friction angle the consistent tangent
+  // is unsymmetric and the system is solved by LU (sparse.ts).
+  const sp = strength.sinPsi;
+  let unsymmetric = false;
+  if (sp) for (let i = 0; i < sp.length && !unsymmetric; i++) if (sp[i] !== strength.sinPhi[i]) unsymmetric = true;
+  const K = tangentMatrix(model, unsymmetric);
   const residual = (uu: Float64Array, withK: boolean): number => {
     evaluate(model, eqs, uu, state.ep, strength, cutoff, fint, stress, ep, withK ? K : null);
     if (model.bars.count) barInternal(model, uu, state.barEp, state.F, fint, barEp, withK ? K : null);

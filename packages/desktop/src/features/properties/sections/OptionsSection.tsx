@@ -711,6 +711,32 @@ function FemFields({
         </select>
       </label>
       <label className="flex flex-col gap-0.5">
+        <Label>Solver</Label>
+        <select
+          value={settings.flowRule === "non-associated" ? settings.nonAssociatedSolver ?? "viscoplastic" : "newton"}
+          disabled={off || settings.flowRule !== "non-associated"}
+          onChange={(e) => set({ nonAssociatedSolver: e.target.value as "viscoplastic" | "newton" })}
+          aria-label="Finite element solver"
+          title="Davis B and associated flow are always solved by Newton's method. Non-associated flow: the viscoplastic iteration of Griffiths & Lane (default), or Newton's method with the unsymmetric tangent, the reduction factor raised in increments (the implicit method of most finite element programs; within about 1 % of the viscoplastic factor in the verification cases, usually slower)."
+        >
+          <option value="viscoplastic">Viscoplastic</option>
+          <option value="newton">Newton</option>
+        </select>
+      </label>
+      <label className="flex flex-col gap-0.5">
+        <Label>Convergence</Label>
+        <select
+          value={settings.convergence ?? "increment"}
+          disabled={off || settings.flowRule !== "non-associated" || settings.nonAssociatedSolver === "newton"}
+          onChange={(e) => set({ convergence: e.target.value as "increment" | "equilibrium" })}
+          aria-label="Convergence test"
+          title="Convergence test of the viscoplastic iteration. Increment (default): the displacement change of an iteration below 10⁻⁴ of the displacement (Griffiths & Lane). Equilibrium: in addition, the stresses returned to the yield surface must balance the load to 0.1 % (the unbalanced-force test of other programs); it does not depend on the time step and gives F up to about 1 % lower. Newton always tests equilibrium (residual 10⁻⁶)."
+        >
+          <option value="increment">Increment</option>
+          <option value="equilibrium">Equilibrium</option>
+        </select>
+      </label>
+      <label className="flex flex-col gap-0.5">
         <Label>Dilation angle ψ (°)</Label>
         <DraftNumberInput
           value={settings.dilationAngle}

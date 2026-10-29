@@ -440,7 +440,9 @@ function isFemSummary(raw: unknown): raw is FemResultSummary {
     Array.isArray(f.levels) &&
     f.levels.every((l) => !!l && typeof l === "object" && Number.isFinite(l.elements) && Number.isFinite(l.fos)) &&
     Array.isArray(f.warnings) &&
-    f.warnings.every((w) => typeof w === "string")
+    f.warnings.every((w) => typeof w === "string") &&
+    (f.curve === undefined ||
+      (Array.isArray(f.curve) && f.curve.every((p) => !!p && typeof p === "object" && Number.isFinite(p.F) && Number.isFinite(p.displacement))))
   );
 }
 
@@ -991,5 +993,7 @@ function normalizeFemSettings(f: Record<string, unknown>): FemAnalysisSettings {
     tensionCutoff: f.tensionCutoff === true,
     refinementLevels: Math.round(num(f.refinementLevels, 0, 3, d.refinementLevels)),
     ...(f.porePressure === "seepage" ? { porePressure: "seepage" as const } : {}),
+    ...(f.nonAssociatedSolver === "newton" ? { nonAssociatedSolver: "newton" as const } : {}),
+    ...(f.convergence === "equilibrium" ? { convergence: "equilibrium" as const } : {}),
   };
 }

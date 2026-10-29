@@ -33,7 +33,9 @@
  *   (Griffiths & Lane 1999); "associated": c/F, tan φ/F and ψ = φ_F.
  * - Associated flow is solved by Newton's method (newton.ts); a trial fails
  *   when Newton does not reach equilibrium, the criterion of implicit
- *   strength reduction. (A viscoplastic iteration deciding Newton's failed
+ *   strength reduction. Non-associated flow can be solved the same way
+ *   with the unsymmetric tangent (option), F raised in increments with
+ *   cutback since the result depends on the path. (A viscoplastic iteration deciding Newton's failed
  *   trials was tried and removed: its displacement-increment test accepted
  *   creeping states and raised F, e.g. V068 1.161 against 1.132, and its
  *   iteration limit failed slowly converging ones, V056.)
@@ -66,9 +68,9 @@
 
 import { GP_STRIDE } from "./elements";
 import type { FeModel } from "./model";
-import { newtonAtF } from "./newton";
+import { evaluate, newtonAtF, norm2 } from "./newton";
 import { bfgsAtF } from "./bfgs";
-import { relaxBars } from "./bars";
+import { barInternal, relaxBars } from "./bars";
 
 /** Confirmations of the bounding failure per search (see strengthReductionSearch). */
 const MAX_CONFIRMATIONS = 3;
@@ -82,9 +84,15 @@ export interface SrmOptions {
   flowRule?: FlowRule;
   /**
    * "newton" (default for Davis B and associated flow): implicit return and
-   * consistent tangent (newton.ts), which decides convergence sharply;
-   * "viscoplastic": the explicit iteration of Griffiths & Lane, always used
-   * for non-associated flow, whose tangent is not symmetric.
+   * consistent tangent (newton.ts), which decides convergence sharply; with
+   * non-associated flow the tangent is unsymmetric (LU, sparse.ts) and F
+   * rises in increments from the starting state (`runTrial`).
+   * "viscoplastic" (default for non-associated flow): the explicit
+   * iteration of Griffiths & Lane. Measured 2026-10-29 on five
+   * non-associated cases (V055, V094 and three published benchmark
+   * slopes), Newton's F lies within 1.3 % of the viscoplastic one, at 0.7
+   * to 8 times its run time (4 times on the median case), so viscoplastic
+   * stays the default. "bfgs": quasi-Newton on the elastic stiffness.
    */
   solver?: "newton" | "bfgs" | "viscoplastic";
   /** Rankine tension cut-off at zero effective stress; default false. */
@@ -95,9 +103,14 @@ export interface SrmOptions {
    * estimated distance to the fixed point Δu·r/(1 − r) instead of Δu, which
    * does not accept a slowly creeping state near collapse but needs more
    * iterations, so with the same limit it gives a lower F (V055: 1.31
-   * against 1.35).
+   * against 1.35); "equilibrium", the increment test and in addition the
+   * out-of-balance force of the stresses returned to the yield surface,
+   * ‖f − ∫Bᵀσ‖ ≤ `unbalanceTolerance`·‖f‖ (the unbalanced-force criterion
+   * of explicit and implicit codes), which does not depend on Δt.
    */
-  convergence?: "increment" | "extrapolated";
+  convergence?: "increment" | "extrapolated" | "equilibrium";
+  /** Relative out-of-balance force of the "equilibrium" test; default 1e-3. */
+  unbalanceTolerance?: number;
   /** Convergence tolerance; default 1e-4 (viscoplastic), 1e-6 relative residual (Newton). */
   tolerance?: number;
   /** Viscoplastic iteration limit per trial (failure when reached); default 1000 × √(elements/2500), at least 1000. */
@@ -302,6 +315,9 @@ export function solveAtF(
   const next = new Float64Array(neq);
   const ue = new Float64Array(12);
   const load = new Float64Array(12);
+  const eqWork = criterion === "equilibrium" ? {
+    fint: new Float64Array(neq), stress: new Float64Array(12 * ne), ep: new Float64Array(12 * ne), barEp: new Float64Array(state.barEp.length),
+  } : { fint: new Float64Array(0), stress: new Float64Array(0), ep: new Float64Array(0), barEp: new Float64Array(0) };
   let converged = false;
   let it = 0;
   let prevDu = 0, ratioCount = 0, passedBefore = false;
@@ -343,6 +359,16 @@ export function solveAtF(
     const passed = it > 1 && (maxU > 0 ? err / maxU <= tol : true);
     converged = passed && passedBefore;
     passedBefore = passed;
+    if (converged && criterion === "equilibrium") {
+      // The stresses of the iteration are in equilibrium but may lie
+      // outside the yield surface; their closest-point returns are the
+      // admissible stresses, whose internal forces must balance the load.
+      evaluate(model, eqs, u, evp, red, cutoff, eqWork.fint, eqWork.stress, eqWork.ep, null);
+      if (model.bars.count) barInternal(model, u, state.barEp, F, eqWork.fint, eqWork.barEp, null);
+      let s = 0;
+      for (let i = 0; i < neq; i++) { const d = model.f[i] - eqWork.fint[i]; s += d * d; }
+      if (Math.sqrt(s) > (options.unbalanceTolerance ?? 1e-3) * norm2(model.f)) converged = false;
+    }
 
     for (let e = 0; e < ne; e++) {
       for (let k = 0; k < 12; k++) { const q = eqs[12 * e + k]; ue[k] = q >= 0 ? u[q] : 0; }
@@ -434,6 +460,8 @@ function maxAbs(a: Float64Array): number {
 /** Trials the search asks for: these reductions, each from the same starting state (null: unloaded). */
 export interface TrialBatch {
   start: SrmState | null;
+  /** F of the starting state; 0 for the unloaded state. */
+  startF: number;
   F: number[];
 }
 
@@ -444,6 +472,13 @@ export interface TrialOutcome {
   solver: SrmTrial["solver"];
   state: SrmState;
 }
+
+/**
+ * Smallest increment of F, as a fraction of the jump from the starting
+ * state, of a non-associated Newton trial: three halvings (implementation
+ * choice).
+ */
+const MIN_INCREMENT = 0.125;
 
 /** Whether the model's flow is associated everywhere (non-associated flow is associated where ψ = φ, as in undrained soil). */
 function isAssociated(model: FeModel, rule: FlowRule): boolean {
@@ -459,9 +494,16 @@ function isAssociated(model: FeModel, rule: FlowRule): boolean {
  * converges when the solver finds equilibrium; Newton decides its trials
  * alone, as in implicit strength reduction.
  */
-export function runTrial(model: FeModel, F: number, start: SrmState | null, options: SrmOptions = {}, eqs: Int32Array = elementEquations(model)): TrialOutcome {
+export function runTrial(
+  model: FeModel,
+  F: number,
+  start: SrmState | null,
+  options: SrmOptions = {},
+  eqs: Int32Array = elementEquations(model),
+  startF = 0,
+): TrialOutcome {
   const rule = options.flowRule ?? "davis-b";
-  const solver = isAssociated(model, rule) ? options.solver ?? "newton" : "viscoplastic";
+  const solver = isAssociated(model, rule) ? options.solver ?? "newton" : options.solver === "bfgs" || options.solver === "newton" ? options.solver : "viscoplastic";
   const useNewton = solver === "newton";
   const st = start ? cloneState(start) : emptyState(model);
   if (solver === "bfgs") {
@@ -473,12 +515,38 @@ export function runTrial(model: FeModel, F: number, start: SrmState | null, opti
     return { converged: r.converged, iterations: r.iterations, solver: "bfgs", state: st };
   }
   if (useNewton) {
-    const r = newtonAtF(model, eqs, reduce(model, F, rule, 1), { u: st.u, ep: st.evp, stress: st.stress, barEp: st.barEp, F }, {
-      tolerance: options.tolerance,
-      maxIterations: options.newtonIterations,
-      tensionCutoff: options.tensionCutoff,
-    });
-    return { converged: r.converged, iterations: r.iterations, solver: "newton", state: st };
+    const at = (f: number) =>
+      newtonAtF(model, eqs, reduce(model, f, rule, 1), { u: st.u, ep: st.evp, stress: st.stress, barEp: st.barEp, F: f }, {
+        tolerance: options.tolerance,
+        maxIterations: options.newtonIterations,
+        tensionCutoff: options.tensionCutoff,
+      });
+    if (isAssociated(model, rule) || !start || !(F > startF)) {
+      const r = at(F);
+      return { converged: r.converged, iterations: r.iterations, solver: "newton", state: st };
+    }
+    // Non-associated flow is path dependent, and its Newton iteration
+    // (unsymmetric tangent, a stress return that is not smooth) can fail
+    // to converge from a state far below F: F is raised in increments from
+    // the starting state, halving an increment that fails and growing it
+    // by half after a success (automatic increments with cutback, as in
+    // incremental plasticity). The trial fails when an increment below
+    // MIN_INCREMENT of the jump fails.
+    const jump = F - startF;
+    let Fc = startF, inc = jump, iterations = 0;
+    for (;;) {
+      const Ft = Fc + inc >= F - 1e-12 * F ? F : Fc + inc;
+      const r = at(Ft);
+      iterations += r.iterations;
+      if (r.converged) {
+        if (Ft === F) return { converged: true, iterations, solver: "newton", state: st };
+        Fc = Ft;
+        inc *= 1.5;
+      } else {
+        inc /= 2;
+        if (inc < MIN_INCREMENT * jump) return { converged: false, iterations, solver: "newton", state: st };
+      }
+    }
   }
   const v = solveAtF(model, F, st, options, eqs);
   return { converged: v.converged, iterations: v.iterations, solver: "viscoplastic", state: st };
@@ -491,7 +559,7 @@ export function strengthReduction(model: FeModel, options: SrmOptions = {}): Srm
   let step = search.next();
   while (!step.done) {
     const batch = step.value;
-    step = search.next(batch.F.map((F) => runTrial(model, F, batch.start, options, eqs)));
+    step = search.next(batch.F.map((F) => runTrial(model, F, batch.start, options, eqs, batch.startF)));
   }
   return step.value;
 }
@@ -535,7 +603,7 @@ export function* strengthReductionSearch(model: FeModel, options: SrmOptions = {
   // Run a batch from the current converged state (or the unloaded one).
   function* round(Fs: number[]): Generator<TrialBatch, boolean, TrialOutcome[]> {
     const warm = loState !== null, from = lo;
-    const out = yield { start: loState, F: Fs };
+    const out = yield { start: loState, startF: warm ? from : 0, F: Fs };
     let best = -1;
     for (let k = 0; k < Fs.length; k++) {
       const r = out[k];

@@ -62,6 +62,26 @@ describe("strengthReduction", () => {
   }, 300000);
 });
 
+describe("strengthReduction with non-associated flow", () => {
+  const def = PROBLEMS.find((p) => p.id === "V055")!.definition as SlopeDefinition;
+  const model = buildFeModel(buildSlope(toCanonicalSlopeDefinition(def)), { elementSize: 2, materialParameters: { "*": { dilationAngle: 0 } } });
+  let vpResult: ReturnType<typeof strengthReduction> | null = null;
+  const viscoplastic = () => (vpResult ??= strengthReduction(model, { flowRule: "non-associated", fTolerance: 0.01 }));
+
+  it("gives the viscoplastic factor with Newton's method and the unsymmetric tangent", () => {
+    const newton = strengthReduction(model, { flowRule: "non-associated", solver: "newton", fTolerance: 0.01 });
+    expect(newton.trials.every((t) => t.solver === "newton")).toBe(true);
+    expect(Math.abs(newton.factorOfSafety - viscoplastic().factorOfSafety)).toBeLessThan(0.03);
+  }, 300000);
+
+  it("accepts no more with the equilibrium test than with the increment test", () => {
+    const eq = strengthReduction(model, { flowRule: "non-associated", convergence: "equilibrium", fTolerance: 0.01 });
+    const vp = viscoplastic();
+    expect(eq.factorOfSafety).toBeLessThanOrEqual(vp.factorOfSafety + 0.01);
+    expect(eq.factorOfSafety).toBeGreaterThan(vp.factorOfSafety - 0.05);
+  }, 300000);
+});
+
 describe("strengthReduction with reinforcement", () => {
   const def = (reinforced: boolean) =>
     ({

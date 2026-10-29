@@ -80,6 +80,39 @@ describe("SparseCholesky", () => {
     expect(K2.values.every((v) => v === 0)).toBe(true);
     expect(() => K2.factor()).toThrow(/not positive definite/);
   });
+
+  it("solves an unsymmetric system with the same pattern by LU", () => {
+    const nx = 7, ny = 5, nn = nx * ny;
+    const groups: number[] = [];
+    for (let j = 0; j + 1 < ny; j++) for (let i = 0; i + 1 < nx; i++) groups.push(j * nx + i, j * nx + i + 1, (j + 1) * nx + i + 1, (j + 1) * nx + i);
+    const K = SparseCholesky.fromGroups(nn, Int32Array.from(groups), 4).emptyCopy(true);
+    const dense = Array.from({ length: nn }, () => new Float64Array(nn));
+    for (let c = 0; c < groups.length; c += 4) {
+      for (let a = 0; a < 4; a++) {
+        for (let b = 0; b < 4; b++) {
+          const i = groups[c + a], j = groups[c + b];
+          dense[i][j] += i === j ? 4 : -0.3 + 0.2 * Math.sin(3 * i + j);
+        }
+      }
+    }
+    // entries below the diagonal in `values`, above it in `upper` at the lower entry's position
+    for (let i = 0; i < nn; i++) {
+      for (let j = 0; j < nn; j++) {
+        if (dense[i][j] === 0) continue;
+        if (j <= i) K.values[K.indexOf(i, j)] += dense[i][j];
+        else K.upper![K.indexOf(i, j)] += dense[i][j];
+      }
+    }
+    // `add` is a symmetric contribution: both triangles
+    K.add(3, 2, 0.5);
+    dense[3][2] += 0.5; dense[2][3] += 0.5;
+    K.factor();
+    const xTrue = Float64Array.from({ length: nn }, (_, i) => Math.cos(i));
+    const b = new Float64Array(nn);
+    for (let i = 0; i < nn; i++) for (let j = 0; j < nn; j++) b[i] += dense[i][j] * xTrue[j];
+    K.solve(b);
+    for (let i = 0; i < nn; i++) expect(b[i]).toBeCloseTo(xTrue[i], 10);
+  });
 });
 
 describe("buildFeModel, elastic gravity", () => {

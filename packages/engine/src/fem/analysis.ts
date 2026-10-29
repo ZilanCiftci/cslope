@@ -167,7 +167,7 @@ export function analyzeFem(slope: Slope, options: FemAnalysisOptions = {}): FemA
   let step = search.next();
   while (!step.done) {
     const b = step.value;
-    step = search.next(b.F.map((F) => runTrial(b.model, F, b.start, b.options)));
+    step = search.next(b.F.map((F) => runTrial(b.model, F, b.start, b.options, undefined, b.startF)));
   }
   return step.value;
 }
@@ -206,7 +206,7 @@ export function* analyzeFemSearch(slope: Slope, options: FemAnalysisOptions = {}
   const perRound = options.trialsPerRound ?? DEFAULT_TRIALS_PER_ROUND;
   const trialOptions: SrmOptions = {
     flowRule, tensionCutoff, solver: options.solver, tolerance: options.tolerance, maxIterations: options.maxIterations,
-    newtonIterations: options.newtonIterations, convergence: options.convergence, relaxation: options.relaxation,
+    newtonIterations: options.newtonIterations, convergence: options.convergence, unbalanceTolerance: options.unbalanceTolerance, relaxation: options.relaxation,
   };
   const search = (m: FeModel, level: number, o: SrmOptions) =>
     onModel(strengthReductionSearch(m, { ...options, ...o, flowRule, tensionCutoff, trialsPerRound: perRound }), m, level, trialOptions);

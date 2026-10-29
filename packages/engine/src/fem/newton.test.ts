@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { returnMap } from "./newton";
+import { returnMap, returnMapInto } from "./newton";
 
 const E = 1e5, nu = 0.3;
 const lam = (E * nu) / ((1 + nu) * (1 - 2 * nu)), mu = E / (2 * (1 + nu));
@@ -7,7 +7,7 @@ const elastic = (e: number[]): [number, number, number, number] => {
   const tr = e[0] + e[1] + e[3];
   return [lam * tr + 2 * mu * e[0], lam * tr + 2 * mu * e[1], mu * e[2], lam * tr + 2 * mu * e[3]];
 };
-function principal(s: readonly number[]): number[] {
+function principal(s: ArrayLike<number>): number[] {
   const pm = (s[0] + s[1]) / 2, r = Math.hypot((s[0] - s[1]) / 2, s[2]);
   return [pm + r, pm - r, s[3]].sort((a, b) => b - a);
 }
@@ -60,6 +60,37 @@ describe("returnMap", () => {
       }
     }
     expect(capped).toBeGreaterThan(10);
+  });
+
+  it("gives an unsymmetric tangent that matches finite differences for non-associated flow (ψ < φ)", () => {
+    let seed = 5;
+    const rand = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+    let unsymmetric = 0, apex = 0;
+    for (let t = 0; t < 400; t++) {
+      const phi = ([20, 30, 40][t % 3] * Math.PI) / 180, psi = ([0, 10][t % 2] * Math.PI) / 180;
+      const c = 5 + 20 * rand(), cut = t % 4 === 0;
+      const eps = [(rand() - 0.5) * 2e-3, (rand() - 0.5) * 2e-3, (rand() - 0.5) * 2e-3, 0];
+      const ret = (e: number[], C: Float64Array | null) => {
+        const s = elastic(e), out = new Float64Array(4);
+        const plastic = returnMapInto(s[0], s[1], s[2], s[3], E, nu, c, Math.sin(phi), Math.cos(phi), cut, Infinity, out, C, Math.sin(psi));
+        return { stress: out, plastic };
+      };
+      const C = new Float64Array(16);
+      const r = ret(eps, C);
+      const p = principal(r.stress);
+      expect((p[0] - p[2]) / 2 + ((p[0] + p[2]) / 2) * Math.sin(phi) - c * Math.cos(phi)).toBeLessThan(1e-9 * c);
+      if (!r.plastic) continue;
+      if (Math.abs(C[1] - C[4]) > 1e-3 * E) unsymmetric++;
+      if (Math.abs(p[0] - p[2]) < 1e-9 * c) apex++;
+      for (let j = 0; j < 3; j++) {
+        const h = 1e-9, a = eps.slice(), b = eps.slice();
+        a[j] += h; b[j] -= h;
+        const sa = ret(a, null).stress, sb = ret(b, null).stress;
+        for (let i = 0; i < 3; i++) expect(Math.abs((sa[i] - sb[i]) / (2 * h) - C[4 * i + j])).toBeLessThan(1e-6 * E);
+      }
+    }
+    expect(unsymmetric).toBeGreaterThan(20);
+    expect(apex).toBeGreaterThan(5);
   });
 
   it("returns a Tresca trial stress by half the excess of the shear stress", () => {

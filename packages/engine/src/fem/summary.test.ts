@@ -27,5 +27,9 @@ describe("runFemSummary", () => {
     }
     expect(b.plasticShear.length).toBe(b.triangles.length / 3);
     expect(JSON.parse(JSON.stringify(b))).toEqual(b);
+    // the F–displacement curve: converged trials by increasing F, up to the factor of safety
+    expect(b.curve!.length).toBeGreaterThan(1);
+    for (let k = 1; k < b.curve!.length; k++) expect(b.curve![k].F).toBeGreaterThan(b.curve![k - 1].F);
+    expect(b.curve![b.curve!.length - 1].F).toBeCloseTo(b.factorOfSafety, 6);
   }, 60000);
 });
