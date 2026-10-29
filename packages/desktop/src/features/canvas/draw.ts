@@ -2635,7 +2635,12 @@ export function drawCanvas(
   }
 }
 
-/** The finite element mechanism: shade per element, ∝ √(strain / largest strain). */
+/**
+ * The finite element mechanism: shade per element, in proportion to strain /
+ * largest strain, as the other programs' linear contour scales; a square
+ * root scale brought out weak strain increments far from the mechanism
+ * (e.g. along the fixed base) as if they were part of it.
+ */
 function drawFemPlasticZone(
   ctx: CanvasRenderingContext2D,
   fem: NonNullable<AnalysisResult["fem"]>,
@@ -2649,11 +2654,11 @@ function drawFemPlasticZone(
   const { x, y, triangles: t } = fem;
   for (let e = 0; e < field.length; e++) {
     const r = field[e] / max;
-    if (r < 0.02) continue;
+    if (r < 0.05) continue;
     const [ax, ay] = toC(x[t[3 * e]], y[t[3 * e]]);
     const [bx, by] = toC(x[t[3 * e + 1]], y[t[3 * e + 1]]);
     const [cx, cy] = toC(x[t[3 * e + 2]], y[t[3 * e + 2]]);
-    ctx.fillStyle = `rgba(214, 40, 40, ${(0.8 * Math.sqrt(r)).toFixed(3)})`;
+    ctx.fillStyle = `rgba(214, 40, 40, ${(0.85 * r).toFixed(3)})`;
     ctx.beginPath();
     ctx.moveTo(ax, ay);
     ctx.lineTo(bx, by);
