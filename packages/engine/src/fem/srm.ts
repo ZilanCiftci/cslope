@@ -361,8 +361,9 @@ export function solveAtF(
     passedBefore = passed;
     if (converged && criterion === "equilibrium") {
       // The stresses of the iteration are in equilibrium but may lie
-      // outside the yield surface; their closest-point returns are the
-      // admissible stresses, whose internal forces must balance the load.
+      // outside the yield surface; their returns to it (along the flow
+      // rule's potential, as in newton.ts) are the admissible stresses,
+      // whose internal forces must balance the load.
       evaluate(model, eqs, u, evp, red, cutoff, eqWork.fint, eqWork.stress, eqWork.ep, null);
       if (model.bars.count) barInternal(model, u, state.barEp, F, eqWork.fint, eqWork.barEp, null);
       let s = 0;

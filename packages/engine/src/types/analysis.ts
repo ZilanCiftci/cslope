@@ -374,8 +374,9 @@ export interface FemResultSummary {
   /** Displacement (x, y) per node at the factor of safety (m). */
   displacement: number[];
   /**
-   * The converged trials of the final mesh by increasing F: the largest
-   * nodal displacement (m) at each reduction factor (the F–displacement
+   * The converged trials of the final mesh that rose from a converged
+   * state, by increasing F: the largest displacement component (m) at each
+   * reduction factor (the F–displacement
    * curve; it turns flat at failure). Absent in results saved before it.
    */
   curve?: { F: number; displacement: number }[];
