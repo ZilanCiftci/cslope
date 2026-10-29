@@ -54,6 +54,22 @@ describe("upperBound", () => {
     expect(ub.trials.length).toBeLessThanOrEqual(4); // started at the strength reduction factor
   }, 300000);
 
+  it("gives a slip band between two soils the strength of one of them, not a mix", async () => {
+    // Clay (c = 30 kPa, φ = 0) over cohesionless sand (φ = 45°): a mix of
+    // the lesser c and the lesser φ would make the interface frictionless
+    // and cohesionless (F 0.57 here); one material's strength gives 0.89.
+    const def = {
+      coordinates: [[0, 0], [0, 15], [15, 15], [25, 5], [40, 5], [40, 0]],
+      materials: [
+        { name: "clay", model: { kind: "mohr-coulomb", unitWeight: 20, cohesion: 30, frictionAngle: 0 } },
+        { name: "sand", model: { kind: "mohr-coulomb", unitWeight: 20, cohesion: 0, frictionAngle: 45 } },
+      ],
+      materialBoundaries: [{ coordinates: [[0, 3], [40, 3]], materialName: "sand" }],
+    } as unknown as SlopeDefinition;
+    const r = await upperBound(buildSlope(toCanonicalSlopeDefinition(def)), { elementSize: 1, fTolerance: 0.005 });
+    expect(r.factorOfSafety).toBeGreaterThan(0.85);
+  }, 300000);
+
   it("lowers the bound with a water table (pore pressure power)", async () => {
     const def = (water: boolean) =>
       ({

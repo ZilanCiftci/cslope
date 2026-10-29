@@ -182,13 +182,15 @@ export function upperBoundProblem(slope: Slope, options: UpperBoundOptions = {})
   const dVars: { name: string; coef: (F: number) => number }[] = [];
   const disc = (
     e: number, k: number, e2: number | null, k2: number | null,
-    c: number, phi: number, cu: number, tie: boolean,
+    c: number, phi: number, cu: number, tie: boolean, pSide: number = e,
   ) => {
     const a = el[3 * e + k], b = el[3 * e + ((k + 1) % 3)];
     const L = Math.hypot(x[b] - x[a], y[b] - y[a]);
     const sx = (x[b] - x[a]) / L, sy = (y[b] - y[a]) / L;
     const nx = sy, ny = -sx; // outward of e (counter-clockwise elements)
-    const pa = nU[3 * e + k], pb = nU[3 * e + ((k + 1) % 3)];
+    // pore pressure on the discontinuity: that of the side whose material it lies in
+    const corner = (node: number) => { for (let q = 0; q < 3; q++) if (el[3 * pSide + q] === node) return 3 * pSide + q; return 3 * e + k; };
+    const pa = nU[corner(a)], pb = nU[corner(b)];
     const [wa, wb] = pairWeights(L, pa, pb);
     const ends: [number, number, number][] = [[k, a, wa], [(k + 1) % 3, b, wb]];
     for (const [kk, node, w] of ends) {
@@ -221,13 +223,28 @@ export function upperBoundProblem(slope: Slope, options: UpperBoundOptions = {})
   };
   const tanRows: { id: string; phi: number }[] = [];
 
+  // Of two soils meeting at an edge, the one with the lower shear strength
+  // under the overburden at the edge's middle, c + σ′v tan φ (at most cu),
+  // σ′v ≈ γ depth − u (implementation choice: either material gives an
+  // upper bound; the weaker one a lower, closer one).
+  const weakerSide = (e: number, k: number, e2: number): number => {
+    const a = el[3 * e + k], b = el[3 * e + ((k + 1) % 3)];
+    const mx = (x[a] + x[b]) / 2, my = (y[a] + y[b]) / 2;
+    const depth = Math.max(0, polylineY(surface, mx) - my);
+    const tau = (s: number) => {
+      const u = (nU[3 * s] + nU[3 * s + 1] + nU[3 * s + 2]) / 3;
+      const sv = Math.max(0, eGamma[s] * depth - u);
+      return Math.min(eC[s] + sv * Math.tan(ePhi[s]), eCu[s]);
+    };
+    return tau(e2) < tau(e) ? e2 : e;
+  };
   for (const [e, k, e2, k2] of interior) {
     const r1 = rigid[e] === 1, r2 = rigid[e2] === 1;
     if (r1 && r2) { disc(e, k, e2, k2, 0, 0, Infinity, true); continue; }
-    const c = r1 ? eC[e2] : r2 ? eC[e] : Math.min(eC[e], eC[e2]);
-    const phi = r1 ? ePhi[e2] : r2 ? ePhi[e] : Math.min(ePhi[e], ePhi[e2]);
-    const cu = r1 ? eCu[e2] : r2 ? eCu[e] : Math.min(eCu[e], eCu[e2]);
-    disc(e, k, e2, k2, c, phi, cu, false);
+    // A slip band lies in one material: the side's whole strength (c, φ, cu),
+    // never a mix of the two, which would be weaker than either.
+    const side = r1 ? e2 : r2 ? e : weakerSide(e, k, e2);
+    disc(e, k, e2, k2, eC[side], ePhi[side], eCu[side], false, side);
   }
   for (const [key, [e, k]] of owner) {
     const a = el[3 * e + k], b = el[3 * e + ((k + 1) % 3)];
@@ -264,6 +281,7 @@ export function upperBoundProblem(slope: Slope, options: UpperBoundOptions = {})
   }
 
   // Normalisation: the power of the loads is one.
+  if (power.size === 0) throw new Error("The slope carries no load: no upper bound.");
   let norm = " norm:";
   for (const [name, a] of power) norm += term(a, name);
   rows.push(`${norm} = 1`);
@@ -308,8 +326,8 @@ export function upperBoundProblem(slope: Slope, options: UpperBoundOptions = {})
   const velocityBounds: string[] = ["Bounds"];
   for (let i = 0; i < 3 * ne; i++) velocityBounds.push(` u${i} free`, ` v${i} free`);
   const fixedText = rows.join("\n"), boundsText = velocityBounds.join("\n");
-  let plastic = 0;
-  for (let e = 0; e < ne; e++) if (!rigid[e]) plastic++;
+  let plastic = 0, combined = 0;
+  for (let e = 0; e < ne; e++) if (!rigid[e]) { plastic++; if (Number.isFinite(eCu[e])) combined++; }
   const perElement = p * (1 + (cutoff ? 1 : 0));
   return {
     build: (F) => {
@@ -324,8 +342,8 @@ export function upperBoundProblem(slope: Slope, options: UpperBoundOptions = {})
     allUndrained,
     cohesive: eC.some((c) => c > 0) || eCu.some((c) => Number.isFinite(c) && c > 0),
     elements: ne,
-    variables: 6 * ne + plastic * perElement + dVars.length + tanRows.length * (cutoff ? 1 : 0),
-    constraints: row + 3 * ne,
+    variables: 6 * ne + plastic * perElement + combined * p + dVars.length + tanRows.length * (cutoff ? 1 : 0),
+    constraints: row + 1 + 3 * ne, // with the normalisation row
     warnings,
     mesh: { x: Float64Array.from(x), y: Float64Array.from(y), el },
   };
@@ -361,7 +379,8 @@ export async function upperBound(slope: Slope, options: UpperBoundOptions = {}, 
   // Where no mechanism fits the mesh (a friction angle near the slope's,
   // whose mechanisms reach beyond the model) the program is infeasible;
   // with cohesion λ turns finite at a larger reduction.
-  for (let k = 0; k < 12 && l0 === Infinity && prob.cohesive; k++) {
+  // (Not when φ = 0 everywhere: the constraints do not depend on F.)
+  for (let k = 0; k < 12 && l0 === Infinity && prob.cohesive && !prob.allUndrained; k++) {
     F0 *= 1.25;
     l0 = lambdaAt(F0);
     if (Number.isNaN(l0)) return fail(`The linear program at F = ${F0.toFixed(3)} was not solved.`);
@@ -371,7 +390,8 @@ export async function upperBound(slope: Slope, options: UpperBoundOptions = {}, 
   // upper bound. The result is the smallest such F evaluated.
   let F: number, mechanismF = NaN;
   if (prob.allUndrained) {
-    if (!(l0 > 0) || !Number.isFinite(l0)) return fail("The linear program has no mechanism with dissipation.");
+    if (l0 === 0) return { factorOfSafety: 0, ...base, warnings: [...warnings, "A mechanism without dissipation fails the slope at any reduction."] };
+    if (!Number.isFinite(l0)) return fail("No mechanism fits the mesh: the linear program is infeasible.");
     F = l0 * F0; // λ(F) = λ(F0)·F0/F
     mechanismF = F0; // the same mechanism at every F
   } else if (l0 === 0 || l0 === Infinity) {

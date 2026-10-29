@@ -81,18 +81,25 @@ export function loadHighs(options?: HighsModuleOptions | ((file: string) => stri
   const bin = o.wasmBinary;
   // The module reads no `wasmBinary` option; a given binary is instantiated
   // through its `instantiateWasm` hook instead, so that nothing is fetched.
-  const moduleArg = bin
-    ? {
-        instantiateWasm: (imports: WebAssembly.Imports, done: (instance: WebAssembly.Instance) => void) => {
-          void WebAssembly.instantiate(bin, imports).then((r) => done(r.instance));
-          return {};
-        },
-      }
-    : o.locateFile ? { locateFile: o.locateFile } : {};
-  highsPromise ??= import("highs").then((m) => {
-    const loader = (m as unknown as { default: (o?: object) => Promise<Highs> }).default;
-    return loader(moduleArg);
-  });
+  // The binary is compiled first, so that an invalid one rejects here
+  // instead of leaving the hook's callback uncalled.
+  highsPromise ??= Promise.all([import("highs"), bin ? WebAssembly.compile(bin) : null])
+    .then(([m, compiled]) => {
+      const loader = (m as unknown as { default: (o?: object) => Promise<Highs> }).default;
+      const moduleArg = compiled
+        ? {
+            instantiateWasm: (imports: WebAssembly.Imports, done: (instance: WebAssembly.Instance) => void) => {
+              void WebAssembly.instantiate(compiled, imports).then(done);
+              return {};
+            },
+          }
+        : o.locateFile ? { locateFile: o.locateFile } : {};
+      return loader(moduleArg);
+    })
+    .catch((err: unknown) => {
+      highsPromise = null; // a later call may try again
+      throw err;
+    });
   return highsPromise;
 }
 
