@@ -384,6 +384,7 @@ export function evaluate(
   const kv = K ? K.values : null, ku = K ? K.upper : null;
   const ue = EV_UE, C = EV_C, ke = EV_KE, fe = EV_FE, sig = EV_SIG;
   const sinPsi = strength.sinPsi;
+  const s0 = model.stress0;
   for (let e = 0; e < ne; e++) {
     for (let k = 0; k < 12; k++) { const q = eqs[12 * e + k]; ue[k] = q >= 0 ? u[q] : 0; }
     const E = elE[e], nu = elNu[e];
@@ -399,7 +400,10 @@ export function evaluate(
       }
       const eex = ex - epOld[s], eey = ey - epOld[s + 1], eg = gxy - epOld[s + 2], eez = -epOld[s + 3];
       const tr = eex + eey + eez;
-      const t0 = lam * tr + 2 * mu * eex, t1 = lam * tr + 2 * mu * eey, t2 = mu * eg, t3 = lam * tr + 2 * mu * eez;
+      let t0 = lam * tr + 2 * mu * eex, t1 = lam * tr + 2 * mu * eey, t2 = mu * eg, t3 = lam * tr + 2 * mu * eez;
+      // initial stress: the stress is σ₀ + D(ε − εp), its forces are already in f (model.ts)
+      let a0 = 0, a1 = 0, a2 = 0;
+      if (s0) { a0 = s0[s]; a1 = s0[s + 1]; a2 = s0[s + 2]; t0 += a0; t1 += a1; t2 += a2; t3 += s0[s + 3]; }
       if (elElastic[e]) {
         sig[0] = t0; sig[1] = t1; sig[2] = t2; sig[3] = t3;
         if (K) { C.fill(0); C[0] = lam + 2 * mu; C[1] = lam; C[4] = lam; C[5] = lam + 2 * mu; C[10] = mu; }
@@ -415,10 +419,11 @@ export function evaluate(
         epNew[s + 3] = epOld[s + 3] + ((1 + nu) * d3) / E - dm;
       }
       stress[s] = sig[0]; stress[s + 1] = sig[1]; stress[s + 2] = sig[2]; stress[s + 3] = sig[3];
+      const q0 = sig[0] - a0, q1 = sig[1] - a1, q2 = sig[2] - a2;
       for (let k = 0; k < 6; k++) {
         const dx = gp[o + k], dy = gp[o + 6 + k];
-        fe[2 * k] += (dx * sig[0] + dy * sig[2]) * w;
-        fe[2 * k + 1] += (dy * sig[1] + dx * sig[2]) * w;
+        fe[2 * k] += (dx * q0 + dy * q2) * w;
+        fe[2 * k + 1] += (dy * q1 + dx * q2) * w;
       }
       if (K && ku) {
         // unsymmetric tangent (non-associated flow): the whole of
@@ -563,7 +568,7 @@ export function newtonAtF(
   const limit = options.maxIterations ?? 200;
   const cutoff = options.tensionCutoff ?? false;
   const neq = model.eqCount, ngp = 3 * model.elementCount;
-  const fnorm = norm2(model.f);
+  const fnorm = model.loadNorm;
   const u = state.u.slice();
   const fint = new Float64Array(neq), r = new Float64Array(neq), du = new Float64Array(neq);
   const stress = new Float64Array(4 * ngp), ep = new Float64Array(4 * ngp);

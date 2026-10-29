@@ -680,6 +680,14 @@ function FemFields({
 }) {
   const set = (patch: Partial<FemAnalysisSettings>) => onChange({ ...settings, ...patch });
   const off = !settings.enabled;
+  const materialNames = useAppStore((s) => s.materials).map((m) => m.name);
+  const k0 = settings.initialStress === "k0";
+  const setStage = (name: string, stage: number) => {
+    const stages = { ...(settings.materialStages ?? {}) };
+    if (stage > 0) stages[name] = stage;
+    else delete stages[name];
+    set({ materialStages: Object.keys(stages).length ? stages : undefined });
+  };
   return (
     <div className="grid grid-cols-2 gap-x-3 gap-y-2">
       <label
@@ -814,6 +822,75 @@ function FemFields({
           <option value="seepage">Steady seepage (FE)</option>
         </select>
       </label>
+      <label className="col-span-2 flex flex-col gap-0.5">
+        <Label>Initial stresses</Label>
+        <select
+          value={settings.initialStress ?? "gravity"}
+          disabled={off}
+          onChange={(e) => set({ initialStress: e.target.value as "gravity" | "k0" })}
+          aria-label="Initial stresses"
+          title="Gravity loading (default): the weight applied in one step from zero stress. K0 procedure: horizontal stresses K0 × the vertical effective stress from the overburden, as for level ground; under a slope its out-of-balance force is applied with the first solution. With associated flow and Davis B the factor of safety does not depend on the initial stresses (the theorems of limit analysis); with non-associated flow, and for the displacements, it does."
+        >
+          <option value="gravity">Gravity loading</option>
+          <option value="k0">K0 procedure</option>
+        </select>
+      </label>
+      <label className="flex flex-col gap-0.5">
+        <Label>K0</Label>
+        <DraftNumberInput
+          value={settings.k0 ?? undefined}
+          min={0.1}
+          max={5}
+          step={0.05}
+          placeholder="1 − sin φ′"
+          disabled={off || !k0}
+          onValueChange={(v) => v > 0 && v <= 5 && set({ k0: v })}
+          onClear={() => set({ k0: null })}
+          aria-label="K0"
+          title="Coefficient of earth pressure at rest for every soil. Empty: 1 − sin φ′ (Jaky), and ν/(1 − ν) for undrained and rigid materials. Overconsolidated clays can have K0 above 1."
+        />
+      </label>
+      <label className="flex flex-col gap-0.5">
+        <Label>Original ground (m)</Label>
+        <DraftNumberInput
+          value={settings.originalGroundLevel ?? undefined}
+          step={0.5}
+          placeholder="Present"
+          disabled={off || !k0}
+          onValueChange={(v) => Number.isFinite(v) && set({ originalGroundLevel: v })}
+          onClear={() => set({ originalGroundLevel: null })}
+          aria-label="Original ground level"
+          title="For a cut slope: the ground level before the excavation. The K0 stresses are those under this level, and their out-of-balance force unloads the excavation. Empty: the present ground surface."
+        />
+      </label>
+      <details className="col-span-2">
+        <summary className="cursor-pointer text-[11px]" style={{ color: "var(--color-vsc-text-muted)" }}>
+          Construction stages
+          {settings.materialStages && Object.keys(settings.materialStages).length ? ` (${Object.keys(settings.materialStages).length} later)` : ""}
+        </summary>
+        <p className="my-1 text-[11px]" style={{ color: "var(--color-vsc-text-muted)" }}>
+          Stage 0 is built first; each later stage is built on the one before, solved at F = 1 (e.g. an embankment in layers). The strength reduction starts from the last stage.
+        </p>
+        <div className="grid grid-cols-2 gap-x-3 gap-y-1">
+          {materialNames.map((name) => (
+            <label key={name} className="flex items-center justify-between gap-1.5">
+              <span className="truncate text-[11px]" title={name}>
+                {name}
+              </span>
+              <DraftNumberInput
+                value={settings.materialStages?.[name] ?? 0}
+                min={0}
+                max={20}
+                step={1}
+                disabled={off}
+                onValueChange={(v) => v >= 0 && v <= 20 && setStage(name, Math.round(v))}
+                aria-label={`Construction stage of ${name}`}
+                className="w-12"
+              />
+            </label>
+          ))}
+        </div>
+      </details>
       <label
         className="flex items-center gap-1.5 self-end"
         title="No tensile effective stress (Rankine cut-off; on by default). Without it, cohesive soil carries tension near the crest and the factor of safety can come out several per cent higher."

@@ -109,6 +109,13 @@ export interface FeModelOptions {
    * lies at or above the ground.
    */
   porePressure?: "water-table" | "seepage";
+  /**
+   * Materials not yet built (staged construction, initial-stress.ts): their
+   * elements are weightless and elastic with SOFT_FACTOR of the softest
+   * soil's stiffness, carry no pore pressure term and no surface load, so
+   * that they follow the active soil without loading or stiffening it.
+   */
+  inactiveMaterials?: readonly string[];
 }
 
 export const DEFAULT_REINFORCEMENT_STIFFNESS = 1e6;
@@ -137,6 +144,8 @@ const RIGID_PERMEABILITY_FACTOR = 1e-4;
 export const DEFAULT_POISSONS_RATIO = 0.3;
 /** Stiffness of high-strength and impenetrable materials relative to the stiffest soil. */
 const RIGID_FACTOR = 100;
+/** Stiffness of an inactive (not yet built) material relative to the softest soil. */
+const SOFT_FACTOR = 1e-6;
 
 /** How a material behaves in the finite element analysis. */
 export type FeBehaviour = "plastic" | "elastic";
@@ -179,8 +188,18 @@ export interface FeModel {
   eqCount: number;
   /** Factorised stiffness matrix. */
   K: SparseCholesky;
-  /** External load vector per equation (gravity, surface loads, pore pressure term). */
+  /**
+   * External load vector per equation (gravity, surface loads, pore pressure
+   * term), less the internal forces ∫ Bᵀ σ₀ of the initial stresses when
+   * there are any (`withInitialStress`).
+   */
   f: Float64Array;
+  /** Initial effective stress per Gauss point (σx, σy, τxy, σz), added to D(ε − εp); null: none. */
+  stress0: Float64Array | null;
+  /** Norm of the external loads, the scale of the convergence tests (‖f‖ without initial stresses). */
+  loadNorm: number;
+  /** Per element: 1 where the material is not yet built (`inactiveMaterials`). */
+  elInactive: Uint8Array;
   /** Surface edges (3 nodes each: end, midside, end), for plotting and loads. */
   surfaceEdges: Int32Array;
   /** The triangulation the mesh was made from. */
@@ -458,6 +477,11 @@ export function buildFeModel(slope: Slope, options: FeModelOptions = {}): FeMode
   if (!Number.isFinite(minSoilK)) minSoilK = DEFAULT_PERMEABILITY;
   const elE = new Float64Array(ne), elNu = new Float64Array(ne), elPsi = new Float64Array(ne);
   const elElastic = new Uint8Array(ne);
+  const inactiveNames = new Set(options.inactiveMaterials ?? []);
+  const elInactive = new Uint8Array(ne);
+  let minSoilE = Infinity;
+  materials.forEach((m, i) => { if (!isRigid(m)) minSoilE = Math.min(minSoilE, params[i].youngsModulus ?? DEFAULT_YOUNGS_MODULUS); });
+  if (!Number.isFinite(minSoilE)) minSoilE = DEFAULT_YOUNGS_MODULUS;
   for (let e = 0; e < ne; e++) {
     const i = elMaterial[e], m = materials[i], p = params[i];
     const rigid = isRigid(m);
@@ -467,6 +491,11 @@ export function buildFeModel(slope: Slope, options: FeModelOptions = {}): FeMode
     elElastic[e] = rigid ? 1 : 0;
     if (!(elE[e] > 0) || !(elNu[e] > -1 && elNu[e] < 0.5)) {
       throw new RangeError(`invalid elastic parameters for material "${m.name}"`);
+    }
+    if (inactiveNames.has(m.name)) {
+      elInactive[e] = 1;
+      elElastic[e] = 1;
+      elE[e] = SOFT_FACTOR * minSoilE;
     }
   }
 
@@ -623,6 +652,7 @@ export function buildFeModel(slope: Slope, options: FeModelOptions = {}): FeMode
     if (iy >= 0) f[iy] += fy;
   };
   for (let e = 0; e < ne; e++) {
+    if (elInactive[e]) continue; // not yet built: no weight, no pore pressure term
     const m = materials[elMaterial[e]], wl = waterLines[elMaterial[e]];
     for (let g = 0; g < 3; g++) {
       const o = (3 * e + g) * GP_STRIDE, w = gp[o + 12], u = gpU[3 * e + g];
@@ -640,6 +670,7 @@ export function buildFeModel(slope: Slope, options: FeModelOptions = {}): FeMode
   const GL = [[(1 - Math.sqrt(3 / 5)) / 2, 5 / 18], [0.5, 8 / 18], [(1 + Math.sqrt(3 / 5)) / 2, 5 / 18]];
   for (let s = 0; s < surfEdges.length; s += 3) {
     const a = surfEdges[s], m = surfEdges[s + 1], b = surfEdges[s + 2];
+    if (elInactive[surfEdgeElement[s / 3]]) continue; // on a material not yet built
     // Ponded water: the water line of the material below the edge, as the
     // slices take it (freeWaterLineAt in slices.ts); with seepage the water
     // table that drives the flow.
@@ -680,7 +711,7 @@ export function buildFeModel(slope: Slope, options: FeModelOptions = {}): FeMode
       const py = y[a] + t * (y[b] - y[a]);
       if (py > bestY) { bestY = py; best = s; bt = t; }
     }
-    if (best < 0) continue;
+    if (best < 0 || elInactive[surfEdgeElement[best / 3]]) continue;
     const a = surfEdges[best], m = surfEdges[best + 1], b = surfEdges[best + 2];
     const P = ll.magnitude * loadFactor;
     addF(a, 0, -P * (1 - bt) * (1 - 2 * bt));
@@ -693,12 +724,41 @@ export function buildFeModel(slope: Slope, options: FeModelOptions = {}): FeMode
     materials, elMaterial, elE, elNu, elPsi, elElastic,
     gp, gpX, gpY, gpC, gpCu, gpPhi, gpU,
     eq, eqCount: neq, K, f,
+    stress0: null,
+    loadNorm: Math.sqrt(f.reduce((sum, v) => sum + v * v, 0)), // as norm2 (newton.ts)
+    elInactive,
     surfaceEdges: Int32Array.from(surfEdges),
     bars,
     seepage,
     triangulation: tm,
     sizeField: options.sizeField ?? Object.assign(size, { min: sizeMin }),
   };
+}
+
+/**
+ * The model with initial effective stresses σ₀ per Gauss point (σx, σy,
+ * τxy, σz): the stress is σ₀ + D(ε − εp), and the load vector becomes
+ * f − ∫ Bᵀ σ₀, the out-of-balance force that the solvers equilibrate
+ * (zero for initial stresses in equilibrium with the loads). The
+ * displacements are counted from the initial state.
+ */
+export function withInitialStress(model: FeModel, stress0: Float64Array): FeModel {
+  const { el, eq, gp, elementCount: ne } = model;
+  const f = Float64Array.from(model.f);
+  for (let e = 0; e < ne; e++) {
+    for (let g = 0; g < 3; g++) {
+      const i = 3 * e + g, o = i * GP_STRIDE, w = gp[o + 12], s = 4 * i;
+      const sx = stress0[s], sy = stress0[s + 1], txy = stress0[s + 2];
+      if (sx === 0 && sy === 0 && txy === 0) continue;
+      for (let k = 0; k < 6; k++) {
+        const dx = gp[o + k], dy = gp[o + 6 + k], n = el[6 * e + k];
+        const ix = eq[2 * n], iy = eq[2 * n + 1];
+        if (ix >= 0) f[ix] -= (dx * sx + dy * txy) * w;
+        if (iy >= 0) f[iy] -= (dy * sy + dx * txy) * w;
+      }
+    }
+  }
+  return { ...model, f, stress0: Float64Array.from(stress0), loadNorm: model.loadNorm };
 }
 
 /**

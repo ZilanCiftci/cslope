@@ -990,6 +990,16 @@ function normalizeAnalysisOptions(raw: unknown): AnalysisOptions {
   };
 }
 
+/** Construction stages per material name from a file: integer stages 0–20, or nothing. */
+function stagesOf(raw: unknown): Record<string, number> | null {
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) return null;
+  const out: Record<string, number> = {};
+  for (const [name, v] of Object.entries(raw as Record<string, unknown>)) {
+    if (typeof v === "number" && Number.isInteger(v) && v >= 0 && v <= 20) out[name] = v;
+  }
+  return Object.keys(out).length ? out : null;
+}
+
 /** Finite element settings from a file: each field checked, the default where it is not valid. */
 function normalizeFemSettings(f: Record<string, unknown>): FemAnalysisSettings {
   const d = DEFAULT_FEM_SETTINGS;
@@ -1008,5 +1018,9 @@ function normalizeFemSettings(f: Record<string, unknown>): FemAnalysisSettings {
     ...(f.nonAssociatedSolver === "newton" ? { nonAssociatedSolver: "newton" as const } : {}),
     ...(f.convergence === "equilibrium" ? { convergence: "equilibrium" as const } : {}),
     ...(f.limitAnalysis === true ? { limitAnalysis: true } : {}),
+    ...(f.initialStress === "k0" ? { initialStress: "k0" as const } : {}),
+    ...(typeof f.k0 === "number" && Number.isFinite(f.k0) && f.k0 > 0 && f.k0 <= 5 ? { k0: f.k0 } : {}),
+    ...(typeof f.originalGroundLevel === "number" && Number.isFinite(f.originalGroundLevel) ? { originalGroundLevel: f.originalGroundLevel } : {}),
+    ...(stagesOf(f.materialStages) ? { materialStages: stagesOf(f.materialStages)! } : {}),
   };
 }

@@ -344,6 +344,18 @@ export interface FemAnalysisSettings {
    * idealisation; minutes of run time. Not set: off.
    */
   limitAnalysis?: boolean;
+  /**
+   * Initial stresses: gravity applied in one increment ("gravity", default)
+   * or the K0 procedure ("k0"): σ′h = K0 σ′v from the overburden
+   * (fem/initial-stress.ts). With associated flow F does not depend on them.
+   */
+  initialStress?: "gravity" | "k0";
+  /** K0 of every soil for the K0 procedure; null or not set: 1 − sin φ′ (Jaky). */
+  k0?: number | null;
+  /** Ground level before excavation (m) for the K0 procedure; null or not set: the present ground. */
+  originalGroundLevel?: number | null;
+  /** Construction stage per material name (0 by default); later stages are built after the earlier ones. */
+  materialStages?: Record<string, number>;
 }
 
 export const DEFAULT_FEM_SETTINGS: FemAnalysisSettings = {

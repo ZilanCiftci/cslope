@@ -75,7 +75,7 @@ export function bfgsAtF(
   const limit = options.maxIterations ?? 2000;
   const cutoff = options.tensionCutoff ?? false;
   const neq = model.eqCount, ngp = 3 * model.elementCount;
-  const fnorm = norm2(model.f);
+  const fnorm = model.loadNorm;
   const u = state.u.slice();
   const fint = new Float64Array(neq), r = new Float64Array(neq);
   const stress = new Float64Array(4 * ngp), ep = new Float64Array(4 * ngp);

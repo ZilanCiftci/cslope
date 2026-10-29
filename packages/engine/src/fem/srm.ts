@@ -68,7 +68,7 @@
 
 import { GP_STRIDE } from "./elements";
 import type { FeModel } from "./model";
-import { evaluate, newtonAtF, norm2 } from "./newton";
+import { evaluate, newtonAtF } from "./newton";
 import { bfgsAtF } from "./bfgs";
 import { barInternal, relaxBars } from "./bars";
 
@@ -311,6 +311,7 @@ export function solveAtF(
   const red = reduce(model, F, rule, options.relaxation ?? 1);
   const { gp, elementCount: ne, elE, elNu, elElastic } = model;
   const { u, evp, bodyLoads, stress } = state;
+  const s0 = model.stress0;
   const neq = model.eqCount;
   const next = new Float64Array(neq);
   const ue = new Float64Array(12);
@@ -368,7 +369,7 @@ export function solveAtF(
       if (model.bars.count) barInternal(model, u, state.barEp, F, eqWork.fint, eqWork.barEp, null);
       let s = 0;
       for (let i = 0; i < neq; i++) { const d = model.f[i] - eqWork.fint[i]; s += d * d; }
-      if (Math.sqrt(s) > (options.unbalanceTolerance ?? 1e-3) * norm2(model.f)) converged = false;
+      if (Math.sqrt(s) > (options.unbalanceTolerance ?? 1e-3) * model.loadNorm) converged = false;
     }
 
     for (let e = 0; e < ne; e++) {
@@ -387,7 +388,9 @@ export function solveAtF(
         ex -= evp[s]; ey -= evp[s + 1]; gxy -= evp[s + 2];
         const ez = -evp[s + 3];
         const tr = ex + ey + ez;
-        const sx = lam * tr + 2 * mu * ex, sy = lam * tr + 2 * mu * ey, txy = mu * gxy, sz = lam * tr + 2 * mu * ez;
+        let sx = lam * tr + 2 * mu * ex, sy = lam * tr + 2 * mu * ey, txy = mu * gxy, sz = lam * tr + 2 * mu * ez;
+        // initial stress: σ₀ + D(ε − εvp); its forces are already in f (model.ts)
+        if (s0) { sx += s0[s]; sy += s0[s + 1]; txy += s0[s + 2]; sz += s0[s + 3]; }
         stress[s] = sx; stress[s + 1] = sy; stress[s + 2] = txy; stress[s + 3] = sz;
         if (elElastic[e]) continue;
 

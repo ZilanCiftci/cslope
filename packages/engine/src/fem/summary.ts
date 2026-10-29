@@ -112,6 +112,10 @@ function femAnalysis(
     porePressure: settings.porePressure ?? "water-table",
     solver: settings.flowRule === "non-associated" && settings.nonAssociatedSolver === "newton" ? "newton" : undefined,
     convergence: settings.convergence === "equilibrium" ? "equilibrium" : undefined,
+    initialStress: settings.initialStress === "k0" ? "k0" : undefined,
+    k0: settings.k0 ?? undefined,
+    originalGroundLevel: settings.originalGroundLevel ?? undefined,
+    materialStages: settings.materialStages,
     adaptive: settings.refinementLevels > 0 ? { levels: Math.min(3, Math.round(settings.refinementLevels)), tolerance: 0.01 } : undefined,
     onTrial,
   });

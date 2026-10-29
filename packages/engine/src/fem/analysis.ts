@@ -21,7 +21,8 @@
  */
 
 import type { Slope } from "../model/slope";
-import { buildFeModel, gaussStrains, type FeModel, type FeModelOptions } from "./model";
+import { gaussStrains, type FeModel, type FeModelOptions } from "./model";
+import { prepareFeModel, type InitialStressOptions } from "./initial-stress";
 import { dissipationIndicator, dorflerMark, refinedSizeField, zzIndicator } from "./adapt";
 import {
   runTrial,
@@ -33,7 +34,7 @@ import {
   type TrialOutcome,
 } from "./srm";
 
-export interface FemAnalysisOptions extends FeModelOptions, SrmOptions {
+export interface FemAnalysisOptions extends FeModelOptions, SrmOptions, InitialStressOptions {
   /**
    * Adaptive refinement: after each analysis the mesh is refined where the
    * indicator at the factor of safety is largest (Dörfler marking, θ
@@ -188,14 +189,7 @@ export async function analyzeFemAsync(
 export function* analyzeFemSearch(slope: Slope, options: FemAnalysisOptions = {}): Generator<FemTrialBatch, FemAnalysisResult, TrialOutcome[]> {
   const t0 = performance.now();
   const warnings: string[] = [];
-  let model = buildFeModel(slope, options);
   const flowRule = options.flowRule ?? "davis-b";
-  // Implementation choice: the warning from φ > 35°.
-  if (flowRule === "non-associated" && model.gpPhi.some((p) => p > (35 * Math.PI) / 180)) {
-    warnings.push(
-      "Non-associated flow at high friction angles can give an oscillating or non-unique factor of safety (Tschuchnigg et al. 2015); Davis B is recommended.",
-    );
-  }
   const tensionCutoff = options.tensionCutoff ?? (slope.tensionCrackDepth > 0 || slope.tensionCrackAuto);
   // With refinement to follow, the coarser meshes need F to half the change
   // that stops the refinement (0.01 by default), so that the stop test is
@@ -208,6 +202,19 @@ export function* analyzeFemSearch(slope: Slope, options: FemAnalysisOptions = {}
     flowRule, tensionCutoff, solver: options.solver, tolerance: options.tolerance, maxIterations: options.maxIterations,
     newtonIterations: options.newtonIterations, convergence: options.convergence, unbalanceTolerance: options.unbalanceTolerance, relaxation: options.relaxation,
   };
+  // The model with its initial stresses (K0 procedure, construction stages; initial-stress.ts).
+  const prepared = (o: FemAnalysisOptions) => {
+    const p = prepareFeModel(slope, o, trialOptions);
+    for (const w of p.warnings) if (!warnings.includes(w)) warnings.push(w);
+    return p.model;
+  };
+  let model = prepared(options);
+  // Implementation choice: the warning from φ > 35°.
+  if (flowRule === "non-associated" && model.gpPhi.some((p) => p > (35 * Math.PI) / 180)) {
+    warnings.push(
+      "Non-associated flow at high friction angles can give an oscillating or non-unique factor of safety (Tschuchnigg et al. 2015); Davis B is recommended.",
+    );
+  }
   const search = (m: FeModel, level: number, o: SrmOptions) =>
     onModel(strengthReductionSearch(m, { ...options, ...o, flowRule, tensionCutoff, trialsPerRound: perRound }), m, level, trialOptions);
   let r = yield* search(model, 0, { fTolerance: coarseTol });
@@ -222,7 +229,7 @@ export function* analyzeFemSearch(slope: Slope, options: FemAnalysisOptions = {}
         : dissipationIndicator(model, r.state.stress, r.state.evp);
       const marked = dorflerMark(eta, ad.theta ?? 0.3);
       const coarser = model, coarserR = r;
-      model = buildFeModel(slope, { ...options, sizeField: refinedSizeField(model, marked) });
+      model = prepared({ ...options, sizeField: refinedSizeField(model, marked) });
       const prev = r.factorOfSafety;
       // Start below the coarser mesh's factor (a finer mesh gives less) and
       // step up from converged states.
