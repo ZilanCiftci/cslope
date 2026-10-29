@@ -726,7 +726,7 @@ function FemFields({
       <label className="flex flex-col gap-0.5">
         <Label>Convergence</Label>
         <select
-          value={settings.convergence ?? "increment"}
+          value={settings.flowRule === "non-associated" && settings.nonAssociatedSolver !== "newton" ? settings.convergence ?? "increment" : "increment"}
           disabled={off || settings.flowRule !== "non-associated" || settings.nonAssociatedSolver === "newton"}
           onChange={(e) => set({ convergence: e.target.value as "increment" | "equilibrium" })}
           aria-label="Convergence test"

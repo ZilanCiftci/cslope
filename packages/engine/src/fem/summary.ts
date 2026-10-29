@@ -67,9 +67,16 @@ export function runFemSummary(
   };
 }
 
-/** Largest displacement of the converged trials by increasing F, one point per F. */
+/**
+ * Largest displacement of the converged trials by increasing F, one point
+ * per F (its first trial). Displacements depend on the load path, so only
+ * trials that rose from a converged state are taken, as in the
+ * displacement-jump test of srm.ts.
+ */
 function forceDisplacementCurve(trials: readonly SrmTrial[]): { F: number; displacement: number }[] {
-  const byF = new Map<number, number>();
-  for (const t of trials) if (t.converged) byF.set(t.F, t.maxDisplacement);
-  return [...byF].sort((a, b) => a[0] - b[0]).map(([F, d]) => ({ F: round(F), displacement: round(d) }));
+  return trials
+    .filter((t) => t.converged && t.startF > 0)
+    .sort((a, b) => a.F - b.F)
+    .filter((t, k, all) => k === 0 || t.F > all[k - 1].F)
+    .map((t) => ({ F: round(t.F), displacement: round(t.maxDisplacement) }));
 }

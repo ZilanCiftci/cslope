@@ -40,7 +40,9 @@ class AnalysisCancelledError extends Error {
 function analysisTimeoutMs(options: AnalysisOptions): number {
   const surfaces = (options.iterations ?? 0) + (options.refinedIterations ?? 0);
   // Strength reduction by finite elements takes minutes on a refined mesh.
-  const fem = options.fem?.enabled ? FEM_TIMEOUT_MS * (1 + (options.fem.refinementLevels ?? 0)) : 0;
+  // Newton on non-associated flow can take several times longer (srm.ts).
+  const slow = options.fem?.flowRule === "non-associated" && options.fem.nonAssociatedSolver === "newton" ? 4 : 1;
+  const fem = options.fem?.enabled ? slow * FEM_TIMEOUT_MS * (1 + (options.fem.refinementLevels ?? 0)) : 0;
   return ANALYSIS_TIMEOUT_MS * Math.max(1, surfaces / 1500) + fem;
 }
 

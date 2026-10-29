@@ -1459,13 +1459,14 @@ export function ResultSidebar() {
  */
 function FemCurve({ curve, fos }: { curve: { F: number; displacement: number }[]; fos: number }) {
   const W = 220, H = 120, L = 34, R = 6, T = 6, B = 24;
-  const maxD = Math.max(...curve.map((p) => p.displacement)) || 1;
+  const dMax = Math.max(...curve.map((p) => p.displacement));
+  const maxD = dMax > 0 ? dMax : 1;
   const fs = curve.map((p) => p.F);
   const fMin = Math.min(...fs), fMax = Math.max(...fs, fos);
   const fLo = fMin - 0.05 * (fMax - fMin || 1), fHi = fMax + 0.05 * (fMax - fMin || 1);
   const px = (d: number) => L + (d / maxD) * (W - L - R);
   const py = (f: number) => T + (1 - (f - fLo) / (fHi - fLo)) * (H - T - B);
-  const unit = maxD < 0.01 ? { k: 1000, name: "mm" } : { k: 1, name: "m" };
+  const unit = dMax < 0.01 ? { k: 1000, name: "mm" } : { k: 1, name: "m" };
   const muted = "var(--color-vsc-text-muted)";
   return (
     <figure className="m-0">
@@ -1486,8 +1487,8 @@ function FemCurve({ curve, fos }: { curve: { F: number; displacement: number }[]
           stroke="var(--color-vsc-accent)"
           strokeWidth={1.5}
         />
-        {curve.map((p) => (
-          <circle key={p.F} cx={px(p.displacement)} cy={py(p.F)} r={2} fill="var(--color-vsc-accent)">
+        {curve.map((p, k) => (
+          <circle key={k} cx={px(p.displacement)} cy={py(p.F)} r={2} fill="var(--color-vsc-accent)">
             <title>{`F = ${p.F.toFixed(3)}: ${(p.displacement * unit.k).toPrecision(3)} ${unit.name}`}</title>
           </circle>
         ))}
@@ -1501,7 +1502,7 @@ function FemCurve({ curve, fos }: { curve: { F: number; displacement: number }[]
           0
         </text>
         <text x={W - R} y={H - B + 11} textAnchor="end" fontSize={9} fill={muted}>
-          {`${(maxD * unit.k).toPrecision(3)} ${unit.name}`}
+          {`${(dMax * unit.k).toPrecision(3)} ${unit.name}`}
         </text>
         <text x={(L + W - R) / 2} y={H - 3} textAnchor="middle" fontSize={9} fill={muted}>
           Largest displacement
