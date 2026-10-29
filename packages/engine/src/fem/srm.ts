@@ -15,7 +15,12 @@
  *   viscoplastic strain increment f·∂Q/∂σ·Δt whose body loads enter the
  *   next solution.
  * - Failure: non-convergence within the iteration limit (Griffiths & Lane
- *   1999, 1000 iterations, tolerance on the displacement increment).
+ *   1999, 1000 iterations, tolerance on the displacement increment); with
+ *   the "equilibrium" test a trial converges only when, in addition, the
+ *   stresses returned to the yield surface balance the loads (the
+ *   unbalanced-force test of explicit and implicit codes), and the
+ *   iteration is then accelerated (Anderson 1965; Walker & Ni 2011;
+ *   anderson.ts) on the viscoplastic strains and body loads.
  * - Yield: Mohr–Coulomb in principal stresses (tension positive),
  *   f = (σ₁ − σ₃)/2 + (σ₁ + σ₃)/2·sin φ − c cos φ, the normalisation of
  *   Smith & Griffiths; optional Rankine tension cut-off f_t = σ₁ ≤ 0,
@@ -51,11 +56,24 @@
  * - Δt = 1/a, half the stability limit: a stress on one yield plane returns
  *   to it in one step, and the corners of the pyramid do not oscillate
  *   (`relaxation` = 1; 2 is the limit).
- * - Iteration limit 1000·√(elements/2500), at least 1000: Griffiths &
+ * - Iteration limit 1000·√(elements/2500), at least 1000 (1500 with the
+ *   accelerated equilibrium test): Griffiths &
  *   Lane's 1000 iterations are for meshes of a few hundred elements, and
  *   plastic flow must cross more elements on a finer mesh. The limit is a
  *   user parameter in every implementation of the non-convergence
  *   criterion, and F depends on it.
+ * - Acceleration and limit, measured 2026-10-29 on the base meshes of 16
+ *   problems of a program's verification manual and Pruska's 17 slopes
+ *   (four programs, ψ = 0): without acceleration the iteration needs many
+ *   thousands of iterations near the limit (58-5: 6168 at F = 0.69, no
+ *   convergence at 0.71 in 20000), so the limit set F (−4.2 % against the
+ *   programs' mean on Pruska's slopes). With 10 iterates mixed the same
+ *   trials converge in 150–400 iterations; Pruska −2.7 %, all 33 cases
+ *   2.8 % mean absolute deviation (3.3 % before) at 1.4 times the run time
+ *   with a limit of 1500 (2.7 % at 3 times with 3000). On the verification
+ *   problems it moved the factors both ways (16 of a program's manual:
+ *   2.34 → 2.69 % mean absolute deviation, 19 published research results
+ *   2.42 → 2.67 %; adaptive meshes), so it is an option, not the default.
  * - A trial that fails from the unloaded state does not bound F from
  *   above; only a failure from a converged state does, a converged trial
  *   overrides failures below it, and the bounding failure is confirmed
@@ -72,6 +90,7 @@ import { evaluate, newtonAtF } from "./newton";
 import { bfgsAtF } from "./bfgs";
 import { barInternal, relaxBars } from "./bars";
 import { beamInternal } from "./piles";
+import { Anderson } from "./anderson";
 
 /** Confirmations of the bounding failure per search (see strengthReductionSearch). */
 const MAX_CONFIRMATIONS = 3;
@@ -99,7 +118,7 @@ export interface SrmOptions {
   /** Rankine tension cut-off at zero effective stress; default false. */
   tensionCutoff?: boolean;
   /**
-   * Convergence test: "increment" (default), max|Δu|/max|u| ≤ tolerance as
+   * Convergence test of the viscoplastic iteration: "increment", max|Δu|/max|u| ≤ tolerance as
    * Griffiths & Lane (1999) and Smith & Griffiths (2014); "extrapolated", the
    * estimated distance to the fixed point Δu·r/(1 − r) instead of Δu, which
    * does not accept a slowly creeping state near collapse but needs more
@@ -107,14 +126,23 @@ export interface SrmOptions {
    * against 1.35); "equilibrium", the increment test and in addition the
    * out-of-balance force of the stresses returned to the yield surface,
    * ‖f − ∫Bᵀσ‖ ≤ `unbalanceTolerance`·‖f‖ (the unbalanced-force criterion
-   * of explicit and implicit codes), which does not depend on Δt.
+   * of explicit and implicit codes), which does not depend on Δt, and
+   * with which the iteration is accelerated (`acceleration`).
    */
   convergence?: "increment" | "extrapolated" | "equilibrium";
+  /**
+   * Anderson acceleration of the viscoplastic iteration (anderson.ts): the
+   * number of past iterates mixed; 0 turns it off. Default 10 with the
+   * "equilibrium" test, 0 otherwise: an accelerated iterate can have a small
+   * displacement change without equilibrium, which the increment test
+   * would accept (measured on 33 slopes: F far above the references on most, up to 97).
+   */
+  acceleration?: number;
   /** Relative out-of-balance force of the "equilibrium" test; default 1e-3. */
   unbalanceTolerance?: number;
   /** Convergence tolerance; default 1e-4 (viscoplastic), 1e-6 relative residual (Newton). */
   tolerance?: number;
-  /** Viscoplastic iteration limit per trial (failure when reached); default 1000 × √(elements/2500), at least 1000. */
+  /** Viscoplastic iteration limit per trial (failure when reached); default 1000 × √(elements/2500), at least 1000 (1500 with the accelerated "equilibrium" test). */
   maxIterations?: number;
   /** Newton iteration limit per trial; default 200 (newton.ts). */
   newtonIterations?: number;
@@ -323,9 +351,9 @@ export function solveAtF(
   // Griffiths & Lane's 1000 iterations are for meshes of a few hundred
   // elements; plastic flow has to cross more elements on a finer mesh, so
   // the limit grows with the mesh's linear resolution, √(elements / 2500).
-  const limit = options.maxIterations ?? Math.round(1000 * Math.max(1, Math.sqrt(model.elementCount / 2500)));
-  const cutoff = options.tensionCutoff ?? false;
   const criterion = options.convergence ?? "increment";
+  const limit = options.maxIterations ?? Math.round((criterion === "equilibrium" ? 1500 : 1000) * Math.max(1, Math.sqrt(model.elementCount / 2500)));
+  const cutoff = options.tensionCutoff ?? false;
   const red = reduce(model, F, rule, options.relaxation ?? 1);
   const { gp, elementCount: ne, elE, elNu, elElastic } = model;
   const { u, evp, bodyLoads, stress } = state;
@@ -341,8 +369,13 @@ export function solveAtF(
   let it = 0;
   let prevDu = 0, ratioCount = 0, passedBefore = false;
   const logRatio = new Float64Array(RATIO_WINDOW);
+  const AA_M = options.acceleration ?? (criterion === "equilibrium" ? 10 : 0);
+  const ne4 = evp.length, nb = state.barEp.length;
+  const aa = AA_M > 0 ? new Anderson(ne4 + nb + neq, AA_M, ne4 + nb) : null;
+  const aaIn = aa ? new Float64Array(ne4 + nb + neq) : null, aaOut = aa ? new Float64Array(ne4 + nb + neq) : null;
   for (; it < limit && !converged; ) {
     it++;
+    if (aaIn) { aaIn.set(evp); aaIn.set(state.barEp, ne4); aaIn.set(bodyLoads, ne4 + nb); }
     for (let i = 0; i < neq; i++) next[i] = model.f[i] + bodyLoads[i];
     model.K.solve(next);
     let maxU = 0, maxDu = 0;
@@ -470,6 +503,11 @@ export function solveAtF(
       if (anyLoad) for (let k = 0; k < 12; k++) { const q = eqs[12 * e + k]; if (q >= 0) bodyLoads[q] += load[k]; }
     }
     if (model.bars.count) relaxBars(model, u, state.barEp, F, bodyLoads);
+    if (aa && aaIn && aaOut && !converged) {
+      aaOut.set(evp); aaOut.set(state.barEp, ne4); aaOut.set(bodyLoads, ne4 + nb);
+      aa.step(aaIn, aaOut);
+      evp.set(aaOut.subarray(0, ne4)); state.barEp.set(aaOut.subarray(ne4, ne4 + nb)); bodyLoads.set(aaOut.subarray(ne4 + nb));
+    }
   }
   return { converged, iterations: it };
 }

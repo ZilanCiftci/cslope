@@ -738,7 +738,7 @@ function FemFields({
           disabled={off || settings.flowRule !== "non-associated" || settings.nonAssociatedSolver === "newton"}
           onChange={(e) => set({ convergence: e.target.value as "increment" | "equilibrium" })}
           aria-label="Convergence test"
-          title="Convergence test of the viscoplastic iteration. Increment (default): the displacement change of an iteration below 10⁻⁴ of the displacement (Griffiths & Lane). Equilibrium: in addition, the stresses returned to the yield surface must balance the load to 0.1 % (the unbalanced-force test of other programs); it does not depend on the time step and gives F up to about 1 % lower. Newton always tests equilibrium (residual 10⁻⁶)."
+          title="Convergence test of the viscoplastic iteration. Increment (default): the displacement change of an iteration below 10⁻⁴ of the displacement (Griffiths & Lane). Equilibrium: in addition, the stresses returned to the yield surface must balance the load to 0.1 % (the unbalanced-force test of other programs), with the iteration Anderson-accelerated so that trials near failure converge instead of running out of iterations; closer to other programs at high friction angles (Pruska's slopes −3.4 % against −4.7 %), about 1.5 times the run time. Newton always tests equilibrium (residual 10⁻⁶)."
         >
           <option value="increment">Increment</option>
           <option value="equilibrium">Equilibrium</option>

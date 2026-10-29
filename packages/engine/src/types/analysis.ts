@@ -333,9 +333,10 @@ export interface FemAnalysisSettings {
   nonAssociatedSolver?: "viscoplastic" | "newton";
   /**
    * Convergence test of the viscoplastic iteration: the displacement
-   * increment ("increment", default), or in addition the out-of-balance
-   * force of the stresses returned to the yield surface, at most 0.1 % of
-   * the load ("equilibrium"). Not set: increment.
+   * increment ("increment"), or in addition the out-of-balance force of the
+   * stresses returned to the yield surface, at most 0.1 % of the load
+   * ("equilibrium", with Anderson acceleration of the iteration). Not set:
+   * increment.
    */
   convergence?: "increment" | "equilibrium";
   /**

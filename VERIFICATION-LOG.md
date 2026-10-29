@@ -51,11 +51,44 @@ The script compares the regenerated verification table with the committed one an
 | 2026-10-29 | Generalised Hoek-Brown rock in limit equilibrium and FE | 0 | 0.348 → 0.348 | 0.483 → 0.483 | 1.011 → 1.011 | 1.595 → 1.595 | 933 s (4 workers, load 5.2 at start) |
 | 2026-10-29 | Newton: a return to the Mohr–Coulomb apex gets 10⁻³ of the elastic tangent instead of zero | 0 | 0.348 → 0.348 | 0.483 → 0.483 | 1.011 → 1.011 | 1.595 → 1.595 | 893 s (4 workers, load 4.2 at start) |
 | 2026-10-29 | Limit analysis in the app refined on the gap between the lower and upper bound | 0 | 0.348 → 0.348 | 0.483 → 0.483 | 1.011 → 1.011 | 1.595 → 1.595 | 670 s (4 workers, load 3.5 at start) |
+| 2026-10-29 | Anderson-accelerated viscoplastic iteration with the equilibrium test, as an option | 0 | 0.348 → 0.348 | 0.483 → 0.483 | 1.011 → 1.011 | 1.595 → 1.595 | 476 s (4 workers, load 2.5 at start) |
 <!-- summary-end -->
 
 ## Entries
 
 <!-- entries -->
+
+### 2026-10-29: Anderson-accelerated viscoplastic iteration with the equilibrium test, as an option
+
+Compared with cbff40d. Errors are relative to the reference, in percent. Verification run time: 476 s (4 workers, load 2.5 at start).
+
+**Against other programs (midpoint of their range):** 0 moved (0 closer to the reference, 0 further).
+
+| Result | Reference | Before | After | Error before | Error after |
+|---|---|---|---|---|---|
+| **Mean error (n = 279)** | | | | -0.231 % | -0.231 % |
+| **Mean absolute error** | | | | 0.348 % | 0.348 % |
+| **RMS error** | | | | 0.483 % | 0.483 % |
+| **Largest error** | | | | 2.100 % | 2.100 % |
+
+**Against the papers:** 0 moved (0 closer to the reference, 0 further).
+
+| Result | Reference | Before | After | Error before | Error after |
+|---|---|---|---|---|---|
+| **Mean error (n = 111)** | | | | -0.167 % | -0.167 % |
+| **Mean absolute error** | | | | 1.011 % | 1.011 % |
+| **RMS error** | | | | 1.595 % | 1.595 % |
+| **Largest error** | | | | 6.591 % | 6.591 % |
+
+**Finite elements against their references (FE, finite differences, limit analysis, theory):** 0 moved (0 closer to the reference, 0 further).
+
+| Result | Reference | Before | After | Error before | Error after |
+|---|---|---|---|---|---|
+| **Mean error (n = 35)** | | | | -0.734 % | -0.734 % |
+| **Mean absolute error** | | | | 2.383 % | 2.383 % |
+| **RMS error** | | | | 3.711 % | 3.711 % |
+| **Largest error** | | | | 15.150 % | 15.150 % |
+
 
 ### 2026-10-29: Limit analysis in the app refined on the gap between the lower and upper bound
 
