@@ -19,7 +19,11 @@
  *   materials of later stages inactive (model.ts: weightless and soft);
  *   the stress of the last is the initial stress of the full model, whose
  *   strength reduction then builds the last stage in its first trial.
- *   Displacements are counted from the start of each stage.
+ *   Displacements are counted from the start of each stage. The
+ *   reinforcement acts from the last stage on (the stages before it are
+ *   solved without it, so that the stresses carried on are in equilibrium
+ *   without bar forces). A stage that fails with Newton's method is solved
+ *   again by the viscoplastic iteration, whose last state is carried on.
  *
  * Implementation choices (not from the literature): the overburden is
  * integrated over the material polygons along the vertical through each
@@ -104,7 +108,8 @@ export function k0Stress(
       if (g0 !== undefined && topMaterial && g0 > top) sv += weightOver(topMaterial, x, top, g0);
       const svEff = Math.min(0, -sv + model.gpU[i]);
       const phi = model.gpPhi[i];
-      const k0 = options.k0 ?? (!rigid && phi > 0 ? 1 - Math.sin(phi) : nu / (1 - nu));
+      // a given K0 is the soils'; rigid materials stay elastic
+      const k0 = rigid ? nu / (1 - nu) : options.k0 ?? (phi > 0 ? 1 - Math.sin(phi) : nu / (1 - nu));
       out[4 * i] = k0 * svEff;
       out[4 * i + 1] = svEff;
       out[4 * i + 3] = k0 * svEff;
@@ -137,10 +142,13 @@ export function prepareFeModel(
   let sigma: Float64Array | null = null;
   for (let s = 0; s + 1 < stages.length; s++) {
     const inactive = names.filter((n) => stageOf(n) > stages[s]);
-    let model = buildFeModel(slope, { ...options, inactiveMaterials: inactive });
+    let model = buildFeModel(slope, { ...options, inactiveMaterials: inactive, withoutReinforcement: true });
     if (s === 0 && k0) sigma = k0Stress(model, slope, { ...k0Options, inactive: new Set(inactive) });
     if (sigma) model = withInitialStress(model, sigma);
-    const r = runTrial(model, 1, null, trialOptions);
+    let r = runTrial(model, 1, null, trialOptions);
+    // Newton and BFGS keep no state from a trial that fails; the viscoplastic
+    // iteration's last state shows how far the stage got.
+    if (!r.converged && r.solver !== "viscoplastic") r = runTrial(model, 1, null, { ...trialOptions, solver: "viscoplastic" });
     if (!r.converged) {
       warnings.push(`Construction stage ${s + 1} of ${stages.length} did not reach equilibrium at F = 1: the slope fails while it is built; the later stages start from its last state.`);
     }
@@ -149,5 +157,6 @@ export function prepareFeModel(
     for (let e = 0; e < model.elementCount; e++) if (model.elInactive[e]) sigma.fill(0, 12 * e, 12 * e + 12);
   }
   const model = buildFeModel(slope, options);
+  if (model.bars.count > 0) warnings.push("The reinforcement acts from the last construction stage on.");
   return { model: withInitialStress(model, sigma!), warnings };
 }

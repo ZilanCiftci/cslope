@@ -116,6 +116,8 @@ export interface FeModelOptions {
    * that they follow the active soil without loading or stiffening it.
    */
   inactiveMaterials?: readonly string[];
+  /** Leave the reinforcement out (the construction stages before the last, initial-stress.ts). */
+  withoutReinforcement?: boolean;
 }
 
 export const DEFAULT_REINFORCEMENT_STIFFNESS = 1e6;
@@ -399,7 +401,7 @@ export function buildFeModel(slope: Slope, options: FeModelOptions = {}): FeMode
 
   const segments: [number, number][][] = polys.map((p) => [...p, p[0]]);
   // Reinforcement lines are mesh constraints, so that bars lie on element edges.
-  const reinf = slope.reinforcements.filter((r) =>
+  const reinf = (options.withoutReinforcement ? [] : slope.reinforcements).filter((r) =>
     pointInPolygon((r.x1 + r.x2) / 2, (r.y1 + r.y2) / 2, bnd) && Math.hypot(r.x2 - r.x1, r.y2 - r.y1) > 0,
   );
   for (const r of reinf) segments.push([[r.x1, r.y1], [r.x2, r.y2]]);
@@ -784,7 +786,7 @@ export function gaussStrains(model: FeModel, u: Float64Array, out: Float64Array)
   }
 }
 
-/** Elastic solution: displacements per equation and effective stresses (σx, σy, τxy, σz) per Gauss point. */
+/** Elastic solution: displacements per equation and effective stresses (σx, σy, τxy, σz) per Gauss point (of the loads alone: initial stresses are not added). */
 export function solveElastic(model: FeModel): { u: Float64Array; stress: Float64Array } {
   const u = Float64Array.from(model.f);
   model.K.solve(u);

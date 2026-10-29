@@ -94,5 +94,7 @@ describe("staged construction", () => {
     const slope = slopeOf({ ...embankment(15), materials: embankment(15).materials.map((m) => (m.name === "found" ? { ...m, model: { kind: "undrained", unitWeight: 19, undrainedShearStrength: 5 } } : m)) });
     const r = prepareFeModel(slope, { elementSize: 1.5, materialStages: { fill1: 1, fill2: 2 } }, { flowRule: "associated" });
     expect(r.warnings.some((w) => /Construction stage 2 of 3 did not reach equilibrium/.test(w))).toBe(true);
+    // the failed stage's last state is carried on (Newton keeps none; the viscoplastic iteration does)
+    expect(Math.max(...Array.from(r.model.stress0!, Math.abs))).toBeGreaterThan(50);
   }, 300000);
 });

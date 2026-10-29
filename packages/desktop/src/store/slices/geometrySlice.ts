@@ -228,6 +228,7 @@ export const createGeometrySlice: SliceCreator<GeometrySlice> = (set, get) => ({
     get().invalidateAnalysis();
   },
   updateMaterial: (id, patch) => {
+    const oldName = get().materials.find((m) => m.id === id)?.name;
     set((s) =>
       syncActiveModel(s, {
         materials: s.materials.map((m) =>
@@ -235,6 +236,13 @@ export const createGeometrySlice: SliceCreator<GeometrySlice> = (set, get) => ({
         ),
       }),
     );
+    // The finite element construction stages are keyed by material name: a
+    // renamed material keeps its stage.
+    const fem = get().options.fem;
+    if (patch.name !== undefined && oldName !== undefined && patch.name !== oldName && fem?.materialStages?.[oldName] !== undefined) {
+      const { [oldName]: stage, ...rest } = fem.materialStages;
+      get().setOptions({ fem: { ...fem, materialStages: { ...rest, [patch.name]: stage } } });
+    }
     get().invalidateAnalysis();
   },
   addMaterial: () => {
