@@ -1,10 +1,10 @@
 {
  "summary": {
-  "problems": 171,
-  "results": 353,
-  "publishedValues": 212,
-  "problemsWithPublished": 140,
-  "literatureProblems": 161,
+  "problems": 172,
+  "results": 369,
+  "publishedValues": 228,
+  "problemsWithPublished": 141,
+  "literatureProblems": 162,
   "reliabilityQuantities": 25
  },
  "problems": [
@@ -37,6 +37,13 @@
      "source": "Arai & Tagyo (1985)",
      "analysis": "Janbu corrected, non-circular",
      "computed": 1.3447
+    },
+    {
+     "value": 1.4,
+     "method": "finite-element strength reduction (verification manual, problem 10)",
+     "source": "another program's verification manual",
+     "analysis": "Strength reduction (FE)",
+     "computed": 1.4024
     }
    ],
    "results": [
@@ -73,9 +80,27 @@
      "method": "Janbu corrected, non-circular",
      "computed": 1.3447,
      "programs": null
+    },
+    {
+     "method": "Strength reduction (FE)",
+     "computed": 1.4024,
+     "programs": null
     }
    ],
-   "note": "Arai & Tagyo's Bishop value 1.451 is 2–3 % above the other programs (1.409–1.417) and cSlope on the same slope; their non-circular Janbu values are within 1 % of cSlope's."
+   "note": "Arai & Tagyo's Bishop value 1.451 is 2–3 % above the other programs (1.409–1.417) and cSlope on the same slope; their non-circular Janbu values are within 1 % of cSlope's.",
+   "fem": {
+    "flowRule": "non-associated",
+    "levels": [
+     {
+      "elements": 2811,
+      "fos": 1.4058687500000007
+     },
+     {
+      "elements": 4033,
+      "fos": 1.4023540781250006
+     }
+    ]
+   }
   },
   {
    "id": "V002",
@@ -213,6 +238,13 @@
      "source": "Arai & Tagyo (1985)",
      "analysis": "Janbu corrected, non-circular",
      "computed": 1.047
+    },
+    {
+     "value": 1.09,
+     "method": "finite-element strength reduction (verification manual, problem 12)",
+     "source": "another program's verification manual",
+     "analysis": "Strength reduction (FE)",
+     "computed": 1.1069
     }
    ],
    "results": [
@@ -249,9 +281,27 @@
      "method": "Janbu corrected, non-circular",
      "computed": 1.047,
      "programs": null
+    },
+    {
+     "method": "Strength reduction (FE)",
+     "computed": 1.1069,
+     "programs": null
     }
    ],
-   "note": "Arai & Tagyo's Bishop value 1.138 is about 2 % above the other programs (1.112–1.118 with Bishop)."
+   "note": "Arai & Tagyo's Bishop value 1.138 is about 2 % above the other programs (1.112–1.118 with Bishop).",
+   "fem": {
+    "flowRule": "non-associated",
+    "levels": [
+     {
+      "elements": 1403,
+      "fos": 1.106875
+     },
+     {
+      "elements": 1846,
+      "fos": 1.1068749999999998
+     }
+    ]
+   }
   },
   {
    "id": "V004a",
@@ -770,6 +820,13 @@
      "value": 0.99,
      "source": "Borges & Cardoso (2002)",
      "computed": null
+    },
+    {
+     "value": 0.95,
+     "method": "finite-element strength reduction (verification manual, problem 24)",
+     "source": "another program's verification manual",
+     "analysis": "Strength reduction (FE)",
+     "computed": 0.9277
     }
    ],
    "results": [
@@ -780,9 +837,31 @@
       "min": 0.98,
       "max": 0.98
      }
+    },
+    {
+     "method": "Strength reduction (FE)",
+     "computed": 0.9277,
+     "programs": null
     }
    ],
-   "note": "Borges & Cardoso print two decimals and do not name the method."
+   "note": "Borges & Cardoso print two decimals and do not name the method.",
+   "fem": {
+    "flowRule": "non-associated",
+    "levels": [
+     {
+      "elements": 6162,
+      "fos": 0.9095166666666669
+     },
+     {
+      "elements": 7014,
+      "fos": 0.9277070000000001
+     },
+     {
+      "elements": 8724,
+      "fos": 0.9277070000000001
+     }
+    ]
+   }
   },
   {
    "id": "V013a",
@@ -2866,6 +2945,13 @@
      "method": "Spencer",
      "analysis": "Spencer",
      "computed": 2.072
+    },
+    {
+     "value": 2,
+     "method": "finite-element strength reduction (verification manual, problem 17)",
+     "source": "another program's verification manual",
+     "analysis": "Strength reduction (FE)",
+     "computed": 1.9803
     }
    ],
    "results": [
@@ -2883,8 +2969,26 @@
      "method": "Spencer",
      "computed": 2.072,
      "programs": null
+    },
+    {
+     "method": "Strength reduction (FE)",
+     "computed": 1.9803,
+     "programs": null
     }
-   ]
+   ],
+   "fem": {
+    "flowRule": "non-associated",
+    "levels": [
+     {
+      "elements": 2133,
+      "fos": 1.9852555456250016
+     },
+     {
+      "elements": 3190,
+      "fos": 1.980292406760939
+     }
+    ]
+   }
   },
   {
    "id": "V045",
@@ -2915,6 +3019,13 @@
      "method": "Spencer",
      "analysis": "Spencer",
      "computed": 1.8274
+    },
+    {
+     "value": 1.78,
+     "method": "finite-element strength reduction (verification manual, problem 17)",
+     "source": "another program's verification manual",
+     "analysis": "Strength reduction (FE)",
+     "computed": 1.7854
     }
    ],
    "results": [
@@ -2932,8 +3043,26 @@
      "method": "Spencer",
      "computed": 1.8274,
      "programs": null
+    },
+    {
+     "method": "Strength reduction (FE)",
+     "computed": 1.7854,
+     "programs": null
     }
-   ]
+   ],
+   "fem": {
+    "flowRule": "non-associated",
+    "levels": [
+     {
+      "elements": 2140,
+      "fos": 1.7854013203125012
+     },
+     {
+      "elements": 3066,
+      "fos": 1.7854013203125012
+     }
+    ]
+   }
   },
   {
    "id": "V046a",
@@ -2964,6 +3093,13 @@
      "method": "Spencer",
      "analysis": "Spencer",
      "computed": 1.3794
+    },
+    {
+     "value": 1.34,
+     "method": "finite-element strength reduction (verification manual, problem 18)",
+     "source": "another program's verification manual",
+     "analysis": "Strength reduction (FE)",
+     "computed": 1.3367
     }
    ],
    "results": [
@@ -2987,8 +3123,26 @@
      "method": "Morgenstern-Price (half-sine)",
      "computed": 1.3699,
      "programs": null
+    },
+    {
+     "method": "Strength reduction (FE)",
+     "computed": 1.3367,
+     "programs": null
     }
-   ]
+   ],
+   "fem": {
+    "flowRule": "non-associated",
+    "levels": [
+     {
+      "elements": 2802,
+      "fos": 1.340046723339844
+     },
+     {
+      "elements": 3113,
+      "fos": 1.3366966065314947
+     }
+    ]
+   }
   },
   {
    "id": "V046b",
@@ -3012,6 +3166,13 @@
      "method": "Spencer",
      "analysis": "Spencer",
      "computed": 1.2417
+    },
+    {
+     "value": 1.13,
+     "method": "finite-element strength reduction (verification manual, problem 18)",
+     "source": "another program's verification manual",
+     "analysis": "Strength reduction (FE)",
+     "computed": 1.1864
     }
    ],
    "results": [
@@ -3029,8 +3190,26 @@
      "method": "Morgenstern-Price (half-sine)",
      "computed": 1.2349,
      "programs": null
+    },
+    {
+     "method": "Strength reduction (FE)",
+     "computed": 1.1864,
+     "programs": null
     }
-   ]
+   ],
+   "fem": {
+    "flowRule": "non-associated",
+    "levels": [
+     {
+      "elements": 2922,
+      "fos": 1.1834178855468749
+     },
+     {
+      "elements": 3425,
+      "fos": 1.186376430260742
+     }
+    ]
+   }
   },
   {
    "id": "V047a",
@@ -3047,6 +3226,13 @@
      "method": "Spencer",
      "analysis": "Spencer",
      "computed": 0.9841
+    },
+    {
+     "value": 0.99,
+     "method": "finite-element strength reduction (verification manual, problem 1)",
+     "source": "another program's verification manual",
+     "analysis": "Strength reduction (FE)",
+     "computed": 0.9559
     }
    ],
    "results": [
@@ -3081,8 +3267,30 @@
       "min": 0.991,
       "max": 0.991
      }
+    },
+    {
+     "method": "Strength reduction (FE)",
+     "computed": 0.9559,
+     "programs": null
     }
-   ]
+   ],
+   "fem": {
+    "flowRule": "non-associated",
+    "levels": [
+     {
+      "elements": 2555,
+      "fos": 0.9705208333333337
+     },
+     {
+      "elements": 3807,
+      "fos": 0.951110416666667
+     },
+     {
+      "elements": 5401,
+      "fos": 0.9558659687500003
+     }
+    ]
+   }
   },
   {
    "id": "V047b",
@@ -3175,6 +3383,13 @@
      "value": 1.39,
      "source": "Giam & Donald (1989), ACADS",
      "computed": null
+    },
+    {
+     "value": 1.36,
+     "method": "finite-element strength reduction (verification manual, problem 2)",
+     "source": "another program's verification manual",
+     "analysis": "Strength reduction (FE)",
+     "computed": 1.3352
     }
    ],
    "results": [
@@ -3209,8 +3424,26 @@
       "min": 1.382,
       "max": 1.382
      }
+    },
+    {
+     "method": "Strength reduction (FE)",
+     "computed": 1.3352,
+     "programs": null
     }
-   ]
+   ],
+   "fem": {
+    "flowRule": "non-associated",
+    "levels": [
+     {
+      "elements": 4522,
+      "fos": 1.3351593750000004
+     },
+     {
+      "elements": 6232,
+      "fos": 1.3351593750000004
+     }
+    ]
+   }
   },
   {
    "id": "V050a",
@@ -3269,6 +3502,13 @@
      "upper": 1.27,
      "source": "Giam & Donald (1989), ACADS",
      "computed": null
+    },
+    {
+     "value": 1.26,
+     "method": "finite-element strength reduction (verification manual, problem 5)",
+     "source": "another program's verification manual",
+     "analysis": "Strength reduction (FE)",
+     "computed": 1.2832
     }
    ],
    "results": [
@@ -3279,9 +3519,27 @@
       "min": 1.246,
       "max": 1.246
      }
+    },
+    {
+     "method": "Strength reduction (FE)",
+     "computed": 1.2832,
+     "programs": null
     }
    ],
-   "note": "ACADS accepted 1.24–1.27; cSlope's search finds a surface along the weak layer at 1.228 (Spencer), unchanged at 50, 100 and 200 slices."
+   "note": "ACADS accepted 1.24–1.27; cSlope's search finds a surface along the weak layer at 1.228 (Spencer), unchanged at 50, 100 and 200 slices.",
+   "fem": {
+    "flowRule": "non-associated",
+    "levels": [
+     {
+      "elements": 2530,
+      "fos": 1.2832050000000002
+     },
+     {
+      "elements": 2855,
+      "fos": 1.2832050000000002
+     }
+    ]
+   }
   },
   {
    "id": "V051",
@@ -3323,6 +3581,13 @@
      "value": 1.95,
      "source": "Giam & Donald (1989), ACADS",
      "computed": null
+    },
+    {
+     "value": 1.88,
+     "method": "finite-element strength reduction (verification manual, problem 4)",
+     "source": "another program's verification manual",
+     "analysis": "Strength reduction (FE)",
+     "computed": 1.7888
     }
    ],
    "results": [
@@ -3349,8 +3614,26 @@
       "min": 1.949,
       "max": 1.949
      }
+    },
+    {
+     "method": "Strength reduction (FE)",
+     "computed": 1.7888,
+     "programs": null
     }
-   ]
+   ],
+   "fem": {
+    "flowRule": "non-associated",
+    "levels": [
+     {
+      "elements": 3092,
+      "fos": 1.779865192187501
+     },
+     {
+      "elements": 3417,
+      "fos": 1.7887645181484384
+     }
+    ]
+   }
   },
   {
    "id": "V052b",
@@ -3403,6 +3686,44 @@
    ]
   },
   {
+   "id": "V099",
+   "title": "ACADS 5, excavated slope with seepage",
+   "reference": "Giam & Donald (1989), ACADS problem 5.",
+   "literature": true,
+   "commercial": false,
+   "surface": "search",
+   "units": "SI",
+   "published": [
+    {
+     "value": 1.48,
+     "method": "finite-element strength reduction with finite element seepage (verification manual, problem 7)",
+     "source": "another program's verification manual",
+     "analysis": "Strength reduction (FE)",
+     "computed": 1.5433
+    }
+   ],
+   "results": [
+    {
+     "method": "Strength reduction (FE)",
+     "computed": 1.5433,
+     "programs": null
+    }
+   ],
+   "fem": {
+    "flowRule": "non-associated",
+    "levels": [
+     {
+      "elements": 4354,
+      "fos": 1.5510309375000007
+     },
+     {
+      "elements": 4935,
+      "fos": 1.5432757828125006
+     }
+    ]
+   }
+  },
+  {
    "id": "V053",
    "title": "Greco (1996) ex. 5 / Chen & Shao weak-layer slope, reference geometry",
    "reference": "Greco (1996) example 5; Chen & Shao (1988).",
@@ -3432,6 +3753,13 @@
      "source": "Greco (1996)",
      "analysis": "Spencer",
      "computed": 1.0913
+    },
+    {
+     "value": 1.02,
+     "method": "finite-element strength reduction (verification manual, problem 16)",
+     "source": "another program's verification manual",
+     "analysis": "Strength reduction (FE)",
+     "computed": 0.9693
     }
    ],
    "results": [
@@ -3447,9 +3775,27 @@
      "method": "Spencer",
      "computed": 1.0913,
      "programs": null
+    },
+    {
+     "method": "Strength reduction (FE)",
+     "computed": 0.9693,
+     "programs": null
     }
    ],
-   "note": "Chen & Shao give 1.009–1.025 with Spencer's assumption for a surface sliding along the weak seam (their test problem 3, Tables 5–6). Greco's Monte Carlo search finds a global minimum of 0.97 along the weak layer, entering the level ground far from the toe, and a local minimum of 1.08 on a nearly circular surface from the toe; the programs' block searches and cSlope give 1.01 on a commercial program's version of the geometry, 4 % above Greco's global minimum."
+   "note": "Chen & Shao give 1.009–1.025 with Spencer's assumption for a surface sliding along the weak seam (their test problem 3, Tables 5–6). Greco's Monte Carlo search finds a global minimum of 0.97 along the weak layer, entering the level ground far from the toe, and a local minimum of 1.08 on a nearly circular surface from the toe; the programs' block searches and cSlope give 1.01 on a commercial program's version of the geometry, 4 % above Greco's global minimum.",
+   "fem": {
+    "flowRule": "non-associated",
+    "levels": [
+     {
+      "elements": 3380,
+      "fos": 0.9791168750000003
+     },
+     {
+      "elements": 3688,
+      "fos": 0.9693257062500004
+     }
+    ]
+   }
   },
   {
    "id": "V054",
@@ -4577,6 +4923,13 @@
      "method": "Ordinary",
      "source": "Low (1989)",
      "computed": null
+    },
+    {
+     "value": 1.41,
+     "method": "finite-element strength reduction (verification manual, problem 19)",
+     "source": "another program's verification manual",
+     "analysis": "Strength reduction (FE)",
+     "computed": 1.4393
     }
    ],
    "results": [
@@ -4587,8 +4940,30 @@
       "min": 1.439,
       "max": 1.439
      }
+    },
+    {
+     "method": "Strength reduction (FE)",
+     "computed": 1.4393,
+     "programs": null
     }
-   ]
+   ],
+   "fem": {
+    "flowRule": "non-associated",
+    "levels": [
+     {
+      "elements": 3620,
+      "fos": 1.46484375
+     },
+     {
+      "elements": 3896,
+      "fos": 1.446533203125
+     },
+     {
+      "elements": 4469,
+      "fos": 1.439300537109375
+     }
+    ]
+   }
   },
   {
    "id": "V068",
@@ -6136,6 +6511,13 @@
      "source": "Greco (1996)",
      "analysis": "Spencer, non-circular",
      "computed": 1.3224
+    },
+    {
+     "value": 1.33,
+     "method": "finite-element strength reduction (verification manual, problem 13)",
+     "source": "another program's verification manual",
+     "analysis": "Strength reduction (FE)",
+     "computed": 1.3393
     }
    ],
    "results": [
@@ -6162,8 +6544,26 @@
       "min": 1.178,
       "max": 1.178
      }
+    },
+    {
+     "method": "Strength reduction (FE)",
+     "computed": 1.3393,
+     "programs": null
     }
-   ]
+   ],
+   "fem": {
+    "flowRule": "non-associated",
+    "levels": [
+     {
+      "elements": 2115,
+      "fos": 1.3393187500000003
+     },
+     {
+      "elements": 3399,
+      "fos": 1.3393187500000001
+     }
+    ]
+   }
   },
   {
    "id": "V094",
@@ -6181,6 +6581,13 @@
      "source": "Greco (1996)",
      "analysis": "Spencer, non-circular",
      "computed": 1.4
+    },
+    {
+     "value": 1.39,
+     "method": "finite-element strength reduction (verification manual, problem 15)",
+     "source": "another program's verification manual",
+     "analysis": "Strength reduction (FE)",
+     "computed": 1.3506
     }
    ],
    "results": [
@@ -6199,8 +6606,30 @@
       "min": 1.389,
       "max": 1.389
      }
+    },
+    {
+     "method": "Strength reduction (FE)",
+     "computed": 1.3506,
+     "programs": null
     }
-   ]
+   ],
+   "fem": {
+    "flowRule": "non-associated",
+    "levels": [
+     {
+      "elements": 2134,
+      "fos": 1.3710963750000005
+     },
+     {
+      "elements": 2626,
+      "fos": 1.3539576703125005
+     },
+     {
+      "elements": 3700,
+      "fos": 1.3505727761367192
+     }
+    ]
+   }
   },
   {
    "id": "V095a",

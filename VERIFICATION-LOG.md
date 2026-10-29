@@ -42,11 +42,44 @@ The script compares the regenerated verification table with the committed one an
 | 2026-10-28 | Newton decides associated FE trials alone (viscoplastic referee removed); BFGS solver as an option | 0 | 0.348 → 0.348 | 0.483 → 0.483 | 1.011 → 1.011 | 1.595 → 1.595 | 1236 s (4 workers, load 0.7 at start) |
 | 2026-10-28 | FE review fixes: Newton line search and stall test, confirmed failure bounds, local thin-layer size, engine-independent mesh, design strength and Tresca cap in FE, seepage side heads, certified lower bound | 0 | 0.348 → 0.348 | 0.483 → 0.483 | 1.011 → 1.011 | 1.595 → 1.595 | 757 s (4 workers, load 2.9 at start) |
 | 2026-10-28 | Viscoplastic iteration: stresses beyond the Mohr-Coulomb apex relaxed towards it (V094-type cohesionless layer at the toe) | 0 | 0.348 → 0.348 | 0.483 → 0.483 | 1.011 → 1.011 | 1.595 → 1.595 | 305 s (4 workers, load 0.6 at start) |
+| 2026-10-29 | FE references from a commercial FE program's verification manual on 15 problems; new problem V099 (ACADS 5, FE seepage) | 0 | 0.348 → 0.348 | 0.483 → 0.483 | 1.011 → 1.011 | 1.595 → 1.595 | 1105 s (4 workers, load 0.9 at start) |
 <!-- summary-end -->
 
 ## Entries
 
 <!-- entries -->
+
+### 2026-10-29: FE references from a commercial FE program's verification manual on 15 problems; new problem V099 (ACADS 5, FE seepage)
+
+Compared with 1b31150. Errors are relative to the reference, in percent. Verification run time: 1105 s (4 workers, load 0.9 at start).
+
+**Against other programs (midpoint of their range):** 0 moved (0 closer to the reference, 0 further).
+
+| Result | Reference | Before | After | Error before | Error after |
+|---|---|---|---|---|---|
+| **Mean error (n = 279)** | | | | -0.231 % | -0.231 % |
+| **Mean absolute error** | | | | 0.348 % | 0.348 % |
+| **RMS error** | | | | 0.483 % | 0.483 % |
+| **Largest error** | | | | 2.100 % | 2.100 % |
+
+**Against the papers:** 0 moved (0 closer to the reference, 0 further).
+
+| Result | Reference | Before | After | Error before | Error after |
+|---|---|---|---|---|---|
+| **Mean error (n = 111)** | | | | -0.167 % | -0.167 % |
+| **Mean absolute error** | | | | 1.011 % | 1.011 % |
+| **RMS error** | | | | 1.595 % | 1.595 % |
+| **Largest error** | | | | 6.591 % | 6.591 % |
+
+**Finite elements against their references (FE, finite differences, limit analysis, theory):** 0 moved (0 closer to the reference, 0 further).
+
+| Result | Reference | Before | After | Error before | Error after |
+|---|---|---|---|---|---|
+| **Mean error (n = 35)** | | | | -1.058 % | -0.734 % |
+| **Mean absolute error** | | | | 2.420 % | 2.383 % |
+| **RMS error** | | | | 4.292 % | 3.711 % |
+| **Largest error** | | | | 15.150 % | 15.150 % |
+
 
 ### 2026-10-28: Viscoplastic iteration: stresses beyond the Mohr-Coulomb apex relaxed towards it (V094-type cohesionless layer at the toe)
 

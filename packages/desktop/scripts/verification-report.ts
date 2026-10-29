@@ -20,6 +20,7 @@ import path from "node:path";
 import { execFileSync } from "node:child_process";
 import { GState, jsPDF } from "jspdf";
 import {
+  buildSlope,
   isPointInPolygon,
   polygonizeRegions,
   toCanonicalSlopeDefinition,
@@ -621,11 +622,14 @@ function evaluate(c: VerificationCase): CaseResult {
   const analyses = presentedAnalyses(c).map((a) =>
     a.checks.length ? results[a.checks[0]].fos : PUBLIC ? runVerification(c.definition, a.method, a.options).fos : null,
   );
-  const plane = criticalPlane(firstSlope!);
+  // A problem checked by finite elements only has no limit equilibrium
+  // analysis: its figure shows the geometry without a surface.
+  const slope = firstSlope ?? buildSlope(toCanonicalSlopeDefinition(c.definition));
+  const plane = firstSlope ? criticalPlane(firstSlope) : null;
   // The figure needs the geometry and the critical surface only: drop the
   // thousands of searched surfaces (with their slices) kept for every case.
-  firstSlope!.setSearchResults([]);
-  return { c, results, analyses, slope: firstSlope!, plane };
+  slope.setSearchResults([]);
+  return { c, results, analyses, slope, plane };
 }
 
 console.log(`Running ${CASES.length} verification problems…`);
@@ -884,7 +888,8 @@ caseResults.forEach((r, i) => {
   const { c } = r;
   const units = c.units === "SI" ? SI : IMPERIAL;
   const nonCircular = !!r.plane?.points;
-  const surfaceKind = c.surface === "fixed"
+  const feOnly = r.results.length === 0 && analysisRows(r).length === 0;
+  const surfaceKind = feOnly ? "Finite elements only" : c.surface === "fixed"
     ? nonCircular ? "Specified non-circular surface" : "Fixed circle"
     : nonCircular ? "Circle search with non-circular optimisation" : "Critical circle search";
   heading(`3.${i + 1}  ${c.id} — ${c.title}`, 2);
@@ -904,7 +909,7 @@ caseResults.forEach((r, i) => {
     c.definition,
     r.slope,
     r.plane,
-    `Figure ${i + 1}. ${c.id}: ${c.surface === "fixed" ? (nonCircular ? "analysed surface" : "analysed circle") : (nonCircular ? "critical surface" : "critical circle")} (${PUBLIC ? analysisRows(r)[0].a.label : first.check.label}, FOS = ${fmt(first.fos ?? NaN)}).`,
+    feOnly ? `Figure ${i + 1}. ${c.id}: geometry and water` : `Figure ${i + 1}. ${c.id}: ${c.surface === "fixed" ? (nonCircular ? "analysed surface" : "analysed circle") : (nonCircular ? "critical surface" : "critical circle")} (${PUBLIC ? analysisRows(r)[0].a.label : first.check.label}, FOS = ${fmt(first.fos ?? NaN)}).`,
     units,
   );
   table(
@@ -1073,7 +1078,7 @@ if (FEM_CASES.length && fs.existsSync(FEM_DATA)) {
       const refText = ref.upper != null ? `${fmt(ref.value, 2)}–${fmt(ref.upper, 2)}` : fmt(ref.value, ref.value < 10 ? 3 : 2).replace(/0+$/, "").replace(/\.$/, ".0");
       const row: Cell[] = [
         j === 0 ? c.id : "",
-        `${ref.method}, ${ref.source}`,
+        `${ref.method}, ${PUBLIC && isProgramSource(ref.source) ? "another program's manual" : ref.source}`,
         refText,
         j === 0 ? (p?.fem?.flowRule ?? c.fem!.flowRule ?? "davis-b") : "",
         j === 0 ? levels.map((l) => `${l.elements}: ${fmt(l.fos)}`).join(", ") : "",

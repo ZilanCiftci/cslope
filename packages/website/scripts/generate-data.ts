@@ -261,9 +261,11 @@ function withFem(
   const computed = value(raw?.fos);
   const published = p.published.slice();
   for (const r of c.fem.references) {
-    const j = published.findIndex((v) => v.value === r.value && v.source === r.source);
+    // The site names no other program, not even by letter.
+    const source = isProgramSource(r.source) ? "another program's verification manual" : r.source;
+    const j = published.findIndex((v) => v.value === r.value && v.source === source);
     if (j >= 0) published[j] = { ...published[j], analysis: FEM_LABEL, computed };
-    else published.push({ value: r.value, ...(r.upper != null ? { upper: r.upper } : {}), method: r.method, source: r.source, analysis: FEM_LABEL, computed });
+    else published.push({ value: r.value, ...(r.upper != null ? { upper: r.upper } : {}), method: r.method, source, analysis: FEM_LABEL, computed });
   }
   return {
     ...p,
