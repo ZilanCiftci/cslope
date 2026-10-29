@@ -1547,13 +1547,25 @@ function FemSummaryRows({ fem, designValues }: { fem: FemResultSummary; designVa
         <Label>Elapsed (FE)</Label>
         <span className="tabular-nums">{(fem.elapsedMs / 1000).toFixed(1)} s</span>
       </div>
+      {fem.bounds && (
+        <div className="flex justify-between">
+          <Label
+            title={`Limit analysis on ${fem.bounds.elements} elements, ${(fem.bounds.elapsedMs / 1000).toFixed(0)} s: a statically admissible stress field (lower bound) and a kinematically admissible mechanism (upper bound) of rigid–perfectly plastic soil with associated flow. The factor of safety of the mesh's idealisation lies between them.`}
+          >
+            Bounds (limit analysis)
+          </Label>
+          <span className="tabular-nums">
+            {fem.bounds.lower !== null ? fem.bounds.lower.toFixed(3) : "–"} – {fem.bounds.upper !== null ? fem.bounds.upper.toFixed(3) : "–"}
+          </span>
+        </div>
+      )}
       {fem.curve && fem.curve.length >= 2 && <FemCurve curve={fem.curve} fos={fem.factorOfSafety} />}
       {designValues && (
         <p className="text-[11px]" style={{ color: "var(--color-vsc-text-muted)" }}>
           The finite element factor uses the characteristic strengths, without partial factors.
         </p>
       )}
-      {fem.warnings.map((w) => (
+      {[...fem.warnings, ...(fem.bounds?.warnings ?? [])].map((w) => (
         <p key={w} className="text-[11px]" style={{ color: "var(--color-vsc-warning)" }}>
           {w}
         </p>

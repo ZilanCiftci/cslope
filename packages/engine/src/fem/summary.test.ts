@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import type { SlopeDefinition } from "../types/slope-definition";
 import { DEFAULT_FEM_SETTINGS } from "../types/analysis";
-import { runFemSummary } from "./summary";
+import { runFemSummary, runFemSummaryWithBounds } from "./summary";
 
 const clay = [{ name: "Clay", model: { kind: "undrained", unitWeight: 18, undrainedShearStrength: 20 } }];
 const settings = { ...DEFAULT_FEM_SETTINGS, enabled: true, elementSize: 2, refinementLevels: 0 };
@@ -32,4 +32,19 @@ describe("runFemSummary", () => {
     for (let k = 1; k < b.curve!.length; k++) expect(b.curve![k].F).toBeGreaterThan(b.curve![k - 1].F);
     expect(b.curve![b.curve!.length - 1].F).toBeCloseTo(b.factorOfSafety, 6);
   }, 60000);
+
+  it("brackets the factor of safety with the limit analysis bounds when asked", async () => {
+    const def = { coordinates: [[0, 0], [0, 10], [10, 10], [15, 5], [30, 5], [30, 0]], materials: clay } as unknown as SlopeDefinition;
+    // (the lower bound with the tension cut-off finds no stress field for this clay on finer meshes)
+    const r = await runFemSummaryWithBounds(def, { ...settings, flowRule: "associated", tensionCutoff: false, limitAnalysis: true });
+    const { lower, upper } = r.bounds!;
+    expect(lower).not.toBeNull();
+    expect(upper).not.toBeNull();
+    expect(lower!).toBeLessThan(upper!);
+    expect(lower!).toBeLessThan(r.factorOfSafety * 1.02);
+    expect(upper!).toBeGreaterThan(r.factorOfSafety * 0.98);
+    expect(JSON.parse(JSON.stringify(r))).toEqual(r);
+    // without the setting no bounds are computed
+    expect((await runFemSummaryWithBounds(def, settings)).bounds).toBeUndefined();
+  }, 300000);
 });

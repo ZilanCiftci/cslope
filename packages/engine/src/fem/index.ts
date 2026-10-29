@@ -21,3 +21,4 @@ export { analyzeFem, type FemAnalysisOptions, type FemAnalysisResult, type FemMe
 export { zzIndicator, dissipationIndicator, dorflerMark, refinedSizeField } from "./adapt";
 export { newtonAtF, returnMap } from "./newton";
 export { lowerBound, lowerBoundProblem, loadHighs, type LowerBoundOptions, type LowerBoundResult } from "./lower-bound";
+export { upperBound, upperBoundProblem, type UpperBoundOptions, type UpperBoundResult } from "./upper-bound";

@@ -420,6 +420,17 @@ function normalizeProjectInfo(raw: unknown): ProjectInfo {
   };
 }
 
+/** Whether saved limit analysis bounds have the shape the result view shows. */
+function isBounds(raw: unknown): boolean {
+  if (!raw || typeof raw !== "object") return false;
+  const b = raw as Record<string, unknown>;
+  const bound = (v: unknown) => v === null || (typeof v === "number" && Number.isFinite(v));
+  return (
+    bound(b.lower) && bound(b.upper) && Number.isFinite(b.elements) && Number.isFinite(b.elapsedMs) &&
+    Array.isArray(b.warnings) && b.warnings.every((w) => typeof w === "string")
+  );
+}
+
 /** Whether a saved finite element result has the shape the canvas draws. */
 function isFemSummary(raw: unknown): raw is FemResultSummary {
   if (!raw || typeof raw !== "object") return false;
@@ -441,6 +452,7 @@ function isFemSummary(raw: unknown): raw is FemResultSummary {
     f.levels.every((l) => !!l && typeof l === "object" && Number.isFinite(l.elements) && Number.isFinite(l.fos)) &&
     Array.isArray(f.warnings) &&
     f.warnings.every((w) => typeof w === "string") &&
+    (f.bounds === undefined || isBounds(f.bounds)) &&
     (f.curve === undefined ||
       (Array.isArray(f.curve) && f.curve.every((p) => !!p && typeof p === "object" && Number.isFinite(p.F) && Number.isFinite(p.displacement))))
   );
@@ -995,5 +1007,6 @@ function normalizeFemSettings(f: Record<string, unknown>): FemAnalysisSettings {
     ...(f.porePressure === "seepage" ? { porePressure: "seepage" as const } : {}),
     ...(f.nonAssociatedSolver === "newton" ? { nonAssociatedSolver: "newton" as const } : {}),
     ...(f.convergence === "equilibrium" ? { convergence: "equilibrium" as const } : {}),
+    ...(f.limitAnalysis === true ? { limitAnalysis: true } : {}),
   };
 }

@@ -213,11 +213,12 @@ export {
 export type { SlopeOrientation } from "./model/canonical";
 
 // ── Finite elements ────────────────────────────────────────────
-// Strength reduction (SRFEM) and lower-bound limit analysis. The lower
-// bound loads HiGHS (WebAssembly) on first use.
+// Strength reduction (SRFEM) and lower- and upper-bound limit analysis.
+// The bounds load HiGHS (WebAssembly) on first use.
 export {
   analyzeFem,
   lowerBound,
+  upperBound,
   loadHighs,
   type FemAnalysisOptions,
   type FemAnalysisResult,
@@ -227,8 +228,10 @@ export {
   type FeMaterialParameters,
   type LowerBoundOptions,
   type LowerBoundResult,
+  type UpperBoundOptions,
+  type UpperBoundResult,
 } from "./fem/index";
-export { runFemSummary } from "./fem/summary";
+export { runFemSummary, runFemSummaryWithBounds } from "./fem/summary";
 
 // ── Verification problems ──────────────────────────────────────
 // Exported from "@cslope/engine/verification" (src/verification/index.ts),

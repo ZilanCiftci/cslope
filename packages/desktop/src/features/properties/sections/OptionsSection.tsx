@@ -827,6 +827,19 @@ function FemFields({
         />
         <Label>Tension cut-off</Label>
       </label>
+      <label
+        className="col-span-2 flex items-center gap-1.5"
+        title="Also the lower and upper bounds of limit analysis (rigid–perfectly plastic soil with associated flow, linear programs): a statically admissible stress field and a kinematically admissible mechanism that bracket the factor of safety of the mesh. Run on a mesh graded as the strength reduction's, twice as coarse; adds about one to several minutes."
+      >
+        <input
+          type="checkbox"
+          checked={settings.limitAnalysis ?? false}
+          disabled={off}
+          onChange={(e) => set({ limitAnalysis: e.target.checked })}
+          aria-label="Limit analysis bounds"
+        />
+        <Label>Also limit analysis bounds (lower and upper)</Label>
+      </label>
     </div>
   );
 }

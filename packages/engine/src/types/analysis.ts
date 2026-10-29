@@ -338,6 +338,12 @@ export interface FemAnalysisSettings {
    * the load ("equilibrium"). Not set: increment.
    */
   convergence?: "increment" | "equilibrium";
+  /**
+   * Also the lower and upper bounds of limit analysis (perfect plasticity,
+   * associated flow), which bracket the factor of safety of the mesh's
+   * idealisation; minutes of run time. Not set: off.
+   */
+  limitAnalysis?: boolean;
 }
 
 export const DEFAULT_FEM_SETTINGS: FemAnalysisSettings = {
@@ -380,6 +386,8 @@ export interface FemResultSummary {
    * curve; it turns flat at failure). Absent in results saved before it.
    */
   curve?: { F: number; displacement: number }[];
+  /** Lower and upper bounds of limit analysis (null where not found), when asked for. */
+  bounds?: { lower: number | null; upper: number | null; elements: number; elapsedMs: number; warnings: string[] };
 }
 
 /** Full analysis result. */

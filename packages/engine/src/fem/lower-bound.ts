@@ -31,21 +31,11 @@
 
 import { WATER_UNIT_WEIGHT } from "../types/constants";
 import type { Slope } from "../model/slope";
-import { designStrength, needsLayerTop } from "../types/strength";
-import { materialLayerTopAt } from "../model/geometry-ops";
-import { buildFeModel, gaussUnitWeight, polylineY, type FeModelOptions } from "./model";
+import { buildFeModel, polylineY, type FeModelOptions } from "./model";
+import { meanUnitWeight, porePressureAt, strengthAt, surfaceLineLoads } from "./limit-common";
 
 /** Sectors per element at a corner of the ground surface (see lowerBoundProblem). */
 const FAN_SECTORS = 4;
-
-/** Centroids of the 16 sub-triangles of a 4 × 4 subdivision, in area coordinates (r, s). */
-const WEIGHT_POINTS: [number, number][] = [];
-for (let i = 0; i < 4; i++) {
-  for (let j = 0; i + j < 4; j++) {
-    WEIGHT_POINTS.push([(i + 1 / 3) / 4, (j + 1 / 3) / 4]);
-    if (i + j < 3) WEIGHT_POINTS.push([(i + 2 / 3) / 4, (j + 2 / 3) / 4]);
-  }
-}
 
 export interface LowerBoundOptions extends FeModelOptions {
   /** Sides of the inscribed yield polygon; default 24. */
@@ -78,12 +68,30 @@ interface Highs {
   };
 }
 
+/** Options of the HiGHS module: where its WebAssembly file is, or the binary itself. */
+export interface HighsModuleOptions {
+  locateFile?: (file: string) => string;
+  wasmBinary?: ArrayBuffer;
+}
+
 let highsPromise: Promise<Highs> | null = null;
-/** Load HiGHS (WebAssembly) on first use. */
-export function loadHighs(locateFile?: (file: string) => string): Promise<Highs> {
+/** Load HiGHS (WebAssembly) on first use; the options of the first call apply. */
+export function loadHighs(options?: HighsModuleOptions | ((file: string) => string)): Promise<Highs> {
+  const o = typeof options === "function" ? { locateFile: options } : options ?? {};
+  const bin = o.wasmBinary;
+  // The module reads no `wasmBinary` option; a given binary is instantiated
+  // through its `instantiateWasm` hook instead, so that nothing is fetched.
+  const moduleArg = bin
+    ? {
+        instantiateWasm: (imports: WebAssembly.Imports, done: (instance: WebAssembly.Instance) => void) => {
+          void WebAssembly.instantiate(bin, imports).then((r) => done(r.instance));
+          return {};
+        },
+      }
+    : o.locateFile ? { locateFile: o.locateFile } : {};
   highsPromise ??= import("highs").then((m) => {
     const loader = (m as unknown as { default: (o?: object) => Promise<Highs> }).default;
-    return loader(locateFile ? { locateFile } : {});
+    return loader(moduleArg);
   });
   return highsPromise;
 }
@@ -210,25 +218,15 @@ export function lowerBoundProblem(slope: Slope, options: LowerBoundOptions = {})
     const m = materials[elMaterial[e]], wl = waterLines[elMaterial[e]];
     for (let k = 0; k < 3; k++) {
       const n = el[3 * e + k], i = 3 * e + k;
-      // Pore pressure from the seepage heads when the model has them, else from the water line.
-      if (head) nU[i] = Number.isFinite(head[n]) ? Math.max(0, WATER_UNIT_WEIGHT * (head[n] - y[n])) : 0;
-      else if (wl) {
-        const yw = polylineY(wl, x[n]);
-        nU[i] = Number.isFinite(yw) ? Math.max(0, WATER_UNIT_WEIGHT * (yw - y[n])) : 0;
-      }
+      nU[i] = porePressureAt(head, n, wl, x[n], y[n]);
       if (elElastic[e]) continue;
       // Strength just inside the element (a node on a boundary takes this element's material).
       const cx = (x[el[3 * e]] + x[el[3 * e + 1]] + x[el[3 * e + 2]]) / 3, cy = (y[el[3 * e]] + y[el[3 * e + 1]] + y[el[3 * e + 2]]) / 3;
       const px = x[n] + 1e-6 * (cx - x[n]), py = y[n] + 1e-6 * (cy - y[n]);
-      const yGround = polylineY(surface, px);
-      // Strength as in the strength reduction model (model.ts): depth from
-      // the layer top, design values with the partial factors.
-      const yLayerTop = needsLayerTop(m.model) ? (materialLayerTopAt(slope.materialGeometries, m, px, py) ?? yGround) : undefined;
-      const s = m.getStrength({ yBottom: py, x: px, yGround, alpha: 0, ...(yLayerTop !== undefined ? { yLayerTop } : {}) });
-      const d = designStrength(m.model.kind, s, slope.partialFactors);
-      nC[i] = Math.max(0, d.cohesion);
-      nPhi[i] = d.undrained ? 0 : slope.partialFactors ? Math.atan(d.tanPhi) : (s.frictionAngle * Math.PI) / 180;
-      if (s.isCombined && !d.undrained) nCu[i] = Math.max(0, d.cohesionUndrained);
+      const st = strengthAt(slope, m, surface, px, py);
+      nC[i] = st.c;
+      nPhi[i] = st.phi;
+      nCu[i] = st.cu;
       if (nPhi[i] > 0) allUndrained = false;
     }
   }
@@ -245,18 +243,11 @@ export function lowerBoundProblem(slope: Slope, options: LowerBoundOptions = {})
     const b = [y[n[1]] - y[n[2]], y[n[2]] - y[n[0]], y[n[0]] - y[n[1]]];
     const c = [x[n[2]] - x[n[1]], x[n[0]] - x[n[2]], x[n[1]] - x[n[0]]];
     const area2 = b[0] * c[1] - b[1] * c[0];
-    // Weight: the mean unit weight over the element (γsat below the water
-    // as in the deformation analysis), by the midpoint rule on 16 equal
-    // sub-triangles, so that an element cut by the water table carries
-    // close to its true weight (the deformation analysis' three Gauss
-    // points weigh it in thirds).
-    let gamma = 0;
-    for (const [r, s2] of WEIGHT_POINTS) {
-      const t = 1 - r - s2;
-      const gx = t * x[n[0]] + r * x[n[1]] + s2 * x[n[2]], gy = t * y[n[0]] + r * y[n[1]] + s2 * y[n[2]];
-      const u = t * nU[3 * e] + r * nU[3 * e + 1] + s2 * nU[3 * e + 2];
-      gamma += gaussUnitWeight(materials[elMaterial[e]], waterLines[elMaterial[e]], !!head, u, gx, gy) / WEIGHT_POINTS.length;
-    }
+    // Weight: the mean unit weight over the element (limit-common.ts).
+    const gamma = meanUnitWeight(
+      materials[elMaterial[e]], waterLines[elMaterial[e]], !!head,
+      n.map((i) => x[i]), n.map((i) => y[i]), [nU[3 * e], nU[3 * e + 1], nU[3 * e + 2]],
+    );
     let ux = 0, uy = 0;
     for (let k = 0; k < 3; k++) { ux += b[k] * nU[3 * e + k]; uy += c[k] * nU[3 * e + k]; }
     // Σ b σx + c τ − λ Σ b u = 0
@@ -315,45 +306,9 @@ export function lowerBoundProblem(slope: Slope, options: LowerBoundOptions = {})
       fixed.push(` r${row++}:${term(-nx * ny, v(e, kk, 0))}${term(nx * ny, v(e, kk, 1))}${term(nx * nx - ny * ny, v(e, kk, 2))} = 0`);
     }
   }
-  // Line loads: a concentrated load has no bounded traction, so each is
-  // spread as uniform strip loads over the two surface edges meeting at its
-  // point (a mesh vertex, model.ts), in inverse proportion to their
-  // horizontal lengths, which keeps its resultant and its point of action.
-  // Where only one edge with a horizontal extent meets the point (at the
-  // end of the surface or the top of a vertical face) the load is spread
-  // over it linearly from 2P/d at the point to 0, its resultant d/3 from
-  // the point (the tractions are linear on an edge). Per edge and node:
-  const lineQ = new Map<string, number>();
-  const addQ = (edge: number, node: number, q: number) => lineQ.set(`${edge}:${node}`, (lineQ.get(`${edge}:${node}`) ?? 0) + q);
-  // Variable loads take the partial factor γQ, as in the slices.
+  // Line loads as strip loads (limit-common.ts); variable loads take γQ.
   const loadFactor = slope.partialFactors?.variableLoad ?? 1;
-  for (const ll of slope.lineLoads) {
-    let v = -1;
-    for (let s = 0; s < model.surfaceEdges.length; s += 3) {
-      for (const node of [model.surfaceEdges[s], model.surfaceEdges[s + 2]]) {
-        if (Math.abs(x[node] - ll.x) <= 1e-9 * (1 + Math.abs(ll.x)) && (v < 0 || y[node] > y[v])) v = node;
-      }
-    }
-    if (v < 0) { warnings.push(`A line load at x = ${ll.x} is not on the mesh's ground surface and is not included.`); continue; }
-    const adj: [number, number, number][] = []; // edge key, horizontal length, the other node
-    for (let s = 0; s < model.surfaceEdges.length; s += 3) {
-      const a = model.surfaceEdges[s], b = model.surfaceEdges[s + 2];
-      if ((a === v || b === v) && Math.abs(x[b] - x[a]) > 0) adj.push([a < b ? a * nc + b : b * nc + a, Math.abs(x[b] - x[a]), a === v ? b : a]);
-    }
-    const P = ll.magnitude * loadFactor;
-    if (adj.length === 1) {
-      const [k1, d1, o1] = adj[0];
-      addQ(k1, v, (2 * P) / d1);
-      addQ(k1, o1, 0);
-      warnings.push(`The line load at x = ${ll.x} is spread over one element edge; its point of action moves ${(d1 / 3).toFixed(2)} m into the slope.`);
-    } else if (adj.length >= 2) {
-      const [[k1, d1, o1], [k2, d2, o2]] = adj;
-      // P1 = P d2/(d1 + d2) on edge 1 and P2 = P d1/(d1 + d2) on edge 2: P1 d1/2 = P2 d2/2.
-      const q1 = (P * d2) / (d1 + d2) / d1, q2 = (P * d1) / (d1 + d2) / d2;
-      addQ(k1, v, q1); addQ(k1, o1, q1);
-      addQ(k2, v, q2); addQ(k2, o2, q2);
-    }
-  }
+  const lineQ = surfaceLineLoads(slope, model, (a, b) => (a < b ? a * nc + b : b * nc + a), warnings);
   // On the ground surface the traction is prescribed.
   for (const [key, [e, k]] of edgeOwner) {
     if (!surfaceSet.has(key)) continue;
@@ -445,8 +400,8 @@ export function lowerBoundProblem(slope: Slope, options: LowerBoundOptions = {})
 }
 
 /** Lower bound on the factor of safety of a slope. */
-export async function lowerBound(slope: Slope, options: LowerBoundOptions = {}, highs?: Highs): Promise<LowerBoundResult> {
-  const solver = highs ?? (await loadHighs());
+export async function lowerBound(slope: Slope, options: LowerBoundOptions = {}, highs?: Highs, module?: HighsModuleOptions): Promise<LowerBoundResult> {
+  const solver = highs ?? (await loadHighs(module));
   const prob = lowerBoundProblem(slope, options);
   const trials: LowerBoundResult["trials"] = [];
   const warnings = [...prob.warnings];
