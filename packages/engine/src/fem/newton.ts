@@ -49,8 +49,8 @@ export interface ReturnResult {
   plastic: boolean;
 }
 
-/** Solve a small dense symmetric system in place (Gaussian elimination); false if singular. */
-function solveSmall(n: number, a: number[], b: number[]): boolean {
+/** Solve a small dense system in place (Gaussian elimination with partial pivoting); false if singular. */
+function solveSmall(n: number, a: Float64Array, b: Float64Array): boolean {
   for (let k = 0; k < n; k++) {
     let p = k;
     for (let i = k + 1; i < n; i++) if (Math.abs(a[i * n + k]) > Math.abs(a[p * n + k])) p = i;
@@ -73,20 +73,43 @@ function solveSmall(n: number, a: number[], b: number[]): boolean {
   return true;
 }
 
-const SUBSETS: number[][] = [];
-for (let mask = 1; mask < 32; mask++) {
-  const s: number[] = [];
-  for (let k = 0; k < 5; k++) if (mask & (1 << k)) s.push(k);
-  if (s.length <= 3) SUBSETS.push(s);
+// Candidate active sets of the closest-point return: subsets of the five
+// planes with at most three members, smallest first, as bit masks.
+const SUBSET_MASKS: number[] = [];
+{
+  const sets: number[][] = [];
+  for (let mask = 1; mask < 32; mask++) {
+    const s: number[] = [];
+    for (let k = 0; k < 5; k++) if (mask & (1 << k)) s.push(k);
+    if (s.length <= 3) sets.push(s);
+  }
+  sets.sort((a, b) => a.length - b.length);
+  for (const s of sets) SUBSET_MASKS.push(s.reduce((m, k) => m | (1 << k), 0));
 }
-SUBSETS.sort((a, b) => a.length - b.length);
+
+// Work arrays of the stress return (one return at a time per thread): the
+// planes aᵀσ ≤ b (A, 5 × 3; B), the active set and its D·a (DA, 3 × 3), the
+// small systems, and the returned principal stresses.
+const PA = new Float64Array(15), PB = new Float64Array(5);
+const ACT = new Int32Array(3), DA = new Float64Array(9), MS = new Float64Array(9), RHS = new Float64Array(3);
+const RET = new Float64Array(3);
+const DEP = new Float64Array(9), MINV = new Float64Array(9), MC = new Float64Array(9), EC = new Float64Array(3);
+const CP = new Float64Array(16), TT = new Float64Array(16), CT = new Float64Array(16);
+let activeCount = 0;
+
+function plane(k: number, v0: number, v1: number, v2: number): number {
+  return PA[3 * k] * v0 + PA[3 * k + 1] * v1 + PA[3 * k + 2] * v2 - PB[k];
+}
 
 /**
- * Closest-point return in sorted principal space.
- * @returns the returned stresses and the active planes, or null if elastic.
+ * Closest-point return in sorted principal space (s0 ≥ s1 ≥ s2): the
+ * returned stresses in RET and the active planes in ACT / activeCount.
+ * @returns false if elastic.
  */
 function principalReturn(
-  s: [number, number, number],
+  s0: number,
+  s1: number,
+  s2: number,
   lam: number,
   mu: number,
   c: number,
@@ -94,46 +117,164 @@ function principalReturn(
   cosPhi: number,
   cutoff: boolean,
   cu: number,
-): { s: [number, number, number]; active: number[][] } | null {
+): boolean {
   // planes aᵀσ ≤ b: 0 Mohr–Coulomb, 1 Rankine, 2 σ₂ ≤ σ₁, 3 σ₃ ≤ σ₂,
   // 4 Tresca (σ₁ − σ₃)/2 ≤ cu, the undrained cap of a combined material
   const tresca = Number.isFinite(cu);
-  const A = [
-    [(1 + sinPhi) / 2, 0, -(1 - sinPhi) / 2],
-    [1, 0, 0],
-    [-1, 1, 0],
-    [0, -1, 1],
-    [0.5, 0, -0.5],
-  ];
-  const B = [c * cosPhi, 0, 0, 0, tresca ? cu : 0];
-  const use = [true, cutoff, true, true, tresca];
-  const tolF = 1e-10 * (Math.abs(s[0]) + Math.abs(s[2]) + c + (tresca ? cu : 0) + 1);
-  const f = (k: number, v: readonly number[]) => A[k][0] * v[0] + A[k][1] * v[1] + A[k][2] * v[2] - B[k];
-  if (f(0, s) <= tolF && (!cutoff || f(1, s) <= tolF) && (!tresca || f(4, s) <= tolF)) return null;
-  const Dv = (a: number[]) => {
-    const tr = a[0] + a[1] + a[2];
-    return [lam * tr + 2 * mu * a[0], lam * tr + 2 * mu * a[1], lam * tr + 2 * mu * a[2]];
-  };
-  for (const S of SUBSETS) {
-    if (S.some((k) => !use[k])) continue;
-    if (!S.includes(0) && !S.includes(1) && !S.includes(4)) continue; // ordering alone is not a return
-    const n = S.length;
-    const DA = S.map((k) => Dv(A[k]));
-    const M: number[] = [];
-    const rhs: number[] = [];
-    for (let i = 0; i < n; i++) {
-      for (let j = 0; j < n; j++) M.push(A[S[i]][0] * DA[j][0] + A[S[i]][1] * DA[j][1] + A[S[i]][2] * DA[j][2]);
-      rhs.push(f(S[i], s));
+  PA[0] = (1 + sinPhi) / 2; PA[1] = 0; PA[2] = -(1 - sinPhi) / 2;
+  PA[3] = 1; PA[4] = 0; PA[5] = 0;
+  PA[6] = -1; PA[7] = 1; PA[8] = 0;
+  PA[9] = 0; PA[10] = -1; PA[11] = 1;
+  PA[12] = 0.5; PA[13] = 0; PA[14] = -0.5;
+  PB[0] = c * cosPhi; PB[1] = 0; PB[2] = 0; PB[3] = 0; PB[4] = tresca ? cu : 0;
+  const useMask = 1 | (cutoff ? 2 : 0) | 4 | 8 | (tresca ? 16 : 0);
+  const tolF = 1e-10 * (Math.abs(s0) + Math.abs(s2) + c + (tresca ? cu : 0) + 1);
+  if (plane(0, s0, s1, s2) <= tolF && (!cutoff || plane(1, s0, s1, s2) <= tolF) && (!tresca || plane(4, s0, s1, s2) <= tolF)) return false;
+  for (const mask of SUBSET_MASKS) {
+    if (mask & ~useMask) continue;
+    if ((mask & (1 | 2 | 16)) === 0) continue; // ordering alone is not a return
+    let n = 0;
+    for (let k = 0; k < 5; k++) if (mask & (1 << k)) ACT[n++] = k;
+    for (let j = 0; j < n; j++) {
+      const a = 3 * ACT[j], tr = PA[a] + PA[a + 1] + PA[a + 2];
+      DA[3 * j] = lam * tr + 2 * mu * PA[a];
+      DA[3 * j + 1] = lam * tr + 2 * mu * PA[a + 1];
+      DA[3 * j + 2] = lam * tr + 2 * mu * PA[a + 2];
     }
-    if (!solveSmall(n, M, rhs)) continue;
-    if (rhs.some((l) => l < -1e-12 * (Math.abs(rhs[0]) + 1e-300))) continue;
-    const out: [number, number, number] = [s[0], s[1], s[2]];
-    for (let i = 0; i < n; i++) for (let d = 0; d < 3; d++) out[d] -= DA[i][d] * rhs[i];
+    for (let i = 0; i < n; i++) {
+      const a = 3 * ACT[i];
+      for (let j = 0; j < n; j++) MS[i * n + j] = PA[a] * DA[3 * j] + PA[a + 1] * DA[3 * j + 1] + PA[a + 2] * DA[3 * j + 2];
+      RHS[i] = plane(ACT[i], s0, s1, s2);
+    }
+    if (!solveSmall(n, MS, RHS)) continue;
+    let negative = false;
+    for (let i = 0; i < n; i++) if (RHS[i] < -1e-12 * (Math.abs(RHS[0]) + 1e-300)) negative = true;
+    if (negative) continue;
+    let o0 = s0, o1 = s1, o2 = s2;
+    for (let i = 0; i < n; i++) { o0 -= DA[3 * i] * RHS[i]; o1 -= DA[3 * i + 1] * RHS[i]; o2 -= DA[3 * i + 2] * RHS[i]; }
     let ok = true;
-    for (let k = 0; k < 5 && ok; k++) if (use[k] && !S.includes(k) && f(k, out) > tolF) ok = false;
-    if (ok) return { s: out, active: S.map((k) => A[k]) };
+    for (let k = 0; k < 5 && ok; k++) if ((useMask >> k) & 1 && !((mask >> k) & 1) && plane(k, o0, o1, o2) > tolF) ok = false;
+    if (ok) {
+      RET[0] = o0; RET[1] = o1; RET[2] = o2;
+      activeCount = n;
+      return true;
+    }
   }
   throw new Error("stress return failed");
+}
+
+/** Elastic tangent (4 × 4, Voigt with engineering shear) into `out`. */
+function elasticTangent(lam: number, mu: number, out: Float64Array): void {
+  out.fill(0);
+  const d11 = lam + 2 * mu;
+  out[0] = d11; out[1] = lam; out[3] = lam;
+  out[4] = lam; out[5] = d11; out[7] = lam;
+  out[10] = mu;
+  out[12] = lam; out[13] = lam; out[15] = d11;
+}
+
+/**
+ * Stress return for one Gauss point from the trial (elastic) stress σx, σy,
+ * τxy, σz, without allocation: the returned stress in `sOut` (4) and, when
+ * `tangent` is given, the consistent tangent in it (4 × 4, row-major).
+ * @returns whether the point is plastic.
+ */
+export function returnMapInto(
+  sx: number,
+  sy: number,
+  txy: number,
+  sz: number,
+  E: number,
+  nu: number,
+  c: number,
+  sinPhi: number,
+  cosPhi: number,
+  cutoff: boolean,
+  cu: number,
+  sOut: Float64Array,
+  tangent: Float64Array | null,
+): boolean {
+  const lam = (E * nu) / ((1 + nu) * (1 - 2 * nu)), mu = E / (2 * (1 + nu));
+  const pm = (sx + sy) / 2, hd = (sx - sy) / 2;
+  const rad = Math.sqrt(hd * hd + txy * txy);
+  const sA = pm + rad, sB = pm - rad;
+  const c2 = rad > 0 ? hd / rad : 1, s2 = rad > 0 ? txy / rad : 0;
+  // order of (A, B, z), largest first: idx0..2 (0 = A, 1 = B, 2 = z), stable
+  // for ties as the sort it replaces; pos* is each one's place in that order
+  let idx0: number, idx1: number, idx2: number;
+  if (sz > sA) { idx0 = 2; idx1 = 0; idx2 = 1; }
+  else if (sz > sB) { idx0 = 0; idx1 = 2; idx2 = 1; }
+  else { idx0 = 0; idx1 = 1; idx2 = 2; }
+  const v0 = idx0 === 0 ? sA : sz, v1 = idx1 === 0 ? sA : idx1 === 1 ? sB : sz, v2 = idx2 === 1 ? sB : sz;
+  const plastic = principalReturn(v0, v1, v2, lam, mu, c, sinPhi, cosPhi, cutoff, cu);
+  if (!plastic) {
+    sOut[0] = sx; sOut[1] = sy; sOut[2] = txy; sOut[3] = sz;
+    if (tangent) elasticTangent(lam, mu, tangent);
+    return false;
+  }
+  const posA = idx0 === 0 ? 0 : idx1 === 0 ? 1 : 2;
+  const posB = idx0 === 1 ? 0 : idx1 === 1 ? 1 : 2;
+  const posZ = 3 - posA - posB;
+  const rA = RET[posA], rB = RET[posB], rZ = RET[posZ];
+  const cc = (1 + c2) / 2, ss = (1 - c2) / 2, sc = s2 / 2;
+  sOut[0] = rA * cc + rB * ss;
+  sOut[1] = rA * ss + rB * cc;
+  sOut[2] = (rA - rB) * sc;
+  sOut[3] = rZ;
+  if (!tangent) return true;
+  // tangent in sorted principal space: D − D A (Aᵀ D A)⁻¹ Aᵀ D
+  const d11 = lam + 2 * mu;
+  for (let p = 0; p < 3; p++) for (let q = 0; q < 3; q++) DEP[3 * p + q] = p === q ? d11 : lam;
+  const n = activeCount;
+  for (let j = 0; j < n; j++) {
+    const a = 3 * ACT[j];
+    for (let i = 0; i < 3; i++) DA[3 * j + i] = DEP[3 * i] * PA[a] + DEP[3 * i + 1] * PA[a + 1] + DEP[3 * i + 2] * PA[a + 2];
+  }
+  for (let i = 0; i < n; i++) {
+    const a = 3 * ACT[i];
+    for (let j = 0; j < n; j++) MS[i * n + j] = PA[a] * DA[3 * j] + PA[a + 1] * DA[3 * j + 1] + PA[a + 2] * DA[3 * j + 2];
+  }
+  // M⁻¹ by solving for the identity columns
+  for (let j = 0; j < n; j++) {
+    for (let i = 0; i < n; i++) EC[i] = i === j ? 1 : 0;
+    for (let k = 0; k < n * n; k++) MC[k] = MS[k];
+    solveSmall(n, MC, EC);
+    for (let i = 0; i < n; i++) MINV[i * n + j] = EC[i];
+  }
+  for (let p = 0; p < 3; p++) for (let q = 0; q < 3; q++) {
+    let s = 0;
+    for (let i = 0; i < n; i++) for (let j = 0; j < n; j++) s += DA[3 * i + p] * MINV[i * n + j] * DA[3 * j + q];
+    DEP[3 * p + q] -= s;
+  }
+  // back to (A, B, z) order: Paa = Dep in the rows/columns of A, B, z
+  const a3 = 3 * posA, b3 = 3 * posB, z3 = 3 * posZ;
+  const dTrial = sA - sB;
+  // For equal in-plane principal strains the quotient's limit is the
+  // derivative (Dep_AA − Dep_AB)/2 (de Souza Neto et al. 2008, appendix A).
+  const G = Math.abs(dTrial) > 1e-12 * (Math.abs(sA) + Math.abs(sB) + 1) ? (mu * (rA - rB)) / dTrial : (DEP[a3 + posA] - DEP[a3 + posB]) / 2;
+  // principal-frame tangent in Voigt (A, B, AB, z)
+  CP[0] = DEP[a3 + posA]; CP[1] = DEP[a3 + posB]; CP[2] = 0; CP[3] = DEP[a3 + posZ];
+  CP[4] = DEP[b3 + posA]; CP[5] = DEP[b3 + posB]; CP[6] = 0; CP[7] = DEP[b3 + posZ];
+  CP[8] = 0; CP[9] = 0; CP[10] = G; CP[11] = 0;
+  CP[12] = DEP[z3 + posA]; CP[13] = DEP[z3 + posB]; CP[14] = 0; CP[15] = DEP[z3 + posZ];
+  // strain transformation ε' = T ε for the principal direction at angle θ:
+  // cos 2θ = c2, sin 2θ = s2
+  TT[0] = cc; TT[1] = ss; TT[2] = sc; TT[3] = 0;
+  TT[4] = ss; TT[5] = cc; TT[6] = -sc; TT[7] = 0;
+  TT[8] = -2 * sc; TT[9] = 2 * sc; TT[10] = c2; TT[11] = 0;
+  TT[12] = 0; TT[13] = 0; TT[14] = 0; TT[15] = 1;
+  // C = Tᵀ Cp T
+  for (let i = 0; i < 4; i++) for (let j = 0; j < 4; j++) {
+    let s = 0;
+    for (let k = 0; k < 4; k++) s += CP[4 * i + k] * TT[4 * k + j];
+    CT[4 * i + j] = s;
+  }
+  for (let i = 0; i < 4; i++) for (let j = 0; j < 4; j++) {
+    let s = 0;
+    for (let k = 0; k < 4; k++) s += TT[4 * k + i] * CT[4 * k + j];
+    tangent[4 * i + j] = s;
+  }
+  return true;
 }
 
 /**
@@ -151,93 +292,9 @@ export function returnMap(
   out: Float64Array,
   cu = Infinity,
 ): ReturnResult {
-  const lam = (E * nu) / ((1 + nu) * (1 - 2 * nu)), mu = E / (2 * (1 + nu));
-  const [sx, sy, txy, sz] = trial;
-  const pm = (sx + sy) / 2, hd = (sx - sy) / 2;
-  const rad = Math.sqrt(hd * hd + txy * txy);
-  const sA = pm + rad, sB = pm - rad;
-  const c2 = rad > 0 ? hd / rad : 1, s2 = rad > 0 ? txy / rad : 0;
-  // order of (A, B, z), largest first
-  const pv = [sA, sB, sz];
-  const idx = [0, 1, 2].sort((i, j) => pv[j] - pv[i]);
-  const sorted: [number, number, number] = [pv[idx[0]], pv[idx[1]], pv[idx[2]]];
-  const r = principalReturn(sorted, lam, mu, c, sinPhi, cosPhi, cutoff, cu);
-  const elastic = () => {
-    out.fill(0);
-    const d11 = lam + 2 * mu;
-    out[0] = d11; out[1] = lam; out[3] = lam;
-    out[4] = lam; out[5] = d11; out[7] = lam;
-    out[10] = mu;
-    out[12] = lam; out[13] = lam; out[15] = d11;
-  };
-  if (!r) {
-    elastic();
-    return { stress: [sx, sy, txy, sz], tangent: out, plastic: false };
-  }
-  // tangent in sorted principal space
-  const D3 = [lam + 2 * mu, lam, lam, lam, lam + 2 * mu, lam, lam, lam, lam + 2 * mu];
-  const Dep = D3.slice();
-  const n = r.active.length;
-  const DA = r.active.map((a) => [0, 1, 2].map((i) => D3[3 * i] * a[0] + D3[3 * i + 1] * a[1] + D3[3 * i + 2] * a[2]));
-  const M: number[] = [];
-  for (let i = 0; i < n; i++) for (let j = 0; j < n; j++) M.push(r.active[i][0] * DA[j][0] + r.active[i][1] * DA[j][1] + r.active[i][2] * DA[j][2]);
-  // Minv via solving for identity columns
-  const Minv: number[] = new Array(n * n).fill(0);
-  for (let j = 0; j < n; j++) {
-    const e = new Array(n).fill(0); e[j] = 1;
-    solveSmall(n, M.slice(), e);
-    for (let i = 0; i < n; i++) Minv[i * n + j] = e[i];
-  }
-  for (let p = 0; p < 3; p++) for (let q = 0; q < 3; q++) {
-    let s = 0;
-    for (let i = 0; i < n; i++) for (let j = 0; j < n; j++) s += DA[i][p] * Minv[i * n + j] * DA[j][q];
-    Dep[3 * p + q] -= s;
-  }
-  // back to (A, B, z) order
-  const pos = [0, 0, 0];
-  idx.forEach((k, i) => (pos[k] = i));
-  const ret = [r.s[pos[0]], r.s[pos[1]], r.s[pos[2]]];
-  const P = (i: number, j: number) => Dep[3 * pos[i] + pos[j]]; // i, j in A=0, B=1, z=2
-  const dTrial = sA - sB;
-  // For equal in-plane principal strains the quotient's limit is the
-  // derivative (Dep_AA − Dep_AB)/2 (de Souza Neto et al. 2008, appendix A).
-  const G = Math.abs(dTrial) > 1e-12 * (Math.abs(sA) + Math.abs(sB) + 1) ? (mu * (ret[0] - ret[1])) / dTrial : (P(0, 0) - P(0, 1)) / 2;
-  // principal-frame tangent in Voigt (A, B, AB, z)
-  const Cp = [
-    P(0, 0), P(0, 1), 0, P(0, 2),
-    P(1, 0), P(1, 1), 0, P(1, 2),
-    0, 0, G, 0,
-    P(2, 0), P(2, 1), 0, P(2, 2),
-  ];
-  // strain transformation ε' = T ε for the principal direction at angle θ:
-  // cos 2θ = c2, sin 2θ = s2
-  const cc = (1 + c2) / 2, ss = (1 - c2) / 2, sc = s2 / 2;
-  const T = [
-    cc, ss, sc, 0,
-    ss, cc, -sc, 0,
-    -2 * sc, 2 * sc, c2, 0,
-    0, 0, 0, 1,
-  ];
-  // C = Tᵀ Cp T
-  const CT = new Array(16).fill(0);
-  for (let i = 0; i < 4; i++) for (let j = 0; j < 4; j++) {
-    let s = 0;
-    for (let k = 0; k < 4; k++) s += Cp[4 * i + k] * T[4 * k + j];
-    CT[4 * i + j] = s;
-  }
-  for (let i = 0; i < 4; i++) for (let j = 0; j < 4; j++) {
-    let s = 0;
-    for (let k = 0; k < 4; k++) s += T[4 * k + i] * CT[4 * k + j];
-    out[4 * i + j] = s;
-  }
-  const rA = ret[0], rB = ret[1];
-  const stress: [number, number, number, number] = [
-    rA * cc + rB * ss,
-    rA * ss + rB * cc,
-    (rA - rB) * sc,
-    ret[2],
-  ];
-  return { stress, tangent: out, plastic: true };
+  const so = new Float64Array(4);
+  const plastic = returnMapInto(trial[0], trial[1], trial[2], trial[3], E, nu, c, sinPhi, cosPhi, cutoff, cu, so, out);
+  return { stress: [so[0], so[1], so[2], so[3]], tangent: out, plastic };
 }
 
 export interface NewtonState {
@@ -290,10 +347,9 @@ export function evaluate(
   const { gp, elementCount: ne, elE, elNu, elElastic } = model;
   fint.fill(0);
   if (K) K.values.fill(0);
-  const ue = new Float64Array(12);
-  const C = new Float64Array(16);
-  const ke = new Float64Array(144);
-  const fe = new Float64Array(12);
+  const scatter = K ? scatterIndex(model, eqs, K) : null;
+  const kv = K ? K.values : null;
+  const ue = EV_UE, C = EV_C, ke = EV_KE, fe = EV_FE, sig = EV_SIG;
   for (let e = 0; e < ne; e++) {
     for (let k = 0; k < 12; k++) { const q = eqs[12 * e + k]; ue[k] = q >= 0 ? u[q] : 0; }
     const E = elE[e], nu = elNu[e];
@@ -309,17 +365,15 @@ export function evaluate(
       }
       const eex = ex - epOld[s], eey = ey - epOld[s + 1], eg = gxy - epOld[s + 2], eez = -epOld[s + 3];
       const tr = eex + eey + eez;
-      const trial: [number, number, number, number] = [lam * tr + 2 * mu * eex, lam * tr + 2 * mu * eey, mu * eg, lam * tr + 2 * mu * eez];
-      let sig = trial;
+      const t0 = lam * tr + 2 * mu * eex, t1 = lam * tr + 2 * mu * eey, t2 = mu * eg, t3 = lam * tr + 2 * mu * eez;
       if (elElastic[e]) {
-        C.fill(0);
-        C[0] = lam + 2 * mu; C[1] = lam; C[4] = lam; C[5] = lam + 2 * mu; C[10] = mu;
+        sig[0] = t0; sig[1] = t1; sig[2] = t2; sig[3] = t3;
+        if (K) { C.fill(0); C[0] = lam + 2 * mu; C[1] = lam; C[4] = lam; C[5] = lam + 2 * mu; C[10] = mu; }
         epNew[s] = epOld[s]; epNew[s + 1] = epOld[s + 1]; epNew[s + 2] = epOld[s + 2]; epNew[s + 3] = epOld[s + 3];
       } else {
-        const r = returnMap(trial, E, nu, strength.c[i], strength.sinPhi[i], strength.cosPhi[i], cutoff, C, strength.cu[i]);
-        sig = r.stress;
+        returnMapInto(t0, t1, t2, t3, E, nu, strength.c[i], strength.sinPhi[i], strength.cosPhi[i], cutoff, strength.cu[i], sig, K ? C : null);
         // plastic strain increment = D⁻¹ (σ_trial − σ)
-        const d0 = trial[0] - sig[0], d1 = trial[1] - sig[1], d2 = trial[2] - sig[2], d3 = trial[3] - sig[3];
+        const d0 = t0 - sig[0], d1 = t1 - sig[1], d2 = t2 - sig[2], d3 = t3 - sig[3];
         const dm = (d0 + d1 + d3) * nu / E;
         epNew[s] = epOld[s] + ((1 + nu) * d0) / E - dm;
         epNew[s + 1] = epOld[s + 1] + ((1 + nu) * d1) / E - dm;
@@ -333,35 +387,69 @@ export function evaluate(
         fe[2 * k + 1] += (dy * sig[1] + dx * sig[2]) * w;
       }
       if (K) {
-        // ke += Bᵀ C B w with B rows (εx, εy, γxy); εz = 0
+        // ke += Bᵀ C B w with B rows (εx, εy, γxy); εz = 0. The in-plane
+        // part of C is symmetric (associated flow); it is symmetrised
+        // against round-off and only the lower triangle of ke is formed.
+        const c00 = C[0], c01 = (C[1] + C[4]) / 2, c02 = (C[2] + C[8]) / 2;
+        const c11 = C[5], c12 = (C[6] + C[9]) / 2, c22 = C[10];
         for (let a = 0; a < 6; a++) {
           const ax = gp[o + a], ay = gp[o + 6 + a];
           // rows of Bᵀ C for dof (a, x): ax*C[0,:] + ay*C[2,:]; (a, y): ay*C[1,:] + ax*C[2,:]
-          const rx0 = ax * C[0] + ay * C[8], rx1 = ax * C[1] + ay * C[9], rx2 = ax * C[2] + ay * C[10];
-          const ry0 = ay * C[4] + ax * C[8], ry1 = ay * C[5] + ax * C[9], ry2 = ay * C[6] + ax * C[10];
-          for (let b = 0; b < 6; b++) {
+          const rx0 = ax * c00 + ay * c02, rx1 = ax * c01 + ay * c12, rx2 = ax * c02 + ay * c22;
+          const ry0 = ay * c01 + ax * c02, ry1 = ay * c11 + ax * c12, ry2 = ay * c12 + ax * c22;
+          const rowX = 24 * a, rowY = 24 * a + 12;
+          for (let b = 0; b < a; b++) {
             const bx = gp[o + b], by = gp[o + 6 + b];
-            ke[24 * a + 2 * b] += w * (rx0 * bx + rx2 * by);
-            ke[24 * a + 2 * b + 1] += w * (rx1 * by + rx2 * bx);
-            ke[24 * a + 12 + 2 * b] += w * (ry0 * bx + ry2 * by);
-            ke[24 * a + 12 + 2 * b + 1] += w * (ry1 * by + ry2 * bx);
+            ke[rowX + 2 * b] += w * (rx0 * bx + rx2 * by);
+            ke[rowX + 2 * b + 1] += w * (rx1 * by + rx2 * bx);
+            ke[rowY + 2 * b] += w * (ry0 * bx + ry2 * by);
+            ke[rowY + 2 * b + 1] += w * (ry1 * by + ry2 * bx);
           }
+          ke[rowX + 2 * a] += w * (rx0 * ax + rx2 * ay);
+          ke[rowY + 2 * a] += w * (ry0 * ax + ry2 * ay);
+          ke[rowY + 2 * a + 1] += w * (ry1 * ay + ry2 * ax);
         }
       }
     }
     for (let k = 0; k < 12; k++) { const q = eqs[12 * e + k]; if (q >= 0) fint[q] += fe[k]; }
-    if (K) {
+    if (kv && scatter) {
+      let t = 78 * e;
       for (let a = 0; a < 12; a++) {
-        const ia = eqs[12 * e + a];
-        if (ia < 0) continue;
-        for (let b = 0; b <= a; b++) {
-          const ib = eqs[12 * e + b];
-          // symmetric tangent: average the two triangles against round-off
-          if (ib >= 0) K.add(ia, ib, a === b ? ke[12 * a + b] : 0.5 * (ke[12 * a + b] + ke[12 * b + a]));
+        for (let b = 0; b <= a; b++, t++) {
+          const at = scatter[t];
+          if (at >= 0) kv[at] += ke[12 * a + b];
         }
       }
     }
   }
+}
+
+// Work arrays of `evaluate` (one evaluation at a time per thread).
+const EV_UE = new Float64Array(12), EV_C = new Float64Array(16), EV_KE = new Float64Array(144);
+const EV_FE = new Float64Array(12), EV_SIG = new Float64Array(4);
+
+/**
+ * Position in the matrix values of each element's lower-triangle entries
+ * (78 per element, row a ≥ column b of the 12 dofs; −1 for a fixed dof),
+ * so that assembly does not search the pattern. Built once per model.
+ */
+const scatterCache = new WeakMap<FeModel, Int32Array>();
+function scatterIndex(model: FeModel, eqs: Int32Array, K: SparseCholesky): Int32Array {
+  let m = scatterCache.get(model);
+  if (m) return m;
+  m = new Int32Array(78 * model.elementCount);
+  let t = 0;
+  for (let e = 0; e < model.elementCount; e++) {
+    for (let a = 0; a < 12; a++) {
+      const ia = eqs[12 * e + a];
+      for (let b = 0; b <= a; b++, t++) {
+        const ib = eqs[12 * e + b];
+        m[t] = ia >= 0 && ib >= 0 ? K.indexOf(ia, ib) : -1;
+      }
+    }
+  }
+  scatterCache.set(model, m);
+  return m;
 }
 
 /**
