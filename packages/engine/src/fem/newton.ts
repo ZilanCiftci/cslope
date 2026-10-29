@@ -24,8 +24,7 @@
  * dilation angle ψ < φ the plastic flow follows the potential's normal G
  * and the tangent D − D G (Aᵀ D G)⁻¹ Aᵀ D is unsymmetric (de Souza Neto et
  * al. 2008, § 8.3), solved by LU on the same pattern; beyond the apex,
- * which the flow of ψ < φ cannot reach, the stress returns to the apex and
- * its tangent is zero.
+ * which the flow of ψ < φ cannot reach, the stress returns to the apex.
  *
  * Globalisation: backtracking line search with the sufficient decrease
  * (Armijo) condition on ½‖r‖², halving the step (Dennis & Schnabel,
@@ -38,7 +37,14 @@
  * residual of 10⁻⁶ of the load, at most 200 iterations, and failure when
  * no step lowers the residual or it has not fallen by 10 % over 30
  * iterations (beyond the limit load it stagnates). A trial that Newton
- * does not converge fails (srm.ts).
+ * does not converge fails (srm.ts). At a return to the apex of the
+ * pyramid (all three principal stresses on the yield surface) the
+ * tangent is 10⁻³ of the elastic one instead of zero (APEX_STIFFNESS): the
+ * stress there is exact, but a cohesionless soil at the ground puts many
+ * points at the apex, whose zero stiffness left Newton's direction no
+ * descent direction of the residual, so that trials failed far below the
+ * limit load (V049 with Davis B: 1.162 against 1.27 by the viscoplastic
+ * iteration and Newton with this tangent).
  */
 
 import { GP_STRIDE } from "./elements";
@@ -103,8 +109,10 @@ const RET = new Float64Array(3);
 const DEP = new Float64Array(9), MINV = new Float64Array(9), MC = new Float64Array(9), EC = new Float64Array(3);
 const CP = new Float64Array(16), TT = new Float64Array(16), CT = new Float64Array(16);
 let activeCount = 0;
-/** activeCount of a return to the apex: the stress is fixed there and the principal tangent is zero. */
+/** activeCount of a return to the apex of ψ < φ: the stress is fixed there (tangent: APEX_STIFFNESS). */
 const APEX = -1;
+/** Tangent at a return to the apex, as a fraction of the elastic one (see the header). */
+const APEX_STIFFNESS = 1e-3;
 
 function plane(k: number, v0: number, v1: number, v2: number): number {
   return PA[3 * k] * v0 + PA[3 * k + 1] * v1 + PA[3 * k + 2] * v2 - PB[k];
@@ -255,6 +263,9 @@ export function returnMapInto(
   for (let p = 0; p < 3; p++) for (let q = 0; q < 3; q++) DEP[3 * p + q] = p === q ? d11 : lam;
   const n = activeCount;
   if (n === APEX) DEP.fill(0);
+  // the apex: the Mohr–Coulomb plane and both ordering planes, or the apex
+  // return of ψ < φ
+  const apex = n === APEX || (n === 3 && ACT[0] === 0 && ACT[1] === 2 && ACT[2] === 3);
   for (let j = 0; j < n; j++) {
     const a = 3 * ACT[j];
     for (let i = 0; i < 3; i++) {
@@ -278,12 +289,14 @@ export function returnMapInto(
     for (let i = 0; i < n; i++) for (let j = 0; j < n; j++) s += DA[3 * i + p] * MINV[i * n + j] * DY[3 * j + q];
     DEP[3 * p + q] -= s;
   }
+  if (apex) for (let p = 0; p < 3; p++) for (let q = 0; q < 3; q++) DEP[3 * p + q] = APEX_STIFFNESS * (p === q ? d11 : lam);
   // back to (A, B, z) order: Paa = Dep in the rows/columns of A, B, z
   const a3 = 3 * posA, b3 = 3 * posB, z3 = 3 * posZ;
   const dTrial = sA - sB;
   // For equal in-plane principal strains the quotient's limit is the
   // derivative (Dep_AA − Dep_AB)/2 (de Souza Neto et al. 2008, appendix A).
-  const G = Math.abs(dTrial) > 1e-12 * (Math.abs(sA) + Math.abs(sB) + 1) ? (mu * (rA - rB)) / dTrial : (DEP[a3 + posA] - DEP[a3 + posB]) / 2;
+  let G = Math.abs(dTrial) > 1e-12 * (Math.abs(sA) + Math.abs(sB) + 1) ? (mu * (rA - rB)) / dTrial : (DEP[a3 + posA] - DEP[a3 + posB]) / 2;
+  if (apex) G = Math.max(G, APEX_STIFFNESS * mu);
   // principal-frame tangent in Voigt (A, B, AB, z)
   CP[0] = DEP[a3 + posA]; CP[1] = DEP[a3 + posB]; CP[2] = 0; CP[3] = DEP[a3 + posZ];
   CP[4] = DEP[b3 + posA]; CP[5] = DEP[b3 + posB]; CP[6] = 0; CP[7] = DEP[b3 + posZ];

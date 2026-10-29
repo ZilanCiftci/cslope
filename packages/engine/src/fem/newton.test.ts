@@ -12,6 +12,14 @@ function principal(s: ArrayLike<number>): number[] {
   return [pm + r, pm - r, s[3]].sort((a, b) => b - a);
 }
 
+/** A return to the apex of the pyramid: all three principal stresses equal. */
+const atApex = (p: number[], c: number) => p[0] - p[2] < 1e-9 * c;
+/** At the apex the tangent is 10⁻³ of the elastic one (newton.ts, APEX_STIFFNESS). */
+function expectApexTangent(C: Float64Array): void {
+  const el = [lam + 2 * mu, lam, 0, lam, lam, lam + 2 * mu, 0, lam, 0, 0, mu, 0, lam, lam, 0, lam + 2 * mu];
+  for (let k = 0; k < 16; k++) expect(Math.abs(C[k] - 1e-3 * el[k])).toBeLessThan(1e-9 * E);
+}
+
 describe("returnMap", () => {
   it("returns to the yield surface with a symmetric tangent that matches finite differences", () => {
     let seed = 7;
@@ -27,6 +35,7 @@ describe("returnMap", () => {
       if (cut) expect(p[0]).toBeLessThan(1e-9 * c);
       if (!r.plastic) continue;
       for (let i = 0; i < 4; i++) for (let j = 0; j < 4; j++) expect(Math.abs(C[4 * i + j] - C[4 * j + i])).toBeLessThan(1e-9 * E);
+      if (!cut && atApex(p, c)) { expectApexTangent(C); continue; }
       for (let j = 0; j < 3; j++) {
         const h = 1e-9, a = eps.slice(), b = eps.slice();
         a[j] += h; b[j] -= h;
@@ -51,6 +60,7 @@ describe("returnMap", () => {
       expect((p[0] - p[2]) / 2 + ((p[0] + p[2]) / 2) * Math.sin(phi) - c * Math.cos(phi)).toBeLessThan(1e-9 * c);
       if (Math.abs((p[0] - p[2]) / 2 - cu) < 1e-6) capped++;
       if (!r.plastic) continue;
+      if (atApex(p, c)) { expectApexTangent(C); continue; }
       for (let j = 0; j < 3; j++) {
         const h = 1e-9, a = eps.slice(), b = eps.slice();
         a[j] += h; b[j] -= h;
@@ -81,7 +91,7 @@ describe("returnMap", () => {
       expect((p[0] - p[2]) / 2 + ((p[0] + p[2]) / 2) * Math.sin(phi) - c * Math.cos(phi)).toBeLessThan(1e-9 * c);
       if (!r.plastic) continue;
       if (Math.abs(C[1] - C[4]) > 1e-3 * E) unsymmetric++;
-      if (Math.abs(p[0] - p[2]) < 1e-9 * c) apex++;
+      if (Math.abs(p[0] - p[2]) < 1e-9 * c) { apex++; if (!cut) expectApexTangent(C); continue; }
       for (let j = 0; j < 3; j++) {
         const h = 1e-9, a = eps.slice(), b = eps.slice();
         a[j] += h; b[j] -= h;
