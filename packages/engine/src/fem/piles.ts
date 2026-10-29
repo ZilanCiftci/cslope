@@ -14,12 +14,15 @@
  *
  * Limits per pile and metre of pile, reduced with the soil's strength
  * (c/F, tan φ/F):
- * - lateral: p_u = 9 c d + 3 Kp σ′v d, the ultimate lateral resistance of
- *   Broms (1964, J. Soil Mech. Found. Div. 90(SM2), 27–63, and (SM3),
- *   123–156) for cohesive and cohesionless soil, summed for c–φ soil; a
+ * - lateral: p_u = 9 c d + 3 (Kp − Ka) σ′v d, the ultimate lateral
+ *   resistance of Broms (1964, J. Soil Mech. Found. Div. 90(SM2), 27–63,
+ *   and (SM3), 123–156) for cohesive and cohesionless soil, summed for c–φ
+ *   soil, with the net passive pressure Kp − Ka (implementation choice:
+ *   Broms' 3 Kp would leave 3 σ′v d of support at φ = 0 and as F grows); a
  *   continuous wall (`wall`, or spacing ≤ width) lets no soil through and
  *   its lateral springs do not yield;
- * - axial: skin friction t = π d (c + K0 σ′v tan φ), K0 = 1 − sin φ.
+ * - axial: skin friction t = π d (c + K0 σ′v tan φ), K0 = 1 − sin φ (two
+ *   faces per metre of a wall).
  *
  * Implementation choices (not from the literature): the springs' stiffness
  * is 10 times the soil's Young's modulus per metre of tributary length
@@ -179,8 +182,10 @@ export function buildPiles(input: PileInput): {
           springs.kind.push(noYield ? 0 : kind);
           springs.fixedCap.push(NO_YIELD);
           // per metre of slope: per pile × trib / spacing
-          springs.capC.push(lateral ? (9 * cc * d * trib) / spacing : (Math.PI * d * cc * trib) / spacing);
-          springs.capSv.push(lateral ? (3 * sv * d * trib) / spacing : (Math.PI * d * (1 - Math.sin(phi)) * sv * trib) / spacing);
+          // axial: the pile's circumference, or both faces of a wall per metre
+          const perimeter = wall ? 2 * spacing : Math.PI * d;
+          springs.capC.push(lateral ? (9 * cc * d * trib) / spacing : (perimeter * cc * trib) / spacing);
+          springs.capSv.push(lateral ? (3 * sv * d * trib) / spacing : (perimeter * (1 - Math.sin(phi)) * sv * trib) / spacing);
           springs.capTan.push(Math.tan(phi));
         }
       }
@@ -204,8 +209,10 @@ export function buildPiles(input: PileInput): {
 export function springCapacity(kind: number, capC: number, capSv: number, tanPhi: number, F: number): number {
   const tanF = tanPhi / F;
   if (kind === 1) {
+    // the net passive pressure Kp − Ka: zero without friction, so that the
+    // support vanishes with the soil's strength
     const sinF = Math.sin(Math.atan(tanF)), kp = (1 + sinF) / (1 - sinF);
-    return capC / F + capSv * kp;
+    return capC / F + capSv * (kp - 1 / kp);
   }
   return capC / F + capSv * tanF;
 }

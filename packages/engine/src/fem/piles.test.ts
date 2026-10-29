@@ -47,12 +47,15 @@ describe("pile beams", () => {
     }
   });
 
-  it("limit the soil's pressure as Broms, reduced with the strength", () => {
+  it("limit the soil's pressure as Broms (net passive pressure), reduced with the strength", () => {
     const d = 0.6, c = 20, sv = 50, phi = (30 * Math.PI) / 180;
     const kp = (1 + Math.sin(phi)) / (1 - Math.sin(phi));
-    expect(springCapacity(1, 9 * c * d, 3 * sv * d, Math.tan(phi), 1)).toBeCloseTo(9 * c * d + 3 * kp * sv * d, 9);
+    expect(springCapacity(1, 9 * c * d, 3 * sv * d, Math.tan(phi), 1)).toBeCloseTo(9 * c * d + 3 * (kp - 1 / kp) * sv * d, 9);
     const phiF = Math.atan(Math.tan(phi) / 2), kpF = (1 + Math.sin(phiF)) / (1 - Math.sin(phiF));
-    expect(springCapacity(1, 9 * c * d, 3 * sv * d, Math.tan(phi), 2)).toBeCloseTo((9 * c * d) / 2 + 3 * kpF * sv * d, 9);
+    expect(springCapacity(1, 9 * c * d, 3 * sv * d, Math.tan(phi), 2)).toBeCloseTo((9 * c * d) / 2 + 3 * (kpF - 1 / kpF) * sv * d, 9);
+    // undrained (φ = 0): Broms' 9 c d alone; the support vanishes with the strength
+    expect(springCapacity(1, 9 * c * d, 3 * sv * d, 0, 1)).toBeCloseTo(9 * c * d, 9);
+    expect(springCapacity(1, 9 * c * d, 3 * sv * d, Math.tan(phi), 1e6)).toBeLessThan(1e-3);
   });
 });
 
@@ -83,5 +86,22 @@ describe("pile rows in the strength reduction", () => {
     const m = buildFeModel(buildSlope(toCanonicalSlopeDefinition(def([{ ...row(), diameter: undefined, force: 100 }]))), { elementSize: 2 });
     expect(m.piles.count).toBe(0);
     expect(m.warnings.some((w) => /no diameter/.test(w))).toBe(true);
+  }, 300000);
+
+  it("keep the mesh of the construction stages that of the final model", async () => {
+    const { prepareFeModel } = await import("./initial-stress");
+    const slope = buildSlope(toCanonicalSlopeDefinition({
+      ...def([row()]),
+      materials: [
+        { name: "found", model: { kind: "mohr-coulomb", unitWeight: 19, cohesion: 8, frictionAngle: 25 } },
+        { name: "fill", model: { kind: "mohr-coulomb", unitWeight: 19, cohesion: 8, frictionAngle: 25 } },
+      ],
+      materialBoundaries: [{ coordinates: [[0, 8], [50, 8]], materialName: "found" }],
+      regionAssignments: [{ point: [40, 3], materialName: "found" }, { point: [5, 12], materialName: "fill" }],
+    } as unknown as SlopeDefinition));
+    const { model } = prepareFeModel(slope, { elementSize: 1.5, materialStages: { fill: 1 } }, { flowRule: "associated" });
+    expect(model.stress0!.length).toBe(12 * model.elementCount);
+    expect(model.f.every(Number.isFinite)).toBe(true);
+    expect(model.piles.count).toBeGreaterThan(0);
   }, 300000);
 });

@@ -477,7 +477,9 @@ export function buildFeModel(slope: Slope, options: FeModelOptions = {}): FeMode
 
   const segments: [number, number][][] = polys.map((p) => [...p, p[0]]);
   // Reinforcement lines are mesh constraints, so that bars lie on element edges.
-  const reinf = (options.withoutReinforcement ? [] : slope.reinforcements).filter((r) =>
+  // (the construction stages leave out the bars and piles, not their lines:
+  // every stage must have the final model's mesh)
+  const reinf = slope.reinforcements.filter((r) =>
     pointInPolygon((r.x1 + r.x2) / 2, (r.y1 + r.y2) / 2, bnd) && Math.hypot(r.x2 - r.x1, r.y2 - r.y1) > 0,
   );
   for (const r of reinf) {
@@ -489,7 +491,7 @@ export function buildFeModel(slope: Slope, options: FeModelOptions = {}): FeMode
     } else segments.push([[r.x1, r.y1], [r.x2, r.y2]]);
   }
   // Piles with a diameter are constraint lines too (piles.ts), clipped to the domain.
-  const pileLines = options.withoutReinforcement ? [] : slope.piles.filter((p) => p.diameter !== undefined && p.diameter > 0);
+  const pileLines = slope.piles.filter((p) => p.diameter !== undefined && p.diameter > 0);
   for (const p of pileLines) {
     const seg = clipToPolygon(bnd, p.x1, p.y1, p.x2, p.y2);
     if (seg) segments.push(seg);
@@ -702,7 +704,7 @@ export function buildFeModel(slope: Slope, options: FeModelOptions = {}): FeMode
   // Piles: beam nodes (with a rotation) at the soil nodes along each pile, and springs to the soil (piles.ts).
   let piles: FePiles = EMPTY_PILES;
   let springs: ReturnType<typeof buildPiles>["springs"] | null = null;
-  const pileWarnings: string[] = [];
+  const pileWarnings: string[] = [], barWarnings: string[] = [];
   if (!options.withoutReinforcement && slope.piles.length) {
     const surface = slope.surfaceLineXY;
     const built = buildPiles({
@@ -719,7 +721,7 @@ export function buildFeModel(slope: Slope, options: FeModelOptions = {}): FeMode
 
   // Reinforcement bars along the element edges on each line.
   const bars = withSprings(
-    buildBars(slope, reinf, el, ne, x, y, span, options.reinforcementStiffness ?? DEFAULT_REINFORCEMENT_STIFFNESS, options.reduceReinforcement ?? true),
+    buildBars(slope, options.withoutReinforcement ? [] : reinf, el, ne, x, y, span, options.reinforcementStiffness ?? DEFAULT_REINFORCEMENT_STIFFNESS, options.reduceReinforcement ?? true, barWarnings),
     springs,
   );
 
@@ -867,7 +869,7 @@ export function buildFeModel(slope: Slope, options: FeModelOptions = {}): FeMode
     surfaceEdges: Int32Array.from(surfEdges),
     bars,
     piles,
-    warnings: pileWarnings,
+    warnings: [...barWarnings, ...pileWarnings],
     seepage,
     triangulation: tm,
     sizeField: options.sizeField ?? Object.assign(size, { min: sizeMin }),
@@ -956,6 +958,7 @@ function buildBars(
   span: number,
   ea: number,
   reduce: boolean,
+  warnings: string[],
 ): FeBars {
   const nodes: number[] = [], source: number[] = [], gpd: number[] = [], cap: number[] = [], passive: number[] = [], stiff: number[] = [], ep0: number[] = [];
   const all = slope.reinforcements;
@@ -974,9 +977,26 @@ function buildBars(
     };
     const seen = new Set<string>();
     const spacing = r.spacing && r.spacing > 0 ? r.spacing : 1;
-    // A grouted anchor's free length is one bar from the head to the start
+    // A grouted anchor's free length is one bar from the head (or, for a
+    // head outside the soil, the first point of the line in it) to the start
     // of the bonded length, joined to the soil only at its ends.
-    const free = freeLength(r);
+    let free = freeLength(r), head = -1, start = -1;
+    if (free > 0) {
+      let first = Infinity;
+      for (let e = 0; e < ne; e++) {
+        for (let j = 0; j < 3; j++) {
+          const n = el[6 * e + j];
+          if (!onLine(n)) continue;
+          const t = station(x[n], y[n]);
+          if (t < first) { first = t; head = n; }
+          if (Math.abs(t - free) <= tol) start = n;
+        }
+      }
+      if (start < 0 || head < 0 || !(first < free - tol)) {
+        warnings.push(`The free length of anchor ${k + 1} could not be placed in the mesh; the anchor is bonded over its length in the finite element analysis.`);
+        free = 0;
+      }
+    }
     for (let e = 0; e < ne; e++) {
       for (let j = 0; j < 3; j++) {
         let a = el[6 * e + j], b = el[6 * e + ((j + 1) % 3)];
@@ -1005,28 +1025,17 @@ function buildBars(
       }
     }
     if (free > 0) {
-      let head = -1, start = -1;
-      for (let e = 0; e < ne; e++) {
-        for (let j = 0; j < 3; j++) {
-          const n = el[6 * e + j];
-          if (!onLine(n)) continue;
-          const t = station(x[n], y[n]);
-          if (Math.abs(t) <= tol) head = n;
-          if (Math.abs(t - free) <= tol) start = n;
-        }
-      }
-      if (head >= 0 && start >= 0) {
-        // two-node bar (head, head, start): the middle node carries no strain
-        nodes.push(head, head, start);
-        source.push(k);
-        stiff.push(ea);
-        passive.push(r.application === "passive" && reduce ? 1 : 0);
-        const P = Math.max(0, r.prestress ?? 0) / spacing;
-        for (let g = 0; g < 2; g++) {
-          gpd.push(-c / free, -s / free, 0, 0, c / free, s / free, free / 2);
-          cap.push((env ? envelopeAt(env, free / 2) : r.tensileCapacity) / spacing);
-          ep0.push(-P / ea);
-        }
+      const hs = station(x[head], y[head]), lf = free - hs; // the free bar's length in the soil
+      // two-node bar (head, head, start): the middle node carries no strain
+      nodes.push(head, head, start);
+      source.push(k);
+      stiff.push(ea);
+      passive.push(r.application === "passive" && reduce ? 1 : 0);
+      const P = Math.max(0, r.prestress ?? 0) / spacing;
+      for (let g = 0; g < 2; g++) {
+        gpd.push(-c / lf, -s / lf, 0, 0, c / lf, s / lf, lf / 2);
+        cap.push((env ? envelopeAt(env, (hs + free) / 2) : r.tensileCapacity) / spacing);
+        ep0.push(-P / ea);
       }
     }
   }

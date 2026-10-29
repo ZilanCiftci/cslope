@@ -963,6 +963,9 @@ export class Slope {
       if (bad(p.force) || bad(p.shearCapacity) || bad(p.momentCapacity) || bad(p.spacing, true) || bad(p.diameter, true)) {
         throw new Error("Pile force and capacities must be ≥ 0, spacing and diameter > 0.");
       }
+      if (bad(p.bendingStiffness, true) || bad(p.axialStiffness, true)) {
+        throw new Error("Pile bending and axial stiffness must be > 0.");
+      }
       if (p.angle !== undefined && !(Number.isFinite(p.angle) && Math.abs(p.angle) < 90)) {
         throw new Error("Pile force angle must be between −90° and 90°.");
       }

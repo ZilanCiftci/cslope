@@ -43,6 +43,18 @@ describe("grouted anchors", () => {
     expect(anchor.x[z]).toBeCloseTo(5, 6);
   });
 
+  it("start the free length where the line enters the soil when the head is outside it", () => {
+    // the head 1.5 m above the crest
+    const d = def({ kind: "bond", strength: 100, bondedLength: 4 }, 80) as unknown as { reinforcements: { x1: number; y1: number }[] };
+    d.reinforcements[0].x1 = 8; d.reinforcements[0].y1 = 11.5;
+    (d.reinforcements[0] as { x2?: number; y2?: number }).x2 = 1; (d.reinforcements[0] as { x2?: number; y2?: number }).y2 = 5.5;
+    const m = buildFeModel(buildSlope(toCanonicalSlopeDefinition(d as unknown as SlopeDefinition)), { elementSize: 1 });
+    const free = Array.from({ length: m.bars.count }, (_, b) => b).filter((b) => m.bars.nodes[3 * b] === m.bars.nodes[3 * b + 1]);
+    expect(free).toHaveLength(1);
+    expect(m.bars.ep0[2 * free[0]]).toBeLessThan(0);
+    expect(m.warnings).toEqual([]);
+  });
+
   it("carry their lock-off load in the free length, with both solvers", () => {
     const freeBar = (m: FeModel) => Array.from({ length: m.bars.count }, (_, b) => b).find((b) => m.bars.nodes[3 * b] === m.bars.nodes[3 * b + 1])!;
     const freeForce = (prestress: number, solver: "newton" | "viscoplastic") => {

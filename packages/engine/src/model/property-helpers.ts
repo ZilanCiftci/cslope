@@ -374,6 +374,9 @@ export function transformDefinition(
       x2: X(p.x2),
       y2: Y(p.y2),
       spacing: (p.spacing ?? 1) * k,
+      // per pile: EI (kNm²) ×s·k⁴ and EA (kN) ×s·k², as forces per pile ×s·k²
+      ...(p.bendingStiffness !== undefined ? { bendingStiffness: p.bendingStiffness * s * k ** 4 } : {}),
+      ...(p.axialStiffness !== undefined ? { axialStiffness: p.axialStiffness * s * k * k } : {}),
       ...(p.diameter !== undefined ? { diameter: p.diameter * k } : {}),
       ...(p.force !== undefined ? { force: p.force * s * k * k } : {}),
       ...(p.shearCapacity !== undefined ? { shearCapacity: p.shearCapacity * s * k * k } : {}),
