@@ -72,6 +72,13 @@ export interface Reinforcement {
   direction?: ReinforcementDirection;
   /** Default "active". */
   application?: ReinforcementApplication;
+  /**
+   * Lock-off (prestress) load of a grouted anchor's free length, kN per
+   * element: the finite element analysis prestresses the free length with
+   * it (the limit equilibrium takes an active element's force as its
+   * capacity). Default 0.
+   */
+  prestress?: number;
 }
 
 /**

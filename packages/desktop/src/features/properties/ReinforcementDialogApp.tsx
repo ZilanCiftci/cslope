@@ -528,6 +528,16 @@ export function ReinforcementDialogApp() {
                       accept={(v) => v >= 0}
                       onValue={(v) => update(selected.id, { bondedLength: v })}
                     />
+                    {selected.bondedLength > 0 && (
+                      <NumberField
+                        label="Lock-off load (kN, FE)"
+                        title="Prestress of the free length in the finite element analysis, per element. The free length is joined to the soil only at its ends there. Limit equilibrium takes an active element's force as its capacity."
+                        value={selected.prestress ?? 0}
+                        ariaLabel="Lock-off load"
+                        accept={(v) => v >= 0}
+                        onValue={(v) => update(selected.id, { prestress: v > 0 ? v : undefined })}
+                      />
+                    )}
                   </>
                 )}
                 {selected.pullout === "interface" && (

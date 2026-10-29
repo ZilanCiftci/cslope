@@ -362,6 +362,7 @@ export function transformDefinition(
       spacing: (q.spacing ?? 1) * k,
       ...(q.end1Capacity !== undefined ? { end1Capacity: q.end1Capacity * s * k * k } : {}),
       ...(q.end2Capacity !== undefined ? { end2Capacity: q.end2Capacity * s * k * k } : {}),
+      ...(q.prestress !== undefined ? { prestress: q.prestress * s * k * k } : {}),
       ...(q.pullout ? { pullout: scalePullout(q.pullout) } : {}),
     }));
   }

@@ -138,6 +138,8 @@ export interface ReinforcementRow {
   bondStrength: number;
   /** Bonded length at end 2 (m); 0 = the whole element (nails). */
   bondedLength: number;
+  /** Lock-off load of the free length (kN per element), for the finite element analysis; not set: 0. */
+  prestress?: number;
   /** Interface adhesion (kPa) and friction angle (°), both faces. */
   adhesion: number;
   interfaceFriction: number;

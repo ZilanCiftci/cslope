@@ -50,6 +50,7 @@ function reinforcementRow(r: Reinforcement, id: string): ReinforcementRow {
     pullout: p?.kind ?? "none",
     bondStrength: p?.kind === "bond" ? p.strength : 0,
     bondedLength: p?.kind === "bond" ? (p.bondedLength ?? 0) : 0,
+    ...(r.prestress ? { prestress: r.prestress } : {}),
     adhesion: p?.kind === "interface" ? p.adhesion : 0,
     interfaceFriction: p?.kind === "interface" ? p.frictionAngle : 0,
     ...(p?.kind === "development" ? { developmentLength1: p.length1, developmentLength2: p.length2 } : {}),

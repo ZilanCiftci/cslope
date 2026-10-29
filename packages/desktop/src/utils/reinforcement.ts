@@ -113,6 +113,7 @@ export function toEngineReinforcement(row: ReinforcementRow): Reinforcement {
     y2: row.y2,
     tensileCapacity: row.tensileCapacity,
     spacing: row.spacing,
+    ...(row.pullout === "bond" && row.bondedLength > 0 && row.prestress ? { prestress: row.prestress } : {}),
     ...(pullout ? { pullout, end1Capacity: row.end1Capacity, end2Capacity: row.end2Capacity } : {}),
     direction: row.direction,
     application: row.application,
@@ -152,6 +153,7 @@ export function sanitizeReinforcement(raw: unknown, id: string): ReinforcementRo
       : {}),
     bondStrength: num(r.bondStrength, preset.bondStrength),
     bondedLength: num(r.bondedLength, preset.bondedLength),
+    ...(finite(r.prestress) && (r.prestress as number) > 0 ? { prestress: r.prestress as number } : {}),
     adhesion: num(r.adhesion, preset.adhesion),
     interfaceFriction: finite(r.interfaceFriction) && (r.interfaceFriction as number) >= 0 && (r.interfaceFriction as number) < 90
       ? (r.interfaceFriction as number)

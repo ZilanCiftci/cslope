@@ -67,7 +67,7 @@
  */
 
 import { GP_STRIDE } from "./elements";
-import type { FeModel } from "./model";
+import { BAR_GP_STRIDE, type FeModel } from "./model";
 import { evaluate, newtonAtF } from "./newton";
 import { bfgsAtF } from "./bfgs";
 import { barInternal, relaxBars } from "./bars";
@@ -276,12 +276,29 @@ function elementEquations(model: FeModel): Int32Array {
 
 export function emptyState(model: FeModel): SrmState {
   const ngp = 3 * model.elementCount;
+  const { bars } = model;
+  const bodyLoads = new Float64Array(model.eqCount);
+  // A prestressed anchor starts with the plastic strain −P/EA in its free
+  // length (bars.ts), whose force the viscoplastic iteration carries as the
+  // body load ∫ Bᵀ EA εp.
+  for (let b = 0; b < bars.count; b++) {
+    for (let g = 0; g < 2; g++) {
+      const ep = bars.ep0[2 * b + g];
+      if (ep === 0) continue;
+      const o = (2 * b + g) * BAR_GP_STRIDE, w = bars.gp[o + 6] * bars.stiffness[b] * ep;
+      for (let k = 0; k < 3; k++) {
+        const n = bars.nodes[3 * b + k], ix = model.eq[2 * n], iy = model.eq[2 * n + 1];
+        if (ix >= 0) bodyLoads[ix] += bars.gp[o + 2 * k] * w;
+        if (iy >= 0) bodyLoads[iy] += bars.gp[o + 2 * k + 1] * w;
+      }
+    }
+  }
   return {
     u: new Float64Array(model.eqCount),
     evp: new Float64Array(4 * ngp),
-    bodyLoads: new Float64Array(model.eqCount),
+    bodyLoads,
     stress: new Float64Array(4 * ngp),
-    barEp: new Float64Array(2 * model.bars.count),
+    barEp: Float64Array.from(bars.ep0),
   };
 }
 

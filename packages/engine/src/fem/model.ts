@@ -232,6 +232,20 @@ export interface FeBars {
   passive: Uint8Array;
   /** EA per bar (kN per metre of slope). */
   stiffness: Float64Array;
+  /** Initial plastic strain per bar Gauss point: −P/EA in a prestressed free length (force P), 0 elsewhere. */
+  ep0: Float64Array;
+}
+
+/**
+ * Free (unbonded) length of a grouted anchor: its length less the bonded
+ * length at end 2, when the pullout is a bond over a bonded length shorter
+ * than the element; 0 otherwise.
+ */
+export function freeLength(r: Slope["reinforcements"][number]): number {
+  const L = Math.hypot(r.x2 - r.x1, r.y2 - r.y1);
+  const p = r.pullout;
+  if (p?.kind !== "bond" || p.bondedLength === undefined || !(p.bondedLength > 0) || !(p.bondedLength < L)) return 0;
+  return L - p.bondedLength;
 }
 
 /** Per bar Gauss point record: B (6 numbers), weight × length. */
@@ -404,7 +418,14 @@ export function buildFeModel(slope: Slope, options: FeModelOptions = {}): FeMode
   const reinf = (options.withoutReinforcement ? [] : slope.reinforcements).filter((r) =>
     pointInPolygon((r.x1 + r.x2) / 2, (r.y1 + r.y2) / 2, bnd) && Math.hypot(r.x2 - r.x1, r.y2 - r.y1) > 0,
   );
-  for (const r of reinf) segments.push([[r.x1, r.y1], [r.x2, r.y2]]);
+  for (const r of reinf) {
+    // a grouted anchor gets a vertex where its bonded length begins (the end of its free bar)
+    const f = freeLength(r);
+    if (f > 0) {
+      const L = Math.hypot(r.x2 - r.x1, r.y2 - r.y1), xb = r.x1 + ((r.x2 - r.x1) * f) / L, yb = r.y1 + ((r.y2 - r.y1) * f) / L;
+      segments.push([[r.x1, r.y1], [xb, yb]], [[xb, yb], [r.x2, r.y2]]);
+    } else segments.push([[r.x1, r.y1], [r.x2, r.y2]]);
+  }
   const tm = meshDomain({
     boundary: bnd,
     segments,
@@ -619,7 +640,17 @@ export function buildFeModel(slope: Slope, options: FeModelOptions = {}): FeMode
     for (let a = 0; a < 6; a++) { allDofs[12 * e + 2 * a] = eq[2 * el[6 * e + a]]; allDofs[12 * e + 2 * a + 1] = eq[2 * el[6 * e + a] + 1]; }
   }
   const elDofs = (e: number) => allDofs.subarray(12 * e, 12 * e + 12);
-  const K = SparseCholesky.fromGroups(neq, allDofs, 12);
+  // The bars' couplings: within an element's except for an anchor's free
+  // bar, whose ends share no element (groups padded to 12 with −1).
+  const groups = new Int32Array(allDofs.length + 12 * bars.count).fill(-1);
+  groups.set(allDofs);
+  for (let b = 0; b < bars.count; b++) {
+    for (let k = 0; k < 3; k++) {
+      const n = bars.nodes[3 * b + k], o = allDofs.length + 12 * b + 2 * k;
+      groups[o] = eq[2 * n]; groups[o + 1] = eq[2 * n + 1];
+    }
+  }
+  const K = SparseCholesky.fromGroups(neq, groups, 12);
   const ke = new Float64Array(144);
   for (let e = 0; e < ne; e++) {
     stiffnessT6(gp, e, elE[e], elNu[e], ke);
@@ -820,7 +851,7 @@ function buildBars(
   ea: number,
   reduce: boolean,
 ): FeBars {
-  const nodes: number[] = [], source: number[] = [], gpd: number[] = [], cap: number[] = [], passive: number[] = [], stiff: number[] = [];
+  const nodes: number[] = [], source: number[] = [], gpd: number[] = [], cap: number[] = [], passive: number[] = [], stiff: number[] = [], ep0: number[] = [];
   const all = slope.reinforcements;
   const envelopes = all.length ? slope.reinforcementEnvelopes : [];
   const tol = 1e-6 * span;
@@ -837,6 +868,9 @@ function buildBars(
     };
     const seen = new Set<string>();
     const spacing = r.spacing && r.spacing > 0 ? r.spacing : 1;
+    // A grouted anchor's free length is one bar from the head to the start
+    // of the bonded length, joined to the soil only at its ends.
+    const free = freeLength(r);
     for (let e = 0; e < ne; e++) {
       for (let j = 0; j < 3; j++) {
         let a = el[6 * e + j], b = el[6 * e + ((j + 1) % 3)];
@@ -847,6 +881,7 @@ function buildBars(
         seen.add(key);
         let sa = station(x[a], y[a]), sb = station(x[b], y[b]);
         if (sb < sa) { [a, b] = [b, a]; [sa, sb] = [sb, sa]; }
+        if (free > 0 && sb <= free + tol) continue; // in the free length
         const len = sb - sa;
         nodes.push(a, m, b);
         source.push(k);
@@ -859,6 +894,32 @@ function buildBars(
           gpd.push(len / 2);
           const st = sa + ((q + 1) / 2) * len;
           cap.push((env ? envelopeAt(env, st) : r.tensileCapacity) / spacing);
+          ep0.push(0);
+        }
+      }
+    }
+    if (free > 0) {
+      let head = -1, start = -1;
+      for (let e = 0; e < ne; e++) {
+        for (let j = 0; j < 3; j++) {
+          const n = el[6 * e + j];
+          if (!onLine(n)) continue;
+          const t = station(x[n], y[n]);
+          if (Math.abs(t) <= tol) head = n;
+          if (Math.abs(t - free) <= tol) start = n;
+        }
+      }
+      if (head >= 0 && start >= 0) {
+        // two-node bar (head, head, start): the middle node carries no strain
+        nodes.push(head, head, start);
+        source.push(k);
+        stiff.push(ea);
+        passive.push(r.application === "passive" && reduce ? 1 : 0);
+        const P = Math.max(0, r.prestress ?? 0) / spacing;
+        for (let g = 0; g < 2; g++) {
+          gpd.push(-c / free, -s / free, 0, 0, c / free, s / free, free / 2);
+          cap.push((env ? envelopeAt(env, free / 2) : r.tensileCapacity) / spacing);
+          ep0.push(-P / ea);
         }
       }
     }
@@ -871,5 +932,6 @@ function buildBars(
     capacity: Float64Array.from(cap),
     passive: Uint8Array.from(passive),
     stiffness: Float64Array.from(stiff),
+    ep0: Float64Array.from(ep0),
   };
 }
