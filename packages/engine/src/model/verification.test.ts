@@ -42,8 +42,8 @@ describe("Verification data", () => {
     expect(files.sort()).toEqual(Array.from({ length: SHARDS }, (_, k) => `verification-problems-${k + 1}.test.ts`).sort());
   });
 
-  it("every problem has at least one check", () => {
-    expect(VERIFICATION_CASES.filter((c) => c.checks.length === 0).map((c) => c.id)).toEqual([]);
+  it("every problem has at least one check or a finite element reference", () => {
+    expect(VERIFICATION_CASES.filter((c) => c.checks.length === 0 && !c.fem?.references.length).map((c) => c.id)).toEqual([]);
   });
 
   it("problems have unique ids of cSlope's own form (V, number, variant letter)", () => {

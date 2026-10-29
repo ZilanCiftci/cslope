@@ -39,6 +39,7 @@ export const PROBLEMS: RawCase[] = [
       "commercial program A Janbu corrected 1.407 (circle); non-circular: Janbu simplified 1.253, corrected 1.346. Arai & Tagyo: Bishop 1.451; Janbu simplified 1.265, corrected 1.357 (non-circular).",
       "commercial program A's table (auto-refine search) gives Bishop 1.409, Spencer 1.319 and GLE 1.414: the Spencer value lies 6 % below Bishop on a homogeneous circle, so its searches for the rigorous methods are not reliable, and its GLE lies above its own Bishop. On its printed Bishop circle (24.499, 50.278, R 35.906) cSlope gives Bishop 1.4075, Spencer 1.4052 and Morgenstern-Price 1.4045; commercial program B's M-P 1.414 lies 0.2 % below its Bishop 1.417, as cSlope's does.",
     ],
+    fem: {"flowRule": "non-associated", "references": [{"value": 1.4, "source": "Commercial program I", "method": "finite-element strength reduction (verification manual, problem 10)", "kind": "numerical", "precision": 0.01}], "note": "The program's finite element manual gives no elastic parameters, dilation or mesh; it is run with ψ = 0 and cSlope's defaults (E = 100 MPa, ν = 0.3)."},
   },
   {
     id: "V002",
@@ -77,6 +78,7 @@ export const PROBLEMS: RawCase[] = [
     notes: [
       "Arai & Tagyo 1.138; commercial program B 1.190.",
     ],
+    fem: {"flowRule": "non-associated", "references": [{"value": 1.09, "source": "Commercial program I", "method": "finite-element strength reduction (verification manual, problem 12)", "kind": "numerical", "precision": 0.01}], "note": "The program's finite element manual gives no elastic parameters, dilation or mesh; it is run with ψ = 0 and cSlope's defaults (E = 100 MPa, ν = 0.3)."},
   },
   {
     id: "V004a",
@@ -379,6 +381,7 @@ export const PROBLEMS: RawCase[] = [
     notes: [
       "Borges & Cardoso 0.99; program D 0.981.",
     ],
+    fem: {"flowRule": "non-associated", "references": [{"value": 0.95, "source": "Commercial program I", "method": "finite-element strength reduction (verification manual, problem 24)", "kind": "numerical", "precision": 0.01}], "note": "The program's finite element manual gives no elastic parameters, dilation or mesh; it is run with ψ = 0 and cSlope's defaults (E = 100 MPa, ν = 0.3). The geosynthetic is the bar line of the problem; the manual lets it fail in tension at its capacity."},
   },
   {
     id: "V013a",
@@ -1392,6 +1395,7 @@ export const PROBLEMS: RawCase[] = [
     notes: [
       "Fredlund & Krahn (1977), Table 2 case 1 (slices 0.5 ft wide, tolerance 0.001): ordinary 1.928, Bishop 2.080, Spencer 2.073 (λ = 0.237), Janbu simplified 2.041, Janbu rigorous 2.008, Morgenstern-Price constant 2.076; Table 3: half-sine 2.076 (Saskatchewan) and 2.085 (Alberta). Their Janbu simplified is close to cSlope's Janbu with the f0 correction (2.021), not without it (1.876). cSlope's results do not change between 50 and 250 slices.",
     ],
+    fem: {"flowRule": "non-associated", "references": [{"value": 2.0, "source": "Commercial program I", "method": "finite-element strength reduction (verification manual, problem 17)", "kind": "numerical", "precision": 0.01}], "note": "The program's finite element manual gives no elastic parameters, dilation or mesh; it is run with ψ = 0 and cSlope's defaults (E = 100 MPa, ν = 0.3)."},
   },
   {
     id: "V045",
@@ -1409,6 +1413,7 @@ export const PROBLEMS: RawCase[] = [
     notes: [
       "Fredlund & Krahn (1977), Table 2 case 5: ordinary 1.693, Bishop 1.834, Spencer 1.830, Janbu simplified 1.827, Janbu rigorous 1.776, Morgenstern-Price constant 1.833; Table 3: half-sine 1.832 (Saskatchewan), 1.837 (Alberta). The piezometric line runs from (0, 40) ft to the toe (Fig. 8).",
     ],
+    fem: {"flowRule": "non-associated", "references": [{"value": 1.78, "source": "Commercial program I", "method": "finite-element strength reduction (verification manual, problem 17)", "kind": "numerical", "precision": 0.01}], "note": "The program's finite element manual gives no elastic parameters, dilation or mesh; it is run with ψ = 0 and cSlope's defaults (E = 100 MPa, ν = 0.3)."},
   },
   {
     id: "V046a",
@@ -1428,6 +1433,7 @@ export const PROBLEMS: RawCase[] = [
     notes: [
       "Fredlund & Krahn (1977), Table 2 case 2: ordinary 1.288, Bishop 1.377, Spencer 1.373, Janbu simplified 1.448, Janbu rigorous 1.432, Morgenstern-Price constant 1.378; Table 3: half-sine 1.370 (Saskatchewan), 1.386 (Alberta). The seam's level is not stated; Fig. 8 draws it near el. 20 with a y-scale that does not match its x-scale (the circle's lowest point, el. 10, is drawn at 13). The seam at 15–16 ft reproduces their factors (Bishop 1.380, half-sine 1.370); at 16–17 ft every method gives 2.8 % less.",
     ],
+    fem: {"flowRule": "non-associated", "references": [{"value": 1.34, "source": "Commercial program I", "method": "finite-element strength reduction (verification manual, problem 18)", "kind": "numerical", "precision": 0.01}], "note": "The program's finite element manual gives no elastic parameters, dilation or mesh; it is run with ψ = 0 and cSlope's defaults (E = 100 MPa, ν = 0.3)."},
   },
   {
     id: "V046b",
@@ -1445,6 +1451,7 @@ export const PROBLEMS: RawCase[] = [
     notes: [
       "Fredlund & Krahn (1977), Table 2 case 6: ordinary 1.171, Bishop 1.248, Spencer 1.245, Janbu simplified 1.333, Janbu rigorous 1.298, Morgenstern-Price constant 1.250; Table 3: half-sine 1.245 (Saskatchewan; the Alberta program did not converge). Their cases 3 and 4 use a pore-pressure ratio ru = 0.25, which cSlope does not have.",
     ],
+    fem: {"flowRule": "non-associated", "references": [{"value": 1.13, "source": "Commercial program I", "method": "finite-element strength reduction (verification manual, problem 18)", "kind": "numerical", "precision": 0.01}], "note": "The program's finite element manual gives no elastic parameters, dilation or mesh; it is run with ψ = 0 and cSlope's defaults (E = 100 MPa, ν = 0.3)."},
   },
   {
     id: "V047a",
@@ -1467,6 +1474,7 @@ export const PROBLEMS: RawCase[] = [
       "Domain x = 20…70 as in Fig. 1 (the commercial program A/program D model is wider).",
       "Table 2 prints Bishop 0.963 / Janbu 0.992, but Fig. 3 (FS vs λ, slip 207) shows the moment FS at λ = 0 = 0.992 and the force FS at λ = 0 = 0.963: the two rows are swapped. commercial program B's Janbu (0.963) is the uncorrected simplified Janbu.",
     ],
+    fem: {"flowRule": "non-associated", "references": [{"value": 0.99, "source": "Commercial program I", "method": "finite-element strength reduction (verification manual, problem 1)", "kind": "numerical", "precision": 0.01}], "note": "The program's finite element manual gives no elastic parameters, dilation or mesh; it is run with ψ = 0 and cSlope's defaults (E = 100 MPa, ν = 0.3)."},
   },
   {
     id: "V047b",
@@ -1528,6 +1536,7 @@ export const PROBLEMS: RawCase[] = [
       "Search limited to x = 20–70, the model of the source.",
       "ACADS 1.39; commercial program B Bishop 1.414.",
     ],
+    fem: {"flowRule": "non-associated", "references": [{"value": 1.36, "source": "Commercial program I", "method": "finite-element strength reduction (verification manual, problem 2)", "kind": "numerical", "precision": 0.01}], "note": "The program's finite element manual gives no elastic parameters, dilation or mesh; it is run with ψ = 0 and cSlope's defaults (E = 100 MPa, ν = 0.3)."},
   },
   {
     id: "V050a",
@@ -1565,6 +1574,7 @@ export const PROBLEMS: RawCase[] = [
       "The best circle gives 1.51; the optimised surface follows the weak layer with a wedge up to the crest. ACADS accepts about 1.24–1.27.",
       "Known gap: commercial program B's optimised Morgenstern-Price (half-sine) reports 1.261, the value of the specified surface of 3(b) (V050a), so its search found nothing lower; cSlope's search finds 1.218 (half-sine) and 1.228 (Spencer), a complete-equilibrium solution with one root that holds at 50, 100 and 200 slices. A search difference, not a model one: not a check.",
     ],
+    fem: {"flowRule": "non-associated", "references": [{"value": 1.26, "source": "Commercial program I", "method": "finite-element strength reduction (verification manual, problem 5)", "kind": "numerical", "precision": 0.01}], "note": "The program's finite element manual gives no elastic parameters, dilation or mesh; it is run with ψ = 0 and cSlope's defaults (E = 100 MPa, ν = 0.3)."},
   },
   {
     id: "V051",
@@ -1602,6 +1612,7 @@ export const PROBLEMS: RawCase[] = [
     notes: [
       "Giam 1.95; infinite-slope limit 1.9475; program D 1.955.",
     ],
+    fem: {"flowRule": "non-associated", "references": [{"value": 1.88, "source": "Commercial program I", "method": "finite-element strength reduction (verification manual, problem 4)", "kind": "numerical", "precision": 0.01}], "note": "The program's finite element manual gives no elastic parameters, dilation or mesh; it is run with ψ = 0 and cSlope's defaults (E = 100 MPa, ν = 0.3). φ′ = 45° in the rockfill: non-associated flow at a high friction angle (warning in the result)."},
   },
   {
     id: "V052b",
@@ -1621,6 +1632,20 @@ export const PROBLEMS: RawCase[] = [
     notes: [
       "Giam 2.29.",
     ],
+  },
+  {
+    id: "V099",
+    title: "ACADS 5, excavated slope with seepage",
+    reference: "Giam & Donald (1989), ACADS problem 5.",
+    surface: "search",
+    units: "SI",
+    description: "1:2 cut, 10 m deep, below an initially horizontal ground with the water table 2 m down; long-term steady seepage towards the excavation, whose floor is under 1 m of water. Checked by finite elements only: the limit equilibrium values come from a flow net that the input cannot reproduce (a straight water table gives a different pore pressure field).",
+    definition: {"coordinates": [[15, 20], [15, 25], [30, 25], [50, 35], [95, 35], [95, 20]], "materials": [{"name": "Soil", "model": {"kind": "mohr-coulomb", "unitWeight": 20, "cohesion": 11, "frictionAngle": 28}}], "waterTable": {"mode": "custom", "value": [[15, 26], [32, 26], [95, 33]], "followBoundary": false}},
+    checks: [],
+    notes: [
+      "Published for limit equilibrium on the flow net of the survey: referee 1.53, mean of 23 submissions 1.464; commercial program A on its own flow net: Bishop 1.498, Spencer 1.501, GLE 1.500, Janbu corrected 1.457.",
+    ],
+    fem: {"flowRule": "non-associated", "porePressure": "seepage", "references": [{"value": 1.48, "source": "Commercial program I", "method": "finite-element strength reduction with finite element seepage (verification manual, problem 7)", "kind": "numerical", "precision": 0.01}], "note": "Pore pressures from cSlope's steady seepage: the water table gives the head 26 m on the excavation floor and the left side, 33 m on the right side (the initial water table far from the cut); the base is impermeable. The program's manual gives no seepage or elastic parameters; cSlope's defaults (van Genuchten loam, E = 100 MPa, ν = 0.3) and ψ = 0."},
   },
   {
     id: "V053",
@@ -1643,6 +1668,7 @@ export const PROBLEMS: RawCase[] = [
       "The reference is commercial program A's block search (1.010, on its own geometry with the base rising to (240, 16)), the same kind of search as cSlope's: the critical surface slides along Layer 4 with a wedge up to the crest and a wedge out to the level ground, and Chen & Shao give 1.01–1.03. Commercial program B's optimised search on this geometry reports 1.054, which cSlope's search passes below (1.009): a search difference, not a model one.",
       "Chen & Shao (1988, test problem 3, Figs. 10–13) draw layer 4 as a seam line without thickness or density, give no stratum below it and mark water only by a ▽ on the I/II boundary near x = 197; the 0.5 m seam, the water table along the ground and the boundary, and (V054) the base rising to (240, 16) are the programs' modelling. Their Table 4 gives densities in g/cm³ (2.00, 1.90, 2.15); with g = 9.81 the unit weights are 19.62 / 18.64 / 21.09 instead of the programs' 20 / 19 / 21.5, which lowers cSlope's result by 0.4–0.7 % (docs/kallor/chen-shao-1988.md).",
     ],
+    fem: {"flowRule": "non-associated", "references": [{"value": 1.02, "source": "Commercial program I", "method": "finite-element strength reduction (verification manual, problem 16)", "kind": "numerical", "precision": 0.01}], "note": "The program's finite element manual gives no elastic parameters, dilation or mesh; it is run with ψ = 0 and cSlope's defaults (E = 100 MPa, ν = 0.3)."},
   },
   {
     id: "V054",
@@ -2164,6 +2190,7 @@ export const PROBLEMS: RawCase[] = [
       {"method":"Bishop","label":"Bishop simplified","published":1.439,"publishedBy":"Commercial program A"},
     ],
     paper: [{"value": 1.44, "method": "Ordinary", "source": "Low (1989)"}, {"value": 1.44, "method": "Bishop simplified", "source": "Low (1989)"}],
+    fem: {"flowRule": "non-associated", "references": [{"value": 1.41, "source": "Commercial program I", "method": "finite-element strength reduction (verification manual, problem 19)", "kind": "numerical", "precision": 0.01}], "note": "The program's finite element manual gives no elastic parameters, dilation or mesh; it is run with ψ = 0 and cSlope's defaults (E = 100 MPa, ν = 0.3)."},
   },
   {
     id: "V068",
@@ -2928,6 +2955,7 @@ export const PROBLEMS: RawCase[] = [
     notes: [
       "Yamagami & Ueta: Bishop 1.348, Spencer 1.339 (non-circular); Greco 1.33.",
     ],
+    fem: {"flowRule": "non-associated", "references": [{"value": 1.33, "source": "Commercial program I", "method": "finite-element strength reduction (verification manual, problem 13)", "kind": "numerical", "precision": 0.01}], "note": "The program's finite element manual gives no elastic parameters, dilation or mesh; it is run with ψ = 0 and cSlope's defaults (E = 100 MPa, ν = 0.3)."},
   },
   {
     id: "V094",
@@ -2946,6 +2974,7 @@ export const PROBLEMS: RawCase[] = [
       "Search limited to x = 0–200; the down-slope beyond the crest is not searched, as in the source.",
       "Greco publishes 1.40–1.42 for the non-circular surface; the best circle gives 1.430.",
     ],
+    fem: {"flowRule": "non-associated", "references": [{"value": 1.39, "source": "Commercial program I", "method": "finite-element strength reduction (verification manual, problem 15)", "kind": "numerical", "precision": 0.01}], "note": "The program's finite element manual gives no elastic parameters, dilation or mesh; it is run with ψ = 0 and cSlope's defaults (E = 100 MPa, ν = 0.3)."},
   },
   {
     id: "V095a",

@@ -39,6 +39,8 @@ export interface FemSetup {
   /** E, ν, ψ per material name, as the source gives them. */
   materialParameters?: Record<string, FeMaterialParameters>;
   tensionCutoff?: boolean;
+  /** Pore pressures: from the water lines (default) or from steady seepage with the water table as boundary (fem/seepage.ts). */
+  porePressure?: "water-table" | "seepage";
   /** Axial stiffness of the reinforcement (kN/m), as the source gives it. */
   reinforcementStiffness?: number;
   /** Whether the source reduces the reinforcement's capacity with the soil's strength; default true. */
@@ -96,6 +98,7 @@ export function runFemVerification(definition: SlopeDefinition, setup: FemSetup)
     flowRule: setup.flowRule,
     materialParameters: setup.materialParameters,
     tensionCutoff: setup.tensionCutoff,
+    porePressure: setup.porePressure,
     elementSize: setup.elementSize,
     reinforcementStiffness: setup.reinforcementStiffness,
     reduceReinforcement: setup.reduceReinforcement,
