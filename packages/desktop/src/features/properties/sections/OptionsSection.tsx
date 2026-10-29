@@ -701,7 +701,7 @@ function FemFields({
           disabled={off}
           onChange={(e) => set({ flowRule: e.target.value as FemAnalysisSettings["flowRule"] })}
           aria-label="Flow rule"
-          title="Davis B: associated flow with strengths reduced for the dilation angle (Tschuchnigg et al. 2015); stable at high friction angles. Non-associated flow with ψ < φ can give an oscillating, non-unique factor of safety at high friction angles (Tschuchnigg et al. 2015)."
+          title="Davis B: associated flow with strengths reduced for the dilation angle (Tschuchnigg et al. 2015); fast and stable at high friction angles, and on the safe side: with ψ = 0, φ ≤ 30° and F below 1 it can lie 10–35 % under non-associated flow. Non-associated flow with ψ < φ is closer to other finite element programs at moderate friction angles but several times slower, and can give an oscillating, non-unique factor of safety at high friction angles (Tschuchnigg et al. 2015)."
         >
           {(Object.keys(FLOW_RULE_LABELS) as FemAnalysisSettings["flowRule"][]).map((r) => (
             <option key={r} value={r}>
@@ -790,7 +790,7 @@ function FemFields({
       </label>
       <label
         className="flex items-center gap-1.5 self-end"
-        title="No tensile effective stress (Rankine cut-off). Without it, cohesive soil carries tension near the crest."
+        title="No tensile effective stress (Rankine cut-off; on by default). Without it, cohesive soil carries tension near the crest and the factor of safety can come out several per cent higher."
       >
         <input
           type="checkbox"

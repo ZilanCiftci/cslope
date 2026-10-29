@@ -308,7 +308,12 @@ export interface FemAnalysisSettings {
   dilationAngle: number;
   /** Initial element size (m); null: a twentieth of the model height. */
   elementSize: number | null;
-  /** Rankine tension cut-off at zero effective stress. */
+  /**
+   * Rankine tension cut-off at zero effective stress; default on for new
+   * projects (soil carries no tension, the usual default of finite element
+   * programs; it brought cSlope closer to a commercial program's verification
+   * values, RMS 4.6 % to 3.0 %).
+   */
   tensionCutoff: boolean;
   /** Adaptive refinements of the mesh (0–3). */
   refinementLevels: number;
@@ -327,7 +332,7 @@ export const DEFAULT_FEM_SETTINGS: FemAnalysisSettings = {
   poissonsRatio: 0.3,
   dilationAngle: 0,
   elementSize: null,
-  tensionCutoff: false,
+  tensionCutoff: true,
   refinementLevels: 1,
 };
 
