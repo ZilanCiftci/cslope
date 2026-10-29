@@ -15,8 +15,9 @@
  *
  * The linear program maximises a load factor λ on every load (weight, pore
  * pressure and surface loads). The factor of safety on strength is the
- * reduction F at which λ(F) = 1: for φ = 0 everywhere λ(F) = λ(1)/F, so
- * F = λ(1) from one program; otherwise F is found by the secant method on
+ * reduction F at which λ(F) = 1: for φ = 0 everywhere λ(F) = λ(F0)·F0/F, so
+ * F = λ(F0)·F0 from one program at the first reduction tried F0 (1 by
+ * default); otherwise F is found by the secant method on
  * log λ (Kim, Salgado & Lee 2002, J. Geotech. Geoenviron. Eng. 128(7),
  * 546–557, fig. 3: iterate until the reference load is carried).
  *
@@ -48,6 +49,8 @@ export interface LowerBoundOptions extends FeModelOptions {
   timeLimit?: number;
   /** Time limit of the whole search (s): no linear program starts after it, and the bound stays the best certified so far; default none. */
   totalTimeLimit?: number;
+  /** First reduction tried, e.g. a coarser mesh's bound; default 1. */
+  startF?: number;
 }
 
 export interface LowerBoundResult {
@@ -446,9 +449,10 @@ export async function lowerBound(slope: Slope, options: LowerBoundOptions = {}, 
     return lambda;
   };
   const tol = options.fTolerance ?? 0.002;
-  const l1 = lambdaAt(1);
+  const F0 = options.startF && options.startF > 0 ? options.startF : 1;
+  const l1 = lambdaAt(F0);
   if (Number.isNaN(l1)) {
-    return { factorOfSafety: NaN, trials, elements: prob.elements, variables: prob.variables, constraints: prob.constraints, warnings: [...warnings, "The linear program at F = 1 was not solved."] };
+    return { factorOfSafety: NaN, trials, elements: prob.elements, variables: prob.variables, constraints: prob.constraints, warnings: [...warnings, `The linear program at F = ${F0.toFixed(3)} was not solved.`] };
   }
   const fail = (reason: string): LowerBoundResult =>
     ({ factorOfSafety: NaN, trials, elements: prob.elements, variables: prob.variables, constraints: prob.constraints, warnings: [...warnings, reason] });
@@ -458,14 +462,14 @@ export async function lowerBound(slope: Slope, options: LowerBoundOptions = {}, 
   let F: number;
   if (prob.allUndrained) {
     if (!(l1 > 0) || !Number.isFinite(l1)) return fail("The linear program has no admissible stress field.");
-    F = l1; // λ(F) = λ(1)/F, so λ(λ(1)) = 1 exactly
+    F = l1 * F0; // λ(F) = λ(F0)·F0/F, so λ(λ(F0)·F0) = 1 exactly
   } else if (l1 === 0 || l1 === Infinity) {
     // Without cohesion every constraint is homogeneous in the stresses and
     // λ, so λ is 0 or unbounded: F is found by bisection on whether the
     // loads can be carried (λ(F) ≥ 1).
     const ok = (f: number) => { const l = lambdaAt(f); return Number.isNaN(l) ? null : l >= 1; };
     let lo = 0, hi = Infinity;
-    if (l1 >= 1) lo = 1; else hi = 1;
+    if (l1 >= 1) lo = F0; else hi = F0;
     for (let k = 0; k < 20 && (lo === 0 || hi === Infinity); k++) {
       const f = lo === 0 ? hi / 1.5 : lo * 1.5;
       if (f < 0.05 || f > 100) break;
@@ -486,14 +490,14 @@ export async function lowerBound(slope: Slope, options: LowerBoundOptions = {}, 
     if (!Number.isFinite(hi) || hi - lo > tol) warnings.push(`The bisection stopped with F between ${lo.toFixed(3)} and ${Number.isFinite(hi) ? hi.toFixed(3) : "∞"}; F is the lower of the two.`);
     F = lo;
   } else {
-    let best = l1 >= 1 ? 1 : 0;
+    let best = l1 >= 1 ? F0 : 0;
     const certify = (f: number, l: number) => { if (l >= 1 && f > best) best = f; };
     // Secant on g(F) = log λ(F), decreasing, root where λ = 1. The next
     // trial is placed tol/2 below the secant's root, so that it lands on
     // the admissible side; the search stops when a certified F lies within
     // tol of the root estimate.
-    let fa = 1, ga = Math.log(l1);
-    let fb = l1 > 1 ? Math.min(l1, 1.5) : Math.max(l1, 0.67);
+    let fa = F0, ga = Math.log(l1);
+    let fb = F0 * (l1 > 1 ? Math.min(l1, 1.5) : Math.max(l1, 0.67));
     let lb = lambdaAt(fb);
     certify(fb, lb);
     let reached = false, root = NaN;

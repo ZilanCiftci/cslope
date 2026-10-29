@@ -142,7 +142,7 @@ export interface SrmOptions {
   unbalanceTolerance?: number;
   /** Convergence tolerance; default 1e-4 (viscoplastic), 1e-6 relative residual (Newton). */
   tolerance?: number;
-  /** Viscoplastic iteration limit per trial (failure when reached); default 1000 × √(elements/2500), at least 1000 (1500 with the accelerated "equilibrium" test). */
+  /** Viscoplastic iteration limit per trial (failure when reached); default 1000 × √(elements/2500), at least 1000 (1500 with acceleration). */
   maxIterations?: number;
   /** Newton iteration limit per trial; default 200 (newton.ts). */
   newtonIterations?: number;
@@ -352,7 +352,8 @@ export function solveAtF(
   // elements; plastic flow has to cross more elements on a finer mesh, so
   // the limit grows with the mesh's linear resolution, √(elements / 2500).
   const criterion = options.convergence ?? "increment";
-  const limit = options.maxIterations ?? Math.round((criterion === "equilibrium" ? 1500 : 1000) * Math.max(1, Math.sqrt(model.elementCount / 2500)));
+  const AA_M = options.acceleration ?? (criterion === "equilibrium" ? 10 : 0);
+  const limit = options.maxIterations ?? Math.round((AA_M > 0 ? 1500 : 1000) * Math.max(1, Math.sqrt(model.elementCount / 2500)));
   const cutoff = options.tensionCutoff ?? false;
   const red = reduce(model, F, rule, options.relaxation ?? 1);
   const { gp, elementCount: ne, elE, elNu, elElastic } = model;
@@ -369,7 +370,6 @@ export function solveAtF(
   let it = 0;
   let prevDu = 0, ratioCount = 0, passedBefore = false;
   const logRatio = new Float64Array(RATIO_WINDOW);
-  const AA_M = options.acceleration ?? (criterion === "equilibrium" ? 10 : 0);
   const ne4 = evp.length, nb = state.barEp.length;
   const aa = AA_M > 0 ? new Anderson(ne4 + nb + neq, AA_M, ne4 + nb) : null;
   const aaIn = aa ? new Float64Array(ne4 + nb + neq) : null, aaOut = aa ? new Float64Array(ne4 + nb + neq) : null;

@@ -31,10 +31,18 @@
  * The loop stops when the gap is below `gapTolerance` of the mean bound or
  * after `levels` refinements; each level's searches start from the last
  * level's bounds. θ = 0.6: on V013a (from 226 elements) three levels to
- * 1156 elements bracket F in 1.129–1.197 (gap 5.8 %), where a uniform mesh
- * of 1120 elements gives 1.120–1.245 (10.6 %); θ = 0.3 refined too little
- * (344 elements after three levels, gap 11 %). The meshes are not nested,
+ * 620 elements bracket F in 1.124–1.213 (gap 7.6 %, 80 s), where a
+ * uniform mesh of 1120 elements gives 1.120–1.247 (10.7 %, 133 s); θ = 0.3
+ * refined too little (344 elements after three levels, gap 11 %). The meshes are not nested,
  * so a bound can be worse on a finer one: the best of the levels is kept.
+ * Speed (implementation choices): the levels before the last search to a
+ * tolerance of 0.02 on F (COARSE_TOLERANCE), the last to `fTolerance`;
+ * each level's searches start at the last level's bounds; elements are not
+ * refined below a quarter of the first mesh's smallest size
+ * (MIN_SIZE_RATIO). Measured on V013a: three levels 80 s against 110 s
+ * before, the same bounds; four levels 122 s against 473 s, 1.125–1.214
+ * against 1.129–1.197 (without the size limit the fourth level refined
+ * the toe to 1156 elements, whose programs took 316 s).
  */
 
 import type { Slope } from "../model/slope";
@@ -50,6 +58,11 @@ interface Highs {
     Columns?: Record<string, { Primal: number }>;
   };
 }
+
+/** Tolerance on F of the levels before the last (they only steer the mesh). */
+const COARSE_TOLERANCE = 0.02;
+/** The refinement does not make elements smaller than the first mesh's smallest over this. */
+const MIN_SIZE_RATIO = 4;
 
 export interface BoundGap {
   /** Contribution of each element of the model's mesh to λ_U − λ_L. */
@@ -227,20 +240,25 @@ export async function adaptiveBounds(slope: Slope, options: AdaptiveBoundsOption
   let lower = NaN, upper = NaN;
   let sizeField: AdaptiveBoundsResult["sizeField"] = (opts.sizeField ?? (() => NaN)) as AdaptiveBoundsResult["sizeField"];
   const result = () => ({ lower, upper, levels: out, sizeField, warnings });
+  // the smallest element size of the first mesh, a quarter of which bounds the refinement
+  let h0 = Infinity;
+  const coarseTol = Math.max(options.fTolerance ?? 0.002, COARSE_TOLERANCE);
   for (let level = 0; ; level++) {
     const t0 = performance.now();
+    // the levels before the last steer the mesh: their searches to a coarser tolerance
+    const levelOpts: AdaptiveBoundsOptions = level < levels ? { ...opts, fTolerance: coarseTol } : opts;
     // Each bound on its own: a failure of one (or of a refined mesh) keeps
     // what the other levels and bounds found.
     let ubF = NaN, lbF = NaN, elements = 0;
     try {
-      const ubr = await upperBound(slope, limited({ ...opts, startF: Number.isFinite(upper) && upper > 0 ? upper : opts.startF }), solver);
+      const ubr = await upperBound(slope, limited({ ...levelOpts, startF: Number.isFinite(upper) && upper > 0 ? upper : opts.startF }), solver);
       for (const w of ubr.warnings) warnings.push(`Level ${level}, upper bound: ${w}`);
       ubF = ubr.factorOfSafety; elements = ubr.elements;
     } catch (err) {
       warnings.push(`Level ${level}, upper bound: ${message(err)}`);
     }
     try {
-      const lbr = await lowerBound(slope, limited(opts), solver);
+      const lbr = await lowerBound(slope, limited({ ...levelOpts, startF: Number.isFinite(lower) && lower > 0 ? lower : opts.startF }), solver);
       for (const w of lbr.warnings) warnings.push(`Level ${level}, lower bound: ${w}`);
       lbF = lbr.factorOfSafety; elements ||= lbr.elements;
     } catch (err) {
@@ -260,6 +278,12 @@ export async function adaptiveBounds(slope: Slope, options: AdaptiveBoundsOption
       return result();
     }
     sizeField = model.sizeField;
+    if (level === 0) {
+      for (let e = 0; e < model.elementCount; e++) {
+        const a = model.el[6 * e], b = model.el[6 * e + 1], c = model.el[6 * e + 2];
+        h0 = Math.min(h0, model.sizeField((model.x[a] + model.x[b] + model.x[c]) / 3, (model.y[a] + model.y[b] + model.y[c]) / 3));
+      }
+    }
     const done = Number.isFinite(lower) && Number.isFinite(upper) && (upper - lower) <= tol * (upper + lower) / 2;
     if (done || level >= levels || !(ubF > 0) || !Number.isFinite(ubF)) return result();
     // the next level: the gap's two programs and the two searches on a
@@ -289,6 +313,6 @@ export async function adaptiveBounds(slope: Slope, options: AdaptiveBoundsOption
       return result();
     }
     if (!gap.withStress && level === 0) warnings.push("The lower bound program has no finite optimum at the upper bound's F: refined on the dissipation alone.");
-    opts = { ...opts, sizeField: refinedSizeField(model, dorflerMark(eta, theta)) };
+    opts = { ...opts, sizeField: refinedSizeField(model, dorflerMark(eta, theta), Number.isFinite(h0) ? h0 / MIN_SIZE_RATIO : 0) };
   }
 }
