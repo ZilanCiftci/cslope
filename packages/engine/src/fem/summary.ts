@@ -144,6 +144,7 @@ function femAnalysis(
     shearIncrement: Array.from(r.shearStrainIncrement, round),
     displacement,
     curve: forceDisplacementCurve(r.trials),
+    ...(r.piles.length ? { piles: r.piles.map((p) => ({ pile: p.pile, maxAxialForce: round(p.maxAxialForce), maxShearForce: round(p.maxShearForce), maxMoment: round(p.maxMoment) })) } : {}),
   };
   return { summary, slope, sizeField: r.sizeField };
 }

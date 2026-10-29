@@ -213,7 +213,9 @@ export function lowerBoundProblem(slope: Slope, options: LowerBoundOptions = {})
   for (let n = 0; n < x.length; n++) { xLo = Math.min(xLo, x[n]); xHi = Math.max(xHi, x[n]); yHi = Math.max(yHi, y[n]); }
   const surface = slope.surfaceLineXY ?? { x: [xLo, xHi], y: [yHi, yHi] };
   const waterLines = materials.map((m) => slope.getWaterLineForMaterial(m));
-  if (model.bars.count > 0) warnings.push("Reinforcement is not included in the lower bound analysis.");
+  // (the bars also hold the piles' springs, source −1)
+  if (model.bars.source.some((k) => k >= 0)) warnings.push("Reinforcement is not included in the lower bound analysis.");
+  if (slope.piles.length > 0) warnings.push("Piles are not included in the lower bound analysis.");
   const head = model.seepage?.flow ? model.seepage.head : undefined;
 
   // Nodal data per element corner: pore pressure and strength.

@@ -1567,6 +1567,16 @@ function FemSummaryRows({ fem, designValues }: { fem: FemResultSummary; designVa
           </span>
         </div>
       )}
+      {fem.piles?.map((p) => (
+        <div key={p.pile} className="flex justify-between">
+          <Label title="Largest bending moment, shear and axial force of the pile (per pile) at the factor of safety, the pile modelled as an elastic beam on springs that let the soil flow between the piles.">
+            Pile {p.pile + 1} (FE)
+          </Label>
+          <span className="tabular-nums">
+            M {p.maxMoment.toFixed(0)} kNm, V {p.maxShearForce.toFixed(0)} kN
+          </span>
+        </div>
+      ))}
       {fem.curve && fem.curve.length >= 2 && <FemCurve curve={fem.curve} fos={fem.factorOfSafety} />}
       {designValues && (
         <p className="text-[11px]" style={{ color: "var(--color-vsc-text-muted)" }}>

@@ -109,7 +109,9 @@ export function upperBoundProblem(slope: Slope, options: UpperBoundOptions = {})
   const p = options.sides ?? 24;
   const cutoff = options.tensionCutoff ?? false;
   const warnings: string[] = [];
-  if (model.bars.count > 0) warnings.push("Reinforcement is not included in the upper bound analysis.");
+  // (the bars also hold the piles' springs, source −1)
+  if (model.bars.source.some((k) => k >= 0)) warnings.push("Reinforcement is not included in the upper bound analysis.");
+  if (slope.piles.length > 0) warnings.push("Piles are not included in the upper bound analysis.");
   const el = new Int32Array(3 * ne);
   for (let e = 0; e < ne; e++) for (let k = 0; k < 3; k++) el[3 * e + k] = model.el[6 * e + k];
   const nc = x.length;

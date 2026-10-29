@@ -71,6 +71,7 @@ import { BAR_GP_STRIDE, type FeModel } from "./model";
 import { evaluate, newtonAtF } from "./newton";
 import { bfgsAtF } from "./bfgs";
 import { barInternal, relaxBars } from "./bars";
+import { beamInternal } from "./piles";
 
 /** Confirmations of the bounding failure per search (see strengthReductionSearch). */
 const MAX_CONFIRMATIONS = 3;
@@ -384,6 +385,7 @@ export function solveAtF(
       // whose internal forces must balance the load.
       evaluate(model, eqs, u, evp, red, cutoff, eqWork.fint, eqWork.stress, eqWork.ep, null);
       if (model.bars.count) barInternal(model, u, state.barEp, F, eqWork.fint, eqWork.barEp, null);
+      if (model.piles.count) beamInternal(model, u, eqWork.fint, null);
       let s = 0;
       for (let i = 0; i < neq; i++) { const d = model.f[i] - eqWork.fint[i]; s += d * d; }
       if (Math.sqrt(s) > (options.unbalanceTolerance ?? 1e-3) * model.loadNorm) converged = false;

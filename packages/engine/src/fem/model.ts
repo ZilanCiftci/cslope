@@ -56,6 +56,7 @@ import { GAUSS_T6, GP_STRIDE, gaussData, shapeT6, stiffnessT6 } from "./elements
 import { meshDomain, pointInPolygon, type TriMesh } from "./mesh";
 import { nestedDissection, nodeGraph, SparseCholesky } from "./sparse";
 import { solveSeepage, type SeepageResult } from "./seepage";
+import { buildPiles, EMPTY_PILES, frameStiffness, beamDofs, type FePiles } from "./piles";
 
 /** Elastic and flow parameters of a material in the finite element analysis. */
 export interface FeMaterialParameters {
@@ -210,6 +211,10 @@ export interface FeModel {
   sizeField: ((x: number, y: number) => number) & { min?: number };
   /** The seepage solution, when the pore pressures come from it. */
   seepage?: SeepageResult;
+  /** Pile rows as beams on springs to the soil (piles.ts). */
+  piles: FePiles;
+  /** Notes on what the model leaves out. */
+  warnings: string[];
   /**
    * Reinforcement as three-node bars along element edges (bonded to the
    * soil): nodes (end, middle, end) per bar, and per bar Gauss point (two
@@ -234,6 +239,63 @@ export interface FeBars {
   stiffness: Float64Array;
   /** Initial plastic strain per bar Gauss point: −P/EA in a prestressed free length (force P), 0 elsewhere. */
   ep0: Float64Array;
+  /** Per bar: 1 for a pile spring, which acts in tension and compression (|N| ≤ capacity). */
+  bothWays: Uint8Array;
+  /**
+   * Per bar Gauss point: 0 for the capacity in `capacity` (divided by F if
+   * passive), 1 or 2 for a pile spring's lateral or axial limit from
+   * capC, capSv and capTan (piles.ts, springCapacity).
+   */
+  capKind: Uint8Array;
+  capC: Float64Array;
+  capSv: Float64Array;
+  capTan: Float64Array;
+}
+
+/** The bars with the piles' springs appended (piles.ts). */
+function withSprings(bars: FeBars, sp: ReturnType<typeof buildPiles>["springs"] | null): FeBars {
+  if (!sp || sp.stiffness.length === 0) return bars;
+  const n = sp.stiffness.length;
+  const cat = <T extends Float64Array | Int32Array | Uint8Array>(a: T, b: ArrayLike<number>, make: (len: number) => T): T => {
+    const out = make(a.length + b.length);
+    out.set(a);
+    out.set(b as ArrayLike<number>, a.length);
+    return out;
+  };
+  const f64 = (len: number) => new Float64Array(len), i32 = (len: number) => new Int32Array(len), u8 = (len: number) => new Uint8Array(len);
+  return {
+    count: bars.count + n,
+    nodes: cat(bars.nodes, sp.nodes, i32),
+    source: cat(bars.source, new Array(n).fill(-1), i32),
+    gp: cat(bars.gp, sp.gp, f64),
+    capacity: cat(bars.capacity, sp.fixedCap, f64),
+    passive: cat(bars.passive, new Array(n).fill(0), u8),
+    stiffness: cat(bars.stiffness, sp.stiffness, f64),
+    ep0: cat(bars.ep0, new Array(2 * n).fill(0), f64),
+    bothWays: cat(bars.bothWays, new Array(n).fill(1), u8),
+    capKind: cat(bars.capKind, sp.kind, u8),
+    capC: cat(bars.capC, sp.capC, f64),
+    capSv: cat(bars.capSv, sp.capSv, f64),
+    capTan: cat(bars.capTan, sp.capTan, f64),
+  };
+}
+
+/** The part of the segment p1–p2 inside the polygon (its ends on the boundary where they cross it), or null. */
+function clipToPolygon(poly: [number, number][], x1: number, y1: number, x2: number, y2: number): [number, number][] | null {
+  const at = (t: number): [number, number] => [x1 + t * (x2 - x1), y1 + t * (y2 - y1)];
+  const inside = (t: number) => { const [px, py] = at(t); return pointInPolygon(px, py, poly); };
+  const SAMPLES = 200;
+  let first = -1, last = -1;
+  for (let k = 0; k <= SAMPLES; k++) if (inside(k / SAMPLES)) { if (first < 0) first = k; last = k; }
+  if (first < 0) return null;
+  // the crossings by bisection between an inside and an outside sample
+  const edge = (tin: number, tout: number) => {
+    for (let k = 0; k < 50; k++) { const m = (tin + tout) / 2; if (inside(m)) tin = m; else tout = m; }
+    return (tin + tout) / 2;
+  };
+  const t0 = first === 0 ? 0 : edge(first / SAMPLES, (first - 1) / SAMPLES);
+  const t1 = last === SAMPLES ? 1 : edge(last / SAMPLES, (last + 1) / SAMPLES);
+  return t1 > t0 ? [at(t0), at(t1)] : null;
 }
 
 /**
@@ -426,6 +488,12 @@ export function buildFeModel(slope: Slope, options: FeModelOptions = {}): FeMode
       segments.push([[r.x1, r.y1], [xb, yb]], [[xb, yb], [r.x2, r.y2]]);
     } else segments.push([[r.x1, r.y1], [r.x2, r.y2]]);
   }
+  // Piles with a diameter are constraint lines too (piles.ts), clipped to the domain.
+  const pileLines = options.withoutReinforcement ? [] : slope.piles.filter((p) => p.diameter !== undefined && p.diameter > 0);
+  for (const p of pileLines) {
+    const seg = clipToPolygon(bnd, p.x1, p.y1, p.x2, p.y2);
+    if (seg) segments.push(seg);
+  }
   const tm = meshDomain({
     boundary: bnd,
     segments,
@@ -459,7 +527,7 @@ export function buildFeModel(slope: Slope, options: FeModelOptions = {}): FeMode
     }
   }
   const nn = xs.length;
-  const x = Float64Array.from(xs), y = Float64Array.from(ys);
+  let x: Float64Array = Float64Array.from(xs), y: Float64Array = Float64Array.from(ys);
 
   // Materials per element.
   const materials: Material[] = [];
@@ -623,7 +691,7 @@ export function buildFeModel(slope: Slope, options: FeModelOptions = {}): FeMode
 
   // Equation numbering in nested dissection order of the nodes.
   const order = nestedDissection(x, y, nodeGraph(el, ne, nn));
-  const eq = new Int32Array(2 * nn).fill(-1);
+  let eq: Int32Array = new Int32Array(2 * nn).fill(-1);
   let neq = 0;
   for (const n of order) {
     if (!fixX[n]) eq[2 * n] = neq++;
@@ -631,8 +699,29 @@ export function buildFeModel(slope: Slope, options: FeModelOptions = {}): FeMode
   }
   if (neq === 0) throw new Error("finite element model has no free degrees of freedom");
 
+  // Piles: beam nodes (with a rotation) at the soil nodes along each pile, and springs to the soil (piles.ts).
+  let piles: FePiles = EMPTY_PILES;
+  let springs: ReturnType<typeof buildPiles>["springs"] | null = null;
+  const pileWarnings: string[] = [];
+  if (!options.withoutReinforcement && slope.piles.length) {
+    const surface = slope.surfaceLineXY;
+    const built = buildPiles({
+      slope, x, y, el, ne, eq, neq, span, materials, elMaterial, elElastic, gpC, gpPhi, gpU,
+      maxSoilE, waterLines,
+      unitWeight: (m, wl, u, px, py) => gaussUnitWeight(m, wl, !!seepage?.flow, u, px, py),
+      groundY: (px) => (surface ? polylineY(surface, px) : ymax),
+    });
+    x = built.x; y = built.y; eq = built.eq; neq = built.neq;
+    piles = built.piles;
+    springs = built.springs;
+    pileWarnings.push(...built.warnings);
+  }
+
   // Reinforcement bars along the element edges on each line.
-  const bars = buildBars(slope, reinf, el, ne, x, y, span, options.reinforcementStiffness ?? DEFAULT_REINFORCEMENT_STIFFNESS, options.reduceReinforcement ?? true);
+  const bars = withSprings(
+    buildBars(slope, reinf, el, ne, x, y, span, options.reinforcementStiffness ?? DEFAULT_REINFORCEMENT_STIFFNESS, options.reduceReinforcement ?? true),
+    springs,
+  );
 
   // Sparse pattern and assembly.
   const allDofs = new Int32Array(12 * ne);
@@ -642,13 +731,19 @@ export function buildFeModel(slope: Slope, options: FeModelOptions = {}): FeMode
   const elDofs = (e: number) => allDofs.subarray(12 * e, 12 * e + 12);
   // The bars' couplings: within an element's except for an anchor's free
   // bar, whose ends share no element (groups padded to 12 with −1).
-  const groups = new Int32Array(allDofs.length + 12 * bars.count).fill(-1);
+  const groups = new Int32Array(allDofs.length + 12 * (bars.count + piles.count)).fill(-1);
   groups.set(allDofs);
   for (let b = 0; b < bars.count; b++) {
     for (let k = 0; k < 3; k++) {
       const n = bars.nodes[3 * b + k], o = allDofs.length + 12 * b + 2 * k;
       groups[o] = eq[2 * n]; groups[o + 1] = eq[2 * n + 1];
     }
+  }
+  // the piles' beams (six dofs each)
+  const bd = new Int32Array(6);
+  for (let b = 0; b < piles.count; b++) {
+    beamDofs(eq, piles, b, bd);
+    groups.set(bd, allDofs.length + 12 * (bars.count + b));
   }
   const K = SparseCholesky.fromGroups(neq, groups, 12);
   const ke = new Float64Array(144);
@@ -673,6 +768,15 @@ export function buildFeModel(slope: Slope, options: FeModelOptions = {}): FeMode
         if (d[i] < 0) continue;
         for (let j = 0; j <= i; j++) if (d[j] >= 0) K.add(d[i], d[j], w * bars.gp[o + i] * bars.gp[o + j]);
       }
+    }
+  }
+  const kb = new Float64Array(36);
+  for (let b = 0; b < piles.count; b++) {
+    frameStiffness(piles.c[b], piles.s[b], piles.length[b], piles.ea[b], piles.ei[b], kb);
+    beamDofs(eq, piles, b, bd);
+    for (let i = 0; i < 6; i++) {
+      if (bd[i] < 0) continue;
+      for (let j = 0; j <= i; j++) if (bd[j] >= 0) K.add(bd[i], bd[j], kb[i * 6 + j]);
     }
   }
   K.factor();
@@ -762,6 +866,8 @@ export function buildFeModel(slope: Slope, options: FeModelOptions = {}): FeMode
     elInactive,
     surfaceEdges: Int32Array.from(surfEdges),
     bars,
+    piles,
+    warnings: pileWarnings,
     seepage,
     triangulation: tm,
     sizeField: options.sizeField ?? Object.assign(size, { min: sizeMin }),
@@ -933,5 +1039,10 @@ function buildBars(
     passive: Uint8Array.from(passive),
     stiffness: Float64Array.from(stiff),
     ep0: Float64Array.from(ep0),
+    bothWays: new Uint8Array(source.length),
+    capKind: new Uint8Array(cap.length),
+    capC: new Float64Array(cap.length),
+    capSv: new Float64Array(cap.length),
+    capTan: new Float64Array(cap.length),
   };
 }

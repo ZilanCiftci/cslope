@@ -77,6 +77,7 @@ function pileRow(p: Pile, id: string): PileRow {
     spacing,
     shearCapacity: p.shearCapacity ?? 0,
     momentCapacity: p.momentCapacity ?? 0,
+    ...(p.bendingStiffness ? { bendingStiffness: p.bendingStiffness } : {}),
     angle: p.angle ?? 0,
     ...(p.direction ? { direction: p.direction } : {}),
     application: p.application ?? "active",

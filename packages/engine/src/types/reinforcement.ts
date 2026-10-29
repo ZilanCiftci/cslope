@@ -137,6 +137,16 @@ export interface Pile {
   application?: ReinforcementApplication;
   /** Where an Ito & Matsui force acts. Default "centroid". */
   location?: PileForceLocation;
+  /**
+   * A continuous wall (sheet piles): in the finite element analysis no soil
+   * flows through it, and its default stiffness is that of a plate of
+   * thickness `diameter` per metre. Default: a wall where spacing ≤ diameter.
+   */
+  wall?: boolean;
+  /** Bending stiffness EI per pile (kNm²), for the finite element analysis; default a solid circle of `diameter` in concrete (E = 30 GPa), or a plate for a wall. */
+  bendingStiffness?: number;
+  /** Axial stiffness EA per pile (kN), for the finite element analysis; default as `bendingStiffness`. */
+  axialStiffness?: number;
 }
 
 /** Applied reinforcement force, per metre of slope. */

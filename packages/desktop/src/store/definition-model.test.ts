@@ -22,7 +22,8 @@ function analysed(d: SlopeDefinition) {
     ),
     // With engine defaults filled in, and without what the analysis does
     // not use: end capacities of fully anchored elements, the diameter of
-    // a pile with a given force.
+    // a pile with a given force, whether a pile row is a wall (finite
+    // elements only).
     reinforcements: (d.reinforcements ?? []).map(({ end1Capacity, end2Capacity, ...r }) => ({
       ...r,
       spacing: r.spacing ?? 1,
@@ -30,13 +31,17 @@ function analysed(d: SlopeDefinition) {
       application: r.application ?? "active",
       ...(r.pullout ? { end1Capacity: end1Capacity ?? 0, end2Capacity: end2Capacity ?? 0 } : {}),
     })),
-    piles: (d.piles ?? []).map(({ diameter, ...p }) => ({
-      ...p,
-      ...(p.force == null ? { diameter } : {}),
-      spacing: p.spacing ?? 1,
-      angle: p.angle ?? 0,
-      application: p.application ?? "active",
-    })),
+    piles: (d.piles ?? []).map(({ diameter, ...withWall }) => {
+      const p = { ...withWall };
+      delete p.wall;
+      return {
+        ...p,
+        ...(p.force == null ? { diameter } : {}),
+        spacing: p.spacing ?? 1,
+        angle: p.angle ?? 0,
+        application: p.application ?? "active",
+      };
+    }),
     udls: d.udls ?? [],
     lineLoads: d.lineLoads ?? [],
     limits: d.analysisLimits ?? null,

@@ -45,6 +45,7 @@ import { GP_STRIDE } from "./elements";
 import type { FeModel } from "./model";
 import type { SparseCholesky } from "./sparse";
 import { barInternal } from "./bars";
+import { beamInternal } from "./piles";
 
 export interface ReturnResult {
   /** Stress after return (σx, σy, τxy, σz). */
@@ -583,6 +584,7 @@ export function newtonAtF(
   const residual = (uu: Float64Array, withK: boolean): number => {
     evaluate(model, eqs, uu, state.ep, strength, cutoff, fint, stress, ep, withK ? K : null);
     if (model.bars.count) barInternal(model, uu, state.barEp, state.F, fint, barEp, withK ? K : null);
+    if (model.piles.count) beamInternal(model, uu, fint, withK ? K : null);
     for (let i = 0; i < neq; i++) r[i] = model.f[i] - fint[i];
     return norm2(r);
   };

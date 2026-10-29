@@ -235,6 +235,8 @@ export function toEnginePile(row: PileRow): Pile {
     spacing: row.spacing,
     ...(row.shearCapacity > 0 ? { shearCapacity: row.shearCapacity } : {}),
     ...(row.momentCapacity > 0 ? { momentCapacity: row.momentCapacity } : {}),
+    ...(row.bendingStiffness && row.bendingStiffness > 0 ? { bendingStiffness: row.bendingStiffness } : {}),
+    ...(row.type === "sheet-pile" ? { wall: true } : {}),
     angle: row.angle,
     ...(row.direction ? { direction: row.direction } : {}),
     application: row.application,
@@ -268,6 +270,7 @@ export function sanitizePile(raw: unknown, id: string): PileRow | null {
     spacing: num(r.spacing, preset.spacing, (n) => n > 0),
     shearCapacity: num(r.shearCapacity, 0, (n) => n >= 0),
     momentCapacity: num(r.momentCapacity, 0, (n) => n >= 0),
+    ...(finite(r.bendingStiffness) && (r.bendingStiffness as number) > 0 ? { bendingStiffness: r.bendingStiffness as number } : {}),
     angle: num(r.angle, 0, (n) => Math.abs(n) < 90),
     // Absent stays absent (force at the angle, as before the option).
     ...(PILE_DIRECTIONS.includes(r.direction as PileForceDirection) ? { direction: r.direction as PileForceDirection } : {}),

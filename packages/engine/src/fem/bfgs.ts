@@ -36,6 +36,7 @@
 import type { FeModel } from "./model";
 import { evaluate, norm2, type GaussStrength, type NewtonState } from "./newton";
 import { barInternal } from "./bars";
+import { beamInternal } from "./piles";
 
 export interface BfgsOptions {
   /** Relative residual tolerance ‖r‖/‖f‖; default 1e-4. */
@@ -84,6 +85,7 @@ export function bfgsAtF(
   const residual = (uu: Float64Array): number => {
     evaluate(model, eqs, uu, state.ep, strength, cutoff, fint, stress, ep, null);
     if (model.bars.count) barInternal(model, uu, state.barEp, state.F, fint, barEp, null);
+    if (model.piles.count) beamInternal(model, uu, fint, null);
     for (let i = 0; i < neq; i++) r[i] = model.f[i] - fint[i];
     return norm2(r);
   };

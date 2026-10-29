@@ -453,6 +453,9 @@ function isFemSummary(raw: unknown): raw is FemResultSummary {
     Array.isArray(f.warnings) &&
     f.warnings.every((w) => typeof w === "string") &&
     (f.bounds === undefined || isBounds(f.bounds)) &&
+    (f.piles === undefined ||
+      (Array.isArray(f.piles) &&
+        f.piles.every((p) => !!p && typeof p === "object" && Number.isInteger(p.pile) && [p.maxAxialForce, p.maxShearForce, p.maxMoment].every(Number.isFinite)))) &&
     (f.curve === undefined ||
       (Array.isArray(f.curve) && f.curve.every((p) => !!p && typeof p === "object" && Number.isFinite(p.F) && Number.isFinite(p.displacement))))
   );

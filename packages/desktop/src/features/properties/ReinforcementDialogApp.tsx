@@ -787,6 +787,15 @@ export function ReinforcementDialogApp() {
                   accept={(v) => v >= 0}
                   onValue={(v) => updatePile(pile.id, { momentCapacity: v })}
                 />
+                <NumberField
+                  label="Bending stiffness EI (kNm², FE; 0 = concrete)"
+                  title="Bending stiffness per pile in the finite element analysis, where the pile is a beam joined to the soil by springs that let the soil flow between the piles. 0: a solid concrete circle of the diameter (E = 30 GPa). For a sheet pile wall: EI per metre with spacing 1."
+                  span={2}
+                  value={pile.bendingStiffness ?? 0}
+                  ariaLabel="Bending stiffness per pile"
+                  accept={(v) => v >= 0}
+                  onValue={(v) => updatePile(pile.id, { bendingStiffness: v > 0 ? v : undefined })}
+                />
                 <Field
                   label="Direction"
                   title="Direction of the force on the sliding mass. Tangent to the slip surface is the usual default for passive supports."

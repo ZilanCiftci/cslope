@@ -181,6 +181,8 @@ export interface PileRow {
   shearCapacity: number;
   /** Bending capacity per pile (kNm); 0 = no limit. */
   momentCapacity: number;
+  /** Bending stiffness EI per pile (kNm²) for the finite element analysis; not set: a concrete circle of the diameter. */
+  bendingStiffness?: number;
   /** Tilt of the force above horizontal (°), for direction "angle". */
   angle: number;
   /**

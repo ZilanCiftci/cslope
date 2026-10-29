@@ -23,6 +23,7 @@
 import type { FeModel } from "./model";
 import { BAR_GP_STRIDE } from "./model";
 import type { SparseCholesky } from "./sparse";
+import { springCapacity } from "./piles";
 
 function barDofs(model: FeModel, b: number, out: Int32Array): void {
   for (let k = 0; k < 3; k++) {
@@ -34,8 +35,11 @@ function barDofs(model: FeModel, b: number, out: Int32Array): void {
 
 /** Capacity of a bar Gauss point at reduction F. */
 function capacity(model: FeModel, b: number, g: number, F: number): number {
-  const c = model.bars.capacity[2 * b + g];
-  return model.bars.passive[b] ? c / F : c;
+  const { bars } = model, i = 2 * b + g;
+  const kind = bars.capKind[i];
+  if (kind !== 0) return springCapacity(kind, bars.capC[i], bars.capSv[i], bars.capTan[i], F);
+  const c = bars.capacity[i];
+  return bars.passive[b] ? c / F : c;
 }
 
 /**
@@ -54,7 +58,8 @@ export function relaxBars(model: FeModel, u: Float64Array, barEp: Float64Array, 
       for (let k = 0; k < 6; k++) if (d[k] >= 0) eps += bars.gp[o + k] * u[d[k]];
       const n = ea * (eps - barEp[i]);
       const t = capacity(model, b, g, F);
-      const excess = n > t ? n - t : n < 0 ? n : 0;
+      const lo = bars.bothWays[b] ? -t : 0; // a pile spring acts both ways
+      const excess = n > t ? n - t : n < lo ? n - lo : 0;
       if (excess === 0) continue;
       barEp[i] += excess / ea;
       const w = bars.gp[o + 6] * excess;
@@ -87,11 +92,12 @@ export function barInternal(
       for (let k = 0; k < 6; k++) if (d[k] >= 0) eps += bars.gp[o + k] * u[d[k]];
       const trial = ea * (eps - barEpOld[i]);
       const t = capacity(model, b, g, F);
-      const n = Math.min(t, Math.max(0, trial));
+      const lo = bars.bothWays[b] ? -t : 0; // a pile spring acts both ways
+      const n = Math.min(t, Math.max(lo, trial));
       barEpNew[i] = eps - n / ea;
       const w = bars.gp[o + 6];
       for (let k = 0; k < 6; k++) if (d[k] >= 0) fint[d[k]] += bars.gp[o + k] * n * w;
-      if (K && trial > 0 && trial < t) {
+      if (K && trial > lo && trial < t) {
         for (let k = 0; k < 6; k++) {
           if (d[k] < 0) continue;
           for (let j = 0; j <= k; j++) if (d[j] >= 0) K.add(d[k], d[j], ea * w * bars.gp[o + k] * bars.gp[o + j]);

@@ -398,6 +398,8 @@ export interface FemResultSummary {
    * curve; it turns flat at failure). Absent in results saved before it.
    */
   curve?: { F: number; displacement: number }[];
+  /** The piles' largest forces at the factor of safety, per pile (kN, kNm), in the slope's pile order. */
+  piles?: { pile: number; maxAxialForce: number; maxShearForce: number; maxMoment: number }[];
   /** Lower and upper bounds of limit analysis (null where not found), when asked for. */
   bounds?: { lower: number | null; upper: number | null; elements: number; elapsedMs: number; warnings: string[] };
 }

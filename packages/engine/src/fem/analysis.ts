@@ -23,6 +23,7 @@
 import type { Slope } from "../model/slope";
 import { gaussStrains, type FeModel, type FeModelOptions } from "./model";
 import { prepareFeModel, type InitialStressOptions } from "./initial-stress";
+import { pileForces } from "./piles";
 import { dissipationIndicator, dorflerMark, refinedSizeField, zzIndicator } from "./adapt";
 import {
   runTrial,
@@ -44,6 +45,15 @@ export interface FemAnalysisOptions extends FeModelOptions, SrmOptions, InitialS
    * Default: off.
    */
   adaptive?: { levels?: number; theta?: number; tolerance?: number; indicator?: "dissipation" | "zz" };
+}
+
+/** Largest forces of a pile at the factor of safety, per pile (kN, kNm). */
+export interface FemPileResult {
+  /** Index in the slope's piles. */
+  pile: number;
+  maxAxialForce: number;
+  maxShearForce: number;
+  maxMoment: number;
 }
 
 export interface FemLevel {
@@ -91,6 +101,8 @@ export interface FemAnalysisResult {
   shearStrainIncrement: Float64Array;
   /** Factor of safety per mesh, coarsest first (one entry without refinement). */
   levels: FemLevel[];
+  /** The piles' largest forces at the factor of safety (per pile). */
+  piles: FemPileResult[];
   /**
    * The element size of the final mesh as a size field, to mesh the same
    * slope again (e.g. for the lower bound, whose mechanism is the same).
@@ -256,8 +268,21 @@ export function* analyzeFemSearch(slope: Slope, options: FemAnalysisOptions = {}
       levels[finalLevel] = { elements: model.elementCount, factorOfSafety: r.factorOfSafety, iterations: levels[finalLevel].iterations + r.iterations };
     }
   }
-  if (slope.piles.length) {
-    warnings.push("Piles are not included in the finite element analysis: a pile row needs beam elements and three-dimensional flow of soil between the piles.");
+  for (const w of model.warnings) if (!warnings.includes(w)) warnings.push(w);
+  // The piles' largest forces at the factor of safety, against their capacities.
+  const pileResults: FemPileResult[] = [];
+  if (model.piles.count) {
+    const forces = pileForces(model, r.state.u, (i) => slope.piles[i].spacing ?? 1);
+    for (const [i, f] of forces) {
+      const p = slope.piles[i];
+      pileResults.push({ pile: i, maxAxialForce: f.axial, maxShearForce: f.shear, maxMoment: f.moment });
+      if (p.momentCapacity !== undefined && f.moment > p.momentCapacity) {
+        warnings.push(`Pile ${i + 1}: the bending moment at the factor of safety, ${f.moment.toFixed(0)} kNm per pile, exceeds its capacity ${p.momentCapacity} kNm; the elastic pile overstates its support.`);
+      }
+      if (p.shearCapacity !== undefined && f.shear > p.shearCapacity) {
+        warnings.push(`Pile ${i + 1}: the shear force at the factor of safety, ${f.shear.toFixed(0)} kN per pile, exceeds its capacity ${p.shearCapacity} kN; the elastic pile overstates its support.`);
+      }
+    }
   }
   if (model.seepage && !model.seepage.converged) warnings.push("The seepage iteration did not converge; the pore pressures are approximate.");
   if (capped) warnings.push("The mesh reached its vertex limit; the element size was not reached everywhere.");
@@ -292,6 +317,7 @@ export function* analyzeFemSearch(slope: Slope, options: FemAnalysisOptions = {}
     plasticShearStrain: plasticShearPerElement(model, r.state.evp),
     shearStrainIncrement: shearIncrementPerElement(model, r.state.u, r.previousState?.u ?? null),
     levels,
+    piles: pileResults,
     sizeField: model.sizeField,
     elapsedMs: performance.now() - t0,
   };
