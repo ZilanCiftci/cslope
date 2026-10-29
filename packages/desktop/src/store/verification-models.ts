@@ -20,7 +20,15 @@ import type { ModelEntry } from "./types";
 export function verificationModel(c: VerificationCase, method?: string, name = c.title): ModelEntry {
   const analyses = presentedAnalyses(c);
   const a = method ? analyses.find((x) => x.label === method) : analyses[0];
-  if (!a) throw new Error(`No verification problem ${c.id} with the analysis "${method}"`);
+  if (!a) {
+    if (method) throw new Error(`No verification problem ${c.id} with the analysis "${method}"`);
+    // A problem checked by finite elements only: the app's default analysis.
+    return modelFromDefinition(c.definition, {
+      id: `verification-${c.id}`,
+      name,
+      options: { ...VERIFICATION_OPTIONS, ...FULL_VERIFICATION_OPTIONS },
+    });
+  }
   return modelFromDefinition(c.definition, {
     id: `verification-${c.id}`,
     name,
