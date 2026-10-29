@@ -4,6 +4,7 @@
 
 import type { Material } from "./material";
 import type { ReinforcementForce } from "./reinforcement";
+import type { HoekBrownParameters } from "./hoek-brown";
 
 /**
  * Represents a polygon region with an associated material.
@@ -153,6 +154,12 @@ export interface Slice {
    * When `true`, the solver uses Combined method (min of drained/undrained).
    */
   isCombined?: boolean;
+  /**
+   * A base in Hoek–Brown rock: `cohesion` and `phi` are the instantaneous
+   * parameters at the base's effective normal stress, updated by the
+   * analysis (solvers.ts).
+   */
+  hoekBrown?: HoekBrownParameters;
   /**
    * When `true`, any slip surface passing through this slice should
    * be treated as infinitely stable and excluded from the search.

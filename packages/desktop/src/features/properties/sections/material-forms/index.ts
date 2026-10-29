@@ -7,6 +7,7 @@ export { AnisotropicFields } from "./AnisotropicFields";
 export { SfDepthFields } from "./SfDepthFields";
 export { SfDatumFields } from "./SfDatumFields";
 export { LimeCementFields } from "./LimeCementFields";
+export { HoekBrownFields } from "./HoekBrownFields";
 export { CutoffField } from "./CutoffField";
 export { UnitWeightSatField } from "./UnitWeightSatField";
 export { createDefaultModel, flatFieldsFromModel } from "./model-defaults";

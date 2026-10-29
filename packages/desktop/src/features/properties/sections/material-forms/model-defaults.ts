@@ -21,6 +21,7 @@ import type {
   StrengthFromDepthModel,
   StrengthFromDatumModel,
   LimeCementColumnModel,
+  HoekBrownModel,
 } from "@cslope/engine";
 
 export function createDefaultModel(
@@ -102,6 +103,16 @@ export function createDefaultModel(
         columnSu: 100,
         areaRatio: 0.2,
       } satisfies LimeCementColumnModel;
+
+    case "hoek-brown":
+      return {
+        kind: "hoek-brown",
+        unitWeight: unitWeight === 18 ? 25 : unitWeight,
+        ucs: 10000,
+        gsi: 50,
+        mi: 10,
+        disturbance: 0,
+      } satisfies HoekBrownModel;
   }
 }
 

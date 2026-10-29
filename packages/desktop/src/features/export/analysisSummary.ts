@@ -144,6 +144,8 @@ export function strengthText(model: MaterialModel): string {
       }
       return s;
     }
+    case "hoek-brown":
+      return `σci = ${fmt(model.ucs)} kPa, GSI = ${fmt(model.gsi)}, mi = ${fmt(model.mi)}, D = ${fmt(model.disturbance ?? 0)} (generalised Hoek-Brown)`;
     case "high-strength":
       return "not sheared (surfaces through it are skipped)";
     case "impenetrable":

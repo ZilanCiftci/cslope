@@ -192,6 +192,15 @@ export function validateMaterialModel(model: MaterialModel): string[] {
       validateCutoff(errors, model.suMax, model.rate, model.suRef);
       break;
 
+    case "hoek-brown":
+      if (!Number.isFinite(model.ucs) || model.ucs <= 0) errors.push("σci must be > 0.");
+      if (!Number.isFinite(model.gsi) || model.gsi < 0 || model.gsi > 100) errors.push("GSI must be between 0 and 100.");
+      if (!Number.isFinite(model.mi) || model.mi <= 0) errors.push("mi must be > 0.");
+      if (model.disturbance !== undefined && !(Number.isFinite(model.disturbance) && model.disturbance >= 0 && model.disturbance <= 1)) {
+        errors.push("Disturbance factor D must be between 0 and 1.");
+      }
+      break;
+
     case "lime-cement-columns":
       if (!Number.isFinite(model.soilSu) || model.soilSu < 0) {
         errors.push("Soil Su between the columns must be ≥ 0.");

@@ -57,6 +57,7 @@ import { meshDomain, pointInPolygon, type TriMesh } from "./mesh";
 import { nestedDissection, nodeGraph, SparseCholesky } from "./sparse";
 import { solveSeepage, type SeepageResult } from "./seepage";
 import { buildPiles, EMPTY_PILES, frameStiffness, beamDofs, type FePiles } from "./piles";
+import { instantaneousAtSigma3, type HoekBrownParameters } from "../types/hoek-brown";
 
 /** Elastic and flow parameters of a material in the finite element analysis. */
 export interface FeMaterialParameters {
@@ -211,6 +212,13 @@ export interface FeModel {
   sizeField: ((x: number, y: number) => number) & { min?: number };
   /** The seepage solution, when the pore pressures come from it. */
   seepage?: SeepageResult;
+  /** Hoek–Brown rock: its parameters per Gauss point (index), whose c and φ follow the stress (`setHoekBrownStrength`). */
+  gpHoekBrown: Map<number, HoekBrownParameters>;
+  /** The partial factors of the strength (design values). */
+  partialFactors: Slope["partialFactors"];
+  /** gpC and gpPhi as built (from the elastic stress), to go back to. */
+  gpC0: Float64Array;
+  gpPhi0: Float64Array;
   /** Pile rows as beams on springs to the soil (piles.ts). */
   piles: FePiles;
   /** Notes on what the model leaves out. */
@@ -599,6 +607,8 @@ export function buildFeModel(slope: Slope, options: FeModelOptions = {}): FeMode
   const gpC = new Float64Array(ngp), gpPhi = new Float64Array(ngp), gpU = new Float64Array(ngp);
   const gpCu = new Float64Array(ngp).fill(Infinity);
   const factors = slope.partialFactors;
+  // Gauss points in Hoek–Brown rock: their strength is set again below from the elastic stress.
+  const hoekBrown = new Map<number, HoekBrownParameters>();
   const N = new Float64Array(6);
   const surface = slope.surfaceLineXY ?? { x: [xmin, xmax], y: [ymax, ymax] };
   const waterLines = materials.map((m) => slope.getWaterLineForMaterial(m));
@@ -625,6 +635,7 @@ export function buildFeModel(slope: Slope, options: FeModelOptions = {}): FeMode
           // without factors φ as given, not through atan(tan φ)
           gpPhi[i] = d.undrained ? 0 : factors ? Math.atan(d.tanPhi) : (s.frictionAngle * Math.PI) / 180;
           if (s.isCombined && !d.undrained) gpCu[i] = Math.max(0, d.cohesionUndrained);
+          if (s.hoekBrown) hoekBrown.set(i, s.hoekBrown);
         }
       }
       if (wl) {
@@ -858,6 +869,24 @@ export function buildFeModel(slope: Slope, options: FeModelOptions = {}): FeMode
     addF(b, 0, -P * bt * (2 * bt - 1));
   }
 
+  // Hoek–Brown rock: the instantaneous Mohr–Coulomb parameters at the
+  // minor principal stress σ3 of the elastic gravity solution (the
+  // equivalent Mohr–Coulomb material of the strength reduction with
+  // Hoek–Brown, after Hammah et al. 2005, with the tangent fixed there).
+  if (hoekBrown.size) {
+    const u = Float64Array.from(f);
+    K.solve(u);
+    const st = new Float64Array(4 * ngp);
+    gaussStrainsOf(el, eq, gp, ne, u, st);
+    for (const [i, hb] of hoekBrown) {
+      const e = Math.floor(i / 3), E = elE[e], nu = elNu[e];
+      const lam = (E * nu) / ((1 + nu) * (1 - 2 * nu)), mu = E / (2 * (1 + nu));
+      const ex = st[4 * i], ey = st[4 * i + 1], g = st[4 * i + 2], tr = ex + ey;
+      const sx = lam * tr + 2 * mu * ex, sy = lam * tr + 2 * mu * ey, txy = mu * g, sz = lam * tr;
+      [gpC[i], gpPhi[i]] = hoekBrownStrength(hb, sx, sy, txy, sz, factors);
+    }
+  }
+
   return {
     x, y, nodeCount: nn, cornerCount: nc, el, elementCount: ne,
     materials, elMaterial, elE, elNu, elPsi, elElastic,
@@ -869,11 +898,41 @@ export function buildFeModel(slope: Slope, options: FeModelOptions = {}): FeMode
     surfaceEdges: Int32Array.from(surfEdges),
     bars,
     piles,
+    gpHoekBrown: hoekBrown,
+    partialFactors: factors,
+    gpC0: hoekBrown.size ? gpC.slice() : gpC,
+    gpPhi0: hoekBrown.size ? gpPhi.slice() : gpPhi,
     warnings: [...barWarnings, ...pileWarnings],
     seepage,
     triangulation: tm,
     sizeField: options.sizeField ?? Object.assign(size, { min: sizeMin }),
   };
+}
+
+/** Design c (kPa) and φ (rad) of Hoek–Brown rock at a stress (σx, σy, τxy, σz; effective, tension positive). */
+function hoekBrownStrength(hb: HoekBrownParameters, sx: number, sy: number, txy: number, sz: number, factors: Slope["partialFactors"]): [number, number] {
+  const r = Math.hypot((sx - sy) / 2, txy);
+  // σ3 compression positive: minus the largest (tension-positive) principal stress
+  const s3 = -Math.max((sx + sy) / 2 + r, sz);
+  const inst = instantaneousAtSigma3(hb, s3);
+  const d = designStrength("hoek-brown", { cohesion: inst.cohesion, frictionAngle: inst.frictionAngle, cohesionUndrained: inst.cohesion }, factors);
+  return [d.cohesion, factors ? Math.atan(d.tanPhi) : (inst.frictionAngle * Math.PI) / 180];
+}
+
+/**
+ * Hoek–Brown rock: c and φ at each of its Gauss points set to the
+ * instantaneous parameters at the stresses given (a trial's starting
+ * state, srm.ts), or back to those of the elastic stress (null): the
+ * tangent follows the stress as the strength reduction proceeds (Hammah,
+ * Yacoub, Corkum & Curran 2005, Proc. 40th US Rock Mech. Symp., ARMA
+ * 05-810).
+ */
+export function setHoekBrownStrength(model: FeModel, stress: Float64Array | null): void {
+  const factors = model.partialFactors;
+  for (const [i, hb] of model.gpHoekBrown) {
+    if (!stress) { model.gpC[i] = model.gpC0[i]; model.gpPhi[i] = model.gpPhi0[i]; continue; }
+    [model.gpC[i], model.gpPhi[i]] = hoekBrownStrength(hb, stress[4 * i], stress[4 * i + 1], stress[4 * i + 2], stress[4 * i + 3], factors);
+  }
 }
 
 /**
@@ -907,7 +966,10 @@ export function withInitialStress(model: FeModel, stress0: Float64Array): FeMode
  * εx, εy, γxy, εz (= 0 in plane strain), 4 per Gauss point.
  */
 export function gaussStrains(model: FeModel, u: Float64Array, out: Float64Array): void {
-  const { el, eq, gp, elementCount } = model;
+  gaussStrainsOf(model.el, model.eq, model.gp, model.elementCount, u, out);
+}
+
+function gaussStrainsOf(el: Int32Array, eq: Int32Array, gp: Float64Array, elementCount: number, u: Float64Array, out: Float64Array): void {
   for (let e = 0; e < elementCount; e++) {
     for (let g = 0; g < 3; g++) {
       const o = (3 * e + g) * GP_STRIDE;

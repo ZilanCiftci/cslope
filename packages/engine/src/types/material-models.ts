@@ -227,6 +227,25 @@ export interface LimeCementColumnModel extends MaterialModelBase {
   columnFrictionAngle?: number;
 }
 
+/**
+ * Generalised Hoek–Brown rock mass (Hoek, Carranza-Torres & Corkum 2002):
+ * σ1′ = σ3′ + σci (mb σ3′/σci + s)^a from the intact rock's σci and mi,
+ * the Geological Strength Index and the disturbance factor D. The analyses
+ * use its instantaneous Mohr–Coulomb parameters at the normal stress on the
+ * slip surface (types/hoek-brown.ts).
+ */
+export interface HoekBrownModel extends MaterialModelBase {
+  kind: "hoek-brown";
+  /** Uniaxial compressive strength of the intact rock σci (kPa). */
+  ucs: number;
+  /** Geological Strength Index, 0–100. */
+  gsi: number;
+  /** Intact rock constant mi. */
+  mi: number;
+  /** Disturbance factor D, 0–1. Default 0. */
+  disturbance?: number;
+}
+
 // ── Union ──────────────────────────────────────────────────────
 
 /** Discriminated union of all supported material models. */
@@ -239,7 +258,8 @@ export type MaterialModel =
   | AnisotropicFunctionModel
   | StrengthFromDepthModel
   | StrengthFromDatumModel
-  | LimeCementColumnModel;
+  | LimeCementColumnModel
+  | HoekBrownModel;
 
 /** All valid `kind` string literals. */
 export type MaterialModelKind = MaterialModel["kind"];
@@ -255,4 +275,5 @@ export const MATERIAL_MODEL_LABELS: Record<MaterialModelKind, string> = {
   "s-f-depth": "S = f(depth)",
   "s-f-datum": "S = f(datum)",
   "lime-cement-columns": "Lime-cement columns",
+  "hoek-brown": "Generalised Hoek-Brown",
 };

@@ -9,6 +9,7 @@
 
 import type { MaterialModel, MaterialModelKind } from "./material-models";
 import type { PartialFactors } from "./analysis";
+import { hoekBrownParameters, instantaneousAtNormalStress, type HoekBrownParameters } from "./hoek-brown";
 import {
   interpolateIDW,
   interpolateNearest,
@@ -48,6 +49,12 @@ export interface ResolvedStrength {
    * resistance = min(drained, undrained).
    */
   isCombined?: boolean;
+  /**
+   * A Hoek–Brown rock mass: c and φ are its instantaneous parameters at an
+   * estimate of the normal stress (the overburden), which the analyses
+   * update from the stress they find (types/hoek-brown.ts).
+   */
+  hoekBrown?: HoekBrownParameters;
 }
 
 // ── Context supplied by the slice builder ──────────────────────
@@ -137,6 +144,17 @@ export function resolveStrength(
 
     case "s-f-datum":
       return resolveStrengthFromDatum(model, context);
+
+    // ── Generalised Hoek–Brown ───────────────────────────────
+    case "hoek-brown": {
+      // first estimate of the normal stress on the base: the overburden
+      // γ·depth·cos²α (no pore pressure); the analyses refine it
+      const hb = hoekBrownParameters(model.ucs, model.gsi, model.mi, model.disturbance ?? 0);
+      const depth = Math.max(0, context.yGround - context.yBottom);
+      const sn = model.unitWeight * depth * Math.cos(context.alpha) ** 2;
+      const inst = instantaneousAtNormalStress(hb, sn);
+      return { ...inst, cohesionUndrained: inst.cohesion, hoekBrown: hb };
+    }
 
     default: {
       // Exhaustiveness guard — TypeScript will error if a new kind

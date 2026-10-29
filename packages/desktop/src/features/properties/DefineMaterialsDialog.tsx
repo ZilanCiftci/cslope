@@ -16,6 +16,7 @@ import {
   SfDepthFields,
   SfDatumFields,
   LimeCementFields,
+  HoekBrownFields,
   createDefaultModel,
 } from "./sections/material-forms";
 import { PopupPanel } from "../../components/ui/PopupPanel";
@@ -34,6 +35,7 @@ const MODEL_KINDS: MaterialModelKind[] = [
   "s-f-depth",
   "s-f-datum",
   "lime-cement-columns",
+  "hoek-brown",
 ];
 
 // ── Props ──
@@ -496,6 +498,16 @@ function ModelFields({
     case "lime-cement-columns":
       return (
         <LimeCementFields
+          model={model}
+          onChange={onChange as (p: Partial<typeof model>) => void}
+          modelExpressions={modelExpressions}
+          parameterValues={parameterValues}
+          onExpressionChange={onExpressionChange}
+        />
+      );
+    case "hoek-brown":
+      return (
+        <HoekBrownFields
           model={model}
           onChange={onChange as (p: Partial<typeof model>) => void}
           modelExpressions={modelExpressions}

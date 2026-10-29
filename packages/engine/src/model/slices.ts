@@ -447,6 +447,7 @@ export function createSlice(
     phi,
     U,
     isCombined: strength.isCombined,
+    ...(strength.hoekBrown ? { hoekBrown: strength.hoekBrown } : {}),
     skipSurface: strength.skipSurface,
     impenetrable: strength.impenetrable,
   };

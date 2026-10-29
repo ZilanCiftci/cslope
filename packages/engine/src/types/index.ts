@@ -20,9 +20,11 @@ export type {
   StrengthFromDepthModel,
   StrengthFromDatumModel,
   LimeCementColumnModel,
+  HoekBrownModel,
   DepthReference,
 } from "./material-models";
 export { MATERIAL_MODEL_LABELS } from "./material-models";
+export { hoekBrownParameters, instantaneousAtNormalStress, instantaneousAtSigma3, type HoekBrownParameters } from "./hoek-brown";
 
 // Strength resolution
 export {

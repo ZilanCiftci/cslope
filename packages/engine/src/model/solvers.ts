@@ -8,6 +8,8 @@ import type { Slice } from "../types/index";
 import { getIntersliceFunctionValue, extrapolateLambda } from "../math/index";
 import type { Slope, SearchPlane } from "./slope";
 import { getSlices, WATER_LINE_GAP } from "./slices";
+import { instantaneousAtNormalStress } from "../types/hoek-brown";
+import { designStrength } from "../types/strength";
 import {
   setEntryExitPlanes,
   generateRefinedPlanes,
@@ -1074,6 +1076,27 @@ function isSurfaceGeometryError(error: unknown): boolean {
   return error instanceof Error && SURFACE_GEOMETRY_ERRORS.has(error.message);
 }
 
+/** Passes of the Hoek–Brown fixed point per surface, and its relative tolerance on F (implementation choices). */
+const HB_PASSES = 20;
+const HB_TOLERANCE = 1e-4;
+
+/**
+ * Each Hoek–Brown slice's instantaneous c and φ at its effective normal
+ * stress N′/l (design values with the partial factors).
+ */
+function updateHoekBrown(slope: Slope, slices: Slice[], normals: readonly number[]): void {
+  for (let i = 0; i < slices.length; i++) {
+    const s = slices[i];
+    if (!s.hoekBrown) continue;
+    const inst = instantaneousAtNormalStress(s.hoekBrown, normals[i] / s.baseLength);
+    const d = designStrength("hoek-brown", { cohesion: inst.cohesion, frictionAngle: inst.frictionAngle, cohesionUndrained: inst.cohesion }, slope.partialFactors);
+    s.cohesion = d.cohesion;
+    s.cohesionUndrained = d.cohesion;
+    s.phi = Math.atan(d.tanPhi);
+    s.frictionAngle = (s.phi * 180) / Math.PI;
+  }
+}
+
 function evaluatePlanes(slope: Slope, allPlanes: SearchPlane[]): void {
   for (const plane of allPlanes) {
     delete plane.belowMinSize;
@@ -1176,48 +1199,61 @@ function evaluatePlanes(slope: Slope, allPlanes: SearchPlane[]): void {
     /** Morgenstern-Price closest pair: not converged, but its factor is kept. */
     let acceptedClosestPair = false;
 
-    switch (slope.method) {
-      case "Bishop": {
-        const [f, , , cvg] = analyseBishop(slope, slices);
-        fos = f;
-        converged = cvg;
-        break;
+    // Hoek–Brown bases: the instantaneous strength at the normal stress
+    // the solution finds, repeated until F settles (a fixed point; the
+    // first pass uses the overburden estimate of the slice builder).
+    const hoekBrown = slices.some((s) => s.hoekBrown);
+    let lastHbFos = NaN;
+    for (let pass = 0; ; pass++) {
+      switch (slope.method) {
+        case "Bishop": {
+          const [f, , , cvg] = analyseBishop(slope, slices);
+          fos = f;
+          converged = cvg;
+          break;
+        }
+        case "Janbu": {
+          const [f, , , cvg] = analyseJanbu(slope, slices);
+          fos = f;
+          // The normal forces are those of the uncorrected factor: the f₀
+          // correction scales the result, not the slice equilibrium.
+          if (f != null && slope.janbuCorrection) solvedFos = f / janbuCorrectionFactor(slices);
+          converged = cvg;
+          break;
+        }
+        case "Morgenstern-Price": {
+          const [f, lff, , , cvg, gap, closest] =
+            morgensternPriceSolver === "march"
+              ? analyseMorgensternPriceMarch(slope, slices)
+              : analyseMorgensternPrice(slope, slices);
+          fos = f;
+          plane.lffArray = lff ?? undefined;
+          // A solution accepted with the closest pair, not a crossing: the
+          // factor of safety satisfies moment equilibrium, force equilibrium
+          // only within the gap. It keeps its factor (on a φ = 0 circle, e.g.
+          // V027, moment equilibrium alone fixes F) but is reported as not
+          // converged, with the gap, so that it is not mistaken for a
+          // complete-equilibrium solution (Fm = Ff; Morgenstern & Price 1965).
+          plane.closestPair = closest === true || undefined;
+          plane.equilibriumGap = closest && gap != null ? gap : undefined;
+          acceptedClosestPair = closest === true;
+          // A candidate of the non-circular optimisation is kept only with a
+          // crossing: the optimisation is a minimum over thousands of
+          // surfaces and finds every one where the closest pair reads low.
+          // The surface is abandoned, as in Edris & Wright (1987, para. 101).
+          if (plane.optimised && closest) fos = null;
+          converged = cvg;
+          break;
+        }
+        default:
+          throw new Error(`Unknown method: ${slope.method}`);
       }
-      case "Janbu": {
-        const [f, , , cvg] = analyseJanbu(slope, slices);
-        fos = f;
-        // The normal forces are those of the uncorrected factor: the f₀
-        // correction scales the result, not the slice equilibrium.
-        if (f != null && slope.janbuCorrection) solvedFos = f / janbuCorrectionFactor(slices);
-        converged = cvg;
-        break;
-      }
-      case "Morgenstern-Price": {
-        const [f, lff, , , cvg, gap, closest] =
-          morgensternPriceSolver === "march"
-            ? analyseMorgensternPriceMarch(slope, slices)
-            : analyseMorgensternPrice(slope, slices);
-        fos = f;
-        plane.lffArray = lff ?? undefined;
-        // A solution accepted with the closest pair, not a crossing: the
-        // factor of safety satisfies moment equilibrium, force equilibrium
-        // only within the gap. It keeps its factor (on a φ = 0 circle, e.g.
-        // V027, moment equilibrium alone fixes F) but is reported as not
-        // converged, with the gap, so that it is not mistaken for a
-        // complete-equilibrium solution (Fm = Ff; Morgenstern & Price 1965).
-        plane.closestPair = closest === true || undefined;
-        plane.equilibriumGap = closest && gap != null ? gap : undefined;
-        acceptedClosestPair = closest === true;
-        // A candidate of the non-circular optimisation is kept only with a
-        // crossing: the optimisation is a minimum over thousands of
-        // surfaces and finds every one where the closest pair reads low.
-        // The surface is abandoned, as in Edris & Wright (1987, para. 101).
-        if (plane.optimised && closest) fos = null;
-        converged = cvg;
-        break;
-      }
-      default:
-        throw new Error(`Unknown method: ${slope.method}`);
+      if (!hoekBrown || fos == null || pass >= HB_PASSES) break;
+      if (Math.abs(fos - lastHbFos) <= HB_TOLERANCE * Math.abs(fos)) break;
+      lastHbFos = fos;
+      const normals = solvedEffectiveNormals(slope, slices, solvedFos ?? fos, plane.lffArray);
+      if (!normals) break;
+      updateHoekBrown(slope, slices, normals);
     }
 
     // Discard non-converged or negative FoS — these arise from
