@@ -62,6 +62,8 @@ export interface UpperBoundOptions extends FeModelOptions {
   fTolerance?: number;
   /** Time limit per linear program (s); default 300. */
   timeLimit?: number;
+  /** Time limit of the whole search (s): no linear program starts after it, and the bound stays the best certified so far; default none. */
+  totalTimeLimit?: number;
   /** First reduction tried, e.g. the strength reduction factor; default 1. */
   startF?: number;
 }
@@ -356,10 +358,18 @@ export async function upperBound(slope: Slope, options: UpperBoundOptions = {}, 
   const trials: UpperBoundResult["trials"] = [];
   const warnings = [...prob.warnings];
   const velocities = new Map<number, Record<string, { Primal: number }>>();
+  const searchStart = performance.now();
+  let outOfTime = false;
   const lambdaAt = (F: number): number => {
     const t0 = performance.now();
+    const remaining = (options.totalTimeLimit ?? Infinity) - (t0 - searchStart) / 1000;
+    if (remaining <= 0) {
+      if (!outOfTime) warnings.push(`The search stopped at its time limit of ${options.totalTimeLimit} s.`);
+      outOfTime = true;
+      return NaN;
+    }
     const lp = prob.build(F);
-    const time_limit = options.timeLimit ?? 300;
+    const time_limit = Math.min(options.timeLimit ?? 300, remaining);
     let r = solver.solve(lp, { solver: "ipm", time_limit });
     if (r.Status !== "Optimal" && r.Status !== "Infeasible" && r.Status !== "Time limit reached") r = solver.solve(lp, { solver: "simplex", time_limit });
     // No mechanism with unit load power (infeasible): the loads cannot fail

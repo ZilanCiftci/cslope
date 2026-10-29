@@ -46,6 +46,8 @@ export interface LowerBoundOptions extends FeModelOptions {
   fTolerance?: number;
   /** Time limit per linear program (s); default 300. */
   timeLimit?: number;
+  /** Time limit of the whole search (s): no linear program starts after it, and the bound stays the best certified so far; default none. */
+  totalTimeLimit?: number;
 }
 
 export interface LowerBoundResult {
@@ -412,13 +414,21 @@ export async function lowerBound(slope: Slope, options: LowerBoundOptions = {}, 
   const prob = lowerBoundProblem(slope, options);
   const trials: LowerBoundResult["trials"] = [];
   const warnings = [...prob.warnings];
+  const searchStart = performance.now();
+  let outOfTime = false;
   const lambdaAt = (F: number): number => {
     const t0 = performance.now();
+    const remaining = (options.totalTimeLimit ?? Infinity) - (t0 - searchStart) / 1000;
+    if (remaining <= 0) {
+      if (!outOfTime) warnings.push(`The search stopped at its time limit of ${options.totalTimeLimit} s.`);
+      outOfTime = true;
+      return NaN;
+    }
     // Interior point (with presolve and crossover) is about four times faster
     // than simplex on these programs (measured on V077); without presolve it
     // can misreport the status, so simplex is the fallback.
     const lp = prob.build(F);
-    const time_limit = options.timeLimit ?? 300;
+    const time_limit = Math.min(options.timeLimit ?? 300, remaining);
     let r = solver.solve(lp, { solver: "ipm", time_limit });
     if (r.Status !== "Optimal" && r.Status !== "Time limit reached") r = solver.solve(lp, { solver: "simplex", time_limit });
     // Only an optimal program gives a load factor; any other status

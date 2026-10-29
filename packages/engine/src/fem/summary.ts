@@ -31,14 +31,17 @@ export function runFemSummary(
  * (`limitAnalysis`), the lower and upper bounds of limit analysis on a mesh
  * graded as the strength reduction's final mesh, BOUND_COARSENING times
  * coarser (the linear programs grow fast with the elements); the upper
- * bound's search starts at the strength reduction factor. `highs` options
- * load the solver (e.g. its WebAssembly binary in an app).
+ * bound's search starts at the strength reduction factor. `highs` gives the
+ * options that load the solver (e.g. its WebAssembly binary in an app),
+ * called only once the strength reduction is done. A failure of the bounds
+ * leaves the strength reduction's result, with the reason in the bounds'
+ * warnings.
  */
 export async function runFemSummaryWithBounds(
   definition: SlopeDefinition,
   settings: FemAnalysisSettings,
   onTrial?: (trial: SrmTrial) => void,
-  highs?: HighsModuleOptions,
+  highs?: () => Promise<HighsModuleOptions>,
 ): Promise<FemResultSummary> {
   const { summary, slope, sizeField } = femAnalysis(definition, settings, onTrial);
   if (!settings.limitAnalysis) return summary;
@@ -50,28 +53,43 @@ export async function runFemSummaryWithBounds(
     porePressure: settings.porePressure ?? "water-table",
     fTolerance: 0.005,
     timeLimit: BOUND_TIME_LIMIT,
+    totalTimeLimit: BOUND_SEARCH_TIME_LIMIT,
   } as const;
   const warnings: string[] = [];
-  const upper = await upperBound(slope, { ...common, startF: summary.factorOfSafety > 0 ? summary.factorOfSafety : 1 }, undefined, highs);
-  const lower = await lowerBound(slope, common, undefined, highs);
-  for (const w of upper.warnings) warnings.push(`Upper bound: ${w}`);
-  for (const w of lower.warnings) warnings.push(`Lower bound: ${w}`);
-  return {
-    ...summary,
-    bounds: {
-      lower: Number.isFinite(lower.factorOfSafety) ? lower.factorOfSafety : null,
-      upper: Number.isFinite(upper.factorOfSafety) ? upper.factorOfSafety : null,
-      elements: upper.elements,
-      elapsedMs: performance.now() - t0,
-      warnings,
-    },
-  };
+  const bounds = { lower: null as number | null, upper: null as number | null, elements: 0, elapsedMs: 0, warnings };
+  const message = (err: unknown) => (err instanceof Error ? err.message : String(err));
+  let module: HighsModuleOptions | undefined;
+  try {
+    module = highs ? await highs() : undefined;
+  } catch (err) {
+    warnings.push(`The linear programming solver could not be loaded: ${message(err)}`);
+    return { ...summary, bounds: { ...bounds, elapsedMs: performance.now() - t0 } };
+  }
+  try {
+    const upper = await upperBound(slope, { ...common, startF: summary.factorOfSafety > 0 ? summary.factorOfSafety : 1 }, undefined, module);
+    for (const w of upper.warnings) warnings.push(`Upper bound: ${w}`);
+    if (Number.isFinite(upper.factorOfSafety)) bounds.upper = upper.factorOfSafety;
+    bounds.elements = upper.elements;
+  } catch (err) {
+    warnings.push(`Upper bound: ${message(err)}`);
+  }
+  try {
+    const lower = await lowerBound(slope, common, undefined, module);
+    for (const w of lower.warnings) warnings.push(`Lower bound: ${w}`);
+    if (Number.isFinite(lower.factorOfSafety)) bounds.lower = lower.factorOfSafety;
+    bounds.elements ||= lower.elements;
+  } catch (err) {
+    warnings.push(`Lower bound: ${message(err)}`);
+  }
+  return { ...summary, bounds: { ...bounds, elapsedMs: performance.now() - t0 } };
 }
 
 /** Coarsening of the bounds' mesh against the strength reduction's final mesh (implementation choice: about 600 elements on V055, 30 s for the upper bound and 2 min for the lower). */
 const BOUND_COARSENING = 2;
 /** Time limit per linear program of the bounds in the app (s). */
 const BOUND_TIME_LIMIT = 120;
+/** Time limit of each bound's search in the app (s): both within the app's 25 minutes for the bounds (analysisSlice.ts). */
+const BOUND_SEARCH_TIME_LIMIT = 480;
 
 function femAnalysis(
   definition: SlopeDefinition,

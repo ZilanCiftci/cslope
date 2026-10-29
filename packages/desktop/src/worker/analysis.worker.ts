@@ -108,7 +108,7 @@ self.onmessage = async (event: MessageEvent<WorkerMessage>) => {
           self.postMessage({ type: "analysis-progress", id, progress: Math.min(0.9, 0.3 + 0.03 * trials) } satisfies AnalysisResponse);
         };
         result.fem = options.fem.limitAnalysis
-          ? await runFemSummaryWithBounds(slopeDef, options.fem, onTrial, { wasmBinary: await highsBinary() })
+          ? await runFemSummaryWithBounds(slopeDef, options.fem, onTrial, async () => ({ wasmBinary: await highsBinary() }))
           : runFemSummary(slopeDef, options.fem, onTrial);
       } catch (err: unknown) {
         result.femError = err instanceof Error ? err.message : String(err);

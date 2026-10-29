@@ -1515,6 +1515,14 @@ function FemCurve({ curve, fos }: { curve: { F: number; displacement: number }[]
   );
 }
 
+/** The bounds as a range, or the one that was found. */
+function boundsText(lower: number | null, upper: number | null): string {
+  if (lower !== null && upper !== null) return `${lower.toFixed(3)} – ${upper.toFixed(3)}`;
+  if (upper !== null) return `≤ ${upper.toFixed(3)} (no lower bound)`;
+  if (lower !== null) return `≥ ${lower.toFixed(3)} (no upper bound)`;
+  return "not found";
+}
+
 const FLOW_RULE_NAMES = { "davis-b": "Davis B", associated: "associated", "non-associated": "non-associated" } as const;
 
 /** The finite element strength reduction of the run. */
@@ -1555,7 +1563,7 @@ function FemSummaryRows({ fem, designValues }: { fem: FemResultSummary; designVa
             Bounds (limit analysis)
           </Label>
           <span className="tabular-nums">
-            {fem.bounds.lower !== null ? fem.bounds.lower.toFixed(3) : "–"} – {fem.bounds.upper !== null ? fem.bounds.upper.toFixed(3) : "–"}
+            {boundsText(fem.bounds.lower, fem.bounds.upper)}
           </span>
         </div>
       )}
