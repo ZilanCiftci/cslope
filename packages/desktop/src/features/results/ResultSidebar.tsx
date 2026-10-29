@@ -1558,7 +1558,7 @@ function FemSummaryRows({ fem, designValues }: { fem: FemResultSummary; designVa
       {fem.bounds && (
         <div className="flex justify-between">
           <Label
-            title={`Limit analysis on ${fem.bounds.elements} elements, ${(fem.bounds.elapsedMs / 1000).toFixed(0)} s: a statically admissible stress field (lower bound) and a kinematically admissible mechanism (upper bound) of rigid–perfectly plastic soil with associated flow. The factor of safety of the mesh's idealisation lies between them.`}
+            title={`Limit analysis on ${fem.bounds.elements} elements${fem.bounds.refinements ? ` after ${fem.bounds.refinements} refinement${fem.bounds.refinements > 1 ? "s" : ""} where the gap between the bounds lay` : ""}, ${(fem.bounds.elapsedMs / 1000).toFixed(0)} s: a statically admissible stress field (lower bound) and a kinematically admissible mechanism (upper bound) of rigid–perfectly plastic soil with associated flow. The factor of safety of the mesh's idealisation lies between them.`}
           >
             Bounds (limit analysis)
           </Label>

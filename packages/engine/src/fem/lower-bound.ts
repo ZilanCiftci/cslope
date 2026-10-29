@@ -105,7 +105,7 @@ export function loadHighs(options?: HighsModuleOptions | ((file: string) => stri
   return highsPromise;
 }
 
-interface LbProblem {
+export interface LbProblem {
   /** Linear program text (CPLEX LP format) for a given F. */
   build(F: number): string;
   allUndrained: boolean;
@@ -113,8 +113,13 @@ interface LbProblem {
   variables: number;
   constraints: number;
   warnings: string[];
-  /** The lower bound mesh: corner coordinates and three nodes per element (for inspection). */
-  mesh: { x: Float64Array; y: Float64Array; el: Int32Array };
+  /**
+   * The lower bound mesh: corner coordinates and three nodes per element,
+   * and the strength reduction model's element each lies in (`parent`; the
+   * model's corner nodes keep their numbers). The stresses of element e at
+   * its corner k are the LP columns s(9e + 3k + 0, 1, 2): σ′x, σ′y, τxy.
+   */
+  mesh: { x: Float64Array; y: Float64Array; el: Int32Array; parent: Int32Array };
 }
 
 /** Assemble the lower bound problem of a slope (the parts that do not depend on F). */
@@ -140,7 +145,7 @@ export function lowerBoundProblem(slope: Slope, options: LowerBoundOptions = {})
     }
   }
   const xs = Array.from(model.x), ys = Array.from(model.y);
-  const elList: number[] = [], matList: number[] = [], elasticList: number[] = [];
+  const elList: number[] = [], matList: number[] = [], elasticList: number[] = [], parentList: number[] = [];
   for (let e = 0; e < model.elementCount; e++) {
     const cn = [model.el[6 * e], model.el[6 * e + 1], model.el[6 * e + 2]];
     let traction = 0;
@@ -157,7 +162,7 @@ export function lowerBoundProblem(slope: Slope, options: LowerBoundOptions = {})
       tris[0] = [cn[0], cn[1], g];
       tris.push([cn[1], cn[2], g], [cn[2], cn[0], g]);
     }
-    for (const t of tris) { elList.push(...t); matList.push(model.elMaterial[e]); elasticList.push(model.elElastic[e]); }
+    for (const t of tris) { elList.push(...t); matList.push(model.elMaterial[e]); elasticList.push(model.elElastic[e]); parentList.push(e); }
   }
   // Fans at the corners of the ground surface (crest, toe, and its ends at
   // the sides): the stress there is singular in direction, and a lower
@@ -180,7 +185,7 @@ export function lowerBoundProblem(slope: Slope, options: LowerBoundOptions = {})
     // field each to meet there (not only a round-off one, 10⁻⁹ rad)
     if (Math.abs(ax * by - ay * bx) > 1e-9 * Math.sqrt((ax * ax + ay * ay) * (bx * bx + by * by))) corner.add(v);
   }
-  const fanned: number[] = [], fanMat: number[] = [], fanElastic: number[] = [];
+  const fanned: number[] = [], fanMat: number[] = [], fanElastic: number[] = [], fanParent: number[] = [];
   for (let t = 0; t < matList.length; t++) {
     const tri = [elList[3 * t], elList[3 * t + 1], elList[3 * t + 2]];
     const kv = tri.findIndex((n) => corner.has(n));
@@ -201,7 +206,7 @@ export function lowerBoundProblem(slope: Slope, options: LowerBoundOptions = {})
       out.push([a, b, pts[pts.length - 1]]);
       for (let j = pts.length - 1; j > 0; j--) out.push([a, pts[j], pts[j - 1]]);
     }
-    for (const o of out) { fanned.push(...o); fanMat.push(matList[t]); fanElastic.push(elasticList[t]); }
+    for (const o of out) { fanned.push(...o); fanMat.push(matList[t]); fanElastic.push(elasticList[t]); fanParent.push(parentList[t]); }
   }
   const x = Float64Array.from(xs), y = Float64Array.from(ys);
   const el = Int32Array.from(fanned), elMaterial = Int32Array.from(fanMat), elElastic = Uint8Array.from(fanElastic);
@@ -406,7 +411,7 @@ export function lowerBoundProblem(slope: Slope, options: LowerBoundOptions = {})
     variables: nVars,
     constraints: fixedRows + yieldCount,
     warnings,
-    mesh: { x, y, el },
+    mesh: { x, y, el, parent: Int32Array.from(fanParent) },
   };
 }
 

@@ -221,6 +221,7 @@ export {
   analyzeFem,
   lowerBound,
   upperBound,
+  adaptiveBounds,
   loadHighs,
   type FemAnalysisOptions,
   type FemAnalysisResult,
@@ -232,6 +233,8 @@ export {
   type LowerBoundResult,
   type UpperBoundOptions,
   type UpperBoundResult,
+  type AdaptiveBoundsOptions,
+  type AdaptiveBoundsResult,
 } from "./fem/index";
 export { runFemSummary, runFemSummaryWithBounds } from "./fem/summary";
 

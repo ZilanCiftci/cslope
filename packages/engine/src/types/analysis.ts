@@ -401,7 +401,16 @@ export interface FemResultSummary {
   /** The piles' largest forces at the factor of safety, per pile (kN, kNm), in the slope's pile order. */
   piles?: { pile: number; maxAxialForce: number; maxShearForce: number; maxMoment: number }[];
   /** Lower and upper bounds of limit analysis (null where not found), when asked for. */
-  bounds?: { lower: number | null; upper: number | null; elements: number; elapsedMs: number; warnings: string[] };
+  bounds?: {
+    lower: number | null;
+    upper: number | null;
+    /** Elements of the last mesh. */
+    elements: number;
+    /** Refinements on the bound gap (bound-adapt.ts); absent in older results: none. */
+    refinements?: number;
+    elapsedMs: number;
+    warnings: string[];
+  };
 }
 
 /** Full analysis result. */

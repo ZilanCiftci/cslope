@@ -89,8 +89,14 @@ interface Highs {
   };
 }
 
-interface UbProblem {
+export interface UbProblem {
   build(F: number): string;
+  /**
+   * The dissipation of a solution at F per element (the model's), with
+   * each discontinuity's shared equally by the elements on its sides (all
+   * of it by the element on the base).
+   */
+  elementDissipation(F: number, columns: Record<string, { Primal: number }>): Float64Array;
   allUndrained: boolean;
   /** Whether any soil has cohesion. */
   cohesive: boolean;
@@ -183,7 +189,7 @@ export function upperBoundProblem(slope: Slope, options: UpperBoundOptions = {})
   let row = 0;
   // Per discontinuity end: tangential and normal jump. `jump` gives the
   // velocity names of the two sides (the other side null for the rigid base).
-  const dVars: { name: string; coef: (F: number) => number }[] = [];
+  const dVars: { name: string; coef: (F: number) => number; e: number; e2: number | null }[] = [];
   const disc = (
     e: number, k: number, e2: number | null, k2: number | null,
     c: number, phi: number, cu: number, tie: boolean, pSide: number = e,
@@ -213,13 +219,13 @@ export function upperBoundProblem(slope: Slope, options: UpperBoundOptions = {})
       const up = `dp${id}`, um = `dm${id}`;
       let t = term(-1, up) + term(1, um), nn = "";
       // dissipation c (u⁺ + u⁻) L/2 per end; the dilation tan φ_F depends on F
-      dVars.push({ name: up, coef: (F) => (c / F) * L / 2 }, { name: um, coef: (F) => (c / F) * L / 2 });
+      dVars.push({ name: up, coef: (F) => (c / F) * L / 2, e, e2 }, { name: um, coef: (F) => (c / F) * L / 2, e, e2 });
       nn += ` - TANPHI${id} ${up} - TANPHI${id} ${um}`;
       tanRows.push({ id, phi });
       if (Number.isFinite(cu)) {
         const tp = `tp${id}`, tm = `tm${id}`;
         t += term(-1, tp) + term(1, tm);
-        dVars.push({ name: tp, coef: (F) => (cu / F) * L / 2 }, { name: tm, coef: (F) => (cu / F) * L / 2 });
+        dVars.push({ name: tp, coef: (F) => (cu / F) * L / 2, e, e2 }, { name: tm, coef: (F) => (cu / F) * L / 2, e, e2 });
       }
       if (cutoff) { const op = `op${id}`; nn += term(-1, op); }
       rows.push(` r${row++}:${jt}${t} = 0`, ` r${row++}:${jn}${nn} = 0`);
@@ -342,6 +348,24 @@ export function upperBoundProblem(slope: Slope, options: UpperBoundOptions = {})
       for (const d of dVars) obj += term(d.coef(F), d.name);
       if (obj === " obj:") obj = " obj: 0 u0";
       return ["Minimize", obj, "Subject To", text, flow.rows.join("\n"), boundsText, "End"].join("\n");
+    },
+    elementDissipation: (F, columns) => {
+      const out = new Float64Array(ne);
+      const val = (name: string) => columns[name]?.Primal ?? 0;
+      for (let e = 0; e < ne; e++) {
+        if (rigid[e]) continue;
+        const dc = (eC[e] / F) * Math.cos(Math.atan(Math.tan(ePhi[e]) / F));
+        for (let j = 0; j < p; j++) {
+          if (dc > 0) out[e] += dc * val(`l${e}_${j}`);
+          if (Number.isFinite(eCu[e])) out[e] += (eCu[e] / F) * val(`t${e}_${j}`);
+        }
+      }
+      for (const d of dVars) {
+        const w = d.coef(F) * val(d.name);
+        if (d.e2 === null) out[d.e] += w;
+        else { out[d.e] += w / 2; out[d.e2] += w / 2; }
+      }
+      return out;
     },
     allUndrained,
     cohesive: eC.some((c) => c > 0) || eCu.some((c) => Number.isFinite(c) && c > 0),

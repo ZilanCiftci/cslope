@@ -11,8 +11,8 @@ import { getDomainX, resolveOrientation, toCanonicalSlopeDefinition } from "../m
 import { analyzeFem } from "./analysis";
 import type { SrmTrial } from "./srm";
 import type { Slope } from "../model/slope";
-import { lowerBound, type HighsModuleOptions } from "./lower-bound";
-import { upperBound } from "./upper-bound";
+import type { HighsModuleOptions } from "./lower-bound";
+import { adaptiveBounds } from "./bound-adapt";
 
 /** Coordinates and displacements are rounded to this many significant digits for the summary. */
 const DIGITS = 7;
@@ -28,10 +28,12 @@ export function runFemSummary(
 
 /**
  * The finite element analysis and, when the settings ask for them
- * (`limitAnalysis`), the lower and upper bounds of limit analysis on a mesh
- * graded as the strength reduction's final mesh, BOUND_COARSENING times
- * coarser (the linear programs grow fast with the elements); the upper
- * bound's search starts at the strength reduction factor. `highs` gives the
+ * (`limitAnalysis`), the lower and upper bounds of limit analysis, starting
+ * on a mesh graded as the strength reduction's final mesh, BOUND_COARSENING
+ * times coarser (the linear programs grow fast with the elements), and
+ * refined where the gap between the bounds lies (bound-adapt.ts) within
+ * BOUND_REFINEMENT_TIME_LIMIT; the upper bound's search starts at the
+ * strength reduction factor. `highs` gives the
  * options that load the solver (e.g. its WebAssembly binary in an app),
  * called only once the strength reduction is done. A failure of the bounds
  * leaves the strength reduction's result, with the reason in the bounds'
@@ -56,7 +58,7 @@ export async function runFemSummaryWithBounds(
     totalTimeLimit: BOUND_SEARCH_TIME_LIMIT,
   } as const;
   const warnings: string[] = [];
-  const bounds = { lower: null as number | null, upper: null as number | null, elements: 0, elapsedMs: 0, warnings };
+  const bounds = { lower: null as number | null, upper: null as number | null, elements: 0, refinements: 0, elapsedMs: 0, warnings };
   const message = (err: unknown) => (err instanceof Error ? err.message : String(err));
   let module: HighsModuleOptions | undefined;
   try {
@@ -66,20 +68,18 @@ export async function runFemSummaryWithBounds(
     return { ...summary, bounds: { ...bounds, elapsedMs: performance.now() - t0 } };
   }
   try {
-    const upper = await upperBound(slope, { ...common, startF: summary.factorOfSafety > 0 ? summary.factorOfSafety : 1 }, undefined, module);
-    for (const w of upper.warnings) warnings.push(`Upper bound: ${w}`);
-    if (Number.isFinite(upper.factorOfSafety)) bounds.upper = upper.factorOfSafety;
-    bounds.elements = upper.elements;
+    const r = await adaptiveBounds(slope, {
+      ...common,
+      startF: summary.factorOfSafety > 0 ? summary.factorOfSafety : 1,
+      refinementTimeLimit: BOUND_REFINEMENT_TIME_LIMIT,
+    }, undefined, module);
+    warnings.push(...r.warnings);
+    if (Number.isFinite(r.upper)) bounds.upper = r.upper;
+    if (Number.isFinite(r.lower)) bounds.lower = r.lower;
+    bounds.elements = r.levels[r.levels.length - 1]?.elements ?? 0;
+    bounds.refinements = Math.max(0, r.levels.length - 1);
   } catch (err) {
-    warnings.push(`Upper bound: ${message(err)}`);
-  }
-  try {
-    const lower = await lowerBound(slope, common, undefined, module);
-    for (const w of lower.warnings) warnings.push(`Lower bound: ${w}`);
-    if (Number.isFinite(lower.factorOfSafety)) bounds.lower = lower.factorOfSafety;
-    bounds.elements ||= lower.elements;
-  } catch (err) {
-    warnings.push(`Lower bound: ${message(err)}`);
+    warnings.push(`Limit analysis: ${message(err)}`);
   }
   return { ...summary, bounds: { ...bounds, elapsedMs: performance.now() - t0 } };
 }
@@ -88,8 +88,10 @@ export async function runFemSummaryWithBounds(
 const BOUND_COARSENING = 2;
 /** Time limit per linear program of the bounds in the app (s). */
 const BOUND_TIME_LIMIT = 120;
-/** Time limit of each bound's search in the app (s): both within the app's 25 minutes for the bounds (analysisSlice.ts). */
+/** Time limit of each bound's search in the app (s). */
 const BOUND_SEARCH_TIME_LIMIT = 480;
+/** Time budget of the refinement on the bound gap in the app (s), within the app's 25 minutes for the bounds (analysisSlice.ts). */
+const BOUND_REFINEMENT_TIME_LIMIT = 900;
 
 function femAnalysis(
   definition: SlopeDefinition,

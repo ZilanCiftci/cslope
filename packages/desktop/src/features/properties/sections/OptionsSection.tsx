@@ -906,7 +906,7 @@ function FemFields({
       </label>
       <label
         className="col-span-2 flex items-center gap-1.5"
-        title="Also the lower and upper bounds of limit analysis (rigid–perfectly plastic soil with associated flow, linear programs): a statically admissible stress field and a kinematically admissible mechanism that bracket the factor of safety of the mesh. Run on a mesh graded as the strength reduction's, twice as coarse; adds about one to several minutes."
+        title="Also the lower and upper bounds of limit analysis (rigid–perfectly plastic soil with associated flow, linear programs): a statically admissible stress field and a kinematically admissible mechanism that bracket the factor of safety of the mesh. Run on a mesh graded as the strength reduction's, twice as coarse, then refined where the gap between the bounds lies until it is below 3 % (at most three times); adds several minutes, up to about 25."
       >
         <input
           type="checkbox"
