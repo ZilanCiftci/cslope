@@ -17,7 +17,10 @@
  *   largest coefficient before solving: the solver's tolerances are
  *   absolute, and in imperial units (γ = 120 pcf, c = 600 psf) the
  *   unscaled programs reported "solved" at a wrong optimum (a prototype on
- *   V046a gave 0.864 for both bounds against 1.32–1.34 scaled).
+ *   V046a gave 0.864 for both bounds against 1.32–1.34 scaled). Its
+ *   "almost" statuses (reduced tolerances, about 1e-4) count as solved or
+ *   infeasible: far below the tolerance on F. A numerical failure is solved
+ *   again with more static regularisation within the time left.
  * - HiGHS solves the linear program in which each cone is replaced by the
  *   polygon inscribed in it with p sides (Sloan 1988; Sloan & Kleeman 1995):
  *   "facets" by its p sides (u·n_j ≤ t cos(π/p), normals at 2πj/p: the
@@ -85,8 +88,7 @@ export class ProgramBuilder {
 
   /** Σ terms = rhs (terms as [column, coefficient], zero coefficients dropped). */
   eq(terms: [number, number][], rhs = 0): number {
-    const cols: number[] = [], vals: number[] = [];
-    for (const [j, a] of terms) if (a !== 0) { cols.push(j); vals.push(a); }
+    const { cols, vals } = affine(terms);
     this.eqCols.push(cols); this.eqVals.push(vals); this.eqRhs.push(rhs);
     return this.eqRhs.length - 1;
   }
@@ -110,10 +112,12 @@ export class ProgramBuilder {
   }
 }
 
-/** An affine expression from terms and a constant (zero coefficients dropped). */
+/** An affine expression from terms and a constant (a column's terms summed, zero coefficients dropped). */
 export function affine(terms: [number, number][], c = 0): Affine {
+  const sum = new Map<number, number>();
+  for (const [j, a] of terms) sum.set(j, (sum.get(j) ?? 0) + a);
   const cols: number[] = [], vals: number[] = [];
-  for (const [j, a] of terms) if (a !== 0) { cols.push(j); vals.push(a); }
+  for (const [j, a] of sum) if (a !== 0) { cols.push(j); vals.push(a); }
   return { cols, vals, c };
 }
 
@@ -195,8 +199,9 @@ export function solveHighs(prog: ConicProgram, highs: HighsSolver, sides: number
   let r = highs.solve(lp, { solver: "ipm", time_limit: timeLimit });
   // Interior point (with presolve and crossover) is about four times faster
   // than simplex on these programs (measured on V077); without presolve it
-  // can misreport the status, so simplex is the fallback.
-  if (r.Status !== "Optimal" && r.Status !== "Infeasible" && r.Status !== "Unbounded" && r.Status !== "Time limit reached") {
+  // can misreport the status, so simplex decides any other outcome
+  // (infeasible and unbounded included).
+  if (r.Status !== "Optimal" && r.Status !== "Time limit reached") {
     r = highs.solve(lp, { solver: "simplex", time_limit: timeLimit });
   }
   const x = new Float64Array(prog.names.length);
@@ -324,12 +329,14 @@ export function solveClarabel(prog: ConicProgram, solver: ClarabelSolver, timeLi
   try {
     const pq = putF(q), pc = putU(colptr), pr = putU(rowval), pv = putF(nzval), pb = putF(b), pk = putU(coneList);
     const po = putF(new Float64Array(n + 2 + m));
-    const limit = Number.isFinite(timeLimit) ? Math.max(0.1, timeLimit) : 0;
-    let code = ex.solve(n, m, pq, pc, pr, pv, nnz, pb, pk, coneList.length / 2, 400, limit, 1e-8, po);
+    const t0 = performance.now();
+    let code = ex.solve(n, m, pq, pc, pr, pv, nnz, pb, pk, coneList.length / 2, 400, Math.max(0.1, timeLimit), 1e-8, po);
     // A numerical failure is solved again with more static regularisation
     // (Clarabel's default 1e-8; 1e-6 solved V067's lower bound, whose rigid
     // elements leave free stresses, where 1e-8 ended in NumericalError).
-    if (code === 9 || code === 10) code = ex.solve(n, m, pq, pc, pr, pv, nnz, pb, pk, coneList.length / 2, 400, limit, 1e-6, po);
+    // (within what is left of the time limit)
+    const left = timeLimit - (performance.now() - t0) / 1000;
+    if ((code === 9 || code === 10) && left > 0.1) code = ex.solve(n, m, pq, pc, pr, pv, nnz, pb, pk, coneList.length / 2, 400, left, 1e-6, po);
     const o = new Float64Array(ex.memory.buffer, po, n + 2 + m);
     const x = new Float64Array(n);
     for (let j = 0; j < n; j++) x[j] = o[j] * s[j];

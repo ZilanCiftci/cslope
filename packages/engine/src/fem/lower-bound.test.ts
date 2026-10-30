@@ -42,6 +42,16 @@ describe("lowerBound", () => {
     expect(r.factorOfSafety).toBeLessThanOrEqual(fe.factorOfSafety + 0.01);
   }, 180000);
 
+  it("takes an unlimited time per program", async () => {
+    const slope = buildSlope(toCanonicalSlopeDefinition({
+      coordinates: [[0, 0], [0, 10], [10, 10], [20, 5], [30, 5], [30, 0]],
+      materials: [{ name: "soil", model: { kind: "mohr-coulomb", unitWeight: 20, cohesion: 15, frictionAngle: 10 } }],
+    } as unknown as SlopeDefinition));
+    const r = await lowerBound(slope, { elementSize: 2.5, timeLimit: Infinity });
+    expect(r.factorOfSafety).toBeGreaterThan(0.8);
+    expect(r.warnings).toEqual([]);
+  });
+
   it("includes a line load, spread over the edges at its point", async () => {
     // Undrained slope (one linear program); a line load on the crest lowers the bound.
     const def = (P: number) =>

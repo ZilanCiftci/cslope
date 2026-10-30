@@ -51,7 +51,8 @@ export interface LowerBoundOptions extends FeModelOptions {
   /**
    * The solver: "clarabel" (default) the yield criterion exactly as a
    * second-order cone, "highs" the inscribed polygon as a linear program
-   * (conic.ts).
+   * (conic.ts; with the tension cut-off the polygon admits no stress at a
+   * free surface, where the stress is uniaxial on the criterion, and λ is 0).
    */
   boundSolver?: "clarabel" | "highs";
   /** The Clarabel WebAssembly binary, where it cannot be read from beside the module (the app). */
