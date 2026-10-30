@@ -169,6 +169,12 @@ export interface SrmOptions {
    */
   resume?: { lo: number; hi: number; state: SrmState; hiFrom?: number };
   /**
+   * A starting state for the first trials, e.g. a coarser mesh's converged
+   * state transferred to this one (transfer.ts): the trials start from it
+   * until one converges, but no F counts as converged from it alone.
+   */
+  warmStart?: SrmState;
+  /**
    * Trials per round (default 1, bisection): with n > 1 the search tries n
    * reductions per round from the same converged state (multisection), which
    * the app runs in parallel. The result depends on n, not on how the
@@ -555,6 +561,12 @@ function isAssociated(model: FeModel, rule: FlowRule): boolean {
  * converges when the solver finds equilibrium; Newton decides its trials
  * alone, as in implicit strength reduction.
  */
+/** The solver of the trials: Newton (default) or BFGS for associated flow, the viscoplastic iteration for non-associated flow unless another is asked for. */
+export function trialSolver(model: FeModel, options: SrmOptions = {}): "newton" | "bfgs" | "viscoplastic" {
+  const rule = options.flowRule ?? "davis-b";
+  return isAssociated(model, rule) ? options.solver ?? "newton" : options.solver === "bfgs" || options.solver === "newton" ? options.solver : "viscoplastic";
+}
+
 export function runTrial(
   model: FeModel,
   F: number,
@@ -567,7 +579,7 @@ export function runTrial(
   // Hoek–Brown rock: the instantaneous strength at the starting stresses
   // (before the solver is chosen, which reads φ)
   if (model.gpHoekBrown.size) setHoekBrownStrength(model, start ? start.stress : model.stress0);
-  const solver = isAssociated(model, rule) ? options.solver ?? "newton" : options.solver === "bfgs" || options.solver === "newton" ? options.solver : "viscoplastic";
+  const solver = trialSolver(model, options);
   const useNewton = solver === "newton";
   const st = start ? cloneState(start) : emptyState(model);
   if (solver === "bfgs") {
@@ -636,6 +648,10 @@ export function strengthReduction(model: FeModel, options: SrmOptions = {}): Srm
  * Either way the result is the same: it depends on `trialsPerRound`, not on
  * how many trials run at once.
  */
+/** A warm start (SrmOptions.warmStart) is tried at most this often, each time F × WARM_FALL lower, before the unloaded state. */
+const WARM_TRIES = 3;
+const WARM_FALL = 0.92;
+
 export function* strengthReductionSearch(model: FeModel, options: SrmOptions = {}): Generator<TrialBatch, SrmResult, TrialOutcome[]> {
   const fTol = options.fTolerance ?? 0.005;
   const rule = options.flowRule ?? "davis-b";
@@ -644,7 +660,8 @@ export function* strengthReductionSearch(model: FeModel, options: SrmOptions = {
   const trials: SrmTrial[] = [];
   let iterations = 0;
   let lo = options.resume?.lo ?? 0, hi = Infinity, hiFrom = 0;
-  let loState: SrmState | null = options.resume ? cloneState(options.resume.state) : null;
+  let loState: SrmState | null = options.resume ? cloneState(options.resume.state) : options.warmStart ? cloneState(options.warmStart) : null;
+  let warmLeft = options.warmStart && !options.resume ? WARM_TRIES : 0;
   let prevState: SrmState | null = null;
   // Failures from converged states, with the F of the state each started
   // from. A failure from the unloaded state bounds nothing: with the full
@@ -666,7 +683,8 @@ export function* strengthReductionSearch(model: FeModel, options: SrmOptions = {
   update();
   // Run a batch from the current converged state (or the unloaded one).
   function* round(Fs: number[]): Generator<TrialBatch, boolean, TrialOutcome[]> {
-    const warm = loState !== null, from = lo;
+    // (a warm start bounds nothing either: only a converged F does)
+    const warm = lo > 0 && loState !== null, from = lo;
     const out = yield { start: loState, startF: warm ? from : 0, F: Fs };
     let best = -1;
     for (let k = 0; k < Fs.length; k++) {
@@ -679,6 +697,10 @@ export function* strengthReductionSearch(model: FeModel, options: SrmOptions = {
       if (r.converged && Fs[k] > lo && (best < 0 || Fs[k] > Fs[best])) best = k;
     }
     if (best >= 0) { lo = Fs[best]; prevState = loState; loState = out[best].state; }
+    // a warm start that did not converge is tried again lower (WARM_TRIES
+    // in all, F × WARM_FALL each), then dropped: the trials go on from the
+    // unloaded state
+    else if (lo === 0 && loState !== null && --warmLeft <= 0) loState = null;
     update();
     return best >= 0;
   }
@@ -719,7 +741,7 @@ export function* strengthReductionSearch(model: FeModel, options: SrmOptions = {
   };
   for (let confirmations = 0; ; confirmations++) {
     for (let k = 0; k < 40 && !(lo > 0 && Number.isFinite(hi)); k++) {
-      if (loState === null || Number.isFinite(hi) || nonAssociated || perRound === 1) {
+      if (lo === 0 || Number.isFinite(hi) || nonAssociated || perRound === 1) {
         // One trial: from the unloaded state, or towards a known failure, or
         // in the equal steps of non-associated flow.
         const ok = yield* round([F]);
@@ -732,7 +754,7 @@ export function* strengthReductionSearch(model: FeModel, options: SrmOptions = {
             // F rises in equal steps as in Griffiths & Lane.
             if (!nonAssociated) rise = Math.min(0.25, rise * 1.5);
           }
-        } else F = lo > 0 ? (lo + F) / 2 : F / 1.5;
+        } else F = lo > 0 ? (lo + F) / 2 : loState !== null ? F * WARM_FALL : F / 1.5;
       } else {
         // Associated flow rising from a converged state: the next steps at once.
         const Fs: number[] = [];

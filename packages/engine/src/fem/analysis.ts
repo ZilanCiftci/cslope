@@ -26,9 +26,11 @@ import { prepareFeModel, type InitialStressOptions } from "./initial-stress";
 import { pileForces } from "./piles";
 import { dissipationIndicator, dorflerMark, refinedSizeField, zzIndicator } from "./adapt";
 import { frictionalSurfaceSlide, surfaceSlideMessage } from "../model/surface-slide";
+import { transferState } from "./transfer";
 import {
   runTrial,
   strengthReductionSearch,
+  trialSolver,
   type SrmOptions,
   type SrmResult,
   type SrmTrial,
@@ -253,8 +255,15 @@ export function* analyzeFemSearch(slope: Slope, options: FemAnalysisOptions = {}
       model = prepared({ ...options, sizeField: refinedSizeField(model, marked) });
       const prev = r.factorOfSafety;
       // Start below the coarser mesh's factor (a finer mesh gives less) and
-      // step up from converged states.
-      r = yield* search(model, level + 1, { startF: 0.6 * prev, bracketStep: 0.04, guide: prev, fTolerance: coarseTol });
+      // step up from converged states. With associated flow (Newton or
+      // BFGS, whose limit does not depend on the load path) the coarser
+      // mesh's state, transferred to the new one, starts the trials just
+      // below its factor instead of the unloaded state far below it (not
+      // with reinforcement or piles, whose own variables are not moved).
+      const warmStart = trialSolver(model, { ...options, ...trialOptions }) !== "viscoplastic" && !model.bars.count && !model.piles.count
+        ? transferState(coarser, coarserR.state, model) ?? undefined
+        : undefined;
+      r = yield* search(model, level + 1, { startF: (warmStart ? 0.97 : 0.6) * prev, bracketStep: 0.04, guide: prev, fTolerance: coarseTol, ...(warmStart ? { warmStart } : {}) });
       levels.push({ elements: model.elementCount, factorOfSafety: r.factorOfSafety, iterations: r.iterations });
       if (!(r.factorOfSafety > 0 && Number.isFinite(r.failedF))) {
         // No factor on the refined mesh: the result stays the coarser mesh's.
