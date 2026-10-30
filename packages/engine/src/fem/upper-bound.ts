@@ -472,23 +472,35 @@ export async function upperBound(slope: Slope, options: UpperBoundOptions = {}, 
     if (!(lo > 0) || hi - lo > tol) warnings.push(`The bisection stopped with F between ${lo.toFixed(3)} and ${hi.toFixed(3)}; F is the upper of the two.`);
     F = hi;
   } else {
-    let best = l0 <= 1 ? F0 : Infinity;
-    const certify = (f: number, l: number) => { if (l <= 1 && f < best) best = f; };
+    let best = l0 <= 1 ? F0 : Infinity, stands = l0 > 1 ? F0 : 0;
+    const certify = (f: number, l: number) => {
+      if (l <= 1) best = Math.min(best, f);
+      else stands = Math.max(stands, f);
+    };
     // Secant on log λ against log F (λ falls about as a power of F), root
     // where λ = 1; the next trial tol/2 above the secant's root, on the
-    // failing side. The second point assumes λ ∝ 1/F², within ±50 %.
-    let fa = F0, ga = Math.log(l0);
+    // failing side. The second point assumes λ ∝ 1/F², within ±50 %. A
+    // trial off the bracket between the largest F that stands and the
+    // smallest that fails, or after λ = 0 or ∞, bisects it (as the lower
+    // bound's search).
+    let fa = F0, la = l0;
     let fb = Math.min(1.5 * F0, Math.max(F0 / 1.5, F0 * Math.sqrt(l0)));
     let lb = lambdaAt(fb);
     certify(fb, lb);
     let reached = false, root = NaN;
-    for (let it = 0; it < 15 && Number.isFinite(lb) && lb > 0; it++) {
-      const gb = Math.log(lb);
-      if (Math.abs(gb - ga) < 1e-14) { reached = Number.isFinite(best) && Math.abs(fb - best) <= tol; break; }
-      root = Math.max(0.05, Math.exp(Math.log(fb) - (gb * (Math.log(fb) - Math.log(fa))) / (gb - ga)));
-      if (Number.isFinite(best) && best <= root + tol) { reached = true; break; }
-      fa = fb; ga = gb;
-      fb = root + tol / 2;
+    for (let it = 0; it < 25 && !Number.isNaN(lb); it++) {
+      if (Number.isFinite(best) && best - stands <= tol) { reached = true; break; }
+      let next = NaN;
+      if (la > 0 && lb > 0 && Number.isFinite(la) && Number.isFinite(lb) && Math.abs(Math.log(lb) - Math.log(la)) >= 1e-14) {
+        const ga = Math.log(la), gb = Math.log(lb);
+        root = Math.max(0.05, Math.exp(Math.log(fb) - (gb * (Math.log(fb) - Math.log(fa))) / (gb - ga)));
+        if (Number.isFinite(best) && best <= root + tol) { reached = true; break; }
+        next = root + tol / 2;
+      }
+      if (!(next > stands && next < best)) next = Number.isFinite(best) && stands > 0 ? (best + stands) / 2 : Number.isFinite(best) ? best / 1.5 : 1.5 * stands;
+      if (next < 0.05 || next > 100) break;
+      fa = fb; la = lb;
+      fb = next;
       lb = lambdaAt(fb);
       certify(fb, lb);
     }

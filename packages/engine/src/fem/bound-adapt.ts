@@ -26,7 +26,8 @@
  * traction boundaries, fans at corners) count in the element they lie in.
  * With a water table the two programs' terms for the saturated weight and
  * the pore pressure are not identical element by element (the lower
- * bound's sub-elements), and the contributions sum to the gap to about 1 %. Where the lower bound program has no finite optimum (a cohesionless
+ * bound's sub-elements), and the contributions sum to the gap to 1–2 %. An
+ * edge the lower bound bisected at a corner is integrated over its halves. Where the lower bound program has no finite optimum (a cohesionless
  * soil makes λ 0 or unbounded) the dissipation alone is the indicator.
  * The loop stops when the gap is below `gapTolerance` of the mean bound or
  * after `levels` refinements; each level's searches start from the last
@@ -111,12 +112,11 @@ export function boundGapIndicator(slope: Slope, options: LowerBoundOptions & Upp
   }
 
   // ∫ σ:ε̇ over each element, from the lower bound's sub-elements in it
-  const { x: lx, y: ly, el: lel, parent } = lb.mesh;
+  const { x: lx, y: ly, el: lel, parent, split } = lb.mesh;
   const sig = (t: number, k: number, comp: number) => cl[9 * t + 3 * k + comp];
   const nt = parent.length;
-  // the sub-element and its corner at each end of a model edge (a, b) on the side of element e
+  // the sub-element and its corners at the ends of each of its edges, by the element e it lies in
   const sideOf = new Map<string, [number, number, number]>();
-  const nModel = x.length;
   for (let t = 0; t < nt; t++) {
     const e = parent[t];
     const n = [lel[3 * t], lel[3 * t + 1], lel[3 * t + 2]];
@@ -125,14 +125,11 @@ export function boundGapIndicator(slope: Slope, options: LowerBoundOptions & Upp
     let w = 0;
     for (let k = 0; k < 3; k++) w += sig(t, k, 0) * rate[3 * e] + sig(t, k, 1) * rate[3 * e + 1] + sig(t, k, 2) * rate[3 * e + 2];
     eta[e] -= (area * w) / 3;
-    for (let k = 0; k < 3; k++) {
-      const a = n[k], b = n[(k + 1) % 3];
-      if (a < nModel && b < nModel) sideOf.set(`${e}:${a}:${b}`, [t, k, (k + 1) % 3]);
-    }
+    for (let k = 0; k < 3; k++) sideOf.set(`${e}:${n[k]}:${n[(k + 1) % 3]}`, [t, k, (k + 1) % 3]);
   }
 
   // ∫ t·[u] over the edges, t = σn outward of e, [u] = u(other side) − u(e)
-  const nc = nModel;
+  const nc = x.length;
   const key = (a: number, b: number) => (a < b ? a * nc + b : b * nc + a);
   const owners = new Map<number, [number, number][]>();
   for (let e = 0; e < ne; e++) {
@@ -146,21 +143,17 @@ export function boundGapIndicator(slope: Slope, options: LowerBoundOptions & Upp
   const surface = new Set<number>();
   const model = buildFeModel(slope, options);
   for (let s = 0; s < model.surfaceEdges.length; s += 3) surface.add(key(model.surfaceEdges[s], model.surfaceEdges[s + 2]));
+  const dot = (p: [number, number], q: [number, number]) => p[0] * q[0] + p[1] * q[1];
   for (const [kk, list] of owners) {
     if (surface.has(kk)) continue;
     const [e, k] = list[0];
     const a = el[3 * e + k], b = el[3 * e + ((k + 1) % 3)];
     if (list.length === 1 && Math.abs(x[b] - x[a]) <= 1e-3 * Math.abs(y[b] - y[a])) continue; // smooth side
-    const side = sideOf.get(`${e}:${a}:${b}`) ?? sideOf.get(`${e}:${b}:${a}`);
-    if (!side) continue;
-    const [t, ka0, kb0] = side;
-    const ka = lel[3 * t + ka0] === a ? ka0 : kb0, kb = ka === ka0 ? kb0 : ka0;
     const L = Math.hypot(x[b] - x[a], y[b] - y[a]);
     // normal outward of e: away from its centroid
     let nx = (y[b] - y[a]) / L, ny = -(x[b] - x[a]) / L;
     const cx = (x[el[3 * e]] + x[el[3 * e + 1]] + x[el[3 * e + 2]]) / 3, cy = (y[el[3 * e]] + y[el[3 * e + 1]] + y[el[3 * e + 2]]) / 3;
     if (nx * ((x[a] + x[b]) / 2 - cx) + ny * ((y[a] + y[b]) / 2 - cy) < 0) { nx = -nx; ny = -ny; }
-    const trac = (kc: number): [number, number] => [sig(t, kc, 0) * nx + sig(t, kc, 2) * ny, sig(t, kc, 2) * nx + sig(t, kc, 1) * ny];
     const cornerOf = (ee: number, node: number) => { for (let q = 0; q < 3; q++) if (el[3 * ee + q] === node) return q; return -1; };
     const other = list.length > 1 ? list[1][0] : null;
     const jump = (node: number): [number, number] => {
@@ -169,9 +162,24 @@ export function boundGapIndicator(slope: Slope, options: LowerBoundOptions & Upp
       const [u2, v2] = vel(other, cornerOf(other, node));
       return [u2 - u, v2 - v];
     };
-    const ta = trac(ka), tb = trac(kb), da = jump(a), db = jump(b);
-    const dot = (p: [number, number], q: [number, number]) => p[0] * q[0] + p[1] * q[1];
-    const work = (L / 6) * (2 * dot(ta, da) + dot(ta, db) + dot(tb, da) + 2 * dot(tb, db));
+    // over a segment (p, q) of the edge, with the jumps there (linear along
+    // the edge), through the halves of an edge bisected at a corner
+    const segment = (p: number, q: number, dp: [number, number], dq: [number, number]): number => {
+      const side = sideOf.get(`${e}:${p}:${q}`) ?? sideOf.get(`${e}:${q}:${p}`);
+      if (!side) {
+        const m = split.get(p < q ? `${p},${q}` : `${q},${p}`);
+        if (m === undefined) return 0;
+        const dm: [number, number] = [(dp[0] + dq[0]) / 2, (dp[1] + dq[1]) / 2];
+        return segment(p, m, dp, dm) + segment(m, q, dm, dq);
+      }
+      const [t, k0, k1] = side;
+      const kp = lel[3 * t + k0] === p ? k0 : k1, kq = kp === k0 ? k1 : k0;
+      const trac = (kc: number): [number, number] => [sig(t, kc, 0) * nx + sig(t, kc, 2) * ny, sig(t, kc, 2) * nx + sig(t, kc, 1) * ny];
+      const tp = trac(kp), tq = trac(kq);
+      const Ls = Math.hypot(lx[q] - lx[p], ly[q] - ly[p]);
+      return (Ls / 6) * (2 * dot(tp, dp) + dot(tp, dq) + dot(tq, dp) + 2 * dot(tq, dq));
+    };
+    const work = segment(a, b, jump(a), jump(b));
     if (other === null) eta[e] -= work;
     else { eta[e] -= work / 2; eta[other] -= work / 2; }
   }

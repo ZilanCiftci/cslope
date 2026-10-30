@@ -27,9 +27,12 @@
  * 546–557, fig. 3: iterate until the reference load is carried).
  *
  * Implementation choices (not from the literature): p = 24 sides; the
- * secant method on log λ with trials tol/2 below its root, returning the
- * largest evaluated F with λ(F) ≥ 1 once it lies within 0.002 of the root
- * (only such an F is a lower bound); the load factor on every load, weight
+ * secant method on log λ with trials tol/2 below its root, safeguarded by
+ * bisection of the bracket between the largest F that carries the loads
+ * and the smallest that does not, returning the largest evaluated F with
+ * λ(F) ≥ 1 once it lies within 0.002 of the root or of the bracket's other
+ * end (only such an F is a lower bound); at least four elements at each
+ * corner of the ground surface (lowerBoundProblem); the load factor on every load, weight
  * included, as the strength reduction applies; a line load spread over the
  * two surface edges at its point; the stresses scaled by γ H (the largest
  * unit weight times the model's height) for Clarabel.
@@ -46,6 +49,8 @@ import {
 
 /** Sectors per element at a corner of the ground surface (see lowerBoundProblem). */
 const FAN_SECTORS = 4;
+/** Elements at least at each corner of the ground surface (see lowerBoundProblem). */
+const CORNER_ELEMENTS = 4;
 
 export interface LowerBoundOptions extends FeModelOptions {
   /**
@@ -155,59 +160,24 @@ export interface LbProblem {
    * and the strength reduction model's element each lies in (`parent`; the
    * model's corner nodes keep their numbers). The stresses of element e at
    * its corner k are the program's columns 9e + 3k + 0, 1, 2: σ′x, σ′y, τxy.
+   * `split`: the edges bisected at the corners ("a,b" with a < b) and the
+   * node at their middle.
    */
-  mesh: { x: Float64Array; y: Float64Array; el: Int32Array; parent: Int32Array };
+  mesh: { x: Float64Array; y: Float64Array; el: Int32Array; parent: Int32Array; split: Map<string, number> };
 }
 
 /** Assemble the lower bound problem of a slope (the parts that do not depend on F). */
 export function lowerBoundProblem(slope: Slope, options: LowerBoundOptions = {}): LbProblem {
   const model = buildFeModel(slope, options);
   const { materials } = model;
-  // The elements: the model's triangles (corner nodes), except that one with
-  // two edges carrying a traction condition (the free ground surface, or a
-  // vertical side, which carries no shear) is split at its centroid into
-  // three. A linear stress field with both conditions leaves too little
-  // freedom: with no cohesion, a surface edge holds no stress at its nodes,
-  // and in an element that also has a side edge equilibrium then demands
-  // uniaxial vertical compression under an inclined surface, which a
-  // frictional soil cannot carry, or zero stress with two surface edges.
   const keyOf = (a: number, b: number) => (a < b ? `${a},${b}` : `${b},${a}`);
   const surfaceKey = new Set<string>();
   for (let s = 0; s < model.surfaceEdges.length; s += 3) surfaceKey.add(keyOf(model.surfaceEdges[s], model.surfaceEdges[s + 2]));
-  const edgeUse = new Map<string, number>();
-  for (let e = 0; e < model.elementCount; e++) {
-    for (let k = 0; k < 3; k++) {
-      const key = keyOf(model.el[6 * e + k], model.el[6 * e + ((k + 1) % 3)]);
-      edgeUse.set(key, (edgeUse.get(key) ?? 0) + 1);
-    }
-  }
   const xs = Array.from(model.x), ys = Array.from(model.y);
-  const elList: number[] = [], matList: number[] = [], elasticList: number[] = [], parentList: number[] = [];
-  for (let e = 0; e < model.elementCount; e++) {
-    const cn = [model.el[6 * e], model.el[6 * e + 1], model.el[6 * e + 2]];
-    let traction = 0;
-    for (let k = 0; k < 3; k++) {
-      const a = cn[k], b = cn[(k + 1) % 3], key = keyOf(a, b);
-      const side = edgeUse.get(key) === 1 && Math.abs(xs[b] - xs[a]) <= 1e-3 * Math.abs(ys[b] - ys[a]);
-      if (surfaceKey.has(key) || side) traction++;
-    }
-    const tris = [cn];
-    if (traction >= 2) {
-      const g = xs.length;
-      xs.push((xs[cn[0]] + xs[cn[1]] + xs[cn[2]]) / 3);
-      ys.push((ys[cn[0]] + ys[cn[1]] + ys[cn[2]]) / 3);
-      tris[0] = [cn[0], cn[1], g];
-      tris.push([cn[1], cn[2], g], [cn[2], cn[0], g]);
-    }
-    for (const t of tris) { elList.push(...t); matList.push(model.elMaterial[e]); elasticList.push(model.elElastic[e]); parentList.push(e); }
-  }
-  // Fans at the corners of the ground surface (crest, toe, and its ends at
-  // the sides): the stress there is singular in direction, and a lower
-  // bound needs several stress sectors meeting at the corner (Sloan 1988,
-  // fans of discontinuities at singular points). Each element at a corner
-  // is divided into FAN_SECTORS sectors from the corner by points halfway
-  // towards the opposite edge, so that no new node lies on an edge shared
-  // with another element.
+  // Corners of the ground surface (crest, toe, its ends at the sides): any
+  // kink, even a slight one (not only a round-off one, 10⁻⁹ rad), and a
+  // point where a material boundary meets it (on V052a's crest the stress
+  // locked where the core, c′ = 85 kPa, meets a cohesionless transition).
   const surfNbr = new Map<number, number[]>();
   for (let s = 0; s < model.surfaceEdges.length; s += 3) {
     const a = model.surfaceEdges[s], b = model.surfaceEdges[s + 2];
@@ -215,13 +185,100 @@ export function lowerBoundProblem(slope: Slope, options: LowerBoundOptions = {})
     surfNbr.set(b, [...(surfNbr.get(b) ?? []), a]);
   }
   const corner = new Set<number>();
+  // and where a material boundary meets the ground: the materials of the surface edges at each node
+  const surfMats = new Map<number, Set<number>>();
+  for (let e = 0; e < model.elementCount; e++) {
+    for (let k = 0; k < 3; k++) {
+      const a = model.el[6 * e + k], b = model.el[6 * e + ((k + 1) % 3)];
+      if (!surfaceKey.has(keyOf(a, b))) continue;
+      for (const n of [a, b]) surfMats.set(n, (surfMats.get(n) ?? new Set()).add(model.elMaterial[e]));
+    }
+  }
+  for (const [v, mats] of surfMats) if (mats.size > 1) corner.add(v);
   for (const [v, nb] of surfNbr) {
     if (nb.length !== 2) { corner.add(v); continue; }
     const ax = xs[nb[0]] - xs[v], ay = ys[nb[0]] - ys[v], bx = xs[nb[1]] - xs[v], by = ys[nb[1]] - ys[v];
-    // any kink: even a slight one leaves two elements with one stress
-    // field each to meet there (not only a round-off one, 10⁻⁹ rad)
     if (Math.abs(ax * by - ay * bx) > 1e-9 * Math.sqrt((ax * ax + ay * ay) * (bx * bx + by * by))) corner.add(v);
   }
+  // At least CORNER_ELEMENTS elements at each corner: the edges opposite a
+  // corner with fewer are bisected, with the element on their other side,
+  // until it has them. With two elements at a crest or a peak each holds a
+  // single linear field with no stress on its surface edge, the two meet on
+  // one edge, and in a cohesionless soil no such pair carries the weight (on
+  // a symmetric peak only uniaxial vertical compression would); new elements
+  // around the corner and beyond the opposite edges give the field room. On
+  // a peak of φ′ = 45° under 27° faces (two elements at the peak) λ was 0.09
+  // at F = 1.2, where the slope stands (implementation choice, as the
+  // prototype in which it was found; fans inside the elements, below, did
+  // not help).
+  let tris: number[][] = [], meta: number[] = []; // corner nodes, the model's element
+  for (let e = 0; e < model.elementCount; e++) { tris.push([model.el[6 * e], model.el[6 * e + 1], model.el[6 * e + 2]]); meta.push(e); }
+  const splitEdges = new Map<string, number>();
+  for (let pass = 0; pass < 4; pass++) {
+    const marked = new Set<string>();
+    const at = new Map<number, number[]>();
+    tris.forEach((t, i) => { for (const n of t) if (corner.has(n)) at.set(n, [...(at.get(n) ?? []), i]); });
+    for (const [v, list] of at) {
+      if (list.length >= CORNER_ELEMENTS) continue;
+      for (const i of list) {
+        const t = tris[i], k = t.indexOf(v), a = t[(k + 1) % 3], b = t[(k + 2) % 3];
+        // not a surface edge (its loads are keyed by the model's edges)
+        if (!surfaceKey.has(keyOf(a, b))) marked.add(keyOf(a, b));
+      }
+    }
+    if (marked.size === 0) break;
+    const mid = (a: number, b: number) => {
+      const key = keyOf(a, b);
+      let m = splitEdges.get(key);
+      if (m === undefined) { m = xs.length; xs.push((xs[a] + xs[b]) / 2); ys.push((ys[a] + ys[b]) / 2); splitEdges.set(key, m); }
+      return m;
+    };
+    const out: number[][] = [], outMeta: number[] = [];
+    const split = (t: number[], e: number) => {
+      for (let k = 0; k < 3; k++) {
+        const a = t[k], b = t[(k + 1) % 3], c = t[(k + 2) % 3];
+        if (marked.has(keyOf(a, b))) { const m = mid(a, b); split([a, m, c], e); split([m, b, c], e); return; }
+      }
+      out.push(t); outMeta.push(e);
+    };
+    tris.forEach((t, i) => split(t, meta[i]));
+    tris = out; meta = outMeta;
+  }
+  // The elements: those, except that one with two edges carrying a traction
+  // condition (the free ground surface, or a vertical side, which carries no
+  // shear) is split at its centroid into three. A linear stress field with
+  // both conditions leaves too little freedom: with no cohesion, a surface
+  // edge holds no stress at its nodes, and in an element that also has a
+  // side edge equilibrium then demands uniaxial vertical compression under
+  // an inclined surface, which a frictional soil cannot carry, or zero
+  // stress with two surface edges.
+  const edgeUse = new Map<string, number>();
+  for (const t of tris) for (let k = 0; k < 3; k++) { const key = keyOf(t[k], t[(k + 1) % 3]); edgeUse.set(key, (edgeUse.get(key) ?? 0) + 1); }
+  const elList: number[] = [], matList: number[] = [], elasticList: number[] = [], parentList: number[] = [];
+  tris.forEach((cn, i) => {
+    const e = meta[i];
+    let traction = 0;
+    for (let k = 0; k < 3; k++) {
+      const a = cn[k], b = cn[(k + 1) % 3], key = keyOf(a, b);
+      const side = edgeUse.get(key) === 1 && Math.abs(xs[b] - xs[a]) <= 1e-3 * Math.abs(ys[b] - ys[a]);
+      if (surfaceKey.has(key) || side) traction++;
+    }
+    const parts = [cn];
+    if (traction >= 2) {
+      const g = xs.length;
+      xs.push((xs[cn[0]] + xs[cn[1]] + xs[cn[2]]) / 3);
+      ys.push((ys[cn[0]] + ys[cn[1]] + ys[cn[2]]) / 3);
+      parts[0] = [cn[0], cn[1], g];
+      parts.push([cn[1], cn[2], g], [cn[2], cn[0], g]);
+    }
+    for (const t of parts) { elList.push(...t); matList.push(model.elMaterial[e]); elasticList.push(model.elElastic[e]); parentList.push(e); }
+  });
+  // Fans at the corners: the stress there is singular in direction, and a
+  // lower bound needs several stress sectors meeting at the corner (Sloan
+  // 1988, fans of discontinuities at singular points). Each element at a
+  // corner is divided into FAN_SECTORS sectors from the corner by points
+  // halfway towards the opposite edge, so that no new node lies on an edge
+  // shared with another element.
   const fanned: number[] = [], fanMat: number[] = [], fanElastic: number[] = [], fanParent: number[] = [];
   for (let t = 0; t < matList.length; t++) {
     const tri = [elList[3 * t], elList[3 * t + 1], elList[3 * t + 2]];
@@ -430,7 +487,7 @@ export function lowerBoundProblem(slope: Slope, options: LowerBoundOptions = {})
     variables: 9 * ne + 1,
     constraints: fixed.eqRhs.length + coneCount,
     warnings,
-    mesh: { x, y, el, parent: Int32Array.from(fanParent) },
+    mesh: { x, y, el, parent: Int32Array.from(fanParent), split: splitEdges },
   };
 }
 
@@ -500,24 +557,35 @@ export async function lowerBound(slope: Slope, options: LowerBoundOptions = {}, 
     if (!Number.isFinite(hi) || hi - lo > tol) warnings.push(`The bisection stopped with F between ${lo.toFixed(3)} and ${Number.isFinite(hi) ? hi.toFixed(3) : "∞"}; F is the lower of the two.`);
     F = lo;
   } else {
-    let best = l1 >= 1 ? F0 : 0;
-    const certify = (f: number, l: number) => { if (l >= 1 && f > best) best = f; };
+    let best = l1 >= 1 ? F0 : 0, failed = l1 < 1 ? F0 : Infinity;
+    const certify = (f: number, l: number) => {
+      if (l >= 1) best = Math.max(best, f);
+      else failed = Math.min(failed, f);
+    };
     // Secant on g(F) = log λ(F), decreasing, root where λ = 1. The next
     // trial is placed tol/2 below the secant's root, so that it lands on
     // the admissible side; the search stops when a certified F lies within
-    // tol of the root estimate.
-    let fa = F0, ga = Math.log(l1);
+    // tol of the root estimate, or of a reduction that fails. A trial off
+    // the bracket between them, or after λ = 0 or ∞ (a cohesionless soil
+    // at the ground surface makes λ jump there: on V012 from 1.6 to 0 at
+    // its embankment's face, tan φ′/tan β = 0.80), bisects it.
+    let fa = F0, la = l1;
     let fb = F0 * (l1 > 1 ? Math.min(l1, 1.5) : Math.max(l1, 0.67));
     let lb = lambdaAt(fb);
     certify(fb, lb);
     let reached = false, root = NaN;
-    for (let it = 0; it < 15 && Number.isFinite(lb) && lb > 0; it++) {
-      const gb = Math.log(lb);
-      if (Math.abs(gb - ga) < 1e-14) { reached = best > 0 && Math.abs(fb - best) <= tol; break; }
-      root = Math.max(0.05, fb - (gb * (fb - fa)) / (gb - ga));
-      if (best > 0 && best >= root - tol) { reached = true; break; }
-      fa = fb; ga = gb;
-      fb = Math.max(0.05, root - tol / 2);
+    for (let it = 0; it < 25 && !Number.isNaN(lb); it++) {
+      if (best > 0 && failed - best <= tol) { reached = true; break; }
+      let next = NaN;
+      if (la > 0 && lb > 0 && Number.isFinite(la) && Number.isFinite(lb) && Math.abs(Math.log(lb) - Math.log(la)) >= 1e-14) {
+        root = Math.max(0.05, fb - (Math.log(lb) * (fb - fa)) / (Math.log(lb) - Math.log(la)));
+        if (best > 0 && best >= root - tol) { reached = true; break; }
+        next = root - tol / 2;
+      }
+      if (!(next > best && next < failed)) next = best > 0 && Number.isFinite(failed) ? (best + failed) / 2 : best > 0 ? 1.5 * best : failed / 1.5;
+      if (next < 0.05) break;
+      fa = fb; la = lb;
+      fb = next;
       lb = lambdaAt(fb);
       certify(fb, lb);
     }
