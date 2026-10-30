@@ -57,13 +57,15 @@ import { WATER_UNIT_WEIGHT } from "../types/constants";
 import { buildFeModel, polylineY, type FeModelOptions } from "./model";
 import { boundSolver, type HighsModuleOptions } from "./lower-bound";
 import { affine, ProgramBuilder, type ConicProgram } from "./conic";
-import { meanUnitWeight, porePressureAt, strengthAt, surfaceLineLoads } from "./limit-common";
+import { meanUnitWeight, porePressureAt, reducedStrength, strengthAt, surfaceLineLoads } from "./limit-common";
 
 export interface UpperBoundOptions extends FeModelOptions {
   /** The solver, as the lower bound's (lower-bound.ts): "clarabel" (default) or "highs". */
   boundSolver?: "clarabel" | "highs";
   /** The Clarabel WebAssembly binary, where it cannot be read from beside the module (the app). */
   clarabelWasm?: ArrayBuffer;
+  /** The reduced strength, as the lower bound's (lower-bound.ts): "associated" (default) or "davis-b". */
+  strengthRule?: "associated" | "davis-b";
   /** Sides of the circumscribed yield polygon (HiGHS); default 24. */
   sides?: number;
   /** Rankine tension cut-off σ₁′ ≤ 0; default false. */
@@ -127,6 +129,7 @@ export function upperBoundProblem(slope: Slope, options: UpperBoundOptions = {})
   const ne = model.elementCount;
   const p = options.sides ?? 24;
   const cutoff = options.tensionCutoff ?? false;
+  const rule = options.strengthRule ?? "associated";
   const warnings: string[] = [];
   // (the bars also hold the piles' springs, source −1)
   if (model.bars.source.some((k) => k >= 0)) warnings.push("Reinforcement is not included in the upper bound analysis.");
@@ -203,7 +206,7 @@ export function upperBoundProblem(slope: Slope, options: UpperBoundOptions = {})
   // The discontinuities: per end, the tangential and normal jump as terms on
   // the velocity columns, and the strength (the dilation tan φ_F and the
   // dissipation c/F depend on F, so the rows are made per F).
-  interface DiscEnd { jt: [number, number][]; jn: [number, number][]; tie: boolean; c: number; phi: number; cu: number; L: number; e: number; e2: number | null }
+  interface DiscEnd { jt: [number, number][]; jn: [number, number][]; tie: boolean; c: number; phi: number; psi: number; cu: number; L: number; e: number; e2: number | null }
   const ends: DiscEnd[] = [];
   const disc = (
     e: number, k: number, e2: number | null, k2: number | null,
@@ -226,7 +229,7 @@ export function upperBoundProblem(slope: Slope, options: UpperBoundOptions = {})
       // pore pressure power on the normal jump
       if (e2 !== null) { addP(vu(e2, kk2), w * nx); addP(vv(e2, kk2), w * ny); }
       addP(vu(e, kk), -w * nx); addP(vv(e, kk), -w * ny);
-      ends.push({ jt, jn, tie, c, phi, cu, L, e, e2 });
+      ends.push({ jt, jn, tie, c, phi, psi: model.elPsi[pSide], cu, L, e, e2 });
     }
   };
 
@@ -312,10 +315,10 @@ export function upperBoundProblem(slope: Slope, options: UpperBoundOptions = {})
       if (d.tie) { pb.eq(d.jt); pb.eq(d.jn); return; }
       const up = pb.col(`dp${i}`, true, vScale), um = pb.col(`dm${i}`, true, vScale);
       lay.dp[i] = up; lay.dm[i] = um;
-      const tanF = Math.tan(d.phi) / F;
+      const red = reducedStrength(d.c, d.phi, d.psi, F, rule), tanF = Math.tan(red.phi);
       const jt: [number, number][] = [...d.jt, [up, -1], [um, 1]];
       const jn: [number, number][] = [...d.jn, [up, -tanF], [um, -tanF]];
-      pb.addObjective(up, ((d.c / F) * d.L) / 2); pb.addObjective(um, ((d.c / F) * d.L) / 2);
+      pb.addObjective(up, (red.c * d.L) / 2); pb.addObjective(um, (red.c * d.L) / 2);
       if (Number.isFinite(d.cu)) {
         const tp = pb.col(`tp${i}`, true, vScale), tm = pb.col(`tm${i}`, true, vScale);
         lay.tp[i] = tp; lay.tm[i] = tm;
@@ -342,7 +345,8 @@ export function upperBoundProblem(slope: Slope, options: UpperBoundOptions = {})
         gxy.push([vu(e, k), c[k]], [vv(e, k), b[k]]);
       }
       if (!rigid[e]) {
-        const phiF = Math.atan(Math.tan(ePhi[e]) / F), sp = Math.sin(phiF), dc = (eC[e] / F) * Math.cos(phiF);
+        const red = reducedStrength(eC[e], ePhi[e], model.elPsi[e], F, rule);
+        const phiF = red.phi, sp = Math.sin(phiF), dc = red.c * Math.cos(phiF);
         const S = pb.col(`S${e}`, false, sScale), d1 = pb.col(`a${e}`, false, sScale), d2 = pb.col(`b${e}`, false, sScale);
         lay.s[e] = S;
         tr.push([S, -2 * sp]); dev.push([d1, -1]); gxy.push([d2, -1]);
@@ -375,13 +379,14 @@ export function upperBoundProblem(slope: Slope, options: UpperBoundOptions = {})
       const lay = layout!;
       for (let e = 0; e < ne; e++) {
         if (rigid[e]) continue;
-        const dc = (eC[e] / F) * Math.cos(Math.atan(Math.tan(ePhi[e]) / F));
+        const red = reducedStrength(eC[e], ePhi[e], model.elPsi[e], F, rule);
+        const dc = red.c * Math.cos(red.phi);
         if (lay.s[e] >= 0) out[e] += dc * sol[lay.s[e]];
         if (lay.t[e] >= 0) out[e] += (eCu[e] / F) * sol[lay.t[e]];
       }
       ends.forEach((d, i) => {
         if (d.tie) return;
-        let w = ((d.c / F) * d.L) / 2 * (sol[lay.dp[i]] + sol[lay.dm[i]]);
+        let w = (reducedStrength(d.c, d.phi, d.psi, F, rule).c * d.L) / 2 * (sol[lay.dp[i]] + sol[lay.dm[i]]);
         if (lay.tp[i] >= 0) w += ((d.cu / F) * d.L) / 2 * (sol[lay.tp[i]] + sol[lay.tm[i]]);
         if (d.e2 === null) out[d.e] += w;
         else { out[d.e] += w / 2; out[d.e2] += w / 2; }

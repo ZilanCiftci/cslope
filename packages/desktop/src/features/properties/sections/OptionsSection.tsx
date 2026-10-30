@@ -803,10 +803,10 @@ function FemFields({
           min={0}
           max={3}
           step={1}
-          disabled={off}
+          disabled={off || settings.flowRule === "non-associated"}
           onValueChange={(v) => v >= 0 && v <= 3 && set({ refinementLevels: Math.round(v) })}
           aria-label="Mesh refinements"
-          title="Adaptive refinements where the plastic dissipation at failure is largest; stops early when F changes by less than 0.01. Each roughly doubles the run time."
+          title="Adaptive refinements where the plastic dissipation at failure is largest; stops early when F changes by less than 0.01. Each roughly doubles the run time. Not with non-associated flow: its factor falls on every refinement without a limit, so it is computed on the first mesh (the limit analysis bounds refine their own mesh)."
         />
       </label>
       <label className="col-span-2 flex flex-col gap-0.5">
@@ -906,7 +906,7 @@ function FemFields({
       </label>
       <label
         className="col-span-2 flex items-center gap-1.5"
-        title="Also the lower and upper bounds of limit analysis (rigid–perfectly plastic soil with associated flow, second-order cone programs): a statically admissible stress field and a kinematically admissible mechanism that bracket the factor of safety of the mesh. Run on a mesh graded as the strength reduction's, twice as coarse, then refined where the gap between the bounds lies until it is below 3 % (at most three times); adds several minutes, up to about 25."
+        title="The lower and upper bounds of limit analysis (rigid–perfectly plastic soil with associated flow, second-order cone programs): a statically admissible stress field and a kinematically admissible mechanism that bracket the factor of safety, and converge as the mesh is refined. They are then the finite element factor of safety, and the strength reduction a comparison with other programs. Also the same bounds with Davis B's reduced strength for the dilation angle, which stands for non-associated flow. Run on a mesh graded as the strength reduction's, twice as coarse, then refined where the gap between the bounds lies until it is below 3 % (at most three times); adds several minutes, up to about 25."
       >
         <input
           type="checkbox"
@@ -915,7 +915,7 @@ function FemFields({
           onChange={(e) => set({ limitAnalysis: e.target.checked })}
           aria-label="Limit analysis bounds"
         />
-        <Label>Also limit analysis bounds (lower and upper)</Label>
+        <Label>Limit analysis bounds (the FE factor of safety)</Label>
       </label>
     </div>
   );

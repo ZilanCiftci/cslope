@@ -38,7 +38,7 @@ describe("persistence of the finite element analysis", () => {
     );
     const f = parsed.models[0].options.fem!;
     expect(f.enabled).toBe(true);
-    expect(f.flowRule).toBe("davis-b");
+    expect(f.flowRule).toBe("non-associated"); // the default
     expect(f.youngsModulus).toBe(5e4);
     expect(f.poissonsRatio).toBe(0.3);
     expect(f.refinementLevels).toBe(2);

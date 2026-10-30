@@ -57,11 +57,44 @@ The script compares the regenerated verification table with the committed one an
 | 2026-10-30 | Limit analysis bounds on second-order cones solved by Clarabel (WebAssembly) | 0 | 0.348 → 0.348 | 0.483 → 0.483 | 1.011 → 1.011 | 1.595 → 1.595 | 513 s (4 workers, load 1.0 at start) |
 | 2026-10-30 | Lower bound: four elements at each corner of the ground surface, bracketed F searches, seepage heads at added nodes | 0 | 0.348 → 0.348 | 0.483 → 0.483 | 1.011 → 1.011 | 1.595 → 1.595 | 544 s (4 workers, load 1.0 at start) |
 | 2026-10-30 | Refined meshes start from the coarser mesh's state (associated flow) | 0 | 0.348 → 0.348 | 0.483 → 0.483 | 1.011 → 1.011 | 1.595 → 1.595 | 594 s (4 workers, load 2.3 at start) |
+| 2026-10-30 | FE factor of safety from the limit analysis bounds; Davis B bounds; no adaptive strength reduction for non-associated flow in the app | 0 | 0.348 → 0.348 | 0.483 → 0.483 | 1.011 → 1.011 | 1.595 → 1.595 | 666 s (4 workers, load 0.7 at start) |
 <!-- summary-end -->
 
 ## Entries
 
 <!-- entries -->
+
+### 2026-10-30: FE factor of safety from the limit analysis bounds; Davis B bounds; no adaptive strength reduction for non-associated flow in the app
+
+Compared with d44b204. Errors are relative to the reference, in percent. Verification run time: 666 s (4 workers, load 0.7 at start).
+
+**Against other programs (midpoint of their range):** 0 moved (0 closer to the reference, 0 further).
+
+| Result | Reference | Before | After | Error before | Error after |
+|---|---|---|---|---|---|
+| **Mean error (n = 279)** | | | | -0.231 % | -0.231 % |
+| **Mean absolute error** | | | | 0.348 % | 0.348 % |
+| **RMS error** | | | | 0.483 % | 0.483 % |
+| **Largest error** | | | | 2.100 % | 2.100 % |
+
+**Against the papers:** 0 moved (0 closer to the reference, 0 further).
+
+| Result | Reference | Before | After | Error before | Error after |
+|---|---|---|---|---|---|
+| **Mean error (n = 111)** | | | | -0.167 % | -0.167 % |
+| **Mean absolute error** | | | | 1.011 % | 1.011 % |
+| **RMS error** | | | | 1.595 % | 1.595 % |
+| **Largest error** | | | | 6.591 % | 6.591 % |
+
+**Finite elements against their references (FE, finite differences, limit analysis, theory):** 0 moved (0 closer to the reference, 0 further).
+
+| Result | Reference | Before | After | Error before | Error after |
+|---|---|---|---|---|---|
+| **Mean error (n = 35)** | | | | -0.711 % | -0.711 % |
+| **Mean absolute error** | | | | 2.399 % | 2.399 % |
+| **RMS error** | | | | 3.712 % | 3.712 % |
+| **Largest error** | | | | 15.100 % | 15.100 % |
+
 
 ### 2026-10-30: Refined meshes start from the coarser mesh's state (associated flow)
 

@@ -425,8 +425,10 @@ function isBounds(raw: unknown): boolean {
   if (!raw || typeof raw !== "object") return false;
   const b = raw as Record<string, unknown>;
   const bound = (v: unknown) => v === null || (typeof v === "number" && Number.isFinite(v));
+  const davis = b.davis as Record<string, unknown> | undefined;
   return (
     bound(b.lower) && bound(b.upper) && Number.isFinite(b.elements) && Number.isFinite(b.elapsedMs) &&
+    (davis === undefined || (!!davis && typeof davis === "object" && bound(davis.lower) && bound(davis.upper))) &&
     Array.isArray(b.warnings) && b.warnings.every((w) => typeof w === "string")
   );
 }

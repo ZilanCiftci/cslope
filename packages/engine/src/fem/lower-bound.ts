@@ -41,7 +41,7 @@
 import { WATER_UNIT_WEIGHT } from "../types/constants";
 import type { Slope } from "../model/slope";
 import { buildFeModel, polylineY, type FeModelOptions } from "./model";
-import { meanUnitWeight, porePressureAt, strengthAt, surfaceLineLoads } from "./limit-common";
+import { meanUnitWeight, porePressureAt, reducedStrength, strengthAt, surfaceLineLoads } from "./limit-common";
 import {
   affine, loadClarabel, ProgramBuilder, solveClarabel, solveHighs,
   type ConicProgram, type ConicSolution, type HighsSolver,
@@ -62,6 +62,13 @@ export interface LowerBoundOptions extends FeModelOptions {
   boundSolver?: "clarabel" | "highs";
   /** The Clarabel WebAssembly binary, where it cannot be read from beside the module (the app). */
   clarabelWasm?: ArrayBuffer;
+  /**
+   * The reduced strength: c/F and tan φ/F ("associated", default), or
+   * Davis B's for the elements' dilation angles ("davis-b",
+   * limit-common.ts), the associated material that stands for
+   * non-associated flow.
+   */
+  strengthRule?: "associated" | "davis-b";
   /** Sides of the inscribed yield polygon (HiGHS); default 24. */
   sides?: number;
   /** Rankine tension cut-off σ₁′ ≤ 0; default false. */
@@ -469,7 +476,7 @@ export function lowerBoundProblem(slope: Slope, options: LowerBoundOptions = {})
       if (elElastic[e]) continue;
       for (let k = 0; k < 3; k++) {
         const i = 3 * e + k, sx = v(e, k, 0), sy = v(e, k, 1), txy = v(e, k, 2);
-        const cF = nC[i] / F, phiF = Math.atan(Math.tan(nPhi[i]) / F);
+        const { c: cF, phi: phiF } = reducedStrength(nC[i], nPhi[i], model.elPsi[fanParent[e]], F, options.strengthRule);
         const sp = Math.sin(phiF);
         const dev1 = affine([[sx, 1], [sy, -1]]), dev2 = affine([[txy, 2]]);
         out.push({ t: affine([[sx, -sp], [sy, -sp]], 2 * cF * Math.cos(phiF)), u1: dev1, u2: dev2, polygon: "facets" });

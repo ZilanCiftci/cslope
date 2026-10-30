@@ -1528,15 +1528,37 @@ const FLOW_RULE_NAMES = { "davis-b": "Davis B", associated: "associated", "non-a
 /** The finite element strength reduction of the run. */
 function FemSummaryRows({ fem, designValues }: { fem: FemResultSummary; designValues: boolean }) {
   const last = fem.levels[fem.levels.length - 1];
+  const srf = Number.isFinite(fem.factorOfSafety) && fem.factorOfSafety > 0 ? fem.factorOfSafety.toFixed(3) : "–";
+  // With the limit analysis bounds they are the factor of safety, the
+  // strength reduction a comparison with other programs (see the docs).
+  const headline = !!fem.bounds && (fem.bounds.lower !== null || fem.bounds.upper !== null);
+  const srfTitle =
+    fem.flowRule === "non-associated"
+      ? "Strength reduction by finite elements with non-associated flow: the largest factor on c and tan φ at which the iteration still finds equilibrium, as other programs compute it. With non-associated flow it has no limit as the mesh is refined (it falls on every refinement), so it is computed on the initial mesh and depends on its size; compare it with other programs' results, not as the factor of safety."
+      : "Strength reduction by finite elements: the largest factor on c and tan φ at which the slope is still in equilibrium. It needs no slip surface; the plastic zone on the canvas shows the mechanism.";
   return (
     <div className="mt-1.5 space-y-1 border-t pt-1.5" style={{ borderColor: "var(--color-vsc-border)" }}>
+      {fem.bounds && (
+        <div className="flex justify-between">
+          <Label
+            title={`Limit analysis on ${fem.bounds.elements} elements${fem.bounds.refinements ? ` after ${fem.bounds.refinements} refinement${fem.bounds.refinements > 1 ? "s" : ""} where the gap between the bounds lay` : ""}, ${(fem.bounds.elapsedMs / 1000).toFixed(0)} s: a statically admissible stress field (lower bound) and a kinematically admissible mechanism (upper bound) of rigid–perfectly plastic soil with associated flow. The factor of safety lies between them; unlike strength reduction with non-associated flow, it converges as the mesh is refined.`}
+          >
+            FOS, limit analysis (FE)
+          </Label>
+          <span className="font-bold tabular-nums">{boundsText(fem.bounds.lower, fem.bounds.upper)}</span>
+        </div>
+      )}
+      {fem.bounds?.davis && (
+        <div className="flex justify-between">
+          <Label title="The same bounds with Davis B's reduced strength for the dilation angle: the associated material that stands for non-associated flow, usually a conservative estimate of it. The associated range above bounds the non-associated soil's factor of safety from above (Radenković 1962); a wide gap between the two means the flow rule matters for this slope.">
+            Davis B (non-associated)
+          </Label>
+          <span className="tabular-nums">{boundsText(fem.bounds.davis.lower, fem.bounds.davis.upper)}</span>
+        </div>
+      )}
       <div className="flex justify-between">
-        <Label title="Strength reduction by finite elements: the largest factor on c and tan φ at which the slope is still in equilibrium. It needs no slip surface; the plastic zone on the canvas shows the mechanism.">
-          FOS, strength reduction (FE)
-        </Label>
-        <span className="font-bold tabular-nums">
-          {Number.isFinite(fem.factorOfSafety) && fem.factorOfSafety > 0 ? fem.factorOfSafety.toFixed(3) : "–"}
-        </span>
+        <Label title={srfTitle}>{headline ? "Strength reduction (comparison)" : "FOS, strength reduction (FE)"}</Label>
+        <span className={headline ? "tabular-nums" : "font-bold tabular-nums"}>{srf}</span>
       </div>
       <div className="flex justify-between">
         <Label>Flow rule</Label>
@@ -1553,20 +1575,8 @@ function FemSummaryRows({ fem, designValues }: { fem: FemResultSummary; designVa
       )}
       <div className="flex justify-between">
         <Label>Elapsed (FE)</Label>
-        <span className="tabular-nums">{(fem.elapsedMs / 1000).toFixed(1)} s</span>
+        <span className="tabular-nums">{((fem.elapsedMs + (fem.bounds?.elapsedMs ?? 0)) / 1000).toFixed(1)} s</span>
       </div>
-      {fem.bounds && (
-        <div className="flex justify-between">
-          <Label
-            title={`Limit analysis on ${fem.bounds.elements} elements${fem.bounds.refinements ? ` after ${fem.bounds.refinements} refinement${fem.bounds.refinements > 1 ? "s" : ""} where the gap between the bounds lay` : ""}, ${(fem.bounds.elapsedMs / 1000).toFixed(0)} s: a statically admissible stress field (lower bound) and a kinematically admissible mechanism (upper bound) of rigid–perfectly plastic soil with associated flow. The factor of safety of the mesh's idealisation lies between them.`}
-          >
-            Bounds (limit analysis)
-          </Label>
-          <span className="tabular-nums">
-            {boundsText(fem.bounds.lower, fem.bounds.upper)}
-          </span>
-        </div>
-      )}
       {fem.piles?.map((p) => (
         <div key={p.pile} className="flex justify-between">
           <Label title="Largest bending moment, shear and axial force of the pile (per pile) at the factor of safety, the pile modelled as an elastic beam on springs that let the soil flow between the piles.">

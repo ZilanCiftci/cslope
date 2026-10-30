@@ -11,6 +11,7 @@ import type { Material } from "../types/material";
 import { designStrength, needsLayerTop } from "../types/strength";
 import { materialLayerTopAt } from "../model/geometry-ops";
 import { gaussUnitWeight, polylineY, type FeModel } from "./model";
+import { davisB } from "./srm";
 
 type Line = { x: number[]; y: number[] };
 
@@ -126,4 +127,17 @@ export function surfaceLineLoads(
     }
   }
   return lineQ;
+}
+
+/**
+ * The strength at a reduction F: c/F and tan φ/F (associated flow in the
+ * reduced material), or with "davis-b" both divided by Davis B's
+ * q_B(F, φ, ψ) instead (srm.ts; Davis 1968, as modified for strength
+ * reduction by Tschuchnigg, Schweiger & Sloan 2015): the associated
+ * material that stands for flow with the dilation angle ψ. φ, ψ in
+ * radians; φ = 0 (undrained) gives c/F either way.
+ */
+export function reducedStrength(c: number, phi: number, psi: number, F: number, rule: "associated" | "davis-b" = "associated"): { c: number; phi: number } {
+  const q = rule === "davis-b" && phi > 0 ? davisB(F, phi, Math.min(psi, phi)) : F;
+  return { c: c / q, phi: Math.atan(Math.tan(phi) / q) };
 }

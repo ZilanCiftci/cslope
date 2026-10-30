@@ -4,7 +4,7 @@ import { DEFAULT_FEM_SETTINGS } from "../types/analysis";
 import { runFemSummary, runFemSummaryWithBounds } from "./summary";
 
 const clay = [{ name: "Clay", model: { kind: "undrained", unitWeight: 18, undrainedShearStrength: 20 } }];
-const settings = { ...DEFAULT_FEM_SETTINGS, enabled: true, elementSize: 2, refinementLevels: 0 };
+const settings = { ...DEFAULT_FEM_SETTINGS, enabled: true, elementSize: 2, refinementLevels: 0, limitAnalysis: false };
 
 describe("runFemSummary", () => {
   it("gives the same factor for a slope and its mirror image, with the mesh in model coordinates", () => {
@@ -36,13 +36,19 @@ describe("runFemSummary", () => {
   it("brackets the factor of safety with the limit analysis bounds when asked", async () => {
     const def = { coordinates: [[0, 0], [0, 10], [10, 10], [15, 5], [30, 5], [30, 0]], materials: clay } as unknown as SlopeDefinition;
     // (the lower bound with the tension cut-off finds no stress field for this clay on finer meshes)
-    const r = await runFemSummaryWithBounds(def, { ...settings, flowRule: "associated", tensionCutoff: false, limitAnalysis: true });
+    const r = await runFemSummaryWithBounds(def, { ...settings, flowRule: "non-associated", tensionCutoff: false, limitAnalysis: true });
     const { lower, upper } = r.bounds!;
     expect(lower).not.toBeNull();
     expect(upper).not.toBeNull();
     expect(lower!).toBeLessThan(upper!);
     expect(lower!).toBeLessThan(r.factorOfSafety * 1.02);
     expect(upper!).toBeGreaterThan(r.factorOfSafety * 0.98);
+    // Davis B's bounds: the associated material standing for ψ = 0, below the associated ones
+    const davis = r.bounds!.davis!;
+    expect(davis.lower).not.toBeNull();
+    expect(davis.upper).not.toBeNull();
+    expect(davis.lower!).toBeLessThanOrEqual(davis.upper!);
+    expect(davis.lower!).toBeLessThan(upper!);
     expect(JSON.parse(JSON.stringify(r))).toEqual(r);
     // without the setting no bounds are computed
     expect((await runFemSummaryWithBounds(def, settings)).bounds).toBeUndefined();

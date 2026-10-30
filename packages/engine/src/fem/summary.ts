@@ -63,7 +63,7 @@ export async function runFemSummaryWithBounds(
     totalTimeLimit: BOUND_SEARCH_TIME_LIMIT,
   } as const;
   const warnings: string[] = [];
-  const bounds = { lower: null as number | null, upper: null as number | null, elements: 0, refinements: 0, elapsedMs: 0, warnings };
+  const bounds: NonNullable<FemResultSummary["bounds"]> = { lower: null, upper: null, elements: 0, refinements: 0, elapsedMs: 0, warnings };
   const message = (err: unknown) => (err instanceof Error ? err.message : String(err));
   let modules: BoundSolverModules;
   try {
@@ -87,6 +87,26 @@ export async function runFemSummaryWithBounds(
   } catch (err) {
     warnings.push(`Limit analysis: ${message(err)}`);
   }
+  // The same with Davis B's reduced strength for the dilation angle (below
+  // the associated bounds), started below the associated lower bound; with
+  // associated flow they are the associated bounds. Each bound's search gets
+  // half the time, so the lower bound is not left without.
+  if (settings.flowRule !== "associated") try {
+    const assoc = bounds.lower ?? bounds.upper ?? (summary.factorOfSafety > 0 ? summary.factorOfSafety : 1);
+    const d = await adaptiveBounds(slope, {
+      ...common,
+      materialParameters: { "*": { dilationAngle: settings.dilationAngle } },
+      strengthRule: "davis-b",
+      startF: 0.8 * assoc,
+      totalTimeLimit: DAVIS_REFINEMENT_TIME_LIMIT / 2,
+      refinementTimeLimit: DAVIS_REFINEMENT_TIME_LIMIT,
+      ...(modules.clarabelWasm ? { clarabelWasm: modules.clarabelWasm } : {}),
+    }, undefined, modules.highs);
+    warnings.push(...d.warnings.map((w) => `Davis B: ${w}`));
+    bounds.davis = { lower: Number.isFinite(d.lower) ? d.lower : null, upper: Number.isFinite(d.upper) ? d.upper : null };
+  } catch (err) {
+    warnings.push(`Limit analysis, Davis B: ${message(err)}`);
+  }
   return { ...summary, bounds: { ...bounds, elapsedMs: performance.now() - t0 } };
 }
 
@@ -96,8 +116,10 @@ const BOUND_COARSENING = 2;
 const BOUND_TIME_LIMIT = 120;
 /** Time limit of each bound's search in the app (s). */
 const BOUND_SEARCH_TIME_LIMIT = 480;
-/** Time budget of the bounds with their refinement on the bound gap in the app (s), within the app's 25 minutes for the bounds (analysisSlice.ts). */
+/** Time budget of the bounds with their refinement on the bound gap in the app (s), within the app's 30 minutes for the bounds (analysisSlice.ts). */
 const BOUND_REFINEMENT_TIME_LIMIT = 1200;
+/** Time budget of the Davis B bounds in the app (s): with the associated ones within the 30 minutes of analysisSlice.ts. */
+const DAVIS_REFINEMENT_TIME_LIMIT = 300;
 
 function femAnalysis(
   definition: SlopeDefinition,
@@ -124,7 +146,7 @@ function femAnalysis(
     k0: settings.k0 ?? undefined,
     originalGroundLevel: settings.originalGroundLevel ?? undefined,
     materialStages: settings.materialStages,
-    adaptive: settings.refinementLevels > 0 ? { levels: Math.min(3, Math.round(settings.refinementLevels)), tolerance: 0.01 } : undefined,
+    adaptive: settings.refinementLevels > 0 && settings.flowRule !== "non-associated" ? { levels: Math.min(3, Math.round(settings.refinementLevels)), tolerance: 0.01 } : undefined,
     onTrial,
   });
   // The analysis runs on the slope as it slides to the right; mirror back.

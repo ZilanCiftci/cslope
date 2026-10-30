@@ -316,7 +316,12 @@ export interface FemAnalysisSettings {
    * values, RMS 4.6 % to 3.0 %).
    */
   tensionCutoff: boolean;
-  /** Adaptive refinements of the mesh (0–3). */
+  /**
+   * Adaptive refinements of the mesh (0–3), for associated flow and Davis B.
+   * Not with non-associated flow: its factor has no limit as the mesh is
+   * refined (it falls on every refinement, Sysala et al. 2021), so it is
+   * computed on the initial mesh only.
+   */
   refinementLevels: number;
   /**
    * Pore pressures: hydrostatic below the water table ("water-table"), or
@@ -341,9 +346,11 @@ export interface FemAnalysisSettings {
    */
   convergence?: "increment" | "equilibrium";
   /**
-   * Also the lower and upper bounds of limit analysis (perfect plasticity,
-   * associated flow), which bracket the factor of safety of the mesh's
-   * idealisation; minutes of run time. Not set: off.
+   * The lower and upper bounds of limit analysis (perfect plasticity,
+   * associated flow, and with Davis B's reduced strength), which bracket
+   * the factor of safety and converge as the mesh is refined: the finite
+   * element factor of safety, the strength reduction a comparison; minutes
+   * of run time. Not set: off (files from before; on for new projects).
    */
   limitAnalysis?: boolean;
   /**
@@ -362,13 +369,16 @@ export interface FemAnalysisSettings {
 
 export const DEFAULT_FEM_SETTINGS: FemAnalysisSettings = {
   enabled: false,
-  flowRule: "davis-b",
+  // The factor of safety from the limit analysis bounds, the strength
+  // reduction with ψ (non-associated) for comparison with other programs.
+  flowRule: "non-associated",
   youngsModulus: 1e5,
   poissonsRatio: 0.3,
   dilationAngle: 0,
   elementSize: null,
   tensionCutoff: true,
   refinementLevels: 1,
+  limitAnalysis: true,
 };
 
 /** Result of the finite element analysis in model coordinates, as plain arrays (JSON). */
@@ -412,6 +422,12 @@ export interface FemResultSummary {
     refinements?: number;
     elapsedMs: number;
     warnings: string[];
+    /**
+     * The same bounds with Davis B's reduced strength for the dilation
+     * angle (limit-common.ts): the associated material that stands for
+     * non-associated flow, below the bounds above. Absent in older results.
+     */
+    davis?: { lower: number | null; upper: number | null };
   };
 }
 
