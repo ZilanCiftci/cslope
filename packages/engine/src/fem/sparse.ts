@@ -272,6 +272,8 @@ export class SparseCholesky {
 
   /** Cholesky factorisation A = L Lᵀ (L U for an unsymmetric matrix). Throws if A is not positive definite (has a zero pivot). */
   factor(): void {
+    // (false until it completes: a failed factorisation leaves none to reuse)
+    this.factored = false;
     if (this.upper) { this.factorLU(); return; }
     const { n, rowPtr, rowCols, Lp, Li, parent } = this.sym;
     const a = this.values, Lx = this.Lx;
