@@ -174,6 +174,15 @@ export function lowerBoundProblem(slope: Slope, options: LowerBoundOptions = {})
   const surfaceKey = new Set<string>();
   for (let s = 0; s < model.surfaceEdges.length; s += 3) surfaceKey.add(keyOf(model.surfaceEdges[s], model.surfaceEdges[s + 2]));
   const xs = Array.from(model.x), ys = Array.from(model.y);
+  // Seepage heads at the nodes, interpolated linearly to the nodes added below
+  // (bisection, centroid splits, fans): the model has them at its own only.
+  const head0 = model.seepage?.flow ? model.seepage.head : undefined;
+  const hs: number[] = head0 ? Array.from(head0) : [];
+  const addNode = (px: number, py: number, h: () => number) => {
+    xs.push(px); ys.push(py);
+    if (head0) hs.push(h());
+    return xs.length - 1;
+  };
   // Corners of the ground surface (crest, toe, its ends at the sides): any
   // kink, even a slight one (not only a round-off one, 10⁻⁹ rad), and a
   // point where a material boundary meets it (on V052a's crest the stress
@@ -230,7 +239,7 @@ export function lowerBoundProblem(slope: Slope, options: LowerBoundOptions = {})
     const mid = (a: number, b: number) => {
       const key = keyOf(a, b);
       let m = splitEdges.get(key);
-      if (m === undefined) { m = xs.length; xs.push((xs[a] + xs[b]) / 2); ys.push((ys[a] + ys[b]) / 2); splitEdges.set(key, m); }
+      if (m === undefined) { m = addNode((xs[a] + xs[b]) / 2, (ys[a] + ys[b]) / 2, () => (hs[a] + hs[b]) / 2); splitEdges.set(key, m); }
       return m;
     };
     const out: number[][] = [], outMeta: number[] = [];
@@ -265,9 +274,7 @@ export function lowerBoundProblem(slope: Slope, options: LowerBoundOptions = {})
     }
     const parts = [cn];
     if (traction >= 2) {
-      const g = xs.length;
-      xs.push((xs[cn[0]] + xs[cn[1]] + xs[cn[2]]) / 3);
-      ys.push((ys[cn[0]] + ys[cn[1]] + ys[cn[2]]) / 3);
+      const g = addNode((xs[cn[0]] + xs[cn[1]] + xs[cn[2]]) / 3, (ys[cn[0]] + ys[cn[1]] + ys[cn[2]]) / 3, () => (hs[cn[0]] + hs[cn[1]] + hs[cn[2]]) / 3);
       parts[0] = [cn[0], cn[1], g];
       parts.push([cn[1], cn[2], g], [cn[2], cn[0], g]);
     }
@@ -290,9 +297,8 @@ export function lowerBoundProblem(slope: Slope, options: LowerBoundOptions = {})
       const pts: number[] = [];
       for (let j = 1; j < FAN_SECTORS; j++) {
         const qx = xs[a] + (j / FAN_SECTORS) * (xs[b] - xs[a]), qy = ys[a] + (j / FAN_SECTORS) * (ys[b] - ys[a]);
-        pts.push(xs.length);
-        xs.push((xs[v] + qx) / 2);
-        ys.push((ys[v] + qy) / 2);
+        const w = j / FAN_SECTORS;
+        pts.push(addNode((xs[v] + qx) / 2, (ys[v] + qy) / 2, () => (hs[v] + hs[a] + w * (hs[b] - hs[a])) / 2));
       }
       const ring = [a, ...pts, b];
       for (let j = 0; j + 1 < ring.length; j++) out.push([v, ring[j], ring[j + 1]]);
@@ -315,7 +321,7 @@ export function lowerBoundProblem(slope: Slope, options: LowerBoundOptions = {})
   // (the bars also hold the piles' springs, source −1)
   if (model.bars.source.some((k) => k >= 0)) warnings.push("Reinforcement is not included in the lower bound analysis.");
   if (slope.piles.length > 0) warnings.push("Piles are not included in the lower bound analysis.");
-  const head = model.seepage?.flow ? model.seepage.head : undefined;
+  const head = head0 ? Float64Array.from(hs) : undefined;
 
   // Nodal data per element corner: pore pressure and strength.
   const nU = new Float64Array(3 * ne);
@@ -585,7 +591,7 @@ export async function lowerBound(slope: Slope, options: LowerBoundOptions = {}, 
         next = root - tol / 2;
       }
       if (!(next > best && next < failed && next >= 0.05)) next = best > 0 && Number.isFinite(failed) ? (best + failed) / 2 : best > 0 ? 1.5 * best : failed / 1.5;
-      if (next < 0.05) break;
+      if (next < 0.05 || next > 100) break;
       fa = fb; la = lb;
       fb = next;
       lb = lambdaAt(fb);
