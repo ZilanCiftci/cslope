@@ -7,6 +7,7 @@
 import type { AnalysisWarning, Slice } from "../types/index";
 import type { Slope } from "./slope";
 import { janbuCorrectionFactor, solvedEffectiveNormals } from "./solvers";
+import { frictionalSurfaceSlide, surfaceSlideMessage } from "./surface-slide";
 
 /**
  * m_α below which a slice is reported. Whitman and Bailey (1967) found
@@ -59,6 +60,10 @@ const slicesText = (n: number, verb: [string, string]) =>
  *   horizontal force equilibrium is not satisfied, so the factor depends
  *   on the axis. Spencer (1967) and Morgenstern and Price (1965) satisfy
  *   both and do not.
+ * - "frictional-surface-slide": a face of the ground surface in soil with
+ *   c′ = 0, dipping in the analysed direction within the search limits,
+ *   whose infinite-slope factor tan φ′/tan β is below the critical
+ *   surface's (surface-slide.ts); the search discards such thin slides.
  *
  * Only the critical surface is checked. `effectiveNormals` are its base
  * N′ when the caller already has them (solvedEffectiveNormals); otherwise
@@ -85,6 +90,10 @@ export function analysisWarnings(
   const crit = slope.search.find((p) => p.fos != null);
   if (crit && slope.method === "Bishop" && crit.points) {
     warnings.push({ code: "bishop-non-circular", message: BISHOP_NON_CIRCULAR_MESSAGE });
+  }
+  const slide = crit ? frictionalSurfaceSlide(slope, true) : null;
+  if (slide && slide.factorOfSafety < crit!.fos!) {
+    warnings.push({ code: "frictional-surface-slide", message: surfaceSlideMessage(slide, crit!.fos!) });
   }
   const slices = crit?.slices;
   if (!crit || !slices || slices.length === 0) return warnings;

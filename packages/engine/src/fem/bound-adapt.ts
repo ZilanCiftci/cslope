@@ -45,6 +45,7 @@
  * the toe to 1156 elements, whose programs took 316 s).
  */
 
+import { frictionalSurfaceSlide, surfaceSlideMessage } from "../model/surface-slide";
 import type { Slope } from "../model/slope";
 import { buildFeModel } from "./model";
 import { dorflerMark, refinedSizeField } from "./adapt";
@@ -239,7 +240,12 @@ export async function adaptiveBounds(slope: Slope, options: AdaptiveBoundsOption
   let opts: AdaptiveBoundsOptions = { ...options };
   let lower = NaN, upper = NaN;
   let sizeField: AdaptiveBoundsResult["sizeField"] = (opts.sizeField ?? (() => NaN)) as AdaptiveBoundsResult["sizeField"];
-  const result = () => ({ lower, upper, levels: out, sizeField, warnings });
+  // a face in frictional soil with a lower infinite-slope factor (not with seepage pore pressures)
+  const slide = options.porePressure === "seepage" ? null : frictionalSurfaceSlide(slope);
+  const result = () => {
+    if (slide && slide.factorOfSafety < upper) warnings.push(surfaceSlideMessage(slide, upper));
+    return { lower, upper, levels: out, sizeField, warnings };
+  };
   // the smallest element size of the first mesh, a quarter of which bounds the refinement
   let h0 = Infinity;
   const coarseTol = Math.max(options.fTolerance ?? 0.002, COARSE_TOLERANCE);

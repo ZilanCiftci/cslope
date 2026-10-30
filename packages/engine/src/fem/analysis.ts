@@ -25,6 +25,7 @@ import { gaussStrains, type FeModel, type FeModelOptions } from "./model";
 import { prepareFeModel, type InitialStressOptions } from "./initial-stress";
 import { pileForces } from "./piles";
 import { dissipationIndicator, dorflerMark, refinedSizeField, zzIndicator } from "./adapt";
+import { frictionalSurfaceSlide, surfaceSlideMessage } from "../model/surface-slide";
 import {
   runTrial,
   strengthReductionSearch,
@@ -296,6 +297,9 @@ export function* analyzeFemSearch(slope: Slope, options: FemAnalysisOptions = {}
   if (capped) warnings.push("The mesh reached its vertex limit; the element size was not reached everywhere.");
   if (model.triangulation.missingSegments > 0) warnings.push("A material boundary shorter than the mesh's merge tolerance is not represented in the mesh.");
   if (r.warning) warnings.push(r.warning);
+  // A face in frictional soil with a lower infinite-slope factor (not with seepage pore pressures, which it does not take).
+  const slide = model.seepage ? null : frictionalSurfaceSlide(slope);
+  if (slide && r.factorOfSafety > 0 && slide.factorOfSafety < r.factorOfSafety) warnings.push(surfaceSlideMessage(slide, r.factorOfSafety));
 
   const nc = model.cornerCount;
   const displacement = new Float64Array(2 * nc);

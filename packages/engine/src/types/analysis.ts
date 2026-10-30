@@ -276,7 +276,8 @@ export type AnalysisWarningCode =
   | "dangling-boundary"
   | "negative-effective-normal"
   | "low-m-alpha"
-  | "bishop-non-circular";
+  | "bishop-non-circular"
+  | "frictional-surface-slide";
 
 /**
  * Something about the input or the critical surface that the factor of
