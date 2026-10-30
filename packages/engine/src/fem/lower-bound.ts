@@ -574,15 +574,17 @@ export async function lowerBound(slope: Slope, options: LowerBoundOptions = {}, 
     let lb = lambdaAt(fb);
     certify(fb, lb);
     let reached = false, root = NaN;
+    const near = (l: number) => l > 0.5 && l < 2;
     for (let it = 0; it < 25 && !Number.isNaN(lb); it++) {
       if (best > 0 && failed - best <= tol) { reached = true; break; }
       let next = NaN;
       if (la > 0 && lb > 0 && Number.isFinite(la) && Number.isFinite(lb) && Math.abs(Math.log(lb) - Math.log(la)) >= 1e-14) {
         root = Math.max(0.05, fb - (Math.log(lb) * (fb - fa)) / (Math.log(lb) - Math.log(la)));
-        if (best > 0 && best >= root - tol) { reached = true; break; }
+        // (the secant's root decides only from trials near λ = 1, not across a jump)
+        if (best > 0 && best >= root - tol && near(la) && near(lb)) { reached = true; break; }
         next = root - tol / 2;
       }
-      if (!(next > best && next < failed)) next = best > 0 && Number.isFinite(failed) ? (best + failed) / 2 : best > 0 ? 1.5 * best : failed / 1.5;
+      if (!(next > best && next < failed && next >= 0.05)) next = best > 0 && Number.isFinite(failed) ? (best + failed) / 2 : best > 0 ? 1.5 * best : failed / 1.5;
       if (next < 0.05) break;
       fa = fb; la = lb;
       fb = next;

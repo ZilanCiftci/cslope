@@ -488,16 +488,18 @@ export async function upperBound(slope: Slope, options: UpperBoundOptions = {}, 
     let lb = lambdaAt(fb);
     certify(fb, lb);
     let reached = false, root = NaN;
+    const near = (l: number) => l > 0.5 && l < 2;
     for (let it = 0; it < 25 && !Number.isNaN(lb); it++) {
       if (Number.isFinite(best) && best - stands <= tol) { reached = true; break; }
       let next = NaN;
       if (la > 0 && lb > 0 && Number.isFinite(la) && Number.isFinite(lb) && Math.abs(Math.log(lb) - Math.log(la)) >= 1e-14) {
         const ga = Math.log(la), gb = Math.log(lb);
         root = Math.max(0.05, Math.exp(Math.log(fb) - (gb * (Math.log(fb) - Math.log(fa))) / (gb - ga)));
-        if (Number.isFinite(best) && best <= root + tol) { reached = true; break; }
+        // (the secant's root decides only from trials near λ = 1, not across a jump)
+        if (Number.isFinite(best) && best <= root + tol && near(la) && near(lb)) { reached = true; break; }
         next = root + tol / 2;
       }
-      if (!(next > stands && next < best)) next = Number.isFinite(best) && stands > 0 ? (best + stands) / 2 : Number.isFinite(best) ? best / 1.5 : 1.5 * stands;
+      if (!(next > stands && next < best && next >= 0.05 && next <= 100)) next = Number.isFinite(best) && stands > 0 ? (best + stands) / 2 : Number.isFinite(best) ? best / 1.5 : 1.5 * stands;
       if (next < 0.05 || next > 100) break;
       fa = fb; la = lb;
       fb = next;
