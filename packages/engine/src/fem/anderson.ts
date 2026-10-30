@@ -20,11 +20,15 @@ export class Anderson {
   private prevG: Float64Array | null = null;
   private prevF: Float64Array | null = null;
 
-  constructor(
-    private readonly n: number,
-    private readonly m: number,
-    private readonly residualStart = 0,
-  ) {}
+  private readonly n: number;
+  private readonly m: number;
+  private readonly residualStart: number;
+
+  constructor(n: number, m: number, residualStart = 0) {
+    this.n = n;
+    this.m = m;
+    this.residualStart = residualStart;
+  }
 
   /** Forget the history (e.g. after the problem changed). */
   reset(): void {
