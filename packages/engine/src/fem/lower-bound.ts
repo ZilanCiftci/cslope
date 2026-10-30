@@ -1,19 +1,24 @@
 /**
- * Lower bound limit analysis by finite elements and linear programming
- * (Sloan 1988, IJNAMG 12, 61–77; Lyamin & Sloan 2002, IJNME 55, 573–611).
+ * Lower bound limit analysis by finite elements and conic programming
+ * (Sloan 1988, IJNAMG 12, 61–77; Lyamin & Sloan 2002, IJNME 55, 573–611;
+ * Makrodimopoulos & Martin 2006, IJNME 66(4), 604–634).
  *
  * The stresses vary linearly over three-node triangles whose nodes are not
  * shared, so that every interior edge can carry a statically admissible
  * stress discontinuity (continuous normal and shear traction). Each
  * element is in equilibrium with its weight and the pore pressure
- * gradient, the ground surface carries its loads, and at every node the
- * Mohr–Coulomb criterion is replaced by the p-sided polygon inscribed in
- * it (Sloan 1988), so that the stress field is admissible and the load
- * factor a strict lower bound for the mesh. Stresses are effective,
- * tension positive; σ = σ′ − u m. The linear programs are solved by HiGHS
- * (Huangfu & Hall 2018, Math. Program. Comput. 10(1), 119–142).
+ * gradient, the ground surface carries its loads, and every node meets the
+ * Mohr–Coulomb criterion, in plane strain the second-order cone
+ * 2c cos φ − sin φ (σ′x + σ′y) ≥ ‖(σ′x − σ′y, 2τxy)‖, so that the stress
+ * field is admissible and the load factor a strict lower bound for the
+ * mesh. Stresses are effective, tension positive; σ = σ′ − u m. The cones
+ * are solved exactly by Clarabel, or as the p-sided polygon inscribed in
+ * the criterion (Sloan 1988) by HiGHS (Huangfu & Hall 2018, Math. Program.
+ * Comput. 10(1), 119–142), see conic.ts. On V044–V046a (2100–2800
+ * elements, the verification meshes) HiGHS reached its time limit of 300 s
+ * per program, where Clarabel solves each in a few seconds.
  *
- * The linear program maximises a load factor λ on every load (weight, pore
+ * The program maximises a load factor λ on every load (weight, pore
  * pressure and surface loads). The factor of safety on strength is the
  * reduction F at which λ(F) = 1: for φ = 0 everywhere λ(F) = λ(F0)·F0/F, so
  * F = λ(F0)·F0 from one program at the first reduction tried F0 (1 by
@@ -26,20 +31,32 @@
  * largest evaluated F with λ(F) ≥ 1 once it lies within 0.002 of the root
  * (only such an F is a lower bound); the load factor on every load, weight
  * included, as the strength reduction applies; a line load spread over the
- * two surface edges at its point; interior point first and simplex as the
- * fallback.
+ * two surface edges at its point; the stresses scaled by γ H (the largest
+ * unit weight times the model's height) for Clarabel.
  */
 
 import { WATER_UNIT_WEIGHT } from "../types/constants";
 import type { Slope } from "../model/slope";
 import { buildFeModel, polylineY, type FeModelOptions } from "./model";
 import { meanUnitWeight, porePressureAt, strengthAt, surfaceLineLoads } from "./limit-common";
+import {
+  affine, loadClarabel, ProgramBuilder, solveClarabel, solveHighs,
+  type ConicProgram, type ConicSolution, type HighsSolver,
+} from "./conic";
 
 /** Sectors per element at a corner of the ground surface (see lowerBoundProblem). */
 const FAN_SECTORS = 4;
 
 export interface LowerBoundOptions extends FeModelOptions {
-  /** Sides of the inscribed yield polygon; default 24. */
+  /**
+   * The solver: "clarabel" (default) the yield criterion exactly as a
+   * second-order cone, "highs" the inscribed polygon as a linear program
+   * (conic.ts).
+   */
+  boundSolver?: "clarabel" | "highs";
+  /** The Clarabel WebAssembly binary, where it cannot be read from beside the module (the app). */
+  clarabelWasm?: ArrayBuffer;
+  /** Sides of the inscribed yield polygon (HiGHS); default 24. */
   sides?: number;
   /** Rankine tension cut-off σ₁′ ≤ 0; default false. */
   tensionCutoff?: boolean;
@@ -108,9 +125,25 @@ export function loadHighs(options?: HighsModuleOptions | ((file: string) => stri
   return highsPromise;
 }
 
+/** A solve function for the bounds' programs: Clarabel or HiGHS as `options.boundSolver` says. */
+export async function boundSolver(
+  options: { boundSolver?: "clarabel" | "highs"; clarabelWasm?: ArrayBuffer },
+  highs?: Highs,
+  module?: HighsModuleOptions,
+): Promise<(prog: ConicProgram, sides: number, timeLimit: number) => ConicSolution> {
+  if ((options.boundSolver ?? "clarabel") === "highs") {
+    const h = (highs ?? (await loadHighs(module))) as HighsSolver;
+    return (prog, sides, timeLimit) => solveHighs(prog, h, sides, timeLimit);
+  }
+  const c = await loadClarabel(options.clarabelWasm);
+  return (prog, _sides, timeLimit) => solveClarabel(prog, c, timeLimit);
+}
+
 export interface LbProblem {
-  /** Linear program text (CPLEX LP format) for a given F. */
-  build(F: number): string;
+  /** The program at a reduction F (conic.ts): maximise λ. */
+  program(F: number): ConicProgram;
+  /** Sides of the yield polygon when the program is solved as an LP by HiGHS. */
+  sides: number;
   allUndrained: boolean;
   elements: number;
   variables: number;
@@ -120,7 +153,7 @@ export interface LbProblem {
    * The lower bound mesh: corner coordinates and three nodes per element,
    * and the strength reduction model's element each lies in (`parent`; the
    * model's corner nodes keep their numbers). The stresses of element e at
-   * its corner k are the LP columns s(9e + 3k + 0, 1, 2): σ′x, σ′y, τxy.
+   * its corner k are the program's columns 9e + 3k + 0, 1, 2: σ′x, σ′y, τxy.
    */
   mesh: { x: Float64Array; y: Float64Array; el: Int32Array; parent: Int32Array };
 }
@@ -250,13 +283,24 @@ export function lowerBoundProblem(slope: Slope, options: LowerBoundOptions = {})
     }
   }
 
-  const v = (e: number, k: number, comp: number) => `s${9 * e + 3 * k + comp}`;
-  const fmt = (a: number) => (a === 0 ? "0" : a.toPrecision(15));
-  const term = (a: number, name: string) => (a === 0 ? "" : ` ${a < 0 ? "-" : "+"} ${fmt(Math.abs(a))} ${name}`);
+  // Columns: the stresses s(9e + 3k + comp) (σ′x, σ′y, τxy at corner k of
+  // element e), free, scaled by γ H; then the load factor λ ≥ 0.
+  let gMax = 0, yLo = Infinity;
+  for (const m of materials) gMax = Math.max(gMax, m.unitWeight ?? 0, (m.model as { unitWeightSat?: number }).unitWeightSat ?? 0);
+  for (let n = 0; n < x.length; n++) yLo = Math.min(yLo, y[n]);
+  const stressScale = Math.max(gMax, WATER_UNIT_WEIGHT) * Math.max(yHi - yLo, 1e-9);
+  const pb = new ProgramBuilder();
+  for (let i = 0; i < 9 * ne; i++) pb.col(`s${i}`, false, stressScale);
+  const lam = pb.col("lam", true);
+  pb.sense = "max";
+  pb.addObjective(lam, 1);
+  const v = (e: number, k: number, comp: number) => 9 * e + 3 * k + comp;
+  const sn = (e: number, k: number, nx: number, ny: number, w = 1): [number, number][] =>
+    [[v(e, k, 0), w * nx * nx], [v(e, k, 1), w * ny * ny], [v(e, k, 2), w * 2 * nx * ny]];
+  const ts = (e: number, k: number, nx: number, ny: number, w = 1): [number, number][] =>
+    [[v(e, k, 0), -w * nx * ny], [v(e, k, 1), w * nx * ny], [v(e, k, 2), w * (nx * nx - ny * ny)]];
 
   // F-independent rows: equilibrium, discontinuities, boundary tractions.
-  const fixed: string[] = [];
-  let row = 0;
   for (let e = 0; e < ne; e++) {
     const n = [el[3 * e], el[3 * e + 1], el[3 * e + 2]];
     const b = [y[n[1]] - y[n[2]], y[n[2]] - y[n[0]], y[n[0]] - y[n[1]]];
@@ -270,13 +314,13 @@ export function lowerBoundProblem(slope: Slope, options: LowerBoundOptions = {})
     let ux = 0, uy = 0;
     for (let k = 0; k < 3; k++) { ux += b[k] * nU[3 * e + k]; uy += c[k] * nU[3 * e + k]; }
     // Σ b σx + c τ − λ Σ b u = 0
-    let r1 = "", r2 = "";
+    const r1: [number, number][] = [], r2: [number, number][] = [];
     for (let k = 0; k < 3; k++) {
-      r1 += term(b[k], v(e, k, 0)) + term(c[k], v(e, k, 2));
-      r2 += term(b[k], v(e, k, 2)) + term(c[k], v(e, k, 1));
+      r1.push([v(e, k, 0), b[k]], [v(e, k, 2), c[k]]);
+      r2.push([v(e, k, 2), b[k]], [v(e, k, 1), c[k]]);
     }
-    fixed.push(` r${row++}:${r1}${term(-ux, "lam")} = 0`);
-    fixed.push(` r${row++}:${r2}${term(-(uy + area2 * gamma), "lam")} = 0`);
+    pb.eq([...r1, [lam, -ux]]);
+    pb.eq([...r2, [lam, -(uy + area2 * gamma)]]);
   }
   // Edges: find each edge's elements by corner pair.
   const nc = x.length; // key multiplier for node pairs
@@ -292,8 +336,6 @@ export function lowerBoundProblem(slope: Slope, options: LowerBoundOptions = {})
       const key = a < b ? a * nc + b : b * nc + a;
       const len = Math.hypot(x[b] - x[a], y[b] - y[a]);
       const nx = (y[b] - y[a]) / len, ny = -(x[b] - x[a]) / len; // outward for this element
-      const snRow = (ee: number, kk: number) => term(nx * nx, v(ee, kk, 0)) + term(ny * ny, v(ee, kk, 1)) + term(2 * nx * ny, v(ee, kk, 2));
-      const tRow = (ee: number, kk: number) => term(-nx * ny, v(ee, kk, 0)) + term(nx * ny, v(ee, kk, 1)) + term(nx * nx - ny * ny, v(ee, kk, 2));
       const other = edgeOwner.get(key);
       if (other) {
         // continuity of total normal and shear traction at both ends
@@ -303,10 +345,8 @@ export function lowerBoundProblem(slope: Slope, options: LowerBoundOptions = {})
           const kk2 = node === a2 ? k2 : (k2 + 1) % 3;
           const du = nU[3 * e + kk] - nU[3 * e2 + kk2];
           // σ′n(e) − λ u(e) = σ′n(e2) − λ u(e2)
-          const sn2 = term(-nx * nx, v(e2, kk2, 0)) + term(-ny * ny, v(e2, kk2, 1)) + term(-2 * nx * ny, v(e2, kk2, 2));
-          const t2 = term(nx * ny, v(e2, kk2, 0)) + term(-nx * ny, v(e2, kk2, 1)) + term(-(nx * nx - ny * ny), v(e2, kk2, 2));
-          fixed.push(` r${row++}:${snRow(e, kk)}${sn2}${term(-du, "lam")} = 0`);
-          fixed.push(` r${row++}:${tRow(e, kk)}${t2} = 0`);
+          pb.eq([...sn(e, kk, nx, ny), ...sn(e2, kk2, nx, ny, -1), [lam, -du]]);
+          pb.eq([...ts(e, kk, nx, ny), ...ts(e2, kk2, nx, ny, -1)]);
         }
         edgeOwner.delete(key);
       } else edgeOwner.set(key, [e, k]);
@@ -321,9 +361,7 @@ export function lowerBoundProblem(slope: Slope, options: LowerBoundOptions = {})
     if (Math.abs(x[b] - x[a]) > 1e-3 * Math.abs(y[b] - y[a])) continue;
     const len = Math.hypot(x[b] - x[a], y[b] - y[a]);
     const nx = (y[b] - y[a]) / len, ny = -(x[b] - x[a]) / len;
-    for (const kk of [k, (k + 1) % 3]) {
-      fixed.push(` r${row++}:${term(-nx * ny, v(e, kk, 0))}${term(nx * ny, v(e, kk, 1))}${term(nx * nx - ny * ny, v(e, kk, 2))} = 0`);
-    }
+    for (const kk of [k, (k + 1) % 3]) pb.eq(ts(e, kk, nx, ny));
   }
   // Line loads as strip loads (limit-common.ts); variable loads take γQ.
   const loadFactor = slope.partialFactors?.variableLoad ?? 1;
@@ -351,68 +389,45 @@ export function lowerBoundProblem(slope: Slope, options: LowerBoundOptions = {})
       for (const udl of slope.udls) if (mx >= udl.x1 && mx <= udl.x2) q += udl.magnitude * loadFactor;
       // traction vector t = −pw n + (0, −q |n_y|); σn,total = t·n, τ = t·s with s = (−ny, nx)
       const tx = -pw * nx, ty = -pw * ny - q * Math.abs(ny);
-      const tn = tx * nx + ty * ny, ts = -tx * ny + ty * nx;
-      const sn = term(nx * nx, v(e, kk, 0)) + term(ny * ny, v(e, kk, 1)) + term(2 * nx * ny, v(e, kk, 2));
-      const tt = term(-nx * ny, v(e, kk, 0)) + term(nx * ny, v(e, kk, 1)) + term(nx * nx - ny * ny, v(e, kk, 2));
+      const tn = tx * nx + ty * ny, tt = -tx * ny + ty * nx;
       // σ′n − λ u = λ tn ; τ = λ ts
-      fixed.push(` r${row++}:${sn}${term(-(nU[3 * e + kk] + tn), "lam")} = 0`);
-      fixed.push(` r${row++}:${tt}${term(-ts, "lam")} = 0`);
+      pb.eq([...sn(e, kk, nx, ny), [lam, -(nU[3 * e + kk] + tn)]]);
+      pb.eq([...ts(e, kk, nx, ny), [lam, -tt]]);
     }
   }
-  const fixedRows = row;
+  const fixed = pb.build();
 
-  // Yield polygon (inscribed): (σx − σy) cos θk + 2τ sin θk + cos(π/p) sin φ (σx + σy) ≤ 2 c cos φ cos(π/p)
-  const cp = Math.cos(Math.PI / p);
-  const yieldRows = (F: number): string[] => {
-    const out: string[] = [];
-    let r = fixedRows;
+  // Yield cones per corner (F-dependent): 2c cos φ − sin φ (σx + σy) ≥ ‖(σx − σy, 2τ)‖;
+  // the undrained cap 2cu ≥ ‖(σx − σy, 2τ)‖; the tension cut-off −(σx + σy)/2 ≥ ‖((σx − σy)/2, τ)‖.
+  const yieldCones = (F: number): ConicProgram["cones"] => {
+    const out: ConicProgram["cones"] = [];
     for (let e = 0; e < ne; e++) {
       if (elElastic[e]) continue;
       for (let k = 0; k < 3; k++) {
-        const i = 3 * e + k;
+        const i = 3 * e + k, sx = v(e, k, 0), sy = v(e, k, 1), txy = v(e, k, 2);
         const cF = nC[i] / F, phiF = Math.atan(Math.tan(nPhi[i]) / F);
-        const sp = Math.sin(phiF), rhs = 2 * cF * Math.cos(phiF) * cp;
-        for (let j = 0; j < p; j++) {
-          const th = (2 * Math.PI * j) / p, ct = Math.cos(th), st = Math.sin(th);
-          const ax = ct + cp * sp, ay = -ct + cp * sp, at = 2 * st;
-          out.push(` r${r++}:${term(ax, v(e, k, 0))}${term(ay, v(e, k, 1))}${term(at, v(e, k, 2))} <= ${fmt(rhs)}`);
-        }
-        if (Number.isFinite(nCu[i])) {
-          // the undrained cap: the inscribed Tresca polygon on cu/F
-          const rhsU = (2 * nCu[i] * cp) / F;
-          for (let j = 0; j < p; j++) {
-            const th = (2 * Math.PI * j) / p, ct = Math.cos(th), st = Math.sin(th);
-            out.push(` r${r++}:${term(ct, v(e, k, 0))}${term(-ct, v(e, k, 1))}${term(2 * st, v(e, k, 2))} <= ${fmt(rhsU)}`);
-          }
-        }
-        if (cutoff) {
-          // σ1 = (σx + σy)/2 + R ≤ 0, R inscribed: ((σx − σy)/2 cos θ + τ sin θ) ≤ −cos(π/p)(σx + σy)/2
-          for (let j = 0; j < p; j++) {
-            const th = (2 * Math.PI * j) / p, ct = Math.cos(th), st = Math.sin(th);
-            out.push(` r${r++}:${term(ct / 2 + cp / 2, v(e, k, 0))}${term(-ct / 2 + cp / 2, v(e, k, 1))}${term(st, v(e, k, 2))} <= 0`);
-          }
-        }
+        const sp = Math.sin(phiF);
+        const dev1 = affine([[sx, 1], [sy, -1]]), dev2 = affine([[txy, 2]]);
+        out.push({ t: affine([[sx, -sp], [sy, -sp]], 2 * cF * Math.cos(phiF)), u1: dev1, u2: dev2, polygon: "facets" });
+        if (Number.isFinite(nCu[i])) out.push({ t: affine([], (2 * nCu[i]) / F), u1: dev1, u2: dev2, polygon: "facets" });
+        if (cutoff) out.push({ t: affine([[sx, -0.5], [sy, -0.5]]), u1: affine([[sx, 0.5], [sy, -0.5]]), u2: affine([[txy, 1]]), polygon: "facets" });
       }
     }
     return out;
   };
-  const nVars = 9 * ne + 1;
-  const bounds = ["Bounds", " lam >= 0"];
-  for (let i = 0; i < 9 * ne; i++) bounds.push(` s${i} free`);
-  const fixedText = fixed.join("\n");
-  const boundsText = bounds.join("\n");
-  let yieldCount = 0;
+  let coneCount = 0;
   for (let e = 0; e < ne; e++) {
     if (elElastic[e]) continue;
-    yieldCount += 3 * p * (cutoff ? 2 : 1);
-    for (let k = 0; k < 3; k++) if (Number.isFinite(nCu[3 * e + k])) yieldCount += p;
+    coneCount += 3 * (cutoff ? 2 : 1);
+    for (let k = 0; k < 3; k++) if (Number.isFinite(nCu[3 * e + k])) coneCount++;
   }
   return {
-    build: (F) => ["Maximize", " obj: lam", "Subject To", fixedText, yieldRows(F).join("\n"), boundsText, "End"].join("\n"),
+    program: (F) => ({ ...fixed, cones: yieldCones(F) }),
+    sides: p,
     allUndrained,
     elements: ne,
-    variables: nVars,
-    constraints: fixedRows + yieldCount,
+    variables: 9 * ne + 1,
+    constraints: fixed.eqRhs.length + coneCount,
     warnings,
     mesh: { x, y, el, parent: Int32Array.from(fanParent) },
   };
@@ -420,7 +435,7 @@ export function lowerBoundProblem(slope: Slope, options: LowerBoundOptions = {})
 
 /** Lower bound on the factor of safety of a slope. */
 export async function lowerBound(slope: Slope, options: LowerBoundOptions = {}, highs?: Highs, module?: HighsModuleOptions): Promise<LowerBoundResult> {
-  const solver = highs ?? (await loadHighs(module));
+  const solve = await boundSolver(options, highs, module);
   const prob = lowerBoundProblem(slope, options);
   const trials: LowerBoundResult["trials"] = [];
   const warnings = [...prob.warnings];
@@ -434,17 +449,11 @@ export async function lowerBound(slope: Slope, options: LowerBoundOptions = {}, 
       outOfTime = true;
       return NaN;
     }
-    // Interior point (with presolve and crossover) is about four times faster
-    // than simplex on these programs (measured on V077); without presolve it
-    // can misreport the status, so simplex is the fallback.
-    const lp = prob.build(F);
-    const time_limit = Math.min(options.timeLimit ?? 300, remaining);
-    let r = solver.solve(lp, { solver: "ipm", time_limit });
-    if (r.Status !== "Optimal" && r.Status !== "Time limit reached") r = solver.solve(lp, { solver: "simplex", time_limit });
+    const r = solve(prob.program(F), prob.sides, Math.min(options.timeLimit ?? 300, remaining));
     // Only an optimal program gives a load factor; any other status
     // (time limit, numerical trouble) gives none, and F is not bounded there.
-    const lambda = r.Status === "Optimal" ? r.ObjectiveValue : r.Status === "Unbounded" ? Infinity : NaN;
-    if (r.Status !== "Optimal") warnings.push(`The linear program at F = ${F.toFixed(3)} ended with status "${r.Status}".`);
+    const lambda = r.status === "optimal" ? r.objective : r.status === "unbounded" ? Infinity : NaN;
+    if (r.status !== "optimal" && r.status !== "unbounded") warnings.push(`The program at F = ${F.toFixed(3)} ended with status "${r.detail}".`);
     trials.push({ F, lambda, seconds: (performance.now() - t0) / 1000 });
     return lambda;
   };
@@ -452,7 +461,7 @@ export async function lowerBound(slope: Slope, options: LowerBoundOptions = {}, 
   const F0 = options.startF && options.startF > 0 ? options.startF : 1;
   const l1 = lambdaAt(F0);
   if (Number.isNaN(l1)) {
-    return { factorOfSafety: NaN, trials, elements: prob.elements, variables: prob.variables, constraints: prob.constraints, warnings: [...warnings, `The linear program at F = ${F0.toFixed(3)} was not solved.`] };
+    return { factorOfSafety: NaN, trials, elements: prob.elements, variables: prob.variables, constraints: prob.constraints, warnings: [...warnings, `The program at F = ${F0.toFixed(3)} was not solved.`] };
   }
   const fail = (reason: string): LowerBoundResult =>
     ({ factorOfSafety: NaN, trials, elements: prob.elements, variables: prob.variables, constraints: prob.constraints, warnings: [...warnings, reason] });
@@ -461,7 +470,7 @@ export async function lowerBound(slope: Slope, options: LowerBoundOptions = {}, 
   // is the largest such F evaluated, never an extrapolation.
   let F: number;
   if (prob.allUndrained) {
-    if (!(l1 > 0) || !Number.isFinite(l1)) return fail("The linear program has no admissible stress field.");
+    if (!(l1 > 0) || !Number.isFinite(l1)) return fail("The program has no admissible stress field.");
     F = l1 * F0; // λ(F) = λ(F0)·F0/F, so λ(λ(F0)·F0) = 1 exactly
   } else if (l1 === 0 || l1 === Infinity) {
     // Without cohesion every constraint is homogeneous in the stresses and

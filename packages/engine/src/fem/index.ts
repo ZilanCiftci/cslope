@@ -22,4 +22,5 @@ export { zzIndicator, dissipationIndicator, dorflerMark, refinedSizeField } from
 export { newtonAtF, returnMap } from "./newton";
 export { lowerBound, lowerBoundProblem, loadHighs, type LowerBoundOptions, type LowerBoundResult } from "./lower-bound";
 export { upperBound, upperBoundProblem, type UpperBoundOptions, type UpperBoundResult } from "./upper-bound";
+export { loadClarabel } from "./conic";
 export { adaptiveBounds, boundGapIndicator, type AdaptiveBoundsOptions, type AdaptiveBoundsResult, type AdaptiveBoundsLevel, type BoundGap } from "./bound-adapt";

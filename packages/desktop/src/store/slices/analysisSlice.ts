@@ -42,7 +42,7 @@ function analysisTimeoutMs(options: AnalysisOptions): number {
   // Strength reduction by finite elements takes minutes on a refined mesh.
   // Newton on non-associated flow can take several times longer (srm.ts).
   const slow = options.fem?.flowRule === "non-associated" && options.fem.nonAssociatedSolver === "newton" ? 4 : 1;
-  // The limit analysis bounds: linear programs of up to two minutes each (summary.ts).
+  // The limit analysis bounds: conic programs of up to two minutes each (summary.ts).
   const bounds = options.fem?.limitAnalysis ? 5 * FEM_TIMEOUT_MS : 0;
   const fem = options.fem?.enabled ? slow * FEM_TIMEOUT_MS * (1 + (options.fem.refinementLevels ?? 0)) + bounds : 0;
   return ANALYSIS_TIMEOUT_MS * Math.max(1, surfaces / 1500) + fem;

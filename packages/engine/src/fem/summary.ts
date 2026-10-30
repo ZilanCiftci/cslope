@@ -12,6 +12,12 @@ import { analyzeFem } from "./analysis";
 import type { SrmTrial } from "./srm";
 import type { Slope } from "../model/slope";
 import type { HighsModuleOptions } from "./lower-bound";
+
+/** The WebAssembly binaries of the bounds' solvers, where they cannot be read from beside the modules (the app). */
+export interface BoundSolverModules {
+  clarabelWasm?: ArrayBuffer;
+  highs?: HighsModuleOptions;
+}
 import { adaptiveBounds } from "./bound-adapt";
 
 /** Coordinates and displacements are rounded to this many significant digits for the summary. */
@@ -33,9 +39,8 @@ export function runFemSummary(
  * times coarser (the linear programs grow fast with the elements), and
  * refined where the gap between the bounds lies (bound-adapt.ts) within
  * BOUND_REFINEMENT_TIME_LIMIT; the upper bound's search starts at the
- * strength reduction factor. `highs` gives the
- * options that load the solver (e.g. its WebAssembly binary in an app),
- * called only once the strength reduction is done. A failure of the bounds
+ * strength reduction factor. `solvers` gives the solvers' WebAssembly
+ * binaries (an app), called only once the strength reduction is done. A failure of the bounds
  * leaves the strength reduction's result, with the reason in the bounds'
  * warnings.
  */
@@ -43,7 +48,7 @@ export async function runFemSummaryWithBounds(
   definition: SlopeDefinition,
   settings: FemAnalysisSettings,
   onTrial?: (trial: SrmTrial) => void,
-  highs?: () => Promise<HighsModuleOptions>,
+  solvers?: () => Promise<BoundSolverModules>,
 ): Promise<FemResultSummary> {
   const { summary, slope, sizeField } = femAnalysis(definition, settings, onTrial);
   if (!settings.limitAnalysis) return summary;
@@ -60,11 +65,11 @@ export async function runFemSummaryWithBounds(
   const warnings: string[] = [];
   const bounds = { lower: null as number | null, upper: null as number | null, elements: 0, refinements: 0, elapsedMs: 0, warnings };
   const message = (err: unknown) => (err instanceof Error ? err.message : String(err));
-  let module: HighsModuleOptions | undefined;
+  let modules: BoundSolverModules;
   try {
-    module = highs ? await highs() : undefined;
+    modules = solvers ? await solvers() : {};
   } catch (err) {
-    warnings.push(`The linear programming solver could not be loaded: ${message(err)}`);
+    warnings.push(`The limit analysis solver could not be loaded: ${message(err)}`);
     return { ...summary, bounds: { ...bounds, elapsedMs: performance.now() - t0 } };
   }
   try {
@@ -72,7 +77,8 @@ export async function runFemSummaryWithBounds(
       ...common,
       startF: summary.factorOfSafety > 0 ? summary.factorOfSafety : 1,
       refinementTimeLimit: BOUND_REFINEMENT_TIME_LIMIT,
-    }, undefined, module);
+      ...(modules.clarabelWasm ? { clarabelWasm: modules.clarabelWasm } : {}),
+    }, undefined, modules.highs);
     warnings.push(...r.warnings);
     if (Number.isFinite(r.upper)) bounds.upper = r.upper;
     if (Number.isFinite(r.lower)) bounds.lower = r.lower;

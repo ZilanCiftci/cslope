@@ -5,7 +5,8 @@
   "main": "src/index.ts",
   "exports": {
     ".": "./src/index.ts",
-    "./verification": "./src/verification/index.ts"
+    "./verification": "./src/verification/index.ts",
+    "./clarabel.wasm": "./src/fem/clarabel.wasm"
   },
   "sideEffects": false,
   "scripts": {

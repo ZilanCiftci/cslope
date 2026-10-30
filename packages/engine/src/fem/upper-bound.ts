@@ -1,14 +1,17 @@
 /**
- * Upper bound limit analysis by finite elements and linear programming
+ * Upper bound limit analysis by finite elements and conic programming
  * (Sloan & Kleeman 1995, Comput. Methods Appl. Mech. Eng. 127, 293–314;
- * Lyamin & Sloan 2002, IJNAMG 26, 181–216).
+ * Lyamin & Sloan 2002, IJNAMG 26, 181–216; Makrodimopoulos & Martin 2007,
+ * IJNAMG 31(6), 835–865).
  *
  * The velocities vary linearly over three-node triangles whose nodes are not
  * shared, so that every edge can carry a velocity discontinuity. In each
- * element the constant plastic strain rate follows the flow rule of the
- * Mohr–Coulomb criterion replaced by the p-sided polygon circumscribing it
- * (its sides tangent to the circle), ε̇ = Σ λₖ ∂Fₖ/∂σ, λₖ ≥ 0, and dissipates
- * 2c cos φ Σ λₖ per unit area. Along a discontinuity the tangential jump is
+ * element the constant plastic strain rate follows the associated flow rule
+ * of the Mohr–Coulomb criterion, in plane strain ε̇x + ε̇y = sin φ z with
+ * z ≥ ‖(ε̇x − ε̇y, γ̇xy)‖ (a second-order cone), and dissipates c cos φ z per
+ * unit area. Solved exactly by Clarabel, or by HiGHS on the p-sided polygon
+ * circumscribing the criterion (Sloan & Kleeman 1995: ε̇ = Σ λₖ ∂Fₖ/∂σ,
+ * λₖ ≥ 0, dissipating 2c cos φ Σ λₖ), see conic.ts. Along a discontinuity the tangential jump is
  * Δu_t = u⁺ − u⁻ and the normal jump Δu_n = (u⁺ + u⁻) tan φ (u⁺, u⁻ ≥ 0, at
  * both ends of the edge), dissipating c (u⁺ + u⁻) per unit length. The
  * circumscribed polygon is stronger than the soil, so the power the loads
@@ -28,14 +31,16 @@
  * F = λ(1) when φ = 0 everywhere, otherwise a secant search on log λ
  * against log F from `startF`, and
  * the smallest evaluated F with λ(F) ≤ 1 is the bound (a mechanism fails
- * the slope there). Solved by HiGHS.
+ * the slope there).
  *
  * Supports as in the strength reduction model (model.ts): the vertical
  * sides are smooth rollers (no normal velocity), the base is rigid, and
  * the soil may slip along it through a discontinuity of the soil's
  * strength.
  *
- * Implementation choices (not from the literature): p = 24 sides; the
+ * Implementation choices (not from the literature): p = 24 sides for
+ * HiGHS; for Clarabel the velocities scaled so that the load power's
+ * largest coefficient is one; the
  * strength of an element at its centroid; a discontinuity between two
  * materials takes the lesser cohesion and friction angle of the two (a
  * slip band in the weaker soil); rigid materials do not deform, and no
@@ -50,11 +55,16 @@
 import type { Slope } from "../model/slope";
 import { WATER_UNIT_WEIGHT } from "../types/constants";
 import { buildFeModel, polylineY, type FeModelOptions } from "./model";
-import { loadHighs, type HighsModuleOptions } from "./lower-bound";
+import { boundSolver, type HighsModuleOptions } from "./lower-bound";
+import { affine, ProgramBuilder, type ConicProgram } from "./conic";
 import { meanUnitWeight, porePressureAt, strengthAt, surfaceLineLoads } from "./limit-common";
 
 export interface UpperBoundOptions extends FeModelOptions {
-  /** Sides of the circumscribed yield polygon; default 24. */
+  /** The solver, as the lower bound's (lower-bound.ts): "clarabel" (default) or "highs". */
+  boundSolver?: "clarabel" | "highs";
+  /** The Clarabel WebAssembly binary, where it cannot be read from beside the module (the app). */
+  clarabelWasm?: ArrayBuffer;
+  /** Sides of the circumscribed yield polygon (HiGHS); default 24. */
   sides?: number;
   /** Rankine tension cut-off σ₁′ ≤ 0; default false. */
   tensionCutoff?: boolean;
@@ -90,13 +100,16 @@ interface Highs {
 }
 
 export interface UbProblem {
-  build(F: number): string;
+  /** The program at a reduction F (conic.ts): minimise the dissipation at unit load power; velocities of corner i in columns 2i, 2i + 1. */
+  program(F: number): ConicProgram;
+  /** Sides of the yield polygon when the program is solved as an LP by HiGHS. */
+  sides: number;
   /**
    * The dissipation of a solution at F per element (the model's), with
    * each discontinuity's shared equally by the elements on its sides (all
    * of it by the element on the base).
    */
-  elementDissipation(F: number, columns: Record<string, { Primal: number }>): Float64Array;
+  elementDissipation(F: number, solution: Float64Array): Float64Array;
   allUndrained: boolean;
   /** Whether any soil has cohesion. */
   cohesive: boolean;
@@ -160,21 +173,23 @@ export function upperBoundProblem(slope: Slope, options: UpperBoundOptions = {})
   const lineQ = surfaceLineLoads(slope, model, edgeKey, warnings);
   const loadFactor = slope.partialFactors?.variableLoad ?? 1;
 
-  const vu = (e: number, k: number) => `u${3 * e + k}`, vv = (e: number, k: number) => `v${3 * e + k}`;
-  const fmt = (a: number) => (a === 0 ? "0" : a.toPrecision(15));
-  const term = (a: number, name: string) => (a === 0 ? "" : ` ${a < 0 ? "-" : "+"} ${fmt(Math.abs(a))} ${name}`);
+  // Columns: the velocities u, v of each element corner (free), first, so
+  // that corner i's are columns 2i and 2i + 1.
+  const vu = (e: number, k: number) => 2 * (3 * e + k), vv = (e: number, k: number) => 2 * (3 * e + k) + 1;
 
-  // The power of the loads (F-independent), as coefficients per velocity.
-  const power = new Map<string, number>();
-  const addP = (name: string, a: number) => { if (a !== 0) power.set(name, (power.get(name) ?? 0) + a); };
+  // The power of the loads (F-independent), as coefficients per velocity column.
+  const power = new Map<number, number>();
+  const addP = (j: number, a: number) => { if (a !== 0) power.set(j, (power.get(j) ?? 0) + a); };
   const geom = (e: number) => {
     const n = [el[3 * e], el[3 * e + 1], el[3 * e + 2]];
     const b = [y[n[1]] - y[n[2]], y[n[2]] - y[n[0]], y[n[0]] - y[n[1]]];
     const c = [x[n[2]] - x[n[1]], x[n[0]] - x[n[2]], x[n[1]] - x[n[0]]];
     return { n, b, c, area2: b[0] * c[1] - b[1] * c[0] };
   };
+  let size = 0;
   for (let e = 0; e < ne; e++) {
     const { b, c, area2 } = geom(e);
+    size += Math.sqrt(Math.abs(area2) / 2) / ne;
     const pm = (nU[3 * e] + nU[3 * e + 1] + nU[3 * e + 2]) / 3;
     for (let k = 0; k < 3; k++) {
       // weight: −γ A v̄; pore pressure: ∫ p ε̇_v dA = p̄ (Σ b u + c v)/2
@@ -185,11 +200,11 @@ export function upperBoundProblem(slope: Slope, options: UpperBoundOptions = {})
   // ∫ p Δu_n over an edge with p and Δu_n linear: L/6 (2 p_a d_a + p_a d_b + p_b d_a + 2 p_b d_b)
   const pairWeights = (L: number, pa: number, pb: number) => [(L / 6) * (2 * pa + pb), (L / 6) * (pa + 2 * pb)];
 
-  const rows: string[] = [];
-  let row = 0;
-  // Per discontinuity end: tangential and normal jump. `jump` gives the
-  // velocity names of the two sides (the other side null for the rigid base).
-  const dVars: { name: string; coef: (F: number) => number; e: number; e2: number | null }[] = [];
+  // The discontinuities: per end, the tangential and normal jump as terms on
+  // the velocity columns, and the strength (the dilation tan φ_F and the
+  // dissipation c/F depend on F, so the rows are made per F).
+  interface DiscEnd { jt: [number, number][]; jn: [number, number][]; tie: boolean; c: number; phi: number; cu: number; L: number; e: number; e2: number | null }
+  const ends: DiscEnd[] = [];
   const disc = (
     e: number, k: number, e2: number | null, k2: number | null,
     c: number, phi: number, cu: number, tie: boolean, pSide: number = e,
@@ -202,36 +217,18 @@ export function upperBoundProblem(slope: Slope, options: UpperBoundOptions = {})
     const corner = (node: number) => { for (let q = 0; q < 3; q++) if (el[3 * pSide + q] === node) return 3 * pSide + q; return 3 * e + k; };
     const pa = nU[corner(a)], pb = nU[corner(b)];
     const [wa, wb] = pairWeights(L, pa, pb);
-    const ends: [number, number, number][] = [[k, a, wa], [(k + 1) % 3, b, wb]];
-    for (const [kk, node, w] of ends) {
+    for (const [kk, node, w] of [[k, a, wa], [(k + 1) % 3, b, wb]] as [number, number, number][]) {
       const kk2 = e2 === null ? -1 : el[3 * e2 + k2!] === node ? k2! : (k2! + 1) % 3;
       // Δu = u(e2) − u(e)
-      const jt = (e2 === null ? "" : term(sx, vu(e2, kk2)) + term(sy, vv(e2, kk2))) + term(-sx, vu(e, kk)) + term(-sy, vv(e, kk));
-      const jn = (e2 === null ? "" : term(nx, vu(e2, kk2)) + term(ny, vv(e2, kk2))) + term(-nx, vu(e, kk)) + term(-ny, vv(e, kk));
+      const jt: [number, number][] = [[vu(e, kk), -sx], [vv(e, kk), -sy]];
+      const jn: [number, number][] = [[vu(e, kk), -nx], [vv(e, kk), -ny]];
+      if (e2 !== null) { jt.push([vu(e2, kk2), sx], [vv(e2, kk2), sy]); jn.push([vu(e2, kk2), nx], [vv(e2, kk2), ny]); }
       // pore pressure power on the normal jump
       if (e2 !== null) { addP(vu(e2, kk2), w * nx); addP(vv(e2, kk2), w * ny); }
       addP(vu(e, kk), -w * nx); addP(vv(e, kk), -w * ny);
-      if (tie) {
-        rows.push(` r${row++}:${jt} = 0`, ` r${row++}:${jn} = 0`);
-        continue;
-      }
-      const id = `${row}`;
-      const up = `dp${id}`, um = `dm${id}`;
-      let t = term(-1, up) + term(1, um), nn = "";
-      // dissipation c (u⁺ + u⁻) L/2 per end; the dilation tan φ_F depends on F
-      dVars.push({ name: up, coef: (F) => (c / F) * L / 2, e, e2 }, { name: um, coef: (F) => (c / F) * L / 2, e, e2 });
-      nn += ` - TANPHI${id} ${up} - TANPHI${id} ${um}`;
-      tanRows.push({ id, phi });
-      if (Number.isFinite(cu)) {
-        const tp = `tp${id}`, tm = `tm${id}`;
-        t += term(-1, tp) + term(1, tm);
-        dVars.push({ name: tp, coef: (F) => (cu / F) * L / 2, e, e2 }, { name: tm, coef: (F) => (cu / F) * L / 2, e, e2 });
-      }
-      if (cutoff) { const op = `op${id}`; nn += term(-1, op); }
-      rows.push(` r${row++}:${jt}${t} = 0`, ` r${row++}:${jn}${nn} = 0`);
+      ends.push({ jt, jn, tie, c, phi, cu, L, e, e2 });
     }
   };
-  const tanRows: { id: string; phi: number }[] = [];
 
   // Of two soils meeting at an edge, the one with the lower shear strength
   // under the overburden at the edge's middle, c + σ′v tan φ (at most cu),
@@ -256,6 +253,7 @@ export function upperBoundProblem(slope: Slope, options: UpperBoundOptions = {})
     const side = r1 ? e2 : r2 ? e : weakerSide(e, k, e2);
     disc(e, k, e2, k2, eC[side], ePhi[side], eCu[side], false, side);
   }
+  const sideCols: number[] = [];
   for (const [key, [e, k]] of owner) {
     const a = el[3 * e + k], b = el[3 * e + ((k + 1) % 3)];
     if (surfaceSet.has(key)) {
@@ -283,95 +281,118 @@ export function upperBoundProblem(slope: Slope, options: UpperBoundOptions = {})
     }
     if (Math.abs(x[b] - x[a]) <= 1e-3 * Math.abs(y[b] - y[a])) {
       // smooth vertical side: no horizontal velocity
-      for (const kk of [k, (k + 1) % 3]) rows.push(` r${row++}: ${vu(e, kk)} = 0`);
+      for (const kk of [k, (k + 1) % 3]) sideCols.push(vu(e, kk));
       continue;
     }
     // rigid base: a discontinuity against zero velocity (none for a rigid element)
     disc(e, k, null, null, eC[e], ePhi[e], eCu[e], rigid[e] === 1);
   }
-
-  // Normalisation: the power of the loads is one.
   if (power.size === 0) throw new Error("The slope carries no load: no upper bound.");
-  let norm = " norm:";
-  for (const [name, a] of power) norm += term(a, name);
-  rows.push(`${norm} = 1`);
+  // Scales (conic.ts): velocities so that the load power's largest
+  // coefficient is one, the flow variables those times the element size.
+  let pMax = 0;
+  for (const a of power.values()) pMax = Math.max(pMax, Math.abs(a));
+  const vScale = 1 / pMax, sScale = vScale * size;
 
-  // Element flow rule (F-dependent): 2A ε̇ = Σ multipliers × gradients, multipliers scaled by 2A.
-  const flowRows = (F: number): { rows: string[]; obj: string[] } => {
-    const out: string[] = [], obj: string[] = [];
-    let r = row;
+  // The columns of the flow rule and the discontinuities, the same at every F.
+  interface Layout { s: Int32Array; t: Int32Array; dp: Int32Array; dm: Int32Array; tp: Int32Array; tm: Int32Array }
+  let layout: Layout | null = null;
+  const program = (F: number): ConicProgram => {
+    const pb = new ProgramBuilder();
+    for (let i = 0; i < 3 * ne; i++) { pb.col(`u${i}`, false, vScale); pb.col(`v${i}`, false, vScale); }
+    const lay: Layout = {
+      s: new Int32Array(ne).fill(-1), t: new Int32Array(ne).fill(-1),
+      dp: new Int32Array(ends.length).fill(-1), dm: new Int32Array(ends.length).fill(-1),
+      tp: new Int32Array(ends.length).fill(-1), tm: new Int32Array(ends.length).fill(-1),
+    };
+    // Discontinuities (Sloan & Kleeman 1995): Δu_t = u⁺ − u⁻ (+ the undrained
+    // cap's), Δu_n = (u⁺ + u⁻) tan φ_F (+ opening with the cut-off),
+    // dissipating c/F (u⁺ + u⁻) L/2 per end.
+    ends.forEach((d, i) => {
+      if (d.tie) { pb.eq(d.jt); pb.eq(d.jn); return; }
+      const up = pb.col(`dp${i}`, true, vScale), um = pb.col(`dm${i}`, true, vScale);
+      lay.dp[i] = up; lay.dm[i] = um;
+      const tanF = Math.tan(d.phi) / F;
+      const jt: [number, number][] = [...d.jt, [up, -1], [um, 1]];
+      const jn: [number, number][] = [...d.jn, [up, -tanF], [um, -tanF]];
+      pb.addObjective(up, ((d.c / F) * d.L) / 2); pb.addObjective(um, ((d.c / F) * d.L) / 2);
+      if (Number.isFinite(d.cu)) {
+        const tp = pb.col(`tp${i}`, true, vScale), tm = pb.col(`tm${i}`, true, vScale);
+        lay.tp[i] = tp; lay.tm[i] = tm;
+        jt.push([tp, -1], [tm, 1]);
+        pb.addObjective(tp, ((d.cu / F) * d.L) / 2); pb.addObjective(tm, ((d.cu / F) * d.L) / 2);
+      }
+      if (cutoff) jn.push([pb.col(`op${i}`, true, vScale), -1]);
+      pb.eq(jt); pb.eq(jn);
+    });
+    for (const j of sideCols) pb.eq([[j, 1]]);
+    // Normalisation: the power of the loads is one.
+    pb.eq([...power.entries()], 1);
+    // Element flow rule: 2A ε̇ = the sum of the mechanisms' strain rates,
+    // each in its cone: Mohr–Coulomb 2A(ε̇x + ε̇y) = 2 sin φ_F S, (2S, d) a
+    // cone, dissipating c/F cos φ_F S; the undrained cap no volume change,
+    // (2T, d) a cone, dissipating cu/F T; the tension cut-off 2A(ε̇x + ε̇y)
+    // = C, (C, d) a cone, no dissipation.
     for (let e = 0; e < ne; e++) {
       const { b, c } = geom(e);
-      let ex = "", ey = "", gxy = "";
+      const tr: [number, number][] = [], dev: [number, number][] = [], gxy: [number, number][] = [];
       for (let k = 0; k < 3; k++) {
-        ex += term(b[k], vu(e, k));
-        ey += term(c[k], vv(e, k));
-        gxy += term(c[k], vu(e, k)) + term(b[k], vv(e, k));
+        tr.push([vu(e, k), b[k]], [vv(e, k), c[k]]);
+        dev.push([vu(e, k), b[k]], [vv(e, k), -c[k]]);
+        gxy.push([vu(e, k), c[k]], [vv(e, k), b[k]]);
       }
       if (!rigid[e]) {
         const phiF = Math.atan(Math.tan(ePhi[e]) / F), sp = Math.sin(phiF), dc = (eC[e] / F) * Math.cos(phiF);
-        for (let j = 0; j < p; j++) {
-          const th = (2 * Math.PI * j) / p, ct = Math.cos(th), st = Math.sin(th);
-          // F_j = cos θ (σx − σy) + sin θ (2τ) + sin φ (σx + σy) − 2c cos φ; dissipation 2c cos φ λ A = c cos φ Λ
-          const m = `l${e}_${j}`;
-          ex += term(-(ct + sp), m); ey += term(-(-ct + sp), m); gxy += term(-2 * st, m);
-          if (dc > 0) obj.push(term(dc, m));
-          if (Number.isFinite(eCu[e])) {
-            const mu = `t${e}_${j}`;
-            ex += term(-ct, mu); ey += term(ct, mu); gxy += term(-2 * st, mu);
-            obj.push(term(eCu[e] / F, mu));
-          }
-          if (cutoff) {
-            // σ₁ ≤ 0 circumscribed: cos θ (σx − σy)/2 + sin θ τ + (σx + σy)/2 ≤ 0, no dissipation
-            const mt = `c${e}_${j}`;
-            ex += term(-(ct / 2 + 0.5), mt); ey += term(-(-ct / 2 + 0.5), mt); gxy += term(-st, mt);
-          }
+        const S = pb.col(`S${e}`, false, sScale), d1 = pb.col(`a${e}`, false, sScale), d2 = pb.col(`b${e}`, false, sScale);
+        lay.s[e] = S;
+        tr.push([S, -2 * sp]); dev.push([d1, -1]); gxy.push([d2, -1]);
+        pb.cone(affine([[S, 2]]), affine([[d1, 1]]), affine([[d2, 1]]), "vertices");
+        pb.addObjective(S, dc);
+        if (Number.isFinite(eCu[e])) {
+          const T = pb.col(`T${e}`, false, sScale), b1 = pb.col(`ta${e}`, false, sScale), b2 = pb.col(`tb${e}`, false, sScale);
+          lay.t[e] = T;
+          dev.push([b1, -1]); gxy.push([b2, -1]);
+          pb.cone(affine([[T, 2]]), affine([[b1, 1]]), affine([[b2, 1]]), "vertices");
+          pb.addObjective(T, eCu[e] / F);
+        }
+        if (cutoff) {
+          const C = pb.col(`C${e}`, false, sScale), c1 = pb.col(`ca${e}`, false, sScale), c2 = pb.col(`cb${e}`, false, sScale);
+          tr.push([C, -1]); dev.push([c1, -1]); gxy.push([c2, -1]);
+          pb.cone(affine([[C, 1]]), affine([[c1, 1]]), affine([[c2, 1]]), "vertices");
         }
       }
-      out.push(` r${r++}:${ex} = 0`, ` r${r++}:${ey} = 0`, ` r${r++}:${gxy} = 0`);
+      pb.eq(tr); pb.eq(dev); pb.eq(gxy);
     }
-    return { rows: out, obj };
+    layout ??= lay;
+    return pb.build();
   };
-
-  const velocityBounds: string[] = ["Bounds"];
-  for (let i = 0; i < 3 * ne; i++) velocityBounds.push(` u${i} free`, ` v${i} free`);
-  const fixedText = rows.join("\n"), boundsText = velocityBounds.join("\n");
-  let plastic = 0, combined = 0;
-  for (let e = 0; e < ne; e++) if (!rigid[e]) { plastic++; if (Number.isFinite(eCu[e])) combined++; }
-  const perElement = p * (1 + (cutoff ? 1 : 0));
+  const first = program(1);
   return {
-    build: (F) => {
-      const tanMap = new Map(tanRows.map((t) => [t.id, Math.tan(t.phi) / F]));
-      const text = fixedText.replace(/ - TANPHI(\d+) (\w+)/g, (_, id: string, name: string) => term(-(tanMap.get(id) ?? 0), name));
-      const flow = flowRows(F);
-      let obj = " obj:" + flow.obj.join("");
-      for (const d of dVars) obj += term(d.coef(F), d.name);
-      if (obj === " obj:") obj = " obj: 0 u0";
-      return ["Minimize", obj, "Subject To", text, flow.rows.join("\n"), boundsText, "End"].join("\n");
-    },
-    elementDissipation: (F, columns) => {
+    program,
+    sides: p,
+    elementDissipation: (F, sol) => {
       const out = new Float64Array(ne);
-      const val = (name: string) => columns[name]?.Primal ?? 0;
+      const lay = layout!;
       for (let e = 0; e < ne; e++) {
         if (rigid[e]) continue;
         const dc = (eC[e] / F) * Math.cos(Math.atan(Math.tan(ePhi[e]) / F));
-        for (let j = 0; j < p; j++) {
-          if (dc > 0) out[e] += dc * val(`l${e}_${j}`);
-          if (Number.isFinite(eCu[e])) out[e] += (eCu[e] / F) * val(`t${e}_${j}`);
-        }
+        if (lay.s[e] >= 0) out[e] += dc * sol[lay.s[e]];
+        if (lay.t[e] >= 0) out[e] += (eCu[e] / F) * sol[lay.t[e]];
       }
-      for (const d of dVars) {
-        const w = d.coef(F) * val(d.name);
+      ends.forEach((d, i) => {
+        if (d.tie) return;
+        let w = ((d.c / F) * d.L) / 2 * (sol[lay.dp[i]] + sol[lay.dm[i]]);
+        if (lay.tp[i] >= 0) w += ((d.cu / F) * d.L) / 2 * (sol[lay.tp[i]] + sol[lay.tm[i]]);
         if (d.e2 === null) out[d.e] += w;
         else { out[d.e] += w / 2; out[d.e2] += w / 2; }
-      }
+      });
       return out;
     },
     allUndrained,
     cohesive: eC.some((c) => c > 0) || eCu.some((c) => Number.isFinite(c) && c > 0),
     elements: ne,
-    variables: 6 * ne + plastic * perElement + combined * p + dVars.length + tanRows.length * (cutoff ? 1 : 0),
-    constraints: row + 1 + 3 * ne, // with the normalisation row
+    variables: first.names.length,
+    constraints: first.eqRhs.length + first.cones.length,
     warnings,
     mesh: { x: Float64Array.from(x), y: Float64Array.from(y), el },
   };
@@ -379,11 +400,11 @@ export function upperBoundProblem(slope: Slope, options: UpperBoundOptions = {})
 
 /** Upper bound on the factor of safety of a slope. */
 export async function upperBound(slope: Slope, options: UpperBoundOptions = {}, highs?: Highs, module?: HighsModuleOptions): Promise<UpperBoundResult> {
-  const solver = (highs ?? (await loadHighs(module))) as Highs;
+  const solve = await boundSolver(options, highs, module);
   const prob = upperBoundProblem(slope, options);
   const trials: UpperBoundResult["trials"] = [];
   const warnings = [...prob.warnings];
-  const velocities = new Map<number, Record<string, { Primal: number }>>();
+  const velocities = new Map<number, Float64Array>();
   const searchStart = performance.now();
   let outOfTime = false;
   const lambdaAt = (F: number): number => {
@@ -394,15 +415,12 @@ export async function upperBound(slope: Slope, options: UpperBoundOptions = {}, 
       outOfTime = true;
       return NaN;
     }
-    const lp = prob.build(F);
-    const time_limit = Math.min(options.timeLimit ?? 300, remaining);
-    let r = solver.solve(lp, { solver: "ipm", time_limit });
-    if (r.Status !== "Optimal" && r.Status !== "Infeasible" && r.Status !== "Time limit reached") r = solver.solve(lp, { solver: "simplex", time_limit });
+    const r = solve(prob.program(F), prob.sides, Math.min(options.timeLimit ?? 300, remaining));
     // No mechanism with unit load power (infeasible): the loads cannot fail
     // the slope at this reduction, λ unbounded.
-    const lambda = r.Status === "Optimal" ? r.ObjectiveValue : r.Status === "Infeasible" ? Infinity : NaN;
-    if (r.Status !== "Optimal" && r.Status !== "Infeasible") warnings.push(`The linear program at F = ${F.toFixed(3)} ended with status "${r.Status}".`);
-    if (r.Status === "Optimal" && r.Columns) velocities.set(F, r.Columns);
+    const lambda = r.status === "optimal" ? r.objective : r.status === "infeasible" ? Infinity : NaN;
+    if (r.status !== "optimal" && r.status !== "infeasible") warnings.push(`The program at F = ${F.toFixed(3)} ended with status "${r.detail}".`);
+    if (r.status === "optimal") velocities.set(F, r.x);
     trials.push({ F, lambda, seconds: (performance.now() - t0) / 1000 });
     return lambda;
   };
@@ -411,7 +429,7 @@ export async function upperBound(slope: Slope, options: UpperBoundOptions = {}, 
   const fail = (reason: string): UpperBoundResult => ({ factorOfSafety: NaN, ...base, warnings: [...warnings, reason] });
   let F0 = options.startF ?? 1;
   let l0 = lambdaAt(F0);
-  if (Number.isNaN(l0)) return fail(`The linear program at F = ${F0.toFixed(3)} was not solved.`);
+  if (Number.isNaN(l0)) return fail(`The program at F = ${F0.toFixed(3)} was not solved.`);
   // Where no mechanism fits the mesh (a friction angle near the slope's,
   // whose mechanisms reach beyond the model) the program is infeasible;
   // with cohesion λ turns finite at a larger reduction.
@@ -419,7 +437,7 @@ export async function upperBound(slope: Slope, options: UpperBoundOptions = {}, 
   for (let k = 0; k < 12 && l0 === Infinity && prob.cohesive && !prob.allUndrained; k++) {
     F0 *= 1.25;
     l0 = lambdaAt(F0);
-    if (Number.isNaN(l0)) return fail(`The linear program at F = ${F0.toFixed(3)} was not solved.`);
+    if (Number.isNaN(l0)) return fail(`The program at F = ${F0.toFixed(3)} was not solved.`);
   }
   // A reduction F with λ(F) ≤ 1 has a mechanism whose loads do at least the
   // power the reduced strength dissipates: the slope fails there, F is an
@@ -486,8 +504,8 @@ export async function upperBound(slope: Slope, options: UpperBoundOptions = {}, 
     const n = prob.mesh.el.length, velocity = new Float64Array(2 * n);
     let vmax = 0;
     for (let i = 0; i < n; i++) {
-      velocity[2 * i] = cols[`u${i}`]?.Primal ?? 0;
-      velocity[2 * i + 1] = cols[`v${i}`]?.Primal ?? 0;
+      velocity[2 * i] = cols[2 * i];
+      velocity[2 * i + 1] = cols[2 * i + 1];
       vmax = Math.max(vmax, Math.hypot(velocity[2 * i], velocity[2 * i + 1]));
     }
     if (vmax > 0) for (let i = 0; i < velocity.length; i++) velocity[i] /= vmax;

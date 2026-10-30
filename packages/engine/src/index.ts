@@ -216,13 +216,14 @@ export type { SlopeOrientation } from "./model/canonical";
 
 // ── Finite elements ────────────────────────────────────────────
 // Strength reduction (SRFEM) and lower- and upper-bound limit analysis.
-// The bounds load HiGHS (WebAssembly) on first use.
+// The bounds load Clarabel (or, as an option, HiGHS) as WebAssembly on first use.
 export {
   analyzeFem,
   lowerBound,
   upperBound,
   adaptiveBounds,
   loadHighs,
+  loadClarabel,
   type FemAnalysisOptions,
   type FemAnalysisResult,
   type FemMeshView,
@@ -236,7 +237,7 @@ export {
   type AdaptiveBoundsOptions,
   type AdaptiveBoundsResult,
 } from "./fem/index";
-export { runFemSummary, runFemSummaryWithBounds } from "./fem/summary";
+export { runFemSummary, runFemSummaryWithBounds, type BoundSolverModules } from "./fem/summary";
 
 // ── Verification problems ──────────────────────────────────────
 // Exported from "@cslope/engine/verification" (src/verification/index.ts),

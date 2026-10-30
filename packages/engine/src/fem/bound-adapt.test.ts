@@ -3,7 +3,7 @@ import { buildSlope } from "../model/build-slope";
 import { toCanonicalSlopeDefinition } from "../model/canonical";
 import type { SlopeDefinition } from "../types/slope-definition";
 import { adaptiveBounds, boundGapIndicator } from "./bound-adapt";
-import { loadHighs } from "./lower-bound";
+import { boundSolver } from "./lower-bound";
 
 const slopeDef = (water = false) => ({
   coordinates: [[0, 0], [0, 10], [10, 10], [20, 5], [30, 5], [30, 0]],
@@ -12,11 +12,11 @@ const slopeDef = (water = false) => ({
 }) as unknown as SlopeDefinition;
 
 describe("boundGapIndicator", () => {
-  for (const water of [false, true]) {
-    it(`splits the bound gap into element contributions that sum to it${water ? " (with a water table)" : ""}`, async () => {
+  for (const [water, solver] of [[false, "highs"], [true, "highs"], [false, "clarabel"], [true, "clarabel"]] as const) {
+    it(`splits the bound gap into element contributions that sum to it${water ? " (with a water table)" : ""}, by ${solver}`, async () => {
       const slope = buildSlope(toCanonicalSlopeDefinition(slopeDef(water)));
-      const solver = (await loadHighs()) as Parameters<typeof boundGapIndicator>[3];
-      const g = boundGapIndicator(slope, { elementSize: 2.5 }, 1.2, solver)!;
+      const solve = await boundSolver({ boundSolver: solver });
+      const g = boundGapIndicator(slope, { elementSize: 2.5, boundSolver: solver }, 1.2, solve)!;
       expect(g.withStress).toBe(true);
       const gap = g.lambdaUpper - g.lambdaLower;
       expect(gap).toBeGreaterThan(0);

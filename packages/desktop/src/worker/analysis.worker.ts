@@ -57,12 +57,12 @@ function computeCriticalSlipVolume(
 }
 
 /**
- * The HiGHS WebAssembly binary for the limit analysis bounds, inlined in a
- * chunk loaded on first use: the app runs from file://, where the worker
+ * The Clarabel WebAssembly binary for the limit analysis bounds, inlined in
+ * a chunk loaded on first use: the app runs from file://, where the worker
  * cannot fetch a separate .wasm file.
  */
-async function highsBinary(): Promise<ArrayBuffer> {
-  const { default: base64 } = await import("highs/runtime?base64");
+async function clarabelBinary(): Promise<ArrayBuffer> {
+  const { default: base64 } = await import("@cslope/engine/clarabel.wasm?base64");
   const bin = atob(base64), bytes = new Uint8Array(bin.length);
   for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
   return bytes.buffer;
@@ -108,7 +108,7 @@ self.onmessage = async (event: MessageEvent<WorkerMessage>) => {
           self.postMessage({ type: "analysis-progress", id, progress: Math.min(0.9, 0.3 + 0.03 * trials) } satisfies AnalysisResponse);
         };
         result.fem = options.fem.limitAnalysis
-          ? await runFemSummaryWithBounds(slopeDef, options.fem, onTrial, async () => ({ wasmBinary: await highsBinary() }))
+          ? await runFemSummaryWithBounds(slopeDef, options.fem, onTrial, async () => ({ clarabelWasm: await clarabelBinary() }))
           : runFemSummary(slopeDef, options.fem, onTrial);
       } catch (err: unknown) {
         result.femError = err instanceof Error ? err.message : String(err);

@@ -54,11 +54,44 @@ The script compares the regenerated verification table with the committed one an
 | 2026-10-29 | Anderson-accelerated viscoplastic iteration with the equilibrium test, as an option | 0 | 0.348 → 0.348 | 0.483 → 0.483 | 1.011 → 1.011 | 1.595 → 1.595 | 476 s (4 workers, load 2.5 at start) |
 | 2026-10-29 | Faster bound gap refinement: coarse tolerance on the steering levels, lower bound started at the last bound, smallest element size limited | 0 | 0.348 → 0.348 | 0.483 → 0.483 | 1.011 → 1.011 | 1.595 → 1.595 | 440 s (4 workers, load 2.0 at start) |
 | 2026-10-30 | Infinite-slope warning for faces in cohesionless soil | 0 | 0.348 → 0.348 | 0.483 → 0.483 | 1.011 → 1.011 | 1.595 → 1.595 | 485 s (4 workers, load 1.8 at start) |
+| 2026-10-30 | Limit analysis bounds on second-order cones solved by Clarabel (WebAssembly) | 0 | 0.348 → 0.348 | 0.483 → 0.483 | 1.011 → 1.011 | 1.595 → 1.595 | 513 s (4 workers, load 1.0 at start) |
 <!-- summary-end -->
 
 ## Entries
 
 <!-- entries -->
+
+### 2026-10-30: Limit analysis bounds on second-order cones solved by Clarabel (WebAssembly)
+
+Compared with ad6993f. Errors are relative to the reference, in percent. Verification run time: 513 s (4 workers, load 1.0 at start).
+
+**Against other programs (midpoint of their range):** 0 moved (0 closer to the reference, 0 further).
+
+| Result | Reference | Before | After | Error before | Error after |
+|---|---|---|---|---|---|
+| **Mean error (n = 279)** | | | | -0.231 % | -0.231 % |
+| **Mean absolute error** | | | | 0.348 % | 0.348 % |
+| **RMS error** | | | | 0.483 % | 0.483 % |
+| **Largest error** | | | | 2.100 % | 2.100 % |
+
+**Against the papers:** 0 moved (0 closer to the reference, 0 further).
+
+| Result | Reference | Before | After | Error before | Error after |
+|---|---|---|---|---|---|
+| **Mean error (n = 111)** | | | | -0.167 % | -0.167 % |
+| **Mean absolute error** | | | | 1.011 % | 1.011 % |
+| **RMS error** | | | | 1.595 % | 1.595 % |
+| **Largest error** | | | | 6.591 % | 6.591 % |
+
+**Finite elements against their references (FE, finite differences, limit analysis, theory):** 0 moved (0 closer to the reference, 0 further).
+
+| Result | Reference | Before | After | Error before | Error after |
+|---|---|---|---|---|---|
+| **Mean error (n = 35)** | | | | -0.734 % | -0.734 % |
+| **Mean absolute error** | | | | 2.383 % | 2.383 % |
+| **RMS error** | | | | 3.711 % | 3.711 % |
+| **Largest error** | | | | 15.150 % | 15.150 % |
+
 
 ### 2026-10-30: Infinite-slope warning for faces in cohesionless soil
 
