@@ -124,7 +124,13 @@ export interface SlopeDefinition {
   }>;
   /** Search area limits for entry/exit ranges. */
   analysisLimits?: AnalysisLimits;
-  /** User-specified circular search planes (cx, cy, radius). */
+  /**
+   * User-specified circular search planes (cx, cy, radius), in model space
+   * (the coordinates of this definition, also for a right-to-left slope).
+   * `analyse` with `mapAnalysisResultToModelSpace` returns results in model
+   * space; a Slope's own surfaces (`Slope.search`) are in canonical space,
+   * taken back with `Slope.toModelX` / `Slope.toModelCircle`.
+   */
   customSearchPlanes?: Array<{ cx: number; cy: number; radius: number }>;
   /**
    * User-specified non-circular surfaces: polylines through the soil. They

@@ -37,6 +37,7 @@ import {
   clipLineToSurface,
   createGeometryWithMaterial,
 } from "./geometry-ops";
+import { getDomainX, mirrorX } from "./canonical";
 import type { Pile, Reinforcement } from "../types/reinforcement";
 import { buildEnvelope, buildPileProfile, type PileProfile, type ReinforcementEnvelope } from "./reinforcement";
 
@@ -209,6 +210,8 @@ export class Slope {
    * mirrored as well.
    */
   private _mirrored = false;
+  /** The model's x extent, [xMin, xMax], from the external boundary (toModelX). */
+  private _domainX: [number, number] | null = null;
 
   // ── Analysis limits ───────────────────────────────────────────
   private _limits: [number, number, number, number] = [0, 0, 0, 0];
@@ -367,10 +370,19 @@ export class Slope {
     return this._fixedSlices;
   }
 
+  /**
+   * The analysed surfaces, in canonical (left-to-right) space: for a
+   * mirrored model (a right-to-left slope) every x is mirrored, x′ = xMin +
+   * xMax − x, from the model space in which the definition and its custom
+   * surfaces are given. `toModelX` and `toModelCircle` take them back;
+   * `analyse` with `mapAnalysisResultToModelSpace` gives whole results in
+   * model space.
+   */
   get search(): readonly SearchPlane[] {
     return this._search;
   }
 
+  /** The custom surfaces analysed, in canonical space (see `search`). */
   get individualPlanes(): readonly SearchPlane[] {
     return this._individualPlanes;
   }
@@ -521,6 +533,33 @@ export class Slope {
   }
 
   /**
+   * An x of the analysis (canonical space: the surfaces in `search`, their
+   * slices and points) in model space, where the definition and its custom
+   * surfaces are given: unchanged unless the model was mirrored, then
+   * mirrored about the middle of the model's extent, as
+   * toCanonicalSlopeDefinition mirrored it (the slope must have been built
+   * from that canonical definition, as `analyse` does). Mirroring is its own
+   * inverse, so the same maps a model-space x into the analysis. For whole
+   * results, `analyse` with `mapAnalysisResultToModelSpace` gives model space.
+   */
+  toModelX(x: number): number {
+    if (!this._mirrored) return x;
+    if (!this._domainX) throw new Error("toModelX: the slope has no external boundary");
+    return mirrorX(x, this._domainX[0], this._domainX[1]);
+  }
+
+  /**
+   * A circular surface of the analysis in model space, the form of
+   * `customSearchPlanes`: analysing it as a custom surface gives the same
+   * surface again. Not for non-circular surfaces (with `points`), whose
+   * cx, cy and radius are only their moment axis.
+   */
+  toModelCircle(plane: Pick<SearchPlane, "cx" | "cy" | "radius"> & { points?: unknown }): { cx: number; cy: number; radius: number } {
+    if (plane.points) throw new Error("toModelCircle: a non-circular surface is not a circle");
+    return { cx: this.toModelX(plane.cx), cy: plane.cy, radius: plane.radius };
+  }
+
+  /**
    * Mark the model as mirrored from model space (a canonical definition of
    * a right-to-left slope, see toCanonicalSlopeDefinition).
    */
@@ -603,6 +642,8 @@ export class Slope {
 
     this._externalBoundaryPx = px;
     this._externalBoundaryPy = py;
+    // the extent canonical.ts mirrors about (toModelX)
+    this._domainX = getDomainX(coordinates);
 
     // Create initial material geometry with first material (or undefined)
     const material =

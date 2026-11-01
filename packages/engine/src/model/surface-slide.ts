@@ -101,9 +101,8 @@ export function frictionalSurfaceSlide(slope: Slope, slidingOnly = false): Surfa
       if (Number.isFinite(yw) && yw >= y) continue;
       const F = (d.tanPhi * dx) / dy;
       if (!best || F < best.factorOfSafety) {
-        const mx = (v: number) => (slope.mirrored ? xMin + xMax - v : v);
         best = {
-          factorOfSafety: F, x1: mx(x1), y1, x2: mx(x2), y2, material: m.name,
+          factorOfSafety: F, x1: slope.toModelX(x1), y1, x2: slope.toModelX(x2), y2, material: m.name,
           frictionAngle: (Math.atan(d.tanPhi) * 180) / Math.PI, inclination: (Math.atan(dy / dx) * 180) / Math.PI,
         };
       }
