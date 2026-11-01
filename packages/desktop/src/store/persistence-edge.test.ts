@@ -117,6 +117,17 @@ describe("parseProjectFile: models", () => {
     expect(ok.materials[0].model).toHaveProperty("unitWeightSat", 21);
   });
 
+  it("keeps an undrained anisotropy list for validation, drops an empty or malformed one", () => {
+    const clay = (anisotropy: unknown) =>
+      parseOne({
+        materials: [{ ...MODEL.materials[0], model: { kind: "undrained", unitWeight: 17, undrainedShearStrength: 20, anisotropy } }],
+      }).materials[0].model;
+    expect(clay([[-45, 0.82], [0, 1], [60, 1.5]])).toHaveProperty("anisotropy", [[-45, 0.82], [0, 1], [60, 1.5]]);
+    // an invalid list is kept, so that validation reports it rather than the material turning isotropic
+    expect(clay([[0, 1]])).toHaveProperty("anisotropy", [[0, 1]]);
+    for (const bad of [[], "x", 3, null]) expect(clay(bad)).not.toHaveProperty("anisotropy");
+  });
+
   it("keeps valid parameters only and leaves missing ones absent", () => {
     expect(parseOne({}).parameters).toBeUndefined();
     const m = parseOne({

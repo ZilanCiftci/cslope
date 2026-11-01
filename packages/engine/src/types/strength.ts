@@ -106,7 +106,7 @@ export function resolveStrength(
 
     // ── Undrained (φ = 0, c = Su) ────────────────────────────
     case "undrained":
-      return resolveUndrained(model, context);
+      return withAnisotropy(model.anisotropy, resolveUndrained(model, context), context);
 
     // ── High Strength ────────────────────────────────────────
     case "high-strength":
@@ -136,14 +136,14 @@ export function resolveStrength(
 
     // ── S = f(depth) ─────────────────────────────────────────
     case "s-f-depth":
-      return resolveStrengthFromDepth(model, context);
+      return withAnisotropy(model.anisotropy, resolveStrengthFromDepth(model, context), context);
 
     // ── S = f(datum) ─────────────────────────────────────────
     case "lime-cement-columns":
       return resolveLimeCementColumns(model, context);
 
     case "s-f-datum":
-      return resolveStrengthFromDatum(model, context);
+      return withAnisotropy(model.anisotropy, resolveStrengthFromDatum(model, context), context);
 
     // ── Generalised Hoek–Brown ───────────────────────────────
     case "hoek-brown": {
@@ -379,6 +379,22 @@ function resolveSpatialMohrCoulomb(
   };
 }
 
+/**
+ * An undrained model's anisotropy (`anisotropy`, see material-models.ts):
+ * its Su, which is the cohesion with φ = 0, times the factor at the base
+ * inclination α. A cutoff applies to Su before the factor, as the factor
+ * describes the direction of shearing, not the soil at the base.
+ */
+function withAnisotropy(
+  anisotropy: [number, number][] | undefined,
+  r: ResolvedStrength,
+  context: StrengthContext,
+): ResolvedStrength {
+  if (!anisotropy || anisotropy.length === 0) return r;
+  const f = interpolateModifier(anisotropy, (context.alpha * 180) / Math.PI);
+  return { ...r, cohesion: nonNegative(r.cohesion * f), cohesionUndrained: nonNegative(r.cohesionUndrained * f) };
+}
+
 function resolveAnisotropic(
   model: Extract<MaterialModel, { kind: "anisotropic-function" }>,
   context: StrengthContext,
@@ -477,8 +493,11 @@ export function interpolateFunction(
   if (points.length === 0) return 0;
   if (points.length === 1) return points[0][1];
 
-  // Ensure sorted by x
-  const sorted = [...points].sort((a, b) => a[0] - b[0]);
+  // Sorted by x: the points as given when they are (the usual case, no
+  // copy for every slice), else a sorted copy
+  let ordered = true;
+  for (let i = 1; i < points.length && ordered; i++) ordered = points[i - 1][0] <= points[i][0];
+  const sorted = ordered ? points : [...points].sort((a, b) => a[0] - b[0]);
 
   if (x <= sorted[0][0]) return sorted[0][1];
   if (x >= sorted[sorted.length - 1][0]) return sorted[sorted.length - 1][1];

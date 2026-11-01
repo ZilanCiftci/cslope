@@ -60,6 +60,11 @@ function cutoffSuffix(model: MaterialRow["model"]): string {
     : "";
 }
 
+/** " (anisotropic)" for an undrained strength with anisotropy (undrained, from depth, from datum), else "". */
+function anisotropySuffix(model: MaterialRow["model"]): string {
+  return "anisotropy" in model && Array.isArray(model.anisotropy) && model.anisotropy.length > 0 ? " (anisotropic)" : "";
+}
+
 function formatMaterialCell(
   key: MaterialTableColumnKey,
   material: MaterialRow,
@@ -68,7 +73,7 @@ function formatMaterialCell(
   const f = flatFieldsFromModel(material.model);
   switch (key) {
     case "model":
-      return MODEL_SHORT_LABELS[material.model.kind];
+      return `${MODEL_SHORT_LABELS[material.model.kind]}${anisotropySuffix(material.model)}`;
     case "unitWeight":
       // γ above / γsat below the water line, when different.
       return material.model.unitWeightSat !== undefined &&

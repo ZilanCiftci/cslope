@@ -1,5 +1,5 @@
 import { sanitizePile, sanitizeReinforcement } from "../utils/reinforcement";
-import {
+import { supportsAnisotropy,
   ITERATIONS_RANGE,
   REFINED_ITERATIONS_RANGE,
   SLICES_RANGE,
@@ -699,7 +699,7 @@ function normalizeMaterial(raw: unknown, index: number): MaterialRow {
 }
 
 /**
- * Depth reference and strength cutoff of the undrained-strength models.
+ * Depth reference, strength cutoff and anisotropy of the undrained-strength models.
  * An absent `depthReference` stays absent (the ground surface, as files
  * written before the option); an unknown value is dropped the same way. A
  * cutoff that is not a positive number is dropped (no cutoff).
@@ -719,6 +719,15 @@ function sanitizeStrengthOptions(model: MaterialModel): MaterialModel {
     if (!(typeof v === "number" && Number.isFinite(v) && v > 0)) {
       out = { ...out };
       delete out.suMax;
+    }
+  }
+  // anisotropy: an empty list or anything but a list is isotropic (dropped);
+  // a list is kept as it is, for validation to report its points
+  if ("anisotropy" in (out as object)) {
+    const a = (out as { anisotropy?: unknown }).anisotropy;
+    if (!Array.isArray(a) || a.length === 0 || !supportsAnisotropy(out.kind)) {
+      out = { ...out };
+      delete (out as { anisotropy?: unknown }).anisotropy;
     }
   }
   if (out.kind === "s-f-depth" && "depthReference" in out) {

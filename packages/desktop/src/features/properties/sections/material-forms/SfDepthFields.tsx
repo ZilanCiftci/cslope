@@ -3,6 +3,7 @@ import { ExpressionNumericInput } from "../../../../components/ui/ExpressionNume
 import type { DepthReference, StrengthFromDepthModel } from "@cslope/engine";
 import type { MaterialExpressions } from "../../../../store/types";
 import { CutoffField } from "./CutoffField";
+import { AnisotropyField } from "./AnisotropyField";
 import { UnitWeightSatField } from "./UnitWeightSatField";
 
 interface Props {
@@ -105,6 +106,10 @@ export function SfDepthFields({
           value={model.suMax}
           rate={model.rate}
           onChange={(suMax) => onChange({ suMax })}
+        />
+        <AnisotropyField
+          value={model.anisotropy}
+          onChange={(anisotropy) => onChange({ anisotropy })}
         />
       </div>
     </div>

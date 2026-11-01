@@ -33,6 +33,7 @@ The first public release.
 
 - Exterior and interior boundaries with snapping, DXF import, and parameters with expressions.
 - Material models: Mohr–Coulomb, undrained, strength increasing with depth (from the ground or from the top of the layer) or from a datum, with a strength cutoff, anisotropic, spatially varying, lime-cement columns, and high-strength and impenetrable (bedrock) layers. Saturated unit weight below the water table.
+- Anisotropy on the undrained strengths (undrained, from depth, from datum): Su times a factor of the slice base inclination, interpolated from points [α, factor] (for example passive 0.82 at −45°, direct 1.0 at 0°, active 1.5 at 60°), on top of the strength's variation with depth and its cutoff. The anisotropic model took a constant strength only, so that a clay whose Su varies with depth needed thin layers of it. Finite elements and limit analysis take the factor at α = 0.
 - Water: several piezometric lines with one per material if needed, ponded water above the ground.
 - Ponded water above the ground comes from the line of the material at the ground, the line that also gives that material its pore pressure, in the analysis (weight on the ground, horizontal thrust, tension-crack depth) and in the drawings; a material's own line above the ground used to give the base the pore pressure of the pond without its weight.
 - Distributed and line loads; anchors, grouted tiebacks, soil nails, geosynthetics, pile rows and sheet pile walls.

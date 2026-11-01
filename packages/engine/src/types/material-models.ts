@@ -51,8 +51,33 @@ export interface MohrCoulombModel extends MaterialModelBase {
   cFactor?: number;
 }
 
+/**
+ * Anisotropy of an undrained shear strength (undrained, S = f(depth),
+ * S = f(datum); see `supportsAnisotropy`).
+ */
+export interface UndrainedAnisotropy {
+  /**
+   * Anisotropy of the undrained shear strength: Su is multiplied by a
+   * factor that depends on the slice base inclination α, given as
+   * [[α°, factor], …] and interpolated linearly (constant beyond the ends),
+   * as `anisotropic-function`'s modifier: α is positive where the base dips
+   * down in the direction of sliding (the active zone near the crest),
+   * negative where it rises (the passive zone at the toe). For example
+   * [[-45, 0.82], [0, 1], [60, 1.5]] for passive 0.82, direct 1.0 and active
+   * 1.5 relative to the direct shear strength. Analyses without a slip
+   * surface base (finite elements, limit analysis, the strength profiles)
+   * take the factor at α = 0. Not set or empty: isotropic.
+   */
+  anisotropy?: [number, number][];
+}
+
+/** Whether a model kind takes `UndrainedAnisotropy.anisotropy`. */
+export function supportsAnisotropy(kind: string): kind is "undrained" | "s-f-depth" | "s-f-datum" {
+  return kind === "undrained" || kind === "s-f-depth" || kind === "s-f-datum";
+}
+
 /** Undrained strength model (φ = 0). */
-export interface UndrainedModel extends MaterialModelBase {
+export interface UndrainedModel extends MaterialModelBase, UndrainedAnisotropy {
   kind: "undrained";
   /** Undrained shear strength Su (kPa). */
   undrainedShearStrength: number;
@@ -146,7 +171,7 @@ export type DepthReference = "ground" | "layer-top";
  * where depth = yTop − yBottom at the slice base centre, yTop being the
  * ground surface or the top of the material layer (see `depthReference`).
  */
-export interface StrengthFromDepthModel extends MaterialModelBase {
+export interface StrengthFromDepthModel extends MaterialModelBase, UndrainedAnisotropy {
   kind: "s-f-depth";
   /** Reference undrained shear strength Su (kPa). */
   suRef: number;
@@ -178,7 +203,7 @@ export interface StrengthFromDepthModel extends MaterialModelBase {
  * where y is the elevation of the slice base: a positive rate increases
  * Su with depth below the datum, as in commercial programs.
  */
-export interface StrengthFromDatumModel extends MaterialModelBase {
+export interface StrengthFromDatumModel extends MaterialModelBase, UndrainedAnisotropy {
   kind: "s-f-datum";
   /** Reference undrained shear strength Su (kPa). */
   suRef: number;

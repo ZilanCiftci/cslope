@@ -7,7 +7,7 @@
  * desktop UI (inline error display).
  */
 
-import type { MaterialModel } from "./material-models";
+import { supportsAnisotropy, type MaterialModel } from "./material-models";
 
 /**
  * Validate a `MaterialModel` and return any errors found.
@@ -147,29 +147,7 @@ export function validateMaterialModel(model: MaterialModel): string[] {
       } else if (model.frictionAngle >= 90) {
         errors.push("Base friction angle (φ) must be less than 90°.");
       }
-      if (
-        !Array.isArray(model.modifierFunction) ||
-        model.modifierFunction.length < 2
-      ) {
-        errors.push(
-          "Anisotropic modifier function requires at least 2 data points.",
-        );
-      } else {
-        for (let i = 0; i < model.modifierFunction.length; i++) {
-          const pt = model.modifierFunction[i];
-          if (!Array.isArray(pt) || pt.length !== 2) {
-            errors.push(
-              `Modifier point ${i + 1}: must have 2 values [α°, factor].`,
-            );
-          } else if (!pt.every((v) => Number.isFinite(v))) {
-            errors.push(
-              `Modifier point ${i + 1}: all values must be finite numbers.`,
-            );
-          } else if (pt[1] < 0) {
-            errors.push(`Modifier point ${i + 1}: factor must be ≥ 0.`);
-          }
-        }
-      }
+      validateModifier(errors, model.modifierFunction, "Anisotropic modifier function");
       break;
 
     case "s-f-depth":
@@ -248,7 +226,30 @@ export function validateMaterialModel(model: MaterialModel): string[] {
       );
   }
 
+  // anisotropy: not set or empty is isotropic
+  if (supportsAnisotropy(model.kind) && "anisotropy" in model && model.anisotropy !== undefined) {
+    if (!Array.isArray(model.anisotropy)) errors.push("Anisotropy must be a list of [α°, factor] points.");
+    else if (model.anisotropy.length > 0) validateModifier(errors, model.anisotropy, "Anisotropy");
+  }
   return errors;
+}
+
+/** A modifier function [[α°, factor], …]: at least two points, finite, factors ≥ 0. */
+function validateModifier(errors: string[], fn: unknown, what: string): void {
+  if (!Array.isArray(fn) || fn.length < 2) {
+    errors.push(`${what} requires at least 2 data points.`);
+    return;
+  }
+  for (let i = 0; i < fn.length; i++) {
+    const pt = fn[i];
+    if (!Array.isArray(pt) || pt.length !== 2) {
+      errors.push(`Modifier point ${i + 1}: must have 2 values [α°, factor].`);
+    } else if (!pt.every((v) => Number.isFinite(v))) {
+      errors.push(`Modifier point ${i + 1}: all values must be finite numbers.`);
+    } else if (pt[1] < 0) {
+      errors.push(`Modifier point ${i + 1}: factor must be ≥ 0.`);
+    }
+  }
 }
 
 /**

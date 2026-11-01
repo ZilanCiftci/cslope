@@ -3,6 +3,7 @@ import { ExpressionNumericInput } from "../../../../components/ui/ExpressionNume
 import type { UndrainedModel } from "@cslope/engine";
 import type { MaterialExpressions } from "../../../../store/types";
 import { CutoffField } from "./CutoffField";
+import { AnisotropyField } from "./AnisotropyField";
 import { UnitWeightSatField } from "./UnitWeightSatField";
 
 interface Props {
@@ -62,6 +63,10 @@ export function UndrainedFields({
         value={model.suMax}
         rate={model.suRateOfChange ?? 0}
         onChange={(suMax) => onChange({ suMax })}
+      />
+      <AnisotropyField
+        value={model.anisotropy}
+        onChange={(anisotropy) => onChange({ anisotropy })}
       />
     </div>
   );

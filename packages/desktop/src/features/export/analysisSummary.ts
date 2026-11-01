@@ -91,6 +91,8 @@ export function fosLabel(partialFactors: PartialFactors | null | undefined): str
 export function strengthText(model: MaterialModel): string {
   const cutoff = (m: { suMax?: number }, rate: number | undefined) =>
     m.suMax === undefined ? "" : `, ${(rate ?? 0) < 0 ? "minimum" : "maximum"} ${fmt(m.suMax)} kPa`;
+  const aniso = (a: [number, number][] | undefined) =>
+    a && a.length ? `; anisotropic, ${a.map(([al, f]) => `${fmt(f)} at α = ${fmt(al)}°`).join(", ")}` : "";
   switch (model.kind) {
     case "mohr-coulomb": {
       const c = model.cFactor ? `${fmt(model.cohesion)} × ${fmt(model.cFactor)}` : fmt(model.cohesion);
@@ -108,21 +110,23 @@ export function strengthText(model: MaterialModel): string {
       if (model.suRateOfChange) {
         s += `, + ${fmt(model.suRateOfChange)} kPa/m below y = ${fmt(model.suRefDepth ?? 0)} m`;
       }
-      return s + cutoff(model, model.suRateOfChange);
+      return s + cutoff(model, model.suRateOfChange) + aniso(model.anisotropy);
     }
     case "s-f-depth": {
       const from = model.depthReference === "layer-top" ? "the layer top" : "the ground";
       return (
         `Su = ${fmt(model.suRef)} kPa at ${fmt(model.depthRef)} m below ${from}, ` +
         `${fmt(model.rate)} kPa/m with depth` +
-        cutoff(model, model.rate)
+        cutoff(model, model.rate) +
+        aniso(model.anisotropy)
       );
     }
     case "s-f-datum":
       return (
         `Su = ${fmt(model.suRef)} kPa at y = ${fmt(model.yRef)} m, ` +
         `${fmt(model.rate)} kPa/m below` +
-        cutoff(model, model.rate)
+        cutoff(model, model.rate) +
+        aniso(model.anisotropy)
       );
     case "anisotropic-function":
       return (
