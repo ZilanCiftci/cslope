@@ -333,7 +333,8 @@ export type AnalysisWarningCode =
   | "negative-effective-normal"
   | "low-m-alpha"
   | "bishop-non-circular"
-  | "frictional-surface-slide";
+  | "frictional-surface-slide"
+  | "shallow-cohesionless-surface";
 
 /**
  * Something about the input or the critical surface that the factor of

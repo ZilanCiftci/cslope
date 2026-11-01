@@ -65,6 +65,17 @@ const slicesText = (n: number, verb: [string, string]) =>
  *   whose infinite-slope factor tan φ′/tan β is below the critical
  *   surface's (surface-slide.ts); the search discards such thin slides.
  *
+ * - "shallow-cohesionless-surface": the critical surface is a shallow
+ *   slide, its base on average less than shallowDepthLimit (1 m, or a
+ *   tenth of the ground relief around it when larger) below the ground,
+ *   with at least half its base in cohesionless soil (c′ = 0, φ′ > 0, no
+ *   undrained strength of a combined analysis): in a loose fill, a road bank's edge or a thin
+ *   cohesionless layer the search finds such a slide before any deeper
+ *   mechanism. Its factor may be the one sought; when the stability of
+ *   the slope as a whole is, a minimum slip depth, sliding area or
+ *   entry–exit distance (Options › Search) analyses the deeper surfaces.
+ *   Not with "frictional-surface-slide", which already names the face.
+ *
  * Only the critical surface is checked. `effectiveNormals` are its base
  * N′ when the caller already has them (solvedEffectiveNormals); otherwise
  * they are solved here.
@@ -92,8 +103,13 @@ export function analysisWarnings(
     warnings.push({ code: "bishop-non-circular", message: BISHOP_NON_CIRCULAR_MESSAGE });
   }
   const slide = crit ? frictionalSurfaceSlide(slope, true) : null;
-  if (slide && slide.factorOfSafety < crit!.fos!) {
-    warnings.push({ code: "frictional-surface-slide", message: surfaceSlideMessage(slide, crit!.fos!) });
+  const surfaceSlide = !!slide && slide.factorOfSafety < crit!.fos!;
+  if (surfaceSlide) {
+    warnings.push({ code: "frictional-surface-slide", message: surfaceSlideMessage(slide!, crit!.fos!) });
+  }
+  if (crit && crit.fos != null && !surfaceSlide && crit.slices && crit.slices.length > 0) {
+    const shallow = shallowCohesionlessMessage(crit.slices, crit.fos, localRelief(slope, crit.slices));
+    if (shallow) warnings.push({ code: "shallow-cohesionless-surface", message: shallow });
   }
   const slices = crit?.slices;
   if (!crit || !slices || slices.length === 0) return warnings;
@@ -126,4 +142,57 @@ export function analysisWarnings(
     });
   }
   return warnings;
+}
+
+/**
+ * The depth a critical surface's base must on average stay within to count
+ * as shallow (m): 1 m, or a tenth of the ground relief around the surface
+ * when larger.
+ */
+export function shallowDepthLimit(localRelief: number): number {
+  return Math.max(1, 0.1 * localRelief);
+}
+
+/**
+ * The ground relief around a surface: the range of the ground's height
+ * over the surface's span and as far again on each side.
+ */
+function localRelief(slope: Slope, slices: readonly Slice[]): number {
+  const g = slope.surfaceLineXY;
+  if (!g || slices.length === 0) return 0;
+  const a = slices[0].xLeft, b = slices[slices.length - 1].xRight, w = b - a;
+  let lo = Infinity, hi = -Infinity;
+  for (let i = 0; i < g.x.length; i++) {
+    if (g.x[i] < a - w || g.x[i] > b + w) continue;
+    lo = Math.min(lo, g.y[i]); hi = Math.max(hi, g.y[i]);
+  }
+  for (const s of slices) { lo = Math.min(lo, s.yTop); hi = Math.max(hi, s.yTop); }
+  return hi > lo ? hi - lo : 0;
+}
+
+/** A slice base in cohesionless soil: c′ = 0 with friction, and no undrained strength of a combined analysis. */
+const cohesionless = (s: Slice) => s.cohesion <= 0 && s.frictionAngle > 0 && !(s.cohesionUndrained > 0);
+
+/**
+ * The warning text when the critical surface, of these slices, is a
+ * shallow slide mostly in cohesionless soil (see analysisWarnings), else
+ * null. Its depth is the base's mean depth below the ground, weighted by
+ * base length, so that a long thin surface counts with a deeper part.
+ */
+export function shallowCohesionlessMessage(slices: readonly Slice[], fos: number, relief: number): string | null {
+  let base = 0, loose = 0, mean = 0, deepest = 0;
+  let name: string | undefined;
+  for (const s of slices) {
+    const d = s.yTop - s.yBottom;
+    base += s.baseLength; mean += d * s.baseLength; deepest = Math.max(deepest, d);
+    if (cohesionless(s)) { loose += s.baseLength; name ??= s.baseMaterial?.name; }
+  }
+  if (!(base > 0)) return null;
+  mean /= base;
+  if (mean >= shallowDepthLimit(relief) || loose < 0.5 * base) return null;
+  return (
+    `The critical surface (F = ${fos.toFixed(3)}) is a shallow slide, on average ${mean.toFixed(2)} m and at most ${deepest.toFixed(2)} m below the ground, ` +
+    `with ${Math.round((100 * loose) / base)} % of its base in cohesionless soil${name ? ` (${name})` : ""}. ` +
+    "If the stability of the slope as a whole is sought, set a minimum slip depth, sliding area or entry–exit distance (Options › Search) to analyse the deeper surfaces."
+  );
 }

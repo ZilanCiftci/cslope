@@ -480,6 +480,17 @@ export function OptionsSection({ plain = false }: OptionsSectionProps) {
               title="Surfaces whose sliding mass is smaller than this are not analysed. Empty = automatic (1 % of the squared ground relief, e.g. 1 m² for a 10 m slope; skips micro-surfaces); 0 = no limit."
             />
           </label>
+          <label className="flex flex-col gap-0.5">
+            <Label>Min. entry–exit distance (m)</Label>
+            <DraftNumberInput
+              value={options.minFailureDist ?? 0}
+              min={0}
+              step={0.5}
+              onValueChange={(v) => v >= 0 && setOptions({ minFailureDist: v })}
+              aria-label="Minimum entry–exit distance"
+              title="Surfaces whose entry and exit points are closer than this (the straight distance between them) are not analysed, for example thin slides in the edge of a cohesionless road bank. 0 = no limit."
+            />
+          </label>
         </div>
       </section>
 

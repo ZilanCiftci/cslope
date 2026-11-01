@@ -218,6 +218,15 @@ describe("OptionsDialogApp", () => {
     expect(opts().partialFactors).toBeNull();
   });
 
+  it("sets the minimum entry–exit distance", async () => {
+    render(<OptionsDialogApp />);
+    hydrate({ options: { partialFactors: null } });
+    const d = screen.getByLabelText("Minimum entry–exit distance");
+    await userEvent.clear(d);
+    await userEvent.type(d, "2");
+    expect(opts().minFailureDist).toBe(2);
+  });
+
   it("sets the 3D effects: stage length, adjacent F2D and the materials out of the end faces", async () => {
     render(<OptionsDialogApp />);
     hydrate({ options: { partialFactors: null } });
