@@ -25,9 +25,10 @@ describe("boundGapIndicator", () => {
       // virtual work: Σ [D − σ:ε̇] = λ_U − λ_L, each term ≥ 0 (round-off
       // aside); with water the two programs' terms for the saturated weight
       // and the pore pressure are not identical element by element (the
-      // lower bound's sub-elements, more with the corners bisected), 1.4 %
-      // of the gap here
-      expect(Math.abs(sum - gap)).toBeLessThan((water ? 2e-2 : 1e-4) * gap);
+      // lower bound's sub-elements, more with the fans of elements at the
+      // corners, whose new nodes take the pore pressure there), 3.5–3.8 %
+      // of the gap here (1.4 % with four elements at each corner)
+      expect(Math.abs(sum - gap)).toBeLessThan((water ? 5e-2 : 1e-4) * gap);
       expect(min).toBeGreaterThan(-1e-5 * gap);
     }, 300000);
   }

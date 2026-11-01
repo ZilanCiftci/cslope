@@ -31,8 +31,9 @@
  * bisection of the bracket between the largest F that carries the loads
  * and the smallest that does not, returning the largest evaluated F with
  * λ(F) ≥ 1 once it lies within 0.002 of the root or of the bracket's other
- * end (only such an F is a lower bound); at least four elements at each
- * corner of the ground surface (lowerBoundProblem); the load factor on every load, weight
+ * end (only such an F is a lower bound); fans of elements spanning at
+ * most 30° within an element size of each corner and load's end of the
+ * ground surface (lowerBoundProblem); the load factor on every load, weight
  * included, as the strength reduction applies; a line load spread over the
  * two surface edges at its point; the stresses scaled by γ H (the largest
  * unit weight times the model's height) for Clarabel.
@@ -47,10 +48,14 @@ import {
   type ConicProgram, type ConicSolution, type HighsSolver,
 } from "./conic";
 
-/** Sectors per element at a corner of the ground surface (see lowerBoundProblem). */
+/** Sectors per element at a singular point of the ground surface (see lowerBoundProblem). */
 const FAN_SECTORS = 4;
-/** Elements at least at each corner of the ground surface (see lowerBoundProblem). */
-const CORNER_ELEMENTS = 4;
+/** Largest angle an element near a singular point of the ground surface spans as seen from it (see lowerBoundProblem). */
+const FAN_ANGLE = (30 * Math.PI) / 180;
+/** Reach of the fans of elements around the singular points, in element sizes (the model's size field there; see lowerBoundProblem). */
+const FAN_RADIUS = 1;
+/** Rounds of bisection at most for the fans of elements (see lowerBoundProblem). */
+const FAN_PASSES = 10;
 
 export interface LowerBoundOptions extends FeModelOptions {
   /**
@@ -167,7 +172,7 @@ export interface LbProblem {
    * and the strength reduction model's element each lies in (`parent`; the
    * model's corner nodes keep their numbers). The stresses of element e at
    * its corner k are the program's columns 9e + 3k + 0, 1, 2: σ′x, σ′y, τxy.
-   * `split`: the edges bisected at the corners ("a,b" with a < b) and the
+   * `split`: the edges bisected for the fans ("a,b" with a < b) and the
    * node at their middle.
    */
   mesh: { x: Float64Array; y: Float64Array; el: Int32Array; parent: Int32Array; split: Map<string, number> };
@@ -178,8 +183,6 @@ export function lowerBoundProblem(slope: Slope, options: LowerBoundOptions = {})
   const model = buildFeModel(slope, options);
   const { materials } = model;
   const keyOf = (a: number, b: number) => (a < b ? `${a},${b}` : `${b},${a}`);
-  const surfaceKey = new Set<string>();
-  for (let s = 0; s < model.surfaceEdges.length; s += 3) surfaceKey.add(keyOf(model.surfaceEdges[s], model.surfaceEdges[s + 2]));
   const xs = Array.from(model.x), ys = Array.from(model.y);
   // Seepage heads at the nodes, interpolated linearly to the nodes added below
   // (bisection, centroid splits, fans): the model has them at its own only.
@@ -190,57 +193,147 @@ export function lowerBoundProblem(slope: Slope, options: LowerBoundOptions = {})
     if (head0) hs.push(h());
     return xs.length - 1;
   };
+  let tris: number[][] = [], meta: number[] = []; // corner nodes, the model's element
+  for (let e = 0; e < model.elementCount; e++) { tris.push([model.el[6 * e], model.el[6 * e + 1], model.el[6 * e + 2]]); meta.push(e); }
+  // The ground surface edges of the lower bound mesh, each with the model's
+  // surface edge it lies on (whose line loads it carries): the model's,
+  // bisected below.
+  const surf: [number, number, number, number][] = [];
+  for (let s = 0; s < model.surfaceEdges.length; s += 3) {
+    const a = model.surfaceEdges[s], b = model.surfaceEdges[s + 2];
+    surf.push([a, b, a, b]);
+  }
+  const surfaceKey = new Set<string>();
+  for (const [a, b] of surf) surfaceKey.add(keyOf(a, b));
   // Corners of the ground surface (crest, toe, its ends at the sides): any
   // kink, even a slight one (not only a round-off one, 10⁻⁹ rad), and a
   // point where a material boundary meets it (on V052a's crest the stress
   // locked where the core, c′ = 85 kPa, meets a cohesionless transition).
   const surfNbr = new Map<number, number[]>();
-  for (let s = 0; s < model.surfaceEdges.length; s += 3) {
-    const a = model.surfaceEdges[s], b = model.surfaceEdges[s + 2];
+  for (const [a, b] of surf) {
     surfNbr.set(a, [...(surfNbr.get(a) ?? []), b]);
     surfNbr.set(b, [...(surfNbr.get(b) ?? []), a]);
   }
   const corner = new Set<number>();
   // and where a material boundary meets the ground: the materials of the surface edges at each node
   const surfMats = new Map<number, Set<number>>();
-  for (let e = 0; e < model.elementCount; e++) {
+  tris.forEach((t, i) => {
     for (let k = 0; k < 3; k++) {
-      const a = model.el[6 * e + k], b = model.el[6 * e + ((k + 1) % 3)];
+      const a = t[k], b = t[(k + 1) % 3];
       if (!surfaceKey.has(keyOf(a, b))) continue;
-      for (const n of [a, b]) surfMats.set(n, (surfMats.get(n) ?? new Set()).add(model.elMaterial[e]));
+      for (const n of [a, b]) surfMats.set(n, (surfMats.get(n) ?? new Set()).add(model.elMaterial[meta[i]]));
     }
-  }
+  });
   for (const [v, mats] of surfMats) if (mats.size > 1) corner.add(v);
   for (const [v, nb] of surfNbr) {
     if (nb.length !== 2) { corner.add(v); continue; }
     const ax = xs[nb[0]] - xs[v], ay = ys[nb[0]] - ys[v], bx = xs[nb[1]] - xs[v], by = ys[nb[1]] - ys[v];
     if (Math.abs(ax * by - ay * bx) > 1e-9 * Math.sqrt((ax * ax + ay * ay) * (bx * bx + by * by))) corner.add(v);
   }
-  // At least CORNER_ELEMENTS elements at each corner: the edges opposite a
-  // corner with fewer are bisected, with the element on their other side,
-  // until it has them. With two elements at a crest or a peak each holds a
-  // single linear field with no stress on its surface edge, the two meet on
-  // one edge, and in a cohesionless soil no such pair carries the weight (on
-  // a symmetric peak only uniaxial vertical compression would); new elements
-  // around the corner and beyond the opposite edges give the field room. On
-  // a peak of φ′ = 45° under 27° faces (two elements at the peak) λ was 0.09
-  // at F = 1.2, where the slope stands (implementation choice, as the
-  // prototype in which it was found; fans inside the elements, below, did
-  // not help).
-  let tris: number[][] = [], meta: number[] = []; // corner nodes, the model's element
-  for (let e = 0; e < model.elementCount; e++) { tris.push([model.el[6 * e], model.el[6 * e + 1], model.el[6 * e + 2]]); meta.push(e); }
-  const splitEdges = new Map<string, number>();
-  for (let pass = 0; pass < 4; pass++) {
-    const marked = new Set<string>();
-    const at = new Map<number, number[]>();
-    tris.forEach((t, i) => { for (const n of t) if (corner.has(n)) at.set(n, [...(at.get(n) ?? []), i]); });
-    for (const [v, list] of at) {
-      if (list.length >= CORNER_ELEMENTS) continue;
-      for (const i of list) {
-        const t = tris[i], k = t.indexOf(v), a = t[(k + 1) % 3], b = t[(k + 2) % 3];
-        // not a surface edge (its loads are keyed by the model's edges)
-        if (!surfaceKey.has(keyOf(a, b))) marked.add(keyOf(a, b));
+  // Line loads as strip loads (limit-common.ts) on the model's surface
+  // edges, keyed by node pairs; variable loads take γQ.
+  const loadFactor = slope.partialFactors?.variableLoad ?? 1;
+  const warnings: string[] = [];
+  const nKey = xs.length; // key multiplier of the model's node pairs (the model's nodes keep their numbers)
+  const lineQ = surfaceLineLoads(slope, model, (a, b) => (a < b ? a * nKey + b : b * nKey + a), warnings);
+  /**
+   * The vertical load per horizontal metre on surface edge `s` of `surf` at
+   * its node `node`: the line loads' strip loads, linear along the model's
+   * edge it lies on, and the strip loads covering the edge's middle.
+   */
+  const surfaceLoad = (s: number, node: number): number => {
+    const [a, b, A, B] = surf[s];
+    const key = A < B ? A * nKey + B : B * nKey + A;
+    const qa = lineQ.get(`${key}:${A}`) ?? 0, qb = lineQ.get(`${key}:${B}`) ?? 0;
+    const t = xs[B] === xs[A] ? 0 : (xs[node] - xs[A]) / (xs[B] - xs[A]);
+    let q = qa + t * (qb - qa);
+    const mx = (xs[a] + xs[b]) / 2;
+    for (const udl of slope.udls) if (mx >= udl.x1 && mx <= udl.x2) q += udl.magnitude * loadFactor;
+    return q;
+  };
+  // Singular points of the ground surface's tractions (Sloan 1988, fans of
+  // discontinuities at singular points; Lyamin & Sloan 2002): besides the
+  // corners, the nodes where the prescribed load jumps, the ends of the
+  // strip loads (the edges of a footing in Prandtl's solution) and of the
+  // line loads' strips. The stress there is not one value: each element at
+  // the node has its own, and the jump in the load must be carried by the
+  // discontinuities between them. With two elements at a load's end, one
+  // on each side, the normal and shear traction continuous across their
+  // common edge at that node demand q n_y = 0, so that unless that edge is
+  // vertical no stress field carries any load (λ = 0 at every F: a strip
+  // load ending on an embankment's flat crest, the edge from its end
+  // inclined 3.4° from the vertical); with three, one sector between them,
+  // the load was carried only at λ = 0.37 even as F fell to 0.05, the
+  // tension apex c′ cot φ′ of the sectors not falling with F (a load
+  // ending 5 cm from the crest corner of a fill of c′ = 2 kPa, φ′ = 33°,
+  // with a 45° face below; the same with loads a few millimetres from such
+  // corners).
+  // A load ending at a corner was carried, as the corners had fans; the
+  // loads' ends get the corners' fans of elements below.
+  {
+    const qs = new Map<number, number>();
+    surf.forEach(([a, b], s) => {
+      for (const n of [a, b]) {
+        const q = surfaceLoad(s, n), q0 = qs.get(n);
+        if (q0 === undefined) qs.set(n, q);
+        else if (Math.abs(q - q0) > 1e-9 * (1 + Math.abs(q) + Math.abs(q0))) corner.add(n);
       }
+    });
+  }
+  // Fans of elements at the singular points (Sloan 1988, fans of
+  // discontinuities at singular points; Lyamin & Sloan 2002): the elements
+  // within FAN_RADIUS element sizes of a corner or a load's end are bisected
+  // until each spans at most FAN_ANGLE as seen from it, one at the point by
+  // its edge opposite the point, any other by its edge that spans the
+  // widest angle; the element on the edge's other side is bisected with
+  // it, a surface edge into two on the same model edge. Bisection only adds
+  // discontinuities, so that the stress fields of the coarser mesh stay
+  // admissible and λ does not fall. Near a singular point the stress varies
+  // with the angle around it (Prandtl's fan at a footing's edge, at the
+  // crest of a loaded face), at every distance from it, so that a fan needs
+  // elements around the point out to the size of the mechanism, not only at
+  // the point: on a weightless 45° wedge of c′ = 10 kPa, φ′ = 30° loaded on
+  // its crest to Prandtl's c′ N_c with a fan of π/4 (F = 1, elements of
+  // 1 m), F was 0.89 with four elements at the corner (their opposite edges
+  // bisected, as before) and four sectors in each (below), 0.89 with twelve
+  // sectors, 0.93 with fans of elements of at most 30° within an element
+  // size, 0.95 with 20° and 0.98 with 15° and no limit on the reach. On the
+  // embankment above, the strip load at the crest corner, 2 mm and 5 cm
+  // from it gave 0.91, 0.87 and no bound before, now 1.13, 1.13 and 1.10
+  // (upper bound 1.21; with 20°, 1.14–1.15 at 1.3 times the elements).
+  // Implementation choices: FAN_ANGLE, FAN_RADIUS and at most FAN_PASSES
+  // rounds of bisection, from these trials. (At least four elements at a
+  // crest or a peak are needed anyway: with two, each a single linear field
+  // with no stress on its surface edge, no such pair carried the weight of a
+  // cohesionless soil; on a peak of φ′ = 45° under 27° faces λ was 0.09 at
+  // F = 1.2, where the slope stands.)
+  const splitEdges = new Map<string, number>();
+  const singular = [...corner];
+  const reach = singular.map((v) => FAN_RADIUS * model.sizeField(xs[v], ys[v]));
+  const spanAt = (v: number, a: number, b: number) => {
+    const ax = xs[a] - xs[v], ay = ys[a] - ys[v], bx = xs[b] - xs[v], by = ys[b] - ys[v];
+    return Math.abs(Math.atan2(ax * by - ay * bx, ax * bx + ay * by));
+  };
+  for (let pass = 0; pass < FAN_PASSES; pass++) {
+    const marked = new Set<string>();
+    for (const t of tris) {
+      singular.forEach((v, j) => {
+        const k = t.indexOf(v);
+        let widest = 0, ea = -1, eb = -1;
+        if (k >= 0) {
+          ea = t[(k + 1) % 3]; eb = t[(k + 2) % 3];
+          widest = spanAt(v, ea, eb);
+        } else {
+          let near = Infinity;
+          for (const n of t) near = Math.min(near, Math.hypot(xs[n] - xs[v], ys[n] - ys[v]));
+          if (near > reach[j]) return;
+          for (let i = 0; i < 3; i++) {
+            const a = t[i], b = t[(i + 1) % 3], w = spanAt(v, a, b);
+            if (w > widest) { widest = w; ea = a; eb = b; }
+          }
+        }
+        if (widest > FAN_ANGLE) marked.add(keyOf(ea, eb));
+      });
     }
     if (marked.size === 0) break;
     const mid = (a: number, b: number) => {
@@ -249,6 +342,14 @@ export function lowerBoundProblem(slope: Slope, options: LowerBoundOptions = {})
       if (m === undefined) { m = addNode((xs[a] + xs[b]) / 2, (ys[a] + ys[b]) / 2, () => (hs[a] + hs[b]) / 2); splitEdges.set(key, m); }
       return m;
     };
+    // a bisected surface edge: its halves on the same model edge
+    for (let i = surf.length - 1; i >= 0; i--) {
+      const [a, b, A, B] = surf[i];
+      if (!marked.has(keyOf(a, b))) continue;
+      const m = mid(a, b);
+      surf.splice(i, 1, [a, m, A, B], [m, b, A, B]);
+      surfaceKey.delete(keyOf(a, b)); surfaceKey.add(keyOf(a, m)); surfaceKey.add(keyOf(m, b));
+    }
     const out: number[][] = [], outMeta: number[] = [];
     const split = (t: number[], e: number) => {
       for (let k = 0; k < 3; k++) {
@@ -287,12 +388,12 @@ export function lowerBoundProblem(slope: Slope, options: LowerBoundOptions = {})
     }
     for (const t of parts) { elList.push(...t); matList.push(model.elMaterial[e]); elasticList.push(model.elElastic[e]); parentList.push(e); }
   });
-  // Fans at the corners: the stress there is singular in direction, and a
-  // lower bound needs several stress sectors meeting at the corner (Sloan
-  // 1988, fans of discontinuities at singular points). Each element at a
-  // corner is divided into FAN_SECTORS sectors from the corner by points
-  // halfway towards the opposite edge, so that no new node lies on an edge
-  // shared with another element.
+  // Fans at the singular points: the stress there is singular in direction,
+  // and a lower bound needs several stress sectors meeting at the point
+  // (Sloan 1988, fans of discontinuities at singular points). Each element
+  // at a corner or a load's end is divided into FAN_SECTORS sectors from the
+  // point by points halfway towards the opposite edge, so that no new node
+  // lies on an edge shared with another element.
   const fanned: number[] = [], fanMat: number[] = [], fanElastic: number[] = [], fanParent: number[] = [];
   for (let t = 0; t < matList.length; t++) {
     const tri = [elList[3 * t], elList[3 * t + 1], elList[3 * t + 2]];
@@ -320,7 +421,6 @@ export function lowerBoundProblem(slope: Slope, options: LowerBoundOptions = {})
   const ne = elMaterial.length;
   const p = options.sides ?? 24;
   const cutoff = options.tensionCutoff ?? false;
-  const warnings: string[] = [];
   let xLo = Infinity, xHi = -Infinity, yHi = -Infinity;
   for (let n = 0; n < x.length; n++) { xLo = Math.min(xLo, x[n]); xHi = Math.max(xHi, x[n]); yHi = Math.max(yHi, y[n]); }
   const surface = slope.surfaceLineXY ?? { x: [xLo, xHi], y: [yHi, yHi] };
@@ -396,11 +496,9 @@ export function lowerBoundProblem(slope: Slope, options: LowerBoundOptions = {})
   // Edges: find each edge's elements by corner pair.
   const nc = x.length; // key multiplier for node pairs
   const edgeOwner = new Map<number, [number, number]>();
-  const surfaceSet = new Set<number>();
-  for (let s = 0; s < model.surfaceEdges.length; s += 3) {
-    const a = model.surfaceEdges[s], b = model.surfaceEdges[s + 2];
-    surfaceSet.add(a < b ? a * nc + b : b * nc + a);
-  }
+  // the ground surface edges, by their index in `surf`
+  const surfaceSet = new Map<number, number>();
+  surf.forEach(([a, b], s) => surfaceSet.set(a < b ? a * nc + b : b * nc + a, s));
   for (let e = 0; e < ne; e++) {
     for (let k = 0; k < 3; k++) {
       const a = el[3 * e + k], b = el[3 * e + ((k + 1) % 3)];
@@ -434,12 +532,10 @@ export function lowerBoundProblem(slope: Slope, options: LowerBoundOptions = {})
     const nx = (y[b] - y[a]) / len, ny = -(x[b] - x[a]) / len;
     for (const kk of [k, (k + 1) % 3]) pb.eq(ts(e, kk, nx, ny));
   }
-  // Line loads as strip loads (limit-common.ts); variable loads take γQ.
-  const loadFactor = slope.partialFactors?.variableLoad ?? 1;
-  const lineQ = surfaceLineLoads(slope, model, (a, b) => (a < b ? a * nc + b : b * nc + a), warnings);
   // On the ground surface the traction is prescribed.
   for (const [key, [e, k]] of edgeOwner) {
-    if (!surfaceSet.has(key)) continue;
+    const s = surfaceSet.get(key);
+    if (s === undefined) continue;
     const a = el[3 * e + k], b = el[3 * e + ((k + 1) % 3)];
     // Ponded water: the line of the element's material, as model.ts; with
     // seepage the water table that drives the flow.
@@ -455,9 +551,7 @@ export function lowerBoundProblem(slope: Slope, options: LowerBoundOptions = {})
       }
       // A strip load acts on the edges whose middle it covers: the node at its
       // end carries it on one side and not on the other (nodes are not shared).
-      let q = lineQ.get(`${key}:${node}`) ?? 0;
-      const mx = (x[a] + x[b]) / 2;
-      for (const udl of slope.udls) if (mx >= udl.x1 && mx <= udl.x2) q += udl.magnitude * loadFactor;
+      const q = surfaceLoad(s, node);
       // traction vector t = −pw n + (0, −q |n_y|); σn,total = t·n, τ = t·s with s = (−ny, nx)
       const tx = -pw * nx, ty = -pw * ny - q * Math.abs(ny);
       const tn = tx * nx + ty * ny, tt = -tx * ny + ty * nx;

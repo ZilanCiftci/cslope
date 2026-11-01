@@ -23,11 +23,14 @@
  * the upper bound's F (where λ_U ≤ 1 and λ_L < 1, both finite with
  * cohesion); an edge's contribution goes half to each element beside it,
  * a base edge's to its element; the lower bound's sub-elements (split at
- * traction boundaries, fans at corners) count in the element they lie in.
+ * traction boundaries, fans at corners and loads' ends) count in the element they lie in.
  * With a water table the two programs' terms for the saturated weight and
  * the pore pressure are not identical element by element (the lower
- * bound's sub-elements), and the contributions sum to the gap to 1–2 %. An
- * edge the lower bound bisected at a corner is integrated over its halves. Where the lower bound program has no finite optimum (a cohesionless
+ * bound's sub-elements, whose new nodes take the pore pressure there),
+ * and the contributions sum to the gap to a few per cent (3.8 % on a
+ * 10 m slope of 2.5 m elements, with the fans of elements at its corners). An
+ * edge the lower bound bisected (its fans of elements, possibly more than
+ * once) is integrated over its parts. Where the lower bound program has no finite optimum (a cohesionless
  * soil makes λ 0 or unbounded) the dissipation alone is the indicator.
  * The loop stops when the gap is below `gapTolerance` of the mean bound or
  * after `levels` refinements; each level's searches start from the last
@@ -163,7 +166,7 @@ export function boundGapIndicator(slope: Slope, options: LowerBoundOptions & Upp
       return [u2 - u, v2 - v];
     };
     // over a segment (p, q) of the edge, with the jumps there (linear along
-    // the edge), through the halves of an edge bisected at a corner
+    // the edge), through the halves of an edge bisected for a fan, recursively
     const segment = (p: number, q: number, dp: [number, number], dq: [number, number]): number => {
       const side = sideOf.get(`${e}:${p}:${q}`) ?? sideOf.get(`${e}:${q}:${p}`);
       if (!side) {
