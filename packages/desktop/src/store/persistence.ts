@@ -1,15 +1,18 @@
 import { sanitizePile, sanitizeReinforcement } from "../utils/reinforcement";
-import { supportsAnisotropy,
+import {
   ITERATIONS_RANGE,
   REFINED_ITERATIONS_RANGE,
   SLICES_RANGE,
   DEFAULT_FEM_SETTINGS,
   resolveOrientation,
+  supportsAnisotropy,
+  swedishPartialFactors,
   type AnalysisOptions,
   type FemAnalysisSettings,
   type FemResultSummary,
   type MaterialModel,
   type PartialFactors,
+  type SwedishFactorBasis,
 } from "@cslope/engine";
 import { DEFAULT_MODEL_NAME } from "../constants";
 import { nextId } from "./helpers";
@@ -887,12 +890,24 @@ function normalizePartialFactors(raw: unknown): PartialFactors | undefined {
   const f = raw as Record<string, unknown>;
   const factor = (v: unknown) =>
     typeof v === "number" && Number.isFinite(v) && v > 0 ? v : 1;
-  return {
+  const out: PartialFactors = {
     cu: factor(f.cu),
     cohesion: factor(f.cohesion),
     tanPhi: factor(f.tanPhi),
     variableLoad: factor(f.variableLoad),
   };
+  // how the factors were formed (safety class and η): kept when it gives
+  // these factors, for display and editing; else dropped (the factors stay)
+  if (f.basis && typeof f.basis === "object") {
+    try {
+      const formed = swedishPartialFactors(f.basis as SwedishFactorBasis);
+      const same = (["cu", "cohesion", "tanPhi", "variableLoad"] as const).every((k) => Math.abs(formed[k] - out[k]) < 1e-9);
+      if (same) out.basis = formed.basis;
+    } catch {
+      // an incomplete or invalid basis: the factors without it
+    }
+  }
+  return out;
 }
 
 /** An angle range [min, max] with 0° < min ≤ max < 90°, as the engine takes it, or null. */

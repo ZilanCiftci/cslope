@@ -60,6 +60,8 @@ export type {
   PorePressureHead,
   SearchMethod,
   PartialFactors,
+  SafetyClass,
+  SwedishFactorBasis,
   AnalysisOptions,
   AnalysisResult,
   AnalysisWarning,
@@ -69,7 +71,7 @@ export type {
   SliceData,
   WaterTableInput,
 } from "./analysis";
-export { DEFAULT_ANALYSIS_OPTIONS, EC7_DA3_FACTORS, DEFAULT_FEM_SETTINGS } from "./analysis";
+export { DEFAULT_ANALYSIS_OPTIONS, EC7_DA3_FACTORS, DEFAULT_FEM_SETTINGS, SAFETY_CLASS_GAMMA_D, swedishPartialFactors } from "./analysis";
 export type { FemAnalysisSettings, FemResultSummary } from "./analysis";
 
 export type {

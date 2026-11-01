@@ -138,6 +138,59 @@ export interface PartialFactors {
   tanPhi: number;
   /** γQ on variable loads (distributed and line loads). */
   variableLoad: number;
+  /**
+   * How the factors were formed in Swedish practice, for display and
+   * editing (`swedishPartialFactors`); the analyses use the factors above
+   * only. Not set: the factors were entered or taken from another set.
+   */
+  basis?: SwedishFactorBasis;
+}
+
+/** Swedish safety class (säkerhetsklass) of a structure or slope. */
+export type SafetyClass = 1 | 2 | 3;
+
+/** Partial factor γd on the load effects in safety class 1, 2 and 3 (EKS). */
+export const SAFETY_CLASS_GAMMA_D: Record<SafetyClass, number> = { 1: 0.83, 2: 0.91, 3: 1.0 };
+
+/** The input of a set of Swedish partial factors (`swedishPartialFactors`). */
+export interface SwedishFactorBasis {
+  /** Safety class 1, 2 or 3: γd = 0.83, 0.91 or 1.0 on the variable loads. */
+  safetyClass: SafetyClass;
+  /** Conversion factor η on the undrained shear strength: γcu = 1.5 / η. */
+  etaCu: number;
+  /** Conversion factor η on c′ and tan φ′: γc′ = γφ′ = 1.3 / η. */
+  etaDrained: number;
+  /**
+   * γQ before γd: γQ = variableLoadBase · γd. 1.3 gives the EN 1997-1 DA3
+   * load factor in safety class 3; some Swedish guidance uses 1.4 (for
+   * example for traffic loads). The governing document decides.
+   */
+  variableLoadBase: number;
+}
+
+/**
+ * Partial factors in Swedish practice from the safety class and the
+ * conversion factors η: design values X_d = η X_k / γM with γM = 1.5 on
+ * the undrained shear strength and 1.3 on c′ and tan φ′, and variable loads
+ * Q_d = γQ γd Q_k. Permanent loads (the soil's weight) take 1.0. The
+ * factors are rounded to three decimals.
+ */
+export function swedishPartialFactors(basis: SwedishFactorBasis): PartialFactors {
+  if (basis.safetyClass !== 1 && basis.safetyClass !== 2 && basis.safetyClass !== 3) {
+    throw new Error("Safety class must be 1, 2 or 3");
+  }
+  const gd = SAFETY_CLASS_GAMMA_D[basis.safetyClass];
+  for (const [k, v] of [["etaCu", basis.etaCu], ["etaDrained", basis.etaDrained], ["variableLoadBase", basis.variableLoadBase]] as const) {
+    if (!(Number.isFinite(v) && v > 0)) throw new Error(`${k} must be a positive number`);
+  }
+  const r3 = (v: number) => Math.round(v * 1000) / 1000;
+  return {
+    cu: r3(1.5 / basis.etaCu),
+    cohesion: r3(1.3 / basis.etaDrained),
+    tanPhi: r3(1.3 / basis.etaDrained),
+    variableLoad: r3(basis.variableLoadBase * gd),
+    basis: { ...basis },
+  };
 }
 
 /** EN 1997-1 Annex A, material set M2 with γQ = 1.3 (Design Approach 3). */

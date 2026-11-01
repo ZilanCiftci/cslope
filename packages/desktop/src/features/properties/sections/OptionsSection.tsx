@@ -3,8 +3,10 @@ import type {
   AnalysisMethod,
   IntersliceFunctionType,
   PartialFactors,
+  SafetyClass,
+  SwedishFactorBasis,
 } from "@cslope/engine";
-import { DEFAULT_FEM_SETTINGS, EC7_DA3_FACTORS, ITERATIONS_RANGE } from "@cslope/engine";
+import { DEFAULT_FEM_SETTINGS, EC7_DA3_FACTORS, ITERATIONS_RANGE, SAFETY_CLASS_GAMMA_D, swedishPartialFactors } from "@cslope/engine";
 import type { FemAnalysisSettings } from "@cslope/engine";
 import { useAppStore } from "../../../store/app-store";
 import { Section } from "../../../components/ui/Section";
@@ -586,7 +588,7 @@ export function OptionsSection({ plain = false }: OptionsSectionProps) {
   return <Section title="Analysis Options">{content}</Section>;
 }
 
-/** Swedish practice (EKS / IEG): γcu 1.5, γc' = γφ' = 1.3; γQ 1.3. */
+/** Swedish practice (EKS / IEG): γcu 1.5, γc' = γφ' = 1.3; γQ 1.3 (safety class 3, η = 1). */
 const SWEDISH_FACTORS: PartialFactors = {
   cu: 1.5,
   cohesion: 1.3,
@@ -594,7 +596,12 @@ const SWEDISH_FACTORS: PartialFactors = {
   variableLoad: 1.3,
 };
 
-const FACTOR_FIELDS: { key: keyof PartialFactors; label: string; title: string }[] = [
+/** The Swedish set from safety class and η: safety class 2, η = 1, γQ = 1.3·γd to start with. */
+const SWEDISH_BASIS: SwedishFactorBasis = { safetyClass: 2, etaCu: 1, etaDrained: 1, variableLoadBase: 1.3 };
+
+type FactorKey = "cu" | "cohesion" | "tanPhi" | "variableLoad";
+
+const FACTOR_FIELDS: { key: FactorKey; label: string; title: string }[] = [
   { key: "cu", label: "γcu", title: "Partial factor on undrained shear strength" },
   { key: "cohesion", label: "γc'", title: "Partial factor on effective cohesion" },
   { key: "tanPhi", label: "γφ'", title: "Partial factor on tan φ'" },
@@ -608,6 +615,11 @@ function PartialFactorsFields({
   factors: PartialFactors | null;
   onChange: (factors: PartialFactors | null) => void;
 }) {
+  const basis = factors?.basis;
+  const setBasis = (patch: Partial<SwedishFactorBasis>) => {
+    // the inputs only take valid values (η > 0, the listed classes and factors)
+    onChange(swedishPartialFactors({ ...(basis ?? SWEDISH_BASIS), ...patch }));
+  };
   return (
     <div className="col-span-2 flex flex-col gap-2">
       <div className="grid grid-cols-2 gap-x-3 items-center">
@@ -628,6 +640,7 @@ function PartialFactorsFields({
             value=""
             onChange={(e) => {
               if (e.target.value === "se") onChange({ ...SWEDISH_FACTORS });
+              if (e.target.value === "se-class") onChange(swedishPartialFactors(SWEDISH_BASIS));
               if (e.target.value === "ec7") onChange({ ...EC7_DA3_FACTORS });
             }}
             aria-label="Partial factor preset"
@@ -635,10 +648,50 @@ function PartialFactorsFields({
           >
             <option value="">Preset…</option>
             <option value="se">Swedish practice (EKS/IEG): 1.5 / 1.3 / 1.3 / 1.3</option>
+            <option value="se-class">Swedish practice from safety class and η…</option>
             <option value="ec7">EN 1997-1 DA3, M2: 1.4 / 1.25 / 1.25 / 1.3</option>
           </select>
         )}
       </div>
+      {factors && basis && (
+        <div
+          className="grid grid-cols-4 gap-1"
+          title="Design values X_d = η X_k / γM (γM 1.5 on Su, 1.3 on c′ and tan φ′) and variable loads Q_d = γQ γd Q_k, γd = 0.83, 0.91, 1.0 in safety class 1, 2, 3. The governing document decides η and γQ."
+        >
+          <label className="flex flex-col gap-0.5">
+            <Label>Safety class</Label>
+            <select
+              value={basis.safetyClass}
+              onChange={(e) => setBasis({ safetyClass: Number(e.target.value) as SafetyClass })}
+              aria-label="Safety class"
+            >
+              {([1, 2, 3] as const).map((k) => (
+                <option key={k} value={k}>
+                  SK{k} (γd {SAFETY_CLASS_GAMMA_D[k]})
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="flex flex-col gap-0.5" title="Conversion factor η on the undrained shear strength: γcu = 1.5/η">
+            <Label>η (Su)</Label>
+            <DraftNumberInput value={basis.etaCu} min={0.1} step={0.05} onValueChange={(v) => v > 0 && setBasis({ etaCu: v })} aria-label="η on the undrained shear strength" />
+          </label>
+          <label className="flex flex-col gap-0.5" title="Conversion factor η on c′ and tan φ′: γc′ = γφ′ = 1.3/η">
+            <Label>η (c′, φ′)</Label>
+            <DraftNumberInput value={basis.etaDrained} min={0.1} step={0.05} onValueChange={(v) => v > 0 && setBasis({ etaDrained: v })} aria-label="η on c′ and tan φ′" />
+          </label>
+          <label className="flex flex-col gap-0.5" title="γQ = this factor × γd">
+            <Label>γQ / γd</Label>
+            <select value={basis.variableLoadBase} onChange={(e) => setBasis({ variableLoadBase: Number(e.target.value) })} aria-label="Load factor before γd">
+              {[...new Set([1.3, 1.4, 1.5, basis.variableLoadBase])].sort((a, b) => a - b).map((v) => (
+                <option key={v} value={v}>
+                  {v}
+                </option>
+              ))}
+            </select>
+          </label>
+        </div>
+      )}
       {factors && (
         <>
           <div className="grid grid-cols-4 gap-1">
@@ -649,7 +702,13 @@ function PartialFactorsFields({
                   value={factors[f.key]}
                   min={0.1}
                   step={0.05}
-                  onValueChange={(v) => v > 0 && onChange({ ...factors, [f.key]: v })}
+                  // a factor entered by hand: no longer formed from the safety class and η
+                  onValueChange={(v) => {
+                    if (!(v > 0)) return;
+                    const next: PartialFactors = { ...factors, [f.key]: v };
+                    delete next.basis;
+                    onChange(next);
+                  }}
                   aria-label={f.title}
                 />
               </label>

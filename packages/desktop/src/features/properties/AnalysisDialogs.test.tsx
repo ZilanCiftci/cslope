@@ -217,6 +217,31 @@ describe("OptionsDialogApp", () => {
     await userEvent.click(screen.getByLabelText("Partial factors"));
     expect(opts().partialFactors).toBeNull();
   });
+
+  it("forms the Swedish factors from the safety class and η", async () => {
+    render(<OptionsDialogApp />);
+    hydrate({ options: { partialFactors: null } });
+    await userEvent.click(screen.getByLabelText("Partial factors"));
+    await userEvent.selectOptions(screen.getByLabelText("Partial factor preset"), "se-class");
+    // safety class 2, η = 1: γQ = 1.3 · 0.91
+    expect(opts().partialFactors?.cu).toBeCloseTo(1.5, 10);
+    expect(opts().partialFactors?.variableLoad).toBeCloseTo(1.183, 10);
+    await userEvent.selectOptions(screen.getByLabelText("Safety class"), "1");
+    await userEvent.selectOptions(screen.getByLabelText("Load factor before γd"), "1.4");
+    expect(opts().partialFactors?.variableLoad).toBe(1.162);
+    const eta = screen.getByLabelText("η on the undrained shear strength");
+    await userEvent.clear(eta);
+    await userEvent.type(eta, "1.1");
+    expect(opts().partialFactors?.cu).toBe(1.364); // 1.5 / 1.1, three decimals
+    expect(opts().partialFactors?.basis).toMatchObject({ safetyClass: 1, etaCu: 1.1, variableLoadBase: 1.4 });
+    // a factor entered by hand: the basis is gone, the other factors stay
+    const tanPhi = screen.getByLabelText("Partial factor on tan φ'");
+    await userEvent.clear(tanPhi);
+    await userEvent.type(tanPhi, "1.25");
+    expect(opts().partialFactors?.basis).toBeUndefined();
+    expect(opts().partialFactors?.cu).toBe(1.364);
+    expect(screen.queryByLabelText("Safety class")).toBeNull();
+  });
 });
 
 function lastSentOrState() {

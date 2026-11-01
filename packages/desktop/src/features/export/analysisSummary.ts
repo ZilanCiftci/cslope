@@ -1,4 +1,5 @@
 import {
+  SAFETY_CLASS_GAMMA_D,
   MATERIAL_MODEL_LABELS,
   WATER_UNIT_WEIGHT,
   type AnalysisOptions,
@@ -342,6 +343,15 @@ export function buildAnalysisSummary(input: AnalysisSummaryInput): SummarySectio
         { label: "γc' (effective cohesion)", value: fmt(pf.cohesion) },
         { label: "γφ' (on tan φ')", value: fmt(pf.tanPhi) },
         { label: "γQ (variable loads)", value: fmt(pf.variableLoad) },
+        ...(pf.basis
+          ? [{
+              label: "Basis (Swedish practice)",
+              value:
+                `safety class ${pf.basis.safetyClass} (γd = ${fmt(SAFETY_CLASS_GAMMA_D[pf.basis.safetyClass])}), ` +
+                `γcu = 1.5/η with η = ${fmt(pf.basis.etaCu)}, γc' = γφ' = 1.3/η with η = ${fmt(pf.basis.etaDrained)}, ` +
+                `γQ = ${fmt(pf.basis.variableLoadBase)}·γd = ${fmt(pf.variableLoad)}`,
+            }]
+          : []),
       ],
       note:
         "Strengths are divided and variable loads multiplied by the factors. The factor is the " +

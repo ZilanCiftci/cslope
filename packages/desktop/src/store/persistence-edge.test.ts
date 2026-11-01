@@ -117,6 +117,17 @@ describe("parseProjectFile: models", () => {
     expect(ok.materials[0].model).toHaveProperty("unitWeightSat", 21);
   });
 
+  it("keeps the basis of Swedish partial factors when complete", () => {
+    const opts = (partialFactors: unknown) => parseOne({ options: { partialFactors } }).options?.partialFactors;
+    const basis = { safetyClass: 2, etaCu: 1.1, etaDrained: 1, variableLoadBase: 1.4 };
+    const f = { cu: 1.364, cohesion: 1.3, tanPhi: 1.3, variableLoad: 1.274 };
+    expect(opts({ ...f, basis })).toEqual({ ...f, basis });
+    expect(opts({ ...f, basis: { ...basis, safetyClass: 4 } })).toEqual(f);
+    expect(opts({ ...f, basis: { ...basis, etaCu: 0 } })).toEqual(f);
+    // a basis that does not give the saved factors (a hand edit): dropped, the factors stay
+    expect(opts({ ...f, basis: { ...basis, safetyClass: 1 } })).toEqual(f);
+  });
+
   it("keeps an undrained anisotropy list for validation, drops an empty or malformed one", () => {
     const clay = (anisotropy: unknown) =>
       parseOne({
