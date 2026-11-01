@@ -107,3 +107,4 @@ export {
   UNIT_WEIGHT_RANGE,
   FRICTION_ANGLE_RANGE,
 } from "./constants";
+export type { Sgi3dOptions, Sgi3dResult, Sgi3dSettings, Sgi3dSurface } from "./sgi3d";

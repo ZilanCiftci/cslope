@@ -3,6 +3,7 @@
  */
 
 import type { Material } from "./material";
+import type { Sgi3dResult, Sgi3dSettings } from "./sgi3d";
 import type { SlopeOrientation } from "../model/canonical";
 import type { ReinforcementForce } from "./reinforcement";
 
@@ -126,6 +127,8 @@ export interface AnalysisOptions {
   minSlipArea?: number | null;
   /** Strength reduction by finite elements after the limit equilibrium analysis. */
   fem?: FemAnalysisSettings;
+  /** 3D effects after SGI's guidance after the 2D analysis (circular surfaces). */
+  sgi3d?: Sgi3dSettings;
 }
 
 /** Partial factors applied to characteristic values. */
@@ -528,6 +531,10 @@ export interface AnalysisResult {
   otherDirectionMinFOS?: number | null;
   /** Strength reduction by finite elements, when enabled in the options. */
   fem?: FemResultSummary;
+  /** 3D effects after SGI's guidance (AnalysisOptions.sgi3d), its circle in model space. */
+  sgi3d?: Sgi3dResult;
+  /** Why the 3D effects could not be computed, when they could not. */
+  sgi3dError?: string;
   /** Why the finite element analysis failed, when it was enabled and did not complete. */
   femError?: string;
 }

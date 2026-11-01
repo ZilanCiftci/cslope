@@ -32,6 +32,22 @@ const value = (s: ReturnType<typeof buildAnalysisSummary>, title: string, label:
   section(s, title).rows!.find((r) => r.label === label)?.value;
 
 describe("analysis summary", () => {
+  it("lists the 3D effects with their options", () => {
+    const sgi3d = {
+      factorOfSafety: 1.034, f2dCritical: 0.92, equation: "2-4",
+      critical: { cx: 4, cy: 2.5, radius: 6.8, f2d: 0.93, fp: 1.13, f3d: 1.034, drivingMoment: 917, endFaceArea: 23.5, endFaceMoment: 1020 },
+      options: { length: 15, overstrongF2D: 2.49, excludeMaterials: ["Let"] }, warnings: [],
+    };
+    const s = buildAnalysisSummary(input({ result: { ...RESULT, sgi3d } as unknown as AnalysisResult }));
+    expect(value(s, "3D effects (SGI Vägledning 8)", "F3D")).toBe("1.034");
+    expect(value(s, "3D effects (SGI Vägledning 8)", "Adjacent stability")).toBe("finite, F2D,överstark,min = 2.49 (eq. 2-4)");
+    expect(value(s, "3D effects (SGI Vägledning 8)", "Not in the end faces")).toBe("Let");
+    const failed = buildAnalysisSummary(input({ result: { ...RESULT, sgi3dError: "No circular slip surface" } as unknown as AnalysisResult }));
+    expect(value(failed, "3D effects (SGI Vägledning 8)", "Not computed")).toBe("No circular slip surface");
+    expect(section(buildAnalysisSummary(input()), "3D effects (SGI Vägledning 8)")).toBeUndefined();
+  });
+
+
   it("states the result, the method and characteristic values", () => {
     const s = buildAnalysisSummary(input());
     expect(value(s, "Result", "Minimum factor of safety")).toBe("1.235");

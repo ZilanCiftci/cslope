@@ -218,6 +218,27 @@ describe("OptionsDialogApp", () => {
     expect(opts().partialFactors).toBeNull();
   });
 
+  it("sets the 3D effects: stage length, adjacent F2D and the materials out of the end faces", async () => {
+    render(<OptionsDialogApp />);
+    hydrate({ options: { partialFactors: null } });
+    expect(screen.queryByLabelText("Stage length L")).toBeNull();
+    await userEvent.click(screen.getByLabelText("3D effects (SGI)"));
+    expect(opts().sgi3d).toEqual({ enabled: true, length: 15, overstrongF2D: null, excludeMaterials: [] });
+    const L = screen.getByLabelText("Stage length L");
+    await userEvent.clear(L);
+    await userEvent.type(L, "10");
+    expect(opts().sgi3d?.length).toBe(10);
+    fireEvent.change(screen.getByLabelText("Adjacent F2D"), { target: { value: "2.5" } });
+    expect(opts().sgi3d?.overstrongF2D).toBe(2.5);
+    fireEvent.change(screen.getByLabelText("Adjacent F2D"), { target: { value: "" } });
+    expect(opts().sgi3d?.overstrongF2D).toBeNull();
+    const first = screen.getAllByLabelText(/Leave .* out of the end faces/)[0];
+    await userEvent.click(first);
+    expect(opts().sgi3d?.excludeMaterials).toHaveLength(1);
+    await userEvent.click(first);
+    expect(opts().sgi3d?.excludeMaterials).toEqual([]);
+  });
+
   it("forms the Swedish factors from the safety class and η", async () => {
     render(<OptionsDialogApp />);
     hydrate({ options: { partialFactors: null } });

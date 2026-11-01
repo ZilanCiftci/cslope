@@ -13,6 +13,7 @@ import type {
   SliceData,
 } from "@cslope/engine";
 import {
+  sgi3dFactorOfSafety,
   analyseSlope,
   analysisWarnings,
   runFemSummary,
@@ -340,6 +341,24 @@ function analyse(
       solvedNormals ?? (criticalSlices.length > 0 ? criticalSlices.map((s) => s.normalForce) : null),
     ),
   };
+
+  // 3D effects after SGI's guidance, over this analysis's circular surfaces
+  // (its circle in model space). A failure keeps the 2D result.
+  const g = options.sgi3d;
+  if (g?.enabled && validSurfaces.length > 0) {
+    try {
+      const r = sgi3dFactorOfSafety(slope, {
+        length: g.length,
+        overstrongF2D: g.overstrongF2D ?? undefined,
+        excludeMaterials: g.excludeMaterials,
+        cellSize: g.cellSize,
+      });
+      if (r) result.sgi3d = r;
+      else result.sgi3dError = "No circular slip surface with a factor of safety (the 3D effects apply to circular surfaces).";
+    } catch (err: unknown) {
+      result.sgi3dError = err instanceof Error ? err.message : String(err);
+    }
+  }
 
   return result;
 }

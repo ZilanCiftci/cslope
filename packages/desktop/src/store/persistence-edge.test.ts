@@ -117,6 +117,15 @@ describe("parseProjectFile: models", () => {
     expect(ok.materials[0].model).toHaveProperty("unitWeightSat", 21);
   });
 
+  it("normalises the 3D effects option", () => {
+    const opts = (sgi3d: unknown) => parseOne({ options: { sgi3d } }).options?.sgi3d;
+    expect(opts({ enabled: true, length: 12, overstrongF2D: 2.3, excludeMaterials: ["Let", 3, "Let"] })).toEqual({
+      enabled: true, length: 12, overstrongF2D: 2.3, excludeMaterials: ["Let"],
+    });
+    expect(opts({ enabled: "yes", length: -1, overstrongF2D: 0 })).toEqual({ enabled: false, length: 15, overstrongF2D: null, excludeMaterials: [] });
+    expect(parseOne({}).options?.sgi3d).toBeUndefined();
+  });
+
   it("keeps the basis of Swedish partial factors when complete", () => {
     const opts = (partialFactors: unknown) => parseOne({ options: { partialFactors } }).options?.partialFactors;
     const basis = { safetyClass: 2, etaCu: 1.1, etaDrained: 1, variableLoadBase: 1.4 };
@@ -277,6 +286,18 @@ describe("parseProjectFile: models", () => {
     ).toMatchObject({ runState: "done", progress: 1, result: { minFOS: 1.3 } });
     // A result the app cannot show is dropped.
     expect(parseOne({ runState: "done", result: { minFOS: 1.3 } })).toMatchObject({ runState: "idle", result: null });
+    // a 3D result is kept whole or dropped, the rest of the result stays
+    const sgi3d = {
+      factorOfSafety: 1.03, f2dCritical: 0.92, equation: "2-3",
+      critical: { cx: 4, cy: 2, radius: 6, f2d: 0.93, fp: 1.1, f3d: 1.03, drivingMoment: 900, endFaceArea: 23, endFaceMoment: 1000 },
+      options: { length: 15, overstrongF2D: null, excludeMaterials: [] }, warnings: [],
+    };
+    expect(parseOne({ runState: "done", result: { ...result, sgi3d } }).result?.sgi3d).toEqual(sgi3d);
+    for (const bad of [{ ...sgi3d, options: {} }, { ...sgi3d, warnings: [3] }, { ...sgi3d, critical: { ...sgi3d.critical, fp: "x" } }]) {
+      const r = parseOne({ runState: "done", result: { ...result, sgi3d: bad } }).result;
+      expect(r?.minFOS).toBe(1.3);
+      expect(r?.sgi3d).toBeUndefined();
+    }
     expect(parseOne({ runState: "error", errorMessage: "x" })).toMatchObject({
       runState: "error",
       progress: 0,

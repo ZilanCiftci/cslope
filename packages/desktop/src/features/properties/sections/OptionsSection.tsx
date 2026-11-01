@@ -5,6 +5,7 @@ import type {
   PartialFactors,
   SafetyClass,
   SwedishFactorBasis,
+  Sgi3dSettings,
 } from "@cslope/engine";
 import { DEFAULT_FEM_SETTINGS, EC7_DA3_FACTORS, ITERATIONS_RANGE, SAFETY_CLASS_GAMMA_D, swedishPartialFactors } from "@cslope/engine";
 import type { FemAnalysisSettings } from "@cslope/engine";
@@ -567,6 +568,7 @@ export function OptionsSection({ plain = false }: OptionsSectionProps) {
             factors={options.partialFactors ?? null}
             onChange={(partialFactors) => setOptions({ partialFactors })}
           />
+          <Sgi3dFields settings={options.sgi3d} onChange={(sgi3d) => setOptions({ sgi3d })} />
         </div>
       </section>
 
@@ -714,6 +716,87 @@ function PartialFactorsFields({
               </label>
             ))}
           </div>
+        </>
+      )}
+    </div>
+  );
+}
+
+/** 3D effects off; a stage of 15 m, infinitely overstrong adjacent stability when switched on. */
+const SGI3D_DEFAULT: Sgi3dSettings = { enabled: false, length: 15, overstrongF2D: null, excludeMaterials: [] };
+
+/**
+ * 3D effects of a temporary slope after SGI's guidance: the stage length L,
+ * the adjacent stretches' F2D (blank: infinitely overstrong) and the
+ * materials left out of the end faces.
+ */
+function Sgi3dFields({
+  settings,
+  onChange,
+}: {
+  settings: Sgi3dSettings | undefined;
+  onChange: (s: Sgi3dSettings) => void;
+}) {
+  const s = settings ?? SGI3D_DEFAULT;
+  const set = (patch: Partial<Sgi3dSettings>) => onChange({ ...s, ...patch });
+  // by name, as the engine takes them; materials of the same name are one entry
+  const materialNames = [...new Set(useAppStore((st) => st.materials).map((m) => m.name))];
+  return (
+    <div className="col-span-2 flex flex-col gap-2">
+      <label
+        className="flex items-center gap-1.5"
+        title="F3D after SGI Vägledning 8 (Temporära slänter, 2024, section 2.1): the critical stretch of length L between two plane end faces of cohesive soil, over the circular surfaces of the analysis. Total stress analysis of normally to lightly overconsolidated clay."
+      >
+        <input type="checkbox" checked={s.enabled} onChange={(e) => set({ enabled: e.target.checked })} aria-label="3D effects (SGI)" />
+        <Label>3D effects (SGI Vägledning 8)</Label>
+      </label>
+      {s.enabled && (
+        <>
+          <div className="grid grid-cols-2 gap-x-3 gap-y-1">
+            <label className="flex flex-col gap-0.5" title="Length of the critical stretch: the stage of the excavation open at a time (m)">
+              <Label>Stage length L (m)</Label>
+              <DraftNumberInput value={s.length} min={0.5} step={0.5} onValueChange={(v) => v > 0 && set({ length: v })} aria-label="Stage length L" />
+            </label>
+            <label
+              className="flex flex-col gap-0.5"
+              title="F2D,överstark,min of the adjacent stretches (eq. 2-4). Blank: infinitely overstrong adjacent stability (eq. 2-3)."
+            >
+              <Label>Adjacent F2D (blank: ∞)</Label>
+              <input
+                type="number"
+                min={0}
+                step={0.05}
+                value={s.overstrongF2D ?? ""}
+                onChange={(e) => {
+                  const v = e.target.value === "" ? null : Number(e.target.value);
+                  if (v === null || (Number.isFinite(v) && v > 0)) set({ overstrongF2D: v });
+                }}
+                aria-label="Adjacent F2D"
+              />
+            </label>
+          </div>
+          {materialNames.length > 0 && (
+            <fieldset className="flex flex-col gap-0.5" title="Materials left out of the end faces, for example a fissured dry crust. Friction soil never counts.">
+              <Label>Not in the end faces</Label>
+              {materialNames.map((name) => (
+                <label key={name} className="flex items-center gap-1.5">
+                  <input
+                    type="checkbox"
+                    checked={s.excludeMaterials.includes(name)}
+                    onChange={(e) =>
+                      set({
+                        excludeMaterials: e.target.checked
+                          ? [...s.excludeMaterials, name]
+                          : s.excludeMaterials.filter((n) => n !== name),
+                      })
+                    }
+                    aria-label={`Leave ${name} out of the end faces`}
+                  />
+                  <span>{name}</span>
+                </label>
+              ))}
+            </fieldset>
+          )}
         </>
       )}
     </div>

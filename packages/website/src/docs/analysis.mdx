@@ -63,6 +63,20 @@ Safety class 3 with η = 1 and γQ/γd = 1.3 gives the Swedish set above. Which 
 
 Which factor applies depends on the material. Undrained models, and Mohr-Coulomb materials with φ = 0, are treated as undrained and take γcu. For lime-cement columns each part takes its own factor: the undrained strength of soil and columns takes γcu, c′ of the columns γc', and tan φ′ of the columns γφ′. Other materials take γc' and γφ'. With partial factors the result is an **over-design factor** on the design values: 1.0 or more means the design is satisfied. The summary shows it as *Min FOS (design values)*.
 
+## 3D effects (temporary slopes)
+
+Tick **3D effects (SGI Vägledning 8)** under **Design** to add the factor of safety of a temporary excavation opened in stages, after SGI's guidance (Vägledning 8, *Temporära slänter*, 2024, section 2.1). The stage of length $L$ is bounded by two plane end faces, whose undrained shear strength adds resisting moment to each circular surface of the 2D analysis:
+
+$$F_P = F_{2D} + \frac{2 \int c_u\, r\, dA}{L\, M_E}, \qquad F_{3D} = F_{2D} + k \cdot 0.75\,(F_P - F_{2D})$$
+
+with $M_E$ the surface's driving moment, the integral over the end face's cohesive soil ($r$ the distance to the circle's centre) and $k = 1$ for infinitely overstrong adjacent stability (eq. 2-3) or $k = 1 - F_{2D,krit,min} / F_{2D,överstark,min}$ for finite (eq. 2-4).
+
+- **Stage length L (m)**: the length of the excavation open at a time.
+- **Adjacent F2D**: $F_{2D,överstark,min}$ of the stretches beside the stage; leave it blank for infinitely overstrong adjacent stability.
+- **Not in the end faces**: materials left out of the end faces, for example a fissured dry crust. Friction soil never counts.
+
+The result is the smallest $F_{3D}$ over the circular surfaces of the search, which is generally on a shallower surface than the critical 2D one. The end faces take the undrained strength without anisotropy (its direct value), as design values when partial factors are on. The guidance applies to total stress analysis of normally to lightly overconsolidated clay; a 3D factor more than 25 % above the critical 2D factor is to be judged with care, and the result shows a warning then.
+
 ## Pore pressure
 
 **Pore pressure below an inclined water line**: *Vertical head (conventional)* or *Phreatic correction*. See [Water](/docs/water#pore-pressure).

@@ -246,3 +246,5 @@ export { runFemSummary, runFemSummaryWithBounds, type BoundSolverModules } from 
 // Exported from "@cslope/engine/verification" (src/verification/index.ts),
 // not from here: the problems cite their sources, and the app imports only
 // this entry, so they stay out of the shipped bundle.
+export type { Sgi3dOptions, Sgi3dResult, Sgi3dSettings, Sgi3dSurface } from "./types/sgi3d";
+export { sgi3dFactorOfSafety } from "./model/sgi3d";

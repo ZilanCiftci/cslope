@@ -13,6 +13,8 @@ import {
   type MaterialModel,
   type PartialFactors,
   type SwedishFactorBasis,
+  type Sgi3dResult,
+  type Sgi3dSettings,
 } from "@cslope/engine";
 import { DEFAULT_MODEL_NAME } from "../constants";
 import { nextId } from "./helpers";
@@ -436,6 +438,37 @@ function isBounds(raw: unknown): boolean {
   );
 }
 
+/** A saved 3D result (SGI) with its factors and critical circle. */
+function isSgi3dResult(raw: unknown): raw is Sgi3dResult {
+  if (!raw || typeof raw !== "object") return false;
+  const r = raw as Record<string, unknown>, c = r.critical as Record<string, unknown> | undefined;
+  const fin = (v: unknown) => typeof v === "number" && Number.isFinite(v);
+  return (
+    fin(r.factorOfSafety) && fin(r.f2dCritical) && (r.equation === "2-3" || r.equation === "2-4") &&
+    !!c && typeof c === "object" && ["cx", "cy", "radius", "f2d", "fp", "f3d", "drivingMoment", "endFaceArea", "endFaceMoment"].every((k) => fin(c[k])) &&
+    isSgi3dOptions(r.options) && Array.isArray(r.warnings) && r.warnings.every((w) => typeof w === "string")
+  );
+}
+
+/** The options a saved 3D result was computed with. */
+function isSgi3dOptions(raw: unknown): boolean {
+  if (!raw || typeof raw !== "object") return false;
+  const o = raw as Record<string, unknown>;
+  return (
+    typeof o.length === "number" && Number.isFinite(o.length) && o.length > 0 &&
+    (o.overstrongF2D === null || (typeof o.overstrongF2D === "number" && Number.isFinite(o.overstrongF2D))) &&
+    Array.isArray(o.excludeMaterials) && o.excludeMaterials.every((n) => typeof n === "string")
+  );
+}
+
+/** The 3D effects option: a positive stage length, a positive adjacent F2D or none, material names. */
+function normalizeSgi3dSettings(raw: Record<string, unknown>): Sgi3dSettings {
+  const L = typeof raw.length === "number" && Number.isFinite(raw.length) && raw.length > 0 ? raw.length : 15;
+  const ov = typeof raw.overstrongF2D === "number" && Number.isFinite(raw.overstrongF2D) && raw.overstrongF2D > 0 ? raw.overstrongF2D : null;
+  const ex = Array.isArray(raw.excludeMaterials) ? raw.excludeMaterials.filter((n): n is string => typeof n === "string") : [];
+  return { enabled: raw.enabled === true, length: L, overstrongF2D: ov, excludeMaterials: [...new Set(ex)] };
+}
+
 /** Whether a saved finite element result has the shape the canvas draws. */
 function isFemSummary(raw: unknown): raw is FemResultSummary {
   if (!raw || typeof raw !== "object") return false;
@@ -488,6 +521,9 @@ function savedRun(model: Record<string, unknown>): Pick<ModelEntry, "runState" |
   // A finite element result of another shape is dropped; the rest stays.
   if (result && result.fem !== undefined && !isFemSummary(result.fem)) delete result.fem;
   if (result && result.femError !== undefined && typeof result.femError !== "string") delete result.femError;
+  // a 3D result of another shape is dropped, as the finite elements'
+  if (result && result.sgi3d !== undefined && !isSgi3dResult(result.sgi3d)) delete result.sgi3d;
+  if (result && result.sgi3dError !== undefined && typeof result.sgi3dError !== "string") delete result.sgi3dError;
   const errorMessage = typeof model.errorMessage === "string" ? model.errorMessage : null;
   if (model.runState === "done" && result) return { runState: "done", progress: 1, result, errorMessage: null };
   if (model.runState === "error" && errorMessage) return { runState: "error", progress: 0, result: null, errorMessage };
@@ -1016,6 +1052,7 @@ function normalizeAnalysisOptions(raw: unknown): AnalysisOptions {
         ? o.porePressureHead
         : (base.porePressureHead ?? "vertical"),
     ...(o.fem && typeof o.fem === "object" ? { fem: normalizeFemSettings(o.fem as Record<string, unknown>) } : {}),
+    ...(o.sgi3d && typeof o.sgi3d === "object" ? { sgi3d: normalizeSgi3dSettings(o.sgi3d as Record<string, unknown>) } : {}),
   };
 }
 

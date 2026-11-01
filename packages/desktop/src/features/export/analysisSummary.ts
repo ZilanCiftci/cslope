@@ -224,6 +224,34 @@ export function buildAnalysisSummary(input: AnalysisSummaryInput): SummarySectio
   for (const w of result.warnings ?? []) res.push({ label: "Warning", value: w.message });
   sections.push({ title: "Result", rows: res });
 
+  // ── 3D effects (SGI) ──
+  if (result.sgi3d) {
+    const g = result.sgi3d, c = g.critical;
+    sections.push({
+      title: "3D effects (SGI Vägledning 8)",
+      rows: [
+        { label: "F3D", value: g.factorOfSafety.toFixed(3) },
+        { label: "Stage length L", value: `${fmt(g.options.length)} m` },
+        {
+          label: "Adjacent stability",
+          value: g.options.overstrongF2D != null
+            ? `finite, F2D,överstark,min = ${fmt(g.options.overstrongF2D)} (eq. 2-4)`
+            : "infinitely overstrong (eq. 2-3)",
+        },
+        { label: "F2D,krit,min", value: g.f2dCritical.toFixed(3) },
+        { label: "Its surface", value: `centre (${fmt(c.cx)}, ${fmt(c.cy)}), R = ${fmt(c.radius)} m; F2D = ${c.f2d.toFixed(3)}, FP = ${c.fp.toFixed(3)}` },
+        { label: "ME, end face", value: `${fmt(c.drivingMoment)} kNm/m; A = ${fmt(c.endFaceArea)} m², ∫cu r dA = ${fmt(c.endFaceMoment)} kNm` },
+        ...(g.options.excludeMaterials.length ? [{ label: "Not in the end faces", value: g.options.excludeMaterials.join(", ") }] : []),
+        ...g.warnings.map((w) => ({ label: "Warning", value: w })),
+      ],
+      note:
+        "F_P = F_2D + 2 ∫c_u r dA / (L M_E) over the end faces' cohesive soil (undrained, without anisotropy; design values with partial factors), " +
+        "F_3D = F_2D + k · 0.75 (F_P − F_2D) with k = 1 (eq. 2-3) or 1 − F_2D,krit,min / F_2D,överstark,min (eq. 2-4), the smallest over the circular surfaces.",
+    });
+  } else if (result.sgi3dError) {
+    sections.push({ title: "3D effects (SGI Vägledning 8)", rows: [{ label: "Not computed", value: result.sgi3dError }] });
+  }
+
   // ── Search ──
   const lim = input.analysisLimits;
   const search: SummaryRow[] = [];

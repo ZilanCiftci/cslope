@@ -47,6 +47,40 @@ const T_ACADS: SlopeDefinition = {
   udls: [{ magnitude: 10, x1: 5, x2: 15 }],
 };
 
+// A 1:2 cut in clay with a load behind the crest, facing left: the 3D circle comes back in model space
+const CUT_RTL: SlopeDefinition = {
+  orientation: "rtl",
+  coordinates: [[0, -12], [0, -4], [6, -4], [14, 0], [20, 0], [20, -12]],
+  materials: [{ name: "clay", model: { kind: "undrained", unitWeight: 18, undrainedShearStrength: 15 } }],
+  regionAssignments: [{ point: [10, -8], materialName: "clay" }],
+  udls: [{ magnitude: 20, x1: 15, x2: 19 }],
+} as unknown as SlopeDefinition;
+
+describe("analysis worker: 3D effects (SGI)", () => {
+  it("adds F3D over the circular surfaces when switched on, its circle in model space", () => {
+    const off = run(CUT_RTL, { method: "Morgenstern-Price", iterations: 300 });
+    if (off.type !== "analysis-complete") throw new Error("analysis failed");
+    expect(off.result.sgi3d).toBeUndefined();
+    const on = run(CUT_RTL, {
+      method: "Morgenstern-Price",
+      iterations: 300,
+      sgi3d: { enabled: true, length: 10, overstrongF2D: null, excludeMaterials: [] },
+    });
+    if (on.type !== "analysis-complete") throw new Error("analysis failed");
+    const g = on.result.sgi3d!;
+    expect(g.factorOfSafety).toBeGreaterThan(on.result.minFOS);
+    expect(g.f2dCritical).toBeCloseTo(on.result.minFOS, 6);
+    // the slope faces left: the circle's centre over the slope as drawn, right of its middle
+    expect(g.critical.cx).toBeGreaterThan(10);
+    expect(g.equation).toBe("2-3");
+    // a bad length reports an error and keeps the 2D result
+    const bad = run(CUT_RTL, { method: "Morgenstern-Price", iterations: 300, sgi3d: { enabled: true, length: 0, overstrongF2D: null, excludeMaterials: [] } });
+    if (bad.type !== "analysis-complete") throw new Error("analysis failed");
+    expect(bad.result.sgi3d).toBeUndefined();
+    expect(bad.result.sgi3dError).toMatch(/length/);
+  }, 120000);
+});
+
 describe("analysis worker result", () => {
   it("passes on the result warnings: a boundary ending inside a region", () => {
     const msg = run(

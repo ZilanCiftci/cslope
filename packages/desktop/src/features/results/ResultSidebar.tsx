@@ -518,6 +518,38 @@ export function ResultSidebar() {
                 {result.elapsedMs.toFixed(0)} ms
               </span>
             </div>
+            {result.sgi3d && (
+              <div className="mt-1.5 space-y-1 border-t pt-1.5" style={{ borderColor: "var(--color-vsc-border)" }}>
+                <div className="flex justify-between">
+                  <Label
+                    title={`SGI Vägledning 8, eq. ${result.sgi3d.equation}: the smallest F3D over the circular surfaces, stage length ${result.sgi3d.options.length} m${
+                      result.sgi3d.options.overstrongF2D != null ? `, adjacent F2D ${result.sgi3d.options.overstrongF2D}` : ", infinitely overstrong adjacent stability"
+                    }${result.sgi3d.options.excludeMaterials.length ? `; not in the end faces: ${result.sgi3d.options.excludeMaterials.join(", ")}` : ""}`}
+                  >
+                    {`F3D (SGI, L = ${result.sgi3d.options.length} m)`}
+                  </Label>
+                  <span className="font-bold tabular-nums" style={{ color: fosStatusColor(result.sgi3d.factorOfSafety, designValues) }}>
+                    {result.sgi3d.factorOfSafety.toFixed(3)}
+                  </span>
+                </div>
+                <div className="flex justify-between text-[11px]">
+                  <Label>Its surface: F2D, FP</Label>
+                  <span className="tabular-nums">
+                    {result.sgi3d.critical.f2d.toFixed(3)}, {result.sgi3d.critical.fp.toFixed(3)}
+                  </span>
+                </div>
+                {result.sgi3d.warnings.map((w) => (
+                  <p key={w} className="text-[11px]" style={{ color: "var(--color-vsc-warning)" }}>
+                    {w}
+                  </p>
+                ))}
+              </div>
+            )}
+            {!result.sgi3d && result.sgi3dError && (
+              <p className="mt-1.5 border-t pt-1.5 text-[11px]" style={{ borderColor: "var(--color-vsc-border)", color: "var(--color-vsc-warning)" }}>
+                3D effects (SGI): {result.sgi3dError}
+              </p>
+            )}
             {result.fem && <FemSummaryRows fem={result.fem} designValues={designValues} />}
             {!result.fem && result.femError && (
               <p className="mt-1.5 border-t pt-1.5 text-[11px]" style={{ borderColor: "var(--color-vsc-border)", color: "var(--color-vsc-warning)" }}>
