@@ -16,3 +16,10 @@ export const PAPER_FRAME_MARGIN_PX = 20;
 
 /** Raw grid step divisor used in grid-step snapping (canvas + PDF). */
 export const GRID_RAW_STEP_PX = 50;
+
+/**
+ * The finite element analysis is not finished for general release: its
+ * results are shown as experimental wherever they appear.
+ */
+export const FEM_EXPERIMENTAL_NOTE =
+  "Experimental: the finite element analysis is still under development. Its results are not verified for design and cannot be guaranteed; base the design on the limit equilibrium result.";

@@ -3,6 +3,7 @@
  */
 
 import { DraftNumberInput } from "../../components/ui/DraftNumberInput";
+import { FEM_EXPERIMENTAL_NOTE } from "../../constants";
 import { useCallback, useMemo, useState } from "react";
 import { PAPER_DIMENSIONS, useAppStore } from "../../store/app-store";
 import { Section } from "../../components/ui/Section";
@@ -1570,6 +1571,9 @@ function FemSummaryRows({ fem, designValues }: { fem: FemResultSummary; designVa
       : "Strength reduction by finite elements: the largest factor on c and tan φ at which the slope is still in equilibrium. It needs no slip surface; the plastic zone on the canvas shows the mechanism.";
   return (
     <div className="mt-1.5 space-y-1 border-t pt-1.5" style={{ borderColor: "var(--color-vsc-border)" }}>
+      <p className="text-[11px] font-semibold" style={{ color: "var(--color-vsc-warning)" }} title={FEM_EXPERIMENTAL_NOTE} role="note">
+        Finite elements: experimental, not for design
+      </p>
       {fem.bounds && (
         <div className="flex justify-between">
           <Label

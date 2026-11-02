@@ -373,7 +373,7 @@ export function ResultsMenu({ isOpen, onActivate, panelHost }: Props) {
                   <RibbonSmallButton
                     icon={<PlasticZoneIcon />}
                     label="Plastic zone"
-                    title="Shade the plastic zone of the finite element analysis (the failure mechanism)"
+                    title="Shade the plastic zone of the finite element analysis (the failure mechanism). Experimental: not verified for design."
                     onClick={() =>
                       setRvs({ showFemPlasticZone: !(rvs.showFemPlasticZone ?? true) })
                     }

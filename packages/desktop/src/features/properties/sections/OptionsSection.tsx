@@ -14,6 +14,8 @@ import { Section } from "../../../components/ui/Section";
 import { Label } from "../../../components/ui/Label";
 import { DraftNumberInput } from "../../../components/ui/DraftNumberInput";
 import { GroupHeading } from "../GroupHeading";
+import { ExperimentalBadge } from "../../../components/ui/ExperimentalBadge";
+import { FEM_EXPERIMENTAL_NOTE } from "../../../constants";
 import { BlockSearchSection } from "./BlockSearchSection";
 
 const METHODS: AnalysisMethod[] = ["Bishop", "Janbu", "Morgenstern-Price"];
@@ -584,7 +586,10 @@ export function OptionsSection({ plain = false }: OptionsSectionProps) {
       </section>
 
       <section>
-        <GroupHeading>Finite elements</GroupHeading>
+        <GroupHeading>
+          Finite elements
+          <ExperimentalBadge />
+        </GroupHeading>
         <FemFields
           settings={options.fem ?? DEFAULT_FEM_SETTINGS}
           onChange={(fem) => setOptions({ fem })}
@@ -855,6 +860,14 @@ function FemFields({
         />
         <Label>Also run strength reduction (FE)</Label>
       </label>
+      <p
+        className="col-span-2 text-[10px]"
+        style={{ color: "var(--color-vsc-warning)" }}
+        role="note"
+        aria-label="Finite elements are experimental"
+      >
+        {FEM_EXPERIMENTAL_NOTE}
+      </p>
       <label className="col-span-2 flex flex-col gap-0.5">
         <Label>Flow rule</Label>
         <select

@@ -75,3 +75,14 @@ describe("OptionsSection Bishop hint", () => {
     expect(screen.queryByText(hint)).toBeNull();
   });
 });
+
+describe("OptionsSection finite elements", () => {
+  it("marks finite elements as experimental and not for design", () => {
+    useAppStore.getState().newProject();
+    render(<OptionsSection plain />);
+    expect(screen.getByRole("heading", { name: /Finite elements/ })).toHaveTextContent("Experimental");
+    expect(screen.getByRole("note", { name: "Finite elements are experimental" })).toHaveTextContent(
+      /not verified for design and cannot be guaranteed/,
+    );
+  });
+});

@@ -120,7 +120,7 @@ function ProblemTable() {
             ["Janbu", "Janbu"],
             ["Spencer", "Spencer"],
             ["Morgenstern-Price", "Morgenstern–Price"],
-            ["Finite elements", "Strength reduction (FE)"],
+            ["Finite elements", "Strength reduction (FE, experimental)"],
           ]}
         />
         <Select<PublishedFilter>
@@ -323,7 +323,8 @@ export function Verification() {
             <p className="font-medium text-foreground">cSlope</p>
             <p className="mt-1">
               cSlope&apos;s result for each analysis, as the program computes it today: the automated tests run the same
-              problems on every change to the code.
+              problems on every change to the code. The finite element results are experimental: the analysis is still
+              under development and not for design use.
             </p>
           </li>
         </ul>

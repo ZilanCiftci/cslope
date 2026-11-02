@@ -2652,12 +2652,15 @@ function drawFemPlasticZone(
   if (!(max > 0)) return;
   ctx.save();
   const { x, y, triangles: t } = fem;
+  // the top of the shaded zone, for its label
+  let topX = 0, topY = Infinity;
   for (let e = 0; e < field.length; e++) {
     const r = field[e] / max;
     if (r < 0.05) continue;
     const [ax, ay] = toC(x[t[3 * e]], y[t[3 * e]]);
     const [bx, by] = toC(x[t[3 * e + 1]], y[t[3 * e + 1]]);
     const [cx, cy] = toC(x[t[3 * e + 2]], y[t[3 * e + 2]]);
+    for (const [px, py] of [[ax, ay], [bx, by], [cx, cy]]) if (py < topY) { topY = py; topX = px; }
     ctx.fillStyle = `rgba(214, 40, 40, ${(0.85 * r).toFixed(3)})`;
     ctx.beginPath();
     ctx.moveTo(ax, ay);
@@ -2665,6 +2668,14 @@ function drawFemPlasticZone(
     ctx.lineTo(cx, cy);
     ctx.closePath();
     ctx.fill();
+  }
+  // the finite element analysis is experimental: said where its result is drawn
+  if (Number.isFinite(topY)) {
+    ctx.font = "11px sans-serif";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "bottom";
+    ctx.fillStyle = "rgba(160, 30, 30, 0.95)";
+    ctx.fillText("FE plastic zone (experimental)", topX, topY - 4);
   }
   ctx.restore();
 }
