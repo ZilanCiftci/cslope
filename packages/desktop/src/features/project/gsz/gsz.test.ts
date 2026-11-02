@@ -214,14 +214,31 @@ describe(".gsz import", () => {
     expect(back.definition.udls!.every((u) => u.direction === "normal")).toBe(true);
   });
 
+  it("reads the default search (no Option) and an exit given as a point", () => {
+    const xml = XML.replace("<Option>EntryExit</Option>", "")
+      .replace('<RightSideLeftPt X="21" Y="5" /><RightSideRightPt X="29" Y="5" />', '<RightOption>Point</RightOption><RightSideLeftPt X="21" Y="5" />');
+    const d = gszToDefinition({ ...parseGszXml(xml), results: new Map() }, 1).definition;
+    expect(d.analysisLimits).toEqual({ entryLeftX: 1, entryRightX: 9, exitLeftX: 21, exitRightX: 21 });
+  });
+
   it("imports and exports a tension crack at a limiting angle", async () => {
-    const xml = XML.replace("<SlipSurface>", "<TensionCrack><TensionOption>Angle</TensionOption><Angle>62</Angle><PctFilledWithWater>50</PctFilledWithWater></TensionCrack><SlipSurface>");
+    // The file's angle is counter-clockwise from +x: 120° for sliding to
+    // the right is a base inclination of 60° (the format's own example).
+    const xml = XML.replace("<SlipSurface>", "<TensionCrack><TensionOption>Angle</TensionOption><Angle>120</Angle><PctFilledWithWater>0.5</PctFilledWithWater></TensionCrack><SlipSurface>");
     const imp = gszToDefinition({ ...parseGszXml(xml), results: new Map() }, 1);
-    expect(imp.options).toMatchObject({ tensionCrackAngle: 62, tensionCrackWater: 0.5 });
-    expect(imp.notes.join(" ")).not.toMatch(/tension crack option/);
+    expect(imp.options).toMatchObject({ tensionCrackAngle: 60, tensionCrackWater: 0.5 });
+    expect(imp.notes.join(" ")).not.toMatch(/tension crack/);
     const model = modelFromDefinition(imp.definition, { id: "c", name: "C", options: imp.options });
+    const written = modelToGszXml(model).xml;
+    expect(written).toMatch(/<Angle>120<\/Angle>/);
     const [back] = await gszImports(modelToGsz(model).bytes, "C.gsz");
-    expect(back.options).toMatchObject({ tensionCrackAngle: 62, tensionCrackWater: 0.5 });
+    expect(back.options).toMatchObject({ tensionCrackAngle: 60, tensionCrackWater: 0.5 });
+    // Sliding to the left: the angle is the inclination itself.
+    const rtl = gszToDefinition({ ...parseGszXml(xml.replace("LeftToRight", "RightToLeft")), results: new Map() }, 1);
+    expect(rtl.options.tensionCrackAngle).toBeUndefined();
+    expect(rtl.notes.join(" ")).toMatch(/tension crack angle 120°/);
+    const rtl62 = gszToDefinition({ ...parseGszXml(xml.replace("LeftToRight", "RightToLeft").replace("<Angle>120", "<Angle>62")), results: new Map() }, 1);
+    expect(rtl62.options.tensionCrackAngle).toBe(62);
   });
 
   it("reports a strength model it cannot read and keeps its parameters", () => {

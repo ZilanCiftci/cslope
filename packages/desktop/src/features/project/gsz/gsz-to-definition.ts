@@ -420,10 +420,15 @@ export function gszToDefinition(file: GszFile, analysisId: number, fileName = "g
         options.tensionCrackDepth = Number((depths.reduce((s, d) => s + d, 0) / depths.length).toFixed(3));
         notes.push(`The tension crack line is imported as a crack depth of ${options.tensionCrackDepth} m.`);
       }
-    } else if (/angle/i.test(tc.option) && tc.angle !== undefined && tc.angle > 0 && tc.angle < 90) {
-      options.tensionCrackAngle = tc.angle;
+    } else if (/angle/i.test(tc.option) && tc.angle !== undefined) {
+      // The file's angle is counter-clockwise from +x: for sliding to the
+      // right the base inclination is 180° − angle (120° means 60°), to
+      // the left the angle itself.
+      const inclination = orientation === "rtl" ? tc.angle : 180 - tc.angle;
+      if (inclination > 0 && inclination < 90) options.tensionCrackAngle = Number(inclination.toFixed(6));
+      else notes.push(`The tension crack angle ${tc.angle}° (a base inclination of ${inclination}°) is not imported.`);
     } else notes.push(`The tension crack option "${tc.option}"${tc.angle !== undefined ? ` (${tc.angle}°)` : ""} is not imported.`);
-    if (tc.waterPercent > 0 && (options.tensionCrackAngle || options.tensionCrackDepth)) options.tensionCrackWater = Math.min(1, tc.waterPercent / 100);
+    if (tc.waterFraction > 0 && (options.tensionCrackAngle || options.tensionCrackDepth)) options.tensionCrackWater = Math.min(1, tc.waterFraction);
   }
   if (stab && (stab.seismicH !== 0 || stab.seismicV !== 0)) {
     notes.push(`The seismic coefficients (kh = ${stab.seismicH}, kv = ${stab.seismicV}) are not imported.`);

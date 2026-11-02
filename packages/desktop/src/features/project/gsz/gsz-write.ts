@@ -235,8 +235,8 @@ ${ids.map((d) => `              <DataPoint>${d}</DataPoint>`).join("\n")}
     (opts.tensionCrackAngle ?? 0) > 0
       ? `        <TensionCrack>
           <TensionOption>Angle</TensionOption>
-          <Angle>${n(opts.tensionCrackAngle!)}</Angle>
-          <PctFilledWithWater>${n((opts.tensionCrackWater ?? 0) * 100)}</PctFilledWithWater>
+          <Angle>${n(rtl ? opts.tensionCrackAngle! : 180 - opts.tensionCrackAngle!)}</Angle>
+          <PctFilledWithWater>${n(opts.tensionCrackWater ?? 0)}</PctFilledWithWater>
         </TensionCrack>
 `
       : "";

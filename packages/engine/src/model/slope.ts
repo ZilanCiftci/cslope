@@ -364,6 +364,32 @@ export class Slope {
     return this._limits;
   }
 
+  /**
+   * The limits the search uses. A range given as a single point (an exit
+   * at the toe, as files from other programs give it) is widened by 1e-5
+   * of the model's width to each side: a circle exactly through a corner
+   * of the ground only touches it there and runs on in the soil, so no
+   * circle would exit at the point itself; the ones just beside it do
+   * (1.2514 against 1.2535 on a public example with its exit at the toe,
+   * where the point alone gave 1.331 from the few circles that rounding
+   * let through).
+   */
+  get searchLimits(): Readonly<[number, number, number, number]> {
+    let [entryLeftX, entryRightX, exitLeftX, exitRightX] = this._limits;
+    const xs = this._surfaceLineX;
+    const width = xs && xs.length > 1 ? Math.max(...xs) - Math.min(...xs) : 0;
+    const widen = 1e-5 * width;
+    if (widen > 0 && entryRightX - entryLeftX < 1e-9 * width) {
+      entryLeftX -= widen;
+      entryRightX += widen;
+    }
+    if (widen > 0 && exitRightX - exitLeftX < 1e-9 * width) {
+      exitLeftX -= widen;
+      exitRightX += widen;
+    }
+    return [entryLeftX, entryRightX, exitLeftX, exitRightX];
+  }
+
   get minFailureDistance(): number {
     return this._minFailureDistance;
   }

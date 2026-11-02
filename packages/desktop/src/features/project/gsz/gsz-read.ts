@@ -75,7 +75,12 @@ export interface GszStability {
   piezometricMaxSuction: Map<number, number>;
   surcharges: GszSurcharge[];
   lineLoads: GszLineLoad[];
-  tensionCrack?: { option: string; angle?: number; line: Pt[]; waterPercent: number };
+  /**
+   * waterFraction: PctFilledWithWater, which despite its name is the
+   * fraction filled (1 = full, as the format's tension crack example
+   * states).
+   */
+  tensionCrack?: { option: string; angle?: number; line: Pt[]; waterFraction: number };
   seismicH: number;
   seismicV: number;
 }
@@ -267,11 +272,16 @@ export function parseGszXml(xml: string): Omit<GszFile, "results"> {
     const slip = child(entry, "SlipSurface");
     const ee = child(slip, "EntryExit");
     const xOf = (tag: string) => num(child(ee, tag)?.getAttribute("X"));
-    const [l1, l2, r1, r2] = ["LeftSideLeftPt", "LeftSideRightPt", "RightSideLeftPt", "RightSideRightPt"].map(xOf);
+    let [l1, l2, r1, r2] = ["LeftSideLeftPt", "LeftSideRightPt", "RightSideLeftPt", "RightSideRightPt"].map(xOf);
+    // An entry or exit given as a single point (LeftOption / RightOption
+    // "Point") has only its first point.
+    if (/point/i.test(childText(ee, "LeftOption") ?? "")) l2 ??= l1;
+    if (/point/i.test(childText(ee, "RightOption") ?? "")) r2 ??= r1;
     const seis = child(entry, "Seismic");
     stability.set(aid, {
       direction: childText(slip, "DirectionOfSlip"),
-      slipOption: childText(slip, "Option"),
+      // The default search (Entry and Exit) is not written.
+      slipOption: childText(slip, "Option") ?? (ee ? "EntryExit" : undefined),
       entryExit:
         l1 !== undefined && l2 !== undefined && r1 !== undefined && r2 !== undefined
           ? { left: [Math.min(l1, l2), Math.max(l1, l2)], right: [Math.min(r1, r2), Math.max(r1, r2)] }
@@ -285,7 +295,7 @@ export function parseGszXml(xml: string): Omit<GszFile, "results"> {
       surcharges,
       lineLoads,
       tensionCrack: tcOption
-        ? { option: tcOption, angle: num(childText(tc, "Angle")), line: pointsOf(tc), waterPercent: num(childText(tc, "PctFilledWithWater")) ?? 0 }
+        ? { option: tcOption, angle: num(childText(tc, "Angle")), line: pointsOf(tc), waterFraction: num(childText(tc, "PctFilledWithWater")) ?? 0 }
         : undefined,
       seismicH: num(seis?.getAttribute("Horizontal")) ?? 0,
       seismicV: num(seis?.getAttribute("Vertical")) ?? 0,

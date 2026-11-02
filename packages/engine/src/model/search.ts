@@ -148,7 +148,7 @@ function isPlaneWithinSearchLimits(
   slope: Slope,
   plane: Pick<SearchPlane, "lc" | "rc">,
 ): boolean {
-  const [entryLeftX, entryRightX, exitLeftX, exitRightX] = slope.limits;
+  const [entryLeftX, entryRightX, exitLeftX, exitRightX] = slope.searchLimits;
   const tol = 1e-9;
   return (
     plane.lc[0] >= entryLeftX - tol &&
@@ -595,7 +595,7 @@ export function generateRefinedPlanes(
   const seeds = chooseSeeds(slope, validRanked, 10);
 
   const grid = getSearchGridSpec(slope);
-  const [entryLeftX, entryRightX, exitLeftX, exitRightX] = slope.limits;
+  const [entryLeftX, entryRightX, exitLeftX, exitRightX] = slope.searchLimits;
   const entryStep =
     grid.numPointsTop > 1
       ? Math.abs(entryRightX - entryLeftX) / (grid.numPointsTop - 1)
@@ -719,7 +719,7 @@ export function generateLocalPlanes(
   const generated: SearchPlane[] = [];
 
   const grid = getSearchGridSpec(slope);
-  const [entryLeftX, entryRightX, exitLeftX, exitRightX] = slope.limits;
+  const [entryLeftX, entryRightX, exitLeftX, exitRightX] = slope.searchLimits;
   const scale = 0.5 ** (level + 1);
   const entryStep =
     grid.numPointsTop > 1
@@ -808,7 +808,7 @@ export function generateLocalPlanes(
 export function setEntryExitPlanes(slope: Slope): void {
   const { numCircles, numPointsTop, numPointsBot } = getSearchGridSpec(slope);
 
-  const [entryLeftX, entryRightX, exitLeftX, exitRightX] = slope.limits;
+  const [entryLeftX, entryRightX, exitLeftX, exitRightX] = slope.searchLimits;
 
   // Generate entry (left) coordinates
   const leftCoords: [number, number][] = [];
