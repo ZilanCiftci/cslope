@@ -272,11 +272,11 @@ export function parseGszXml(xml: string): Omit<GszFile, "results"> {
     const slip = child(entry, "SlipSurface");
     const ee = child(slip, "EntryExit");
     const xOf = (tag: string) => num(child(ee, tag)?.getAttribute("X"));
-    let [l1, l2, r1, r2] = ["LeftSideLeftPt", "LeftSideRightPt", "RightSideLeftPt", "RightSideRightPt"].map(xOf);
+    const [l1, l2Given, r1, r2Given] = ["LeftSideLeftPt", "LeftSideRightPt", "RightSideLeftPt", "RightSideRightPt"].map(xOf);
     // An entry or exit given as a single point (LeftOption / RightOption
     // "Point") has only its first point.
-    if (/point/i.test(childText(ee, "LeftOption") ?? "")) l2 ??= l1;
-    if (/point/i.test(childText(ee, "RightOption") ?? "")) r2 ??= r1;
+    const l2 = /point/i.test(childText(ee, "LeftOption") ?? "") ? (l2Given ?? l1) : l2Given;
+    const r2 = /point/i.test(childText(ee, "RightOption") ?? "") ? (r2Given ?? r1) : r2Given;
     const seis = child(entry, "Seismic");
     stability.set(aid, {
       direction: childText(slip, "DirectionOfSlip"),

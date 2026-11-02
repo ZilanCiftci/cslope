@@ -1,7 +1,10 @@
-/// <reference types="vitest/config" />
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 import tailwindcss from "@tailwindcss/vite";
+import { configDefaults } from "vitest/config";
+
+/** Left out of the quick run (CSLOPE_QUICK_TESTS=1): full engine searches. */
+const SLOW = ["src/test/engine/benchmarks.test.ts", "src/test/engine/mirrored-examples.test.ts"];
 
 export default defineConfig({
   plugins: [tailwindcss(), react()],
@@ -18,6 +21,7 @@ export default defineConfig({
           environment: "jsdom",
           setupFiles: ["./src/test/setup.ts"],
           include: ["src/**/*.{test,spec}.{ts,tsx}"],
+          exclude: process.env.CSLOPE_QUICK_TESTS ? [...configDefaults.exclude, ...SLOW] : configDefaults.exclude,
         },
       },
       {

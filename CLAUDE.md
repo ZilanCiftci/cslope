@@ -28,3 +28,7 @@ cd packages/website && bun scripts/media-sizes.ts
 ```
 
 Check that the factors of safety in the images match the table. The examples are listed in packages/website/src/content/home-examples.ts.
+
+## CI
+
+Pushes to working branches run a quick suite (CSLOPE_QUICK_TESTS=1: no verification problems or slowest FE/search tests, desktop on Linux). Main and pull requests run the full suite. Before pushing an engine change to main, run the full engine tests locally (`cd packages/engine && bunx vitest run`).

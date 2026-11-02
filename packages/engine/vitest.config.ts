@@ -1,4 +1,23 @@
-import { defineConfig } from "vitest/config";
+import { configDefaults, defineConfig } from "vitest/config";
+
+/**
+ * Left out of the quick run (CSLOPE_QUICK_TESTS=1, CI on pushes to working
+ * branches): the verification problems and the slowest finite element and
+ * search tests, about 780 of the suite's 990 test seconds (2026-11). The
+ * full suite runs on main and on pull requests.
+ */
+const SLOW = [
+  "src/model/verification-problems-*.test.ts",
+  "src/model/verification.test.ts",
+  "src/model/benchmarks.test.ts",
+  "src/model/reliability.test.ts",
+  "src/model/search-review-c2.test.ts",
+  "src/model/orientation-matrix.test.ts",
+  "src/fem/srm.test.ts",
+  "src/fem/lower-bound-corner.test.ts",
+  "src/fem/initial-stress.test.ts",
+  "src/fem/piles.test.ts",
+];
 
 export default defineConfig({
   test: {
@@ -8,6 +27,7 @@ export default defineConfig({
     // about 25 s under coverage on four cores (V094), more on CI runners.
     testTimeout: 120_000,
     include: ["src/**/*.{test,spec}.{ts,tsx}"],
+    exclude: process.env.CSLOPE_QUICK_TESTS ? [...configDefaults.exclude, ...SLOW] : configDefaults.exclude,
     coverage: {
       provider: "v8",
       // Measured and reported, never a reason to fail the run: the

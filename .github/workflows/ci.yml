@@ -7,9 +7,16 @@ on:
 permissions:
   contents: read
 
+# Pushes to working branches run a quick suite: the engine and desktop
+# tests without the verification problems and the slowest finite element
+# and search tests (CSLOPE_QUICK_TESTS, see the vitest configs), and the
+# desktop app on Linux. Pushes to main and pull requests run everything,
+# the desktop app on Windows, where it ships.
+env:
+  CSLOPE_QUICK_TESTS: ${{ (github.event_name == 'push' && github.ref != 'refs/heads/main') && '1' || '' }}
+
 # The three jobs run in parallel. The engine is platform-independent
-# TypeScript and runs on the faster Linux runner; the desktop app (Electron
-# main process, file paths) is tested on Windows, where it ships.
+# TypeScript and runs on the faster Linux runner.
 jobs:
   check:
     runs-on: ubuntu-latest
@@ -57,7 +64,7 @@ jobs:
         run: bun run --filter @cslope/engine test
 
   desktop:
-    runs-on: windows-latest
+    runs-on: ${{ (github.event_name == 'push' && github.ref != 'refs/heads/main') && 'ubuntu-latest' || 'windows-latest' }}
     steps:
       - name: Checkout
         uses: actions/checkout@v6
