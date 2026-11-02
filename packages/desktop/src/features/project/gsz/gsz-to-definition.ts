@@ -8,7 +8,7 @@
 
 import type { AnalysisOptions, MaterialModel, SlopeDefinition } from "@cslope/engine";
 import { regionInteriorPoint } from "../../../utils/regions";
-import type { GszFile, GszMaterial, GszSlipResult } from "./gsz-read";
+import type { GszBlockGrid, GszFile, GszMaterial, GszSlipResult } from "./gsz-read";
 
 type Pt = [number, number];
 
@@ -208,7 +208,13 @@ function suctionOf(m: GszMaterial, phiB: number | undefined, water: MaterialWate
   return { phiB, ...(water.maxSuction !== undefined && water.maxSuction > 0 ? { maxSuction: water.maxSuction } : {}) };
 }
 
-function materialModel(m: GszMaterial, scale: { len: number; weight: number; stress: number }, notes: string[], water: MaterialWater = { hasLine: false }): MaterialModel {
+function materialModel(
+  m: GszMaterial,
+  scale: { len: number; weight: number; stress: number },
+  notes: string[],
+  water: MaterialWater = { hasLine: false },
+  anisotropyFunctions?: Map<number, [number, number][]>,
+): MaterialModel {
   const f = (k: string): number | undefined => {
     const v = Number(m.fields[k]);
     return Number.isFinite(v) && m.fields[k] !== undefined ? v : undefined;
@@ -216,6 +222,18 @@ function materialModel(m: GszMaterial, scale: { len: number; weight: number; str
   const gamma = (f("UnitWeight") ?? 0) * scale.weight;
   const unitWeight = gamma > 0 ? gamma : 20;
   if (!(gamma > 0) && m.model !== "Bedrock") notes.push(`Material "${m.name}": no unit weight in the file; 20 kN/m³ used.`);
+  // An anisotropy function on the shear strength: on the undrained models
+  // as their anisotropy (interpolated linearly; the file uses a spline).
+  const anisoId = f("ShearAnisoFnNum");
+  const aniso = anisoId !== undefined ? anisotropyFunctions?.get(anisoId) : undefined;
+  const undrainedAniso = (): { anisotropy?: [number, number][] } => {
+    if (!aniso) return {};
+    notes.push(`Material "${m.name}": the anisotropy function is imported as factors interpolated linearly between its ${aniso.length} points (the file uses a spline).`);
+    return { anisotropy: aniso };
+  };
+  if (aniso && m.model !== "UndrainedPhiZero" && m.model !== "SFnDepth") {
+    notes.push(`Material "${m.name}": the anisotropy function on the shear strength is not imported for the model "${m.model}".`);
+  }
   switch (m.model) {
     case "MohrCoulomb":
       return {
@@ -226,26 +244,42 @@ function materialModel(m: GszMaterial, scale: { len: number; weight: number; str
         ...suctionOf(m, f("UnsatPhiB"), water, notes),
       };
     case "UndrainedPhiZero":
-      return { kind: "undrained", unitWeight, undrainedShearStrength: (f("Cohesion") ?? f("CohesionPrime") ?? 0) * scale.stress };
+      return { kind: "undrained", unitWeight, undrainedShearStrength: (f("Cohesion") ?? f("CohesionPrime") ?? 0) * scale.stress, ...undrainedAniso() };
+    case "SFnDepth": {
+      // Su at the top of the layer and its increase with depth below it
+      const top = f("CTopOfLayer"), rate = f("CRateOfIncrease"), max = f("CMaximum");
+      if (top !== undefined) {
+        return {
+          kind: "s-f-depth",
+          unitWeight,
+          suRef: top * scale.stress,
+          depthRef: 0,
+          rate: ((rate ?? 0) * scale.stress) / scale.len,
+          depthReference: "layer-top",
+          ...(max !== undefined && max > 0 ? { suMax: max * scale.stress } : {}),
+          ...undrainedAniso(),
+        };
+      }
+      break;
+    }
     case "Bedrock":
       return { kind: "impenetrable", unitWeight };
     case "HighStrength":
       return { kind: "high-strength", unitWeight };
-    default: {
-      const c = (f("CohesionPrime") ?? f("Cohesion") ?? 0) * scale.stress;
-      const phi = f("PhiPrime") ?? 0;
-      const params = Object.entries(m.fields)
-        .filter(([k]) => !/FnNum$|Model$/.test(k))
-        .map(([k, v]) => `${k} = ${v}`)
-        .join(", ");
-      // no strength in the plain fields (it is in a function): a placeholder the model accepts
-      const placeholder = !(c > 0) && !(phi > 0);
-      notes.push(
-        `Material "${m.name}": the strength model "${m.model || "unnamed"}" has no counterpart in the import yet; it is read as Mohr-Coulomb with ${placeholder ? "a placeholder c = 0.001 kPa (the file gives the strength as a function)" : `c = ${c.toFixed(2)} kPa, φ = ${phi}°`}, which is NOT the same strength. Enter it by hand. The file gives: ${params}.`,
-      );
-      return { kind: "mohr-coulomb", unitWeight, cohesion: placeholder ? 0.001 : c, frictionAngle: phi };
-    }
   }
+  // A model not read above: Mohr-Coulomb from its plain fields, with a note.
+  const c = (f("CohesionPrime") ?? f("Cohesion") ?? 0) * scale.stress;
+  const phi = f("PhiPrime") ?? 0;
+  const params = Object.entries(m.fields)
+    .filter(([k]) => !/FnNum$|Model$/.test(k))
+    .map(([k, v]) => `${k} = ${v}`)
+    .join(", ");
+  // no strength in the plain fields (it is in a function): a placeholder the model accepts
+  const placeholder = !(c > 0) && !(phi > 0);
+  notes.push(
+    `Material "${m.name}": the strength model "${m.model || "unnamed"}" has no counterpart in the import yet; it is read as Mohr-Coulomb with ${placeholder ? "a placeholder c = 0.001 kPa (the file gives the strength as a function)" : `c = ${c.toFixed(2)} kPa, φ = ${phi}°`}, which is NOT the same strength. Enter it by hand. The file gives: ${params}.`,
+  );
+  return { kind: "mohr-coulomb", unitWeight, cohesion: placeholder ? 0.001 : c, frictionAngle: phi };
 }
 
 /** One stability analysis of a .gsz file as a slope definition. */
@@ -342,7 +376,7 @@ export function gszToDefinition(file: GszFile, analysisId: number, fileName = "g
     const c = m.color;
     return {
       name: nameOf.get(id)!,
-      model: materialModel(m, scale, notes, waterOfMaterial.get(id)),
+      model: materialModel(m, scale, notes, waterOfMaterial.get(id), file.anisotropyFunctions),
       ...(c ? { color: `#${c.map((v) => v.toString(16).padStart(2, "0")).join("")}` } : {}),
       ...(waterIdOf.has(id) ? { waterTableId: waterIdOf.get(id) } : {}),
     };
@@ -402,6 +436,7 @@ export function gszToDefinition(file: GszFile, analysisId: number, fileName = "g
   else if (best?.direction !== undefined) orientation = best.direction > 0 ? "ltr" : "rtl";
 
   let analysisLimits: SlopeDefinition["analysisLimits"];
+  let blockSearchObjects: SlopeDefinition["blockSearchObjects"];
   if (stab?.entryExit && /entry/i.test(stab.slipOption ?? "")) {
     const { left, right } = stab.entryExit;
     const [entry, exit] = orientation === "rtl" ? [right, left] : [left, right];
@@ -411,6 +446,26 @@ export function gszToDefinition(file: GszFile, analysisId: number, fileName = "g
     };
   } else if (stab && /fully/i.test(stab.slipOption ?? "") && stab.fullySpecified.length > 0) {
     // the file's own surfaces, analysed alone (below)
+  } else if (stab?.block && /block/i.test(stab.slipOption ?? "")) {
+    // The two grids as windows of the block search, their end angles (°
+    // counter-clockwise from +x) as the inclinations of the end segments:
+    // the upslope end rises backwards (180° − angle when sliding to the
+    // right), the downslope end forwards (the angle).
+    const rtl = orientation === "rtl";
+    const window = (g: GszBlockGrid) => {
+      const ur: Pt = [g.ul[0] + g.lr[0] - g.ll[0], g.ul[1] + g.lr[1] - g.ll[1]];
+      return { points: [g.ul, g.ll, g.lr, ur].map(L) };
+    };
+    const incl = (a: number, upslope: boolean) => (upslope !== rtl ? 180 - a : a);
+    const range = (g: GszBlockGrid, upslope: boolean): [number, number] => {
+      const [p, q] = g.angles.map((a) => incl(a, upslope));
+      return [Math.min(p, q), Math.max(p, q)];
+    };
+    const [up, down] = rtl ? [stab.block.right, stab.block.left] : [stab.block.left, stab.block.right];
+    blockSearchObjects = [window(stab.block.left), window(stab.block.right)];
+    Object.assign(options, { searchMethod: "block", blockActiveAngle: range(up, true), blockPassiveAngle: range(down, false) });
+    if (stab.optimised) options.nonCircularOptimization = true;
+    notes.push("The block search grids are imported as block search windows, with their end angles.");
   } else if (stab?.slipOption) {
     notes.push(`The file's slip surface search ("${stab.slipOption}") is not imported; cSlope's own search over the whole slope is used.`);
   }
@@ -472,6 +527,7 @@ export function gszToDefinition(file: GszFile, analysisId: number, fileName = "g
     ...(analysisLimits ? { analysisLimits } : {}),
     ...(reference ? { customSearchPlanes: [{ cx: reference.cx, cy: reference.cy, radius: reference.r }] } : {}),
     ...(customSurfaces.length > 0 ? { customSurfaces, customPlanesOnly: true } : {}),
+    ...(blockSearchObjects ? { blockSearchObjects } : {}),
   } as SlopeDefinition;
   const base = fileName.replace(/\.gsz$/i, "");
   return { name: stabilityAnalyses(file).length > 1 ? `${base} – ${analysis.name}` : base, definition, options, notes, reference };

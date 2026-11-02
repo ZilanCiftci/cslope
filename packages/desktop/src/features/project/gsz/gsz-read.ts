@@ -66,6 +66,12 @@ export interface GszStability {
   projected: boolean;
   /** Fully specified slip surfaces (polylines) and their moment axis. */
   fullySpecified: Pt[][];
+  /**
+   * Block search: each grid as its corners (upper left, lower left, lower
+   * right) and the range of the end segment's angle (°, counter-clockwise
+   * from +x).
+   */
+  block?: { left: GszBlockGrid; right: GszBlockGrid };
   axis?: Pt;
   /** Piezometric surface id → its points. */
   piezometric: Map<number, Pt[]>;
@@ -112,6 +118,11 @@ export interface GszFile {
   stability: Map<number, GszStability>;
   /** Analysis id → the unit weight of water and the pore pressure option. */
   water: Map<number, { gammaWater?: number; option: string }>;
+  /**
+   * Anisotropy functions by id: [inclination °, modifier factor] points
+   * (the file interpolates them with a spline).
+   */
+  anisotropyFunctions?: Map<number, [number, number][]>;
   /** Analysis name (lower case) → the solved slip surfaces in the file. */
   results: Map<string, GszSlipResult[]>;
 }
@@ -143,6 +154,14 @@ const num = (s: string | null | undefined): number | undefined => {
 function parseColor(s: string | undefined): [number, number, number] | undefined {
   const m = s?.match(/RGB=\((\d+),(\d+),(\d+)\)/);
   return m ? [Number(m[1]), Number(m[2]), Number(m[3])] : undefined;
+}
+
+/** A block search grid: three corners of the parallelogram and the end angles. */
+export interface GszBlockGrid {
+  ul: Pt;
+  ll: Pt;
+  lr: Pt;
+  angles: [number, number];
 }
 
 /** Parse the model XML of a .gsz. */
@@ -306,6 +325,20 @@ export function parseGszXml(xml: string): Omit<GszFile, "results"> {
       slices: num(childText(slip, "NumberOfSlicesPerSlip")),
       optimised: childText(slip, "IsOptimizationOn") === "true",
       projected: ["UseLeftAngle", "UseRightAngle"].some((k) => child(slip, "Radius")?.getAttribute(k) === "true"),
+      block: (() => {
+        const grid = (tag: string): GszBlockGrid | undefined => {
+          const g = child(child(slip, "Block"), tag);
+          const at = (k: string) => {
+            const id = num(g?.getAttribute(k));
+            return id === undefined ? undefined : local.get(id);
+          };
+          const [ul, ll, lr] = [at("PointUL"), at("PointLL"), at("PointLR")];
+          const a1 = num(g?.getAttribute("Angle1")), a2 = num(g?.getAttribute("Angle2"));
+          return ul && ll && lr && a1 !== undefined && a2 !== undefined ? { ul, ll, lr, angles: [a1, a2] } : undefined;
+        };
+        const left = grid("LeftGrid"), right = grid("RightGrid");
+        return left && right ? { left, right } : undefined;
+      })(),
       fullySpecified: [
         ...children(slip, "FullySpecifiedSlips/FullySpecifiedSlip"),
         // version 8
@@ -350,7 +383,17 @@ export function parseGszXml(xml: string): Omit<GszFile, "results"> {
     else if ((stability.get(aid)?.piezometric.size ?? 0) > 0) water.set(aid, { option: "PiezoSurface" });
   }
 
-  return { units, analyses, geometries, materials, regionMaterials, stability, water };
+  const anisotropyFunctions = new Map<number, [number, number][]>();
+  for (const fn of children(root, "Functions/Material/StressStrain/AnisoFns/AnisoFn")) {
+    const id = num(childText(fn, "ID"));
+    const pts = children(fn, "Points/Point").flatMap((p) => {
+      const x = num(p.getAttribute("X")), y = num(p.getAttribute("Y"));
+      return x !== undefined && y !== undefined ? [[x, y] as [number, number]] : [];
+    });
+    if (id !== undefined && pts.length > 0) anisotropyFunctions.set(id, pts.sort((a, b) => a[0] - b[0]));
+  }
+
+  return { units, analyses, geometries, materials, regionMaterials, stability, water, anisotropyFunctions };
 }
 
 /** The solved slip surfaces of one analysis's slip_surface.csv. */

@@ -231,6 +231,28 @@ describe(".gsz import", () => {
     expect(imp.notes.join(" ")).not.toMatch(/search \("FullySpecified"\) is not imported/);
   });
 
+  it("imports a block search: its grids as windows, its end angles as inclinations", () => {
+    const xml = XML.replace('<DataPoint Number="5" X="5" Y="10" />', '<DataPoint Number="5" X="5" Y="10" /><DataPoint Number="6" X="6" Y="6" /><DataPoint Number="7" X="6" Y="3" /><DataPoint Number="8" X="10" Y="3" /><DataPoint Number="9" X="18" Y="4" /><DataPoint Number="10" X="18" Y="2" /><DataPoint Number="11" X="24" Y="2" />')
+      .replace("<Option>EntryExit</Option>", '<Option>Block</Option><Block><LeftGrid Angle1="115" Angle2="135" PointUL="6" PointLL="7" PointLR="8" /><RightGrid Angle1="30" Angle2="45" PointUL="9" PointLL="10" PointLR="11" /></Block><IsOptimizationOn>true</IsOptimizationOn>');
+    const imp = gszToDefinition({ ...parseGszXml(xml), results: new Map() }, 1);
+    expect(imp.definition.blockSearchObjects).toEqual([
+      { points: [[6, 6], [6, 3], [10, 3], [10, 6]] },
+      { points: [[18, 4], [18, 2], [24, 2], [24, 4]] },
+    ]);
+    // 115–135° counter-clockwise from +x: the upslope end rises backwards at 45–65°
+    expect(imp.options).toMatchObject({ searchMethod: "block", blockActiveAngle: [45, 65], blockPassiveAngle: [30, 45], nonCircularOptimization: true });
+  });
+
+  it("imports S = f(depth) from the top of the layer, with an anisotropy function", () => {
+    const xml = XML.replace("<SlopeModel>MohrCoulomb</SlopeModel>", "<SlopeModel>SFnDepth</SlopeModel>")
+      .replace("<CohesionPrime>", "<ShearAnisoFnNum>1</ShearAnisoFnNum><CTopOfLayer>12</CTopOfLayer><CRateOfIncrease>2</CRateOfIncrease><CohesionPrime>")
+      .replace("</GSIData>", '<Functions><Material><StressStrain><AnisoFns Len="1"><AnisoFn><ID>1</ID><Points Len="3"><Point X="10" Y="1" /><Point X="-10" Y="1" /><Point X="0" Y="0.7" /></Points></AnisoFn></AnisoFns></StressStrain></Material></Functions></GSIData>');
+    const imp = gszToDefinition({ ...parseGszXml(xml), results: new Map() }, 1);
+    const m = imp.definition.materials.find((x) => x.model?.kind === "s-f-depth")!;
+    expect(m.model).toMatchObject({ suRef: 12, depthRef: 0, rate: 2, depthReference: "layer-top", anisotropy: [[-10, 1], [0, 0.7], [10, 1]] });
+    expect(imp.notes.join(" ")).toMatch(/anisotropy function is imported as factors interpolated linearly/);
+  });
+
   it("imports and exports a tension crack at a limiting angle", async () => {
     // The file's angle is counter-clockwise from +x: 120° for sliding to
     // the right is a base inclination of 60° (the format's own example).
