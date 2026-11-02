@@ -184,6 +184,13 @@ export function validateMaterialModel(model: MaterialModel): string[] {
 
     case "hoek-brown":
       if (!Number.isFinite(model.ucs) || model.ucs <= 0) errors.push("σci must be > 0.");
+      if (model.mb !== undefined || model.s !== undefined) {
+        // the criterion's own parameters, given directly
+        if (!Number.isFinite(model.mb) || !(model.mb! > 0)) errors.push("mb must be > 0.");
+        if (!Number.isFinite(model.s) || !(model.s! >= 0 && model.s! <= 1)) errors.push("s must be between 0 and 1.");
+        if (model.a !== undefined && !(Number.isFinite(model.a) && model.a > 0 && model.a <= 1)) errors.push("a must be between 0 and 1.");
+        break;
+      }
       if (!Number.isFinite(model.gsi) || model.gsi < 0 || model.gsi > 100) errors.push("GSI must be between 0 and 100.");
       if (!Number.isFinite(model.mi) || model.mi <= 0) errors.push("mi must be > 0.");
       if (model.disturbance !== undefined && !(Number.isFinite(model.disturbance) && model.disturbance >= 0 && model.disturbance <= 1)) {

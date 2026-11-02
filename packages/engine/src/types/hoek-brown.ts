@@ -41,6 +41,22 @@ export function hoekBrownParameters(ucs: number, gsi: number, mi: number, distur
   };
 }
 
+/** mb, s and a of a material: given directly, or from GSI, mi and D. */
+export function hoekBrownOf(model: {
+  ucs: number;
+  gsi: number;
+  mi: number;
+  disturbance?: number;
+  mb?: number;
+  s?: number;
+  a?: number;
+}): HoekBrownParameters {
+  if (model.mb !== undefined && model.s !== undefined) {
+    return { ucs: model.ucs, mb: model.mb, s: model.s, a: model.a ?? 0.5 };
+  }
+  return hoekBrownParameters(model.ucs, model.gsi, model.mi, model.disturbance ?? 0);
+}
+
 /** The envelope at σ3 (compression positive): σn, τ and the slope k. */
 function atSigma3(p: HoekBrownParameters, s3: number): { sn: number; tau: number; k: number } {
   const base = Math.max(1e-12, (p.mb * s3) / p.ucs + p.s);

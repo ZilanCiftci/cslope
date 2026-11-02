@@ -29,10 +29,13 @@ describe("search respects limits on the actual surfaces", () => {
     const valid = slope.search.filter((p) => p.fos != null);
     expect(valid.length).toBeGreaterThan(0);
     for (const p of valid) {
-      expect(p.lc[0]).toBeGreaterThanOrEqual(limits.entryLeftX - 1e-9);
-      expect(p.lc[0]).toBeLessThanOrEqual(limits.entryRightX + 1e-9);
-      expect(p.rc[0]).toBeGreaterThanOrEqual(limits.exitLeftX - 1e-9);
-      expect(p.rc[0]).toBeLessThanOrEqual(limits.exitRightX + 1e-9);
+      // within the limits the search uses (an end on a ground corner moved out by 1e-5 of the width)
+      const [el, er, xl, xr] = slope.searchLimits;
+      expect(p.lc[0]).toBeGreaterThanOrEqual(el - 1e-9);
+      expect(p.lc[0]).toBeLessThanOrEqual(er + 1e-9);
+      expect(p.rc[0]).toBeGreaterThanOrEqual(xl - 1e-9);
+      expect(p.rc[0]).toBeLessThanOrEqual(xr + 1e-9);
+      expect(er - limits.entryRightX).toBeLessThan(1e-3);
     }
   });
 

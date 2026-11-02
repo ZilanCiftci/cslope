@@ -1,6 +1,6 @@
 import { Label } from "../../../../components/ui/Label";
 import { ExpressionNumericInput } from "../../../../components/ui/ExpressionNumericInput";
-import { hoekBrownParameters, type HoekBrownModel } from "@cslope/engine";
+import { hoekBrownOf, type HoekBrownModel } from "@cslope/engine";
 import type { MaterialExpressions } from "../../../../store/types";
 import { UnitWeightSatField } from "./UnitWeightSatField";
 
@@ -37,7 +37,7 @@ export function HoekBrownFields({ model, onChange, modelExpressions, parameterVa
       />
     </label>
   );
-  const p = hoekBrownParameters(model.ucs, model.gsi, model.mi, model.disturbance ?? 0);
+  const p = hoekBrownOf(model);
   return (
     <div className="grid grid-cols-2 gap-2">
       {field("unitWeight", "γ (kN/m³)", model.unitWeight, 0.01, 0.1)}
@@ -47,7 +47,8 @@ export function HoekBrownFields({ model, onChange, modelExpressions, parameterVa
       {field("mi", "mi", model.mi, 0, 10, "Intact rock constant (e.g. 4–10 for mudstones and shales, 17–25 for sandstones, 25–33 for granites)")}
       {field("disturbance", "D", model.disturbance ?? 0, 0, 0, "Disturbance factor, 0 (undisturbed) to 1 (heavy blasting or stress relief)")}
       <p className="col-span-2 text-[11px] tabular-nums" style={{ color: "var(--color-vsc-text-muted)" }}>
-        mb = {p.mb.toPrecision(3)}, s = {p.s.toPrecision(3)}, a = {p.a.toFixed(3)}. The analyses use the instantaneous c′ and φ′ at the normal stress they find on the slip surface (in FE, at the stress state).
+        mb = {p.mb.toPrecision(3)}, s = {p.s.toPrecision(3)}, a = {p.a.toFixed(3)}
+        {model.mb !== undefined && model.s !== undefined ? " (given directly, not from GSI, mi and D)" : ""}. The analyses use the instantaneous c′ and φ′ at the normal stress they find on the slip surface (in FE, at the stress state).
       </p>
     </div>
   );

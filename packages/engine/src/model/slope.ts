@@ -365,29 +365,33 @@ export class Slope {
   }
 
   /**
-   * The limits the search uses. A range given as a single point (an exit
-   * at the toe, as files from other programs give it) is widened by 1e-5
-   * of the model's width to each side: a circle exactly through a corner
-   * of the ground only touches it there and runs on in the soil, so no
-   * circle would exit at the point itself; the ones just beside it do
-   * (1.2514 against 1.2535 on a public example with its exit at the toe,
-   * where the point alone gave 1.331 from the few circles that rounding
-   * let through).
+   * The limits the search uses. The upslope end of the exit range, when it
+   * is a corner of the ground (the toe), is moved upslope by 1e-5 of the
+   * model's width: a circle exactly through the corner only touches it and
+   * runs on in the soil, so a range starting at the toe, or being the toe
+   * alone (as files from other programs give an exit at the toe), held no
+   * circle exiting at it; the ones just above it on the face do. On two
+   * public examples: 1.2514 against the file's 1.2535 (1.331 before), and
+   * 1.1625 against 1.178 (1.238 before; 1.1773 on the file's own circle).
+   * Ranges are in canonical (left-to-right) space; an entry range given as
+   * a point on a corner is widened to both sides. Other ends are as given
+   * (moving them as well moved the search's start on V005's plane face).
    */
   get searchLimits(): Readonly<[number, number, number, number]> {
-    let [entryLeftX, entryRightX, exitLeftX, exitRightX] = this._limits;
+    const [entryLeftX, entryRightX, exitLeftX, exitRightX] = this._limits;
     const xs = this._surfaceLineX;
-    const width = xs && xs.length > 1 ? Math.max(...xs) - Math.min(...xs) : 0;
-    const widen = 1e-5 * width;
-    if (widen > 0 && entryRightX - entryLeftX < 1e-9 * width) {
-      entryLeftX -= widen;
-      entryRightX += widen;
-    }
-    if (widen > 0 && exitRightX - exitLeftX < 1e-9 * width) {
-      exitLeftX -= widen;
-      exitRightX += widen;
-    }
-    return [entryLeftX, entryRightX, exitLeftX, exitRightX];
+    if (!xs || xs.length < 2) return this._limits;
+    const x0 = Math.min(...xs), x1 = Math.max(...xs);
+    const w = 1e-5 * (x1 - x0);
+    const tol = 1e-9 * (x1 - x0);
+    const atCorner = (x: number) => x > x0 && x < x1 && xs.some((v) => Math.abs(v - x) <= tol);
+    const entryPoint = entryRightX - entryLeftX <= tol && atCorner(entryLeftX);
+    return [
+      entryPoint ? Math.max(x0, entryLeftX - w) : entryLeftX,
+      entryPoint ? Math.min(x1, entryRightX + w) : entryRightX,
+      atCorner(exitLeftX) ? Math.max(x0, exitLeftX - w) : exitLeftX,
+      exitRightX,
+    ];
   }
 
   get minFailureDistance(): number {

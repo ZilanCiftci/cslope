@@ -166,6 +166,9 @@ function strengthWithoutSuction(model: MaterialModel): string {
       return s;
     }
     case "hoek-brown":
+      if (model.mb !== undefined && model.s !== undefined) {
+        return `σci = ${fmt(model.ucs)} kPa, mb = ${fmt(model.mb)}, s = ${fmt(model.s)}, a = ${fmt(model.a ?? 0.5)} (Hoek-Brown, parameters given directly)`;
+      }
       return `σci = ${fmt(model.ucs)} kPa, GSI = ${fmt(model.gsi)}, mi = ${fmt(model.mi)}, D = ${fmt(model.disturbance ?? 0)} (generalised Hoek-Brown)`;
     case "high-strength":
       return "not sheared (surfaces through it are skipped)";

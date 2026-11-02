@@ -253,6 +253,16 @@ describe(".gsz import", () => {
     expect(imp.notes.join(" ")).toMatch(/anisotropy function is imported as factors interpolated linearly/);
   });
 
+  it("imports Hoek-Brown from GSI, mi (10 when not given) and D, or from mb, s and a", () => {
+    const hb = (fields: string) => XML.replace("<SlopeModel>MohrCoulomb</SlopeModel>", "<SlopeModel>HoekBrown</SlopeModel>")
+      .replace("<CohesionPrime>2</CohesionPrime><PhiPrime>32</PhiPrime>", fields);
+    const a = gszToDefinition({ ...parseGszXml(hb("<UniaxialCompressiveStrength>20000</UniaxialCompressiveStrength><GeologicalStrengthIndex>20</GeologicalStrengthIndex><DisturbanceFactor>1</DisturbanceFactor><IsHoekBrownDerivedCalc>true</IsHoekBrownDerivedCalc>")), results: new Map() }, 1);
+    expect(a.definition.materials.find((m) => m.name === "Fill")!.model).toMatchObject({ kind: "hoek-brown", ucs: 20000, gsi: 20, mi: 10, disturbance: 1 });
+    expect(a.notes.join(" ")).toMatch(/no mi in the file; 10 used/);
+    const b = gszToDefinition({ ...parseGszXml(hb("<UniaxialCompressiveStrength>20000</UniaxialCompressiveStrength><HoekBrownMB>0.045</HoekBrownMB><HoekBrownS>1e-06</HoekBrownS>")), results: new Map() }, 1);
+    expect(b.definition.materials.find((m) => m.name === "Fill")!.model).toMatchObject({ kind: "hoek-brown", ucs: 20000, mb: 0.045, s: 1e-6 });
+  });
+
   it("imports and exports a tension crack at a limiting angle", async () => {
     // The file's angle is counter-clockwise from +x: 120° for sliding to
     // the right is a base inclination of 60° (the format's own example).

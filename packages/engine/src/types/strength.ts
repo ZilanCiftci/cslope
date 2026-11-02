@@ -9,7 +9,7 @@
 
 import { isCombinedDepthModel, suctionAngle, type MaterialModel, type MaterialModelKind } from "./material-models";
 import type { PartialFactors } from "./analysis";
-import { hoekBrownParameters, instantaneousAtNormalStress, type HoekBrownParameters } from "./hoek-brown";
+import { hoekBrownOf, instantaneousAtNormalStress, type HoekBrownParameters } from "./hoek-brown";
 import {
   interpolateIDW,
   interpolateNearest,
@@ -188,7 +188,7 @@ function resolveModelStrength(
     case "hoek-brown": {
       // first estimate of the normal stress on the base: the overburden
       // γ·depth·cos²α (no pore pressure); the analyses refine it
-      const hb = hoekBrownParameters(model.ucs, model.gsi, model.mi, model.disturbance ?? 0);
+      const hb = hoekBrownOf(model);
       const depth = Math.max(0, context.yGround - context.yBottom);
       const sn = model.unitWeight * depth * Math.cos(context.alpha) ** 2;
       const inst = instantaneousAtNormalStress(hb, sn);

@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
-import { hoekBrownParameters, instantaneousAtNormalStress, instantaneousAtSigma3 } from "./hoek-brown";
+import { hoekBrownOf, hoekBrownParameters, instantaneousAtNormalStress, instantaneousAtSigma3 } from "./hoek-brown";
+import { validateMaterialModel } from "./validation";
 import { buildSlope } from "../model/build-slope";
 import { toCanonicalSlopeDefinition } from "../model/canonical";
 import { analyseSlope, solvedEffectiveNormals } from "../model/solvers";
@@ -35,6 +36,24 @@ describe("generalised Hoek–Brown", () => {
     }
     // the friction angle falls with the stress (a curved envelope)
     expect(instantaneousAtNormalStress(p, 50).frictionAngle).toBeGreaterThan(instantaneousAtNormalStress(p, 1000).frictionAngle);
+  });
+});
+
+describe("Hoek–Brown parameters given directly", () => {
+  it("uses mb, s and a when given (a = 0.5 by default), else those from GSI, mi and D", () => {
+    const base = { ucs: 20000, gsi: 20, mi: 10, disturbance: 1 };
+    expect(hoekBrownOf(base)).toEqual(hoekBrownParameters(20000, 20, 10, 1));
+    expect(hoekBrownOf({ ...base, mb: 0.045, s: 1e-6 })).toEqual({ ucs: 20000, mb: 0.045, s: 1e-6, a: 0.5 });
+    // The format's example with the original criterion: τ at σn = 44.6 kPa
+    // from c and φ there.
+    const i = instantaneousAtNormalStress(hoekBrownOf({ ...base, mb: 0.045, s: 1e-6, a: 0.5 }), 44.6);
+    expect(i.cohesion + 44.6 * Math.tan((i.frictionAngle * Math.PI) / 180)).toBeCloseTo(52.28, 1);
+  });
+
+  it("validates them instead of GSI and mi", () => {
+    const m = { kind: "hoek-brown", unitWeight: 20, ucs: 20000, gsi: 100, mi: 1 } as const;
+    expect(validateMaterialModel({ ...m, mb: 0.045, s: 1e-6 })).toEqual([]);
+    expect(validateMaterialModel({ ...m, mb: -1, s: 2 }).join(" ")).toMatch(/mb must be > 0.*s must be between 0 and 1/);
   });
 });
 

@@ -26,7 +26,7 @@ export type {
   UnsaturatedStrength,
 } from "./material-models";
 export { MATERIAL_MODEL_LABELS, isCombinedDepthModel, supportsAnisotropy, supportsSuctionStrength, suctionAngle } from "./material-models";
-export { hoekBrownParameters, instantaneousAtNormalStress, instantaneousAtSigma3, type HoekBrownParameters } from "./hoek-brown";
+export { hoekBrownOf, hoekBrownParameters, instantaneousAtNormalStress, instantaneousAtSigma3, type HoekBrownParameters } from "./hoek-brown";
 
 // Strength resolution
 export {

@@ -402,7 +402,7 @@
      "method": "Spencer, non-circular (dynamic programming)",
      "source": "Baker, Frydman & Talesnick (1993)",
      "analysis": "Spencer, non-circular",
-     "computed": 2.5023
+     "computed": 2.5035
     }
    ],
    "results": [
@@ -418,7 +418,7 @@
     },
     {
      "method": "Spencer, non-circular",
-     "computed": 2.5023,
+     "computed": 2.5035,
      "programs": null
     }
    ]

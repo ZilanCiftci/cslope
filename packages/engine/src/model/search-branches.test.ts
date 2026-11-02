@@ -31,7 +31,8 @@ describe("generated planes", () => {
       s.updateAnalysisOptions({ iterations: 300, minFailureDist: uniform(r, 0, 10) });
       setEntryExitPlanes(s);
       expect(s.search.length, `case ${i}`).toBeGreaterThan(0);
-      const [el, er, xl, xr] = s.limits;
+      // the limits the search uses (an end on a ground corner moved out by 1e-5 of the width)
+      const [el, er, xl, xr] = s.searchLimits;
       for (const p of s.search) {
         expect(p.lc[0]).toBeGreaterThanOrEqual(el - 1e-9);
         expect(p.lc[0]).toBeLessThanOrEqual(er + 1e-9);

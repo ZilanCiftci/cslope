@@ -326,6 +326,14 @@ export interface HoekBrownModel extends MaterialModelBase {
   mi: number;
   /** Disturbance factor D, 0–1. Default 0. */
   disturbance?: number;
+  /**
+   * The criterion's own parameters, given directly (for example the
+   * original criterion, a = 0.5): with `mb` and `s` set they are used
+   * instead of those from GSI, mi and D (`a` not set: 0.5).
+   */
+  mb?: number;
+  s?: number;
+  a?: number;
 }
 
 // ── Union ──────────────────────────────────────────────────────

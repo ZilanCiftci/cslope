@@ -262,6 +262,24 @@ function materialModel(
       }
       break;
     }
+    case "HoekBrown": {
+      // from GSI, mi and D, or mb, s and a given directly; the file's
+      // envelope is a spline up to MaxConfiningStress, cSlope's exact
+      const ucs = f("UniaxialCompressiveStrength");
+      const mb = f("HoekBrownMB"), s = f("HoekBrownS"), a = f("HoekBrownA");
+      if (ucs !== undefined && ucs > 0) {
+        if (m.fields.IsHoekBrownDerivedCalc !== "true" && mb !== undefined && s !== undefined) {
+          return { kind: "hoek-brown", unitWeight, ucs: ucs * scale.stress, gsi: 100, mi: mb, mb, s, ...(a !== undefined ? { a } : {}) };
+        }
+        const gsi = f("GeologicalStrengthIndex");
+        if (gsi !== undefined) {
+          const mi = f("IntactRockParam");
+          if (mi === undefined) notes.push(`Material "${m.name}": no mi in the file; 10 used (the format's default).`);
+          return { kind: "hoek-brown", unitWeight, ucs: ucs * scale.stress, gsi, mi: mi ?? 10, disturbance: f("DisturbanceFactor") ?? 0 };
+        }
+      }
+      break;
+    }
     case "Bedrock":
       return { kind: "impenetrable", unitWeight };
     case "HighStrength":

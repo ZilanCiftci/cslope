@@ -32,13 +32,19 @@ describe("a search range given as a point", () => {
     expect(Math.abs(crit.rc[0] - 30.5)).toBeLessThan(1e-3);
   });
 
-  it("leaves a range of finite width as given", () => {
-    const { slope: s } = runVerification(
-      slope({ entryLeftX: 17, entryRightX: 21.5, exitLeftX: 30, exitRightX: 31 }),
+  it("reaches the corner from a range that starts at it", () => {
+    // Exit range 30.5–35 starting at the toe: the circles exiting just
+    // above it are searched too (an end on a corner of the ground is moved
+    // out by 1e-5 of the width), and the toe mechanism is found as with
+    // the toe alone. The ends not on a corner stay as given.
+    const { fos, slope: s } = runVerification(
+      slope({ entryLeftX: 17, entryRightX: 21.5, exitLeftX: 30.5, exitRightX: 35 }),
       "Morgenstern-Price",
       mp,
     );
-    expect(s.limits).toEqual([17, 21.5, 30, 31]);
-    expect(s.searchLimits).toEqual([17, 21.5, 30, 31]);
+    expect(fos!).toBeCloseTo(1.2535, 2);
+    expect(s.limits).toEqual([17, 21.5, 30.5, 35]);
+    const w = 1e-5 * 31.5;
+    expect(s.searchLimits).toEqual([17, 21.5, 30.5 - w, 35]);
   });
 });

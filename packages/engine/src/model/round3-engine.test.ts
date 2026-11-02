@@ -3,6 +3,7 @@ import { buildSlope } from "./build-slope";
 import { getSlices } from "./slices";
 import { analyseSlope, analyseBishop } from "./solvers";
 import { getCircleLineIntersections } from "../math/circle";
+import { selectEntryExit } from "./search";
 import type { SlopeDefinition } from "../types/slope-definition";
 
 describe("slip surface entry and exit", () => {
@@ -31,13 +32,23 @@ describe("slip surface entry and exit", () => {
     slope.updateAnalysisOptions({ iterations: 1500, refinedIterations: 500 });
     analyseSlope(slope);
     for (const p of slope.search.filter((q) => q.fos != null)) {
-      // Just beyond the exit the arc must be out of the ground.
+      // Just beyond the exit the arc must be out of the ground. (A circle
+      // exiting the face within 1e-5 of the width above the toe (a search
+      // range end on the toe corner is moved out by that much) re-enters the ground just beyond the toe: it
+      // is the toe mechanism itself, and the arc through the toe vertex is
+      // checked below.)
+      if (Math.abs(p.rc[0] - 40) < 1e-5 * 60) continue;
       const x = p.rc[0] + 1e-3;
       const term = p.radius ** 2 - (x - p.cx) ** 2;
       if (term < 0) continue;
       const yArc = p.cy - Math.sqrt(term);
       expect(slope.isInsideExternalBoundary(x, yArc)).toBe(false);
     }
+    // A circle exactly through the toe vertex (40, -10) runs on in the soil.
+    const [cx, cy] = [45, 20];
+    const r = Math.hypot(40 - cx, -10 - cy);
+    const ends = selectEntryExit(slope, cx, cy, r)!;
+    expect(ends[1][0]).toBeGreaterThan(40 + 1);
   });
 
   it("finds a crossing exactly at a surface vertex", () => {

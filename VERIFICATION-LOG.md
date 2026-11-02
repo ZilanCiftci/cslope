@@ -70,11 +70,45 @@ The script compares the regenerated verification table with the committed one an
 | 2026-11-02 | Tension crack at a limiting base inclination | 0 | 0.348 → 0.348 | 0.483 → 0.483 | 1.011 → 1.011 | 1.595 → 1.595 | 757 s (4 workers, load 4.9 at start) |
 | 2026-11-02 | Arc-consistent slice base on circles, steep ends cut | 177 | 0.348 → 0.342 | 0.483 → 0.477 | 1.011 → 1.009 | 1.595 → 1.595 | 753 s (4 workers, load 1.7 at start) |
 | 2026-11-02 | Search ranges given as a point; .gsz tension crack angle and water | 0 | 0.342 → 0.342 | 0.477 → 0.477 | 1.009 → 1.009 | 1.595 → 1.595 | 730 s (4 workers, load 1.3 at start) |
+| 2026-11-02 | Exit range starting at the toe moved upslope; Hoek-Brown mb, s, a given directly | 1 | 0.342 → 0.342 | 0.477 → 0.477 | 1.009 → 1.009 | 1.595 → 1.596 | 779 s (4 workers, load 1.2 at start) |
 <!-- summary-end -->
 
 ## Entries
 
 <!-- entries -->
+
+### 2026-11-02: Exit range starting at the toe moved upslope; Hoek-Brown mb, s, a given directly
+
+Compared with f6c8c8c. Errors are relative to the reference, in percent. Verification run time: 779 s (4 workers, load 1.2 at start).
+
+**Against other programs (midpoint of their range):** 0 moved (0 closer to the reference, 0 further).
+
+| Result | Reference | Before | After | Error before | Error after |
+|---|---|---|---|---|---|
+| **Mean error (n = 279)** | | | | -0.221 % | -0.221 % |
+| **Mean absolute error** | | | | 0.342 % | 0.342 % |
+| **RMS error** | | | | 0.477 % | 0.477 % |
+| **Largest error** | | | | 2.109 % | 2.109 % |
+
+**Against the papers:** 1 moved (0 closer to the reference, 1 further).
+
+| Result | Reference | Before | After | Error before | Error after |
+|---|---|---|---|---|---|
+| V005 Spencer, non-circular (dynamic programming) (Baker, Frydman & Talesnick (1993)) | 2.410 | 2.5023 | 2.5035 | +3.830 % | +3.880 % |
+| **Mean error (n = 111)** | | | | -0.154 % | -0.153 % |
+| **Mean absolute error** | | | | 1.009 % | 1.009 % |
+| **RMS error** | | | | 1.595 % | 1.596 % |
+| **Largest error** | | | | 6.591 % | 6.591 % |
+
+**Finite elements against their references (FE, finite differences, limit analysis, theory):** 0 moved (0 closer to the reference, 0 further).
+
+| Result | Reference | Before | After | Error before | Error after |
+|---|---|---|---|---|---|
+| **Mean error (n = 35)** | | | | -0.711 % | -0.711 % |
+| **Mean absolute error** | | | | 2.399 % | 2.399 % |
+| **RMS error** | | | | 3.712 % | 3.712 % |
+| **Largest error** | | | | 15.100 % | 15.100 % |
+
 
 ### 2026-11-02: Search ranges given as a point; .gsz tension crack angle and water
 
