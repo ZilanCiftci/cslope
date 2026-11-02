@@ -333,7 +333,9 @@ export function parseGszXml(xml: string): Omit<GszFile, "results"> {
             return id === undefined ? undefined : local.get(id);
           };
           const [ul, ll, lr] = [at("PointUL"), at("PointLL"), at("PointLR")];
-          const a1 = num(g?.getAttribute("Angle1")), a2 = num(g?.getAttribute("Angle2"));
+          // one angle given: a fixed angle
+          const a1 = num(g?.getAttribute("Angle1")) ?? num(g?.getAttribute("Angle2"));
+          const a2 = num(g?.getAttribute("Angle2")) ?? a1;
           return ul && ll && lr && a1 !== undefined && a2 !== undefined ? { ul, ll, lr, angles: [a1, a2] } : undefined;
         };
         const left = grid("LeftGrid"), right = grid("RightGrid");
@@ -437,7 +439,8 @@ export async function readGsz(bytes: Uint8Array): Promise<GszFile> {
   const file = parseGszXml(new TextDecoder().decode(entries.get(xmlName)));
   const results = new Map<string, GszSlipResult[]>();
   for (const a of file.analyses) {
-    const prefix = `${a.name.toLowerCase()}/`;
+    // a "/" in the analysis name is "&3" in its folder name
+    const prefix = `${a.name.replace(/\//g, "&3").toLowerCase()}/`;
     const csv = [...entries.keys()].sort().find((n) => n.toLowerCase().startsWith(prefix) && n.endsWith("slip_surface.csv"));
     if (csv) results.set(a.name.toLowerCase(), parseSlipSurfaceCsv(new TextDecoder().decode(entries.get(csv))));
   }

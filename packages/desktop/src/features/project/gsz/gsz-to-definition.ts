@@ -481,7 +481,17 @@ export function gszToDefinition(file: GszFile, analysisId: number, fileName = "g
     };
     const [up, down] = rtl ? [stab.block.right, stab.block.left] : [stab.block.left, stab.block.right];
     blockSearchObjects = [window(stab.block.left), window(stab.block.right)];
-    Object.assign(options, { searchMethod: "block", blockActiveAngle: range(up, true), blockPassiveAngle: range(down, false) });
+    options.searchMethod = "block";
+    // cSlope's block search takes end inclinations between 0° and 90°;
+    // others (an exit segment dipping down) leave the Rankine angles
+    const valid = (r: [number, number]) => r[0] > 0 && r[1] < 90;
+    for (const [key, r, end] of [
+      ["blockActiveAngle", range(up, true), "upslope"],
+      ["blockPassiveAngle", range(down, false), "downslope"],
+    ] as const) {
+      if (valid(r)) options[key] = r;
+      else notes.push(`The ${end} end angles of the block search (${r[0]}° to ${r[1]}° from the horizontal) are outside 0–90°; the Rankine angle is used.`);
+    }
     if (stab.optimised) options.nonCircularOptimization = true;
     notes.push("The block search grids are imported as block search windows, with their end angles.");
   } else if (stab?.slipOption) {

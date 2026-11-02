@@ -243,6 +243,21 @@ describe(".gsz import", () => {
     expect(imp.options).toMatchObject({ searchMethod: "block", blockActiveAngle: [45, 65], blockPassiveAngle: [30, 45], nonCircularOptimization: true });
   });
 
+  it("leaves the Rankine angle for block end angles outside 0–90° and reads one angle as fixed", () => {
+    const xml = XML.replace('<DataPoint Number="5" X="5" Y="10" />', '<DataPoint Number="5" X="5" Y="10" /><DataPoint Number="6" X="6" Y="6" /><DataPoint Number="7" X="6" Y="3" /><DataPoint Number="8" X="10" Y="3" /><DataPoint Number="9" X="18" Y="4" /><DataPoint Number="10" X="18" Y="2" /><DataPoint Number="11" X="24" Y="2" />')
+      .replace("<Option>EntryExit</Option>", '<Option>Block</Option><Block><LeftGrid Angle1="125" Angle2="" PointUL="6" PointLL="7" PointLR="8" /><RightGrid Angle1="10" Angle2="-15" PointUL="9" PointLL="10" PointLR="11" /></Block>');
+    const imp = gszToDefinition({ ...parseGszXml(xml), results: new Map() }, 1);
+    expect(imp.options.blockActiveAngle).toEqual([55, 55]);
+    expect(imp.options.blockPassiveAngle).toBeUndefined();
+    expect(imp.notes.join(" ")).toMatch(/downslope end angles of the block search \(-15° to 10° from the horizontal\) are outside 0–90°/);
+  });
+
+  it("finds the results of an analysis with a slash in its name", async () => {
+    const xml = XML.replace("<Name>Short term</Name>", "<Name>Short/long term</Name>");
+    const imps = await gszImports(writeZip([{ name: "S.xml", data: xml }, { name: "Short&3long term/001/slip_surface.csv", data: CSV }]), "S.gsz");
+    expect(imps[0].reference?.fos).toBe(1.4);
+  });
+
   it("imports S = f(depth) from the top of the layer, with an anisotropy function", () => {
     const xml = XML.replace("<SlopeModel>MohrCoulomb</SlopeModel>", "<SlopeModel>SFnDepth</SlopeModel>")
       .replace("<CohesionPrime>", "<ShearAnisoFnNum>1</ShearAnisoFnNum><CTopOfLayer>12</CTopOfLayer><CRateOfIncrease>2</CRateOfIncrease><CohesionPrime>")
