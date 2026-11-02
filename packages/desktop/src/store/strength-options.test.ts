@@ -79,7 +79,7 @@ describe("project file round trip", () => {
     withMaterials([comb]);
     const again = roundTrip();
     expect(again.materials[0].model).toEqual(comb);
-    const dto = buildSlopeDTOFromModel(useAppStore.getState());
+    const dto = buildSlopeDTOFromModel(again);
     expect(dto.materials[0].model).toMatchObject({ drainedCohesion: 1.14, drainedCohesionRate: 0.114, drainedFrictionAngle: 30 });
   });
 
