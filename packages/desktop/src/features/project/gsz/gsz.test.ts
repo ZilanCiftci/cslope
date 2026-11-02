@@ -1,0 +1,249 @@
+import { describe, expect, it } from "vitest";
+import { analyseSlope, buildSlope, DEFAULT_ANALYSIS_OPTIONS, toCanonicalSlopeDefinition, type SlopeDefinition } from "@cslope/engine";
+import { readZip, writeZip } from "../../../utils/zip";
+import { parseGszXml, parseSlipSurfaceCsv, readGsz } from "./gsz-read";
+import { gszToDefinition } from "./gsz-to-definition";
+import { modelToGsz, modelToGszXml } from "./gsz-write";
+import { gszImports } from "../importGsz";
+import { modelFromDefinition } from "../../../store/definition-model";
+
+async function deflateRaw(data: Uint8Array): Promise<Uint8Array> {
+  const source = new ReadableStream<Uint8Array>({
+    start(c) {
+      c.enqueue(data);
+      c.close();
+    },
+  });
+  const out = source.pipeThrough(new CompressionStream("deflate-raw") as unknown as ReadableWritablePair<Uint8Array, Uint8Array>);
+  return new Uint8Array(await new Response(out).arrayBuffer());
+}
+
+/** A ZIP with one deflated entry, as the format's files are written. */
+async function deflatedZip(name: string, text: string): Promise<Uint8Array> {
+  const data = new TextEncoder().encode(text);
+  const comp = await deflateRaw(data);
+  const stored = writeZip([{ name, data }]);
+  // rewrite the stored entry as method 8 with the compressed bytes
+  const nameBytes = new TextEncoder().encode(name);
+  const local = new Uint8Array(30 + nameBytes.length);
+  local.set(stored.subarray(0, 30 + nameBytes.length));
+  const lv = new DataView(local.buffer);
+  lv.setUint16(8, 8, true);
+  lv.setUint32(18, comp.length, true);
+  const cenStart = 30 + nameBytes.length + data.length;
+  const cen = stored.slice(cenStart, cenStart + 46 + nameBytes.length);
+  const cv = new DataView(cen.buffer);
+  cv.setUint16(10, 8, true);
+  cv.setUint32(20, comp.length, true);
+  const end = stored.slice(stored.length - 22);
+  const ev = new DataView(end.buffer);
+  ev.setUint32(16, local.length + comp.length, true);
+  const out = new Uint8Array(local.length + comp.length + cen.length + end.length);
+  out.set(local, 0);
+  out.set(comp, local.length);
+  out.set(cen, local.length + comp.length);
+  out.set(end, local.length + comp.length + cen.length);
+  return out;
+}
+
+// Two layers under a 1:2 slope from y = 10 (x ≤ 10) down to y = 5 (x ≥ 20);
+// the layer boundary at y = 3 has a corner (point 9) on the right edge only
+// of the lower region (a T-junction for the upper one).
+const XML = `<?xml version="1.0" encoding="UTF-8"?>
+<GSIData Version="11.11">
+  <Analyses Len="2">
+    <Analysis><ID>1</ID><Name>Short term</Name><Kind>Slope stability</Kind><Method>Spencer</Method><GeometryId>1</GeometryId></Analysis>
+    <Analysis><ID>2</ID><Name>Seepage</Name><Kind>Seepage</Kind><GeometryId>1</GeometryId></Analysis>
+  </Analyses>
+  <Contexts Len="1">
+    <Context>
+      <AnalysisID>1</AnalysisID>
+      <GeometryUsesMaterials Len="2">
+        <GeometryUsesMaterial ID="Regions-1" Entry="1" />
+        <GeometryUsesMaterial ID="Regions-2" Entry="2" />
+      </GeometryUsesMaterials>
+    </Context>
+  </Contexts>
+  <Coordinates><EngCoords UnitSystem="Metric" /></Coordinates>
+  <Geometries Len="1">
+    <Geometry>
+      <Points Len="9">
+        <Point ID="1" X="0" Y="10" /><Point ID="2" X="10" Y="10" /><Point ID="3" X="20" Y="5" />
+        <Point ID="4" X="30" Y="5" /><Point ID="5" X="30" Y="3" /><Point ID="6" X="0" Y="3" />
+        <Point ID="7" X="0" Y="0" /><Point ID="8" X="30" Y="0" /><Point ID="9" X="15" Y="3" />
+      </Points>
+      <Regions Len="2">
+        <Region><ID>1</ID><PointIDs>1,2,3,4,5,6</PointIDs></Region>
+        <Region><ID>2</ID><PointIDs>6,9,5,8,7</PointIDs></Region>
+      </Regions>
+    </Geometry>
+  </Geometries>
+  <Materials Len="2">
+    <Material><ID>1</ID><Name>Fill</Name><Color>RGB=(255,128,0)</Color><SlopeModel>MohrCoulomb</SlopeModel>
+      <StressStrain><UnitWeight>19</UnitWeight><CohesionPrime>2</CohesionPrime><PhiPrime>32</PhiPrime><Rf Missing="true" /></StressStrain></Material>
+    <Material><ID>2</ID><Name>Clay</Name><SlopeModel>UndrainedPhiZero</SlopeModel>
+      <StressStrain><UnitWeight>17</UnitWeight><Cohesion>25</Cohesion></StressStrain></Material>
+  </Materials>
+  <StabilityItems Len="1">
+    <StabilityItem>
+      <AnalysisID>1</AnalysisID>
+      <Entry>
+        <DataPoints Len="5">
+          <DataPoint Number="1" X="0" Y="6" /><DataPoint Number="2" X="30" Y="4" />
+          <DataPoint Number="3" X="2" Y="11.5" /><DataPoint Number="4" X="8" Y="11.5" /><DataPoint Number="5" X="5" Y="10" />
+        </DataPoints>
+        <PiezometricSurfaces Len="1">
+          <PiezometricSurface><ID>1</ID><DataPoints Len="2"><DataPoint>1</DataPoint><DataPoint>2</DataPoint></DataPoints></PiezometricSurface>
+        </PiezometricSurfaces>
+        <MaterialUsesPiezs Len="1"><MaterialUsesPiez ID="1" UsesID="1" /></MaterialUsesPiezs>
+        <Surcharges Len="1">
+          <Surcharge><ID>1</ID><Pressure>20</Pressure><DataPoints Len="2"><DataPoint>3</DataPoint><DataPoint>4</DataPoint></DataPoints></Surcharge>
+        </Surcharges>
+        <LineLoadPoints Len="1">
+          <LineLoadPoint><ID>5</ID><LineLoad><Value>40</Value><Direction Plunge="90" Trend="0" /></LineLoad></LineLoadPoint>
+        </LineLoadPoints>
+        <SlipSurface>
+          <DirectionOfSlip>LeftToRight</DirectionOfSlip>
+          <Option>EntryExit</Option>
+          <EntryExit>
+            <LeftSideLeftPt X="1" Y="10" /><LeftSideRightPt X="9" Y="10" />
+            <RightSideLeftPt X="21" Y="5" /><RightSideRightPt X="29" Y="5" />
+          </EntryExit>
+          <NumberOfSlicesPerSlip>40</NumberOfSlicesPerSlip>
+        </SlipSurface>
+      </Entry>
+    </StabilityItem>
+  </StabilityItems>
+  <WaterItems Len="1">
+    <WaterItem><AnalysisID>1</AnalysisID><Entry><UnitWaterWeight>9.807</UnitWaterWeight><ResultInputInfo><Option>PiezoSurface</Option></ResultInputInfo></Entry></WaterItem>
+  </WaterItems>
+</GSIData>`;
+
+const CSV = "SlipNum,SlipFOS,SlipCenterX,SlipCenterY,SlipRadiusX,SlipWeight,SlipOrigSearchMethod,MobilizedShearDirection\n1,1.5,15,18,14,900,5,-1.5707963\n2,999,15,18,1,0,5,-1.57\n3,1.4,14,17,13.5,800,5,-1.5707963\n";
+
+const fos = (def: SlopeDefinition, options: object = {}) => {
+  const s = buildSlope(toCanonicalSlopeDefinition(def));
+  s.updateAnalysisOptions({ ...DEFAULT_ANALYSIS_OPTIONS, slices: 30, iterations: 300, refinedIterations: 150, ...options });
+  return analyseSlope(s) as number;
+};
+
+describe("ZIP", () => {
+  it("reads back what it writes and reads deflated entries", async () => {
+    const z = writeZip([{ name: "a.xml", data: "<x>å</x>" }, { name: "dir/b.csv", data: "1,2" }]);
+    const r = await readZip(z);
+    expect(new TextDecoder().decode(r.get("a.xml"))).toBe("<x>å</x>");
+    expect(new TextDecoder().decode(r.get("dir/b.csv"))).toBe("1,2");
+    const d = await readZip(await deflatedZip("m.xml", XML));
+    expect(new TextDecoder().decode(d.get("m.xml"))).toBe(XML);
+  });
+});
+
+describe(".gsz import", () => {
+  it("reads the analyses, regions, materials, water, loads and search", () => {
+    const f = parseGszXml(XML);
+    expect(f.units).toBe("metric");
+    expect(f.analyses.map((a) => a.name)).toEqual(["Short term", "Seepage"]);
+    expect(f.materials.get(1)).toMatchObject({ name: "Fill", model: "MohrCoulomb", color: [255, 128, 0] });
+    expect(f.materials.get(1)!.fields).not.toHaveProperty("Rf");
+    const st = f.stability.get(1)!;
+    expect(st.piezometric.get(1)).toEqual([[0, 6], [30, 4]]);
+    expect(st.surcharges[0]).toMatchObject({ unitWeight: 20, line: [[2, 11.5], [8, 11.5]] });
+    expect(st.lineLoads[0]).toMatchObject({ x: 5, y: 10, value: 40, plunge: 90 });
+    expect(st.entryExit).toEqual({ left: [1, 9], right: [21, 29] });
+  });
+
+  it("builds a slope definition from one stability analysis", () => {
+    const f = { ...parseGszXml(XML), results: new Map([["short term", parseSlipSurfaceCsv(CSV)]]) };
+    const imp = gszToDefinition(f, 1, "Section A.gsz");
+    const d = imp.definition;
+    expect(imp.name).toBe("Section A");
+    // outline from the edges used once
+    expect(d.coordinates).toHaveLength(8);
+    expect(d.coordinates).toEqual(expect.arrayContaining([[0, 3], [30, 3], [0, 0], [30, 0], [10, 10]]));
+    // the layer boundary from x = 0 to x = 30 through the T-junction
+    expect(d.materialBoundaries).toHaveLength(1);
+    const b = d.materialBoundaries![0].coordinates;
+    expect(b.map((p) => p[1])).toEqual([3, 3, 3]);
+    expect(d.materials.map((m) => [m.name, m.model?.kind])).toEqual([["Fill", "mohr-coulomb"], ["Clay", "undrained"]]);
+    expect(d.materials[0].color).toBe("#ff8000");
+    expect(d.regionAssignments!.find((a) => a.materialName === "Clay")!.point[1]).toBeLessThan(3);
+    // the fill uses the line, the clay has none (a line below the model)
+    expect(d.waterTable).toEqual({ mode: "custom", value: [[0, 6], [30, 4]] });
+    expect(d.materials[1].waterTableId).toBe("no-water");
+    expect(d.waterTables![0].coordinates[0][1]).toBeLessThan(0);
+    // surcharge: 20 kN/m³ × 1.5 m above the crest = 30 kPa on x 2–8
+    expect(d.udls!.every((u) => u.magnitude === 30)).toBe(true);
+    expect(Math.min(...d.udls!.map((u) => u.x1))).toBe(2);
+    expect(Math.max(...d.udls!.map((u) => u.x2))).toBe(8);
+    expect(d.lineLoads).toEqual([{ magnitude: 40, x: 5 }]);
+    expect(d.orientation).toBe("ltr");
+    expect(d.analysisLimits).toEqual({ entryLeftX: 1, entryRightX: 9, exitLeftX: 21, exitRightX: 29 });
+    expect(imp.options).toMatchObject({ method: "Morgenstern-Price", intersliceFunction: "constant", slices: 40 });
+    // the file's critical circle (the sentinel factor 999 left out)
+    expect(imp.reference).toMatchObject({ fos: 1.4, cx: 14, cy: 17, r: 13.5 });
+    expect(d.customSearchPlanes).toEqual([{ cx: 14, cy: 17, radius: 13.5 }]);
+    expect(imp.notes.join(" ")).toMatch(/Materials without a piezometric line \(Clay\)/);
+    expect(Number.isFinite(fos(d, imp.options))).toBe(true);
+  });
+
+  it("reports a strength model it cannot read and keeps its parameters", () => {
+    const xml = XML.replace("<SlopeModel>UndrainedPhiZero</SlopeModel>", "<SlopeModel>SHANSEP</SlopeModel>");
+    const imp = gszToDefinition({ ...parseGszXml(xml), results: new Map() }, 1);
+    expect(imp.notes.join(" ")).toMatch(/"Clay": the strength model "SHANSEP" has no counterpart.*Cohesion = 25/);
+  });
+
+  it("converts an Imperial file", () => {
+    const xml = XML.replace('UnitSystem="Metric"', 'UnitSystem="Imperial"');
+    const imp = gszToDefinition({ ...parseGszXml(xml), results: new Map() }, 1);
+    expect(imp.definition.coordinates).toEqual(expect.arrayContaining([[30 * 0.3048, 0]]));
+    expect(imp.definition.materials[1].model).toMatchObject({ unitWeight: 17 * 0.157087463, undrainedShearStrength: 25 * 0.0478802589 });
+  });
+
+  it("imports every stability analysis of a ZIP and skips the seepage one", async () => {
+    const bytes = writeZip([{ name: "Section A.xml", data: XML }, { name: "Short term/001/slip_surface.csv", data: CSV }]);
+    const imps = await gszImports(bytes, "Section A.gsz");
+    expect(imps).toHaveLength(1);
+    expect(imps[0].reference?.fos).toBe(1.4);
+    await expect(readGsz(new Uint8Array([1, 2, 3]))).rejects.toThrow(/Not a \.gsz/);
+  });
+});
+
+describe(".gsz export", () => {
+  const def: SlopeDefinition = {
+    orientation: "ltr",
+    coordinates: [[0, 0], [0, 10], [10, 10], [20, 5], [30, 5], [30, 0]],
+    materials: [
+      { name: "Fill", color: "#ff8000", model: { kind: "mohr-coulomb", unitWeight: 19, cohesion: 2, frictionAngle: 32 } },
+      { name: "Clay", model: { kind: "undrained", unitWeight: 17, undrainedShearStrength: 25 } },
+    ],
+    materialBoundaries: [{ coordinates: [[0, 3], [30, 3]], materialName: "" }],
+    regionAssignments: [{ point: [5, 6], materialName: "Fill" }, { point: [5, 1], materialName: "Clay" }],
+    waterTable: { mode: "custom", value: [[0, 6], [30, 4]] },
+    udls: [{ magnitude: 20, x1: 2, x2: 8 }],
+    lineLoads: [{ magnitude: 40, x: 5 }],
+    analysisLimits: { entryLeftX: 1, entryRightX: 9, exitLeftX: 21, exitRightX: 29 },
+  } as SlopeDefinition;
+  const model = modelFromDefinition(def, { id: "m", name: "Section A", options: { method: "Morgenstern-Price", intersliceFunction: "constant" } });
+
+  it("writes the regions, materials, water, loads and search, and reads back the same slope", async () => {
+    const { bytes, notes } = modelToGsz(model);
+    const [imp] = await gszImports(bytes, "Section A.gsz");
+    const d = imp.definition;
+    expect(d.materials.map((m) => [m.name, m.model?.kind])).toEqual([["Fill", "mohr-coulomb"], ["Clay", "undrained"]]);
+    expect(d.udls!.every((u) => Math.abs(u.magnitude - 20) < 1e-9)).toBe(true);
+    expect(d.lineLoads).toEqual([{ magnitude: 40, x: 5 }]);
+    expect(d.analysisLimits).toEqual(def.analysisLimits);
+    expect(imp.options).toMatchObject({ method: "Morgenstern-Price", intersliceFunction: "constant" });
+    expect(notes.join(" ")).toMatch(/surcharges/);
+    // the same factor of safety
+    const opts = { method: "Morgenstern-Price", intersliceFunction: "constant" };
+    expect(fos(d, opts)).toBeCloseTo(fos(def, opts), 6);
+  });
+
+  it("names what it cannot write", () => {
+    const m = { ...model, materials: model.materials.map((x, i) => (i === 1 ? { ...x, model: { kind: "s-f-depth", unitWeight: 17, suRef: 10, depthRef: 0, rate: 1.5 } as const } : x)) };
+    const { xml, notes } = modelToGszXml(m);
+    expect(xml).toContain("<SlopeModel>UndrainedPhiZero</SlopeModel>");
+    expect(notes.join(" ")).toMatch(/"Clay": strength as a function of depth is written as undrained with its reference Su \(10 kPa\)/);
+  });
+});

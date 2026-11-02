@@ -109,6 +109,7 @@ describe("FileMenu in a browser", () => {
     const alert = vi.spyOn(window, "alert").mockImplementation(() => {});
     const pickers = capturePickers();
     renderMenu();
+    await userEvent.click(screen.getByTitle("Import"));
     await userEvent.click(screen.getByTitle("Import DXF"));
     const picker = pickers.at(-1)!;
     expect(picker.accept).toBe(".dxf");
@@ -124,6 +125,7 @@ describe("FileMenu in a browser", () => {
     const alert = vi.spyOn(window, "alert").mockImplementation(() => {});
     const pickers = capturePickers();
     renderMenu();
+    await userEvent.click(screen.getByTitle("Import"));
     await userEvent.click(screen.getByTitle("Import DXF"));
     const picker = pickers.at(-1)!;
     choose(picker, "empty.dxf", dxf([[0, "SECTION"], [2, "ENTITIES"], [0, "ENDSEC"], [0, "EOF"]]));
@@ -131,6 +133,31 @@ describe("FileMenu in a browser", () => {
     await waitFor(() => expect(alert).toHaveBeenCalled());
     expect(String(alert.mock.calls[0][0])).toMatch(/^DXF import failed: /);
     expect(store().models).toHaveLength(1);
+  });
+
+  it("imports a .gsz file from Import › .gsz file and exports the model as one", async () => {
+    const alert = vi.spyOn(window, "alert").mockImplementation(() => {});
+    const { modelToGsz } = await import("../../../features/project/gsz/gsz-write");
+    store().saveCurrentModel();
+    const model = store().models.find((m) => m.id === store().activeModelId)!;
+    const { bytes } = modelToGsz({ ...model, name: "Exported" });
+    const pickers = capturePickers();
+    renderMenu();
+    await userEvent.click(screen.getByTitle("Import"));
+    await userEvent.click(screen.getByTitle("Import a .gsz project file"));
+    const picker = pickers.at(-1)!;
+    expect(picker.accept).toBe(".gsz");
+    Object.defineProperty(picker, "files", { value: [new File([bytes as BlobPart], "Section B.gsz")], configurable: true });
+    picker.onchange?.(new Event("change"));
+    await waitFor(() => expect(alert).toHaveBeenCalled());
+    expect(String(alert.mock.calls[0][0])).toMatch(/^Imported 1 model from Section B\.gsz/);
+    expect(store().models.find((m) => m.id === store().activeModelId)!.name).toBe("Section B");
+
+    URL.createObjectURL ??= () => "blob:x";
+    URL.revokeObjectURL ??= () => {};
+    await userEvent.click(screen.getByTitle("Export"));
+    await userEvent.click(screen.getByTitle("Export the model as a .gsz project file"));
+    expect(String(alert.mock.calls.at(-1)![0])).toMatch(/^Exported "Section B" as Section B\.gsz/);
   });
 
   it("starts a new project", async () => {

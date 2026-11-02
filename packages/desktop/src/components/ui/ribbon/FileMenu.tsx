@@ -2,8 +2,10 @@ import { useEffect } from "react";
 import { createPortal } from "react-dom";
 import { isElectron } from "../../../utils/is-electron";
 import { useProjectActions } from "../../../features/project/useProjectActions";
-import { RibbonGroup, RibbonButton, RibbonSep } from "./RibbonParts";
+import { RibbonGroup, RibbonButton, RibbonMenuButton, RibbonSep } from "./RibbonParts";
 import { importDxf } from "../../../features/project/importDxf";
+import { importGsz } from "../../../features/project/importGsz";
+import { exportGsz } from "../../../features/project/exportGsz";
 import {
   NewIcon,
   OpenIcon,
@@ -54,6 +56,34 @@ export function FileMenu({
       reader.readAsText(file);
     };
     input.click();
+  };
+
+  const handleImportGsz = () => {
+    const input = document.createElement("input");
+    input.type = "file";
+    input.accept = ".gsz";
+    input.onchange = () => {
+      const file = input.files?.[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = () => {
+        importGsz(new Uint8Array(reader.result as ArrayBuffer), file.name).then(
+          (message) => alert(message),
+          (err) => alert(`.gsz import failed: ${err instanceof Error ? err.message : String(err)}`),
+        );
+      };
+      reader.onerror = () => alert(`Could not read ${file.name}.`);
+      reader.readAsArrayBuffer(file);
+    };
+    input.click();
+  };
+
+  const handleExportGsz = () => {
+    try {
+      alert(exportGsz());
+    } catch (err) {
+      alert(`.gsz export failed: ${err instanceof Error ? err.message : String(err)}`);
+    }
   };
 
   // ── Keyboard shortcuts (Ctrl+N/O/S/Shift+S) ──
@@ -122,10 +152,18 @@ export function FileMenu({
                 shortcut="Ctrl+O"
                 onClick={handleOpen}
               />
-              <RibbonButton
+              <RibbonMenuButton
                 icon={<ImportDxfIcon />}
-                label="Import DXF"
-                onClick={handleImportDxf}
+                label="Import"
+                items={[
+                  { label: "DXF file…", title: "Import DXF", onClick: handleImportDxf },
+                  { label: ".gsz file…", title: "Import a .gsz project file", onClick: handleImportGsz },
+                ]}
+              />
+              <RibbonMenuButton
+                icon={<ExportFileIcon />}
+                label="Export"
+                items={[{ label: ".gsz file…", title: "Export the model as a .gsz project file", onClick: handleExportGsz }]}
               />
             </RibbonGroup>
             <RibbonSep />
@@ -167,6 +205,20 @@ export function FileMenu({
         onChange={handleFileChange}
       />
     </div>
+  );
+}
+
+function ExportFileIcon({ size = 22 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 32 32" fill="none">
+      <path
+        d="M7 3h12l7 7v18a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z"
+        fill="#e8eaed"
+        stroke="#90a4ae"
+        strokeWidth="1.2"
+      />
+      <path d="M16 23V12m0 0l-4 4m4-4l4 4" stroke="#1e88e5" strokeWidth="1.8" fill="none" strokeLinecap="round" />
+    </svg>
   );
 }
 
