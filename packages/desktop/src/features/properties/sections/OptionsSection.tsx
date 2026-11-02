@@ -553,6 +553,20 @@ export function OptionsSection({ plain = false }: OptionsSectionProps) {
             />
           </label>
           <label className="flex flex-col gap-0.5">
+            <Label>Crack at base angle (°)</Label>
+            <DraftNumberInput
+              value={options.tensionCrackAngle ?? 0}
+              min={0}
+              max={89.9}
+              step={5}
+              onValueChange={(v) =>
+                v >= 0 && v < 90 && setOptions({ tensionCrackAngle: v })
+              }
+              aria-label="Tension crack angle"
+              title="Tension crack at a limiting base inclination: from the entry, the part of the slip surface steeper than this angle is cut off and the surface ends at a vertical crack there (often 45° + φ/2, or about 60°). 0 = none. With a crack depth too, the crack further from the entry governs."
+            />
+          </label>
+          <label className="flex flex-col gap-0.5">
             <Label>Water in crack (%)</Label>
             <DraftNumberInput
               value={Math.round((options.tensionCrackWater ?? 0) * 100)}
@@ -560,7 +574,9 @@ export function OptionsSection({ plain = false }: OptionsSectionProps) {
               max={100}
               step={10}
               disabled={
-                !(options.tensionCrackDepth! > 0) && !options.tensionCrackAuto
+                !(options.tensionCrackDepth! > 0) &&
+                !options.tensionCrackAuto &&
+                !(options.tensionCrackAngle! > 0)
               }
               onValueChange={(v) =>
                 v >= 0 &&

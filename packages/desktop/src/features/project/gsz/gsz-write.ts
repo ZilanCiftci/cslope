@@ -230,7 +230,16 @@ ${ids.map((d) => `              <DataPoint>${d}</DataPoint>`).join("\n")}
   if (opts.method === "Morgenstern-Price" && opts.intersliceFunction && !["constant", "half-sine"].includes(opts.intersliceFunction)) {
     notes.push(`The interslice function "${opts.intersliceFunction}" is not written (half-sine).`);
   }
-  if ((opts.tensionCrackDepth ?? 0) > 0) notes.push("The tension crack depth is not written.");
+  if ((opts.tensionCrackDepth ?? 0) > 0 || opts.tensionCrackAuto) notes.push("The tension crack depth is not written (the crack angle is).");
+  const crackXml =
+    (opts.tensionCrackAngle ?? 0) > 0
+      ? `        <TensionCrack>
+          <TensionOption>Angle</TensionOption>
+          <Angle>${n(opts.tensionCrackAngle!)}</Angle>
+          <PctFilledWithWater>${n((opts.tensionCrackWater ?? 0) * 100)}</PctFilledWithWater>
+        </TensionCrack>
+`
+      : "";
   if (opts.partialFactors) notes.push("The partial factors are not written; the file has characteristic values.");
 
   const xml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
@@ -307,7 +316,7 @@ ${surchargeXml.join("\n")}
         <LineLoadPoints Len="${lineLoadXml.length}">
 ${lineLoadXml.join("\n")}
         </LineLoadPoints>
-        <SlipSurface>
+${crackXml}        <SlipSurface>
           <DirectionOfSlip>${rtl ? "RightToLeft" : "LeftToRight"}</DirectionOfSlip>
           <Option>EntryExit</Option>
           <EntryExit>

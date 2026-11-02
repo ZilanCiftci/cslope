@@ -193,6 +193,7 @@ export class Slope {
   private _tensionCrackDepth: number;
   private _tensionCrackWater: number;
   private _tensionCrackAuto: boolean;
+  private _tensionCrackAngle: number;
   private _partialFactors: PartialFactors | null = null;
   private _nonCircularOptimization = false;
   private _searchMethod: SearchMethod = "circular";
@@ -244,6 +245,7 @@ export class Slope {
     this._tensionCrackDepth = d.tensionCrackDepth ?? 0;
     this._tensionCrackWater = d.tensionCrackWater ?? 0;
     this._tensionCrackAuto = d.tensionCrackAuto ?? false;
+    this._tensionCrackAngle = d.tensionCrackAngle ?? 0;
   }
 
   // ────────────────────────────────────────────────────────────────
@@ -409,6 +411,11 @@ export class Slope {
 
   get tensionCrackWater(): number {
     return this._tensionCrackWater;
+  }
+
+  /** Limiting base inclination of a tension crack (°; 0: none). */
+  get tensionCrackAngle(): number {
+    return this._tensionCrackAngle;
   }
 
   get tensionCrackAuto(): boolean {
@@ -1107,6 +1114,12 @@ export class Slope {
     }
     if (opts.tensionCrackAuto !== undefined) {
       this._tensionCrackAuto = opts.tensionCrackAuto;
+    }
+    if (opts.tensionCrackAngle !== undefined) {
+      if (!Number.isFinite(opts.tensionCrackAngle) || opts.tensionCrackAngle < 0 || opts.tensionCrackAngle >= 90) {
+        throw new Error("tensionCrackAngle must be ≥ 0 and less than 90°");
+      }
+      this._tensionCrackAngle = opts.tensionCrackAngle;
     }
     if (opts.tensionCrackWater !== undefined) {
       if (

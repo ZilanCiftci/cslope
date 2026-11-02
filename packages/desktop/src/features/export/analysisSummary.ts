@@ -371,13 +371,16 @@ export function buildAnalysisSummary(input: AnalysisSummaryInput): SummarySectio
     });
   }
   water.push({ label: "Unit weight of water", value: `${WATER_UNIT_WEIGHT} kN/m³` });
-  if (options.tensionCrackAuto || options.tensionCrackDepth) {
-    water.push({
-      label: "Tension crack",
-      value: options.tensionCrackAuto
-        ? "Rankine depth from the soil at each entry"
-        : `${fmt(options.tensionCrackDepth)} m deep`,
-    });
+  if (options.tensionCrackAuto || options.tensionCrackDepth || options.tensionCrackAngle) {
+    const parts = [
+      ...(options.tensionCrackAuto
+        ? ["Rankine depth from the soil at each entry"]
+        : options.tensionCrackDepth
+          ? [`${fmt(options.tensionCrackDepth)} m deep`]
+          : []),
+      ...(options.tensionCrackAngle ? [`where the base is no steeper than ${fmt(options.tensionCrackAngle)}°`] : []),
+    ];
+    water.push({ label: "Tension crack", value: parts.join("; the further from the entry, ") });
     water.push({
       label: "Water in crack",
       value: `${fmt((options.tensionCrackWater ?? 0) * 100)} % of the crack depth`,

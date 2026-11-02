@@ -88,3 +88,15 @@ describe("distributed load direction", () => {
     expect("direction" in again.udls[0]).toBe(false);
   });
 });
+
+describe("tension crack angle", () => {
+  it("keeps a valid crack angle through the project file and drops an invalid one", async () => {
+    const { parseProjectFile, serializeProject } = await import("./persistence");
+    store().setOptions({ tensionCrackAngle: 60 });
+    store().saveCurrentModel();
+    expect(parseProjectFile(JSON.stringify(serializeProject(store()))).models[0].options.tensionCrackAngle).toBe(60);
+    const raw = JSON.parse(JSON.stringify(serializeProject(store())));
+    raw.models[0].options.tensionCrackAngle = 95;
+    expect("tensionCrackAngle" in parseProjectFile(JSON.stringify(raw)).models[0].options).toBe(false);
+  });
+});

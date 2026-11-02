@@ -214,6 +214,16 @@ describe(".gsz import", () => {
     expect(back.definition.udls!.every((u) => u.direction === "normal")).toBe(true);
   });
 
+  it("imports and exports a tension crack at a limiting angle", async () => {
+    const xml = XML.replace("<SlipSurface>", "<TensionCrack><TensionOption>Angle</TensionOption><Angle>62</Angle><PctFilledWithWater>50</PctFilledWithWater></TensionCrack><SlipSurface>");
+    const imp = gszToDefinition({ ...parseGszXml(xml), results: new Map() }, 1);
+    expect(imp.options).toMatchObject({ tensionCrackAngle: 62, tensionCrackWater: 0.5 });
+    expect(imp.notes.join(" ")).not.toMatch(/tension crack option/);
+    const model = modelFromDefinition(imp.definition, { id: "c", name: "C", options: imp.options });
+    const [back] = await gszImports(modelToGsz(model).bytes, "C.gsz");
+    expect(back.options).toMatchObject({ tensionCrackAngle: 62, tensionCrackWater: 0.5 });
+  });
+
   it("reports a strength model it cannot read and keeps its parameters", () => {
     const xml = XML.replace("<SlopeModel>UndrainedPhiZero</SlopeModel>", "<SlopeModel>SHANSEP</SlopeModel>");
     const imp = gszToDefinition({ ...parseGszXml(xml), results: new Map() }, 1);

@@ -629,6 +629,16 @@ export function getSlices(
     if (xc === null) return [];
     x0 = xc;
   }
+  // A crack at a limiting base inclination: the steeper part from the
+  // entry is cut off; the crack further from the entry governs.
+  if (slope.tensionCrackAngle > 0) {
+    const xa = findAngleCrackX(x0, x1, baseY, (slope.tensionCrackAngle * Math.PI) / 180);
+    if (xa === null) return [];
+    if (xa > x0) {
+      x0 = xa;
+      crackDepth = Math.max(0, getYAtX(surfXY.x, surfXY.y, xa) - baseY(xa));
+    }
+  }
 
   const dist = x1 - x0;
   const b = dist / slope.sliceCount;
@@ -1073,6 +1083,47 @@ export function rankineCrackDepth(slope: Slope, x: number): number {
     if (Number.isFinite(wy) && wy > yGround) q += WATER_UNIT_WEIGHT * (wy - yGround);
   }
   return Math.max(0, (2 * c) / (gamma * sqrtKa) - q / gamma);
+}
+
+/**
+ * x of a tension crack at a limiting base inclination: the first point
+ * from the entry where the slip surface is no steeper than `angle` (rad,
+ * measured from the horizontal, descending in the sliding direction +x);
+ * `xEntry` itself when the surface starts no steeper; null when the
+ * surface never flattens to it before the exit.
+ */
+export function findAngleCrackX(
+  xEntry: number,
+  xExit: number,
+  baseY: (x: number) => number,
+  angle: number,
+): number | null {
+  const span = xExit - xEntry;
+  const h = Math.max(1e-9, span * 1e-6);
+  // inclination at x from the slope just after x (a polyline's kink belongs to the next segment)
+  const steeper = (x: number) => {
+    const d = Math.min(h, xExit - x);
+    return d > 0 ? Math.atan(-(baseY(x + d) - baseY(x)) / d) - angle : -1;
+  };
+  if (steeper(xEntry) <= 0) return xEntry;
+  const steps = 400;
+  let prev = xEntry;
+  for (let k = 1; k <= steps; k++) {
+    const x = xEntry + (span * k) / steps;
+    if (x >= xExit) break;
+    if (steeper(x) <= 0) {
+      let lo = prev;
+      let hi = x;
+      for (let it = 0; it < 50; it++) {
+        const mid = (lo + hi) / 2;
+        if (steeper(mid) <= 0) hi = mid;
+        else lo = mid;
+      }
+      return hi;
+    }
+    prev = x;
+  }
+  return null;
 }
 
 /**

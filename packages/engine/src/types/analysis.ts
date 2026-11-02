@@ -74,6 +74,17 @@ export interface AnalysisOptions {
    */
   tensionCrackAuto?: boolean;
   /**
+   * Tension crack at a limiting base inclination (°, 0 < angle < 90; not
+   * set or 0: none): from the entry, the part of a slip surface whose base
+   * is steeper than this angle is cut off, and the surface ends at a
+   * vertical crack where its inclination falls to the angle (as commercial
+   * programs offer it, typically 45° + φ/2 or about 60°). With a crack
+   * depth (`tensionCrackDepth` or `tensionCrackAuto`) as well, the crack
+   * further from the entry governs. Water in the crack (`tensionCrackWater`)
+   * is the part of its depth there.
+   */
+  tensionCrackAngle?: number;
+  /**
    * Partial factors (Eurocode 7 design values). When set, strengths are
    * divided and variable loads multiplied by them, and the FOS is the
    * over-design factor on design values (≥ 1.0 satisfies the design).

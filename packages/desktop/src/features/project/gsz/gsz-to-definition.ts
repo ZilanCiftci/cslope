@@ -420,7 +420,10 @@ export function gszToDefinition(file: GszFile, analysisId: number, fileName = "g
         options.tensionCrackDepth = Number((depths.reduce((s, d) => s + d, 0) / depths.length).toFixed(3));
         notes.push(`The tension crack line is imported as a crack depth of ${options.tensionCrackDepth} m.`);
       }
+    } else if (/angle/i.test(tc.option) && tc.angle !== undefined && tc.angle > 0 && tc.angle < 90) {
+      options.tensionCrackAngle = tc.angle;
     } else notes.push(`The tension crack option "${tc.option}"${tc.angle !== undefined ? ` (${tc.angle}°)` : ""} is not imported.`);
+    if (tc.waterPercent > 0 && (options.tensionCrackAngle || options.tensionCrackDepth)) options.tensionCrackWater = Math.min(1, tc.waterPercent / 100);
   }
   if (stab && (stab.seismicH !== 0 || stab.seismicV !== 0)) {
     notes.push(`The seismic coefficients (kh = ${stab.seismicH}, kv = ${stab.seismicV}) are not imported.`);

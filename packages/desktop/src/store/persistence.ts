@@ -1057,6 +1057,9 @@ function normalizeAnalysisOptions(raw: unknown): AnalysisOptions {
       ? { minSlipArea: o.minSlipArea }
       : {}),
     ...(o.tensionCrackAuto === true ? { tensionCrackAuto: true } : {}),
+    ...(typeof o.tensionCrackAngle === "number" && Number.isFinite(o.tensionCrackAngle) && o.tensionCrackAngle > 0 && o.tensionCrackAngle < 90
+      ? { tensionCrackAngle: o.tensionCrackAngle }
+      : {}),
     ...(o.searchMethod === "block" ? { searchMethod: "block" as const } : {}),
     ...(angleRangeOrNull(o.blockActiveAngle) ? { blockActiveAngle: angleRangeOrNull(o.blockActiveAngle) } : {}),
     ...(angleRangeOrNull(o.blockPassiveAngle) ? { blockPassiveAngle: angleRangeOrNull(o.blockPassiveAngle) } : {}),
