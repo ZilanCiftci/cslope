@@ -293,6 +293,57 @@ describe(".gsz import", () => {
     expect(imps[0].reference?.fos).toBe(1.4);
     await expect(readGsz(new Uint8Array([1, 2, 3]))).rejects.toThrow(/Not a \.gsz/);
   });
+
+  it("reads a GeoStudio 2012 file (version 8) and imports the analyses it can", async () => {
+    // GeometryItems instead of Geometries, RegionUsesMaterials, SlopeItems
+    // with SlipEntryExit and piezometric lines on the geometry's points,
+    // no water items, SlipRadius in the results.
+    const v8 = `<?xml version="1.0"?>
+<GSIData Version="8.16">
+  <Analyses Len="2">
+    <Analysis><ID>1</ID><Name>Wet</Name><Kind>SLOPE/W</Kind><Method>Bishop</Method></Analysis>
+    <Analysis><ID>2</ID><Name>Empty</Name><Kind>SLOPE/W</Kind><Method>Bishop</Method></Analysis>
+  </Analyses>
+  <Contexts Len="2">
+    <Context><AnalysisID>1</AnalysisID><RegionUsesMaterials Len="1"><RegionUsesMaterial ID="1" UsesID="1" /></RegionUsesMaterials></Context>
+    <Context><AnalysisID>2</AnalysisID></Context>
+  </Contexts>
+  <GeometryItems>
+    <Points Len="6">
+      <Point ID="1" X="0" Y="10" /><Point ID="2" X="10" Y="10" /><Point ID="3" X="20" Y="5" />
+      <Point ID="4" X="30" Y="5" /><Point ID="5" X="30" Y="0" /><Point ID="6" X="0" Y="0" />
+      <Point ID="7" X="0" Y="8" /><Point ID="8" X="30" Y="4" />
+    </Points>
+    <Regions Len="1"><Region><ID>1</ID><PointIDs>1,2,3,4,5,6</PointIDs></Region></Regions>
+  </GeometryItems>
+  <Materials Len="1">
+    <Material><ID>1</ID><Name>Clay</Name><SlopeModel>MohrCoulomb</SlopeModel>
+      <StressStrain><UnitWeight>18</UnitWeight><CohesionPrime>8</CohesionPrime><PhiPrime>25</PhiPrime></StressStrain></Material>
+  </Materials>
+  <SlopeItems Len="1">
+    <SlopeItem><AnalysisID>1</AnalysisID><Entry>
+      <SlipEntryExit>
+        <LeftSideLeftPt X="1" Y="10" /><LeftSideRightPt X="9" Y="10" />
+        <RightOption>Point</RightOption><RightSideLeftPt X="20" Y="5" />
+      </SlipEntryExit>
+      <PiezometricLines Len="1"><PiezometricLine><ID>1</ID><DataPoints Len="2"><DataPoint>7</DataPoint><DataPoint>8</DataPoint></DataPoints></PiezometricLine></PiezometricLines>
+      <MaterialUsesPiezs Len="1"><MaterialUsesPiez ID="1" UsesID="1" /></MaterialUsesPiezs>
+    </Entry></SlopeItem>
+  </SlopeItems>
+</GSIData>`;
+    const csv = "SlipNum,SlipFOS,SlipCenterX,SlipCenterY,SlipRadius,SlipVolume,SlipWeight\n1,1.31,18,20,16,40,720\n";
+    const imps = await gszImports(writeZip([{ name: "Old.xml", data: v8 }, { name: "Wet/001/slip_surface.csv", data: csv }]), "Old.gsz");
+    expect(imps).toHaveLength(1);
+    const [imp] = imps;
+    expect(imp.definition.coordinates).toHaveLength(6);
+    expect(imp.definition.materials.map((m) => m.name)).toEqual(["Clay"]);
+    expect(imp.definition.waterTable?.value).toEqual([[0, 8], [30, 4]]);
+    expect(imp.definition.analysisLimits).toEqual({ entryLeftX: 1, entryRightX: 9, exitLeftX: 20, exitRightX: 20 });
+    expect(imp.options.method).toBe("Bishop");
+    expect(imp.reference).toMatchObject({ fos: 1.31, cx: 18, cy: 20, r: 16 });
+    // the analysis without materials is named, not a reason to fail
+    expect(imp.notes.join(" ")).toMatch(/Not imported: Analysis "Empty" assigns no material/);
+  });
 });
 
 describe(".gsz export", () => {

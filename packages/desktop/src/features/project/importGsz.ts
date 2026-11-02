@@ -9,7 +9,20 @@ export async function gszImports(bytes: Uint8Array, fileName: string): Promise<G
   const file = await readGsz(bytes);
   const analyses = stabilityAnalyses(file);
   if (analyses.length === 0) throw new Error("The file has no slope stability analysis.");
-  return analyses.map((a) => gszToDefinition(file, a.id, fileName));
+  // An analysis that cannot be read (no geometry, no materials) does not
+  // stop the others; it is named in the first one's notes.
+  const imports: GszImport[] = [];
+  const failed: string[] = [];
+  for (const a of analyses) {
+    try {
+      imports.push(gszToDefinition(file, a.id, fileName));
+    } catch (e) {
+      failed.push(e instanceof Error ? e.message : String(e));
+    }
+  }
+  if (imports.length === 0) throw new Error(failed[0]);
+  if (failed.length > 0) imports[0].notes.push(...failed.map((m) => `Not imported: ${m}`));
+  return imports;
 }
 
 /**

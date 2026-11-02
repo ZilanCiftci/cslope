@@ -165,7 +165,10 @@ export function parseGszXml(xml: string): Omit<GszFile, "results"> {
   }
 
   const geometries = new Map<number, GszGeometry>();
-  children(root, "Geometries/Geometry").forEach((g, i) => {
+  // GeoStudio 2012 files (version 8) have one geometry, as GeometryItems.
+  const geometryElements = children(root, "Geometries/Geometry");
+  if (geometryElements.length === 0) geometryElements.push(...children(root, "GeometryItems"));
+  geometryElements.forEach((g, i) => {
     const points = new Map<number, Pt>();
     for (const p of children(g, "Points/Point")) {
       const id = num(p.getAttribute("ID")), x = num(p.getAttribute("X")), y = num(p.getAttribute("Y"));
@@ -210,6 +213,11 @@ export function parseGszXml(xml: string): Omit<GszFile, "results"> {
       const entry = num(g.getAttribute("Entry"));
       if (m && entry !== undefined) map.set(Number(m[1]), entry);
     }
+    // version 8: region id → material id
+    for (const g of children(c, "RegionUsesMaterials/RegionUsesMaterial")) {
+      const id = num(g.getAttribute("ID")), uses = num(g.getAttribute("UsesID"));
+      if (id !== undefined && uses !== undefined) map.set(id, uses);
+    }
     regionMaterials.set(aid, map);
   }
 
@@ -225,7 +233,11 @@ export function parseGszXml(xml: string): Omit<GszFile, "results"> {
   }
 
   const stability = new Map<number, GszStability>();
-  for (const s of children(root, "StabilityItems/StabilityItem")) {
+  // The geometry's points, which version 8 files refer to from the
+  // stability items (later versions give each analysis its own list).
+  const globalPoints = geometries.get(1)?.points ?? new Map<number, Pt>();
+  const items = [...children(root, "StabilityItems/StabilityItem"), ...children(root, "SlopeItems/SlopeItem")];
+  for (const s of items) {
     const aid = num(childText(s, "AnalysisID"));
     const entry = child(s, "Entry");
     if (aid === undefined || !entry) continue;
@@ -237,12 +249,13 @@ export function parseGszXml(xml: string): Omit<GszFile, "results"> {
     }
     const pointsOf = (el: Element | null): Pt[] =>
       children(el, "DataPoints/DataPoint").flatMap((d) => {
-        const p = local.get(Number(d.textContent?.trim()));
+        const n = Number(d.textContent?.trim());
+        const p = local.size > 0 ? local.get(n) : globalPoints.get(n);
         return p ? [p] : [];
       });
     const piezometric = new Map<number, Pt[]>();
     const piezometricMaxSuction = new Map<number, number>();
-    for (const ps of children(entry, "PiezometricSurfaces/PiezometricSurface")) {
+    for (const ps of [...children(entry, "PiezometricSurfaces/PiezometricSurface"), ...children(entry, "PiezometricLines/PiezometricLine")]) {
       const id = num(childText(ps, "ID"));
       if (id === undefined) continue;
       piezometric.set(id, pointsOf(ps));
@@ -270,7 +283,8 @@ export function parseGszXml(xml: string): Omit<GszFile, "results"> {
     const tc = child(entry, "TensionCrack");
     const tcOption = childText(tc, "TensionOption");
     const slip = child(entry, "SlipSurface");
-    const ee = child(slip, "EntryExit");
+    // version 8: SlipEntryExit directly in the entry
+    const ee = child(slip, "EntryExit") ?? child(entry, "SlipEntryExit");
     const xOf = (tag: string) => num(child(ee, tag)?.getAttribute("X"));
     const [l1, l2Given, r1, r2Given] = ["LeftSideLeftPt", "LeftSideRightPt", "RightSideLeftPt", "RightSideRightPt"].map(xOf);
     // An entry or exit given as a single point (LeftOption / RightOption
@@ -313,6 +327,17 @@ export function parseGszXml(xml: string): Omit<GszFile, "results"> {
     else throw new Error(`Cannot tell the units of the file (unit weight of water ${gw}).`);
   }
 
+  // Version 8 has no water items: the piezometric lines of an analysis
+  // are its pore pressure, and a pore pressure function (PHFunc3DID) is
+  // named so that it is reported as not imported.
+  for (const s of children(root, "SlopeItems/SlopeItem")) {
+    const aid = num(childText(s, "AnalysisID"));
+    if (aid === undefined || water.has(aid)) continue;
+    const entry = child(s, "Entry");
+    if (childText(entry, "PHFunc3DID") !== undefined) water.set(aid, { option: "Spatial function" });
+    else if ((stability.get(aid)?.piezometric.size ?? 0) > 0) water.set(aid, { option: "PiezoSurface" });
+  }
+
   return { units, analyses, geometries, materials, regionMaterials, stability, water };
 }
 
@@ -323,11 +348,13 @@ export function parseSlipSurfaceCsv(text: string): GszSlipResult[] {
   const head = lines[0].split(",").map((h) => h.trim());
   const col = (name: string) => head.indexOf(name);
   const [iF, iX, iY, iR, iM, iW, iD] = ["SlipFOS", "SlipCenterX", "SlipCenterY", "SlipRadiusX", "SlipOrigSearchMethod", "SlipWeight", "MobilizedShearDirection"].map(col);
-  if (iF < 0 || iX < 0 || iY < 0 || iR < 0) return [];
+  // version 8: SlipRadius
+  const iRadius = iR >= 0 ? iR : col("SlipRadius");
+  if (iF < 0 || iX < 0 || iY < 0 || iRadius < 0) return [];
   const out: GszSlipResult[] = [];
   for (const line of lines.slice(1)) {
     const c = line.split(",");
-    const fos = Number(c[iF]), cx = Number(c[iX]), cy = Number(c[iY]), r = Number(c[iR]);
+    const fos = Number(c[iF]), cx = Number(c[iX]), cy = Number(c[iY]), r = Number(c[iRadius]);
     // failed trials carry a sentinel factor
     if (!(fos > 0 && fos < 100) || !Number.isFinite(cx) || !Number.isFinite(cy) || !(r > 0)) continue;
     // search method 4 is the block search, whose surfaces are not circles
