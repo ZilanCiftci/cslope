@@ -5,7 +5,7 @@
  */
 
 import type { AnalysisWarning, Slice } from "../types/index";
-import type { Slope } from "./slope";
+import type { SearchPlane, Slope } from "./slope";
 import { janbuCorrectionFactor, solvedEffectiveNormals } from "./solvers";
 import { frictionalSurfaceSlide, surfaceSlideMessage } from "./surface-slide";
 
@@ -34,6 +34,50 @@ function mAlpha(s: Slice, fos: number): number {
   // tan φ = 0 in the equation that was solved.
   const tanPhi = s.undrainedGoverns ? 0 : Math.tan(s.phi);
   return Math.cos(s.alpha) + (Math.sin(s.alpha) * tanPhi) / fos;
+}
+
+/**
+ * Entry inclination (degrees) from which a Morgenstern–Price or Spencer
+ * surface without complete equilibrium is put down to its steep entry.
+ */
+export const STEEP_ENTRY_LIMIT = 70;
+
+/**
+ * Inclination of a surface at its entry (degrees, positive descending
+ * into the slope): at the crack bottom when cut, on a circle from the
+ * centre, on a polyline its first segment.
+ */
+export function entryInclination(p: SearchPlane): number {
+  if (p.points && p.points.length >= 2) {
+    const [[x0, y0], [x1, y1]] = p.points;
+    return (Math.atan2(y0 - y1, x1 - x0) * 180) / Math.PI;
+  }
+  const x = (p.crack ?? p.lc)[0];
+  return (Math.asin(Math.max(-1, Math.min(1, (p.cx - x) / p.radius))) * 180) / Math.PI;
+}
+
+/**
+ * Morgenstern–Price or Spencer found no complete equilibrium (no solution,
+ * or only the closest pair) on surfaces whose entry is steeper than
+ * STEEP_ENTRY_LIMIT: the cohesion along a nearly vertical base can only
+ * hold the slice with tension at its base (a negative normal force), and
+ * the moment and force factors then need not meet. A tension crack at a
+ * limiting base inclination cuts that part off. Null when this does not
+ * apply (another method, a crack angle already set, no steep entry).
+ *
+ * `planes` are the surfaces concerned: the critical one when it is a
+ * closest pair, or those without a factor when no surface has one.
+ */
+export function steepEntryMessage(slope: Slope, planes: readonly SearchPlane[]): string | null {
+  if (slope.method !== "Morgenstern-Price" || slope.tensionCrackAngle > 0) return null;
+  const steep = planes.map(entryInclination).filter((a) => a >= STEEP_ENTRY_LIMIT);
+  if (steep.length === 0) return null;
+  const angle = Math.max(...steep).toFixed(0);
+  const what =
+    planes.length === 1
+      ? `the surface enters the slope at ${angle}°`
+      : `${steep.length} of the surfaces enter the slope at up to ${angle}°`;
+  return `Moment and force equilibrium do not meet where ${what}: cohesion along a nearly vertical base can only hold it with tension at the base. A tension crack cutting off the steep part (Options › Crack at base angle, for example 60–70°) usually gives a solution.`;
 }
 
 const slicesText = (n: number, verb: [string, string]) =>
@@ -76,7 +120,12 @@ const slicesText = (n: number, verb: [string, string]) =>
  *   entry–exit distance (Options › Search) analyses the deeper surfaces.
  *   Not with "frictional-surface-slide", which already names the face.
  *
- * Only the critical surface is checked. `effectiveNormals` are its base
+ * - "steep-entry-no-equilibrium": Morgenstern–Price or Spencer found no
+ *   complete equilibrium on a surface entering steeper than
+ *   STEEP_ENTRY_LIMIT (steepEntryMessage): the critical surface is a
+ *   closest pair, or no surface has a factor at all.
+ *
+ * Only the critical surface is checked (all surfaces when none solved). `effectiveNormals` are its base
  * N′ when the caller already has them (solvedEffectiveNormals); otherwise
  * they are solved here.
  */
@@ -111,6 +160,12 @@ export function analysisWarnings(
     const shallow = shallowCohesionlessMessage(crit.slices, crit.fos, localRelief(slope, crit.slices));
     if (shallow) warnings.push({ code: "shallow-cohesionless-surface", message: shallow });
   }
+  const steepEntry = crit
+    ? crit.closestPair
+      ? steepEntryMessage(slope, [crit])
+      : null
+    : steepEntryMessage(slope, slope.search.filter((p) => p.fos == null && p.converged === false && !p.belowMinSize));
+  if (steepEntry) warnings.push({ code: "steep-entry-no-equilibrium", message: steepEntry });
   const slices = crit?.slices;
   if (!crit || !slices || slices.length === 0) return warnings;
   const fos = crit.fos!;

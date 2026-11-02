@@ -4,7 +4,7 @@ import type { SlopeDefinition } from "../types/slope-definition";
 import { VERIFICATION_CASES, runVerification } from "../verification/cases";
 import { buildSlope } from "./build-slope";
 import { polygonizeRegionsDetailed } from "./geometry-ops";
-import { analysisWarnings, M_ALPHA_WARNING_LIMIT } from "./result-warnings";
+import { analysisWarnings, entryInclination, M_ALPHA_WARNING_LIMIT } from "./result-warnings";
 import type { Slope } from "./slope";
 import { analyseSlope, solvedEffectiveNormals } from "./solvers";
 
@@ -183,5 +183,39 @@ describe("Bishop on a non-circular surface", () => {
     // The optimised surface follows the weak seam.
     expect(slope.search.find((p) => p.fos != null)?.points).toBeDefined();
     expect(hasWarning(slope)).toBe(true);
+  });
+});
+
+describe("steep entry without complete equilibrium", () => {
+  // φ = 0 slope with a vertical upper face: the circle enters at about 82°
+  // and Spencer finds no λ where moment and force equilibrium meet.
+  const def = {
+    orientation: "ltr",
+    coordinates: [[0, -10.1434], [0, 12.3984], [13.0087, 12.3984], [38.2674, 0], [52.0491, 0], [52.0491, -10.1434]],
+    materials: [{ name: "Upper", model: mc(20.8894, 17.2195, 0) }],
+    customSearchPlanes: [{ cx: 27.1581, cy: 14.9465, radius: 19.4513 }],
+    customPlanesOnly: true,
+  } as SlopeDefinition;
+  const spencer = { intersliceFunction: "constant" } as const;
+
+  it("names the steep entry and the crack angle when no surface solves", () => {
+    const { fos, slope } = runVerification(def, "Morgenstern-Price", spencer);
+    expect(fos).toBeNull();
+    expect(entryInclination(slope.search[0])).toBeCloseTo(82.4, 0);
+    const w = analysisWarnings(slope).find((x) => x.code === "steep-entry-no-equilibrium");
+    expect(w?.message).toMatch(/enters the slope at 82°.*Crack at base angle/);
+  });
+
+  it("solves with the steep part cut off, without the warning", () => {
+    const { fos, slope } = runVerification(def, "Morgenstern-Price", { ...spencer, tensionCrackAngle: 70 });
+    const bishop = runVerification(def, "Bishop", { tensionCrackAngle: 70 }).fos!;
+    // φ = 0: moment equilibrium alone fixes F, the same for every method.
+    expect(fos!).toBeCloseTo(bishop, 3);
+    expect(analysisWarnings(slope).some((x) => x.code === "steep-entry-no-equilibrium")).toBe(false);
+  });
+
+  it("is not given for Bishop", () => {
+    const { slope } = runVerification(def, "Bishop");
+    expect(analysisWarnings(slope).some((x) => x.code === "steep-entry-no-equilibrium")).toBe(false);
   });
 });

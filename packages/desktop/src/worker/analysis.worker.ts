@@ -16,6 +16,7 @@ import {
   sgi3dFactorOfSafety,
   analyseSlope,
   analysisWarnings,
+  steepEntryMessage,
   runFemSummary,
   runFemSummaryWithBounds,
   mapAnalysisResultToModelSpace,
@@ -214,8 +215,13 @@ function analyse(
   const validSurfaces = slope.search.filter((s) => s.fos != null);
   if (validSurfaces.length === 0) {
     // Reporting FOS 0.000 here would read as a collapsed slope.
+    const steep = steepEntryMessage(
+      slope,
+      slope.search.filter((p) => p.fos == null && p.converged === false && !p.belowMinSize),
+    );
     throw new Error(
-      "No valid slip surface was found. Check the search limits, the geometry and the material strengths.",
+      "No valid slip surface was found. " +
+        (steep ?? "Check the search limits, the geometry and the material strengths."),
     );
   }
 
