@@ -221,6 +221,16 @@ describe(".gsz import", () => {
     expect(d.analysisLimits).toEqual({ entryLeftX: 1, entryRightX: 9, exitLeftX: 21, exitRightX: 21 });
   });
 
+  it("imports a fully specified slip surface with its axis, analysed alone", () => {
+    const xml = XML.replace('<DataPoint Number="5" X="5" Y="10" />', '<DataPoint Number="5" X="5" Y="10" /><DataPoint Number="6" X="4" Y="10" /><DataPoint Number="7" X="12" Y="4" /><DataPoint Number="8" X="24" Y="5" /><DataPoint Number="9" X="14" Y="18" />')
+      .replace("<Option>EntryExit</Option>", "<Option>FullySpecified</Option><Axis ID=\"9\" /><FullySpecifiedSlips Len=\"1\"><FullySpecifiedSlip><ID>1</ID><DataPoints Len=\"3\"><DataPoint>6</DataPoint><DataPoint>7</DataPoint><DataPoint>8</DataPoint></DataPoints></FullySpecifiedSlip></FullySpecifiedSlips>");
+    const imp = gszToDefinition({ ...parseGszXml(xml), results: new Map() }, 1);
+    expect(imp.definition.customSurfaces).toEqual([{ points: [[4, 10], [12, 4], [24, 5]], axis: [14, 18] }]);
+    expect(imp.definition.customPlanesOnly).toBe(true);
+    expect(imp.notes.join(" ")).toMatch(/fully specified slip surface is imported/);
+    expect(imp.notes.join(" ")).not.toMatch(/search \("FullySpecified"\) is not imported/);
+  });
+
   it("imports and exports a tension crack at a limiting angle", async () => {
     // The file's angle is counter-clockwise from +x: 120° for sliding to
     // the right is a base inclination of 60° (the format's own example).

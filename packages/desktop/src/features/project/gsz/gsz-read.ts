@@ -64,6 +64,9 @@ export interface GszStability {
   optimised: boolean;
   /** The ends of the surface are projected at a fixed angle (then not a circle). */
   projected: boolean;
+  /** Fully specified slip surfaces (polylines) and their moment axis. */
+  fullySpecified: Pt[][];
+  axis?: Pt;
   /** Piezometric surface id → its points. */
   piezometric: Map<number, Pt[]>;
   /** Material id → piezometric surface id. */
@@ -303,6 +306,15 @@ export function parseGszXml(xml: string): Omit<GszFile, "results"> {
       slices: num(childText(slip, "NumberOfSlicesPerSlip")),
       optimised: childText(slip, "IsOptimizationOn") === "true",
       projected: ["UseLeftAngle", "UseRightAngle"].some((k) => child(slip, "Radius")?.getAttribute(k) === "true"),
+      fullySpecified: [
+        ...children(slip, "FullySpecifiedSlips/FullySpecifiedSlip"),
+        // version 8
+        ...children(entry, "FullySpecifiedSlipSurfaces/FullySpecifiedSlipSurface"),
+      ].map(pointsOf).filter((l) => l.length >= 2),
+      axis: (() => {
+        const id = num(child(slip, "Axis")?.getAttribute("ID")) ?? num(childText(child(entry, "SlipSurfaceAxis"), "ID"));
+        return id === undefined ? undefined : (local.size > 0 ? local.get(id) : globalPoints.get(id));
+      })(),
       piezometric,
       materialPiezometric,
       piezometricMaxSuction,

@@ -409,8 +409,21 @@ export function gszToDefinition(file: GszFile, analysisId: number, fileName = "g
       entryLeftX: entry[0] * scale.len, entryRightX: entry[1] * scale.len,
       exitLeftX: exit[0] * scale.len, exitRightX: exit[1] * scale.len,
     };
+  } else if (stab && /fully/i.test(stab.slipOption ?? "") && stab.fullySpecified.length > 0) {
+    // the file's own surfaces, analysed alone (below)
   } else if (stab?.slipOption) {
     notes.push(`The file's slip surface search ("${stab.slipOption}") is not imported; cSlope's own search over the whole slope is used.`);
+  }
+  // Fully specified surfaces: the polylines with their moment axis, and
+  // only they are analysed, as in the file.
+  const fully = stab && /fully/i.test(stab.slipOption ?? "") ? stab.fullySpecified : [];
+  const customSurfaces = fully.map((pts) => ({
+    points: pts.map(L).sort((a, b) => a[0] - b[0]),
+    ...(stab?.axis ? { axis: L(stab.axis) } : {}),
+  }));
+  if (customSurfaces.length > 0) {
+    notes.push(`The file's ${customSurfaces.length === 1 ? "fully specified slip surface is" : `${customSurfaces.length} fully specified slip surfaces are`} imported as custom surfaces and analysed alone.`);
+    if (stab?.optimised) notes.push("The optimisation of the specified surface is not carried over; turn on the non-circular optimisation in the options to refine it.");
   }
   if (stab?.tensionCrack) {
     const tc = stab.tensionCrack;
@@ -458,6 +471,7 @@ export function gszToDefinition(file: GszFile, analysisId: number, fileName = "g
     lineLoads,
     ...(analysisLimits ? { analysisLimits } : {}),
     ...(reference ? { customSearchPlanes: [{ cx: reference.cx, cy: reference.cy, radius: reference.r }] } : {}),
+    ...(customSurfaces.length > 0 ? { customSurfaces, customPlanesOnly: true } : {}),
   } as SlopeDefinition;
   const base = fileName.replace(/\.gsz$/i, "");
   return { name: stabilityAnalyses(file).length > 1 ? `${base} – ${analysis.name}` : base, definition, options, notes, reference };
