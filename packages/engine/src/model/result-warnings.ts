@@ -80,6 +80,21 @@ export function steepEntryMessage(slope: Slope, planes: readonly SearchPlane[]):
   return `Moment and force equilibrium do not meet where ${what}: cohesion along a nearly vertical base can only hold it with tension at the base. A tension crack cutting off the steep part (Options › Crack at base angle, for example 60–70°) usually gives a solution.`;
 }
 
+/**
+ * The critical surface enters steeper than STEEP_ENTRY_LIMIT and slices on
+ * its descending (entry) part have N′ < 0 or a low m_α: every method then
+ * relies on tension at the base there, and Bishop and Janbu still give a
+ * factor (on a φ = 0 slope with a vertical upper face 0.460 with Bishop,
+ * against 0.426 with the steep part cut off at 70°; with c′ = 15 kPa and
+ * φ′ = 25° 2.211 against 2.227). Null when it does not apply.
+ */
+export function steepEntryTensionMessage(slope: Slope, plane: SearchPlane, n: number): string | null {
+  if (slope.tensionCrackAngle > 0 || n === 0) return null;
+  const angle = entryInclination(plane);
+  if (angle < STEEP_ENTRY_LIMIT) return null;
+  return `The surface enters the slope at ${angle.toFixed(0)}° and ${n === 1 ? "a slice" : `${n} slices`} on its steep part rely on tension at the base (N′ < 0 or a low m_α), which soil cannot take; the factor of safety is then unreliable (higher or lower than with the steep part cut off). A tension crack cutting off the steep part (Options › Crack at base angle, for example 60–70°) removes it.`;
+}
+
 const slicesText = (n: number, verb: [string, string]) =>
   `${n} ${n === 1 ? "slice" : "slices"} of the critical surface ${n === 1 ? verb[0] : verb[1]}`;
 
@@ -124,6 +139,9 @@ const slicesText = (n: number, verb: [string, string]) =>
  *   complete equilibrium on a surface entering steeper than
  *   STEEP_ENTRY_LIMIT (steepEntryMessage): the critical surface is a
  *   closest pair, or no surface has a factor at all.
+ * - "steep-entry-tension": the critical surface enters steeper than
+ *   STEEP_ENTRY_LIMIT and slices on its entry side rely on tension
+ *   (N′ < 0 or low m_α), with any method (steepEntryTensionMessage).
  *
  * Only the critical surface is checked (all surfaces when none solved). `effectiveNormals` are its base
  * N′ when the caller already has them (solvedEffectiveNormals); otherwise
@@ -172,9 +190,15 @@ export function analysisWarnings(
 
   const normals =
     effectiveNormals ?? solvedEffectiveNormals(slope, slices, fos, crit.lffArray);
+  // Slices on the entry side (base descending into the slope) that rely
+  // on tension at the base: N′ < 0 or a low m_α.
+  const entryTension = new Set<number>();
   if (normals && normals.length > 0) {
     const scale = Math.max(...normals.map((n) => Math.abs(n)));
     const negative = normals.filter((n) => n < -NEGATIVE_NORMAL_TOLERANCE * scale).length;
+    normals.forEach((n, i) => {
+      if (n < -NEGATIVE_NORMAL_TOLERANCE * scale && slices[i]?.alpha > 0) entryTension.add(i);
+    });
     if (negative > 0) {
       warnings.push({
         code: "negative-effective-normal",
@@ -189,6 +213,9 @@ export function analysisWarnings(
   const solvedFos =
     slope.method === "Janbu" && slope.janbuCorrection ? fos / janbuCorrectionFactor(slices) : fos;
   const lowMAlpha = slices.filter((s) => mAlpha(s, solvedFos) < M_ALPHA_WARNING_LIMIT).length;
+  slices.forEach((s, i) => {
+    if (s.alpha > 0 && mAlpha(s, solvedFos) < M_ALPHA_WARNING_LIMIT) entryTension.add(i);
+  });
   if (lowMAlpha > 0) {
     warnings.push({
       code: "low-m-alpha",
@@ -196,6 +223,9 @@ export function analysisWarnings(
       count: lowMAlpha,
     });
   }
+  // Not with the Morgenstern–Price warning, which already names the entry.
+  const tension = steepEntry ? null : steepEntryTensionMessage(slope, crit, entryTension.size);
+  if (tension) warnings.push({ code: "steep-entry-tension", message: tension, count: entryTension.size });
   return warnings;
 }
 

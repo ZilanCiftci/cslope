@@ -350,7 +350,8 @@ export type AnalysisWarningCode =
   | "bishop-non-circular"
   | "frictional-surface-slide"
   | "shallow-cohesionless-surface"
-  | "steep-entry-no-equilibrium";
+  | "steep-entry-no-equilibrium"
+  | "steep-entry-tension";
 
 /**
  * Something about the input or the critical surface that the factor of

@@ -214,8 +214,25 @@ describe("steep entry without complete equilibrium", () => {
     expect(analysisWarnings(slope).some((x) => x.code === "steep-entry-no-equilibrium")).toBe(false);
   });
 
-  it("is not given for Bishop", () => {
-    const { slope } = runVerification(def, "Bishop");
-    expect(analysisWarnings(slope).some((x) => x.code === "steep-entry-no-equilibrium")).toBe(false);
+  it("is not given for Bishop, which names the tension at the steep entry instead", () => {
+    const { fos, slope } = runVerification(def, "Bishop");
+    const codes = analysisWarnings(slope).map((x) => x.code);
+    expect(codes).not.toContain("steep-entry-no-equilibrium");
+    const w = analysisWarnings(slope).find((x) => x.code === "steep-entry-tension");
+    expect(w?.message).toMatch(/enters the slope at 82°.*tension.*Crack at base angle/);
+    expect(w?.count).toBeGreaterThan(0);
+    // Without the slices that hold by tension the factor is lower here.
+    const cut = runVerification(def, "Bishop", { tensionCrackAngle: 70 });
+    expect(cut.fos!).toBeLessThan(fos!);
+    expect(analysisWarnings(cut.slope).map((x) => x.code)).not.toContain("steep-entry-tension");
+  });
+
+  it("names the steep entry for Janbu and a converged Morgenstern-Price too", () => {
+    const cphi = { ...def, materials: [{ name: "U", model: mc(20, 15, 25) }] } as SlopeDefinition;
+    for (const [method, o] of [["Janbu", {}], ["Morgenstern-Price", { intersliceFunction: "half-sine" }]] as const) {
+      const { fos, slope } = runVerification(cphi, method, o);
+      expect(fos).not.toBeNull();
+      expect(analysisWarnings(slope).map((x) => x.code), method).toContain("steep-entry-tension");
+    }
   });
 });
