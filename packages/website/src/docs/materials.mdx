@@ -1,6 +1,6 @@
 ---
 title: Materials
-description: The material models cSlope offers, their properties, and the saturated unit weight below the water table.
+description: The material models cSlope offers, their properties, the strength from suction above the water table, and the saturated unit weight below it.
 section: Modelling
 order: 2
 ---
@@ -17,11 +17,11 @@ Choose the model in the **Material Model** list. Changing the model resets the s
 
 | Model | Properties | Use for |
 | --- | --- | --- |
-| **Mohr-Coulomb** | γ (kN/m³), φ (°), c (kPa) | Drained analyses with effective strength parameters. |
+| **Mohr-Coulomb** | γ (kN/m³), φ (°), c (kPa), φb, Max suction | Drained analyses with effective strength parameters. |
 | **Undrained** | γ, Su (kPa), Max Su (cutoff) | Clay with a constant undrained shear strength. |
-| **S = f(depth)** | γ, Su ref, Depth ref, Rate (kPa/m), Depth measured from, Max Su; combined: c′, c′ rate, φ′ | Undrained strength increasing with depth below the ground or below the top of the layer, alone or combined with a drained strength. |
+| **S = f(depth)** | γ, Su ref, Depth ref, Rate (kPa/m), Depth measured from, Max Su; combined: c′, c′ rate, φ′, φb, Max suction | Undrained strength increasing with depth below the ground or below the top of the layer, alone or combined with a drained strength. |
 | **S = f(datum)** | γ, Su ref, Y ref, Rate, Max Su | Undrained strength that varies with elevation. |
-| **Anisotropic Function** | γ, φ, c, modifier table | Strength that depends on the inclination of the slip surface. |
+| **Anisotropic Function** | γ, φ, c, φb, Max suction, modifier table | Strength that depends on the inclination of the slip surface. |
 | **Spatial Mohr-Coulomb** | γ, interpolation, data points | Strength that varies from point to point in the section. |
 | **Lime-cement columns** | γ, area ratio, soil and column strengths | Ground improved with lime-cement columns. |
 | **High Strength** | γ | Strong material that may lie in the sliding mass; slip surfaces may not run through it. |
@@ -89,6 +89,21 @@ where **Area ratio a** is the share of the area taken by columns (0–1). The so
 ### High Strength and Bedrock
 
 **High Strength** material is so strong that the slip surface cannot run through it: a surface with a slice base in it is not analysed. The material can lie inside the sliding mass, above the slip surface, where it adds its weight. **Impenetrable (Bedrock)** stops slip surfaces: a surface that would enter it is not analysed. Both are drawn with a hatch on the canvas (HS and BR).
+
+## Strength from suction
+
+Above the water table the soil is unsaturated and the negative pore pressure (matric suction) adds to its strength. **φb, suction (°)** takes this into account with the extended Mohr-Coulomb criterion of Fredlund, Morgenstern and Widger (1978), with the pore-air pressure $u_a = 0$:
+
+$$
+\tau = c' + \sigma_n \tan\varphi' + (u_a - u_w) \tan\varphi^b
+$$
+
+Above the material's [piezometric line](/docs/water#pore-pressure) the pore pressure is negative, $u = -\gamma_w\, h$, with $h$ the head measured as below the line (the vertical distance up from the line, or with the phreatic correction the vertical distance × cos²θ). The suction strength $(-u) \tan\varphi^b$ is added to c′ on the slice like an apparent cohesion, and the pore pressure on the base stays zero. Below the line nothing changes, and without a piezometric line there is no suction. **Max suction (kPa)**, shown once φb is set, limits the suction taken into account; leave it empty for no limit. φb is typically 10–20°, at most φ′.
+
+- φb is taken by the drained strength: Mohr-Coulomb (with a c-factor, its drained branch), the Anisotropic Function (the suction strength is not multiplied by the modifier) and the drained branch of a combined S = f(depth). The undrained strengths, Spatial Mohr-Coulomb, lime-cement columns and Hoek-Brown do not have it.
+- With [partial factors](/docs/analysis#partial-factors) the suction strength takes γc' like c′, also on a Mohr-Coulomb material with φ = 0.
+- The pore pressure in the slice table and the slice plots is negative above the line on bases in a material with φb.
+- The finite element analyses take it at each Gauss point, with the vertical head above the line (or the negative pore pressure of the seepage with pore pressure from seepage). The Rankine depth of an automatic tension crack and the Ito & Matsui pile pressure do not take it.
 
 ## Saturated unit weight
 

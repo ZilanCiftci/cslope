@@ -9,7 +9,7 @@
  * a starting point to check there, not a guaranteed round trip.
  */
 
-import type { MaterialModel } from "@cslope/engine";
+import { suctionAngle, type MaterialModel } from "@cslope/engine";
 import { buildSlopeDTOFromModel } from "../../../store/helpers";
 import type { ModelEntry } from "../../../store/types";
 import { computeRegions } from "../../../utils/regions";
@@ -40,7 +40,7 @@ function materialXml(name: string, model: MaterialModel, notes: string[]): { slo
       if (model.cohesionRateOfChange) notes.push(`"${name}": c′ increasing with depth is written as its reference value.`);
       if (model.cFactor) notes.push(`"${name}": the combined (undrained) limit is not written; drained c′ and φ′ only.`);
       const c = model.cFactor ? model.cohesion * model.cFactor : model.cohesion;
-      return { slopeModel: "MohrCoulomb", fields: [["UnitWeight", gamma], ["CohesionPrime", c], ["PhiPrime", model.frictionAngle]] };
+      return { slopeModel: "MohrCoulomb", fields: [["UnitWeight", gamma], ["CohesionPrime", c], ["PhiPrime", model.frictionAngle], ...phiBField(model)] };
     }
     case "undrained":
       if (model.suRateOfChange) notes.push(`"${name}": Su increasing with depth is written as its reference value.`);
@@ -50,14 +50,21 @@ function materialXml(name: string, model: MaterialModel, notes: string[]): { slo
     case "s-f-depth":
     case "s-f-datum":
       notes.push(`"${name}": strength as a function of ${model.kind === "s-f-depth" ? "depth" : "datum"} is written as undrained with its reference Su (${model.suRef} kPa); enter the variation by hand.`);
+      if (suctionAngle(model) > 0) notes.push(`"${name}": the strength from suction (φb = ${suctionAngle(model)}°) of the drained branch is not written.`);
       return { slopeModel: "UndrainedPhiZero", fields: [["UnitWeight", gamma], ["Cohesion", model.suRef], ["CohesionPrime", model.suRef]] };
     case "anisotropic-function":
       notes.push(`"${name}": the anisotropy is not written; Mohr-Coulomb with c and φ only.`);
-      return { slopeModel: "MohrCoulomb", fields: [["UnitWeight", gamma], ["CohesionPrime", model.cohesion], ["PhiPrime", model.frictionAngle]] };
+      return { slopeModel: "MohrCoulomb", fields: [["UnitWeight", gamma], ["CohesionPrime", model.cohesion], ["PhiPrime", model.frictionAngle], ...phiBField(model)] };
     default:
       notes.push(`"${name}": the material model "${model.kind}" has no counterpart in the export; written as Mohr-Coulomb with no strength, to be entered by hand.`);
       return { slopeModel: "MohrCoulomb", fields: [["UnitWeight", gamma], ["CohesionPrime", 0], ["PhiPrime", 0]] };
   }
+}
+
+/** φb of a material with strength from suction, as the format's UnsatPhiB (none without). */
+function phiBField(model: MaterialModel): [string, number][] {
+  const phiB = suctionAngle(model);
+  return phiB > 0 ? [["UnsatPhiB", phiB]] : [];
 }
 
 function groundAt(outline: Pt[], x: number): number {
@@ -150,13 +157,24 @@ ${fields.map(([k, v]) => `        <${k}>${n(v)}</${k}>`).join("\n")}
   const piezoLines = piezo?.enabled ? piezo.lines.filter((l) => l.coordinates.length >= 2) : [];
   const main = piezoLines.length > 0 ? (mainPiezoLine({ lines: piezoLines, mainLineId: piezo.mainLineId }) ?? piezoLines[0]) : undefined;
   const piezoIds = new Map(piezoLines.map((l, i) => [l.id, i + 1]));
+  const lineOf = (materialId: string) => piezo.materialAssignment[materialId] ?? main?.id;
   const piezoXml = piezoLines.map((l) => {
     const ids = l.coordinates.map((c) => lid([c[0], c[1]]));
+    // the cap on the suction belongs to the line in the format, to the material in cSlope
+    const caps = model.materials
+      .filter((m) => lineOf(m.id) === l.id && suctionAngle(m.model) > 0)
+      .map((m) => (m.model as { maxSuction?: number }).maxSuction);
+    const cap = caps.length > 0 && caps.every((c) => c !== undefined && c === caps[0]) ? caps[0] : undefined;
+    if (caps.some((c) => c !== undefined) && cap === undefined) {
+      notes.push(`The materials with φb on the line "${l.name}" have different maximum suctions; the format has one per line, so none is written.`);
+    }
     return `          <PiezometricSurface>
             <ID>${piezoIds.get(l.id)}</ID>
             <DataPoints Len="${ids.length}">
 ${ids.map((d) => `              <DataPoint>${d}</DataPoint>`).join("\n")}
             </DataPoints>
+            <CapSuction>${cap !== undefined ? "true" : "false"}</CapSuction>
+            ${cap !== undefined ? `<MaxSuction>${n(cap)}</MaxSuction>` : `<MaxSuction Missing="true" />`}
           </PiezometricSurface>`;
   });
   const usesXml = main

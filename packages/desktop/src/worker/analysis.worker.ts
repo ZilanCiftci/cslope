@@ -268,7 +268,8 @@ function analyse(
           normalForce:
             solvedNormals?.[i] ??
             (s.weight + surfaceLoad) * Math.cos(s.alpha) - s.U * s.baseLength,
-          porePressure: s.U,
+          // negative above the line in a material with φb (the suction)
+          porePressure: s.U - (s.suction ?? 0),
           baseMaterial: s.baseMaterial!,
         });
       }

@@ -176,7 +176,39 @@ function regionsToGeometry(polys: { id: number; pts: number[] }[], points: Map<n
   };
 }
 
-function materialModel(m: GszMaterial, scale: { len: number; weight: number; stress: number }, notes: string[]): MaterialModel {
+/**
+ * The piezometric line a material uses, for its strength from suction:
+ * whether it has one, and the line's cap on the suction (kPa) if any.
+ */
+interface MaterialWater {
+  hasLine: boolean;
+  maxSuction?: number;
+}
+
+/**
+ * Strength from suction of a Mohr-Coulomb material: a constant φb
+ * (UnsatPhiB) with the cap of its piezometric line. Suction strength from
+ * a function of the volumetric water content has no counterpart and is
+ * noted; so is a φb without a line (no negative pore pressure there).
+ */
+function suctionOf(m: GszMaterial, phiB: number | undefined, water: MaterialWater, notes: string[]): { phiB?: number; maxSuction?: number } {
+  if (/function/i.test(m.fields.SlopeSuctionModel ?? "")) {
+    if (water.hasLine) notes.push(`Material "${m.name}": the strength from suction is given by a function (from the volumetric water content); it is not imported, so the material has no suction strength.`);
+    return {};
+  }
+  if (phiB === undefined || !(phiB > 0)) return {};
+  if (!(phiB < 90)) {
+    notes.push(`Material "${m.name}": φb = ${phiB}° is not below 90°; the strength from suction is not imported.`);
+    return {};
+  }
+  if (!water.hasLine) {
+    notes.push(`Material "${m.name}": φb = ${phiB}° without a piezometric line (no suction) is not imported.`);
+    return {};
+  }
+  return { phiB, ...(water.maxSuction !== undefined && water.maxSuction > 0 ? { maxSuction: water.maxSuction } : {}) };
+}
+
+function materialModel(m: GszMaterial, scale: { len: number; weight: number; stress: number }, notes: string[], water: MaterialWater = { hasLine: false }): MaterialModel {
   const f = (k: string): number | undefined => {
     const v = Number(m.fields[k]);
     return Number.isFinite(v) && m.fields[k] !== undefined ? v : undefined;
@@ -186,8 +218,13 @@ function materialModel(m: GszMaterial, scale: { len: number; weight: number; str
   if (!(gamma > 0) && m.model !== "Bedrock") notes.push(`Material "${m.name}": no unit weight in the file; 20 kN/m³ used.`);
   switch (m.model) {
     case "MohrCoulomb":
-      if ((f("UnsatPhiB") ?? 0) > 0) notes.push(`Material "${m.name}": the strength from suction (φb = ${f("UnsatPhiB")}°) is not imported.`);
-      return { kind: "mohr-coulomb", unitWeight, cohesion: (f("CohesionPrime") ?? 0) * scale.stress, frictionAngle: f("PhiPrime") ?? 0 };
+      return {
+        kind: "mohr-coulomb",
+        unitWeight,
+        cohesion: (f("CohesionPrime") ?? 0) * scale.stress,
+        frictionAngle: f("PhiPrime") ?? 0,
+        ...suctionOf(m, f("UnsatPhiB"), water, notes),
+      };
     case "UndrainedPhiZero":
       return { kind: "undrained", unitWeight, undrainedShearStrength: (f("Cohesion") ?? f("CohesionPrime") ?? 0) * scale.stress };
     case "Bedrock":
@@ -263,6 +300,8 @@ export function gszToDefinition(file: GszFile, analysisId: number, fileName = "g
   let waterTable: SlopeDefinition["waterTable"];
   const waterTables: NonNullable<SlopeDefinition["waterTables"]> = [];
   const waterIdOf = new Map<number, string>();
+  // material id → its piezometric line's cap on the suction (as written), for φb
+  const waterOfMaterial = new Map<number, MaterialWater>();
   if (/piezo/i.test(waterOption) && piezo.size > 0) {
     if (/bbar/i.test(waterOption)) notes.push("Pore pressure from B-bar (excess pore pressure from loading) is not imported; only the piezometric lines.");
     const usage = new Map<number, number>();
@@ -289,6 +328,10 @@ export function gszToDefinition(file: GszFile, analysisId: number, fileName = "g
       const p = stab?.materialPiezometric.get(id);
       if (p !== undefined && p !== main && piezo.has(p)) waterIdOf.set(id, `piezo-${p}`);
       else if (p === undefined || !piezo.has(p)) if (main !== undefined) waterIdOf.set(id, "no-water");
+      if (p !== undefined && piezo.has(p)) {
+        const cap = stab?.piezometricMaxSuction.get(p);
+        waterOfMaterial.set(id, { hasLine: true, ...(cap !== undefined ? { maxSuction: cap * scale.stress } : {}) });
+      }
     }
   } else if (waterOption !== "None") {
     notes.push(`The pore pressure option "${waterOption}" is not imported (for example from a seepage analysis or ru); the model has no water.`);
@@ -299,7 +342,7 @@ export function gszToDefinition(file: GszFile, analysisId: number, fileName = "g
     const c = m.color;
     return {
       name: nameOf.get(id)!,
-      model: materialModel(m, scale, notes),
+      model: materialModel(m, scale, notes, waterOfMaterial.get(id)),
       ...(c ? { color: `#${c.map((v) => v.toString(16).padStart(2, "0")).join("")}` } : {}),
       ...(waterIdOf.has(id) ? { waterTableId: waterIdOf.get(id) } : {}),
     };

@@ -206,6 +206,38 @@ describe(".gsz import", () => {
     expect(imp.notes.join(" ")).toMatch(/"Clay": the strength model "SHANSEP" has no counterpart.*Cohesion = 25/);
   });
 
+  it("imports φb (UnsatPhiB) and the line's cap on the suction", () => {
+    const xml = XML.replace("<PhiPrime>32</PhiPrime>", "<PhiPrime>32</PhiPrime><UnsatPhiB>15</UnsatPhiB>").replace(
+      "<DataPoint>2</DataPoint></DataPoints></PiezometricSurface>",
+      "<DataPoint>2</DataPoint></DataPoints><CapSuction>true</CapSuction><MaxSuction>50</MaxSuction></PiezometricSurface>",
+    );
+    const f = parseGszXml(xml);
+    expect(f.stability.get(1)!.piezometricMaxSuction.get(1)).toBe(50);
+    const imp = gszToDefinition({ ...f, results: new Map() }, 1);
+    expect(imp.definition.materials[0].model).toMatchObject({ kind: "mohr-coulomb", phiB: 15, maxSuction: 50 });
+    expect(imp.notes.join(" ")).not.toMatch(/suction/);
+    // the strength from suction raises the factor of safety
+    const without = gszToDefinition({ ...parseGszXml(XML), results: new Map() }, 1);
+    expect(fos(imp.definition)).toBeGreaterThan(fos(without.definition));
+    // a line without a cap: no maximum
+    const uncapped = gszToDefinition({ ...parseGszXml(xml.replace("<CapSuction>true</CapSuction>", "<CapSuction>false</CapSuction>")), results: new Map() }, 1);
+    expect(uncapped.definition.materials[0].model).toEqual({ kind: "mohr-coulomb", unitWeight: 19, cohesion: 2, frictionAngle: 32, phiB: 15 });
+  });
+
+  it("names a suction strength it does not import", () => {
+    // φb on a material without a piezometric line, and suction from a function
+    const xml = XML.replace("<SlopeModel>UndrainedPhiZero</SlopeModel>", "<SlopeModel>MohrCoulomb</SlopeModel>")
+      .replace("<Cohesion>25</Cohesion>", "<CohesionPrime>25</CohesionPrime><PhiPrime>0</PhiPrime><UnsatPhiB>10</UnsatPhiB>")
+      .replace("<StressStrain><UnitWeight>19</UnitWeight>", "<StressStrain><SlopeSuctionModel>Function</SlopeSuctionModel><UnitWeight>19</UnitWeight>");
+    const imp = gszToDefinition({ ...parseGszXml(xml), results: new Map() }, 1);
+    const [fill, clay] = imp.definition.materials.map((m) => m.model!);
+    expect(fill).not.toHaveProperty("phiB");
+    expect(clay).not.toHaveProperty("phiB");
+    const notes = imp.notes.join(" ");
+    expect(notes).toMatch(/"Fill": the strength from suction is given by a function/);
+    expect(notes).toMatch(/"Clay": φb = 10° without a piezometric line/);
+  });
+
   it("converts an Imperial file", () => {
     const xml = XML.replace('UnitSystem="Metric"', 'UnitSystem="Imperial"');
     const imp = gszToDefinition({ ...parseGszXml(xml), results: new Map() }, 1);
@@ -252,6 +284,25 @@ describe(".gsz export", () => {
     // the same factor of safety
     const opts = { method: "Morgenstern-Price", intersliceFunction: "constant" };
     expect(fos(d, opts)).toBeCloseTo(fos(def, opts), 6);
+  });
+
+  it("writes φb as UnsatPhiB and the maximum suction on the line, and reads them back", async () => {
+    const withPhiB = (maxSuction?: number) => ({
+      ...model,
+      materials: model.materials.map((x, i) =>
+        i === 0 ? { ...x, model: { ...x.model, phiB: 15, ...(maxSuction !== undefined ? { maxSuction } : {}) } as typeof x.model } : x,
+      ),
+    });
+    const { xml } = modelToGszXml(withPhiB(50));
+    const { bytes } = modelToGsz(withPhiB(50));
+    expect(xml).toContain("<UnsatPhiB>15</UnsatPhiB>");
+    expect(xml).toContain("<CapSuction>true</CapSuction>");
+    expect(xml).toContain("<MaxSuction>50</MaxSuction>");
+    const [imp] = await gszImports(bytes, "Section A.gsz");
+    expect(imp.definition.materials[0].model).toMatchObject({ phiB: 15, maxSuction: 50 });
+    // without a maximum: no cap on the line
+    expect(modelToGszXml(withPhiB()).xml).toContain("<CapSuction>false</CapSuction>");
+    expect(modelToGszXml(model).xml).not.toContain("UnsatPhiB");
   });
 
   it("names what it cannot write", () => {

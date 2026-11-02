@@ -116,6 +116,18 @@ export interface Slice {
    * takes γcu when design values are formed. Not set: 0.
    */
   cohesionUndrainedPart?: number;
+  /**
+   * Matric suction at the base centre (kPa, > 0): the negative pore
+   * pressure −u above the water line, set only on a base in a material
+   * with φb (`UnsaturatedStrength`) above its water line. U stays 0 there.
+   */
+  suction?: number;
+  /**
+   * Part of `cohesion` that is strength from that suction,
+   * min(suction, maxSuction)·tan φb (kPa); a design value, like
+   * `cohesion`, when partial factors are applied (γc′). Not set: 0.
+   */
+  suctionStrength?: number;
   /** Friction angle at base (deg). */
   frictionAngle: number;
   /** Friction angle at base (rad). */

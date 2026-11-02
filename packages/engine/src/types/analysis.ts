@@ -322,7 +322,11 @@ export interface SliceData {
   frictionAngle: number;
   /** Effective base normal force N′ = N − u·l (kN) from the method's equilibrium at the FOS (solvedEffectiveNormals). */
   normalForce: number;
-  /** Pore water pressure at the base (kPa). */
+  /**
+   * Pore water pressure at the base (kPa): negative above the water line
+   * in a material with φb (the matric suction, see Slice.suction), else
+   * ≥ 0.
+   */
   porePressure: number;
   baseMaterial: Material;
 }

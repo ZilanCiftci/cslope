@@ -3,6 +3,7 @@ import { ExpressionNumericInput } from "../../../../components/ui/ExpressionNume
 import type { MohrCoulombModel } from "@cslope/engine";
 import type { MaterialExpressions } from "../../../../store/types";
 import { UnitWeightSatField } from "./UnitWeightSatField";
+import { SuctionFields } from "./SuctionFields";
 
 interface Props {
   model: MohrCoulombModel;
@@ -90,6 +91,11 @@ export function MohrCoulombFields({
             }
           />
         </label>
+        <SuctionFields
+          phiB={model.phiB}
+          maxSuction={model.maxSuction}
+          onChange={onChange}
+        />
       </div>
     </>
   );

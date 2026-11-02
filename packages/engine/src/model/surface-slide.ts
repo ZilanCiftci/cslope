@@ -21,7 +21,8 @@
  * factors applied) and its water line lies below the surface there (a water
  * line above the ground is clipped to it, so still water over a face cannot
  * be told from seepage out of it, under which the factor would be lower and
- * depend on the flow). Faces steeper than 89.4° (dx < dy/100: steps and
+ * depend on the flow), and the material takes no strength from suction
+ * (φb, which above the line acts as a cohesion). Faces steeper than 89.4° (dx < dy/100: steps and
  * walls) are skipped, as is a face that reinforcement or a pile reaches
  * (within 0.1 % of the model's extent), whose head or facing holds it. For
  * the methods of slices only faces dipping in the analysed direction and
@@ -32,6 +33,7 @@ import type { Slope } from "./slope";
 import { isPointInPolygon } from "../math/polygon";
 import { getYAtX } from "../math/interpolation";
 import { designStrength } from "../types/strength";
+import { suctionAngle } from "../types/material-models";
 
 /** Distance between segments ab and cd (zero when they cross). */
 function segmentDistance(ax: number, ay: number, bx: number, by: number, cx: number, cy: number, dx: number, dy: number): number {
@@ -99,6 +101,9 @@ export function frictionalSurfaceSlide(slope: Slope, slidingOnly = false): Surfa
       const wl = slope.getWaterLineForMaterial(m);
       const yw = wl ? getYAtX(wl.x, wl.y, x) : NaN;
       if (Number.isFinite(yw) && yw >= y) continue;
+      // with φb the suction above the line is an apparent cohesion: a slab
+      // of vanishing depth has strength to spare
+      if (Number.isFinite(yw) && suctionAngle(m.model) > 0) continue;
       const F = (d.tanPhi * dx) / dy;
       if (!best || F < best.factorOfSafety) {
         best = {

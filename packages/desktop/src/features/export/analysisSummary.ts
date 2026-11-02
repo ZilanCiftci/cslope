@@ -2,6 +2,7 @@ import {
   SAFETY_CLASS_GAMMA_D,
   MATERIAL_MODEL_LABELS,
   WATER_UNIT_WEIGHT,
+  suctionAngle,
   type AnalysisOptions,
   type AnalysisResult,
   type MaterialModel,
@@ -90,6 +91,18 @@ export function fosLabel(partialFactors: PartialFactors | null | undefined): str
 
 /** Characteristic strength of a material model, in words. */
 export function strengthText(model: MaterialModel): string {
+  return strengthWithoutSuction(model) + suctionText(model);
+}
+
+/** Strength from suction above the water line (φb), in words, or "". */
+function suctionText(model: MaterialModel): string {
+  const phiB = suctionAngle(model);
+  if (!(phiB > 0)) return "";
+  const cap = (model as { maxSuction?: number }).maxSuction;
+  return `; suction above the water line, φb = ${fmt(phiB)}°${cap !== undefined ? `, at most ${fmt(cap)} kPa` : ""}`;
+}
+
+function strengthWithoutSuction(model: MaterialModel): string {
   const cutoff = (m: { suMax?: number }, rate: number | undefined) =>
     m.suMax === undefined ? "" : `, ${(rate ?? 0) < 0 ? "minimum" : "maximum"} ${fmt(m.suMax)} kPa`;
   const aniso = (a: [number, number][] | undefined) =>
@@ -340,6 +353,15 @@ export function buildAnalysisSummary(input: AnalysisSummaryInput): SummarySectio
           ? "vertical head × cos²θ (phreatic correction)"
           : "vertical head below the line",
     });
+    const suction = input.materials.filter((m) => suctionAngle(m.model) > 0);
+    if (suction.length > 0) {
+      water.push({
+        label: "Suction",
+        value:
+          `above the line the pore pressure is negative, u = −γw × head (the same head as below it); ` +
+          `(−u)·tan φb adds to c' in ${suction.map((m) => m.name).join(", ")}`,
+      });
+    }
     water.push({
       label: "Water above ground",
       value:

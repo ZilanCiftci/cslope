@@ -3,7 +3,7 @@
  */
 
 import type { GeometryWithMaterial, PartialFactors, Slice } from "../types/index";
-import { designStrength, needsLayerTop, resolveStrength, resolveUnitWeight } from "../types/index";
+import { designStrength, needsLayerTop, resolveStrength, resolveUnitWeight, suctionAngle } from "../types/index";
 import { WATER_UNIT_WEIGHT, SLICE_DEDUP_TOLERANCE } from "../types/constants";
 import {
   getCircleYCoordinateAtX,
@@ -363,13 +363,13 @@ export function createSlice(
           const yLT = needsLayerTop(mat.model)
             ? (materialLayerTopAt(materialGeometries, mat, x, yProbe) ?? undefined)
             : undefined;
-          const st = resolveStrength(mat.model, { yBottom, x, yGround: yTop, yLayerTop: yLT, alpha });
           const w = waterForMaterial
             ? waterForMaterial(mat)
             : waterYMean !== null && waterH !== null
               ? { yMean: waterYMean, h: waterH }
               : null;
           const u = w ? Math.max(w.yMean - yBottom, 0) * WATER_UNIT_WEIGHT * w.h : 0;
+          const st = resolveStrength(mat.model, { yBottom, x, yGround: yTop, yLayerTop: yLT, alpha, suction: baseSuction(mat, w, yBottom) });
           const drained = st.cohesion + Math.max(0, sigma - u) * Math.tan((st.frictionAngle * Math.PI) / 180);
           return st.isCombined ? Math.min(drained, st.cohesionUndrained) : drained;
         };
@@ -386,10 +386,13 @@ export function createSlice(
 
   if (baseMaterial === null) return null; // No material → invalid slice
 
+  let baseWater: { yMean: number; h: number } | null =
+    waterYMean !== null && waterH !== null ? { yMean: waterYMean, h: waterH } : null;
   if (waterForMaterial) {
-    const water = waterForMaterial(baseMaterial);
-    U = water ? Math.max(water.yMean - yBottom, 0) * WATER_UNIT_WEIGHT * water.h : 0;
+    baseWater = waterForMaterial(baseMaterial);
+    U = baseWater ? Math.max(baseWater.yMean - yBottom, 0) * WATER_UNIT_WEIGHT * baseWater.h : 0;
   }
+  const suction = baseSuction(baseMaterial, baseWater, yBottom);
 
   // Top of the base material's layer, for depth measured from it: searched
   // in the full material regions just above the base centre.
@@ -407,6 +410,7 @@ export function createSlice(
     yGround: yTop,
     yLayerTop,
     alpha,
+    suction,
   });
 
   const cohesion = strength.cohesion;
@@ -443,6 +447,8 @@ export function createSlice(
     ...(strength.cohesionUndrainedPart !== undefined
       ? { cohesionUndrainedPart: strength.cohesionUndrainedPart }
       : {}),
+    ...(suction > 0 ? { suction } : {}),
+    ...(strength.suctionStrength !== undefined ? { suctionStrength: strength.suctionStrength } : {}),
     frictionAngle,
     phi,
     U,
@@ -453,6 +459,23 @@ export function createSlice(
   };
 
   return slice;
+}
+
+/**
+ * Matric suction at a slice base (kPa, ≥ 0) in a material with φb
+ * (`UnsaturatedStrength`): the negative pore pressure above its water line,
+ * −u = γw·(y_base − y_line)·h, with the same head factor h as the positive
+ * pore pressure below the line (1 with vertical head, cos²θ with the
+ * phreatic correction). 0 below the line, without a water line, or for a
+ * material without φb.
+ */
+function baseSuction(
+  material: GeometryWithMaterial["material"],
+  water: { yMean: number; h: number } | null,
+  yBottom: number,
+): number {
+  if (!water || !(suctionAngle(material.model) > 0)) return 0;
+  return Math.max(yBottom - water.yMean, 0) * WATER_UNIT_WEIGHT * water.h;
 }
 
 // ── Water at a slice ──────────────────────────────────────────────
@@ -987,6 +1010,7 @@ function applyMaterialFactors(s: Slice, f: PartialFactors): void {
   const d = designStrength(kind, s, f);
   s.cohesion = d.cohesion;
   s.cohesionUndrained = d.cohesionUndrained;
+  if (s.suctionStrength !== undefined) s.suctionStrength /= f.cohesion;
   if (d.undrained) return;
   s.phi = Math.atan(d.tanPhi);
   s.frictionAngle = (s.phi * 180) / Math.PI;

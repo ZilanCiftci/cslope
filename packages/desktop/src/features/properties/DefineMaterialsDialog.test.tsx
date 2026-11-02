@@ -152,6 +152,38 @@ describe("DefineMaterialsDialog — Mohr-Coulomb fields", () => {
     await userEvent.clear(sat);
     expect(model().unitWeightSat).toBeUndefined();
   });
+
+  it("sets φb and the maximum suction, and clears them", async () => {
+    render(<DefineMaterialsDialog onClose={() => {}} />);
+    // The maximum is offered once φb is set.
+    expect(screen.queryByLabelText("Max suction (kPa)")).toBeNull();
+    const phiB = screen.getByLabelText("φb (°)");
+    await userEvent.type(phiB, "15");
+    expect(model()).toMatchObject({ kind: "mohr-coulomb", phiB: 15 });
+    const cap = screen.getByLabelText("Max suction (kPa)");
+    await userEvent.type(cap, "80");
+    expect(model()).toMatchObject({ phiB: 15, maxSuction: 80 });
+    await userEvent.clear(cap);
+    expect((model() as { maxSuction?: number }).maxSuction).toBeUndefined();
+    await userEvent.clear(phiB);
+    expect((model() as { phiB?: number }).phiB).toBeUndefined();
+    // 90° and more is not taken
+    await userEvent.type(phiB, "95");
+    expect((model() as { phiB?: number }).phiB).not.toBe(95);
+  });
+
+  it("offers φb for the drained branch of a combined S = f(depth) only, and drops it with the branch", async () => {
+    render(<DefineMaterialsDialog onClose={() => {}} />);
+    await userEvent.selectOptions(kindSelect(), "s-f-depth");
+    expect(screen.queryByLabelText("φb (°)")).toBeNull();
+    const combined = screen.getByLabelText("Combined analysis (drained limit)");
+    await userEvent.click(combined);
+    await userEvent.type(screen.getByLabelText("φb (°)"), "12");
+    expect(model()).toMatchObject({ kind: "s-f-depth", phiB: 12 });
+    await userEvent.click(combined);
+    expect((model() as { phiB?: number }).phiB).toBeUndefined();
+    expect(screen.queryByLabelText("φb (°)")).toBeNull();
+  });
 });
 
 describe("DefineMaterialsDialog — switching the model", () => {

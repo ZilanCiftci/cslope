@@ -24,10 +24,46 @@ export interface MaterialModelBase {
   unitWeightSat?: number;
 }
 
+/**
+ * Shear strength from matric suction above the water line, as the extended
+ * Mohr-Coulomb criterion of Fredlund, Morgenstern & Widger (1978) gives it:
+ * τ = c′ + (σn − ua)·tan φ′ + (ua − uw)·tan φb, with the pore-air pressure
+ * ua = 0. Above the material's water line the pore pressure is negative,
+ * u = −γw·(y_base − y_line) (with the same head convention as the positive
+ * pore pressure below it), and the suction (−u)·tan φb, limited by
+ * `maxSuction`, adds to the drained cohesion of the slice like an apparent
+ * cohesion. Below the line, and without a water line, nothing changes.
+ * Taken by the drained strength only: Mohr-Coulomb (the drained branch
+ * of a combined material), the anisotropic function and the drained
+ * branch of a combined S = f(depth); see `supportsSuctionStrength`.
+ */
+export interface UnsaturatedStrength {
+  /** Angle φb (°) of the strength increase with matric suction, 0 ≤ φb < 90. Not set or 0: no suction strength. */
+  phiB?: number;
+  /** Largest matric suction (kPa) taken into account, > 0. Not set: no limit. */
+  maxSuction?: number;
+}
+
+/** Whether a model kind takes `UnsaturatedStrength` (S = f(depth) only in a combined analysis). */
+export function supportsSuctionStrength(kind: string): kind is "mohr-coulomb" | "anisotropic-function" | "s-f-depth" {
+  return kind === "mohr-coulomb" || kind === "anisotropic-function" || kind === "s-f-depth";
+}
+
+/**
+ * φb (°) a model uses: its `phiB` where the model takes suction strength
+ * (an S = f(depth) material only in a combined analysis) and φb > 0, else 0.
+ */
+export function suctionAngle(model: { kind: string; phiB?: number; drainedCohesion?: number; drainedFrictionAngle?: number }): number {
+  if (!supportsSuctionStrength(model.kind)) return 0;
+  if (model.kind === "s-f-depth" && !isCombinedDepthModel(model)) return 0;
+  const phiB = model.phiB;
+  return phiB !== undefined && Number.isFinite(phiB) && phiB > 0 && phiB < 90 ? phiB : 0;
+}
+
 // ── Model variants ─────────────────────────────────────────────
 
 /** Standard Mohr-Coulomb effective-stress model. */
-export interface MohrCoulombModel extends MaterialModelBase {
+export interface MohrCoulombModel extends MaterialModelBase, UnsaturatedStrength {
   kind: "mohr-coulomb";
   /** Effective cohesion c (kPa). */
   cohesion: number;
@@ -144,7 +180,7 @@ export interface SpatialMohrCoulombModel extends MaterialModelBase {
  * The factor scales φ in degrees, not tan φ: 0.8 on φ = 30° gives
  * 24.0°, where 0.8·tan 30° would give 24.8°.
  */
-export interface AnisotropicFunctionModel extends MaterialModelBase {
+export interface AnisotropicFunctionModel extends MaterialModelBase, UnsaturatedStrength {
   kind: "anisotropic-function";
   /** Base effective cohesion c (kPa). */
   cohesion: number;
@@ -177,7 +213,7 @@ export type DepthReference = "ground" | "layer-top";
  * drainedCohesionRate at the same depth, as Swedish practice analyses
  * clay ("kombinerad analys") and commercial programs offer it.
  */
-export interface StrengthFromDepthModel extends MaterialModelBase, UndrainedAnisotropy {
+export interface StrengthFromDepthModel extends MaterialModelBase, UndrainedAnisotropy, UnsaturatedStrength {
   kind: "s-f-depth";
   /** Reference undrained shear strength Su (kPa). */
   suRef: number;

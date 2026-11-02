@@ -25,6 +25,7 @@ import {
 import { anchoredTopLeft } from "../annotations/anchorPosition";
 import { fosScaleRange, fosTickLabel } from "../../utils/fos-color";
 import { mainPiezoLine } from "../../utils/piezo";
+import { suctionAngle } from "@cslope/engine";
 
 export { computePaperFrame } from "../view/paper";
 
@@ -65,6 +66,12 @@ function anisotropySuffix(model: MaterialRow["model"]): string {
   return "anisotropy" in model && Array.isArray(model.anisotropy) && model.anisotropy.length > 0 ? " (anisotropic)" : "";
 }
 
+/** " (φb 15°)" for a material with strength from suction (φb), else "". */
+function suctionSuffix(model: MaterialRow["model"]): string {
+  const phiB = suctionAngle(model);
+  return phiB > 0 ? ` (φb ${phiB}\u00b0)` : "";
+}
+
 function formatMaterialCell(
   key: MaterialTableColumnKey,
   material: MaterialRow,
@@ -84,13 +91,13 @@ function formatMaterialCell(
       // Only models with a friction angle; φ = 0 for undrained strength.
       const k = material.model.kind;
       if (k === "mohr-coulomb" || k === "anisotropic-function")
-        return `${f.frictionAngle}\u00b0`;
+        return `${f.frictionAngle}\u00b0${suctionSuffix(material.model)}`;
       // Lime-cement columns with a drained limit: φ′ of the columns.
       if (k === "lime-cement-columns" && material.model.columnFrictionAngle !== undefined)
         return `${material.model.columnFrictionAngle}\u00b0 (col.)`;
       // Combined S = f(depth): φ′ of the drained branch.
       if (k === "s-f-depth" && material.model.drainedFrictionAngle !== undefined && material.model.drainedCohesion !== undefined)
-        return `${material.model.drainedFrictionAngle}\u00b0 (comb.)`;
+        return `${material.model.drainedFrictionAngle}\u00b0 (comb.)${suctionSuffix(material.model)}`;
       if (k === "undrained" || k === "s-f-depth" || k === "s-f-datum" || k === "lime-cement-columns")
         return "0\u00b0";
       return "-";

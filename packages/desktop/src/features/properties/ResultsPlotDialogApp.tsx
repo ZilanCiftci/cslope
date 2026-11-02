@@ -263,8 +263,9 @@ export function ResultsPlotDialogApp() {
           frictionAngle,
           cohesion: slice.cohesion,
           baseCohesion: slice.cohesion,
-          porePressure: slice.U,
-          pwp: slice.U * slice.baseLength,
+          // negative above the line in a material with φb (the suction)
+          porePressure: slice.U - (slice.suction ?? 0),
+          pwp: (slice.U - (slice.suction ?? 0)) * slice.baseLength,
           sliceWeight: totalWeight,
           cohesionStrength,
           resistingForce,

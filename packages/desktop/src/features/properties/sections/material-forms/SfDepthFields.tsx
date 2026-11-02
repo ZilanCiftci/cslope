@@ -5,6 +5,7 @@ import type { MaterialExpressions } from "../../../../store/types";
 import { CutoffField } from "./CutoffField";
 import { AnisotropyField } from "./AnisotropyField";
 import { UnitWeightSatField } from "./UnitWeightSatField";
+import { SuctionFields } from "./SuctionFields";
 
 interface Props {
   model: StrengthFromDepthModel;
@@ -128,7 +129,14 @@ export function SfDepthFields({
                     drainedCohesionRate: Math.round(model.rate * 100) / 1000,
                     drainedFrictionAngle: 30,
                   }
-                : { drainedCohesion: undefined, drainedCohesionRate: undefined, drainedFrictionAngle: undefined },
+                : {
+                    drainedCohesion: undefined,
+                    drainedCohesionRate: undefined,
+                    drainedFrictionAngle: undefined,
+                    // suction strength belongs to the drained branch
+                    phiB: undefined,
+                    maxSuction: undefined,
+                  },
             )
           }
           aria-label="Combined analysis (drained limit)"
@@ -177,6 +185,11 @@ export function SfDepthFields({
               aria-label="φ′ (°)"
             />
           </label>
+          <SuctionFields
+            phiB={model.phiB}
+            maxSuction={model.maxSuction}
+            onChange={onChange}
+          />
         </div>
       )}
     </div>

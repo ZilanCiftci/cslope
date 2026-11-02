@@ -6,6 +6,7 @@ import {
   DEFAULT_FEM_SETTINGS,
   resolveOrientation,
   supportsAnisotropy,
+  supportsSuctionStrength,
   swedishPartialFactors,
   type AnalysisOptions,
   type FemAnalysisSettings,
@@ -710,7 +711,7 @@ function normalizeMaterial(raw: unknown, index: number): MaterialRow {
         delete model.unitWeightSat;
       }
     }
-    model = sanitizeStrengthOptions(model);
+    model = sanitizeSuction(sanitizeStrengthOptions(model));
   } else {
     // Legacy file without model — synthesise MohrCoulomb from flat fields
     const unitWeight = Math.max(
@@ -775,6 +776,26 @@ function sanitizeStrengthOptions(model: MaterialModel): MaterialModel {
       out = { ...out };
       delete (out as { depthReference?: unknown }).depthReference;
     }
+  }
+  return out;
+}
+
+/**
+ * Strength from suction (φb, maximum suction): a φb that is not a number in
+ * [0°, 90°), or on a model that does not take it, is dropped (no suction
+ * strength), as is a maximum suction that is not a positive number (no
+ * limit).
+ */
+function sanitizeSuction(model: MaterialModel): MaterialModel {
+  if (!("phiB" in model) && !("maxSuction" in model)) return model;
+  const out = { ...model } as MaterialModel & { phiB?: unknown; maxSuction?: unknown };
+  const phiB = out.phiB;
+  if (!supportsSuctionStrength(out.kind) || !(typeof phiB === "number" && Number.isFinite(phiB) && phiB >= 0 && phiB < 90)) {
+    delete out.phiB;
+  }
+  const cap = out.maxSuction;
+  if (!supportsSuctionStrength(out.kind) || !(typeof cap === "number" && Number.isFinite(cap) && cap > 0)) {
+    delete out.maxSuction;
   }
   return out;
 }

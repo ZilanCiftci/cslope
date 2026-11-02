@@ -7,7 +7,7 @@
  * they only consume the `ResolvedStrength` output.
  */
 
-import { isCombinedDepthModel, type MaterialModel, type MaterialModelKind } from "./material-models";
+import { isCombinedDepthModel, suctionAngle, type MaterialModel, type MaterialModelKind } from "./material-models";
 import type { PartialFactors } from "./analysis";
 import { hoekBrownParameters, instantaneousAtNormalStress, type HoekBrownParameters } from "./hoek-brown";
 import {
@@ -33,6 +33,13 @@ export interface ResolvedStrength {
    * (1 − a)·cu,soil + a·c′ mixes the two. Not set: 0.
    */
   cohesionUndrainedPart?: number;
+  /**
+   * Part of `cohesion` (kPa) that is strength from matric suction,
+   * min(suction, maxSuction)·tan φb (`UnsaturatedStrength`): drained, so
+   * it takes γc′ when design values are formed, also on a material
+   * entered with φ = 0. Not set: 0.
+   */
+  suctionStrength?: number;
   /**
    * When `true`, any slip surface passing through this material
    * should be treated as infinitely stable (FOS → ∞) and excluded
@@ -76,6 +83,12 @@ export interface StrengthContext {
   yLayerTop?: number;
   /** Base inclination angle α (rad). */
   alpha: number;
+  /**
+   * Matric suction ua − uw at the point (kPa, ≥ 0): the negative pore
+   * pressure above the material's water line, for materials with φb
+   * (`UnsaturatedStrength`). Not set: 0, no suction strength.
+   */
+  suction?: number;
 }
 
 // ── Resolver ───────────────────────────────────────────────────
@@ -96,6 +109,32 @@ export function needsLayerTop(model: MaterialModel): boolean {
  * @returns Resolved c, φ (and flags) for the solver.
  */
 export function resolveStrength(
+  model: MaterialModel,
+  context: StrengthContext,
+): ResolvedStrength {
+  const r = resolveModelStrength(model, context);
+  const suction = context.suction ?? 0;
+  if (!(suction > 0)) return r;
+  const ss = suctionStrength(model, suction);
+  if (!(ss > 0)) return r;
+  // like an apparent cohesion on the drained strength (for a combined
+  // material its drained branch; the undrained Su is unchanged)
+  return { ...r, cohesion: r.cohesion + ss, suctionStrength: ss };
+}
+
+/**
+ * Strength from matric suction (kPa): min(suction, maxSuction)·tan φb for
+ * a material with φb (`UnsaturatedStrength`), else 0.
+ */
+export function suctionStrength(model: MaterialModel, suction: number): number {
+  const phiB = suctionAngle(model);
+  if (!(phiB > 0) || !(suction > 0)) return 0;
+  const cap = "maxSuction" in model ? model.maxSuction : undefined;
+  const s = cap !== undefined && Number.isFinite(cap) && cap > 0 ? Math.min(suction, cap) : suction;
+  return s * Math.tan((phiB * Math.PI) / 180);
+}
+
+function resolveModelStrength(
   model: MaterialModel,
   context: StrengthContext,
 ): ResolvedStrength {
@@ -273,6 +312,8 @@ export interface DesignStrength {
  * composite strength of soil and columns in the Swedish guidance on deep
  * mixing, SGF Report 2:2000 and TK Geo 13, with the Eurocode factor of
  * each part). The undrained branch of a combined material takes γcu.
+ * Strength from matric suction (φb) is drained and takes γc′ like c′,
+ * also on a Mohr-Coulomb material entered with φ = 0.
  * Without factors (and for high-strength and bedrock) the characteristic
  * values are returned.
  *
@@ -281,7 +322,7 @@ export interface DesignStrength {
  */
 export function designStrength(
   kind: MaterialModelKind | undefined,
-  st: Pick<ResolvedStrength, "cohesion" | "frictionAngle" | "cohesionUndrained" | "isCombined" | "cohesionUndrainedPart">,
+  st: Pick<ResolvedStrength, "cohesion" | "frictionAngle" | "cohesionUndrained" | "isCombined" | "cohesionUndrainedPart" | "suctionStrength">,
   f: PartialFactors | null | undefined,
 ): DesignStrength {
   const undrained =
@@ -294,7 +335,11 @@ export function designStrength(
     return { cohesion: st.cohesion, tanPhi, cohesionUndrained: st.cohesionUndrained, undrained };
   }
   const cohesionUndrained = st.cohesionUndrained / f.cu;
-  if (undrained) return { cohesion: st.cohesion / f.cu, tanPhi, cohesionUndrained, undrained };
+  if (undrained) {
+    // a Mohr-Coulomb material with φ = 0 and φb: its suction strength is drained (γc′)
+    const ss = Math.min(st.cohesion, st.suctionStrength ?? 0);
+    return { cohesion: (st.cohesion - ss) / f.cu + ss / f.cohesion, tanPhi, cohesionUndrained, undrained };
+  }
   const part = Math.min(st.cohesion, st.cohesionUndrainedPart ?? 0);
   return {
     cohesion: part / f.cu + (st.cohesion - part) / f.cohesion,

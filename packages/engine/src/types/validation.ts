@@ -7,7 +7,7 @@
  * desktop UI (inline error display).
  */
 
-import { supportsAnisotropy, type MaterialModel } from "./material-models";
+import { isCombinedDepthModel, supportsAnisotropy, supportsSuctionStrength, type MaterialModel } from "./material-models";
 
 /**
  * Validate a `MaterialModel` and return any errors found.
@@ -243,7 +243,32 @@ export function validateMaterialModel(model: MaterialModel): string[] {
     if (!Array.isArray(model.anisotropy)) errors.push("Anisotropy must be a list of [α°, factor] points.");
     else if (model.anisotropy.length > 0) validateModifier(errors, model.anisotropy, "Anisotropy");
   }
+  validateSuction(errors, model);
   return errors;
+}
+
+/**
+ * Strength from suction (`UnsaturatedStrength`): 0 ≤ φb < 90 and a
+ * maximum suction > 0, on a model whose drained strength takes it (an
+ * S = f(depth) material only in a combined analysis).
+ */
+function validateSuction(errors: string[], model: MaterialModel): void {
+  const m = model as { phiB?: unknown; maxSuction?: unknown };
+  const { phiB, maxSuction } = m;
+  if (phiB === undefined && maxSuction === undefined) return;
+  if (phiB !== undefined && !(typeof phiB === "number" && Number.isFinite(phiB) && phiB >= 0 && phiB < 90)) {
+    errors.push("φb must be ≥ 0 and less than 90°.");
+  }
+  if (maxSuction !== undefined && !(typeof maxSuction === "number" && Number.isFinite(maxSuction) && maxSuction > 0)) {
+    errors.push("The maximum suction must be a positive number.");
+  }
+  if (typeof phiB === "number" && phiB > 0) {
+    if (!supportsSuctionStrength(model.kind)) {
+      errors.push("φb (strength from suction) is only taken by Mohr-Coulomb, the anisotropic function and a combined S = f(depth).");
+    } else if (model.kind === "s-f-depth" && !isCombinedDepthModel(model)) {
+      errors.push("φb (strength from suction) needs the drained branch of a combined S = f(depth) analysis.");
+    }
+  }
 }
 
 /** A modifier function [[α°, factor], …]: at least two points, finite, factors ≥ 0. */

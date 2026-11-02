@@ -68,6 +68,11 @@ export interface GszStability {
   piezometric: Map<number, Pt[]>;
   /** Material id → piezometric surface id. */
   materialPiezometric: Map<number, number>;
+  /**
+   * Piezometric surface id → the largest suction (as written) above it,
+   * for the surfaces whose suction is capped (CapSuction).
+   */
+  piezometricMaxSuction: Map<number, number>;
   surcharges: GszSurcharge[];
   lineLoads: GszLineLoad[];
   tensionCrack?: { option: string; angle?: number; line: Pt[]; waterPercent: number };
@@ -231,9 +236,13 @@ export function parseGszXml(xml: string): Omit<GszFile, "results"> {
         return p ? [p] : [];
       });
     const piezometric = new Map<number, Pt[]>();
+    const piezometricMaxSuction = new Map<number, number>();
     for (const ps of children(entry, "PiezometricSurfaces/PiezometricSurface")) {
       const id = num(childText(ps, "ID"));
-      if (id !== undefined) piezometric.set(id, pointsOf(ps));
+      if (id === undefined) continue;
+      piezometric.set(id, pointsOf(ps));
+      const cap = num(childText(ps, "MaxSuction"));
+      if (childText(ps, "CapSuction") === "true" && cap !== undefined) piezometricMaxSuction.set(id, cap);
     }
     const materialPiezometric = new Map<number, number>();
     for (const mu of children(entry, "MaterialUsesPiezs/MaterialUsesPiez")) {
@@ -272,6 +281,7 @@ export function parseGszXml(xml: string): Omit<GszFile, "results"> {
       projected: ["UseLeftAngle", "UseRightAngle"].some((k) => child(slip, "Radius")?.getAttribute(k) === "true"),
       piezometric,
       materialPiezometric,
+      piezometricMaxSuction,
       surcharges,
       lineLoads,
       tensionCrack: tcOption

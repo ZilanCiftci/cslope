@@ -22,6 +22,9 @@
  *   the partial factors (EN 1997-1 Annex A, `designStrength`), and for a
  *   combined material the lesser of the drained and the undrained strength,
  *   a Tresca cap (σ₁ − σ₃)/2 ≤ cu on Mohr–Coulomb. Variable loads take γQ.
+ *   A material with φb adds the suction strength min(s, s_max)·tan φb to
+ *   c′, with the matric suction s = γw (y − y_w) above its water line
+ *   (vertical head), or from the negative pore pressure of the seepage.
  * - Surface loads: ponded water as a normal pressure, strip loads (kPa per
  *   horizontal metre) and line loads (kN/m) as vertical tractions,
  *   integrated with the quadratic edge shape functions.
@@ -47,7 +50,8 @@
 
 import { WATER_UNIT_WEIGHT } from "../types/constants";
 import type { Material } from "../types/material";
-import { designStrength, needsLayerTop, resolveUnitWeight } from "../types/strength";
+import { designStrength, needsLayerTop, resolveUnitWeight, suctionStrength } from "../types/strength";
+import { suctionAngle } from "../types/material-models";
 import { materialLayerTopAt } from "../model/geometry-ops";
 import { envelopeAt } from "../model/reinforcement";
 import type { Slope } from "../model/slope";
@@ -612,6 +616,9 @@ export function buildFeModel(slope: Slope, options: FeModelOptions = {}): FeMode
   const N = new Float64Array(6);
   const surface = slope.surfaceLineXY ?? { x: [xmin, xmax], y: [ymax, ymax] };
   const waterLines = materials.map((m) => slope.getWaterLineForMaterial(m));
+  // Design suction strength included in gpC (φb), to replace it with that of the seepage.
+  const gpSuction = new Float64Array(ngp);
+  const suctionFactor = factors ? factors.cohesion : 1;
   for (let e = 0; e < ne; e++) {
     const m = materials[elMaterial[e]], wl = waterLines[elMaterial[e]];
     for (let g = 0; g < 3; g++) {
@@ -625,13 +632,17 @@ export function buildFeModel(slope: Slope, options: FeModelOptions = {}): FeMode
         const yGround = polylineY(surface, gx);
         // Depth from the top of the material's layer, as the slices take it.
         const yLayerTop = needsLayerTop(m.model) ? (materialLayerTopAt(slope.materialGeometries, m, gx, gy) ?? yGround) : undefined;
-        const s = m.getStrength({ yBottom: gy, x: gx, yGround, alpha: 0, ...(yLayerTop !== undefined ? { yLayerTop } : {}) });
+        // Matric suction above the material's water line, for φb.
+        const yw = wl && suctionAngle(m.model) > 0 ? polylineY(wl, gx) : Number.NaN;
+        const suction = Number.isFinite(yw) ? Math.max(0, WATER_UNIT_WEIGHT * (gy - yw)) : 0;
+        const s = m.getStrength({ yBottom: gy, x: gx, yGround, alpha: 0, suction, ...(yLayerTop !== undefined ? { yLayerTop } : {}) });
         if (s.skipSurface) { gpC[i] = Infinity; gpPhi[i] = 0; elElastic[e] = 1; }
         else {
           // Design strength with the partial factors, as the slices
           // (designStrength); the factor of safety is then on it.
           const d = designStrength(m.model.kind, s, factors);
           gpC[i] = Math.max(0, d.cohesion);
+          gpSuction[i] = (s.suctionStrength ?? 0) / suctionFactor;
           // without factors φ as given, not through atan(tan φ)
           gpPhi[i] = d.undrained ? 0 : factors ? Math.atan(d.tanPhi) : (s.frictionAngle * Math.PI) / 180;
           if (s.isCombined && !d.undrained) gpCu[i] = Math.max(0, d.cohesionUndrained);
@@ -698,6 +709,13 @@ export function buildFeModel(slope: Slope, options: FeModelOptions = {}): FeMode
         for (let k = 0; k < 6; k++) h += N[k] * head[el[6 * e + k]];
         const i = 3 * e + g;
         gpU[i] = Number.isFinite(h) ? Math.max(0, WATER_UNIT_WEIGHT * (h - gpY[i])) : 0;
+        // φb: the suction strength from the seepage's negative pore pressure
+        const m = materials[elMaterial[e]];
+        if (!elElastic[e] && Number.isFinite(gpC[i]) && suctionAngle(m.model) > 0) {
+          const ss = Number.isFinite(h) ? suctionStrength(m.model, Math.max(0, WATER_UNIT_WEIGHT * (gpY[i] - h))) / suctionFactor : 0;
+          gpC[i] = Math.max(0, gpC[i] - gpSuction[i] + ss);
+          gpSuction[i] = ss;
+        }
       }
     }
   }

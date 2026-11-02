@@ -4,6 +4,7 @@ import { DataPointTable } from "../../../../components/ui/DataPointTable";
 import type { AnisotropicFunctionModel } from "@cslope/engine";
 import type { MaterialExpressions } from "../../../../store/types";
 import { UnitWeightSatField } from "./UnitWeightSatField";
+import { SuctionFields } from "./SuctionFields";
 
 interface Props {
   model: AnisotropicFunctionModel;
@@ -81,6 +82,11 @@ export function AnisotropicFields({
             aria-label="c (kPa)"
           />
         </label>
+        <SuctionFields
+          phiB={model.phiB}
+          maxSuction={model.maxSuction}
+          onChange={onChange}
+        />
       </div>
       <Label>Modifier function (α° → factor)</Label>
       <DataPointTable
