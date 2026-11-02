@@ -168,7 +168,7 @@ describe(".gsz import", () => {
     expect(d.materials[0].color).toBe("#ff8000");
     expect(d.regionAssignments!.find((a) => a.materialName === "Clay")!.point[1]).toBeLessThan(3);
     // the fill uses the line, the clay has none (a line below the model)
-    expect(d.waterTable).toEqual({ mode: "custom", value: [[0, 6], [30, 4]] });
+    expect(d.waterTable).toEqual({ mode: "custom", value: [[0, 6], [30, 4]], followBoundary: false });
     expect(d.materials[1].waterTableId).toBe("no-water");
     expect(d.waterTables![0].coordinates[0][1]).toBeLessThan(0);
     // surcharge: 20 kN/m³ × 1.5 m above the crest = 30 kPa on x 2–8
@@ -184,6 +184,20 @@ describe(".gsz import", () => {
     expect(d.customSearchPlanes).toEqual([{ cx: 14, cy: 17, radius: 13.5 }]);
     expect(imp.notes.join(" ")).toMatch(/Materials without a piezometric line \(Clay\)/);
     expect(Number.isFinite(fos(d, imp.options))).toBe(true);
+  });
+
+  it("does not take a surface with projected ends for a circle", () => {
+    const xml = XML.replace("<NumberOfSlicesPerSlip>", '<Radius NumInc="10" UseRightAngle="true" RightAngle="30" /><NumberOfSlicesPerSlip>');
+    const imp = gszToDefinition({ ...parseGszXml(xml), results: new Map([["short term", parseSlipSurfaceCsv(CSV)]]) }, 1);
+    expect(imp.reference).toBeUndefined();
+    expect(imp.notes.join(" ")).toMatch(/not a circle/);
+  });
+
+  it("gives a material whose strength is a function a placeholder the model accepts", () => {
+    const xml = XML.replace("<SlopeModel>UndrainedPhiZero</SlopeModel>", "<SlopeModel>MohrCoulombSpatial</SlopeModel>").replace("<Cohesion>25</Cohesion>", "<CohesionSpatialFnNum>1</CohesionSpatialFnNum>");
+    const imp = gszToDefinition({ ...parseGszXml(xml), results: new Map() }, 1);
+    expect(imp.definition.materials[1].model).toMatchObject({ kind: "mohr-coulomb", cohesion: 0.001, frictionAngle: 0 });
+    expect(Number.isFinite(fos(imp.definition))).toBe(true);
   });
 
   it("reports a strength model it cannot read and keeps its parameters", () => {

@@ -201,10 +201,12 @@ function materialModel(m: GszMaterial, scale: { len: number; weight: number; str
         .filter(([k]) => !/FnNum$|Model$/.test(k))
         .map(([k, v]) => `${k} = ${v}`)
         .join(", ");
+      // no strength in the plain fields (it is in a function): a placeholder the model accepts
+      const placeholder = !(c > 0) && !(phi > 0);
       notes.push(
-        `Material "${m.name}": the strength model "${m.model || "unnamed"}" has no counterpart in the import yet; it is read as Mohr-Coulomb with c = ${c.toFixed(2)} kPa, φ = ${phi}°, which is NOT the same strength. Enter it by hand. The file gives: ${params}.`,
+        `Material "${m.name}": the strength model "${m.model || "unnamed"}" has no counterpart in the import yet; it is read as Mohr-Coulomb with ${placeholder ? "a placeholder c = 0.001 kPa (the file gives the strength as a function)" : `c = ${c.toFixed(2)} kPa, φ = ${phi}°`}, which is NOT the same strength. Enter it by hand. The file gives: ${params}.`,
       );
-      return { kind: "mohr-coulomb", unitWeight, cohesion: c, frictionAngle: phi };
+      return { kind: "mohr-coulomb", unitWeight, cohesion: placeholder ? 0.001 : c, frictionAngle: phi };
     }
   }
 }
@@ -270,10 +272,11 @@ export function gszToDefinition(file: GszFile, analysisId: number, fileName = "g
     }
     const main = [...usage].sort((a, b) => b[1] - a[1])[0]?.[0];
     if (main !== undefined) {
-      waterTable = { mode: "custom", value: clipLine(piezo.get(main)!) };
+      // a line above the ground is free water standing on it, as in the file
+      waterTable = { mode: "custom", value: clipLine(piezo.get(main)!), followBoundary: false };
       for (const [pid] of usage) {
         if (pid === main) continue;
-        waterTables.push({ id: `piezo-${pid}`, coordinates: clipLine(piezo.get(pid)!) });
+        waterTables.push({ id: `piezo-${pid}`, coordinates: clipLine(piezo.get(pid)!), followBoundary: false });
       }
     }
     const dry = usedIds.filter((id) => !usage.has(stab?.materialPiezometric.get(id) ?? -1));
@@ -323,7 +326,9 @@ export function gszToDefinition(file: GszFile, analysisId: number, fileName = "g
         else udls.push({ magnitude: q, x1: u, x2: v });
       }
     }
-    if (s.direction && !/vertical/i.test(s.direction)) notes.push("A surcharge acting normal to the ground is imported as vertical.");
+    if (s.direction && !/vertical/i.test(s.direction)) {
+      notes.push("A surcharge acting normal to the ground is imported as vertical: its horizontal part on sloping ground (water against a slope) is missing, which can change the factor of safety by several per cent.");
+    }
   }
   if ((stab?.surcharges.length ?? 0) > 0) {
     notes.push(`${stab!.surcharges.length} surcharge${stab!.surcharges.length === 1 ? "" : "s"} imported as distributed loads: the unit weight times the height of the fill above the ground, in strips.`);
@@ -384,7 +389,7 @@ export function gszToDefinition(file: GszFile, analysisId: number, fileName = "g
   });
 
   // the file's critical surface, when it is a circle (an optimised or block surface is not)
-  const circularBest = best && best.circular && !stab?.optimised;
+  const circularBest = best && best.circular && !stab?.optimised && !stab?.projected;
   const reference = circularBest
     ? { ...best, cx: best.cx * scale.len, cy: best.cy * scale.len, r: best.r * scale.len, ...(best.weight !== undefined ? { weight: best.weight * (imperial ? 0.0145939 : 1) } : {}) }
     : undefined;

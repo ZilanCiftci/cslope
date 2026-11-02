@@ -62,6 +62,8 @@ export interface GszStability {
   slices?: number;
   /** The critical surface is optimised after the search (then no longer a circle). */
   optimised: boolean;
+  /** The ends of the surface are projected at a fixed angle (then not a circle). */
+  projected: boolean;
   /** Piezometric surface id → its points. */
   piezometric: Map<number, Pt[]>;
   /** Material id → piezometric surface id. */
@@ -267,6 +269,7 @@ export function parseGszXml(xml: string): Omit<GszFile, "results"> {
           : undefined,
       slices: num(childText(slip, "NumberOfSlicesPerSlip")),
       optimised: childText(slip, "IsOptimizationOn") === "true",
+      projected: ["UseLeftAngle", "UseRightAngle"].some((k) => child(slip, "Radius")?.getAttribute(k) === "true"),
       piezometric,
       materialPiezometric,
       surcharges,
