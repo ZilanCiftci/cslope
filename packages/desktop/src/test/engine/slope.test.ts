@@ -337,7 +337,8 @@ describe("Slice generation", () => {
     const ints = slope.getCircleExternalIntersection(cx, cy, radius);
     const slices = getSlices(slope, ints[0][0], ints[1][0], cx, cy, radius);
 
-    // expected total weight: 5376.058 (with unitWeight=18)
+    // expected total weight: 5378.11 under the arc (with unitWeight=18;
+    // 5376.06 with one arc node per slice before 2026-11)
     const totalWeight = slices.reduce((s, sl) => s + sl.weight, 0);
     expect(totalWeight).toBeCloseTo(5376, -1); // within ±5 kN
 
@@ -345,8 +346,11 @@ describe("Slice generation", () => {
     const first = slices[0];
     expect(first.xLeft).toBeCloseTo(7.087, 2);
     expect(first.yTop).toBeCloseTo(0, 2);
-    expect(first.yBottom).toBeCloseTo(-1.505, 1);
-    expect(first.alpha).toBeCloseTo(1.093, 1);
+    // The steep entry is cut into narrower slices (no more arc than twice
+    // a slice at the bottom of the circle): x 7.09–7.76, not –8.52.
+    expect(first.xRight).toBeCloseTo(7.761, 2);
+    expect(first.yBottom).toBeCloseTo(-0.739, 2);
+    expect(first.alpha).toBeCloseTo(1.128, 2);
 
     // Last slice properties
     const last = slices[slices.length - 1];

@@ -514,8 +514,11 @@ export function analyseOrdinary(_slope: Slope, slices: Slice[]): number | null {
           Math.tan(s.phi);
     }
 
+    // Driving force along the base: on a circle the weight's moment W·dx
+    // over the radius (the same moment as the other methods; α is at the
+    // middle of the arc, where R sin α differs slightly from dx).
     pushing +=
-      W * Math.sin(s.alpha) +
+      W * (s.circular ? s.dx / s.R : Math.sin(s.alpha)) +
       (meanArm > 1e-9 ? ((s.extraMoment ?? 0) + rMoment) / meanArm : 0);
   }
 

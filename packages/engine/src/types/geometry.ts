@@ -98,6 +98,11 @@ export interface Slice {
    * positive where the normal force drives; 0 on a circle.
    */
   normalArm?: number;
+  /**
+   * On a circle: the weight's arm about the centre is `dx`, while α is
+   * the inclination at the middle of the slice's arc (R sin α ≠ dx).
+   */
+  circular?: boolean;
   /** UDL force on slice (kN). */
   udl: number;
   /** Line load force on slice (kN). */

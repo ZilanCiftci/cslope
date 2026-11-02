@@ -24,10 +24,13 @@ import { applyReinforcement } from "./reinforcement";
 /** Grid of the local origin for clipping material regions (see createSlice). */
 const LOCAL_ORIGIN_GRID = 4096;
 
+/** Largest arc a slice of a circle spans, at least (rad); see getSlices. */
+const MAX_SLICE_ARC = (2 * Math.PI) / 180;
+
 // ── Clipping buffers ──────────────────────────────────────────────
-// A slice clips every material polygon four times (the vertical strip,
-// then the two slip-surface edges). Done with fresh arrays and `map`
-// passes, the allocation was a fifth of a whole search. The clips below
+// A slice clips every material polygon by the vertical strip, then by
+// each slip-surface edge (two on a straight base, more along an arc).
+// Done with fresh arrays and `map` passes, the allocation was a fifth of a whole search. The clips below
 // write into two reused buffers instead, with the same arithmetic in the
 // same order, so the results are identical to the last bit.
 
@@ -195,10 +198,15 @@ export function createSlice(
   const e = cy - (yTop + yBottom) / 2;
 
   // Alpha angle: positive where the base descends towards +x (the
-  // sliding direction). On a circle the tangent at the slice middle.
+  // sliding direction). On a circle the tangent at the middle of the
+  // slice's arc (θ the angle of a point from the downward vertical through
+  // the centre, x = cx + R sin θ; α = −θ), which with the arc length below
+  // is the slice's base as the circle has it.
+  const th0 = base ? 0 : Math.asin(Math.max(-1, Math.min(1, (x0 - cx) / radius)));
+  const th1 = base ? 0 : Math.asin(Math.max(-1, Math.min(1, (x1 - cx) / radius)));
   const alpha = base
     ? Math.atan((y0Bottom - y1Bottom) / width)
-    : Math.atan(dx / (cy - yBottom));
+    : -(th0 + th1) / 2;
 
   // Moment arms about the centre / axis point. The base shear resists
   // with arm R; the normal force has arm `normalArm` (0 on a circle,
@@ -212,18 +220,15 @@ export function createSlice(
     normalArm = bx * Math.cos(alpha) - by * Math.sin(alpha);
   }
 
-  // Base length consistent with the base inclination the solvers use
-  // (the equilibrium equations assume a straight base of length b/cos α).
-  // The arc length over-credited cohesion on steep slices: on a nearly
-  // vertical entry slice by ~40 %, e.g. +5 % FOS at 50 slices on
-  // V068 compared with a converged slice count. Compared with 2000 slices
-  // on the 150 fixed-circle checks of the verification (2026-11), this base
-  // (tangent at the x-midpoint, b/cos α, one arc node in the weight) is the
-  // closest at the default slice count: mean |error| 0.027 %, against
-  // 0.049 % for the arc length, 0.053 % for angle, point and length at the
-  // arc midpoint, 0.061 % for straight chords (chord angle and length) and
-  // 0.029 % with an exact weight (8 arc nodes).
-  const baseLength = width / Math.cos(alpha);
+  // Base length: on a circle the arc length R·|θ1 − θ0|, with α at the
+  // middle of the arc and the weight under the arc (below), so that base,
+  // inclination and weight are the circle's own; a straight base b/cos α.
+  // (Before 2026-11: α the tangent at the x-midpoint with b/cos α, which
+  // under-credited cohesion on a steep slice, by 0.3 % of the resisting
+  // moment on an undrained clay with a steep crest, partly offset by the
+  // weight under one arc node. With the steep ends cut (getSlices), the
+  // error against 4000 slices is 0.013 % on average, 0.16 % at most.)
+  const baseLength = base ? width / Math.cos(alpha) : radius * Math.abs(th1 - th0);
 
   // Pore water pressure
   let U = 0;
@@ -236,15 +241,29 @@ export function createSlice(
   // geometry_for_area: [(x0, 10000), (x1, 10000), (x1, y1_bottom), (xm, ym_bottom), (x0, y0_bottom)]
   // The top at y = 10000 is a fixed ceiling: material above it is not
   // counted, so model elevations must stay below 10000 m.
+  // On a circle the base follows the arc with a node every ≤ 1° (an even
+  // number of segments up to 32), so that the weight is that under the
+  // arc. One node is always the base point (x, yBottom): the base material
+  // is looked up just above it, and a chord there would lie above the arc.
+  const arcSegments = base
+    ? 2
+    : Math.min(32, 2 * Math.max(1, Math.ceil(Math.abs(th1 - th0) / (Math.PI / 90))));
+  const arcNodes = arcSegments - 1;
   const clipPoly: [number, number][] = [
     [x0, 10000],
     [x1, 10000],
     [x1, y1Bottom],
-    [x, yBottom],
+    ...(arcNodes === 1
+      ? [[x, yBottom] as [number, number]]
+      : Array.from({ length: arcNodes }, (_, k): [number, number] => {
+          if (2 * (k + 1) === arcSegments) return [x, yBottom];
+          const xx = x1 - ((k + 1) / arcSegments) * (x1 - x0);
+          return [xx, getCircleYCoordinateAtX(cx, cy, radius, xx)];
+        })),
     [x0, y0Bottom],
   ];
 
-  // Compute edge coefficients for the slip-surface edges (indices 2-3 and 3-4),
+  // Compute edge coefficients for the slip-surface edges (from index 2 on),
   // relative to a local origin (ox, oy) near the slice: with real-world
   // coordinates (eastings ~1e6 and elevations ~1e3) the constant term x·y
   // of global coefficients lost the base by more than `lift` below, and the
@@ -253,7 +272,7 @@ export function createSlice(
   const ox = Math.round(x / LOCAL_ORIGIN_GRID) * LOCAL_ORIGIN_GRID;
   const oy = Math.round(yBottom / LOCAL_ORIGIN_GRID) * LOCAL_ORIGIN_GRID;
   const edgeCoeffs: [number, number, number][] = [];
-  for (let i = 2; i < 4; i++) {
+  for (let i = 2; i < clipPoly.length - 1; i++) {
     const p1: [number, number] = [clipPoly[i][0] - ox, clipPoly[i][1] - oy];
     const p2: [number, number] = [clipPoly[i + 1][0] - ox, clipPoly[i + 1][1] - oy];
     const a = p2[1] - p1[1];
@@ -292,6 +311,18 @@ export function createSlice(
     let lx = bufBx, ly = bufBy, tx = bufAx, ty = bufAy;
     let valid = true;
     for (const [a, b, c] of edgeCoeffs) {
+      if (2 * n > tx.length) {
+        // A non-convex region can gain vertices at each arc edge.
+        const cap = 4 * n;
+        const nx = new Float64Array(cap);
+        const ny = new Float64Array(cap);
+        nx.set(lx.subarray(0, n));
+        ny.set(ly.subarray(0, n));
+        lx = bufAx = nx;
+        ly = bufAy = ny;
+        tx = bufBx = new Float64Array(cap);
+        ty = bufBy = new Float64Array(cap);
+      }
       n = clipHalfplaneInto(lx, ly, n, a, b, c, tx, ty);
       [lx, ly, tx, ty] = [tx, ty, lx, ly];
       if (n < 3) {
@@ -445,6 +476,7 @@ export function createSlice(
     e,
     R: shearArm,
     normalArm,
+    circular: !base,
     udl: udlForce,
     ll: llForce,
     isValid: true,
@@ -773,7 +805,31 @@ export function getSlices(
     }
   }
 
-  const slicesX = finalX.sort((a, b) => a - b);
+  finalX.sort((a, b) => a - b);
+  // On a circle, an end where the arc turns steep (towards a vertical
+  // tangent) is cut so that no slice spans more arc than twice a nominal
+  // slice at the bottom of the circle (2b/R), nor more than 2°: one base
+  // inclination per slice cannot follow an arc that turns 20–30° within
+  // it, while the middle of the circle keeps the nominal width. Against
+  // 4000 slices on the 150 fixed-circle checks of the verification
+  // (2026-11) this took the largest error from 0.87 % (V068, a vertical
+  // tangent at the crest) to 0.16 %, with 3 % more slices; 65 or 80
+  // even slices left 0.53 % and 0.35 %.
+  if (!poly) {
+    const maxArc = Math.max(MAX_SLICE_ARC, (2 * b) / radius);
+    const theta = (x: number) => Math.asin(Math.max(-1, Math.min(1, (x - cx) / radius)));
+    for (let i = finalX.length - 2; i >= 0; i--) {
+      const t0 = theta(finalX[i]);
+      const t1 = theta(finalX[i + 1]);
+      const k = Math.ceil((t1 - t0) / maxArc - 1e-9);
+      if (k > 1) {
+        const extra: number[] = [];
+        for (let j = 1; j < k; j++) extra.push(cx + radius * Math.sin(t0 + ((t1 - t0) * j) / k));
+        finalX.splice(i + 1, 0, ...extra);
+      }
+    }
+  }
+  const slicesX = finalX;
   const nSlices = slicesX.length - 1;
   const bArray = slicesX.slice(0, -1).map((v, i) => slicesX[i + 1] - v);
   const sxArray = slicesX.slice(0, -1).map((v, i) => (v + slicesX[i + 1]) / 2);
