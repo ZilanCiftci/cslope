@@ -45,7 +45,7 @@ export interface AnalysisSummaryInput {
   orientation: ModelOrientation;
   piezometricLine: PiezometricLineState;
   materials: MaterialRow[];
-  udls: { x1: number; x2: number; magnitude: number }[];
+  udls: { x1: number; x2: number; magnitude: number; direction?: "vertical" | "normal" }[];
   lineLoads: { x: number; magnitude: number }[];
   reinforcements?: ReinforcementRow[];
   piles?: PileRow[];
@@ -443,7 +443,7 @@ export function buildAnalysisSummary(input: AnalysisSummaryInput): SummarySectio
     ...input.udls.map((u) => [
       "Distributed load",
       `x ${fmt(Math.min(u.x1, u.x2))} to ${fmt(Math.max(u.x1, u.x2))} m`,
-      `${fmt(u.magnitude)} kPa`,
+      `${fmt(u.magnitude)} kPa${u.direction === "normal" ? ", normal to the ground" : ""}`,
     ]),
     ...input.lineLoads.map((l) => ["Line load", `x = ${fmt(l.x)} m`, `${fmt(l.magnitude)} kN/m`]),
   ];

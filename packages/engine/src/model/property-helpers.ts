@@ -348,7 +348,7 @@ export function transformDefinition(
           : { ...w, value: (w.value as number) * k };
   }
   if (def.waterTables) out.waterTables = def.waterTables.map((w) => ({ ...w, coordinates: w.coordinates.map(P) }));
-  if (def.udls) out.udls = def.udls.map((u) => ({ magnitude: u.magnitude * s, x1: X(u.x1), x2: X(u.x2) }));
+  if (def.udls) out.udls = def.udls.map((u) => ({ ...u, magnitude: u.magnitude * s, x1: X(u.x1), x2: X(u.x2) }));
   if (def.lineLoads) out.lineLoads = def.lineLoads.map((l) => ({ magnitude: l.magnitude * s * k, x: X(l.x) }));
   if (def.reinforcements) {
     out.reinforcements = def.reinforcements.map((q) => ({

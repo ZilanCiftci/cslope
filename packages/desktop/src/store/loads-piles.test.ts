@@ -69,3 +69,22 @@ describe("nextId", () => {
     expect(Number(b.slice(2))).toBe(Number(a.slice(2)) + 1);
   });
 });
+
+describe("distributed load direction", () => {
+  it("keeps a load normal to the ground through the project file and passes it to the engine", async () => {
+    const { parseProjectFile, serializeProject } = await import("./persistence");
+    const { buildSlopeDTOFromModel } = await import("./helpers");
+    store().addUdl();
+    const id = store().udls[0].id;
+    store().updateUdl(id, { direction: "normal", magnitude: 20, x1: 1, x2: 4 });
+    store().saveCurrentModel();
+    const loaded = parseProjectFile(JSON.stringify(serializeProject(store()))).models[0];
+    expect(loaded.udls[0].direction).toBe("normal");
+    expect(buildSlopeDTOFromModel(loaded).udls![0]).toMatchObject({ magnitude: 20, direction: "normal" });
+    // vertical (not set) stays without a direction
+    store().updateUdl(id, { direction: undefined });
+    store().saveCurrentModel();
+    const again = parseProjectFile(JSON.stringify(serializeProject(store()))).models[0];
+    expect("direction" in again.udls[0]).toBe(false);
+  });
+});

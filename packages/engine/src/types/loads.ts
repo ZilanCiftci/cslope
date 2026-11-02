@@ -12,7 +12,18 @@ export interface UdlParams {
   x2: number;
   /** Display color (default: "red"). */
   color?: string;
+  /**
+   * How the pressure acts: "vertical" (default), or "normal" to the ground
+   * surface, as water or earth pressure against a slope. A normal pressure
+   * p on ground inclined at β carries p per horizontal metre vertically and
+   * p·tan β horizontally (into the ground), so the vertical part equals a
+   * vertical load of the same magnitude.
+   */
+  direction?: UdlDirection;
 }
+
+/** Direction of a distributed load (see `UdlParams.direction`). */
+export type UdlDirection = "vertical" | "normal";
 
 export class Udl {
   readonly magnitude: number;
@@ -20,8 +31,10 @@ export class Udl {
   readonly x2: number;
   readonly length: number;
   readonly color: string;
+  readonly direction: UdlDirection;
 
   constructor(params: UdlParams) {
+    this.direction = params.direction === "normal" ? "normal" : "vertical";
     this.magnitude = Math.abs(params.magnitude);
     this.x1 = Math.min(params.x1, params.x2);
     this.x2 = Math.max(params.x1, params.x2);

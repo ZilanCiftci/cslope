@@ -9,7 +9,7 @@ export { Material } from "./types/material";
 export type { MaterialParams } from "./types/material";
 
 export { Udl, LineLoad } from "./types/loads";
-export type { UdlParams, LineLoadParams } from "./types/loads";
+export type { UdlParams, UdlDirection, LineLoadParams } from "./types/loads";
 
 export type {
   AnalysisMethod,

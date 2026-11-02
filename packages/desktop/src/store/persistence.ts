@@ -881,6 +881,7 @@ function normalizeUdl(raw: unknown): UdlRow | null {
     magnitude,
     x1,
     x2,
+    ...(u.direction === "normal" ? { direction: "normal" as const } : {}),
     expressions: normalizeLoadExpressions(u.expressions, [
       "magnitude",
       "x1",

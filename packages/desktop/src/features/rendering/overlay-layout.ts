@@ -167,7 +167,7 @@ export interface StripGroup<T> {
  * load entered as many strips) so they are drawn and labelled as one load.
  * Overlapping strips stay separate groups: they are separate surcharges.
  */
-export function groupTouchingStrips<T extends { x1: number; x2: number; magnitude: number }>(
+export function groupTouchingStrips<T extends { x1: number; x2: number; magnitude: number; direction?: string }>(
   strips: readonly T[],
 ): StripGroup<T>[] {
   const sorted = [...strips].sort((a, b) => Math.min(a.x1, a.x2) - Math.min(b.x1, b.x2));

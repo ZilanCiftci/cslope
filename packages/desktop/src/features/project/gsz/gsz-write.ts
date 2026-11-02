@@ -192,7 +192,7 @@ ${ids.map((d) => `              <DataPoint>${d}</DataPoint>`).join("\n")}
     return `          <Surcharge>
             <ID>${i + 1}</ID>
             <Pressure>${n(u.magnitude)}</Pressure>
-            <Direction>Vertical</Direction>
+            <Direction>${u.direction === "normal" ? "Normal" : "Vertical"}</Direction>
             <DataPoints Len="${ids.length}">
 ${ids.map((d) => `              <DataPoint>${d}</DataPoint>`).join("\n")}
             </DataPoints>

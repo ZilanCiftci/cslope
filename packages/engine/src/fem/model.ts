@@ -856,9 +856,14 @@ export function buildFeModel(slope: Slope, options: FeModelOptions = {}): FeMode
           const p = Number.isFinite(yw) ? WATER_UNIT_WEIGHT * Math.max(0, yw - py) : 0;
           tx -= p * dy; ty += p * dx;
         }
-        // strip loads: vertical, per horizontal metre (downward on a surface traversed right to left)
+        // strip loads: vertical, per horizontal metre (downward on a surface traversed right to left);
+        // a load normal to the ground as the ponded water, magnitude per metre of ground
         for (const q of slope.udls) {
-          if (px >= q.x1 && px <= q.x2) ty -= q.magnitude * loadFactor * Math.abs(dx);
+          if (px < q.x1 || px > q.x2) continue;
+          if (q.direction === "normal") {
+            const p = q.magnitude * loadFactor;
+            tx -= p * dy; ty += p * dx;
+          } else ty -= q.magnitude * loadFactor * Math.abs(dx);
         }
         if (tx !== 0 || ty !== 0) {
           addF(a, na * tx * w, na * ty * w);

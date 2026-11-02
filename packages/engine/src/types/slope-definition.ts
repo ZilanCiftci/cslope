@@ -98,7 +98,7 @@ export interface SlopeDefinition {
     followBoundary?: boolean;
   }>;
   /** UDL loads. */
-  udls?: Array<{ magnitude: number; x1: number; x2: number }>;
+  udls?: Array<{ magnitude: number; x1: number; x2: number; direction?: "vertical" | "normal" }>;
   /** Line loads (point loads). */
   lineLoads?: Array<{ magnitude: number; x: number }>;
   /** Reinforcement: anchors, tiebacks, soil nails, geosynthetics. */

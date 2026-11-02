@@ -99,6 +99,8 @@ export interface UdlRow {
   magnitude: number;
   x1: number;
   x2: number;
+  /** Acting normal to the ground (water against a slope); not set: vertical. */
+  direction?: "vertical" | "normal";
   expressions?: UdlExpressions;
 }
 

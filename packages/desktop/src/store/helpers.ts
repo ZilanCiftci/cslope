@@ -171,6 +171,7 @@ export function buildSlopeDTOFromModel(model: ModelEntry): SlopeDefinition {
       magnitude: u.magnitude,
       x1: u.x1,
       x2: u.x2,
+      ...(u.direction === "normal" ? { direction: "normal" as const } : {}),
     }));
   }
 

@@ -175,7 +175,7 @@ export function buildSlope(def: SlopeDefinition): Slope {
   if (def.udls) {
     slope.setUdls(
       ...def.udls.map(
-        (u) => new Udl({ magnitude: u.magnitude, x1: u.x1, x2: u.x2 }),
+        (u) => new Udl({ magnitude: u.magnitude, x1: u.x1, x2: u.x2, direction: u.direction }),
       ),
     );
   }

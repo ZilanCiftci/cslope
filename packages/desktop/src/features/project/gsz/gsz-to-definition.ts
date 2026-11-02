@@ -321,7 +321,7 @@ export function gszToDefinition(file: GszFile, analysisId: number, fileName = "g
     const dry = usedIds.filter((id) => !usage.has(stab?.materialPiezometric.get(id) ?? -1));
     if (dry.length > 0 && main !== undefined) {
       // no line for these materials: a line below the model gives no pore pressure
-      waterTables.push({ id: "no-water", coordinates: [[x0, yMin - 100], [x1, yMin - 100]] });
+      waterTables.push({ id: "no-water", coordinates: [[x0, yMin - 100], [x1, yMin - 100]], followBoundary: false });
       notes.push(`Materials without a piezometric line (${dry.map((id) => nameOf.get(id)).join(", ")}) get a line below the model (no pore pressure).`);
     }
     for (const id of usedIds) {
@@ -349,9 +349,11 @@ export function gszToDefinition(file: GszFile, analysisId: number, fileName = "g
   });
 
   // surcharge: the weight of the fill between the drawn line and the ground, in strips
-  const udls: { magnitude: number; x1: number; x2: number }[] = [];
+  const udls: { magnitude: number; x1: number; x2: number; direction?: "normal" }[] = [];
   for (const s of stab?.surcharges ?? []) {
     const line = s.line.map(L);
+    // normal to the ground: the pressure γ·h acts normal to it (water against a slope)
+    const normal = /normal/i.test(s.direction);
     const gw = s.unitWeight * scale.weight;
     const lx = line.map((p) => p[0]);
     const a = Math.max(Math.min(...lx), x0), b = Math.min(Math.max(...lx), x1);
@@ -365,13 +367,11 @@ export function gszToDefinition(file: GszFile, analysisId: number, fileName = "g
         if (top === null || g === null || top <= g) continue;
         const q = Number((gw * (top - g)).toFixed(3));
         const last = udls[udls.length - 1];
-        if (last && Math.abs(last.x2 - u) < 1e-9 && last.magnitude === q) last.x2 = v;
-        else udls.push({ magnitude: q, x1: u, x2: v });
+        if (last && Math.abs(last.x2 - u) < 1e-9 && last.magnitude === q && (last.direction === "normal") === normal) last.x2 = v;
+        else udls.push({ magnitude: q, x1: u, x2: v, ...(normal ? { direction: "normal" as const } : {}) });
       }
     }
-    if (s.direction && !/vertical/i.test(s.direction)) {
-      notes.push("A surcharge acting normal to the ground is imported as vertical: its horizontal part on sloping ground (water against a slope) is missing, which can change the factor of safety by several per cent.");
-    }
+    if (s.direction && !/vertical|normal/i.test(s.direction)) notes.push(`A surcharge direction "${s.direction}" is imported as vertical.`);
   }
   if ((stab?.surcharges.length ?? 0) > 0) {
     notes.push(`${stab!.surcharges.length} surcharge${stab!.surcharges.length === 1 ? "" : "s"} imported as distributed loads: the unit weight times the height of the fill above the ground, in strips.`);

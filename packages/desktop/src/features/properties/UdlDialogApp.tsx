@@ -121,11 +121,11 @@ export function UdlDialogApp() {
     },
     {
       header: (
-        <Label title="Vertical pressure per horizontal metre between x1 and x2">
+        <Label title="Pressure between x1 and x2: vertical, per horizontal metre; or normal to the ground, per metre of ground">
           q (kPa)
         </Label>
       ),
-      widthClassName: "w-[30%]",
+      widthClassName: "w-[22%]",
       renderCell: (row) => (
         <SpreadsheetExpressionInput
           value={row.magnitude}
@@ -143,7 +143,7 @@ export function UdlDialogApp() {
     },
     {
       header: <Label title="Start of the load">x1 (m)</Label>,
-      widthClassName: "w-[30%]",
+      widthClassName: "w-[22%]",
       renderCell: (row) => (
         <SpreadsheetExpressionInput
           value={row.x1}
@@ -157,7 +157,7 @@ export function UdlDialogApp() {
     },
     {
       header: <Label title="End of the load">x2 (m)</Label>,
-      widthClassName: "w-[30%]",
+      widthClassName: "w-[22%]",
       renderCell: (row) => (
         <SpreadsheetExpressionInput
           value={row.x2}
@@ -167,6 +167,25 @@ export function UdlDialogApp() {
           onResolvedValue={(nextX2) => updateUdl(row.id, { x2: nextX2 })}
           onExpressionChange={(expr) => setUdlExpression(row, "x2", expr)}
         />
+      ),
+    },
+    {
+      header: (
+        <Label title="Vertical, or normal to the ground: water or earth pressure against a slope, which also pushes horizontally into it">
+          Direction
+        </Label>
+      ),
+      widthClassName: "w-[24%]",
+      renderCell: (row, i) => (
+        <select
+          value={row.direction ?? "vertical"}
+          onChange={(e) => updateUdl(row.id, { direction: e.target.value === "normal" ? "normal" : undefined })}
+          aria-label={`UDL ${i + 1} direction`}
+          className="w-full text-[11px]"
+        >
+          <option value="vertical">Vertical</option>
+          <option value="normal">Normal to ground</option>
+        </select>
       ),
     },
     {

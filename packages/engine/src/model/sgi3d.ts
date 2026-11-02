@@ -120,7 +120,15 @@ export function sgi3dFactorOfSafety(slope: Slope, options: Sgi3dOptions): Sgi3dR
       for (let j = 0; j < k; j++) {
         const xm = u.x1 + (j + 0.5) * w, dx = xm - p.cx;
         if (dx * dx >= r2 || xm < xa || xm > xb) continue;
-        if (p.cy - Math.sqrt(r2 - dx * dx) < getYAtX(surf.x, surf.y, xm)) me += u.magnitude * qf * w * dx;
+        const yg = getYAtX(surf.x, surf.y, xm);
+        if (p.cy - Math.sqrt(r2 - dx * dx) < yg) {
+          me += u.magnitude * qf * w * dx;
+          // a load normal to the ground: its horizontal part p·dy at the ground
+          if (u.direction === "normal") {
+            const sl = (getYAtX(surf.x, surf.y, xm + w / 2) - getYAtX(surf.x, surf.y, xm - w / 2)) / w;
+            me -= u.magnitude * qf * w * sl * (p.cy - yg);
+          }
+        }
       }
     }
     for (const l of slope.lineLoads) {

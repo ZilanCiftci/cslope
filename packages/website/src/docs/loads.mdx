@@ -5,7 +5,7 @@ section: Modelling
 order: 4
 ---
 
-cSlope has two kinds of external load, both vertical and both acting on the ground surface.
+cSlope has two kinds of external load, both acting on the ground surface: distributed loads, vertical or normal to the ground, and vertical line loads.
 
 ## Distributed loads (UDL)
 
@@ -13,8 +13,11 @@ Open **Model › Loads & support › UDL**. Each row is one load:
 
 | Column | Meaning |
 | --- | --- |
-| **q** | Vertical pressure in kPa, per horizontal metre, between x1 and x2 |
+| **q** | Pressure in kPa between x1 and x2 |
 | **x1**, **x2** | The horizontal extent of the load, in metres |
+| **Direction** | **Vertical**: q per horizontal metre. **Normal to ground**: q acts normal to the ground surface, as water or earth pressure against a slope |
+
+A pressure q normal to ground inclined at β carries q per horizontal metre vertically, as a vertical load would, and q·tan β horizontally, pushing into the ground. On level ground the two directions are the same. Water standing against a slope is the typical case: entered as a normal load q = γw·(water level − ground), it acts as [free water](/docs/water) does on the ground, without pore pressure in the soil. The canvas labels such a load "⊥ ground".
 
 **+ Add UDL** adds a load of 10 kPa from x = 0 to 5 m. On the canvas you can drag the two ends of a load horizontally while the UDL window is open.
 
@@ -24,7 +27,7 @@ Open **Model › Loads & support › Line loads**. Each row is a vertical line l
 
 ## How loads enter the analysis
 
-A load on the ground above a slice adds to the slice's weight. A load outside the sliding mass has no effect on that slip surface. All load values accept [parameters](/docs/geometry#parameters).
+A load on the ground above a slice adds to the slice's weight. The horizontal part of a load normal to the ground acts on the slice as a horizontal force at the ground, with its moment about the centre of the slip surface. A load outside the sliding mass has no effect on that slip surface. The finite element strength reduction takes a normal load normal to the ground; the limit analysis bounds take its vertical part only. All load values accept [parameters](/docs/geometry#parameters).
 
 With [partial factors](/docs/analysis#partial-factors) switched on, both kinds of load are multiplied by the load factor γQ.
 

@@ -14,6 +14,7 @@ import {
   isPointInPolygon,
 } from "../math/index";
 import type { Slope } from "./slope";
+import type { Udl } from "../types/loads";
 import { materialLayerTopAt, polylineYFrom } from "./geometry-ops";
 import { polylineCrossingsX, polylineYAt, type Pt } from "./surface";
 import { applyReinforcement } from "./reinforcement";
@@ -215,7 +216,13 @@ export function createSlice(
   // (the equilibrium equations assume a straight base of length b/cos α).
   // The arc length over-credited cohesion on steep slices: on a nearly
   // vertical entry slice by ~40 %, e.g. +5 % FOS at 50 slices on
-  // V068 compared with a converged slice count.
+  // V068 compared with a converged slice count. Compared with 2000 slices
+  // on the 150 fixed-circle checks of the verification (2026-11), this base
+  // (tangent at the x-midpoint, b/cos α, one arc node in the weight) is the
+  // closest at the default slice count: mean |error| 0.027 %, against
+  // 0.049 % for the arc length, 0.053 % for angle, point and length at the
+  // arc midpoint, 0.061 % for straight chords (chord angle and length) and
+  // 0.029 % with an exact weight (8 arc nodes).
   const baseLength = width / Math.cos(alpha);
 
   // Pore water pressure
@@ -791,6 +798,7 @@ export function getSlices(
   );
   const factors = slope.partialFactors;
   const loadFactor = factors?.variableLoad ?? 1;
+  const normalUdls = slope.udls.filter((u) => u.direction === "normal");
 
   // Surface y at each slice edge, taken from the slice's own side: at a
   // vertical face the averaged value would put the top below the base and
@@ -926,6 +934,7 @@ export function getSlices(
     if (s !== null && s.isValid) {
       if (factors) applyMaterialFactors(s, factors);
       if (freeLines[i]) applyFreeWater(s, freeYL[i], freeYR[i], cy);
+      if (normalUdls.length > 0) applyNormalLoads(s, normalUdls, loadFactor, cy);
       results.push(s);
     }
   }
@@ -1147,6 +1156,30 @@ function applyFreeWater(
   s.hForce = (s.hForce ?? 0) + surfaceSlope * load;
   // The solvers already take the vertical load at the slice centre.
   s.extraMoment = (s.extraMoment ?? 0) + moment - load * s.dx;
+}
+
+/**
+ * The horizontal part of distributed loads acting normal to the ground
+ * (`Udl.direction` "normal"): over the loaded part of the slice top a
+ * pressure p normal to a surface of slope dy/dx gives p·dx vertically (the
+ * load the slice already carries, at its centre) and p·dy horizontally,
+ * pointing into the ground; applied like the free water's thrust
+ * (`applyFreeWater`): `hForce` in +x (the sliding direction) and its moment
+ * about the centre at the height of the loaded part's middle.
+ */
+function applyNormalLoads(s: Slice, udls: readonly Udl[], loadFactor: number, cy: number): void {
+  const b = s.xRight - s.xLeft;
+  if (b <= 0) return;
+  const slope = (s.y1Top - s.y0Top) / b;
+  if (slope === 0) return;
+  for (const u of udls) {
+    const a = Math.max(s.xLeft, u.x1), c = Math.min(s.xRight, u.x2);
+    if (c <= a) continue;
+    const fx = slope * u.magnitude * loadFactor * (c - a);
+    const yc = s.y0Top + slope * ((a + c) / 2 - s.xLeft);
+    s.hForce = (s.hForce ?? 0) + fx;
+    s.extraMoment = (s.extraMoment ?? 0) + fx * (cy - yc);
+  }
 }
 
 /**

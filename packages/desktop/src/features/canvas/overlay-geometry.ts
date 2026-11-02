@@ -133,8 +133,10 @@ export function layoutLoads(
     if (hoverEdge >= 0) arrows.push(arrowAt(hoverEdge, true));
     out.udlGroups.push({ strips: strips.map((s) => ({ ground: s.ground, top: s.top })), arrows });
     const topMost = Math.min(...strips.flatMap((s) => s.top.map(([, y]) => y)));
+    const normal = g.strips.filter((u) => u.direction === "normal").length;
     label(
-      formatRange(g.qMin, g.qMax, "q", "kPa"),
+      formatRange(g.qMin, g.qMax, "q", "kPa") +
+        (normal === 0 ? "" : normal === g.strips.length ? " ⊥ ground" : " (partly ⊥ ground)"),
       "udl",
       false,
       (edgeC[0][0] + edgeC[edgeC.length - 1][0]) / 2,

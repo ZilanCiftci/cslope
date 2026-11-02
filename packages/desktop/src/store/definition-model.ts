@@ -163,7 +163,13 @@ export function modelFromDefinition(def: SlopeDefinition, info: DefinitionModelI
       return id ? [{ point: [a.point[0], a.point[1]] as [number, number], materialId: id }] : [];
     }),
     piezometricLine: piezometricLine(def, info.id, materialId),
-    udls: (def.udls ?? []).map((u, i) => ({ id: `${info.id}-udl-${i + 1}`, magnitude: u.magnitude, x1: u.x1, x2: u.x2 })),
+    udls: (def.udls ?? []).map((u, i) => ({
+      id: `${info.id}-udl-${i + 1}`,
+      magnitude: u.magnitude,
+      x1: u.x1,
+      x2: u.x2,
+      ...(u.direction === "normal" ? { direction: "normal" as const } : {}),
+    })),
     lineLoads: (def.lineLoads ?? []).map((l, i) => ({ id: `${info.id}-load-${i + 1}`, magnitude: l.magnitude, x: l.x })),
     customSearchPlanes: [
       ...(def.customSearchPlanes ?? []).map((p, i) => ({ id: `${info.id}-plane-${i + 1}`, cx: p.cx, cy: p.cy, radius: p.radius })),

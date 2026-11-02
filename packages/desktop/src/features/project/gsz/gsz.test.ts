@@ -171,6 +171,8 @@ describe(".gsz import", () => {
     expect(d.waterTable).toEqual({ mode: "custom", value: [[0, 6], [30, 4]], followBoundary: false });
     expect(d.materials[1].waterTableId).toBe("no-water");
     expect(d.waterTables![0].coordinates[0][1]).toBeLessThan(0);
+    // and the app takes it (all lines with the same free-water setting)
+    expect(() => modelFromDefinition(d, { id: "x", name: "x" })).not.toThrow();
     // surcharge: 20 kN/m³ × 1.5 m above the crest = 30 kPa on x 2–8
     expect(d.udls!.every((u) => u.magnitude === 30)).toBe(true);
     expect(Math.min(...d.udls!.map((u) => u.x1))).toBe(2);
@@ -198,6 +200,18 @@ describe(".gsz import", () => {
     const imp = gszToDefinition({ ...parseGszXml(xml), results: new Map() }, 1);
     expect(imp.definition.materials[1].model).toMatchObject({ kind: "mohr-coulomb", cohesion: 0.001, frictionAngle: 0 });
     expect(Number.isFinite(fos(imp.definition))).toBe(true);
+  });
+
+  it("imports a surcharge normal to the ground as a load normal to it, and exports it back", async () => {
+    const xml = XML.replace("<Pressure>20</Pressure>", "<Pressure>20</Pressure><Direction>Normal</Direction>");
+    const imp = gszToDefinition({ ...parseGszXml(xml), results: new Map() }, 1);
+    expect(imp.definition.udls!.every((u) => u.direction === "normal")).toBe(true);
+    expect(imp.notes.join(" ")).not.toMatch(/imported as vertical/);
+    const model = modelFromDefinition(imp.definition, { id: "n", name: "N" });
+    const { xml: out } = modelToGszXml(model);
+    expect(out).toContain("<Direction>Normal</Direction>");
+    const [back] = await gszImports(modelToGsz(model).bytes, "N.gsz");
+    expect(back.definition.udls!.every((u) => u.direction === "normal")).toBe(true);
   });
 
   it("reports a strength model it cannot read and keeps its parameters", () => {
