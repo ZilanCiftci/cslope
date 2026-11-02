@@ -2,9 +2,9 @@ import { configDefaults, defineConfig } from "vitest/config";
 
 /**
  * Left out of the quick run (CSLOPE_QUICK_TESTS=1, CI on pushes to working
- * branches): the verification problems and the slowest finite element and
- * search tests, about 780 of the suite's 990 test seconds (2026-11). The
- * full suite runs on main and on pull requests.
+ * branches): the verification problems, all finite element tests and the
+ * slowest search tests, about 860 of the suite's 990 test seconds
+ * (2026-11). The full suite runs on main and on pull requests.
  */
 const SLOW = [
   "src/model/verification-problems-*.test.ts",
@@ -13,10 +13,7 @@ const SLOW = [
   "src/model/reliability.test.ts",
   "src/model/search-review-c2.test.ts",
   "src/model/orientation-matrix.test.ts",
-  "src/fem/srm.test.ts",
-  "src/fem/lower-bound-corner.test.ts",
-  "src/fem/initial-stress.test.ts",
-  "src/fem/piles.test.ts",
+  "src/fem/**",
 ];
 
 export default defineConfig({
