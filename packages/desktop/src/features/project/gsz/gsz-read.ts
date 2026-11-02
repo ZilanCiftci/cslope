@@ -165,7 +165,7 @@ export function parseGszXml(xml: string): Omit<GszFile, "results"> {
   }
 
   const geometries = new Map<number, GszGeometry>();
-  // GeoStudio 2012 files (version 8) have one geometry, as GeometryItems.
+  // Version 8 files (2012) have one geometry, as GeometryItems.
   const geometryElements = children(root, "Geometries/Geometry");
   if (geometryElements.length === 0) geometryElements.push(...children(root, "GeometryItems"));
   geometryElements.forEach((g, i) => {

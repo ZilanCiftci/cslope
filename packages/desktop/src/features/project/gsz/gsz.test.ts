@@ -294,15 +294,15 @@ describe(".gsz import", () => {
     await expect(readGsz(new Uint8Array([1, 2, 3]))).rejects.toThrow(/Not a \.gsz/);
   });
 
-  it("reads a GeoStudio 2012 file (version 8) and imports the analyses it can", async () => {
+  it("reads a version 8 file (2012) and imports the analyses it can", async () => {
     // GeometryItems instead of Geometries, RegionUsesMaterials, SlopeItems
     // with SlipEntryExit and piezometric lines on the geometry's points,
     // no water items, SlipRadius in the results.
     const v8 = `<?xml version="1.0"?>
 <GSIData Version="8.16">
   <Analyses Len="2">
-    <Analysis><ID>1</ID><Name>Wet</Name><Kind>SLOPE/W</Kind><Method>Bishop</Method></Analysis>
-    <Analysis><ID>2</ID><Name>Empty</Name><Kind>SLOPE/W</Kind><Method>Bishop</Method></Analysis>
+    <Analysis><ID>1</ID><Name>Wet</Name><Kind>Slope stability</Kind><Method>Bishop</Method></Analysis>
+    <Analysis><ID>2</ID><Name>Empty</Name><Kind>Slope stability</Kind><Method>Bishop</Method></Analysis>
   </Analyses>
   <Contexts Len="2">
     <Context><AnalysisID>1</AnalysisID><RegionUsesMaterials Len="1"><RegionUsesMaterial ID="1" UsesID="1" /></RegionUsesMaterials></Context>
