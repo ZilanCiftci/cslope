@@ -292,6 +292,8 @@ function describeModel(model: MaterialModel | undefined, u: Units): { kind: stri
     case "high-strength":
       return { kind: "High strength", gamma: g(model.unitWeight), strength: "–", phi: "–" };
     case "s-f-depth":
+      if (model.drainedCohesion !== undefined && model.drainedFrictionAngle !== undefined)
+        return { kind: "S = f(depth), combined", gamma: g(model.unitWeight), strength: `Su = ${g(model.suRef)} at depth ${g(model.depthRef)}, ${g(model.rate)}/${u.length}; c′ = ${g(model.drainedCohesion)}, ${g(model.drainedCohesionRate ?? 0)}/${u.length}`, phi: `${g(model.drainedFrictionAngle)}°` };
       return { kind: "S = f(depth)", gamma: g(model.unitWeight), strength: `Su = ${g(model.suRef)} at depth ${g(model.depthRef)}, ${g(model.rate)}/${u.length}`, phi: "0°" };
     case "s-f-datum":
       return { kind: "S = f(datum)", gamma: g(model.unitWeight), strength: `Su = ${g(model.suRef)} at y = ${g(model.yRef)}, ${g(model.rate)} ${u.stress}/${u.length} below`, phi: "0°" };

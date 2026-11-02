@@ -13,7 +13,8 @@
  * lever arm and the undrained shear strength, here ∫ c_u r dA over the face
  * (r the distance to the centre), so that c_u varying with depth and a
  * layered face need no sectors. Only cohesive soil counts in the end faces:
- * the undrained materials (φ = 0), not friction soil, and not the materials
+ * the undrained materials (φ = 0) and the undrained branch c_u of a
+ * combined material (clay in a combined analysis), not friction soil, and not the materials
  * given in `excludeMaterials` (a fissured dry crust, for example). The 3D
  * factor is the smallest over the analysed circular surfaces, as the
  * surface of the smallest F_3D is generally shallower than the critical 2D
@@ -91,6 +92,8 @@ export function sgi3dFactorOfSafety(slope: Slope, options: Sgi3dOptions): Sgi3dR
         const st = resolveStrength(model, { yBottom: y, x, yGround, yLayerTop, alpha: 0 });
         const d = designStrength(model.kind, st, f);
         if (d.undrained && Number.isFinite(d.cohesion)) c = d.cohesion;
+        // combined clay: the end faces of a temporary slope take its undrained strength
+        else if (st.isCombined && Number.isFinite(d.cohesionUndrained)) c = d.cohesionUndrained;
       }
       cx.push(x); cy.push(y); gam.push(g); cu.push(c);
     }

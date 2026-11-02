@@ -21,6 +21,7 @@ export function SfDepthFields({
   parameterValues,
   onExpressionChange,
 }: Props) {
+  const combined = model.drainedCohesion !== undefined && model.drainedFrictionAngle !== undefined;
   return (
     <div className="space-y-2">
       <div className="grid grid-cols-2 gap-2">
@@ -112,6 +113,72 @@ export function SfDepthFields({
           onChange={(anisotropy) => onChange({ anisotropy })}
         />
       </div>
+      <label
+        className="flex items-center gap-2 text-[11px]"
+        title="Combined analysis: the strength is the lesser of Su and the drained c′ + σ′·tan φ′, c′ varying with the same depth as Su (e.g. c′ = 0.1·Su, φ′ = 30°)."
+      >
+        <input
+          type="checkbox"
+          checked={combined}
+          onChange={(e) =>
+            onChange(
+              e.target.checked
+                ? {
+                    drainedCohesion: Math.round(model.suRef * 10) / 100,
+                    drainedCohesionRate: Math.round(model.rate * 100) / 1000,
+                    drainedFrictionAngle: 30,
+                  }
+                : { drainedCohesion: undefined, drainedCohesionRate: undefined, drainedFrictionAngle: undefined },
+            )
+          }
+          aria-label="Combined analysis (drained limit)"
+        />
+        Combined analysis (drained limit)
+      </label>
+      {combined && (
+        <div className="grid grid-cols-2 gap-2">
+          <label className="flex flex-col gap-0.5">
+            <Label>c′ at reference depth (kPa)</Label>
+            <ExpressionNumericInput
+              value={model.drainedCohesion ?? 0}
+              expression={modelExpressions?.drainedCohesion}
+              vars={parameterValues}
+              onValueChange={(drainedCohesion) => onChange({ drainedCohesion })}
+              onExpressionChange={(expr) => onExpressionChange("drainedCohesion", expr)}
+              min={0}
+              fallbackValue={0}
+              allowNegative={false}
+              aria-label="c′ at reference depth (kPa)"
+            />
+          </label>
+          <label className="flex flex-col gap-0.5">
+            <Label title="Change of c′ per metre of depth, with the same depth as Su.">c′ increase rate (kPa/m)</Label>
+            <ExpressionNumericInput
+              value={model.drainedCohesionRate ?? 0}
+              expression={modelExpressions?.drainedCohesionRate}
+              vars={parameterValues}
+              onValueChange={(drainedCohesionRate) => onChange({ drainedCohesionRate })}
+              onExpressionChange={(expr) => onExpressionChange("drainedCohesionRate", expr)}
+              fallbackValue={0}
+              aria-label="c′ increase rate (kPa/m)"
+            />
+          </label>
+          <label className="flex flex-col gap-0.5">
+            <Label>φ′ (°)</Label>
+            <ExpressionNumericInput
+              value={model.drainedFrictionAngle ?? 0}
+              expression={modelExpressions?.drainedFrictionAngle}
+              vars={parameterValues}
+              onValueChange={(v) => onChange({ drainedFrictionAngle: Math.min(89, v) })}
+              onExpressionChange={(expr) => onExpressionChange("drainedFrictionAngle", expr)}
+              min={0}
+              fallbackValue={0}
+              allowNegative={false}
+              aria-label="φ′ (°)"
+            />
+          </label>
+        </div>
+      )}
     </div>
   );
 }

@@ -7,7 +7,7 @@
  * they only consume the `ResolvedStrength` output.
  */
 
-import type { MaterialModel, MaterialModelKind } from "./material-models";
+import { isCombinedDepthModel, type MaterialModel, type MaterialModelKind } from "./material-models";
 import type { PartialFactors } from "./analysis";
 import { hoekBrownParameters, instantaneousAtNormalStress, type HoekBrownParameters } from "./hoek-brown";
 import {
@@ -286,7 +286,7 @@ export function designStrength(
 ): DesignStrength {
   const undrained =
     kind === "undrained" ||
-    kind === "s-f-depth" ||
+    (kind === "s-f-depth" && !st.isCombined) ||
     kind === "s-f-datum" ||
     (st.frictionAngle === 0 && !st.isCombined);
   const tanPhi = undrained ? 0 : Math.tan((st.frictionAngle * Math.PI) / 180);
@@ -392,6 +392,8 @@ function withAnisotropy(
 ): ResolvedStrength {
   if (!anisotropy || anisotropy.length === 0) return r;
   const f = interpolateModifier(anisotropy, (context.alpha * 180) / Math.PI);
+  // a combined material: the anisotropy belongs to Su, not to the drained c′
+  if (r.isCombined) return { ...r, cohesionUndrained: nonNegative(r.cohesionUndrained * f) };
   return { ...r, cohesion: nonNegative(r.cohesion * f), cohesionUndrained: nonNegative(r.cohesionUndrained * f) };
 }
 
@@ -423,6 +425,17 @@ function resolveStrengthFromDepth(
     model.rate,
     model.suMax,
   );
+
+  if (isCombinedDepthModel(model)) {
+    // combined: drained c′ + σ′ tan φ′ limited by Su (the slices take the lesser)
+    const c = nonNegative((model.drainedCohesion ?? 0) + (depth - model.depthRef) * (model.drainedCohesionRate ?? 0));
+    return {
+      cohesion: c,
+      frictionAngle: physicalFrictionAngle(model.drainedFrictionAngle ?? 0),
+      cohesionUndrained: su,
+      isCombined: true,
+    };
+  }
 
   return {
     cohesion: su,

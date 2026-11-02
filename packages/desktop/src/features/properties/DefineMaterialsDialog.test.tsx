@@ -239,6 +239,22 @@ describe("DefineMaterialsDialog — switching the model", () => {
     });
   });
 
+  it("edits the combined (drained) branch of S = f(depth)", async () => {
+    render(<DefineMaterialsDialog onClose={() => {}} />);
+    await userEvent.selectOptions(kindSelect(), "s-f-depth");
+    await setField("Su at reference depth (kPa)", "11.4");
+    await setField("Su increase rate (kPa/m)", "1.14");
+    expect(screen.queryByLabelText("φ′ (°)")).toBeNull();
+    await userEvent.click(screen.getByRole("checkbox", { name: /Combined analysis/ }));
+    // defaults: c′ = 0.1·Su with the same depth, φ′ = 30°
+    expect(model()).toMatchObject({ drainedCohesion: 1.14, drainedCohesionRate: 0.114, drainedFrictionAngle: 30 });
+    await setField("c′ at reference depth (kPa)", "1.2");
+    await setField("φ′ (°)", "28");
+    expect(model()).toMatchObject({ kind: "s-f-depth", suRef: 11.4, rate: 1.14, drainedCohesion: 1.2, drainedCohesionRate: 0.114, drainedFrictionAngle: 28 });
+    await userEvent.click(screen.getByRole("checkbox", { name: /Combined analysis/ }));
+    expect((model() as { drainedCohesion?: number }).drainedCohesion).toBeUndefined();
+  });
+
   it("edits S = f(datum) fields", async () => {
     render(<DefineMaterialsDialog onClose={() => {}} />);
     await userEvent.selectOptions(kindSelect(), "s-f-datum");

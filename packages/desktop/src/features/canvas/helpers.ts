@@ -88,6 +88,9 @@ function formatMaterialCell(
       // Lime-cement columns with a drained limit: φ′ of the columns.
       if (k === "lime-cement-columns" && material.model.columnFrictionAngle !== undefined)
         return `${material.model.columnFrictionAngle}\u00b0 (col.)`;
+      // Combined S = f(depth): φ′ of the drained branch.
+      if (k === "s-f-depth" && material.model.drainedFrictionAngle !== undefined && material.model.drainedCohesion !== undefined)
+        return `${material.model.drainedFrictionAngle}\u00b0 (comb.)`;
       if (k === "undrained" || k === "s-f-depth" || k === "s-f-datum" || k === "lime-cement-columns")
         return "0\u00b0";
       return "-";

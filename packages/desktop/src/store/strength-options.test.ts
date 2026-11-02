@@ -74,6 +74,15 @@ describe("project file round trip", () => {
     expect("depthReference" in again.materials[0].model).toBe(false);
   });
 
+  it("keeps the drained branch of a combined S = f(depth) and passes it to the engine", () => {
+    const comb: MaterialModel = { ...sfDepth, depthReference: "layer-top", drainedCohesion: 1.14, drainedCohesionRate: 0.114, drainedFrictionAngle: 30 };
+    withMaterials([comb]);
+    const again = roundTrip();
+    expect(again.materials[0].model).toEqual(comb);
+    const dto = buildSlopeDTOFromModel(useAppStore.getState());
+    expect(dto.materials[0].model).toMatchObject({ drainedCohesion: 1.14, drainedCohesionRate: 0.114, drainedFrictionAngle: 30 });
+  });
+
   it("keeps the depth reference and the cutoffs", () => {
     const models: MaterialModel[] = [
       { ...sfDepth, depthReference: "layer-top", suMax: 40 },

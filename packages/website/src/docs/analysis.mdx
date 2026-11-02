@@ -61,7 +61,7 @@ Ticking the box fills in the Swedish set at once. Choose another set from **Pres
 
 Safety class 3 with η = 1 and γQ/γd = 1.3 gives the Swedish set above. Which η and which load factor apply is decided by the governing document (for example 1.4 · γd is used for traffic loads in some Swedish guidance). The factors follow the inputs; entering a factor by hand leaves the inputs and keeps the factors as they are. The summary lists the inputs with the factors.
 
-Which factor applies depends on the material. Undrained models, and Mohr-Coulomb materials with φ = 0, are treated as undrained and take γcu. For lime-cement columns each part takes its own factor: the undrained strength of soil and columns takes γcu, c′ of the columns γc', and tan φ′ of the columns γφ′. Other materials take γc' and γφ'. With partial factors the result is an **over-design factor** on the design values: 1.0 or more means the design is satisfied. The summary shows it as *Min FOS (design values)*.
+Which factor applies depends on the material. Undrained models, and Mohr-Coulomb materials with φ = 0, are treated as undrained and take γcu. For lime-cement columns each part takes its own factor: the undrained strength of soil and columns takes γcu, c′ of the columns γc', and tan φ′ of the columns γφ′. A combined material (Mohr-Coulomb with Su, or combined S = f(depth)) takes γcu on Su and γc' and γφ' on its drained strength. Other materials take γc' and γφ'. With partial factors the result is an **over-design factor** on the design values: 1.0 or more means the design is satisfied. The summary shows it as *Min FOS (design values)*.
 
 ## 3D effects (temporary slopes)
 
@@ -75,7 +75,7 @@ with $M_E$ the surface's driving moment, the integral over the end face's cohesi
 - **Adjacent F2D**: $F_{2D,överstark,min}$ of the stretches beside the stage; leave it blank for infinitely overstrong adjacent stability.
 - **Not in the end faces**: materials left out of the end faces, for example a fissured dry crust. Friction soil never counts.
 
-The result is the smallest $F_{3D}$ over the circular surfaces of the search, which is generally on a shallower surface than the critical 2D one. The end faces take the undrained strength without anisotropy (its direct value), as design values when partial factors are on. The guidance applies to total stress analysis of normally to lightly overconsolidated clay; a 3D factor more than 25 % above the critical 2D factor is to be judged with care, and the result shows a warning then.
+The result is the smallest $F_{3D}$ over the circular surfaces of the search, which is generally on a shallower surface than the critical 2D one. The end faces take the undrained strength without anisotropy (its direct value), for a combined clay its Su, as design values when partial factors are on. The guidance applies to total stress analysis of normally to lightly overconsolidated clay; a 3D factor more than 25 % above the critical 2D factor is to be judged with care, and the result shows a warning then.
 
 ## Finite elements (experimental)
 

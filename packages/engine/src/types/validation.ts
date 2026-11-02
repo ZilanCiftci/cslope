@@ -168,6 +168,18 @@ export function validateMaterialModel(model: MaterialModel): string[] {
         errors.push('Depth reference must be "ground" or "layer-top".');
       }
       validateCutoff(errors, model.suMax, model.rate, model.suRef);
+      if ((model.drainedCohesion === undefined) !== (model.drainedFrictionAngle === undefined)) {
+        errors.push("A combined S = f(depth) needs both the drained c′ and φ′.");
+      }
+      if (model.drainedCohesion !== undefined && !(Number.isFinite(model.drainedCohesion) && model.drainedCohesion >= 0)) {
+        errors.push("Drained cohesion (c′) must be ≥ 0.");
+      }
+      if (model.drainedCohesionRate !== undefined && !Number.isFinite(model.drainedCohesionRate)) {
+        errors.push("Rate of change of c′ must be a finite number.");
+      }
+      if (model.drainedFrictionAngle !== undefined && !(Number.isFinite(model.drainedFrictionAngle) && model.drainedFrictionAngle >= 0 && model.drainedFrictionAngle < 90)) {
+        errors.push("Drained friction angle (φ′) must be ≥ 0 and less than 90°.");
+      }
       break;
 
     case "hoek-brown":

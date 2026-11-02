@@ -170,6 +170,12 @@ export type DepthReference = "ground" | "layer-top";
  * φ = 0; Su = suRef + (depth − depthRef) × rate,
  * where depth = yTop − yBottom at the slice base centre, yTop being the
  * ground surface or the top of the material layer (see `depthReference`).
+ *
+ * Combined (with `drainedCohesion` and `drainedFrictionAngle`): the
+ * strength is the lesser of the undrained Su and the drained
+ * c′ + σ′·tan φ′, with c′ = drainedCohesion + (depth − depthRef) ×
+ * drainedCohesionRate at the same depth, as Swedish practice analyses
+ * clay ("kombinerad analys") and commercial programs offer it.
  */
 export interface StrengthFromDepthModel extends MaterialModelBase, UndrainedAnisotropy {
   kind: "s-f-depth";
@@ -194,6 +200,21 @@ export interface StrengthFromDepthModel extends MaterialModelBase, UndrainedAnis
    * is a MINIMUM: Su = max(Su, suMax). Not set: no cutoff.
    */
   suMax?: number;
+  /**
+   * Drained effective cohesion c′ (kPa) at the reference depth, for a
+   * combined analysis. Set together with `drainedFrictionAngle`; either
+   * not set: undrained only.
+   */
+  drainedCohesion?: number;
+  /** Change of c′ per metre of depth (kPa/m), with the same depth as Su. Not set: 0. */
+  drainedCohesionRate?: number;
+  /** Drained friction angle φ′ (°) for a combined analysis (see `drainedCohesion`). */
+  drainedFrictionAngle?: number;
+}
+
+/** Whether an S = f(depth) model has a drained branch (a combined analysis). */
+export function isCombinedDepthModel(model: { kind: string; drainedCohesion?: number; drainedFrictionAngle?: number }): boolean {
+  return model.kind === "s-f-depth" && model.drainedCohesion !== undefined && model.drainedFrictionAngle !== undefined;
 }
 
 /**

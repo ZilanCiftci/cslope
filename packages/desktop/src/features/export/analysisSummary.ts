@@ -119,7 +119,10 @@ export function strengthText(model: MaterialModel): string {
         `Su = ${fmt(model.suRef)} kPa at ${fmt(model.depthRef)} m below ${from}, ` +
         `${fmt(model.rate)} kPa/m with depth` +
         cutoff(model, model.rate) +
-        aniso(model.anisotropy)
+        aniso(model.anisotropy) +
+        (model.drainedCohesion !== undefined && model.drainedFrictionAngle !== undefined
+          ? `; combined with c' = ${fmt(model.drainedCohesion)} kPa, ${fmt(model.drainedCohesionRate ?? 0)} kPa/m with the same depth, φ' = ${fmt(model.drainedFrictionAngle)}°`
+          : "")
       );
     }
     case "s-f-datum":

@@ -70,7 +70,7 @@ export type {
   HoekBrownModel,
   DepthReference,
 } from "./types/material-models";
-export { MATERIAL_MODEL_LABELS, supportsAnisotropy } from "./types/material-models";
+export { MATERIAL_MODEL_LABELS, isCombinedDepthModel, supportsAnisotropy } from "./types/material-models";
 export { hoekBrownParameters, instantaneousAtNormalStress, instantaneousAtSigma3, type HoekBrownParameters } from "./types/hoek-brown";
 
 // Strength resolution

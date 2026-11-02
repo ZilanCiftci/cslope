@@ -19,7 +19,7 @@ Choose the model in the **Material Model** list. Changing the model resets the s
 | --- | --- | --- |
 | **Mohr-Coulomb** | γ (kN/m³), φ (°), c (kPa) | Drained analyses with effective strength parameters. |
 | **Undrained** | γ, Su (kPa), Max Su (cutoff) | Clay with a constant undrained shear strength. |
-| **S = f(depth)** | γ, Su ref, Depth ref, Rate (kPa/m), Depth measured from, Max Su | Undrained strength increasing with depth below the ground or below the top of the layer. |
+| **S = f(depth)** | γ, Su ref, Depth ref, Rate (kPa/m), Depth measured from, Max Su; combined: c′, c′ rate, φ′ | Undrained strength increasing with depth below the ground or below the top of the layer, alone or combined with a drained strength. |
 | **S = f(datum)** | γ, Su ref, Y ref, Rate, Max Su | Undrained strength that varies with elevation. |
 | **Anisotropic Function** | γ, φ, c, modifier table | Strength that depends on the inclination of the slip surface. |
 | **Spatial Mohr-Coulomb** | γ, interpolation, data points | Strength that varies from point to point in the section. |
@@ -47,6 +47,14 @@ where $z$ is the depth of the point and $z_\text{ref}$ the **Depth ref**. **Dept
 
 - **Top of layer** (default): the depth below the top of this material's layer above the slice. A layer that lies below other layers then starts at Su ref at its own top.
 - **Ground surface**: the depth below the ground surface.
+
+**Combined analysis (drained limit)** adds a drained strength, for clay in a combined analysis. The strength at the base of a slice is then the lesser of the two:
+
+$$
+\tau = \min\left(S_u,\; c' + \sigma'_n \tan\varphi'\right), \qquad c' = c'_\text{ref} + (z - z_\text{ref}) \cdot \text{rate}_{c'}
+$$
+
+with $c'$ at the same depth $z$ as $S_u$. Ticking the box fills in c′ = 0.1·Su and φ′ = 30° as a starting point. With partial factors, $S_u$ takes γcu and $c'$ and $\tan\varphi'$ their own factors. The anisotropy applies to $S_u$ only. In the SGI 3D analysis of a temporary slope the end faces take $S_u$.
 
 ### S = f(datum)
 

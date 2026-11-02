@@ -171,6 +171,9 @@ describe("analysis summary", () => {
       strengthText({ kind: "s-f-depth", unitWeight: 16, suRef: 10, depthRef: 0, rate: -1, suMax: 4, depthReference: "layer-top" }),
     ).toBe("Su = 10 kPa at 0 m below the layer top, -1 kPa/m with depth, minimum 4 kPa");
     expect(
+      strengthText({ kind: "s-f-depth", unitWeight: 17, suRef: 11.4, depthRef: 0, rate: 1.14, depthReference: "layer-top", drainedCohesion: 1.14, drainedCohesionRate: 0.114, drainedFrictionAngle: 30 }),
+    ).toBe("Su = 11.4 kPa at 0 m below the layer top, 1.14 kPa/m with depth; combined with c' = 1.14 kPa, 0.114 kPa/m with the same depth, φ' = 30°");
+    expect(
       strengthText({ kind: "lime-cement-columns", unitWeight: 16, soilSu: 10, columnSu: 100, areaRatio: 0.2, columnCohesion: 20, columnFrictionAngle: 30 }),
     ).toBe("soil Su = 10 kPa; columns Su = 100 kPa, area ratio 0.2, drained c' = 20 kPa, φ' = 30°");
     expect(strengthText({ kind: "impenetrable", unitWeight: 22 })).toContain("impenetrable");
