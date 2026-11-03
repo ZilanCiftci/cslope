@@ -489,7 +489,8 @@ describe("DefineMaterialsDialog — SHANSEP, shear-normal and B̄", () => {
     await setField("φR (°)", "16");
     expect(model()).toMatchObject({ kind: "mohr-coulomb", drawdownStrength: { cohesion: 12, frictionAngle: 16 } });
     await userEvent.click(screen.getByLabelText("Undrained in rapid drawdown (R envelope)"));
-    expect(model().kind === "mohr-coulomb" && model().drawdownStrength).toBeFalsy();
+    const m = model();
+    expect(m.kind === "mohr-coulomb" ? m.drawdownStrength : undefined).toBeUndefined();
     expect(screen.queryByLabelText("cR (kPa)")).toBeNull();
   });
 });
