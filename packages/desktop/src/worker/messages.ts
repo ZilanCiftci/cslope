@@ -24,6 +24,8 @@ export interface AnalysisRequest {
   id: string;
   slope: SlopeDefinition;
   options: AnalysisOptions;
+  /** Ports to evaluator workers that evaluate trial surfaces for this run (transferred). */
+  evaluators?: MessagePort[];
 }
 
 /** Probabilistic analysis of the model (its own sliding direction). */
@@ -34,6 +36,17 @@ export interface ReliabilityRequest {
   options: AnalysisOptions;
   variables: RandomVariable[];
   reliability: Omit<ReliabilityOptions, "onProgress">;
+  /** Ports to evaluator workers (transferred), as for an analysis. */
+  evaluators?: MessagePort[];
+}
+
+/**
+ * Makes the worker an evaluator for the analysis worker at the other end
+ * of `port` (transferred), until that one detaches.
+ */
+export interface EvaluatorRequest {
+  type: "serve-evaluator";
+  port: MessagePort;
 }
 
 /** Response messages sent from the worker. */
@@ -62,5 +75,5 @@ export type AnalysisResponse =
     };
 
 /** Union of all worker messages. */
-export type WorkerMessage = AnalysisRequest | ReliabilityRequest;
+export type WorkerMessage = AnalysisRequest | ReliabilityRequest | EvaluatorRequest;
 export type WorkerResponse = AnalysisResponse;

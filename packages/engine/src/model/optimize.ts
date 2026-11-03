@@ -28,9 +28,7 @@ import { resolveStrength, type GeometryWithMaterial } from "../types/index";
 import { effectiveVerticalStress } from "./reinforcement";
 import type { Slope, SearchPlane } from "./slope";
 import { circleToPolyline, isAdmissiblePolyline, type Pt } from "./surface";
-
-/** Evaluates planes in place (sets fos, null when invalid). */
-type Evaluate = (planes: SearchPlane[]) => void;
+import { inParallel, runStepsSync, type Evaluate, type PlaneSteps } from "./steps";
 
 const START_VERTICES = 9;
 /** Vertices of a seed's surface after its one refinement, at most. */
@@ -74,17 +72,36 @@ export function optimiseNonCircular(
   evaluate: Evaluate,
   options: OptimiseOptions = {},
 ): SearchPlane[] {
+  return runStepsSync(optimiseNonCircularSteps(slope, evaluated, options), evaluate);
+}
+
+/**
+ * optimiseNonCircular as steps (model/steps.ts). The seeds are optimised
+ * independently of each other, so their searches run in lockstep and each
+ * step evaluates their candidates as one batch.
+ */
+export function* optimiseNonCircularSteps(
+  slope: Slope,
+  evaluated: readonly SearchPlane[],
+  options: OptimiseOptions = {},
+): PlaneSteps<SearchPlane[]> {
   const budgetPerSeed = options.budgetPerSeed ?? 1500;
   const seeds = pickSeeds(slope, evaluated);
+  const circles = seeds.map((seed) => optimiseCircleSeed(slope, seed, budgetPerSeed));
+  const layers = (function* (): PlaneSteps<Optimised[]> {
+    const found = yield* layerSeeds(slope);
+    return yield* inParallel(
+      found.map((seed) => optimisePoints(slope, seed.points, seed.axis, budgetPerSeed, seed.plane)),
+    );
+  })();
+  const done = yield* inParallel<Optimised | null | Optimised[]>([...circles, layers]);
   const results: Optimised[] = [];
-  for (const seed of seeds) {
-    const result = optimiseCircleSeed(slope, seed, evaluate, budgetPerSeed);
+  for (let i = 0; i < seeds.length; i++) {
+    const result = done[i] as Optimised | null;
     if (result) results.push(result);
   }
-  for (const seed of layerSeeds(slope, evaluate)) {
-    results.push(optimisePoints(slope, seed.points, seed.axis, evaluate, budgetPerSeed, seed.plane));
-  }
-  return polishBest(slope, results, evaluate, budgetPerSeed);
+  results.push(...(done[seeds.length] as Optimised[]));
+  return yield* polishBest(slope, results, budgetPerSeed);
 }
 
 /**
@@ -99,17 +116,26 @@ export function optimisePolylines(
   evaluate: Evaluate,
   options: OptimiseOptions = {},
 ): SearchPlane[] {
+  return runStepsSync(optimisePolylinesSteps(slope, seeds, options), evaluate);
+}
+
+/** optimisePolylines as steps, the seeds in lockstep (see optimiseNonCircularSteps). */
+export function* optimisePolylinesSteps(
+  slope: Slope,
+  seeds: readonly SearchPlane[],
+  options: OptimiseOptions = {},
+): PlaneSteps<SearchPlane[]> {
   const budgetPerSeed = options.budgetPerSeed ?? 1500;
-  const results: Optimised[] = [];
-  for (const seed of seeds) {
-    if (!seed.points || seed.fos == null) continue;
-    results.push(optimisePoints(slope, seed.points, [seed.cx, seed.cy], evaluate, budgetPerSeed, seed));
-  }
-  return polishBest(slope, results, evaluate, budgetPerSeed);
+  const results = yield* inParallel(
+    seeds
+      .filter((seed) => seed.points && seed.fos != null)
+      .map((seed) => optimisePoints(slope, seed.points!, [seed.cx, seed.cy], budgetPerSeed, seed)),
+  );
+  return yield* polishBest(slope, results, budgetPerSeed);
 }
 
 /** The optimised surfaces, the best one optimised further (see below). */
-function polishBest(slope: Slope, results: Optimised[], evaluate: Evaluate, budgetPerSeed: number): SearchPlane[] {
+function* polishBest(slope: Slope, results: Optimised[], budgetPerSeed: number): PlaneSteps<SearchPlane[]> {
   // The best surface, while its last cycle still lowered the FOS by more
   // than the tolerance: the halved shifts of one cycle (or its budget)
   // stop before the minimum of a surface whose shape is still changing.
@@ -118,7 +144,7 @@ function polishBest(slope: Slope, results: Optimised[], evaluate: Evaluate, budg
     .filter((r) => r.plane.fos != null)
     .sort((a, b) => a.plane.fos! - b.plane.fos!)[0];
   if (best && best.gain > slope.tolerance) {
-    const polished = optimisePoints(slope, best.points, best.axis, evaluate, 2 * budgetPerSeed, best.plane, best.gain);
+    const polished = yield* optimisePoints(slope, best.points, best.axis, 2 * budgetPerSeed, best.plane, best.gain);
     if (polished.plane !== best.plane) results.push(polished);
   }
   return results.map((r) => r.plane);
@@ -168,19 +194,18 @@ function makePlane(points: Pt[], axis: Pt): SearchPlane {
 }
 
 /** The circle as a polyline, finer when the coarse chords cut the air. */
-function optimiseCircleSeed(
+function* optimiseCircleSeed(
   slope: Slope,
   seed: SearchPlane,
-  evaluate: Evaluate,
   budget: number,
-): Optimised | null {
+): PlaneSteps<Optimised | null> {
   const axis: Pt = [seed.cx, seed.cy];
   for (const vertices of [START_VERTICES, SEED_MAX_VERTICES, 2 * SEED_MAX_VERTICES - 1]) {
     const points = circleToPolyline(seed.cx, seed.cy, seed.radius, seed.lc, seed.rc, vertices);
     const plane = makePlane(points, axis);
-    evaluate([plane]);
+    yield [plane];
     budget--;
-    if (plane.fos != null) return optimisePoints(slope, points, axis, evaluate, budget, plane);
+    if (plane.fos != null) return yield* optimisePoints(slope, points, axis, budget, plane);
     if (budget <= 0) break;
   }
   return null;
@@ -239,7 +264,7 @@ export function rayToGround(ground: { x: readonly number[]; y: readonly number[]
  * para. 86): the initial surface "should be input so that it passes
  * through the weaker material".
  */
-function layerSeeds(slope: Slope, evaluate: Evaluate): { points: Pt[]; axis: Pt; plane: SearchPlane }[] {
+function* layerSeeds(slope: Slope): PlaneSteps<{ points: Pt[]; axis: Pt; plane: SearchPlane }[]> {
   const out: { points: Pt[]; axis: Pt; plane: SearchPlane }[] = [];
   const ground = slope.surfaceLineXY;
   if (!ground) return out;
@@ -344,7 +369,7 @@ function layerSeeds(slope: Slope, evaluate: Evaluate): { points: Pt[]; axis: Pt;
         candidates.push({ points, axis, plane: makePlane(points, axis) });
       }
     }
-    evaluate(candidates.map((c) => c.plane));
+    yield candidates.map((c) => c.plane);
     const solved = candidates
       .filter((c) => c.plane.fos != null && Number.isFinite(c.plane.fos))
       .sort((a, b) => a.plane.fos! - b.plane.fos!);
@@ -370,15 +395,14 @@ function layerSeeds(slope: Slope, evaluate: Evaluate): { points: Pt[]; axis: Pt;
  * tolerance, the vertices are doubled (up to MAX_VERTICES), or else the
  * cycle restarts from the best surface, and another cycle runs.
  */
-function optimisePoints(
+function* optimisePoints(
   slope: Slope,
   start: Pt[],
   axis: Pt,
-  evaluate: Evaluate,
   budget: number,
   startPlane: SearchPlane,
   lastGain?: number,
-): Optimised {
+): PlaneSteps<Optimised> {
   let points = start;
   let used = 0;
   let best = startPlane;
@@ -388,9 +412,8 @@ function optimisePoints(
   const tol = 1e-9;
   const minLength = Math.max(slope.minFailureDistance, 0);
 
-  /** FOS of a candidate (null: inadmissible, invalid or out of budget). */
-  const fosOf = (candidate: Pt[]): { plane: SearchPlane; fos: number } | null => {
-    if (used >= budget) return null;
+  /** The plane of a candidate, or null when it is inadmissible (not evaluated). */
+  const candidatePlane = (candidate: Pt[]): SearchPlane | null => {
     if (candidate[candidate.length - 1][0] - candidate[0][0] <= minLength) return null;
     if (slope.minSlipDepth > 0) {
       let d = 0;
@@ -398,10 +421,21 @@ function optimisePoints(
       if (d < slope.minSlipDepth) return null;
     }
     if (!isAdmissiblePolyline(slope, candidate)) return null;
-    const plane = makePlane(candidate, axis);
-    evaluate([plane]);
+    return makePlane(candidate, axis);
+  };
+
+  /** An evaluated plane with its FOS, or null when it has none. */
+  const solved = (plane: SearchPlane): { plane: SearchPlane; fos: number } | null =>
+    plane.fos != null && Number.isFinite(plane.fos) ? { plane, fos: plane.fos } : null;
+
+  /** FOS of a candidate (null: inadmissible, invalid or out of budget). */
+  const fosOf = function* (candidate: Pt[]): PlaneSteps<{ plane: SearchPlane; fos: number } | null> {
+    if (used >= budget) return null;
+    const plane = candidatePlane(candidate);
+    if (!plane) return null;
+    yield [plane];
     used++;
-    return plane.fos != null && Number.isFinite(plane.fos) ? { plane, fos: plane.fos } : null;
+    return solved(plane);
   };
 
   /** The vertex k shifted by t along its direction; null when it cannot move. */
@@ -444,7 +478,7 @@ function optimisePoints(
    * One cycle: Δ from a tenth of the shortest segment, halved down to
    * LAST_SHIFT of it. Returns how much it lowered the FOS.
    */
-  const runCycle = (): number => {
+  const runCycle = function* (): PlaneSteps<number> {
     const cycleStart = best.fos!;
     let minSegment = Infinity;
     for (let i = 1; i < points.length; i++) {
@@ -456,19 +490,34 @@ function optimisePoints(
       for (let round = 0; round < ROUNDS_PER_SHIFT && used < budget; round++) {
         const f0 = best.fos!;
         const shifts = new Array<number>(points.length).fill(0);
+        // Every vertex shifted alone, both ways, from the same surface: the
+        // candidates of a round are independent and evaluated as one batch,
+        // in the order (vertex, +Δ, −Δ), as far as the budget goes.
+        const sides: ({ plane: SearchPlane; points: Pt[] } | null)[][] = [];
+        const batch: SearchPlane[] = [];
+        for (let k = 0; k < points.length && used + batch.length < budget; k++) {
+          const pair: ({ plane: SearchPlane; points: Pt[] } | null)[] = [];
+          for (const t of [delta, -delta]) {
+            const p = shifted(points, k, t);
+            const candidate = p && used + batch.length < budget ? withVertex(points, k, p) : null;
+            const plane = candidate && candidatePlane(candidate);
+            if (plane) batch.push(plane);
+            pair.push(plane ? { plane, points: candidate! } : null);
+          }
+          sides.push(pair);
+        }
+        yield batch;
+        used += batch.length;
         // (Assigned inside `side`; the cast keeps the type from narrowing.)
         let bestSingle = null as { plane: SearchPlane; fos: number; points: Pt[] } | null;
-        for (let k = 0; k < points.length && used < budget; k++) {
-          const side = (t: number) => {
-            const p = shifted(points, k, t);
-            if (!p) return null;
-            const candidate = withVertex(points, k, p);
-            const r = fosOf(candidate);
-            if (r && (!bestSingle || r.fos < bestSingle.fos)) bestSingle = { ...r, points: candidate };
+        for (let k = 0; k < sides.length; k++) {
+          const side = (s: { plane: SearchPlane; points: Pt[] } | null) => {
+            const r = s && solved(s.plane);
+            if (r && (!bestSingle || r.fos < bestSingle.fos)) bestSingle = { ...r, points: s.points };
             return r?.fos ?? null;
           };
-          const fPlus = side(delta);
-          const fMinus = side(-delta);
+          const fPlus = side(sides[k][0]);
+          const fMinus = side(sides[k][1]);
           // The parabola through (−Δ, F−), (0, F0), (+Δ, F+), or the better
           // side when it has no minimum.
           let t = 0;
@@ -498,7 +547,7 @@ function optimisePoints(
             candidate.push([p[0], p[1]]);
           }
           if (candidate.length === points.length) {
-            const r = fosOf(candidate);
+            const r = yield* fosOf(candidate);
             if (r) moved = { ...r, points: candidate };
           }
         }
@@ -516,7 +565,7 @@ function optimisePoints(
    * the extra slice boundaries change the FOS slightly), or, past
    * `maxVertices`, restarts from the best surface. False when it cannot.
    */
-  const refine = (maxVertices: number, restart: boolean): boolean => {
+  const refine = function* (maxVertices: number, restart: boolean): PlaneSteps<boolean> {
     if (used >= budget) return false;
     if (2 * points.length - 1 > maxVertices) {
       if (!restart) return false;
@@ -530,7 +579,7 @@ function optimisePoints(
       refined.push([(ax + bx) / 2, (ay + by) / 2], [bx, by]);
     }
     const plane = makePlane(refined, axis);
-    evaluate([plane]);
+    yield [plane];
     used++;
     if (plane.fos == null) return false;
     points = refined;
@@ -540,13 +589,13 @@ function optimisePoints(
 
   let gain: number;
   if (lastGain === undefined) {
-    gain = runCycle();
-    if (refine(SEED_MAX_VERTICES, false)) gain = runCycle();
+    gain = yield* runCycle();
+    if (yield* refine(SEED_MAX_VERTICES, false)) gain = yield* runCycle();
   } else {
     gain = lastGain;
     const tolerance = slope.tolerance;
-    for (let cycle = 0; cycle < POLISH_CYCLES && gain > tolerance && refine(MAX_VERTICES, true); cycle++) {
-      gain = runCycle();
+    for (let cycle = 0; cycle < POLISH_CYCLES && gain > tolerance && (yield* refine(MAX_VERTICES, true)); cycle++) {
+      gain = yield* runCycle();
     }
   }
   return { plane: best, points: best.points ?? points, axis, gain };

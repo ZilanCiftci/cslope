@@ -1,0 +1,24 @@
+[package]
+name = "cslope-wasm"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "WebAssembly API of the cSlope engine (wasm-bindgen), used by the TypeScript facade in packages/engine"
+publish = false
+
+[lib]
+# cdylib for wasm-bindgen; rlib so that the target-independent parts (the
+# handle registry, the testing dispatch table) are tested natively.
+crate-type = ["cdylib", "rlib"]
+
+[features]
+# The testing build (packages/engine/src/wasm-testing): adds `__test_call`,
+# which dispatches the internal functions the TypeScript unit tests import.
+testing = []
+
+[dependencies]
+cslope-engine = { path = "../cslope-engine" }
+serde.workspace = true
+wasm-bindgen.workspace = true
+js-sys.workspace = true
+serde-wasm-bindgen.workspace = true

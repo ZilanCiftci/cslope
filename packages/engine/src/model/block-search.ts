@@ -28,9 +28,7 @@ import { rng } from "./property-helpers";
 import type { Slope, SearchPlane } from "./slope";
 import { defaultAxisPoint, isAdmissiblePolyline, type Pt } from "./surface";
 import { rayToGround } from "./optimize";
-
-/** Evaluates planes in place (sets fos, null when invalid). */
-type Evaluate = (planes: SearchPlane[]) => void;
+import { runStepsSync, type Evaluate, type PlaneSteps } from "./steps";
 
 /** How one block surface was drawn: a point per object and the two angles (°). */
 interface Gene {
@@ -64,6 +62,15 @@ export function isBlockSurface(plane: SearchPlane): boolean {
  * Returns every evaluated surface (FOS null where invalid).
  */
 export function blockSearch(slope: Slope, evaluate: Evaluate): SearchPlane[] {
+  return runStepsSync(blockSearchSteps(slope), evaluate);
+}
+
+/**
+ * The block search as steps (model/steps.ts): the first draws, then each
+ * refinement level as one batch. The draws do not depend on the factors
+ * of safety, only the choice of the parents at the start of a level.
+ */
+export function* blockSearchSteps(slope: Slope): PlaneSteps<SearchPlane[]> {
   const objects = slope.blockSearchObjects;
   if (objects.length === 0) {
     throw new Error("Block search needs at least one search object: a point, a line or a window.");
@@ -193,8 +200,8 @@ export function blockSearch(slope: Slope, evaluate: Evaluate): SearchPlane[] {
   const keys = new Set<string>();
   const key = (g: Gene) => g.points.map((p) => `${p[0].toFixed(6)},${p[1].toFixed(6)}`).join(";") + `|${g.active.toFixed(4)}|${g.passive.toFixed(4)}`;
 
-  /** Draws `count` genes (from `make`), evaluates the admissible new ones. */
-  const run = (count: number, make: () => Gene | null) => {
+  /** Draws `count` genes (from `make`); returns the admissible new surfaces. */
+  const run = (count: number, make: () => Gene | null): SearchPlane[] => {
     const batch: SearchPlane[] = [];
     // Inadmissible draws count against the budget too, at most twice it,
     // so that objects outside the soil cannot loop for ever.
@@ -207,13 +214,13 @@ export function blockSearch(slope: Slope, evaluate: Evaluate): SearchPlane[] {
       const plane = planeOf(gene);
       if (plane) batch.push(plane);
     }
-    evaluate(batch);
     all.push(...batch);
+    return batch;
   };
 
   // A fixed-point object with fixed angles gives one surface only.
   const fixed = objects.every((o) => o.length === 1) && !activeRange && !passiveRange;
-  run(fixed ? 1 : slope.iterations, () => {
+  yield run(fixed ? 1 : slope.iterations, () => {
     const points: Pt[] = [];
     for (let k = 0; k < objects.length; k++) {
       const p = drawPoint(k);
@@ -231,9 +238,10 @@ export function blockSearch(slope: Slope, evaluate: Evaluate): SearchPlane[] {
     const parents = bestDistinct(all, PARENTS, span);
     if (parents.length === 0) break;
     const perParent = Math.max(1, Math.floor(perLevel / parents.length));
+    const batch: SearchPlane[] = [];
     for (const parent of parents) {
       const gene = genes.get(parent)!;
-      run(perParent, () => {
+      batch.push(...run(perParent, () => {
         const points: Pt[] = [];
         for (let k = 0; k < objects.length; k++) {
           const p = drawPoint(k, gene.points[k], scale);
@@ -241,8 +249,9 @@ export function blockSearch(slope: Slope, evaluate: Evaluate): SearchPlane[] {
           points.push(p);
         }
         return geneOf(points, gene, scale);
-      });
+      }));
     }
+    yield batch;
   }
   return all;
 }

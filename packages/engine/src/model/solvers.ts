@@ -19,9 +19,10 @@ import {
   planeKey,
   isPlaneWithinExternalBoundary,
 } from "./search";
-import { optimiseNonCircular, optimisePolylines } from "./optimize";
-import { BLOCK_SEEDS, bestDistinct, blockSearch } from "./block-search";
+import { optimiseNonCircularSteps, optimisePolylinesSteps } from "./optimize";
+import { BLOCK_SEEDS, bestDistinct, blockSearchSteps } from "./block-search";
 import { analyseMorgensternPriceMarch, LAMBDA_MAX, LAMBDA_MIN } from "./mp-march";
+import { runStepsAsync, runStepsSync, type AsyncEvaluate, type PlaneSteps } from "./steps";
 
 /**
  * Which Morgenstern-Price solver `analyseSlope` runs: the iterative one
@@ -31,6 +32,11 @@ import { analyseMorgensternPriceMarch, LAMBDA_MAX, LAMBDA_MIN } from "./mp-march
 let morgensternPriceSolver: "iterative" | "march" = "iterative";
 export function setMorgensternPriceSolver(solver: "iterative" | "march"): void {
   morgensternPriceSolver = solver;
+}
+
+/** The Morgenstern-Price solver set (a parallel evaluator must use the same). */
+export function getMorgensternPriceSolver(): "iterative" | "march" {
+  return morgensternPriceSolver;
 }
 
 
@@ -986,6 +992,40 @@ export function analyseMorgensternPrice(
  * @returns Minimum FOS found, or null if no valid surfaces.
  */
 export function analyseSlope(slope: Slope): number | null {
+  return runStepsSync(analyseSlopeSteps(slope), (planes) => evaluatePlanes(slope, planes));
+}
+
+/**
+ * analyseSlope with the surfaces evaluated by `evaluate`, e.g. a pool of
+ * workers (src/parallel). The search is the same (analyseSlopeSteps), so
+ * the result is that of analyseSlope as long as `evaluate` sets each
+ * plane as evaluatePlanes does. An evaluator may leave out the slices of
+ * the planes: those of the critical surface are restored here.
+ */
+export async function analyseSlopeAsync(slope: Slope, evaluate: AsyncEvaluate): Promise<number | null> {
+  const fos = await runStepsAsync(analyseSlopeSteps(slope), evaluate);
+  restoreCriticalSlices(slope);
+  return fos;
+}
+
+/**
+ * The slices of the critical surface, when an evaluator left them out:
+ * evaluated again on a copy (the same surface gives the same slices).
+ */
+export function restoreCriticalSlices(slope: Slope): void {
+  const best = slope.search.find((plane) => plane.fos != null);
+  if (!best || best.slices) return;
+  const copy: SearchPlane = { ...best };
+  evaluatePlanes(slope, [copy]);
+  best.slices = copy.slices;
+}
+
+/**
+ * The search of analyseSlope as steps (model/steps.ts): each batch of
+ * surfaces it yields is independent and evaluated in place before it
+ * resumes. Sets the sorted results on the slope; returns the minimum FOS.
+ */
+export function* analyseSlopeSteps(slope: Slope): PlaneSteps<number | null> {
   const block = slope.searchMethod === "block" && !slope.customPlanesOnly;
   // Generate search planes unless only custom planes are requested
   if (slope.search.length === 0 && !slope.customPlanesOnly && !block) {
@@ -1018,20 +1058,20 @@ export function analyseSlope(slope: Slope): number | null {
     allPlanes.push(plane);
   }
 
-  evaluatePlanes(slope, allPlanes);
+  yield allPlanes;
 
   if (block) {
     // Block search: surfaces through the block search objects, refined
     // around the best; optimised as polylines on request.
-    const evaluate = (planes: SearchPlane[]) => evaluatePlanes(slope, planes);
-    const blockPlanes = blockSearch(slope, evaluate);
+    const blockPlanes = yield* blockSearchSteps(slope);
     allPlanes.push(...blockPlanes);
     if (slope.nonCircularOptimization) {
       const ground = slope.surfaceLineXY;
       const span = ground ? Math.max(...ground.x) - Math.min(...ground.x) : 1;
       const seeds = bestDistinct(blockPlanes, BLOCK_SEEDS, span);
       const known = new Set(allPlanes);
-      allPlanes.push(...optimisePolylines(slope, seeds, evaluate).filter((p) => !known.has(p)));
+      const optimised = yield* optimisePolylinesSteps(slope, seeds);
+      allPlanes.push(...optimised.filter((p) => !known.has(p)));
     }
   } else if (slope.refinedIterations > 0 && !slope.customPlanesOnly) {
     allPlanes.sort((a, b) => {
@@ -1045,7 +1085,7 @@ export function analyseSlope(slope: Slope): number | null {
       slope.refinedIterations,
     );
     if (refinedPlanes.length > 0) {
-      evaluatePlanes(slope, refinedPlanes);
+      yield refinedPlanes;
       allPlanes.push(...refinedPlanes);
     }
 
@@ -1055,7 +1095,7 @@ export function analyseSlope(slope: Slope): number | null {
     for (let level = 1; budget > 0 && level <= 12; level++) {
       const localPlanes = generateLocalPlanes(slope, allPlanes, budget, level, keys);
       if (localPlanes.length === 0) break;
-      evaluatePlanes(slope, localPlanes);
+      yield localPlanes;
       allPlanes.push(...localPlanes);
       budget -= localPlanes.length;
     }
@@ -1063,9 +1103,7 @@ export function analyseSlope(slope: Slope): number | null {
 
   // Non-circular optimisation of the best circles.
   if (slope.nonCircularOptimization && !slope.customPlanesOnly && !block) {
-    const optimised = optimiseNonCircular(slope, allPlanes, (planes) =>
-      evaluatePlanes(slope, planes),
-    );
+    const optimised = yield* optimiseNonCircularSteps(slope, allPlanes);
     allPlanes.push(...optimised);
   }
 
@@ -1115,7 +1153,12 @@ function updateHoekBrown(slope: Slope, slices: Slice[], normals: readonly number
   }
 }
 
-function evaluatePlanes(slope: Slope, allPlanes: SearchPlane[]): void {
+/**
+ * Evaluates the planes in place: slices, FOS by the slope's method,
+ * convergence, crack and composite floor (null FOS when invalid). Each
+ * plane is evaluated on its own, so a batch may be split in any way.
+ */
+export function evaluatePlanes(slope: Slope, allPlanes: SearchPlane[]): void {
   for (const plane of allPlanes) {
     delete plane.belowMinSize;
     delete plane.composite;

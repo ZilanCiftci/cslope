@@ -1,4 +1,9 @@
 import "@testing-library/jest-dom/vitest";
+import { setAnalysisThreads } from "../store/analysis-workers";
+
+// One thread per analysis: the store tests count the analysis workers a
+// run starts (analysis-workers.test.ts covers the evaluators).
+setAnalysisThreads(1);
 
 // ── jsdom polyfills for canvas & ResizeObserver ───────────────
 

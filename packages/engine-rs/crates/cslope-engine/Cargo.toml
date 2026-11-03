@@ -1,0 +1,11 @@
+[package]
+name = "cslope-engine"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "Slope stability engine (limit equilibrium and finite elements)"
+
+[dependencies]
+serde.workspace = true
+serde_json.workspace = true
+clarabel = { version = "=0.11.1", default-features = false, features = ["serde"] }

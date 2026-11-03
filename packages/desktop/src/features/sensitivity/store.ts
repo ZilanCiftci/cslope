@@ -1,6 +1,7 @@
 import { create } from "zustand";
 import type { ModelEntry } from "../../store/types";
 import { executeModelAnalysis, type AnalysisHandle } from "../../store/slices/analysisSlice";
+import { coreCount, threadsPerRun } from "../../store/analysis-workers";
 import {
   modelWithValue,
   type SensitivityPoint,
@@ -34,10 +35,9 @@ interface SensitivityState {
 let generation = 0;
 const activeHandles = new Set<AnalysisHandle>();
 
-/** Workers used at once (leaves a core for the interface). */
+/** Analyses run at once (leaves a core for the interface). */
 function poolSize(): number {
-  const cores = typeof navigator !== "undefined" ? navigator.hardwareConcurrency || 2 : 2;
-  return Math.max(1, Math.min(4, cores - 1));
+  return Math.max(1, Math.min(4, coreCount() - 1));
 }
 
 /** Sensitivity panel state (not saved with the project). */
@@ -67,6 +67,9 @@ export const useSensitivityStore = create<SensitivityState>((set, get) => ({
       total: values.length,
     });
     const queue = [...values];
+    const runs = Math.min(poolSize(), values.length);
+    // the cores left over go to the analyses' own evaluators
+    const threads = threadsPerRun(runs);
     const worker = async () => {
       while (queue.length > 0) {
         if (run !== generation) return;
@@ -74,7 +77,7 @@ export const useSensitivityStore = create<SensitivityState>((set, get) => ({
         let point: SensitivityPoint;
         let handle: AnalysisHandle | null = null;
         try {
-          handle = executeModelAnalysis(modelWithValue(model, variable, value));
+          handle = executeModelAnalysis(modelWithValue(model, variable, value), undefined, threads);
           activeHandles.add(handle);
           const result = await handle.promise;
           point = { value, fos: result.minFOS };
@@ -89,7 +92,7 @@ export const useSensitivityStore = create<SensitivityState>((set, get) => ({
         }));
       }
     };
-    await Promise.all(Array.from({ length: Math.min(poolSize(), values.length) }, worker));
+    await Promise.all(Array.from({ length: runs }, worker));
     if (run === generation) set({ running: false });
   },
   cancel: () => {

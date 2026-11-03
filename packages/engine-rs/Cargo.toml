@@ -1,0 +1,34 @@
+[workspace]
+resolver = "2"
+members = ["crates/cslope-engine", "crates/cslope-wasm"]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+license = "MIT"
+
+[workspace.dependencies]
+serde = { version = "1", features = ["derive", "rc"] }
+serde_json = { version = "1", features = ["float_roundtrip"] }
+# Exact pins: the wasm-bindgen CLI that generates the JavaScript glue must be
+# the same version as the crate (tools/build-wasm.ts checks it against
+# Cargo.lock). Install it with
+#   cargo install wasm-bindgen-cli --version 0.2.130 --locked
+wasm-bindgen = "=0.2.130"
+js-sys = "=0.3.107"
+serde-wasm-bindgen = "=0.6.5"
+
+[profile.release]
+opt-level = 3
+lto = true
+codegen-units = 1
+
+# The WebAssembly build (tools/build-wasm.ts): release, with panics that
+# abort (the instance traps; the facade reports it) and no symbols.
+[profile.wasm-release]
+inherits = "release"
+panic = "abort"
+strip = "debuginfo"
+
+[profile.test]
+opt-level = 2

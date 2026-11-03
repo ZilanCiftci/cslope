@@ -189,14 +189,71 @@ function definitionWith(def: SlopeDefinition, variables: RandomVariable[], value
   return { ...def, materials };
 }
 
+/**
+ * What the reliability analysis asks of its driver (analyseReliability
+ * runs them in turn; analyseReliabilityAsync may spread them over workers):
+ * - "analyse": a full analysis of `slope` (built from `def` and `options`),
+ *   in place, as analyseSlope;
+ * - "samples": F of each set of values by `sampler` (null when it has
+ *   none), in order; `progress` takes the number done.
+ */
+export type ReliabilityStep =
+  | { kind: "analyse"; slope: Slope; def: SlopeDefinition; options: Partial<AnalysisOptions> }
+  | {
+      kind: "samples";
+      /** The definition with only the critical surface (the sampler's). */
+      def: SlopeDefinition;
+      options: Partial<AnalysisOptions>;
+      variables: RandomVariable[];
+      values: number[][];
+      sampler: MonteCarloSampler;
+      progress: (done: number) => void;
+    };
+
+/** F of the slope with the variables at the given values, null when there is none. */
+export type MonteCarloSampler = (values: number[]) => number | null;
+
+/** Steps of a reliability analysis; a "samples" step resumes with the factors. */
+type ReliabilitySteps<T> = Generator<ReliabilityStep, T, unknown>;
+
 /** Lowest FOS of a slope and its surface. */
-function critical(slope: Slope): { fos: number; surface: CriticalSurface } | null {
-  const fos = analyseSlope(slope);
+function* critical(
+  slope: Slope,
+  def: SlopeDefinition,
+  options: Partial<AnalysisOptions>,
+): ReliabilitySteps<{ fos: number; surface: CriticalSurface } | null> {
+  yield { kind: "analyse", slope, def, options };
   const best = slope.search.find((p) => p.fos != null);
+  const fos = best?.fos ?? null;
   if (fos == null || !best) return null;
   return {
     fos,
     surface: { cx: best.cx, cy: best.cy, radius: best.radius, lc: best.lc, rc: best.rc, ...(best.points ? { points: best.points } : {}) },
+  };
+}
+
+/**
+ * The Monte Carlo sampler of a definition with only the critical surface
+ * (onSurface): the slope is built once and only the materials change.
+ */
+export function monteCarloSampler(
+  surfaceDef: SlopeDefinition,
+  options: Partial<AnalysisOptions>,
+  variables: RandomVariable[],
+): MonteCarloSampler {
+  const slope = build(surfaceDef, options);
+  if (slope.individualPlanes.length === 0) {
+    throw new Error("The critical surface at the mean values could not be set up again for the samples.");
+  }
+  const materialsByIndex = surfaceDef.materials.map((m) =>
+    slope.materialGeometries.map((g) => g.material).find((mat) => mat.name === m.name) ?? null,
+  );
+  const baseModels = materialsByIndex.map((m) => m?.model ?? null);
+  return (values) => {
+    applyValues(materialsByIndex, baseModels, variables, values);
+    slope.materialsChanged();
+    const fos = analyseSlope(slope);
+    return fos == null || !Number.isFinite(fos) ? null : fos;
   };
 }
 
@@ -225,13 +282,67 @@ export function analyseReliability(
   variables: RandomVariable[],
   ro: ReliabilityOptions,
 ): ReliabilityResult {
+  const steps = reliabilitySteps(def, options, variables, ro);
+  for (let input: unknown = undefined; ; ) {
+    const r = steps.next(input);
+    if (r.done) return r.value;
+    const step = r.value;
+    if (step.kind === "analyse") {
+      analyseSlope(step.slope);
+      input = undefined;
+    } else {
+      input = step.values.map((values, k) => {
+        const fos = step.sampler(values);
+        if ((k + 1) % 50 === 0) step.progress(k + 1);
+        return fos;
+      });
+    }
+  }
+}
+
+/** How analyseReliabilityAsync runs the steps (e.g. on a pool of workers). */
+export interface ReliabilityRunner {
+  /** Analyse the slope in place, as analyseSlope. */
+  analyse(step: Extract<ReliabilityStep, { kind: "analyse" }>): Promise<void>;
+  /** F of each set of values, in order (null where there is none). */
+  samples(step: Extract<ReliabilityStep, { kind: "samples" }>): Promise<(number | null)[]>;
+}
+
+/** analyseReliability with the analyses and samples run by `runner`; the same result. */
+export async function analyseReliabilityAsync(
+  def: SlopeDefinition,
+  options: Partial<AnalysisOptions>,
+  variables: RandomVariable[],
+  ro: ReliabilityOptions,
+  runner: ReliabilityRunner,
+): Promise<ReliabilityResult> {
+  const steps = reliabilitySteps(def, options, variables, ro);
+  for (let input: unknown = undefined; ; ) {
+    const r = steps.next(input);
+    if (r.done) return r.value;
+    const step = r.value;
+    if (step.kind === "analyse") {
+      await runner.analyse(step);
+      input = undefined;
+    } else {
+      input = await runner.samples(step);
+    }
+  }
+}
+
+function* reliabilitySteps(
+  def: SlopeDefinition,
+  options: Partial<AnalysisOptions>,
+  variables: RandomVariable[],
+  ro: ReliabilityOptions,
+): ReliabilitySteps<ReliabilityResult> {
   if (variables.length === 0) throw new Error("Give at least one random variable.");
   for (const v of variables) {
     if (!(Number.isFinite(v.sd) && v.sd >= 0)) throw new Error("Standard deviations must be ≥ 0.");
   }
   const means = variables.map((v) => modelValue(def, v));
   const meanSlope = build(def, options);
-  const atMean = critical(meanSlope);
+  const atMean = yield* critical(meanSlope, def, options);
   if (!atMean) throw new Error("No valid slip surface at the mean values.");
   // A material in no region would vary nothing.
   const used = new Set(meanSlope.materialGeometries.map((g) => g.material.name));
@@ -247,8 +358,9 @@ export function analyseReliability(
     const search = ro.search ?? true;
     const base = search ? def : onSurface(def, atMean.surface);
     let failed = 0;
-    const evaluate = (values: number[]): number => {
-      const r = critical(build(definitionWith(base, variables, values), options));
+    const evaluate = function* (values: number[]): ReliabilitySteps<number> {
+      const valuesDef = definitionWith(base, variables, values);
+      const r = yield* critical(build(valuesDef, options), valuesDef, options);
       if (!r) {
         failed++;
         return NaN;
@@ -256,7 +368,7 @@ export function analyseReliability(
       return r.fos;
     };
     const terms: TaylorTerm[] = [];
-    variables.forEach((v, i) => {
+    for (const [i, v] of variables.entries()) {
       if (NON_NEGATIVE.has(v.field) && means[i] - v.sd < 0) {
         throw new Error(
           `Mean − σ of ${v.field} (material ${v.material + 1}) is negative; use Monte Carlo, which truncates the samples.`,
@@ -266,9 +378,11 @@ export function analyseReliability(
       const minus = [...means];
       plus[i] += v.sd;
       minus[i] -= v.sd;
-      terms.push({ variable: i, mean: means[i], sd: v.sd, fPlus: evaluate(plus), fMinus: evaluate(minus) });
+      const fPlus = yield* evaluate(plus);
+      const fMinus = yield* evaluate(minus);
+      terms.push({ variable: i, mean: means[i], sd: v.sd, fPlus, fMinus });
       ro.onProgress?.((i + 1) / variables.length);
-    });
+    }
     if (failed > 0) throw new Error(`${failed} evaluation(s) at mean ± σ found no slip surface.`);
     // σF² = Σᵢ Σⱼ ρᵢⱼ (ΔFᵢ/2)(ΔFⱼ/2), with signed ΔF = F⁺ − F⁻.
     const half = terms.map((t) => (t.fPlus - t.fMinus) / 2);
@@ -293,18 +407,13 @@ export function analyseReliability(
   }
 
   // Monte Carlo on the critical surface at the means: the slope is built
-  // once and only the materials change.
+  // once and only the materials change (monteCarloSampler). The values of
+  // all samples are drawn first: they do not depend on the factors.
   const n = Math.max(10, Math.min(100000, Math.round(ro.samples ?? 1000)));
   const random = rng(ro.seed ?? 1);
   const L = cholesky(corr);
-  const slope = build(onSurface(def, atMean.surface), options);
-  if (slope.individualPlanes.length === 0) {
-    throw new Error("The critical surface at the mean values could not be set up again for the samples.");
-  }
-  const materialsByIndex = def.materials.map((m) =>
-    slope.materialGeometries.map((g) => g.material).find((mat) => mat.name === m.name) ?? null,
-  );
-  const baseModels = materialsByIndex.map((m) => m?.model ?? null);
+  const surfaceDef = onSurface(def, atMean.surface);
+  const sampler = monteCarloSampler(surfaceDef, options, variables);
   const params = variables.map((v, i) => {
     const mean = means[i];
     const lognormal = v.distribution === "lognormal" && mean > 0;
@@ -318,8 +427,7 @@ export function analyseReliability(
       max: v.max ?? (v.field === "frictionAngle" ? 89.9 : Infinity),
     };
   });
-  const samples: number[] = [];
-  let failed = 0;
+  const drawn: number[][] = [];
   const values = new Array<number>(variables.length);
   for (let k = 0; k < n; k++) {
     // Correlated standard normals; resampled until within the truncation.
@@ -336,14 +444,23 @@ export function analyseReliability(
       if (ok) break;
       if (attempt === 99) values.forEach((x, i) => (values[i] = Math.min(params[i].max, Math.max(params[i].min, x))));
     }
-    applyValues(materialsByIndex, baseModels, variables, values);
-    slope.materialsChanged();
-    const fos = analyseSlope(slope);
-    if (fos == null || !Number.isFinite(fos)) failed++;
-    else samples.push(fos);
-    if ((k + 1) % 50 === 0) ro.onProgress?.((k + 1) / n);
+    drawn.push([...values]);
   }
-  applyValues(materialsByIndex, baseModels, variables, means);
+  const factors = (yield {
+    kind: "samples",
+    def: surfaceDef,
+    options,
+    variables,
+    values: drawn,
+    sampler,
+    progress: (done) => ro.onProgress?.(done / n),
+  }) as (number | null)[];
+  const samples: number[] = [];
+  let failed = 0;
+  for (const fos of factors) {
+    if (fos == null) failed++;
+    else samples.push(fos);
+  }
   if (samples.length < 2) throw new Error("Too few Monte Carlo samples gave a FOS.");
   const mean = samples.reduce((a, b) => a + b, 0) / samples.length;
   const sd = Math.sqrt(samples.reduce((a, b) => a + (b - mean) ** 2, 0) / (samples.length - 1));

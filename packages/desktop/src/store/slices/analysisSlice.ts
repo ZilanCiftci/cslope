@@ -16,6 +16,15 @@ import { DEFAULT_ANALYSIS_LIMITS } from "../defaults";
 import { ANALYSIS_TIMEOUT_MS, FEM_TIMEOUT_MS } from "../../constants";
 import { defaultCustomCircle } from "../../utils/custom-plane";
 import { analysisErrorText } from "../../utils/analysis-error";
+import {
+  acquireWorkers,
+  analysisThreads,
+  coreCount,
+  createAnalysisWorker,
+  discardWorkers,
+  releaseWorkers,
+  threadsPerRun,
+} from "../analysis-workers";
 
 // ── Shared worker execution ────────────────────────────────────────
 
@@ -51,21 +60,25 @@ function analysisTimeoutMs(options: AnalysisOptions): number {
 }
 
 /**
- * Spawn a Web Worker to run a single model analysis.
+ * Spawn a Web Worker to run a single model analysis, with `threads − 1`
+ * evaluator workers for its trial surfaces (analysis-workers.ts).
  *
  * Returns a `{ promise, cancel }` handle.  The promise resolves with
  * the `AnalysisResult` on success, or rejects on error / timeout.
- * Calling `cancel()` terminates the worker early.
+ * Calling `cancel()` terminates the workers early.
  */
 export function executeModelAnalysis(
   model: ModelEntry,
   onProgress?: (progress: number) => void,
+  threads = analysisThreads(),
 ): AnalysisHandle {
   const { slope, options } = workerInputs(model);
   const handle = runInWorker<AnalysisResult>(
     { type: "run-analysis", id: crypto.randomUUID(), slope, options },
     analysisTimeoutMs(options),
     onProgress,
+    RUN_PROGRESS_MAX,
+    threads,
   );
   const boundaries = model.materialBoundaries ?? [];
   return {
@@ -91,6 +104,7 @@ export function executeReliability(
   variables: RandomVariable[],
   reliability: Omit<ReliabilityOptions, "onProgress">,
   onProgress?: (progress: number) => void,
+  threads = analysisThreads(),
 ): ReliabilityHandle {
   const { slope, options } = workerInputs(model);
   const runs =
@@ -102,6 +116,7 @@ export function executeReliability(
     analysisTimeoutMs(options) * runs,
     onProgress,
     1, // reports real progress, up to done
+    threads,
   );
 }
 
@@ -128,19 +143,28 @@ function runInWorker<T>(
   timeoutMs: number,
   onProgress?: (progress: number) => void,
   progressMax = RUN_PROGRESS_MAX,
+  threads = 1,
 ): { promise: Promise<T>; cancel: () => void } {
-  let worker: Worker | null = new Worker(
-    new URL("../../worker/analysis.worker.ts", import.meta.url),
-    { type: "module" },
-  );
+  // With more than one thread the analysis worker and its evaluators (each
+  // connected to it by its own channel) come from the idle workers, which
+  // have the engine loaded and compiled, and go back after a completed run.
+  // One thread starts a fresh worker, as before.
+  const pooled = threads > 1;
+  const workers = pooled ? acquireWorkers(threads) : [createAnalysisWorker()];
+  let worker: Worker | null = workers[0];
+  let evaluators = workers.slice(1);
   let timeout: ReturnType<typeof setTimeout> | null = null;
   let settled = false;
   let rejectPromise: ((reason: Error) => void) | null = null;
 
-  const stop = () => {
+  /** Ends the run: stops its workers, or keeps those of a completed pooled run. */
+  const stop = (completed = false) => {
     settled = true;
-    worker?.terminate();
+    const all = worker ? [worker, ...evaluators] : evaluators;
+    if (completed && pooled) releaseWorkers(all);
+    else discardWorkers(all);
     worker = null;
+    evaluators = [];
     if (timeout) {
       clearTimeout(timeout);
       timeout = null;
@@ -171,7 +195,7 @@ function runInWorker<T>(
       if (settled) return;
       const msg = event.data;
       if (msg.type === "analysis-complete" || msg.type === "reliability-complete") {
-        stop();
+        stop(true);
         resolve(msg.result as T);
       } else if (msg.type === "analysis-progress") {
         onProgress?.(Math.min(progressMax, Math.max(0, msg.progress)));
@@ -187,7 +211,17 @@ function runInWorker<T>(
       reject(new Error(err.message || "The analysis worker failed to start."));
     };
 
-    worker!.postMessage(request);
+    if (evaluators.length === 0) {
+      worker!.postMessage(request);
+      return;
+    }
+    const ports = evaluators.map((evaluator) => {
+      const channel = new MessageChannel();
+      evaluator.onerror = worker!.onerror;
+      evaluator.postMessage({ type: "serve-evaluator", port: channel.port1 } satisfies WorkerMessage, [channel.port1]);
+      return channel.port2;
+    });
+    worker!.postMessage({ ...request, evaluators: ports }, ports);
   });
 
   return { promise, cancel };
@@ -733,7 +767,7 @@ export const createAnalysisSlice: SliceCreator<AnalysisSlice> = (set, get) => ({
               m.id === freshModel.id ? { ...m, progress: p } : m,
             ),
           }));
-        });
+        }, threads);
       } catch (err) {
         stopModelProgressInterval(freshModel.id);
         progressByModel.set(freshModel.id, 1);
@@ -803,11 +837,10 @@ export const createAnalysisSlice: SliceCreator<AnalysisSlice> = (set, get) => ({
       }
     };
 
-    const maxConcurrency =
-      typeof navigator !== "undefined" && navigator.hardwareConcurrency
-        ? navigator.hardwareConcurrency
-        : 4;
-    const concurrency = Math.max(1, Math.min(models.length, maxConcurrency));
+    // A model per core at once; the cores left over go to the models'
+    // own evaluators (one model alone gets them all).
+    const concurrency = Math.max(1, Math.min(models.length, coreCount()));
+    const threads = threadsPerRun(concurrency);
     let cursor = 0;
 
     await Promise.all(

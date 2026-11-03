@@ -13,6 +13,7 @@ const SLOW = [
   "src/model/reliability.test.ts",
   "src/model/search-review-c2.test.ts",
   "src/model/orientation-matrix.test.ts",
+  "src/parallel/parallel-search.test.ts",
   "src/fem/**",
 ];
 

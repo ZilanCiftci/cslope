@@ -1,0 +1,11 @@
+# JavaScript semantics that change logic, not just the last bits
+# (ARCHITECTURE.md §5): use crate::js instead. Transcendental functions
+# (sin, cos, atan2, exp, powf, …) are std's; last-bit differences from V8
+# are accepted (tolerance policy in PORTING.md).
+disallowed-methods = [
+  { path = "f64::round", reason = "use js::math::round (JS Math.round rounds halves up)" },
+  { path = "f64::min", reason = "use js::math::min (JS NaN and -0 rules)" },
+  { path = "f64::max", reason = "use js::math::max (JS NaN and -0 rules)" },
+  { path = "slice::sort_unstable", reason = "JS sort is stable: js::array::sort_by" },
+  { path = "slice::sort_unstable_by", reason = "JS sort is stable: js::array::sort_by" },
+]

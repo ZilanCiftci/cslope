@@ -6,9 +6,10 @@
  */
 
 import type { AnalysisResponse, ReliabilityRequest, WorkerMessage } from "./messages";
-import { runReliabilityRequest } from "./reliability-run";
+import { runReliabilityRequest, runReliabilityRequestParallel } from "./reliability-run";
 import type {
   AnalysisResult,
+  ReliabilityResult,
   SlipSurfaceResult,
   SliceData,
 } from "@cslope/engine";
@@ -20,7 +21,10 @@ import {
   runFemSummary,
   runFemSummaryWithBounds,
   mapAnalysisResultToModelSpace,
-  buildSlope,
+  buildAnalysisSlope,
+  EvaluatorPool,
+  serveEvaluator,
+  webEndpoint,
   oppositeDirectionDefinition,
   resolveOrientation,
   sliceDrivingMoment,
@@ -28,7 +32,10 @@ import {
   solvedEffectiveNormals,
   type SearchPlane,
   type Slice,
+  type Slope,
   type AnalysisOptions,
+  type CoordinatorEndpoint,
+  type EvaluatorEndpoint,
   type SlopeDefinition,
 } from "@cslope/engine";
 
@@ -72,10 +79,24 @@ async function clarabelBinary(): Promise<ArrayBuffer> {
 
 // ── Worker handler ──────────────────────────────────────────────
 
+/**
+ * The evaluators of a request, if it brought any: a pool that spreads the
+ * trial surfaces over them (the result is the same as without).
+ */
+function evaluatorPool(ports: MessagePort[] | undefined): EvaluatorPool | null {
+  if (!ports || ports.length === 0) return null;
+  return new EvaluatorPool(ports.map((port) => webEndpoint(port) as CoordinatorEndpoint));
+}
+
 /** Handle incoming analysis requests. */
 self.onmessage = async (event: MessageEvent<WorkerMessage>) => {
+  if (event.data.type === "serve-evaluator") {
+    // This worker evaluates trial surfaces for an analysis worker.
+    serveEvaluator(webEndpoint(event.data.port) as EvaluatorEndpoint);
+    return;
+  }
   if (event.data.type === "run-reliability") {
-    runReliability(event.data);
+    await runReliability(event.data);
     return;
   }
   const { type, id, slope: slopeDef, options } = event.data;
@@ -90,10 +111,21 @@ self.onmessage = async (event: MessageEvent<WorkerMessage>) => {
     return;
   }
 
+  const pool = evaluatorPool(event.data.evaluators);
   try {
     const start = performance.now();
     let result: AnalysisResult;
-    if (options.bothDirections && !slopeDef.customPlanesOnly) {
+    const both = options.bothDirections && !slopeDef.customPlanesOnly;
+    if (pool) {
+      // (awaited only with evaluators: without, the result is posted at once)
+      try {
+        result = both
+          ? await analyseBothDirectionsParallel(slopeDef, options, pool)
+          : mapAnalysisResultToModelSpace(await analyseParallel(slopeDef, options, pool), slopeDef);
+      } finally {
+        pool.close();
+      }
+    } else if (both) {
       result = analyseBothDirections(slopeDef, options);
     } else {
       result = mapAnalysisResultToModelSpace(analyse(slopeDef, options), slopeDef);
@@ -134,11 +166,21 @@ self.onmessage = async (event: MessageEvent<WorkerMessage>) => {
 };
 
 /** Probabilistic analysis; the result's surface is in model coordinates. */
-function runReliability(req: ReliabilityRequest): void {
+async function runReliability(req: ReliabilityRequest): Promise<void> {
+  const onProgress = (progress: number) =>
+    self.postMessage({ type: "analysis-progress", id: req.id, progress } satisfies AnalysisResponse);
+  const pool = evaluatorPool(req.evaluators);
   try {
-    const result = runReliabilityRequest(req, (progress) =>
-      self.postMessage({ type: "analysis-progress", id: req.id, progress } satisfies AnalysisResponse),
-    );
+    let result: ReliabilityResult;
+    if (pool) {
+      try {
+        result = await runReliabilityRequestParallel(req, pool, onProgress);
+      } finally {
+        pool.close();
+      }
+    } else {
+      result = runReliabilityRequest(req, onProgress);
+    }
     self.postMessage({ type: "reliability-complete", id: req.id, result } satisfies AnalysisResponse);
   } catch (err: unknown) {
     self.postMessage({
@@ -157,22 +199,46 @@ function analyseBothDirections(
   slopeDef: SlopeDefinition,
   options: AnalysisOptions,
 ): AnalysisResult {
-  const own = resolveOrientation(slopeDef.orientation, slopeDef.coordinates);
   const oppositeDef = oppositeDirectionDefinition(slopeDef);
-  const tryRun = (def: SlopeDefinition) => {
-    try {
-      return { result: mapAnalysisResultToModelSpace(analyse(def, options), def) };
-    } catch (err) {
-      return { error: err };
-    }
-  };
   // A failure in the model's own direction (its limits, its geometry) is
   // the user's error to see; only the opposite run may come up empty.
   const ownResult = mapAnalysisResultToModelSpace(analyse(slopeDef, options), slopeDef);
-  const b = tryRun(oppositeDef);
-  const ownGoverns = !b.result || ownResult.minFOS <= b.result.minFOS;
-  const governing = ownGoverns ? ownResult : b.result!;
-  const other = ownGoverns ? b.result : ownResult;
+  let opposite: AnalysisResult | undefined;
+  try {
+    opposite = mapAnalysisResultToModelSpace(analyse(oppositeDef, options), oppositeDef);
+  } catch {
+    opposite = undefined;
+  }
+  return governingDirection(slopeDef, ownResult, opposite);
+}
+
+/** analyseBothDirections with the trial surfaces spread over the pool. */
+async function analyseBothDirectionsParallel(
+  slopeDef: SlopeDefinition,
+  options: AnalysisOptions,
+  pool: EvaluatorPool,
+): Promise<AnalysisResult> {
+  const oppositeDef = oppositeDirectionDefinition(slopeDef);
+  const ownResult = mapAnalysisResultToModelSpace(await analyseParallel(slopeDef, options, pool), slopeDef);
+  let opposite: AnalysisResult | undefined;
+  try {
+    opposite = mapAnalysisResultToModelSpace(await analyseParallel(oppositeDef, options, pool), oppositeDef);
+  } catch {
+    opposite = undefined;
+  }
+  return governingDirection(slopeDef, ownResult, opposite);
+}
+
+/** The lower FOS of the two directions, with the direction it slides in. */
+function governingDirection(
+  slopeDef: SlopeDefinition,
+  ownResult: AnalysisResult,
+  opposite: AnalysisResult | undefined,
+): AnalysisResult {
+  const own = resolveOrientation(slopeDef.orientation, slopeDef.coordinates);
+  const ownGoverns = !opposite || ownResult.minFOS <= opposite.minFOS;
+  const governing = ownGoverns ? ownResult : opposite!;
+  const other = ownGoverns ? opposite : ownResult;
   return {
     ...governing,
     slidingDirection: ownGoverns ? own : own === "ltr" ? "rtl" : "ltr",
@@ -199,15 +265,28 @@ function analyse(
   options: AnalysisOptions,
 ): AnalysisResult {
   const start = performance.now();
-  // Build slope model from DTO
-  const slope = buildSlope(slopeDef);
+  const slope = buildAnalysisSlope(slopeDef, options);
+  return analysisResult(slope, analyseSlope(slope), options, start);
+}
 
-  // Apply analysis options
-  slope.updateAnalysisOptions(options);
+/** analyse with the trial surfaces spread over the pool: the same result. */
+async function analyseParallel(
+  slopeDef: SlopeDefinition,
+  options: AnalysisOptions,
+  pool: EvaluatorPool,
+): Promise<AnalysisResult> {
+  const start = performance.now();
+  const slope = buildAnalysisSlope(slopeDef, options);
+  return analysisResult(slope, await pool.analyse(slope, slopeDef, options), options, start);
+}
 
-  // Run analysis
-  const minFOS = analyseSlope(slope);
-
+/** The result of an analysed slope (canonical space). */
+function analysisResult(
+  slope: Slope,
+  minFOS: number | null,
+  options: AnalysisOptions,
+  start: number,
+): AnalysisResult {
   // Build result DTO
   let criticalSurface: SlipSurfaceResult | null = null;
   const allSurfaces: SlipSurfaceResult[] = [];

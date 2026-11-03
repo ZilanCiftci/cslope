@@ -183,10 +183,15 @@ export {
   analyseJanbu,
   analyseMorgensternPrice,
   analyseSlope,
+  analyseSlopeAsync,
+  analyseSlopeSteps,
+  evaluatePlanes,
+  restoreCriticalSlices,
   sliceDrivingMoment,
   sliceVerticalLoad,
   solvedEffectiveNormals,
 } from "./model/solvers";
+export { inParallel, runStepsAsync, runStepsSync, type AsyncEvaluate, type Evaluate, type PlaneSteps } from "./model/steps";
 
 export { buildSlope } from "./model/build-slope";
 export { waternetPorePressure, type Waternet } from "./model/waternet";
@@ -200,14 +205,25 @@ export {
   pileForce,
 } from "./model/reinforcement";
 export type { ReinforcementEnvelope } from "./model/reinforcement";
-export { analyseReliability, normalCdf, lognormalBeta, reliabilitySurfaceToModelSpace } from "./model/reliability";
+export {
+  analyseReliability,
+  analyseReliabilityAsync,
+  monteCarloSampler,
+  normalCdf,
+  lognormalBeta,
+  reliabilitySurfaceToModelSpace,
+} from "./model/reliability";
 export type {
+  MonteCarloSampler,
   RandomVariable,
   ReliabilityOptions,
   ReliabilityResult,
+  ReliabilityRunner,
+  ReliabilityStep,
   TaylorTerm,
   CriticalSurface,
 } from "./model/reliability";
+export * from "./parallel/index";
 
 export {
   mirrorX,

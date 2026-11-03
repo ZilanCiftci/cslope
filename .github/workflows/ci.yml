@@ -15,7 +15,7 @@ permissions:
 env:
   CSLOPE_QUICK_TESTS: ${{ (github.event_name == 'push' && github.ref != 'refs/heads/main') && '1' || '' }}
 
-# The three jobs run in parallel. The engine is platform-independent
+# The jobs run in parallel. The engine is platform-independent
 # TypeScript and runs on the faster Linux runner.
 jobs:
   check:
@@ -80,3 +80,58 @@ jobs:
       - name: Test
         if: github.event_name != 'pull_request' && github.ref != 'refs/heads/main'
         run: bun run --filter @cslope/desktop test
+
+  # The Rust engine (packages/engine-rs, ARCHITECTURE.md §8.4): format, lints
+  # and tests, the WebAssembly builds, and the engine's unit tests run
+  # unchanged against the Rust engine through the facade
+  # (vitest.rust.config.ts, test-manifest.json). A job of its own: the jobs
+  # above need no Rust, and the app and the default engine tests do not use
+  # the Rust engine yet. On working branches the facade run is the quick one
+  # (only the test files whose engine modules are all ported).
+  rust:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version-file: package.json
+      - name: Install
+        run: bun install --frozen-lockfile
+      # The toolchain of rust-toolchain.toml, with the wasm32 target
+      - name: Setup Rust
+        working-directory: packages/engine-rs
+        run: rustup toolchain install
+      - name: Cache Rust
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: packages/engine-rs
+      # The version in Cargo.lock; build-wasm.ts fails if they differ
+      - name: Install wasm-bindgen
+        uses: taiki-e/install-action@v2
+        with:
+          tool: wasm-bindgen-cli@0.2.130
+      - name: Format
+        working-directory: packages/engine-rs
+        run: cargo fmt --check
+      - name: Lint
+        working-directory: packages/engine-rs
+        run: |
+          cargo clippy --all-targets --all-features -- -D warnings
+          cargo clippy -p cslope-wasm --target wasm32-unknown-unknown --all-features -- -D warnings
+      # Not committed: exported from the TypeScript engine under Node (V8)
+      - name: Fixtures
+        working-directory: packages/engine
+        run: bunx vitest run --config vitest.fixtures.config.ts
+      - name: Test
+        working-directory: packages/engine-rs
+        run: cargo test --all-features
+      - name: Build WebAssembly
+        run: bun packages/engine-rs/tools/build-wasm.ts
+      # The facade is typechecked against the committed product glue
+      - name: Committed glue is current
+        run: git diff --exit-code -- packages/engine/src/wasm
+      - name: Engine tests on the Rust engine
+        working-directory: packages/engine
+        run: bunx vitest run --config vitest.rust.config.ts
