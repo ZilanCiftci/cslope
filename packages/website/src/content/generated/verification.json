@@ -1,11 +1,11 @@
 {
  "summary": {
-  "problems": 172,
-  "results": 372,
-  "publishedValues": 229,
-  "problemsWithPublished": 141,
-  "literatureProblems": 162,
-  "reliabilityQuantities": 25
+  "problems": 179,
+  "results": 389,
+  "publishedValues": 243,
+  "problemsWithPublished": 148,
+  "literatureProblems": 169,
+  "reliabilityQuantities": 26
  },
  "problems": [
   {
@@ -3003,6 +3003,55 @@
    }
   },
   {
+   "id": "V044b",
+   "title": "Fredlund & Krahn (1977), rᵤ = 0.25",
+   "reference": "Fredlund, D.G. & Krahn, J. (1977). Comparison of slope stability methods of analysis. Can. Geotech. J. 14(3), 429–439.",
+   "literature": true,
+   "commercial": false,
+   "surface": "fixed",
+   "units": "imperial",
+   "published": [
+    {
+     "value": 1.766,
+     "source": "Fredlund & Krahn",
+     "method": "Bishop simplified",
+     "analysis": "Bishop simplified",
+     "computed": 1.7595
+    },
+    {
+     "value": 1.764,
+     "source": "Fredlund & Krahn",
+     "method": "Morgenstern-Price (half-sine)",
+     "analysis": "Morgenstern-Price (half-sine)",
+     "computed": 1.7569
+    },
+    {
+     "value": 1.761,
+     "source": "Fredlund & Krahn",
+     "method": "Spencer",
+     "analysis": "Spencer",
+     "computed": 1.7576
+    }
+   ],
+   "results": [
+    {
+     "method": "Bishop simplified",
+     "computed": 1.7595,
+     "programs": null
+    },
+    {
+     "method": "Morgenstern-Price (half-sine)",
+     "computed": 1.7569,
+     "programs": null
+    },
+    {
+     "method": "Spencer",
+     "computed": 1.7576,
+     "programs": null
+    }
+   ]
+  },
+  {
    "id": "V045",
    "title": "Fredlund & Krahn (1977), with water table",
    "reference": "Fredlund, D.G. & Krahn, J. (1977). Can. Geotech. J. 14(3).",
@@ -3222,6 +3271,54 @@
      }
     ]
    }
+  },
+  {
+   "id": "V046c",
+   "title": "Fredlund & Krahn slope on a weak seam, rᵤ = 0.25",
+   "reference": "Fredlund, D.G. & Krahn, J. (1977). Can. Geotech. J. 14(3), 429–439.",
+   "literature": true,
+   "commercial": false,
+   "surface": "fixed",
+   "units": "imperial",
+   "published": [
+    {
+     "value": 1.118,
+     "source": "Fredlund & Krahn",
+     "method": "Morgenstern-Price (half-sine)",
+     "analysis": "Morgenstern-Price (half-sine)",
+     "computed": 1.1125
+    },
+    {
+     "value": 1.124,
+     "source": "Fredlund & Krahn",
+     "method": "Bishop simplified",
+     "analysis": "Bishop simplified",
+     "computed": 1.1219
+    }
+   ],
+   "results": [
+    {
+     "method": "Bishop simplified",
+     "computed": 1.1219,
+     "programs": {
+      "min": 1.124,
+      "max": 1.124
+     }
+    },
+    {
+     "method": "Spencer",
+     "computed": 1.1222,
+     "programs": {
+      "min": 1.124,
+      "max": 1.124
+     }
+    },
+    {
+     "method": "Morgenstern-Price (half-sine)",
+     "computed": 1.1125,
+     "programs": null
+    }
+   ]
   },
   {
    "id": "V047a",
@@ -4662,6 +4759,67 @@
    }
   },
   {
+   "id": "V100",
+   "title": "Jiang, Baker & Yamagami (2003) example 1, power-law envelope, rᵤ = 0.3",
+   "reference": "Jiang, J.-C., Baker, R. & Yamagami, T. (2003). The effect of strength envelope nonlinearity on slope stability computations. Can. Geotech. J. 40(2), 308–325; after Charles & Soares (1984b).",
+   "literature": true,
+   "commercial": false,
+   "surface": "search",
+   "units": "SI",
+   "published": [
+    {
+     "value": 1.66,
+     "source": "Charles & Soares",
+     "method": "Bishop simplified",
+     "analysis": "Bishop simplified",
+     "computed": 1.668
+    },
+    {
+     "value": 1.56,
+     "source": "Jiang, Baker & Yamagami",
+     "method": "Janbu simplified (uncorrected), non-circular",
+     "analysis": "Janbu simplified, non-circular",
+     "computed": 1.5589
+    },
+    {
+     "value": 1.67,
+     "method": "Janbu rigorous, on the critical Bishop circle",
+     "source": "Perry (1994)",
+     "computed": null
+    },
+    {
+     "value": 1.6,
+     "method": "simplified Janbu (uncorrected) on Charles & Soares's circle",
+     "source": "Jiang, Baker & Yamagami (2003)",
+     "computed": null
+    }
+   ],
+   "results": [
+    {
+     "method": "Bishop simplified",
+     "computed": 1.668,
+     "programs": null
+    },
+    {
+     "method": "Janbu simplified, non-circular",
+     "computed": 1.5589,
+     "programs": {
+      "min": 1.563,
+      "max": 1.563
+     }
+    },
+    {
+     "method": "Bishop simplified, non-circular",
+     "computed": 1.6476,
+     "programs": {
+      "min": 1.656,
+      "max": 1.656
+     }
+    }
+   ],
+   "note": "Charles & Soares's 1.66 (Bishop, critical circle), Perry's 1.67 (rigorous Janbu on that circle) and Jiang, Baker & Yamagami's 1.60 (simplified Janbu on that circle) and 1.56 (simplified Janbu, dynamic programming) are all quoted from Jiang, Baker & Yamagami (2003, p. 318 and Fig. 10). The values on that circle are shown without a comparison: cSlope has no rigorous Janbu, and its critical circle for simplified Janbu is a deeper one."
+  },
+  {
    "id": "V064",
    "title": "Leshchinsky & Han MSE wall, five tiers",
    "reference": "Leshchinsky & Han (2004), J. Geotech. Geoenviron. Eng. 130(12).",
@@ -4920,6 +5078,124 @@
     }
    ],
    "note": "Leshchinsky & Han give 1.00 with Bishop's method for every variant of the wall (the reinforcement was designed for that value), and a finite-difference value. Here the reinforcement keeps the baseline strength of 10 kN/m, as in the program compared with, not the 11.6 kN/m designed for the surcharge, so the published 1.00 is not directly comparable."
+  },
+  {
+   "id": "V101",
+   "title": "Li & Lumb (1987) homogeneous slope, rᵤ = 0.2",
+   "reference": "Li, K.S. & Lumb, P. (1987). Probabilistic design of slopes. Can. Geotech. J. 24(4), 520–535; Hassan, A.M. & Wolff, T.F. (1999). J. Geotech. Geoenviron. Eng. 125(4), 301–308.",
+   "literature": true,
+   "commercial": false,
+   "surface": "search",
+   "units": "SI",
+   "published": [
+    {
+     "value": 1.334,
+     "source": "Hassan & Wolff",
+     "method": "Bishop simplified",
+     "analysis": "Bishop simplified",
+     "computed": 1.3337
+    }
+   ],
+   "results": [
+    {
+     "method": "Bishop simplified",
+     "computed": 1.3337,
+     "programs": {
+      "min": 1.34,
+      "max": 1.343
+     }
+    }
+   ]
+  },
+  {
+   "id": "V102a",
+   "title": "Loukidis et al. (2003) slope at its critical seismic coefficient, dry",
+   "reference": "Loukidis, D., Bandini, P. & Salgado, R. (2003). Stability of seismically loaded slopes using limit analysis. Géotechnique 53(5), 463–479.",
+   "literature": true,
+   "commercial": false,
+   "surface": "search",
+   "units": "SI",
+   "published": [
+    {
+     "value": 1,
+     "source": "Loukidis, Bandini & Salgado",
+     "method": "Spencer",
+     "analysis": "Spencer",
+     "computed": 1.0009
+    }
+   ],
+   "results": [
+    {
+     "method": "Spencer",
+     "computed": 1.0009,
+     "programs": {
+      "min": 1.001,
+      "max": 1.001
+     }
+    },
+    {
+     "method": "Bishop simplified",
+     "computed": 0.9912,
+     "programs": {
+      "min": 0.991,
+      "max": 0.993
+     }
+    },
+    {
+     "method": "Spencer, non-circular",
+     "computed": 0.9978,
+     "programs": {
+      "min": 0.999,
+      "max": 0.999
+     }
+    }
+   ],
+   "note": "Loukidis, Bandini & Salgado (2003) give the critical seismic coefficient, at which the factor of safety is 1 by definition; the check is the factor of safety at their coefficient. Their coefficients are quoted from two program manuals, which agree."
+  },
+  {
+   "id": "V102b",
+   "title": "Loukidis et al. (2003) slope at its critical seismic coefficient, rᵤ = 0.5",
+   "reference": "Loukidis, D., Bandini, P. & Salgado, R. (2003). Stability of seismically loaded slopes using limit analysis. Géotechnique 53(5), 463–479.",
+   "literature": true,
+   "commercial": false,
+   "surface": "search",
+   "units": "SI",
+   "published": [
+    {
+     "value": 1,
+     "source": "Loukidis, Bandini & Salgado",
+     "method": "Spencer",
+     "analysis": "Spencer",
+     "computed": 1.0006
+    }
+   ],
+   "results": [
+    {
+     "method": "Spencer",
+     "computed": 1.0006,
+     "programs": {
+      "min": 1.001,
+      "max": 1.001
+     }
+    },
+    {
+     "method": "Bishop simplified",
+     "computed": 0.9864,
+     "programs": {
+      "min": 0.987,
+      "max": 0.988
+     }
+    },
+    {
+     "method": "Spencer, non-circular",
+     "computed": 0.9965,
+     "programs": {
+      "min": 0.997,
+      "max": 0.997
+     }
+    }
+   ],
+   "note": "Loukidis, Bandini & Salgado (2003) give the critical seismic coefficient, at which the factor of safety is 1 by definition; the check is the factor of safety at their coefficient. Their coefficients are quoted from two program manuals, which agree."
   },
   {
    "id": "V067",
@@ -6047,6 +6323,40 @@
      }
     }
    ]
+  },
+  {
+   "id": "V103",
+   "title": "Spencer's slope, rᵤ = 0.5, non-circular critical surface",
+   "reference": "Fredlund, D.G. & Krahn, J. (1977), Can. Geotech. J. 14(3), Figs. 3 and 7; Baker, R. (1980). Determination of the critical slip surface in slope stability computations. Int. J. Numer. Anal. Meth. Geomech. 4, 333–359; Spencer (1969).",
+   "literature": true,
+   "commercial": false,
+   "surface": "search",
+   "units": "SI",
+   "published": [
+    {
+     "value": 1.02,
+     "source": "Baker",
+     "method": "Spencer, non-circular",
+     "analysis": "Spencer, non-circular",
+     "computed": 1.0078
+    },
+    {
+     "value": 1.08,
+     "source": "Spencer (1969)",
+     "computed": null
+    }
+   ],
+   "results": [
+    {
+     "method": "Spencer, non-circular",
+     "computed": 1.0078,
+     "programs": {
+      "min": 1.01,
+      "max": 1.01
+     }
+    }
+   ],
+   "note": "Spencer's own factor of safety (1.08, quoted from a program manual) is for his own trial surface, not a critical non-circular surface, and is shown without a comparison: cSlope's critical circle gives 1.015 with Spencer's method, and the non-circular searches 1.01–1.02."
   },
   {
    "id": "V086a",
@@ -7355,6 +7665,23 @@
       "min": 0.2139,
       "max": 0.2139
      }
+    }
+   ]
+  },
+  {
+   "id": "V101",
+   "title": "Li & Lumb (1987) homogeneous slope, rᵤ = 0.2",
+   "rows": [
+    {
+     "quantity": "beta-taylor",
+     "computed": 2.3282,
+     "published": [
+      {
+       "value": 2.336,
+       "source": "Hassan & Wolff (1999)"
+      }
+     ],
+     "programs": null
     }
    ]
   }

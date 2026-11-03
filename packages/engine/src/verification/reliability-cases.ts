@@ -379,4 +379,23 @@ export const RELIABILITY_CASES: ReliabilityCaseData[] = [
       "commercial program B's Monte Carlo probability of failure (sample count not printed) against cSlope's 10 000 samples. Chowdhury & Xu 19.733 % (normal distribution of F).",
     ],
   },
+  {
+    id: "V101",
+    title: "Li & Lumb (1987) homogeneous slope, reliability index on the critical circle",
+    reference: "Hassan, A.M. & Wolff, T.F. (1999). J. Geotech. Geoenviron. Eng. 125(4), 301–308; Li, K.S. & Lumb, P. (1987). Can. Geotech. J. 24(4), 520–535.",
+    description: "The V101 slope on its critical circle (from the toe to the crest 2.8 m behind its edge, as a polyline of 40 chords): c′ = 18 ± 3.6 kPa, γ = 18 ± 0.9 kN/m³, tan φ′ = tan 30° with a COV of 10 % (φ′ = 30° ± 2.481°), rᵤ = 0.2 ± 0.02, independent; Taylor series (mean ± σ), lognormal reliability index; Bishop.",
+    definition: {"coordinates":[[0,0],[0,5],[5,5],[15,15],[20,15],[20,0]],"materials":[{"name":"Soil","model":{"kind":"mohr-coulomb","unitWeight":18,"cohesion":18,"frictionAngle":30,"ru":0.2}}],"materialBoundaries":[],"regionAssignments":[{"point":[10,2.5],"materialName":"Soil"}],"customSurfaces":[{"points":[[5,5],[5.4302,5.0344],[5.8592,5.0817],[6.2865,5.1418],[6.7119,5.2146],[7.1349,5.3002],[7.5552,5.3983],[7.9724,5.5089],[8.386,5.6319],[8.7958,5.7673],[9.2014,5.9148],[9.6024,6.0744],[9.9984,6.2459],[10.3891,6.4291],[10.7742,6.624],[11.1533,6.8303],[11.526,7.0478],[11.8921,7.2763],[12.2512,7.5157],[12.603,7.7657],[12.9472,8.0261],[13.2834,8.2967],[13.6114,8.5772],[13.9308,8.8674],[14.2414,9.167],[14.543,9.4757],[14.8352,9.7933],[15.1177,10.1195],[15.3904,10.454],[15.653,10.7965],[15.9052,11.1467],[16.1469,11.5043],[16.3777,11.869],[16.5976,12.2403],[16.8062,12.6181],[17.0035,13.0019],[17.1892,13.3915],[17.3632,13.7865],[17.5253,14.1864],[17.6754,14.5911],[17.8133,15]]}],"customPlanesOnly":true},
+    method: "Bishop",
+    options: {},
+    variables: [{"material":0,"field":"cohesion","sd":3.6},{"material":0,"field":"unitWeight","sd":0.9},{"material":0,"field":"frictionAngle","sd":2.481},{"material":0,"field":"ru","sd":0.02}],
+    samples: 10000,
+    seed: 1,
+    checks: [
+      ["beta-taylor",2.336,"Hassan & Wolff (1999)",0.03],
+    ],
+    notes: [
+      "Hassan & Wolff's β on surface A (Table 7): MFOSM with F at the mean ± one standard deviation of each variable in turn and the lognormal index of their eq. (4), which is cSlope's Taylor series. The moments are Li & Lumb's (1987, p. 9): COV 20 % (c′), 5 % (γ), 10 % (tan φ′), 10 % (rᵤ). cSlope takes φ′ as the variable: ± 2.481° is half the difference between atan(1.1 tan 30°) and atan(0.9 tan 30°). With ± 3° (the program manuals' σ of φ′) β = 2.248.",
+      "Program manuals on their own surfaces: commercial program A 2.482 (Monte Carlo, F 1.340), commercial program B 2.32 (lognormal from its Monte Carlo, F 1.343). Li & Lumb's βHL = 2.50 (Hasofer–Lind, with spatial averaging of c′ and γ) is a different index.",
+    ],
+  },
 ];
