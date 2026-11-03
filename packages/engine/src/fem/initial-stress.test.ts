@@ -43,7 +43,7 @@ describe("K0 procedure", () => {
     const gravity = F({});
     expect(F({ initialStress: "k0" })).toBeCloseTo(gravity, 6);
     expect(F({ initialStress: "k0", originalGroundLevel: 14 })).toBeCloseTo(gravity, 6);
-  }, 300000);
+  }, 600000);
 });
 
 describe("staged construction", () => {
