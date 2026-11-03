@@ -87,6 +87,23 @@ describe("composite circles", () => {
     expect(circle(part, 32, 22, 23, { compositeBase: true }).fos).not.toBeNull();
   });
 
+  it("analyses the circle the search finds tangent to the bare base, also with rock elsewhere on the base", () => {
+    // rock on the base far from the slope; the circle dips 0.9 µm below the
+    // base, within the search's tolerance: a circle, not one through the base
+    const H = 5;
+    const mk = (m: object, extra = {}) => ({
+      coordinates: [[0, 0], [0, H], [2 * H, H], [4 * H, H / 2], [7 * H, H / 2], [7 * H, 0]],
+      materials: [{ ...clay, model: { ...clay.model, undrainedShearStrength: 10 } }, m],
+      materialBoundaries: [{ coordinates: [[6 * H, 0], [6 * H, 0.1 * H], [7 * H + 1, 0.1 * H]], materialName: "" }],
+      regionAssignments: [{ point: [1, H * 0.9], materialName: "Clay" }, { point: [6.5 * H, 0.05 * H], materialName: (m as { name: string }).name }],
+      ...extra,
+    }) as unknown as SlopeDefinition;
+    const sand = { name: "Sand", model: { kind: "mohr-coulomb", unitWeight: 24, cohesion: 50, frictionAngle: 40 } };
+    const fos = (m: object) => circle(mk(m), 14.97, 9.78 - 9e-7, 9.78, { slices: 30 }).fos;
+    expect(fos(rock)).not.toBeNull();
+    expect(fos(rock)).toBeCloseTo(fos(sand)!, 9);
+  });
+
   it("keeps the floor up to date when a region becomes rock", () => {
     const s = buildSlope(toCanonicalSlopeDefinition({ ...onRock, materials: [clay, { ...rock, name: "Sand", model: { kind: "mohr-coulomb", unitWeight: 19, cohesion: 0, frictionAngle: 35 } }], regionAssignments: [{ point: [1, 15], materialName: "Clay" }, { point: [1, 2], materialName: "Sand" }] } as unknown as SlopeDefinition));
     // no rock on the base: nothing to follow (the bare base is followed only with compositeBase)

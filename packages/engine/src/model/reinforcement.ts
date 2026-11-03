@@ -98,6 +98,36 @@ export function verticalStress(slope: Slope, x: number, y: number, effective: bo
   return Math.max(0, sigma - u);
 }
 
+/** cos 80°: the movement's component along an element that counts as pushing it. */
+const NEAR_NORMAL = Math.cos((80 * Math.PI) / 180);
+
+/** Whether a point lies below the ground surface. */
+function inSoil(slope: Slope, x: number, y: number): boolean {
+  const surf = slope.surfaceLineXY;
+  if (!surf) return true;
+  const g = getYAtX(surf.x, surf.y, x);
+  return !Number.isFinite(g) || y < g;
+}
+
+/** Stations (distance from end 1) where an element crosses the ground surface. */
+function groundCrossings(slope: Slope, r: Reinforcement, length: number): number[] {
+  const surf = slope.surfaceLineXY;
+  if (!surf || !(length > 0)) return [];
+  const out: number[] = [];
+  const ex = r.x2 - r.x1, ey = r.y2 - r.y1;
+  for (let i = 0; i + 1 < surf.x.length; i++) {
+    const bx = surf.x[i], by = surf.y[i];
+    const dx = surf.x[i + 1] - bx, dy = surf.y[i + 1] - by;
+    const den = dx * ey - dy * ex;
+    if (Math.abs(den) < 1e-14 * Math.max(1, Math.hypot(dx, dy) * length)) continue;
+    const qx = r.x1 - bx, qy = r.y1 - by;
+    const u = (qx * ey - qy * ex) / den;
+    const t = (qx * dy - qy * dx) / den;
+    if (u >= 0 && u <= 1 && t > 0 && t < 1) out.push(t * length);
+  }
+  return out;
+}
+
 /** Capacity envelope of an element in the slope (per element). */
 export function buildEnvelope(slope: Slope, r: Reinforcement): ReinforcementEnvelope {
   const length = Math.hypot(r.x2 - r.x1, r.y2 - r.y1);
@@ -121,15 +151,21 @@ export function buildEnvelope(slope: Slope, r: Reinforcement): ReinforcementEnve
     };
   }
   if (p.kind === "bond") {
-    // Constant bond over the bonded length at end 2 (default: all of it).
+    // Constant bond over the bonded length at end 2 (default: all of it),
+    // where the element is in the soil: a part in the air (a head beyond
+    // the face) develops nothing.
     const bonded = Math.min(length, p.bondedLength ?? length);
     const start = length - bonded;
-    return {
-      ...base,
-      anchored: false,
-      s: new Float64Array([0, start, length]),
-      fromEnd1: new Float64Array([0, 0, p.strength * bonded]),
-    };
+    const breaks = [0, start, length, ...groundCrossings(slope, r, length)].filter((v) => v >= 0 && v <= length);
+    const st = [...new Set(breaks)].sort((u, v) => u - v);
+    const fromEnd1 = new Float64Array(st.length);
+    for (let k = 1; k < st.length; k++) {
+      const mid = (st[k - 1] + st[k]) / 2;
+      const t = mid / length;
+      const rate = mid > start && inSoil(slope, r.x1 + t * (r.x2 - r.x1), r.y1 + t * (r.y2 - r.y1)) ? p.strength : 0;
+      fromEnd1[k] = fromEnd1[k - 1] + rate * (st[k] - st[k - 1]);
+    }
+    return { ...base, anchored: false, s: new Float64Array(st), fromEnd1 };
   }
   // Interface friction: r = 2(a + σ′v tan δ), integrated along the element.
   const n = Math.min(200, Math.max(20, Math.ceil(length / 0.1)));
@@ -290,8 +326,11 @@ export function applyReinforcement(
       const into = tx * ay - ty * ax > 0;
       const dx = into ? -ax : ax;
       const dy = into ? -ay : ay;
-      // Tension only: the movement must pull away from the stable part.
-      if (dx * tx + dy * ty >= 0) continue;
+      // Tension only: the movement must pull away from the stable part. An
+      // element within 10° of the normal to the base (the movement neither
+      // pulls nor pushes it appreciably) still carries its force, as
+      // commercial programs apply it whatever the angle.
+      if (dx * tx + dy * ty >= NEAR_NORMAL) continue;
       const magnitude = envelopeAt(env, t * env.length) / (r.spacing ?? 1);
       if (!(magnitude > 0)) continue;
       let fx: number;

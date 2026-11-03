@@ -13,6 +13,7 @@ import { getYAtX } from "../math/interpolation";
 import type { Material } from "../types/index";
 import type { Slope, SearchPlane } from "./slope";
 import { circleLeavesModel } from "./surface";
+import { circleBelowBareBase, floorDipTolerance } from "./composite";
 
 interface SearchGridSpec {
   numCircles: number;
@@ -110,10 +111,18 @@ export function isPlaneWithinExternalBoundary(
   /** Whether the circle itself stays inside, also with composite surfaces. */
   asCircle = false,
 ): boolean {
-  // A composite circle follows the base of the model where it would leave
-  // it (model/composite.ts); between its entry and exit on the ground it
-  // cannot leave the model otherwise.
-  if (!asCircle && slope.compositeSurfaces && slope.compositeFloor) return true;
+  // A composite circle follows the floor where it would leave the model
+  // (model/composite.ts): the top of rock on the base, and the base itself
+  // with compositeBase; between its entry and exit on the ground it cannot
+  // leave the model otherwise, except through the bare base (not followed).
+  const floor = !asCircle && slope.compositeSurfaces ? slope.compositeFloor : null;
+  if (floor) {
+    const [a, b] = [Math.min(plane.lc[0], plane.rc[0]), Math.max(plane.lc[0], plane.rc[0])];
+    return (
+      floor.bare.length === 0 ||
+      !circleBelowBareBase(floor, plane.cx, plane.cy, plane.radius, a, b, floorDipTolerance(slope.modelHeight))
+    );
+  }
   const xSpan = Math.abs(plane.rc[0] - plane.lc[0]);
   const sampleCount = Math.min(64, Math.max(12, Math.ceil(xSpan / 8)));
 
@@ -522,7 +531,9 @@ function generatePlanesWithScale(
     const plane = planeAt(chordToEdge);
     if (plane === "outside") {
       deepestOutside = chordToEdge;
-      if (composite) planes.push(outsidePlanes.get(chordToEdge)!);
+      // (one through the bare base, not followed, is no composite surface)
+      const outside = outsidePlanes.get(chordToEdge)!;
+      if (composite && isPlaneWithinExternalBoundary(slope, outside)) planes.push(outside);
       continue;
     }
     if (plane === null) continue;
@@ -916,6 +927,6 @@ export function addSingleCircularPlane(
       slices: null,
     };
 
-    slope.addIndividualPlanes([plane]);
+    slope.addIndividualPlanes([{ ...plane, unchecked: true }]);
   }
 }

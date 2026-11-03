@@ -60,6 +60,12 @@ export interface SearchPlane {
   fos: number | null;
   /** Slices for this surface (set after analysis). */
   slices: Slice[] | null;
+  /**
+   * A circle given directly (addSingleCircularPlane), not checked against
+   * the model's boundary when added: evaluatePlanes rejects it when it
+   * leaves the model where it is no composite surface.
+   */
+  unchecked?: true;
   /** Lambda-FS-FForce array for Morgenstern-Price. */
   lffArray?: [number, number, number, number][];
   /**

@@ -279,6 +279,53 @@ describe(".gsz import", () => {
     expect(b.definition.materials.find((m) => m.name === "Fill")!.model).toMatchObject({ kind: "hoek-brown", ucs: 20000, mb: 0.045, s: 1e-6 });
   });
 
+  it("imports anchors, nails, geosynthetics and piles (old files' reduction factors applied)", () => {
+    const reinf = (body: string) => `<Reinforcements Len="1"><Reinforcement><Name>R</Name><ID>1</ID>${body}</Reinforcement></Reinforcements><StabilityItems`;
+    const line = '<DataPoint Number="5" X="5" Y="10" /><DataPoint Number="6" X="10" Y="9" /><DataPoint Number="7" X="2" Y="7" />';
+    const lines = '<ReinforcementLines Len="1"><ReinforcementLine ID="1" Reinforcement="1" Point1Id="6" Point2Id="7" /></ReinforcementLines></Entry>';
+    const imp = (body: string) => {
+      const xml = XML.replace("<StabilityItems", reinf(body)).replace('<DataPoint Number="5" X="5" Y="10" />', line).replace("</Entry>", lines);
+      return gszToDefinition({ ...parseGszXml(xml), results: new Map() }, 1);
+    };
+    // an anchor: bond (a stress) over π × the diameter, over the bonded length; its head on the wall
+    const a = imp("<Spacing>2</Spacing><BondLength>3</BondLength><BondDiameter>0.31831</BondDiameter><TensileCapacity>2000</TensileCapacity><ReinforcementForceReductionFactor>2</ReinforcementForceReductionFactor><PulloutResistance>300</PulloutResistance><PulloutReductionFactor>1.5</PulloutReductionFactor><FofSDependent>true</FofSDependent>");
+    expect(a.definition.reinforcements).toHaveLength(1);
+    expect(a.definition.reinforcements![0]).toMatchObject({ x1: 10, y1: 9, x2: 2, y2: 7, tensileCapacity: 1000, spacing: 2, end1Capacity: 1000, direction: "axial", application: "passive" });
+    expect(a.definition.reinforcements![0].pullout).toMatchObject({ kind: "bond", bondedLength: 3 });
+    expect((a.definition.reinforcements![0].pullout as { strength: number }).strength).toBeCloseTo(200, 3);
+    expect(a.notes.join(" ")).toMatch(/Distributed reinforcement forces/);
+    // a nail without a plate: bond along all of it, nothing at the head
+    const n = imp("<Type>Nail</Type><Spacing>2</Spacing><BondDiameter>0.31831</BondDiameter><Tensile>200</Tensile><PulloutResistance>66.7</PulloutResistance><ForceDistribution>Concentrated</ForceDistribution>");
+    expect(n.definition.reinforcements![0]).toMatchObject({ end1Capacity: 0, application: "active" });
+    expect(n.definition.reinforcements![0].pullout).not.toHaveProperty("bondedLength");
+    expect(n.notes.join(" ")).not.toMatch(/Distributed/);
+    // a geosynthetic with the pullout from the overburden; along the slip surface
+    const g = imp("<Type>Geosynthetic</Type><CalculatedPulloutResistance>true</CalculatedPulloutResistance><InterfaceShearAngle>21</InterfaceShearAngle><SurfaceAreaFactor>1</SurfaceAreaFactor><Tensile>120</Tensile><PlateCapacity>120</PlateCapacity><ForceOrientation>1</ForceOrientation>");
+    expect(g.definition.reinforcements![0]).toMatchObject({ tensileCapacity: 120, end1Capacity: 120, direction: "tangent", pullout: { kind: "interface", adhesion: 0, frictionAngle: 21, coverage: 0.5 } });
+    expect(g.definition.reinforcements![0]).not.toHaveProperty("spacing");
+    // a pile: its shear force along the slip surface; an anchor with shear adds one
+    const p = imp("<Type>Pile</Type><Shear>50</Shear>");
+    expect(p.definition.reinforcements).toBeUndefined();
+    expect(p.definition.piles).toEqual([{ x1: 10, y1: 9, x2: 2, y2: 7, force: 50, direction: "tangent", application: "active" }]);
+    const s = imp("<Spacing>2</Spacing><Tensile>1000</Tensile><Shear>25</Shear>");
+    expect(s.definition.reinforcements).toHaveLength(1);
+    expect(s.definition.piles![0]).toMatchObject({ force: 25, spacing: 2 });
+    // a user-defined force is not imported
+    const u = imp("<Type>UserDefined</Type><ReinfForceVsDistanceFnNum>1</ReinfForceVsDistanceFnNum>");
+    expect(u.definition.reinforcements).toBeUndefined();
+    expect(u.notes.join(" ")).toMatch(/user-defined force/);
+  });
+
+  it("takes the circle's centre from its slices when the file reports the moment axis", async () => {
+    const { circleFromColumns } = await import("./gsz-read");
+    // a circle centred (40, 23), radius 26.5, from x 14.2 to 20
+    const y = (x: number) => 23 - Math.sqrt(26.5 ** 2 - (x - 40) ** 2);
+    const csv = ["ColumnNum,XLeft,XRight,YBackBotLeft,YBackBotRight", `1,14.2,15,${y(14.2)},${y(15)}`, `2,15,20,${y(15)},${y(20)}`].join("\n");
+    const c = circleFromColumns(csv, 26.5)!;
+    expect(c[0]).toBeCloseTo(40, 9);
+    expect(c[1]).toBeCloseTo(23, 9);
+  });
+
   it("imports and exports a tension crack at a limiting angle", async () => {
     // The file's angle is counter-clockwise from +x: 120° for sliding to
     // the right is a base inclination of 60° (the format's own example).

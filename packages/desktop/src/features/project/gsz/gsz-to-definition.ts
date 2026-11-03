@@ -6,9 +6,9 @@
  * `notes`, never dropped in silence.
  */
 
-import type { AnalysisOptions, MaterialModel, SlopeDefinition } from "@cslope/engine";
+import type { AnalysisOptions, MaterialModel, Pile, Reinforcement, SlopeDefinition } from "@cslope/engine";
 import { regionInteriorPoint } from "../../../utils/regions";
-import type { GszBlockGrid, GszFile, GszMaterial, GszSlipResult } from "./gsz-read";
+import type { GszBlockGrid, GszFile, GszMaterial, GszSlipResult, GszStability } from "./gsz-read";
 
 type Pt = [number, number];
 
@@ -26,6 +26,99 @@ export interface GszImport {
 const FT = 0.3048;
 const PCF = 0.157087463;
 const PSF = 0.0478802589;
+/** lbf → kN */
+const LBF = 0.00444822162;
+
+/**
+ * The reinforcement of an analysis as cSlope elements. Anchors and nails
+ * pull along themselves, from end 1 (the head), with the bond resistance
+ * (a stress) over the bond's circumference (π × the bond diameter) along
+ * the bonded length (anchors: at the embedded end) or the whole length
+ * (nails); the plate capacity anchors the head. Geosynthetics take the
+ * pullout resistance per metre of length and width as given, or from the
+ * overburden (adhesion, interface angle, surface area factor). Piles, and
+ * anchors or nails with a shear force, resist with that shear force along
+ * the slip surface. "F of S dependent" elements are passive (divided by
+ * F), the others active.
+ */
+function reinforcementOf(
+  file: GszFile,
+  stab: GszStability | undefined,
+  scale: { len: number; stress: number },
+  imperial: boolean,
+  notes: string[],
+): { reinforcements: Reinforcement[]; piles: Pile[] } {
+  const reinforcements: Reinforcement[] = [];
+  const piles: Pile[] = [];
+  const force = imperial ? LBF : 1;
+  const perLength = imperial ? PSF * FT : 1; // lbf/ft → kN/m
+  const said = new Set<string>();
+  const once = (n: string) => {
+    if (!said.has(n)) notes.push(n);
+    said.add(n);
+  };
+  for (const line of stab?.reinforcementLines ?? []) {
+    const r = file.reinforcements?.get(line.reinforcement);
+    if (!r) continue;
+    const [x1, y1] = [line.p1[0] * scale.len, line.p1[1] * scale.len];
+    const [x2, y2] = [line.p2[0] * scale.len, line.p2[1] * scale.len];
+    const application = r.fosDependent ? ("passive" as const) : ("active" as const);
+    const type = r.type.toLowerCase();
+    const sheet = type === "geosynthetic";
+    const spacing = !sheet && r.spacing !== undefined && r.spacing > 0 ? r.spacing * scale.len : undefined;
+    if (type === "userdefined") {
+      once(`Reinforcement "${r.name}": a user-defined force (a function of distance) is not imported.`);
+      continue;
+    }
+    if (type === "pile" || (r.shear !== undefined && r.shear > 0)) {
+      if (r.shear !== undefined && r.shear > 0) {
+        piles.push({ x1, y1, x2, y2, force: r.shear * force, ...(spacing ? { spacing } : {}), direction: "tangent", application });
+      }
+      if (type === "pile") continue;
+    }
+    const orientation = r.orientation ?? 0;
+    const direction = orientation <= 0.25 ? "axial" : orientation >= 0.75 ? "tangent" : "bisector";
+    if (orientation !== 0 && orientation !== 0.5 && orientation !== 1) {
+      once(`Reinforcement "${r.name}": the force orientation ${orientation} (0: along the reinforcement, 1: along the slip surface) is imported as ${direction}.`);
+    }
+    const big = 1e12;
+    if (sheet) {
+      const pullout: Reinforcement["pullout"] = r.calculatedPullout
+        ? { kind: "interface", adhesion: (r.adhesion ?? 0) * scale.stress, frictionAngle: r.interfaceAngle ?? 0, coverage: (r.surfaceAreaFactor ?? 2) / 2 }
+        : r.pullout !== undefined ? { kind: "bond", strength: r.pullout * scale.stress } : undefined;
+      reinforcements.push({
+        x1, y1, x2, y2,
+        tensileCapacity: r.tensile !== undefined ? r.tensile * perLength : big,
+        ...(pullout ? { pullout } : {}),
+        end1Capacity: (r.plate ?? 0) * perLength,
+        direction, application,
+      });
+    } else {
+      // the bond resistance per metre of the element
+      const circumference = r.bondDiameter !== undefined && r.bondDiameter > 0 ? Math.PI * r.bondDiameter * scale.len : 1;
+      const strength = r.pullout !== undefined ? r.pullout * scale.stress * circumference : undefined;
+      const anchor = type !== "nail";
+      const bonded = anchor && r.bondLength !== undefined && r.bondLength > 0 ? r.bondLength * scale.len : undefined;
+      const tensile = r.tensile !== undefined ? r.tensile * force : big;
+      reinforcements.push({
+        x1, y1, x2, y2,
+        tensileCapacity: tensile,
+        ...(spacing ? { spacing } : {}),
+        ...(strength !== undefined ? { pullout: { kind: "bond" as const, strength, ...(bonded ? { bondedLength: bonded } : {}) } } : {}),
+        // an anchor's head bears on the wall: its plate, or the tendon
+        end1Capacity: r.plate !== undefined ? r.plate * force : anchor ? tensile : 0,
+        direction, application,
+      });
+    }
+    if (r.distribution !== "Concentrated") {
+      once("Distributed reinforcement forces (spread over the slices the reinforcement crosses) are applied where the slip surface crosses it.");
+    }
+  }
+  if (reinforcements.length + piles.length > 0) {
+    notes.push(`The reinforcement is imported: ${reinforcements.length} element${reinforcements.length === 1 ? "" : "s"}${piles.length > 0 ? ` and ${piles.length} shear force${piles.length === 1 ? "" : "s"} (piles)` : ""}.`);
+  }
+  return { reinforcements, piles };
+}
 
 const isStability = (kind: string) => /slope/i.test(kind);
 
@@ -533,6 +626,8 @@ export function gszToDefinition(file: GszFile, analysisId: number, fileName = "g
     notes.push(`The seismic coefficients (kh = ${stab.seismicH}, kv = ${stab.seismicV}) are not imported.`);
   }
 
+  const { reinforcements, piles } = reinforcementOf(file, stab, scale, imperial, notes);
+
   const regionAssignments = geo.rings.map((r) => {
     const pt = regionInteriorPoint(r.pts.map((p) => p[0]), r.pts.map((p) => p[1]));
     return { point: pt, materialName: nameOf.get(assign.get(r.id)!)! };
@@ -555,6 +650,8 @@ export function gszToDefinition(file: GszFile, analysisId: number, fileName = "g
     ...(waterTables.length > 0 ? { waterTables } : {}),
     udls,
     lineLoads,
+    ...(reinforcements.length > 0 ? { reinforcements } : {}),
+    ...(piles.length > 0 ? { piles } : {}),
     ...(analysisLimits ? { analysisLimits } : {}),
     ...(reference ? { customSearchPlanes: [{ cx: reference.cx, cy: reference.cy, radius: reference.r }] } : {}),
     ...(customSurfaces.length > 0 ? { customSurfaces, customPlanesOnly: true } : {}),

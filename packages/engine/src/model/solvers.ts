@@ -1118,7 +1118,7 @@ function evaluatePlanes(slope: Slope, allPlanes: SearchPlane[]): void {
     delete plane.composite;
     // A circle given directly (addSingleCircularPlane) that leaves the
     // model where it is no composite surface.
-    if (!plane.points && !isPlaneWithinExternalBoundary(slope, plane)) {
+    if (plane.unchecked && !plane.points && !isPlaneWithinExternalBoundary(slope, plane)) {
       plane.fos = null;
       continue;
     }

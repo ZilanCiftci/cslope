@@ -96,7 +96,7 @@ export const APP_DEFAULT_ANALYSIS_OPTIONS: AnalysisOptions = {
   slices: 30,
   iterations: 1000,
   refinedIterations: 500,
-  // circles follow bedrock and the model base (a project saved before the
+  // circles follow bedrock, not the bare model base (a project saved before the
   // option existed keeps circles only, see persistence)
   compositeSurfaces: true,
 };

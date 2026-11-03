@@ -17,7 +17,7 @@ import type { Slope } from "./slope";
 import type { Udl } from "../types/loads";
 import { materialLayerTopAt, polylineYFrom } from "./geometry-ops";
 import { polylineCrossingsX, polylineYAt, type Pt } from "./surface";
-import { floorYAt } from "./composite";
+import { floorDipTolerance, floorYAt } from "./composite";
 import { applyReinforcement } from "./reinforcement";
 
 // ── createSlice ───────────────────────────────────────────────────
@@ -653,7 +653,7 @@ export function getSlices(
     // A circle that dips below the floor by less than this (a circle
     // tangent to it, to rounding) stays a circle; the checks below that
     // reject a base outside the model lift by more.
-    const dipTol = 1e-7 * Math.max(1, slope.modelHeight);
+    const dipTol = floorDipTolerance(slope.modelHeight);
     const xTol = 1e-9 * Math.max(1, radius);
     for (let k = 0; k + 1 < ends.length; k++) {
       const a = ends[k], b = ends[k + 1];

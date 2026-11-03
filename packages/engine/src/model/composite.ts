@@ -121,6 +121,50 @@ export function compositeFloor(
   return pts.length >= 2 ? { pts, bare } : null;
 }
 
+/**
+ * How far a circle may dip below the floor and still count as a circle
+ * (tangent to it, to rounding): the same tolerance as the search's check
+ * that a circle stays inside the model (search.ts), so that the circle the
+ * search finds tangent to the base is analysed as a circle.
+ */
+export function floorDipTolerance(modelHeight: number): number {
+  return 1e-6 * Math.max(1, modelHeight);
+}
+
+/**
+ * Whether the circle (its lower arc between x0 and x1) goes below the
+ * floor by more than `tol` where the floor is the bare base of the model
+ * (not followed: the circle leaves the model there).
+ */
+export function circleBelowBareBase(
+  floor: CompositeFloor,
+  cx: number, cy: number, radius: number,
+  x0: number, x1: number,
+  tol: number,
+): boolean {
+  const arc = (x: number) => cy - Math.sqrt(Math.max(0, radius * radius - (x - cx) * (x - cx)));
+  const p = floor.pts;
+  for (const [u, v] of floor.bare) {
+    for (let i = 0; i + 1 < p.length; i++) {
+      const a = Math.max(u, x0, p[i][0]), b = Math.min(v, x1, p[i + 1][0]);
+      if (!(b > a)) continue;
+      // arc − floor is convex on a straight floor segment: its minimum by
+      // golden-section search
+      const [ax, ay] = p[i], [bx, by] = p[i + 1];
+      const gap = (x: number) => arc(x) - (ay + ((x - ax) / (bx - ax)) * (by - ay));
+      let lo = a, hi = b;
+      const g = (Math.sqrt(5) - 1) / 2;
+      for (let k = 0; k < 60 && hi - lo > 1e-12 * Math.max(1, radius); k++) {
+        const m1 = hi - g * (hi - lo), m2 = lo + g * (hi - lo);
+        if (gap(m1) < gap(m2)) hi = m2;
+        else lo = m1;
+      }
+      if (Math.min(gap(a), gap(b), gap((lo + hi) / 2)) < -tol) return true;
+    }
+  }
+  return false;
+}
+
 /** The floor's y at x from the given side of a step (NaN outside it). */
 export function floorYAt(floor: CompositeFloor, x: number, side: "left" | "right" = "left"): number {
   const p = floor.pts;

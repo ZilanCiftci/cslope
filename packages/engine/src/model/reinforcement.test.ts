@@ -165,6 +165,17 @@ describe("Capacity envelope", () => {
     expect(pulloutBeyond(inside, 0)).toBeCloseTo(2 * 10 * 15, 6);
   });
 
+  it("no bond outside the soil (a head beyond the face)", () => {
+    // From the air at x = 25 (the face is at x = 15 at y = 5) to x = 0.
+    const env = buildEnvelope(slope, { x1: 25, y1: 5, x2: 0, y2: 5, tensileCapacity: 1e6, pullout: { kind: "bond", strength: 20 } });
+    expect(pulloutBeyond(env, 0)).toBeCloseTo(20 * 15, 9);
+    // crossed 2 m inside the face: 2 m of bond in front, 13 m behind
+    expect(envelopeAt(env, 12)).toBeCloseTo(40, 9);
+    // the bonded length at end 2 is unaffected
+    const tieback = buildEnvelope(slope, { x1: 25, y1: 5, x2: 0, y2: 5, tensileCapacity: 1e6, pullout: { kind: "bond", strength: 20, bondedLength: 4 } });
+    expect(pulloutBeyond(tieback, 12)).toBeCloseTo(80, 9);
+  });
+
   it("ponded water weighs on the overburden", () => {
     // Flat ground at 10, pond to 12: σ′v at depth 5 = 100 + 2·γw − 7·γw.
     const def = layered([[0, 10], [40, 10]], -10, [{ name: "S", topY: null, model: mc(0, 30, 20) }], {
