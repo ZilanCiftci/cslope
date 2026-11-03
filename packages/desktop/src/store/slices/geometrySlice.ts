@@ -688,6 +688,17 @@ export const createGeometrySlice: SliceCreator<GeometrySlice> = (set, get) => ({
     get().invalidateAnalysis();
   },
 
+  setPiezoRapidDrawdown: (rapidDrawdown) => {
+    set((s) => {
+      const { rapidDrawdown: _old, ...rest } = s.piezometricLine;
+      void _old;
+      return syncActiveModel(s, {
+        piezometricLine: rapidDrawdown ? { ...rest, rapidDrawdown } : rest,
+      });
+    });
+    get().invalidateAnalysis();
+  },
+
   enablePiezoWithDefault: () => {
     const s = get();
     if (s.piezometricLine.lines.length > 0) return;

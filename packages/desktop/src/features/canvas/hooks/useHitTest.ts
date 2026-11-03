@@ -4,6 +4,7 @@ import { computeRegions, isClosedBoundary } from "../../../utils/regions";
 import type { AppState } from "../../../store/types";
 import { EDGE_THRESHOLD, SNAP_THRESHOLD } from "../constants";
 import { loadArrowLifts } from "../overlay-geometry";
+import { lineLoadArrow } from "../../rendering/overlay-layout";
 import type { EdgeHit, LimitHandle, PointHit, UdlHandle } from "../types";
 
 function pointToSegmentDist(
@@ -206,10 +207,24 @@ export function useHitTest({
       // Line load arrows (only active when loads enabled and Load panel is open)
       if (lineLoads.length > 0 && lifts) {
         for (const ll of lineLoads) {
-          const ly = surfaceYAtX(ll.x);
-          if (ly === null) continue;
-          const [px, py] = worldToCanvas(ll.x, ly, rect.width, rect.height);
-          const topPy = py - (lifts.lineLoad.get(ll.id) ?? 0);
+          const arrow = lineLoadArrow(
+            ll,
+            (x, y) => worldToCanvas(x, y, rect.width, rect.height),
+            surfaceYAtX,
+            lifts.lineLoad.get(ll.id) ?? 0,
+          );
+          if (!arrow) continue;
+          if (arrow.inclined) {
+            // along the inclined shaft
+            const [tx, ty] = arrow.tail;
+            const [hx, hy] = arrow.tip;
+            if (pointToSegmentDist(mx, my, tx, ty, hx, hy).dist < SNAP_THRESHOLD + 4) {
+              return { kind: "lineLoad", loadId: ll.id };
+            }
+            continue;
+          }
+          const [px, py] = arrow.tip;
+          const topPy = arrow.tail[1];
           if (
             Math.abs(px - mx) < SNAP_THRESHOLD + 4 &&
             my >= topPy - 4 &&

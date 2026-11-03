@@ -100,7 +100,18 @@ export interface SlopeDefinition {
   /** UDL loads. */
   udls?: Array<{ magnitude: number; x1: number; x2: number; direction?: "vertical" | "normal" }>;
   /** Line loads (point loads). */
-  lineLoads?: Array<{ magnitude: number; x: number }>;
+  /**
+   * Line loads; `angle`: inclination from the downward vertical (°),
+   * positive towards +x; `y`: the elevation of the load point (a point on a
+   * wall face; default the ground at x).
+   */
+  lineLoads?: Array<{ magnitude: number; x: number; angle?: number; y?: number }>;
+  /**
+   * Rapid drawdown (three-stage, model/drawdown.ts): the water table before
+   * drawdown, for all materials (the model's own water is the state after
+   * it). The materials with a drawdown envelope do not drain.
+   */
+  rapidDrawdown?: { waterBefore: [number, number][] };
   /** Reinforcement: anchors, tiebacks, soil nails, geosynthetics. */
   reinforcements?: Reinforcement[];
   /** Pile rows and sheet pile walls (shear). */

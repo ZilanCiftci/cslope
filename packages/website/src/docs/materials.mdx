@@ -24,6 +24,8 @@ Choose the model in the **Material Model** list. Changing the model resets the s
 | **Anisotropic Function** | γ, φ, c, φb, Max suction, modifier table | Strength that depends on the inclination of the slip surface. |
 | **Spatial Mohr-Coulomb** | γ, interpolation, data points | Strength that varies from point to point in the section. |
 | **Lime-cement columns** | γ, area ratio, soil and column strengths | Ground improved with lime-cement columns. |
+| **SHANSEP** | γ, S, m, OCR or OCR against elevation, or Su against σ′v, Min Su | Undrained strength from the effective vertical stress and the stress history. |
+| **Shear-normal function** | γ, points (σ′n, τ) | A curved strength envelope given as points. |
 | **High Strength** | γ | Strong material that may lie in the sliding mass; slip surfaces may not run through it. |
 | **Impenetrable (Bedrock)** | γ | Material slip surfaces cannot enter. |
 
@@ -85,6 +87,28 @@ $$
 $$
 
 where **Area ratio a** is the share of the area taken by columns (0–1). The soil strength is **Su soil**, increasing by **Su soil increase** per metre below **Su soil at level**; the column strength is **Su columns**. Tick **Drained limit of the column strength** to also limit the column strength by drained parameters **c′ columns** and **φ′ columns**. The cutoff applies to the soil between the columns only. With [partial factors](/docs/analysis#partial-factors), each part takes its own factor: the undrained strength of soil and columns is divided by γcu, c′ columns by γc' and tan φ′ columns by γφ′.
+
+### SHANSEP
+
+The undrained strength at the base of each slice follows from the effective vertical stress there and the stress history (Ladd & Foott 1974):
+
+$$
+S_u = \sigma'_v \, S \, \mathrm{OCR}^m
+$$
+
+**S** is $S_u/\sigma'_v$ of the normally consolidated soil and **m** the exponent (often 0.8). **OCR** is a constant or a table against elevation; alternatively **Su against σ′v** gives the strength directly from the stress. $\sigma'_v$ is the weight of the slice and the loads on it per metre of width less the pore pressure at its base, so a fill on the clay raises the strength under it and a higher water table lowers it. **Min Su** is a lower limit. The tables are interpolated linearly, or with a cubic spline when the model is imported with one.
+
+### Shear-normal function
+
+The shear strength against the effective normal stress, $\tau = f(\sigma'_n)$, as points; linear between them or a cubic spline, the end segments extended. Each slice base takes the tangent c and φ of the curve at its normal stress, which the analysis updates from the normal stress it finds until the factor of safety settles, as for Hoek-Brown.
+
+### Pore pressure from a fill (B̄)
+
+**B̄** on a material raises the pore pressure at a slice base in it by $\bar B$ times the vertical stress of the fills above it: the materials ticked **Weight raises pore pressure below (fill, B̄)**. This is the short-term pore pressure of a soft foundation under a new embankment (Skempton 1954). It adds to the pore pressure of the material's water line.
+
+### Drawdown envelope (rapid drawdown)
+
+A Mohr-Coulomb material can have a **drawdown (R) envelope** cR, φR: the total-stress envelope of isotropically consolidated undrained tests. In a [rapid drawdown analysis](/docs/water#rapid-drawdown) such a soil does not drain; without the envelope it is free-draining.
 
 ### High Strength and Bedrock
 

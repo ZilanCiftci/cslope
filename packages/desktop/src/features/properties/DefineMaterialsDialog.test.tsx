@@ -24,7 +24,7 @@ async function setField(label: string, text: string) {
 }
 
 const kindSelect = () =>
-  screen.getByDisplayValue(/Mohr-Coulomb|Undrained|High|Impenetrable|Spatial|Anisotropic|S = f|Lime|Bedrock|function/i) as HTMLSelectElement;
+  screen.getByDisplayValue(/Mohr-Coulomb|Undrained|High|Impenetrable|Spatial|Anisotropic|S = f|Lime|Bedrock|function|SHANSEP/i) as HTMLSelectElement;
 
 beforeEach(() => {
   store().newProject();
@@ -438,5 +438,58 @@ describe("DefineMaterialsDialog — switching the model", () => {
     const alert = screen.getByRole("alert", { name: "Validation errors" });
     expect(alert).toHaveTextContent("Cohesion (c) must be ≥ 0.");
     expect(screen.getByLabelText("c (kPa)")).toHaveAttribute("aria-invalid", "true");
+  });
+});
+
+describe("DefineMaterialsDialog — SHANSEP, shear-normal and B̄", () => {
+  it("switches to SHANSEP, edits S, m and OCR, and turns on Su against σ′v", async () => {
+    render(<DefineMaterialsDialog onClose={() => {}} />);
+    await userEvent.selectOptions(kindSelect(), "shansep");
+    expect(model()).toMatchObject({ kind: "shansep", ratio: 0.25, exponent: 0.8, ocr: 1 });
+    await setField("S (Su/σ′v)", "0.3");
+    await setField("m (exponent)", "0.7");
+    await setField("OCR", "1.5");
+    expect(model()).toMatchObject({ ratio: 0.3, exponent: 0.7, ocr: 1.5 });
+    await userEvent.click(screen.getByLabelText("OCR against elevation"));
+    expect(screen.queryByLabelText("OCR")).toBeNull();
+    expect(model()).toMatchObject({ ocrByElevation: [[0, 1.5], [10, 1.5]] });
+    await userEvent.click(screen.getByLabelText("Su against σ′v"));
+    expect(screen.queryByLabelText("S (Su/σ′v)")).toBeNull();
+    expect(model()).toMatchObject({ suByStress: [[0, 0], [100, 30]] });
+    await userEvent.click(screen.getByLabelText("Su against σ′v"));
+    expect((model() as { suByStress?: unknown }).suByStress).toBeUndefined();
+    expect(screen.queryByRole("alert", { name: "Validation errors" })).toBeNull();
+  });
+
+  it("switches to a shear-normal function with its default points", async () => {
+    render(<DefineMaterialsDialog onClose={() => {}} />);
+    await userEvent.selectOptions(kindSelect(), "shear-normal");
+    expect(model()).toMatchObject({ kind: "shear-normal", points: [[0, 0], [100, 60], [300, 150]] });
+    expect(screen.getByText("σ′n (kPa)")).toBeInTheDocument();
+  });
+
+  it("edits B̄ and the fill flag, and keeps them when the model is switched", async () => {
+    render(<DefineMaterialsDialog onClose={() => {}} />);
+    await userEvent.type(screen.getByLabelText("B̄ (excess pore pressure from fill)"), "0.8");
+    await userEvent.click(screen.getByLabelText("Weight raises pore pressure below (fill, B̄)"));
+    expect(model()).toMatchObject({ bBar: 0.8, bBarLoad: true });
+    await userEvent.selectOptions(kindSelect(), "shansep");
+    expect(model()).toMatchObject({ kind: "shansep", bBar: 0.8, bBarLoad: true });
+    await userEvent.clear(screen.getByLabelText("B̄ (excess pore pressure from fill)"));
+    await userEvent.click(screen.getByLabelText("Weight raises pore pressure below (fill, B̄)"));
+    expect(model().bBar).toBeUndefined();
+    expect(model().bBarLoad).toBeUndefined();
+  });
+
+  it("turns on the drawdown (R) envelope of a Mohr-Coulomb material, edits cR and φR, and turns it off", async () => {
+    render(<DefineMaterialsDialog onClose={() => {}} />);
+    expect(screen.queryByLabelText("cR (kPa)")).toBeNull();
+    await userEvent.click(screen.getByLabelText("Undrained in rapid drawdown (R envelope)"));
+    await setField("cR (kPa)", "12");
+    await setField("φR (°)", "16");
+    expect(model()).toMatchObject({ kind: "mohr-coulomb", drawdownStrength: { cohesion: 12, frictionAngle: 16 } });
+    await userEvent.click(screen.getByLabelText("Undrained in rapid drawdown (R envelope)"));
+    expect(model().kind === "mohr-coulomb" && model().drawdownStrength).toBeFalsy();
+    expect(screen.queryByLabelText("cR (kPa)")).toBeNull();
   });
 });

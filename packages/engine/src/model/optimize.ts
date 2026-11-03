@@ -25,6 +25,7 @@
  */
 
 import { resolveStrength, type GeometryWithMaterial } from "../types/index";
+import { effectiveVerticalStress } from "./reinforcement";
 import type { Slope, SearchPlane } from "./slope";
 import { circleToPolyline, isAdmissiblePolyline, type Pt } from "./surface";
 
@@ -248,7 +249,7 @@ function layerSeeds(slope: Slope, evaluate: Evaluate): { points: Pt[]; axis: Pt;
   const geometries = slope.materialGeometries;
   /** c and φ (rad) of a material at the point (x, y), as the slices see them. */
   const params = (m: GeometryWithMaterial, x: number, y: number, g: number) => {
-    const r = resolveStrength(m.material.model, { yBottom: y, x, yGround: g, alpha: 0 });
+    const r = resolveStrength(m.material.model, { yBottom: y, x, yGround: g, alpha: 0, ...(m.material.model.kind === "shansep" ? { effectiveVerticalStress: effectiveVerticalStress(slope, x, y) } : {}) });
     return { c: r.cohesion, phi: (r.frictionAngle * Math.PI) / 180 };
   };
   /**

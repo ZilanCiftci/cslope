@@ -24,7 +24,7 @@ import { groundBetween, slipMassPolygon } from "../../utils/slip-mass";
 import { surfaceYAtX } from "../view/surface";
 import { boxesOverlap, type Box } from "../canvas/label-layout";
 import { ARROW_HEAD_PX, ARROW_HEIGHT_PX } from "../canvas/constants";
-import { polylineSegments, segmentHitsBox, type Seg } from "./overlay-layout";
+import { lineLoadArrow, polylineSegments, segmentHitsBox, type Seg } from "./overlay-layout";
 import { layoutLimitMarkers, layoutRangeDots } from "./search-markers";
 import type { MarkerDot } from "../canvas/marker-geometry";
 import {
@@ -296,7 +296,7 @@ export interface PiezoScene {
   /** Material boundaries: better not crossed. */
   materialBoundaries?: readonly { coordinates: readonly Pt[] }[];
   udls?: readonly { x1: number; x2: number; magnitude: number }[];
-  lineLoads?: readonly { x: number; magnitude: number }[];
+  lineLoads?: readonly { x: number; magnitude: number; angle?: number; y?: number }[];
   /** The search limits as drawn (null or disabled: none). */
   analysisLimits?: AnalysisLimitsState | null;
   /** Prescribed surfaces drawn (the edit view). */
@@ -356,10 +356,12 @@ export function piezoObstacles(scene: PiezoScene, toD: (x: number, y: number) =>
     avoid.push(box(Math.min(...xs) - head, Math.min(...ys) - arrowH - labelRoom, Math.max(...xs) + head, Math.max(...ys)));
   }
   for (const l of scene.lineLoads ?? []) {
-    const gy = surfaceYAtX(coordinates as Pt[], l.x);
-    if (gy === null) continue;
-    const [cx, cy] = toD(l.x, gy);
-    avoid.push(box(cx - ARROW_HEAD_PX * unit, cy - arrowH - labelRoom, cx + ARROW_HEAD_PX * unit, cy));
+    const arrow = lineLoadArrow(l, toD, (x) => surfaceYAtX(coordinates as Pt[], x), arrowH);
+    if (!arrow) continue;
+    const [cx, cy] = arrow.tip;
+    const [tx, ty] = arrow.tail;
+    const head = ARROW_HEAD_PX * unit;
+    avoid.push(box(Math.min(cx, tx) - head, Math.min(cy, ty) - labelRoom, Math.max(cx, tx) + head, Math.max(cy, ty)));
   }
   const lim = scene.analysisLimits;
   if (lim?.enabled && coordinates.length >= 3) {

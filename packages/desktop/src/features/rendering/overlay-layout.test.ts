@@ -4,6 +4,7 @@ import {
   formatMagnitude,
   formatRange,
   groupTouchingStrips,
+  lineLoadArrow,
   loadHeightFraction,
   placeLabel,
   segmentBoxGap,
@@ -71,6 +72,29 @@ describe("arrowEdges and loadHeightFraction", () => {
     expect(loadHeightFraction(20, 40)).toBe(0.5);
     expect(loadHeightFraction(1, 40)).toBe(0.4);
     expect(loadHeightFraction(5, 0)).toBe(1);
+  });
+});
+
+describe("lineLoadArrow", () => {
+  // world to drawing: 10 units per metre, y down
+  const toD = (x: number, y: number): [number, number] => [10 * x, -10 * y];
+  const ground = (x: number) => (x >= 0 && x <= 10 ? 5 : null);
+
+  it("puts a vertical arrow's tail straight above its tip on the ground", () => {
+    expect(lineLoadArrow({ x: 2, y: 1 }, toD, ground, 30)).toEqual({ tip: [20, -50], tail: [20, -80], inclined: false });
+    expect(lineLoadArrow({ x: 20 }, toD, ground, 30)).toBeNull();
+  });
+
+  it("points an inclined arrow along the load, its tip at the given point", () => {
+    const right = lineLoadArrow({ x: 2, angle: 90, y: 3 }, toD, ground, 30)!;
+    expect(right.inclined).toBe(true);
+    expect(right.tip).toEqual([20, -30]);
+    expect(right.tail[0]).toBeCloseTo(-10, 9);
+    expect(right.tail[1]).toBeCloseTo(-30, 9);
+    const left = lineLoadArrow({ x: 2, angle: -45 }, toD, ground, 30)!;
+    expect(left.tip).toEqual([20, -50]);
+    expect(left.tail[0]).toBeCloseTo(20 + 30 * Math.SQRT1_2, 9);
+    expect(left.tail[1]).toBeCloseTo(-50 - 30 * Math.SQRT1_2, 9);
   });
 });
 

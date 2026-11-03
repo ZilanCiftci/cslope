@@ -153,6 +153,40 @@ export function loadHeightFraction(q: number, qMax: number, min = 0.4): number {
   return Math.max(min, Math.min(1, Math.abs(q) / qMax));
 }
 
+/** A line load's arrow in drawing units: the tip at the load point, the tail `length` back. */
+export interface LineLoadArrowGeometry {
+  tip: Pt;
+  tail: Pt;
+  /** Not vertical: the tail is not straight above the tip. */
+  inclined: boolean;
+}
+
+/**
+ * Where a line load's arrow goes: the tip at the load point (the ground at
+ * x, or the given elevation of an inclined load on a wall face), the tail
+ * `length` back against the load's direction (its angle from the downward
+ * vertical, positive towards +x). A vertical load's tail is straight above
+ * the tip. Null when the point is off the model.
+ */
+export function lineLoadArrow(
+  load: { x: number; angle?: number; y?: number },
+  toD: (x: number, y: number) => Pt,
+  groundY: (x: number) => number | null,
+  length: number,
+): LineLoadArrowGeometry | null {
+  const a = Number.isFinite(load.angle) && load.angle !== 0 ? (load.angle! * Math.PI) / 180 : 0;
+  const wy = a !== 0 && Number.isFinite(load.y) ? load.y! : groundY(load.x);
+  if (wy === null) return null;
+  const tip = toD(load.x, wy);
+  if (a === 0) return { tip, tail: [tip[0], tip[1] - length], inclined: false };
+  // the direction in drawing units, from a step along it in the world
+  const ahead = toD(load.x + Math.sin(a), wy - Math.cos(a));
+  const dx = ahead[0] - tip[0];
+  const dy = ahead[1] - tip[1];
+  const d = Math.hypot(dx, dy) || 1;
+  return { tip, tail: [tip[0] - (dx / d) * length, tip[1] - (dy / d) * length], inclined: true };
+}
+
 export interface StripGroup<T> {
   /** Strips left to right. */
   strips: T[];

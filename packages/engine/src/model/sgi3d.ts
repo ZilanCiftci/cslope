@@ -29,6 +29,7 @@ import type { Sgi3dOptions, Sgi3dResult, Sgi3dSurface } from "../types/sgi3d";
 import { getYAtX } from "../math/interpolation";
 import { isPointInPolygon } from "../math/polygon";
 import { designStrength, needsLayerTop, resolveStrength, resolveUnitWeight } from "../types/strength";
+import { effectiveVerticalStress } from "./reinforcement";
 import { materialLayerTopAt } from "./geometry-ops";
 
 /**
@@ -90,7 +91,7 @@ export function sgi3dFactorOfSafety(slope: Slope, options: Sgi3dOptions): Sgi3dR
       let c = 0;
       if (!exclude.has(m.name)) {
         const yLayerTop = needsLayerTop(model) ? (materialLayerTopAt(geos, m, x, y) ?? undefined) : undefined;
-        const st = resolveStrength(model, { yBottom: y, x, yGround, yLayerTop, alpha: 0 });
+        const st = resolveStrength(model, { yBottom: y, x, yGround, yLayerTop, alpha: 0, ...(model.kind === "shansep" ? { effectiveVerticalStress: effectiveVerticalStress(slope, x, y) } : {}) });
         const d = designStrength(model.kind, st, f);
         if (d.undrained && Number.isFinite(d.cohesion)) c = d.cohesion;
         // combined clay: the end faces of a temporary slope take its undrained strength
@@ -134,7 +135,7 @@ export function sgi3dFactorOfSafety(slope: Slope, options: Sgi3dOptions): Sgi3dR
     }
     for (const l of slope.lineLoads) {
       const dx = l.x - p.cx;
-      if (dx * dx < r2 && l.x >= xa && l.x <= xb && p.cy - Math.sqrt(r2 - dx * dx) < getYAtX(surf.x, surf.y, l.x)) me += l.magnitude * qf * dx;
+      if (dx * dx < r2 && l.x >= xa && l.x <= xb && p.cy - Math.sqrt(r2 - dx * dx) < getYAtX(surf.x, surf.y, l.x)) me += l.magnitude * Math.cos((l.angle * Math.PI) / 180) * qf * dx;
     }
     me = Math.abs(me);
     if (!(me > 0)) return null;

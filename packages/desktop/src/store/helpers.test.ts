@@ -230,6 +230,21 @@ describe("buildSlopeDTO", () => {
     expect(dto.lineLoads!.length).toBe(1);
   });
 
+  it("passes an inclined line load's angle and point y on, not those of a vertical one", () => {
+    const state = makeMinimalState({
+      lineLoads: [
+        { id: "l1", magnitude: 25, x: 5, y: 3 },
+        { id: "l2", magnitude: 10, x: 2, angle: 90, y: 4 },
+        { id: "l3", magnitude: 10, x: 2, angle: -20 },
+      ],
+    } as Partial<AppState>);
+    expect(buildSlopeDTO(state).lineLoads).toEqual([
+      { magnitude: 25, x: 5 },
+      { magnitude: 10, x: 2, angle: 90, y: 4 },
+      { magnitude: 10, x: 2, angle: -20 },
+    ]);
+  });
+
   it("does not include line loads when empty", () => {
     const state = makeMinimalState({ lineLoads: [] });
     const dto = buildSlopeDTO(state);

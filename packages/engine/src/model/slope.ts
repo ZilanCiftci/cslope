@@ -209,6 +209,11 @@ export class Slope {
   private _tensionCrackAngle: number;
   private _compositeSurfaces = true;
   private _compositeBase = false;
+  private _drawdownBefore: Slope | null = null;
+  /** The analysis options given so far (for the model before drawdown). */
+  private _optionsGiven: Partial<AnalysisOptions> = {};
+  private _seismicHorizontal = 0;
+  private _seismicVertical = 0;
   private _compositeFloorCache: { geometries: readonly GeometryWithMaterial[]; base: boolean; floor: CompositeFloor | null } | null = null;
   private _partialFactors: PartialFactors | null = null;
   private _nonCircularOptimization = false;
@@ -264,6 +269,8 @@ export class Slope {
     this._tensionCrackAngle = d.tensionCrackAngle ?? 0;
     this._compositeSurfaces = d.compositeSurfaces ?? true;
     this._compositeBase = d.compositeBase ?? false;
+    this._seismicHorizontal = d.seismicHorizontal ?? 0;
+    this._seismicVertical = d.seismicVertical ?? 0;
   }
 
   // ────────────────────────────────────────────────────────────────
@@ -469,6 +476,30 @@ export class Slope {
   /** Whether circles follow the top of impenetrable material (composite surfaces). */
   get compositeSurfaces(): boolean {
     return this._compositeSurfaces;
+  }
+
+  /**
+   * Rapid drawdown: the model with the water before drawdown
+   * (model/drawdown.ts); null without a drawdown analysis.
+   */
+  get drawdownBefore(): Slope | null {
+    return this._drawdownBefore;
+  }
+
+  /** Set the model before drawdown (build-slope.ts); it takes this slope's analysis options from now on. */
+  setDrawdownBefore(before: Slope | null): void {
+    this._drawdownBefore = before;
+    if (before) before.updateAnalysisOptions({ ...this._optionsGiven, seismicHorizontal: 0, seismicVertical: 0 });
+  }
+
+  /** Pseudostatic horizontal seismic coefficient kh (toward the sliding direction). */
+  get seismicHorizontal(): number {
+    return this._seismicHorizontal;
+  }
+
+  /** Pseudostatic vertical seismic coefficient kv (positive downward). */
+  get seismicVertical(): number {
+    return this._seismicVertical;
   }
 
   /** Whether composite circles also follow the bare base of the model. */
@@ -1119,6 +1150,9 @@ export class Slope {
    * @param opts Partial analysis options to update.
    */
   updateAnalysisOptions(opts: Partial<AnalysisOptions> = {}): void {
+    this._optionsGiven = { ...this._optionsGiven, ...opts };
+    // (the state before drawdown is static: no seismic load)
+    this._drawdownBefore?.updateAnalysisOptions({ ...opts, seismicHorizontal: 0, seismicVertical: 0 });
     // A NaN count or tolerance passed the clamps below unchanged and gave a
     // different analysis (or none) without an error.
     for (const key of ["slices", "iterations", "refinedIterations", "maxIterations", "tolerance", "minFailureDist"] as const) {
@@ -1188,6 +1222,13 @@ export class Slope {
     }
     if (opts.compositeSurfaces !== undefined) this._compositeSurfaces = opts.compositeSurfaces;
     if (opts.compositeBase !== undefined) this._compositeBase = opts.compositeBase;
+    for (const k of ["seismicHorizontal", "seismicVertical"] as const) {
+      const v = opts[k];
+      if (v === undefined) continue;
+      if (!Number.isFinite(v) || Math.abs(v) > 1) throw new Error(`${k} must be a number between −1 and 1`);
+      if (k === "seismicHorizontal") this._seismicHorizontal = v;
+      else this._seismicVertical = v;
+    }
     if (opts.tensionCrackAngle !== undefined) {
       if (!Number.isFinite(opts.tensionCrackAngle) || opts.tensionCrackAngle < 0 || opts.tensionCrackAngle >= 90) {
         throw new Error("tensionCrackAngle must be ≥ 0 and less than 90°");

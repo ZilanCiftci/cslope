@@ -17,6 +17,9 @@ import {
   SfDatumFields,
   LimeCementFields,
   HoekBrownFields,
+  ShansepFields,
+  ShearNormalFields,
+  BBarFields,
   createDefaultModel,
 } from "./sections/material-forms";
 import { PopupPanel } from "../../components/ui/PopupPanel";
@@ -36,6 +39,8 @@ const MODEL_KINDS: MaterialModelKind[] = [
   "s-f-datum",
   "lime-cement-columns",
   "hoek-brown",
+  "shansep",
+  "shear-normal",
 ];
 
 // ── Props ──
@@ -103,6 +108,9 @@ export function DefineMaterialsDialog({ onClose, mode = "popup" }: Props) {
     if (currentModel.unitWeightSat !== undefined && newKind !== "impenetrable") {
       newModel.unitWeightSat = currentModel.unitWeightSat;
     }
+    // B̄ and the fill flag belong to every kind.
+    if (currentModel.bBar !== undefined) newModel.bBar = currentModel.bBar;
+    if (currentModel.bBarLoad) newModel.bBarLoad = true;
     // Expressions belong to the old kind's fields; keep only γ, which
     // every kind has, or a stale expression would come back later.
     const mat = materials.find((m) => m.id === matId);
@@ -302,6 +310,13 @@ export function DefineMaterialsDialog({ onClose, mode = "popup" }: Props) {
               onExpressionChange={(field, expression) =>
                 patchModelExpression(selected.id, field, expression)
               }
+            />
+
+            {/* Excess pore pressure from fills (every model kind) */}
+            <BBarFields
+              bBar={model.bBar}
+              bBarLoad={model.bBarLoad}
+              onChange={(patch) => patchModel(selected.id, model, patch)}
             />
 
             {/* Inline validation errors */}
@@ -508,6 +523,26 @@ function ModelFields({
     case "hoek-brown":
       return (
         <HoekBrownFields
+          model={model}
+          onChange={onChange as (p: Partial<typeof model>) => void}
+          modelExpressions={modelExpressions}
+          parameterValues={parameterValues}
+          onExpressionChange={onExpressionChange}
+        />
+      );
+    case "shansep":
+      return (
+        <ShansepFields
+          model={model}
+          onChange={onChange as (p: Partial<typeof model>) => void}
+          modelExpressions={modelExpressions}
+          parameterValues={parameterValues}
+          onExpressionChange={onExpressionChange}
+        />
+      );
+    case "shear-normal":
+      return (
+        <ShearNormalFields
           model={model}
           onChange={onChange as (p: Partial<typeof model>) => void}
           modelExpressions={modelExpressions}

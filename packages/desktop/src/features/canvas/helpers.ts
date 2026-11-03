@@ -98,7 +98,7 @@ function formatMaterialCell(
       // Combined S = f(depth): φ′ of the drained branch.
       if (k === "s-f-depth" && material.model.drainedFrictionAngle !== undefined && material.model.drainedCohesion !== undefined)
         return `${material.model.drainedFrictionAngle}\u00b0 (comb.)${suctionSuffix(material.model)}`;
-      if (k === "undrained" || k === "s-f-depth" || k === "s-f-datum" || k === "lime-cement-columns")
+      if (k === "undrained" || k === "s-f-depth" || k === "s-f-datum" || k === "lime-cement-columns" || k === "shansep")
         return "0\u00b0";
       return "-";
     }
@@ -112,6 +112,13 @@ function formatMaterialCell(
         return `${m.undrainedShearStrength}${cutoffSuffix(m)}`;
       if (m.kind === "lime-cement-columns")
         return `${f.cohesion}${cutoffSuffix(m)}`;
+      // SHANSEP: Su from σ′v, shown by its S and m (or its table).
+      if (m.kind === "shansep")
+        return m.suByStress && m.suByStress.length > 0
+          ? `Su(σ′v), ${m.suByStress.length} pts`
+          : `S ${m.ratio}, m ${m.exponent ?? 0.8}`;
+      // Shear-normal function: τ from σ′n, by its number of points.
+      if (m.kind === "shear-normal") return `τ(σn), ${m.points.length} pts`;
       return "-";
     }
     case "piezometricLine": {

@@ -21,6 +21,9 @@ export type {
   StrengthFromDatumModel,
   LimeCementColumnModel,
   HoekBrownModel,
+  ShansepModel,
+  ShearNormalModel,
+  TableSpline,
   DepthReference,
   UndrainedAnisotropy,
   UnsaturatedStrength,
@@ -36,6 +39,8 @@ export {
   resolveUnitWeight,
   needsLayerTop,
   interpolateFunction,
+  shansepSu,
+  shearNormalAt,
 } from "./strength";
 export type { DesignStrength, ResolvedStrength, StrengthContext } from "./strength";
 

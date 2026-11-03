@@ -98,8 +98,8 @@ export function verticalStress(slope: Slope, x: number, y: number, effective: bo
   return Math.max(0, sigma - u);
 }
 
-/** cos 80°: the movement's component along an element that counts as pushing it. */
-const NEAR_NORMAL = Math.cos((80 * Math.PI) / 180);
+/** cos 88°: the movement's component along an element that counts as pushing it. */
+const NEAR_NORMAL = Math.cos((88 * Math.PI) / 180);
 
 /** Whether a point lies below the ground surface. */
 function inSoil(slope: Slope, x: number, y: number): boolean {
@@ -327,15 +327,16 @@ export function applyReinforcement(
       const dx = into ? -ax : ax;
       const dy = into ? -ay : ay;
       // Tension only: the movement must pull away from the stable part. An
-      // element within 10° of the normal to the base (the movement neither
-      // pulls nor pushes it appreciably) still carries its force, as
-      // commercial programs apply it whatever the angle.
-      if (dx * tx + dy * ty >= NEAR_NORMAL) continue;
+      // element within 2° of the normal to the base (the movement neither
+      // pulls nor pushes it appreciably) still carries its force along
+      // itself, as commercial programs apply it whatever the angle.
+      const along = dx * tx + dy * ty;
+      if (along >= NEAR_NORMAL) continue;
       const magnitude = envelopeAt(env, t * env.length) / (r.spacing ?? 1);
       if (!(magnitude > 0)) continue;
       let fx: number;
       let fy: number;
-      const direction = r.direction ?? "axial";
+      const direction = along > 0 ? "axial" : (r.direction ?? "axial");
       if (direction === "tangent") {
         fx = -tx;
         fy = -ty;
@@ -488,7 +489,7 @@ export function buildPileProfile(slope: Slope, p: Pile): PileProfile | null {
       const yLayerTop = needsLayerTop(m.model)
         ? (materialLayerTopAt(slope.materialGeometries, m, x, yy) ?? undefined)
         : undefined;
-      const st = resolveStrength(m.model, { yBottom: yy, x, yGround, yLayerTop, alpha: 0 });
+      const st = resolveStrength(m.model, { yBottom: yy, x, yGround, yLayerTop, alpha: 0, ...(m.model.kind === "shansep" ? { effectiveVerticalStress: effectiveVerticalStress(slope, x, yy) } : {}) });
       // High-strength or bedrock: no soil to squeeze between the piles.
       if (Number.isFinite(st.cohesion) && !st.impenetrable) {
         const d = designStrength(m.model.kind, st, f);

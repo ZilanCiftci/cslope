@@ -46,7 +46,7 @@ export interface AnalysisSummaryInput {
   piezometricLine: PiezometricLineState;
   materials: MaterialRow[];
   udls: { x1: number; x2: number; magnitude: number; direction?: "vertical" | "normal" }[];
-  lineLoads: { x: number; magnitude: number }[];
+  lineLoads: { x: number; magnitude: number; angle?: number; y?: number }[];
   reinforcements?: ReinforcementRow[];
   piles?: PileRow[];
   customPlanesOnly?: boolean;
@@ -91,7 +91,15 @@ export function fosLabel(partialFactors: PartialFactors | null | undefined): str
 
 /** Characteristic strength of a material model, in words. */
 export function strengthText(model: MaterialModel): string {
-  return strengthWithoutSuction(model) + suctionText(model);
+  return strengthWithoutSuction(model) + suctionText(model) + bBarText(model);
+}
+
+/** Excess pore pressure from fills (B̄, fill weight), in words, or "". */
+function bBarText(model: MaterialModel): string {
+  let s = "";
+  if (model.bBar !== undefined) s += `; excess pore pressure B̄ = ${fmt(model.bBar)} × vertical stress of the fill above`;
+  if (model.bBarLoad) s += "; fill (its weight raises the pore pressure below, B̄)";
+  return s;
 }
 
 /** Strength from suction above the water line (φb), in words, or "". */
@@ -116,6 +124,9 @@ function strengthWithoutSuction(model: MaterialModel): string {
       }
       if (model.cFactor) {
         s += `; combined, limited by Su = ${fmt(model.cohesionUndrained ?? model.cohesion)} kPa`;
+      }
+      if (model.drawdownStrength) {
+        s += `; undrained in rapid drawdown, R envelope cR = ${fmt(model.drawdownStrength.cohesion)} kPa, φR = ${fmt(model.drawdownStrength.frictionAngle)}°`;
       }
       return s;
     }
@@ -170,6 +181,20 @@ function strengthWithoutSuction(model: MaterialModel): string {
         return `σci = ${fmt(model.ucs)} kPa, mb = ${fmt(model.mb)}, s = ${fmt(model.s)}, a = ${fmt(model.a ?? 0.5)} (Hoek-Brown, parameters given directly)`;
       }
       return `σci = ${fmt(model.ucs)} kPa, GSI = ${fmt(model.gsi)}, mi = ${fmt(model.mi)}, D = ${fmt(model.disturbance ?? 0)} (generalised Hoek-Brown)`;
+    case "shansep": {
+      const anisotropy = aniso(model.anisotropy);
+      const min = model.suMin ? `, at least ${fmt(model.suMin)} kPa` : "";
+      if (model.suByStress && model.suByStress.length > 0) {
+        return `Su against σ'v (SHANSEP), ${model.suByStress.map(([sv, su]) => `${fmt(su)} kPa at ${fmt(sv)} kPa`).join(", ")}${min}${anisotropy}`;
+      }
+      const ocr =
+        model.ocrByElevation && model.ocrByElevation.length > 0
+          ? `OCR against elevation, ${model.ocrByElevation.map(([y, o]) => `${fmt(o)} at y = ${fmt(y)} m`).join(", ")}`
+          : `OCR = ${fmt(model.ocr ?? 1)}`;
+      return `Su = σ'v · S · OCR^m (SHANSEP), S = ${fmt(model.ratio)}, m = ${fmt(model.exponent ?? 0.8)}, ${ocr}${min}${anisotropy}`;
+    }
+    case "shear-normal":
+      return `τ against σ'n, ${model.points.map(([sn, tau]) => `${fmt(tau)} kPa at ${fmt(sn)} kPa`).join(", ")}`;
     case "high-strength":
       return "not sheared (surfaces through it are skipped)";
     case "impenetrable":
@@ -384,6 +409,26 @@ export function buildAnalysisSummary(input: AnalysisSummaryInput): SummarySectio
           : "line clipped to the ground",
     });
   }
+  const before = piezo.rapidDrawdown?.waterBefore;
+  if (before && before.length >= 2) {
+    const undrained = input.materials.filter((m) => m.model.kind === "mohr-coulomb" && m.model.drawdownStrength);
+    const ys = before.map((p) => p[1]);
+    water.push({
+      label: "Rapid drawdown",
+      value:
+        "three-stage analysis (Duncan, Wright & Wong 1990): the piezometric lines above are the water after drawdown; " +
+        (undrained.length > 0
+          ? `${undrained.map((m) => m.name).join(", ")} ${undrained.length === 1 ? "does not drain and takes the undrained strength from its" : "do not drain and take the undrained strength from their"} ` +
+            "R envelope at the consolidation stresses before drawdown (the drained strength where lower); the other materials drain"
+          : "no material has a drawdown (R) envelope, so all drain"),
+    });
+    water.push({
+      label: "Water before drawdown",
+      value: ys.every((y) => y === ys[0])
+        ? `level y = ${fmt(ys[0])} m, x ${fmt(before[0][0])} to ${fmt(before[before.length - 1][0])} m`
+        : `line of ${before.length} points, ${before.map(([x, y]) => `(${fmt(x)}, ${fmt(y)})`).join(", ")}`,
+    });
+  }
   water.push({ label: "Unit weight of water", value: `${WATER_UNIT_WEIGHT} kN/m³` });
   if (options.tensionCrackAuto || options.tensionCrackDepth || options.tensionCrackAngle) {
     const parts = [
@@ -462,7 +507,14 @@ export function buildAnalysisSummary(input: AnalysisSummaryInput): SummarySectio
       `x ${fmt(Math.min(u.x1, u.x2))} to ${fmt(Math.max(u.x1, u.x2))} m`,
       `${fmt(u.magnitude)} kPa${u.direction === "normal" ? ", normal to the ground" : ""}`,
     ]),
-    ...input.lineLoads.map((l) => ["Line load", `x = ${fmt(l.x)} m`, `${fmt(l.magnitude)} kN/m`]),
+    ...input.lineLoads.map((l) => {
+      const inclined = l.angle !== undefined && Number.isFinite(l.angle) && l.angle !== 0;
+      return [
+        "Line load",
+        inclined && l.y !== undefined && Number.isFinite(l.y) ? `x = ${fmt(l.x)} m, y = ${fmt(l.y)} m` : `x = ${fmt(l.x)} m`,
+        `${fmt(l.magnitude)} kN/m${inclined ? `, ${fmt(l.angle)}° from vertical` : ""}`,
+      ];
+    }),
   ];
   const reinf = input.reinforcements ?? [];
   const piles = input.piles ?? [];

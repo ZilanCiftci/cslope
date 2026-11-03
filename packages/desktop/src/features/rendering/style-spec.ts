@@ -202,4 +202,6 @@ export const MODEL_SHORT_LABELS: Record<MaterialModelKind, string> = {
   "s-f-datum": "S=f(z)",
   "lime-cement-columns": "KC",
   "hoek-brown": "H-B",
+  shansep: "SHANSEP",
+  "shear-normal": "τ=f(σn)",
 };

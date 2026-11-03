@@ -4,6 +4,7 @@ import type { MohrCoulombModel } from "@cslope/engine";
 import type { MaterialExpressions } from "../../../../store/types";
 import { UnitWeightSatField } from "./UnitWeightSatField";
 import { SuctionFields } from "./SuctionFields";
+import { DrawdownFields } from "./DrawdownFields";
 
 interface Props {
   model: MohrCoulombModel;
@@ -97,6 +98,12 @@ export function MohrCoulombFields({
           onChange={onChange}
         />
       </div>
+      <DrawdownFields
+        drawdownStrength={model.drawdownStrength}
+        cohesion={model.cohesion}
+        frictionAngle={model.frictionAngle}
+        onChange={onChange}
+      />
     </>
   );
 }

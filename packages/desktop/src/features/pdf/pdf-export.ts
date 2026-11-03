@@ -104,7 +104,7 @@ export interface PdfExportData {
   resultViewSettings: ResultViewSettings;
   piezometricLine: PiezometricLineState;
   udls: { id: string; x1: number; x2: number; magnitude: number }[];
-  lineLoads: { id: string; x: number; magnitude: number }[];
+  lineLoads: { id: string; x: number; magnitude: number; angle?: number; y?: number }[];
   reinforcements?: ReinforcementRow[];
   piles?: PileRow[];
   analysisLimits: AnalysisLimitsState;

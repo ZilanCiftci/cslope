@@ -166,6 +166,12 @@ export function buildSlopeDTOFromModel(model: ModelEntry): SlopeDefinition {
     }
   }
 
+  // Rapid drawdown: the water before it; the lines above are the water after.
+  const waterBefore = piezometricLine.rapidDrawdown?.waterBefore;
+  if (waterBefore && waterBefore.length >= 2) {
+    slope.rapidDrawdown = { waterBefore: waterBefore.map(([x, y]) => [x, y] as [number, number]) };
+  }
+
   if (model.udls?.length > 0) {
     slope.udls = model.udls.map((u) => ({
       magnitude: u.magnitude,
@@ -176,10 +182,15 @@ export function buildSlopeDTOFromModel(model: ModelEntry): SlopeDefinition {
   }
 
   if (model.lineLoads?.length > 0) {
-    slope.lineLoads = model.lineLoads.map((l) => ({
-      magnitude: l.magnitude,
-      x: l.x,
-    }));
+    slope.lineLoads = model.lineLoads.map((l) => {
+      const angle = Number.isFinite(l.angle) && l.angle !== 0 ? l.angle : undefined;
+      return {
+        magnitude: l.magnitude,
+        x: l.x,
+        ...(angle !== undefined ? { angle } : {}),
+        ...(angle !== undefined && Number.isFinite(l.y) ? { y: l.y } : {}),
+      };
+    });
   }
 
   if (model.reinforcements?.length) {
@@ -278,6 +289,7 @@ export function getAnalysisInputSignature(state: AppState): string {
       freeWater: piezo.freeWater,
       // The default pore pressure (and free water) comes from the main line.
       mainLineId: piezo.mainLineId,
+      rapidDrawdown: piezo.rapidDrawdown,
     },
     udls: state.udls,
     lineLoads: state.lineLoads,

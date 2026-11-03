@@ -49,6 +49,17 @@ export interface LineLoadParams {
   magnitude: number;
   /** x-coordinate where the load is applied (m). */
   x: number;
+  /**
+   * Inclination of the load from the downward vertical (°), positive when
+   * it points towards +x: 0 vertical, ±90 horizontal. Default 0. The
+   * horizontal part acts at the ground at x.
+   */
+  angle?: number;
+  /**
+   * Elevation where the load acts (m), for the moment of its horizontal
+   * part: a point on a wall face. Default: the ground at x.
+   */
+  y?: number;
   /** Display color (default: "blue"). */
   color?: string;
 }
@@ -56,11 +67,17 @@ export interface LineLoadParams {
 export class LineLoad {
   readonly magnitude: number;
   readonly x: number;
+  /** Inclination from the downward vertical (°), positive towards +x. */
+  readonly angle: number;
+  /** Elevation of the load point (undefined: the ground at x). */
+  readonly y: number | undefined;
   readonly color: string;
 
   constructor(params: LineLoadParams) {
     this.magnitude = Math.abs(params.magnitude);
     this.x = params.x;
+    this.angle = Number.isFinite(params.angle) ? params.angle! : 0;
+    this.y = Number.isFinite(params.y) ? params.y : undefined;
     this.color = params.color ?? "blue";
   }
 }

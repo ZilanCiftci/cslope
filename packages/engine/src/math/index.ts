@@ -43,3 +43,4 @@ export {
   getPrecision,
   MATERIAL_COLORS,
 } from "./helpers";
+export { cubicSpline, evalSpline, type CubicSpline } from "./spline";

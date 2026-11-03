@@ -670,7 +670,19 @@ function normalizePiezo(raw: unknown): PiezometricLineState {
     lines.some((l) => l.id === piezo.mainLineId)
       ? { mainLineId: piezo.mainLineId }
       : {}),
+    ...normalizeRapidDrawdown(piezo.rapidDrawdown),
   };
+}
+
+/**
+ * The water before a rapid drawdown: kept when it has two or more finite
+ * points with x increasing, dropped otherwise (no drawdown analysis).
+ */
+function normalizeRapidDrawdown(raw: unknown): Pick<PiezometricLineState, "rapidDrawdown"> {
+  const points = (raw as { waterBefore?: unknown } | null | undefined)?.waterBefore;
+  if (!Array.isArray(points) || points.length < 2 || !points.every(isFinitePair)) return {};
+  if (!points.every((p, i) => i === 0 || p[0] > points[i - 1][0])) return {};
+  return { rapidDrawdown: { waterBefore: points.map(([x, y]) => [x, y] as [number, number]) } };
 }
 
 // ── 4.2 — Material field validation ──
@@ -711,7 +723,12 @@ function normalizeMaterial(raw: unknown, index: number): MaterialRow {
         delete model.unitWeightSat;
       }
     }
-    model = sanitizeSuction(sanitizeStrengthOptions(model));
+    // A shear-normal function without a point list gets an empty one (for
+    // validation to report) instead of failing the form.
+    if (model.kind === "shear-normal" && !Array.isArray(model.points)) {
+      model = { ...model, points: [] };
+    }
+    model = sanitizeDrawdown(sanitizeBBar(sanitizeSuction(sanitizeStrengthOptions(model))));
   } else {
     // Legacy file without model — synthesise MohrCoulomb from flat fields
     const unitWeight = Math.max(
@@ -749,7 +766,8 @@ function sanitizeStrengthOptions(model: MaterialModel): MaterialModel {
     model.kind !== "s-f-depth" &&
     model.kind !== "s-f-datum" &&
     model.kind !== "undrained" &&
-    model.kind !== "lime-cement-columns"
+    model.kind !== "lime-cement-columns" &&
+    model.kind !== "shansep"
   ) {
     return model;
   }
@@ -770,12 +788,62 @@ function sanitizeStrengthOptions(model: MaterialModel): MaterialModel {
       delete (out as { anisotropy?: unknown }).anisotropy;
     }
   }
+  if (out.kind === "shansep") {
+    // SHANSEP: a point table that is empty or not a list is not set (the
+    // constant parameters apply); a list is kept for validation to report.
+    for (const key of ["ocrByElevation", "suByStress"] as const) {
+      if (key in out && (!Array.isArray(out[key]) || out[key].length === 0)) {
+        out = { ...out };
+        delete out[key];
+      }
+    }
+    const suMin = out.suMin;
+    if ("suMin" in out && !(typeof suMin === "number" && Number.isFinite(suMin) && suMin >= 0)) {
+      out = { ...out };
+      delete out.suMin;
+    }
+  }
   if (out.kind === "s-f-depth" && "depthReference" in out) {
     const r = out.depthReference;
     if (r !== "ground" && r !== "layer-top") {
       out = { ...out };
       delete (out as { depthReference?: unknown }).depthReference;
     }
+  }
+  return out;
+}
+
+/**
+ * Excess pore pressure from fills: a B̄ that is not a finite number in
+ * [0, 1.5] is dropped (none), and a fill flag that is not `true` too.
+ */
+function sanitizeBBar(model: MaterialModel): MaterialModel {
+  if (!("bBar" in model) && !("bBarLoad" in model)) return model;
+  const out = { ...model } as MaterialModel & { bBar?: unknown; bBarLoad?: unknown };
+  const b = out.bBar;
+  if (!(typeof b === "number" && Number.isFinite(b) && b >= 0 && b <= 1.5)) delete out.bBar;
+  if (out.bBarLoad !== true) delete out.bBarLoad;
+  return out;
+}
+
+/**
+ * The drawdown (R) envelope of a soil that does not drain in rapid
+ * drawdown: kept on a Mohr-Coulomb material when cR is a finite number
+ * ≥ 0 and φR one in [0°, 90°), dropped otherwise (free-draining).
+ */
+function sanitizeDrawdown(model: MaterialModel): MaterialModel {
+  if (!("drawdownStrength" in model)) return model;
+  const out = { ...model } as MaterialModel & { drawdownStrength?: unknown };
+  const r = out.drawdownStrength as { cohesion?: unknown; frictionAngle?: unknown } | null | undefined;
+  const c = r?.cohesion, phi = r?.frictionAngle;
+  if (
+    out.kind === "mohr-coulomb" &&
+    typeof c === "number" && Number.isFinite(c) && c >= 0 &&
+    typeof phi === "number" && Number.isFinite(phi) && phi >= 0 && phi < 90
+  ) {
+    out.drawdownStrength = { cohesion: c, frictionAngle: phi };
+  } else {
+    delete out.drawdownStrength;
   }
   return out;
 }
@@ -897,10 +965,21 @@ function normalizeLineLoad(raw: unknown): LineLoadRow | null {
   const magnitude = finiteOr(l.magnitude, 0);
   const x = finiteOr(l.x, 0);
   if (!id) return null;
+  // the inclination: finite, within ±180°; 0 (vertical) is not stored
+  const angle =
+    typeof l.angle === "number" &&
+    Number.isFinite(l.angle) &&
+    l.angle !== 0 &&
+    Math.abs(l.angle) <= 180
+      ? l.angle
+      : undefined;
+  const y = typeof l.y === "number" && Number.isFinite(l.y) ? l.y : undefined;
   return {
     id,
     magnitude,
     x,
+    ...(angle !== undefined ? { angle } : {}),
+    ...(y !== undefined ? { y } : {}),
     expressions: normalizeLoadExpressions(l.expressions, ["magnitude", "x"]),
   };
 }
@@ -1061,6 +1140,12 @@ function normalizeAnalysisOptions(raw: unknown): AnalysisOptions {
       ? { minSlipArea: o.minSlipArea }
       : {}),
     ...(o.tensionCrackAuto === true ? { tensionCrackAuto: true } : {}),
+    ...(typeof o.seismicHorizontal === "number" && Number.isFinite(o.seismicHorizontal) && o.seismicHorizontal > 0 && o.seismicHorizontal <= 1
+      ? { seismicHorizontal: o.seismicHorizontal }
+      : {}),
+    ...(typeof o.seismicVertical === "number" && Number.isFinite(o.seismicVertical) && o.seismicVertical !== 0 && Math.abs(o.seismicVertical) <= 1
+      ? { seismicVertical: o.seismicVertical }
+      : {}),
     ...(typeof o.tensionCrackAngle === "number" && Number.isFinite(o.tensionCrackAngle) && o.tensionCrackAngle > 0 && o.tensionCrackAngle < 90
       ? { tensionCrackAngle: o.tensionCrackAngle }
       : {}),

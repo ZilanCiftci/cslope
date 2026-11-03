@@ -22,6 +22,8 @@ import type {
   StrengthFromDatumModel,
   LimeCementColumnModel,
   HoekBrownModel,
+  ShansepModel,
+  ShearNormalModel,
 } from "@cslope/engine";
 
 export function createDefaultModel(
@@ -113,6 +115,26 @@ export function createDefaultModel(
         mi: 10,
         disturbance: 0,
       } satisfies HoekBrownModel;
+
+    case "shansep":
+      return {
+        kind: "shansep",
+        unitWeight,
+        ratio: 0.25,
+        exponent: 0.8,
+        ocr: 1,
+      } satisfies ShansepModel;
+
+    case "shear-normal":
+      return {
+        kind: "shear-normal",
+        unitWeight,
+        points: [
+          [0, 0],
+          [100, 60],
+          [300, 150],
+        ],
+      } satisfies ShearNormalModel;
   }
 }
 

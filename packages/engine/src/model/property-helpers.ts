@@ -263,7 +263,7 @@ export function mirrorDefinition(def: SlopeDefinition, axis: number): SlopeDefin
     out.waterTables = def.waterTables.map((w) => ({ ...w, coordinates: w.coordinates.map(mp) }));
   }
   if (def.udls) out.udls = def.udls.map((u) => ({ ...u, x1: mx(u.x2), x2: mx(u.x1) }));
-  if (def.lineLoads) out.lineLoads = def.lineLoads.map((l) => ({ ...l, x: mx(l.x) }));
+  if (def.lineLoads) out.lineLoads = def.lineLoads.map((l) => ({ ...l, x: mx(l.x), ...(l.angle ? { angle: -l.angle } : {}) }));
   if (def.reinforcements) out.reinforcements = def.reinforcements.map((q) => ({ ...q, x1: mx(q.x1), x2: mx(q.x2) }));
   if (def.piles) out.piles = def.piles.map((p) => ({ ...p, x1: mx(p.x1), x2: mx(p.x2) }));
   if (def.analysisLimits) {

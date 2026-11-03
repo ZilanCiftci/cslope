@@ -99,6 +99,18 @@ export interface AnalysisOptions {
    */
   compositeBase?: boolean;
   /**
+   * Pseudostatic seismic load: the horizontal seismic coefficient kh. Each
+   * slice carries kh × its weight horizontally in the sliding direction,
+   * at the centre of gravity of the slice. Default 0.
+   */
+  seismicHorizontal?: number;
+  /**
+   * The vertical seismic coefficient kv: kv × the slice weight acts
+   * vertically at the slice's centre line, positive downward (adding to
+   * the weight), negative upward. Default 0.
+   */
+  seismicVertical?: number;
+  /**
    * Partial factors (Eurocode 7 design values). When set, strengths are
    * divided and variable loads multiplied by them, and the FOS is the
    * over-design factor on design values (≥ 1.0 satisfies the design).

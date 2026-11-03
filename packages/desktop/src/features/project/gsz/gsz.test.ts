@@ -326,6 +326,24 @@ describe(".gsz import", () => {
     expect(c[1]).toBeCloseTo(23, 9);
   });
 
+  it("imports SHANSEP with its OCR spline, shear-normal functions, B-bar pore pressure and seismic coefficients", () => {
+    const fns = `<Functions><Material><Fn2Ds Len="1"><Fn2D><ID>1</ID><Function>Spline(OutputParam=OverconsolidationRatio,InputParam=Y,Smooth=100,Tension=100,SlopeBefore=0,SlopeAfter=0,LogInput=false,LogOutput=false)</Function><Points Len="2"><Point X="2" Y="2" /><Point X="0" Y="1" /></Points></Fn2D></Fn2Ds><StressStrain><StrengthFns Len="1"><StrengthFn><ID>1</ID><Function>Spline(OutputParam=ShearStress,InputParam=NormalStress,Smooth=100,Tension=100,SlopeBefore=Calc,SlopeAfter=Calc,LogInput=false,LogOutput=false)</Function><Points Len="3"><Point X="0" Y="0" /><Point X="50" Y="30" /><Point X="100" Y="50" /></Points></StrengthFn></StrengthFns></StressStrain></Material></Functions><StabilityItems`;
+    const clay = (body: string) =>
+      XML.replace("<StabilityItems", fns)
+        .replace(/<Material><ID>2<\/ID><Name>Clay<\/Name><SlopeModel>UndrainedPhiZero<\/SlopeModel>\s*<StressStrain><UnitWeight>17<\/UnitWeight><Cohesion>25<\/Cohesion><\/StressStrain><\/Material>/, `<Material><ID>2</ID><Name>Clay</Name>${body}</Material>`);
+    const shansep = gszToDefinition({ ...parseGszXml(clay("<SlopeModel>SHANSEP</SlopeModel><StressStrain><UnitWeight>17</UnitWeight><SlopeUndrainedStrengthModel>Custom</SlopeUndrainedStrengthModel><OCRFnNum>1</OCRFnNum><NCUndrainedStrengthRatio>0.3</NCUndrainedStrengthRatio><SHANSEPExponent>0.8</SHANSEPExponent></StressStrain>")), results: new Map() }, 1);
+    expect(shansep.definition.materials.find((m) => m.name === "Clay")!.model).toEqual({ kind: "shansep", unitWeight: 17, ratio: 0.3, exponent: 0.8, ocrByElevation: [[0, 1], [2, 2]], spline: { startSlope: 0, endSlope: 0 } });
+    const sn = gszToDefinition({ ...parseGszXml(clay("<SlopeModel>ShearNormalFn</SlopeModel><StressStrain><UnitWeight>17</UnitWeight><StrengthFnNum>1</StrengthFnNum></StressStrain>")), results: new Map() }, 1);
+    expect(sn.definition.materials.find((m) => m.name === "Clay")!.model).toEqual({ kind: "shear-normal", unitWeight: 17, points: [[0, 0], [50, 30], [100, 50]], spline: {} });
+    // B-bar: the fill raises the clay's pore pressure; seismic coefficients
+    const bb = XML.replace("<Option>PiezoSurface</Option>", "<Option>PiezoSurfaceBbar</Option>")
+      .replace("<SlipSurface>", '<MaterialUsesBBarParams Len="2"><MaterialUsesBBarParam><ID>1</ID><Entry IsIncluded="true" /></MaterialUsesBBarParam><MaterialUsesBBarParam><ID>2</ID><Entry Function="1" /></MaterialUsesBBarParam></MaterialUsesBBarParams><Seismic Horizontal="0.1" Vertical="-0.05" /><SlipSurface>');
+    const b = gszToDefinition({ ...parseGszXml(bb), results: new Map() }, 1);
+    expect(b.definition.materials.find((m) => m.name === "Fill")!.model).toMatchObject({ bBarLoad: true });
+    expect(b.definition.materials.find((m) => m.name === "Clay")!.model).toMatchObject({ bBar: 1 });
+    expect(b.options).toMatchObject({ seismicHorizontal: 0.1, seismicVertical: -0.05 });
+  });
+
   it("imports and exports a tension crack at a limiting angle", async () => {
     // The file's angle is counter-clockwise from +x: 120° for sliding to
     // the right is a base inclination of 60° (the format's own example).
@@ -483,6 +501,41 @@ describe(".gsz export", () => {
     expect(fos(d, opts)).toBeCloseTo(fos(def, opts), 6);
   });
 
+  it("writes the direction and point of inclined line loads, and reads back the same angle and y", async () => {
+    const inclined = modelFromDefinition(
+      {
+        ...def,
+        lineLoads: [
+          { magnitude: 40, x: 5 },
+          { magnitude: 30, x: 4, angle: 30 },
+          { magnitude: 25, x: 0, angle: 60, y: 7.5 },
+          { magnitude: 20, x: 25, angle: -45, y: 5 },
+          { magnitude: 10, x: 12, angle: 120 },
+        ],
+      } as SlopeDefinition,
+      { id: "m", name: "Section A" },
+    );
+    // the import into the model keeps the angle and the point
+    expect(inclined.lineLoads[2]).toMatchObject({ angle: 60, y: 7.5 });
+    const { xml } = modelToGszXml(inclined);
+    expect(xml).toContain(`<Direction Plunge="90" Trend="0" />`);
+    expect(xml).toContain(`<Direction Plunge="60" Trend="90" />`);
+    expect(xml).toContain(`<Direction Plunge="45" Trend="270" />`);
+    expect(xml).toContain(`<Direction Plunge="-30" Trend="90" />`);
+    const [imp] = await gszImports(modelToGsz(inclined).bytes, "Section A.gsz");
+    const back = imp.definition.lineLoads!;
+    expect(back[0]).toEqual({ magnitude: 40, x: 5 });
+    // without a point given: on the ground at x
+    expect(back[1].angle).toBeCloseTo(30, 9);
+    expect(back[1].y).toBeCloseTo(10, 9);
+    expect(back[2].angle).toBeCloseTo(60, 9);
+    expect(back[2].y).toBeCloseTo(7.5, 9);
+    expect(back[3].angle).toBeCloseTo(-45, 9);
+    expect(back[3].y).toBeCloseTo(5, 9);
+    expect(back[4].angle).toBeCloseTo(120, 9);
+    expect(back[4].x).toBeCloseTo(12, 9);
+  });
+
   it("writes φb as UnsatPhiB and the maximum suction on the line, and reads them back", async () => {
     const withPhiB = (maxSuction?: number) => ({
       ...model,
@@ -500,6 +553,26 @@ describe(".gsz export", () => {
     // without a maximum: no cap on the line
     expect(modelToGszXml(withPhiB()).xml).toContain("<CapSuction>false</CapSuction>");
     expect(modelToGszXml(model).xml).not.toContain("UnsatPhiB");
+  });
+
+  it("keeps a rapid drawdown from the definition, and notes that it is not written", () => {
+    const rd = modelFromDefinition(
+      {
+        ...def,
+        materials: [
+          { ...def.materials[0], model: { kind: "mohr-coulomb", unitWeight: 19, cohesion: 2, frictionAngle: 32, drawdownStrength: { cohesion: 5, frictionAngle: 18 } } },
+          def.materials[1],
+        ],
+        rapidDrawdown: { waterBefore: [[0, 9], [30, 9]] },
+      } as SlopeDefinition,
+      { id: "m", name: "Section A" },
+    );
+    expect(rd.piezometricLine.rapidDrawdown).toEqual({ waterBefore: [[0, 9], [30, 9]] });
+    expect(rd.materials[0].model).toMatchObject({ drawdownStrength: { cohesion: 5, frictionAngle: 18 } });
+    expect(modelToGszXml(rd).notes.join(" ")).toMatch(/Rapid drawdown: the three-stage analysis is not written/);
+    // without the analysis: only the envelopes are left out
+    const plain = { ...rd, piezometricLine: { ...rd.piezometricLine, rapidDrawdown: undefined } };
+    expect(modelToGszXml(plain).notes.join(" ")).toMatch(/drawdown envelopes \(cR, φR\) of the materials are not written/);
   });
 
   it("names what it cannot write", () => {

@@ -107,6 +107,20 @@ function clipHalfplaneInto(
   return m;
 }
 
+/** Σ (y_i + y_{i+1})·cross_i / 6 of a polygon: its area times its centroid's y (signs as its orientation). */
+function polygonMomentYN(x: Float64Array, y: Float64Array, n: number): number {
+  if (n < 3) return 0.0;
+  let m = 0.0;
+  let a = 0.0;
+  for (let i = 0; i < n; i++) {
+    const j = i + 1 === n ? 0 : i + 1;
+    const cross = x[i] * y[j] - x[j] * y[i];
+    a += cross;
+    m += (y[i] + y[j]) * cross;
+  }
+  return a === 0 ? 0 : (m / 6) * Math.sign(a);
+}
+
 /** Shoelace area of the first `n` vertices (as `calculatePolygonArea`). */
 function polygonAreaN(x: Float64Array, y: Float64Array, n: number): number {
   if (n < 3) return 0.0;
@@ -289,6 +303,10 @@ export function createSlice(
   let firstIntersected: GeometryWithMaterial["material"] | null = null;
   let totalWeight = 0;
   let totalArea = 0;
+  // the weight of the fills raising the pore pressure (B-bar) in the slice
+  let fillWeight = 0;
+  // Σ γ·A·ȳ (local y), for the centre of gravity
+  let weightMomentY = 0;
 
   for (const m of materialGeometries) {
     // Fast X-bounds check
@@ -350,6 +368,8 @@ export function createSlice(
       gamma = fragmentUnitWeight(m.material, mpx, mpy, area);
     }
     totalWeight += area * gamma;
+    weightMomentY += gamma * polygonMomentYN(lx, ly, n);
+    if (m.material.model.bBarLoad) fillWeight += area * gamma;
     const gammaSat = m.material.model.unitWeightSat;
     if (gammaSat !== undefined && gammaSat !== gamma && waterForWeight) {
       // The part of the fragment below the material's water line (straight
@@ -360,6 +380,7 @@ export function createSlice(
         const nb = clipHalfplaneInto(lx, ly, n, s, -1, w[0] - oy - s * (x0 - ox), tx, ty);
         if (nb >= 3) {
           totalWeight += polygonAreaN(tx, ty, nb) * (gammaSat - gamma);
+          weightMomentY += (gammaSat - gamma) * polygonMomentYN(tx, ty, nb);
         }
       }
     }
@@ -408,7 +429,10 @@ export function createSlice(
               ? { yMean: waterYMean, h: waterH }
               : null;
           const u = w ? Math.max(w.yMean - yBottom, 0) * WATER_UNIT_WEIGHT * w.h : 0;
-          const st = resolveStrength(mat.model, { yBottom, x, yGround: yTop, yLayerTop: yLT, alpha, suction: baseSuction(mat, w, yBottom) });
+          const st = resolveStrength(mat.model, {
+            yBottom, x, yGround: yTop, yLayerTop: yLT, alpha, suction: baseSuction(mat, w, yBottom),
+            effectiveVerticalStress: (totalWeight + udlForce + llForce) / width - u,
+          });
           const drained = st.cohesion + Math.max(0, sigma - u) * Math.tan((st.frictionAngle * Math.PI) / 180);
           return st.isCombined ? Math.min(drained, st.cohesionUndrained) : drained;
         };
@@ -431,6 +455,9 @@ export function createSlice(
     baseWater = waterForMaterial(baseMaterial);
     U = baseWater ? Math.max(baseWater.yMean - yBottom, 0) * WATER_UNIT_WEIGHT * baseWater.h : 0;
   }
+  // Excess pore pressure from the fill above (B-bar).
+  const bBar = baseMaterial.model.bBar;
+  if (bBar !== undefined && bBar !== 0 && fillWeight > 0) U += (bBar * fillWeight) / width;
   const suction = baseSuction(baseMaterial, baseWater, yBottom);
 
   // Top of the base material's layer, for depth measured from it: searched
@@ -450,6 +477,9 @@ export function createSlice(
     yLayerTop,
     alpha,
     suction,
+    // SHANSEP: the overburden on the base (free water above the ground is
+    // added with its load, refreshShansep)
+    effectiveVerticalStress: (totalWeight + udlForce + llForce) / width - U,
   });
 
   const cohesion = strength.cohesion;
@@ -473,6 +503,7 @@ export function createSlice(
     alpha,
     baseLength,
     weight: totalWeight,
+    ...(totalWeight > 0 ? { yCentroid: oy + weightMomentY / totalWeight } : {}),
     dx,
     e,
     R: shearArm,
@@ -494,6 +525,7 @@ export function createSlice(
     U,
     isCombined: strength.isCombined,
     ...(strength.hoekBrown ? { hoekBrown: strength.hoekBrown } : {}),
+    ...(strength.shearNormal ? { shearNormal: strength.shearNormal } : {}),
     skipSurface: strength.skipSurface,
     impenetrable: strength.impenetrable,
   };
@@ -919,9 +951,10 @@ export function getSlices(
     u.x2,
     u.magnitude,
   ]);
+  // (the vertical part of an inclined line load; its horizontal part below)
   const llData: [number, number][] = slope.lineLoads.map((ll) => [
     ll.x,
-    ll.magnitude,
+    ll.angle ? ll.magnitude * Math.cos((ll.angle * Math.PI) / 180) : ll.magnitude,
   ]);
   const [udlForces, llForces] = calculateAllLoads(
     bArray,
@@ -931,6 +964,7 @@ export function getSlices(
   );
   const factors = slope.partialFactors;
   const loadFactor = factors?.variableLoad ?? 1;
+  const kh = slope.seismicHorizontal, kv = slope.seismicVertical;
   const normalUdls = slope.udls.filter((u) => u.direction === "normal");
 
   // Surface y at each slice edge, taken from the slice's own side: at a
@@ -1075,9 +1109,24 @@ export function getSlices(
     );
 
     if (s !== null && s.isValid) {
+      if (freeLines[i]) {
+        applyFreeWater(s, freeYL[i], freeYR[i], cy);
+        refreshShansep(s);
+      }
       if (factors) applyMaterialFactors(s, factors);
-      if (freeLines[i]) applyFreeWater(s, freeYL[i], freeYR[i], cy);
       if (normalUdls.length > 0) applyNormalLoads(s, normalUdls, loadFactor, cy);
+      if (kh !== 0 || kv !== 0) applySeismic(s, kh, kv, cy);
+      for (const ll of slope.lineLoads) {
+        // the horizontal part of an inclined line load, on the slice it
+        // acts on (at a slice edge the first; at the ends of the mass, on
+        // a wall face, the end slice), at the load point or the ground
+        if (!ll.angle || ll.x < s.xLeft || ll.x > s.xRight) continue;
+        if (ll.x === s.xLeft && results.length > 0 && results[results.length - 1].xRight === ll.x) continue;
+        const h = ll.magnitude * Math.sin((ll.angle * Math.PI) / 180) * loadFactor;
+        const yg = ll.y ?? s.y0Top + ((s.y1Top - s.y0Top) * (ll.x - s.xLeft)) / (s.xRight - s.xLeft);
+        s.hForce = (s.hForce ?? 0) + h;
+        s.extraMoment = (s.extraMoment ?? 0) + h * (cy - yg);
+      }
       results.push(s);
     }
   }
@@ -1150,6 +1199,40 @@ export function getSlices(
   applyReinforcement(slope, results, cx, cy);
 
   return results;
+}
+
+/**
+ * Pseudostatic seismic load on a slice: kh·W horizontally in the sliding
+ * direction at its centre of gravity, kv·W vertically (positive downward)
+ * at its centre line, as a load on the slice (with the surface loads).
+ */
+function applySeismic(s: Slice, kh: number, kv: number, cy: number): void {
+  const w = s.weight;
+  if (kh !== 0) {
+    const yc = s.yCentroid ?? (s.yTop + s.yBottom) / 2;
+    s.hForce = (s.hForce ?? 0) + kh * w;
+    s.extraMoment = (s.extraMoment ?? 0) + kh * w * (cy - yc);
+  }
+  if (kv !== 0) s.udl += kv * w;
+}
+
+/**
+ * A SHANSEP base with free water standing on the slice: its strength from
+ * the overburden with the water's weight (createSlice had the soil and the
+ * loads only).
+ */
+function refreshShansep(s: Slice): void {
+  const model = s.baseMaterial?.model;
+  if (model?.kind !== "shansep" || !s.waterLoad) return;
+  const st = resolveStrength(model, {
+    yBottom: s.yBottom,
+    x: s.x,
+    yGround: s.yTop,
+    alpha: s.alpha,
+    effectiveVerticalStress: (s.weight + s.udl + s.ll + s.waterLoad) / s.width - s.U,
+  });
+  s.cohesion = st.cohesion;
+  s.cohesionUndrained = st.cohesionUndrained;
 }
 
 /**

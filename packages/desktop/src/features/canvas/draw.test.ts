@@ -451,6 +451,18 @@ describe("drawCanvas — edit mode", () => {
     for (const b of boxes) for (const k of keepOut) expect(overlap(b, k)).toBe(false);
   });
 
+  it("draws the water before a rapid drawdown dashed, with its label, only when set", () => {
+    const line: [number, number][] = [[0, 9], [30, 9]];
+    const isBefore = (p: PaintedPath) => hasPoints(p, line.map(([x, y]) => toC(x, y)));
+    const rec = draw({ piezometricLine: { ...DEFAULT_PIEZO_LINE, rapidDrawdown: { waterBefore: line } } });
+    const stroke = rec.strokes(PIEZO_COLOR.hex).find(isBefore);
+    expect(stroke?.state.lineDash.length).toBeGreaterThan(0);
+    expect(rec.texts.map((t) => t.text)).toContain("before drawdown");
+    const none = draw();
+    expect(none.strokes(PIEZO_COLOR.hex).some(isBefore)).toBe(false);
+    expect(none.texts.map((t) => t.text)).not.toContain("before drawdown");
+  });
+
   it("puts each coordinate label on a near-opaque plate of the background colour", () => {
     const rec = draw({ editingExterior: true });
     const plates = rec.callsOf("fillRect").filter((c) => c.state.globalAlpha === POINT_LABEL_PLATE_ALPHA);

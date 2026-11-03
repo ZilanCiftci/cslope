@@ -184,7 +184,7 @@ export function buildSlope(def: SlopeDefinition): Slope {
   if (def.lineLoads) {
     slope.setLineLoads(
       ...def.lineLoads.map(
-        (ll) => new LineLoad({ magnitude: ll.magnitude, x: ll.x }),
+        (ll) => new LineLoad({ magnitude: ll.magnitude, x: ll.x, ...(ll.angle ? { angle: ll.angle } : {}), ...(ll.y !== undefined ? { y: ll.y } : {}) }),
       ),
     );
   }
@@ -245,6 +245,21 @@ export function buildSlope(def: SlopeDefinition): Slope {
   // Custom-planes-only mode: no search surfaces are generated
   if (def.customPlanesOnly) {
     slope.customPlanesOnly = true;
+  }
+
+  // Rapid drawdown: the same model with the water before drawdown, for
+  // all materials (model/drawdown.ts); its options follow the slope's.
+  if (def.rapidDrawdown && def.rapidDrawdown.waterBefore.length >= 2) {
+    const before = buildSlope({
+      ...def,
+      waterTable: { mode: "custom", value: def.rapidDrawdown.waterBefore, followBoundary: false },
+      waterTables: [],
+      materials: def.materials.map((m) => ({ ...m, waterTableId: undefined })),
+      rapidDrawdown: undefined,
+      customSearchPlanes: undefined,
+      customSurfaces: undefined,
+    });
+    slope.setDrawdownBefore(before);
   }
 
   return slope;

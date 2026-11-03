@@ -7,7 +7,8 @@
  * they only consume the `ResolvedStrength` output.
  */
 
-import { isCombinedDepthModel, suctionAngle, type MaterialModel, type MaterialModelKind } from "./material-models";
+import { isCombinedDepthModel, suctionAngle, type MaterialModel, type MaterialModelKind, type TableSpline } from "./material-models";
+import { cubicSpline, evalSpline } from "../math/spline";
 import type { PartialFactors } from "./analysis";
 import { hoekBrownOf, instantaneousAtNormalStress, type HoekBrownParameters } from "./hoek-brown";
 import {
@@ -62,6 +63,8 @@ export interface ResolvedStrength {
    * update from the stress they find (types/hoek-brown.ts).
    */
   hoekBrown?: HoekBrownParameters;
+  /** A shear-normal function: its tangent c, φ are updated like Hoek-Brown's. */
+  shearNormal?: Extract<MaterialModel, { kind: "shear-normal" }>;
 }
 
 // ── Context supplied by the slice builder ──────────────────────
@@ -89,6 +92,12 @@ export interface StrengthContext {
    * (`UnsaturatedStrength`). Not set: 0, no suction strength.
    */
   suction?: number;
+  /**
+   * Effective vertical stress at the base (kPa), for SHANSEP: the slice's
+   * weight and loads per unit width less the pore pressure. Not set: the
+   * overburden γ·(ground − base) of the model's unit weight.
+   */
+  effectiveVerticalStress?: number;
 }
 
 // ── Resolver ───────────────────────────────────────────────────
@@ -183,6 +192,17 @@ function resolveModelStrength(
 
     case "s-f-datum":
       return withAnisotropy(model.anisotropy, resolveStrengthFromDatum(model, context), context);
+
+    case "shear-normal": {
+      // first estimate of the normal stress: the overburden, as Hoek-Brown
+      const depth = Math.max(0, context.yGround - context.yBottom);
+      const sn = model.unitWeight * depth * Math.cos(context.alpha) ** 2;
+      const t = shearNormalAt(model, sn);
+      return { ...t, cohesionUndrained: t.cohesion, shearNormal: model };
+    }
+
+    case "shansep":
+      return withAnisotropy(model.anisotropy, resolveShansep(model, context), context);
 
     // ── Generalised Hoek–Brown ───────────────────────────────
     case "hoek-brown": {
@@ -329,7 +349,8 @@ export function designStrength(
     kind === "undrained" ||
     (kind === "s-f-depth" && !st.isCombined) ||
     kind === "s-f-datum" ||
-    (st.frictionAngle === 0 && !st.isCombined);
+    kind === "shansep" ||
+    (st.frictionAngle === 0 && !st.isCombined && kind !== "shear-normal" && kind !== "hoek-brown");
   const tanPhi = undrained ? 0 : Math.tan((st.frictionAngle * Math.PI) / 180);
   if (!f || kind === "high-strength" || kind === "impenetrable") {
     return { cohesion: st.cohesion, tanPhi, cohesionUndrained: st.cohesionUndrained, undrained };
@@ -504,6 +525,62 @@ function resolveStrengthFromDatum(
     frictionAngle: 0,
     cohesionUndrained: su,
   };
+}
+
+/**
+ * Tangent c (kPa) and φ (°) of a shear-normal function at σ′n: of the
+ * segment holding σ′n (the first or last beyond the ends), so that
+ * c + σ′n·tan φ is the strength there. Where the tangent's intercept would
+ * be negative (a convex part), the secant through the origin (c = 0,
+ * tan φ = τ/σ′n); where the curve falls, its value as c with φ = 0.
+ */
+export function shearNormalAt(model: { points: readonly [number, number][]; spline?: TableSpline }, sn: number): { cohesion: number; frictionAngle: number } {
+  const points = model.points;
+  const n = points.length;
+  if (n === 0) return { cohesion: 0, frictionAngle: 0 };
+  if (n === 1) return { cohesion: Math.max(0, points[0][1]), frictionAngle: 0 };
+  let tau: number, slope: number;
+  if (model.spline) {
+    ({ value: tau, slope } = evalSpline(cubicSpline(points, [model.spline.startSlope ?? null, model.spline.endSlope ?? null]), sn));
+  } else {
+    let k = 1;
+    while (k < n - 1 && points[k][0] < sn) k++;
+    const [x0, y0] = points[k - 1], [x1, y1] = points[k];
+    slope = x1 > x0 ? (y1 - y0) / (x1 - x0) : 0;
+    tau = y0 + (sn - x0) * slope;
+  }
+  tau = Math.max(0, tau);
+  const deg = (t: number) => (Math.atan(t) * 180) / Math.PI;
+  if (!(slope > 0)) return { cohesion: tau, frictionAngle: 0 };
+  const c = tau - sn * slope;
+  if (c >= 0) return { cohesion: c, frictionAngle: deg(slope) };
+  return sn > 0 ? { cohesion: 0, frictionAngle: deg(tau / sn) } : { cohesion: tau, frictionAngle: 0 };
+}
+
+/** SHANSEP undrained strength at the base (see ShansepModel). */
+export function shansepSu(model: Extract<MaterialModel, { kind: "shansep" }>, context: Pick<StrengthContext, "yBottom" | "yGround" | "effectiveVerticalStress">): number {
+  const sv = Math.max(0, context.effectiveVerticalStress ?? model.unitWeight * Math.max(0, context.yGround - context.yBottom));
+  let su: number;
+  // a table: straight lines or a spline, constant beyond the ends
+  const table = (pts: [number, number][], x: number) => {
+    if (!model.spline || pts.length < 2) return interpolateFunction(pts, x);
+    const t = Math.min(Math.max(x, pts[0][0]), pts[pts.length - 1][0]);
+    return evalSpline(cubicSpline(pts, [model.spline.startSlope ?? null, model.spline.endSlope ?? null]), t).value;
+  };
+  if (model.suByStress && model.suByStress.length > 0) su = table(model.suByStress, sv);
+  else {
+    const ocr = model.ocrByElevation && model.ocrByElevation.length > 0 ? table(model.ocrByElevation, context.yBottom) : (model.ocr ?? 1);
+    su = sv * model.ratio * Math.max(ocr, 0) ** (model.exponent ?? 0.8);
+  }
+  return Math.max(nonNegative(su), model.suMin ?? 0);
+}
+
+function resolveShansep(
+  model: Extract<MaterialModel, { kind: "shansep" }>,
+  context: StrengthContext,
+): ResolvedStrength {
+  const su = shansepSu(model, context);
+  return { cohesion: su, frictionAngle: 0, cohesionUndrained: su };
 }
 
 // ── Helpers ────────────────────────────────────────────────────

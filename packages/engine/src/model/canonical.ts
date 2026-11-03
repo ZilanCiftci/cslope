@@ -154,6 +154,9 @@ export function toCanonicalSlopeDefinition(
       ...wt,
       coordinates: mirrorPoints(wt.coordinates, xMin, xMax),
     })),
+    ...(slopeDefinition.rapidDrawdown
+      ? { rapidDrawdown: { ...slopeDefinition.rapidDrawdown, waterBefore: mirrorPoints(slopeDefinition.rapidDrawdown.waterBefore, xMin, xMax) } }
+      : {}),
     udls: slopeDefinition.udls?.map((udl) => {
       const x1 = mirrorX(udl.x2, xMin, xMax);
       const x2 = mirrorX(udl.x1, xMin, xMax);
@@ -166,6 +169,7 @@ export function toCanonicalSlopeDefinition(
     lineLoads: slopeDefinition.lineLoads?.map((lineLoad) => ({
       ...lineLoad,
       x: mirrorX(lineLoad.x, xMin, xMax),
+      ...(lineLoad.angle ? { angle: -lineLoad.angle } : {}),
     })),
     piles: slopeDefinition.piles?.map((p) => ({
       ...p,

@@ -122,7 +122,7 @@ describe("forces on the slices", () => {
     expect(forcesFor({ ...nail, tensileCapacity: 0 })).toHaveLength(0);
   });
 
-  it("an element within 10° of the normal to the base carries its force; one pushed more steeply does not", () => {
+  it("an element within 2° of the normal to the base carries its force (along itself when pushed); one pushed more steeply does not", () => {
     // the circle's lowest point is (22, −0.5), its base level there
     const at = (deg: number) => {
       const t = (deg * Math.PI) / 180;
@@ -130,8 +130,8 @@ describe("forces on the slices", () => {
       return forcesFor({ x1: 22 - 6 * Math.sin(t), y1: -0.5 + 6 * Math.cos(t), x2: 22 + 6 * Math.sin(t), y2: -0.5 - 6 * Math.cos(t), tensileCapacity: 100 });
     };
     expect(at(0)).toHaveLength(1);
-    expect(at(8)).toHaveLength(1);
-    expect(at(15)).toHaveLength(0);
+    // (the slice base there is within about 1° of level)
+    expect(at(6)).toHaveLength(0);
   });
 
   it("passive elements go to the passive loads, divided by the spacing", () => {

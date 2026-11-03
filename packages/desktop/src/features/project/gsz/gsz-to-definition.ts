@@ -76,30 +76,44 @@ function reinforcementOf(
       }
       if (type === "pile") continue;
     }
+    // No tensile capacity in the file: nothing to carry (not an unlimited element).
+    if (r.tensile === undefined) {
+      once(`Reinforcement "${r.name}": the file gives no tensile capacity; it is not imported.`);
+      continue;
+    }
+    if (r.pullout === undefined && !(sheet && r.calculatedPullout)) {
+      once(`Reinforcement "${r.name}": the file gives no pullout resistance; both its ends are taken as fully anchored (the tensile capacity wherever it is crossed).`);
+    } else if (!sheet && r.pullout !== undefined && !(r.bondDiameter !== undefined && r.bondDiameter > 0)) {
+      once(`Reinforcement "${r.name}": no bond diameter in the file; its pullout resistance is taken per metre of the element.`);
+    }
     const orientation = r.orientation ?? 0;
     const direction = orientation <= 0.25 ? "axial" : orientation >= 0.75 ? "tangent" : "bisector";
     if (orientation !== 0 && orientation !== 0.5 && orientation !== 1) {
       once(`Reinforcement "${r.name}": the force orientation ${orientation} (0: along the reinforcement, 1: along the slip surface) is imported as ${direction}.`);
     }
-    const big = 1e12;
     if (sheet) {
       const pullout: Reinforcement["pullout"] = r.calculatedPullout
         ? { kind: "interface", adhesion: (r.adhesion ?? 0) * scale.stress, frictionAngle: r.interfaceAngle ?? 0, coverage: (r.surfaceAreaFactor ?? 2) / 2 }
         : r.pullout !== undefined ? { kind: "bond", strength: r.pullout * scale.stress } : undefined;
       reinforcements.push({
         x1, y1, x2, y2,
-        tensileCapacity: r.tensile !== undefined ? r.tensile * perLength : big,
+        tensileCapacity: r.tensile * perLength,
         ...(pullout ? { pullout } : {}),
         end1Capacity: (r.plate ?? 0) * perLength,
         direction, application,
       });
     } else {
       // the bond resistance per metre of the element
-      const circumference = r.bondDiameter !== undefined && r.bondDiameter > 0 ? Math.PI * r.bondDiameter * scale.len : 1;
-      const strength = r.pullout !== undefined ? r.pullout * scale.stress * circumference : undefined;
+      // a stress over the circumference; without a diameter, per length
+      const strength =
+        r.pullout === undefined
+          ? undefined
+          : r.bondDiameter !== undefined && r.bondDiameter > 0
+            ? r.pullout * scale.stress * Math.PI * r.bondDiameter * scale.len
+            : r.pullout * perLength;
       const anchor = type !== "nail";
       const bonded = anchor && r.bondLength !== undefined && r.bondLength > 0 ? r.bondLength * scale.len : undefined;
-      const tensile = r.tensile !== undefined ? r.tensile * force : big;
+      const tensile = r.tensile * force;
       reinforcements.push({
         x1, y1, x2, y2,
         tensileCapacity: tensile,
@@ -307,6 +321,9 @@ function materialModel(
   notes: string[],
   water: MaterialWater = { hasLine: false },
   anisotropyFunctions?: Map<number, [number, number][]>,
+  materialFunctions?: GszFile["materialFunctions"],
+  cohesionFunctions?: GszFile["cohesionFunctions"],
+  strengthFunctions?: GszFile["strengthFunctions"],
 ): MaterialModel {
   const f = (k: string): number | undefined => {
     const v = Number(m.fields[k]);
@@ -324,7 +341,7 @@ function materialModel(
     notes.push(`Material "${m.name}": the anisotropy function is imported as factors interpolated linearly between its ${aniso.length} points (the file uses a spline).`);
     return { anisotropy: aniso };
   };
-  if (aniso && m.model !== "UndrainedPhiZero" && m.model !== "SFnDepth") {
+  if (aniso && m.model !== "UndrainedPhiZero" && m.model !== "SFnDepth" && m.model !== "SHANSEP") {
     notes.push(`Material "${m.name}": the anisotropy function on the shear strength is not imported for the model "${m.model}".`);
   }
   switch (m.model) {
@@ -370,6 +387,69 @@ function materialModel(
           if (mi === undefined) notes.push(`Material "${m.name}": no mi in the file; 10 used (the format's default).`);
           return { kind: "hoek-brown", unitWeight, ucs: ucs * scale.stress, gsi, mi: mi ?? 10, disturbance: f("DisturbanceFactor") ?? 0 };
         }
+      }
+      break;
+    }
+    case "ShearNormalFn": {
+      const id = f("StrengthFnNum");
+      const g = id !== undefined ? strengthFunctions?.get(id) : undefined;
+      if (g && g.input === "NormalStress" && g.points.length >= 2) {
+        return {
+          kind: "shear-normal", unitWeight,
+          points: g.points.map(([sn, tau]) => [sn * scale.stress, Math.max(0, tau) * scale.stress]),
+          ...(g.spline ? { spline: { ...(g.spline.startSlope !== undefined ? { startSlope: g.spline.startSlope } : {}), ...(g.spline.endSlope !== undefined ? { endSlope: g.spline.endSlope } : {}) } } : {}),
+        };
+      }
+      break;
+    }
+    case "MohrCoulombSpatial": {
+      // c a straight-line function of elevation with φ = 0: S = f(datum)
+      const id = f("CohesionFnNum");
+      const g = id !== undefined ? cohesionFunctions?.get(id) : undefined;
+      if (g && g.input === "Y" && g.points.length === 2 && !(f("PhiPrime") ?? 0)) {
+        const [[ya, ca], [yb, cb]] = g.points;
+        if (yb > ya) {
+          return {
+            kind: "s-f-datum", unitWeight,
+            suRef: cb * scale.stress, yRef: yb * scale.len,
+            rate: ((ca - cb) * scale.stress) / ((yb - ya) * scale.len),
+          };
+        }
+      }
+      break;
+    }
+    case "SHANSEP": {
+      // Su = σ′v·S·OCR^m (OCR a function of elevation with the "Custom"
+      // model), Su a function of σ′v ("Function"), or Su/σ′v constant
+      const option = m.fields.SlopeUndrainedStrengthModel ?? "";
+      const fn = (key: string, input: string) => {
+        const id = f(key);
+        const g = id !== undefined ? materialFunctions?.get(id) : undefined;
+        return g && g.input === input ? g : undefined;
+      };
+      // the spline in stress units (its end slopes are ratios of the units)
+      const splineOf = (g: { spline?: { startSlope?: number; endSlope?: number } }, k: number) =>
+        g.spline ? { spline: { ...(g.spline.startSlope !== undefined ? { startSlope: g.spline.startSlope * k } : {}), ...(g.spline.endSlope !== undefined ? { endSlope: g.spline.endSlope * k } : {}) } } : {};
+      if (/function/i.test(option)) {
+        const g = fn("ShearVerticalFnNum", "YEffectiveStress");
+        if (g) {
+          return { kind: "shansep", unitWeight, ratio: f("TauSigmaRatio") ?? 0, suByStress: g.points.map(([s, su]) => [s * scale.stress, su * scale.stress]), ...splineOf(g, 1), ...undrainedAniso() };
+        }
+      } else if (/custom/i.test(option)) {
+        const ratio = f("NCUndrainedStrengthRatio"), m_ = f("SHANSEPExponent");
+        const g = fn("OCRFnNum", "Y");
+        const ocr = f("OCRatio");
+        if (ratio !== undefined && (g || (ocr !== undefined && ocr > 0))) {
+          return {
+            kind: "shansep", unitWeight, ratio,
+            ...(m_ !== undefined ? { exponent: m_ } : {}),
+            ...(g ? { ocrByElevation: g.points.map(([y, o]) => [y * scale.len, o]), ...splineOf(g, 1 / scale.len) } : { ocr }),
+            ...undrainedAniso(),
+          };
+        }
+      } else {
+        const ratio = f("TauSigmaRatio");
+        if (ratio !== undefined) return { kind: "shansep", unitWeight, ratio, ocr: 1, ...undrainedAniso() };
       }
       break;
     }
@@ -448,7 +528,6 @@ export function gszToDefinition(file: GszFile, analysisId: number, fileName = "g
   // material id → its piezometric line's cap on the suction (as written), for φb
   const waterOfMaterial = new Map<number, MaterialWater>();
   if (/piezo/i.test(waterOption) && piezo.size > 0) {
-    if (/bbar/i.test(waterOption)) notes.push("Pore pressure from B-bar (excess pore pressure from loading) is not imported; only the piezometric lines.");
     const usage = new Map<number, number>();
     for (const id of usedIds) {
       const p = stab?.materialPiezometric.get(id);
@@ -482,12 +561,49 @@ export function gszToDefinition(file: GszFile, analysisId: number, fileName = "g
     notes.push(`The pore pressure option "${waterOption}" is not imported (for example from a seepage analysis or ru); the model has no water.`);
   }
 
+  // B-bar: the excess pore pressure from the weight of the included fills
+  // (the format's B-bar function, whose points the file does not hold: 1)
+  const bBarOf = (id: number): { bBar?: number; bBarLoad?: true } => {
+    if (!/bbar/i.test(waterOption)) return {};
+    const b = stab?.bBar?.get(id);
+    if (!b) return {};
+    const value = b.value ?? (b.fn !== undefined ? (file.materialFunctions?.get(b.fn)?.points.length === 1 ? file.materialFunctions.get(b.fn)!.points[0][1] : 1) : undefined);
+    return { ...(value !== undefined ? { bBar: value } : {}), ...(b.included ? { bBarLoad: true as const } : {}) };
+  };
+  if (/bbar/i.test(waterOption) && [...(stab?.bBar?.values() ?? [])].some((b) => b.fn !== undefined && b.value === undefined)) {
+    notes.push("B-bar pore pressure: the excess pore pressure is B̄ = 1 times the weight of the included fill above (the file names a B-bar function without its points).");
+  }
+
+  // Rapid drawdown (three-stage): the materials' line is the water before
+  // drawdown, the one line no material uses the water after it.
+  let rapidDrawdown: SlopeDefinition["rapidDrawdown"];
+  if (stab?.rapidDrawdown) {
+    const used = new Set(usedIds.map((id) => stab.materialPiezometric.get(id)).filter((p): p is number => p !== undefined && piezo.has(p)));
+    const after = [...piezo.keys()].filter((p) => !used.has(p));
+    if (used.size === 1 && after.length === 1) {
+      rapidDrawdown = { waterBefore: clipLine(piezo.get([...used][0])!) };
+      waterTable = { mode: "custom", value: clipLine(piezo.get(after[0])!), followBoundary: false };
+      waterTables.length = 0;
+      waterIdOf.clear();
+      notes.push("Rapid drawdown: imported as the three-stage analysis, with the materials' piezometric line as the water before drawdown and the other line as the water after it; the materials with drawdown strengths (cR, φR) do not drain.");
+    } else {
+      notes.push("Rapid drawdown: the piezometric lines before and after drawdown could not be told apart (one line used by all materials and one other expected); not imported as a drawdown analysis.");
+    }
+  }
+
   const materials = usedIds.map((id) => {
     const m = file.materials.get(id) ?? { id, name: `Material ${id}`, model: "", fields: {} };
     const c = m.color;
+    const model = materialModel(m, scale, notes, waterOfMaterial.get(id), file.anisotropyFunctions, file.materialFunctions, file.cohesionFunctions, file.strengthFunctions);
+    // the drawdown (R) envelope of a soil that does not drain
+    const cR = Number(m.fields.DrawdownCohesion), phiR = Number(m.fields.DrawdownPhi);
+    const drawdown =
+      rapidDrawdown && model.kind === "mohr-coulomb" && (m.fields.DrawdownCohesion !== undefined || m.fields.DrawdownPhi !== undefined)
+        ? { drawdownStrength: { cohesion: (Number.isFinite(cR) ? cR : 0) * scale.stress, frictionAngle: Number.isFinite(phiR) ? phiR : 0 } }
+        : {};
     return {
       name: nameOf.get(id)!,
-      model: materialModel(m, scale, notes, waterOfMaterial.get(id), file.anisotropyFunctions),
+      model: { ...model, ...bBarOf(id), ...drawdown },
       ...(c ? { color: `#${c.map((v) => v.toString(16).padStart(2, "0")).join("")}` } : {}),
       ...(waterIdOf.has(id) ? { waterTableId: waterIdOf.get(id) } : {}),
     };
@@ -521,9 +637,14 @@ export function gszToDefinition(file: GszFile, analysisId: number, fileName = "g
   if ((stab?.surcharges.length ?? 0) > 0) {
     notes.push(`${stab!.surcharges.length} surcharge${stab!.surcharges.length === 1 ? "" : "s"} imported as distributed loads: the unit weight times the height of the fill above the ground, in strips.`);
   }
+  // the direction from the plunge below the horizontal and the compass
+  // trend of its horizontal part (90: +x): the angle from the downward
+  // vertical, positive towards +x
   const lineLoads = (stab?.lineLoads ?? []).map((l) => {
-    if (Math.abs(l.plunge - 90) > 0.5) notes.push(`A line load at x = ${(l.x * scale.len).toFixed(2)} is inclined (${l.plunge}° below horizontal); imported as vertical.`);
-    return { magnitude: l.value * (imperial ? 0.0145939 : 1), x: l.x * scale.len };
+    const p = (l.plunge * Math.PI) / 180, t = (l.trend * Math.PI) / 180;
+    const angle = (Math.atan2(Math.cos(p) * Math.sin(t), Math.sin(p)) * 180) / Math.PI;
+    const a = Math.abs(angle) < 1e-9 ? 0 : Number(angle.toFixed(6));
+    return { magnitude: l.value * (imperial ? 0.0145939 : 1), x: l.x * scale.len, ...(a !== 0 ? { angle: a, y: l.y * scale.len } : {}) };
   });
 
   const options: Partial<AnalysisOptions> = {};
@@ -622,9 +743,9 @@ export function gszToDefinition(file: GszFile, analysisId: number, fileName = "g
     } else notes.push(`The tension crack option "${tc.option}"${tc.angle !== undefined ? ` (${tc.angle}°)` : ""} is not imported.`);
     if (tc.waterFraction > 0 && (options.tensionCrackAngle || options.tensionCrackDepth)) options.tensionCrackWater = Math.min(1, tc.waterFraction);
   }
-  if (stab && (stab.seismicH !== 0 || stab.seismicV !== 0)) {
-    notes.push(`The seismic coefficients (kh = ${stab.seismicH}, kv = ${stab.seismicV}) are not imported.`);
-  }
+  // pseudostatic seismic coefficients (the file's kv positive downward, as cSlope's)
+  if (stab && stab.seismicH !== 0) options.seismicHorizontal = Math.abs(stab.seismicH);
+  if (stab && stab.seismicV !== 0) options.seismicVertical = stab.seismicV;
 
   const { reinforcements, piles } = reinforcementOf(file, stab, scale, imperial, notes);
 
@@ -639,6 +760,44 @@ export function gszToDefinition(file: GszFile, analysisId: number, fileName = "g
     ? { ...best, cx: best.cx * scale.len, cy: best.cy * scale.len, r: best.r * scale.len, ...(best.weight !== undefined ? { weight: best.weight * (imperial ? 0.0145939 : 1) } : {}) }
     : undefined;
   if (best && !circularBest) notes.push(`The file's critical surface (F = ${best.fos.toFixed(3)}) is not a circle; it is not carried over.`);
+  // A circle the file ends at a point where it would run on in the soil
+  // (an exit given at the toe of a wall): cSlope would take it on to its
+  // own exit, so its base as the slices give it is carried over instead,
+  // a surface with the circle's centre as its axis.
+  let truncatedReference: { points: Pt[]; axis: Pt } | undefined;
+  if (reference && best?.base && best.base.length >= 3) {
+    const base = best.base.map(L);
+    const arcY = (x: number) => reference.cy - Math.sqrt(Math.max(0, reference.r ** 2 - (x - reference.cx) ** 2));
+    const d = 1e-3 * reference.r;
+    const inSoil = (x: number) => {
+      const g = groundAt(geo.outline, x);
+      return g !== null && Math.abs(x - reference.cx) < reference.r && arcY(x) < g - 1e-6 * reference.r;
+    };
+    // the circle runs on in the soil for 1 % of its radius beyond the end
+    const runsOn = (x: number) => {
+      const dir = x < base[0][0] + d ? -1 : 1;
+      for (let k = 1; k <= 10; k++) if (!inSoil(x + dir * k * d)) return false;
+      return true;
+    };
+    // (the entry end of a file with a tension crack is cut by the crack, which cSlope makes itself)
+    const crackAtLeft = stab?.tensionCrack ? orientation !== "rtl" : null;
+    const leftCut = crackAtLeft !== true && runsOn(base[0][0]);
+    const rightCut = crackAtLeft !== false && runsOn(base[base.length - 1][0]);
+    if (leftCut || rightCut) {
+      // An end below the ground (a tension crack) rises to it, nearly
+      // vertically, so that cSlope's crack forms there again.
+      const pts = base.slice();
+      const rise = (p: Pt, dir: number): Pt | null => {
+        const g = groundAt(geo.outline, p[0]);
+        return g !== null && g - p[1] > 1e-3 * reference.r ? [p[0] + dir * 1e-4 * reference.r, g] : null;
+      };
+      const first = rise(pts[0], -1), last = rise(pts[pts.length - 1], 1);
+      if (first) pts.unshift(first);
+      if (last) pts.push(last);
+      truncatedReference = { points: pts, axis: [reference.cx, reference.cy] };
+      notes.push(`The file's critical circle ends where it would run on in the soil (F = ${best.fos.toFixed(3)}); it is carried over as a surface along its slices, with the circle's centre as the axis.`);
+    }
+  }
 
   const definition: SlopeDefinition = {
     ...(orientation ? { orientation } : {}),
@@ -647,14 +806,19 @@ export function gszToDefinition(file: GszFile, analysisId: number, fileName = "g
     materialBoundaries: geo.boundaries.map((c) => ({ coordinates: c, materialName: "" })),
     regionAssignments,
     ...(waterTable ? { waterTable } : {}),
+    ...(rapidDrawdown ? { rapidDrawdown } : {}),
     ...(waterTables.length > 0 ? { waterTables } : {}),
     udls,
     lineLoads,
     ...(reinforcements.length > 0 ? { reinforcements } : {}),
     ...(piles.length > 0 ? { piles } : {}),
     ...(analysisLimits ? { analysisLimits } : {}),
-    ...(reference ? { customSearchPlanes: [{ cx: reference.cx, cy: reference.cy, radius: reference.r }] } : {}),
-    ...(customSurfaces.length > 0 ? { customSurfaces, customPlanesOnly: true } : {}),
+    ...(reference && !truncatedReference ? { customSearchPlanes: [{ cx: reference.cx, cy: reference.cy, radius: reference.r }] } : {}),
+    ...(customSurfaces.length > 0
+      ? { customSurfaces, customPlanesOnly: true }
+      : truncatedReference
+        ? { customSurfaces: [truncatedReference] }
+        : {}),
     ...(blockSearchObjects ? { blockSearchObjects } : {}),
   } as SlopeDefinition;
   const base = fileName.replace(/\.gsz$/i, "");

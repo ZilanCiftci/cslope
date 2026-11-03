@@ -2,10 +2,12 @@ import { useEffect, useRef, useState } from "react";
 import { isElectron } from "../../utils/is-electron";
 import { Label } from "../../components/ui/Label";
 import {
+  SpreadsheetNumberInput,
   SpreadsheetRemoveButton,
   SpreadsheetTable,
   type SpreadsheetColumn,
 } from "../../components/ui/SpreadsheetTable";
+import { DraftNumberInput } from "../../components/ui/DraftNumberInput";
 import { SpreadsheetExpressionInput } from "../../components/ui/SpreadsheetExpressionInput";
 import { useAppStore } from "../../store/app-store";
 import type { LineLoadRow, ParameterDef, UdlRow } from "../../store/types";
@@ -17,6 +19,14 @@ interface LoadsStatePayload {
   parameters?: ParameterDef[];
   /** From the main window: keeps new loads inside the model. */
   coordinates?: [number, number][];
+}
+
+/** A typed inclination: within ±180°, 0 (vertical) not stored. */
+function parseLoadAngle(text: string): number | undefined | null {
+  if (text.trim() === "") return undefined;
+  const v = Number(text);
+  if (!Number.isFinite(v) || Math.abs(v) > 180) return null;
+  return v === 0 ? undefined : v;
 }
 
 function normalizeLoadsPayload(
@@ -121,11 +131,11 @@ export function LineLoadsDialogApp() {
     },
     {
       header: (
-        <Label title="Vertical line load per metre run of the slope">
+        <Label title="Line load per metre run of the slope">
           P (kN/m)
         </Label>
       ),
-      widthClassName: "w-[45%]",
+      widthClassName: "w-[24%]",
       renderCell: (row) => (
         <SpreadsheetExpressionInput
           value={row.magnitude}
@@ -143,7 +153,7 @@ export function LineLoadsDialogApp() {
     },
     {
       header: <Label title="Position of the load">x (m)</Label>,
-      widthClassName: "w-[45%]",
+      widthClassName: "w-[22%]",
       renderCell: (row) => (
         <SpreadsheetExpressionInput
           value={row.x}
@@ -154,6 +164,55 @@ export function LineLoadsDialogApp() {
           onExpressionChange={(expr) => setLineLoadExpression(row, "x", expr)}
         />
       ),
+    },
+    {
+      header: (
+        <Label title="Inclination of the load from the downward vertical, positive when it points towards +x: 0 = vertical, ±90 = horizontal">
+          Angle from vertical (°)
+        </Label>
+      ),
+      widthClassName: "w-[22%]",
+      renderCell: (row) => (
+        <SpreadsheetNumberInput
+          value={row.angle ?? 0}
+          step="5"
+          ariaLabel="Line load angle"
+          onChange={(text) => {
+            const angle = parseLoadAngle(text);
+            if (angle !== null) updateLineLoad(row.id, { angle });
+          }}
+        />
+      ),
+    },
+    {
+      header: (
+        <Label title="Elevation of the load point, for a load on a wall face; empty = on the ground at x. Used for an inclined load only.">
+          Load point y (m)
+        </Label>
+      ),
+      widthClassName: "w-[22%]",
+      renderCell: (row) => {
+        const vertical = !row.angle;
+        return (
+          <DraftNumberInput
+            value={row.y}
+            step="0.5"
+            placeholder="ground"
+            disabled={vertical}
+            aria-label="Line load point y"
+            onValueChange={(y) => updateLineLoad(row.id, { y })}
+            onClear={() => updateLineLoad(row.id, { y: undefined })}
+            className="w-full h-full py-1 px-2 text-[12px] outline-none border-2 border-transparent focus:border-[var(--color-vsc-accent)] disabled:opacity-40"
+            style={{
+              background: "var(--color-vsc-input-bg)",
+              color: "var(--color-vsc-text)",
+              borderRadius: 0,
+              boxShadow: "none",
+              margin: 0,
+            }}
+          />
+        );
+      },
     },
     {
       header: null,

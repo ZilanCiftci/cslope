@@ -49,6 +49,16 @@ With the box unticked, the lines are clipped to the ground surface and no water 
   A fully submerged slope gives the same factor of safety as the same slope in the dry with buoyant unit weights. This is one of the checks in the [verification](/verification).
 </Callout>
 
+## Rapid drawdown
+
+With **Rapid drawdown** on, the model's water is the state after drawdown and **Water before drawdown** gives the water table before it. Materials with a [drawdown envelope](/docs/materials#drawdown-envelope-rapid-drawdown) do not drain; the analysis follows the three-stage procedure of Duncan, Wright & Wong (1990):
+
+1. Before drawdown, with the drained strengths and the water (and reservoir) before it, the effective normal stress $\sigma'_{fc}$ and the shear stress $\tau_{fc}$ on each slice base.
+2. After drawdown, the undrained strength $\tau_{ff}$ at those consolidation stresses, interpolated by the consolidation ratio $K_c$ between the drawdown envelope ($K_c = 1$) and the effective envelope ($K_c = K_f$).
+3. Where the drained strength with the water after drawdown is lower than $\tau_{ff}$, the drained strength.
+
+Free-draining materials take their drained strength with the water after drawdown.
+
 ## Water in a tension crack
 
 A tension crack can be partly or fully filled with water. The water pushes on the sliding mass. Set it with *Water in crack (%)* in the analysis options; see [Tension cracks](/docs/analysis#tension-crack).

@@ -1247,9 +1247,29 @@ export function drawCanvas(
 
   // ── UDL and line loads (geometry from layoutLoads) ───────
   const loads = layoutLoads(ctx, { w, h, coordinates, worldToCanvas, surfaceYAtX }, udls, lineLoads, hoverHit, paperZoom);
-  const drawDownArrow = ({ cx, cy, top }: LoadArrow, color: string, lineWidth: number) => {
+  const drawDownArrow = ({ cx, cy, top, tail }: LoadArrow, color: string, lineWidth: number) => {
     ctx.strokeStyle = color;
     ctx.lineWidth = lineWidth * paperZoom;
+    if (tail) {
+      // an inclined line load: the shaft from the tail, the head along it
+      const len = Math.hypot(cx - tail[0], cy - tail[1]) || 1;
+      const ux = (cx - tail[0]) / len;
+      const uy = (cy - tail[1]) / len;
+      const hl = ARROW_HEAD_LEN_PX * paperZoom;
+      const hw = ARROW_HEAD_PX * paperZoom;
+      ctx.beginPath();
+      ctx.moveTo(tail[0], tail[1]);
+      ctx.lineTo(cx, cy);
+      ctx.stroke();
+      ctx.fillStyle = color;
+      ctx.beginPath();
+      ctx.moveTo(cx, cy);
+      ctx.lineTo(cx - ux * hl - uy * hw, cy - uy * hl + ux * hw);
+      ctx.lineTo(cx - ux * hl + uy * hw, cy - uy * hl - ux * hw);
+      ctx.closePath();
+      ctx.fill();
+      return;
+    }
     ctx.beginPath();
     ctx.moveTo(cx, top);
     ctx.lineTo(cx, cy);
@@ -1422,6 +1442,27 @@ export function drawCanvas(
             ),
         )
       : [];
+  // Rapid drawdown: the water before drawdown, dashed, with a label at
+  // its right end.
+  const waterBefore = piezometricLine.rapidDrawdown?.waterBefore;
+  if (waterBefore && waterBefore.length >= 2) {
+    const pts = waterBefore.map(([x, y]) => worldToCanvas(x, y, w, h));
+    ctx.strokeStyle = PIEZO_COLOR.hex;
+    ctx.lineWidth = 1.5 * paperZoom;
+    ctx.setLineDash([8 * paperZoom, 5 * paperZoom]);
+    ctx.beginPath();
+    pts.forEach(([px, py], i) => (i === 0 ? ctx.moveTo(px, py) : ctx.lineTo(px, py)));
+    ctx.stroke();
+    ctx.setLineDash([]);
+    const [lx, ly] = pts.reduce((a, b) => (b[0] > a[0] ? b : a));
+    ctx.fillStyle = PIEZO_COLOR.hex;
+    ctx.font = `${9 * paperZoom}px 'Segoe UI', sans-serif`;
+    ctx.textAlign = "right";
+    ctx.textBaseline = "bottom";
+    ctx.fillText("before drawdown", lx - 2 * paperZoom, ly - 2 * paperZoom);
+    ctx.textBaseline = "alphabetic";
+    ctx.textAlign = "left";
+  }
   if (piezometricLine.lines.length > 0) {
     const multiLine = piezometricLine.lines.length > 1;
     const piezoBlue = PIEZO_COLOR.hex;

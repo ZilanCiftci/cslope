@@ -38,6 +38,11 @@ const FIELD_LABELS: Record<string, string> = {
   gsi: "GSI",
   mi: "mi",
   disturbance: "D",
+  ratio: "S (Su/σ′v)",
+  exponent: "m (SHANSEP)",
+  ocr: "OCR",
+  suMin: "Min Su (kPa)",
+  bBar: "B̄",
 };
 
 /** Variables of a model: its parameters and the materials' numbers. */

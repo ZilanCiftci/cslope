@@ -184,6 +184,11 @@ ${ids.map((d) => `              <DataPoint>${d}</DataPoint>`).join("\n")}
       })
     : [];
   if (piezo?.enabled && piezo.freeWater === false) notes.push("The water lines are clipped to the ground in cSlope; the format carries free water above the ground where a line is above it.");
+  if (piezo?.rapidDrawdown) {
+    notes.push("Rapid drawdown: the three-stage analysis is not written; the water lines written are the water after drawdown, and the materials are drained.");
+  } else if (model.materials.some((m) => m.model.kind === "mohr-coulomb" && m.model.drawdownStrength)) {
+    notes.push("The drawdown envelopes (cR, φR) of the materials are not written.");
+  }
 
   // distributed loads: a fill 1 m high above the ground of unit weight = the load
   const surchargeXml = (model.udls ?? []).map((u, i) => {
@@ -200,12 +205,21 @@ ${ids.map((d) => `              <DataPoint>${d}</DataPoint>`).join("\n")}
   });
   if ((model.udls ?? []).length > 0) notes.push("Distributed loads are written as surcharges: a fill 1 m above the ground whose unit weight is the load.");
   const lineLoadXml = (model.lineLoads ?? []).map((l) => {
-    const id = lid([l.x, groundAt(outline, l.x)]);
+    // the direction as the plunge below the horizontal and the compass trend
+    // of the horizontal part (90: +x, 270: −x), from the angle from the
+    // downward vertical (positive towards +x)
+    const a = Number.isFinite(l.angle) ? ((l.angle ?? 0) * Math.PI) / 180 : 0;
+    const sin = Math.abs(Math.sin(a)) < 1e-12 ? 0 : Math.sin(a);
+    const plunge = (Math.asin(Math.max(-1, Math.min(1, Math.cos(a)))) * 180) / Math.PI;
+    const trend = sin > 0 ? 90 : sin < 0 ? 270 : 0;
+    // the load point: on a wall face when given, else the ground at x
+    const y = a !== 0 && l.y !== undefined && Number.isFinite(l.y) ? l.y : groundAt(outline, l.x);
+    const id = lid([l.x, y]);
     return `          <LineLoadPoint>
             <ID>${id}</ID>
             <LineLoad>
               <Value>${n(l.magnitude)}</Value>
-              <Direction Plunge="90" Trend="0" />
+              <Direction Plunge="${n(Number(plunge.toFixed(9)))}" Trend="${trend}" />
             </LineLoad>
           </LineLoadPoint>`;
   });

@@ -224,6 +224,26 @@ describe("parseProjectFile: models", () => {
     ]);
   });
 
+  it("keeps a line load's finite angle within ±180° and its point y; drops the rest", () => {
+    const m = parseOne({
+      lineLoads: [
+        { id: "l1", magnitude: 5, x: 3, angle: 30, y: 7 },
+        { id: "l2", magnitude: 5, x: 3, angle: 0, y: 2 },
+        { id: "l3", magnitude: 5, x: 3, angle: 200, y: "high" },
+        { id: "l4", magnitude: 5, x: 3, angle: "30", y: null },
+        { id: "l5", magnitude: 5, x: 3, angle: -180 },
+      ],
+    });
+    expect(m.lineLoads.map(({ angle, y }) => ({ angle, y }))).toEqual([
+      { angle: 30, y: 7 },
+      { angle: undefined, y: 2 },
+      { angle: undefined, y: undefined },
+      { angle: undefined, y: undefined },
+      { angle: -180, y: undefined },
+    ]);
+    expect(m.lineLoads[1]).not.toHaveProperty("angle");
+  });
+
   it("searches the whole slope when a file has no limits; fills bad fields", () => {
     expect(parseOne({}).analysisLimits).toEqual({
       ...DEFAULT_ANALYSIS_LIMITS,

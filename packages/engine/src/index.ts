@@ -68,6 +68,9 @@ export type {
   StrengthFromDatumModel,
   LimeCementColumnModel,
   HoekBrownModel,
+  ShansepModel,
+  ShearNormalModel,
+  TableSpline,
   DepthReference,
   UnsaturatedStrength,
 } from "./types/material-models";

@@ -9,6 +9,8 @@ import { getIntersliceFunctionValue, extrapolateLambda } from "../math/index";
 import type { Slope, SearchPlane } from "./slope";
 import { getSlices, WATER_LINE_GAP } from "./slices";
 import { instantaneousAtNormalStress } from "../types/hoek-brown";
+import { shearNormalAt } from "../types/strength";
+import { applyRapidDrawdown } from "./drawdown";
 import { designStrength } from "../types/strength";
 import {
   setEntryExitPlanes,
@@ -1102,9 +1104,10 @@ const HB_TOLERANCE = 1e-4;
 function updateHoekBrown(slope: Slope, slices: Slice[], normals: readonly number[]): void {
   for (let i = 0; i < slices.length; i++) {
     const s = slices[i];
-    if (!s.hoekBrown) continue;
-    const inst = instantaneousAtNormalStress(s.hoekBrown, normals[i] / s.baseLength);
-    const d = designStrength("hoek-brown", { cohesion: inst.cohesion, frictionAngle: inst.frictionAngle, cohesionUndrained: inst.cohesion }, slope.partialFactors);
+    if (!s.hoekBrown && !s.shearNormal) continue;
+    const sn = normals[i] / s.baseLength;
+    const inst = s.hoekBrown ? instantaneousAtNormalStress(s.hoekBrown, sn) : shearNormalAt(s.shearNormal!, sn);
+    const d = designStrength(s.hoekBrown ? "hoek-brown" : "shear-normal", { cohesion: inst.cohesion, frictionAngle: inst.frictionAngle, cohesionUndrained: inst.cohesion }, slope.partialFactors);
     s.cohesion = (s.cohesion + d.cohesion) / 2;
     s.cohesionUndrained = s.cohesion;
     s.phi = Math.atan((Math.tan(s.phi) + d.tanPhi) / 2);
@@ -1233,10 +1236,18 @@ function evaluatePlanes(slope: Slope, allPlanes: SearchPlane[]): void {
     /** Morgenstern-Price closest pair: not converged, but its factor is kept. */
     let acceptedClosestPair = false;
 
+    // Rapid drawdown: the undrained strength from the consolidation
+    // stresses before drawdown (model/drawdown.ts).
+    if (slope.drawdownBefore && !applyRapidDrawdown(slope, slices, plane)) {
+      plane.fos = null;
+      plane.slices = slices;
+      continue;
+    }
+
     // Hoek–Brown bases: the instantaneous strength at the normal stress
     // the solution finds, repeated until F settles (a fixed point; the
     // first pass uses the overburden estimate of the slice builder).
-    const hoekBrown = slices.some((s) => s.hoekBrown);
+    const hoekBrown = slices.some((s) => s.hoekBrown || s.shearNormal);
     let lastHbFos = NaN;
     for (let pass = 0; ; pass++) {
       switch (slope.method) {

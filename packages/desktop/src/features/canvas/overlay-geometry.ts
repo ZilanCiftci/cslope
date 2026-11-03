@@ -14,6 +14,7 @@ import {
   formatMagnitude,
   formatRange,
   groupTouchingStrips,
+  lineLoadArrow,
   loadHeightFraction,
   placeLabel,
 } from "../rendering/overlay-layout";
@@ -36,12 +37,17 @@ export interface CanvasView {
   surfaceYAtX: (x: number) => number | null;
 }
 
-/** A downward load arrow: tip on the ground at (cx, cy), shaft up to `top`. */
+/**
+ * A load arrow: tip at (cx, cy), on the ground for a downward one, shaft up
+ * to `top`. An inclined line load's shaft runs from `tail` instead (`top`
+ * is then the higher of its ends).
+ */
 export interface LoadArrow {
   cx: number;
   cy: number;
   top: number;
   hover: boolean;
+  tail?: Pt;
 }
 
 export interface UdlGroupGeometry {
@@ -145,13 +151,14 @@ export function layoutLoads(
   }
 
   for (const ll of lineLoads) {
-    const sy = surfaceYAtX(ll.x);
-    if (sy === null) continue;
-    const [cx, cy] = toC(ll.x, sy);
-    const top = cy - (lifts.lineLoad.get(ll.id) ?? 0);
+    const arrow = lineLoadArrow(ll, toC, surfaceYAtX, lifts.lineLoad.get(ll.id) ?? 0);
+    if (!arrow) continue;
+    const [cx, cy] = arrow.tip;
+    const top = Math.min(cy, arrow.tail[1]);
     const hover = hoverHit?.kind === "lineLoad" && hoverHit.loadId === ll.id;
-    out.lineLoads.push({ cx, cy, top, hover });
-    label(`P = ${formatMagnitude(ll.magnitude)} kN/m`, "lineLoad", hover, cx, top - 4 * zoom);
+    out.lineLoads.push({ cx, cy, top, hover, ...(arrow.inclined ? { tail: arrow.tail } : {}) });
+    // above the tail of an inclined arrow
+    label(`P = ${formatMagnitude(ll.magnitude)} kN/m`, "lineLoad", hover, arrow.tail[0], top - 4 * zoom);
   }
   ctx.restore();
   return out;
@@ -179,6 +186,20 @@ export function loadArrowLifts(
 
 /** Boxes covering a load arrow: its shaft and its head. */
 export function loadArrowBoxes(a: LoadArrow, zoom = 1): Box[] {
+  if (a.tail) {
+    // an inclined arrow: a box around its shaft and one around its tip
+    const [tx, ty] = a.tail;
+    const r = ARROW_HEAD_PX * zoom;
+    return [
+      {
+        left: Math.min(tx, a.cx) - 1.5 * zoom,
+        top: Math.min(ty, a.cy) - 1.5 * zoom,
+        right: Math.max(tx, a.cx) + 1.5 * zoom,
+        bottom: Math.max(ty, a.cy) + 1.5 * zoom,
+      },
+      { left: a.cx - r, top: a.cy - r, right: a.cx + r, bottom: a.cy + r },
+    ];
+  }
   return [
     { left: a.cx - 1.5 * zoom, top: a.top, right: a.cx + 1.5 * zoom, bottom: a.cy },
     {

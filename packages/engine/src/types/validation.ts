@@ -31,6 +31,9 @@ export function validateMaterialModel(model: MaterialModel): string[] {
   ) {
     errors.push("Saturated unit weight (γsat) must be a positive number up to 500 kN/m³.");
   }
+  if (model.bBar !== undefined && !(Number.isFinite(model.bBar) && model.bBar >= 0 && model.bBar <= 1.5)) {
+    errors.push("B-bar must be between 0 and 1.5.");
+  }
 
   // Optional numeric fields must be finite when given: NaN would silently
   // turn into zero strength further on.
@@ -53,6 +56,11 @@ export function validateMaterialModel(model: MaterialModel): string[] {
     case "mohr-coulomb":
       if (!Number.isFinite(model.cohesion) || model.cohesion < 0) {
         errors.push("Cohesion (c) must be ≥ 0.");
+      }
+      if (model.drawdownStrength !== undefined) {
+        const d = model.drawdownStrength;
+        if (!(Number.isFinite(d.cohesion) && d.cohesion >= 0)) errors.push("Drawdown cohesion (cR) must be ≥ 0.");
+        if (!(Number.isFinite(d.frictionAngle) && d.frictionAngle >= 0 && d.frictionAngle < 90)) errors.push("Drawdown friction angle (φR) must be 0–90°.");
       }
       if (!Number.isFinite(model.frictionAngle) || model.frictionAngle < 0) {
         errors.push("Friction angle (φ) must be ≥ 0.");
@@ -226,6 +234,33 @@ export function validateMaterialModel(model: MaterialModel): string[] {
       }
       validateCutoff(errors, model.suMax, model.suRateOfChange ?? 0, model.soilSu);
       break;
+
+    case "shear-normal": {
+      const pts = model.points;
+      if (!Array.isArray(pts) || pts.length < 2 || !pts.every((p) => Array.isArray(p) && p.length === 2 && p.every(Number.isFinite))) {
+        errors.push("The shear-normal function needs at least two finite [σn, τ] points.");
+      } else {
+        if (pts.some((p, i) => i > 0 && !(p[0] > pts[i - 1][0]))) errors.push("The shear-normal points must be sorted by increasing normal stress.");
+        if (pts.some((p) => p[1] < 0)) errors.push("The shear strengths of the shear-normal function must be ≥ 0.");
+      }
+      break;
+    }
+
+    case "shansep": {
+      if (!(Number.isFinite(model.ratio) && model.ratio >= 0)) errors.push("SHANSEP ratio S must be ≥ 0.");
+      if (model.exponent !== undefined && !Number.isFinite(model.exponent)) errors.push("SHANSEP exponent m must be a finite number.");
+      if (model.ocr !== undefined && !(Number.isFinite(model.ocr) && model.ocr > 0)) errors.push("OCR must be > 0.");
+      if (model.suMin !== undefined && !(Number.isFinite(model.suMin) && model.suMin >= 0)) errors.push("Minimum Su must be ≥ 0.");
+      const table = (pts: [number, number][] | undefined, what: string) => {
+        if (pts === undefined) return;
+        if (!Array.isArray(pts) || pts.length === 0 || !pts.every((p) => Array.isArray(p) && p.length === 2 && p.every(Number.isFinite))) {
+          errors.push(`${what} must be a list of finite [x, y] points.`);
+        } else if (pts.some((p, i) => i > 0 && !(p[0] > pts[i - 1][0]))) errors.push(`${what} must be sorted by increasing x.`);
+      };
+      table(model.ocrByElevation, "OCR against elevation");
+      table(model.suByStress, "Su against σ′v");
+      break;
+    }
 
     case "s-f-datum":
       if (!Number.isFinite(model.suRef) || model.suRef < 0) {

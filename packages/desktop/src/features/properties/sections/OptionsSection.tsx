@@ -17,6 +17,7 @@ import { GroupHeading } from "../GroupHeading";
 import { ExperimentalBadge } from "../../../components/ui/ExperimentalBadge";
 import { FEM_EXPERIMENTAL_NOTE } from "../../../constants";
 import { BlockSearchSection } from "./BlockSearchSection";
+import { RapidDrawdownFields } from "./RapidDrawdownFields";
 
 const METHODS: AnalysisMethod[] = ["Bishop", "Janbu", "Morgenstern-Price"];
 const INTERSLICE_FUNCTIONS: IntersliceFunctionType[] = [
@@ -610,6 +611,38 @@ export function OptionsSection({ plain = false }: OptionsSectionProps) {
               }
               aria-label="Water in crack"
               title="Part of the crack depth filled with water; its hydrostatic thrust pushes the sliding mass."
+            />
+          </label>
+        </div>
+      </section>
+
+      <RapidDrawdownFields />
+
+      <section>
+        <GroupHeading>Seismic (pseudostatic)</GroupHeading>
+        <div className="grid grid-cols-2 gap-x-3 gap-y-2">
+          <label className="flex flex-col gap-0.5">
+            <Label>kh</Label>
+            <DraftNumberInput
+              value={options.seismicHorizontal ?? 0}
+              min={0}
+              max={1}
+              step={0.05}
+              onValueChange={(v) => v >= 0 && v <= 1 && setOptions({ seismicHorizontal: v })}
+              aria-label="Horizontal seismic coefficient"
+              title="Horizontal seismic coefficient: each slice carries kh × its weight horizontally in the sliding direction, at its centre of gravity. 0 = none."
+            />
+          </label>
+          <label className="flex flex-col gap-0.5">
+            <Label>kv</Label>
+            <DraftNumberInput
+              value={options.seismicVertical ?? 0}
+              min={-1}
+              max={1}
+              step={0.05}
+              onValueChange={(v) => v >= -1 && v <= 1 && setOptions({ seismicVertical: v })}
+              aria-label="Vertical seismic coefficient"
+              title="Vertical seismic coefficient: kv × the slice weight acts vertically, positive downward (adds to the weight), negative upward. Check both signs. 0 = none."
             />
           </label>
         </div>

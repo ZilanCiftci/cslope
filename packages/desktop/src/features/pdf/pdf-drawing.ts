@@ -17,6 +17,7 @@ import {
   formatMagnitude,
   formatRange,
   groupTouchingStrips,
+  lineLoadArrow,
   loadHeightFraction,
   placeLabel,
   type Box,
@@ -511,7 +512,7 @@ export function drawUdlLoads(
 export function drawLineLoads(
   pdf: jsPDF,
   tf: PdfTransform,
-  lineLoads: { x: number; magnitude: number }[],
+  lineLoads: { x: number; magnitude: number; angle?: number; y?: number }[],
   coordinates: [number, number][],
   placed: Box[] = [],
 ) {
@@ -521,11 +522,24 @@ export function drawLineLoads(
   const pMaxAll = Math.max(0, ...lineLoads.map((ll) => Math.abs(ll.magnitude)));
 
   for (const ll of lineLoads) {
-    const sy = surfaceYAtX(coordinates, ll.x);
-    if (sy === null) continue;
-
-    const [px, py] = tf.worldToPdf(ll.x, sy);
     const lift = arrowH * loadHeightFraction(ll.magnitude, pMaxAll);
+    const arrow = lineLoadArrow(ll, tf.worldToPdf, (x) => surfaceYAtX(coordinates, x), lift);
+    if (!arrow) continue;
+    const [px, py] = arrow.tip;
+    if (arrow.inclined) {
+      // the shaft from the tail, the head along it
+      const [tx, ty] = arrow.tail;
+      const ux = (px - tx) / lift;
+      const uy = (py - ty) / lift;
+      pdf.setDrawColor(...LINE_LOAD_COLOR.rgb);
+      pdf.setLineWidth(0.4);
+      pdf.line(tx, ty, px - ux * headL, py - uy * headL);
+      pdf.setFillColor(...LINE_LOAD_COLOR.rgb);
+      pdf.triangle(px, py, px - ux * headL - uy * headW, py - uy * headL + ux * headW, px - ux * headL + uy * headW, py - uy * headL - ux * headW, "F");
+      pdf.setTextColor(...LINE_LOAD_COLOR.rgb);
+      drawLoadLabelPdf(pdf, `P = ${formatMagnitude(ll.magnitude)} kN/m`, tx, Math.min(ty, py) - 4 * tf.mmPerPx, placed);
+      continue;
+    }
     pdf.setDrawColor(...LINE_LOAD_COLOR.rgb);
     pdf.setLineWidth(0.4);
     pdf.line(px, py - lift, px, py - headL);

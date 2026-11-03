@@ -22,6 +22,16 @@ export interface MaterialModelBase {
    * line. Not set: `unitWeight` throughout.
    */
   unitWeightSat?: number;
+  /**
+   * B̄ (B-bar): the excess pore pressure at a slice base in this material
+   * is B̄ times the vertical stress of the fill above it (the materials
+   * with `bBarLoad`), added to the pore pressure of its water line: the
+   * short-term pore pressure of a soft foundation under a new fill
+   * (Skempton 1954; Bishop 1954). Not set: none.
+   */
+  bBar?: number;
+  /** The weight of this material (a fill) raises the pore pressure of materials with `bBar` below it. */
+  bBarLoad?: boolean;
 }
 
 /**
@@ -63,12 +73,29 @@ export function suctionAngle(model: { kind: string; phiB?: number; drainedCohesi
 // ── Model variants ─────────────────────────────────────────────
 
 /** Standard Mohr-Coulomb effective-stress model. */
+/**
+ * The drawdown (R) envelope of a soil that does not drain during rapid
+ * drawdown: the total-stress envelope of isotropically consolidated
+ * undrained tests (cR, φR), for the three-stage drawdown analysis.
+ */
+export interface DrawdownEnvelope {
+  cohesion: number;
+  frictionAngle: number;
+}
+
 export interface MohrCoulombModel extends MaterialModelBase, UnsaturatedStrength {
   kind: "mohr-coulomb";
   /** Effective cohesion c (kPa). */
   cohesion: number;
   /** Friction angle φ (°). */
   frictionAngle: number;
+  /**
+   * The drawdown (R) envelope: with a rapid drawdown analysis
+   * (SlopeDefinition.rapidDrawdown) the soil does not drain and takes the
+   * undrained strength of the three-stage procedure (model/drawdown.ts).
+   * Not set: free-draining, its drained strength throughout.
+   */
+  drawdownStrength?: DrawdownEnvelope;
   /**
    * Reference ELEVATION y (m, despite the name) where c = `cohesion`:
    * c = cohesion + (cohesionRefDepth − y_base) × cohesionRateOfChange.
@@ -108,8 +135,8 @@ export interface UndrainedAnisotropy {
 }
 
 /** Whether a model kind takes `UndrainedAnisotropy.anisotropy`. */
-export function supportsAnisotropy(kind: string): kind is "undrained" | "s-f-depth" | "s-f-datum" {
-  return kind === "undrained" || kind === "s-f-depth" || kind === "s-f-datum";
+export function supportsAnisotropy(kind: string): kind is "undrained" | "s-f-depth" | "s-f-datum" | "shansep" {
+  return kind === "undrained" || kind === "s-f-depth" || kind === "s-f-datum" || kind === "shansep";
 }
 
 /** Undrained strength model (φ = 0). */
@@ -339,6 +366,58 @@ export interface HoekBrownModel extends MaterialModelBase {
 // ── Union ──────────────────────────────────────────────────────
 
 /** Discriminated union of all supported material models. */
+/**
+ * SHANSEP (Ladd & Foott 1974): the undrained strength from the effective
+ * vertical stress at the slice base and the stress history,
+ * Su = σ′v · S · OCR^m, with OCR constant or a function of elevation; or
+ * Su as a function of σ′v. σ′v is the slice's weight and surface loads per
+ * unit width less the pore pressure at its base (the overburden on the
+ * base in the analysis's pore pressures), as commercial programs take it.
+ */
+export interface ShansepModel extends MaterialModelBase, UndrainedAnisotropy {
+  kind: "shansep";
+  /** S, the Su/σ′v ratio of the normally consolidated soil. */
+  ratio: number;
+  /** The exponent m. Default 0.8. */
+  exponent?: number;
+  /** OCR, constant. Default 1. */
+  ocr?: number;
+  /** OCR against elevation, [[y, OCR], …], interpolated linearly (constant beyond the ends); replaces `ocr`. */
+  ocrByElevation?: [number, number][];
+  /** Su against σ′v, [[σ′v, Su], …], interpolated linearly (constant beyond the ends); replaces S, m and OCR. */
+  suByStress?: [number, number][];
+  /** Lower limit of Su (kPa). Default 0. */
+  suMin?: number;
+  /** Cubic splines through `ocrByElevation` / `suByStress` instead of straight lines; constant beyond the ends as with straight lines. */
+  spline?: TableSpline;
+}
+
+/**
+ * A curved strength envelope given as points of the shear strength against
+ * the effective normal stress, τ = f(σ′n), interpolated linearly between
+ * them or with a spline (the end segment extended beyond the ends): each
+ * slice base takes
+ * the tangent c and φ of the segment at its normal stress, which the
+ * analysis updates from the stress it finds, as for Hoek-Brown.
+ */
+export interface ShearNormalModel extends MaterialModelBase {
+  kind: "shear-normal";
+  /** [[σ′n (kPa), τ (kPa)], …], σ′n increasing, τ ≥ 0. */
+  points: [number, number][];
+  /** A cubic spline through the points instead of straight lines (see `TableSpline`). */
+  spline?: TableSpline;
+}
+
+/**
+ * A cubic spline through a table's points: natural (zero curvature) at an
+ * end without a slope, clamped to the slope given; a straight line with
+ * the end slope beyond the ends (math/spline.ts).
+ */
+export interface TableSpline {
+  startSlope?: number;
+  endSlope?: number;
+}
+
 export type MaterialModel =
   | MohrCoulombModel
   | UndrainedModel
@@ -349,7 +428,9 @@ export type MaterialModel =
   | StrengthFromDepthModel
   | StrengthFromDatumModel
   | LimeCementColumnModel
-  | HoekBrownModel;
+  | HoekBrownModel
+  | ShansepModel
+  | ShearNormalModel;
 
 /** All valid `kind` string literals. */
 export type MaterialModelKind = MaterialModel["kind"];
@@ -366,4 +447,6 @@ export const MATERIAL_MODEL_LABELS: Record<MaterialModelKind, string> = {
   "s-f-datum": "S = f(datum)",
   "lime-cement-columns": "Lime-cement columns",
   "hoek-brown": "Generalised Hoek-Brown",
+  shansep: "SHANSEP",
+  "shear-normal": "Shear-normal function",
 };

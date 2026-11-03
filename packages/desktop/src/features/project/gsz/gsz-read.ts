@@ -52,6 +52,8 @@ export interface GszLineLoad {
   value: number;
   /** Angle below the horizontal (90: vertical). */
   plunge: number;
+  /** Compass direction of the horizontal part (°; 90: +x, 270: −x). */
+  trend: number;
 }
 
 export interface GszStability {
@@ -92,8 +94,16 @@ export interface GszStability {
   tensionCrack?: { option: string; angle?: number; line: Pt[]; waterFraction: number };
   seismicH: number;
   seismicV: number;
+  /** A rapid drawdown analysis (Control/IsRapidDrawdown). */
+  rapidDrawdown?: boolean;
   /** The reinforcement lines: the reinforcement's id, end 1 (the head) and end 2. */
   reinforcementLines?: { reinforcement: number; p1: Pt; p2: Pt }[];
+  /**
+   * B-bar per material id: the function giving B̄ (its id; a constant
+   * when written as a value), and whether the material's weight is the
+   * load that raises the pore pressure (IsIncluded).
+   */
+  bBar?: Map<number, { fn?: number; value?: number; included: boolean }>;
 }
 
 /**
@@ -128,6 +138,14 @@ export interface GszReinforcement {
   distribution?: string;
 }
 
+/** A function of a material property given as points (see GszFile.materialFunctions). */
+export interface GszFunction {
+  output: string;
+  input: string;
+  points: [number, number][];
+  spline?: { startSlope?: number; endSlope?: number };
+}
+
 export interface GszSlipResult {
   fos: number;
   cx: number;
@@ -139,6 +157,8 @@ export interface GszSlipResult {
   weight?: number;
   /** The slip surface's number (its slices are in column_<num>.csv). */
   num?: number;
+  /** The critical surface's base as its slices give it (the ends of the slice bases), from left to right. */
+  base?: Pt[];
   /** +1 when the mass moves to the right, −1 to the left (from the mobilised shear direction). */
   direction?: 1 | -1;
 }
@@ -161,6 +181,18 @@ export interface GszFile {
    * (the file interpolates them with a spline).
    */
   anisotropyFunctions?: Map<number, [number, number][]>;
+  /**
+   * Material functions by id (Fn2D): what they give (OutputParam, e.g.
+   * OverconsolidationRatio, UndrainedShearStrength) from what (InputParam,
+   * e.g. Y, YEffectiveStress), and their points, sorted by x; `spline`
+   * when the function is a spline, with its end slopes (absent: computed,
+   * a natural spline).
+   */
+  materialFunctions?: Map<number, GszFunction>;
+  /** Shear strength against normal stress functions by id (StrengthFn), as `materialFunctions`. */
+  strengthFunctions?: Map<number, GszFunction>;
+  /** Cohesion functions by id (CohesionFn), as `materialFunctions`. */
+  cohesionFunctions?: Map<number, GszFunction>;
   /** Analysis name (lower case) → the solved slip surfaces in the file. */
   results: Map<string, GszSlipResult[]>;
 }
@@ -338,7 +370,8 @@ export function parseGszXml(xml: string): Omit<GszFile, "results"> {
       const value = num(childText(ll, "Value"));
       if (!p || value === undefined) return [];
       const plunge = num(child(ll, "Direction")?.getAttribute("Plunge")) ?? 90;
-      return [{ x: p[0], y: p[1], value, plunge }];
+      const trend = num(child(ll, "Direction")?.getAttribute("Trend")) ?? 0;
+      return [{ x: p[0], y: p[1], value, plunge, trend }];
     });
     const tc = child(entry, "TensionCrack");
     const tcOption = childText(tc, "TensionOption");
@@ -398,6 +431,16 @@ export function parseGszXml(xml: string): Omit<GszFile, "results"> {
         : undefined,
       seismicH: num(seis?.getAttribute("Horizontal")) ?? 0,
       seismicV: num(seis?.getAttribute("Vertical")) ?? 0,
+      rapidDrawdown: childText(child(entry, "Control"), "IsRapidDrawdown") === "true",
+      bBar: new Map(
+        children(entry, "MaterialUsesBBarParams/MaterialUsesBBarParam").flatMap((b) => {
+          const id = num(childText(b, "ID"));
+          const e = child(b, "Entry");
+          if (id === undefined || !e) return [];
+          const fn = num(e.getAttribute("Function")), value = num(e.getAttribute("BBar") ?? e.getAttribute("Value"));
+          return [[id, { ...(fn !== undefined ? { fn } : {}), ...(value !== undefined ? { value } : {}), included: e.getAttribute("IsIncluded") === "true" }] as const];
+        }),
+      ),
       reinforcementLines: children(entry, "ReinforcementLines/ReinforcementLine").flatMap((rl) => {
         const at = (k: string) => {
           const id = num(rl.getAttribute(k));
@@ -442,6 +485,33 @@ export function parseGszXml(xml: string): Omit<GszFile, "results"> {
     if (id !== undefined && pts.length > 0) anisotropyFunctions.set(id, pts.sort((a, b) => a[0] - b[0]));
   }
 
+  const materialFunctions = new Map<number, GszFunction>();
+  const cohesionFunctions = new Map<number, GszFunction>();
+  const strengthFunctions = new Map<number, GszFunction>();
+  for (const [fn, into] of [
+    ...children(root, "Functions/Material/Fn2Ds/Fn2D").map((e) => [e, materialFunctions] as const),
+    ...children(root, "Functions/Material/StressStrain/CohesionFns/CohesionFn").map((e) => [e, cohesionFunctions] as const),
+    ...children(root, "Functions/Material/StressStrain/StrengthFns/StrengthFn").map((e) => [e, strengthFunctions] as const),
+  ]) {
+    const id = num(childText(fn, "ID"));
+    const def = childText(fn, "Function") ?? "";
+    const pts = children(fn, "Points/Point").flatMap((p) => {
+      const x = num(p.getAttribute("X")), y = num(p.getAttribute("Y"));
+      return x !== undefined && y !== undefined ? [[x, y] as [number, number]] : [];
+    });
+    if (id === undefined || pts.length === 0) continue;
+    const slope = (k: string) => num(def.match(new RegExp(`${k}=([^,)]+)`))?.[1]);
+    const startSlope = slope("SlopeBefore"), endSlope = slope("SlopeAfter");
+    into.set(id, {
+      output: def.match(/OutputParam=(\w+)/)?.[1] ?? "",
+      input: def.match(/InputParam=(\w+)/)?.[1] ?? "",
+      points: pts.sort((a, b) => a[0] - b[0]),
+      ...(/^\s*Spline\(/.test(def)
+        ? { spline: { ...(startSlope !== undefined ? { startSlope } : {}), ...(endSlope !== undefined ? { endSlope } : {}) } }
+        : {}),
+    });
+  }
+
   const reinforcements = new Map<number, GszReinforcement>();
   for (const r of children(root, "Reinforcements/Reinforcement")) {
     const id = num(childText(r, "ID"));
@@ -471,7 +541,7 @@ export function parseGszXml(xml: string): Omit<GszFile, "results"> {
     });
   }
 
-  return { units, analyses, geometries, materials, reinforcements, regionMaterials, stability, water, anisotropyFunctions };
+  return { units, analyses, geometries, materials, reinforcements, regionMaterials, stability, water, anisotropyFunctions, materialFunctions, cohesionFunctions, strengthFunctions };
 }
 
 /** The solved slip surfaces of one analysis's slip_surface.csv. */
@@ -529,6 +599,22 @@ export function circleFromColumns(text: string, r: number): Pt | null {
   return [(a[0] + b[0]) / 2 + nx * h, (a[1] + b[1]) / 2 + ny * h];
 }
 
+/** The base of a slip surface from its column_<n>.csv: the ends of the slice bases, left to right. */
+export function basePolylineFromColumns(text: string): Pt[] | null {
+  const lines = text.replace(/^\uFEFF/, "").split(/\r?\n/).filter((l) => l.trim() !== "");
+  if (lines.length < 2) return null;
+  const head = lines[0].split(",").map((h) => h.trim());
+  const [iXl, iXr, iYl, iYr] = ["XLeft", "XRight", "YBackBotLeft", "YBackBotRight"].map((k) => head.indexOf(k));
+  if ([iXl, iXr, iYl, iYr].some((i) => i < 0)) return null;
+  // both ends of every slice (the columns run in the direction of sliding)
+  const rows = lines.slice(1).map((l) => l.split(",").map(Number));
+  const ends = rows.flatMap((r): Pt[] => [[r[iXl], r[iYl]], [r[iXr], r[iYr]]]);
+  if (!ends.every((p) => p.every(Number.isFinite))) return null;
+  ends.sort((a, b) => a[0] - b[0]);
+  const tol = 1e-9 * Math.max(1, Math.abs(ends[ends.length - 1][0] - ends[0][0]));
+  return ends.filter((p, i) => i === 0 || Math.abs(p[0] - ends[i - 1][0]) > tol || Math.abs(p[1] - ends[i - 1][1]) > tol);
+}
+
 /** Read a .gsz file. */
 export async function readGsz(bytes: Uint8Array): Promise<GszFile> {
   if (!isZip(bytes)) throw new Error("Not a .gsz project file (expected a ZIP archive).");
@@ -550,8 +636,11 @@ export async function readGsz(bytes: Uint8Array): Promise<GszFile> {
     // (column_<n>.csv) and its radius.
     const best = slips.reduce<GszSlipResult | undefined>((m, r) => (!m || r.fos < m.fos ? r : m), undefined);
     const columns = best?.num !== undefined ? entries.get(csv.replace(/slip_surface\.csv$/, `column_${best.num}.csv`)) : undefined;
-    if (best && best.circular && columns) {
-      const c = circleFromColumns(new TextDecoder().decode(columns), best.r);
+    if (best && columns) {
+      const text = new TextDecoder().decode(columns);
+      const base = basePolylineFromColumns(text);
+      if (base) best.base = base;
+      const c = best.circular ? circleFromColumns(text, best.r) : null;
       if (c && Math.hypot(c[0] - best.cx, c[1] - best.cy) > 1e-3 * best.r) [best.cx, best.cy] = c;
     }
     results.set(a.name.toLowerCase(), slips);

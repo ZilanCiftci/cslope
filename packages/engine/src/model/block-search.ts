@@ -23,6 +23,7 @@
 
 import { isPointInPolygon } from "../math/index";
 import { resolveStrength } from "../types/index";
+import { effectiveVerticalStress } from "./reinforcement";
 import { rng } from "./property-helpers";
 import type { Slope, SearchPlane } from "./slope";
 import { defaultAxisPoint, isAdmissiblePolyline, type Pt } from "./surface";
@@ -122,7 +123,7 @@ export function blockSearch(slope: Slope, evaluate: Evaluate): SearchPlane[] {
     const ym = (y + g) / 2;
     const m = slope.materialGeometries.find((geom) => isPointInPolygon(x, ym, geom.px, geom.py));
     if (!m) return 0;
-    const r = resolveStrength(m.material.model, { yBottom: ym, x, yGround: g, alpha: 0 });
+    const r = resolveStrength(m.material.model, { yBottom: ym, x, yGround: g, alpha: 0, ...(m.material.model.kind === "shansep" ? { effectiveVerticalStress: effectiveVerticalStress(slope, x, ym) } : {}) });
     const tanPhi = Math.tan((r.frictionAngle * Math.PI) / 180) / (factors?.tanPhi ?? 1);
     return (Math.atan(tanPhi) * 180) / Math.PI;
   };

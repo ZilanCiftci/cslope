@@ -162,7 +162,13 @@ export function modelFromDefinition(def: SlopeDefinition, info: DefinitionModelI
       const id = idByName.get(a.materialName);
       return id ? [{ point: [a.point[0], a.point[1]] as [number, number], materialId: id }] : [];
     }),
-    piezometricLine: piezometricLine(def, info.id, materialId),
+    piezometricLine: {
+      ...piezometricLine(def, info.id, materialId),
+      // Rapid drawdown: the water before it (the lines are the water after).
+      ...(def.rapidDrawdown
+        ? { rapidDrawdown: { waterBefore: def.rapidDrawdown.waterBefore.map(([x, y]) => [x, y] as [number, number]) } }
+        : {}),
+    },
     udls: (def.udls ?? []).map((u, i) => ({
       id: `${info.id}-udl-${i + 1}`,
       magnitude: u.magnitude,
@@ -170,7 +176,13 @@ export function modelFromDefinition(def: SlopeDefinition, info: DefinitionModelI
       x2: u.x2,
       ...(u.direction === "normal" ? { direction: "normal" as const } : {}),
     })),
-    lineLoads: (def.lineLoads ?? []).map((l, i) => ({ id: `${info.id}-load-${i + 1}`, magnitude: l.magnitude, x: l.x })),
+    lineLoads: (def.lineLoads ?? []).map((l, i) => ({
+      id: `${info.id}-load-${i + 1}`,
+      magnitude: l.magnitude,
+      x: l.x,
+      ...(l.angle ? { angle: l.angle } : {}),
+      ...(l.angle && l.y !== undefined ? { y: l.y } : {}),
+    })),
     customSearchPlanes: [
       ...(def.customSearchPlanes ?? []).map((p, i) => ({ id: `${info.id}-plane-${i + 1}`, cx: p.cx, cy: p.cy, radius: p.radius })),
       ...(def.customSurfaces ?? []).map((s, i) => ({

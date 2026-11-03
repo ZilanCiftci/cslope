@@ -5,6 +5,7 @@
 import type { Material } from "./material";
 import type { ReinforcementForce } from "./reinforcement";
 import type { HoekBrownParameters } from "./hoek-brown";
+import type { ShearNormalModel } from "./material-models";
 
 /**
  * Represents a polygon region with an associated material.
@@ -177,6 +178,10 @@ export interface Slice {
    * analysis (solvers.ts).
    */
   hoekBrown?: HoekBrownParameters;
+  /** Elevation of the slice's centre of gravity (the weight's), where a horizontal seismic force acts. */
+  yCentroid?: number;
+  /** A shear-normal function at the base, updated like `hoekBrown`. */
+  shearNormal?: ShearNormalModel;
   /**
    * When `true`, any slip surface passing through this slice should
    * be treated as infinitely stable and excluded from the search.

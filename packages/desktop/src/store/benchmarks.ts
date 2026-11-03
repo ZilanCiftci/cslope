@@ -714,6 +714,10 @@ export function mirrorModelEntry(model: ModelEntry): ModelEntry {
         coordinates: mirrorPoints(line.coordinates, xMin, xMax),
       })),
       activeLineId: model.piezometricLine.activeLineId,
+      // Mirrored and reversed, so x still increases along it.
+      ...(model.piezometricLine.rapidDrawdown
+        ? { rapidDrawdown: { waterBefore: mirrorPoints(model.piezometricLine.rapidDrawdown.waterBefore, xMin, xMax).reverse() } }
+        : {}),
     },
     udls: model.udls.map((udl) => {
       const x1 = mirrorX(udl.x2, xMin, xMax);
@@ -727,6 +731,7 @@ export function mirrorModelEntry(model: ModelEntry): ModelEntry {
     lineLoads: model.lineLoads.map((lineLoad) => ({
       ...lineLoad,
       x: mirrorX(lineLoad.x, xMin, xMax),
+      ...(lineLoad.angle ? { angle: -lineLoad.angle } : {}),
     })),
     customSearchPlanes: (model.customSearchPlanes ?? []).map((p) => ({
       ...p,

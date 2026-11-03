@@ -162,7 +162,10 @@ describe("persistence round-trip", () => {
         activeLineId: "p1",
       },
       udls: [{ id: "u1", magnitude: 10, x1: 1, x2: 4 }],
-      lineLoads: [{ id: "l1", magnitude: 25, x: 2 }],
+      lineLoads: [
+        { id: "l1", magnitude: 25, x: 2 },
+        { id: "l2", magnitude: 15, x: 10, angle: -30, y: 7 },
+      ],
       options: { ...DEFAULT_ANALYSIS_OPTIONS, compositeSurfaces: true },
       analysisLimits: { ...DEFAULT_ANALYSIS_LIMITS, enabled: true },
       editViewOffset: [1, 2],
@@ -196,6 +199,9 @@ describe("persistence round-trip", () => {
     } as AppState);
 
     expect(roundTrip).toEqual(serialized);
+    // an inclined line load keeps its angle and load point
+    expect(parsed.models[0].lineLoads[1]).toMatchObject({ angle: -30, y: 7 });
+    expect(parsed.models[0].lineLoads[0]).not.toHaveProperty("angle");
   });
 });
 

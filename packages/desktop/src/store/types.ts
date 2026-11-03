@@ -108,6 +108,16 @@ export interface LineLoadRow {
   id: string;
   magnitude: number;
   x: number;
+  /**
+   * Inclination from the downward vertical (°), positive when the load
+   * points towards +x: 0 vertical, ±90 horizontal. Not set: vertical.
+   */
+  angle?: number;
+  /**
+   * Elevation of the load point (m), for a load on a wall face; only used
+   * with a non-zero angle. Not set: the ground at x.
+   */
+  y?: number;
   expressions?: LineLoadExpressions;
 }
 
@@ -225,6 +235,13 @@ export interface PiezometricLineState {
    * a line of their own (see mainPiezoLine). Missing: the first line.
    */
   mainLineId?: string;
+  /**
+   * Rapid drawdown (three-stage, Duncan, Wright & Wong 1990): the water
+   * table before drawdown, for all materials; the lines above are the
+   * water after it. Materials with a drawdown (R) envelope do not drain.
+   * Missing: no drawdown analysis.
+   */
+  rapidDrawdown?: { waterBefore: [number, number][] };
 }
 
 export type PaperSize = "A4" | "A3" | "A2" | "A1" | "A0";
@@ -478,6 +495,8 @@ export interface GeometrySlice {
   setPiezoMaterialAssignment: (materialId: string, piezoLineId: string) => void;
   setPiezoFreeWater: (enabled: boolean) => void;
   setPiezoMainLine: (lineId: string) => void;
+  /** Rapid drawdown: the water before it, or undefined for none. */
+  setPiezoRapidDrawdown: (rapidDrawdown: PiezometricLineState["rapidDrawdown"]) => void;
   enablePiezoWithDefault: () => void;
 }
 
