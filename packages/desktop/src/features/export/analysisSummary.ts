@@ -560,7 +560,7 @@ export function buildAnalysisSummary(input: AnalysisSummaryInput): SummarySectio
   const excessText = (entries: UdlExcessPorePressure[] | undefined): string => {
     const known = (entries ?? []).filter((e) => materialName.has(e.materialId));
     return known.length > 0
-      ? `; ${known.map((e) => `degree of consolidation U = ${fmt((1 - e.ratio) * 100)} % in ${materialName.get(e.materialId)}`).join(", ")} (the rest of the load as excess pore pressure)`
+      ? `; not consolidated: ${known.map((e) => `excess pore pressure ${fmt(e.ratio)} × q in ${materialName.get(e.materialId)}`).join(", ")}`
       : "";
   };
   const loads: string[][] = [

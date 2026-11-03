@@ -50,6 +50,14 @@ describe("Explorer — list and selection", () => {
     expect(row("Beta")).toHaveAttribute("aria-selected", "false");
   });
 
+  it("moves the selection to a model made active elsewhere (e.g. an import)", async () => {
+    render(<Explorer />);
+    await userEvent.click(row("Beta"));
+    act(() => store().switchModel(store().models[2].id));
+    expect(row("Gamma")).toHaveAttribute("aria-selected", "true");
+    expect(row("Beta")).toHaveAttribute("aria-selected", "false");
+  });
+
   it("collapses and expands the list", async () => {
     render(<Explorer />);
     const toggle = screen.getByRole("button", { name: "Toggle models list" });

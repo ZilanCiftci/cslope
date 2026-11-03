@@ -102,7 +102,7 @@ describe("an imported earlier stage in the materials dialog", () => {
     expect(store().waternet).toEqual(waternet);
     expect(screen.queryByTestId("earlier-stage-notice")).toBeNull();
     expect(screen.queryByTestId("stage-tag")).toBeNull();
-    expect(screen.getByTestId("ocr-override")).toHaveTextContent("Overridden by imported POP 10 kPa");
+    expect(screen.getByTestId("ocr-override")).toHaveTextContent("Overridden by POP 10 kPa");
     expect(screen.getByTestId("ocr-override")).not.toHaveTextContent("earlier stage");
     act(() => performUndo());
     expect(store().earlierStage).toEqual(earlierStage);

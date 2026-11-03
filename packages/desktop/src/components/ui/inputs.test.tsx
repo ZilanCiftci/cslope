@@ -194,12 +194,30 @@ describe("DraftNumberInput", () => {
     await userEvent.tab();
     expect(onBlur).toHaveBeenCalled();
     // The parent kept 3, so 3 is shown again.
-    expect(input).toHaveValue(3);
+    expect(input).toHaveValue("3");
+  });
+
+  it("reads a comma as the decimal separator (whatever the locale)", async () => {
+    const onValueChange = vi.fn();
+    render(<DraftNumberInput aria-label="d" value={undefined} onValueChange={onValueChange} />);
+    await userEvent.type(screen.getByLabelText("d"), "0,5");
+    expect(onValueChange).toHaveBeenLastCalledWith(0.5);
+    expect(onValueChange).not.toHaveBeenCalledWith(5);
+  });
+
+  it("passes on no number for text that is not one", async () => {
+    const onValueChange = vi.fn();
+    render(<DraftNumberInput aria-label="d" value={undefined} onValueChange={onValueChange} />);
+    await userEvent.type(screen.getByLabelText("d"), "x");
+    await userEvent.clear(screen.getByLabelText("d"));
+    await userEvent.type(screen.getByLabelText("d"), "0x1");
+    expect(onValueChange).toHaveBeenCalledTimes(1); // "0" only
+    expect(onValueChange).toHaveBeenCalledWith(0);
   });
 
   it("shows an empty field for an undefined value", () => {
     render(<DraftNumberInput aria-label="d" value={undefined} onValueChange={() => {}} />);
-    expect(screen.getByLabelText("d")).toHaveValue(null);
+    expect(screen.getByLabelText("d")).toHaveValue("");
   });
 });
 

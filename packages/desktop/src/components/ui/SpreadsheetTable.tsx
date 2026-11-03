@@ -148,14 +148,12 @@ function SpreadsheetRow<T>({
 
 export function SpreadsheetNumberInput({
   value,
-  step = "0.5",
   ariaLabel,
   onChange,
   onBlur,
   className,
 }: {
   value: number;
-  step?: string;
   ariaLabel: string;
   onChange: (value: string) => void;
   onBlur?: (value: string) => void;
@@ -163,19 +161,22 @@ export function SpreadsheetNumberInput({
 }) {
   // While the user types, show their text rather than the stored number:
   // partial input such as "-" or "" would otherwise snap back immediately.
+  // A text field with "," read as ".", as DraftNumberInput: a number field
+  // drops a decimal separator that is not its locale's ("2,5" became 25).
   const [draft, setDraft] = useState<string | null>(null);
+  const normalized = (text: string) => text.replace(",", ".");
   return (
     <input
-      type="number"
-      step={step}
+      type="text"
+      inputMode="decimal"
       value={draft ?? value}
       onChange={(e) => {
         setDraft(e.target.value);
-        onChange(e.target.value);
+        onChange(normalized(e.target.value));
       }}
       onBlur={(e) => {
         setDraft(null);
-        onBlur?.(e.target.value);
+        onBlur?.(normalized(e.target.value));
       }}
       className={`w-full h-full py-1 px-2 text-[12px] outline-none border-2 border-transparent focus:border-[var(--color-vsc-accent)] ${className ?? ""}`}
       style={{

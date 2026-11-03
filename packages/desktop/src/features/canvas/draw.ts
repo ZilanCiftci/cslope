@@ -112,6 +112,7 @@ import {
   type MarkerDot,
 } from "./marker-geometry";
 import { piezoExtensions, piezoPonds } from "../../utils/piezo";
+import { staggerLabelTops } from "../../utils/stagger-labels";
 import { pondArrowLayout, type PondArrow } from "../rendering/pond-arrows";
 import {
   isDarkFill,
@@ -1507,12 +1508,16 @@ export function drawCanvas(
     // Below the line, clear of the "before drawdown" label above its line.
     ctx.textAlign = "right";
     ctx.textBaseline = "top";
-    waternet.headLines.forEach((head, i) => {
-      if (head.points.length < 2) return;
+    // Labels of lines ending close together are put below one another.
+    const labels = waternet.headLines.flatMap((head, i) => {
+      if (head.points.length < 2) return [];
       const pts = head.points.map(([x, y]) => worldToCanvas(x, y, w, h));
       const [lx, ly] = pts.reduce((a, b) => (b[0] > a[0] ? b : a));
-      ctx.fillText(`head line ${i + 1}`, lx - 2 * paperZoom, ly + 2 * paperZoom);
+      const text = `head line ${i + 1}`;
+      return [{ text, right: lx - 2 * paperZoom, top: ly + 2 * paperZoom, width: ctx.measureText(text).width, height: 10 * paperZoom }];
     });
+    const tops = staggerLabelTops(labels);
+    labels.forEach((l, i) => ctx.fillText(l.text, l.right, tops[i]));
     ctx.textBaseline = "alphabetic";
     ctx.textAlign = "left";
   }

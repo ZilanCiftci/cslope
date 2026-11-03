@@ -16,6 +16,7 @@ import { CustomSearchPlanesDialogApp } from "./features/properties/CustomSearchP
 import { OptionsDialogApp } from "./features/properties/OptionsDialogApp";
 import { ViewSettingsDialogApp } from "./features/properties/ViewSettingsDialogApp";
 import { getAnalysisInputSignature, useAppStore } from "./store/app-store";
+import { asDialogEdit } from "./store/undo-coalesce";
 import type {
   AppState,
   AnalysisLimitsState,
@@ -150,7 +151,8 @@ function withRapidDrawdown(
 
 function applyDialogPatch(patch: Partial<AppState>): void {
   const before = getAnalysisInputSignature(useAppStore.getState());
-  useAppStore.setState((s) => {
+  // Typed in the dialog window: one undo step per edit of a field there.
+  asDialogEdit(() => useAppStore.setState((s) => {
     const modelPatch: Partial<ModelEntry> = {};
     for (const key of MODEL_ENTRY_FIELDS) {
       if (key in patch) {
@@ -163,7 +165,7 @@ function applyDialogPatch(patch: Partial<AppState>): void {
         m.id === s.activeModelId ? { ...m, ...modelPatch } : m,
       ),
     };
-  });
+  }));
   if (getAnalysisInputSignature(useAppStore.getState()) !== before) {
     useAppStore.getState().invalidateAnalysis();
   }

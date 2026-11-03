@@ -142,7 +142,8 @@ describe("FileMenu in a browser", () => {
     const picker = pickers.at(-1)!;
     choose(picker, "empty.dxf", dxf([[0, "SECTION"], [2, "ENTITIES"], [0, "ENDSEC"], [0, "EOF"]]));
     picker.onchange?.(new Event("change"));
-    expect(await summaryText()).toMatch(/^Import of empty\.dxf failed: /);
+    expect(await summaryText()).not.toMatch(/failed/);
+    expect(screen.getByText("Import of empty.dxf failed")).toBeInTheDocument();
     expect(store().models).toHaveLength(1);
   });
 
@@ -190,6 +191,8 @@ describe("FileMenu in a browser", () => {
     picker.onchange?.(new Event("change"));
     const imported = await summaryText();
     expect(imported).toMatch(/^Imported 1 model from Dike\.stix/);
+    // The method the model got (Bishop for a circle).
+    expect(imported).toMatch(/; method (Bishop|Morgenstern-Price|Janbu)\./);
     expect(imported).toContain("The import cannot be undone");
     await closeSummary();
     expect(store().models.find((m) => m.id === store().activeModelId)!.name).toBe("Calculation 1 (Dike)");

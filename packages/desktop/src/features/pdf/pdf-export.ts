@@ -47,7 +47,7 @@ import {
 import { ARROW_HEIGHT_PX } from "../canvas/constants";
 import type { Box } from "../rendering/overlay-layout";
 import { surfacePoints } from "../../utils/arc";
-import { drawSummaryPages, type SummaryHeader } from "./pdf-summary";
+import { drawDrawingTitle, drawSummaryPages, type SummaryHeader } from "./pdf-summary";
 import type { SummarySection } from "../export/analysisSummary";
 import { clampMinorTicks } from "../../utils/ruler";
 import { computeRegions } from "../../utils/regions";
@@ -492,6 +492,7 @@ export function exportVectorPdf(data: PdfExportData): void {
     );
 
     if (summary) {
+      drawDrawingTitle(pdf, summary.sections, summary.header, { left: innerFrame.x, top: innerFrame.y, width: innerFrame.w });
       drawSummaryPages(pdf, summary.sections, summary.header, {
         w: tf.paperW,
         h: tf.paperH,

@@ -6,7 +6,7 @@ import type { Rig } from "./lib";
 
 const esc = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 
-export function writeContactSheet(rig: Rig) {
+export function writeContactSheet(rig: Rig, title = "cSlope design capture") {
   const sections = [...new Set(rig.shots.map((s) => s.section))];
   const failed = rig.shots.filter((s) => s.error);
   const body = sections
@@ -25,7 +25,7 @@ export function writeContactSheet(rig: Rig) {
     .join("\n");
   const html = `<!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>cSlope design capture</title>
+<title>${esc(title)}</title>
 <style>
   body { font: 14px/1.4 system-ui, sans-serif; margin: 16px; background: #fafafa; color: #222; }
   h1 { font-size: 20px; } h2 { font-size: 16px; margin-top: 28px; border-bottom: 1px solid #ccc; }
@@ -36,7 +36,7 @@ export function writeContactSheet(rig: Rig) {
   figcaption { margin-top: 6px; font-size: 13px; } figcaption p { margin: 4px 0 0; color: #555; white-space: pre-wrap; }
   .err { color: #b00 !important; } pre { background: #fff; border: 1px solid #ddd; padding: 8px; overflow-x: auto; font-size: 12px; }
 </style></head><body>
-<h1>cSlope design capture</h1>
+<h1>${esc(title)}</h1>
 <p>${rig.shots.filter((s) => s.file).length} images, ${failed.length} failed steps, ${new Date().toISOString().slice(0, 16).replace("T", " ")} UTC. Click an image for full size. Summaries of imports and exports are in <code>text/</code>, exported files in <code>exports/</code>, the files imported in <code>files/</code>.</p>
 ${failed.length ? `<p class="err">Failed: ${failed.map((f) => esc(f.title)).join(", ")}</p>` : ""}
 ${body}

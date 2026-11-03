@@ -69,7 +69,7 @@ describe("ViewSettingsDialogApp", () => {
     const selects = screen.getAllByRole("combobox") as HTMLSelectElement[];
     expect(selects[0].value).toBe("A4");
     expect(selects[1].value).toBe("landscape");
-    expect(screen.getByPlaceholderText("Auto")).toHaveValue(5);
+    expect(screen.getByPlaceholderText("Auto")).toHaveValue("5");
     expect(screen.getByDisplayValue("4")).toBeInTheDocument();
     expect(bridge.sentOf("sendViewSettingsChanged")).toEqual([]);
     expect(useAppStore.getState().resultViewScale).toBe(2);

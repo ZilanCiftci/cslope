@@ -204,6 +204,36 @@ describe("DefineMaterialsDialog — switching the model", () => {
     expect(screen.getByRole("cell", { name: "Undrained" })).toBeInTheDocument();
   });
 
+  it("restores the fields a kind had earlier in the session when switched back", async () => {
+    const shansep: MaterialModel = {
+      kind: "shansep",
+      unitWeight: 16,
+      ratio: 0.3,
+      exponent: 0.75,
+      pop: 10,
+      yieldStress: 80,
+      yieldFromEarlierStage: true,
+      ocrByElevation: [[0, 1.5], [5, 1.2]],
+      ru: 0.2,
+    };
+    store().setMaterials([
+      { ...material("a", "Soft clay", shansep), modelExpressions: { ratio: "g/100" } },
+    ]);
+    render(<DefineMaterialsDialog onClose={() => {}} />);
+    await userEvent.selectOptions(kindSelect(), "mohr-coulomb");
+    expect(model()).toEqual({ kind: "mohr-coulomb", unitWeight: 16, cohesion: 10, frictionAngle: 30, ru: 0.2 });
+    await setField("c′ (kPa)", "4");
+    await setField("γ (kN/m³)", "17");
+    await setField("rᵤ (pore pressure ratio)", "");
+    await userEvent.selectOptions(kindSelect(), "undrained");
+    await userEvent.selectOptions(kindSelect(), "shansep");
+    // The stress history is back; γ and rᵤ are the ones set meanwhile.
+    expect(model()).toEqual({ ...shansep, unitWeight: 17, ru: undefined });
+    expect(mats()[0].modelExpressions).toEqual({ ratio: "g/100" });
+    await userEvent.selectOptions(kindSelect(), "mohr-coulomb");
+    expect(model()).toMatchObject({ kind: "mohr-coulomb", cohesion: 4, unitWeight: 17 });
+  });
+
   it("drops γsat for an impenetrable material and hides its field", async () => {
     render(<DefineMaterialsDialog onClose={() => {}} />);
     await userEvent.type(screen.getByLabelText("Saturated unit weight"), "22");
@@ -481,16 +511,16 @@ describe("DefineMaterialsDialog — SHANSEP, shear-normal and B̄", () => {
     expect(model().bBarLoad).toBeUndefined();
   });
 
-  it("keeps an out-of-range rᵤ and shows the validation error, as for B̄", async () => {
+  it("keeps an out-of-range rᵤ and shows the error under the field only, as for B̄", async () => {
     render(<DefineMaterialsDialog onClose={() => {}} />);
     expect(screen.getByRole("group", { name: "Additional pore pressure (added to the water line)" })).toBeInTheDocument();
     await userEvent.type(screen.getByLabelText("rᵤ (pore pressure ratio)"), "1.2");
     expect(model().ru).toBe(1.2);
-    expect(screen.getByRole("alert", { name: "Validation errors" })).toHaveTextContent(/ru|rᵤ/);
-    // Under the field, which is outlined, instead of the range hint.
+    // Once, under the field (not again in the list of errors), which is outlined, instead of the range hint.
     expect(screen.getByLabelText("rᵤ (pore pressure ratio)")).toHaveAttribute("aria-invalid", "true");
     expect(screen.getByText("rᵤ must be at least 0 and below 1.")).toBeInTheDocument();
     expect(screen.queryByText("0 to below 1; empty: none")).toBeNull();
+    expect(screen.queryByRole("alert", { name: "Validation errors" })).toBeNull();
     await userEvent.clear(screen.getByLabelText("rᵤ (pore pressure ratio)"));
     await userEvent.type(screen.getByLabelText("rᵤ (pore pressure ratio)"), "0.3");
     expect(model().ru).toBe(0.3);

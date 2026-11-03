@@ -56,7 +56,7 @@ describe("analysis summary", () => {
   });
 
   it("writes B̄ and rᵤ as the PDF font can print them", () => {
-    expect(pdfSafeText("B̄ = 0.5; rᵤ = 0.2")).toBe("B-bar = 0.5; ru = 0.2");
+    expect(pdfSafeText("B̄ = 0.5; rᵤ = 0.2; x̄")).toBe("B̄ = 0.5; rᵤ = 0.2; x");
   });
 
   it("states the result, the method and characteristic values", () => {

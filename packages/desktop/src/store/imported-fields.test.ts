@@ -343,7 +343,7 @@ describe("in the store", () => {
     );
     expect(text).toContain("2 head lines and 1 reference line");
     expect(text).toContain("earlier construction stage");
-    expect(text).toContain("degree of consolidation U = 40 % in Clay (the rest of the load as excess pore pressure)");
+    expect(text).toContain("not consolidated: excess pore pressure 0.6 × q in Clay");
     expect(text).toContain("above the water line Mohr-Coulomb");
     expect(text).toContain("from the earlier stage + POP 10 kPa");
   });

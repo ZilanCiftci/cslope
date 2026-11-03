@@ -185,3 +185,35 @@ export function flatFieldsFromModel(model: MaterialModel): {
       };
   }
 }
+
+/** Fields every model kind has (impenetrable: no γsat), kept when the kind changes. */
+const SHARED_FIELDS = ["unitWeightSat", "bBar", "bBarLoad", "ru", "aboveWater"] as const;
+
+/**
+ * The model of a material switched to another kind: the fields it had for
+ * that kind earlier (`remembered`, e.g. earlier in the same dialog
+ * session, so that switching away and back loses nothing, such as an
+ * imported stress history), or else that kind's defaults; with the
+ * current model's γ and the fields every kind has (γsat, B̄, the fill
+ * flag, rᵤ, a separate strength above the water line).
+ */
+export function switchModelKind(
+  current: MaterialModel,
+  kind: MaterialModelKind,
+  remembered?: MaterialModel,
+): MaterialModel {
+  const next: MaterialModel =
+    remembered?.kind === kind
+      ? { ...remembered, unitWeight: current.unitWeight }
+      : createDefaultModel(kind, current.unitWeight);
+  const fields = next as unknown as Record<string, unknown>;
+  for (const key of SHARED_FIELDS) {
+    const value = current[key];
+    if (value === undefined || value === false || (key === "unitWeightSat" && kind === "impenetrable")) {
+      delete fields[key];
+    } else {
+      fields[key] = value;
+    }
+  }
+  return next;
+}

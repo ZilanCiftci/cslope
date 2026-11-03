@@ -48,6 +48,17 @@ export function Explorer() {
   const [selectionAnchorId, setSelectionAnchorId] = useState<string | null>(
     activeModelId,
   );
+  // Another model made active from elsewhere (an import, a new model, Open):
+  // the selection follows it, so that the model shown before does not stay
+  // highlighted next to it.
+  const [shownActiveId, setShownActiveId] = useState(activeModelId);
+  if (shownActiveId !== activeModelId) {
+    setShownActiveId(activeModelId);
+    if (!selectedModelIds.includes(activeModelId)) {
+      setSelectedModelIds([activeModelId]);
+      setSelectionAnchorId(activeModelId);
+    }
+  }
   const [draggedModelId, setDraggedModelId] = useState<string | null>(null);
   const [dropTarget, setDropTarget] = useState<{
     modelId: string;

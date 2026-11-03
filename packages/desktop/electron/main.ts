@@ -1169,6 +1169,15 @@ function setCurrentFilePath(filePath: string) {
   currentFilePath = filePath;
   const name = path.basename(filePath, path.extname(filePath));
   win?.setTitle(`${name} — cSlope`);
+  sendFileName(name);
+}
+
+/**
+ * Tell the renderer the name of the project file (null: untitled): its
+ * title bar and the window title show it, with a mark for unsaved changes.
+ */
+function sendFileName(name: string | null) {
+  win?.webContents.send("file:nameChanged", name);
 }
 
 /** Largest project file accepted (a real project is a few hundred kB). */
@@ -1337,6 +1346,7 @@ ipcMain.on("menu:new", (event) => {
   currentFilePath = null;
   pendingOpenPath = null;
   win?.setTitle("cSlope");
+  sendFileName(null);
 });
 
 ipcMain.on("menu:about", () => {

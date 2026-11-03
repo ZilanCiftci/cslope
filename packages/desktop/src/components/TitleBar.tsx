@@ -1,8 +1,8 @@
 import { useEffect, useState } from "react";
 import { useStore } from "zustand";
-import { DEFAULT_MODEL_NAME } from "../constants";
 import { useAppStore, performUndo, performRedo } from "../store/app-store";
 import { isElectron } from "../utils/is-electron";
+import { useWindowTitle } from "./useWindowTitle";
 import { useProjectActions } from "../features/project/useProjectActions";
 import { NewIcon, OpenIcon, SaveIcon } from "./icons/FileActionIcons";
 import { UndoIcon, RedoIcon } from "./icons/EditIcons";
@@ -22,6 +22,8 @@ interface Props {
 
 export function TitleBar({ theme, onToggleTheme, activeModelName }: Props) {
   const [maximized, setMaximized] = useState(false);
+  // The project file's name and an unsaved-changes mark, as the window title.
+  const title = useWindowTitle();
 
   const defaultBaseName = activeModelName?.trim() || "cslope-project";
   const { fileInputRef, handleNew, handleOpen, handleSave, handleFileChange } =
@@ -120,7 +122,7 @@ export function TitleBar({ theme, onToggleTheme, activeModelName }: Props) {
             color: "var(--color-vsc-text-muted)",
           }}
         >
-          {activeModelName ?? DEFAULT_MODEL_NAME} — cSlope
+          {title}
         </span>
       </div>
 

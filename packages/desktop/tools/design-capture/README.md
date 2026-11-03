@@ -55,6 +55,26 @@ fails is logged and shown in red on the contact sheet; the run goes on. A
 native message box (`alert`) is captured from the X screen with ImageMagick
 `import` and accepted.
 
+## Beta checklist
+
+`beta-checklist.ts` runs the manual beta checklist in the app: open, save
+and reopen (also after a restart), every import and export through the
+File menu, the dialog edits with Ctrl+Z, runs, the PDF, search, drag and
+drop, the dark theme, a decimal comma in a Swedish and an English locale
+and display scaling. It starts the app through Playwright's Electron
+launcher so that the main process's open, save and message dialogs are
+answered by the test and downloads are saved (or cancelled) in the output
+folder, and checks each factor of safety as the status bar shows it.
+
+```
+CSLOPE_CAPTURE_NO_SANDBOX=1 xvfb-run -a -s "-screen 0 1920x1200x24" bun packages/desktop/tools/design-capture/beta-checklist.ts <output folder> <beta-test folder>
+```
+
+The beta-test folder holds `files/` (the projects and their exports),
+`expected.json` and `variants.json`. It writes `results.md` and
+`index.html`; about 10 minutes. `BETA_PARTS=A,B,C` picks parts,
+`BETA_START_AT=<step id>` skips the steps before one.
+
 ## Files
 
 - `capture.ts`: the steps.

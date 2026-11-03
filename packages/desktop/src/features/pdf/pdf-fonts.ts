@@ -2,7 +2,11 @@
  * The sans-serif font of the PDF exports: Liberation Sans (SIL Open Font
  * License, see assets/fonts/OFL.txt), embedded so that Greek letters and
  * symbols print (φ, γ, ′, ≥, ³); the standard PDF fonts only have Latin-1.
- * Subset to Latin, Greek, punctuation and mathematical symbols.
+ * Subset to Latin, Greek, punctuation and mathematical symbols, plus the
+ * subscript ᵤ (rᵤ) and the combining macron (B̄). jsPDF does no mark
+ * positioning, so the macron's outline (and left side bearing) is moved
+ * to sit over a capital B written before it; over another letter it would
+ * be misplaced.
  */
 import type { jsPDF } from "jspdf";
 import regular from "../../assets/fonts/LiberationSans-Regular.ttf?inline";

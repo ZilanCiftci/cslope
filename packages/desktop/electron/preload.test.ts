@@ -48,6 +48,7 @@ const EXPECTED: Record<string, [Kind, string]> = {
   openFile: ["invoke", "dialog:openFile"],
   openDroppedFile: ["invoke", "file:openPath"],
   confirmFileOpened: ["send", "file:openConfirmed"],
+  onFileNameChanged: ["on", "file:nameChanged"],
   askUnsavedChanges: ["invoke", "dialog:unsavedChanges"],
   closeGuardReady: ["send", "app:closeGuardReady"],
   closeGuardReleased: ["send", "app:closeGuardReleased"],

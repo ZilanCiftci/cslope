@@ -1025,7 +1025,8 @@ function FemFields({
         />
       </label>
       <label className="flex flex-col gap-0.5">
-        <Label>Poisson&apos;s ratio ν</Label>
+        {/* In a serif italic: the UI font draws ν like a v. */}
+        <Label>Poisson&apos;s ratio <span style={{ fontFamily: "'Times New Roman', Times, serif", fontStyle: "italic", fontSize: "1.15em" }}>ν</span></Label>
         <DraftNumberInput
           value={settings.poissonsRatio}
           min={0}

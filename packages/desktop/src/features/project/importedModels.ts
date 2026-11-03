@@ -81,12 +81,14 @@ export function addImportedModels(imports: ImportedModel[], fileName: string, su
   useAppStore.setState({ _pendingFitToScreen: true });
   useAppStore.temporal.getState().clear();
 
-  const lines = imports.map((imp) => {
+  const lines = imports.map((imp, i) => {
     const ref = imp.reference
       ? ` The file's critical ${surface} (factor of safety ${imp.reference.fos.toFixed(3)}) is added as a custom surface.`
       : "";
     const notes = imp.notes.length > 0 ? `\n  – ${imp.notes.join("\n  – ")}` : "";
-    return `"${imp.name}": ${plural(imp.definition.materials.length, "material")}, ${plural(imp.definition.materialBoundaries?.length ?? 0, "boundary", "boundaries")}.${ref}${notes}`;
+    // The method the model is analysed with (the file's, or the one closest to it).
+    const method = entries[i].options?.method;
+    return `"${imp.name}": ${plural(imp.definition.materials.length, "material")}, ${plural(imp.definition.materialBoundaries?.length ?? 0, "boundary", "boundaries")}${method ? `; method ${method}` : ""}.${ref}${notes}`;
   });
   return (
     `Imported ${plural(imports.length, "model")} from ${fileName}:\n${lines.join("\n")}\n\n` +

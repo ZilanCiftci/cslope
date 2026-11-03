@@ -167,15 +167,14 @@ export function LineLoadsDialogApp() {
     },
     {
       header: (
-        <Label title="Inclination of the load from the downward vertical, positive when it points towards +x: 0 = vertical, ±90 = horizontal">
-          Angle from vertical (°, + towards +x)
+        <Label title="Angle of the load from the downward vertical (°), positive when it points towards +x: 0 = vertical, ±90 = horizontal">
+          Angle (°)
         </Label>
       ),
       widthClassName: "w-[22%]",
       renderCell: (row) => (
         <SpreadsheetNumberInput
           value={row.angle ?? 0}
-          step="5"
           ariaLabel="Line load angle"
           onChange={(text) => {
             const angle = parseLoadAngle(text);

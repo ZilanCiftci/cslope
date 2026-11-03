@@ -14,4 +14,4 @@ export { BBarFields } from "./BBarFields";
 export { CutoffField } from "./CutoffField";
 export { UnitWeightSatField } from "./UnitWeightSatField";
 export { SuctionFields } from "./SuctionFields";
-export { createDefaultModel, flatFieldsFromModel } from "./model-defaults";
+export { createDefaultModel, flatFieldsFromModel, switchModelKind } from "./model-defaults";

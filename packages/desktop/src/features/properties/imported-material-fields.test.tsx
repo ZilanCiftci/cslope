@@ -42,9 +42,51 @@ describe("DefineMaterialsDialog — imported material settings", () => {
     expect(above).toHaveTextContent("Strength above the water line (imported): Mohr-Coulomb");
     expect(above).toHaveTextContent("c′ = 2 kPa, φ′ = 30°");
     expect(screen.getByTestId("ocr-override")).toHaveTextContent("Overridden by the yield stress from the earlier stage + POP 12 kPa");
-    // OCR does not apply: its field is disabled.
-    expect(screen.getByLabelText("OCR")).toBeDisabled();
+    // OCR does not apply: POP takes its place, the OCR table is disabled.
+    expect(screen.queryByLabelText("OCR")).toBeNull();
+    expect(screen.getByLabelText("POP (kPa)")).toHaveValue("12");
     expect(screen.getByLabelText("OCR against elevation")).toBeDisabled();
+  });
+
+  it("edits the POP added to the earlier stage, and empties it", async () => {
+    render(<DefineMaterialsDialog onClose={() => {}} />);
+    const pop = screen.getByLabelText("POP (kPa)");
+    await userEvent.clear(pop);
+    await userEvent.type(pop, "20");
+    await userEvent.tab();
+    expect(store().materials[0].model).toEqual({ ...imported, pop: 20 });
+    expect(screen.getByTestId("ocr-override")).toHaveTextContent("+ POP 20 kPa");
+    // One undo step for the whole edit.
+    act(() => performUndo());
+    expect(store().materials[0].model).toEqual(imported);
+    await userEvent.clear(screen.getByLabelText("POP (kPa)"));
+    await userEvent.tab();
+    expect(store().materials[0].model).toEqual({ ...imported, pop: undefined });
+    // The earlier stage still applies: the field stays, empty.
+    expect(screen.getByLabelText("POP (kPa)")).toHaveValue("");
+  });
+
+  it("edits a POP or a yield stress alone, which emptying does not remove", async () => {
+    store().setMaterials([
+      { id: "a", name: "A", color: "#123456", model: { kind: "shansep", unitWeight: 17, ratio: 0.25, pop: 20 }, modelExpressions: {} },
+    ]);
+    const { unmount } = render(<DefineMaterialsDialog onClose={() => {}} />);
+    const pop = screen.getByLabelText("POP (kPa)");
+    await userEvent.clear(pop);
+    await userEvent.tab();
+    expect(store().materials[0].model).toMatchObject({ pop: 20 });
+    await userEvent.type(pop, "{Control>}a{/Control}35");
+    expect(store().materials[0].model).toMatchObject({ pop: 35 });
+    unmount();
+    store().setMaterials([
+      { id: "b", name: "B", color: "#123456", model: { kind: "shansep", unitWeight: 17, ratio: 0.25, yieldStress: 90 }, modelExpressions: {} },
+    ]);
+    render(<DefineMaterialsDialog onClose={() => {}} />);
+    expect(screen.queryByLabelText("POP (kPa)")).toBeNull();
+    const sy = screen.getByLabelText("σ′y (yield stress) (kPa)");
+    await userEvent.clear(sy);
+    await userEvent.type(sy, "120");
+    expect(store().materials[0].model).toMatchObject({ yieldStress: 120 });
   });
 
   it("removes the strength above the water line in one undoable step", async () => {
@@ -78,13 +120,13 @@ describe("DefineMaterialsDialog — imported material settings", () => {
       { id: "a", name: "A", color: "#123456", model: { kind: "shansep", unitWeight: 17, ratio: 0.25, pop: 20 }, modelExpressions: {} },
     ]);
     const { unmount } = render(<DefineMaterialsDialog onClose={() => {}} />);
-    expect(screen.getByTestId("ocr-override")).toHaveTextContent("Overridden by imported POP 20 kPa");
+    expect(screen.getByTestId("ocr-override")).toHaveTextContent("Overridden by POP 20 kPa");
     unmount();
     store().setMaterials([
       { id: "b", name: "B", color: "#123456", model: { kind: "shansep", unitWeight: 17, ratio: 0.25, yieldStress: 90 }, modelExpressions: {} },
     ]);
     render(<DefineMaterialsDialog onClose={() => {}} />);
-    expect(screen.getByTestId("ocr-override")).toHaveTextContent("Overridden by imported yield stress σ′y 90 kPa");
+    expect(screen.getByTestId("ocr-override")).toHaveTextContent("Overridden by the yield stress σ′y 90 kPa");
   });
 
   it("keeps them when another field is edited", async () => {

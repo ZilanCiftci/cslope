@@ -12,6 +12,18 @@ type Props = Omit<
   onClear?: () => void;
 };
 
+/** Characters of a plain decimal number, "," or "." as the separator. */
+const DECIMAL = /^[+-]?(\d+[.,]?\d*|[.,]\d+)([eE][+-]?\d+)?$/;
+
+/**
+ * The number a user typed, with "," or "." as the decimal separator; NaN
+ * for anything else (partial input such as "-" or "", text).
+ */
+function parseDecimalText(text: string): number {
+  const t = text.trim();
+  return DECIMAL.test(t) ? Number(t.replace(",", ".")) : NaN;
+}
+
 /**
  * Number input that keeps the user's text while they type.
  *
@@ -19,6 +31,10 @@ type Props = Omit<
  * keystroke turns valid 0 into the fallback and cannot hold partial input
  * such as "-" or "0.".  Here only finite numbers are passed on, and the
  * stored value is shown again once the field loses focus.
+ *
+ * A text field, not type="number": a number field accepts only the decimal
+ * separator of the app's locale and drops any other, so "0,5" typed in an
+ * English locale became 5. Both "," and "." are read here.
  */
 export function DraftNumberInput({
   value,
@@ -31,7 +47,8 @@ export function DraftNumberInput({
   return (
     <input
       {...rest}
-      type="number"
+      type="text"
+      inputMode="decimal"
       value={draft ?? value ?? ""}
       onChange={(e) => {
         setDraft(e.target.value);
@@ -39,7 +56,7 @@ export function DraftNumberInput({
           onClear?.();
           return;
         }
-        const parsed = Number(e.target.value);
+        const parsed = parseDecimalText(e.target.value);
         if (Number.isFinite(parsed)) onValueChange(parsed);
       }}
       onBlur={(e) => {

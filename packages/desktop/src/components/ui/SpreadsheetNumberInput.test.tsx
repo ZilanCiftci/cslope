@@ -29,4 +29,12 @@ describe("SpreadsheetNumberInput", () => {
     await userEvent.type(input, "-5");
     expect(screen.getByRole("status").textContent).toBe("-5");
   });
+
+  it("reads a comma as the decimal separator", async () => {
+    render(<Harness />);
+    const input = screen.getByLabelText("cell");
+    await userEvent.clear(input);
+    await userEvent.type(input, "2,5");
+    expect(screen.getByRole("status").textContent).toBe("2.5");
+  });
 });

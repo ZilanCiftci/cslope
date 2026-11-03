@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useRef } from "react";
 import { useAppStore } from "../../store/app-store";
 import {
   MATERIAL_MODEL_LABELS,
@@ -20,7 +20,7 @@ import {
   ShansepFields,
   ShearNormalFields,
   BBarFields,
-  createDefaultModel,
+  switchModelKind,
 } from "./sections/material-forms";
 import { PopupPanel } from "../../components/ui/PopupPanel";
 import type { MaterialRow } from "../../store/types";
@@ -103,29 +103,40 @@ export function DefineMaterialsDialog({ onClose, mode = "popup" }: Props) {
     setModel(matId, merged);
   };
 
-  /** Switch model kind — reset to defaults but keep unitWeight. */
+  // The model (and expressions) each material had for each kind it was
+  // switched away from in this dialog session: switching back restores
+  // them instead of that kind's defaults (e.g. an imported stress history).
+  const earlierKinds = useRef(
+    new Map<string, { model: MaterialModel; modelExpressions: MaterialRow["modelExpressions"] }>(),
+  );
+
+  /**
+   * Switch model kind: the fields the material had for that kind earlier
+   * in this session, or its defaults; γ and the fields of every kind kept.
+   */
   const switchKind = (
     matId: string,
     currentModel: MaterialModel,
     newKind: MaterialModelKind,
   ) => {
-    const newModel = createDefaultModel(newKind, currentModel.unitWeight);
-    if (currentModel.unitWeightSat !== undefined && newKind !== "impenetrable") {
-      newModel.unitWeightSat = currentModel.unitWeightSat;
-    }
-    // B̄ and the fill flag belong to every kind.
-    if (currentModel.bBar !== undefined) newModel.bBar = currentModel.bBar;
-    if (currentModel.bBarLoad) newModel.bBarLoad = true;
-    if (currentModel.ru !== undefined) newModel.ru = currentModel.ru;
-    // So does a separate strength above the water line (imported).
-    if (currentModel.aboveWater) newModel.aboveWater = currentModel.aboveWater;
-    // Expressions belong to the old kind's fields; keep only γ, which
-    // every kind has, or a stale expression would come back later.
     const mat = materials.find((m) => m.id === matId);
+    earlierKinds.current.set(`${matId}:${currentModel.kind}`, {
+      model: currentModel,
+      modelExpressions: mat?.modelExpressions,
+    });
+    const earlier = earlierKinds.current.get(`${matId}:${newKind}`);
+    const newModel = switchModelKind(currentModel, newKind, earlier?.model);
+    // Expressions belong to their kind's fields; γ, which every kind has,
+    // keeps the current one (a stale expression would come back later).
+    const earlierExpressions = { ...earlier?.modelExpressions };
+    delete earlierExpressions.unitWeight;
     const unitWeightExpr = mat?.modelExpressions?.unitWeight;
     updateMaterial(matId, {
       model: newModel,
-      modelExpressions: unitWeightExpr ? { unitWeight: unitWeightExpr } : {},
+      modelExpressions: {
+        ...earlierExpressions,
+        ...(unitWeightExpr ? { unitWeight: unitWeightExpr } : {}),
+      },
     });
     setFreshKindId(matId);
   };
@@ -645,9 +656,12 @@ function AboveWaterStrength({ model, onRemove }: { model: MaterialModel; onRemov
   );
 }
 
-/** Shows validation errors for the current model, if any. */
+/**
+ * Shows validation errors for the current model, if any; not those of B̄
+ * and rᵤ, which their fields show under them.
+ */
 function ValidationErrors({ model }: { model: MaterialModel }) {
-  const errors = useMemo(() => validateMaterialModel(model), [model]);
+  const errors = useMemo(() => validateMaterialModel({ ...model, bBar: undefined, ru: undefined }), [model]);
   if (errors.length === 0) return null;
 
   return (

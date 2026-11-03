@@ -15,6 +15,7 @@ import type { AnalysisSlice, AppState, ModelEntry } from "../types";
 import { DEFAULT_ANALYSIS_LIMITS } from "../defaults";
 import { ANALYSIS_TIMEOUT_MS, FEM_TIMEOUT_MS } from "../../constants";
 import { defaultCustomCircle } from "../../utils/custom-plane";
+import { analysisErrorText } from "../../utils/analysis-error";
 
 // ── Shared worker execution ────────────────────────────────────────
 
@@ -470,7 +471,7 @@ export const createAnalysisSlice: SliceCreator<AnalysisSlice> = (set, get) => ({
     try {
       inputKey = analysisInputKey(modelSnapshot);
     } catch (err) {
-      set({ runState: "error", progress: 0, result: null, errorMessage: err instanceof Error ? err.message : String(err) });
+      set({ runState: "error", progress: 0, result: null, errorMessage: analysisErrorText(err) });
       return;
     }
 
@@ -509,7 +510,7 @@ export const createAnalysisSlice: SliceCreator<AnalysisSlice> = (set, get) => ({
       set({
         runState: "error",
         progress: 0,
-        errorMessage: err instanceof Error ? err.message : String(err),
+        errorMessage: analysisErrorText(err),
       });
       activeHandle = null;
       activeRunModelId = null;
@@ -574,7 +575,7 @@ export const createAnalysisSlice: SliceCreator<AnalysisSlice> = (set, get) => ({
         finish({
           runState: "error",
           result: null,
-          errorMessage: err instanceof Error ? err.message : String(err),
+          errorMessage: analysisErrorText(err),
         });
       });
   },
@@ -737,7 +738,7 @@ export const createAnalysisSlice: SliceCreator<AnalysisSlice> = (set, get) => ({
         stopModelProgressInterval(freshModel.id);
         progressByModel.set(freshModel.id, 1);
         updateBatchProgress();
-        const errorMessage = err instanceof Error ? err.message : String(err);
+        const errorMessage = analysisErrorText(err);
         set((s) => ({
           models: s.models.map((m) =>
             m.id === freshModel.id
@@ -786,7 +787,7 @@ export const createAnalysisSlice: SliceCreator<AnalysisSlice> = (set, get) => ({
         if (err instanceof AnalysisCancelledError || !isCurrentBatch()) return;
         progressByModel.set(freshModel.id, 1);
         updateBatchProgress();
-        const errorMessage = err instanceof Error ? err.message : String(err);
+        const errorMessage = analysisErrorText(err);
         set((s) => ({
           models: s.models.map((m) =>
             m.id === freshModel.id

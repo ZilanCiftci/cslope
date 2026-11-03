@@ -45,7 +45,8 @@ export function FileMenu({
   // What an import or export did (or why it failed), shown in a dialog.
   const [summary, setSummary] = useState<{ title: string; text: string } | null>(null);
   const failure = (what: string, err: unknown) =>
-    setSummary({ title: `${what} failed`, text: `${what} failed: ${err instanceof Error ? err.message : String(err)}` });
+    // The title says what failed; the text says why.
+    setSummary({ title: `${what} failed`, text: err instanceof Error ? err.message : String(err) });
 
   const handleImportDxf = () => {
     const input = document.createElement("input");

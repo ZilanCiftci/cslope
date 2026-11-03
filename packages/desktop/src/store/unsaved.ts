@@ -91,9 +91,18 @@ export function projectContentSignature(state: AppState): string {
   );
 }
 
+const cleanListeners = new Set<() => void>();
+
+/** Call `listener` whenever the project is recorded as saved; returns the unsubscribe. */
+export function onProjectMarkedClean(listener: () => void): () => void {
+  cleanListeners.add(listener);
+  return () => cleanListeners.delete(listener);
+}
+
 /** Record the project in `state` as saved (after open, new or save). */
 export function markProjectClean(state: AppState): void {
   cleanSignature = projectContentSignature(state);
+  for (const listener of cleanListeners) listener();
 }
 
 /** True when the project in `state` differs from the last saved content. */

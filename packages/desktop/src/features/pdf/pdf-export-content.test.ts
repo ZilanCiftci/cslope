@@ -218,6 +218,11 @@ describe("exportVectorPdf — full model", () => {
       ]),
     );
     expect(texts.some((t) => t.startsWith("cSlope 9.9.9"))).toBe(true);
+    // Page 1 names the model and the result above the drawing.
+    const name = recordedTexts(doc).find((t) => t.text === "Section A");
+    expect(name).toBeDefined();
+    expect(texts).toContain("Over-design factor (design values) 1.234 · Bishop simplified (moment equilibrium)");
+    expect(texts.indexOf("Section A")).toBeLessThan(texts.indexOf("Analysis summary"));
     // Every summary line lies inside the page.
     const [w, h] = [doc.internal.pageSize.getWidth(), doc.internal.pageSize.getHeight()];
     for (const t of recordedTexts(doc)) {

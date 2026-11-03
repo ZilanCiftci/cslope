@@ -86,7 +86,7 @@ describe("OptionsDialogApp", () => {
       piezometricLine: { ...s.piezometricLine, rapidDrawdown: { waterBefore: [[0, 9], [40, 9]] } },
     });
     expect(screen.getByLabelText("Rapid drawdown")).toBeChecked();
-    expect(screen.getByLabelText("Water level before drawdown")).toHaveValue(9);
+    expect(screen.getByLabelText("Water level before drawdown")).toHaveValue("9");
     await userEvent.click(screen.getByLabelText("Rapid drawdown"));
     expect(bridge.sentOf<{ rapidDrawdown: unknown }>("sendAnalysisChanged").at(-1)!.rapidDrawdown).toBeNull();
     await userEvent.click(screen.getByLabelText("Rapid drawdown"));
@@ -195,7 +195,7 @@ describe("OptionsDialogApp", () => {
     await userEvent.click(screen.getByLabelText("Automatic tension crack depth"));
     expect(opts().tensionCrackAuto).toBe(true);
     expect(depth).toBeDisabled();
-    expect(depth).toHaveValue(null);
+    expect(depth).toHaveValue("");
     expect(water).toBeEnabled();
   });
 

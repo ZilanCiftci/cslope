@@ -111,6 +111,8 @@ declare global {
       openDroppedFile: (file: File) => Promise<string | null>;
       /** Make the file just read by openFile/openFilePath the save target. */
       confirmFileOpened: () => void;
+      /** The name of the project file (null: untitled), when it changes. */
+      onFileNameChanged: (listener: (event: unknown, name: unknown) => void) => () => void;
       /** Native Save / Don't Save / Cancel prompt for unsaved changes. */
       askUnsavedChanges: () => Promise<"save" | "discard" | "cancel">;
       /** The renderer handles close requests (enables the close guard). */

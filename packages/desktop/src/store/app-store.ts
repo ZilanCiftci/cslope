@@ -17,11 +17,12 @@ import {
 import { createParametersSlice } from "./slices/parametersSlice";
 import { createResultViewSlice } from "./slices/resultViewSlice";
 import { createViewportSlice } from "./slices/viewportSlice";
+import { coalescingHandleSet } from "./undo-coalesce";
 export * from "./types";
 export * from "./defaults";
 export * from "./helpers";
 export * from "./selectors";
-export { isProjectDirty, markProjectClean } from "./unsaved";
+export { isProjectDirty, markProjectClean, onProjectMarkedClean } from "./unsaved";
 
 /**
  * Fields tracked by undo/redo — geometry, materials, loads, analysis options.
@@ -50,6 +51,9 @@ type UndoableState = Pick<
   | "options"
   | "resultViewSettings"
 >;
+
+/** The undo history (set once the store exists). */
+let undoHistory: () => { pastStates: unknown[]; futureStates: unknown[] } = () => ({ pastStates: [], futureStates: [] });
 
 export const useAppStore = create<AppState>()(
   temporal(
@@ -88,6 +92,8 @@ export const useAppStore = create<AppState>()(
         resultViewSettings: state.resultViewSettings,
       }),
       limit: 50,
+      // Typing in a field is one step, not one per keystroke.
+      handleSet: coalescingHandleSet<UndoableState>(() => undoHistory()) as never,
       // Panning and zooming the result paper is no edit: a pan would
       // otherwise push one step per pointer move and evict real edits.
       equality: (pastState, currentState) =>
@@ -96,6 +102,8 @@ export const useAppStore = create<AppState>()(
     },
   ),
 );
+
+undoHistory = () => useAppStore.temporal.getState();
 
 // Show the starter model the explorer lists (the slices' own defaults are
 // a generic model, so the screen and Save showed different data under the

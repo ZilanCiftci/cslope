@@ -36,6 +36,8 @@ contextBridge.exposeInMainWorld("cslope", {
     return filePath ? ipcRenderer.invoke("file:openPath", filePath) : Promise.resolve(null);
   },
   confirmFileOpened: () => ipcRenderer.send("file:openConfirmed"),
+  onFileNameChanged: (listener: (event: unknown, name: unknown) => void) =>
+    subscribe("file:nameChanged", listener),
   // Unsaved changes
   askUnsavedChanges: () => ipcRenderer.invoke("dialog:unsavedChanges"),
   closeGuardReady: () => ipcRenderer.send("app:closeGuardReady"),

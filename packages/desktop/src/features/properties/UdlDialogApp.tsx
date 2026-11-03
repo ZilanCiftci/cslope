@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { isElectron } from "../../utils/is-electron";
 import { Label } from "../../components/ui/Label";
+import { DraftNumberInput } from "../../components/ui/DraftNumberInput";
 import {
   SpreadsheetRemoveButton,
   SpreadsheetTable,
@@ -21,8 +22,6 @@ interface LoadsStatePayload {
   materialNames?: { id: string; name: string }[];
 }
 
-/** A percentage for the notes, without trailing zeros. */
-const percent = (ratio: number) => `${Number((ratio * 100).toFixed(1))} %`;
 
 function normalizeLoadsPayload(
   payload: LoadsStatePayload | null | undefined,
@@ -106,6 +105,12 @@ export function UdlDialogApp() {
   const removeExcess = (row: UdlRow, materialId: string) => {
     const rest = (row.excessPorePressure ?? []).filter((e) => e.materialId !== materialId);
     updateUdl(row.id, { excessPorePressure: rest.length > 0 ? rest : undefined });
+  };
+  /** Set the part of a load carried as excess pore pressure in one material (0–1). */
+  const setExcessRatio = (row: UdlRow, materialId: string, ratio: number) => {
+    updateUdl(row.id, {
+      excessPorePressure: (row.excessPorePressure ?? []).map((e) => (e.materialId === materialId ? { ...e, ratio } : e)),
+    });
   };
   const excessNotes = udls.flatMap((row, i) =>
     (row.excessPorePressure ?? [])
@@ -259,8 +264,21 @@ export function UdlDialogApp() {
                 role="note"
                 className="flex items-center gap-2 text-[11px]"
               >
-                <span className="flex-1">
-                  UDL {i + 1}, not consolidated: Material "{name}" {percent(entry.ratio)} of q (excess pore pressure below the water)
+                <span className="flex-1" title="Part of the load carried as excess pore pressure below the water in this material: 0 (consolidated) to 1 (none of it consolidated)">
+                  UDL {i + 1}, Material "{name}": excess pore pressure{" "}
+                  <DraftNumberInput
+                    value={entry.ratio}
+                    min={0}
+                    max={1}
+                    className="w-12 text-[11px] inline-block"
+                    style={{ padding: "1px 4px", borderRadius: 4 }}
+                    onValueChange={(ratio) => {
+                      if (ratio >= 0 && ratio <= 1) setExcessRatio(row, entry.materialId, ratio);
+                    }}
+                    aria-label={`Excess pore pressure ratio of UDL ${i + 1} in Material "${name}"`}
+                    title="Part of the load carried as excess pore pressure in this material, 0 (consolidated) to 1 (none of it consolidated)"
+                  />
+                  {" "}× q (0 to 1)
                 </span>
                 <button
                   type="button"

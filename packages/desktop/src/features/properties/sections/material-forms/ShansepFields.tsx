@@ -94,6 +94,57 @@ function OcrOverride({ text, onUseOcr }: { text: string; onUseOcr: () => void })
   );
 }
 
+/**
+ * The imported stress history that replaces OCR, editable: POP (on its own
+ * or added to the earlier stage's stress) or the yield stress σ′y. Emptied,
+ * POP on top of the earlier stage is none; POP or σ′y on its own is kept
+ * (the "Use OCR instead" button removes it).
+ */
+function StressHistoryField({ model, onChange }: { model: ShansepModel; onChange: (patch: Partial<ShansepModel>) => void }) {
+  if (model.yieldFromEarlierStage || model.pop !== undefined) {
+    const onStage = model.yieldFromEarlierStage === true;
+    return (
+      <label
+        className="flex flex-col gap-0.5"
+        title={
+          onStage
+            ? "Pre-overburden pressure added to the yield stress from the earlier stage (kPa). Empty: none."
+            : "Pre-overburden pressure (kPa): OCR = (σ′v + POP)/σ′v at the slice base."
+        }
+      >
+        <Label>POP (kPa)</Label>
+        <DraftNumberInput
+          value={model.pop}
+          min={0}
+          placeholder={onStage ? "None" : undefined}
+          className={NO_SPINNER}
+          onValueChange={(pop) => {
+            if (pop >= 0) onChange({ pop });
+          }}
+          onClear={() => {
+            if (onStage) onChange({ pop: undefined });
+          }}
+          aria-label="POP (kPa)"
+        />
+      </label>
+    );
+  }
+  return (
+    <label className="flex flex-col gap-0.5" title="Yield (preconsolidation) stress (kPa): OCR = σ′y/σ′v at the slice base, at least 1.">
+      <Label>σ′y (yield stress) (kPa)</Label>
+      <DraftNumberInput
+        value={model.yieldStress}
+        min={0}
+        className={NO_SPINNER}
+        onValueChange={(yieldStress) => {
+          if (yieldStress >= 0) onChange({ yieldStress });
+        }}
+        aria-label="σ′y (yield stress) (kPa)"
+      />
+    </label>
+  );
+}
+
 /** Optional lower limit of Su; an empty field means none (0). */
 function SuMinField({ value, onChange }: { value: number | undefined; onChange: (suMin: number | undefined) => void }) {
   return (
@@ -184,8 +235,9 @@ export function ShansepFields({
               onUseOcr={() => onChange({ pop: undefined, yieldStress: undefined, yieldFromEarlierStage: undefined })}
             />
           )}
-          {!byElevation && (
-            <label className="flex flex-col gap-0.5" style={override ? { opacity: 0.6 } : undefined}>
+          {override && <StressHistoryField model={model} onChange={onChange} />}
+          {!byElevation && !override && (
+            <label className="flex flex-col gap-0.5">
               <Label title="Overconsolidation ratio, constant through the material. Default 1.">OCR</Label>
               <ExpressionNumericInput
                 value={model.ocr ?? 1}
@@ -196,7 +248,6 @@ export function ShansepFields({
                 min={0.01}
                 fallbackValue={1}
                 allowNegative={false}
-                disabled={override !== null}
                 aria-label="OCR"
               />
             </label>

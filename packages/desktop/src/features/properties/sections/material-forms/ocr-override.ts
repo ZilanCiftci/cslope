@@ -9,7 +9,7 @@ export function ocrOverrideText(model: ShansepModel): string | null {
   if (model.yieldFromEarlierStage) {
     return `Overridden by the yield stress from the earlier stage${model.pop ? ` + POP ${fmt(model.pop)} kPa` : ""}`;
   }
-  if (model.pop !== undefined) return `Overridden by imported POP ${fmt(model.pop)} kPa`;
-  if (model.yieldStress !== undefined) return `Overridden by imported yield stress σ′y ${fmt(model.yieldStress)} kPa`;
+  if (model.pop !== undefined) return `Overridden by POP ${fmt(model.pop)} kPa`;
+  if (model.yieldStress !== undefined) return `Overridden by the yield stress σ′y ${fmt(model.yieldStress)} kPa`;
   return null;
 }

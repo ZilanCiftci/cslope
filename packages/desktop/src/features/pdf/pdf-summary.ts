@@ -14,11 +14,12 @@ export interface SummaryHeader {
 }
 
 /**
- * Text the embedded font can print: it has no combining macron and no
- * subscript letters, so B̄ and rᵤ are written "B-bar" and "ru".
+ * Text the embedded font can print: its combining macron sits over a
+ * capital B (B̄; the PDF has no mark positioning), so a macron over any
+ * other letter is left out. rᵤ prints as it is.
  */
 export function pdfSafeText(text: string): string {
-  return text.replace(/B\u0304/g, "B-bar").replace(/r\u1d64/g, "ru").replace(/\u0304/g, "");
+  return text.replace(/(?<!B)\u0304/g, "");
 }
 
 function pdfSafeSection(section: SummarySection): SummarySection {
@@ -35,6 +36,43 @@ const MARGIN = 15;
 const LINE = 4.6;
 const BODY_PT = 9;
 const LABEL_W = 58;
+
+/**
+ * The line above the drawing on page 1: the model (or project) name, then
+ * the result row of the summary (the factor of safety) and the method.
+ */
+export function drawingTitleParts(sections: SummarySection[], header: SummaryHeader): { name: string; result: string } {
+  const name = header.modelName?.trim() || header.projectInfo?.title?.trim() || "";
+  const [fos, method] = sections[0]?.rows ?? [];
+  const result = [fos && `${fos.label} ${fos.value}`, method?.value].filter(Boolean).join(" · ");
+  return { name: pdfSafeText(name), result: pdfSafeText(result) };
+}
+
+/** Write the drawing's title line in the top margin of page 1, above the frame at `left`, `top`. */
+export function drawDrawingTitle(
+  pdf: jsPDF,
+  sections: SummarySection[],
+  header: SummaryHeader,
+  frame: { left: number; top: number; width: number },
+): void {
+  const { name, result } = drawingTitleParts(sections, header);
+  if (!name && !result) return;
+  const y = frame.top - 2.5;
+  pdf.setFontSize(BODY_PT);
+  pdf.setTextColor(0, 0, 0);
+  let x = frame.left;
+  if (name) {
+    setSansFont(pdf, "bold");
+    pdf.text(name, x, y);
+    x += pdf.getTextWidth(name) + 4;
+  }
+  if (result) {
+    setSansFont(pdf, "normal");
+    const room = frame.left + frame.width - x;
+    const [line] = pdf.splitTextToSize(result, Math.max(room, 10)) as string[];
+    pdf.text(line ?? result, x, y);
+  }
+}
 
 /**
  * Append the analysis summary as text pages after the drawing: method,
