@@ -184,6 +184,8 @@ export function prescribedPath(
   plane: { cx: number; cy: number; radius: number; points?: readonly Pt[] | null },
   crackDepth: number,
   mirrored = false,
+  /** Composite surfaces along the base (the analysis options): a circle below the base follows it. */
+  composite = true,
 ): PrescribedPath {
   if (plane.points) {
     const given = plane.points.map(([x, y]): Pt => [x, y]);
@@ -208,12 +210,14 @@ export function prescribedPath(
   }
   const ends = plane.radius > 0 ? circleEntryExit(coordinates, plane.cx, plane.cy, plane.radius, mirrored) : null;
   if (!ends) return { points: [], crack: null, unusable: true };
-  // A circle that leaves the model between its ends (through its base) is not analysed.
+  // A circle that leaves the model between its ends (through its base) is
+  // not analysed, unless composite surfaces let it follow the base.
   const slope = boundarySlope(coordinates, mirrored);
   const [lc, rc] = mirrored ? [mirrorPt(ends[0]), mirrorPt(ends[1])] : ends;
   const inside =
     slope !== null &&
-    isPlaneWithinExternalBoundary(slope, { lc, rc, cx: mirrored ? -plane.cx : plane.cx, cy: plane.cy, radius: plane.radius });
+    (composite ||
+      isPlaneWithinExternalBoundary(slope, { lc, rc, cx: mirrored ? -plane.cx : plane.cx, cy: plane.cy, radius: plane.radius }, true));
   if (!inside) return { points: [], crack: null, unusable: true };
   if (!(crackDepth > 0)) {
     return { points: circleArcPoints(plane.cx, plane.cy, plane.radius, ends[0], ends[1], 90), crack: null, unusable: false };

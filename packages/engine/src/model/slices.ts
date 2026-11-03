@@ -17,6 +17,7 @@ import type { Slope } from "./slope";
 import type { Udl } from "../types/loads";
 import { materialLayerTopAt, polylineYFrom } from "./geometry-ops";
 import { polylineCrossingsX, polylineYAt, type Pt } from "./surface";
+import { floorYAt } from "./composite";
 import { applyReinforcement } from "./reinforcement";
 
 // ── createSlice ───────────────────────────────────────────────────
@@ -635,9 +636,60 @@ export function getSlices(
   const surfXY = slope.surfaceLineXY;
   if (!surfXY) throw new Error("Surface line not defined");
   const poly = points && points.length >= 2 ? points : null;
+  const arcY = (x: number) => getCircleYCoordinateAtX(cx, cy, radius, x);
+
+  // Composite circle: where the circle goes below the floor (the top of
+  // impenetrable material, and the base of the model with compositeBase)
+  // the surface follows the floor (model/composite.ts). `floorParts` are the x ranges along
+  // the floor; empty: a plain circle.
+  const floor = !poly && slope.compositeSurfaces ? slope.compositeFloor : null;
+  const floorParts: [number, number][] = [];
+  if (floor) {
+    const fx = floor.pts.map((p) => p[0]), fy = floor.pts.map((p) => p[1]);
+    const cuts = getCircleLineIntersections(cx, cy, radius, fx, fy)
+      .map(([ix]) => ix)
+      .filter((ix) => ix > entryX && ix < x1);
+    const ends = [entryX, ...cuts.sort((a, b) => a - b), x1];
+    // A circle that dips below the floor by less than this (a circle
+    // tangent to it, to rounding) stays a circle; the checks below that
+    // reject a base outside the model lift by more.
+    const dipTol = 1e-7 * Math.max(1, slope.modelHeight);
+    const xTol = 1e-9 * Math.max(1, radius);
+    for (let k = 0; k + 1 < ends.length; k++) {
+      const a = ends[k], b = ends[k + 1];
+      if (b - a <= xTol) continue;
+      const m = (a + b) / 2;
+      if (floorYAt(floor, m) > arcY(m) + dipTol) {
+        const last = floorParts[floorParts.length - 1];
+        if (last && Math.abs(last[1] - a) <= xTol) last[1] = b;
+        else floorParts.push([a, b]);
+      }
+    }
+    if (floorParts.length > 0) {
+      // Not admissible, so not analysed: a surface that would rise
+      // vertically against the motion (where the floor steps up towards the
+      // exit; the soil below the step's top would have to move into it), or
+      // that runs along the floor up to the ground (rock at the surface).
+      const stepTol = 1e-4 * Math.max(1, slope.modelHeight);
+      for (const [a, b] of floorParts) {
+        // Through the bare base of the model (not followed): outside it.
+        if (floor.bare.some(([u, v]) => Math.min(b, v) - Math.max(a, u) > xTol)) return [];
+        const into = floorYAt(floor, a, "right") - (a > entryX ? Math.min(arcY(a), floorYAt(floor, a, "left")) : arcY(a));
+        if (a > entryX && into > stepTol) return [];
+        for (const [px, py] of floor.pts) {
+          if (px > a && px < b && floorYAt(floor, px, "right") - floorYAt(floor, px, "left") > stepTol) return [];
+          // (the ends excepted: exiting where the floor meets the ground is no outcrop)
+          if (px > a && px < b && py >= getYAtX(surfXY.x, surfXY.y, px) - stepTol) return [];
+        }
+      }
+    }
+  }
+  const onFloor = (x: number) => floorParts.some(([a, b]) => x > a && x < b);
   const baseY = poly
     ? (x: number) => polylineYAt(poly, x)
-    : (x: number) => getCircleYCoordinateAtX(cx, cy, radius, x);
+    : floorParts.length > 0
+      ? (x: number) => (onFloor(x) ? floorYAt(floor!, x) : arcY(x))
+      : arcY;
 
   // A tension crack cuts the surface off where it reaches the crack depth
   // on the upslope side; a surface that never gets that deep has no
@@ -679,9 +731,14 @@ export function getSlices(
   allSlicesSet.add(x1);
 
   // A polyline's kinks must be slice boundaries (straight bases), also
-  // with fixed slices.
+  // with fixed slices; on a composite circle the ends of the parts along
+  // the floor and the floor's kinks there.
   if (poly) {
     for (const [px] of poly) if (px > x0 && px < x1) allSlicesSet.add(px);
+  }
+  for (const [a, b] of floorParts) {
+    for (const x of [a, b]) if (x > x0 && x < x1) allSlicesSet.add(x);
+    for (const [px] of floor!.pts) if (px > a && px < b && px > x0 && px < x1) allSlicesSet.add(px);
   }
   if (slope.fixedSlices) {
     for (const fx of slope.fixedSlices) {
@@ -697,7 +754,7 @@ export function getSlices(
       // Polygon corner points within the sliding mass
       for (let i = 0; i < mg.px.length; i++) {
         if (mg.px[i] <= x0 || mg.px[i] >= x1) continue;
-        const inside = poly
+        const inside = poly || onFloor(mg.px[i])
           ? mg.py[i] >= baseY(mg.px[i]) - 1e-9
           : (mg.px[i] - cx) ** 2 + (mg.py[i] - cy) ** 2 <= radiusSq + 1e-9;
         if (inside) allSlicesSet.add(mg.px[i]);
@@ -705,9 +762,14 @@ export function getSlices(
       // Surface-polygon edge intersections
       const intersections = poly
         ? polylineCrossingsX(poly, mg.px, mg.py, true)
-        : getCircleLineIntersections(cx, cy, radius, mg.px, mg.py).map(
-            ([ix]) => ix,
-          );
+        : [
+            ...getCircleLineIntersections(cx, cy, radius, mg.px, mg.py)
+              .map(([ix]) => ix)
+              .filter((ix) => !onFloor(ix)),
+            ...(floorParts.length > 0
+              ? polylineCrossingsX(floor!.pts, mg.px, mg.py, true).filter(onFloor)
+              : []),
+          ];
       for (const ix of intersections) {
         if (ix > x0 && ix < x1) {
           allSlicesSet.add(ix);
@@ -733,9 +795,14 @@ export function getSlices(
     for (const waterXY of slope.allWaterLines) {
       const waterIntersections = poly
         ? polylineCrossingsX(poly, waterXY.x, waterXY.y, false)
-        : getCircleLineIntersections(cx, cy, radius, waterXY.x, waterXY.y).map(
-            ([ix]) => ix,
-          );
+        : [
+            ...getCircleLineIntersections(cx, cy, radius, waterXY.x, waterXY.y)
+              .map(([ix]) => ix)
+              .filter((ix) => !onFloor(ix)),
+            ...(floorParts.length > 0
+              ? polylineCrossingsX(floor!.pts, waterXY.x, waterXY.y, false).filter(onFloor)
+              : []),
+          ];
       for (const ix of waterIntersections) {
         if (ix > x0 && ix < x1) {
           allSlicesSet.add(ix);
@@ -920,6 +987,16 @@ export function getSlices(
     }
   }
 
+  // A slice along the floor of a composite circle has a straight base
+  // between the floor's heights at its edges (from its own side of a step
+  // in the floor), analysed about the centre like a polyline's.
+  const floorBase = (i: number): ((x: number) => number) | undefined => {
+    if (floorParts.length === 0 || !onFloor(sxArray[i])) return undefined;
+    const a = slicesX[i], b = slicesX[i + 1];
+    const ya = floorYAt(floor!, a, "right"), yb = floorYAt(floor!, b, "left");
+    return (x: number) => ya + ((yb - ya) * (x - a)) / (b - a);
+  };
+
   // Create slices
   const results: Slice[] = [];
   const verticalHead = slope.porePressureHead === "vertical";
@@ -985,7 +1062,7 @@ export function getSlices(
               verticalHead,
             )
         : undefined,
-      poly ? baseY : undefined,
+      poly ? baseY : floorBase(i),
       hasSatWeight
         ? (material) => {
             const ys = waterYsFor(material);

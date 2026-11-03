@@ -103,10 +103,16 @@ describe("circular search with two basins (toe circle above a stronger layer, de
         { point: [1, 2], materialName: "Rock" },
       ],
     } as unknown as SlopeDefinition;
-    const options = { iterations: 1000, refinedIterations: 0, slices: 50 };
+    // circles only: with composite surfaces both follow the floor at y = 4
+    const options = { iterations: 1000, refinedIterations: 0, slices: 50, compositeSurfaces: false };
     const base = run(withBase, options).fos;
     const rock = run(withRock, options).fos;
     expect(Math.abs(rock / base - 1)).toBeLessThan(1e-3);
+    const composite = { iterations: 1000, refinedIterations: 0, slices: 50 };
+    const baseC = run(withBase, composite).fos;
+    const rockC = run(withRock, composite).fos;
+    expect(Math.abs(rockC / baseC - 1)).toBeLessThan(1e-2);
+    expect(baseC).toBeLessThanOrEqual(base * (1 + 1e-9));
   });
 });
 

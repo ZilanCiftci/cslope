@@ -15,6 +15,7 @@ import {
   generateRefinedPlanes,
   generateLocalPlanes,
   planeKey,
+  isPlaneWithinExternalBoundary,
 } from "./search";
 import { optimiseNonCircular, optimisePolylines } from "./optimize";
 import { BLOCK_SEEDS, bestDistinct, blockSearch } from "./block-search";
@@ -485,6 +486,9 @@ export function analyseOrdinary(_slope: Slope, slices: Slice[]): number | null {
     lenSum += s.baseLength;
   }
   const meanArm = lenSum > 0 ? armSum / lenSum : 0;
+  // A composite circle (arc and slices along the floor): one moment balance
+  // about the centre, each force with its own arm, over the mean arm.
+  const composite = slices.some((s) => s.circular) && slices.some((s) => !s.circular);
 
   for (const s of slices) {
     // Reinforcement: active forces load the slice; passive ones (divided
@@ -500,25 +504,31 @@ export function analyseOrdinary(_slope: Slope, slices: Slice[]): number | null {
       resisting -= (rp[0] * s.dx + rp[2]) / meanArm;
     }
 
+    const arm = composite && meanArm > 1e-9 ? s.R / meanArm : 1;
     if (s.isCombined) {
       const fd =
         s.cohesion * s.baseLength +
         Math.max(0, W * Math.cos(s.alpha) - hNormal - s.U * s.baseLength) *
           Math.tan(s.phi);
       const fu = s.cohesionUndrained * s.baseLength;
-      resisting += Math.min(fd, fu);
+      resisting += Math.min(fd, fu) * arm;
     } else {
       resisting +=
-        s.cohesion * s.baseLength +
-        Math.max(0, W * Math.cos(s.alpha) - hNormal - s.U * s.baseLength) *
-          Math.tan(s.phi);
+        (s.cohesion * s.baseLength +
+          Math.max(0, W * Math.cos(s.alpha) - hNormal - s.U * s.baseLength) *
+            Math.tan(s.phi)) *
+        arm;
     }
 
     // Driving force along the base: on a circle the weight's moment W·dx
     // over the radius (the same moment as the other methods; α is at the
-    // middle of the arc, where R sin α differs slightly from dx).
+    // middle of the arc, where R sin α differs slightly from dx); on a
+    // composite circle with the floor slices' normal forces' moments too.
+    const drive = composite && meanArm > 1e-9
+      ? (W * s.dx + (W * Math.cos(s.alpha) - hNormal) * (s.normalArm ?? 0)) / meanArm
+      : W * (s.circular ? s.dx / s.R : Math.sin(s.alpha));
     pushing +=
-      W * (s.circular ? s.dx / s.R : Math.sin(s.alpha)) +
+      drive +
       (meanArm > 1e-9 ? ((s.extraMoment ?? 0) + rMoment) / meanArm : 0);
   }
 
@@ -1105,6 +1115,13 @@ function updateHoekBrown(slope: Slope, slices: Slice[], normals: readonly number
 function evaluatePlanes(slope: Slope, allPlanes: SearchPlane[]): void {
   for (const plane of allPlanes) {
     delete plane.belowMinSize;
+    delete plane.composite;
+    // A circle given directly (addSingleCircularPlane) that leaves the
+    // model where it is no composite surface.
+    if (!plane.points && !isPlaneWithinExternalBoundary(slope, plane)) {
+      plane.fos = null;
+      continue;
+    }
     let slices: Slice[];
     try {
       slices = getSlices(
@@ -1132,6 +1149,18 @@ function evaluatePlanes(slope: Slope, allPlanes: SearchPlane[]): void {
     }
     if (slices[0].xLeft > plane.lc[0] + 1e-9) {
       plane.crack = [slices[0].xLeft, slices[0].y0Bottom];
+    }
+    // A composite circle: the surface as analysed, along the floor where
+    // the circle went below it.
+    if (!plane.points && slices.some((s) => s.circular === false)) {
+      // both sides of a step in the floor (a slice edge with two heights)
+      const pts: [number, number][] = [];
+      for (const s of slices) {
+        const last = pts[pts.length - 1];
+        if (!last || Math.abs(last[1] - s.y0Bottom) > 1e-9) pts.push([s.xLeft, s.y0Bottom]);
+        pts.push([s.xRight, s.y1Bottom]);
+      }
+      plane.composite = pts;
     }
 
     // Minimum depth: shallower surfaces are not analysed. Surfaces that

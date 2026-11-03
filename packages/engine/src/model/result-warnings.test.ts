@@ -168,7 +168,8 @@ describe("Bishop on a non-circular surface", () => {
 
   it("is not flagged for Bishop on a circle", () => {
     const circleOnly = { ...v046, customSurfaces: undefined, customPlanesOnly: false };
-    const { slope } = runVerification(circleOnly, "Bishop", { iterations: 200, refinedIterations: 0 });
+    // (circles only: a composite circle along the base is flagged too)
+    const { slope } = runVerification(circleOnly, "Bishop", { iterations: 200, refinedIterations: 0, compositeSurfaces: false });
     expect(slope.search.find((p) => p.fos != null)?.points).toBeUndefined();
     expect(hasWarning(slope)).toBe(false);
   });

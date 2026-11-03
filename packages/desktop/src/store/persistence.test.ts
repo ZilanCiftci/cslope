@@ -163,7 +163,7 @@ describe("persistence round-trip", () => {
       },
       udls: [{ id: "u1", magnitude: 10, x1: 1, x2: 4 }],
       lineLoads: [{ id: "l1", magnitude: 25, x: 2 }],
-      options: { ...DEFAULT_ANALYSIS_OPTIONS },
+      options: { ...DEFAULT_ANALYSIS_OPTIONS, compositeSurfaces: true },
       analysisLimits: { ...DEFAULT_ANALYSIS_LIMITS, enabled: true },
       editViewOffset: [1, 2],
       editViewScale: 3,
@@ -310,6 +310,14 @@ describe("persistence normalization fallbacks", () => {
       },
     ],
   };
+
+  it("keeps composite surfaces as saved, and off in a project saved before the option existed", () => {
+    for (const [saved, loaded] of [[true, true], [false, false], [undefined, false]] as const) {
+      const options = { ...DEFAULT_ANALYSIS_OPTIONS, ...(saved === undefined ? {} : { compositeSurfaces: saved }) };
+      const parsed = parseProjectFile(makeBaseProject([{ ...minimalModel, options }]));
+      expect(parsed.models[0].options.compositeSurfaces).toBe(loaded);
+    }
+  });
 
   it("defaults model name when missing", () => {
     const parsed = parseProjectFile(

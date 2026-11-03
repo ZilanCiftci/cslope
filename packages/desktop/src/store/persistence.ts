@@ -1043,6 +1043,10 @@ function normalizeAnalysisOptions(raw: unknown): AnalysisOptions {
     intersliceDataPoints,
     partialFactors: normalizePartialFactors(o.partialFactors),
     ...(o.bothDirections === true ? { bothDirections: true } : {}),
+    // composite surfaces: on for new projects; a project saved before the
+    // option existed keeps circles only, so its results do not change
+    compositeSurfaces: o.compositeSurfaces === true,
+    ...(o.compositeBase === true ? { compositeBase: true } : {}),
     ...(o.nonCircularOptimization === true
       ? { nonCircularOptimization: true }
       : {}),

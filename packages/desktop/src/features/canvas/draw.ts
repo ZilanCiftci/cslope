@@ -1108,7 +1108,9 @@ export function drawCanvas(
     mode !== "result" && !options?.tensionCrackAuto ? Math.max(0, options?.tensionCrackDepth ?? 0) : 0;
   const prescribedPaths =
     mode !== "result" && coordinates.length >= 3
-      ? (customSearchPlanes ?? []).map((s) => prescribedPath(coordinates, s, editCrackDepth, orientation === "rtl"))
+      ? (customSearchPlanes ?? []).map((s) =>
+          prescribedPath(coordinates, s, editCrackDepth, orientation === "rtl", options?.compositeSurfaces !== false && options?.compositeBase === true),
+        )
       : [];
   const crackPlane = prescribedPaths.findIndex((p) => p.crack !== null);
   let editCrackMarker: CrackMarker | null = null;
@@ -2053,7 +2055,7 @@ export function drawCanvas(
 
       // Centre dot and radius lines to entry/exit (circles only: the
       // axis point of a non-circular surface is no centre)
-      if (rvs.showCentreMarker && !cs.points) {
+      if (rvs.showCentreMarker && (!cs.points || cs.composite)) {
         const [ccx, ccy] = worldToCanvas(cs.cx, cs.cy, w, h);
         const [epx, epy] = worldToCanvas(
           cs.entryPoint[0],

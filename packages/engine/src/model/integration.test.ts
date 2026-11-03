@@ -361,7 +361,7 @@ describe("Integration: High-strength and impenetrable exclusion", () => {
     expect(shallowPlane!.fos).toBeGreaterThan(0);
   });
 
-  it("impenetrable layer excludes surfaces passing through it", () => {
+  it("with composite surfaces off, an impenetrable layer excludes surfaces passing through it", () => {
     const clay = new Material({
       name: "Clay",
       unitWeight: 20,
@@ -383,7 +383,7 @@ describe("Integration: High-strength and impenetrable exclusion", () => {
     ]);
     s.assignMaterial([25, -3], clay);
     s.assignMaterial([25, -12], bedrock);
-    s.updateAnalysisOptions({ slices: 30, method: "Bishop" });
+    s.updateAnalysisOptions({ slices: 30, method: "Bishop", compositeSurfaces: false });
     s.customPlanesOnly = true;
 
     // Shallow circle (bottom at y = -4, stays above bedrock layer)
@@ -403,7 +403,49 @@ describe("Integration: High-strength and impenetrable exclusion", () => {
     expect(shallowPlane!.fos).toBeGreaterThan(0);
   });
 
-  it("single circle through impenetrable returns null FOS", () => {
+  it("a circle into an impenetrable layer follows its top (composite surface)", () => {
+    const clay = new Material({ name: "Clay", unitWeight: 20, frictionAngle: 19.6, cohesion: 3 });
+    const bedrock = new Material({ name: "Bedrock", unitWeight: 26, model: { kind: "impenetrable", unitWeight: 26 } });
+    const s = new Slope();
+    s.setExternalBoundary(T_ACADS_BOUNDARY);
+    s.setMaterialBoundary([
+      [0, -12],
+      [50, -12],
+    ]);
+    s.assignMaterial([25, -3], clay);
+    s.assignMaterial([25, -13], bedrock);
+    s.updateAnalysisOptions({ slices: 30, method: "Bishop" });
+    s.customPlanesOnly = true;
+    addSingleCircularPlane(s, 30, 22, 35);
+    analyseSlope(s);
+    const p = s.search.find((q) => q.radius === 35)!;
+    expect(p.fos).toBeGreaterThan(0);
+    // along the rock (y = -12, below the toe at -10) where the circle would go below it
+    expect(Math.min(...p.composite!.map(([, y]) => y))).toBeCloseTo(-12, 9);
+    const onRock = p.slices!.filter((sl) => sl.circular === false);
+    expect(onRock.length).toBeGreaterThan(0);
+    for (const sl of onRock) {
+      expect(sl.y0Bottom).toBeCloseTo(-12, 9);
+      expect(sl.y1Bottom).toBeCloseTo(-12, 9);
+      expect(sl.baseMaterial?.name).toBe("Clay");
+    }
+    // With composite surfaces off the same circle is rejected.
+    const circleAbove = new Slope();
+    circleAbove.setExternalBoundary(T_ACADS_BOUNDARY);
+    circleAbove.setMaterialBoundary([
+      [0, -12],
+      [50, -12],
+    ]);
+    circleAbove.assignMaterial([25, -3], clay);
+    circleAbove.assignMaterial([25, -13], bedrock);
+    circleAbove.updateAnalysisOptions({ slices: 30, method: "Bishop", compositeSurfaces: false });
+    circleAbove.customPlanesOnly = true;
+    addSingleCircularPlane(circleAbove, 30, 22, 35);
+    analyseSlope(circleAbove);
+    expect(circleAbove.search.find((q) => q.radius === 35)!.fos).toBeNull();
+  });
+
+  it("with composite surfaces off, a single circle through impenetrable returns null FOS", () => {
     const clay = new Material({
       name: "Clay",
       unitWeight: 20,
@@ -424,7 +466,7 @@ describe("Integration: High-strength and impenetrable exclusion", () => {
     ]);
     s.assignMaterial([25, -3], clay);
     s.assignMaterial([25, -12], bedrock);
-    s.updateAnalysisOptions({ slices: 30, method: "Bishop" });
+    s.updateAnalysisOptions({ slices: 30, method: "Bishop", compositeSurfaces: false });
     s.customPlanesOnly = true;
 
     // Add a single circle that passes deep into the bedrock (bottom at y = -10)
@@ -517,7 +559,7 @@ describe("Integration: High-strength and impenetrable exclusion", () => {
     };
 
     const s = buildSlope(def);
-    s.updateAnalysisOptions({ slices: 30, method: "Bishop" });
+    s.updateAnalysisOptions({ slices: 30, method: "Bishop", compositeSurfaces: false });
     s.customPlanesOnly = true;
 
     // Circle that passes into bedrock

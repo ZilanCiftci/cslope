@@ -207,7 +207,9 @@ export function buildAnalysisSummary(input: AnalysisSummaryInput): SummarySectio
   if (cs) {
     res.push({
       label: "Critical surface",
-      value: cs.points
+      value: cs.composite
+        ? `composite circle, centre (${fmt(cs.cx)}, ${fmt(cs.cy)}) m, radius ${fmt(cs.radius)} m, along the firm base where it reaches it`
+        : cs.points
         ? `non-circular, ${cs.points.length} points`
         : `circle, centre (${fmt(cs.cx)}, ${fmt(cs.cy)}) m, radius ${fmt(cs.radius)} m`,
     });
@@ -313,6 +315,15 @@ export function buildAnalysisSummary(input: AnalysisSummaryInput): SummarySectio
         (options.refinedIterations ? ` + ${options.refinedIterations} refined` : ""),
     });
     search.push({ label: "Both directions", value: options.bothDirections ? "yes" : "no" });
+    search.push({
+      label: "Composite surfaces",
+      value:
+        options.compositeSurfaces === false
+          ? "no (circles only)"
+          : options.compositeBase
+            ? "yes, along bedrock and the model base"
+            : "yes, along bedrock",
+    });
   }
   search.push({ label: "Slices", value: `${options.slices}` });
   search.push({

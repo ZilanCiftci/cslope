@@ -62,7 +62,9 @@ export function buildSliceTable(
     rows.push(["Values", "characteristic (no partial factors)"]);
   }
   if (cs) {
-    if (cs.points) {
+    if (cs.composite) {
+      rows.push(["Critical surface", "composite circle (along the firm base)"], ["Centre x (m)", round(cs.cx, 4)], ["Centre y (m)", round(cs.cy, 4)], ["Radius (m)", round(cs.radius, 4)]);
+    } else if (cs.points) {
       rows.push(["Critical surface", `non-circular, ${cs.points.length} points`]);
     } else {
       rows.push(["Critical surface", "circle"], ["Centre x (m)", round(cs.cx, 4)], ["Centre y (m)", round(cs.cy, 4)], ["Radius (m)", round(cs.radius, 4)]);

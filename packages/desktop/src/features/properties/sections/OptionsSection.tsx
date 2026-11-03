@@ -342,6 +342,31 @@ export function OptionsSection({ plain = false }: OptionsSectionProps) {
             />
             <Label>Analyse both sliding directions</Label>
           </label>
+          <label
+            className="col-span-2 flex items-center gap-1.5"
+            title="A circle that reaches impenetrable material (bedrock) follows its top there instead of being rejected, as on a firm base (composite surface). Off: such circles are not analysed."
+          >
+            <input
+              type="checkbox"
+              checked={options.compositeSurfaces !== false}
+              onChange={(e) => setOptions({ compositeSurfaces: e.target.checked })}
+              aria-label="Composite surfaces along bedrock"
+            />
+            <Label>Circles follow bedrock (composite)</Label>
+          </label>
+          <label
+            className="col-span-2 flex items-center gap-1.5 pl-4"
+            title="Also follow the base of the model where no impenetrable material lies on it, as if the material below the model were impenetrable. Off: a circle through the base is not analysed (the base is only the edge of the model)."
+          >
+            <input
+              type="checkbox"
+              checked={options.compositeSurfaces !== false && options.compositeBase === true}
+              disabled={options.compositeSurfaces === false}
+              onChange={(e) => setOptions({ compositeBase: e.target.checked })}
+              aria-label="Composite surfaces along the model base"
+            />
+            <Label>…and the base of the model</Label>
+          </label>
           <label className="col-span-2 flex flex-col gap-0.5">
             <Label>Search method</Label>
             <select

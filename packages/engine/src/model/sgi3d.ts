@@ -48,7 +48,8 @@ export function sgi3dFactorOfSafety(slope: Slope, options: Sgi3dOptions): Sgi3dR
   const exclude = new Set(options.excludeMaterials ?? []);
 
   const valid = slope.search.filter((p) => p.fos != null && Number.isFinite(p.fos));
-  const planes = valid.filter((p) => p.radius > 0 && !p.points);
+  // composite circles (along rock or the model's base) are not circles in 3D either
+  const planes = valid.filter((p) => p.radius > 0 && !p.points && !p.composite);
   if (planes.length === 0) return null;
   // F_2D,krit,min: the analysis's smallest F_2D, non-circular surfaces included
   const f2dCritical = Math.min(...valid.map((p) => p.fos!));
@@ -157,8 +158,8 @@ export function sgi3dFactorOfSafety(slope: Slope, options: Sgi3dOptions): Sgi3dR
   if (best.f3d > 1.25 * f2dCritical) {
     warnings.push("F3D is more than 25 % above the critical F2D: SGI's guidance asks for the 3D factor to be judged with care (section 2.1.2).");
   }
-  if (valid.some((p) => p.points)) {
-    warnings.push("Non-circular surfaces are not included in the 3D factor (their F2D counts as F2D,krit,min).");
+  if (valid.some((p) => p.points || p.composite)) {
+    warnings.push("Non-circular and composite surfaces are not included in the 3D factor (their F2D counts as F2D,krit,min).");
   }
   // what the guidance's M_E (the soil's weight and the loads) leaves out, though the 2D factor has it
   const left: string[] = [];

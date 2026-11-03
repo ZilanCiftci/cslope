@@ -53,12 +53,18 @@ describe("surfaces the analysis rejects", () => {
     regionAssignments: [{ point: [1, 5], materialName: "S" }, { point: [1, -5], materialName: "R" }],
   });
 
-  it("through strong rock or bedrock: no FOS", () => {
+  it("through strong rock, or bedrock without composite surfaces: no FOS", () => {
     for (const model of [{ kind: "high-strength", unitWeight: 24 }, { kind: "impenetrable", unitWeight: 24 }]) {
       const s = buildSlope(onCircle(layered(model)));
+      s.updateAnalysisOptions({ compositeSurfaces: false });
       expect(analyseSlope(s), model.kind).toBeNull();
       expect(s.search[0].converged).toBe(true);
     }
+    // with them (the default) neither: the rock (top at y = 1) reaches the
+    // ground at the toe (y = 0), so the surface would run along it to the
+    // surface
+    const s = buildSlope(onCircle(layered({ kind: "impenetrable", unitWeight: 24 })));
+    expect(analyseSlope(s)).toBeNull();
   });
 
   it("shallower than the minimum depth or smaller than the minimum area: no FOS", () => {

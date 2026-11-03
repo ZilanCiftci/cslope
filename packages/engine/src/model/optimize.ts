@@ -134,7 +134,8 @@ interface Optimised {
 /** Best circles with clearly different entry and exit points. */
 function pickSeeds(slope: Slope, evaluated: readonly SearchPlane[]): SearchPlane[] {
   const circles = evaluated
-    .filter((p) => !p.points && p.fos != null && Number.isFinite(p.fos) && p.radius > 0)
+    // (not composite circles: their circle leaves the soil, its polyline would too)
+    .filter((p) => !p.points && !p.composite && p.fos != null && Number.isFinite(p.fos) && p.radius > 0)
     .sort((a, b) => a.fos! - b.fos!);
   const [eL, eR, xL, xR] = slope.limits;
   const span = Math.max(Math.abs(xR - eL), Math.abs(eR - xL), 1);

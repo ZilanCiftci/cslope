@@ -6,7 +6,7 @@
 import { describe, it, expect } from "vitest";
 import { Material, Udl, LineLoad } from "../types/index";
 import { Slope } from "./slope";
-import { setEntryExitPlanes, addSingleEntryExitPlane, addSingleCircularPlane, generateRefinedPlanes, generateLocalPlanes } from "./search";
+import { setEntryExitPlanes, addSingleEntryExitPlane, addSingleCircularPlane, generateRefinedPlanes, generateLocalPlanes, isPlaneWithinExternalBoundary } from "./search";
 import { analyseSlope } from "./solvers";
 import { rng, uniform, randomShape, shapeCoordinates } from "./property-helpers";
 
@@ -84,15 +84,20 @@ describe("individual planes", () => {
     expect(s.individualPlanes.length).toBe(before);
   });
 
-  it("a circle dipping a hair below the model base between the samples is not added", () => {
+  it("a circle dipping a hair below the model base between the samples leaves the model", () => {
     const t = model([[0, -10], [0, 10], [10, 10], [25, 0], [40, 0], [40, -10]]);
     // Lowest point 5 mm below the base, at x = 21.6 between arc samples.
+    // (Added all the same: with compositeBase it follows the base; without,
+    // the analysis rejects it.)
     const cx = 21.6;
     const radius = 21;
     addSingleCircularPlane(t, cx, -10.005 + radius, radius);
-    expect(t.individualPlanes).toHaveLength(0);
     addSingleCircularPlane(t, cx, -9.9 + radius, radius);
-    expect(t.individualPlanes).toHaveLength(1);
+    expect(t.individualPlanes).toHaveLength(2);
+    expect(isPlaneWithinExternalBoundary(t, t.individualPlanes[0])).toBe(false);
+    expect(isPlaneWithinExternalBoundary(t, t.individualPlanes[1])).toBe(true);
+    t.updateAnalysisOptions({ compositeBase: true });
+    expect(isPlaneWithinExternalBoundary(t, t.individualPlanes[0])).toBe(true);
   });
 
   it("refined and local planes: nothing without a budget or valid seeds", () => {

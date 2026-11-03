@@ -185,6 +185,8 @@ function analyseBothDirections(
  * cracked) to the exit.
  */
 function displayPoints(p: SearchPlane): [number, number][] | undefined {
+  // a composite circle as analysed (from its crack, along the floor)
+  if (p.composite) return p.composite;
   if (!p.points) return undefined;
   const crack = p.crack;
   if (!crack) return p.points;
@@ -239,6 +241,7 @@ function analyse(
       lffArray: crit.lffArray,
       equilibriumGap: crit.equilibriumGap,
       points: displayPoints(crit),
+      ...(crit.composite ? { composite: true } : {}),
       reinforcementForces: crit.slices?.flatMap((s) => s.reinforcementForces ?? []),
       // The crack the slices start at: its face runs from the ground at
       // the first slice's left side down to the surface.
@@ -296,6 +299,7 @@ function analyse(
         lffArray: p.lffArray,
         equilibriumGap: p.equilibriumGap,
         points: displayPoints(p),
+        ...(p.composite ? { composite: true } : {}),
       });
     }
   }
@@ -303,7 +307,7 @@ function analyse(
   // Moments about a circle's centre; on a non-circular surface they
   // depend on the axis point and the solved normal forces, so none are
   // reported.
-  const criticalPushingMoment = validSurfaces[0]?.points
+  const criticalPushingMoment = validSurfaces[0]?.points || validSurfaces[0]?.composite
     ? null
     : computeCriticalPushingMoment(validSurfaces[0]?.slices);
   const criticalSlipVolume = computeCriticalSlipVolume(

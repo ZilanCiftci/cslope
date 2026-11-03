@@ -1,8 +1,8 @@
 {
  "summary": {
   "problems": 172,
-  "results": 369,
-  "publishedValues": 228,
+  "results": 372,
+  "publishedValues": 229,
   "problemsWithPublished": 141,
   "literatureProblems": 162,
   "reliabilityQuantities": 25
@@ -2593,7 +2593,7 @@
    ],
    "results": [
     {
-     "method": "Bishop simplified",
+     "method": "Bishop simplified, circles only",
      "computed": 1.0694,
      "programs": {
       "min": 1.07,
@@ -2601,7 +2601,7 @@
      }
     },
     {
-     "method": "Spencer",
+     "method": "Spencer, circles only",
      "computed": 1.0768,
      "programs": {
       "min": 1.1,
@@ -2686,8 +2686,15 @@
      "value": 1.45,
      "source": "Duncan & Wright",
      "method": "Spencer",
-     "analysis": "Spencer",
+     "analysis": "Spencer, circles only",
      "computed": 1.4472
+    },
+    {
+     "value": 1.17,
+     "source": "Duncan & Wright",
+     "method": "Spencer, composite circle, composite surface",
+     "analysis": "Spencer",
+     "computed": 1.1659
     },
     {
      "value": 1.16,
@@ -2706,8 +2713,13 @@
    ],
    "results": [
     {
-     "method": "Spencer",
+     "method": "Spencer, circles only",
      "computed": 1.4472,
+     "programs": null
+    },
+    {
+     "method": "Spencer",
+     "computed": 1.1659,
      "programs": null
     },
     {
@@ -2751,13 +2763,13 @@
      "value": 1.46,
      "method": "Bishop simplified",
      "source": "El-Ramly et al. (2002)",
-     "analysis": "Bishop simplified",
+     "analysis": "Bishop simplified, circles only",
      "computed": 1.4593
     }
    ],
    "results": [
     {
-     "method": "Bishop simplified",
+     "method": "Bishop simplified, circles only",
      "computed": 1.4593,
      "programs": {
       "min": 1.461,
@@ -5297,7 +5309,7 @@
    "published": [],
    "results": [
     {
-     "method": "Bishop simplified",
+     "method": "Bishop simplified, circles only",
      "computed": 1.41,
      "programs": {
       "min": 1.417,
@@ -5305,11 +5317,27 @@
      }
     },
     {
-     "method": "Spencer",
+     "method": "Spencer, circles only",
      "computed": 1.4146,
      "programs": {
       "min": 1.422,
       "max": 1.422
+     }
+    },
+    {
+     "method": "Bishop simplified",
+     "computed": 1.3873,
+     "programs": {
+      "min": 1.392,
+      "max": 1.392
+     }
+    },
+    {
+     "method": "Spencer",
+     "computed": 1.3952,
+     "programs": {
+      "min": 1.4,
+      "max": 1.4
      }
     }
    ],

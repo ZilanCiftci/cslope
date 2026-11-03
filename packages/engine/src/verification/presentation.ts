@@ -65,6 +65,8 @@ export function analysisLabel(method: AnalysisMethod, options: Partial<AnalysisO
     s = f === "constant" ? "Spencer" : `Morgenstern-Price (${f === "data-point-specified" ? "specified f(x)" : f})`;
   } else s = method;
   if (options.nonCircularOptimization) s += ", non-circular";
+  // circles that are not to follow rock or the model base (composite surfaces are the default)
+  if (options.compositeSurfaces === false) s += ", circles only";
   return s;
 }
 

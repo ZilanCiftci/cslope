@@ -38,6 +38,7 @@ import {
   createGeometryWithMaterial,
 } from "./geometry-ops";
 import { getDomainX, mirrorX } from "./canonical";
+import { compositeFloor, type CompositeFloor } from "./composite";
 import type { Pile, Reinforcement } from "../types/reinforcement";
 import { buildEnvelope, buildPileProfile, type PileProfile, type ReinforcementEnvelope } from "./reinforcement";
 
@@ -92,6 +93,12 @@ export interface SearchPlane {
    * cut off; the sliding mass starts here instead of at `lc`.
    */
   crack?: [number, number];
+  /**
+   * A composite circle (model/composite.ts): the surface as analysed, from
+   * the entry (or crack) to the exit, following the floor where the circle
+   * went below it. Absent for a plain circle.
+   */
+  composite?: [number, number][];
   /** Generated tangent to this material interface (search.ts). */
   tangentTo?: number;
   /**
@@ -194,6 +201,9 @@ export class Slope {
   private _tensionCrackWater: number;
   private _tensionCrackAuto: boolean;
   private _tensionCrackAngle: number;
+  private _compositeSurfaces = true;
+  private _compositeBase = false;
+  private _compositeFloorCache: { geometries: readonly GeometryWithMaterial[]; base: boolean; floor: CompositeFloor | null } | null = null;
   private _partialFactors: PartialFactors | null = null;
   private _nonCircularOptimization = false;
   private _searchMethod: SearchMethod = "circular";
@@ -246,6 +256,8 @@ export class Slope {
     this._tensionCrackWater = d.tensionCrackWater ?? 0;
     this._tensionCrackAuto = d.tensionCrackAuto ?? false;
     this._tensionCrackAngle = d.tensionCrackAngle ?? 0;
+    this._compositeSurfaces = d.compositeSurfaces ?? true;
+    this._compositeBase = d.compositeBase ?? false;
   }
 
   // ────────────────────────────────────────────────────────────────
@@ -446,6 +458,29 @@ export class Slope {
   /** Limiting base inclination of a tension crack (°; 0: none). */
   get tensionCrackAngle(): number {
     return this._tensionCrackAngle;
+  }
+
+  /** Whether circles follow the top of impenetrable material (composite surfaces). */
+  get compositeSurfaces(): boolean {
+    return this._compositeSurfaces;
+  }
+
+  /** Whether composite circles also follow the bare base of the model. */
+  get compositeBase(): boolean {
+    return this._compositeBase;
+  }
+
+  /** The floor composite circles follow (model/composite.ts), for the current geometry. */
+  get compositeFloor(): CompositeFloor | null {
+    const geometries = this._materialGeometries;
+    if (this._compositeFloorCache?.geometries !== geometries || this._compositeFloorCache.base !== this._compositeBase) {
+      this._compositeFloorCache = {
+        geometries,
+        base: this._compositeBase,
+        floor: compositeFloor(this.externalBoundaryXY, geometries, this._compositeBase),
+      };
+    }
+    return this._compositeFloorCache.floor;
   }
 
   get tensionCrackAuto(): boolean {
@@ -1145,6 +1180,8 @@ export class Slope {
     if (opts.tensionCrackAuto !== undefined) {
       this._tensionCrackAuto = opts.tensionCrackAuto;
     }
+    if (opts.compositeSurfaces !== undefined) this._compositeSurfaces = opts.compositeSurfaces;
+    if (opts.compositeBase !== undefined) this._compositeBase = opts.compositeBase;
     if (opts.tensionCrackAngle !== undefined) {
       if (!Number.isFinite(opts.tensionCrackAngle) || opts.tensionCrackAngle < 0 || opts.tensionCrackAngle >= 90) {
         throw new Error("tensionCrackAngle must be ≥ 0 and less than 90°");
@@ -1429,6 +1466,8 @@ export class Slope {
 
   private _resetResults(): void {
     this._search = [];
+    // materials can change in place (assignMaterial): the floor with them
+    this._compositeFloorCache = null;
     // Pullout from the overburden and the pile pressures depend on geometry,
     // materials, water and the partial factors.
     this._reinforcementEnvelopes = null;

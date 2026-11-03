@@ -202,19 +202,21 @@ describe("prescribedPath", () => {
     expect(above.unusable).toBe(true);
   });
 
-  it("has no surface for a circle that leaves the model through its base", () => {
+  it("has no surface for a circle that leaves the model through its base, without composite surfaces", () => {
     // Both ends on the ground, the lowest point 0.5 m below the base (y 0).
     const deep = { cx: 15, cy: 14, radius: 14.5 };
     expect(circleEntryExit(model, deep.cx, deep.cy, deep.radius)).not.toBeNull();
-    expect(prescribedPath(model, deep, 0).unusable).toBe(true);
-    expect(prescribedPath(model.map(([x, y]): [number, number] => [30 - x, y]), { ...deep, cx: 15 }, 0, true).unusable).toBe(true);
+    expect(prescribedPath(model, deep, 0, false, false).unusable).toBe(true);
+    expect(prescribedPath(model.map(([x, y]): [number, number] => [30 - x, y]), { ...deep, cx: 15 }, 0, true, false).unusable).toBe(true);
+    // with composite surfaces (the default) it follows the base
+    expect(prescribedPath(model, deep, 0).unusable).toBe(false);
     // 1 m above the base: a surface.
-    expect(prescribedPath(model, { ...deep, radius: 13 }, 0).unusable).toBe(false);
-    // As the analysis: no plane for the first, one for the second.
+    expect(prescribedPath(model, { ...deep, radius: 13 }, 0, false, false).unusable).toBe(false);
+    // As the analysis (composite surfaces on): a plane for both.
     const planes = (c: typeof deep) =>
       buildSlope({ coordinates: model, materials: [{ name: "M", unitWeight: 20, frictionAngle: 30, cohesion: 5 }], customSearchPlanes: [c] })
         .individualPlanes.length;
-    expect(planes(deep)).toBe(0);
+    expect(planes(deep)).toBe(1);
     expect(planes({ ...deep, radius: 13 })).toBe(1);
   });
 });

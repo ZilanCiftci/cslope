@@ -26,7 +26,7 @@ export const M_ALPHA_WARNING_LIMIT = 0.2;
 const NEGATIVE_NORMAL_TOLERANCE = 1e-6;
 
 const BISHOP_NON_CIRCULAR_MESSAGE =
-  "Bishop's simplified method is defined for circular surfaces (Bishop 1955); on a non-circular surface its factor of safety depends on the moment axis. Use Spencer or Morgenstern-Price for non-circular surfaces.";
+  "Bishop's simplified method is defined for circular surfaces (Bishop 1955); on a non-circular surface (also the part of a composite circle along a firm base) its factor of safety depends on the moment axis. Use Spencer or Morgenstern-Price for them.";
 
 /** m_α of a slice at the factor of safety F (as the solvers form it). */
 function mAlpha(s: Slice, fos: number): number {
@@ -166,7 +166,7 @@ export function analysisWarnings(
   }
 
   const crit = slope.search.find((p) => p.fos != null);
-  if (crit && slope.method === "Bishop" && crit.points) {
+  if (crit && slope.method === "Bishop" && (crit.points || crit.composite)) {
     warnings.push({ code: "bishop-non-circular", message: BISHOP_NON_CIRCULAR_MESSAGE });
   }
   const slide = crit ? frictionalSurfaceSlide(slope, true) : null;

@@ -45,6 +45,7 @@ describe("loads and the entry grid", () => {
   });
 });
 
+// With composite surfaces off: they would follow the base instead (below).
 describe("surfaces leaving the model below a re-entrant corner of its base", () => {
   // Base at y = 5 for x > 50 and at y = 0 for x < 50: the corner (50, 5)
   // points into the model.
@@ -56,7 +57,7 @@ describe("surfaces leaving the model below a re-entrant corner of its base", () 
   } as unknown as SlopeDefinition;
   const analyse = (def: SlopeDefinition) => {
     const slope = buildSlope(toCanonicalSlopeDefinition(def));
-    slope.updateAnalysisOptions({ method: "Bishop", slices: 20, tolerance: 0.001 });
+    slope.updateAnalysisOptions({ method: "Bishop", slices: 20, tolerance: 0.001, compositeSurfaces: false });
     return { fos: analyseSlope(slope), slope };
   };
 
@@ -64,6 +65,14 @@ describe("surfaces leaving the model below a re-entrant corner of its base", () 
     // The segment (49, 1)–(62, 10) passes below the corner from x = 50 to 54.8.
     const { fos } = analyse({ ...notch, customSurfaces: [{ points: [[15, 20], [35, 1], [49, 1], [62, 10]] }], customPlanesOnly: true });
     expect(fos).toBeNull();
+  });
+
+  it("with composite surfaces a circle below the corner is not admissible either: the base steps up against the motion", () => {
+    // Following the base would rise 0.3 m vertically at x = 50, where the
+    // base steps up towards the exit.
+    const slope = buildSlope(toCanonicalSlopeDefinition({ ...notch, customSearchPlanes: [{ cx: 37.5, cy: 32, radius: 30 }], customPlanesOnly: true }));
+    slope.updateAnalysisOptions({ method: "Bishop", slices: 20, tolerance: 0.001 });
+    expect(analyseSlope(slope)).toBeNull();
   });
 
   it("nor is a circle passing below the corner between the samples along it", () => {
@@ -74,7 +83,7 @@ describe("surfaces leaving the model below a re-entrant corner of its base", () 
 
   it("a surface with a slice base outside the model has no slices", () => {
     const slope = buildSlope(toCanonicalSlopeDefinition(notch));
-    slope.updateAnalysisOptions({ slices: 20 });
+    slope.updateAnalysisOptions({ slices: 20, compositeSurfaces: false });
     const lc = 37.5 - Math.sqrt(30 ** 2 - 12 ** 2);
     const rc = 37.5 + Math.sqrt(30 ** 2 - 22 ** 2);
     expect(getSlices(slope, lc, rc, 37.5, 32, 30)).toEqual([]);
@@ -82,7 +91,7 @@ describe("surfaces leaving the model below a re-entrant corner of its base", () 
 
   it("V053: no circle of the first pass passes more than 0.1 mm below the base", () => {
     const slope = buildSlope(toCanonicalSlopeDefinition(caseDef("V053")));
-    slope.updateAnalysisOptions({ iterations: 4000 });
+    slope.updateAnalysisOptions({ iterations: 4000, compositeSurfaces: false });
     setEntryExitPlanes(slope);
     let outside = 0;
     for (const p of slope.search) {

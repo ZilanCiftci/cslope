@@ -107,7 +107,13 @@ export function selectEntryExit(
 export function isPlaneWithinExternalBoundary(
   slope: Slope,
   plane: Pick<SearchPlane, "lc" | "rc" | "cx" | "cy" | "radius">,
+  /** Whether the circle itself stays inside, also with composite surfaces. */
+  asCircle = false,
 ): boolean {
+  // A composite circle follows the base of the model where it would leave
+  // it (model/composite.ts); between its entry and exit on the ground it
+  // cannot leave the model otherwise.
+  if (!asCircle && slope.compositeSurfaces && slope.compositeFloor) return true;
   const xSpan = Math.abs(plane.rc[0] - plane.lc[0]);
   const sampleCount = Math.min(64, Math.max(12, Math.ceil(xSpan / 8)));
 
@@ -483,6 +489,11 @@ function generatePlanesWithScale(
   const startChordToEdge = startRadius - startChordToCentre;
   const C = halfCoordDist ** 2;
 
+  // "outside": the circle leaves the model (through its base); with
+  // composite surfaces it is analysed all the same (along the base), and
+  // the circle just touching the base is still added between the depths.
+  const composite = slope.compositeSurfaces && slope.compositeFloor !== null;
+  const outsidePlanes = new Map<number, SearchPlane>();
   const planeAt = (chordToEdge: number): SearchPlane | null | "outside" => {
     const radius = circleRadiusFromAbcd(chordToEdge, C);
     if (radius === null) return null;
@@ -498,7 +509,9 @@ function generatePlanesWithScale(
       fos: 100,
       slices: null,
     };
-    return isPlaneWithinExternalBoundary(slope, plane) ? plane : "outside";
+    if (isPlaneWithinExternalBoundary(slope, plane, true)) return plane;
+    outsidePlanes.set(chordToEdge, plane);
+    return "outside";
   };
 
   // From the deepest circle to the shallowest.
@@ -509,6 +522,7 @@ function generatePlanesWithScale(
     const plane = planeAt(chordToEdge);
     if (plane === "outside") {
       deepestOutside = chordToEdge;
+      if (composite) planes.push(outsidePlanes.get(chordToEdge)!);
       continue;
     }
     if (plane === null) continue;
@@ -879,7 +893,10 @@ export function addSingleEntryExitPlane(
 // ── addSingleCircularPlane ────────────────────────────────────────
 
 /**
- * Add a specific circular failure surface to the analysis.
+ * Add a specific circular failure surface to the analysis. A circle that
+ * leaves the model is added all the same: whether it is analysed (along
+ * the floor, as a composite surface) depends on the options at analysis
+ * time, and evaluatePlanes rejects it otherwise.
  */
 export function addSingleCircularPlane(
   slope: Slope,
@@ -899,8 +916,6 @@ export function addSingleCircularPlane(
       slices: null,
     };
 
-    if (isPlaneWithinExternalBoundary(slope, plane)) {
-      slope.addIndividualPlanes([plane]);
-    }
+    slope.addIndividualPlanes([plane]);
   }
 }

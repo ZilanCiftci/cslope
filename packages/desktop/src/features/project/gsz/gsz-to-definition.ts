@@ -444,6 +444,9 @@ export function gszToDefinition(file: GszFile, analysisId: number, fileName = "g
     notes.push(`The method "${analysis.method}" is not available; Morgenstern-Price is used.`);
   }
   if (stab?.slices) options.slices = Math.min(500, Math.max(10, Math.round(stab.slices)));
+  // A slip surface below the bottom of the geometry follows it there in
+  // .gsz files (the material below is taken as impenetrable).
+  options.compositeBase = true;
 
   const results = file.results.get(analysis.name.toLowerCase()) ?? [];
   const best = results.slice().sort((a, b) => a.fos - b.fos)[0];

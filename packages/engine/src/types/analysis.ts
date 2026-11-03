@@ -85,6 +85,20 @@ export interface AnalysisOptions {
    */
   tensionCrackAngle?: number;
   /**
+   * Composite circles (default true): a circle that reaches impenetrable
+   * material (bedrock on the base of the model) follows its top there
+   * instead of being rejected (model/composite.ts). False: such circles are
+   * not analysed, as before 2026-11.
+   */
+  compositeSurfaces?: boolean;
+  /**
+   * With composite circles, whether they also follow the base of the model
+   * where no impenetrable material lies on it (default false: a circle
+   * through the base is not analysed, the base is only the edge of the
+   * model). True treats the material below the model as impenetrable.
+   */
+  compositeBase?: boolean;
+  /**
    * Partial factors (Eurocode 7 design values). When set, strengths are
    * divided and variable loads multiplied by them, and the FOS is the
    * over-design factor on design values (≥ 1.0 satisfies the design).
@@ -298,9 +312,13 @@ export interface SlipSurfaceResult {
   equilibriumGap?: number;
   /**
    * Non-circular surface: its points from entry to exit (then cx, cy is
-   * the moment axis and radius 0). Absent for a circle.
+   * the moment axis and radius 0). Absent for a circle. For a composite
+   * circle (`composite`), the surface as analysed, with the circle's
+   * centre and radius.
    */
   points?: [number, number][];
+  /** A composite circle: along impenetrable material or the model's base where the circle went below it. */
+  composite?: boolean;
   /** Reinforcement forces on the sliding mass (critical surface only). */
   reinforcementForces?: ReinforcementForce[];
   /**

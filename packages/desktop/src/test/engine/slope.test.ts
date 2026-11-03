@@ -409,7 +409,9 @@ describe("Search plane generation", () => {
       5,
     );
     expect(planes.length).toBeGreaterThan(0);
-    expect(planes.length).toBeLessThanOrEqual(5);
+    // the 5 circles, and the one just touching the base when deeper ones
+    // leave the model (with composite surfaces those are kept too)
+    expect(planes.length).toBeLessThanOrEqual(6);
 
     for (const p of planes) {
       expect(p.radius).toBeGreaterThan(0);
@@ -425,11 +427,11 @@ describe("Search plane generation", () => {
     expect(slope.individualPlanes[0].radius).toBeCloseTo(25);
   });
 
-  it("keeps Talbingo search planes inside external boundary", () => {
+  it("keeps Talbingo search planes inside external boundary (circles only)", () => {
     const talbingo = new Slope();
     talbingo.setExternalBoundary(TALBINGO_BOUNDARY);
     talbingo.setAnalysisLimits(TALBINGO_LIMITS);
-    talbingo.updateAnalysisOptions({ iterations: 800 });
+    talbingo.updateAnalysisOptions({ iterations: 800, compositeSurfaces: false });
 
     setEntryExitPlanes(talbingo);
     expect(talbingo.search.length).toBeGreaterThan(0);

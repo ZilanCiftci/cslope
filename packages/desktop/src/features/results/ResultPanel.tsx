@@ -146,7 +146,7 @@ export function ResultPanel({ showTitle = true }: { showTitle?: boolean }) {
               >
                 Critical Surface
               </p>
-              {result.criticalSurface.points ? (
+              {result.criticalSurface.points && !result.criticalSurface.composite ? (
                 <p>
                   Non-circular, {result.criticalSurface.points.length} points
                 </p>
@@ -157,6 +157,7 @@ export function ResultPanel({ showTitle = true }: { showTitle?: boolean }) {
                     {result.criticalSurface.cy.toFixed(2)})
                   </p>
                   <p>Radius: {result.criticalSurface.radius.toFixed(2)} m</p>
+                  {result.criticalSurface.composite && <p>Composite: follows the firm base where the circle reaches it</p>}
                 </>
               )}
             </div>

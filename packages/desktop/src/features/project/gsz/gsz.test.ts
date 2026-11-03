@@ -123,7 +123,8 @@ const CSV = "SlipNum,SlipFOS,SlipCenterX,SlipCenterY,SlipRadiusX,SlipWeight,Slip
 
 const fos = (def: SlopeDefinition, options: object = {}) => {
   const s = buildSlope(toCanonicalSlopeDefinition(def));
-  s.updateAnalysisOptions({ ...DEFAULT_ANALYSIS_OPTIONS, slices: 30, iterations: 300, refinedIterations: 150, ...options });
+  // circles only: a short search, so that the import, not the search, is compared
+  s.updateAnalysisOptions({ ...DEFAULT_ANALYSIS_OPTIONS, slices: 30, iterations: 300, refinedIterations: 150, compositeSurfaces: false, ...options });
   return analyseSlope(s) as number;
 };
 
