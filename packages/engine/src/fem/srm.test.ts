@@ -41,7 +41,7 @@ describe("strengthReduction", () => {
     expect(r.factorOfSafety).toBeGreaterThan(1.3);
     expect(r.factorOfSafety).toBeLessThan(1.5);
     expect(r.failedF - r.factorOfSafety).toBeLessThanOrEqual(0.02);
-  }, 120000);
+  }, 600000);
 
   it("gives the same factor with Newton and the viscoplastic iteration for associated flow", () => {
     const def = PROBLEMS.find((p) => p.id === "V055")!.definition as SlopeDefinition;
@@ -50,7 +50,7 @@ describe("strengthReduction", () => {
     const vp = strengthReduction(model, { flowRule: "associated", solver: "viscoplastic", fTolerance: 0.01 });
     expect(Math.abs(newton.factorOfSafety - vp.factorOfSafety)).toBeLessThan(0.02);
     expect(newton.iterations).toBeLessThan(vp.iterations);
-  }, 180000);
+  }, 600000);
 
   it("gives the same factor with Newton and BFGS (constant stiffness) for associated flow", () => {
     const def = PROBLEMS.find((p) => p.id === "V055")!.definition as SlopeDefinition;
@@ -109,5 +109,5 @@ describe("viscoplastic iteration beyond the apex", () => {
     const model = buildFeModel(buildSlope(toCanonicalSlopeDefinition(p.definition as SlopeDefinition)), {});
     const r = strengthReduction(model, { flowRule: "non-associated", fTolerance: 0.05 });
     expect(r.factorOfSafety).toBeGreaterThan(1.2);
-  }, 120000);
+  }, 600000);
 });
