@@ -671,6 +671,8 @@ export function sliToDefinition(file: SliFile, index: number, fileName = "model.
   const waterOf = new Map<string, { line?: number; hu: number; auto: boolean }>();
   const rtl = orientation === "rtl";
   const drawdownMaterials: string[] = [];
+  const bBarMethod = d("advanced_options") === "yes" && d("advanced_options_type") === "1";
+  const bBarMaterials: { name: string; bbar: number }[] = [];
   for (const key of usedKeys) {
     const k = Number(key.replace(/\D/g, ""));
     const f = sc.materials.get(key);
@@ -702,7 +704,17 @@ export function sliToDefinition(file: SliFile, index: number, fileName = "model.
         drawdownMaterials.push(name);
       } else if (drawdownLine) notes.push(`Material "${name}": its undrained strength in rapid drawdown is not imported${(num(f.rd_cr) ?? 0) === 0 && (num(f.rd_phir) ?? 0) === 0 ? " (no R envelope is given; the file's drawdown procedure is not cSlope's)" : ""}.`);
     }
-    if ((num(f.bbar) ?? 0) !== 0) notes.push(`Material "${name}": the B-bar pore pressure is not imported.`);
+    // B-bar (the excess pore pressure method): the materials with B̄ take
+    // B̄ × the weight of the materials without one above them (the fill)
+    const bbar = num(f.bbar) ?? 0;
+    if (bBarMethod) {
+      if (bbar > 0 && bbar <= 1.5) {
+        model = { ...model, bBar: bbar } as MaterialModel;
+        bBarMaterials.push({ name, bbar });
+      } else if (bbar === 0) model = { ...model, bBarLoad: true } as MaterialModel;
+      else notes.push(`Material "${name}": its B-bar ${bbar} is outside 0–1.5 and is not imported.`);
+    }
+    // (without the method switched on, B-bar values have no effect in the file either)
     // an ru coefficient: the water method ru (the `water` value is ru), or
     // with "with_ru" one on top of the water line's pressure
     const ru = waterMode === "ru" ? num(f.water) ?? 0 : dn("with_ru") !== 0 ? num(f.withru) ?? 0 : 0;
@@ -781,12 +793,21 @@ export function sliToDefinition(file: SliFile, index: number, fileName = "model.
         `Rapid drawdown: the water table is the water before it and the drawdown line the water after it; ${drawdownMaterials.join(", ")} take their undrained (R) envelope in cSlope's three-stage procedure` +
           `${m && m !== "0" ? ` (the file's procedure is number ${m}, not the three-stage one)` : ""}; the interpolation between the envelopes may differ from the file's.`,
       );
-    } else if (d("advanced_options") !== "yes") notes.push("Rapid drawdown is not imported (no material has an undrained R envelope for cSlope's three-stage procedure); the model has the water before drawdown (the drawdown line is left out).");
+    } else if (!(d("advanced_options") === "yes" && d("advanced_options_type") === "2")) notes.push("Rapid drawdown is not imported (no material has an undrained R envelope for cSlope's three-stage procedure); the model has the water before drawdown (the drawdown line is left out).");
   }
 
-  if (d("advanced_options") === "yes" && !rapidDrawdown) {
+  if (d("advanced_options") === "yes" && d("advanced_options_type") === "2" && !rapidDrawdown) {
     const methods: Record<string, string> = { "3": "effective stress with B-bar" };
     notes.push(`The rapid drawdown analysis (${methods[d("advanced_options_rdd_method") ?? ""] ?? `method ${d("advanced_options_rdd_method") ?? "?"}`}) is not imported; the model has the water before drawdown, without drawdown.`);
+  }
+
+  if (d("advanced_options") === "yes" && !["1", "2"].includes(d("advanced_options_type") ?? "")) notes.push(`The advanced groundwater option ${d("advanced_options_type")} (for example a transient analysis) is not imported.`);
+  if (bBarMethod) {
+    notes.push(
+      bBarMaterials.length > 0
+        ? `Excess pore pressure (B-bar): ${bBarMaterials.map((m) => `${m.name} (B̄ = ${m.bbar})`).join(", ")} take B̄ × the weight of the materials without B̄ above them, and B̄ × the loads applied in the second stage.`
+        : "The B-bar method is on, but no material has a B-bar value.",
+    );
   }
 
   // loads: distributed loads (type 0) and line loads (type 1)
@@ -808,11 +829,13 @@ export function sliToDefinition(file: SliFile, index: number, fileName = "model.
       // the vertical part of an inclined load (the angle is the direction, ° counter-clockwise from +x)
       const v = down ? 1 : Math.max(0, -Math.sin((angle * Math.PI) / 180));
       if (!down) notes.push(`Distributed load ${udls.length + 1} acts at ${angle}° (270° is vertical); its vertical part is imported.`);
-      if (Math.abs(qa - qb) < 1e-9) udls.push({ magnitude: qa * v, x1: a, x2: b });
+      // a load applied in the second stage raises the pore pressure of the B-bar materials
+      const excess = bBarMethod && num(f.stage2) === 1 && bBarMaterials.length > 0 ? { excessPorePressure: bBarMaterials.map((m) => ({ material: m.name, ratio: Math.min(1, m.bbar) })) } : {};
+      if (Math.abs(qa - qb) < 1e-9) udls.push({ magnitude: qa * v, x1: a, x2: b, ...excess });
       else {
         // a linearly varying load as ten uniform steps
         const n = 10;
-        for (let i = 0; i < n; i++) udls.push({ magnitude: (qa + ((i + 0.5) / n) * (qb - qa)) * v, x1: a + ((b - a) * i) / n, x2: a + ((b - a) * (i + 1)) / n });
+        for (let i = 0; i < n; i++) udls.push({ magnitude: (qa + ((i + 0.5) / n) * (qb - qa)) * v, x1: a + ((b - a) * i) / n, x2: a + ((b - a) * (i + 1)) / n, ...excess });
         notes.push(`A distributed load from ${+qa.toFixed(3)} to ${+qb.toFixed(3)} kPa over x = ${+a.toFixed(3)}–${+b.toFixed(3)} is imported as ten uniform steps.`);
       }
     } else if (type === 1 && ax !== undefined) {

@@ -363,8 +363,38 @@ function stagePart(file: StixFile, st: StixStage, notes: string[], inherited?: M
     const a = num(l.Angle) ?? 0;
     return [{ magnitude: q, x: p[0], ...(a !== 0 ? { angle: a, y: p[1] } : {}) }];
   });
-  if ([...((loads.LineLoads as Json[] | undefined) ?? []), ...((loads.LayerLoads as Json[] | undefined) ?? [])].some((l) => consolidations(l).length > 0)) {
-    notes.push("Degrees of consolidation below 100 % under line loads and the weight of layers (their excess pore pressure) are not imported; they act fully drained.");
+  if (((loads.LineLoads as Json[] | undefined) ?? []).some((l) => consolidations(l).length > 0)) {
+    notes.push("Degrees of consolidation below 100 % under line loads (their excess pore pressure) are not imported; they act fully drained.");
+  }
+  // the weight of a layer not yet consolidated in another (an embankment on
+  // clay): B̄ = 1 − the degree of consolidation on the material of the
+  // receiving layer, and the loading layer's material counts as fill
+  const layerLoads = ((loads.LayerLoads as Json[] | undefined) ?? []).filter((l) => consolidations(l).length > 0);
+  if (layerLoads.length > 0) {
+    const bBarOf = new Map<string, number>();
+    const fills = new Set<string>();
+    let mixed = false;
+    for (const l of layerLoads) {
+      const fill = materialOfLayer.get(String(l.LayerId));
+      if (!fill) continue;
+      for (const c of consolidations(l)) {
+        const target = materialOfLayer.get(String(c.LayerId));
+        if (!target || target === fill) continue;
+        const b = 1 - Math.max(0, num(c.Degree) ?? 100) / 100;
+        const had = bBarOf.get(target);
+        if (had !== undefined && Math.abs(had - b) > 1e-9) mixed = true;
+        bBarOf.set(target, Math.max(had ?? 0, b));
+        fills.add(fill);
+      }
+    }
+    for (const m of materials) {
+      const b = bBarOf.get(m.name);
+      if (b !== undefined && b > 0) m.model = { ...m.model, bBar: b } as MaterialModel;
+      if (fills.has(m.name) && !bBarOf.has(m.name)) m.model = { ...m.model, bBarLoad: true } as MaterialModel;
+    }
+    const list = [...bBarOf].map(([name, b]) => `"${name}" B̄ = ${+b.toFixed(3)}`).join(", ");
+    if (list) notes.push(`Degrees of consolidation below 100 % under the weight of layers are imported as excess pore pressure (B̄ = 1 − the degree): ${list}, from the weight of ${[...fills].map((f) => `"${f}"`).join(", ")} above. cSlope applies it also above the water and from the whole fill above a base (not compared with a file's result yet).`);
+    if (mixed) notes.push("Some materials take different degrees of consolidation from different layers above them; the largest excess pore pressure is used.");
   }
   if (consolidations((loads.Earthquake as Json | undefined) ?? {}).length > 0 && (loads.Earthquake as Json | undefined)?.IsEnabled) {
     notes.push("Degrees of consolidation below 100 % under the earthquake load are not imported.");

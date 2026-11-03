@@ -167,6 +167,22 @@ ${ids.map((d) => `              <DataPoint>${d}</DataPoint>`).join("\n")}
     notes.push("The drawdown envelopes (cR, φR) of the materials are not written.");
   }
 
+  // B-bar: B̄ of a material, and whether its weight counts as fill (the
+  // format's option with B-bar on the piezometric lines)
+  const bBarXml = main
+    ? model.materials.flatMap((m) => {
+        const mm = m.model as { bBar?: number; bBarLoad?: boolean };
+        if (mm.bBar === undefined && !mm.bBarLoad) return [];
+        const attrs = [mm.bBar !== undefined ? `BBar="${n(mm.bBar)}"` : "", mm.bBarLoad ? `IsIncluded="true"` : ""].filter(Boolean).join(" ");
+        return [`          <MaterialUsesBBarParam>
+            <ID>${matIndex.get(m.id)}</ID>
+            <Entry ${attrs} />
+          </MaterialUsesBBarParam>`];
+      })
+    : [];
+  if (bBarXml.length > 0) notes.push("B̄ is written as a value on each material; the receiving program may expect a B-bar function instead (the format's examples give one), so check it there.");
+  if (!main && model.materials.some((m) => (m.model as { bBar?: number }).bBar !== undefined)) notes.push("B̄ is not written: the format applies it with piezometric lines, and the model has none.");
+
   // distributed loads: a fill 1 m high above the ground of unit weight = the load
   const surchargeXml = (model.udls ?? []).map((u, i) => {
     const xs = [u.x1, ...outline.map((c) => c[0]).filter((x) => x > u.x1 && x < u.x2), u.x2].sort((a, b) => a - b);
@@ -301,7 +317,10 @@ ${piezoXml.join("\n")}
         <MaterialUsesPiezs Len="${usesXml.length}">
 ${usesXml.join("\n")}
         </MaterialUsesPiezs>
-        <Surcharges Len="${surchargeXml.length}">
+${bBarXml.length > 0 ? `        <MaterialUsesBBarParams Len="${bBarXml.length}">
+${bBarXml.join("\n")}
+        </MaterialUsesBBarParams>
+` : ""}        <Surcharges Len="${surchargeXml.length}">
 ${surchargeXml.join("\n")}
         </Surcharges>
         <LineLoadPoints Len="${lineLoadXml.length}">
@@ -327,7 +346,7 @@ ${crackXml}        <SlipSurface>
       <Entry>
         <UnitWaterWeight>9.81</UnitWaterWeight>
         <ResultInputInfo>
-          <Option>${main ? "PiezoSurface" : "None"}</Option>
+          <Option>${main ? (bBarXml.length > 0 ? "PiezoSurfaceBbar" : "PiezoSurface") : "None"}</Option>
         </ResultInputInfo>
       </Entry>
     </WaterItem>

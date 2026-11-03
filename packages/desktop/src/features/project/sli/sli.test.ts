@@ -498,6 +498,33 @@ describe(".sli review regressions", () => {
     expect(r.notes.join(" ")).not.toMatch(/not imported; the model has no pore pressure/);
   });
 
+  it("imports the B-bar method: B̄ on its materials, the others as fill, second-stage loads; and writes it back", () => {
+    const text = sli({
+      description: ["  methods: 1", "  water: hu", "  advanced_options: yes", "  advanced_options_type: 1"],
+      materials: ["type: 0 water: 1 wtable: 0 c: 5 phi: 32 uw: 20 bbar: 0", "type: 0 water: 1 wtable: 1 c: 10 phi: 20 uw: 17 bbar: 1"],
+      names: ["Fill", "Clay"],
+      vertices: [[0, 0], [40, 0], [40, 6], [28, 6], [20, 10], [12, 10], [0, 10], [0, 6]],
+      cells: [[[1, 2, 3], 2], [[1, 3, 8], 2], [[8, 3, 4], 1], [[8, 4, 5], 1], [[8, 5, 6], 1], [[8, 6, 7], 1]],
+      extra: "water table:\r\n  vertices: [8,3]\r\n\r\nforces:\r\n  1 type: 0 x1: 13 y1: 10 x2: 19 y2: 10 angle: 270 load: 10 load2: 10 stage2: 1\r\n",
+    });
+    const imp = sliToDefinition(parseSli(text), 0, "bbar.sli");
+    const byName = Object.fromEntries(imp.definition.materials.map((m) => [m.name, m.model]));
+    expect(byName.Clay).toMatchObject({ bBar: 1 });
+    expect(byName.Fill).toMatchObject({ bBarLoad: true });
+    expect(imp.definition.udls?.[0].excessPorePressure).toEqual([{ material: "Clay", ratio: 1 }]);
+    expect(imp.notes.join(" ")).toMatch(/Excess pore pressure \(B-bar\): Clay \(B̄ = 1\)/);
+    // written back: the method, B̄ and the second-stage load
+    const def = { ...imp.definition, customSearchPlanes: [{ cx: 24, cy: 18, radius: 13 }], customPlanesOnly: true };
+    const opts = { method: "Bishop" as const, slices: 40 };
+    const f0 = F(def, opts);
+    const { text: out } = modelToSli(model(def, opts));
+    expect(out).toMatch(/advanced_options_type: 1/);
+    expect(out).toMatch(/stage2: 1/);
+    const back = sliToDefinition(parseSli(out), 0, "bbar.sli");
+    expect(F(back.definition, back.options)).toBeCloseTo(f0, 6);
+    expect(f0).toBeLessThan(F({ ...def, materials: def.materials.map((m) => ({ ...m, model: { ...m.model!, bBar: undefined, bBarLoad: undefined } })), udls: [{ magnitude: 10, x1: 13, x2: 19 }] }, opts));
+  });
+
   it("writes ru and reads it back with the same factor of safety", () => {
     const wet: SlopeDefinition = { ...dike, materials: dike.materials.map((m) => ({ ...m, model: { ...m.model!, ru: 0.3 } })) };
     const opts = { method: "Bishop" as const, slices: 40 };

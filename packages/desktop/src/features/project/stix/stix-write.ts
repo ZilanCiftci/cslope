@@ -217,7 +217,12 @@ function stageDocs(
     headLines.unshift({ Id: phreaticId, Label: "Phreatic line", Notes: null, Points: (def.waterTable.value as Pt[]).map(xz) });
   }
   if ((def.waterTables ?? []).length > 0) notes.push("The materials' own water lines are not written; the format has one phreatic line (and head lines through reference lines).");
-  if (def.materials.some((m) => (m.model as { bBar?: number } | undefined)?.bBar)) notes.push("The excess pore pressure from fill weight (B-bar) is not written.");
+  // B-bar: the weight of the fills not yet consolidated in the B̄ materials
+  // (degree of consolidation 1 − B̄; the format has no B̄ above 1)
+  const bBarOf = (name: string) => (def.materials.find((m) => m.name === name)?.model as { bBar?: number } | undefined)?.bBar ?? 0;
+  const isFill = (name: string) => (def.materials.find((m) => m.name === name)?.model as { bBarLoad?: boolean } | undefined)?.bBarLoad === true;
+  if (def.materials.some((m) => bBarOf(m.name) > 1)) notes.push("A B̄ above 1 is written as a degree of consolidation of 0 % (B̄ = 1).");
+  if (def.materials.some((m) => bBarOf(m.name) > 0) && !def.materials.some((m) => isFill(m.name))) notes.push("Materials have B̄ but none is marked as fill, so no excess pore pressure is written.");
 
   // loads
   const full = layers.map((l) => ({ LayerId: l.id, Degree: 100 }));
@@ -232,7 +237,12 @@ function stageDocs(
   const lineLoads = (def.lineLoads ?? []).map((l, i) => ({
     Label: `Line load ${i + 1}`, Notes: null, Location: xz([l.x, l.y ?? groundAt(outline, l.x)]), Magnitude: l.magnitude, Angle: l.angle ?? 0, Spread: 0, Consolidations: full,
   }));
-  const layerLoads = layers.map((l) => ({ LayerId: l.id, Consolidations: layers.filter((o) => o.id !== l.id).map((o) => ({ LayerId: o.id, Degree: 100 })) }));
+  const layerLoads = layers.map((l) => ({
+    LayerId: l.id,
+    Consolidations: layers
+      .filter((o) => o.id !== l.id)
+      .map((o) => ({ LayerId: o.id, Degree: isFill(l.material) && bBarOf(o.material) > 0 ? 100 * (1 - Math.min(1, bBarOf(o.material))) : 100 })),
+  }));
   const kh = options.seismicHorizontal ?? 0, kv = options.seismicVertical ?? 0;
 
   // reinforcement: elements with a developed pullout as geotextiles

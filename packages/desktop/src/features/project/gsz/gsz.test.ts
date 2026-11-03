@@ -364,6 +364,21 @@ describe(".gsz import", () => {
     expect(rtl62.options.tensionCrackAngle).toBe(62);
   });
 
+  it("exports B̄ and the fill flag with the B-bar option, and reads them back", async () => {
+    const imp = gszToDefinition({ ...parseGszXml(XML), results: new Map() }, 1);
+    expect(imp.definition.waterTable).toBeDefined();
+    const [first, ...rest] = imp.definition.materials;
+    const def = { ...imp.definition, materials: [{ ...first, model: { ...first.model!, bBar: 0.7 } }, ...rest.map((m) => ({ ...m, model: { ...m.model!, bBarLoad: true } }))] };
+    const model = modelFromDefinition(def, { id: "b", name: "B", options: imp.options });
+    const { xml, notes } = modelToGszXml(model);
+    expect(xml).toMatch(/<Option>PiezoSurfaceBbar<\/Option>/);
+    expect(xml).toMatch(/<Entry BBar="0.7" \/>/);
+    expect(notes.join(" ")).toMatch(/B̄ is written as a value/);
+    const [back] = await gszImports(modelToGsz(model).bytes, "B.gsz");
+    expect(back.definition.materials[0].model).toMatchObject({ bBar: 0.7 });
+    if (rest.length > 0) expect(back.definition.materials[1].model).toMatchObject({ bBarLoad: true });
+  });
+
   it("reports a strength model it cannot read and keeps its parameters", () => {
     const xml = XML.replace("<SlopeModel>UndrainedPhiZero</SlopeModel>", "<SlopeModel>SHANSEP</SlopeModel>");
     const imp = gszToDefinition({ ...parseGszXml(xml), results: new Map() }, 1);

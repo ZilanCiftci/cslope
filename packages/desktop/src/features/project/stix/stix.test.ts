@@ -102,6 +102,26 @@ describe(".stix export and import", () => {
     expect(F(imp.definition, imp.options)).toBeCloseTo(f0, 6);
   });
 
+  it("writes B̄ as the degree of consolidation under the weight of the fill and reads it back", () => {
+    const bbar: SlopeDefinition = {
+      ...dike,
+      udls: [],
+      materials: dike.materials.map((q) =>
+        q.name === "Clay" ? { ...q, model: { kind: "mohr-coulomb" as const, unitWeight: 16, cohesion: 8, frictionAngle: 22, bBar: 0.8 } } : q.name === "Dike" ? { ...q, model: { ...q.model!, bBarLoad: true } } : q,
+      ),
+    };
+    const f0 = F(bbar, { method: "Bishop" });
+    expect(f0).toBeLessThan(F({ ...bbar, materials: bbar.materials.map((q) => ({ ...q, model: { ...q.model!, bBar: undefined } })) }, { method: "Bishop" }));
+    const { docs } = modelToStixDocuments(model(bbar));
+    const loads = docs.get("loads/loads.json")!.LayerLoads as { Consolidations: { Degree: number }[] }[];
+    expect(loads.some((l) => l.Consolidations.some((c) => Math.abs(c.Degree - 20) < 1e-9))).toBe(true);
+    const imp = stixToDefinition(reread(docs), 0, "x.stix");
+    const byName = Object.fromEntries(imp.definition.materials.map((q) => [q.name, q.model]));
+    expect(byName.Clay).toMatchObject({ bBar: expect.closeTo(0.8, 9) });
+    expect(byName.Dike).toMatchObject({ bBarLoad: true });
+    expect(F(imp.definition, imp.options)).toBeCloseTo(f0, 6);
+  });
+
   it("writes a waternet with its head and reference lines", () => {
     const wn: SlopeDefinition = {
       ...dike,

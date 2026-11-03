@@ -164,7 +164,6 @@ interface MaterialOut {
 function materialFields(name: string, model: MaterialModel, notes: string[]): MaterialOut {
   const uw = `uw: ${n(model.unitWeight)}${model.unitWeightSat !== undefined && model.unitWeightSat !== model.unitWeight ? ` uwbwt: ${n(model.unitWeightSat)}` : ""}`;
   if (model.aboveWater) notes.push(`"${name}": the strength above the water line is not written; the strength below it is used throughout.`);
-  if (model.bBar) notes.push(`"${name}": the B-bar pore pressure is not written.`);
   const mc = (c: number, phi: number, extra = "") => ({ fields: `type: 0 c: ${n(c)} phi: ${n(phi)} ${uw}${extra}` });
   switch (model.kind) {
     case "mohr-coulomb": {
@@ -280,6 +279,19 @@ export function modelToSli(model: ModelEntry): { text: string; notes: string[] }
     return k + 2;
   };
   const auto = opts.porePressureHead === "phreatic-correction";
+  // B-bar: the format's method takes B̄ × the weight of every material without
+  // B̄ above a material with one (cSlope: the materials marked as fill)
+  const bBarOf = new Map<string, number>();
+  for (const m of def.materials) {
+    const b = (m.model as { bBar?: number } | undefined)?.bBar;
+    if (b) bBarOf.set(m.name, b);
+  }
+  const bBarWritten = bBarOf.size > 0 && !def.rapidDrawdown;
+  if (bBarOf.size > 0 && def.rapidDrawdown) notes.push("The B-bar pore pressure is not written: the format has one advanced water option, and rapid drawdown is written.");
+  if (bBarWritten) {
+    const unmarked = def.materials.filter((m) => !bBarOf.has(m.name) && !(m.model as { bBarLoad?: boolean } | undefined)?.bBarLoad).map((m) => `"${m.name}"`);
+    if (unmarked.length > 0) notes.push(`B-bar: the format counts the weight of every material without B̄ above a B̄ material as fill, also ${unmarked.join(", ")}, which are not marked as fill in cSlope.`);
+  }
   const matLines: string[] = [];
   const propLines: string[] = [];
   const functions: string[] = [];
@@ -293,7 +305,7 @@ export function modelToSli(model: ModelEntry): { text: string; notes: string[] }
     }
     const out = m.model ? materialFields(m.name, m.model, notes) : { fields: "type: 0 c: 0 phi: 0 uw: 0" } as MaterialOut;
     // (a function's name runs to the end of the line)
-    matLines.push(`  soil${k} = ${out.fields} water: 1 wtable: ${wtableOf(m)} hutype: ${auto ? 1 : 0} withru: ${n((m.model as { ru?: number } | undefined)?.ru ?? 0)}${out.strengthFunction ? ` name: ${out.strengthFunction.name}` : ""}`);
+    matLines.push(`  soil${k} = ${out.fields} water: 1 wtable: ${wtableOf(m)} hutype: ${auto ? 1 : 0} withru: ${n((m.model as { ru?: number } | undefined)?.ru ?? 0)} bbar: ${n(bBarWritten ? (m.model as { bBar?: number } | undefined)?.bBar ?? 0 : 0)}${out.strengthFunction ? ` name: ${out.strengthFunction.name}` : ""}`);
     const hex = /^#[0-9a-f]{6}$/i.test(m.color ?? "") ? m.color! : "#c8c8c8";
     const [r, g, b] = [1, 3, 5].map((o) => parseInt(hex.slice(o, o + 2), 16));
     propLines.push(`  ${m.name.replace(/\s+/g, " ").trim() || `Material ${k}`}    red: ${r}  green: ${g}  blue: ${b}  has_hatch: 0 hatch2: 0  hatch_clr: 0`);
@@ -359,8 +371,12 @@ export function modelToSli(model: ModelEntry): { text: string; notes: string[] }
   for (const u of def.udls ?? []) {
     const ya = Number.isFinite(topAt(u.x1)) ? topAt(u.x1) : y1, yb = Number.isFinite(topAt(u.x2)) ? topAt(u.x2) : y1;
     if (u.direction === "normal") notes.push(`A distributed load acting normal to the ground in cSlope is written as vertical.`);
-    if (u.excessPorePressure?.length) notes.push("The excess pore pressure under a distributed load is not written.");
-    forces.push(`  ${forces.length + 1} type: 0 x1: ${n(u.x1)} y1: ${n(ya)} x2: ${n(u.x2)} y2: ${n(yb)} angle: 270 load: ${n(u.magnitude)} load2: ${n(u.magnitude)} stage2: 0 design_standard_option: 0`);
+    // excess pore pressure under the load: a second-stage load in the B-bar method, when its
+    // ratios are the B̄ of those materials (the file applies B̄ × the load to every B̄ material)
+    const excess = u.excessPorePressure ?? [];
+    const stage2 = bBarWritten && excess.length > 0 && bBarOf.size === excess.length && excess.every((e) => Math.abs((bBarOf.get(e.material) ?? -1) - e.ratio) < 1e-9);
+    if (excess.length > 0 && !stage2) notes.push("The excess pore pressure under a distributed load is not written (the format applies B̄ × a second-stage load to every material with B̄).");
+    forces.push(`  ${forces.length + 1} type: 0 x1: ${n(u.x1)} y1: ${n(ya)} x2: ${n(u.x2)} y2: ${n(yb)} angle: 270 load: ${n(u.magnitude)} load2: ${n(u.magnitude)} stage2: ${stage2 ? 1 : 0} design_standard_option: 0`);
   }
   for (const l of def.lineLoads ?? []) {
     const y = l.y ?? (Number.isFinite(topAt(l.x)) ? topAt(l.x) : y1);
@@ -444,6 +460,7 @@ export function modelToSli(model: ModelEntry): { text: string; notes: string[] }
   sec("model description", [
     "  version: 7.010", `  methods: ${bits}`, "  units: metric", `  seismic: ${n(kh)}`, `  seismicv: ${n(kv)}`, "  seismic_advanced: 0", "  seismic_pseudostatic: 0",
     "  water: hu", `  direction: ${direction}`, "  tolerance: 0.005", "  maxiter: 75", "  gammaw: 9.81", "  mode: 0", "  search: 0", "  circularsearch: 0", "  datamode: 1",
+    ...(bBarWritten ? ["  advanced_options: yes", "  advanced_options_type: 1"] : []),
     `  nummaterials: ${def.materials.length}`, `  numanchors: ${anchorTypes.length}`, "  probability_analysis: 0", "  sensitivity analysis: no", `  with_ru: ${def.materials.some((m) => ((m.model as { ru?: number } | undefined)?.ru ?? 0) > 0) ? 1 : 0}`, "  transient: no", "  design_selection: 0", "  use_profile: 0", "  slices_type: 0",
   ]);
   sec("material types", matLines);
