@@ -470,7 +470,7 @@ describe(".sli review regressions", () => {
     expect(inC && x >= 0 && x <= 10).toBe(true);
   });
 
-  it("keeps the water line of a material with an ru coefficient, and notes it and the unused materials", () => {
+  it("imports a material's ru coefficient on top of its water line, and the water method ru", () => {
     const text = sli({
       description: ["  methods: 2", "  water: hu", "  with_ru: 1"],
       materials: ["type: 0 water: 1 wtable: 1 c: 5 phi: 30 uw: 19 hutype: 0 withru: 0.4", "type: 0 water: 1 wtable: 0 c: 1 phi: 35 uw: 20"],
@@ -482,8 +482,32 @@ describe(".sli review regressions", () => {
     const imp = sliToDefinition(parseSli(text), 0, "ru.sli");
     expect(imp.definition.waterTable).toBeDefined();
     expect(imp.definition.materials[0].waterTableId).toBeUndefined();
-    expect(imp.notes.join(" ")).toMatch(/"Fill": its ru coefficient 0.4 is not imported/);
+    expect(imp.definition.materials[0].model).toMatchObject({ ru: 0.4 });
+    expect(imp.notes.join(" ")).not.toMatch(/ru coefficient/);
     expect(imp.notes.join(" ")).toMatch(/no region uses are not imported: Rock/);
+    // the water method ru: the material's `water` value is its ru, without a water line
+    const ruMode = sli({
+      description: ["  methods: 2", "  water: ru"],
+      materials: ["type: 0 water: 0.25 wtable: 0 c: 5 phi: 30 uw: 19 hutype: 0"],
+      names: ["Fill"],
+      vertices: [[0, 0], [20, 0], [20, 10], [0, 10]],
+      cells: [[[1, 2, 3], 1], [[1, 3, 4], 1]],
+    });
+    const r = sliToDefinition(parseSli(ruMode), 0, "ru.sli");
+    expect(r.definition.materials[0].model).toMatchObject({ ru: 0.25 });
+    expect(r.notes.join(" ")).not.toMatch(/not imported; the model has no pore pressure/);
+  });
+
+  it("writes ru and reads it back with the same factor of safety", () => {
+    const wet: SlopeDefinition = { ...dike, materials: dike.materials.map((m) => ({ ...m, model: { ...m.model!, ru: 0.3 } })) };
+    const opts = { method: "Bishop" as const, slices: 40 };
+    const f0 = F(wet, opts);
+    expect(f0).toBeLessThan(F(dike, opts));
+    const { text } = modelToSli(model(wet, opts));
+    expect(text).toMatch(/with_ru: 1/);
+    const imp = sliToDefinition(parseSli(text), 0, "Dike.sli");
+    expect(imp.definition.materials.map((m) => (m.model as { ru?: number }).ru)).toEqual([0.3, 0.3, 0.3]);
+    expect(F(imp.definition, imp.options)).toBeCloseTo(f0, 6);
   });
 
   it("notes a void inside the model and what fills it", () => {

@@ -293,7 +293,7 @@ export function modelToSli(model: ModelEntry): { text: string; notes: string[] }
     }
     const out = m.model ? materialFields(m.name, m.model, notes) : { fields: "type: 0 c: 0 phi: 0 uw: 0" } as MaterialOut;
     // (a function's name runs to the end of the line)
-    matLines.push(`  soil${k} = ${out.fields} water: 1 wtable: ${wtableOf(m)} hutype: ${auto ? 1 : 0} withru: 0${out.strengthFunction ? ` name: ${out.strengthFunction.name}` : ""}`);
+    matLines.push(`  soil${k} = ${out.fields} water: 1 wtable: ${wtableOf(m)} hutype: ${auto ? 1 : 0} withru: ${n((m.model as { ru?: number } | undefined)?.ru ?? 0)}${out.strengthFunction ? ` name: ${out.strengthFunction.name}` : ""}`);
     const hex = /^#[0-9a-f]{6}$/i.test(m.color ?? "") ? m.color! : "#c8c8c8";
     const [r, g, b] = [1, 3, 5].map((o) => parseInt(hex.slice(o, o + 2), 16));
     propLines.push(`  ${m.name.replace(/\s+/g, " ").trim() || `Material ${k}`}    red: ${r}  green: ${g}  blue: ${b}  has_hatch: 0 hatch2: 0  hatch_clr: 0`);
@@ -444,7 +444,7 @@ export function modelToSli(model: ModelEntry): { text: string; notes: string[] }
   sec("model description", [
     "  version: 7.010", `  methods: ${bits}`, "  units: metric", `  seismic: ${n(kh)}`, `  seismicv: ${n(kv)}`, "  seismic_advanced: 0", "  seismic_pseudostatic: 0",
     "  water: hu", `  direction: ${direction}`, "  tolerance: 0.005", "  maxiter: 75", "  gammaw: 9.81", "  mode: 0", "  search: 0", "  circularsearch: 0", "  datamode: 1",
-    `  nummaterials: ${def.materials.length}`, `  numanchors: ${anchorTypes.length}`, "  probability_analysis: 0", "  sensitivity analysis: no", "  with_ru: 0", "  transient: no", "  design_selection: 0", "  use_profile: 0", "  slices_type: 0",
+    `  nummaterials: ${def.materials.length}`, `  numanchors: ${anchorTypes.length}`, "  probability_analysis: 0", "  sensitivity analysis: no", `  with_ru: ${def.materials.some((m) => ((m.model as { ru?: number } | undefined)?.ru ?? 0) > 0) ? 1 : 0}`, "  transient: no", "  design_selection: 0", "  use_profile: 0", "  slices_type: 0",
   ]);
   sec("material types", matLines);
   sec("strength functions");

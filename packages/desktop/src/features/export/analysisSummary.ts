@@ -119,6 +119,7 @@ function bBarText(model: MaterialModel): string {
   let s = "";
   if (model.bBar !== undefined) s += `; excess pore pressure B̄ = ${fmt(model.bBar)} × vertical stress of the fill above`;
   if (model.bBarLoad) s += "; fill (its weight raises the pore pressure below, B̄)";
+  if (model.ru !== undefined) s += `; pore pressure ratio rᵤ = ${fmt(model.ru)}`;
   return s;
 }
 

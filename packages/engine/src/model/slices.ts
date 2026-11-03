@@ -463,6 +463,9 @@ export function createSlice(
   // Excess pore pressure from the fill above (B-bar).
   const bBar = baseMaterial.model.bBar;
   if (bBar !== undefined && bBar !== 0 && fillWeight > 0) U += (bBar * fillWeight) / width;
+  // Pore pressure ratio: rᵤ times the soil above the base.
+  const ru = baseMaterial.model.ru;
+  if (ru !== undefined && ru !== 0) U += (ru * totalWeight) / width;
   const suction = baseSuction(baseMaterial, baseWater, yBottom);
 
   // Top of the base material's layer, for depth measured from it: searched

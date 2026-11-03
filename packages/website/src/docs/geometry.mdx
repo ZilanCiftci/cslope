@@ -94,7 +94,7 @@ After the import, assign materials to the regions, add the materials' properties
 
 - **Geometry**: cells of the same material are merged into regions; the outer edges are the exterior boundary and the edges between materials the material boundaries (a lens is a closed boundary). Model sides leaning by less than 1/1000 of the width are made vertical.
 - **Materials**: Mohr-Coulomb, undrained (constant or increasing with depth), the shear-normal function, Hoek-Brown, SHANSEP with an OCR table against elevation and the anisotropic models (as the anisotropic function), with the saturated unit weight, φb with its suction cap and the drawdown (R) envelope.
-- **Water**: the water table and piezometric lines per material, Hu = 1 or automatic (the phreatic correction), and three-stage rapid drawdown when an R envelope is given. ru, pressure grids and finite element groundwater are not imported.
+- **Water**: the water table and piezometric lines per material, Hu = 1 or automatic (the phreatic correction), the pore pressure ratio rᵤ (the water method rᵤ, or rᵤ on top of the water line), and three-stage rapid drawdown when an R envelope is given. Pressure grids and finite element groundwater are not imported.
 - **Loads and support**: distributed loads (a varying load in ten uniform steps), line loads, seismic coefficients, end-anchored bars, grouted tiebacks and geosynthetics.
 - **Analysis**: the method (Bishop, else Spencer, else the general limit equilibrium as Morgenstern-Price with a half-sine function, else Janbu), the number of slices (at least 10), the direction, given circles and surfaces, slope limits as entry and exit ranges, non-circular optimisation and a tension crack.
 - Imperial files are converted to metres, kN/m³ and kPa.

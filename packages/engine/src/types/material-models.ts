@@ -33,6 +33,13 @@ export interface MaterialModelBase {
   /** The weight of this material (a fill) raises the pore pressure of materials with `bBar` below it. */
   bBarLoad?: boolean;
   /**
+   * Pore pressure ratio rᵤ = u / σv (Bishop & Morgenstern 1960): the pore
+   * pressure at a slice base in this material is rᵤ times the weight of
+   * the soil above it per unit width, added to the pore pressure of its
+   * water line (if any). Not set: none.
+   */
+  ru?: number;
+  /**
    * The strength of the material above its water line (the phreatic
    * level), when it differs from the strength below it (for example drained
    * above and undrained below). It also applies everywhere when the

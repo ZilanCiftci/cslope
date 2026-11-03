@@ -335,6 +335,7 @@ export function modelToStixDocuments(model: ModelEntry): { docs: Map<string, Jso
   if ((def.blockSearchObjects ?? []).length > 0) notes.push("The block search objects are not written.");
   for (const m of def.materials) {
     if (m.model && suctionAngle(m.model) > 0) notes.push(`"${m.name}": the strength from suction (φb) is not written.`);
+    if (m.model?.ru) notes.push(`"${m.name}": the pore pressure ratio rᵤ = ${m.model.ru} is not written (the format has none).`);
     if (m.model && (m.model as { anisotropy?: unknown[] }).anisotropy?.length) notes.push(`"${m.name}": the anisotropy of the undrained strength is not written.`);
   }
   const nx = 10, nz = 10;

@@ -656,7 +656,7 @@ export function sliToDefinition(file: SliFile, index: number, fileName = "model.
   const drawdown = vertexLists(sc.sections.get("drawdown line"))[0];
   const drawdownLine = drawdown ? lineOf(sc, drawdown.ids) : undefined;
   const waterUsed = waterMode === "hu";
-  if (!waterUsed) {
+  if (!waterUsed && waterMode !== "ru") {
     const what: Record<string, string> = { groundwater: "a finite element groundwater analysis", "total head": "a grid of total heads", "pressure head": "a grid of pressure heads", "pore pressure": "a grid of pore pressures", ru: "ru coefficients" };
     notes.push(`The pore pressures come from ${what[waterMode] ?? `the method "${waterMode}"`}, which is not imported; the model has no pore pressure.`);
   }
@@ -671,7 +671,6 @@ export function sliToDefinition(file: SliFile, index: number, fileName = "model.
   const waterOf = new Map<string, { line?: number; hu: number; auto: boolean }>();
   const rtl = orientation === "rtl";
   const drawdownMaterials: string[] = [];
-  const ruValues: string[] = [];
   for (const key of usedKeys) {
     const k = Number(key.replace(/\D/g, ""));
     const f = sc.materials.get(key);
@@ -704,8 +703,11 @@ export function sliToDefinition(file: SliFile, index: number, fileName = "model.
       } else if (drawdownLine) notes.push(`Material "${name}": its undrained strength in rapid drawdown is not imported${(num(f.rd_cr) ?? 0) === 0 && (num(f.rd_phir) ?? 0) === 0 ? " (no R envelope is given; the file's drawdown procedure is not cSlope's)" : ""}.`);
     }
     if ((num(f.bbar) ?? 0) !== 0) notes.push(`Material "${name}": the B-bar pore pressure is not imported.`);
-    // an ru coefficient (with "with_ru"), on top of the water line's pressure in the file
-    if ((num(f.withru) ?? 0) !== 0 && dn("with_ru") !== 0) notes.push(`Material "${name}": its ru coefficient ${f.withru} is not imported (cSlope has no ru); only the pore pressure of its water line is.`);
+    // an ru coefficient: the water method ru (the `water` value is ru), or
+    // with "with_ru" one on top of the water line's pressure
+    const ru = waterMode === "ru" ? num(f.water) ?? 0 : dn("with_ru") !== 0 ? num(f.withru) ?? 0 : 0;
+    if (ru > 0 && ru < 1) model = { ...model, ru } as MaterialModel;
+    else if (ru !== 0) notes.push(`Material "${name}": its ru coefficient ${ru} is outside 0–1 and is not imported.`);
     if ((num(f.mat_tensile) ?? 0) !== 0) notes.push(`Material "${name}": the tensile strength (cut-off) is not imported.`);
     if ((num(f.use_alternate_strength) ?? 0) !== 0) notes.push(`Material "${name}": the alternate strength is not imported.`);
     if ((num(f.spatially_variable_material) ?? 0) !== 0) notes.push(`Material "${name}": the spatial variability is not imported (the mean values are used).`);
@@ -716,10 +718,8 @@ export function sliToDefinition(file: SliFile, index: number, fileName = "model.
     const hu = num(f.water) ?? 1;
     const auto = (num(f.hutype) ?? 0) === 1;
     if (waterUsed && surface > 0 && (auto || hu > 0)) waterOf.set(name, { line: surface, hu, auto });
-    if (waterMode === "ru" && hu > 0) ruValues.push(`${name} (ru = ${hu})`);
   }
 
-  if (ruValues.length > 0) notes.push(`The ru coefficients of ${ruValues.join(", ")} are not imported (cSlope has no ru).`);
   // materials the file defines but no cell uses
   const unused = [...sc.materials.keys()].filter((k) => !usedKeys.includes(k) && sc.materialNames[Number(k.replace(/\D/g, "")) - 1] !== undefined && sc.cells.length > 0);
   const defaultNames = /^(Material \d+|Soil)$/;

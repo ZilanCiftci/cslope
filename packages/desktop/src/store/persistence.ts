@@ -914,8 +914,10 @@ function sanitizeStrengthOptions(model: MaterialModel): MaterialModel {
  * [0, 1.5] is dropped (none), and a fill flag that is not `true` too.
  */
 function sanitizeBBar(model: MaterialModel): MaterialModel {
-  if (!("bBar" in model) && !("bBarLoad" in model)) return model;
-  const out = { ...model } as MaterialModel & { bBar?: unknown; bBarLoad?: unknown };
+  if (!("bBar" in model) && !("bBarLoad" in model) && !("ru" in model)) return model;
+  const out = { ...model } as MaterialModel & { bBar?: unknown; bBarLoad?: unknown; ru?: unknown };
+  const ru = out.ru;
+  if (!(typeof ru === "number" && Number.isFinite(ru) && ru >= 0 && ru < 1)) delete out.ru;
   const b = out.bBar;
   if (!(typeof b === "number" && Number.isFinite(b) && b >= 0 && b <= 1.5)) delete out.bBar;
   if (out.bBarLoad !== true) delete out.bBarLoad;

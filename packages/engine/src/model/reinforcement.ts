@@ -91,6 +91,9 @@ export function verticalStress(slope: Slope, x: number, y: number, effective: bo
   // material just below the ground, as the slices and the Rankine depth
   // take it (freeWaterLineAt in slices.ts); the pore pressure at the point
   // comes from the line of the material there.
+  // (the pore pressure ratio of the material at the point takes the soil above it)
+  const ru = effective ? materialAt(slope, x, y)?.model.ru ?? 0 : 0;
+  const soil = sigma;
   const yTop = yGround - 1e-6 * Math.max(1, Math.abs(surf.x[surf.x.length - 1] - surf.x[0]));
   const pond = waterLineAt(slope, materialAt(slope, x, yTop), x);
   sigma += Math.max(0, pond - yGround) * WATER_UNIT_WEIGHT;
@@ -98,7 +101,7 @@ export function verticalStress(slope: Slope, x: number, y: number, effective: bo
   const u = slope.waternet
     ? waternetPorePressure(slope.waternet, x, y)
     : Math.max(0, waterLineAt(slope, materialAt(slope, x, y), x) - y) * WATER_UNIT_WEIGHT;
-  return Math.max(0, sigma - u);
+  return Math.max(0, sigma - u - ru * soil);
 }
 
 /** cos 88°: the movement's component along an element that counts as pushing it. */

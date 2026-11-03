@@ -106,6 +106,10 @@ A material can have its own **strength above its water line** (for example drain
 
 The shear strength against the effective normal stress, $\tau = f(\sigma'_n)$, as points; linear between them or a cubic spline, the end segments extended. Each slice base takes the tangent c and φ of the curve at its normal stress, which the analysis updates from the normal stress it finds until the factor of safety settles, as for Hoek-Brown.
 
+### Pore pressure ratio (rᵤ)
+
+**rᵤ** on a material sets the pore pressure at a slice base in it to rᵤ times the weight of the soil above the base per metre of width, $u = r_u\,\gamma h$ (Bishop & Morgenstern 1960), added to the pore pressure of its water line if it has one. It is a simple way to describe pore pressure that rises with depth, used in stability charts and in older analyses. 0 ≤ rᵤ < 1. The finite element analyses do not take it.
+
 ### Pore pressure from a fill (B̄)
 
 **B̄** on a material raises the pore pressure at a slice base in it by $\bar B$ times the vertical stress of the fills above it: the materials ticked **Weight raises pore pressure below (fill, B̄)**. This is the short-term pore pressure of a soft foundation under a new embankment (Skempton 1954). It adds to the pore pressure of the material's water line.

@@ -157,6 +157,7 @@ ${ids.map((d) => `              <DataPoint>${d}</DataPoint>`).join("\n")}
   for (const m of model.materials) {
     const mm = m.model as { aboveWater?: unknown; pop?: number; yieldStress?: number };
     if (mm.aboveWater) notes.push(`"${m.name}": the strength above the water line is not written.`);
+    if (m.model.ru) notes.push(`"${m.name}": the pore pressure ratio rᵤ = ${m.model.ru} is not written.`);
     if (mm.pop !== undefined || mm.yieldStress !== undefined) notes.push(`"${m.name}": the POP or yield stress of its SHANSEP strength is not written.`);
   }
   if ((model.udls ?? []).some((u) => (u.excessPorePressure ?? []).length > 0)) notes.push("The excess pore pressure of loads not yet consolidated is not written.");

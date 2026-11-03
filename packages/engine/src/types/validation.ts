@@ -31,6 +31,9 @@ export function validateMaterialModel(model: MaterialModel): string[] {
   ) {
     errors.push("Saturated unit weight (γsat) must be a positive number up to 500 kN/m³.");
   }
+  if (model.ru !== undefined && !(Number.isFinite(model.ru) && model.ru >= 0 && model.ru < 1)) {
+    errors.push("The pore pressure ratio ru must be at least 0 and below 1.");
+  }
   if (model.bBar !== undefined && !(Number.isFinite(model.bBar) && model.bBar >= 0 && model.bBar <= 1.5)) {
     errors.push("B-bar must be between 0 and 1.5.");
   }

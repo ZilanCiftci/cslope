@@ -74,11 +74,44 @@ The script compares the regenerated verification table with the committed one an
 | 2026-11-03 | Composite circles along bedrock (default on); along the model base optional (compositeBase) | 2 | 0.342 → 0.342 | 0.477 → 0.476 | 1.009 → 1.003 | 1.596 → 1.589 | 719 s (4 workers, load 3.7 at start) |
 | 2026-11-03 | Reinforcement, SHANSEP, B-bar, shear-normal, seismic, inclined line loads, rapid drawdown; composite review fixes | 0 | 0.342 → 0.342 | 0.476 → 0.476 | 1.003 → 1.003 | 1.589 → 1.589 | 210 s (4 workers, load 0.7 at start) |
 | 2026-11-03 | Import and export of .stix and .sli/.slim/.slmd files; waternet, strength above the water line, POP/yield stress with an earlier stage, load consolidation | 0 | 0.342 → 0.342 | 0.476 → 0.476 | 1.003 → 1.003 | 1.589 → 1.589 | 498 s (4 workers, load 2.8 at start) |
+| 2026-11-03 | Pore pressure ratio ru | 0 | 0.342 → 0.342 | 0.476 → 0.476 | 1.003 → 1.003 | 1.589 → 1.589 | 489 s (4 workers, load 5.4 at start) |
 <!-- summary-end -->
 
 ## Entries
 
 <!-- entries -->
+
+### 2026-11-03: Pore pressure ratio ru
+
+Compared with 9ff3a08. Errors are relative to the reference, in percent. Verification run time: 489 s (4 workers, load 5.4 at start).
+
+**Against other programs (midpoint of their range):** 0 moved (0 closer to the reference, 0 further).
+
+| Result | Reference | Before | After | Error before | Error after |
+|---|---|---|---|---|---|
+| **Mean error (n = 281)** | | | | -0.222 % | -0.222 % |
+| **Mean absolute error** | | | | 0.342 % | 0.342 % |
+| **RMS error** | | | | 0.476 % | 0.476 % |
+| **Largest error** | | | | 2.109 % | 2.109 % |
+
+**Against the papers:** 0 moved (0 closer to the reference, 0 further).
+
+| Result | Reference | Before | After | Error before | Error after |
+|---|---|---|---|---|---|
+| **Mean error (n = 112)** | | | | -0.155 % | -0.155 % |
+| **Mean absolute error** | | | | 1.003 % | 1.003 % |
+| **RMS error** | | | | 1.589 % | 1.589 % |
+| **Largest error** | | | | 6.591 % | 6.591 % |
+
+**Finite elements against their references (FE, finite differences, limit analysis, theory):** 0 moved (0 closer to the reference, 0 further).
+
+| Result | Reference | Before | After | Error before | Error after |
+|---|---|---|---|---|---|
+| **Mean error (n = 35)** | | | | -0.711 % | -0.711 % |
+| **Mean absolute error** | | | | 2.399 % | 2.399 % |
+| **RMS error** | | | | 3.712 % | 3.712 % |
+| **Largest error** | | | | 15.100 % | 15.100 % |
+
 
 ### 2026-11-03: Import and export of .stix and .sli/.slim/.slmd files; waternet, strength above the water line, POP/yield stress with an earlier stage, load consolidation
 

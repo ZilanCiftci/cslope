@@ -115,6 +115,7 @@ export function DefineMaterialsDialog({ onClose, mode = "popup" }: Props) {
     // B̄ and the fill flag belong to every kind.
     if (currentModel.bBar !== undefined) newModel.bBar = currentModel.bBar;
     if (currentModel.bBarLoad) newModel.bBarLoad = true;
+    if (currentModel.ru !== undefined) newModel.ru = currentModel.ru;
     // So does a separate strength above the water line (imported).
     if (currentModel.aboveWater) newModel.aboveWater = currentModel.aboveWater;
     // Expressions belong to the old kind's fields; keep only γ, which
@@ -331,6 +332,7 @@ export function DefineMaterialsDialog({ onClose, mode = "popup" }: Props) {
             <BBarFields
               bBar={model.bBar}
               bBarLoad={model.bBarLoad}
+              ru={model.ru}
               onChange={(patch) => patchModel(selected.id, model, patch)}
             />
 

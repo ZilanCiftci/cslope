@@ -43,6 +43,7 @@ const FIELD_LABELS: Record<string, string> = {
   ocr: "OCR",
   suMin: "Min Su (kPa)",
   bBar: "B̄",
+  ru: "rᵤ",
 };
 
 /** Variables of a model: its parameters and the materials' numbers. */
