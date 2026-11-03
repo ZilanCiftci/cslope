@@ -7,6 +7,7 @@ import type {
   ModelOrientation,
   ParameterDef,
   PaperSize,
+  ModelWaternet,
   PiezometricLineState,
   ProjectInfo,
   RegionMaterials,
@@ -27,8 +28,9 @@ import {
   drawReinforcementsPdf,
   drawPilesPdf,
   drawReinforcementForcesPdf,
+  drawMaterialBoundariesClipped,
   drawMaterialRegions,
-  drawOpenPolyline,
+  drawWaterExtrasPdf,
   drawPiezometricLines,
   drawRulerFrame,
   drawSlipSurfaces,
@@ -103,6 +105,8 @@ export interface PdfExportData {
   result: AnalysisResult;
   resultViewSettings: ResultViewSettings;
   piezometricLine: PiezometricLineState;
+  /** Imported head and reference lines, drawn as on the canvas. */
+  waternet?: ModelWaternet;
   udls: { id: string; x1: number; x2: number; magnitude: number }[];
   lineLoads: { id: string; x: number; magnitude: number; angle?: number; y?: number }[];
   reinforcements?: ReinforcementRow[];
@@ -160,6 +164,7 @@ export function exportVectorPdf(data: PdfExportData): void {
       result,
       resultViewSettings: rvs,
       piezometricLine,
+      waternet,
       udls,
       lineLoads,
       reinforcements = [],
@@ -363,11 +368,8 @@ export function exportVectorPdf(data: PdfExportData): void {
       drawClosedPolyline(pdf, tf, coordinates, [0, 0, 0], 0.5);
     }
 
-    for (const b of materialBoundaries) {
-      if (b.coordinates.length >= 2) {
-        drawOpenPolyline(pdf, tf, b.coordinates, [0, 0, 0], 0.5);
-      }
-    }
+    // Clipped to the outline, as on the canvas.
+    drawMaterialBoundariesClipped(pdf, tf, coordinates, materialBoundaries);
 
     // Load labels placed so far, so later ones keep clear of them.
     const loadLabels: Box[] = [];
@@ -416,6 +418,8 @@ export function exportVectorPdf(data: PdfExportData): void {
         },
       );
     }
+
+    drawWaterExtrasPdf(pdf, tf, piezometricLine.rapidDrawdown?.waterBefore, waternet);
 
     // Not for an analysis of prescribed surfaces only (nothing was searched).
     if (analysisLimits.enabled && coordinates.length >= 3 && !customPlanesOnly) {

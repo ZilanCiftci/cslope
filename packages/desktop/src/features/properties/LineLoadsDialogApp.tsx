@@ -168,7 +168,7 @@ export function LineLoadsDialogApp() {
     {
       header: (
         <Label title="Inclination of the load from the downward vertical, positive when it points towards +x: 0 = vertical, ±90 = horizontal">
-          Angle from vertical (°)
+          Angle from vertical (°, + towards +x)
         </Label>
       ),
       widthClassName: "w-[22%]",
@@ -186,7 +186,7 @@ export function LineLoadsDialogApp() {
     },
     {
       header: (
-        <Label title="Elevation of the load point, for a load on a wall face; empty = on the ground at x. Used for an inclined load only.">
+        <Label title="Elevation of the load point, for a load on a wall face; empty (&quot;ground&quot;) = on the ground at x. Used for an inclined load only: the field is greyed out while the angle is 0 (a vertical load acts the same at any height).">
           Load point y (m)
         </Label>
       ),
@@ -240,7 +240,7 @@ export function LineLoadsDialogApp() {
       }}
     >
       <div className="pb-2">
-        <h2 className="text-[12px] font-semibold">Line Loads</h2>
+        <h2 className="text-[12px] font-semibold">Line loads</h2>
       </div>
       <div className="flex-1 overflow-y-auto pr-1">
         <SpreadsheetTable
@@ -253,7 +253,7 @@ export function LineLoadsDialogApp() {
           className="text-[11px] mt-1 cursor-pointer hover:underline font-medium"
           style={{ color: "var(--color-vsc-accent)" }}
         >
-          + Add Line Load
+          + Add line load
         </button>
       </div>
       <div

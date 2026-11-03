@@ -1,7 +1,7 @@
 import { jsPDF } from "jspdf";
 import { PDF_SANS, setSansFont } from "./pdf-fonts";
 import type { ReinforcementForce } from "@cslope/engine";
-import type { PileRow, ReinforcementRow } from "../../store/types";
+import type { ModelWaternet, PileRow, ReinforcementRow } from "../../store/types";
 import {
   bondedSpan,
   divideSign,
@@ -372,6 +372,75 @@ export function drawMaterialRegions(
 
   // Restore state to remove model polygon clip
   pdf.restoreGraphicsState();
+}
+
+/** The material boundaries, clipped to the model outline as the canvas draws them. */
+export function drawMaterialBoundariesClipped(
+  pdf: jsPDF,
+  tf: PdfTransform,
+  coordinates: [number, number][],
+  boundaries: readonly { coordinates: [number, number][] }[],
+) {
+  if (boundaries.length === 0) return;
+  const clipped = coordinates.length >= 3;
+  if (clipped) {
+    pdf.saveGraphicsState();
+    pdfPath(pdf, buildPolylinePath(coordinates.map(([wx, wy]) => tf.worldToPdf(wx, wy)), true), "");
+    pdf.clip();
+    (pdf as unknown as { discardPath?: () => void }).discardPath?.();
+  }
+  for (const b of boundaries) {
+    if (b.coordinates.length >= 2) drawOpenPolyline(pdf, tf, b.coordinates, [0, 0, 0], 0.5);
+  }
+  if (clipped) pdf.restoreGraphicsState();
+}
+
+/** Head lines (teal, as on the canvas). */
+const HEAD_LINE_RGB: [number, number, number] = [0, 137, 123];
+/** Reference lines (faint grey). */
+const REFERENCE_LINE_RGB: [number, number, number] = [176, 190, 197];
+
+/** A small label at the right end of a line, above it. */
+function lineEndLabel(pdf: jsPDF, tf: PdfTransform, points: [number, number][], text: string, rgb: [number, number, number], below = false) {
+  const pts = points.map(([wx, wy]) => tf.worldToPdf(wx, wy));
+  const [lx, ly] = pts.reduce((a, b) => (b[0] > a[0] ? b : a));
+  setSansFont(pdf, "normal");
+  pdf.setFontSize(6.5);
+  pdf.setTextColor(...rgb);
+  pdf.text(text, lx - 0.6, below ? ly + 2.4 : ly - 0.6, { align: "right" });
+  pdf.setTextColor(0, 0, 0);
+}
+
+/**
+ * The water before a rapid drawdown (dashed, "before drawdown") and imported
+ * head lines (dash-dotted, "head line N") and reference lines (faint,
+ * dotted), as the canvas draws them.
+ */
+export function drawWaterExtrasPdf(
+  pdf: jsPDF,
+  tf: PdfTransform,
+  waterBefore: [number, number][] | undefined,
+  waternet: ModelWaternet | undefined,
+) {
+  const dashed = (points: [number, number][], rgb: [number, number, number], width: number, dash: number[]) => {
+    pdf.setLineDashPattern(dash, 0);
+    drawOpenPolyline(pdf, tf, points, rgb, width);
+    pdf.setLineDashPattern([], 0);
+  };
+  if (waternet) {
+    for (const ref of waternet.referenceLines) {
+      if (ref.points.length >= 2) dashed(ref.points, REFERENCE_LINE_RGB, 0.25, [0.4, 0.8]);
+    }
+    waternet.headLines.forEach((head, i) => {
+      if (head.points.length < 2) return;
+      dashed(head.points, HEAD_LINE_RGB, 0.3, [2, 0.8, 0.5, 0.8]);
+      lineEndLabel(pdf, tf, head.points, `head line ${i + 1}`, HEAD_LINE_RGB, true);
+    });
+  }
+  if (waterBefore && waterBefore.length >= 2) {
+    dashed(waterBefore, PIEZO_COLOR.rgb as [number, number, number], 0.4, [2, 1.25]);
+    lineEndLabel(pdf, tf, waterBefore, "before drawdown", PIEZO_COLOR.rgb as [number, number, number]);
+  }
 }
 
 export function drawClosedPolyline(

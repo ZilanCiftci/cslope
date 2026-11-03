@@ -336,6 +336,23 @@ describe("ProjectInfoDialog", () => {
     expect(onSave).toHaveBeenCalledWith({ client: "C" });
   });
 
+  it("shows the notes of an imported model read-only", () => {
+    const { unmount } = render(<ProjectInfoDialog initialInfos={[info()]} onSave={() => {}} onClose={() => {}} />);
+    expect(screen.queryByTestId("import-notes")).toBeNull();
+    unmount();
+    render(
+      <ProjectInfoDialog
+        initialInfos={[info()]}
+        onSave={() => {}}
+        onClose={() => {}}
+        importNotes={["Imported from Dike.stix.", 'Material "Clay": no unit weight in the file; 20 kN/m³ used.']}
+      />,
+    );
+    const notes = screen.getByRole("region", { name: "Import notes" });
+    expect(notes).toHaveTextContent("Imported from Dike.stix.");
+    expect(notes).toHaveTextContent('Material "Clay": no unit weight');
+  });
+
   it("closes from the header button", async () => {
     const onClose = vi.fn();
     render(<ProjectInfoDialog initialInfos={[info()]} onSave={() => {}} onClose={onClose} />);

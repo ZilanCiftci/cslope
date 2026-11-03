@@ -73,6 +73,27 @@ describe("OptionsDialogApp", () => {
     expect(screen.getByLabelText("Number of slices")).toHaveValue(60);
   });
 
+  it("shows the model's rapid drawdown and sends a change of it back", async () => {
+    render(<OptionsDialogApp />);
+    const s = store();
+    bridge.emit("onAnalysisState", {
+      coordinates: [[0, 0], [0, 10], [30, 10], [40, 0]],
+      orientation: "ltr",
+      analysisLimits: s.analysisLimits,
+      customSearchPlanes: [],
+      customPlanesOnly: false,
+      options: s.options,
+      piezometricLine: { ...s.piezometricLine, rapidDrawdown: { waterBefore: [[0, 9], [40, 9]] } },
+    });
+    expect(screen.getByLabelText("Rapid drawdown")).toBeChecked();
+    expect(screen.getByLabelText("Water level before drawdown")).toHaveValue(9);
+    await userEvent.click(screen.getByLabelText("Rapid drawdown"));
+    expect(bridge.sentOf<{ rapidDrawdown: unknown }>("sendAnalysisChanged").at(-1)!.rapidDrawdown).toBeNull();
+    await userEvent.click(screen.getByLabelText("Rapid drawdown"));
+    const sent = bridge.sentOf<{ rapidDrawdown: { waterBefore: [number, number][] } | null }>("sendAnalysisChanged").at(-1)!;
+    expect(sent.rapidDrawdown!.waterBefore.map((p) => p[0])).toEqual([0, 40]);
+  });
+
   it("switches the analysis direction", async () => {
     render(<OptionsDialogApp />);
     hydrate();
@@ -316,7 +337,7 @@ describe("CustomSearchPlanesDialogApp", () => {
     render(<CustomSearchPlanesDialogApp />);
     hydrate();
     expect(screen.queryByText(/Only analyse these surfaces/)).toBeNull();
-    await userEvent.click(screen.getByRole("button", { name: "+ Add Search Plane" }));
+    await userEvent.click(screen.getByRole("button", { name: "+ Add search plane" }));
     expect(store().customSearchPlanes).toHaveLength(1);
     // A new circle starts inside the model: centre above the middle of the
     // slope face (x 30 to 40), reaching down to just above the base.
@@ -355,7 +376,7 @@ describe("CustomSearchPlanesDialogApp", () => {
     render(<CustomSearchPlanesDialogApp />);
     hydrate();
     await userEvent.click(
-      screen.getByRole("button", { name: "+ Add Non-circular Surface" }),
+      screen.getByRole("button", { name: "+ Add non-circular surface" }),
     );
     const pts = screen.getByLabelText("Non-circular surface points") as HTMLInputElement;
     // Not flagged before anything is typed.

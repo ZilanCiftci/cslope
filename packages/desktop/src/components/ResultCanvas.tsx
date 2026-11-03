@@ -102,6 +102,8 @@ export function ResultCanvas() {
     customPlanesOnly,
   } = useCanvasModelState();
   const setRvs = useAppStore((s) => s.setResultViewSettings);
+  // Imported head and reference lines, drawn as on the edit canvas.
+  const waternet = useAppStore((s) => s.waternet);
   const {
     setAnalysisLimits,
     updateUdl,
@@ -419,6 +421,7 @@ export function ResultCanvas() {
       reinforcements,
       piles,
       piezometricLine,
+      waternet,
       viewScale,
       mouseWorld: null,
       hoverHit,
@@ -445,6 +448,7 @@ export function ResultCanvas() {
       reinforcements,
       piles,
       piezometricLine,
+      waternet,
       viewScale,
       hoverHit,
       selectedPointIndex,

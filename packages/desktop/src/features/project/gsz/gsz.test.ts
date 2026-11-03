@@ -587,7 +587,7 @@ describe(".gsz export", () => {
     expect(modelToGszXml(rd).notes.join(" ")).toMatch(/Rapid drawdown: the three-stage analysis is not written/);
     // without the analysis: only the envelopes are left out
     const plain = { ...rd, piezometricLine: { ...rd.piezometricLine, rapidDrawdown: undefined } };
-    expect(modelToGszXml(plain).notes.join(" ")).toMatch(/drawdown envelopes \(cR, φR\) of the materials are not written/);
+    expect(modelToGszXml(plain).notes.join(" ")).toMatch(/drawdown strengths \(R envelope, cR, φR\) of the materials are not written/);
   });
 
   it("names what it cannot write", () => {
@@ -595,5 +595,154 @@ describe(".gsz export", () => {
     const { xml, notes } = modelToGszXml(m);
     expect(xml).toContain("<SlopeModel>UndrainedPhiZero</SlopeModel>");
     expect(notes.join(" ")).toMatch(/"Clay": strength as a function of depth is written as undrained with its reference Su \(10 kPa\)/);
+  });
+
+  it("writes a region around a lens as pieces without holes, so that no regions overlap, and reads back the same slope", async () => {
+    const lens = {
+      ...def,
+      materials: [...def.materials, { name: "Lens", model: { kind: "mohr-coulomb", unitWeight: 20, cohesion: 0, frictionAngle: 36 } }],
+      materialBoundaries: [...def.materialBoundaries!, { coordinates: [[6, 5], [9, 5], [9, 8], [6, 8], [6, 5]], materialName: "" }],
+      regionAssignments: [...def.regionAssignments!, { point: [7.5, 6.5], materialName: "Lens" }],
+    } as SlopeDefinition;
+    const m = modelFromDefinition(lens, { id: "m", name: "Lens", options: { method: "Bishop" } });
+    const { xml, notes } = modelToGszXml(m);
+    expect(notes.join(" ")).not.toMatch(/hole/);
+    const file = parseGszXml(xml);
+    const geo = file.geometries.get(1)!;
+    const area = (ids: number[]) => Math.abs(ids.reduce((s, id, i) => {
+      const p = geo.points.get(id)!, q = geo.points.get(ids[(i + 1) % ids.length])!;
+      return s + p[0] * q[1] - q[0] * p[1];
+    }, 0)) / 2;
+    const areas = [...geo.regions.entries()].map(([id, ids]) => ({ material: file.regionMaterials.get(1)!.get(id)!, area: area(ids) }));
+    // the regions tile the outline (225 m²); the fill around the lens is in two pieces, the lens 9 m²
+    expect(areas.reduce((s, r) => s + r.area, 0)).toBeCloseTo(225, 9);
+    expect(areas.filter((r) => r.material === 1)).toHaveLength(2);
+    expect(areas.filter((r) => r.material === 3).map((r) => r.area)).toEqual([expect.closeTo(9, 9)]);
+    const [imp] = await gszImports(modelToGsz(m).bytes, "Lens.gsz");
+    // the same slope on a circle through the lens: the same factor of safety as with the cuts
+    // between the pieces of fill drawn as boundaries (the slices also break there), and within 0.1 % without
+    const onCircle = (d: SlopeDefinition) => fos({ ...d, customSearchPlanes: [{ cx: 16, cy: 18, radius: 15 }], customPlanesOnly: true }, { method: "Bishop" });
+    const cut = { ...lens, materialBoundaries: [...lens.materialBoundaries!, { coordinates: [[7.5, 3], [7.5, 5]], materialName: "" }, { coordinates: [[7.5, 8], [7.5, 10]], materialName: "" }] } as SlopeDefinition;
+    expect(onCircle(imp.definition)).toBeCloseTo(onCircle(cut), 6);
+    expect(Math.abs(onCircle(imp.definition) / onCircle(lens) - 1)).toBeLessThan(1e-3);
+  });
+
+  it("writes the seismic coefficients and reads them back", async () => {
+    const quake = { ...model, options: { ...model.options, seismicHorizontal: 0.15, seismicVertical: 0.05 } };
+    expect(modelToGszXml(quake).xml).toContain(`<Seismic Horizontal="0.15" Vertical="0.05" />`);
+    const [imp] = await gszImports(modelToGsz(quake).bytes, "Q.gsz");
+    expect(imp.options).toMatchObject({ seismicHorizontal: 0.15, seismicVertical: 0.05 });
+    // none: blank, as the format's files write it
+    expect(modelToGszXml(model).xml).toContain(`<Seismic Horizontal="" Vertical="" />`);
+    const [dry] = await gszImports(modelToGsz(model).bytes, "Q.gsz");
+    expect(dry.options.seismicHorizontal).toBeUndefined();
+  });
+
+  it("writes given circles and surfaces analysed alone as fully specified slip surfaces, and notes them when the model also searches", async () => {
+    const circle = { cx: 16, cy: 18, radius: 15 };
+    const onCircle = modelFromDefinition({ ...def, customSearchPlanes: [circle], customPlanesOnly: true } as SlopeDefinition, { id: "m", name: "C", options: { method: "Bishop" } });
+    const { xml, notes } = modelToGszXml(onCircle);
+    expect(xml).toContain("<Option>FullySpecified</Option>");
+    expect(xml).toMatch(/<Axis ID="\d+" \/>/);
+    expect(notes.join(" ")).toMatch(/custom circle is written as fully specified slip surfaces along the circle/);
+    const [imp] = await gszImports(modelToGsz(onCircle).bytes, "C.gsz");
+    expect(imp.definition.customPlanesOnly).toBe(true);
+    const [surface] = imp.definition.customSurfaces!;
+    expect(surface.axis).toEqual([16, 18]);
+    // the points are on the circle and reach above the ground at both ends
+    expect(surface.points.every(([x, y]) => Math.abs(Math.hypot(x - 16, y - 18) - 15) < 1e-9)).toBe(true);
+    // a polyline in 2° steps: the factor of safety of the circle within 0.2 %
+    const f0 = fos({ ...def, customSearchPlanes: [circle], customPlanesOnly: true } as SlopeDefinition, { method: "Bishop" });
+    expect(Math.abs(fos(imp.definition, { method: "Bishop" }) / f0 - 1)).toBeLessThan(2e-3);
+    // a surface: its points, no axis
+    const pts: [number, number][] = [[4, 10], [12, 4], [22, 3.5], [27, 5]];
+    const onSurface = modelFromDefinition({ ...def, customSurfaces: [{ points: pts }], customPlanesOnly: true } as SlopeDefinition, { id: "m", name: "S" });
+    const [back] = await gszImports(modelToGsz(onSurface).bytes, "S.gsz");
+    expect(back.definition.customSurfaces).toEqual([{ points: pts }]);
+    // with the search as well: not written, with a note
+    const both = modelFromDefinition({ ...def, customSearchPlanes: [circle], customPlanesOnly: false } as SlopeDefinition, { id: "m", name: "B" });
+    const out = modelToGszXml(both);
+    expect(out.xml).not.toContain("FullySpecified");
+    expect(out.notes.join(" ")).toMatch(/custom slip surfaces are not written/);
+  });
+
+  it("writes SHANSEP with its ratio, exponent and OCR (a function of elevation), and reads it back with the same factor of safety", async () => {
+    const withClay = (clay: object) => {
+      const d = { ...def, materials: [def.materials[0], { name: "Clay", model: { kind: "shansep", unitWeight: 17, ...clay } }] } as SlopeDefinition;
+      return { d, m: modelFromDefinition(d, { id: "m", name: "Shansep", options: { method: "Bishop" } }) };
+    };
+    const back = async (clay: object) => {
+      const { d, m } = withClay(clay);
+      const { xml, notes } = modelToGszXml(m);
+      const [imp] = await gszImports(modelToGsz(m).bytes, "S.gsz");
+      return { d, xml, notes, imp, model: imp.definition.materials[1].model };
+    };
+    // OCR 1: Su/σ′v constant
+    const one = await back({ ratio: 0.25, exponent: 0.8 });
+    expect(one.xml).toContain("<SlopeModel>SHANSEP</SlopeModel>");
+    expect(one.xml).toContain("<TauSigmaRatio>0.25</TauSigmaRatio>");
+    expect(one.xml).not.toContain("SlopeUndrainedStrengthModel");
+    expect(one.model).toMatchObject({ kind: "shansep", unitWeight: 17, ratio: 0.25, ocr: 1 });
+    expect(fos(one.imp.definition, { method: "Bishop" })).toBeCloseTo(fos(one.d, { method: "Bishop" }), 6);
+    // a constant OCR: a flat function of elevation
+    const two = await back({ ratio: 0.25, exponent: 0.8, ocr: 2 });
+    expect(two.xml).toContain("<SlopeUndrainedStrengthModel>Custom</SlopeUndrainedStrengthModel>");
+    expect(two.xml).toContain("<NCUndrainedStrengthRatio>0.25</NCUndrainedStrengthRatio>");
+    expect(two.xml).toContain("<SHANSEPExponent>0.8</SHANSEPExponent>");
+    expect(two.xml).toMatch(/<Functions>\s*<Material>\s*<Fn2Ds Len="1">\s*<Fn2D>\s*<ID>1<\/ID>/);
+    expect(two.xml).toContain("<Function>Linear(OutputParam=OverconsolidationRatio,InputParam=Y,SlopeBefore=0,SlopeAfter=0)</Function>");
+    expect(two.model).toMatchObject({ kind: "shansep", ratio: 0.25, exponent: 0.8, ocrByElevation: [[0, 2], [10, 2]] });
+    expect(fos(two.imp.definition, { method: "Bishop" })).toBeCloseTo(fos(two.d, { method: "Bishop" }), 6);
+    // OCR against elevation, with a spline
+    const byY = await back({ ratio: 0.3, exponent: 0.85, ocrByElevation: [[0, 3], [2, 1.5], [3, 1]], spline: { startSlope: 0, endSlope: 0 } });
+    expect(byY.xml).toContain("<Function>Spline(OutputParam=OverconsolidationRatio,InputParam=Y,Smooth=100,Tension=100,SlopeBefore=0,SlopeAfter=0,LogInput=false,LogOutput=false)</Function>");
+    expect(byY.model).toMatchObject({ ratio: 0.3, exponent: 0.85, ocrByElevation: [[0, 3], [2, 1.5], [3, 1]], spline: { startSlope: 0, endSlope: 0 } });
+    expect(fos(byY.imp.definition, { method: "Bishop" })).toBeCloseTo(fos(byY.d, { method: "Bishop" }), 6);
+    // Su as a function of σ′v
+    const su = await back({ ratio: 0.25, suByStress: [[0, 5], [50, 15], [100, 28]] });
+    expect(su.xml).toContain("<SlopeUndrainedStrengthModel>Function</SlopeUndrainedStrengthModel>");
+    expect(su.model).toMatchObject({ suByStress: [[0, 5], [50, 15], [100, 28]] });
+    expect(fos(su.imp.definition, { method: "Bishop" })).toBeCloseTo(fos(su.d, { method: "Bishop" }), 6);
+    // POP: not written, with a note
+    const pop = await back({ ratio: 0.25, pop: 20 });
+    expect(pop.notes.join(" ")).toMatch(/"Clay": the POP of its SHANSEP strength is not written/);
+    expect(pop.model).toMatchObject({ ratio: 0.25, ocr: 1 });
+  });
+
+  it("writes what the format's files leave out only when it differs from their default, in their order", async () => {
+    const parse = (xml: string) => new DOMParser().parseFromString(xml, "application/xml");
+    const { xml } = modelToGszXml(model);
+    // the entry and exit search and sliding to the right are not written
+    expect(xml).not.toContain("<Option>EntryExit</Option>");
+    expect(xml).not.toContain("DirectionOfSlip");
+    // a vertical surcharge has no direction
+    expect(xml).not.toMatch(/<Surcharge>[\s\S]*<Direction>/);
+    const doc = parse(xml);
+    const tags = (el: Element | null | undefined) => Array.from(el?.children ?? []).map((c) => c.tagName);
+    expect(tags(doc.querySelector("Material"))).toEqual(["ID", "Color", "Name", "SlopeModel", "StressStrain"]);
+    expect(tags(doc.querySelector("StabilityItem > Entry"))).toEqual(["DataPoints", "SlipSurface", "LineLoadPoints", "Surcharges", "Seismic", "PiezometricSurfaces", "MaterialUsesPiezs"]);
+    expect(tags(doc.querySelector("Surcharge"))).toEqual(["ID", "DataPoints", "Pressure"]);
+    // read back: the search, sliding to the right
+    const [imp] = await gszImports(modelToGsz(model).bytes, "A.gsz");
+    expect(imp.definition.analysisLimits).toEqual(def.analysisLimits);
+    expect(imp.definition.orientation ?? "ltr").toBe("ltr");
+    // sliding to the left is written, and read back
+    const rtl = modelFromDefinition({ ...def, orientation: "rtl", coordinates: def.coordinates.map(([x, y]) => [30 - x, y] as [number, number]).reverse(), analysisLimits: undefined } as SlopeDefinition, { id: "m", name: "L" });
+    expect(modelToGszXml(rtl).xml).toContain("<DirectionOfSlip>RightToLeft</DirectionOfSlip>");
+    const [left] = await gszImports(modelToGsz(rtl).bytes, "L.gsz");
+    expect(left.definition.orientation).toBe("rtl");
+    // dry: no pore pressure option and no empty lists
+    const dry = modelFromDefinition({ ...def, waterTable: undefined, udls: [], lineLoads: [] } as SlopeDefinition, { id: "m", name: "D" });
+    const dryXml = modelToGszXml(dry).xml;
+    expect(dryXml).not.toContain("ResultInputInfo");
+    expect(tags(parse(dryXml).querySelector("StabilityItem > Entry"))).toEqual(["SlipSurface", "Seismic"]);
+    const [d] = await gszImports(modelToGsz(dry).bytes, "D.gsz");
+    expect(d.definition.waterTable).toBeUndefined();
+  });
+
+  it("notes that the direction convention of an inclined line load is unverified", () => {
+    const inclined = { ...model, lineLoads: [{ ...model.lineLoads[0], angle: 30 }] };
+    expect(modelToGszXml(inclined).notes.join(" ")).toMatch(/direction convention of the format is unverified/);
+    expect(modelToGszXml(model).notes.join(" ")).not.toMatch(/unverified/);
   });
 });

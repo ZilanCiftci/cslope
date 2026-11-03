@@ -52,7 +52,7 @@ export function BlockSearchSection() {
         className="self-start text-[11px] cursor-pointer hover:underline font-medium"
         style={{ color: "var(--color-vsc-accent)" }}
       >
-        + Add Search Object
+        + Add search object
       </button>
       <div className="grid grid-cols-2 gap-x-3 gap-y-2">
         <AngleRange

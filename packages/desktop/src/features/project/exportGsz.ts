@@ -16,5 +16,6 @@ export function exportGsz(): string {
   const fileName = safeFileName(model.name || "cslope", "gsz");
   downloadFile(fileName, bytes as BlobPart, "application/zip");
   const list = notes.length > 0 ? `\n  – ${notes.join("\n  – ")}` : "";
-  return `Exported "${model.name}" as ${fileName}.${list}\n\nOpen it in the receiving program and check it before use.`;
+  // The download reports neither its end nor a cancelled save dialog.
+  return `Prepared "${model.name}" as ${fileName} for download.${list}\n\nOpen it in the receiving program and check it before use.`;
 }

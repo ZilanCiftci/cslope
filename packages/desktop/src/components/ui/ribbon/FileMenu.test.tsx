@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
 const mocks = vi.hoisted(() => ({ downloadFile: vi.fn() }));
@@ -36,6 +36,20 @@ function capturePickers() {
 function choose(input: HTMLInputElement, name: string, content: string) {
   const file = new File([content], name);
   Object.defineProperty(input, "files", { value: [file], configurable: true });
+}
+
+/** The text of the import/export summary dialog, once it shows. */
+async function summaryText(): Promise<string> {
+  const text = await screen.findByTestId("summary-text");
+  return text.textContent ?? "";
+}
+
+/** Close the summary dialog. */
+async function closeSummary() {
+  const dialog = screen.getByRole("dialog");
+  // The ✕ in the header and the Close button in the footer.
+  await userEvent.click(within(dialog).getAllByRole("button", { name: "Close" })[1]);
+  expect(screen.queryByRole("dialog")).toBeNull();
 }
 
 function renderMenu(name?: string) {
@@ -106,37 +120,33 @@ describe("FileMenu in a browser", () => {
   });
 
   it("imports a DXF outline as a new model and reports it", async () => {
-    const alert = vi.spyOn(window, "alert").mockImplementation(() => {});
     const pickers = capturePickers();
     renderMenu();
     await userEvent.click(screen.getByTitle("Import"));
-    await userEvent.click(screen.getByTitle("Import DXF"));
+    await userEvent.click(screen.getByTitle("Import a DXF file"));
     const picker = pickers.at(-1)!;
     expect(picker.accept).toBe(".dxf");
     choose(picker, "Section 1.dxf", OUTLINE_DXF);
     picker.onchange?.(new Event("change"));
-    await waitFor(() => expect(alert).toHaveBeenCalled());
+    expect(await summaryText()).toMatch(/^Imported "Section 1": outline with 4 points/);
     const active = store().models.find((m) => m.id === store().activeModelId)!;
     expect(active.name).toBe("Section 1");
     expect(store().coordinates).toHaveLength(4);
   });
 
   it("reports a DXF that cannot be imported", async () => {
-    const alert = vi.spyOn(window, "alert").mockImplementation(() => {});
     const pickers = capturePickers();
     renderMenu();
     await userEvent.click(screen.getByTitle("Import"));
-    await userEvent.click(screen.getByTitle("Import DXF"));
+    await userEvent.click(screen.getByTitle("Import a DXF file"));
     const picker = pickers.at(-1)!;
     choose(picker, "empty.dxf", dxf([[0, "SECTION"], [2, "ENTITIES"], [0, "ENDSEC"], [0, "EOF"]]));
     picker.onchange?.(new Event("change"));
-    await waitFor(() => expect(alert).toHaveBeenCalled());
-    expect(String(alert.mock.calls[0][0])).toMatch(/^DXF import failed: /);
+    expect(await summaryText()).toMatch(/^Import of empty\.dxf failed: /);
     expect(store().models).toHaveLength(1);
   });
 
   it("imports a .gsz file from Import › .gsz file and exports the model as one", async () => {
-    const alert = vi.spyOn(window, "alert").mockImplementation(() => {});
     const { modelToGsz } = await import("../../../features/project/gsz/gsz-write");
     store().saveCurrentModel();
     const model = store().models.find((m) => m.id === store().activeModelId)!;
@@ -149,19 +159,23 @@ describe("FileMenu in a browser", () => {
     expect(picker.accept).toBe(".gsz");
     Object.defineProperty(picker, "files", { value: [new File([bytes as BlobPart], "Section B.gsz")], configurable: true });
     picker.onchange?.(new Event("change"));
-    await waitFor(() => expect(alert).toHaveBeenCalled());
-    expect(String(alert.mock.calls[0][0])).toMatch(/^Imported 1 model from Section B\.gsz/);
-    expect(store().models.find((m) => m.id === store().activeModelId)!.name).toBe("Section B");
+    const imported = await summaryText();
+    expect(imported).toMatch(/^Imported 1 model from Section B\.gsz/);
+    expect(imported).toContain("The import cannot be undone");
+    await closeSummary();
+    const importedModel = store().models.find((m) => m.id === store().activeModelId)!;
+    expect(importedModel.name).toBe("Section B");
+    // The notes stay with the model.
+    expect(importedModel.importNotes?.[0]).toBe("Imported from Section B.gsz.");
 
     URL.createObjectURL ??= () => "blob:x";
     URL.revokeObjectURL ??= () => {};
     await userEvent.click(screen.getByTitle("Export"));
-    await userEvent.click(screen.getByTitle("Export the model as a .gsz project file"));
-    expect(String(alert.mock.calls.at(-1)![0])).toMatch(/^Exported "Section B" as Section B\.gsz/);
+    await userEvent.click(screen.getByTitle("Export the active model as a .gsz project file"));
+    expect(await summaryText()).toMatch(/^Prepared "Section B" as Section B\.gsz for download/);
   });
 
   it("imports a .stix file from Import › .stix file and exports the model as one", async () => {
-    const alert = vi.spyOn(window, "alert").mockImplementation(() => {});
     const { modelToStix } = await import("../../../features/project/stix/stix-write");
     store().saveCurrentModel();
     const model = store().models.find((m) => m.id === store().activeModelId)!;
@@ -174,19 +188,20 @@ describe("FileMenu in a browser", () => {
     expect(picker.accept).toBe(".stix");
     Object.defineProperty(picker, "files", { value: [new File([bytes as BlobPart], "Dike.stix")], configurable: true });
     picker.onchange?.(new Event("change"));
-    await waitFor(() => expect(alert).toHaveBeenCalled());
-    expect(String(alert.mock.calls[0][0])).toMatch(/^Imported 1 model from Dike\.stix/);
-    expect(store().models.find((m) => m.id === store().activeModelId)!.name).toBe("Dike – Exported – Calculation 1");
+    const imported = await summaryText();
+    expect(imported).toMatch(/^Imported 1 model from Dike\.stix/);
+    expect(imported).toContain("The import cannot be undone");
+    await closeSummary();
+    expect(store().models.find((m) => m.id === store().activeModelId)!.name).toBe("Calculation 1 (Dike)");
 
     URL.createObjectURL ??= () => "blob:x";
     URL.revokeObjectURL ??= () => {};
     await userEvent.click(screen.getByTitle("Export"));
-    await userEvent.click(screen.getByTitle("Export the model as a .stix project file"));
-    expect(String(alert.mock.calls.at(-1)![0])).toMatch(/^Exported "Dike – Exported – Calculation 1" as /);
+    await userEvent.click(screen.getByTitle("Export the active model as a .stix project file"));
+    expect(await summaryText()).toMatch(/^Prepared "Calculation 1 \(Dike\)" as /);
   });
 
   it("imports a .slim file from Import › .sli/.slim/.slmd file and exports the model as one", async () => {
-    const alert = vi.spyOn(window, "alert").mockImplementation(() => {});
     const { modelToSlim } = await import("../../../features/project/sli/sli-write");
     store().saveCurrentModel();
     const model = store().models.find((m) => m.id === store().activeModelId)!;
@@ -199,14 +214,33 @@ describe("FileMenu in a browser", () => {
     expect(picker.accept).toBe(".sli,.slim,.slmd");
     Object.defineProperty(picker, "files", { value: [new File([bytes as BlobPart], "Cut.slim")], configurable: true });
     picker.onchange?.(new Event("change"));
-    await waitFor(() => expect(alert).toHaveBeenCalled());
-    expect(String(alert.mock.calls[0][0])).toMatch(/^Imported 1 model from Cut\.slim/);
+    const imported = await summaryText();
+    expect(imported).toMatch(/^Imported 1 model from Cut\.slim/);
+    expect(imported).toContain("The import cannot be undone");
+    await closeSummary();
 
     URL.createObjectURL ??= () => "blob:x";
     URL.revokeObjectURL ??= () => {};
     await userEvent.click(screen.getByTitle("Export"));
-    await userEvent.click(screen.getByTitle("Export the model as a .slim model file"));
-    expect(String(alert.mock.calls.at(-1)![0])).toMatch(/^Exported ".*" as .*\.slim/);
+    await userEvent.click(screen.getByTitle("Export the active model as a .slim model file"));
+    expect(await summaryText()).toMatch(/^Prepared ".*" as .*\.slim/);
+  });
+
+  it("shows the summary in a dialog that copies it", async () => {
+    const writeText = vi.fn(async () => {});
+    Object.defineProperty(navigator, "clipboard", { value: { writeText }, configurable: true });
+    URL.createObjectURL ??= () => "blob:x";
+    URL.revokeObjectURL ??= () => {};
+    renderMenu();
+    await userEvent.click(screen.getByTitle("Export"));
+    await userEvent.click(screen.getByTitle("Export the active model as a .gsz project file"));
+    const text = await summaryText();
+    expect(screen.getByRole("dialog", { name: "Export as .gsz" })).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: "Copy" }));
+    expect(writeText).toHaveBeenCalledWith(text);
+    expect(await screen.findByRole("status")).toHaveTextContent("Copied");
+    fireEvent.keyDown(window, { key: "Escape" });
+    expect(screen.queryByRole("dialog")).toBeNull();
   });
 
   it("starts a new project", async () => {

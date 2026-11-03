@@ -189,7 +189,7 @@ export function InteriorBoundariesDialogApp() {
       }}
     >
       <div className="pb-2">
-        <h2 className="text-[12px] font-semibold">Interior Boundaries</h2>
+        <h2 className="text-[12px] font-semibold">Interior boundaries</h2>
       </div>
       <div className="flex-1 overflow-y-auto space-y-3 pr-1">
         <div className="flex gap-3">
@@ -390,7 +390,7 @@ export function InteriorBoundariesDialogApp() {
               className="text-[11px] cursor-pointer hover:underline font-medium"
               style={{ color: "var(--color-vsc-accent)" }}
             >
-              + Add Point
+              + Add point
             </button>
           </div>
         ) : (

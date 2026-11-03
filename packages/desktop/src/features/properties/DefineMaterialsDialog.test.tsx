@@ -64,7 +64,7 @@ describe("DefineMaterialsDialog — material list", () => {
     expect(mats()).toHaveLength(2);
     const newId = mats()[1].id;
     // The new material's fields are shown: edit them.
-    await setField("c (kPa)", "7");
+    await setField("c′ (kPa)", "7");
     expect(mats()[1].model).toMatchObject({ cohesion: 7 });
     expect(mats()[0].model).not.toMatchObject({ cohesion: 7 });
 
@@ -83,7 +83,7 @@ describe("DefineMaterialsDialog — material list", () => {
       ]);
     });
     // The first material is shown...
-    expect(screen.getByLabelText("φ (°)")).toHaveValue("34");
+    expect(screen.getByLabelText("φ′ (°)")).toHaveValue("34");
     // ...and Delete removes it.
     await userEvent.click(screen.getByRole("button", { name: "Delete" }));
     expect(mats().map((m) => m.id)).toEqual(["b"]);
@@ -96,9 +96,9 @@ describe("DefineMaterialsDialog — material list", () => {
       material("b", "Clay", { kind: "undrained", unitWeight: 17, undrainedShearStrength: 40 }),
     ]);
     render(<DefineMaterialsDialog onClose={() => {}} />);
-    expect(screen.getByLabelText("φ (°)")).toBeInTheDocument();
+    expect(screen.getByLabelText("φ′ (°)")).toBeInTheDocument();
     await userEvent.click(screen.getByRole("cell", { name: "Undrained" }));
-    expect(screen.queryByLabelText("φ (°)")).toBeNull();
+    expect(screen.queryByLabelText("φ′ (°)")).toBeNull();
     expect(screen.getByLabelText("Su (kPa)")).toHaveValue("40");
   });
 
@@ -114,7 +114,7 @@ describe("DefineMaterialsDialog — material list", () => {
   it("renders as a full window with a Close button in window mode", async () => {
     const onClose = vi.fn();
     render(<DefineMaterialsDialog onClose={onClose} mode="window" />);
-    expect(screen.getByRole("heading", { name: "Define Materials" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Define materials" })).toBeInTheDocument();
     await userEvent.click(screen.getByRole("button", { name: "Close" }));
     expect(onClose).toHaveBeenCalledTimes(1);
   });
@@ -123,8 +123,8 @@ describe("DefineMaterialsDialog — material list", () => {
 describe("DefineMaterialsDialog — Mohr-Coulomb fields", () => {
   it("edits γ, φ and c, rejecting negative values", async () => {
     render(<DefineMaterialsDialog onClose={() => {}} />);
-    await setField("φ (°)", "28.5");
-    await setField("c (kPa)", "-3");
+    await setField("φ′ (°)", "28.5");
+    await setField("c′ (kPa)", "-3");
     await setField("γ (kN/m³)", "0");
     expect(model()).toMatchObject({ frictionAngle: 28.5, cohesion: 0, unitWeight: 0.01 });
   });
@@ -136,11 +136,11 @@ describe("DefineMaterialsDialog — Mohr-Coulomb fields", () => {
     expect(mats()[0].modelExpressions).toEqual({ unitWeight: "g+1" });
     expect(gamma.value).toBe("g+1");
     // An unknown name keeps the value and marks the field.
-    const c = await setField("c (kPa)", "nope");
+    const c = await setField("c′ (kPa)", "nope");
     expect(mats()[0].modelExpressions?.cohesion).toBe("nope");
     expect(c.getAttribute("style")).toContain("var(--color-vsc-error)");
     // Clearing the field removes the expression.
-    await setField("c (kPa)", "");
+    await setField("c′ (kPa)", "");
     expect(mats()[0].modelExpressions?.cohesion).toBeUndefined();
   });
 
@@ -190,7 +190,7 @@ describe("DefineMaterialsDialog — switching the model", () => {
   it("resets to the new kind's defaults but keeps γ, γsat and its expression", async () => {
     render(<DefineMaterialsDialog onClose={() => {}} />);
     await setField("γ (kN/m³)", "g");
-    await setField("c (kPa)", "g*2");
+    await setField("c′ (kPa)", "g*2");
     await userEvent.type(screen.getByLabelText("Saturated unit weight"), "22");
     await userEvent.selectOptions(kindSelect(), "undrained");
     expect(model()).toEqual({
@@ -320,7 +320,7 @@ describe("DefineMaterialsDialog — switching the model", () => {
   it("edits the anisotropic modifier table", async () => {
     render(<DefineMaterialsDialog onClose={() => {}} />);
     await userEvent.selectOptions(kindSelect(), "anisotropic-function");
-    await userEvent.click(screen.getByRole("button", { name: "+ Add Row" }));
+    await userEvent.click(screen.getByRole("button", { name: "+ Add row" }));
     const rows = () => (model() as { modifierFunction: [number, number][] }).modifierFunction;
     expect(rows()).toEqual([
       [0, 1],
@@ -342,7 +342,7 @@ describe("DefineMaterialsDialog — switching the model", () => {
     // No errors before the user has entered anything.
     expect(screen.queryByRole("alert", { name: "Validation errors" })).toBeNull();
     expect(screen.getByText("No data points yet: add at least one.")).toBeInTheDocument();
-    await userEvent.click(screen.getByRole("button", { name: "+ Add Row" }));
+    await userEvent.click(screen.getByRole("button", { name: "+ Add row" }));
     const c = screen.getByLabelText("c (kPa) row 1");
     await userEvent.clear(c);
     await userEvent.type(c, "12");
@@ -391,15 +391,15 @@ describe("DefineMaterialsDialog — switching the model", () => {
       expect(screen.getByText(/slip surfaces (passing through|cannot enter) this material/)).toBeInTheDocument();
       await setField("γ (kN/m³)", "23");
       expect(model()).toEqual(expect.objectContaining({ kind, unitWeight: 23 }));
-      expect(screen.queryByLabelText("c (kPa)")).toBeNull();
+      expect(screen.queryByLabelText("c′ (kPa)")).toBeNull();
     },
   );
 
   it("edits strength values of anisotropic and spatial materials", async () => {
     render(<DefineMaterialsDialog onClose={() => {}} />);
     await userEvent.selectOptions(kindSelect(), "anisotropic-function");
-    await setField("φ (°)", "25");
-    await setField("c (kPa)", "4");
+    await setField("φ′ (°)", "25");
+    await setField("c′ (kPa)", "4");
     await setField("γ (kN/m³)", "g");
     expect(model()).toMatchObject({ frictionAngle: 25, cohesion: 4, unitWeight: 19 });
     await userEvent.selectOptions(kindSelect(), "spatial-mohr-coulomb");
@@ -437,7 +437,7 @@ describe("DefineMaterialsDialog — switching the model", () => {
     render(<DefineMaterialsDialog onClose={() => {}} />);
     const alert = screen.getByRole("alert", { name: "Validation errors" });
     expect(alert).toHaveTextContent("Cohesion (c) must be ≥ 0.");
-    expect(screen.getByLabelText("c (kPa)")).toHaveAttribute("aria-invalid", "true");
+    expect(screen.getByLabelText("c′ (kPa)")).toHaveAttribute("aria-invalid", "true");
   });
 });
 
@@ -470,25 +470,42 @@ describe("DefineMaterialsDialog — SHANSEP, shear-normal and B̄", () => {
 
   it("edits B̄ and the fill flag, and keeps them when the model is switched", async () => {
     render(<DefineMaterialsDialog onClose={() => {}} />);
-    await userEvent.type(screen.getByLabelText("B̄ (excess pore pressure from fill)"), "0.8");
-    await userEvent.click(screen.getByLabelText("Weight raises pore pressure below (fill, B̄)"));
+    await userEvent.type(screen.getByLabelText("B̄ (excess pore pressure from fill above)"), "0.8");
+    await userEvent.click(screen.getByLabelText("This material is a fill that loads the B̄ materials below"));
     expect(model()).toMatchObject({ bBar: 0.8, bBarLoad: true });
     await userEvent.selectOptions(kindSelect(), "shansep");
     expect(model()).toMatchObject({ kind: "shansep", bBar: 0.8, bBarLoad: true });
-    await userEvent.clear(screen.getByLabelText("B̄ (excess pore pressure from fill)"));
-    await userEvent.click(screen.getByLabelText("Weight raises pore pressure below (fill, B̄)"));
+    await userEvent.clear(screen.getByLabelText("B̄ (excess pore pressure from fill above)"));
+    await userEvent.click(screen.getByLabelText("This material is a fill that loads the B̄ materials below"));
     expect(model().bBar).toBeUndefined();
     expect(model().bBarLoad).toBeUndefined();
+  });
+
+  it("keeps an out-of-range rᵤ and shows the validation error, as for B̄", async () => {
+    render(<DefineMaterialsDialog onClose={() => {}} />);
+    expect(screen.getByRole("group", { name: "Additional pore pressure (added to the water line)" })).toBeInTheDocument();
+    await userEvent.type(screen.getByLabelText("rᵤ (pore pressure ratio)"), "1.2");
+    expect(model().ru).toBe(1.2);
+    expect(screen.getByRole("alert", { name: "Validation errors" })).toHaveTextContent(/ru|rᵤ/);
+    // Under the field, which is outlined, instead of the range hint.
+    expect(screen.getByLabelText("rᵤ (pore pressure ratio)")).toHaveAttribute("aria-invalid", "true");
+    expect(screen.getByText("rᵤ must be at least 0 and below 1.")).toBeInTheDocument();
+    expect(screen.queryByText("0 to below 1; empty: none")).toBeNull();
+    await userEvent.clear(screen.getByLabelText("rᵤ (pore pressure ratio)"));
+    await userEvent.type(screen.getByLabelText("rᵤ (pore pressure ratio)"), "0.3");
+    expect(model().ru).toBe(0.3);
+    expect(screen.queryByRole("alert", { name: "Validation errors" })).toBeNull();
+    expect(screen.getByText("0 to below 1; empty: none")).toBeInTheDocument();
   });
 
   it("turns on the drawdown (R) envelope of a Mohr-Coulomb material, edits cR and φR, and turns it off", async () => {
     render(<DefineMaterialsDialog onClose={() => {}} />);
     expect(screen.queryByLabelText("cR (kPa)")).toBeNull();
-    await userEvent.click(screen.getByLabelText("Undrained in rapid drawdown (R envelope)"));
+    await userEvent.click(screen.getByLabelText("Drawdown strength (R envelope, cR, φR)"));
     await setField("cR (kPa)", "12");
     await setField("φR (°)", "16");
     expect(model()).toMatchObject({ kind: "mohr-coulomb", drawdownStrength: { cohesion: 12, frictionAngle: 16 } });
-    await userEvent.click(screen.getByLabelText("Undrained in rapid drawdown (R envelope)"));
+    await userEvent.click(screen.getByLabelText("Drawdown strength (R envelope, cR, φR)"));
     const m = model();
     expect(m.kind === "mohr-coulomb" ? m.drawdownStrength : undefined).toBeUndefined();
     expect(screen.queryByLabelText("cR (kPa)")).toBeNull();

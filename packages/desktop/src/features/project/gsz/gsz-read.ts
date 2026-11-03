@@ -197,9 +197,15 @@ export interface GszFile {
   results: Map<string, GszSlipResult[]>;
 }
 
+/** The child elements, by walking the siblings (an element's `children` list can be slow to index for long lists). */
+const elements = (el: Element): Element[] => {
+  const out: Element[] = [];
+  for (let c = el.firstElementChild; c; c = c.nextElementSibling) out.push(c);
+  return out;
+};
 const childText = (el: Element | null | undefined, tag: string): string | undefined => {
   if (!el) return undefined;
-  for (const c of Array.from(el.children)) {
+  for (const c of elements(el)) {
     if (c.tagName === tag) {
       if (c.getAttribute("Missing") === "true") return undefined;
       const t = c.textContent?.trim();
@@ -209,10 +215,10 @@ const childText = (el: Element | null | undefined, tag: string): string | undefi
   return undefined;
 };
 const child = (el: Element | null | undefined, tag: string): Element | null =>
-  el ? (Array.from(el.children).find((c) => c.tagName === tag) ?? null) : null;
+  el ? (elements(el).find((c) => c.tagName === tag) ?? null) : null;
 const children = (el: Element | null | undefined, path: string): Element[] => {
   let level: Element[] = el ? [el] : [];
-  for (const tag of path.split("/")) level = level.flatMap((e) => Array.from(e.children).filter((c) => c.tagName === tag));
+  for (const tag of path.split("/")) level = level.flatMap((e) => elements(e).filter((c) => c.tagName === tag));
   return level;
 };
 const num = (s: string | null | undefined): number | undefined => {

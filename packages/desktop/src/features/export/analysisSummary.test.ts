@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { DEFAULT_ANALYSIS_OPTIONS, type AnalysisResult } from "@cslope/engine";
 import { buildAnalysisSummary, methodText, strengthText, type AnalysisSummaryInput } from "./analysisSummary";
+import { pdfSafeText } from "../pdf/pdf-summary";
 import { DEFAULT_ANALYSIS_LIMITS, DEFAULT_MATERIAL } from "../../store/defaults";
 
 const RESULT = {
@@ -47,6 +48,16 @@ describe("analysis summary", () => {
     expect(section(buildAnalysisSummary(input()), "3D effects (SGI Vägledning 8)")).toBeUndefined();
   });
 
+
+  it("lists the seismic coefficients, with a real minus sign", () => {
+    const s = buildAnalysisSummary(input({ options: { ...DEFAULT_ANALYSIS_OPTIONS, seismicHorizontal: 0.1, seismicVertical: -0.05 } }));
+    expect(value(s, "Loads and structures", "Seismic (pseudostatic)")).toBe("kh = 0.1 (+ in the sliding direction), kv = −0.05 (+ downward)");
+    expect(section(buildAnalysisSummary(input()), "Loads and structures")).toBeUndefined();
+  });
+
+  it("writes B̄ and rᵤ as the PDF font can print them", () => {
+    expect(pdfSafeText("B̄ = 0.5; rᵤ = 0.2")).toBe("B-bar = 0.5; ru = 0.2");
+  });
 
   it("states the result, the method and characteristic values", () => {
     const s = buildAnalysisSummary(input());

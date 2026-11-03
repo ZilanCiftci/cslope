@@ -331,6 +331,9 @@ function normalizeModelEntry(raw: unknown): ModelEntry {
     // Imported from .stix files; absent in older files (none).
     ...normalizeWaternet(model.waternet),
     ...normalizeEarlierStage(model.earlierStage),
+    ...(Array.isArray(model.importNotes)
+      ? { importNotes: (model.importNotes as unknown[]).filter((n): n is string => typeof n === "string") }
+      : {}),
     resultViewSettings: normalizeResultView(model.resultViewSettings),
     viewOffset: pointOrUndefined(model.viewOffset),
     viewScale: positiveOrUndefined(model.viewScale),
@@ -401,18 +404,82 @@ function normalizeEarlierStage(raw: unknown): Pick<ModelEntry, "earlierStage"> {
   delete stage.earlierStage; // one stage back only
   if (stage.materialBoundaries !== undefined) {
     stage.materialBoundaries = Array.isArray(stage.materialBoundaries)
-      ? (stage.materialBoundaries as { coordinates?: unknown }[]).map((b) => ({ coordinates: normalizePoints(b?.coordinates), materialName: "" })).filter((b) => b.coordinates.length >= 2)
+      ? (stage.materialBoundaries as { coordinates?: unknown; materialName?: unknown }[]).map((b) => ({ coordinates: normalizePoints(b?.coordinates), materialName: typeof b?.materialName === "string" && materials.some((m) => m.name === b.materialName) ? b.materialName : "" })).filter((b) => b.coordinates.length >= 2)
       : [];
   }
+  // Assignments and loads may only name the materials kept.
+  const names = new Set(materials.map((m) => m.name));
   if (stage.regionAssignments !== undefined) {
     stage.regionAssignments = Array.isArray(stage.regionAssignments)
       ? (stage.regionAssignments as { point?: unknown; materialName?: unknown }[]).flatMap((a) => {
           const point = pointOrUndefined(a?.point);
-          return point && typeof a.materialName === "string" ? [{ point, materialName: a.materialName }] : [];
+          return point && typeof a.materialName === "string" && names.has(a.materialName)
+            ? [{ point, materialName: a.materialName }]
+            : [];
         })
       : [];
   }
+  if (stage.topRegionMaterialName !== undefined && !(typeof stage.topRegionMaterialName === "string" && names.has(stage.topRegionMaterialName))) {
+    delete stage.topRegionMaterialName;
+  }
+  const waterTable = normalizeStageWaterTable(stage.waterTable);
+  if (waterTable) stage.waterTable = waterTable;
+  else delete stage.waterTable;
+  if (stage.waterTables !== undefined) {
+    stage.waterTables = Array.isArray(stage.waterTables)
+      ? (stage.waterTables as { id?: unknown; coordinates?: unknown; followBoundary?: unknown }[]).flatMap((w) => {
+          const coords = normalizePoints(w?.coordinates);
+          return typeof w?.id === "string" && coords.length >= 2
+            ? [{ id: w.id, coordinates: coords, ...(w.followBoundary === true ? { followBoundary: true } : {}) }]
+            : [];
+        })
+      : [];
+  }
+  if (stage.udls !== undefined) {
+    stage.udls = Array.isArray(stage.udls) ? (stage.udls as unknown[]).flatMap((u) => normalizeStageUdl(u, names)) : [];
+  }
   return { earlierStage: stage as unknown as ModelEntry["earlierStage"] };
+}
+
+type StageDefinition = NonNullable<ModelEntry["earlierStage"]>;
+
+/** An earlier stage's water table (an engine definition's) with finite numbers, or undefined. */
+function normalizeStageWaterTable(raw: unknown): StageDefinition["waterTable"] {
+  if (!raw || typeof raw !== "object") return undefined;
+  const w = raw as Record<string, unknown>;
+  const followBoundary = w.followBoundary === true ? { followBoundary: true } : {};
+  if (w.mode === "custom") {
+    const value = normalizePoints(w.value);
+    return value.length >= 2 ? { mode: "custom", value, ...followBoundary } : undefined;
+  }
+  if ((w.mode === "height" || w.mode === "depth") && typeof w.value === "number" && Number.isFinite(w.value)) {
+    return { mode: w.mode, value: w.value, ...followBoundary };
+  }
+  return undefined;
+}
+
+/** An earlier stage's distributed load (an engine definition's) with finite numbers, or none. */
+function normalizeStageUdl(raw: unknown, materialNames: Set<string>): NonNullable<StageDefinition["udls"]> {
+  if (!raw || typeof raw !== "object") return [];
+  const u = raw as Record<string, unknown>;
+  const finite = (v: unknown): v is number => typeof v === "number" && Number.isFinite(v);
+  if (!finite(u.magnitude) || !finite(u.x1) || !finite(u.x2) || u.x1 === u.x2) return [];
+  const excess = Array.isArray(u.excessPorePressure)
+    ? (u.excessPorePressure as { material?: unknown; ratio?: unknown }[]).flatMap((e) =>
+        e && typeof e.material === "string" && materialNames.has(e.material) && finite(e.ratio) && e.ratio >= 0 && e.ratio <= 1
+          ? [{ material: e.material, ratio: e.ratio }]
+          : [],
+      )
+    : [];
+  return [
+    {
+      magnitude: u.magnitude,
+      x1: u.x1,
+      x2: u.x2,
+      ...(u.direction === "normal" ? { direction: "normal" as const } : {}),
+      ...(excess.length > 0 ? { excessPorePressure: excess } : {}),
+    },
+  ];
 }
 
 /** Keep only finite [x, y] pairs. */
@@ -1040,7 +1107,7 @@ function normalizeExcessPorePressure(raw: unknown): Pick<UdlRow, "excessPorePres
   const entries = raw.flatMap((e: unknown) => {
     const r = e as Record<string, unknown> | null;
     return r && typeof r === "object" && typeof r.materialId === "string" &&
-      typeof r.ratio === "number" && Number.isFinite(r.ratio)
+      typeof r.ratio === "number" && Number.isFinite(r.ratio) && r.ratio >= 0 && r.ratio <= 1
       ? [{ materialId: r.materialId, ratio: r.ratio }]
       : [];
   });

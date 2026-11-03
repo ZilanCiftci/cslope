@@ -173,6 +173,13 @@ export function buildSlope(def: SlopeDefinition): Slope {
 
   // UDLs
   if (def.udls) {
+    def.udls.forEach((u, i) => {
+      for (const e of u.excessPorePressure ?? []) {
+        if (!(Number.isFinite(e.ratio) && e.ratio >= 0 && e.ratio <= 1)) {
+          throw new Error(`Distributed load ${i + 1}: the part of the load carried by excess pore pressure in "${e.material}" must be between 0 and 1.`);
+        }
+      }
+    });
     slope.setUdls(
       ...def.udls.map(
         (u) =>
@@ -278,6 +285,11 @@ export function buildSlope(def: SlopeDefinition): Slope {
       waterTables: [],
       materials: def.materials.map((m) => ({ ...m, waterTableId: undefined })),
       rapidDrawdown: undefined,
+      // the water before drawdown is waterBefore alone (a waternet would
+      // keep the pore pressures after drawdown); the earlier stage only
+      // matters for the slope after drawdown (its SHANSEP bases)
+      waternet: undefined,
+      earlierStage: undefined,
       customSearchPlanes: undefined,
       customSurfaces: undefined,
     });

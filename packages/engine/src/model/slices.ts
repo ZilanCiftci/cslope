@@ -2,7 +2,7 @@
  * Slice creation and generation for slope stability analysis.
  */
 
-import type { GeometryWithMaterial, PartialFactors, Slice } from "../types/index";
+import type { GeometryWithMaterial, PartialFactors, ShansepModel, Slice } from "../types/index";
 import { designStrength, needsLayerTop, resolveStrength, resolveUnitWeight, suctionAngle } from "../types/index";
 import { WATER_UNIT_WEIGHT, SLICE_DEDUP_TOLERANCE } from "../types/constants";
 import {
@@ -19,7 +19,7 @@ import { materialLayerTopAt, polylineYFrom } from "./geometry-ops";
 import { polylineCrossingsX, polylineYAt, type Pt } from "./surface";
 import { floorDipTolerance, floorYAt } from "./composite";
 import { waternetPorePressure } from "./waternet";
-import { applyReinforcement, effectiveVerticalStress } from "./reinforcement";
+import { applyReinforcement, effectiveVerticalStressWithLoads } from "./reinforcement";
 
 // ── createSlice ───────────────────────────────────────────────────
 
@@ -460,6 +460,9 @@ export function createSlice(
   }
   // A waternet gives the pore pressure (the water lines still the phreatic level).
   if (porePressureAt) U = porePressureAt(x, yBottom);
+  // The pore pressure from the water alone, before B-bar and rᵤ add theirs
+  // (the excess pore pressure under loads only acts below the water).
+  const uWater = U;
   // Excess pore pressure from the fill above (B-bar).
   const bBar = baseMaterial.model.bBar;
   if (bBar !== undefined && bBar !== 0 && fillWeight > 0) U += (bBar * fillWeight) / width;
@@ -539,6 +542,7 @@ export function createSlice(
     frictionAngle,
     phi,
     U,
+    ...(U !== uWater ? { uWater } : {}),
     isCombined: strength.isCombined,
     ...(strength.hoekBrown ? { hoekBrown: strength.hoekBrown } : {}),
     ...(strength.shearNormal ? { shearNormal: strength.shearNormal } : {}),
@@ -1247,30 +1251,47 @@ function refreshShansep(s: Slice, earlier: Slope | null = null, porePressureChan
   const fromEarlier = earlier !== null && m.yieldFromEarlierStage === true;
   if (!s.waterLoad && !fromEarlier && !porePressureChanged) return;
   const sv = (s.weight + s.udl + s.ll + (s.waterLoad ?? 0)) / s.width - s.U;
+  const st = shansepStrengthAt(m, s, sv, earlier);
+  s.cohesion = st.cohesion;
+  s.cohesionUndrained = st.cohesionUndrained;
+}
+
+/**
+ * The characteristic strength of a SHANSEP base at the effective vertical
+ * stress sv. With `yieldFromEarlierStage` and an earlier stage, the yield
+ * stress is the earlier stage's effective vertical stress at the base (with
+ * its distributed loads) plus `pop`, OCR at least 1.
+ */
+export function shansepStrengthAt(
+  m: ShansepModel,
+  s: Pick<Slice, "x" | "yBottom" | "yTop" | "alpha">,
+  sv: number,
+  earlier: Slope | null,
+): ReturnType<typeof resolveStrength> {
+  const fromEarlier = earlier !== null && m.yieldFromEarlierStage === true;
   // the yield stress the soil kept from the earlier stage, OCR at least 1
   const model = fromEarlier
-    ? { ...m, pop: undefined, yieldStress: Math.max(effectiveVerticalStress(earlier, s.x, s.yBottom) + (m.pop ?? 0), sv) }
+    ? { ...m, pop: undefined, yieldStress: Math.max(effectiveVerticalStressWithLoads(earlier, s.x, s.yBottom) + (m.pop ?? 0), sv) }
     : m;
-  const st = resolveStrength(model, {
+  return resolveStrength(model, {
     yBottom: s.yBottom,
     x: s.x,
     yGround: s.yTop,
     alpha: s.alpha,
     effectiveVerticalStress: sv,
   });
-  s.cohesion = st.cohesion;
-  s.cohesionUndrained = st.cohesionUndrained;
 }
 
 /**
  * Excess pore pressure at the slice base from loads not yet consolidated
  * in its material: ratio × the mean load over the slice width. Only below
- * the water (a base with pore pressure); above it the soil is not
+ * the water (a base with pore pressure from the water lines or the
+ * waternet, not from rᵤ or B-bar alone); above it the soil is not
  * saturated and the load is carried by the soil skeleton.
  */
 function loadExcessPorePressure(s: Slice, udls: readonly Udl[], loadFactor: number): number {
   const name = s.baseMaterial?.name;
-  if (name === undefined || !(s.width > 0) || !(s.U > 0)) return 0;
+  if (name === undefined || !(s.width > 0) || !((s.uWater ?? s.U) > 0)) return 0;
   let u = 0;
   for (const l of udls) {
     const e = l.excessPorePressure.find((q) => q.material === name);

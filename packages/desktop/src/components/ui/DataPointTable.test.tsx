@@ -80,14 +80,14 @@ describe("DataPointTable", () => {
   it("adds a row copying the last one, or zeros for an empty table", async () => {
     const onRows = vi.fn();
     const { unmount } = render(<Harness initial={[[1, 2]]} onRows={onRows} />);
-    await userEvent.click(screen.getByRole("button", { name: "+ Add Row" }));
+    await userEvent.click(screen.getByRole("button", { name: "+ Add row" }));
     expect(onRows).toHaveBeenLastCalledWith([
       [1, 2],
       [1, 2],
     ]);
     unmount();
     render(<Harness initial={[]} onRows={onRows} />);
-    await userEvent.click(screen.getByRole("button", { name: "+ Add Row" }));
+    await userEvent.click(screen.getByRole("button", { name: "+ Add row" }));
     expect(onRows).toHaveBeenLastCalledWith([[0, 0]]);
   });
 

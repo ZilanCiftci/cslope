@@ -1,12 +1,14 @@
-import { addImportedModels, importEach } from "./importedModels";
+import { addImportedModels, importEach, importError } from "./importedModels";
 import { readSli } from "./sli/sli-read";
 import { sliToDefinition, type SliImport } from "./sli/sli-to-definition";
 
 /** The models of a .sli, .slim or .slmd file (one per scenario) as slope definitions (no store). */
 export async function sliImports(bytes: Uint8Array, fileName: string): Promise<SliImport[]> {
-  const file = await readSli(bytes);
+  const file = await readSli(bytes).catch((e: unknown) => {
+    throw importError(e);
+  });
   if (file.scenarios.length === 0) throw new Error("The file has no model.");
-  return importEach(file.scenarios.length, (i) => sliToDefinition(file, i, fileName));
+  return importEach(file.scenarios.length, (i) => sliToDefinition(file, i, fileName), (i) => (file.scenarios[i].name ? `Scenario "${file.scenarios[i].name}"` : ""));
 }
 
 /**

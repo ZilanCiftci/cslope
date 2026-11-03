@@ -26,7 +26,8 @@ import { PopupPanel } from "../../components/ui/PopupPanel";
 import type { MaterialRow } from "../../store/types";
 import { resolveParameters } from "../../utils/expression";
 import { ImportedDataNotice } from "./ImportedDataNotice";
-import { EARLIER_STAGE_NOTICE } from "./imported-notices";
+import { earlierStageMaterials, earlierStageNoticeText } from "./imported-notices";
+import { strengthParametersText } from "../export/analysisSummary";
 
 // ── Constants ──
 
@@ -147,6 +148,11 @@ export function DefineMaterialsDialog({ onClose, mode = "popup" }: Props) {
   };
 
   const model = selected ? getModel(selected) : undefined;
+  // Materials whose yield stress comes from the earlier stage (tagged in the list).
+  const stageIds = useMemo(
+    () => new Set(earlierStage ? earlierStageMaterials(materials).map((m) => m.id) : []),
+    [earlierStage, materials],
+  );
   const parameterValues = useMemo(
     () => resolveParameters(parameters).resolved,
     [parameters],
@@ -176,8 +182,9 @@ export function DefineMaterialsDialog({ onClose, mode = "popup" }: Props) {
       {earlierStage && (
         <ImportedDataNotice
           testId="earlier-stage-notice"
-          text={EARLIER_STAGE_NOTICE}
+          text={earlierStageNoticeText(materials)}
           buttonLabel="Remove earlier stage"
+          buttonAriaLabel="Remove the imported earlier stage"
           onRemove={removeEarlierStage}
         />
       )}
@@ -248,6 +255,19 @@ export function DefineMaterialsDialog({ onClose, mode = "popup" }: Props) {
                     </td>
                     <td className="px-2 py-1.5">
                       {MATERIAL_MODEL_LABELS[getModel(mat).kind]}
+                      {stageIds.has(mat.id) && (
+                        <span
+                          className="ml-1.5 px-1 rounded text-[10px]"
+                          style={{
+                            border: "1px solid var(--color-vsc-border)",
+                            color: "var(--color-vsc-text)",
+                          }}
+                          title="Its yield stress comes from the imported earlier stage"
+                          data-testid="stage-tag"
+                        >
+                          stage
+                        </span>
+                      )}
                     </td>
                     <td className="px-2 py-1 text-center">
                       <input
@@ -336,8 +356,11 @@ export function DefineMaterialsDialog({ onClose, mode = "popup" }: Props) {
               onChange={(patch) => patchModel(selected.id, model, patch)}
             />
 
-            {/* Imported settings the form does not edit (kept on edits) */}
-            <ImportedModelNotes model={model} />
+            {/* Imported strength above the water line (kept on edits) */}
+            <AboveWaterStrength
+              model={model}
+              onRemove={() => patchModel(selected.id, model, { aboveWater: undefined })}
+            />
 
             {/* Inline validation errors */}
             {freshKindId !== selected.id && <ValidationErrors model={model} />}
@@ -357,7 +380,7 @@ export function DefineMaterialsDialog({ onClose, mode = "popup" }: Props) {
         }}
       >
         <div className="pb-2">
-          <h2 className="text-[12px] font-semibold">Define Materials</h2>
+          <h2 className="text-[12px] font-semibold">Define materials</h2>
         </div>
         <div className="flex-1 overflow-y-auto space-y-3 pr-1">{body}</div>
         <div
@@ -382,7 +405,7 @@ export function DefineMaterialsDialog({ onClose, mode = "popup" }: Props) {
 
   return (
     <PopupPanel
-      title="Define Materials"
+      title="Define materials"
       onClose={onClose}
       width={560}
       maxHeight="85vh"
@@ -574,39 +597,50 @@ function ModelFields({
 }
 
 /**
- * Read-only lines for model settings that come from imported files and
- * have no fields here: a separate strength above the water line and the
- * SHANSEP stress history. Editing other fields keeps them.
+ * A separate strength above the water line, from an imported file: shown
+ * read-only (the form edits the strength below it), with a button that
+ * removes it so that one strength applies throughout. Editing other fields
+ * keeps it.
  */
-function importedModelNotes(model: MaterialModel): string[] {
-  const notes: string[] = [];
-  if (model.aboveWater) {
-    notes.push(
-      `Separate strength above the water line: ${MATERIAL_MODEL_LABELS[model.aboveWater.kind]} (imported; not editable here).`,
-    );
-  }
-  if (model.kind === "shansep") {
-    const fmt = (v: number) => String(Number(v.toFixed(4)));
-    const history = model.yieldFromEarlierStage
-      ? `yield stress from the earlier stage${model.pop ? ` + POP ${fmt(model.pop)} kPa` : ""}`
-      : model.pop !== undefined
-        ? `POP ${fmt(model.pop)} kPa`
-        : model.yieldStress !== undefined
-          ? `yield stress ${fmt(model.yieldStress)} kPa`
-          : null;
-    if (history) notes.push(`Stress history: ${history}, instead of OCR (imported; not editable here).`);
-  }
-  return notes;
-}
-
-function ImportedModelNotes({ model }: { model: MaterialModel }) {
-  const notes = importedModelNotes(model);
-  if (notes.length === 0) return null;
+function AboveWaterStrength({ model, onRemove }: { model: MaterialModel; onRemove: () => void }) {
+  const above = model.aboveWater;
+  if (!above) return null;
+  // The summary text writes primes as apostrophes (for the PDF font).
+  const params = strengthParametersText(above).replace(/'/g, "′");
   return (
-    <div className="text-[10px] opacity-70 space-y-0.5" data-testid="imported-model-notes">
-      {notes.map((n) => (
-        <div key={n}>{n}</div>
-      ))}
+    <div
+      role="group"
+      aria-label="Strength above the water line"
+      data-testid="above-water-strength"
+      className="flex items-start gap-2 p-2 rounded text-[11px]"
+      style={{
+        color: "var(--color-vsc-text)",
+        border: "1px solid var(--color-vsc-border)",
+      }}
+    >
+      <div className="flex-1 space-y-0.5">
+        <div className="font-medium">
+          Strength above the water line (imported): {MATERIAL_MODEL_LABELS[above.kind]}
+        </div>
+        <div>{params}</div>
+        <div style={{ color: "var(--color-vsc-text-muted)" }}>
+          Not editable here; the fields above set the strength below the water line.
+        </div>
+      </div>
+      <button
+        type="button"
+        onClick={onRemove}
+        className="px-2 py-0.5 text-[11px] font-medium rounded border cursor-pointer flex-shrink-0"
+        style={{
+          background: "var(--color-vsc-surface-tint)",
+          color: "var(--color-vsc-text)",
+          borderColor: "var(--color-vsc-border)",
+        }}
+        title="Use one strength throughout (the fields above)"
+        aria-label="Remove the strength above the water line"
+      >
+        Remove
+      </button>
     </div>
   );
 }

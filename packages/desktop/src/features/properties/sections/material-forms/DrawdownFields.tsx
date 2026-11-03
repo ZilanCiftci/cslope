@@ -26,7 +26,7 @@ export function DrawdownFields({ drawdownStrength, cohesion, frictionAngle, onCh
     <div className="flex flex-col gap-1">
       <label
         className="flex items-center gap-1.5"
-        title="The soil does not drain during a rapid drawdown: with a rapid drawdown analysis it takes the undrained strength of the three-stage procedure, from its drawdown (R) envelope. Off: free-draining."
+        title="The soil does not drain during a rapid drawdown: with a rapid drawdown analysis it takes the undrained strength of the three-stage procedure, from its drawdown strength (R envelope, cR, φR). Off: free-draining."
       >
         <input
           type="checkbox"
@@ -38,13 +38,13 @@ export function DrawdownFields({ drawdownStrength, cohesion, frictionAngle, onCh
                 : undefined,
             })
           }
-          aria-label="Undrained in rapid drawdown (R envelope)"
+          aria-label="Drawdown strength (R envelope, cR, φR)"
         />
-        <Label>Undrained in rapid drawdown (R envelope)</Label>
+        <Label>Drawdown strength (R envelope, cR, φR)</Label>
       </label>
       {r && (
         <div className="grid grid-cols-2 gap-2" aria-label="Drawdown envelope (R)">
-          <label className="flex flex-col gap-0.5" title="Cohesion intercept of the drawdown (R) envelope.">
+          <label className="flex flex-col gap-0.5" title="Cohesion intercept cR of the drawdown strength (R envelope).">
             <Label>cR (kPa)</Label>
             <DraftNumberInput
               value={r.cohesion}
@@ -56,7 +56,7 @@ export function DrawdownFields({ drawdownStrength, cohesion, frictionAngle, onCh
               aria-label="cR (kPa)"
             />
           </label>
-          <label className="flex flex-col gap-0.5" title="Friction angle of the drawdown (R) envelope, 0° to 90°.">
+          <label className="flex flex-col gap-0.5" title="Friction angle φR of the drawdown strength (R envelope), 0° to 90°.">
             <Label>φR (°)</Label>
             <DraftNumberInput
               value={r.frictionAngle}

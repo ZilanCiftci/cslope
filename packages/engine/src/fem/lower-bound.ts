@@ -41,7 +41,7 @@
 
 import { WATER_UNIT_WEIGHT } from "../types/constants";
 import type { Slope } from "../model/slope";
-import { buildFeModel, polylineY, type FeModelOptions } from "./model";
+import { buildFeModel, ignoredInputWarnings, polylineY, type FeModelOptions } from "./model";
 import { meanUnitWeight, porePressureAt, reducedStrength, strengthAt, surfaceLineLoads } from "./limit-common";
 import {
   affine, loadClarabel, ProgramBuilder, solveClarabel, solveHighs,
@@ -233,7 +233,7 @@ export function lowerBoundProblem(slope: Slope, options: LowerBoundOptions = {})
   // Line loads as strip loads (limit-common.ts) on the model's surface
   // edges, keyed by node pairs; variable loads take γQ.
   const loadFactor = slope.partialFactors?.variableLoad ?? 1;
-  const warnings: string[] = [];
+  const warnings: string[] = ignoredInputWarnings(slope);
   const nKey = xs.length; // key multiplier of the model's node pairs (the model's nodes keep their numbers)
   const lineQ = surfaceLineLoads(slope, model, (a, b) => (a < b ? a * nKey + b : b * nKey + a), warnings);
   /**

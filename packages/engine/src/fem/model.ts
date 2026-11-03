@@ -925,11 +925,38 @@ export function buildFeModel(slope: Slope, options: FeModelOptions = {}): FeMode
     partialFactors: factors,
     gpC0: hoekBrown.size ? gpC.slice() : gpC,
     gpPhi0: hoekBrown.size ? gpPhi.slice() : gpPhi,
-    warnings: [...barWarnings, ...pileWarnings],
+    warnings: [...ignoredInputWarnings(slope), ...barWarnings, ...pileWarnings],
     seepage,
     triangulation: tm,
     sizeField: options.sizeField ?? Object.assign(size, { min: sizeMin }),
   };
+}
+
+/**
+ * Inputs of the limit equilibrium analysis that the finite element
+ * analyses do not take: one warning for each in the slope, so that the
+ * result is not read as including them. Pore pressures come from the
+ * materials' water lines (or the seepage), strengths from the materials'
+ * own models.
+ */
+export function ignoredInputWarnings(slope: Slope): string[] {
+  const warnings: string[] = [];
+  const materials = new Set(slope.materialGeometries.map((g) => g.material));
+  const named = (pred: (m: Material) => boolean) =>
+    [...materials].filter(pred).map((m) => m.name || "unnamed").join(", ");
+  if (slope.waternet) warnings.push("The waternet is not included in the finite element analysis: the pore pressures come from the water tables.");
+  const ru = named((m) => m.model.ru !== undefined && m.model.ru !== 0);
+  if (ru) warnings.push(`The pore pressure ratio rᵤ is not included in the finite element analysis (${ru}).`);
+  const bBar = named((m) => m.model.bBar !== undefined && m.model.bBar !== 0);
+  if (bBar) warnings.push(`The excess pore pressure from fill (B̄) is not included in the finite element analysis (${bBar}).`);
+  const above = named((m) => m.model.aboveWater !== undefined);
+  if (above) warnings.push(`The strength above the water table is not included in the finite element analysis: the material's own strength is used throughout (${above}).`);
+  if (slope.udls.some((u) => u.excessPorePressure.length > 0)) {
+    warnings.push("The excess pore pressure under distributed loads is not included in the finite element analysis.");
+  }
+  if (slope.earlierStage) warnings.push("The earlier stage is not included in the finite element analysis: the yield stress of SHANSEP materials does not come from it.");
+  if (slope.drawdownBefore) warnings.push("Rapid drawdown is not included in the finite element analysis: the slope is analysed with the water after drawdown and the materials' own strengths.");
+  return warnings;
 }
 
 /** Design c (kPa) and φ (rad) of Hoek–Brown rock at a stress (σx, σy, τxy, σz; effective, tension positive). */

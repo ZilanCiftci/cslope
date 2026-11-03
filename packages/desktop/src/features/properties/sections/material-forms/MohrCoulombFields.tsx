@@ -51,7 +51,27 @@ export function MohrCoulombFields({
           onChange={(unitWeightSat) => onChange({ unitWeightSat })}
         />
         <label className="flex flex-col gap-0.5">
-          <Label>φ (°)</Label>
+          <Label>c′ (kPa)</Label>
+          <ExpressionNumericInput
+            value={model.cohesion}
+            expression={modelExpressions?.cohesion}
+            vars={parameterValues}
+            onValueChange={(cohesion) => onChange({ cohesion })}
+            onExpressionChange={(expr) => onExpressionChange("cohesion", expr)}
+            min={0}
+            fallbackValue={0}
+            allowNegative={false}
+            aria-label="c′ (kPa)"
+            aria-invalid={model.cohesion < 0}
+            style={
+              model.cohesion < 0
+                ? { borderColor: "var(--color-vsc-error)" }
+                : undefined
+            }
+          />
+        </label>
+        <label className="flex flex-col gap-0.5">
+          <Label>φ′ (°)</Label>
           <ExpressionNumericInput
             value={model.frictionAngle}
             expression={modelExpressions?.frictionAngle}
@@ -63,30 +83,10 @@ export function MohrCoulombFields({
             min={0}
             fallbackValue={0}
             allowNegative={false}
-            aria-label="φ (°)"
+            aria-label="φ′ (°)"
             aria-invalid={model.frictionAngle < 0}
             style={
               model.frictionAngle < 0
-                ? { borderColor: "var(--color-vsc-error)" }
-                : undefined
-            }
-          />
-        </label>
-        <label className="flex flex-col gap-0.5">
-          <Label>c (kPa)</Label>
-          <ExpressionNumericInput
-            value={model.cohesion}
-            expression={modelExpressions?.cohesion}
-            vars={parameterValues}
-            onValueChange={(cohesion) => onChange({ cohesion })}
-            onExpressionChange={(expr) => onExpressionChange("cohesion", expr)}
-            min={0}
-            fallbackValue={0}
-            allowNegative={false}
-            aria-label="c (kPa)"
-            aria-invalid={model.cohesion < 0}
-            style={
-              model.cohesion < 0
                 ? { borderColor: "var(--color-vsc-error)" }
                 : undefined
             }

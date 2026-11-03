@@ -94,6 +94,10 @@ interface AnalysisStatePayload {
   customPlanesOnly: boolean;
   blockSearchObjects: BlockSearchObject[];
   options: ModelEntry["options"];
+  /** From the main window: the water lines (the Options window sets rapid drawdown on them). */
+  piezometricLine?: PiezometricLineState;
+  /** From the Options window: the water before drawdown; null: none. Missing: not sent. */
+  rapidDrawdown?: PiezometricLineState["rapidDrawdown"] | null;
 }
 
 interface ViewSettingsStatePayload {
@@ -134,6 +138,16 @@ const MODEL_ENTRY_FIELDS = [
  * write it through to the active model entry, and invalidate the analysis
  * result when the analysis inputs actually changed.
  */
+/** The water lines with the given water before drawdown (null: none). */
+function withRapidDrawdown(
+  line: PiezometricLineState,
+  rapidDrawdown: PiezometricLineState["rapidDrawdown"] | null,
+): PiezometricLineState {
+  const { rapidDrawdown: _old, ...rest } = line;
+  void _old;
+  return rapidDrawdown ? { ...rest, rapidDrawdown } : rest;
+}
+
 function applyDialogPatch(patch: Partial<AppState>): void {
   const before = getAnalysisInputSignature(useAppStore.getState());
   useAppStore.setState((s) => {
@@ -681,6 +695,7 @@ function App() {
         parameters: state.parameters,
         coordinates: state.coordinates,
         orientation: state.orientation,
+        materialNames: state.materials.map((m) => ({ id: m.id, name: m.name })),
       });
     };
 
@@ -859,6 +874,7 @@ function App() {
         customPlanesOnly: state.customPlanesOnly,
         blockSearchObjects: state.blockSearchObjects,
         options: state.options,
+        piezometricLine: state.piezometricLine,
       });
     };
 
@@ -875,6 +891,10 @@ function App() {
         customPlanesOnly: next.customPlanesOnly,
         blockSearchObjects: next.blockSearchObjects ?? [],
         options: next.options,
+        // Rapid drawdown, set in the Options window, on the water lines.
+        ...(next.rapidDrawdown !== undefined
+          ? { piezometricLine: withRapidDrawdown(useAppStore.getState().piezometricLine, next.rapidDrawdown) }
+          : {}),
       });
     };
 
@@ -903,6 +923,7 @@ function App() {
       customPlanesOnly,
       blockSearchObjects,
       options,
+      piezometricLine,
     });
   }, [
     coordinates,
@@ -912,6 +933,7 @@ function App() {
     customPlanesOnly,
     blockSearchObjects,
     options,
+    piezometricLine,
     isAnyDialogWindow,
   ]);
 

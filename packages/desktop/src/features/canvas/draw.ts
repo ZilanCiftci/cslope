@@ -136,6 +136,11 @@ import {
   type Seg,
 } from "./label-layout";
 
+/** Imported head lines (teal, apart from the blue water lines). */
+const HEAD_LINE_COLOR = "#00897b";
+/** Imported reference lines (drawn faintly). */
+const REFERENCE_LINE_COLOR = "#78909c";
+
 const arcPointCache = new WeakMap<object, Map<string, [number, number][]>>();
 
 /** A vertex coordinate label waiting to be placed. */
@@ -1469,22 +1474,47 @@ export function drawCanvas(
     ctx.textBaseline = "alphabetic";
     ctx.textAlign = "left";
   }
-  // Imported head lines: thin and dashed, in the water colour.
+  // Imported head and reference lines: unlike the water lines and the
+  // drawdown line (blue, long dashes), head lines are teal and dash-dotted
+  // with a label at their right end; reference lines are faint and dotted.
   if (waternet) {
-    ctx.strokeStyle = PIEZO_COLOR.hex;
-    ctx.lineWidth = 1 * paperZoom;
-    ctx.setLineDash([4 * paperZoom, 4 * paperZoom]);
-    for (const head of waternet.headLines) {
-      if (head.points.length < 2) continue;
+    const path = (points: [number, number][]) => {
       ctx.beginPath();
-      head.points.forEach(([x, y], i) => {
+      points.forEach(([x, y], i) => {
         const [px, py] = worldToCanvas(x, y, w, h);
         if (i === 0) ctx.moveTo(px, py);
         else ctx.lineTo(px, py);
       });
       ctx.stroke();
-    }
+    };
+    ctx.save();
+    ctx.globalAlpha = 0.45;
+    ctx.strokeStyle = REFERENCE_LINE_COLOR;
+    ctx.lineWidth = 1 * paperZoom;
+    ctx.setLineDash([1.5 * paperZoom, 3 * paperZoom]);
+    for (const ref of waternet.referenceLines) if (ref.points.length >= 2) path(ref.points);
+    ctx.restore();
+
+    ctx.strokeStyle = HEAD_LINE_COLOR;
+    ctx.lineWidth = 1.2 * paperZoom;
+    ctx.setLineDash([8 * paperZoom, 3 * paperZoom, 2 * paperZoom, 3 * paperZoom]);
+    waternet.headLines.forEach((head) => {
+      if (head.points.length >= 2) path(head.points);
+    });
     ctx.setLineDash([]);
+    ctx.fillStyle = HEAD_LINE_COLOR;
+    ctx.font = `${9 * paperZoom}px 'Segoe UI', sans-serif`;
+    // Below the line, clear of the "before drawdown" label above its line.
+    ctx.textAlign = "right";
+    ctx.textBaseline = "top";
+    waternet.headLines.forEach((head, i) => {
+      if (head.points.length < 2) return;
+      const pts = head.points.map(([x, y]) => worldToCanvas(x, y, w, h));
+      const [lx, ly] = pts.reduce((a, b) => (b[0] > a[0] ? b : a));
+      ctx.fillText(`head line ${i + 1}`, lx - 2 * paperZoom, ly + 2 * paperZoom);
+    });
+    ctx.textBaseline = "alphabetic";
+    ctx.textAlign = "left";
   }
   if (piezometricLine.lines.length > 0) {
     const multiLine = piezometricLine.lines.length > 1;

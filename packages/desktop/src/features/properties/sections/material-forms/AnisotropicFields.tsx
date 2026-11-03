@@ -53,7 +53,21 @@ export function AnisotropicFields({
           onChange={(unitWeightSat) => onChange({ unitWeightSat })}
         />
         <label className="flex flex-col gap-0.5">
-          <Label>φ (°)</Label>
+          <Label>c′ (kPa)</Label>
+          <ExpressionNumericInput
+            value={model.cohesion}
+            expression={modelExpressions?.cohesion}
+            vars={parameterValues}
+            onValueChange={(cohesion) => onChange({ cohesion })}
+            onExpressionChange={(expr) => onExpressionChange("cohesion", expr)}
+            min={0}
+            fallbackValue={0}
+            allowNegative={false}
+            aria-label="c′ (kPa)"
+          />
+        </label>
+        <label className="flex flex-col gap-0.5">
+          <Label>φ′ (°)</Label>
           <ExpressionNumericInput
             value={model.frictionAngle}
             expression={modelExpressions?.frictionAngle}
@@ -65,21 +79,7 @@ export function AnisotropicFields({
             min={0}
             fallbackValue={0}
             allowNegative={false}
-            aria-label="φ (°)"
-          />
-        </label>
-        <label className="flex flex-col gap-0.5">
-          <Label>c (kPa)</Label>
-          <ExpressionNumericInput
-            value={model.cohesion}
-            expression={modelExpressions?.cohesion}
-            vars={parameterValues}
-            onValueChange={(cohesion) => onChange({ cohesion })}
-            onExpressionChange={(expr) => onExpressionChange("cohesion", expr)}
-            min={0}
-            fallbackValue={0}
-            allowNegative={false}
-            aria-label="c (kPa)"
+            aria-label="φ′ (°)"
           />
         </label>
         <SuctionFields

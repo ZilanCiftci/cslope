@@ -7,6 +7,7 @@ import type { MaterialExpressions } from "../../../../store/types";
 import { AnisotropyField } from "./AnisotropyField";
 import { UnitWeightSatField } from "./UnitWeightSatField";
 import { NO_SPINNER } from "./styles";
+import { ocrOverrideText } from "./ocr-override";
 
 interface Props {
   model: ShansepModel;
@@ -32,6 +33,7 @@ function PointTableField({
   value,
   initial,
   onChange,
+  disabled,
 }: {
   label: string;
   title: string;
@@ -39,10 +41,11 @@ function PointTableField({
   value: [number, number][] | undefined;
   initial: () => [number, number][];
   onChange: (points: [number, number][] | undefined) => void;
+  disabled?: boolean;
 }) {
   const on = value !== undefined;
   return (
-    <div className="col-span-2 space-y-1">
+    <fieldset disabled={disabled} className="col-span-2 space-y-1" style={disabled ? { opacity: 0.6 } : undefined}>
       <label className="flex items-center gap-1.5" title={title}>
         <input
           type="checkbox"
@@ -60,6 +63,33 @@ function PointTableField({
           minRows={1}
         />
       )}
+    </fieldset>
+  );
+}
+
+/** The note that the OCR fields do not apply, with a button that clears the stress history. */
+function OcrOverride({ text, onUseOcr }: { text: string; onUseOcr: () => void }) {
+  return (
+    <div
+      role="note"
+      data-testid="ocr-override"
+      className="col-span-2 flex items-center gap-2 text-[11px]"
+      style={{ color: "var(--color-vsc-text)" }}
+    >
+      <span className="flex-1">{text}.</span>
+      <button
+        type="button"
+        onClick={onUseOcr}
+        className="px-2 py-0.5 text-[11px] font-medium rounded border cursor-pointer flex-shrink-0"
+        style={{
+          background: "var(--color-vsc-surface-tint)",
+          color: "var(--color-vsc-text)",
+          borderColor: "var(--color-vsc-border)",
+        }}
+        title="Remove the imported stress history and use the OCR fields"
+      >
+        Use OCR instead
+      </button>
     </div>
   );
 }
@@ -98,6 +128,8 @@ export function ShansepFields({
 }: Props) {
   const byStress = model.suByStress !== undefined;
   const byElevation = model.ocrByElevation !== undefined;
+  // An imported stress history (POP, yield stress, earlier stage) replaces OCR.
+  const override = ocrOverrideText(model);
   return (
     <div className="grid grid-cols-2 gap-2">
       <label className="flex flex-col gap-0.5">
@@ -146,8 +178,14 @@ export function ShansepFields({
               aria-label="m (exponent)"
             />
           </label>
+          {override && (
+            <OcrOverride
+              text={override}
+              onUseOcr={() => onChange({ pop: undefined, yieldStress: undefined, yieldFromEarlierStage: undefined })}
+            />
+          )}
           {!byElevation && (
-            <label className="flex flex-col gap-0.5">
+            <label className="flex flex-col gap-0.5" style={override ? { opacity: 0.6 } : undefined}>
               <Label title="Overconsolidation ratio, constant through the material. Default 1.">OCR</Label>
               <ExpressionNumericInput
                 value={model.ocr ?? 1}
@@ -158,6 +196,7 @@ export function ShansepFields({
                 min={0.01}
                 fallbackValue={1}
                 allowNegative={false}
+                disabled={override !== null}
                 aria-label="OCR"
               />
             </label>
@@ -173,6 +212,7 @@ export function ShansepFields({
               [10, model.ocr ?? 1],
             ]}
             onChange={(ocrByElevation) => onChange({ ocrByElevation })}
+            disabled={override !== null}
           />
         </>
       )}

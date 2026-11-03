@@ -44,6 +44,13 @@ function normalizePiezoPayload(
   return payload;
 }
 
+/** The line about rapid drawdown: these lines are the water after it. */
+function rapidDrawdownNote(before: [number, number][]): string {
+  const ys = before.map((p) => p[1]);
+  const level = ys.every((y) => y === ys[0]) ? `level y = ${Number(ys[0].toFixed(3))} m` : `an imported line (${before.length} points)`;
+  return `Rapid drawdown: water before drawdown at ${level}; the lines below are the water after drawdown (set in Options › Rapid drawdown).`;
+}
+
 export function PiezoDialogApp() {
   const pl = useAppStore((s) => s.piezometricLine);
   const materials = useAppStore((s) => s.materials);
@@ -255,16 +262,22 @@ export function PiezoDialogApp() {
       }}
     >
       <div className="pb-2">
-        <h2 className="text-[12px] font-semibold">Piezometric Lines</h2>
+        <h2 className="text-[12px] font-semibold">Piezometric lines</h2>
       </div>
       <div className="flex-1 overflow-y-auto space-y-3 pr-1">
         {waternet && (
           <ImportedDataNotice
             testId="waternet-notice"
             text={waternetNoticeText(waternet)}
-            buttonLabel="Remove"
+            buttonLabel="Remove head lines"
+            buttonAriaLabel="Remove the imported head and reference lines"
             onRemove={removeWaternet}
           />
+        )}
+        {pl.rapidDrawdown && pl.rapidDrawdown.waterBefore.length >= 2 && (
+          <div role="note" data-testid="drawdown-note" className="text-[11px]">
+            {rapidDrawdownNote(pl.rapidDrawdown.waterBefore)}
+          </div>
         )}
 
         {/* ── Line list table + Add/Delete buttons ── */}
@@ -369,7 +382,7 @@ export function PiezoDialogApp() {
               className="text-[11px] cursor-pointer hover:underline font-medium"
               style={{ color: "var(--color-vsc-accent)" }}
             >
-              + Add Point
+              + Add point
             </button>
           </div>
         ) : (

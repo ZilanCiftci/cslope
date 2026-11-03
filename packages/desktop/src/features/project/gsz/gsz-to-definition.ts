@@ -182,12 +182,17 @@ function lineYAt(line: Pt[], x: number): number | null {
   return null;
 }
 
+/** The most soil regions (or layers) of an analysis that are imported. */
+export const MAX_REGIONS = 1000;
+
 /**
  * Outline and interior boundaries of a set of regions that share corner
  * points: an edge used by one region is on the outline, one shared by two
  * is a boundary between materials.
  */
 export function regionsToGeometry(polys: { id: number; pts: number[] }[], points: Map<number, Pt>, notes: string[]) {
+  // (each region becomes a boundary, and the time to build the model grows with their square)
+  if (polys.length > MAX_REGIONS) throw new Error(`The model has ${polys.length} soil regions; at most ${MAX_REGIONS} can be imported.`);
   const tol = 1e-6 * Math.max(1, ...[...points.values()].map(([x, y]) => Math.max(Math.abs(x), Math.abs(y))));
   // corner points of other regions that lie on an edge (T-junctions) become corners of that edge too
   const used = [...new Set(polys.flatMap((p) => p.pts))];
@@ -491,6 +496,11 @@ export function gszToDefinition(file: GszFile, analysisId: number, fileName = "g
   const unassigned = geometry.regions.size - soil.length;
   if (unassigned > 0) notes.push(`${unassigned} region${unassigned === 1 ? "" : "s"} without a material in this analysis left out.`);
   const points = new Map([...geometry.points].map(([k, p]) => [k, L(p)] as [number, Pt]));
+  for (const r of soil) {
+    const missing = r.pts.find((id) => !points.has(id));
+    if (missing !== undefined) throw new Error(`Analysis "${analysis.name}": region ${r.id} refers to ${Number.isFinite(missing) ? `point ${missing}, which the file does not give` : "a point that is not a number"}.`);
+    if (r.pts.length < 3) throw new Error(`Analysis "${analysis.name}": region ${r.id} has fewer than three points.`);
+  }
   const geo = regionsToGeometry(soil, points, notes);
 
   // materials: those the analysis uses, by unique name
@@ -521,7 +531,8 @@ export function gszToDefinition(file: GszFile, analysisId: number, fileName = "g
     if (l[l.length - 1][0] < x1) l.push([x1, l[l.length - 1][1]]);
     return l;
   };
-  const piezo = stab?.piezometric ?? new Map<number, Pt[]>();
+  // (a line without points, e.g. one whose points are missing, gives no water)
+  const piezo = new Map([...(stab?.piezometric ?? [])].filter(([, line]) => line.length > 0));
   let waterTable: SlopeDefinition["waterTable"];
   const waterTables: NonNullable<SlopeDefinition["waterTables"]> = [];
   const waterIdOf = new Map<number, string>();
@@ -571,7 +582,7 @@ export function gszToDefinition(file: GszFile, analysisId: number, fileName = "g
     return { ...(value !== undefined ? { bBar: value } : {}), ...(b.included ? { bBarLoad: true as const } : {}) };
   };
   if (/bbar/i.test(waterOption) && [...(stab?.bBar?.values() ?? [])].some((b) => b.fn !== undefined && b.value === undefined)) {
-    notes.push("B-bar pore pressure: the excess pore pressure is B̄ = 1 times the weight of the included fill above (the file names a B-bar function without its points).");
+    notes.push("B̄ pore pressure: the excess pore pressure is B̄ = 1 times the weight of the included fill above (the file names a B̄ function without its points).");
   }
 
   // Rapid drawdown (three-stage): the materials' line is the water before
@@ -822,5 +833,5 @@ export function gszToDefinition(file: GszFile, analysisId: number, fileName = "g
     ...(blockSearchObjects ? { blockSearchObjects } : {}),
   } as SlopeDefinition;
   const base = fileName.replace(/\.gsz$/i, "");
-  return { name: stabilityAnalyses(file).length > 1 ? `${base} – ${analysis.name}` : base, definition, options, notes, reference };
+  return { name: stabilityAnalyses(file).length > 1 ? `${analysis.name} (${base})` : base, definition, options, notes, reference };
 }

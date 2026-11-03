@@ -71,7 +71,7 @@ export function GeometryDialogApp() {
       }}
     >
       <div className="pb-2">
-        <h2 className="text-[12px] font-semibold">Exterior Boundary</h2>
+        <h2 className="text-[12px] font-semibold">Exterior boundary</h2>
       </div>
       <div className="flex-1 overflow-y-auto pr-1">
         <GeometrySection plain />

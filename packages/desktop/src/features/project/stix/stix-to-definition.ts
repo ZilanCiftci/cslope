@@ -11,7 +11,7 @@
 
 import { waternetPorePressure, type AnalysisOptions, type MaterialModel, type SlopeDefinition } from "@cslope/engine";
 import { regionInteriorPoint } from "../../../utils/regions";
-import { regionsToGeometry } from "../gsz/gsz-to-definition";
+import { MAX_REGIONS, regionsToGeometry } from "../gsz/gsz-to-definition";
 import { num, pts, type Pt, type StixCalculation, type StixFile, type StixStage } from "./stix-read";
 
 type Json = Record<string, unknown>;
@@ -74,12 +74,12 @@ function pointInRegion(ring: Pt[], holes: Pt[][]): Pt {
 }
 
 /** The state (POP, OCR or yield stress) of a layer, from its state point or the nearest state line. */
-function layerState(state: Json | undefined, layerId: string, centroid: Pt, notes: string[], svAt?: (p: Pt) => number): Json | undefined {
+function layerState(state: Json | undefined, layerId: string, centroid: Pt, notes: string[], svAt?: (p: Pt) => number, layerLabel = layerId): Json | undefined {
   const points = ((state?.StatePoints as Json[] | undefined) ?? []).filter((p) => p.LayerId === layerId);
   if (points.length > 0) {
     const s = points.map((p) => p.Stress as Json);
     const key = (x: Json) => `${x.StateType}:${x.Pop}:${x.Ocr}:${x.YieldStress}`;
-    if (new Set(s.map(key)).size > 1) notes.push(`Layer ${layerId}: ${s.length} state points with different values; the first is used for the whole layer.`);
+    if (new Set(s.map(key)).size > 1) notes.push(`Layer "${layerLabel}": ${s.length} state points with different values; the first is used for the whole layer.`);
     const at = pts([points[0].Point])[0];
     return at && svAt ? { ...s[0], __sv: svAt(at) } : s[0];
   }
@@ -121,7 +121,7 @@ function strengthModel(soil: Json, type: string, state: Json | undefined, unitWe
     let phi = num(mc.FrictionAngle) ?? 0;
     let c = num(mc.Cohesion) ?? 0;
     if (!(c > 0) && !(phi > 0)) {
-      notes.push(`Soil "${name}": its ${type === "MohrCoulombClassic" ? "Mohr-Coulomb" : "Mohr-Coulomb (advanced)"} strength is c = 0, φ = 0; a placeholder c = 0.001 kPa is used (cSlope needs some strength).`);
+      notes.push(`Material "${name}": its ${type === "MohrCoulombClassic" ? "Mohr-Coulomb" : "Mohr-Coulomb (advanced)"} strength is c = 0, φ = 0; a placeholder c = 0.001 kPa is used (cSlope needs some strength).`);
       return { kind: "mohr-coulomb", unitWeight, cohesion: 0.001, frictionAngle: 0 };
     }
     // the advanced model's dilatancy ψ < φ lowers the strength on the slip
@@ -133,7 +133,7 @@ function strengthModel(soil: Json, type: string, state: Json | undefined, unitWe
       const c0 = c, phi0 = phi;
       c = (c * Math.cos(psi * r) * Math.cos(phi * r)) / k;
       phi = Math.atan((Math.cos(psi * r) * Math.sin(phi * r)) / k) / r;
-      notes.push(`Soil "${name}": the dilatancy ψ = ${psi}° below φ = ${phi0}° reduces the strength (Davis): c = ${c0} → ${+c.toFixed(3)} kPa, φ = ${phi0}° → ${+phi.toFixed(2)}°.`);
+      notes.push(`Material "${name}": the dilatancy ψ = ${psi}° below φ = ${phi0}° reduces the strength (Davis): c = ${c0} → ${+c.toFixed(3)} kPa, φ = ${phi0}° → ${+phi.toFixed(2)}°.`);
     }
     return { kind: "mohr-coulomb", unitWeight, cohesion: c, frictionAngle: phi };
   }
@@ -141,7 +141,7 @@ function strengthModel(soil: Json, type: string, state: Json | undefined, unitWe
     const su = (soil.SuShearStrengthModel ?? {}) as Json;
     const ratio = num(su.ShearStrengthRatio) ?? 0, exponent = num(su.StrengthIncreaseExponent) ?? 1;
     const st = stateOf(state);
-    if (!st) notes.push(`Soil "${name}": no state (POP, OCR or yield stress) for its Su; OCR = 1 is used.`);
+    if (!st) notes.push(`Material "${name}": no state (POP, OCR or yield stress) for its Su; OCR = 1 is used.`);
     return { kind: "shansep", unitWeight, ratio, exponent, ...(st ?? { ocr: 1 }), ...(fromEarlier ? { yieldFromEarlierStage: true } : {}) };
   }
   if (type === "SuTable") {
@@ -155,7 +155,7 @@ function strengthModel(soil: Json, type: string, state: Json | undefined, unitWe
     if (table.length > 0) {
       const m = num(t.StrengthIncreaseExponent) ?? 1;
       const st = stateOf(state);
-      if (st && m !== 0 && !("ocr" in st && st.ocr === 1)) notes.push(`Soil "${name}": the Su table's increase with OCR (exponent ${m}) is not imported; the table's Su is used.`);
+      if (st && m !== 0 && !("ocr" in st && st.ocr === 1)) notes.push(`Material "${name}": the Su table's increase with OCR (exponent ${m}) is not imported; the table's Su is used.`);
       return { kind: "shansep", unitWeight, ratio: 0, suByStress: table };
     }
   }
@@ -169,7 +169,7 @@ function strengthModel(soil: Json, type: string, state: Json | undefined, unitWe
       .sort((a, b) => a[0] - b[0]);
     if (table.length >= 2) return { kind: "shear-normal", unitWeight, points: table };
   }
-  notes.push(`Soil "${name}": the strength model "${type}" is not imported; Mohr-Coulomb with its c′ and φ′ is used.`);
+  notes.push(`Material "${name}": the strength model "${type}" is not imported; Mohr-Coulomb with its c′ and φ′ is used.`);
   const mc = (soil.MohrCoulombAdvancedShearStrengthModel ?? soil.MohrCoulombClassicShearStrengthModel ?? {}) as Json;
   return { kind: "mohr-coulomb", unitWeight, cohesion: num(mc.Cohesion) ?? 0, frictionAngle: num(mc.FrictionAngle) ?? 0 };
 }
@@ -195,6 +195,7 @@ function stagePart(file: StixFile, st: StixStage, notes: string[], inherited?: M
   const popByLabel = new Map<string, number>();
   const layers = ((st.geometry?.Layers as Json[] | undefined) ?? []).filter(Boolean);
   if (layers.length === 0) throw new Error(`Stage "${st.label}" has no geometry.`);
+  if (layers.length > MAX_REGIONS) throw new Error(`Stage "${st.label}" has ${layers.length} layers; at most ${MAX_REGIONS} can be imported.`);
   const soilOfLayer = new Map<string, string>();
   for (const sl of (st.soilLayers?.SoilLayers as Json[] | undefined) ?? []) {
     if (typeof sl.LayerId === "string" && typeof sl.SoilId === "string") soilOfLayer.set(sl.LayerId, sl.SoilId);
@@ -233,14 +234,33 @@ function stagePart(file: StixFile, st: StixStage, notes: string[], inherited?: M
   };
 
   // water: the phreatic line for all materials; head and reference lines as a waternet
-  if (st.waterDefinition === "WaterMesh") notes.push(`Stage "${st.label}" takes its pore pressures from a mesh (a groundwater flow calculation); that is not imported, and the stage's waternet (if any) is used instead.`);
+  if (st.waterDefinition === "WaterMesh") notes.push(`Stage "${st.label}" takes its pore pressures from a mesh (a groundwater flow calculation); that is not imported, and the stage's head and reference lines (if any) are used instead.`);
   const wn = st.waternet;
   const headLines = ((wn?.HeadLines as Json[] | undefined) ?? []).map((h) => ({ id: String(h.Id), points: pts(h.Points).sort((a, b) => a[0] - b[0]) })).filter((h) => h.points.length >= 2);
+  const headLabel = (id: string) => {
+    const h = ((wn?.HeadLines as Json[] | undefined) ?? []).find((l) => String(l.Id) === id);
+    return String(h?.Label ?? id);
+  };
   const refs = ((wn?.ReferenceLines as Json[] | undefined) ?? [])
     .map((r) => ({ points: pts(r.Points).sort((a, b) => a[0] - b[0]), ...(typeof r.TopHeadLineId === "string" ? { topHeadLineId: r.TopHeadLineId } : {}), ...(typeof r.BottomHeadLineId === "string" ? { bottomHeadLineId: r.BottomHeadLineId } : {}) }))
     .filter((r) => r.points.length >= 2);
   const phreaticId = typeof wn?.PhreaticLineId === "string" ? wn.PhreaticLineId : undefined;
-  const phreatic = headLines.find((h) => h.id === phreaticId)?.points;
+  let phreatic = headLines.find((h) => h.id === phreaticId)?.points;
+  if (!phreatic && phreaticId === undefined && headLines.length > 0) {
+    // No phreatic line: the materials would have no water line (so their
+    // strength above the water applied everywhere and γsat went unused).
+    // Take the top head line of the uppermost reference line, else the
+    // first head line.
+    const meanY = (l: Pt[]) => l.reduce((a, p) => a + p[1], 0) / l.length;
+    const top = [...refs]
+      .filter((r) => r.topHeadLineId !== undefined && headLines.some((h) => h.id === r.topHeadLineId))
+      .sort((a, b) => meanY(b.points) - meanY(a.points))[0];
+    const line = headLines.find((h) => h.id === top?.topHeadLineId) ?? headLines[0];
+    phreatic = line.points;
+    notes.push(
+      `Stage "${st.label}" has no phreatic line; the phreatic level (for the saturated unit weight, free water and the strength above the water) is taken from head line "${headLabel(line.id)}"${top ? " (the top head line of the uppermost reference line)" : ""}.`,
+    );
+  }
   const xs = geo.outline.map((p) => p[0]);
   const x0 = Math.min(...xs), x1 = Math.max(...xs);
   const extend = (l: Pt[]): Pt[] => {
@@ -300,7 +320,7 @@ function stagePart(file: StixFile, st: StixStage, notes: string[], inherited?: M
     }
     const holes = holesOf(r.id);
     const centroid = holes.length === 0 ? regionInteriorPoint(r.pts.map((p) => p[0]), r.pts.map((p) => p[1])) : pointInRegion(r.pts, holes);
-    const own = layerState(st.state, String(layer.Id), centroid, notes, svAt);
+    const own = layerState(st.state, String(layer.Id), centroid, notes, svAt, String(layer.Label ?? layer.Id));
     // no state of its own: the stress history of the earlier stage (its yield stresses)
     // (keyed by label and soil, as the format matches a layer to the one of an earlier stage)
     const label = `${String(layer.Label ?? layer.Id)}|${soilId}`;
@@ -350,7 +370,7 @@ function stagePart(file: StixFile, st: StixStage, notes: string[], inherited?: M
     for (const c of consolidations(u)) {
       const material = materialOfLayer.get(String(c.LayerId));
       if (!material) continue;
-      const ratio = 1 - Math.max(0, num(c.Degree) ?? 100) / 100;
+      const ratio = 1 - Math.min(100, Math.max(0, num(c.Degree) ?? 100)) / 100;
       const had = excess.find((e) => e.material === material);
       if (!had) excess.push({ material, ratio });
       else if (Math.abs(had.ratio - ratio) > 1e-9) notes.push(`Material "${material}" has layers with different degrees of consolidation under a uniform load; the first (${(100 * (1 - had.ratio)).toFixed(0)} %) is used.`);
@@ -393,7 +413,7 @@ function stagePart(file: StixFile, st: StixStage, notes: string[], inherited?: M
       if (fills.has(m.name) && !bBarOf.has(m.name)) m.model = { ...m.model, bBarLoad: true } as MaterialModel;
     }
     const list = [...bBarOf].map(([name, b]) => `"${name}" B̄ = ${+b.toFixed(3)}`).join(", ");
-    if (list) notes.push(`Degrees of consolidation below 100 % under the weight of layers are imported as excess pore pressure (B̄ = 1 − the degree): ${list}, from the weight of ${[...fills].map((f) => `"${f}"`).join(", ")} above. cSlope applies it also above the water and from the whole fill above a base (not compared with a file's result yet).`);
+    if (list) notes.push(`Degrees of consolidation below 100 % under the weight of layers are imported as excess pore pressure (B̄ = 1 − the degree): ${list}, from the weight of ${[...fills].map((f) => `"${f}"`).join(", ")} above. cSlope applies it also above the water and from the whole fill above a base; this mapping is approximate, so check the excess pore pressure.`);
     if (mixed) notes.push("Some materials take different degrees of consolidation from different layers above them; the largest excess pore pressure is used.");
   }
   if (consolidations((loads.Earthquake as Json | undefined) ?? {}).length > 0 && (loads.Earthquake as Json | undefined)?.IsEnabled) {
@@ -480,7 +500,7 @@ export function stixToDefinition(file: StixFile, index: number, fileName = "stix
     notes.push("The given Uplift-Van slip plane is not carried over (its result is, when the file has one).");
   }
   if (/BruteForce|Genetic|ParticleSwarm/.test(type)) notes.push(`The file's search (${type}) is not imported; cSlope's own search over the whole slope is used.`);
-  const ctype = String(s.CalculationType ?? "Deterministic");
+  const ctype = typeof s.CalculationType === "string" ? s.CalculationType : "Deterministic";
   if (ctype !== "Deterministic") notes.push(`The ${ctype.toLowerCase()} calculation is imported as a deterministic one with the soils' given values (no partial factors or design values).`);
   if ((num(s.ModelFactorMean) ?? 1) !== 1) notes.push(`The model factor ${num(s.ModelFactorMean)} is not imported.`);
 
@@ -520,5 +540,9 @@ export function stixToDefinition(file: StixFile, index: number, fileName = "stix
     ...(type === "Bishop" ? { customPlanesOnly: true } : {}),
   } as SlopeDefinition;
   const base = fileName.replace(/\.stix$/i, "");
-  return { name: `${base} – ${calc.scenario} – ${calc.label}`, definition, options, notes: [...new Set(notes)], ...(reference ? { reference } : {}) };
+  // A short name, the calculation (and its scenario when needed) and the file; the list shows the whole name on hover.
+  const scenarios = new Set(file.calculations.map((c) => c.scenario));
+  const perScenario = file.calculations.filter((c) => c.scenario === calc.scenario).length;
+  const what = scenarios.size <= 1 ? calc.label : perScenario === 1 ? calc.scenario : `${calc.scenario}, ${calc.label}`;
+  return { name: `${what} (${base})`, definition, options, notes: [...new Set(notes)], ...(reference ? { reference } : {}) };
 }

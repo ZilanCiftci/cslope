@@ -20,7 +20,7 @@
 import type { Slice } from "../types/index";
 import { designStrength, resolveStrength } from "../types/index";
 import type { Slope, SearchPlane } from "./slope";
-import { getSlices } from "./slices";
+import { getSlices, shansepStrengthAt } from "./slices";
 import { analyseBishop, analyseJanbu, analyseMorgensternPrice, solvedEffectiveNormals } from "./solvers";
 
 /**
@@ -91,7 +91,7 @@ export function drawdownStrength(sfc: number, tfc: number, c: number, phiDeg: nu
  */
 export function applyRapidDrawdown(slope: Slope, slices: Slice[], plane: SearchPlane): boolean {
   const before = slope.drawdownBefore;
-  if (!before || !slices.some((s) => rEnvelope(s) || s.baseMaterial?.model.kind === "shansep")) return true;
+  if (!before || !slices.some((s) => rEnvelope(s) || (s.strengthModel ?? s.baseMaterial?.model)?.kind === "shansep")) return true;
   const sb = getSlices(before, plane.lc[0], plane.rc[0], plane.cx, plane.cy, plane.radius, plane.points);
   if (sb.length === 0) return false;
   const factors = slope.partialFactors;
@@ -100,13 +100,17 @@ export function applyRapidDrawdown(slope: Slope, slices: Slice[], plane: SearchP
     while (j < sb.length - 1 && sb[j].xRight < x) j++;
     return j;
   };
-  // undrained SHANSEP: the effective vertical stress before drawdown
+  // undrained SHANSEP: the effective vertical stress before drawdown, as
+  // the slices take it (b.U includes the excess pore pressure under loads;
+  // the slope before drawdown has no seismic load), and the yield stress
+  // from the earlier stage of the slope after drawdown (the slope before
+  // drawdown has none)
   for (const s of slices) {
-    const m = s.baseMaterial?.model;
+    const m = s.strengthModel ?? s.baseMaterial?.model;
     if (m?.kind !== "shansep") continue;
     const b = sb[at(s.x)];
     const sv = (b.weight + b.udl + b.ll + (b.waterLoad ?? 0)) / b.width - b.U;
-    const st = resolveStrength(m, { yBottom: s.yBottom, x: s.x, yGround: s.yTop, alpha: s.alpha, effectiveVerticalStress: sv });
+    const st = shansepStrengthAt(m, s, sv, slope.earlierStage);
     const d = designStrength("shansep", st, factors);
     s.cohesion = d.cohesion;
     s.cohesionUndrained = d.cohesionUndrained;

@@ -119,7 +119,7 @@ describe(".sli import", () => {
         "type: 8 water: 1 wtable: 0 mb: 1.5 s: 0.004 a: 0.51 sigc: 50000 uw: 26",
         "type: 18 water: 1 wtable: 0 uw: 19 shansepA: 0 shansepS: 0.25 shansepm: 0.8 histype: 0 shansepmd: 0 shansepht: 0 shansepcon: 2",
         "type: 15 water: 1 wtable: 0 c: 8 phi: 15 c2: 20 phi2: 30 ang: 0 snowA: 5 snowB: 10 uw: 22 anisoDef: 0",
-        "type: 42 water: 1 wtable: 0 c: 5 phi: 20 uw: 18",
+        "type: 42 water: 1 wtable: 0 c: 5 phi: 20",
       ],
       names: ["Clay", "Clay deep", "Rock", "HB", "Shansep", "Bedded", "Odd"],
       vertices: [[0, 0], [70, 0], [70, 10], [0, 10], [0, 20], [10, 20], [20, 20], [30, 20], [40, 20], [50, 20], [60, 20], [70, 20]],
@@ -162,9 +162,11 @@ describe(".sli import", () => {
     expect(at(-4)).toBeCloseTo(0.5, 6);
     expect(at(7.5)).toBeCloseTo(0.75, 6);
     expect(at(30)).toBeCloseTo(1, 6);
-    expect(m["Odd"]).toEqual({ kind: "mohr-coulomb", unitWeight: 18, cohesion: 5, frictionAngle: 20 });
+    // no unit weight in the file: 20 kN/m³, as the .gsz import
+    expect(m["Odd"]).toEqual({ kind: "mohr-coulomb", unitWeight: 20, cohesion: 5, frictionAngle: 20 });
     const notes = imp.notes.join(" ");
-    expect(notes).toMatch(/"Odd": the strength type 42 is not imported/);
+    expect(notes).toContain('Material "Odd": no unit weight in the file; 20 kN/m³ used.');
+    expect(notes).toMatch(/"Odd": its strength model is an option of the file \(code 42\) that cSlope does not import/);
     expect(notes).toMatch(/"Bedded".*scales c and φ together/);
     // Spencer and GLE: Spencer is used, GLE noted
     expect(imp.options).toMatchObject({ method: "Morgenstern-Price", intersliceFunction: "constant" });
@@ -255,7 +257,7 @@ describe(".sli import", () => {
     expect(file.version).toBe("9.027");
     expect(file.scenarios.map((s) => s.name)).toEqual(["Dry", "Wet"]);
     const [dry, wet] = [0, 1].map((i) => sliToDefinition(file, i, "m.slmd"));
-    expect(dry.name).toBe("m – Dry");
+    expect(dry.name).toBe("Dry (m)");
     expect(dry.definition.materials[0]).toMatchObject({ name: "Clay", color: "#0a141e", model: { cohesion: 10, frictionAngle: 25 } });
     expect(dry.definition.waterTable).toBeUndefined();
     expect(wet.definition.waterTable).toBeDefined();
@@ -512,7 +514,7 @@ describe(".sli review regressions", () => {
     expect(byName.Clay).toMatchObject({ bBar: 1 });
     expect(byName.Fill).toMatchObject({ bBarLoad: true });
     expect(imp.definition.udls?.[0].excessPorePressure).toEqual([{ material: "Clay", ratio: 1 }]);
-    expect(imp.notes.join(" ")).toMatch(/Excess pore pressure \(B-bar\): Clay \(B̄ = 1\)/);
+    expect(imp.notes.join(" ")).toMatch(/Excess pore pressure \(B̄\): Clay \(B̄ = 1\)/);
     // written back: the method, B̄ and the second-stage load
     const def = { ...imp.definition, customSearchPlanes: [{ cx: 24, cy: 18, radius: 13 }], customPlanesOnly: true };
     const opts = { method: "Bishop" as const, slices: 40 };
@@ -523,6 +525,34 @@ describe(".sli review regressions", () => {
     const back = sliToDefinition(parseSli(out), 0, "bbar.sli");
     expect(F(back.definition, back.options)).toBeCloseTo(f0, 6);
     expect(f0).toBeLessThan(F({ ...def, materials: def.materials.map((m) => ({ ...m, model: { ...m.model!, bBar: undefined, bBarLoad: undefined } })), udls: [{ magnitude: 10, x1: 13, x2: 19 }] }, opts));
+  });
+
+  it("marks the fill with stg2: 1 when it writes B̄, and reads only the marked materials as fill when the file marks them", () => {
+    const base = {
+      description: ["  methods: 1", "  water: hu", "  advanced_options: yes", "  advanced_options_type: 1"],
+      names: ["Fill", "Clay", "Drain"],
+      vertices: [[0, 0], [40, 0], [40, 6], [28, 6], [20, 10], [12, 10], [0, 10], [0, 6]] as [number, number][],
+      cells: [[[1, 2, 3], 2], [[1, 3, 8], 3], [[8, 3, 4], 1], [[8, 4, 5], 1], [[8, 5, 6], 1], [[8, 6, 7], 1]] as [number[], number][],
+      extra: "water table:\r\n  vertices: [8,3]\r\n",
+    };
+    const fillOf = (text: string) =>
+      sliToDefinition(parseSli(text), 0, "bbar.sli").definition.materials.filter((m) => (m.model as { bBarLoad?: boolean }).bBarLoad).map((m) => m.name);
+    // marked (as in the format's own B̄ tutorial): only stg2: 1 is fill, a bbar: 0 material without the mark is not
+    const marked = sli({ ...base, materials: ["type: 0 water: 1 wtable: 0 c: 5 phi: 32 uw: 20 stg2: 1 bbar: 0", "type: 0 water: 1 wtable: 1 c: 10 phi: 20 uw: 17 stg2: 0 bbar: 1", "type: 0 water: 1 wtable: 1 c: 1 phi: 35 uw: 20 stg2: 0 bbar: 0"] });
+    expect(fillOf(marked)).toEqual(["Fill"]);
+    // not marked: every bbar: 0 material is fill
+    const unmarked = sli({ ...base, materials: ["type: 0 water: 1 wtable: 0 c: 5 phi: 32 uw: 20 bbar: 0", "type: 0 water: 1 wtable: 1 c: 10 phi: 20 uw: 17 bbar: 1", "type: 0 water: 1 wtable: 1 c: 1 phi: 35 uw: 20 bbar: 0"] });
+    expect(fillOf(unmarked)).toEqual(["Fill", "Drain"]);
+    // written: stg2 1 on the fill only, and read back the same
+    const imp = sliToDefinition(parseSli(marked), 0, "bbar.sli");
+    const { text, notes } = modelToSli(model({ ...imp.definition, customSearchPlanes: [{ cx: 24, cy: 18, radius: 13 }], customPlanesOnly: true }, { method: "Bishop" }));
+    const soil = (k: number) => text.split("\r\n").find((l) => l.startsWith(`  soil${k} = `))!;
+    expect([1, 2, 3].map((k) => soil(k).match(/stg2: (\d) bbar: (\S+)/)!.slice(1))).toEqual([["1", "0"], ["0", "1"], ["0", "0"]]);
+    expect(notes.join(" ")).not.toMatch(/not marked as fill/);
+    expect(fillOf(text)).toEqual(["Fill"]);
+    // without B̄ written, no material is marked
+    const dry = modelToSli(model(dike, { method: "Bishop" })).text;
+    expect(dry.split("\r\n").filter((l) => /^ {2}soil\d+ = /.test(l)).every((l) => / stg2: 0 /.test(l))).toBe(true);
   });
 
   it("writes ru and reads it back with the same factor of safety", () => {

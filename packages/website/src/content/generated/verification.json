@@ -1,10 +1,10 @@
 {
  "summary": {
-  "problems": 179,
-  "results": 389,
+  "problems": 187,
+  "results": 397,
   "publishedValues": 243,
   "problemsWithPublished": 148,
-  "literatureProblems": 169,
+  "literatureProblems": 177,
   "reliabilityQuantities": 26
  },
  "problems": [
@@ -7328,6 +7328,174 @@
     }
    ],
    "note": "The problem comes from a program manual only; no independent value is published."
+  },
+  {
+   "id": "V104a",
+   "title": "Embankment on clay, no excess pore pressure (B-bar tutorial, step 1)",
+   "reference": "Tutorial of a commercial slope stability program: undrained loading by the B-bar method (its tutorial pages and the tutorial's project file).",
+   "literature": true,
+   "commercial": true,
+   "surface": "search",
+   "units": "SI",
+   "published": [],
+   "results": [
+    {
+     "method": "Bishop simplified",
+     "computed": 2.2918,
+     "programs": {
+      "min": 2.3,
+      "max": 2.3
+     }
+    }
+   ],
+   "note": "The problem comes from a program's tutorial only; no independent value is published. The tutorial does not name the method; its project file runs Bishop simplified."
+  },
+  {
+   "id": "V104b",
+   "title": "Embankment on clay, B̄ = 1 from the fill weight (B-bar tutorial, step 2)",
+   "reference": "Tutorial of a commercial slope stability program: undrained loading by the B-bar method (its tutorial pages and the tutorial's project file).",
+   "literature": true,
+   "commercial": true,
+   "surface": "search",
+   "units": "SI",
+   "published": [],
+   "results": [
+    {
+     "method": "Bishop simplified",
+     "computed": 1.7637,
+     "programs": {
+      "min": 1.77,
+      "max": 1.77
+     }
+    }
+   ],
+   "note": "The problem comes from a program's tutorial only; no independent value is published. The tutorial does not name the method; its project file runs Bishop simplified."
+  },
+  {
+   "id": "V104c",
+   "title": "Embankment on clay, B̄ = 1 with a 10 kPa crest load (B-bar tutorial, step 3)",
+   "reference": "Tutorial of a commercial slope stability program: undrained loading by the B-bar method (its tutorial pages and the tutorial's project file).",
+   "literature": true,
+   "commercial": true,
+   "surface": "search",
+   "units": "SI",
+   "published": [],
+   "results": [
+    {
+     "method": "Bishop simplified",
+     "computed": 1.4619,
+     "programs": {
+      "min": 1.47,
+      "max": 1.47
+     }
+    }
+   ],
+   "note": "The problem comes from a program's tutorial only; no independent value is published. The tutorial does not name the method; its project file runs Bishop simplified."
+  },
+  {
+   "id": "V104d",
+   "title": "Embankment on clay, B̄ = 1, crest load and rᵤ = 0.4 in the fill (B-bar tutorial, step 4)",
+   "reference": "Tutorial of a commercial slope stability program: undrained loading by the B-bar method (its tutorial pages and the tutorial's project file).",
+   "literature": true,
+   "commercial": true,
+   "surface": "search",
+   "units": "SI",
+   "published": [],
+   "results": [
+    {
+     "method": "Bishop simplified",
+     "computed": 1.3324,
+     "programs": {
+      "min": 1.33,
+      "max": 1.33
+     }
+    }
+   ],
+   "note": "The problem comes from a program's tutorial only; no independent value is published. The tutorial does not name the method; its project file runs Bishop simplified."
+  },
+  {
+   "id": "V105a",
+   "title": "Dike on soft soil, SHANSEP with POP and yield stress, daily water level",
+   "reference": "Tutorial of a commercial slope stability program (its user manual): a dike on soft soil, stage \"Daily conditions\" and stage \"High Water\". The project file with the program's results is distributed with the program and in the test data of an open-source library.",
+   "literature": true,
+   "commercial": true,
+   "surface": "fixed",
+   "units": "SI",
+   "published": [],
+   "results": [
+    {
+     "method": "Bishop simplified",
+     "computed": 1.2851,
+     "programs": {
+      "min": 1.285,
+      "max": 1.285
+     }
+    }
+   ],
+   "note": "The problem comes from a program's tutorial only; no independent value is published. The checks are on the program's own surfaces, stored with its results in the tutorial's project file."
+  },
+  {
+   "id": "V105b",
+   "title": "Dike on soft soil at high water: waternet, excess pore pressure under load, yield stress from the earlier stage",
+   "reference": "Tutorial of a commercial slope stability program (its user manual): a dike on soft soil, stage \"Daily conditions\" and stage \"High Water\". The project file with the program's results is distributed with the program and in the test data of an open-source library.",
+   "literature": true,
+   "commercial": true,
+   "surface": "fixed",
+   "units": "SI",
+   "published": [],
+   "results": [
+    {
+     "method": "Bishop simplified",
+     "computed": 1.0039,
+     "programs": {
+      "min": 1.004,
+      "max": 1.004
+     }
+    }
+   ],
+   "note": "The problem comes from a program's tutorial only; no independent value is published. The checks are on the program's own surfaces, stored with its results in the tutorial's project file."
+  },
+  {
+   "id": "V105c",
+   "title": "Dike on soft soil at high water, the program's non-circular critical surface",
+   "reference": "Tutorial of a commercial slope stability program (its user manual): a dike on soft soil, stage \"Daily conditions\" and stage \"High Water\". The project file with the program's results is distributed with the program and in the test data of an open-source library.",
+   "literature": true,
+   "commercial": true,
+   "surface": "fixed",
+   "units": "SI",
+   "published": [],
+   "results": [
+    {
+     "method": "Spencer",
+     "computed": 1.0848,
+     "programs": {
+      "min": 1.085,
+      "max": 1.085
+     }
+    }
+   ],
+   "note": "The problem comes from a program's tutorial only; no independent value is published. The checks are on the program's own surfaces, stored with its results in the tutorial's project file."
+  },
+  {
+   "id": "V105d",
+   "title": "Dike on soft soil at high water, deep surface into the aquifer head zone",
+   "reference": "Tutorial of a commercial slope stability program (its user manual): a dike on soft soil, stage \"Daily conditions\" and stage \"High Water\". The project file with the program's results is distributed with the program and in the test data of an open-source library.",
+   "literature": true,
+   "commercial": true,
+   "surface": "fixed",
+   "units": "SI",
+   "published": [],
+   "results": [
+    {
+     "method": "Spencer",
+     "computed": 1.7607,
+     "programs": {
+      "min": 1.761,
+      "max": 1.761
+     }
+    }
+   ],
+   "note": "The problem comes from a program's tutorial only; no independent value is published. The checks are on the program's own surfaces, stored with its results in the tutorial's project file."
   }
  ],
  "reliability": [

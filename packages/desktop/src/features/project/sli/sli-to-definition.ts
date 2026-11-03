@@ -16,6 +16,7 @@
 
 import type { AnalysisOptions, MaterialModel, SlopeDefinition } from "@cslope/engine";
 import { fields, num, vertexLists, type Fields, type Pt, type SliFile, type SliScenario } from "./sli-read";
+import { MAX_REGIONS } from "../gsz/gsz-to-definition";
 
 export interface SliImport {
   name: string;
@@ -444,13 +445,25 @@ interface MaterialContext {
   u: Units;
 }
 
+/**
+ * An option of the file given only by its code, whose meaning cSlope does
+ * not know: "an option of the file (code N) that cSlope does not import".
+ * The notes go on to say what is used instead and to enter it by hand if
+ * needed.
+ */
+function fileOption(code: unknown): string {
+  return `an option of the file (code ${String(code ?? "?")}) that cSlope does not import`;
+}
+
 /** The strength model of one material. */
 function strength(f: Fields, ctx: MaterialContext): MaterialModel {
   const { name, notes } = ctx;
   const type = num(f.type) ?? 0;
   const u = ctx.u;
-  const unitWeight = (num(f.uw) ?? 0) * u.G;
-  if (!(unitWeight > 0)) notes.push(`Material "${name}" has no unit weight in the file; 0 is used.`);
+  const fileWeight = (num(f.uw) ?? 0) * u.G;
+  // (as the .gsz import: a placeholder that keeps the slices' weight)
+  const unitWeight = fileWeight > 0 ? fileWeight : 20;
+  if (!(fileWeight > 0)) notes.push(`Material "${name}": no unit weight in the file; 20 kN/m³ used.`);
   const c = (num(f.c) ?? 0) * u.P, phi = num(f.phi) ?? 0;
   const mc = (cohesion: number, frictionAngle: number): MaterialModel => {
     if (!(cohesion > 0) && !(frictionAngle > 0)) {
@@ -469,7 +482,7 @@ function strength(f: Fields, ctx: MaterialContext): MaterialModel {
         notes.push(`Material "${name}": Su = ${+c.toFixed(3)} kPa increasing by ${+rate.toFixed(4)} kPa/m with depth, measured from the top of the material's layer.`);
         return { kind: "s-f-depth", unitWeight, suRef: c, depthRef: 0, rate, depthReference: "layer-top" };
       }
-      if (ctype !== 0) notes.push(`Material "${name}": the undrained strength type ${ctype} is not known; a constant Su = ${c} kPa is used.`);
+      if (ctype !== 0) notes.push(`Material "${name}": its undrained strength uses ${fileOption(ctype)}; a constant Su = ${c} kPa is used (enter the variation by hand if needed).`);
       return { kind: "undrained", unitWeight, undrainedShearStrength: c };
     }
     case 5: {
@@ -556,11 +569,11 @@ function strength(f: Fields, ctx: MaterialContext): MaterialModel {
         const ocrByElevation = table.map(([x, ocr]): [number, number] => [byElevation ? x * u.L : ctx.top - x * u.L, ocr]).sort((p, q) => p[0] - q[0]);
         return { kind: "shansep", unitWeight, ratio, exponent, ocrByElevation };
       }
-      if ((num(f.histype) ?? 0) !== 0) notes.push(`Material "${name}": the SHANSEP stress history type ${f.histype} is not imported; OCR = 1.`);
+      if ((num(f.histype) ?? 0) !== 0) notes.push(`Material "${name}": its SHANSEP stress history uses ${fileOption(f.histype)}; OCR = 1 is used (enter the OCR by hand if needed).`);
       return { kind: "shansep", unitWeight, ratio, exponent, ocr: 1 };
     }
     default: {
-      notes.push(`Material "${name}": the strength type ${type} is not imported; Mohr-Coulomb with c = ${c}, φ = ${phi} from the file is used.`);
+      notes.push(`Material "${name}": its strength model is ${fileOption(type)}; Mohr-Coulomb with c = ${c}, φ = ${phi} from the file is used (enter the strength by hand if needed).`);
       return mc(c, phi);
     }
   }
@@ -642,6 +655,7 @@ export function sliToDefinition(file: SliFile, index: number, fileName = "model.
   else if (units && units !== "metric") notes.push(`The model is in ${units} units; the numbers are imported as they are (cSlope works in kN, kPa and m).`);
 
   const geo = cellRegions({ vertices: squareSides(sc, notes), cells: sc.cells }, notes);
+  if (geo.regions.length > MAX_REGIONS) throw new Error(`${label} has ${geo.regions.length} soil regions; at most ${MAX_REGIONS} can be imported.`);
   const outline = geo.outline;
   let x0 = Infinity, x1 = -Infinity, y0 = Infinity;
   for (const [x, y] of outline) [x0, x1, y0] = [Math.min(x0, x), Math.max(x1, x), Math.min(y0, y)];
@@ -657,7 +671,7 @@ export function sliToDefinition(file: SliFile, index: number, fileName = "model.
   const drawdownLine = drawdown ? lineOf(sc, drawdown.ids) : undefined;
   const waterUsed = waterMode === "hu";
   if (!waterUsed && waterMode !== "ru") {
-    const what: Record<string, string> = { groundwater: "a finite element groundwater analysis", "total head": "a grid of total heads", "pressure head": "a grid of pressure heads", "pore pressure": "a grid of pore pressures", ru: "ru coefficients" };
+    const what: Record<string, string> = { groundwater: "a finite element groundwater analysis", "total head": "a grid of total heads", "pressure head": "a grid of pressure heads", "pore pressure": "a grid of pore pressures", ru: "rᵤ coefficients" };
     notes.push(`The pore pressures come from ${what[waterMode] ?? `the method "${waterMode}"`}, which is not imported; the model has no pore pressure.`);
   }
   if (waterUsed && (sc.sections.get("pore pressures") ?? []).some((l) => /\bv:/.test(l))) notes.push("The grid of pore pressure points is not imported.");
@@ -673,6 +687,9 @@ export function sliToDefinition(file: SliFile, index: number, fileName = "model.
   const drawdownMaterials: string[] = [];
   const bBarMethod = d("advanced_options") === "yes" && d("advanced_options_type") === "1";
   const bBarMaterials: { name: string; bbar: number }[] = [];
+  // the fill (the load on the B̄ materials): marked stg2: 1 when the file
+  // marks it, else every material with bbar: 0
+  const fillMarked = [...sc.materials.values()].some((m) => m.stg2 !== undefined);
   for (const key of usedKeys) {
     const k = Number(key.replace(/\D/g, ""));
     const f = sc.materials.get(key);
@@ -702,7 +719,7 @@ export function sliToDefinition(file: SliFile, index: number, fileName = "model.
       if (model.kind === "mohr-coulomb" && drawdownLine && ((num(f.rd_cr) ?? 0) > 0 || (num(f.rd_phir) ?? 0) > 0)) {
         model = { ...model, drawdownStrength: { cohesion: (num(f.rd_cr) ?? 0) * u.P, frictionAngle: num(f.rd_phir) ?? 0 } };
         drawdownMaterials.push(name);
-      } else if (drawdownLine) notes.push(`Material "${name}": its undrained strength in rapid drawdown is not imported${(num(f.rd_cr) ?? 0) === 0 && (num(f.rd_phir) ?? 0) === 0 ? " (no R envelope is given; the file's drawdown procedure is not cSlope's)" : ""}.`);
+      } else if (drawdownLine) notes.push(`Material "${name}": its undrained strength in rapid drawdown is not imported${(num(f.rd_cr) ?? 0) === 0 && (num(f.rd_phir) ?? 0) === 0 ? " (no drawdown strength (R envelope, cR, φR) is given; the file's drawdown procedure is not cSlope's)" : ""}.`);
     }
     // B-bar (the excess pore pressure method): the materials with B̄ take
     // B̄ × the weight of the materials without one above them (the fill)
@@ -711,15 +728,16 @@ export function sliToDefinition(file: SliFile, index: number, fileName = "model.
       if (bbar > 0 && bbar <= 1.5) {
         model = { ...model, bBar: bbar } as MaterialModel;
         bBarMaterials.push({ name, bbar });
-      } else if (bbar === 0) model = { ...model, bBarLoad: true } as MaterialModel;
-      else notes.push(`Material "${name}": its B-bar ${bbar} is outside 0–1.5 and is not imported.`);
+      } else if (bbar === 0) {
+        if (!fillMarked || num(f.stg2) === 1) model = { ...model, bBarLoad: true } as MaterialModel;
+      } else notes.push(`Material "${name}": its B̄ ${bbar} is outside 0–1.5 and is not imported.`);
     }
     // (without the method switched on, B-bar values have no effect in the file either)
     // an ru coefficient: the water method ru (the `water` value is ru), or
     // with "with_ru" one on top of the water line's pressure
     const ru = waterMode === "ru" ? num(f.water) ?? 0 : dn("with_ru") !== 0 ? num(f.withru) ?? 0 : 0;
     if (ru > 0 && ru < 1) model = { ...model, ru } as MaterialModel;
-    else if (ru !== 0) notes.push(`Material "${name}": its ru coefficient ${ru} is outside 0–1 and is not imported.`);
+    else if (ru !== 0) notes.push(`Material "${name}": its rᵤ ${ru} is outside 0–1 and is not imported.`);
     if ((num(f.mat_tensile) ?? 0) !== 0) notes.push(`Material "${name}": the tensile strength (cut-off) is not imported.`);
     if ((num(f.use_alternate_strength) ?? 0) !== 0) notes.push(`Material "${name}": the alternate strength is not imported.`);
     if ((num(f.spatially_variable_material) ?? 0) !== 0) notes.push(`Material "${name}": the spatial variability is not imported (the mean values are used).`);
@@ -767,7 +785,7 @@ export function sliToDefinition(file: SliFile, index: number, fileName = "model.
       if (id) materialsOut[i] = { ...m, waterTableId: id };
     }
     const partial = wet.filter(([, w]) => !w.auto && w.hu > 0 && w.hu < 1).map(([n, w]) => `${n} (Hu = ${w.hu})`);
-    if (partial.length > 0) notes.push(`A head below the water of less than its full height (Hu < 1) is not imported; full hydrostatic pressure is used for ${partial.join(", ")}.`);
+    if (partial.length > 0) notes.push(`A head factor Hu below 1 (a pore pressure below the water line of less than its full height) is not imported; full hydrostatic pressure is used for ${partial.join(", ")}.`);
   } else if (waterTableLine && waterUsed) {
     notes.push("The model has a water table that no material uses; it is not imported.");
   }
@@ -778,7 +796,7 @@ export function sliToDefinition(file: SliFile, index: number, fileName = "model.
   const autos = wet.filter(([, w]) => w.auto).map(([n]) => n);
   if (autos.length > 0) {
     if (autos.length === wet.length) options.porePressureHead = "phreatic-correction";
-    else notes.push(`Hu is automatic (cos² of the water line's inclination) for ${autos.join(", ")} and given for the other materials; cSlope has one setting for all, so the full head (Hu = 1) is used throughout.`);
+    else notes.push(`The head factor Hu is automatic (cos² of the water line's inclination) for ${autos.join(", ")} and given for the other materials; cSlope has one setting for all, so the full head (Hu = 1) is used throughout.`);
   }
 
   // rapid drawdown: the water table before it, the drawdown line after it
@@ -790,23 +808,24 @@ export function sliToDefinition(file: SliFile, index: number, fileName = "model.
       waterTable = { mode: "custom", value: spanning(drawdownLine, x0, x1), followBoundary: false };
       const m = d("advanced_options_rdd_method");
       notes.push(
-        `Rapid drawdown: the water table is the water before it and the drawdown line the water after it; ${drawdownMaterials.join(", ")} take their undrained (R) envelope in cSlope's three-stage procedure` +
-          `${m && m !== "0" ? ` (the file's procedure is number ${m}, not the three-stage one)` : ""}; the interpolation between the envelopes may differ from the file's.`,
+        `Rapid drawdown: the water table is the water before it and the drawdown line the water after it; ${drawdownMaterials.join(", ")} ${drawdownMaterials.length === 1 ? "takes its" : "take their"} drawdown strength (R envelope, cR, φR) in cSlope's three-stage procedure` +
+          `${m && m !== "0" ? ` (the file uses another drawdown procedure, code ${m}, which cSlope does not import)` : ""}; the interpolation between the envelopes may differ from the file's.`,
       );
-    } else if (!(d("advanced_options") === "yes" && d("advanced_options_type") === "2")) notes.push("Rapid drawdown is not imported (no material has an undrained R envelope for cSlope's three-stage procedure); the model has the water before drawdown (the drawdown line is left out).");
+    } else if (!(d("advanced_options") === "yes" && d("advanced_options_type") === "2")) notes.push("Rapid drawdown is not imported (no material has a drawdown strength (R envelope, cR, φR) for cSlope's three-stage procedure); the model has the water before drawdown (the drawdown line is left out).");
   }
 
   if (d("advanced_options") === "yes" && d("advanced_options_type") === "2" && !rapidDrawdown) {
-    const methods: Record<string, string> = { "3": "effective stress with B-bar" };
-    notes.push(`The rapid drawdown analysis (${methods[d("advanced_options_rdd_method") ?? ""] ?? `method ${d("advanced_options_rdd_method") ?? "?"}`}) is not imported; the model has the water before drawdown, without drawdown.`);
+    const methods: Record<string, string> = { "3": "effective stress with B̄" };
+    const method = d("advanced_options_rdd_method");
+    notes.push(`The rapid drawdown analysis (${methods[method ?? ""] ?? (method !== undefined ? `a procedure of the file, code ${method}` : "its procedure is not given")}) is not imported; the model has the water before drawdown, without drawdown (enter the drawdown by hand if needed).`);
   }
 
-  if (d("advanced_options") === "yes" && !["1", "2"].includes(d("advanced_options_type") ?? "")) notes.push(`The advanced groundwater option ${d("advanced_options_type")} (for example a transient analysis) is not imported.`);
+  if (d("advanced_options") === "yes" && !["1", "2"].includes(d("advanced_options_type") ?? "")) notes.push(`The groundwater uses ${fileOption(d("advanced_options_type"))} (for example a transient analysis); enter it by hand if needed.`);
   if (bBarMethod) {
     notes.push(
       bBarMaterials.length > 0
-        ? `Excess pore pressure (B-bar): ${bBarMaterials.map((m) => `${m.name} (B̄ = ${m.bbar})`).join(", ")} take B̄ × the weight of the materials without B̄ above them, and B̄ × the loads applied in the second stage.`
-        : "The B-bar method is on, but no material has a B-bar value.",
+        ? `Excess pore pressure (B̄): ${bBarMaterials.map((m) => `${m.name} (B̄ = ${m.bbar})`).join(", ")} take B̄ × the weight of the materials without B̄ above them, and B̄ × the loads applied in the second stage.`
+        : "The B̄ method is on, but no material has a B̄ value.",
     );
   }
 
@@ -850,7 +869,7 @@ export function sliToDefinition(file: SliFile, index: number, fileName = "model.
     if (dn("seismic")) options.seismicHorizontal = Math.abs(dn("seismic")!);
     if (dn("seismicv")) {
       options.seismicVertical = dn("seismicv")!;
-      notes.push(`The vertical seismic coefficient ${dn("seismicv")} is imported with its sign as given (cSlope: positive downward); check its direction.`);
+      notes.push(`The vertical seismic coefficient ${String(dn("seismicv")).replace(/^-/, "−")} is imported with its sign as given (cSlope: positive downward); check its direction.`);
     }
   }
   if (dn("seismic_advanced") || dn("seismic_pseudostatic")) notes.push("The advanced seismic analysis (pseudo-static from a record, Newmark) is not imported.");
@@ -874,13 +893,13 @@ export function sliToDefinition(file: SliFile, index: number, fileName = "model.
     // the force's orientation: 1 along the element, 0 along the surface, 2 between them
     const fo = num(t.fo_flag) ?? 1;
     const direction = fo === 0 ? ("tangent" as const) : fo === 2 ? ("bisector" as const) : ("axial" as const);
-    if (fo > 2) notes.push(`Support "${f.material}": its force orientation (${fo}) is taken along the element.`);
+    if (fo > 2) notes.push(`Support "${f.material}": its force orientation is ${fileOption(fo)}; the force is taken along the element (change its direction by hand if needed).`);
     if (type === 1) reinforcements.push({ x1: ax, y1: ay, x2: bx, y2: by, tensileCapacity: cap, spacing: sp, direction, application });
     else if (type === 4) {
       // a geosynthetic (per metre): its long-term strength, pullout by adhesion and friction on both faces, the connection at the face
       const cover = (num(t.cov_perc) ?? 100) / 100;
       const anch = num(t.anch) ?? 0;
-      if (anch !== 0 && anch !== 2) notes.push(`Support "${f.material}": its anchorage (${anch}) is taken as none; only an anchorage at the slope face (the first end) is imported.`);
+      if (anch !== 0 && anch !== 2) notes.push(`Support "${f.material}": its anchorage is ${fileOption(anch)}; it is taken as none (only an anchorage at the slope face, the first end, is imported); enter it by hand if needed.`);
       reinforcements.push({
         x1: ax, y1: ay, x2: bx, y2: by, tensileCapacity: ((num(t.ts) ?? 0) * cover * u.F) / u.L, spacing: 1, direction, application,
         // (the coverage on the pullout as a lower adhesion and friction: 2·(a + σ′v·tan δ)·A; the model takes no coverage of its own)
@@ -899,7 +918,10 @@ export function sliToDefinition(file: SliFile, index: number, fileName = "model.
     } else unsupported.set(String(type), (unsupported.get(String(type)) ?? 0) + 1);
   }
   const supportNames: Record<string, string> = { "3": "soil nail", "5": "pile", "6": "user-defined" };
-  for (const [type, n] of unsupported) notes.push(`${n} support element(s) of type ${supportNames[type] ?? type} are not imported.`);
+  for (const [type, n] of unsupported) {
+    const what = `${n} support element${n === 1 ? "" : "s"}`;
+    notes.push(supportNames[type] ? `${what} of type ${supportNames[type]} ${n === 1 ? "is" : "are"} not imported.` : `${what} of a type of the file (code ${type}) that cSlope does not import; enter ${n === 1 ? "it" : "them"} by hand if needed.`);
+  }
   if (reinforcements.length > 0) notes.push(`${reinforcements.length} support element(s) imported (end-anchored bars, grouted tiebacks and geosynthetics); check their capacities.`);
 
   // method, slices, tension crack
@@ -989,6 +1011,6 @@ export function sliToDefinition(file: SliFile, index: number, fileName = "model.
   // scenarios of the same name are told apart by their number
   const same = file.scenarios.filter((q) => q.name === sc.name).length > 1;
   const label_ = `${sc.name || "Scenario"}${same ? ` ${index + 1}` : ""}`;
-  const name = file.scenarios.length > 1 || (file.kind === "slmd" && sc.name && sc.name !== "Master Scenario") ? `${base} – ${label_}` : base;
+  const name = file.scenarios.length > 1 || (file.kind === "slmd" && sc.name && sc.name !== "Master Scenario") ? `${label_} (${base})` : base;
   return { name, definition, options, notes: [...new Set(notes)] };
 }

@@ -622,7 +622,7 @@ export function OptionsSection({ plain = false }: OptionsSectionProps) {
         <GroupHeading>Seismic (pseudostatic)</GroupHeading>
         <div className="grid grid-cols-2 gap-x-3 gap-y-2">
           <label className="flex flex-col gap-0.5">
-            <Label>kh</Label>
+            <Label>kh (horizontal, + in the sliding direction)</Label>
             <DraftNumberInput
               value={options.seismicHorizontal ?? 0}
               min={0}
@@ -634,7 +634,7 @@ export function OptionsSection({ plain = false }: OptionsSectionProps) {
             />
           </label>
           <label className="flex flex-col gap-0.5">
-            <Label>kv</Label>
+            <Label>kv (+ downward)</Label>
             <DraftNumberInput
               value={options.seismicVertical ?? 0}
               min={-1}

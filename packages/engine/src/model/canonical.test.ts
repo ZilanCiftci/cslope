@@ -193,3 +193,20 @@ describe("oppositeDirectionDefinition", () => {
     expect(Math.max(...xs)).toBeLessThanOrEqual(40);
   });
 });
+
+describe("mirroring spatially varying strength", () => {
+  it("mirrors the data points of a material's strength above the water too", () => {
+    const spatial = { kind: "spatial-mohr-coulomb", unitWeight: 18, dataPoints: [[2, 5, 10, 30, 18], [8, 5, 12, 28, 18]] } as const;
+    const def = {
+      coordinates: [[0, 0], [0, 5], [10, 10], [10, 0]],
+      orientation: "rtl",
+      materials: [{ name: "A", model: { kind: "mohr-coulomb", unitWeight: 18, cohesion: 5, frictionAngle: 30, aboveWater: spatial } }],
+    } as unknown as SlopeDefinition;
+    const c = toCanonicalSlopeDefinition(def);
+    const above = (c.materials[0].model as { aboveWater?: { dataPoints: number[][] } }).aboveWater!;
+    expect(above.dataPoints.map((p) => p[0])).toEqual([8, 2]);
+    // a material without one is passed on as it is
+    const plain = { ...def, materials: [{ name: "A", model: { kind: "mohr-coulomb", unitWeight: 18, cohesion: 5, frictionAngle: 30 } }] } as unknown as SlopeDefinition;
+    expect(toCanonicalSlopeDefinition(plain).materials[0].model).toEqual(plain.materials[0].model);
+  });
+});

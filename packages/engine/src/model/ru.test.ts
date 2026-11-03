@@ -32,8 +32,22 @@ describe("pore pressure ratio ru", () => {
     expect(Math.abs((f0 - f1) - (f1 - f2)) / (f0 - f2)).toBeLessThan(0.05);
   });
 
+  it("gives no excess pore pressure under a load above the water (rᵤ alone is no water)", () => {
+    // the water below every base: the pore pressure is rᵤ's alone
+    const water = { waterTable: { mode: "custom" as const, value: [[0, -5], [45, -5]] as [number, number][] } };
+    const load = (excess: boolean) => ({ ...water, udls: [{ magnitude: 50, x1: 0, x2: 10, ...(excess ? { excessPorePressure: [{ material: "S", ratio: 0.9 }] } : {}) }] });
+    const drained = run({ ...mc(5, 30, 19), ru: 0.3 }, load(false));
+    const loaded = run({ ...mc(5, 30, 19), ru: 0.3 }, load(true));
+    const d = drained.slope.search[0].slices!;
+    loaded.slope.search[0].slices!.forEach((s, i) => {
+      expect(s.U).toBeGreaterThan(0);
+      expect(s.U).toBe(d[i].U);
+    });
+    expect(loaded.fos).toBe(drained.fos);
+  });
+
   it("must be at least 0 and below 1", () => {
-    expect(validateMaterialModel({ ...mc(5, 30, 19), ru: 1 })).toHaveLength(1);
+    expect(validateMaterialModel({ ...mc(5, 30, 19), ru: 1 })).toEqual(["The pore pressure ratio rᵤ must be at least 0 and below 1."]);
     expect(validateMaterialModel({ ...mc(5, 30, 19), ru: -0.1 })).toHaveLength(1);
     expect(validateMaterialModel({ ...mc(5, 30, 19), ru: 0.5 })).toHaveLength(0);
   });

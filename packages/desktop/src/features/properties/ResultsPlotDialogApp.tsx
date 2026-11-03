@@ -400,7 +400,7 @@ export function ResultsPlotDialogApp() {
     >
       <div className="pb-2 flex items-center justify-between gap-3">
         <div>
-          <h2 className="text-[12px] font-semibold">Results Plot</h2>
+          <h2 className="text-[12px] font-semibold">Results plot</h2>
           <p
             className="text-[10px] mt-0.5"
             style={{ color: "var(--color-vsc-text-muted)" }}

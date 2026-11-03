@@ -1,15 +1,17 @@
 /**
- * Material settings from imported .stix files that the dialog has no fields
- * for (a separate strength above the water line, the SHANSEP stress
- * history) are shown read-only and kept when other fields are edited.
+ * Material settings from imported files that the dialog has no fields for
+ * (a separate strength above the water line, the SHANSEP stress history)
+ * are shown read-only, kept when other fields are edited, and can be
+ * removed.
  */
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { cleanup, render, screen } from "@testing-library/react";
+import { act, cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { MaterialModel } from "@cslope/engine";
 
 import { DefineMaterialsDialog } from "./DefineMaterialsDialog";
 import { useAppStore } from "../../store/app-store";
+import { performUndo } from "../../store/selectors";
 
 const store = () => useAppStore.getState();
 
@@ -36,9 +38,53 @@ afterEach(() => {
 describe("DefineMaterialsDialog — imported material settings", () => {
   it("shows them read-only", () => {
     render(<DefineMaterialsDialog onClose={() => {}} />);
-    const notes = screen.getByTestId("imported-model-notes");
-    expect(notes).toHaveTextContent("Separate strength above the water line: Mohr-Coulomb");
-    expect(notes).toHaveTextContent("yield stress from the earlier stage + POP 12 kPa");
+    const above = screen.getByTestId("above-water-strength");
+    expect(above).toHaveTextContent("Strength above the water line (imported): Mohr-Coulomb");
+    expect(above).toHaveTextContent("c′ = 2 kPa, φ′ = 30°");
+    expect(screen.getByTestId("ocr-override")).toHaveTextContent("Overridden by the yield stress from the earlier stage + POP 12 kPa");
+    // OCR does not apply: its field is disabled.
+    expect(screen.getByLabelText("OCR")).toBeDisabled();
+    expect(screen.getByLabelText("OCR against elevation")).toBeDisabled();
+  });
+
+  it("removes the strength above the water line in one undoable step", async () => {
+    render(<DefineMaterialsDialog onClose={() => {}} />);
+    await userEvent.click(screen.getByRole("button", { name: "Remove the strength above the water line" }));
+    expect(store().materials[0].model.aboveWater).toBeUndefined();
+    expect(screen.queryByTestId("above-water-strength")).toBeNull();
+    // Another kind does not bring it back.
+    await userEvent.selectOptions(screen.getByDisplayValue("SHANSEP"), "undrained");
+    expect(store().materials[0].model.aboveWater).toBeUndefined();
+    act(() => performUndo());
+    act(() => performUndo());
+    expect(store().materials[0].model.aboveWater).toEqual(imported.aboveWater);
+  });
+
+  it("uses OCR instead of the stress history in one undoable step", async () => {
+    render(<DefineMaterialsDialog onClose={() => {}} />);
+    await userEvent.click(screen.getByRole("button", { name: "Use OCR instead" }));
+    const model = store().materials[0].model as Extract<MaterialModel, { kind: "shansep" }>;
+    expect(model.pop).toBeUndefined();
+    expect(model.yieldStress).toBeUndefined();
+    expect(model.yieldFromEarlierStage).toBeUndefined();
+    expect(screen.queryByTestId("ocr-override")).toBeNull();
+    expect(screen.getByLabelText("OCR")).toBeEnabled();
+    act(() => performUndo());
+    expect(store().materials[0].model).toEqual(imported);
+  });
+
+  it("names a POP or a yield stress alone", () => {
+    store().setMaterials([
+      { id: "a", name: "A", color: "#123456", model: { kind: "shansep", unitWeight: 17, ratio: 0.25, pop: 20 }, modelExpressions: {} },
+    ]);
+    const { unmount } = render(<DefineMaterialsDialog onClose={() => {}} />);
+    expect(screen.getByTestId("ocr-override")).toHaveTextContent("Overridden by imported POP 20 kPa");
+    unmount();
+    store().setMaterials([
+      { id: "b", name: "B", color: "#123456", model: { kind: "shansep", unitWeight: 17, ratio: 0.25, yieldStress: 90 }, modelExpressions: {} },
+    ]);
+    render(<DefineMaterialsDialog onClose={() => {}} />);
+    expect(screen.getByTestId("ocr-override")).toHaveTextContent("Overridden by imported yield stress σ′y 90 kPa");
   });
 
   it("keeps them when another field is edited", async () => {
@@ -64,6 +110,7 @@ describe("DefineMaterialsDialog — imported material settings", () => {
       { id: "sand", name: "Sand", color: "#123456", model: { kind: "mohr-coulomb", unitWeight: 19, cohesion: 0, frictionAngle: 34 } },
     ]);
     render(<DefineMaterialsDialog onClose={() => {}} />);
-    expect(screen.queryByTestId("imported-model-notes")).toBeNull();
+    expect(screen.queryByTestId("above-water-strength")).toBeNull();
+    expect(screen.queryByTestId("ocr-override")).toBeNull();
   });
 });

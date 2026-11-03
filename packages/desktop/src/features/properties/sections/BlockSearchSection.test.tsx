@@ -12,16 +12,16 @@ describe("block search settings", () => {
   });
 
   it("shows the objects and angles only for a block search", async () => {
-    expect(screen.queryByText("+ Add Search Object")).toBeNull();
+    expect(screen.queryByText("+ Add search object")).toBeNull();
     await userEvent.selectOptions(screen.getByLabelText("Search method"), "block");
     expect(useAppStore.getState().options.searchMethod).toBe("block");
-    expect(screen.getByText("+ Add Search Object")).toBeTruthy();
+    expect(screen.getByText("+ Add search object")).toBeTruthy();
     expect(screen.getByText(/Add at least one object/)).toBeTruthy();
   });
 
   it("adds an object from typed points", async () => {
     await userEvent.selectOptions(screen.getByLabelText("Search method"), "block");
-    await userEvent.click(screen.getByText("+ Add Search Object"));
+    await userEvent.click(screen.getByText("+ Add search object"));
     const input = screen.getByLabelText("Block search object points");
     await userEvent.type(input, "25, 26.75; 50, 26.75");
     expect(useAppStore.getState().blockSearchObjects[0].points).toEqual([

@@ -17,7 +17,12 @@ interface LoadsStatePayload {
   parameters?: ParameterDef[];
   /** From the main window: keeps new loads inside the model. */
   coordinates?: [number, number][];
+  /** From the main window: names the materials of excess pore pressure. */
+  materialNames?: { id: string; name: string }[];
 }
+
+/** A percentage for the notes, without trailing zeros. */
+const percent = (ratio: number) => `${Number((ratio * 100).toFixed(1))} %`;
 
 function normalizeLoadsPayload(
   payload: LoadsStatePayload | null | undefined,
@@ -38,6 +43,9 @@ export function UdlDialogApp() {
   const updateUdl = useAppStore((s) => s.updateUdl);
   const removeUdl = useAppStore((s) => s.removeUdl);
   const parameters = useAppStore((s) => s.parameters);
+  const storeMaterials = useAppStore((s) => s.materials);
+  // In a separate window the materials come with the loads.
+  const [sentMaterialNames, setSentMaterialNames] = useState<{ id: string; name: string }[] | null>(null);
   const [isHydrated, setIsHydrated] = useState(!isElectron);
   const suppressNextBroadcastRef = useRef(false);
 
@@ -66,6 +74,7 @@ export function UdlDialogApp() {
       }
 
       useAppStore.setState(patch);
+      if (Array.isArray(normalized.materialNames)) setSentMaterialNames(normalized.materialNames);
       setIsHydrated(true);
     };
 
@@ -91,6 +100,18 @@ export function UdlDialogApp() {
   }, [udls, lineLoads, parameters, isHydrated]);
 
   const parameterValues = resolveParameters(parameters).resolved;
+  const materialName = new Map((sentMaterialNames ?? storeMaterials).map((m) => [m.id, m.name]));
+
+  /** Remove one material's excess pore pressure from a load (it then consolidates fully). */
+  const removeExcess = (row: UdlRow, materialId: string) => {
+    const rest = (row.excessPorePressure ?? []).filter((e) => e.materialId !== materialId);
+    updateUdl(row.id, { excessPorePressure: rest.length > 0 ? rest : undefined });
+  };
+  const excessNotes = udls.flatMap((row, i) =>
+    (row.excessPorePressure ?? [])
+      .filter((e) => materialName.has(e.materialId))
+      .map((e) => ({ row, i, entry: e, name: materialName.get(e.materialId) ?? "" })),
+  );
 
   const setUdlExpression = (
     row: UdlRow,
@@ -214,7 +235,7 @@ export function UdlDialogApp() {
       }}
     >
       <div className="pb-2">
-        <h2 className="text-[12px] font-semibold">UDL</h2>
+        <h2 className="text-[12px] font-semibold">Distributed loads</h2>
       </div>
       <div className="flex-1 overflow-y-auto pr-1">
         <SpreadsheetTable
@@ -227,8 +248,38 @@ export function UdlDialogApp() {
           className="text-[11px] mt-1 cursor-pointer hover:underline font-medium"
           style={{ color: "var(--color-vsc-accent)" }}
         >
-          + Add UDL
+          + Add load
         </button>
+        {excessNotes.length > 0 && (
+          <div className="mt-3 space-y-1" data-testid="udl-excess-notes">
+            <div className="text-[11px] font-medium">Loads not yet consolidated (imported)</div>
+            {excessNotes.map(({ row, i, entry, name }) => (
+              <div
+                key={`${row.id}-${entry.materialId}`}
+                role="note"
+                className="flex items-center gap-2 text-[11px]"
+              >
+                <span className="flex-1">
+                  UDL {i + 1}, not consolidated: Material "{name}" {percent(entry.ratio)} of q (excess pore pressure below the water)
+                </span>
+                <button
+                  type="button"
+                  onClick={() => removeExcess(row, entry.materialId)}
+                  className="px-2 py-0.5 text-[11px] font-medium rounded border cursor-pointer flex-shrink-0"
+                  style={{
+                    background: "var(--color-vsc-surface-tint)",
+                    color: "var(--color-vsc-text)",
+                    borderColor: "var(--color-vsc-border)",
+                  }}
+                  aria-label={`Remove the excess pore pressure of UDL ${i + 1} in Material "${name}"`}
+                  title="Treat the load as fully consolidated in this material"
+                >
+                  Remove
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
       <div
         className="pt-3 mt-2 border-t"

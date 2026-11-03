@@ -52,9 +52,9 @@ export function parseStixDocuments(docs: Map<string, Json>): StixFile {
     if (typeof id === "string" && !byId.has(id)) byId.set(id, d);
   }
   const doc = (id: unknown) => (typeof id === "string" ? byId.get(id) : undefined);
-  const soils = ((docs.get("soils.json")?.Soils as Json[] | undefined) ?? []).filter(Boolean);
+  const soils = list(docs.get("soils.json")?.Soils);
   const colours = new Map<string, string>();
-  for (const v of (docs.get("soilvisualizations.json")?.SoilVisualizations as Json[] | undefined) ?? []) {
+  for (const v of list(docs.get("soilvisualizations.json")?.SoilVisualizations)) {
     const c = typeof v.Color === "string" ? v.Color : "";
     // #AARRGGBB
     const m = c.match(/^#([0-9a-f]{2})?([0-9a-f]{6})$/i);
@@ -66,8 +66,8 @@ export function parseStixDocuments(docs: Map<string, Json>): StixFile {
   const legacy = Number.isFinite(year) && year < 2024;
   const scenarios = [...docs.entries()].filter(([p]) => /^scenarios\/scenario(_\d+)?\.json$/i.test(p)).sort(([a], [b]) => order(a) - order(b));
   for (const [, sc] of scenarios) {
-    const stageList = ((sc.Stages as Json[] | undefined) ?? []).map((g): StixStage => ({
-      label: String(g.Label ?? ""),
+    const stageList = list(sc.Stages).map((g): StixStage => ({
+      label: str(g.Label),
       geometry: doc(g.GeometryId),
       soilLayers: doc(g.SoilLayersId),
       waternet: doc(g.WaternetId),
@@ -77,15 +77,15 @@ export function parseStixDocuments(docs: Map<string, Json>): StixFile {
       ...(typeof g.WaterDefinitionType === "string" ? { waterDefinition: g.WaterDefinitionType } : {}),
     }));
     if (stageList.length === 0) continue;
-    for (const c of (sc.Calculations as Json[] | undefined) ?? []) {
-      const label = String(c.Label ?? "");
+    for (const c of list(sc.Calculations)) {
+      const label = str(c.Label);
       // Files from before 2024 calculated each stage on its own; a
       // converted file names each calculation after its stage. Later
       // versions calculate the last stage.
       const own = legacy ? stageList.findIndex((g) => g.label === label) : -1;
       const upTo = own >= 0 ? own + 1 : stageList.length;
       calculations.push({
-        scenario: String(sc.Label ?? ""),
+        scenario: str(sc.Label),
         label,
         stage: stageList[upTo - 1],
         stages: stageList.slice(0, upTo),
@@ -112,7 +112,9 @@ export async function readStix(bytes: Uint8Array): Promise<StixFile> {
   for (const [name, data] of entries) {
     if (!name.toLowerCase().endsWith(".json")) continue;
     try {
-      docs.set(name.replace(/\\/g, "/").toLowerCase(), JSON.parse(text.decode(data).replace(/^\uFEFF/, "")) as Json);
+      const d: unknown = JSON.parse(text.decode(data).replace(/^\uFEFF/, ""));
+      // (each document is an object; another value is left out as well)
+      if (isObject(d)) docs.set(name.replace(/\\/g, "/").toLowerCase(), d);
     } catch {
       // a document that is not JSON is left out
     }
@@ -127,9 +129,21 @@ export function num(v: unknown): number | undefined {
   return Number.isFinite(n) ? n : undefined;
 }
 
+const isObject = (v: unknown): v is Json => typeof v === "object" && v !== null && !Array.isArray(v);
+
+/** The objects of a list of the file (nothing when it is not a list). */
+export function list(v: unknown): Json[] {
+  return Array.isArray(v) ? v.filter(isObject) : [];
+}
+
+/** A label of the file as text ("" when it is not text or a number). */
+function str(v: unknown): string {
+  return typeof v === "string" ? v : typeof v === "number" ? String(v) : "";
+}
+
 /** Points [{X, Z}] as [x, y]. */
 export function pts(v: unknown): Pt[] {
-  return ((v as Json[] | undefined) ?? []).flatMap((p) => {
+  return list(v).flatMap((p) => {
     const x = num(p?.X), z = num(p?.Z);
     return x !== undefined && z !== undefined ? [[x, z] as Pt] : [];
   });

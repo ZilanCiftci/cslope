@@ -185,6 +185,26 @@ describe("main window IPC", () => {
     expect(useAppStore.getState().result).toBeNull();
   });
 
+  it("applies rapid drawdown from the analysis window to the water lines, and sends the lines to it", () => {
+    const s = useAppStore.getState();
+    const payload = {
+      coordinates: s.coordinates,
+      orientation: s.orientation,
+      analysisLimits: s.analysisLimits,
+      customSearchPlanes: s.customSearchPlanes,
+      customPlanesOnly: s.customPlanesOnly,
+      options: s.options,
+    };
+    emit("onAnalysisChanged", { ...structuredClone(payload), rapidDrawdown: { waterBefore: [[0, 9], [25, 9]] } });
+    expect(useAppStore.getState().piezometricLine.rapidDrawdown).toEqual({ waterBefore: [[0, 9], [25, 9]] });
+    expect(useAppStore.getState().models.find((m) => m.id === useAppStore.getState().activeModelId)!.piezometricLine.rapidDrawdown).toBeDefined();
+    // Without the field (an older window), the lines stay as they are.
+    emit("onAnalysisChanged", structuredClone(payload));
+    expect(useAppStore.getState().piezometricLine.rapidDrawdown).toBeDefined();
+    emit("onAnalysisChanged", { ...structuredClone(payload), rapidDrawdown: null });
+    expect(useAppStore.getState().piezometricLine).not.toHaveProperty("rapidDrawdown");
+  });
+
   it("applies view settings without discarding the result", () => {
     const s = useAppStore.getState();
     emit("onViewSettingsChanged", {

@@ -54,7 +54,7 @@
 
 import type { Slope } from "../model/slope";
 import { WATER_UNIT_WEIGHT } from "../types/constants";
-import { buildFeModel, polylineY, type FeModelOptions } from "./model";
+import { buildFeModel, ignoredInputWarnings, polylineY, type FeModelOptions } from "./model";
 import { boundSolver, type HighsModuleOptions } from "./lower-bound";
 import { affine, ProgramBuilder, type ConicProgram } from "./conic";
 import { meanUnitWeight, porePressureAt, reducedStrength, strengthAt, surfaceLineLoads } from "./limit-common";
@@ -130,7 +130,7 @@ export function upperBoundProblem(slope: Slope, options: UpperBoundOptions = {})
   const p = options.sides ?? 24;
   const cutoff = options.tensionCutoff ?? false;
   const rule = options.strengthRule ?? "associated";
-  const warnings: string[] = [];
+  const warnings: string[] = ignoredInputWarnings(slope);
   // (the bars also hold the piles' springs, source −1)
   if (model.bars.source.some((k) => k >= 0)) warnings.push("Reinforcement is not included in the upper bound analysis.");
   if (slope.piles.length > 0) warnings.push("Piles are not included in the upper bound analysis.");

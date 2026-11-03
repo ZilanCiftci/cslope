@@ -15,7 +15,7 @@ const STEPS = [
   },
   {
     title: "Run it",
-    text: "Choose a folder and whether to install for yourself only. If Windows SmartScreen says it protected your PC, choose More info and then Run anyway: the installer is not yet code-signed.",
+    text: "Choose a folder and whether to install for yourself only. The installer is code-signed, but Windows SmartScreen can still say it protected your PC until a new release has been run by enough people. Choose More info, check that a publisher is named (not “Unknown publisher”), then choose Run anyway.",
   },
   {
     title: "Start cSlope",

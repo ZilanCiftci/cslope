@@ -76,11 +76,44 @@ The script compares the regenerated verification table with the committed one an
 | 2026-11-03 | Import and export of .stix and .sli/.slim/.slmd files; waternet, strength above the water line, POP/yield stress with an earlier stage, load consolidation | 0 | 0.342 → 0.342 | 0.476 → 0.476 | 1.003 → 1.003 | 1.589 → 1.589 | 498 s (4 workers, load 2.8 at start) |
 | 2026-11-03 | Pore pressure ratio ru | 0 | 0.342 → 0.342 | 0.476 → 0.476 | 1.003 → 1.003 | 1.589 → 1.589 | 489 s (4 workers, load 5.4 at start) |
 | 2026-11-03 | Verification problems with the pore pressure ratio ru (Fredlund & Krahn cases 3 and 4, Li & Lumb, Loukidis et al., Spencer, Jiang et al.) | 0 | 0.342 → 0.336 | 0.476 → 0.469 | 1.003 → 0.942 | 1.589 → 1.522 | 110 s (4 workers, load 0.8 at start) |
+| 2026-11-03 | Verification problems for B̄, SHANSEP with an earlier stage and head lines (V104, V105) | 0 | 0.336 → 0.332 | 0.469 → 0.465 | 0.942 → 0.942 | 1.522 → 1.522 | 537 s (4 workers, load 4.3 at start) |
 <!-- summary-end -->
 
 ## Entries
 
 <!-- entries -->
+
+### 2026-11-03: Verification problems for B̄, SHANSEP with an earlier stage and head lines (V104, V105)
+
+Compared with 52c9a68. Errors are relative to the reference, in percent. Verification run time: 537 s (4 workers, load 4.3 at start).
+
+**Against other programs (midpoint of their range):** 0 moved (0 closer to the reference, 0 further).
+
+| Result | Reference | Before | After | Error before | Error after |
+|---|---|---|---|---|---|
+| **Mean error (n = 301)** | | | | -0.221 % | -0.218 % |
+| **Mean absolute error** | | | | 0.336 % | 0.332 % |
+| **RMS error** | | | | 0.469 % | 0.465 % |
+| **Largest error** | | | | 2.109 % | 2.109 % |
+
+**Against the papers:** 0 moved (0 closer to the reference, 0 further).
+
+| Result | Reference | Before | After | Error before | Error after |
+|---|---|---|---|---|---|
+| **Mean error (n = 123)** | | | | -0.160 % | -0.160 % |
+| **Mean absolute error** | | | | 0.942 % | 0.942 % |
+| **RMS error** | | | | 1.522 % | 1.522 % |
+| **Largest error** | | | | 6.591 % | 6.591 % |
+
+**Finite elements against their references (FE, finite differences, limit analysis, theory):** 0 moved (0 closer to the reference, 0 further).
+
+| Result | Reference | Before | After | Error before | Error after |
+|---|---|---|---|---|---|
+| **Mean error (n = 35)** | | | | -0.711 % | -0.711 % |
+| **Mean absolute error** | | | | 2.399 % | 2.399 % |
+| **RMS error** | | | | 3.712 % | 3.712 % |
+| **Largest error** | | | | 15.100 % | 15.100 % |
+
 
 ### 2026-11-03: Verification problems with the pore pressure ratio ru (Fredlund & Krahn cases 3 and 4, Li & Lumb, Loukidis et al., Spencer, Jiang et al.)
 

@@ -91,17 +91,61 @@ export function verticalStress(slope: Slope, x: number, y: number, effective: bo
   // material just below the ground, as the slices and the Rankine depth
   // take it (freeWaterLineAt in slices.ts); the pore pressure at the point
   // comes from the line of the material there.
-  // (the pore pressure ratio of the material at the point takes the soil above it)
-  const ru = effective ? materialAt(slope, x, y)?.model.ru ?? 0 : 0;
+  // (the pore pressure ratio of the material at the point takes the soil
+  // above it)
   const soil = sigma;
   const yTop = yGround - 1e-6 * Math.max(1, Math.abs(surf.x[surf.x.length - 1] - surf.x[0]));
   const pond = waterLineAt(slope, materialAt(slope, x, yTop), x);
   sigma += Math.max(0, pond - yGround) * WATER_UNIT_WEIGHT;
   if (!effective) return sigma;
-  const u = slope.waternet
-    ? waternetPorePressure(slope.waternet, x, y)
-    : Math.max(0, waterLineAt(slope, materialAt(slope, x, y), x) - y) * WATER_UNIT_WEIGHT;
+  const here = materialAt(slope, x, y);
+  const ru = here?.model.ru ?? 0;
+  const u = slope.waternet ? waternetPorePressure(slope.waternet, x, y) : waterPorePressure(slope, here, x, y);
   return Math.max(0, sigma - u - ru * soil);
+}
+
+/** Pore pressure at (x, y) below the water line of the material there (no waternet). */
+function waterPorePressure(slope: Slope, m: Material | null, x: number, y: number): number {
+  return Math.max(0, waterLineAt(slope, m, x) - y) * WATER_UNIT_WEIGHT;
+}
+
+/**
+ * Effective vertical stress at (x, y) with the slope's distributed loads:
+ * `effectiveVerticalStress` plus each load over x, for the yield stress a
+ * SHANSEP material keeps from an earlier stage (its geometry, water and
+ * loads). A load acts as a strip load straight down, without spreading
+ * with depth (as the slices take it on their bases); a load normal to the
+ * ground counts with its vertical part, which is its magnitude per
+ * horizontal metre. The loads are characteristic (the earlier stage is a
+ * stress history, not a design state). The part of a load carried by
+ * excess pore pressure in the material at the point (`excessPorePressure`)
+ * does not count where the point is below the water (as the slices take
+ * it). Reinforcement pullout uses `effectiveVerticalStress`, without the
+ * loads.
+ */
+export function effectiveVerticalStressWithLoads(slope: Slope, x: number, y: number): number {
+  const base = effectiveVerticalStress(slope, x, y);
+  const surf = slope.surfaceLineXY;
+  if (!surf || slope.udls.length === 0) return base;
+  const yGround = getYAtX(surf.x, surf.y, x);
+  if (!Number.isFinite(yGround) || y >= yGround) return base;
+  let q = 0;
+  let here: Material | null | undefined;
+  let wet: boolean | undefined;
+  for (const l of slope.udls) {
+    if (x < l.x1 || x > l.x2) continue;
+    let carried = l.magnitude;
+    if (l.excessPorePressure.length > 0) {
+      here ??= materialAt(slope, x, y);
+      const e = here ? l.excessPorePressure.find((p) => p.material === here!.name) : undefined;
+      if (e) {
+        wet ??= (slope.waternet ? waternetPorePressure(slope.waternet, x, y) : waterPorePressure(slope, here, x, y)) > 0;
+        if (wet) carried *= 1 - e.ratio;
+      }
+    }
+    q += carried;
+  }
+  return base + q;
 }
 
 /** cos 88°: the movement's component along an element that counts as pushing it. */

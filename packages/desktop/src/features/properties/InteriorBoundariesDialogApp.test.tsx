@@ -130,7 +130,7 @@ describe("InteriorBoundariesDialogApp", () => {
     render(<InteriorBoundariesDialogApp />);
     hydrate([boundary("b1", [[0, 5], [10, 4]])], "b1");
     expect(screen.queryByRole("button", { name: "Remove point 1" })).toBeNull();
-    await userEvent.click(screen.getByRole("button", { name: "+ Add Point" }));
+    await userEvent.click(screen.getByRole("button", { name: "+ Add point" }));
     expect(store().materialBoundaries[0].coordinates).toEqual([
       [0, 5],
       [10, 4],

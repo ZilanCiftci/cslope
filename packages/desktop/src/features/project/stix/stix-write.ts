@@ -12,11 +12,11 @@
  * to check there, not a guaranteed round trip.
  */
 
-import { suctionAngle, toCanonicalSlopeDefinition, type MaterialModel, type SlopeDefinition } from "@cslope/engine";
+import { MATERIAL_MODEL_LABELS, suctionAngle, toCanonicalSlopeDefinition, type MaterialModel, type SlopeDefinition } from "@cslope/engine";
 import { buildSlopeDTOFromModel } from "../../../store/helpers";
 import type { ModelEntry } from "../../../store/types";
 import { computeRegions } from "../../../utils/regions";
-import { sharedRings } from "../../../utils/region-rings";
+import { holeFreeRegions, ringArea2, sharedRings } from "../../../utils/region-rings";
 import { writeZip } from "../../../utils/zip";
 
 type Pt = [number, number];
@@ -47,27 +47,27 @@ interface SoilStrength {
 function strengthOf(name: string, model: MaterialModel, notes: string[]): SoilStrength {
   switch (model.kind) {
     case "mohr-coulomb":
-      if (model.cohesionRateOfChange) notes.push(`"${name}": c′ increasing with depth is written as its reference value.`);
-      if (model.cFactor) notes.push(`"${name}": the combined (undrained) limit is not written; drained c′ and φ′ only.`);
-      if (model.drawdownStrength) notes.push(`"${name}": the drawdown envelope (cR, φR) is not written.`);
+      if (model.cohesionRateOfChange) notes.push(`Material "${name}": c′ increasing with depth is written as its reference value.`);
+      if (model.cFactor) notes.push(`Material "${name}": the combined (undrained) limit is not written; drained c′ and φ′ only.`);
+      if (model.drawdownStrength) notes.push(`Material "${name}": the drawdown strength (R envelope, cR, φR) is not written.`);
       return { type: "MohrCoulombAdvanced", mc: { c: model.cohesion, phi: model.frictionAngle } };
     case "undrained":
-      if (model.suRateOfChange) notes.push(`"${name}": Su increasing with depth is written as its reference value.`);
+      if (model.suRateOfChange) notes.push(`Material "${name}": Su increasing with depth is written as its reference value.`);
       return { type: "MohrCoulombAdvanced", mc: { c: model.undrainedShearStrength, phi: 0 } };
     case "shansep": {
       if (model.suByStress && model.suByStress.length > 0) return { type: "SuTable", suTable: model.suByStress };
-      if (model.ocrByElevation) notes.push(`"${name}": OCR varying with elevation is not written; OCR = 1.`);
-      if (model.suMin) notes.push(`"${name}": the lower limit of Su is not written.`);
+      if (model.ocrByElevation) notes.push(`Material "${name}": OCR varying with elevation is not written; OCR = 1.`);
+      if (model.suMin) notes.push(`Material "${name}": the lower limit of Su is not written.`);
       const state =
         model.pop !== undefined ? { pop: model.pop } : model.yieldStress !== undefined ? { yieldStress: model.yieldStress } : { ocr: model.ocrByElevation ? 1 : model.ocr ?? 1 };
       return { type: "Su", su: { ratio: model.ratio, exponent: model.exponent ?? 0.8 }, state };
     }
     case "shear-normal":
-      if (model.spline) notes.push(`"${name}": the spline through the shear-normal points is not written; straight lines between them.`);
+      if (model.spline) notes.push(`Material "${name}": the spline through the shear-normal points is not written; straight lines between them.`);
       return { type: "SigmaTauTable", sigmaTau: model.points };
     default: {
       const m = model as { cohesion?: number; frictionAngle?: number };
-      notes.push(`"${name}": the material model "${model.kind}" has no counterpart in the export; written as Mohr-Coulomb${m.cohesion !== undefined || m.frictionAngle !== undefined ? " with its c and φ" : " with no strength, to be entered by hand"}.`);
+      notes.push(`Material "${name}": the material model "${MATERIAL_MODEL_LABELS[model.kind as MaterialModel["kind"]] ?? model.kind}" has no counterpart in the export; written as Mohr-Coulomb${m.cohesion !== undefined || m.frictionAngle !== undefined ? " with its c and φ" : " with no strength, to be entered by hand"}.`);
       return { type: "MohrCoulombAdvanced", mc: { c: m.cohesion ?? 0, phi: m.frictionAngle ?? 0 } };
     }
   }
@@ -79,7 +79,7 @@ function soilJson(id: string, name: string, model: MaterialModel, notes: string[
   const above = model.aboveWater ? strengthOf(name, model.aboveWater, notes) : below;
   // one set of parameters per strength model: the one below the water wins
   if (above !== below && above.type === below.type && JSON.stringify(above) !== JSON.stringify(below)) {
-    notes.push(`"${name}": the strength above the water line is of the same kind as below it with other parameters; the format has one set per kind, so the one below the water is written for both.`);
+    notes.push(`Material "${name}": the strength above the water line is of the same kind as below it with other parameters; the format has one set per kind, so the one below the water is written for both.`);
   }
   const pick = <K extends keyof SoilStrength>(k: K) => (below[k] ?? above[k]) as SoilStrength[K];
   const mc = pick("mc") ?? { c: 0, phi: 0 };
@@ -161,13 +161,18 @@ function stageDocs(
     (def.regionAssignments ?? []).map((a) => ({ point: a.point, materialId: a.materialName })),
     names[0],
   );
-  if (regions.some((r) => r.holes && r.holes.length > 0)) notes.push("A region that surrounds another (a hole) is written without the hole; layers may not overlap in the format, so check it.");
-  const { points, rings } = sharedRings(regions);
+  // layers may not overlap: a region around a lens is written as pieces without holes
+  const pieces = holeFreeRegions(regions);
+  if (pieces.some((r) => r.holes && r.holes.length > 0)) notes.push("A region that surrounds another (a hole) could not be split into pieces and is written without the hole; layers may not overlap in the format, so check it.");
+  const { points, rings } = sharedRings(pieces);
   const count = new Map<string, number>();
   const layers = rings.map((r) => {
     const k = (count.get(r.materialId) ?? 0) + 1;
     count.set(r.materialId, k);
-    return { id: id(), label: `${r.materialId} ${k}`, ring: r.ids.map((q) => points[q - 1]), material: r.materialId };
+    // clockwise, as the format's files give the layers
+    const ring = r.ids.map((q) => points[q - 1]);
+    if (ringArea2(ring) > 0) ring.reverse();
+    return { id: id(), label: `${r.materialId} ${k}`, ring, material: r.materialId };
   });
 
   // state: a state point in each layer of a SHANSEP soil

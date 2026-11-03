@@ -302,17 +302,17 @@ describe("validateMaterialModel — s-f-depth", () => {
 
   it("rejects negative suRef", () => {
     const errs = validateMaterialModel({ ...validSfDepth, suRef: -1 });
-    expect(errs).toContainEqual(expect.stringContaining("suRef"));
+    expect(errs).toContainEqual(expect.stringContaining("reference Su"));
   });
 
   it("rejects NaN suRef", () => {
     const errs = validateMaterialModel({ ...validSfDepth, suRef: NaN });
-    expect(errs).toContainEqual(expect.stringContaining("suRef"));
+    expect(errs).toContainEqual(expect.stringContaining("reference Su"));
   });
 
   it("rejects NaN depthRef", () => {
     const errs = validateMaterialModel({ ...validSfDepth, depthRef: NaN });
-    expect(errs).toContainEqual(expect.stringContaining("depthRef"));
+    expect(errs).toContainEqual(expect.stringContaining("reference depth"));
   });
 
   it("rejects NaN rate", () => {
@@ -338,12 +338,12 @@ describe("validateMaterialModel — s-f-datum", () => {
 
   it("rejects negative suRef", () => {
     const errs = validateMaterialModel({ ...validSfDatum, suRef: -1 });
-    expect(errs).toContainEqual(expect.stringContaining("suRef"));
+    expect(errs).toContainEqual(expect.stringContaining("reference Su"));
   });
 
   it("rejects NaN yRef", () => {
     const errs = validateMaterialModel({ ...validSfDatum, yRef: NaN });
-    expect(errs).toContainEqual(expect.stringContaining("yRef"));
+    expect(errs).toContainEqual(expect.stringContaining("reference elevation"));
   });
 
   it("rejects NaN rate", () => {
@@ -404,10 +404,10 @@ describe("validateMaterialModel — depth reference and strength cutoff", () => 
   it("rejects a cutoff that is not a positive finite number", () => {
     for (const suMax of [0, -5, NaN, Infinity]) {
       expect(validateMaterialModel({ ...validSfDepth, suMax })).toContainEqual(
-        expect.stringContaining("suMax"),
+        expect.stringContaining("strength cutoff"),
       );
       expect(validateMaterialModel({ ...validUndrained, suMax })).toContainEqual(
-        expect.stringContaining("suMax"),
+        expect.stringContaining("strength cutoff"),
       );
     }
   });

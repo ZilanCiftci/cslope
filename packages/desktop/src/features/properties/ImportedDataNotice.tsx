@@ -6,11 +6,14 @@
 export function ImportedDataNotice({
   text,
   buttonLabel,
+  buttonAriaLabel,
   onRemove,
   testId,
 }: {
   text: string;
   buttonLabel: string;
+  /** What the button removes, for screen readers (the label alone can be terse). */
+  buttonAriaLabel?: string;
   onRemove: () => void;
   testId?: string;
 }) {
@@ -29,6 +32,7 @@ export function ImportedDataNotice({
       <button
         type="button"
         onClick={onRemove}
+        aria-label={buttonAriaLabel ?? buttonLabel}
         className="px-2 py-0.5 text-[11px] font-medium rounded border cursor-pointer flex-shrink-0"
         style={{
           background: "var(--color-vsc-surface-tint)",

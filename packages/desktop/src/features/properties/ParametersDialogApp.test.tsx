@@ -52,12 +52,12 @@ describe("ParametersDialogApp", () => {
   it("adds a parameter and broadcasts the list", async () => {
     render(<ParametersDialogApp />);
     hydrate([]);
-    await userEvent.click(screen.getByRole("button", { name: "+ Add Parameter" }));
+    await userEvent.click(screen.getByRole("button", { name: "+ Add parameter" }));
     expect(params()).toHaveLength(1);
     expect(params()[0]).toMatchObject({ name: "p1", expression: "0" });
     // A new row gets a valid name, so it shows its value, not an error.
     expect(screen.queryByText("Parameter name is empty.")).toBeNull();
-    await userEvent.click(screen.getByRole("button", { name: "+ Add Parameter" }));
+    await userEvent.click(screen.getByRole("button", { name: "+ Add parameter" }));
     expect(params().map((p) => p.name)).toEqual(["p1", "p2"]);
     const sent = bridge.sentOf<{ parameters: ParameterDef[] }>(
       "sendParametersChanged",

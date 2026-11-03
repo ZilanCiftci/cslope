@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { isElectron } from "../../../utils/is-electron";
 import { useProjectActions } from "../../../features/project/useProjectActions";
@@ -17,6 +17,7 @@ import {
   SaveAsIcon,
   ExitIcon,
 } from "../../icons/FileActionIcons";
+import { SummaryDialog } from "../SummaryDialog";
 
 interface Props {
   activeModelName?: string;
@@ -41,6 +42,11 @@ export function FileMenu({
     handleFileChange,
   } = useProjectActions(defaultBaseName);
 
+  // What an import or export did (or why it failed), shown in a dialog.
+  const [summary, setSummary] = useState<{ title: string; text: string } | null>(null);
+  const failure = (what: string, err: unknown) =>
+    setSummary({ title: `${what} failed`, text: `${what} failed: ${err instanceof Error ? err.message : String(err)}` });
+
   const handleImportDxf = () => {
     const input = document.createElement("input");
     input.type = "file";
@@ -51,12 +57,12 @@ export function FileMenu({
       const reader = new FileReader();
       reader.onload = () => {
         try {
-          alert(importDxf(String(reader.result ?? ""), file.name));
+          setSummary({ title: `Import of ${file.name}`, text: importDxf(String(reader.result ?? ""), file.name) });
         } catch (err) {
-          alert(`DXF import failed: ${err instanceof Error ? err.message : String(err)}`);
+          failure(`Import of ${file.name}`, err);
         }
       };
-      reader.onerror = () => alert(`Could not read ${file.name}.`);
+      reader.onerror = () => setSummary({ title: `Import of ${file.name} failed`, text: `Could not read ${file.name}.` });
       reader.readAsText(file);
     };
     input.click();
@@ -73,11 +79,11 @@ export function FileMenu({
       const reader = new FileReader();
       reader.onload = () => {
         run(new Uint8Array(reader.result as ArrayBuffer), file.name).then(
-          (message) => alert(message),
-          (err) => alert(`${extension} import failed: ${err instanceof Error ? err.message : String(err)}`),
+          (text) => setSummary({ title: `Import of ${file.name}`, text }),
+          (err) => failure(`Import of ${file.name}`, err),
         );
       };
-      reader.onerror = () => alert(`Could not read ${file.name}.`);
+      reader.onerror = () => setSummary({ title: `Import of ${file.name} failed`, text: `Could not read ${file.name}.` });
       reader.readAsArrayBuffer(file);
     };
     input.click();
@@ -88,9 +94,9 @@ export function FileMenu({
 
   const exportAs = (extension: string, run: () => string) => {
     try {
-      alert(run());
+      setSummary({ title: `Export as ${extension}`, text: run() });
     } catch (err) {
-      alert(`${extension} export failed: ${err instanceof Error ? err.message : String(err)}`);
+      failure(`Export as ${extension}`, err);
     }
   };
   const handleExportGsz = () => exportAs(".gsz", exportGsz);
@@ -164,10 +170,10 @@ export function FileMenu({
                 onClick={handleOpen}
               />
               <RibbonMenuButton
-                icon={<ImportDxfIcon />}
+                icon={<ImportFileIcon />}
                 label="Import"
                 items={[
-                  { label: "DXF file…", title: "Import DXF", onClick: handleImportDxf },
+                  { label: "DXF file…", title: "Import a DXF file", onClick: handleImportDxf },
                   { label: ".gsz file…", title: "Import a .gsz project file", onClick: handleImportGsz },
                   { label: ".stix file…", title: "Import a .stix project file", onClick: handleImportStix },
                   { label: ".sli/.slim/.slmd file…", title: "Import a .sli, .slim or .slmd model file", onClick: handleImportSli },
@@ -177,9 +183,9 @@ export function FileMenu({
                 icon={<ExportFileIcon />}
                 label="Export"
                 items={[
-                  { label: ".gsz file…", title: "Export the model as a .gsz project file", onClick: handleExportGsz },
-                  { label: ".stix file…", title: "Export the model as a .stix project file", onClick: handleExportStix },
-                  { label: ".slim file…", title: "Export the model as a .slim model file", onClick: handleExportSli },
+                  { label: ".gsz file…", title: "Export the active model as a .gsz project file", onClick: handleExportGsz },
+                  { label: ".stix file…", title: "Export the active model as a .stix project file", onClick: handleExportStix },
+                  { label: ".slim file…", title: "Export the active model as a .slim model file", onClick: handleExportSli },
                 ]}
               />
             </RibbonGroup>
@@ -221,6 +227,8 @@ export function FileMenu({
         className="hidden"
         onChange={handleFileChange}
       />
+
+      {summary && <SummaryDialog title={summary.title} text={summary.text} onClose={() => setSummary(null)} />}
     </div>
   );
 }
@@ -239,7 +247,8 @@ function ExportFileIcon({ size = 22 }: { size?: number }) {
   );
 }
 
-function ImportDxfIcon({ size = 22 }: { size?: number }) {
+/** A page with an arrow into it (any file format). */
+function ImportFileIcon({ size = 22 }: { size?: number }) {
   return (
     <svg width={size} height={size} viewBox="0 0 32 32" fill="none">
       <path
@@ -248,10 +257,7 @@ function ImportDxfIcon({ size = 22 }: { size?: number }) {
         stroke="#90a4ae"
         strokeWidth="1.2"
       />
-      <path d="M8 22l5-6 4 3 6-7" stroke="#26a69a" strokeWidth="1.8" fill="none" />
-      <text x="16" y="29" fontSize="6" textAnchor="middle" fill="#546e7a" fontWeight="bold">
-        DXF
-      </text>
+      <path d="M16 12v11m0 0l-4-4m4 4l4-4" stroke="#26a69a" strokeWidth="1.8" fill="none" strokeLinecap="round" />
     </svg>
   );
 }

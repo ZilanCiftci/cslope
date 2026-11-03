@@ -143,6 +143,11 @@ export interface Slice {
    * the base is U · baseLength.
    */
   U: number;
+  /**
+   * The part of U from the water lines or the waternet alone (kPa), set
+   * only where rᵤ or B-bar add to it.
+   */
+  uWater?: number;
   /** Weight of free water standing on the slice top (kN). */
   waterLoad?: number;
   /**

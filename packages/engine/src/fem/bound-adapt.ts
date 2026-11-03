@@ -54,7 +54,7 @@
 
 import { frictionalSurfaceSlide, surfaceSlideMessage } from "../model/surface-slide";
 import type { Slope } from "../model/slope";
-import { buildFeModel } from "./model";
+import { buildFeModel, ignoredInputWarnings } from "./model";
 import { dorflerMark, refinedSizeField } from "./adapt";
 import { boundSolver, lowerBound, lowerBoundProblem, type HighsModuleOptions, type LowerBoundOptions } from "./lower-bound";
 import { upperBound, upperBoundProblem, type UpperBoundOptions } from "./upper-bound";
@@ -237,7 +237,9 @@ export async function adaptiveBounds(slope: Slope, options: AdaptiveBoundsOption
     timeLimit: Math.min(o.timeLimit ?? 300, Math.max(1, remaining())),
   });
   const message = (err: unknown) => (err instanceof Error ? err.message : String(err));
-  const warnings: string[] = [];
+  // the inputs the bounds do not take, once (not for each level and bound)
+  const ignored = ignoredInputWarnings(slope);
+  const warnings: string[] = [...ignored];
   const out: AdaptiveBoundsLevel[] = [];
   let opts: AdaptiveBoundsOptions = { ...options };
   let lower = NaN, upper = NaN;
@@ -260,14 +262,14 @@ export async function adaptiveBounds(slope: Slope, options: AdaptiveBoundsOption
     let ubF = NaN, lbF = NaN, elements = 0;
     try {
       const ubr = await upperBound(slope, limited({ ...levelOpts, startF: Number.isFinite(upper) && upper > 0 ? upper : opts.startF }), highs, module);
-      for (const w of ubr.warnings) warnings.push(`Level ${level}, upper bound: ${w}`);
+      for (const w of ubr.warnings) if (!ignored.includes(w)) warnings.push(`Level ${level}, upper bound: ${w}`);
       ubF = ubr.factorOfSafety; elements = ubr.elements;
     } catch (err) {
       warnings.push(`Level ${level}, upper bound: ${message(err)}`);
     }
     try {
       const lbr = await lowerBound(slope, limited({ ...levelOpts, startF: Number.isFinite(lower) && lower > 0 ? lower : opts.startF }), highs, module);
-      for (const w of lbr.warnings) warnings.push(`Level ${level}, lower bound: ${w}`);
+      for (const w of lbr.warnings) if (!ignored.includes(w)) warnings.push(`Level ${level}, lower bound: ${w}`);
       lbF = lbr.factorOfSafety; elements ||= lbr.elements;
     } catch (err) {
       warnings.push(`Level ${level}, lower bound: ${message(err)}`);

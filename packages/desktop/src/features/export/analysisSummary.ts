@@ -81,6 +81,11 @@ const INTERSLICE_LABELS: Record<string, string> = {
   "data-point-specified": "specified by data points",
 };
 
+/** A number as typed, with a real minus sign. */
+export function signed(v: number | undefined | null): string {
+  return fmt(v).replace(/^-(?=\d)/, "−");
+}
+
 /** The method as a reader would cite it. */
 export function methodText(options: AnalysisOptions): string {
   switch (options.method) {
@@ -111,7 +116,12 @@ export function strengthText(model: MaterialModel): string {
 function aboveWaterText(model: MaterialModel): string {
   const above = model.aboveWater;
   if (!above) return "";
-  return `; above the water line ${MATERIAL_MODEL_LABELS[above.kind]}, ${strengthWithoutSuction(above)}${suctionText(above)}`;
+  return `; above the water line ${MATERIAL_MODEL_LABELS[above.kind]}, ${strengthParametersText(above)}`;
+}
+
+/** The strength parameters of a model alone (with suction), in words. */
+export function strengthParametersText(model: MaterialModel): string {
+  return strengthWithoutSuction(model) + suctionText(model);
 }
 
 /** Excess pore pressure from fills (B̄, fill weight), in words, or "". */
@@ -147,7 +157,7 @@ function strengthWithoutSuction(model: MaterialModel): string {
         s += `; combined, limited by Su = ${fmt(model.cohesionUndrained ?? model.cohesion)} kPa`;
       }
       if (model.drawdownStrength) {
-        s += `; undrained in rapid drawdown, R envelope cR = ${fmt(model.drawdownStrength.cohesion)} kPa, φR = ${fmt(model.drawdownStrength.frictionAngle)}°`;
+        s += `; drawdown strength (R envelope) cR = ${fmt(model.drawdownStrength.cohesion)} kPa, φR = ${fmt(model.drawdownStrength.frictionAngle)}°`;
       }
       return s;
     }
@@ -447,8 +457,8 @@ export function buildAnalysisSummary(input: AnalysisSummaryInput): SummarySectio
         "three-stage analysis (Duncan, Wright & Wong 1990): the piezometric lines above are the water after drawdown; " +
         (undrained.length > 0
           ? `${undrained.map((m) => m.name).join(", ")} ${undrained.length === 1 ? "does not drain and takes the undrained strength from its" : "do not drain and take the undrained strength from their"} ` +
-            "R envelope at the consolidation stresses before drawdown (the drained strength where lower); the other materials drain"
-          : "no material has a drawdown (R) envelope, so all drain"),
+            "drawdown strength (R envelope, cR, φR) at the consolidation stresses before drawdown (the drained strength where lower); the other materials drain"
+          : "no material has a drawdown strength (R envelope, cR, φR), so all drain"),
     });
     water.push({
       label: "Water before drawdown",
@@ -550,7 +560,7 @@ export function buildAnalysisSummary(input: AnalysisSummaryInput): SummarySectio
   const excessText = (entries: UdlExcessPorePressure[] | undefined): string => {
     const known = (entries ?? []).filter((e) => materialName.has(e.materialId));
     return known.length > 0
-      ? `; excess pore pressure ${known.map((e) => `${fmt(e.ratio * 100)} % in ${materialName.get(e.materialId)}`).join(", ")}`
+      ? `; ${known.map((e) => `degree of consolidation U = ${fmt((1 - e.ratio) * 100)} % in ${materialName.get(e.materialId)}`).join(", ")} (the rest of the load as excess pore pressure)`
       : "";
   };
   const loads: string[][] = [
@@ -570,8 +580,17 @@ export function buildAnalysisSummary(input: AnalysisSummaryInput): SummarySectio
   ];
   const reinf = input.reinforcements ?? [];
   const piles = input.piles ?? [];
-  if (loads.length > 0 || reinf.length > 0 || piles.length > 0) {
+  const kh = options.seismicHorizontal ?? 0;
+  const kv = options.seismicVertical ?? 0;
+  const seismic = (Number.isFinite(kh) && kh !== 0) || (Number.isFinite(kv) && kv !== 0);
+  if (loads.length > 0 || reinf.length > 0 || piles.length > 0 || seismic) {
     const rows: SummaryRow[] = [];
+    if (seismic) {
+      rows.push({
+        label: "Seismic (pseudostatic)",
+        value: `kh = ${signed(kh)} (+ in the sliding direction), kv = ${signed(kv)} (+ downward)`,
+      });
+    }
     if (reinf.length > 0) rows.push({ label: "Reinforcement", value: countByType(reinf) });
     if (piles.length > 0) rows.push({ label: "Piles", value: countByType(piles) });
     sections.push({

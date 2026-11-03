@@ -91,7 +91,7 @@ describe("PiezoDialogApp", () => {
       lines: [line("a", "Line 1", [[0, 4], [10, 4]])],
       activeLineId: "a",
     });
-    await userEvent.click(screen.getByRole("button", { name: "+ Add Point" }));
+    await userEvent.click(screen.getByRole("button", { name: "+ Add point" }));
     expect(pl().lines[0].coordinates).toEqual([
       [0, 4],
       [10, 4],
@@ -109,7 +109,7 @@ describe("PiezoDialogApp", () => {
   it("starts an empty line at the left edge", async () => {
     render(<PiezoDialogApp />);
     hydrate({ lines: [line("a", "Line 1", [])], activeLineId: "a" });
-    await userEvent.click(screen.getByRole("button", { name: "+ Add Point" }));
+    await userEvent.click(screen.getByRole("button", { name: "+ Add point" }));
     expect(pl().lines[0].coordinates).toEqual([[0, 5]]);
   });
 
@@ -216,12 +216,28 @@ describe("PiezoDialogApp — imported head and reference lines", () => {
     hydrate();
     expect(screen.queryByTestId("waternet-notice")).toBeNull();
     bridge.emit("onPiezoChanged", { piezometricLine: pl(), coordinates: COORDS, materials: store().materials, waternet });
-    expect(screen.getByTestId("waternet-notice")).toHaveTextContent("(1 head line, 1 reference line)");
+    expect(screen.getByTestId("waternet-notice")).toHaveTextContent("from 1 imported head line and 1 reference line.");
     expect(bridge.sentOf("sendPiezoChanged")).toEqual([]);
-    await userEvent.click(screen.getByRole("button", { name: "Remove" }));
+    await userEvent.click(screen.getByRole("button", { name: "Remove the imported head and reference lines" }));
     expect(store().waternet).toBeUndefined();
     expect(screen.queryByTestId("waternet-notice")).toBeNull();
     const sent = bridge.sentOf<{ waternet: ModelWaternet | null }>("sendPiezoChanged");
     expect(sent.at(-1)!.waternet).toBeNull();
+  });
+});
+
+describe("PiezoDialogApp — rapid drawdown", () => {
+  it("says when the model has rapid drawdown", () => {
+    render(<PiezoDialogApp />);
+    hydrate();
+    expect(screen.queryByTestId("drawdown-note")).toBeNull();
+    bridge.emit("onPiezoChanged", {
+      piezometricLine: { ...pl(), rapidDrawdown: { waterBefore: [[0, 9], [20, 9]] } },
+      coordinates: COORDS,
+      materials: store().materials,
+    });
+    expect(screen.getByTestId("drawdown-note")).toHaveTextContent(
+      "Rapid drawdown: water before drawdown at level y = 9 m; the lines below are the water after drawdown (set in Options › Rapid drawdown).",
+    );
   });
 });

@@ -137,6 +137,38 @@ describe(".stix export and import", () => {
     expect(imp.definition.waternet?.referenceLines).toHaveLength(1);
     expect(F(imp.definition, imp.options)).toBeCloseTo(f0, 6);
   });
+
+  it("writes a region around a lens as pieces without holes that do not overlap the lens, every layer clockwise", () => {
+    const lens: SlopeDefinition = {
+      ...dike,
+      materials: [...dike.materials, { name: "Lens", model: { kind: "mohr-coulomb", unitWeight: 19, cohesion: 0, frictionAngle: 36 } }],
+      materialBoundaries: [...dike.materialBoundaries!, { coordinates: [[4, 3], [10, 3], [10, 5], [4, 5], [4, 3]], materialName: "" }],
+      regionAssignments: [...dike.regionAssignments!, { point: [7, 4], materialName: "Lens" }],
+    };
+    const f0 = F(lens, { method: "Bishop" });
+    const { docs, notes } = modelToStixDocuments(model(lens));
+    expect(notes.join(" ")).not.toMatch(/hole/);
+    const layers = docs.get("geometries/geometry.json")!.Layers as { Label: string; Points: { X: number; Z: number }[] }[];
+    const area2 = (pts: { X: number; Z: number }[]) => pts.reduce((s, p, i) => { const q = pts[(i + 1) % pts.length]; return s + p.X * q.Z - q.X * p.Z; }, 0);
+    // clockwise: a negative signed area (Z up)
+    expect(layers.every((l) => area2(l.Points) < 0)).toBe(true);
+    // the layers tile the outline (no overlap): their areas add up to it
+    const outline = dike.coordinates.map(([X, Z]) => ({ X, Z }));
+    expect(layers.reduce((s, l) => s - area2(l.Points) / 2, 0)).toBeCloseTo(Math.abs(area2(outline)) / 2, 9);
+    // the clay around the lens is in two pieces, the lens one layer of 12 m²
+    expect(layers.filter((l) => l.Label.startsWith("Clay")).length).toBe(2);
+    expect(-area2(layers.find((l) => l.Label.startsWith("Lens"))!.Points) / 2).toBeCloseTo(12, 9);
+    const imp = stixToDefinition(reread(docs), 0, "x.stix");
+    expect(F(imp.definition, imp.options)).toBeCloseTo(f0, 6);
+  });
+
+  it("writes the layer of a model with one region clockwise", () => {
+    const one: SlopeDefinition = { coordinates: [[0, 0], [30, 0], [30, 5], [12, 10], [0, 10]], materials: [{ name: "Clay", model: { kind: "mohr-coulomb", unitWeight: 18, cohesion: 8, frictionAngle: 25 } }] };
+    const layers = modelToStixDocuments(model(one)).docs.get("geometries/geometry.json")!.Layers as { Points: { X: number; Z: number }[] }[];
+    expect(layers).toHaveLength(1);
+    const pts = layers[0].Points;
+    expect(pts.reduce((s, p, i) => { const q = pts[(i + 1) % pts.length]; return s + p.X * q.Z - q.X * p.Z; }, 0)).toBeLessThan(0);
+  });
 });
 
 describe(".stix import", () => {
@@ -177,6 +209,29 @@ describe(".stix import", () => {
     expect(stixToDefinition(reread(docs), 0, "x.stix").definition.orientation).toBe("rtl");
     ((docs.get("scenarios/scenario.json")!.Stages as Json[])[0]).WaterDefinitionType = "WaterMesh";
     expect(stixToDefinition(reread(docs), 0, "x.stix").notes.join(" ")).toMatch(/pore pressures from a mesh/);
+  });
+
+  it("takes the phreatic level from the top head line of the uppermost reference line when the file names none", () => {
+    const docs = docsOf({
+      ...dike,
+      waternet: {
+        headLines: [
+          { id: "low", points: [[0, 4], [40, 4]] },
+          { id: "high", points: [[0, 7], [40, 6]] },
+        ],
+        referenceLines: [
+          { points: [[0, 1], [40, 1]], topHeadLineId: "low", bottomHeadLineId: "low" },
+          { points: [[0, 3], [40, 3]], topHeadLineId: "high", bottomHeadLineId: "low" },
+        ],
+        phreaticLineId: "low",
+      },
+    });
+    delete docs.get("waternets/waternets.json")!.PhreaticLineId;
+    const imp = stixToDefinition(reread(docs), 0, "x.stix");
+    const wt = imp.definition.waterTable!;
+    expect(wt.mode).toBe("custom");
+    expect((wt.value as [number, number][]).map((p) => p[1])).toEqual(expect.arrayContaining([7, 6]));
+    expect(imp.notes.join(" ")).toMatch(/has no phreatic line; the phreatic level .* is taken from head line ".*" \(the top head line of the uppermost reference line\)/);
   });
 
   it("leaves out a reference line without head lines", () => {

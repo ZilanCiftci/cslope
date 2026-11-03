@@ -2,6 +2,8 @@ import { describe, expect, it } from "vitest";
 import type { MaterialModel, SlopeDefinition } from "../types";
 import { layered, mc, runVerification } from "../verification/cases";
 import { waternetPorePressure, type Waternet } from "./waternet";
+import { effectiveVerticalStress, effectiveVerticalStressWithLoads } from "./reinforcement";
+import { buildSlope } from "./build-slope";
 
 const GW = 9.81;
 
@@ -94,6 +96,28 @@ describe("staged strength and pore pressure", () => {
       const sy = (s.weight + s.udl) / s.width + 5;
       expect(s.cohesionUndrained / (0.25 * sv * Math.max(1, sy / sv) ** 0.8)).toBeCloseTo(1, 1);
     }
+  });
+
+  it("an earlier stage's distributed load (a preload) raises the yield stress, as a strip load straight down", () => {
+    const clay: MaterialModel = { kind: "shansep", unitWeight: 18, ratio: 0.25, exponent: 0.8, yieldFromEarlierStage: true };
+    const stage = (q: number) => layered(ground, -10, [{ name: "C", topY: null, model: clay }], q > 0 ? { ...water, udls: [{ magnitude: q, x1: 0, x2: 45 }] } : water);
+    const none = run([{ name: "C", topY: null, model: clay }], { ...water, earlierStage: stage(0) });
+    const pre = run([{ name: "C", topY: null, model: clay }], { ...water, earlierStage: stage(200) });
+    const earlier = pre.slope.earlierStage!;
+    const base = none.slope.search[0].slices!;
+    pre.slope.search[0].slices!.forEach((s, i) => {
+      expect(s.cohesionUndrained).toBeGreaterThan(base[i].cohesionUndrained);
+      const sv = (s.weight + s.udl) / s.width - s.U;
+      const sy = effectiveVerticalStress(earlier, s.x, s.yBottom) + 200;
+      expect(s.cohesionUndrained).toBeCloseTo(0.25 * sv * Math.max(1, sy / sv) ** 0.8, 9);
+    });
+    expect(pre.fos!).toBeGreaterThan(none.fos!);
+    // the stress for reinforcement pullout does not take the loads
+    const s0 = base[10];
+    expect(effectiveVerticalStress(earlier, s0.x, s0.yBottom)).toBe(effectiveVerticalStress(none.slope.earlierStage!, s0.x, s0.yBottom));
+    // the part carried by excess pore pressure below the water does not count
+    expect(effectiveVerticalStressWithLoads(buildSlope({ ...stage(0), udls: [{ magnitude: 200, x1: 0, x2: 45, excessPorePressure: [{ material: "C", ratio: 0.75 }] }] }), 30, -5))
+      .toBeCloseTo(effectiveVerticalStress(earlier, 30, -5) + 50, 9);
   });
 
   it("a load not yet consolidated adds ratio × q of pore pressure under it, below the water only", () => {

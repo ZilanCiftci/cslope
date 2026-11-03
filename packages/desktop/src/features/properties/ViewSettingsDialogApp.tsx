@@ -232,7 +232,7 @@ export function ViewSettingsDialogApp() {
       }}
     >
       <div className="pb-2">
-        <h2 className="text-[12px] font-semibold">View Settings</h2>
+        <h2 className="text-[12px] font-semibold">View settings</h2>
       </div>
       <div className="flex-1 overflow-y-auto pr-1">
         {/* ── Paper ────────────────────────────────────── */}

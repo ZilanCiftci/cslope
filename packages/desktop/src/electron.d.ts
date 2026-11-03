@@ -57,6 +57,8 @@ interface LoadsStatePayload {
   coordinates?: [number, number][];
   orientation?: "ltr" | "rtl";
   parameters?: ParameterDef[];
+  /** The materials' ids and names (for the excess pore pressure of loads); read-only there. */
+  materialNames?: { id: string; name: string }[];
 }
 
 interface PiezoStatePayload {
@@ -85,6 +87,10 @@ interface AnalysisStatePayload {
   customPlanesOnly: boolean;
   blockSearchObjects: BlockSearchObject[];
   options: ModelEntry["options"];
+  /** From the main window: the water lines (the Options window sets rapid drawdown on them). */
+  piezometricLine?: PiezometricLineState;
+  /** From the Options window: the water before drawdown; null: none. Missing: not sent. */
+  rapidDrawdown?: PiezometricLineState["rapidDrawdown"] | null;
 }
 
 interface ViewSettingsStatePayload {

@@ -247,6 +247,56 @@ describe("in the store", () => {
     expect(loaded.materials[0].model).toMatchObject({ pop: 10, yieldFromEarlierStage: true });
   });
 
+  it("cleans the earlier stage on load: assignments and loads of dropped materials, non-finite numbers", () => {
+    loadImported();
+    store().saveCurrentModel();
+    const raw = JSON.parse(JSON.stringify(serializeProject(store())));
+    const stage = raw.models[0].earlierStage;
+    stage.materials.push({ name: "Broken", model: { kind: "mohr-coulomb", unitWeight: -1, cohesion: 0, frictionAngle: 0 } });
+    stage.regionAssignments = [
+      { point: [5, 2], materialName: "Clay" },
+      { point: [5, 7], materialName: "Broken" },
+    ];
+    stage.waterTable = { mode: "custom", value: [[0, 7], [30, "x"], [15, 5]] };
+    stage.udls = [
+      { magnitude: 10, x1: 0, x2: 5, excessPorePressure: [{ material: "Clay", ratio: 0.5 }, { material: "Broken", ratio: 0.5 }] },
+      { magnitude: "a", x1: 0, x2: 5 },
+      { magnitude: 10, x1: 3, x2: 3 },
+    ];
+    const loaded = parseProjectFile(JSON.stringify(raw)).models[0].earlierStage!;
+    expect(loaded.materials.map((m) => m.name)).toEqual(["Clay"]);
+    expect(loaded.regionAssignments).toEqual([{ point: [5, 2], materialName: "Clay" }]);
+    expect(loaded.waterTable).toEqual({ mode: "custom", value: [[0, 7], [15, 5]] });
+    expect(loaded.udls).toEqual([{ magnitude: 10, x1: 0, x2: 5, excessPorePressure: [{ material: "Clay", ratio: 0.5 }] }]);
+    stage.waterTable = { mode: "height", value: null };
+    expect(parseProjectFile(JSON.stringify(raw)).models[0].earlierStage).not.toHaveProperty("waterTable");
+  });
+
+  it("keeps the material names of the earlier stage's boundaries (a stage assigned by boundary)", () => {
+    loadImported();
+    store().saveCurrentModel();
+    const raw = JSON.parse(JSON.stringify(serializeProject(store())));
+    const stage = raw.models[0].earlierStage;
+    stage.materialBoundaries = [
+      { coordinates: [[0, 4], [30, 4]], materialName: "Clay" },
+      { coordinates: [[0, 3], [30, 3]], materialName: "Missing" },
+    ];
+    const loaded = parseProjectFile(JSON.stringify(raw)).models[0].earlierStage!;
+    expect(loaded.materialBoundaries?.map((b) => b.materialName)).toEqual(["Clay", ""]);
+  });
+
+  it("keeps a model's import notes through save and load", () => {
+    loadImported();
+    useAppStore.setState((s) => ({ models: s.models.map((m) => (m.id === "imp" ? { ...m, importNotes: ["Imported from a.stix.", "A note."] } : m)) }));
+    store().saveCurrentModel();
+    const raw = JSON.parse(JSON.stringify(serializeProject(store())));
+    const loaded = parseProjectFile(JSON.stringify(raw));
+    expect(loaded.models.find((m) => m.id === "imp")!.importNotes).toEqual(["Imported from a.stix.", "A note."]);
+    expect(loaded.models.find((m) => m.id === "other")).not.toHaveProperty("importNotes");
+    raw.models[0].importNotes = ["ok", 3];
+    expect(parseProjectFile(JSON.stringify(raw)).models[0].importNotes).toEqual(["ok"]);
+  });
+
   it("keeps them through an edit and its undo", () => {
     loadImported();
     const udl = store().udls[0];
@@ -293,7 +343,7 @@ describe("in the store", () => {
     );
     expect(text).toContain("2 head lines and 1 reference line");
     expect(text).toContain("earlier construction stage");
-    expect(text).toContain("excess pore pressure 60 % in Clay");
+    expect(text).toContain("degree of consolidation U = 40 % in Clay (the rest of the load as excess pore pressure)");
     expect(text).toContain("above the water line Mohr-Coulomb");
     expect(text).toContain("from the earlier stage + POP 10 kPa");
   });

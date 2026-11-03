@@ -206,7 +206,7 @@ export function DataPointTable({
         className="text-[10px] cursor-pointer hover:underline font-medium"
         style={{ color: "var(--color-vsc-accent)" }}
       >
-        + Add Row
+        + Add row
       </button>
     </div>
   );

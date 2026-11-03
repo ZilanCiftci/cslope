@@ -66,7 +66,7 @@ describe("UdlDialogApp", () => {
   it("adds, edits and removes rows and broadcasts every change", async () => {
     render(<UdlDialogApp />);
     hydrate([]);
-    await userEvent.click(screen.getByRole("button", { name: "+ Add UDL" }));
+    await userEvent.click(screen.getByRole("button", { name: "+ Add load" }));
     expect(useAppStore.getState().udls).toHaveLength(1);
     let last = bridge.sentOf<{ udls: UdlRow[] }>("sendLoadsChanged").at(-1)!;
     expect(last.udls).toHaveLength(1);
@@ -93,7 +93,7 @@ describe("UdlDialogApp", () => {
       lineLoads: [],
       coordinates: [[0, 0], [0, 10], [20, 10], [20, 0]],
     });
-    await userEvent.click(screen.getByRole("button", { name: "+ Add UDL" }));
+    await userEvent.click(screen.getByRole("button", { name: "+ Add load" }));
     expect(
       useAppStore.getState().udls.map(({ x1, x2 }) => [x1, x2]),
     ).toEqual([
@@ -106,7 +106,7 @@ describe("UdlDialogApp", () => {
       lineLoads: [],
       coordinates: [[-40, 0], [-40, 10], [-38, 10], [-38, 0]],
     });
-    await userEvent.click(screen.getByRole("button", { name: "+ Add UDL" }));
+    await userEvent.click(screen.getByRole("button", { name: "+ Add load" }));
     expect(
       useAppStore.getState().udls.map(({ x1, x2 }) => [x1, x2]),
     ).toEqual([[-40, -38]]);
@@ -115,8 +115,8 @@ describe("UdlDialogApp", () => {
   it("places each new row just beyond the last one instead of stacking", async () => {
     render(<UdlDialogApp />);
     hydrate([{ id: "u1", magnitude: 12, x1: 1, x2: 3 }]);
-    await userEvent.click(screen.getByRole("button", { name: "+ Add UDL" }));
-    await userEvent.click(screen.getByRole("button", { name: "+ Add UDL" }));
+    await userEvent.click(screen.getByRole("button", { name: "+ Add load" }));
+    await userEvent.click(screen.getByRole("button", { name: "+ Add load" }));
     expect(
       useAppStore.getState().udls.map(({ magnitude, x1, x2 }) => [magnitude, x1, x2]),
     ).toEqual([
@@ -177,6 +177,25 @@ describe("UdlDialogApp", () => {
     close.mockRestore();
   });
 
+  it("shows a load's excess pore pressure (not consolidated) and removes it", async () => {
+    render(<UdlDialogApp />);
+    bridge.emit("onLoadsState", {
+      udls: [
+        { id: "u1", magnitude: 20, x1: 1, x2: 3, excessPorePressure: [{ materialId: "m1", ratio: 0.5 }, { materialId: "m2", ratio: 0.25 }] },
+      ],
+      lineLoads: [],
+      materialNames: [{ id: "m1", name: "Clay" }, { id: "m2", name: "Peat" }],
+    });
+    const notes = screen.getByTestId("udl-excess-notes");
+    expect(notes).toHaveTextContent('UDL 1, not consolidated: Material "Clay" 50 % of q (excess pore pressure below the water)');
+    expect(notes).toHaveTextContent('Material "Peat" 25 % of q');
+    await userEvent.click(screen.getByRole("button", { name: 'Remove the excess pore pressure of UDL 1 in Material "Clay"' }));
+    expect(useAppStore.getState().udls[0].excessPorePressure).toEqual([{ materialId: "m2", ratio: 0.25 }]);
+    await userEvent.click(screen.getByRole("button", { name: 'Remove the excess pore pressure of UDL 1 in Material "Peat"' }));
+    expect(useAppStore.getState().udls[0].excessPorePressure).toBeUndefined();
+    expect(screen.queryByTestId("udl-excess-notes")).toBeNull();
+  });
+
   it("unsubscribes from IPC on unmount", () => {
     const { unmount } = render(<UdlDialogApp />);
     expect(bridge.listenerCount("onLoadsState")).toBe(1);
@@ -190,8 +209,8 @@ describe("LineLoadsDialogApp", () => {
   it("adds new line loads 5 m beyond the last one", async () => {
     render(<LineLoadsDialogApp />);
     hydrate([], []);
-    await userEvent.click(screen.getByRole("button", { name: "+ Add Line Load" }));
-    await userEvent.click(screen.getByRole("button", { name: "+ Add Line Load" }));
+    await userEvent.click(screen.getByRole("button", { name: "+ Add line load" }));
+    await userEvent.click(screen.getByRole("button", { name: "+ Add line load" }));
     expect(
       useAppStore.getState().lineLoads.map(({ magnitude, x }) => [magnitude, x]),
     ).toEqual([
@@ -241,7 +260,7 @@ describe("LineLoadsDialogApp", () => {
       lineLoads: [{ id: "l1", magnitude: 30, x: 18 }],
       coordinates: [[0, 0], [0, 10], [20, 10], [20, 0]],
     });
-    const add = screen.getByRole("button", { name: "+ Add Line Load" });
+    const add = screen.getByRole("button", { name: "+ Add line load" });
     await userEvent.click(add);
     await userEvent.click(add);
     expect(useAppStore.getState().lineLoads.map((l) => l.x)).toEqual([18, 20, 20]);

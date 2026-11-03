@@ -49,7 +49,7 @@ export function RapidDrawdownFields() {
       <div className="grid grid-cols-2 gap-x-3 gap-y-2">
         <label
           className="col-span-2 flex items-center gap-1.5"
-          title="Three-stage rapid drawdown analysis (Duncan, Wright & Wong 1990): the piezometric lines are the water after drawdown. Materials with a drawdown (R) envelope do not drain: they take the undrained strength at their consolidation stresses under the water before drawdown (the drained strength where lower). The other materials drain."
+          title="Three-stage rapid drawdown analysis (Duncan, Wright & Wong 1990): the piezometric lines are the water after drawdown. Materials with a drawdown strength (R envelope, cR, φR) do not drain: they take the undrained strength at their consolidation stresses under the water before drawdown (the drained strength where lower). The other materials drain."
         >
           <input
             type="checkbox"
@@ -59,16 +59,39 @@ export function RapidDrawdownFields() {
           />
           <Label>Rapid drawdown (three-stage)</Label>
         </label>
-        {before && (
+        {before && level === null && (
+          <div className="col-span-2 flex flex-col gap-0.5">
+            <Label>Water before drawdown</Label>
+            <div className="flex items-center gap-2 text-[11px]" data-testid="drawdown-imported-line">
+              <span className="flex-1">Imported line ({before.length} points)</span>
+              <button
+                type="button"
+                onClick={() =>
+                  // Start the level at the highest point of the imported line.
+                  setRapidDrawdown({ waterBefore: levelLine(coordinates, Math.max(...before.map((p) => p[1]))) })
+                }
+                className="px-2 py-0.5 text-[11px] font-medium rounded border cursor-pointer flex-shrink-0"
+                style={{
+                  background: "var(--color-vsc-surface-tint)",
+                  color: "var(--color-vsc-text)",
+                  borderColor: "var(--color-vsc-border)",
+                }}
+                title="Replace the imported line by a horizontal level across the model (at the line's highest point, then editable)"
+              >
+                Replace with level
+              </button>
+            </div>
+          </div>
+        )}
+        {before && level !== null && (
           <label className="col-span-2 flex flex-col gap-0.5">
             <Label>Water level before drawdown (m)</Label>
             <DraftNumberInput
-              value={level ?? undefined}
+              value={level}
               step={0.5}
-              placeholder={level === null ? `imported line (${before.length} points)` : undefined}
               onValueChange={(y) => setRapidDrawdown({ waterBefore: levelLine(coordinates, y) })}
               aria-label="Water level before drawdown"
-              title="Level of the water (reservoir) before drawdown, across the model, for all materials. An imported line is kept until a level is entered here."
+              title="Level of the water (reservoir) before drawdown, across the model, for all materials."
             />
           </label>
         )}

@@ -225,7 +225,7 @@ export function ParametersDialogApp() {
           className="text-[11px] mt-1 cursor-pointer hover:underline font-medium"
           style={{ color: "var(--color-vsc-accent)" }}
         >
-          + Add Parameter
+          + Add parameter
         </button>
       </div>
 

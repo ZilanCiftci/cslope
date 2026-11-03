@@ -46,7 +46,7 @@ export async function readZip(bytes: Uint8Array, want?: (name: string) => boolea
   let p = u32(bytes, eocd + 16);
   const out = new Map<string, Uint8Array>();
   for (let k = 0; k < count; k++) {
-    if (u32(bytes, p) !== 0x02014b50) throw new Error("Damaged ZIP archive (central directory).");
+    if (p + 46 > bytes.length || u32(bytes, p) !== 0x02014b50) throw new Error("Damaged ZIP archive (central directory).");
     const flags = u16(bytes, p + 8);
     const method = u16(bytes, p + 10);
     const compressed = u32(bytes, p + 20);
@@ -60,10 +60,16 @@ export async function readZip(bytes: Uint8Array, want?: (name: string) => boolea
     if (flags & 1) throw new Error(`Encrypted ZIP entry: ${name}`);
     if (u32(bytes, local) !== 0x04034b50) throw new Error("Damaged ZIP archive (local header).");
     const start = local + 30 + u16(bytes, local + 26) + u16(bytes, local + 28);
+    if (start + compressed > bytes.length) throw new Error(`Damaged ZIP archive (${name} is cut off).`);
     const data = bytes.subarray(start, start + compressed);
     if (method === 0) out.set(name, data.slice());
-    else if (method === 8) out.set(name, await inflateRaw(data));
-    else throw new Error(`Unsupported ZIP compression (method ${method}) for ${name}`);
+    else if (method === 8) {
+      try {
+        out.set(name, await inflateRaw(data));
+      } catch {
+        throw new Error(`Damaged ZIP archive (${name} cannot be decompressed).`);
+      }
+    } else throw new Error(`Unsupported ZIP compression (method ${method}) for ${name}`);
   }
   return out;
 }

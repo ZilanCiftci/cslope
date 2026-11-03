@@ -109,7 +109,7 @@ describe("rapid drawdown", () => {
   });
 
   it("the summary names the drawdown envelope", () => {
-    expect(strengthText(clay)).toMatch(/undrained in rapid drawdown, R envelope cR = 10 kPa, φR = 15°/);
+    expect(strengthText(clay)).toMatch(/drawdown strength \(R envelope\) cR = 10 kPa, φR = 15°/);
     expect(strengthText(sand)).not.toMatch(/drawdown/);
   });
 });

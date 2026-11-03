@@ -18,7 +18,7 @@
  * to check there, not a guaranteed round trip.
  */
 
-import { hoekBrownOf, toCanonicalSlopeDefinition, type AnalysisOptions, type MaterialModel, type SlopeDefinition } from "@cslope/engine";
+import { MATERIAL_MODEL_LABELS, hoekBrownOf, toCanonicalSlopeDefinition, type AnalysisOptions, type MaterialModel, type SlopeDefinition } from "@cslope/engine";
 import { buildSlopeDTOFromModel } from "../../../store/helpers";
 import type { ModelEntry } from "../../../store/types";
 import { computeRegions } from "../../../utils/regions";
@@ -163,37 +163,37 @@ interface MaterialOut {
 /** The format's material fields for one model (without the water fields). */
 function materialFields(name: string, model: MaterialModel, notes: string[]): MaterialOut {
   const uw = `uw: ${n(model.unitWeight)}${model.unitWeightSat !== undefined && model.unitWeightSat !== model.unitWeight ? ` uwbwt: ${n(model.unitWeightSat)}` : ""}`;
-  if (model.aboveWater) notes.push(`"${name}": the strength above the water line is not written; the strength below it is used throughout.`);
+  if (model.aboveWater) notes.push(`Material "${name}": the strength above the water line is not written; the strength below it is used throughout.`);
   const mc = (c: number, phi: number, extra = "") => ({ fields: `type: 0 c: ${n(c)} phi: ${n(phi)} ${uw}${extra}` });
   switch (model.kind) {
     case "mohr-coulomb": {
-      if (model.cohesionRateOfChange) notes.push(`"${name}": c′ increasing with depth is written as its reference value.`);
-      if (model.cFactor) notes.push(`"${name}": the combined (undrained) limit is not written; drained c′ and φ′ only.`);
-      if (model.maxSuction !== undefined && model.phiB) notes.push(`"${name}": the limit on the suction is not written.`);
+      if (model.cohesionRateOfChange) notes.push(`Material "${name}": c′ increasing with depth is written as its reference value.`);
+      if (model.cFactor) notes.push(`Material "${name}": the combined (undrained) limit is not written; drained c′ and φ′ only.`);
+      if (model.maxSuction !== undefined && model.phiB) notes.push(`Material "${name}": the limit on the suction is not written.`);
       const phiB = model.phiB && model.phiB > 0 ? ` gw_phi_b: ${n(model.phiB)}` : "";
       const rd = model.drawdownStrength ? ` rd_undrained: 1 rd_type: 0 rd_cr: ${n(model.drawdownStrength.cohesion)} rd_phir: ${n(model.drawdownStrength.frictionAngle)}` : "";
       return mc(model.cohesion, model.frictionAngle, phiB + rd);
     }
     case "undrained":
-      if (model.suRateOfChange) notes.push(`"${name}": Su increasing with depth below a reference level is written as its reference value.`);
-      if (model.suMax !== undefined) notes.push(`"${name}": the cut-off of Su is not written.`);
-      if (model.anisotropy?.length) notes.push(`"${name}": the anisotropy of Su is not written.`);
+      if (model.suRateOfChange) notes.push(`Material "${name}": Su increasing with depth below a reference level is written as its reference value.`);
+      if (model.suMax !== undefined) notes.push(`Material "${name}": the cut-off of Su is not written.`);
+      if (model.anisotropy?.length) notes.push(`Material "${name}": the anisotropy of Su is not written.`);
       return { fields: `type: 1 ctype: 0 c: ${n(model.undrainedShearStrength)} ${uw}` };
     case "s-f-depth": {
       const top = model.depthReference === "layer-top";
-      if (!top) notes.push(`"${name}": Su is given below the ground; the format measures the depth from the top of the material's layer, so check it where the layer is not at the ground.`);
-      if (model.drainedCohesion !== undefined) notes.push(`"${name}": the drained branch of the combined strength is not written.`);
-      if (model.suMax !== undefined) notes.push(`"${name}": the cut-off of Su is not written.`);
-      if (model.anisotropy?.length) notes.push(`"${name}": the anisotropy of Su is not written.`);
+      if (!top) notes.push(`Material "${name}": Su is given below the ground; the format measures the depth from the top of the material's layer, so check it where the layer is not at the ground.`);
+      if (model.drainedCohesion !== undefined) notes.push(`Material "${name}": the drained branch of the combined strength is not written.`);
+      if (model.suMax !== undefined) notes.push(`Material "${name}": the cut-off of Su is not written.`);
+      if (model.anisotropy?.length) notes.push(`Material "${name}": the anisotropy of Su is not written.`);
       const c0 = model.suRef - model.depthRef * model.rate;
-      if (c0 < 0) notes.push(`"${name}": Su at the top of the layer would be ${+c0.toFixed(3)} kPa; it is written as 0, with the same increase.`);
+      if (c0 < 0) notes.push(`Material "${name}": Su at the top of the layer would be ${+c0.toFixed(3)} kPa; it is written as 0, with the same increase.`);
       return { fields: `type: 1 ctype: 1 c: ${n(Math.max(0, c0))} dc: ${n(model.rate)} ${uw}` };
     }
     case "s-f-datum":
-      notes.push(`"${name}": Su against elevation is written as its reference value ${model.suRef} kPa (constant).`);
+      notes.push(`Material "${name}": Su against elevation is written as its reference value ${model.suRef} kPa (constant).`);
       return { fields: `type: 1 ctype: 0 c: ${n(model.suRef)} ${uw}` };
     case "shear-normal":
-      if (model.spline) notes.push(`"${name}": the spline through the shear-normal points is not written; straight lines between them.`);
+      if (model.spline) notes.push(`Material "${name}": the spline through the shear-normal points is not written; straight lines between them.`);
       return { fields: `type: 5 ${uw}`, strengthFunction: { name: `${name} function`, points: model.points } };
     case "hoek-brown": {
       const p = hoekBrownOf(model);
@@ -203,17 +203,17 @@ function materialFields(name: string, model: MaterialModel, notes: string[]): Ma
       let ocr: Pt[] | undefined;
       if (model.ocrByElevation?.length) ocr = model.ocrByElevation;
       else if ((model.ocr ?? 1) !== 1) ocr = [[-1e4, model.ocr!], [1e4, model.ocr!]];
-      if (model.pop !== undefined || model.yieldStress !== undefined || model.yieldFromEarlierStage) notes.push(`"${name}": the stress history (POP or yield stress) is not written; OCR = 1.`);
-      if (model.suByStress) notes.push(`"${name}": Su as a function of the vertical stress is not written.`);
-      if (model.suMin) notes.push(`"${name}": the lower limit of Su is not written.`);
+      if (model.pop !== undefined || model.yieldStress !== undefined || model.yieldFromEarlierStage) notes.push(`Material "${name}": the stress history (POP or yield stress) is not written; OCR = 1.`);
+      if (model.suByStress) notes.push(`Material "${name}": Su as a function of the vertical stress is not written.`);
+      if (model.suMin) notes.push(`Material "${name}": the lower limit of Su is not written.`);
       return { fields: `type: 18 ${uw} shansepA: 0 shansepS: ${n(model.ratio)} shansepm: ${n(model.exponent ?? 0.8)} histype: 0 shansepmd: 0 shansepht: 0 shansepcon: 2`, ...(ocr ? { ocr } : {}) };
     }
     case "anisotropic-function":
-      notes.push(`"${name}": the anisotropic function is not written; Mohr-Coulomb with its base c and φ.`);
+      notes.push(`Material "${name}": the anisotropic function is not written; Mohr-Coulomb with its base c and φ.`);
       return mc(model.cohesion, model.frictionAngle);
     default: {
       const m = model as { cohesion?: number; frictionAngle?: number; kind: string };
-      notes.push(`"${name}": the material model "${model.kind}" has no counterpart in the export; written as Mohr-Coulomb${m.cohesion !== undefined || m.frictionAngle !== undefined ? " with its c and φ" : " with no strength, to be entered by hand"}.`);
+      notes.push(`Material "${name}": the material model "${MATERIAL_MODEL_LABELS[model.kind as MaterialModel["kind"]] ?? model.kind}" has no counterpart in the export; written as Mohr-Coulomb${m.cohesion !== undefined || m.frictionAngle !== undefined ? " with its c and φ" : " with no strength, to be entered by hand"}.`);
       return mc(m.cohesion ?? 0, m.frictionAngle ?? 0);
     }
   }
@@ -279,19 +279,16 @@ export function modelToSli(model: ModelEntry): { text: string; notes: string[] }
     return k + 2;
   };
   const auto = opts.porePressureHead === "phreatic-correction";
-  // B-bar: the format's method takes B̄ × the weight of every material without
-  // B̄ above a material with one (cSlope: the materials marked as fill)
+  // B-bar: the format's method takes B̄ × the weight of the fill materials
+  // (marked stg2: 1, cSlope's materials marked as fill) above a material
+  // with B̄ (bbar: B̄)
   const bBarOf = new Map<string, number>();
   for (const m of def.materials) {
     const b = (m.model as { bBar?: number } | undefined)?.bBar;
     if (b) bBarOf.set(m.name, b);
   }
   const bBarWritten = bBarOf.size > 0 && !def.rapidDrawdown;
-  if (bBarOf.size > 0 && def.rapidDrawdown) notes.push("The B-bar pore pressure is not written: the format has one advanced water option, and rapid drawdown is written.");
-  if (bBarWritten) {
-    const unmarked = def.materials.filter((m) => !bBarOf.has(m.name) && !(m.model as { bBarLoad?: boolean } | undefined)?.bBarLoad).map((m) => `"${m.name}"`);
-    if (unmarked.length > 0) notes.push(`B-bar: the format counts the weight of every material without B̄ above a B̄ material as fill, also ${unmarked.join(", ")}, which are not marked as fill in cSlope.`);
-  }
+  if (bBarOf.size > 0 && def.rapidDrawdown) notes.push("The B̄ pore pressure is not written: the format has one advanced water option, and rapid drawdown is written.");
   const matLines: string[] = [];
   const propLines: string[] = [];
   const functions: string[] = [];
@@ -305,7 +302,7 @@ export function modelToSli(model: ModelEntry): { text: string; notes: string[] }
     }
     const out = m.model ? materialFields(m.name, m.model, notes) : { fields: "type: 0 c: 0 phi: 0 uw: 0" } as MaterialOut;
     // (a function's name runs to the end of the line)
-    matLines.push(`  soil${k} = ${out.fields} water: 1 wtable: ${wtableOf(m)} hutype: ${auto ? 1 : 0} withru: ${n((m.model as { ru?: number } | undefined)?.ru ?? 0)} bbar: ${n(bBarWritten ? (m.model as { bBar?: number } | undefined)?.bBar ?? 0 : 0)}${out.strengthFunction ? ` name: ${out.strengthFunction.name}` : ""}`);
+    matLines.push(`  soil${k} = ${out.fields} water: 1 wtable: ${wtableOf(m)} hutype: ${auto ? 1 : 0} withru: ${n((m.model as { ru?: number } | undefined)?.ru ?? 0)} stg2: ${bBarWritten && (m.model as { bBarLoad?: boolean } | undefined)?.bBarLoad ? 1 : 0} bbar: ${n(bBarWritten ? (m.model as { bBar?: number } | undefined)?.bBar ?? 0 : 0)}${out.strengthFunction ? ` name: ${out.strengthFunction.name}` : ""}`);
     const hex = /^#[0-9a-f]{6}$/i.test(m.color ?? "") ? m.color! : "#c8c8c8";
     const [r, g, b] = [1, 3, 5].map((o) => parseInt(hex.slice(o, o + 2), 16));
     propLines.push(`  ${m.name.replace(/\s+/g, " ").trim() || `Material ${k}`}    red: ${r}  green: ${g}  blue: ${b}  has_hatch: 0 hatch2: 0  hatch_clr: 0`);
@@ -405,7 +402,7 @@ export function modelToSli(model: ModelEntry): { text: string; notes: string[] }
       const pct = Math.min(100, (100 * (r.pullout.bondedLength ?? len)) / len);
       anchorTypes.push(`  anchor${k} = type: 2 fa: ${fa} sp: ${n(r.spacing ?? 1)} cap: ${n(r.tensileCapacity)} pc: ${n(r.end1Capacity ?? 0)} bst: 0 bs: ${n(r.pullout.strength)} bt: 1 bl: ${n(pct)}`);
     } else {
-      notes.push(`Reinforcement ${i + 1}: its pullout (${r.pullout.kind}) has no counterpart in the export; it is written as an end-anchored bar with its tensile capacity.`);
+      notes.push(`Reinforcement ${i + 1}: its pullout model has no counterpart in the export; it is written as an end-anchored bar with its tensile capacity.`);
       anchorTypes.push(`  anchor${k} = type: 1 fa: ${fa} sp: ${n(r.spacing ?? 1)} cap: ${n(r.tensileCapacity)}`);
     }
     anchors.push(`  ${anchors.length + 1} x1: ${n(r.x1)} y1: ${n(r.y1)} x2: ${n(r.x2)} y2: ${n(r.y2)}  material: anchor${k}`);

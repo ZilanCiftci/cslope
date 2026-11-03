@@ -528,24 +528,24 @@ describe("window controls", () => {
 // ── Dialog windows ────────────────────────────────────────────────
 
 const DIALOGS: [channel: string, title: string, hash: string][] = [
-  ["window:openMaterialsDialog", "Define Materials", "materials-dialog"],
+  ["window:openMaterialsDialog", "Define materials", "materials-dialog"],
   [
     "window:openMaterialAssignmentDialog",
-    "Assign Materials",
+    "Assign materials",
     "material-assignment-dialog",
   ],
-  ["window:openGeometryDialog", "Exterior Boundary", "geometry-dialog"],
+  ["window:openGeometryDialog", "Exterior boundary", "geometry-dialog"],
   [
     "window:openInteriorBoundariesDialog",
-    "Interior Boundaries",
+    "Interior boundaries",
     "interior-boundaries-dialog",
   ],
-  ["window:openUdlDialog", "UDL", "udl-dialog"],
-  ["window:openLineLoadsDialog", "Line Loads", "line-loads-dialog"],
+  ["window:openUdlDialog", "Distributed loads", "udl-dialog"],
+  ["window:openLineLoadsDialog", "Line loads", "line-loads-dialog"],
   ["window:openReinforcementDialog", "Reinforcement", "reinforcement-dialog"],
-  ["window:openPiezoDialog", "Piezometric Lines", "piezo-dialog"],
+  ["window:openPiezoDialog", "Piezometric lines", "piezo-dialog"],
   ["window:openParametersDialog", "Parameters", "parameters-dialog"],
-  ["window:openResultsPlotDialog", "Results Plot", "results-plot-dialog"],
+  ["window:openResultsPlotDialog", "Results plot", "results-plot-dialog"],
   ["window:openSearchLimitsDialog", "Search limits", "search-limits-dialog"],
   [
     "window:openCustomSearchPlanesDialog",
@@ -553,7 +553,7 @@ const DIALOGS: [channel: string, title: string, hash: string][] = [
     "custom-search-planes-dialog",
   ],
   ["window:openOptionsDialog", "Options", "options-dialog"],
-  ["window:openViewSettingsDialog", "View Settings", "view-settings-dialog"],
+  ["window:openViewSettingsDialog", "View settings", "view-settings-dialog"],
 ];
 
 function openDialog(channel: string): Win {

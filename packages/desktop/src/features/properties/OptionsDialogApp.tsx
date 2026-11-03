@@ -8,6 +8,7 @@ import type {
   CustomSearchPlane,
   ModelEntry,
   ModelOrientation,
+  PiezometricLineState,
 } from "../../store/types";
 
 interface AnalysisStatePayload {
@@ -18,6 +19,10 @@ interface AnalysisStatePayload {
   customPlanesOnly: boolean;
   blockSearchObjects: BlockSearchObject[];
   options: ModelEntry["options"];
+  /** From the main window: the water lines (rapid drawdown is set here). */
+  piezometricLine?: PiezometricLineState;
+  /** To the main window: the water before drawdown; null: none. */
+  rapidDrawdown?: PiezometricLineState["rapidDrawdown"] | null;
 }
 
 export function OptionsDialogApp() {
@@ -28,6 +33,7 @@ export function OptionsDialogApp() {
   const customPlanesOnly = useAppStore((s) => s.customPlanesOnly);
   const blockSearchObjects = useAppStore((s) => s.blockSearchObjects);
   const options = useAppStore((s) => s.options);
+  const rapidDrawdown = useAppStore((s) => s.piezometricLine.rapidDrawdown);
 
   const [isHydrated, setIsHydrated] = useState(!isElectron);
   const suppressNextBroadcastRef = useRef(false);
@@ -45,6 +51,7 @@ export function OptionsDialogApp() {
         customPlanesOnly: next.customPlanesOnly,
         blockSearchObjects: next.blockSearchObjects ?? [],
         options: next.options,
+        ...(next.piezometricLine ? { piezometricLine: next.piezometricLine } : {}),
       });
       setIsHydrated(true);
     };
@@ -75,6 +82,7 @@ export function OptionsDialogApp() {
       customPlanesOnly,
       blockSearchObjects,
       options,
+      rapidDrawdown: rapidDrawdown ?? null,
     });
   }, [
     coordinates,
@@ -84,6 +92,7 @@ export function OptionsDialogApp() {
     customPlanesOnly,
     blockSearchObjects,
     options,
+    rapidDrawdown,
     isHydrated,
   ]);
 

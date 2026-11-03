@@ -5,6 +5,8 @@ interface Props {
   initialInfos: ProjectInfo[];
   onSave: (changes: Partial<ProjectInfo>) => void;
   onClose: () => void;
+  /** What the import of the model noted (read-only); absent: not imported. */
+  importNotes?: string[];
 }
 
 type ProjectInfoKey = keyof ProjectInfo;
@@ -33,7 +35,7 @@ function allSame<T>(values: T[]): { same: boolean; value: T } {
   return { same: values.every((v) => v === first), value: first };
 }
 
-export function ProjectInfoDialog({ initialInfos, onSave, onClose }: Props) {
+export function ProjectInfoDialog({ initialInfos, onSave, onClose, importNotes }: Props) {
   const multiEdit = initialInfos.length > 1;
 
   const { initialValues, mixedFields } = useMemo(() => {
@@ -297,6 +299,16 @@ export function ProjectInfoDialog({ initialInfos, onSave, onClose }: Props) {
               />
             </div>
           </div>
+          {importNotes && importNotes.length > 0 && (
+            <section aria-label="Import notes" data-testid="import-notes">
+              <div className="text-xs font-medium mb-1 opacity-70">Import notes</div>
+              <ul className="text-[11px] list-disc pl-4 space-y-0.5 max-h-40 overflow-y-auto">
+                {importNotes.map((n, i) => (
+                  <li key={i}>{n}</li>
+                ))}
+              </ul>
+            </section>
+          )}
         </div>
 
         <div className="flex items-center justify-end gap-2 px-4 py-3 border-t border-[var(--color-vsc-border)] bg-[var(--color-vsc-surface)] rounded-b-lg">

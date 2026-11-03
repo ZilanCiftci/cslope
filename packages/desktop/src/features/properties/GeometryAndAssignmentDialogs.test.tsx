@@ -84,7 +84,7 @@ describe("GeometryDialogApp", () => {
     ]);
     // A triangle cannot lose a point.
     expect(screen.queryByRole("button", { name: "Remove point 1" })).toBeNull();
-    await userEvent.click(screen.getByRole("button", { name: "+ Add Point" }));
+    await userEvent.click(screen.getByRole("button", { name: "+ Add point" }));
     expect(store().coordinates.at(-1)).toEqual([25, 0]);
     await userEvent.click(screen.getByRole("button", { name: "Remove point 2" }));
     expect(store().coordinates).toEqual([
@@ -106,12 +106,12 @@ describe("GeometrySection in the side panel", () => {
   it("opens and closes with its header", async () => {
     render(<GeometrySection />);
     const header = screen.getByRole("button", { name: /Exterior Boundary/ });
-    if (!screen.queryByRole("button", { name: "+ Add Point" })) {
+    if (!screen.queryByRole("button", { name: "+ Add point" })) {
       await userEvent.click(header);
     }
-    expect(screen.getByRole("button", { name: "+ Add Point" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "+ Add point" })).toBeInTheDocument();
     await userEvent.click(header);
-    expect(screen.queryByRole("button", { name: "+ Add Point" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "+ Add point" })).toBeNull();
     expect(store().activeSection).toBeNull();
   });
 });
@@ -206,7 +206,7 @@ describe("MaterialsDialogApp", () => {
     bridge.emit("onMaterialsState", { materials: [mat("m1", "Sand")], earlierStage });
     expect(store().earlierStage).toEqual(earlierStage);
     expect(screen.getByTestId("earlier-stage-notice")).toBeInTheDocument();
-    await userEvent.click(screen.getByRole("button", { name: "Remove earlier stage" }));
+    await userEvent.click(screen.getByRole("button", { name: "Remove the imported earlier stage" }));
     expect(store().earlierStage).toBeUndefined();
     const sent = bridge.sentOf<{ earlierStage: unknown }>("sendMaterialsChanged");
     expect(sent.at(-1)!.earlierStage).toBeNull();

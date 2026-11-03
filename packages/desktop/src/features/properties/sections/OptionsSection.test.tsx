@@ -107,12 +107,14 @@ describe("OptionsSection rapid drawdown", () => {
     expect(piezo().rapidDrawdown).toBeUndefined();
   });
 
-  it("shows an imported line and keeps it until a level is entered", async () => {
+  it("shows an imported line and keeps it until it is replaced with a level", async () => {
     act(() => useAppStore.getState().setPiezoRapidDrawdown({ waterBefore: [[0, 9], [10, 8], [20, 8]] }));
-    const input = screen.getByLabelText("Water level before drawdown") as HTMLInputElement;
-    expect(input.value).toBe("");
-    expect(input.placeholder).toBe("imported line (3 points)");
+    expect(screen.getByTestId("drawdown-imported-line")).toHaveTextContent("Imported line (3 points)");
+    // No level field to type into by accident.
+    expect(screen.queryByLabelText("Water level before drawdown")).toBeNull();
     expect(piezo().rapidDrawdown!.waterBefore).toHaveLength(3);
+    await userEvent.click(screen.getByRole("button", { name: "Replace with level" }));
+    expect(piezo().rapidDrawdown!.waterBefore.map((p) => p[1])).toEqual([9, 9]);
     await typeInto("Water level before drawdown", "6");
     expect(piezo().rapidDrawdown!.waterBefore.map((p) => p[1])).toEqual([6, 6]);
   });

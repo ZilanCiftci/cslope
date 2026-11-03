@@ -40,24 +40,24 @@ const rejected: [string, MaterialModel, RegExp][] = [
   ["γsat = 0", mc({ unitWeightSat: 0 }), /Saturated/],
   ["γsat > 500", mc({ unitWeightSat: 501 }), /Saturated/],
   ["γsat Infinity", mc({ unitWeightSat: Infinity }), /Saturated/],
-  ["cohesionRefDepth NaN", mc({ cohesionRefDepth: NaN }), /cohesionRefDepth must be a finite/],
-  ["cohesionRateOfChange string", mc({ cohesionRateOfChange: "1" }), /cohesionRateOfChange must be a finite/],
-  ["cohesionUndrained Infinity", mc({ cohesionUndrained: Infinity }), /cohesionUndrained must be a finite/],
-  ["cFactor NaN", mc({ cFactor: NaN }), /cFactor must be a finite/],
-  ["suRefDepth NaN", su({ suRefDepth: NaN }), /suRefDepth must be a finite/],
-  ["suRateOfChange NaN", su({ suRateOfChange: NaN }), /suRateOfChange must be a finite/],
+  ["cohesionRefDepth NaN", mc({ cohesionRefDepth: NaN }), /reference elevation of the cohesion must be a finite/],
+  ["cohesionRateOfChange string", mc({ cohesionRateOfChange: "1" }), /rate of change of the cohesion must be a finite/],
+  ["cohesionUndrained Infinity", mc({ cohesionUndrained: Infinity }), /undrained shear strength \(Su\) must be a finite/],
+  ["cFactor NaN", mc({ cFactor: NaN }), /c-factor must be a finite/],
+  ["suRefDepth NaN", su({ suRefDepth: NaN }), /reference elevation of Su must be a finite/],
+  ["suRateOfChange NaN", su({ suRateOfChange: NaN }), /rate of change of Su must be a finite/],
   ["c < 0", mc({ cohesion: -0.1 }), /Cohesion \(c\) must be ≥ 0/],
   ["c NaN", mc({ cohesion: NaN }), /Cohesion \(c\) must be ≥ 0/],
   ["φ < 0", mc({ frictionAngle: -1 }), /Friction angle \(φ\) must be ≥ 0/],
   ["φ = 90", mc({ frictionAngle: 90 }), /less than 90/],
-  ["cFactor < 0", mc({ cFactor: -1 }), /cFactor must be ≥ 0/],
+  ["cFactor < 0", mc({ cFactor: -1 }), /c-factor must be ≥ 0/],
   ["c = φ = 0", mc({ cohesion: 0, frictionAngle: 0 }), /no strength/],
   ["c = φ = 0, rate 0", mc({ cohesion: 0, frictionAngle: 0, cohesionRateOfChange: 0 }), /no strength/],
   ["combined Su < 0", mc({ cohesionUndrained: -1, cFactor: 1 }), /Su\) must be ≥ 0 for combined/],
   ["Su < 0", su({ undrainedShearStrength: -1 }), /Undrained shear strength/],
   ["Su NaN", su({ undrainedShearStrength: NaN }), /Undrained shear strength/],
-  ["suMax 0", su({ suMax: 0 }), /suMax\) must be a positive/],
-  ["suMax NaN", su({ suMax: NaN }), /suMax\) must be a positive/],
+  ["suMax 0", su({ suMax: 0 }), /strength cutoff must be a positive/],
+  ["suMax NaN", su({ suMax: NaN }), /strength cutoff must be a positive/],
   ["spatial: no points", spatial([]), /at least 1 data point/],
   ["spatial: not an array", spatial(null), /at least 1 data point/],
   ["spatial: 4 values", spatial([[0, 0, 1, 30]]), /must have 5 values/],
@@ -73,13 +73,13 @@ const rejected: [string, MaterialModel, RegExp][] = [
   ["aniso: 3 values", aniso({ modifierFunction: [[0, 1, 2], [10, 1]] }), /must have 2 values/],
   ["aniso: NaN", aniso({ modifierFunction: [[0, NaN], [10, 1]] }), /finite numbers/],
   ["aniso: factor < 0", aniso({ modifierFunction: [[0, -0.5], [10, 1]] }), /factor must be ≥ 0/],
-  ["s-f-depth: suRef < 0", sfd({ suRef: -1 }), /Reference Su/],
-  ["s-f-depth: depthRef NaN", sfd({ depthRef: NaN }), /Reference depth/],
+  ["s-f-depth: suRef < 0", sfd({ suRef: -1 }), /reference Su/],
+  ["s-f-depth: depthRef NaN", sfd({ depthRef: NaN }), /reference depth/],
   ["s-f-depth: rate Infinity", sfd({ rate: Infinity }), /Rate of change/],
   ["s-f-depth: bad reference", sfd({ depthReference: "surface" }), /Depth reference/],
-  ["s-f-depth: suMax < 0", sfd({ suMax: -5 }), /suMax\) must be a positive/],
-  ["s-f-datum: suRef NaN", sfy({ suRef: NaN }), /Reference Su/],
-  ["s-f-datum: yRef NaN", sfy({ yRef: NaN }), /Reference elevation/],
+  ["s-f-depth: suMax < 0", sfd({ suMax: -5 }), /strength cutoff must be a positive/],
+  ["s-f-datum: suRef NaN", sfy({ suRef: NaN }), /reference Su/],
+  ["s-f-datum: yRef NaN", sfy({ yRef: NaN }), /reference elevation must/],
   ["s-f-datum: rate NaN", sfy({ rate: NaN }), /Rate of change/],
   ["lcc: soil Su < 0", lcc({ soilSu: -1 }), /Soil Su/],
   ["lcc: column Su NaN", lcc({ columnSu: NaN }), /Column Su/],
@@ -92,6 +92,9 @@ const rejected: [string, MaterialModel, RegExp][] = [
   ["lcc: c′ < 0", lcc({ columnCohesion: -1, columnFrictionAngle: 30 }), /Drained column cohesion/],
   ["lcc: φ′ = 90", lcc({ columnCohesion: 10, columnFrictionAngle: 90 }), /friction angle must be 0–90/],
   ["lcc: φ′ < 0", lcc({ columnCohesion: 10, columnFrictionAngle: -1 }), /friction angle must be 0–90/],
+  ["shansep: both POP and yield stress", { kind: "shansep", unitWeight: 18, ratio: 0.25, pop: 10, yieldStress: 80 } as MaterialModel, /either POP or the yield stress/],
+  ["rᵤ = 1", mc({ ru: 1 }), /^The pore pressure ratio rᵤ must be at least 0 and below 1\.$/],
+  ["B̄ > 1.5", mc({ bBar: 1.6 }), /^B̄ must be between 0 and 1\.5\.$/],
   ["unknown kind", { kind: "granite", unitWeight: 18 } as unknown as MaterialModel, /Unknown material model kind "granite"/],
 ];
 
@@ -150,7 +153,7 @@ describe("validateMaterialModel rules", () => {
 
   it("a cutoff that is not a positive number is not also checked against the reference", () => {
     const errors = validateMaterialModel(su({ suMax: -40, suRateOfChange: -1 }));
-    expect(errors).toEqual(["Strength cutoff (suMax) must be a positive number."]);
+    expect(errors).toEqual(["The strength cutoff must be a positive number."]);
   });
 
   it("a malformed spatial data point skips the value checks of that point", () => {

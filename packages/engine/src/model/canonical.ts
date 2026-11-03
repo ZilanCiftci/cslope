@@ -1,4 +1,5 @@
 import type { AnalysisResult, AnalysisLimits } from "../types/analysis";
+import type { MaterialModel } from "../types/material-models";
 import { withMaterialModel, type SlopeDefinition } from "../types/slope-definition";
 
 export type SlopeOrientation = "ltr" | "rtl";
@@ -130,25 +131,10 @@ export function toCanonicalSlopeDefinition(
     orientation,
     coordinates: mirrorPoints(slopeDefinition.coordinates, xMin, xMax),
     // Spatially varying strength is given at model-space points.
+    // (also in the strength above the water, a model of its own)
     materials: materials.map((m) => {
-      const model = m.model;
-      if (model?.kind !== "spatial-mohr-coulomb") return m;
-      return {
-        ...m,
-        model: {
-          ...model,
-          dataPoints: model.dataPoints.map(
-            ([x, y, c, phi, gamma]) =>
-              [mirrorX(x, xMin, xMax), y, c, phi, gamma] as [
-                number,
-                number,
-                number,
-                number,
-                number,
-              ],
-          ),
-        },
-      };
+      const model = m.model && mirrorModel(m.model, xMin, xMax);
+      return model === m.model ? m : { ...m, model };
     }),
     materialBoundaries: slopeDefinition.materialBoundaries?.map((boundary) => ({
       ...boundary,
@@ -314,4 +300,24 @@ export function mapAnalysisResultToModelSpace(
       };
     }),
   };
+}
+
+/**
+ * A material model with its spatially varying strength points mirrored
+ * in x, its strength above the water too; the model itself when it has
+ * none.
+ */
+function mirrorModel(model: MaterialModel, xMin: number, xMax: number): MaterialModel {
+  const above = model.aboveWater && mirrorModel(model.aboveWater, xMin, xMax);
+  const own: MaterialModel =
+    model.kind === "spatial-mohr-coulomb"
+      ? {
+          ...model,
+          dataPoints: model.dataPoints.map(
+            ([x, y, c, phi, gamma]) =>
+              [mirrorX(x, xMin, xMax), y, c, phi, gamma] as [number, number, number, number, number],
+          ),
+        }
+      : model;
+  return above === model.aboveWater ? own : { ...own, aboveWater: above };
 }

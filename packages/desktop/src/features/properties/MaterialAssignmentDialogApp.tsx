@@ -77,7 +77,7 @@ export function MaterialAssignmentDialogApp() {
       }}
     >
       <div className="pb-2">
-        <h2 className="text-[12px] font-semibold">Assign Materials</h2>
+        <h2 className="text-[12px] font-semibold">Assign materials</h2>
       </div>
       <div className="flex-1 overflow-y-auto pr-1">
         <MaterialAssignmentSection plain />

@@ -125,14 +125,14 @@ export function CustomSearchPlanesSection({
           className="text-[11px] mt-1 cursor-pointer hover:underline font-medium"
           style={{ color: "var(--color-vsc-accent)" }}
         >
-          + Add Search Plane
+          + Add search plane
         </button>
         <button
           onClick={() => addPlane("polyline")}
           className="text-[11px] mt-1 cursor-pointer hover:underline font-medium"
           style={{ color: "var(--color-vsc-accent)" }}
         >
-          + Add Non-circular Surface
+          + Add non-circular surface
         </button>
       </div>
     </>

@@ -32,10 +32,10 @@ export function validateMaterialModel(model: MaterialModel): string[] {
     errors.push("Saturated unit weight (γsat) must be a positive number up to 500 kN/m³.");
   }
   if (model.ru !== undefined && !(Number.isFinite(model.ru) && model.ru >= 0 && model.ru < 1)) {
-    errors.push("The pore pressure ratio ru must be at least 0 and below 1.");
+    errors.push("The pore pressure ratio rᵤ must be at least 0 and below 1.");
   }
   if (model.bBar !== undefined && !(Number.isFinite(model.bBar) && model.bBar >= 0 && model.bBar <= 1.5)) {
-    errors.push("B-bar must be between 0 and 1.5.");
+    errors.push("B̄ must be between 0 and 1.5.");
   }
   if (model.aboveWater !== undefined) {
     if (model.aboveWater.aboveWater !== undefined) errors.push("The strength above the water line cannot itself have one.");
@@ -45,17 +45,17 @@ export function validateMaterialModel(model: MaterialModel): string[] {
   // Optional numeric fields must be finite when given: NaN would silently
   // turn into zero strength further on.
   const optional = model as unknown as Record<string, unknown>;
-  for (const field of [
-    "cohesionRefDepth",
-    "cohesionRateOfChange",
-    "cohesionUndrained",
-    "cFactor",
-    "suRefDepth",
-    "suRateOfChange",
+  for (const [field, label] of [
+    ["cohesionRefDepth", "The reference elevation of the cohesion"],
+    ["cohesionRateOfChange", "The rate of change of the cohesion"],
+    ["cohesionUndrained", "The undrained shear strength (Su)"],
+    ["cFactor", "The c-factor"],
+    ["suRefDepth", "The reference elevation of Su"],
+    ["suRateOfChange", "The rate of change of Su"],
   ]) {
     const v = optional[field];
     if (v !== undefined && (typeof v !== "number" || !Number.isFinite(v))) {
-      errors.push(`${field} must be a finite number.`);
+      errors.push(`${label} must be a finite number.`);
     }
   }
 
@@ -75,7 +75,7 @@ export function validateMaterialModel(model: MaterialModel): string[] {
         errors.push("Friction angle (φ) must be less than 90°.");
       }
       if (model.cFactor !== undefined && model.cFactor < 0) {
-        errors.push("cFactor must be ≥ 0.");
+        errors.push("The c-factor must be ≥ 0.");
       }
       if (
         model.cohesion === 0 &&
@@ -167,10 +167,10 @@ export function validateMaterialModel(model: MaterialModel): string[] {
 
     case "s-f-depth":
       if (!Number.isFinite(model.suRef) || model.suRef < 0) {
-        errors.push("Reference Su (suRef) must be ≥ 0.");
+        errors.push("The reference Su must be ≥ 0.");
       }
       if (!Number.isFinite(model.depthRef)) {
-        errors.push("Reference depth (depthRef) must be a finite number.");
+        errors.push("The reference depth must be a finite number.");
       }
       if (!Number.isFinite(model.rate)) {
         errors.push("Rate of change must be a finite number.");
@@ -259,6 +259,7 @@ export function validateMaterialModel(model: MaterialModel): string[] {
       if (model.ocr !== undefined && !(Number.isFinite(model.ocr) && model.ocr > 0)) errors.push("OCR must be > 0.");
       if (model.pop !== undefined && !(Number.isFinite(model.pop) && model.pop >= 0)) errors.push("POP must be ≥ 0.");
       if (model.yieldStress !== undefined && !(Number.isFinite(model.yieldStress) && model.yieldStress >= 0)) errors.push("The yield stress must be ≥ 0.");
+      if (model.pop !== undefined && model.yieldStress !== undefined) errors.push("Give either POP or the yield stress, not both.");
       if (model.suMin !== undefined && !(Number.isFinite(model.suMin) && model.suMin >= 0)) errors.push("Minimum Su must be ≥ 0.");
       const table = (pts: [number, number][] | undefined, what: string) => {
         if (pts === undefined) return;
@@ -273,10 +274,10 @@ export function validateMaterialModel(model: MaterialModel): string[] {
 
     case "s-f-datum":
       if (!Number.isFinite(model.suRef) || model.suRef < 0) {
-        errors.push("Reference Su (suRef) must be ≥ 0.");
+        errors.push("The reference Su must be ≥ 0.");
       }
       if (!Number.isFinite(model.yRef)) {
-        errors.push("Reference elevation (yRef) must be a finite number.");
+        errors.push("The reference elevation must be a finite number.");
       }
       if (!Number.isFinite(model.rate)) {
         errors.push("Rate of change must be a finite number.");
@@ -353,7 +354,7 @@ function validateCutoff(
 ): void {
   if (suMax === undefined) return;
   if (!Number.isFinite(suMax) || suMax <= 0) {
-    errors.push("Strength cutoff (suMax) must be a positive number.");
+    errors.push("The strength cutoff must be a positive number.");
   }
   // With a negative rate the cutoff is a floor. It may lie above the
   // reference Su (the profile is highest at its top), so it is not

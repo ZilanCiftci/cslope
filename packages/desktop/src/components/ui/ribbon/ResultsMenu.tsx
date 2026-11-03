@@ -120,6 +120,7 @@ export function ResultsMenu({ isOpen, onActivate, panelHost }: Props) {
       result: state.result,
       resultViewSettings: state.resultViewSettings,
       piezometricLine: state.piezometricLine,
+      waternet: state.waternet,
       udls: state.udls,
       lineLoads: state.lineLoads,
       reinforcements: state.reinforcements,

@@ -38,3 +38,17 @@ describe("buildSlope region assignments", () => {
     expect(slope.materialGeometries[0].material.name).toBe("B");
   });
 });
+
+describe("buildSlope distributed loads", () => {
+  it("rejects a part carried by excess pore pressure outside 0 to 1", () => {
+    const def = (ratio: number): SlopeDefinition => ({
+      coordinates: COORDS,
+      materials: [{ name: "A", model: { kind: "mohr-coulomb", unitWeight: 18, cohesion: 5, frictionAngle: 30 } }],
+      udls: [{ magnitude: 10, x1: 0, x2: 10, excessPorePressure: [{ material: "A", ratio }] }],
+    }) as SlopeDefinition;
+    expect(() => buildSlope(def(1.2))).toThrow(/between 0 and 1/);
+    expect(() => buildSlope(def(-0.1))).toThrow(/between 0 and 1/);
+    expect(() => buildSlope(def(Number.NaN))).toThrow(/between 0 and 1/);
+    expect(() => buildSlope(def(1))).not.toThrow();
+  });
+});

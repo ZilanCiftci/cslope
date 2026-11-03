@@ -341,6 +341,7 @@ export function Explorer() {
       {modelsForProperties.length > 0 && (
         <ProjectInfoDialog
           initialInfos={modelsForProperties.map(buildProjectInfo)}
+          importNotes={modelsForProperties.length === 1 ? modelsForProperties[0].importNotes : undefined}
           onSave={handleSaveProperties}
           onClose={() => setPropertiesModelIds(null)}
         />

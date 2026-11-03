@@ -392,6 +392,11 @@ export interface ModelEntry {
   waternet?: ModelWaternet;
   /** An earlier construction stage; absent: none. */
   earlierStage?: ModelEarlierStage;
+  /**
+   * What the import from another program's file noted (what did not carry
+   * over), shown in the model's properties; absent: not imported.
+   */
+  importNotes?: string[];
   options: AnalysisOptions;
   analysisLimits: AnalysisLimitsState;
   editViewOffset?: [number, number];

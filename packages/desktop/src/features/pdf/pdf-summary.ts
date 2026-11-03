@@ -13,6 +13,24 @@ export interface SummaryHeader {
   date: string;
 }
 
+/**
+ * Text the embedded font can print: it has no combining macron and no
+ * subscript letters, so B̄ and rᵤ are written "B-bar" and "ru".
+ */
+export function pdfSafeText(text: string): string {
+  return text.replace(/B\u0304/g, "B-bar").replace(/r\u1d64/g, "ru").replace(/\u0304/g, "");
+}
+
+function pdfSafeSection(section: SummarySection): SummarySection {
+  const t = pdfSafeText;
+  return {
+    title: t(section.title),
+    ...(section.rows ? { rows: section.rows.map((r) => ({ label: t(r.label), value: t(r.value) })) } : {}),
+    ...(section.table ? { table: { header: section.table.header.map(t), rows: section.table.rows.map((r) => r.map(t)) } } : {}),
+    ...(section.note !== undefined ? { note: t(section.note) } : {}),
+  };
+}
+
 const MARGIN = 15;
 const LINE = 4.6;
 const BODY_PT = 9;
@@ -25,10 +43,11 @@ const LABEL_W = 58;
  */
 export function drawSummaryPages(
   pdf: jsPDF,
-  sections: SummarySection[],
+  rawSections: SummarySection[],
   header: SummaryHeader,
   paper: { w: number; h: number; landscape: boolean },
 ): void {
+  const sections = rawSections.map(pdfSafeSection);
   const width = paper.w - 2 * MARGIN;
   const bottom = paper.h - MARGIN - 8;
   let page = 0;

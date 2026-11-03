@@ -111,7 +111,7 @@ export function GeometrySection({ plain = false }: GeometrySectionProps) {
         className="text-[11px] mt-1 cursor-pointer hover:underline font-medium"
         style={{ color: "var(--color-vsc-accent)" }}
       >
-        + Add Point
+        + Add point
       </button>
     </>
   );

@@ -463,14 +463,22 @@ describe("drawCanvas — edit mode", () => {
     expect(none.texts.map((t) => t.text)).not.toContain("before drawdown");
   });
 
-  it("draws imported head lines thin and dashed in the water colour, only when set", () => {
+  it("draws imported head lines dash-dotted in their own colour with a label, reference lines faintly, only when set", () => {
     const head: [number, number][] = [[0, 7], [15, 6], [30, 3]];
+    const ref: [number, number][] = [[0, 2], [30, 2]];
     const isHead = (p: PaintedPath) => hasPoints(p, head.map(([x, y]) => toC(x, y)));
-    const rec = draw({ waternet: { headLines: [{ id: "PL1", points: head }], referenceLines: [] } });
-    const stroke = rec.strokes(PIEZO_COLOR.hex).find(isHead);
-    expect(stroke?.state.lineDash.length).toBeGreaterThan(0);
-    expect(stroke?.state.lineWidth).toBe(1);
-    expect(draw().strokes(PIEZO_COLOR.hex).some(isHead)).toBe(false);
+    const isRef = (p: PaintedPath) => hasPoints(p, ref.map(([x, y]) => toC(x, y)));
+    const rec = draw({ waternet: { headLines: [{ id: "PL1", points: head }], referenceLines: [{ points: ref, topHeadLineId: "PL1" }] } });
+    // Not like the water lines or the drawdown line (blue, long dashes).
+    expect(rec.strokes(PIEZO_COLOR.hex).some(isHead)).toBe(false);
+    const stroke = rec.strokes().find(isHead);
+    expect(stroke?.state.lineDash).toHaveLength(4);
+    const refStroke = rec.strokes().find(isRef);
+    expect(refStroke?.state.globalAlpha).toBeLessThan(1);
+    expect(rec.callsOf("fillText").some((c) => c.args[0] === "head line 1")).toBe(true);
+    const none = draw();
+    expect(none.strokes().some(isHead)).toBe(false);
+    expect(none.callsOf("fillText").some((c) => c.args[0] === "head line 1")).toBe(false);
   });
 
   it("puts each coordinate label on a near-opaque plate of the background colour", () => {

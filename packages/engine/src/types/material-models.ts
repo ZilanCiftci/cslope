@@ -405,9 +405,10 @@ export interface ShansepModel extends MaterialModelBase, UndrainedAnisotropy {
   yieldStress?: number;
   /**
    * With an earlier stage (SlopeDefinition.earlierStage): the yield stress
-   * is the effective vertical stress of the earlier stage at the base plus
-   * `pop` (the stress history the soil kept from it), OCR = σ′y/σ′v, at
-   * least 1.
+   * is the effective vertical stress of the earlier stage at the base, with
+   * its distributed loads over the base taken straight down (no spreading
+   * with depth), plus `pop` (the stress history the soil kept from it),
+   * OCR = σ′y/σ′v, at least 1.
    */
   yieldFromEarlierStage?: boolean;
   /** OCR against elevation, [[y, OCR], …], interpolated linearly (constant beyond the ends); replaces `ocr`. */

@@ -59,6 +59,8 @@ export class Udl {
     this.color = params.color ?? "red";
     this.excessPorePressure = (params.excessPorePressure ?? [])
       .filter((e) => Number.isFinite(e.ratio) && e.ratio > 0)
+      // buildSlope rejects a ratio above 1 in a definition; a load made
+      // here directly keeps at most the whole load
       .map((e) => ({ material: e.material, ratio: Math.min(1, e.ratio) }));
   }
 }
