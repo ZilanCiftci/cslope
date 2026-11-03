@@ -9,6 +9,7 @@ import {
   mirrorLimits,
   mirrorPoints,
   mirrorX,
+  toCanonicalSlopeDefinition,
 } from "@cslope/engine";
 import { DEFAULT_RESULT_VIEW_SETTINGS, PAPER_DIMENSIONS } from "./defaults";
 import type { Annotation } from "./types";
@@ -744,6 +745,19 @@ export function mirrorModelEntry(model: ModelEntry): ModelEntry {
           ...mirrorLimits(model.analysisLimits, xMin, xMax),
         }
       : { ...model.analysisLimits },
+    ...(model.waternet
+      ? {
+          waternet: {
+            ...model.waternet,
+            headLines: model.waternet.headLines.map((h) => ({ ...h, points: mirrorPoints(h.points, xMin, xMax) })),
+            referenceLines: model.waternet.referenceLines.map((r) => ({ ...r, points: mirrorPoints(r.points, xMin, xMax) })),
+          },
+        }
+      : {}),
+    // The earlier stage mirrors about the model's x range, as the engine does.
+    ...(model.earlierStage
+      ? { earlierStage: { ...toCanonicalSlopeDefinition({ ...model.earlierStage, orientation: "rtl" }, [xMin, xMax]), orientation: undefined } }
+      : {}),
   };
 }
 

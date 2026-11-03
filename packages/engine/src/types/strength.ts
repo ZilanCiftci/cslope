@@ -569,7 +569,14 @@ export function shansepSu(model: Extract<MaterialModel, { kind: "shansep" }>, co
   };
   if (model.suByStress && model.suByStress.length > 0) su = table(model.suByStress, sv);
   else {
-    const ocr = model.ocrByElevation && model.ocrByElevation.length > 0 ? table(model.ocrByElevation, context.yBottom) : (model.ocr ?? 1);
+    const ocr =
+      model.pop !== undefined && sv > 0
+        ? (sv + model.pop) / sv
+        : model.yieldStress !== undefined && sv > 0
+          ? Math.max(1, model.yieldStress / sv)
+          : model.ocrByElevation && model.ocrByElevation.length > 0
+            ? table(model.ocrByElevation, context.yBottom)
+            : (model.ocr ?? 1);
     su = sv * model.ratio * Math.max(ocr, 0) ** (model.exponent ?? 0.8);
   }
   return Math.max(nonNegative(su), model.suMin ?? 0);

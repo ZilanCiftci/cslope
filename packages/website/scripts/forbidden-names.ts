@@ -47,6 +47,8 @@ const ENCODED: [source: string, flags: string][] = [
   [String.raw`\ognyera\o`, "gi"],
   [String.raw`\oynevk\o`, "gi"],
   [String.raw`\ofanvym\o`, "gi"],
+  [String.raw`\oq-?fgnovyvgl\o`, "gi"],
+  [String.raw`\oqrygnerf\o`, "gi"],
   [String.raw`\oFyvqr'f\o`, "g"],
   [String.raw`\oFYVQR\o`, "g"],
   [String.raw`\oFyvqr\f+(?:Fcrapre|Ovfubc|Wnaoh|inyhr|irevsvpngvba|rknzcyr|znahny|ceboyrz|ghgbevny)\o`, "g"],

@@ -39,6 +39,7 @@ import {
 } from "./geometry-ops";
 import { getDomainX, mirrorX } from "./canonical";
 import { compositeFloor, type CompositeFloor } from "./composite";
+import type { Waternet } from "./waternet";
 import type { Pile, Reinforcement } from "../types/reinforcement";
 import { buildEnvelope, buildPileProfile, type PileProfile, type ReinforcementEnvelope } from "./reinforcement";
 
@@ -210,6 +211,8 @@ export class Slope {
   private _compositeSurfaces = true;
   private _compositeBase = false;
   private _drawdownBefore: Slope | null = null;
+  private _waternet: Waternet | null = null;
+  private _earlierStage: Slope | null = null;
   /** The analysis options given so far (for the model before drawdown). */
   private _optionsGiven: Partial<AnalysisOptions> = {};
   private _seismicHorizontal = 0;
@@ -476,6 +479,26 @@ export class Slope {
   /** Whether circles follow the top of impenetrable material (composite surfaces). */
   get compositeSurfaces(): boolean {
     return this._compositeSurfaces;
+  }
+
+  /** An earlier stage (SlopeDefinition.earlierStage); null: none. */
+  get earlierStage(): Slope | null {
+    return this._earlierStage;
+  }
+
+  setEarlierStage(s: Slope | null): void {
+    this._earlierStage = s;
+    this._resetResults?.();
+  }
+
+  /** Pore pressure from head lines and reference lines (model/waternet.ts); null: the water lines. */
+  get waternet(): Waternet | null {
+    return this._waternet;
+  }
+
+  setWaternet(wn: Waternet | null): void {
+    this._waternet = wn;
+    this._resetResults?.();
   }
 
   /**

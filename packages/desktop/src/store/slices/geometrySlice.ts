@@ -11,7 +11,7 @@ import { nextId } from "../helpers";
 import type { SliceCreator } from "../helpers";
 import { createDefaultModel } from "../../features/properties/sections/material-forms/model-defaults";
 import { computeRegions, isClosedBoundary } from "../../utils/regions";
-import { isPointInPolygon } from "@cslope/engine";
+import { isPointInPolygon, type MaterialModel } from "@cslope/engine";
 import type { GeometrySlice, ModelEntry, PiezoLine } from "../types";
 
 type GeometryState = GeometrySlice & {
@@ -67,6 +67,8 @@ export const createGeometrySlice: SliceCreator<GeometrySlice> = (set, get) => ({
   materialBoundaries: [],
   regionMaterials: [],
   piezometricLine: { ...DEFAULT_PIEZO_LINE },
+  waternet: undefined,
+  earlierStage: undefined,
   selectedPointIndex: null,
   selectedMaterialBoundaryId: null,
   interiorBoundariesDialogOpen: false,
@@ -742,4 +744,59 @@ export const createGeometrySlice: SliceCreator<GeometrySlice> = (set, get) => ({
     );
     get().invalidateAnalysis();
   },
+
+  removeWaternet: () => {
+    if (!get().waternet) return;
+    // One step (one undo): the store field and the active model entry.
+    set((s) => ({
+      waternet: undefined,
+      models: s.models.map((m) => {
+        if (m.id !== s.activeModelId) return m;
+        const { waternet: _old, ...rest } = m;
+        void _old;
+        return rest;
+      }),
+    }));
+    get().invalidateAnalysis();
+  },
+
+  removeEarlierStage: () => {
+    const s0 = get();
+    const materials = s0.materials.map((m) => {
+      const model = withoutYieldFromEarlierStage(m.model);
+      return model === m.model ? m : { ...m, model };
+    });
+    const changed = materials.some((m, i) => m !== s0.materials[i]);
+    if (!s0.earlierStage && !changed) return;
+    // One step (one undo): the earlier stage and the materials that used it.
+    set((s) => ({
+      earlierStage: undefined,
+      materials,
+      models: s.models.map((m) => {
+        if (m.id !== s.activeModelId) return m;
+        const { earlierStage: _old, ...rest } = m;
+        void _old;
+        return { ...rest, materials };
+      }),
+    }));
+    get().invalidateAnalysis();
+  },
 });
+
+/**
+ * The material model without a yield stress from the earlier stage (also
+ * on its strength above the water line); the same object when it has none.
+ */
+function withoutYieldFromEarlierStage(model: MaterialModel): MaterialModel {
+  let out = model;
+  if ("yieldFromEarlierStage" in out) {
+    const { yieldFromEarlierStage: _old, ...rest } = out;
+    void _old;
+    out = rest;
+  }
+  if (out.aboveWater) {
+    const aboveWater = withoutYieldFromEarlierStage(out.aboveWater);
+    if (aboveWater !== out.aboveWater) out = { ...out, aboveWater };
+  }
+  return out;
+}

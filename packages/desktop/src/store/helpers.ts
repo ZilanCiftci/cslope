@@ -2,12 +2,17 @@ import type { StateCreator } from "zustand";
 import { isClosedBoundary } from "../utils/regions";
 import type { AnalysisResponse, SlopeDefinition } from "../worker/messages";
 import { danglingBoundaryMessage, toCanonicalSlopeDefinition, type AnalysisResult } from "@cslope/engine";
-import type { AppState, ModelEntry, ModelsSlice } from "./types";
+import type { AppState, ModelEntry, ModelsSlice, UdlRow } from "./types";
 import { DEFAULT_ANALYSIS_LIMITS, DEFAULT_PIEZO_LINE } from "./defaults";
 import { mainPiezoLine } from "../utils/piezo";
 import { toEnginePile, toEngineReinforcement } from "../utils/reinforcement";
 
 export type SliceCreator<T> = StateCreator<AppState, [], [], T>;
+
+/** A deep copy of plain data (JSON values: no functions, dates or maps). */
+export function cloneData<T>(value: T): T {
+  return JSON.parse(JSON.stringify(value)) as T;
+}
 
 let idCounter = 100;
 export function nextId(prefix: string): string {
@@ -178,6 +183,7 @@ export function buildSlopeDTOFromModel(model: ModelEntry): SlopeDefinition {
       x1: u.x1,
       x2: u.x2,
       ...(u.direction === "normal" ? { direction: "normal" as const } : {}),
+      ...udlExcessPorePressure(u.excessPorePressure, engineNameById),
     }));
   }
 
@@ -227,7 +233,27 @@ export function buildSlopeDTOFromModel(model: ModelEntry): SlopeDefinition {
     slope.blockSearchObjects = blockObjects.map((o) => ({ points: o.points }));
   }
 
+  // Imported pore pressure from head and reference lines, and an earlier
+  // stage: in model coordinates like the rest (mirrored with it).
+  if (model.waternet) slope.waternet = cloneData(model.waternet);
+  if (model.earlierStage) slope.earlierStage = cloneData(model.earlierStage);
+
   return toCanonicalSlopeDefinition(slope);
+}
+
+/**
+ * A load's excess pore pressure by engine material name; entries of
+ * materials that no longer exist are dropped.
+ */
+function udlExcessPorePressure(
+  entries: UdlRow["excessPorePressure"],
+  engineNameById: Map<string, string>,
+): { excessPorePressure?: { material: string; ratio: number }[] } {
+  const out = (entries ?? []).flatMap((e) => {
+    const material = engineNameById.get(e.materialId);
+    return material !== undefined ? [{ material, ratio: e.ratio }] : [];
+  });
+  return out.length > 0 ? { excessPorePressure: out } : {};
 }
 
 /**
@@ -255,6 +281,8 @@ export function buildSlopeDTO(state: AppState): SlopeDefinition {
     customSearchPlanes: state.customSearchPlanes,
     customPlanesOnly: state.customPlanesOnly,
     blockSearchObjects: state.blockSearchObjects,
+    waternet: state.waternet,
+    earlierStage: state.earlierStage,
     options: state.options,
     analysisLimits: state.analysisLimits,
   });
@@ -298,6 +326,8 @@ export function getAnalysisInputSignature(state: AppState): string {
     customSearchPlanes: state.customSearchPlanes,
     customPlanesOnly: state.customPlanesOnly,
     blockSearchObjects: state.blockSearchObjects,
+    waternet: state.waternet,
+    earlierStage: state.earlierStage,
     analysisLimits: state.analysisLimits,
     options: state.options,
   });

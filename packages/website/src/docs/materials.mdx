@@ -98,6 +98,10 @@ $$
 
 **S** is $S_u/\sigma'_v$ of the normally consolidated soil and **m** the exponent (often 0.8). **OCR** is a constant or a table against elevation; alternatively **Su against σ′v** gives the strength directly from the stress. $\sigma'_v$ is the weight of the slice and the loads on it per metre of width less the pore pressure at its base, so a fill on the clay raises the strength under it and a higher water table lowers it. **Min Su** is a lower limit. The tables are interpolated linearly, or with a cubic spline when the model is imported with one.
 
+Instead of OCR the stress history can be a **POP** (pre-overburden pressure, $\mathrm{OCR} = (\sigma'_v + \mathrm{POP})/\sigma'_v$) or a **yield stress** ($\mathrm{OCR} = \sigma'_y/\sigma'_v$, at least 1). With an earlier stage (imported from .stix files), the yield stress is the effective vertical stress of that stage at the base plus the POP: the stress history the soil kept from it. The Define Materials window says when a model has an earlier stage, and **Remove earlier stage** drops it.
+
+A material can have its own **strength above its water line** (for example drained above and undrained below the phreatic level); it applies to slice bases above the line, and everywhere when the material has no line. Imported from .stix files.
+
 ### Shear-normal function
 
 The shear strength against the effective normal stress, $\tau = f(\sigma'_n)$, as points; linear between them or a cubic spline, the end segments extended. Each slice base takes the tangent c and φ of the curve at its normal stress, which the analysis updates from the normal stress it finds until the factor of safety settles, as for Hoek-Brown.

@@ -20,6 +20,22 @@ export interface UdlParams {
    * vertical load of the same magnitude.
    */
   direction?: UdlDirection;
+  /**
+   * The part of the load carried by excess pore pressure at slice bases in
+   * the named materials: 1 − the degree of consolidation under the load
+   * (0 drained, 1 undrained). A base under the load and below the water
+   * (with pore pressure) gets ratio × q more. Not set: none (fully
+   * consolidated).
+   */
+  excessPorePressure?: UdlExcessPorePressure[];
+}
+
+/** Excess pore pressure under a load in one material (see `UdlParams.excessPorePressure`). */
+export interface UdlExcessPorePressure {
+  /** Material name. */
+  material: string;
+  /** Part of the load (0–1). */
+  ratio: number;
 }
 
 /** Direction of a distributed load (see `UdlParams.direction`). */
@@ -32,6 +48,7 @@ export class Udl {
   readonly length: number;
   readonly color: string;
   readonly direction: UdlDirection;
+  readonly excessPorePressure: readonly UdlExcessPorePressure[];
 
   constructor(params: UdlParams) {
     this.direction = params.direction === "normal" ? "normal" : "vertical";
@@ -40,6 +57,9 @@ export class Udl {
     this.x2 = Math.max(params.x1, params.x2);
     this.length = this.x2 - this.x1;
     this.color = params.color ?? "red";
+    this.excessPorePressure = (params.excessPorePressure ?? [])
+      .filter((e) => Number.isFinite(e.ratio) && e.ratio > 0)
+      .map((e) => ({ material: e.material, ratio: Math.min(1, e.ratio) }));
   }
 }
 

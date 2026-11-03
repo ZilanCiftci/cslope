@@ -34,6 +34,10 @@ export function validateMaterialModel(model: MaterialModel): string[] {
   if (model.bBar !== undefined && !(Number.isFinite(model.bBar) && model.bBar >= 0 && model.bBar <= 1.5)) {
     errors.push("B-bar must be between 0 and 1.5.");
   }
+  if (model.aboveWater !== undefined) {
+    if (model.aboveWater.aboveWater !== undefined) errors.push("The strength above the water line cannot itself have one.");
+    else for (const e of validateMaterialModel(model.aboveWater)) errors.push(`Above the water line: ${e}`);
+  }
 
   // Optional numeric fields must be finite when given: NaN would silently
   // turn into zero strength further on.
@@ -250,6 +254,8 @@ export function validateMaterialModel(model: MaterialModel): string[] {
       if (!(Number.isFinite(model.ratio) && model.ratio >= 0)) errors.push("SHANSEP ratio S must be ≥ 0.");
       if (model.exponent !== undefined && !Number.isFinite(model.exponent)) errors.push("SHANSEP exponent m must be a finite number.");
       if (model.ocr !== undefined && !(Number.isFinite(model.ocr) && model.ocr > 0)) errors.push("OCR must be > 0.");
+      if (model.pop !== undefined && !(Number.isFinite(model.pop) && model.pop >= 0)) errors.push("POP must be ≥ 0.");
+      if (model.yieldStress !== undefined && !(Number.isFinite(model.yieldStress) && model.yieldStress >= 0)) errors.push("The yield stress must be ≥ 0.");
       if (model.suMin !== undefined && !(Number.isFinite(model.suMin) && model.suMin >= 0)) errors.push("Minimum Su must be ≥ 0.");
       const table = (pts: [number, number][] | undefined, what: string) => {
         if (pts === undefined) return;

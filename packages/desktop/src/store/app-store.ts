@@ -44,6 +44,8 @@ type UndoableState = Pick<
   | "customSearchPlanes"
   | "customPlanesOnly"
   | "blockSearchObjects"
+  | "waternet"
+  | "earlierStage"
   | "analysisLimits"
   | "options"
   | "resultViewSettings"
@@ -79,6 +81,8 @@ export const useAppStore = create<AppState>()(
         customSearchPlanes: state.customSearchPlanes,
         customPlanesOnly: state.customPlanesOnly,
         blockSearchObjects: state.blockSearchObjects,
+        waternet: state.waternet,
+        earlierStage: state.earlierStage,
         analysisLimits: state.analysisLimits,
         options: state.options,
         resultViewSettings: state.resultViewSettings,

@@ -463,6 +463,16 @@ describe("drawCanvas — edit mode", () => {
     expect(none.texts.map((t) => t.text)).not.toContain("before drawdown");
   });
 
+  it("draws imported head lines thin and dashed in the water colour, only when set", () => {
+    const head: [number, number][] = [[0, 7], [15, 6], [30, 3]];
+    const isHead = (p: PaintedPath) => hasPoints(p, head.map(([x, y]) => toC(x, y)));
+    const rec = draw({ waternet: { headLines: [{ id: "PL1", points: head }], referenceLines: [] } });
+    const stroke = rec.strokes(PIEZO_COLOR.hex).find(isHead);
+    expect(stroke?.state.lineDash.length).toBeGreaterThan(0);
+    expect(stroke?.state.lineWidth).toBe(1);
+    expect(draw().strokes(PIEZO_COLOR.hex).some(isHead)).toBe(false);
+  });
+
   it("puts each coordinate label on a near-opaque plate of the background colour", () => {
     const rec = draw({ editingExterior: true });
     const plates = rec.callsOf("fillRect").filter((c) => c.state.globalAlpha === POINT_LABEL_PLATE_ALPHA);

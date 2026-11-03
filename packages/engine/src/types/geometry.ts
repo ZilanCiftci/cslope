@@ -178,6 +178,8 @@ export interface Slice {
    * analysis (solvers.ts).
    */
   hoekBrown?: HoekBrownParameters;
+  /** The strength model at the base when not the base material's own (its `aboveWater` model). */
+  strengthModel?: import("./material-models").MaterialModel;
   /** Elevation of the slice's centre of gravity (the weight's), where a horizontal seismic force acts. */
   yCentroid?: number;
   /** A shear-normal function at the base, updated like `hoekBrown`. */

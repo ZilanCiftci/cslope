@@ -25,6 +25,8 @@ import {
 import { PopupPanel } from "../../components/ui/PopupPanel";
 import type { MaterialRow } from "../../store/types";
 import { resolveParameters } from "../../utils/expression";
+import { ImportedDataNotice } from "./ImportedDataNotice";
+import { EARLIER_STAGE_NOTICE } from "./imported-notices";
 
 // ── Constants ──
 
@@ -58,6 +60,8 @@ export function DefineMaterialsDialog({ onClose, mode = "popup" }: Props) {
   const addMaterial = useAppStore((s) => s.addMaterial);
   const removeMaterial = useAppStore((s) => s.removeMaterial);
   const parameters = useAppStore((s) => s.parameters);
+  const earlierStage = useAppStore((s) => s.earlierStage);
+  const removeEarlierStage = useAppStore((s) => s.removeEarlierStage);
 
   const [selectedId, setSelectedId] = useState<string>(materials[0]?.id ?? "");
   // A material just switched to another model kind holds that kind's
@@ -111,6 +115,8 @@ export function DefineMaterialsDialog({ onClose, mode = "popup" }: Props) {
     // B̄ and the fill flag belong to every kind.
     if (currentModel.bBar !== undefined) newModel.bBar = currentModel.bBar;
     if (currentModel.bBarLoad) newModel.bBarLoad = true;
+    // So does a separate strength above the water line (imported).
+    if (currentModel.aboveWater) newModel.aboveWater = currentModel.aboveWater;
     // Expressions belong to the old kind's fields; keep only γ, which
     // every kind has, or a stale expression would come back later.
     const mat = materials.find((m) => m.id === matId);
@@ -166,6 +172,15 @@ export function DefineMaterialsDialog({ onClose, mode = "popup" }: Props) {
 
   const body = (
     <>
+      {earlierStage && (
+        <ImportedDataNotice
+          testId="earlier-stage-notice"
+          text={EARLIER_STAGE_NOTICE}
+          buttonLabel="Remove earlier stage"
+          onRemove={removeEarlierStage}
+        />
+      )}
+
       {/* Material list table + action buttons */}
       <div className="flex gap-3">
         <div
@@ -318,6 +333,9 @@ export function DefineMaterialsDialog({ onClose, mode = "popup" }: Props) {
               bBarLoad={model.bBarLoad}
               onChange={(patch) => patchModel(selected.id, model, patch)}
             />
+
+            {/* Imported settings the form does not edit (kept on edits) */}
+            <ImportedModelNotes model={model} />
 
             {/* Inline validation errors */}
             {freshKindId !== selected.id && <ValidationErrors model={model} />}
@@ -551,6 +569,44 @@ function ModelFields({
         />
       );
   }
+}
+
+/**
+ * Read-only lines for model settings that come from imported files and
+ * have no fields here: a separate strength above the water line and the
+ * SHANSEP stress history. Editing other fields keeps them.
+ */
+function importedModelNotes(model: MaterialModel): string[] {
+  const notes: string[] = [];
+  if (model.aboveWater) {
+    notes.push(
+      `Separate strength above the water line: ${MATERIAL_MODEL_LABELS[model.aboveWater.kind]} (imported; not editable here).`,
+    );
+  }
+  if (model.kind === "shansep") {
+    const fmt = (v: number) => String(Number(v.toFixed(4)));
+    const history = model.yieldFromEarlierStage
+      ? `yield stress from the earlier stage${model.pop ? ` + POP ${fmt(model.pop)} kPa` : ""}`
+      : model.pop !== undefined
+        ? `POP ${fmt(model.pop)} kPa`
+        : model.yieldStress !== undefined
+          ? `yield stress ${fmt(model.yieldStress)} kPa`
+          : null;
+    if (history) notes.push(`Stress history: ${history}, instead of OCR (imported; not editable here).`);
+  }
+  return notes;
+}
+
+function ImportedModelNotes({ model }: { model: MaterialModel }) {
+  const notes = importedModelNotes(model);
+  if (notes.length === 0) return null;
+  return (
+    <div className="text-[10px] opacity-70 space-y-0.5" data-testid="imported-model-notes">
+      {notes.map((n) => (
+        <div key={n}>{n}</div>
+      ))}
+    </div>
+  );
 }
 
 /** Shows validation errors for the current model, if any. */

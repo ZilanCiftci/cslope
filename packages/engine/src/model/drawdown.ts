@@ -29,7 +29,7 @@ import { analyseBishop, analyseJanbu, analyseMorgensternPrice, solvedEffectiveNo
  * cohesion varying with depth counts), if it has an envelope.
  */
 function rEnvelope(s: Slice): { cohesion: number; frictionAngle: number; c: number; phi: number } | null {
-  const m = s.baseMaterial?.model;
+  const m = s.strengthModel ?? s.baseMaterial?.model;
   if (m?.kind !== "mohr-coulomb" || !m.drawdownStrength) return null;
   const st = resolveStrength(m, { yBottom: s.yBottom, x: s.x, yGround: s.yTop, alpha: s.alpha });
   return { ...m.drawdownStrength, c: st.cohesion, phi: st.frictionAngle };

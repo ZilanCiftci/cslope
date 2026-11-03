@@ -13,6 +13,7 @@ import { suctionAngle, type MaterialModel } from "@cslope/engine";
 import { buildSlopeDTOFromModel } from "../../../store/helpers";
 import type { ModelEntry } from "../../../store/types";
 import { computeRegions } from "../../../utils/regions";
+import { sharedRings } from "../../../utils/region-rings";
 import { writeZip } from "../../../utils/zip";
 import { mainPiezoLine } from "../../../utils/piezo";
 
@@ -87,40 +88,7 @@ export function modelToGszXml(model: ModelEntry): { xml: string; notes: string[]
   // regions with shared corner points
   const regions = computeRegions(outline, model.materialBoundaries, model.regionMaterials, model.materials[0].id);
   if (regions.some((r) => r.holes && r.holes.length > 0)) notes.push("A region that surrounds another (a hole) is written without the hole; check it.");
-  const points: Pt[] = [];
-  const pid = (p: Pt) => {
-    const tol = 1e-6;
-    let i = points.findIndex((q) => Math.abs(q[0] - p[0]) < tol && Math.abs(q[1] - p[1]) < tol);
-    if (i < 0) {
-      points.push([p[0], p[1]]);
-      i = points.length - 1;
-    }
-    return i + 1;
-  };
-  const rings = regions.map((r) => {
-    const pts: Pt[] = r.px.map((x, i) => [x, r.py[i]] as Pt);
-    if (pts.length > 1 && pts[0][0] === pts[pts.length - 1][0] && pts[0][1] === pts[pts.length - 1][1]) pts.pop();
-    return { ids: pts.map(pid), materialId: r.materialId };
-  });
-  // corners of a neighbour that lie on an edge become corners of that edge as well
-  for (const ring of rings) {
-    const out: number[] = [];
-    for (let i = 0; i < ring.ids.length; i++) {
-      const a = points[ring.ids[i] - 1], b = points[ring.ids[(i + 1) % ring.ids.length] - 1];
-      out.push(ring.ids[i]);
-      const len2 = (b[0] - a[0]) ** 2 + (b[1] - a[1]) ** 2;
-      const on = points
-        .map((p, k) => ({ k: k + 1, t: ((p[0] - a[0]) * (b[0] - a[0]) + (p[1] - a[1]) * (b[1] - a[1])) / (len2 || 1), p }))
-        .filter(({ t, p }) => {
-          if (t <= 1e-9 || t >= 1 - 1e-9) return false;
-          const qx = a[0] + t * (b[0] - a[0]) - p[0], qy = a[1] + t * (b[1] - a[1]) - p[1];
-          return qx * qx + qy * qy < 1e-10;
-        })
-        .sort((u, v) => u.t - v.t);
-      out.push(...on.map((o) => o.k));
-    }
-    ring.ids = out;
-  }
+  const { points, rings } = sharedRings(regions);
   const lines: [number, number][] = [];
   const lineKey = new Set<string>();
   for (const r of rings) for (let i = 0; i < r.ids.length; i++) {
@@ -184,6 +152,14 @@ ${ids.map((d) => `              <DataPoint>${d}</DataPoint>`).join("\n")}
       })
     : [];
   if (piezo?.enabled && piezo.freeWater === false) notes.push("The water lines are clipped to the ground in cSlope; the format carries free water above the ground where a line is above it.");
+  if (def.waternet) notes.push("The head and reference lines (waternet) are not written; the format has piezometric lines per material.");
+  if (def.earlierStage) notes.push("The earlier stage (the stress history it gives) is not written.");
+  for (const m of model.materials) {
+    const mm = m.model as { aboveWater?: unknown; pop?: number; yieldStress?: number };
+    if (mm.aboveWater) notes.push(`"${m.name}": the strength above the water line is not written.`);
+    if (mm.pop !== undefined || mm.yieldStress !== undefined) notes.push(`"${m.name}": the POP or yield stress of its SHANSEP strength is not written.`);
+  }
+  if ((model.udls ?? []).some((u) => (u.excessPorePressure ?? []).length > 0)) notes.push("The excess pore pressure of loads not yet consolidated is not written.");
   if (piezo?.rapidDrawdown) {
     notes.push("Rapid drawdown: the three-stage analysis is not written; the water lines written are the water after drawdown, and the materials are drained.");
   } else if (model.materials.some((m) => m.model.kind === "mohr-coulomb" && m.model.drawdownStrength)) {

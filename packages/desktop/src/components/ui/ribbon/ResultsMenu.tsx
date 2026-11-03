@@ -146,6 +146,8 @@ export function ResultsMenu({ isOpen, onActivate, panelHost }: Props) {
           // Only with surfaces to analyse (as buildSlopeDTOFromModel).
           customPlanesOnly: state.customPlanesOnly && state.customSearchPlanes.length > 0,
           customSurfaceCount: state.customSearchPlanes.length,
+          waternet: state.waternet,
+          earlierStage: state.earlierStage,
         }),
         header: {
           projectInfo: state.projectInfo,

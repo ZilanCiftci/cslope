@@ -175,7 +175,14 @@ export function buildSlope(def: SlopeDefinition): Slope {
   if (def.udls) {
     slope.setUdls(
       ...def.udls.map(
-        (u) => new Udl({ magnitude: u.magnitude, x1: u.x1, x2: u.x2, direction: u.direction }),
+        (u) =>
+          new Udl({
+            magnitude: u.magnitude,
+            x1: u.x1,
+            x2: u.x2,
+            direction: u.direction,
+            ...(u.excessPorePressure ? { excessPorePressure: u.excessPorePressure } : {}),
+          }),
       ),
     );
   }
@@ -245,6 +252,21 @@ export function buildSlope(def: SlopeDefinition): Slope {
   // Custom-planes-only mode: no search surfaces are generated
   if (def.customPlanesOnly) {
     slope.customPlanesOnly = true;
+  }
+
+  // An earlier stage, for the stress history of SHANSEP materials
+  if (def.earlierStage) {
+    slope.setEarlierStage(buildSlope({ ...def.earlierStage, customSearchPlanes: undefined, customSurfaces: undefined, customPlanesOnly: true }));
+  }
+
+  // Pore pressure from head lines and reference lines (x increasing)
+  if (def.waternet) {
+    const inc = (pts: [number, number][]) => [...pts].sort((a, b) => a[0] - b[0]);
+    slope.setWaternet({
+      ...def.waternet,
+      headLines: def.waternet.headLines.map((h) => ({ ...h, points: inc(h.points) })),
+      referenceLines: def.waternet.referenceLines.map((r) => ({ ...r, points: inc(r.points) })),
+    });
   }
 
   // Rapid drawdown: the same model with the water before drawdown, for

@@ -160,6 +160,55 @@ describe("FileMenu in a browser", () => {
     expect(String(alert.mock.calls.at(-1)![0])).toMatch(/^Exported "Section B" as Section B\.gsz/);
   });
 
+  it("imports a .stix file from Import › .stix file and exports the model as one", async () => {
+    const alert = vi.spyOn(window, "alert").mockImplementation(() => {});
+    const { modelToStix } = await import("../../../features/project/stix/stix-write");
+    store().saveCurrentModel();
+    const model = store().models.find((m) => m.id === store().activeModelId)!;
+    const { bytes } = modelToStix({ ...model, name: "Exported" });
+    const pickers = capturePickers();
+    renderMenu();
+    await userEvent.click(screen.getByTitle("Import"));
+    await userEvent.click(screen.getByTitle("Import a .stix project file"));
+    const picker = pickers.at(-1)!;
+    expect(picker.accept).toBe(".stix");
+    Object.defineProperty(picker, "files", { value: [new File([bytes as BlobPart], "Dike.stix")], configurable: true });
+    picker.onchange?.(new Event("change"));
+    await waitFor(() => expect(alert).toHaveBeenCalled());
+    expect(String(alert.mock.calls[0][0])).toMatch(/^Imported 1 model from Dike\.stix/);
+    expect(store().models.find((m) => m.id === store().activeModelId)!.name).toBe("Dike – Exported – Calculation 1");
+
+    URL.createObjectURL ??= () => "blob:x";
+    URL.revokeObjectURL ??= () => {};
+    await userEvent.click(screen.getByTitle("Export"));
+    await userEvent.click(screen.getByTitle("Export the model as a .stix project file"));
+    expect(String(alert.mock.calls.at(-1)![0])).toMatch(/^Exported "Dike – Exported – Calculation 1" as /);
+  });
+
+  it("imports a .slim file from Import › .sli/.slim/.slmd file and exports the model as one", async () => {
+    const alert = vi.spyOn(window, "alert").mockImplementation(() => {});
+    const { modelToSlim } = await import("../../../features/project/sli/sli-write");
+    store().saveCurrentModel();
+    const model = store().models.find((m) => m.id === store().activeModelId)!;
+    const { bytes } = modelToSlim({ ...model, name: "Exported" }, "Exported");
+    const pickers = capturePickers();
+    renderMenu();
+    await userEvent.click(screen.getByTitle("Import"));
+    await userEvent.click(screen.getByTitle("Import a .sli, .slim or .slmd model file"));
+    const picker = pickers.at(-1)!;
+    expect(picker.accept).toBe(".sli,.slim,.slmd");
+    Object.defineProperty(picker, "files", { value: [new File([bytes as BlobPart], "Cut.slim")], configurable: true });
+    picker.onchange?.(new Event("change"));
+    await waitFor(() => expect(alert).toHaveBeenCalled());
+    expect(String(alert.mock.calls[0][0])).toMatch(/^Imported 1 model from Cut\.slim/);
+
+    URL.createObjectURL ??= () => "blob:x";
+    URL.revokeObjectURL ??= () => {};
+    await userEvent.click(screen.getByTitle("Export"));
+    await userEvent.click(screen.getByTitle("Export the model as a .slim model file"));
+    expect(String(alert.mock.calls.at(-1)![0])).toMatch(/^Exported ".*" as .*\.slim/);
+  });
+
   it("starts a new project", async () => {
     store().addMaterial();
     markProjectClean(store());

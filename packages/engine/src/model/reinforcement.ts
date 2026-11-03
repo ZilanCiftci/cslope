@@ -19,6 +19,7 @@ import type { Pile, Reinforcement, ReinforcementForce } from "../types/reinforce
 import { getYAtX, isPointInPolygon } from "../math/index";
 import type { Slope } from "./slope";
 import { materialLayerTopAt } from "./geometry-ops";
+import { waternetPorePressure } from "./waternet";
 
 /** Capacity envelope of one element, per element (not per metre). */
 export interface ReinforcementEnvelope {
@@ -94,7 +95,9 @@ export function verticalStress(slope: Slope, x: number, y: number, effective: bo
   const pond = waterLineAt(slope, materialAt(slope, x, yTop), x);
   sigma += Math.max(0, pond - yGround) * WATER_UNIT_WEIGHT;
   if (!effective) return sigma;
-  const u = Math.max(0, waterLineAt(slope, materialAt(slope, x, y), x) - y) * WATER_UNIT_WEIGHT;
+  const u = slope.waternet
+    ? waternetPorePressure(slope.waternet, x, y)
+    : Math.max(0, waterLineAt(slope, materialAt(slope, x, y), x) - y) * WATER_UNIT_WEIGHT;
   return Math.max(0, sigma - u);
 }
 

@@ -61,6 +61,8 @@ export function projectContentSignature(state: AppState): string {
             customSearchPlanes: state.customSearchPlanes,
             customPlanesOnly: state.customPlanesOnly,
             blockSearchObjects: state.blockSearchObjects,
+            waternet: state.waternet,
+            earlierStage: state.earlierStage,
             options: state.options,
             analysisLimits: state.analysisLimits,
             resultViewSettings: state.resultViewSettings,

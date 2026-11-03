@@ -9,7 +9,7 @@ export { Material } from "./types/material";
 export type { MaterialParams } from "./types/material";
 
 export { Udl, LineLoad } from "./types/loads";
-export type { UdlParams, UdlDirection, LineLoadParams } from "./types/loads";
+export type { UdlParams, UdlDirection, UdlExcessPorePressure, LineLoadParams } from "./types/loads";
 
 export type {
   AnalysisMethod,
@@ -189,6 +189,7 @@ export {
 } from "./model/solvers";
 
 export { buildSlope } from "./model/build-slope";
+export { waternetPorePressure, type Waternet } from "./model/waternet";
 export { analysisWarnings, danglingBoundaryMessage, M_ALPHA_WARNING_LIMIT, steepEntryMessage } from "./model/result-warnings";
 export {
   buildEnvelope,

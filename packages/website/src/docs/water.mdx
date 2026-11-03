@@ -39,6 +39,10 @@ With two or more lines, the window shows two more settings:
 
 A material's line is also the level below which its [saturated unit weight](/docs/materials#saturated-unit-weight) applies.
 
+## Head and reference lines (waternet)
+
+A model imported from a .stix file can take its pore pressure from head lines and reference lines. Between two reference lines the head varies linearly with elevation, from the bottom head line of the upper line to the top head line of the lower one; below the lowest line it is that line's bottom head; above the uppermost line it varies linearly from that line's top head to the phreatic level, and above the phreatic line there is no pore pressure. A reference line without head lines is left out. This describes, for example, a clay layer between the phreatic level and an aquifer under a higher head. The pore pressure is $\gamma_w (h - z)$, not negative. The piezometric lines window says when such lines set the pore pressure, and **Remove** drops them (the piezometric lines then apply); the edit canvas draws the head lines dashed.
+
 ## Free water above the ground
 
 **Free water above ground (ponding)** is on by default. Where the line of the material at the ground (its own line, else the main line) lies above the ground surface, for example at the toe of a slope in a river or a reservoir, the water stands on the slope. Its weight acts on the slices below it, and against a vertical face it pushes horizontally. This is the usual way to model a submerged toe or a full reservoir.

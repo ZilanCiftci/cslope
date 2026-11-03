@@ -59,7 +59,7 @@ export type {
 } from "./reinforcement";
 
 export { Udl, LineLoad } from "./loads";
-export type { UdlParams, UdlDirection, LineLoadParams } from "./loads";
+export type { UdlParams, UdlDirection, UdlExcessPorePressure, LineLoadParams } from "./loads";
 
 export type {
   AnalysisMethod,

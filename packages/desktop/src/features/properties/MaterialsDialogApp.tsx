@@ -1,12 +1,14 @@
 import { useEffect, useRef, useState } from "react";
 import { DefineMaterialsDialog } from "./DefineMaterialsDialog";
 import { useAppStore } from "../../store/app-store";
-import type { MaterialRow, ParameterDef } from "../../store/types";
+import type { MaterialRow, ModelEarlierStage, ParameterDef } from "../../store/types";
 import { isElectron } from "../../utils/is-electron";
 
 interface MaterialsStatePayload {
   materials: MaterialRow[];
   parameters?: ParameterDef[];
+  /** The imported earlier stage; null: none. Missing: not sent. */
+  earlierStage?: ModelEarlierStage | null;
 }
 
 function normalizeMaterialsPayload(
@@ -23,6 +25,7 @@ export function MaterialsDialogApp() {
   const setMaterials = useAppStore((s) => s.setMaterials);
   const setParameters = useAppStore((s) => s.setParameters);
   const parameters = useAppStore((s) => s.parameters);
+  const earlierStage = useAppStore((s) => s.earlierStage);
   const [isHydrated, setIsHydrated] = useState(!isElectron);
   // State that arrived from the main window must not be echoed back: the
   // echo would invalidate the analysis result even though nothing changed.
@@ -40,6 +43,9 @@ export function MaterialsDialogApp() {
       setMaterials(next.materials);
       if (Array.isArray(next.parameters)) {
         setParameters(next.parameters);
+      }
+      if (next.earlierStage !== undefined) {
+        useAppStore.setState({ earlierStage: next.earlierStage ?? undefined });
       }
       setIsHydrated(true);
     };
@@ -60,8 +66,12 @@ export function MaterialsDialogApp() {
       suppressNextBroadcastRef.current = false;
       return;
     }
-    window.cslope.sendMaterialsChanged({ materials, parameters });
-  }, [materials, parameters, isHydrated]);
+    window.cslope.sendMaterialsChanged({
+      materials,
+      parameters,
+      earlierStage: earlierStage ?? null,
+    });
+  }, [materials, parameters, earlierStage, isHydrated]);
 
   return (
     <DefineMaterialsDialog

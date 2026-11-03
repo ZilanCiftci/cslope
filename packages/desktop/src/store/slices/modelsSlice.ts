@@ -14,7 +14,7 @@ import {
   DEFAULT_RESULT_VIEW_SETTINGS,
 } from "../defaults";
 import type { SliceCreator } from "../helpers";
-import { nextId } from "../helpers";
+import { cloneData, nextId } from "../helpers";
 import type { ModelEntry, ModelsSlice } from "../types";
 import { abortAllAnalyses, cancelRunForModel } from "./analysisSlice";
 import { markProjectClean } from "../unsaved";
@@ -80,6 +80,9 @@ export const mapModelToState = (model: ModelEntry) => ({
   customSearchPlanes: model.customSearchPlanes ?? [],
   customPlanesOnly: model.customPlanesOnly ?? false,
   blockSearchObjects: model.blockSearchObjects ?? [],
+  // Set (to undefined too), or the previous model's would stay.
+  waternet: model.waternet,
+  earlierStage: model.earlierStage,
   options: model.options ?? {
     ...DEFAULT_ANALYSIS_OPTIONS,
     method: "Morgenstern-Price",
@@ -276,7 +279,18 @@ export const createModelsSlice: SliceCreator<ModelsSlice> = (
           ),
         ),
       },
-      udls: source.udls.map((u) => ({ ...u, id: nextId("udl") })),
+      udls: source.udls.map((u) => ({
+        ...u,
+        id: nextId("udl"),
+        ...(u.excessPorePressure
+          ? {
+              excessPorePressure: u.excessPorePressure.map((e) => ({
+                materialId: matIdMap.get(e.materialId) ?? e.materialId,
+                ratio: e.ratio,
+              })),
+            }
+          : {}),
+      })),
       lineLoads: source.lineLoads.map((l) => ({ ...l, id: nextId("ll") })),
       reinforcements: (source.reinforcements ?? []).map((r) => ({
         ...r,
@@ -292,6 +306,9 @@ export const createModelsSlice: SliceCreator<ModelsSlice> = (
         id: nextId("bso"),
         points: o.points.map(([x, y]) => [x, y] as [number, number]),
       })),
+      // Imported, not edited: copied so the two models share no data.
+      waternet: source.waternet ? cloneData(source.waternet) : undefined,
+      earlierStage: source.earlierStage ? cloneData(source.earlierStage) : undefined,
       options: { ...source.options },
       analysisLimits: { ...source.analysisLimits },
       editViewOffset: source.editViewOffset
@@ -397,6 +414,8 @@ export const createModelsSlice: SliceCreator<ModelsSlice> = (
             customSearchPlanes: s.customSearchPlanes,
             customPlanesOnly: s.customPlanesOnly,
             blockSearchObjects: s.blockSearchObjects,
+            waternet: s.waternet,
+            earlierStage: s.earlierStage,
             options: s.options,
             analysisLimits: s.analysisLimits,
             editViewOffset: s.editViewOffset,
@@ -444,6 +463,8 @@ export const createModelsSlice: SliceCreator<ModelsSlice> = (
               customSearchPlanes: s.customSearchPlanes,
               customPlanesOnly: s.customPlanesOnly,
               blockSearchObjects: s.blockSearchObjects,
+              waternet: s.waternet,
+              earlierStage: s.earlierStage,
               options: s.options,
               analysisLimits: s.analysisLimits,
               editViewOffset: s.editViewOffset,

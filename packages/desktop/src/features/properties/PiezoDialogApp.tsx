@@ -3,9 +3,12 @@ import { isElectron } from "../../utils/is-electron";
 import { useAppStore } from "../../store/app-store";
 import type {
   MaterialRow,
+  ModelWaternet,
   ParameterDef,
   PiezometricLineState,
 } from "../../store/types";
+import { ImportedDataNotice } from "./ImportedDataNotice";
+import { waternetNoticeText } from "./imported-notices";
 import { Label } from "../../components/ui/Label";
 import {
   SpreadsheetRemoveButton,
@@ -21,6 +24,8 @@ interface PiezoStatePayload {
   coordinates: [number, number][];
   materials: MaterialRow[];
   parameters?: ParameterDef[];
+  /** The imported waternet; null: none. Missing: not sent. */
+  waternet?: ModelWaternet | null;
 }
 
 function normalizePiezoPayload(
@@ -57,6 +62,8 @@ export function PiezoDialogApp() {
   const setPiezoFreeWater = useAppStore((s) => s.setPiezoFreeWater);
   const setPiezoMainLine = useAppStore((s) => s.setPiezoMainLine);
   const parameters = useAppStore((s) => s.parameters);
+  const waternet = useAppStore((s) => s.waternet);
+  const removeWaternet = useAppStore((s) => s.removeWaternet);
 
   const [isHydrated, setIsHydrated] = useState(!isElectron);
   const suppressNextBroadcastRef = useRef(false);
@@ -73,6 +80,7 @@ export function PiezoDialogApp() {
         coordinates: [number, number][];
         materials: MaterialRow[];
         parameters?: ParameterDef[];
+        waternet?: ModelWaternet;
       } = {
         piezometricLine: normalized.piezometricLine,
         coordinates: normalized.coordinates,
@@ -81,6 +89,9 @@ export function PiezoDialogApp() {
 
       if (Array.isArray(normalized.parameters)) {
         patch.parameters = normalized.parameters;
+      }
+      if (normalized.waternet !== undefined) {
+        patch.waternet = normalized.waternet ?? undefined;
       }
 
       useAppStore.setState(patch);
@@ -110,8 +121,9 @@ export function PiezoDialogApp() {
       coordinates,
       materials,
       parameters,
+      waternet: waternet ?? null,
     });
-  }, [pl, coordinates, materials, parameters, isHydrated]);
+  }, [pl, coordinates, materials, parameters, waternet, isHydrated]);
 
   const activeLine =
     pl.lines.find((l) => l.id === pl.activeLineId) ?? pl.lines[0] ?? null;
@@ -246,6 +258,15 @@ export function PiezoDialogApp() {
         <h2 className="text-[12px] font-semibold">Piezometric Lines</h2>
       </div>
       <div className="flex-1 overflow-y-auto space-y-3 pr-1">
+        {waternet && (
+          <ImportedDataNotice
+            testId="waternet-notice"
+            text={waternetNoticeText(waternet)}
+            buttonLabel="Remove"
+            onRemove={removeWaternet}
+          />
+        )}
+
         {/* ── Line list table + Add/Delete buttons ── */}
         <div className="flex gap-3">
           <div

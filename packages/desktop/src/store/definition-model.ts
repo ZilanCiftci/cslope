@@ -8,9 +8,10 @@
 
 import { materialModelOf, resolveOrientation, type AnalysisOptions, type SlopeDefinition } from "@cslope/engine";
 import type { Pile, Reinforcement } from "@cslope/engine";
-import type { ModelEntry, PileRow, ReinforcementRow } from "./types";
+import type { ModelEntry, PileRow, ReinforcementRow, UdlExcessPorePressure } from "./types";
 import { APP_DEFAULT_ANALYSIS_OPTIONS, DEFAULT_PIEZO_LINE, MATERIAL_COLORS, PIEZO_COLORS, createDefaultProjectInfo } from "./defaults";
 import { createExampleResultViewSettings } from "./benchmarks";
+import { cloneData } from "./helpers";
 import { paperContentOf } from "../features/view/extents";
 
 export interface DefinitionModelInfo {
@@ -129,6 +130,21 @@ function piezometricLine(def: SlopeDefinition, id: string, materialId: (i: numbe
   };
 }
 
+/**
+ * A load's excess pore pressure by material id instead of name; entries
+ * naming no material of the definition are dropped.
+ */
+function excessPorePressureRows(
+  entries: { material: string; ratio: number }[] | undefined,
+  idByName: Map<string, string>,
+): { excessPorePressure?: UdlExcessPorePressure[] } {
+  const rows = (entries ?? []).flatMap((e) => {
+    const materialId = idByName.get(e.material);
+    return materialId ? [{ materialId, ratio: e.ratio }] : [];
+  });
+  return rows.length > 0 ? { excessPorePressure: rows } : {};
+}
+
 export function modelFromDefinition(def: SlopeDefinition, info: DefinitionModelInfo): ModelEntry {
   if (def.waterTable && def.waterTable.mode !== "custom") {
     throw new Error(`Water table mode "${def.waterTable.mode}" is not supported`);
@@ -175,6 +191,7 @@ export function modelFromDefinition(def: SlopeDefinition, info: DefinitionModelI
       x1: u.x1,
       x2: u.x2,
       ...(u.direction === "normal" ? { direction: "normal" as const } : {}),
+      ...excessPorePressureRows(u.excessPorePressure, idByName),
     })),
     lineLoads: (def.lineLoads ?? []).map((l, i) => ({
       id: `${info.id}-load-${i + 1}`,
@@ -200,6 +217,10 @@ export function modelFromDefinition(def: SlopeDefinition, info: DefinitionModelI
     })),
     reinforcements: (def.reinforcements ?? []).map((r, i) => reinforcementRow(r, `${info.id}-reinforcement-${i + 1}`)),
     piles: (def.piles ?? []).map((p, i) => pileRow(p, `${info.id}-pile-${i + 1}`)),
+    // Pore pressure from head and reference lines, and an earlier stage
+    // (both in model coordinates, as the definition's), kept as they are.
+    ...(def.waternet ? { waternet: cloneData(def.waternet) } : {}),
+    ...(def.earlierStage ? { earlierStage: cloneData(def.earlierStage) } : {}),
     options: { ...APP_DEFAULT_ANALYSIS_OPTIONS, ...info.options },
     analysisLimits: def.analysisLimits
       ? { enabled: true, ...def.analysisLimits }

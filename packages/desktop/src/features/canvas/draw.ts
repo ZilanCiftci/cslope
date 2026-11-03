@@ -526,6 +526,11 @@ export interface DrawCanvasParams {
   reinforcements?: AppState["reinforcements"];
   piles?: AppState["piles"];
   piezometricLine: AppState["piezometricLine"];
+  /**
+   * Imported head and reference lines (they give the pore pressure instead
+   * of the piezometric lines): the head lines are drawn thin and dashed.
+   */
+  waternet?: AppState["waternet"];
   /** Prescribed slip surfaces, drawn faintly in edit view. */
   customSearchPlanes?: AppState["customSearchPlanes"];
   /** Block search objects, drawn in edit view when the block search is selected. */
@@ -581,6 +586,7 @@ export function drawCanvas(
     reinforcements,
     piles,
     piezometricLine,
+    waternet,
     customSearchPlanes,
     blockSearchObjects,
     viewScale,
@@ -1462,6 +1468,23 @@ export function drawCanvas(
     ctx.fillText("before drawdown", lx - 2 * paperZoom, ly - 2 * paperZoom);
     ctx.textBaseline = "alphabetic";
     ctx.textAlign = "left";
+  }
+  // Imported head lines: thin and dashed, in the water colour.
+  if (waternet) {
+    ctx.strokeStyle = PIEZO_COLOR.hex;
+    ctx.lineWidth = 1 * paperZoom;
+    ctx.setLineDash([4 * paperZoom, 4 * paperZoom]);
+    for (const head of waternet.headLines) {
+      if (head.points.length < 2) continue;
+      ctx.beginPath();
+      head.points.forEach(([x, y], i) => {
+        const [px, py] = worldToCanvas(x, y, w, h);
+        if (i === 0) ctx.moveTo(px, py);
+        else ctx.lineTo(px, py);
+      });
+      ctx.stroke();
+    }
+    ctx.setLineDash([]);
   }
   if (piezometricLine.lines.length > 0) {
     const multiLine = piezometricLine.lines.length > 1;

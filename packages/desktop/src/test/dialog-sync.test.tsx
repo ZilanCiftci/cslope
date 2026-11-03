@@ -6,6 +6,8 @@ vi.mock("../utils/is-electron", () => ({ isElectron: true }));
 
 import App from "../App";
 import { useAppStore } from "../store/app-store";
+import { performUndo } from "../store/selectors";
+import type { ModelEarlierStage, ModelWaternet } from "../store/types";
 
 type Handler = (event: unknown, payload: unknown) => void;
 const handlers = new Map<string, Handler[]>();
@@ -89,5 +91,95 @@ describe("main window <-> dialog sync", () => {
       useAppStore.getState().addMaterial();
     });
     expect(sent.some((m) => m.name === "sendMaterialsChanged")).toBe(true);
+  });
+});
+
+describe("imported waternet and earlier stage <-> dialogs", () => {
+  const waternet: ModelWaternet = {
+    headLines: [{ id: "PL1", points: [[0, 8], [20, 4]] }],
+    referenceLines: [],
+    phreaticLineId: "PL1",
+  };
+  const earlierStage: ModelEarlierStage = {
+    coordinates: [[0, 0], [0, 8], [20, 5], [20, 0]],
+    materials: [{ name: "Clay", model: { kind: "mohr-coulomb", unitWeight: 17, cohesion: 5, frictionAngle: 25 } }],
+  };
+  const active = () => {
+    const s = useAppStore.getState();
+    return s.models.find((m) => m.id === s.activeModelId)!;
+  };
+
+  beforeEach(() => {
+    handlers.clear();
+    sent.length = 0;
+    installFakeBridge();
+    useAppStore.getState().newProject();
+    useAppStore.setState((s) => ({
+      waternet,
+      earlierStage,
+      models: s.models.map((m) => (m.id === s.activeModelId ? { ...m, waternet, earlierStage } : m)),
+    }));
+    render(<App />);
+    act(() => {
+      useAppStore.setState({ runState: "done", result: RESULT });
+    });
+  });
+
+  afterEach(() => {
+    cleanup();
+    delete (window as unknown as { cslope?: unknown }).cslope;
+  });
+
+  it("sends them to the dialogs", () => {
+    emit("onPiezoRequestState", undefined);
+    emit("onMaterialsRequestState", undefined);
+    const last = (name: string) => sent.filter((m) => m.name === name).at(-1)!.payload as Record<string, unknown>;
+    expect(last("sendPiezoState").waternet).toEqual(waternet);
+    expect(last("sendMaterialsState").earlierStage).toEqual(earlierStage);
+  });
+
+  it("keeps them, and the result, when a dialog echoes them", () => {
+    const s = useAppStore.getState();
+    emit("onPiezoChanged", {
+      piezometricLine: structuredClone(s.piezometricLine),
+      coordinates: structuredClone(s.coordinates),
+      materials: structuredClone(s.materials),
+      parameters: structuredClone(s.parameters),
+      waternet: structuredClone(waternet),
+    });
+    emit("onMaterialsChanged", {
+      materials: structuredClone(s.materials),
+      parameters: structuredClone(s.parameters),
+      earlierStage: structuredClone(earlierStage),
+    });
+    expect(useAppStore.getState().waternet).toEqual(waternet);
+    expect(useAppStore.getState().earlierStage).toEqual(earlierStage);
+    expect(useAppStore.getState().result).toBe(RESULT);
+  });
+
+  it("removes them when a dialog removed them, undoably", () => {
+    const s = useAppStore.getState();
+    emit("onPiezoChanged", {
+      piezometricLine: structuredClone(s.piezometricLine),
+      coordinates: structuredClone(s.coordinates),
+      materials: structuredClone(s.materials),
+      parameters: structuredClone(s.parameters),
+      waternet: null,
+    });
+    expect(useAppStore.getState().waternet).toBeUndefined();
+    expect(active().waternet).toBeUndefined();
+    expect(useAppStore.getState().result).toBeNull();
+    emit("onMaterialsChanged", {
+      materials: structuredClone(s.materials),
+      parameters: structuredClone(s.parameters),
+      earlierStage: null,
+    });
+    expect(useAppStore.getState().earlierStage).toBeUndefined();
+    expect(active().earlierStage).toBeUndefined();
+    act(() => performUndo());
+    expect(useAppStore.getState().earlierStage).toEqual(earlierStage);
+    expect(useAppStore.getState().waternet).toBeUndefined();
+    act(() => performUndo());
+    expect(useAppStore.getState().waternet).toEqual(waternet);
   });
 });

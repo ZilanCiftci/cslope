@@ -8,6 +8,7 @@ import {
   supportsAnisotropy,
   supportsSuctionStrength,
   swedishPartialFactors,
+  validateMaterialModel,
   type AnalysisOptions,
   type FemAnalysisSettings,
   type FemResultSummary,
@@ -327,6 +328,9 @@ function normalizeModelEntry(raw: unknown): ModelEntry {
           }),
         }
       : {}),
+    // Imported from .stix files; absent in older files (none).
+    ...normalizeWaternet(model.waternet),
+    ...normalizeEarlierStage(model.earlierStage),
     resultViewSettings: normalizeResultView(model.resultViewSettings),
     viewOffset: pointOrUndefined(model.viewOffset),
     viewScale: positiveOrUndefined(model.viewScale),
@@ -336,6 +340,79 @@ function normalizeModelEntry(raw: unknown): ModelEntry {
         ? model.mode
         : undefined,
   };
+}
+
+/**
+ * Pore pressure from head and reference lines: kept with its lines' finite
+ * points; dropped when it is not an object with lists of lines.
+ */
+function normalizeWaternet(raw: unknown): Pick<ModelEntry, "waternet"> {
+  if (!raw || typeof raw !== "object") return {};
+  const w = raw as Record<string, unknown>;
+  if (!Array.isArray(w.headLines) || !Array.isArray(w.referenceLines)) return {};
+  const optionalId = (v: unknown) => (typeof v === "string" ? v : undefined);
+  const headLines = w.headLines.flatMap((h: unknown) => {
+    const line = h as Record<string, unknown> | null;
+    if (!line || typeof line !== "object" || typeof line.id !== "string") return [];
+    return [{ id: line.id, points: normalizePoints(line.points) }];
+  });
+  const referenceLines = w.referenceLines.flatMap((r: unknown) => {
+    const line = r as Record<string, unknown> | null;
+    if (!line || typeof line !== "object") return [];
+    const top = optionalId(line.topHeadLineId);
+    const bottom = optionalId(line.bottomHeadLineId);
+    return [
+      {
+        points: normalizePoints(line.points),
+        ...(top !== undefined ? { topHeadLineId: top } : {}),
+        ...(bottom !== undefined ? { bottomHeadLineId: bottom } : {}),
+      },
+    ];
+  });
+  const phreatic = optionalId(w.phreaticLineId);
+  return {
+    waternet: {
+      headLines,
+      referenceLines,
+      ...(phreatic !== undefined ? { phreaticLineId: phreatic } : {}),
+    },
+  };
+}
+
+/**
+ * An earlier construction stage: an engine definition, kept as saved when
+ * it has a boundary and materials (the analysis checks the rest), dropped
+ * otherwise.
+ */
+function normalizeEarlierStage(raw: unknown): Pick<ModelEntry, "earlierStage"> {
+  if (!raw || typeof raw !== "object") return {};
+  const d = raw as Record<string, unknown>;
+  if (!Array.isArray(d.coordinates) || !Array.isArray(d.materials)) return {};
+  // only an outline and valid materials reach the analysis
+  const coordinates = normalizePoints(d.coordinates);
+  const materials = (d.materials as unknown[]).flatMap((m) => {
+    const q = m as { name?: unknown; model?: unknown } | null;
+    if (!q || typeof q.name !== "string" || !q.model || typeof q.model !== "object" || typeof (q.model as { kind?: unknown }).kind !== "string") return [];
+    const model = sanitizeMaterialModel(q.model as MaterialModel);
+    return validateMaterialModel(model).length === 0 ? [{ ...q, name: q.name, model }] : [];
+  });
+  if (coordinates.length < 3 || materials.length === 0) return {};
+  const stage: Record<string, unknown> = { ...d, coordinates, materials };
+  delete stage.earlierStage; // one stage back only
+  if (stage.materialBoundaries !== undefined) {
+    stage.materialBoundaries = Array.isArray(stage.materialBoundaries)
+      ? (stage.materialBoundaries as { coordinates?: unknown }[]).map((b) => ({ coordinates: normalizePoints(b?.coordinates), materialName: "" })).filter((b) => b.coordinates.length >= 2)
+      : [];
+  }
+  if (stage.regionAssignments !== undefined) {
+    stage.regionAssignments = Array.isArray(stage.regionAssignments)
+      ? (stage.regionAssignments as { point?: unknown; materialName?: unknown }[]).flatMap((a) => {
+          const point = pointOrUndefined(a?.point);
+          return point && typeof a.materialName === "string" ? [{ point, materialName: a.materialName }] : [];
+        })
+      : [];
+  }
+  return { earlierStage: stage as unknown as ModelEntry["earlierStage"] };
 }
 
 /** Keep only finite [x, y] pairs. */
@@ -728,7 +805,7 @@ function normalizeMaterial(raw: unknown, index: number): MaterialRow {
     if (model.kind === "shear-normal" && !Array.isArray(model.points)) {
       model = { ...model, points: [] };
     }
-    model = sanitizeDrawdown(sanitizeBBar(sanitizeSuction(sanitizeStrengthOptions(model))));
+    model = sanitizeMaterialModel(model);
   } else {
     // Legacy file without model — synthesise MohrCoulomb from flat fields
     const unitWeight = Math.max(
@@ -753,6 +830,25 @@ function normalizeMaterial(raw: unknown, index: number): MaterialRow {
     model,
     modelExpressions: normalizeModelExpressions(m.modelExpressions, true),
   };
+}
+
+/**
+ * A saved material model with its optional fields checked. The strength
+ * above the water line (`aboveWater`) is checked the same way, and dropped
+ * when it is not a model.
+ */
+function sanitizeMaterialModel(model: MaterialModel, depth = 0): MaterialModel {
+  let out = sanitizeDrawdown(sanitizeBBar(sanitizeSuction(sanitizeStrengthOptions(model))));
+  if ("aboveWater" in out) {
+    const above = out.aboveWater as unknown;
+    out = { ...out };
+    if (depth === 0 && above && typeof above === "object" && typeof (above as { kind?: unknown }).kind === "string") {
+      out.aboveWater = sanitizeMaterialModel(above as MaterialModel, depth + 1);
+    } else {
+      delete out.aboveWater;
+    }
+  }
+  return out;
 }
 
 /**
@@ -936,6 +1032,19 @@ function normalizeModelExpressions(
 
 // ── 4.3 — UDL / lineLoad field validation ──
 
+/** A load's excess pore pressure: entries with a material id and a finite ratio. */
+function normalizeExcessPorePressure(raw: unknown): Pick<UdlRow, "excessPorePressure"> {
+  if (!Array.isArray(raw)) return {};
+  const entries = raw.flatMap((e: unknown) => {
+    const r = e as Record<string, unknown> | null;
+    return r && typeof r === "object" && typeof r.materialId === "string" &&
+      typeof r.ratio === "number" && Number.isFinite(r.ratio)
+      ? [{ materialId: r.materialId, ratio: r.ratio }]
+      : [];
+  });
+  return entries.length > 0 ? { excessPorePressure: entries } : {};
+}
+
 function normalizeUdl(raw: unknown): UdlRow | null {
   if (!raw || typeof raw !== "object") return null;
   const u = raw as Record<string, unknown>;
@@ -950,6 +1059,7 @@ function normalizeUdl(raw: unknown): UdlRow | null {
     x1,
     x2,
     ...(u.direction === "normal" ? { direction: "normal" as const } : {}),
+    ...normalizeExcessPorePressure(u.excessPorePressure),
     expressions: normalizeLoadExpressions(u.expressions, [
       "magnitude",
       "x1",

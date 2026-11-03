@@ -10,8 +10,10 @@ import type {
   ReinforcementRow,
   MaterialBoundaryRow,
   MaterialRow,
+  ModelEarlierStage,
   ModelEntry,
   ModelOrientation,
+  ModelWaternet,
   ParameterDef,
   PiezometricLineState,
   RegionMaterials,
@@ -36,6 +38,8 @@ interface GeometryStatePayload {
 interface MaterialsStatePayload {
   materials: MaterialRow[];
   parameters?: ParameterDef[];
+  /** The imported earlier stage; null: none. Missing: not sent. */
+  earlierStage?: ModelEarlierStage | null;
 }
 
 interface InteriorBoundariesStatePayload {
@@ -60,6 +64,8 @@ interface PiezoStatePayload {
   coordinates: [number, number][];
   materials: MaterialRow[];
   parameters?: ParameterDef[];
+  /** The imported waternet; null: none. Missing: not sent. */
+  waternet?: ModelWaternet | null;
 }
 
 interface ResultsPlotStatePayload {

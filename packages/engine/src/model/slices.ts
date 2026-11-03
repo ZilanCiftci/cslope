@@ -18,7 +18,8 @@ import type { Udl } from "../types/loads";
 import { materialLayerTopAt, polylineYFrom } from "./geometry-ops";
 import { polylineCrossingsX, polylineYAt, type Pt } from "./surface";
 import { floorDipTolerance, floorYAt } from "./composite";
-import { applyReinforcement } from "./reinforcement";
+import { waternetPorePressure } from "./waternet";
+import { applyReinforcement, effectiveVerticalStress } from "./reinforcement";
 
 // ── createSlice ───────────────────────────────────────────────────
 
@@ -195,6 +196,8 @@ export function createSlice(
   waterForWeight?: (
     material: GeometryWithMaterial["material"],
   ) => [number, number] | null,
+  /** Pore pressure at a point, replacing the water lines' (a waternet, model/waternet.ts). */
+  porePressureAt?: (x: number, y: number) => number,
 ): Slice | null {
   const x = (x0 + x1) / 2;
   const dx = cx - x;
@@ -455,6 +458,8 @@ export function createSlice(
     baseWater = waterForMaterial(baseMaterial);
     U = baseWater ? Math.max(baseWater.yMean - yBottom, 0) * WATER_UNIT_WEIGHT * baseWater.h : 0;
   }
+  // A waternet gives the pore pressure (the water lines still the phreatic level).
+  if (porePressureAt) U = porePressureAt(x, yBottom);
   // Excess pore pressure from the fill above (B-bar).
   const bBar = baseMaterial.model.bBar;
   if (bBar !== undefined && bBar !== 0 && fillWeight > 0) U += (bBar * fillWeight) / width;
@@ -469,8 +474,15 @@ export function createSlice(
       undefined;
   }
 
+  // The strength above the material's water line (or everywhere when it
+  // has none), when it has its own.
+  const strengthModel =
+    baseMaterial.model.aboveWater && (!baseWater || yBottom > baseWater.yMean)
+      ? baseMaterial.model.aboveWater
+      : baseMaterial.model;
+
   // Resolve strength via the material model plugin system
-  const strength = resolveStrength(baseMaterial.model, {
+  const strength = resolveStrength(strengthModel, {
     yBottom,
     x,
     yGround: yTop,
@@ -513,6 +525,7 @@ export function createSlice(
     ll: llForce,
     isValid: true,
     baseMaterial,
+    ...(strengthModel !== baseMaterial.model ? { strengthModel } : {}),
     cohesion,
     cohesionUndrained,
     ...(strength.cohesionUndrainedPart !== undefined
@@ -965,7 +978,10 @@ export function getSlices(
   const factors = slope.partialFactors;
   const loadFactor = factors?.variableLoad ?? 1;
   const kh = slope.seismicHorizontal, kv = slope.seismicVertical;
+  const waternet = slope.waternet;
+  const earlier = slope.earlierStage;
   const normalUdls = slope.udls.filter((u) => u.direction === "normal");
+  const excessUdls = slope.udls.filter((u) => u.excessPorePressure.length > 0);
 
   // Surface y at each slice edge, taken from the slice's own side: at a
   // vertical face the averaged value would put the top below the base and
@@ -1106,13 +1122,14 @@ export function getSlices(
             return Number.isFinite(w0) && Number.isFinite(w1) ? [w0, w1] : null;
           }
         : undefined,
+      waternet ? (x, y) => waternetPorePressure(waternet, x, y) : undefined,
     );
 
     if (s !== null && s.isValid) {
-      if (freeLines[i]) {
-        applyFreeWater(s, freeYL[i], freeYR[i], cy);
-        refreshShansep(s);
-      }
+      if (freeLines[i]) applyFreeWater(s, freeYL[i], freeYR[i], cy);
+      const excess = excessUdls.length > 0 ? loadExcessPorePressure(s, excessUdls, loadFactor) : 0;
+      if (excess > 0) s.U += excess;
+      if (freeLines[i] || earlier || excess > 0) refreshShansep(s, earlier, excess > 0);
       if (factors) applyMaterialFactors(s, factors);
       if (normalUdls.length > 0) applyNormalLoads(s, normalUdls, loadFactor, cy);
       if (kh !== 0 || kv !== 0) applySeismic(s, kh, kv, cy);
@@ -1221,18 +1238,44 @@ function applySeismic(s: Slice, kh: number, kv: number, cy: number): void {
  * the overburden with the water's weight (createSlice had the soil and the
  * loads only).
  */
-function refreshShansep(s: Slice): void {
-  const model = s.baseMaterial?.model;
-  if (model?.kind !== "shansep" || !s.waterLoad) return;
+function refreshShansep(s: Slice, earlier: Slope | null = null, porePressureChanged = false): void {
+  const m = s.strengthModel ?? s.baseMaterial?.model;
+  if (m?.kind !== "shansep") return;
+  const fromEarlier = earlier !== null && m.yieldFromEarlierStage === true;
+  if (!s.waterLoad && !fromEarlier && !porePressureChanged) return;
+  const sv = (s.weight + s.udl + s.ll + (s.waterLoad ?? 0)) / s.width - s.U;
+  // the yield stress the soil kept from the earlier stage, OCR at least 1
+  const model = fromEarlier
+    ? { ...m, pop: undefined, yieldStress: Math.max(effectiveVerticalStress(earlier, s.x, s.yBottom) + (m.pop ?? 0), sv) }
+    : m;
   const st = resolveStrength(model, {
     yBottom: s.yBottom,
     x: s.x,
     yGround: s.yTop,
     alpha: s.alpha,
-    effectiveVerticalStress: (s.weight + s.udl + s.ll + s.waterLoad) / s.width - s.U,
+    effectiveVerticalStress: sv,
   });
   s.cohesion = st.cohesion;
   s.cohesionUndrained = st.cohesionUndrained;
+}
+
+/**
+ * Excess pore pressure at the slice base from loads not yet consolidated
+ * in its material: ratio × the mean load over the slice width. Only below
+ * the water (a base with pore pressure); above it the soil is not
+ * saturated and the load is carried by the soil skeleton.
+ */
+function loadExcessPorePressure(s: Slice, udls: readonly Udl[], loadFactor: number): number {
+  const name = s.baseMaterial?.name;
+  if (name === undefined || !(s.width > 0) || !(s.U > 0)) return 0;
+  let u = 0;
+  for (const l of udls) {
+    const e = l.excessPorePressure.find((q) => q.material === name);
+    if (!e) continue;
+    const overlap = Math.min(l.x2, s.xRight) - Math.max(l.x1, s.xLeft);
+    if (overlap > 0) u += (e.ratio * l.magnitude * loadFactor * overlap) / s.width;
+  }
+  return u;
 }
 
 /**
@@ -1240,7 +1283,7 @@ function refreshShansep(s: Slice): void {
  * by its own partial factor (designStrength).
  */
 function applyMaterialFactors(s: Slice, f: PartialFactors): void {
-  const kind = s.baseMaterial?.model.kind;
+  const kind = (s.strengthModel ?? s.baseMaterial?.model)?.kind;
   if (kind === "high-strength" || kind === "impenetrable") return;
   const d = designStrength(kind, s, f);
   s.cohesion = d.cohesion;

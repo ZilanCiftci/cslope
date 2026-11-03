@@ -4,6 +4,7 @@ import type {
   MaterialModel,
   PileForceDirection,
   PileForceLocation,
+  SlopeDefinition,
 } from "@cslope/engine";
 
 // Export analysis types so UI components can consume them from a single module
@@ -15,6 +16,26 @@ export type RunState = "idle" | "running" | "done" | "error";
 export type AnalysisRunState = RunState;
 export type SurfaceDisplayMode = "critical" | "all" | "filter";
 export type ModelOrientation = "ltr" | "rtl";
+
+/**
+ * Pore pressure from head lines and reference lines (from .stix files), in
+ * the model's own coordinates. Replaces the piezometric lines' pore
+ * pressure for all materials (they still give the phreatic level).
+ */
+export type ModelWaternet = NonNullable<SlopeDefinition["waternet"]>;
+
+/**
+ * An earlier construction stage (from .stix files), an engine definition in
+ * the model's own coordinates: its effective stresses give the yield stress
+ * of SHANSEP materials with `yieldFromEarlierStage`. Not edited in the app.
+ */
+export type ModelEarlierStage = NonNullable<SlopeDefinition["earlierStage"]>;
+
+/** Part of a load carried as excess pore pressure in one material (0–1). */
+export interface UdlExcessPorePressure {
+  materialId: string;
+  ratio: number;
+}
 
 export interface ParameterDef {
   id: string;
@@ -101,6 +122,11 @@ export interface UdlRow {
   x2: number;
   /** Acting normal to the ground (water against a slope); not set: vertical. */
   direction?: "vertical" | "normal";
+  /**
+   * Part of the load carried as excess pore pressure in these materials
+   * (from .stix files). Entries of deleted materials are ignored.
+   */
+  excessPorePressure?: UdlExcessPorePressure[];
   expressions?: UdlExpressions;
 }
 
@@ -362,6 +388,10 @@ export interface ModelEntry {
   customPlanesOnly: boolean;
   /** Absent in files saved before the block search. */
   blockSearchObjects?: BlockSearchObject[];
+  /** Pore pressure from head and reference lines; absent: none. */
+  waternet?: ModelWaternet;
+  /** An earlier construction stage; absent: none. */
+  earlierStage?: ModelEarlierStage;
   options: AnalysisOptions;
   analysisLimits: AnalysisLimitsState;
   editViewOffset?: [number, number];
@@ -437,6 +467,10 @@ export interface GeometrySlice {
   materialBoundaries: MaterialBoundaryRow[];
   regionMaterials: RegionMaterials;
   piezometricLine: PiezometricLineState;
+  /** The active model's waternet (imported; not edited in the app). */
+  waternet: ModelWaternet | undefined;
+  /** The active model's earlier stage (imported; not edited in the app). */
+  earlierStage: ModelEarlierStage | undefined;
   selectedPointIndex: number | null;
   selectedMaterialBoundaryId: string | null;
   interiorBoundariesDialogOpen: boolean;
@@ -498,6 +532,13 @@ export interface GeometrySlice {
   /** Rapid drawdown: the water before it, or undefined for none. */
   setPiezoRapidDrawdown: (rapidDrawdown: PiezometricLineState["rapidDrawdown"]) => void;
   enablePiezoWithDefault: () => void;
+  /** Drop the imported waternet: the piezometric lines give the pore pressure again. */
+  removeWaternet: () => void;
+  /**
+   * Drop the imported earlier stage, and the yield stress from it of every
+   * material (also above the water line).
+   */
+  removeEarlierStage: () => void;
 }
 
 export interface LoadsSlice {

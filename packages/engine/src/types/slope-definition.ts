@@ -98,7 +98,14 @@ export interface SlopeDefinition {
     followBoundary?: boolean;
   }>;
   /** UDL loads. */
-  udls?: Array<{ magnitude: number; x1: number; x2: number; direction?: "vertical" | "normal" }>;
+  udls?: Array<{
+    magnitude: number;
+    x1: number;
+    x2: number;
+    direction?: "vertical" | "normal";
+    /** Excess pore pressure under the load per material (UdlParams.excessPorePressure). */
+    excessPorePressure?: { material: string; ratio: number }[];
+  }>;
   /** Line loads (point loads). */
   /**
    * Line loads; `angle`: inclination from the downward vertical (°),
@@ -112,6 +119,23 @@ export interface SlopeDefinition {
    * it). The materials with a drawdown envelope do not drain.
    */
   rapidDrawdown?: { waterBefore: [number, number][] };
+  /**
+   * An earlier stage of the same section (its geometry, water and loads),
+   * whose effective vertical stresses give the yield stress of SHANSEP
+   * materials with `yieldFromEarlierStage` (multi-stage analyses). Its x
+   * range must be the model's.
+   */
+  earlierStage?: Omit<SlopeDefinition, "earlierStage">;
+  /**
+   * Pore pressure from head lines and reference lines (model/waternet.ts),
+   * for all materials instead of their water lines (which still give the
+   * phreatic level for unit weights, free water and `aboveWater`).
+   */
+  waternet?: {
+    headLines: { id: string; points: [number, number][] }[];
+    referenceLines: { points: [number, number][]; topHeadLineId?: string; bottomHeadLineId?: string }[];
+    phreaticLineId?: string;
+  };
   /** Reinforcement: anchors, tiebacks, soil nails, geosynthetics. */
   reinforcements?: Reinforcement[];
   /** Pile rows and sheet pile walls (shear). */

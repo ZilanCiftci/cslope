@@ -31,8 +31,8 @@ export function isZip(bytes: Uint8Array): boolean {
   return bytes.length >= 4 && u32(bytes, 0) === 0x04034b50;
 }
 
-/** The entries of a ZIP archive by name (directories left out). */
-export async function readZip(bytes: Uint8Array): Promise<Map<string, Uint8Array>> {
+/** The entries of a ZIP archive by name (directories left out); with `want`, only the entries it accepts are read. */
+export async function readZip(bytes: Uint8Array, want?: (name: string) => boolean): Promise<Map<string, Uint8Array>> {
   // end of central directory: the last signature within the trailing 64 kB comment window
   let eocd = -1;
   for (let i = bytes.length - 22; i >= Math.max(0, bytes.length - 22 - 0xffff); i--) {
@@ -56,7 +56,7 @@ export async function readZip(bytes: Uint8Array): Promise<Map<string, Uint8Array
     const local = u32(bytes, p + 42);
     const name = textDecoder.decode(bytes.subarray(p + 46, p + 46 + nameLen));
     p += 46 + nameLen + extraLen + commentLen;
-    if (name.endsWith("/")) continue;
+    if (name.endsWith("/") || (want && !want(name))) continue;
     if (flags & 1) throw new Error(`Encrypted ZIP entry: ${name}`);
     if (u32(bytes, local) !== 0x04034b50) throw new Error("Damaged ZIP archive (local header).");
     const start = local + 30 + u16(bytes, local + 26) + u16(bytes, local + 28);

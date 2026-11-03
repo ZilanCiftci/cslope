@@ -212,6 +212,8 @@ export function snapshotFromState(state: AppState): ModelEntry {
     customSearchPlanes: state.customSearchPlanes,
     customPlanesOnly: state.customPlanesOnly,
     blockSearchObjects: state.blockSearchObjects,
+    waternet: state.waternet,
+    earlierStage: state.earlierStage,
     options: state.options,
     analysisLimits: state.analysisLimits,
   };
@@ -463,7 +465,14 @@ export const createAnalysisSlice: SliceCreator<AnalysisSlice> = (set, get) => ({
     // execution path.  This ensures "Run" and "Run All" go through the
     // exact same DTO-building and worker-spawning code.
     const modelSnapshot = snapshotFromState(state);
-    const inputKey = analysisInputKey(modelSnapshot);
+    // (building the input can fail, e.g. on imported data; report it)
+    let inputKey: string;
+    try {
+      inputKey = analysisInputKey(modelSnapshot);
+    } catch (err) {
+      set({ runState: "error", progress: 0, result: null, errorMessage: err instanceof Error ? err.message : String(err) });
+      return;
+    }
 
     set({
       runState: "running",

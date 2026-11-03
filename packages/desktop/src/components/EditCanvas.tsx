@@ -92,6 +92,7 @@ export function EditCanvas() {
   const activeSection = useAppStore((s) => s.activeSection);
   const customSearchPlanes = useAppStore((s) => s.customSearchPlanes);
   const blockSearchObjects = useAppStore((s) => s.blockSearchObjects);
+  const waternet = useAppStore((s) => s.waternet);
   const {
     setAnalysisLimits,
     updateUdl,
@@ -288,6 +289,7 @@ export function EditCanvas() {
       reinforcements,
       piles,
       piezometricLine,
+      waternet,
       customSearchPlanes,
       blockSearchObjects,
       viewScale,
@@ -316,6 +318,7 @@ export function EditCanvas() {
       reinforcements,
       piles,
       piezometricLine,
+      waternet,
       customSearchPlanes,
       blockSearchObjects,
       viewScale,

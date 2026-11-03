@@ -99,11 +99,23 @@ export function mirrorLimits(
 
 export function toCanonicalSlopeDefinition(
   slopeDefinition: SlopeDefinition,
+  /** The mirror axis' x range (default: the definition's own); an earlier stage takes the model's. */
+  mirrorRange?: [number, number],
 ): SlopeDefinition {
   const orientation = resolveOrientation(
     slopeDefinition.orientation,
     slopeDefinition.coordinates,
   );
+  // an earlier stage takes the model's orientation and mirror axis (its
+  // own extent may differ: outside it, it gives no stress)
+  if (slopeDefinition.earlierStage) {
+    const { earlierStage, ...rest } = slopeDefinition;
+    const axis = mirrorRange ?? getDomainX(slopeDefinition.coordinates);
+    return {
+      ...toCanonicalSlopeDefinition({ ...rest, orientation }, axis),
+      earlierStage: toCanonicalSlopeDefinition({ ...earlierStage, orientation }, axis),
+    };
+  }
 
   // Every material by its model (older definitions give flat fields).
   const materials = slopeDefinition.materials.map(withMaterialModel);
@@ -111,7 +123,7 @@ export function toCanonicalSlopeDefinition(
     return { ...slopeDefinition, orientation, materials };
   }
 
-  const [xMin, xMax] = getDomainX(slopeDefinition.coordinates);
+  const [xMin, xMax] = mirrorRange ?? getDomainX(slopeDefinition.coordinates);
 
   return {
     ...slopeDefinition,
@@ -154,6 +166,15 @@ export function toCanonicalSlopeDefinition(
       ...wt,
       coordinates: mirrorPoints(wt.coordinates, xMin, xMax),
     })),
+    ...(slopeDefinition.waternet
+      ? {
+          waternet: {
+            ...slopeDefinition.waternet,
+            headLines: slopeDefinition.waternet.headLines.map((h) => ({ ...h, points: mirrorPoints(h.points, xMin, xMax) })),
+            referenceLines: slopeDefinition.waternet.referenceLines.map((r) => ({ ...r, points: mirrorPoints(r.points, xMin, xMax) })),
+          },
+        }
+      : {}),
     ...(slopeDefinition.rapidDrawdown
       ? { rapidDrawdown: { ...slopeDefinition.rapidDrawdown, waterBefore: mirrorPoints(slopeDefinition.rapidDrawdown.waterBefore, xMin, xMax) } }
       : {}),

@@ -200,6 +200,20 @@ describe("MaterialsDialogApp", () => {
     expect(sent.at(-1)!.materials).toHaveLength(2);
   });
 
+  it("shows an imported earlier stage and sends its removal back", async () => {
+    render(<MaterialsDialogApp />);
+    const earlierStage = { coordinates: [[0, 0], [0, 8], [20, 0]] as [number, number][], materials: [] };
+    bridge.emit("onMaterialsState", { materials: [mat("m1", "Sand")], earlierStage });
+    expect(store().earlierStage).toEqual(earlierStage);
+    expect(screen.getByTestId("earlier-stage-notice")).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: "Remove earlier stage" }));
+    expect(store().earlierStage).toBeUndefined();
+    const sent = bridge.sentOf<{ earlierStage: unknown }>("sendMaterialsChanged");
+    expect(sent.at(-1)!.earlierStage).toBeNull();
+    bridge.emit("onMaterialsChanged", { materials: [mat("m1", "Sand")], earlierStage: null });
+    expect(screen.queryByTestId("earlier-stage-notice")).toBeNull();
+  });
+
   it("closes the window", async () => {
     const close = vi.spyOn(window, "close").mockImplementation(() => {});
     render(<MaterialsDialogApp />);

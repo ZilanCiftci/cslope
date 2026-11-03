@@ -25,8 +25,10 @@ import type {
   LineLoadRow,
   MaterialBoundaryRow,
   MaterialRow,
+  ModelEarlierStage,
   ModelEntry,
   ModelOrientation,
+  ModelWaternet,
   PiezometricLineState,
   ParameterDef,
   RegionMaterials,
@@ -51,11 +53,15 @@ interface PiezoStatePayload {
   coordinates: [number, number][];
   materials: MaterialRow[];
   parameters?: ParameterDef[];
+  /** The imported waternet; null: none. Missing: not sent. */
+  waternet?: ModelWaternet | null;
 }
 
 interface MaterialsStatePayload {
   materials: MaterialRow[];
   parameters?: ParameterDef[];
+  /** The imported earlier stage; null: none. Missing: not sent. */
+  earlierStage?: ModelEarlierStage | null;
 }
 
 interface GeometryStatePayload {
@@ -116,6 +122,8 @@ const MODEL_ENTRY_FIELDS = [
   "customSearchPlanes",
   "customPlanesOnly",
   "blockSearchObjects",
+  "waternet",
+  "earlierStage",
   "options",
   "analysisLimits",
   "resultViewSettings",
@@ -207,6 +215,9 @@ function buildResultsPlotPayloadFromState(): ResultsPlotStatePayload {
       customSearchPlanes: state.customSearchPlanes,
       customPlanesOnly: state.customPlanesOnly,
       blockSearchObjects: state.blockSearchObjects,
+      // The slices are rebuilt with the model's pore pressure.
+      waternet: state.waternet,
+      earlierStage: state.earlierStage,
       options: state.options,
       analysisLimits: state.analysisLimits,
     },
@@ -229,6 +240,8 @@ function App() {
   const reinforcements = useAppStore((s) => s.reinforcements);
   const piles = useAppStore((s) => s.piles);
   const piezometricLine = useAppStore((s) => s.piezometricLine);
+  const waternet = useAppStore((s) => s.waternet);
+  const earlierStage = useAppStore((s) => s.earlierStage);
   const parameters = useAppStore((s) => s.parameters);
   const orientation = useAppStore((s) => s.orientation);
   const customSearchPlanes = useAppStore((s) => s.customSearchPlanes);
@@ -410,6 +423,7 @@ function App() {
       window.cslope.sendMaterialsState({
         materials: state.materials,
         parameters: state.parameters,
+        earlierStage: state.earlierStage ?? null,
       });
     };
 
@@ -435,6 +449,10 @@ function App() {
         piezometricLine: { ...s.piezometricLine, materialAssignment },
         ...(s.assigningMaterialId && !ids.has(s.assigningMaterialId)
           ? { assigningMaterialId: null }
+          : {}),
+        // Removed in the dialog (with the materials' yield stress from it).
+        ...(next.earlierStage !== undefined
+          ? { earlierStage: next.earlierStage ?? undefined }
           : {}),
       });
       if (
@@ -465,8 +483,12 @@ function App() {
       return;
     }
 
-    window.cslope.sendMaterialsChanged({ materials, parameters });
-  }, [materials, parameters, isAnyDialogWindow]);
+    window.cslope.sendMaterialsChanged({
+      materials,
+      parameters,
+      earlierStage: earlierStage ?? null,
+    });
+  }, [materials, parameters, earlierStage, isAnyDialogWindow]);
 
   useEffect(() => {
     if (!isElectron || isAnyDialogWindow) return;
@@ -729,6 +751,7 @@ function App() {
         coordinates: state.coordinates,
         materials: state.materials,
         parameters: state.parameters,
+        waternet: state.waternet ?? null,
       });
     };
 
@@ -741,6 +764,7 @@ function App() {
         coordinates: [number, number][];
         materials: MaterialRow[];
         parameters?: ParameterDef[];
+        waternet?: ModelWaternet;
       } = {
         piezometricLine: normalized.piezometricLine,
         coordinates: normalized.coordinates,
@@ -749,6 +773,10 @@ function App() {
 
       if (Array.isArray(normalized.parameters)) {
         patch.parameters = normalized.parameters;
+      }
+      // Removed in the dialog.
+      if (normalized.waternet !== undefined) {
+        patch.waternet = normalized.waternet ?? undefined;
       }
 
       applyDialogPatch(patch);
@@ -776,8 +804,9 @@ function App() {
       coordinates,
       materials,
       parameters,
+      waternet: waternet ?? null,
     });
-  }, [piezometricLine, coordinates, materials, parameters, isAnyDialogWindow]);
+  }, [piezometricLine, coordinates, materials, parameters, waternet, isAnyDialogWindow]);
 
   useEffect(() => {
     if (!isElectron || isAnyDialogWindow) return;

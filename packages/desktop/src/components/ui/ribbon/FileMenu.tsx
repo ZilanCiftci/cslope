@@ -6,6 +6,10 @@ import { RibbonGroup, RibbonButton, RibbonMenuButton, RibbonSep } from "./Ribbon
 import { importDxf } from "../../../features/project/importDxf";
 import { importGsz } from "../../../features/project/importGsz";
 import { exportGsz } from "../../../features/project/exportGsz";
+import { importStix } from "../../../features/project/importStix";
+import { exportStix } from "../../../features/project/exportStix";
+import { importSli } from "../../../features/project/importSli";
+import { exportSli } from "../../../features/project/exportSli";
 import {
   NewIcon,
   OpenIcon,
@@ -58,18 +62,19 @@ export function FileMenu({
     input.click();
   };
 
-  const handleImportGsz = () => {
+  /** Import a project file of another program (a ZIP archive) with `run`. */
+  const importBinary = (extension: string, run: (bytes: Uint8Array, name: string) => Promise<string>) => {
     const input = document.createElement("input");
     input.type = "file";
-    input.accept = ".gsz";
+    input.accept = extension;
     input.onchange = () => {
       const file = input.files?.[0];
       if (!file) return;
       const reader = new FileReader();
       reader.onload = () => {
-        importGsz(new Uint8Array(reader.result as ArrayBuffer), file.name).then(
+        run(new Uint8Array(reader.result as ArrayBuffer), file.name).then(
           (message) => alert(message),
-          (err) => alert(`.gsz import failed: ${err instanceof Error ? err.message : String(err)}`),
+          (err) => alert(`${extension} import failed: ${err instanceof Error ? err.message : String(err)}`),
         );
       };
       reader.onerror = () => alert(`Could not read ${file.name}.`);
@@ -77,14 +82,20 @@ export function FileMenu({
     };
     input.click();
   };
+  const handleImportGsz = () => importBinary(".gsz", importGsz);
+  const handleImportStix = () => importBinary(".stix", importStix);
+  const handleImportSli = () => importBinary(".sli,.slim,.slmd", importSli);
 
-  const handleExportGsz = () => {
+  const exportAs = (extension: string, run: () => string) => {
     try {
-      alert(exportGsz());
+      alert(run());
     } catch (err) {
-      alert(`.gsz export failed: ${err instanceof Error ? err.message : String(err)}`);
+      alert(`${extension} export failed: ${err instanceof Error ? err.message : String(err)}`);
     }
   };
+  const handleExportGsz = () => exportAs(".gsz", exportGsz);
+  const handleExportStix = () => exportAs(".stix", exportStix);
+  const handleExportSli = () => exportAs(".slim", exportSli);
 
   // ── Keyboard shortcuts (Ctrl+N/O/S/Shift+S) ──
   useEffect(() => {
@@ -158,12 +169,18 @@ export function FileMenu({
                 items={[
                   { label: "DXF file…", title: "Import DXF", onClick: handleImportDxf },
                   { label: ".gsz file…", title: "Import a .gsz project file", onClick: handleImportGsz },
+                  { label: ".stix file…", title: "Import a .stix project file", onClick: handleImportStix },
+                  { label: ".sli/.slim/.slmd file…", title: "Import a .sli, .slim or .slmd model file", onClick: handleImportSli },
                 ]}
               />
               <RibbonMenuButton
                 icon={<ExportFileIcon />}
                 label="Export"
-                items={[{ label: ".gsz file…", title: "Export the model as a .gsz project file", onClick: handleExportGsz }]}
+                items={[
+                  { label: ".gsz file…", title: "Export the model as a .gsz project file", onClick: handleExportGsz },
+                  { label: ".stix file…", title: "Export the model as a .stix project file", onClick: handleExportStix },
+                  { label: ".slim file…", title: "Export the model as a .slim model file", onClick: handleExportSli },
+                ]}
               />
             </RibbonGroup>
             <RibbonSep />

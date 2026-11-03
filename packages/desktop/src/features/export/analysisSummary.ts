@@ -12,9 +12,12 @@ import type {
   AnalysisLimitsState,
   MaterialRow,
   ModelOrientation,
+  ModelEarlierStage,
+  ModelWaternet,
   PiezometricLineState,
   PileRow,
   ReinforcementRow,
+  UdlExcessPorePressure,
 } from "../../store/types";
 import { mainPiezoLine } from "../../utils/piezo";
 import { closestPairWarning, discardedBySizeText, surfaceCountText } from "../../utils/result-summary";
@@ -45,12 +48,22 @@ export interface AnalysisSummaryInput {
   orientation: ModelOrientation;
   piezometricLine: PiezometricLineState;
   materials: MaterialRow[];
-  udls: { x1: number; x2: number; magnitude: number; direction?: "vertical" | "normal" }[];
+  udls: {
+    x1: number;
+    x2: number;
+    magnitude: number;
+    direction?: "vertical" | "normal";
+    excessPorePressure?: UdlExcessPorePressure[];
+  }[];
   lineLoads: { x: number; magnitude: number; angle?: number; y?: number }[];
   reinforcements?: ReinforcementRow[];
   piles?: PileRow[];
   customPlanesOnly?: boolean;
   customSurfaceCount?: number;
+  /** Pore pressure from head and reference lines (imported). */
+  waternet?: ModelWaternet;
+  /** An earlier construction stage (imported). */
+  earlierStage?: ModelEarlierStage;
 }
 
 /** A number as typed: up to four decimals, no trailing zeros. */
@@ -91,7 +104,14 @@ export function fosLabel(partialFactors: PartialFactors | null | undefined): str
 
 /** Characteristic strength of a material model, in words. */
 export function strengthText(model: MaterialModel): string {
-  return strengthWithoutSuction(model) + suctionText(model) + bBarText(model);
+  return strengthWithoutSuction(model) + suctionText(model) + bBarText(model) + aboveWaterText(model);
+}
+
+/** The strength above the water line when it differs (`aboveWater`), in words, or "". */
+function aboveWaterText(model: MaterialModel): string {
+  const above = model.aboveWater;
+  if (!above) return "";
+  return `; above the water line ${MATERIAL_MODEL_LABELS[above.kind]}, ${strengthWithoutSuction(above)}${suctionText(above)}`;
 }
 
 /** Excess pore pressure from fills (B̄, fill weight), in words, or "". */
@@ -187,10 +207,17 @@ function strengthWithoutSuction(model: MaterialModel): string {
       if (model.suByStress && model.suByStress.length > 0) {
         return `Su against σ'v (SHANSEP), ${model.suByStress.map(([sv, su]) => `${fmt(su)} kPa at ${fmt(sv)} kPa`).join(", ")}${min}${anisotropy}`;
       }
-      const ocr =
-        model.ocrByElevation && model.ocrByElevation.length > 0
-          ? `OCR against elevation, ${model.ocrByElevation.map(([y, o]) => `${fmt(o)} at y = ${fmt(y)} m`).join(", ")}`
-          : `OCR = ${fmt(model.ocr ?? 1)}`;
+      // The stress history replaces OCR (as in the engine: the earlier
+      // stage, then POP, then σ'y).
+      const ocr = model.yieldFromEarlierStage
+        ? `OCR = σ'y/σ'v, σ'y from the earlier stage${model.pop ? ` + POP ${fmt(model.pop)} kPa` : ""}`
+        : model.pop !== undefined
+          ? `OCR = (σ'v + POP)/σ'v, POP = ${fmt(model.pop)} kPa`
+          : model.yieldStress !== undefined
+            ? `OCR = σ'y/σ'v, σ'y = ${fmt(model.yieldStress)} kPa`
+            : model.ocrByElevation && model.ocrByElevation.length > 0
+              ? `OCR against elevation, ${model.ocrByElevation.map(([y, o]) => `${fmt(o)} at y = ${fmt(y)} m`).join(", ")}`
+              : `OCR = ${fmt(model.ocr ?? 1)}`;
       return `Su = σ'v · S · OCR^m (SHANSEP), S = ${fmt(model.ratio)}, m = ${fmt(model.exponent ?? 0.8)}, ${ocr}${min}${anisotropy}`;
     }
     case "shear-normal":
@@ -379,7 +406,7 @@ export function buildAnalysisSummary(input: AnalysisSummaryInput): SummarySectio
   const lines = piezo.lines.filter((l) => l.coordinates.length >= 2);
   const main = mainPiezoLine({ lines, mainLineId: piezo.mainLineId });
   if (lines.length === 0) {
-    water.push({ label: "Piezometric lines", value: "none (no pore pressure)" });
+    water.push({ label: "Piezometric lines", value: input.waternet ? "none" : "none (no pore pressure)" });
   } else {
     water.push({ label: "Piezometric lines", value: lines.map((l) => l.name).join(", ") });
     if (lines.length > 1 && main) {
@@ -427,6 +454,16 @@ export function buildAnalysisSummary(input: AnalysisSummaryInput): SummarySectio
       value: ys.every((y) => y === ys[0])
         ? `level y = ${fmt(ys[0])} m, x ${fmt(before[0][0])} to ${fmt(before[before.length - 1][0])} m`
         : `line of ${before.length} points, ${before.map(([x, y]) => `(${fmt(x)}, ${fmt(y)})`).join(", ")}`,
+    });
+  }
+  if (input.waternet) {
+    const heads = input.waternet.headLines.length;
+    const refs = input.waternet.referenceLines.length;
+    water.push({
+      label: "Head and reference lines",
+      value:
+        `pore pressure from ${heads} head line${heads === 1 ? "" : "s"} and ${refs} reference line${refs === 1 ? "" : "s"} ` +
+        "for all materials, instead of the piezometric lines (which still give the phreatic level)",
     });
   }
   water.push({ label: "Unit weight of water", value: `${WATER_UNIT_WEIGHT} kN/m³` });
@@ -498,14 +535,28 @@ export function buildAnalysisSummary(input: AnalysisSummaryInput): SummarySectio
         lineName(m),
       ]),
     },
+    ...(input.earlierStage
+      ? {
+          note:
+            "The model has an earlier construction stage: SHANSEP materials with the yield stress from the " +
+            "earlier stage take it from that stage's effective vertical stress.",
+        }
+      : {}),
   });
 
   // ── Loads and structures ──
+  const materialName = new Map(input.materials.map((m) => [m.id, m.name]));
+  const excessText = (entries: UdlExcessPorePressure[] | undefined): string => {
+    const known = (entries ?? []).filter((e) => materialName.has(e.materialId));
+    return known.length > 0
+      ? `; excess pore pressure ${known.map((e) => `${fmt(e.ratio * 100)} % in ${materialName.get(e.materialId)}`).join(", ")}`
+      : "";
+  };
   const loads: string[][] = [
     ...input.udls.map((u) => [
       "Distributed load",
       `x ${fmt(Math.min(u.x1, u.x2))} to ${fmt(Math.max(u.x1, u.x2))} m`,
-      `${fmt(u.magnitude)} kPa${u.direction === "normal" ? ", normal to the ground" : ""}`,
+      `${fmt(u.magnitude)} kPa${u.direction === "normal" ? ", normal to the ground" : ""}${excessText(u.excessPorePressure)}`,
     ]),
     ...input.lineLoads.map((l) => {
       const inclined = l.angle !== undefined && Number.isFinite(l.angle) && l.angle !== 0;

@@ -187,7 +187,7 @@ function lineYAt(line: Pt[], x: number): number | null {
  * points: an edge used by one region is on the outline, one shared by two
  * is a boundary between materials.
  */
-function regionsToGeometry(polys: { id: number; pts: number[] }[], points: Map<number, Pt>, notes: string[]) {
+export function regionsToGeometry(polys: { id: number; pts: number[] }[], points: Map<number, Pt>, notes: string[]) {
   const tol = 1e-6 * Math.max(1, ...[...points.values()].map(([x, y]) => Math.max(Math.abs(x), Math.abs(y))));
   // corner points of other regions that lie on an edge (T-junctions) become corners of that edge too
   const used = [...new Set(polys.flatMap((p) => p.pts))];

@@ -73,11 +73,44 @@ The script compares the regenerated verification table with the committed one an
 | 2026-11-02 | Exit range starting at the toe moved upslope; Hoek-Brown mb, s, a given directly | 1 | 0.342 → 0.342 | 0.477 → 0.477 | 1.009 → 1.009 | 1.595 → 1.596 | 779 s (4 workers, load 1.2 at start) |
 | 2026-11-03 | Composite circles along bedrock (default on); along the model base optional (compositeBase) | 2 | 0.342 → 0.342 | 0.477 → 0.476 | 1.009 → 1.003 | 1.596 → 1.589 | 719 s (4 workers, load 3.7 at start) |
 | 2026-11-03 | Reinforcement, SHANSEP, B-bar, shear-normal, seismic, inclined line loads, rapid drawdown; composite review fixes | 0 | 0.342 → 0.342 | 0.476 → 0.476 | 1.003 → 1.003 | 1.589 → 1.589 | 210 s (4 workers, load 0.7 at start) |
+| 2026-11-03 | Import and export of .stix and .sli/.slim/.slmd files; waternet, strength above the water line, POP/yield stress with an earlier stage, load consolidation | 0 | 0.342 → 0.342 | 0.476 → 0.476 | 1.003 → 1.003 | 1.589 → 1.589 | 498 s (4 workers, load 2.8 at start) |
 <!-- summary-end -->
 
 ## Entries
 
 <!-- entries -->
+
+### 2026-11-03: Import and export of .stix and .sli/.slim/.slmd files; waternet, strength above the water line, POP/yield stress with an earlier stage, load consolidation
+
+Compared with 1daf4d7. Errors are relative to the reference, in percent. Verification run time: 498 s (4 workers, load 2.8 at start).
+
+**Against other programs (midpoint of their range):** 0 moved (0 closer to the reference, 0 further).
+
+| Result | Reference | Before | After | Error before | Error after |
+|---|---|---|---|---|---|
+| **Mean error (n = 281)** | | | | -0.222 % | -0.222 % |
+| **Mean absolute error** | | | | 0.342 % | 0.342 % |
+| **RMS error** | | | | 0.476 % | 0.476 % |
+| **Largest error** | | | | 2.109 % | 2.109 % |
+
+**Against the papers:** 0 moved (0 closer to the reference, 0 further).
+
+| Result | Reference | Before | After | Error before | Error after |
+|---|---|---|---|---|---|
+| **Mean error (n = 112)** | | | | -0.155 % | -0.155 % |
+| **Mean absolute error** | | | | 1.003 % | 1.003 % |
+| **RMS error** | | | | 1.589 % | 1.589 % |
+| **Largest error** | | | | 6.591 % | 6.591 % |
+
+**Finite elements against their references (FE, finite differences, limit analysis, theory):** 0 moved (0 closer to the reference, 0 further).
+
+| Result | Reference | Before | After | Error before | Error after |
+|---|---|---|---|---|---|
+| **Mean error (n = 35)** | | | | -0.711 % | -0.711 % |
+| **Mean absolute error** | | | | 2.399 % | 2.399 % |
+| **RMS error** | | | | 3.712 % | 3.712 % |
+| **Largest error** | | | | 15.100 % | 15.100 % |
+
 
 ### 2026-11-03: Reinforcement, SHANSEP, B-bar, shear-normal, seismic, inclined line loads, rapid drawdown; composite review fixes
 

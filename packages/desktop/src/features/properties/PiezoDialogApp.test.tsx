@@ -7,7 +7,7 @@ vi.mock("../../utils/is-electron", () => ({ isElectron: true }));
 import { PiezoDialogApp } from "./PiezoDialogApp";
 import { useAppStore } from "../../store/app-store";
 import { installFakeBridge, type FakeBridge } from "../../test/fake-bridge";
-import type { PiezometricLineState } from "../../store/types";
+import type { ModelWaternet, PiezometricLineState } from "../../store/types";
 
 let bridge: FakeBridge;
 const COORDS: [number, number][] = [
@@ -202,5 +202,26 @@ describe("PiezoDialogApp", () => {
     expect(pl().lines).toHaveLength(1);
     expect(store().coordinates).toEqual(COORDS);
     expect(bridge.sentOf("sendPiezoChanged")).toEqual([]);
+  });
+});
+
+describe("PiezoDialogApp — imported head and reference lines", () => {
+  const waternet: ModelWaternet = {
+    headLines: [{ id: "PL1", points: [[0, 8], [20, 4]] }],
+    referenceLines: [{ points: [[0, 4], [20, 4]], topHeadLineId: "PL1" }],
+  };
+
+  it("shows them from the main window and sends their removal back", async () => {
+    render(<PiezoDialogApp />);
+    hydrate();
+    expect(screen.queryByTestId("waternet-notice")).toBeNull();
+    bridge.emit("onPiezoChanged", { piezometricLine: pl(), coordinates: COORDS, materials: store().materials, waternet });
+    expect(screen.getByTestId("waternet-notice")).toHaveTextContent("(1 head line, 1 reference line)");
+    expect(bridge.sentOf("sendPiezoChanged")).toEqual([]);
+    await userEvent.click(screen.getByRole("button", { name: "Remove" }));
+    expect(store().waternet).toBeUndefined();
+    expect(screen.queryByTestId("waternet-notice")).toBeNull();
+    const sent = bridge.sentOf<{ waternet: ModelWaternet | null }>("sendPiezoChanged");
+    expect(sent.at(-1)!.waternet).toBeNull();
   });
 });

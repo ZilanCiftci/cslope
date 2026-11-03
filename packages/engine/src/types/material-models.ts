@@ -32,6 +32,13 @@ export interface MaterialModelBase {
   bBar?: number;
   /** The weight of this material (a fill) raises the pore pressure of materials with `bBar` below it. */
   bBarLoad?: boolean;
+  /**
+   * The strength of the material above its water line (the phreatic
+   * level), when it differs from the strength below it (for example drained
+   * above and undrained below). It also applies everywhere when the
+   * material has no water line. Its unit weight is this model's.
+   */
+  aboveWater?: MaterialModel;
 }
 
 /**
@@ -382,6 +389,20 @@ export interface ShansepModel extends MaterialModelBase, UndrainedAnisotropy {
   exponent?: number;
   /** OCR, constant. Default 1. */
   ocr?: number;
+  /**
+   * Pre-overburden pressure POP (kPa): OCR = (σ′v + POP)/σ′v at the base.
+   * Replaces `ocr` and `ocrByElevation`.
+   */
+  pop?: number;
+  /** Yield (preconsolidation) stress σ′y (kPa): OCR = σ′y/σ′v at the base, at least 1. Replaces `ocr` and `ocrByElevation`. */
+  yieldStress?: number;
+  /**
+   * With an earlier stage (SlopeDefinition.earlierStage): the yield stress
+   * is the effective vertical stress of the earlier stage at the base plus
+   * `pop` (the stress history the soil kept from it), OCR = σ′y/σ′v, at
+   * least 1.
+   */
+  yieldFromEarlierStage?: boolean;
   /** OCR against elevation, [[y, OCR], …], interpolated linearly (constant beyond the ends); replaces `ocr`. */
   ocrByElevation?: [number, number][];
   /** Su against σ′v, [[σ′v, Su], …], interpolated linearly (constant beyond the ends); replaces S, m and OCR. */
