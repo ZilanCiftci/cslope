@@ -106,6 +106,10 @@ pub struct SearchPlane {
     /// The custom search plane of the definition this plane was added for
     /// (build_slope.rs); carried through the analysis to the result.
     pub custom_plane: Option<CustomPlaneRef>,
+    /// Further custom search planes of the definition identical to this one
+    /// (solvers.rs drops the duplicates): each gets this plane's surface in
+    /// the result's custom surfaces.
+    pub custom_aliases: Vec<CustomPlaneRef>,
     /// Why the evaluation left the plane without a factor (evaluate_plane).
     pub rejection: Option<SurfaceRejection>,
 }

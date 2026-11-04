@@ -215,15 +215,22 @@ pub fn custom_surface_results(slope: &Slope) -> Option<Vec<CustomSurfaceResult>>
             let why = p.rejection.unwrap_or(SurfaceRejection::NotConverged);
             (None, Some(why.message().to_string()))
         };
-        entries.push((
-            custom,
-            CustomSurfaceResult {
-                kind: custom.kind,
-                index: custom.index,
-                surface,
-                reason,
-            },
-        ));
+        // The plane's own custom plane, then any identical ones given again
+        // (each with the same surface, marked as itself).
+        for alias in std::iter::once(custom).chain(p.custom_aliases.iter().copied()) {
+            entries.push((
+                alias,
+                CustomSurfaceResult {
+                    kind: alias.kind,
+                    index: alias.index,
+                    surface: surface.clone().map(|s| SlipSurfaceResult {
+                        custom_plane: Some(alias),
+                        ..s
+                    }),
+                    reason: reason.clone(),
+                },
+            ));
+        }
     }
     for &(custom, why) in slope.custom_plane_rejections() {
         entries.push((

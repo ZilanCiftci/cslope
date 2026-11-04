@@ -111,6 +111,11 @@ export interface SearchPlane {
    * (buildSlope); carried through the analysis to the result.
    */
   customPlane?: CustomPlaneRef;
+  /**
+   * Further custom search planes of the definition identical to this one
+   * (the analysis drops the duplicates); each gets this plane's surface.
+   */
+  customAliases?: CustomPlaneRef[];
   /** Why the evaluation left the plane without a factor (evaluatePlanes). */
   rejection?: SurfaceRejection;
 }
