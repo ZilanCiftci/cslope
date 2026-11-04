@@ -9,6 +9,7 @@ import {
 } from "./defaults";
 import type { AppState, ModelEntry } from "./types";
 import {
+  normalizeColorBarScale,
   normalizeResultView,
   parseProjectFile,
   serializeProject,
@@ -688,5 +689,74 @@ describe("normalizeResultView (also used for view templates)", () => {
     const unset = normalizeResultView({ pdfSummaryPages: "no", pdfTitleLine: 1 });
     expect("pdfSummaryPages" in unset).toBe(false);
     expect("pdfTitleLine" in unset).toBe(false);
+  });
+
+  it("keeps the colour scale of a colour bar when it is valid", () => {
+    const view = normalizeResultView({
+      annotations: [
+        {
+          id: "c",
+          type: "color-bar",
+          x: 0.8,
+          y: 0.3,
+          scaleMode: "fixed",
+          scaleMin: 1,
+          scaleMax: 2.5,
+          scheme: "custom",
+          schemeFrom: "#ff0000",
+          schemeMid: "#FFFFFF",
+          schemeTo: "#0000ff",
+        },
+      ],
+    });
+    expect(view.annotations[0]).toEqual({
+      id: "c",
+      type: "color-bar",
+      x: 0.8,
+      y: 0.3,
+      scaleMode: "fixed",
+      scaleMin: 1,
+      scaleMax: 2.5,
+      scheme: "custom",
+      schemeFrom: "#ff0000",
+      schemeMid: "#FFFFFF",
+      schemeTo: "#0000ff",
+    });
+    expect(normalizeResultView({ annotations: [{ id: "c", type: "color-bar", x: 0, y: 0, scaleMode: "filter", scheme: "viridis" }] }).annotations[0]).toMatchObject({
+      scaleMode: "filter",
+      scheme: "viridis",
+    });
+  });
+
+  it("drops colour scale fields that are not valid, and all of them from other annotations", () => {
+    const view = normalizeResultView({
+      annotations: [
+        {
+          id: "c",
+          type: "color-bar",
+          x: 0.8,
+          y: 0.3,
+          scaleMode: "manual",
+          scaleMin: "1",
+          scaleMax: Number.NaN,
+          scheme: "rainbow",
+          schemeFrom: "red",
+          schemeMid: "#fff",
+          schemeTo: 42,
+        },
+        { id: "t", type: "text", x: 0.1, y: 0.1, text: "x", scaleMode: "fixed", scheme: "viridis", schemeFrom: "#ff0000" },
+      ],
+    });
+    expect(view.annotations[0]).toEqual({ id: "c", type: "color-bar", x: 0.8, y: 0.3 });
+    expect(view.annotations[1]).toEqual({ id: "t", type: "text", x: 0.1, y: 0.1, text: "x" });
+    // Direct use, as for a colour bar of a template.
+    expect(normalizeColorBarScale({ id: "c", type: "color-bar", x: 0, y: 0, scaleMode: "auto", scheme: "classic" })).toEqual({
+      id: "c",
+      type: "color-bar",
+      x: 0,
+      y: 0,
+      scaleMode: "auto",
+      scheme: "classic",
+    });
   });
 });

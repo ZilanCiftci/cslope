@@ -28,15 +28,27 @@ const MATERIALS: MaterialRow[] = [
   } as MaterialRow,
 ];
 
-function record(anno: Annotation, result: AnalysisResult = RESULT) {
+function record(anno: Annotation, result: AnalysisResult = RESULT, filter?: { fosFilterMax: number }) {
   const pdf = new jsPDF({ unit: "mm", format: [297, 210], orientation: "landscape" });
   const rects: { w: number; h: number; style?: string | null }[] = [];
   const fontSizes: number[] = [];
+  const texts: string[] = [];
+  const fills: number[][] = [];
   const rect = pdf.rect.bind(pdf);
   pdf.rect = ((x: number, y: number, w: number, h: number, style?: string | null) => {
     rects.push({ w, h, style });
     return rect(x, y, w, h, style);
   }) as typeof pdf.rect;
+  const text = pdf.text.bind(pdf);
+  pdf.text = ((...args: Parameters<typeof pdf.text>) => {
+    texts.push(String(args[0]));
+    return text(...args);
+  }) as typeof pdf.text;
+  const setFillColor = pdf.setFillColor.bind(pdf);
+  pdf.setFillColor = ((...args: number[]) => {
+    fills.push(args);
+    return (setFillColor as (...a: number[]) => jsPDF)(...args);
+  }) as typeof pdf.setFillColor;
   const setFontSize = pdf.setFontSize.bind(pdf);
   pdf.setFontSize = ((size: number) => {
     fontSizes.push(size);
@@ -58,8 +70,9 @@ function record(anno: Annotation, result: AnalysisResult = RESULT) {
     {},
     [],
     FRAME,
+    filter,
   );
-  return { rects, fontSizes, circles };
+  return { rects, fontSizes, circles, texts, fills };
 }
 
 describe("PDF annotations match the canvas proportions", () => {
@@ -75,6 +88,25 @@ describe("PDF annotations match the canvas proportions", () => {
     const border = rects.find((r) => r.style === "S")!;
     expect(border.w).toBeCloseTo(20 * SCALE, 6);
     expect(border.h).toBeCloseTo(200 * SCALE, 6);
+  });
+
+  it("draws the colour bar with its own range and scheme, ticks marked beyond the ends", () => {
+    const bar = { id: "c", type: "color-bar", x: 0.8, y: 0.2, scaleMode: "fixed", scaleMin: 1.3, scaleMax: 2, scheme: "greyscale" } as Annotation;
+    const fixed = record(bar, { ...RESULT, maxFOS: 9 });
+    expect(fixed.texts).toContain("≥ 2.00");
+    expect(fixed.texts).toContain("≤ 1.30");
+    expect(fixed.texts).toContain("1.58");
+    // The gradient runs from the top (high FOS, light grey) to the bottom (black).
+    expect(fixed.fills[0]).toEqual([200, 200, 200]);
+    expect(fixed.fills.at(-1)).toEqual([0, 0, 0]);
+
+    const follow = record({ ...bar, scaleMode: "filter", scheme: "custom", schemeFrom: "#ff0000", schemeTo: "#0000ff" } as Annotation, RESULT, {
+      fosFilterMax: 1.6,
+    });
+    expect(follow.texts).toContain("≥ 1.60");
+    expect(follow.texts).toContain("1.10");
+    expect(follow.fills[0]).toEqual([0, 0, 255]);
+    expect(follow.fills.at(-1)).toEqual([255, 0, 0]);
   });
 
   it("uses the annotation font size without an 8 pt floor", () => {

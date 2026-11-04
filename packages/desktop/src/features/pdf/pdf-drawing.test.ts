@@ -22,7 +22,7 @@ import type { PdfTransform } from "./pdf-helpers";
 import { DEFAULT_MATERIAL, DEFAULT_RESULT_VIEW_SETTINGS } from "../../store/defaults";
 import type { Annotation, MaterialRow, ResultViewSettings } from "../../store/types";
 import { newPile, newReinforcement } from "../../utils/reinforcement";
-import { fosColor } from "../../utils/fos-color";
+import { fosColor, fosColorIn } from "../../utils/fos-color";
 import { parseColor } from "./pdf-helpers";
 import {
   ENTRY_DOT_COLOR,
@@ -685,6 +685,39 @@ describe("drawSlipSurfaces", () => {
     const rec = recorder();
     drawSlipSurfaces(rec.pdf, tf, res, rvs({ surfaceDisplay: "filter", fosFilterMax: 2 }));
     expect(rec.of("stroke")).toHaveLength(1);
+  });
+
+  it("colours the surfaces by the colour bar's range and scheme, like the canvas", () => {
+    const bar: Annotation = {
+      id: "c",
+      type: "color-bar",
+      x: 0.8,
+      y: 0.3,
+      scaleMode: "fixed",
+      scaleMin: 1.3,
+      scaleMax: 2,
+      scheme: "greyscale",
+    };
+    const rec = recorder();
+    drawSlipSurfaces(rec.pdf, tf, res, rvs({ surfaceDisplay: "all", annotations: [bar] }));
+    expect(rec.of("setDrawColor").map((c) => c.args)).toEqual([
+      parseColor("#c8c8c8"),
+      parseColor(fosColorIn({ id: "greyscale" }, 1.5, 1.3, 2)),
+    ]);
+
+    // Following the filter with a custom scheme; the first bar wins.
+    const follow: Annotation = {
+      ...bar,
+      id: "d",
+      scaleMode: "filter",
+      scheme: "custom",
+      schemeFrom: "#ff0000",
+      schemeMid: "#ffffff",
+      schemeTo: "#0000ff",
+    };
+    const rec2 = recorder();
+    drawSlipSurfaces(rec2.pdf, tf, res, rvs({ surfaceDisplay: "all", fosFilterMax: 1.766, annotations: [follow, bar] }));
+    expect(rec2.of("setDrawColor").map((c) => c.args)).toEqual([parseColor("#0000ff"), parseColor("#ffffff")]);
   });
 });
 

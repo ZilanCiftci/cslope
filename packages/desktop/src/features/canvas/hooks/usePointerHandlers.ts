@@ -574,6 +574,7 @@ export function usePointerHandlers(deps: PointerDeps) {
             piezometricLine: state.piezometricLine,
             projectInfo: state.projectInfo,
             parameters: state.parameters,
+            resultView: state.resultViewSettings,
           });
           if (
             cxPx >= b.x &&

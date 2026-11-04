@@ -29,7 +29,8 @@ import {
 } from "../rendering/style-spec";
 import { REINFORCEMENT_COLOR, PILE_COLOR } from "./reinforcement-draw";
 import { newPile, newReinforcement } from "../../utils/reinforcement";
-import { fosColor } from "../../utils/fos-color";
+import { fosColor, fosColorIn } from "../../utils/fos-color";
+import { colorScaleOfBar } from "../annotations/colorScale";
 import type { Annotation, ResultViewSettings } from "../../store/types";
 import { computeRegions } from "../../utils/regions";
 
@@ -1501,6 +1502,74 @@ describe("drawCanvas — result mode", () => {
     const uncapped = drawResult({ resultViewSettings: rvs({ annotations: [anno] }) });
     expect(uncapped.textStrings()).toContain("1.80");
     expect(uncapped.textStrings().some((t) => t.startsWith("≥"))).toBe(false);
+  });
+
+  it("colours the surfaces and the bar by the bar's range and scheme", () => {
+    const s2 = surface({ cx: 15, cy: 16, fos: 1.5 });
+    const s3 = surface({ cx: 15, cy: 18, fos: 9 });
+    const res = result({ allSurfaces: [surface(), s2, s3], maxFOS: 9 });
+    const faintOf = (rec: ReturnType<typeof drawResult>) =>
+      rec.strokes().filter((p) => p.state.globalAlpha === SLIP_SURFACE_OPACITY);
+    const barsOf = (rec: ReturnType<typeof drawResult>) => rec.callsOf("fillRect").filter((c) => c.args[3] === 2);
+
+    // A fixed range 1–2 on a greyscale scheme: FOS 9 past the top is "≥ 2.00"
+    // and light grey; FOS 1.5 is the middle grey; the critical FOS below the
+    // bottom reads "≤ 1.00".
+    const fixed: Annotation = {
+      id: "c",
+      type: "color-bar",
+      x: 0.8,
+      y: 0.3,
+      scaleMode: "fixed",
+      scaleMin: 1.3,
+      scaleMax: 2,
+      scheme: "greyscale",
+    };
+    const grey = drawResult({ result: res, resultViewSettings: rvs({ surfaceDisplay: "all", annotations: [fixed] }) });
+    expect(grey.textStrings()).toContain("≥ 2.00");
+    expect(grey.textStrings()).toContain("≤ 1.30");
+    expect(grey.textStrings()).toContain("1.58");
+    const scale = colorScaleOfBar(fixed, res);
+    expect(faintOf(grey)[0].state.strokeStyle).toBe("#c8c8c8");
+    expect(faintOf(grey)[1].state.strokeStyle).toBe(scale.colorOf(1.5));
+    expect(faintOf(grey)[1].state.strokeStyle).toBe(fosColorIn({ id: "greyscale" }, 1.5, 1.3, 2));
+    expect(barsOf(grey)[0].state.fillStyle).toBe("#c8c8c8");
+    expect(barsOf(grey).at(-1)!.state.fillStyle).toBe("#000000");
+
+    // Bounds out of order: the automatic range, with its own message in the panel.
+    const bad = drawResult({
+      result: res,
+      resultViewSettings: rvs({ surfaceDisplay: "all", annotations: [{ ...fixed, scaleMin: 3, scheme: "classic" }] }),
+    });
+    expect(bad.textStrings()).toContain("≥ 2.47");
+    expect(faintOf(bad)[1].state.strokeStyle).toBe(fosColor(1.5, 1.234, 2.468));
+
+    // Following the filter: the scale ends at the filter's limit, also in "all" mode.
+    const custom: Annotation = {
+      ...fixed,
+      scaleMode: "filter",
+      scheme: "custom",
+      schemeFrom: "#ff0000",
+      schemeMid: "#ffffff",
+      schemeTo: "#0000ff",
+    };
+    const follow = drawResult({
+      result: res,
+      resultViewSettings: rvs({ surfaceDisplay: "all", fosFilterMax: 1.766, annotations: [custom] }),
+    });
+    expect(follow.textStrings()).toContain("≥ 1.77");
+    expect(follow.textStrings()).toContain("1.23");
+    expect(faintOf(follow)[0].state.strokeStyle).toBe("#0000ff");
+    expect(faintOf(follow)[1].state.strokeStyle).toBe("#ffffff");
+    expect(barsOf(follow)[0].state.fillStyle).toBe("#0000ff");
+    expect(barsOf(follow).at(-1)!.state.fillStyle).toBe("#ff0000");
+
+    // The first colour bar sets the scale of the plot.
+    const two = drawResult({
+      result: res,
+      resultViewSettings: rvs({ surfaceDisplay: "all", annotations: [fixed, { ...custom, id: "d" }] }),
+    });
+    expect(faintOf(two)[0].state.strokeStyle).toBe("#c8c8c8");
   });
 
   it("draws a slice plot with axis end labels, or a placeholder without slices", () => {

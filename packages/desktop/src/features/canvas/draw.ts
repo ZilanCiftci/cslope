@@ -9,7 +9,8 @@ import {
   surfacePoints,
   type DrawableSurface,
 } from "../../utils/arc";
-import { fosColor, fosScaleRange, fosTickLabel } from "../../utils/fos-color";
+import { fosTickLabel } from "../../utils/fos-color";
+import { colorScaleOf, colorScaleOfBar } from "../annotations/colorScale";
 import { computeRegions } from "../../utils/regions";
 import { prescribedPath } from "../../utils/custom-plane";
 import {
@@ -2040,7 +2041,8 @@ export function drawCanvas(
     // Non-critical surfaces (when "all" or "filter" mode)
     // Draw in reverse FOS order (high FOS first = behind, low FOS last = on top)
     if (rvs.surfaceDisplay !== "critical" && result.allSurfaces.length > 0) {
-      const fosRange = fosScaleRange(result);
+      // The scale of the colour bar, so the plot and the bar agree.
+      const fosScale = colorScaleOf(rvs, result);
       for (let si = result.allSurfaces.length - 1; si >= 0; si--) {
         const surf = result.allSurfaces[si];
         // Skip critical (drawn separately) and filtered out
@@ -2050,7 +2052,7 @@ export function drawCanvas(
           continue;
 
         const arcPts = getArcPoints(surf);
-        ctx.strokeStyle = fosColor(surf.fos, fosRange.min, fosRange.max);
+        ctx.strokeStyle = fosScale.colorOf(surf.fos);
         ctx.lineWidth = 1 * paperZoom;
         ctx.globalAlpha = SLIP_SURFACE_OPACITY;
         ctx.beginPath();
@@ -2521,7 +2523,8 @@ export function drawCanvas(
         ctx.font = `${labelFontSize}px 'Segoe UI', sans-serif`;
         let maxLabelW = 0;
         const numTicks = COLOR_BAR_NUM_TICKS;
-        const fosScale = fosScaleRange(result);
+        const colorScale = colorScaleOfBar(anno, result, rvs);
+        const fosScale = colorScale.range;
         for (let t = 0; t <= numTicks; t++) {
           maxLabelW = Math.max(
             maxLabelW,
@@ -2548,7 +2551,7 @@ export function drawCanvas(
         for (let i = 0; i < numSteps; i++) {
           const t = i / (numSteps - 1);
           const fos = fosMax - t * (fosMax - fosMin);
-          ctx.fillStyle = fosColor(fos, fosMin, fosMax);
+          ctx.fillStyle = colorScale.colorOf(fos);
           ctx.fillRect(barX, barY + i, barW, 2);
         }
 
@@ -2754,6 +2757,7 @@ export function drawCanvas(
           piezometricLine,
           projectInfo,
           parameters,
+          resultView: rvs,
         });
         ctx.save();
         ctx.strokeStyle = "#0078d4";

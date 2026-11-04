@@ -492,6 +492,7 @@ export function exportVectorPdf(data: PdfExportData): void {
       projectInfo || {},
       parameters ?? [],
       annotationFrame,
+      rvs,
     );
 
     drawRulerFrame(

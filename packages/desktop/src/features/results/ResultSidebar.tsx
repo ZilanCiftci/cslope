@@ -24,6 +24,7 @@ import {
 } from "../annotations/anchorPosition";
 import { surfaceCountText } from "../../utils/result-summary";
 import { ResultNotes } from "./ResultNotes";
+import { ColorBarProperties } from "./ColorBarProperties";
 import { resolveAnnotationText } from "../annotations/resolveAnnotationText";
 import { InsertVariableMenu } from "../annotations/InsertVariableMenu";
 import { modelViewLock } from "../view/viewLock";
@@ -279,6 +280,13 @@ export function ResultSidebar() {
     () => selectedAnnotations.filter((anno) => anno.type === "plot"),
     [selectedAnnotations],
   );
+  const selectedColorBarAnnotations = useMemo(
+    () => selectedAnnotations.filter((anno) => anno.type === "color-bar"),
+    [selectedAnnotations],
+  );
+  const allSelectedAreColorBar =
+    selectedAnnotations.length > 0 &&
+    selectedColorBarAnnotations.length === selectedAnnotations.length;
 
   const allSelectedAreText =
     selectedAnnotations.length > 0 &&
@@ -358,6 +366,7 @@ export function ResultSidebar() {
           piezometricLine: s.piezometricLine,
           projectInfo: s.projectInfo,
           parameters: s.parameters,
+          resultView: s.resultViewSettings,
         });
         const hitPad = 4;
         const wFrac = (bounds.w - 2 * hitPad) / pf.w;
@@ -1051,7 +1060,8 @@ export function ResultSidebar() {
             {selectedAnnotations.length > 1 &&
               !allSelectedAreText &&
               !allSelectedAreMaterialTable &&
-              !allSelectedArePlot && (
+              !allSelectedArePlot &&
+              !allSelectedAreColorBar && (
                 <div
                   className="border-t pt-2 mt-2"
                   style={{ borderColor: "var(--color-vsc-border)" }}
@@ -1210,6 +1220,15 @@ export function ResultSidebar() {
               </div>
             </div>
           </div>
+        )}
+
+        {allSelectedAreColorBar && (
+          <ColorBarProperties
+            annotations={selectedColorBarAnnotations}
+            result={result}
+            fosFilterMax={rvs.fosFilterMax}
+            updateAnnotation={updateAnnotation}
+          />
         )}
 
         {allSelectedAreMaterialTable && (
