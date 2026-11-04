@@ -1,0 +1,65 @@
+{
+  "version": 3,
+  "activeModelId": "model-2",
+  "models": [
+    {
+      "id": "model-1",
+      "name": "Legacy v3 slope",
+      "orientation": "ltr",
+      "coordinates": [[0, 0], [10, 0], [20, 5], [30, 5]],
+      "materials": [
+        {
+          "id": "mat-1",
+          "name": "Clay",
+          "color": "#d4a373",
+          "modelExpressions": {},
+          "model": { "kind": "mohr-coulomb", "unitWeight": 18, "frictionAngle": 0, "cohesion": 12 }
+        }
+      ],
+      "materialBoundaries": [],
+      "regionMaterials": [],
+      "piezometricLine": { "enabled": false, "lines": [], "activeLineId": null, "materialAssignment": {}, "freeWater": false },
+      "udls": [{ "id": "udl-1", "x1": 22, "x2": 28, "magnitude": 10, "direction": "vertical" }],
+      "lineLoads": [],
+      "customSearchPlanes": [],
+      "customPlanesOnly": false,
+      "runState": "done",
+      "progress": 1,
+      "result": {
+        "minFOS": 1.25,
+        "maxFOS": 3,
+        "criticalSurface": null,
+        "allSurfaces": [],
+        "criticalSlices": [],
+        "method": "Bishop",
+        "elapsedMs": 12
+      },
+      "errorMessage": null
+    },
+    {
+      "id": "model-2",
+      "name": "Second model",
+      "coordinates": [[0, 0], [10, 0], [20, 8], [30, 8]],
+      "materials": [
+        {
+          "id": "mat-1",
+          "name": "Sand",
+          "color": "#e9c46a",
+          "modelExpressions": {},
+          "model": { "kind": "mohr-coulomb", "unitWeight": 19, "frictionAngle": 32, "cohesion": 0 }
+        }
+      ],
+      "materialBoundaries": [],
+      "regionMaterials": [],
+      "piezometricLine": { "enabled": false, "lines": [], "activeLineId": null, "materialAssignment": {} },
+      "udls": [],
+      "lineLoads": [],
+      "customSearchPlanes": [],
+      "customPlanesOnly": false,
+      "runState": "error",
+      "progress": 0,
+      "result": null,
+      "errorMessage": "No admissible surface"
+    }
+  ]
+}

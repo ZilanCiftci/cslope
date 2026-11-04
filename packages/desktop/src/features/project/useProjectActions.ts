@@ -30,6 +30,7 @@ import {
   saveProjectInElectron,
   withUnsavedChangesCheck,
 } from "./unsavedGuard";
+import { projectThumbnail } from "./thumbnail";
 
 export interface ProjectActions {
   /** Current project file-name (without `.cslp`). Empty for untitled. */
@@ -123,7 +124,7 @@ export function useProjectActions(defaultBaseName: string): ProjectActions {
     useAppStore.getState().saveCurrentModel();
     const state = useAppStore.getState();
     try {
-      triggerBrowserDownload(await buildProjectArchive(state), finalName);
+      triggerBrowserDownload(await buildProjectArchive(state, { thumbnail: projectThumbnail }), finalName);
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Unknown error";
       window.alert(`Unable to save project: ${msg}`);

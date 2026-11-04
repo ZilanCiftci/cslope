@@ -9,6 +9,7 @@ import {
 } from "../../store/app-store";
 import { isElectron } from "../../utils/is-electron";
 import { buildProjectArchive, ensureCslpName } from "./cslp";
+import { projectThumbnail } from "./thumbnail";
 
 /** The file name a new project file is offered under: the active model's name, .cslp. */
 export function suggestedProjectFileName(state = useAppStore.getState()): string {
@@ -26,7 +27,7 @@ export async function saveProjectInElectron(saveAs = false): Promise<boolean> {
   useAppStore.getState().saveCurrentModel();
   const state = useAppStore.getState();
   try {
-    const data = await buildProjectArchive(state);
+    const data = await buildProjectArchive(state, { thumbnail: projectThumbnail });
     const name = suggestedProjectFileName(state);
     const saved = saveAs
       ? await window.cslope.saveFileAs(data, name)

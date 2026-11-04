@@ -388,6 +388,28 @@ export interface ResultViewSettings {
   pdfTitleLine?: boolean;
 }
 
+/** A background image of a model: an asset of the project file, placed in world coordinates. */
+export interface BackgroundImage {
+  /** The asset's id in assets/index.json. */
+  assetId: string;
+  transform: {
+    /** World coordinates of the image's bottom-left corner (m). */
+    originX: number;
+    originY: number;
+    /** World units per image pixel. */
+    scale: number;
+    /** Rotation about the origin, counter-clockwise (degrees). */
+    rotationDeg: number;
+    /** Mirrored left to right before the rotation. */
+    mirrored: boolean;
+  };
+  /** 0 to 1. */
+  opacity: number;
+  visible: boolean;
+  /** Drawing order among the model's backgrounds, lowest first. */
+  order: number;
+}
+
 export interface ModelEntry {
   id: string;
   name: string;
@@ -417,6 +439,12 @@ export interface ModelEntry {
    * over), shown in the model's properties; absent: not imported.
    */
   importNotes?: string[];
+  /**
+   * Background images under the drawing (models/<id>/backgrounds.json of a
+   * .cslp file), each an asset of the project file. Read and written by the
+   * project file; there is no interface for them yet. Absent: none.
+   */
+  backgrounds?: BackgroundImage[];
   options: AnalysisOptions;
   analysisLimits: AnalysisLimitsState;
   editViewOffset?: [number, number];
@@ -471,8 +499,14 @@ export interface ModelsSlice {
   ) => void;
   switchModel: (id: string) => void;
   saveCurrentModel: () => void;
-  loadProject: (data: { models: ModelEntry[]; activeModelId?: string }) => void;
+  loadProject: (data: { models: ModelEntry[]; activeModelId?: string; created?: string }) => void;
   newProject: () => void;
+  /**
+   * When the project file was first saved (ISO 8601; the manifest's
+   * `created`), kept over Save; null for a project not opened from a .cslp
+   * file (the first save sets it).
+   */
+  projectCreated: string | null;
   /** Help → Benchmarks: every verification problem. */
   loadBenchmarks: () => void;
   /** The bundled example models (tutorials and the website's images). */

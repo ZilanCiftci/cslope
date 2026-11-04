@@ -1,17 +1,30 @@
 /**
- * The cSlope project file (.cslp): a ZIP archive (deflated) of
+ * The cSlope project file (.cslp): a ZIP archive (docs/file-format.md is
+ * the specification) of
  *
- *   manifest.json  { format: "cslope-project", formatVersion, appVersion, created }
- *   project.json   the project without the outcome of its runs
- *   results.json   the outcomes by model id (only when a model has one)
+ *   manifest.json                   the format and its version, who wrote the file and when
+ *   project.json                    the project: schema version, the models' order, the active model, units
+ *   models/<id>/model.json          one model without the outcome of its run
+ *   models/<id>/result.json         the outcome of its run (optional), with the hash of the input it belongs to
+ *   models/<id>/backgrounds.json    its background images (optional)
+ *   assets/index.json               the binary attachments (optional)
+ *   assets/<id>.<ext>               the attachments themselves
+ *   thumbnail.png                   the active model's result sheet, small (optional)
  *
- * Projects saved before .cslp are a single JSON file (.json or .cslope);
- * they open as before. What a file is, is told by its content (a ZIP
- * archive or a JSON object), not by its extension.
+ * The JSON entries are written canonically (utils/canonical-json.ts) in a
+ * fixed order with one time stamp, so the same project saved twice gives
+ * the same bytes. Reading opens the archive's directory only and unpacks
+ * the JSON entries; an asset is unpacked when it is asked for.
  *
- * Reading goes through readZip (with its limits on what an archive may
- * unpack to) and then through the same validation as a JSON project
- * (parseProjectData: only known fields are kept).
+ * Projects saved before .cslp are a single JSON file (.json or .cslope),
+ * and the first .cslp layout (never released) had project.json and
+ * results.json at the root; both open as before and are written in the
+ * layout above. What a file is, is told by its content (a ZIP archive or
+ * a JSON object), not by its extension.
+ *
+ * Everything read goes through openZip (with its limits on what an
+ * archive may unpack to) and then through the same validation as a JSON
+ * project (parseProjectData: only known fields are kept).
  */
 import {
   parseJson,
@@ -21,33 +34,136 @@ import {
   serializeProject,
   type ProjectFile,
 } from "../../store/persistence";
-import type { AppState } from "../../store/types";
-import { APP_VERSION } from "../../utils/app-version";
-import { isZip, readZip, writeZipDeflated } from "../../utils/zip";
+import type { AnalysisResult, AppState, BackgroundImage, ModelEntry } from "../../store/types";
+import { APP_VERSION, ENGINE_BUILD } from "../../utils/app-version";
+import { canonicalJson } from "../../utils/canonical-json";
+import { isZip, openZip, writeZipDeflated, type ZipArchive, type ZipInput } from "../../utils/zip";
 import { MAX_FILE_BYTES } from "./file-limits";
+import { analysisInputHash, sha256Hex } from "./input-hash";
 
 /** The project file's extension. */
 export const PROJECT_EXTENSION = ".cslp";
 /** The manifest's `format`. */
 export const CSLP_FORMAT = "cslope-project";
-/** The archive layout this version writes (and the newest it reads). */
+/** The archive layout this version writes (and the newest it knows). */
 export const CSLP_FORMAT_VERSION = 1;
+/** The oldest reader that reads what this version writes (the manifest's `minReaderVersion`). */
+export const CSLP_MIN_READER_VERSION = 1;
 
 export interface CslpManifest {
   format: typeof CSLP_FORMAT;
+  /** The layout; rises only with a change an older reader cannot ignore. */
   formatVersion: number;
+  /** A reader whose format version is below this must refuse the file. */
+  minReaderVersion: number;
   /** The cSlope version that saved the file. */
   appVersion: string;
-  /** When the file was saved (ISO 8601). */
+  /** When the project file was first saved (ISO 8601). */
   created: string;
+  /** When the file was saved (ISO 8601). */
+  modified: string;
+  /** The program that saved the file, for messages: "cSlope <version>". */
+  generator: string;
+}
+
+/** project.json. */
+export interface CslpProject {
+  /** The project schema version (persistence.ts PROJECT_FILE_VERSION, with its migrations). */
+  version: number;
+  activeModelId: string;
+  /** The models' ids in order; each has a folder models/<id>/. */
+  models: string[];
+  units: "SI";
+  /** Project-wide settings; none defined yet. */
+  settings: Record<string, unknown>;
+}
+
+/** models/<id>/result.json. */
+export interface CslpResult {
+  runState: "done" | "error";
+  result: AnalysisResult | null;
+  errorMessage: string | null;
+  /** The hash of the model's analysis input the result was computed for (input-hash.ts). */
+  inputHash: string;
+  /** The engine that computed it. */
+  engine: { version: string; sourceHash: string };
+}
+
+/** An entry of assets/index.json. */
+export interface CslpAssetEntry {
+  /** [A-Za-z0-9_-]+, a UUID for new assets. */
+  id: string;
+  /** The entry's name in the archive: assets/<id>.<ext>. */
+  path: string;
+  mime: string;
+  /** The size in bytes. */
+  bytes: number;
+  /** SHA-256 of the bytes, lowercase hex. */
+  sha256: string;
+  /** The name the file had when it was attached. */
+  originalName: string;
+  /** When it was attached (ISO 8601). */
+  addedAt: string;
+}
+
+/** An attachment to write: its index fields and its bytes (read when the file is written). */
+export interface ProjectAsset {
+  id: string;
+  mime: string;
+  originalName: string;
+  addedAt: string;
+  data: () => Promise<Uint8Array> | Uint8Array;
+}
+
+/** What is written besides the project. */
+export interface WriteProjectOptions {
+  /** Write the models' results (default true). */
+  results?: boolean;
+  /** When the file was saved (the manifest's `modified` and the archive's time stamps; default now). */
+  modified?: Date;
+  /** When the project was first saved (default the project's `created`, else `modified`). */
+  created?: Date | string;
+  /** thumbnail.png: the bytes, or a function that draws them (null: none). */
+  thumbnail?: Uint8Array | null | (() => Uint8Array | null);
+  /**
+   * The attachments available; those a model refers to are written. The
+   * default is the attachments of the project last opened (so they survive
+   * a save).
+   */
+  assets?: ProjectAsset[];
+}
+
+/** A project file opened: its content, and what else the archive holds. */
+export interface OpenedProject {
+  file: ProjectFile;
+  /** "cslp": the layout above; "cslp-3file": the first .cslp layout; "json": a JSON project. */
+  layout: "cslp" | "cslp-3file" | "json";
+  manifest: CslpManifest | null;
+  /** The attachments the file lists (those with an entry of the declared size). */
+  assets: CslpAssetEntry[];
+  /** An attachment's bytes, unpacked now and checked against the index's hash. */
+  readAsset: (id: string) => Promise<Uint8Array>;
+  /** thumbnail.png, or null without one. */
+  readThumbnail: () => Promise<Uint8Array | null>;
+  /** By model id: what result.json says about the result's input and engine. */
+  results: Map<string, Pick<CslpResult, "inputHash" | "engine">>;
 }
 
 const MANIFEST = "manifest.json";
 const PROJECT = "project.json";
 const RESULTS = "results.json";
+const ASSET_INDEX = "assets/index.json";
+const THUMBNAIL = "thumbnail.png";
+const MODELS_DIR = "models/";
 
-/** Run fields kept in results.json (the progress of a run is not saved). */
+/** Run fields kept in result.json (the progress of a run is not saved). */
 const SAVED_RUN_FIELDS = RUN_FIELDS.filter((f) => f !== "progress");
+
+/** A model's id, as a folder name: letters, digits, "_" and "-" only. */
+export const SAFE_ID = /^[A-Za-z0-9_-]+$/;
+
+/** Asset entries: assets/<id>.<ext>. */
+const ASSET_PATH = /^assets\/([A-Za-z0-9_-]+)\.[A-Za-z0-9]+$/;
 
 // ── File names ──────────────────────────────────────────────────────
 
@@ -75,59 +191,145 @@ export function isProjectFileName(name: string): boolean {
   return /\.(cslp|cslope|json)$/i.test(name);
 }
 
-// ── Writing ─────────────────────────────────────────────────────────
+// ── Model ids ───────────────────────────────────────────────────────
 
 /**
- * Split a project into the part saved in project.json and the outcomes of
- * its runs (results.json; null when no model has one).
+ * The project with every model id a folder name (SAFE_ID): a model with
+ * another id (a hand-edited file) gets a new UUID, and the active model's
+ * id follows. Nothing else refers to a model by id.
  */
-export function splitResults(file: ProjectFile): {
-  project: ProjectFile;
-  results: { models: Record<string, Record<string, unknown>> } | null;
-} {
-  const results: Record<string, Record<string, unknown>> = {};
-  let any = false;
-  const models = file.models.map((model) => {
-    const rest: Record<string, unknown> = { ...model };
-    for (const f of RUN_FIELDS) delete rest[f];
-    if (model.runState === "done" || model.runState === "error") {
-      const run: Record<string, unknown> = {};
-      for (const f of SAVED_RUN_FIELDS) {
-        if (model[f] !== undefined) run[f] = model[f];
-      }
-      results[model.id] = run;
-      any = true;
-    }
-    return rest as unknown as ProjectFile["models"][number];
+export function withSafeModelIds(file: ProjectFile): ProjectFile {
+  if (file.models.every((m) => SAFE_ID.test(m.id))) return file;
+  let activeModelId = file.activeModelId;
+  const models = file.models.map((m) => {
+    if (SAFE_ID.test(m.id)) return m;
+    const id = crypto.randomUUID();
+    if (m.id === activeModelId) activeModelId = id;
+    return { ...m, id };
   });
-  return { project: { ...file, models }, results: any ? { models: results } : null };
+  return { ...file, activeModelId, models };
 }
 
+// ── The attachments of the opened project ───────────────────────────
+
+/**
+ * The attachments of the project last opened, read from its archive when
+ * a save needs them (the models keep their references; the store holds no
+ * bytes). Replaced by the next open.
+ */
+let openedAssets: ProjectAsset[] = [];
+
+/** For tests: the attachments a save would take by default. */
+export function openedProjectAssets(): ProjectAsset[] {
+  return openedAssets;
+}
+
+// ── Writing ─────────────────────────────────────────────────────────
+
+/** The file extension of an attachment, from its type. */
+function extensionOf(mime: string): string {
+  const known: Record<string, string> = {
+    "image/png": "png",
+    "image/jpeg": "jpg",
+    "image/webp": "webp",
+    "image/gif": "gif",
+    "image/bmp": "bmp",
+    "image/tiff": "tif",
+    "image/svg+xml": "svg",
+    "application/pdf": "pdf",
+  };
+  return known[mime.toLowerCase()] ?? "bin";
+}
+
+/** Types compressed already: stored as they are. */
+const STORED_MIME = new Set(["image/png", "image/jpeg", "image/webp", "image/gif", "application/pdf", "application/zip"]);
+
+const json = (name: string, value: unknown): ZipInput => ({ name, data: canonicalJson(value) });
+
+/** A model as model.json: without the outcome of its run and its backgrounds (their own files). */
+function modelJson(model: ModelEntry): Record<string, unknown> {
+  const rest: Record<string, unknown> = { ...model };
+  for (const f of RUN_FIELDS) delete rest[f];
+  delete rest.backgrounds;
+  return rest;
+}
+
+/** The outcome of a model's run as result.json, or null without one. */
+async function resultJson(model: ModelEntry): Promise<CslpResult | null> {
+  if (model.runState !== "done" && model.runState !== "error") return null;
+  return {
+    runState: model.runState,
+    result: model.runState === "done" ? (model.result ?? null) : null,
+    errorMessage: model.runState === "error" ? (model.errorMessage ?? null) : null,
+    inputHash: await analysisInputHash(model),
+    engine: { ...ENGINE_BUILD },
+  };
+}
+
+const isoOf = (d: Date | string) => (typeof d === "string" ? d : d.toISOString());
+
 /** A project as a .cslp archive. */
-export async function writeProjectArchive(file: ProjectFile, created = new Date()): Promise<Uint8Array> {
-  const { project, results } = splitResults(file);
+export async function writeProjectArchive(input: ProjectFile, options: WriteProjectOptions = {}): Promise<Uint8Array> {
+  const file = withSafeModelIds(input);
+  const modified = options.modified ?? new Date();
+  const created = options.created ?? file.created ?? modified;
   const manifest: CslpManifest = {
     format: CSLP_FORMAT,
     formatVersion: CSLP_FORMAT_VERSION,
+    minReaderVersion: CSLP_MIN_READER_VERSION,
     appVersion: APP_VERSION || "unknown",
-    created: created.toISOString(),
+    created: isoOf(created),
+    modified: modified.toISOString(),
+    generator: `cSlope ${APP_VERSION || "unknown"}`,
   };
-  const entries = [
-    { name: MANIFEST, data: JSON.stringify(manifest, null, 2) },
-    { name: PROJECT, data: JSON.stringify(project, null, 2) },
-  ];
-  // The results are large (surfaces, slices, finite element meshes) and not
-  // read by people: no indentation.
-  if (results) entries.push({ name: RESULTS, data: JSON.stringify(results) });
-  return writeZipDeflated(entries);
+  const project: CslpProject = {
+    version: file.version,
+    activeModelId: file.activeModelId,
+    models: file.models.map((m) => m.id),
+    units: "SI",
+    settings: {},
+  };
+  const entries: ZipInput[] = [json(MANIFEST, manifest), json(PROJECT, project)];
+
+  // The attachments the models refer to (others are dropped).
+  const available = new Map((options.assets ?? openedAssets).map((a) => [a.id, a]));
+  const referenced = new Set<string>();
+  for (const model of file.models) {
+    const dir = `${MODELS_DIR}${model.id}/`;
+    entries.push(json(`${dir}model.json`, modelJson(model)));
+    if (options.results !== false) {
+      const result = await resultJson(model);
+      if (result) entries.push(json(`${dir}result.json`, result));
+    }
+    const backgrounds = (model.backgrounds ?? []).filter((b) => available.has(b.assetId));
+    if (backgrounds.length > 0) {
+      entries.push(json(`${dir}backgrounds.json`, backgrounds));
+      for (const b of backgrounds) referenced.add(b.assetId);
+    }
+  }
+  if (referenced.size > 0) {
+    const index: CslpAssetEntry[] = [];
+    const files: ZipInput[] = [];
+    for (const id of [...referenced].sort()) {
+      const asset = available.get(id)!;
+      const data = await asset.data();
+      const path = `assets/${id}.${extensionOf(asset.mime)}`;
+      index.push({ id, path, mime: asset.mime, bytes: data.length, sha256: await sha256Hex(data), originalName: asset.originalName, addedAt: asset.addedAt });
+      files.push({ name: path, data, method: STORED_MIME.has(asset.mime.toLowerCase()) ? "store" : "deflate" });
+    }
+    entries.push(json(ASSET_INDEX, index), ...files);
+  }
+  const thumbnail = typeof options.thumbnail === "function" ? options.thumbnail() : options.thumbnail;
+  if (thumbnail && thumbnail.length > 0) entries.push({ name: THUMBNAIL, data: thumbnail, method: "store" });
+  return writeZipDeflated(entries, { time: modified });
 }
 
 /**
  * The current project as a .cslp archive. The caller must call
  * `state.saveCurrentModel()` first, so the latest edits are in the models.
  */
-export function buildProjectArchive(state: AppState): Promise<Uint8Array> {
-  return writeProjectArchive(serializeProject(state));
+export function buildProjectArchive(state: AppState, options: WriteProjectOptions = {}): Promise<Uint8Array> {
+  return writeProjectArchive(serializeProject(state), options);
 }
 
 // ── Reading ─────────────────────────────────────────────────────────
@@ -136,83 +338,279 @@ const decoder = new TextDecoder();
 
 /**
  * Read a project file: a .cslp archive or a JSON project file of an earlier
- * version (told apart by the content).
+ * version (told apart by the content). The archive's attachments are kept
+ * for the next save (openedAssets).
  */
 export async function readProjectBytes(bytes: Uint8Array): Promise<ProjectFile> {
+  const opened = await openProject(bytes);
+  openedAssets = opened.assets.map((a) => ({ id: a.id, mime: a.mime, originalName: a.originalName, addedAt: a.addedAt, data: () => opened.readAsset(a.id) }));
+  return opened.file;
+}
+
+/** Open a project file (a .cslp archive, or a JSON project of an earlier version) and what else it holds. */
+export async function openProject(bytes: Uint8Array): Promise<OpenedProject> {
   if (bytes.length > MAX_FILE_BYTES) {
     throw new Error("The file is too large to be a cSlope project.");
   }
-  if (isZip(bytes)) return readProjectArchive(bytes);
+  if (isZip(bytes)) return openProjectArchive(bytes);
   // TextDecoder drops a byte order mark.
   const text = decoder.decode(bytes);
   if (!/^\s*\{/.test(text)) {
     throw new Error("The file is not a cSlope project (neither a .cslp archive nor a JSON project file).");
   }
-  return parseProjectFile(text);
+  return withoutArchive(parseProjectFile(text), "json");
 }
 
-/** Read a .cslp archive. */
-export async function readProjectArchive(bytes: Uint8Array): Promise<ProjectFile> {
-  let entries: Map<string, Uint8Array>;
+/**
+ * A project without attachments (a JSON project, or the first .cslp
+ * layout). Its model ids become folder names here (withSafeModelIds), so
+ * the project is saved under the same ids every time.
+ */
+function withoutArchive(file: ProjectFile, layout: OpenedProject["layout"], manifest: CslpManifest | null = null): OpenedProject {
+  return {
+    file: withSafeModelIds(file),
+    layout,
+    manifest,
+    assets: [],
+    readAsset: async (id) => {
+      throw new Error(`The project has no attachment ${id}.`);
+    },
+    readThumbnail: async () => null,
+    results: new Map(),
+  };
+}
+
+/** A JSON entry of the archive, parsed. */
+async function readJsonEntry(archive: ZipArchive, name: string): Promise<unknown> {
+  return parseJson(decoder.decode(await archive.read(name)), `The project's ${name} is not valid JSON.`);
+}
+
+const isObject = (v: unknown): v is Record<string, unknown> => !!v && typeof v === "object" && !Array.isArray(v);
+
+/** Open a .cslp archive. */
+export async function openProjectArchive(bytes: Uint8Array): Promise<OpenedProject> {
+  let archive: ZipArchive;
   try {
-    entries = await readZip(bytes, (name) => name === MANIFEST || name === PROJECT || name === RESULTS);
+    archive = openZip(bytes);
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
     throw new Error(`The file is not a readable cSlope project: ${msg}`);
   }
-  const text = (name: string) => decoder.decode(entries.get(name));
-
-  if (!entries.has(MANIFEST)) {
+  if (!archive.has(MANIFEST)) {
     throw new Error("The file is not a cSlope project (the archive has no manifest.json).");
   }
-  const manifest = parseJson(text(MANIFEST), "The project's manifest.json is not valid JSON.") as Partial<CslpManifest> | null;
-  if (!manifest || typeof manifest !== "object" || manifest.format !== CSLP_FORMAT) {
+  const manifest = readManifest(await readJsonEntry(archive, MANIFEST));
+
+  const hasModels = archive.entries().some((e) => e.name.startsWith(MODELS_DIR) && e.name.endsWith("/model.json"));
+  if (!hasModels) {
+    // The first layout: project.json with the models, results.json beside it.
+    if (!archive.has(PROJECT)) {
+      throw new Error("The project file is damaged (the archive has no project.json).");
+    }
+    const project = await readJsonEntry(archive, PROJECT);
+    if (!isObject(project) || !Array.isArray(project.models)) {
+      throw new Error("The project file is damaged (no models in project.json and no models/ folder).");
+    }
+    const results = archive.has(RESULTS) ? await readJsonEntry(archive, RESULTS) : null;
+    return withoutArchive(parseProjectData({ ...joinResults(project, results), created: manifest.created }), "cslp-3file", manifest);
+  }
+  return openLayout(archive, manifest);
+}
+
+/** The manifest validated; refuses a file this version must not read. */
+function readManifest(raw: unknown): CslpManifest {
+  if (!isObject(raw) || raw.format !== CSLP_FORMAT) {
     throw new Error("The file is not a cSlope project (its manifest names another format).");
   }
-  const version = manifest.formatVersion;
+  const version = raw.formatVersion;
   if (typeof version !== "number" || !Number.isInteger(version) || version < 1) {
     throw new Error("The project's manifest.json is damaged (no valid formatVersion).");
   }
-  if (version > CSLP_FORMAT_VERSION) {
-    const by = typeof manifest.appVersion === "string" && manifest.appVersion ? ` (cSlope ${manifest.appVersion})` : "";
-    throw new Error(
-      `This project was saved by a newer version of cSlope${by}, in project format ${version}; this version reads format ${CSLP_FORMAT_VERSION}. Update cSlope to open it.`,
-    );
+  const minReader = raw.minReaderVersion;
+  // (the first layout's manifest has no minReaderVersion: its own version)
+  const minReaderVersion = typeof minReader === "number" && Number.isInteger(minReader) && minReader >= 1 ? minReader : version;
+  const str = (v: unknown) => (typeof v === "string" ? v : "");
+  const appVersion = str(raw.appVersion);
+  const generator = str(raw.generator) || (appVersion ? `cSlope ${appVersion}` : "a newer cSlope");
+  if (minReaderVersion > CSLP_FORMAT_VERSION) {
+    throw new Error(`This project was saved by a newer cSlope (${generator}); update to open it.`);
   }
-  if (!entries.has(PROJECT)) {
+  return {
+    format: CSLP_FORMAT,
+    formatVersion: version,
+    minReaderVersion,
+    appVersion,
+    created: str(raw.created),
+    modified: str(raw.modified),
+    generator,
+  };
+}
+
+/** The layout of this version: project.json naming the models, each in its folder. */
+async function openLayout(archive: ZipArchive, manifest: CslpManifest): Promise<OpenedProject> {
+  if (!archive.has(PROJECT)) {
     throw new Error("The project file is damaged (the archive has no project.json).");
   }
-  const project = parseJson(text(PROJECT), "The project's project.json is not valid JSON.");
-  const results = entries.has(RESULTS) ? parseJson(text(RESULTS), "The project's results.json is not valid JSON.") : null;
-  return parseProjectData(joinResults(project, results));
+  const project = await readJsonEntry(archive, PROJECT);
+  if (!isObject(project)) throw new Error("The project file is damaged (project.json is not an object).");
+
+  // The models in the order project.json gives; folders it does not name
+  // come after, by name (nothing in the file is lost).
+  const listed = Array.isArray(project.models) ? project.models.filter((id): id is string => typeof id === "string" && SAFE_ID.test(id)) : [];
+  const folders = archive
+    .entries()
+    .map((e) => /^models\/([A-Za-z0-9_-]+)\/model\.json$/.exec(e.name)?.[1])
+    .filter((id): id is string => !!id)
+    .sort();
+  const ids = [...new Set([...listed, ...folders])];
+  for (const id of listed) {
+    if (!archive.has(`${MODELS_DIR}${id}/model.json`)) {
+      throw new Error(`The project file is damaged (project.json names the model ${id}, but models/${id}/model.json is missing).`);
+    }
+  }
+
+  const results = new Map<string, Pick<CslpResult, "inputHash" | "engine">>();
+  const backgroundsById = new Map<string, BackgroundImage[]>();
+  const models: unknown[] = [];
+  for (const id of ids) {
+    const dir = `${MODELS_DIR}${id}/`;
+    const raw = await readJsonEntry(archive, `${dir}model.json`);
+    if (!isObject(raw)) throw new Error(`The project file is damaged (models/${id}/model.json is not an object).`);
+    // The folder names the model; the outcome comes from result.json only.
+    const model: Record<string, unknown> = { ...raw, id };
+    for (const f of RUN_FIELDS) delete model[f];
+    delete model.backgrounds;
+    if (archive.has(`${dir}result.json`)) {
+      const run = await readJsonEntry(archive, `${dir}result.json`);
+      if (isObject(run) && (run.runState === "done" || run.runState === "error")) {
+        for (const f of SAVED_RUN_FIELDS) {
+          if (Object.hasOwn(run, f)) model[f] = run[f];
+        }
+        const engine = isObject(run.engine) ? run.engine : {};
+        results.set(id, {
+          inputHash: typeof run.inputHash === "string" ? run.inputHash : "",
+          engine: { version: typeof engine.version === "string" ? engine.version : "", sourceHash: typeof engine.sourceHash === "string" ? engine.sourceHash : "" },
+        });
+      }
+    }
+    if (archive.has(`${dir}backgrounds.json`)) {
+      backgroundsById.set(id, normalizeBackgrounds(await readJsonEntry(archive, `${dir}backgrounds.json`)));
+    }
+    models.push(model);
+  }
+
+  const file = parseProjectData({
+    version: project.version,
+    activeModelId: project.activeModelId,
+    units: project.units,
+    created: manifest.created,
+    models,
+  });
+
+  // The attachments: entries of the declared size; a background without
+  // its attachment is dropped.
+  const assets = archive.has(ASSET_INDEX) ? normalizeAssetIndex(await readJsonEntry(archive, ASSET_INDEX), archive) : [];
+  const assetIds = new Set(assets.map((a) => a.id));
+  for (const model of file.models) {
+    const backgrounds = backgroundsById.get(model.id)?.filter((b) => assetIds.has(b.assetId));
+    if (backgrounds && backgrounds.length > 0) model.backgrounds = backgrounds;
+  }
+  for (const id of results.keys()) {
+    if (!file.models.some((m) => m.id === id && (m.runState === "done" || m.runState === "error"))) results.delete(id);
+  }
+
+  return {
+    file,
+    layout: "cslp",
+    manifest,
+    assets,
+    readAsset: async (id) => {
+      const entry = assets.find((a) => a.id === id);
+      if (!entry) throw new Error(`The project has no attachment ${id}.`);
+      const data = await archive.read(entry.path);
+      if ((await sha256Hex(data)) !== entry.sha256) {
+        throw new Error(`The project file is damaged (the attachment ${entry.originalName || entry.path} does not match its hash).`);
+      }
+      return data;
+    },
+    readThumbnail: async () => (archive.has(THUMBNAIL) ? archive.read(THUMBNAIL) : null),
+    results,
+  };
+}
+
+const finite = (v: unknown): v is number => typeof v === "number" && Number.isFinite(v);
+
+/** backgrounds.json validated: entries of the shape BackgroundImage, in `order`. */
+export function normalizeBackgrounds(raw: unknown): BackgroundImage[] {
+  if (!Array.isArray(raw)) return [];
+  const out: BackgroundImage[] = [];
+  for (const item of raw) {
+    if (!isObject(item) || typeof item.assetId !== "string" || !SAFE_ID.test(item.assetId) || !isObject(item.transform)) continue;
+    const t = item.transform;
+    if (!finite(t.originX) || !finite(t.originY) || !finite(t.scale) || t.scale <= 0) continue;
+    out.push({
+      assetId: item.assetId,
+      transform: {
+        originX: t.originX,
+        originY: t.originY,
+        scale: t.scale,
+        rotationDeg: finite(t.rotationDeg) ? t.rotationDeg : 0,
+        mirrored: t.mirrored === true,
+      },
+      opacity: finite(item.opacity) ? Math.min(1, Math.max(0, item.opacity)) : 1,
+      visible: item.visible !== false,
+      order: finite(item.order) ? item.order : out.length,
+    });
+  }
+  return out.sort((a, b) => a.order - b.order);
+}
+
+/** assets/index.json validated: entries naming an archive entry of the declared size. */
+function normalizeAssetIndex(raw: unknown, archive: ZipArchive): CslpAssetEntry[] {
+  if (!Array.isArray(raw)) return [];
+  const out: CslpAssetEntry[] = [];
+  const seen = new Set<string>();
+  for (const item of raw) {
+    if (!isObject(item) || typeof item.id !== "string" || !SAFE_ID.test(item.id) || seen.has(item.id)) continue;
+    if (typeof item.path !== "string" || ASSET_PATH.exec(item.path)?.[1] !== item.id) continue;
+    if (!finite(item.bytes) || archive.size(item.path) !== item.bytes) continue;
+    if (typeof item.sha256 !== "string" || !/^[0-9a-f]{64}$/.test(item.sha256)) continue;
+    seen.add(item.id);
+    out.push({
+      id: item.id,
+      path: item.path,
+      mime: typeof item.mime === "string" ? item.mime : "application/octet-stream",
+      bytes: item.bytes,
+      sha256: item.sha256,
+      originalName: typeof item.originalName === "string" ? item.originalName : "",
+      addedAt: typeof item.addedAt === "string" ? item.addedAt : "",
+    });
+  }
+  return out;
 }
 
 /**
- * Put the outcomes of results.json back into the models of project.json.
- * Outcome fields in project.json itself are ignored (results come only from
- * results.json), and only the known outcome fields are taken over; the
- * models are then validated as a JSON project's.
+ * The first .cslp layout: put the outcomes of results.json back into the
+ * models of project.json. Outcome fields in project.json itself are
+ * ignored (results come only from results.json), and only the known
+ * outcome fields are taken over; the models are then validated as a JSON
+ * project's.
  */
-function joinResults(project: unknown, results: unknown): unknown {
-  if (!project || typeof project !== "object") return project;
-  const root = project as Record<string, unknown>;
-  if (!Array.isArray(root.models)) return project;
-  const byId =
-    results && typeof results === "object" && (results as Record<string, unknown>).models && typeof (results as Record<string, unknown>).models === "object"
-      ? ((results as Record<string, unknown>).models as Record<string, unknown>)
-      : null;
-  const models = root.models.map((m: unknown) => {
-    if (!m || typeof m !== "object" || Array.isArray(m)) return m;
-    const model: Record<string, unknown> = { ...(m as Record<string, unknown>) };
+function joinResults(project: Record<string, unknown>, results: unknown): Record<string, unknown> {
+  if (!Array.isArray(project.models)) return project;
+  const byId = isObject(results) && isObject(results.models) ? results.models : null;
+  const models = project.models.map((m: unknown) => {
+    if (!isObject(m)) return m;
+    const model: Record<string, unknown> = { ...m };
     for (const f of RUN_FIELDS) delete model[f];
     const id = model.id;
     const run = byId && typeof id === "string" && Object.hasOwn(byId, id) ? byId[id] : null;
-    if (run && typeof run === "object" && !Array.isArray(run)) {
+    if (isObject(run)) {
       for (const f of SAVED_RUN_FIELDS) {
-        if (Object.hasOwn(run, f)) model[f] = (run as Record<string, unknown>)[f];
+        if (Object.hasOwn(run, f)) model[f] = run[f];
       }
     }
     return model;
   });
-  return { ...root, models };
+  return { ...project, models };
 }

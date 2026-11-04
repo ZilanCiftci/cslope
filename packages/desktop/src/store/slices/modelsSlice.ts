@@ -172,6 +172,7 @@ export const createModelsSlice: SliceCreator<ModelsSlice> = (
 ) => ({
   activeModelId: INITIAL_MODEL_ID,
   models: [INITIAL_MODEL],
+  projectCreated: null,
   _pendingFitToScreen: false,
   clearPendingFitToScreen: () => set({ _pendingFitToScreen: false }),
 
@@ -481,7 +482,7 @@ export const createModelsSlice: SliceCreator<ModelsSlice> = (
       ),
     })),
 
-  loadProject: ({ models, activeModelId }) => {
+  loadProject: ({ models, activeModelId, created }) => {
     abortAllAnalyses();
     if (!models || models.length === 0) return;
     const targetId =
@@ -499,6 +500,7 @@ export const createModelsSlice: SliceCreator<ModelsSlice> = (
     set({
       models,
       activeModelId: targetId,
+      projectCreated: created ?? null,
       ...mapModelToState(target),
       runAll: null,
       _pendingFitToScreen: !hasSavedViewport,
@@ -515,6 +517,7 @@ export const createModelsSlice: SliceCreator<ModelsSlice> = (
     set({
       models: [entry],
       activeModelId: id,
+      projectCreated: null,
       ...mapModelToState(entry),
       runAll: null,
     });
@@ -531,6 +534,7 @@ export const createModelsSlice: SliceCreator<ModelsSlice> = (
     set({
       models,
       activeModelId: first.id,
+      projectCreated: null,
       ...mapModelToState(first),
       runAll: null,
       _pendingFitToScreen: true,
@@ -547,6 +551,7 @@ export const createModelsSlice: SliceCreator<ModelsSlice> = (
     set({
       models,
       activeModelId: first.id,
+      projectCreated: null,
       ...mapModelToState(first),
       runAll: null,
       _pendingFitToScreen: true,
@@ -563,6 +568,7 @@ export const createModelsSlice: SliceCreator<ModelsSlice> = (
     set({
       models,
       activeModelId: first.id,
+      projectCreated: null,
       ...mapModelToState(first),
       runAll: null,
       _pendingFitToScreen: true,
