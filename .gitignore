@@ -32,8 +32,10 @@ coverage-final.json
 # Generated media assets are checked in: the website is deployed from the
 # repository. Regenerate with: bun run media:capture
 
-# Docs (generated), at the repository root only
-/docs/
+# Docs (generated), at the repository root only; the file format
+# specification is kept
+/docs/*
+!/docs/file-format.md
 
 # Client project data: kept on the developer's machine only
 packages/desktop/src/store/lovo.local.ts
