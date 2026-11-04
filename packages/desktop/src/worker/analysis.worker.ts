@@ -18,6 +18,7 @@ import {
   runAnalysisAsync,
   runFemSummary,
   runFemSummaryWithBounds,
+  toCanonicalSlopeDefinition,
   initEngineSync,
   EvaluatorPool,
   serveEvaluator,
@@ -79,9 +80,13 @@ self.onmessage = async (event: MessageEvent<WorkerMessage>) => {
     // Strength reduction by finite elements, in the model's own sliding direction.
     // A failure here keeps the limit equilibrium result and reports the error with it.
     if (options.fem?.enabled) {
+      // The finite element analysis takes the model in its own coordinates
+      // (it turns it to canonical orientation and its mesh back itself);
+      // the canonical definition of a model facing left was drawn mirrored.
+      const femDef = event.data.femSlope ?? (slopeDef.orientation === "rtl" ? toCanonicalSlopeDefinition(slopeDef) : slopeDef);
       // The limit equilibrium result now, to be shown while the finite
       // elements take their minutes; the whole result follows.
-      self.postMessage({ type: "analysis-partial", id, result } satisfies AnalysisResponse);
+      self.postMessage({ type: "analysis-partial", id, result: { ...result } } satisfies AnalysisResponse);
       const tracker = femProgressTracker();
       const report = ({ text, progress }: { text: string; progress: number }) =>
         self.postMessage({ type: "analysis-progress", id, progress, stage: text } satisfies AnalysisResponse);
@@ -90,8 +95,8 @@ self.onmessage = async (event: MessageEvent<WorkerMessage>) => {
         const onStage = (stage: FemStage) => report(tracker.stage(stage));
         const onTrial = (trial: { F: number }) => report(tracker.trial(trial.F));
         result.fem = options.fem.limitAnalysis
-          ? await runFemSummaryWithBounds(slopeDef, options.fem, onTrial, onStage)
-          : runFemSummary(slopeDef, options.fem, onTrial, onStage);
+          ? await runFemSummaryWithBounds(femDef, options.fem, onTrial, onStage)
+          : runFemSummary(femDef, options.fem, onTrial, onStage);
       } catch (err: unknown) {
         result.femError = err instanceof Error ? err.message : String(err);
       }

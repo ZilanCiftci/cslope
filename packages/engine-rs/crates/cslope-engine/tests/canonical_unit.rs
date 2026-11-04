@@ -260,3 +260,32 @@ fn without_critical_surface_or_polylines() {
     let cs = n.critical_surface.unwrap();
     assert!(cs.points.is_none() && cs.reinforcement_forces.is_none());
 }
+
+#[test]
+fn mirrors_a_finite_element_result_with_the_rest() {
+    let c = def(json!({ "orientation": "rtl", "coordinates": LTR, "materials": [soil()] }));
+    let mut r = polyline_result();
+    r["fem"] = json!({
+        "factorOfSafety": 1.3, "failedF": 1.31, "flowRule": "davis-b", "levels": [{ "elements": 1, "fos": 1.3 }],
+        "warnings": [], "elapsedMs": 10,
+        "x": [5, 15, 5], "y": [0, 0, 4], "triangles": [0, 1, 2],
+        "plasticShear": [0.01], "shearIncrement": [0.02], "displacement": [0.1, -0.2, 0.3, -0.4, 0.5, -0.6],
+    });
+    let fem = map_analysis_result_to_model_space(&result(r), &c)
+        .fem
+        .unwrap();
+    let [x_min, x_max] = get_domain_x(&c.coordinates);
+    let s = x_min + x_max;
+    assert_eq!(fem.x, vec![s - 5.0, s - 15.0, s - 5.0]);
+    assert_eq!(fem.y, vec![0.0, 0.0, 4.0]);
+    assert_eq!(fem.displacement, vec![-0.1, -0.2, -0.3, -0.4, -0.5, -0.6]);
+    // still counter-clockwise
+    assert_eq!(fem.triangles, vec![0, 2, 1]);
+    let t = &fem.triangles;
+    let area = (fem.x[t[1]] - fem.x[t[0]]) * (fem.y[t[2]] - fem.y[t[0]])
+        - (fem.y[t[1]] - fem.y[t[0]]) * (fem.x[t[2]] - fem.x[t[0]]);
+    assert!(area > 0.0);
+    assert_eq!(fem.plastic_shear, vec![0.01]);
+    assert_eq!(fem.shear_increment, Some(vec![0.02]));
+    assert_eq!(fem.factor_of_safety, 1.3);
+}

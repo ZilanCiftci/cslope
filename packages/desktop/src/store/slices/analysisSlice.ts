@@ -10,7 +10,7 @@ import { findExpressionErrors } from "../expression-check";
 import { DEFAULT_ANALYSIS_OPTIONS, engineModule } from "@cslope/engine";
 import type { AnalysisResponse, WorkerMessage } from "../../worker/messages";
 import type { SliceCreator } from "../helpers";
-import { boundaryWarningsInStoreOrder, buildSlopeDTOFromModel, nextId, RUN_RESET } from "../helpers";
+import { boundaryWarningsInStoreOrder, buildModelSpaceSlopeDTO, buildSlopeDTOFromModel, nextId, RUN_RESET } from "../helpers";
 import type { AnalysisSlice, AppState, ModelEntry } from "../types";
 import { DEFAULT_ANALYSIS_LIMITS } from "../defaults";
 import { ANALYSIS_TIMEOUT_MS, FEM_TIMEOUT_MS } from "../../constants";
@@ -82,8 +82,10 @@ export function executeModelAnalysis(
 ): AnalysisHandle {
   const { slope, options } = workerInputs(model);
   const boundaries = model.materialBoundaries ?? [];
+  // the finite element analysis takes the model in its own coordinates
+  const femSlope = options.fem?.enabled ? buildModelSpaceSlopeDTO(model) : undefined;
   const handle = runInWorker<AnalysisResult>(
-    { type: "run-analysis", id: crypto.randomUUID(), slope, options },
+    { type: "run-analysis", id: crypto.randomUUID(), slope, options, ...(femSlope ? { femSlope } : {}) },
     analysisTimeoutMs(options),
     onProgress,
     RUN_PROGRESS_MAX,

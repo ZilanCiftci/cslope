@@ -1,6 +1,7 @@
 import { beforeAll, describe, expect, it, vi } from "vitest";
 import {
   DEFAULT_ANALYSIS_OPTIONS,
+  DEFAULT_FEM_SETTINGS,
   toCanonicalSlopeDefinition,
   type AnalysisOptions,
   type SlopeDefinition,
@@ -227,5 +228,38 @@ describe("non-circular surfaces", () => {
     );
     if (msg.type !== "analysis-complete") throw new Error("analysis failed");
     expect(msg.result.minFOS).toBeCloseTo(1.26, 2);
+  });
+});
+
+describe("analysis worker: finite elements", () => {
+  const fem = { ...DEFAULT_FEM_SETTINGS, enabled: true, elementSize: 2, refinementLevels: 0, limitAnalysis: false };
+
+  it("posts the limit equilibrium result first, then the stages and trials, then the whole result", () => {
+    const last = run(CUT_RTL, { fem });
+    const partial = posted.findIndex((m) => m.type === "analysis-partial");
+    expect(partial).toBe(0);
+    const first = posted[0] as Extract<AnalysisResponse, { type: "analysis-partial" }>;
+    expect(first.result.minFOS).toBeGreaterThan(0);
+    expect(first.result.fem).toBeUndefined();
+    const stages = posted.flatMap((m) => (m.type === "analysis-progress" && m.stage ? [m.stage] : []));
+    expect(stages[0]).toBe("Finite elements: mesh and initial stresses");
+    expect(stages[1]).toBe("Finite elements: strength reduction");
+    expect(stages.some((s) => /^Finite elements: strength reduction, trial F = \d\.\d\d \(\d+\)$/.test(s))).toBe(true);
+    expect(last.type).toBe("analysis-complete");
+    const result = (last as Extract<AnalysisResponse, { type: "analysis-complete" }>).result;
+    expect(result.minFOS).toBe(first.result.minFOS);
+    expect(result.fem!.factorOfSafety).toBeGreaterThan(0);
+  });
+
+  it("gives the mesh of a slope facing left in model space, inside the soil", () => {
+    const last = run(CUT_RTL, { fem }) as Extract<AnalysisResponse, { type: "analysis-complete" }>;
+    const { x, y } = last.result.fem!;
+    // ground of CUT_RTL: −4 up to x = 6, 0 from x = 14, the face between
+    const ground = (px: number) => (px <= 6 ? -4 : px >= 14 ? 0 : -4 + (px - 6) / 2);
+    for (let i = 0; i < x.length; i++) {
+      expect(x[i]).toBeGreaterThanOrEqual(-1e-4);
+      expect(x[i]).toBeLessThanOrEqual(20 + 1e-4);
+      expect(y[i]).toBeLessThanOrEqual(ground(x[i]) + 1e-4);
+    }
   });
 });

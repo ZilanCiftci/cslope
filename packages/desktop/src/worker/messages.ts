@@ -33,6 +33,12 @@ export interface AnalysisRequest extends EngineCarrier {
   id: string;
   slope: SlopeDefinition;
   options: AnalysisOptions;
+  /**
+   * The model in its own coordinates for the finite element analysis (which
+   * turns it to canonical orientation itself); `slope` is canonical. Without
+   * it the worker turns `slope` back (a model facing left is mirrored again).
+   */
+  femSlope?: SlopeDefinition;
   /** Ports to evaluator workers that evaluate trial surfaces for this run (transferred). */
   evaluators?: MessagePort[];
 }

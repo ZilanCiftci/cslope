@@ -142,3 +142,23 @@ describe("a run with the finite element analysis", () => {
     expect(store().result).toBeNull();
   });
 });
+
+describe("the finite element analysis of a model facing left", () => {
+  it("is given the model in its own coordinates, the limit equilibrium the canonical one", () => {
+    store().setCoordinates([[0, 0], [0, 5], [10, 10], [20, 10], [20, 0]]);
+    store().setOrientation("rtl");
+    store().runAnalysis();
+    const [w] = FakeWorker.instances;
+    const request = w.posted[0] as { slope: { coordinates: number[][] }; femSlope: { coordinates: number[][]; orientation: string } };
+    expect(request.femSlope.orientation).toBe("rtl");
+    expect(request.femSlope.coordinates).toEqual(store().coordinates);
+    // the limit equilibrium's definition is mirrored to slide to the right
+    expect(request.slope.coordinates).toEqual(store().coordinates.map(([x, y]) => [20 - x, y]));
+  });
+
+  it("is not given a second definition without finite elements", () => {
+    store().setOptions({ fem: undefined });
+    store().runAnalysis();
+    expect(FakeWorker.instances[0].posted[0]).not.toHaveProperty("femSlope");
+  });
+});

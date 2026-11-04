@@ -6,7 +6,9 @@
 use crate::error::Result;
 use crate::js;
 use crate::model::waternet::{HeadLine, ReferenceLine, Waternet};
-use crate::types::analysis::{AnalysisLimits, AnalysisResult, Crack, SliceData, SlipSurfaceResult};
+use crate::types::analysis::{
+    AnalysisLimits, AnalysisResult, Crack, FemResultSummary, SliceData, SlipSurfaceResult,
+};
 use crate::types::material_models::MaterialModel;
 use crate::types::reinforcement::{Pile, Reinforcement, ReinforcementForce};
 use crate::types::slope_definition::{
@@ -387,7 +389,31 @@ pub fn map_analysis_result_to_model_space(
                 }
             })
             .collect(),
+        fem: r.fem.as_ref().map(|f| mirror_fem_summary(f, x_min, x_max)),
         ..r.clone()
+    }
+}
+
+/// A finite element summary mirrored in x: the nodes' x, the x component of
+/// their displacements, and each element's node order (to keep it
+/// counter-clockwise); the per-element fields and the factors are the same.
+/// (`run_fem_summary` gives its summary in model space already; this maps
+/// a summary that a result in canonical space carries.)
+pub fn mirror_fem_summary(fem: &FemResultSummary, x_min: f64, x_max: f64) -> FemResultSummary {
+    let mut triangles = fem.triangles.clone();
+    for t in triangles.chunks_exact_mut(3) {
+        t.swap(1, 2);
+    }
+    FemResultSummary {
+        x: fem.x.iter().map(|&x| mirror_x(x, x_min, x_max)).collect(),
+        displacement: fem
+            .displacement
+            .iter()
+            .enumerate()
+            .map(|(i, &v)| if i % 2 == 0 { -v } else { v })
+            .collect(),
+        triangles,
+        ..fem.clone()
     }
 }
 
