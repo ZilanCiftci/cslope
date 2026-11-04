@@ -86,7 +86,11 @@ function createWindow() {
     height: 860,
     title: "cSlope",
     icon: path.join(process.env.VITE_PUBLIC, "mountain.svg"),
-    frame: false,
+    // Windows: a hidden title bar on a native frame (resize borders and
+    // shadow kept). A frameless window (frame: false) is redrawn when it
+    // loses or regains focus, e.g. as a dialog window opens or closes, and
+    // the whole content jumped by the width of its invisible border.
+    frame: process.platform !== "win32" ? false : undefined,
     titleBarStyle: "hidden",
     show: false, // hidden until renderer signals ready
     webPreferences: {
