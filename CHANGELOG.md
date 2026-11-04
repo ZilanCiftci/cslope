@@ -2,6 +2,19 @@
 
 All notable changes to cSlope. Versions follow [semantic versioning](https://semver.org).
 
+## [0.1.0-beta.2] - Unreleased
+
+Second beta of 0.1.0. It has the contents listed under 0.1.0 in CHANGELOG.md; since beta 1:
+
+- The analysis engine is written in Rust and runs as WebAssembly: the same results (all verification checks as before), 3 to 5 times faster on one thread.
+- One analysis runs on several cores (up to 8), with the same result as on one; Run All analyses several models at a time, longest first, on workers kept between runs (20 models on 4 cores: 2.4 s, before the engine change 14 s).
+- New analysis features: composite surfaces along bedrock, block search, generalised Hoek–Brown, SHANSEP, shear–normal functions, anisotropy of undrained strength, strength from suction (φb), pore pressure ratio rᵤ and B̄, seismic loads, inclined line loads, rapid drawdown, partial factors in Swedish practice from the safety class, 3D effects of temporary slopes after SGI Vägledning 8, and warnings for shallow slides and steep entries.
+- Finite element analysis (experimental, marked so wherever it appears): limit analysis bounds, strength reduction, seepage, reinforcement, staged construction.
+- Import and export of .gsz, .stix and .sli/.slim/.slmd project files.
+- Number fields accept a decimal comma in any language; the slice table's shear force comes from the engine.
+- Security: ZIP and file size limits on import, a stricter content security policy, project files keep only known fields, Electron 45 with the app archive checked against the signed program at every start.
+- Verification: 187 problems; V056's coarse-mesh finite element reference is shown as disputed and not counted.
+
 ## [0.1.0-beta.1] - 2026-10-16
 
 Beta of 0.1.0, to test the program and the signed Windows installer before the first public release. It has the contents listed under 0.1.0 in CHANGELOG.md.
@@ -87,6 +100,9 @@ The first public release.
 ### Interface
 
 - A failed run shows its error over the edit canvas and in the status bar, with a shortcut to the search limits when no slip surface was found. F5 or Ctrl+Enter runs the analysis; Escape closes the dialog windows and Model Properties. A new project starts with a neutral "Model 1" instead of an example's name and title.
+- One analysis runs on several cores (one worker per core, up to 8), with the same result as on one. Run All analyses several models at a time, the longest expected first, on workers kept for the next run.
+- Number fields read a decimal comma in any app language ("0,5" in an English locale was read as 5).
+- Security: imported ZIP archives are checked against size limits before they are unpacked, and files above 50 MB are refused; .gsz files with a DOCTYPE are refused; project files keep only the fields the program knows; a stricter content security policy; the packaged app refuses to start when its archive differs from the one it was built with (asar integrity), and cannot be used to run other scripts.
 
 ### Verification
 
