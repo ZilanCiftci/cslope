@@ -393,7 +393,7 @@ export function drawMaterialBoundariesClipped(
     (pdf as unknown as { discardPath?: () => void }).discardPath?.();
   }
   for (const b of boundaries) {
-    if (b.coordinates.length >= 2) drawOpenPolyline(pdf, tf, b.coordinates, [0, 0, 0], 0.5);
+    if (b.coordinates.length >= 2) drawOpenPolyline(pdf, tf, b.coordinates, [0, 0, 0], 0.25);
   }
   if (clipped) pdf.restoreGraphicsState();
 }
@@ -555,7 +555,7 @@ export function drawUdlLoads(
     const maxY = Math.max(...all.map(([, y]) => y));
     const span = maxX - minX + (maxY - minY);
     pdf.setDrawColor(...UDL_LOAD_COLOR.rgb);
-    pdf.setLineWidth(0.15);
+    pdf.setLineWidth(0.1);
     setOpacity(pdf, 1, 0.5);
     for (let d = -span; d < span; d += HATCH_SPACING_PX * tf.mmPerPx) {
       pdf.line(minX + d, minY, minX + d + (maxY - minY), maxY);
@@ -564,7 +564,7 @@ export function drawUdlLoads(
     pdf.restoreGraphicsState();
 
     pdf.setDrawColor(...UDL_LOAD_COLOR.rgb);
-    pdf.setLineWidth(0.4);
+    pdf.setLineWidth(0.25);
     pdf.setFillColor(...UDL_LOAD_COLOR.rgb);
     const edges = [strips[0].lo, ...strips.map((s) => s.hi)];
     const edgePts = edges.map(groundAt);
@@ -580,7 +580,7 @@ export function drawUdlLoads(
     // the ground.
     const groundAll = strips.flatMap((s) => s.ground);
     const outline: [number, number][] = [strips[0].ground[0], ...strips.flatMap((s) => s.top), ...[...groundAll].reverse()];
-    pdf.setLineWidth(0.3);
+    pdf.setLineWidth(0.2);
     pdfPath(pdf, buildPolylinePath(outline, true), "S");
 
     pdf.setTextColor(...UDL_LOAD_COLOR.rgb);
@@ -614,7 +614,7 @@ export function drawLineLoads(
       const ux = (px - tx) / lift;
       const uy = (py - ty) / lift;
       pdf.setDrawColor(...LINE_LOAD_COLOR.rgb);
-      pdf.setLineWidth(0.4);
+      pdf.setLineWidth(0.25);
       pdf.line(tx, ty, px - ux * headL, py - uy * headL);
       pdf.setFillColor(...LINE_LOAD_COLOR.rgb);
       pdf.triangle(px, py, px - ux * headL - uy * headW, py - uy * headL + ux * headW, px - ux * headL + uy * headW, py - uy * headL - ux * headW, "F");
@@ -623,7 +623,7 @@ export function drawLineLoads(
       continue;
     }
     pdf.setDrawColor(...LINE_LOAD_COLOR.rgb);
-    pdf.setLineWidth(0.4);
+    pdf.setLineWidth(0.25);
     pdf.line(px, py - lift, px, py - headL);
     pdf.setFillColor(...LINE_LOAD_COLOR.rgb);
     pdf.triangle(px, py, px - headW, py - headL, px + headW, py - headL, "F");
@@ -854,12 +854,12 @@ export function drawPiezometricLines(
     const pts = line.coordinates.map(([wx, wy]) => tf.worldToPdf(wx, wy));
 
     pdf.setDrawColor(...PIEZO_COLOR.rgb);
-    pdf.setLineWidth(0.35);
+    pdf.setLineWidth(0.25);
     const ops = buildPolylinePath(pts, false);
     pdfPath(pdf, ops, "S");
 
     // Dashed horizontal continuation used by the analysis (see canvas).
-    pdf.setLineWidth(0.25);
+    pdf.setLineWidth(0.18);
     pdf.setLineDashPattern([1.6, 1.1], 0);
     for (const [a, b] of piezoExtensions(line.coordinates, modelCoordinates)) {
       const [ax, ay] = tf.worldToPdf(a[0], a[1]);
@@ -887,7 +887,7 @@ export function drawPiezometricLines(
 
       if (bars) {
         pdf.setDrawColor(...PIEZO_COLOR.rgb);
-        pdf.setLineWidth(0.25);
+        pdf.setLineWidth(0.18);
         pdf.line(mx - barW, my + barGap1, mx + barW, my + barGap1);
         pdf.line(mx - barW, my + barGap2, mx + barW, my + barGap2);
       }
@@ -930,7 +930,7 @@ export function drawEntryExitMarkers(
   }
   pdf.setDrawColor(...MARKER_COLOR.rgb);
   pdf.setFillColor(...MARKER_COLOR.rgb);
-  pdf.setLineWidth(0.4);
+  pdf.setLineWidth(0.28);
   for (const m of layoutLimitMarkers(limits, coordinates, tf.worldToPdf, tf.mmPerPx, { lifted: false })) {
     pdf.line(m.cx, m.barTop, m.cx, m.barBottom);
     for (const [tip, b1, b2] of m.triangles) {
@@ -1115,7 +1115,7 @@ export function drawCriticalSurface(
     const pts: [number, number][] = crack ? [[crack.x, crack.top], ...arcPts] : arcPts;
     const pdfPts = pts.map(([wx, wy]) => tf.worldToPdf(wx, wy));
     pdf.setDrawColor(...CRITICAL_SURFACE_COLOR.rgb);
-    pdf.setLineWidth(0.5);
+    pdf.setLineWidth(0.38);
     const ops = buildPolylinePath(pdfPts, false);
     pdfPath(pdf, ops, "S");
   }
@@ -1126,7 +1126,7 @@ export function drawCriticalSurface(
     const [xpx, xpy] = tf.worldToPdf(cs.exitPoint[0], cs.exitPoint[1]);
 
     pdf.setDrawColor(...CRITICAL_SURFACE_COLOR.rgb);
-    pdf.setLineWidth(0.5);
+    pdf.setLineWidth(0.25);
     pdf.line(ccx, ccy, epx, epy);
     pdf.line(ccx, ccy, xpx, xpy);
 
@@ -1172,7 +1172,7 @@ function drawFosLabelPdf(pdf: jsPDF, label: FosLabelPdf, color: DualColor) {
   pdf.text(text, labelX, y - 1);
 
   pdf.setDrawColor(...color.rgb);
-  pdf.setLineWidth(0.3);
+  pdf.setLineWidth(0.2);
   pdf.line(labelX - 0.2, y, labelX + width + 0.2, y);
 }
 
@@ -1771,7 +1771,7 @@ function drawTablePdf(
   }
 
   pdf.setDrawColor(0, 0, 0);
-  pdf.setLineWidth(0.35);
+  pdf.setLineWidth(0.2);
   pdf.line(x, y + headerH, x + totalW, y + headerH);
   for (let r = 0; r < rows.length - 1; r++) {
     const rule = y + headerH + (r + 1) * rowH;

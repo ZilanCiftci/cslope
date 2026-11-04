@@ -236,6 +236,9 @@ function wrapHeaderText(
 }
 
 /** Draw a material table on the canvas. */
+/** The rules of the material table (thin, as on paper). */
+const TABLE_RULE_PX = 0.6;
+
 export function drawTable(
   ctx: CanvasRenderingContext2D,
   x: number,
@@ -288,7 +291,7 @@ export function drawTable(
   // Background
   ctx.fillStyle = "rgba(255,255,255,0.92)";
   ctx.strokeStyle = "#000";
-  ctx.lineWidth = 1;
+  ctx.lineWidth = TABLE_RULE_PX;
   ctx.fillRect(x, y, totalW, totalH);
   ctx.strokeRect(x, y, totalW, totalH);
 
@@ -326,7 +329,7 @@ export function drawTable(
     }
     // Row border
     ctx.strokeStyle = "#000";
-    ctx.lineWidth = 1;
+    ctx.lineWidth = TABLE_RULE_PX;
     ctx.beginPath();
     ctx.moveTo(x, ry + rowH);
     ctx.lineTo(x + totalW, ry + rowH);
@@ -365,7 +368,7 @@ export function drawTable(
   for (let c = 0; c < colW.length - 1; c++) {
     separatorX += colW[c];
     ctx.strokeStyle = "#000";
-    ctx.lineWidth = 1;
+    ctx.lineWidth = TABLE_RULE_PX;
     ctx.beginPath();
     ctx.moveTo(separatorX, y);
     ctx.lineTo(separatorX, y + totalH);

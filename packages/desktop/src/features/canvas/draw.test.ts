@@ -1122,7 +1122,7 @@ describe("drawCanvas — result mode", () => {
 
   it("strokes the critical surface along the circle from entry to exit", () => {
     const rec = drawResult();
-    const arc = rec.strokes().find((p) => p.state.lineWidth === 2 && pathPoints(p).length > 20)!;
+    const arc = rec.strokes().find((p) => p.state.lineWidth === 1.5 && pathPoints(p).length > 20)!;
     const pts = pathPoints(arc).map(([x, y]) => canvasToWorld(x, y, W, H));
     expect(pts[0][0]).toBeCloseTo(ENTRY_X, 6);
     expect(pts[0][1]).toBeCloseTo(10, 6);
@@ -1190,7 +1190,7 @@ describe("drawCanvas — result mode", () => {
     expect(label.x).toBe(ccx + 10);
     expect(label.y).toBe(ccy - 4);
     expect(label.state.textAlign).toBe("left");
-    const underline = rec.strokes().find((p) => p.state.lineWidth === 1.5 && close(pathPoints(p)[0], [ccx + 9, ccy + 2]));
+    const underline = rec.strokes().find((p) => p.state.lineWidth === 1 && close(pathPoints(p)[0], [ccx + 9, ccy + 2]));
     expect(underline).toBeDefined();
   });
 
@@ -1298,7 +1298,7 @@ describe("drawCanvas — result mode", () => {
       result: result({ criticalSurface: cs, allSurfaces: [cs] }),
       options: { ...DEFAULT_ANALYSIS_OPTIONS, tensionCrackDepth: 3, tensionCrackWater: 0.5 },
     });
-    const line = rec.strokes().find((p) => p.state.lineWidth === 2 && pathPoints(p).length === 4)!;
+    const line = rec.strokes().find((p) => p.state.lineWidth === 1.5 && pathPoints(p).length === 4)!;
     expect(pathPoints(line)[0]).toEqual(toC(6, 10));
     expect(pathPoints(line)[1]).toEqual(toC(6, 7));
     // Water from the crack bottom up to half the crack depth, in the crack:
@@ -1321,7 +1321,7 @@ describe("drawCanvas — result mode", () => {
       result: result({ criticalSurface: plain, allSurfaces: [plain] }),
       options: { ...DEFAULT_ANALYSIS_OPTIONS, tensionCrackDepth: 3, tensionCrackWater: 0.5 },
     });
-    expect(none.strokes().some((p) => p.state.lineWidth === 2 && close(pathPoints(p)[0], toC(6, 10)))).toBe(false);
+    expect(none.strokes().some((p) => p.state.lineWidth === 1.5 && pathPoints(p).length > 0 && close(pathPoints(p)[0], toC(6, 10)))).toBe(false);
     expect(none.fills(POND_COLOR.hex).filter((p) => p.segments[0].op === "rect")).toHaveLength(0);
   });
 
@@ -1430,7 +1430,7 @@ describe("drawCanvas — result mode", () => {
     for (const [x, y] of pathPoints(lines[0])) expect(Math.hypot(x - ccx, y - ccy)).toBeCloseTo(R * SCALE, 6);
     // Each on a wider solid halo; the critical surface is still the one bold solid arc.
     expect(on.strokes().filter((p) => p.state.lineDash.length === 0 && p.state.lineWidth === 4)).toHaveLength(2);
-    expect(on.strokes().filter((p) => p.state.lineWidth === 2 && pathPoints(p).length > 20)).toHaveLength(1);
+    expect(on.strokes().filter((p) => p.state.lineWidth === 1.5 && p.state.lineDash.length === 0 && pathPoints(p).length > 20)).toHaveLength(1);
     // Labels in the custom colour: the first at its centre, the second moved below the critical label.
     const label = on.findText("1.500")!;
     expect(label.state.fillStyle).toBe(CUSTOM_SURFACE_COLOR.hex);
@@ -1753,7 +1753,7 @@ describe("drawCanvas — reference annotations", () => {
     expect(hasPoints(line, (LINE as { points: [number, number][] }).points.map(([x, y]) => toC(x, y)))).toBe(true);
     expect(line.state.lineDash).toEqual([8, 5]);
     expect(line.state.lineWidth).toBe(1.5);
-    const critical = rec.strokes().find((p) => p.state.lineWidth === 2 && pathPoints(p).length > 20)!;
+    const critical = rec.strokes().find((p) => p.state.lineWidth === 1.5 && pathPoints(p).length > 20)!;
     expect(rec.paths.indexOf(line)).toBeLessThan(rec.paths.indexOf(critical));
   });
 

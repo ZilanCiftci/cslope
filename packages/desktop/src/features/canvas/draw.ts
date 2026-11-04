@@ -811,6 +811,8 @@ export function drawCanvas(
     mode === "result" && result
       ? Math.max(0.25, resultViewSettings.paperFrame.zoom ?? 1)
       : 1;
+  // Lines over a result are drawn thinner than in the edit view.
+  const thin = mode === "result" ? 0.7 : 1;
   // The view as numbers (worldToCanvas is a new function every frame):
   // where two world points land fixes the scale and offset.
   const viewProbe = [...worldToCanvas(0, 0, w, h), ...worldToCanvas(1, 1, w, h)];
@@ -1085,7 +1087,7 @@ export function drawCanvas(
         ctx.strokeStyle = isSelectedBoundary
           ? SELECTED_BOUNDARY_COLOR
           : POLY_STROKE;
-        ctx.lineWidth = isSelectedBoundary ? 2 : 1;
+        ctx.lineWidth = (isSelectedBoundary ? 2 : 1) * thin * paperZoom;
         ctx.beginPath();
         b.coordinates.forEach(([x, y], i) => {
           const [px, py] = worldToCanvas(x, y, w, h);
@@ -1309,7 +1311,7 @@ export function drawCanvas(
   const loads = layoutLoads(ctx, { w, h, coordinates, worldToCanvas, surfaceYAtX }, udls, lineLoads, hoverHit, paperZoom);
   const drawDownArrow = ({ cx, cy, top, tail }: LoadArrow, color: string, lineWidth: number) => {
     ctx.strokeStyle = color;
-    ctx.lineWidth = lineWidth * paperZoom;
+    ctx.lineWidth = lineWidth * thin * paperZoom;
     if (tail) {
       // an inclined line load: the shaft from the tail, the head along it
       const len = Math.hypot(cx - tail[0], cy - tail[1]) || 1;
@@ -1354,7 +1356,7 @@ export function drawCanvas(
     }
     ctx.clip();
     ctx.strokeStyle = UDL_LOAD_COLOR.hex;
-    ctx.lineWidth = 1 * paperZoom;
+    ctx.lineWidth = 1 * thin * paperZoom;
     ctx.globalAlpha = 0.5;
     const allPts = strips.flatMap((s) => [...s.ground, ...s.top]);
     const minX = Math.min(...allPts.map(([x]) => x));
@@ -1374,7 +1376,7 @@ export function drawCanvas(
     // Outline: up the left end, along the tops (stepping between strips of
     // different size), down the right end, back along the ground.
     ctx.strokeStyle = UDL_LOAD_COLOR.hex;
-    ctx.lineWidth = 1.5 * paperZoom;
+    ctx.lineWidth = 1.5 * thin * paperZoom;
     ctx.beginPath();
     ctx.moveTo(strips[0].ground[0][0], strips[0].ground[0][1]);
     for (const s of strips) for (const [px, py] of s.top) ctx.lineTo(px, py);
@@ -1616,7 +1618,7 @@ export function drawCanvas(
       const lineColor =
         isActive && editingPiezo ? SELECTED_BOUNDARY_COLOR : piezoBlue;
       ctx.strokeStyle = lineColor;
-      ctx.lineWidth = (isActive && editingPiezo ? 3 : 1.5) * paperZoom;
+      ctx.lineWidth = (isActive && editingPiezo ? 3 : 1.5) * thin * paperZoom;
       ctx.beginPath();
       for (let i = 0; i < plCoords.length; i++) {
         const [px, py] = worldToCanvas(plCoords[i][0], plCoords[i][1], w, h);
@@ -1660,7 +1662,7 @@ export function drawCanvas(
         // Two bars below the tip (left out where they would go into the ground).
         if (bars) {
           ctx.strokeStyle = piezoBlue;
-          ctx.lineWidth = 1.2 * paperZoom;
+          ctx.lineWidth = 1.2 * thin * paperZoom;
           for (const gap of [PIEZO_BAR_GAP1_PX, PIEZO_BAR_GAP2_PX]) {
             ctx.beginPath();
             ctx.moveTo(mx - barW, my + gap * paperZoom);
@@ -1798,7 +1800,7 @@ export function drawCanvas(
       ctx.globalAlpha = markerAlpha;
       ctx.strokeStyle = color;
       ctx.fillStyle = color;
-      ctx.lineWidth = (isHover ? 2.5 : 2) * paperZoom;
+      ctx.lineWidth = (isHover ? 2.5 : 2) * thin * paperZoom;
       ctx.beginPath();
       ctx.moveTo(m.cx, m.barTop);
       ctx.lineTo(m.cx, m.barBottom);
@@ -2301,7 +2303,7 @@ export function drawCanvas(
       // Arc stroke (bold black like reference image), from the top of the
       // tension crack (its face is part of the slip surface) to the exit.
       ctx.strokeStyle = CRITICAL_SURFACE_COLOR.hex;
-      ctx.lineWidth = 2 * paperZoom;
+      ctx.lineWidth = 1.5 * paperZoom;
       ctx.beginPath();
       if (crack) {
         const [tx, ty] = worldToCanvas(crack.x, crack.top, w, h);
@@ -2333,7 +2335,7 @@ export function drawCanvas(
 
         // Radius lines (solid, bold — same style as the arc)
         ctx.strokeStyle = CRITICAL_SURFACE_COLOR.hex;
-        ctx.lineWidth = 2 * paperZoom;
+        ctx.lineWidth = 1 * paperZoom;
         ctx.beginPath();
         ctx.moveTo(ccx, ccy);
         ctx.lineTo(epx, epy);
@@ -2433,7 +2435,7 @@ export function drawCanvas(
 
         // Underline
         ctx.strokeStyle = CRITICAL_SURFACE_COLOR.hex;
-        ctx.lineWidth = 1.5 * paperZoom;
+        ctx.lineWidth = 1 * paperZoom;
         ctx.beginPath();
         ctx.moveTo(labelX - 1 * paperZoom, ccy2 + 2 * paperZoom);
         ctx.lineTo(labelX + tw + 1 * paperZoom, ccy2 + 2 * paperZoom);
@@ -2467,7 +2469,7 @@ export function drawCanvas(
         ctx.fillStyle = CUSTOM_SURFACE;
         ctx.fillText(fosText, labelX, cy - 4 * paperZoom);
         ctx.strokeStyle = CUSTOM_SURFACE;
-        ctx.lineWidth = 1.5 * paperZoom;
+        ctx.lineWidth = 1 * paperZoom;
         ctx.beginPath();
         ctx.moveTo(labelX - 1 * paperZoom, cy + 2 * paperZoom);
         ctx.lineTo(labelX + tw + 1 * paperZoom, cy + 2 * paperZoom);
