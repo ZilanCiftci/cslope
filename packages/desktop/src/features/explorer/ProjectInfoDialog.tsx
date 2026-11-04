@@ -110,7 +110,7 @@ export function ProjectInfoDialog({ initialInfos, onSave, onClose, importNotes }
   }, [onClose]);
 
   const inputClassName =
-    "w-full px-2 py-1.5 text-xs rounded border bg-[var(--color-vsc-input-bg)] text-[var(--color-vsc-text)] focus:border-[var(--color-vsc-accent)] outline-none";
+    "w-full";
 
   const fieldBorder = (field: ProjectInfoKey) => {
     const isMixedUntouched =
@@ -119,9 +119,9 @@ export function ProjectInfoDialog({ initialInfos, onSave, onClose, importNotes }
       ? {
           border: "1px dashed var(--color-vsc-accent)",
           background:
-            "color-mix(in srgb, var(--color-vsc-input-bg) 90%, var(--color-vsc-accent) 10%)",
+            "color-mix(in srgb, var(--color-vsc-field-bg) 90%, var(--color-vsc-accent) 10%)",
         }
-      : { border: "1px solid var(--color-vsc-border)" };
+      : undefined;
   };
 
   const fieldLabel = (label: string, field: ProjectInfoKey) => (
@@ -314,13 +314,13 @@ export function ProjectInfoDialog({ initialInfos, onSave, onClose, importNotes }
         <div className="flex items-center justify-end gap-2 px-4 py-3 border-t border-[var(--color-vsc-border)] bg-[var(--color-vsc-surface)] rounded-b-lg">
           <button
             onClick={onClose}
-            className="px-3 py-1.5 text-xs font-medium rounded hover:bg-[var(--color-vsc-list-hover)] transition-colors"
+            className="btn min-w-[80px]"
           >
             Cancel
           </button>
           <button
             onClick={handleSave}
-            className="px-3 py-1.5 text-xs font-medium rounded text-white bg-[var(--color-vsc-accent)] hover:opacity-90 transition-opacity"
+            className="btn btn-primary min-w-[80px]"
           >
             Save Changes
           </button>

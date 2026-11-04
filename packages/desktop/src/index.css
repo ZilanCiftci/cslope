@@ -32,6 +32,26 @@
   --color-vsc-swatch-border: rgba(255,255,255,0.2);
   --color-vsc-selected-bg: rgba(0, 120, 212, 0.15);
 
+  /* Form controls (fields, selects, buttons): flat, 1 px borders, 2 px
+     corners, like the Windows desktop.  Fields are darker than the panels
+     they sit on; disabled fields are flat in the panel colour. */
+  --color-vsc-field-bg: #171717;
+  --color-vsc-field-border: #474747;
+  --color-vsc-field-border-bottom: #7a7a7a;
+  --color-vsc-field-border-hover: #6a6a6a;
+  --color-vsc-field-text: #e0e0e0;
+  --color-vsc-field-placeholder: #8a8a8a;
+  --color-vsc-field-disabled-bg: #262626;
+  --color-vsc-field-disabled-border: #363636;
+  --color-vsc-field-disabled-text: #6e6e6e;
+  --color-vsc-button-bg: #333333;
+  --color-vsc-button-bg-hover: #3d3d3d;
+  --color-vsc-button-bg-active: #2a2a2a;
+  --color-vsc-button-border: #4a4a4a;
+  --color-vsc-button-border-bottom: #565656;
+  --color-vsc-button-text: #e0e0e0;
+  --color-vsc-chevron: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' fill='none' stroke='%23c8c8c8' stroke-width='1.2'/%3E%3C/svg%3E");
+
   /* Canvas-specific */
   --color-canvas-bg: #1e1e1e;
   --color-canvas-grid: #2a2a2a;
@@ -88,6 +108,23 @@
   --color-vsc-swatch-border: rgba(0,0,0,0.2);
   --color-vsc-selected-bg: rgba(0, 120, 212, 0.12);
 
+  --color-vsc-field-bg: #ffffff;
+  --color-vsc-field-border: #c4c4c4;
+  --color-vsc-field-border-bottom: #8a8a8a;
+  --color-vsc-field-border-hover: #9a9a9a;
+  --color-vsc-field-text: #1e1e1e;
+  --color-vsc-field-placeholder: #8a8a8a;
+  --color-vsc-field-disabled-bg: #f3f3f3;
+  --color-vsc-field-disabled-border: #dcdcdc;
+  --color-vsc-field-disabled-text: #a0a0a0;
+  --color-vsc-button-bg: #f7f7f7;
+  --color-vsc-button-bg-hover: #ebebeb;
+  --color-vsc-button-bg-active: #dedede;
+  --color-vsc-button-border: #c4c4c4;
+  --color-vsc-button-border-bottom: #a8a8a8;
+  --color-vsc-button-text: #1e1e1e;
+  --color-vsc-chevron: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' fill='none' stroke='%23505050' stroke-width='1.2'/%3E%3C/svg%3E");
+
   /* Canvas-specific */
   --color-canvas-bg: #ffffff;
   --color-canvas-grid: #e8e8e8;
@@ -139,39 +176,89 @@
     background: rgba(128, 128, 128, 0.65);
   }
 
-  /* ── Inputs ───────────────────────────────────────────── */
-  input[type="number"],
-  input[type="text"],
-  select {
-    background: var(--color-vsc-input-bg);
-    border: 1px solid var(--color-vsc-input-border);
-    color: var(--color-vsc-text);
-    border-radius: 6px;
-    padding: 4px 8px;
+  /* ── Fields: text, number, select, textarea ───────────── */
+  /* A native desktop look at the source: white (dark in the dark theme)
+     with a 1 px border and a darker bottom edge, 2 px corners, 22 px high
+     at 12 px text.  Disabled fields alone are flat and grey.  Call sites
+     add only a width (and a font size where a panel needs one). */
+  input:where(:not([type]), [type="text"], [type="number"], [type="search"],
+      [type="email"], [type="password"], [type="url"], [type="tel"]),
+  select,
+  textarea,
+  .field {
+    box-sizing: border-box;
+    background-color: var(--color-vsc-field-bg);
+    color: var(--color-vsc-field-text);
+    border: 1px solid var(--color-vsc-field-border);
+    border-bottom-color: var(--color-vsc-field-border-bottom);
+    border-radius: 2px;
+    padding: 2px 6px;
+    font: inherit;
     font-size: 12px;
+    line-height: 16px;
+    min-height: 22px;
     outline: none;
-    transition: border-color 0.15s ease, box-shadow 0.15s ease;
+    box-shadow: none;
   }
-  input[type="number"]:focus,
-  input[type="text"]:focus,
-  select:focus {
-    border-color: var(--color-vsc-accent);
-    box-shadow: 0 0 0 2px rgba(0, 120, 212, 0.25);
+  select {
+    appearance: none;
+    padding-right: 20px;
+    background-image: var(--color-vsc-chevron);
+    background-repeat: no-repeat;
+    background-position: right 6px center;
+    background-size: 10px 6px;
+    cursor: default;
+    text-overflow: ellipsis;
   }
-  input[type="number"]:hover,
-  input[type="text"]:hover,
-  select:hover {
+  textarea {
+    padding-top: 3px;
+    padding-bottom: 3px;
+  }
+  input:where(:not([type]), [type="text"], [type="number"], [type="search"],
+      [type="email"], [type="password"], [type="url"], [type="tel"]):hover,
+  select:hover,
+  textarea:hover,
+  .field:hover {
+    border-color: var(--color-vsc-field-border-hover);
+    border-bottom-color: var(--color-vsc-field-border-bottom);
+  }
+  input:where(:not([type]), [type="text"], [type="number"], [type="search"],
+      [type="email"], [type="password"], [type="url"], [type="tel"]):focus,
+  select:focus,
+  textarea:focus,
+  .field:focus,
+  .field:focus-within {
     border-color: var(--color-vsc-accent);
+    outline: none;
+  }
+  ::placeholder {
+    color: var(--color-vsc-field-placeholder);
+    opacity: 1;
+  }
+  :disabled::placeholder {
+    color: var(--color-vsc-field-disabled-text);
+  }
+  input:where(:not([type]), [type="text"], [type="number"], [type="search"],
+      [type="email"], [type="password"], [type="url"], [type="tel"]):disabled,
+  select:disabled,
+  textarea:disabled,
+  .field[aria-disabled="true"] {
+    background-color: var(--color-vsc-field-disabled-bg);
+    border-color: var(--color-vsc-field-disabled-border);
+    color: var(--color-vsc-field-disabled-text);
+    cursor: default;
   }
   select option {
-    background: var(--color-vsc-input-bg);
-    color: var(--color-vsc-text);
+    background: var(--color-vsc-field-bg);
+    color: var(--color-vsc-field-text);
   }
 
   /* ── Checkboxes & radios ──────────────────────────────── */
   input[type="checkbox"],
   input[type="radio"] {
     accent-color: var(--color-vsc-accent);
+    width: 13px;
+    height: 13px;
   }
 
   /* ── Focus ring: keyboard navigation only ─────────────── */
@@ -192,5 +279,68 @@
                 opacity 0.15s ease, box-shadow 0.15s ease;
     border: none;
     background: transparent;
+  }
+}
+
+/* ── Buttons ───────────────────────────────────────────────── */
+/* A standard push button: grey face, 1 px border, 2 px corners, 22 px
+   high.  .btn-primary is the default (accent) button of a dialog;
+   aria-pressed="true" shows a toggle (bold, italic) as pressed. */
+@layer components {
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    box-sizing: border-box;
+    min-height: 22px;
+    padding: 0 10px;
+    font-size: 12px;
+    line-height: 20px;
+    font-weight: 400;
+    white-space: nowrap;
+    color: var(--color-vsc-button-text);
+    background: var(--color-vsc-button-bg);
+    border: 1px solid var(--color-vsc-button-border);
+    border-bottom-color: var(--color-vsc-button-border-bottom);
+    border-radius: 2px;
+    cursor: default;
+  }
+  .btn:hover:not(:disabled):not([aria-disabled="true"]) {
+    background: var(--color-vsc-button-bg-hover);
+  }
+  .btn:active:not(:disabled):not([aria-disabled="true"]) {
+    background: var(--color-vsc-button-bg-active);
+  }
+  .btn[aria-pressed="true"] {
+    background: var(--color-vsc-selected-bg);
+    border-color: var(--color-vsc-accent);
+  }
+  .btn:disabled,
+  .btn[aria-disabled="true"] {
+    color: var(--color-vsc-field-disabled-text);
+    background: var(--color-vsc-field-disabled-bg);
+    border-color: var(--color-vsc-field-disabled-border);
+  }
+  .btn-primary {
+    color: #ffffff;
+    background: var(--color-vsc-accent);
+    border-color: var(--color-vsc-accent);
+  }
+  .btn-primary:hover:not(:disabled):not([aria-disabled="true"]) {
+    background: var(--color-vsc-accent-hover);
+  }
+  .btn-primary:active:not(:disabled):not([aria-disabled="true"]) {
+    background: var(--color-vsc-accent);
+    border-color: var(--color-vsc-accent);
+  }
+  /* A row of dialog buttons, right-aligned as on Windows. */
+  .dialog-buttons {
+    display: flex;
+    justify-content: flex-end;
+    gap: 6px;
+  }
+  .dialog-buttons > .btn {
+    min-width: 80px;
   }
 }

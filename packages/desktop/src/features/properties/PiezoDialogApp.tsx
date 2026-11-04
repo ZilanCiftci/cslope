@@ -429,12 +429,7 @@ export function PiezoDialogApp() {
                   value={mainPiezoLine(pl)?.id ?? ""}
                   onChange={(e) => setPiezoMainLine(e.target.value)}
                   aria-label="Main piezometric line"
-                  className="text-[11px] px-1 py-0.5 rounded flex-1"
-                  style={{
-                    background: "var(--color-vsc-input-bg)",
-                    color: "var(--color-vsc-text)",
-                    border: "1px solid var(--color-vsc-border)",
-                  }}
+                  className="flex-1"
                 >
                   {pl.lines.map((line) => (
                     <option key={line.id} value={line.id}>
@@ -483,12 +478,6 @@ export function PiezoDialogApp() {
                     onChange={(e) =>
                       setPiezoMaterialAssignment(m.id, e.target.value)
                     }
-                    className="text-[11px] px-1 py-0.5 rounded"
-                    style={{
-                      background: "var(--color-vsc-input-bg)",
-                      color: "var(--color-vsc-text)",
-                      border: "1px solid var(--color-vsc-border)",
-                    }}
                   >
                     {pl.lines.map((line) => (
                       <option key={line.id} value={line.id}>
@@ -503,17 +492,12 @@ export function PiezoDialogApp() {
         )}
       </div>
       <div
-        className="pt-3 mt-2 border-t"
+        className="pt-3 mt-2 border-t dialog-buttons"
         style={{ borderColor: "var(--color-vsc-border)" }}
       >
         <button
           onClick={() => window.close()}
-          className="w-full text-[11px] py-1 rounded cursor-pointer font-medium"
-          style={{
-            background: "var(--color-vsc-accent)",
-            color: "#fff",
-            border: "1px solid var(--color-vsc-accent)",
-          }}
+          className="btn btn-primary"
         >
           Close
         </button>
@@ -534,15 +518,7 @@ function DialogButton({
   return (
     <button
       onClick={disabled ? undefined : onClick}
-      className="px-3 py-1.5 text-[11px] font-medium rounded border transition-colors cursor-pointer min-w-[64px]"
-      style={{
-        background: disabled ? "transparent" : "var(--color-vsc-surface-tint)",
-        color: disabled
-          ? "var(--color-vsc-text-muted)"
-          : "var(--color-vsc-text)",
-        borderColor: "var(--color-vsc-border)",
-        opacity: disabled ? 0.5 : 1,
-      }}
+      className="btn min-w-[64px]"
       aria-disabled={disabled}
     >
       {children}

@@ -164,14 +164,7 @@ export function OptionsSection({ plain = false }: OptionsSectionProps) {
             if (both) setOptions({ bothDirections: false });
           }
         }}
-        className="px-2 py-1 rounded border text-[11px] font-medium cursor-pointer"
-        style={{
-          borderColor: pressed ? "var(--color-vsc-accent)" : "var(--color-vsc-border)",
-          background: pressed
-            ? "color-mix(in srgb, var(--color-vsc-accent) 18%, transparent)"
-            : "var(--color-vsc-input-bg)",
-          color: "var(--color-vsc-text)",
-        }}
+        className="btn"
         aria-pressed={pressed}
         aria-label={ariaLabel}
         title={title}

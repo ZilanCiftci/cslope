@@ -79,12 +79,7 @@ export function AnalysisErrorBanner() {
       {isNoSlipSurfaceError(errorMessage) && (
         <button
           onClick={openSearchLimits}
-          className="shrink-0 self-center px-2.5 py-1 rounded text-[11px] font-medium cursor-pointer"
-          style={{
-            border: "1px solid var(--color-vsc-border)",
-            background: "var(--color-vsc-input-bg)",
-            color: "var(--color-vsc-text)",
-          }}
+          className="btn shrink-0 self-center"
         >
           Search limits…
         </button>

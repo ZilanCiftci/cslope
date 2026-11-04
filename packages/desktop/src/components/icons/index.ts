@@ -21,7 +21,7 @@ export {
   ZoomInIcon,
   ZoomOutIcon,
   ZoomBoxIcon,
-  HandIcon,
+  PanIcon,
   PlusIcon,
   MinusIcon,
   RibbonFitIcon,

@@ -224,18 +224,11 @@ export function MultiSelectComboboxChips({
           setHighlightedIndex(0);
           inputRef.current?.focus();
         }}
-        className="w-full rounded-lg border min-h-[32px] cursor-text"
-        style={{
-          background: "var(--color-vsc-input-bg)",
-          borderColor: open
-            ? "var(--color-vsc-accent)"
-            : "var(--color-vsc-input-border)",
-          boxShadow: open ? "0 0 0 2px rgba(0,120,212,0.18)" : "none",
-          transition: "border-color 100ms, box-shadow 100ms",
-        }}
+        className="field w-full p-0 cursor-text"
+        style={open ? { borderColor: "var(--color-vsc-accent)" } : undefined}
       >
         <div
-          className="flex flex-wrap items-center gap-1 px-1.5 py-1"
+          className="flex flex-wrap items-center gap-1 px-1 py-px"
           onDragOver={(e) => e.preventDefault()}
         >
           {/* ── Chips ──────────────────────────────────── */}
@@ -259,7 +252,7 @@ export function MultiSelectComboboxChips({
                 onDragOver={handleDragOver(i)}
                 onDrop={handleDrop}
                 onDragEnd={handleDragEnd}
-                className="inline-flex items-center gap-0.5 rounded-md pl-2 pr-1 py-[1px] text-[10px] font-medium select-none"
+                className="inline-flex items-center gap-0.5 rounded-xs pl-1.5 pr-0.5 py-0 text-[11px] select-none"
                 style={{
                   position: "relative",
                   background: "var(--color-vsc-surface-tint-strong)",
@@ -338,7 +331,7 @@ export function MultiSelectComboboxChips({
       <div
         ref={listRef}
         role="listbox"
-        className="absolute z-50 mt-1 w-full rounded-lg border max-h-48 overflow-auto py-1 origin-top"
+        className="absolute z-50 mt-px w-full rounded-xs border max-h-48 overflow-auto py-0.5 origin-top"
         style={{
           background: "var(--color-vsc-panel)",
           borderColor: "var(--color-vsc-border)",
@@ -373,9 +366,8 @@ export function MultiSelectComboboxChips({
               aria-selected={selected}
               onClick={() => toggleValue(opt.value)}
               onMouseEnter={() => setHighlightedIndex(idx)}
-              className="w-full flex items-center gap-2 rounded-md mx-1 px-2 py-1.5 text-[11px] cursor-pointer select-none"
+              className="w-full flex items-center gap-2 px-2 py-1 text-[12px] select-none"
               style={{
-                width: "calc(100% - 8px)",
                 color: "var(--color-vsc-text)",
                 background: highlighted
                   ? "var(--color-vsc-list-active)"

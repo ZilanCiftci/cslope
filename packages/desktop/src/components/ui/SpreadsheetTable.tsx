@@ -34,7 +34,7 @@ export function SpreadsheetTable<T>({
 }: SpreadsheetTableProps<T>) {
   return (
     <div
-      className="overflow-hidden rounded-md border"
+      className="overflow-hidden rounded-xs border"
       style={{ borderColor: "var(--color-vsc-border)" }}
     >
       <table className="w-full text-[12px] border-collapse">

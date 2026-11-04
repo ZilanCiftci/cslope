@@ -98,12 +98,6 @@ export function MaterialAssignmentSection({
                   setRegionMaterial([r.cx, r.cy], e.target.value);
                 }}
                 onClick={(e) => e.stopPropagation()}
-                className="text-[11px] px-1.5 py-0.5 rounded cursor-pointer"
-                style={{
-                  background: "var(--color-vsc-input-bg)",
-                  color: "var(--color-vsc-text)",
-                  border: "1px solid var(--color-vsc-border)",
-                }}
                 aria-label={`Material for Region ${r.index}`}
               >
                 {materials.map((m) => (

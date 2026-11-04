@@ -325,12 +325,7 @@ export function ResultsMenu({ isOpen, onActivate, panelHost }: Props) {
                               if (value > 0) setRvs({ fosFilterMax: value });
                             }}
                             aria-label="Maximum FOS shown"
-                            className="w-16 text-[11px] px-1 py-0.5 rounded tabular-nums"
-                            style={{
-                              background: "var(--color-vsc-bg)",
-                              color: "var(--color-vsc-text)",
-                              border: "1px solid var(--color-vsc-border)",
-                            }}
+                            className="w-16 tabular-nums"
                           />
                         </label>
                       )}

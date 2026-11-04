@@ -4,8 +4,8 @@ type IconProps = {
 
 // ── Toolbar (small, monochrome, currentColor) ───────────────────────
 
-/** Fit-to-view corners (toolbar). */
-export function FitIcon({ size = 14 }: IconProps) {
+/** Zoom to the extents: four frame corners (toolbar). */
+export function FitIcon({ size = 16 }: IconProps) {
   return (
     <svg
       width={size}
@@ -13,7 +13,7 @@ export function FitIcon({ size = 14 }: IconProps) {
       viewBox="0 0 24 24"
       fill="none"
       stroke="currentColor"
-      strokeWidth="2"
+      strokeWidth="1.75"
       strokeLinecap="round"
       strokeLinejoin="round"
     >
@@ -26,7 +26,7 @@ export function FitIcon({ size = 14 }: IconProps) {
 }
 
 /** Zoom-in magnifier (toolbar). */
-export function ZoomInIcon({ size = 14 }: IconProps) {
+export function ZoomInIcon({ size = 16 }: IconProps) {
   return (
     <svg
       width={size}
@@ -34,7 +34,7 @@ export function ZoomInIcon({ size = 14 }: IconProps) {
       viewBox="0 0 24 24"
       fill="none"
       stroke="currentColor"
-      strokeWidth="2"
+      strokeWidth="1.75"
       strokeLinecap="round"
       strokeLinejoin="round"
     >
@@ -46,7 +46,7 @@ export function ZoomInIcon({ size = 14 }: IconProps) {
 }
 
 /** Zoom-out magnifier (toolbar). */
-export function ZoomOutIcon({ size = 14 }: IconProps) {
+export function ZoomOutIcon({ size = 16 }: IconProps) {
   return (
     <svg
       width={size}
@@ -54,7 +54,7 @@ export function ZoomOutIcon({ size = 14 }: IconProps) {
       viewBox="0 0 24 24"
       fill="none"
       stroke="currentColor"
-      strokeWidth="2"
+      strokeWidth="1.75"
       strokeLinecap="round"
       strokeLinejoin="round"
     >
@@ -65,8 +65,8 @@ export function ZoomOutIcon({ size = 14 }: IconProps) {
   );
 }
 
-/** Zoom-box selection rectangle (toolbar). */
-export function ZoomBoxIcon({ size = 14 }: IconProps) {
+/** Zoom window: a dashed selection box with a magnifier (toolbar). */
+export function ZoomBoxIcon({ size = 16 }: IconProps) {
   return (
     <svg
       width={size}
@@ -74,18 +74,22 @@ export function ZoomBoxIcon({ size = 14 }: IconProps) {
       viewBox="0 0 24 24"
       fill="none"
       stroke="currentColor"
-      strokeWidth="2"
+      strokeWidth="1.75"
       strokeLinecap="round"
       strokeLinejoin="round"
     >
-      <rect x="4" y="4" width="16" height="16" rx="1" />
-      <path d="M8 8h8M8 16h8M8 8v8M16 8v8" strokeDasharray="2 2" />
+      <path
+        d="M10 17H4a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h12a1 1 0 0 1 1 1v6"
+        strokeDasharray="3 2.4"
+      />
+      <circle cx="15.5" cy="15.5" r="3.5" />
+      <path d="M21 21l-3-3" />
     </svg>
   );
 }
 
-/** Hand/pan cursor (toolbar). */
-export function HandIcon({ size = 14 }: IconProps) {
+/** Pan: four arrows, as in drawing programs (toolbar). */
+export function PanIcon({ size = 16 }: IconProps) {
   return (
     <svg
       width={size}
@@ -93,14 +97,15 @@ export function HandIcon({ size = 14 }: IconProps) {
       viewBox="0 0 24 24"
       fill="none"
       stroke="currentColor"
-      strokeWidth="2"
+      strokeWidth="1.75"
       strokeLinecap="round"
       strokeLinejoin="round"
     >
-      <path d="M6 12v-2a2 2 0 0 1 4 0v2" />
-      <path d="M10 10V8a2 2 0 0 1 4 0v4" />
-      <path d="M14 12V7a2 2 0 0 1 4 0v7" />
-      <path d="M6 12v3a5 5 0 0 0 10 0v-1" />
+      <path d="M12 2v20M2 12h20" />
+      <path d="m9 5 3-3 3 3" />
+      <path d="m15 19-3 3-3-3" />
+      <path d="m5 9-3 3 3 3" />
+      <path d="m19 9 3 3-3 3" />
     </svg>
   );
 }
