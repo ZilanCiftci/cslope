@@ -598,17 +598,11 @@ export class Slope {
   }
 
   /**
-   * Smallest sliding mass that is analysed (m²): the set value, or by
-   * default 1 % of the squared ground relief (1 m² for a 10 m slope).
-   * Scaled by the relief rather than the model area so that deep models
-   * do not filter out the shallow surfaces that govern in friction soil.
-   *
-   * The automatic default has no basis in the literature: it is a
-   * practical filter against micro-surfaces, whose FOS in cohesive soil
-   * grows without bound, and it can hide a real local failure (a low cut
-   * at the toe of a high slope). It is kept because changing it moves
-   * verified results; instead the surfaces it leaves out are counted and
-   * reported (AnalysisResult.discardedBySize), and it can be set to 0.
+   * Smallest sliding mass that is analysed (m², cross-section area per
+   * metre): the set value, by default 0 (no limit). `null` from older
+   * projects (formerly automatic, 1 % of the squared ground relief) also
+   * means 0. The surfaces a set limit leaves out are counted and reported
+   * (AnalysisResult.discardedBySize).
    */
   get minSlipArea(): number {
     return this._get("minSlipArea");

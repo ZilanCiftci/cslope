@@ -338,8 +338,9 @@ fn an_impenetrable_layer_gives_the_circle_tangent_to_it_as_the_model_base_does()
     assert!(base_c <= base * (1.0 + 1e-9));
 }
 
-/// A 40 m high 3:1 slope with a 1.5 m vertical cut at its toe: the
-/// automatic minimum area (17 m²) leaves out the surfaces through the cut.
+/// A 40 m high 3:1 slope with a 1.5 m vertical cut at its toe: a minimum
+/// area of 17 m² (the former automatic one) leaves out the surfaces through
+/// the cut.
 fn below_min_count(options: Value) -> usize {
     let cut = json!({
         "coordinates": [[0, 0], [0, 50], [20, 50], [140, 10], [160, 10], [160, 8.5], [200, 8.5], [200, 0]],
@@ -363,8 +364,9 @@ fn below_min_count(options: Value) -> usize {
 
 #[test]
 fn surfaces_below_the_minimum_area_are_counted() {
-    assert!(below_min_count(json!({})) > 0);
-    assert_eq!(below_min_count(json!({ "minSlipArea": 0 })), 0);
+    assert!(below_min_count(json!({ "minSlipArea": 17 })) > 0);
+    // no limit by default
+    assert_eq!(below_min_count(json!({})), 0);
 }
 
 #[test]

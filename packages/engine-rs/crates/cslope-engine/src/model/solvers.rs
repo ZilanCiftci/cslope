@@ -1874,9 +1874,8 @@ pub fn evaluate_plane(
         }
     }
 
-    // Minimum size of the sliding mass (micro-surfaces are of no interest
-    // and their FOS is arbitrarily high in cohesive soil). The automatic
-    // default has no basis in the literature; see Slope.min_slip_area.
+    // Minimum size of the sliding mass, when the user set one (default 0:
+    // no limit); see Slope.min_slip_area.
     let min_area = slope.min_slip_area();
     if min_area > 0.0 {
         let mut area = 0.0;

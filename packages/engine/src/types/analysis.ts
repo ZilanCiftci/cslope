@@ -159,9 +159,8 @@ export interface AnalysisOptions {
    */
   minSlipDepth?: number;
   /**
-   * Surfaces whose sliding mass is smaller than this (m²) are not
-   * analysed. Null or not set: automatic, 1 % of the squared ground
-   * relief. 0: no limit.
+   * Surfaces whose sliding mass (cross-section area per metre, m²) is
+   * smaller than this are not analysed. 0, null or not set: no limit.
    */
   minSlipArea?: number | null;
   /** Strength reduction by finite elements after the limit equilibrium analysis. */
@@ -244,6 +243,7 @@ export const DEFAULT_ANALYSIS_OPTIONS: AnalysisOptions = {
   tensionCrackWater: 0,
   nonCircularOptimization: false,
   minSlipDepth: 0,
+  minSlipArea: 0,
 };
 
 /** Water table input — one of three modes. */

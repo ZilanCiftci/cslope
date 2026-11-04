@@ -160,7 +160,7 @@ pub fn dangling_boundary_message(n: usize) -> String {
 /// - "frictional-surface-slide": a face of the ground surface in soil with
 ///   c′ = 0, dipping in the analysed direction within the search limits,
 ///   whose infinite-slope factor tan φ′/tan β is below the critical
-///   surface's (surface_slide.rs); the search discards such thin slides.
+///   surface's (surface_slide.rs); the search does not reach such thin slides.
 /// - "shallow-cohesionless-surface": the critical surface is a shallow
 ///   slide, its base on average less than shallow_depth_limit (1 m, or a
 ///   tenth of the ground relief around it when larger) below the ground,
@@ -168,7 +168,7 @@ pub fn dangling_boundary_message(n: usize) -> String {
 ///   undrained strength of a combined analysis): in a loose fill, a road
 ///   bank's edge or a thin cohesionless layer the search finds such a slide
 ///   before any deeper mechanism. Its factor may be the one sought; when the
-///   stability of the slope as a whole is, a minimum slip depth, sliding
+///   stability of the slope as a whole is, a minimum slip depth, slip
 ///   area or entry–exit distance (Options › Search) analyses the deeper
 ///   surfaces. Not with "frictional-surface-slide", which already names the
 ///   face.
@@ -457,7 +457,7 @@ pub fn shallow_cohesionless_message(
         return None;
     }
     Some(format!(
-        "The critical surface (F = {}) is a shallow slide, on average {} m and at most {} m below the ground, with {} % of its base in cohesionless soil{}. If the stability of the slope as a whole is sought, set a minimum slip depth, sliding area or entry–exit distance (Options › Search) to analyse the deeper surfaces.",
+        "The critical surface (F = {}) is a shallow slide, on average {} m and at most {} m below the ground, with {} % of its base in cohesionless soil{}. If the stability of the slope as a whole is sought, set a minimum slip depth, slip area or entry–exit distance (Options › Search) to analyse the deeper surfaces.",
         js::num::to_fixed(fos, 3),
         js::num::to_fixed(mean, 2),
         js::num::to_fixed(deepest, 2),

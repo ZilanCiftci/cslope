@@ -279,7 +279,7 @@ porters. Each names where it lives.
     use reads by truthiness); `partialFactors` that are not truthy are
     `null`, other values of the wrong shape NaN factors (TypeScript's
     message); `blockActiveAngle` / `blockPassiveAngle` are
-    `AngleRangePatch` (`const [lo, hi] = r`); `minSlipArea` keeps `null`;
+    `AngleRangePatch` (`const [lo, hi] = r`); `minSlipArea` accepts `null` (older projects' automatic minimum), which is 0, no limit;
     `intersliceDataPoints` is `IntersliceDataPointsPatch`: TypeScript's
     filter (a point needs two values that `isFinite` accepts; further values
     are left out, every use reads x and f), a value that is not a list is
@@ -768,7 +768,8 @@ porters. Each names where it lives.
   are not meaningful at 1e-9. An optional field with |v| ≤ 1e-12 present
   in one engine only (free water of 1e-16 on V038b) counts as absent.
 - **Whole-search near-ties** (tests/allowlist.toml, 10 entries, each with
-  its cause): the surfaces are evaluated identically (the TypeScript
+  its cause; empty since the minimum slip area defaults to 0, see "Golden
+  results"): the surfaces are evaluated identically (the TypeScript
   critical surface evaluated in Rust gives TypeScript's F bit for bit);
   what differs is plane generation at a discontinuity: (A) a local/refined
   seed entering exactly at the entry limit (`ex < entryLeftX` without
@@ -1343,7 +1344,10 @@ TypeScript implementation is removed (ARCHITECTURE.md §9, Phases 6 and 8).
   compositeBase (8e-6, native only) and counts of surfaces in V036a–d and
   V039. The near-ties found against TypeScript only (V047b, V063, V086b,
   V009c; causes A and C) agree between WebAssembly and native and left the
-  list. An idle-machine benchmark of all 444 checks (TypeScript, Rust as
+  list. Since the minimum slip area defaults to 0 (2026-11-04) the ten
+  cause-B entries have left it too: other circles seed the refinement, and
+  all 356 analyses agree within 1e-10 with the same counts; the list is
+  empty. An idle-machine benchmark of all 444 checks (TypeScript, Rust as
   WebAssembly, native) found every check passing in all three.
 - **Verification.** generate-data.ts on the Rust engine: 414/414 checks,
   34/35 FE references (V056 as before); the published table (4 decimals)

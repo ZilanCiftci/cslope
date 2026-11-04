@@ -9,7 +9,8 @@
  * changes the normal and shear stress alike). It is the limit of shallow
  * planar surfaces of the methods of slices and an upper bound of limit
  * analysis (with c = 0 the slab dissipates nothing). The searches miss it:
- * the methods of slices discard surfaces below the minimum slip area, and
+ * the methods of slices need ever finer trial surfaces to approach it (and
+ * leave out those below a minimum slip area, when one is set), and
  * a finite element mesh cannot represent a slab thinner than its elements
  * (on V052a, rockfill φ′ = 45° on a 30.9° face, F = 1.67 against 1.78 by
  * strength reduction and 1.88 in another program's verification manual).
