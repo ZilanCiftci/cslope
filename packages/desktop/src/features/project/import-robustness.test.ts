@@ -58,9 +58,17 @@ const importers: Record<Kind, (bytes: Uint8Array, name: string) => Promise<{ def
 /** Text that is not for a user: internal errors of the runtime or the parser. */
 const INTERNAL = /Cannot read|Cannot set|undefined|null\b|is not a function|is not iterable|is not an object|Maximum call stack|Invalid array length|Unexpected token|in JSON at|\bat [\w.<>]+ \(|\.ts:\d|\bNaN\b|\[object /;
 
+/**
+ * The time budget counts this process's own CPU time where Node reports it:
+ * it guards against pathological parsing (a deep nesting, a huge count), and
+ * wall-clock time on a loaded machine (other test runs, builds) is not that.
+ */
+const cpuUsage = (globalThis as { process?: { cpuUsage?: (previous?: { user: number; system: number }) => { user: number; system: number } } }).process?.cpuUsage;
+
 /** Check one input; returns a description of what went wrong, or nothing. */
 async function check(kind: Kind, bytes: Uint8Array, label: string, limitMs = 5000): Promise<string | undefined> {
   const t0 = performance.now();
+  const cpu0 = cpuUsage?.();
   let out: Awaited<ReturnType<(typeof importers)[Kind]>> | undefined;
   let err: unknown;
   try {
@@ -68,8 +76,10 @@ async function check(kind: Kind, bytes: Uint8Array, label: string, limitMs = 500
   } catch (e) {
     err = e;
   }
-  const ms = performance.now() - t0;
-  if (ms > limitMs) return `${label}: took ${Math.round(ms)} ms`;
+  const wallMs = performance.now() - t0;
+  const cpu = cpu0 && cpuUsage ? cpuUsage(cpu0) : undefined;
+  const ms = cpu ? (cpu.user + cpu.system) / 1000 : wallMs;
+  if (ms > limitMs) return `${label}: took ${Math.round(ms)} ms${cpu ? " of CPU time" : ""}`;
   if (err !== undefined) {
     if (!(err instanceof Error)) return `${label}: threw a non-Error ${String(err)}`;
     if (!err.message || err.message.trim() === "") return `${label}: empty error message`;
