@@ -2,7 +2,7 @@ import { create } from "zustand";
 import { temporal } from "zundo";
 import type { AppState, ViewLock } from "./types";
 import { isProjectDirty, markProjectClean, withoutPaperViewport } from "./unsaved";
-import { modelViewLock, sameViewLock, viewLockContains } from "../features/view/viewLock";
+import { marksClearOfTitleBlock, modelViewLock, sameViewLock, viewLockContains } from "../features/view/viewLock";
 import { paperContentOf } from "../features/view/extents";
 import { createAnalysisSlice } from "./slices/analysisSlice";
 import { createCanvasToolbarSlice } from "./slices/canvasToolbarSlice";
@@ -134,7 +134,8 @@ export function restoringHistoryStep(step: () => void): void {
 useAppStore.subscribe((state, prev) => {
   if (restoringHistory) return;
   // A result whose circle centre or FOS label (newly shown) falls outside a locked
-  // view that shows the whole model: widen the frame to take them in. Only
+  // view that shows the whole model, or into the title block at its top:
+  // widen the frame to take them in below the block. Only
   // a frame the app fitted itself before the change (with the marks shown
   // then, or without any, as a model starts), not one the user set.
   const marksShown = (s: AppState) => [s.resultViewSettings.showCentreMarker, s.resultViewSettings.showFosLabel].join();
@@ -150,7 +151,7 @@ useAppStore.subscribe((state, prev) => {
     const automatic = (l: ViewLock) =>
       sameViewLock(l, modelViewLock(prevContent, prev.resultViewSettings)) ||
       sameViewLock(l, modelViewLock({ ...prevContent, marks: [] }, prev.resultViewSettings));
-    if (lock && marks.length > 0 && !viewLockContains(lock, marks.map((m) => m.at)) && automatic(lock)) {
+    if (lock && marks.length > 0 && !marksClearOfTitleBlock(lock, state.resultViewSettings.annotations, marks) && automatic(lock)) {
       const history = useAppStore.temporal.getState();
       const tracking = history.isTracking;
       // Running an analysis is not an unsaved change: a clean project

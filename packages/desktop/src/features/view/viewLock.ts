@@ -1,5 +1,6 @@
 import type { Annotation, ResultViewSettings, ViewLock } from "../../store/types";
 import { PLOT_MARGINS } from "../../store/defaults";
+import { ANNOTATION_DEFAULT_FONT_SIZE, ANNOTATION_LINE_HEIGHT, ANNOTATION_SCALE_DIVISOR } from "../rendering/style-spec";
 import { getPlotAspectRatio } from "./paper";
 import { boundsOf, paperContentBounds, type Bounds, type PaperContent } from "./extents";
 
@@ -129,15 +130,58 @@ export function paperViewLock(
  */
 export const TITLE_BLOCK_BOTTOM = 0.22;
 
+/** Space kept between the lowest line of a longer title block and the model, as a share of the paper height. */
+const TITLE_BLOCK_GAP = 0.01;
+
+/**
+ * Bottom of a text annotation that hangs from its point (top-left, the
+ * default), as a share of the paper height: its lines at their font size,
+ * which scales with the shorter side of the paper (so on a landscape
+ * sheet, the height, and less on a portrait one). A tag (#Title) counts
+ * as one line.
+ */
+function textBottom(a: AnnotationExtent): number {
+  if (a.type !== "text" || (a.anchor && !a.anchor.startsWith("top"))) return a.y;
+  const lines = (a.text ?? "").split("\n").length;
+  return a.y + (lines * (a.fontSize ?? ANNOTATION_DEFAULT_FONT_SIZE) * ANNOTATION_LINE_HEIGHT) / ANNOTATION_SCALE_DIVISOR;
+}
+
+/** What `paperTopBand` reads of an annotation. */
+type AnnotationExtent = Pick<Annotation, "y"> & Partial<Pick<Annotation, "type" | "text" | "fontSize" | "anchor">>;
+
 /**
  * Share of the plot height at its top that `paperViewLock` keeps free of the
  * model for the annotations at the top of the paper: down to the bottom of
  * the title block when an annotation sits there (the default layout, the
- * examples), none otherwise (the verification problems).
+ * examples), or of its lowest line when a longer block runs further down
+ * (the benchmarks opened from the Help menu, with their reference values);
+ * none otherwise (the verification problems' plain plots).
  */
-export function paperTopBand(annotations: readonly Pick<Annotation, "y">[]): number {
-  if (!annotations.some((a) => a.y < TITLE_BLOCK_BOTTOM)) return 0;
-  return (TITLE_BLOCK_BOTTOM - PLOT_MARGINS.T) / (1 - PLOT_MARGINS.T - PLOT_MARGINS.B);
+export function paperTopBand(annotations: readonly AnnotationExtent[]): number {
+  const top = annotations.filter((a) => a.y < TITLE_BLOCK_BOTTOM);
+  if (top.length === 0) return 0;
+  const textEnd = Math.max(...top.map(textBottom));
+  const bottom = Math.max(TITLE_BLOCK_BOTTOM, textEnd + TITLE_BLOCK_GAP);
+  return (bottom - PLOT_MARGINS.T) / (1 - PLOT_MARGINS.T - PLOT_MARGINS.B);
+}
+
+/**
+ * Whether the marks of a result (the centre or FOS label of its critical
+ * surface, PaperContent.marks) are drawn whole inside a locked view and
+ * below its title block (paperTopBand), clear of the title, the FOS line
+ * and the reference values. Their size in pixels is taken at the smallest
+ * paper (REFERENCE_PAPER_WIDTH_PX), where they take the most room.
+ */
+export function marksClearOfTitleBlock(
+  lock: ViewLock,
+  annotations: readonly AnnotationExtent[],
+  marks: NonNullable<PaperContent["marks"]>,
+): boolean {
+  const band = Math.min(0.8, paperTopBand(annotations));
+  const height = lock.topRight[1] - lock.bottomLeft[1];
+  const worldPerPx = (lock.topRight[0] - lock.bottomLeft[0]) / (REFERENCE_PAPER_WIDTH_PX * (1 - PLOT_MARGINS.L - PLOT_MARGINS.R));
+  const free: ViewLock = { bottomLeft: lock.bottomLeft, topRight: [lock.topRight[0], lock.topRight[1] - band * height] };
+  return marks.every(({ at: [x, y], rightPx, upPx }) => viewLockContains(free, [[x, y], [x + rightPx * worldPerPx, y + upPx * worldPerPx]]));
 }
 
 /**

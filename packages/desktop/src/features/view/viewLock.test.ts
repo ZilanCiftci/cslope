@@ -3,6 +3,7 @@ import { restoringHistoryStep, useAppStore } from "../../store/app-store";
 import { performUndo } from "../../store/selectors";
 import { isProjectDirty, markProjectClean } from "../../store/unsaved";
 import {
+  marksClearOfTitleBlock,
   modelViewLock,
   PAPER_MARGIN_FRACTION,
   paperTopBand,
@@ -92,6 +93,29 @@ describe("paperTopBand", () => {
     expect(paperTopBand(DEFAULT_RESULT_VIEW_SETTINGS.annotations)).toBeGreaterThan(0);
     expect(paperTopBand([])).toBe(0);
     expect(paperTopBand([{ y: 0.9 }])).toBe(0);
+  });
+
+  it("reaches down to the last line of a longer title block", () => {
+    const base = paperTopBand(DEFAULT_RESULT_VIEW_SETTINGS.annotations);
+    // Three lines of 11 pt below 0.2: down to about 0.27 of the paper.
+    const block = [{ y: 0.08, type: "text" as const, text: "#Title", fontSize: 24 }, { y: 0.2, type: "text" as const, text: "a\nb\nc", fontSize: 11 }];
+    expect(paperTopBand(block)).toBeGreaterThan(base);
+    expect(paperTopBand(block)).toBeCloseTo((0.2 + (3 * 11 * 1.2) / 600 + 0.01 - 0.05) / 0.9, 9);
+  });
+});
+
+describe("marksClearOfTitleBlock", () => {
+  const lock = { bottomLeft: [0, 0], topRight: [100, 70] } as ViewLock;
+  const annotations = DEFAULT_RESULT_VIEW_SETTINGS.annotations;
+  const top = 70 * (1 - paperTopBand(annotations));
+  const label = (y: number) => [{ at: [50, y] as [number, number], rightPx: 40, upPx: 14 }];
+
+  it("takes a FOS label below the title block as clear, and one in it or above the view as not", () => {
+    expect(marksClearOfTitleBlock(lock, annotations, label(top - 10))).toBe(true);
+    expect(marksClearOfTitleBlock(lock, annotations, label(top - 0.5))).toBe(false);
+    expect(marksClearOfTitleBlock(lock, annotations, label(80))).toBe(false);
+    // Without a title block the whole view is free.
+    expect(marksClearOfTitleBlock(lock, [], label(65))).toBe(true);
   });
 });
 
