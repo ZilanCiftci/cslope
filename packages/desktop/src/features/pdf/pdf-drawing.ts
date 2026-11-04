@@ -400,8 +400,20 @@ export function drawMaterialBoundariesClipped(
 
 /** Head lines (teal, as on the canvas). */
 const HEAD_LINE_RGB: [number, number, number] = [0, 137, 123];
+/** Their labels, a darker teal for contrast on white (as on the light canvas). */
+const HEAD_LABEL_RGB: [number, number, number] = [0, 121, 107];
 /** Reference lines (faint grey). */
 const REFERENCE_LINE_RGB: [number, number, number] = [176, 190, 197];
+
+/**
+ * A white plate behind a right-aligned 6.5 pt label (baseline at `y`), so
+ * the ground line and the soil fill under it do not strike through it.
+ */
+function labelPlate(pdf: jsPDF, text: string, right: number, y: number) {
+  const width = pdf.getTextWidth(text);
+  pdf.setFillColor(255, 255, 255);
+  pdf.rect(right - width - 0.3, y - 1.9, width + 0.6, 2.5, "F");
+}
 
 /** A small label at the right end of a line, above it. */
 function lineEndLabel(pdf: jsPDF, tf: PdfTransform, points: [number, number][], text: string, rgb: [number, number, number]) {
@@ -409,6 +421,7 @@ function lineEndLabel(pdf: jsPDF, tf: PdfTransform, points: [number, number][], 
   const [lx, ly] = pts.reduce((a, b) => (b[0] > a[0] ? b : a));
   setSansFont(pdf, "normal");
   pdf.setFontSize(6.5);
+  labelPlate(pdf, text, lx - 0.6, ly - 0.6);
   pdf.setTextColor(...rgb);
   pdf.text(text, lx - 0.6, ly - 0.6, { align: "right" });
   pdf.setTextColor(0, 0, 0);
@@ -446,8 +459,11 @@ export function drawWaterExtrasPdf(
       return [{ text, right: lx - 0.6, top: ly + 0.1, width: pdf.getTextWidth(text), height: 2.5 }];
     });
     const tops = staggerLabelTops(labels);
-    pdf.setTextColor(...HEAD_LINE_RGB);
-    labels.forEach((l, i) => pdf.text(l.text, l.right, tops[i] + 2.3, { align: "right" }));
+    labels.forEach((l, i) => {
+      labelPlate(pdf, l.text, l.right, tops[i] + 2.3);
+      pdf.setTextColor(...HEAD_LABEL_RGB);
+      pdf.text(l.text, l.right, tops[i] + 2.3, { align: "right" });
+    });
     pdf.setTextColor(0, 0, 0);
   }
   if (waterBefore && waterBefore.length >= 2) {

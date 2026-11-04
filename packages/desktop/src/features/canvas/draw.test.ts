@@ -479,6 +479,8 @@ describe("drawCanvas — edit mode", () => {
     const refStroke = rec.strokes().find(isRef);
     expect(refStroke?.state.globalAlpha).toBeLessThan(1);
     expect(rec.callsOf("fillText").some((c) => c.args[0] === "head line 1")).toBe(true);
+    // On a halo, so the ground line and the soil fill do not strike through it.
+    expect(rec.callsOf("strokeText").some((c) => c.args[0] === "head line 1")).toBe(true);
     const none = draw();
     expect(none.strokes().some(isHead)).toBe(false);
     expect(none.callsOf("fillText").some((c) => c.args[0] === "head line 1")).toBe(false);
