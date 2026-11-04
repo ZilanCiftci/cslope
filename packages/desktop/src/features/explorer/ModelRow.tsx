@@ -1,3 +1,4 @@
+import { Box } from "lucide-react";
 import type React from "react";
 import type { ModelEntry } from "../../store/types";
 
@@ -99,24 +100,13 @@ export function ModelRow({
       aria-selected={isActive || isSelected}
       aria-label={model.name}
     >
-      {/* A section glyph in the text colour: the ground profile, and the slip
-          surface once the model has a result. */}
-      <svg
-        width="16"
-        height="16"
-        viewBox="0 0 16 16"
+      <Box
+        size={16}
+        strokeWidth={1.75}
         className="shrink-0"
         aria-hidden
-        fill="none"
-        stroke={isActive ? "var(--color-vsc-text-bright)" : "var(--color-vsc-text-muted)"}
-        strokeWidth="1.3"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      >
-        <path d="M1.5 12.5h3l4-5.5h6" />
-        <path d="M1.5 12.5h13" opacity="0.45" />
-        {hasResult && <path d="M3.6 12.3c2-3.3 5-4.2 8.2-3.6" opacity="0.85" />}
-      </svg>
+        color={isActive ? "var(--color-vsc-text-bright)" : hasResult ? "var(--color-vsc-text)" : "var(--color-vsc-text-muted)"}
+      />
 
       {isEditing ? (
         <input
