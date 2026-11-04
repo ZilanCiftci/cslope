@@ -197,6 +197,30 @@ describe("ResultsMenu", () => {
     expect(screen.queryByLabelText("Maximum FOS shown")).toBeNull();
   });
 
+  it("offers the custom surfaces toggle in the Surfaces menu only with custom surfaces in the result, off by default", async () => {
+    renderMenu();
+    await userEvent.click(screen.getByTitle(/^Surfaces:/));
+    expect(screen.queryByLabelText("Show custom surfaces")).toBeNull();
+    fireEvent.mouseDown(document.body);
+
+    const base = fakeResult();
+    const custom = { ...base.criticalSurface!, cy: 25, fos: 1.5, customPlane: { kind: "circle" as const, index: 0 } };
+    act(() =>
+      useAppStore.setState({
+        result: { ...base, allSurfaces: [base.criticalSurface!, custom], customSurfaces: [{ kind: "circle", index: 0, surface: custom }] },
+        runState: "done",
+      }),
+    );
+    await userEvent.click(screen.getByTitle(/^Surfaces:/));
+    const toggle = screen.getByLabelText("Show custom surfaces");
+    expect(toggle).not.toBeChecked();
+    expect(rvs().showCustomSurfaces ?? false).toBe(false);
+    await userEvent.click(toggle);
+    expect(rvs().showCustomSurfaces).toBe(true);
+    await userEvent.click(screen.getByLabelText("Show custom surfaces"));
+    expect(rvs().showCustomSurfaces).toBe(false);
+  });
+
   it("adds annotations", async () => {
     renderMenu();
     const count = store().resultViewSettings.annotations.length;

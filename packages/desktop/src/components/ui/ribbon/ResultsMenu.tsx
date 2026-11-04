@@ -332,6 +332,25 @@ export function ResultsMenu({ isOpen, onActivate, panelHost }: Props) {
                           {item.label}
                         </button>
                       ))}
+                      {(result?.customSurfaces?.length ?? 0) > 0 && (
+                        <label
+                          className="flex items-center gap-2 px-3 py-1.5 text-[11px] cursor-pointer whitespace-nowrap"
+                          style={{
+                            color: "var(--color-vsc-text)",
+                            borderTop: "1px solid var(--color-vsc-border)",
+                          }}
+                          title="Draw the custom search planes' surfaces, dashed, each with its factor of safety"
+                        >
+                          <input
+                            type="checkbox"
+                            className="accent-blue-500"
+                            checked={rvs.showCustomSurfaces === true}
+                            onChange={(e) => setRvs({ showCustomSurfaces: e.target.checked })}
+                            aria-label="Show custom surfaces"
+                          />
+                          Custom surfaces
+                        </label>
+                      )}
                       {rvs.surfaceDisplay === "filter" && (
                         <label
                           className="flex items-center gap-2 px-3 py-1.5 text-[11px]"

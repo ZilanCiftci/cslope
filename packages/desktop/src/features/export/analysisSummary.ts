@@ -20,7 +20,14 @@ import type {
   UdlExcessPorePressure,
 } from "../../store/types";
 import { mainPiezoLine } from "../../utils/piezo";
-import { closestPairWarning, discardedBySizeText, surfaceCountText } from "../../utils/result-summary";
+import {
+  closestPairWarning,
+  customSurfaceGeometryText,
+  customSurfaceName,
+  customSurfaceValueText,
+  discardedBySizeText,
+  surfaceCountText,
+} from "../../utils/result-summary";
 
 /**
  * What an analysis was run with and what it found, as text for the summary
@@ -299,6 +306,13 @@ export function buildAnalysisSummary(input: AnalysisSummaryInput): SummarySectio
   if (result.discardedBySize) {
     res.push({ label: "Below minimum size", value: discardedBySizeText(result.discardedBySize) });
   }
+  // The custom search planes of the run, each with its factor or why it has none.
+  (result.customSurfaces ?? []).forEach((c, i) => {
+    res.push({
+      label: customSurfaceName(i),
+      value: c.surface ? `${customSurfaceValueText(c)} (${customSurfaceGeometryText(c)})` : customSurfaceValueText(c),
+    });
+  });
   const closestPair = closestPairWarning(cs);
   if (closestPair) {
     res.push({ label: "Warning", value: closestPair });

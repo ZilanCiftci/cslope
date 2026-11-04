@@ -689,4 +689,11 @@ describe("normalizeResultView (also used for view templates)", () => {
     expect("pdfSummaryPages" in unset).toBe(false);
     expect("pdfTitleLine" in unset).toBe(false);
   });
+
+  it("keeps the custom surfaces display only when it is on (off is the default)", () => {
+    expect(normalizeResultView({ showCustomSurfaces: true }).showCustomSurfaces).toBe(true);
+    expect("showCustomSurfaces" in normalizeResultView({})).toBe(false);
+    expect("showCustomSurfaces" in normalizeResultView({ showCustomSurfaces: false })).toBe(false);
+    expect("showCustomSurfaces" in normalizeResultView({ showCustomSurfaces: "yes" })).toBe(false);
+  });
 });

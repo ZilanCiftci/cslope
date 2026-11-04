@@ -5,6 +5,7 @@ import {
   drawAnnotations,
   drawClosedPolyline,
   drawCriticalSurface,
+  drawCustomSurfaces,
   drawEntryExitMarkers,
   drawGrid,
   drawLineLoads,
@@ -25,6 +26,7 @@ import { newPile, newReinforcement } from "../../utils/reinforcement";
 import { fosColor } from "../../utils/fos-color";
 import { parseColor } from "./pdf-helpers";
 import {
+  CUSTOM_SURFACE_COLOR,
   ENTRY_DOT_COLOR,
   EXIT_DOT_COLOR,
   LINE_LOAD_COLOR,
@@ -685,6 +687,54 @@ describe("drawSlipSurfaces", () => {
     const rec = recorder();
     drawSlipSurfaces(rec.pdf, tf, res, rvs({ surfaceDisplay: "filter", fosFilterMax: 2 }));
     expect(rec.of("stroke")).toHaveLength(1);
+  });
+});
+
+describe("drawCustomSurfaces", () => {
+  const custom = surface({ cy: 16, fos: 1.5, customPlane: { kind: "circle", index: 0 } });
+  // The same centre as the critical surface: its label would stand on the critical one's.
+  const onCritical = surface({ radius: R + 1, fos: 1.75, customPlane: { kind: "circle", index: 1 } });
+  const res = result({
+    allSurfaces: [surface(), custom, onCritical],
+    maxFOS: 1.75,
+    customSurfaces: [
+      { kind: "circle", index: 0, surface: custom },
+      { kind: "circle", index: 1, surface: onCritical },
+      { kind: "circle", index: 2, reason: "the circle does not cut the ground twice" },
+      // The critical surface itself as a custom plane: drawn as critical, not again.
+      { kind: "polyline", index: 0, surface: surface({ customPlane: { kind: "polyline", index: 0 } }) },
+    ],
+  });
+
+  it("draws nothing unless asked, whatever the surface display", () => {
+    const rec = recorder();
+    drawCustomSurfaces(rec.pdf, tf, res, rvs({ surfaceDisplay: "all", showFosLabel: true }));
+    expect(rec.calls).toHaveLength(0);
+  });
+
+  it("draws the custom surfaces dashed in their colour, then their labels clear of the critical label", () => {
+    const rec = recorder();
+    drawCustomSurfaces(rec.pdf, tf, res, rvs({ showCustomSurfaces: true }));
+    expect(rec.of("stroke")).toHaveLength(2);
+    expect(rec.of("setDrawColor")[0].args).toEqual(CUSTOM_SURFACE_COLOR.rgb);
+    expect(rec.of("setLineDashPattern").map((c) => c.args)).toEqual([
+      [[2, 1.25], 0],
+      [[], 0],
+    ]);
+    expect(rec.texts()).toEqual([]);
+
+    const labelled = recorder();
+    drawCustomSurfaces(labelled.pdf, tf, res, rvs({ showCustomSurfaces: true, showFosLabel: true }));
+    expect(labelled.texts()).toEqual(["1.500", "1.750"]);
+    const [first, second] = labelled.of("text");
+    const [ccx, ccy] = tf.worldToPdf(CIRCLE.cx, 16);
+    expect(first.args[1]).toBe(ccx + 3);
+    expect(first.args[2]).toBe(ccy - 1);
+    // Moved down one label height (5.5 mm) and a gap (0.5 mm) from the critical label at (cx, cy).
+    const [, cy] = tf.worldToPdf(CIRCLE.cx, CIRCLE.cy);
+    expect(second.args[1]).toBe(ccx + 3);
+    expect(second.args[2]).toBeCloseTo(cy + 6 - 1, 9);
+    expect(labelled.of("setTextColor").map((c) => c.args)).toEqual([CUSTOM_SURFACE_COLOR.rgb, CUSTOM_SURFACE_COLOR.rgb]);
   });
 });
 

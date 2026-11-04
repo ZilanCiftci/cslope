@@ -1,4 +1,5 @@
 // Text helpers for the result summary.
+import type { CustomSurfaceResult } from "@cslope/engine";
 
 /**
  * Number of analysed surfaces and how many of them have FOS below 1.0,
@@ -64,3 +65,22 @@ export const DISCARDED_BY_SIZE_TITLE =
 /** Tooltip for {@link nonConvergedText}. */
 export const NON_CONVERGED_TITLE =
   "For these trial surfaces the method found no factor of safety that satisfies equilibrium within the iteration limits, so they are left out of the minimum. A few are normal; many can point to a search range that reaches unrealistic surfaces.";
+
+/** The name of a custom search plane in the result, by its place in the result's list. */
+export function customSurfaceName(index: number): string {
+  return `Custom surface ${index + 1}`;
+}
+
+/** What a custom search plane is, as far as the result tells: its circle or polyline. */
+export function customSurfaceGeometryText(c: CustomSurfaceResult): string {
+  const s = c.surface;
+  const fmt = (v: number) => v.toFixed(2);
+  if (s && c.kind === "circle") return `circle, centre (${fmt(s.cx)}, ${fmt(s.cy)}) m, radius ${fmt(s.radius)} m`;
+  if (s?.points) return `non-circular, ${s.points.length} points`;
+  return c.kind === "circle" ? "circle" : "non-circular";
+}
+
+/** The factor of safety of a custom search plane ("F = 1.234"), or why it has none. */
+export function customSurfaceValueText(c: CustomSurfaceResult): string {
+  return c.surface ? `F = ${c.surface.fos.toFixed(3)}` : `no solution: ${c.reason ?? "no factor of safety"}`;
+}

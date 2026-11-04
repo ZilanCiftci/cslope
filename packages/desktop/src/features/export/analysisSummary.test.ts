@@ -189,4 +189,17 @@ describe("analysis summary", () => {
     ).toBe("soil Su = 10 kPa; columns Su = 100 kPa, area ratio 0.2, drained c' = 20 kPa, φ' = 30°");
     expect(strengthText({ kind: "impenetrable", unitWeight: 22 })).toContain("impenetrable");
   });
+
+  it("lists each custom surface with its factor of safety or why it has none", () => {
+    const customSurfaces = [
+      { kind: "circle", index: 0, surface: { ...RESULT.criticalSurface, fos: 0.664, customPlane: { kind: "circle", index: 0 } } },
+      { kind: "circle", index: 1, reason: "the circle does not cut the ground twice" },
+      { kind: "polyline", index: 0, surface: { ...RESULT.criticalSurface, radius: 0, fos: 1.5, points: [[1, 5], [8, 1], [20, 0]] } },
+    ];
+    const s = buildAnalysisSummary(input({ result: { ...RESULT, customSurfaces } as unknown as AnalysisResult }));
+    expect(value(s, "Result", "Custom surface 1")).toBe("F = 0.664 (circle, centre (10.00, 20.00) m, radius 15.00 m)");
+    expect(value(s, "Result", "Custom surface 2")).toBe("no solution: the circle does not cut the ground twice");
+    expect(value(s, "Result", "Custom surface 3")).toBe("F = 1.500 (non-circular, 3 points)");
+    expect(section(buildAnalysisSummary(input()), "Result").rows!.some((r) => r.label.startsWith("Custom surface"))).toBe(false);
+  });
 });

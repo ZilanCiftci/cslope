@@ -104,6 +104,38 @@ describe("ResultSidebar summary", () => {
     expect(screen.getByText(/2 slices of the critical surface have negative effective normal force/)).toBeInTheDocument();
   });
 
+  it("lists each custom surface with its factor of safety or why it has none", () => {
+    act(() =>
+      useAppStore.setState({
+        result: result({
+          customSurfaces: [
+            { kind: "circle", index: 0, surface: { ...surface(0.664), customPlane: { kind: "circle", index: 0 } } },
+            { kind: "circle", index: 1, reason: "the circle does not cut the ground twice" },
+            {
+              kind: "polyline",
+              index: 0,
+              surface: { ...surface(1.5), radius: 0, points: [[2, 8], [10, 3], [18, 2]], customPlane: { kind: "polyline", index: 0 } },
+            },
+          ] as unknown as AnalysisResult["customSurfaces"],
+        }),
+      }),
+    );
+    render(<ResultSidebar />);
+    const rows = screen.getAllByTestId("custom-surface-row");
+    expect(rows.map((r) => r.textContent)).toEqual([
+      "Custom surface 1F = 0.664",
+      "Custom surface 2no solution: the circle does not cut the ground twice",
+      "Custom surface 3F = 1.500",
+    ]);
+    expect(screen.getByText("Custom surface 1")).toHaveAttribute("title", "circle, centre (10.00, 12.00) m, radius 10.00 m");
+    expect(screen.getByText("Custom surface 2")).toHaveAttribute("title", "circle");
+    expect(screen.getByText("Custom surface 3")).toHaveAttribute("title", "non-circular, 3 points");
+    cleanup();
+    act(() => useAppStore.setState({ result: result() }));
+    render(<ResultSidebar />);
+    expect(screen.queryByTestId("custom-surface-row")).toBeNull();
+  });
+
   it("marks the finite element results as experimental", () => {
     act(() =>
       useAppStore.setState({

@@ -25,6 +25,7 @@ import {
   POND_ARROW_WIDTH_PX,
   POND_OPACITY,
   SLIP_SURFACE_OPACITY,
+  CUSTOM_SURFACE_COLOR,
   UDL_LOAD_COLOR,
 } from "../rendering/style-spec";
 import { REINFORCEMENT_COLOR, PILE_COLOR } from "./reinforcement-draw";
@@ -1406,6 +1407,53 @@ describe("drawCanvas — result mode", () => {
 
     const criticalOnly = drawResult({ result: res });
     expect(criticalOnly.strokes().filter((p) => p.state.globalAlpha === SLIP_SURFACE_OPACITY)).toHaveLength(0);
+  });
+
+  it("draws the custom surfaces dashed with their own FOS labels only when asked, clear of the critical label", () => {
+    const custom = surface({ cx: 15, cy: 16, fos: 1.5, customPlane: { kind: "circle", index: 0 } });
+    // The same centre as the critical surface: its label would stand on the critical one's.
+    const onCritical = surface({ radius: R + 1, fos: 1.75, customPlane: { kind: "circle", index: 1 } });
+    const res = result({
+      allSurfaces: [surface(), custom, onCritical],
+      maxFOS: 1.75,
+      customSurfaces: [
+        { kind: "circle", index: 0, surface: custom },
+        { kind: "circle", index: 1, surface: onCritical },
+        { kind: "circle", index: 2, reason: "the circle does not cut the ground twice" },
+        // The critical surface itself as a custom plane: drawn as critical, not again.
+        { kind: "polyline", index: 0, surface: surface({ customPlane: { kind: "polyline", index: 0 } }) },
+      ],
+    });
+    const dashed = (rec: ReturnType<typeof draw>) =>
+      rec.strokes(CUSTOM_SURFACE_COLOR.hex).filter((p) => p.state.lineDash.length > 0 && p.state.lineWidth === 1.5);
+    // Off by default, whatever the surface display.
+    expect(dashed(drawResult({ result: res }))).toHaveLength(0);
+    expect(dashed(drawResult({ result: res, resultViewSettings: rvs({ surfaceDisplay: "all" }) }))).toHaveLength(0);
+    expect(drawResult({ result: res, resultViewSettings: rvs({ showFosLabel: true }) }).findText("1.500")).toBeUndefined();
+
+    const on = drawResult({ result: res, resultViewSettings: rvs({ showCustomSurfaces: true, showFosLabel: true }) });
+    const lines = dashed(on);
+    expect(lines).toHaveLength(2);
+    expect(lines[0].state.lineDash).toEqual([8, 5]);
+    const [ccx, ccy] = toC(15, 16);
+    for (const [x, y] of pathPoints(lines[0])) expect(Math.hypot(x - ccx, y - ccy)).toBeCloseTo(R * SCALE, 6);
+    // Each on a wider solid halo; the critical surface is still the one bold solid arc.
+    expect(on.strokes().filter((p) => p.state.lineDash.length === 0 && p.state.lineWidth === 4)).toHaveLength(2);
+    expect(on.strokes().filter((p) => p.state.lineWidth === 2 && pathPoints(p).length > 20)).toHaveLength(1);
+    // Labels in the custom colour: the first at its centre, the second moved below the critical label.
+    const label = on.findText("1.500")!;
+    expect(label.state.fillStyle).toBe(CUSTOM_SURFACE_COLOR.hex);
+    expect(label.x).toBe(ccx + 10);
+    expect(label.y).toBe(ccy - 4);
+    const critical = on.findText("1.234")!;
+    const moved = on.findText("1.750")!;
+    expect(moved.x).toBe(critical.x);
+    expect(moved.y).toBe(critical.y + 16);
+    expect(on.depth()).toBe(0);
+    // Without the FOS label, the surfaces but no labels.
+    const noLabel = drawResult({ result: res, resultViewSettings: rvs({ showCustomSurfaces: true }) });
+    expect(dashed(noLabel)).toHaveLength(2);
+    expect(noLabel.findText("1.500")).toBeUndefined();
   });
 
   it("draws reinforcement forces on the critical surface", () => {
