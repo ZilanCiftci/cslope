@@ -37,7 +37,6 @@ import {
 import type {
   Annotation,
   AnalysisLimitsState,
-  Annotation,
   AppState,
   CoordinateExpression,
   LineLoadRow,

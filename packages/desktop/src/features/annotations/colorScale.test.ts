@@ -1,10 +1,10 @@
 import { describe, expect, it } from "vitest";
 import { colorBarRange, colorBarScheme, colorScaleOf, colorScaleOfBar, firstColorBar } from "./colorScale";
 import { fosColor, fosSchemeColorAt } from "../../utils/fos-color";
-import type { Annotation } from "../../store/types";
+import type { PaperAnnotation } from "../../store/types";
 
 const res = { minFOS: 1.234, maxFOS: 9 };
-const bar = (over: Partial<Annotation> = {}): Annotation => ({ id: "c", type: "color-bar", x: 0.8, y: 0.3, ...over });
+const bar = (over: Partial<PaperAnnotation> = {}): PaperAnnotation => ({ id: "c", type: "color-bar", x: 0.8, y: 0.3, ...over });
 
 describe("colorScaleOfBar", () => {
   it("is the automatic range and the default scheme without a bar or settings", () => {
@@ -57,7 +57,7 @@ describe("colorScaleOfBar", () => {
 
 describe("colorScaleOf", () => {
   it("takes the first colour bar of the view", () => {
-    const text: Annotation = { id: "t", type: "text", x: 0, y: 0, text: "x" };
+    const text: PaperAnnotation = { id: "t", type: "text", x: 0, y: 0, text: "x" };
     const a = bar({ id: "a", scaleMode: "fixed", scaleMin: 1, scaleMax: 3, scheme: "viridis" });
     const b = bar({ id: "b", scaleMode: "fixed", scaleMin: 0, scaleMax: 1 });
     expect(firstColorBar([text, a, b])).toBe(a);
