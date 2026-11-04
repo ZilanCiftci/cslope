@@ -12,7 +12,11 @@ export type PointHit =
   | { kind: "limit"; handle: LimitHandle }
   | { kind: "udl"; udlId: string; handle: UdlHandle }
   | { kind: "lineLoad"; loadId: string }
-  | { kind: "annotation"; annoId: string };
+  | { kind: "annotation"; annoId: string }
+  /** A custom search circle: its centre dot, or its rim (drag sets the radius). */
+  | { kind: "customCircle"; planeId: string; handle: "centre" | "rim" }
+  /** A vertex of a custom non-circular surface. */
+  | { kind: "customVertex"; planeId: string; pointIndex: number };
 
 export type EdgeHit =
   | { kind: "external"; insertIndex: number; snapPoint: [number, number] }
@@ -25,6 +29,13 @@ export type EdgeHit =
   | {
       kind: "piezo";
       lineId: string;
+      insertIndex: number;
+      snapPoint: [number, number];
+    }
+  /** A segment of a custom non-circular surface. */
+  | {
+      kind: "customPlane";
+      planeId: string;
       insertIndex: number;
       snapPoint: [number, number];
     };

@@ -47,6 +47,15 @@ interface ContextMenuParams {
   setSelectedPoint: (idx: number | null) => void;
   setSelectedMaterialBoundary: (boundaryId: string | null) => void;
   setMaterialPicker: (picker: MaterialPickerState | null) => void;
+  customSearchPlanes: { id: string; points?: [number, number][] }[];
+  removeCustomSearchPlane: (id: string) => void;
+  removeCustomPlanePoint: (id: string, pointIndex: number) => void;
+  insertCustomPlanePointAt: (
+    id: string,
+    pointIndex: number,
+    point: [number, number],
+  ) => void;
+  setSelectedCustomPlane: (id: string | null) => void;
 }
 
 export function useContextMenu(params: ContextMenuParams) {
@@ -72,6 +81,11 @@ export function useContextMenu(params: ContextMenuParams) {
     setSelectedPoint,
     setSelectedMaterialBoundary,
     setMaterialPicker,
+    customSearchPlanes,
+    removeCustomSearchPlane,
+    removeCustomPlanePoint,
+    insertCustomPlanePointAt,
+    setSelectedCustomPlane,
   } = params;
 
   const [contextMenu, setContextMenu] = useState<ContextMenuState | null>(null);
@@ -255,6 +269,40 @@ export function useContextMenu(params: ContextMenuParams) {
               setContextMenu(null);
             },
           });
+        } else if (pointHit.kind === "customVertex") {
+          setSelectedCustomPlane(pointHit.planeId);
+          const plane = customSearchPlanes.find((p) => p.id === pointHit.planeId);
+          const count = plane?.points?.length ?? 0;
+          items.push({
+            label: "Delete Point",
+            danger: true,
+            // A non-circular surface keeps at least two points.
+            disabled: count <= 2,
+            action: () => {
+              if (count > 2) {
+                removeCustomPlanePoint(pointHit.planeId, pointHit.pointIndex);
+              }
+              setContextMenu(null);
+            },
+          });
+          items.push({
+            label: "Delete Surface",
+            danger: true,
+            action: () => {
+              removeCustomSearchPlane(pointHit.planeId);
+              setContextMenu(null);
+            },
+          });
+        } else if (pointHit.kind === "customCircle") {
+          setSelectedCustomPlane(pointHit.planeId);
+          items.push({
+            label: "Delete Circle",
+            danger: true,
+            action: () => {
+              removeCustomSearchPlane(pointHit.planeId);
+              setContextMenu(null);
+            },
+          });
         }
         setContextMenu({ screenX, screenY, items });
         return;
@@ -278,6 +326,19 @@ export function useContextMenu(params: ContextMenuParams) {
             label: "Add Point",
             action: () => {
               insertPiezoPointAt(edgeHit.insertIndex, edgeHit.snapPoint);
+              setContextMenu(null);
+            },
+          });
+        } else if (edgeHit.kind === "customPlane") {
+          setSelectedCustomPlane(edgeHit.planeId);
+          items.push({
+            label: "Add Point",
+            action: () => {
+              insertCustomPlanePointAt(
+                edgeHit.planeId,
+                edgeHit.insertIndex,
+                edgeHit.snapPoint,
+              );
               setContextMenu(null);
             },
           });
@@ -305,22 +366,27 @@ export function useContextMenu(params: ContextMenuParams) {
       alignAnnotations,
       canvasRef,
       coordinates,
+      customSearchPlanes,
       findNearEdgeUnified,
       findNearPointUnified,
       getEventWorldPos,
       insertBoundaryPointAt,
       insertCoordinateAt,
+      insertCustomPlanePointAt,
       insertPiezoPointAt,
       materialBoundaries,
       mode,
       piezometricLine.lines,
       removeBoundaryPoint,
       removeCoordinate,
+      removeCustomPlanePoint,
+      removeCustomSearchPlane,
       removePiezoPoint,
       selectedAnnotationIds,
       setSelectedAnnotations,
       setActivePiezoLine,
       setMaterialPicker,
+      setSelectedCustomPlane,
       setSelectedMaterialBoundary,
       setSelectedPoint,
     ],

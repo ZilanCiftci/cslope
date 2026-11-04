@@ -10,15 +10,25 @@ import { computePaperFrame, getAnnotationBoundsPx } from "../helpers";
 import { useAppStore } from "../../../store/app-store";
 import { VIEW_SCALE_MAX, VIEW_SCALE_MIN } from "../constants";
 import type { CanvasWheelEvent } from "./useNonPassiveWheel";
-import type { ContextMenuState, MaterialPickerState, PointHit } from "../types";
+import type {
+  ContextMenuState,
+  EdgeHit,
+  MaterialPickerState,
+  PointHit,
+} from "../types";
 import type {
   AnalysisLimitsState,
   AppState,
+  CustomSearchPlane,
   LineLoadRow,
   MaterialBoundaryRow,
   PiezometricLineState,
   UdlRow,
 } from "../../../store/types";
+import {
+  circleRadiusFromPointer,
+  isSameCustomPlaneHit,
+} from "../custom-plane-geometry";
 
 type UndoableSnapshot = Pick<
   AppState,
@@ -30,6 +40,7 @@ type UndoableSnapshot = Pick<
   | "piezometricLine"
   | "udls"
   | "lineLoads"
+  | "customSearchPlanes"
   | "analysisLimits"
   | "options"
   | "resultViewSettings"
@@ -45,10 +56,23 @@ function pickUndoableSnapshot(state: AppState): UndoableSnapshot {
     piezometricLine: state.piezometricLine,
     udls: state.udls,
     lineLoads: state.lineLoads,
+    customSearchPlanes: state.customSearchPlanes,
     analysisLimits: state.analysisLimits,
     options: state.options,
     resultViewSettings: state.resultViewSettings,
   };
+}
+
+/** What a circle drag shows beside the pointer: its centre and radius. */
+export interface DragTip {
+  text: string;
+  /** Canvas px. */
+  x: number;
+  y: number;
+}
+
+function circleTipText(p: CustomSearchPlane): string {
+  return `cx ${p.cx.toFixed(2)}  cy ${p.cy.toFixed(2)}  R ${p.radius.toFixed(2)} m`;
 }
 
 function isSameUndoableSnapshot(a: UndoableSnapshot, b: UndoableSnapshot) {
@@ -67,27 +91,7 @@ interface PointerDeps {
   setActiveViewScale: (scale: number) => void;
   onZoomCompleted?: () => void;
   findNearPointUnified: (wx: number, wy: number) => PointHit | null;
-  findNearEdgeUnified: (
-    wx: number,
-    wy: number,
-  ) =>
-    | {
-        kind: "external";
-        insertIndex: number;
-        snapPoint: [number, number];
-      }
-    | {
-        kind: "boundary";
-        boundaryId: string;
-        insertIndex: number;
-        snapPoint: [number, number];
-      }
-    | {
-        kind: "piezo";
-        insertIndex: number;
-        snapPoint: [number, number];
-      }
-    | null;
+  findNearEdgeUnified: (wx: number, wy: number) => EdgeHit | null;
   findRegionAtPoint: (wx: number, wy: number) => { regionKey: string } | null;
   findSnapTarget: (
     wx: number,
@@ -102,9 +106,22 @@ interface PointerDeps {
   udls: UdlRow[];
   lineLoads: LineLoadRow[];
   materialBoundaries: MaterialBoundaryRow[];
+  customSearchPlanes: CustomSearchPlane[];
+  updateCustomSearchPlane: (
+    id: string,
+    patch: Partial<CustomSearchPlane>,
+  ) => void;
+  updateCustomPlanePoint: (
+    id: string,
+    pointIndex: number,
+    point: [number, number],
+  ) => void;
+  setSelectedCustomPlane: (id: string | null) => void;
   assigningMaterialId: string | null;
   editingAssignment: boolean;
   editingBoundaries: boolean;
+  /** The custom search planes can be picked (edit view, any planes). */
+  editingCustomPlanes: boolean;
   panActive: boolean;
   setRegionMaterial: (point: [number, number], materialId: string) => void;
   setAssigningMaterial: (materialId: string | null) => void;
@@ -167,9 +184,14 @@ export function usePointerHandlers(deps: PointerDeps) {
     udls,
     lineLoads,
     materialBoundaries,
+    customSearchPlanes,
+    updateCustomSearchPlane,
+    updateCustomPlanePoint,
+    setSelectedCustomPlane,
     assigningMaterialId,
     editingAssignment,
     editingBoundaries,
+    editingCustomPlanes,
     panActive,
     setRegionMaterial,
     setAssigningMaterial,
@@ -243,10 +265,14 @@ export function usePointerHandlers(deps: PointerDeps) {
   const [mouseWorld, setMouseWorld] = useState<[number, number] | null>(null);
   const [hoverHit, setHoverHit] = useState<PointHit | null>(null);
   const hoverHitRef = useRef<PointHit | null>(null);
+  const [dragTip, setDragTip] = useState<DragTip | null>(null);
 
   const isSameHit = (a: PointHit | null, b: PointHit | null) => {
     if (!a || !b) return a === b;
     switch (a.kind) {
+      case "customCircle":
+      case "customVertex":
+        return isSameCustomPlaneHit(a, b);
       case "external":
         return b.kind === "external" && a.index === b.index;
       case "piezo":
@@ -355,13 +381,41 @@ export function usePointerHandlers(deps: PointerDeps) {
       const rawX = drag.startWorld[0] + dx;
       const rawY = drag.startWorld[1] + dy;
 
-      const snap = findSnapTarget(rawX, rawY, drag.hit);
+      // A circle's centre is no geometry point: it snaps to the grid only.
+      const snap =
+        drag.hit.kind === "customCircle"
+          ? null
+          : findSnapTarget(rawX, rawY, drag.hit);
       const newX = snap ? snap[0] : snapValue(rawX);
       const newY = snap ? snap[1] : snapValue(rawY);
 
       // Show the snapped coordinate in the status bar, not the raw mouse position
       if (drag.hit.kind !== "annotation") {
         setMouseWorld([newX, newY]);
+      }
+
+      if (drag.hit.kind === "customCircle") {
+        const hit = drag.hit;
+        const plane = s.customSearchPlanes.find((p) => p.id === hit.planeId);
+        if (!plane || plane.points) return;
+        const patch =
+          hit.handle === "centre"
+            ? { cx: newX, cy: newY }
+            : { radius: circleRadiusFromPointer(plane.cx, plane.cy, rawX, rawY, snapValue) };
+        updateCustomSearchPlane(hit.planeId, patch);
+        const rect = canvasRef.current?.getBoundingClientRect();
+        setDragTip({
+          text: circleTipText({ ...plane, ...patch }),
+          x: clientX - (rect?.left ?? 0),
+          y: clientY - (rect?.top ?? 0),
+        });
+        return;
+      }
+      if (drag.hit.kind === "customVertex") {
+        // The ends are extended to the ground by the analysis, so a vertex
+        // may lie anywhere, inside the soil included.
+        updateCustomPlanePoint(drag.hit.planeId, drag.hit.pointIndex, [newX, newY]);
+        return;
       }
 
       if (drag.hit.kind === "annotation") {
@@ -478,6 +532,8 @@ export function usePointerHandlers(deps: PointerDeps) {
       snapValue,
       updateAnnotation,
       updateBoundaryPoint,
+      updateCustomPlanePoint,
+      updateCustomSearchPlane,
       updateLineLoad,
       updateUdl,
     ],
@@ -664,7 +720,26 @@ export function usePointerHandlers(deps: PointerDeps) {
                             b.coordinates[hit.pointIndex][1],
                           ];
                         })()
-                      : [0, 0];
+                      : hit.kind === "customCircle"
+                        ? (() => {
+                            const p = customSearchPlanes.find(
+                              (cp) => cp.id === hit.planeId,
+                            );
+                            // The rim follows the pointer itself: the
+                            // radius is its distance from the centre.
+                            return p && hit.handle === "centre"
+                              ? [p.cx, p.cy]
+                              : [wx, wy];
+                          })()
+                        : hit.kind === "customVertex"
+                          ? (() => {
+                              const p = customSearchPlanes.find(
+                                (cp) => cp.id === hit.planeId,
+                              );
+                              const pt = p?.points?.[hit.pointIndex];
+                              return pt ? [pt[0], pt[1]] : [wx, wy];
+                            })()
+                          : [0, 0];
 
         dragRef.current = {
           hit,
@@ -686,6 +761,12 @@ export function usePointerHandlers(deps: PointerDeps) {
           setSelectedMaterialBoundary(hit.boundaryId);
           setSelectedPoint(null);
         }
+        if (hit.kind === "customCircle" || hit.kind === "customVertex") {
+          setSelectedCustomPlane(hit.planeId);
+          setSelectedPoint(null);
+        } else if (editingCustomPlanes) {
+          setSelectedCustomPlane(null);
+        }
         (e.target as HTMLElement).setPointerCapture(e.pointerId);
       } else if (panActive) {
         panRef.current = {
@@ -695,14 +776,22 @@ export function usePointerHandlers(deps: PointerDeps) {
         (e.target as HTMLElement).setPointerCapture(e.pointerId);
         return;
       } else {
-        if (editingBoundaries) {
+        if (editingBoundaries || editingCustomPlanes) {
           const edgeHit = findNearEdgeUnified(wx, wy);
-          if (edgeHit?.kind === "boundary") {
+          if (editingBoundaries && edgeHit?.kind === "boundary") {
             setSelectedMaterialBoundary(edgeHit.boundaryId);
+            setSelectedPoint(null);
+            if (editingCustomPlanes) setSelectedCustomPlane(null);
+            return;
+          }
+          // A click on a non-circular surface's line picks the surface.
+          if (edgeHit?.kind === "customPlane") {
+            setSelectedCustomPlane(edgeHit.planeId);
             setSelectedPoint(null);
             return;
           }
         }
+        if (editingCustomPlanes) setSelectedCustomPlane(null);
 
         const region = findRegionAtPoint(wx, wy);
         if (region) {
@@ -736,8 +825,10 @@ export function usePointerHandlers(deps: PointerDeps) {
       assigningMaterialId,
       canvasRef,
       coordinates,
+      customSearchPlanes,
       editingAssignment,
       editingBoundaries,
+      editingCustomPlanes,
       findAnnotationAt,
       findNearEdgeUnified,
       findNearPointUnified,
@@ -755,6 +846,7 @@ export function usePointerHandlers(deps: PointerDeps) {
       setMaterialPicker,
       setSelectedAnnotations,
       setSelectedResultObject,
+      setSelectedCustomPlane,
       setSelectedMaterialBoundary,
       setSelectedPoint,
       setSelectedRegionKey,
@@ -824,6 +916,7 @@ export function usePointerHandlers(deps: PointerDeps) {
       dragRef.current = null;
       panRef.current = null;
       lastPointerRef.current = null;
+      setDragTip(null);
       stopAutoPan();
       (e.target as HTMLElement).releasePointerCapture(e.pointerId);
     },
@@ -836,6 +929,7 @@ export function usePointerHandlers(deps: PointerDeps) {
       dragRef.current = null;
       panRef.current = null;
       lastPointerRef.current = null;
+      setDragTip(null);
       stopAutoPan();
       (e.target as HTMLElement).releasePointerCapture(e.pointerId);
     },
@@ -887,6 +981,7 @@ export function usePointerHandlers(deps: PointerDeps) {
   return {
     mouseWorld,
     hoverHit,
+    dragTip,
     handlePointerDown,
     handlePointerMove,
     handlePointerUp,

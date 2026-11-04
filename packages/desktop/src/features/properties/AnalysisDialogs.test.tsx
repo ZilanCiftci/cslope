@@ -398,6 +398,36 @@ describe("CustomSearchPlanesDialogApp", () => {
     expect(pts.value).toBe("5, 10; 20, 2; 35, 9");
   });
 
+  it("shows the numbers a canvas drag in the main window sends, and sends typed numbers back", async () => {
+    render(<CustomSearchPlanesDialogApp />);
+    hydrate({
+      customSearchPlanes: [
+        { id: "c1", cx: 10, cy: 20, radius: 12 },
+        { id: "p1", cx: 0, cy: 0, radius: 0, points: [[5, 8], [25, 4]] },
+      ],
+    });
+    // The canvas moved the circle, dragged its rim and added a vertex.
+    bridge.emit("onAnalysisChanged", {
+      ...lastSentOrState(),
+      customSearchPlanes: [
+        { id: "c1", cx: 18.3, cy: 15.2, radius: 13 },
+        { id: "p1", cx: 0, cy: 0, radius: 0, points: [[5, 8], [15, 2], [25, 4]] },
+      ],
+    });
+    expect(screen.getByLabelText("Circle centre X")).toHaveValue("18.3");
+    expect(screen.getByLabelText("Circle centre Y")).toHaveValue("15.2");
+    expect(screen.getByLabelText("Circle radius")).toHaveValue("13");
+    expect(screen.getByLabelText("Non-circular surface points")).toHaveValue("5, 8; 15, 2; 25, 4");
+    // Nothing is echoed back; a typed number is.
+    expect(bridge.sentOf("sendAnalysisChanged")).toEqual([]);
+    const r = screen.getByLabelText("Circle radius");
+    await userEvent.clear(r);
+    await userEvent.type(r, "9");
+    expect(store().customSearchPlanes[0]).toMatchObject({ cx: 18.3, cy: 15.2, radius: 9 });
+    expect(lastSent().customSearchPlanes[0].radius).toBe(9);
+    expect(lastSent().customSearchPlanes[1].points).toHaveLength(3);
+  });
+
   it("removes circles and non-circular surfaces", async () => {
     render(<CustomSearchPlanesDialogApp />);
     hydrate({

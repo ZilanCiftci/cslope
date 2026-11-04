@@ -539,6 +539,8 @@ export interface DrawCanvasParams {
   waternet?: AppState["waternet"];
   /** Prescribed slip surfaces, drawn faintly in edit view. */
   customSearchPlanes?: AppState["customSearchPlanes"];
+  /** The custom search plane picked on the canvas, drawn highlighted. */
+  selectedCustomPlaneId?: string | null;
   /** Block search objects, drawn in edit view when the block search is selected. */
   blockSearchObjects?: AppState["blockSearchObjects"];
   viewScale: number;
@@ -594,6 +596,7 @@ export function drawCanvas(
     piezometricLine,
     waternet,
     customSearchPlanes,
+    selectedCustomPlaneId = null,
     blockSearchObjects,
     viewScale,
     mouseWorld,
@@ -1156,12 +1159,13 @@ export function drawCanvas(
   // dimension stands at the first one's). A circle the analysis can't
   // use (no such entry and exit, or never as deep as the crack) shows
   // fainter, its part in the soil. A halo of the background colour keeps
-  // them visible on dark fills.
+  // them visible on dark fills. The plane picked on the canvas is drawn in
+  // the selection colour, a hovered rim as a thin ring.
   if (mode !== "result" && customSearchPlanes?.length && coordinates.length >= 3) {
     const extC = coordinates.map(([x, y]) => worldToCanvas(x, y, w, h));
     const inModel = (x: number, y: number) =>
       isPointInPolygon(x, y, extC.map((c) => c[0]), extC.map((c) => c[1]));
-    const strokeDashed = (path: () => void, alpha: number) => {
+    const strokeDashed = (path: () => void, alpha: number, selected: boolean) => {
       ctx.save();
       ctx.setLineDash([]);
       ctx.strokeStyle = BG_COLOR;
@@ -1170,9 +1174,9 @@ export function drawCanvas(
       ctx.beginPath();
       path();
       ctx.stroke();
-      ctx.strokeStyle = MARKER_BASE;
-      ctx.globalAlpha = 0.85 * alpha;
-      ctx.lineWidth = 1.5;
+      ctx.strokeStyle = selected ? SELECTED_BOUNDARY_COLOR : MARKER_BASE;
+      ctx.globalAlpha = selected ? 1 : 0.85 * alpha;
+      ctx.lineWidth = selected ? 2 : 1.5;
       ctx.setLineDash([8, 5]);
       ctx.beginPath();
       path();
@@ -1188,6 +1192,7 @@ export function drawCanvas(
     ctx.clip();
     customSearchPlanes.forEach((s, k) => {
       const path = prescribedPaths[k];
+      const selected = s.id === selectedCustomPlaneId;
       if (s.points) {
         if (s.points.length < 2) return;
       } else if (!(s.radius > 0)) return;
@@ -1195,18 +1200,34 @@ export function drawCanvas(
         // The crack face too, where no dimension stands on it.
         const world = path.crack && k !== crackPlane ? [[path.crack.x, path.crack.top] as [number, number], ...path.points] : path.points;
         const pts = world.map(([x, y]) => worldToCanvas(x, y, w, h));
-        strokeDashed(polyPath(pts), 1);
+        strokeDashed(polyPath(pts), 1, selected);
         for (const seg of segmentsInside(pts, extC, inModel)) labelLines.push({ seg, pad: 2 });
       } else if (s.points) {
         // A polyline the analysis has no surface for, faint as it was given.
-        strokeDashed(polyPath(s.points.map(([x, y]) => worldToCanvas(x, y, w, h))), 0.4);
+        strokeDashed(polyPath(s.points.map(([x, y]) => worldToCanvas(x, y, w, h))), 0.4, selected);
       } else {
         const [cx, cy] = worldToCanvas(s.cx, s.cy, w, h);
         const [ex] = worldToCanvas(s.cx + s.radius, s.cy, w, h);
-        strokeDashed(() => ctx.arc(cx, cy, Math.abs(ex - cx), 0, Math.PI * 2), 0.4);
+        strokeDashed(() => ctx.arc(cx, cy, Math.abs(ex - cx), 0, Math.PI * 2), 0.4, selected);
       }
     });
     ctx.restore();
+    // The whole rim under the pointer, unclipped: it is what a drag resizes.
+    const rimHover = hoverHit?.kind === "customCircle" && hoverHit.handle === "rim" ? hoverHit : null;
+    const rimPlane = rimHover ? customSearchPlanes.find((s) => s.id === rimHover.planeId) : undefined;
+    if (rimPlane && !rimPlane.points && rimPlane.radius > 0) {
+      const [cx, cy] = worldToCanvas(rimPlane.cx, rimPlane.cy, w, h);
+      const [ex] = worldToCanvas(rimPlane.cx + rimPlane.radius, rimPlane.cy, w, h);
+      ctx.save();
+      ctx.setLineDash([]);
+      ctx.strokeStyle = POINT_COLOR_HOVER;
+      ctx.globalAlpha = 0.6;
+      ctx.lineWidth = 2.5;
+      ctx.beginPath();
+      ctx.arc(cx, cy, Math.abs(ex - cx), 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.restore();
+    }
   }
 
   // ── Block search objects (edit view, block search) ──────
@@ -1870,6 +1891,52 @@ export function drawCanvas(
         pointSymbols.push(boxAround(px, py, bndRadius));
       }
     }
+  }
+
+  // ── Custom search plane handles (interactive) ──────────
+  // A circle's centre and a non-circular surface's vertices, draggable
+  // whenever there are custom planes; a centre carries a small cross.
+  if (mode !== "result" && customSearchPlanes?.length) {
+    const handleRadius = POINT_RADIUS - 1;
+    const drawHandle = (px: number, py: number, hover: boolean, selected: boolean, cross: boolean) => {
+      ctx.beginPath();
+      ctx.arc(px, py, handleRadius, 0, Math.PI * 2);
+      ctx.fillStyle = hover ? POINT_COLOR_HOVER : selected ? SELECTED_BOUNDARY_COLOR : MARKER_BASE;
+      ctx.fill();
+      ctx.strokeStyle = selected ? SELECTED_BOUNDARY_COLOR : STROKE_ACTIVE;
+      ctx.lineWidth = selected ? 2 : 1.5;
+      ctx.stroke();
+      if (cross) {
+        const arm = handleRadius + 3;
+        ctx.beginPath();
+        ctx.moveTo(px - arm, py);
+        ctx.lineTo(px + arm, py);
+        ctx.moveTo(px, py - arm);
+        ctx.lineTo(px, py + arm);
+        ctx.lineWidth = 1;
+        ctx.stroke();
+      }
+      pointSymbols.push(boxAround(px, py, handleRadius + (cross ? 3 : 0)));
+    };
+    ctx.save();
+    ctx.setLineDash([]);
+    for (const s of customSearchPlanes) {
+      const selected = s.id === selectedCustomPlaneId;
+      if (s.points) {
+        for (let i = 0; i < s.points.length; i++) {
+          const [px, py] = worldToCanvas(s.points[i][0], s.points[i][1], w, h);
+          const hover =
+            hoverHit?.kind === "customVertex" && hoverHit.planeId === s.id && hoverHit.pointIndex === i;
+          drawHandle(px, py, hover, selected, false);
+        }
+      } else {
+        const [px, py] = worldToCanvas(s.cx, s.cy, w, h);
+        const hover =
+          hoverHit?.kind === "customCircle" && hoverHit.planeId === s.id && hoverHit.handle === "centre";
+        drawHandle(px, py, hover, selected, true);
+      }
+    }
+    ctx.restore();
   }
 
   if (pointLabels.length > 0 || crackLabel) {

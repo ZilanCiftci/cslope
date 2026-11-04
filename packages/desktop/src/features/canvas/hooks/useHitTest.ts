@@ -6,6 +6,11 @@ import { EDGE_THRESHOLD, SNAP_THRESHOLD } from "../constants";
 import { loadArrowLifts } from "../overlay-geometry";
 import { lineLoadArrow } from "../../rendering/overlay-layout";
 import type { EdgeHit, LimitHandle, PointHit, UdlHandle } from "../types";
+import {
+  customPlaneEdgeHit,
+  findCustomPlaneHandle,
+  findCustomPlaneSegment,
+} from "../custom-plane-geometry";
 
 function pointToSegmentDist(
   mx: number,
@@ -24,6 +29,8 @@ function pointToSegmentDist(
   const projY = ay + t * dy;
   return { dist: Math.hypot(mx - projX, my - projY), projX, projY };
 }
+
+const NO_PLANES: AppState["customSearchPlanes"] = [];
 
 interface UseHitTestParams {
   canvasRef: RefObject<HTMLCanvasElement | null>;
@@ -57,6 +64,9 @@ interface UseHitTestParams {
   editingPiezo: boolean;
   editingLimits: boolean;
   editingLoads: boolean;
+  /** The custom search planes, picked whenever there are any (edit view). */
+  customSearchPlanes?: AppState["customSearchPlanes"];
+  editingCustomPlanes?: boolean;
 }
 
 export function useHitTest({
@@ -81,6 +91,8 @@ export function useHitTest({
   editingPiezo,
   editingLimits,
   editingLoads,
+  customSearchPlanes = NO_PLANES,
+  editingCustomPlanes = false,
 }: UseHitTestParams) {
   /** Unified point hit-test — checks external boundary AND all material boundaries. */
   const findNearPointUnified = useCallback(
@@ -235,6 +247,19 @@ export function useHitTest({
         }
       }
 
+      // Custom search planes (whenever there are any): their handles come
+      // last, so they never take a hit from the section being edited.
+      if (editingCustomPlanes && customSearchPlanes.length > 0) {
+        return findCustomPlaneHandle(
+          customSearchPlanes,
+          mx,
+          my,
+          (x, y) => worldToCanvas(x, y, rect.width, rect.height),
+          SNAP_THRESHOLD,
+          EDGE_THRESHOLD,
+        );
+      }
+
       return null;
     },
     [
@@ -244,6 +269,7 @@ export function useHitTest({
       analysisLimits,
       udls,
       lineLoads,
+      customSearchPlanes,
       surfaceYAtX,
       worldToCanvas,
       editingExterior,
@@ -251,6 +277,7 @@ export function useHitTest({
       editingPiezo,
       editingLimits,
       editingLoads,
+      editingCustomPlanes,
       canvasRef,
     ],
   );
@@ -394,18 +421,39 @@ export function useHitTest({
         }
       }
 
+      // Segments of the custom non-circular surfaces (whenever there are
+      // any), after the section being edited.
+      if (editingCustomPlanes && customSearchPlanes.length > 0) {
+        const seg = findCustomPlaneSegment(
+          customSearchPlanes,
+          mx,
+          my,
+          (x, y) => worldToCanvas(x, y, rect.width, rect.height),
+          bestDist,
+        );
+        if (seg) {
+          bestHit = customPlaneEdgeHit(
+            seg,
+            (px, py) => canvasToWorld(px, py, rect.width, rect.height),
+            snapValue,
+          );
+        }
+      }
+
       return bestHit;
     },
     [
       coordinates,
       materialBoundaries,
       piezometricLine,
+      customSearchPlanes,
       worldToCanvas,
       canvasToWorld,
       snapValue,
       editingExterior,
       editingBoundaries,
       editingPiezo,
+      editingCustomPlanes,
       canvasRef,
     ],
   );

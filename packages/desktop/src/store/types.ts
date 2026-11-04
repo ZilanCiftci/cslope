@@ -618,6 +618,23 @@ export interface AnalysisSlice {
     patch: Partial<CustomSearchPlane>,
   ) => void;
   removeCustomSearchPlane: (id: string) => void;
+  /** Move one vertex of a non-circular surface (a canvas drag). */
+  updateCustomPlanePoint: (
+    id: string,
+    pointIndex: number,
+    point: [number, number],
+  ) => void;
+  /** Insert a vertex before `pointIndex` of a non-circular surface. */
+  insertCustomPlanePointAt: (
+    id: string,
+    pointIndex: number,
+    point: [number, number],
+  ) => void;
+  /** Remove a vertex of a non-circular surface; it keeps at least two. */
+  removeCustomPlanePoint: (id: string, pointIndex: number) => void;
+  /** The custom search plane picked on the canvas (not persisted). */
+  selectedCustomPlaneId: string | null;
+  setSelectedCustomPlane: (id: string | null) => void;
   setCustomPlanesOnly: (value: boolean) => void;
   addBlockSearchObject: () => void;
   updateBlockSearchObject: (id: string, points: [number, number][]) => void;

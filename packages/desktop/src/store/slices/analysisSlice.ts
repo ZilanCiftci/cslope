@@ -407,6 +407,8 @@ export const createAnalysisSlice: SliceCreator<AnalysisSlice> = (set, get) => ({
       );
       return {
         customSearchPlanes,
+        selectedCustomPlaneId:
+          s.selectedCustomPlaneId === id ? null : s.selectedCustomPlaneId,
         models: s.models.map((m) =>
           m.id === s.activeModelId ? { ...m, customSearchPlanes } : m,
         ),
@@ -414,6 +416,33 @@ export const createAnalysisSlice: SliceCreator<AnalysisSlice> = (set, get) => ({
     });
     get().invalidateAnalysis();
   },
+
+  updateCustomPlanePoint: (id, pointIndex, point) => {
+    const plane = get().customSearchPlanes.find((p) => p.id === id);
+    if (!plane?.points || pointIndex < 0 || pointIndex >= plane.points.length) return;
+    const points = plane.points.map((p, i) => (i === pointIndex ? point : p));
+    get().updateCustomSearchPlane(id, { points });
+  },
+
+  insertCustomPlanePointAt: (id, pointIndex, point) => {
+    const plane = get().customSearchPlanes.find((p) => p.id === id);
+    if (!plane?.points) return;
+    const at = Math.max(0, Math.min(plane.points.length, pointIndex));
+    const points = [...plane.points.slice(0, at), point, ...plane.points.slice(at)];
+    get().updateCustomSearchPlane(id, { points });
+  },
+
+  removeCustomPlanePoint: (id, pointIndex) => {
+    const plane = get().customSearchPlanes.find((p) => p.id === id);
+    // A surface needs two points.
+    if (!plane?.points || plane.points.length <= 2) return;
+    if (pointIndex < 0 || pointIndex >= plane.points.length) return;
+    const points = plane.points.filter((_, i) => i !== pointIndex);
+    get().updateCustomSearchPlane(id, { points });
+  },
+
+  selectedCustomPlaneId: null,
+  setSelectedCustomPlane: (id) => set({ selectedCustomPlaneId: id }),
 
   setCustomPlanesOnly: (value) => {
     set((s) => ({

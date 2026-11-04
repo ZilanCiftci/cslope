@@ -38,6 +38,10 @@ import { surfaceYAtX as surfaceY } from "../features/view/surface";
 import { ContextMenuOverlay } from "../features/canvas/ContextMenuOverlay";
 import { AxisOverlay } from "../features/canvas/AxisOverlay";
 import { setPaperDrawSource } from "../features/export/paper-png";
+import type { CustomSearchPlane } from "../store/types";
+
+/** The result canvas never edits the custom search planes. */
+const NO_PLANES: CustomSearchPlane[] = [];
 
 export function ResultCanvas() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -162,6 +166,8 @@ export function ResultCanvas() {
   } = useViewport(canvasRef, containerRef);
 
   const setMaterialPicker = useCallback(() => {}, []);
+  // The custom search planes are edited on the edit canvas only.
+  const noPlaneEdit = useCallback(() => {}, []);
 
   const hitTest = useHitTest({
     canvasRef,
@@ -209,6 +215,11 @@ export function ResultCanvas() {
     setSelectedPoint,
     setSelectedMaterialBoundary,
     setMaterialPicker,
+    customSearchPlanes: NO_PLANES,
+    removeCustomSearchPlane: noPlaneEdit,
+    removeCustomPlanePoint: noPlaneEdit,
+    insertCustomPlanePointAt: noPlaneEdit,
+    setSelectedCustomPlane: noPlaneEdit,
   });
 
   const {
@@ -237,9 +248,14 @@ export function ResultCanvas() {
     udls,
     lineLoads,
     materialBoundaries,
+    customSearchPlanes: NO_PLANES,
+    updateCustomSearchPlane: noPlaneEdit,
+    updateCustomPlanePoint: noPlaneEdit,
+    setSelectedCustomPlane: noPlaneEdit,
     assigningMaterialId,
     editingAssignment,
     editingBoundaries,
+    editingCustomPlanes: false,
     panActive,
     setRegionMaterial,
     setAssigningMaterial,

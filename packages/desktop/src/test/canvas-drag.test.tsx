@@ -175,4 +175,79 @@ describe("dragging points on the edit canvas", () => {
     expect(event.defaultPrevented).toBe(true);
     expect(useAppStore.getState().editViewScale).toBeGreaterThan(before);
   });
+
+  describe("custom search planes", () => {
+    const CIRCLE = { id: "c1", cx: 12, cy: 18, radius: 12 };
+    const LINE = { id: "p1", cx: 0, cy: 0, radius: 0, points: [[2, 6], [12, 2], [22, 5]] as [number, number][] };
+    const planes = () => useAppStore.getState().customSearchPlanes;
+
+    beforeEach(() => {
+      act(() => {
+        useAppStore.setState({ snapToGrid: false, customSearchPlanes: [CIRCLE, LINE] });
+        useAppStore.temporal.getState().clear();
+      });
+    });
+
+    it("drags a circle's centre whatever section is edited, with a tip, and undoes it in one step", async () => {
+      const [sx, sy] = toScreen([12, 18]);
+      const canvas = screen.getByTestId("slope-canvas");
+      fireEvent.pointerDown(canvas, { button: 0, clientX: sx, clientY: sy, pointerId: 1 });
+      expect(useAppStore.getState().selectedCustomPlaneId).toBe("c1");
+      fireEvent.pointerMove(canvas, { clientX: sx + 30, clientY: sy - 20, pointerId: 1 });
+      await frames(2);
+      expect(planes()[0]).toMatchObject({ cx: 15, cy: 20, radius: 12 });
+      expect(screen.getByTestId("drag-tip")).toHaveTextContent(/cx 15\.00\s+cy 20\.00\s+R 12\.00 m/);
+      fireEvent.pointerUp(canvas, { button: 0, clientX: sx + 30, clientY: sy - 20, pointerId: 1 });
+      expect(screen.queryByTestId("drag-tip")).toBeNull();
+      expect(useAppStore.temporal.getState().pastStates).toHaveLength(1);
+      act(() => useAppStore.temporal.getState().undo());
+      expect(planes()[0]).toEqual(CIRCLE);
+    });
+
+    it("drags the rim to set the radius from the pointer's distance", async () => {
+      // On the rim right of the centre, dragged 25 px further out.
+      const [sx, sy] = toScreen([24, 18]);
+      const canvas = screen.getByTestId("slope-canvas");
+      fireEvent.pointerDown(canvas, { button: 0, clientX: sx, clientY: sy, pointerId: 1 });
+      fireEvent.pointerMove(canvas, { clientX: sx + 25, clientY: sy, pointerId: 1 });
+      await frames(2);
+      fireEvent.pointerUp(canvas, { button: 0, clientX: sx + 25, clientY: sy, pointerId: 1 });
+      expect(planes()[0].radius).toBeCloseTo(14.5, 6);
+      expect(planes()[0]).toMatchObject({ cx: 12, cy: 18 });
+    });
+
+    it("drags a vertex of a non-circular surface", async () => {
+      const [sx, sy] = toScreen([12, 2]);
+      const canvas = screen.getByTestId("slope-canvas");
+      fireEvent.pointerDown(canvas, { button: 0, clientX: sx, clientY: sy, pointerId: 1 });
+      fireEvent.pointerMove(canvas, { clientX: sx + 10, clientY: sy + 10, pointerId: 1 });
+      await frames(2);
+      fireEvent.pointerUp(canvas, { button: 0, clientX: sx + 10, clientY: sy + 10, pointerId: 1 });
+      expect(planes()[1].points![1][0]).toBeCloseTo(13, 6);
+      expect(planes()[1].points![1][1]).toBeCloseTo(1, 6);
+    });
+
+    it("adds a point on a segment and deletes a vertex from the context menu", async () => {
+      const canvas = screen.getByTestId("slope-canvas");
+      // On the segment (12, 2)–(22, 5), at x = 17 (y = 3.5).
+      const [ex, ey] = toScreen([17, 3.5]);
+      fireEvent.contextMenu(canvas, { clientX: ex, clientY: ey });
+      fireEvent.click(screen.getByRole("button", { name: "Add Point" }));
+      const pts = planes()[1].points!;
+      expect(pts).toHaveLength(4);
+      expect(pts[2][0]).toBeCloseTo(17, 6);
+      expect(pts[2][1]).toBeCloseTo(3.5, 6);
+      expect(screen.queryByRole("button", { name: "Add Point" })).toBeNull();
+      const [vx, vy] = toScreen([2, 6]);
+      fireEvent.contextMenu(canvas, { clientX: vx, clientY: vy });
+      fireEvent.click(screen.getByRole("button", { name: "Delete Point" }));
+      expect(planes()[1].points).toHaveLength(3);
+      expect(planes()[1].points![0]).toEqual([12, 2]);
+      // A circle: its centre offers to delete it.
+      const [cx, cy] = toScreen([12, 18]);
+      fireEvent.contextMenu(canvas, { clientX: cx, clientY: cy });
+      fireEvent.click(screen.getByRole("button", { name: "Delete Circle" }));
+      expect(planes().map((p) => p.id)).toEqual(["p1"]);
+    });
+  });
 });
