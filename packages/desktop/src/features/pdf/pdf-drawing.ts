@@ -97,7 +97,7 @@ import { boxesOverlap } from "../canvas/label-layout";
 import { piezoExtensions, piezoPonds } from "../../utils/piezo";
 import { pondArrowLayout } from "../rendering/pond-arrows";
 import { piezoSymbolBox } from "../canvas/overlay-geometry";
-import type { AnalysisOptions, AnalysisResult } from "@cslope/engine";
+import type { AnalysisOptions, AnalysisResult, SlipSurfaceResult } from "@cslope/engine";
 import type {
   AnalysisLimitsState,
   Annotation,
@@ -1177,17 +1177,24 @@ function drawFosLabelPdf(pdf: jsPDF, label: FosLabelPdf, color: DualColor) {
 }
 
 /**
- * The custom search planes' surfaces, on request (the "Custom surfaces"
- * toggle): dashed in their own colour, whatever the surface display, the
- * critical surface not again; with the FOS label on, each surface's label
- * like the critical one's, moved down until clear of the critical label
- * and the labels placed before it (as on the canvas).
+ * The custom search planes' surfaces drawn on request (the "Custom
+ * surfaces" toggle), whatever the surface display: those with a surface,
+ * the critical surface not (it is drawn as such).
  */
-export function drawCustomSurfaces(pdf: jsPDF, tf: PdfTransform, result: AnalysisResult, rvs: ResultViewSettings) {
-  if (rvs.showCustomSurfaces !== true) return;
+export function customSurfacesToDraw(result: AnalysisResult, rvs: ResultViewSettings): SlipSurfaceResult[] {
+  if (rvs.showCustomSurfaces !== true) return [];
   const cs = result.criticalSurface;
-  const surfaces = (result.customSurfaces ?? []).flatMap((c) => (c.surface && !(cs && sameSurface(c.surface, cs)) ? [c.surface] : []));
-  if (surfaces.length === 0) return;
+  return (result.customSurfaces ?? []).flatMap((c) => (c.surface && !(cs && sameSurface(c.surface, cs)) ? [c.surface] : []));
+}
+
+/**
+ * The custom surfaces' lines (customSurfacesToDraw), dashed in their own
+ * colour; drawn before the critical surface, as on the canvas, so the
+ * critical FOS label's plate covers them. Returns the surfaces drawn.
+ */
+export function drawCustomSurfaceLines(pdf: jsPDF, tf: PdfTransform, result: AnalysisResult, rvs: ResultViewSettings): SlipSurfaceResult[] {
+  const surfaces = customSurfacesToDraw(result, rvs);
+  if (surfaces.length === 0) return surfaces;
 
   pdf.setDrawColor(...CUSTOM_SURFACE_COLOR.rgb);
   pdf.setLineWidth(CUSTOM_SURFACE_LINE_WIDTH_PX * tf.mmPerPx);
@@ -1200,9 +1207,21 @@ export function drawCustomSurfaces(pdf: jsPDF, tf: PdfTransform, result: Analysi
     pdfPath(pdf, buildPolylinePath(pts, false), "S");
   }
   pdf.setLineDashPattern([], 0);
+  return surfaces;
+}
 
-  if (!rvs.showFosLabel) return;
+/**
+ * With the FOS label on, the custom surfaces' labels, like the critical
+ * one's in their colour: each moved down until clear of the critical
+ * label and the labels placed before it (as on the canvas). Drawn after
+ * the critical surface. Returns the labels' boxes.
+ */
+export function drawCustomSurfaceLabels(pdf: jsPDF, tf: PdfTransform, result: AnalysisResult, rvs: ResultViewSettings): Box[] {
+  const surfaces = customSurfacesToDraw(result, rvs);
+  if (surfaces.length === 0 || !rvs.showFosLabel) return [];
+  const cs = result.criticalSurface;
   const placed: Box[] = cs ? [fosLabelLayoutPdf(pdf, tf, cs).box] : [];
+  const boxes: Box[] = [];
   for (const surf of surfaces) {
     let label = fosLabelLayoutPdf(pdf, tf, surf);
     const step = label.box.bottom - label.box.top + 0.5;
@@ -1210,8 +1229,10 @@ export function drawCustomSurfaces(pdf: jsPDF, tf: PdfTransform, result: Analysi
       label = fosLabelLayoutPdf(pdf, tf, surf, n * step);
     }
     placed.push(label.box);
+    boxes.push(label.box);
     drawFosLabelPdf(pdf, label, CUSTOM_SURFACE_COLOR);
   }
+  return boxes;
 }
 
 function measureTextAnnotationPdf(

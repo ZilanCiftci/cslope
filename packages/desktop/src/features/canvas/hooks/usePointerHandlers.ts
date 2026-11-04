@@ -674,7 +674,10 @@ export function usePointerHandlers(deps: PointerDeps) {
       if (mode === "result") {
         const canvas = canvasRef.current;
         if (canvas) {
-          const refHit = findReferenceAt(e.clientX, e.clientY);
+          // A paper annotation (colour bar, text, ...) is drawn over the
+          // reference lines, so it takes the pointer first.
+          const a = findAnnotationAt(e.clientX, e.clientY);
+          const refHit = a ? null : findReferenceAt(e.clientX, e.clientY);
           const refId = referenceHitId(refHit);
           if (refHit && refId) {
             if (e.ctrlKey || e.shiftKey) {
@@ -705,7 +708,6 @@ export function usePointerHandlers(deps: PointerDeps) {
             (e.target as HTMLElement).setPointerCapture(e.pointerId);
             return;
           }
-          const a = findAnnotationAt(e.clientX, e.clientY);
           if (a) {
             if (e.ctrlKey || e.shiftKey) {
               toggleAnnotationSelection(a.id, true);
@@ -953,9 +955,10 @@ export function usePointerHandlers(deps: PointerDeps) {
       let hit: PointHit | null = null;
       if (mode === "result") {
         // Same hit area as a click, so the cursor matches what a click does.
-        const ref = findReferenceAt(e.clientX, e.clientY);
-        const a = ref ? null : findAnnotationAt(e.clientX, e.clientY);
-        hit = ref ?? (a ? { kind: "annotation", annoId: a.id } : null);
+        // Paper annotations first: they are drawn over the reference lines.
+        const a = findAnnotationAt(e.clientX, e.clientY);
+        const ref = a ? null : findReferenceAt(e.clientX, e.clientY);
+        hit = a ? { kind: "annotation", annoId: a.id } : ref;
       } else {
         hit = findNearPointUnified(wx, wy);
       }

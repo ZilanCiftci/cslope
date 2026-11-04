@@ -105,6 +105,22 @@ describe("reference annotations in the PDF", () => {
     expect(boxes[0].bottom <= boxes[1].top || boxes[1].bottom <= boxes[0].top || boxes[0].right <= boxes[1].left || boxes[1].right <= boxes[0].left).toBe(true);
   });
 
+  it("keeps the labels off the custom surfaces' lines and FOS labels", () => {
+    const { pdf } = recorder();
+    const drawn = drawReferenceLinesPdf(pdf, tf, [CIRCLE], COORDS);
+    const [alone] = drawReferenceLabelsPdf(pdf, tf, drawn, { coordinates: COORDS, bounds: BOUNDS });
+    // A custom surface's FOS label where the label went, and its line through the spot beside it.
+    const fosBox = { left: alone.left + 1, top: alone.top + 0.5, right: alone.right + 2, bottom: alone.bottom + 1 };
+    const [lx, ly] = [(alone.right + 5 - 20) / 5, (150 - (alone.top + alone.bottom) / 2) / 5];
+    const line = { cx: 0, cy: 0, radius: 0, entryPoint: [lx, ly + 3] as [number, number], exitPoint: [lx, ly - 3] as [number, number], points: [[lx, ly + 3], [lx, ly - 3]] as [number, number][] };
+    const [moved] = drawReferenceLabelsPdf(pdf, tf, drawn, { coordinates: COORDS, bounds: BOUNDS, customSurfaces: [line], customLabelBoxes: [fosBox] });
+    const apart = (a: typeof fosBox, b: typeof fosBox) => a.right <= b.left || b.right <= a.left || a.bottom <= b.top || b.bottom <= a.top;
+    expect(apart(alone, fosBox)).toBe(false);
+    expect(apart(moved, fosBox)).toBe(true);
+    const [x] = tf.worldToPdf(lx, ly);
+    expect(moved.right <= x || moved.left >= x).toBe(true);
+  });
+
   it("draws no label without text or without a drawn line", () => {
     const { pdf, of } = recorder();
     const drawn = drawReferenceLinesPdf(pdf, tf, [{ ...LINE, label: "  " }, { ...CIRCLE, cy: 40 }], COORDS);

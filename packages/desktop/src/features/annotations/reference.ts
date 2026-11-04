@@ -170,7 +170,8 @@ export function cloneAnnotation<T extends Annotation>(a: T): T {
 
 /**
  * A custom search plane as a reference annotation, labelled "Custom
- * surface n" (n = `index` + 1): a circle clipped to the ground, a
+ * surface n" (n = `index` + 1, its place in customPlanesInResultOrder,
+ * as the result numbers it): a circle clipped to the ground, a
  * non-circular surface as its points. Null for a plane without geometry.
  */
 export function referenceFromCustomPlane(plane: CustomSearchPlane, index: number): ReferenceSpec | null {

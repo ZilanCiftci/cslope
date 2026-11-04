@@ -22,7 +22,8 @@ import {
   drawAnnotations,
   drawClosedPolyline,
   drawCriticalSurface,
-  drawCustomSurfaces,
+  drawCustomSurfaceLabels,
+  drawCustomSurfaceLines,
   drawEntryExitMarkers,
   drawGrid,
   drawLineLoads,
@@ -445,20 +446,25 @@ export function exportVectorPdf(data: PdfExportData): void {
 
     drawSlipSurfaces(pdf, tf, result, rvs);
 
+    // The custom surfaces' lines under the critical surface (and its FOS
+    // label's plate), their labels after it, as on the canvas.
+    const customSurfaces = drawCustomSurfaceLines(pdf, tf, result, rvs);
     drawCriticalSurface(pdf, tf, result, rvs, coordinates, {
       options,
       materials,
       materialBoundaries,
       regionMaterials,
     });
-    drawCustomSurfaces(pdf, tf, result, rvs);
-    // Their labels, clear of the lines and the FOS label.
+    const customLabelBoxes = drawCustomSurfaceLabels(pdf, tf, result, rvs);
+    // Their labels, clear of the lines and the FOS labels.
     drawReferenceLabelsPdf(pdf, tf, drawnReferences, {
       coordinates,
       materialBoundaries,
       waterLines: piezometricLine.lines,
       criticalSurface: result.criticalSurface,
       showFosLabel: rvs.showFosLabel,
+      customSurfaces,
+      customLabelBoxes,
       bounds: { left: innerFrame.x, top: innerFrame.y, right: innerFrame.x + innerFrame.w, bottom: innerFrame.y + innerFrame.h },
     });
     if (result.criticalSurface?.reinforcementForces?.length) {

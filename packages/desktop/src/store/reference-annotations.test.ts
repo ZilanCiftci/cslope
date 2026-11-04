@@ -47,6 +47,21 @@ describe("reference annotations in the store", () => {
     expect(store().addReferenceFromCustomPlane("missing")).toBeNull();
   });
 
+  it("numbers the reference as the result numbers the custom surfaces: circles, then polylines", () => {
+    store().addCustomSearchPlane("polyline");
+    store().addCustomSearchPlane("polyline");
+    store().addCustomSearchPlane("circle");
+    const [poly, unfinished, circle] = store().customSearchPlanes;
+    store().updateCustomSearchPlane(poly.id, { points: [[5, 8], [15, 2], [25, 4]] });
+    store().updateCustomSearchPlane(unfinished.id, { points: [[1, 1]] });
+    store().updateCustomSearchPlane(circle.id, { cx: 15, cy: 14, radius: 10 });
+    store().addReferenceFromCustomPlane(poly.id);
+    store().addReferenceFromCustomPlane(circle.id);
+    expect(references().map((a) => a.label)).toEqual(["Custom surface 2", "Custom surface 1"]);
+    // An incomplete polyline is not a custom surface of the result.
+    expect(store().addReferenceFromCustomPlane(unfinished.id)).toBeNull();
+  });
+
   it("edits and removes reference annotations like the others", () => {
     const id = store().addReferenceAnnotation({ shape: "circle", cx: 1, cy: 2, radius: 3 });
     store().updateAnnotation(id, { radius: 5, color: "#ff00ff", dash: "dotted", showInEdit: true });
