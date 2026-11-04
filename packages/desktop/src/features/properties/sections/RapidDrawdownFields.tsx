@@ -70,12 +70,7 @@ export function RapidDrawdownFields() {
                   // Start the level at the highest point of the imported line.
                   setRapidDrawdown({ waterBefore: levelLine(coordinates, Math.max(...before.map((p) => p[1]))) })
                 }
-                className="px-2 py-0.5 text-[11px] font-medium rounded border cursor-pointer flex-shrink-0"
-                style={{
-                  background: "var(--color-vsc-surface-tint)",
-                  color: "var(--color-vsc-text)",
-                  borderColor: "var(--color-vsc-border)",
-                }}
+                className="btn flex-shrink-0"
                 title="Replace the imported line by a horizontal level across the model (at the line's highest point, then editable)"
               >
                 Replace with level

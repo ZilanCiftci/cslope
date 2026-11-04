@@ -80,12 +80,7 @@ function OcrOverride({ text, onUseOcr }: { text: string; onUseOcr: () => void })
       <button
         type="button"
         onClick={onUseOcr}
-        className="px-2 py-0.5 text-[11px] font-medium rounded border cursor-pointer flex-shrink-0"
-        style={{
-          background: "var(--color-vsc-surface-tint)",
-          color: "var(--color-vsc-text)",
-          borderColor: "var(--color-vsc-border)",
-        }}
+        className="btn flex-shrink-0"
         title="Remove the imported stress history and use the OCR fields"
       >
         Use OCR instead

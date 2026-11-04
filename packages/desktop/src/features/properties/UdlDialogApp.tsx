@@ -270,8 +270,7 @@ export function UdlDialogApp() {
                     value={entry.ratio}
                     min={0}
                     max={1}
-                    className="w-12 text-[11px] inline-block"
-                    style={{ padding: "1px 4px", borderRadius: 4 }}
+                    className="w-12 inline-block"
                     onValueChange={(ratio) => {
                       if (ratio >= 0 && ratio <= 1) setExcessRatio(row, entry.materialId, ratio);
                     }}
@@ -283,12 +282,7 @@ export function UdlDialogApp() {
                 <button
                   type="button"
                   onClick={() => removeExcess(row, entry.materialId)}
-                  className="px-2 py-0.5 text-[11px] font-medium rounded border cursor-pointer flex-shrink-0"
-                  style={{
-                    background: "var(--color-vsc-surface-tint)",
-                    color: "var(--color-vsc-text)",
-                    borderColor: "var(--color-vsc-border)",
-                  }}
+                  className="btn flex-shrink-0"
                   aria-label={`Remove the excess pore pressure of UDL ${i + 1} in Material "${name}"`}
                   title="Treat the load as fully consolidated in this material"
                 >
@@ -300,17 +294,12 @@ export function UdlDialogApp() {
         )}
       </div>
       <div
-        className="pt-3 mt-2 border-t"
+        className="pt-3 mt-2 border-t dialog-buttons"
         style={{ borderColor: "var(--color-vsc-border)" }}
       >
         <button
           onClick={() => window.close()}
-          className="w-full text-[11px] py-1 rounded cursor-pointer font-medium"
-          style={{
-            background: "var(--color-vsc-accent)",
-            color: "#fff",
-            border: "1px solid var(--color-vsc-accent)",
-          }}
+          className="btn btn-primary"
         >
           Close
         </button>

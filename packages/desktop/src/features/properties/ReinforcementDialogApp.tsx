@@ -174,13 +174,7 @@ function DialogButton({
   return (
     <button
       onClick={disabled ? undefined : onClick}
-      className="px-3 py-1.5 text-[11px] font-medium rounded border transition-colors cursor-pointer w-full"
-      style={{
-        background: disabled ? "transparent" : "var(--color-vsc-surface-tint)",
-        color: disabled ? "var(--color-vsc-text-muted)" : "var(--color-vsc-text)",
-        borderColor: "var(--color-vsc-border)",
-        opacity: disabled ? 0.5 : 1,
-      }}
+      className="btn w-full"
       aria-disabled={disabled}
     >
       {children}
@@ -866,15 +860,10 @@ export function ReinforcementDialogApp() {
           )}
         </section>
       </div>
-      <div className="pt-3 mt-2 border-t" style={{ borderColor: "var(--color-vsc-border)" }}>
+      <div className="pt-3 mt-2 border-t dialog-buttons" style={{ borderColor: "var(--color-vsc-border)" }}>
         <button
           onClick={() => window.close()}
-          className="w-full text-[11px] py-1 rounded cursor-pointer font-medium"
-          style={{
-            background: "var(--color-vsc-accent)",
-            color: "#fff",
-            border: "1px solid var(--color-vsc-accent)",
-          }}
+          className="btn btn-primary"
         >
           Close
         </button>

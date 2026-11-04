@@ -157,8 +157,7 @@ export function StatusBar({
           disabled={!snapToGrid}
           aria-label="Snap grid size"
           title="Snap grid size (m)"
-          className="bg-transparent border border-(--color-vsc-border) rounded text-[11px] px-1 py-0 cursor-pointer disabled:opacity-40"
-          style={{ color: "inherit" }}
+          className="text-[11px] min-h-0 h-[18px] py-0"
         >
           <option value="0.1">0.1 m</option>
           <option value="0.25">0.25 m</option>

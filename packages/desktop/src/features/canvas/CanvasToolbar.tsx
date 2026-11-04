@@ -3,7 +3,7 @@ import {
   ZoomInIcon,
   ZoomOutIcon,
   ZoomBoxIcon,
-  HandIcon,
+  PanIcon,
 } from "../../components/icons/ViewIcons";
 
 interface Props {
@@ -47,7 +47,7 @@ export function CanvasToolbar({
         <ZoomOutIcon />
       </ToolButton>
       <ToolButton title="Pan" onClick={onTogglePan} active={panActive}>
-        <HandIcon />
+        <PanIcon />
       </ToolButton>
       <ToolButton
         title="Zoom box"

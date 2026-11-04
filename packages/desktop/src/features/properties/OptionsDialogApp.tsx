@@ -111,17 +111,12 @@ export function OptionsDialogApp() {
         <OptionsSection plain />
       </div>
       <div
-        className="pt-3 mt-2 border-t"
+        className="pt-3 mt-2 border-t dialog-buttons"
         style={{ borderColor: "var(--color-vsc-border)" }}
       >
         <button
           onClick={() => window.close()}
-          className="w-full text-[11px] py-1 rounded cursor-pointer font-medium"
-          style={{
-            background: "var(--color-vsc-accent)",
-            color: "#fff",
-            border: "1px solid var(--color-vsc-accent)",
-          }}
+          className="btn btn-primary"
         >
           Close
         </button>

@@ -84,15 +84,14 @@ function ReliabilityPanelBody() {
       footer={
         <div className="flex items-center gap-2 text-[11px]">
           {running ? (
-            <button onClick={cancel} className="px-3 py-1 rounded cursor-pointer" style={buttonStyle}>
+            <button onClick={cancel} className="btn">
               Cancel
             </button>
           ) : (
             <button
               onClick={start}
               disabled={variables.length === 0}
-              className="px-4 py-1 rounded cursor-pointer font-medium disabled:opacity-40 disabled:cursor-not-allowed"
-              style={primaryButtonStyle}
+              className="btn btn-primary min-w-[64px]"
             >
               Run
             </button>
@@ -113,8 +112,7 @@ function ReliabilityPanelBody() {
                 )
               }
               disabled={!result || running}
-              className="px-2 py-1 rounded cursor-pointer whitespace-nowrap disabled:opacity-40 disabled:cursor-not-allowed"
-              style={buttonStyle}
+              className="btn"
               title={
                 swedish
                   ? "CSV with semicolons and decimal commas, for Excel set to a decimal-comma locale"
@@ -214,8 +212,7 @@ function ReliabilityPanelBody() {
                   if (c) setRows((rs) => [...rs, { key: c.key, sd: defaultSd(c), distribution: "normal" }]);
                 }}
                 disabled={unused.length === 0}
-                className="px-2 py-0.5 rounded cursor-pointer text-[11px]"
-                style={buttonStyle}
+                className="btn"
               >
                 + Add variable
               </button>
@@ -361,19 +358,6 @@ function ResultRow({ label, value, bold }: { label: string; value: string; bold?
     </tr>
   );
 }
-
-/** The panel's main action (Run), styled like the dialogs' Close button. */
-const primaryButtonStyle: React.CSSProperties = {
-  background: "var(--color-vsc-accent)",
-  border: "1px solid var(--color-vsc-accent)",
-  color: "#fff",
-};
-
-const buttonStyle: React.CSSProperties = {
-  background: "var(--color-vsc-input-bg)",
-  border: "1px solid var(--color-vsc-border)",
-  color: "var(--color-vsc-text)",
-};
 
 function round(v: number): number {
   return Math.round(v * 1000) / 1000;

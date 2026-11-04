@@ -728,12 +728,7 @@ export function ResultSidebar() {
                       (e.currentTarget as HTMLInputElement).blur();
                     }
                   }}
-                  className="w-full text-[11px] px-1.5 py-1 rounded tabular-nums"
-                  style={{
-                    background: "var(--color-vsc-bg)",
-                    color: "var(--color-vsc-text)",
-                    border: "1px solid var(--color-vsc-border)",
-                  }}
+                  className="w-full tabular-nums"
                 />
               </div>
 
@@ -760,12 +755,7 @@ export function ResultSidebar() {
                       (e.currentTarget as HTMLInputElement).blur();
                     }
                   }}
-                  className="w-full text-[11px] px-1.5 py-1 rounded tabular-nums"
-                  style={{
-                    background: "var(--color-vsc-bg)",
-                    color: "var(--color-vsc-text)",
-                    border: "1px solid var(--color-vsc-border)",
-                  }}
+                  className="w-full tabular-nums"
                 />
               </div>
             </div>
@@ -799,12 +789,7 @@ export function ResultSidebar() {
                       (e.currentTarget as HTMLInputElement).blur();
                     }
                   }}
-                  className="w-full text-[11px] px-1.5 py-1 rounded tabular-nums"
-                  style={{
-                    background: "var(--color-vsc-bg)",
-                    color: "var(--color-vsc-text)",
-                    border: "1px solid var(--color-vsc-border)",
-                  }}
+                  className="w-full tabular-nums"
                 />
               </div>
 
@@ -831,12 +816,7 @@ export function ResultSidebar() {
                       (e.currentTarget as HTMLInputElement).blur();
                     }
                   }}
-                  className="w-full text-[11px] px-1.5 py-1 rounded tabular-nums"
-                  style={{
-                    background: "var(--color-vsc-bg)",
-                    color: "var(--color-vsc-text)",
-                    border: "1px solid var(--color-vsc-border)",
-                  }}
+                  className="w-full tabular-nums"
                 />
               </div>
             </div>
@@ -844,12 +824,7 @@ export function ResultSidebar() {
             <button
               type="button"
               onClick={setViewLockToModelBounds}
-              className="w-full text-[11px] px-1.5 py-1 rounded cursor-pointer"
-              style={{
-                background: "var(--color-vsc-list-hover)",
-                color: "var(--color-vsc-text)",
-                border: "1px solid var(--color-vsc-border)",
-              }}
+              className="btn self-start"
             >
               Use model bounds
             </button>
@@ -876,12 +851,7 @@ export function ResultSidebar() {
                     setRvs({ gridSpacing: value > 0 ? value : undefined })
                   }
                   onClear={() => setRvs({ gridSpacing: undefined })}
-                  className="w-full text-[11px] px-1.5 py-1 rounded tabular-nums"
-                  style={{
-                    background: "var(--color-vsc-bg)",
-                    color: "var(--color-vsc-text)",
-                    border: "1px solid var(--color-vsc-border)",
-                  }}
+                  className="w-full tabular-nums"
                 />
               </div>
 
@@ -909,12 +879,7 @@ export function ResultSidebar() {
                     const value = Math.max(0, Math.min(20, Math.round(parsed)));
                     setRvs({ minorTicks: value || undefined });
                   }}
-                  className="w-full text-[11px] px-1.5 py-1 rounded tabular-nums"
-                  style={{
-                    background: "var(--color-vsc-bg)",
-                    color: "var(--color-vsc-text)",
-                    border: "1px solid var(--color-vsc-border)",
-                  }}
+                  className="w-full tabular-nums"
                 />
               </div>
             </div>
@@ -936,12 +901,7 @@ export function ResultSidebar() {
                     },
                   })
                 }
-                className="w-full text-[11px] px-1.5 py-1 rounded cursor-pointer"
-                style={{
-                  background: "var(--color-vsc-bg)",
-                  color: "var(--color-vsc-text)",
-                  border: "1px solid var(--color-vsc-border)",
-                }}
+                className="w-full"
               >
                 {(Object.keys(PAPER_DIMENSIONS) as PaperSize[]).map((size) => (
                   <option key={size} value={size}>
@@ -982,12 +942,7 @@ export function ResultSidebar() {
                   }
                   setRvs(updates);
                 }}
-                className="w-full text-[11px] px-1.5 py-1 rounded cursor-pointer"
-                style={{
-                  background: "var(--color-vsc-bg)",
-                  color: "var(--color-vsc-text)",
-                  border: "1px solid var(--color-vsc-border)",
-                }}
+                className="w-full"
               >
                 <option value="portrait">Portrait</option>
                 <option value="landscape">Landscape</option>
@@ -1017,12 +972,7 @@ export function ResultSidebar() {
                     const v = parseFloat(e.target.value);
                     if (!Number.isNaN(v)) applyToAll({ x: v / 100 });
                   }}
-                  className="w-full text-[11px] px-1.5 py-1 rounded tabular-nums"
-                  style={{
-                    background: "var(--color-vsc-bg)",
-                    color: "var(--color-vsc-text)",
-                    border: "1px solid var(--color-vsc-border)",
-                  }}
+                  className="w-full tabular-nums"
                 />
               </div>
               <div className="flex-1">
@@ -1043,12 +993,7 @@ export function ResultSidebar() {
                     const v = parseFloat(e.target.value);
                     if (!Number.isNaN(v)) applyToAll({ y: v / 100 });
                   }}
-                  className="w-full text-[11px] px-1.5 py-1 rounded tabular-nums"
-                  style={{
-                    background: "var(--color-vsc-bg)",
-                    color: "var(--color-vsc-text)",
-                    border: "1px solid var(--color-vsc-border)",
-                  }}
+                  className="w-full tabular-nums"
                 />
               </div>
             </div>
@@ -1138,12 +1083,7 @@ export function ResultSidebar() {
                 value={textValue ?? ""}
                 placeholder={textValue === undefined ? "Mixed values" : ""}
                 onChange={(e) => applyToSelectedText({ text: e.target.value })}
-                className="w-full text-[11px] px-1.5 py-1 rounded resize-y min-h-[48px]"
-                style={{
-                  background: "var(--color-vsc-bg)",
-                  color: "var(--color-vsc-text)",
-                  border: "1px solid var(--color-vsc-border)",
-                }}
+                className="w-full resize-y min-h-[48px]"
               />
               {textValue !== undefined &&
                 resolveText(textValue) !== textValue && (
@@ -1178,12 +1118,7 @@ export function ResultSidebar() {
                   if (e.target.value === "__mixed__") return;
                   applyToSelectedText({ fontFamily: e.target.value });
                 }}
-                className="w-full text-[11px] px-1.5 py-1 rounded cursor-pointer"
-                style={{
-                  background: "var(--color-vsc-bg)",
-                  color: "var(--color-vsc-text)",
-                  border: "1px solid var(--color-vsc-border)",
-                }}
+                className="w-full"
               >
                 {fontFamilyValue === undefined && (
                   <option value="__mixed__">Mixed values</option>
@@ -1209,12 +1144,7 @@ export function ResultSidebar() {
                   if (e.target.value === "__mixed__") return;
                   applyToSelectedText({ fontSize: Number(e.target.value) });
                 }}
-                className="w-full text-[11px] px-1.5 py-1 rounded cursor-pointer"
-                style={{
-                  background: "var(--color-vsc-bg)",
-                  color: "var(--color-vsc-text)",
-                  border: "1px solid var(--color-vsc-border)",
-                }}
+                className="w-full"
               >
                 {fontSizeValue === undefined && (
                   <option value="__mixed__">Mixed values</option>
@@ -1232,15 +1162,8 @@ export function ResultSidebar() {
                 onClick={() =>
                   applyToSelectedText({ bold: boldValue !== true })
                 }
-                className="flex-1 text-[12px] font-bold py-1 rounded cursor-pointer"
-                style={{
-                  background:
-                    boldValue === true
-                      ? "var(--color-vsc-accent)"
-                      : "var(--color-vsc-bg)",
-                  color: boldValue === true ? "#fff" : "var(--color-vsc-text)",
-                  border: "1px solid var(--color-vsc-border)",
-                }}
+                className="btn w-[28px] px-0 font-bold"
+                aria-pressed={boldValue === true}
               >
                 B
               </button>
@@ -1248,16 +1171,8 @@ export function ResultSidebar() {
                 onClick={() =>
                   applyToSelectedText({ italic: italicValue !== true })
                 }
-                className="flex-1 text-[12px] italic py-1 rounded cursor-pointer"
-                style={{
-                  background:
-                    italicValue === true
-                      ? "var(--color-vsc-accent)"
-                      : "var(--color-vsc-bg)",
-                  color:
-                    italicValue === true ? "#fff" : "var(--color-vsc-text)",
-                  border: "1px solid var(--color-vsc-border)",
-                }}
+                className="btn w-[28px] px-0 italic"
+                aria-pressed={italicValue === true}
               >
                 I
               </button>
@@ -1307,12 +1222,7 @@ export function ResultSidebar() {
                     fontSize: Number(e.target.value),
                   });
                 }}
-                className="w-full text-[11px] px-1.5 py-1 rounded cursor-pointer"
-                style={{
-                  background: "var(--color-vsc-bg)",
-                  color: "var(--color-vsc-text)",
-                  border: "1px solid var(--color-vsc-border)",
-                }}
+                className="w-full"
               >
                 {mtFontSize === undefined && (
                   <option value="__mixed__">Mixed values</option>
@@ -1370,12 +1280,7 @@ export function ResultSidebar() {
                     const clamped = Math.max(5, Math.min(95, v));
                     applyToSelectedPlots({ width: clamped / 100 });
                   }}
-                  className="w-full text-[11px] px-1.5 py-1 rounded tabular-nums"
-                  style={{
-                    background: "var(--color-vsc-bg)",
-                    color: "var(--color-vsc-text)",
-                    border: "1px solid var(--color-vsc-border)",
-                  }}
+                  className="w-full tabular-nums"
                 />
               </div>
               <div className="flex-1">
@@ -1402,12 +1307,7 @@ export function ResultSidebar() {
                     const clamped = Math.max(5, Math.min(95, v));
                     applyToSelectedPlots({ height: clamped / 100 });
                   }}
-                  className="w-full text-[11px] px-1.5 py-1 rounded tabular-nums"
-                  style={{
-                    background: "var(--color-vsc-bg)",
-                    color: "var(--color-vsc-text)",
-                    border: "1px solid var(--color-vsc-border)",
-                  }}
+                  className="w-full tabular-nums"
                 />
               </div>
             </div>
@@ -1427,12 +1327,7 @@ export function ResultSidebar() {
                     plotAxisX: e.target.value as PlotAxisMode,
                   });
                 }}
-                className="w-full text-[11px] px-1.5 py-1 rounded cursor-pointer"
-                style={{
-                  background: "var(--color-vsc-bg)",
-                  color: "var(--color-vsc-text)",
-                  border: "1px solid var(--color-vsc-border)",
-                }}
+                className="w-full"
               >
                 {plotAxisXValue === undefined && (
                   <option value="__mixed__">Mixed values</option>
@@ -1460,12 +1355,7 @@ export function ResultSidebar() {
                     plotAxisY: e.target.value as PlotMetricKey,
                   });
                 }}
-                className="w-full text-[11px] px-1.5 py-1 rounded cursor-pointer"
-                style={{
-                  background: "var(--color-vsc-bg)",
-                  color: "var(--color-vsc-text)",
-                  border: "1px solid var(--color-vsc-border)",
-                }}
+                className="w-full"
               >
                 {plotAxisYValue === undefined && (
                   <option value="__mixed__">Mixed values</option>

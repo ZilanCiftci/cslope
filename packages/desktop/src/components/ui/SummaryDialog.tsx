@@ -38,12 +38,6 @@ export function SummaryDialog({ title, text, onClose }: Props) {
     }
   };
 
-  const buttonStyle = {
-    background: "var(--color-vsc-surface-tint)",
-    color: "var(--color-vsc-text)",
-    border: "1px solid var(--color-vsc-border)",
-  };
-
   return createPortal(
     <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/30">
       <div
@@ -84,20 +78,14 @@ export function SummaryDialog({ title, text, onClose }: Props) {
           <button
             type="button"
             onClick={() => void copy()}
-            className="px-3 py-1.5 text-xs font-medium rounded cursor-pointer"
-            style={buttonStyle}
+            className="btn min-w-[80px]"
           >
             Copy
           </button>
           <button
             type="button"
             onClick={onClose}
-            className="px-3 py-1.5 text-xs font-medium rounded cursor-pointer"
-            style={{
-              background: "var(--color-vsc-accent)",
-              color: "#fff",
-              border: "1px solid var(--color-vsc-accent)",
-            }}
+            className="btn btn-primary min-w-[80px]"
           >
             Close
           </button>

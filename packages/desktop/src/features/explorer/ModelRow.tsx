@@ -157,12 +157,7 @@ export function ModelRow({
             if (e.key === "Enter") onCommitRename();
             if (e.key === "Escape") onCancelRename();
           }}
-          className="flex-1 min-w-0 px-1.5 py-0 text-[12px] rounded"
-          style={{
-            background: "var(--color-vsc-input-bg)",
-            border: "1px solid var(--color-vsc-accent)",
-            color: "var(--color-vsc-text)",
-          }}
+          className="flex-1 min-w-0 py-0"
           autoFocus
           onClick={(e) => e.stopPropagation()}
         />

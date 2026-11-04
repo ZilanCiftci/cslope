@@ -2,7 +2,7 @@ type IconProps = {
   size?: number;
 };
 
-export function EditModeIcon({ size = 14 }: IconProps) {
+export function EditModeIcon({ size = 16 }: IconProps) {
   return (
     <svg
       width={size}
@@ -10,7 +10,7 @@ export function EditModeIcon({ size = 14 }: IconProps) {
       viewBox="0 0 24 24"
       fill="none"
       stroke="currentColor"
-      strokeWidth="2"
+      strokeWidth="1.75"
       strokeLinecap="round"
       strokeLinejoin="round"
     >
@@ -19,7 +19,7 @@ export function EditModeIcon({ size = 14 }: IconProps) {
   );
 }
 
-export function ResultsModeIcon({ size = 14 }: IconProps) {
+export function ResultsModeIcon({ size = 16 }: IconProps) {
   return (
     <svg
       width={size}
@@ -27,7 +27,7 @@ export function ResultsModeIcon({ size = 14 }: IconProps) {
       viewBox="0 0 24 24"
       fill="none"
       stroke="currentColor"
-      strokeWidth="2"
+      strokeWidth="1.75"
       strokeLinecap="round"
       strokeLinejoin="round"
     >

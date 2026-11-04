@@ -6,7 +6,7 @@ import {
   ZoomInIcon,
   ZoomOutIcon,
   ZoomBoxIcon,
-  HandIcon,
+  PanIcon,
 } from "../icons/ViewIcons";
 
 // ── Undo / Redo icons (small, monochrome) ───────────────────────────
@@ -19,7 +19,7 @@ function UndoIcon({ size = 16 }: { size?: number }) {
       viewBox="0 0 24 24"
       fill="none"
       stroke="currentColor"
-      strokeWidth="2"
+      strokeWidth="1.75"
       strokeLinecap="round"
       strokeLinejoin="round"
     >
@@ -37,7 +37,7 @@ function RedoIcon({ size = 16 }: { size?: number }) {
       viewBox="0 0 24 24"
       fill="none"
       stroke="currentColor"
-      strokeWidth="2"
+      strokeWidth="1.75"
       strokeLinecap="round"
       strokeLinejoin="round"
     >
@@ -145,6 +145,11 @@ export function FloatingToolbar({
     }
   }, [runState, onRun, onCancel]);
 
+  const runColor =
+    runState === "running"
+      ? "var(--color-vsc-error, #f44747)"
+      : "var(--color-vsc-success)";
+
   const zoomPresets = [25, 50, 75, 100, 125, 150, 200, 300, 400];
   const currentZoom = canvasToolbar?.zoomPercent ?? 100;
   const selectedPreset = zoomPresets.reduce((best, cur) =>
@@ -168,26 +173,23 @@ export function FloatingToolbar({
       onPointerLeave={resetFadeTimer}
     >
       <div
-        className="pointer-events-auto flex items-center gap-0 rounded-xl shadow-lg px-1 h-9"
+        className="pointer-events-auto flex items-center gap-0 rounded-xs shadow-md px-0.5 h-8"
         style={{
-          background:
-            "color-mix(in srgb, var(--color-vsc-bg) 82%, transparent)",
-          backdropFilter: "blur(12px)",
-          WebkitBackdropFilter: "blur(12px)",
+          background: "var(--color-vsc-sidebar)",
           border: "1px solid var(--color-vsc-border)",
         }}
       >
         {/* ── Mode Toggle ─────────────────────────────────── */}
         <div className="flex items-center gap-0.5 px-1">
           <ToolbarButton
-            icon={<EditModeIcon size={14} />}
+            icon={<EditModeIcon size={16} />}
             label="Edit"
             showLabel={!compact}
             active={mode === "edit"}
             onClick={() => setMode("edit")}
           />
           <ToolbarButton
-            icon={<ResultsModeIcon size={14} />}
+            icon={<ResultsModeIcon size={16} />}
             label="Results"
             showLabel={!compact}
             active={mode === "result"}
@@ -204,16 +206,11 @@ export function FloatingToolbar({
         <div className="flex items-center gap-0.5 px-1" ref={runMenuRef}>
           <button
             onClick={handleRunClick}
-            className="h-7 px-2.5 rounded-lg flex items-center gap-1.5 cursor-pointer text-[11px] font-semibold transition-colors"
+            className="h-6 px-2 rounded-xs flex items-center gap-1.5 text-[12px] font-medium hover:brightness-110"
             style={{
-              background:
-                runState === "running"
-                  ? "color-mix(in srgb, var(--color-vsc-error, #f44747) 18%, transparent)"
-                  : "color-mix(in srgb, var(--color-vsc-success) 18%, transparent)",
-              color:
-                runState === "running"
-                  ? "var(--color-vsc-error, #f44747)"
-                  : "var(--color-vsc-success)",
+              background: `color-mix(in srgb, ${runColor} 12%, transparent)`,
+              border: `1px solid color-mix(in srgb, ${runColor} 45%, transparent)`,
+              color: "var(--color-vsc-text-bright)",
             }}
             title={
               runState === "running"
@@ -221,18 +218,19 @@ export function FloatingToolbar({
                 : "Run analysis and view results"
             }
           >
-            <span
-              className="w-4 h-4 rounded-full flex items-center justify-center text-[9px]"
-              style={{
-                background:
-                  runState === "running"
-                    ? "var(--color-vsc-error, #f44747)"
-                    : "var(--color-vsc-success)",
-                color: "var(--color-vsc-bg)",
-              }}
+            <svg
+              width="12"
+              height="12"
+              viewBox="0 0 12 12"
+              aria-hidden="true"
+              style={{ color: runColor }}
             >
-              {runState === "running" ? "■" : "▶"}
-            </span>
+              {runState === "running" ? (
+                <rect x="2" y="2" width="8" height="8" fill="currentColor" />
+              ) : (
+                <path d="M3 1.5v9l7.5-4.5z" fill="currentColor" />
+              )}
+            </svg>
             {!compact && (runState === "running" ? "Cancel" : "Run")}
           </button>
 
@@ -240,7 +238,7 @@ export function FloatingToolbar({
           <button
             onClick={() => setRunMenuOpen((v) => !v)}
             disabled={runState === "running"}
-            className="h-7 w-5 rounded-lg flex items-center justify-center cursor-pointer text-[10px] disabled:opacity-40 disabled:cursor-not-allowed"
+            className="h-6 w-4 rounded-xs flex items-center justify-center text-[10px] hover:bg-[var(--color-vsc-list-active)] disabled:opacity-40"
             style={{
               color: "var(--color-vsc-text-muted)",
             }}
@@ -252,7 +250,7 @@ export function FloatingToolbar({
           {/* Dropdown menu */}
           {runMenuOpen && (
             <div
-              className="absolute bottom-full mb-1.5 rounded-lg shadow-xl overflow-hidden min-w-[140px]"
+              className="absolute bottom-full mb-1 rounded-xs shadow-md overflow-hidden min-w-[140px] py-0.5"
               style={{
                 background: "var(--color-vsc-input-bg)",
                 border: "1px solid var(--color-vsc-border)",
@@ -293,14 +291,14 @@ export function FloatingToolbar({
         {/* ── History (Undo / Redo) ───────────────────────── */}
         <div className="flex items-center gap-0.5 px-1">
           <ToolbarButton
-            icon={<UndoIcon size={15} />}
+            icon={<UndoIcon size={16} />}
             label="Undo"
             shortcut="Ctrl+Z"
             disabled={!canUndo}
             onClick={onUndo}
           />
           <ToolbarButton
-            icon={<RedoIcon size={15} />}
+            icon={<RedoIcon size={16} />}
             label="Redo"
             shortcut="Ctrl+Shift+Z"
             disabled={!canRedo}
@@ -313,7 +311,7 @@ export function FloatingToolbar({
         {/* ── Viewport Controls ───────────────────────────── */}
         <div className="flex items-center gap-0.5 px-1">
           <ToolbarButton
-            icon={<ZoomOutIcon size={15} />}
+            icon={<ZoomOutIcon size={16} />}
             label="Zoom out"
             disabled={!canvasToolbar}
             onClick={canvasToolbar?.onZoomOut}
@@ -322,13 +320,7 @@ export function FloatingToolbar({
           {/* Zoom % selector — hidden in compact mode */}
           {!compact && (
             <select
-              className="h-6 text-[10px] rounded cursor-pointer px-0.5"
-              style={{
-                minWidth: 44,
-                background: "var(--color-vsc-input-bg)",
-                color: "var(--color-vsc-text)",
-                border: "1px solid var(--color-vsc-border)",
-              }}
+              className="w-[64px] text-[11px] mx-0.5"
               value={selectedPreset}
               onChange={(e) =>
                 canvasToolbar?.onSetZoomPercent(Number(e.target.value))
@@ -344,7 +336,7 @@ export function FloatingToolbar({
           )}
 
           <ToolbarButton
-            icon={<ZoomInIcon size={15} />}
+            icon={<ZoomInIcon size={16} />}
             label="Zoom in"
             disabled={!canvasToolbar}
             onClick={canvasToolbar?.onZoomIn}
@@ -356,21 +348,21 @@ export function FloatingToolbar({
           />
 
           <ToolbarButton
-            icon={<ZoomBoxIcon size={15} />}
+            icon={<ZoomBoxIcon size={16} />}
             label="Zoom box"
             active={canvasToolbar?.zoomBoxActive}
             disabled={!canvasToolbar}
             onClick={canvasToolbar?.onToggleZoomBox}
           />
           <ToolbarButton
-            icon={<HandIcon size={15} />}
+            icon={<PanIcon size={16} />}
             label="Pan"
             active={canvasToolbar?.panActive}
             disabled={!canvasToolbar}
             onClick={canvasToolbar?.onTogglePan}
           />
           <ToolbarButton
-            icon={<FitIcon size={15} />}
+            icon={<FitIcon size={16} />}
             label="Fit to screen"
             disabled={!canvasToolbar}
             onClick={canvasToolbar?.onFitToScreen}
@@ -386,8 +378,8 @@ export function FloatingToolbar({
 function Divider() {
   return (
     <div
-      className="w-px h-5 mx-0.5"
-      style={{ background: "var(--color-vsc-border)", opacity: 0.6 }}
+      className="w-px h-4 mx-1"
+      style={{ background: "var(--color-vsc-border)" }}
     />
   );
 }
@@ -413,21 +405,24 @@ function ToolbarButton({
     <button
       title={shortcut ? `${label} (${shortcut})` : label}
       onClick={disabled ? undefined : onClick}
-      className="h-7 rounded-lg flex items-center justify-center gap-1 cursor-pointer transition-colors"
+      aria-pressed={active === undefined ? undefined : active}
+      className={`h-6 rounded-xs flex items-center justify-center gap-1 border ${
+        active
+          ? "bg-[var(--color-vsc-selected-bg)]"
+          : "hover:bg-[var(--color-vsc-list-active)]"
+      }`}
       style={{
-        padding: showLabel ? "0 8px" : "0 6px",
-        color: active
-          ? "var(--color-vsc-text-bright)"
-          : "var(--color-vsc-text-muted)",
-        background: active
-          ? "color-mix(in srgb, var(--color-vsc-accent) 22%, transparent)"
+        padding: showLabel ? "0 6px" : "0 3px",
+        borderColor: active
+          ? "color-mix(in srgb, var(--color-vsc-accent) 55%, transparent)"
           : "transparent",
+        color: active ? "var(--color-vsc-text-bright)" : "var(--color-vsc-text)",
         opacity: disabled ? 0.35 : 1,
         pointerEvents: disabled ? "none" : "auto",
       }}
     >
       {icon}
-      {showLabel && <span className="text-[11px] font-medium">{label}</span>}
+      {showLabel && <span className="text-[12px]">{label}</span>}
     </button>
   );
 }
@@ -445,7 +440,7 @@ function DropdownItem({
     <button
       // Disabled for the keyboard too, not only for the pointer.
       disabled={disabled}
-      className="w-full text-left px-3 py-1.5 text-[11px] cursor-pointer"
+      className="w-full text-left px-3 py-1 text-[12px]"
       style={{
         color: disabled ? "var(--color-vsc-badge)" : "var(--color-vsc-text)",
         pointerEvents: disabled ? "none" : "auto",

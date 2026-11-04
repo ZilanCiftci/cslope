@@ -148,7 +148,7 @@ export function PopupPanel({
       {/* ── Footer ── */}
       {footer && (
         <div
-          className="flex gap-2 p-3 border-t"
+          className="flex gap-1.5 px-3 py-2 border-t"
           style={{
             borderColor: "var(--color-vsc-border)",
             background: "var(--color-vsc-input-bg)",

@@ -87,30 +87,6 @@ export function ViewSettingsDialogApp() {
     });
   }, [rvs, coordinates, isHydrated]);
 
-  const inputStyle: React.CSSProperties = {
-    background: "var(--color-vsc-input-bg)",
-    border: "1px solid var(--color-vsc-border)",
-    color: "var(--color-vsc-text)",
-    borderRadius: 4,
-    padding: "3px 6px",
-    fontSize: 12,
-  };
-
-  const selectStyle: React.CSSProperties = {
-    ...inputStyle,
-    cursor: "pointer",
-  };
-
-  const btnStyle: React.CSSProperties = {
-    background: "var(--color-vsc-list-hover)",
-    border: "1px solid var(--color-vsc-border)",
-    color: "var(--color-vsc-text)",
-    borderRadius: 4,
-    padding: "4px 8px",
-    fontSize: 11,
-    cursor: "pointer",
-  };
-
   type ExtentField = "bl_x" | "bl_y" | "tr_x" | "tr_y";
 
   const extentFieldValue = (field: ExtentField): number => {
@@ -249,7 +225,6 @@ export function ViewSettingsDialogApp() {
                 },
               })
             }
-            style={selectStyle}
             className="w-44"
           >
             {(Object.keys(PAPER_DIMENSIONS) as PaperSize[]).map((size) => (
@@ -284,7 +259,6 @@ export function ViewSettingsDialogApp() {
               }
               setRvs(updates);
             }}
-            style={selectStyle}
             className="w-44"
           >
             <option value="portrait">Portrait</option>
@@ -305,7 +279,7 @@ export function ViewSettingsDialogApp() {
               setRvs({ gridSpacing: value > 0 ? value : undefined })
             }
             onClear={() => setRvs({ gridSpacing: undefined })}
-            style={{ ...inputStyle, width: 176 }}
+            style={{ width: 176 }}
           />
         </FieldRow>
 
@@ -329,7 +303,7 @@ export function ViewSettingsDialogApp() {
               const value = Math.max(0, Math.min(20, Math.round(parsed)));
               setRvs({ minorTicks: value || undefined });
             }}
-            style={{ ...inputStyle, width: 176 }}
+            style={{ width: 176 }}
           />
         </FieldRow>
 
@@ -356,7 +330,7 @@ export function ViewSettingsDialogApp() {
                     (e.currentTarget as HTMLInputElement).blur();
                   }
                 }}
-                style={{ ...inputStyle, width: "100%" }}
+                className="w-full"
               />
             </div>
             <div>
@@ -377,7 +351,7 @@ export function ViewSettingsDialogApp() {
                     (e.currentTarget as HTMLInputElement).blur();
                   }
                 }}
-                style={{ ...inputStyle, width: "100%" }}
+                className="w-full"
               />
             </div>
             <div>
@@ -398,7 +372,7 @@ export function ViewSettingsDialogApp() {
                     (e.currentTarget as HTMLInputElement).blur();
                   }
                 }}
-                style={{ ...inputStyle, width: "100%" }}
+                className="w-full"
               />
             </div>
             <div>
@@ -419,7 +393,7 @@ export function ViewSettingsDialogApp() {
                     (e.currentTarget as HTMLInputElement).blur();
                   }
                 }}
-                style={{ ...inputStyle, width: "100%" }}
+                className="w-full"
               />
             </div>
           </div>
@@ -427,8 +401,7 @@ export function ViewSettingsDialogApp() {
           <button
             type="button"
             onClick={setViewLockToModelBounds}
-            style={btnStyle}
-            className="w-full"
+            className="btn self-start"
           >
             Use model bounds
           </button>
@@ -437,17 +410,12 @@ export function ViewSettingsDialogApp() {
 
       {/* ── Close button ─────────────────────────────── */}
       <div
-        className="pt-3 mt-2 border-t"
+        className="pt-3 mt-2 border-t dialog-buttons"
         style={{ borderColor: "var(--color-vsc-border)" }}
       >
         <button
           onClick={() => window.close()}
-          className="w-full text-[11px] py-1 rounded cursor-pointer font-medium"
-          style={{
-            background: "var(--color-vsc-accent)",
-            color: "#fff",
-            border: "1px solid var(--color-vsc-accent)",
-          }}
+          className="btn btn-primary"
         >
           Close
         </button>

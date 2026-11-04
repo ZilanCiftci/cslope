@@ -129,23 +129,13 @@ export function AnnotationStyleMenu({
         <>
           <button
             onClick={handleSave}
-            className="flex-1 text-[11px] py-1 rounded cursor-pointer font-medium"
-            style={{
-              background: "var(--color-vsc-accent)",
-              color: "#fff",
-              border: "1px solid var(--color-vsc-accent)",
-            }}
+            className="btn btn-primary flex-1"
           >
             OK
           </button>
           <button
             onClick={handleCancel}
-            className="flex-1 text-[11px] py-1 rounded cursor-pointer"
-            style={{
-              background: "transparent",
-              color: "var(--color-vsc-text)",
-              border: "1px solid var(--color-vsc-border)",
-            }}
+            className="btn flex-1"
           >
             Cancel
           </button>
@@ -157,12 +147,8 @@ export function AnnotationStyleMenu({
               removeAnnotation(anno.id);
               onClose();
             }}
-            className="flex-1 text-[11px] py-1 rounded cursor-pointer"
-            style={{
-              background: "transparent",
-              color: "var(--color-vsc-error)",
-              border: "1px solid var(--color-vsc-error)",
-            }}
+            className="btn flex-1"
+            style={{ color: "var(--color-vsc-error)" }}
           >
             Delete
           </button>
@@ -184,12 +170,7 @@ export function AnnotationStyleMenu({
                 prev ? { ...prev, text: e.target.value } : prev,
               )
             }
-            className="w-full text-[11px] px-1.5 py-1 rounded resize-y min-h-[48px]"
-            style={{
-              background: "var(--color-vsc-bg)",
-              color: "var(--color-vsc-text)",
-              border: "1px solid var(--color-vsc-border)",
-            }}
+            className="w-full resize-y min-h-[48px]"
           />
         </div>
       )}
@@ -213,12 +194,7 @@ export function AnnotationStyleMenu({
                 : prev,
             )
           }
-          className="w-full text-[11px] px-1.5 py-1 rounded cursor-pointer"
-          style={{
-            background: "var(--color-vsc-bg)",
-            color: "var(--color-vsc-text)",
-            border: "1px solid var(--color-vsc-border)",
-          }}
+          className="w-full"
         >
           {FONT_FAMILIES.map((f) => (
             <option key={f.value} value={f.value}>
@@ -247,12 +223,7 @@ export function AnnotationStyleMenu({
                 : prev,
             )
           }
-          className="w-full text-[11px] px-1.5 py-1 rounded cursor-pointer"
-          style={{
-            background: "var(--color-vsc-bg)",
-            color: "var(--color-vsc-text)",
-            border: "1px solid var(--color-vsc-border)",
-          }}
+          className="w-full"
         >
           {FONT_SIZES.map((s) => (
             <option key={s} value={s}>
@@ -267,14 +238,8 @@ export function AnnotationStyleMenu({
           onClick={() =>
             setDraft((prev) => (prev ? { ...prev, bold: !prev.bold } : prev))
           }
-          className="flex-1 text-[12px] font-bold py-1 rounded cursor-pointer"
-          style={{
-            background: draft.bold
-              ? "var(--color-vsc-accent)"
-              : "var(--color-vsc-bg)",
-            color: draft.bold ? "#fff" : "var(--color-vsc-text)",
-            border: "1px solid var(--color-vsc-border)",
-          }}
+          className="btn w-[28px] px-0 font-bold"
+          aria-pressed={!!draft.bold}
         >
           B
         </button>
@@ -284,14 +249,8 @@ export function AnnotationStyleMenu({
               prev ? { ...prev, italic: !prev.italic } : prev,
             )
           }
-          className="flex-1 text-[12px] italic py-1 rounded cursor-pointer"
-          style={{
-            background: draft.italic
-              ? "var(--color-vsc-accent)"
-              : "var(--color-vsc-bg)",
-            color: draft.italic ? "#fff" : "var(--color-vsc-text)",
-            border: "1px solid var(--color-vsc-border)",
-          }}
+          className="btn w-[28px] px-0 italic"
+          aria-pressed={!!draft.italic}
         >
           I
         </button>

@@ -258,8 +258,7 @@ export function DefineMaterialsDialog({ onClose, mode = "popup" }: Props) {
                         }
                         onClick={(e) => e.stopPropagation()}
                         onFocus={() => selectMaterial(mat.id)}
-                        className="w-full text-[11px]"
-                        style={{ padding: "2px 6px", borderRadius: 4 }}
+                        className="w-full"
                         title="Material name (click to rename)"
                         aria-label="Material name"
                       />
@@ -333,12 +332,7 @@ export function DefineMaterialsDialog({ onClose, mode = "popup" }: Props) {
                     e.target.value as MaterialModelKind,
                   )
                 }
-                className="w-full text-xs rounded px-2 py-1.5 border outline-none"
-                style={{
-                  background: "var(--color-vsc-input-bg)",
-                  color: "var(--color-vsc-text)",
-                  borderColor: "var(--color-vsc-border)",
-                }}
+                className="w-full"
               >
                 {MODEL_KINDS.map((kind) => (
                   <option key={kind} value={kind}>
@@ -395,17 +389,12 @@ export function DefineMaterialsDialog({ onClose, mode = "popup" }: Props) {
         </div>
         <div className="flex-1 overflow-y-auto space-y-3 pr-1">{body}</div>
         <div
-          className="pt-3 mt-2 border-t"
+          className="pt-3 mt-2 border-t dialog-buttons"
           style={{ borderColor: "var(--color-vsc-border)" }}
         >
           <button
             onClick={onClose}
-            className="w-full text-[11px] py-1 rounded cursor-pointer font-medium"
-            style={{
-              background: "var(--color-vsc-accent)",
-              color: "#fff",
-              border: "1px solid var(--color-vsc-accent)",
-            }}
+            className="btn btn-primary"
           >
             Close
           </button>
@@ -423,12 +412,7 @@ export function DefineMaterialsDialog({ onClose, mode = "popup" }: Props) {
       footer={
         <button
           onClick={onClose}
-          className="flex-1 text-[11px] py-1 rounded cursor-pointer font-medium"
-          style={{
-            background: "var(--color-vsc-accent)",
-            color: "#fff",
-            border: "1px solid var(--color-vsc-accent)",
-          }}
+          className="btn btn-primary min-w-[80px] ml-auto"
         >
           Close
         </button>
@@ -453,15 +437,7 @@ function DialogButton({
   return (
     <button
       onClick={disabled ? undefined : onClick}
-      className="px-3 py-1.5 text-[11px] font-medium rounded border transition-colors cursor-pointer min-w-[64px]"
-      style={{
-        background: disabled ? "transparent" : "var(--color-vsc-surface-tint)",
-        color: disabled
-          ? "var(--color-vsc-text-muted)"
-          : "var(--color-vsc-text)",
-        borderColor: "var(--color-vsc-border)",
-        opacity: disabled ? 0.5 : 1,
-      }}
+      className="btn min-w-[64px]"
       aria-disabled={disabled}
     >
       {children}
@@ -641,12 +617,7 @@ function AboveWaterStrength({ model, onRemove }: { model: MaterialModel; onRemov
       <button
         type="button"
         onClick={onRemove}
-        className="px-2 py-0.5 text-[11px] font-medium rounded border cursor-pointer flex-shrink-0"
-        style={{
-          background: "var(--color-vsc-surface-tint)",
-          color: "var(--color-vsc-text)",
-          borderColor: "var(--color-vsc-border)",
-        }}
+        className="btn flex-shrink-0"
         title="Use one strength throughout (the fields above)"
         aria-label="Remove the strength above the water line"
       >

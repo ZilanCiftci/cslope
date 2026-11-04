@@ -72,7 +72,7 @@ export function DataPointTable({
   return (
     <div className="space-y-1">
       <div
-        className="overflow-hidden rounded-md border"
+        className="overflow-hidden rounded-xs border"
         style={{
           borderColor: tooFew
             ? "var(--color-vsc-error)"

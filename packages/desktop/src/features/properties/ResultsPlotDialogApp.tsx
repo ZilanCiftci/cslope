@@ -68,12 +68,6 @@ interface LffPoint {
   gap: number;
 }
 
-const SELECT_STYLE: React.CSSProperties = {
-  background: "var(--color-vsc-input-bg)",
-  color: "var(--color-vsc-text)",
-  border: "1px solid var(--color-vsc-border)",
-};
-
 const METRIC_OPTIONS: Array<{ key: MetricKey; label: string; unit: string }> = [
   { key: "shearStrength", label: "Shear strength", unit: "kPa" },
   { key: "frictionAngle", label: "Friction angle", unit: "deg" },
@@ -456,8 +450,6 @@ export function ResultsPlotDialogApp() {
               <select
                 value={plotMode}
                 onChange={(e) => setPlotMode(e.target.value as PlotMode)}
-                className="text-[11px] px-2 py-1 rounded"
-                style={SELECT_STYLE}
               >
                 <option value="slipSurface">Slip Surface Variables</option>
                 <option value="lambdaFmFf" disabled={!canShowLambdaPlot}>
@@ -475,8 +467,6 @@ export function ResultsPlotDialogApp() {
                 onChange={(e) =>
                   setSelectedSurfaceIndex(Number(e.target.value))
                 }
-                className="text-[11px] px-2 py-1 rounded"
-                style={SELECT_STYLE}
               >
                 {surfaces.map((surface, idx) => {
                   const tag =
@@ -511,16 +501,13 @@ export function ResultsPlotDialogApp() {
                 <select
                   value={axisMode}
                   onChange={(e) => setAxisMode(e.target.value as AxisMode)}
-                  className="text-[11px] px-2 py-1 rounded"
-                  style={SELECT_STYLE}
                 >
                   <option value="slice">Slice number</option>
                   <option value="x">X value</option>
                 </select>
               ) : (
                 <div
-                  className="text-[11px] px-2 py-1 rounded"
-                  style={SELECT_STYLE}
+                  className="field" aria-disabled="true"
                 >
                   Lambda
                 </div>
@@ -535,8 +522,6 @@ export function ResultsPlotDialogApp() {
                 <select
                   value={metric}
                   onChange={(e) => setMetric(e.target.value as MetricKey)}
-                  className="text-[11px] px-2 py-1 rounded"
-                  style={SELECT_STYLE}
                 >
                   {METRIC_OPTIONS.map((option) => (
                     <option key={option.key} value={option.key}>
@@ -546,8 +531,7 @@ export function ResultsPlotDialogApp() {
                 </select>
               ) : (
                 <div
-                  className="text-[11px] px-2 py-1 rounded"
-                  style={SELECT_STYLE}
+                  className="field" aria-disabled="true"
                 >
                   Factor of Safety
                 </div>
@@ -820,17 +804,12 @@ export function ResultsPlotDialogApp() {
       )}
 
       <div
-        className="pt-3 mt-2 border-t"
+        className="pt-3 mt-2 border-t dialog-buttons"
         style={{ borderColor: "var(--color-vsc-border)" }}
       >
         <button
           onClick={() => window.close()}
-          className="w-full text-[11px] py-1 rounded cursor-pointer font-medium"
-          style={{
-            background: "var(--color-vsc-accent)",
-            color: "#fff",
-            border: "1px solid var(--color-vsc-accent)",
-          }}
+          className="btn btn-primary"
         >
           Close
         </button>
