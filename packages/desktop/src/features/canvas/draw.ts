@@ -148,20 +148,27 @@ import {
 
 /** Imported head lines (teal, apart from the blue water lines). */
 const HEAD_LINE_COLOR = "#00897b";
-/** Width of the halo behind a line label, in px at paper zoom 1. */
-const LABEL_HALO_PX = 3;
+/** Margin of the plate around a line label, in px at paper zoom 1. */
+const LABEL_PLATE_PAD_PX = 1.5;
 
 /**
- * Text with a halo in the colour behind it, so a line or a soil fill under
- * the text does not strike through it.
+ * Text on a plate in the colour behind it (the sheet or the canvas), so the
+ * ground line or a soil fill under the text does not strike through it, as
+ * the PDF does with a white plate. Uses the context's font, alignment and
+ * baseline.
  */
-function fillTextWithHalo(ctx: CanvasRenderingContext2D, text: string, x: number, y: number, halo: string, width: number) {
+function fillTextOnPlate(ctx: CanvasRenderingContext2D, text: string, x: number, y: number, plate: string, pad: number) {
+  const size = Number(/([\d.]+)px/.exec(ctx.font)?.[1] ?? 10);
+  const width = ctx.measureText(text).width;
+  const height = size * 1.15;
+  const align = ctx.textAlign;
+  const left = align === "right" || align === "end" ? x - width : align === "center" ? x - width / 2 : x;
+  const base = ctx.textBaseline;
+  const top = base === "top" ? y : base === "bottom" ? y - height : base === "middle" ? y - height / 2 : y - size;
   ctx.save();
-  ctx.strokeStyle = halo;
-  ctx.lineWidth = width;
-  ctx.lineJoin = "round";
-  ctx.setLineDash([]);
-  ctx.strokeText(text, x, y);
+  ctx.globalAlpha = 1;
+  ctx.fillStyle = plate;
+  ctx.fillRect(left - pad, top, width + 2 * pad, height);
   ctx.restore();
   ctx.fillText(text, x, y);
 }
@@ -658,7 +665,7 @@ export function drawCanvas(
   // Reference annotations without a colour of their own: the theme's.
   const REFERENCE_COLOR = cssVar("--color-canvas-reference") || REFERENCE_ANNOTATION_COLOR.hex;
   // Labels of the water and head lines: a lighter tint in the dark theme,
-  // with a halo in the colour of the sheet or the canvas behind them.
+  // on a plate in the colour of the sheet or the canvas behind them.
   const WATER_LABEL_COLOR = cssVar("--color-canvas-water-label") || PIEZO_COLOR.hex;
   const HEAD_LABEL_COLOR = cssVar("--color-canvas-head-label") || HEAD_LINE_COLOR;
   const LINE_LABEL_HALO = (mode === "result" && result ? PAPER_FILL_COLOR : BG_COLOR) || "#ffffff";
@@ -1543,7 +1550,7 @@ export function drawCanvas(
     ctx.font = `${9 * paperZoom}px 'Segoe UI', sans-serif`;
     ctx.textAlign = "right";
     ctx.textBaseline = "bottom";
-    fillTextWithHalo(ctx, "before drawdown", lx - 2 * paperZoom, ly - 2 * paperZoom, LINE_LABEL_HALO, LABEL_HALO_PX * paperZoom);
+    fillTextOnPlate(ctx, "before drawdown", lx - 2 * paperZoom, ly - 2 * paperZoom, LINE_LABEL_HALO, LABEL_PLATE_PAD_PX * paperZoom);
     ctx.textBaseline = "alphabetic";
     ctx.textAlign = "left";
   }
@@ -1589,8 +1596,8 @@ export function drawCanvas(
       return [{ text, right: lx - 2 * paperZoom, top: ly + 2 * paperZoom, width: ctx.measureText(text).width, height: 10 * paperZoom }];
     });
     const tops = staggerLabelTops(labels);
-    // A halo keeps the ground line and the soil fill from striking through them.
-    labels.forEach((l, i) => fillTextWithHalo(ctx, l.text, l.right, tops[i], LINE_LABEL_HALO, LABEL_HALO_PX * paperZoom));
+    // A plate keeps the ground line and the soil fill from striking through them.
+    labels.forEach((l, i) => fillTextOnPlate(ctx, l.text, l.right, tops[i], LINE_LABEL_HALO, LABEL_PLATE_PAD_PX * paperZoom));
     ctx.textBaseline = "alphabetic";
     ctx.textAlign = "left";
   }
@@ -1700,7 +1707,7 @@ export function drawCanvas(
           ctx.font = `bold ${10 * paperZoom}px 'Segoe UI', sans-serif`;
           ctx.textAlign = "center";
           ctx.textBaseline = "bottom";
-          fillTextWithHalo(ctx, labelNum, mx, triTop - 2 * paperZoom, LINE_LABEL_HALO, LABEL_HALO_PX * paperZoom);
+          fillTextOnPlate(ctx, labelNum, mx, triTop - 2 * paperZoom, LINE_LABEL_HALO, LABEL_PLATE_PAD_PX * paperZoom);
           ctx.textBaseline = "alphabetic";
         }
       }

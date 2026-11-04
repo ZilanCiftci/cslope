@@ -46,7 +46,8 @@ export const createResultViewSlice: SliceCreator<ResultViewSlice> = (set, get) =
       // frame line does not run through them; text and plots in the
       // middle, where they are seen.
       x: type === "material-table" || type === "color-bar" ? RIGHT_INSIDE_FRAME : 0.5,
-      y: type === "material-table" ? TOP_INSIDE_FRAME : type === "color-bar" ? 0.25 : 0.5,
+      // The colour bar below a table of about five materials at the top.
+      y: type === "material-table" ? TOP_INSIDE_FRAME : type === "color-bar" ? 0.35 : 0.5,
       anchor: type === "material-table" || type === "color-bar" ? "top-right" : undefined,
       text: type === "text" ? "Annotation" : undefined,
       fontSize: type === "material-table" ? NEW_MATERIAL_TABLE_FONT_SIZE : 12,
