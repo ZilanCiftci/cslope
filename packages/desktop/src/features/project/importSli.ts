@@ -15,6 +15,6 @@ export async function sliImports(bytes: Uint8Array, fileName: string): Promise<S
  * Import a .sli, .slim or .slmd model file: each scenario becomes a model.
  * Returns a summary for the user, with what did not carry over.
  */
-export async function importSli(bytes: Uint8Array, fileName: string): Promise<string> {
+export async function importSli(bytes: Uint8Array, fileName: string): Promise<string | null> {
   return addImportedModels(await sliImports(bytes, fileName), fileName, "surface");
 }

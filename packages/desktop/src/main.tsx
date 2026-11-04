@@ -3,6 +3,7 @@ import { createRoot } from "react-dom/client";
 import "./index.css";
 import App from "./App.tsx";
 import { ErrorBoundary } from "./components/ErrorBoundary";
+import { LongTitleTooltip } from "./components/ui/LongTitleTooltip";
 import { useAppStore } from "./store/app-store";
 import { paperPngDataUrl } from "./features/export/paper-png";
 import { installFocusSource } from "./utils/focus-source";
@@ -40,6 +41,7 @@ void initEngine(base64Bytes(engineWasm)).then(() => {
     <StrictMode>
       <ErrorBoundary>
         <App />
+        <LongTitleTooltip />
       </ErrorBoundary>
     </StrictMode>,
   );

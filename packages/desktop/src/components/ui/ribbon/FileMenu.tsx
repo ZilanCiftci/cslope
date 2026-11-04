@@ -76,7 +76,7 @@ export function FileMenu({
   };
 
   /** Import a project file of another program (a ZIP archive) with `run`. */
-  const importBinary = (extension: string, run: (bytes: Uint8Array, name: string) => Promise<string>) => {
+  const importBinary = (extension: string, run: (bytes: Uint8Array, name: string) => Promise<string | null>) => {
     const input = document.createElement("input");
     input.type = "file";
     input.accept = extension;
@@ -91,7 +91,7 @@ export function FileMenu({
       const reader = new FileReader();
       reader.onload = () => {
         run(new Uint8Array(reader.result as ArrayBuffer), file.name).then(
-          (text) => setSummary({ title: `Import of ${file.name}`, text }),
+          (text) => setSummary(text ? { title: `Import of ${file.name}`, text } : null),
           (err) => failure(`Import of ${file.name}`, err),
         );
       };
@@ -104,9 +104,10 @@ export function FileMenu({
   const handleImportStix = () => importBinary(".stix", importStix);
   const handleImportSli = () => importBinary(".sli,.slim,.slmd", importSli);
 
-  const exportAs = (extension: string, run: () => string) => {
+  const exportAs = (extension: string, run: () => string | null) => {
     try {
-      setSummary({ title: `Export as ${extension}`, text: run() });
+      const text = run();
+      setSummary(text ? { title: `Export as ${extension}`, text } : null);
     } catch (err) {
       failure(`Export as ${extension}`, err);
     }

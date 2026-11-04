@@ -64,13 +64,14 @@ export function plural(n: number, word: string, plural = `${word}s`): string {
 
 /**
  * Add imported models to the project and show the first. Returns a summary
- * for the user, with what did not carry over; `surface` names the file's
+ * for the user with what did not carry over, or null when everything did
+ * (the models appear in the explorer and on the canvas); `surface` names the file's
  * critical surface. Each model keeps its notes (`importNotes`, shown in
  * its properties). The undo history belongs to one model and does not
  * hold the list of models, so the import is no undo step: the summary says
  * so.
  */
-export function addImportedModels(imports: ImportedModel[], fileName: string, surface: string): string {
+export function addImportedModels(imports: ImportedModel[], fileName: string, surface: string): string | null {
   const entries = imports.map((imp) => ({
     ...modelFromDefinition(imp.definition, { id: nextId("model"), name: imp.name, options: imp.options }),
     importNotes: [`Imported from ${fileName}.`, ...imp.notes],
@@ -81,6 +82,7 @@ export function addImportedModels(imports: ImportedModel[], fileName: string, su
   useAppStore.setState({ _pendingFitToScreen: true });
   useAppStore.temporal.getState().clear();
 
+  if (imports.every((imp) => imp.notes.length === 0 && !imp.reference)) return null;
   const lines = imports.map((imp, i) => {
     const ref = imp.reference
       ? ` The file's critical ${surface} (factor of safety ${imp.reference.fos.toFixed(3)}) is added as a custom surface.`

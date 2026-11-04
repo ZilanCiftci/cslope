@@ -16,6 +16,6 @@ export async function stixImports(bytes: Uint8Array, fileName: string): Promise<
  * Import a .stix project file: each calculation becomes a model.
  * Returns a summary for the user, with what did not carry over.
  */
-export async function importStix(bytes: Uint8Array, fileName: string): Promise<string> {
+export async function importStix(bytes: Uint8Array, fileName: string): Promise<string | null> {
   return addImportedModels(await stixImports(bytes, fileName), fileName, "slip plane");
 }

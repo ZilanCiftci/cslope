@@ -16,6 +16,6 @@ export async function gszImports(bytes: Uint8Array, fileName: string): Promise<G
  * Import a .gsz project file: each stability analysis becomes a model.
  * Returns a summary for the user, with what did not carry over.
  */
-export async function importGsz(bytes: Uint8Array, fileName: string): Promise<string> {
+export async function importGsz(bytes: Uint8Array, fileName: string): Promise<string | null> {
   return addImportedModels(await gszImports(bytes, fileName), fileName, "circle");
 }

@@ -151,7 +151,9 @@ describe("FileMenu in a browser", () => {
     const { modelToGsz } = await import("../../../features/project/gsz/gsz-write");
     store().saveCurrentModel();
     const model = store().models.find((m) => m.id === store().activeModelId)!;
-    const { bytes } = modelToGsz({ ...model, name: "Exported" });
+    const { bytes, notes } = modelToGsz({ ...model, name: "Exported" });
+    // This model goes through the format whole: nothing to report.
+    expect(notes).toEqual([]);
     const pickers = capturePickers();
     renderMenu();
     await userEvent.click(screen.getByTitle("Import"));
@@ -159,21 +161,23 @@ describe("FileMenu in a browser", () => {
     const picker = pickers.at(-1)!;
     expect(picker.accept).toBe(".gsz");
     Object.defineProperty(picker, "files", { value: [new File([bytes as BlobPart], "Section B.gsz")], configurable: true });
+    const before = store().models.length;
     picker.onchange?.(new Event("change"));
-    const imported = await summaryText();
-    expect(imported).toMatch(/^Imported 1 model from Section B\.gsz/);
-    expect(imported).toContain("The import cannot be undone");
-    await closeSummary();
+    await waitFor(() => expect(store().models).toHaveLength(before + 1));
     const importedModel = store().models.find((m) => m.id === store().activeModelId)!;
     expect(importedModel.name).toBe("Section B");
     // The notes stay with the model.
-    expect(importedModel.importNotes?.[0]).toBe("Imported from Section B.gsz.");
+    expect(importedModel.importNotes).toEqual(["Imported from Section B.gsz."]);
+    // Nothing was lost on the way in, so no summary interrupts.
+    expect(screen.queryByRole("dialog")).toBeNull();
 
     URL.createObjectURL ??= () => "blob:x";
     URL.revokeObjectURL ??= () => {};
     await userEvent.click(screen.getByTitle("Export"));
     await userEvent.click(screen.getByTitle("Export the active model as a .gsz project file"));
-    expect(await summaryText()).toMatch(/^Prepared "Section B" as Section B\.gsz for download/);
+    // The save dialog is the feedback; nothing left out, nothing to say.
+    expect(mocks.downloadFile.mock.calls.at(-1)?.[0]).toBe("Section B.gsz");
+    expect(screen.queryByRole("dialog")).toBeNull();
   });
 
   it("refuses an import file above the size limit without reading it", async () => {
@@ -218,7 +222,7 @@ describe("FileMenu in a browser", () => {
     URL.revokeObjectURL ??= () => {};
     await userEvent.click(screen.getByTitle("Export"));
     await userEvent.click(screen.getByTitle("Export the active model as a .stix project file"));
-    expect(await summaryText()).toMatch(/^Prepared "Calculation 1 \(Dike\)" as /);
+    expect(await summaryText()).toMatch(/^Calculation 1 \(Dike\)\.stix leaves out:\n  – /);
   });
 
   it("imports a .slim file from Import › .sli/.slim/.slmd file and exports the model as one", async () => {
@@ -243,7 +247,7 @@ describe("FileMenu in a browser", () => {
     URL.revokeObjectURL ??= () => {};
     await userEvent.click(screen.getByTitle("Export"));
     await userEvent.click(screen.getByTitle("Export the active model as a .slim model file"));
-    expect(await summaryText()).toMatch(/^Prepared ".*" as .*\.slim/);
+    expect(await summaryText()).toMatch(/^Cut\.slim leaves out:\n  – /);
   });
 
   it("shows the summary in a dialog that copies it", async () => {
@@ -253,9 +257,9 @@ describe("FileMenu in a browser", () => {
     URL.revokeObjectURL ??= () => {};
     renderMenu();
     await userEvent.click(screen.getByTitle("Export"));
-    await userEvent.click(screen.getByTitle("Export the active model as a .gsz project file"));
+    await userEvent.click(screen.getByTitle("Export the active model as a .stix project file"));
     const text = await summaryText();
-    expect(screen.getByRole("dialog", { name: "Export as .gsz" })).toBeInTheDocument();
+    expect(screen.getByRole("dialog", { name: "Export as .stix" })).toBeInTheDocument();
     await userEvent.click(screen.getByRole("button", { name: "Copy" }));
     expect(writeText).toHaveBeenCalledWith(text);
     expect(await screen.findByRole("status")).toHaveTextContent("Copied");

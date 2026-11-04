@@ -4,9 +4,10 @@ import { modelToStix } from "./stix/stix-write";
 
 /**
  * Export the active model as a .stix project file. Returns a summary for the
- * user with what the format does not carry.
+ * user with what the format does not carry, or null when it carries
+ * everything (nothing to say: the save dialog is the feedback).
  */
-export function exportStix(): string {
+export function exportStix(): string | null {
   const store = useAppStore.getState();
   store.saveCurrentModel();
   const s = useAppStore.getState();
@@ -15,7 +16,8 @@ export function exportStix(): string {
   const { bytes, notes } = modelToStix(model);
   const fileName = safeFileName(model.name || "cslope", "stix");
   downloadFile(fileName, bytes as BlobPart, "application/zip");
-  const list = notes.length > 0 ? `\n  – ${notes.join("\n  – ")}` : "";
-  // The download reports neither its end nor a cancelled save dialog.
-  return `Prepared "${model.name}" as ${fileName} for download.${list}\n\nOpen it in the receiving program and check it before use.`;
+  if (notes.length === 0) return null;
+  // The download reports neither its end nor a cancelled save dialog, so
+  // the summary only says what the file leaves out.
+  return `${fileName} leaves out:\n  – ${notes.join("\n  – ")}\n\nCheck the model in the receiving program before use.`;
 }
