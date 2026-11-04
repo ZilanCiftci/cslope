@@ -46,7 +46,7 @@ More iterations give a more thorough search and take longer. For a final analysi
 Very shallow surfaces at the ground surface can give a low factor of safety that does not matter for the design, especially in frictional soil. Three settings in the options leave them out:
 
 - **Min. slip depth (m)**: surfaces whose greatest depth below the ground is less than this are not analysed. 0 means no limit.
-- **Min. sliding area (m²)**: surfaces with a smaller sliding mass are skipped. Empty means automatic (1 % of the square of the height of the slope); 0 means no limit.
+- **Min. slip area (m²)**: surfaces whose sliding mass (cross-section area per metre) is smaller than this are left out of the search. 0 means no limit, the default. A limit hides small surfaces, such as a low cut at the toe; use it to skip shallow slips you do not want to analyse.
 - **Min. entry–exit distance (m)**: surfaces whose entry and exit points are closer than this (the straight distance between them; horizontally for planar surfaces) are not analysed. 0 means no limit. In a cohesionless fill (a road bank's 45° edge, a loose fill over clay) the search otherwise finds a thin slide in the fill before any deeper mechanism; when the critical surface is such a slide (its base on average less than 1 m, or a tenth of the ground relief around it, below the ground, with half its base or more in cohesionless soil), the result warns and points to this setting, the minimum depth and the minimum area.
 
 ## Non-circular surfaces
@@ -91,7 +91,7 @@ A surface is skipped when it:
 - enters bedrock (Impenetrable) or has a slice base in High Strength material,
 - has no driving force in the sliding direction,
 - does not reach equilibrium,
-- is shallower than **Min. slip depth** or smaller than **Min. sliding area** (surfaces shallower than 0.1 % of the model height are always skipped),
+- is shallower than **Min. slip depth** or smaller than **Min. slip area** (surfaces shallower than 0.1 % of the model height are always skipped),
 - gives a negative factor of safety, or
 - has a slice with $m_\alpha \le 0$ (see [Bishop simplified](/docs/theory#bishop-simplified)), where the normal force on the base has no meaning.
 

@@ -498,14 +498,13 @@ export function OptionsSection({ plain = false }: OptionsSectionProps) {
           <label className="flex flex-col gap-0.5">
             <Label>Min. slip area (m²)</Label>
             <DraftNumberInput
-              value={options.minSlipArea ?? undefined}
+              value={options.minSlipArea ?? 0}
               min={0}
               step={0.5}
-              placeholder="Auto"
               onValueChange={(v) => v >= 0 && setOptions({ minSlipArea: v })}
-              onClear={() => setOptions({ minSlipArea: undefined })}
-              aria-label="Minimum sliding area"
-              title="Surfaces whose sliding mass is smaller than this are not analysed. Empty = automatic (1 % of the squared ground relief, e.g. 1 m² for a 10 m slope; skips micro-surfaces); 0 = no limit."
+              onClear={() => setOptions({ minSlipArea: 0 })}
+              aria-label="Minimum slip area"
+              title="Surfaces whose sliding mass (cross-section area per metre) is smaller than this are left out of the search. 0 = no limit (default). A limit hides small surfaces, such as a low cut at the toe; use it to skip shallow slips you do not want to analyse."
             />
           </label>
           <label className="flex flex-col gap-0.5">

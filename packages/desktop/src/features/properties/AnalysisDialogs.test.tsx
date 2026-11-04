@@ -167,12 +167,15 @@ describe("OptionsDialogApp", () => {
     await userEvent.type(depth, "1.5");
     expect(opts().minSlipDepth).toBe(1.5);
 
-    const area = screen.getByLabelText("Minimum sliding area");
-    expect(area).toHaveAttribute("placeholder", "Auto");
+    const area = screen.getByLabelText("Minimum slip area");
+    expect(area).toHaveValue("0");
+    await userEvent.clear(area);
+    expect(opts().minSlipArea).toBe(0);
     await userEvent.type(area, "2");
     expect(opts().minSlipArea).toBe(2);
+    // empty is 0 (no limit), not automatic
     await userEvent.clear(area);
-    expect(opts().minSlipArea).toBeUndefined();
+    expect(opts().minSlipArea).toBe(0);
   });
 
   it("enables crack water only with a crack, and disables the depth when automatic", async () => {

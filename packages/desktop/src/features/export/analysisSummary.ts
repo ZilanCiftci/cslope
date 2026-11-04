@@ -400,13 +400,8 @@ export function buildAnalysisSummary(input: AnalysisSummaryInput): SummarySectio
     search.push({ label: "Minimum slip depth", value: `${fmt(options.minSlipDepth)} m` });
   }
   search.push({
-    label: "Minimum sliding area",
-    value:
-      options.minSlipArea == null
-        ? "automatic (1 % of the squared ground relief)"
-        : options.minSlipArea === 0
-          ? "none"
-          : `${fmt(options.minSlipArea)} m²`,
+    label: "Minimum slip area",
+    value: options.minSlipArea ? `${fmt(options.minSlipArea)} m²` : "none",
   });
   sections.push({ title: "Search", rows: search });
 
