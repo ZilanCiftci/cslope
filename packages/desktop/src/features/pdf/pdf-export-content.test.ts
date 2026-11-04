@@ -221,9 +221,11 @@ describe("exportVectorPdf — full model", () => {
         "Bishop simplified (moment equilibrium)",
         "Partial factors",
         "Materials (characteristic values)",
-        "Summary page 1",
       ]),
     );
+    // Numbered as pages of the whole document, the drawing being page 1.
+    expect(texts).toContain(`Page 2 of ${doc.getNumberOfPages()}`);
+    expect(texts.some((t) => t.startsWith("Summary page"))).toBe(false);
     expect(texts.some((t) => t.startsWith("cSlope 9.9.9"))).toBe(true);
     // No title line in the margin unless asked for: the drawing's text
     // annotations carry the title.
@@ -237,6 +239,16 @@ describe("exportVectorPdf — full model", () => {
     }
     const out = doc.output();
     expect(out.match(/\/VP \[/g)).toHaveLength(1);
+  });
+
+  it("names the model in the summary header only when the project title is not its name", () => {
+    const named = pageTexts(exportDoc(withSummary()).doc);
+    expect(named.some((t) => t.includes("Full model") && t.includes("model Model B"))).toBe(true);
+    const same = withSummary();
+    same.summary!.header.modelName = "Full model";
+    const texts = pageTexts(exportDoc(same).doc);
+    expect(texts).toContain("Full model");
+    expect(texts.some((t) => t.includes("model Full model"))).toBe(false);
   });
 
   it("writes the title line above the drawing when it is turned on", () => {
@@ -259,7 +271,7 @@ describe("exportVectorPdf — full model", () => {
     expect(doc.getNumberOfPages()).toBe(1);
     const texts = pageTexts(doc);
     expect(texts).not.toContain("Analysis summary");
-    expect(texts.some((t) => t.startsWith("Summary page"))).toBe(false);
+    expect(texts.some((t) => /^Page \d+ of \d+$/.test(t))).toBe(false);
     expect(texts).not.toContain(TITLE_RESULT);
     // The title line on its own, without the summary pages.
     const titled = exportDoc(withSummary({ pdfSummaryPages: false, pdfTitleLine: true })).doc;
