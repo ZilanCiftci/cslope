@@ -71,7 +71,7 @@ export function MenuBar({ activeModelName }: Props) {
       </div>
       <div
         ref={setPanelHost}
-        className="h-[4.375rem] px-3 flex items-center"
+        className="h-[4.25rem] px-2.5 pt-0.5 pb-px flex items-stretch"
         style={{
           background: "var(--color-vsc-panel)",
           borderBottom: "1px solid var(--color-vsc-border)",

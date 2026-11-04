@@ -6,21 +6,28 @@ import {
   performUndo,
   performRedo,
 } from "../../../store/app-store";
-import { RibbonGroup, RibbonButton, RibbonSep } from "./RibbonParts";
 import {
-  RibbonGeometryIcon,
-  RibbonInteriorBoundaryIcon,
-  RibbonAssignMaterialsIcon,
-  RibbonMaterialsIcon,
-  RibbonUdlIcon,
-  RibbonLineLoadIcon,
-  RibbonReinforcementIcon,
-  RibbonPiezoLineIcon,
-  RibbonParametersIcon,
-  RibbonSearchLimitsIcon,
-  RibbonCustomPlanesIcon,
-  RibbonOptionsIcon,
-} from "../../icons/EditIcons";
+  Anchor,
+  ArrowDownToLine,
+  ArrowDownWideNarrow,
+  Layers,
+  PaintBucket,
+  Pentagon,
+  ScanSearch,
+  Settings,
+  Slash,
+  SlidersHorizontal,
+  Spline,
+  Waves,
+} from "lucide-react";
+import {
+  RibbonGroup,
+  RibbonButton,
+  RibbonSep,
+  RibbonSmallButton,
+  RibbonStack,
+} from "./RibbonParts";
+import { LARGE_ICON, SMALL_ICON } from "./icon-props";
 
 interface Props {
   isOpen: boolean;
@@ -106,121 +113,131 @@ export function EditMenu({ isOpen, onActivate, panelHost }: Props) {
       {isOpen &&
         panelHost &&
         createPortal(
-          <div className="h-full flex items-center gap-0" role="menu">
+          <div className="h-full flex items-stretch gap-0" role="menu">
             <RibbonGroup label="Boundaries">
               <RibbonButton
-                icon={<RibbonGeometryIcon />}
+                icon={<Pentagon {...LARGE_ICON} />}
                 label="Exterior"
                 onClick={() => {
                   setActiveSection("Exterior Boundary");
                   window.cslope.openGeometryDialog();
                 }}
               />
-              <RibbonButton
-                icon={<RibbonInteriorBoundaryIcon />}
-                label="Interior"
-                onClick={() => {
-                  setActiveSection("Interior Boundaries");
-                  window.cslope.openInteriorBoundariesDialog();
-                }}
-              />
+              <RibbonStack>
+                <RibbonSmallButton
+                  icon={<Spline {...SMALL_ICON} />}
+                  label="Interior"
+                  onClick={() => {
+                    setActiveSection("Interior Boundaries");
+                    window.cslope.openInteriorBoundariesDialog();
+                  }}
+                />
+              </RibbonStack>
             </RibbonGroup>
 
             <RibbonSep />
 
             <RibbonGroup label="Materials">
               <RibbonButton
-                icon={<RibbonMaterialsIcon />}
+                icon={<Layers {...LARGE_ICON} />}
                 label="Materials"
                 onClick={() => window.cslope.openMaterialsDialog()}
               />
-              <RibbonButton
-                icon={<RibbonAssignMaterialsIcon />}
-                label="Assign"
-                onClick={() => {
-                  setActiveSection("Material Assignment");
-                  window.cslope.openMaterialAssignmentDialog();
-                }}
-              />
+              <RibbonStack>
+                <RibbonSmallButton
+                  icon={<PaintBucket {...SMALL_ICON} />}
+                  label="Assign"
+                  onClick={() => {
+                    setActiveSection("Material Assignment");
+                    window.cslope.openMaterialAssignmentDialog();
+                  }}
+                />
+              </RibbonStack>
             </RibbonGroup>
 
             <RibbonSep />
 
             <RibbonGroup label="Loads & support">
-              <RibbonButton
-                icon={<RibbonUdlIcon />}
-                label="UDL"
-                onClick={() => {
-                  setActiveSection("Loads");
-                  window.cslope.openUdlDialog();
-                }}
-              />
-              <RibbonButton
-                icon={<RibbonLineLoadIcon />}
-                label="Line loads"
-                onClick={() => {
-                  setActiveSection("Loads");
-                  window.cslope.openLineLoadsDialog();
-                }}
-              />
-              <RibbonButton
-                icon={<RibbonReinforcementIcon />}
-                label="Reinforcement"
-                onClick={() => {
-                  setActiveSection("Loads");
-                  window.cslope.openReinforcementDialog();
-                }}
-              />
+              <RibbonStack>
+                <RibbonSmallButton
+                  icon={<ArrowDownWideNarrow {...SMALL_ICON} />}
+                  label="UDL"
+                  onClick={() => {
+                    setActiveSection("Loads");
+                    window.cslope.openUdlDialog();
+                  }}
+                />
+                <RibbonSmallButton
+                  icon={<ArrowDownToLine {...SMALL_ICON} />}
+                  label="Line loads"
+                  onClick={() => {
+                    setActiveSection("Loads");
+                    window.cslope.openLineLoadsDialog();
+                  }}
+                />
+                <RibbonSmallButton
+                  icon={<Anchor {...SMALL_ICON} />}
+                  label="Reinforcement"
+                  onClick={() => {
+                    setActiveSection("Loads");
+                    window.cslope.openReinforcementDialog();
+                  }}
+                />
+              </RibbonStack>
             </RibbonGroup>
 
             <RibbonSep />
 
             <RibbonGroup label="Water & parameters">
               <RibbonButton
-                icon={<RibbonPiezoLineIcon />}
+                icon={<Waves {...LARGE_ICON} />}
                 label="Piezometric lines"
                 onClick={() => {
                   setActiveSection("Piezometric Lines");
                   window.cslope.openPiezoDialog();
                 }}
               />
-              <RibbonButton
-                icon={<RibbonParametersIcon />}
-                label="Parameters"
-                onClick={() => {
-                  setActiveSection("Parameters");
-                  window.cslope.openParametersDialog();
-                }}
-              />
+              <RibbonStack>
+                <RibbonSmallButton
+                  icon={<SlidersHorizontal {...SMALL_ICON} />}
+                  label="Parameters"
+                  onClick={() => {
+                    setActiveSection("Parameters");
+                    window.cslope.openParametersDialog();
+                  }}
+                />
+              </RibbonStack>
             </RibbonGroup>
 
             <RibbonSep />
 
             <RibbonGroup label="Analysis">
               <RibbonButton
-                icon={<RibbonSearchLimitsIcon />}
-                label="Search limits"
-                onClick={() => {
-                  setActiveSection("Search Limits");
-                  window.cslope.openSearchLimitsDialog();
-                }}
-              />
-              <RibbonButton
-                icon={<RibbonCustomPlanesIcon />}
-                label="Custom planes"
-                onClick={() => {
-                  setActiveSection("Custom Search Planes");
-                  window.cslope.openCustomSearchPlanesDialog();
-                }}
-              />
-              <RibbonButton
-                icon={<RibbonOptionsIcon />}
+                icon={<Settings {...LARGE_ICON} />}
                 label="Options"
                 onClick={() => {
                   setActiveSection("Options");
                   window.cslope.openOptionsDialog();
                 }}
               />
+              <RibbonStack>
+                <RibbonSmallButton
+                  icon={<ScanSearch {...SMALL_ICON} />}
+                  label="Search limits"
+                  onClick={() => {
+                    setActiveSection("Search Limits");
+                    window.cslope.openSearchLimitsDialog();
+                  }}
+                />
+                <RibbonSmallButton
+                  icon={<Slash {...SMALL_ICON} />}
+                  label="Custom planes"
+                  onClick={() => {
+                    setActiveSection("Custom Search Planes");
+                    window.cslope.openCustomSearchPlanesDialog();
+                  }}
+                />
+              </RibbonStack>
             </RibbonGroup>
           </div>,
           panelHost,

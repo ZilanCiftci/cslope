@@ -13,14 +13,14 @@ async function confirmReplace(question: string): Promise<boolean> {
 }
 import { isElectron } from "../../../utils/is-electron";
 import { PopupPanel } from "../PopupPanel";
-import { RibbonGroup, RibbonButton } from "./RibbonParts";
+import { BadgeCheck, BookOpen, FlaskConical, Info, Keyboard } from "lucide-react";
 import {
-  BenchmarkIcon,
-  DocsIcon,
-  ExamplesIcon,
-  InfoIcon,
-  KeyboardIcon,
-} from "../../icons/HelpIcons";
+  RibbonGroup,
+  RibbonButton,
+  RibbonSmallButton,
+  RibbonStack,
+} from "./RibbonParts";
+import { LARGE_ICON, SMALL_ICON } from "./icon-props";
 
 /** The online documentation (the website's /docs pages). */
 const DOCS_URL = "https://cslope.com/docs";
@@ -105,34 +105,36 @@ export function HelpMenu({ isOpen, onActivate, panelHost }: Props) {
       {isOpen &&
         panelHost &&
         createPortal(
-          <div className="h-full flex items-center gap-0" role="menu">
+          <div className="h-full flex items-stretch gap-0" role="menu">
             <RibbonGroup label="Resources">
               <RibbonButton
-                icon={<DocsIcon />}
+                icon={<BookOpen {...LARGE_ICON} />}
                 label="Documentation"
                 onClick={handleDocs}
               />
               <RibbonButton
-                icon={<KeyboardIcon />}
-                label="Shortcuts"
-                tooltip="Keyboard shortcuts"
-                onClick={() => setShortcutsOpen(true)}
-              />
-              <RibbonButton
-                icon={<ExamplesIcon />}
+                icon={<FlaskConical {...LARGE_ICON} />}
                 label="Examples"
                 onClick={handleLoadExamples}
               />
               <RibbonButton
-                icon={<BenchmarkIcon />}
+                icon={<BadgeCheck {...LARGE_ICON} />}
                 label="Benchmarks"
                 onClick={handleLoadBenchmarks}
               />
-              <RibbonButton
-                icon={<InfoIcon />}
-                label="About"
-                onClick={handleAbout}
-              />
+              <RibbonStack>
+                <RibbonSmallButton
+                  icon={<Keyboard {...SMALL_ICON} />}
+                  label="Shortcuts"
+                  title="Keyboard shortcuts"
+                  onClick={() => setShortcutsOpen(true)}
+                />
+                <RibbonSmallButton
+                  icon={<Info {...SMALL_ICON} />}
+                  label="About"
+                  onClick={handleAbout}
+                />
+              </RibbonStack>
             </RibbonGroup>
           </div>,
           panelHost,

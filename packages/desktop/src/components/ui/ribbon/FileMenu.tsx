@@ -2,7 +2,15 @@ import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { isElectron } from "../../../utils/is-electron";
 import { useProjectActions } from "../../../features/project/useProjectActions";
-import { RibbonGroup, RibbonButton, RibbonMenuButton, RibbonSep } from "./RibbonParts";
+import {
+  RibbonGroup,
+  RibbonButton,
+  RibbonMenuButton,
+  RibbonSep,
+  RibbonSmallButton,
+  RibbonStack,
+} from "./RibbonParts";
+import { LARGE_ICON, SMALL_ICON } from "./icon-props";
 import { importDxf } from "../../../features/project/importDxf";
 import { importGsz } from "../../../features/project/importGsz";
 import { exportGsz } from "../../../features/project/exportGsz";
@@ -11,13 +19,7 @@ import { exportStix } from "../../../features/project/exportStix";
 import { importSli } from "../../../features/project/importSli";
 import { exportSli } from "../../../features/project/exportSli";
 import { fileTooLarge } from "../../../features/project/file-limits";
-import {
-  NewIcon,
-  OpenIcon,
-  SaveIcon,
-  SaveAsIcon,
-  ExitIcon,
-} from "../../icons/FileActionIcons";
+import { FileInput, FileOutput, FilePlus, FolderOpen, LogOut, Save, SaveAll } from "lucide-react";
 import { SummaryDialog } from "../SummaryDialog";
 
 interface Props {
@@ -168,64 +170,70 @@ export function FileMenu({
       {isOpen &&
         panelHost &&
         createPortal(
-          <div className="h-full flex items-center gap-0" role="menu">
+          <div className="h-full flex items-stretch gap-0" role="menu">
             <RibbonGroup label="Project">
               <RibbonButton
-                icon={<NewIcon />}
+                icon={<FilePlus {...LARGE_ICON} />}
                 label="New"
                 shortcut="Ctrl+N"
                 onClick={handleNew}
               />
               <RibbonButton
-                icon={<OpenIcon />}
+                icon={<FolderOpen {...LARGE_ICON} />}
                 label="Open"
                 shortcut="Ctrl+O"
                 onClick={handleOpen}
               />
-              <RibbonMenuButton
-                icon={<ImportFileIcon />}
-                label="Import"
-                items={[
-                  { label: "DXF file…", title: "Import a DXF file", onClick: handleImportDxf },
-                  { label: ".gsz file…", title: "Import a .gsz project file", onClick: handleImportGsz },
-                  { label: ".stix file…", title: "Import a .stix project file", onClick: handleImportStix },
-                  { label: ".sli/.slim/.slmd file…", title: "Import a .sli, .slim or .slmd model file", onClick: handleImportSli },
-                ]}
-              />
-              <RibbonMenuButton
-                icon={<ExportFileIcon />}
-                label="Export"
-                items={[
-                  { label: ".gsz file…", title: "Export the active model as a .gsz project file", onClick: handleExportGsz },
-                  { label: ".stix file…", title: "Export the active model as a .stix project file", onClick: handleExportStix },
-                  { label: ".slim file…", title: "Export the active model as a .slim model file", onClick: handleExportSli },
-                ]}
-              />
+              <RibbonStack>
+                <RibbonMenuButton
+                  icon={<FileInput {...SMALL_ICON} />}
+                  label="Import"
+                  items={[
+                    { label: "DXF file…", title: "Import a DXF file", onClick: handleImportDxf },
+                    { label: ".gsz file…", title: "Import a .gsz project file", onClick: handleImportGsz },
+                    { label: ".stix file…", title: "Import a .stix project file", onClick: handleImportStix },
+                    { label: ".sli/.slim/.slmd file…", title: "Import a .sli, .slim or .slmd model file", onClick: handleImportSli },
+                  ]}
+                />
+                <RibbonMenuButton
+                  icon={<FileOutput {...SMALL_ICON} />}
+                  label="Export"
+                  items={[
+                    { label: ".gsz file…", title: "Export the active model as a .gsz project file", onClick: handleExportGsz },
+                    { label: ".stix file…", title: "Export the active model as a .stix project file", onClick: handleExportStix },
+                    { label: ".slim file…", title: "Export the active model as a .slim model file", onClick: handleExportSli },
+                  ]}
+                />
+              </RibbonStack>
             </RibbonGroup>
             <RibbonSep />
             <RibbonGroup label="Save">
               <RibbonButton
-                icon={<SaveIcon />}
+                icon={<Save {...LARGE_ICON} />}
                 label="Save"
                 shortcut="Ctrl+S"
                 onClick={handleSave}
               />
-              <RibbonButton
-                icon={<SaveAsIcon />}
-                label="Save As"
-                shortcut="Ctrl+Shift+S"
-                onClick={handleSaveAs}
-              />
+              <RibbonStack>
+                <RibbonSmallButton
+                  icon={<SaveAll {...SMALL_ICON} />}
+                  label="Save As"
+                  shortcut="Ctrl+Shift+S"
+                  onClick={handleSaveAs}
+                />
+              </RibbonStack>
             </RibbonGroup>
             {isElectron && (
               <>
                 <RibbonSep />
                 <RibbonGroup label="">
-                  <RibbonButton
-                    icon={<ExitIcon />}
-                    label="Exit"
-                    onClick={() => window.cslope.close()}
-                  />
+                  <RibbonStack>
+                    <RibbonSmallButton
+                      icon={<LogOut {...SMALL_ICON} />}
+                      label="Exit"
+                      onClick={() => window.cslope.close()}
+                    />
+                  </RibbonStack>
                 </RibbonGroup>
               </>
             )}
@@ -243,34 +251,5 @@ export function FileMenu({
 
       {summary && <SummaryDialog title={summary.title} text={summary.text} onClose={() => setSummary(null)} />}
     </div>
-  );
-}
-
-function ExportFileIcon({ size = 22 }: { size?: number }) {
-  return (
-    <svg width={size} height={size} viewBox="0 0 32 32" fill="none">
-      <path
-        d="M7 3h12l7 7v18a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z"
-        fill="#e8eaed"
-        stroke="#90a4ae"
-        strokeWidth="1.2"
-      />
-      <path d="M16 23V12m0 0l-4 4m4-4l4 4" stroke="#1e88e5" strokeWidth="1.8" fill="none" strokeLinecap="round" />
-    </svg>
-  );
-}
-
-/** A page with an arrow into it (any file format). */
-function ImportFileIcon({ size = 22 }: { size?: number }) {
-  return (
-    <svg width={size} height={size} viewBox="0 0 32 32" fill="none">
-      <path
-        d="M7 3h12l7 7v18a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z"
-        fill="#e8eaed"
-        stroke="#90a4ae"
-        strokeWidth="1.2"
-      />
-      <path d="M16 12v11m0 0l-4-4m4 4l4-4" stroke="#26a69a" strokeWidth="1.8" fill="none" strokeLinecap="round" />
-    </svg>
   );
 }
