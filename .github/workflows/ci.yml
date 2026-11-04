@@ -156,7 +156,10 @@ jobs:
       # so that it transforms the engine exactly as the developer's did and
       # the bytes can be compared; rust-cache keeps the binary between runs.
       - name: Install wasm-bindgen
-        run: cargo install wasm-bindgen-cli --version 0.2.130 --locked
+        run: |
+          if ! wasm-bindgen --version 2>/dev/null | grep -q ' 0\.2\.130$'; then
+            cargo install wasm-bindgen-cli --version 0.2.130 --locked --force
+          fi
       - name: Install cargo-audit
         uses: taiki-e/install-action@b80e2bb2635f28eb98b9fce1e2f0887e1535c6b2 # v2.90.0
         with:
