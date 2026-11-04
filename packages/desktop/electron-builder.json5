@@ -18,13 +18,16 @@
   },
   // Electron fuses, set in the packaged binary: the signed cSlope.exe cannot
   // be used to run arbitrary Node scripts (ELECTRON_RUN_AS_NODE,
-  // NODE_OPTIONS, --inspect), loads the app only from its asar archive and
-  // encrypts cookies. (Embedded asar integrity is left off until it is
-  // verified on a Windows build.)
+  // NODE_OPTIONS, --inspect), loads the app only from its asar archive,
+  // refuses an app.asar whose contents differ from the hash embedded in the
+  // executable at packaging (electron-builder writes it into cSlope.exe
+  // before signing; checked by package-smoke.yml on a Windows build) and
+  // encrypts cookies.
   electronFuses: {
     runAsNode: false,
     enableNodeOptionsEnvironmentVariable: false,
     enableNodeCliInspectArguments: false,
+    enableEmbeddedAsarIntegrityValidation: true,
     onlyLoadAppFromAsar: true,
     enableCookieEncryption: true,
   },

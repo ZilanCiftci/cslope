@@ -1,0 +1,80 @@
+name: Package smoke test
+
+# Run by hand (Actions > Package smoke test > Run workflow) to check the
+# packaged Windows app without signing it: the app starts from its asar
+# archive, and refuses to start when the archive has been changed after
+# packaging (the asar integrity fuse, electron-builder.json5). Nothing is
+# published; the unsigned build is only kept as an artifact for a week.
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  windows:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+        with:
+          bun-version-file: package.json
+      - name: Install
+        run: bun install --frozen-lockfile
+      - name: Engine build is fresh
+        run: bun packages/engine-rs/tools/check-wasm-fresh.ts
+      - name: Package (unsigned, unpacked directory)
+        working-directory: packages/desktop
+        env:
+          CSLOPE_ALLOW_UNSIGNED: "1"
+        shell: bash
+        run: |
+          bunx tsc -b
+          bunx vite build
+          bun ../website/scripts/check-names.ts dist dist-electron
+          bun scripts/check-local-data.ts dist dist-electron
+          bunx electron-builder --win --dir --publish never
+      - name: The app starts, and refuses a changed archive
+        shell: pwsh
+        working-directory: packages/desktop
+        run: |
+          $ErrorActionPreference = "Stop"
+          # No crash dialog: a refused start must end the process.
+          reg add "HKCU\Software\Microsoft\Windows\Windows Error Reporting" /v DontShowUI /t REG_DWORD /d 1 /f | Out-Null
+          $version = (Get-Content package.json | ConvertFrom-Json).version
+          $dir = "release\$version\win-unpacked"
+          $exe = "$dir\cSlope.exe"
+          $asar = "$dir\resources\app.asar"
+          if (-not (Test-Path $exe)) { throw "No packaged app at $exe" }
+          if (-not (Test-Path $asar)) { throw "No archive at $asar" }
+
+          # 1. The packaged app starts and stays up.
+          $p = Start-Process -FilePath $exe -PassThru
+          Start-Sleep -Seconds 20
+          if ($p.HasExited) { throw "The packaged app exited within 20 s (exit code $($p.ExitCode))" }
+          Stop-Process -Id $p.Id -Force
+          Write-Host "The packaged app started and ran for 20 s."
+
+          # 2. One byte changed inside the archive (in its JavaScript, not
+          #    its header): the app must not start.
+          $bytes = [System.IO.File]::ReadAllBytes($asar)
+          $i = [int]($bytes.Length * 0.75)
+          $bytes[$i] = $bytes[$i] -bxor 0xFF
+          [System.IO.File]::WriteAllBytes($asar, $bytes)
+          $p = Start-Process -FilePath $exe -PassThru
+          $exited = $p.WaitForExit(30000)
+          if (-not $exited) {
+            Stop-Process -Id $p.Id -Force
+            throw "The app ran for 30 s with a changed archive: the asar integrity check is not in force"
+          }
+          if ($p.ExitCode -eq 0) { throw "The app exited normally (0) with a changed archive" }
+          Write-Host "The app refused the changed archive (exit code $($p.ExitCode))."
+      - name: Keep the unsigned build
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        if: always()
+        with:
+          name: win-unpacked-unsigned
+          path: packages/desktop/release/*/win-unpacked
+          retention-days: 7
