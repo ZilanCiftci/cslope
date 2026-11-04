@@ -328,7 +328,7 @@ export function modelToSli(model: ModelEntry): { text: string; notes: string[] }
     try {
       tris = triangulate(r.outer, r.holes, at);
     } catch (e) {
-      throw new Error(`A region of "${r.material}" cannot be divided into cells (${e instanceof Error ? e.message : String(e)}), so the model cannot be exported.`);
+      throw new Error(`A region of "${r.material}" cannot be divided into cells (${e instanceof Error ? e.message : String(e)}), so the model cannot be exported.`, { cause: e });
     }
     for (const t of tris) cells.push(`  ${cells.length + 1}  vertices: [${t.join(",")}] material: soil${k}`);
   }

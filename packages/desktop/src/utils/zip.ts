@@ -169,8 +169,8 @@ export function openZip(bytes: Uint8Array, limits: ZipLimits = ZIP_LIMITS): ZipA
         // (what the stream really unpacks is bounded by the declared size)
         out = await inflateRaw(data, size);
       } catch (err) {
-        if (err instanceof OversizeError) throw new Error(`Damaged ZIP archive (${name} is larger than its header says).`);
-        throw new Error(`Damaged ZIP archive (${name} cannot be decompressed).`);
+        if (err instanceof OversizeError) throw new Error(`Damaged ZIP archive (${name} is larger than its header says).`, { cause: err });
+        throw new Error(`Damaged ZIP archive (${name} cannot be decompressed).`, { cause: err });
       }
     } else throw new Error(`Unsupported ZIP compression (method ${method}) for ${name}`);
     total += size;
