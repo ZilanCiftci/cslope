@@ -743,7 +743,7 @@ export function ResultSidebar() {
                   className="text-[10px] block mb-0.5"
                   style={{ color: "var(--color-vsc-text-muted)" }}
                 >
-                  Left X
+                  Left x (m)
                 </label>
                 <input
                   type="text"
@@ -770,7 +770,7 @@ export function ResultSidebar() {
                   className="text-[10px] block mb-0.5"
                   style={{ color: "var(--color-vsc-text-muted)" }}
                 >
-                  Right X
+                  Right x (m)
                 </label>
                 <input
                   type="text"
@@ -804,7 +804,7 @@ export function ResultSidebar() {
                   className="text-[10px] block mb-0.5"
                   style={{ color: "var(--color-vsc-text-muted)" }}
                 >
-                  Bottom Y
+                  Bottom y (m)
                 </label>
                 <input
                   type="text"
@@ -831,7 +831,7 @@ export function ResultSidebar() {
                   className="text-[10px] block mb-0.5"
                   style={{ color: "var(--color-vsc-text-muted)" }}
                 >
-                  Top Y
+                  Top y (m)
                 </label>
                 <input
                   type="text"
@@ -873,7 +873,7 @@ export function ResultSidebar() {
                   className="text-[10px] block mb-0.5"
                   style={{ color: "var(--color-vsc-text-muted)" }}
                 >
-                  Ticks spacing
+                  Tick spacing (m)
                 </label>
                 <DraftNumberInput
                   min={0}
@@ -931,7 +931,7 @@ export function ResultSidebar() {
                     className="text-[10px] block mb-0.5"
                     style={{ color: "var(--color-vsc-text-muted)" }}
                   >
-                    Grid spacing
+                    Grid spacing (m)
                   </label>
                   <DraftNumberInput
                     min={0}
@@ -970,8 +970,7 @@ export function ResultSidebar() {
               >
                 {(Object.keys(PAPER_DIMENSIONS) as PaperSize[]).map((size) => (
                   <option key={size} value={size}>
-                    {size} ({PAPER_DIMENSIONS[size].w}x
-                    {PAPER_DIMENSIONS[size].h}mm)
+                    {size} ({PAPER_DIMENSIONS[size].w} × {PAPER_DIMENSIONS[size].h} mm)
                   </option>
                 ))}
               </select>

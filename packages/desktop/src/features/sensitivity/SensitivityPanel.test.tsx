@@ -55,10 +55,10 @@ describe("SensitivityPanel", () => {
     openPanel();
     const select = screen.getByLabelText("Variable") as HTMLSelectElement;
     expect([...select.options].map((o) => o.textContent)).toEqual([
-      "Parameter H (now 10)",
-      "Clay: γ (kN/m³) (now 18)",
-      "Clay: c (kPa) (now 12)",
-      "Clay: φ (°) (now 0)",
+      "Parameter H, now 10",
+      "Clay: γ (kN/m³), now 18",
+      "Clay: c (kPa), now 12",
+      "Clay: φ (°), now 0",
     ]);
     expect(input("From").value).toBe("8");
     expect(input("To").value).toBe("12");

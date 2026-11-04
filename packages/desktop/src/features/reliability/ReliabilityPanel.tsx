@@ -159,7 +159,7 @@ function ReliabilityPanelBody() {
                         >
                           {options.map((c) => (
                             <option key={c.key} value={c.key}>
-                              {c.label} ({round(c.value)})
+                              {c.label}, mean {round(c.value)}
                             </option>
                           ))}
                         </select>

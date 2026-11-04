@@ -1513,8 +1513,9 @@ function drawPlotAnnotationPdf(
 
   const padLeft = 32 * scale;
   const padRight = 12 * scale;
-  const padBottom = 22 * scale;
-  const padTop = titleMm + 6 * scale;
+  // Room for the x axis title, and the top tick value clear of the title (as on the canvas).
+  const padBottom = 22 * scale + axisMm + 2 * scale;
+  const padTop = titleMm + 6 * scale + axisMm / 2 + 3 * scale;
   const chartX = x + padLeft;
   const chartY = y + padTop;
   const chartW = Math.max(2, w - padLeft - padRight);
@@ -1568,6 +1569,10 @@ function drawPlotAnnotationPdf(
     pdf.line(gx, chartY + chartH, gx, chartY + chartH + tick);
     pdf.text(tickLabel(v, xTicks), gx, chartY + chartH + tick + pad / 2, { align: "center", baseline: "top" });
   }
+  pdf.text(plot.xLabel, chartX + chartW / 2, chartY + chartH + tick + pad / 2 + axisMm + 2 * scale, {
+    align: "center",
+    baseline: "top",
+  });
 }
 
 function drawTextAnnotation(

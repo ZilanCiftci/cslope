@@ -63,7 +63,7 @@ describe("ReliabilityPanel", () => {
     openPanel();
     expect(screen.getByText("Probabilistic analysis")).toBeInTheDocument();
     const variable = screen.getByLabelText("Variable 1") as HTMLSelectElement;
-    expect(variable.selectedOptions[0].textContent).toBe("Clay: c (kPa) (12)");
+    expect(variable.selectedOptions[0].textContent).toBe("Clay: c (kPa), mean 12");
     // σ = 25 % of c = 12.
     expect((screen.getByLabelText("Standard deviation 1") as HTMLInputElement).value).toBe("3");
     // Distribution is fixed for the Taylor series.
@@ -97,7 +97,7 @@ describe("ReliabilityPanel", () => {
     // γ, c and φ are all used now.
     expect(add).toBeDisabled();
     const second = screen.getByLabelText("Variable 2") as HTMLSelectElement;
-    expect([...second.options].map((o) => o.textContent)).toEqual(["Clay: γ (kN/m³) (18)"]);
+    expect([...second.options].map((o) => o.textContent)).toEqual(["Clay: γ (kN/m³), mean 18"]);
     // φ = 0 gets σ = 1 instead of 0.
     expect((screen.getByLabelText("Standard deviation 3") as HTMLInputElement).value).toBe("1");
 

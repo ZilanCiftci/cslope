@@ -35,6 +35,8 @@ export function sliceShearStrength(
 
 export interface SlicePlotData {
   title: string;
+  /** Title of the x axis: "Slice" (slice number) or "x (m)". */
+  xLabel: string;
   points: { x: number; y: number }[];
   /** Axis ranges, widened when degenerate. Undefined with < 2 points. */
   range?: { xMin: number; xMax: number; yMin: number; yMax: number };
@@ -75,6 +77,7 @@ export function computeSlicePlotData(
   const meta = PLOT_METRIC_META[metric];
   const data: SlicePlotData = {
     title: `${meta.label} (${meta.unit})`,
+    xLabel: axisMode === "slice" ? "Slice" : "x (m)",
     points,
     xDecimals: axisMode === "slice" ? 0 : 1,
   };

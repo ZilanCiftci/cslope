@@ -202,12 +202,14 @@ export function UdlDialogApp() {
         </Label>
       ),
       widthClassName: "w-[24%]",
+      // The select has a border of its own: kept off the cell's borders.
+      cellClassName: "px-1 py-0.5",
       renderCell: (row, i) => (
         <select
           value={row.direction ?? "vertical"}
           onChange={(e) => updateUdl(row.id, { direction: e.target.value === "normal" ? "normal" : undefined })}
           aria-label={`UDL ${i + 1} direction`}
-          className="w-full text-[11px]"
+          className="w-full min-w-0 text-[11px]"
         >
           <option value="vertical">Vertical</option>
           <option value="normal">Normal to ground</option>

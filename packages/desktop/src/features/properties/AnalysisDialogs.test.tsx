@@ -349,7 +349,7 @@ describe("CustomSearchPlanesDialogApp", () => {
     render(<CustomSearchPlanesDialogApp />);
     hydrate();
     expect(screen.queryByText(/Only analyse these surfaces/)).toBeNull();
-    await userEvent.click(screen.getByRole("button", { name: "+ Add search plane" }));
+    await userEvent.click(screen.getByRole("button", { name: "+ Add circle" }));
     expect(store().customSearchPlanes).toHaveLength(1);
     // A new circle starts inside the model: centre above the middle of the
     // slope face (x 30 to 40), reaching down to just above the base.

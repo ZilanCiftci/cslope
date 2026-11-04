@@ -2837,7 +2837,8 @@ export function drawCanvas(
         );
 
         ctx.save();
-        ctx.fillStyle = "rgba(255,255,255,0.94)";
+        // Opaque, as in the PDF: the surfaces behind it do not show through.
+        ctx.fillStyle = "#ffffff";
         ctx.strokeStyle = "#78909c";
         ctx.lineWidth = 1;
         ctx.fillRect(drawX, drawY, plotW, plotH);
@@ -2871,8 +2872,10 @@ export function drawCanvas(
 
         const padLeft = Math.max(26, 32 * annoScale);
         const padRight = Math.max(10, 12 * annoScale);
-        const padBottom = Math.max(18, 22 * annoScale);
-        const padTop = titlePad;
+        // Room below the tick values for the x axis title, and above the
+        // top tick value so it stays clear of the plot title.
+        const padBottom = Math.max(18, 22 * annoScale) + axisSize + 2;
+        const padTop = titlePad + axisSize / 2 + 3;
         const chartX = drawX + padLeft;
         const chartY = drawY + padTop;
         const chartW = Math.max(8, plotW - padLeft - padRight);
@@ -2961,6 +2964,7 @@ export function drawCanvas(
           ctx.stroke();
           ctx.fillText(tickLabel(v, xTicks), gx, chartY + chartH + tick + 2);
         }
+        ctx.fillText(plot.xLabel, chartX + chartW / 2, chartY + chartH + tick + 4 + axisSize);
         ctx.restore();
       }
 

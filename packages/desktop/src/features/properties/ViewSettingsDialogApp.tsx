@@ -270,7 +270,7 @@ export function ViewSettingsDialogApp() {
         {/* ── Grid & Ticks ──────────────────────── */}
         <GroupHeading>Grid &amp; Ticks</GroupHeading>
 
-        <FieldRow label="Spacing">
+        <FieldRow label="Tick spacing (m)">
           <DraftNumberInput
             min={0}
             step="any"
@@ -305,7 +305,7 @@ export function ViewSettingsDialogApp() {
         <div className="space-y-2 px-2">
           <div className="grid grid-cols-2 gap-x-3 gap-y-2">
             <div>
-              <span className="text-[10px] opacity-60">Left X</span>
+              <span className="text-[10px] opacity-60">Left x (m)</span>
               <input
                 type="text"
                 inputMode="decimal"
@@ -326,7 +326,7 @@ export function ViewSettingsDialogApp() {
               />
             </div>
             <div>
-              <span className="text-[10px] opacity-60">Right X</span>
+              <span className="text-[10px] opacity-60">Right x (m)</span>
               <input
                 type="text"
                 inputMode="decimal"
@@ -347,7 +347,7 @@ export function ViewSettingsDialogApp() {
               />
             </div>
             <div>
-              <span className="text-[10px] opacity-60">Bottom Y</span>
+              <span className="text-[10px] opacity-60">Bottom y (m)</span>
               <input
                 type="text"
                 inputMode="decimal"
@@ -368,7 +368,7 @@ export function ViewSettingsDialogApp() {
               />
             </div>
             <div>
-              <span className="text-[10px] opacity-60">Top Y</span>
+              <span className="text-[10px] opacity-60">Top y (m)</span>
               <input
                 type="text"
                 inputMode="decimal"

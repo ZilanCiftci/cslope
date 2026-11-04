@@ -44,7 +44,7 @@ export function DevMenu({ isOpen, onActivate, panelHost }: Props) {
 
   const handleLoadLovo = async () => {
     const ok = await confirmReplace(
-      "Load Lovö models into the current workspace? This will replace current models.",
+      "Open the Lovö models as a new project? The current project will be closed.",
     );
     if (!ok) return;
     await useAppStore.getState().loadLovoModels();

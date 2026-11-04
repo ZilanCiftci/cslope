@@ -391,15 +391,15 @@ describe("useContextMenu — reference annotations", () => {
     const { params, open, menu, click } = setup({ mode: "result" });
     open(...at(12, 4));
     expect(params.setSelectedAnnotations).toHaveBeenCalledWith(["l"]);
-    expect(menu()!.items.map((i) => i.label)).toEqual(["Remove Point", "Delete Reference Line"]);
-    click("Remove Point");
+    expect(menu()!.items.map((i) => i.label)).toEqual(["Delete Point", "Delete Reference Line"]);
+    click("Delete Point");
     expect(line()!.points).toEqual([
       [2, 10],
       [22, 5],
     ]);
     expect(menu()).toBeNull();
     open(...at(2, 10));
-    expect(menu()!.items[0]).toMatchObject({ label: "Remove Point", disabled: true });
+    expect(menu()!.items[0]).toMatchObject({ label: "Delete Point", disabled: true });
     click("Delete Reference Line");
     expect(line()).toBeUndefined();
   });

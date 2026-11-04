@@ -1634,6 +1634,14 @@ describe("drawCanvas — result mode", () => {
     // Cohesion 10–30 gets the ticks 10, 15, 20, 25, 30; the slices 1, 2, 3.
     const labels = rec.textStrings();
     for (const t of ["10", "15", "20", "25", "30", "1", "2", "3"]) expect(labels).toContain(t);
+    // The x axis is titled, and the top tick value is clear of the plot title.
+    expect(labels).toContain("Slice");
+    const title = rec.texts.find((t) => t.text === "Cohesion (kPa)")!;
+    const top = rec.texts.find((t) => t.text === "30")!;
+    const titleSize = Number(title.state.font.match(/([\d.]+)px/)![1]);
+    const tickSize = Number(top.state.font.match(/([\d.]+)px/)![1]);
+    // (the tick value is centred on its tick)
+    expect(top.y - tickSize / 2).toBeGreaterThan(title.y + titleSize);
   });
 
   it("outlines selected annotations and the paper frame with a dashed rectangle", () => {

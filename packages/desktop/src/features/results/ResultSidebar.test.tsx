@@ -238,9 +238,18 @@ describe("ResultSidebar paper frame properties", () => {
     act(() => useAppStore.setState({ selectedResultObject: "paper-frame" }));
   });
 
+  it("reads a decimal comma in an extent", () => {
+    render(<ResultSidebar />);
+    const left = field("Left x (m)");
+    fireEvent.focus(left);
+    fireEvent.change(left, { target: { value: "2,5" } });
+    fireEvent.blur(left);
+    expect(rvs().viewLock!.bottomLeft[0]).toBe(2.5);
+  });
+
   it("edits the locked view, keeping the paper's aspect ratio", () => {
     render(<ResultSidebar />);
-    const left = field("Left X");
+    const left = field("Left x (m)");
     expect(left.value).toBe("-1.00");
     fireEvent.focus(left);
     fireEvent.change(left, { target: { value: "4" } });
@@ -251,7 +260,7 @@ describe("ResultSidebar paper frame properties", () => {
     expect(lock.topRight[1] - lock.bottomLeft[1]).toBeCloseTo((lock.topRight[0] - 4) / ar, 9);
 
     // Top Y moves the bottom instead.
-    const top = field("Top Y");
+    const top = field("Top y (m)");
     fireEvent.focus(top);
     fireEvent.change(top, { target: { value: "30" } });
     fireEvent.keyDown(top, { key: "Enter" });
@@ -262,7 +271,7 @@ describe("ResultSidebar paper frame properties", () => {
 
   it("ignores an empty or invalid extent and restores the shown value", () => {
     render(<ResultSidebar />);
-    const right = field("Right X");
+    const right = field("Right x (m)");
     const before = rvs().viewLock;
     fireEvent.focus(right);
     fireEvent.change(right, { target: { value: "" } });
@@ -274,14 +283,14 @@ describe("ResultSidebar paper frame properties", () => {
   it("edits the bottom and right extents, keeping the aspect ratio from the bottom", () => {
     render(<ResultSidebar />);
     const ar = getPlotAspectRatio("A4", true);
-    const bottom = field("Bottom Y");
+    const bottom = field("Bottom y (m)");
     fireEvent.focus(bottom);
     fireEvent.change(bottom, { target: { value: "-5" } });
     fireEvent.keyDown(bottom, { key: "Enter" });
     let lock = rvs().viewLock!;
     expect(lock.bottomLeft[1]).toBe(-5);
     expect(lock.topRight[1]).toBeCloseTo(-5 + (lock.topRight[0] - lock.bottomLeft[0]) / ar, 9);
-    const right = field("Right X");
+    const right = field("Right x (m)");
     fireEvent.focus(right);
     fireEvent.change(right, { target: { value: "50" } });
     fireEvent.blur(right);
@@ -347,7 +356,7 @@ describe("ResultSidebar paper frame properties", () => {
     fireEvent.change(minor, { target: { value: "0" } });
     expect(rvs().minorTicks).toBeUndefined();
 
-    const spacing = field("Ticks spacing");
+    const spacing = field("Tick spacing (m)");
     fireEvent.change(spacing, { target: { value: "5" } });
     fireEvent.blur(spacing);
     expect(rvs().gridSpacing).toBe(5);
@@ -355,7 +364,7 @@ describe("ResultSidebar paper frame properties", () => {
     // The grid: on/off, and a spacing of its own while on.
     const grid = screen.getByRole("checkbox", { name: "Grid lines" }) as HTMLInputElement;
     if (!grid.checked) fireEvent.click(grid);
-    const gridSpacing = field("Grid spacing");
+    const gridSpacing = field("Grid spacing (m)");
     fireEvent.change(gridSpacing, { target: { value: "2" } });
     fireEvent.blur(gridSpacing);
     expect(rvs().gridLineSpacing).toBe(2);

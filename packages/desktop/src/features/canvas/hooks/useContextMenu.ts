@@ -174,7 +174,7 @@ export function useContextMenu(params: ContextMenuParams) {
               const count = anno.points.length;
               const at = refHit.pointIndex;
               items.push({
-                label: "Remove Point",
+                label: "Delete Point",
                 danger: true,
                 // A polyline keeps at least two points.
                 disabled: count <= 2,

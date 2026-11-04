@@ -43,7 +43,7 @@ export function GeometrySection({ plain = false }: GeometrySectionProps) {
       ),
     },
     {
-      header: <Label>X</Label>,
+      header: <Label>x (m)</Label>,
       renderCell: ([x], i) => (
         <SpreadsheetExpressionInput
           value={x}
@@ -60,7 +60,7 @@ export function GeometrySection({ plain = false }: GeometrySectionProps) {
       ),
     },
     {
-      header: <Label>Y</Label>,
+      header: <Label>y (m)</Label>,
       renderCell: ([, y], i) => (
         <SpreadsheetExpressionInput
           value={y}

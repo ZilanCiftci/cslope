@@ -154,7 +154,7 @@ export function CustomSearchPlanesSection({
           className="text-[11px] mt-1 cursor-pointer hover:underline font-medium"
           style={{ color: "var(--color-vsc-accent)" }}
         >
-          + Add search plane
+          + Add circle
         </button>
         <button
           onClick={() => addPlane("polyline")}
@@ -184,7 +184,7 @@ function AddAsReferenceButton({ planeId }: { planeId: string }) {
       title="Draw this surface over the result as a reference line (Results view)"
       aria-label="Add as reference line"
     >
-      + Ref
+      + Reference line
     </button>
   );
 }
