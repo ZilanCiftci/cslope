@@ -12,6 +12,12 @@ updates:
       interval: "weekly"
       day: "monday"
     open-pull-requests-limit: 5
+    ignore:
+      # The docs render math with rehype-katex, which needs katex 0.16; katex
+      # 0.18 renamed its CSS classes, so a newer katex stylesheet would not
+      # style that markup. Lift this once rehype-katex moves on.
+      - dependency-name: "katex"
+        versions: [">=0.17"]
     groups:
       bun-minor-and-patch:
         update-types:
