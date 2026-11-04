@@ -89,6 +89,13 @@ export function EditCanvas() {
   } = useCanvasModelState();
   const activeSection = useAppStore((s) => s.activeSection);
   const customSearchPlanes = useAppStore((s) => s.customSearchPlanes);
+  const selectedCustomPlaneId = useAppStore((s) => s.selectedCustomPlaneId);
+  const updateCustomSearchPlane = useAppStore((s) => s.updateCustomSearchPlane);
+  const updateCustomPlanePoint = useAppStore((s) => s.updateCustomPlanePoint);
+  const insertCustomPlanePointAt = useAppStore((s) => s.insertCustomPlanePointAt);
+  const removeCustomPlanePoint = useAppStore((s) => s.removeCustomPlanePoint);
+  const removeCustomSearchPlane = useAppStore((s) => s.removeCustomSearchPlane);
+  const setSelectedCustomPlane = useAppStore((s) => s.setSelectedCustomPlane);
   const blockSearchObjects = useAppStore((s) => s.blockSearchObjects);
   const waternet = useAppStore((s) => s.waternet);
   const {
@@ -128,6 +135,8 @@ export function EditCanvas() {
     mode === "edit" && activeSection === "Material Assignment";
   const editingLimits = mode === "edit" && activeSection === "Search Limits";
   const editingLoads = mode === "edit" && activeSection === "Loads";
+  // The custom search planes are editable on the canvas whenever there are any.
+  const editingCustomPlanes = mode === "edit" && customSearchPlanes.length > 0;
 
   const surfaceYAtX = useCallback(
     (x: number): number | null => surfaceY(coordinates, x),
@@ -174,6 +183,8 @@ export function EditCanvas() {
     editingPiezo,
     editingLimits,
     editingLoads,
+    customSearchPlanes,
+    editingCustomPlanes,
   });
 
   const { contextMenu, setContextMenu, handleContextMenu } = useContextMenu({
@@ -198,11 +209,17 @@ export function EditCanvas() {
     setSelectedPoint,
     setSelectedMaterialBoundary,
     setMaterialPicker,
+    customSearchPlanes,
+    removeCustomSearchPlane,
+    removeCustomPlanePoint,
+    insertCustomPlanePointAt,
+    setSelectedCustomPlane,
   });
 
   const {
     mouseWorld,
     hoverHit,
+    dragTip,
     handlePointerDown,
     handlePointerMove,
     handlePointerUp,
@@ -227,9 +244,14 @@ export function EditCanvas() {
     udls,
     lineLoads,
     materialBoundaries,
+    customSearchPlanes,
+    updateCustomSearchPlane,
+    updateCustomPlanePoint,
+    setSelectedCustomPlane,
     assigningMaterialId,
     editingAssignment,
     editingBoundaries,
+    editingCustomPlanes,
     panActive,
     setRegionMaterial,
     setAssigningMaterial,
@@ -289,6 +311,7 @@ export function EditCanvas() {
       piezometricLine,
       waternet,
       customSearchPlanes,
+      selectedCustomPlaneId,
       blockSearchObjects,
       viewScale,
       mouseWorld: null,
@@ -318,6 +341,7 @@ export function EditCanvas() {
       piezometricLine,
       waternet,
       customSearchPlanes,
+      selectedCustomPlaneId,
       blockSearchObjects,
       viewScale,
       hoverHit,
@@ -766,9 +790,12 @@ export function EditCanvas() {
                       hoverHit?.kind === "udl" ||
                       hoverHit?.kind === "lineLoad"
                     ? "ew-resize"
-                    : hoverHit
-                      ? "grab"
-                      : "default",
+                    : hoverHit?.kind === "customCircle" &&
+                        hoverHit.handle === "rim"
+                      ? "crosshair"
+                      : hoverHit
+                        ? "grab"
+                        : "default",
           }}
           onPointerDown={handleCanvasPointerDown}
           onPointerMove={handleCanvasPointerMove}
@@ -802,6 +829,22 @@ export function EditCanvas() {
             style={{ color: "var(--color-vsc-text-muted)", display: "none" }}
           >
             x: {mouseWorld[0].toFixed(1)} &nbsp; y: {mouseWorld[1].toFixed(1)}
+          </div>
+        )}
+
+        {dragTip && (
+          <div
+            className="absolute px-1.5 py-0.5 rounded text-[11px] font-mono whitespace-pre select-none pointer-events-none z-40"
+            style={{
+              left: dragTip.x + 14,
+              top: dragTip.y + 14,
+              background: "var(--color-vsc-input-bg)",
+              color: "var(--color-vsc-text)",
+              border: "1px solid var(--color-vsc-border)",
+            }}
+            data-testid="drag-tip"
+          >
+            {dragTip.text}
           </div>
         )}
 

@@ -46,6 +46,11 @@ function setup(over: Partial<Params> = {}) {
     setSelectedPoint: vi.fn(),
     setSelectedMaterialBoundary: vi.fn(),
     setMaterialPicker: vi.fn(),
+    customSearchPlanes: [],
+    removeCustomSearchPlane: vi.fn(),
+    removeCustomPlanePoint: vi.fn(),
+    insertCustomPlanePointAt: vi.fn(),
+    setSelectedCustomPlane: vi.fn(),
     ...over,
   };
   const hook = renderHook(() => useContextMenu(params));
@@ -282,6 +287,65 @@ describe("useContextMenu — result mode", () => {
     const { params, open, menu } = setup({ mode: "result", selectedAnnotationIds: ["a", "b"] });
     open(...at(0.4, 0.9));
     expect(params.setSelectedAnnotations).not.toHaveBeenCalled();
+    expect(menu()).toBeNull();
+  });
+});
+
+describe("useContextMenu — custom search planes", () => {
+  const LINE = { id: "p1", points: [[5, 8], [15, 2], [25, 4]] as [number, number][] };
+
+  it("offers to delete a vertex (a surface keeps two) or the whole surface", () => {
+    const { params, open, menu, click } = setup({
+      customSearchPlanes: [LINE],
+      findNearPointUnified: pointHit({ kind: "customVertex", planeId: "p1", pointIndex: 1 }),
+    });
+    open();
+    expect(params.setSelectedCustomPlane).toHaveBeenCalledWith("p1");
+    expect(menu()!.items.map((i) => i.label)).toEqual(["Delete Point", "Delete Surface"]);
+    expect(menu()!.items[0]).toMatchObject({ danger: true, disabled: false });
+    click("Delete Point");
+    expect(params.removeCustomPlanePoint).toHaveBeenCalledWith("p1", 1);
+    expect(menu()).toBeNull();
+    open();
+    click("Delete Surface");
+    expect(params.removeCustomSearchPlane).toHaveBeenCalledWith("p1");
+    expect(menu()).toBeNull();
+
+    const two = setup({
+      customSearchPlanes: [{ id: "p1", points: [[5, 8], [25, 4]] }],
+      findNearPointUnified: pointHit({ kind: "customVertex", planeId: "p1", pointIndex: 0 }),
+    });
+    two.open();
+    expect(two.menu()!.items[0]).toMatchObject({ label: "Delete Point", disabled: true });
+    two.click("Delete Point");
+    expect(two.params.removeCustomPlanePoint).not.toHaveBeenCalled();
+  });
+
+  it("offers to delete a circle from its centre or its rim", () => {
+    for (const handle of ["centre", "rim"] as const) {
+      const { params, open, menu, click } = setup({
+        customSearchPlanes: [{ id: "c1" }],
+        findNearPointUnified: pointHit({ kind: "customCircle", planeId: "c1", handle }),
+      });
+      open();
+      expect(params.setSelectedCustomPlane).toHaveBeenCalledWith("c1");
+      expect(menu()!.items).toEqual([expect.objectContaining({ label: "Delete Circle", danger: true })]);
+      click("Delete Circle");
+      expect(params.removeCustomSearchPlane).toHaveBeenCalledWith("c1");
+      expect(menu()).toBeNull();
+    }
+  });
+
+  it("adds a point on a surface segment at the snapped position", () => {
+    const { params, open, menu, click } = setup({
+      customSearchPlanes: [LINE],
+      findNearEdgeUnified: edgeHit({ kind: "customPlane", planeId: "p1", insertIndex: 2, snapPoint: [20, 3] }),
+    });
+    open();
+    expect(params.setSelectedCustomPlane).toHaveBeenCalledWith("p1");
+    expect(menu()!.items.map((i) => i.label)).toEqual(["Add Point"]);
+    click("Add Point");
+    expect(params.insertCustomPlanePointAt).toHaveBeenCalledWith("p1", 2, [20, 3]);
     expect(menu()).toBeNull();
   });
 });

@@ -960,6 +960,41 @@ describe("store slices", () => {
     expect(model.customPlanesOnly).toBe(true);
   });
 
+  it("analysisSlice edits the vertices of a non-circular surface, which keeps two", () => {
+    useAppStore.getState().addCustomSearchPlane("polyline");
+    const id = useAppStore.getState().customSearchPlanes[0].id;
+    const points = () => useAppStore.getState().customSearchPlanes[0].points;
+    useAppStore.getState().updateCustomSearchPlane(id, { points: [[5, 8], [25, 4]] });
+    useAppStore.getState().insertCustomPlanePointAt(id, 1, [15, 2]);
+    expect(points()).toEqual([[5, 8], [15, 2], [25, 4]]);
+    useAppStore.getState().updateCustomPlanePoint(id, 1, [16, 3]);
+    expect(points()![1]).toEqual([16, 3]);
+    expect(useAppStore.getState().models[0].customSearchPlanes[0].points![1]).toEqual([16, 3]);
+    useAppStore.getState().removeCustomPlanePoint(id, 1);
+    expect(points()).toEqual([[5, 8], [25, 4]]);
+    useAppStore.getState().removeCustomPlanePoint(id, 0);
+    expect(points()).toEqual([[5, 8], [25, 4]]);
+    // Out of range, or on a circle: nothing happens.
+    useAppStore.getState().updateCustomPlanePoint(id, 5, [0, 0]);
+    expect(points()).toEqual([[5, 8], [25, 4]]);
+    useAppStore.getState().addCustomSearchPlane("circle");
+    const circle = useAppStore.getState().customSearchPlanes[1];
+    useAppStore.getState().insertCustomPlanePointAt(circle.id, 0, [1, 1]);
+    useAppStore.getState().updateCustomPlanePoint(circle.id, 0, [1, 1]);
+    expect(useAppStore.getState().customSearchPlanes[1]).toEqual(circle);
+  });
+
+  it("analysisSlice clears the picked plane when it is removed", () => {
+    useAppStore.getState().addCustomSearchPlane();
+    useAppStore.getState().addCustomSearchPlane();
+    const [a, b] = useAppStore.getState().customSearchPlanes.map((p) => p.id);
+    useAppStore.getState().setSelectedCustomPlane(a);
+    useAppStore.getState().removeCustomSearchPlane(b);
+    expect(useAppStore.getState().selectedCustomPlaneId).toBe(a);
+    useAppStore.getState().removeCustomSearchPlane(a);
+    expect(useAppStore.getState().selectedCustomPlaneId).toBeNull();
+  });
+
   it("analysisSlice runAnalysis handles worker startup failures", () => {
     const originalWorker = globalThis.Worker;
     const brokenWorker = function BrokenWorker() {

@@ -6,7 +6,7 @@ import { useAppStore } from "../../../store/app-store";
 import { DEFAULT_PIEZO_LINE, DEFAULT_RESULT_VIEW_SETTINGS } from "../../../store/defaults";
 import { computePaperFrame } from "../helpers";
 import { VIEW_SCALE_MAX } from "../constants";
-import type { PointHit } from "../types";
+import type { EdgeHit, PointHit } from "../types";
 
 type Deps = Parameters<typeof usePointerHandlers>[0];
 
@@ -85,9 +85,14 @@ function setup(over: Partial<Deps> = {}) {
     udls: [],
     lineLoads: [],
     materialBoundaries: [],
+    customSearchPlanes: [],
+    updateCustomSearchPlane: vi.fn((id, patch) => useAppStore.getState().updateCustomSearchPlane(id, patch)),
+    updateCustomPlanePoint: vi.fn((id, i, pt) => useAppStore.getState().updateCustomPlanePoint(id, i, pt)),
+    setSelectedCustomPlane: vi.fn(),
     assigningMaterialId: null,
     editingAssignment: false,
     editingBoundaries: false,
+    editingCustomPlanes: false,
     panActive: false,
     setRegionMaterial: vi.fn(),
     setAssigningMaterial: vi.fn(),
@@ -537,5 +542,129 @@ describe("annotations in the result view", () => {
     expect(h().hoverHit).toEqual({ kind: "annotation", annoId: "b" });
     move(...at(0.4, 0.4));
     expect(h().hoverHit).toBeNull();
+  });
+});
+
+describe("custom search planes", () => {
+  const CIRCLE = { id: "c1", cx: 15, cy: 14, radius: 10 };
+  const LINE = { id: "p1", cx: 0, cy: 0, radius: 0, points: [[5, 8], [15, 2], [25, 4]] as [number, number][] };
+  const planes = () => useAppStore.getState().customSearchPlanes;
+  const centreHit = () => hitOnce({ kind: "customCircle", planeId: "c1", handle: "centre" });
+
+  beforeEach(() => {
+    useAppStore.setState({ customSearchPlanes: [CIRCLE, LINE] });
+    useAppStore.temporal.getState().clear();
+  });
+
+  it("drags a circle's centre, snapped to the grid only, showing its numbers beside the pointer", () => {
+    const { deps, h, down, move, up } = setup({
+      customSearchPlanes: planes(),
+      editingCustomPlanes: true,
+      findNearPointUnified: centreHit(),
+      findSnapTarget: vi.fn(() => [0, 0] as [number, number]),
+    });
+    const [sx, sy] = toScreen(15, 14);
+    down(sx, sy);
+    expect(deps.setSelectedCustomPlane).toHaveBeenCalledWith("c1");
+    expect(deps.setSelectedPoint).toHaveBeenCalledWith(null);
+    move(sx + 33, sy - 12);
+    expect(deps.findSnapTarget).not.toHaveBeenCalled();
+    expect(planes()[0]).toMatchObject({ cx: 18.3, cy: 15.2, radius: 10 });
+    expect(h().mouseWorld).toEqual([18.3, 15.2]);
+    expect(h().dragTip).toEqual({ text: "cx 18.30  cy 15.20  R 10.00 m", x: sx + 33, y: sy - 12 });
+    up(sx + 33, sy - 12);
+    expect(h().dragTip).toBeNull();
+  });
+
+  it("drags a circle's rim: the radius is the pointer's distance from the centre, at least 0.1 m", () => {
+    const { h, down, move } = setup({
+      customSearchPlanes: planes(),
+      editingCustomPlanes: true,
+      findNearPointUnified: hitOnce({ kind: "customCircle", planeId: "c1", handle: "rim" }),
+    });
+    // Pressed on the rim below the centre, dragged 30 px further down.
+    const [sx, sy] = toScreen(15, 4);
+    down(sx, sy);
+    move(sx, sy + 30);
+    expect(planes()[0]).toMatchObject({ cx: 15, cy: 14, radius: 13 });
+    expect(h().dragTip!.text).toBe("cx 15.00  cy 14.00  R 13.00 m");
+    // Beside the centre: 6 m away.
+    move(sx + 60, sy - 100);
+    expect(planes()[0].radius).toBeCloseTo(6, 6);
+    // On the centre: the minimum.
+    move(sx, sy - 100);
+    expect(planes()[0].radius).toBe(0.1);
+  });
+
+  it("drags a vertex of a non-circular surface, snapping to neighbouring points, anywhere in the soil", () => {
+    const { deps, down, move, up } = setup({
+      customSearchPlanes: planes(),
+      editingCustomPlanes: true,
+      findNearPointUnified: hitOnce({ kind: "customVertex", planeId: "p1", pointIndex: 1 }),
+      findSnapTarget: vi.fn((x: number, y: number) => (Math.hypot(x - 20, y - 5) < 1 ? ([20, 5] as [number, number]) : null)),
+    });
+    const [sx, sy] = toScreen(15, 2);
+    down(sx, sy);
+    expect(deps.setSelectedCustomPlane).toHaveBeenCalledWith("p1");
+    move(sx + 20, sy + 30);
+    expect(planes()[1].points![1]).toEqual([17, -1]);
+    move(sx + 48, sy - 28);
+    expect(planes()[1].points![1]).toEqual([20, 5]);
+    up(sx + 48, sy - 28);
+    expect(useAppStore.temporal.getState().pastStates).toHaveLength(1);
+  });
+
+  it("records one undo step for a drag, which restores the circle", () => {
+    const { down, move, up } = setup({
+      customSearchPlanes: planes(),
+      editingCustomPlanes: true,
+      findNearPointUnified: centreHit(),
+    });
+    const [sx, sy] = toScreen(15, 14);
+    down(sx, sy);
+    move(sx + 10, sy);
+    move(sx + 20, sy);
+    move(sx + 30, sy);
+    up(sx + 30, sy);
+    const past = useAppStore.temporal.getState().pastStates;
+    expect(past).toHaveLength(1);
+    expect(past[0].customSearchPlanes![0]).toMatchObject({ cx: 15, cy: 14 });
+    expect(planes()[0].cx).toBe(18);
+    act(() => useAppStore.temporal.getState().undo());
+    expect(planes()[0]).toMatchObject({ cx: 15, cy: 14, radius: 10 });
+    expect(planes()[1]).toEqual(LINE);
+  });
+
+  it("does not move a handle that is only clicked, and records no step", () => {
+    const { down, move, up } = setup({
+      customSearchPlanes: planes(),
+      editingCustomPlanes: true,
+      findNearPointUnified: centreHit(),
+    });
+    const [sx, sy] = toScreen(15, 14);
+    down(sx, sy);
+    move(sx + 2, sy + 1);
+    up(sx + 2, sy + 1);
+    expect(planes()[0]).toEqual(CIRCLE);
+    expect(useAppStore.temporal.getState().pastStates).toHaveLength(0);
+  });
+
+  it("picks a surface by a click on its line, and clears the pick on empty canvas", () => {
+    const edge: EdgeHit = { kind: "customPlane", planeId: "p1", insertIndex: 2, snapPoint: [20, 3] };
+    const onLine = setup({
+      customSearchPlanes: planes(),
+      editingCustomPlanes: true,
+      findNearEdgeUnified: vi.fn(() => edge),
+    });
+    onLine.down(...toScreen(20, 3));
+    expect(onLine.deps.setSelectedCustomPlane).toHaveBeenLastCalledWith("p1");
+    expect(onLine.deps.setSelectedPoint).toHaveBeenCalledWith(null);
+    const empty = setup({ customSearchPlanes: planes(), editingCustomPlanes: true });
+    empty.down(...toScreen(28, 2));
+    expect(empty.deps.setSelectedCustomPlane).toHaveBeenLastCalledWith(null);
+    // Without custom planes nothing touches the pick.
+    const none = setup({ customSearchPlanes: [], editingCustomPlanes: false });
+    none.down(...toScreen(28, 2));
+    expect(none.deps.setSelectedCustomPlane).not.toHaveBeenCalled();
   });
 });

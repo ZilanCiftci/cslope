@@ -1544,3 +1544,40 @@ describe("drawCanvas — result mode", () => {
     expect(rec.strokes().some((p) => p.state.lineDash.join() === "4,4")).toBe(false);
   });
 });
+
+describe("custom search plane handles", () => {
+  const CIRCLE_PLANE = { id: "c1", cx: 15, cy: 14, radius: 10 };
+  const LINE_PLANE = { id: "p1", cx: 0, cy: 0, radius: 0, points: [[5, 10], [15, 3], [25, 5]] as [number, number][] };
+  const planes = [CIRCLE_PLANE, LINE_PLANE];
+  const handleDots = (rec: ReturnType<typeof draw>) => rec.callsOf("arc").filter((c) => c.args[2] === POINT_RADIUS - 1);
+
+  it("draws a dot on each vertex and a crossed dot on a circle's centre, in the edit view only", () => {
+    const rec = draw({ customSearchPlanes: planes });
+    const centres = handleDots(rec).map((c) => [c.args[0], c.args[1]] as [number, number]);
+    for (const [x, y] of [[15, 14], ...LINE_PLANE.points] as [number, number][]) {
+      expect(centres.some((c) => close(c, toC(x, y)))).toBe(true);
+    }
+    const [cx, cy] = toC(15, 14);
+    const arm = POINT_RADIUS + 2;
+    expect(rec.strokes().some((p) => hasPoints(p, [[cx - arm, cy], [cx + arm, cy], [cx, cy - arm], [cx, cy + arm]]))).toBe(true);
+    expect(handleDots(draw({ customSearchPlanes: planes, mode: "result" }))).toHaveLength(0);
+    expect(handleDots(draw({ customSearchPlanes: [] }))).toHaveLength(0);
+  });
+
+  it("highlights the hovered handle, the hovered rim and the picked plane", () => {
+    const hover = draw({ customSearchPlanes: planes, hoverHit: { kind: "customVertex", planeId: "p1", pointIndex: 1 } });
+    const [vx, vy] = toC(15, 3);
+    expect(hover.fills(POINT_COLOR_HOVER).some((p) => p.segments.some((s) => s.op === "arc" && close([s.x, s.y], [vx, vy])))).toBe(true);
+    // The whole rim as a ring while the pointer is on it (the dashed arc is clipped to the model).
+    const rim = draw({ customSearchPlanes: planes, hoverHit: { kind: "customCircle", planeId: "c1", handle: "rim" } });
+    expect(rim.strokes(POINT_COLOR_HOVER).some((p) => p.segments.some((s) => s.op === "arc" && s.r === 10 * SCALE))).toBe(true);
+    expect(draw({ customSearchPlanes: planes }).strokes(POINT_COLOR_HOVER)).toHaveLength(0);
+    // The picked plane: its dashed line and its dots in the selection colour.
+    const picked = draw({ customSearchPlanes: planes, selectedCustomPlaneId: "p1" });
+    const line = picked.strokes("#f59e0b").find((p) => p.state.lineDash.length > 0)!;
+    expect(line).toBeDefined();
+    expect(hasPoints(line, LINE_PLANE.points.map(([x, y]) => toC(x, y)))).toBe(true);
+    expect(picked.fills("#f59e0b")).toHaveLength(LINE_PLANE.points.length);
+    expect(draw({ customSearchPlanes: planes }).strokes("#f59e0b")).toHaveLength(0);
+  });
+});

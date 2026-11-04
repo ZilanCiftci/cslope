@@ -260,3 +260,42 @@ describe("load hit areas", () => {
     expect(hit.findNearPointUnified(28, 6.3)).toEqual({ kind: "lineLoad", loadId: "p" });
   });
 });
+
+describe("custom search planes", () => {
+  const CIRCLE = { id: "c1", cx: 15, cy: 14, radius: 10 };
+  const LINE = { id: "p1", cx: 0, cy: 0, radius: 0, points: [[5, 8], [15, 2], [25, 4]] as [number, number][] };
+  const planes = [CIRCLE, LINE];
+
+  it("hits their handles only while they are editable (any planes, edit view)", () => {
+    const hit = setup({ customSearchPlanes: planes, editingCustomPlanes: true });
+    // 10 px per metre: 1 m from a vertex is inside the 12 px snap radius.
+    expect(hit.findNearPointUnified(15.5, 2.5)).toEqual({ kind: "customVertex", planeId: "p1", pointIndex: 1 });
+    expect(hit.findNearPointUnified(15.5, 14.5)).toEqual({ kind: "customCircle", planeId: "c1", handle: "centre" });
+    // The rim, 100 px from the centre, within the 10 px edge threshold.
+    expect(hit.findNearPointUnified(15, 4.5)).toEqual({ kind: "customCircle", planeId: "c1", handle: "rim" });
+    // 1.5 m off the rim and 3.5 m from the vertex below: nothing.
+    expect(hit.findNearPointUnified(15, 5.5)).toBeNull();
+    expect(setup({ customSearchPlanes: planes }).findNearPointUnified(15.5, 2.5)).toBeNull();
+  });
+
+  it("gives way to the section being edited", () => {
+    // A vertex on the exterior vertex (10, 10): the exterior wins while it is edited.
+    const onVertex = { ...LINE, points: [[10, 10], [25, 4]] as [number, number][] };
+    const hit = setup({ customSearchPlanes: [onVertex], editingCustomPlanes: true, editingExterior: true });
+    expect(hit.findNearPointUnified(10, 10)).toEqual({ kind: "external", index: 2 });
+    const idle = setup({ customSearchPlanes: [onVertex], editingCustomPlanes: true });
+    expect(idle.findNearPointUnified(10, 10)).toEqual({ kind: "customVertex", planeId: "p1", pointIndex: 0 });
+  });
+
+  it("finds a surface segment with the insert index and a snapped point on it", () => {
+    const hit = setup({ customSearchPlanes: planes, editingCustomPlanes: true });
+    expect(hit.findNearEdgeUnified(20, 3.4)).toEqual({
+      kind: "customPlane",
+      planeId: "p1",
+      insertIndex: 2,
+      snapPoint: [20, 3],
+    });
+    expect(hit.findNearEdgeUnified(20, 5)).toBeNull();
+    expect(setup({ customSearchPlanes: planes }).findNearEdgeUnified(20, 3.4)).toBeNull();
+  });
+});
