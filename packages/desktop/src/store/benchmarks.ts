@@ -19,8 +19,13 @@ import type { PaperContent } from "../features/view/extents";
 type ExamplePaperOptions = {
   paperSize?: keyof typeof PAPER_DIMENSIONS;
   landscape?: boolean;
-  /** Title, FOS and material table at the top of the paper (the examples); false for none. */
-  annotations?: boolean;
+  /**
+   * Title, FOS and material table at the top of the paper (the examples);
+   * false for none, or the annotations to use instead.
+   */
+  annotations?: boolean | Annotation[];
+  /** The FOS label at the critical surface (default: off, the title block gives the FOS). */
+  showFosLabel?: boolean;
 };
 
 const EXAMPLE_ANNOTATIONS: Annotation[] = [
@@ -59,6 +64,15 @@ const EXAMPLE_ANNOTATIONS: Annotation[] = [
   },
 ];
 
+function copyAnnotation(a: Annotation): Annotation {
+  return { ...a, ...(a.tableColumns ? { tableColumns: [...a.tableColumns] } : {}) };
+}
+
+/** The examples' material table at the top right of the paper. */
+export function exampleMaterialTable(): Annotation {
+  return copyAnnotation(EXAMPLE_ANNOTATIONS.find((a) => a.type === "material-table")!);
+}
+
 /**
  * Result view of an example: the paper fitted to the model, with a title
  * and a material table (`annotations: false` leaves them out).
@@ -81,19 +95,18 @@ export function createExampleResultViewSettings(
     paperSize: paperOptions.paperSize ?? DEFAULT_RESULT_VIEW_SETTINGS.paperFrame.paperSize,
     landscape: paperOptions.landscape ?? true,
   };
-  const annotations =
-    (paperOptions.annotations ?? true)
-      ? EXAMPLE_ANNOTATIONS.map((a) => ({
-          ...a,
-          ...(a.tableColumns ? { tableColumns: [...a.tableColumns] } : {}),
-        }))
+  const given = paperOptions.annotations ?? true;
+  const annotations = Array.isArray(given)
+    ? given.map(copyAnnotation)
+    : given
+      ? EXAMPLE_ANNOTATIONS.map(copyAnnotation)
       : [];
 
   return {
     ...DEFAULT_RESULT_VIEW_SETTINGS,
     paperFrame,
     viewLock: modelViewLock(paperContent, { paperFrame, annotations }),
-    showFosLabel: false,
+    showFosLabel: paperOptions.showFosLabel ?? false,
     showCentreMarker: false,
     showGrid: false,
     showSoilColor: true,
