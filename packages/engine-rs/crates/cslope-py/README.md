@@ -68,6 +68,7 @@ phi'             Bishop  Morgenstern-Price
 | `Slope(definition)` | `build_slope` of the canonical definition: `update_analysis_options`, `analysis_options`, `analyse(...)` (`analyse_slope`, every slice kept), `min_fos`, `search` (every trial surface, canonical coordinates), `result()` (the `AnalysisResult`), `fem(options, ...)` (`analyze_fem`), `orientation`, `definition` |
 | `CancelToken()` | `.cancel()` from another thread stops the analyses it was passed to |
 | `__version__`, `ENGINE_BUILD` | crate version; version + git commit |
+| `project.read(path)` | a `.cslp` (or earlier `.json`) project file: its models as dicts (below) |
 
 Notes:
 
@@ -112,6 +113,32 @@ Notes:
   `arrays="list"`. The conversion is in Python (`numpy.asarray`) rather
   than the pyo3 `numpy` crate: no optional Rust feature, one wheel.
 
+## Project files
+
+`cslope.project` reads the app's `.cslp` project files (and the `.json`
+projects of earlier versions) with the standard library only, so it works
+without the compiled engine too:
+
+```python
+from cslope import project
+
+p = project.read("slope.cslp")
+for m in p.models:
+    print(m.id, m.name, m.min_fos)          # None without a saved result
+model = p.active_model.data                 # the model's dict, as model.json holds it
+result = cslope.analyse(model, model["options"])
+```
+
+`read(path)` gives a `Project`: `manifest`, `version` (the project schema
+version), `active_model_id`, `units`, `models` (each a `Model` with `id`,
+`data`, `result`, `backgrounds`), `assets` (the attachments; `read_asset(id)`
+unpacks one and checks its SHA-256) and `thumbnail()`. The dicts are the
+files' JSON as it is, with camelCase keys: nothing is validated or migrated
+(the app drops unknown fields and brings older schema versions up to date;
+the engine ignores unknown keys). A file that needs a newer reader raises
+`ValueError` naming the cSlope that saved it. The format is specified in
+`docs/file-format.md` at the repository root.
+
 ## Tests
 
 ```
@@ -119,6 +146,9 @@ cd packages/engine-rs/crates/cslope-py
 maturin develop --release
 pytest tests
 ```
+
+`test_project.py` runs without the compiled engine (it loads the module from
+its file when the package cannot be imported).
 
 `test_api.py` needs only the installed package: the demo models against
 pinned factors of safety (within 1e-6), thread counts giving identical
