@@ -13,7 +13,13 @@ async function confirmReplace(question: string): Promise<boolean> {
 }
 import { isElectron } from "../../../utils/is-electron";
 import { PopupPanel } from "../PopupPanel";
-import { BadgeCheck, BookOpen, FlaskConical, Info, Keyboard } from "lucide-react";
+import {
+  AboutIcon,
+  BenchmarksIcon,
+  DocumentationIcon,
+  ExamplesIcon,
+  ShortcutsIcon,
+} from "../../icons/ribbon";
 import {
   RibbonGroup,
   RibbonButton,
@@ -108,29 +114,29 @@ export function HelpMenu({ isOpen, onActivate, panelHost }: Props) {
           <div className="h-full flex items-stretch gap-0" role="menu">
             <RibbonGroup label="Resources">
               <RibbonButton
-                icon={<BookOpen {...LARGE_ICON} />}
+                icon={<DocumentationIcon {...LARGE_ICON} />}
                 label="Documentation"
                 onClick={handleDocs}
               />
               <RibbonButton
-                icon={<FlaskConical {...LARGE_ICON} />}
+                icon={<ExamplesIcon {...LARGE_ICON} />}
                 label="Examples"
                 onClick={handleLoadExamples}
               />
               <RibbonButton
-                icon={<BadgeCheck {...LARGE_ICON} />}
+                icon={<BenchmarksIcon {...LARGE_ICON} />}
                 label="Benchmarks"
                 onClick={handleLoadBenchmarks}
               />
               <RibbonStack>
                 <RibbonSmallButton
-                  icon={<Keyboard {...SMALL_ICON} />}
+                  icon={<ShortcutsIcon {...SMALL_ICON} />}
                   label="Shortcuts"
                   title="Keyboard shortcuts"
                   onClick={() => setShortcutsOpen(true)}
                 />
                 <RibbonSmallButton
-                  icon={<Info {...SMALL_ICON} />}
+                  icon={<AboutIcon {...SMALL_ICON} />}
                   label="About"
                   onClick={handleAbout}
                 />

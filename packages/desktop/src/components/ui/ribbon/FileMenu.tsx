@@ -19,7 +19,15 @@ import { exportStix } from "../../../features/project/exportStix";
 import { importSli } from "../../../features/project/importSli";
 import { exportSli } from "../../../features/project/exportSli";
 import { fileTooLarge } from "../../../features/project/file-limits";
-import { FileInput, FileOutput, FilePlus, FolderOpen, LogOut, Save, SaveAll } from "lucide-react";
+import {
+  ExitIcon,
+  ExportIcon,
+  ImportIcon,
+  NewIcon,
+  OpenIcon,
+  SaveAsIcon,
+  SaveIcon,
+} from "../../icons/ribbon";
 import { SummaryDialog } from "../SummaryDialog";
 
 interface Props {
@@ -173,20 +181,20 @@ export function FileMenu({
           <div className="h-full flex items-stretch gap-0" role="menu">
             <RibbonGroup label="Project">
               <RibbonButton
-                icon={<FilePlus {...LARGE_ICON} />}
+                icon={<NewIcon {...LARGE_ICON} />}
                 label="New"
                 shortcut="Ctrl+N"
                 onClick={handleNew}
               />
               <RibbonButton
-                icon={<FolderOpen {...LARGE_ICON} />}
+                icon={<OpenIcon {...LARGE_ICON} />}
                 label="Open"
                 shortcut="Ctrl+O"
                 onClick={handleOpen}
               />
               <RibbonStack>
                 <RibbonMenuButton
-                  icon={<FileInput {...SMALL_ICON} />}
+                  icon={<ImportIcon {...SMALL_ICON} />}
                   label="Import"
                   items={[
                     { label: "DXF file…", title: "Import a DXF file", onClick: handleImportDxf },
@@ -196,7 +204,7 @@ export function FileMenu({
                   ]}
                 />
                 <RibbonMenuButton
-                  icon={<FileOutput {...SMALL_ICON} />}
+                  icon={<ExportIcon {...SMALL_ICON} />}
                   label="Export"
                   items={[
                     { label: ".gsz file…", title: "Export the active model as a .gsz project file", onClick: handleExportGsz },
@@ -209,14 +217,14 @@ export function FileMenu({
             <RibbonSep />
             <RibbonGroup label="Save">
               <RibbonButton
-                icon={<Save {...LARGE_ICON} />}
+                icon={<SaveIcon {...LARGE_ICON} />}
                 label="Save"
                 shortcut="Ctrl+S"
                 onClick={handleSave}
               />
               <RibbonStack>
                 <RibbonSmallButton
-                  icon={<SaveAll {...SMALL_ICON} />}
+                  icon={<SaveAsIcon {...SMALL_ICON} />}
                   label="Save As"
                   shortcut="Ctrl+Shift+S"
                   onClick={handleSaveAs}
@@ -229,7 +237,7 @@ export function FileMenu({
                 <RibbonGroup label="">
                   <RibbonStack>
                     <RibbonSmallButton
-                      icon={<LogOut {...SMALL_ICON} />}
+                      icon={<ExitIcon {...SMALL_ICON} />}
                       label="Exit"
                       onClick={() => window.cslope.close()}
                     />

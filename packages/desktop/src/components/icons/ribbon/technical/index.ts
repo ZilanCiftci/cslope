@@ -37,6 +37,7 @@ export { TextIcon } from "./TextIcon";
 export { PlotIcon } from "./PlotIcon";
 export { MaterialTableIcon } from "./MaterialTableIcon";
 export { ColorBarIcon } from "./ColorBarIcon";
+export { ReferenceLineIcon } from "./ReferenceLineIcon";
 export { ExportTemplateIcon } from "./ExportTemplateIcon";
 export { ImportTemplateIcon } from "./ImportTemplateIcon";
 export { PdfIcon } from "./PdfIcon";

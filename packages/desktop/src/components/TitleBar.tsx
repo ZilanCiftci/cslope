@@ -4,7 +4,13 @@ import { useAppStore, performUndo, performRedo } from "../store/app-store";
 import { isElectron } from "../utils/is-electron";
 import { useWindowTitle } from "./useWindowTitle";
 import { useProjectActions } from "../features/project/useProjectActions";
-import { FilePlus, FolderOpen, Redo2, Save, Undo2 } from "lucide-react";
+import {
+  NewIcon,
+  OpenIcon,
+  RedoIcon,
+  SaveIcon,
+  UndoIcon,
+} from "./icons/ribbon";
 import { SunIcon, MoonIcon } from "./icons/ThemeIcons";
 import {
   MinimizeIcon,
@@ -79,23 +85,23 @@ export function TitleBar({ theme, onToggleTheme, activeModelName }: Props) {
         />
         <div className="flex items-center gap-0.5">
           <FavButton title="New project" onClick={handleNew}>
-            <FilePlus {...QUICK_ICON} />
+            <NewIcon {...QUICK_ICON} />
           </FavButton>
           <FavButton title="Open project" onClick={handleOpen}>
-            <FolderOpen {...QUICK_ICON} />
+            <OpenIcon {...QUICK_ICON} />
           </FavButton>
           <FavButton title="Save" onClick={handleSave}>
-            <Save {...QUICK_ICON} />
+            <SaveIcon {...QUICK_ICON} />
           </FavButton>
           <div
             className="mx-1 h-3.5"
             style={{ borderLeft: "1px solid var(--color-vsc-border)" }}
           />
           <FavButton title="Undo" onClick={handleUndo} disabled={!canUndo}>
-            <Undo2 {...QUICK_ICON} />
+            <UndoIcon {...QUICK_ICON} />
           </FavButton>
           <FavButton title="Redo" onClick={handleRedo} disabled={!canRedo}>
-            <Redo2 {...QUICK_ICON} />
+            <RedoIcon {...QUICK_ICON} />
           </FavButton>
         </div>
         <input

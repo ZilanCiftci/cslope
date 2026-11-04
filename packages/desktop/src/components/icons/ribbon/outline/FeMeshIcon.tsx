@@ -4,8 +4,9 @@ import { RibbonIcon, type RibbonIconProps } from "../RibbonIcon";
 export function FeMeshIcon(props: RibbonIconProps) {
   return (
     <RibbonIcon {...props} style="outline">
-      <path d="M5 3h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z" />
-      <path d="M3 3l8 10M21 3l-10 10M3 21l8-8M21 21l-10-8" />
+      <path d="M3 4h18v16H3z" />
+      <path d="M3 12h18M12 4v16" />
+      <path d="M3 20 21 4M3 12l9-8M12 20l9-8" />
     </RibbonIcon>
   );
 }
