@@ -13,7 +13,6 @@ import {
 } from "react";
 import {
   isProjectDirty,
-  markProjectClean,
   useAppStore,
 } from "../../store/app-store";
 import { isElectron } from "../../utils/is-electron";
@@ -21,12 +20,14 @@ import { fileTooLarge } from "./file-limits";
 import {
   buildProjectArchive,
   ensureCslpName,
-  readProjectBytes,
   stripProjectExt,
   triggerBrowserDownload,
 } from "./actions";
+import { adoptProjectAssets, readProject } from "./cslp";
 import {
   confirmUnsavedChanges,
+  createdForSave,
+  markProjectSaved,
   saveProjectInElectron,
   withUnsavedChangesCheck,
 } from "./unsavedGuard";
@@ -91,8 +92,9 @@ export function useProjectActions(defaultBaseName: string): ProjectActions {
       try {
         const contents = await window.cslope.openFile();
         if (!contents) return;
-        const parsed = await readProjectBytes(contents);
-        useAppStore.getState().loadProject(parsed);
+        const read = await readProject(contents);
+        adoptProjectAssets(read.assets);
+        useAppStore.getState().loadProject(read.file);
         useAppStore.temporal.getState().clear();
         window.cslope.confirmFileOpened();
       } catch (err) {
@@ -123,14 +125,15 @@ export function useProjectActions(defaultBaseName: string): ProjectActions {
   const downloadProject = async (finalName: string) => {
     useAppStore.getState().saveCurrentModel();
     const state = useAppStore.getState();
+    const created = createdForSave(state);
     try {
-      triggerBrowserDownload(await buildProjectArchive(state, { thumbnail: projectThumbnail }), finalName);
+      triggerBrowserDownload(await buildProjectArchive(state, { thumbnail: projectThumbnail, created }), finalName);
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Unknown error";
       window.alert(`Unable to save project: ${msg}`);
       return;
     }
-    markProjectClean(state);
+    markProjectSaved(state, created);
     setFileName(stripProjectExt(finalName));
   };
 
@@ -159,9 +162,10 @@ export function useProjectActions(defaultBaseName: string): ProjectActions {
     }
     // A .cslp archive, or a .json/.cslope project of an earlier version.
     void readFileBytes(file)
-      .then(readProjectBytes)
-      .then((parsed) => {
-        useAppStore.getState().loadProject(parsed);
+      .then(readProject)
+      .then((read) => {
+        adoptProjectAssets(read.assets);
+        useAppStore.getState().loadProject(read.file);
         useAppStore.temporal.getState().clear();
         setFileName(stripProjectExt(file.name));
       })

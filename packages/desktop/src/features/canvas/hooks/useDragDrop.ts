@@ -2,7 +2,7 @@ import { useEffect } from "react";
 import { useAppStore } from "../../../store/app-store";
 import { isElectron } from "../../../utils/is-electron";
 import { confirmUnsavedChanges } from "../../project/unsavedGuard";
-import { isProjectFileName, readProjectBytes } from "../../project/cslp";
+import { adoptProjectAssets, isProjectFileName, readProject } from "../../project/cslp";
 import { readFileBytes } from "../../project/useProjectActions";
 
 /**
@@ -14,9 +14,10 @@ import { readFileBytes } from "../../project/useProjectActions";
 async function openProjectBytes(bytes: Uint8Array | null): Promise<void> {
   try {
     if (!bytes) return;
-    const parsed = await readProjectBytes(bytes);
+    const read = await readProject(bytes);
     if (!(await confirmUnsavedChanges())) return;
-    useAppStore.getState().loadProject(parsed);
+    adoptProjectAssets(read.assets);
+    useAppStore.getState().loadProject(read.file);
     useAppStore.temporal.getState().clear();
     if (isElectron) window.cslope.confirmFileOpened();
   } catch (err) {
