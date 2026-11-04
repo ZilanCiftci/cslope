@@ -106,7 +106,9 @@ function AngleRange({
   const enter = () => {
     linked.current = value === null;
   };
-  const leave = (which: 0 | 1) => (e: { target: HTMLInputElement }) => {
+  // Called from the handlers, not curried during render: the ref is only
+  // read when the field is left.
+  const leave = (which: 0 | 1, e: { target: HTMLInputElement }) => {
     const text = e.target.value.trim();
     if (text !== "") set(which, Number(text), true);
     linked.current = false;
@@ -123,7 +125,7 @@ function AngleRange({
           placeholder="Auto"
           onValueChange={(v) => set(0, v)}
           onFocus={enter}
-          onBlur={leave(0)}
+          onBlur={(e) => leave(0, e)}
           onClear={() => onChange(null)}
           aria-label={`${label}, minimum`}
           className="w-full min-w-0"
@@ -137,7 +139,7 @@ function AngleRange({
           placeholder="Auto"
           onValueChange={(v) => set(1, v)}
           onFocus={enter}
-          onBlur={leave(1)}
+          onBlur={(e) => leave(1, e)}
           onClear={() => onChange(null)}
           aria-label={`${label}, maximum`}
           className="w-full min-w-0"
