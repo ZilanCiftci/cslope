@@ -777,6 +777,9 @@ export function normalizeResultView(raw: unknown): ResultViewSettings {
     showGrid: view.showGrid ?? DEFAULT_RESULT_VIEW_SETTINGS.showGrid,
     showSoilColor:
       view.showSoilColor ?? DEFAULT_RESULT_VIEW_SETTINGS.showSoilColor,
+    // the finite element display, where it is not the default
+    ...(view.showFemPlasticZone === false ? { showFemPlasticZone: false } : {}),
+    ...(view.showFemMesh === true ? { showFemMesh: true } : {}),
     ...(Number.isFinite(view.gridSpacing)
       ? { gridSpacing: view.gridSpacing }
       : {}),

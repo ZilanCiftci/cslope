@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { AnalysisResult, SliceData, SlipSurfaceResult } from "@cslope/engine";
 import { DEFAULT_ANALYSIS_OPTIONS } from "@cslope/engine";
-import { drawCanvas, editOverlayBoxes, POINT_LABEL_PLATE_ALPHA, type DrawCanvasParams } from "./draw";
+import { drawCanvas, editOverlayBoxes, femMeshEdges, POINT_LABEL_PLATE_ALPHA, type DrawCanvasParams } from "./draw";
 import { segmentHitsBox } from "./label-layout";
 import { layoutLoads } from "./overlay-geometry";
 import { createRecordingContext, pathPoints, type PaintedPath } from "../../test/recording-context";
@@ -1542,5 +1542,42 @@ describe("drawCanvas — result mode", () => {
     const rec = drawResult({ mouseWorld: [5, 5], editingExterior: true });
     expect(rec.texts.some((t) => t.text.startsWith("("))).toBe(false);
     expect(rec.strokes().some((p) => p.state.lineDash.join() === "4,4")).toBe(false);
+  });
+});
+
+describe("drawCanvas — finite element mesh", () => {
+  // two elements sharing the edge (2, 1)–(6, 4)
+  const fem = {
+    factorOfSafety: 1.2, failedF: 1.21, flowRule: "davis-b" as const, levels: [{ elements: 2, fos: 1.2 }],
+    warnings: [], elapsedMs: 1,
+    x: [2, 6, 6, 2], y: [1, 1, 4, 4], triangles: [0, 1, 2, 0, 2, 3],
+    plasticShear: [1, 0.5], displacement: [0, 0, 0, 0, 0, 0, 0, 0],
+  };
+  const drawFem = (over: Partial<ResultViewSettings>) =>
+    draw({ mode: "result", result: result({ fem }), resultViewSettings: rvs(over) });
+  const meshPath = (rec: ReturnType<typeof draw>) =>
+    rec.strokes().find((p) => p.segments.filter((g) => g.op === "moveTo").length === 5 && p.state.globalAlpha === 0.35);
+
+  it("lists each edge once", () => {
+    expect(femMeshEdges([0, 1, 2, 0, 2, 3])).toEqual([[0, 1], [1, 2], [2, 0], [2, 3], [3, 0]]);
+  });
+
+  it("is off by default, drawn thin under the plastic zone when turned on", () => {
+    expect(meshPath(drawFem({}))).toBeUndefined();
+    const rec = drawFem({ showFemMesh: true });
+    const mesh = meshPath(rec)!;
+    expect(mesh).toBeDefined();
+    expect(mesh.state.lineWidth).toBeLessThan(1);
+    const moves = mesh.segments.filter((g) => g.op === "moveTo").map((g) => [g.x, g.y]);
+    expect(moves).toContainEqual(toC(2, 1));
+    // under the plastic zone
+    const zone = rec.paths.findIndex((p) => p.kind === "fill" && p.state.fillStyle.startsWith("rgba(214, 40, 40"));
+    expect(zone).toBeGreaterThan(rec.paths.indexOf(mesh));
+  });
+
+  it("draws the mesh without the plastic zone", () => {
+    const rec = drawFem({ showFemMesh: true, showFemPlasticZone: false });
+    expect(meshPath(rec)).toBeDefined();
+    expect(rec.paths.some((p) => p.kind === "fill" && p.state.fillStyle.startsWith("rgba(214, 40, 40"))).toBe(false);
   });
 });

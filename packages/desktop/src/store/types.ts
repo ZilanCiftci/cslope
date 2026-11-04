@@ -359,6 +359,8 @@ export interface ResultViewSettings {
   showSoilColor?: boolean;
   /** Shade the plastic zone of a finite element result (default: shown). */
   showFemPlasticZone?: boolean;
+  /** Draw the final mesh of a finite element result (default: hidden). */
+  showFemMesh?: boolean;
   /** Grid / major-tick spacing in world units. undefined or 0 = auto. */
   gridSpacing?: number;
   /** Number of minor tick subdivisions between major ticks. 0 = none. */

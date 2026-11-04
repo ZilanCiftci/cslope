@@ -385,6 +385,15 @@ export function ResultsMenu({ isOpen, onActivate, panelHost }: Props) {
                     active={rvs.showFemPlasticZone ?? true}
                   />
                 )}
+                {result?.fem && (
+                  <RibbonSmallButton
+                    icon={<FemMeshIcon />}
+                    label="FE mesh"
+                    title={`Draw the mesh of the finite element analysis: its last refinement, finer where the failure mechanism lies. ${FEM_EXPERIMENTAL_NOTE}`}
+                    onClick={() => setRvs({ showFemMesh: !(rvs.showFemMesh ?? false) })}
+                    active={rvs.showFemMesh ?? false}
+                  />
+                )}
               </div>
               <RibbonButton
                 icon={<ViewSettingsIcon />}
@@ -866,6 +875,15 @@ function GridIcon() {
         strokeWidth="0.7"
         opacity="0.5"
       />
+    </svg>
+  );
+}
+
+function FemMeshIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="#78909c" strokeWidth="0.9" strokeLinejoin="round">
+      <path d="M2 14 L14 14 L14 2 Z" />
+      <path d="M8 14 L14 8 M8 14 L8 8 L14 8 M8 8 L11 11 L14 11 M11 11 L11 14" />
     </svg>
   );
 }

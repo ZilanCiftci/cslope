@@ -57,6 +57,15 @@ describe("persistence of the finite element analysis", () => {
     }
   });
 
+  it("keeps the finite element display settings that are not the default", () => {
+    const view = (v: Record<string, unknown>) =>
+      parseProjectFile(model({ resultViewSettings: { ...v } })).models[0].resultViewSettings;
+    expect(view({ showFemPlasticZone: false, showFemMesh: true })).toMatchObject({ showFemPlasticZone: false, showFemMesh: true });
+    const plain = view({})!;
+    expect(plain.showFemPlasticZone).toBeUndefined(); // shown
+    expect(plain.showFemMesh).toBeUndefined(); // hidden
+  });
+
   it("keeps a valid finite element result and drops a damaged one", () => {
     const ok = parseProjectFile(model({ runState: "done", result: { ...result, fem } }));
     expect(ok.models[0].result?.fem?.factorOfSafety).toBe(1.3);
