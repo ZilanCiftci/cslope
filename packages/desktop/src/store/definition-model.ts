@@ -229,7 +229,8 @@ export function modelFromDefinition(def: SlopeDefinition, info: DefinitionModelI
   return {
     ...model,
     // The paper fitted to the model and what it draws, without the
-    // examples' title and table.
-    resultViewSettings: createExampleResultViewSettings(paperContentOf(model), { annotations: false }),
+    // examples' title and table, but with the FOS at the critical surface
+    // as on a new model.
+    resultViewSettings: createExampleResultViewSettings(paperContentOf(model), { annotations: false, showFosLabel: true }),
   };
 }

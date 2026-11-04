@@ -66,7 +66,9 @@ export function verificationModel(
       : // A problem checked by finite elements only: the app's default analysis.
         { ...VERIFICATION_OPTIONS, ...FULL_VERIFICATION_OPTIONS },
   });
-  return opts.titleBlock ? withTitleBlock(model, c, a) : model;
+  if (opts.titleBlock) return withTitleBlock(model, c, a);
+  // The website's plots are plain: the table gives the FOS.
+  return { ...model, resultViewSettings: { ...model.resultViewSettings!, showFosLabel: false } };
 }
 
 /** Every verification problem, named by its id and title ("V001 Arai & Tagyo (1985) example 1"), with its title block. */
