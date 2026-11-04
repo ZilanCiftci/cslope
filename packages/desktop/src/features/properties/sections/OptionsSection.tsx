@@ -144,32 +144,42 @@ export function OptionsSection({ plain = false }: OptionsSectionProps) {
     toleranceParsed < 0.001 ||
     toleranceParsed > 0.1;
 
+  // One direction, or both: "both" analyses the model's direction and the
+  // opposite one (with automatic search limits) and reports the lower FOS.
+  const both = options.bothDirections === true;
   const directionButton = (
-    value: "ltr" | "rtl",
+    value: "ltr" | "rtl" | "both",
     label: string,
     ariaLabel: string,
-  ) => (
-    <button
-      type="button"
-      onClick={() => setOrientation(value)}
-      className="px-2 py-1 rounded border text-[11px] font-medium cursor-pointer"
-      style={{
-        borderColor:
-          orientation === value
-            ? "var(--color-vsc-accent)"
-            : "var(--color-vsc-border)",
-        background:
-          orientation === value
+    title?: string,
+  ) => {
+    const pressed = value === "both" ? both : !both && orientation === value;
+    return (
+      <button
+        type="button"
+        onClick={() => {
+          if (value === "both") setOptions({ bothDirections: true });
+          else {
+            setOrientation(value);
+            if (both) setOptions({ bothDirections: false });
+          }
+        }}
+        className="px-2 py-1 rounded border text-[11px] font-medium cursor-pointer"
+        style={{
+          borderColor: pressed ? "var(--color-vsc-accent)" : "var(--color-vsc-border)",
+          background: pressed
             ? "color-mix(in srgb, var(--color-vsc-accent) 18%, transparent)"
             : "var(--color-vsc-input-bg)",
-        color: "var(--color-vsc-text)",
-      }}
-      aria-pressed={orientation === value}
-      aria-label={ariaLabel}
-    >
-      {label}
-    </button>
-  );
+          color: "var(--color-vsc-text)",
+        }}
+        aria-pressed={pressed}
+        aria-label={ariaLabel}
+        title={title}
+      >
+        {label}
+      </button>
+    );
+  };
 
   const content = (
     <div className="space-y-3 text-[12px]">
@@ -317,32 +327,18 @@ export function OptionsSection({ plain = false }: OptionsSectionProps) {
         <GroupHeading>Search</GroupHeading>
         <div className="grid grid-cols-2 gap-x-3 gap-y-2">
           <div className="col-span-2 flex flex-col gap-1">
-            <Label>Analysis direction</Label>
-            <div className="grid grid-cols-2 gap-1">
+            <Label>Sliding direction</Label>
+            <div className="grid grid-cols-3 gap-1">
+              {directionButton("ltr", "Left to right", "Analysis direction left to right")}
+              {directionButton("rtl", "Right to left", "Analysis direction right to left")}
               {directionButton(
-                "ltr",
-                "Left to right",
-                "Analysis direction left to right",
-              )}
-              {directionButton(
-                "rtl",
-                "Right to left",
-                "Analysis direction right to left",
+                "both",
+                "Both",
+                "Analyse both directions",
+                "Both directions: the model's own and the opposite one (with automatic search limits); the lower FOS governs.",
               )}
             </div>
           </div>
-          <label
-            className="col-span-2 flex items-center gap-1.5"
-            title="Also search for sliding in the opposite direction (with automatic search limits) and report the lower FOS."
-          >
-            <input
-              type="checkbox"
-              checked={options.bothDirections === true}
-              onChange={(e) => setOptions({ bothDirections: e.target.checked })}
-              aria-label="Analyse both directions"
-            />
-            <Label>Analyse both sliding directions</Label>
-          </label>
           <label
             className="col-span-2 flex items-center gap-1.5"
             title="A circle that reaches impenetrable material (bedrock) follows its top there instead of being rejected, as on a firm base (composite surface). Off: such circles are not analysed."
@@ -353,7 +349,7 @@ export function OptionsSection({ plain = false }: OptionsSectionProps) {
               onChange={(e) => setOptions({ compositeSurfaces: e.target.checked })}
               aria-label="Composite surfaces along bedrock"
             />
-            <Label>Circles follow bedrock (composite)</Label>
+            <Label>Composite surfaces along bedrock</Label>
           </label>
           <label
             className="col-span-2 flex items-center gap-1.5 pl-4"
@@ -366,7 +362,7 @@ export function OptionsSection({ plain = false }: OptionsSectionProps) {
               onChange={(e) => setOptions({ compositeBase: e.target.checked })}
               aria-label="Composite surfaces along the model base"
             />
-            <Label>…and the base of the model</Label>
+            <Label>Also along the model base</Label>
           </label>
           <label className="col-span-2 flex flex-col gap-0.5">
             <Label>Search method</Label>

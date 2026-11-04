@@ -206,9 +206,18 @@ describe("OptionsDialogApp", () => {
     render(<OptionsDialogApp />);
     hydrate();
     await userEvent.click(screen.getByLabelText("Non-circular optimisation"));
-    await userEvent.click(screen.getByLabelText("Analyse both directions"));
+    const bothButton = screen.getByRole("button", { name: "Analyse both directions" });
+    await userEvent.click(bothButton);
     expect(opts()).toMatchObject({ nonCircularOptimization: true, bothDirections: true });
     expect(lastSent().options).toMatchObject({ bothDirections: true });
+    // The three direction buttons are one choice: "Both" is pressed alone,
+    // and picking a direction again turns "both" off.
+    expect(bothButton).toHaveAttribute("aria-pressed", "true");
+    expect(screen.getByRole("button", { name: "Analysis direction left to right" })).toHaveAttribute("aria-pressed", "false");
+    await userEvent.click(screen.getByRole("button", { name: "Analysis direction right to left" }));
+    expect(opts()).toMatchObject({ bothDirections: false });
+    expect(store().orientation).toBe("rtl");
+    expect(bothButton).toHaveAttribute("aria-pressed", "false");
   });
 
   it("applies partial factor presets and edits single factors", async () => {
