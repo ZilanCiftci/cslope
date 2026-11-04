@@ -33,7 +33,9 @@ import {
   Table,
   Tag,
   Type,
-  Zap,, Waypoints } from "lucide-react";
+  Zap,
+  Waypoints,
+} from "lucide-react";
 import {
   Chevron,
   RibbonButton,
