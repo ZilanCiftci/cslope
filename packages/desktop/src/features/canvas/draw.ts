@@ -148,6 +148,30 @@ import {
 
 /** Imported head lines (teal, apart from the blue water lines). */
 const HEAD_LINE_COLOR = "#00897b";
+/** Margin of the plate around a line label, in px at paper zoom 1. */
+const LABEL_PLATE_PAD_PX = 1.5;
+
+/**
+ * Text on a plate in the colour behind it (the sheet or the canvas), so the
+ * ground line or a soil fill under the text does not strike through it, as
+ * the PDF does with a white plate. Uses the context's font, alignment and
+ * baseline.
+ */
+function fillTextOnPlate(ctx: CanvasRenderingContext2D, text: string, x: number, y: number, plate: string, pad: number) {
+  const size = Number(/([\d.]+)px/.exec(ctx.font)?.[1] ?? 10);
+  const width = ctx.measureText(text).width;
+  const height = size * 1.15;
+  const align = ctx.textAlign;
+  const left = align === "right" || align === "end" ? x - width : align === "center" ? x - width / 2 : x;
+  const base = ctx.textBaseline;
+  const top = base === "top" ? y : base === "bottom" ? y - height : base === "middle" ? y - height / 2 : y - size;
+  ctx.save();
+  ctx.globalAlpha = 1;
+  ctx.fillStyle = plate;
+  ctx.fillRect(left - pad, top, width + 2 * pad, height);
+  ctx.restore();
+  ctx.fillText(text, x, y);
+}
 /** Imported reference lines (drawn faintly). */
 const REFERENCE_LINE_COLOR = "#78909c";
 
@@ -640,6 +664,11 @@ export function drawCanvas(
   const CUSTOM_SURFACE = cssVar("--color-canvas-custom-surface") || CUSTOM_SURFACE_COLOR.hex;
   // Reference annotations without a colour of their own: the theme's.
   const REFERENCE_COLOR = cssVar("--color-canvas-reference") || REFERENCE_ANNOTATION_COLOR.hex;
+  // Labels of the water and head lines: a lighter tint in the dark theme,
+  // on a plate in the colour of the sheet or the canvas behind them.
+  const WATER_LABEL_COLOR = cssVar("--color-canvas-water-label") || PIEZO_COLOR.hex;
+  const HEAD_LABEL_COLOR = cssVar("--color-canvas-head-label") || HEAD_LINE_COLOR;
+  const LINE_LABEL_HALO = (mode === "result" && result ? PAPER_FILL_COLOR : BG_COLOR) || "#ffffff";
   // Point labels stay off the rulers (left and bottom) and the canvas edge.
   const labelBounds: Box = { left: RULER_SIZE_PX + 2, top: 2, right: w - 2, bottom: h - RULER_SIZE_PX - 2 };
   const labelColors = { text: STROKE_ACTIVE, plate: BG_COLOR };
@@ -1517,11 +1546,11 @@ export function drawCanvas(
     ctx.stroke();
     ctx.setLineDash([]);
     const [lx, ly] = pts.reduce((a, b) => (b[0] > a[0] ? b : a));
-    ctx.fillStyle = PIEZO_COLOR.hex;
+    ctx.fillStyle = WATER_LABEL_COLOR;
     ctx.font = `${9 * paperZoom}px 'Segoe UI', sans-serif`;
     ctx.textAlign = "right";
     ctx.textBaseline = "bottom";
-    ctx.fillText("before drawdown", lx - 2 * paperZoom, ly - 2 * paperZoom);
+    fillTextOnPlate(ctx, "before drawdown", lx - 2 * paperZoom, ly - 2 * paperZoom, LINE_LABEL_HALO, LABEL_PLATE_PAD_PX * paperZoom);
     ctx.textBaseline = "alphabetic";
     ctx.textAlign = "left";
   }
@@ -1553,7 +1582,7 @@ export function drawCanvas(
       if (head.points.length >= 2) path(head.points);
     });
     ctx.setLineDash([]);
-    ctx.fillStyle = HEAD_LINE_COLOR;
+    ctx.fillStyle = HEAD_LABEL_COLOR;
     ctx.font = `${9 * paperZoom}px 'Segoe UI', sans-serif`;
     // Below the line, clear of the "before drawdown" label above its line.
     ctx.textAlign = "right";
@@ -1567,7 +1596,8 @@ export function drawCanvas(
       return [{ text, right: lx - 2 * paperZoom, top: ly + 2 * paperZoom, width: ctx.measureText(text).width, height: 10 * paperZoom }];
     });
     const tops = staggerLabelTops(labels);
-    labels.forEach((l, i) => ctx.fillText(l.text, l.right, tops[i]));
+    // A plate keeps the ground line and the soil fill from striking through them.
+    labels.forEach((l, i) => fillTextOnPlate(ctx, l.text, l.right, tops[i], LINE_LABEL_HALO, LABEL_PLATE_PAD_PX * paperZoom));
     ctx.textBaseline = "alphabetic";
     ctx.textAlign = "left";
   }
@@ -1673,11 +1703,11 @@ export function drawCanvas(
 
         // Line number above the triangle (only if multiple lines)
         if (multiLine) {
-          ctx.fillStyle = piezoBlue;
+          ctx.fillStyle = WATER_LABEL_COLOR;
           ctx.font = `bold ${10 * paperZoom}px 'Segoe UI', sans-serif`;
           ctx.textAlign = "center";
           ctx.textBaseline = "bottom";
-          ctx.fillText(labelNum, mx, triTop - 2 * paperZoom);
+          fillTextOnPlate(ctx, labelNum, mx, triTop - 2 * paperZoom, LINE_LABEL_HALO, LABEL_PLATE_PAD_PX * paperZoom);
           ctx.textBaseline = "alphabetic";
         }
       }
@@ -2814,7 +2844,8 @@ export function drawCanvas(
         );
 
         ctx.save();
-        ctx.fillStyle = "rgba(255,255,255,0.94)";
+        // Opaque, as in the PDF: the surfaces behind it do not show through.
+        ctx.fillStyle = "#ffffff";
         ctx.strokeStyle = "#78909c";
         ctx.lineWidth = 1;
         ctx.fillRect(drawX, drawY, plotW, plotH);
@@ -2848,8 +2879,10 @@ export function drawCanvas(
 
         const padLeft = Math.max(26, 32 * annoScale);
         const padRight = Math.max(10, 12 * annoScale);
-        const padBottom = Math.max(18, 22 * annoScale);
-        const padTop = titlePad;
+        // Room below the tick values for the x axis title, and above the
+        // top tick value so it stays clear of the plot title.
+        const padBottom = Math.max(18, 22 * annoScale) + axisSize + 2;
+        const padTop = titlePad + axisSize / 2 + 3;
         const chartX = drawX + padLeft;
         const chartY = drawY + padTop;
         const chartW = Math.max(8, plotW - padLeft - padRight);
@@ -2938,6 +2971,7 @@ export function drawCanvas(
           ctx.stroke();
           ctx.fillText(tickLabel(v, xTicks), gx, chartY + chartH + tick + 2);
         }
+        ctx.fillText(plot.xLabel, chartX + chartW / 2, chartY + chartH + tick + 4 + axisSize);
         ctx.restore();
       }
 

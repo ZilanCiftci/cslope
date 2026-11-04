@@ -3,6 +3,7 @@ import { useAppStore } from "./app-store";
 import { INITIAL_MODEL } from "./slices/modelsSlice";
 import { stopIdleWorkers } from "./analysis-workers";
 import type { ModelEntry } from "./types";
+import { PLOT_MARGINS } from "./defaults";
 
 function clone<T>(value: T): T {
   const sc = globalThis.structuredClone as ((v: T) => T) | undefined;
@@ -1109,6 +1110,23 @@ describe("store slices", () => {
     const model = useAppStore.getState().models[0];
     const annos = model.resultViewSettings?.annotations ?? [];
     expect(annos.some((a) => a.type === "color-bar")).toBe(true);
+  });
+
+  it("resultViewSlice addAnnotation pins a new colour bar and table at the right edge, inside the plot frame", () => {
+    useAppStore.getState().addAnnotation("color-bar");
+    useAppStore.getState().addAnnotation("material-table");
+    const annos = useAppStore.getState().resultViewSettings.annotations;
+    const bar = [...annos].reverse().find((a) => a.type === "color-bar")!;
+    const table = [...annos].reverse().find((a) => a.type === "material-table")!;
+    for (const a of [bar, table]) {
+      expect(a.anchor).toBe("top-right");
+      // Clear of the frame line (PLOT_MARGINS from the paper edge), but near it.
+      expect(a.x).toBeLessThan(1 - PLOT_MARGINS.R);
+      expect(a.x).toBeGreaterThan(0.9);
+      expect(a.y).toBeGreaterThan(PLOT_MARGINS.T);
+    }
+    // Readable at 100 %.
+    expect(table.fontSize).toBe(8);
   });
 
   it("resultViewSlice updateAnnotation patches an existing annotation", () => {

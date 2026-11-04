@@ -331,6 +331,9 @@ describe("startup", () => {
       expect.stringMatching(/splash\.html$/),
     );
     expect(win.options.show).toBe(false);
+    // Not narrower than the widest ribbon tab.
+    expect(win.options.minWidth).toBeGreaterThanOrEqual(1100);
+    expect(win.options.minHeight).toBeGreaterThan(0);
     expect(win.options.webPreferences).toMatchObject({
       contextIsolation: true,
       nodeIntegration: false,

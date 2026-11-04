@@ -3,6 +3,7 @@
  */
 
 import { DraftNumberInput } from "../../components/ui/DraftNumberInput";
+import { parseDecimalText } from "../../utils/decimal";
 import { ExperimentalBadge } from "../../components/ui/ExperimentalBadge";
 import { useCallback, useMemo, useRef, useState } from "react";
 import { PAPER_DIMENSIONS, useAppStore } from "../../store/app-store";
@@ -11,6 +12,7 @@ import { PanelHeaderRow } from "../../components/SidePanelChrome";
 import { Label } from "../../components/ui/Label";
 import { MultiSelectComboboxChips } from "../../components/ui/MultiSelectComboboxChips";
 import {
+  DEFAULT_MATERIAL_TABLE_COLUMNS,
   MATERIAL_TABLE_COLUMNS,
   getAnnotationBoundsPx,
 } from "../canvas/helpers";
@@ -62,21 +64,10 @@ const COLORS = [
   "#ffffff",
 ];
 
-const DEFAULT_TABLE_COLUMNS: MaterialTableColumnKey[] = [
-  "model",
-  "unitWeight",
-  "cohesion",
-  "piezometricLine",
-  "depthRef",
-  "cDatum",
-  "cRate",
-  "frictionAngle",
-];
-
 const SHORT_COLUMN_LABELS: Record<MaterialTableColumnKey, string> = {
   model: "Model",
   unitWeight: "Unit Wt.",
-  cohesion: "Su",
+  cohesion: "c / Su",
   piezometricLine: "Piezo",
   depthRef: "Datum",
   cDatum: "C-Datum",
@@ -237,7 +228,7 @@ export function ResultSidebar() {
       return;
     }
 
-    const parsed = Number(raw);
+    const parsed = parseDecimalText(raw);
     if (!Number.isFinite(parsed)) {
       setExtentDraft((prev) => ({
         ...prev,
@@ -464,10 +455,10 @@ export function ResultSidebar() {
   const visibleColumnsValue = useMemo(() => {
     if (selectedMaterialTableAnnotations.length === 0) return [];
     const first =
-      selectedMaterialTableAnnotations[0].tableColumns ?? DEFAULT_TABLE_COLUMNS;
+      selectedMaterialTableAnnotations[0].tableColumns ?? DEFAULT_MATERIAL_TABLE_COLUMNS;
     return first.filter((column) =>
       selectedMaterialTableAnnotations.every((anno) =>
-        (anno.tableColumns ?? DEFAULT_TABLE_COLUMNS).includes(column),
+        (anno.tableColumns ?? DEFAULT_MATERIAL_TABLE_COLUMNS).includes(column),
       ),
     );
   }, [selectedMaterialTableAnnotations]);
@@ -580,14 +571,14 @@ export function ResultSidebar() {
                   </span>
                 </div>
                 {result.sgi3d.warnings.map((w) => (
-                  <p key={w} className="text-[11px]" style={{ color: "var(--color-vsc-warning)" }}>
+                  <p key={w} className="text-[11px]" style={{ color: "var(--color-vsc-warning-text)" }}>
                     {w}
                   </p>
                 ))}
               </div>
             )}
             {!result.sgi3d && result.sgi3dError && (
-              <p className="mt-1.5 border-t pt-1.5 text-[11px]" style={{ borderColor: "var(--color-vsc-border)", color: "var(--color-vsc-warning)" }}>
+              <p className="mt-1.5 border-t pt-1.5 text-[11px]" style={{ borderColor: "var(--color-vsc-border)", color: "var(--color-vsc-warning-text)" }}>
                 3D effects (SGI): {result.sgi3dError}
               </p>
             )}
@@ -600,7 +591,7 @@ export function ResultSidebar() {
                     {c.surface ? (
                       <span className="tabular-nums">{customSurfaceValueText(c)}</span>
                     ) : (
-                      <span className="text-[11px] text-right" style={{ color: "var(--color-vsc-warning)" }}>
+                      <span className="text-[11px] text-right" style={{ color: "var(--color-vsc-warning-text)" }}>
                         {customSurfaceValueText(c)}
                       </span>
                     )}
@@ -622,7 +613,7 @@ export function ResultSidebar() {
               </p>
             )}
             {!result.fem && result.femError && (
-              <p className="mt-1.5 border-t pt-1.5 text-[11px]" style={{ borderColor: "var(--color-vsc-border)", color: "var(--color-vsc-warning)" }}>
+              <p className="mt-1.5 border-t pt-1.5 text-[11px]" style={{ borderColor: "var(--color-vsc-border)", color: "var(--color-vsc-warning-text)" }}>
                 Strength reduction (FE) failed: {result.femError}
               </p>
             )}
@@ -686,7 +677,7 @@ export function ResultSidebar() {
                     ? "var(--color-vsc-list-active)"
                     : "var(--color-vsc-list-hover)",
                   outline: isSelected
-                    ? "1px solid var(--color-vsc-focus-border)"
+                    ? "1px solid var(--color-vsc-accent)"
                     : "none",
                 }}
                 onClick={(e) => {
@@ -752,11 +743,11 @@ export function ResultSidebar() {
                   className="text-[10px] block mb-0.5"
                   style={{ color: "var(--color-vsc-text-muted)" }}
                 >
-                  Left X
+                  Left x (m)
                 </label>
                 <input
-                  type="number"
-                  step="1"
+                  type="text"
+                  inputMode="decimal"
                   value={extentInputValue("bl_x")}
                   onFocus={() => handleExtentFocus("bl_x")}
                   onChange={(e) => handleExtentChange("bl_x", e.target.value)}
@@ -779,11 +770,11 @@ export function ResultSidebar() {
                   className="text-[10px] block mb-0.5"
                   style={{ color: "var(--color-vsc-text-muted)" }}
                 >
-                  Right X
+                  Right x (m)
                 </label>
                 <input
-                  type="number"
-                  step="1"
+                  type="text"
+                  inputMode="decimal"
                   value={extentInputValue("tr_x")}
                   onFocus={() => handleExtentFocus("tr_x")}
                   onChange={(e) => handleExtentChange("tr_x", e.target.value)}
@@ -813,11 +804,11 @@ export function ResultSidebar() {
                   className="text-[10px] block mb-0.5"
                   style={{ color: "var(--color-vsc-text-muted)" }}
                 >
-                  Bottom Y
+                  Bottom y (m)
                 </label>
                 <input
-                  type="number"
-                  step="1"
+                  type="text"
+                  inputMode="decimal"
                   value={extentInputValue("bl_y")}
                   onFocus={() => handleExtentFocus("bl_y")}
                   onChange={(e) => handleExtentChange("bl_y", e.target.value)}
@@ -840,11 +831,11 @@ export function ResultSidebar() {
                   className="text-[10px] block mb-0.5"
                   style={{ color: "var(--color-vsc-text-muted)" }}
                 >
-                  Top Y
+                  Top y (m)
                 </label>
                 <input
-                  type="number"
-                  step="1"
+                  type="text"
+                  inputMode="decimal"
                   value={extentInputValue("tr_y")}
                   onFocus={() => handleExtentFocus("tr_y")}
                   onChange={(e) => handleExtentChange("tr_y", e.target.value)}
@@ -882,7 +873,7 @@ export function ResultSidebar() {
                   className="text-[10px] block mb-0.5"
                   style={{ color: "var(--color-vsc-text-muted)" }}
                 >
-                  Ticks spacing
+                  Tick spacing (m)
                 </label>
                 <DraftNumberInput
                   min={0}
@@ -904,23 +895,16 @@ export function ResultSidebar() {
                 >
                   Minor ticks
                 </label>
-                <input
-                  type="number"
+                <DraftNumberInput
                   min={0}
                   max={20}
                   step={1}
                   value={rvs.minorTicks ?? 0}
-                  onChange={(e) => {
-                    const raw = e.target.value;
-                    if (raw === "") {
-                      setRvs({ minorTicks: undefined });
-                      return;
-                    }
-                    const parsed = Number(raw);
-                    if (!Number.isFinite(parsed)) return;
+                  onValueChange={(parsed) => {
                     const value = Math.max(0, Math.min(20, Math.round(parsed)));
                     setRvs({ minorTicks: value || undefined });
                   }}
+                  onClear={() => setRvs({ minorTicks: undefined })}
                   className="w-full tabular-nums"
                 />
               </div>
@@ -947,7 +931,7 @@ export function ResultSidebar() {
                     className="text-[10px] block mb-0.5"
                     style={{ color: "var(--color-vsc-text-muted)" }}
                   >
-                    Grid spacing
+                    Grid spacing (m)
                   </label>
                   <DraftNumberInput
                     min={0}
@@ -986,8 +970,7 @@ export function ResultSidebar() {
               >
                 {(Object.keys(PAPER_DIMENSIONS) as PaperSize[]).map((size) => (
                   <option key={size} value={size}>
-                    {size} ({PAPER_DIMENSIONS[size].w}x
-                    {PAPER_DIMENSIONS[size].h}mm)
+                    {size} ({PAPER_DIMENSIONS[size].w} × {PAPER_DIMENSIONS[size].h} mm)
                   </option>
                 ))}
               </select>
@@ -1049,17 +1032,13 @@ export function ResultSidebar() {
                 >
                   X (%)
                 </label>
-                <input
-                  type="number"
+                <DraftNumberInput
                   step="1"
                   value={
-                    xValue !== undefined ? Math.round(xValue * 1000) / 10 : ""
+                    xValue !== undefined ? Math.round(xValue * 1000) / 10 : undefined
                   }
                   placeholder={xValue === undefined ? "Mixed" : ""}
-                  onChange={(e) => {
-                    const v = parseFloat(e.target.value);
-                    if (!Number.isNaN(v)) applyToAll({ x: v / 100 });
-                  }}
+                  onValueChange={(v) => applyToAll({ x: v / 100 })}
                   className="w-full tabular-nums"
                 />
               </div>
@@ -1070,17 +1049,13 @@ export function ResultSidebar() {
                 >
                   Y (%)
                 </label>
-                <input
-                  type="number"
+                <DraftNumberInput
                   step="1"
                   value={
-                    yValue !== undefined ? Math.round(yValue * 1000) / 10 : ""
+                    yValue !== undefined ? Math.round(yValue * 1000) / 10 : undefined
                   }
                   placeholder={yValue === undefined ? "Mixed" : ""}
-                  onChange={(e) => {
-                    const v = parseFloat(e.target.value);
-                    if (!Number.isNaN(v)) applyToAll({ y: v / 100 });
-                  }}
+                  onValueChange={(v) => applyToAll({ y: v / 100 })}
                   className="w-full tabular-nums"
                 />
               </div>
@@ -1370,20 +1345,17 @@ export function ResultSidebar() {
                 >
                   Width (%)
                 </label>
-                <input
-                  type="number"
+                <DraftNumberInput
                   min={5}
                   max={95}
                   step="1"
                   value={
                     plotWidthValue !== undefined
                       ? Math.round(plotWidthValue * 1000) / 10
-                      : ""
+                      : undefined
                   }
                   placeholder={plotWidthValue === undefined ? "Mixed" : ""}
-                  onChange={(e) => {
-                    const v = Number(e.target.value);
-                    if (!Number.isFinite(v)) return;
+                  onValueChange={(v) => {
                     const clamped = Math.max(5, Math.min(95, v));
                     applyToSelectedPlots({ width: clamped / 100 });
                   }}
@@ -1397,20 +1369,17 @@ export function ResultSidebar() {
                 >
                   Height (%)
                 </label>
-                <input
-                  type="number"
+                <DraftNumberInput
                   min={5}
                   max={95}
                   step="1"
                   value={
                     plotHeightValue !== undefined
                       ? Math.round(plotHeightValue * 1000) / 10
-                      : ""
+                      : undefined
                   }
                   placeholder={plotHeightValue === undefined ? "Mixed" : ""}
-                  onChange={(e) => {
-                    const v = Number(e.target.value);
-                    if (!Number.isFinite(v)) return;
+                  onValueChange={(v) => {
                     const clamped = Math.max(5, Math.min(95, v));
                     applyToSelectedPlots({ height: clamped / 100 });
                   }}
@@ -1629,7 +1598,7 @@ function FemSummaryRows({ fem, designValues }: { fem: FemResultSummary; designVa
         </p>
       )}
       {[...fem.warnings, ...(fem.bounds?.warnings ?? [])].map((w) => (
-        <p key={w} className="text-[11px]" style={{ color: "var(--color-vsc-warning)" }}>
+        <p key={w} className="text-[11px]" style={{ color: "var(--color-vsc-warning-text)" }}>
           {w}
         </p>
       ))}

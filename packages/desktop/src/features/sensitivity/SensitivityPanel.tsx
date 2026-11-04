@@ -139,7 +139,7 @@ function SensitivityPanelBody() {
               <select value={key} onChange={(e) => chooseVariable(e.target.value)} aria-label="Variable">
                 {variables.map((v) => (
                   <option key={v.key} value={v.key}>
-                    {v.label} (now {round(v.value)})
+                    {v.label}, now {round(v.value)}
                   </option>
                 ))}
               </select>
@@ -154,7 +154,7 @@ function SensitivityPanelBody() {
                 <DraftNumberInput value={to} onValueChange={setTo} aria-label="To" />
               </label>
               <label className="flex flex-col gap-0.5">
-                <Label>Values</Label>
+                <Label>Number of values</Label>
                 <DraftNumberInput
                   value={steps}
                   min={2}
@@ -235,7 +235,7 @@ function SensitivityPanelBody() {
           </table>
         )}
         {failed.length > 0 && !running && (
-          <p className="text-[10px]" style={{ color: "var(--color-vsc-warning)" }}>
+          <p className="text-[10px]" style={{ color: "var(--color-vsc-warning-text)" }}>
             {failed.length} value(s) gave no result; hover the row for the reason.
           </p>
         )}

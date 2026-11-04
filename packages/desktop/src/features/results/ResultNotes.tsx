@@ -69,7 +69,7 @@ export function ResultNotes({ result }: { result: AnalysisResult }) {
       // Private window or blocked storage: the choice just is not kept.
     }
   };
-  const colour = warnings > 0 ? "var(--color-vsc-warning)" : "var(--color-vsc-text-muted)";
+  const colour = warnings > 0 ? "var(--color-vsc-warning-text)" : "var(--color-vsc-text-muted)";
   return (
     <div className="mt-1.5 border-t pt-1.5" style={{ borderColor: "var(--color-vsc-border)" }}>
       <button
@@ -113,7 +113,7 @@ export function ResultNotes({ result }: { result: AnalysisResult }) {
       {open && (
         <ul className="mt-1 flex flex-col gap-1 text-[11px]">
           {notes.map((n) => (
-            <li key={n.key} style={{ color: n.warning ? "var(--color-vsc-warning)" : "var(--color-vsc-text)" }}>
+            <li key={n.key} style={{ color: n.warning ? "var(--color-vsc-warning-text)" : "var(--color-vsc-text)" }}>
               <div className="flex items-start gap-1">
                 <span className="flex-1">{n.text}</span>
                 {n.detail && (

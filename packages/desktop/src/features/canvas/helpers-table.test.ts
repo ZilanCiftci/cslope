@@ -87,7 +87,7 @@ describe("material table cells", () => {
   it("uses the default columns when none are chosen", () => {
     const t = buildMaterialTableData({ id: "t", type: "material-table", x: 0, y: 0 }, [row("a", DEFAULT_MATERIAL.model)]);
     expect(t.columnKeys.slice(0, 2)).toEqual(["color", "name"]);
-    expect(t.header).toContain("Unit Weight (kN/m3)");
+    expect(t.header).toContain("Unit Weight (kN/m³)");
     expect(t.columnKeys).toHaveLength(10);
   });
 });
@@ -115,13 +115,19 @@ describe("drawTable", () => {
     }
   });
 
-  it("truncates long cells with an ellipsis and wraps long headers", () => {
+  it("wraps long cells onto more lines instead of cutting them off, and wraps long headers", () => {
     const { columnKeys, header, rows } = buildMaterialTableData(ALL_COLUMNS, materials);
     const rec = createRecordingContext(800, 600, { measureCharWidth: 6 });
+    const size = measureTable(rec.ctx, columnKeys, header, rows);
+    rec.reset();
     drawTable(rec.ctx, 0, 0, columnKeys, header, rows, materials);
-    const name = rec.texts.find((t) => t.text.startsWith("A very"))!;
-    expect(name.text.endsWith("…")).toBe(true);
-    expect(name.text.length).toBeLessThan(materials[0].name.length);
+    const body = rec.texts.filter((t) => !t.state.font.startsWith("bold"));
+    expect(body.some((t) => t.text.includes("…"))).toBe(false);
+    // The long name is all there, over several lines, each within the table.
+    const nameLines = body.filter((t) => materials[0].name.includes(t.text) && t.text !== "B");
+    expect(nameLines.length).toBeGreaterThan(1);
+    expect(nameLines.map((t) => t.text).join(" ")).toBe(materials[0].name);
+    for (const t of nameLines) expect(t.y).toBeLessThan(size.h);
     expect(rec.textStrings()).toContain("B");
     // "Datum Elevation / Ref. Depth (m)" is split over several lines.
     const headerWords = rec.texts.filter((t) => t.state.font.startsWith("bold")).map((t) => t.text);
@@ -286,7 +292,7 @@ describe("annotation hit boxes enclose what is drawn", () => {
   it("adds the datum, value and rate columns when a material's strength varies with depth", () => {
     const four = { id: "t", type: "material-table" as const, x: 0, y: 0, tableColumns: ["model", "unitWeight", "cohesion", "frictionAngle"] as const };
     const plain = buildMaterialTableData({ ...four, tableColumns: [...four.tableColumns] }, [row("a", DEFAULT_MATERIAL.model)]);
-    expect(plain.header).toEqual(["Color", "Name", "Material Model", "Unit Weight (kN/m3)", "Cohesion / Su (kPa)", "Effective Friction Angle (\u00b0)"]);
+    expect(plain.header).toEqual(["Color", "Name", "Material Model", "Unit Weight (kN/m³)", "Cohesion / Su (kPa)", "Effective Friction Angle (\u00b0)"]);
     const varying = buildMaterialTableData({ ...four, tableColumns: [...four.tableColumns] }, [
       row("a", DEFAULT_MATERIAL.model),
       row("clay", { kind: "s-f-datum", unitWeight: 17, suRef: 19, yRef: -1.5, rate: -12.7 }),

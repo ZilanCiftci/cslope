@@ -63,9 +63,9 @@ describe("ViewSettingsDialogApp", () => {
     render(<ViewSettingsDialogApp />);
     expect(bridge.callNames()).toContain("requestViewSettingsState");
     hydrate({ gridSpacing: 5, minorTicks: 4 });
-    expect(extent("Left X").value).toBe("0.00");
-    expect(extent("Right X").value).toBe("20.00");
-    expect(extent("Top Y").value).toBe("10.00");
+    expect(extent("Left x (m)").value).toBe("0.00");
+    expect(extent("Right x (m)").value).toBe("20.00");
+    expect(extent("Top y (m)").value).toBe("10.00");
     const selects = screen.getAllByRole("combobox") as HTMLSelectElement[];
     expect(selects[0].value).toBe("A4");
     expect(selects[1].value).toBe("landscape");
@@ -126,7 +126,7 @@ describe("ViewSettingsDialogApp", () => {
     render(<ViewSettingsDialogApp />);
     hydrate();
     const ar = getPlotAspectRatio("A4", true);
-    const right = extent("Right X");
+    const right = extent("Right x (m)");
     await userEvent.clear(right);
     await userEvent.type(right, "40{Enter}");
     expect(rvs().viewLock!.topRight[0]).toBe(40);
@@ -139,7 +139,7 @@ describe("ViewSettingsDialogApp", () => {
     render(<ViewSettingsDialogApp />);
     hydrate();
     const ar = getPlotAspectRatio("A4", true);
-    const top = extent("Top Y");
+    const top = extent("Top y (m)");
     await userEvent.clear(top);
     await userEvent.type(top, "30");
     await userEvent.tab();
@@ -152,7 +152,7 @@ describe("ViewSettingsDialogApp", () => {
   it("restores the stored extent when the field is left empty", async () => {
     render(<ViewSettingsDialogApp />);
     hydrate();
-    const left = extent("Left X");
+    const left = extent("Left x (m)");
     await userEvent.clear(left);
     await userEvent.tab();
     expect(rvs().viewLock!.bottomLeft[0]).toBe(0);
@@ -193,7 +193,7 @@ describe("ViewSettingsDialogApp", () => {
     render(<ViewSettingsDialogApp />);
     // E.g. after importing a view template without a locked view.
     hydrate({ viewLock: undefined });
-    const left = extent("Left X");
+    const left = extent("Left x (m)");
     expect(Number(left.value)).toBe(-1);
     await userEvent.clear(left);
     await userEvent.type(left, "2{Enter}");

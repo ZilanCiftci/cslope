@@ -13,6 +13,7 @@ import { useAppStore } from "../../../store/app-store";
 import { Section } from "../../../components/ui/Section";
 import { Label } from "../../../components/ui/Label";
 import { DraftNumberInput } from "../../../components/ui/DraftNumberInput";
+import { parseDecimalText } from "../../../utils/decimal";
 import { GroupHeading } from "../GroupHeading";
 import { ExperimentalBadge } from "../../../components/ui/ExperimentalBadge";
 import { FEM_EXPERIMENTAL_ADVICE } from "../../../constants";
@@ -114,7 +115,7 @@ export function OptionsSection({ plain = false }: OptionsSectionProps) {
     integer: boolean,
   ) => {
     if (raw.trim() === "") return;
-    const parsed = Number(raw);
+    const parsed = parseDecimalText(raw);
     if (!Number.isFinite(parsed) || parsed < min || parsed > max) return;
     const value = integer ? Math.round(parsed) : parsed;
     setPrevOptions((prev) => ({ ...prev, [field]: value }));
@@ -124,23 +125,24 @@ export function OptionsSection({ plain = false }: OptionsSectionProps) {
   // Free-text data points: keep the typed text while editing.
   const [pointsDraft, setPointsDraft] = useState<string | null>(null);
 
-  const slicesParsed = Number(slicesDraft);
-  const iterationsParsed = Number(iterationsDraft);
-  const refinedParsed = Number(refinedIterationsDraft);
-  const toleranceParsed = Number(toleranceDraft);
+  // "," or "." as the decimal separator; NaN (invalid) for anything else.
+  const slicesParsed = parseDecimalText(slicesDraft);
+  const iterationsParsed = parseDecimalText(iterationsDraft);
+  const refinedParsed = parseDecimalText(refinedIterationsDraft);
+  const toleranceParsed = parseDecimalText(toleranceDraft);
 
   const slicesInvalid =
-    slicesDraft.trim() === "" || slicesParsed < 10 || slicesParsed > 500;
+    !Number.isFinite(slicesParsed) || slicesParsed < 10 || slicesParsed > 500;
   const iterationsInvalid =
-    iterationsDraft.trim() === "" ||
+    !Number.isFinite(iterationsParsed) ||
     iterationsParsed < ITERATIONS_RANGE.min ||
     iterationsParsed > 100000;
   const refinedIterationsInvalid =
-    refinedIterationsDraft.trim() === "" ||
+    !Number.isFinite(refinedParsed) ||
     refinedParsed < 0 ||
     refinedParsed > 100000;
   const toleranceInvalid =
-    toleranceDraft.trim() === "" ||
+    !Number.isFinite(toleranceParsed) ||
     toleranceParsed < 0.001 ||
     toleranceParsed > 0.1;
 
@@ -198,7 +200,8 @@ export function OptionsSection({ plain = false }: OptionsSectionProps) {
           <label className="flex flex-col gap-0.5">
             <Label>Slices</Label>
             <input
-              type="number"
+              type="text"
+              inputMode="decimal"
               min={10}
               max={500}
               step={5}
@@ -209,7 +212,7 @@ export function OptionsSection({ plain = false }: OptionsSectionProps) {
                 commitWhileTyping("slices", value, 10, 500, true);
               }}
               onBlur={(e) => {
-                const parsed = Number(e.target.value);
+                const parsed = parseDecimalText(e.target.value);
                 const normalized = Number.isFinite(parsed)
                   ? Math.round(clampNumber(parsed, 10, 500))
                   : options.slices;
@@ -249,7 +252,8 @@ export function OptionsSection({ plain = false }: OptionsSectionProps) {
           <label className="flex flex-col gap-0.5">
             <Label>Tolerance</Label>
             <input
-              type="number"
+              type="text"
+              inputMode="decimal"
               min={0.001}
               max={0.1}
               step={0.001}
@@ -260,7 +264,7 @@ export function OptionsSection({ plain = false }: OptionsSectionProps) {
                 commitWhileTyping("tolerance", value, 0.001, 0.1, false);
               }}
               onBlur={(e) => {
-                const parsed = Number(e.target.value);
+                const parsed = parseDecimalText(e.target.value);
                 const normalized = Number.isFinite(parsed)
                   ? clampNumber(parsed, 0.001, 0.1)
                   : options.tolerance;
@@ -375,7 +379,8 @@ export function OptionsSection({ plain = false }: OptionsSectionProps) {
           <label className="flex flex-col gap-0.5">
             <Label>Iterations</Label>
             <input
-              type="number"
+              type="text"
+              inputMode="decimal"
               min={ITERATIONS_RANGE.min}
               max={ITERATIONS_RANGE.max}
               step={100}
@@ -392,7 +397,7 @@ export function OptionsSection({ plain = false }: OptionsSectionProps) {
                 );
               }}
               onBlur={(e) => {
-                const parsed = Number(e.target.value);
+                const parsed = parseDecimalText(e.target.value);
                 const normalized = Number.isFinite(parsed)
                   ? Math.round(
                       clampNumber(
@@ -417,7 +422,8 @@ export function OptionsSection({ plain = false }: OptionsSectionProps) {
           <label className="flex flex-col gap-0.5">
             <Label>Refined iterations</Label>
             <input
-              type="number"
+              type="text"
+              inputMode="decimal"
               min={0}
               max={100000}
               step={50}
@@ -428,7 +434,7 @@ export function OptionsSection({ plain = false }: OptionsSectionProps) {
                 commitWhileTyping("refinedIterations", value, 0, 100000, true);
               }}
               onBlur={(e) => {
-                const parsed = Number(e.target.value);
+                const parsed = parseDecimalText(e.target.value);
                 const normalized = Number.isFinite(parsed)
                   ? Math.round(clampNumber(parsed, 0, 100000))
                   : options.refinedIterations;
@@ -840,15 +846,12 @@ function Sgi3dFields({
               title="F2D,överstark,min of the adjacent stretches (eq. 2-4). Blank: infinitely overstrong adjacent stability (eq. 2-3)."
             >
               <Label>Adjacent F2D (blank: ∞)</Label>
-              <input
-                type="number"
+              <DraftNumberInput
                 min={0}
                 step={0.05}
-                value={s.overstrongF2D ?? ""}
-                onChange={(e) => {
-                  const v = e.target.value === "" ? null : Number(e.target.value);
-                  if (v === null || (Number.isFinite(v) && v > 0)) set({ overstrongF2D: v });
-                }}
+                value={s.overstrongF2D ?? undefined}
+                onValueChange={(v) => v > 0 && set({ overstrongF2D: v })}
+                onClear={() => set({ overstrongF2D: null })}
                 aria-label="Adjacent F2D"
               />
             </label>
@@ -924,7 +927,7 @@ function FemFields({
       </label>
       <p
         className="col-span-2 text-[10px]"
-        style={{ color: "var(--color-vsc-warning)" }}
+        style={{ color: "var(--color-vsc-warning-text)" }}
         role="note"
         aria-label="Finite elements are experimental"
       >

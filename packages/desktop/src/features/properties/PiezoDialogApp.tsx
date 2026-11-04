@@ -173,7 +173,7 @@ export function PiezoDialogApp() {
       ),
     },
     {
-      header: <Label>X (m)</Label>,
+      header: <Label>x (m)</Label>,
       renderCell: ([x, y], i) => (
         <SpreadsheetExpressionInput
           value={x}
@@ -189,7 +189,7 @@ export function PiezoDialogApp() {
       ),
     },
     {
-      header: <Label>Y (m)</Label>,
+      header: <Label>y (m)</Label>,
       renderCell: ([x, y], i) => (
         <SpreadsheetExpressionInput
           value={y}

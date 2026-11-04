@@ -95,7 +95,7 @@ export function ResultPanel({ showTitle = true }: { showTitle?: boolean }) {
                   result.minFOS < 1.0
                     ? "var(--color-vsc-error)"
                     : !designValues && result.minFOS < 1.5
-                      ? "var(--color-vsc-warning)"
+                      ? "var(--color-vsc-warning-text)"
                       : "var(--color-vsc-success)",
               }}
             >
@@ -114,7 +114,7 @@ export function ResultPanel({ showTitle = true }: { showTitle?: boolean }) {
           {(result.nonConvergedSurfaces ?? 0) > 0 && (
             <Row label="Convergence">
               <span
-                style={{ color: "var(--color-vsc-warning)" }}
+                style={{ color: "var(--color-vsc-warning-text)" }}
                 title={NON_CONVERGED_TITLE}
               >
                 {nonConvergedText(result.nonConvergedSurfaces ?? 0)}
@@ -123,14 +123,14 @@ export function ResultPanel({ showTitle = true }: { showTitle?: boolean }) {
           )}
           {closestPairWarning(result.criticalSurface) && (
             <Row label="Equilibrium">
-              <span style={{ color: "var(--color-vsc-warning)" }}>
+              <span style={{ color: "var(--color-vsc-warning-text)" }}>
                 {closestPairWarning(result.criticalSurface)}
               </span>
             </Row>
           )}
           {(result.splitFailureCount ?? 0) > 0 && (
             <Row label="Geometry Split">
-              <span style={{ color: "var(--color-vsc-warning)" }}>
+              <span style={{ color: "var(--color-vsc-warning-text)" }}>
                 {result.splitFailureCount} split operation(s) failed
               </span>
             </Row>

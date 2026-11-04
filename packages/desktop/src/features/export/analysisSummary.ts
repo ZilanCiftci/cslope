@@ -80,6 +80,15 @@ export function fmt(v: number | undefined | null): string {
   return Number(v.toFixed(4)).toString();
 }
 
+/**
+ * A computed length or coordinate in metres (a surface the analysis found),
+ * to 0.01 m: more digits suggest a precision the search does not have.
+ */
+function fmtM(v: number | undefined | null): string {
+  if (v === undefined || v === null || !Number.isFinite(v)) return "-";
+  return Number(v.toFixed(2)).toString();
+}
+
 const INTERSLICE_LABELS: Record<string, string> = {
   constant: "constant (Spencer)",
   "half-sine": "half-sine",
@@ -278,14 +287,14 @@ export function buildAnalysisSummary(input: AnalysisSummaryInput): SummarySectio
     res.push({
       label: "Critical surface",
       value: cs.composite
-        ? `composite circle, centre (${fmt(cs.cx)}, ${fmt(cs.cy)}) m, radius ${fmt(cs.radius)} m, along the firm base where it reaches it`
+        ? `composite circle, centre (${fmtM(cs.cx)}, ${fmtM(cs.cy)}) m, radius ${fmtM(cs.radius)} m, along the firm base where it reaches it`
         : cs.points
         ? `non-circular, ${cs.points.length} points`
-        : `circle, centre (${fmt(cs.cx)}, ${fmt(cs.cy)}) m, radius ${fmt(cs.radius)} m`,
+        : `circle, centre (${fmtM(cs.cx)}, ${fmtM(cs.cy)}) m, radius ${fmtM(cs.radius)} m`,
     });
     res.push({
       label: "Entry / exit",
-      value: `(${fmt(cs.entryPoint[0])}, ${fmt(cs.entryPoint[1])}) / (${fmt(cs.exitPoint[0])}, ${fmt(cs.exitPoint[1])}) m`,
+      value: `(${fmtM(cs.entryPoint[0])}, ${fmtM(cs.entryPoint[1])}) / (${fmtM(cs.exitPoint[0])}, ${fmtM(cs.exitPoint[1])}) m`,
     });
   }
   const direction = result.slidingDirection ?? input.orientation;
@@ -337,7 +346,7 @@ export function buildAnalysisSummary(input: AnalysisSummaryInput): SummarySectio
             : "infinitely overstrong (eq. 2-3)",
         },
         { label: "F2D,krit,min", value: g.f2dCritical.toFixed(3) },
-        { label: "Its surface", value: `centre (${fmt(c.cx)}, ${fmt(c.cy)}), R = ${fmt(c.radius)} m; F2D = ${c.f2d.toFixed(3)}, FP = ${c.fp.toFixed(3)}` },
+        { label: "Its surface", value: `centre (${fmtM(c.cx)}, ${fmtM(c.cy)}), R = ${fmtM(c.radius)} m; F2D = ${c.f2d.toFixed(3)}, FP = ${c.fp.toFixed(3)}` },
         { label: "ME, end face", value: `${fmt(c.drivingMoment)} kNm/m; A = ${fmt(c.endFaceArea)} m², ∫cu r dA = ${fmt(c.endFaceMoment)} kNm` },
         ...(g.options.excludeMaterials.length ? [{ label: "Not in the end faces", value: g.options.excludeMaterials.join(", ") }] : []),
         ...g.warnings.map((w) => ({ label: "Warning", value: w })),

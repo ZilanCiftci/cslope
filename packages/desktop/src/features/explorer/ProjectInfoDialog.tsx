@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import type { ProjectInfo } from "../../store/app-store";
+import { parseDecimalText } from "../../utils/decimal";
 
 interface Props {
   initialInfos: ProjectInfo[];
@@ -88,7 +89,8 @@ export function ProjectInfoDialog({ initialInfos, onSave, onClose, importNotes }
     const patch: Partial<ProjectInfo> = {};
     for (const field of touchedFields) {
       if (isNumberField(field)) {
-        patch[field] = Number(info[field]) || 0;
+        // "," or "." as the decimal separator.
+        patch[field] = parseDecimalText(String(info[field])) || 0;
       } else {
         patch[field] = info[field];
       }
@@ -271,9 +273,8 @@ export function ProjectInfoDialog({ initialInfos, onSave, onClose, importNotes }
             <div>
               {fieldLabel("Canvas Width (m)", "canvasWidth")}
               <input
-                type="number"
-                min={10}
-                max={100000}
+                type="text"
+                inputMode="decimal"
                 value={info.canvasWidth}
                 onChange={(e) => handleChange("canvasWidth", e.target.value)}
                 placeholder={
@@ -286,9 +287,8 @@ export function ProjectInfoDialog({ initialInfos, onSave, onClose, importNotes }
             <div>
               {fieldLabel("Canvas Height (m)", "canvasHeight")}
               <input
-                type="number"
-                min={10}
-                max={100000}
+                type="text"
+                inputMode="decimal"
                 value={info.canvasHeight}
                 onChange={(e) => handleChange("canvasHeight", e.target.value)}
                 placeholder={
@@ -311,7 +311,7 @@ export function ProjectInfoDialog({ initialInfos, onSave, onClose, importNotes }
           )}
         </div>
 
-        <div className="flex items-center justify-end gap-2 px-4 py-3 border-t border-[var(--color-vsc-border)] bg-[var(--color-vsc-surface)] rounded-b-lg">
+        <div className="flex items-center justify-end gap-2 px-4 py-3 border-t border-[var(--color-vsc-border)] bg-[var(--color-vsc-panel)] rounded-b-lg">
           <button
             onClick={onClose}
             className="btn min-w-[80px]"

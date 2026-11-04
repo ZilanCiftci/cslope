@@ -307,7 +307,7 @@ export function InteriorBoundariesDialogApp() {
                     ),
                   },
                   {
-                    header: <Label>X</Label>,
+                    header: <Label>x (m)</Label>,
                     renderCell: ([x, y], i) => (
                       <SpreadsheetExpressionInput
                         value={x}
@@ -334,7 +334,7 @@ export function InteriorBoundariesDialogApp() {
                     ),
                   },
                   {
-                    header: <Label>Y</Label>,
+                    header: <Label>y (m)</Label>,
                     renderCell: ([x, y], i) => (
                       <SpreadsheetExpressionInput
                         value={y}

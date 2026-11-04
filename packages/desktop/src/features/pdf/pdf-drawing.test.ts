@@ -19,6 +19,7 @@ import {
   drawRulerFrame,
   drawSlipSurfaces,
   drawUdlLoads,
+  drawWaterExtrasPdf,
 } from "./pdf-drawing";
 import type { PdfTransform } from "./pdf-helpers";
 import { DEFAULT_MATERIAL, DEFAULT_RESULT_VIEW_SETTINGS } from "../../store/defaults";
@@ -494,6 +495,28 @@ describe("reinforcement", () => {
       expect(t.args[1]).toBeCloseTo(x + 0.25, 9);
       expect(t.args[2]).toBeCloseTo(y + h / 2, 9);
       expect(70 > x && 70 < x + w && 120 > y && 120 < y + h).toBe(false);
+    }
+  });
+});
+
+describe("drawWaterExtrasPdf", () => {
+  it("puts a white plate behind each line label, so the ground line does not strike through it", () => {
+    const rec = recorder();
+    const head: [number, number][] = [[0, 7], [30, 5]];
+    drawWaterExtrasPdf(rec.pdf, tf, [[0, 9], [30, 9]], { headLines: [{ id: "PL1", points: head }], referenceLines: [] });
+    for (const label of ["head line 1", "before drawdown"]) {
+      const at = rec.calls.findIndex((c) => c.name === "text" && c.args[0] === label);
+      expect(at, label).toBeGreaterThan(0);
+      const [, x, y] = rec.calls[at].args as [string, number, number];
+      const plate = rec.calls
+        .slice(0, at)
+        .filter((c) => c.name === "rect" && c.args[4] === "F")
+        .at(-1)!.args as number[];
+      // Around the text: right-aligned at x, baseline y.
+      expect(plate[0] + plate[2]).toBeGreaterThan(x);
+      expect(plate[0]).toBeLessThan(x - 5);
+      expect(plate[1]).toBeLessThan(y - 1.5);
+      expect(plate[1] + plate[3]).toBeGreaterThan(y);
     }
   });
 });

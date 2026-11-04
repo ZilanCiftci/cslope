@@ -141,7 +141,9 @@ export function ModelRow({
           onClick={(e) => e.stopPropagation()}
         />
       ) : (
-        <span className="truncate flex-1" title={model.name}>
+        // Up to two lines: long names (the examples, the verification
+        // problems) were cut off after about 25 characters.
+        <span className="line-clamp-2 break-words flex-1 min-w-0" title={model.name}>
           {model.name}
         </span>
       )}

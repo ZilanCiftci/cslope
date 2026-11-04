@@ -84,6 +84,10 @@ function createWindow() {
   win = new BrowserWindow({
     width: 1280,
     height: 860,
+    // The widest ribbon tab (Results) needs about 1060 px; narrower, its
+    // last group (PDF, Export) was cut off.
+    minWidth: 1100,
+    minHeight: 640,
     title: "cSlope",
     icon: path.join(process.env.VITE_PUBLIC, "mountain.svg"),
     // Windows: a hidden title bar on a native frame (resize borders and

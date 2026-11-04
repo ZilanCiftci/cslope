@@ -86,4 +86,9 @@ describe("modelFromDefinition", () => {
     expect(m.options.method).toBe("Bishop");
     expect(m.options.slices).toBe(50);
   });
+
+  it("shows the FOS at the critical surface, as a new model does", () => {
+    const m = modelFromDefinition(VERIFICATION_CASES[0].definition, { id: "x", name: "x" });
+    expect(m.resultViewSettings!.showFosLabel).toBe(true);
+  });
 });

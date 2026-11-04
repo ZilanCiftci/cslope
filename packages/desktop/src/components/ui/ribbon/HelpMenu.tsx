@@ -56,7 +56,7 @@ export function HelpMenu({ isOpen, onActivate, panelHost }: Props) {
 
   // Replace the project with a set of models, as a new unsaved project.
   const loadModels = async (what: string, load: () => void) => {
-    const ok = await confirmReplace(`Load ${what} into the current workspace? This will replace current models.`);
+    const ok = await confirmReplace(`Open ${what} as a new project? The current project will be closed.`);
     if (!ok) return;
     load();
     useAppStore.temporal.getState().clear();

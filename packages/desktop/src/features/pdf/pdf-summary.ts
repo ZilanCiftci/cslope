@@ -88,23 +88,30 @@ export function drawSummaryPages(
   const sections = rawSections.map(pdfSafeSection);
   const width = paper.w - 2 * MARGIN;
   const bottom = paper.h - MARGIN - 8;
-  let page = 0;
+  /** The document's numbers of the summary pages, for their footers. */
+  const pages: number[] = [];
   let y = 0;
 
-  const footer = () => {
-    setSansFont(pdf, "normal");
-    pdf.setFontSize(7.5);
-    pdf.setTextColor(110, 110, 110);
+  // Numbered as pages of the whole document ("Page 2 of 3"), so a printed
+  // or quoted page number matches the PDF's.
+  const footers = () => {
+    const total = pdf.getNumberOfPages();
     const left = `cSlope${header.version ? ` ${header.version}` : ""} · analysis summary · exported ${header.date}`;
-    pdf.text(left, MARGIN, paper.h - MARGIN + 2);
-    pdf.text(`Summary page ${page}`, paper.w - MARGIN, paper.h - MARGIN + 2, { align: "right" });
-    pdf.setTextColor(0, 0, 0);
+    for (const n of pages) {
+      pdf.setPage(n);
+      setSansFont(pdf, "normal");
+      pdf.setFontSize(7.5);
+      pdf.setTextColor(110, 110, 110);
+      pdf.text(left, MARGIN, paper.h - MARGIN + 2);
+      pdf.text(`Page ${n} of ${total}`, paper.w - MARGIN, paper.h - MARGIN + 2, { align: "right" });
+      pdf.setTextColor(0, 0, 0);
+    }
+    pdf.setPage(total);
   };
 
   const newPage = () => {
-    if (page > 0) footer();
     pdf.addPage([paper.w, paper.h], paper.landscape ? "landscape" : "portrait");
-    page++;
+    pages.push(pdf.getNumberOfPages());
     y = MARGIN + 4;
     setSansFont(pdf, "bold");
     pdf.setFontSize(13);
@@ -114,7 +121,8 @@ export function drawSummaryPages(
       info.title,
       info.projectNumber && `project ${info.projectNumber}`,
       info.revision && `rev. ${info.revision}`,
-      header.modelName && `model ${header.modelName}`,
+      // The project title is the model's name by default: not twice.
+      header.modelName && header.modelName !== info.title && `model ${header.modelName}`,
     ]
       .filter(Boolean)
       .join(" · ");
@@ -172,7 +180,7 @@ export function drawSummaryPages(
     }
     y += LINE * 0.8;
   }
-  footer();
+  footers();
 
   function drawTable(head: string[], rows: string[][]) {
     // Column widths from the longest text in each column, the widest

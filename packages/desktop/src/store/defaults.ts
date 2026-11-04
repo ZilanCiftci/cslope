@@ -137,10 +137,11 @@ export const DEFAULT_RESULT_VIEW_SETTINGS: ResultViewSettings = {
     {
       id: "anno-default-material-table",
       type: "material-table",
-      x: 0.95,
-      y: 0.05,
+      // Just inside the top right corner of the plot frame (PLOT_MARGINS).
+      x: 0.94,
+      y: 0.06,
       anchor: "top-right",
-      fontSize: 6,
+      fontSize: 8,
       tableColumns: ["model", "unitWeight", "cohesion", "frictionAngle"],
     },
   ],

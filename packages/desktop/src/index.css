@@ -25,6 +25,8 @@
   --color-vsc-status: #181818;
   --color-vsc-error: #f14c4c;
   --color-vsc-warning: #cca700;
+  /* Warning text: the icon/border colour is below 4.5:1 as body text. */
+  --color-vsc-warning-text: #e5c07b;
   --color-vsc-success: #89d185;
   --color-vsc-surface-tint: rgba(255,255,255,0.03);
   --color-vsc-surface-tint-strong: rgba(255,255,255,0.04);
@@ -75,6 +77,9 @@
   --color-canvas-marker: #e8e8e8;
   --color-canvas-custom-surface: #c084fc;
   --color-canvas-reference: #e879f9;
+  /* Labels of water and head lines (the lines keep their print colours). */
+  --color-canvas-water-label: #b4ccff;
+  --color-canvas-head-label: #6ee0d2;
 
   color-scheme: dark;
 }
@@ -102,6 +107,7 @@
   --color-vsc-status: #f3f3f3;
   --color-vsc-error: #d32f2f;
   --color-vsc-warning: #bf8803;
+  --color-vsc-warning-text: #8a6100;
   --color-vsc-success: #388e3c;
   --color-vsc-surface-tint: rgba(0,0,0,0.03);
   --color-vsc-surface-tint-strong: rgba(0,0,0,0.04);
@@ -149,6 +155,8 @@
   --color-canvas-marker: #000000;
   --color-canvas-custom-surface: #7e22ce;
   --color-canvas-reference: #a21caf;
+  --color-canvas-water-label: #1a3a8a;
+  --color-canvas-head-label: #00796b;
 
   color-scheme: light;
 }

@@ -33,6 +33,23 @@ describe("OptionsSection inputs", () => {
     expect(useAppStore.getState().options.iterations).toBe(2000);
   });
 
+  it("reads a decimal comma as well as a point", async () => {
+    const tol = await typeInto("Tolerance", "0,02");
+    expect(tol.value).toBe("0,02");
+    expect(useAppStore.getState().options.tolerance).toBe(0.02);
+    await userEvent.tab();
+    expect(useAppStore.getState().options.tolerance).toBe(0.02);
+  });
+
+  it("marks text that is not a number as invalid and keeps the value", async () => {
+    const before = useAppStore.getState().options.slices;
+    const slices = await typeInto("Number of slices", "4x");
+    expect(slices).toHaveAttribute("aria-invalid", "true");
+    await userEvent.tab();
+    expect(useAppStore.getState().options.slices).toBe(before);
+    expect(slices.value).toBe(String(before));
+  });
+
   it("clamps out-of-range values when the field is left", async () => {
     const slices = await typeInto("Number of slices", "5");
     await userEvent.tab();

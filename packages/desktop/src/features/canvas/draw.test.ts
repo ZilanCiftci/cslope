@@ -479,6 +479,16 @@ describe("drawCanvas — edit mode", () => {
     const refStroke = rec.strokes().find(isRef);
     expect(refStroke?.state.globalAlpha).toBeLessThan(1);
     expect(rec.callsOf("fillText").some((c) => c.args[0] === "head line 1")).toBe(true);
+    // On a plate in the canvas colour, drawn just before it, so the ground
+    // line and the soil fill do not strike through it.
+    const at = rec.calls.findIndex((c) => c.name === "fillText" && c.args[0] === "head line 1");
+    const plate = rec.calls.slice(0, at).filter((c) => c.name === "fillRect").at(-1)!;
+    expect(plate.name).toBe("fillRect");
+    expect(plate.state.globalAlpha).toBe(1);
+    // Around the text, which is right-aligned at the line's end.
+    const [px, , pw] = plate.args as number[];
+    expect(px + pw).toBeGreaterThan(rec.calls[at].args[1] as number);
+    expect(px).toBeLessThan((rec.calls[at].args[1] as number) - 10);
     const none = draw();
     expect(none.strokes().some(isHead)).toBe(false);
     expect(none.callsOf("fillText").some((c) => c.args[0] === "head line 1")).toBe(false);
@@ -1632,6 +1642,14 @@ describe("drawCanvas — result mode", () => {
     // Cohesion 10–30 gets the ticks 10, 15, 20, 25, 30; the slices 1, 2, 3.
     const labels = rec.textStrings();
     for (const t of ["10", "15", "20", "25", "30", "1", "2", "3"]) expect(labels).toContain(t);
+    // The x axis is titled, and the top tick value is clear of the plot title.
+    expect(labels).toContain("Slice");
+    const title = rec.texts.find((t) => t.text === "Cohesion (kPa)")!;
+    const top = rec.texts.find((t) => t.text === "30")!;
+    const titleSize = Number(title.state.font.match(/([\d.]+)px/)![1]);
+    const tickSize = Number(top.state.font.match(/([\d.]+)px/)![1]);
+    // (the tick value is centred on its tick)
+    expect(top.y - tickSize / 2).toBeGreaterThan(title.y + titleSize);
   });
 
   it("outlines selected annotations and the paper frame with a dashed rectangle", () => {

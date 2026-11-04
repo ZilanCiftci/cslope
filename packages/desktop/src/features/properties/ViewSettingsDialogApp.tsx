@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { DraftNumberInput } from "../../components/ui/DraftNumberInput";
+import { parseDecimalText } from "../../utils/decimal";
 import { isElectron } from "../../utils/is-electron";
 import { useAppStore, PAPER_DIMENSIONS } from "../../store/app-store";
 import type { ResultViewSettings, PaperSize } from "../../store/types";
@@ -183,7 +184,7 @@ export function ViewSettingsDialogApp() {
       return;
     }
 
-    const parsed = Number(raw);
+    const parsed = parseDecimalText(raw);
     if (!Number.isFinite(parsed)) {
       setExtentDraft((prev) => ({
         ...prev,
@@ -269,7 +270,7 @@ export function ViewSettingsDialogApp() {
         {/* ── Grid & Ticks ──────────────────────── */}
         <GroupHeading>Grid &amp; Ticks</GroupHeading>
 
-        <FieldRow label="Spacing">
+        <FieldRow label="Tick spacing (m)">
           <DraftNumberInput
             min={0}
             step="any"
@@ -284,25 +285,16 @@ export function ViewSettingsDialogApp() {
         </FieldRow>
 
         <FieldRow label="Minor ticks">
-          <input
-            type="number"
+          <DraftNumberInput
             min={0}
             max={20}
             step={1}
             value={rvs.minorTicks ?? 0}
-            onChange={(e) => {
-              const raw = e.target.value;
-              if (raw === "") {
-                setRvs({ minorTicks: undefined });
-                return;
-              }
-              const parsed = Number(raw);
-              if (!Number.isFinite(parsed)) {
-                return;
-              }
+            onValueChange={(parsed) => {
               const value = Math.max(0, Math.min(20, Math.round(parsed)));
               setRvs({ minorTicks: value || undefined });
             }}
+            onClear={() => setRvs({ minorTicks: undefined })}
             style={{ width: 176 }}
           />
         </FieldRow>
@@ -313,10 +305,10 @@ export function ViewSettingsDialogApp() {
         <div className="space-y-2 px-2">
           <div className="grid grid-cols-2 gap-x-3 gap-y-2">
             <div>
-              <span className="text-[10px] opacity-60">Left X</span>
+              <span className="text-[10px] opacity-60">Left x (m)</span>
               <input
-                type="number"
-                step={1}
+                type="text"
+                inputMode="decimal"
                 value={extentInputValue("bl_x")}
                 onFocus={() => handleExtentFocus("bl_x")}
                 onChange={(e) => handleExtentChange("bl_x", e.target.value)}
@@ -334,10 +326,10 @@ export function ViewSettingsDialogApp() {
               />
             </div>
             <div>
-              <span className="text-[10px] opacity-60">Right X</span>
+              <span className="text-[10px] opacity-60">Right x (m)</span>
               <input
-                type="number"
-                step={1}
+                type="text"
+                inputMode="decimal"
                 value={extentInputValue("tr_x")}
                 onFocus={() => handleExtentFocus("tr_x")}
                 onChange={(e) => handleExtentChange("tr_x", e.target.value)}
@@ -355,10 +347,10 @@ export function ViewSettingsDialogApp() {
               />
             </div>
             <div>
-              <span className="text-[10px] opacity-60">Bottom Y</span>
+              <span className="text-[10px] opacity-60">Bottom y (m)</span>
               <input
-                type="number"
-                step={1}
+                type="text"
+                inputMode="decimal"
                 value={extentInputValue("bl_y")}
                 onFocus={() => handleExtentFocus("bl_y")}
                 onChange={(e) => handleExtentChange("bl_y", e.target.value)}
@@ -376,10 +368,10 @@ export function ViewSettingsDialogApp() {
               />
             </div>
             <div>
-              <span className="text-[10px] opacity-60">Top Y</span>
+              <span className="text-[10px] opacity-60">Top y (m)</span>
               <input
-                type="number"
-                step={1}
+                type="text"
+                inputMode="decimal"
                 value={extentInputValue("tr_y")}
                 onFocus={() => handleExtentFocus("tr_y")}
                 onChange={(e) => handleExtentChange("tr_y", e.target.value)}
