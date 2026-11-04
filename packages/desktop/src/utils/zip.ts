@@ -1,7 +1,9 @@
 /**
  * A minimal ZIP reader and writer for project files that are ZIP archives
- * (.gsz): reading takes stored and deflated entries (deflate through the
- * platform's DecompressionStream), writing stores the entries uncompressed.
+ * (.gsz, .cslp): reading takes stored and deflated entries (deflate through
+ * the platform's DecompressionStream); writing stores the entries
+ * uncompressed (writeZip) or deflates them (writeZipDeflated, through
+ * CompressionStream).
  * No ZIP64, encryption or multi-disk archives.
  */
 
@@ -148,22 +150,67 @@ function crc32(data: Uint8Array): number {
   return (c ^ 0xffffffff) >>> 0;
 }
 
+/** An entry as written: its uncompressed data and what is stored for it. */
+interface PackedEntry {
+  name: string;
+  /** The uncompressed data (for the CRC and the declared size). */
+  data: Uint8Array;
+  /** The bytes stored in the archive (the data, or the data deflated). */
+  stored: Uint8Array;
+  /** 0: stored, 8: deflated. */
+  method: 0 | 8;
+}
+
+const toBytes = (data: Uint8Array | string) => (typeof data === "string" ? textEncoder.encode(data) : data);
+
 /** A ZIP archive of the given entries, stored without compression. */
 export function writeZip(entries: { name: string; data: Uint8Array | string }[]): Uint8Array {
+  return packZip(
+    entries.map((e) => {
+      const data = toBytes(e.data);
+      return { name: e.name, data, stored: data, method: 0 };
+    }),
+  );
+}
+
+/** Deflate `data` to a raw deflate stream (as a ZIP entry stores it). */
+async function deflateRaw(data: Uint8Array): Promise<Uint8Array> {
+  const source = new ReadableStream<Uint8Array>({
+    start(controller) {
+      controller.enqueue(data);
+      controller.close();
+    },
+  });
+  const stream = source.pipeThrough(new CompressionStream("deflate-raw") as unknown as ReadableWritablePair<Uint8Array, Uint8Array>);
+  return new Uint8Array(await new Response(stream as unknown as BodyInit).arrayBuffer());
+}
+
+/** A ZIP archive of the given entries, deflated. */
+export async function writeZipDeflated(entries: { name: string; data: Uint8Array | string }[]): Promise<Uint8Array> {
+  const packed: PackedEntry[] = [];
+  for (const e of entries) {
+    const data = toBytes(e.data);
+    packed.push({ name: e.name, data, stored: await deflateRaw(data), method: 8 });
+  }
+  return packZip(packed);
+}
+
+function packZip(entries: PackedEntry[]): Uint8Array {
   const parts: Uint8Array[] = [];
   const central: Uint8Array[] = [];
   let offset = 0;
   for (const e of entries) {
     const name = textEncoder.encode(e.name);
-    const data = typeof e.data === "string" ? textEncoder.encode(e.data) : e.data;
+    const { data, stored, method } = e;
     const crc = crc32(data);
     const local = new Uint8Array(30 + name.length);
     const lv = new DataView(local.buffer);
     lv.setUint32(0, 0x04034b50, true);
     lv.setUint16(4, 20, true);
     lv.setUint16(6, 0x0800, true); // UTF-8 names
+    lv.setUint16(8, method, true);
     lv.setUint32(14, crc, true);
-    lv.setUint32(18, data.length, true);
+    lv.setUint32(18, stored.length, true);
     lv.setUint32(22, data.length, true);
     lv.setUint16(26, name.length, true);
     local.set(name, 30);
@@ -173,15 +220,16 @@ export function writeZip(entries: { name: string; data: Uint8Array | string }[])
     cv.setUint16(4, 20, true);
     cv.setUint16(6, 20, true);
     cv.setUint16(8, 0x0800, true);
+    cv.setUint16(10, method, true);
     cv.setUint32(16, crc, true);
-    cv.setUint32(20, data.length, true);
+    cv.setUint32(20, stored.length, true);
     cv.setUint32(24, data.length, true);
     cv.setUint16(28, name.length, true);
     cv.setUint32(42, offset, true);
     cen.set(name, 46);
-    parts.push(local, data);
+    parts.push(local, stored);
     central.push(cen);
-    offset += local.length + data.length;
+    offset += local.length + stored.length;
   }
   const cenSize = central.reduce((n, c) => n + c.length, 0);
   const end = new Uint8Array(22);

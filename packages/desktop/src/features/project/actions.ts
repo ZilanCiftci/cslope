@@ -14,27 +14,26 @@ import {
 import type { AppState } from "../../store/types";
 import { downloadFile } from "../../utils/download";
 
-// ── Filename helpers ────────────────────────────────────────────────
-
-/** Ensure a filename ends with `.json`. */
-export const ensureJsonName = (name: string): string =>
-  name.toLowerCase().endsWith(".json") ? name : `${name}.json`;
-
-/** Strip the `.json` extension for display purposes. */
-export const stripJsonExt = (name: string): string =>
-  name.replace(/\.json$/i, "");
+export {
+  buildProjectArchive,
+  ensureCslpName,
+  isProjectFileName,
+  readProjectBytes,
+  stripProjectExt,
+} from "./cslp";
 
 // ── Browser download helper ─────────────────────────────────────────
 
-/** Trigger a JSON file download in a regular browser context. */
-export function triggerBrowserDownload(json: string, fileName: string): void {
-  downloadFile(fileName, json, "application/json");
+/** Offer a project file (.cslp archive) as a download in a regular browser context. */
+export function triggerBrowserDownload(data: Uint8Array, fileName: string): void {
+  downloadFile(fileName, data as BlobPart, "application/octet-stream");
 }
 
 // ── Serialise / parse wrappers ──────────────────────────────────────
 
 /**
- * Build a pretty-printed JSON string from the current app state.
+ * Build a pretty-printed JSON string from the current app state (the
+ * project as one JSON document, as project files were before .cslp).
  *
  * The caller must call `state.saveCurrentModel()` **before** invoking this
  * function so that the latest in-flight edits are flushed into the model array.

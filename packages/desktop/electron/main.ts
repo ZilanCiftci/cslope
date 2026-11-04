@@ -1185,23 +1185,65 @@ function sendFileName(name: string | null) {
  */
 const MAX_PROJECT_BYTES = 50 * 1024 * 1024;
 
+/**
+ * The project file: a .cslp archive. Projects saved before it are JSON
+ * files named .json or .cslope; they are opened (the renderer tells the
+ * formats apart by content) but never written.
+ */
+const PROJECT_EXT = ".cslp";
+const OPENABLE_EXTS = [PROJECT_EXT, ".json", ".cslope"];
+/** One or more project extensions at the end of a name (".cslope.cslp"). */
+const PROJECT_EXTS_AT_END = /(\.(cslp|cslope|json))+$/i;
+
+/** Whether a path names a file the app opens as a project. */
+function isOpenablePath(filePath: string): boolean {
+  return OPENABLE_EXTS.includes(path.extname(filePath).toLowerCase());
+}
+
+/**
+ * The path a project is saved to: the name with .cslp as its only
+ * extension. A typed .json or .cslope, or .cslp twice (a save dialog may
+ * append the filter's extension to a typed one), is replaced, so
+ * "x.cslope.cslp", "x.cslp.cslp" and "x.json" all give "x.cslp". Other
+ * dots stay part of the name.
+ */
+export function cslpPath(filePath: string): string {
+  const dir = path.dirname(filePath);
+  const base = path.basename(filePath).trim().replace(PROJECT_EXTS_AT_END, "").trim();
+  return path.join(dir, `${base || "cslope-project"}${PROJECT_EXT}`);
+}
+
+/** The file name to offer for a new project, from the name the renderer suggests. */
+function suggestedFileName(suggested: unknown): string {
+  const raw = typeof suggested === "string" ? suggested : "";
+  // A name only, never a path, in characters every file system takes.
+  const name = path
+    .basename(raw.replace(/[\\/]+/g, "_"))
+    .replace(/[:*?"<>|]+|\p{Cc}+/gu, "_")
+    .slice(0, 200);
+  return path.basename(cslpPath(name || "cslope-project"));
+}
+
+/** A project file's bytes (a size check first: never a huge file read by mistake). */
+function readProjectFile(filePath: string): Uint8Array {
+  const stat = fs.statSync(filePath);
+  if (!stat.isFile()) throw new Error("Not a file.");
+  if (stat.size > MAX_PROJECT_BYTES) {
+    throw new Error("The file is too large to be a cSlope project.");
+  }
+  return new Uint8Array(fs.readFileSync(filePath));
+}
+
 ipcMain.handle("file:openPath", async (event, filePath: string) => {
   // File access only for the main window (not dialogs or a page that a
   // dropped file might have navigated to).
   if (!win || event.sender !== win.webContents) return null;
-  const ext = path.extname(filePath).toLowerCase();
-  if (ext !== ".json" && ext !== ".cslope") return null;
+  if (typeof filePath !== "string" || !isOpenablePath(filePath)) return null;
   const resolved = path.resolve(filePath);
   // A new open attempt replaces any earlier one that was not confirmed.
   pendingOpenPath = null;
   try {
-    const stat = fs.statSync(resolved);
-    if (!stat.isFile() || stat.size > MAX_PROJECT_BYTES) return null;
-  } catch {
-    return null;
-  }
-  try {
-    const contents = fs.readFileSync(resolved, "utf-8");
+    const contents = readProjectFile(resolved);
     pendingOpenPath = resolved;
     return contents;
   } catch {
@@ -1214,20 +1256,17 @@ ipcMain.handle("dialog:openFile", async (event) => {
   // A cancelled or failed open must not leave an earlier path to confirm.
   pendingOpenPath = null;
   const { canceled, filePaths } = await dialog.showOpenDialog(win, {
-    title: "Open cSlope Project",
+    title: "Open cSlope project",
     filters: [
-      { name: "cSlope Projects", extensions: ["json", "cslope"] },
+      { name: "cSlope project", extensions: ["cslp", "json", "cslope"] },
       { name: "All Files", extensions: ["*"] },
     ],
     properties: ["openFile"],
   });
   if (canceled || filePaths.length === 0) return null;
-  let contents: string;
+  let contents: Uint8Array;
   try {
-    if (fs.statSync(filePaths[0]).size > MAX_PROJECT_BYTES) {
-      throw new Error("The file is too large to be a cSlope project.");
-    }
-    contents = fs.readFileSync(filePaths[0], "utf-8");
+    contents = readProjectFile(filePaths[0]);
   } catch (err) {
     dialog.showErrorBox(
       "Could not open file",
@@ -1245,13 +1284,68 @@ ipcMain.on("file:openConfirmed", (event) => {
   pendingOpenPath = null;
 });
 
+// ── Project files given to the app ───────────────────────────
+// A double-clicked .cslp file (Windows, Linux: on the command line;
+// macOS: the open-file event), also when cSlope is already running (a
+// second launch hands its command line to this instance and quits). The
+// path waits here until the page asks for it (it may still be loading),
+// and is read like a dropped file.
+
+/** A project file given to the app, not yet asked for by the page. */
+let requestedOpenPath: string | null = null;
+
+/** The project file named on a command line (relative paths from `cwd`), if any (the last one). */
+export function projectPathFromArgs(argv: readonly string[], cwd = process.cwd()): string | null {
+  let found: string | null = null;
+  // argv[0] is the executable; flags (Chromium's too) start with "-".
+  for (const arg of argv.slice(1)) {
+    if (!arg || arg.startsWith("-") || !isOpenablePath(arg)) continue;
+    const resolved = path.resolve(cwd, arg);
+    try {
+      if (fs.statSync(resolved).isFile()) found = resolved;
+    } catch {
+      // Not a file.
+    }
+  }
+  return found;
+}
+
+/** Open `filePath` in the main window (once its page asks for it). */
+function requestOpen(filePath: string) {
+  requestedOpenPath = filePath;
+  if (win && !win.isDestroyed()) {
+    win.webContents.send("file:openRequested");
+  } else if (app.isReady()) {
+    // macOS: no window left; the new page asks for the file once loaded.
+    createWindow();
+  }
+}
+
+ipcMain.handle("file:openRequested", async (event) => {
+  if (!win || event.sender !== win.webContents || !requestedOpenPath) return null;
+  const filePath = requestedOpenPath;
+  requestedOpenPath = null;
+  pendingOpenPath = null;
+  try {
+    const contents = readProjectFile(filePath);
+    pendingOpenPath = filePath;
+    return contents;
+  } catch (err) {
+    dialog.showErrorBox(
+      "Could not open file",
+      `${filePath}\n${err instanceof Error ? err.message : String(err)}`,
+    );
+    return null;
+  }
+});
+
 /**
  * Write the project atomically: to a temporary file next to the target,
  * flushed to disk, then renamed over it. Writing in place truncates the
  * existing file first, so a crash, power loss or full disk mid-write
  * would destroy the user's only copy.
  */
-async function saveToPath(filePath: string, content: string) {
+async function saveToPath(filePath: string, content: Uint8Array) {
   let target = filePath;
   try {
     target = fs.realpathSync(filePath); // keep symlinks pointing at the file
@@ -1274,7 +1368,7 @@ async function saveToPath(filePath: string, content: string) {
   try {
     const fd = fs.openSync(tmp, "wx", mode);
     try {
-      fs.writeFileSync(fd, content, "utf-8");
+      fs.writeFileSync(fd, content);
       fs.fsyncSync(fd);
     } finally {
       fs.closeSync(fd);
@@ -1287,7 +1381,7 @@ async function saveToPath(filePath: string, content: string) {
       // so it cannot be replaced; fall back to writing it in place.
       const code = (err as NodeJS.ErrnoException).code;
       if (code !== "EPERM" && code !== "EBUSY" && code !== "EXDEV") throw err;
-      fs.writeFileSync(target, content, "utf-8");
+      fs.writeFileSync(target, content);
       fs.unlinkSync(tmp);
     }
   } catch (err) {
@@ -1302,33 +1396,50 @@ async function saveToPath(filePath: string, content: string) {
   return true;
 }
 
-ipcMain.handle("dialog:saveFile", async (event, content: string) => {
-  if (!win || event.sender !== win.webContents) return false;
-  // If we already have a path, save directly (no dialog)
-  if (currentFilePath) {
+/** The project archive from the renderer (never anything but bytes). */
+const isProjectData = (content: unknown): content is Uint8Array => content instanceof Uint8Array;
+
+ipcMain.handle("dialog:saveFile", async (event, content: unknown, suggestedName?: unknown) => {
+  if (!win || event.sender !== win.webContents || !isProjectData(content)) return false;
+  // A .cslp file: save to it directly (no dialog).
+  if (currentFilePath && path.extname(currentFilePath).toLowerCase() === PROJECT_EXT) {
     return saveToPath(currentFilePath, content);
   }
-  // Otherwise fall through to Save As
-  return saveAs(content);
+  // No file yet, or a project opened from a .json/.cslope file of an
+  // earlier version: Save As, offering <name>.cslp next to it (the old
+  // file is never replaced by a file of another format).
+  return saveAs(content, suggestedName);
 });
 
-ipcMain.handle("dialog:saveFileAs", async (event, content: string) => {
-  if (event.sender !== win?.webContents) return false;
-  return saveAs(content);
+ipcMain.handle("dialog:saveFileAs", async (event, content: unknown, suggestedName?: unknown) => {
+  if (event.sender !== win?.webContents || !isProjectData(content)) return false;
+  return saveAs(content, suggestedName);
 });
 
-async function saveAs(content: string): Promise<boolean> {
+async function saveAs(content: Uint8Array, suggestedName?: unknown): Promise<boolean> {
   if (!win) return false;
   const { canceled, filePath } = await dialog.showSaveDialog(win, {
-    title: "Save cSlope Project",
-    defaultPath: currentFilePath ?? "cslope-project.json",
-    filters: [
-      { name: "cSlope Projects", extensions: ["json", "cslope"] },
-      { name: "All Files", extensions: ["*"] },
-    ],
+    title: "Save cSlope project",
+    defaultPath: currentFilePath ? cslpPath(currentFilePath) : suggestedFileName(suggestedName),
+    filters: [{ name: "cSlope project", extensions: ["cslp"] }],
   });
   if (canceled || !filePath) return false;
-  return saveToPath(filePath, content);
+  const target = cslpPath(filePath);
+  // The dialog asked about replacing the name typed; the name saved to
+  // differs (x.json typed, x.cslp saved), so ask about that one.
+  if (target !== filePath && fs.existsSync(target)) {
+    const { response } = await dialog.showMessageBox(win, {
+      type: "warning",
+      title: "Save cSlope project",
+      message: `${path.basename(target)} already exists. Do you want to replace it?`,
+      buttons: ["Replace", "Cancel"],
+      defaultId: 1,
+      cancelId: 1,
+      noLink: true,
+    });
+    if (response !== 0) return false;
+  }
+  return saveToPath(target, content);
 }
 
 // ── Application menu (hidden — custom title bar in renderer) ─
@@ -1409,7 +1520,32 @@ app.on("activate", () => {
   }
 });
 
+// One cSlope at a time: a second launch (a .cslp file double-clicked
+// while cSlope runs) hands its command line to this instance and quits.
+// Not for automated capture, which may run instances side by side.
+const isPrimaryInstance = process.env.CSLOPE_CAPTURE ? true : app.requestSingleInstanceLock();
+if (!isPrimaryInstance) {
+  app.quit();
+} else {
+  requestedOpenPath = projectPathFromArgs(process.argv);
+  app.on("second-instance", (_event, argv: string[], workingDirectory: string) => {
+    if (win && !win.isDestroyed()) {
+      if (win.isMinimized()) win.restore();
+      win.show();
+      win.focus();
+    }
+    const filePath = projectPathFromArgs(argv, workingDirectory || undefined);
+    if (filePath) requestOpen(filePath);
+  });
+  // macOS: a file opened with cSlope (also before the app is ready).
+  app.on("open-file", (event, filePath: string) => {
+    event.preventDefault();
+    if (isOpenablePath(filePath)) requestOpen(path.resolve(filePath));
+  });
+}
+
 app.whenReady().then(() => {
+  if (!isPrimaryInstance) return;
   setupCSP();
   // The app needs no camera, microphone, location or notifications.
   session.defaultSession.setPermissionRequestHandler((_webContents, _permission, callback) => callback(false));

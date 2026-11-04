@@ -75,7 +75,14 @@ const fake = vi.hoisted(() => {
     loadURL = vi.fn();
     loadFile = vi.fn();
     reload = vi.fn();
-    minimize = vi.fn();
+    minimized = false;
+    minimize = vi.fn(() => {
+      this.minimized = true;
+    });
+    isMinimized = () => this.minimized;
+    restore = vi.fn(() => {
+      this.minimized = false;
+    });
     maximize = vi.fn(() => {
       this.maximized = true;
     });
@@ -153,6 +160,8 @@ const fake = vi.hoisted(() => {
     whenReady: vi.fn(() => Promise.resolve()),
     getVersion: vi.fn(() => "1.2.3"),
     quit: vi.fn(),
+    requestSingleInstanceLock: vi.fn(() => true),
+    isReady: vi.fn(() => true),
   };
 
   const dialog = {
@@ -205,6 +214,8 @@ const fake = vi.hoisted(() => {
       }
     }
     session.defaultSession.webRequest.onHeadersReceived.mockClear();
+    app.requestSingleInstanceLock.mockImplementation(() => true);
+    app.isReady.mockImplementation(() => true);
     dialog.showMessageBox.mockImplementation(async () => ({ response: 0 }));
     dialog.showOpenDialog.mockImplementation(async () => ({
       canceled: true,
@@ -293,6 +304,10 @@ function invoke(channel: string, sender: Contents, ...args: unknown[]) {
 }
 
 const stranger = () => new fake.FakeWebContents();
+
+/** Project data as the renderer sends it, and back as text. */
+const bytes = (text: string) => new Uint8Array(Buffer.from(text, "utf-8"));
+const text = (data: unknown) => Buffer.from(data as Uint8Array).toString("utf-8");
 
 beforeEach(() => {
   vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
@@ -1038,7 +1053,7 @@ describe("close guard", () => {
       await loadMain();
       const win = mainWin();
       send("app:closeGuardReady", win.webContents);
-      const file = path.join(dir, "Slope.json");
+      const file = path.join(dir, "Slope.cslp");
       fs.writeFileSync(file, "{}");
       await invoke("file:openPath", win.webContents, file);
       send("file:openConfirmed", win.webContents);
@@ -1050,7 +1065,7 @@ describe("close guard", () => {
       send("file:openConfirmed", win.webContents);
       expect(win.title).toBe("cSlope");
       // Save now asks for a path instead of overwriting the old file.
-      await invoke("dialog:saveFile", win.webContents, "{}");
+      await invoke("dialog:saveFile", win.webContents, new Uint8Array([1]));
       expect(fake.dialog.showSaveDialog).toHaveBeenCalled();
       win.close();
       expect(win.destroyed).toBe(true);
@@ -1122,7 +1137,7 @@ describe("close guard", () => {
       const win = mainWin();
       expect(await invoke("dialog:unsavedChanges", stranger())).toBe("cancel");
       expect(fake.dialog.showMessageBox).not.toHaveBeenCalled();
-      const file = path.join(dir, "Dam.cslope");
+      const file = path.join(dir, "Dam.cslp");
       fs.writeFileSync(file, "{}");
       await invoke("file:openPath", win.webContents, file);
       send("file:openConfirmed", win.webContents);
@@ -1150,56 +1165,55 @@ describe("opening files", () => {
     fs.rmSync(dir, { recursive: true, force: true });
   });
 
-  it("reads a dropped project and makes it the save target only once confirmed", async () => {
+  it("reads a dropped .cslp project as bytes and makes it the save target only once confirmed", async () => {
     await loadMain();
     const win = mainWin();
-    const file = path.join(dir, "Slope.JSON");
-    fs.writeFileSync(file, '{"v":1}');
-    expect(await invoke("file:openPath", win.webContents, file)).toBe(
-      '{"v":1}',
-    );
+    const file = path.join(dir, "Slope.CSLP");
+    fs.writeFileSync(file, "PK\x03\x04zip");
+    const got = await invoke("file:openPath", win.webContents, file);
+    expect(got).toBeInstanceOf(Uint8Array);
+    expect(text(got)).toBe("PK\x03\x04zip");
     expect(win.title).toBe("");
 
     // Not yet confirmed: Save asks for a path.
-    await invoke("dialog:saveFile", win.webContents, "x");
+    await invoke("dialog:saveFile", win.webContents, bytes("x"));
     expect(fake.dialog.showSaveDialog).toHaveBeenCalledTimes(1);
 
     send("file:openConfirmed", win.webContents);
     expect(win.title).toBe("Slope — cSlope");
-    await invoke("dialog:saveFile", win.webContents, "saved");
+    await invoke("dialog:saveFile", win.webContents, bytes("saved"));
     expect(fake.dialog.showSaveDialog).toHaveBeenCalledTimes(1);
     expect(fs.readFileSync(file, "utf-8")).toBe("saved");
   });
 
-  it("accepts .cslope files", async () => {
+  it.each(["a.json", "a.cslope", "a.Cslp"])("accepts %s (legacy JSON projects too)", async (name) => {
     await loadMain();
-    const file = path.join(dir, "a.cslope");
+    const file = path.join(dir, name);
     fs.writeFileSync(file, "c");
-    expect(await invoke("file:openPath", mainWin().webContents, file)).toBe(
-      "c",
-    );
+    expect(text(await invoke("file:openPath", mainWin().webContents, file))).toBe("c");
   });
 
   it("refuses other senders, other extensions, directories, missing and oversized files", async () => {
     await loadMain();
     const win = mainWin();
-    const good = path.join(dir, "ok.json");
+    const good = path.join(dir, "ok.cslp");
     fs.writeFileSync(good, "{}");
     expect(await invoke("file:openPath", stranger(), good)).toBeNull();
+    expect(await invoke("file:openPath", win.webContents, 7)).toBeNull();
 
     const html = path.join(dir, "page.html");
     fs.writeFileSync(html, "<html>");
     expect(await invoke("file:openPath", win.webContents, html)).toBeNull();
 
-    const folder = path.join(dir, "folder.json");
+    const folder = path.join(dir, "folder.cslp");
     fs.mkdirSync(folder);
     expect(await invoke("file:openPath", win.webContents, folder)).toBeNull();
 
     expect(
-      await invoke("file:openPath", win.webContents, path.join(dir, "no.json")),
+      await invoke("file:openPath", win.webContents, path.join(dir, "no.cslp")),
     ).toBeNull();
 
-    const big = path.join(dir, "big.json");
+    const big = path.join(dir, "big.cslp");
     fs.writeFileSync(big, "");
     fs.truncateSync(big, 50 * 1024 * 1024 + 1);
     expect(await invoke("file:openPath", win.webContents, big)).toBeNull();
@@ -1207,7 +1221,7 @@ describe("opening files", () => {
     // Exactly at the cap is still accepted.
     fs.truncateSync(big, 50 * 1024 * 1024);
     const atCap = await invoke("file:openPath", win.webContents, big);
-    expect(typeof atCap).toBe("string");
+    expect(atCap).toBeInstanceOf(Uint8Array);
   });
 
   it("returns null when the file cannot be read and keeps the previous target", async () => {
@@ -1228,7 +1242,7 @@ describe("opening files", () => {
     const win = mainWin();
     send("file:openConfirmed", win.webContents);
     expect(win.setTitle).not.toHaveBeenCalled();
-    const file = path.join(dir, "a.json");
+    const file = path.join(dir, "a.cslp");
     fs.writeFileSync(file, "{}");
     await invoke("file:openPath", win.webContents, file);
     send("file:openConfirmed", stranger());
@@ -1238,7 +1252,7 @@ describe("opening files", () => {
   it("an unconfirmed open does not survive a cancelled open or File > New", async () => {
     await loadMain();
     const win = mainWin();
-    const file = path.join(dir, "Old.json");
+    const file = path.join(dir, "Old.cslp");
     fs.writeFileSync(file, "{}");
     // Read but never confirmed (e.g. the project failed to parse)...
     await invoke("file:openPath", win.webContents, file);
@@ -1255,20 +1269,20 @@ describe("opening files", () => {
     expect(win.setTitle).not.toHaveBeenCalled();
   });
 
-  it("opens through the native dialog", async () => {
+  it("opens through the native dialog, offering .cslp and the earlier .json and .cslope", async () => {
     await loadMain();
     const win = mainWin();
-    const file = path.join(dir, "Bank.json");
+    const file = path.join(dir, "Bank.cslp");
     fs.writeFileSync(file, "bank");
     fake.dialog.showOpenDialog.mockResolvedValueOnce({
       canceled: false,
       filePaths: [file],
     });
-    expect(await invoke("dialog:openFile", win.webContents)).toBe("bank");
-    expect(fake.dialog.showOpenDialog).toHaveBeenCalledWith(
-      win,
-      expect.objectContaining({ properties: ["openFile"] }),
-    );
+    expect(text(await invoke("dialog:openFile", win.webContents))).toBe("bank");
+    const options = fake.dialog.showOpenDialog.mock.calls[0][1];
+    expect(fake.dialog.showOpenDialog.mock.calls[0][0]).toBe(win);
+    expect(options.properties).toEqual(["openFile"]);
+    expect(options.filters[0]).toEqual({ name: "cSlope project", extensions: ["cslp", "json", "cslope"] });
     send("file:openConfirmed", win.webContents);
     expect(win.title).toBe("Bank — cSlope");
   });
@@ -1291,7 +1305,7 @@ describe("opening files", () => {
     const win = mainWin();
     fake.dialog.showOpenDialog.mockResolvedValueOnce({
       canceled: false,
-      filePaths: [path.join(dir, "gone.json")],
+      filePaths: [path.join(dir, "gone.cslp")],
     });
     expect(await invoke("dialog:openFile", win.webContents)).toBeNull();
     expect(fake.dialog.showErrorBox).toHaveBeenCalledWith(
@@ -1299,7 +1313,7 @@ describe("opening files", () => {
       expect.stringContaining("ENOENT"),
     );
 
-    const big = path.join(dir, "big.json");
+    const big = path.join(dir, "big.cslp");
     fs.writeFileSync(big, "");
     fs.truncateSync(big, 50 * 1024 * 1024 + 1);
     fake.dialog.showOpenDialog.mockResolvedValueOnce({
@@ -1338,7 +1352,7 @@ describe("opening files", () => {
   it("File > New forgets the save target", async () => {
     await loadMain();
     const win = mainWin();
-    const file = path.join(dir, "a.json");
+    const file = path.join(dir, "a.cslp");
     fs.writeFileSync(file, "{}");
     await invoke("file:openPath", win.webContents, file);
     send("file:openConfirmed", win.webContents);
@@ -1346,9 +1360,108 @@ describe("opening files", () => {
     expect(win.title).toBe("a — cSlope");
     send("menu:new", win.webContents);
     expect(win.title).toBe("cSlope");
-    await invoke("dialog:saveFile", win.webContents, "new");
+    await invoke("dialog:saveFile", win.webContents, bytes("new"));
     expect(fake.dialog.showSaveDialog).toHaveBeenCalled();
     expect(fs.readFileSync(file, "utf-8")).toBe("{}");
+  });
+});
+
+// ── Project files given to the app (double-click, second launch) ──
+
+describe("project files given to the app", () => {
+  let dir: string;
+  const argv = process.argv;
+  beforeEach(() => {
+    dir = fs.mkdtempSync(path.join(os.tmpdir(), "cslope-launch-"));
+  });
+  afterEach(() => {
+    process.argv = argv;
+    fs.rmSync(dir, { recursive: true, force: true });
+  });
+
+  it("finds the project file on a command line, skipping the executable, flags and other files", async () => {
+    const { projectPathFromArgs } = await loadMain();
+    const a = path.join(dir, "a.cslp");
+    const b = path.join(dir, "b.json");
+    fs.writeFileSync(a, "a");
+    fs.writeFileSync(b, "b");
+    expect(projectPathFromArgs([a])).toBeNull(); // argv[0] is the program
+    expect(projectPathFromArgs(["cslope.exe", "--flag", a])).toBe(a);
+    expect(projectPathFromArgs(["cslope.exe", ".", a, b])).toBe(b);
+    expect(projectPathFromArgs(["cslope.exe", path.join(dir, "missing.cslp")])).toBeNull();
+    expect(projectPathFromArgs(["cslope.exe", path.join(dir, "x.txt")])).toBeNull();
+    fs.mkdirSync(path.join(dir, "folder.cslp"));
+    expect(projectPathFromArgs(["cslope.exe", path.join(dir, "folder.cslp")])).toBeNull();
+  });
+
+  it("opens the file cSlope was launched with once the page asks, then makes it the save target", async () => {
+    const file = path.join(dir, "Dam.cslp");
+    fs.writeFileSync(file, "PK\x03\x04dam");
+    process.argv = ["cslope.exe", file];
+    await loadMain();
+    const win = mainWin();
+    expect(await invoke("file:openRequested", stranger())).toBeNull();
+    expect(text(await invoke("file:openRequested", win.webContents))).toBe("PK\x03\x04dam");
+    // Asked for once only.
+    expect(await invoke("file:openRequested", win.webContents)).toBeNull();
+    send("file:openConfirmed", win.webContents);
+    expect(win.title).toBe("Dam — cSlope");
+  });
+
+  it("holds the single-instance lock and opens a file from a second launch in this window", async () => {
+    await loadMain();
+    expect(fake.app.requestSingleInstanceLock).toHaveBeenCalled();
+    const win = mainWin();
+    win.minimized = true;
+    const file = path.join(dir, "Second.cslp");
+    fs.writeFileSync(file, "second");
+    const secondInstance = fake.state.appListeners.get("second-instance")![0];
+    // (a relative path is taken from the second launch's working directory)
+    secondInstance({}, ["cslope.exe", "--allow-file-access-from-files", "Second.cslp"], dir);
+    expect(win.restore).toHaveBeenCalled();
+    expect(win.focus).toHaveBeenCalled();
+    expect(win.webContents.send).toHaveBeenCalledWith("file:openRequested");
+    expect(text(await invoke("file:openRequested", win.webContents))).toBe("second");
+    // A second launch without a file only brings the window forward.
+    vi.mocked(win.webContents.send).mockClear();
+    secondInstance({}, ["cslope.exe"], dir);
+    expect(win.webContents.send).not.toHaveBeenCalledWith("file:openRequested");
+  });
+
+  it("opens a file handed over by macOS (open-file)", async () => {
+    await loadMain();
+    const win = mainWin();
+    const file = path.join(dir, "Mac.cslp");
+    fs.writeFileSync(file, "mac");
+    const event = { preventDefault: vi.fn() };
+    fake.state.appListeners.get("open-file")![0](event, file);
+    expect(event.preventDefault).toHaveBeenCalled();
+    expect(text(await invoke("file:openRequested", win.webContents))).toBe("mac");
+  });
+
+  it("reports a launch file that cannot be read", async () => {
+    const file = path.join(dir, "Gone.cslp");
+    fs.writeFileSync(file, "x");
+    process.argv = ["cslope.exe", file];
+    await loadMain();
+    fs.rmSync(file);
+    expect(await invoke("file:openRequested", mainWin().webContents)).toBeNull();
+    expect(fake.dialog.showErrorBox).toHaveBeenCalledWith("Could not open file", expect.stringContaining("Gone.cslp"));
+  });
+
+  it("a second instance quits at once and creates no window", async () => {
+    vi.resetModules();
+    fake.reset();
+    fake.app.requestSingleInstanceLock.mockImplementation(() => false);
+    await import("./main");
+    await flush();
+    expect(fake.app.quit).toHaveBeenCalled();
+    expect(fake.FakeBrowserWindow.instances).toHaveLength(0);
+  });
+
+  it("does not take the lock in capture mode", async () => {
+    await loadMain({ CSLOPE_CAPTURE: "1" });
+    expect(fake.app.requestSingleInstanceLock).not.toHaveBeenCalled();
   });
 });
 
@@ -1365,61 +1478,156 @@ describe("saving", () => {
 
   const leftovers = () => fs.readdirSync(dir).filter((f) => f.includes(".tmp-"));
 
-  async function saveAsTo(file: string, content: string) {
+  async function saveAsTo(file: string, content: string, suggested?: string) {
     fake.dialog.showSaveDialog.mockResolvedValueOnce({
       canceled: false,
       filePath: file,
     });
-    return invoke("dialog:saveFileAs", mainWin().webContents, content);
+    return invoke("dialog:saveFileAs", mainWin().webContents, bytes(content), suggested);
   }
 
-  it("Save As writes a new file, sets the title and becomes the save target", async () => {
+  it("Save As writes a new .cslp file, sets the title and becomes the save target", async () => {
     await loadMain();
     const win = mainWin();
-    const file = path.join(dir, "New Slope.json");
-    expect(await saveAsTo(file, "one")).toBe(true);
+    const file = path.join(dir, "New Slope.cslp");
+    expect(await saveAsTo(file, "one", "Embankment.cslp")).toBe(true);
     expect(fs.readFileSync(file, "utf-8")).toBe("one");
     expect(win.title).toBe("New Slope — cSlope");
-    expect(fake.dialog.showSaveDialog).toHaveBeenCalledWith(
-      win,
-      expect.objectContaining({ defaultPath: "cslope-project.json" }),
-    );
+    // The model's name is offered; only .cslp can be chosen.
+    const options = fake.dialog.showSaveDialog.mock.calls[0][1];
+    expect(options.defaultPath).toBe("Embankment.cslp");
+    expect(options.filters).toEqual([{ name: "cSlope project", extensions: ["cslp"] }]);
     expect(leftovers()).toEqual([]);
 
-    expect(await invoke("dialog:saveFile", win.webContents, "two")).toBe(true);
+    expect(await invoke("dialog:saveFile", win.webContents, bytes("two"))).toBe(true);
     expect(fs.readFileSync(file, "utf-8")).toBe("two");
     expect(fake.dialog.showSaveDialog).toHaveBeenCalledTimes(1);
 
     // Save As again proposes the current path.
-    await invoke("dialog:saveFileAs", win.webContents, "three");
+    await invoke("dialog:saveFileAs", win.webContents, bytes("three"));
     expect(fake.dialog.showSaveDialog).toHaveBeenLastCalledWith(
       win,
       expect.objectContaining({ defaultPath: file }),
     );
   });
 
+  it("offers a safe name: no path, no reserved characters, cslope-project without one", async () => {
+    await loadMain();
+    const win = mainWin();
+    const offered = async (suggested: unknown) => {
+      await invoke("dialog:saveFileAs", win.webContents, bytes("x"), suggested);
+      return fake.dialog.showSaveDialog.mock.calls.at(-1)![1].defaultPath;
+    };
+    expect(await offered(undefined)).toBe("cslope-project.cslp");
+    expect(await offered("")).toBe("cslope-project.cslp");
+    expect(await offered("../../etc/passwd")).toBe(".._.._etc_passwd.cslp");
+    expect(await offered('a:b*c?"d<e>f|g')).toBe("a_b_c_d_e_f_g.cslp");
+    expect(await offered("Slope 1.5 m")).toBe("Slope 1.5 m.cslp");
+    expect(await offered("dam.json")).toBe("dam.cslp");
+  });
+
+  it.each([
+    ["test.cslope", "test.cslp"],
+    ["test.cslope.cslp", "test.cslp"],
+    ["test.cslp.cslp", "test.cslp"],
+    ["test.json", "test.cslp"],
+    ["test.json.cslp", "test.cslp"],
+    ["test", "test.cslp"],
+    ["Test.CSLP", "Test.cslp"],
+    ["Slope 1.5 m", "Slope 1.5 m.cslp"],
+    ["notes.txt", "notes.txt.cslp"],
+  ])("a name typed as %s is saved as %s", async (typed, saved) => {
+    await loadMain();
+    expect(await saveAsTo(path.join(dir, typed), "data")).toBe(true);
+    expect(fs.readdirSync(dir)).toEqual([saved]);
+    expect(fs.readFileSync(path.join(dir, saved), "utf-8")).toBe("data");
+  });
+
+  it("asks before replacing a .cslp file the dialog did not ask about", async () => {
+    await loadMain();
+    const win = mainWin();
+    const existing = path.join(dir, "dam.cslp");
+    fs.writeFileSync(existing, "keep");
+    // x.json typed: the dialog asked about dam.json; dam.cslp would be replaced.
+    fake.dialog.showMessageBox.mockResolvedValueOnce({ response: 1 });
+    expect(await saveAsTo(path.join(dir, "dam.json"), "new")).toBe(false);
+    expect(fake.dialog.showMessageBox).toHaveBeenLastCalledWith(
+      win,
+      expect.objectContaining({ message: "dam.cslp already exists. Do you want to replace it?" }),
+    );
+    expect(fs.readFileSync(existing, "utf-8")).toBe("keep");
+    expect(fs.readdirSync(dir)).toEqual(["dam.cslp"]);
+
+    fake.dialog.showMessageBox.mockResolvedValueOnce({ response: 0 });
+    expect(await saveAsTo(path.join(dir, "dam.json"), "new")).toBe(true);
+    expect(fs.readFileSync(existing, "utf-8")).toBe("new");
+    // Typed exactly: the dialog itself asked.
+    fake.dialog.showMessageBox.mockClear();
+    expect(await saveAsTo(existing, "again")).toBe(true);
+    expect(fake.dialog.showMessageBox).not.toHaveBeenCalled();
+  });
+
+  it.each(["Old.json", "Old.cslope"])(
+    "Save on a project opened from %s offers Old.cslp next to it and leaves the old file alone",
+    async (name) => {
+      await loadMain();
+      const win = mainWin();
+      const legacy = path.join(dir, name);
+      fs.writeFileSync(legacy, '{"models":[]}');
+      await invoke("file:openPath", win.webContents, legacy);
+      send("file:openConfirmed", win.webContents);
+
+      const target = path.join(dir, "Old.cslp");
+      fake.dialog.showSaveDialog.mockResolvedValueOnce({ canceled: false, filePath: target });
+      expect(await invoke("dialog:saveFile", win.webContents, bytes("zip"))).toBe(true);
+      expect(fake.dialog.showSaveDialog).toHaveBeenCalledWith(win, expect.objectContaining({ defaultPath: target }));
+      expect(fs.readFileSync(legacy, "utf-8")).toBe('{"models":[]}');
+      expect(fs.readFileSync(target, "utf-8")).toBe("zip");
+      // The .cslp file is the save target from now on.
+      expect(await invoke("dialog:saveFile", win.webContents, bytes("zip2"))).toBe(true);
+      expect(fake.dialog.showSaveDialog).toHaveBeenCalledTimes(1);
+      expect(fs.readFileSync(target, "utf-8")).toBe("zip2");
+      expect(win.title).toBe("Old — cSlope");
+    },
+  );
+
+  it("Save on a legacy project that is cancelled writes nothing", async () => {
+    await loadMain();
+    const win = mainWin();
+    const legacy = path.join(dir, "Old.json");
+    fs.writeFileSync(legacy, "{}");
+    await invoke("file:openPath", win.webContents, legacy);
+    send("file:openConfirmed", win.webContents);
+    expect(await invoke("dialog:saveFile", win.webContents, bytes("zip"))).toBe(false);
+    expect(fs.readdirSync(dir)).toEqual(["Old.json"]);
+    expect(fs.readFileSync(legacy, "utf-8")).toBe("{}");
+  });
+
   it("Save without a path falls through to Save As; cancelling saves nothing", async () => {
     await loadMain();
     const win = mainWin();
-    expect(await invoke("dialog:saveFile", win.webContents, "x")).toBe(false);
+    expect(await invoke("dialog:saveFile", win.webContents, bytes("x"))).toBe(false);
     fake.dialog.showSaveDialog.mockResolvedValueOnce({
       canceled: false,
       filePath: "",
     });
-    expect(await invoke("dialog:saveFile", win.webContents, "x")).toBe(false);
+    expect(await invoke("dialog:saveFile", win.webContents, bytes("x"))).toBe(false);
     expect(fs.readdirSync(dir)).toEqual([]);
   });
 
-  it("refuses saves from other windows", async () => {
+  it("refuses saves from other windows and anything but bytes", async () => {
     await loadMain();
-    expect(await invoke("dialog:saveFile", stranger(), "x")).toBe(false);
-    expect(await invoke("dialog:saveFileAs", stranger(), "x")).toBe(false);
+    expect(await invoke("dialog:saveFile", stranger(), bytes("x"))).toBe(false);
+    expect(await invoke("dialog:saveFileAs", stranger(), bytes("x"))).toBe(false);
+    const win = mainWin();
+    expect(await invoke("dialog:saveFile", win.webContents, "text")).toBe(false);
+    expect(await invoke("dialog:saveFileAs", win.webContents, { length: 3 })).toBe(false);
     expect(fake.dialog.showSaveDialog).not.toHaveBeenCalled();
   });
 
   it("writes through a temporary file that is flushed before the rename", async () => {
     await loadMain();
-    const file = path.join(dir, "p.json");
+    const file = path.join(dir, "p.cslp");
     fs.writeFileSync(file, "old");
     const order: string[] = [];
     const open = vi.spyOn(fs, "openSync");
@@ -1448,7 +1656,7 @@ describe("saving", () => {
     "keeps the file's permissions",
     async () => {
       await loadMain();
-      const file = path.join(dir, "p.json");
+      const file = path.join(dir, "p.cslp");
       fs.writeFileSync(file, "old");
       fs.chmodSync(file, 0o640);
       expect(await saveAsTo(file, "new")).toBe(true);
@@ -1460,7 +1668,7 @@ describe("saving", () => {
   it("refuses to replace a read-only file and leaves it untouched", async () => {
     await loadMain();
     const win = mainWin();
-    const file = path.join(dir, "ro.json");
+    const file = path.join(dir, "ro.cslp");
     fs.writeFileSync(file, "keep");
     // Root can write anything, so simulate the permission check.
     vi.spyOn(fs, "accessSync").mockImplementation(() => {
@@ -1478,8 +1686,8 @@ describe("saving", () => {
     "saves through a symlink without replacing the link",
     async () => {
       await loadMain();
-      const real = path.join(dir, "real.json");
-      const link = path.join(dir, "link.json");
+      const real = path.join(dir, "real.cslp");
+      const link = path.join(dir, "link.cslp");
       fs.writeFileSync(real, "old");
       fs.symlinkSync(real, link);
       expect(await saveAsTo(link, "new")).toBe(true);
@@ -1493,7 +1701,7 @@ describe("saving", () => {
     "falls back to an in-place write when the rename fails with %s",
     async (code) => {
       await loadMain();
-      const file = path.join(dir, "held.json");
+      const file = path.join(dir, "held.cslp");
       fs.writeFileSync(file, "old");
       vi.spyOn(fs, "renameSync").mockImplementation(() => {
         throw Object.assign(new Error(code), { code });
@@ -1507,7 +1715,7 @@ describe("saving", () => {
   it("fails on other rename errors, keeping the original and removing the temp file", async () => {
     await loadMain();
     const win = mainWin();
-    const file = path.join(dir, "p.json");
+    const file = path.join(dir, "p.cslp");
     fs.writeFileSync(file, "old");
     vi.spyOn(fs, "renameSync").mockImplementation(() => {
       throw Object.assign(new Error("EACCES"), { code: "EACCES" });
@@ -1520,7 +1728,7 @@ describe("saving", () => {
 
   it("keeps the original when writing the temporary file fails (disk full)", async () => {
     await loadMain();
-    const file = path.join(dir, "p.json");
+    const file = path.join(dir, "p.cslp");
     fs.writeFileSync(file, "old");
     const real = fs.writeFileSync;
     vi.spyOn(fs, "writeFileSync").mockImplementation((target, ...rest) => {
@@ -1536,7 +1744,7 @@ describe("saving", () => {
 
   it("propagates unexpected stat errors without writing", async () => {
     await loadMain();
-    const file = path.join(dir, "p.json");
+    const file = path.join(dir, "p.cslp");
     vi.spyOn(fs, "statSync").mockImplementation(() => {
       throw Object.assign(new Error("EIO"), { code: "EIO" });
     });
@@ -1547,7 +1755,7 @@ describe("saving", () => {
 
   it("still reports the original error when the temp file cannot be removed", async () => {
     await loadMain();
-    const file = path.join(dir, "p.json");
+    const file = path.join(dir, "p.cslp");
     vi.spyOn(fs, "openSync").mockImplementation(() => {
       throw Object.assign(new Error("EMFILE"), { code: "EMFILE" });
     });

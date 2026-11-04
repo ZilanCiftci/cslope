@@ -10,6 +10,7 @@ vi.mock("../../../utils/download", async (importOriginal) => ({
 
 import { FileMenu } from "./FileMenu";
 import { markProjectClean, useAppStore } from "../../../store/app-store";
+import { buildProjectArchive, readProjectBytes } from "../../../features/project/cslp";
 
 const store = () => useAppStore.getState();
 
@@ -33,8 +34,8 @@ function capturePickers() {
   return pickers;
 }
 
-function choose(input: HTMLInputElement, name: string, content: string) {
-  const file = new File([content], name);
+function choose(input: HTMLInputElement, name: string, content: string | Uint8Array) {
+  const file = new File([content as BlobPart], name);
   Object.defineProperty(input, "files", { value: [file], configurable: true });
 }
 
@@ -76,11 +77,13 @@ describe("FileMenu in a browser", () => {
   it("downloads the project named after the model on Save", async () => {
     renderMenu("Slope A");
     await userEvent.click(screen.getByTitle("Save (Ctrl+S)"));
+    await waitFor(() => expect(mocks.downloadFile).toHaveBeenCalled());
     expect(mocks.downloadFile).toHaveBeenCalledTimes(1);
-    const [name, json, type] = mocks.downloadFile.mock.calls[0];
-    expect(name).toBe("Slope A.json");
-    expect(type).toBe("application/json");
-    expect(JSON.parse(json as string)).toHaveProperty("models");
+    const [name, data, type] = mocks.downloadFile.mock.calls[0];
+    expect(name).toBe("Slope A.cslp");
+    expect(type).toBe("application/octet-stream");
+    const project = await readProjectBytes(data as Uint8Array);
+    expect(project.models.map((m) => m.name)).toEqual(store().models.map((m) => m.name));
   });
 
   it("asks for a name on Save As and keeps it for later saves", async () => {
@@ -89,10 +92,10 @@ describe("FileMenu in a browser", () => {
     fireEvent.keyDown(window, { key: "S", ctrlKey: true, shiftKey: true });
     await waitFor(() => expect(mocks.downloadFile).toHaveBeenCalledTimes(1));
     expect(prompt).toHaveBeenCalledWith("Save project as", "cslope-project");
-    expect(mocks.downloadFile.mock.calls[0][0]).toBe("my project.json");
+    expect(mocks.downloadFile.mock.calls[0][0]).toBe("my project.cslp");
     fireEvent.keyDown(window, { key: "s", ctrlKey: true });
     await waitFor(() => expect(mocks.downloadFile).toHaveBeenCalledTimes(2));
-    expect(mocks.downloadFile.mock.calls[1][0]).toBe("my project.json");
+    expect(mocks.downloadFile.mock.calls[1][0]).toBe("my project.cslp");
   });
 
   it("does nothing when Save As is cancelled", async () => {
@@ -117,6 +120,20 @@ describe("FileMenu in a browser", () => {
     choose(input, "p.json", json);
     fireEvent.change(input);
     await waitFor(() => expect(store().models.map((m) => m.name)).toContain("Second"));
+  });
+
+  it("opens a .cslp project chosen in the file picker", async () => {
+    capturePickers();
+    const { container } = renderMenu();
+    const input = container.querySelector('input[type="file"]') as HTMLInputElement;
+    expect(input.accept).toBe(".cslp,.json,.cslope");
+    store().addModel("Third");
+    store().saveCurrentModel();
+    const archive = await buildProjectArchive(store());
+    store().newProject();
+    choose(input, "p.cslp", archive);
+    fireEvent.change(input);
+    await waitFor(() => expect(store().models.map((m) => m.name)).toContain("Third"));
   });
 
   it("imports a DXF outline as a new model and reports it", async () => {

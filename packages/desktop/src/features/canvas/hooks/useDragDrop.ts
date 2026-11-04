@@ -1,18 +1,39 @@
 import { useEffect } from "react";
-import { parseProjectFile } from "../../../store/persistence";
 import { useAppStore } from "../../../store/app-store";
 import { isElectron } from "../../../utils/is-electron";
 import { confirmUnsavedChanges } from "../../project/unsavedGuard";
+import { isProjectFileName, readProjectBytes } from "../../project/cslp";
+import { readFileBytes } from "../../project/useProjectActions";
 
 /**
- * Allows dropping `.json` or `.cslope` project files onto the window.
- * Works in both Electron (using the native file path) and browser (using
- * the File API).
+ * Load a project file read from outside the File menu (dropped on the
+ * window, or opened by double-click / on the command line): parsed first,
+ * then unsaved changes are dealt with, then it replaces the project. In
+ * the desktop app the file then becomes the save target.
+ */
+async function openProjectBytes(bytes: Uint8Array | null): Promise<void> {
+  try {
+    if (!bytes) return;
+    const parsed = await readProjectBytes(bytes);
+    if (!(await confirmUnsavedChanges())) return;
+    useAppStore.getState().loadProject(parsed);
+    useAppStore.temporal.getState().clear();
+    if (isElectron) window.cslope.confirmFileOpened();
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : "Unknown error";
+    window.alert(`Unable to open project: ${msg}`);
+  }
+}
+
+/**
+ * Allows dropping project files (.cslp, and .json or .cslope from earlier
+ * versions) onto the window. Works in both Electron (using the native file
+ * path) and browser (using the File API). In Electron it also opens the
+ * project file cSlope was started with (double-click on a .cslp file), and
+ * one passed to it later, while it runs.
  */
 export function useDragDrop() {
   useEffect(() => {
-    const isProjectFile = (name: string) => /\.(json|cslope)$/i.test(name);
-
     const handleDragOver = (e: DragEvent) => {
       e.preventDefault();
       e.stopPropagation();
@@ -26,34 +47,19 @@ export function useDragDrop() {
       e.stopPropagation();
 
       const file = e.dataTransfer?.files?.[0];
-      if (!file || !isProjectFile(file.name)) return;
+      if (!file || !isProjectFileName(file.name)) return;
 
+      let bytes: Uint8Array | null;
       try {
-        let contents: string | null = null;
-
-        if (isElectron) {
-          // Read by the main process from the native path (then a save
-          // writes back to that file).
-          contents = await window.cslope.openDroppedFile(file);
-        } else {
-          // Browser fallback: read via FileReader
-          contents = await new Promise<string>((resolve, reject) => {
-            const reader = new FileReader();
-            reader.onload = () => resolve(String(reader.result ?? ""));
-            reader.onerror = () => reject(reader.error);
-            reader.readAsText(file);
-          });
-        }
-
-        if (!contents) return;
-        const parsed = parseProjectFile(contents);
-        if (!(await confirmUnsavedChanges())) return;
-        useAppStore.getState().loadProject(parsed);
-        if (isElectron) window.cslope.confirmFileOpened();
+        // Electron: read by the main process from the native path (then a
+        // save writes back to that file). Browser: read via FileReader.
+        bytes = isElectron ? await window.cslope.openDroppedFile(file) : await readFileBytes(file);
       } catch (err) {
         const msg = err instanceof Error ? err.message : "Unknown error";
         window.alert(`Unable to open project: ${msg}`);
+        return;
       }
+      await openProjectBytes(bytes);
     };
 
     // Prevent the browser from navigating to the file on stray drops
@@ -66,10 +72,26 @@ export function useDragDrop() {
     window.addEventListener("drop", handleDrop);
     window.addEventListener("dragleave", blockDefault);
 
+    // A project file given to the app (on launch or while it runs): the
+    // main process holds its path and reads it when asked.
+    let unsubscribeOpenRequests: (() => void) | undefined;
+    if (isElectron && typeof window.cslope.onOpenFileRequested === "function") {
+      const openRequested = () => {
+        void window.cslope.openRequestedFile().then(openProjectBytes, (err: unknown) => {
+          const msg = err instanceof Error ? err.message : "Unknown error";
+          window.alert(`Unable to open project: ${msg}`);
+        });
+      };
+      unsubscribeOpenRequests = window.cslope.onOpenFileRequested(openRequested);
+      // One may be waiting since launch.
+      openRequested();
+    }
+
     return () => {
       window.removeEventListener("dragover", handleDragOver);
       window.removeEventListener("drop", handleDrop);
       window.removeEventListener("dragleave", blockDefault);
+      unsubscribeOpenRequests?.();
     };
   }, []);
 }

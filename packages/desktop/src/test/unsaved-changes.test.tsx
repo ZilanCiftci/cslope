@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { act, cleanup, render, renderHook } from "@testing-library/react";
+import { act, cleanup, render, renderHook, waitFor } from "@testing-library/react";
 
 vi.mock("../utils/is-electron", () => ({ isElectron: true }));
 
@@ -11,8 +11,8 @@ type Handler = (event: unknown, payload?: unknown) => void;
 const handlers = new Map<string, Handler[]>();
 const bridge = {
   askUnsavedChanges: vi.fn<() => Promise<"save" | "discard" | "cancel">>(),
-  saveFile: vi.fn<(json: string) => Promise<boolean>>(),
-  saveFileAs: vi.fn<(json: string) => Promise<boolean>>(),
+  saveFile: vi.fn<(data: Uint8Array, name?: string) => Promise<boolean>>(),
+  saveFileAs: vi.fn<(data: Uint8Array, name?: string) => Promise<boolean>>(),
   confirmClose: vi.fn(),
   closeGuardReady: vi.fn(),
   closeGuardReleased: vi.fn(),
@@ -132,7 +132,8 @@ describe("unsaved changes", () => {
     bridge.askUnsavedChanges.mockResolvedValue("save");
     bridge.saveFile.mockResolvedValue(true);
     await requestClose();
+    // (the project is packed into a .cslp archive asynchronously first)
+    await waitFor(() => expect(bridge.confirmClose).toHaveBeenCalledTimes(2));
     expect(bridge.saveFile).toHaveBeenCalled();
-    expect(bridge.confirmClose).toHaveBeenCalledTimes(2);
   });
 });

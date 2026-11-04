@@ -7,10 +7,10 @@ import { useAppStore } from "../../store/app-store";
 import { useProjectActions } from "./useProjectActions";
 
 const bridge = {
-  openFile: vi.fn<() => Promise<string | null>>(),
+  openFile: vi.fn<() => Promise<Uint8Array | null>>(),
   confirmFileOpened: vi.fn(),
-  saveFile: vi.fn<(content: string) => Promise<boolean>>(),
-  saveFileAs: vi.fn<(content: string) => Promise<boolean>>(),
+  saveFile: vi.fn<(content: Uint8Array, name?: string) => Promise<boolean>>(),
+  saveFileAs: vi.fn<(content: Uint8Array, name?: string) => Promise<boolean>>(),
   menuNew: vi.fn(),
 };
 
@@ -28,7 +28,7 @@ describe("useProjectActions in Electron", () => {
   });
 
   it("does not adopt a file as save target when it fails to parse", async () => {
-    bridge.openFile.mockResolvedValue('{"name":"not a project"}');
+    bridge.openFile.mockResolvedValue(new TextEncoder().encode('{"name":"not a project"}'));
     const { result } = renderHook(() => useProjectActions("project"));
     await act(() => result.current.handleOpen());
     expect(window.alert).toHaveBeenCalled();
@@ -38,10 +38,28 @@ describe("useProjectActions in Electron", () => {
   it("adopts the file as save target after a successful load", async () => {
     const { serializeProject } = await import("../../store/persistence");
     bridge.openFile.mockResolvedValue(
-      JSON.stringify(serializeProject(useAppStore.getState())),
+      new TextEncoder().encode(JSON.stringify(serializeProject(useAppStore.getState()))),
     );
     const { result } = renderHook(() => useProjectActions("project"));
     await act(() => result.current.handleOpen());
+    expect(bridge.confirmFileOpened).toHaveBeenCalledTimes(1);
+  });
+
+  it("saves a .cslp archive under the model's name and opens it again", async () => {
+    const { readProjectBytes } = await import("./cslp");
+    useAppStore.getState().addModel("Dam: north / B");
+    bridge.saveFile.mockResolvedValue(true);
+    const { result } = renderHook(() => useProjectActions("project"));
+    await act(() => result.current.handleSave());
+    const [data, name] = bridge.saveFile.mock.calls[0];
+    expect(name).toBe("Dam_ north _ B.cslp");
+    const saved = await readProjectBytes(data);
+    expect(saved.models.map((m) => m.name)).toContain("Dam: north / B");
+
+    useAppStore.getState().newProject();
+    bridge.openFile.mockResolvedValue(data);
+    await act(() => result.current.handleOpen());
+    expect(useAppStore.getState().models.map((m) => m.name)).toContain("Dam: north / B");
     expect(bridge.confirmFileOpened).toHaveBeenCalledTimes(1);
   });
 

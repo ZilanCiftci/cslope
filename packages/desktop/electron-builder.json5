@@ -19,6 +19,7 @@
   mac: {
     target: ["dmg"],
     icon: "build/icon.png",
+    fileAssociations: [{ ext: "cslp", name: "cSlope project", description: "cSlope project", role: "Editor" }],
     artifactName: "${productName}-Mac-${version}-Installer.${ext}",
   },
   // Electron fuses, set in the packaged binary: the signed cSlope.exe cannot
@@ -38,6 +39,9 @@
   },
   win: {
     icon: "build/icon.png",
+    // Double-clicking a .cslp project opens it in cSlope (the installer
+    // registers the extension; never .json). Icon: build/icon.ico.
+    fileAssociations: [{ ext: "cslp", name: "cSlope project", description: "cSlope project", icon: "icon" }],
     // Azure Trusted Signing (see sign.cjs).
     signtoolOptions: {
       sign: "./sign.cjs",
@@ -58,6 +62,7 @@
   },
   linux: {
     target: ["AppImage"],
+    fileAssociations: [{ ext: "cslp", name: "cSlope project", description: "cSlope project", mimeType: "application/x-cslope-project" }],
     artifactName: "${productName}-Linux-${version}.${ext}",
   },
 }

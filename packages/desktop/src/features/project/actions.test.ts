@@ -1,53 +1,66 @@
 import { describe, expect, it, vi, beforeEach } from "vitest";
 import {
-  ensureJsonName,
-  stripJsonExt,
+  ensureCslpName,
+  stripProjectExt,
   triggerBrowserDownload,
   buildProjectJson,
 } from "./actions";
 import type { AppState } from "../../store/types";
 import { PROJECT_FILE_VERSION } from "../../store/persistence";
 
-// ── ensureJsonName ──────────────────────────────────────────────────
+// ── ensureCslpName ──────────────────────────────────────────────────
 
-describe("ensureJsonName", () => {
-  it("appends .json when extension is missing", () => {
-    expect(ensureJsonName("my-project")).toBe("my-project.json");
+describe("ensureCslpName", () => {
+  it("appends .cslp when the extension is missing", () => {
+    expect(ensureCslpName("my-project")).toBe("my-project.cslp");
   });
 
-  it("returns the name unchanged when it already ends in .json", () => {
-    expect(ensureJsonName("my-project.json")).toBe("my-project.json");
+  it("gives .cslp exactly once, replacing the project extensions of earlier versions", () => {
+    expect(ensureCslpName("my-project.cslp")).toBe("my-project.cslp");
+    expect(ensureCslpName("test.cslope")).toBe("test.cslp");
+    expect(ensureCslpName("test.cslope.cslp")).toBe("test.cslp");
+    expect(ensureCslpName("test.cslp.cslp")).toBe("test.cslp");
+    expect(ensureCslpName("test.json")).toBe("test.cslp");
+    expect(ensureCslpName("test.cslope.json")).toBe("test.cslp");
   });
 
   it("is case-insensitive", () => {
-    expect(ensureJsonName("foo.JSON")).toBe("foo.JSON");
-    expect(ensureJsonName("bar.Json")).toBe("bar.Json");
+    expect(ensureCslpName("foo.CSLP")).toBe("foo.cslp");
+    expect(ensureCslpName("bar.Json")).toBe("bar.cslp");
   });
 
-  it("handles empty string", () => {
-    expect(ensureJsonName("")).toBe(".json");
+  it("keeps other dots as part of the name", () => {
+    expect(ensureCslpName("Slope 1.5 m")).toBe("Slope 1.5 m.cslp");
+    expect(ensureCslpName("notes.txt")).toBe("notes.txt.cslp");
+  });
+
+  it("names an empty name cslope-project", () => {
+    expect(ensureCslpName("")).toBe("cslope-project.cslp");
+    expect(ensureCslpName("  .cslp ")).toBe("cslope-project.cslp");
   });
 });
 
-// ── stripJsonExt ────────────────────────────────────────────────────
+// ── stripProjectExt ─────────────────────────────────────────────────
 
-describe("stripJsonExt", () => {
-  it("removes .json extension", () => {
-    expect(stripJsonExt("project.json")).toBe("project");
+describe("stripProjectExt", () => {
+  it("removes the .cslp, .json and .cslope extensions", () => {
+    expect(stripProjectExt("project.cslp")).toBe("project");
+    expect(stripProjectExt("project.json")).toBe("project");
+    expect(stripProjectExt("project.cslope")).toBe("project");
   });
 
   it("is case-insensitive", () => {
-    expect(stripJsonExt("project.JSON")).toBe("project");
-    expect(stripJsonExt("project.Json")).toBe("project");
+    expect(stripProjectExt("project.CSLP")).toBe("project");
+    expect(stripProjectExt("project.Json")).toBe("project");
   });
 
-  it("returns the name unchanged when there is no .json extension", () => {
-    expect(stripJsonExt("project")).toBe("project");
-    expect(stripJsonExt("project.txt")).toBe("project.txt");
+  it("returns the name unchanged when there is no project extension", () => {
+    expect(stripProjectExt("project")).toBe("project");
+    expect(stripProjectExt("project.txt")).toBe("project.txt");
   });
 
   it("handles empty string", () => {
-    expect(stripJsonExt("")).toBe("");
+    expect(stripProjectExt("")).toBe("");
   });
 });
 
@@ -77,7 +90,7 @@ describe("triggerBrowserDownload", () => {
   });
 
   it("creates a blob URL and clicks the anchor", () => {
-    triggerBrowserDownload('{"hello":"world"}', "test.json");
+    triggerBrowserDownload(new Uint8Array([0x50, 0x4b, 3, 4]), "test.cslp");
 
     expect(createObjectURLSpy).toHaveBeenCalledOnce();
     expect(clickSpy).toHaveBeenCalledOnce();

@@ -264,7 +264,7 @@ function Gallery() {
 
 const OPEN_SOURCE = [
   ["Transparent", "The solvers, the search and every verification problem are in the public repository."],
-  ["Reproducible", "Deterministic solvers and a plain JSON project file: the same model gives the same answer."],
+  ["Reproducible", "Deterministic solvers and an open project file (JSON in a ZIP archive): the same model gives the same answer."],
   ["Maintained", `Developed by ${SITE.company.name}, with automated tests and verification on every change.`],
 ] as const;
 

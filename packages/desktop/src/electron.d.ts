@@ -106,9 +106,14 @@ declare global {
   interface Window {
     cslope: {
       // File dialogs
-      openFile: () => Promise<string | null>;
+      /** The bytes of a project file chosen in the open dialog (null: none). */
+      openFile: () => Promise<Uint8Array | null>;
       /** Read a dropped project file by its native path (null if it has none). */
-      openDroppedFile: (file: File) => Promise<string | null>;
+      openDroppedFile: (file: File) => Promise<Uint8Array | null>;
+      /** A project file was given to the app (double-click, command line). */
+      onOpenFileRequested: (listener: (event: unknown) => void) => () => void;
+      /** The bytes of the project file given to the app (null: none waiting). */
+      openRequestedFile: () => Promise<Uint8Array | null>;
       /** Make the file just read by openFile/openFilePath the save target. */
       confirmFileOpened: () => void;
       /** The name of the project file (null: untitled), when it changes. */
@@ -121,8 +126,9 @@ declare global {
       /** Close the main window after the unsaved-changes check passed. */
       confirmClose: () => void;
       onCloseRequested: (listener: (event: unknown) => void) => () => void;
-      saveFile: (content: string) => Promise<boolean>;
-      saveFileAs: (content: string) => Promise<boolean>;
+      /** Save the project (a .cslp archive); `suggestedName` is offered when a dialog asks for a name. */
+      saveFile: (content: Uint8Array, suggestedName?: string) => Promise<boolean>;
+      saveFileAs: (content: Uint8Array, suggestedName?: string) => Promise<boolean>;
       // Window controls
       minimize: () => void;
       maximize: () => void;

@@ -13,6 +13,7 @@ vi.mock("../../project/unsavedGuard", () => ({ confirmUnsavedChanges: () => conf
 import { useDragDrop } from "./useDragDrop";
 import { useAppStore } from "../../../store/app-store";
 import { serializeProject } from "../../../store/persistence";
+import { buildProjectArchive } from "../../project/cslp";
 
 /** A project file whose first vertex is at x = `marker` (store actions keep the model entry in sync). */
 function projectText(marker: number): string {
@@ -91,7 +92,7 @@ describe("useDragDrop", () => {
   it("reads the native path in the desktop app and confirms the open", async () => {
     electron.value = true;
     const text = projectText(-80);
-    const openDroppedFile = vi.fn(async () => text);
+    const openDroppedFile = vi.fn(async () => new TextEncoder().encode(text));
     const confirmFileOpened = vi.fn();
     (window as unknown as { cslope: unknown }).cslope = { openDroppedFile, confirmFileOpened };
     renderHook(() => useDragDrop());
@@ -100,6 +101,43 @@ describe("useDragDrop", () => {
     await waitFor(() => expect(firstX()).toBe(-80));
     expect(openDroppedFile).toHaveBeenCalledWith(file);
     expect(confirmFileOpened).toHaveBeenCalled();
+  });
+
+  it("opens a dropped .cslp archive", async () => {
+    useAppStore.getState().newProject();
+    const [, y] = useAppStore.getState().coordinates[0];
+    useAppStore.getState().setCoordinate(0, [-81, y]);
+    useAppStore.getState().saveCurrentModel();
+    const archive = await buildProjectArchive(useAppStore.getState());
+    useAppStore.getState().newProject();
+    renderHook(() => useDragDrop());
+    drop(new File([archive as BlobPart], "Dam.cslp"));
+    await waitFor(() => expect(firstX()).toBe(-81));
+  });
+
+  it("opens the project file the desktop app was given (double-click), at mount and when told", async () => {
+    electron.value = true;
+    const requested: Uint8Array[] = [new TextEncoder().encode(projectText(-82))];
+    const openRequestedFile = vi.fn(async () => requested.shift() ?? null);
+    let notify: (() => void) | undefined;
+    const unsubscribe = vi.fn();
+    const onOpenFileRequested = vi.fn((fn: () => void) => {
+      notify = fn;
+      return unsubscribe;
+    });
+    const confirmFileOpened = vi.fn();
+    (window as unknown as { cslope: unknown }).cslope = { openRequestedFile, onOpenFileRequested, confirmFileOpened };
+    const { unmount } = renderHook(() => useDragDrop());
+    // A file waiting since launch is asked for at once.
+    await waitFor(() => expect(firstX()).toBe(-82));
+    expect(confirmFileOpened).toHaveBeenCalledTimes(1);
+    // One handed over later (second launch).
+    requested.push(new TextEncoder().encode(projectText(-83)));
+    await act(async () => notify?.());
+    await waitFor(() => expect(firstX()).toBe(-83));
+    expect(confirmFileOpened).toHaveBeenCalledTimes(2);
+    unmount();
+    expect(unsubscribe).toHaveBeenCalled();
   });
 
   it("stops listening when unmounted", () => {

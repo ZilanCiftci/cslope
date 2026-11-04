@@ -68,14 +68,34 @@ export function serializeProject(state: AppState): ProjectFile {
   };
 }
 
+/** Parse the text of a JSON project file (the format before .cslp). */
 export function parseProjectFile(contents: string): ProjectFile {
-  let data: unknown;
-  try {
-    data = JSON.parse(contents);
-  } catch {
-    throw new Error("File is not valid JSON.");
-  }
+  return parseProjectData(parseJson(contents, "File is not valid JSON."));
+}
 
+/** JSON.parse with a readable message instead of the parser's. */
+export function parseJson(contents: string, message: string): unknown {
+  try {
+    return JSON.parse(contents);
+  } catch {
+    throw new Error(message);
+  }
+}
+
+/**
+ * The fields of a saved model that hold the outcome of its run. A .cslp
+ * archive keeps them apart from the model (in results.json), so the model
+ * reads without its results.
+ */
+export const RUN_FIELDS = ["runState", "progress", "result", "errorMessage"] as const;
+
+/**
+ * A parsed project (a JSON project file, or the project.json and
+ * results.json of a .cslp archive put back together), validated: only
+ * known fields are kept, and values of the wrong shape are dropped or
+ * replaced by defaults.
+ */
+export function parseProjectData(data: unknown): ProjectFile {
   if (!data || typeof data !== "object") {
     throw new Error("File is missing project data.");
   }
