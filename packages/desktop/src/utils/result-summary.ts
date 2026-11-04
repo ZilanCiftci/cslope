@@ -59,7 +59,7 @@ export function discardedBySizeText(count: number): string {
 
 /** Tooltip for {@link discardedBySizeText}. */
 export const DISCARDED_BY_SIZE_TITLE =
-  "The minimum slip area (by default 1 % of the squared ground relief) and the minimum slip depth leave small surfaces out of the search. The default is a practical filter, not a rule from the literature: a small local failure, such as a low cut at the toe, can be among the skipped surfaces. Set the minimum slip area to 0 in the analysis options to include them.";
+  "The minimum slip area and minimum slip depth set in the analysis options leave small surfaces out of the search. A small local failure, such as a low cut at the toe, can be among the skipped surfaces. Set both to 0 (no limit, the default) to include them.";
 
 /** Tooltip for {@link nonConvergedText}. */
 export const NON_CONVERGED_TITLE =

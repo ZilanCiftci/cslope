@@ -389,20 +389,18 @@ describe("Minimum slip depth", () => {
       expect(depth).toBeGreaterThanOrEqual(minDepth);
     }
   });
-  it("sliding masses below the minimum area are skipped (automatic by default)", () => {
+  it("sliding masses below a set minimum area are skipped (no limit by default)", () => {
     const def = layered([[0, 0], [10, 0], [25, 10], [40, 10]], -10, [{ name: "C", topY: null, model: su(12, 19) }]);
     const area = (p: { slices?: { area: number }[] | null }) => p.slices!.reduce((a, s) => a + s.area, 0);
-    const auto = runVerification(def, "Bishop");
-    expect(auto.slope.minSlipArea).toBeCloseTo(1e-2 * 10 ** 2);
-    for (const p of auto.slope.search) {
-      if (p.fos != null) expect(area(p)).toBeGreaterThanOrEqual(auto.slope.minSlipArea);
-    }
+    const free = runVerification(def, "Bishop");
+    expect(free.slope.minSlipArea).toBe(0);
+    expect(free.slope.search.some((p) => p.fos != null && area(p) < 1)).toBe(true);
     const set = runVerification(def, "Bishop", { minSlipArea: 5 });
     for (const p of set.slope.search) if (p.fos != null) expect(area(p)).toBeGreaterThanOrEqual(5);
-    // 0 turns the limit off: smaller surfaces are analysed again.
-    const off = runVerification(def, "Bishop", { minSlipArea: 0 });
-    expect(off.slope.search.some((p) => p.fos != null && area(p) < auto.slope.minSlipArea)).toBe(true);
-    expect(auto.fos!).toBeCloseTo(off.fos!, 6);
+    // Purely cohesive soil: small surfaces have high factors, so a limit
+    // below the critical mass does not move the result.
+    const small = runVerification(def, "Bishop", { minSlipArea: 1 });
+    expect(free.fos!).toBeCloseTo(small.fos!, 6);
   });
 });
 

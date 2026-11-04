@@ -143,7 +143,7 @@ fn assign_material_accepts_only_materials_a_point_outside_every_region_is_ignore
 }
 
 #[test]
-fn model_area_height_and_ground_relief_automatic_minimum_slip_area() {
+fn model_area_height_and_ground_relief_minimum_slip_area_defaults_to_no_limit() {
     let empty = Slope::new();
     assert_eq!(empty.model_area(), 0.0);
     assert_eq!(empty.model_height(), 0.0);
@@ -154,13 +154,14 @@ fn model_area_height_and_ground_relief_automatic_minimum_slip_area() {
     close(s.model_area(), 400.0 + 10.0 * 10.0 + 0.5 * 15.0 * 10.0, 9);
     assert_eq!(s.model_height(), 20.0);
     assert_eq!(s.ground_relief(), 10.0);
-    close(s.min_slip_area(), 1e-2 * 100.0, 12);
+    assert_eq!(s.min_slip_area(), 0.0);
     s.update_analysis_options(&opts(json!({ "minSlipArea": 3 })))
         .unwrap();
     assert_eq!(s.min_slip_area(), 3.0);
+    // null (older projects: automatic) is no limit
     s.update_analysis_options(&opts(json!({ "minSlipArea": null })))
         .unwrap();
-    close(s.min_slip_area(), 1.0, 12);
+    assert_eq!(s.min_slip_area(), 0.0);
 }
 
 #[test]

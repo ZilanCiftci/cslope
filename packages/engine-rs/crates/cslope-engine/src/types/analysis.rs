@@ -232,9 +232,8 @@ pub struct AnalysisOptions {
         deserialize_with = "crate::types::json::opt_num"
     )]
     pub min_slip_depth: Option<f64>,
-    /// Surfaces whose sliding mass is smaller than this (m²) are not
-    /// analysed. Null or not set: automatic, 1 % of the squared ground
-    /// relief. 0: no limit.
+    /// Surfaces whose sliding mass (cross-section area per metre, m²) is
+    /// smaller than this are not analysed. 0, null or not set: no limit.
     #[serde(
         default,
         skip_serializing_if = "Option::is_none",
@@ -377,7 +376,7 @@ pub fn default_analysis_options() -> AnalysisOptions {
         block_active_angle: None,
         block_passive_angle: None,
         min_slip_depth: Some(0.0),
-        min_slip_area: None,
+        min_slip_area: Some(Some(0.0)),
         fem: None,
         sgi3d: None,
     }

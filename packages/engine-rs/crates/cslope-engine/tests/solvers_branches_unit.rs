@@ -22,7 +22,7 @@ use cslope_engine::model::solvers::{
 use cslope_engine::types::{
     default_analysis_options, AnalysisMethod, Slice, SlopeDefinition, WATER_UNIT_WEIGHT,
 };
-use model_core_support::{close, def, layered, mc};
+use model_core_support::{close, def, layered, mc, su};
 use serde_json::{json, Value};
 use solvers_support::run_verification;
 use std::f64::consts::PI;
@@ -574,4 +574,86 @@ fn a_normal_load_acts_into_the_ground_on_a_slope_facing_the_other_way() {
     );
     let mp = AnalysisMethod::MorgensternPrice;
     close(normal_fos(r, mp), normal_fos(d, mp), 8);
+}
+
+// ── No minimum slip area (the default) ────────────────────────────
+
+/// The sliding area and the largest depth of a surface's slices.
+fn area_and_depth(slices: &[Slice]) -> (f64, f64) {
+    let area = slices.iter().map(|s| s.area).sum();
+    let depth = slices
+        .iter()
+        .map(|s| (s.y0_top - s.y0_bottom).max(s.y1_top - s.y1_bottom))
+        .fold(0.0, f64::max);
+    (area, depth)
+}
+
+/// Every analysed trial surface of the search has a finite, positive
+/// factor and a sliding mass; returns the critical one's area and depth.
+fn finite_search(slope: &Slope) -> (f64, f64) {
+    let search = slope.search();
+    let mut valid = 0;
+    for p in search.iter() {
+        let Some(f) = p.fos else { continue };
+        valid += 1;
+        assert!(f.is_finite() && f > 0.0, "F = {f}");
+        let (area, depth) = area_and_depth(p.slices.as_deref().unwrap());
+        assert!(area > 0.0 && area.is_finite(), "area {area}");
+        // the degenerate surfaces (0.1 % of the model height) stay out
+        assert!(
+            depth >= 1e-3 * slope.model_height() - 1e-12,
+            "depth {depth}"
+        );
+    }
+    assert!(valid > 0);
+    let critical = search.iter().find(|p| p.fos.is_some()).unwrap();
+    area_and_depth(critical.slices.as_deref().unwrap())
+}
+
+const SLOPE_2_3: [[f64; 2]; 4] = [[0.0, 0.0], [10.0, 0.0], [25.0, 10.0], [40.0, 10.0]];
+
+#[test]
+fn no_minimum_slip_area_cohesionless_slope_tends_to_the_infinite_slope_factor() {
+    // c′ = 0, φ′ = 30° on a 2:3 face (β = 33.7°): the critical surface is a
+    // thin slab parallel to the face, F just above tan φ′/tan β = 0.866.
+    let d = layered(
+        &SLOPE_2_3,
+        -10.0,
+        &[("S", None, mc(0.0, 30.0, 19.0))],
+        json!({}),
+    );
+    let infinite = (30.0 * PI / 180.0).tan() / (10.0f64 / 15.0);
+    for method in ["Bishop", "Morgenstern-Price"] {
+        let (f, slope) = run_verification(d.clone(), method, json!({}));
+        assert_eq!(slope.min_slip_area(), 0.0);
+        let f = f.unwrap();
+        assert!(
+            f >= infinite - 2e-3 && f < infinite * 1.03,
+            "{method}: F = {f}"
+        );
+        let (area, depth) = finite_search(&slope);
+        assert!(
+            depth < 1.0 && area < 5.0,
+            "{method}: area {area}, depth {depth}"
+        );
+    }
+}
+
+#[test]
+fn no_minimum_slip_area_purely_cohesive_slope_finds_the_deep_circle() {
+    // Undrained clay: F of a thin surface grows as cu/(γ·depth), so the
+    // micro-surfaces analysed with no limit stay finite and far from
+    // critical; the critical circle is the deep one, as with a limit.
+    let d = layered(&SLOPE_2_3, -10.0, &[("C", None, su(20.0, 19.0))], json!({}));
+    for method in ["Bishop", "Morgenstern-Price"] {
+        let (f, slope) = run_verification(d.clone(), method, json!({}));
+        let f = f.unwrap();
+        let (area, depth) = finite_search(&slope);
+        assert!(
+            area > 20.0 && depth > 2.0,
+            "{method}: area {area}, depth {depth}"
+        );
+        let (limited, _) = run_verification(d.clone(), method, json!({ "minSlipArea": 1 }));
+        close(f, limited.unwrap(), 9);
+    }
 }

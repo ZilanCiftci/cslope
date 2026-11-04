@@ -117,8 +117,9 @@ describe("circular search with two basins (toe circle above a stronger layer, de
 });
 
 describe("surfaces below the minimum slip size", () => {
-  // A 40 m high 3:1 slope with a 1.5 m vertical cut at its toe: the
-  // automatic minimum area (17 m²) leaves out the surfaces through the cut.
+  // A 40 m high 3:1 slope with a 1.5 m vertical cut at its toe: a minimum
+  // area of 17 m² (the former automatic one) leaves out the surfaces
+  // through the cut.
   const cut = {
     coordinates: [[0, 0], [0, 50], [20, 50], [140, 10], [160, 10], [160, 8.5], [200, 8.5], [200, 0]],
     materials: [{ name: "S", model: { kind: "mohr-coulomb", unitWeight: 19, cohesion: 5, frictionAngle: 30 } }],
@@ -130,9 +131,10 @@ describe("surfaces below the minimum slip size", () => {
       (p) => p.belowMinSize,
     ).length;
 
-  it("are counted with the automatic minimum area", () => {
-    expect(count({})).toBeGreaterThan(0);
-    expect(count({ minSlipArea: 0 })).toBe(0);
+  it("are counted with a set minimum area", () => {
+    expect(count({ minSlipArea: 17 })).toBeGreaterThan(0);
+    // no limit by default
+    expect(count({})).toBe(0);
   });
 
   it("are counted for the minimum slip depth too", () => {

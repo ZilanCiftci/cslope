@@ -579,8 +579,6 @@ fn check_water_line(coordinates: &[Pt]) -> Result<()> {
 
 /// Smallest useful inner iteration limit for the FOS solvers.
 const MIN_MAX_ITERATIONS: f64 = 6.0;
-/// Default smallest sliding mass, as a fraction of the model area.
-const AUTO_MIN_SLIP_AREA: f64 = 1e-2;
 
 /// The message of `assign_material` with an id that is not in the table
 /// (TypeScript: an object that is not a `Material`).
@@ -659,8 +657,8 @@ pub struct Slope {
     /// Block search objects: one point, a line (two) or a window (three or more).
     block_search_objects: Vec<Vec<Pt>>,
     min_slip_depth: f64,
-    /// None: automatic (see `min_slip_area`).
-    min_slip_area: Option<f64>,
+    /// Smallest sliding mass analysed (m²); 0: no limit (the default).
+    min_slip_area: f64,
     interslice_data_points: Vec<Pt>,
     /// The model was mirrored into canonical (left-to-right) coordinates, so
     /// model-space analysis options such as the interslice data points must be
@@ -749,7 +747,7 @@ impl Slope {
             block_passive_angle: None,
             block_search_objects: Vec::new(),
             min_slip_depth: 0.0,
-            min_slip_area: None,
+            min_slip_area: 0.0,
             interslice_data_points: d.interslice_data_points.unwrap_or_default(),
             mirrored: false,
             domain_x: None,
@@ -1220,20 +1218,15 @@ impl Slope {
         Ok(())
     }
 
-    /// Smallest sliding mass that is analysed (m²): the set value, or by
-    /// default 1 % of the squared ground relief (1 m² for a 10 m slope).
-    /// Scaled by the relief rather than the model area so that deep models
-    /// do not filter out the shallow surfaces that govern in friction soil.
-    ///
-    /// The automatic default has no basis in the literature: it is a
-    /// practical filter against micro-surfaces, whose FOS in cohesive soil
-    /// grows without bound, and it can hide a real local failure (a low cut
-    /// at the toe of a high slope). It is kept because changing it moves
-    /// verified results; instead the surfaces it leaves out are counted and
-    /// reported (AnalysisResult.discardedBySize), and it can be set to 0.
+    /// Smallest sliding mass that is analysed (m², cross-section area per
+    /// metre): the set value, by default 0 (no limit). An earlier automatic
+    /// default (1 % of the squared ground relief) had no basis in the
+    /// literature and could hide a real local failure (a low cut at the toe
+    /// of a high slope); `null` from older projects now also means 0. The
+    /// surfaces a set limit leaves out are counted and reported
+    /// (AnalysisResult.discardedBySize).
     pub fn min_slip_area(&self) -> f64 {
         self.min_slip_area
-            .unwrap_or_else(|| AUTO_MIN_SLIP_AREA * js::math::pow(self.ground_relief(), 2.0))
     }
 
     /// Height difference of the ground surface (model height if not set).
@@ -2068,7 +2061,9 @@ impl Slope {
             self.min_slip_depth = d;
         }
         if let Some(a) = opts.min_slip_area {
-            if matches!(a, Some(a) if !a.is_finite() || a < 0.0) {
+            // null (older projects: automatic) is no limit, as 0.
+            let a = a.unwrap_or(0.0);
+            if !a.is_finite() || a < 0.0 {
                 return Err(EngineError::new("minSlipArea must be a number ≥ 0 or null"));
             }
             self.min_slip_area = a;

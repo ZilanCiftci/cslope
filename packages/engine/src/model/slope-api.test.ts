@@ -81,11 +81,12 @@ describe("Slope: geometry setup", () => {
     expect(s.modelArea).toBeCloseTo(400 + 10 * 10 + 0.5 * 15 * 10, 9);
     expect(s.modelHeight).toBe(20);
     expect(s.groundRelief).toBe(10);
-    expect(s.minSlipArea).toBeCloseTo(1e-2 * 100, 12);
+    expect(s.minSlipArea).toBe(0);
     s.updateAnalysisOptions({ minSlipArea: 3 });
     expect(s.minSlipArea).toBe(3);
+    // null (older projects: automatic) is no limit
     s.updateAnalysisOptions({ minSlipArea: null });
-    expect(s.minSlipArea).toBeCloseTo(1, 12);
+    expect(s.minSlipArea).toBe(0);
   });
 
   it("queries need the geometry", () => {

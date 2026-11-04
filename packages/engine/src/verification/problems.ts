@@ -130,7 +130,7 @@ export const PROBLEMS: RawCase[] = [
     notes: [
       "Search limited to the downstream face, x = 104–148, as in the source (the left limit marker sits on the downstream crest vertex).",
       "Crest corrected from a single apex (100, 101) to the 6 m crest (98, 101)–(104, 101) of commercial program A's Fig. 46.1 (vertices read at 400 dpi: 98.0 and 103.2–104, scale checked on the vertices at x = 80, 128 and 148): upstream face 3:1, downstream face one straight 4:1 line (104, 101)–(128, 95)–(148, 90). The apex had made the compacted-clay part of the downstream face 4.67:1. The critical slabs lie on the natural-clay face (x = 128–148), so neither change moves the answer beyond search scatter: 2.516 → 2.520 with the short search, 2.523 → 2.524 with the full one (theory 2.50).",
-      "The critical surfaces are shallow slabs on the cohesionless face; a minimum sliding area in proportion to the model area (here 20 000 m²) would skip them and read 3 % high.",
+      "The critical surfaces are shallow slabs on the cohesionless face; a minimum sliding area in proportion to the model area (here 20 000 m²) would skip them and read 3 % high. With no minimum slip area (the default since 2026-11-04) the critical circle is a slab 0.1 m deep (0.36 m²) and F = 2.506 by Bishop; the former automatic minimum, 1 % of the squared ground relief (1.21 m²), read 2.519.",
       "commercial program A 2.534 (noncircular, minimum depth 5 m). Baker, Frydman & Talesnick give 2.41 (Spencer, dynamic programming, empty reservoir; p. 37, Fig. 15), below the infinite-slope value 2.50 they do not explain. They call the 4:1 face the upstream (reservoir) face and the 3:1 face the downstream one (p. 32, Fig. 10a); their crest is 5 m wide and the whole profile 2 m lower (crest 99, ground 93 / 88 over a base at 0), with the same 6 m and 11 m heights (docs/kallor/baker-frydman-talesnick-1993.md).",
     ],
   },
@@ -1652,7 +1652,7 @@ export const PROBLEMS: RawCase[] = [
     ],
     paper: [{"value": 1.95, "source": "Giam & Donald (1989), ACADS"}],
     notes: [
-      "Giam 1.95; infinite-slope limit 1.9475; program D 1.955.",
+      "Giam 1.95; infinite-slope limit 1.9475; program D 1.955. With no minimum slip area (the default since 2026-11-04) the critical circle is a slab 0.17 m deep on the upstream face (4.4 m²), Bishop 1.9477; the former automatic minimum, 1 % of the squared ground relief (262 m²), read 1.960.",
     ],
     fem: {"flowRule": "non-associated", "references": [{"value": 1.88, "source": "Commercial program I", "method": "finite-element strength reduction (verification manual, problem 4)", "kind": "numerical", "precision": 0.01}], "note": "The program's finite element manual gives no elastic parameters, dilation or mesh; it is run with ψ = 0 and cSlope's defaults (E = 100 MPa, ν = 0.3). φ′ = 45° in the rockfill: non-associated flow at a high friction angle (warning in the result)."},
   },
