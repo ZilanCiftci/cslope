@@ -25,6 +25,7 @@
  */
 
 import { _electron, type ElectronApplication, type Page } from "playwright";
+import { readZip } from "../../src/utils/zip";
 import { createRequire } from "node:module";
 import { execSync } from "node:child_process";
 import { existsSync, mkdirSync, readFileSync, readdirSync, statSync, writeFileSync } from "node:fs";
@@ -504,7 +505,7 @@ async function partA() {
   rig.section = "A3 Save and open again";
   const saved = join(OUT, "saved", "ny mapp");
   mkdirSync(saved, { recursive: true });
-  const pop20 = join(saved, "test-pop20.json");
+  const pop20 = join(saved, "test-pop20.cslp");
   await step("A3.1", "04: POP 10 → 20, run", async () => {
     const from = rig.shots.length;
     await openProject(file("04-shansep-excavation.json"));
@@ -532,17 +533,17 @@ async function partA() {
     const calls = await takeCalls();
     const title = await windowTitle();
     const sv = calls.find((c) => c.kind === "save");
-    record("A3.2", "Save As → test-pop20.json in a new folder", 'save dialog; file written; title "test-pop20 — cSlope"', `${sv ? `save dialog (default name "${sv.defaultPath}")` : "NO save dialog"}; file ${existsSync(pop20) ? "written" : "MISSING"}; title "${title}"`, !!sv && existsSync(pop20) && title === "test-pop20 — cSlope");
+    record("A3.2", "Save As → test-pop20.cslp in a new folder", 'save dialog; file written; title "test-pop20 — cSlope"', `${sv ? `save dialog (default name "${sv.defaultPath}")` : "NO save dialog"}; file ${existsSync(pop20) ? "written" : "MISSING"}; title "${title}"`, !!sv && existsSync(pop20) && title === "test-pop20 — cSlope");
   });
-  await step("A3.3", "restart, open test-pop20.json, run; stage tag and note kept", async () => {
+  await step("A3.3", "restart, open test-pop20.cslp, run; stage tag and note kept", async () => {
     const from = rig.shots.length;
     await quit();
     await start();
     await openProject(pop20);
     const title = await windowTitle();
     const got = await run();
-    await rig.shot(main, "a3-reopened-result", "test-pop20.json after a restart: result", `title "${title}"`);
-    checkF("A3.3", "test-pop20.json after a restart", VARIANTS["04 POP 20"], got, from);
+    await rig.shot(main, "a3-reopened-result", "test-pop20.cslp after a restart: result", `title "${title}"`);
+    checkF("A3.3", "test-pop20.cslp after a restart", VARIANTS["04 POP 20"], got, from);
     const from2 = rig.shots.length;
     const d = await materialsDialog();
     await selectMaterial(d, "Soft clay");
@@ -572,8 +573,10 @@ async function partA() {
     record("A3.4t", "title with an unsaved change, then after Ctrl+S", '"*test-pop20 — cSlope", then "test-pop20 — cSlope" (system title and title bar)', `${dirtyTitles.join(" | ")} → ${cleanTitles.join(" | ")}`, dirtyTitles.every((t) => t === "*test-pop20 — cSlope") && cleanTitles.every((t) => t === "test-pop20 — cSlope"));
     const calls = await takeCalls();
     const after = statSync(pop20).mtimeMs;
-    const content = readFileSync(pop20, "utf-8");
-    record("A3.4", "Ctrl+S after a change", "saved to test-pop20.json, no dialog", `${calls.length ? `dialogs: ${calls.map((c) => c.kind).join(", ")}` : "no dialog"}; file ${after > before ? "rewritten" : "NOT rewritten"}${content.includes("(edited)") ? " with the change" : " (change not in the file)"}`, !calls.length && after > before && content.includes("(edited)"));
+    // A .cslp file is a ZIP archive: the model names are in its project.json.
+    const entries = await readZip(new Uint8Array(readFileSync(pop20)), (n) => n === "project.json");
+    const content = new TextDecoder().decode(entries.get("project.json") ?? new Uint8Array());
+    record("A3.4", "Ctrl+S after a change", "saved to test-pop20.cslp, no dialog", `${calls.length ? `dialogs: ${calls.map((c) => c.kind).join(", ")}` : "no dialog"}; file ${after > before ? "rewritten" : "NOT rewritten"}${content.includes("(edited)") ? " with the change" : " (change not in the file)"}`, !calls.length && after > before && content.includes("(edited)"));
   });
   await step("A3.5", "alla-funktioner.json: eight models, switch and run", async () => {
     const from = rig.shots.length;
@@ -1245,7 +1248,7 @@ const MANUAL = [
   "A6.7 A comma as the decimal separator with Windows' Swedish regional settings (here: Chromium's --lang=sv-SE only).",
   "A9 The PDF opening in the Windows PDF reader.",
   "B3 A real drag from Explorer (here a File with its native path is dropped by script).",
-  "B4 Double click on a .json in Explorer, Open with › cSlope.",
+  "B4 Double click on a .cslp project in Explorer: opens it in cSlope (in the running cSlope, if one is open); the file icon and type name \"cSlope project\".",
   "C1 Uninstall (Settings › Apps): shortcuts and program folder removed, %APPDATA% kept; reinstall keeps the theme.",
   "C2 Upgrade over an older version.",
   "C3 Real Windows 125 %/150 % scaling and a second monitor, moving dialog windows between them (here: Chromium's forced device scale on one virtual screen).",

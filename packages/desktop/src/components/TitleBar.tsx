@@ -108,7 +108,7 @@ export function TitleBar({ theme, onToggleTheme, activeModelName }: Props) {
         <input
           ref={fileInputRef}
           type="file"
-          accept="application/json"
+          accept=".cslp,.json,.cslope"
           onChange={handleFileChange}
           style={{ display: "none" }}
         />

@@ -236,7 +236,7 @@ export function FileMenu({
       <input
         ref={fileInputRef}
         type="file"
-        accept=".json,application/json"
+        accept=".cslp,.json,.cslope"
         className="hidden"
         onChange={handleFileChange}
       />

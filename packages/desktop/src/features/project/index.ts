@@ -1,6 +1,8 @@
 export {
-  ensureJsonName,
-  stripJsonExt,
+  buildProjectArchive,
+  ensureCslpName,
+  readProjectBytes,
+  stripProjectExt,
   triggerBrowserDownload,
   buildProjectJson,
   parseProjectFile,

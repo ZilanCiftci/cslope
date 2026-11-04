@@ -8,7 +8,14 @@ import {
   useAppStore,
 } from "../../store/app-store";
 import { isElectron } from "../../utils/is-electron";
-import { buildProjectJson } from "./actions";
+import { buildProjectArchive, ensureCslpName } from "./cslp";
+
+/** The file name a new project file is offered under: the active model's name, .cslp. */
+export function suggestedProjectFileName(state = useAppStore.getState()): string {
+  const active = state.models.find((m) => m.id === state.activeModelId);
+  const name = (active?.name ?? "").replace(/[\\/:*?"<>|]+/g, "_").trim();
+  return ensureCslpName(name || "cslope-project");
+}
 
 /**
  * Save the current project through Electron (Save As when `saveAs` or
@@ -18,11 +25,12 @@ import { buildProjectJson } from "./actions";
 export async function saveProjectInElectron(saveAs = false): Promise<boolean> {
   useAppStore.getState().saveCurrentModel();
   const state = useAppStore.getState();
-  const json = buildProjectJson(state);
   try {
+    const data = await buildProjectArchive(state);
+    const name = suggestedProjectFileName(state);
     const saved = saveAs
-      ? await window.cslope.saveFileAs(json)
-      : await window.cslope.saveFile(json);
+      ? await window.cslope.saveFileAs(data, name)
+      : await window.cslope.saveFile(data, name);
     if (saved) markProjectClean(state);
     return saved;
   } catch (err) {

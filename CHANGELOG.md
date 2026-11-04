@@ -102,6 +102,7 @@ The first public release.
 - A failed run shows its error over the edit canvas and in the status bar, with a shortcut to the search limits when no slip surface was found. F5 or Ctrl+Enter runs the analysis; Escape closes the dialog windows and Model Properties. A new project starts with a neutral "Model 1" instead of an example's name and title.
 - One analysis runs on several cores (one worker per core, up to 8), with the same result as on one. Run All analyses several models at a time, the longest expected first, on workers kept for the next run.
 - Number fields read a decimal comma in any app language ("0,5" in an English locale was read as 5).
+- Projects are saved as .cslp, a ZIP archive with the project and its results as JSON; .json and .cslope projects from earlier versions open as before. The installer registers .cslp, so double-clicking a project opens it in cSlope (in the running cSlope, if one is open).
 - Security: imported ZIP archives are checked against size limits before they are unpacked, and files above 50 MB are refused; .gsz files with a DOCTYPE are refused; project files keep only the fields the program knows; a stricter content security policy; the packaged app refuses to start when its archive differs from the one it was built with (asar integrity), and cannot be used to run other scripts.
 
 ### Verification

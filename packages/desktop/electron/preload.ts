@@ -35,6 +35,11 @@ contextBridge.exposeInMainWorld("cslope", {
     const filePath = webUtils.getPathForFile(file);
     return filePath ? ipcRenderer.invoke("file:openPath", filePath) : Promise.resolve(null);
   },
+  // A project file given to the app (double-click, command line, a second
+  // launch): the main process tells the page, which then asks for it.
+  onOpenFileRequested: (listener: (event: unknown) => void) =>
+    subscribe("file:openRequested", listener),
+  openRequestedFile: () => ipcRenderer.invoke("file:openRequested"),
   confirmFileOpened: () => ipcRenderer.send("file:openConfirmed"),
   onFileNameChanged: (listener: (event: unknown, name: unknown) => void) =>
     subscribe("file:nameChanged", listener),
@@ -45,9 +50,11 @@ contextBridge.exposeInMainWorld("cslope", {
   confirmClose: () => ipcRenderer.send("app:closeConfirmed"),
   onCloseRequested: (listener: (event: unknown) => void) =>
     subscribe("app:closeRequested", listener),
-  saveFile: (content: string) => ipcRenderer.invoke("dialog:saveFile", content),
-  saveFileAs: (content: string) =>
-    ipcRenderer.invoke("dialog:saveFileAs", content),
+  // The project as a .cslp archive and the file name to offer for it.
+  saveFile: (content: Uint8Array, suggestedName?: string) =>
+    ipcRenderer.invoke("dialog:saveFile", content, suggestedName),
+  saveFileAs: (content: Uint8Array, suggestedName?: string) =>
+    ipcRenderer.invoke("dialog:saveFileAs", content, suggestedName),
   // Window controls
   minimize: () => ipcRenderer.send("window:minimize"),
   maximize: () => ipcRenderer.send("window:maximize"),

@@ -19,10 +19,10 @@ import {
 import { isElectron } from "../../utils/is-electron";
 import { fileTooLarge } from "./file-limits";
 import {
-  buildProjectJson,
-  ensureJsonName,
-  parseProjectFile,
-  stripJsonExt,
+  buildProjectArchive,
+  ensureCslpName,
+  readProjectBytes,
+  stripProjectExt,
   triggerBrowserDownload,
 } from "./actions";
 import {
@@ -32,7 +32,7 @@ import {
 } from "./unsavedGuard";
 
 export interface ProjectActions {
-  /** Current project file-name (without `.json`). Empty for untitled. */
+  /** Current project file-name (without `.cslp`). Empty for untitled. */
   fileName: string;
 
   /** Hidden `<input type="file">` ref for browser Open dialog. */
@@ -90,7 +90,7 @@ export function useProjectActions(defaultBaseName: string): ProjectActions {
       try {
         const contents = await window.cslope.openFile();
         if (!contents) return;
-        const parsed = parseProjectFile(contents);
+        const parsed = await readProjectBytes(contents);
         useAppStore.getState().loadProject(parsed);
         useAppStore.temporal.getState().clear();
         window.cslope.confirmFileOpened();
@@ -110,42 +110,43 @@ export function useProjectActions(defaultBaseName: string): ProjectActions {
   // ── Save ─────────────────────────────────────────────────────────
 
   const handleSave = async () => {
-    const store = useAppStore.getState();
-    store.saveCurrentModel();
-    const json = buildProjectJson(useAppStore.getState());
-
     if (isElectron) {
       await saveProjectInElectron();
       return;
     }
     const suggested = fileName || defaultBaseName;
-    const finalName = ensureJsonName(suggested.trim());
-    triggerBrowserDownload(json, finalName);
-    markProjectClean(useAppStore.getState());
-    setFileName(stripJsonExt(finalName));
+    await downloadProject(ensureCslpName(suggested));
+  };
+
+  /** Browser: offer the project as a .cslp download. */
+  const downloadProject = async (finalName: string) => {
+    useAppStore.getState().saveCurrentModel();
+    const state = useAppStore.getState();
+    try {
+      triggerBrowserDownload(await buildProjectArchive(state), finalName);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Unknown error";
+      window.alert(`Unable to save project: ${msg}`);
+      return;
+    }
+    markProjectClean(state);
+    setFileName(stripProjectExt(finalName));
   };
 
   // ── Save As ──────────────────────────────────────────────────────
 
   const handleSaveAs = async () => {
-    const store = useAppStore.getState();
-    store.saveCurrentModel();
-    const json = buildProjectJson(useAppStore.getState());
-
     if (isElectron) {
       await saveProjectInElectron(true);
       return;
     }
     const suggested = fileName || defaultBaseName;
     const inputName = window.prompt("Save project as", suggested);
-    if (!inputName) return;
-    const finalName = ensureJsonName(inputName.trim());
-    triggerBrowserDownload(json, finalName);
-    markProjectClean(useAppStore.getState());
-    setFileName(stripJsonExt(finalName));
+    if (!inputName?.trim()) return;
+    await downloadProject(ensureCslpName(inputName));
   };
 
-  // ── File change (browser <input> → parse → load) ────────────────
+  // ── File change (browser <input> → read → load) ─────────────────
 
   const handleFileChange: ChangeEventHandler<HTMLInputElement> = (e) => {
     const file = e.target.files?.[0];
@@ -155,19 +156,18 @@ export function useProjectActions(defaultBaseName: string): ProjectActions {
       window.alert(`Unable to open project: ${tooLarge}`);
       return;
     }
-    const reader = new FileReader();
-    reader.onload = () => {
-      try {
-        const parsed = parseProjectFile(String(reader.result ?? ""));
+    // A .cslp archive, or a .json/.cslope project of an earlier version.
+    void readFileBytes(file)
+      .then(readProjectBytes)
+      .then((parsed) => {
         useAppStore.getState().loadProject(parsed);
         useAppStore.temporal.getState().clear();
-        setFileName(stripJsonExt(file.name));
-      } catch (err) {
+        setFileName(stripProjectExt(file.name));
+      })
+      .catch((err: unknown) => {
         const msg = err instanceof Error ? err.message : "Unknown error";
         window.alert(`Unable to open project: ${msg}`);
-      }
-    };
-    reader.readAsText(file);
+      });
   };
 
   return {
@@ -179,4 +179,14 @@ export function useProjectActions(defaultBaseName: string): ProjectActions {
     handleSaveAs,
     handleFileChange,
   };
+}
+
+/** The bytes of a file chosen in a browser file picker or dropped. */
+export function readFileBytes(file: Blob): Promise<Uint8Array> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(new Uint8Array(reader.result as ArrayBuffer));
+    reader.onerror = () => reject(reader.error ?? new Error("The file could not be read."));
+    reader.readAsArrayBuffer(file);
+  });
 }

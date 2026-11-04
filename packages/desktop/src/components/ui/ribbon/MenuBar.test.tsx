@@ -7,6 +7,7 @@ vi.mock("../../../utils/is-electron", () => ({ isElectron: true }));
 import { MenuBar } from "./MenuBar";
 import { markProjectClean, useAppStore } from "../../../store/app-store";
 import { installFakeBridge, type FakeBridge } from "../../../test/fake-bridge";
+import { readProjectBytes } from "../../../features/project/cslp";
 import { HAS_LOCAL_LOVO_MODELS } from "../../../store/local-models";
 
 let bridge: FakeBridge;
@@ -137,8 +138,9 @@ describe("File ribbon", () => {
     await waitFor(() => expect(window.cslope.saveFile).toHaveBeenCalledTimes(1));
     fireEvent.keyDown(window, { key: "S", ctrlKey: true, shiftKey: true });
     await waitFor(() => expect(window.cslope.saveFileAs).toHaveBeenCalledTimes(1));
-    const json = JSON.parse(vi.mocked(window.cslope.saveFile).mock.calls[0][0]);
-    expect(json).toHaveProperty("models");
+    const [data, name] = vi.mocked(window.cslope.saveFile).mock.calls[0];
+    expect((await readProjectBytes(data)).models.length).toBeGreaterThan(0);
+    expect(name).toMatch(/\.cslp$/);
   });
 
   it("starts a new project with Ctrl+N and the New button", async () => {

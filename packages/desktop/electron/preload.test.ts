@@ -47,6 +47,8 @@ type Kind = "send" | "invoke" | "on";
 const EXPECTED: Record<string, [Kind, string]> = {
   openFile: ["invoke", "dialog:openFile"],
   openDroppedFile: ["invoke", "file:openPath"],
+  onOpenFileRequested: ["on", "file:openRequested"],
+  openRequestedFile: ["invoke", "file:openRequested"],
   confirmFileOpened: ["send", "file:openConfirmed"],
   onFileNameChanged: ["on", "file:nameChanged"],
   askUnsavedChanges: ["invoke", "dialog:unsavedChanges"],
@@ -185,12 +187,13 @@ describe("preload", () => {
 
   it("passes the path and content to the file handlers", async () => {
     await api.openDroppedFile({ nativePath: "/tmp/a.json" });
-    await api.saveFile("content");
-    await api.saveFileAs("content2");
+    const data = new Uint8Array([0x50, 0x4b]);
+    await api.saveFile(data, "Dam.cslp");
+    await api.saveFileAs(data);
     expect(fake.ipcRenderer.invoke.mock.calls).toEqual([
       ["file:openPath", "/tmp/a.json"],
-      ["dialog:saveFile", "content"],
-      ["dialog:saveFileAs", "content2"],
+      ["dialog:saveFile", data, "Dam.cslp"],
+      ["dialog:saveFileAs", data, undefined],
     ]);
   });
 
