@@ -91,9 +91,15 @@ describe("ResultSidebar summary", () => {
     expect(screen.getByText("Min FOS (design values)")).toBeInTheDocument();
     expect(screen.getByText("← left")).toBeInTheDocument();
     expect(screen.getByText("Other direction").nextSibling!.textContent).toBe("no surface");
-    expect(
-      screen.getByText("3 surfaces were discarded because they did not reach equilibrium"),
-    ).toHaveAttribute("title", expect.stringMatching(/equilibrium/));
+    // The notes are folded into one line; unfolded, each is a line, and the
+    // explanation sits behind its info button instead of a long tooltip.
+    expect(screen.queryByText(/discarded because they did not reach equilibrium/)).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: /3 notes/ }));
+    const note = screen.getByText("3 surfaces were discarded because they did not reach equilibrium");
+    expect(note).not.toHaveAttribute("title");
+    expect(screen.queryByText(/within the iteration limits/)).toBeNull();
+    fireEvent.click(screen.getAllByRole("button", { name: "Explain" })[0]);
+    expect(screen.getByText(/within the iteration limits/)).toBeInTheDocument();
     expect(screen.getByText(/1 material boundary split\(s\) failed/)).toBeInTheDocument();
     expect(screen.getByText(/2 slices of the critical surface have negative effective normal force/)).toBeInTheDocument();
   });

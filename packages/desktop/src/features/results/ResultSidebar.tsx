@@ -21,14 +21,8 @@ import {
   anchoredTopLeft,
   anchorPointFromTopLeft,
 } from "../annotations/anchorPosition";
-import {
-  closestPairWarning,
-  NON_CONVERGED_TITLE,
-  nonConvergedText,
-  surfaceCountText,
-  discardedBySizeText,
-  DISCARDED_BY_SIZE_TITLE,
-} from "../../utils/result-summary";
+import { surfaceCountText } from "../../utils/result-summary";
+import { ResultNotes } from "./ResultNotes";
 import { resolveAnnotationText } from "../annotations/resolveAnnotationText";
 import { modelViewLock } from "../view/viewLock";
 import { paperContentOf } from "../view/extents";
@@ -551,35 +545,7 @@ export function ResultSidebar() {
                 3D effects (SGI): {result.sgi3dError}
               </p>
             )}
-            {(result.nonConvergedSurfaces ?? 0) > 0 && (
-              <p
-                style={{ color: "var(--color-vsc-warning)" }}
-                title={NON_CONVERGED_TITLE}
-              >
-                {nonConvergedText(result.nonConvergedSurfaces ?? 0)}
-              </p>
-            )}
-            {(result.discardedBySize ?? 0) > 0 && (
-              <p title={DISCARDED_BY_SIZE_TITLE}>
-                {discardedBySizeText(result.discardedBySize ?? 0)}
-              </p>
-            )}
-            {closestPairWarning(result.criticalSurface) && (
-              <p style={{ color: "var(--color-vsc-warning)" }}>
-                {closestPairWarning(result.criticalSurface)}
-              </p>
-            )}
-            {(result.splitFailureCount ?? 0) > 0 && (
-              <p style={{ color: "var(--color-vsc-warning)" }}>
-                {result.splitFailureCount} material boundary split(s) failed —
-                check the interior boundaries
-              </p>
-            )}
-            {result.warnings?.map((w, i) => (
-              <p key={`${w.code}-${i}`} style={{ color: "var(--color-vsc-warning)" }}>
-                {w.message}
-              </p>
-            ))}
+            <ResultNotes result={result} />
             {/* The finite element rows come last: the notes above belong to the limit equilibrium result. */}
             {result.fem && <FemSummaryRows fem={result.fem} designValues={designValues} />}
             {!result.fem && result.femError && (
