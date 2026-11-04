@@ -72,10 +72,22 @@ export type AnalysisResponse =
       result: ReliabilityResult;
     }
   | {
+      /**
+       * The limit equilibrium result of a run that goes on with the finite
+       * element analysis (shown while that runs); "analysis-complete" follows
+       * with the whole result.
+       */
+      type: "analysis-partial";
+      id: string;
+      result: AnalysisResult;
+    }
+  | {
       type: "analysis-progress";
       id: string;
       /** Progress 0–1. */
       progress: number;
+      /** What the run is doing (the finite element analysis's stage and trials). */
+      stage?: string;
     }
   | {
       type: "analysis-error";

@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
-import { render, screen, fireEvent } from "@testing-library/react";
+import { act, render, screen, fireEvent } from "@testing-library/react";
 import { StatusBar } from "./StatusBar";
+import { elapsedText } from "../utils/elapsed-text";
 import type { AnalysisResult } from "../store/types";
 import { APP_VERSION } from "../utils/app-version";
 
@@ -174,6 +175,43 @@ describe("StatusBar", () => {
       "Analysis failed: No valid slip surface was found.",
     );
     expect(status).toHaveAttribute("title", "No valid slip surface was found.");
+  });
+
+  it("shows the stage of a finite element run and its elapsed time while it runs", () => {
+    vi.useFakeTimers();
+    try {
+      vi.setSystemTime(new Date(2026, 0, 1, 12, 0, 0));
+      const started = Date.now() - 65_000;
+      render(
+        <StatusBar
+          {...defaultProps}
+          runState="running"
+          runStage="Finite elements: strength reduction, trial F = 1.23 (5)"
+          runStartedAt={started}
+        />,
+      );
+      expect(screen.getByTestId("status-run-stage")).toHaveTextContent("Finite elements: strength reduction, trial F = 1.23 (5)");
+      expect(screen.getByTestId("status-run-elapsed")).toHaveTextContent("1:05");
+      act(() => {
+        vi.advanceTimersByTime(2000);
+      });
+      expect(screen.getByTestId("status-run-elapsed")).toHaveTextContent("1:07");
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("shows no stage or elapsed time unless a run is going on", () => {
+    render(<StatusBar {...defaultProps} runStage="stale" runStartedAt={Date.now()} />);
+    expect(screen.queryByTestId("status-run-stage")).toBeNull();
+    expect(screen.queryByTestId("status-run-elapsed")).toBeNull();
+  });
+
+  it("gives the elapsed time as m:ss, from an hour h:mm:ss", () => {
+    expect(elapsedText(0)).toBe("0:00");
+    expect(elapsedText(59_999)).toBe("0:59");
+    expect(elapsedText(61_000)).toBe("1:01");
+    expect(elapsedText(3_725_000)).toBe("1:02:05");
   });
 
   it("shows no error unless the run failed", () => {

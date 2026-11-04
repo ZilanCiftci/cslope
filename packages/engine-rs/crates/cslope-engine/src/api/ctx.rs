@@ -58,6 +58,34 @@ pub enum ProgressEvent {
     FemTrial(crate::fem::srm::SrmTrial),
     /// The bounds of one level of the adaptive limit analysis (TypeScript's `onLevel`).
     Bounds(crate::fem::bound_adapt::AdaptiveBoundsLevel),
+    /// The finite element analysis starts a stage (progress only: what the
+    /// stage finds comes with `FemTrial` and `Bounds`).
+    FemStage(FemStage),
+}
+
+/// A stage of the finite element analysis, as its progress reports it
+/// (`ProgressEvent::FemStage`; JSON `{ "stage": "lowerBound", "mesh": 1, ... }`).
+/// Meshes count from 0 (the first); `meshes` is the most there can be.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize)]
+#[serde(tag = "stage", rename_all = "camelCase")]
+pub enum FemStage {
+    /// The mesh and the initial stresses of the strength reduction.
+    Mesh,
+    /// The strength reduction's trials on mesh `mesh`.
+    StrengthReduction { mesh: usize, meshes: usize },
+    /// The upper bound's search on mesh `mesh` of the limit analysis;
+    /// `davis`: with Davis B's reduced strength.
+    UpperBound {
+        mesh: usize,
+        meshes: usize,
+        davis: bool,
+    },
+    /// The lower bound's search, as the upper bound's.
+    LowerBound {
+        mesh: usize,
+        meshes: usize,
+        davis: bool,
+    },
 }
 
 /// Cancels a running analysis from another thread (native and Python; the

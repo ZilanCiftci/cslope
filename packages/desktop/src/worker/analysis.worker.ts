@@ -10,6 +10,7 @@
  */
 
 import type { AnalysisResponse, ReliabilityRequest, WorkerMessage } from "./messages";
+import { femProgressTracker } from "./fem-progress";
 import { runReliabilityRequest, runReliabilityRequestParallel } from "./reliability-run";
 import type { AnalysisResult, ReliabilityResult } from "@cslope/engine";
 import {
@@ -23,6 +24,7 @@ import {
   webEndpoint,
   type CoordinatorEndpoint,
   type EvaluatorEndpoint,
+  type FemStage,
 } from "@cslope/engine";
 
 // ── Worker handler ──────────────────────────────────────────────
@@ -77,16 +79,19 @@ self.onmessage = async (event: MessageEvent<WorkerMessage>) => {
     // Strength reduction by finite elements, in the model's own sliding direction.
     // A failure here keeps the limit equilibrium result and reports the error with it.
     if (options.fem?.enabled) {
-      let trials = 0;
+      // The limit equilibrium result now, to be shown while the finite
+      // elements take their minutes; the whole result follows.
+      self.postMessage({ type: "analysis-partial", id, result } satisfies AnalysisResponse);
+      const tracker = femProgressTracker();
+      const report = ({ text, progress }: { text: string; progress: number }) =>
+        self.postMessage({ type: "analysis-progress", id, progress, stage: text } satisfies AnalysisResponse);
       try {
-        const onTrial = () => {
-          // No measure of the remaining work: report the trials as they pass.
-          trials++;
-          self.postMessage({ type: "analysis-progress", id, progress: Math.min(0.9, 0.3 + 0.03 * trials) } satisfies AnalysisResponse);
-        };
+        // progress only: the stages as they start, the strength reduction's trials as they end
+        const onStage = (stage: FemStage) => report(tracker.stage(stage));
+        const onTrial = (trial: { F: number }) => report(tracker.trial(trial.F));
         result.fem = options.fem.limitAnalysis
-          ? await runFemSummaryWithBounds(slopeDef, options.fem, onTrial)
-          : runFemSummary(slopeDef, options.fem, onTrial);
+          ? await runFemSummaryWithBounds(slopeDef, options.fem, onTrial, onStage)
+          : runFemSummary(slopeDef, options.fem, onTrial, onStage);
       } catch (err: unknown) {
         result.femError = err instanceof Error ? err.message : String(err);
       }

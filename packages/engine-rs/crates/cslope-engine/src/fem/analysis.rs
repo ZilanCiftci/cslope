@@ -29,7 +29,7 @@
 // (index loops as in the TypeScript, for a line-by-line port)
 #![allow(clippy::needless_range_loop)]
 
-use crate::api::ctx::{Clock, ProgressEvent, RunCtx};
+use crate::api::ctx::{Clock, FemStage, ProgressEvent, RunCtx};
 use crate::error::{EngineError, Result};
 use crate::fem::adapt::{dissipation_indicator, dorfler_mark, refined_size_field, zz_indicator};
 use crate::fem::initial_stress::{prepare_fe_model, InitialStressOptions};
@@ -745,8 +745,14 @@ pub fn analyze_fem(
     options: &FemAnalysisOptions,
     ctx: &mut RunCtx,
 ) -> Result<FemAnalysisResult> {
+    ctx.report(ProgressEvent::FemStage(FemStage::Mesh))?;
     let mut search = FemSearch::new(slope, options, ctx.clock)?;
     let mut outcomes: Option<Vec<TrialOutcome>> = None;
+    // the meshes there can be: the first and the refinements
+    let meshes = 1 + options.adaptive.as_ref().map_or(0, |a| {
+        js::math::max(0.0, js::math::round(a.levels.unwrap_or(3.0))) as usize
+    });
+    let mut reported_mesh: Option<usize> = None;
     loop {
         let step = search.step(outcomes.take())?;
         for t in search.drain_trials() {
@@ -754,6 +760,13 @@ pub fn analyze_fem(
         }
         match step {
             FemStep::Batch(b) => {
+                if reported_mesh != Some(b.level) {
+                    reported_mesh = Some(b.level);
+                    ctx.report(ProgressEvent::FemStage(FemStage::StrengthReduction {
+                        mesh: b.level,
+                        meshes: meshes.max(b.level + 1),
+                    }))?;
+                }
                 let mut out = Vec::with_capacity(b.batch.f.len());
                 for &f in &b.batch.f {
                     ctx.check_cancelled()?;

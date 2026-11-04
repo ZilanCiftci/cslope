@@ -91,7 +91,11 @@ Notes:
   after another.
 - **Progress**: the callback gets a dict per event: `{"kind": "search",
   "done", "totalHint", "phase"}`, `{"kind": "reliability", "progress"}`,
-  `{"kind": "femTrial", "trial"}` or `{"kind": "bounds", "level"}`. It runs
+  `{"kind": "femTrial", "trial"}`, `{"kind": "bounds", "level"}` or
+  `{"kind": "femStage", "stage"}` (the finite element analysis starts a
+  stage: `{"stage": "mesh"}`, `{"stage": "strengthReduction", "mesh",
+  "meshes"}`, `{"stage": "upperBound" | "lowerBound", "mesh", "meshes",
+  "davis"}`, meshes from 0). It runs
   with the GIL taken for the call. Returning `False` cancels
   (`AnalysisCancelled`); an exception it raises cancels and is raised again.
 - **Ctrl+C**: every progress event (with or without a callback) checks for

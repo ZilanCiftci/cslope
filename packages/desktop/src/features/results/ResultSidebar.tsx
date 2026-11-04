@@ -122,6 +122,7 @@ export function ResultSidebar() {
   const designValues = useAppStore((s) => !!s.options.partialFactors);
   const runState = useAppStore((s) => s.runState);
   const errorMessage = useAppStore((s) => s.errorMessage);
+  const runStage = useAppStore((s) => s.runStage);
   const rvs = useAppStore((s) => s.resultViewSettings);
   const setRvs = useAppStore((s) => s.setResultViewSettings);
   const removeAnnotation = useAppStore((s) => s.removeAnnotation);
@@ -552,6 +553,16 @@ export function ResultSidebar() {
               </p>
             )}
             {result.fem && <FemSummaryRows fem={result.fem} designValues={designValues} />}
+            {!result.fem && !result.femError && runState === "running" && (
+              // the limit equilibrium result is shown while the finite elements run
+              <p
+                data-testid="fem-running"
+                className="mt-1.5 border-t pt-1.5 text-[11px]"
+                style={{ borderColor: "var(--color-vsc-border)", color: "var(--color-vsc-accent)" }}
+              >
+                Finite elements running{runStage ? ` (${runStage.replace(/^Finite elements: /, "")})` : ""}…
+              </p>
+            )}
             {!result.fem && result.femError && (
               <p className="mt-1.5 border-t pt-1.5 text-[11px]" style={{ borderColor: "var(--color-vsc-border)", color: "var(--color-vsc-warning)" }}>
                 Strength reduction (FE) failed: {result.femError}

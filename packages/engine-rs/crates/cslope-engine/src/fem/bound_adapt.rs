@@ -56,11 +56,11 @@
 // (index loops as in the TypeScript, for a line-by-line port)
 #![allow(clippy::needless_range_loop)]
 
-use crate::api::ctx::{ProgressEvent, RunCtx};
+use crate::api::ctx::{FemStage, ProgressEvent, RunCtx};
 use crate::error::{EngineError, ErrorKind, Result};
 use crate::fem::adapt::{dorfler_mark, refined_size_field};
 use crate::fem::conic::ConicStatus;
-use crate::fem::limit_common::InsertionMap;
+use crate::fem::limit_common::{InsertionMap, StrengthRule};
 use crate::fem::lower_bound::{bound_solve, lower_bound, lower_bound_problem, LowerBoundOptions};
 use crate::fem::model::{build_fe_model, ignored_input_warnings, PorePressureSource, SizeField};
 use crate::fem::upper_bound::{upper_bound, upper_bound_problem};
@@ -445,6 +445,13 @@ pub fn adaptive_bounds(
             opts.start_f
         };
         let o = limited(&o, ctx);
+        let meshes = 1 + js::math::max(0.0, levels) as usize;
+        let davis = options.bounds.strength_rule == Some(StrengthRule::DavisB);
+        ctx.report(ProgressEvent::FemStage(FemStage::UpperBound {
+            mesh: level,
+            meshes,
+            davis,
+        }))?;
         match caught(upper_bound(slope, &o, ctx))? {
             Ok(ubr) => {
                 for w in &ubr.warnings {
@@ -464,6 +471,11 @@ pub fn adaptive_bounds(
             opts.start_f
         };
         let o = limited(&o, ctx);
+        ctx.report(ProgressEvent::FemStage(FemStage::LowerBound {
+            mesh: level,
+            meshes,
+            davis,
+        }))?;
         match caught(lower_bound(slope, &o, ctx))? {
             Ok(lbr) => {
                 for w in &lbr.warnings {

@@ -12,8 +12,24 @@ import type { SrmTrial } from "./srm";
 import type { FemAnalysisSettings,FemResultSummary } from "../types/analysis";
 import type { SlopeDefinition } from "../types/slope-definition";
 
-export function runFemSummary(definition: SlopeDefinition, settings: FemAnalysisSettings, onTrial?: (trial: SrmTrial) => void): FemResultSummary {
-  return wasm().run_fem_summary(definition, settings, onTrial);
+/**
+ * A stage of the finite element analysis as it starts (progress only; the
+ * trials and the bounds' levels report what it finds). Meshes count from 0;
+ * `meshes` is the most there can be (the refinements stop earlier when the
+ * result has converged). `davis`: the bounds with Davis B's reduced strength.
+ */
+export type FemStage =
+  | { stage: "mesh" }
+  | { stage: "strengthReduction"; mesh: number; meshes: number }
+  | { stage: "upperBound" | "lowerBound"; mesh: number; meshes: number; davis: boolean };
+
+export function runFemSummary(
+  definition: SlopeDefinition,
+  settings: FemAnalysisSettings,
+  onTrial?: (trial: SrmTrial) => void,
+  onStage?: (stage: FemStage) => void,
+): FemResultSummary {
+  return wasm().run_fem_summary(definition, settings, onTrial, onStage);
 }
 
 /**
@@ -32,6 +48,7 @@ export async function runFemSummaryWithBounds(
   definition: SlopeDefinition,
   settings: FemAnalysisSettings,
   onTrial?: (trial: SrmTrial) => void,
+  onStage?: (stage: FemStage) => void,
 ): Promise<FemResultSummary> {
-  return wasm().run_fem_summary_with_bounds(definition, settings, onTrial);
+  return wasm().run_fem_summary_with_bounds(definition, settings, onTrial, onStage);
 }

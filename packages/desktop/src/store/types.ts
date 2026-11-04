@@ -581,8 +581,16 @@ export interface AnalysisSlice {
   options: AnalysisOptions;
   runState: RunState;
   progress: number;
+  /**
+   * The limit equilibrium result while the run goes on with the finite
+   * element analysis (`runState` "running"), else the run's result.
+   */
   result: AnalysisResult | null;
   errorMessage: string | null;
+  /** What the single run is doing (the finite element analysis's stage and trials); null otherwise. */
+  runStage: string | null;
+  /** When the single run started (ms since the epoch), for its elapsed time; null when none runs. */
+  runStartedAt: number | null;
   invalidateAnalysis: () => void;
   setAnalysisLimits: (limits: Partial<AnalysisLimitsState>) => void;
   addCustomSearchPlane: (kind?: "circle" | "polyline") => void;

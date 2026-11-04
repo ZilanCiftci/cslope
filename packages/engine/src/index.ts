@@ -274,6 +274,7 @@ export {
   type AdaptiveBoundsResult,
 } from "./fem/index";
 export { runFemSummary, runFemSummaryWithBounds } from "./fem/summary";
+export type { FemStage } from "./fem/summary";
 
 // ── Verification problems ──────────────────────────────────────
 // Exported from "@cslope/engine/verification" (src/verification/index.ts),
