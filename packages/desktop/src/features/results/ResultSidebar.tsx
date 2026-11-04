@@ -551,12 +551,6 @@ export function ResultSidebar() {
                 3D effects (SGI): {result.sgi3dError}
               </p>
             )}
-            {result.fem && <FemSummaryRows fem={result.fem} designValues={designValues} />}
-            {!result.fem && result.femError && (
-              <p className="mt-1.5 border-t pt-1.5 text-[11px]" style={{ borderColor: "var(--color-vsc-border)", color: "var(--color-vsc-warning)" }}>
-                Strength reduction (FE) failed: {result.femError}
-              </p>
-            )}
             {(result.nonConvergedSurfaces ?? 0) > 0 && (
               <p
                 style={{ color: "var(--color-vsc-warning)" }}
@@ -586,6 +580,13 @@ export function ResultSidebar() {
                 {w.message}
               </p>
             ))}
+            {/* The finite element rows come last: the notes above belong to the limit equilibrium result. */}
+            {result.fem && <FemSummaryRows fem={result.fem} designValues={designValues} />}
+            {!result.fem && result.femError && (
+              <p className="mt-1.5 border-t pt-1.5 text-[11px]" style={{ borderColor: "var(--color-vsc-border)", color: "var(--color-vsc-warning)" }}>
+                Strength reduction (FE) failed: {result.femError}
+              </p>
+            )}
           </div>
         ) : runState === "error" ? (
           // Without this a failed run only showed "No results yet".
