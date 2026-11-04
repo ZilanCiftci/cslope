@@ -17,7 +17,7 @@ import {
   DEFAULT_RESULT_VIEW_SETTINGS,
 } from "../../store/defaults";
 import { computePaperFrame } from "../view/paper";
-import type { AnchorPosition, Annotation, MaterialRow } from "../../store/types";
+import type { AnchorPosition, Annotation, MaterialRow, PaperAnnotation } from "../../store/types";
 
 const row = (id: string, model: MaterialModel, extra: Partial<MaterialRow> = {}): MaterialRow => ({
   id,
@@ -251,7 +251,7 @@ function drawTexts(annotations: Annotation[]): TextCall[] {
 describe("annotation hit boxes enclose what is drawn", () => {
   const pf = computePaperFrame(W, H, "A4", true, 1, 0, 0);
   const anchors: (AnchorPosition | undefined)[] = [undefined, "top-right", "bottom-left", "bottom-right"];
-  const kinds: Annotation[] = [
+  const kinds: PaperAnnotation[] = [
     { id: "x", type: "text", x: 0.5, y: 0.5, text: "#Title\nsecond line", fontSize: 18, bold: true },
     { id: "x", type: "color-bar", x: 0.5, y: 0.5 },
     { id: "x", type: "material-table", x: 0.5, y: 0.5, fontSize: 8 },

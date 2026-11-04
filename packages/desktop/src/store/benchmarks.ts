@@ -13,6 +13,7 @@ import {
 } from "@cslope/engine";
 import { DEFAULT_RESULT_VIEW_SETTINGS, PAPER_DIMENSIONS } from "./defaults";
 import type { Annotation } from "./types";
+import { cloneAnnotation } from "../features/annotations/reference";
 import { modelViewLock } from "../features/view/viewLock";
 import type { PaperContent } from "../features/view/extents";
 
@@ -65,7 +66,7 @@ const EXAMPLE_ANNOTATIONS: Annotation[] = [
 ];
 
 function copyAnnotation(a: Annotation): Annotation {
-  return { ...a, ...(a.tableColumns ? { tableColumns: [...a.tableColumns] } : {}) };
+  return cloneAnnotation(a);
 }
 
 /** The examples' material table at the top right of the paper. */

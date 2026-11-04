@@ -15,6 +15,7 @@ import {
 } from "../defaults";
 import type { SliceCreator } from "../helpers";
 import { cloneData, nextId } from "../helpers";
+import { cloneAnnotation } from "../../features/annotations/reference";
 import type { ModelEntry, ModelsSlice } from "../types";
 import { abortAllAnalyses, cancelRunForModel } from "./analysisSlice";
 import { markProjectClean } from "../unsaved";
@@ -327,9 +328,7 @@ export const createModelsSlice: SliceCreator<ModelsSlice> = (
       resultViewSettings: source.resultViewSettings
         ? {
             ...source.resultViewSettings,
-            annotations: source.resultViewSettings.annotations.map((a) => ({
-              ...a,
-            })),
+            annotations: source.resultViewSettings.annotations.map(cloneAnnotation),
             paperFrame: { ...source.resultViewSettings.paperFrame },
             viewLock: source.resultViewSettings.viewLock
               ? {

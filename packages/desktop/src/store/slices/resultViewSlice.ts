@@ -1,11 +1,13 @@
 import { DEFAULT_RESULT_VIEW_SETTINGS } from "../defaults";
 import { nextId } from "../helpers";
 import type { SliceCreator } from "../helpers";
-import type { ModelEntry, ResultViewSlice } from "../types";
+import type { CustomSearchPlane, ModelEntry, ReferenceAnnotation, ResultViewSlice } from "../types";
+import { isPaperAnnotation, referenceFromCustomPlane } from "../../features/annotations/reference";
 
 type ResultViewState = ResultViewSlice & {
   activeModelId: string;
   models: ModelEntry[];
+  customSearchPlanes: CustomSearchPlane[];
 };
 
 const syncActiveModel = (
@@ -18,7 +20,7 @@ const syncActiveModel = (
   ),
 });
 
-export const createResultViewSlice: SliceCreator<ResultViewSlice> = (set) => ({
+export const createResultViewSlice: SliceCreator<ResultViewSlice> = (set, get) => ({
   resultViewSettings: { ...DEFAULT_RESULT_VIEW_SETTINGS },
   selectedAnnotationIds: [],
   selectedResultObject: null,
@@ -54,12 +56,34 @@ export const createResultViewSlice: SliceCreator<ResultViewSlice> = (set) => ({
     );
   },
 
+  addReferenceAnnotation: (spec) => {
+    const anno = { ...spec, id: nextId("anno"), type: "reference" } as ReferenceAnnotation;
+    set((s) => ({
+      ...syncActiveModel(s, {
+        ...s.resultViewSettings,
+        annotations: [...s.resultViewSettings.annotations, anno],
+      }),
+      selectedAnnotationIds: [anno.id],
+      selectedResultObject: null,
+    }));
+    return anno.id;
+  },
+
+  addReferenceFromCustomPlane: (planeId) => {
+    const planes = get().customSearchPlanes;
+    const index = planes.findIndex((p) => p.id === planeId);
+    if (index < 0) return null;
+    const spec = referenceFromCustomPlane(planes[index], index);
+    if (!spec) return null;
+    return get().addReferenceAnnotation(spec);
+  },
+
   updateAnnotation: (id, patch) =>
     set((s) =>
       syncActiveModel(s, {
         ...s.resultViewSettings,
         annotations: s.resultViewSettings.annotations.map((a) =>
-          a.id === id ? { ...a, ...patch } : a,
+          a.id === id ? ({ ...a, ...patch } as typeof a) : a,
         ),
       }),
     ),
@@ -99,9 +123,10 @@ export const createResultViewSlice: SliceCreator<ResultViewSlice> = (set) => ({
     set((s) => {
       const sel = s.selectedAnnotationIds;
       if (sel.length < 2) return s;
-      const annos = s.resultViewSettings.annotations.filter((a) =>
-        sel.includes(a.id),
-      );
+      // Reference annotations lie in model coordinates: not aligned.
+      const annos = s.resultViewSettings.annotations
+        .filter(isPaperAnnotation)
+        .filter((a) => sel.includes(a.id));
       if (annos.length < 2) return s;
 
       let targetX: number | undefined;
@@ -135,7 +160,7 @@ export const createResultViewSlice: SliceCreator<ResultViewSlice> = (set) => ({
       return syncActiveModel(s, {
         ...s.resultViewSettings,
         annotations: s.resultViewSettings.annotations.map((a) => {
-          if (!sel.includes(a.id)) return a;
+          if (!sel.includes(a.id) || !isPaperAnnotation(a)) return a;
           return {
             ...a,
             ...(targetX !== undefined ? { x: targetX } : {}),

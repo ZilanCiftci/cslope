@@ -74,6 +74,7 @@
   --color-canvas-paper-border: #ffffff;
   --color-canvas-marker: #e8e8e8;
   --color-canvas-custom-surface: #c084fc;
+  --color-canvas-reference: #e879f9;
 
   color-scheme: dark;
 }
@@ -147,6 +148,7 @@
   --color-canvas-paper-border: #111111;
   --color-canvas-marker: #000000;
   --color-canvas-custom-surface: #7e22ce;
+  --color-canvas-reference: #a21caf;
 
   color-scheme: light;
 }

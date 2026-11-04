@@ -52,6 +52,15 @@ export const FOS_LABEL_BG_COLOR: DualColor = {
   hex: "#ffffff",
   rgb: [255, 255, 255],
 };
+/**
+ * Reference annotations (a slip surface from another program, a line from
+ * a paper): a purple no surface uses. The canvas takes the theme's
+ * --color-canvas-reference instead where it is set; the PDF this.
+ */
+export const REFERENCE_ANNOTATION_COLOR: DualColor = {
+  hex: "#a21caf",
+  rgb: [162, 28, 175],
+};
 /** Failure mass semi-transparent fill colour (black). */
 export const FAILURE_MASS_COLOR: DualColor = {
   hex: "#000000",

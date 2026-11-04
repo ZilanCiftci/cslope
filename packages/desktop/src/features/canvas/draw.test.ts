@@ -1728,3 +1728,86 @@ describe("drawCanvas — finite element mesh", () => {
     expect(rec.paths.some((p) => p.kind === "fill" && p.state.fillStyle.startsWith("rgba(214, 40, 40"))).toBe(false);
   });
 });
+
+describe("drawCanvas — reference annotations", () => {
+  const LINE: Annotation = {
+    id: "l",
+    type: "reference",
+    shape: "polyline",
+    points: [
+      [2, 10],
+      [12, 4],
+      [22, 5],
+    ],
+    label: "F = 0.664 (other program)",
+    dash: "dashed",
+  };
+  const CIRCLE: Annotation = { id: "c", type: "reference", shape: "circle", cx: 15, cy: 14, radius: 10, color: "#ff0000", label: "paper" };
+  const drawRefs = (over: Partial<DrawCanvasParams> = {}, annotations: Annotation[] = [LINE, CIRCLE]) =>
+    draw({ mode: "result", result: result(), resultViewSettings: rvs({ annotations, showFosLabel: true }), ...over });
+
+  it("strokes a polyline through its points in the reference colour, dashed, under the critical surface", () => {
+    const rec = drawRefs();
+    const line = rec.strokes("#a21caf").find((p) => pathPoints(p).length === 3)!;
+    expect(line).toBeDefined();
+    expect(hasPoints(line, (LINE as { points: [number, number][] }).points.map(([x, y]) => toC(x, y)))).toBe(true);
+    expect(line.state.lineDash).toEqual([8, 5]);
+    expect(line.state.lineWidth).toBe(1.5);
+    const critical = rec.strokes().find((p) => p.state.lineWidth === 2 && pathPoints(p).length > 20)!;
+    expect(rec.paths.indexOf(line)).toBeLessThan(rec.paths.indexOf(critical));
+  });
+
+  it("strokes a circle's arc below the ground in its own colour, with the lowest point on it", () => {
+    const rec = drawRefs();
+    const arc = rec.strokes("#ff0000").find((p) => pathPoints(p).length > 8)!;
+    expect(arc).toBeDefined();
+    const pts = pathPoints(arc).map(([x, y]) => canvasToWorld(x, y, W, H));
+    for (const [x, y] of pts) {
+      expect(Math.hypot(x - 15, y - 14)).toBeCloseTo(10, 6);
+      expect(y).toBeLessThanOrEqual(surfaceYAtX(COORDS, x)! + 1e-6);
+    }
+    expect(pts.some(([x, y]) => Math.abs(x - 15) < 1e-9 && Math.abs(y - 4) < 1e-9)).toBe(true);
+    // Drawn whole when not clipped: closed, above the ground too.
+    const whole = drawRefs({}, [{ ...CIRCLE, clip: "none" }]);
+    const ring = pathPoints(whole.strokes("#ff0000").find((p) => pathPoints(p).length > 100)!);
+    expect(ring[0]).toEqual(ring[ring.length - 1]);
+  });
+
+  it("labels the lines in their colour on a plate, the circle's below its lowest point, clear of the FOS label", () => {
+    const rec = drawRefs();
+    const paper = rec.findText("paper")!;
+    expect(paper.state.fillStyle).toBe("#ff0000");
+    const [ax, ay] = toC(15, 4);
+    expect(paper.y).toBeGreaterThan(ay);
+    expect(Math.abs(paper.x - ax)).toBeLessThan(60);
+    const other = rec.findText("F = 0.664 (other program)")!;
+    expect(other.state.fillStyle).toBe("#a21caf");
+    expect(rec.callsOf("fillRect").filter((c) => c.state.globalAlpha === 0.85)).toHaveLength(2);
+    // The FOS label is drawn before the reference labels, so they keep off it.
+    const fos = rec.findText("1.234")!;
+    expect(rec.texts.indexOf(fos)).toBeLessThan(rec.texts.indexOf(paper));
+    // No label for a blank one.
+    const blank = drawRefs({}, [{ ...LINE, label: "  " }]);
+    expect(blank.callsOf("fillRect").filter((c) => c.state.globalAlpha === 0.85)).toHaveLength(0);
+  });
+
+  it("draws handles for a selected reference annotation instead of the paper outline", () => {
+    const rec = drawRefs({ selectedAnnotationIds: ["l", "c"] });
+    expect(rec.strokes("#0078d4")).toHaveLength(0);
+    // Three vertices and a centre.
+    expect(rec.fills("#0078d4")).toHaveLength(4);
+    const hovered = drawRefs({ selectedAnnotationIds: ["l"], hoverHit: { kind: "referenceVertex", annoId: "l", pointIndex: 1 } });
+    expect(hovered.fills(POINT_COLOR_HOVER)).toHaveLength(1);
+    expect(drawRefs().fills("#0078d4")).toHaveLength(0);
+  });
+
+  it("shows a reference annotation in the edit view only when asked, and keeps save/restore balanced", () => {
+    const hidden = draw({ resultViewSettings: rvs({ annotations: [LINE] }) });
+    expect(hidden.strokes("#a21caf")).toHaveLength(0);
+    const shown = draw({ resultViewSettings: rvs({ annotations: [{ ...LINE, showInEdit: true }] }) });
+    expect(shown.strokes("#a21caf")).toHaveLength(1);
+    expect(shown.findText("F = 0.664 (other program)")).toBeDefined();
+    expect(shown.depth()).toBe(0);
+    expect(drawRefs({ selectedAnnotationIds: ["l", "c"] }).depth()).toBe(0);
+  });
+});

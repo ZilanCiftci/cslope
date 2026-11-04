@@ -45,9 +45,19 @@ Text annotations can show values from the model. They are replaced when the shee
 
 `\n` starts a new line. A new model starts with a title (`#Title`), a subtitle (`#Subtitle`) and a material table.
 
+### Reference lines
+
+A reference line is a line in model coordinates drawn over the result: a slip circle read from another program's printout, a slip surface interpreted from a paper for a benchmark. It is drawn under the critical surface in a colour no surface uses, in the PDF and PNG exports too.
+
+**Results › Annotations › Reference line** adds a **Polyline** or a **Circle** through the middle of the sheet. A circle is drawn as the arc below the ground, like a slip circle (*Drawn: Whole circle* in the properties shows all of it). **Options › Custom search planes › + Ref** copies a custom search plane as a reference line labelled *Custom surface n*; so does *Add as Reference Line* in the right-click menu of a custom plane in the edit view.
+
+Click a line to select it, then drag its points, a circle's centre or its rim; drag the line itself to move it whole. Right-click a polyline to **Add Point** on a segment or **Remove Point** at a vertex, or to delete the line; <Kbd>Delete</Kbd> removes the selection. Each drag is one undo step. The **Properties** section edits the label (drawn near the line, for example `F = 0.664 (other program)`), the points as `x, y; x, y; …` or the centre and radius, the colour (*Theme* follows the light or dark theme), the dash, the width and whether the line also shows in the edit view.
+
+Reference lines belong to the model: they are saved with it and left out of view templates.
+
 ## Templates
 
-A template stores the layout of the sheet: annotations, display options, paper and extents.
+A template stores the layout of the sheet: annotations, display options, paper and extents. Reference lines are not part of it.
 
 - **Results › Templates › Export template** saves the layout of the active model as `view-template.json`.
 - **Results › Templates › Import template** applies a saved layout to the active model.

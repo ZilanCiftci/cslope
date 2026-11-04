@@ -15,6 +15,7 @@ import type {
 } from "../types";
 import type { PiezometricLineState } from "../../../store/types";
 import { isClosedBoundary } from "../../../utils/regions";
+import { findReferenceEdgeAt, findReferenceHitAt, referenceHitId } from "../reference-geometry";
 
 interface ContextMenuParams {
   canvasRef: RefObject<HTMLCanvasElement | null>;
@@ -56,6 +57,10 @@ interface ContextMenuParams {
     point: [number, number],
   ) => void;
   setSelectedCustomPlane: (id: string | null) => void;
+  /** Edit view: copies a custom search plane into a reference annotation (absent: no such item). */
+  addReferenceFromCustomPlane?: (planeId: string) => void;
+  /** Result view: snaps a point added to a reference polyline (absent: no snapping). */
+  snapValue?: (v: number) => number;
 }
 
 export function useContextMenu(params: ContextMenuParams) {
@@ -86,6 +91,8 @@ export function useContextMenu(params: ContextMenuParams) {
     removeCustomPlanePoint,
     insertCustomPlanePointAt,
     setSelectedCustomPlane,
+    addReferenceFromCustomPlane,
+    snapValue,
   } = params;
 
   const [contextMenu, setContextMenu] = useState<ContextMenuState | null>(null);
@@ -113,9 +120,62 @@ export function useContextMenu(params: ContextMenuParams) {
         const state = useAppStore.getState();
         const annos = state.resultViewSettings.annotations;
         const resultForBounds = state.result;
+
+        // A reference annotation: its points (a polyline's vertex removed,
+        // one added on a segment) and the annotation itself.
+        const refHit = findReferenceHitAt(state, canvasRect, e.clientX, e.clientY);
+        const refId = referenceHitId(refHit);
+        if (refHit && refId) {
+          setSelectedAnnotations([refId]);
+          const anno = annos.find((a) => a.id === refId);
+          const items: ContextMenuState["items"] = [];
+          if (anno?.type === "reference" && anno.shape === "polyline") {
+            if (refHit.kind === "referenceVertex") {
+              const count = anno.points.length;
+              const at = refHit.pointIndex;
+              items.push({
+                label: "Remove Point",
+                danger: true,
+                // A polyline keeps at least two points.
+                disabled: count <= 2,
+                action: () => {
+                  if (count > 2) {
+                    state.updateAnnotation(refId, { points: anno.points.filter((_, i) => i !== at) });
+                  }
+                  setContextMenu(null);
+                },
+              });
+            } else if (refHit.kind === "referenceLine") {
+              const edge = findReferenceEdgeAt(state, canvasRect, e.clientX, e.clientY, snapValue ?? ((v) => v));
+              if (edge?.kind === "reference") {
+                items.push({
+                  label: "Add Point",
+                  action: () => {
+                    state.updateAnnotation(refId, {
+                      points: [...anno.points.slice(0, edge.insertIndex), edge.snapPoint, ...anno.points.slice(edge.insertIndex)],
+                    });
+                    setContextMenu(null);
+                  },
+                });
+              }
+            }
+          }
+          items.push({
+            label: anno?.type === "reference" && anno.shape === "circle" ? "Delete Reference Circle" : "Delete Reference Line",
+            danger: true,
+            action: () => {
+              state.removeAnnotation(refId);
+              setContextMenu(null);
+            },
+          });
+          setContextMenu({ screenX: cxPx, screenY: cyPx, items });
+          return;
+        }
+
         let hitAnno: string | null = null;
         for (let i = annos.length - 1; i >= 0; i--) {
           const a = annos[i];
+          if (a.type === "reference") continue;
           const hit =
             ctx && resultForBounds
               ? (() => {
@@ -294,6 +354,15 @@ export function useContextMenu(params: ContextMenuParams) {
               setContextMenu(null);
             },
           });
+          if (addReferenceFromCustomPlane) {
+            items.push({
+              label: "Add as Reference Line",
+              action: () => {
+                addReferenceFromCustomPlane(pointHit.planeId);
+                setContextMenu(null);
+              },
+            });
+          }
         } else if (pointHit.kind === "customCircle") {
           setSelectedCustomPlane(pointHit.planeId);
           items.push({
@@ -304,6 +373,15 @@ export function useContextMenu(params: ContextMenuParams) {
               setContextMenu(null);
             },
           });
+          if (addReferenceFromCustomPlane) {
+            items.push({
+              label: "Add as Reference Line",
+              action: () => {
+                addReferenceFromCustomPlane(pointHit.planeId);
+                setContextMenu(null);
+              },
+            });
+          }
         }
         setContextMenu({ screenX, screenY, items });
         return;
@@ -343,7 +421,16 @@ export function useContextMenu(params: ContextMenuParams) {
               setContextMenu(null);
             },
           });
-        } else {
+          if (addReferenceFromCustomPlane) {
+            items.push({
+              label: "Add as Reference Line",
+              action: () => {
+                addReferenceFromCustomPlane(edgeHit.planeId);
+                setContextMenu(null);
+              },
+            });
+          }
+        } else if (edgeHit.kind === "boundary") {
           setSelectedMaterialBoundary(edgeHit.boundaryId);
           items.push({
             label: "Add Point",
@@ -364,6 +451,7 @@ export function useContextMenu(params: ContextMenuParams) {
       setContextMenu(null);
     },
     [
+      addReferenceFromCustomPlane,
       alignAnnotations,
       canvasRef,
       coordinates,
@@ -390,6 +478,7 @@ export function useContextMenu(params: ContextMenuParams) {
       setSelectedCustomPlane,
       setSelectedMaterialBoundary,
       setSelectedPoint,
+      snapValue,
     ],
   );
 

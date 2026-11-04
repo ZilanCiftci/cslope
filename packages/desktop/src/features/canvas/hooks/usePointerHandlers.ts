@@ -29,6 +29,9 @@ import {
   circleRadiusFromPointer,
   isSameCustomPlaneHit,
 } from "../custom-plane-geometry";
+import { findReferenceHitAt, isSameReferenceHit, referenceHitId } from "../reference-geometry";
+import { isPaperAnnotation, MIN_REFERENCE_RADIUS, translateReference } from "../../annotations/reference";
+import type { Annotation, ReferenceAnnotation } from "../../../store/types";
 
 type UndoableSnapshot = Pick<
   AppState,
@@ -128,19 +131,7 @@ interface PointerDeps {
   setSelectedRegionKey: (key: string | null) => void;
   setSelectedMaterialBoundary: (boundaryId: string | null) => void;
   setSelectedPoint: (idx: number | null) => void;
-  updateAnnotation: (
-    id: string,
-    patch: Partial<{
-      text: string;
-      fontSize: number;
-      fontFamily: string;
-      bold: boolean;
-      italic: boolean;
-      color: string;
-      x: number;
-      y: number;
-    }>,
-  ) => void;
+  updateAnnotation: (id: string, patch: Partial<Annotation>) => void;
   setSelectedAnnotations: (ids: string[]) => void;
   toggleAnnotationSelection: (id: string, add: boolean) => void;
   setSelectedResultObject: (target: "paper-frame" | null) => void;
@@ -222,6 +213,8 @@ export function usePointerHandlers(deps: PointerDeps) {
     downPx: [number, number];
     /** True once the pointer has moved past the drag threshold. */
     moved: boolean;
+    /** The reference annotation as it was when its drag began. */
+    reference?: ReferenceAnnotation;
   } | null>(null);
   const panRef = useRef<{
     startPx: [number, number];
@@ -273,6 +266,10 @@ export function usePointerHandlers(deps: PointerDeps) {
       case "customCircle":
       case "customVertex":
         return isSameCustomPlaneHit(a, b);
+      case "referenceVertex":
+      case "referenceCircle":
+      case "referenceLine":
+        return isSameReferenceHit(a, b);
       case "external":
         return b.kind === "external" && a.index === b.index;
       case "piezo":
@@ -299,7 +296,8 @@ export function usePointerHandlers(deps: PointerDeps) {
   const applyEdgePan = useCallback(() => {
     const drag = dragRef.current;
     const last = lastPointerRef.current;
-    if (!drag || drag.hit.kind === "annotation" || !last) return;
+    // The result view is the paper: nothing pans while an annotation moves.
+    if (!drag || drag.hit.kind === "annotation" || referenceHitId(drag.hit) || !last) return;
 
     const rect = containerRef?.current?.getBoundingClientRect();
     const canvasRect = canvasRef.current?.getBoundingClientRect();
@@ -381,9 +379,10 @@ export function usePointerHandlers(deps: PointerDeps) {
       const rawX = drag.startWorld[0] + dx;
       const rawY = drag.startWorld[1] + dy;
 
-      // A circle's centre is no geometry point: it snaps to the grid only.
+      // A circle's centre is no geometry point: it snaps to the grid only;
+      // so does a reference circle, and a reference line moved whole.
       const snap =
-        drag.hit.kind === "customCircle"
+        drag.hit.kind === "customCircle" || drag.hit.kind === "referenceCircle" || drag.hit.kind === "referenceLine"
           ? null
           : findSnapTarget(rawX, rawY, drag.hit);
       const newX = snap ? snap[0] : snapValue(rawX);
@@ -418,6 +417,26 @@ export function usePointerHandlers(deps: PointerDeps) {
         return;
       }
 
+      // A reference annotation (result view): a vertex or centre follows
+      // the (snapped) pointer, a rim sets the radius, a line moves whole by
+      // the pointer's travel since the press. One undo step per drag.
+      if (drag.hit.kind === "referenceVertex" || drag.hit.kind === "referenceCircle" || drag.hit.kind === "referenceLine") {
+        const start = drag.reference;
+        if (!start) return;
+        const hit = drag.hit;
+        if (hit.kind === "referenceVertex" && start.shape === "polyline") {
+          const points = start.points.map((p, i): [number, number] => (i === hit.pointIndex ? [newX, newY] : p));
+          updateAnnotation(start.id, { points });
+        } else if (hit.kind === "referenceCircle" && start.shape === "circle") {
+          if (hit.handle === "centre") updateAnnotation(start.id, { cx: newX, cy: newY });
+          else updateAnnotation(start.id, { radius: Math.max(MIN_REFERENCE_RADIUS, snapValue(Math.hypot(rawX - start.cx, rawY - start.cy))) });
+        } else if (hit.kind === "referenceLine") {
+          const moved = translateReference(start, rawX - drag.startWorld[0], rawY - drag.startWorld[1]);
+          updateAnnotation(start.id, moved.shape === "polyline" ? { points: moved.points } : { cx: moved.cx, cy: moved.cy });
+        }
+        return;
+      }
+
       if (drag.hit.kind === "annotation") {
         const canvas = canvasRef.current;
         if (!canvas) return;
@@ -444,14 +463,14 @@ export function usePointerHandlers(deps: PointerDeps) {
             const draggedAnno = s.resultViewSettings.annotations.find(
               (a) => a.id === draggedId,
             );
-            if (draggedAnno) {
+            if (draggedAnno && isPaperAnnotation(draggedAnno)) {
               const ddx = drag.startWorld[0] + dxFrac - draggedAnno.x;
               const ddy = drag.startWorld[1] + dyFrac - draggedAnno.y;
               for (const sid of selectedAnnotationIds) {
                 const sa = s.resultViewSettings.annotations.find(
                   (a) => a.id === sid,
                 );
-                if (sa) {
+                if (sa && isPaperAnnotation(sa)) {
                   updateAnnotation(sid, { x: sa.x + ddx, y: sa.y + ddy });
                 }
               }
@@ -565,6 +584,8 @@ export function usePointerHandlers(deps: PointerDeps) {
       const annos = state.resultViewSettings.annotations;
       for (let i = annos.length - 1; i >= 0; i--) {
         const a = annos[i];
+        // Reference annotations are hit through findReferenceAt.
+        if (a.type === "reference") continue;
         if (ctx && state.result) {
           const b = getAnnotationBoundsPx(ctx, {
             annotation: a,
@@ -591,6 +612,16 @@ export function usePointerHandlers(deps: PointerDeps) {
         }
       }
       return null;
+    },
+    [canvasRef],
+  );
+
+  /** The reference annotation (its handle, line or arc) under the pointer in the result view. */
+  const findReferenceAt = useCallback(
+    (clientX: number, clientY: number): PointHit | null => {
+      const canvas = canvasRef.current;
+      if (!canvas) return null;
+      return findReferenceHitAt(useAppStore.getState(), canvas.getBoundingClientRect(), clientX, clientY);
     },
     [canvasRef],
   );
@@ -643,6 +674,37 @@ export function usePointerHandlers(deps: PointerDeps) {
       if (mode === "result") {
         const canvas = canvasRef.current;
         if (canvas) {
+          const refHit = findReferenceAt(e.clientX, e.clientY);
+          const refId = referenceHitId(refHit);
+          if (refHit && refId) {
+            if (e.ctrlKey || e.shiftKey) {
+              toggleAnnotationSelection(refId, true);
+            } else if (!selectedAnnotationIds.includes(refId)) {
+              setSelectedAnnotations([refId]);
+            }
+            if (e.button !== 0) return;
+            const anno = useAppStore.getState().resultViewSettings.annotations.find((an) => an.id === refId);
+            if (!anno || anno.type !== "reference") return;
+            // A handle starts from its own point (it snaps from there); a
+            // line or rim from the pointer itself.
+            const startWorld: [number, number] =
+              refHit.kind === "referenceVertex" && anno.shape === "polyline"
+                ? [anno.points[refHit.pointIndex][0], anno.points[refHit.pointIndex][1]]
+                : refHit.kind === "referenceCircle" && refHit.handle === "centre" && anno.shape === "circle"
+                  ? [anno.cx, anno.cy]
+                  : [wx, wy];
+            dragRef.current = {
+              hit: refHit,
+              startWorld,
+              startPx: [e.clientX, e.clientY],
+              downPx: [e.clientX, e.clientY],
+              moved: false,
+              reference: anno,
+            };
+            beginDragHistoryBatch();
+            (e.target as HTMLElement).setPointerCapture(e.pointerId);
+            return;
+          }
           const a = findAnnotationAt(e.clientX, e.clientY);
           if (a) {
             if (e.ctrlKey || e.shiftKey) {
@@ -831,6 +893,7 @@ export function usePointerHandlers(deps: PointerDeps) {
       editingBoundaries,
       editingCustomPlanes,
       findAnnotationAt,
+      findReferenceAt,
       findNearEdgeUnified,
       findNearPointUnified,
       findRegionAtPoint,
@@ -890,8 +953,9 @@ export function usePointerHandlers(deps: PointerDeps) {
       let hit: PointHit | null = null;
       if (mode === "result") {
         // Same hit area as a click, so the cursor matches what a click does.
-        const a = findAnnotationAt(e.clientX, e.clientY);
-        hit = a ? { kind: "annotation", annoId: a.id } : null;
+        const ref = findReferenceAt(e.clientX, e.clientY);
+        const a = ref ? null : findAnnotationAt(e.clientX, e.clientY);
+        hit = ref ?? (a ? { kind: "annotation", annoId: a.id } : null);
       } else {
         hit = findNearPointUnified(wx, wy);
       }
@@ -903,6 +967,7 @@ export function usePointerHandlers(deps: PointerDeps) {
     [
       applyEdgePan,
       findAnnotationAt,
+      findReferenceAt,
       findNearPointUnified,
       getEventWorldPos,
       mode,

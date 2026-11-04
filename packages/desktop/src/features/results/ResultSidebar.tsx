@@ -27,6 +27,8 @@ import { ResultNotes } from "./ResultNotes";
 import { ColorBarProperties } from "./ColorBarProperties";
 import { resolveAnnotationText } from "../annotations/resolveAnnotationText";
 import { InsertVariableMenu } from "../annotations/InsertVariableMenu";
+import { isPaperAnnotation, isReferenceAnnotation, referenceListName } from "../annotations/reference";
+import { ReferenceProperties } from "./ReferenceProperties";
 import { modelViewLock } from "../view/viewLock";
 import { paperContentOf } from "../view/extents";
 import { fosStatusColor } from "../../utils/fos-color";
@@ -268,6 +270,20 @@ export function ResultSidebar() {
     [rvs.annotations, selectedAnnotationIds],
   );
 
+  // Paper annotations share a position and anchor; reference annotations
+  // (model coordinates) have their own properties.
+  const selectedPaperAnnotations = useMemo(
+    () => selectedAnnotations.filter(isPaperAnnotation),
+    [selectedAnnotations],
+  );
+  const selectedReferenceAnnotations = useMemo(
+    () => selectedAnnotations.filter(isReferenceAnnotation),
+    [selectedAnnotations],
+  );
+  const allSelectedAreReference =
+    selectedAnnotations.length > 0 &&
+    selectedReferenceAnnotations.length === selectedAnnotations.length;
+
   const selectedTextAnnotations = useMemo(
     () => selectedAnnotations.filter((anno) => anno.type === "text"),
     [selectedAnnotations],
@@ -315,20 +331,20 @@ export function ResultSidebar() {
     selectedTextAnnotations.map((a) => a.color ?? "#000000"),
   );
 
-  // Shared position values (all annotation types)
-  const xValue = commonValue(selectedAnnotations.map((a) => a.x));
-  const yValue = commonValue(selectedAnnotations.map((a) => a.y));
+  // Shared position values (all paper annotation types)
+  const xValue = commonValue(selectedPaperAnnotations.map((a) => a.x));
+  const yValue = commonValue(selectedPaperAnnotations.map((a) => a.y));
   const anchorValue = commonValue(
-    selectedAnnotations.map((a) => a.anchor ?? "top-left"),
+    selectedPaperAnnotations.map((a) => a.anchor ?? "top-left"),
   );
 
   const applyToAll = useCallback(
     (patch: { x?: number; y?: number; anchor?: AnchorPosition }) => {
-      for (const anno of selectedAnnotations) {
+      for (const anno of selectedPaperAnnotations) {
         updateAnnotation(anno.id, patch);
       }
     },
-    [selectedAnnotations, updateAnnotation],
+    [selectedPaperAnnotations, updateAnnotation],
   );
 
   const handleAnchorChange = useCallback(
@@ -352,7 +368,7 @@ export function ResultSidebar() {
         0,
         0,
       );
-      for (const anno of selectedAnnotations) {
+      for (const anno of selectedPaperAnnotations) {
         const oldAnchor = anno.anchor ?? "top-left";
         if (oldAnchor === newAnchor) {
           updateAnnotation(anno.id, { anchor: newAnchor });
@@ -386,7 +402,7 @@ export function ResultSidebar() {
         });
       }
     },
-    [selectedAnnotations, updateAnnotation, applyToAll],
+    [selectedPaperAnnotations, updateAnnotation, applyToAll],
   );
 
   const mtFontSize = commonValue(
@@ -652,13 +668,15 @@ export function ResultSidebar() {
                 ? resolveText(anno.text ?? "").replace(/\s+/g, " ").trim()
                 : "";
             const name =
-              anno.type === "color-bar"
-                ? "Color Bar"
-                : anno.type === "material-table"
-                  ? "Material Table"
-                  : anno.type === "plot"
-                    ? "Plot"
-                    : shown || "Text (empty)";
+              anno.type === "reference"
+                ? `Reference: ${referenceListName(anno)}`
+                : anno.type === "color-bar"
+                  ? "Color Bar"
+                  : anno.type === "material-table"
+                    ? "Material Table"
+                    : anno.type === "plot"
+                      ? "Plot"
+                      : shown || "Text (empty)";
             return (
               <div
                 key={anno.id}
@@ -1014,7 +1032,14 @@ export function ResultSidebar() {
           </div>
         )}
 
-        {selectedAnnotations.length > 0 && (
+        {allSelectedAreReference && (
+          <ReferenceProperties
+            annotations={selectedReferenceAnnotations}
+            updateAnnotation={updateAnnotation}
+          />
+        )}
+
+        {selectedPaperAnnotations.length > 0 && (
           <div className="space-y-2 mb-3">
             <div className="flex gap-2">
               <div className="flex-1">

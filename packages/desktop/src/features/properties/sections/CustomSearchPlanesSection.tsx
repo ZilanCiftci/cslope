@@ -4,6 +4,33 @@ import { Section } from "../../../components/ui/Section";
 import { Label } from "../../../components/ui/Label";
 import { DraftNumberInput } from "../../../components/ui/DraftNumberInput";
 import { formatPolyline, parsePolyline } from "../../../utils/polyline";
+import { isElectron } from "../../../utils/is-electron";
+
+/** Whether this is one of the dialog windows (their store is a copy of the main window's). */
+const inDialogWindow = () => typeof window !== "undefined" && /-dialog$/.test(window.location.hash);
+
+/**
+ * Copies a plane into a reference annotation of the result view. A dialog
+ * window has no result view of its own: it asks the main window through
+ * the analysis sync (referenceFromPlaneId on the payload).
+ */
+function addPlaneAsReference(planeId: string) {
+  const s = useAppStore.getState();
+  if (isElectron && inDialogWindow()) {
+    window.cslope.sendAnalysisChanged({
+      coordinates: s.coordinates,
+      orientation: s.orientation,
+      analysisLimits: s.analysisLimits,
+      customSearchPlanes: s.customSearchPlanes,
+      customPlanesOnly: s.customPlanesOnly,
+      blockSearchObjects: s.blockSearchObjects,
+      options: s.options,
+      referenceFromPlaneId: planeId,
+    });
+    return;
+  }
+  s.addReferenceFromCustomPlane(planeId);
+}
 
 interface CustomSearchPlanesSectionProps {
   plain?: boolean;
@@ -51,6 +78,7 @@ export function CustomSearchPlanesSection({
                   onChange={(points) => updatePlane(p.id, { points })}
                 />
               </label>
+              <AddAsReferenceButton planeId={p.id} />
               <button
                 onClick={() => removePlane(p.id)}
                 className="w-5 h-5 flex items-center justify-center rounded hover:bg-red-500/20 hover:text-red-400 cursor-pointer transition-colors"
@@ -108,6 +136,7 @@ export function CustomSearchPlanesSection({
                 aria-label="Circle radius"
               />
             </label>
+            <AddAsReferenceButton planeId={p.id} />
             <button
               onClick={() => removePlane(p.id)}
               className="w-5 h-5 flex items-center justify-center rounded hover:bg-red-500/20 hover:text-red-400 cursor-pointer transition-colors"
@@ -143,6 +172,21 @@ export function CustomSearchPlanesSection({
   }
 
   return <Section title="Custom Search Planes">{content}</Section>;
+}
+
+/** "Add as reference line": the plane drawn over the result, labelled "Custom surface n". */
+function AddAsReferenceButton({ planeId }: { planeId: string }) {
+  return (
+    <button
+      onClick={() => addPlaneAsReference(planeId)}
+      className="h-5 px-1 flex items-center rounded hover:bg-[var(--color-vsc-list-hover)] cursor-pointer transition-colors text-[10px] whitespace-nowrap"
+      style={{ color: "var(--color-vsc-accent)" }}
+      title="Draw this surface over the result as a reference line (Results view)"
+      aria-label="Add as reference line"
+    >
+      + Ref
+    </button>
+  );
 }
 
 /** Text input for polyline points that keeps the user's text while typing. */
