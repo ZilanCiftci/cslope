@@ -121,9 +121,49 @@ export function useContextMenu(params: ContextMenuParams) {
         const annos = state.resultViewSettings.annotations;
         const resultForBounds = state.result;
 
+        // A paper annotation under the pointer: drawn over the reference
+        // lines, so it is hit first.
+        let hitAnno: string | null = null;
+        for (let i = annos.length - 1; i >= 0; i--) {
+          const a = annos[i];
+          if (a.type === "reference") continue;
+          const hit =
+            ctx && resultForBounds
+              ? (() => {
+                  const b = getAnnotationBoundsPx(ctx, {
+                    annotation: a,
+                    paperFrame: pf,
+                    result: resultForBounds,
+                    materials: state.materials,
+                    piezometricLine: state.piezometricLine,
+                    projectInfo: state.projectInfo,
+                    parameters: state.parameters,
+                    resultView: state.resultViewSettings,
+                  });
+                  return (
+                    cxPx >= b.x &&
+                    cxPx <= b.x + b.w &&
+                    cyPx >= b.y &&
+                    cyPx <= b.y + b.h
+                  );
+                })()
+              : (() => {
+                  const fx = (cxPx - pf.x) / pf.w;
+                  const fy = (cyPx - pf.y) / pf.h;
+                  const dx = (fx - a.x) * pf.w;
+                  const dy = (fy - a.y) * pf.h;
+                  return Math.hypot(dx, dy) < 15;
+                })();
+
+          if (hit) {
+            hitAnno = a.id;
+            break;
+          }
+        }
+
         // A reference annotation: its points (a polyline's vertex removed,
         // one added on a segment) and the annotation itself.
-        const refHit = findReferenceHitAt(state, canvasRect, e.clientX, e.clientY);
+        const refHit = hitAnno ? null : findReferenceHitAt(state, canvasRect, e.clientX, e.clientY);
         const refId = referenceHitId(refHit);
         if (refHit && refId) {
           setSelectedAnnotations([refId]);
@@ -170,44 +210,6 @@ export function useContextMenu(params: ContextMenuParams) {
           });
           setContextMenu({ screenX: cxPx, screenY: cyPx, items });
           return;
-        }
-
-        let hitAnno: string | null = null;
-        for (let i = annos.length - 1; i >= 0; i--) {
-          const a = annos[i];
-          if (a.type === "reference") continue;
-          const hit =
-            ctx && resultForBounds
-              ? (() => {
-                  const b = getAnnotationBoundsPx(ctx, {
-                    annotation: a,
-                    paperFrame: pf,
-                    result: resultForBounds,
-                    materials: state.materials,
-                    piezometricLine: state.piezometricLine,
-                    projectInfo: state.projectInfo,
-                    parameters: state.parameters,
-                    resultView: state.resultViewSettings,
-                  });
-                  return (
-                    cxPx >= b.x &&
-                    cxPx <= b.x + b.w &&
-                    cyPx >= b.y &&
-                    cyPx <= b.y + b.h
-                  );
-                })()
-              : (() => {
-                  const fx = (cxPx - pf.x) / pf.w;
-                  const fy = (cyPx - pf.y) / pf.h;
-                  const dx = (fx - a.x) * pf.w;
-                  const dy = (fy - a.y) * pf.h;
-                  return Math.hypot(dx, dy) < 15;
-                })();
-
-          if (hit) {
-            hitAnno = a.id;
-            break;
-          }
         }
 
         if (hitAnno) {

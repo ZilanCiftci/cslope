@@ -63,6 +63,31 @@ describe("useProjectActions in Electron", () => {
     expect(bridge.confirmFileOpened).toHaveBeenCalledTimes(1);
   });
 
+  it("keeps the first save's created time on later saves of a new project", async () => {
+    const { openProject } = await import("./cslp");
+    bridge.saveFile.mockResolvedValue(true);
+    vi.useFakeTimers({ toFake: ["Date"] });
+    try {
+      const { result } = renderHook(() => useProjectActions("project"));
+      vi.setSystemTime(new Date("2026-01-01T10:00:00.000Z"));
+      await act(() => result.current.handleSave());
+      vi.setSystemTime(new Date("2026-02-01T10:00:00.000Z"));
+      useAppStore.getState().addModel("Second");
+      await act(() => result.current.handleSave());
+      const manifests = await Promise.all(
+        bridge.saveFile.mock.calls.map(async ([data]) => (await openProject(data)).manifest),
+      );
+      expect(manifests.map((m) => m?.created)).toEqual([
+        "2026-01-01T10:00:00.000Z",
+        "2026-01-01T10:00:00.000Z",
+      ]);
+      expect(manifests[1]?.modified).toBe("2026-02-01T10:00:00.000Z");
+      expect(useAppStore.getState().projectCreated).toBe("2026-01-01T10:00:00.000Z");
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it("reports a failed read instead of rejecting unhandled", async () => {
     bridge.openFile.mockRejectedValue(new Error("EACCES"));
     const { result } = renderHook(() => useProjectActions("project"));

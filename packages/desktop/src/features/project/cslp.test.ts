@@ -13,7 +13,9 @@ import {
   buildProjectArchive,
   CSLP_FORMAT_VERSION,
   openedProjectAssets,
+  adoptProjectAssets,
   openProject,
+  readProject,
   readProjectBytes,
   withSafeModelIds,
   writeProjectArchive,
@@ -341,12 +343,28 @@ describe("attachments and backgrounds", () => {
     expect(await opened.readAsset("img-1")).toEqual(PNG);
     await expect(opened.readAsset("unused")).rejects.toThrow("no attachment unused");
 
-    // Opened with readProjectBytes, the attachment is there for the next save.
-    const reread = await readProjectBytes(bytes);
+    // Read and loaded (adopted), the attachment is there for the next save.
+    const reread = await readProject(bytes);
+    expect(reread.assets.map((a) => a.id)).toEqual(["img-1"]);
+    adoptProjectAssets(reread.assets);
     expect(openedProjectAssets().map((a) => a.id)).toEqual(["img-1"]);
-    const again = await writeProjectArchive(reread, { modified: MODIFIED });
+    const again = await writeProjectArchive(reread.file, { modified: MODIFIED });
     expect(await entry(again, "assets/img-1.png")).toEqual(PNG);
     expect(await entry(again, "assets/index.json")).toEqual(await entry(bytes, "assets/index.json"));
+  });
+
+  it("reading another project without loading it keeps the current project's attachments", async () => {
+    const a = withBackground();
+    const opened = await readProject(await writeProjectArchive(a, { assets: assets() }));
+    adoptProjectAssets(opened.assets);
+    // Project B is read (dropped on the window), then the user cancels or saves A first.
+    const b = await readProject(await writeProjectArchive(project()));
+    expect(b.assets).toEqual([]);
+    await readProjectBytes(await writeProjectArchive(project()));
+    const saved = await writeProjectArchive(opened.file);
+    expect(await entry(saved, "assets/img-1.png")).toEqual(PNG);
+    expect(await entry(saved, `models/${a.models[0].id}/backgrounds.json`)).toEqual([background]);
+    adoptProjectAssets([]);
   });
 
   it("checks an attachment against its hash when it is read, and only then", async () => {

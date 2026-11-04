@@ -417,6 +417,18 @@ describe("useContextMenu — reference annotations", () => {
     ]);
   });
 
+  it("takes a colour bar drawn over a reference line, not the line", () => {
+    const [cx, cy] = at(12, 4);
+    const pf = computePaperFrame(RECT.width, RECT.height, "A4", true, 1, 0, 0);
+    const bar = { id: "bar", type: "color-bar" as const, x: (cx - RECT.left - pf.x) / pf.w, y: (cy - RECT.top - pf.y) / pf.h };
+    useAppStore.setState({ resultViewSettings: { ...DEFAULT_RESULT_VIEW_SETTINGS, annotations: [LINE, CIRCLE, bar] } });
+    const { params, open, menu } = setup({ mode: "result" });
+    open(cx, cy);
+    expect(params.setSelectedAnnotations).toHaveBeenCalledWith(["bar"]);
+    expect(params.setSelectedAnnotations).not.toHaveBeenCalledWith(["l"]);
+    expect(menu()).toBeNull();
+  });
+
   it("deletes a circle from its arc or centre", () => {
     const { open, menu, click } = setup({ mode: "result" });
     open(...at(15, 6));

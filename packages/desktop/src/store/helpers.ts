@@ -2,7 +2,7 @@ import type { StateCreator } from "zustand";
 import { isClosedBoundary } from "../utils/regions";
 import type { AnalysisResponse, SlopeDefinition } from "../worker/messages";
 import { danglingBoundaryMessage, toCanonicalSlopeDefinition, type AnalysisResult } from "@cslope/engine";
-import type { AppState, ModelEntry, ModelsSlice, UdlRow } from "./types";
+import type { AppState, CustomSearchPlane, ModelEntry, ModelsSlice, UdlRow } from "./types";
 import { DEFAULT_ANALYSIS_LIMITS, DEFAULT_PIEZO_LINE } from "./defaults";
 import { mainPiezoLine } from "../utils/piezo";
 import { toEnginePile, toEngineReinforcement } from "../utils/reinforcement";
@@ -222,11 +222,9 @@ export function buildModelSpaceSlopeDTO(model: ModelEntry): SlopeDefinition {
   }
 
   if (model.customSearchPlanes?.length > 0) {
-    const circles = model.customSearchPlanes.filter((p) => !p.points);
-    // Polylines need two points; incomplete ones are still being entered.
-    const polylines = model.customSearchPlanes.filter(
-      (p) => p.points && p.points.length >= 2,
-    );
+    const ordered = customPlanesInResultOrder(model.customSearchPlanes);
+    const circles = ordered.filter((p) => !p.points);
+    const polylines = ordered.filter((p) => p.points);
     if (circles.length > 0) {
       slope.customSearchPlanes = circles.map((p) => ({
         cx: p.cx,
@@ -354,3 +352,16 @@ export type WorkerMessageHandler = (
 export type ModelsSliceWithHelpers = ModelsSlice & {
   _hydrateModels: () => void;
 };
+
+/**
+ * The custom search planes in the order the engine gets them and lists
+ * them in its result (`customSurfaces`, "Custom surface n" = place n):
+ * the circles, then the polylines with at least two points (incomplete
+ * ones are still being entered and are left out).
+ */
+export function customPlanesInResultOrder(planes: CustomSearchPlane[]): CustomSearchPlane[] {
+  return [
+    ...planes.filter((p) => !p.points),
+    ...planes.filter((p) => p.points && p.points.length >= 2),
+  ];
+}

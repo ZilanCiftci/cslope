@@ -1791,6 +1791,27 @@ describe("drawCanvas — reference annotations", () => {
     expect(blank.callsOf("fillRect").filter((c) => c.state.globalAlpha === 0.85)).toHaveLength(0);
   });
 
+  it("keeps the labels off the custom surfaces' FOS labels", () => {
+    const plateOf = (rec: ReturnType<typeof draw>) => {
+      const [left, top, w, h] = rec.callsOf("fillRect").find((c) => c.state.globalAlpha === 0.85)!.args as number[];
+      return { left, top, right: left + w, bottom: top + h };
+    };
+    const alone = plateOf(drawRefs({}, [CIRCLE]));
+    // A custom surface whose FOS label stands where the reference label went.
+    const [ax, ay] = canvasToWorld(alone.left - 5, alone.top + 13, W, H);
+    const custom = surface({ cx: ax, cy: ay, fos: 1.5, customPlane: { kind: "circle", index: 0 } });
+    const res = result({ allSurfaces: [surface(), custom], customSurfaces: [{ kind: "circle", index: 0, surface: custom }] });
+    const rec = draw({ mode: "result", result: res, resultViewSettings: rvs({ annotations: [CIRCLE], showFosLabel: true, showCustomSurfaces: true }) });
+    const label = rec.findText("1.500")!;
+    const tw = "1.500".length * 12 * 0.6 * 1.2; // generous: wider than the recorded measure
+    const fosBox = { left: label.x - 1, top: label.y + 4 - 11, right: label.x + tw + 1, bottom: label.y + 4 + 3 };
+    expect(fosBox.left < alone.right && alone.left < fosBox.right && fosBox.top < alone.bottom && alone.top < fosBox.bottom).toBe(true);
+    const plate = plateOf(rec);
+    const overlaps = plate.left < fosBox.right && fosBox.left < plate.right && plate.top < fosBox.bottom && fosBox.top < plate.bottom;
+    expect(overlaps).toBe(false);
+    expect(rec.texts.indexOf(label)).toBeLessThan(rec.texts.indexOf(rec.findText("paper")!));
+  });
+
   it("draws handles for a selected reference annotation instead of the paper outline", () => {
     const rec = drawRefs({ selectedAnnotationIds: ["l", "c"] });
     expect(rec.strokes("#0078d4")).toHaveLength(0);

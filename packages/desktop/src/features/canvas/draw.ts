@@ -2141,6 +2141,8 @@ export function drawCanvas(
       bottom: cy + 3 * paperZoom,
     });
     let criticalLabelBox: Box | null = null;
+    // The custom surfaces' FOS labels' boxes, kept clear by the reference labels.
+    const customLabelBoxes: Box[] = [];
     if (customSurfaces.length > 0) {
       ctx.save();
       for (const surf of customSurfaces) {
@@ -2466,6 +2468,7 @@ export function drawCanvas(
           box = fosLabelBox(labelX, cy, tw);
         }
         placed.push(box);
+        customLabelBoxes.push(box);
         ctx.fillStyle = CUSTOM_SURFACE;
         ctx.fillText(fosText, labelX, cy - 4 * paperZoom);
         ctx.strokeStyle = CUSTOM_SURFACE;
@@ -2506,6 +2509,9 @@ export function drawCanvas(
           refLayout.reserve({ left: lx + 9 * paperZoom, top: ly - 12 * paperZoom, right: lx + 11 * paperZoom + tw, bottom: ly + 3 * paperZoom });
         }
       }
+      // The custom surfaces' dashed lines and FOS labels, as drawn above.
+      for (const surf of customSurfaces) refLayout.reservePolyline(getArcPoints(surf).map(([x, y]) => toC(x, y)), 2 * paperZoom);
+      for (const box of customLabelBoxes) refLayout.reserve(box);
       drawReferenceLabels(ctx, drawnReferences, { toC, paperZoom, layout: refLayout, plate: PAPER_FILL_COLOR || BG_COLOR });
     }
 

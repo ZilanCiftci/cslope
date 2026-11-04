@@ -7,6 +7,7 @@ import {
   markProjectClean,
   useAppStore,
 } from "../../store/app-store";
+import type { AppState } from "../../store/types";
 import { isElectron } from "../../utils/is-electron";
 import { buildProjectArchive, ensureCslpName } from "./cslp";
 import { projectThumbnail } from "./thumbnail";
@@ -19,6 +20,25 @@ export function suggestedProjectFileName(state = useAppStore.getState()): string
 }
 
 /**
+ * The `created` time a save of `state` writes in the manifest: the
+ * project's, else now (its first save, or a project of an earlier version).
+ */
+export function createdForSave(state: AppState): string {
+  return state.projectCreated ?? new Date().toISOString();
+}
+
+/**
+ * Record a save of `state` that wrote `created`: the project is clean,
+ * and keeps that `created` for the next saves.
+ */
+export function markProjectSaved(state: AppState, created: string): void {
+  markProjectClean(state);
+  if (useAppStore.getState().projectCreated === null) {
+    useAppStore.setState({ projectCreated: created });
+  }
+}
+
+/**
  * Save the current project through Electron (Save As when `saveAs` or
  * when the project has no file yet).  Returns true when the file was
  * written; reports write errors to the user.
@@ -27,12 +47,13 @@ export async function saveProjectInElectron(saveAs = false): Promise<boolean> {
   useAppStore.getState().saveCurrentModel();
   const state = useAppStore.getState();
   try {
-    const data = await buildProjectArchive(state, { thumbnail: projectThumbnail });
+    const created = createdForSave(state);
+    const data = await buildProjectArchive(state, { thumbnail: projectThumbnail, created });
     const name = suggestedProjectFileName(state);
     const saved = saveAs
       ? await window.cslope.saveFileAs(data, name)
       : await window.cslope.saveFile(data, name);
-    if (saved) markProjectClean(state);
+    if (saved) markProjectSaved(state, created);
     return saved;
   } catch (err) {
     const msg = err instanceof Error ? err.message : "Unknown error";

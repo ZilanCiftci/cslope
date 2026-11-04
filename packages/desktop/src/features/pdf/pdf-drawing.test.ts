@@ -5,7 +5,8 @@ import {
   drawAnnotations,
   drawClosedPolyline,
   drawCriticalSurface,
-  drawCustomSurfaces,
+  drawCustomSurfaceLabels,
+  drawCustomSurfaceLines,
   drawEntryExitMarkers,
   drawGrid,
   drawLineLoads,
@@ -718,7 +719,7 @@ describe("drawSlipSurfaces", () => {
   });
 });
 
-describe("drawCustomSurfaces", () => {
+describe("drawCustomSurfaceLines and drawCustomSurfaceLabels", () => {
   const custom = surface({ cy: 16, fos: 1.5, customPlane: { kind: "circle", index: 0 } });
   // The same centre as the critical surface: its label would stand on the critical one's.
   const onCritical = surface({ radius: R + 1, fos: 1.75, customPlane: { kind: "circle", index: 1 } });
@@ -736,13 +737,16 @@ describe("drawCustomSurfaces", () => {
 
   it("draws nothing unless asked, whatever the surface display", () => {
     const rec = recorder();
-    drawCustomSurfaces(rec.pdf, tf, res, rvs({ surfaceDisplay: "all", showFosLabel: true }));
+    const off = rvs({ surfaceDisplay: "all", showFosLabel: true });
+    expect(drawCustomSurfaceLines(rec.pdf, tf, res, off)).toEqual([]);
+    expect(drawCustomSurfaceLabels(rec.pdf, tf, res, off)).toEqual([]);
     expect(rec.calls).toHaveLength(0);
   });
 
   it("draws the custom surfaces dashed in their colour, then their labels clear of the critical label", () => {
     const rec = recorder();
-    drawCustomSurfaces(rec.pdf, tf, res, rvs({ showCustomSurfaces: true }));
+    expect(drawCustomSurfaceLines(rec.pdf, tf, res, rvs({ showCustomSurfaces: true }))).toEqual([custom, onCritical]);
+    expect(drawCustomSurfaceLabels(rec.pdf, tf, res, rvs({ showCustomSurfaces: true }))).toEqual([]);
     expect(rec.of("stroke")).toHaveLength(2);
     expect(rec.of("setDrawColor")[0].args).toEqual(CUSTOM_SURFACE_COLOR.rgb);
     expect(rec.of("setLineDashPattern").map((c) => c.args)).toEqual([
@@ -752,7 +756,9 @@ describe("drawCustomSurfaces", () => {
     expect(rec.texts()).toEqual([]);
 
     const labelled = recorder();
-    drawCustomSurfaces(labelled.pdf, tf, res, rvs({ showCustomSurfaces: true, showFosLabel: true }));
+    const boxes = drawCustomSurfaceLabels(labelled.pdf, tf, res, rvs({ showCustomSurfaces: true, showFosLabel: true }));
+    expect(boxes).toHaveLength(2);
+    expect(labelled.of("stroke")).toHaveLength(0);
     expect(labelled.texts()).toEqual(["1.500", "1.750"]);
     const [first, second] = labelled.of("text");
     const [ccx, ccy] = tf.worldToPdf(CIRCLE.cx, 16);

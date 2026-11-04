@@ -1,5 +1,5 @@
 import { DEFAULT_RESULT_VIEW_SETTINGS } from "../defaults";
-import { nextId } from "../helpers";
+import { customPlanesInResultOrder, nextId } from "../helpers";
 import type { SliceCreator } from "../helpers";
 import type { CustomSearchPlane, ModelEntry, ReferenceAnnotation, ResultViewSlice } from "../types";
 import { isPaperAnnotation, referenceFromCustomPlane } from "../../features/annotations/reference";
@@ -70,7 +70,8 @@ export const createResultViewSlice: SliceCreator<ResultViewSlice> = (set, get) =
   },
 
   addReferenceFromCustomPlane: (planeId) => {
-    const planes = get().customSearchPlanes;
+    // Numbered as the result numbers its custom surfaces.
+    const planes = customPlanesInResultOrder(get().customSearchPlanes);
     const index = planes.findIndex((p) => p.id === planeId);
     if (index < 0) return null;
     const spec = referenceFromCustomPlane(planes[index], index);

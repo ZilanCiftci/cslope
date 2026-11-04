@@ -76,6 +76,9 @@ export interface ReferenceLabelContextPdf {
   /** The critical surface and whether its FOS label is drawn. */
   criticalSurface?: (DrawableSurface & { fos: number }) | null;
   showFosLabel?: boolean;
+  /** The custom surfaces drawn (dashed) and their FOS labels' boxes (mm). */
+  customSurfaces?: readonly DrawableSurface[];
+  customLabelBoxes?: readonly Box[];
   /** The plot area (mm). */
   bounds: Box;
 }
@@ -117,6 +120,8 @@ export function drawReferenceLabelsPdf(
       layout.reserve({ left: ccx + 2.5, top: ccy - 4.5, right: ccx + 3.5 + tw, bottom: ccy + 1 });
     }
   }
+  for (const s of ctx.customSurfaces ?? []) layout.reservePolyline(toPdf(surfacePoints(s)), 2 * z);
+  for (const b of ctx.customLabelBoxes ?? []) layout.reserve(b);
 
   const fontMm = REFERENCE_LABEL_FONT_PX * z;
   pdf.setFontSize(fontMm / MM_PER_PT);

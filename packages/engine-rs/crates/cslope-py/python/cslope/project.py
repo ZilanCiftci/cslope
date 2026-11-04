@@ -47,6 +47,12 @@ FORMAT = "cslope-project"
 #: The layout this reader knows; a file whose ``minReaderVersion`` is above it is refused.
 FORMAT_VERSION = 1
 
+#: The largest an archive's entry may unpack to, and all its entries together
+#: (their declared sizes, checked before anything is read): the limits of the
+#: app's reader.
+MAX_ENTRY_BYTES = 100 * 1024 * 1024
+MAX_TOTAL_BYTES = 200 * 1024 * 1024
+
 _SAFE_ID = re.compile(r"^[A-Za-z0-9_-]+$")
 _MODEL_JSON = re.compile(r"^models/([A-Za-z0-9_-]+)/model\.json$")
 _RUN_FIELDS = ("runState", "progress", "result", "errorMessage")
@@ -126,7 +132,7 @@ class Project:
         a = self.asset(asset_id)
         if self._archive is None:
             raise KeyError(asset_id)
-        data = self._archive.read(a.path)
+        data = _read_entry(self._archive, a.path)
         if hashlib.sha256(data).hexdigest() != a.sha256:
             raise ValueError(f"the attachment {a.original_name or a.path} does not match its hash")
         return data
@@ -134,7 +140,7 @@ class Project:
     def thumbnail(self) -> Optional[bytes]:
         """``thumbnail.png``, or None without one."""
         if self._archive is not None and "thumbnail.png" in self._archive.namelist():
-            return self._archive.read("thumbnail.png")
+            return _read_entry(self._archive, "thumbnail.png")
         return None
 
     def close(self) -> None:
@@ -152,7 +158,13 @@ class Project:
 def read(path: Union[str, "os.PathLike[str]"]) -> Project:
     """Open a project file: a ``.cslp`` archive, or a JSON project of an earlier version."""
     if zipfile.is_zipfile(path):
-        return _read_archive(zipfile.ZipFile(path))
+        archive = zipfile.ZipFile(path)
+        try:
+            _check_sizes(archive)
+            return _read_archive(archive)
+        except BaseException:
+            archive.close()
+            raise
     with open(path, "rb") as f:
         text = f.read().decode("utf-8-sig")
     if not text.lstrip().startswith("{"):
@@ -160,9 +172,44 @@ def read(path: Union[str, "os.PathLike[str]"]) -> Project:
     return _from_root(json.loads(text), {}, "json", None)
 
 
+def _megabytes(n: int) -> str:
+    return f"{-(-n // (1024 * 1024))} MB"
+
+
+def _check_sizes(archive: zipfile.ZipFile) -> None:
+    """Refuse an archive whose entries declare more than the limits."""
+    total = 0
+    for info in archive.infolist():
+        if info.file_size > MAX_ENTRY_BYTES:
+            raise ValueError(f"the archive's entry {info.filename} is too large ({_megabytes(info.file_size)} unpacked; at most {_megabytes(MAX_ENTRY_BYTES)})")
+        total += info.file_size
+        if total > MAX_TOTAL_BYTES:
+            raise ValueError(f"the archive is too large (its entries unpack to more than {_megabytes(MAX_TOTAL_BYTES)})")
+
+
+def _read_entry(archive: zipfile.ZipFile, name: str) -> bytes:
+    """An entry's bytes, read no further than its declared size (within the limits)."""
+    info = archive.getinfo(name)
+    if info.file_size > MAX_ENTRY_BYTES:
+        raise ValueError(f"the archive's entry {name} is too large ({_megabytes(info.file_size)} unpacked; at most {_megabytes(MAX_ENTRY_BYTES)})")
+    with archive.open(info) as f:
+        data = f.read(info.file_size + 1)
+    if len(data) > info.file_size:
+        raise ValueError(f"the archive's entry {name} unpacks to more than its declared size")
+    return data
+
+
+def _units(root: Dict[str, Any]) -> str:
+    """The project's units: SI (the numbers of a project in other units cannot be read as they are)."""
+    units = root.get("units", "SI")
+    if units != "SI":
+        raise ValueError(f"the project is in {units if isinstance(units, str) else 'unknown'} units; this reader reads SI projects only")
+    return "SI"
+
+
 def _json(archive: zipfile.ZipFile, name: str) -> Any:
     try:
-        return json.loads(archive.read(name).decode("utf-8"))
+        return json.loads(_read_entry(archive, name).decode("utf-8"))
     except ValueError as e:
         raise ValueError(f"the project's {name} is not valid JSON") from e
 
@@ -242,7 +289,7 @@ def _read_archive(archive: zipfile.ZipFile) -> Project:
         manifest=manifest,
         version=int(project.get("version", 1)),
         active_model_id=str(project.get("activeModelId", ids[0])),
-        units=str(project.get("units", "SI")),
+        units=_units(project),
         models=models,
         assets=assets,
         layout="cslp",
@@ -267,7 +314,7 @@ def _from_root(root: Dict[str, Any], manifest: Dict[str, Any], layout: str, arch
         manifest=manifest,
         version=int(version) if isinstance(version, (int, float)) else 1,
         active_model_id=str(root.get("activeModelId", models[0].id)),
-        units=str(root.get("units", "SI")),
+        units=_units(root),
         models=models,
         assets=[],
         layout=layout,

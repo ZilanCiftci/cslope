@@ -234,6 +234,31 @@ fn a_search_plane_equal_to_a_custom_plane_stands_for_it() {
 }
 
 #[test]
+fn identical_custom_planes_each_keep_their_entry() {
+    let circle = json!({ "cx": 28, "cy": 25, "radius": 35 });
+    let mut d = definition(json!({ "customSearchPlanes": [circle, circle] }));
+    d.custom_planes_only = Some(true);
+    let r = run(&d, &options());
+    let customs = r.custom_surfaces.as_ref().expect("custom surfaces");
+    let refs: Vec<CustomPlaneRef> = customs.iter().map(|c| custom(c.kind, c.index)).collect();
+    assert_eq!(
+        refs,
+        vec![
+            custom(CustomPlaneKind::Circle, 0),
+            custom(CustomPlaneKind::Circle, 1)
+        ]
+    );
+    let a = customs[0].surface.as_ref().expect("first surface");
+    let b = customs[1].surface.as_ref().expect("second surface");
+    assert_eq!(a.fos, b.fos);
+    assert_eq!(a.fos, r.min_fos);
+    assert_eq!(a.custom_plane, Some(custom(CustomPlaneKind::Circle, 0)));
+    assert_eq!(b.custom_plane, Some(custom(CustomPlaneKind::Circle, 1)));
+    // Analysed once.
+    assert_eq!(r.all_surfaces.len(), 1);
+}
+
+#[test]
 fn mirrored_results_mirror_the_custom_surfaces() {
     let canonical = def(json!({
         "orientation": "rtl",

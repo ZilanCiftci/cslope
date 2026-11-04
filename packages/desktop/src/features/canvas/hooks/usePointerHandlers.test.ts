@@ -742,7 +742,23 @@ describe("reference annotations in the result view", () => {
     expect(useAppStore.temporal.getState().pastStates).toHaveLength(3);
   });
 
-  it("hovers reference handles and lines before paper annotations", () => {
+  it("grabs a colour bar drawn over a reference line, not the line", () => {
+    // The colour bar's anchor on the polyline's vertex (12, 4).
+    const [sx, sy] = toScreen(12, 4);
+    const pf = computePaperFrame(W, H, "A4", true, 1, 0, 0);
+    const bar = { id: "bar", type: "color-bar" as const, x: (sx - pf.x) / pf.w, y: (sy - pf.y) / pf.h };
+    useAppStore.setState({ resultViewSettings: { ...DEFAULT_RESULT_VIEW_SETTINGS, annotations: [LINE, CIRCLE, bar] } });
+    const { deps, h, down, move } = setup({ mode: "result" });
+    move(sx, sy);
+    expect(h().hoverHit).toEqual({ kind: "annotation", annoId: "bar" });
+    down(sx, sy);
+    expect(deps.setSelectedAnnotations).toHaveBeenCalledWith(["bar"]);
+    move(sx + 10, sy);
+    expect(vi.mocked(deps.updateAnnotation).mock.calls.at(-1)![0]).toBe("bar");
+    expect(line().points).toEqual(LINE.points);
+  });
+
+  it("hovers reference handles and lines", () => {
     const { h, move } = setup({ mode: "result" });
     move(...toScreen(12, 4));
     expect(h().hoverHit).toEqual({ kind: "referenceVertex", annoId: "l", pointIndex: 1 });

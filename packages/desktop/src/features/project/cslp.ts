@@ -215,9 +215,19 @@ export function withSafeModelIds(file: ProjectFile): ProjectFile {
 /**
  * The attachments of the project last opened, read from its archive when
  * a save needs them (the models keep their references; the store holds no
- * bytes). Replaced by the next open.
+ * bytes). Replaced when the next project is loaded (adoptProjectAssets).
  */
 let openedAssets: ProjectAsset[] = [];
+
+/**
+ * Keep `assets` (from readProject) for the next save: call it where the
+ * project read is loaded, not before, so a file read and then not opened
+ * (the user cancels, or saves the current project first) leaves the
+ * current project's attachments in place.
+ */
+export function adoptProjectAssets(assets: ProjectAsset[]): void {
+  openedAssets = assets;
+}
 
 /** For tests: the attachments a save would take by default. */
 export function openedProjectAssets(): ProjectAsset[] {
@@ -336,15 +346,26 @@ export function buildProjectArchive(state: AppState, options: WriteProjectOption
 
 const decoder = new TextDecoder();
 
+/** A project file read: its content and its attachments (to adoptProjectAssets when it is loaded). */
+export interface ReadProject {
+  file: ProjectFile;
+  assets: ProjectAsset[];
+}
+
 /**
  * Read a project file: a .cslp archive or a JSON project file of an earlier
- * version (told apart by the content). The archive's attachments are kept
- * for the next save (openedAssets).
+ * version (told apart by the content), with the archive's attachments.
+ * Changes nothing: the caller that loads the project adopts its assets.
  */
-export async function readProjectBytes(bytes: Uint8Array): Promise<ProjectFile> {
+export async function readProject(bytes: Uint8Array): Promise<ReadProject> {
   const opened = await openProject(bytes);
-  openedAssets = opened.assets.map((a) => ({ id: a.id, mime: a.mime, originalName: a.originalName, addedAt: a.addedAt, data: () => opened.readAsset(a.id) }));
-  return opened.file;
+  const assets = opened.assets.map((a) => ({ id: a.id, mime: a.mime, originalName: a.originalName, addedAt: a.addedAt, data: () => opened.readAsset(a.id) }));
+  return { file: opened.file, assets };
+}
+
+/** The content of a project file (readProject without the attachments). */
+export async function readProjectBytes(bytes: Uint8Array): Promise<ProjectFile> {
+  return (await readProject(bytes)).file;
 }
 
 /** Open a project file (a .cslp archive, or a JSON project of an earlier version) and what else it holds. */

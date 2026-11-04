@@ -292,6 +292,8 @@ pub struct PlaneMeta {
     pub below_min_size: Option<bool>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub custom_plane: Option<CustomPlaneRef>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub custom_aliases: Vec<CustomPlaneRef>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub rejection: Option<SurfaceRejection>,
     /// Out only: the analysis dropped the slices, which the facade gets on
@@ -321,6 +323,7 @@ fn meta(p: &SearchPlane) -> PlaneMeta {
         tangent_to: p.tangent_to.map(|v| v as f64),
         below_min_size: p.below_min_size,
         custom_plane: p.custom_plane,
+        custom_aliases: p.custom_aliases.clone(),
         rejection: p.rejection,
         lazy_slices: None,
     }
@@ -385,6 +388,7 @@ pub fn planes_from_js(v: JsValue) -> JsResult<Vec<SearchPlane>> {
             tangent_to: m.tangent_to.map(|v| v as usize),
             below_min_size: m.below_min_size,
             custom_plane: m.custom_plane,
+            custom_aliases: m.custom_aliases,
             rejection: m.rejection,
         })
         .collect())

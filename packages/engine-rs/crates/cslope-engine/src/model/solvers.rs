@@ -1543,10 +1543,17 @@ impl PlaneSteps for AnalyseSlopeSteps {
                         let plane = for_evaluation(p);
                         let key = plane_key(&plane);
                         if let Some(&i) = seen.get(&key) {
-                            // A custom plane the search also generated: the
-                            // one kept stands for it in the result.
-                            if all[i].custom_plane.is_none() {
-                                all[i].custom_plane = plane.custom_plane;
+                            // A custom plane the search also generated, or a
+                            // custom plane given twice: the one kept stands
+                            // for each in the result.
+                            if let Some(custom) = plane.custom_plane {
+                                if all[i].custom_plane.is_none() {
+                                    all[i].custom_plane = Some(custom);
+                                } else if all[i].custom_plane != Some(custom)
+                                    && !all[i].custom_aliases.contains(&custom)
+                                {
+                                    all[i].custom_aliases.push(custom);
+                                }
                             }
                             continue;
                         }
