@@ -133,7 +133,7 @@ export function ReferenceProperties({
             aria-pressed={colorValue === ""}
             title="The theme's reference colour"
             style={{
-              border: colorValue === "" ? "2px solid var(--color-vsc-focus-border)" : "1px solid var(--color-vsc-border)",
+              border: colorValue === "" ? "2px solid var(--color-vsc-accent)" : "1px solid var(--color-vsc-border)",
               color: "var(--color-vsc-text)",
               background: "transparent",
             }}
@@ -149,7 +149,7 @@ export function ReferenceProperties({
               aria-pressed={colorValue === c}
               style={{
                 background: c,
-                border: colorValue === c ? "2px solid var(--color-vsc-focus-border)" : "1px solid var(--color-vsc-border)",
+                border: colorValue === c ? "2px solid var(--color-vsc-accent)" : "1px solid var(--color-vsc-border)",
               }}
             />
           ))}

@@ -43,7 +43,7 @@ export function BlockSearchSection() {
         </div>
       ))}
       {objects.filter((o) => o.points.length > 0).length === 0 && (
-        <p className="text-[10px] italic" style={{ color: "var(--color-vsc-warning)" }}>
+        <p className="text-[10px] italic" style={{ color: "var(--color-vsc-warning-text)" }}>
           Add at least one object to run a block search.
         </p>
       )}

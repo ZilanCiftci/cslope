@@ -311,7 +311,7 @@ export function ProjectInfoDialog({ initialInfos, onSave, onClose, importNotes }
           )}
         </div>
 
-        <div className="flex items-center justify-end gap-2 px-4 py-3 border-t border-[var(--color-vsc-border)] bg-[var(--color-vsc-surface)] rounded-b-lg">
+        <div className="flex items-center justify-end gap-2 px-4 py-3 border-t border-[var(--color-vsc-border)] bg-[var(--color-vsc-panel)] rounded-b-lg">
           <button
             onClick={onClose}
             className="btn min-w-[80px]"

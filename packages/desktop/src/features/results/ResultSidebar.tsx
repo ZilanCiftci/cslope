@@ -580,14 +580,14 @@ export function ResultSidebar() {
                   </span>
                 </div>
                 {result.sgi3d.warnings.map((w) => (
-                  <p key={w} className="text-[11px]" style={{ color: "var(--color-vsc-warning)" }}>
+                  <p key={w} className="text-[11px]" style={{ color: "var(--color-vsc-warning-text)" }}>
                     {w}
                   </p>
                 ))}
               </div>
             )}
             {!result.sgi3d && result.sgi3dError && (
-              <p className="mt-1.5 border-t pt-1.5 text-[11px]" style={{ borderColor: "var(--color-vsc-border)", color: "var(--color-vsc-warning)" }}>
+              <p className="mt-1.5 border-t pt-1.5 text-[11px]" style={{ borderColor: "var(--color-vsc-border)", color: "var(--color-vsc-warning-text)" }}>
                 3D effects (SGI): {result.sgi3dError}
               </p>
             )}
@@ -600,7 +600,7 @@ export function ResultSidebar() {
                     {c.surface ? (
                       <span className="tabular-nums">{customSurfaceValueText(c)}</span>
                     ) : (
-                      <span className="text-[11px] text-right" style={{ color: "var(--color-vsc-warning)" }}>
+                      <span className="text-[11px] text-right" style={{ color: "var(--color-vsc-warning-text)" }}>
                         {customSurfaceValueText(c)}
                       </span>
                     )}
@@ -622,7 +622,7 @@ export function ResultSidebar() {
               </p>
             )}
             {!result.fem && result.femError && (
-              <p className="mt-1.5 border-t pt-1.5 text-[11px]" style={{ borderColor: "var(--color-vsc-border)", color: "var(--color-vsc-warning)" }}>
+              <p className="mt-1.5 border-t pt-1.5 text-[11px]" style={{ borderColor: "var(--color-vsc-border)", color: "var(--color-vsc-warning-text)" }}>
                 Strength reduction (FE) failed: {result.femError}
               </p>
             )}
@@ -686,7 +686,7 @@ export function ResultSidebar() {
                     ? "var(--color-vsc-list-active)"
                     : "var(--color-vsc-list-hover)",
                   outline: isSelected
-                    ? "1px solid var(--color-vsc-focus-border)"
+                    ? "1px solid var(--color-vsc-accent)"
                     : "none",
                 }}
                 onClick={(e) => {
@@ -1629,7 +1629,7 @@ function FemSummaryRows({ fem, designValues }: { fem: FemResultSummary; designVa
         </p>
       )}
       {[...fem.warnings, ...(fem.bounds?.warnings ?? [])].map((w) => (
-        <p key={w} className="text-[11px]" style={{ color: "var(--color-vsc-warning)" }}>
+        <p key={w} className="text-[11px]" style={{ color: "var(--color-vsc-warning-text)" }}>
           {w}
         </p>
       ))}

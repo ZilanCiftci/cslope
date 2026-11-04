@@ -11,7 +11,7 @@ const FOS_SCALE = chroma.scale(["red", "yellow", "green", "blue"]);
  */
 export function fosStatusColor(fos: number, designValues: boolean): string {
   if (fos < 1.0) return "var(--color-vsc-error)";
-  if (!designValues && fos < 1.5) return "var(--color-vsc-warning)";
+  if (!designValues && fos < 1.5) return "var(--color-vsc-warning-text)";
   return "var(--color-vsc-success)";
 }
 

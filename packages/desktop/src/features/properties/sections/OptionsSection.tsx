@@ -924,7 +924,7 @@ function FemFields({
       </label>
       <p
         className="col-span-2 text-[10px]"
-        style={{ color: "var(--color-vsc-warning)" }}
+        style={{ color: "var(--color-vsc-warning-text)" }}
         role="note"
         aria-label="Finite elements are experimental"
       >

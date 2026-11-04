@@ -235,7 +235,7 @@ function SensitivityPanelBody() {
           </table>
         )}
         {failed.length > 0 && !running && (
-          <p className="text-[10px]" style={{ color: "var(--color-vsc-warning)" }}>
+          <p className="text-[10px]" style={{ color: "var(--color-vsc-warning-text)" }}>
             {failed.length} value(s) gave no result; hover the row for the reason.
           </p>
         )}
