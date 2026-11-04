@@ -395,30 +395,30 @@
      "source": "Theory",
      "method": "infinite slope",
      "analysis": "Bishop simplified",
-     "computed": 2.5237
+     "computed": 2.5126
     },
     {
      "value": 2.41,
      "method": "Spencer, non-circular (dynamic programming)",
      "source": "Baker, Frydman & Talesnick (1993)",
      "analysis": "Spencer, non-circular",
-     "computed": 2.5035
+     "computed": 2.5043
     }
    ],
    "results": [
     {
      "method": "Bishop simplified",
-     "computed": 2.5237,
+     "computed": 2.5126,
      "programs": null
     },
     {
      "method": "Spencer",
-     "computed": 2.5237,
+     "computed": 2.5126,
      "programs": null
     },
     {
      "method": "Spencer, non-circular",
-     "computed": 2.5035,
+     "computed": 2.5043,
      "programs": null
     }
    ]
@@ -2172,13 +2172,13 @@
      "source": "Duncan & Wright",
      "method": "Spencer",
      "analysis": "Spencer",
-     "computed": 1.1556
+     "computed": 1.1547
     }
    ],
    "results": [
     {
      "method": "Bishop simplified",
-     "computed": 1.1558,
+     "computed": 1.1548,
      "programs": {
       "min": 1.155,
       "max": 1.155
@@ -2186,7 +2186,7 @@
     },
     {
      "method": "Spencer",
-     "computed": 1.1556,
+     "computed": 1.1547,
      "programs": {
       "min": 1.155,
       "max": 1.155
@@ -3702,7 +3702,7 @@
    "results": [
     {
      "method": "Bishop simplified",
-     "computed": 1.9636,
+     "computed": 1.9479,
      "programs": {
       "min": 1.948,
       "max": 1.951
@@ -3710,7 +3710,7 @@
     },
     {
      "method": "Spencer",
-     "computed": 1.9636,
+     "computed": 1.9478,
      "programs": {
       "min": 1.948,
       "max": 1.948
@@ -3718,7 +3718,7 @@
     },
     {
      "method": "Janbu corrected",
-     "computed": 1.9741,
+     "computed": 1.9508,
      "programs": {
       "min": 1.949,
       "max": 1.949

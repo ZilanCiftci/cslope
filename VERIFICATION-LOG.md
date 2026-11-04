@@ -81,11 +81,52 @@ The script compares the regenerated verification table with the committed one an
 | 2026-11-04 | Morgenstern-Price: a converged solution needs positive Fm and Ff and a gap below a capped tolerance | 0 | 0.332 → 0.332 | 0.465 → 0.465 | 0.942 → 0.942 | 1.522 → 1.522 | 2341 s (4 workers, load 13.9 at start) |
 | 2026-11-04 | Engine rewritten in Rust (WebAssembly); TypeScript engine removed | 0 | 0.332 → 0.332 | 0.465 → 0.465 | 0.942 → 0.942 | 1.522 → 1.522 | 575 s (4 workers, load 2.2 at start) |
 | 2026-11-04 | V056: Griffiths & Lane's coarse-mesh finite element value disputed, not counted; slice shear force reported by the engine | 0 | 0.332 → 0.332 | 0.465 → 0.465 | 0.942 → 0.942 | 1.522 → 1.522 | 554 s (4 workers, load 0.9 at start) |
+| 2026-11-04 | Minimum slip area defaults to 0 (no limit); slice shear force and FE progress from the engine | 8 | 0.332 → 0.323 | 0.465 → 0.455 | 0.942 → 0.938 | 1.522 → 1.521 | 503 s (4 workers, load 1.0 at start) |
 <!-- summary-end -->
 
 ## Entries
 
 <!-- entries -->
+
+### 2026-11-04: Minimum slip area defaults to 0 (no limit); slice shear force and FE progress from the engine
+
+Compared with 5c6f310. Errors are relative to the reference, in percent. Verification run time: 503 s (4 workers, load 1.0 at start).
+
+**Against other programs (midpoint of their range):** 5 moved (5 closer to the reference, 0 further).
+
+| Result | Reference | Before | After | Error before | Error after |
+|---|---|---|---|---|---|
+| V052a Janbu corrected | 1.949 | 1.9741 | 1.9508 | +1.288 % | +0.092 % |
+| V052a Spencer | 1.948 | 1.9636 | 1.9478 | +0.801 % | -0.010 % |
+| V052a Bishop simplified | 1.950 | 1.9636 | 1.9479 | +0.723 % | -0.082 % |
+| V032b Bishop simplified | 1.155 | 1.1558 | 1.1548 | +0.069 % | -0.017 % |
+| V032b Spencer | 1.155 | 1.1556 | 1.1547 | +0.052 % | -0.026 % |
+| **Mean error (n = 301)** | | | | -0.218 % | -0.228 % |
+| **Mean absolute error** | | | | 0.332 % | 0.323 % |
+| **RMS error** | | | | 0.465 % | 0.455 % |
+| **Largest error** | | | | 2.109 % | 2.109 % |
+
+**Against the papers:** 3 moved (2 closer to the reference, 1 further).
+
+| Result | Reference | Before | After | Error before | Error after |
+|---|---|---|---|---|---|
+| V005 infinite slope (Theory) | 2.500 | 2.5237 | 2.5126 | +0.948 % | +0.504 % |
+| V032b Spencer (Duncan & Wright) | 1.150 | 1.1556 | 1.1547 | +0.487 % | +0.409 % |
+| V005 Spencer, non-circular (dynamic programming) (Baker, Frydman & Talesnick (1993)) | 2.410 | 2.5035 | 2.5043 | +3.880 % | +3.913 % |
+| **Mean error (n = 123)** | | | | -0.160 % | -0.164 % |
+| **Mean absolute error** | | | | 0.942 % | 0.938 % |
+| **RMS error** | | | | 1.522 % | 1.521 % |
+| **Largest error** | | | | 6.591 % | 6.591 % |
+
+**Finite elements against their references (FE, finite differences, limit analysis, theory):** 0 moved (0 closer to the reference, 0 further).
+
+| Result | Reference | Before | After | Error before | Error after |
+|---|---|---|---|---|---|
+| **Mean error (n = 34)** | | | | -0.288 % | -0.288 % |
+| **Mean absolute error** | | | | 2.026 % | 2.026 % |
+| **RMS error** | | | | 2.735 % | 2.735 % |
+| **Largest error** | | | | 6.325 % | 6.325 % |
+
 
 ### 2026-11-04: V056: Griffiths & Lane's coarse-mesh finite element value disputed, not counted; slice shear force reported by the engine
 
