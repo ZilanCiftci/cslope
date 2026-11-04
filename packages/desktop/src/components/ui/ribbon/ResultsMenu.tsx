@@ -65,6 +65,13 @@ export function ResultsMenu({ isOpen, onActivate, panelHost }: Props) {
   const result = useAppStore((s) => s.result);
   const hasResult = Boolean(result?.allSurfaces?.length);
   const addAnnotation = useAppStore((s) => s.addAnnotation);
+  const removeAnnotation = useAppStore((s) => s.removeAnnotation);
+  // The table and the colour bar are one per paper: their buttons toggle.
+  const toggleAnnotation = (type: "material-table" | "color-bar") => {
+    const present = rvs.annotations.filter((a) => a.type === type);
+    if (present.length > 0) present.forEach((a) => removeAnnotation(a.id));
+    else addAnnotation(type);
+  };
   const rvs = useAppStore((s) => s.resultViewSettings);
   const setRvs = useAppStore((s) => s.setResultViewSettings);
   const [exportMenuOpen, setExportMenuOpen] = useState(false);
@@ -439,14 +446,16 @@ export function ResultsMenu({ isOpen, onActivate, panelHost }: Props) {
                 <RibbonSmallButton
                   icon={<Table {...SMALL_ICON} />}
                   label="Material table"
-                  title="Add Material Table"
-                  onClick={() => addAnnotation("material-table")}
+                  title={rvs.annotations.some((a) => a.type === "material-table") ? "Remove Material Table" : "Add Material Table"}
+                  onClick={() => toggleAnnotation("material-table")}
+                  active={rvs.annotations.some((a) => a.type === "material-table")}
                 />
                 <RibbonSmallButton
                   icon={<Blinds {...SMALL_ICON} />}
                   label="Color bar"
-                  title="Add Color Bar"
-                  onClick={() => addAnnotation("color-bar")}
+                  title={rvs.annotations.some((a) => a.type === "color-bar") ? "Remove Color Bar" : "Add Color Bar"}
+                  onClick={() => toggleAnnotation("color-bar")}
+                  active={rvs.annotations.some((a) => a.type === "color-bar")}
                 />
               </RibbonStack>
             </RibbonGroup>

@@ -197,15 +197,23 @@ describe("ResultsMenu", () => {
     expect(screen.queryByLabelText("Maximum FOS shown")).toBeNull();
   });
 
-  it("adds annotations", async () => {
+  it("adds annotations; the table and the colour bar toggle and start at the right edge", async () => {
     renderMenu();
-    const count = store().resultViewSettings.annotations.length;
+    store().setResultViewSettings({ annotations: [] });
     await userEvent.click(screen.getByTitle("Add Text"));
     await userEvent.click(screen.getByTitle("Add Plot"));
     await userEvent.click(screen.getByTitle("Add Material Table"));
     await userEvent.click(screen.getByTitle("Add Color Bar"));
-    const types = store().resultViewSettings.annotations.slice(count).map((a) => a.type);
-    expect(types).toEqual(["text", "plot", "material-table", "color-bar"]);
+    const annotations = store().resultViewSettings.annotations;
+    expect(annotations.map((a) => a.type)).toEqual(["text", "plot", "material-table", "color-bar"]);
+    const bar = annotations.find((a) => a.type === "color-bar")!;
+    expect([bar.x, bar.y, bar.anchor]).toEqual([0.95, 0.25, "top-right"]);
+    expect(screen.getByTitle("Remove Color Bar")).toHaveAttribute("aria-pressed", "true");
+    // A second click removes the one there instead of adding another.
+    await userEvent.click(screen.getByTitle("Remove Color Bar"));
+    await userEvent.click(screen.getByTitle("Remove Material Table"));
+    expect(store().resultViewSettings.annotations.map((a) => a.type)).toEqual(["text", "plot"]);
+    expect(screen.getByTitle("Add Color Bar")).toHaveAttribute("aria-pressed", "false");
   });
 
   it("exports the view settings as a template", async () => {

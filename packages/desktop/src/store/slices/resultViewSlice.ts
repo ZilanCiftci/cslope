@@ -30,9 +30,11 @@ export const createResultViewSlice: SliceCreator<ResultViewSlice> = (set) => ({
     const anno = {
       id: nextId("anno"),
       type,
-      x: type === "material-table" ? 0.95 : 0.5,
-      y: type === "material-table" ? 0.05 : 0.5,
-      anchor: type === "material-table" ? "top-right" : undefined,
+      // The table and the colour bar start at the right edge of the paper,
+      // clear of the model; text and plots in the middle, where they are seen.
+      x: type === "material-table" || type === "color-bar" ? 0.95 : 0.5,
+      y: type === "material-table" ? 0.05 : type === "color-bar" ? 0.25 : 0.5,
+      anchor: type === "material-table" || type === "color-bar" ? "top-right" : undefined,
       text: type === "text" ? "Annotation" : undefined,
       fontSize: type === "material-table" ? 6 : 12,
       width: type === "plot" ? 0.24 : undefined,
