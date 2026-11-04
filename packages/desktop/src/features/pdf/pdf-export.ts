@@ -22,6 +22,7 @@ import {
   drawAnnotations,
   drawClosedPolyline,
   drawCriticalSurface,
+  drawCustomSurfaces,
   drawEntryExitMarkers,
   drawGrid,
   drawLineLoads,
@@ -446,6 +447,7 @@ export function exportVectorPdf(data: PdfExportData): void {
       materialBoundaries,
       regionMaterials,
     });
+    drawCustomSurfaces(pdf, tf, result, rvs);
     if (result.criticalSurface?.reinforcementForces?.length) {
       const cs = result.criticalSurface;
       drawReinforcementForcesPdf(

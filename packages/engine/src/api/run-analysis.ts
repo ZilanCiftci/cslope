@@ -70,6 +70,9 @@ function governingDirection(def: SlopeDefinition, ownResult: AnalysisResult, opp
     ...governing,
     slidingDirection: ownGoverns ? own : own === "ltr" ? "rtl" : "ltr",
     otherDirectionMinFOS: other ? other.minFOS : null,
+    // The custom search planes are analysed in the model's own direction
+    // (the opposite definition has none): their results stay.
+    ...(ownResult.customSurfaces ? { customSurfaces: ownResult.customSurfaces } : {}),
   };
 }
 

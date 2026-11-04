@@ -7,7 +7,8 @@ use crate::error::Result;
 use crate::js;
 use crate::model::waternet::{HeadLine, ReferenceLine, Waternet};
 use crate::types::analysis::{
-    AnalysisLimits, AnalysisResult, Crack, FemResultSummary, SliceData, SlipSurfaceResult,
+    AnalysisLimits, AnalysisResult, Crack, CustomSurfaceResult, FemResultSummary, SliceData,
+    SlipSurfaceResult,
 };
 use crate::types::material_models::MaterialModel;
 use crate::types::reinforcement::{Pile, Reinforcement, ReinforcementForce};
@@ -339,6 +340,16 @@ pub fn map_analysis_result_to_model_space(
     let mx = |x: f64| mirror_x(x, x_min, x_max);
     let mp = |p: [f64; 2]| mirror_point(p, x_min, x_max);
     let r = analysis_result;
+    let mirror_surface = |s: &SlipSurfaceResult| SlipSurfaceResult {
+        cx: mx(s.cx),
+        entry_point: mp(s.entry_point),
+        exit_point: mp(s.exit_point),
+        points: s
+            .points
+            .as_ref()
+            .map(|ps| ps.iter().map(|&p| mp(p)).collect()),
+        ..s.clone()
+    };
 
     AnalysisResult {
         critical_surface: r.critical_surface.as_ref().map(|s| SlipSurfaceResult {
@@ -361,20 +372,15 @@ pub fn map_analysis_result_to_model_space(
             crack: s.crack.map(|c| Crack { x: mx(c.x), ..c }),
             ..s.clone()
         }),
-        all_surfaces: r
-            .all_surfaces
-            .iter()
-            .map(|s| SlipSurfaceResult {
-                cx: mx(s.cx),
-                entry_point: mp(s.entry_point),
-                exit_point: mp(s.exit_point),
-                points: s
-                    .points
-                    .as_ref()
-                    .map(|ps| ps.iter().map(|&p| mp(p)).collect()),
-                ..s.clone()
-            })
-            .collect(),
+        all_surfaces: r.all_surfaces.iter().map(mirror_surface).collect(),
+        custom_surfaces: r.custom_surfaces.as_ref().map(|cs| {
+            cs.iter()
+                .map(|c| CustomSurfaceResult {
+                    surface: c.surface.as_ref().map(mirror_surface),
+                    ..c.clone()
+                })
+                .collect()
+        }),
         critical_slices: r
             .critical_slices
             .iter()

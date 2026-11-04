@@ -22,8 +22,9 @@ use cslope_engine::model::reinforcement::{PileProfile, ReinforcementEnvelope};
 use cslope_engine::model::slope::{AnalysisLimitsPatch, AnalysisOptionsPatch, SearchPlane, Slope};
 use cslope_engine::model::waternet::Waternet;
 use cslope_engine::types::{
-    self as t, GeometryWithMaterial, HoekBrownParameters, Material, MaterialId, MaterialModel,
-    Pile, Reinforcement, ReinforcementForce, ShearNormalModel, Slice, WaterTableInput,
+    self as t, CustomPlaneRef, GeometryWithMaterial, HoekBrownParameters, Material, MaterialId,
+    MaterialModel, Pile, Reinforcement, ReinforcementForce, ShearNormalModel, Slice,
+    SurfaceRejection, WaterTableInput,
 };
 use serde::{Deserialize, Serialize};
 use std::cell::{Cell, RefCell};
@@ -647,6 +648,10 @@ pub struct PlaneDto {
     pub tangent_to: Option<f64>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub below_min_size: Option<bool>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub custom_plane: Option<CustomPlaneRef>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub rejection: Option<SurfaceRejection>,
 }
 
 impl PlaneDto {
@@ -674,6 +679,8 @@ impl PlaneDto {
             composite: p.composite.clone(),
             tangent_to: p.tangent_to.map(|v| v as f64),
             below_min_size: p.below_min_size,
+            custom_plane: p.custom_plane,
+            rejection: p.rejection,
         }
     }
 }
@@ -699,6 +706,8 @@ impl From<PlaneDto> for SearchPlane {
             composite: p.composite,
             tangent_to: p.tangent_to.map(|v| v as usize),
             below_min_size: p.below_min_size,
+            custom_plane: p.custom_plane,
+            rejection: p.rejection,
         }
     }
 }

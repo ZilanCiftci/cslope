@@ -22,7 +22,7 @@ import {
   anchoredTopLeft,
   anchorPointFromTopLeft,
 } from "../annotations/anchorPosition";
-import { surfaceCountText } from "../../utils/result-summary";
+import { customSurfaceGeometryText, customSurfaceName, customSurfaceValueText, surfaceCountText } from "../../utils/result-summary";
 import { ResultNotes } from "./ResultNotes";
 import { resolveAnnotationText } from "../annotations/resolveAnnotationText";
 import { InsertVariableMenu } from "../annotations/InsertVariableMenu";
@@ -565,6 +565,23 @@ export function ResultSidebar() {
               <p className="mt-1.5 border-t pt-1.5 text-[11px]" style={{ borderColor: "var(--color-vsc-border)", color: "var(--color-vsc-warning)" }}>
                 3D effects (SGI): {result.sgi3dError}
               </p>
+            )}
+            {result.customSurfaces && result.customSurfaces.length > 0 && (
+              // Each custom search plane of the run with its factor of safety, or why it has none.
+              <div className="mt-1.5 space-y-1 border-t pt-1.5" style={{ borderColor: "var(--color-vsc-border)" }}>
+                {result.customSurfaces.map((c, i) => (
+                  <div key={`${c.kind}-${c.index}`} className="flex justify-between gap-2" data-testid="custom-surface-row">
+                    <Label title={customSurfaceGeometryText(c)}>{customSurfaceName(i)}</Label>
+                    {c.surface ? (
+                      <span className="tabular-nums">{customSurfaceValueText(c)}</span>
+                    ) : (
+                      <span className="text-[11px] text-right" style={{ color: "var(--color-vsc-warning)" }}>
+                        {customSurfaceValueText(c)}
+                      </span>
+                    )}
+                  </div>
+                ))}
+              </div>
             )}
             <ResultNotes result={result} />
             {/* The finite element rows come last: the notes above belong to the limit equilibrium result. */}

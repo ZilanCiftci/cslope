@@ -14,7 +14,17 @@
  *   JavaScript are given back as the objects set, as TypeScript keeps them.
  */
 import { engineEpoch } from "../engine";
-import type { AnalysisLimits, AnalysisMethod, AnalysisOptions, IntersliceFunctionType, PartialFactors, PorePressureHead, SearchMethod } from "../types/analysis";
+import type {
+  AnalysisLimits,
+  AnalysisMethod,
+  AnalysisOptions,
+  CustomPlaneRef,
+  IntersliceFunctionType,
+  PartialFactors,
+  PorePressureHead,
+  SearchMethod,
+  SurfaceRejection,
+} from "../types/analysis";
 import type { GeometryWithMaterial, Slice } from "../types/geometry";
 import type { Pile, Reinforcement } from "../types/reinforcement";
 import { type CompositeFloor } from "./composite";
@@ -96,6 +106,13 @@ export interface SearchPlane {
    * the minimum slip area.
    */
   belowMinSize?: boolean;
+  /**
+   * The custom search plane of the definition this plane was added for
+   * (buildSlope); carried through the analysis to the result.
+   */
+  customPlane?: CustomPlaneRef;
+  /** Why the evaluation left the plane without a factor (evaluatePlanes). */
+  rejection?: SurfaceRejection;
 }
 
 type Pt = [number, number];

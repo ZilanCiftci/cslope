@@ -56,6 +56,46 @@ describe("runAnalysis", () => {
     expect(both.otherDirectionMinFOS).not.toBeUndefined();
   });
 
+  it("marks the custom search planes' surfaces and lists each with its factor or why it has none, also on a pool", async () => {
+    // V001 (canonical: the crest at y = 35 left of x = 22, a 1.5:1 slope down to (52, 15), the lower ground at y = 15).
+    const def = {
+      ...problem("V001"),
+      customSearchPlanes: [
+        { cx: 40, cy: 60, radius: 40 },
+        { cx: 0, cy: 0, radius: 0.1 },
+      ],
+      customSurfaces: [{ points: [[0, 30], [20, 18], [45, 18.5]] as [number, number][] }],
+    };
+    const r = runAnalysis(def, options());
+    const customs = r.customSurfaces!;
+    expect(customs.map((c) => [c.kind, c.index])).toEqual([
+      ["circle", 0],
+      ["circle", 1],
+      ["polyline", 0],
+    ]);
+    expect(customs[0].surface!.customPlane).toEqual({ kind: "circle", index: 0 });
+    expect(customs[0].surface!.fos).toBeGreaterThan(0);
+    expect(customs[0].reason).toBeUndefined();
+    expect(customs[1].surface).toBeUndefined();
+    expect(customs[1].reason).toMatch(/does not cut the ground twice/);
+    expect(customs[2].surface!.points!.length).toBeGreaterThanOrEqual(3);
+    expect(customs[2].surface!.customPlane).toEqual({ kind: "polyline", index: 0 });
+    // The analysed ones are among all surfaces, marked, and only they are.
+    const marked = r.allSurfaces.filter((s) => s.customPlane);
+    expect(marked).toHaveLength(2);
+    expect(marked.map((s) => s.fos).sort()).toEqual([customs[0].surface!.fos, customs[2].surface!.fos].sort());
+    // Without custom planes there is no list.
+    expect(runAnalysis(problem("V001"), options()).customSurfaces).toBeUndefined();
+    // The marks and the list survive the pool's workers (the planes cross the wire).
+    const { pool } = fakePool(2, 5);
+    const par = await runAnalysisAsync(def, options(), (slope, d, opts) => pool.analyse(slope, d, opts));
+    pool.close();
+    expect(sameBits(withoutTime(r), withoutTime(par), "", new Set())).toBeNull();
+    // With both directions the custom planes (analysed in the model's own direction) stay listed.
+    const both = runAnalysis(def, options({ bothDirections: true }));
+    expect(both.customSurfaces).toEqual(customs);
+  }, 120_000);
+
   it("no valid surface is an error", () => {
     const def = { ...problem("V001"), customSearchPlanes: [{ cx: 0, cy: 0, radius: 0.1 }], customPlanesOnly: true };
     expect(() => runAnalysis(def, options())).toThrow(/No valid slip surface/);

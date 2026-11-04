@@ -317,6 +317,47 @@ export interface SlipSurfaceResult {
    * crack.
    */
   crack?: { x: number; top: number; bottom: number };
+  /**
+   * The custom search plane of the definition this surface was analysed
+   * for (`customSearchPlanes` or `customSurfaces`, by index). Absent for a
+   * surface of the search.
+   */
+  customPlane?: CustomPlaneRef;
+}
+
+/** Which list of the definition a custom search plane is in. */
+export type CustomPlaneKind = "circle" | "polyline";
+
+/** A custom search plane of the definition: its list and its index there. */
+export interface CustomPlaneRef {
+  kind: CustomPlaneKind;
+  index: number;
+}
+
+/** Why a trial surface has no factor of safety (SearchPlane.rejection). */
+export type SurfaceRejection =
+  | "no-ground-crossing"
+  | "not-through-soil"
+  | "outside-model"
+  | "no-slices"
+  | "too-shallow"
+  | "below-min-area"
+  | "impenetrable-material"
+  | "no-driving-moment"
+  | "drawdown"
+  | "not-converged";
+
+/**
+ * The result of one custom search plane of the definition: its surface
+ * with its factor of safety (also in `allSurfaces`), or why it has none.
+ */
+export interface CustomSurfaceResult {
+  kind: CustomPlaneKind;
+  index: number;
+  /** The analysed surface, when it has a factor of safety. */
+  surface?: SlipSurfaceResult;
+  /** Why the plane has no factor of safety, when it has none. */
+  reason?: string;
 }
 
 /** Slice data for detailed output. */
@@ -571,6 +612,13 @@ export interface AnalysisResult {
   sgi3dError?: string;
   /** Why the finite element analysis failed, when it was enabled and did not complete. */
   femError?: string;
+  /**
+   * The custom search planes of the definition, in its order (circles, then
+   * polylines), each with its surface and factor of safety or the reason it
+   * has none. Absent without custom search planes. Analysed in the model's
+   * own direction (with `bothDirections` too).
+   */
+  customSurfaces?: CustomSurfaceResult[];
 }
 
 /**

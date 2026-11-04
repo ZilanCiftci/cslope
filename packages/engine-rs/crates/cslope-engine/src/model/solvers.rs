@@ -26,11 +26,13 @@ use crate::model::search::{
 use crate::model::slices::{get_slices, SliceScratch, WATER_LINE_GAP};
 use crate::model::slope::{Pt, SearchPlane, Slope};
 use crate::model::steps::{run_steps_with_hint, BoxedSteps, PlaneSteps, Step};
-use crate::types::analysis::{AnalysisMethod, IntersliceFunctionType, SearchMethod};
+use crate::types::analysis::{
+    AnalysisMethod, IntersliceFunctionType, SearchMethod, SurfaceRejection,
+};
 use crate::types::geometry::Slice;
 use crate::types::hoek_brown::instantaneous_at_normal_stress;
 use crate::types::strength::{design_strength, shear_normal_at, ResolvedStrength};
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 use std::f64::consts::PI;
 use std::sync::atomic::{AtomicU8, Ordering};
 
@@ -1535,14 +1537,20 @@ impl PlaneSteps for AnalyseSlopeSteps {
                         slope.search_method() == SearchMethod::Block && !slope.custom_planes_only();
                     // Combine search + individual planes
                     let search: &[SearchPlane] = if self.block { &[] } else { slope.search() };
-                    let mut seen: HashSet<String> = HashSet::new();
+                    let mut seen: HashMap<String, usize> = HashMap::new();
                     let mut all: Vec<SearchPlane> = Vec::new();
                     for p in search.iter().chain(slope.individual_planes()) {
                         let plane = for_evaluation(p);
                         let key = plane_key(&plane);
-                        if !seen.insert(key) {
+                        if let Some(&i) = seen.get(&key) {
+                            // A custom plane the search also generated: the
+                            // one kept stands for it in the result.
+                            if all[i].custom_plane.is_none() {
+                                all[i].custom_plane = plane.custom_plane;
+                            }
                             continue;
                         }
+                        seen.insert(key, all.len());
                         all.push(plane);
                     }
                     self.batch = all;
@@ -1785,6 +1793,7 @@ pub fn evaluate_plane(
 ) -> Result<()> {
     plane.below_min_size = None;
     plane.composite = None;
+    plane.rejection = None;
     // A circle given directly (add_single_circular_plane) that leaves the
     // model where it is no composite surface.
     if plane.unchecked == Some(true)
@@ -1792,6 +1801,7 @@ pub fn evaluate_plane(
         && !is_plane_within_external_boundary(slope, plane, false)
     {
         plane.fos = None;
+        plane.rejection = Some(SurfaceRejection::OutsideModel);
         return Ok(());
     }
     let mut slices = match get_slices(
@@ -1810,6 +1820,7 @@ pub fn evaluate_plane(
         // raise the minimum).
         Err(e) if is_surface_geometry_error(&e) => {
             plane.fos = None;
+            plane.rejection = Some(SurfaceRejection::NoSlices);
             return Ok(());
         }
         Err(e) => return Err(e),
@@ -1818,6 +1829,7 @@ pub fn evaluate_plane(
     // without slices (e.g. too shallow for the tension crack) is invalid.
     if slices.is_empty() {
         plane.fos = None;
+        plane.rejection = Some(SurfaceRejection::NoSlices);
         return Ok(());
     }
     if slices[0].x_left > plane.lc[0] + 1e-9 {
@@ -1866,6 +1878,7 @@ pub fn evaluate_plane(
         if max_depth < min_depth {
             plane.fos = None;
             plane.converged = Some(true);
+            plane.rejection = Some(SurfaceRejection::TooShallow);
             if max_depth >= degenerate_depth {
                 plane.below_min_size = count_as_small(&slices);
             }
@@ -1885,6 +1898,7 @@ pub fn evaluate_plane(
         if area < min_area {
             plane.fos = None;
             plane.converged = Some(true);
+            plane.rejection = Some(SurfaceRejection::BelowMinArea);
             plane.below_min_size = count_as_small(&slices);
             plane.slices = Some(slices);
             return Ok(());
@@ -1897,6 +1911,7 @@ pub fn evaluate_plane(
         plane.fos = None;
         plane.slices = Some(slices);
         plane.converged = Some(true);
+        plane.rejection = Some(SurfaceRejection::ImpenetrableMaterial);
         return Ok(());
     }
 
@@ -1908,6 +1923,7 @@ pub fn evaluate_plane(
         plane.fos = None;
         plane.slices = Some(slices);
         plane.converged = Some(true);
+        plane.rejection = Some(SurfaceRejection::NoDrivingMoment);
         return Ok(());
     }
 
@@ -1925,6 +1941,7 @@ pub fn evaluate_plane(
     {
         plane.fos = None;
         plane.slices = Some(slices);
+        plane.rejection = Some(SurfaceRejection::Drawdown);
         return Ok(());
     }
 
@@ -2035,6 +2052,9 @@ pub fn evaluate_plane(
     plane.fos = fos;
     plane.slices = Some(slices);
     plane.converged = Some(converged);
+    if fos.is_none() {
+        plane.rejection = Some(SurfaceRejection::NotConverged);
+    }
     Ok(())
 }
 

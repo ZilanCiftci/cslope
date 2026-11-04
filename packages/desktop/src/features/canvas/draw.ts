@@ -54,6 +54,9 @@ import {
   CRACK_WATER_OPACITY,
   CRACK_WATER_WIDTH_PX,
   CRITICAL_SURFACE_COLOR,
+  CUSTOM_SURFACE_COLOR,
+  CUSTOM_SURFACE_DASH_PX,
+  CUSTOM_SURFACE_LINE_WIDTH_PX,
   ENTRY_DOT_COLOR,
   ENTRY_EXIT_DOT_RADIUS_PX,
   EXIT_DOT_COLOR,
@@ -127,6 +130,7 @@ import {
 } from "../../utils/slip-mass";
 import {
   boxAround,
+  boxesOverlap,
   clampBox,
   distanceToSegment,
   growBox,
@@ -630,6 +634,7 @@ export function drawCanvas(
   const PAPER_BORDER_COLOR = cssVar("--color-canvas-paper-border");
   const SELECTED_BOUNDARY_COLOR = "#f59e0b";
   const MARKER_BASE = cssVar("--color-canvas-marker") || MARKER_COLOR.hex;
+  const CUSTOM_SURFACE = cssVar("--color-canvas-custom-surface") || CUSTOM_SURFACE_COLOR.hex;
   // Point labels stay off the rulers (left and bottom) and the canvas edge.
   const labelBounds: Box = { left: RULER_SIZE_PX + 2, top: 2, right: w - 2, bottom: h - RULER_SIZE_PX - 2 };
   const labelColors = { text: STROKE_ACTIVE, plate: BG_COLOR };
@@ -2072,6 +2077,53 @@ export function drawCanvas(
       }
     }
 
+    // The custom search planes' surfaces, on request (whatever the
+    // surface display): dashed in their own colour on a halo of the paper,
+    // as the edit view draws the planes; the critical surface is drawn as
+    // such below, not again here. Their FOS labels come after the
+    // critical surface's, which they keep clear of.
+    const customSurfaces =
+      rvs.showCustomSurfaces === true
+        ? (result.customSurfaces ?? []).flatMap((c) =>
+            c.surface && !(result.criticalSurface && sameSurface(c.surface, result.criticalSurface)) ? [c.surface] : [],
+          )
+        : [];
+    // A FOS label's box: the text above its underline, as drawn below.
+    const fosLabelBox = (labelX: number, cy: number, tw: number): Box => ({
+      left: labelX - 1 * paperZoom,
+      top: cy - 11 * paperZoom,
+      right: labelX + tw + 1 * paperZoom,
+      bottom: cy + 3 * paperZoom,
+    });
+    let criticalLabelBox: Box | null = null;
+    if (customSurfaces.length > 0) {
+      ctx.save();
+      for (const surf of customSurfaces) {
+        const arcPts = getArcPoints(surf);
+        const path = () => {
+          ctx.beginPath();
+          arcPts.forEach(([x, y], i) => {
+            const [px, py] = worldToCanvas(x, y, w, h);
+            if (i === 0) ctx.moveTo(px, py);
+            else ctx.lineTo(px, py);
+          });
+        };
+        ctx.setLineDash([]);
+        ctx.strokeStyle = PAPER_FILL_COLOR || BG_COLOR;
+        ctx.globalAlpha = 0.55;
+        ctx.lineWidth = 4 * paperZoom;
+        path();
+        ctx.stroke();
+        ctx.strokeStyle = CUSTOM_SURFACE;
+        ctx.globalAlpha = 1;
+        ctx.lineWidth = CUSTOM_SURFACE_LINE_WIDTH_PX * paperZoom;
+        ctx.setLineDash(CUSTOM_SURFACE_DASH_PX.map((d) => d * paperZoom));
+        path();
+        ctx.stroke();
+      }
+      ctx.restore();
+    }
+
     // Critical surface
     if (result.criticalSurface) {
       const cs = result.criticalSurface;
@@ -2328,6 +2380,7 @@ export function drawCanvas(
         ctx.font = `bold ${12 * paperZoom}px sans-serif`;
         const tw = ctx.measureText(fosText).width;
         const labelX = ccx2 + 10 * paperZoom;
+        criticalLabelBox = fosLabelBox(labelX, ccy2, tw);
 
         // Text
         ctx.fillStyle = CRITICAL_SURFACE_COLOR.hex;
@@ -2343,6 +2396,41 @@ export function drawCanvas(
         ctx.lineTo(labelX + tw + 1 * paperZoom, ccy2 + 2 * paperZoom);
         ctx.stroke();
       }
+    }
+
+    // The custom surfaces' FOS labels, like the critical one's, in their
+    // colour: each moved down from its anchor until it is clear of the
+    // critical label and the ones placed before it.
+    if (customSurfaces.length > 0 && rvs.showFosLabel) {
+      const placed: Box[] = criticalLabelBox ? [criticalLabelBox] : [];
+      ctx.save();
+      ctx.font = `bold ${12 * paperZoom}px sans-serif`;
+      ctx.textAlign = "left";
+      ctx.textBaseline = "middle";
+      ctx.setLineDash([]);
+      for (const surf of customSurfaces) {
+        const [ax, ay] = fosLabelAnchor(surf);
+        const [lx, ly] = worldToCanvas(ax, ay, w, h);
+        const fosText = surf.fos.toFixed(3);
+        const tw = ctx.measureText(fosText).width;
+        const labelX = lx + 10 * paperZoom;
+        let cy = ly;
+        let box = fosLabelBox(labelX, cy, tw);
+        for (let n = 0; n < 20 && placed.some((b) => boxesOverlap(box, b, 0)); n++) {
+          cy += box.bottom - box.top + 2 * paperZoom;
+          box = fosLabelBox(labelX, cy, tw);
+        }
+        placed.push(box);
+        ctx.fillStyle = CUSTOM_SURFACE;
+        ctx.fillText(fosText, labelX, cy - 4 * paperZoom);
+        ctx.strokeStyle = CUSTOM_SURFACE;
+        ctx.lineWidth = 1.5 * paperZoom;
+        ctx.beginPath();
+        ctx.moveTo(labelX - 1 * paperZoom, cy + 2 * paperZoom);
+        ctx.lineTo(labelX + tw + 1 * paperZoom, cy + 2 * paperZoom);
+        ctx.stroke();
+      }
+      ctx.restore();
     }
 
     // ── Paper frame ──────────────────────────────────────

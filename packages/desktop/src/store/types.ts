@@ -361,6 +361,11 @@ export interface ResultViewSettings {
   showFemPlasticZone?: boolean;
   /** Draw the final mesh of a finite element result (default: hidden). */
   showFemMesh?: boolean;
+  /**
+   * Draw the custom search planes' surfaces in the result, dashed, each
+   * with its own factor of safety (default: hidden).
+   */
+  showCustomSurfaces?: boolean;
   /** Grid / major-tick spacing in world units. undefined or 0 = auto. */
   gridSpacing?: number;
   /** Grid line spacing in world units. undefined or 0 = the tick spacing. */

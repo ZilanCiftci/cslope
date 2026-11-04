@@ -57,6 +57,20 @@ export const FAILURE_MASS_COLOR: DualColor = {
   hex: "#000000",
   rgb: [0, 0, 0],
 };
+/**
+ * The custom search planes' surfaces in the result (dashed, each with its
+ * own FOS label): purple, apart from the black critical surface and the
+ * red–yellow–green–blue FOS scale. The canvas takes its theme's
+ * `--color-canvas-custom-surface` and falls back to this (the PDF's).
+ */
+export const CUSTOM_SURFACE_COLOR: DualColor = {
+  hex: "#7e22ce",
+  rgb: [126, 34, 206],
+};
+/** Dash pattern of a custom surface in the result (logical px). */
+export const CUSTOM_SURFACE_DASH_PX: readonly [number, number] = [8, 5];
+/** Line width of a custom surface in the result (logical px). */
+export const CUSTOM_SURFACE_LINE_WIDTH_PX = 1.5;
 
 // ── Entry / exit marker geometry (logical px) ──────────────────
 

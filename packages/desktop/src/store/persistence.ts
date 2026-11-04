@@ -800,6 +800,7 @@ export function normalizeResultView(raw: unknown): ResultViewSettings {
     // the finite element display, where it is not the default
     ...(view.showFemPlasticZone === false ? { showFemPlasticZone: false } : {}),
     ...(view.showFemMesh === true ? { showFemMesh: true } : {}),
+    ...(view.showCustomSurfaces === true ? { showCustomSurfaces: true } : {}),
     ...(Number.isFinite(view.gridSpacing)
       ? { gridSpacing: view.gridSpacing }
       : {}),
