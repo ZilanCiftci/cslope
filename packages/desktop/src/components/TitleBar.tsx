@@ -4,8 +4,7 @@ import { useAppStore, performUndo, performRedo } from "../store/app-store";
 import { isElectron } from "../utils/is-electron";
 import { useWindowTitle } from "./useWindowTitle";
 import { useProjectActions } from "../features/project/useProjectActions";
-import { NewIcon, OpenIcon, SaveIcon } from "./icons/FileActionIcons";
-import { UndoIcon, RedoIcon } from "./icons/EditIcons";
+import { FilePlus, FolderOpen, Redo2, Save, Undo2 } from "lucide-react";
 import { SunIcon, MoonIcon } from "./icons/ThemeIcons";
 import {
   MinimizeIcon,
@@ -78,31 +77,25 @@ export function TitleBar({ theme, onToggleTheme, activeModelName }: Props) {
           className="w-5 h-5 mr-1"
           draggable={false}
         />
-        <div
-          className="flex items-center gap-1 px-1.5 py-0.5 rounded"
-          style={{
-            background: "var(--color-vsc-tab-inactive)",
-            border: "1px solid var(--color-vsc-border)",
-          }}
-        >
+        <div className="flex items-center gap-0.5">
           <FavButton title="New project" onClick={handleNew}>
-            <NewIcon size={18} />
+            <FilePlus {...QUICK_ICON} />
           </FavButton>
           <FavButton title="Open project" onClick={handleOpen}>
-            <OpenIcon size={18} />
+            <FolderOpen {...QUICK_ICON} />
           </FavButton>
           <FavButton title="Save" onClick={handleSave}>
-            <SaveIcon size={18} />
+            <Save {...QUICK_ICON} />
           </FavButton>
           <div
-            className="mx-1 h-4"
+            className="mx-1 h-3.5"
             style={{ borderLeft: "1px solid var(--color-vsc-border)" }}
           />
           <FavButton title="Undo" onClick={handleUndo} disabled={!canUndo}>
-            <UndoIcon />
+            <Undo2 {...QUICK_ICON} />
           </FavButton>
           <FavButton title="Redo" onClick={handleRedo} disabled={!canRedo}>
-            <RedoIcon />
+            <Redo2 {...QUICK_ICON} />
           </FavButton>
         </div>
         <input
@@ -177,6 +170,9 @@ export function TitleBar({ theme, onToggleTheme, activeModelName }: Props) {
 
 // ── Quick action UI ──
 
+/** The quick-access icons: monochrome, as the ribbon's small buttons. */
+const QUICK_ICON = { size: 16, strokeWidth: 1.5 } as const;
+
 function FavButton({
   title,
   onClick,
@@ -193,11 +189,9 @@ function FavButton({
       title={title}
       aria-label={title}
       onClick={disabled ? undefined : onClick}
-      className="w-7 h-7 rounded flex items-center justify-center"
+      className={`w-[26px] h-[26px] rounded-xs flex items-center justify-center ${disabled ? "" : "hover:bg-[var(--color-vsc-list-hover)]"}`}
       style={{
-        color: disabled
-          ? "var(--color-vsc-text-muted)"
-          : "var(--color-vsc-text-bright)",
+        color: "var(--color-vsc-text)",
         opacity: disabled ? 0.4 : 1,
       }}
     >

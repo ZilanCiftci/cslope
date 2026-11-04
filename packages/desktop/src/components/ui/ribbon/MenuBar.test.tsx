@@ -238,3 +238,33 @@ describe("Dev ribbon (development builds)", () => {
     expect(bridge.callNames().filter((n) => n === "menuNew")).toHaveLength(2);
   });
 });
+
+describe("Compact ribbon", () => {
+  it("shows the primary commands large and the others small", async () => {
+    render(<MenuBar />);
+    expect(screen.getByTitle("New (Ctrl+N)")).toHaveAttribute("data-size", "large");
+    expect(screen.getByTitle("Save (Ctrl+S)")).toHaveAttribute("data-size", "large");
+    expect(screen.getByTitle("Import")).toHaveAttribute("data-size", "small");
+    expect(screen.getByTitle("Save As (Ctrl+Shift+S)")).toHaveAttribute("data-size", "small");
+    expect(screen.getByTitle("Exit")).toHaveAttribute("data-size", "small");
+    await userEvent.click(tab("Model"));
+    expect(screen.getByTitle("Materials")).toHaveAttribute("data-size", "large");
+    expect(screen.getByTitle("Assign")).toHaveAttribute("data-size", "small");
+    await userEvent.click(tab("Results"));
+    expect(screen.getByRole("menuitem", { name: "Results Plot" })).toHaveAttribute("data-size", "large");
+    expect(screen.getByRole("menuitem", { name: "Export PDF" })).toHaveAttribute("data-size", "large");
+    expect(screen.getByTitle("Settings")).toHaveAttribute("data-size", "small");
+  });
+
+  it("marks a pressed toggle with aria-pressed", async () => {
+    render(<MenuBar />);
+    await userEvent.click(tab("Results"));
+    const slices = screen.getByTitle("Show slices");
+    const before = store().resultViewSettings.showSlices;
+    expect(slices).toHaveAttribute("aria-pressed", String(before));
+    await userEvent.click(slices);
+    expect(slices).toHaveAttribute("aria-pressed", String(!before));
+    // A plain command is not a toggle.
+    expect(screen.getByTitle("Add Text")).not.toHaveAttribute("aria-pressed");
+  });
+});

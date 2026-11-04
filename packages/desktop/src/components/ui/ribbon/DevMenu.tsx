@@ -12,14 +12,9 @@ async function confirmReplace(question: string): Promise<boolean> {
   return window.confirm(question);
 }
 import { isElectron } from "../../../utils/is-electron";
-import { RibbonGroup, RibbonButton, RibbonSep } from "./RibbonParts";
-import {
-  ReloadIcon,
-  DevToolsIcon,
-  LogIcon,
-  ResetIcon,
-} from "../../icons/DevIcons";
-import { BenchmarkIcon } from "../../icons/HelpIcons";
+import { Mountain, RefreshCw, RotateCcw, ScrollText, SquareCode } from "lucide-react";
+import { RibbonGroup, RibbonSep, RibbonSmallButton, RibbonStack } from "./RibbonParts";
+import { SMALL_ICON } from "./icon-props";
 
 interface Props {
   isOpen: boolean;
@@ -88,47 +83,53 @@ export function DevMenu({ isOpen, onActivate, panelHost }: Props) {
       {isOpen &&
         panelHost &&
         createPortal(
-          <div className="h-full flex items-center gap-0" role="menu">
+          <div className="h-full flex items-stretch gap-0" role="menu">
             <RibbonGroup label="Window">
-              <RibbonButton
-                icon={<ReloadIcon />}
-                label="Reload"
-                shortcut="Ctrl+R"
-                onClick={handleReloadWindow}
-              />
-              {isElectron && (
-                <RibbonButton
-                  icon={<DevToolsIcon />}
-                  label="DevTools"
-                  shortcut="F12"
-                  onClick={handleToggleDevTools}
+              <RibbonStack>
+                <RibbonSmallButton
+                  icon={<RefreshCw {...SMALL_ICON} />}
+                  label="Reload"
+                  shortcut="Ctrl+R"
+                  onClick={handleReloadWindow}
                 />
-              )}
+                {isElectron && (
+                  <RibbonSmallButton
+                    icon={<SquareCode {...SMALL_ICON} />}
+                    label="DevTools"
+                    shortcut="F12"
+                    onClick={handleToggleDevTools}
+                  />
+                )}
+              </RibbonStack>
             </RibbonGroup>
             <RibbonSep />
             {HAS_LOCAL_LOVO_MODELS && (
               <>
                 <RibbonGroup label="Models">
-                  <RibbonButton
-                    icon={<BenchmarkIcon />}
-                    label="Lovö"
-                    onClick={handleLoadLovo}
-                  />
+                  <RibbonStack>
+                    <RibbonSmallButton
+                      icon={<Mountain {...SMALL_ICON} />}
+                      label="Lovö"
+                      onClick={handleLoadLovo}
+                    />
+                  </RibbonStack>
                 </RibbonGroup>
                 <RibbonSep />
               </>
             )}
             <RibbonGroup label="Store">
-              <RibbonButton
-                icon={<LogIcon />}
-                label="Log"
-                onClick={handleLogState}
-              />
-              <RibbonButton
-                icon={<ResetIcon />}
-                label="Reset"
-                onClick={handleResetStore}
-              />
+              <RibbonStack>
+                <RibbonSmallButton
+                  icon={<ScrollText {...SMALL_ICON} />}
+                  label="Log"
+                  onClick={handleLogState}
+                />
+                <RibbonSmallButton
+                  icon={<RotateCcw {...SMALL_ICON} />}
+                  label="Reset"
+                  onClick={handleResetStore}
+                />
+              </RibbonStack>
             </RibbonGroup>
           </div>,
           panelHost,
