@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { parseProjectFile } from "./persistence";
+import { DEFAULT_FEM_SETTINGS } from "@cslope/engine";
+import { LEGACY_FEM_FLOW_RULE, parseProjectFile } from "./persistence";
 
 const model = (extra: Record<string, unknown>) =>
   JSON.stringify({
@@ -38,11 +39,22 @@ describe("persistence of the finite element analysis", () => {
     );
     const f = parsed.models[0].options.fem!;
     expect(f.enabled).toBe(true);
-    expect(f.flowRule).toBe("non-associated"); // the default
+    expect(f.flowRule).toBe("non-associated"); // as before Davis B became the default of new projects
     expect(f.youngsModulus).toBe(5e4);
     expect(f.poissonsRatio).toBe(0.3);
     expect(f.refinementLevels).toBe(2);
     expect(f.elementSize).toBeNull();
+  });
+
+  it("reads a file without a flow rule as before (non-associated), one with a flow rule as saved", () => {
+    expect(DEFAULT_FEM_SETTINGS.flowRule).toBe("davis-b"); // new projects
+    expect(LEGACY_FEM_FLOW_RULE).toBe("non-associated");
+    const without = parseProjectFile(model({ options: { method: "Bishop", fem: { enabled: true, youngsModulus: 5e4 } } }));
+    expect(without.models[0].options.fem!.flowRule).toBe("non-associated");
+    for (const flowRule of ["davis-b", "associated", "non-associated"] as const) {
+      const saved = parseProjectFile(model({ options: { method: "Bishop", fem: { ...DEFAULT_FEM_SETTINGS, enabled: true, flowRule } } }));
+      expect(saved.models[0].options.fem!.flowRule).toBe(flowRule);
+    }
   });
 
   it("keeps a valid finite element result and drops a damaged one", () => {

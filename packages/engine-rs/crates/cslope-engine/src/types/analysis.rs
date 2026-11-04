@@ -719,9 +719,11 @@ pub struct FemAnalysisSettings {
 pub fn default_fem_settings() -> FemAnalysisSettings {
     FemAnalysisSettings {
         enabled: false,
-        // The factor of safety from the limit analysis bounds, the strength
-        // reduction with ψ (non-associated) for comparison with other programs.
-        flow_rule: FlowRule::NonAssociated,
+        // The factor of safety from the limit analysis bounds; the strength
+        // reduction with Davis B (the option recommended in the app: fast,
+        // stable and on the safe side). Files without a flow rule read as
+        // non-associated (the app's persistence), as before.
+        flow_rule: FlowRule::DavisB,
         youngs_modulus: 1e5,
         poissons_ratio: 0.3,
         dilation_angle: 0.0,

@@ -457,9 +457,11 @@ export interface FemAnalysisSettings {
 
 export const DEFAULT_FEM_SETTINGS: FemAnalysisSettings = {
   enabled: false,
-  // The factor of safety from the limit analysis bounds, the strength
-  // reduction with ψ (non-associated) for comparison with other programs.
-  flowRule: "non-associated",
+  // The factor of safety from the limit analysis bounds; the strength
+  // reduction with Davis B (the option recommended in the app: fast, stable
+  // and on the safe side). Files without a flow rule read as non-associated
+  // (the app's persistence), as before.
+  flowRule: "davis-b",
   youngsModulus: 1e5,
   poissonsRatio: 0.3,
   dilationAngle: 0,
