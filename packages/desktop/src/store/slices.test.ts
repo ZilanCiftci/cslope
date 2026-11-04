@@ -1116,8 +1116,8 @@ describe("store slices", () => {
     useAppStore.getState().addAnnotation("color-bar");
     useAppStore.getState().addAnnotation("material-table");
     const annos = useAppStore.getState().resultViewSettings.annotations;
-    const bar = annos.findLast((a) => a.type === "color-bar")!;
-    const table = annos.findLast((a) => a.type === "material-table")!;
+    const bar = [...annos].reverse().find((a) => a.type === "color-bar")!;
+    const table = [...annos].reverse().find((a) => a.type === "material-table")!;
     for (const a of [bar, table]) {
       expect(a.anchor).toBe("top-right");
       // Clear of the frame line (PLOT_MARGINS from the paper edge), but near it.

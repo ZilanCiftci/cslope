@@ -63,14 +63,14 @@ describe("OptionsDialogApp", () => {
     expect(bridge.callNames()).toContain("requestAnalysisState");
     hydrate({ options: { method: "Janbu", slices: 40, tolerance: 0.005 } });
     expect(screen.getByLabelText("Analysis method")).toHaveValue("Janbu");
-    expect(screen.getByLabelText("Number of slices")).toHaveValue(40);
-    expect(screen.getByLabelText("Tolerance")).toHaveValue(0.005);
+    expect(screen.getByLabelText("Number of slices")).toHaveValue("40");
+    expect(screen.getByLabelText("Tolerance")).toHaveValue("0.005");
     expect(bridge.sentOf("sendAnalysisChanged")).toEqual([]);
     bridge.emit("onAnalysisChanged", {
       ...lastSentOrState(),
       options: { ...opts(), slices: 60 },
     });
-    expect(screen.getByLabelText("Number of slices")).toHaveValue(60);
+    expect(screen.getByLabelText("Number of slices")).toHaveValue("60");
   });
 
   it("shows the model's rapid drawdown and sends a change of it back", async () => {

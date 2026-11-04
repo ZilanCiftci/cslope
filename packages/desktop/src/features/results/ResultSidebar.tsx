@@ -3,6 +3,7 @@
  */
 
 import { DraftNumberInput } from "../../components/ui/DraftNumberInput";
+import { parseDecimalText } from "../../utils/decimal";
 import { ExperimentalBadge } from "../../components/ui/ExperimentalBadge";
 import { useCallback, useMemo, useRef, useState } from "react";
 import { PAPER_DIMENSIONS, useAppStore } from "../../store/app-store";
@@ -227,7 +228,7 @@ export function ResultSidebar() {
       return;
     }
 
-    const parsed = Number(raw);
+    const parsed = parseDecimalText(raw);
     if (!Number.isFinite(parsed)) {
       setExtentDraft((prev) => ({
         ...prev,
@@ -745,8 +746,8 @@ export function ResultSidebar() {
                   Left X
                 </label>
                 <input
-                  type="number"
-                  step="1"
+                  type="text"
+                  inputMode="decimal"
                   value={extentInputValue("bl_x")}
                   onFocus={() => handleExtentFocus("bl_x")}
                   onChange={(e) => handleExtentChange("bl_x", e.target.value)}
@@ -772,8 +773,8 @@ export function ResultSidebar() {
                   Right X
                 </label>
                 <input
-                  type="number"
-                  step="1"
+                  type="text"
+                  inputMode="decimal"
                   value={extentInputValue("tr_x")}
                   onFocus={() => handleExtentFocus("tr_x")}
                   onChange={(e) => handleExtentChange("tr_x", e.target.value)}
@@ -806,8 +807,8 @@ export function ResultSidebar() {
                   Bottom Y
                 </label>
                 <input
-                  type="number"
-                  step="1"
+                  type="text"
+                  inputMode="decimal"
                   value={extentInputValue("bl_y")}
                   onFocus={() => handleExtentFocus("bl_y")}
                   onChange={(e) => handleExtentChange("bl_y", e.target.value)}
@@ -833,8 +834,8 @@ export function ResultSidebar() {
                   Top Y
                 </label>
                 <input
-                  type="number"
-                  step="1"
+                  type="text"
+                  inputMode="decimal"
                   value={extentInputValue("tr_y")}
                   onFocus={() => handleExtentFocus("tr_y")}
                   onChange={(e) => handleExtentChange("tr_y", e.target.value)}
@@ -894,23 +895,16 @@ export function ResultSidebar() {
                 >
                   Minor ticks
                 </label>
-                <input
-                  type="number"
+                <DraftNumberInput
                   min={0}
                   max={20}
                   step={1}
                   value={rvs.minorTicks ?? 0}
-                  onChange={(e) => {
-                    const raw = e.target.value;
-                    if (raw === "") {
-                      setRvs({ minorTicks: undefined });
-                      return;
-                    }
-                    const parsed = Number(raw);
-                    if (!Number.isFinite(parsed)) return;
+                  onValueChange={(parsed) => {
                     const value = Math.max(0, Math.min(20, Math.round(parsed)));
                     setRvs({ minorTicks: value || undefined });
                   }}
+                  onClear={() => setRvs({ minorTicks: undefined })}
                   className="w-full tabular-nums"
                 />
               </div>
@@ -1039,17 +1033,13 @@ export function ResultSidebar() {
                 >
                   X (%)
                 </label>
-                <input
-                  type="number"
+                <DraftNumberInput
                   step="1"
                   value={
-                    xValue !== undefined ? Math.round(xValue * 1000) / 10 : ""
+                    xValue !== undefined ? Math.round(xValue * 1000) / 10 : undefined
                   }
                   placeholder={xValue === undefined ? "Mixed" : ""}
-                  onChange={(e) => {
-                    const v = parseFloat(e.target.value);
-                    if (!Number.isNaN(v)) applyToAll({ x: v / 100 });
-                  }}
+                  onValueChange={(v) => applyToAll({ x: v / 100 })}
                   className="w-full tabular-nums"
                 />
               </div>
@@ -1060,17 +1050,13 @@ export function ResultSidebar() {
                 >
                   Y (%)
                 </label>
-                <input
-                  type="number"
+                <DraftNumberInput
                   step="1"
                   value={
-                    yValue !== undefined ? Math.round(yValue * 1000) / 10 : ""
+                    yValue !== undefined ? Math.round(yValue * 1000) / 10 : undefined
                   }
                   placeholder={yValue === undefined ? "Mixed" : ""}
-                  onChange={(e) => {
-                    const v = parseFloat(e.target.value);
-                    if (!Number.isNaN(v)) applyToAll({ y: v / 100 });
-                  }}
+                  onValueChange={(v) => applyToAll({ y: v / 100 })}
                   className="w-full tabular-nums"
                 />
               </div>
@@ -1360,20 +1346,17 @@ export function ResultSidebar() {
                 >
                   Width (%)
                 </label>
-                <input
-                  type="number"
+                <DraftNumberInput
                   min={5}
                   max={95}
                   step="1"
                   value={
                     plotWidthValue !== undefined
                       ? Math.round(plotWidthValue * 1000) / 10
-                      : ""
+                      : undefined
                   }
                   placeholder={plotWidthValue === undefined ? "Mixed" : ""}
-                  onChange={(e) => {
-                    const v = Number(e.target.value);
-                    if (!Number.isFinite(v)) return;
+                  onValueChange={(v) => {
                     const clamped = Math.max(5, Math.min(95, v));
                     applyToSelectedPlots({ width: clamped / 100 });
                   }}
@@ -1387,20 +1370,17 @@ export function ResultSidebar() {
                 >
                   Height (%)
                 </label>
-                <input
-                  type="number"
+                <DraftNumberInput
                   min={5}
                   max={95}
                   step="1"
                   value={
                     plotHeightValue !== undefined
                       ? Math.round(plotHeightValue * 1000) / 10
-                      : ""
+                      : undefined
                   }
                   placeholder={plotHeightValue === undefined ? "Mixed" : ""}
-                  onChange={(e) => {
-                    const v = Number(e.target.value);
-                    if (!Number.isFinite(v)) return;
+                  onValueChange={(v) => {
                     const clamped = Math.max(5, Math.min(95, v));
                     applyToSelectedPlots({ height: clamped / 100 });
                   }}
