@@ -57,12 +57,11 @@ jobs:
           Stop-Process -Id $p.Id -Force
           Write-Host "The packaged app started and ran for 20 s."
 
-          # 2. One byte changed inside the archive (in its JavaScript, not
-          #    its header): the app must not start.
-          $bytes = [System.IO.File]::ReadAllBytes($asar)
-          $i = [int]($bytes.Length * 0.75)
-          $bytes[$i] = $bytes[$i] -bxor 0xFF
-          [System.IO.File]::WriteAllBytes($asar, $bytes)
+          # 2. One byte changed in the main process script inside the
+          #    archive (Electron checks a file's blocks as it reads them, so
+          #    the change must be in a file read at startup): the app must
+          #    not start.
+          bun scripts/tamper-asar.ts $asar dist-electron/main.js
           $p = Start-Process -FilePath $exe -PassThru
           $exited = $p.WaitForExit(30000)
           if (-not $exited) {
