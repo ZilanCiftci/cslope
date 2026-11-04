@@ -2,7 +2,7 @@
 
 All notable changes to cSlope. Versions follow [semantic versioning](https://semver.org).
 
-## [0.1.0-beta.2] - Unreleased
+## [0.1.0-beta.2] - 2026-11-04
 
 Second beta of 0.1.0. It has the contents listed under 0.1.0 in CHANGELOG.md; since beta 1:
 
