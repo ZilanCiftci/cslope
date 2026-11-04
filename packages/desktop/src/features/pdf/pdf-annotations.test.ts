@@ -65,7 +65,8 @@ function record(anno: Annotation, result: AnalysisResult = RESULT) {
 describe("PDF annotations match the canvas proportions", () => {
   it("draws the material table at the canvas size (364 units wide)", () => {
     const { rects } = record({ id: "t", type: "material-table", x: 0.1, y: 0.1 } as Annotation);
-    const outline = rects.find((r) => r.style === "FD")!;
+    // The outline is stroked last, after the fills and the rules.
+    const outline = rects.filter((r) => r.style === "S").at(-1)!;
     expect(outline.w).toBeCloseTo(364 * SCALE, 1); // ≈ 127 mm, was ≈ 35 mm
   });
 

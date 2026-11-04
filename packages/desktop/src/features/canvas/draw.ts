@@ -616,7 +616,6 @@ export function drawCanvas(
   const BG_COLOR = cssVar("--color-canvas-bg");
   const GRID_COLOR = "rgba(0, 0, 0, 0.1)";
   const GRID_TEXT_COLOR = cssVar("--color-canvas-grid-text");
-  const AXIS_COLOR = cssVar("--color-canvas-axis");
   const POLY_STROKE = cssVar("--color-canvas-poly-stroke");
   const STROKE_ACTIVE = cssVar("--color-canvas-stroke-active");
   const STROKE_INACTIVE = cssVar("--color-canvas-stroke-inactive");
@@ -847,19 +846,7 @@ export function drawCanvas(
       ctx.stroke();
     }
 
-    // Axes (origin lines)
-    ctx.strokeStyle = AXIS_COLOR;
-    ctx.lineWidth = 1 * paperZoom;
-    const [ax0] = worldToCanvas(0, 0, w, h);
-    const [, ay0] = worldToCanvas(0, 0, w, h);
-    ctx.beginPath();
-    ctx.moveTo(ax0, gridCanvasBounds.yMin);
-    ctx.lineTo(ax0, gridCanvasBounds.yMax);
-    ctx.stroke();
-    ctx.beginPath();
-    ctx.moveTo(gridCanvasBounds.xMin, ay0);
-    ctx.lineTo(gridCanvasBounds.xMax, ay0);
-    ctx.stroke();
+    // (No heavier line at x = 0 and y = 0: every grid line is drawn alike.)
   };
 
   // ── Material region fills ─────────────────────────────

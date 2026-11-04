@@ -176,16 +176,7 @@ export function drawGrid(
     }
   }
 
-  pdf.setDrawColor(180, 180, 180);
-  pdf.setLineWidth(0.3);
-  const [axX] = tf.worldToPdf(0, 0);
-  const [, axY] = tf.worldToPdf(0, 0);
-  if (axX >= clip.x && axX <= clip.x + clip.w) {
-    pdf.line(axX, clip.y, axX, clip.y + clip.h);
-  }
-  if (axY >= clip.y && axY <= clip.y + clip.h) {
-    pdf.line(clip.x, axY, clip.x + clip.w, axY);
-  }
+  // (No heavier line at x = 0 and y = 0: every grid line is drawn alike.)
 }
 
 export function drawRulerFrame(
@@ -1642,17 +1633,14 @@ function drawTablePdf(
     totalH,
   } = layoutMaterialTablePdf(pdf, annotation, materials, piezometricLine, scale);
 
+  // Fills and text first, every rule last: a row's fill drawn after the
+  // rule above it covered half of that rule, so the rules alternated in
+  // width in the PDF.
   pdf.setFillColor(255, 255, 255);
-  pdf.setDrawColor(0, 0, 0);
-  pdf.setLineWidth(0.35);
-  pdf.rect(x, y, totalW, totalH, "FD");
+  pdf.rect(x, y, totalW, totalH, "F");
 
   pdf.setFillColor(240, 240, 240);
   pdf.rect(x, y, totalW, headerH, "F");
-
-  pdf.setDrawColor(0, 0, 0);
-  pdf.setLineWidth(0.35);
-  pdf.line(x, y + headerH, x + totalW, y + headerH);
 
   setSansFont(pdf, "bold");
   pdf.setFontSize(headerPt);
@@ -1679,10 +1667,6 @@ function drawTablePdf(
       pdf.rect(x, ry, totalW, rowH, "F");
     }
 
-    pdf.setDrawColor(0, 0, 0);
-    pdf.setLineWidth(0.35);
-    pdf.line(x, ry + rowH, x + totalW, ry + rowH);
-
     cx = x;
     for (let c = 0; c < rows[r].length; c++) {
       if (c === 0 && materials[r]) {
@@ -1690,7 +1674,7 @@ function drawTablePdf(
         const [sr, sg, sb] = parseColor(materials[r].color);
         pdf.setFillColor(sr, sg, sb);
         const swatchY = ry + (rowH - swatchW) / 2;
-        pdf.rect(swatchX, swatchY, swatchW, swatchW, "FD");
+        pdf.rect(swatchX, swatchY, swatchW, swatchW, "F");
         pdf.setDrawColor(102, 102, 102);
         pdf.setLineWidth(0.1);
         pdf.rect(swatchX, swatchY, swatchW, swatchW, "S");
@@ -1707,11 +1691,17 @@ function drawTablePdf(
     }
   }
 
-  let separatorX = x;
   pdf.setDrawColor(0, 0, 0);
   pdf.setLineWidth(0.35);
+  pdf.line(x, y + headerH, x + totalW, y + headerH);
+  for (let r = 0; r < rows.length - 1; r++) {
+    const rule = y + headerH + (r + 1) * rowH;
+    pdf.line(x, rule, x + totalW, rule);
+  }
+  let separatorX = x;
   for (let c = 0; c < colW.length - 1; c++) {
     separatorX += colW[c];
     pdf.line(separatorX, y, separatorX, y + totalH);
   }
+  pdf.rect(x, y, totalW, totalH, "S");
 }

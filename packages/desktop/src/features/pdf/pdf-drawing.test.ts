@@ -184,7 +184,7 @@ const PIEZO_EMPTY = { enabled: false, lines: [], activeLineId: null, materialAss
 const FRAME = { x: 0, y: 0, w: 297, h: 210 };
 
 describe("drawGrid", () => {
-  it("draws grid lines at round world steps inside the clip and the axes through the origin", () => {
+  it("draws grid lines at round world steps inside the clip, the lines through the origin like the others", () => {
     const rec = recorder();
     const clip = { x: 10, y: 10, w: 200, h: 150 };
     drawGrid(rec.pdf, tf, VIEW_SCALE, clip, 5);
@@ -198,16 +198,8 @@ describe("drawGrid", () => {
       expect(x).toBeGreaterThanOrEqual(10);
       expect(x).toBeLessThanOrEqual(210);
     }
-    const axes = rec.linesIn([180, 180, 180]);
-    expect(axes).toEqual([
-      [20, 10, 20, 160],
-      [10, 150, 210, 150],
-    ]);
-  });
-
-  it("omits axes outside the clip", () => {
-    const rec = recorder();
-    drawGrid(rec.pdf, tf, VIEW_SCALE, { x: 50, y: 10, w: 100, h: 100 });
+    // x = 0 is an ordinary grid line, in the grid colour; no darker axis line.
+    expect(vertical).toContainEqual([20, 10, 20, 160]);
     expect(rec.linesIn([180, 180, 180])).toHaveLength(0);
   });
 });
@@ -956,7 +948,8 @@ describe("drawAnnotations", () => {
     // Second row is shaded.
     expect(fills).toContain("248,248,248");
     // Right edge of the outline at the anchor (0.9 of the frame width).
-    const outline = rec.of("rect").find((c) => c.args[4] === "FD")!.args as number[];
+    // The outline is stroked last, after the fills and the rules.
+    const outline = rec.of("rect").filter((c) => c.args[4] === "S").at(-1)!.args as number[];
     expect(outline[0] + outline[2]).toBeCloseTo(0.9 * 297, 6);
     expect(outline[1]).toBeCloseTo(0.1 * 210, 6);
     expect(rec.balanced()).toBe(true);
