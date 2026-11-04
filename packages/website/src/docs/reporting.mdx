@@ -15,7 +15,7 @@ Click an empty part of the sheet to select the paper and edit it under **Propert
 
 - **Paper size** A4 to A0 and **orientation** portrait or landscape.
 - **Plot extents**: *Left X*, *Right X*, *Bottom Y* and *Top Y*, the part of the model shown on the sheet. The scale of the drawing follows from the extents and the paper. **Use model bounds**, in the sidebar Properties of the selected paper, fits the whole model.
-- **Grid & ticks**: the tick spacing (*Auto* when empty) and the number of minor ticks.
+- **Grid & ticks**: the tick spacing (*Auto* when empty) and the number of minor ticks. Tick **Grid** in the Properties of the selected paper to draw grid lines; **Grid spacing** sets their distance (the tick spacing when empty).
 
 Zooming and panning in result mode move the sheet on the screen; they do not change the drawing.
 
@@ -25,8 +25,10 @@ Zooming and panning in result mode move the sheet on the screen; they do not cha
 
 - **Text**: a text block. Choose font, size, bold, italic and colour.
 - **Material Table**: the materials with their properties. Choose the text size and the columns.
-- **Plot**: a chart of slice data along the critical surface, placed on the sheet.
+- **Plot**: a chart of slice data along the critical surface, placed on the sheet. Both axes have round ticks with their values, and grid lines at the ticks.
 - **Color Bar**: the factor-of-safety colour scale of the trial surfaces (*All surfaces* and *Filter by FOS*). Its **Properties** set the scale, which also colours the surfaces on the sheet, so the drawing and the bar always agree. **Range**: *Automatic* runs from the critical factor of safety to a cap near it (twice the critical value, or one unit above it), so the colours are spread over the surfaces near the critical one; *Fixed* takes a minimum and a maximum of your own; *Follow the surface filter* takes the span of **Surfaces › Filter by FOS**. Surfaces beyond either end get the end colour, and the tick there reads ≥ or ≤. **Colour scheme**: red–yellow–green–blue (the default), traffic light, warm to cool, viridis, greyscale, or *Custom* with a colour for the low end, one for the high end and an optional middle colour. Without a colour bar the drawing uses the automatic range and the default scheme.
+
+A sheet has one material table and one colour bar: their buttons toggle, so a second click removes the table or the bar. The colour bar is placed at the right edge of the sheet.
 
 Drag annotations to place them; their position is stored as a percentage of the sheet, so they stay in place on any paper size. Select several with <Kbd>Ctrl</Kbd>+click and right-click to align them. The arrow keys nudge the selection, <Kbd>Delete</Kbd> removes it. The **Annotations** list in the sidebar shows all of them; the **Properties** section edits the selected one.
 
