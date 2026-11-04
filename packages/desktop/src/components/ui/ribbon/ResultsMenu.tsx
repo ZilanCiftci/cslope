@@ -567,7 +567,11 @@ export function ResultsMenu({ isOpen, onActivate, panelHost }: Props) {
                           const imported = normalizeResultView(data.resultViewSettings);
                           setRvs({
                             gridSpacing: undefined,
+                            gridLineSpacing: undefined,
                             minorTicks: undefined,
+                            showCustomSurfaces: undefined,
+                            showFemMesh: undefined,
+                            showFemPlasticZone: undefined,
                             viewLock: undefined,
                             pdfSummaryPages: undefined,
                             pdfTitleLine: undefined,

@@ -260,7 +260,7 @@ describe("ResultsMenu", () => {
     ) {
       pickers.push(this);
     });
-    act(() => store().setResultViewSettings({ gridSpacing: 7, minorTicks: 3 }));
+    act(() => store().setResultViewSettings({ gridSpacing: 7, gridLineSpacing: 2, minorTicks: 3, showCustomSurfaces: true }));
     renderMenu();
 
     const choose = (content: string) => {
@@ -276,11 +276,15 @@ describe("ResultsMenu", () => {
     const template = { ...JSON.parse(JSON.stringify(rvs())), showGrid: !rvs().showGrid };
     delete template.gridSpacing;
     delete template.minorTicks;
+    delete template.gridLineSpacing;
+    delete template.showCustomSurfaces;
     const expectedGrid = template.showGrid;
     choose(JSON.stringify({ version: 1, resultViewSettings: template }));
     await waitFor(() => expect(rvs().showGrid).toBe(expectedGrid));
     // Fields missing in the template are not kept from the current view.
     expect(rvs().gridSpacing).toBeUndefined();
+    expect(rvs().gridLineSpacing).toBeUndefined();
+    expect(rvs().showCustomSurfaces).toBeUndefined();
     expect(rvs().minorTicks).toBeUndefined();
 
     await userEvent.click(screen.getByTitle("Import template"));
