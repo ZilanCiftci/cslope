@@ -573,9 +573,9 @@ async function partA() {
     record("A3.4t", "title with an unsaved change, then after Ctrl+S", '"*test-pop20 — cSlope", then "test-pop20 — cSlope" (system title and title bar)', `${dirtyTitles.join(" | ")} → ${cleanTitles.join(" | ")}`, dirtyTitles.every((t) => t === "*test-pop20 — cSlope") && cleanTitles.every((t) => t === "test-pop20 — cSlope"));
     const calls = await takeCalls();
     const after = statSync(pop20).mtimeMs;
-    // A .cslp file is a ZIP archive: the model names are in its project.json.
-    const entries = await readZip(new Uint8Array(readFileSync(pop20)), (n) => n === "project.json");
-    const content = new TextDecoder().decode(entries.get("project.json") ?? new Uint8Array());
+    // A .cslp file is a ZIP archive: the model names are in models/<id>/model.json.
+    const entries = await readZip(new Uint8Array(readFileSync(pop20)), (n) => /^models\/[^/]+\/model\.json$/.test(n));
+    const content = [...entries.values()].map((e) => new TextDecoder().decode(e)).join("\n");
     record("A3.4", "Ctrl+S after a change", "saved to test-pop20.cslp, no dialog", `${calls.length ? `dialogs: ${calls.map((c) => c.kind).join(", ")}` : "no dialog"}; file ${after > before ? "rewritten" : "NOT rewritten"}${content.includes("(edited)") ? " with the change" : " (change not in the file)"}`, !calls.length && after > before && content.includes("(edited)"));
   });
   await step("A3.5", "alla-funktioner.json: eight models, switch and run", async () => {

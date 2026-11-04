@@ -1,0 +1,30 @@
+{
+  "activeModelId": "model-1",
+  "models": [
+    {
+      "id": "model-1",
+      "name": "Legacy v1 slope",
+      "coordinates": [[0, 0], [10, 0], [20, 5], [30, 5]],
+      "materials": [
+        {
+          "id": "mat-1",
+          "name": "Clay",
+          "color": "#d4a373",
+          "model": { "kind": "s-f-datum", "unitWeight": 18, "suRef": 20, "yRef": 5, "rate": 1.5 }
+        }
+      ],
+      "materialBoundaries": [],
+      "regionMaterials": [],
+      "piezometricLine": {
+        "enabled": true,
+        "lines": [{ "id": "piezo-1", "name": "Water", "color": "#3b82f6", "coordinates": [[0, 1], [30, 4]] }],
+        "activeLineId": "piezo-1",
+        "materialAssignment": {}
+      },
+      "udls": [],
+      "lineLoads": [],
+      "customSearchPlanes": [],
+      "customPlanesOnly": false
+    }
+  ]
+}

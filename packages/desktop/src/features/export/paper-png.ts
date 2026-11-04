@@ -59,11 +59,13 @@ function withExportTheme<T>(draw: () => T): T {
  * website's result images are captured with. It is drawn again without
  * the selection or the hover highlight, so the view needs no redraw first.
  * Null without a result view or without a result (the canvas has no paper
- * then).
+ * then). `scale` replaces PNG_SCALE (the project file's thumbnail is drawn
+ * at a fraction of it).
  */
-export function paperPngDataUrl(): string | null {
+export function paperPngDataUrl(options: { scale?: number } = {}): string | null {
   const args = drawSource?.();
   if (!args?.result || args.w <= 0 || args.h <= 0) return null;
+  const pngScale = options.scale ?? PNG_SCALE;
 
   const state = useAppStore.getState();
   const scale = state.resultViewScale;
@@ -116,18 +118,18 @@ export function paperPngDataUrl(): string | null {
   };
 
   const full = document.createElement("canvas");
-  full.width = Math.ceil(layoutW * PNG_SCALE);
-  full.height = Math.ceil(layoutH * PNG_SCALE);
+  full.width = Math.ceil(layoutW * pngScale);
+  full.height = Math.ceil(layoutH * pngScale);
   const fullCtx = full.getContext("2d");
   if (!fullCtx) return null;
-  fullCtx.setTransform(PNG_SCALE, 0, 0, PNG_SCALE, 0, 0);
+  fullCtx.setTransform(pngScale, 0, 0, pngScale, 0, 0);
   withExportTheme(() => drawCanvas(fullCtx, params));
 
   // The paper alone, its edge pixels inside it.
-  const sx = Math.ceil(frame.x * PNG_SCALE);
-  const sy = Math.ceil(frame.y * PNG_SCALE);
-  const sw = Math.floor((frame.x + frame.w) * PNG_SCALE) - sx;
-  const sh = Math.floor((frame.y + frame.h) * PNG_SCALE) - sy;
+  const sx = Math.ceil(frame.x * pngScale);
+  const sy = Math.ceil(frame.y * pngScale);
+  const sw = Math.floor((frame.x + frame.w) * pngScale) - sx;
+  const sh = Math.floor((frame.y + frame.h) * pngScale) - sy;
   const out = document.createElement("canvas");
   out.width = sw;
   out.height = sh;

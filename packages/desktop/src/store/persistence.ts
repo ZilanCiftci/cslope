@@ -54,10 +54,17 @@ import type {
  */
 export const PROJECT_FILE_VERSION = 3;
 
+/** The unit system of a project's numbers; cSlope works in SI (m, kN, kPa). */
+export type ProjectUnits = "SI";
+
 export interface ProjectFile {
   version: number;
   activeModelId: string;
   models: ModelEntry[];
+  /** Always "SI" (a project in other units is refused). */
+  units: ProjectUnits;
+  /** When the project file was first saved (ISO 8601); absent before the first save. */
+  created?: string;
 }
 
 export function serializeProject(state: AppState): ProjectFile {
@@ -65,6 +72,8 @@ export function serializeProject(state: AppState): ProjectFile {
     version: PROJECT_FILE_VERSION,
     activeModelId: state.activeModelId,
     models: state.models,
+    units: "SI",
+    ...(state.projectCreated ? { created: state.projectCreated } : {}),
   };
 }
 
@@ -105,6 +114,14 @@ export function parseProjectData(data: unknown): ProjectFile {
   if (!Array.isArray(root.models) || root.models.length === 0) {
     throw new Error("File must include at least one model.");
   }
+  // The numbers are SI; a project marked as in other units cannot be read
+  // as they are (no file written so far says anything but SI).
+  if (root.units !== undefined && root.units !== "SI") {
+    throw new Error(
+      `The project is in ${typeof root.units === "string" ? root.units : "unknown"} units; this version of cSlope reads SI projects only.`,
+    );
+  }
+  const created = typeof root.created === "string" && Number.isFinite(Date.parse(root.created)) ? root.created : undefined;
 
   // Files without a version predate versioning and follow version 1.
   const fileVersion = typeof root.version === "number" ? root.version : 1;
@@ -138,6 +155,8 @@ export function parseProjectData(data: unknown): ProjectFile {
     version: PROJECT_FILE_VERSION,
     activeModelId,
     models,
+    units: "SI",
+    ...(created ? { created } : {}),
   };
 }
 
