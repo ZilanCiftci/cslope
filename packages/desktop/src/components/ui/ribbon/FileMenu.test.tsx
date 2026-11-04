@@ -222,7 +222,7 @@ describe("FileMenu in a browser", () => {
     URL.revokeObjectURL ??= () => {};
     await userEvent.click(screen.getByTitle("Export"));
     await userEvent.click(screen.getByTitle("Export the active model as a .stix project file"));
-    expect(await summaryText()).toMatch(/^Calculation 1 \(Dike\)\.stix leaves out:\n  – /);
+    expect(await summaryText()).toMatch(/^Calculation 1 \(Dike\)\.stix leaves out:\n {2}– /);
   });
 
   it("imports a .slim file from Import › .sli/.slim/.slmd file and exports the model as one", async () => {
@@ -247,7 +247,7 @@ describe("FileMenu in a browser", () => {
     URL.revokeObjectURL ??= () => {};
     await userEvent.click(screen.getByTitle("Export"));
     await userEvent.click(screen.getByTitle("Export the active model as a .slim model file"));
-    expect(await summaryText()).toMatch(/^Cut\.slim leaves out:\n  – /);
+    expect(await summaryText()).toMatch(/^Cut\.slim leaves out:\n {2}– /);
   });
 
   it("shows the summary in a dialog that copies it", async () => {
