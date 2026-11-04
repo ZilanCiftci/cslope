@@ -6,6 +6,7 @@ import type {
   PileForceLocation,
   SlopeDefinition,
 } from "@cslope/engine";
+import type { FosSchemeId } from "../utils/fos-color";
 
 // Export analysis types so UI components can consume them from a single module
 export type { AnalysisResult } from "@cslope/engine";
@@ -330,7 +331,11 @@ export type AnchorPosition =
   | "bottom-left"
   | "bottom-right";
 
-export interface Annotation {
+/**
+ * An annotation placed on the paper: its anchor at (x, y) as fractions of
+ * the paper frame.
+ */
+export interface PaperAnnotation {
   id: string;
   type: "text" | "material-table" | "color-bar" | "plot";
   x: number;
@@ -347,7 +352,90 @@ export interface Annotation {
   tableColumns?: MaterialTableColumnKey[];
   plotAxisX?: PlotAxisMode;
   plotAxisY?: PlotMetricKey;
+  /**
+   * Colour bar: the FOS range of the scale, which also colours the
+   * surfaces of the plot. "auto" (absent): from the critical FOS to a cap
+   * near it; "fixed": scaleMin to scaleMax; "filter": the span of
+   * Surfaces ▸ Filter by FOS (critical FOS to fosFilterMax).
+   */
+  scaleMode?: ColorScaleMode;
+  scaleMin?: number;
+  scaleMax?: number;
+  /** Colour bar: a preset scheme id, or "custom" (absent: the default). */
+  scheme?: FosSchemeId;
+  /** Colour bar, custom scheme: hex colours at the low and high end. */
+  schemeFrom?: string;
+  schemeTo?: string;
+  /** Colour bar, custom scheme: an optional middle colour. */
+  schemeMid?: string;
 }
+
+export type ColorScaleMode = "auto" | "fixed" | "filter";
+
+export type ReferenceDash = "solid" | "dashed" | "dotted";
+
+/**
+ * The fields of a paper annotation a reference annotation never has, typed
+ * absent so code over the Annotation union reads them as undefined without
+ * narrowing (`color` and `width` are shared).
+ */
+type NotOnReference = {
+  [K in Exclude<keyof PaperAnnotation, "id" | "type" | "color" | "width">]?: undefined;
+};
+
+/**
+ * What every reference annotation carries: a line in model coordinates
+ * (metres) drawn over the result, such as a slip surface from another
+ * program's printout or one interpreted from a paper.
+ */
+interface ReferenceAnnotationBase extends NotOnReference {
+  id: string;
+  type: "reference";
+  /** Drawn near the line, e.g. "F = 0.664 (other program)". */
+  label?: string;
+  /** CSS colour; absent: the theme's reference colour. */
+  color?: string;
+  /** Absent: solid. */
+  dash?: ReferenceDash;
+  /** Line width in paper px; absent: REFERENCE_DEFAULT_WIDTH (1.5). */
+  width?: number;
+  /** Also drawn in the edit view; absent: result view only. */
+  showInEdit?: boolean;
+}
+
+/** A polyline through the given points (at least two). */
+export interface ReferencePolyline extends ReferenceAnnotationBase {
+  shape: "polyline";
+  points: [number, number][];
+}
+
+/**
+ * A circle; `clip: "ground"` (the default) draws only the arc below the
+ * ground surface, like a slip circle, `"none"` the whole circle.
+ */
+export interface ReferenceCircle extends ReferenceAnnotationBase {
+  shape: "circle";
+  cx: number;
+  cy: number;
+  radius: number;
+  clip?: "ground" | "none";
+}
+
+/**
+ * The shapes of a reference annotation. A future `shape: "dimension"`
+ * (two points, an offset, arrows and a length label) is added here, in
+ * the normalizer (features/annotations/reference.ts), the geometry
+ * (referenceWorldPoints), the two drawing dispatches (canvas and PDF),
+ * the hit test and the properties panel.
+ */
+export type ReferenceAnnotation = ReferencePolyline | ReferenceCircle;
+
+type DistributiveOmit<T, K extends PropertyKey> = T extends unknown ? Omit<T, K> : never;
+
+/** A reference annotation without its id and type: what creating one takes. */
+export type ReferenceSpec = DistributiveOmit<ReferenceAnnotation, "id" | "type">;
+
+export type Annotation = PaperAnnotation | ReferenceAnnotation;
 
 export interface ResultViewSettings {
   surfaceDisplay: SurfaceDisplayMode;
@@ -361,8 +449,15 @@ export interface ResultViewSettings {
   showFemPlasticZone?: boolean;
   /** Draw the final mesh of a finite element result (default: hidden). */
   showFemMesh?: boolean;
+  /**
+   * Draw the custom search planes' surfaces in the result, dashed, each
+   * with its own factor of safety (default: hidden).
+   */
+  showCustomSurfaces?: boolean;
   /** Grid / major-tick spacing in world units. undefined or 0 = auto. */
   gridSpacing?: number;
+  /** Grid line spacing in world units. undefined or 0 = the tick spacing. */
+  gridLineSpacing?: number;
   /** Number of minor tick subdivisions between major ticks. 0 = none. */
   minorTicks?: number;
   annotations: Annotation[];
@@ -379,6 +474,28 @@ export interface ResultViewSettings {
    * annotations (#Title, #Subtitle) carry the title.
    */
   pdfTitleLine?: boolean;
+}
+
+/** A background image of a model: an asset of the project file, placed in world coordinates. */
+export interface BackgroundImage {
+  /** The asset's id in assets/index.json. */
+  assetId: string;
+  transform: {
+    /** World coordinates of the image's bottom-left corner (m). */
+    originX: number;
+    originY: number;
+    /** World units per image pixel. */
+    scale: number;
+    /** Rotation about the origin, counter-clockwise (degrees). */
+    rotationDeg: number;
+    /** Mirrored left to right before the rotation. */
+    mirrored: boolean;
+  };
+  /** 0 to 1. */
+  opacity: number;
+  visible: boolean;
+  /** Drawing order among the model's backgrounds, lowest first. */
+  order: number;
 }
 
 export interface ModelEntry {
@@ -410,6 +527,12 @@ export interface ModelEntry {
    * over), shown in the model's properties; absent: not imported.
    */
   importNotes?: string[];
+  /**
+   * Background images under the drawing (models/<id>/backgrounds.json of a
+   * .cslp file), each an asset of the project file. Read and written by the
+   * project file; there is no interface for them yet. Absent: none.
+   */
+  backgrounds?: BackgroundImage[];
   options: AnalysisOptions;
   analysisLimits: AnalysisLimitsState;
   editViewOffset?: [number, number];
@@ -464,8 +587,14 @@ export interface ModelsSlice {
   ) => void;
   switchModel: (id: string) => void;
   saveCurrentModel: () => void;
-  loadProject: (data: { models: ModelEntry[]; activeModelId?: string }) => void;
+  loadProject: (data: { models: ModelEntry[]; activeModelId?: string; created?: string }) => void;
   newProject: () => void;
+  /**
+   * When the project file was first saved (ISO 8601; the manifest's
+   * `created`), kept over Save; null for a project not opened from a .cslp
+   * file (the first save sets it).
+   */
+  projectCreated: string | null;
   /** Help → Benchmarks: every verification problem. */
   loadBenchmarks: () => void;
   /** The bundled example models (tutorials and the website's images). */
@@ -673,7 +802,15 @@ export interface ResultViewSlice {
   selectedAnnotationIds: string[];
   selectedResultObject: "paper-frame" | null;
   setResultViewSettings: (patch: Partial<ResultViewSettings>) => void;
-  addAnnotation: (type: Annotation["type"]) => void;
+  addAnnotation: (type: PaperAnnotation["type"]) => void;
+  /** Adds a reference annotation (model coordinates) and selects it; returns its id. */
+  addReferenceAnnotation: (anno: ReferenceSpec) => string;
+  /**
+   * Copies a custom search plane (circle or polyline) into a reference
+   * annotation labelled "Custom surface n"; returns its id, or null when
+   * there is no such plane.
+   */
+  addReferenceFromCustomPlane: (planeId: string) => string | null;
   updateAnnotation: (id: string, patch: Partial<Annotation>) => void;
   removeAnnotation: (id: string) => void;
   setSelectedAnnotations: (ids: string[]) => void;

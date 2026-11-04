@@ -41,6 +41,9 @@ export function Explorer() {
   // The active model runs in the flat state (a single run), the others in
   // their entries; during Run All the active one is running once started.
   const activeRunning = useAppStore((s) => s.runState === "running" && !s.runAll?.running);
+  // The active model's result and error are in the flat state too.
+  const activeHasResult = useAppStore((s) => !!s.result);
+  const activeFailed = useAppStore((s) => s.runState === "error");
 
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editName, setEditName] = useState("");
@@ -313,7 +316,8 @@ export function Explorer() {
                 isActive={isActive}
                 isSelected={isSelected}
                 isEditing={isEditing}
-                hasResult={!!model.result}
+                hasResult={isActive ? activeHasResult : !!model.result}
+                hasError={isActive ? activeFailed : model.runState === "error"}
                 isRunning={model.runState === "running" || (isActive && activeRunning)}
                 editName={editName}
                 onChangeName={setEditName}

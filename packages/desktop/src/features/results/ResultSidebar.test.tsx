@@ -104,6 +104,38 @@ describe("ResultSidebar summary", () => {
     expect(screen.getByText(/2 slices of the critical surface have negative effective normal force/)).toBeInTheDocument();
   });
 
+  it("lists each custom surface with its factor of safety or why it has none", () => {
+    act(() =>
+      useAppStore.setState({
+        result: result({
+          customSurfaces: [
+            { kind: "circle", index: 0, surface: { ...surface(0.664), customPlane: { kind: "circle", index: 0 } } },
+            { kind: "circle", index: 1, reason: "the circle does not cut the ground twice" },
+            {
+              kind: "polyline",
+              index: 0,
+              surface: { ...surface(1.5), radius: 0, points: [[2, 8], [10, 3], [18, 2]], customPlane: { kind: "polyline", index: 0 } },
+            },
+          ] as unknown as AnalysisResult["customSurfaces"],
+        }),
+      }),
+    );
+    render(<ResultSidebar />);
+    const rows = screen.getAllByTestId("custom-surface-row");
+    expect(rows.map((r) => r.textContent)).toEqual([
+      "Custom surface 1F = 0.664",
+      "Custom surface 2no solution: the circle does not cut the ground twice",
+      "Custom surface 3F = 1.500",
+    ]);
+    expect(screen.getByText("Custom surface 1")).toHaveAttribute("title", "circle, centre (10.00, 12.00) m, radius 10.00 m");
+    expect(screen.getByText("Custom surface 2")).toHaveAttribute("title", "circle");
+    expect(screen.getByText("Custom surface 3")).toHaveAttribute("title", "non-circular, 3 points");
+    cleanup();
+    act(() => useAppStore.setState({ result: result() }));
+    render(<ResultSidebar />);
+    expect(screen.queryByTestId("custom-surface-row")).toBeNull();
+  });
+
   it("marks the finite element results as experimental", () => {
     act(() =>
       useAppStore.setState({
@@ -320,6 +352,17 @@ describe("ResultSidebar paper frame properties", () => {
     fireEvent.blur(spacing);
     expect(rvs().gridSpacing).toBe(5);
 
+    // The grid: on/off, and a spacing of its own while on.
+    const grid = screen.getByRole("checkbox", { name: "Grid lines" }) as HTMLInputElement;
+    if (!grid.checked) fireEvent.click(grid);
+    const gridSpacing = field("Grid spacing");
+    fireEvent.change(gridSpacing, { target: { value: "2" } });
+    fireEvent.blur(gridSpacing);
+    expect(rvs().gridLineSpacing).toBe(2);
+    fireEvent.click(grid);
+    expect(rvs().showGrid).toBe(false);
+    expect(screen.queryByText("Grid spacing")).toBeNull();
+
     fireEvent.change(field("Paper size"), { target: { value: "A3" } });
     expect(rvs().paperFrame.paperSize).toBe("A3");
 
@@ -401,6 +444,63 @@ describe("ResultSidebar annotation properties", () => {
     expect(anno("m").fontSize).toBe(10);
   });
 
+  it("sets the range of the colour bar: fixed bounds start from the shown range, and must be in order", () => {
+    select(["c"]);
+    render(<ResultSidebar />);
+    expect(field("Range").value).toBe("auto");
+    // The automatic range of the result (min FOS 1.234, max FOS 2).
+    expect(screen.getByText("F 1.23 to 2.00")).toBeInTheDocument();
+
+    fireEvent.change(field("Range"), { target: { value: "fixed" } });
+    expect(anno("c")).toMatchObject({ scaleMode: "fixed", scaleMin: 1.23, scaleMax: 2 });
+    expect(field("Min F").value).toBe("1.23");
+    expect(field("Max F").value).toBe("2");
+    expect(screen.queryByRole("alert")).toBeNull();
+
+    fireEvent.change(field("Max F"), { target: { value: "1,1" } });
+    expect(anno("c").scaleMax).toBe(1.1);
+    expect(screen.getByRole("alert").textContent).toMatch(/Min F must be below max F/);
+    fireEvent.change(field("Min F"), { target: { value: "0.5" } });
+    expect(anno("c").scaleMin).toBe(0.5);
+    expect(screen.queryByRole("alert")).toBeNull();
+
+    fireEvent.change(field("Range"), { target: { value: "filter" } });
+    expect(anno("c").scaleMode).toBe("filter");
+    // The bounds stay for a return to "Fixed".
+    expect(anno("c")).toMatchObject({ scaleMin: 0.5, scaleMax: 1.1 });
+    expect(screen.getByText(/F 1.23 to 1.50, the span of Surfaces/)).toBeInTheDocument();
+    act(() => useAppStore.getState().setResultViewSettings({ fosFilterMax: 1 }));
+    expect(screen.getByText(/is not above the minimum F; the automatic range is used/)).toBeInTheDocument();
+  });
+
+  it("sets the colour scheme of the colour bar, with custom colours and an optional middle one", () => {
+    select(["c"]);
+    render(<ResultSidebar />);
+    expect(field("Colour scheme").value).toBe("classic");
+    // jsdom stores the gradient's colours as rgb().
+    const preview = () => screen.getByRole("img", { name: /Scheme preview/ }).style.background;
+    expect(preview()).toMatch(/^linear-gradient\(to right, rgb\(255, 0, 0\), /);
+
+    fireEvent.change(field("Colour scheme"), { target: { value: "greyscale" } });
+    expect(anno("c").scheme).toBe("greyscale");
+    expect(preview()).toMatch(/rgb\(200, 200, 200\)\)$/);
+
+    fireEvent.change(field("Colour scheme"), { target: { value: "custom" } });
+    expect(anno("c")).toMatchObject({ scheme: "custom", schemeFrom: "#cc0000", schemeTo: "#0066cc" });
+    fireEvent.change(screen.getByLabelText("From (low F) colour"), { target: { value: "#112233" } });
+    fireEvent.change(screen.getByLabelText("To (high F) colour"), { target: { value: "#445566" } });
+    expect(anno("c")).toMatchObject({ schemeFrom: "#112233", schemeTo: "#445566" });
+    expect(preview()).toMatch(/^linear-gradient\(to right, rgb\(17, 34, 51\), .*rgb\(68, 85, 102\)\)$/);
+
+    fireEvent.click(screen.getByLabelText("Add a middle colour"));
+    expect(anno("c").schemeMid).toMatch(/^#[0-9a-f]{6}$/);
+    fireEvent.change(screen.getByLabelText("Middle colour"), { target: { value: "#ffffff" } });
+    expect(anno("c").schemeMid).toBe("#ffffff");
+    expect(preview()).toContain("rgb(255, 255, 255)");
+    fireEvent.click(screen.getByLabelText("Add a middle colour"));
+    expect(anno("c").schemeMid).toBeUndefined();
+  });
+
   it("removes and adds material table columns for the selected tables", () => {
     // jsdom has no scrolling.
     Element.prototype.scrollIntoView = vi.fn();
@@ -464,5 +564,99 @@ describe("ResultSidebar Insert variable", () => {
     select(["t1", "t2"]);
     render(<ResultSidebar />);
     expect(screen.getByRole("button", { name: /Insert variable/ })).toBeDisabled();
+  });
+});
+
+describe("ResultSidebar reference lines", () => {
+  // Ids apart from the paper annotations' ("c" is the colour bar).
+  const LINE: Annotation = {
+    id: "rl",
+    type: "reference",
+    shape: "polyline",
+    points: [
+      [2, 10],
+      [12, 4],
+    ],
+    label: "other program",
+  };
+  const CIRCLE: Annotation = { id: "rc", type: "reference", shape: "circle", cx: 15, cy: 14, radius: 10 };
+  const ref = (id: string) =>
+    anno(id) as unknown as {
+      label?: string;
+      color?: string;
+      dash?: string;
+      width?: number;
+      showInEdit?: boolean;
+      points: [number, number][];
+      cx: number;
+      cy: number;
+      radius: number;
+      clip?: string;
+    };
+
+  beforeEach(() => {
+    useAppStore.setState({ resultViewSettings: { ...DEFAULT_RESULT_VIEW_SETTINGS, annotations: [...ANNOS, LINE, CIRCLE] } });
+  });
+
+  it("lists reference lines by their label or shape", () => {
+    render(<ResultSidebar />);
+    expect(screen.getByText("Reference: other program")).toBeInTheDocument();
+    expect(screen.getByText("Reference: Reference circle")).toBeInTheDocument();
+    fireEvent.click(screen.getByText("Reference: other program"));
+    expect(useAppStore.getState().selectedAnnotationIds).toEqual(["rl"]);
+  });
+
+  it("edits a polyline's label, points, colour, dash, width and edit-view visibility", () => {
+    select(["rl"]);
+    render(<ResultSidebar />);
+    // No paper position for a reference line.
+    expect(screen.queryByText("X (%)")).toBeNull();
+    fireEvent.change(field("Label"), { target: { value: "F = 0.664 (other program)" } });
+    expect(ref("rl").label).toBe("F = 0.664 (other program)");
+    const points = screen.getByLabelText("Reference polyline points") as HTMLTextAreaElement;
+    expect(points.value).toBe("2, 10; 12, 4");
+    fireEvent.change(points, { target: { value: "1, 9; 11, 3; 21, 4" } });
+    expect(ref("rl").points).toEqual([
+      [1, 9],
+      [11, 3],
+      [21, 4],
+    ]);
+    // A single pair is still being typed: the points stay, the field is flagged.
+    fireEvent.change(points, { target: { value: "1, 9" } });
+    expect(ref("rl").points).toHaveLength(3);
+    expect(points.getAttribute("aria-invalid")).toBe("true");
+    fireEvent.click(screen.getByRole("button", { name: "Color #cc0000" }));
+    expect(ref("rl").color).toBe("#cc0000");
+    fireEvent.click(screen.getByRole("button", { name: "Theme" }));
+    expect(ref("rl").color).toBeUndefined();
+    fireEvent.change(field("Line"), { target: { value: "dotted" } });
+    expect(ref("rl").dash).toBe("dotted");
+    fireEvent.change(field("Width (px)"), { target: { value: "2.5" } });
+    expect(ref("rl").width).toBe(2.5);
+    fireEvent.click(screen.getByLabelText("Show in edit view"));
+    expect(ref("rl").showInEdit).toBe(true);
+  });
+
+  it("edits a circle's centre, radius and clip; several lines share the common fields", () => {
+    select(["rc"]);
+    render(<ResultSidebar />);
+    fireEvent.change(screen.getByLabelText("Reference circle centre X"), { target: { value: "16" } });
+    fireEvent.change(screen.getByLabelText("Reference circle centre Y"), { target: { value: "13" } });
+    fireEvent.change(screen.getByLabelText("Reference circle radius"), { target: { value: "12" } });
+    expect(ref("rc")).toMatchObject({ cx: 16, cy: 13, radius: 12 });
+    // Below the smallest radius: kept.
+    fireEvent.change(screen.getByLabelText("Reference circle radius"), { target: { value: "0" } });
+    expect(ref("rc").radius).toBe(12);
+    fireEvent.change(field("Drawn"), { target: { value: "none" } });
+    expect(ref("rc").clip).toBe("none");
+
+    cleanup();
+    select(["rl", "rc"]);
+    render(<ResultSidebar />);
+    expect(screen.queryByLabelText("Reference polyline points")).toBeNull();
+    expect(screen.getByText("Select one reference line to edit its points.")).toBeInTheDocument();
+    expect(field("Label").placeholder).toBe("Mixed values");
+    fireEvent.change(field("Line"), { target: { value: "dashed" } });
+    expect([ref("rl").dash, ref("rc").dash]).toEqual(["dashed", "dashed"]);
   });
 });

@@ -21,6 +21,8 @@ import {
 import { DEFAULT_MODEL_NAME } from "../constants";
 import { nextId } from "./helpers";
 import { clampMinorTicks } from "../utils/ruler";
+import { isFosSchemeId, isHexColor } from "../utils/fos-color";
+import { normalizeReferenceAnnotation } from "../features/annotations/reference";
 import {
   APP_DEFAULT_ANALYSIS_OPTIONS,
   DEFAULT_ANALYSIS_LIMITS,
@@ -33,6 +35,7 @@ import {
   PAPER_DIMENSIONS,
 } from "./defaults";
 import type {
+  Annotation,
   AnalysisLimitsState,
   AppState,
   CoordinateExpression,
@@ -54,10 +57,17 @@ import type {
  */
 export const PROJECT_FILE_VERSION = 3;
 
+/** The unit system of a project's numbers; cSlope works in SI (m, kN, kPa). */
+export type ProjectUnits = "SI";
+
 export interface ProjectFile {
   version: number;
   activeModelId: string;
   models: ModelEntry[];
+  /** Always "SI" (a project in other units is refused). */
+  units: ProjectUnits;
+  /** When the project file was first saved (ISO 8601); absent before the first save. */
+  created?: string;
 }
 
 export function serializeProject(state: AppState): ProjectFile {
@@ -65,6 +75,8 @@ export function serializeProject(state: AppState): ProjectFile {
     version: PROJECT_FILE_VERSION,
     activeModelId: state.activeModelId,
     models: state.models,
+    units: "SI",
+    ...(state.projectCreated ? { created: state.projectCreated } : {}),
   };
 }
 
@@ -105,6 +117,14 @@ export function parseProjectData(data: unknown): ProjectFile {
   if (!Array.isArray(root.models) || root.models.length === 0) {
     throw new Error("File must include at least one model.");
   }
+  // The numbers are SI; a project marked as in other units cannot be read
+  // as they are (no file written so far says anything but SI).
+  if (root.units !== undefined && root.units !== "SI") {
+    throw new Error(
+      `The project is in ${typeof root.units === "string" ? root.units : "unknown"} units; this version of cSlope reads SI projects only.`,
+    );
+  }
+  const created = typeof root.created === "string" && Number.isFinite(Date.parse(root.created)) ? root.created : undefined;
 
   // Files without a version predate versioning and follow version 1.
   const fileVersion = typeof root.version === "number" ? root.version : 1;
@@ -138,6 +158,8 @@ export function parseProjectData(data: unknown): ProjectFile {
     version: PROJECT_FILE_VERSION,
     activeModelId,
     models,
+    units: "SI",
+    ...(created ? { created } : {}),
   };
 }
 
@@ -769,18 +791,7 @@ export function normalizeResultView(raw: unknown): ResultViewSettings {
         ? rawPaperFrame.offsetY
         : (DEFAULT_RESULT_VIEW_SETTINGS.paperFrame.offsetY ?? 0),
   };
-  const annotations = Array.isArray(view.annotations)
-    ? view.annotations.filter(
-        (anno): anno is ResultViewSettings["annotations"][number] => {
-          if (!anno || typeof anno !== "object") return false;
-          const a = anno as unknown as Record<string, unknown>;
-          if (typeof a.id !== "string") return false;
-          if (typeof a.type !== "string") return false;
-          if (typeof a.x !== "number" || typeof a.y !== "number") return false;
-          return true;
-        },
-      )
-    : [];
+  const annotations = normalizeAnnotations(view.annotations).map(normalizeColorBarScale);
 
   return {
     surfaceDisplay:
@@ -800,8 +811,12 @@ export function normalizeResultView(raw: unknown): ResultViewSettings {
     // the finite element display, where it is not the default
     ...(view.showFemPlasticZone === false ? { showFemPlasticZone: false } : {}),
     ...(view.showFemMesh === true ? { showFemMesh: true } : {}),
+    ...(view.showCustomSurfaces === true ? { showCustomSurfaces: true } : {}),
     ...(Number.isFinite(view.gridSpacing)
       ? { gridSpacing: view.gridSpacing }
+      : {}),
+    ...(Number.isFinite(view.gridLineSpacing) && (view.gridLineSpacing as number) > 0
+      ? { gridLineSpacing: view.gridLineSpacing }
       : {}),
     // A whole number of ticks: a huge count made the ruler loops endless.
     ...(Number.isFinite(view.minorTicks)
@@ -825,6 +840,71 @@ export function normalizeResultView(raw: unknown): ResultViewSettings {
       ? { pdfTitleLine: view.pdfTitleLine }
       : {}),
   };
+}
+
+const COLOR_SCALE_FIELDS = [
+  "scaleMode",
+  "scaleMin",
+  "scaleMax",
+  "scheme",
+  "schemeFrom",
+  "schemeTo",
+  "schemeMid",
+] as const;
+
+/**
+ * The colour scale fields of a colour bar annotation (its range mode and
+ * bounds, its colour scheme and the custom colours), each kept only when
+ * it is valid: a mode of "auto", "fixed" or "filter", finite bounds, a
+ * known scheme id and six-digit hex colours. Other annotation types carry
+ * none of them.
+ */
+export function normalizeColorBarScale(anno: Annotation): Annotation {
+  const raw = anno as unknown as Record<string, unknown>;
+  const rest = { ...raw } as Record<string, unknown>;
+  for (const field of COLOR_SCALE_FIELDS) delete rest[field];
+  if (anno.type !== "color-bar") return rest as unknown as Annotation;
+  const mode = raw.scaleMode;
+  const scale: Partial<Annotation> = {
+    ...(mode === "auto" || mode === "fixed" || mode === "filter"
+      ? { scaleMode: mode }
+      : {}),
+    ...(typeof raw.scaleMin === "number" && Number.isFinite(raw.scaleMin)
+      ? { scaleMin: raw.scaleMin }
+      : {}),
+    ...(typeof raw.scaleMax === "number" && Number.isFinite(raw.scaleMax)
+      ? { scaleMax: raw.scaleMax }
+      : {}),
+    ...(isFosSchemeId(raw.scheme) ? { scheme: raw.scheme } : {}),
+    ...(isHexColor(raw.schemeFrom) ? { schemeFrom: raw.schemeFrom } : {}),
+    ...(isHexColor(raw.schemeTo) ? { schemeTo: raw.schemeTo } : {}),
+    ...(isHexColor(raw.schemeMid) ? { schemeMid: raw.schemeMid } : {}),
+  };
+  return { ...rest, ...scale } as Annotation;
+}
+
+/**
+ * The annotations of a result view or template: paper annotations with an
+ * id, a type and a position; reference annotations (model coordinates)
+ * through normalizeReferenceAnnotation, their named fields only. Anything
+ * else is dropped.
+ */
+export function normalizeAnnotations(raw: unknown): Annotation[] {
+  if (!Array.isArray(raw)) return [];
+  const out: Annotation[] = [];
+  for (const anno of raw) {
+    if (!anno || typeof anno !== "object") continue;
+    const a = anno as Record<string, unknown>;
+    if (typeof a.id !== "string" || typeof a.type !== "string") continue;
+    if (a.type === "reference") {
+      const ref = normalizeReferenceAnnotation(a);
+      if (ref) out.push(ref);
+      continue;
+    }
+    if (typeof a.x !== "number" || typeof a.y !== "number") continue;
+    out.push(anno as Annotation);
+  }
+  return out;
 }
 
 function isFinitePair(value: unknown): value is [number, number] {

@@ -668,3 +668,99 @@ describe("custom search planes", () => {
     expect(none.deps.setSelectedCustomPlane).not.toHaveBeenCalled();
   });
 });
+
+describe("reference annotations in the result view", () => {
+  const LINE = {
+    id: "l",
+    type: "reference" as const,
+    shape: "polyline" as const,
+    points: [
+      [2, 10],
+      [12, 4],
+      [22, 5],
+    ] as [number, number][],
+  };
+  // Its lowest point (15, 6) lies in the soil; its arc keeps clear of the polyline.
+  const CIRCLE = { id: "c", type: "reference" as const, shape: "circle" as const, cx: 15, cy: 18, radius: 12 };
+  const refs = () => useAppStore.getState().resultViewSettings.annotations.filter((a) => a.type === "reference");
+  const line = () => refs().find((a) => a.id === "l") as typeof LINE;
+  const circle = () => refs().find((a) => a.id === "c") as typeof CIRCLE;
+  const realUpdate = (id: string, patch: Parameters<Deps["updateAnnotation"]>[1]) => useAppStore.getState().updateAnnotation(id, patch);
+
+  beforeEach(() => {
+    useAppStore.setState({
+      mode: "result",
+      result: null,
+      coordinates: COORDS,
+      resultViewScale: 5,
+      resultViewOffset: [0, 0],
+      resultViewSettings: { ...DEFAULT_RESULT_VIEW_SETTINGS, annotations: [LINE, CIRCLE] },
+    });
+    useAppStore.temporal.getState().clear();
+  });
+
+  it("selects a polyline by a click on its line and drags it whole, in one undo step", () => {
+    const { deps, down, move, up } = setup({ mode: "result", updateAnnotation: realUpdate });
+    const [sx, sy] = toScreen(7, 7);
+    down(sx, sy);
+    expect(deps.setSelectedAnnotations).toHaveBeenCalledWith(["l"]);
+    move(sx + 10, sy - 20);
+    move(sx + 20, sy - 20);
+    expect(line().points).toEqual([
+      [6, 14],
+      [16, 8],
+      [26, 9],
+    ]);
+    up(sx + 20, sy - 20);
+    const past = useAppStore.temporal.getState().pastStates;
+    expect(past).toHaveLength(1);
+    act(() => useAppStore.temporal.getState().undo());
+    expect(line().points).toEqual(LINE.points);
+    expect(circle()).toEqual(CIRCLE);
+  });
+
+  it("drags a vertex (snapped to the grid) and a circle's centre and rim", () => {
+    const { down, move, up } = setup({ mode: "result", updateAnnotation: realUpdate });
+    const [vx, vy] = toScreen(12, 4);
+    down(vx, vy);
+    move(vx + 6.3, vy + 4.2); // +1.26 m, -0.84 m → snapped to 0.1
+    up(vx + 6.3, vy + 4.2);
+    expect(line().points[1]).toEqual([13.3, 3.2]);
+
+    const [cx, cy] = toScreen(15, 18);
+    down(cx, cy);
+    move(cx + 5, cy + 5);
+    up(cx + 5, cy + 5);
+    expect(circle()).toMatchObject({ cx: 16, cy: 17, radius: 12 });
+
+    // The bottom of the circle (16, 5) lies in the soil: its rim.
+    const [rx, ry] = toScreen(16, 5);
+    down(rx, ry);
+    move(rx, ry + 10);
+    up(rx, ry + 10);
+    expect(circle()).toMatchObject({ cx: 16, cy: 17, radius: 14 });
+    expect(useAppStore.temporal.getState().pastStates).toHaveLength(3);
+  });
+
+  it("hovers reference handles and lines before paper annotations", () => {
+    const { h, move } = setup({ mode: "result" });
+    move(...toScreen(12, 4));
+    expect(h().hoverHit).toEqual({ kind: "referenceVertex", annoId: "l", pointIndex: 1 });
+    move(...toScreen(7, 7));
+    expect(h().hoverHit).toEqual({ kind: "referenceLine", annoId: "l" });
+    move(...toScreen(15, 6));
+    expect(h().hoverHit).toEqual({ kind: "referenceCircle", annoId: "c", handle: "rim" });
+    move(...toScreen(28, 2));
+    expect(h().hoverHit).toBeNull();
+  });
+
+  it("adds to the selection with Ctrl and records no step for a mere click", () => {
+    const { deps, down, up } = setup({ mode: "result", selectedAnnotationIds: ["c"], updateAnnotation: realUpdate });
+    const [sx, sy] = toScreen(7, 7);
+    down(sx, sy, { ctrlKey: true });
+    expect(deps.toggleAnnotationSelection).toHaveBeenCalledWith("l", true);
+    up(sx, sy);
+    expect(line().points).toEqual(LINE.points);
+    expect(useAppStore.temporal.getState().pastStates).toHaveLength(0);
+  });
+});

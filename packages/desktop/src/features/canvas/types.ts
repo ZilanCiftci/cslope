@@ -16,7 +16,13 @@ export type PointHit =
   /** A custom search circle: its centre dot, or its rim (drag sets the radius). */
   | { kind: "customCircle"; planeId: string; handle: "centre" | "rim" }
   /** A vertex of a custom non-circular surface. */
-  | { kind: "customVertex"; planeId: string; pointIndex: number };
+  | { kind: "customVertex"; planeId: string; pointIndex: number }
+  /** A vertex of a reference polyline (result view). */
+  | { kind: "referenceVertex"; annoId: string; pointIndex: number }
+  /** A reference circle: its centre, or its arc (a drag sets the radius). */
+  | { kind: "referenceCircle"; annoId: string; handle: "centre" | "rim" }
+  /** A reference polyline's line itself: a drag moves it whole. */
+  | { kind: "referenceLine"; annoId: string };
 
 export type EdgeHit =
   | { kind: "external"; insertIndex: number; snapPoint: [number, number] }
@@ -36,6 +42,13 @@ export type EdgeHit =
   | {
       kind: "customPlane";
       planeId: string;
+      insertIndex: number;
+      snapPoint: [number, number];
+    }
+  /** A segment of a reference polyline (result view). */
+  | {
+      kind: "reference";
+      annoId: string;
       insertIndex: number;
       snapPoint: [number, number];
     };

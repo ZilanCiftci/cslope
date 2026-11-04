@@ -14,6 +14,26 @@ const { version } = JSON.parse(
 ) as { version: string };
 
 /**
+ * The engine the app ships, recorded with every saved result
+ * (src/utils/app-version.ts): the engine package's version and the source
+ * hash of its wasm build (packages/engine/src/wasm/BUILD-INFO.json).
+ */
+function engineBuild(): { version: string; sourceHash: string } {
+  // (the workspace package beside this one; its exports map hides package.json)
+  const engine = path.join(__dirname, "../engine");
+  const read = (file: string) => JSON.parse(readFileSync(path.join(engine, file), "utf8")) as Record<string, unknown>;
+  const pkg = read("package.json");
+  let sourceHash = "";
+  try {
+    const info = read("src/wasm/BUILD-INFO.json");
+    if (typeof info.sourceHash === "string") sourceHash = info.sourceHash;
+  } catch {
+    // An engine without build information: the version alone.
+  }
+  return { version: typeof pkg.version === "string" ? pkg.version : "", sourceHash };
+}
+
+/**
  * `import s from "file?base64"`: the file's bytes as a base64 string, for a
  * binary the app must carry inside a bundle (the engine's WebAssembly,
  * which cannot be fetched from file://; main.tsx compiles it and posts the
@@ -54,7 +74,7 @@ function cspMeta(): Plugin {
 
 export default defineConfig({
   worker: { format: "es", plugins: () => [base64Import()] },
-  define: { __APP_VERSION__: JSON.stringify(version) },
+  define: { __APP_VERSION__: JSON.stringify(version), __ENGINE_BUILD__: JSON.stringify(engineBuild()) },
   plugins: [
     base64Import(),
     cspMeta(),

@@ -97,6 +97,26 @@ describe("Explorer — list and selection", () => {
     expect(store().mode).toBe("result");
   });
 
+  it("shows the run state as a dot: analysed, failed, not analysed (the active one from the flat state)", () => {
+    const [, beta, gamma] = store().models.map((m) => m.id);
+    act(() =>
+      useAppStore.setState((s) => ({
+        result: { minFOS: 1.3 } as AnalysisResult,
+        runState: "done",
+        models: s.models.map((m) =>
+          m.id === beta ? { ...m, runState: "error" } : m.id === gamma ? { ...m, result: { minFOS: 1.1 } as AnalysisResult, runState: "done" } : m,
+        ),
+      })),
+    );
+    render(<Explorer />);
+    const state = (name: string) => row(name).querySelector("[role=img]")!.getAttribute("aria-label");
+    expect(state("Alpha")).toBe("Analysed");
+    expect(state("Beta")).toBe("Analysis failed");
+    expect(state("Gamma")).toBe("Analysed");
+    act(() => useAppStore.setState({ result: null, runState: "idle" }));
+    expect(state("Alpha")).toBe("Not analysed");
+  });
+
   it("marks the models whose analysis runs, the active one by its single run", () => {
     const [alpha, beta, gamma] = store().models.map((m) => m.id);
     render(<Explorer />);

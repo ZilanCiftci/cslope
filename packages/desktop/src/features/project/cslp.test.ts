@@ -1,20 +1,26 @@
 /**
- * The .cslp project file: a ZIP archive of manifest.json, project.json and
- * (when a model has an outcome) results.json. Earlier JSON projects still
- * open; what is read goes through the ZIP limits and the same validation
- * as a JSON project.
+ * The .cslp project file: a ZIP archive of manifest.json, project.json,
+ * one folder per model (model.json, result.json, backgrounds.json),
+ * attachments and a thumbnail. Earlier JSON projects and the first .cslp
+ * layout still open; what is read goes through the ZIP limits and the
+ * same validation as a JSON project.
  */
 import { beforeEach, describe, expect, it } from "vitest";
 import { useAppStore } from "../../store/app-store";
-import { parseProjectFile, serializeProject, type ProjectFile } from "../../store/persistence";
-import { readZip, writeZip } from "../../utils/zip";
+import { parseProjectFile, PROJECT_FILE_VERSION, serializeProject, type ProjectFile } from "../../store/persistence";
+import { dosDateTime, openZip, readZip, writeZip } from "../../utils/zip";
 import {
   buildProjectArchive,
   CSLP_FORMAT_VERSION,
+  openedProjectAssets,
+  openProject,
   readProjectBytes,
-  splitResults,
+  withSafeModelIds,
   writeProjectArchive,
+  type CslpResult,
+  type ProjectAsset,
 } from "./cslp";
+import { analysisInputHash } from "./input-hash";
 
 const store = () => useAppStore.getState();
 const enc = new TextEncoder();
@@ -45,6 +51,14 @@ const result = {
   fem,
 };
 
+/** A 1 × 1 PNG (70 bytes). */
+const PNG = Uint8Array.from(
+  atob("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg=="),
+  (c) => c.charCodeAt(0),
+);
+
+const MODIFIED = new Date("2026-11-04T12:00:00Z");
+
 /** The current project with a second model, as it is saved. */
 function project(): ProjectFile {
   store().newProject();
@@ -69,86 +83,329 @@ function projectWithResults(): ProjectFile {
 /** What a JSON project file of the same content opens as (the reference). */
 const viaJson = (file: ProjectFile) => parseProjectFile(JSON.stringify(file));
 
-async function entries(bytes: Uint8Array): Promise<Record<string, unknown>> {
-  const map = await readZip(bytes);
-  return Object.fromEntries([...map].map(([name, data]) => [name, JSON.parse(dec.decode(data))]));
+/** An opened project without the file's own `created`, to compare with the reference. */
+function content(file: ProjectFile): ProjectFile {
+  const rest = { ...file };
+  delete rest.created;
+  return rest;
 }
 
-/** An archive of the given JSON entries (stored), to craft files. */
+/** The archive's entries in order, JSON parsed (other entries as bytes). */
+async function entries(bytes: Uint8Array): Promise<[string, unknown][]> {
+  const archive = openZip(bytes);
+  const out: [string, unknown][] = [];
+  for (const e of archive.entries()) {
+    const data = await archive.read(e.name);
+    out.push([e.name, e.name.endsWith(".json") ? JSON.parse(dec.decode(data)) : data]);
+  }
+  return out;
+}
+const names = async (bytes: Uint8Array) => (await entries(bytes)).map(([n]) => n);
+const entry = async (bytes: Uint8Array, name: string) => (await entries(bytes)).find(([n]) => n === name)?.[1];
+
+/** An archive of the given entries (stored), to craft files. */
 const archive = (files: Record<string, unknown>) =>
-  writeZip(Object.entries(files).map(([name, value]) => ({ name, data: typeof value === "string" ? value : JSON.stringify(value) })));
+  writeZip(
+    Object.entries(files)
+      .filter(([, value]) => value !== undefined)
+      .map(([name, value]) => ({ name, data: typeof value === "string" || value instanceof Uint8Array ? value : JSON.stringify(value) })),
+  );
 
 const manifest = (over: Record<string, unknown> = {}) => ({
   format: "cslope-project",
   formatVersion: 1,
+  minReaderVersion: 1,
   appVersion: "0.1.0",
   created: "2026-11-04T00:00:00.000Z",
+  modified: "2026-11-04T00:00:00.000Z",
+  generator: "cSlope 0.1.0",
   ...over,
 });
+
+/** A model without its run fields and backgrounds (as model.json holds it). */
+function withoutRun(m: ProjectFile["models"][number]): Record<string, unknown> {
+  const rest: Record<string, unknown> = { ...m };
+  for (const f of ["runState", "progress", "result", "errorMessage", "backgrounds"]) delete rest[f];
+  return rest;
+}
+
+/** The entries of an archive in this version's layout, from a project's models (results as result.json). */
+function layout(file: ProjectFile, over: Record<string, unknown> = {}): Record<string, unknown> {
+  const files: Record<string, unknown> = {
+    "manifest.json": manifest(),
+    "project.json": { version: file.version, activeModelId: file.activeModelId, models: file.models.map((m) => m.id), units: "SI", settings: {} },
+  };
+  for (const m of file.models) {
+    const { runState, result, errorMessage, backgrounds } = m;
+    files[`models/${m.id}/model.json`] = withoutRun(m);
+    if (backgrounds) files[`models/${m.id}/backgrounds.json`] = backgrounds;
+    if (runState === "done" || runState === "error") {
+      files[`models/${m.id}/result.json`] = { runState, result, errorMessage, inputHash: "", engine: { version: "", sourceHash: "" } };
+    }
+  }
+  return { ...files, ...over };
+}
 
 beforeEach(() => {
   store().newProject();
 });
 
 describe(".cslp round trip", () => {
-  it("opens a saved project as it was (no results: no results.json)", async () => {
+  it("writes one folder per model, in order, and opens as the same project (no results: no result.json)", async () => {
     const file = project();
+    const [a, b] = file.models;
     const bytes = await buildProjectArchive(store());
     expect(Array.from(bytes.subarray(0, 4))).toEqual([0x50, 0x4b, 3, 4]);
-    expect(Object.keys(await entries(bytes)).sort()).toEqual(["manifest.json", "project.json"]);
+    expect(await names(bytes)).toEqual(["manifest.json", "project.json", `models/${a.id}/model.json`, `models/${b.id}/model.json`]);
+    expect(await entry(bytes, "project.json")).toEqual({
+      version: PROJECT_FILE_VERSION,
+      activeModelId: file.activeModelId,
+      models: [a.id, b.id],
+      units: "SI",
+      settings: {},
+    });
     const opened = await readProjectBytes(bytes);
-    expect(opened).toEqual(viaJson(file));
+    expect(content(opened)).toEqual(viaJson(file));
     expect(opened.models.map((m) => m.name)).toEqual(file.models.map((m) => m.name));
     expect(opened.models.every((m) => m.runState === "idle" && m.result === null)).toBe(true);
   });
 
-  it("keeps the results in results.json and restores them on opening", async () => {
+  it("keeps each result in its model's result.json, with the input hash and the engine, and restores it", async () => {
     const file = projectWithResults();
-    const bytes = await writeProjectArchive(file);
-    const content = await entries(bytes);
-    expect(Object.keys(content).sort()).toEqual(["manifest.json", "project.json", "results.json"]);
-    // project.json has no outcome fields
-    for (const m of (content["project.json"] as ProjectFile).models) {
-      expect(Object.keys(m)).not.toEqual(expect.arrayContaining(["result"]));
-      expect(m).not.toHaveProperty("runState");
-      expect(m).not.toHaveProperty("errorMessage");
-      expect(m).not.toHaveProperty("progress");
-    }
     const [a, b] = file.models;
-    expect(content["results.json"]).toEqual({
-      models: {
-        [a.id]: { runState: "done", result, errorMessage: null },
-        [b.id]: { runState: "error", result: null, errorMessage: "Too few slices" },
-      },
+    const bytes = await writeProjectArchive(file);
+    expect(await names(bytes)).toEqual([
+      "manifest.json",
+      "project.json",
+      `models/${a.id}/model.json`,
+      `models/${a.id}/result.json`,
+      `models/${b.id}/model.json`,
+      `models/${b.id}/result.json`,
+    ]);
+    // model.json has no outcome fields
+    for (const id of [a.id, b.id]) {
+      const m = (await entry(bytes, `models/${id}/model.json`)) as Record<string, unknown>;
+      expect(m.id).toBe(id);
+      for (const f of ["runState", "progress", "result", "errorMessage"]) expect(m).not.toHaveProperty(f);
+    }
+    const ra = (await entry(bytes, `models/${a.id}/result.json`)) as CslpResult;
+    expect(ra).toEqual({
+      runState: "done",
+      result,
+      errorMessage: null,
+      inputHash: await analysisInputHash(a),
+      engine: { version: expect.any(String), sourceHash: expect.any(String) },
     });
+    expect(ra.inputHash).toMatch(/^[0-9a-f]{64}$/);
+    expect(await entry(bytes, `models/${b.id}/result.json`)).toMatchObject({ runState: "error", result: null, errorMessage: "Too few slices" });
     const opened = await readProjectBytes(bytes);
-    expect(opened).toEqual(viaJson(file));
+    expect(content(opened)).toEqual(viaJson(file));
     expect(opened.models[0].runState).toBe("done");
     expect(opened.models[0].result?.fem?.triangles).toEqual([0, 1, 2]);
     expect(opened.models[1]).toMatchObject({ runState: "error", errorMessage: "Too few slices" });
+    // the input hash and engine of each result are read with the file
+    const project = await openProject(bytes);
+    expect(project.layout).toBe("cslp");
+    expect(project.results.get(a.id)).toEqual({ inputHash: ra.inputHash, engine: ra.engine });
+    expect(project.results.has(b.id)).toBe(true);
   });
 
-  it("writes a manifest naming the format, its version, the app version and the time", async () => {
-    const bytes = await writeProjectArchive(project(), new Date("2026-11-04T12:00:00Z"));
-    const m = (await entries(bytes))["manifest.json"] as Record<string, unknown>;
-    expect(m).toMatchObject({ format: "cslope-project", formatVersion: CSLP_FORMAT_VERSION, created: "2026-11-04T12:00:00.000Z" });
-    expect(typeof m.appVersion).toBe("string");
+  it("can leave the results out", async () => {
+    const file = projectWithResults();
+    const bytes = await writeProjectArchive(file, { results: false });
+    expect((await names(bytes)).some((n) => n.endsWith("result.json"))).toBe(false);
+    const opened = await readProjectBytes(bytes);
+    expect(opened.models.every((m) => m.runState === "idle" && m.result === null)).toBe(true);
   });
 
-  it("deflates the entries", async () => {
+  it("writes a manifest naming the format, its versions, the app, and the times; created is kept over saves", async () => {
+    const file = project();
+    const bytes = await writeProjectArchive(file, { modified: MODIFIED });
+    const m = (await entry(bytes, "manifest.json")) as Record<string, unknown>;
+    expect(m).toEqual({
+      format: "cslope-project",
+      formatVersion: CSLP_FORMAT_VERSION,
+      minReaderVersion: 1,
+      appVersion: expect.any(String),
+      created: "2026-11-04T12:00:00.000Z",
+      modified: "2026-11-04T12:00:00.000Z",
+      generator: `cSlope ${m.appVersion}`,
+    });
+    // The project's own created (from the file it was opened from) stays.
+    const opened = await readProjectBytes(bytes);
+    expect(opened.created).toBe("2026-11-04T12:00:00.000Z");
+    const again = await writeProjectArchive(opened, { modified: new Date("2026-12-01T08:00:00Z") });
+    expect(await entry(again, "manifest.json")).toMatchObject({ created: "2026-11-04T12:00:00.000Z", modified: "2026-12-01T08:00:00.000Z" });
+    // ... and reaches the store when the project is loaded
+    store().loadProject(opened);
+    expect(store().projectCreated).toBe("2026-11-04T12:00:00.000Z");
+    expect(serializeProject(store()).created).toBe("2026-11-04T12:00:00.000Z");
+    store().newProject();
+    expect(store().projectCreated).toBeNull();
+    expect(serializeProject(store()).created).toBeUndefined();
+  });
+
+  it("is deterministic: the same project saved twice is byte-identical, canonical JSON, one time stamp", async () => {
+    const file = projectWithResults();
+    const a = await writeProjectArchive(file, { modified: MODIFIED });
+    const b = await writeProjectArchive(file, { modified: MODIFIED });
+    expect(a).toEqual(b);
+    // JSON: sorted keys, 2-space indentation, LF, a final newline
+    const text = dec.decode((await readZip(a)).get("project.json"));
+    expect(text).toBe(`{\n  "activeModelId": ${JSON.stringify(file.activeModelId)},\n  "models": [\n    ${JSON.stringify(file.models[0].id)},\n    ${JSON.stringify(file.models[1].id)}\n  ],\n  "settings": {},\n  "units": "SI",\n  "version": ${PROJECT_FILE_VERSION}\n}\n`);
+    const model = dec.decode((await readZip(a)).get(`models/${file.models[0].id}/model.json`));
+    expect(model).not.toContain("\r");
+    const keys = [...model.matchAll(/^ {2}"([^"]+)":/gm)].map((m) => m[1]);
+    expect(keys).toEqual([...keys].sort());
+    // every entry's header carries the save time (DOS time, local)
+    const stamp = dosDateTime(MODIFIED);
+    for (const e of openZip(a).entries()) {
+      expect(a[e.local + 10] | (a[e.local + 11] << 8)).toBe(stamp.time);
+      expect(a[e.local + 12] | (a[e.local + 13] << 8)).toBe(stamp.date);
+    }
+    // another save time: another file
+    const c = await writeProjectArchive(file, { modified: new Date("2026-11-04T12:00:02Z") });
+    expect(c).not.toEqual(a);
+  });
+
+  it("deflates the JSON entries", async () => {
     const file = projectWithResults();
     const bytes = await writeProjectArchive(file);
-    // compression method of the first local header
-    expect(bytes[8] | (bytes[9] << 8)).toBe(8);
-    // (the JSON project file of earlier versions was indented)
-    expect(bytes.length).toBeLessThan(JSON.stringify(file, null, 2).length / 3);
+    const list = openZip(bytes).entries();
+    for (const e of list) {
+      expect(e.method).toBe(8);
+      expect(e.compressedSize).toBeLessThan(e.size);
+    }
+    expect(bytes.length).toBeLessThan(list.reduce((n, e) => n + e.size, 0));
   });
 
-  it("splitResults leaves models without an outcome out of results.json", () => {
+  it("gives a model whose id is not a folder name a new UUID (the active model follows)", async () => {
     const file = project();
-    expect(splitResults(file).results).toBeNull();
-    const running = { ...file, models: [{ ...file.models[0], runState: "running" as const }, file.models[1]] };
-    expect(splitResults(running).results).toBeNull();
+    const [a, b] = file.models;
+    const odd = { ...file, activeModelId: "model 2", models: [{ ...a, id: "../x" }, { ...b, id: "model 2" }] };
+    const safe = withSafeModelIds(odd);
+    expect(safe.models.map((m) => m.id)).toEqual([expect.stringMatching(/^[0-9a-f-]{36}$/), expect.stringMatching(/^[0-9a-f-]{36}$/)]);
+    expect(safe.activeModelId).toBe(safe.models[1].id);
+    expect(withSafeModelIds(file)).toBe(file);
+    const opened = await readProjectBytes(await writeProjectArchive(odd));
+    expect(opened.models.map((m) => m.name)).toEqual([a.name, b.name]);
+    expect(opened.activeModelId).toBe(opened.models[1].id);
+    expect(opened.models[1].id).toMatch(/^[0-9a-f-]{36}$/);
+    // a JSON project with such ids gets them when it is opened, so every save uses the same ids
+    const fromJson = await readProjectBytes(enc.encode(JSON.stringify(odd)));
+    expect(fromJson.models.map((m) => m.id)).toEqual([expect.stringMatching(/^[0-9a-f-]{36}$/), expect.stringMatching(/^[0-9a-f-]{36}$/)]);
+    expect(fromJson.activeModelId).toBe(fromJson.models[1].id);
+  });
+
+  it("writes the thumbnail last, stored, when there is one", async () => {
+    const file = project();
+    const bytes = await writeProjectArchive(file, { thumbnail: PNG });
+    const list = await names(bytes);
+    expect(list[list.length - 1]).toBe("thumbnail.png");
+    expect(openZip(bytes).entries().find((e) => e.name === "thumbnail.png")?.method).toBe(0);
+    expect(await (await openProject(bytes)).readThumbnail()).toEqual(PNG);
+    const none = await writeProjectArchive(file, { thumbnail: () => null });
+    expect(await names(none)).not.toContain("thumbnail.png");
+    expect(await (await openProject(none)).readThumbnail()).toBeNull();
+  });
+});
+
+describe("attachments and backgrounds", () => {
+  const assets = (): ProjectAsset[] => [
+    { id: "img-1", mime: "image/png", originalName: "plan.png", addedAt: "2026-11-04T00:00:00.000Z", data: () => PNG },
+    { id: "unused", mime: "text/plain", originalName: "notes.txt", addedAt: "2026-11-04T00:00:00.000Z", data: () => enc.encode("x") },
+  ];
+  const background = { assetId: "img-1", transform: { originX: 1, originY: 2, scale: 0.05, rotationDeg: 0, mirrored: false }, opacity: 0.5, visible: true, order: 0 };
+
+  function withBackground(): ProjectFile {
+    const file = project();
+    return { ...file, models: [{ ...file.models[0], backgrounds: [background] }, file.models[1]] };
+  }
+
+  it("writes the attachments the models refer to (stored when compressed already), with an index, and reads them on demand", async () => {
+    const file = withBackground();
+    const id = file.models[0].id;
+    const bytes = await writeProjectArchive(file, { assets: assets(), modified: MODIFIED });
+    expect(await names(bytes)).toEqual(["manifest.json", "project.json", `models/${id}/model.json`, `models/${id}/backgrounds.json`, `models/${file.models[1].id}/model.json`, "assets/index.json", "assets/img-1.png"]);
+    expect(await entry(bytes, `models/${id}/backgrounds.json`)).toEqual([background]);
+    expect((await entry(bytes, `models/${id}/model.json`) as object)).not.toHaveProperty("backgrounds");
+    expect(await entry(bytes, "assets/index.json")).toEqual([
+      { id: "img-1", path: "assets/img-1.png", mime: "image/png", bytes: PNG.length, sha256: expect.stringMatching(/^[0-9a-f]{64}$/), originalName: "plan.png", addedAt: "2026-11-04T00:00:00.000Z" },
+    ]);
+    expect(openZip(bytes).entries().find((e) => e.name === "assets/img-1.png")?.method).toBe(0);
+
+    const opened = await openProject(bytes);
+    expect(opened.assets.map((a) => a.id)).toEqual(["img-1"]);
+    expect(opened.file.models[0].backgrounds).toEqual([background]);
+    expect(opened.file.models[1].backgrounds).toBeUndefined();
+    expect(await opened.readAsset("img-1")).toEqual(PNG);
+    await expect(opened.readAsset("unused")).rejects.toThrow("no attachment unused");
+
+    // Opened with readProjectBytes, the attachment is there for the next save.
+    const reread = await readProjectBytes(bytes);
+    expect(openedProjectAssets().map((a) => a.id)).toEqual(["img-1"]);
+    const again = await writeProjectArchive(reread, { modified: MODIFIED });
+    expect(await entry(again, "assets/img-1.png")).toEqual(PNG);
+    expect(await entry(again, "assets/index.json")).toEqual(await entry(bytes, "assets/index.json"));
+  });
+
+  it("checks an attachment against its hash when it is read, and only then", async () => {
+    const file = withBackground();
+    const bytes = await writeProjectArchive(file, { assets: assets() });
+    // flip a byte of the stored PNG (the CRC after its IEND chunk)
+    const at = find(bytes, enc.encode("IEND")) + 4;
+    expect(at).toBeGreaterThan(4);
+    const damaged = bytes.slice();
+    damaged[at] ^= 0xff;
+    const opened = await openProject(damaged);
+    expect(opened.assets).toHaveLength(1);
+    await expect(opened.readAsset("img-1")).rejects.toThrow(/plan\.png does not match its hash/);
+  });
+
+  it("opens a file whose attachment would break the limits, failing only when it is read", async () => {
+    const file = withBackground();
+    const index = [{ id: "img-1", path: "assets/img-1.png", mime: "image/png", bytes: 0xffffffff, sha256: "0".repeat(64), originalName: "plan.png", addedAt: "" }];
+    const bytes = rawZip([
+      ...Object.entries(layout(file, { "assets/index.json": index })).map(([name, value]) => ({ name, data: enc.encode(JSON.stringify(value)), method: 0, uncompressed: -1 })),
+      { name: "assets/img-1.png", data: await deflated(new Uint8Array(4 * MB)), method: 8, uncompressed: 0xffffffff },
+    ]);
+    const opened = await openProject(bytes);
+    expect(opened.file.models[0].backgrounds?.[0].assetId).toBe("img-1");
+    expect(opened.assets[0].bytes).toBe(0xffffffff);
+    await expect(opened.readAsset("img-1")).rejects.toThrow(/img-1\.png is too large to import/);
+  });
+
+  it("drops a background without its attachment, index entries that do not match the archive, and a bad backgrounds.json", async () => {
+    const file = withBackground();
+    const id = file.models[0].id;
+    const good = { id: "img-1", path: "assets/img-1.png", mime: "image/png", bytes: PNG.length, sha256: "a".repeat(64), originalName: "plan.png", addedAt: "" };
+    const open = (over: Record<string, unknown>) => openProject(archive(layout(file, { "assets/img-1.png": PNG, ...over })));
+    // no index at all: no attachments, no backgrounds
+    expect((await open({})).file.models[0].backgrounds).toBeUndefined();
+    // index entries: wrong size, wrong path, no hash, a repeated id
+    for (const bad of [{ ...good, bytes: 1 }, { ...good, path: "assets/other.png" }, { ...good, sha256: "x" }, { ...good, id: "../x" }]) {
+      const opened = await open({ "assets/index.json": [bad] });
+      expect(opened.assets).toEqual([]);
+      expect(opened.file.models[0].backgrounds).toBeUndefined();
+    }
+    const twice = await open({ "assets/index.json": [good, good] });
+    expect(twice.assets).toHaveLength(1);
+    // backgrounds.json: entries without a transform or with a bad scale are dropped; the rest sorted by order
+    const opened = await open({
+      "assets/index.json": [good],
+      [`models/${id}/backgrounds.json`]: [
+        { ...background, order: 2, opacity: 7 },
+        { assetId: "img-1" },
+        { ...background, transform: { ...background.transform, scale: 0 } },
+        { ...background, assetId: "missing", order: 0 },
+        { ...background, order: 1, visible: false, transform: { originX: 0, originY: 0, scale: 1 } },
+      ],
+    });
+    expect(opened.file.models[0].backgrounds).toEqual([
+      { ...background, order: 1, visible: false, transform: { originX: 0, originY: 0, scale: 1, rotationDeg: 0, mirrored: false } },
+      { ...background, order: 2, opacity: 1 },
+    ]);
+    expect((await open({ "assets/index.json": [good], [`models/${id}/backgrounds.json`]: { not: "a list" } })).file.models[0].backgrounds).toBeUndefined();
   });
 });
 
@@ -159,6 +416,32 @@ describe("project files of earlier versions", () => {
     expect(await readProjectBytes(enc.encode(json))).toEqual(viaJson(file));
     // with a byte order mark and leading white space
     expect(await readProjectBytes(enc.encode(`\uFEFF \r\n${json}`))).toEqual(viaJson(file));
+    expect((await openProject(enc.encode(json))).layout).toBe("json");
+  });
+
+  it("opens the first .cslp layout (project.json with the models, results.json beside it)", async () => {
+    const file = projectWithResults();
+    const [a, b] = file.models;
+    const models = file.models.map(withoutRun);
+    const old = {
+      "manifest.json": { format: "cslope-project", formatVersion: 1, appVersion: "0.1.0-beta.2", created: "2026-11-04T00:00:00.000Z" },
+      "project.json": { version: file.version, activeModelId: file.activeModelId, models },
+      "results.json": { models: { [a.id]: { runState: "done", result, errorMessage: null }, [b.id]: { runState: "error", result: null, errorMessage: "Too few slices" } } },
+    };
+    const opened = await openProject(archive(old));
+    expect(opened.layout).toBe("cslp-3file");
+    expect(content(opened.file)).toEqual(viaJson(file));
+    expect(opened.file.created).toBe("2026-11-04T00:00:00.000Z");
+    expect(opened.manifest).toMatchObject({ formatVersion: 1, minReaderVersion: 1, generator: "cSlope 0.1.0-beta.2" });
+    // an outcome written into project.json itself is not a result; results.json may be missing or odd
+    const inProject = await readProjectBytes(archive({ ...old, "project.json": { ...old["project.json"], models: file.models }, "results.json": undefined }));
+    expect(inProject.models.every((m) => m.runState === "idle" && m.result === null)).toBe(true);
+    const odd = await readProjectBytes(archive({ ...old, "results.json": [1, 2] }));
+    expect(odd.models[0].runState).toBe("idle");
+    await expect(readProjectBytes(archive({ ...old, "results.json": "{" }))).rejects.toThrow(/results\.json is not valid JSON/);
+    // saved again, it is written in this version's layout
+    const saved = await writeProjectArchive(opened.file);
+    expect(await names(saved)).toContain(`models/${a.id}/result.json`);
   });
 
   it("refuses a file that is neither", async () => {
@@ -169,41 +452,55 @@ describe("project files of earlier versions", () => {
 });
 
 describe(".cslp archives that are refused", () => {
-  const good = () => {
-    const file = project();
-    return { "manifest.json": manifest(), "project.json": file };
-  };
+  const good = () => layout(project());
 
   it("opens a hand-made archive (stored entries)", async () => {
+    expect((await readProjectBytes(archive(good()))).models).toHaveLength(2);
+  });
+
+  it("refuses a file that needs a newer reader, with a clear message, and opens a newer format it may read", async () => {
+    await expect(readProjectBytes(archive({ ...good(), "manifest.json": manifest({ formatVersion: 2, minReaderVersion: 2, appVersion: "0.9.0", generator: "cSlope 0.9.0" }) }))).rejects.toThrow(
+      "This project was saved by a newer cSlope (cSlope 0.9.0); update to open it.",
+    );
+    // without a generator, the app version; without either, "a newer cSlope"
+    await expect(readProjectBytes(archive({ ...good(), "manifest.json": manifest({ minReaderVersion: 2, generator: undefined }) }))).rejects.toThrow("(cSlope 0.1.0)");
+    await expect(readProjectBytes(archive({ ...good(), "manifest.json": manifest({ minReaderVersion: 2, generator: undefined, appVersion: undefined }) }))).rejects.toThrow("(a newer cSlope)");
+    // the first layout's manifest has no minReaderVersion: its format version counts
+    await expect(readProjectBytes(archive({ ...good(), "manifest.json": manifest({ formatVersion: 2, minReaderVersion: undefined }) }))).rejects.toThrow(/newer cSlope/);
+    // a newer format that older readers may read opens (unknown entries and fields ignored)
+    const opened = await openProject(archive({ ...good(), "manifest.json": manifest({ formatVersion: 2, minReaderVersion: 1 }), "extra/new.json": { x: 1 } }));
+    expect(opened.file.models).toHaveLength(2);
+    expect(opened.manifest?.formatVersion).toBe(2);
+  });
+
+  it("refuses an archive without manifest.json or project.json, or with another format, or damaged", async () => {
     const files = good();
-    expect((await readProjectBytes(archive(files))).models).toHaveLength(2);
-  });
-
-  it("refuses a newer format version with a clear message", async () => {
-    const files = { ...good(), "manifest.json": manifest({ formatVersion: 2, appVersion: "0.9.0" }) };
-    await expect(readProjectBytes(archive(files))).rejects.toThrow(
-      "This project was saved by a newer version of cSlope (cSlope 0.9.0), in project format 2; this version reads format 1. Update cSlope to open it.",
-    );
-  });
-
-  it("refuses an archive without manifest.json or project.json, or with another format", async () => {
-    const { "project.json": p, "manifest.json": m } = good();
-    await expect(readProjectBytes(archive({ "project.json": p }))).rejects.toThrow(/no manifest\.json/);
-    await expect(readProjectBytes(archive({ "manifest.json": m }))).rejects.toThrow(/no project\.json/);
-    await expect(readProjectBytes(archive({ "manifest.json": manifest({ format: "other" }), "project.json": p }))).rejects.toThrow(
-      /manifest names another format/,
-    );
+    const without = (name: string) => Object.fromEntries(Object.entries(files).filter(([n]) => n !== name));
+    await expect(readProjectBytes(archive(without("manifest.json")))).rejects.toThrow(/no manifest\.json/);
+    await expect(readProjectBytes(archive(without("project.json")))).rejects.toThrow(/no project\.json/);
+    await expect(readProjectBytes(archive({ ...files, "manifest.json": manifest({ format: "other" }) }))).rejects.toThrow(/manifest names another format/);
     for (const formatVersion of [undefined, "1", 0, 1.5]) {
-      await expect(readProjectBytes(archive({ "manifest.json": manifest({ formatVersion }), "project.json": p }))).rejects.toThrow(
-        /no valid formatVersion/,
-      );
+      await expect(readProjectBytes(archive({ ...files, "manifest.json": manifest({ formatVersion }) }))).rejects.toThrow(/no valid formatVersion/);
     }
-    await expect(readProjectBytes(archive({ "manifest.json": "{", "project.json": p }))).rejects.toThrow(/manifest\.json is not valid JSON/);
-    await expect(readProjectBytes(archive({ "manifest.json": m, "project.json": "{" }))).rejects.toThrow(/project\.json is not valid JSON/);
-    await expect(readProjectBytes(archive({ "manifest.json": m, "project.json": { models: [] } }))).rejects.toThrow(/at least one model/);
+    await expect(readProjectBytes(archive({ ...files, "manifest.json": "{" }))).rejects.toThrow(/manifest\.json is not valid JSON/);
+    await expect(readProjectBytes(archive({ ...files, "project.json": "{" }))).rejects.toThrow(/project\.json is not valid JSON/);
+    await expect(readProjectBytes(archive({ ...files, "project.json": [1] }))).rejects.toThrow(/project\.json is not an object/);
+    // a model project.json names without its folder; a model.json that is not a model
+    const ids = (files["project.json"] as { models: string[] }).models;
+    await expect(readProjectBytes(archive({ ...files, "project.json": { ...(files["project.json"] as object), models: [...ids, "ghost"] } }))).rejects.toThrow(
+      "project.json names the model ghost, but models/ghost/model.json is missing",
+    );
+    await expect(readProjectBytes(archive({ ...files, [`models/${ids[0]}/model.json`]: [1] }))).rejects.toThrow(/model\.json is not an object/);
+    await expect(readProjectBytes(archive({ ...files, [`models/${ids[0]}/model.json`]: { name: "no coordinates" } }))).rejects.toThrow(/must include coordinates/);
+    // the first layout without models
+    await expect(readProjectBytes(archive({ "manifest.json": manifest(), "project.json": { x: 1 } }))).rejects.toThrow(/no models in project\.json and no models\/ folder/);
+    await expect(readProjectBytes(archive({ "manifest.json": manifest(), "project.json": { models: [] } }))).rejects.toThrow(/at least one model/);
+    // other units
+    await expect(readProjectBytes(archive({ ...files, "project.json": { ...(files["project.json"] as object), units: "imperial" } }))).rejects.toThrow(
+      "The project is in imperial units; this version of cSlope reads SI projects only.",
+    );
     // An archive that is not cSlope's (no central directory: cut off)
-    const bytes = archive(good());
-    await expect(readProjectBytes(bytes.subarray(0, 40))).rejects.toThrow(/not a readable cSlope project/);
+    await expect(readProjectBytes(archive(files).subarray(0, 40))).rejects.toThrow(/not a readable cSlope project/);
   });
 
   it("refuses files above the 50 MB limit", async () => {
@@ -215,83 +512,116 @@ describe(".cslp archives that are refused", () => {
   it("keeps the ZIP limits: entries claiming too much, or unpacking past their declared size", async () => {
     const zeros = new Uint8Array(4 * MB);
     const comp = await deflated(zeros);
-    await expect(readProjectBytes(rawZip([{ name: "project.json", data: comp, method: 8, uncompressed: 0xffffffff }]))).rejects.toThrow(
+    const stored = (name: string, value: unknown) => ({ name, data: enc.encode(JSON.stringify(value)), method: 0, uncompressed: -1 });
+    const m = stored("manifest.json", manifest());
+    const p = (ids: string[]) => stored("project.json", { version: 3, activeModelId: ids[0], models: ids, units: "SI", settings: {} });
+    await expect(readProjectBytes(rawZip([m, { name: "project.json", data: comp, method: 8, uncompressed: 0xffffffff }]))).rejects.toThrow(
       /project\.json is too large to import \(4096 MB unpacked; at most 100 MB\)/,
     );
-    await expect(readProjectBytes(rawZip([{ name: "results.json", data: comp, method: 8, uncompressed: 100 }]))).rejects.toThrow(
-      /results\.json is larger than its header says/,
+    await expect(readProjectBytes(rawZip([m, p(["a"]), { name: "models/a/model.json", data: comp, method: 8, uncompressed: 100 }]))).rejects.toThrow(
+      /model\.json is larger than its header says/,
     );
+    // three results declared as 70 MB each: more than the 200 MB an archive
+    // may unpack to in all (what they hold is small, so each reads alone)
+    const model = stored("x", project().models[0]);
+    const small = await deflated(enc.encode("{}"));
     await expect(
-      readProjectBytes(rawZip([1, 2, 3].map(() => ({ name: "results.json", data: comp, method: 8, uncompressed: 70 * MB })))),
+      readProjectBytes(
+        rawZip([
+          m,
+          p(["a", "b", "c"]),
+          ...["a", "b", "c"].flatMap((id) => [
+            { ...model, name: `models/${id}/model.json` },
+            { name: `models/${id}/result.json`, data: small, method: 8, uncompressed: 70 * MB },
+          ]),
+        ]),
+      ),
     ).rejects.toThrow(/entries unpack to more than 200 MB/);
+    // two of them read (the declared sizes count, not what came out)
+    const two = await readProjectBytes(rawZip([m, p(["a", "b"]), ...["a", "b"].flatMap((id) => [{ ...model, name: `models/${id}/model.json` }, { name: `models/${id}/result.json`, data: small, method: 8, uncompressed: 70 * MB }])]));
+    expect(two.models).toHaveLength(2);
   });
 });
 
 describe(".cslp content is validated as a JSON project's", () => {
-  it("drops unknown fields in project.json and results.json", async () => {
+  it("drops unknown fields and entries, and takes the outcome from result.json only", async () => {
     const file = projectWithResults();
-    const { project: p, results } = splitResults(file);
-    const raw = JSON.parse(JSON.stringify(p));
-    raw.evil = "root";
-    raw.models[0].evil = "model";
-    raw.models[0].materials[0].evil = "material";
-    raw.models[0].options.evil = "options";
-    const r = JSON.parse(JSON.stringify(results));
     const id = file.models[0].id;
-    r.models[id].evil = "run";
-    r.models[id].mode = "result"; // a model field, not an outcome field: not taken from results.json
-    const opened = await readProjectBytes(archive({ "manifest.json": manifest(), "project.json": raw, "results.json": r }));
+    const files = layout(file, { "notes.txt": "x", [`models/${id}/extra.json`]: { x: 1 } });
+    (files["project.json"] as Record<string, unknown>).evil = "root";
+    (files["project.json"] as Record<string, unknown>).settings = { evil: true };
+    const raw = files[`models/${id}/model.json`] as Record<string, unknown>;
+    raw.evil = "model";
+    (raw.materials as Record<string, unknown>[])[0].evil = "material";
+    (raw.options as Record<string, unknown>).evil = "options";
+    raw.runState = "done"; // in model.json: ignored
+    raw.result = { minFOS: 9 };
+    const run = files[`models/${id}/result.json`] as Record<string, unknown>;
+    run.evil = "run";
+    run.mode = "result"; // a model field, not an outcome field: not taken from result.json
+    const opened = await readProjectBytes(archive(files));
     const text = JSON.stringify(opened);
     expect(text).not.toContain("evil");
-    expect(opened).not.toHaveProperty("evil");
-    expect(opened.models[0]).not.toHaveProperty("evil");
     expect(opened.models[0].mode).toBe(file.models[0].mode);
     expect(opened.models[0].runState).toBe("done");
+    expect(opened.models[0].result?.minFOS).toBe(1.2);
+    // without result.json: no outcome, whatever model.json says
+    const none = Object.fromEntries(Object.entries(files).filter(([n]) => !n.endsWith("result.json")));
+    expect((await readProjectBytes(archive(none))).models.every((m) => m.runState === "idle" && m.result === null && m.errorMessage === null)).toBe(true);
+    // a damaged result (or one of another runState) is dropped as in a JSON project
+    const bad = { ...files, [`models/${id}/result.json`]: { runState: "done", result: { minFOS: "x" } } };
+    expect((await readProjectBytes(archive(bad))).models[0]).toMatchObject({ runState: "idle", result: null });
+    const running = { ...files, [`models/${id}/result.json`]: { runState: "running", result } };
+    expect((await readProjectBytes(archive(running))).models[0]).toMatchObject({ runState: "idle", result: null });
+    await expect(readProjectBytes(archive({ ...files, [`models/${id}/result.json`]: "{" }))).rejects.toThrow(/result\.json is not valid JSON/);
   });
 
-  it("takes outcomes from results.json only (none without it), and only valid ones", async () => {
-    const file = projectWithResults();
-    // An outcome written into project.json itself is not a result.
-    const opened = await readProjectBytes(archive({ "manifest.json": manifest(), "project.json": file }));
-    expect(opened.models.every((m) => m.runState === "idle" && m.result === null && m.errorMessage === null)).toBe(true);
-    // A damaged result is dropped as in a JSON project.
-    const id = file.models[0].id;
-    const { project: p } = splitResults(file);
-    const bad = { models: { [id]: { runState: "done", result: { minFOS: "x" } } } };
-    const reopened = await readProjectBytes(archive({ "manifest.json": manifest(), "project.json": p, "results.json": bad }));
-    expect(reopened.models[0]).toMatchObject({ runState: "idle", result: null });
-    expect(reopened.models[1]).toMatchObject({ runState: "idle", result: null });
-    // results.json that is not an object, or not valid JSON
-    const odd = await readProjectBytes(archive({ "manifest.json": manifest(), "project.json": p, "results.json": [1, 2] }));
-    expect(odd.models[0].runState).toBe("idle");
-    await expect(readProjectBytes(archive({ "manifest.json": manifest(), "project.json": p, "results.json": "{" }))).rejects.toThrow(
-      /results\.json is not valid JSON/,
-    );
+  it("names a model by its folder, and reads a folder project.json does not list (after the listed ones)", async () => {
+    const file = project();
+    const [a, b] = file.models;
+    const files = layout(file);
+    (files[`models/${a.id}/model.json`] as Record<string, unknown>).id = "other";
+    (files["project.json"] as Record<string, unknown>).models = [b.id];
+    const opened = await readProjectBytes(archive(files));
+    expect(opened.models.map((m) => m.id)).toEqual([b.id, a.id]);
+    expect(opened.models[1].name).toBe(a.name);
   });
 
   it("migrates an older project.json version as a JSON project", async () => {
     const file = project();
-    const old = { ...file, version: 2 };
-    const opened = await readProjectBytes(archive({ "manifest.json": manifest(), "project.json": old }));
-    expect(opened).toEqual(parseProjectFile(JSON.stringify(old)));
+    const files = layout({ ...file, version: 2 });
+    const opened = await readProjectBytes(archive(files));
+    expect(content(opened)).toEqual(parseProjectFile(JSON.stringify({ ...file, version: 2 })));
   });
 });
 
+/** The index of `needle` in `bytes`, or -1. */
+function find(bytes: Uint8Array, needle: Uint8Array): number {
+  for (let i = 0; i + needle.length <= bytes.length; i++) {
+    let k = 0;
+    while (k < needle.length && bytes[i + k] === needle[k]) k++;
+    if (k === needle.length) return i;
+  }
+  return -1;
+}
+
 // ── crafted archives (as in import-robustness.test.ts) ──────────────
 
+/** An archive of entries with the declared sizes given (-1: the data's length). */
 function rawZip(entries: { name: string; data: Uint8Array; method: number; uncompressed: number }[]): Uint8Array {
   const parts: Uint8Array[] = [];
   const central: Uint8Array[] = [];
   let offset = 0;
   for (const e of entries) {
     const name = enc.encode(e.name);
+    const uncompressed = e.uncompressed < 0 ? e.data.length : e.uncompressed;
     const local = new Uint8Array(30 + name.length);
     const lv = new DataView(local.buffer);
     lv.setUint32(0, 0x04034b50, true);
     lv.setUint16(4, 20, true);
     lv.setUint16(8, e.method, true);
     lv.setUint32(18, e.data.length, true);
-    lv.setUint32(22, e.uncompressed, true);
+    lv.setUint32(22, uncompressed, true);
     lv.setUint16(26, name.length, true);
     local.set(name, 30);
     const cen = new Uint8Array(46 + name.length);
@@ -301,7 +631,7 @@ function rawZip(entries: { name: string; data: Uint8Array; method: number; uncom
     cv.setUint16(6, 20, true);
     cv.setUint16(10, e.method, true);
     cv.setUint32(20, e.data.length, true);
-    cv.setUint32(24, e.uncompressed, true);
+    cv.setUint32(24, uncompressed, true);
     cv.setUint16(28, name.length, true);
     cv.setUint32(42, offset, true);
     cen.set(name, 46);

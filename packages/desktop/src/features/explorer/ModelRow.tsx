@@ -10,6 +10,8 @@ interface Props {
   hasResult: boolean;
   /** The model's analysis is running (a single run or Run All). */
   isRunning?: boolean;
+  /** The model's last analysis failed. */
+  hasError?: boolean;
   editName: string;
   onChangeName: (value: string) => void;
   onCommitRename: () => void;
@@ -37,6 +39,7 @@ export function ModelRow({
   isEditing,
   hasResult,
   isRunning = false,
+  hasError = false,
   editName,
   onChangeName,
   onCommitRename,
@@ -52,13 +55,20 @@ export function ModelRow({
   onDrop,
   onDragEnd,
 }: Props) {
+  const state = isRunning
+    ? { label: "Analysing", fill: "var(--color-vsc-accent)" }
+    : hasError
+      ? { label: "Analysis failed", fill: "var(--color-vsc-error)" }
+      : hasResult
+        ? { label: "Analysed", fill: "var(--color-vsc-success)" }
+        : { label: "Not analysed", fill: null };
 
   return (
     <div
       className="group flex items-center gap-2 px-4 py-[5px] cursor-pointer text-[12px] select-none rounded-sm mx-1 transition-colors"
       style={{
         background: isActive
-          ? "var(--color-vsc-list-active)"
+          ? "var(--color-vsc-selected-bg)"
           : isSelected
             ? "var(--color-vsc-list-hover)"
             : undefined,
@@ -100,13 +110,21 @@ export function ModelRow({
       aria-selected={isActive || isSelected}
       aria-label={model.name}
     >
-      <Box
-        size={16}
-        strokeWidth={1.75}
-        className="shrink-0"
-        aria-hidden
-        color={isActive ? "var(--color-vsc-text-bright)" : hasResult ? "var(--color-vsc-text)" : "var(--color-vsc-text-muted)"}
+      {/* The run state as a dot before the box: green analysed, blue
+          running, red failed, hollow grey not run. Selection is shown
+          by the row background only. */}
+      <span
+        data-testid={isRunning ? "model-running" : undefined}
+        role="img"
+        aria-label={state.label}
+        title={state.label}
+        className={`w-[7px] h-[7px] rounded-full shrink-0 box-border${isRunning ? " animate-pulse" : ""}`}
+        style={{
+          background: state.fill ?? "transparent",
+          border: state.fill ? undefined : "1px solid var(--color-vsc-text-muted)",
+        }}
       />
+      <Box size={16} strokeWidth={1.75} className="shrink-0" aria-hidden color="var(--color-vsc-text-muted)" />
 
       {isEditing ? (
         <input
@@ -126,16 +144,6 @@ export function ModelRow({
         <span className="truncate flex-1" title={model.name}>
           {model.name}
         </span>
-      )}
-      {isRunning && (
-        <span
-          data-testid="model-running"
-          role="img"
-          aria-label="Analysing"
-          title="Analysing"
-          className="w-1.5 h-1.5 rounded-full shrink-0 animate-pulse"
-          style={{ background: "var(--color-vsc-accent)" }}
-        />
       )}
     </div>
   );

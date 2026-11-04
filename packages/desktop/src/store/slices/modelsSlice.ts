@@ -15,6 +15,7 @@ import {
 } from "../defaults";
 import type { SliceCreator } from "../helpers";
 import { cloneData, nextId } from "../helpers";
+import { cloneAnnotation } from "../../features/annotations/reference";
 import type { ModelEntry, ModelsSlice } from "../types";
 import { abortAllAnalyses, cancelRunForModel } from "./analysisSlice";
 import { markProjectClean } from "../unsaved";
@@ -172,6 +173,7 @@ export const createModelsSlice: SliceCreator<ModelsSlice> = (
 ) => ({
   activeModelId: INITIAL_MODEL_ID,
   models: [INITIAL_MODEL],
+  projectCreated: null,
   _pendingFitToScreen: false,
   clearPendingFitToScreen: () => set({ _pendingFitToScreen: false }),
 
@@ -326,9 +328,7 @@ export const createModelsSlice: SliceCreator<ModelsSlice> = (
       resultViewSettings: source.resultViewSettings
         ? {
             ...source.resultViewSettings,
-            annotations: source.resultViewSettings.annotations.map((a) => ({
-              ...a,
-            })),
+            annotations: source.resultViewSettings.annotations.map(cloneAnnotation),
             paperFrame: { ...source.resultViewSettings.paperFrame },
             viewLock: source.resultViewSettings.viewLock
               ? {
@@ -481,7 +481,7 @@ export const createModelsSlice: SliceCreator<ModelsSlice> = (
       ),
     })),
 
-  loadProject: ({ models, activeModelId }) => {
+  loadProject: ({ models, activeModelId, created }) => {
     abortAllAnalyses();
     if (!models || models.length === 0) return;
     const targetId =
@@ -499,6 +499,7 @@ export const createModelsSlice: SliceCreator<ModelsSlice> = (
     set({
       models,
       activeModelId: targetId,
+      projectCreated: created ?? null,
       ...mapModelToState(target),
       runAll: null,
       _pendingFitToScreen: !hasSavedViewport,
@@ -515,6 +516,7 @@ export const createModelsSlice: SliceCreator<ModelsSlice> = (
     set({
       models: [entry],
       activeModelId: id,
+      projectCreated: null,
       ...mapModelToState(entry),
       runAll: null,
     });
@@ -531,6 +533,7 @@ export const createModelsSlice: SliceCreator<ModelsSlice> = (
     set({
       models,
       activeModelId: first.id,
+      projectCreated: null,
       ...mapModelToState(first),
       runAll: null,
       _pendingFitToScreen: true,
@@ -547,6 +550,7 @@ export const createModelsSlice: SliceCreator<ModelsSlice> = (
     set({
       models,
       activeModelId: first.id,
+      projectCreated: null,
       ...mapModelToState(first),
       runAll: null,
       _pendingFitToScreen: true,
@@ -563,6 +567,7 @@ export const createModelsSlice: SliceCreator<ModelsSlice> = (
     set({
       models,
       activeModelId: first.id,
+      projectCreated: null,
       ...mapModelToState(first),
       runAll: null,
       _pendingFitToScreen: true,

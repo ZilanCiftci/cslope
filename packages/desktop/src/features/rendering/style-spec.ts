@@ -52,11 +52,34 @@ export const FOS_LABEL_BG_COLOR: DualColor = {
   hex: "#ffffff",
   rgb: [255, 255, 255],
 };
+/**
+ * Reference annotations (a slip surface from another program, a line from
+ * a paper): a purple no surface uses. The canvas takes the theme's
+ * --color-canvas-reference instead where it is set; the PDF this.
+ */
+export const REFERENCE_ANNOTATION_COLOR: DualColor = {
+  hex: "#a21caf",
+  rgb: [162, 28, 175],
+};
 /** Failure mass semi-transparent fill colour (black). */
 export const FAILURE_MASS_COLOR: DualColor = {
   hex: "#000000",
   rgb: [0, 0, 0],
 };
+/**
+ * The custom search planes' surfaces in the result (dashed, each with its
+ * own FOS label): purple, apart from the black critical surface and the
+ * red–yellow–green–blue FOS scale. The canvas takes its theme's
+ * `--color-canvas-custom-surface` and falls back to this (the PDF's).
+ */
+export const CUSTOM_SURFACE_COLOR: DualColor = {
+  hex: "#7e22ce",
+  rgb: [126, 34, 206],
+};
+/** Dash pattern of a custom surface in the result (logical px). */
+export const CUSTOM_SURFACE_DASH_PX: readonly [number, number] = [8, 5];
+/** Line width of a custom surface in the result (logical px). */
+export const CUSTOM_SURFACE_LINE_WIDTH_PX = 1.5;
 
 // ── Entry / exit marker geometry (logical px) ──────────────────
 
@@ -111,7 +134,9 @@ export const FAILURE_MASS_FILL_OPACITY = 0.12;
 /** Opacity for slice wall lines. */
 export const SLICE_LINE_OPACITY = 0.6;
 /** Slice wall line width (logical px; PDF scales by mmPerPx). */
-export const SLICE_LINE_WIDTH_PX = 0.8;
+export const SLICE_LINE_WIDTH_PX = 0.55;
+/** The model outline over a result (canvas px; 1 in the edit view). */
+export const RESULT_OUTLINE_WIDTH_PX = 0.7;
 /** Slice wall colour over a dark material fill (white). */
 export const SLICE_LINE_ON_DARK_COLOR: DualColor = { hex: "#ffffff", rgb: [255, 255, 255] };
 /** A sliding mass thinner than this on screen gets a band of this width along it. */

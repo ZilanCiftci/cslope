@@ -25,10 +25,12 @@ import {
 } from "../rendering/overlay-layout";
 import { piezoObstacles, piezoSymbolLayout, type PiezoScene } from "../rendering/piezo-layout";
 import { layoutLimitMarkers, layoutRangeDots } from "../rendering/search-markers";
-import { fosColor, fosScaleRange, fosTickLabel } from "../../utils/fos-color";
+import { fosTickLabel } from "../../utils/fos-color";
+import { colorScaleOf, colorScaleOfBar, type FosColorScale, type ScaleFilter } from "../annotations/colorScale";
 
-/** "≥" (in the embedded font). */
+/** "≥" and "≤" (in the embedded font). */
 const PDF_GE = "≥ ";
+const PDF_LE = "≤ ";
 import {
   fosLabelAnchor,
   sameSurface,
@@ -59,6 +61,9 @@ import {
   CRACK_WATER_OPACITY,
   CRACK_WATER_WIDTH_PX,
   CRITICAL_SURFACE_COLOR,
+  CUSTOM_SURFACE_COLOR,
+  CUSTOM_SURFACE_DASH_PX,
+  CUSTOM_SURFACE_LINE_WIDTH_PX,
   ENTRY_DOT_COLOR,
   ENTRY_EXIT_DOT_RADIUS_PX,
   EXIT_DOT_COLOR,
@@ -85,8 +90,10 @@ import {
   SLIP_SURFACE_OPACITY,
   UDL_LOAD_COLOR,
   MODEL_HATCH_PATTERNS,
+  type DualColor,
 } from "../rendering/style-spec";
 import { drawPdfHatch, drawPdfHatchLabel } from "../rendering/hatch";
+import { boxesOverlap } from "../canvas/label-layout";
 import { piezoExtensions, piezoPonds } from "../../utils/piezo";
 import { pondArrowLayout } from "../rendering/pond-arrows";
 import { piezoSymbolBox } from "../canvas/overlay-geometry";
@@ -129,6 +136,7 @@ import { resolveAnnotationText } from "../annotations/resolveAnnotationText";
 import { getMaterialTableColumnWidthPx } from "../annotations/materialTableLayout";
 import { anchoredTopLeft } from "../annotations/anchorPosition";
 import { computeSlicePlotData } from "../annotations/slicePlotData";
+import { axisTicks, tickLabel } from "../annotations/plotAxis";
 
 export function drawGrid(
   pdf: jsPDF,
@@ -136,6 +144,7 @@ export function drawGrid(
   viewScale: number,
   clip: { x: number; y: number; w: number; h: number },
   gridSpacing?: number,
+  gridLineSpacing?: number,
 ) {
   const [originPdfX, originPdfY] = tf.worldToPdf(0, 0);
   const worldPerMm = 1 / (viewScale * tf.mmPerPx);
@@ -147,14 +156,16 @@ export function drawGrid(
 
   // The ruler's major-tick spacing (drawRulerFrame, same frame), so the
   // grid lines run through the labelled ticks as on the canvas; the
-  // separately rounded automatic steps used to differ.
-  const gridStep = resolveTickStep(
+  // separately rounded automatic steps used to differ. The user may give
+  // the grid a spacing of its own.
+  const tickStep = resolveTickStep(
     gridSpacing,
     computeRulerStep(worldRight - worldLeft, clip.w, tf.paperW, [
       worldLeft,
       worldRight,
     ]),
   );
+  const gridStep = resolveTickStep(gridLineSpacing, tickStep);
 
   pdf.setDrawColor(220, 220, 220);
   pdf.setLineWidth(0.1);
@@ -892,15 +903,14 @@ export function drawPiezometricLines(
 }
 
 /** Opacity of the search-limit markers in the result (as on the canvas). */
-const RESULT_MARKER_OPACITY = 0.55;
+const RESULT_MARKER_OPACITY = 1;
 
 /**
  * The search limits as on the canvas over a result (layoutLimitMarkers,
  * layoutRangeDots): dots along the ground over each range, none over the
- * sliding mass of `critical`, then at each limit a bar with a triangle
- * lifted clear of the ground pointing into the range (only a bar for a
- * range of zero width), a limit both ranges share drawn once. Lighter
- * than the result drawn over them.
+ * sliding mass of `critical`, then at each limit a bar across the ground
+ * with a triangle pointing into the range (only a bar for a range of
+ * zero width), as in the edit view.
  */
 export function drawEntryExitMarkers(
   pdf: jsPDF,
@@ -910,7 +920,7 @@ export function drawEntryExitMarkers(
   critical: Pick<DrawableSurface, "entryPoint" | "exitPoint"> | null = null,
 ) {
   setOpacity(pdf, RESULT_MARKER_OPACITY);
-  const radius = ENTRY_EXIT_DOT_RADIUS_PX * tf.mmPerPx * 0.8;
+  const radius = ENTRY_EXIT_DOT_RADIUS_PX * tf.mmPerPx;
   for (const d of layoutRangeDots(limits, coordinates, tf.worldToPdf, tf.mmPerPx, {
     skip: critical ? [critical.entryPoint[0], critical.exitPoint[0]] : null,
     radius,
@@ -921,7 +931,7 @@ export function drawEntryExitMarkers(
   pdf.setDrawColor(...MARKER_COLOR.rgb);
   pdf.setFillColor(...MARKER_COLOR.rgb);
   pdf.setLineWidth(0.4);
-  for (const m of layoutLimitMarkers(limits, coordinates, tf.worldToPdf, tf.mmPerPx, { lifted: true })) {
+  for (const m of layoutLimitMarkers(limits, coordinates, tf.worldToPdf, tf.mmPerPx, { lifted: false })) {
     pdf.line(m.cx, m.barTop, m.cx, m.barBottom);
     for (const [tip, b1, b2] of m.triangles) {
       const triOps: PathOp[] = [
@@ -946,7 +956,8 @@ export function drawSlipSurfaces(
     return;
   }
 
-  const fosRange = fosScaleRange(result);
+  // The scale of the colour bar, so the drawing and the bar agree.
+  const fosScale = colorScaleOf(rvs, result);
   for (let si = result.allSurfaces.length - 1; si >= 0; si--) {
     const surf = result.allSurfaces[si];
     if (result.criticalSurface && sameSurface(surf, result.criticalSurface)) {
@@ -958,7 +969,7 @@ export function drawSlipSurfaces(
 
     const arcPts = surfacePoints(surf);
     const pdfPts = arcPts.map(([wx, wy]) => tf.worldToPdf(wx, wy));
-    const color = parseColor(fosColor(surf.fos, fosRange.min, fosRange.max));
+    const color = parseColor(fosScale.colorOf(surf.fos));
 
     pdf.setDrawColor(...color);
     pdf.setLineWidth(0.15);
@@ -1124,22 +1135,82 @@ export function drawCriticalSurface(
   }
 
   if (rvs.showFosLabel) {
-    const [ccx, ccy] = tf.worldToPdf(...fosLabelAnchor(cs));
-    const fosText = cs.fos.toFixed(3);
-    const labelX = ccx + 3;
+    drawFosLabelPdf(pdf, fosLabelLayoutPdf(pdf, tf, cs), CRITICAL_SURFACE_COLOR);
+  }
+}
 
-    pdf.setFontSize(10);
-    setSansFont(pdf, "bold");
-    const tw = pdf.getTextWidth(fosText);
-    pdf.setFillColor(...FOS_LABEL_BG_COLOR.rgb);
-    pdf.rect(labelX - 0.5, ccy - 4.5, tw + 1, 5.5, "F");
+/** A FOS label as the PDF places it (mm): its text, position and box, measured in the label font. */
+interface FosLabelPdf {
+  text: string;
+  labelX: number;
+  /** The underline's y; the text stands above it. */
+  y: number;
+  width: number;
+  box: Box;
+}
 
-    pdf.setTextColor(...CRITICAL_SURFACE_COLOR.rgb);
-    pdf.text(fosText, labelX, ccy - 1);
+function fosLabelLayoutPdf(pdf: jsPDF, tf: PdfTransform, surf: DrawableSurface & { fos: number }, dy = 0): FosLabelPdf {
+  const [ccx, ccy] = tf.worldToPdf(...fosLabelAnchor(surf));
+  const text = surf.fos.toFixed(3);
+  const labelX = ccx + 3;
+  const y = ccy + dy;
+  pdf.setFontSize(10);
+  setSansFont(pdf, "bold");
+  const width = pdf.getTextWidth(text);
+  return { text, labelX, y, width, box: { left: labelX - 0.5, top: y - 4.5, right: labelX + width + 0.5, bottom: y + 1 } };
+}
 
-    pdf.setDrawColor(...CRITICAL_SURFACE_COLOR.rgb);
-    pdf.setLineWidth(0.3);
-    pdf.line(labelX - 0.2, ccy, labelX + tw + 0.2, ccy);
+/** The FOS label on its white plate, underlined, in the colour of its surface. */
+function drawFosLabelPdf(pdf: jsPDF, label: FosLabelPdf, color: DualColor) {
+  const { text, labelX, y, width, box } = label;
+  pdf.setFontSize(10);
+  setSansFont(pdf, "bold");
+  pdf.setFillColor(...FOS_LABEL_BG_COLOR.rgb);
+  pdf.rect(box.left, box.top, box.right - box.left, box.bottom - box.top, "F");
+
+  pdf.setTextColor(...color.rgb);
+  pdf.text(text, labelX, y - 1);
+
+  pdf.setDrawColor(...color.rgb);
+  pdf.setLineWidth(0.3);
+  pdf.line(labelX - 0.2, y, labelX + width + 0.2, y);
+}
+
+/**
+ * The custom search planes' surfaces, on request (the "Custom surfaces"
+ * toggle): dashed in their own colour, whatever the surface display, the
+ * critical surface not again; with the FOS label on, each surface's label
+ * like the critical one's, moved down until clear of the critical label
+ * and the labels placed before it (as on the canvas).
+ */
+export function drawCustomSurfaces(pdf: jsPDF, tf: PdfTransform, result: AnalysisResult, rvs: ResultViewSettings) {
+  if (rvs.showCustomSurfaces !== true) return;
+  const cs = result.criticalSurface;
+  const surfaces = (result.customSurfaces ?? []).flatMap((c) => (c.surface && !(cs && sameSurface(c.surface, cs)) ? [c.surface] : []));
+  if (surfaces.length === 0) return;
+
+  pdf.setDrawColor(...CUSTOM_SURFACE_COLOR.rgb);
+  pdf.setLineWidth(CUSTOM_SURFACE_LINE_WIDTH_PX * tf.mmPerPx);
+  pdf.setLineDashPattern(
+    CUSTOM_SURFACE_DASH_PX.map((d) => d * tf.mmPerPx),
+    0,
+  );
+  for (const surf of surfaces) {
+    const pts = surfacePoints(surf).map(([wx, wy]) => tf.worldToPdf(wx, wy));
+    pdfPath(pdf, buildPolylinePath(pts, false), "S");
+  }
+  pdf.setLineDashPattern([], 0);
+
+  if (!rvs.showFosLabel) return;
+  const placed: Box[] = cs ? [fosLabelLayoutPdf(pdf, tf, cs).box] : [];
+  for (const surf of surfaces) {
+    let label = fosLabelLayoutPdf(pdf, tf, surf);
+    const step = label.box.bottom - label.box.top + 0.5;
+    for (let n = 1; n <= 20 && placed.some((b) => boxesOverlap(label.box, b, 0)); n++) {
+      label = fosLabelLayoutPdf(pdf, tf, surf, n * step);
+    }
+    placed.push(label.box);
+    drawFosLabelPdf(pdf, label, CUSTOM_SURFACE_COLOR);
   }
 }
 
@@ -1175,7 +1246,7 @@ function measureTextAnnotationPdf(
  * Colour bar layout in mm, using the canvas proportions (bar 20 × 200,
  * labels 11, title above the bar) with the annotation scale in mm.
  */
-function layoutColorBarPdf(pdf: jsPDF, result: AnalysisResult, scale: number) {
+function layoutColorBarPdf(pdf: jsPDF, colorScale: FosColorScale, scale: number) {
   const barW = 20 * scale;
   const barH = 200 * scale;
   const labelMm = 11 * scale;
@@ -1184,11 +1255,11 @@ function layoutColorBarPdf(pdf: jsPDF, result: AnalysisResult, scale: number) {
   setSansFont(pdf, "normal");
   pdf.setFontSize(labelPt);
   let maxLabelW = 0;
-  const fosScale = fosScaleRange(result);
+  const fosScale = colorScale.range;
   for (let t = 0; t <= COLOR_BAR_NUM_TICKS; t++) {
     maxLabelW = Math.max(
       maxLabelW,
-      pdf.getTextWidth(fosTickLabel(fosScale, t, COLOR_BAR_NUM_TICKS, PDF_GE)),
+      pdf.getTextWidth(fosTickLabel(fosScale, t, COLOR_BAR_NUM_TICKS, PDF_GE, PDF_LE)),
     );
   }
   return {
@@ -1323,10 +1394,14 @@ export function drawAnnotations(
   projectInfo: Partial<ProjectInfo>,
   parameters: ParameterDef[],
   paperFrame: { x: number; y: number; w: number; h: number },
+  /** The surface filter, which a colour bar's "filter" range follows. */
+  scaleFilter?: ScaleFilter,
 ) {
   const annoScale = Math.min(tf.paperW, tf.paperH) / ANNOTATION_SCALE_DIVISOR;
 
   for (const anno of annotations) {
+    // Reference annotations are drawn with the result (pdf-reference.ts).
+    if (anno.type === "reference") continue;
     const ax = paperFrame.x + anno.x * paperFrame.w;
     const ay = paperFrame.y + anno.y * paperFrame.h;
 
@@ -1358,7 +1433,8 @@ export function drawAnnotations(
       );
     } else if (anno.type === "color-bar") {
       // Drawn whenever the canvas draws it (also for a single surface).
-      const size = layoutColorBarPdf(pdf, result, annoScale);
+      const colorScale = colorScaleOfBar(anno, result, scaleFilter);
+      const size = layoutColorBarPdf(pdf, colorScale, annoScale);
       const { x: drawX, y: drawY } = anchoredTopLeft(
         ax,
         ay,
@@ -1366,7 +1442,7 @@ export function drawAnnotations(
         size.h,
         anno.anchor,
       );
-      drawColorBarAnnotation(pdf, drawX, drawY, result, annoScale);
+      drawColorBarAnnotation(pdf, drawX, drawY, colorScale, annoScale);
     } else if (anno.type === "material-table") {
       const size = measureTablePdf(
         pdf,
@@ -1460,15 +1536,23 @@ function drawPlotAnnotationPdf(
   const chartW = Math.max(2, w - padLeft - padRight);
   const chartH = Math.max(2, h - padTop - padBottom);
   const { xMin, xMax, yMin, yMax } = plot.range;
-  const mapX = (v: number) => chartX + ((v - xMin) / (xMax - xMin)) * chartW;
+  // Round ticks on both axes; the axes run to the outer ticks (as on the canvas).
+  const xTicks = axisTicks(xMin, xMax, 5, (anno.plotAxisX ?? "slice") === "slice");
+  const yTicks = axisTicks(yMin, yMax, 4);
+  const mapX = (v: number) => chartX + ((v - xTicks.min) / (xTicks.max - xTicks.min)) * chartW;
   const mapY = (v: number) =>
-    chartY + chartH - ((v - yMin) / (yMax - yMin)) * chartH;
+    chartY + chartH - ((v - yTicks.min) / (yTicks.max - yTicks.min)) * chartH;
 
   pdf.setDrawColor(207, 216, 220);
   pdf.setLineWidth(0.15);
-  for (let i = 1; i < 4; i++) {
-    const gy = chartY + (chartH * i) / 4;
-    pdf.line(chartX, gy, chartX + chartW, gy);
+  for (const v of yTicks.values) {
+    const gy = mapY(v);
+    if (gy > chartY + 1e-6 && gy < chartY + chartH - 1e-6) pdf.line(chartX, gy, chartX + chartW, gy);
+  }
+  pdf.setDrawColor(228, 234, 237);
+  for (const v of xTicks.values) {
+    const gx = mapX(v);
+    if (gx > chartX + 1e-6 && gx < chartX + chartW - 1e-6) pdf.line(gx, chartY, gx, chartY + chartH);
   }
   pdf.setDrawColor(120, 144, 156);
   pdf.setLineWidth(0.2);
@@ -1485,26 +1569,21 @@ function drawPlotAnnotationPdf(
   const r = Math.max(0.35, 1.8 * scale);
   for (const p of plot.points) pdf.circle(mapX(p.x), mapY(p.y), r, "F");
 
+  // Tick marks and values on both axes.
+  const tick = 1.2 * scale;
+  pdf.setDrawColor(120, 144, 156);
+  pdf.setLineWidth(0.2);
   pdf.setTextColor(95, 107, 115);
-  pdf.text(yMax.toFixed(2), chartX - pad, chartY, {
-    align: "right",
-    baseline: "middle",
-  });
-  pdf.text(yMin.toFixed(2), chartX - pad, chartY + chartH, {
-    align: "right",
-    baseline: "middle",
-  });
-  // Axis ends, not first/last slice (descending x on rtl models).
-  pdf.text(xMin.toFixed(plot.xDecimals), chartX, chartY + chartH + pad, {
-    align: "center",
-    baseline: "top",
-  });
-  pdf.text(
-    xMax.toFixed(plot.xDecimals),
-    chartX + chartW,
-    chartY + chartH + pad,
-    { align: "center", baseline: "top" },
-  );
+  for (const v of yTicks.values) {
+    const gy = mapY(v);
+    pdf.line(chartX - tick, gy, chartX, gy);
+    pdf.text(tickLabel(v, yTicks), chartX - tick - pad / 2, gy, { align: "right", baseline: "middle" });
+  }
+  for (const v of xTicks.values) {
+    const gx = mapX(v);
+    pdf.line(gx, chartY + chartH, gx, chartY + chartH + tick);
+    pdf.text(tickLabel(v, xTicks), gx, chartY + chartH + tick + pad / 2, { align: "center", baseline: "top" });
+  }
 }
 
 function drawTextAnnotation(
@@ -1548,17 +1627,17 @@ function drawColorBarAnnotation(
   pdf: jsPDF,
   x: number,
   y: number,
-  result: AnalysisResult,
+  colorScale: FosColorScale,
   scale: number,
 ) {
   const { barW, barH, labelPt, titleExtraTop } = layoutColorBarPdf(
     pdf,
-    result,
+    colorScale,
     scale,
   );
   const barY = y + titleExtraTop;
 
-  const fosScale = fosScaleRange(result);
+  const fosScale = colorScale.range;
   const fosMin = fosScale.min;
   const fosMax = fosScale.max;
   const numSteps = 50;
@@ -1566,7 +1645,7 @@ function drawColorBarAnnotation(
   for (let i = 0; i < numSteps; i++) {
     const t = i / (numSteps - 1);
     const fos = fosMax - t * (fosMax - fosMin);
-    const [r, g, b] = parseColor(fosColor(fos, fosMin, fosMax));
+    const [r, g, b] = parseColor(colorScale.colorOf(fos));
     pdf.setFillColor(r, g, b);
     pdf.rect(x, barY + t * barH, barW, barH / (numSteps - 1) + 0.1, "F");
   }
@@ -1590,7 +1669,7 @@ function drawColorBarAnnotation(
     pdf.setLineWidth(0.2);
     pdf.line(x + barW, ty, x + barW + 3 * scale, ty);
 
-    pdf.text(fosTickLabel(fosScale, t, COLOR_BAR_NUM_TICKS, PDF_GE), labelX, ty, {
+    pdf.text(fosTickLabel(fosScale, t, COLOR_BAR_NUM_TICKS, PDF_GE, PDF_LE), labelX, ty, {
       baseline: "middle",
     });
   }

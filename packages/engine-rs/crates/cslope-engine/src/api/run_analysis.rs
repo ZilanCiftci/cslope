@@ -30,7 +30,10 @@ use crate::model::slope::{AnalysisOptionsPatch, SearchPlane, Slope};
 use crate::model::solvers::{
     analyse_slope, slice_driving_moment, slice_vertical_load, solved_effective_normals,
 };
-use crate::types::analysis::{AnalysisResult, Crack, SliceData, SlipSurfaceResult};
+use crate::types::analysis::{
+    AnalysisResult, Crack, CustomPlaneRef, CustomSurfaceResult, SliceData, SlipSurfaceResult,
+    SurfaceRejection,
+};
 use crate::types::geometry::Slice;
 use crate::types::sgi3d::Sgi3dOptions;
 use crate::types::SlopeDefinition;
@@ -124,6 +127,9 @@ fn governing_direction(
         None => true,
         Some(o) => own_result.min_fos <= o.min_fos,
     };
+    // The custom search planes are analysed in the model's own direction
+    // (the opposite definition has none): their results stay.
+    let custom_surfaces = own_result.custom_surfaces.clone();
     let (governing, other) = if own_governs {
         (own_result, opposite)
     } else {
@@ -138,6 +144,7 @@ fn governing_direction(
             SlopeOrientation::Ltr
         }),
         other_direction_min_fos: Some(other.map(|o| o.min_fos)),
+        custom_surfaces,
         ..governing
     }
 }
@@ -188,7 +195,69 @@ fn surface_result(p: &SearchPlane) -> SlipSurfaceResult {
         composite: p.composite.as_ref().map(|_| true),
         reinforcement_forces: None,
         crack: None,
+        custom_plane: p.custom_plane,
     }
+}
+
+/// The result of each custom search plane of the definition, in its order
+/// (circles, then polylines): the planes analysed (marked by build_slope),
+/// with their surface or why the evaluation left them without a factor, and
+/// those that gave no surface to analyse. None without custom planes.
+pub fn custom_surface_results(slope: &Slope) -> Option<Vec<CustomSurfaceResult>> {
+    let mut entries: Vec<(CustomPlaneRef, CustomSurfaceResult)> = Vec::new();
+    for p in slope.search() {
+        let Some(custom) = p.custom_plane else {
+            continue;
+        };
+        let (surface, reason) = if p.fos.is_some() {
+            (Some(surface_result(p)), None)
+        } else {
+            let why = p.rejection.unwrap_or(SurfaceRejection::NotConverged);
+            (None, Some(why.message().to_string()))
+        };
+        entries.push((
+            custom,
+            CustomSurfaceResult {
+                kind: custom.kind,
+                index: custom.index,
+                surface,
+                reason,
+            },
+        ));
+    }
+    for &(custom, why) in slope.custom_plane_rejections() {
+        entries.push((
+            custom,
+            CustomSurfaceResult {
+                kind: custom.kind,
+                index: custom.index,
+                surface: None,
+                reason: Some(why.message().to_string()),
+            },
+        ));
+    }
+    if entries.is_empty() {
+        return None;
+    }
+    entries.sort_by_key(|e| e.0);
+    Some(entries.into_iter().map(|(_, e)| e).collect())
+}
+
+/// `custom_surface_results` as a sentence for an error message: the custom
+/// surfaces without a factor and why. Empty without any.
+fn custom_surfaces_message(slope: &Slope) -> String {
+    let Some(customs) = custom_surface_results(slope) else {
+        return String::new();
+    };
+    customs
+        .iter()
+        .enumerate()
+        .filter_map(|(i, c)| {
+            c.reason
+                .as_ref()
+                .map(|why| format!(" Custom surface {}: {}.", i + 1, why))
+        })
+        .collect()
 }
 
 /// The result of an analysed slope (canonical space). The slope is changed
@@ -211,10 +280,11 @@ pub fn analysis_result(
             .collect();
         let steep = steep_entry_message(slope, &candidates);
         return Err(crate::error::EngineError::new(format!(
-            "No valid slip surface was found. {}",
+            "No valid slip surface was found. {}{}",
             steep.unwrap_or_else(|| {
                 "Check the search limits, the geometry and the material strengths.".to_string()
-            })
+            }),
+            custom_surfaces_message(slope)
         )));
     };
 
@@ -298,6 +368,7 @@ pub fn analysis_result(
         .filter(|p| p.fos.is_some())
         .map(surface_result)
         .collect();
+    let custom_surfaces = custom_surface_results(slope);
 
     // Moments about a circle's centre; on a non-circular surface they
     // depend on the axis point and the solved normal forces, so none are
@@ -359,6 +430,7 @@ pub fn analysis_result(
         sgi3d: None,
         sgi3d_error: None,
         fem_error: None,
+        custom_surfaces,
     };
 
     // 3D effects after SGI's guidance, over this analysis's circular surfaces

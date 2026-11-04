@@ -11,7 +11,7 @@ use crate::model::search::add_single_circular_plane;
 use crate::model::slope::{AnalysisLimitsPatch, Pt, SearchPlane, Slope};
 use crate::model::surface::{default_axis_point, fit_polyline_to_ground, is_admissible_polyline};
 use crate::model::waternet::{HeadLine, ReferenceLine, Waternet};
-use crate::types::analysis::WaterTableInput;
+use crate::types::analysis::{CustomPlaneKind, CustomPlaneRef, SurfaceRejection, WaterTableInput};
 use crate::types::loads::{LineLoad, LineLoadParams, Udl, UdlParams};
 use crate::types::material::{Material, MaterialId, MaterialParams};
 use crate::types::slope_definition::{
@@ -304,8 +304,10 @@ pub fn build_slope(def: &SlopeDefinition) -> Result<Slope> {
     }
 
     // Custom search planes
+    // Each plane added is marked with its place in the definition, and one
+    // that gives no surface is recorded with the reason, for the result.
     if let Some(planes) = &def.custom_search_planes {
-        for p in planes {
+        for (index, p) in planes.iter().enumerate() {
             if ![p.cx, p.cy, p.radius].iter().all(|v| v.is_finite()) || p.radius <= 0.0 {
                 return Err(EngineError::new(format!(
                     "Custom search circle ({}, {}, R {}) needs a finite centre and a positive radius.",
@@ -314,7 +316,17 @@ pub fn build_slope(def: &SlopeDefinition) -> Result<Slope> {
                     js::num::to_string(p.radius)
                 )));
             }
+            let custom = CustomPlaneRef {
+                kind: CustomPlaneKind::Circle,
+                index,
+            };
+            let before = slope.individual_planes().len();
             add_single_circular_plane(&mut slope, p.cx, p.cy, p.radius)?;
+            if slope.individual_planes().len() > before {
+                slope.mark_last_individual_plane(custom);
+            } else {
+                slope.add_custom_plane_rejection(custom, SurfaceRejection::NoGroundCrossing);
+            }
         }
     }
 
@@ -325,15 +337,19 @@ pub fn build_slope(def: &SlopeDefinition) -> Result<Slope> {
 
     // Custom non-circular surfaces
     if let Some(surfaces) = &def.custom_surfaces {
-        for surface in surfaces {
+        for (index, surface) in surfaces.iter().enumerate() {
+            let custom = CustomPlaneRef {
+                kind: CustomPlaneKind::Polyline,
+                index,
+            };
             // Like a custom circle that misses the ground, a polyline that does
             // not cut through the soil or leaves the model is no surface.
-            let Some(points) = fit_polyline_to_ground(&slope, &surface.points) else {
+            let fitted = fit_polyline_to_ground(&slope, &surface.points)
+                .filter(|points| is_admissible_polyline(&slope, points, f64::INFINITY));
+            let Some(points) = fitted else {
+                slope.add_custom_plane_rejection(custom, SurfaceRejection::NotThroughSoil);
                 continue;
             };
-            if !is_admissible_polyline(&slope, &points, f64::INFINITY) {
-                continue;
-            }
             let [cx, cy] = surface.axis.unwrap_or_else(|| default_axis_point(&points));
             slope.add_individual_planes(vec![SearchPlane {
                 lc: points[0],
@@ -344,6 +360,7 @@ pub fn build_slope(def: &SlopeDefinition) -> Result<Slope> {
                 points: Some(points),
                 fos: None,
                 slices: None,
+                custom_plane: Some(custom),
                 ..Default::default()
             }]);
         }

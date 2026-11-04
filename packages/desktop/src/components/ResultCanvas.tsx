@@ -220,6 +220,8 @@ export function ResultCanvas() {
     removeCustomPlanePoint: noPlaneEdit,
     insertCustomPlanePointAt: noPlaneEdit,
     setSelectedCustomPlane: noPlaneEdit,
+    // A point added to a reference polyline snaps like a dragged one.
+    snapValue,
   });
 
   const {
@@ -565,7 +567,8 @@ export function ResultCanvas() {
         const annos = useAppStore.getState().resultViewSettings.annotations;
         for (const id of selectedAnnotationIds) {
           const a = annos.find((an) => an.id === id);
-          if (a) updateAnnotation(id, { x: a.x + dx, y: a.y + dy });
+          // A reference annotation lies in model coordinates: dragged, not nudged.
+          if (a && a.type !== "reference") updateAnnotation(id, { x: a.x + dx, y: a.y + dy });
         }
       }
     };

@@ -22,10 +22,13 @@ import {
   anchoredTopLeft,
   anchorPointFromTopLeft,
 } from "../annotations/anchorPosition";
-import { surfaceCountText } from "../../utils/result-summary";
+import { customSurfaceGeometryText, customSurfaceName, customSurfaceValueText, surfaceCountText } from "../../utils/result-summary";
 import { ResultNotes } from "./ResultNotes";
+import { ColorBarProperties } from "./ColorBarProperties";
 import { resolveAnnotationText } from "../annotations/resolveAnnotationText";
 import { InsertVariableMenu } from "../annotations/InsertVariableMenu";
+import { isPaperAnnotation, isReferenceAnnotation, referenceListName } from "../annotations/reference";
+import { ReferenceProperties } from "./ReferenceProperties";
 import { modelViewLock } from "../view/viewLock";
 import { paperContentOf } from "../view/extents";
 import { fosStatusColor } from "../../utils/fos-color";
@@ -267,6 +270,20 @@ export function ResultSidebar() {
     [rvs.annotations, selectedAnnotationIds],
   );
 
+  // Paper annotations share a position and anchor; reference annotations
+  // (model coordinates) have their own properties.
+  const selectedPaperAnnotations = useMemo(
+    () => selectedAnnotations.filter(isPaperAnnotation),
+    [selectedAnnotations],
+  );
+  const selectedReferenceAnnotations = useMemo(
+    () => selectedAnnotations.filter(isReferenceAnnotation),
+    [selectedAnnotations],
+  );
+  const allSelectedAreReference =
+    selectedAnnotations.length > 0 &&
+    selectedReferenceAnnotations.length === selectedAnnotations.length;
+
   const selectedTextAnnotations = useMemo(
     () => selectedAnnotations.filter((anno) => anno.type === "text"),
     [selectedAnnotations],
@@ -279,6 +296,13 @@ export function ResultSidebar() {
     () => selectedAnnotations.filter((anno) => anno.type === "plot"),
     [selectedAnnotations],
   );
+  const selectedColorBarAnnotations = useMemo(
+    () => selectedAnnotations.filter((anno) => anno.type === "color-bar"),
+    [selectedAnnotations],
+  );
+  const allSelectedAreColorBar =
+    selectedAnnotations.length > 0 &&
+    selectedColorBarAnnotations.length === selectedAnnotations.length;
 
   const allSelectedAreText =
     selectedAnnotations.length > 0 &&
@@ -307,20 +331,20 @@ export function ResultSidebar() {
     selectedTextAnnotations.map((a) => a.color ?? "#000000"),
   );
 
-  // Shared position values (all annotation types)
-  const xValue = commonValue(selectedAnnotations.map((a) => a.x));
-  const yValue = commonValue(selectedAnnotations.map((a) => a.y));
+  // Shared position values (all paper annotation types)
+  const xValue = commonValue(selectedPaperAnnotations.map((a) => a.x));
+  const yValue = commonValue(selectedPaperAnnotations.map((a) => a.y));
   const anchorValue = commonValue(
-    selectedAnnotations.map((a) => a.anchor ?? "top-left"),
+    selectedPaperAnnotations.map((a) => a.anchor ?? "top-left"),
   );
 
   const applyToAll = useCallback(
     (patch: { x?: number; y?: number; anchor?: AnchorPosition }) => {
-      for (const anno of selectedAnnotations) {
+      for (const anno of selectedPaperAnnotations) {
         updateAnnotation(anno.id, patch);
       }
     },
-    [selectedAnnotations, updateAnnotation],
+    [selectedPaperAnnotations, updateAnnotation],
   );
 
   const handleAnchorChange = useCallback(
@@ -344,7 +368,7 @@ export function ResultSidebar() {
         0,
         0,
       );
-      for (const anno of selectedAnnotations) {
+      for (const anno of selectedPaperAnnotations) {
         const oldAnchor = anno.anchor ?? "top-left";
         if (oldAnchor === newAnchor) {
           updateAnnotation(anno.id, { anchor: newAnchor });
@@ -358,6 +382,7 @@ export function ResultSidebar() {
           piezometricLine: s.piezometricLine,
           projectInfo: s.projectInfo,
           parameters: s.parameters,
+          resultView: s.resultViewSettings,
         });
         const hitPad = 4;
         const wFrac = (bounds.w - 2 * hitPad) / pf.w;
@@ -377,7 +402,7 @@ export function ResultSidebar() {
         });
       }
     },
-    [selectedAnnotations, updateAnnotation, applyToAll],
+    [selectedPaperAnnotations, updateAnnotation, applyToAll],
   );
 
   const mtFontSize = commonValue(
@@ -566,6 +591,23 @@ export function ResultSidebar() {
                 3D effects (SGI): {result.sgi3dError}
               </p>
             )}
+            {result.customSurfaces && result.customSurfaces.length > 0 && (
+              // Each custom search plane of the run with its factor of safety, or why it has none.
+              <div className="mt-1.5 space-y-1 border-t pt-1.5" style={{ borderColor: "var(--color-vsc-border)" }}>
+                {result.customSurfaces.map((c, i) => (
+                  <div key={`${c.kind}-${c.index}`} className="flex justify-between gap-2" data-testid="custom-surface-row">
+                    <Label title={customSurfaceGeometryText(c)}>{customSurfaceName(i)}</Label>
+                    {c.surface ? (
+                      <span className="tabular-nums">{customSurfaceValueText(c)}</span>
+                    ) : (
+                      <span className="text-[11px] text-right" style={{ color: "var(--color-vsc-warning)" }}>
+                        {customSurfaceValueText(c)}
+                      </span>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
             <ResultNotes result={result} />
             {/* The finite element rows come last: the notes above belong to the limit equilibrium result. */}
             {result.fem && <FemSummaryRows fem={result.fem} designValues={designValues} />}
@@ -626,13 +668,15 @@ export function ResultSidebar() {
                 ? resolveText(anno.text ?? "").replace(/\s+/g, " ").trim()
                 : "";
             const name =
-              anno.type === "color-bar"
-                ? "Color Bar"
-                : anno.type === "material-table"
-                  ? "Material Table"
-                  : anno.type === "plot"
-                    ? "Plot"
-                    : shown || "Text (empty)";
+              anno.type === "reference"
+                ? `Reference: ${referenceListName(anno)}`
+                : anno.type === "color-bar"
+                  ? "Color Bar"
+                  : anno.type === "material-table"
+                    ? "Material Table"
+                    : anno.type === "plot"
+                      ? "Plot"
+                      : shown || "Text (empty)";
             return (
               <div
                 key={anno.id}
@@ -882,6 +926,45 @@ export function ResultSidebar() {
               </div>
             </div>
 
+            <div
+              className="grid gap-2 items-end"
+              style={{
+                gridTemplateColumns: "repeat(auto-fit, minmax(64px, 1fr))",
+              }}
+            >
+              <label className="flex items-center gap-1.5 text-[11px] pb-1">
+                <input
+                  type="checkbox"
+                  checked={rvs.showGrid}
+                  onChange={(e) => setRvs({ showGrid: e.target.checked })}
+                  aria-label="Grid lines"
+                />
+                Grid
+              </label>
+              {rvs.showGrid && (
+                <div>
+                  <label
+                    className="text-[10px] block mb-0.5"
+                    style={{ color: "var(--color-vsc-text-muted)" }}
+                  >
+                    Grid spacing
+                  </label>
+                  <DraftNumberInput
+                    min={0}
+                    step="any"
+                    placeholder="As ticks"
+                    value={rvs.gridLineSpacing}
+                    onValueChange={(value) =>
+                      setRvs({ gridLineSpacing: value > 0 ? value : undefined })
+                    }
+                    onClear={() => setRvs({ gridLineSpacing: undefined })}
+                    title="Distance between the grid lines; empty: the tick spacing"
+                    className="w-full tabular-nums"
+                  />
+                </div>
+              )}
+            </div>
+
             <div>
               <label
                 className="text-[10px] block mb-0.5"
@@ -949,7 +1032,14 @@ export function ResultSidebar() {
           </div>
         )}
 
-        {selectedAnnotations.length > 0 && (
+        {allSelectedAreReference && (
+          <ReferenceProperties
+            annotations={selectedReferenceAnnotations}
+            updateAnnotation={updateAnnotation}
+          />
+        )}
+
+        {selectedPaperAnnotations.length > 0 && (
           <div className="space-y-2 mb-3">
             <div className="flex gap-2">
               <div className="flex-1">
@@ -1051,7 +1141,8 @@ export function ResultSidebar() {
             {selectedAnnotations.length > 1 &&
               !allSelectedAreText &&
               !allSelectedAreMaterialTable &&
-              !allSelectedArePlot && (
+              !allSelectedArePlot &&
+              !allSelectedAreColorBar && (
                 <div
                   className="border-t pt-2 mt-2"
                   style={{ borderColor: "var(--color-vsc-border)" }}
@@ -1210,6 +1301,15 @@ export function ResultSidebar() {
               </div>
             </div>
           </div>
+        )}
+
+        {allSelectedAreColorBar && (
+          <ColorBarProperties
+            annotations={selectedColorBarAnnotations}
+            result={result}
+            fosFilterMax={rvs.fosFilterMax}
+            updateAnnotation={updateAnnotation}
+          />
         )}
 
         {allSelectedAreMaterialTable && (

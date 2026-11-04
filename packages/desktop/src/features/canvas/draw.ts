@@ -9,7 +9,8 @@ import {
   surfacePoints,
   type DrawableSurface,
 } from "../../utils/arc";
-import { fosColor, fosScaleRange, fosTickLabel } from "../../utils/fos-color";
+import { fosTickLabel } from "../../utils/fos-color";
+import { colorScaleOf, colorScaleOfBar } from "../annotations/colorScale";
 import { computeRegions } from "../../utils/regions";
 import { prescribedPath } from "../../utils/custom-plane";
 import {
@@ -42,7 +43,9 @@ import {
 import { resolveAnnotationText } from "../annotations/resolveAnnotationText";
 import { anchoredTopLeft } from "../annotations/anchorPosition";
 import { computeSlicePlotData } from "../annotations/slicePlotData";
+import { axisTicks, tickLabel } from "../annotations/plotAxis";
 import type { PointHit } from "./types";
+import { drawReferenceLabels, drawReferenceLines, referenceSegments } from "./reference-draw";
 import {
   ANNOTATION_DEFAULT_FONT_FAMILY,
   ANNOTATION_DEFAULT_FONT_SIZE,
@@ -53,13 +56,18 @@ import {
   CRACK_WATER_OPACITY,
   CRACK_WATER_WIDTH_PX,
   CRITICAL_SURFACE_COLOR,
+  CUSTOM_SURFACE_COLOR,
+  CUSTOM_SURFACE_DASH_PX,
+  CUSTOM_SURFACE_LINE_WIDTH_PX,
   ENTRY_DOT_COLOR,
   ENTRY_EXIT_DOT_RADIUS_PX,
   EXIT_DOT_COLOR,
   FAILURE_MASS_COLOR,
   FAILURE_MASS_FILL_OPACITY,
+  REFERENCE_ANNOTATION_COLOR,
   LINE_LOAD_COLOR,
   MARKER_COLOR,
+  RESULT_OUTLINE_WIDTH_PX,
   MIN_SLIP_MASS_BAND_OPACITY,
   MIN_SLIP_MASS_PX,
   PIEZO_BAR_GAP1_PX,
@@ -125,6 +133,7 @@ import {
 } from "../../utils/slip-mass";
 import {
   boxAround,
+  boxesOverlap,
   clampBox,
   distanceToSegment,
   growBox,
@@ -628,6 +637,9 @@ export function drawCanvas(
   const PAPER_BORDER_COLOR = cssVar("--color-canvas-paper-border");
   const SELECTED_BOUNDARY_COLOR = "#f59e0b";
   const MARKER_BASE = cssVar("--color-canvas-marker") || MARKER_COLOR.hex;
+  const CUSTOM_SURFACE = cssVar("--color-canvas-custom-surface") || CUSTOM_SURFACE_COLOR.hex;
+  // Reference annotations without a colour of their own: the theme's.
+  const REFERENCE_COLOR = cssVar("--color-canvas-reference") || REFERENCE_ANNOTATION_COLOR.hex;
   // Point labels stay off the rulers (left and bottom) and the canvas edge.
   const labelBounds: Box = { left: RULER_SIZE_PX + 2, top: 2, right: w - 2, bottom: h - RULER_SIZE_PX - 2 };
   const labelColors = { text: STROKE_ACTIVE, plate: BG_COLOR };
@@ -813,7 +825,11 @@ export function drawCanvas(
   // On the paper the grid lines run through the labelled ticks; their
   // separately rounded automatic steps used to differ (e.g. grid 5 m,
   // ticks 2 m).
-  const gridStep = resultTickStep ?? autoGridStep;
+  // The grid has a spacing of its own when the user sets one (Properties).
+  const gridStep =
+    resultTickStep !== null
+      ? resolveTickStep(resultViewSettings.gridLineSpacing, resultTickStep)
+      : autoGridStep;
 
   ctx.strokeStyle = GRID_COLOR;
   ctx.lineWidth = 1 * paperZoom;
@@ -1032,7 +1048,8 @@ export function drawCanvas(
     }
     ctx.closePath();
     ctx.strokeStyle = POLY_STROKE;
-    ctx.lineWidth = 1 * paperZoom;
+    // Thinner over a result, where the slip surface is the heavy line.
+    ctx.lineWidth = (mode === "result" ? RESULT_OUTLINE_WIDTH_PX : 1) * paperZoom;
     // Round joins: a mitre at a sharp toe sticks out far past the corner.
     ctx.lineJoin = "round";
     ctx.stroke();
@@ -1214,6 +1231,29 @@ export function drawCanvas(
       ctx.arc(cx, cy, Math.abs(ex - cx), 0, Math.PI * 2);
       ctx.stroke();
       ctx.restore();
+    }
+  }
+
+  // ── Reference annotations marked for the edit view ──────
+  // Lines over the soil as in the result view, with their labels; the
+  // point labels keep off them.
+  if (mode !== "result") {
+    const drawnRefs = drawReferenceLines(ctx, {
+      annotations: resultViewSettings.annotations,
+      mode: "edit",
+      toC: (x, y) => worldToCanvas(x, y, w, h),
+      groundYAt: surfaceYAtX,
+      paperZoom: 1,
+      defaultColor: REFERENCE_COLOR,
+    });
+    if (drawnRefs.length > 0) {
+      const refSegs = referenceSegments(drawnRefs);
+      for (const seg of refSegs) labelLines.push({ seg, pad: 2 });
+      const refLayout = new LabelLayout(labelBounds);
+      for (const seg of refSegs) refLayout.reserveSegment(seg, 2);
+      if (coordinates.length >= 3) refLayout.reservePolyline(coordinates.map(([x, y]) => worldToCanvas(x, y, w, h)), 2, true);
+      for (const box of drawReferenceLabels(ctx, drawnRefs, { toC: (x, y) => worldToCanvas(x, y, w, h), paperZoom: 1, layout: refLayout, plate: BG_COLOR }))
+        pointSymbols.push(box);
     }
   }
 
@@ -1714,20 +1754,21 @@ export function drawCanvas(
   // ── Entry / Exit range markers ──────────────────────────
   // Not when only prescribed surfaces are analysed (nothing is searched):
   // in the result, and in edit view once there is a prescribed surface. In
-  // the result they are lighter and drawn before the sliding mass, so the
-  // critical surface stays on top of them.
+  // the result they look as in the edit view, drawn before the sliding
+  // mass so the critical surface stays on top of them.
   const limitsShown =
     analysisLimits.enabled &&
     coordinates.length >= 3 &&
     !(customPlanesOnly && (mode === "result" || (customSearchPlanes?.length ?? 0) > 0));
   if (limitsShown) {
-    const markerAlpha = mode === "result" ? 0.55 : 1;
+    // Over a result as in the edit view (opaque, standing on the ground).
+    const markerAlpha = 1;
     const toC = (x: number, y: number) => worldToCanvas(x, y, w, h);
     const cs = mode === "result" ? (result?.criticalSurface ?? null) : null;
 
     // Dots along the ground over each range (alternating colours where the
     // entry and exit ranges coincide), none over the sliding mass.
-    const dotRadius = ENTRY_EXIT_DOT_RADIUS_PX * paperZoom * (mode === "result" ? 0.8 : 1);
+    const dotRadius = ENTRY_EXIT_DOT_RADIUS_PX * paperZoom;
     ctx.save();
     ctx.globalAlpha = markerAlpha;
     for (const d of layoutRangeDots(analysisLimits, coordinates, toC, paperZoom, {
@@ -1746,7 +1787,7 @@ export function drawCanvas(
     // only the bar for a range of zero width. Over a result the triangle
     // is lifted clear of the ground and a shared limit is drawn once.
     for (const m of layoutLimitMarkers(analysisLimits, coordinates, toC, paperZoom, {
-      lifted: mode === "result",
+      lifted: false,
       dots: vertexDots,
     })) {
       const isHover = hoverHit?.kind === "limit" && m.handles.includes(hoverHit.handle);
@@ -2037,10 +2078,25 @@ export function drawCanvas(
     // relative to the largest, so the failure mechanism shows as a band.
     if (result.fem && rvs.showFemPlasticZone !== false) drawFemPlasticZone(ctx, result.fem, (x, y) => worldToCanvas(x, y, w, h));
 
+    // ── Reference annotations: the lines, under the surfaces ──
+    // (their labels follow the FOS label, so they can keep clear of it)
+    const drawnReferences = drawReferenceLines(ctx, {
+      annotations: rvs.annotations,
+      mode: "result",
+      toC: (x, y) => worldToCanvas(x, y, w, h),
+      groundYAt: surfaceYAtX,
+      paperZoom,
+      defaultColor: REFERENCE_COLOR,
+      selectedIds: selectedAnnotationIds,
+      hoverHit,
+      handleStroke: PAPER_FILL_COLOR || BG_COLOR,
+    });
+
     // Non-critical surfaces (when "all" or "filter" mode)
     // Draw in reverse FOS order (high FOS first = behind, low FOS last = on top)
     if (rvs.surfaceDisplay !== "critical" && result.allSurfaces.length > 0) {
-      const fosRange = fosScaleRange(result);
+      // The scale of the colour bar, so the plot and the bar agree.
+      const fosScale = colorScaleOf(rvs, result);
       for (let si = result.allSurfaces.length - 1; si >= 0; si--) {
         const surf = result.allSurfaces[si];
         // Skip critical (drawn separately) and filtered out
@@ -2050,7 +2106,7 @@ export function drawCanvas(
           continue;
 
         const arcPts = getArcPoints(surf);
-        ctx.strokeStyle = fosColor(surf.fos, fosRange.min, fosRange.max);
+        ctx.strokeStyle = fosScale.colorOf(surf.fos);
         ctx.lineWidth = 1 * paperZoom;
         ctx.globalAlpha = SLIP_SURFACE_OPACITY;
         ctx.beginPath();
@@ -2062,6 +2118,53 @@ export function drawCanvas(
         ctx.stroke();
         ctx.globalAlpha = 1.0;
       }
+    }
+
+    // The custom search planes' surfaces, on request (whatever the
+    // surface display): dashed in their own colour on a halo of the paper,
+    // as the edit view draws the planes; the critical surface is drawn as
+    // such below, not again here. Their FOS labels come after the
+    // critical surface's, which they keep clear of.
+    const customSurfaces =
+      rvs.showCustomSurfaces === true
+        ? (result.customSurfaces ?? []).flatMap((c) =>
+            c.surface && !(result.criticalSurface && sameSurface(c.surface, result.criticalSurface)) ? [c.surface] : [],
+          )
+        : [];
+    // A FOS label's box: the text above its underline, as drawn below.
+    const fosLabelBox = (labelX: number, cy: number, tw: number): Box => ({
+      left: labelX - 1 * paperZoom,
+      top: cy - 11 * paperZoom,
+      right: labelX + tw + 1 * paperZoom,
+      bottom: cy + 3 * paperZoom,
+    });
+    let criticalLabelBox: Box | null = null;
+    if (customSurfaces.length > 0) {
+      ctx.save();
+      for (const surf of customSurfaces) {
+        const arcPts = getArcPoints(surf);
+        const path = () => {
+          ctx.beginPath();
+          arcPts.forEach(([x, y], i) => {
+            const [px, py] = worldToCanvas(x, y, w, h);
+            if (i === 0) ctx.moveTo(px, py);
+            else ctx.lineTo(px, py);
+          });
+        };
+        ctx.setLineDash([]);
+        ctx.strokeStyle = PAPER_FILL_COLOR || BG_COLOR;
+        ctx.globalAlpha = 0.55;
+        ctx.lineWidth = 4 * paperZoom;
+        path();
+        ctx.stroke();
+        ctx.strokeStyle = CUSTOM_SURFACE;
+        ctx.globalAlpha = 1;
+        ctx.lineWidth = CUSTOM_SURFACE_LINE_WIDTH_PX * paperZoom;
+        ctx.setLineDash(CUSTOM_SURFACE_DASH_PX.map((d) => d * paperZoom));
+        path();
+        ctx.stroke();
+      }
+      ctx.restore();
     }
 
     // Critical surface
@@ -2320,6 +2423,7 @@ export function drawCanvas(
         ctx.font = `bold ${12 * paperZoom}px sans-serif`;
         const tw = ctx.measureText(fosText).width;
         const labelX = ccx2 + 10 * paperZoom;
+        criticalLabelBox = fosLabelBox(labelX, ccy2, tw);
 
         // Text
         ctx.fillStyle = CRITICAL_SURFACE_COLOR.hex;
@@ -2335,6 +2439,72 @@ export function drawCanvas(
         ctx.lineTo(labelX + tw + 1 * paperZoom, ccy2 + 2 * paperZoom);
         ctx.stroke();
       }
+    }
+
+    // The custom surfaces' FOS labels, like the critical one's, in their
+    // colour: each moved down from its anchor until it is clear of the
+    // critical label and the ones placed before it.
+    if (customSurfaces.length > 0 && rvs.showFosLabel) {
+      const placed: Box[] = criticalLabelBox ? [criticalLabelBox] : [];
+      ctx.save();
+      ctx.font = `bold ${12 * paperZoom}px sans-serif`;
+      ctx.textAlign = "left";
+      ctx.textBaseline = "middle";
+      ctx.setLineDash([]);
+      for (const surf of customSurfaces) {
+        const [ax, ay] = fosLabelAnchor(surf);
+        const [lx, ly] = worldToCanvas(ax, ay, w, h);
+        const fosText = surf.fos.toFixed(3);
+        const tw = ctx.measureText(fosText).width;
+        const labelX = lx + 10 * paperZoom;
+        let cy = ly;
+        let box = fosLabelBox(labelX, cy, tw);
+        for (let n = 0; n < 20 && placed.some((b) => boxesOverlap(box, b, 0)); n++) {
+          cy += box.bottom - box.top + 2 * paperZoom;
+          box = fosLabelBox(labelX, cy, tw);
+        }
+        placed.push(box);
+        ctx.fillStyle = CUSTOM_SURFACE;
+        ctx.fillText(fosText, labelX, cy - 4 * paperZoom);
+        ctx.strokeStyle = CUSTOM_SURFACE;
+        ctx.lineWidth = 1.5 * paperZoom;
+        ctx.beginPath();
+        ctx.moveTo(labelX - 1 * paperZoom, cy + 2 * paperZoom);
+        ctx.lineTo(labelX + tw + 1 * paperZoom, cy + 2 * paperZoom);
+        ctx.stroke();
+      }
+      ctx.restore();
+    }
+
+    // ── Reference annotations: the labels ────────────────
+    // Clear of the lines of the drawing, the FOS label and each other,
+    // inside the plot area.
+    if (drawnReferences.some((d) => d.anno.label?.trim())) {
+      const toC = (x: number, y: number) => worldToCanvas(x, y, w, h);
+      const { paperFrame: rf } = rvs;
+      const frame = computePaperFrame(w, h, rf.paperSize, rf.landscape, rf.zoom ?? 1, rf.offsetX ?? 0, rf.offsetY ?? 0);
+      const refLayout = new LabelLayout({
+        left: frame.x + frame.w * PLOT_MARGINS.L + 2,
+        top: frame.y + frame.h * PLOT_MARGINS.T + 2,
+        right: frame.x + frame.w * (1 - PLOT_MARGINS.R) - 2,
+        bottom: frame.y + frame.h * (1 - PLOT_MARGINS.B) - 2,
+      });
+      for (const seg of referenceSegments(drawnReferences)) refLayout.reserveSegment(seg, 2 * paperZoom);
+      if (coordinates.length >= 3) refLayout.reservePolyline(coordinates.map(([x, y]) => toC(x, y)), 2, true);
+      for (const bnd of materialBoundaries) refLayout.reservePolyline(bnd.coordinates.map(([x, y]) => toC(x, y)), 2);
+      for (const line of piezometricLine.lines) refLayout.reservePolyline(line.coordinates.map(([x, y]) => toC(x, y)), 2);
+      if (result.criticalSurface) {
+        const cs = result.criticalSurface;
+        refLayout.reservePolyline(getArcPoints(cs).map(([x, y]) => toC(x, y)), 3 * paperZoom);
+        if (rvs.showFosLabel) {
+          // The FOS label's box, as drawn above.
+          const [lx, ly] = toC(...fosLabelAnchor(cs));
+          ctx.font = `bold ${12 * paperZoom}px sans-serif`;
+          const tw = ctx.measureText(cs.fos.toFixed(3)).width;
+          refLayout.reserve({ left: lx + 9 * paperZoom, top: ly - 12 * paperZoom, right: lx + 11 * paperZoom + tw, bottom: ly + 3 * paperZoom });
+        }
+      }
+      drawReferenceLabels(ctx, drawnReferences, { toC, paperZoom, layout: refLayout, plate: PAPER_FILL_COLOR || BG_COLOR });
     }
 
     // ── Paper frame ──────────────────────────────────────
@@ -2473,6 +2643,8 @@ export function drawCanvas(
     const annoScale = Math.min(pf.w, pf.h) / ANNOTATION_SCALE_DIVISOR;
 
     for (const anno of annotations) {
+      // Reference annotations are drawn with the result above (model coordinates).
+      if (anno.type === "reference") continue;
       // Convert fractional paper-frame coordinates to canvas pixels (anchor point)
       const ax = pf.x + anno.x * pf.w;
       const ay = pf.y + anno.y * pf.h;
@@ -2521,7 +2693,8 @@ export function drawCanvas(
         ctx.font = `${labelFontSize}px 'Segoe UI', sans-serif`;
         let maxLabelW = 0;
         const numTicks = COLOR_BAR_NUM_TICKS;
-        const fosScale = fosScaleRange(result);
+        const colorScale = colorScaleOfBar(anno, result, rvs);
+        const fosScale = colorScale.range;
         for (let t = 0; t <= numTicks; t++) {
           maxLabelW = Math.max(
             maxLabelW,
@@ -2548,7 +2721,7 @@ export function drawCanvas(
         for (let i = 0; i < numSteps; i++) {
           const t = i / (numSteps - 1);
           const fos = fosMax - t * (fosMax - fosMin);
-          ctx.fillStyle = fosColor(fos, fosMin, fosMax);
+          ctx.fillStyle = colorScale.colorOf(fos);
           ctx.fillRect(barX, barY + i, barW, 2);
         }
 
@@ -2674,11 +2847,14 @@ export function drawCanvas(
         const chartW = Math.max(8, plotW - padLeft - padRight);
         const chartH = Math.max(8, plotH - padTop - padBottom);
         const { xMin, xMax, yMin, yMax } = plot.range;
+        // Round ticks on both axes; the axes run to the outer ticks.
+        const xTicks = axisTicks(xMin, xMax, 5, (anno.plotAxisX ?? "slice") === "slice");
+        const yTicks = axisTicks(yMin, yMax, 4);
 
         const mapX = (v: number) =>
-          chartX + ((v - xMin) / (xMax - xMin)) * chartW;
+          chartX + ((v - xTicks.min) / (xTicks.max - xTicks.min)) * chartW;
         const mapY = (v: number) =>
-          chartY + chartH - ((v - yMin) / (yMax - yMin)) * chartH;
+          chartY + chartH - ((v - yTicks.min) / (yTicks.max - yTicks.min)) * chartH;
 
         ctx.font = `${titleSize}px sans-serif`;
         ctx.fillStyle = "#78909c";
@@ -2688,11 +2864,19 @@ export function drawCanvas(
 
         ctx.strokeStyle = "rgba(120,144,156,0.35)";
         ctx.lineWidth = 0.8;
-        for (let i = 0; i <= 4; i++) {
-          const gy = chartY + (chartH * i) / 4;
+        for (const v of yTicks.values) {
+          const gy = mapY(v);
           ctx.beginPath();
           ctx.moveTo(chartX, gy);
           ctx.lineTo(chartX + chartW, gy);
+          ctx.stroke();
+        }
+        ctx.strokeStyle = "rgba(120,144,156,0.2)";
+        for (const v of xTicks.values) {
+          const gx = mapX(v);
+          ctx.beginPath();
+          ctx.moveTo(gx, chartY);
+          ctx.lineTo(gx, chartY + chartH);
           ctx.stroke();
         }
 
@@ -2720,27 +2904,32 @@ export function drawCanvas(
           ctx.fill();
         });
 
+        // Tick marks and values on both axes.
+        const tick = Math.max(2, 3 * annoScale);
+        ctx.strokeStyle = "#78909c";
+        ctx.lineWidth = 1;
         ctx.font = `${axisSize}px sans-serif`;
         ctx.fillStyle = "#5f6b73";
         ctx.textBaseline = "middle";
         ctx.textAlign = "right";
-        ctx.fillText(yMax.toFixed(2), chartX - 4, chartY);
-        ctx.fillText(yMin.toFixed(2), chartX - 4, chartY + chartH);
-
+        for (const v of yTicks.values) {
+          const gy = mapY(v);
+          ctx.beginPath();
+          ctx.moveTo(chartX - tick, gy);
+          ctx.lineTo(chartX, gy);
+          ctx.stroke();
+          ctx.fillText(tickLabel(v, yTicks), chartX - tick - 2, gy);
+        }
         ctx.textBaseline = "top";
         ctx.textAlign = "center";
-        // Axis ends, not first/last slice: slices of a right-to-left
-        // model come in descending x.
-        ctx.fillText(
-          xMin.toFixed(plot.xDecimals),
-          chartX,
-          chartY + chartH + 4,
-        );
-        ctx.fillText(
-          xMax.toFixed(plot.xDecimals),
-          chartX + chartW,
-          chartY + chartH + 4,
-        );
+        for (const v of xTicks.values) {
+          const gx = mapX(v);
+          ctx.beginPath();
+          ctx.moveTo(gx, chartY + chartH);
+          ctx.lineTo(gx, chartY + chartH + tick);
+          ctx.stroke();
+          ctx.fillText(tickLabel(v, xTicks), gx, chartY + chartH + tick + 2);
+        }
         ctx.restore();
       }
 
@@ -2754,6 +2943,7 @@ export function drawCanvas(
           piezometricLine,
           projectInfo,
           parameters,
+          resultView: rvs,
         });
         ctx.save();
         ctx.strokeStyle = "#0078d4";

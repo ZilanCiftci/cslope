@@ -22,6 +22,7 @@ import {
   drawAnnotations,
   drawClosedPolyline,
   drawCriticalSurface,
+  drawCustomSurfaces,
   drawEntryExitMarkers,
   drawGrid,
   drawLineLoads,
@@ -47,6 +48,7 @@ import {
 import { ARROW_HEIGHT_PX } from "../canvas/constants";
 import type { Box } from "../rendering/overlay-layout";
 import { surfacePoints } from "../../utils/arc";
+import { drawReferenceLabelsPdf, drawReferenceLinesPdf } from "./pdf-reference";
 import { drawDrawingTitle, drawSummaryPages, type SummaryHeader } from "./pdf-summary";
 import type { SummarySection } from "../export/analysisSummary";
 import { clampMinorTicks } from "../../utils/ruler";
@@ -373,11 +375,11 @@ export function exportVectorPdf(data: PdfExportData): void {
 
     // Grid on top of the (opaque) regions, as on the canvas.
     if (rvs.showGrid) {
-      drawGrid(pdf, tf, viewScale, innerFrame, rvs.gridSpacing);
+      drawGrid(pdf, tf, viewScale, innerFrame, rvs.gridSpacing, rvs.gridLineSpacing);
     }
 
     if (coordinates.length >= 3) {
-      drawClosedPolyline(pdf, tf, coordinates, [0, 0, 0], 0.5);
+      drawClosedPolyline(pdf, tf, coordinates, [0, 0, 0], 0.3);
     }
 
     // Clipped to the outline, as on the canvas.
@@ -438,6 +440,9 @@ export function exportVectorPdf(data: PdfExportData): void {
       drawEntryExitMarkers(pdf, tf, analysisLimits, coordinates, result.criticalSurface ?? null);
     }
 
+    // Reference annotations: the lines under the surfaces, as on the canvas.
+    const drawnReferences = drawReferenceLinesPdf(pdf, tf, rvs.annotations, coordinates);
+
     drawSlipSurfaces(pdf, tf, result, rvs);
 
     drawCriticalSurface(pdf, tf, result, rvs, coordinates, {
@@ -445,6 +450,16 @@ export function exportVectorPdf(data: PdfExportData): void {
       materials,
       materialBoundaries,
       regionMaterials,
+    });
+    drawCustomSurfaces(pdf, tf, result, rvs);
+    // Their labels, clear of the lines and the FOS label.
+    drawReferenceLabelsPdf(pdf, tf, drawnReferences, {
+      coordinates,
+      materialBoundaries,
+      waterLines: piezometricLine.lines,
+      criticalSurface: result.criticalSurface,
+      showFosLabel: rvs.showFosLabel,
+      bounds: { left: innerFrame.x, top: innerFrame.y, right: innerFrame.x + innerFrame.w, bottom: innerFrame.y + innerFrame.h },
     });
     if (result.criticalSurface?.reinforcementForces?.length) {
       const cs = result.criticalSurface;
@@ -492,6 +507,7 @@ export function exportVectorPdf(data: PdfExportData): void {
       projectInfo || {},
       parameters ?? [],
       annotationFrame,
+      rvs,
     );
 
     drawRulerFrame(

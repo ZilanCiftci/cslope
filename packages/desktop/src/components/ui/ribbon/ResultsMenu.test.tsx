@@ -126,13 +126,12 @@ describe("ResultsMenu", () => {
     await userEvent.click(screen.getByTitle("Show slices"));
     await userEvent.click(screen.getByTitle("Show FOS label"));
     await userEvent.click(screen.getByTitle("Show centre mark"));
-    await userEvent.click(screen.getByTitle("Grid lines"));
     await userEvent.click(screen.getByTitle("Soil colors"));
     const after = rvs();
     expect(after.showSlices).toBe(!before.showSlices);
     expect(after.showFosLabel).toBe(!before.showFosLabel);
     expect(after.showCentreMarker).toBe(!before.showCentreMarker);
-    expect(after.showGrid).toBe(!before.showGrid);
+    expect(screen.queryByTitle("Grid lines")).toBeNull(); // in Properties
     expect(after.showSoilColor).toBe(!(before.showSoilColor ?? true));
   });
 
@@ -197,15 +196,47 @@ describe("ResultsMenu", () => {
     expect(screen.queryByLabelText("Maximum FOS shown")).toBeNull();
   });
 
-  it("adds annotations", async () => {
+  it("offers the custom surfaces toggle in the Surfaces menu only with custom surfaces in the result, off by default", async () => {
     renderMenu();
-    const count = store().resultViewSettings.annotations.length;
+    await userEvent.click(screen.getByTitle(/^Surfaces:/));
+    expect(screen.queryByLabelText("Show custom surfaces")).toBeNull();
+    fireEvent.mouseDown(document.body);
+
+    const base = fakeResult();
+    const custom = { ...base.criticalSurface!, cy: 25, fos: 1.5, customPlane: { kind: "circle" as const, index: 0 } };
+    act(() =>
+      useAppStore.setState({
+        result: { ...base, allSurfaces: [base.criticalSurface!, custom], customSurfaces: [{ kind: "circle", index: 0, surface: custom }] },
+        runState: "done",
+      }),
+    );
+    await userEvent.click(screen.getByTitle(/^Surfaces:/));
+    const toggle = screen.getByLabelText("Show custom surfaces");
+    expect(toggle).not.toBeChecked();
+    expect(rvs().showCustomSurfaces ?? false).toBe(false);
+    await userEvent.click(toggle);
+    expect(rvs().showCustomSurfaces).toBe(true);
+    await userEvent.click(screen.getByLabelText("Show custom surfaces"));
+    expect(rvs().showCustomSurfaces).toBe(false);
+  });
+
+  it("adds annotations; the table and the colour bar toggle and start at the right edge", async () => {
+    renderMenu();
+    store().setResultViewSettings({ annotations: [] });
     await userEvent.click(screen.getByTitle("Add Text"));
     await userEvent.click(screen.getByTitle("Add Plot"));
     await userEvent.click(screen.getByTitle("Add Material Table"));
     await userEvent.click(screen.getByTitle("Add Color Bar"));
-    const types = store().resultViewSettings.annotations.slice(count).map((a) => a.type);
-    expect(types).toEqual(["text", "plot", "material-table", "color-bar"]);
+    const annotations = store().resultViewSettings.annotations;
+    expect(annotations.map((a) => a.type)).toEqual(["text", "plot", "material-table", "color-bar"]);
+    const bar = annotations.find((a) => a.type === "color-bar")!;
+    expect([bar.x, bar.y, bar.anchor]).toEqual([0.95, 0.25, "top-right"]);
+    expect(screen.getByTitle("Remove Color Bar")).toHaveAttribute("aria-pressed", "true");
+    // A second click removes the one there instead of adding another.
+    await userEvent.click(screen.getByTitle("Remove Color Bar"));
+    await userEvent.click(screen.getByTitle("Remove Material Table"));
+    expect(store().resultViewSettings.annotations.map((a) => a.type)).toEqual(["text", "plot"]);
+    expect(screen.getByTitle("Add Color Bar")).toHaveAttribute("aria-pressed", "false");
   });
 
   it("exports the view settings as a template", async () => {
@@ -428,5 +459,62 @@ describe("ResultsMenu", () => {
     expect(link!.download).toMatch(/\.png$/);
     expect(link!.href).toBe("data:image/png;base64,xx");
     expect(store().selectedAnnotationIds).toEqual(["a1"]);
+  });
+});
+
+describe("ResultsMenu reference lines", () => {
+  const refs = () => rvs().annotations.filter((a) => a.type === "reference");
+
+  it("adds a reference polyline and circle from the Annotations menu, through the middle of the model", async () => {
+    renderMenu();
+    await userEvent.click(screen.getByRole("menuitem", { name: "Reference line" }));
+    await userEvent.click(screen.getByRole("menuitem", { name: "Polyline" }));
+    expect(refs()).toHaveLength(1);
+    const line = refs()[0] as { shape: string; points: [number, number][] };
+    expect(line.shape).toBe("polyline");
+    expect(line.points).toHaveLength(3);
+    const xs = store().coordinates.map((c) => c[0]);
+    const [xMin, xMax] = [Math.min(...xs), Math.max(...xs)];
+    expect(line.points[0][0]).toBeCloseTo(xMin + 0.3 * (xMax - xMin), 1);
+    expect(line.points[2][0]).toBeCloseTo(xMin + 0.7 * (xMax - xMin), 1);
+    expect(store().selectedAnnotationIds).toEqual([refs()[0].id]);
+
+    await userEvent.click(screen.getByRole("menuitem", { name: "Reference line" }));
+    await userEvent.click(screen.getByRole("menuitem", { name: "Circle" }));
+    expect(refs()).toHaveLength(2);
+    expect(refs()[1]).toMatchObject({ shape: "circle", clip: "ground" });
+    expect((refs()[1] as { radius: number }).radius).toBeGreaterThan(0);
+  });
+
+  it("leaves reference lines out of an exported template and keeps the model's on import", async () => {
+    const pickers: HTMLInputElement[] = [];
+    vi.spyOn(HTMLInputElement.prototype, "click").mockImplementation(function (this: HTMLInputElement) {
+      pickers.push(this);
+    });
+    act(() => {
+      store().addReferenceAnnotation({ shape: "polyline", points: [[2, 10], [12, 4]], label: "mine" });
+    });
+    renderMenu();
+    await userEvent.click(screen.getByTitle("Export template"));
+    const exported = JSON.parse(mocks.downloadFile.mock.calls[0][1] as string);
+    expect(exported.resultViewSettings.annotations.some((a: { type: string }) => a.type === "reference")).toBe(false);
+    expect(exported.resultViewSettings.annotations.length).toBe(rvs().annotations.length - 1);
+
+    await userEvent.click(screen.getByTitle("Import template"));
+    const template = {
+      ...JSON.parse(JSON.stringify(rvs())),
+      annotations: [
+        { id: "t", type: "text", x: 0.1, y: 0.1, text: "From template" },
+        { id: "theirs", type: "reference", shape: "circle", cx: 1, cy: 2, radius: 3 },
+      ],
+    };
+    const file = new File([JSON.stringify({ version: 1, resultViewSettings: template })], "t.json", { type: "application/json" });
+    Object.defineProperty(pickers.at(-1)!, "files", { value: [file], configurable: true });
+    act(() => {
+      pickers.at(-1)!.onchange?.(new Event("change"));
+    });
+    await waitFor(() => expect(rvs().annotations.some((a) => a.id === "t")).toBe(true));
+    expect(rvs().annotations.map((a) => a.type)).toEqual(["text", "reference"]);
+    expect(rvs().annotations[1]).toMatchObject({ shape: "polyline", label: "mine" });
   });
 });

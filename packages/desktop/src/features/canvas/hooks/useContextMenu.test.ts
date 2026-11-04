@@ -349,3 +349,118 @@ describe("useContextMenu — custom search planes", () => {
     expect(menu()).toBeNull();
   });
 });
+
+describe("useContextMenu — reference annotations", () => {
+  const COORDS: [number, number][] = [
+    [0, 0],
+    [0, 10],
+    [10, 10],
+    [20, 5],
+    [30, 5],
+    [30, 0],
+  ];
+  const LINE = {
+    id: "l",
+    type: "reference" as const,
+    shape: "polyline" as const,
+    points: [
+      [2, 10],
+      [12, 4],
+      [22, 5],
+    ] as [number, number][],
+  };
+  // Its lowest point (15, 6) lies in the soil; its arc keeps clear of the polyline.
+  const CIRCLE = { id: "c", type: "reference" as const, shape: "circle" as const, cx: 15, cy: 18, radius: 12 };
+  const refs = () => useAppStore.getState().resultViewSettings.annotations.filter((a) => a.type === "reference");
+  const line = () => refs().find((a) => a.id === "l") as typeof LINE | undefined;
+  // Client position of a world point: 10 px per metre, the world origin at the canvas centre.
+  const at = (x: number, y: number): [number, number] => [RECT.left + RECT.width / 2 + x * 10, RECT.top + RECT.height / 2 - y * 10];
+
+  beforeEach(() => {
+    useAppStore.setState({
+      result: null,
+      coordinates: COORDS,
+      resultViewScale: 10,
+      resultViewOffset: [0, 0],
+      resultViewSettings: { ...DEFAULT_RESULT_VIEW_SETTINGS, annotations: [LINE, CIRCLE] },
+    });
+  });
+  afterEach(() => useAppStore.getState().newProject());
+
+  it("removes a vertex of a polyline (it keeps two) or the whole line", () => {
+    const { params, open, menu, click } = setup({ mode: "result" });
+    open(...at(12, 4));
+    expect(params.setSelectedAnnotations).toHaveBeenCalledWith(["l"]);
+    expect(menu()!.items.map((i) => i.label)).toEqual(["Remove Point", "Delete Reference Line"]);
+    click("Remove Point");
+    expect(line()!.points).toEqual([
+      [2, 10],
+      [22, 5],
+    ]);
+    expect(menu()).toBeNull();
+    open(...at(2, 10));
+    expect(menu()!.items[0]).toMatchObject({ label: "Remove Point", disabled: true });
+    click("Delete Reference Line");
+    expect(line()).toBeUndefined();
+  });
+
+  it("adds a point on a segment at the snapped position", () => {
+    const { open, menu, click } = setup({ mode: "result", snapValue: (v) => Math.round(v) });
+    open(...at(17.2, 4.6));
+    expect(menu()!.items.map((i) => i.label)).toEqual(["Add Point", "Delete Reference Line"]);
+    click("Add Point");
+    expect(line()!.points).toEqual([
+      [2, 10],
+      [12, 4],
+      [17, 5],
+      [22, 5],
+    ]);
+  });
+
+  it("deletes a circle from its arc or centre", () => {
+    const { open, menu, click } = setup({ mode: "result" });
+    open(...at(15, 6));
+    expect(menu()!.items.map((i) => i.label)).toEqual(["Delete Reference Circle"]);
+    click("Delete Reference Circle");
+    expect(refs().map((a) => a.id)).toEqual(["l"]);
+  });
+
+  it("offers to add a custom search plane as a reference line in the edit view", () => {
+    const LINE_PLANE = { id: "p1", points: [[5, 8], [15, 2], [25, 4]] as [number, number][] };
+    const addReferenceFromCustomPlane = vi.fn();
+    const vertex = setup({
+      customSearchPlanes: [LINE_PLANE],
+      addReferenceFromCustomPlane,
+      findNearPointUnified: pointHit({ kind: "customVertex", planeId: "p1", pointIndex: 1 }),
+    });
+    vertex.open();
+    expect(vertex.menu()!.items.map((i) => i.label)).toEqual(["Delete Point", "Delete Surface", "Add as Reference Line"]);
+    vertex.click("Add as Reference Line");
+    expect(addReferenceFromCustomPlane).toHaveBeenCalledWith("p1");
+    expect(vertex.menu()).toBeNull();
+
+    const circle = setup({
+      customSearchPlanes: [{ id: "c1" }],
+      addReferenceFromCustomPlane,
+      findNearPointUnified: pointHit({ kind: "customCircle", planeId: "c1", handle: "rim" }),
+    });
+    circle.open();
+    expect(circle.menu()!.items.map((i) => i.label)).toEqual(["Delete Circle", "Add as Reference Line"]);
+
+    const edge = setup({
+      customSearchPlanes: [LINE_PLANE],
+      addReferenceFromCustomPlane,
+      findNearEdgeUnified: edgeHit({ kind: "customPlane", planeId: "p1", insertIndex: 2, snapPoint: [20, 3] }),
+    });
+    edge.open();
+    expect(edge.menu()!.items.map((i) => i.label)).toEqual(["Add Point", "Add as Reference Line"]);
+
+    // Without the action (the result canvas) the item is not offered.
+    const none = setup({
+      customSearchPlanes: [LINE_PLANE],
+      findNearPointUnified: pointHit({ kind: "customVertex", planeId: "p1", pointIndex: 1 }),
+    });
+    none.open();
+    expect(none.menu()!.items.map((i) => i.label)).toEqual(["Delete Point", "Delete Surface"]);
+  });
+});

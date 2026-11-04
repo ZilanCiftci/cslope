@@ -5,6 +5,7 @@ import {
   drawAnnotations,
   drawClosedPolyline,
   drawCriticalSurface,
+  drawCustomSurfaces,
   drawEntryExitMarkers,
   drawGrid,
   drawLineLoads,
@@ -22,9 +23,10 @@ import type { PdfTransform } from "./pdf-helpers";
 import { DEFAULT_MATERIAL, DEFAULT_RESULT_VIEW_SETTINGS } from "../../store/defaults";
 import type { Annotation, MaterialRow, ResultViewSettings } from "../../store/types";
 import { newPile, newReinforcement } from "../../utils/reinforcement";
-import { fosColor } from "../../utils/fos-color";
+import { fosColor, fosColorIn } from "../../utils/fos-color";
 import { parseColor } from "./pdf-helpers";
 import {
+  CUSTOM_SURFACE_COLOR,
   ENTRY_DOT_COLOR,
   EXIT_DOT_COLOR,
   LINE_LOAD_COLOR,
@@ -619,19 +621,14 @@ describe("drawEntryExitMarkers", () => {
     expect(lastDot).toBeLessThan(firstBar);
   });
 
-  it("keeps the markers off the sliding mass: no dots over it, triangles above the ground", () => {
+  it("puts no dots over the sliding mass; the markers stand on the ground as in the edit view", () => {
     const rec = recorder();
     drawEntryExitMarkers(rec.pdf, tf, limits, COORDS, { entryPoint: [ENTRY_X, 10], exitPoint: [22, 5] });
     const xs = rec.of("circle").map((c) => ((c.args[0] as number) - 20) / 5);
     expect(xs.length).toBeGreaterThan(0);
     for (const x of xs) expect(x < ENTRY_X || x > 22).toBe(true);
-    // Every triangle corner above the ground under it.
-    for (const c of [...rec.of("moveTo"), ...rec.of("lineTo")]) {
-      const [px, py] = c.args as [number, number];
-      const wx = (px - 20) / 5;
-      const gy = wx <= 10 ? 10 : wx <= 20 ? 10 - (wx - 10) / 2 : 5;
-      expect(py).toBeLessThan(tf.worldToPdf(wx, gy)[1]);
-    }
+    // Four triangles (one per limit), as in the edit view.
+    expect(rec.of("moveTo")).toHaveLength(4);
   });
 
   it("alternates the colours of the dots when the entry and exit ranges coincide", () => {
@@ -645,7 +642,7 @@ describe("drawEntryExitMarkers", () => {
     expect(new Set(xs).size).toBe(xs.length);
   });
 
-  it("is drawn lighter than the result and keeps the graphics state balanced", () => {
+  it("keeps the graphics state balanced", () => {
     const { rec } = triangles(limits);
     expect(rec.of("setGState")).toHaveLength(1);
     expect(rec.balanced()).toBe(true);
@@ -685,6 +682,87 @@ describe("drawSlipSurfaces", () => {
     const rec = recorder();
     drawSlipSurfaces(rec.pdf, tf, res, rvs({ surfaceDisplay: "filter", fosFilterMax: 2 }));
     expect(rec.of("stroke")).toHaveLength(1);
+  });
+
+  it("colours the surfaces by the colour bar's range and scheme, like the canvas", () => {
+    const bar: Annotation = {
+      id: "c",
+      type: "color-bar",
+      x: 0.8,
+      y: 0.3,
+      scaleMode: "fixed",
+      scaleMin: 1.3,
+      scaleMax: 2,
+      scheme: "greyscale",
+    };
+    const rec = recorder();
+    drawSlipSurfaces(rec.pdf, tf, res, rvs({ surfaceDisplay: "all", annotations: [bar] }));
+    expect(rec.of("setDrawColor").map((c) => c.args)).toEqual([
+      parseColor("#c8c8c8"),
+      parseColor(fosColorIn({ id: "greyscale" }, 1.5, 1.3, 2)),
+    ]);
+
+    // Following the filter with a custom scheme; the first bar wins.
+    const follow: Annotation = {
+      ...bar,
+      id: "d",
+      scaleMode: "filter",
+      scheme: "custom",
+      schemeFrom: "#ff0000",
+      schemeMid: "#ffffff",
+      schemeTo: "#0000ff",
+    };
+    const rec2 = recorder();
+    drawSlipSurfaces(rec2.pdf, tf, res, rvs({ surfaceDisplay: "all", fosFilterMax: 1.766, annotations: [follow, bar] }));
+    expect(rec2.of("setDrawColor").map((c) => c.args)).toEqual([parseColor("#0000ff"), parseColor("#ffffff")]);
+  });
+});
+
+describe("drawCustomSurfaces", () => {
+  const custom = surface({ cy: 16, fos: 1.5, customPlane: { kind: "circle", index: 0 } });
+  // The same centre as the critical surface: its label would stand on the critical one's.
+  const onCritical = surface({ radius: R + 1, fos: 1.75, customPlane: { kind: "circle", index: 1 } });
+  const res = result({
+    allSurfaces: [surface(), custom, onCritical],
+    maxFOS: 1.75,
+    customSurfaces: [
+      { kind: "circle", index: 0, surface: custom },
+      { kind: "circle", index: 1, surface: onCritical },
+      { kind: "circle", index: 2, reason: "the circle does not cut the ground twice" },
+      // The critical surface itself as a custom plane: drawn as critical, not again.
+      { kind: "polyline", index: 0, surface: surface({ customPlane: { kind: "polyline", index: 0 } }) },
+    ],
+  });
+
+  it("draws nothing unless asked, whatever the surface display", () => {
+    const rec = recorder();
+    drawCustomSurfaces(rec.pdf, tf, res, rvs({ surfaceDisplay: "all", showFosLabel: true }));
+    expect(rec.calls).toHaveLength(0);
+  });
+
+  it("draws the custom surfaces dashed in their colour, then their labels clear of the critical label", () => {
+    const rec = recorder();
+    drawCustomSurfaces(rec.pdf, tf, res, rvs({ showCustomSurfaces: true }));
+    expect(rec.of("stroke")).toHaveLength(2);
+    expect(rec.of("setDrawColor")[0].args).toEqual(CUSTOM_SURFACE_COLOR.rgb);
+    expect(rec.of("setLineDashPattern").map((c) => c.args)).toEqual([
+      [[2, 1.25], 0],
+      [[], 0],
+    ]);
+    expect(rec.texts()).toEqual([]);
+
+    const labelled = recorder();
+    drawCustomSurfaces(labelled.pdf, tf, res, rvs({ showCustomSurfaces: true, showFosLabel: true }));
+    expect(labelled.texts()).toEqual(["1.500", "1.750"]);
+    const [first, second] = labelled.of("text");
+    const [ccx, ccy] = tf.worldToPdf(CIRCLE.cx, 16);
+    expect(first.args[1]).toBe(ccx + 3);
+    expect(first.args[2]).toBe(ccy - 1);
+    // Moved down one label height (5.5 mm) and a gap (0.5 mm) from the critical label at (cx, cy).
+    const [, cy] = tf.worldToPdf(CIRCLE.cx, CIRCLE.cy);
+    expect(second.args[1]).toBe(ccx + 3);
+    expect(second.args[2]).toBeCloseTo(cy + 6 - 1, 9);
+    expect(labelled.of("setTextColor").map((c) => c.args)).toEqual([CUSTOM_SURFACE_COLOR.rgb, CUSTOM_SURFACE_COLOR.rgb]);
   });
 });
 

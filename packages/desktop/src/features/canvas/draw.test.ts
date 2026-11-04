@@ -25,11 +25,13 @@ import {
   POND_ARROW_WIDTH_PX,
   POND_OPACITY,
   SLIP_SURFACE_OPACITY,
+  CUSTOM_SURFACE_COLOR,
   UDL_LOAD_COLOR,
 } from "../rendering/style-spec";
 import { REINFORCEMENT_COLOR, PILE_COLOR } from "./reinforcement-draw";
 import { newPile, newReinforcement } from "../../utils/reinforcement";
-import { fosColor } from "../../utils/fos-color";
+import { fosColor, fosColorIn } from "../../utils/fos-color";
+import { colorScaleOfBar } from "../annotations/colorScale";
 import type { Annotation, ResultViewSettings } from "../../store/types";
 import { computeRegions } from "../../utils/regions";
 
@@ -1229,14 +1231,14 @@ describe("drawCanvas — result mode", () => {
     expect(at12[1][1]).toBeCloseTo(CIRCLE.cy - Math.sqrt(R * R - 9), 6);
   });
 
-  it("draws search limits lighter and under the sliding mass, and none for prescribed surfaces only", () => {
+  it("draws search limits as in the edit view, under the sliding mass, and none for prescribed surfaces only", () => {
     const limits = { enabled: true, entryLeftX: 2, entryRightX: 8, exitLeftX: 21, exitRightX: 28 };
     const rec = drawResult({ analysisLimits: limits });
     const massIndex = rec.paths.findIndex((p) => p.kind === "fill" && p.state.globalAlpha === 0.12);
     const dotIndex = rec.paths.findIndex((p) => p.kind === "fill" && p.state.fillStyle === EXIT_DOT_COLOR.hex);
     expect(dotIndex).toBeGreaterThanOrEqual(0);
     expect(dotIndex).toBeLessThan(massIndex);
-    expect(rec.paths[dotIndex].state.globalAlpha).toBeLessThan(1);
+    expect(rec.paths[dotIndex].state.globalAlpha).toBe(1);
 
     const only = drawResult({ analysisLimits: limits, customPlanesOnly: true });
     expect(only.fills(EXIT_DOT_COLOR.hex)).toHaveLength(0);
@@ -1244,20 +1246,15 @@ describe("drawCanvas — result mode", () => {
     expect(draw({ analysisLimits: limits, customPlanesOnly: true }).fills(EXIT_DOT_COLOR.hex).length).toBeGreaterThan(0);
   });
 
-  it("keeps the search markers off the result: triangles above the ground, shared limits once, no dots on the mass", () => {
+  it("draws the search markers over a result as in the edit view, no dots on the mass", () => {
     const limits = { enabled: true, entryLeftX: 2, entryRightX: 8, exitLeftX: 21, exitRightX: 28 };
     const triangles = (rec: ReturnType<typeof draw>) =>
       rec.fills().filter((p) => pathPoints(p).length === 3 && p.state.fillStyle === MARKER_COLOR.hex);
     const rec = drawResult({ analysisLimits: limits });
     const tris = triangles(rec);
     expect(tris).toHaveLength(4);
-    for (const t of tris) {
-      for (const [px, py] of pathPoints(t)) {
-        const [wx] = canvasToWorld(px, py, W, H);
-        const gy = toC(wx, surfaceYAtX(COORDS, wx)!)[1];
-        expect(py).toBeLessThan(gy); // above the ground
-      }
-    }
+    // The same triangles as in the edit view.
+    expect(tris.map(pathPoints)).toEqual(triangles(draw({ analysisLimits: limits })).map(pathPoints));
     // No dots over the sliding mass (entry ≈ 4.3 to exit 22).
     const dots = rec.fills().filter((p) => p.segments[0].op === "arc" && (p.state.fillStyle === ENTRY_DOT_COLOR.hex || p.state.fillStyle === EXIT_DOT_COLOR.hex));
     expect(dots.length).toBeGreaterThan(0);
@@ -1265,14 +1262,9 @@ describe("drawCanvas — result mode", () => {
       const [wx] = canvasToWorld(pathPoints(d)[0][0], pathPoints(d)[0][1], W, H);
       expect(wx < ENTRY_X || wx > 22).toBe(true);
     }
-    // In the edit view they stand on the ground.
-    const edit = triangles(draw({ analysisLimits: limits }));
-    expect(edit.some((t) => pathPoints(t).some(([, py]) => py > toC(0, 10)[1]))).toBe(true);
-
-    // Coinciding ranges: each limit once over a result (two triangles, not four).
+    // Coinciding ranges: as in the edit view.
     const same = { enabled: true, entryLeftX: 2, entryRightX: 28, exitLeftX: 2, exitRightX: 28 };
-    expect(triangles(drawResult({ analysisLimits: same }))).toHaveLength(2);
-    expect(triangles(draw({ analysisLimits: same }))).toHaveLength(4);
+    expect(triangles(drawResult({ analysisLimits: same }))).toHaveLength(4);
   });
 
   it("fills the mass behind a vertical wall face without spilling into the air", () => {
@@ -1408,6 +1400,53 @@ describe("drawCanvas — result mode", () => {
     expect(criticalOnly.strokes().filter((p) => p.state.globalAlpha === SLIP_SURFACE_OPACITY)).toHaveLength(0);
   });
 
+  it("draws the custom surfaces dashed with their own FOS labels only when asked, clear of the critical label", () => {
+    const custom = surface({ cx: 15, cy: 16, fos: 1.5, customPlane: { kind: "circle", index: 0 } });
+    // The same centre as the critical surface: its label would stand on the critical one's.
+    const onCritical = surface({ radius: R + 1, fos: 1.75, customPlane: { kind: "circle", index: 1 } });
+    const res = result({
+      allSurfaces: [surface(), custom, onCritical],
+      maxFOS: 1.75,
+      customSurfaces: [
+        { kind: "circle", index: 0, surface: custom },
+        { kind: "circle", index: 1, surface: onCritical },
+        { kind: "circle", index: 2, reason: "the circle does not cut the ground twice" },
+        // The critical surface itself as a custom plane: drawn as critical, not again.
+        { kind: "polyline", index: 0, surface: surface({ customPlane: { kind: "polyline", index: 0 } }) },
+      ],
+    });
+    const dashed = (rec: ReturnType<typeof draw>) =>
+      rec.strokes(CUSTOM_SURFACE_COLOR.hex).filter((p) => p.state.lineDash.length > 0 && p.state.lineWidth === 1.5);
+    // Off by default, whatever the surface display.
+    expect(dashed(drawResult({ result: res }))).toHaveLength(0);
+    expect(dashed(drawResult({ result: res, resultViewSettings: rvs({ surfaceDisplay: "all" }) }))).toHaveLength(0);
+    expect(drawResult({ result: res, resultViewSettings: rvs({ showFosLabel: true }) }).findText("1.500")).toBeUndefined();
+
+    const on = drawResult({ result: res, resultViewSettings: rvs({ showCustomSurfaces: true, showFosLabel: true }) });
+    const lines = dashed(on);
+    expect(lines).toHaveLength(2);
+    expect(lines[0].state.lineDash).toEqual([8, 5]);
+    const [ccx, ccy] = toC(15, 16);
+    for (const [x, y] of pathPoints(lines[0])) expect(Math.hypot(x - ccx, y - ccy)).toBeCloseTo(R * SCALE, 6);
+    // Each on a wider solid halo; the critical surface is still the one bold solid arc.
+    expect(on.strokes().filter((p) => p.state.lineDash.length === 0 && p.state.lineWidth === 4)).toHaveLength(2);
+    expect(on.strokes().filter((p) => p.state.lineWidth === 2 && pathPoints(p).length > 20)).toHaveLength(1);
+    // Labels in the custom colour: the first at its centre, the second moved below the critical label.
+    const label = on.findText("1.500")!;
+    expect(label.state.fillStyle).toBe(CUSTOM_SURFACE_COLOR.hex);
+    expect(label.x).toBe(ccx + 10);
+    expect(label.y).toBe(ccy - 4);
+    const critical = on.findText("1.234")!;
+    const moved = on.findText("1.750")!;
+    expect(moved.x).toBe(critical.x);
+    expect(moved.y).toBe(critical.y + 16);
+    expect(on.depth()).toBe(0);
+    // Without the FOS label, the surfaces but no labels.
+    const noLabel = drawResult({ result: res, resultViewSettings: rvs({ showCustomSurfaces: true }) });
+    expect(dashed(noLabel)).toHaveLength(2);
+    expect(noLabel.findText("1.500")).toBeUndefined();
+  });
+
   it("draws reinforcement forces on the critical surface", () => {
     const cs = surface({
       reinforcementForces: [{ index: 0, x: 12, y: 6, fx: -40, fy: 10, force: 41.2, passive: true }],
@@ -1503,7 +1542,75 @@ describe("drawCanvas — result mode", () => {
     expect(uncapped.textStrings().some((t) => t.startsWith("≥"))).toBe(false);
   });
 
-  it("draws a slice plot with axis end labels, or a placeholder without slices", () => {
+  it("colours the surfaces and the bar by the bar's range and scheme", () => {
+    const s2 = surface({ cx: 15, cy: 16, fos: 1.5 });
+    const s3 = surface({ cx: 15, cy: 18, fos: 9 });
+    const res = result({ allSurfaces: [surface(), s2, s3], maxFOS: 9 });
+    const faintOf = (rec: ReturnType<typeof drawResult>) =>
+      rec.strokes().filter((p) => p.state.globalAlpha === SLIP_SURFACE_OPACITY);
+    const barsOf = (rec: ReturnType<typeof drawResult>) => rec.callsOf("fillRect").filter((c) => c.args[3] === 2);
+
+    // A fixed range 1–2 on a greyscale scheme: FOS 9 past the top is "≥ 2.00"
+    // and light grey; FOS 1.5 is the middle grey; the critical FOS below the
+    // bottom reads "≤ 1.00".
+    const fixed: Annotation = {
+      id: "c",
+      type: "color-bar",
+      x: 0.8,
+      y: 0.3,
+      scaleMode: "fixed",
+      scaleMin: 1.3,
+      scaleMax: 2,
+      scheme: "greyscale",
+    };
+    const grey = drawResult({ result: res, resultViewSettings: rvs({ surfaceDisplay: "all", annotations: [fixed] }) });
+    expect(grey.textStrings()).toContain("≥ 2.00");
+    expect(grey.textStrings()).toContain("≤ 1.30");
+    expect(grey.textStrings()).toContain("1.58");
+    const scale = colorScaleOfBar(fixed, res);
+    expect(faintOf(grey)[0].state.strokeStyle).toBe("#c8c8c8");
+    expect(faintOf(grey)[1].state.strokeStyle).toBe(scale.colorOf(1.5));
+    expect(faintOf(grey)[1].state.strokeStyle).toBe(fosColorIn({ id: "greyscale" }, 1.5, 1.3, 2));
+    expect(barsOf(grey)[0].state.fillStyle).toBe("#c8c8c8");
+    expect(barsOf(grey).at(-1)!.state.fillStyle).toBe("#000000");
+
+    // Bounds out of order: the automatic range, with its own message in the panel.
+    const bad = drawResult({
+      result: res,
+      resultViewSettings: rvs({ surfaceDisplay: "all", annotations: [{ ...fixed, scaleMin: 3, scheme: "classic" }] }),
+    });
+    expect(bad.textStrings()).toContain("≥ 2.47");
+    expect(faintOf(bad)[1].state.strokeStyle).toBe(fosColor(1.5, 1.234, 2.468));
+
+    // Following the filter: the scale ends at the filter's limit, also in "all" mode.
+    const custom: Annotation = {
+      ...fixed,
+      scaleMode: "filter",
+      scheme: "custom",
+      schemeFrom: "#ff0000",
+      schemeMid: "#ffffff",
+      schemeTo: "#0000ff",
+    };
+    const follow = drawResult({
+      result: res,
+      resultViewSettings: rvs({ surfaceDisplay: "all", fosFilterMax: 1.766, annotations: [custom] }),
+    });
+    expect(follow.textStrings()).toContain("≥ 1.77");
+    expect(follow.textStrings()).toContain("1.23");
+    expect(faintOf(follow)[0].state.strokeStyle).toBe("#0000ff");
+    expect(faintOf(follow)[1].state.strokeStyle).toBe("#ffffff");
+    expect(barsOf(follow)[0].state.fillStyle).toBe("#0000ff");
+    expect(barsOf(follow).at(-1)!.state.fillStyle).toBe("#ff0000");
+
+    // The first colour bar sets the scale of the plot.
+    const two = drawResult({
+      result: res,
+      resultViewSettings: rvs({ surfaceDisplay: "all", annotations: [fixed, { ...custom, id: "d" }] }),
+    });
+    expect(faintOf(two)[0].state.strokeStyle).toBe("#c8c8c8");
+  });
+
+  it("draws a slice plot with round ticks on both axes, or a placeholder without slices", () => {
     const anno: Annotation = { id: "p", type: "plot", x: 0.5, y: 0.5, plotAxisX: "slice", plotAxisY: "cohesion" };
     const empty = drawResult({ resultViewSettings: rvs({ annotations: [anno] }) });
     expect(empty.textStrings()).toContain("No slice data");
@@ -1522,6 +1629,9 @@ describe("drawCanvas — result mode", () => {
     expect(pts[0][1]).toBeGreaterThan(pts[1][1]);
     expect(pts[1][1]).toBeGreaterThan(pts[2][1]);
     expect(rec.fills("#26a69a")).toHaveLength(3);
+    // Cohesion 10–30 gets the ticks 10, 15, 20, 25, 30; the slices 1, 2, 3.
+    const labels = rec.textStrings();
+    for (const t of ["10", "15", "20", "25", "30", "1", "2", "3"]) expect(labels).toContain(t);
   });
 
   it("outlines selected annotations and the paper frame with a dashed rectangle", () => {
@@ -1616,5 +1726,88 @@ describe("drawCanvas — finite element mesh", () => {
     const rec = drawFem({ showFemMesh: true, showFemPlasticZone: false });
     expect(meshPath(rec)).toBeDefined();
     expect(rec.paths.some((p) => p.kind === "fill" && p.state.fillStyle.startsWith("rgba(214, 40, 40"))).toBe(false);
+  });
+});
+
+describe("drawCanvas — reference annotations", () => {
+  const LINE: Annotation = {
+    id: "l",
+    type: "reference",
+    shape: "polyline",
+    points: [
+      [2, 10],
+      [12, 4],
+      [22, 5],
+    ],
+    label: "F = 0.664 (other program)",
+    dash: "dashed",
+  };
+  const CIRCLE: Annotation = { id: "c", type: "reference", shape: "circle", cx: 15, cy: 14, radius: 10, color: "#ff0000", label: "paper" };
+  const drawRefs = (over: Partial<DrawCanvasParams> = {}, annotations: Annotation[] = [LINE, CIRCLE]) =>
+    draw({ mode: "result", result: result(), resultViewSettings: rvs({ annotations, showFosLabel: true }), ...over });
+
+  it("strokes a polyline through its points in the reference colour, dashed, under the critical surface", () => {
+    const rec = drawRefs();
+    const line = rec.strokes("#a21caf").find((p) => pathPoints(p).length === 3)!;
+    expect(line).toBeDefined();
+    expect(hasPoints(line, (LINE as { points: [number, number][] }).points.map(([x, y]) => toC(x, y)))).toBe(true);
+    expect(line.state.lineDash).toEqual([8, 5]);
+    expect(line.state.lineWidth).toBe(1.5);
+    const critical = rec.strokes().find((p) => p.state.lineWidth === 2 && pathPoints(p).length > 20)!;
+    expect(rec.paths.indexOf(line)).toBeLessThan(rec.paths.indexOf(critical));
+  });
+
+  it("strokes a circle's arc below the ground in its own colour, with the lowest point on it", () => {
+    const rec = drawRefs();
+    const arc = rec.strokes("#ff0000").find((p) => pathPoints(p).length > 8)!;
+    expect(arc).toBeDefined();
+    const pts = pathPoints(arc).map(([x, y]) => canvasToWorld(x, y, W, H));
+    for (const [x, y] of pts) {
+      expect(Math.hypot(x - 15, y - 14)).toBeCloseTo(10, 6);
+      expect(y).toBeLessThanOrEqual(surfaceYAtX(COORDS, x)! + 1e-6);
+    }
+    expect(pts.some(([x, y]) => Math.abs(x - 15) < 1e-9 && Math.abs(y - 4) < 1e-9)).toBe(true);
+    // Drawn whole when not clipped: closed, above the ground too.
+    const whole = drawRefs({}, [{ ...CIRCLE, clip: "none" }]);
+    const ring = pathPoints(whole.strokes("#ff0000").find((p) => pathPoints(p).length > 100)!);
+    expect(ring[0]).toEqual(ring[ring.length - 1]);
+  });
+
+  it("labels the lines in their colour on a plate, the circle's below its lowest point, clear of the FOS label", () => {
+    const rec = drawRefs();
+    const paper = rec.findText("paper")!;
+    expect(paper.state.fillStyle).toBe("#ff0000");
+    const [ax, ay] = toC(15, 4);
+    expect(paper.y).toBeGreaterThan(ay);
+    expect(Math.abs(paper.x - ax)).toBeLessThan(60);
+    const other = rec.findText("F = 0.664 (other program)")!;
+    expect(other.state.fillStyle).toBe("#a21caf");
+    expect(rec.callsOf("fillRect").filter((c) => c.state.globalAlpha === 0.85)).toHaveLength(2);
+    // The FOS label is drawn before the reference labels, so they keep off it.
+    const fos = rec.findText("1.234")!;
+    expect(rec.texts.indexOf(fos)).toBeLessThan(rec.texts.indexOf(paper));
+    // No label for a blank one.
+    const blank = drawRefs({}, [{ ...LINE, label: "  " }]);
+    expect(blank.callsOf("fillRect").filter((c) => c.state.globalAlpha === 0.85)).toHaveLength(0);
+  });
+
+  it("draws handles for a selected reference annotation instead of the paper outline", () => {
+    const rec = drawRefs({ selectedAnnotationIds: ["l", "c"] });
+    expect(rec.strokes("#0078d4")).toHaveLength(0);
+    // Three vertices and a centre.
+    expect(rec.fills("#0078d4")).toHaveLength(4);
+    const hovered = drawRefs({ selectedAnnotationIds: ["l"], hoverHit: { kind: "referenceVertex", annoId: "l", pointIndex: 1 } });
+    expect(hovered.fills(POINT_COLOR_HOVER)).toHaveLength(1);
+    expect(drawRefs().fills("#0078d4")).toHaveLength(0);
+  });
+
+  it("shows a reference annotation in the edit view only when asked, and keeps save/restore balanced", () => {
+    const hidden = draw({ resultViewSettings: rvs({ annotations: [LINE] }) });
+    expect(hidden.strokes("#a21caf")).toHaveLength(0);
+    const shown = draw({ resultViewSettings: rvs({ annotations: [{ ...LINE, showInEdit: true }] }) });
+    expect(shown.strokes("#a21caf")).toHaveLength(1);
+    expect(shown.findText("F = 0.664 (other program)")).toBeDefined();
+    expect(shown.depth()).toBe(0);
+    expect(drawRefs({ selectedAnnotationIds: ["l", "c"] }).depth()).toBe(0);
   });
 });
