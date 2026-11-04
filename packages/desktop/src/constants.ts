@@ -18,8 +18,12 @@ export const PAPER_FRAME_MARGIN_PX = 20;
 export const GRID_RAW_STEP_PX = 50;
 
 /**
- * The finite element analysis is not finished for general release: its
- * results are shown as experimental wherever they appear.
+ * The finite element analysis (strength reduction, the limit analysis bounds
+ * and the seepage) is experimental until its verification is as broad as the
+ * limit equilibrium one: its results are marked wherever they appear. The
+ * note is the one-sentence tooltip of the Experimental badge; the advice adds
+ * what to base the design on.
  */
 export const FEM_EXPERIMENTAL_NOTE =
-  "Experimental: the finite element analysis is still under development. Its results are not verified for design and cannot be guaranteed; base the design on the limit equilibrium result.";
+  "Finite element analysis is experimental: fewer verification problems than limit equilibrium; results may change between versions.";
+export const FEM_EXPERIMENTAL_ADVICE = `${FEM_EXPERIMENTAL_NOTE} Base the design on the limit equilibrium result.`;

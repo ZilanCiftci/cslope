@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useAppStore } from "../../../store/app-store";
+import { FEM_EXPERIMENTAL_NOTE } from "../../../constants";
 import { normalizeResultView } from "../../../store/persistence";
 import { fileTooLarge } from "../../../features/project/file-limits";
 import { DraftNumberInput } from "../DraftNumberInput";
@@ -377,7 +378,7 @@ export function ResultsMenu({ isOpen, onActivate, panelHost }: Props) {
                   <RibbonSmallButton
                     icon={<PlasticZoneIcon />}
                     label="Plastic zone"
-                    title="Shade the plastic zone of the finite element analysis (the failure mechanism). Experimental: not verified for design."
+                    title={`Shade the plastic zone of the finite element analysis (the failure mechanism). ${FEM_EXPERIMENTAL_NOTE}`}
                     onClick={() =>
                       setRvs({ showFemPlasticZone: !(rvs.showFemPlasticZone ?? true) })
                     }

@@ -136,6 +136,31 @@ describe("ResultsMenu", () => {
     expect(after.showSoilColor).toBe(!(before.showSoilColor ?? true));
   });
 
+  it("marks the plastic zone of the finite element analysis as experimental", async () => {
+    const fem = {
+      factorOfSafety: 1.4,
+      failedF: 1.45,
+      flowRule: "associated" as const,
+      levels: [{ elements: 500, fos: 1.4 }],
+      warnings: [],
+      elapsedMs: 3000,
+      x: [],
+      y: [],
+      triangles: [],
+      plasticShear: [],
+      displacement: [],
+    };
+    act(() => useAppStore.setState({ result: { ...fakeResult(), fem }, runState: "done" }));
+    renderMenu({ withResult: false });
+    const button = screen.getByTitle(/Shade the plastic zone/);
+    expect(button).toHaveAttribute(
+      "title",
+      expect.stringMatching(/experimental: fewer verification problems than limit equilibrium/),
+    );
+    await userEvent.click(button);
+    expect(rvs().showFemPlasticZone).toBe(false);
+  });
+
   it("chooses which surfaces to show and filters by FOS", async () => {
     renderMenu();
     await userEvent.click(screen.getByTitle(/^Surfaces:/));

@@ -55,11 +55,11 @@ jobs:
       - name: Install
         run: bun install --frozen-lockfile
       # A high or critical advisory on a production dependency fails the
-      # job. The root package.json's audit script ignores the advisories
-      # reviewed as not reachable: jsPDF's HTML and annotation paths and
-      # DOMPurify (the app only saves PDFs it draws itself), and React
-      # Router's server runtime (the site is pre-rendered and static). The
-      # weekly verification-full workflow audits the Rust crates too.
+      # job (the root package.json's audit script). No advisory is ignored:
+      # when one appears, upgrade the dependency (Dependabot opens the pull
+      # request) and add an --ignore only for an advisory reviewed as not
+      # reachable, with the reason here. The weekly verification-full
+      # workflow audits the Rust crates too.
       - name: Audit dependencies
         run: bun run audit
       # The committed WebAssembly engine was built from the Rust sources as

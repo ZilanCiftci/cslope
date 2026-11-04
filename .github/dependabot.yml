@@ -1,0 +1,46 @@
+# Dependabot opens pull requests for dependency updates every Monday. Minor
+# and patch updates are grouped into one pull request per ecosystem; a major
+# update gets its own. CI reviews each pull request (audit, typecheck, lint,
+# tests, builds); nothing is merged automatically.
+version: 2
+updates:
+  # The bun workspaces: the root package.json, packages/*/package.json and
+  # the text bun.lock (supported by Dependabot for bun 1.1.39 and later).
+  - package-ecosystem: "bun"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    open-pull-requests-limit: 5
+    groups:
+      bun-minor-and-patch:
+        update-types:
+          - "minor"
+          - "patch"
+
+  # The workflows pin actions to commit SHAs with a version comment;
+  # Dependabot updates both.
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    open-pull-requests-limit: 5
+    groups:
+      actions-minor-and-patch:
+        update-types:
+          - "minor"
+          - "patch"
+
+  # The Rust engine (Cargo.toml and Cargo.lock of the workspace).
+  - package-ecosystem: "cargo"
+    directory: "/packages/engine-rs"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    open-pull-requests-limit: 5
+    groups:
+      cargo-minor-and-patch:
+        update-types:
+          - "minor"
+          - "patch"

@@ -15,7 +15,7 @@ import { Label } from "../../../components/ui/Label";
 import { DraftNumberInput } from "../../../components/ui/DraftNumberInput";
 import { GroupHeading } from "../GroupHeading";
 import { ExperimentalBadge } from "../../../components/ui/ExperimentalBadge";
-import { FEM_EXPERIMENTAL_NOTE } from "../../../constants";
+import { FEM_EXPERIMENTAL_ADVICE } from "../../../constants";
 import { BlockSearchSection } from "./BlockSearchSection";
 import { RapidDrawdownFields } from "./RapidDrawdownFields";
 
@@ -940,7 +940,7 @@ function FemFields({
         role="note"
         aria-label="Finite elements are experimental"
       >
-        {FEM_EXPERIMENTAL_NOTE}
+        {FEM_EXPERIMENTAL_ADVICE}
       </p>
       <label className="col-span-2 flex flex-col gap-0.5">
         <Label>Flow rule</Label>
@@ -1060,7 +1060,7 @@ function FemFields({
           title="Steady seepage: the water table gives the reservoir and the tail water where it lies at or above the ground; the phreatic surface and the seepage face come from the flow (one permeability for all soils, unsaturated flow after van Genuchten–Mualem with loam parameters; rigid materials nearly impervious)."
         >
           <option value="water-table">From the water table</option>
-          <option value="seepage">Steady seepage (FE)</option>
+          <option value="seepage">Steady seepage (FE, experimental)</option>
         </select>
       </label>
       <label className="col-span-2 flex flex-col gap-0.5">

@@ -77,13 +77,18 @@ describe("OptionsSection Bishop hint", () => {
 });
 
 describe("OptionsSection finite elements", () => {
-  it("marks finite elements as experimental and not for design", () => {
+  it("marks finite elements, and the seepage, as experimental", () => {
     useAppStore.getState().newProject();
     render(<OptionsSection plain />);
     expect(screen.getByRole("heading", { name: /Finite elements/ })).toHaveTextContent("Experimental");
-    expect(screen.getByRole("note", { name: "Finite elements are experimental" })).toHaveTextContent(
-      /not verified for design and cannot be guaranteed/,
+    expect(screen.getByText("Experimental")).toHaveAttribute(
+      "title",
+      "Finite element analysis is experimental: fewer verification problems than limit equilibrium; results may change between versions.",
     );
+    expect(screen.getByRole("note", { name: "Finite elements are experimental" })).toHaveTextContent(
+      /results may change between versions. Base the design on the limit equilibrium result/,
+    );
+    expect(screen.getByRole("option", { name: "Steady seepage (FE, experimental)" })).toBeInTheDocument();
   });
 });
 

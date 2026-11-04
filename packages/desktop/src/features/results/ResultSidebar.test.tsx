@@ -98,6 +98,37 @@ describe("ResultSidebar summary", () => {
     expect(screen.getByText(/2 slices of the critical surface have negative effective normal force/)).toBeInTheDocument();
   });
 
+  it("marks the finite element results as experimental", () => {
+    act(() =>
+      useAppStore.setState({
+        result: result({
+          fem: {
+            factorOfSafety: 1.4,
+            failedF: 1.45,
+            flowRule: "associated",
+            levels: [{ elements: 500, fos: 1.4 }],
+            warnings: [],
+            elapsedMs: 3000,
+            x: [],
+            y: [],
+            triangles: [],
+            plasticShear: [],
+            displacement: [],
+            bounds: { lower: 1.35, upper: 1.45, elements: 800, elapsedMs: 2000, warnings: [] },
+          },
+        }),
+      }),
+    );
+    render(<ResultSidebar />);
+    expect(screen.getByRole("heading", { name: /Finite elements/ })).toHaveTextContent("Experimental");
+    expect(screen.getByText("Experimental")).toHaveAttribute(
+      "title",
+      expect.stringMatching(/experimental: fewer verification problems than limit equilibrium/),
+    );
+    expect(screen.getByText("FOS, limit analysis (FE)").nextSibling!.textContent).toBe("1.350 – 1.450");
+    expect(screen.getByText("Strength reduction (comparison)").nextSibling!.textContent).toBe("1.400");
+  });
+
   it("reports a failed run, or that there is no result yet", () => {
     act(() => useAppStore.setState({ result: null, runState: "error", errorMessage: "Bad geometry" }));
     render(<ResultSidebar />);
