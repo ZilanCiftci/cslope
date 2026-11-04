@@ -1,4 +1,4 @@
-import type { AnalysisResult, RunState } from "../store/types";
+import type { AnalysisResult, RunAllStatus, RunState } from "../store/types";
 import { APP_VERSION } from "../utils/app-version";
 import { fosStatusColor } from "../utils/fos-color";
 
@@ -16,6 +16,51 @@ interface Props {
   setGridSnapSize: (size: number) => void;
   coordinateCount: number;
   cursorWorld: [number, number] | null;
+  /** A Run All batch: its progress while it runs, then its summary. */
+  runAll?: RunAllStatus | null;
+}
+
+/** "Run All 7/20" and a small bar while the batch runs, then its outcome. */
+function RunAllProgress({ status }: { status: RunAllStatus }) {
+  const { total, finished, failed, progress, running } = status;
+  return (
+    <>
+      <span style={{ color: "var(--color-vsc-border)" }}>|</span>
+      {running ? (
+        <span
+          data-testid="status-run-all"
+          className="flex items-center gap-1.5"
+          style={{ color: "var(--color-vsc-accent)", fontWeight: 600 }}
+        >
+          Run All {finished}/{total}
+          <span
+            role="progressbar"
+            aria-label="Run All progress"
+            aria-valuemin={0}
+            aria-valuemax={100}
+            aria-valuenow={Math.round(progress * 100)}
+            className="inline-block w-16 h-1.5 rounded-full overflow-hidden"
+            style={{ background: "var(--color-vsc-input-bg)" }}
+          >
+            <span
+              className="block h-1.5 rounded-full transition-all duration-150"
+              style={{
+                width: `${Math.max(2, Math.round(progress * 100))}%`,
+                background: "var(--color-vsc-accent)",
+              }}
+            />
+          </span>
+        </span>
+      ) : (
+        <span data-testid="status-run-all">
+          Run All done: {total} {total === 1 ? "model" : "models"}
+          {failed > 0 && (
+            <span style={{ color: "var(--color-vsc-error)", fontWeight: 600 }}>, {failed} failed</span>
+          )}
+        </span>
+      )}
+    </>
+  );
 }
 
 export function StatusBar({
@@ -30,6 +75,7 @@ export function StatusBar({
   setGridSnapSize,
   coordinateCount,
   cursorWorld,
+  runAll = null,
 }: Props) {
   return (
     <div
@@ -70,7 +116,8 @@ export function StatusBar({
             </span>
           </>
         )}
-        {runState === "running" && (
+        {runAll && <RunAllProgress status={runAll} />}
+        {runState === "running" && !runAll?.running && (
           <>
             <span style={{ color: "var(--color-vsc-border)" }}>|</span>
             <span style={{ color: "var(--color-vsc-accent)", fontWeight: 600 }}>

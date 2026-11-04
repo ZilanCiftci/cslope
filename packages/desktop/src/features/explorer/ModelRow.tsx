@@ -7,6 +7,8 @@ interface Props {
   isSelected: boolean;
   isEditing: boolean;
   hasResult: boolean;
+  /** The model's analysis is running (a single run or Run All). */
+  isRunning?: boolean;
   editName: string;
   onChangeName: (value: string) => void;
   onCommitRename: () => void;
@@ -33,6 +35,7 @@ export function ModelRow({
   isSelected,
   isEditing,
   hasResult,
+  isRunning = false,
   editName,
   onChangeName,
   onCommitRename,
@@ -167,6 +170,16 @@ export function ModelRow({
         <span className="truncate flex-1" title={model.name}>
           {model.name}
         </span>
+      )}
+      {isRunning && (
+        <span
+          data-testid="model-running"
+          role="img"
+          aria-label="Analysing"
+          title="Analysing"
+          className="w-1.5 h-1.5 rounded-full shrink-0 animate-pulse"
+          style={{ background: "var(--color-vsc-accent)" }}
+        />
       )}
     </div>
   );

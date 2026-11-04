@@ -34,6 +34,9 @@ export function Explorer() {
   const reorderModels = useAppStore((s) => s.reorderModels);
   const updateModelProjectInfo = useAppStore((s) => s.updateModelProjectInfo);
   const explorerOpen = useAppStore((s) => s.explorerOpen);
+  // The active model runs in the flat state (a single run), the others in
+  // their entries; during Run All the active one is running once started.
+  const activeRunning = useAppStore((s) => s.runState === "running" && !s.runAll?.running);
 
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editName, setEditName] = useState("");
@@ -304,6 +307,7 @@ export function Explorer() {
                 isSelected={isSelected}
                 isEditing={isEditing}
                 hasResult={!!model.result}
+                isRunning={model.runState === "running" || (isActive && activeRunning)}
                 editName={editName}
                 onChangeName={setEditName}
                 onCommitRename={commitRename}

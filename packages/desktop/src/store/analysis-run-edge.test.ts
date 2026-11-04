@@ -457,7 +457,7 @@ describe("Run All", () => {
     expect(store().models.map((m) => m.result)).toEqual([result(1), result(2), result(3)]);
   });
 
-  it("analyses the longest expected first; the list and its results keep their order", async () => {
+  it("analyses the models in the list's order, top to bottom, even a heavy one last", async () => {
     vi.stubGlobal("navigator", { ...navigator, hardwareConcurrency: 1 });
     const { a, b } = twoModels();
     store().addModel("C");
@@ -471,19 +471,100 @@ describe("Run All", () => {
     const [w] = FakeWorker.instances;
     const posted = () => (w.posted as { options: { iterations: number } }[]).at(-1)!;
     const runningIds = () => store().models.filter((m) => m.runState === "running").map((m) => m.id);
-    // C's big search first, then A and B (equal but for B's custom surface alone, last).
-    expect(posted().options.iterations).toBe(5000);
-    expect(runningIds()).toEqual([c]);
-    w.complete(3);
-    await flush();
     expect(runningIds()).toEqual([a]);
     w.complete(1);
     await flush();
     expect(runningIds()).toEqual([b]);
     w.complete(2);
+    await flush();
+    // C's big search last, where it stands in the list.
+    expect(runningIds()).toEqual([c]);
+    expect(posted().options.iterations).toBe(5000);
+    w.complete(3);
     await run;
     expect(store().models.map((m) => m.id)).toEqual([a, b, c]);
     expect(store().models.map((m) => m.result)).toEqual([result(1), result(2), result(3)]);
+  });
+
+  it("runs several models at once (one per core), started in the list's order", async () => {
+    vi.stubGlobal("navigator", { ...navigator, hardwareConcurrency: 2 });
+    const { a, b } = twoModels();
+    store().addModel("C");
+    const c = store().activeModelId;
+    store().addModel("D");
+    const d = store().activeModelId;
+    store().switchModel(a);
+    const run = store().runAllAnalyses();
+    await flush();
+    const runningIds = () => store().models.filter((m) => m.runState === "running").map((m) => m.id);
+    expect(FakeWorker.instances).toHaveLength(2);
+    expect(runningIds()).toEqual([a, b]);
+    // B ends first: its worker takes C, the next in the list.
+    FakeWorker.instances[1].complete(2);
+    await flush();
+    expect(runningIds()).toEqual([a, c]);
+    FakeWorker.instances[0].complete(1);
+    await flush();
+    expect(runningIds()).toEqual([c, d]);
+    expect(FakeWorker.instances).toHaveLength(2);
+    FakeWorker.instances[1].complete(3);
+    FakeWorker.instances[0].complete(4);
+    await run;
+    expect(store().models.map((m) => m.id)).toEqual([a, b, c, d]);
+    expect(store().models.map((m) => m.result)).toEqual([result(1), result(2), result(3), result(4)]);
+  });
+
+  it("reports the batch for the status bar: finished/total and its progress, then a summary", async () => {
+    vi.stubGlobal("navigator", { ...navigator, hardwareConcurrency: 1 });
+    const { a, b } = twoModels();
+    store().addModel("C");
+    store().switchModel(a);
+    expect(store().runAll).toBeNull();
+    const run = store().runAllAnalyses();
+    await flush();
+    const [w] = FakeWorker.instances;
+    expect(store().runAll).toMatchObject({ total: 3, finished: 0, failed: 0, running: true });
+    vi.advanceTimersByTime(600);
+    const early = store().runAll!.progress;
+    expect(early).toBeGreaterThan(0);
+    expect(early).toBeLessThan(1 / 3);
+    w.complete(1);
+    await flush();
+    expect(store().runAll).toMatchObject({ total: 3, finished: 1, running: true });
+    expect(store().runAll!.progress).toBeGreaterThan(early);
+    expect(entry(b).runState).toBe("running");
+    w.fail("boom");
+    await flush();
+    expect(store().runAll).toMatchObject({ finished: 2, failed: 1, running: true });
+    // (a failed worker is replaced)
+    FakeWorker.instances.at(-1)!.complete(3);
+    await run;
+    expect(store().runAll).toEqual({ total: 3, finished: 3, failed: 1, progress: 1, running: false });
+    // The summary stays until the next run.
+    store().runAnalysis();
+    expect(store().runAll).toBeNull();
+  });
+
+  it("clears the status bar's batch when Run All is cancelled", async () => {
+    twoModels();
+    const run = store().runAllAnalyses();
+    await flush();
+    expect(store().runAll?.running).toBe(true);
+    store().cancelAnalysis();
+    await run;
+    expect(store().runAll).toBeNull();
+    vi.advanceTimersByTime(1000);
+    expect(store().runAll).toBeNull();
+  });
+
+  it("clears the status bar's batch when another project is opened", async () => {
+    twoModels();
+    const run = store().runAllAnalyses();
+    await flush();
+    store().newProject();
+    await run;
+    vi.advanceTimersByTime(1000);
+    expect(store().runAll).toBeNull();
   });
 
   it("falls back to four parallel runs when the core count is unknown", async () => {

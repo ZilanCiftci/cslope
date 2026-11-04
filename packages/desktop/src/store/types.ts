@@ -584,6 +584,20 @@ export interface ParametersSlice {
   setParameters: (params: ParameterDef[]) => void;
 }
 
+/** Progress of a Run All batch, or its outcome once it has ended. */
+export interface RunAllStatus {
+  /** Models in the batch. */
+  total: number;
+  /** Models finished (analysed, failed or dropped). */
+  finished: number;
+  /** Of them, those whose analysis failed. */
+  failed: number;
+  /** The batch's progress, 0 to 1: the mean of the models'. */
+  progress: number;
+  /** False once the batch has ended (its summary). */
+  running: boolean;
+}
+
 export interface AnalysisSlice {
   analysisLimits: AnalysisLimitsState;
   customSearchPlanes: CustomSearchPlane[];
@@ -594,6 +608,8 @@ export interface AnalysisSlice {
   progress: number;
   result: AnalysisResult | null;
   errorMessage: string | null;
+  /** The Run All batch for the status bar: while it runs, then its summary. */
+  runAll: RunAllStatus | null;
   invalidateAnalysis: () => void;
   setAnalysisLimits: (limits: Partial<AnalysisLimitsState>) => void;
   addCustomSearchPlane: (kind?: "circle" | "polyline") => void;
