@@ -150,7 +150,7 @@ export function FloatingToolbar({
       ? "var(--color-vsc-error, #f44747)"
       : "var(--color-vsc-success)";
 
-  const zoomPresets = [25, 50, 75, 100, 125, 150, 200, 300, 400];
+  const zoomPresets = [25, 50, 75, 100, 125, 150, 200, 300, 400, 600, 800];
   const currentZoom = canvasToolbar?.zoomPercent ?? 100;
   const selectedPreset = zoomPresets.reduce((best, cur) =>
     Math.abs(cur - currentZoom) < Math.abs(best - currentZoom) ? cur : best,

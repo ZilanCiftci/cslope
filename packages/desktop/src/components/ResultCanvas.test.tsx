@@ -113,7 +113,7 @@ describe("ResultCanvas keyboard", () => {
 });
 
 describe("ResultCanvas paper zoom and pan", () => {
-  it("zooms the paper in steps and to a percentage, within 25–300 %", () => {
+  it("zooms the paper in steps and to a percentage, within 25–800 %", () => {
     renderCanvas();
     act(() => toolbar().onZoomIn());
     expect(paper().zoom).toBeCloseTo(1.1, 9);
@@ -121,7 +121,7 @@ describe("ResultCanvas paper zoom and pan", () => {
     act(() => toolbar().onZoomOut());
     expect(paper().zoom).toBeCloseTo(0.99, 9);
     act(() => toolbar().onSetZoomPercent(1000));
-    expect(paper().zoom).toBe(3);
+    expect(paper().zoom).toBe(8);
     act(() => toolbar().onSetZoomPercent(5));
     expect(paper().zoom).toBe(0.25);
   });
@@ -174,9 +174,9 @@ describe("ResultCanvas paper zoom and pan", () => {
     fireEvent.pointerMove(canvas(), { clientX: 850, clientY: 575, pointerId: 1 });
     fireEvent.pointerUp(canvas(), { button: 0, clientX: 850, clientY: 575, pointerId: 1 });
     // Box 250 × 175 in 1000 × 700: ×4, its centre (725, 487.5) moves to the middle.
-    expect(paper().zoom).toBeCloseTo(3, 9); // clamped from 4
-    expect(paper().offsetX).toBeCloseTo(-(725 - 500) * 3, 9);
-    expect(paper().offsetY).toBeCloseTo(-(487.5 - 350) * 3, 9);
+    expect(paper().zoom).toBeCloseTo(4, 9);
+    expect(paper().offsetX).toBeCloseTo(-(725 - 500) * 4, 9);
+    expect(paper().offsetY).toBeCloseTo(-(487.5 - 350) * 4, 9);
     expect(toolbar().zoomBoxActive).toBe(false);
   });
 

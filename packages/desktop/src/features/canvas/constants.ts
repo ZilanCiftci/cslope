@@ -2,6 +2,9 @@ import { UDL_LOAD_COLOR, LINE_LOAD_COLOR } from "../rendering/style-spec";
 
 // Canvas interaction constants
 export const POINT_RADIUS = 6;
+/** The paper zoom of the result view, as a factor of the fitted paper. */
+export const PAPER_ZOOM_MIN = 0.25;
+export const PAPER_ZOOM_MAX = 8;
 export const SNAP_THRESHOLD = 12; // px distance to snap to a point
 export const EDGE_THRESHOLD = 10; // px distance to detect near-edge
 export const GRID_STEP_MIN = 1;

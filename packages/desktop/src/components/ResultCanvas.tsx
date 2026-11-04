@@ -22,7 +22,7 @@ import {
   type CanvasWheelEvent,
 } from "../features/canvas/hooks/useNonPassiveWheel";
 import { drawCanvas, type DrawCanvasParams } from "../features/canvas/draw";
-import {
+import { PAPER_ZOOM_MAX, PAPER_ZOOM_MIN,
   ARROW_HEIGHT_PX,
   RULER_SIZE_PX,
   VIEW_SCALE_MAX,
@@ -735,7 +735,7 @@ export function ResultCanvas() {
   const handleZoomStep = useCallback(
     (factor: number) => {
       const currentZoom = resultViewSettings.paperFrame.zoom ?? 1;
-      const nextZoom = Math.max(0.25, Math.min(3, currentZoom * factor));
+      const nextZoom = Math.max(PAPER_ZOOM_MIN, Math.min(PAPER_ZOOM_MAX, currentZoom * factor));
       setRvs({
         paperFrame: {
           ...resultViewSettings.paperFrame,
@@ -748,7 +748,7 @@ export function ResultCanvas() {
 
   const handleSetZoomPercent = useCallback(
     (percent: number) => {
-      const nextZoom = Math.max(0.25, Math.min(3, percent / 100));
+      const nextZoom = Math.max(PAPER_ZOOM_MIN, Math.min(PAPER_ZOOM_MAX, percent / 100));
       setRvs({
         paperFrame: {
           ...resultViewSettings.paperFrame,
@@ -781,7 +781,7 @@ export function ResultCanvas() {
         const pf = resultViewSettings.paperFrame;
         const currentZoom = pf.zoom ?? 1;
         const factor = e.deltaY > 0 ? 0.8 : 1.2;
-        const nextZoom = Math.max(0.25, Math.min(3, currentZoom * factor));
+        const nextZoom = Math.max(PAPER_ZOOM_MIN, Math.min(PAPER_ZOOM_MAX, currentZoom * factor));
 
         // Paper frame center (before offset) at current zoom
         const cxBefore = rect.width / 2 + (pf.offsetX ?? 0);
@@ -929,7 +929,7 @@ export function ResultCanvas() {
             const zoomFactor = Math.min(rect.width / boxW, rect.height / boxH);
             const nextZoom = Math.max(
               0.25,
-              Math.min(3, currentZoom * zoomFactor),
+              Math.min(PAPER_ZOOM_MAX, currentZoom * zoomFactor),
             );
 
             // Center of the zoom box in canvas coords
