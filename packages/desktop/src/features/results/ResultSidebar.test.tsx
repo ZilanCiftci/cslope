@@ -444,6 +444,63 @@ describe("ResultSidebar annotation properties", () => {
     expect(anno("m").fontSize).toBe(10);
   });
 
+  it("sets the range of the colour bar: fixed bounds start from the shown range, and must be in order", () => {
+    select(["c"]);
+    render(<ResultSidebar />);
+    expect(field("Range").value).toBe("auto");
+    // The automatic range of the result (min FOS 1.234, max FOS 2).
+    expect(screen.getByText("F 1.23 to 2.00")).toBeInTheDocument();
+
+    fireEvent.change(field("Range"), { target: { value: "fixed" } });
+    expect(anno("c")).toMatchObject({ scaleMode: "fixed", scaleMin: 1.23, scaleMax: 2 });
+    expect(field("Min F").value).toBe("1.23");
+    expect(field("Max F").value).toBe("2");
+    expect(screen.queryByRole("alert")).toBeNull();
+
+    fireEvent.change(field("Max F"), { target: { value: "1,1" } });
+    expect(anno("c").scaleMax).toBe(1.1);
+    expect(screen.getByRole("alert").textContent).toMatch(/Min F must be below max F/);
+    fireEvent.change(field("Min F"), { target: { value: "0.5" } });
+    expect(anno("c").scaleMin).toBe(0.5);
+    expect(screen.queryByRole("alert")).toBeNull();
+
+    fireEvent.change(field("Range"), { target: { value: "filter" } });
+    expect(anno("c").scaleMode).toBe("filter");
+    // The bounds stay for a return to "Fixed".
+    expect(anno("c")).toMatchObject({ scaleMin: 0.5, scaleMax: 1.1 });
+    expect(screen.getByText(/F 1.23 to 1.50, the span of Surfaces/)).toBeInTheDocument();
+    act(() => useAppStore.getState().setResultViewSettings({ fosFilterMax: 1 }));
+    expect(screen.getByText(/is not above the minimum F; the automatic range is used/)).toBeInTheDocument();
+  });
+
+  it("sets the colour scheme of the colour bar, with custom colours and an optional middle one", () => {
+    select(["c"]);
+    render(<ResultSidebar />);
+    expect(field("Colour scheme").value).toBe("classic");
+    // jsdom stores the gradient's colours as rgb().
+    const preview = () => screen.getByRole("img", { name: /Scheme preview/ }).style.background;
+    expect(preview()).toMatch(/^linear-gradient\(to right, rgb\(255, 0, 0\), /);
+
+    fireEvent.change(field("Colour scheme"), { target: { value: "greyscale" } });
+    expect(anno("c").scheme).toBe("greyscale");
+    expect(preview()).toMatch(/rgb\(200, 200, 200\)\)$/);
+
+    fireEvent.change(field("Colour scheme"), { target: { value: "custom" } });
+    expect(anno("c")).toMatchObject({ scheme: "custom", schemeFrom: "#cc0000", schemeTo: "#0066cc" });
+    fireEvent.change(screen.getByLabelText("From (low F) colour"), { target: { value: "#112233" } });
+    fireEvent.change(screen.getByLabelText("To (high F) colour"), { target: { value: "#445566" } });
+    expect(anno("c")).toMatchObject({ schemeFrom: "#112233", schemeTo: "#445566" });
+    expect(preview()).toMatch(/^linear-gradient\(to right, rgb\(17, 34, 51\), .*rgb\(68, 85, 102\)\)$/);
+
+    fireEvent.click(screen.getByLabelText("Add a middle colour"));
+    expect(anno("c").schemeMid).toMatch(/^#[0-9a-f]{6}$/);
+    fireEvent.change(screen.getByLabelText("Middle colour"), { target: { value: "#ffffff" } });
+    expect(anno("c").schemeMid).toBe("#ffffff");
+    expect(preview()).toContain("rgb(255, 255, 255)");
+    fireEvent.click(screen.getByLabelText("Add a middle colour"));
+    expect(anno("c").schemeMid).toBeUndefined();
+  });
+
   it("removes and adds material table columns for the selected tables", () => {
     // jsdom has no scrolling.
     Element.prototype.scrollIntoView = vi.fn();

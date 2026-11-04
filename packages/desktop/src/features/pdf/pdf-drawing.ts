@@ -25,10 +25,12 @@ import {
 } from "../rendering/overlay-layout";
 import { piezoObstacles, piezoSymbolLayout, type PiezoScene } from "../rendering/piezo-layout";
 import { layoutLimitMarkers, layoutRangeDots } from "../rendering/search-markers";
-import { fosColor, fosScaleRange, fosTickLabel } from "../../utils/fos-color";
+import { fosTickLabel } from "../../utils/fos-color";
+import { colorScaleOf, colorScaleOfBar, type FosColorScale, type ScaleFilter } from "../annotations/colorScale";
 
-/** "≥" (in the embedded font). */
+/** "≥" and "≤" (in the embedded font). */
 const PDF_GE = "≥ ";
+const PDF_LE = "≤ ";
 import {
   fosLabelAnchor,
   sameSurface,
@@ -954,7 +956,8 @@ export function drawSlipSurfaces(
     return;
   }
 
-  const fosRange = fosScaleRange(result);
+  // The scale of the colour bar, so the drawing and the bar agree.
+  const fosScale = colorScaleOf(rvs, result);
   for (let si = result.allSurfaces.length - 1; si >= 0; si--) {
     const surf = result.allSurfaces[si];
     if (result.criticalSurface && sameSurface(surf, result.criticalSurface)) {
@@ -966,7 +969,7 @@ export function drawSlipSurfaces(
 
     const arcPts = surfacePoints(surf);
     const pdfPts = arcPts.map(([wx, wy]) => tf.worldToPdf(wx, wy));
-    const color = parseColor(fosColor(surf.fos, fosRange.min, fosRange.max));
+    const color = parseColor(fosScale.colorOf(surf.fos));
 
     pdf.setDrawColor(...color);
     pdf.setLineWidth(0.15);
@@ -1243,7 +1246,7 @@ function measureTextAnnotationPdf(
  * Colour bar layout in mm, using the canvas proportions (bar 20 × 200,
  * labels 11, title above the bar) with the annotation scale in mm.
  */
-function layoutColorBarPdf(pdf: jsPDF, result: AnalysisResult, scale: number) {
+function layoutColorBarPdf(pdf: jsPDF, colorScale: FosColorScale, scale: number) {
   const barW = 20 * scale;
   const barH = 200 * scale;
   const labelMm = 11 * scale;
@@ -1252,11 +1255,11 @@ function layoutColorBarPdf(pdf: jsPDF, result: AnalysisResult, scale: number) {
   setSansFont(pdf, "normal");
   pdf.setFontSize(labelPt);
   let maxLabelW = 0;
-  const fosScale = fosScaleRange(result);
+  const fosScale = colorScale.range;
   for (let t = 0; t <= COLOR_BAR_NUM_TICKS; t++) {
     maxLabelW = Math.max(
       maxLabelW,
-      pdf.getTextWidth(fosTickLabel(fosScale, t, COLOR_BAR_NUM_TICKS, PDF_GE)),
+      pdf.getTextWidth(fosTickLabel(fosScale, t, COLOR_BAR_NUM_TICKS, PDF_GE, PDF_LE)),
     );
   }
   return {
@@ -1391,6 +1394,8 @@ export function drawAnnotations(
   projectInfo: Partial<ProjectInfo>,
   parameters: ParameterDef[],
   paperFrame: { x: number; y: number; w: number; h: number },
+  /** The surface filter, which a colour bar's "filter" range follows. */
+  scaleFilter?: ScaleFilter,
 ) {
   const annoScale = Math.min(tf.paperW, tf.paperH) / ANNOTATION_SCALE_DIVISOR;
 
@@ -1426,7 +1431,8 @@ export function drawAnnotations(
       );
     } else if (anno.type === "color-bar") {
       // Drawn whenever the canvas draws it (also for a single surface).
-      const size = layoutColorBarPdf(pdf, result, annoScale);
+      const colorScale = colorScaleOfBar(anno, result, scaleFilter);
+      const size = layoutColorBarPdf(pdf, colorScale, annoScale);
       const { x: drawX, y: drawY } = anchoredTopLeft(
         ax,
         ay,
@@ -1434,7 +1440,7 @@ export function drawAnnotations(
         size.h,
         anno.anchor,
       );
-      drawColorBarAnnotation(pdf, drawX, drawY, result, annoScale);
+      drawColorBarAnnotation(pdf, drawX, drawY, colorScale, annoScale);
     } else if (anno.type === "material-table") {
       const size = measureTablePdf(
         pdf,
@@ -1619,17 +1625,17 @@ function drawColorBarAnnotation(
   pdf: jsPDF,
   x: number,
   y: number,
-  result: AnalysisResult,
+  colorScale: FosColorScale,
   scale: number,
 ) {
   const { barW, barH, labelPt, titleExtraTop } = layoutColorBarPdf(
     pdf,
-    result,
+    colorScale,
     scale,
   );
   const barY = y + titleExtraTop;
 
-  const fosScale = fosScaleRange(result);
+  const fosScale = colorScale.range;
   const fosMin = fosScale.min;
   const fosMax = fosScale.max;
   const numSteps = 50;
@@ -1637,7 +1643,7 @@ function drawColorBarAnnotation(
   for (let i = 0; i < numSteps; i++) {
     const t = i / (numSteps - 1);
     const fos = fosMax - t * (fosMax - fosMin);
-    const [r, g, b] = parseColor(fosColor(fos, fosMin, fosMax));
+    const [r, g, b] = parseColor(colorScale.colorOf(fos));
     pdf.setFillColor(r, g, b);
     pdf.rect(x, barY + t * barH, barW, barH / (numSteps - 1) + 0.1, "F");
   }
@@ -1661,7 +1667,7 @@ function drawColorBarAnnotation(
     pdf.setLineWidth(0.2);
     pdf.line(x + barW, ty, x + barW + 3 * scale, ty);
 
-    pdf.text(fosTickLabel(fosScale, t, COLOR_BAR_NUM_TICKS, PDF_GE), labelX, ty, {
+    pdf.text(fosTickLabel(fosScale, t, COLOR_BAR_NUM_TICKS, PDF_GE, PDF_LE), labelX, ty, {
       baseline: "middle",
     });
   }

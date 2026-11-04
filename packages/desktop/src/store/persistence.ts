@@ -21,6 +21,7 @@ import {
 import { DEFAULT_MODEL_NAME } from "../constants";
 import { nextId } from "./helpers";
 import { clampMinorTicks } from "../utils/ruler";
+import { isFosSchemeId, isHexColor } from "../utils/fos-color";
 import {
   APP_DEFAULT_ANALYSIS_OPTIONS,
   DEFAULT_ANALYSIS_LIMITS,
@@ -34,6 +35,7 @@ import {
 } from "./defaults";
 import type {
   AnalysisLimitsState,
+  Annotation,
   AppState,
   CoordinateExpression,
   LineLoadRow,
@@ -798,7 +800,7 @@ export function normalizeResultView(raw: unknown): ResultViewSettings {
           if (typeof a.x !== "number" || typeof a.y !== "number") return false;
           return true;
         },
-      )
+      ).map(normalizeColorBarScale)
     : [];
 
   return {
@@ -848,6 +850,47 @@ export function normalizeResultView(raw: unknown): ResultViewSettings {
       ? { pdfTitleLine: view.pdfTitleLine }
       : {}),
   };
+}
+
+const COLOR_SCALE_FIELDS = [
+  "scaleMode",
+  "scaleMin",
+  "scaleMax",
+  "scheme",
+  "schemeFrom",
+  "schemeTo",
+  "schemeMid",
+] as const;
+
+/**
+ * The colour scale fields of a colour bar annotation (its range mode and
+ * bounds, its colour scheme and the custom colours), each kept only when
+ * it is valid: a mode of "auto", "fixed" or "filter", finite bounds, a
+ * known scheme id and six-digit hex colours. Other annotation types carry
+ * none of them.
+ */
+export function normalizeColorBarScale(anno: Annotation): Annotation {
+  const raw = anno as unknown as Record<string, unknown>;
+  const rest = { ...raw } as Record<string, unknown>;
+  for (const field of COLOR_SCALE_FIELDS) delete rest[field];
+  if (anno.type !== "color-bar") return rest as unknown as Annotation;
+  const mode = raw.scaleMode;
+  const scale: Partial<Annotation> = {
+    ...(mode === "auto" || mode === "fixed" || mode === "filter"
+      ? { scaleMode: mode }
+      : {}),
+    ...(typeof raw.scaleMin === "number" && Number.isFinite(raw.scaleMin)
+      ? { scaleMin: raw.scaleMin }
+      : {}),
+    ...(typeof raw.scaleMax === "number" && Number.isFinite(raw.scaleMax)
+      ? { scaleMax: raw.scaleMax }
+      : {}),
+    ...(isFosSchemeId(raw.scheme) ? { scheme: raw.scheme } : {}),
+    ...(isHexColor(raw.schemeFrom) ? { schemeFrom: raw.schemeFrom } : {}),
+    ...(isHexColor(raw.schemeTo) ? { schemeTo: raw.schemeTo } : {}),
+    ...(isHexColor(raw.schemeMid) ? { schemeMid: raw.schemeMid } : {}),
+  };
+  return { ...rest, ...scale } as Annotation;
 }
 
 function isFinitePair(value: unknown): value is [number, number] {

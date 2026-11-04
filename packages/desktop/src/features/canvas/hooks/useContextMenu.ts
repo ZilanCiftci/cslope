@@ -127,6 +127,7 @@ export function useContextMenu(params: ContextMenuParams) {
                     piezometricLine: state.piezometricLine,
                     projectInfo: state.projectInfo,
                     parameters: state.parameters,
+                    resultView: state.resultViewSettings,
                   });
                   return (
                     cxPx >= b.x &&

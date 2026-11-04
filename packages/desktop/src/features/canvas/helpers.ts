@@ -23,7 +23,8 @@ import {
   type MaterialTableRenderColumnKey,
 } from "../annotations/materialTableLayout";
 import { anchoredTopLeft } from "../annotations/anchorPosition";
-import { fosScaleRange, fosTickLabel } from "../../utils/fos-color";
+import { fosTickLabel } from "../../utils/fos-color";
+import { colorBarRange, type ScaleFilter } from "../annotations/colorScale";
 import { mainPiezoLine } from "../../utils/piezo";
 import { suctionAngle } from "@cslope/engine";
 
@@ -426,6 +427,8 @@ export function getAnnotationBoundsPx(
     piezometricLine?: PiezometricLineState;
     projectInfo: ProjectInfo;
     parameters: ParameterDef[];
+    /** The surface filter, which a colour bar's "filter" range follows. */
+    resultView?: ScaleFilter;
   },
 ): { x: number; y: number; w: number; h: number } {
   const {
@@ -436,6 +439,7 @@ export function getAnnotationBoundsPx(
     piezometricLine,
     projectInfo,
     parameters,
+    resultView,
   } = params;
 
   const annoScale = Math.min(pf.w, pf.h) / 600;
@@ -490,7 +494,7 @@ export function getAnnotationBoundsPx(
 
     ctx.font = `${labelFontSize}px 'Segoe UI', sans-serif`;
     let maxLabelW = 0;
-    const fosScale = fosScaleRange(result);
+    const fosScale = colorBarRange(anno, result, resultView);
     for (let t = 0; t <= numTicks; t++) {
       maxLabelW = Math.max(maxLabelW, ctx.measureText(fosTickLabel(fosScale, t, numTicks)).width);
     }

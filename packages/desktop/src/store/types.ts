@@ -6,6 +6,7 @@ import type {
   PileForceLocation,
   SlopeDefinition,
 } from "@cslope/engine";
+import type { FosSchemeId } from "../utils/fos-color";
 
 // Export analysis types so UI components can consume them from a single module
 export type { AnalysisResult } from "@cslope/engine";
@@ -347,7 +348,25 @@ export interface Annotation {
   tableColumns?: MaterialTableColumnKey[];
   plotAxisX?: PlotAxisMode;
   plotAxisY?: PlotMetricKey;
+  /**
+   * Colour bar: the FOS range of the scale, which also colours the
+   * surfaces of the plot. "auto" (absent): from the critical FOS to a cap
+   * near it; "fixed": scaleMin to scaleMax; "filter": the span of
+   * Surfaces ▸ Filter by FOS (critical FOS to fosFilterMax).
+   */
+  scaleMode?: ColorScaleMode;
+  scaleMin?: number;
+  scaleMax?: number;
+  /** Colour bar: a preset scheme id, or "custom" (absent: the default). */
+  scheme?: FosSchemeId;
+  /** Colour bar, custom scheme: hex colours at the low and high end. */
+  schemeFrom?: string;
+  schemeTo?: string;
+  /** Colour bar, custom scheme: an optional middle colour. */
+  schemeMid?: string;
 }
+
+export type ColorScaleMode = "auto" | "fixed" | "filter";
 
 export interface ResultViewSettings {
   surfaceDisplay: SurfaceDisplayMode;
