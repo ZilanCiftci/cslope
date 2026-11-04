@@ -192,16 +192,23 @@ describe("exportVectorPdf — full model", () => {
     expect(texts.some((t) => t.startsWith("≥ 2.47"))).toBe(true);
   });
 
-  it("appends the analysis summary after the drawing, with the scale on the drawing only", () => {
+  /** The full model with its analysis summary; `view` sets the PDF page choices. */
+  function withSummary(view: Partial<PdfExportData["resultViewSettings"]> = {}): PdfExportData {
     const d = data();
     const sections = buildAnalysisSummary({
       ...d,
       options: { ...DEFAULT_ANALYSIS_OPTIONS, partialFactors: { cu: 1.5, cohesion: 1.3, tanPhi: 1.3, variableLoad: 1.3 } },
     });
-    const { alert, error, doc } = exportDoc({
+    return {
       ...d,
-      summary: { sections, header: { projectInfo: d.projectInfo, modelName: "Section A", version: "9.9.9", date: "2026-10-17" } },
-    });
+      resultViewSettings: { ...d.resultViewSettings, ...view },
+      summary: { sections, header: { projectInfo: d.projectInfo, modelName: "Model B", version: "9.9.9", date: "2026-10-17" } },
+    };
+  }
+  const TITLE_RESULT = "Over-design factor (design values) 1.234 · Bishop simplified (moment equilibrium)";
+
+  it("appends the analysis summary after the drawing, with the scale on the drawing only", () => {
+    const { alert, error, doc } = exportDoc(withSummary());
     expect(alert).not.toHaveBeenCalled();
     expect(error).not.toHaveBeenCalled();
     expect(doc.getNumberOfPages()).toBeGreaterThanOrEqual(2);
@@ -218,11 +225,10 @@ describe("exportVectorPdf — full model", () => {
       ]),
     );
     expect(texts.some((t) => t.startsWith("cSlope 9.9.9"))).toBe(true);
-    // Page 1 names the model and the result above the drawing.
-    const name = recordedTexts(doc).find((t) => t.text === "Section A");
-    expect(name).toBeDefined();
-    expect(texts).toContain("Over-design factor (design values) 1.234 · Bishop simplified (moment equilibrium)");
-    expect(texts.indexOf("Section A")).toBeLessThan(texts.indexOf("Analysis summary"));
+    // No title line in the margin unless asked for: the drawing's text
+    // annotations carry the title.
+    expect(texts).not.toContain(TITLE_RESULT);
+    expect(texts).not.toContain("Model B");
     // Every summary line lies inside the page.
     const [w, h] = [doc.internal.pageSize.getWidth(), doc.internal.pageSize.getHeight()];
     for (const t of recordedTexts(doc)) {
@@ -231,6 +237,34 @@ describe("exportVectorPdf — full model", () => {
     }
     const out = doc.output();
     expect(out.match(/\/VP \[/g)).toHaveLength(1);
+  });
+
+  it("writes the title line above the drawing when it is turned on", () => {
+    const { doc } = exportDoc(withSummary({ pdfTitleLine: true }));
+    const texts = pageTexts(doc);
+    // Page 1 names the model and the result above the drawing frame.
+    expect(texts).toContain(TITLE_RESULT);
+    const name = recordedTexts(doc).find((t) => t.text === "Model B");
+    expect(name).toBeDefined();
+    expect(name!.y).toBeLessThan(210 * PLOT_MARGINS.T);
+    expect(texts.indexOf("Model B")).toBeLessThan(texts.indexOf("Analysis summary"));
+  });
+
+  it("leaves the summary pages out when they are turned off", () => {
+    const included = exportDoc(withSummary()).doc.getNumberOfPages();
+    const { alert, error, doc } = exportDoc(withSummary({ pdfSummaryPages: false }));
+    expect(alert).not.toHaveBeenCalled();
+    expect(error).not.toHaveBeenCalled();
+    expect(included).toBeGreaterThanOrEqual(2);
+    expect(doc.getNumberOfPages()).toBe(1);
+    const texts = pageTexts(doc);
+    expect(texts).not.toContain("Analysis summary");
+    expect(texts.some((t) => t.startsWith("Summary page"))).toBe(false);
+    expect(texts).not.toContain(TITLE_RESULT);
+    // The title line on its own, without the summary pages.
+    const titled = exportDoc(withSummary({ pdfSummaryPages: false, pdfTitleLine: true })).doc;
+    expect(titled.getNumberOfPages()).toBe(1);
+    expect(pageTexts(titled)).toContain(TITLE_RESULT);
   });
 
   it("names the file from the project number when there is no title", () => {

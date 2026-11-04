@@ -366,6 +366,17 @@ export interface ResultViewSettings {
   annotations: Annotation[];
   paperFrame: PaperFrameSettings;
   viewLock?: ViewLock;
+  /**
+   * PDF export: append the analysis summary (calculation basis) pages after
+   * the drawing. Absent: included.
+   */
+  pdfSummaryPages?: boolean;
+  /**
+   * PDF export: a title line (model name, factor of safety, method) in the
+   * top margin above the drawing frame. Absent: off; the drawing's own text
+   * annotations (#Title, #Subtitle) carry the title.
+   */
+  pdfTitleLine?: boolean;
 }
 
 export interface ModelEntry {

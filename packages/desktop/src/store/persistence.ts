@@ -795,6 +795,12 @@ export function normalizeResultView(raw: unknown): ResultViewSettings {
             topRight: [...view.viewLock.topRight],
           }
         : undefined,
+    ...(typeof view.pdfSummaryPages === "boolean"
+      ? { pdfSummaryPages: view.pdfSummaryPages }
+      : {}),
+    ...(typeof view.pdfTitleLine === "boolean"
+      ? { pdfTitleLine: view.pdfTitleLine }
+      : {}),
   };
 }
 

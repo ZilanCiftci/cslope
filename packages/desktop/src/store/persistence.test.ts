@@ -679,4 +679,14 @@ describe("normalizeResultView (also used for view templates)", () => {
     });
     expect(view.viewLock).toEqual({ bottomLeft: [0, -2], topRight: [10, 5] });
   });
+
+  it("keeps the PDF page choices when they are booleans, else leaves them unset", () => {
+    expect(normalizeResultView({ pdfSummaryPages: false, pdfTitleLine: true })).toMatchObject({
+      pdfSummaryPages: false,
+      pdfTitleLine: true,
+    });
+    const unset = normalizeResultView({ pdfSummaryPages: "no", pdfTitleLine: 1 });
+    expect("pdfSummaryPages" in unset).toBe(false);
+    expect("pdfTitleLine" in unset).toBe(false);
+  });
 });

@@ -9,6 +9,7 @@ import { isElectron } from "../../../utils/is-electron";
 import {
   buildExportFilename,
   exportVectorPdf,
+  pdfPageOptions,
 } from "../../../features/pdf/pdf-export";
 import {
   computeInnerFrame,
@@ -471,6 +472,8 @@ export function ResultsMenu({ isOpen, onActivate, panelHost }: Props) {
                           gridSpacing: undefined,
                           minorTicks: undefined,
                           viewLock: undefined,
+                          pdfSummaryPages: undefined,
+                          pdfTitleLine: undefined,
                           ...normalizeResultView(data.resultViewSettings),
                         });
                       } catch {
@@ -561,6 +564,35 @@ export function ResultsMenu({ isOpen, onActivate, panelHost }: Props) {
                     >
                       Export as PDF
                     </button>
+                    {/* What the PDF holds besides the drawing; kept with the
+                        model's result view (saved in the project file and
+                        in view templates). */}
+                    <div
+                      className="px-3 py-1 flex flex-col gap-1"
+                      style={{ borderBottom: "1px solid var(--color-vsc-border)" }}
+                    >
+                      {(
+                        [
+                          ["pdfSummaryPages", "summaryPages", "Analysis summary pages", "Append the calculation basis (method, search, water, partial factors, materials and loads) as pages after the drawing"],
+                          ["pdfTitleLine", "titleLine", "Title line above the drawing", "Write the model name, factor of safety and method in the top margin above the drawing frame"],
+                        ] as const
+                      ).map(([key, option, label, tip]) => (
+                        <label
+                          key={key}
+                          className="flex items-center gap-2 text-[11px] cursor-pointer select-none whitespace-nowrap"
+                          style={{ color: "var(--color-vsc-text)" }}
+                          title={tip}
+                        >
+                          <input
+                            type="checkbox"
+                            checked={pdfPageOptions(rvs)[option]}
+                            onChange={(e) => setRvs({ [key]: e.target.checked })}
+                            className="accent-blue-500 w-3 h-3"
+                          />
+                          {label}
+                        </label>
+                      ))}
+                    </div>
                     <button
                       onClick={() => {
                         setExportMenuOpen(false);

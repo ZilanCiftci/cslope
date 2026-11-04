@@ -307,6 +307,28 @@ describe("ResultsMenu", () => {
     expect(viewBounds.xMax).toBeLessThan(40);
   });
 
+  it("sets the PDF's summary pages and title line in the export menu, kept in the result view", async () => {
+    renderMenu();
+    await userEvent.click(screen.getByTitle("More export options"));
+    const summary = screen.getByRole("checkbox", { name: "Analysis summary pages" });
+    const title = screen.getByRole("checkbox", { name: "Title line above the drawing" });
+    // Defaults: summary pages included, no title line in the margin.
+    expect(summary).toBeChecked();
+    expect(title).not.toBeChecked();
+    await userEvent.click(summary);
+    await userEvent.click(title);
+    expect(rvs().pdfSummaryPages).toBe(false);
+    expect(rvs().pdfTitleLine).toBe(true);
+    // The menu stays open for the export, which gets the choices.
+    await userEvent.click(screen.getByRole("button", { name: "Export as PDF" }));
+    const arg = mocks.exportVectorPdf.mock.calls[0][0];
+    expect(arg.resultViewSettings.pdfSummaryPages).toBe(false);
+    expect(arg.resultViewSettings.pdfTitleLine).toBe(true);
+    // Saved with the model in the project file.
+    const model = store().models.find((m) => m.id === store().activeModelId)!;
+    expect(model.resultViewSettings?.pdfSummaryPages).toBe(false);
+  });
+
   it("exports slice data as Excel and CSV files named after the model", async () => {
     renderMenu();
     const name = store().models.find((m) => m.id === store().activeModelId)!.name;

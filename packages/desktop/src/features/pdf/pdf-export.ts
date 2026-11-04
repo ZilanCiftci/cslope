@@ -120,8 +120,20 @@ export interface PdfExportData {
   projectInfo?: ProjectInfo;
   parameters?: ParameterDef[];
   viewBounds?: PdfViewBounds;
-  /** Analysis summary, appended as text pages after the drawing. */
+  /**
+   * Analysis summary: appended as text pages after the drawing unless
+   * `resultViewSettings.pdfSummaryPages` is false, and written as a title
+   * line above the drawing when `resultViewSettings.pdfTitleLine` is true.
+   */
   summary?: { sections: SummarySection[]; header: SummaryHeader };
+}
+
+/** The PDF export's page choices of a result view, with their defaults. */
+export function pdfPageOptions(rvs: Pick<ResultViewSettings, "pdfSummaryPages" | "pdfTitleLine">): {
+  summaryPages: boolean;
+  titleLine: boolean;
+} {
+  return { summaryPages: rvs.pdfSummaryPages !== false, titleLine: rvs.pdfTitleLine === true };
 }
 
 function createTransform(
@@ -491,8 +503,13 @@ export function exportVectorPdf(data: PdfExportData): void {
       clampMinorTicks(rvs.minorTicks ?? 0),
     );
 
-    if (summary) {
+    // Both are the user's choice (the PDF button's menu): the title line is
+    // off by default, as the drawing's text annotations carry the title.
+    const pages = pdfPageOptions(rvs);
+    if (summary && pages.titleLine) {
       drawDrawingTitle(pdf, summary.sections, summary.header, { left: innerFrame.x, top: innerFrame.y, width: innerFrame.w });
+    }
+    if (summary && pages.summaryPages) {
       drawSummaryPages(pdf, summary.sections, summary.header, {
         w: tf.paperW,
         h: tf.paperH,
