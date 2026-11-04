@@ -63,7 +63,7 @@ describe("ResultsPlotDialogApp", () => {
   it("waits for state and asks the main window for it", () => {
     render(<ResultsPlotDialogApp />);
     expect(bridge.callNames()).toContain("requestResultsPlotState");
-    expect(screen.getByText("Waiting for state")).toBeInTheDocument();
+    expect(screen.getByRole("status")).toHaveTextContent("Waiting for the main window…");
     expect(
       screen.getByText("Run an analysis first to open results plots."),
     ).toBeInTheDocument();
@@ -72,7 +72,8 @@ describe("ResultsPlotDialogApp", () => {
   it("shows the empty hint when the main window has no result", () => {
     render(<ResultsPlotDialogApp />);
     bridge.emit("onResultsPlotState", { model: activeModel(), result: null });
-    expect(screen.getByText("Synced")).toBeInTheDocument();
+    // Nothing to say once the result is there.
+    expect(screen.queryByRole("status")).toBeNull();
     expect(
       screen.getByText("Run an analysis first to open results plots."),
     ).toBeInTheDocument();
@@ -100,7 +101,6 @@ describe("ResultsPlotDialogApp", () => {
     ]);
     expect(screen.getByText("FOS: 1.250")).toBeInTheDocument();
     expect(screen.getByText("Critical surface")).toBeInTheDocument();
-    expect(screen.getByText("Metric unit: kPa")).toBeInTheDocument();
     // The slices of the default model are derived for the surface.
     const slices = screen.getByText(/^Slices: \d+$/);
     expect(Number(slices.textContent!.split(": ")[1])).toBeGreaterThan(0);
@@ -127,12 +127,12 @@ describe("ResultsPlotDialogApp", () => {
       screen.getByRole("combobox", { name: "Y axis" }),
       "sliceWeight",
     );
-    expect(screen.getByText("Metric unit: kN")).toBeInTheDocument();
+    expect(screen.getByRole("combobox", { name: "Y axis" })).toHaveValue("sliceWeight");
     await userEvent.selectOptions(
       screen.getByRole("combobox", { name: "Y axis" }),
       "frictionAngle",
     );
-    expect(screen.getByText("Metric unit: deg")).toBeInTheDocument();
+    expect(screen.getByRole("combobox", { name: "Y axis" })).toHaveValue("frictionAngle");
 
     const xAxis = screen.getByRole("combobox", { name: "X axis" }) as HTMLSelectElement;
     await userEvent.selectOptions(xAxis, "x");

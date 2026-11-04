@@ -399,30 +399,20 @@ export function ResultsPlotDialogApp() {
             className="text-[10px] mt-0.5"
             style={{ color: "var(--color-vsc-text-muted)" }}
           >
-            Plot slip-surface variables and Lambda vs Fm/Ff analysis curves.
+            Values per slice along a slip surface, or the factors of safety Fm and Ff against λ.
           </p>
         </div>
-        <div
-          role="status"
-          className="text-[10px] flex items-center gap-1.5 shrink-0"
-          style={{ color: "var(--color-vsc-text-muted)" }}
-          title={
-            isHydrated
-              ? "Showing the main window's latest result"
-              : "Waiting for the main window"
-          }
-        >
-          <span
-            aria-hidden="true"
-            className="inline-block w-1.5 h-1.5 rounded-full"
-            style={{
-              background: isHydrated
-                ? "var(--color-vsc-success, #3fb950)"
-                : "var(--color-vsc-text-muted)",
-            }}
-          />
-          <span>{isHydrated ? "Synced" : "Waiting for state"}</span>
-        </div>
+        {/* Only while the result is not there yet: once it is, the plot
+            simply follows the main window. */}
+        {!isHydrated && (
+          <div
+            role="status"
+            className="text-[10px] shrink-0"
+            style={{ color: "var(--color-vsc-text-muted)" }}
+          >
+            Waiting for the main window…
+          </div>
+        )}
       </div>
 
       {!snapshot?.result || surfaces.length === 0 ? (
@@ -550,7 +540,6 @@ export function ResultsPlotDialogApp() {
                 <span>
                   {hasCritical ? "Critical surface" : "Non-critical surface"}
                 </span>
-                <span>Metric unit: {metricMeta.unit}</span>
               </>
             ) : (
               <>
@@ -635,11 +624,12 @@ export function ResultsPlotDialogApp() {
                         borderRadius: 6,
                         fontSize: 11,
                       }}
+                      separator=": "
                       formatter={(value) => {
                         const numeric = toFiniteNumber(value);
                         return numeric == null
                           ? `- ${metricMeta.unit}`
-                          : `${formatNumber(numeric, 3)} ${metricMeta.unit}`;
+                          : `${formatNumber(numeric, 2)} ${metricMeta.unit}`;
                       }}
                       labelFormatter={(label) => {
                         const numeric = toFiniteNumber(label);
@@ -651,8 +641,10 @@ export function ResultsPlotDialogApp() {
                           : `X ${formatNumber(numeric, 3)}`;
                       }}
                     />
+                    {/* Straight segments: a smoothed curve between slices
+                        suggests values that were never computed. */}
                     <Line
-                      type="monotone"
+                      type="linear"
                       dataKey={metric}
                       name={metricMeta.label}
                       stroke="#26a69a"
@@ -731,6 +723,7 @@ export function ResultsPlotDialogApp() {
                       borderRadius: 6,
                       fontSize: 11,
                     }}
+                    separator=": "
                     formatter={(value, name) => {
                       const numeric = toFiniteNumber(value);
                       if (numeric == null) {
@@ -754,7 +747,7 @@ export function ResultsPlotDialogApp() {
                     />
                   )}
                   <Line
-                    type="monotone"
+                    type="linear"
                     dataKey="momentFos"
                     name="Moment (Fm)"
                     stroke="#e06c75"
@@ -764,7 +757,7 @@ export function ResultsPlotDialogApp() {
                     isAnimationActive={false}
                   />
                   <Line
-                    type="monotone"
+                    type="linear"
                     dataKey="forceFos"
                     name="Force (Ff)"
                     stroke="#61afef"
