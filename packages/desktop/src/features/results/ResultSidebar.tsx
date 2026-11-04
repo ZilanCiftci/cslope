@@ -7,6 +7,7 @@ import { ExperimentalBadge } from "../../components/ui/ExperimentalBadge";
 import { useCallback, useMemo, useRef, useState } from "react";
 import { PAPER_DIMENSIONS, useAppStore } from "../../store/app-store";
 import { Section } from "../../components/ui/Section";
+import { PanelHeaderRow } from "../../components/SidePanelChrome";
 import { Label } from "../../components/ui/Label";
 import { MultiSelectComboboxChips } from "../../components/ui/MultiSelectComboboxChips";
 import {
@@ -113,6 +114,9 @@ function commonValue<T>(values: T[]): T | undefined {
 }
 
 export function ResultSidebar() {
+  const toggleSidebar = useAppStore((s) => s.toggleSidebar);
+  const propertiesLocation = useAppStore((s) => s.propertiesLocation);
+  const setPropertiesLocation = useAppStore((s) => s.setPropertiesLocation);
   const result = useAppStore((s) => s.result);
   const designValues = useAppStore((s) => !!s.options.partialFactors);
   const runState = useAppStore((s) => s.runState);
@@ -457,13 +461,23 @@ export function ResultSidebar() {
 
   return (
     <div
-      className="h-full overflow-y-auto"
+      className="h-full flex flex-col"
       style={{
         background: "var(--color-vsc-panel)",
         color: "var(--color-vsc-text)",
-        borderLeft: "1px solid var(--color-vsc-border)",
       }}
     >
+      <PanelHeaderRow
+        side={propertiesLocation}
+        label="Properties"
+        onCollapse={toggleSidebar}
+        onMove={() =>
+          setPropertiesLocation(propertiesLocation === "left" ? "right" : "left")
+        }
+      >
+        <div className="px-4 py-1.5">Properties</div>
+      </PanelHeaderRow>
+      <div className="flex-1 min-h-0 overflow-y-auto">
       <Section
         title="Summary"
         open={openSections.summary}
@@ -1363,6 +1377,7 @@ export function ResultSidebar() {
           </div>
         )}
       </Section>
+      </div>
     </div>
   );
 }

@@ -48,12 +48,13 @@ describe("App — VS Code dark layout", () => {
     expect(button).toBeInTheDocument();
   });
 
-  it("renders the activity bar with models toggle", () => {
+  it("has no activity bar: each panel carries its own collapse button", () => {
     render(<App />);
-    expect(screen.getByLabelText("Toggle models")).toBeInTheDocument();
-    expect(
-      screen.queryByLabelText("Toggle properties"),
-    ).not.toBeInTheDocument();
+    expect(screen.queryByLabelText("Toggle models")).not.toBeInTheDocument();
+    expect(screen.getByLabelText("Collapse models")).toBeInTheDocument();
+    // The properties panel exists in result mode only.
+    expect(screen.queryByLabelText("Collapse properties")).not.toBeInTheDocument();
+    expect(screen.queryByLabelText("Open properties")).not.toBeInTheDocument();
   });
 
   it("shows the explorer sidebar by default", () => {
@@ -62,20 +63,69 @@ describe("App — VS Code dark layout", () => {
     expect(screen.getByLabelText(getActiveModelName())).toBeInTheDocument();
   });
 
-  it("can toggle explorer open/closed", async () => {
+  it("collapses the explorer to a strip and opens it again", async () => {
     const user = userEvent.setup();
     render(<App />);
-    const toggle = screen.getByLabelText("Toggle models");
-    // Explorer sidebar should be visible initially — model row has aria-label
     const modelName = getActiveModelName();
     expect(screen.getByLabelText(modelName)).toBeInTheDocument();
-    // Close explorer
-    await user.click(toggle);
-    // Model row should no longer be present
+    expect(screen.queryByTestId("collapsed-models")).not.toBeInTheDocument();
+
+    await user.click(screen.getByLabelText("Collapse models"));
+    expect(useAppStore.getState().explorerOpen).toBe(false);
     expect(screen.queryByLabelText(modelName)).not.toBeInTheDocument();
-    // Re-open
-    await user.click(toggle);
+    // The strip stands where the panel was, with its name along it.
+    const strip = screen.getByTestId("collapsed-models");
+    expect(within(strip).getByText("Models")).toBeInTheDocument();
+
+    await user.click(within(strip).getByLabelText("Open models"));
+    expect(useAppStore.getState().explorerOpen).toBe(true);
     expect(screen.getByLabelText(modelName)).toBeInTheDocument();
+    expect(screen.queryByTestId("collapsed-models")).not.toBeInTheDocument();
+  });
+
+  it("collapses and opens the properties panel in result mode", async () => {
+    const user = userEvent.setup();
+    useAppStore.setState({ mode: "result" });
+    render(<App />);
+    await user.click(screen.getByLabelText("Collapse properties"));
+    expect(useAppStore.getState().sidebarOpen).toBe(false);
+    const strip = screen.getByTestId("collapsed-properties");
+    expect(within(strip).getByText("Properties")).toBeInTheDocument();
+    await user.click(within(strip).getByLabelText("Open properties"));
+    expect(useAppStore.getState().sidebarOpen).toBe(true);
+    expect(screen.getByLabelText("Collapse properties")).toBeInTheDocument();
+    expect(screen.queryByTestId("collapsed-properties")).not.toBeInTheDocument();
+  });
+
+  it("keeps the explorer on the right, open or collapsed", async () => {
+    const user = userEvent.setup();
+    useAppStore.setState({ explorerLocation: "right" });
+    try {
+      render(<App />);
+      const canvas = screen.getByTestId("slope-canvas");
+      const after = (el: HTMLElement) =>
+        Boolean(canvas.compareDocumentPosition(el) & Node.DOCUMENT_POSITION_FOLLOWING);
+      expect(after(screen.getByTestId("panel-header-models"))).toBe(true);
+      await user.click(screen.getByLabelText("Collapse models"));
+      expect(after(screen.getByTestId("collapsed-models"))).toBe(true);
+      await user.click(screen.getByLabelText("Open models"));
+      expect(after(screen.getByTestId("panel-header-models"))).toBe(true);
+    } finally {
+      useAppStore.setState({ explorerLocation: "left" });
+    }
+  });
+
+  it("moves the explorer from the panel header's context menu", async () => {
+    const user = userEvent.setup();
+    render(<App />);
+    try {
+      await user.pointer({ keys: "[MouseRight]", target: screen.getByTestId("panel-header-models") });
+      await user.click(screen.getByRole("menuitem", { name: "Move panel to the right" }));
+      expect(useAppStore.getState().explorerLocation).toBe("right");
+      expect(screen.queryByRole("menuitem", { name: /Move panel/ })).not.toBeInTheDocument();
+    } finally {
+      useAppStore.setState({ explorerLocation: "left" });
+    }
   });
 
   it("renders the interactive canvas in edit mode", () => {

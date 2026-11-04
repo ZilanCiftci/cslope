@@ -25,7 +25,3 @@ export { SunIcon, MoonIcon } from "./ThemeIcons";
 
 // Mode indicators
 export { EditModeIcon, ResultsModeIcon } from "./ModeIcons";
-
-// Activity bar
-export { ExplorerIcon } from "./ExplorerIcon";
-export { PropertiesIcon } from "./PropertiesIcon";

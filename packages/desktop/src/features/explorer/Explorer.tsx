@@ -1,5 +1,6 @@
 import { useCallback, useMemo, useState } from "react";
 import { useAppStore, type ProjectInfo } from "../../store/app-store";
+import { PanelHeaderRow } from "../../components/SidePanelChrome";
 import { ContextMenu, type MenuPos } from "./ContextMenu";
 import { ModelRow } from "./ModelRow";
 import { ProjectInfoDialog } from "./ProjectInfoDialog";
@@ -34,6 +35,9 @@ export function Explorer() {
   const reorderModels = useAppStore((s) => s.reorderModels);
   const updateModelProjectInfo = useAppStore((s) => s.updateModelProjectInfo);
   const explorerOpen = useAppStore((s) => s.explorerOpen);
+  const toggleExplorer = useAppStore((s) => s.toggleExplorer);
+  const explorerLocation = useAppStore((s) => s.explorerLocation);
+  const setExplorerLocation = useAppStore((s) => s.setExplorerLocation);
   // The active model runs in the flat state (a single run), the others in
   // their entries; during Run All the active one is running once started.
   const activeRunning = useAppStore((s) => s.runState === "running" && !s.runAll?.running);
@@ -269,29 +273,32 @@ export function Explorer() {
         background: "var(--color-vsc-sidebar)",
       }}
     >
-      <button
-        className="flex items-center gap-1.5 px-4 py-1.5 text-[10px] font-bold tracking-[0.08em] select-none cursor-pointer w-full text-left"
-        style={{
-          background: "var(--color-vsc-surface-tint)",
-          color: "var(--color-vsc-text-muted)",
-          borderTop: "1px solid var(--color-vsc-border)",
-          borderBottom: "1px solid var(--color-vsc-border)",
-        }}
-        onClick={() => setModelsOpen((v) => !v)}
-        aria-expanded={modelsOpen}
-        aria-label="Toggle models list"
+      <PanelHeaderRow
+        side={explorerLocation}
+        label="Models"
+        onCollapse={toggleExplorer}
+        onMove={() =>
+          setExplorerLocation(explorerLocation === "left" ? "right" : "left")
+        }
       >
-        <svg
-          width="10"
-          height="10"
-          viewBox="0 0 10 10"
-          fill="currentColor"
-          style={{ transform: modelsOpen ? "rotate(0deg)" : "rotate(-90deg)" }}
+        <button
+          className="flex items-center gap-1.5 px-4 py-1.5 cursor-pointer w-full text-left"
+          onClick={() => setModelsOpen((v) => !v)}
+          aria-expanded={modelsOpen}
+          aria-label="Toggle models list"
         >
-          <path d="M2 3l3 3.5L8 3z" />
-        </svg>
-        MODELS
-      </button>
+          <svg
+            width="10"
+            height="10"
+            viewBox="0 0 10 10"
+            fill="currentColor"
+            style={{ transform: modelsOpen ? "rotate(0deg)" : "rotate(-90deg)" }}
+          >
+            <path d="M2 3l3 3.5L8 3z" />
+          </svg>
+          MODELS
+        </button>
+      </PanelHeaderRow>
 
       {modelsOpen && (
         <div className="flex-1 overflow-y-auto py-1">

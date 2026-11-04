@@ -5,6 +5,13 @@ interface ResizablePanelProps {
   minWidth?: number;
   maxWidth?: number;
   onResize: (width: number) => void;
+  /**
+   * Called when the splitter is dragged well past the minimum width (below
+   * collapseWidth, half the minimum by default): the panel collapses and
+   * keeps its last width for when it opens again.
+   */
+  onCollapse?: () => void;
+  collapseWidth?: number;
   position: "left" | "right";
   children: React.ReactNode;
   className?: string;
@@ -16,6 +23,8 @@ export function ResizablePanel({
   minWidth = 100,
   maxWidth = 600,
   onResize,
+  onCollapse,
+  collapseWidth = minWidth / 2,
   position,
   children,
   className,
@@ -41,19 +50,25 @@ export function ResizablePanel({
   useEffect(() => {
     if (!isResizing) return;
 
+    const handlePointerUp = () => {
+      setIsResizing(false);
+      document.body.style.cursor = "";
+      document.body.style.userSelect = "";
+    };
+
     const handlePointerMove = (e: PointerEvent) => {
       const dx = e.clientX - startX.current;
       const newWidth =
         position === "left" ? startWidth.current + dx : startWidth.current - dx;
 
+      if (onCollapse && newWidth < collapseWidth) {
+        // Dragged shut: the drag ends here and the panel collapses.
+        handlePointerUp();
+        onCollapse();
+        return;
+      }
       const clamped = Math.max(minWidth, Math.min(maxWidth, newWidth));
       onResize(clamped);
-    };
-
-    const handlePointerUp = () => {
-      setIsResizing(false);
-      document.body.style.cursor = "";
-      document.body.style.userSelect = "";
     };
 
     window.addEventListener("pointermove", handlePointerMove);
@@ -63,7 +78,7 @@ export function ResizablePanel({
       window.removeEventListener("pointermove", handlePointerMove);
       window.removeEventListener("pointerup", handlePointerUp);
     };
-  }, [isResizing, minWidth, maxWidth, onResize, position]);
+  }, [isResizing, minWidth, maxWidth, collapseWidth, onResize, onCollapse, position]);
 
   return (
     <div
