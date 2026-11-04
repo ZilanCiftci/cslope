@@ -54,4 +54,26 @@ describe("ResizablePanel", () => {
     expect(onResize).toHaveBeenLastCalledWith(300);
     pointer("pointerup", 450);
   });
+
+  it("collapses when dragged shut, keeping its width", () => {
+    const onResize = vi.fn();
+    const onCollapse = vi.fn();
+    const { container } = render(
+      <ResizablePanel width={250} minWidth={150} onResize={onResize} onCollapse={onCollapse} position="left">
+        <p>content</p>
+      </ResizablePanel>,
+    );
+    const handle = (container.firstElementChild as HTMLElement).lastElementChild as HTMLElement;
+    fireEvent.pointerDown(handle, { clientX: 300 });
+    pointer("pointermove", 200);
+    expect(onResize).toHaveBeenLastCalledWith(150);
+    expect(onCollapse).not.toHaveBeenCalled();
+    // Below half the minimum width the panel collapses and the drag ends.
+    pointer("pointermove", 100);
+    expect(onCollapse).toHaveBeenCalledTimes(1);
+    expect(onResize).toHaveBeenLastCalledWith(150);
+    expect(document.body.style.cursor).toBe("");
+    pointer("pointermove", 400);
+    expect(onResize).toHaveBeenCalledTimes(1);
+  });
 });

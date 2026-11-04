@@ -98,8 +98,8 @@ for (const [text, name] of [["Sensitivity", "sensitivity"], ["Probabilistic", "p
 await step("help about", async () => { await tab("Help"); await clickRibbon("About"); await page.waitForTimeout(500); await shot(page, "30-about"); });
 await step("help help", async () => { await tab("Help"); const before = others().length; await clickRibbon("Help"); await page.waitForTimeout(800); const w = await waitNewWindow(before, 2000); await shot(page, "31-help"); if (w) await shotWindow(w, "31-help-window"); });
 
-// Run dropdown, explorer and activity-bar context menus.
+// Run dropdown, explorer and panel-header (move panel) context menus.
 await step("run menu", async () => { await S((s) => s.setMode("edit")); await page.getByRole("button", { name: "▾", exact: true }).click(); await shot(page, "40-run-menu"); });
 await step("explorer ctx", async () => { await page.getByText("T-ACADS Simple", { exact: true }).click({ button: "right" }); await shot(page, "41-explorer-ctx"); });
-await step("activitybar ctx", async () => { await page.mouse.click(24, 162, { button: "right" }); await shot(page, "42-activitybar-ctx"); });
+await step("panel header ctx", async () => { await page.getByTestId("panel-header-models").click({ button: "right" }); await shot(page, "42-panel-header-ctx"); });
 await stop(browser, proc);

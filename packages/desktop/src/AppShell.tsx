@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { useStore } from "zustand";
-import { ActivityBar } from "./components/ActivityBar";
+import { CollapsedPanelStrip } from "./components/SidePanelChrome";
 import { StatusBar } from "./components/StatusBar";
 import { MenuBar } from "./components/ui/ribbon/MenuBar";
 import { FloatingToolbar } from "./components/ui/FloatingToolbar";
@@ -153,6 +153,50 @@ export function AppShell() {
     resetAllAnalyses();
   };
 
+  const moveExplorer = () =>
+    setExplorerLocation(explorerLocation === "left" ? "right" : "left");
+  const moveProperties = () =>
+    setPropertiesLocation(propertiesLocation === "left" ? "right" : "left");
+
+  // Each side panel is either open (resizable, with a collapse button in
+  // its header row) or a narrow strip at the window edge that opens it.
+  const explorerPanel = (side: "left" | "right") =>
+    explorerOpen ? (
+      <ResizablePanel
+        width={explorerWidth}
+        onResize={setExplorerWidth}
+        onCollapse={toggleExplorer}
+        position={side}
+      >
+        <Explorer />
+      </ResizablePanel>
+    ) : (
+      <CollapsedPanelStrip
+        side={side}
+        label="Models"
+        onOpen={toggleExplorer}
+        onMove={moveExplorer}
+      />
+    );
+  const propertiesPanel = (side: "left" | "right") =>
+    sidebarOpen ? (
+      <ResizablePanel
+        width={propertiesWidth}
+        onResize={setPropertiesWidth}
+        onCollapse={toggleSidebar}
+        position={side}
+      >
+        <ResultSidebar />
+      </ResizablePanel>
+    ) : (
+      <CollapsedPanelStrip
+        side={side}
+        label="Properties"
+        onOpen={toggleSidebar}
+        onMove={moveProperties}
+      />
+    );
+
   return (
     <div
       className="flex flex-col h-screen overflow-hidden"
@@ -169,42 +213,8 @@ export function AppShell() {
       />
 
       <div className="flex flex-1 min-h-0">
-        <ActivityBar
-          mode={mode}
-          explorerOpen={explorerOpen}
-          propertiesOpen={sidebarOpen}
-          explorerLocation={explorerLocation}
-          propertiesLocation={propertiesLocation}
-          onToggleExplorer={toggleExplorer}
-          onToggleProperties={toggleSidebar}
-          onToggleExplorerLocation={() =>
-            setExplorerLocation(explorerLocation === "left" ? "right" : "left")
-          }
-          onTogglePropertiesLocation={() =>
-            setPropertiesLocation(
-              propertiesLocation === "left" ? "right" : "left",
-            )
-          }
-        />
-
-        {explorerOpen && explorerLocation === "left" && (
-          <ResizablePanel
-            width={explorerWidth}
-            onResize={setExplorerWidth}
-            position="left"
-          >
-            <Explorer />
-          </ResizablePanel>
-        )}
-        {mode === "result" && sidebarOpen && propertiesLocation === "left" && (
-          <ResizablePanel
-            width={propertiesWidth}
-            onResize={setPropertiesWidth}
-            position="left"
-          >
-            <ResultSidebar />
-          </ResizablePanel>
-        )}
+        {explorerLocation === "left" && explorerPanel("left")}
+        {mode === "result" && propertiesLocation === "left" && propertiesPanel("left")}
 
         <div className="flex-1 min-w-0 flex flex-col">
           <div className="flex-1 min-h-0 relative">
@@ -229,24 +239,8 @@ export function AppShell() {
           </div>
         </div>
 
-        {mode === "result" && sidebarOpen && propertiesLocation === "right" && (
-          <ResizablePanel
-            width={propertiesWidth}
-            onResize={setPropertiesWidth}
-            position="right"
-          >
-            <ResultSidebar />
-          </ResizablePanel>
-        )}
-        {explorerOpen && explorerLocation === "right" && (
-          <ResizablePanel
-            width={explorerWidth}
-            onResize={setExplorerWidth}
-            position="right"
-          >
-            <Explorer />
-          </ResizablePanel>
-        )}
+        {mode === "result" && propertiesLocation === "right" && propertiesPanel("right")}
+        {explorerLocation === "right" && explorerPanel("right")}
       </div>
 
       <StatusBar
