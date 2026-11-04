@@ -47,6 +47,7 @@ export function AppShell() {
   const cancelAnalysis = useAppStore((s) => s.cancelAnalysis);
   const result = useAppStore((s) => s.result);
   const errorMessage = useAppStore((s) => s.errorMessage);
+  const runAll = useAppStore((s) => s.runAll);
   const designValues = useAppStore((s) => !!s.options.partialFactors);
   const models = useAppStore((s) => s.models);
   const activeModelId = useAppStore((s) => s.activeModelId);
@@ -258,6 +259,7 @@ export function AppShell() {
         setGridSnapSize={setGridSnapSize}
         coordinateCount={coordinateCount}
         cursorWorld={cursorWorld}
+        runAll={runAll}
       />
       <SensitivityPanel />
       <ReliabilityPanel />

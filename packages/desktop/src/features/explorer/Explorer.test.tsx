@@ -97,6 +97,39 @@ describe("Explorer — list and selection", () => {
     expect(store().mode).toBe("result");
   });
 
+  it("marks the models whose analysis runs, the active one by its single run", () => {
+    const [alpha, beta, gamma] = store().models.map((m) => m.id);
+    render(<Explorer />);
+    const running = () =>
+      ["Alpha", "Beta", "Gamma"].filter((name) => row(name).querySelector("[data-testid=model-running]"));
+    expect(running()).toEqual([]);
+    // Run All: Alpha (active) and Beta started, Gamma waiting.
+    act(() =>
+      useAppStore.setState((s) => ({
+        runState: "running",
+        runAll: { total: 3, finished: 0, failed: 0, progress: 0.1, running: true },
+        models: s.models.map((m) => (m.id === gamma ? m : { ...m, runState: "running" })),
+      })),
+    );
+    expect(running()).toEqual(["Alpha", "Beta"]);
+    act(() =>
+      useAppStore.setState((s) => ({
+        models: s.models.map((m) => (m.id === alpha ? { ...m, runState: "idle" } : m)),
+      })),
+    );
+    // (the active model's flat state is "running" for the whole batch)
+    expect(running()).toEqual(["Beta"]);
+    // A single run of the active model.
+    act(() =>
+      useAppStore.setState((s) => ({
+        runState: "running",
+        runAll: null,
+        models: s.models.map((m) => (m.id === beta ? { ...m, runState: "done" } : m)),
+      })),
+    );
+    expect(running()).toEqual(["Alpha"]);
+  });
+
   it("extends the selection with Ctrl and Shift", async () => {
     render(<Explorer />);
     const user = userEvent.setup();

@@ -180,4 +180,36 @@ describe("StatusBar", () => {
     render(<StatusBar {...defaultProps} errorMessage="stale" />);
     expect(screen.queryByTestId("status-run-error")).toBeNull();
   });
+
+  it("shows a running Run All as finished/total with its progress bar", () => {
+    render(
+      <StatusBar
+        {...defaultProps}
+        runState="running"
+        runAll={{ total: 20, finished: 7, failed: 0, progress: 0.42, running: true }}
+      />,
+    );
+    expect(screen.getByTestId("status-run-all")).toHaveTextContent("Run All 7/20");
+    const bar = screen.getByRole("progressbar", { name: "Run All progress" });
+    expect(bar).toHaveAttribute("aria-valuenow", "42");
+    expect((bar.firstChild as HTMLElement).style.width).toBe("42%");
+    // (the batch stands for the "Analysing..." of a single run)
+    expect(screen.queryByText("Analysing...")).toBeNull();
+  });
+
+  it("shows the outcome of an ended Run All, with the failed models if any", () => {
+    const { rerender } = render(
+      <StatusBar {...defaultProps} runAll={{ total: 20, finished: 20, failed: 2, progress: 1, running: false }} />,
+    );
+    expect(screen.getByTestId("status-run-all")).toHaveTextContent("Run All done: 20 models, 2 failed");
+    expect(screen.queryByRole("progressbar")).toBeNull();
+    rerender(<StatusBar {...defaultProps} runAll={{ total: 1, finished: 1, failed: 0, progress: 1, running: false }} />);
+    expect(screen.getByTestId("status-run-all")).toHaveTextContent(/^Run All done: 1 model$/);
+  });
+
+  it("shows no Run All without a batch", () => {
+    render(<StatusBar {...defaultProps} runState="running" runAll={null} />);
+    expect(screen.queryByTestId("status-run-all")).toBeNull();
+    expect(screen.getByText("Analysing...")).toBeInTheDocument();
+  });
 });

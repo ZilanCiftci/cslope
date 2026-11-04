@@ -11,7 +11,7 @@ import { DEFAULT_ANALYSIS_OPTIONS, engineModule } from "@cslope/engine";
 import type { AnalysisResponse, WorkerMessage } from "../../worker/messages";
 import type { SliceCreator } from "../helpers";
 import { boundaryWarningsInStoreOrder, buildSlopeDTOFromModel, nextId, RUN_RESET } from "../helpers";
-import type { AnalysisSlice, AppState, ModelEntry } from "../types";
+import type { AnalysisSlice, AppState, ModelEntry, RunAllStatus } from "../types";
 import { DEFAULT_ANALYSIS_LIMITS } from "../defaults";
 import { ANALYSIS_TIMEOUT_MS, FEM_TIMEOUT_MS } from "../../constants";
 import { defaultCustomCircle } from "../../utils/custom-plane";
@@ -258,43 +258,6 @@ export function snapshotFromState(state: AppState): ModelEntry {
 }
 
 /**
- * The expected work of a model's analysis relative to the other models',
- * for the order of Run All: the trial surfaces (the search, or the custom
- * surfaces alone) times the slices, more for Morgenstern-Price, a block
- * search, the non-circular optimisation and both directions, and far
- * more for a finite element analysis (minutes against a search's second).
- */
-export function expectedAnalysisWork(model: ModelEntry): number {
-  const options = model.options ?? DEFAULT_ANALYSIS_OPTIONS;
-  const custom = model.customSearchPlanes?.length ?? 0;
-  const surfaces = model.customPlanesOnly
-    ? Math.max(1, custom)
-    : (options.iterations ?? 0) + (options.refinedIterations ?? 0) + custom;
-  let work = surfaces * Math.max(1, options.slices ?? 25);
-  if (options.method === "Morgenstern-Price") work *= 1.5;
-  if (options.searchMethod === "block") work *= 2;
-  if (options.nonCircularOptimization) work *= 3;
-  if (options.bothDirections) work *= 2;
-  if (options.fem?.enabled) {
-    work += 1e9 * (1 + (options.fem.refinementLevels ?? 0)) * (options.fem.limitAnalysis ? 2 : 1);
-  }
-  return work;
-}
-
-/**
- * The models in the order Run All analyses them: the longest expected
- * first, so that the cores stay busy to the end instead of waiting for a
- * long one started last; models expected equal keep the list's order.
- * (The list itself, and so the UI, keeps its order.)
- */
-export function runAllOrder(models: ModelEntry[]): ModelEntry[] {
-  return models
-    .map((model, index) => ({ model, index, work: expectedAnalysisWork(model) }))
-    .sort((a, b) => b.work - a.work || a.index - b.index)
-    .map((entry) => entry.model);
-}
-
-/**
  * Key identifying exactly what the engine is asked to compute.  A result
  * is only accepted if the model still produces the same key when the run
  * finishes.
@@ -371,6 +334,7 @@ export const createAnalysisSlice: SliceCreator<AnalysisSlice> = (set, get) => ({
   progress: 0,
   result: null,
   errorMessage: null,
+  runAll: null,
 
   invalidateAnalysis: () => {
     // A run for the model being edited would finish with a result for the
@@ -549,12 +513,14 @@ export const createAnalysisSlice: SliceCreator<AnalysisSlice> = (set, get) => ({
       return;
     }
 
-    set({
+    set((s) => ({
       runState: "running",
       progress: 0.02,
       result: null,
       errorMessage: null,
-    });
+      // (the summary of an ended Run All goes; a running one stays)
+      ...(s.runAll && !s.runAll.running ? { runAll: null } : {}),
+    }));
 
     // Fake progress interval for UI responsiveness
     activeProgressInterval = setInterval(() => {
@@ -660,6 +626,7 @@ export const createAnalysisSlice: SliceCreator<AnalysisSlice> = (set, get) => ({
       runState: "idle",
       progress: 0,
       errorMessage: null,
+      runAll: null,
       models: s.models.map((m) =>
         m.runState === "running" ? { ...m, runState: "idle", progress: 0 } : m,
       ),
@@ -685,6 +652,7 @@ export const createAnalysisSlice: SliceCreator<AnalysisSlice> = (set, get) => ({
     set({
       ...resetState,
       mode: "edit",
+      ...(s.runAll?.running ? {} : { runAll: null }),
       models: s.models.map((m) => ({
         ...m,
         ...resetState,
@@ -696,8 +664,10 @@ export const createAnalysisSlice: SliceCreator<AnalysisSlice> = (set, get) => ({
   runAllAnalyses: async () => {
     const baseState = get();
     baseState.saveCurrentModel();
-    // The queue: the longest analyses first (the list keeps its order).
-    const models = runAllOrder(get().models);
+    // The queue: the list's order, top to bottom, so that the user sees the
+    // models run (a heavy model low in the list may end the batch a little
+    // later than if it had been started first).
+    const models = get().models;
     // A new batch replaces a running one: stop its workers.
     for (const handle of batchHandles) handle.cancel();
     batchHandles.clear();
@@ -706,7 +676,7 @@ export const createAnalysisSlice: SliceCreator<AnalysisSlice> = (set, get) => ({
     const isCurrentBatch = () => generation === batchGeneration;
 
     if (models.length === 0) {
-      set({ runState: "idle", progress: 0, result: null, errorMessage: null });
+      set({ runState: "idle", progress: 0, result: null, errorMessage: null, runAll: null });
       return;
     }
 
@@ -723,6 +693,23 @@ export const createAnalysisSlice: SliceCreator<AnalysisSlice> = (set, get) => ({
       let total = 0;
       for (const p of progressByModel.values()) total += p;
       return Math.max(0, Math.min(1, total / models.length));
+    };
+    /** Models finished (analysed, failed or dropped), and those failed. */
+    let finished = 0;
+    let failed = 0;
+    /** The batch for the status bar. */
+    const batchStatus = (running = true): RunAllStatus => ({
+      total: models.length,
+      finished,
+      failed,
+      progress: running ? batchProgress() : 1,
+      running,
+    });
+    /** A model's analysis ended (the caller shows it with batchStatus()). */
+    const finishModel = (modelId: string, outcome: "done" | "failed") => {
+      progressByModel.set(modelId, 1);
+      finished += 1;
+      if (outcome === "failed") failed += 1;
     };
 
     /**
@@ -756,18 +743,25 @@ export const createAnalysisSlice: SliceCreator<AnalysisSlice> = (set, get) => ({
         updated[i] = { ...m, progress: p };
       });
       const progress = batchProgress();
-      if (updated) set({ progress, models: updated });
-      else if (progress !== s.progress) set({ progress });
+      if (updated) set({ progress, runAll: batchStatus(), models: updated });
+      else if (progress !== s.progress || progress !== s.runAll?.progress) {
+        set({ progress, runAll: batchStatus() });
+      }
     };
     const ticks = setInterval(tick, 120);
 
     // Track active model status in UI while running batch.
-    set({ runState: "running", progress: 0, errorMessage: null });
+    set({ runState: "running", progress: 0, errorMessage: null, runAll: batchStatus() });
 
     const runModel = async (model: ModelEntry) => {
       if (!isCurrentBatch()) return;
       const freshModel = get().models.find((m) => m.id === model.id);
-      if (!freshModel) return;
+      if (!freshModel) {
+        // (deleted meanwhile)
+        finishModel(model.id, "done");
+        set({ progress: batchProgress(), runAll: batchStatus() });
+        return;
+      }
       const inputKey = analysisInputKey(freshModel);
 
       /** Inputs of this model now (flat state when it is the active one). */
@@ -784,6 +778,7 @@ export const createAnalysisSlice: SliceCreator<AnalysisSlice> = (set, get) => ({
 
       set((s) => ({
         progress: batchProgress(),
+        runAll: batchStatus(),
         models: s.models.map((m) =>
           m.id === freshModel.id
             ? {
@@ -815,10 +810,11 @@ export const createAnalysisSlice: SliceCreator<AnalysisSlice> = (set, get) => ({
           reported.add(freshModel.id);
         }, threads);
       } catch (err) {
-        progressByModel.set(freshModel.id, 1);
+        finishModel(freshModel.id, "failed");
         const errorMessage = analysisErrorText(err);
         set((s) => ({
           progress: batchProgress(),
+          runAll: batchStatus(),
           models: s.models.map((m) =>
             m.id === freshModel.id
               ? { ...m, runState: "error", errorMessage }
@@ -837,11 +833,12 @@ export const createAnalysisSlice: SliceCreator<AnalysisSlice> = (set, get) => ({
         const result = await handle.promise;
         running.delete(freshModel.id);
         if (!isCurrentBatch()) return;
-        progressByModel.set(freshModel.id, 1);
+        finishModel(freshModel.id, "done");
         if (currentKey() !== inputKey) {
           // The model was edited while it was being analysed.
           set((s) => ({
             progress: batchProgress(),
+            runAll: batchStatus(),
             models: s.models.map((m) =>
               m.id === freshModel.id ? { ...m, ...RUN_RESET } : m,
             ),
@@ -850,6 +847,7 @@ export const createAnalysisSlice: SliceCreator<AnalysisSlice> = (set, get) => ({
         }
         set((s) => ({
           progress: batchProgress(),
+          runAll: batchStatus(),
           models: s.models.map((m) =>
             m.id === freshModel.id
               ? { ...m, runState: "done", progress: 1, result }
@@ -865,11 +863,17 @@ export const createAnalysisSlice: SliceCreator<AnalysisSlice> = (set, get) => ({
         }));
       } catch (err) {
         running.delete(freshModel.id);
-        if (err instanceof AnalysisCancelledError || !isCurrentBatch()) return;
-        progressByModel.set(freshModel.id, 1);
+        if (!isCurrentBatch()) return;
+        if (err instanceof AnalysisCancelledError) {
+          finishModel(freshModel.id, "done");
+          set({ progress: batchProgress(), runAll: batchStatus() });
+          return;
+        }
+        finishModel(freshModel.id, "failed");
         const errorMessage = analysisErrorText(err);
         set((s) => ({
           progress: batchProgress(),
+          runAll: batchStatus(),
           models: s.models.map((m) =>
             m.id === freshModel.id
               ? { ...m, runState: "error", errorMessage }
@@ -901,6 +905,8 @@ export const createAnalysisSlice: SliceCreator<AnalysisSlice> = (set, get) => ({
 
     clearInterval(ticks);
     if (!isCurrentBatch()) return;
+    // The batch's summary, until the next run or reset.
+    set({ runAll: batchStatus(false) });
 
     const currentActiveId = get().activeModelId;
     // A single run started on the active model meanwhile owns its display.
