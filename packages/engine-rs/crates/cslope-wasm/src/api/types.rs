@@ -174,7 +174,8 @@ fn model(value: JsValue) -> JsResult<t::MaterialModel> {
 
 #[wasm_bindgen]
 pub fn validate_material_model(model_js: JsValue) -> JsResult<Vec<String>> {
-    Ok(t::validate_material_model(&model(model_js)?))
+    // (TypeScript's TypeError on `aboveWater: null` and the like: a TypeError)
+    t::try_validate_material_model(&model(model_js)?).js()
 }
 
 #[wasm_bindgen]

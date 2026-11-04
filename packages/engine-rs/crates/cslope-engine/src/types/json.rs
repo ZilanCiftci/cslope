@@ -4,7 +4,10 @@
 //! makes of NaN and ±Infinity) as NaN, and the strings "NaN", "Infinity",
 //! "-Infinity" (the fixtures' encoding); used with `deserialize_with`.
 
+use crate::error::EngineError;
 use serde::de::{self, Deserialize, Deserializer, Visitor};
+use serde::Serialize;
+use serde_json::Value;
 use std::fmt;
 
 /// A number as JavaScript has it: a JSON number, `null` (what
@@ -185,6 +188,282 @@ impl<'de> Deserialize<'de> for JsJson {
     }
 }
 
+// ── Values as JavaScript reads them ─────────────────────────────
+//
+// For the inputs TypeScript checks itself (material models, analysis
+// options, definition fields that may be `null` or of another type): the
+// value is kept as JSON and read with JavaScript's rules. `None` is
+// `undefined` (a missing field); the strings "NaN", "Infinity" and
+// "-Infinity" are the non-finite numbers (`JsJson`'s encoding).
+
+/// The number of a JavaScript `number` (`typeof v === "number"`).
+pub fn js_number(v: Option<&Value>) -> Option<f64> {
+    match v? {
+        Value::Number(n) => n.as_f64(),
+        Value::String(s) => match s.as_str() {
+            "NaN" => Some(f64::NAN),
+            "Infinity" => Some(f64::INFINITY),
+            "-Infinity" => Some(f64::NEG_INFINITY),
+            _ => None,
+        },
+        _ => None,
+    }
+}
+
+/// `Number.isFinite(v)`: a finite number, no conversion.
+pub fn js_is_finite(v: Option<&Value>) -> bool {
+    js_number(v).is_some_and(f64::is_finite)
+}
+
+/// `isFinite(v)` (the global function): `ToNumber(v)` is finite.
+pub fn js_global_is_finite(v: Option<&Value>) -> bool {
+    js_to_number(v).is_finite()
+}
+
+/// JavaScript's white space and line terminators (`String.prototype.trim`).
+fn js_space(c: char) -> bool {
+    c.is_whitespace() || c == '\u{feff}'
+}
+
+/// `ToNumber` of a string (StringToNumber).
+fn string_to_number(s: &str) -> f64 {
+    let t = s.trim_matches(js_space);
+    if t.is_empty() {
+        return 0.0;
+    }
+    match t {
+        "Infinity" | "+Infinity" => return f64::INFINITY,
+        "-Infinity" => return f64::NEG_INFINITY,
+        _ => {}
+    }
+    let radix = |digits: &str, r: u32| -> f64 {
+        if digits.is_empty() {
+            return f64::NAN;
+        }
+        let mut v = 0.0;
+        for c in digits.chars() {
+            match c.to_digit(r) {
+                Some(d) => v = v * f64::from(r) + f64::from(d),
+                None => return f64::NAN,
+            }
+        }
+        v
+    };
+    let lower = t.to_ascii_lowercase();
+    if let Some(d) = lower.strip_prefix("0x") {
+        return radix(d, 16);
+    }
+    if let Some(d) = lower.strip_prefix("0o") {
+        return radix(d, 8);
+    }
+    if let Some(d) = lower.strip_prefix("0b") {
+        return radix(d, 2);
+    }
+    // StrDecimalLiteral: [+-] (digits [. digits] | . digits) [e [+-] digits]
+    let b = t.as_bytes();
+    let mut i = 0;
+    if i < b.len() && (b[i] == b'+' || b[i] == b'-') {
+        i += 1;
+    }
+    let int_start = i;
+    while i < b.len() && b[i].is_ascii_digit() {
+        i += 1;
+    }
+    let mut digits = i - int_start;
+    if i < b.len() && b[i] == b'.' {
+        i += 1;
+        let frac_start = i;
+        while i < b.len() && b[i].is_ascii_digit() {
+            i += 1;
+        }
+        digits += i - frac_start;
+    }
+    if digits == 0 {
+        return f64::NAN;
+    }
+    if i < b.len() && (b[i] == b'e' || b[i] == b'E') {
+        i += 1;
+        if i < b.len() && (b[i] == b'+' || b[i] == b'-') {
+            i += 1;
+        }
+        let exp_start = i;
+        while i < b.len() && b[i].is_ascii_digit() {
+            i += 1;
+        }
+        if i == exp_start {
+            return f64::NAN;
+        }
+    }
+    if i != b.len() {
+        return f64::NAN;
+    }
+    t.parse::<f64>().unwrap_or(f64::NAN)
+}
+
+/// `ToNumber(v)`, as in a comparison or arithmetic (`undefined` is NaN,
+/// `null` 0, an array its joined string).
+pub fn js_to_number(v: Option<&Value>) -> f64 {
+    if let Some(n) = js_number(v) {
+        return n;
+    }
+    match v {
+        None => f64::NAN,
+        Some(Value::Null) => 0.0,
+        Some(Value::Bool(b)) => f64::from(u8::from(*b)),
+        Some(Value::String(s)) => string_to_number(s),
+        Some(a @ Value::Array(_)) => string_to_number(&js_to_string(Some(a))),
+        Some(_) => f64::NAN,
+    }
+}
+
+/// `String(v)` (as a template literal formats it).
+pub fn js_to_string(v: Option<&Value>) -> String {
+    if let Some(n) = js_number(v) {
+        return crate::js::num::to_string(n);
+    }
+    match v {
+        None => "undefined".into(),
+        Some(Value::Null) => "null".into(),
+        Some(Value::Bool(b)) => b.to_string(),
+        Some(Value::String(s)) => s.clone(),
+        Some(Value::Array(a)) => a
+            .iter()
+            .map(|e| match e {
+                Value::Null => String::new(),
+                e => js_to_string(Some(e)),
+            })
+            .collect::<Vec<_>>()
+            .join(","),
+        Some(_) => "[object Object]".into(),
+    }
+}
+
+/// Whether `v` is truthy.
+pub fn js_truthy(v: Option<&Value>) -> bool {
+    if let Some(n) = js_number(v) {
+        return !(n == 0.0 || n.is_nan());
+    }
+    match v {
+        None | Some(Value::Null) => false,
+        Some(Value::Bool(b)) => *b,
+        Some(Value::String(s)) => !s.is_empty(),
+        Some(_) => true,
+    }
+}
+
+/// `v[key]` for a named field: the field of an object, `undefined` on any
+/// other value (an array's elements and length are read with `js_array`),
+/// and JavaScript's TypeError on `undefined` and `null`.
+pub fn js_get<'a>(v: Option<&'a Value>, key: &str) -> Result<Option<&'a Value>, EngineError> {
+    match v {
+        None => Err(EngineError::type_error(format!(
+            "Cannot read properties of undefined (reading '{key}')"
+        ))),
+        Some(Value::Null) => Err(EngineError::type_error(format!(
+            "Cannot read properties of null (reading '{key}')"
+        ))),
+        Some(Value::Object(o)) => Ok(o.get(key)),
+        Some(_) => Ok(None),
+    }
+}
+
+/// The elements of `v` if it is an array (`Array.isArray`).
+pub fn js_array(v: Option<&Value>) -> Option<&Vec<Value>> {
+    match v {
+        Some(Value::Array(a)) => Some(a),
+        _ => None,
+    }
+}
+
+/// `deserialize_with` for an optional number TypeScript checks with
+/// `Number.isFinite` before it uses it (`v !== undefined && !isFinite(v)`):
+/// absent is `None`; `null`, a string or any other value that is not a
+/// number is `Some(NaN)`, which fails that check as the value itself does.
+pub fn present_num<'de, D: Deserializer<'de>>(d: D) -> Result<Option<f64>, D::Error> {
+    let v = JsJson::deserialize(d)?.0;
+    Ok(Some(js_number(Some(&v)).unwrap_or(f64::NAN)))
+}
+
+/// `deserialize_with` for an optional number TypeScript uses without a
+/// check, as `v ?? default` in arithmetic: absent and `null` are `None`,
+/// another value `ToNumber` of it (`"1"` is 1).
+pub fn opt_to_number<'de, D: Deserializer<'de>>(d: D) -> Result<Option<f64>, D::Error> {
+    let v = JsJson::deserialize(d)?.0;
+    Ok((!v.is_null()).then(|| js_to_number(Some(&v))))
+}
+
+/// `deserialize_with` for an optional flag TypeScript reads by truthiness:
+/// absent is `None`, any other value (`null` too) whether it is truthy.
+pub fn truthy<'de, D: Deserializer<'de>>(d: D) -> Result<Option<bool>, D::Error> {
+    let v = JsJson::deserialize(d)?.0;
+    Ok(Some(js_truthy(Some(&v))))
+}
+
+/// `deserialize_with` for an optional flag TypeScript reads as
+/// `flag ?? default` and then by truthiness: absent and `null` are `None`,
+/// any other value whether it is truthy.
+pub fn nullish_truthy<'de, D: Deserializer<'de>>(d: D) -> Result<Option<bool>, D::Error> {
+    let v = JsJson::deserialize(d)?.0;
+    Ok(match v {
+        Value::Null => None,
+        v => Some(js_truthy(Some(&v))),
+    })
+}
+
+/// `deserialize_with` for an optional field where `null` is a value
+/// (`v !== undefined` in TypeScript): absent is `None`, anything present,
+/// `null` included, is deserialized as `T` (with `T`'s own reading of
+/// `null`).
+pub fn present<'de, D: Deserializer<'de>, T: Deserialize<'de>>(
+    d: D,
+) -> Result<Option<T>, D::Error> {
+    T::deserialize(d).map(Some)
+}
+
+/// A value TypeScript compares with known strings: one of them (`T`), or
+/// anything else, kept as it came (`null` included), so that the check that
+/// rejects it gives TypeScript's message, or TypeScript's default applies.
+#[derive(Debug, Clone, PartialEq)]
+pub enum OrOther<T> {
+    Known(T),
+    Other(Value),
+}
+
+impl<T> OrOther<T> {
+    /// The known value, if it is one.
+    pub fn known(&self) -> Option<&T> {
+        match self {
+            OrOther::Known(t) => Some(t),
+            OrOther::Other(_) => None,
+        }
+    }
+}
+
+impl<T> From<T> for OrOther<T> {
+    fn from(t: T) -> Self {
+        OrOther::Known(t)
+    }
+}
+
+impl<'de, T: serde::de::DeserializeOwned> Deserialize<'de> for OrOther<T> {
+    fn deserialize<D: Deserializer<'de>>(d: D) -> Result<Self, D::Error> {
+        let v = JsJson::deserialize(d)?.0;
+        Ok(match serde_json::from_value::<T>(v.clone()) {
+            Ok(t) => OrOther::Known(t),
+            Err(_) => OrOther::Other(v),
+        })
+    }
+}
+
+impl<T: Serialize> Serialize for OrOther<T> {
+    fn serialize<S: serde::Serializer>(&self, s: S) -> Result<S::Ok, S::Error> {
+        match self {
+            OrOther::Known(t) => t.serialize(s),
+            OrOther::Other(v) => v.serialize(s),
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -211,6 +490,42 @@ mod tests {
         assert_eq!(t.b, None);
         assert!(t.c.is_empty());
         assert!(serde_json::from_str::<T>(r#"{"a":1,"c":[[1,2,3]]}"#).is_err());
+    }
+
+    #[test]
+    fn values_as_javascript_reads_them() {
+        use serde_json::json;
+        let n = |v: Value| js_to_number(Some(&v));
+        assert_eq!(n(json!(" 2 ")), 2.0);
+        assert_eq!(n(json!("0x10")), 16.0);
+        assert_eq!(n(json!("")), 0.0);
+        assert_eq!(n(json!(".5")), 0.5);
+        assert_eq!(n(json!("5.")), 5.0);
+        assert_eq!(n(json!("-Infinity")), f64::NEG_INFINITY);
+        assert!(n(json!("inf")).is_nan());
+        assert!(n(json!("1e")).is_nan());
+        assert!(n(json!("abc")).is_nan());
+        assert_eq!(n(json!(null)), 0.0);
+        assert_eq!(n(json!(true)), 1.0);
+        assert_eq!(n(json!([])), 0.0);
+        assert_eq!(n(json!(["3"])), 3.0);
+        assert!(n(json!([1, 2])).is_nan());
+        assert!(n(json!({})).is_nan());
+        assert!(js_to_number(None).is_nan());
+        let s = |v: Value| js_to_string(Some(&v));
+        assert_eq!(s(json!([1, null, [2, 3]])), "1,,2,3");
+        assert_eq!(s(json!({ "a": 1 })), "[object Object]");
+        assert_eq!(s(json!(1e21)), "1e+21");
+        assert_eq!(js_to_string(None), "undefined");
+        assert!(!js_is_finite(Some(&json!("1"))));
+        assert!(js_global_is_finite(Some(&json!("1"))));
+        assert!(!js_truthy(Some(&json!(0))) && js_truthy(Some(&json!([]))));
+        let e = js_get(Some(&json!(null)), "aboveWater").unwrap_err();
+        assert_eq!(
+            e.message,
+            "Cannot read properties of null (reading 'aboveWater')"
+        );
+        assert_eq!(js_get(Some(&json!(5)), "kind").unwrap(), None);
     }
 
     #[test]

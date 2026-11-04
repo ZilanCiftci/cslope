@@ -1,6 +1,9 @@
 /**
  * Circle geometry calculations.
+ *
+ * Implemented by the Rust engine (packages/engine-rs) through WebAssembly (see facade/internal.ts).
  */
+import { list, orNull, pt, wasm } from "../facade/internal";
 
 /**
  * Get the y-coordinate on the bottom of a circle at a given x.
@@ -11,13 +14,8 @@
  * @param x - x-coordinate to query
  * @returns y-coordinate on the lower arc
  */
-export function getCircleYCoordinateAtX(
-  cx: number,
-  cy: number,
-  radius: number,
-  x: number,
-): number {
-  return cy - Math.sqrt(Math.max(0, radius * radius - (x - cx) * (x - cx)));
+export function getCircleYCoordinateAtX(cx: number, cy: number, radius: number, x: number): number {
+  return wasm().get_circle_y_coordinate_at_x(cx, cy, radius, x);
 }
 
 /**
@@ -25,55 +23,8 @@ export function getCircleYCoordinateAtX(
  *
  * @returns Array of [x, y] intersection points
  */
-export function getCircleLineIntersections(
-  cx: number,
-  cy: number,
-  r: number,
-  px: number[],
-  py: number[],
-): [number, number][] {
-  const intersections: [number, number][] = [];
-  const r2 = r * r;
-
-  for (let i = 0; i < px.length - 1; i++) {
-    const x1 = px[i],
-      y1 = py[i];
-    const x2 = px[i + 1],
-      y2 = py[i + 1];
-
-    const dx = x2 - x1;
-    const dy = y2 - y1;
-
-    if (Math.abs(dx) < 1e-12 && Math.abs(dy) < 1e-12) continue;
-
-    const a = dx * dx + dy * dy;
-    const f1 = x1 - cx;
-    const f2 = y1 - cy;
-    const b = 2 * (dx * f1 + dy * f2);
-    const c = f1 * f1 + f2 * f2 - r2;
-
-    const discriminant = b * b - 4 * a * c;
-    if (discriminant < 0) continue;
-
-    const sqrtDisc = Math.sqrt(discriminant);
-    const t1 = (-b + sqrtDisc) / (2 * a);
-    const t2 = (-b - sqrtDisc) / (2 * a);
-
-    // A crossing exactly at a vertex can come out as t = 1 + 2e-16 on one
-    // segment and t = -2e-16 on the next and be lost on both: accept a
-    // tiny overshoot and snap it onto the vertex.
-    const T_TOL = 1e-9;
-    if (t1 >= -T_TOL && t1 <= 1 + T_TOL) {
-      const t = Math.min(1, Math.max(0, t1));
-      intersections.push([x1 + t * dx, y1 + t * dy]);
-    }
-    if (discriminant > 1e-12 && t2 >= -T_TOL && t2 <= 1 + T_TOL) {
-      const t = Math.min(1, Math.max(0, t2));
-      intersections.push([x1 + t * dx, y1 + t * dy]);
-    }
-  }
-
-  return intersections;
+export function getCircleLineIntersections(cx: number, cy: number, r: number, px: number[], py: number[]): [number, number][] {
+  return wasm().get_circle_line_intersections(cx, cy, r, px, py);
 }
 
 /**
@@ -81,21 +32,14 @@ export function getCircleLineIntersections(
  * a * b = c * d  →  R = (C + c²) / (2c)
  */
 export function circleRadiusFromAbcd(cToE: number, C: number): number | null {
-  if (Math.abs(cToE) < 1e-12) return null;
-  return (C + cToE * cToE) / (2 * cToE);
+  return orNull(wasm().circle_radius_from_abcd(cToE, C));
 }
 
 /**
  * Calculate circle centre from chord intersection.
  */
-export function circleCentre(
-  beta: number,
-  chordIntersection: [number, number],
-  chordToCentre: number,
-): [number, number] {
-  const dy = Math.cos(beta) * chordToCentre;
-  const dx = Math.sin(beta) * chordToCentre;
-  return [chordIntersection[0] + dx, chordIntersection[1] + dy];
+export function circleCentre(beta: number, chordIntersection: [number, number], chordToCentre: number): [number, number] {
+  return pt(wasm().circle_centre(beta, chordIntersection[0], chordIntersection[1], chordToCentre));
 }
 
 /**
@@ -107,24 +51,7 @@ export function circleCentre(
  * @param numPoints - Number of points (default: 90)
  * @returns [x[], y[]] arrays
  */
-export function generateCircleCoordinates(
-  cx: number,
-  cy: number,
-  radius: number,
-  numPoints: number = 90,
-): [number[], number[]] {
-  const x: number[] = [];
-  const y: number[] = [];
-  if (numPoints < 2) {
-    const angle = Math.PI / 2;
-    x.push(Math.round((cx - Math.cos(angle) * radius) * 1000) / 1000);
-    y.push(Math.round((cy - Math.sin(angle) * radius) * 1000) / 1000);
-    return [x, y];
-  }
-  for (let i = 0; i < numPoints; i++) {
-    const angle = ((1 + (i * 178) / (numPoints - 1)) * Math.PI) / 180;
-    x.push(Math.round((cx - Math.cos(angle) * radius) * 1000) / 1000);
-    y.push(Math.round((cy - Math.sin(angle) * radius) * 1000) / 1000);
-  }
-  return [x, y];
+export function generateCircleCoordinates(cx: number, cy: number, radius: number, numPoints: number = 90): [number[], number[]] {
+  const [x, y] = wasm().generate_circle_coordinates(cx, cy, radius, numPoints) as [number[], number[]];
+  return [list(x), list(y)];
 }

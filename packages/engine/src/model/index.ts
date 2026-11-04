@@ -13,7 +13,7 @@ export {
   createGeometryWithMaterial,
 } from "./geometry-ops";
 
-export { createSlice, findCrackX, getSlices, rankineCrackDepth } from "./slices";
+export { findCrackX, getSlices, rankineCrackDepth } from "./slices";
 export { fitPolylineToGround, isAdmissiblePolyline } from "./surface";
 
 export {

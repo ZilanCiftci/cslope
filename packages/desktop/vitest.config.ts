@@ -19,7 +19,7 @@ export default defineConfig({
         test: {
           name: "renderer",
           environment: "jsdom",
-          setupFiles: ["./src/test/setup.ts"],
+          setupFiles: ["./vitest.engine-setup.ts", "./src/test/setup.ts"],
           include: ["src/**/*.{test,spec}.{ts,tsx}"],
           exclude: process.env.CSLOPE_QUICK_TESTS ? [...configDefaults.exclude, ...SLOW] : configDefaults.exclude,
         },

@@ -1,10 +1,8 @@
 //! Ported unit tests of model/slope.ts and model/build-slope.ts
 //! (slope-api.test.ts, water-table.test.ts, build-slope.test.ts, the
 //! buildSlope parts of canonical-build.test.ts, review-fixes.test.ts,
-//! point-limits.test.ts and model-coordinates.test.ts), and the setter and
-//! buildSlope error paths of the model-core fixtures (scenarios.json,
-//! build-errors.json). The parts that run an analysis are deferred to the
-//! solver phase (PORTING.md).
+//! point-limits.test.ts and model-coordinates.test.ts).
+//! (The differential tests against the TypeScript engine's fixtures were removed with it at the cutover, PORTING.md.)
 #![allow(clippy::disallowed_methods)]
 
 mod common;
@@ -12,16 +10,14 @@ mod model_core_support;
 
 use cslope_engine::model::build_slope::build_slope;
 use cslope_engine::model::canonical::{get_domain_x, mirror_x, to_canonical_slope_definition};
-use cslope_engine::model::search::{
-    add_single_circular_plane, add_single_entry_exit_plane, generate_planes,
-};
+use cslope_engine::model::search::add_single_circular_plane;
 use cslope_engine::model::slope::{AnalysisLimitsPatch, AnalysisOptionsPatch, SearchPlane, Slope};
 use cslope_engine::types::{
-    LineLoad, LineLoadParams, Material, MaterialId, MaterialParams, PartialFactors, Pile,
-    PorePressureHead, Reinforcement, Udl, UdlParams, WaterTableInput, ITERATIONS_RANGE,
-    REFINED_ITERATIONS_RANGE, SLICES_RANGE,
+    LineLoad, LineLoadParams, Material, MaterialId, MaterialParams, Pile, PorePressureHead,
+    Reinforcement, Udl, UdlParams, WaterTableInput, ITERATIONS_RANGE, REFINED_ITERATIONS_RANGE,
+    SLICES_RANGE,
 };
-use model_core_support::{close, compare, def, n, plane_json, pts, Stats};
+use model_core_support::{close, def};
 use serde_json::{json, Value};
 
 const BOUNDARY: [[f64; 2]; 6] = [
@@ -506,9 +502,12 @@ fn reinforcement_rejects_invalid_input() {
         let e = err(model().set_reinforcements(&[nail(change)]));
         assert!(e.contains(msg), "{label}: {e}");
     }
-    // "development length missing": a shape TypeScript validates and serde rejects
+    // "development length missing": the length reads as NaN (TypeScript's
+    // undefined), which the validation rejects with TypeScript's message
     let missing = json!({ "x1": 20, "y1": 4, "x2": 10, "y2": 1, "tensileCapacity": 100, "pullout": { "kind": "development", "length1": 1 } });
-    assert!(serde_json::from_value::<Reinforcement>(missing).is_err());
+    let r: Reinforcement = serde_json::from_value(missing).expect("reads");
+    let e = err(model().set_reinforcements(&[r]));
+    assert!(e.contains("development lengths"), "{e}");
 }
 
 #[test]
@@ -686,14 +685,23 @@ fn rejects_invalid_options() {
         ..Default::default()
     }));
     assert!(e.contains("minSlipArea"), "min slip area NaN: {e}");
-    // An unknown method, pore pressure head or interslice function: enums
-    // here, rejected by serde.
-    for o in [
-        json!({ "method": "Spencer" }),
-        json!({ "porePressureHead": "hydrostatic" }),
-        json!({ "intersliceFunction": "cubic" }),
+    // An unknown method, pore pressure head, search method or interslice
+    // function: TypeScript's messages (the value is kept for the check)
+    for (o, msg) in [
+        (json!({ "method": "Spencer" }), "Method must be one of"),
+        (json!({ "method": null }), "Method must be one of"),
+        (
+            json!({ "porePressureHead": "hydrostatic" }),
+            "porePressureHead must be",
+        ),
+        (json!({ "searchMethod": 5 }), "searchMethod must be"),
+        (
+            json!({ "intersliceFunction": "cubic" }),
+            "intersliceFunction must be one of",
+        ),
     ] {
-        assert!(serde_json::from_value::<AnalysisOptionsPatch>(o).is_err());
+        let e = err(model().update_analysis_options(&opts(o.clone())));
+        assert!(e.contains(msg), "{o}: {e}");
     }
 }
 
@@ -746,13 +754,18 @@ fn clamps_slices_iterations_and_the_inner_iteration_limit() {
 fn keeps_only_finite_interslice_data_points_mirrored_models_mirror_them() {
     let mut s = model();
     s.update_analysis_options(&AnalysisOptionsPatch {
-        interslice_function: Some(cslope_engine::types::IntersliceFunctionType::DataPointSpecified),
-        interslice_data_points: Some(vec![
-            [0.0, 0.2],
-            [f64::NAN, 1.0],
-            [0.3, f64::INFINITY],
-            [0.6, 1.0],
-        ]),
+        interslice_function: Some(
+            cslope_engine::types::IntersliceFunctionType::DataPointSpecified.into(),
+        ),
+        interslice_data_points: Some(
+            vec![
+                [0.0, 0.2],
+                [f64::NAN, 1.0],
+                [0.3, f64::INFINITY],
+                [0.6, 1.0],
+            ]
+            .into(),
+        ),
         ..Default::default()
     })
     .unwrap();
@@ -1173,431 +1186,4 @@ fn model_space_x_and_circles() {
     }
 }
 
-// ── model-core fixtures: setter scenarios and buildSlope errors ───
-
-fn ts_base() -> Value {
-    json!({
-        "coordinates": [[0, 0], [0, 10], [10, 10], [20, 0]],
-        "materials": [{ "name": "A", "model": { "kind": "mohr-coulomb", "unitWeight": 18, "cohesion": 5, "frictionAngle": 30 } }],
-    })
-}
-
-fn built() -> Slope {
-    build_slope(&def(ts_base())).unwrap()
-}
-
-fn state(s: &Slope) -> Value {
-    json!({
-        "sliceCount": s.slice_count(), "iterations": s.iterations(), "refinedIterations": s.refined_iterations(),
-        "maxIterations": s.max_iterations(), "tolerance": s.tolerance(), "minFailureDistance": s.min_failure_distance(),
-        "limits": s.limits(), "method": s.method().as_str(), "seismicHorizontal": n(s.seismic_horizontal()),
-        "seismicVertical": n(s.seismic_vertical()), "minSlipArea": n(s.min_slip_area()),
-        "intersliceDataPoints": pts(&s.interslice_data_points()),
-        "blockActiveAngle": s.block_active_angle().map_or(Value::Null, |a| json!(a)),
-    })
-}
-
-fn ok(v: Value) -> Value {
-    json!({ "ok": v })
-}
-
-fn attempt<T>(r: cslope_engine::error::Result<T>, f: impl FnOnce(T) -> Value) -> Value {
-    model_core_support::attempt(r, f)
-}
-
-fn unit<T>(r: cslope_engine::error::Result<T>) -> Value {
-    // a setter returning undefined: `{ ok: undefined }` is written as `{}`
-    attempt(r, |_| Value::Null)
-        .as_object()
-        .map_or(Value::Null, |o| {
-            if o.contains_key("ok") {
-                json!({})
-            } else {
-                Value::Object(o.clone())
-            }
-        })
-}
-
-fn upd(o: AnalysisOptionsPatch) -> Value {
-    unit(built().update_analysis_options(&o))
-}
-
-fn scenario(name: &str) -> Value {
-    let nan = f64::NAN;
-    let o = AnalysisOptionsPatch::default;
-    match name {
-        "boundaries-before-external" => {
-            unit(Slope::new().set_material_boundaries(&[vec![[0.0, 1.0], [5.0, 1.0]]]))
-        }
-        "material-boundary-1pt" => unit(built().set_material_boundary(&[[0.0, 0.0]])),
-        "assign-non-material" => unit(built().assign_material([1.0, 1.0], MaterialId(1000))),
-        "water-depth-no-boundary" => unit(Slope::new().set_water_table(&WaterTableInput::Depth {
-            depth: 2.0,
-            follow_boundary: None,
-        })),
-        "water-height-no-boundary" => {
-            unit(Slope::new().set_water_table(&WaterTableInput::Height {
-                height: 2.0,
-                follow_boundary: None,
-            }))
-        }
-        "water-custom-no-boundary" => {
-            unit(Slope::new().set_water_table(&custom(&[[0.0, 1.0], [10.0, 1.0]], None)))
-        }
-        "water-custom-no-boundary-free" => {
-            let mut s = Slope::new();
-            s.set_water_table(&custom(&[[10.0, 1.0], [0.0, 2.0]], Some(false)))
-                .unwrap();
-            s.set_external_boundary(&[[0.0, 0.0], [0.0, 10.0], [10.0, 10.0], [20.0, 0.0]])
-                .unwrap();
-            ok(json!([
-                model_core_support::line(s.water_rl_xy()),
-                s.has_water_table()
-            ]))
-        }
-        "water-not-finite" => {
-            unit(built().set_water_table(&custom(&[[0.0, nan], [1.0, 1.0]], None)))
-        }
-        "water-one-point" => unit(built().set_water_table(&custom(&[[0.0, 1.0]], None))),
-        "water-by-id-infinite" => {
-            unit(built().set_water_table_by_id("w", &[[0.0, 1.0], [f64::INFINITY, 1.0]], true))
-        }
-        "remove-limits-no-surface" => unit(Slope::new().remove_analysis_limits()),
-        "external-y-no-surface" => unit(Slope::new().get_external_y_intersection(1.0)),
-        "water-y-none" => unit(built().get_water_y_intersection(1.0)),
-        "circle-no-surface" => unit(Slope::new().get_circle_external_intersection(1.0, 1.0, 1.0)),
-        "min-fos-none" => unit(built().get_min_fos()),
-        "max-fos-none" => unit(built().get_max_fos()),
-        "min-fos-circle-none" => unit(built().get_min_fos_circle()),
-        "end-points-none" => unit(built().get_min_fos_end_points()),
-        "to-model-x-no-boundary" => {
-            let mut s = Slope::new();
-            s.set_mirrored(true);
-            unit(s.to_model_x(1.0))
-        }
-        "to-model-circle-points" => unit(built().to_model_circle(&SearchPlane {
-            cx: 1.0,
-            cy: 2.0,
-            radius: 3.0,
-            points: Some(vec![[0.0, 0.0]]),
-            ..Default::default()
-        })),
-        "few-coordinates" => unit(Slope::new().set_external_boundary(&[[0.0, 0.0], [1.0, 1.0]])),
-        "boundaries-nan-vertex" => {
-            let mut s = Slope::new();
-            let r = s
-                .set_external_boundary(&[[nan, 0.0], [0.0, 10.0], [10.0, 10.0], [20.0, 0.0]])
-                .and_then(|_| s.set_material_boundaries(&[vec![[0.0, 5.0], [20.0, 5.0]]]));
-            attempt(r, |_| json!(s.material_geometries().len()))
-        }
-        "slices-nan" => upd(AnalysisOptionsPatch {
-            slices: Some(nan),
-            ..o()
-        }),
-        "iterations-inf" => upd(AnalysisOptionsPatch {
-            iterations: Some(f64::INFINITY),
-            ..o()
-        }),
-        "refined-nan" => upd(AnalysisOptionsPatch {
-            refined_iterations: Some(nan),
-            ..o()
-        }),
-        "max-iterations-nan" => upd(AnalysisOptionsPatch {
-            max_iterations: Some(nan),
-            ..o()
-        }),
-        "tolerance-nan" => upd(AnalysisOptionsPatch {
-            tolerance: Some(nan),
-            ..o()
-        }),
-        "min-failure-nan" => upd(AnalysisOptionsPatch {
-            min_failure_dist: Some(f64::NEG_INFINITY),
-            ..o()
-        }),
-        "tolerance-zero" => upd(AnalysisOptionsPatch {
-            tolerance: Some(0.0),
-            ..o()
-        }),
-        "crack-depth" => upd(AnalysisOptionsPatch {
-            tension_crack_depth: Some(-1.0),
-            ..o()
-        }),
-        "crack-depth-nan" => upd(AnalysisOptionsPatch {
-            tension_crack_depth: Some(nan),
-            ..o()
-        }),
-        "seismic-h" => upd(AnalysisOptionsPatch {
-            seismic_horizontal: Some(2.0),
-            ..o()
-        }),
-        "seismic-v" => upd(AnalysisOptionsPatch {
-            seismic_vertical: Some(nan),
-            ..o()
-        }),
-        "crack-angle" => upd(AnalysisOptionsPatch {
-            tension_crack_angle: Some(90.0),
-            ..o()
-        }),
-        "crack-angle-neg" => upd(AnalysisOptionsPatch {
-            tension_crack_angle: Some(-1.0),
-            ..o()
-        }),
-        "crack-water" => upd(AnalysisOptionsPatch {
-            tension_crack_water: Some(1.5),
-            ..o()
-        }),
-        "block-active" => upd(AnalysisOptionsPatch {
-            block_active_angle: Some(Some([0.0, 10.0])),
-            ..o()
-        }),
-        "block-passive" => upd(AnalysisOptionsPatch {
-            block_passive_angle: Some(Some([50.0, 40.0])),
-            ..o()
-        }),
-        "block-active-90" => upd(AnalysisOptionsPatch {
-            block_active_angle: Some(Some([10.0, 90.0])),
-            ..o()
-        }),
-        "min-slip-depth" => upd(AnalysisOptionsPatch {
-            min_slip_depth: Some(-1.0),
-            ..o()
-        }),
-        "min-slip-area" => upd(AnalysisOptionsPatch {
-            min_slip_area: Some(Some(-1.0)),
-            ..o()
-        }),
-        "partial-factors" => upd(AnalysisOptionsPatch {
-            partial_factors: Some(Some(PartialFactors {
-                cu: 0.0,
-                cohesion: 1.0,
-                tan_phi: 1.0,
-                variable_load: 1.0,
-                basis: None,
-            })),
-            ..o()
-        }),
-        "partial-factors-nan" => upd(AnalysisOptionsPatch {
-            partial_factors: Some(Some(PartialFactors {
-                cu: 1.0,
-                cohesion: 1.0,
-                tan_phi: nan,
-                variable_load: 1.0,
-                basis: None,
-            })),
-            ..o()
-        }),
-        "partial-midway" => {
-            let mut s = built();
-            let r = unit(s.update_analysis_options(&opts(json!({ "slices": 33, "method": "Janbu", "seismicHorizontal": 0.1, "tensionCrackWater": 3 }))));
-            ok(json!([r, state(&s)]))
-        }
-        "clamps" => {
-            let mut s = built();
-            let mut out = Vec::new();
-            for p in [
-                opts(json!({ "slices": 3.6 })),
-                opts(json!({ "slices": 600 })),
-                opts(json!({ "slices": 20.5 })),
-                opts(json!({ "slices": -20.5 })),
-                opts(json!({ "iterations": 1 })),
-                opts(json!({ "iterations": 1e9 })),
-                opts(json!({ "maxIterations": 2 })),
-                opts(json!({ "minFailureDist": 1000 })),
-                opts(json!({ "minFailureDist": -3 })),
-                opts(json!({ "refinedIterations": -5 })),
-                opts(json!({ "minSlipArea": null })),
-                opts(json!({ "minSlipArea": 2 })),
-                AnalysisOptionsPatch {
-                    interslice_data_points: Some(vec![[0.0, 0.0], [0.5, nan], [1.0, 1.0]]),
-                    ..o()
-                },
-                opts(json!({ "blockActiveAngle": [20, 30] })),
-                opts(json!({ "blockActiveAngle": null })),
-            ] {
-                s.update_analysis_options(&p).unwrap();
-                out.push(state(&s));
-            }
-            ok(Value::Array(out))
-        }
-        "limits" => {
-            let mut s = built();
-            let mut out = Vec::new();
-            for l in [
-                json!({ "entryLeftX": 5 }),
-                json!({ "exitLeftX": 9, "exitRightX": 3 }),
-                json!({ "entryRightX": 1 }),
-                json!({ "exitRightX": 2 }),
-            ] {
-                s.set_analysis_limits(&limits(l));
-                out.push(json!([s.limits(), s.search_limits()]));
-            }
-            s.remove_analysis_limits().unwrap();
-            out.push(json!([s.limits(), s.search_limits()]));
-            ok(Value::Array(out))
-        }
-        "search-limits-corner" => {
-            let mut s = built();
-            s.set_analysis_limits(&limits(
-                json!({ "entryLeftX": 10, "entryRightX": 10, "exitLeftX": 10, "exitRightX": 15 }),
-            ));
-            ok(json!([s.limits(), s.search_limits()]))
-        }
-        "drawdown-options" => {
-            let mut d = ts_base();
-            d["rapidDrawdown"] = json!({ "waterBefore": [[0, 8], [20, 8]] });
-            let mut s = build_slope(&def(d)).unwrap();
-            s.update_analysis_options(&opts(
-                json!({ "slices": 40, "seismicHorizontal": 0.1, "method": "Janbu" }),
-            ))
-            .unwrap();
-            let b = s.drawdown_before().unwrap();
-            let before = json!([
-                b.slice_count(),
-                b.seismic_horizontal(),
-                b.method().as_str(),
-                b.min_failure_distance()
-            ]);
-            let r = unit(s.update_analysis_options(&opts(json!({ "tensionCrackDepth": -1 }))));
-            ok(json!([
-                before,
-                r,
-                state(&s),
-                state(s.drawdown_before().unwrap())
-            ]))
-        }
-        "single-entry-exit" => {
-            let mut s = built();
-            add_single_entry_exit_plane(&mut s, 2.0, 18.0, 4.0).unwrap();
-            add_single_circular_plane(&mut s, 10.0, 25.0, 20.0).unwrap();
-            add_single_circular_plane(&mut s, 100.0, 100.0, 1.0).unwrap();
-            ok(Value::Array(
-                s.individual_planes().iter().map(plane_json).collect(),
-            ))
-        }
-        "generate-planes" => {
-            let s = built();
-            let a: Vec<Value> = generate_planes(&s, [2.0, 10.0], [18.0, 2.0], 5.0)
-                .unwrap()
-                .iter()
-                .map(plane_json)
-                .collect();
-            let b: Vec<Value> = generate_planes(&s, [1.0, 10.0], [19.0, 1.0], 9.0)
-                .unwrap()
-                .iter()
-                .map(plane_json)
-                .collect();
-            ok(json!([a, b]))
-        }
-        "ito-matsui" => ok(Value::Array(
-            [
-                [1.0, 0.5, 0.0],
-                [1.0, 0.5, 0.005],
-                [1.0, 0.5, 10.0],
-                [0.6, 0.6, 30.0],
-                [2.0, 0.3, 45.0],
-            ]
-            .iter()
-            .map(|&[a, b, c]| {
-                json!(cslope_engine::model::reinforcement::ito_matsui_coefficients(a, b, c))
-            })
-            .collect(),
-        )),
-        "mirrored-interslice" => {
-            let mut s = built();
-            s.update_analysis_options(&opts(
-                json!({ "intersliceDataPoints": [[0, 0.2], [0.3, 1], [1, 0.5]] }),
-            ))
-            .unwrap();
-            s.set_mirrored(true);
-            let (cx, cy, r) = s
-                .to_model_circle(&SearchPlane {
-                    cx: 4.0,
-                    cy: 20.0,
-                    radius: 15.0,
-                    ..Default::default()
-                })
-                .unwrap();
-            ok(
-                json!([pts(&s.interslice_data_points()), s.to_model_x(3.0).unwrap(), { "cx": cx, "cy": cy, "radius": r }]),
-            )
-        }
-        "material-boundary" => {
-            let mut s = built();
-            let a = s.set_material_boundary(&[[0.0, 5.0], [15.0, 5.0]]).unwrap();
-            let b = s
-                .set_material_boundary(&[[30.0, 30.0], [31.0, 31.0]])
-                .unwrap();
-            let g: Vec<Value> = s
-                .material_geometries()
-                .iter()
-                .map(|g| json!([g.px, g.py]))
-                .collect();
-            ok(json!([a, b, g, s.split_failure_count()]))
-        }
-        "udls-lls" => {
-            let mut s = built();
-            s.remove_udls();
-            s.remove_line_loads();
-            s.add_fixed_slices(&[1.0, 2.0, 3.0]);
-            ok(json!([
-                s.udls().len(),
-                s.line_loads().len(),
-                s.fixed_slices().unwrap()
-            ]))
-        }
-        other => panic!("unknown scenario {other}"),
-    }
-}
-
-#[test]
-fn setter_scenarios_match_typescript() {
-    #[derive(serde::Deserialize)]
-    struct Case {
-        name: String,
-        out: Value,
-    }
-    let cases: Vec<Case> = common::load("model-core", "scenarios");
-    assert!(cases.len() >= 50);
-    let mut stats = Stats::default();
-    for c in &cases {
-        compare(&scenario(&c.name), &c.out, &c.name, 1e-9, &mut stats);
-    }
-    assert!(stats.errors.is_empty(), "{}", stats.errors.join("\n"));
-}
-
-#[test]
-fn build_slope_errors_match_typescript() {
-    #[derive(serde::Deserialize)]
-    struct Case {
-        name: String,
-        definition: Value,
-        out: Value,
-    }
-    let cases: Vec<Case> = common::load("model-core", "build-errors");
-    for c in &cases {
-        let got = attempt(build_slope(&def(c.definition.clone())), |_| json!("ok"));
-        assert_eq!(got, c.out, "{}", c.name);
-    }
-}
-
 // ── review-fixes.test.ts: interslice data points of a right-to-left model ──
-
-#[test]
-fn interslice_data_points_are_mirrored_only_on_a_mirrored_model() {
-    // the canonical definition of V018 (a right-to-left problem)
-    let mut slope = build_slope(&model_core_support::problem("V018")).unwrap();
-    slope
-        .update_analysis_options(&opts(
-            json!({ "intersliceDataPoints": [[0, 0], [0.25, 1]] }),
-        ))
-        .unwrap();
-    assert_eq!(
-        slope.interslice_data_points(),
-        vec![[0.75, 1.0], [1.0, 0.0]]
-    );
-    slope.set_mirrored(false);
-    assert_eq!(
-        slope.interslice_data_points(),
-        vec![[0.0, 0.0], [0.25, 1.0]]
-    );
-}

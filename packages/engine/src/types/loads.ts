@@ -1,6 +1,9 @@
 /**
  * Load type definitions for slope stability analysis.
+ *
+ * Implemented by the Rust engine (packages/engine-rs) through WebAssembly (see facade/internal.ts).
  */
+import { wasm } from "../facade/internal";
 
 /** Uniformly distributed load (surface pressure) in kPa. */
 export interface UdlParams {
@@ -41,30 +44,6 @@ export interface UdlExcessPorePressure {
 /** Direction of a distributed load (see `UdlParams.direction`). */
 export type UdlDirection = "vertical" | "normal";
 
-export class Udl {
-  readonly magnitude: number;
-  readonly x1: number;
-  readonly x2: number;
-  readonly length: number;
-  readonly color: string;
-  readonly direction: UdlDirection;
-  readonly excessPorePressure: readonly UdlExcessPorePressure[];
-
-  constructor(params: UdlParams) {
-    this.direction = params.direction === "normal" ? "normal" : "vertical";
-    this.magnitude = Math.abs(params.magnitude);
-    this.x1 = Math.min(params.x1, params.x2);
-    this.x2 = Math.max(params.x1, params.x2);
-    this.length = this.x2 - this.x1;
-    this.color = params.color ?? "red";
-    this.excessPorePressure = (params.excessPorePressure ?? [])
-      .filter((e) => Number.isFinite(e.ratio) && e.ratio > 0)
-      // buildSlope rejects a ratio above 1 in a definition; a load made
-      // here directly keeps at most the whole load
-      .map((e) => ({ material: e.material, ratio: Math.min(1, e.ratio) }));
-  }
-}
-
 /** Line load (point load per unit width) in kN/m. */
 export interface LineLoadParams {
   /** Magnitude in kN/m. */
@@ -86,6 +65,29 @@ export interface LineLoadParams {
   color?: string;
 }
 
+/** A distributed load, normalised by the engine (a plain data object). */
+export class Udl {
+  readonly magnitude: number;
+  readonly x1: number;
+  readonly x2: number;
+  readonly length: number;
+  readonly color: string;
+  readonly direction: UdlDirection;
+  readonly excessPorePressure: readonly UdlExcessPorePressure[];
+
+  constructor(params: UdlParams) {
+    const u = wasm().udl_new(params) as Udl;
+    this.magnitude = u.magnitude;
+    this.x1 = u.x1;
+    this.x2 = u.x2;
+    this.length = u.length;
+    this.color = u.color;
+    this.direction = u.direction;
+    this.excessPorePressure = u.excessPorePressure;
+  }
+}
+
+/** A line load, normalised by the engine (a plain data object). */
 export class LineLoad {
   readonly magnitude: number;
   readonly x: number;
@@ -96,10 +98,11 @@ export class LineLoad {
   readonly color: string;
 
   constructor(params: LineLoadParams) {
-    this.magnitude = Math.abs(params.magnitude);
-    this.x = params.x;
-    this.angle = Number.isFinite(params.angle) ? params.angle! : 0;
-    this.y = Number.isFinite(params.y) ? params.y : undefined;
-    this.color = params.color ?? "blue";
+    const l = wasm().line_load_new(params) as LineLoad;
+    this.magnitude = l.magnitude;
+    this.x = l.x;
+    this.angle = l.angle;
+    this.y = l.y;
+    this.color = l.color;
   }
 }

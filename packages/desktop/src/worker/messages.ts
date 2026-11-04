@@ -18,8 +18,17 @@ import type {
 // Re-export SlopeDefinition so existing consumers can still import from here
 export type { SlopeDefinition, SlopeOrientation };
 
+/**
+ * The engine's WebAssembly module, compiled by the main thread
+ * (`engineModule()`): the worker starts the engine from it on its first
+ * request. Optional only for tests that start the engine themselves.
+ */
+interface EngineCarrier {
+  engine?: WebAssembly.Module;
+}
+
 /** Request message sent to the worker. */
-export interface AnalysisRequest {
+export interface AnalysisRequest extends EngineCarrier {
   type: "run-analysis";
   id: string;
   slope: SlopeDefinition;
@@ -29,7 +38,7 @@ export interface AnalysisRequest {
 }
 
 /** Probabilistic analysis of the model (its own sliding direction). */
-export interface ReliabilityRequest {
+export interface ReliabilityRequest extends EngineCarrier {
   type: "run-reliability";
   id: string;
   slope: SlopeDefinition;
@@ -44,7 +53,7 @@ export interface ReliabilityRequest {
  * Makes the worker an evaluator for the analysis worker at the other end
  * of `port` (transferred), until that one detaches.
  */
-export interface EvaluatorRequest {
+export interface EvaluatorRequest extends EngineCarrier {
   type: "serve-evaluator";
   port: MessagePort;
 }

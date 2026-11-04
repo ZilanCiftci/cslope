@@ -6,7 +6,7 @@
   "exports": {
     ".": "./src/index.ts",
     "./verification": "./src/verification/index.ts",
-    "./clarabel.wasm": "./src/fem/clarabel.wasm"
+    "./wasm": "./src/wasm/cslope_wasm_bg.wasm"
   },
   "sideEffects": false,
   "scripts": {
@@ -22,9 +22,5 @@
     "typescript": "^5.9.3",
     "typescript-eslint": "^8.56.1",
     "vitest": "^4.0.18"
-  },
-  "dependencies": {
-    "highs": "1.15.3",
-    "jsts": "^2.12.1"
   }
 }

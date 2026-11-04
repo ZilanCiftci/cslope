@@ -1,7 +1,9 @@
 /**
  * Analysis type definitions for slope stability analysis.
+ *
+ * Implemented by the Rust engine (packages/engine-rs) through WebAssembly (see facade/internal.ts).
  */
-
+import { wasm } from "../facade/internal";
 import type { Material } from "./material";
 import type { Sgi3dResult, Sgi3dSettings } from "./sgi3d";
 import type { SlopeOrientation } from "../model/canonical";
@@ -206,31 +208,6 @@ export interface SwedishFactorBasis {
    * example for traffic loads). The governing document decides.
    */
   variableLoadBase: number;
-}
-
-/**
- * Partial factors in Swedish practice from the safety class and the
- * conversion factors η: design values X_d = η X_k / γM with γM = 1.5 on
- * the undrained shear strength and 1.3 on c′ and tan φ′, and variable loads
- * Q_d = γQ γd Q_k. Permanent loads (the soil's weight) take 1.0. The
- * factors are rounded to three decimals.
- */
-export function swedishPartialFactors(basis: SwedishFactorBasis): PartialFactors {
-  if (basis.safetyClass !== 1 && basis.safetyClass !== 2 && basis.safetyClass !== 3) {
-    throw new Error("Safety class must be 1, 2 or 3");
-  }
-  const gd = SAFETY_CLASS_GAMMA_D[basis.safetyClass];
-  for (const [k, v] of [["etaCu", basis.etaCu], ["etaDrained", basis.etaDrained], ["variableLoadBase", basis.variableLoadBase]] as const) {
-    if (!(Number.isFinite(v) && v > 0)) throw new Error(`${k} must be a positive number`);
-  }
-  const r3 = (v: number) => Math.round(v * 1000) / 1000;
-  return {
-    cu: r3(1.5 / basis.etaCu),
-    cohesion: r3(1.3 / basis.etaDrained),
-    tanPhi: r3(1.3 / basis.etaDrained),
-    variableLoad: r3(basis.variableLoadBase * gd),
-    basis: { ...basis },
-  };
 }
 
 /** EN 1997-1 Annex A, material set M2 with γQ = 1.3 (Design Approach 3). */
@@ -585,4 +562,15 @@ export interface AnalysisResult {
   sgi3dError?: string;
   /** Why the finite element analysis failed, when it was enabled and did not complete. */
   femError?: string;
+}
+
+/**
+ * Partial factors in Swedish practice from the safety class and the
+ * conversion factors η: design values X_d = η X_k / γM with γM = 1.5 on
+ * the undrained shear strength and 1.3 on c′ and tan φ′, and variable loads
+ * Q_d = γQ γd Q_k. Permanent loads (the soil's weight) take 1.0. The
+ * factors are rounded to three decimals.
+ */
+export function swedishPartialFactors(basis: SwedishFactorBasis): PartialFactors {
+  return wasm().swedish_partial_factors(basis);
 }

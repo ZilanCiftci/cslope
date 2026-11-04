@@ -20,7 +20,7 @@ import { existsSync, readdirSync } from "node:fs";
 import { execSync } from "node:child_process";
 import { join, resolve } from "node:path";
 import { tmpdir } from "node:os";
-import { buildSlope, analyseSlope } from "@cslope/engine";
+import { buildSlope, analyseSlope, initEngine } from "@cslope/engine";
 import { buildSlopeDTOFromModel } from "../../src/store/helpers";
 import { parseProjectFile, serializeProject } from "../../src/store/persistence";
 import { modelToStix } from "../../src/features/project/stix/stix-write";
@@ -179,6 +179,7 @@ async function undo(page: Page) {
 
 async function main() {
   console.log(`\n  Design capture → ${OUT}\n`);
+  await initEngine();
   if (!process.env.DESIGN_CAPTURE_SKIP_BUILD) {
     console.log("  Building the renderer (VITE_CAPTURE_MODE=1)…");
     buildApp();

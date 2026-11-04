@@ -1,5 +1,5 @@
 //! The engine's error type: the kind and message of the TypeScript error it
-//! ports (`Error`, `RangeError`) plus cancellation.
+//! ports (`Error`, `RangeError`, `TypeError`) plus cancellation.
 
 use std::fmt;
 
@@ -10,6 +10,9 @@ pub enum ErrorKind {
     /// TypeScript `RangeError` (`Material`, `getYAtXStrict`, …); tests check
     /// the kind.
     Range,
+    /// TypeScript `TypeError`: JavaScript's own error on a value of the
+    /// wrong type (reading a field of `null`), where the port reproduces it.
+    Type,
     /// The analysis was cancelled through a `CancelToken`.
     Cancelled,
 }
@@ -33,6 +36,14 @@ impl EngineError {
     pub fn range(message: impl Into<String>) -> Self {
         EngineError {
             kind: ErrorKind::Range,
+            message: message.into(),
+        }
+    }
+
+    /// `throw new TypeError(message)`.
+    pub fn type_error(message: impl Into<String>) -> Self {
+        EngineError {
+            kind: ErrorKind::Type,
             message: message.into(),
         }
     }

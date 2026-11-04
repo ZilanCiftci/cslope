@@ -81,11 +81,8 @@ fn get_search_grid_spec(slope: &Slope) -> SearchGridSpec {
 /// Returns None when the circle has no such entry/exit pair.
 pub fn select_entry_exit(slope: &Slope, cx: f64, cy: f64, radius: f64) -> Result<Option<(Pt, Pt)>> {
     let tol = 1e-9 * js::math::max(1.0, radius);
-    let crossings: Vec<Pt> = slope
-        .get_circle_external_intersection(cx, cy, radius)?
-        .into_iter()
-        .filter(|p| p[1] <= cy + tol)
-        .collect();
+    let mut crossings = slope.get_circle_external_intersection(cx, cy, radius)?;
+    crossings.retain(|p| p[1] <= cy + tol);
     if crossings.len() < 2 {
         return Ok(None);
     }
@@ -182,18 +179,34 @@ pub fn is_plane_within_external_boundary(
     !circle_leaves_model(slope, plane.cx, plane.cy, plane.radius, x0, x1)
 }
 
+/// The search limits and the minimum failure distance, read once per
+/// generation (`slope.searchLimits` is computed on each read).
+struct SearchWindow {
+    limits: [f64; 4],
+    min_failure_distance: f64,
+}
+
+impl SearchWindow {
+    fn of(slope: &Slope) -> Self {
+        SearchWindow {
+            limits: slope.search_limits(),
+            min_failure_distance: slope.min_failure_distance(),
+        }
+    }
+}
+
 /// True when a plane's actual entry/exit points lie within the search
 /// limits and it is longer (horizontally) than the minimum failure
 /// distance. Circles generated through grid points can intersect the
 /// ground elsewhere, so this must be checked on the plane itself.
-fn is_plane_within_search_limits(slope: &Slope, plane: &SearchPlane) -> bool {
-    let [entry_left_x, entry_right_x, exit_left_x, exit_right_x] = slope.search_limits();
+fn is_plane_within_search_limits(window: &SearchWindow, plane: &SearchPlane) -> bool {
+    let [entry_left_x, entry_right_x, exit_left_x, exit_right_x] = window.limits;
     let tol = 1e-9;
     plane.lc[0] >= entry_left_x - tol
         && plane.lc[0] <= entry_right_x + tol
         && plane.rc[0] >= exit_left_x - tol
         && plane.rc[0] <= exit_right_x + tol
-        && plane.rc[0] - plane.lc[0] > js::math::max(slope.min_failure_distance(), 0.0)
+        && plane.rc[0] - plane.lc[0] > js::math::max(window.min_failure_distance, 0.0)
 }
 
 // ── Material interfaces and tangent circles ───────────────────────
@@ -709,6 +722,7 @@ pub fn generate_refined_planes(
         return Ok(Vec::new());
     }
 
+    let window = SearchWindow::of(slope);
     let existing_keys: HashSet<String> = valid_ranked.iter().map(|p| plane_key(p)).collect();
     let mut generated: Vec<SearchPlane> = Vec::new();
     let mut generated_keys: HashSet<String> = HashSet::new();
@@ -718,7 +732,7 @@ pub fn generate_refined_planes(
         for plane in planes {
             // addPlane
             if !(generated.len() as f64 >= refined_iterations)
-                && is_plane_within_search_limits(slope, &plane)
+                && is_plane_within_search_limits(&window, &plane)
             {
                 let key = plane_key(&plane);
                 if !existing_keys.contains(&key) && !generated_keys.contains(&key) {
@@ -897,7 +911,8 @@ pub fn generate_local_planes(
     let mut generated: Vec<SearchPlane> = Vec::new();
 
     let grid = get_search_grid_spec(slope);
-    let [entry_left_x, entry_right_x, exit_left_x, exit_right_x] = slope.search_limits();
+    let window = SearchWindow::of(slope);
+    let [entry_left_x, entry_right_x, exit_left_x, exit_right_x] = window.limits;
     let scale = js::math::pow(0.5, level + 1.0);
     let entry_step = if grid.num_points_top > 1.0 {
         ((entry_right_x - entry_left_x).abs() / (grid.num_points_top - 1.0)) * scale
@@ -916,6 +931,7 @@ pub fn generate_local_planes(
     #[allow(clippy::too_many_arguments)]
     fn add(
         slope: &Slope,
+        window: &SearchWindow,
         interfaces: &[MaterialInterface],
         lc: Pt,
         rc: Pt,
@@ -941,7 +957,7 @@ pub fn generate_local_planes(
         if !is_plane_within_external_boundary(slope, &plane, false) {
             return Ok(false);
         }
-        if !is_plane_within_search_limits(slope, &plane) {
+        if !is_plane_within_search_limits(window, &plane) {
             return Ok(false);
         }
         let key = plane_key(&plane);
@@ -990,6 +1006,7 @@ pub fn generate_local_planes(
                     }
                     if add(
                         slope,
+                        &window,
                         interfaces,
                         lc,
                         rc,
@@ -1015,6 +1032,7 @@ pub fn generate_local_planes(
                         {
                             if add(
                                 slope,
+                                &window,
                                 interfaces,
                                 lc,
                                 rc,
@@ -1057,7 +1075,8 @@ pub fn entry_exit_planes(slope: &Slope) -> Result<Vec<SearchPlane>> {
         num_points_bot,
     } = get_search_grid_spec(slope);
 
-    let [entry_left_x, entry_right_x, exit_left_x, exit_right_x] = slope.search_limits();
+    let window = SearchWindow::of(slope);
+    let [entry_left_x, entry_right_x, exit_left_x, exit_right_x] = window.limits;
 
     // Generate entry (left) coordinates
     let mut left_coords: Vec<Pt> = Vec::new();
@@ -1106,7 +1125,7 @@ pub fn entry_exit_planes(slope: &Slope) -> Result<Vec<SearchPlane>> {
     // Filter valid planes
     Ok(all_planes
         .into_iter()
-        .filter(|p| is_plane_within_search_limits(slope, p))
+        .filter(|p| is_plane_within_search_limits(&window, p))
         .collect())
 }
 

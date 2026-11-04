@@ -1,6 +1,10 @@
 # cSlope engine in Rust: architecture
 
-Status: design, 2026-11-03, accepted by the integrator with these notes:
+Status: implemented; the cutover (Phases 6 and 8) was made on 2026-11-04:
+the app, the tests, the website and the report run on the Rust engine as
+WebAssembly, and the TypeScript implementation is removed (§9, "After the
+cutover"; PORTING.md, "Cutover"). Python (Phase 7) is still to come. The
+design, as accepted on 2026-11-03 by the integrator with these notes:
 - All ten recommendations in §10.2 are adopted.
 - §9 Phase 6 shadow mode: there is no multi-week beta wait. The gate for switching the app is the parity job, the facade test suites (100 % green, unedited), the desktop suites and all verification checks. A shadow-mode setting that runs both engines and logs differences ships for the beta testers and can stay on until the TypeScript engine is deleted.
 - **Superseded by the user (2026-11-03): no port of V8's fdlibm and no bit identity.** Rust's std transcendental functions are used. Read §0.1, §5 and the bit-identity goals in §5.1, §5.4, §6.4 and §9 with PORTING.md's tolerance policy instead: F within 1e-6 per surface and per search (near-tie branches up to 1e-4 only if explained and allowlisted), verification checks with their tolerances; the golden file after deletion records F to 1e-6. js::math keeps only the JS rules that change logic (round, max/min, `**` edge cases); fixtures are still generated under Node.
@@ -314,7 +318,7 @@ TS throws `RangeError` in `Material` (two places), `getYAtXStrict`, `getLineBetw
 | Handles or JSON round trips | **Handles** for `Slope` and `FemAnalysisResult`. Stateless calls (`runAnalysis`, `toCanonicalSlopeDefinition`, …) take and return values | The test suite and the desktop use a stateful `Slope`; rebuilding per call would be wrong (mutations) and slow |
 | Handle mechanism | **u32 slab registry in wasm** (`thread_local! RefCell<Slab<Entry>>`, entries with a generation) plus JS `FinalizationRegistry` and an explicit `free()` / `[Symbol.dispose]` | One mechanism serves the product API, the testing dispatcher (handles inside JSON args) and child-slope views. wasm-bindgen exported classes cannot be passed inside serde values |
 | Typed arrays | FE: `Vec<f64>` / `Vec<i32>` getters on the FE result handle, which arrive as `Float64Array` / `Int32Array` copies. Metadata goes through serde | `FemAnalysisResult.mesh`, `displacement`, `plasticShearStrain` and `shearStrainIncrement` are typed arrays in TS. The app's `FemResultSummary` stays plain arrays, as today |
-| Clarabel | Linked into the engine wasm | `loadClarabel()` and `runFemSummaryWithBounds(..., solvers)` stay in the facade as no-ops that resolve, for API compatibility. `clarabel.wasm`, its crate and the `?base64` import go away. HiGHS is not ported: `loadHighs` throws "HiGHS is no longer available; the bounds use Clarabel." |
+| Clarabel | Linked into the engine wasm | `loadClarabel()` and `runFemSummaryWithBounds(..., solvers)` stay in the facade as no-ops that resolve, for API compatibility. `clarabel.wasm`, its crate and the `?base64` import go away. HiGHS is not ported: `boundSolver: "highs"` is solved by Clarabel, and `loadHighs` resolves too (to a stand-in whose `solve` throws; PORTING.md, FE facade) |
 
 ### 3.2 Initialisation (sync API after one async start)
 
@@ -459,6 +463,11 @@ s.fem(options) -> FemResult                      # .factor_of_safety, .mesh (x, 
   - A handwritten `__init__.pyi` holds `TypedDict`s for the main shapes.
   - The verification problems are **not** shipped: they cite other programs, and the check-names policy applies.
   - A `cslope.examples` module carries a few clean demo models.
+- **As built** (Phase 7): PORTING.md, "Python binding". Differences from
+  this sketch: numpy arrays come from `numpy.asarray` in Python (no pyo3
+  `numpy` feature); a `cancel=CancelToken()` argument as well; the wheels'
+  smoke test compares the demo models within 1e-6 rather than V001 bit for
+  bit; `Slope.slices` and `Slope.analyse_circle` are not built.
 
 ---
 
@@ -697,6 +706,24 @@ Deleted in Phase 8:
 - `experiments/rust-engine` (the spike branch).
 
 After deletion, constants come from Rust: `cargo run -p xtask -- gen-ts` writes `src/types/constants.gen.ts`, and CI checks it is fresh. `MATERIAL_MODEL_LABELS` and other UI strings stay TS.
+
+### After the cutover (2026-11-04)
+
+Done as above, with these differences: the shims were merged into the modules they replaced (`src/<path>.ts` keeps the types, data and docs and calls the engine; no `wasm-api` directory); the TypeScript data constants stay hand-written TypeScript, checked equal to the engine's by `src/facade/facade.test.ts` and `fem.test.ts` (no generated `constants.gen.ts`); the fixtures were not frozen as such: the TypeScript-against-Rust differential tests were removed (decided by the user), and `golden/verification.json` holds the verification results of the shipped engine (F to 1e-6, the critical surface's key, the counts of surfaces), compared natively in CI; the parity job and Python wait for Phase 7.
+
+What TypeScript remains in `packages/engine/src`, and why none of it is engine computation:
+
+| Files | What | Why TypeScript |
+|---|---|---|
+| `engine.ts` | Starts the WebAssembly engine (async, sync, from a compiled module), restarts it after a trap | The boundary itself |
+| `index.ts`, `*/index.ts` | Barrels | API |
+| `types/*.ts` | Type declarations, data constants (defaults, ranges, partial factor presets, `MATERIAL_MODEL_LABELS`) and wrappers (`Material`, `Udl`, `LineLoad`, strength, validation) | Types and UI data the app reads at module load; the computation is the engine's |
+| `math/*.ts`, `model/*.ts` (but those below), `fem/*.ts`, `api/run-analysis.ts` | One wrapper per engine function; `model/slope.ts` is the `Slope` class over an engine handle (snapshot cache, material identity, setters) | Thin API: each call goes to `wasm()` or, for the tests' internal functions, `testCall` |
+| `model/steps.ts`, `api/run-analysis.ts` (`runAnalysisAsync`) | Drivers of the engine's step machines: hand each batch of surfaces to an evaluator (in the same thread or on a pool) and back | Control flow between workers; every surface is generated and evaluated by the engine |
+| `parallel/*.ts` | The evaluator pool and its message protocol (chunks of surfaces to workers, results back in order) | Worker orchestration, no computation |
+| `facade/*.ts` | Conversion at the boundary: slices and planes in bulk (`slice-codec.ts`), handles, material identity, write-back of changed slices | The boundary itself |
+| `verification/*.ts` | The verification problems (data), the tolerance policy (`agrees`, `referenceTolerance`), presentation (labels, formatting), thin runners (`runVerification`, `runFemVerification`, `runReliabilityCase`) over the engine; `layered()` builds problem definitions for tests | Data and the comparison with published values, not analysis |
+| `model/property-helpers.ts`, `model/verification-shard.ts`, `parallel/test-pool.ts` | Test support: seeded random models, test sharding, an in-process pool | Tests only, not exported |
 
 ---
 

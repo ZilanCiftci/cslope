@@ -12,7 +12,7 @@ const slopeDef = (water = false) => ({
 }) as unknown as SlopeDefinition;
 
 describe("boundGapIndicator", () => {
-  for (const [water, solver] of [[false, "highs"], [true, "highs"], [false, "clarabel"], [true, "clarabel"]] as const) {
+  for (const [water, solver] of [[false, "clarabel"], [true, "clarabel"]] as const) {
     it(`splits the bound gap into element contributions that sum to it${water ? " (with a water table)" : ""}, by ${solver}`, async () => {
       const slope = buildSlope(toCanonicalSlopeDefinition(slopeDef(water)));
       const solve = await boundSolver({ boundSolver: solver });

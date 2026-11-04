@@ -21,7 +21,12 @@ pub struct SlopeMaterialDefinition {
     pub name: String,
     /// The material: unit weight and strength. The only source of them; see
     /// `material_model_of` for definitions written before models existed.
-    #[serde(default, skip_serializing_if = "Option::is_none")]
+    /// (`if (m.model)`: a value that is not truthy, `null` included, is none.)
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        deserialize_with = "truthy_model"
+    )]
     pub model: Option<MaterialModel>,
     /// Deprecated: older definitions without `model` gave a Mohr-Coulomb
     /// material in these flat fields. Read only when `model` is absent.
@@ -73,8 +78,24 @@ pub struct SlopeMaterialDefinition {
     pub color: Option<String>,
     /// Id of an entry in `water_tables` that governs pore pressure in this
     /// material. When absent (or unknown) the default `water_table` is used.
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub water_table_id: Option<String>,
+    /// `Some(None)` is `null`: TypeScript assigns it (`waterTableId !==
+    /// undefined`), so the material counts as having its own water table
+    /// while it uses the default one.
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        deserialize_with = "crate::types::json::nullable"
+    )]
+    pub water_table_id: Option<Option<String>>,
+}
+
+/// `deserialize_with` for `SlopeMaterialDefinition.model`: TypeScript's
+/// `materialModelOf` takes it when it is truthy.
+fn truthy_model<'de, D: serde::Deserializer<'de>>(
+    d: D,
+) -> std::result::Result<Option<MaterialModel>, D::Error> {
+    let v = crate::types::json::JsJson::deserialize(d)?.0;
+    Ok(crate::types::json::js_truthy(Some(&v)).then(|| MaterialModel::from_json(v)))
 }
 
 impl SlopeMaterialDefinition {
@@ -140,31 +161,75 @@ pub fn with_material_model(m: &SlopeMaterialDefinition) -> Result<SlopeMaterialD
     })
 }
 
-/// Water table mode (`SlopeDefinition.waterTable.mode`).
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+/// Water table mode (`SlopeDefinition.waterTable.mode`). Another value
+/// (`null` and a missing mode included: `Missing`) is kept, and the water
+/// table is then left out, as `buildSlope` leaves it.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
 pub enum WaterTableMode {
     Height,
     Depth,
     Custom,
+    #[serde(untagged)]
+    Other(serde_json::Value),
+}
+
+impl WaterTableMode {
+    /// A mode that is not given.
+    fn missing() -> Self {
+        WaterTableMode::Other(serde_json::Value::Null)
+    }
+
+    fn is_missing(&self) -> bool {
+        *self == WaterTableMode::Other(serde_json::Value::Null)
+    }
 }
 
 /// `SlopeDefinition.waterTable.value`: a level (height or depth) or the
-/// points of a custom line.
+/// points of a custom line. Another value (`null`, a string, a list that is
+/// not of points, a missing value) is kept, and the water table is then
+/// left out, as `buildSlope` leaves it where the value does not fit the
+/// mode.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(untagged)]
 pub enum WaterTableValue {
     Level(f64),
     Points(Vec<[f64; 2]>),
+    Other(serde_json::Value),
+}
+
+impl WaterTableValue {
+    /// A value that is not given.
+    fn missing() -> Self {
+        WaterTableValue::Other(serde_json::Value::Null)
+    }
+
+    fn is_missing(&self) -> bool {
+        *self == WaterTableValue::Other(serde_json::Value::Null)
+    }
 }
 
 /// Water table definition.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct WaterTableDefinition {
+    #[serde(
+        default = "WaterTableMode::missing",
+        skip_serializing_if = "WaterTableMode::is_missing"
+    )]
     pub mode: WaterTableMode,
+    #[serde(
+        default = "WaterTableValue::missing",
+        skip_serializing_if = "WaterTableValue::is_missing"
+    )]
     pub value: WaterTableValue,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
+    /// `setWaterTable`'s `followBoundary ?? true`: `null` is the default
+    /// (true), another value its truthiness.
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        deserialize_with = "crate::types::json::nullish_truthy"
+    )]
     pub follow_boundary: Option<bool>,
 }
 
@@ -175,7 +240,14 @@ pub struct WaterTableDefinition {
 pub struct WaterTableEntry {
     pub id: String,
     pub coordinates: Vec<[f64; 2]>,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
+    /// `setWaterTableById`'s default parameter `followBoundary = true`
+    /// applies only when it is absent: `null` is false (no clipping), another
+    /// value its truthiness.
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        deserialize_with = "crate::types::json::truthy"
+    )]
     pub follow_boundary: Option<bool>,
 }
 
@@ -278,7 +350,9 @@ pub struct SlopeDefinition {
     pub orientation: Option<SlopeOrientation>,
     /// Boundary coordinates [[x,y], ...].
     pub coordinates: Vec<[f64; 2]>,
-    /// Material assignments.
+    /// Material assignments. Absent reads as none, which `build_slope`
+    /// rejects with TypeScript's message (TypeScript's `!def.materials`).
+    #[serde(default)]
     pub materials: Vec<SlopeMaterialDefinition>,
     /// Water table definition (optional).
     #[serde(default, skip_serializing_if = "Option::is_none")]

@@ -108,7 +108,7 @@ export function Download() {
       <Section>
         <SectionHeading
           title="Build from source"
-          lead="The source code is on GitHub. With Bun installed, clone the repository, run bun install and bun run dev to start the application."
+          lead="The source code is on GitHub. With Bun installed, clone the repository, run bun install and bun run dev to start the application. The analysis engine is written in Rust and comes built as WebAssembly; changing it needs the Rust toolchain (packages/engine-rs)."
         />
         <Button asChild variant="outline" className="mt-6">
           <a href={SITE.github} target="_blank" rel="noopener noreferrer">

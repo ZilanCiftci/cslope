@@ -9,3 +9,8 @@ description = "Slope stability engine (limit equilibrium and finite elements)"
 serde.workspace = true
 serde_json.workspace = true
 clarabel = { version = "=0.11.1", default-features = false, features = ["serde"] }
+rayon = { version = "1", optional = true }
+
+[features]
+# Evaluates the trial surfaces of a search over a thread pool (api/ctx.rs).
+rayon = ["dep:rayon"]

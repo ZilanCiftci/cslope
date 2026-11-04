@@ -7,17 +7,42 @@ on:
 permissions:
   contents: read
 
-# Pushes to working branches run a quick suite: the engine and desktop
-# tests without the verification problems and the slowest finite element
-# and search tests (CSLOPE_QUICK_TESTS, see the vitest configs), and the
-# desktop app on Linux. Pushes to main and pull requests run everything,
-# the desktop app on Windows, where it ships.
+# Kept lean (the engine port to Rust is done and verified):
+# - The engine jobs (rust, engine) run only when the engine changed
+#   (packages/engine-rs, packages/engine); the app's own changes do not
+#   rebuild or retest the engine. The weekly verification-full workflow
+#   runs everything on a schedule.
+# - The engine's verification checks run once, in Rust, against the golden
+#   results (golden/verification.json); the TypeScript test suite runs its
+#   quick set (the API over the engine), not the verification problems again.
+# - No coverage runs (it measured thin wrappers and slowed the jobs).
+# - Pushes to working branches test the desktop app on Linux; main and pull
+#   requests on Windows, where it ships. The desktop leaves out the full
+#   engine searches on working branches (CSLOPE_QUICK_TESTS).
 env:
   CSLOPE_QUICK_TESTS: ${{ (github.event_name == 'push' && github.ref != 'refs/heads/main') && '1' || '' }}
 
-# The jobs run in parallel. The engine is platform-independent
-# TypeScript and runs on the faster Linux runner.
 jobs:
+  # Which parts changed: the engine jobs are skipped when the engine did not.
+  changes:
+    runs-on: ubuntu-latest
+    outputs:
+      engine: ${{ steps.filter.outputs.engine }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+      - name: Filter
+        id: filter
+        uses: dorny/paths-filter@v3
+        with:
+          filters: |
+            engine:
+              - 'packages/engine-rs/**'
+              - 'packages/engine/**'
+              - 'rust-toolchain.toml'
+              - 'bun.lock'
+              - '.github/workflows/ci.yml'
+
   check:
     runs-on: ubuntu-latest
     steps:
@@ -29,6 +54,10 @@ jobs:
           bun-version-file: package.json
       - name: Install
         run: bun install --frozen-lockfile
+      # The committed WebAssembly engine was built from the Rust sources as
+      # they are (BUILD-INFO.json; no Rust needed).
+      - name: Engine build is fresh
+        run: bun packages/engine-rs/tools/check-wasm-fresh.ts
       - name: Typecheck
         run: bun run typecheck
       - name: Lint
@@ -42,11 +71,14 @@ jobs:
       - name: Build website
         run: bun run --filter @cslope/website build
 
-  # Coverage runs on pull requests and on main only, as a report in the
-  # job log (no thresholds: a drop is seen, not a failure). Other pushes
-  # run the same tests without coverage, which is faster.
+  # The engine's TypeScript API over the testing build of the WebAssembly
+  # engine (internal functions the tests call): the quick set.
   engine:
+    needs: changes
+    if: needs.changes.outputs.engine == 'true'
     runs-on: ubuntu-latest
+    env:
+      CSLOPE_QUICK_TESTS: "1"
     steps:
       - name: Checkout
         uses: actions/checkout@v6
@@ -56,11 +88,20 @@ jobs:
           bun-version-file: package.json
       - name: Install
         run: bun install --frozen-lockfile
-      - name: Test with coverage
-        if: github.event_name == 'pull_request' || github.ref == 'refs/heads/main'
-        run: bun run --filter @cslope/engine test:coverage
+      - name: Setup Rust
+        working-directory: packages/engine-rs
+        run: rustup toolchain install
+      - name: Cache Rust
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: packages/engine-rs
+      - name: Install wasm-bindgen
+        uses: taiki-e/install-action@v2
+        with:
+          tool: wasm-bindgen-cli@0.2.130
+      - name: Build the testing engine
+        run: bun packages/engine-rs/tools/build-wasm.ts testing
       - name: Test
-        if: github.event_name != 'pull_request' && github.ref != 'refs/heads/main'
         run: bun run --filter @cslope/engine test
 
   desktop:
@@ -74,21 +115,15 @@ jobs:
           bun-version-file: package.json
       - name: Install
         run: bun install --frozen-lockfile
-      - name: Test with coverage
-        if: github.event_name == 'pull_request' || github.ref == 'refs/heads/main'
-        run: bun run --filter @cslope/desktop test:coverage
       - name: Test
-        if: github.event_name != 'pull_request' && github.ref != 'refs/heads/main'
         run: bun run --filter @cslope/desktop test
 
-  # The Rust engine (packages/engine-rs, ARCHITECTURE.md §8.4): format, lints
-  # and tests, the WebAssembly builds, and the engine's unit tests run
-  # unchanged against the Rust engine through the facade
-  # (vitest.rust.config.ts, test-manifest.json). A job of its own: the jobs
-  # above need no Rust, and the app and the default engine tests do not use
-  # the Rust engine yet. On working branches the facade run is the quick one
-  # (only the test files whose engine modules are all ported).
+  # The Rust engine (packages/engine-rs): format, lints, tests including the
+  # verification checks against the golden results, and the WebAssembly build
+  # (its generated glue must match the committed one; size budget).
   rust:
+    needs: changes
+    if: needs.changes.outputs.engine == 'true'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -120,18 +155,17 @@ jobs:
         run: |
           cargo clippy --all-targets --all-features -- -D warnings
           cargo clippy -p cslope-wasm --target wasm32-unknown-unknown --all-features -- -D warnings
-      # Not committed: exported from the TypeScript engine under Node (V8)
-      - name: Fixtures
-        working-directory: packages/engine
-        run: bunx vitest run --config vitest.fixtures.config.ts
+      # Unit tests, and the verification checks with the golden results
+      # (golden/verification.json, tests/verification_native.rs)
       - name: Test
         working-directory: packages/engine-rs
-        run: cargo test --all-features
+        run: cargo test --release --all-features
       - name: Build WebAssembly
-        run: bun packages/engine-rs/tools/build-wasm.ts
-      # The facade is typechecked against the committed product glue
-      - name: Committed glue is current
-        run: git diff --exit-code -- packages/engine/src/wasm
-      - name: Engine tests on the Rust engine
-        working-directory: packages/engine
-        run: bunx vitest run --config vitest.rust.config.ts
+        run: bun packages/engine-rs/tools/build-wasm.ts product
+      # The wasm bytes may differ by a few bytes between machines (symbol
+      # hashes), so only the generated glue is compared.
+      - name: Committed glue matches the build
+        run: git diff --exit-code -- packages/engine/src/wasm/cslope_wasm.js packages/engine/src/wasm/cslope_wasm.d.ts packages/engine/src/wasm/cslope_wasm_bg.wasm.d.ts
+      # The size budget of the product build (ARCHITECTURE.md §3.5)
+      - name: Size budget
+        run: test "$(stat -c %s packages/engine/src/wasm/cslope_wasm_bg.wasm)" -le 4194304

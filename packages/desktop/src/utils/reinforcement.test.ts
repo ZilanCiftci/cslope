@@ -93,7 +93,12 @@ describe("reinforcement forces in model space", () => {
       coordinates: [[0, 0], [0, 5], [10, 10], [20, 10], [20, 0]],
       materials: [],
     };
+    // (a complete result: the engine reads it as an AnalysisResult)
     const result = {
+      minFOS: 1.2,
+      maxFOS: 1.2,
+      method: "Bishop",
+      elapsedMs: 0,
       criticalSurface: {
         cx: 5, cy: 20, radius: 15, fos: 1.2, entryPoint: [2, 6], exitPoint: [15, 10],
         reinforcementForces: [{ index: 0, x: 4, y: 3, fx: -10, fy: 2, force: 10.2, passive: false }],

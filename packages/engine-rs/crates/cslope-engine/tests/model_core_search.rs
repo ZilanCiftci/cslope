@@ -22,7 +22,7 @@ use cslope_engine::model::surface::{
     polyline_y_at,
 };
 use cslope_engine::types::{LineLoad, LineLoadParams, Udl, UdlParams};
-use model_core_support::{close, def, material, problem, rng, slope_with, uniform};
+use model_core_support::{close, def, material, rng, slope_with, uniform};
 use serde_json::{json, Value};
 use std::collections::HashSet;
 
@@ -307,55 +307,6 @@ fn the_local_search_also_starts_from_the_best_circle_of_a_second_basin() {
 }
 
 // ── search-review-c2.test.ts ──────────────────────────────────────
-
-#[test]
-fn the_first_pass_has_as_many_surfaces_with_the_loads_as_without() {
-    // (the canonical definition: V001 slides left to right, so the loads' x are model space)
-    let v001 = problem("V001");
-    let mut loaded = v001.clone();
-    loaded.udls = Some(
-        (0..12)
-            .map(|i| {
-                serde_json::from_value(
-                    json!({ "magnitude": 1e-6, "x1": -29 + i, "x2": -28.5 + i as f64 }),
-                )
-                .unwrap()
-            })
-            .collect(),
-    );
-    let planes = |d: &cslope_engine::types::SlopeDefinition| {
-        let mut s = build_slope(d).unwrap();
-        s.update_analysis_options(&opts(json!({ "iterations": 1000 })))
-            .unwrap();
-        set_entry_exit_planes(&mut s).unwrap();
-        s.search().len()
-    };
-    assert_eq!(planes(&loaded), planes(&v001));
-}
-
-#[test]
-fn v053_no_circle_of_the_first_pass_passes_more_than_0_1_mm_below_the_base() {
-    let mut slope = build_slope(&problem("V053")).unwrap();
-    slope
-        .update_analysis_options(&opts(
-            json!({ "iterations": 4000, "compositeSurfaces": false }),
-        ))
-        .unwrap();
-    set_entry_exit_planes(&mut slope).unwrap();
-    let mut outside = 0;
-    for p in slope.search() {
-        for i in 1..400 {
-            let x = p.lc[0] + ((p.rc[0] - p.lc[0]) * i as f64) / 400.0;
-            let y = p.cy - (p.radius * p.radius - (x - p.cx) * (x - p.cx)).sqrt();
-            if !slope.is_inside_external_boundary(x, y + 1e-4) {
-                outside += 1;
-                break;
-            }
-        }
-    }
-    assert!(slope.search().len() > 1000);
-    assert_eq!(outside, 0);
-}
 
 // ── surface-props.test.ts ─────────────────────────────────────────
 

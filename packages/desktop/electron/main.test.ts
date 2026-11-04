@@ -387,8 +387,8 @@ describe("startup", () => {
     const headers = callback.mock.calls[0][0].responseHeaders;
     expect(headers["X-Other"]).toEqual(["1"]);
     const csp = headers["Content-Security-Policy"][0] as string;
-    expect(csp).toContain("script-src 'self';");
-    expect(csp).not.toContain("unsafe-eval");
+    expect(csp).toContain("script-src 'self' 'wasm-unsafe-eval';");
+    expect(csp).not.toContain("'unsafe-eval'");
   });
 
   it("allows the Vite HMR socket and eval only in development", async () => {

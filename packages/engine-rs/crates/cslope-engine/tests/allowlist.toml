@@ -1,0 +1,94 @@
+# Whole searches that take another branch on a near-tie (PORTING.md,
+# tolerance policy): the native minimum factor of safety may then differ
+# from the golden one (golden/verification.json, the engine the app ships:
+# WebAssembly) by more than 1e-6, at most by `max_rel` (never above 1e-4),
+# and the critical surface and the counts of surfaces may differ. Read by
+# tests/verification_native.rs (`searches_match_golden`); an entry that is
+# no longer needed fails the test. `key` is the analysis key of
+# tools/golden.ts: problem|method|the check's own options.
+#
+# Native Rust and WebAssembly run the same code; what differs is the libm of
+# sin, cos, atan and the like (glibc natively, Rust's own in WebAssembly),
+# in the last bits. Until the cutover the reference was the TypeScript
+# engine (V8's libm), and the causes below were found against it; the
+# searches that met a near-tie against V8 only (V047b, V063, V086b, V009c,
+# cause A or C) agree natively with WebAssembly and left the list.
+#
+# In every entry the surfaces are evaluated identically (checked against
+# TypeScript before the cutover: its surface evaluated in Rust gave its
+# factor bit for bit). What differs is a
+# surface the search GENERATES, from a circle whose geometry comes through
+# sin, cos, atan and sqrt and so differs from V8's in the last bits (std's
+# libm, accepted by the policy), at a point where the search or the model
+# is discontinuous. Three causes were found:
+#
+# (A) A seed of the local search enters exactly at the entry limit. The
+#     local search moves its ends by ±step and keeps an end only if
+#     `ex >= entryLeftX` (search.ts generateLocalPlanes; no tolerance). The
+#     seed's entry x is the circle's crossing with the ground: 2 ulps below
+#     the limit in V8 and 2 above in Rust (or the reverse), so one engine
+#     drops every candidate with that entry and spends the budget elsewhere.
+# (B) Two distinct first-pass surfaces have factors within ~4e-13 of each
+#     other; the libm difference swaps their order, and with it the best
+#     surface of a basin, which seeds the refinement (search.ts chooseSeeds).
+#     With c′ = 0 on a planar face this is no accident: similar circles have
+#     the same factor in exact arithmetic (F does not depend on the size;
+#     V036a). Confirmed for V036a by giving the two surfaces in TypeScript
+#     the factors Rust found: TypeScript's search then ends where Rust's
+#     does.
+# (C) A first-pass circle is generated in one engine only (the model core's
+#     tangent-circle near-tie, accepted in PORTING.md "Plane-list
+#     near-ties"); it is the best of its basin, so it also seeds the
+#     refinement, and the search continues from a different set of
+#     surfaces. Confirmed by adding Rust's circle to TypeScript's first
+#     pass: TypeScript then has Rust's counts.
+
+[[search]]
+key = "V039|Morgenstern-Price|{\"compositeBase\":true,\"intersliceFunction\":\"constant\"}"
+max_rel = 1e-5
+reason = "(B) basin 3: circles 124.2766|29.206|8.0416 and 130.1162|26.1692|6.8928 have factors within 1e-12 (1.89503763086…) and swap order with the libm, so the refinement seeds differ. Native 1.16585 differs from WebAssembly (and TypeScript, 1.1658575292990208) by about 8e-6; WebAssembly agrees with TypeScript."
+
+[[search]]
+key = "V039|Morgenstern-Price|{\"compositeSurfaces\":false,\"intersliceFunction\":\"constant\"}"
+max_rel = 1e-6
+reason = "(B) the same two circles of basin 3 as with compositeBase; the minimum agrees within 1e-6, the critical surface or the counts differ."
+
+[[search]]
+key = "V036a|Morgenstern-Price|{\"intersliceFunction\":\"constant\",\"porePressureHead\":\"vertical\",\"slices\":40}"
+max_rel = 2e-5
+reason = "(B) basin 1 (the embankment: c' = 0, phi' = 35 degrees, a planar 1:2.5 face): 20 first-pass circles have F = 1.90839380718441 to ...852, equal in exact arithmetic, so the libm decides which is the best of the basin, the twelfth refinement seed. Against TypeScript natively: seed 28.3014|9.7155|2.8105 in TypeScript, 25.4273|11.4147|3.3726 natively, minimum 0.7514199093405504 against 0.7514199078676196 (2e-9; TypeScript given the native factors of the two ends on the native minimum). WebAssembly's libm breaks the same tie a third way: 0.7514083463242264, 1.54e-5 from native and 1.5e-5 from TypeScript."
+
+[[search]]
+key = "V036a|Bishop|{\"porePressureHead\":\"vertical\",\"slices\":40}"
+max_rel = 1e-6
+reason = "(B) the embankment of V036 (c' = 0 on a planar face, as V036a Morgenstern-Price): its first-pass circles have equal factors in exact arithmetic, and the libm of WebAssembly breaks the tie otherwise than glibc, so the refinement seeds differ; the minimum and the critical surface agree within 1e-6, the counts of surfaces differ by 3 to 8 in about 2000."
+
+[[search]]
+key = "V036b|Bishop|{\"porePressureHead\":\"vertical\",\"slices\":40}"
+max_rel = 1e-6
+reason = "(B) the embankment of V036 (c' = 0 on a planar face, as V036a Morgenstern-Price): its first-pass circles have equal factors in exact arithmetic, and the libm of WebAssembly breaks the tie otherwise than glibc, so the refinement seeds differ; the minimum and the critical surface agree within 1e-6, the counts of surfaces differ by 3 to 8 in about 2000."
+
+[[search]]
+key = "V036b|Morgenstern-Price|{\"intersliceFunction\":\"constant\",\"porePressureHead\":\"vertical\",\"slices\":40}"
+max_rel = 1e-6
+reason = "(B) the embankment of V036 (c' = 0 on a planar face, as V036a Morgenstern-Price): its first-pass circles have equal factors in exact arithmetic, and the libm of WebAssembly breaks the tie otherwise than glibc, so the refinement seeds differ; the minimum and the critical surface agree within 1e-6, the counts of surfaces differ by 3 to 8 in about 2000."
+
+[[search]]
+key = "V036c|Bishop|{\"porePressureHead\":\"vertical\",\"slices\":40}"
+max_rel = 1e-6
+reason = "(B) the embankment of V036 (c' = 0 on a planar face, as V036a Morgenstern-Price): its first-pass circles have equal factors in exact arithmetic, and the libm of WebAssembly breaks the tie otherwise than glibc, so the refinement seeds differ; the minimum and the critical surface agree within 1e-6, the counts of surfaces differ by 3 to 8 in about 2000."
+
+[[search]]
+key = "V036c|Morgenstern-Price|{\"intersliceFunction\":\"constant\",\"porePressureHead\":\"vertical\",\"slices\":40}"
+max_rel = 1e-6
+reason = "(B) the embankment of V036 (c' = 0 on a planar face, as V036a Morgenstern-Price): its first-pass circles have equal factors in exact arithmetic, and the libm of WebAssembly breaks the tie otherwise than glibc, so the refinement seeds differ; the minimum and the critical surface agree within 1e-6, the counts of surfaces differ by 3 to 8 in about 2000."
+
+[[search]]
+key = "V036d|Bishop|{\"porePressureHead\":\"vertical\",\"slices\":40}"
+max_rel = 1e-6
+reason = "(B) the embankment of V036 (c' = 0 on a planar face, as V036a Morgenstern-Price): its first-pass circles have equal factors in exact arithmetic, and the libm of WebAssembly breaks the tie otherwise than glibc, so the refinement seeds differ; the minimum and the critical surface agree within 1e-6, the counts of surfaces differ by 3 to 8 in about 2000."
+
+[[search]]
+key = "V036d|Morgenstern-Price|{\"intersliceFunction\":\"constant\",\"porePressureHead\":\"vertical\",\"slices\":40}"
+max_rel = 1e-6
+reason = "(B) the embankment of V036 (c' = 0 on a planar face, as V036a Morgenstern-Price): its first-pass circles have equal factors in exact arithmetic, and the libm of WebAssembly breaks the tie otherwise than glibc, so the refinement seeds differ; the minimum and the critical surface agree within 1e-6, the counts of surfaces differ by 3 to 8 in about 2000."

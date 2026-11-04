@@ -1,8 +1,10 @@
 /**
- * Helpers of the facade shims (not a shim). A shim in `src/facade/<path>.ts`
- * replaces `src/<path>.ts` under `vitest.rust.config.ts`: it exports the same
- * names, implemented by the Rust engine (`engine()`), and re-exports the
- * TypeScript types and data of the original.
+ * Helpers of the engine's TypeScript API (the facade). Each module of src/
+ * keeps the TypeScript types and data of the engine and implements its
+ * functions by calling the Rust engine (`engine()`, WebAssembly): this
+ * directory has what they share (value conversion, handles, slices in bulk,
+ * material identity). ARCHITECTURE.md §3 and PORTING.md ("The limit
+ * equilibrium facade", "FE facade") describe the boundary.
  */
 import { engine } from "../engine";
 
@@ -38,9 +40,11 @@ function same(a: unknown, b: unknown): boolean {
  * replaced by the input's own objects, so that, as in TypeScript, what a
  * function leaves unchanged keeps its identity (`toCanonicalSlopeDefinition`
  * of a left-to-right definition keeps its coordinates). The top level is
- * always the engine's object.
+ * the engine's object, unless `whole` and it equals the input (a function
+ * that returns its argument itself when it has nothing to change).
  */
-export function shareUnchanged<T>(input: unknown, output: T): T {
+export function shareUnchanged<T>(input: unknown, output: T, whole = false): T {
+  if (whole && same(input, output)) return input as T;
   if (typeof output !== "object" || output === null || typeof input !== "object" || input === null) return output;
   const out = output as Record<string, unknown>;
   const inp = input as Record<string, unknown>;

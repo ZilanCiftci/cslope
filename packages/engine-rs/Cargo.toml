@@ -1,6 +1,11 @@
 [workspace]
 resolver = "2"
-members = ["crates/cslope-engine", "crates/cslope-wasm"]
+members = ["crates/cslope-engine", "crates/cslope-wasm", "crates/cslope-py"]
+# The Python binding needs a Python interpreter to build (pyo3) and is built
+# by maturin (crates/cslope-py, .github/workflows/python.yml): plain `cargo
+# build/clippy/test` in this directory leave it out; `--workspace` or
+# `-p cslope-py` take it.
+default-members = ["crates/cslope-engine", "crates/cslope-wasm"]
 
 [workspace.package]
 version = "0.1.0"

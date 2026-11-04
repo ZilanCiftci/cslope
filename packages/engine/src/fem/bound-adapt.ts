@@ -46,26 +46,18 @@
  * (MIN_SIZE_RATIO). Measured on V013a: three levels 80 s against 110 s
  * before, the same bounds; four levels 122 s against 473 s, 1.125–1.214
  * against 1.129–1.197 (without the size limit the fourth level refined
- * the toe to 1156 elements, whose programs took 316 s). These times are
- * HiGHS's on the polygon LPs; with Clarabel on the cones (conic.ts) three
- * levels on V013a's default mesh, 1366 to 2859 elements, take 56 s and
- * give 1.135–1.177.
+ * the toe to 1156 elements, whose programs took 316 s), with an LP solver
+ * on polygons replacing the cones; with Clarabel on the cones (conic.ts)
+ * three levels on V013a's default mesh, 1366 to 2859 elements, take 56 s
+ * and give 1.135–1.177.
+ *
+ * Implemented by the Rust engine (packages/engine-rs) through WebAssembly (see facade/internal.ts and fem/_handles.ts).
  */
-
-import { frictionalSurfaceSlide, surfaceSlideMessage } from "../model/surface-slide";
+import { testCall, wasm } from "../facade/internal";
+import type { LowerBoundOptions } from "./lower-bound";
+import type { UpperBoundOptions } from "./upper-bound";
 import type { Slope } from "../model/slope";
-import { buildFeModel, ignoredInputWarnings } from "./model";
-import { dorflerMark, refinedSizeField } from "./adapt";
-import { boundSolver, lowerBound, lowerBoundProblem, type HighsModuleOptions, type LowerBoundOptions } from "./lower-bound";
-import { upperBound, upperBoundProblem, type UpperBoundOptions } from "./upper-bound";
-import type { HighsSolver } from "./conic";
-
-type Solve = Awaited<ReturnType<typeof boundSolver>>;
-
-/** Tolerance on F of the levels before the last (they only steer the mesh). */
-const COARSE_TOLERANCE = 0.02;
-/** The refinement does not make elements smaller than the first mesh's smallest over this. */
-const MIN_SIZE_RATIO = 4;
+import { dataOptions, sizeFieldHandle, sizeFieldOf, slopeRef } from "../facade/fem/_handles";
 
 export interface BoundGap {
   /** Contribution of each element of the model's mesh to λ_U − λ_L. */
@@ -75,118 +67,6 @@ export interface BoundGap {
   lambdaUpper: number;
   /** Whether the stress field entered (otherwise eta is the dissipation alone). */
   withStress: boolean;
-}
-
-/**
- * The bound gap at the reduction F split per element of the mesh that
- * `buildFeModel(slope, options)` makes (see the header); null when the
- * upper bound program has no optimum at F.
- */
-export function boundGapIndicator(slope: Slope, options: LowerBoundOptions & UpperBoundOptions, F: number, solve: Solve): BoundGap | null {
-  const tl = options.timeLimit ?? 300;
-  const ub = upperBoundProblem(slope, options);
-  // without cohesion nothing dissipates at the bounds' F: no gap to split
-  if (!ub.cohesive) return { eta: new Float64Array(ub.elements), lambdaLower: NaN, lambdaUpper: 0, withStress: false };
-  const ru = solve(ub.program(F), ub.sides, tl);
-  if (ru.status !== "optimal") return null;
-  const cu = ru.x;
-  const eta = ub.elementDissipation(F, cu);
-  const { x, y, el } = ub.mesh;
-  const ne = eta.length;
-  const lb = lowerBoundProblem(slope, options);
-  const rl = solve(lb.program(F), lb.sides, tl);
-  if (rl.status !== "optimal") return { eta, lambdaLower: NaN, lambdaUpper: ru.objective, withStress: false };
-  const cl = rl.x;
-  const vel = (e: number, k: number): [number, number] => [cu[2 * (3 * e + k)], cu[2 * (3 * e + k) + 1]];
-
-  // strain rate of each upper bound element (constant), engineering shear
-  const rate = new Float64Array(3 * ne);
-  for (let e = 0; e < ne; e++) {
-    const n = [el[3 * e], el[3 * e + 1], el[3 * e + 2]];
-    const b = [y[n[1]] - y[n[2]], y[n[2]] - y[n[0]], y[n[0]] - y[n[1]]];
-    const c = [x[n[2]] - x[n[1]], x[n[0]] - x[n[2]], x[n[1]] - x[n[0]]];
-    const a2 = b[0] * c[1] - b[1] * c[0];
-    let ex = 0, ey = 0, g = 0;
-    for (let k = 0; k < 3; k++) {
-      const [u, v] = vel(e, k);
-      ex += b[k] * u; ey += c[k] * v; g += c[k] * u + b[k] * v;
-    }
-    rate[3 * e] = ex / a2; rate[3 * e + 1] = ey / a2; rate[3 * e + 2] = g / a2;
-  }
-
-  // ∫ σ:ε̇ over each element, from the lower bound's sub-elements in it
-  const { x: lx, y: ly, el: lel, parent, split } = lb.mesh;
-  const sig = (t: number, k: number, comp: number) => cl[9 * t + 3 * k + comp];
-  const nt = parent.length;
-  // the sub-element and its corners at the ends of each of its edges, by the element e it lies in
-  const sideOf = new Map<string, [number, number, number]>();
-  for (let t = 0; t < nt; t++) {
-    const e = parent[t];
-    const n = [lel[3 * t], lel[3 * t + 1], lel[3 * t + 2]];
-    const a2 = (lx[n[1]] - lx[n[0]]) * (ly[n[2]] - ly[n[0]]) - (lx[n[2]] - lx[n[0]]) * (ly[n[1]] - ly[n[0]]);
-    const area = Math.abs(a2) / 2;
-    let w = 0;
-    for (let k = 0; k < 3; k++) w += sig(t, k, 0) * rate[3 * e] + sig(t, k, 1) * rate[3 * e + 1] + sig(t, k, 2) * rate[3 * e + 2];
-    eta[e] -= (area * w) / 3;
-    for (let k = 0; k < 3; k++) sideOf.set(`${e}:${n[k]}:${n[(k + 1) % 3]}`, [t, k, (k + 1) % 3]);
-  }
-
-  // ∫ t·[u] over the edges, t = σn outward of e, [u] = u(other side) − u(e)
-  const nc = x.length;
-  const key = (a: number, b: number) => (a < b ? a * nc + b : b * nc + a);
-  const owners = new Map<number, [number, number][]>();
-  for (let e = 0; e < ne; e++) {
-    for (let k = 0; k < 3; k++) {
-      const kk = key(el[3 * e + k], el[3 * e + ((k + 1) % 3)]);
-      const list = owners.get(kk) ?? [];
-      list.push([e, k]);
-      owners.set(kk, list);
-    }
-  }
-  const surface = new Set<number>();
-  const model = buildFeModel(slope, options);
-  for (let s = 0; s < model.surfaceEdges.length; s += 3) surface.add(key(model.surfaceEdges[s], model.surfaceEdges[s + 2]));
-  const dot = (p: [number, number], q: [number, number]) => p[0] * q[0] + p[1] * q[1];
-  for (const [kk, list] of owners) {
-    if (surface.has(kk)) continue;
-    const [e, k] = list[0];
-    const a = el[3 * e + k], b = el[3 * e + ((k + 1) % 3)];
-    if (list.length === 1 && Math.abs(x[b] - x[a]) <= 1e-3 * Math.abs(y[b] - y[a])) continue; // smooth side
-    const L = Math.hypot(x[b] - x[a], y[b] - y[a]);
-    // normal outward of e: away from its centroid
-    let nx = (y[b] - y[a]) / L, ny = -(x[b] - x[a]) / L;
-    const cx = (x[el[3 * e]] + x[el[3 * e + 1]] + x[el[3 * e + 2]]) / 3, cy = (y[el[3 * e]] + y[el[3 * e + 1]] + y[el[3 * e + 2]]) / 3;
-    if (nx * ((x[a] + x[b]) / 2 - cx) + ny * ((y[a] + y[b]) / 2 - cy) < 0) { nx = -nx; ny = -ny; }
-    const cornerOf = (ee: number, node: number) => { for (let q = 0; q < 3; q++) if (el[3 * ee + q] === node) return q; return -1; };
-    const other = list.length > 1 ? list[1][0] : null;
-    const jump = (node: number): [number, number] => {
-      const [u, v] = vel(e, cornerOf(e, node));
-      if (other === null) return [-u, -v];
-      const [u2, v2] = vel(other, cornerOf(other, node));
-      return [u2 - u, v2 - v];
-    };
-    // over a segment (p, q) of the edge, with the jumps there (linear along
-    // the edge), through the halves of an edge bisected for a fan, recursively
-    const segment = (p: number, q: number, dp: [number, number], dq: [number, number]): number => {
-      const side = sideOf.get(`${e}:${p}:${q}`) ?? sideOf.get(`${e}:${q}:${p}`);
-      if (!side) {
-        const m = split.get(p < q ? `${p},${q}` : `${q},${p}`);
-        if (m === undefined) return 0;
-        const dm: [number, number] = [(dp[0] + dq[0]) / 2, (dp[1] + dq[1]) / 2];
-        return segment(p, m, dp, dm) + segment(m, q, dm, dq);
-      }
-      const [t, k0, k1] = side;
-      const kp = lel[3 * t + k0] === p ? k0 : k1, kq = kp === k0 ? k1 : k0;
-      const trac = (kc: number): [number, number] => [sig(t, kc, 0) * nx + sig(t, kc, 2) * ny, sig(t, kc, 2) * nx + sig(t, kc, 1) * ny];
-      const tp = trac(kp), tq = trac(kq);
-      const Ls = Math.hypot(lx[q] - lx[p], ly[q] - ly[p]);
-      return (Ls / 6) * (2 * dot(tp, dp) + dot(tp, dq) + dot(tq, dp) + 2 * dot(tq, dq));
-    };
-    const work = segment(a, b, jump(a), jump(b));
-    if (other === null) eta[e] -= work;
-    else { eta[e] -= work / 2; eta[other] -= work / 2; }
-  }
-  return { eta, lambdaLower: rl.objective, lambdaUpper: ru.objective, withStress: true };
 }
 
 export interface AdaptiveBoundsOptions extends LowerBoundOptions, UpperBoundOptions {
@@ -223,106 +103,16 @@ export interface AdaptiveBoundsResult {
   warnings: string[];
 }
 
-/** Lower and upper bounds on meshes refined where the bound gap lies (see the header). */
-export async function adaptiveBounds(slope: Slope, options: AdaptiveBoundsOptions = {}, highs?: HighsSolver, module?: HighsModuleOptions): Promise<AdaptiveBoundsResult> {
-  const solve = await boundSolver(options, highs, module);
-  const levels = options.levels ?? 3, theta = options.theta ?? 0.6, tol = options.gapTolerance ?? 0.03;
-  const start = performance.now();
-  const budget = options.refinementTimeLimit ?? Infinity;
-  const remaining = () => budget - (performance.now() - start) / 1000;
-  // each search and program within what is left of the budget
-  const limited = (o: AdaptiveBoundsOptions): AdaptiveBoundsOptions => ({
-    ...o,
-    totalTimeLimit: Math.min(o.totalTimeLimit ?? Infinity, Math.max(1, remaining())),
-    timeLimit: Math.min(o.timeLimit ?? 300, Math.max(1, remaining())),
-  });
-  const message = (err: unknown) => (err instanceof Error ? err.message : String(err));
-  // the inputs the bounds do not take, once (not for each level and bound)
-  const ignored = ignoredInputWarnings(slope);
-  const warnings: string[] = [...ignored];
-  const out: AdaptiveBoundsLevel[] = [];
-  let opts: AdaptiveBoundsOptions = { ...options };
-  let lower = NaN, upper = NaN;
-  let sizeField: AdaptiveBoundsResult["sizeField"] = (opts.sizeField ?? (() => NaN)) as AdaptiveBoundsResult["sizeField"];
-  // a face in frictional soil with a lower infinite-slope factor (not with seepage pore pressures)
-  const slide = options.porePressure === "seepage" ? null : frictionalSurfaceSlide(slope);
-  const result = () => {
-    if (slide && slide.factorOfSafety < upper) warnings.push(surfaceSlideMessage(slide, upper));
-    return { lower, upper, levels: out, sizeField, warnings };
+/** The bound gap per element at F; the programs are solved by the engine's Clarabel (TypeScript's `solve` argument, from boundSolver, is not needed). */
+export function boundGapIndicator(slope: Slope, options: LowerBoundOptions & UpperBoundOptions, F: number, solve?: unknown): BoundGap | null {
+  void solve;
+  return testCall("fem/bound-adapt::boundGapIndicator", [slopeRef(slope), dataOptions(options), F, sizeFieldHandle(options.sizeField)]);
+}
+
+/** The bounds on meshes refined where their gap lies (`options.onLevel` is called after each level). */
+export async function adaptiveBounds(slope: Slope, options: AdaptiveBoundsOptions = {}): Promise<AdaptiveBoundsResult> {
+  const r = wasm().adaptive_bounds(slopeRef(slope), dataOptions(options), sizeFieldHandle(options.sizeField), options.onLevel) as Omit<AdaptiveBoundsResult, "sizeField"> & {
+    sizeField: number;
   };
-  // the smallest element size of the first mesh, a quarter of which bounds the refinement
-  let h0 = Infinity;
-  const coarseTol = Math.max(options.fTolerance ?? 0.002, COARSE_TOLERANCE);
-  for (let level = 0; ; level++) {
-    const t0 = performance.now();
-    // the levels before the last steer the mesh: their searches to a coarser tolerance
-    const levelOpts: AdaptiveBoundsOptions = level < levels ? { ...opts, fTolerance: coarseTol } : opts;
-    // Each bound on its own: a failure of one (or of a refined mesh) keeps
-    // what the other levels and bounds found.
-    let ubF = NaN, lbF = NaN, elements = 0;
-    try {
-      const ubr = await upperBound(slope, limited({ ...levelOpts, startF: Number.isFinite(upper) && upper > 0 ? upper : opts.startF }), highs, module);
-      for (const w of ubr.warnings) if (!ignored.includes(w)) warnings.push(`Level ${level}, upper bound: ${w}`);
-      ubF = ubr.factorOfSafety; elements = ubr.elements;
-    } catch (err) {
-      warnings.push(`Level ${level}, upper bound: ${message(err)}`);
-    }
-    try {
-      const lbr = await lowerBound(slope, limited({ ...levelOpts, startF: Number.isFinite(lower) && lower > 0 ? lower : opts.startF }), highs, module);
-      for (const w of lbr.warnings) if (!ignored.includes(w)) warnings.push(`Level ${level}, lower bound: ${w}`);
-      lbF = lbr.factorOfSafety; elements ||= lbr.elements;
-    } catch (err) {
-      warnings.push(`Level ${level}, lower bound: ${message(err)}`);
-    }
-    // the remeshed levels are not nested, and a bound on a finer mesh can
-    // be worse: the best of the levels is kept
-    if (Number.isFinite(ubF)) upper = Number.isFinite(upper) ? Math.min(upper, ubF) : ubF;
-    if (Number.isFinite(lbF)) lower = Number.isFinite(lower) ? Math.max(lower, lbF) : lbF;
-    out.push({ elements, lower: lbF, upper: ubF, seconds: (performance.now() - t0) / 1000 });
-    options.onLevel?.(out[out.length - 1]);
-    let model;
-    try {
-      model = buildFeModel(slope, opts);
-    } catch (err) {
-      warnings.push(`Level ${level}: ${message(err)}`);
-      return result();
-    }
-    sizeField = model.sizeField;
-    if (level === 0) {
-      for (let e = 0; e < model.elementCount; e++) {
-        const a = model.el[6 * e], b = model.el[6 * e + 1], c = model.el[6 * e + 2];
-        h0 = Math.min(h0, model.sizeField((model.x[a] + model.x[b] + model.x[c]) / 3, (model.y[a] + model.y[b] + model.y[c]) / 3));
-      }
-    }
-    const done = Number.isFinite(lower) && Number.isFinite(upper) && (upper - lower) <= tol * (upper + lower) / 2;
-    if (done || level >= levels || !(ubF > 0) || !Number.isFinite(ubF)) return result();
-    // the next level: the gap's two programs and the two searches on a
-    // larger mesh, about four times this level's searches
-    if (4 * out[out.length - 1].seconds > remaining()) {
-      warnings.push(`The refinement stopped after ${level} of ${levels} levels at its time limit of ${options.refinementTimeLimit} s.`);
-      return result();
-    }
-    let gap: BoundGap | null;
-    try {
-      gap = boundGapIndicator(slope, limited(opts), ubF, solve);
-    } catch (err) {
-      warnings.push(`Level ${level}, bound gap: ${message(err)}`);
-      return result();
-    }
-    if (!gap) {
-      warnings.push(`Level ${level}: the upper bound program at F = ${ubF.toFixed(3)} gave no mechanism to refine on.`);
-      return result();
-    }
-    const eta = gap.eta.map((v) => Math.max(0, v));
-    let total = 0;
-    for (const v of eta) total += v;
-    // a cohesionless soil dissipates nothing at the bounds' F (the
-    // programs are homogeneous): there is no gap to refine on
-    if (!(total > 0)) {
-      warnings.push(`Level ${level}: the bound gap has no element contributions to refine on (no cohesion).`);
-      return result();
-    }
-    if (!gap.withStress && level === 0) warnings.push("The lower bound program has no finite optimum at the upper bound's F: refined on the dissipation alone.");
-    opts = { ...opts, sizeField: refinedSizeField(model, dorflerMark(eta, theta), Number.isFinite(h0) ? h0 / MIN_SIZE_RATIO : 0) };
-  }
+  return { ...r, sizeField: sizeFieldOf(r.sizeField) };
 }

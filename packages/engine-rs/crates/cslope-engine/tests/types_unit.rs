@@ -1120,9 +1120,11 @@ fn validation_by_kind() {
         "unit weight",
     );
     assert!(errs(with(&sp, json!({ "dataPoints": [[0, 0, 10, 30, 18]] }))).is_empty());
-    // a point with the wrong number of values does not deserialize
-    let bad = with(&sp, json!({ "dataPoints": [[0, 0, 10]] }));
-    assert!(serde_json::from_value::<MaterialModel>(bad).is_err());
+    // a point with the wrong number of values: TypeScript's message
+    contains(
+        &errs(with(&sp, json!({ "dataPoints": [[0, 0, 10]] }))),
+        "5 values",
+    );
 
     let an = json!({ "kind": "anisotropic-function", "unitWeight": 18, "cohesion": 10, "frictionAngle": 30,
         "modifierFunction": [[0, 1.0], [90, 0.5]] });
@@ -1490,18 +1492,29 @@ fn every_rule_rejects_with_its_message() {
         .contains(&"The pore pressure ratio rᵤ must be at least 0 and below 1.".to_string()));
     assert!(errs(with(&kind("mc"), json!({ "bBar": 1.6 })))
         .contains(&"B̄ must be between 0 and 1.5.".to_string()));
-    // shapes TypeScript reports and serde rejects: a string number, a point
-    // with the wrong number of values
-    for bad in [
-        with(&kind("mc"), json!({ "cohesionRateOfChange": "1" })),
-        spatial(json!([[0, 0, 1, 30]])),
-        with(
-            &kind("aniso"),
-            json!({ "modifierFunction": [[0, 1, 2], [10, 1]] }),
+    // shapes TypeScript checks (a string number, a point with the wrong
+    // number of values): its messages, read from the JSON
+    for (bad, fragment) in [
+        (
+            with(&kind("mc"), json!({ "cohesionRateOfChange": "1" })),
+            "rate of change of the cohesion must be a finite",
+        ),
+        (spatial(json!([[0, 0, 1, 30]])), "must have 5 values"),
+        (
+            with(
+                &kind("aniso"),
+                json!({ "modifierFunction": [[0, 1, 2], [10, 1]] }),
+            ),
+            "must have 2 values",
         ),
     ] {
-        assert!(serde_json::from_value::<MaterialModel>(bad).is_err());
+        contains(&errs(bad), fragment);
     }
+    // a malformed spatial data point skips the value checks of that point
+    assert_eq!(
+        errs(spatial(json!([[0, 0, -1], [0, 0, 1, 30, 18]]))),
+        vec!["Data point 1: must have 5 values [x, y, c, φ, γ].".to_string()]
+    );
 }
 
 #[test]

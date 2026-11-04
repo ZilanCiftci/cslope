@@ -1,10 +1,12 @@
 /**
  * Material type definitions for slope stability analysis.
+ *
+ * Implemented by the Rust engine (packages/engine-rs) through WebAssembly (see facade/internal.ts).
  */
-
-import type { MaterialModel, MohrCoulombModel } from "./material-models";
-import { resolveStrength } from "./strength";
-import type { StrengthContext } from "./strength";
+import { wasm } from "../facade/internal";
+import { registerMaterial } from "../facade/materials";
+import type { MaterialModel } from "./material-models";
+import type { ResolvedStrength, StrengthContext } from "./strength";
 
 /**
  * A material: its model, or (for brevity in code and tests) a Mohr-Coulomb
@@ -36,36 +38,25 @@ export interface MaterialParams {
 /** Small tolerance for floating-point comparisons. */
 export const MATERIAL_EPSILON = 1e-10;
 
+/**
+ * A material: a plain data object, its identity the JavaScript object (as
+ * in TypeScript). The engine normalises the parameters and throws the
+ * constructor's RangeErrors. A given `model` is kept as the same object.
+ */
 export class Material {
   readonly name: string;
   readonly color: string;
   /** The material: unit weight and strength (see `resolveStrength`). */
   readonly model: MaterialModel;
+  /** @internal Unique per instance: how the engine refers back to this object. */
+  declare readonly _key: number;
 
   constructor(params: MaterialParams = {}) {
-    this.name = params.name ?? "";
-    this.color = params.color ?? "";
-    if (params.model) {
-      this.model = params.model;
-    } else {
-      const frictionAngle = params.frictionAngle ?? 35;
-      if (frictionAngle < 0 || frictionAngle > 90) {
-        throw new RangeError("friction_angle must be between 0 and 90");
-      }
-      this.model = {
-        kind: "mohr-coulomb",
-        unitWeight: params.unitWeight ?? 20,
-        frictionAngle,
-        cohesion: Math.abs(params.cohesion ?? 2),
-        cohesionRefDepth: params.cohesionRefDepth ?? 0,
-        cohesionRateOfChange: params.cohesionRateOfChange ?? 0,
-        cohesionUndrained: params.cohesionUndrained ?? 20,
-        cFactor: params.cFactor ?? 0,
-      } satisfies MohrCoulombModel;
-    }
-    if (!(this.model.unitWeight >= 0 && this.model.unitWeight <= 500)) {
-      throw new RangeError("unit weight must be between 0 and 500");
-    }
+    const m = wasm().material_new(params) as { name: string; color: string; model: MaterialModel };
+    this.name = m.name;
+    this.color = m.color;
+    this.model = params.model ?? m.model;
+    Object.defineProperty(this, "_key", { value: registerMaterial(this), enumerable: false });
   }
 
   /** Unit weight (kN/m³): the model's. */
@@ -74,7 +65,7 @@ export class Material {
   }
 
   /** The strength at a point (see `resolveStrength`). */
-  getStrength(context: StrengthContext) {
-    return resolveStrength(this.model, context);
+  getStrength(context: StrengthContext): ResolvedStrength {
+    return wasm().resolve_strength(this.model, context);
   }
 }

@@ -19,19 +19,27 @@
 
 use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "kebab-case")]
 pub enum ReinforcementDirection {
     Axial,
     Tangent,
     Bisector,
+    /// Any other string or value, which acts as "axial" (TypeScript's last
+    /// branch). (`null` is absent: `r.direction ?? "axial"`.)
+    #[serde(untagged)]
+    Other(serde_json::Value),
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "kebab-case")]
 pub enum ReinforcementApplication {
     Active,
     Passive,
+    /// Any other string or value, which is not "passive". (`null` is
+    /// absent: `application ?? "active"`.)
+    #[serde(untagged)]
+    Other(serde_json::Value),
 }
 
 /// Pullout resistance along the element (per element, per metre of its
@@ -63,7 +71,7 @@ pub enum ReinforcementPullout {
         #[serde(
             default,
             skip_serializing_if = "Option::is_none",
-            deserialize_with = "crate::types::json::opt_num"
+            deserialize_with = "crate::types::json::present_num"
         )]
         bonded_length: Option<f64>,
     },
@@ -75,14 +83,22 @@ pub enum ReinforcementPullout {
         #[serde(
             default,
             skip_serializing_if = "Option::is_none",
-            deserialize_with = "crate::types::json::opt_num"
+            deserialize_with = "crate::types::json::present_num"
         )]
         coverage: Option<f64>,
     },
     Development {
-        #[serde(deserialize_with = "crate::types::json::num")]
+        // A missing length reads as NaN (TypeScript's `undefined`), which
+        // `set_reinforcements` rejects with TypeScript's message.
+        #[serde(
+            default = "crate::types::json::nan",
+            deserialize_with = "crate::types::json::num"
+        )]
         length1: f64,
-        #[serde(deserialize_with = "crate::types::json::num")]
+        #[serde(
+            default = "crate::types::json::nan",
+            deserialize_with = "crate::types::json::num"
+        )]
         length2: f64,
     },
 }
@@ -109,7 +125,7 @@ pub struct Reinforcement {
     #[serde(
         default,
         skip_serializing_if = "Option::is_none",
-        deserialize_with = "crate::types::json::opt_num"
+        deserialize_with = "crate::types::json::present_num"
     )]
     pub spacing: Option<f64>,
     /// Pullout along the element. Without it both ends are fully anchored:
@@ -121,14 +137,14 @@ pub struct Reinforcement {
     #[serde(
         default,
         skip_serializing_if = "Option::is_none",
-        deserialize_with = "crate::types::json::opt_num"
+        deserialize_with = "crate::types::json::present_num"
     )]
     pub end1_capacity: Option<f64>,
     /// Anchorage capacity at end 2, kN per element. Default 0.
     #[serde(
         default,
         skip_serializing_if = "Option::is_none",
-        deserialize_with = "crate::types::json::opt_num"
+        deserialize_with = "crate::types::json::present_num"
     )]
     pub end2_capacity: Option<f64>,
     /// Default "axial".
@@ -144,7 +160,7 @@ pub struct Reinforcement {
     #[serde(
         default,
         skip_serializing_if = "Option::is_none",
-        deserialize_with = "crate::types::json::opt_num"
+        deserialize_with = "crate::types::json::opt_to_number"
     )]
     pub prestress: Option<f64>,
 }
@@ -166,18 +182,24 @@ pub enum PileForceDirection {
     Tangent,
     Perpendicular,
     #[serde(untagged)]
-    Other(String),
+    Other(serde_json::Value),
 }
 
 /// Where an Ito & Matsui pile force acts: at the resultant of the soil
 /// pressure on the pile above the slip surface ("centroid", the default),
 /// or where the slip surface crosses the pile ("slip-surface", as Cai &
 /// Ugai 2000, eq. 9, apply it). A given force acts at the crossing.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "kebab-case")]
 pub enum PileForceLocation {
     Centroid,
     SlipSurface,
+    /// Any other string or value, which is not "centroid": the force acts
+    /// where the slip surface crosses the pile, as TypeScript's
+    /// `(p.location ?? "centroid") === "centroid"` decides. (`null` is
+    /// absent.)
+    #[serde(untagged)]
+    Other(serde_json::Value),
 }
 
 /// Pile row (or sheet pile wall) resisting the sliding mass in shear: where
@@ -204,47 +226,51 @@ pub struct Pile {
     #[serde(
         default,
         skip_serializing_if = "Option::is_none",
-        deserialize_with = "crate::types::json::opt_num"
+        deserialize_with = "crate::types::json::present_num"
     )]
     pub force: Option<f64>,
     /// Pile diameter / width (m), for Ito & Matsui.
     #[serde(
         default,
         skip_serializing_if = "Option::is_none",
-        deserialize_with = "crate::types::json::opt_num"
+        deserialize_with = "crate::types::json::present_num"
     )]
     pub diameter: Option<f64>,
     /// Centre-to-centre spacing (m). Default 1 (a wall per metre).
     #[serde(
         default,
         skip_serializing_if = "Option::is_none",
-        deserialize_with = "crate::types::json::opt_num"
+        deserialize_with = "crate::types::json::present_num"
     )]
     pub spacing: Option<f64>,
     /// Shear capacity per pile (kN).
     #[serde(
         default,
         skip_serializing_if = "Option::is_none",
-        deserialize_with = "crate::types::json::opt_num"
+        deserialize_with = "crate::types::json::present_num"
     )]
     pub shear_capacity: Option<f64>,
     /// Bending capacity per pile (kNm): force ≤ M / Lm, Lm the arm of the soil pressure.
     #[serde(
         default,
         skip_serializing_if = "Option::is_none",
-        deserialize_with = "crate::types::json::opt_num"
+        deserialize_with = "crate::types::json::present_num"
     )]
     pub moment_capacity: Option<f64>,
     /// Tilt of the force above horizontal (°), for direction "angle". Default 0.
     #[serde(
         default,
         skip_serializing_if = "Option::is_none",
-        deserialize_with = "crate::types::json::opt_num"
+        deserialize_with = "crate::types::json::present_num"
     )]
     pub angle: Option<f64>,
     /// Direction of the force. Default "angle" (with `angle`), so that saved
     /// models keep their result; the usual default elsewhere is "tangent".
-    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        deserialize_with = "crate::types::json::present"
+    )]
     pub direction: Option<PileForceDirection>,
     /// Default "active".
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -255,20 +281,24 @@ pub struct Pile {
     /// A continuous wall (sheet piles): in the finite element analysis no soil
     /// flows through it, and its default stiffness is that of a plate of
     /// thickness `diameter` per metre. Default: a wall where spacing ≤ diameter.
-    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        deserialize_with = "crate::types::json::nullish_truthy"
+    )]
     pub wall: Option<bool>,
     /// Bending stiffness EI per pile (kNm²), for the finite element analysis; default a solid circle of `diameter` in concrete (E = 30 GPa), or a plate for a wall.
     #[serde(
         default,
         skip_serializing_if = "Option::is_none",
-        deserialize_with = "crate::types::json::opt_num"
+        deserialize_with = "crate::types::json::present_num"
     )]
     pub bending_stiffness: Option<f64>,
     /// Axial stiffness EA per pile (kN), for the finite element analysis; default as `bendingStiffness`.
     #[serde(
         default,
         skip_serializing_if = "Option::is_none",
-        deserialize_with = "crate::types::json::opt_num"
+        deserialize_with = "crate::types::json::present_num"
     )]
     pub axial_stiffness: Option<f64>,
 }

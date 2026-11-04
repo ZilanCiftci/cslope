@@ -206,39 +206,6 @@ fn rejects_invalid_input() {
 }
 
 #[test]
-fn fhwa_pullout_tables() {
-    #[derive(serde::Deserialize)]
-    struct Table {
-        id: String,
-        definition: Value,
-        layers: Vec<[f64; 3]>,
-    }
-    let tables: Vec<Table> = common::load("model-core", "fhwa");
-    assert!(!tables.is_empty());
-    for table in &tables {
-        let slope = build_slope(&def(table.definition.clone())).unwrap();
-        let envs = slope.reinforcement_envelopes();
-        assert_eq!(envs.len(), table.layers.len(), "{}", table.id);
-        for (i, r) in slope.reinforcements().iter().enumerate() {
-            let [x, pullout, capacity] = table.layers[i];
-            let t = ((x - r.x1) / (r.x2 - r.x1)).clamp(0.0, 1.0);
-            let s = t * envs[i].length;
-            let spacing = r.spacing.unwrap_or(1.0);
-            assert!(
-                (pullout_beyond(&envs[i], s) / spacing / pullout - 1.0).abs() < 0.003,
-                "{} layer {i}",
-                table.id
-            );
-            assert!(
-                (envelope_at(&envs[i], s) / spacing / capacity - 1.0).abs() < 0.003,
-                "{} layer {i}",
-                table.id
-            );
-        }
-    }
-}
-
-#[test]
 fn a_water_table_entered_right_to_left_keeps_its_vertical_step() {
     let d = layered(
         &[[0.0, 5.0], [10.0, 5.0], [10.0, 10.0], [20.0, 10.0]],

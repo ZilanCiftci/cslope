@@ -1,6 +1,9 @@
 /**
  * Load force calculations for slices.
+ *
+ * Implemented by the Rust engine (packages/engine-rs) through WebAssembly (see facade/internal.ts).
  */
+import { wasm } from "../facade/internal";
 
 /**
  * UDL input data: [x1, x2, magnitude] per UDL.
@@ -21,46 +24,6 @@ export type LineLoadData = [number, number];
  * @param linLoads - Mx2 data: [x, magnitude] per line load
  * @returns [udlForces, llForces] per slice
  */
-export function calculateAllLoads(
-  widths: number[],
-  centerXs: number[],
-  udls: UdlData[],
-  linLoads: LineLoadData[],
-): [number[], number[]] {
-  const numSlices = widths.length;
-  const udlForces = new Array<number>(numSlices).fill(0);
-  const llForces = new Array<number>(numSlices).fill(0);
-
-  for (let i = 0; i < numSlices; i++) {
-    const b = widths[i];
-    const sx = centerXs[i];
-    const sxl = sx - b / 2.0;
-    const sxr = sx + b / 2.0;
-
-    // UDLs — single overlap formula handles all cases
-    for (let j = 0; j < udls.length; j++) {
-      const [rawX1, rawX2, umag] = udls[j];
-      const ux1 = Math.min(rawX1, rawX2);
-      const ux2 = Math.max(rawX1, rawX2);
-      const overlapL = Math.max(sxl, ux1);
-      const overlapR = Math.min(sxr, ux2);
-      if (overlapR > overlapL) {
-        udlForces[i] += (overlapR - overlapL) * umag;
-      }
-    }
-
-    // Line loads
-    for (let j = 0; j < linLoads.length; j++) {
-      const [lx, lmag] = linLoads[j];
-      // Half-open per slice so a load on a shared boundary counts once,
-      // but closed on the last slice: a load exactly at the exit point
-      // was dropped while one at the entry point was kept.
-      const last = i === widths.length - 1;
-      if (sxl <= lx && (lx < sxr || (last && lx <= sxr))) {
-        llForces[i] += lmag;
-      }
-    }
-  }
-
-  return [udlForces, llForces];
+export function calculateAllLoads(widths: number[], centerXs: number[], udls: UdlData[], linLoads: LineLoadData[]): [number[], number[]] {
+  return wasm().calculate_all_loads(widths, centerXs, udls, linLoads);
 }

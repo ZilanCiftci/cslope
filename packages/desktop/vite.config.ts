@@ -14,8 +14,9 @@ const { version } = JSON.parse(
 
 /**
  * `import s from "file?base64"`: the file's bytes as a base64 string, for a
- * binary the app must carry inside a bundle (the HiGHS WebAssembly of the
- * limit analysis bounds, which a worker cannot fetch from file://).
+ * binary the app must carry inside a bundle (the engine's WebAssembly,
+ * which cannot be fetched from file://; main.tsx compiles it and posts the
+ * module to the workers).
  */
 function base64Import(): Plugin {
   return {
@@ -52,13 +53,13 @@ export default defineConfig({
     }),
   ],
   build: {
-    chunkSizeWarningLimit: 6000,
+    // The main chunk carries the engine's WebAssembly as base64 (about 4 MB).
+    chunkSizeWarningLimit: 7000,
     rollupOptions: {
       output: {
         manualChunks(id) {
           if (id.includes("node_modules")) {
             if (id.includes("jspdf")) return "vendor-jspdf";
-            if (id.includes("jsts")) return "vendor-jsts";
             if (id.includes("react")) return "vendor-react";
           }
         },

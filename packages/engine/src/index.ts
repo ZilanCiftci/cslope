@@ -1,8 +1,20 @@
 /**
- * @cslope/engine — Pure-TypeScript slope stability engine.
+ * @cslope/engine — slope stability engine: the Rust engine as WebAssembly
+ * (packages/engine-rs) behind its TypeScript API.
  *
- * Barrel export of all public types, classes, and functions.
+ * Barrel export of all public types, classes, and functions. Start the
+ * engine once before calling it (ARCHITECTURE.md §3.2):
+ *
+ *   await initEngine();             // Node and Bun: reads the wasm from disk
+ *   await initEngine(bytes);        // a browser's main thread
+ *   initEngineSync(engineModule()); // a worker, given the compiled module
+ *
+ * Objects the engine returns are copies (snapshots): changing them does not
+ * change the engine's model.
  */
+
+// ── The engine ────────────────────────────────────────────────────
+export { initEngine, initEngineSync, engineModule, isEngineReady, type WasmSource } from "./engine";
 
 // ── Types ─────────────────────────────────────────────────────────
 export { Material } from "./types/material";
@@ -165,7 +177,7 @@ export {
 } from "./model/geometry-ops";
 export type { RegionFace } from "./model/geometry-ops";
 
-export { createSlice, findCrackX, getSlices, rankineCrackDepth } from "./model/slices";
+export { findCrackX, getSlices, rankineCrackDepth } from "./model/slices";
 export { fitPolylineToGround, isAdmissiblePolyline } from "./model/surface";
 
 export {
@@ -224,6 +236,7 @@ export type {
   CriticalSurface,
 } from "./model/reliability";
 export * from "./parallel/index";
+export { runAnalysis, runAnalysisAsync, analysisResult, displayPoints, type AnalyseHook, type RunAnalysisHooks } from "./api/run-analysis";
 
 export {
   mirrorX,
@@ -241,14 +254,12 @@ export type { SlopeOrientation } from "./model/canonical";
 
 // ── Finite elements ────────────────────────────────────────────
 // Strength reduction (SRFEM) and lower- and upper-bound limit analysis.
-// The bounds load Clarabel (or, as an option, HiGHS) as WebAssembly on first use.
+// The bounds' conic programs are solved by Clarabel, linked into the engine.
 export {
   analyzeFem,
   lowerBound,
   upperBound,
   adaptiveBounds,
-  loadHighs,
-  loadClarabel,
   type FemAnalysisOptions,
   type FemAnalysisResult,
   type FemMeshView,
@@ -262,7 +273,7 @@ export {
   type AdaptiveBoundsOptions,
   type AdaptiveBoundsResult,
 } from "./fem/index";
-export { runFemSummary, runFemSummaryWithBounds, type BoundSolverModules } from "./fem/summary";
+export { runFemSummary, runFemSummaryWithBounds } from "./fem/summary";
 
 // ── Verification problems ──────────────────────────────────────
 // Exported from "@cslope/engine/verification" (src/verification/index.ts),

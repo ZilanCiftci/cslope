@@ -1,218 +1,42 @@
-import type { AnalysisResult, AnalysisLimits } from "../types/analysis";
-import type { MaterialModel } from "../types/material-models";
-import { withMaterialModel, type SlopeDefinition } from "../types/slope-definition";
+/**
+ * Implemented by the Rust engine (packages/engine-rs) through WebAssembly (see facade/internal.ts).
+ */
+import { list, pt, shareUnchanged, wasm } from "../facade/internal";
+import type { AnalysisLimits, AnalysisResult } from "../types/analysis";
+import type { SlopeDefinition } from "../types/slope-definition";
 
 export type SlopeOrientation = "ltr" | "rtl";
 
 export function mirrorX(x: number, xMin: number, xMax: number): number {
-  return xMin + xMax - x;
+  return wasm().mirror_x(x, xMin, xMax);
 }
 
-export function mirrorPoint(
-  point: [number, number],
-  xMin: number,
-  xMax: number,
-): [number, number] {
-  return [mirrorX(point[0], xMin, xMax), point[1]];
+export function mirrorPoint(point: [number, number], xMin: number, xMax: number): [number, number] {
+  return pt(wasm().mirror_point(point[0], point[1], xMin, xMax));
 }
 
-export function mirrorPoints(
-  points: [number, number][],
-  xMin: number,
-  xMax: number,
-): [number, number][] {
-  return points.map((point) => mirrorPoint(point, xMin, xMax));
+export function mirrorPoints(points: [number, number][], xMin: number, xMax: number): [number, number][] {
+  return wasm().mirror_points(points, xMin, xMax);
 }
 
 export function getDomainX(coordinates: [number, number][]): [number, number] {
-  const xs = coordinates.map((coord) => coord[0]);
-  return [Math.min(...xs), Math.max(...xs)];
+  return pt(list(wasm().get_domain_x(coordinates)));
 }
 
-function getSideCrestY(
-  coordinates: [number, number][],
-  sideX: number,
-  tolerance = 1e-9,
-): number {
-  let crestY = -Infinity;
-  for (const [x, y] of coordinates) {
-    if (Math.abs(x - sideX) <= tolerance) {
-      crestY = Math.max(crestY, y);
-    }
-  }
-  return crestY;
+export function inferOrientationFromCoordinates(coordinates: [number, number][]): SlopeOrientation {
+  return wasm().infer_orientation_from_coordinates(coordinates);
 }
 
-export function inferOrientationFromCoordinates(
-  coordinates: [number, number][],
-): SlopeOrientation {
-  if (coordinates.length < 2) return "ltr";
-  const [xMin, xMax] = getDomainX(coordinates);
-  const leftCrestY = getSideCrestY(coordinates, xMin);
-  const rightCrestY = getSideCrestY(coordinates, xMax);
-  return rightCrestY > leftCrestY ? "rtl" : "ltr";
+export function resolveOrientation(orientation: SlopeOrientation | undefined, coordinates: [number, number][]): SlopeOrientation {
+  return wasm().resolve_orientation(orientation, coordinates);
 }
 
-export function resolveOrientation(
-  orientation: SlopeOrientation | undefined,
-  coordinates: [number, number][],
-): SlopeOrientation {
-  if (orientation === "ltr" || orientation === "rtl") return orientation;
-  return inferOrientationFromCoordinates(coordinates);
+export function mirrorLimits(limits: AnalysisLimits, xMin: number, xMax: number): AnalysisLimits {
+  return wasm().mirror_limits(limits, xMin, xMax);
 }
 
-function mirrorRange(
-  left: number,
-  right: number,
-  xMin: number,
-  xMax: number,
-): [number, number] {
-  const a = mirrorX(left, xMin, xMax);
-  const b = mirrorX(right, xMin, xMax);
-  return [Math.min(a, b), Math.max(a, b)];
-}
-
-export function mirrorLimits(
-  limits: AnalysisLimits,
-  xMin: number,
-  xMax: number,
-): AnalysisLimits {
-  const [entryLeftX, entryRightX] = mirrorRange(
-    limits.entryLeftX,
-    limits.entryRightX,
-    xMin,
-    xMax,
-  );
-  const [exitLeftX, exitRightX] = mirrorRange(
-    limits.exitLeftX,
-    limits.exitRightX,
-    xMin,
-    xMax,
-  );
-
-  return {
-    entryLeftX,
-    entryRightX,
-    exitLeftX,
-    exitRightX,
-  };
-}
-
-export function toCanonicalSlopeDefinition(
-  slopeDefinition: SlopeDefinition,
-  /** The mirror axis' x range (default: the definition's own); an earlier stage takes the model's. */
-  mirrorRange?: [number, number],
-): SlopeDefinition {
-  const orientation = resolveOrientation(
-    slopeDefinition.orientation,
-    slopeDefinition.coordinates,
-  );
-  // an earlier stage takes the model's orientation and mirror axis (its
-  // own extent may differ: outside it, it gives no stress)
-  if (slopeDefinition.earlierStage) {
-    const { earlierStage, ...rest } = slopeDefinition;
-    const axis = mirrorRange ?? getDomainX(slopeDefinition.coordinates);
-    return {
-      ...toCanonicalSlopeDefinition({ ...rest, orientation }, axis),
-      earlierStage: toCanonicalSlopeDefinition({ ...earlierStage, orientation }, axis),
-    };
-  }
-
-  // Every material by its model (older definitions give flat fields).
-  const materials = slopeDefinition.materials.map(withMaterialModel);
-  if (orientation === "ltr") {
-    return { ...slopeDefinition, orientation, materials };
-  }
-
-  const [xMin, xMax] = mirrorRange ?? getDomainX(slopeDefinition.coordinates);
-
-  return {
-    ...slopeDefinition,
-    orientation,
-    coordinates: mirrorPoints(slopeDefinition.coordinates, xMin, xMax),
-    // Spatially varying strength is given at model-space points.
-    // (also in the strength above the water, a model of its own)
-    materials: materials.map((m) => {
-      const model = m.model && mirrorModel(m.model, xMin, xMax);
-      return model === m.model ? m : { ...m, model };
-    }),
-    materialBoundaries: slopeDefinition.materialBoundaries?.map((boundary) => ({
-      ...boundary,
-      coordinates: mirrorPoints(boundary.coordinates, xMin, xMax),
-    })),
-    waterTable:
-      slopeDefinition.waterTable?.mode === "custom" &&
-      Array.isArray(slopeDefinition.waterTable.value)
-        ? {
-            ...slopeDefinition.waterTable,
-            value: mirrorPoints(slopeDefinition.waterTable.value, xMin, xMax),
-          }
-        : slopeDefinition.waterTable,
-    waterTables: slopeDefinition.waterTables?.map((wt) => ({
-      ...wt,
-      coordinates: mirrorPoints(wt.coordinates, xMin, xMax),
-    })),
-    ...(slopeDefinition.waternet
-      ? {
-          waternet: {
-            ...slopeDefinition.waternet,
-            headLines: slopeDefinition.waternet.headLines.map((h) => ({ ...h, points: mirrorPoints(h.points, xMin, xMax) })),
-            referenceLines: slopeDefinition.waternet.referenceLines.map((r) => ({ ...r, points: mirrorPoints(r.points, xMin, xMax) })),
-          },
-        }
-      : {}),
-    ...(slopeDefinition.rapidDrawdown
-      ? { rapidDrawdown: { ...slopeDefinition.rapidDrawdown, waterBefore: mirrorPoints(slopeDefinition.rapidDrawdown.waterBefore, xMin, xMax) } }
-      : {}),
-    udls: slopeDefinition.udls?.map((udl) => {
-      const x1 = mirrorX(udl.x2, xMin, xMax);
-      const x2 = mirrorX(udl.x1, xMin, xMax);
-      return {
-        ...udl,
-        x1: Math.min(x1, x2),
-        x2: Math.max(x1, x2),
-      };
-    }),
-    lineLoads: slopeDefinition.lineLoads?.map((lineLoad) => ({
-      ...lineLoad,
-      x: mirrorX(lineLoad.x, xMin, xMax),
-      ...(lineLoad.angle ? { angle: -lineLoad.angle } : {}),
-    })),
-    piles: slopeDefinition.piles?.map((p) => ({
-      ...p,
-      x1: mirrorX(p.x1, xMin, xMax),
-      x2: mirrorX(p.x2, xMin, xMax),
-    })),
-    reinforcements: slopeDefinition.reinforcements?.map((r) => ({
-      ...r,
-      x1: mirrorX(r.x1, xMin, xMax),
-      x2: mirrorX(r.x2, xMin, xMax),
-    })),
-    analysisLimits: slopeDefinition.analysisLimits
-      ? mirrorLimits(slopeDefinition.analysisLimits, xMin, xMax)
-      : undefined,
-    regionAssignments: slopeDefinition.regionAssignments?.map((ra) => ({
-      ...ra,
-      point: [mirrorX(ra.point[0], xMin, xMax), ra.point[1]] as [
-        number,
-        number,
-      ],
-    })),
-    customSearchPlanes: slopeDefinition.customSearchPlanes?.map((p) => ({
-      ...p,
-      cx: mirrorX(p.cx, xMin, xMax),
-    })),
-    customSurfaces: slopeDefinition.customSurfaces?.map((surface) => ({
-      ...surface,
-      points: mirrorPoints(surface.points, xMin, xMax),
-      ...(surface.axis ? { axis: mirrorPoint(surface.axis, xMin, xMax) } : {}),
-    })),
-    customPlanesOnly: slopeDefinition.customPlanesOnly,
-    blockSearchObjects: slopeDefinition.blockSearchObjects?.map((o) => ({
-      ...o,
-      points: mirrorPoints(o.points, xMin, xMax),
-    })),
-  };
+export function toCanonicalSlopeDefinition(slopeDefinition: SlopeDefinition, mirrorRange?: [number, number]): SlopeDefinition {
+  return shareUnchanged(slopeDefinition, wasm().to_canonical_slope_definition(slopeDefinition, mirrorRange));
 }
 
 /**
@@ -222,102 +46,10 @@ export function toCanonicalSlopeDefinition(
  * results back with the returned definition. The block search objects are
  * kept: they mark where the surface may run, in either direction.
  */
-export function oppositeDirectionDefinition(
-  canonical: SlopeDefinition,
-): SlopeDefinition {
-  const orientation = resolveOrientation(
-    canonical.orientation,
-    canonical.coordinates,
-  );
-  const mirrored = toCanonicalSlopeDefinition({
-    ...canonical,
-    orientation: "rtl",
-    analysisLimits: undefined,
-    customSearchPlanes: undefined,
-    customSurfaces: undefined,
-    customPlanesOnly: false,
-  });
-  return { ...mirrored, orientation: orientation === "ltr" ? "rtl" : "ltr" };
+export function oppositeDirectionDefinition(canonical: SlopeDefinition): SlopeDefinition {
+  return shareUnchanged(canonical, wasm().opposite_direction_definition(canonical));
 }
 
-export function mapAnalysisResultToModelSpace(
-  analysisResult: AnalysisResult,
-  canonicalSlopeDefinition: SlopeDefinition,
-): AnalysisResult {
-  const orientation = resolveOrientation(
-    canonicalSlopeDefinition.orientation,
-    canonicalSlopeDefinition.coordinates,
-  );
-
-  if (orientation === "ltr") {
-    return analysisResult;
-  }
-
-  const [xMin, xMax] = getDomainX(canonicalSlopeDefinition.coordinates);
-
-  return {
-    ...analysisResult,
-    criticalSurface: analysisResult.criticalSurface
-      ? {
-          ...analysisResult.criticalSurface,
-          cx: mirrorX(analysisResult.criticalSurface.cx, xMin, xMax),
-          entryPoint: mirrorPoint(
-            analysisResult.criticalSurface.entryPoint,
-            xMin,
-            xMax,
-          ),
-          exitPoint: mirrorPoint(
-            analysisResult.criticalSurface.exitPoint,
-            xMin,
-            xMax,
-          ),
-          points: analysisResult.criticalSurface.points?.map((p) =>
-            mirrorPoint(p, xMin, xMax),
-          ),
-          reinforcementForces: analysisResult.criticalSurface.reinforcementForces?.map(
-            (f) => ({ ...f, x: mirrorX(f.x, xMin, xMax), fx: -f.fx }),
-          ),
-          crack: analysisResult.criticalSurface.crack
-            ? { ...analysisResult.criticalSurface.crack, x: mirrorX(analysisResult.criticalSurface.crack.x, xMin, xMax) }
-            : undefined,
-        }
-      : null,
-    allSurfaces: analysisResult.allSurfaces.map((surface) => ({
-      ...surface,
-      cx: mirrorX(surface.cx, xMin, xMax),
-      entryPoint: mirrorPoint(surface.entryPoint, xMin, xMax),
-      exitPoint: mirrorPoint(surface.exitPoint, xMin, xMax),
-      points: surface.points?.map((p) => mirrorPoint(p, xMin, xMax)),
-    })),
-    criticalSlices: analysisResult.criticalSlices.map((slice) => {
-      const mirroredLeft = mirrorX(slice.xLeft, xMin, xMax);
-      const mirroredRight = mirrorX(slice.xRight, xMin, xMax);
-      return {
-        ...slice,
-        x: mirrorX(slice.x, xMin, xMax),
-        xLeft: Math.min(mirroredLeft, mirroredRight),
-        xRight: Math.max(mirroredLeft, mirroredRight),
-      };
-    }),
-  };
-}
-
-/**
- * A material model with its spatially varying strength points mirrored
- * in x, its strength above the water too; the model itself when it has
- * none.
- */
-function mirrorModel(model: MaterialModel, xMin: number, xMax: number): MaterialModel {
-  const above = model.aboveWater && mirrorModel(model.aboveWater, xMin, xMax);
-  const own: MaterialModel =
-    model.kind === "spatial-mohr-coulomb"
-      ? {
-          ...model,
-          dataPoints: model.dataPoints.map(
-            ([x, y, c, phi, gamma]) =>
-              [mirrorX(x, xMin, xMax), y, c, phi, gamma] as [number, number, number, number, number],
-          ),
-        }
-      : model;
-  return above === model.aboveWater ? own : { ...own, aboveWater: above };
+export function mapAnalysisResultToModelSpace(analysisResult: AnalysisResult, canonicalSlopeDefinition: SlopeDefinition): AnalysisResult {
+  return shareUnchanged(analysisResult, wasm().map_analysis_result_to_model_space(analysisResult, canonicalSlopeDefinition));
 }

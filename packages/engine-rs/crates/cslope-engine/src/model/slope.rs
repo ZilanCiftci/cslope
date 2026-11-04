@@ -35,6 +35,7 @@ use crate::types::analysis::{
 };
 use crate::types::constants::{ITERATIONS_RANGE, REFINED_ITERATIONS_RANGE, SLICES_RANGE};
 use crate::types::geometry::{GeometryWithMaterial, Slice};
+use crate::types::json::OrOther;
 use crate::types::loads::{LineLoad, Udl};
 use crate::types::material::{Material, MaterialId, MaterialParams};
 use crate::types::material_models::MaterialModel;
@@ -106,135 +107,322 @@ pub struct SearchPlane {
 /// `Partial<AnalysisOptions>`: the options given to `update_analysis_options`.
 /// A field typed `T | null` in TypeScript is `Option<Option<T>>` (`Some(None)`
 /// is `null`).
+///
+/// JSON is read as `updateAnalysisOptions` reads it (absent is
+/// `undefined`, `None` here): a number that is `null` or of another type is
+/// NaN (the finiteness checks give TypeScript's message); a string option
+/// TypeScript checks against its values keeps another value (`OrOther`) for
+/// that check; a flag is its truthiness (`null` is false); see the
+/// deserializers of the other fields.
 #[derive(Debug, Clone, PartialEq, Default, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct AnalysisOptionsPatch {
     #[serde(
         default,
         skip_serializing_if = "Option::is_none",
-        deserialize_with = "crate::types::json::opt_num"
+        deserialize_with = "crate::types::json::present_num"
     )]
     pub slices: Option<f64>,
     #[serde(
         default,
         skip_serializing_if = "Option::is_none",
-        deserialize_with = "crate::types::json::opt_num"
+        deserialize_with = "crate::types::json::present_num"
     )]
     pub iterations: Option<f64>,
     #[serde(
         default,
         skip_serializing_if = "Option::is_none",
-        deserialize_with = "crate::types::json::opt_num"
+        deserialize_with = "crate::types::json::present_num"
     )]
     pub refined_iterations: Option<f64>,
     #[serde(
         default,
         skip_serializing_if = "Option::is_none",
-        deserialize_with = "crate::types::json::opt_num"
+        deserialize_with = "crate::types::json::present_num"
     )]
     pub min_failure_dist: Option<f64>,
     #[serde(
         default,
         skip_serializing_if = "Option::is_none",
-        deserialize_with = "crate::types::json::opt_num"
+        deserialize_with = "crate::types::json::present_num"
     )]
     pub tolerance: Option<f64>,
     #[serde(
         default,
         skip_serializing_if = "Option::is_none",
-        deserialize_with = "crate::types::json::opt_num"
+        deserialize_with = "crate::types::json::present_num"
     )]
     pub max_iterations: Option<f64>,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub method: Option<AnalysisMethod>,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub janbu_correction: Option<bool>,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub interslice_function: Option<IntersliceFunctionType>,
     #[serde(
         default,
         skip_serializing_if = "Option::is_none",
-        deserialize_with = "crate::types::json::opt_tuples"
+        deserialize_with = "crate::types::json::present"
     )]
-    pub interslice_data_points: Option<Vec<[f64; 2]>>,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub pore_pressure_head: Option<PorePressureHead>,
+    pub method: Option<OrOther<AnalysisMethod>>,
     #[serde(
         default,
         skip_serializing_if = "Option::is_none",
-        deserialize_with = "crate::types::json::opt_num"
+        deserialize_with = "crate::types::json::truthy"
+    )]
+    pub janbu_correction: Option<bool>,
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        deserialize_with = "crate::types::json::present"
+    )]
+    pub interslice_function: Option<OrOther<IntersliceFunctionType>>,
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        deserialize_with = "crate::types::json::present"
+    )]
+    pub interslice_data_points: Option<IntersliceDataPointsPatch>,
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        deserialize_with = "crate::types::json::present"
+    )]
+    pub pore_pressure_head: Option<OrOther<PorePressureHead>>,
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        deserialize_with = "crate::types::json::present_num"
     )]
     pub tension_crack_depth: Option<f64>,
     #[serde(
         default,
         skip_serializing_if = "Option::is_none",
-        deserialize_with = "crate::types::json::opt_num"
+        deserialize_with = "crate::types::json::present_num"
     )]
     pub tension_crack_water: Option<f64>,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        deserialize_with = "crate::types::json::truthy"
+    )]
     pub tension_crack_auto: Option<bool>,
     #[serde(
         default,
         skip_serializing_if = "Option::is_none",
-        deserialize_with = "crate::types::json::opt_num"
+        deserialize_with = "crate::types::json::present_num"
     )]
     pub tension_crack_angle: Option<f64>,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        deserialize_with = "crate::types::json::truthy"
+    )]
     pub composite_surfaces: Option<bool>,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        deserialize_with = "crate::types::json::truthy"
+    )]
     pub composite_base: Option<bool>,
     #[serde(
         default,
         skip_serializing_if = "Option::is_none",
-        deserialize_with = "crate::types::json::opt_num"
+        deserialize_with = "crate::types::json::present_num"
     )]
     pub seismic_horizontal: Option<f64>,
     #[serde(
         default,
         skip_serializing_if = "Option::is_none",
-        deserialize_with = "crate::types::json::opt_num"
+        deserialize_with = "crate::types::json::present_num"
     )]
     pub seismic_vertical: Option<f64>,
     #[serde(
         default,
         skip_serializing_if = "Option::is_none",
-        deserialize_with = "crate::types::json::nullable"
+        deserialize_with = "partial_factors_patch"
     )]
     pub partial_factors: Option<Option<PartialFactors>>,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        deserialize_with = "crate::types::json::truthy"
+    )]
     pub both_directions: Option<bool>,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        deserialize_with = "crate::types::json::truthy"
+    )]
     pub non_circular_optimization: Option<bool>,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub search_method: Option<SearchMethod>,
     #[serde(
         default,
         skip_serializing_if = "Option::is_none",
-        deserialize_with = "crate::types::json::nullable"
+        deserialize_with = "crate::types::json::present"
     )]
-    pub block_active_angle: Option<Option<[f64; 2]>>,
+    pub search_method: Option<OrOther<SearchMethod>>,
     #[serde(
         default,
         skip_serializing_if = "Option::is_none",
-        deserialize_with = "crate::types::json::nullable"
+        deserialize_with = "crate::types::json::present"
     )]
-    pub block_passive_angle: Option<Option<[f64; 2]>>,
+    pub block_active_angle: Option<AngleRangePatch>,
     #[serde(
         default,
         skip_serializing_if = "Option::is_none",
-        deserialize_with = "crate::types::json::opt_num"
+        deserialize_with = "crate::types::json::present"
+    )]
+    pub block_passive_angle: Option<AngleRangePatch>,
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        deserialize_with = "crate::types::json::present_num"
     )]
     pub min_slip_depth: Option<f64>,
     #[serde(
         default,
         skip_serializing_if = "Option::is_none",
-        deserialize_with = "crate::types::json::nullable"
+        deserialize_with = "nullable_num_patch"
     )]
     pub min_slip_area: Option<Option<f64>>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub fem: Option<FemAnalysisSettings>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub sgi3d: Option<Sgi3dSettings>,
+}
+
+/// `intersliceDataPoints` of a patch as `updateAnalysisOptions` reads it:
+/// the points it keeps (`Array.isArray(p) && p.length >= 2 &&
+/// isFinite(p[0]) && isFinite(p[1])`), or a value that is not a list, on
+/// which `.filter` throws TypeScript's TypeError. The kept points are
+/// [x, f]: further values of a point (`[0, 0.5, 9]`) are left out, as every
+/// use reads x and f only. The global `isFinite` converts (`"0.5"`, `null`,
+/// `true` pass), but the interslice function (`dataPointSpecified`) keeps
+/// only numbers (`Number.isFinite`): such a value is NaN here, and the
+/// point is dropped as the analysis drops it. (TypeScript's getter shows
+/// the point as given, and on a mirrored model `1 - x` would turn such an
+/// x into a number: a corner the port does not follow.)
+#[derive(Debug, Clone, PartialEq)]
+pub enum IntersliceDataPointsPatch {
+    Points(Vec<[f64; 2]>),
+    NotAList(serde_json::Value),
+}
+
+impl From<Vec<[f64; 2]>> for IntersliceDataPointsPatch {
+    fn from(points: Vec<[f64; 2]>) -> Self {
+        IntersliceDataPointsPatch::Points(points)
+    }
+}
+
+impl<'de> Deserialize<'de> for IntersliceDataPointsPatch {
+    fn deserialize<D: serde::Deserializer<'de>>(d: D) -> std::result::Result<Self, D::Error> {
+        use crate::types::json::{js_array, js_global_is_finite, js_number};
+        // a value the filter keeps that is not a number is NaN here
+        let num = |v: &serde_json::Value| js_number(Some(v)).unwrap_or(f64::NAN);
+        let v = crate::types::json::JsJson::deserialize(d)?.0;
+        let Some(list) = js_array(Some(&v)) else {
+            return Ok(IntersliceDataPointsPatch::NotAList(v));
+        };
+        Ok(IntersliceDataPointsPatch::Points(
+            list.iter()
+                .filter_map(|p| {
+                    let p = js_array(Some(p)).filter(|p| p.len() >= 2)?;
+                    (js_global_is_finite(Some(&p[0])) && js_global_is_finite(Some(&p[1])))
+                        .then(|| [num(&p[0]), num(&p[1])])
+                })
+                .collect(),
+        ))
+    }
+}
+
+impl Serialize for IntersliceDataPointsPatch {
+    fn serialize<S: serde::Serializer>(&self, s: S) -> std::result::Result<S::Ok, S::Error> {
+        match self {
+            IntersliceDataPointsPatch::Points(p) => p.serialize(s),
+            IntersliceDataPointsPatch::NotAList(v) => v.serialize(s),
+        }
+    }
+}
+
+/// `partialFactors` of a patch: a value that is not truthy (`null`) is
+/// `Some(None)`; an object of factors is them; any other truthy value
+/// (another type, a factor missing) is factors of NaN, which the positivity
+/// check rejects with TypeScript's message.
+fn partial_factors_patch<'de, D: serde::Deserializer<'de>>(
+    d: D,
+) -> std::result::Result<Option<Option<PartialFactors>>, D::Error> {
+    let v = crate::types::json::JsJson::deserialize(d)?.0;
+    if !crate::types::json::js_truthy(Some(&v)) {
+        return Ok(Some(None));
+    }
+    Ok(Some(Some(serde_json::from_value(v).unwrap_or(
+        PartialFactors {
+            cu: f64::NAN,
+            cohesion: f64::NAN,
+            tan_phi: f64::NAN,
+            variable_load: f64::NAN,
+            basis: None,
+        },
+    ))))
+}
+
+/// `blockActiveAngle` / `blockPassiveAngle` of a patch, as
+/// `updateAnalysisOptions` reads it: `null` (no range), or TypeScript's
+/// `const [lo, hi] = r`: the first two values of a list or a string
+/// (missing ones and values that are not numbers are NaN, which the range
+/// check rejects), and TypeScript's TypeError "r is not iterable" on any
+/// other value.
+#[derive(Debug, Clone, PartialEq)]
+pub enum AngleRangePatch {
+    Null,
+    Range([f64; 2]),
+    NotIterable(serde_json::Value),
+}
+
+impl From<Option<[f64; 2]>> for AngleRangePatch {
+    fn from(r: Option<[f64; 2]>) -> Self {
+        match r {
+            None => AngleRangePatch::Null,
+            Some(r) => AngleRangePatch::Range(r),
+        }
+    }
+}
+
+impl<'de> Deserialize<'de> for AngleRangePatch {
+    fn deserialize<D: serde::Deserializer<'de>>(d: D) -> std::result::Result<Self, D::Error> {
+        use crate::types::json::js_number;
+        let v = crate::types::json::JsJson::deserialize(d)?.0;
+        Ok(match &v {
+            serde_json::Value::Null => AngleRangePatch::Null,
+            // (a number, NaN and ±Infinity included, is not iterable)
+            serde_json::Value::String(_) if js_number(Some(&v)).is_none() => {
+                AngleRangePatch::Range([f64::NAN, f64::NAN])
+            }
+            serde_json::Value::Array(a) => {
+                let at = |i: usize| js_number(a.get(i)).unwrap_or(f64::NAN);
+                AngleRangePatch::Range([at(0), at(1)])
+            }
+            _ => AngleRangePatch::NotIterable(v),
+        })
+    }
+}
+
+impl Serialize for AngleRangePatch {
+    fn serialize<S: serde::Serializer>(&self, s: S) -> std::result::Result<S::Ok, S::Error> {
+        match self {
+            AngleRangePatch::Null => s.serialize_none(),
+            AngleRangePatch::Range(r) => r.serialize(s),
+            AngleRangePatch::NotIterable(v) => v.serialize(s),
+        }
+    }
+}
+
+/// `minSlipArea` of a patch: `null` is `Some(None)`, a number itself, any
+/// other value NaN (rejected by its check as in TypeScript).
+fn nullable_num_patch<'de, D: serde::Deserializer<'de>>(
+    d: D,
+) -> std::result::Result<Option<Option<f64>>, D::Error> {
+    let v = crate::types::json::JsJson::deserialize(d)?.0;
+    if v.is_null() {
+        return Ok(Some(None));
+    }
+    Ok(Some(Some(
+        crate::types::json::js_number(Some(&v)).unwrap_or(f64::NAN),
+    )))
 }
 
 impl AnalysisOptionsPatch {
@@ -290,11 +478,11 @@ impl From<&AnalysisOptions> for AnalysisOptionsPatch {
             min_failure_dist: Some(o.min_failure_dist),
             tolerance: Some(o.tolerance),
             max_iterations: Some(o.max_iterations),
-            method: Some(o.method),
+            method: Some(o.method.into()),
             janbu_correction: o.janbu_correction,
-            interslice_function: o.interslice_function,
-            interslice_data_points: o.interslice_data_points.clone(),
-            pore_pressure_head: o.pore_pressure_head,
+            interslice_function: o.interslice_function.map(Into::into),
+            interslice_data_points: o.interslice_data_points.clone().map(Into::into),
+            pore_pressure_head: o.pore_pressure_head.map(Into::into),
             tension_crack_depth: o.tension_crack_depth,
             tension_crack_water: o.tension_crack_water,
             tension_crack_auto: o.tension_crack_auto,
@@ -306,9 +494,9 @@ impl From<&AnalysisOptions> for AnalysisOptionsPatch {
             partial_factors: o.partial_factors.clone(),
             both_directions: o.both_directions,
             non_circular_optimization: o.non_circular_optimization,
-            search_method: o.search_method,
-            block_active_angle: o.block_active_angle,
-            block_passive_angle: o.block_passive_angle,
+            search_method: o.search_method.map(Into::into),
+            block_active_angle: o.block_active_angle.map(Into::into),
+            block_passive_angle: o.block_passive_angle.map(Into::into),
             min_slip_depth: o.min_slip_depth,
             min_slip_area: o.min_slip_area,
             fem: o.fem.clone(),
@@ -422,7 +610,7 @@ pub struct Slope {
     /// assigned to one of these use it for pore pressure instead of the
     /// default water table.
     extra_water_lines: Vec<(String, Option<Polyline>)>,
-    material_water_table: Vec<(MaterialId, String)>,
+    material_water_table: Vec<(MaterialId, Option<String>)>,
     /// Water lines as given (before extension to the model edges and
     /// clipping), so that they are built again for a new external boundary:
     /// a line must always span the whole model, or slices beyond its ends
@@ -618,6 +806,13 @@ impl Slope {
         self.reset_results();
     }
 
+    /// Gives a table entry the facade's key of the JavaScript object that
+    /// stands for it (a material made by the engine, handed to JavaScript),
+    /// so that the object passed back is this entry again. Not a port.
+    pub fn set_material_external_key(&mut self, id: MaterialId, key: u32) {
+        self.materials[id.0 as usize].external_key = Some(key);
+    }
+
     fn register(&mut self, id: MaterialId) {
         if !self.registered.contains(&id) {
             self.registered.push(id);
@@ -671,8 +866,13 @@ impl Slope {
             }
         }
         let mut ids: Vec<&str> = Vec::new();
-        for (_, id) in &self.material_water_table {
-            if !ids.contains(&id.as_str()) {
+        // (an id of `null` names no line)
+        for id in self
+            .material_water_table
+            .iter()
+            .filter_map(|(_, id)| id.as_deref())
+        {
+            if !ids.contains(&id) {
                 ids.push(id);
             }
         }
@@ -692,7 +892,7 @@ impl Slope {
             self.material_water_table
                 .iter()
                 .find(|(k, _)| *k == m)
-                .map(|(_, v)| v.as_str())
+                .and_then(|(_, v)| v.as_deref())
         });
         if let Some(id) = id {
             if let Some(line) = self.extra_water_line(id) {
@@ -1162,6 +1362,13 @@ impl Slope {
         self.version += 1;
     }
 
+    /// The analysed planes, to change in place (run_analysis writes the
+    /// flags the critical surface's normal forces solve, as TypeScript's
+    /// solve does on the slope's own slices).
+    pub fn search_mut(&mut self) -> &mut [SearchPlane] {
+        &mut self.search
+    }
+
     pub fn set_search_planes(&mut self, planes: Vec<SearchPlane>) {
         self.search = planes;
         self.version += 1;
@@ -1456,14 +1663,22 @@ impl Slope {
     }
 
     /// Make a material use the water table added with the given id.
-    pub fn assign_material_water_table(&mut self, material: MaterialId, id: &str) {
+    /// `id` `None` is TypeScript's `null` (a definition's `waterTableId:
+    /// null`): the material counts as having its own water table
+    /// (`has_material_water_tables`) but uses the default line.
+    pub fn assign_material_water_table<'a>(
+        &mut self,
+        material: MaterialId,
+        id: impl Into<Option<&'a str>>,
+    ) {
+        let id = id.into().map(str::to_string);
         match self
             .material_water_table
             .iter_mut()
             .find(|(m, _)| *m == material)
         {
-            Some(entry) => entry.1 = id.to_string(),
-            None => self.material_water_table.push((material, id.to_string())),
+            Some(entry) => entry.1 = id,
+            None => self.material_water_table.push((material, id)),
         }
         self.reset_results();
     }
@@ -1716,8 +1931,13 @@ impl Slope {
                 "Analysis option tolerance must be positive.",
             ));
         }
-        if let Some(m) = opts.method {
-            self.method = m;
+        if let Some(m) = &opts.method {
+            let OrOther::Known(m) = m else {
+                return Err(EngineError::new(
+                    "Method must be one of 'Bishop', 'Janbu', or 'Morgenstern-Price'",
+                ));
+            };
+            self.method = *m;
         }
         if let Some(s) = opts.slices {
             self.slices = js::math::max(
@@ -1751,8 +1971,13 @@ impl Slope {
         if let Some(j) = opts.janbu_correction {
             self.janbu_correction = j;
         }
-        if let Some(h) = opts.pore_pressure_head {
-            self.pore_pressure_head = h;
+        if let Some(h) = &opts.pore_pressure_head {
+            let OrOther::Known(h) = h else {
+                return Err(EngineError::new(
+                    "porePressureHead must be 'phreatic-correction' or 'vertical'",
+                ));
+            };
+            self.pore_pressure_head = *h;
         }
         if let Some(d) = opts.tension_crack_depth {
             if !d.is_finite() || d < 0.0 {
@@ -1807,11 +2032,22 @@ impl Slope {
         if let Some(n) = opts.non_circular_optimization {
             self.non_circular_optimization = n;
         }
-        if let Some(s) = opts.search_method {
-            self.search_method = s;
+        if let Some(s) = &opts.search_method {
+            let OrOther::Known(s) = s else {
+                return Err(EngineError::new(
+                    "searchMethod must be 'circular' or 'block'",
+                ));
+            };
+            self.search_method = *s;
         }
-        let angle_range = |name: &str, r: Option<[f64; 2]>| -> Result<Option<[f64; 2]>> {
-            let Some([lo, hi]) = r else { return Ok(None) };
+        let angle_range = |name: &str, r: &AngleRangePatch| -> Result<Option<[f64; 2]>> {
+            let [lo, hi] = match r {
+                AngleRangePatch::Null => return Ok(None),
+                AngleRangePatch::Range(r) => *r,
+                AngleRangePatch::NotIterable(_) => {
+                    return Err(EngineError::type_error("r is not iterable"))
+                }
+            };
             if !(lo.is_finite() && hi.is_finite() && lo > 0.0 && hi < 90.0 && lo <= hi) {
                 return Err(EngineError::new(format!(
                     "{name} must be a range [min, max] with 0° < min ≤ max < 90°"
@@ -1819,10 +2055,10 @@ impl Slope {
             }
             Ok(Some([lo, hi]))
         };
-        if let Some(r) = opts.block_active_angle {
+        if let Some(r) = &opts.block_active_angle {
             self.block_active_angle = angle_range("blockActiveAngle", r)?;
         }
-        if let Some(r) = opts.block_passive_angle {
+        if let Some(r) = &opts.block_passive_angle {
             self.block_passive_angle = angle_range("blockPassiveAngle", r)?;
         }
         if let Some(d) = opts.min_slip_depth {
@@ -1848,15 +2084,32 @@ impl Slope {
             }
             self.partial_factors = f.clone();
         }
-        if let Some(f) = opts.interslice_function {
-            self.interslice_function = f;
+        if let Some(f) = &opts.interslice_function {
+            let OrOther::Known(f) = f else {
+                return Err(EngineError::new(
+                    "intersliceFunction must be one of 'constant', 'half-sine', 'clipped-sine', 'trapezoidal', or 'data-point-specified'",
+                ));
+            };
+            self.interslice_function = *f;
         }
-        if let Some(points) = &opts.interslice_data_points {
-            self.interslice_data_points = points
-                .iter()
-                .filter(|p| p[0].is_finite() && p[1].is_finite())
-                .copied()
-                .collect();
+        match &opts.interslice_data_points {
+            None => {}
+            Some(IntersliceDataPointsPatch::Points(points)) => {
+                self.interslice_data_points = points
+                    .iter()
+                    .filter(|p| p[0].is_finite() && p[1].is_finite())
+                    .copied()
+                    .collect();
+            }
+            // `opts.intersliceDataPoints.filter(…)` on a value that is not a list
+            Some(IntersliceDataPointsPatch::NotAList(v)) => {
+                return Err(EngineError::type_error(match v {
+                    serde_json::Value::Null => {
+                        "Cannot read properties of null (reading 'filter')".to_string()
+                    }
+                    _ => "opts.intersliceDataPoints.filter is not a function".to_string(),
+                }));
+            }
         }
         self.reset_results();
         Ok(())
@@ -1967,16 +2220,20 @@ impl Slope {
         // both adjacent segments; drop the duplicate or the plane's entry and
         // exit collapse into one point and the plane is discarded.
         js::array::sort_by(&mut intersections, |a, b| a[0] - b[0]);
-        let mut out: Vec<Pt> = Vec::with_capacity(intersections.len());
-        for (i, p) in intersections.iter().enumerate() {
-            if i == 0
-                || (p[0] - intersections[i - 1][0]).abs() > 1e-9
-                || (p[1] - intersections[i - 1][1]).abs() > 1e-9
-            {
-                out.push(*p);
+        // (in place; each point is compared with the one before it in the
+        // sorted list, kept or not, as TypeScript's filter does)
+        let mut kept = 0;
+        let mut previous: Option<Pt> = None;
+        for i in 0..intersections.len() {
+            let p = intersections[i];
+            if previous.is_none_or(|q| (p[0] - q[0]).abs() > 1e-9 || (p[1] - q[1]).abs() > 1e-9) {
+                intersections[kept] = p;
+                kept += 1;
             }
+            previous = Some(p);
         }
-        Ok(out)
+        intersections.truncate(kept);
+        Ok(intersections)
     }
 
     /// Get the minimum factor of safety from the analysis results.

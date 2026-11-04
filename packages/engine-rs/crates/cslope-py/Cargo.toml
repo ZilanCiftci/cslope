@@ -1,0 +1,25 @@
+[package]
+name = "cslope-py"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "Python binding of the cSlope engine (pyo3), import name `cslope`; built with maturin"
+publish = false
+
+[lib]
+# The extension module `cslope._native` (python/cslope wraps it).
+name = "_native"
+crate-type = ["cdylib"]
+# No Rust unit tests: the binding is tested from Python (tests/, pytest),
+# and a test harness would have to link libpython.
+test = false
+doctest = false
+
+[dependencies]
+cslope-engine = { path = "../cslope-engine", features = ["rayon"] }
+serde.workspace = true
+# Exact pins (PORTING.md rule 5): pythonize must match pyo3's minor version.
+# abi3-py39: one wheel per platform for CPython 3.9 and later.
+pyo3 = { version = "=0.29.3", features = ["abi3-py39"] }
+pythonize = "=0.29.0"
+rayon = "1"

@@ -44,8 +44,6 @@ packages/desktop/src/store/lovo.local.ts
 # Rust build output
 packages/engine-rs/target/
 # WebAssembly engine builds (packages/engine-rs/tools/build-wasm.ts): the
-# testing build always, the product's wasm until it is committed (Phase 6);
-# the product glue (cslope_wasm.js, .d.ts) is committed for the facade's types
+# testing build is never committed; the product build (packages/engine/src/
+# wasm: the .wasm, its glue and BUILD-INFO.json) is
 packages/engine/src/wasm-testing/
-packages/engine/src/wasm/cslope_wasm_bg.wasm
-packages/engine/src/wasm/BUILD-INFO.json

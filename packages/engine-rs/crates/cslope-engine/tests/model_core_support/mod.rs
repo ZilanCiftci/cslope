@@ -1,6 +1,6 @@
 //! Shared code of the model core tests: the Slope snapshot (every getter and
-//! derived value, in the JSON shape tools/fixtures/model-core.fixture.ts
-//! writes) and a JSON comparison with a relative tolerance on numbers.
+//! derived value, as JSON), a JSON comparison with a relative tolerance on
+//! numbers, and model builders.
 #![allow(dead_code, clippy::disallowed_methods)]
 
 use cslope_engine::model::composite::{circle_below_bare_base, composite_floor, floor_y_at};
@@ -9,15 +9,9 @@ use cslope_engine::model::reinforcement::{
     effective_vertical_stress, effective_vertical_stress_with_loads, envelope_at, pile_force,
     pile_force_direction, pullout_beyond, vertical_stress,
 };
-use cslope_engine::model::search::{
-    generate_local_planes, generate_refined_planes, is_plane_within_external_boundary, plane_key,
-    plane_keys, select_entry_exit, set_entry_exit_planes,
-};
+use cslope_engine::model::search::{plane_key, select_entry_exit};
 use cslope_engine::model::slope::{SearchPlane, Slope};
-use cslope_engine::model::surface::{
-    boundary_corner_in_mass, circle_leaves_model, circle_to_polyline, default_axis_point,
-    fit_polyline_to_ground, is_admissible_polyline, polyline_crossings_x, polyline_y_at,
-};
+use cslope_engine::model::surface::circle_leaves_model;
 use cslope_engine::types::Material;
 use serde_json::{json, Map, Value};
 
@@ -290,34 +284,6 @@ pub fn snap(slope: &Slope, depth: usize) -> Value {
     })
 }
 
-pub fn surface_probe(slope: &Slope, planes: &[SearchPlane]) -> Value {
-    let mut out = Vec::new();
-    let step = std::cmp::max(1, planes.len() / 25);
-    let mut i = 0;
-    while i < planes.len() {
-        let p = &planes[i];
-        i += step;
-        let poly = circle_to_polyline(p.cx, p.cy, p.radius, p.lc, p.rc, 7);
-        let mut ext = vec![[poly[0][0] - 0.5, poly[0][1] - 1.0]];
-        ext.extend_from_slice(&poly[1..6]);
-        ext.push([poly[6][0] + 0.5, poly[6][1] - 1.0]);
-        let fitted = fit_polyline_to_ground(slope, &ext);
-        let (bx, by) = slope.external_boundary_xy();
-        out.push(json!({
-            "poly": pts(&poly),
-            "admissible": is_admissible_polyline(slope, &poly, 1.0),
-            "fitted": opt(fitted.as_ref().map(|f| pts(f))),
-            "fittedAdmissible": opt(fitted.as_ref().map(|f| json!(is_admissible_polyline(slope, f, f64::INFINITY)))),
-            "axis": pt(default_axis_point(&poly)),
-            "corner": boundary_corner_in_mass(slope, poly[0][0], poly[6][0], |x| polyline_y_at(&poly, x)),
-            "crossings": ns(&polyline_crossings_x(&poly, bx, by, true)),
-            "within": is_plane_within_external_boundary(slope, p, false),
-            "withinCircle": is_plane_within_external_boundary(slope, p, true),
-        }));
-    }
-    Value::Array(out)
-}
-
 /// Made-up factors of safety for the refined and local generation (as the
 /// exporter's `fakeFos`: a hash of the plane's key).
 pub fn fake_fos(key: &str, salt: u64) -> f64 {
@@ -354,10 +320,6 @@ pub fn plane_of(v: &Value) -> SearchPlane {
     }
 }
 
-pub fn planes_from(v: &Value) -> Vec<SearchPlane> {
-    v.as_array().unwrap().iter().map(plane_of).collect()
-}
-
 fn ranked(planes: &[SearchPlane], salt: u64, offset: f64) -> Vec<SearchPlane> {
     planes
         .iter()
@@ -366,12 +328,6 @@ fn ranked(planes: &[SearchPlane], salt: u64, offset: f64) -> Vec<SearchPlane> {
             ..p.clone()
         })
         .collect()
-}
-
-/// The first pass (`set_entry_exit_planes`).
-pub fn first_pass(slope: &mut Slope) -> Vec<SearchPlane> {
-    set_entry_exit_planes(slope).unwrap();
-    slope.search().to_vec()
 }
 
 /// Planes of a key-aligned comparison (`compare_planes`).
@@ -383,6 +339,8 @@ pub struct PlaneMatch {
     /// Planes with equal keys whose values differ by more than `rel` (but
     /// within `near_tie_rel`): bisection results at a tangency.
     pub near_tie_values: Vec<String>,
+    /// Those planes, (Rust, TypeScript).
+    pub near_tie_planes: Vec<(Value, Value)>,
     /// The same plane (all values within `rel`) with another key: a value
     /// on a rounding half of the key (`Math.round` of x.5 decided by the
     /// last bit).
@@ -428,6 +386,7 @@ pub fn compare_planes(
             } else {
                 m.near_tie_values
                     .push(format!("{at}: {}", strict.errors.join("; ")));
+                m.near_tie_planes.push((a[i].clone(), b[j].clone()));
                 // only a circle tangent to a material interface is a near-tie
                 if b[j].get("tangentTo").is_none() || a[i].get("tangentTo").is_none() {
                     stats.errors.push(format!(
@@ -496,26 +455,6 @@ pub fn compare_planes(
     m.only_rust.extend(a[i..].iter().cloned());
     m.only_ts.extend(b[j..].iter().cloned());
     m
-}
-
-/// The refined and local planes generated from given first-pass planes and
-/// refined planes (TypeScript's, so that each stage starts from the same
-/// input): `refined`, `local0`, `local2` and `keysAfter` of the exporter.
-pub fn later_passes(slope: &Slope, planes: &[SearchPlane], refined_in: &[SearchPlane]) -> Value {
-    let ranked0 = ranked(planes, 0, 0.0);
-    let refined = generate_refined_planes(slope, &ranked0, slope.refined_iterations()).unwrap();
-    let mut keys = plane_keys(&ranked0);
-    let mut evaluated = ranked0.clone();
-    evaluated.extend(ranked(refined_in, 7, 0.5));
-    let local0 = generate_local_planes(slope, &evaluated, 150.0, 0.0, &mut keys, 4).unwrap();
-    let mut keys2 = plane_keys(&ranked0);
-    let local2 = generate_local_planes(slope, &ranked0, 60.0, 2.0, &mut keys2, 2).unwrap();
-    json!({
-        "refined": Value::Array(refined.iter().map(plane_json).collect()),
-        "local0": Value::Array(local0.iter().map(plane_json).collect()),
-        "local2": Value::Array(local2.iter().map(plane_json).collect()),
-        "keysAfter": keys.len(),
-    })
 }
 
 // ── Comparison ────────────────────────────────────────────────────
@@ -771,9 +710,15 @@ pub fn close(a: f64, b: f64, digits: i32) {
     );
 }
 
-/// The canonical definition of a verification problem (from the fixtures;
-/// `toCanonicalSlopeDefinition` already applied, so build it directly).
+/// The canonical definition of a verification problem
+/// (golden/verification.json, `toCanonicalSlopeDefinition` applied, so
+/// build it directly).
 pub fn problem(id: &str) -> cslope_engine::types::SlopeDefinition {
-    let cases: Value = crate::common::load("model-core", &format!("def-{id}"));
-    def(cases["canonical"]["definition"].clone())
+    let cases: Vec<Value> = crate::common::verification_cases();
+    let c = cases.iter().find(|c| c["id"] == id).expect("the problem");
+    cslope_engine::model::canonical::to_canonical_slope_definition(
+        &def(c["definition"].clone()),
+        None,
+    )
+    .expect("canonical")
 }

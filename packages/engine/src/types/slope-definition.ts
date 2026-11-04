@@ -3,11 +3,13 @@
  *
  * This is the data-transfer shape used to pass a slope model between
  * the UI, the Web Worker, and the engine.
+ *
+ * Implemented by the Rust engine (packages/engine-rs) through WebAssembly (see facade/internal.ts).
  */
-
+import { shareUnchanged, wasm } from "../facade/internal";
+import type { MaterialModel } from "./material-models";
 import type { AnalysisLimits } from "./analysis";
 import type { SlopeOrientation } from "../model/canonical";
-import type { MaterialModel } from "./material-models";
 import type { Pile, Reinforcement } from "./reinforcement";
 
 /** A material of a slope definition. */
@@ -41,37 +43,6 @@ export interface SlopeMaterialDefinition {
    * material.  When absent (or unknown) the default `waterTable` is used.
    */
   waterTableId?: string;
-}
-
-/**
- * The model of a definition's material: its `model`, or for an older
- * definition a Mohr-Coulomb model from the flat fields.
- */
-export function materialModelOf(m: SlopeMaterialDefinition): MaterialModel {
-  if (m.model) return m.model;
-  // Older definitions gave all three; a missing one is an error, not 0.
-  if (typeof m.unitWeight !== "number" || typeof m.cohesion !== "number" || typeof m.frictionAngle !== "number") {
-    throw new Error(`Material "${m.name}" has no model.`);
-  }
-  return {
-    kind: "mohr-coulomb",
-    unitWeight: m.unitWeight,
-    cohesion: m.cohesion,
-    frictionAngle: m.frictionAngle,
-    ...(m.cohesionRefDepth !== undefined ? { cohesionRefDepth: m.cohesionRefDepth } : {}),
-    ...(m.cohesionRateOfChange !== undefined ? { cohesionRateOfChange: m.cohesionRateOfChange } : {}),
-    ...(m.cohesionUndrained !== undefined ? { cohesionUndrained: m.cohesionUndrained } : {}),
-  };
-}
-
-/** The flat fields of older definitions (and their material type). */
-const FLAT_FIELDS = ["unitWeight", "frictionAngle", "cohesion", "cohesionRefDepth", "cohesionRateOfChange", "cohesionUndrained", "materialType"];
-
-/** A definition's material with its model and without the flat fields. */
-export function withMaterialModel(m: SlopeMaterialDefinition): SlopeMaterialDefinition {
-  const out: Record<string, unknown> = { ...m, model: materialModelOf(m) };
-  for (const key of FLAT_FIELDS) delete out[key];
-  return out as unknown as SlopeMaterialDefinition;
 }
 
 /** Slope definition sent from the UI to the engine / worker. */
@@ -182,4 +153,18 @@ export interface SlopeDefinition {
    * a fixed point, two points a line, three or more a window (polygon).
    */
   blockSearchObjects?: Array<{ points: [number, number][] }>;
+}
+
+/**
+ * The model of a definition's material: its `model`, or for an older
+ * definition a Mohr-Coulomb model from the flat fields.
+ */
+export function materialModelOf(m: SlopeMaterialDefinition): MaterialModel {
+  // TypeScript returns the given model itself
+  return m.model ?? wasm().material_model_of(m);
+}
+
+/** A definition's material with its model and without the flat fields. */
+export function withMaterialModel(m: SlopeMaterialDefinition): SlopeMaterialDefinition {
+  return shareUnchanged(m, wasm().with_material_model(m));
 }

@@ -21,6 +21,7 @@ import { execFileSync } from "node:child_process";
 import { GState, jsPDF } from "jspdf";
 import {
   buildSlope,
+  initEngine,
   isPointInPolygon,
   polygonizeRegions,
   toCanonicalSlopeDefinition,
@@ -53,6 +54,9 @@ import { freeWaterPolygons } from "../src/utils/piezo";
 import { POND_COLOR, POND_OPACITY } from "../src/features/rendering/style-spec";
 
 type Pt = [number, number];
+
+// The engine's WebAssembly, read from disk.
+await initEngine();
 
 // import.meta.dirname, not the URL pathname: on Windows that is "/D:/…".
 const HERE = import.meta.dirname;

@@ -1,5 +1,6 @@
 //! Engine errors as JavaScript errors (ARCHITECTURE.md §2.3): the message
-//! unchanged, `RangeError` for `ErrorKind::Range`, `Error` otherwise
+//! unchanged, `RangeError` for `ErrorKind::Range`, `TypeError` for
+//! `ErrorKind::Type`, `Error` otherwise
 //! (cancellation included: the app terminates the worker instead).
 
 use cslope_engine::error::{EngineError, ErrorKind};
@@ -9,6 +10,7 @@ use wasm_bindgen::JsValue;
 pub fn to_js_error(e: &EngineError) -> JsValue {
     match e.kind {
         ErrorKind::Range => js_sys::RangeError::new(&e.message).into(),
+        ErrorKind::Type => js_sys::TypeError::new(&e.message).into(),
         ErrorKind::Error | ErrorKind::Cancelled => js_sys::Error::new(&e.message).into(),
     }
 }

@@ -12,7 +12,7 @@
 //! capacities. Without pullout both ends are fully anchored (T = Tmax).
 //! Forces are per metre of slope: capacities are divided by the spacing.
 
-use crate::error::Result;
+use crate::error::{EngineError, Result};
 use crate::js;
 use crate::math::interpolation::get_y_at_x;
 use crate::math::polygon::is_point_in_polygon;
@@ -552,9 +552,11 @@ pub fn apply_reinforcement(
                 continue;
             }
             let direction = if along > 0.0 {
-                ReinforcementDirection::Axial
+                &ReinforcementDirection::Axial
             } else {
-                r.direction.unwrap_or(ReinforcementDirection::Axial)
+                r.direction
+                    .as_ref()
+                    .unwrap_or(&ReinforcementDirection::Axial)
             };
             let (fx, fy) = match direction {
                 ReinforcementDirection::Tangent => (-tx, -ty),
@@ -564,7 +566,8 @@ pub fn apply_reinforcement(
                     let bl = js::math::hypot(&[bxv, byv]);
                     (bxv / bl, byv / bl)
                 }
-                ReinforcementDirection::Axial => (dx, dy),
+                // "axial", and any other value (TypeScript's last branch)
+                ReinforcementDirection::Axial | ReinforcementDirection::Other(_) => (dx, dy),
             };
             let force = ReinforcementForce {
                 index: k,
@@ -574,8 +577,7 @@ pub fn apply_reinforcement(
                 fx: fx * magnitude,
                 fy: fy * magnitude,
                 force: magnitude,
-                passive: r.application.unwrap_or(ReinforcementApplication::Active)
-                    == ReinforcementApplication::Passive,
+                passive: is_passive(r.application.as_ref()),
             };
             add_force(&mut slices[slice], force.clone(), cx, cy, None);
             forces.push(force);
@@ -616,8 +618,7 @@ pub fn apply_reinforcement(
                 fx: magnitude * ux,
                 fy: magnitude * uy,
                 force: magnitude,
-                passive: p.application.unwrap_or(ReinforcementApplication::Active)
-                    == ReinforcementApplication::Passive,
+                passive: is_passive(p.application.as_ref()),
             };
             // The soil pressure acts on the pile from its head (or the ground)
             // down to the slip surface, so its moment about the centre is that
@@ -625,9 +626,7 @@ pub fn apply_reinforcement(
             // at the crossing the arm of a horizontal force is the longest it
             // can be, and the pile's moment came out about 5 % too large (V013c).
             let mut at: [f64; 2] = [px, py];
-            if p.location.unwrap_or(PileForceLocation::Centroid) == PileForceLocation::Centroid
-                && resultant_above > 0.0
-            {
+            if at_centroid(p) && resultant_above > 0.0 {
                 let len = js::math::hypot(&[p.x2 - p.x1, p.y2 - p.y1]);
                 let up = if p.y1 >= p.y2 { 1.0 } else { -1.0 };
                 if len > 0.0 {
@@ -642,6 +641,19 @@ pub fn apply_reinforcement(
         }
     }
     Ok(forces)
+}
+
+/// `(application ?? "active") === "passive"`: whether the force of a
+/// reinforcement or pile is passive (another value is not).
+pub fn is_passive(application: Option<&ReinforcementApplication>) -> bool {
+    application == Some(&ReinforcementApplication::Passive)
+}
+
+/// `(p.location ?? "centroid") === "centroid"`: whether a pile's force acts
+/// at the resultant of the soil pressure above the slip surface (another
+/// value acts at the crossing).
+pub fn at_centroid(p: &Pile) -> bool {
+    matches!(p.location, None | Some(PileForceLocation::Centroid))
 }
 
 /// Unit direction of a pile's force on the sliding mass (+x sliding, +y up)
@@ -711,6 +723,9 @@ pub struct PileProfile {
 
 const PROFILE_STEP: f64 = 0.05;
 
+/// `Number.MAX_SAFE_INTEGER`, the largest length of a typed array.
+const MAX_SAFE_INTEGER: f64 = 9_007_199_254_740_991.0;
+
 pub fn build_pile_profile(slope: &Slope, p: &Pile) -> Result<Option<PileProfile>> {
     let (None, Some(d)) = (p.force, p.diameter) else {
         return Ok(None);
@@ -727,12 +742,30 @@ pub fn build_pile_profile(slope: &Slope, p: &Pile) -> Result<Option<PileProfile>
     let z_tip = js::math::max(z_top, y_ground - js::math::min(p.y1, p.y2));
     let d1 = p.spacing.unwrap_or(1.0) - d;
     let f = slope.partial_factors();
-    let n = js::math::max(1.0, ((z_tip - z_top) / PROFILE_STEP).ceil()) as usize;
-    let nf = n as f64;
+    let nf = js::math::max(1.0, ((z_tip - z_top) / PROFILE_STEP).ceil());
     let dz = (z_tip - z_top) / nf;
-    let mut z = vec![0.0; n + 1];
-    let mut force = vec![0.0; n + 1];
-    let mut moment = vec![0.0; n + 1];
+    // `new Float64Array(n + 1)`: a length beyond 2^53 − 1 (a pile tip
+    // at y = −1e300) is TypeScript's RangeError, and so is a length that
+    // cannot be allocated ("Array buffer allocation failed"; in WebAssembly
+    // the memory limit, natively what the system gives).
+    let len = nf + 1.0;
+    if !(len <= MAX_SAFE_INTEGER) {
+        return Err(EngineError::range(format!(
+            "Invalid typed array length: {}",
+            js::num::to_string(len)
+        )));
+    }
+    let n = nf as usize;
+    let alloc = || -> Result<Vec<f64>> {
+        let mut v = Vec::new();
+        v.try_reserve_exact(n + 1)
+            .map_err(|_| EngineError::range("Array buffer allocation failed"))?;
+        v.resize(n + 1, 0.0);
+        Ok(v)
+    };
+    let mut z = alloc()?;
+    let mut force = alloc()?;
+    let mut moment = alloc()?;
     z[0] = z_top;
     for k in 0..n {
         let zm = z_top + (k as f64 + 0.5) * dz;

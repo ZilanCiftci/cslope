@@ -36,6 +36,7 @@ import {
   runReliabilityCase,
   runVerification,
 } from "@cslope/engine/verification";
+import { initEngine } from "@cslope/engine";
 import { findForbiddenNames } from "./forbidden-names";
 import type { ReliabilityProblem, VerificationData, VerificationProblem } from "../src/content/verification-types";
 
@@ -60,10 +61,10 @@ export interface FemRaw {
 }
 
 /**
- * Finite element results are cached by a hash of the problem's input and
- * of every engine source the finite element analysis imports, directly or
- * not (packages/engine/src/fem and what it uses): they take minutes, and a
- * change elsewhere in the limit equilibrium engine does not move them.
+ * Finite element results are cached by a hash of the problem's input, of
+ * the engine's WebAssembly and of every engine source the finite element
+ * analysis imports, directly or not (packages/engine/src/fem and what it
+ * uses): they take minutes.
  */
 const FEM_CACHE = join(import.meta.dirname, "../node_modules/.cache/cslope-fem");
 const ENGINE_SRC = join(import.meta.dirname, "../../engine/src");
@@ -89,6 +90,7 @@ let femSourceHash: string | undefined;
 function femKey(c: (typeof VERIFICATION_CASES)[number]): string {
   if (femSourceHash === undefined) {
     const h = createHash("sha256");
+    h.update(readFileSync(join(ENGINE_SRC, "wasm/cslope_wasm_bg.wasm")));
     for (const f of femSources()) {
       h.update(f.slice(ENGINE_SRC.length));
       h.update(readFileSync(f));
@@ -298,6 +300,7 @@ if (import.meta.main) {
   if (i >= 0) {
     const [k, n] = process.argv[i + 1].split("/").map(Number);
     const file = process.argv[i + 2];
+    await initEngine();
     writeFileSync(file, JSON.stringify({ fos: runShard(k, n), reliability: runReliability(k, n), fem: runFemShard(k, n) }));
   } else {
     const started = Date.now();

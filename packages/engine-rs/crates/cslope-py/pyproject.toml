@@ -1,0 +1,44 @@
+[build-system]
+# Pinned: the wheels workflow and the local build use the same maturin.
+requires = ["maturin==1.15.0"]
+build-backend = "maturin"
+
+[project]
+name = "cslope"
+description = "Slope stability analysis: limit equilibrium (Bishop, Janbu, Morgenstern-Price) and finite elements, from the cSlope engine"
+readme = "README-PYPI.md"
+license = { text = "MIT" }
+requires-python = ">=3.9"
+dynamic = ["version"]
+keywords = ["geotechnical", "slope stability", "limit equilibrium", "finite element", "factor of safety"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Rust",
+    "Topic :: Scientific/Engineering",
+    "Typing :: Typed",
+]
+
+[project.optional-dependencies]
+# Finite element arrays as numpy arrays (arrays="numpy").
+numpy = ["numpy>=1.21"]
+test = ["pytest>=7"]
+
+[project.urls]
+Source = "https://github.com/ZilanCiftci/cslope"
+
+[tool.maturin]
+# The Rust extension is cslope._native; python/cslope is the package.
+module-name = "cslope._native"
+python-source = "python"
+manifest-path = "Cargo.toml"
+profile = "release"
+# Without symbols (smaller wheels).
+strip = true
+# Only the package goes into the wheel: no tests, no verification data.
+include = [{ path = "python/cslope/py.typed", format = "wheel" }]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

@@ -8,6 +8,7 @@
 // `x >= a && x <= b` as they are.
 #![allow(clippy::neg_cmp_op_on_partial_ord, clippy::manual_range_contains)]
 
+pub mod api;
 pub mod error;
 pub mod fem;
 pub mod js;

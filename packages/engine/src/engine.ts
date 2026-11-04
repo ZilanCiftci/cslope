@@ -6,9 +6,10 @@
  *   await initEngine(bytes);         // the app's main thread
  *   initEngineSync(engineModule());  // a worker, given the compiled module
  *
- * The facade (src/facade) calls the exports through `engine()`. Not used by
- * the app or the default tests yet: the TypeScript engine is still the
- * reference, and the facade runs under `vitest.rust.config.ts` only.
+ * The modules of src/ call the exports through `engine()` (src/facade has
+ * the helpers). The app starts the engine in main.tsx and posts the
+ * compiled module to its workers; the tests start the testing build in
+ * their setup file.
  */
 import * as glue from "./wasm/cslope_wasm.js";
 
@@ -105,10 +106,12 @@ export async function initEngine(source?: WasmSource): Promise<void> {
   let module: WebAssembly.Module;
   if (source === undefined) {
     // node:fs by a variable name, so that bundlers for the browser leave it
-    // alone (and the engine needs no Node types)
+    // alone (and the engine needs no Node types); the file name too, or
+    // Vite would emit the file as an asset
     const fs = "node:fs/promises";
+    const file = "./wasm/cslope_wasm_bg.wasm";
     const { readFile } = (await import(/* @vite-ignore */ fs)) as { readFile(path: URL): Promise<Uint8Array<ArrayBuffer>> };
-    const bytes = await readFile(new URL("./wasm/cslope_wasm_bg.wasm", import.meta.url));
+    const bytes = await readFile(new URL(file, import.meta.url));
     module = await WebAssembly.compile(ownBytes(bytes));
   } else {
     module = isModule(source) ? source : await WebAssembly.compile(ownBytes(source));

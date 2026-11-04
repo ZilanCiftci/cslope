@@ -24,6 +24,16 @@ jobs:
           bun-version-file: package.json
       - name: Install
         run: bun install --frozen-lockfile
+      # The engine's tests run on its testing build (packages/engine/vitest.setup.ts)
+      - name: Setup Rust
+        working-directory: packages/engine-rs
+        run: rustup toolchain install
+      - name: Install wasm-bindgen
+        uses: taiki-e/install-action@v2
+        with:
+          tool: wasm-bindgen-cli@0.2.130
+      - name: Build the testing engine
+        run: bun packages/engine-rs/tools/build-wasm.ts testing
       - name: Verification problems, full search
         working-directory: packages/engine
         env:

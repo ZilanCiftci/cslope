@@ -50,3 +50,5 @@ cd cslope
 bun install
 bun run dev
 ```
+
+The analysis engine is written in Rust (packages/engine-rs) and is included built, as WebAssembly, so running the app needs only Bun. To change the engine, install the Rust toolchain and the wasm-bindgen command-line tool, then rebuild it with `bun packages/engine-rs/tools/build-wasm.ts`.

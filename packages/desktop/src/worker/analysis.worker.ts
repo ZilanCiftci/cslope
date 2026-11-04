@@ -3,79 +3,27 @@
  *
  * Reconstructs a Slope model from the serialized SlopeDefinition,
  * runs the full analysis, and returns structured results.
+ *
+ * The engine is WebAssembly: each request brings the module the main
+ * thread compiled (`engine`), and the worker starts it on the first one
+ * (ARCHITECTURE.md §3.2), without compiling it again.
  */
 
 import type { AnalysisResponse, ReliabilityRequest, WorkerMessage } from "./messages";
 import { runReliabilityRequest, runReliabilityRequestParallel } from "./reliability-run";
-import type {
-  AnalysisResult,
-  ReliabilityResult,
-  SlipSurfaceResult,
-  SliceData,
-} from "@cslope/engine";
+import type { AnalysisResult, ReliabilityResult } from "@cslope/engine";
 import {
-  sgi3dFactorOfSafety,
-  analyseSlope,
-  analysisWarnings,
-  steepEntryMessage,
+  runAnalysis,
+  runAnalysisAsync,
   runFemSummary,
   runFemSummaryWithBounds,
-  mapAnalysisResultToModelSpace,
-  buildAnalysisSlope,
+  initEngineSync,
   EvaluatorPool,
   serveEvaluator,
   webEndpoint,
-  oppositeDirectionDefinition,
-  resolveOrientation,
-  sliceDrivingMoment,
-  sliceVerticalLoad,
-  solvedEffectiveNormals,
-  type SearchPlane,
-  type Slice,
-  type Slope,
-  type AnalysisOptions,
   type CoordinatorEndpoint,
   type EvaluatorEndpoint,
-  type SlopeDefinition,
 } from "@cslope/engine";
-
-function computeCriticalPushingMoment(
-  slices: ReadonlyArray<Slice> | null | undefined,
-): number | null {
-  if (!slices || slices.length === 0) return null;
-  let pushing = 0;
-  for (const s of slices) {
-    pushing += sliceDrivingMoment(s);
-    // Active reinforcement is on the driving side (passive is part of the
-    // resistance, which is reported as pushing × FOS).
-    const a = s.reinforcementActive;
-    if (a) pushing += a[0] * s.dx + a[2];
-  }
-  return Number.isFinite(pushing) && pushing > 0 ? pushing : null;
-}
-
-function computeCriticalSlipVolume(
-  slices: ReadonlyArray<{ area: number }> | null | undefined,
-): number | null {
-  if (!slices || slices.length === 0) return null;
-  let volume = 0;
-  for (const s of slices) {
-    volume += s.area;
-  }
-  return Number.isFinite(volume) && volume > 0 ? volume : null;
-}
-
-/**
- * The Clarabel WebAssembly binary for the limit analysis bounds, inlined in
- * a chunk loaded on first use: the app runs from file://, where the worker
- * cannot fetch a separate .wasm file.
- */
-async function clarabelBinary(): Promise<ArrayBuffer> {
-  const { default: base64 } = await import("@cslope/engine/clarabel.wasm?base64");
-  const bin = atob(base64), bytes = new Uint8Array(bin.length);
-  for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
-  return bytes.buffer;
-}
 
 // ── Worker handler ──────────────────────────────────────────────
 
@@ -90,6 +38,8 @@ function evaluatorPool(ports: MessagePort[] | undefined): EvaluatorPool | null {
 
 /** Handle incoming analysis requests. */
 self.onmessage = async (event: MessageEvent<WorkerMessage>) => {
+  // the engine, compiled by the main thread (a no-op once started)
+  if (event.data.engine) initEngineSync(event.data.engine);
   if (event.data.type === "serve-evaluator") {
     // This worker evaluates trial surfaces for an analysis worker.
     serveEvaluator(webEndpoint(event.data.port) as EvaluatorEndpoint);
@@ -113,24 +63,17 @@ self.onmessage = async (event: MessageEvent<WorkerMessage>) => {
 
   const pool = evaluatorPool(event.data.evaluators);
   try {
-    const start = performance.now();
     let result: AnalysisResult;
-    const both = options.bothDirections && !slopeDef.customPlanesOnly;
     if (pool) {
       // (awaited only with evaluators: without, the result is posted at once)
       try {
-        result = both
-          ? await analyseBothDirectionsParallel(slopeDef, options, pool)
-          : mapAnalysisResultToModelSpace(await analyseParallel(slopeDef, options, pool), slopeDef);
+        result = await runAnalysisAsync(slopeDef, options, (slope, def, opts) => pool.analyse(slope, def, opts));
       } finally {
         pool.close();
       }
-    } else if (both) {
-      result = analyseBothDirections(slopeDef, options);
     } else {
-      result = mapAnalysisResultToModelSpace(analyse(slopeDef, options), slopeDef);
+      result = runAnalysis(slopeDef, options);
     }
-    result.elapsedMs = performance.now() - start;
     // Strength reduction by finite elements, in the model's own sliding direction.
     // A failure here keeps the limit equilibrium result and reports the error with it.
     if (options.fem?.enabled) {
@@ -142,7 +85,7 @@ self.onmessage = async (event: MessageEvent<WorkerMessage>) => {
           self.postMessage({ type: "analysis-progress", id, progress: Math.min(0.9, 0.3 + 0.03 * trials) } satisfies AnalysisResponse);
         };
         result.fem = options.fem.limitAnalysis
-          ? await runFemSummaryWithBounds(slopeDef, options.fem, onTrial, async () => ({ clarabelWasm: await clarabelBinary() }))
+          ? await runFemSummaryWithBounds(slopeDef, options.fem, onTrial)
           : runFemSummary(slopeDef, options.fem, onTrial);
       } catch (err: unknown) {
         result.femError = err instanceof Error ? err.message : String(err);
@@ -189,268 +132,6 @@ async function runReliability(req: ReliabilityRequest): Promise<void> {
       error: err instanceof Error ? err.message : String(err),
     } satisfies AnalysisResponse);
   }
-}
-
-/**
- * Analyse the model's own direction and the opposite one and report the
- * lower FOS, with the direction it slides in.
- */
-function analyseBothDirections(
-  slopeDef: SlopeDefinition,
-  options: AnalysisOptions,
-): AnalysisResult {
-  const oppositeDef = oppositeDirectionDefinition(slopeDef);
-  // A failure in the model's own direction (its limits, its geometry) is
-  // the user's error to see; only the opposite run may come up empty.
-  const ownResult = mapAnalysisResultToModelSpace(analyse(slopeDef, options), slopeDef);
-  let opposite: AnalysisResult | undefined;
-  try {
-    opposite = mapAnalysisResultToModelSpace(analyse(oppositeDef, options), oppositeDef);
-  } catch {
-    opposite = undefined;
-  }
-  return governingDirection(slopeDef, ownResult, opposite);
-}
-
-/** analyseBothDirections with the trial surfaces spread over the pool. */
-async function analyseBothDirectionsParallel(
-  slopeDef: SlopeDefinition,
-  options: AnalysisOptions,
-  pool: EvaluatorPool,
-): Promise<AnalysisResult> {
-  const oppositeDef = oppositeDirectionDefinition(slopeDef);
-  const ownResult = mapAnalysisResultToModelSpace(await analyseParallel(slopeDef, options, pool), slopeDef);
-  let opposite: AnalysisResult | undefined;
-  try {
-    opposite = mapAnalysisResultToModelSpace(await analyseParallel(oppositeDef, options, pool), oppositeDef);
-  } catch {
-    opposite = undefined;
-  }
-  return governingDirection(slopeDef, ownResult, opposite);
-}
-
-/** The lower FOS of the two directions, with the direction it slides in. */
-function governingDirection(
-  slopeDef: SlopeDefinition,
-  ownResult: AnalysisResult,
-  opposite: AnalysisResult | undefined,
-): AnalysisResult {
-  const own = resolveOrientation(slopeDef.orientation, slopeDef.coordinates);
-  const ownGoverns = !opposite || ownResult.minFOS <= opposite.minFOS;
-  const governing = ownGoverns ? ownResult : opposite!;
-  const other = ownGoverns ? opposite : ownResult;
-  return {
-    ...governing,
-    slidingDirection: ownGoverns ? own : own === "ltr" ? "rtl" : "ltr",
-    otherDirectionMinFOS: other ? other.minFOS : null,
-  };
-}
-
-/**
- * Points of a non-circular surface as drawn: from the crack bottom (when
- * cracked) to the exit.
- */
-function displayPoints(p: SearchPlane): [number, number][] | undefined {
-  // a composite circle as analysed (from its crack, along the floor)
-  if (p.composite) return p.composite;
-  if (!p.points) return undefined;
-  const crack = p.crack;
-  if (!crack) return p.points;
-  return [crack, ...p.points.filter((q) => q[0] > crack[0] + 1e-9)];
-}
-
-/** Run one analysis on a canonical definition (result in canonical space). */
-function analyse(
-  slopeDef: SlopeDefinition,
-  options: AnalysisOptions,
-): AnalysisResult {
-  const start = performance.now();
-  const slope = buildAnalysisSlope(slopeDef, options);
-  return analysisResult(slope, analyseSlope(slope), options, start);
-}
-
-/** analyse with the trial surfaces spread over the pool: the same result. */
-async function analyseParallel(
-  slopeDef: SlopeDefinition,
-  options: AnalysisOptions,
-  pool: EvaluatorPool,
-): Promise<AnalysisResult> {
-  const start = performance.now();
-  const slope = buildAnalysisSlope(slopeDef, options);
-  return analysisResult(slope, await pool.analyse(slope, slopeDef, options), options, start);
-}
-
-/** The result of an analysed slope (canonical space). */
-function analysisResult(
-  slope: Slope,
-  minFOS: number | null,
-  options: AnalysisOptions,
-  start: number,
-): AnalysisResult {
-  // Build result DTO
-  let criticalSurface: SlipSurfaceResult | null = null;
-  const allSurfaces: SlipSurfaceResult[] = [];
-  const criticalSlices: SliceData[] = [];
-  let solvedNormals: number[] | null = null;
-
-  const validSurfaces = slope.search.filter((s) => s.fos != null);
-  if (validSurfaces.length === 0) {
-    // Reporting FOS 0.000 here would read as a collapsed slope.
-    const steep = steepEntryMessage(
-      slope,
-      slope.search.filter((p) => p.fos == null && p.converged === false && !p.belowMinSize),
-    );
-    throw new Error(
-      "No valid slip surface was found. " +
-        (steep ?? "Check the search limits, the geometry and the material strengths."),
-    );
-  }
-
-  if (validSurfaces.length > 0) {
-    const crit = validSurfaces[0];
-    criticalSurface = {
-      cx: crit.cx,
-      cy: crit.cy,
-      radius: crit.radius,
-      fos: crit.fos!,
-      entryPoint: crit.crack ?? crit.lc,
-      exitPoint: crit.rc,
-      converged: crit.converged,
-      closestPair: crit.closestPair,
-      lffArray: crit.lffArray,
-      equilibriumGap: crit.equilibriumGap,
-      points: displayPoints(crit),
-      ...(crit.composite ? { composite: true } : {}),
-      reinforcementForces: crit.slices?.flatMap((s) => s.reinforcementForces ?? []),
-      // The crack the slices start at: its face runs from the ground at
-      // the first slice's left side down to the surface.
-      crack:
-        crit.crack && crit.slices?.length
-          ? { x: crit.crack[0], top: crit.slices[0].y0Top, bottom: crit.crack[1] }
-          : undefined,
-    };
-
-    // Convert slices for critical surface
-    if (crit.slices) {
-      // The method's own base normal forces at the critical FOS (the
-      // ordinary-method estimate (W + Q)·cos α − u·l did not add up to the
-      // FOS of Bishop, Janbu or Morgenstern–Price).
-      solvedNormals = solvedEffectiveNormals(slope, crit.slices, crit.fos!, crit.lffArray);
-      for (const [i, s] of crit.slices.entries()) {
-        const surfaceLoad = sliceVerticalLoad(s) - s.weight;
-        criticalSlices.push({
-          x: s.x,
-          xLeft: s.xLeft,
-          xRight: s.xRight,
-          width: s.width,
-          yTop: s.yTop,
-          yBottom: s.yBottom,
-          height: s.height,
-          area: s.area,
-          alpha: s.alpha,
-          baseLength: s.baseLength,
-          weight: s.weight,
-          surfaceLoad,
-          cohesion: s.cohesion,
-          frictionAngle: s.frictionAngle,
-          normalForce:
-            solvedNormals?.[i] ??
-            (s.weight + surfaceLoad) * Math.cos(s.alpha) - s.U * s.baseLength,
-          // negative above the line in a material with φb (the suction)
-          porePressure: s.U - (s.suction ?? 0),
-          baseMaterial: s.baseMaterial!,
-        });
-      }
-    }
-
-    // All surfaces for visualization (sorted by FOS ascending)
-    for (let i = 0; i < validSurfaces.length; i++) {
-      const p = validSurfaces[i];
-      allSurfaces.push({
-        cx: p.cx,
-        cy: p.cy,
-        radius: p.radius,
-        fos: p.fos!,
-        entryPoint: p.crack ?? p.lc,
-        exitPoint: p.rc,
-        converged: p.converged,
-        closestPair: p.closestPair,
-        lffArray: p.lffArray,
-        equilibriumGap: p.equilibriumGap,
-        points: displayPoints(p),
-        ...(p.composite ? { composite: true } : {}),
-      });
-    }
-  }
-
-  // Moments about a circle's centre; on a non-circular surface they
-  // depend on the axis point and the solved normal forces, so none are
-  // reported.
-  const criticalPushingMoment = validSurfaces[0]?.points || validSurfaces[0]?.composite
-    ? null
-    : computeCriticalPushingMoment(validSurfaces[0]?.slices);
-  const criticalSlipVolume = computeCriticalSlipVolume(
-    validSurfaces[0]?.slices,
-  );
-  const criticalResistingMoment =
-    criticalPushingMoment != null && criticalSurface
-      ? criticalPushingMoment * criticalSurface.fos
-      : null;
-
-  // Surfaces left without a factor; a Morgenstern-Price closest pair is
-  // not converged either but keeps its factor (and is flagged by its gap).
-  const nonConvergedSurfaces = slope.search.reduce(
-    (count, plane) => count + (plane.converged === false && plane.fos == null ? 1 : 0),
-    0,
-  );
-
-  const result: AnalysisResult = {
-    minFOS: minFOS ?? 0,
-    maxFOS: validSurfaces.length > 0 ? slope.getMaxFOS() : 0,
-    criticalSurface,
-    allSurfaces,
-    criticalSlices,
-    method: options.method,
-    criticalLffArray:
-      options.method === "Morgenstern-Price" && validSurfaces.length > 0
-        ? validSurfaces[0].lffArray
-        : undefined,
-    criticalPushingMoment:
-      criticalPushingMoment != null ? criticalPushingMoment : undefined,
-    criticalResistingMoment:
-      criticalResistingMoment != null ? criticalResistingMoment : undefined,
-    criticalSlipVolume:
-      criticalSlipVolume != null ? criticalSlipVolume : undefined,
-    elapsedMs: performance.now() - start,
-    nonConvergedSurfaces,
-    splitFailureCount: slope.splitFailureCount,
-    discardedBySize: slope.search.reduce((count, plane) => count + (plane.belowMinSize ? 1 : 0), 0),
-    // Checked on the base normal forces reported in the slice table.
-    warnings: analysisWarnings(
-      slope,
-      solvedNormals ?? (criticalSlices.length > 0 ? criticalSlices.map((s) => s.normalForce) : null),
-    ),
-  };
-
-  // 3D effects after SGI's guidance, over this analysis's circular surfaces
-  // (its circle in model space). A failure keeps the 2D result.
-  const g = options.sgi3d;
-  if (g?.enabled && validSurfaces.length > 0) {
-    try {
-      const r = sgi3dFactorOfSafety(slope, {
-        length: g.length,
-        overstrongF2D: g.overstrongF2D ?? undefined,
-        excludeMaterials: g.excludeMaterials,
-        cellSize: g.cellSize,
-      });
-      if (r) result.sgi3d = r;
-      else result.sgi3dError = "No circular slip surface with a factor of safety (the 3D effects apply to circular surfaces).";
-    } catch (err: unknown) {
-      result.sgi3dError = err instanceof Error ? err.message : String(err);
-    }
-  }
-
-  return result;
 }
 
 export {}; // Ensure this is treated as a module

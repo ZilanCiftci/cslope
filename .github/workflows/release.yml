@@ -32,6 +32,10 @@ jobs:
           bun-version-file: package.json
       - name: Install
         run: bun install --frozen-lockfile
+      # The app ships the committed WebAssembly engine: it must have been
+      # built from the Rust sources of this commit (no Rust needed here).
+      - name: Engine build is fresh
+        run: bun packages/engine-rs/tools/check-wasm-fresh.ts
       - name: Check the tag against the app version
         shell: pwsh
         run: |

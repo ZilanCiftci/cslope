@@ -17,7 +17,7 @@ use crate::types::material::{Material, MaterialId, MaterialParams};
 use crate::types::slope_definition::{
     material_model_of, SlopeDefinition, WaterTableDefinition, WaterTableMode, WaterTableValue,
 };
-use crate::types::validation::validate_material_model;
+use crate::types::validation::try_validate_material_model;
 
 /// Compute the midpoint along a polyline at half of its total arc length.
 /// The result always lies ON the polyline and is robust for any number of
@@ -72,7 +72,8 @@ pub fn build_slope(def: &SlopeDefinition) -> Result<Slope> {
 
     // Materials — build Material instances first so we can assign the first
     // one to the external boundary (set_external_boundary uses materials[0]).
-    // (TypeScript's check that `materials` is an array is serde's here.)
+    // (TypeScript's check that `materials` is an array is serde's here; an
+    // absent list is empty.)
     let mut materials_by_name: Vec<(String, MaterialId)> = Vec::new();
     if def.materials.is_empty() {
         return Err(EngineError::new("The model needs at least one material."));
@@ -81,7 +82,7 @@ pub fn build_slope(def: &SlopeDefinition) -> Result<Slope> {
         let model = material_model_of(m)?;
 
         // Validate the model before constructing the Material.
-        let validation_errors = validate_material_model(&model);
+        let validation_errors = try_validate_material_model(&model)?;
         if !validation_errors.is_empty() {
             return Err(EngineError::new(format!(
                 "Material \"{}\" has invalid model:\n  – {}",
@@ -198,6 +199,28 @@ pub fn build_slope(def: &SlopeDefinition) -> Result<Slope> {
                     follow_boundary,
                 })?;
             }
+            // `Array.isArray(wt.value)`: a list that is not of [x, y] points
+            // goes to setWaterTable too, which reads x and y of each entry
+            // (an entry that is not a pair of finite numbers fails its check)
+            (WaterTableMode::Custom, WaterTableValue::Other(serde_json::Value::Array(list))) => {
+                use crate::types::json::{js_array, js_number};
+                let coordinates = list
+                    .iter()
+                    .map(|c| {
+                        let at = |i: usize| {
+                            js_array(Some(c))
+                                .and_then(|c| js_number(c.get(i)))
+                                .unwrap_or(f64::NAN)
+                        };
+                        [at(0), at(1)]
+                    })
+                    .collect();
+                slope.set_water_table(&WaterTableInput::Custom {
+                    coordinates,
+                    follow_boundary,
+                })?;
+            }
+            // another mode, or a value that does not fit the mode: no water table
             _ => {}
         }
     }
@@ -214,7 +237,7 @@ pub fn build_slope(def: &SlopeDefinition) -> Result<Slope> {
         for m in &def.materials {
             if let (Some(mat), Some(id)) = (by_name(&materials_by_name, &m.name), &m.water_table_id)
             {
-                slope.assign_material_water_table(mat, id);
+                slope.assign_material_water_table(mat, id.as_deref());
             }
         }
     }

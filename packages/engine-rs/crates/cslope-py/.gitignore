@@ -1,0 +1,7 @@
+# maturin develop puts the extension next to the package
+python/cslope/*.so
+python/cslope/*.pyd
+__pycache__/
+*.pyc
+.pytest_cache/
+dist/

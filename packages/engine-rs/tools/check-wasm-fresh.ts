@@ -5,9 +5,9 @@
 //
 //   bun packages/engine-rs/tools/check-wasm-fresh.ts [product|testing]
 //
-// For CI's check job and the release, once the product build is committed
-// (Phase 6). During the port only the glue is committed; CI's rust job
-// rebuilds and compares the glue instead (see .github/workflows/ci.yml).
+// Run by CI's check job and by the release, before packaging: the app
+// ships the committed product build (packages/engine/src/wasm). CI's rust
+// job also rebuilds it and compares the bytes (.github/workflows/ci.yml).
 import { existsSync, readFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { ENGINE_RS, fileSha256, sourceHash, type BuildInfo } from "./wasm-source-hash";

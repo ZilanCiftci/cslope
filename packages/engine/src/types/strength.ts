@@ -5,17 +5,13 @@
  * `MaterialModel` + geometric context → effective c / φ for a slice.
  * Solvers and the slice builder never inspect `model.kind` directly;
  * they only consume the `ResolvedStrength` output.
+ *
+ * Implemented by the Rust engine (packages/engine-rs) through WebAssembly (see facade/internal.ts).
  */
-
-import { isCombinedDepthModel, suctionAngle, type MaterialModel, type MaterialModelKind, type TableSpline } from "./material-models";
-import { cubicSpline, evalSpline } from "../math/spline";
+import { testCall, wasm } from "../facade/internal";
+import type { MaterialModel, MaterialModelKind, TableSpline } from "./material-models";
 import type { PartialFactors } from "./analysis";
-import { hoekBrownOf, instantaneousAtNormalStress, type HoekBrownParameters } from "./hoek-brown";
-import {
-  interpolateIDW,
-  interpolateNearest,
-  type SpatialDataPoint,
-} from "../math/interpolation";
+import type { HoekBrownParameters } from "./hoek-brown";
 
 // ── Result type ────────────────────────────────────────────────
 
@@ -100,211 +96,6 @@ export interface StrengthContext {
   effectiveVerticalStress?: number;
 }
 
-// ── Resolver ───────────────────────────────────────────────────
-
-/**
- * Whether resolving `model` uses `StrengthContext.yLayerTop`, so callers
- * only search the layer top when it matters.
- */
-export function needsLayerTop(model: MaterialModel): boolean {
-  return model.kind === "s-f-depth" && model.depthReference === "layer-top";
-}
-
-/**
- * Resolve effective shear-strength parameters for a single slice.
- *
- * @param model   The material model assigned to the slice base.
- * @param context Geometric context from the slice builder.
- * @returns Resolved c, φ (and flags) for the solver.
- */
-export function resolveStrength(
-  model: MaterialModel,
-  context: StrengthContext,
-): ResolvedStrength {
-  const r = resolveModelStrength(model, context);
-  const suction = context.suction ?? 0;
-  if (!(suction > 0)) return r;
-  const ss = suctionStrength(model, suction);
-  if (!(ss > 0)) return r;
-  // like an apparent cohesion on the drained strength (for a combined
-  // material its drained branch; the undrained Su is unchanged)
-  return { ...r, cohesion: r.cohesion + ss, suctionStrength: ss };
-}
-
-/**
- * Strength from matric suction (kPa): min(suction, maxSuction)·tan φb for
- * a material with φb (`UnsaturatedStrength`), else 0.
- */
-export function suctionStrength(model: MaterialModel, suction: number): number {
-  const phiB = suctionAngle(model);
-  if (!(phiB > 0) || !(suction > 0)) return 0;
-  const cap = "maxSuction" in model ? model.maxSuction : undefined;
-  const s = cap !== undefined && Number.isFinite(cap) && cap > 0 ? Math.min(suction, cap) : suction;
-  return s * Math.tan((phiB * Math.PI) / 180);
-}
-
-function resolveModelStrength(
-  model: MaterialModel,
-  context: StrengthContext,
-): ResolvedStrength {
-  switch (model.kind) {
-    // ── Mohr-Coulomb (current default) ───────────────────────
-    case "mohr-coulomb":
-      return resolveMohrCoulomb(model, context);
-
-    // ── Undrained (φ = 0, c = Su) ────────────────────────────
-    case "undrained":
-      return withAnisotropy(model.anisotropy, resolveUndrained(model, context), context);
-
-    // ── High Strength ────────────────────────────────────────
-    case "high-strength":
-      return {
-        cohesion: Infinity,
-        frictionAngle: 90,
-        cohesionUndrained: Infinity,
-        skipSurface: true,
-      };
-
-    // ── Impenetrable (Bedrock) ───────────────────────────────
-    case "impenetrable":
-      return {
-        cohesion: 0,
-        frictionAngle: 0,
-        cohesionUndrained: 0,
-        impenetrable: true,
-      };
-
-    // ── Spatial Mohr-Coulomb ─────────────────────────────────
-    case "spatial-mohr-coulomb":
-      return resolveSpatialMohrCoulomb(model, context);
-
-    // ── Anisotropic Function ─────────────────────────────────
-    case "anisotropic-function":
-      return resolveAnisotropic(model, context);
-
-    // ── S = f(depth) ─────────────────────────────────────────
-    case "s-f-depth":
-      return withAnisotropy(model.anisotropy, resolveStrengthFromDepth(model, context), context);
-
-    // ── S = f(datum) ─────────────────────────────────────────
-    case "lime-cement-columns":
-      return resolveLimeCementColumns(model, context);
-
-    case "s-f-datum":
-      return withAnisotropy(model.anisotropy, resolveStrengthFromDatum(model, context), context);
-
-    case "shear-normal": {
-      // first estimate of the normal stress: the overburden, as Hoek-Brown
-      const depth = Math.max(0, context.yGround - context.yBottom);
-      const sn = model.unitWeight * depth * Math.cos(context.alpha) ** 2;
-      const t = shearNormalAt(model, sn);
-      return { ...t, cohesionUndrained: t.cohesion, shearNormal: model };
-    }
-
-    case "shansep":
-      return withAnisotropy(model.anisotropy, resolveShansep(model, context), context);
-
-    // ── Generalised Hoek–Brown ───────────────────────────────
-    case "hoek-brown": {
-      // first estimate of the normal stress on the base: the overburden
-      // γ·depth·cos²α (no pore pressure); the analyses refine it
-      const hb = hoekBrownOf(model);
-      const depth = Math.max(0, context.yGround - context.yBottom);
-      const sn = model.unitWeight * depth * Math.cos(context.alpha) ** 2;
-      const inst = instantaneousAtNormalStress(hb, sn);
-      return { ...inst, cohesionUndrained: inst.cohesion, hoekBrown: hb };
-    }
-
-    default: {
-      // Exhaustiveness guard — TypeScript will error if a new kind
-      // is added to the union but not handled above.
-      const _exhaustive: never = model;
-      throw new Error(
-        `Unknown material model kind: ${(_exhaustive as MaterialModel).kind}`,
-      );
-    }
-  }
-}
-
-// ── Per-model resolvers ────────────────────────────────────────
-
-function resolveMohrCoulomb(
-  model: Extract<MaterialModel, { kind: "mohr-coulomb" }>,
-  context: StrengthContext,
-): ResolvedStrength {
-  const refDepth = model.cohesionRefDepth ?? 0;
-  const rateOfChange = model.cohesionRateOfChange ?? 0;
-  const baseCohesion =
-    model.cohesion + (refDepth - context.yBottom) * rateOfChange;
-
-  const cFactor = model.cFactor ?? 0;
-  const cohesion = nonNegative(
-    cFactor !== 0 ? baseCohesion * cFactor : baseCohesion,
-  );
-
-  // Undrained cohesion (used by Combined method)
-  const cohesionUndrained = nonNegative(
-    (model.cohesionUndrained ?? model.cohesion) +
-      (refDepth - context.yBottom) * rateOfChange,
-  );
-
-  return {
-    cohesion,
-    frictionAngle: model.frictionAngle,
-    cohesionUndrained,
-    isCombined: cFactor !== 0,
-  };
-}
-
-function resolveLimeCementColumns(
-  model: Extract<MaterialModel, { kind: "lime-cement-columns" }>,
-  context: StrengthContext,
-): ResolvedStrength {
-  const rate = model.suRateOfChange ?? 0;
-  const soil = applyCutoff(
-    nonNegative(model.soilSu + ((model.suRefDepth ?? 0) - context.yBottom) * rate),
-    rate,
-    model.suMax,
-  );
-  const a = Math.min(1, Math.max(0, model.areaRatio));
-  const undrained = a * model.columnSu + (1 - a) * soil;
-  if (model.columnCohesion === undefined || model.columnFrictionAngle === undefined) {
-    return { cohesion: undrained, frictionAngle: 0, cohesionUndrained: undrained };
-  }
-  // min over the column part: a·min(c′ + σ′ tan φ′, cu,col) + (1 − a)·cu,soil
-  // = min((1 − a)·cu,soil + a·c′ + σ′·a·tan φ′, undrained): a combined
-  // material with these drained parameters.
-  const tanPhi = a * Math.tan((model.columnFrictionAngle * Math.PI) / 180);
-  return {
-    cohesion: (1 - a) * soil + a * model.columnCohesion,
-    // The soil between the columns stays undrained: it takes γcu, the
-    // columns' c′ γc′ (designStrength).
-    cohesionUndrainedPart: (1 - a) * soil,
-    frictionAngle: (Math.atan(tanPhi) * 180) / Math.PI,
-    cohesionUndrained: undrained,
-    isCombined: true,
-  };
-}
-
-function resolveUndrained(
-  model: Extract<MaterialModel, { kind: "undrained" }>,
-  context: StrengthContext,
-): ResolvedStrength {
-  const refDepth = model.suRefDepth ?? 0;
-  const rate = model.suRateOfChange ?? 0;
-  const su = applyCutoff(
-    nonNegative(model.undrainedShearStrength + (refDepth - context.yBottom) * rate),
-    rate,
-    model.suMax,
-  );
-
-  return {
-    cohesion: su,
-    frictionAngle: 0,
-    cohesionUndrained: su,
-  };
-}
-
 /** Design shear strength at one point (see `designStrength`). */
 export interface DesignStrength {
   /** Cohesion of the drained (or only) branch (kPa). */
@@ -321,6 +112,55 @@ export interface DesignStrength {
    */
   undrained: boolean;
 }
+
+/**
+ * Whether resolving `model` uses `StrengthContext.yLayerTop`, so callers
+ * only search the layer top when it matters.
+ */
+export function needsLayerTop(model: MaterialModel): boolean {
+  return wasm().needs_layer_top(model);
+}
+
+/**
+ * Resolve effective shear-strength parameters for a single slice.
+ *
+ * @param model   The material model assigned to the slice base.
+ * @param context Geometric context from the slice builder.
+ * @returns Resolved c, φ (and flags) for the solver.
+ */
+export function resolveStrength(model: MaterialModel, context: StrengthContext): ResolvedStrength {
+  return wasm().resolve_strength(model, context);
+}
+
+/**
+ * Strength from matric suction (kPa): min(suction, maxSuction)·tan φb for
+ * a material with φb (`UnsaturatedStrength`), else 0.
+ */
+export function suctionStrength(model: MaterialModel, suction: number): number {
+  return wasm().suction_strength(model, suction);
+}
+
+/**
+ * Unit weight at a point (kN/m³).
+ *
+ * Only the spatial Mohr-Coulomb model varies γ: it is interpolated from
+ * the data points that give a positive γ, the same way as c and φ.
+ * Every other model (and a spatial model without γ data) uses
+ * `fallback`, the material's own unit weight.
+ */
+export function resolveUnitWeight(model: MaterialModel, fallback: number, x: number, y: number): number {
+  return wasm().resolve_unit_weight(model, fallback, x, y);
+}
+
+/**
+ * Linearly interpolate a 1-D function defined by sorted (x, y) pairs.
+ * Clamps to the nearest endpoint outside the data range.
+ */
+export function interpolateFunction(points: [number, number][], x: number): number {
+  return wasm().interpolate_function(points, x);
+}
+
+// ── internal (testing build) ─────────────────────────────────────
 
 /**
  * Design strength: each characteristic parameter divided by its own
@@ -345,186 +185,7 @@ export function designStrength(
   st: Pick<ResolvedStrength, "cohesion" | "frictionAngle" | "cohesionUndrained" | "isCombined" | "cohesionUndrainedPart" | "suctionStrength">,
   f: PartialFactors | null | undefined,
 ): DesignStrength {
-  const undrained =
-    kind === "undrained" ||
-    (kind === "s-f-depth" && !st.isCombined) ||
-    kind === "s-f-datum" ||
-    kind === "shansep" ||
-    (st.frictionAngle === 0 && !st.isCombined && kind !== "shear-normal" && kind !== "hoek-brown");
-  const tanPhi = undrained ? 0 : Math.tan((st.frictionAngle * Math.PI) / 180);
-  if (!f || kind === "high-strength" || kind === "impenetrable") {
-    return { cohesion: st.cohesion, tanPhi, cohesionUndrained: st.cohesionUndrained, undrained };
-  }
-  const cohesionUndrained = st.cohesionUndrained / f.cu;
-  if (undrained) {
-    // a Mohr-Coulomb material with φ = 0 and φb: its suction strength is drained (γc′)
-    const ss = Math.min(st.cohesion, st.suctionStrength ?? 0);
-    return { cohesion: (st.cohesion - ss) / f.cu + ss / f.cohesion, tanPhi, cohesionUndrained, undrained };
-  }
-  const part = Math.min(st.cohesion, st.cohesionUndrainedPart ?? 0);
-  return {
-    cohesion: part / f.cu + (st.cohesion - part) / f.cohesion,
-    tanPhi: tanPhi / f.tanPhi,
-    cohesionUndrained,
-    undrained,
-  };
-}
-
-/**
- * Unit weight at a point (kN/m³).
- *
- * Only the spatial Mohr-Coulomb model varies γ: it is interpolated from
- * the data points that give a positive γ, the same way as c and φ.
- * Every other model (and a spatial model without γ data) uses
- * `fallback`, the material's own unit weight.
- */
-export function resolveUnitWeight(
-  model: MaterialModel,
-  fallback: number,
-  x: number,
-  y: number,
-): number {
-  if (model.kind !== "spatial-mohr-coulomb") return fallback;
-  const points: SpatialDataPoint[] = model.dataPoints
-    .filter(([, , , , gamma]) => Number.isFinite(gamma) && gamma > 0)
-    .map(([px, py, , , gamma]) => ({ x: px, y: py, values: [gamma] }));
-  if (points.length === 0) return fallback;
-  const method = model.interpolation ?? "idw";
-  const [gamma] =
-    method === "nearest"
-      ? interpolateNearest(points, x, y)
-      : interpolateIDW(points, x, y, method === "linear" ? 1 : 2);
-  return gamma;
-}
-
-function resolveSpatialMohrCoulomb(
-  model: Extract<MaterialModel, { kind: "spatial-mohr-coulomb" }>,
-  context: StrengthContext,
-): ResolvedStrength {
-  if (model.dataPoints.length === 0) {
-    return { cohesion: 0, frictionAngle: 0, cohesionUndrained: 0 };
-  }
-
-  // Convert tuples to SpatialDataPoint format: values = [c, φ]
-  const points: SpatialDataPoint[] = model.dataPoints.map(([x, y, c, phi]) => ({
-    x,
-    y,
-    values: [c, phi],
-  }));
-
-  const method = model.interpolation ?? "idw";
-  let result: number[];
-
-  switch (method) {
-    case "nearest":
-      result = interpolateNearest(points, context.x, context.yBottom);
-      break;
-    case "idw":
-    case "linear":
-      // Both "idw" and "linear" use IDW; linear is treated as IDW(p=1).
-      result = interpolateIDW(
-        points,
-        context.x,
-        context.yBottom,
-        method === "linear" ? 1 : 2,
-      );
-      break;
-    default: {
-      // Exhaustiveness guard
-      method satisfies never;
-      result = interpolateIDW(points, context.x, context.yBottom);
-      break;
-    }
-  }
-
-  const [c, phi] = result;
-  return {
-    cohesion: nonNegative(c),
-    frictionAngle: physicalFrictionAngle(phi),
-    cohesionUndrained: nonNegative(c),
-  };
-}
-
-/**
- * An undrained model's anisotropy (`anisotropy`, see material-models.ts):
- * its Su, which is the cohesion with φ = 0, times the factor at the base
- * inclination α. A cutoff applies to Su before the factor, as the factor
- * describes the direction of shearing, not the soil at the base.
- */
-function withAnisotropy(
-  anisotropy: [number, number][] | undefined,
-  r: ResolvedStrength,
-  context: StrengthContext,
-): ResolvedStrength {
-  if (!anisotropy || anisotropy.length === 0) return r;
-  const f = interpolateModifier(anisotropy, (context.alpha * 180) / Math.PI);
-  // a combined material: the anisotropy belongs to Su, not to the drained c′
-  if (r.isCombined) return { ...r, cohesionUndrained: nonNegative(r.cohesionUndrained * f) };
-  return { ...r, cohesion: nonNegative(r.cohesion * f), cohesionUndrained: nonNegative(r.cohesionUndrained * f) };
-}
-
-function resolveAnisotropic(
-  model: Extract<MaterialModel, { kind: "anisotropic-function" }>,
-  context: StrengthContext,
-): ResolvedStrength {
-  const alphaDeg = (context.alpha * 180) / Math.PI;
-  const factor = interpolateModifier(model.modifierFunction, alphaDeg);
-
-  return {
-    cohesion: nonNegative(model.cohesion * factor),
-    frictionAngle: physicalFrictionAngle(model.frictionAngle * factor),
-    cohesionUndrained: nonNegative(model.cohesion * factor),
-  };
-}
-
-function resolveStrengthFromDepth(
-  model: Extract<MaterialModel, { kind: "s-f-depth" }>,
-  context: StrengthContext,
-): ResolvedStrength {
-  const yTop =
-    model.depthReference === "layer-top"
-      ? (context.yLayerTop ?? context.yGround)
-      : context.yGround;
-  const depth = yTop - context.yBottom;
-  const su = applyCutoff(
-    nonNegative(model.suRef + (depth - model.depthRef) * model.rate),
-    model.rate,
-    model.suMax,
-  );
-
-  if (isCombinedDepthModel(model)) {
-    // combined: drained c′ + σ′ tan φ′ limited by Su (the slices take the lesser)
-    const c = nonNegative((model.drainedCohesion ?? 0) + (depth - model.depthRef) * (model.drainedCohesionRate ?? 0));
-    return {
-      cohesion: c,
-      frictionAngle: physicalFrictionAngle(model.drainedFrictionAngle ?? 0),
-      cohesionUndrained: su,
-      isCombined: true,
-    };
-  }
-
-  return {
-    cohesion: su,
-    frictionAngle: 0,
-    cohesionUndrained: su,
-  };
-}
-
-function resolveStrengthFromDatum(
-  model: Extract<MaterialModel, { kind: "s-f-datum" }>,
-  context: StrengthContext,
-): ResolvedStrength {
-  const su = applyCutoff(
-    nonNegative(model.suRef + (model.yRef - context.yBottom) * model.rate),
-    model.rate,
-    model.suMax,
-  );
-
-  return {
-    cohesion: su,
-    frictionAngle: 0,
-    cohesionUndrained: su,
-  };
+  return testCall("types/strength::designStrength", [kind, st, f]);
 }
 
 /**
@@ -535,134 +196,13 @@ function resolveStrengthFromDatum(
  * tan φ = τ/σ′n); where the curve falls, its value as c with φ = 0.
  */
 export function shearNormalAt(model: { points: readonly [number, number][]; spline?: TableSpline }, sn: number): { cohesion: number; frictionAngle: number } {
-  const points = model.points;
-  const n = points.length;
-  if (n === 0) return { cohesion: 0, frictionAngle: 0 };
-  if (n === 1) return { cohesion: Math.max(0, points[0][1]), frictionAngle: 0 };
-  let tau: number, slope: number;
-  if (model.spline) {
-    ({ value: tau, slope } = evalSpline(cubicSpline(points, [model.spline.startSlope ?? null, model.spline.endSlope ?? null]), sn));
-  } else {
-    let k = 1;
-    while (k < n - 1 && points[k][0] < sn) k++;
-    const [x0, y0] = points[k - 1], [x1, y1] = points[k];
-    slope = x1 > x0 ? (y1 - y0) / (x1 - x0) : 0;
-    tau = y0 + (sn - x0) * slope;
-  }
-  tau = Math.max(0, tau);
-  const deg = (t: number) => (Math.atan(t) * 180) / Math.PI;
-  if (!(slope > 0)) return { cohesion: tau, frictionAngle: 0 };
-  const c = tau - sn * slope;
-  if (c >= 0) return { cohesion: c, frictionAngle: deg(slope) };
-  return sn > 0 ? { cohesion: 0, frictionAngle: deg(tau / sn) } : { cohesion: tau, frictionAngle: 0 };
+  return testCall("types/strength::shearNormalAt", [model, sn]);
 }
 
 /** SHANSEP undrained strength at the base (see ShansepModel). */
-export function shansepSu(model: Extract<MaterialModel, { kind: "shansep" }>, context: Pick<StrengthContext, "yBottom" | "yGround" | "effectiveVerticalStress">): number {
-  const sv = Math.max(0, context.effectiveVerticalStress ?? model.unitWeight * Math.max(0, context.yGround - context.yBottom));
-  let su: number;
-  // a table: straight lines or a spline, constant beyond the ends
-  const table = (pts: [number, number][], x: number) => {
-    if (!model.spline || pts.length < 2) return interpolateFunction(pts, x);
-    const t = Math.min(Math.max(x, pts[0][0]), pts[pts.length - 1][0]);
-    return evalSpline(cubicSpline(pts, [model.spline.startSlope ?? null, model.spline.endSlope ?? null]), t).value;
-  };
-  if (model.suByStress && model.suByStress.length > 0) su = table(model.suByStress, sv);
-  else {
-    const ocr =
-      model.pop !== undefined && sv > 0
-        ? (sv + model.pop) / sv
-        : model.yieldStress !== undefined && sv > 0
-          ? Math.max(1, model.yieldStress / sv)
-          : model.ocrByElevation && model.ocrByElevation.length > 0
-            ? table(model.ocrByElevation, context.yBottom)
-            : (model.ocr ?? 1);
-    su = sv * model.ratio * Math.max(ocr, 0) ** (model.exponent ?? 0.8);
-  }
-  return Math.max(nonNegative(su), model.suMin ?? 0);
-}
-
-function resolveShansep(
+export function shansepSu(
   model: Extract<MaterialModel, { kind: "shansep" }>,
-  context: StrengthContext,
-): ResolvedStrength {
-  const su = shansepSu(model, context);
-  return { cohesion: su, frictionAngle: 0, cohesionUndrained: su };
-}
-
-// ── Helpers ────────────────────────────────────────────────────
-
-/**
- * Linearly varying strength can extrapolate below zero far from its
- * reference level; negative shear strength is not physical and would
- * produce a meaningless (near-zero) factor of safety.
- */
-function nonNegative(value: number): number {
-  return value > 0 ? value : 0;
-}
-
-/**
- * Strength cutoff (an upper or lower limit on Su). Every rate here is
- * positive where strength increases with depth; then (and for a constant
- * strength) the cutoff is a maximum, for a negative rate a minimum. A cutoff
- * that is not a positive number (rejected by validation) is ignored.
- */
-function applyCutoff(su: number, rate: number, suMax: number | undefined): number {
-  if (suMax === undefined || !Number.isFinite(suMax) || suMax <= 0) return su;
-  return rate < 0 ? Math.max(su, suMax) : Math.min(su, suMax);
-}
-
-/** Highest friction angle used (tan φ must stay finite and positive). */
-const MAX_FRICTION_ANGLE = 89.9;
-
-/**
- * A modifier or interpolation can produce φ ≥ 90°, where tan φ becomes
- * huge or negative and the FOS meaningless; keep φ in [0°, 89.9°].
- */
-function physicalFrictionAngle(phi: number): number {
-  if (!(phi > 0)) return 0;
-  return Math.min(phi, MAX_FRICTION_ANGLE);
-}
-
-/**
- * Linearly interpolate a 1-D function defined by sorted (x, y) pairs.
- * Clamps to the nearest endpoint outside the data range.
- */
-export function interpolateFunction(
-  points: [number, number][],
-  x: number,
+  context: Pick<StrengthContext, "yBottom" | "yGround" | "effectiveVerticalStress">,
 ): number {
-  if (points.length === 0) return 0;
-  if (points.length === 1) return points[0][1];
-
-  // Sorted by x: the points as given when they are (the usual case, no
-  // copy for every slice), else a sorted copy
-  let ordered = true;
-  for (let i = 1; i < points.length && ordered; i++) ordered = points[i - 1][0] <= points[i][0];
-  const sorted = ordered ? points : [...points].sort((a, b) => a[0] - b[0]);
-
-  if (x <= sorted[0][0]) return sorted[0][1];
-  if (x >= sorted[sorted.length - 1][0]) return sorted[sorted.length - 1][1];
-
-  for (let i = 0; i < sorted.length - 1; i++) {
-    const [x0, y0] = sorted[i];
-    const [x1, y1] = sorted[i + 1];
-    if (x >= x0 && x <= x1) {
-      const t = (x - x0) / (x1 - x0);
-      return y0 + t * (y1 - y0);
-    }
-  }
-
-  return sorted[sorted.length - 1][1];
-}
-
-/**
- * Interpolate the anisotropic modifier from (α_deg, factor) pairs.
- */
-function interpolateModifier(
-  modifierFunction: [number, number][],
-  alphaDeg: number,
-): number {
-  if (modifierFunction.length === 0) return 1;
-  return interpolateFunction(modifierFunction, alphaDeg);
+  return testCall("types/strength::shansepSu", [model, context]);
 }

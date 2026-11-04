@@ -10,8 +10,11 @@
  *   the batch (src/parallel).
  * - inParallel runs independent searches in lockstep and evaluates their
  *   batches together (the seeds of the non-circular optimisation).
+ *
+ * Implemented by the Rust engine (packages/engine-rs) through WebAssembly (see facade/internal.ts): the drivers and
+ * the lockstep combinator are plain generator code over the engine's
+ * steps (facade/wire.ts `engineSteps`), the same as TypeScript's.
  */
-
 import type { SearchPlane } from "./slope";
 
 /** Steps of a search with result T: each yield is a batch to evaluate in place. */

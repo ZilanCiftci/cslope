@@ -55,7 +55,12 @@ pub struct MaterialModelBase {
     )]
     pub b_bar: Option<f64>,
     /// The weight of this material (a fill) raises the pore pressure of materials with `b_bar` below it.
-    #[serde(default, skip_serializing_if = "Option::is_none")]
+    /// (`if (model.bBarLoad)`: any value by its truthiness.)
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        deserialize_with = "crate::types::json::truthy"
+    )]
     pub b_bar_load: Option<bool>,
     /// Pore pressure ratio rᵤ = u / σv (Bishop & Morgenstern 1960): the pore
     /// pressure at a slice base in this material is rᵤ times the weight of
@@ -281,8 +286,9 @@ pub struct ImpenetrableModel {
     pub base: MaterialModelBase,
 }
 
-/// Interpolation method of a spatial Mohr-Coulomb model. Another string
-/// is kept as it is (TypeScript falls back to inverse distance weighting).
+/// Interpolation method of a spatial Mohr-Coulomb model. Another value
+/// (a string or of another type) is kept as it is (TypeScript falls back to
+/// inverse distance weighting).
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub enum SpatialInterpolation {
     #[serde(rename = "nearest")]
@@ -292,7 +298,7 @@ pub enum SpatialInterpolation {
     #[serde(rename = "idw")]
     Idw,
     #[serde(untagged)]
-    Other(String),
+    Other(serde_json::Value),
 }
 
 /// Spatial Mohr-Coulomb — c, φ vary as functions of (x, y).
@@ -686,7 +692,12 @@ pub struct ShansepModel {
     /// its distributed loads over the base taken straight down (no spreading
     /// with depth), plus `pop` (the stress history the soil kept from it),
     /// OCR = σ′y/σ′v, at least 1.
-    #[serde(default, skip_serializing_if = "Option::is_none")]
+    /// (`yieldFromEarlierStage === true`: any other value is false.)
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        deserialize_with = "strictly_true"
+    )]
     pub yield_from_earlier_stage: Option<bool>,
     /// OCR against elevation, [[y, OCR], …], interpolated linearly (constant beyond the ends); replaces `ocr`.
     #[serde(
@@ -710,7 +721,11 @@ pub struct ShansepModel {
     )]
     pub su_min: Option<f64>,
     /// Cubic splines through `ocrByElevation` / `suByStress` instead of straight lines; constant beyond the ends as with straight lines.
-    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        deserialize_with = "truthy_spline"
+    )]
     pub spline: Option<TableSpline>,
 }
 
@@ -729,7 +744,11 @@ pub struct ShearNormalModel {
     #[serde(deserialize_with = "crate::types::json::tuples", default)]
     pub points: Vec<[f64; 2]>,
     /// A cubic spline through the points instead of straight lines (see `TableSpline`).
-    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        deserialize_with = "truthy_spline"
+    )]
     pub spline: Option<TableSpline>,
 }
 
@@ -753,13 +772,68 @@ pub struct TableSpline {
     pub end_slope: Option<f64>,
 }
 
-/// A model of a kind this engine does not know, kept for validation and
-/// `resolve_strength` to report (TypeScript reads such a model too).
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+/// `deserialize_with` for `spline`: TypeScript's `if (model.spline)` and
+/// `model.spline.startSlope ?? null`: a value that is not truthy is none, a
+/// truthy one a spline with its end slopes where it has them as numbers
+/// (any other value converted with `ToNumber`).
+fn truthy_spline<'de, D: Deserializer<'de>>(d: D) -> Result<Option<TableSpline>, D::Error> {
+    use crate::types::json::{js_to_number, js_truthy};
+    let v = crate::types::json::JsJson::deserialize(d)?.0;
+    if !js_truthy(Some(&v)) {
+        return Ok(None);
+    }
+    let end = |k: &str| {
+        v.get(k)
+            .filter(|e| !e.is_null())
+            .map(|e| js_to_number(Some(e)))
+    };
+    Ok(Some(TableSpline {
+        start_slope: end("startSlope"),
+        end_slope: end("endSlope"),
+    }))
+}
+
+/// A model the engine cannot read as one of its kinds: an unknown `kind`,
+/// or a known kind whose JSON TypeScript would read but validation rejects
+/// (a value of another type, a point with the wrong number of values,
+/// `null` where a number belongs, …). It keeps the JSON as it came (`raw`)
+/// for `validate_material_model` to report with TypeScript's messages (the
+/// checks of validation.ts on the JSON, read with JavaScript's rules) and
+/// for `resolve_strength` to refuse. `kind` is `String(model.kind)`, `base`
+/// what could be read of the shared fields (the unit weight as a number).
+#[derive(Debug, Clone, PartialEq)]
 pub struct UnknownModel {
     pub kind: String,
-    #[serde(flatten)]
     pub base: MaterialModelBase,
+    /// The JSON as it came (non-finite numbers as `JsJson` encodes them);
+    /// `None` for a model made in Rust, serialized from `kind` and `base`.
+    pub raw: Option<Box<serde_json::Value>>,
+}
+
+impl UnknownModel {
+    /// Whether this is a model of a known kind that could not be read.
+    pub fn is_malformed(&self) -> bool {
+        MATERIAL_MODEL_KINDS.contains(&self.kind.as_str())
+    }
+}
+
+impl Serialize for UnknownModel {
+    fn serialize<S: serde::Serializer>(&self, s: S) -> Result<S::Ok, S::Error> {
+        #[derive(Serialize)]
+        struct Out<'a> {
+            kind: &'a str,
+            #[serde(flatten)]
+            base: &'a MaterialModelBase,
+        }
+        match &self.raw {
+            Some(raw) => raw.serialize(s),
+            None => Out {
+                kind: &self.kind,
+                base: &self.base,
+            }
+            .serialize(s),
+        }
+    }
 }
 
 // ── Union ──────────────────────────────────────────────────────
@@ -799,23 +873,118 @@ pub enum MaterialModel {
 
 impl<'de> Deserialize<'de> for MaterialModel {
     fn deserialize<D: Deserializer<'de>>(d: D) -> Result<Self, D::Error> {
-        use serde::de::Error;
-        let mut value = crate::types::json::JsJson::deserialize(d)?.0;
-        let kind = match value.get("kind") {
-            Some(serde_json::Value::String(s)) => s.clone(),
-            Some(other) => other.to_string(),
-            None => "undefined".to_string(),
-        };
-        let known = MATERIAL_MODEL_KINDS.contains(&kind.as_str());
-        if known {
-            if let Some(obj) = value.as_object_mut() {
-                obj.remove("kind");
+        Ok(MaterialModel::from_json(
+            crate::types::json::JsJson::deserialize(d)?.0,
+        ))
+    }
+}
+
+/// Whether a JSON value holds a `null` anywhere (a `null` number reads as
+/// NaN and serializes back as `null`, but TypeScript compares `null` as 0).
+fn has_null(v: &serde_json::Value) -> bool {
+    match v {
+        serde_json::Value::Null => true,
+        serde_json::Value::Array(a) => a.iter().any(has_null),
+        serde_json::Value::Object(o) => o.values().any(has_null),
+        _ => false,
+    }
+}
+
+/// `deserialize_with` for a flag TypeScript compares with `=== true`.
+fn strictly_true<'de, D: Deserializer<'de>>(d: D) -> Result<Option<bool>, D::Error> {
+    let v = crate::types::json::JsJson::deserialize(d)?.0;
+    Ok(Some(v == serde_json::Value::Bool(true)))
+}
+
+/// Whether two JSON values are the same, numbers by value (`18` and `18.0`).
+fn same_json(a: &serde_json::Value, b: &serde_json::Value) -> bool {
+    use serde_json::Value;
+    match (a, b) {
+        (Value::Number(x), Value::Number(y)) => x.as_f64() == y.as_f64(),
+        (Value::Array(x), Value::Array(y)) => {
+            x.len() == y.len() && x.iter().zip(y).all(|(x, y)| same_json(x, y))
+        }
+        (Value::Object(x), Value::Object(y)) => {
+            x.len() == y.len()
+                && x.iter()
+                    .all(|(k, v)| y.get(k).is_some_and(|w| same_json(v, w)))
+        }
+        (x, y) => x == y,
+    }
+}
+
+/// The value with the `null` fields of its objects left out (TypeScript's
+/// `?? default` and truthiness read them as absent).
+fn without_null_fields(v: &serde_json::Value) -> serde_json::Value {
+    match v {
+        serde_json::Value::Object(o) => serde_json::Value::Object(
+            o.iter()
+                .filter(|(_, v)| !v.is_null())
+                .map(|(k, v)| (k.clone(), without_null_fields(v)))
+                .collect(),
+        ),
+        other => other.clone(),
+    }
+}
+
+impl MaterialModel {
+    /// A model from its JSON (non-finite numbers as `JsJson` encodes them),
+    /// never failing. JSON of a known kind in the engine's own shape (it
+    /// serializes back to the same JSON) is that kind. Other JSON (fields of
+    /// another kind, which validation.ts also checks, `null`, values of
+    /// another type, non-finite numbers) is validated as TypeScript validates
+    /// it (`validate_material_model_json`): if valid, it is read as
+    /// TypeScript reads it (`null` fields as absent, the flags by
+    /// truthiness, other fields dropped); otherwise it is kept as it came
+    /// (`UnknownModel`), as is a model of an unknown kind, for validation to
+    /// report.
+    pub fn from_json(value: serde_json::Value) -> MaterialModel {
+        // the engine's shape: the model reads back as the same JSON (no
+        // field of another kind, no `null`, no value of another type)
+        if !has_null(&value) {
+            if let Some(m) = Self::typed(&value) {
+                if serde_json::to_value(&m).is_ok_and(|back| same_json(&back, &value)) {
+                    return m;
+                }
             }
         }
-        fn v<T: serde::de::DeserializeOwned, E: Error>(value: serde_json::Value) -> Result<T, E> {
-            serde_json::from_value(value).map_err(E::custom)
+        if crate::types::validation::validate_material_model_json(&value)
+            .is_ok_and(|e| e.is_empty())
+        {
+            if let Some(m) = Self::typed(&without_null_fields(&value)) {
+                return m;
+            }
         }
-        Ok(match kind.as_str() {
+        let kind = match &value {
+            serde_json::Value::Object(o) => crate::types::json::js_to_string(o.get("kind")),
+            _ => "undefined".to_string(),
+        };
+        let base = serde_json::from_value::<MaterialModelBase>(value.clone())
+            .ok()
+            .filter(|b| !b.above_water.as_deref().is_some_and(MaterialModel::is_raw))
+            .unwrap_or_else(|| {
+                MaterialModelBase::new(crate::types::json::js_to_number(value.get("unitWeight")))
+            });
+        MaterialModel::Unknown(UnknownModel {
+            kind,
+            base,
+            raw: Some(Box::new(value)),
+        })
+    }
+
+    /// The model of a known kind in the engine's shape, if `value` is one
+    /// (and its `aboveWater` too).
+    fn typed(value: &serde_json::Value) -> Option<MaterialModel> {
+        let kind = value.get("kind")?.as_str()?;
+        if !MATERIAL_MODEL_KINDS.contains(&kind) {
+            return None;
+        }
+        let mut value = value.clone();
+        value.as_object_mut()?.remove("kind");
+        fn v<T: serde::de::DeserializeOwned>(value: serde_json::Value) -> Option<T> {
+            serde_json::from_value(value).ok()
+        }
+        let m = match kind {
             "mohr-coulomb" => MaterialModel::MohrCoulomb(v(value)?),
             "undrained" => MaterialModel::Undrained(v(value)?),
             "high-strength" => MaterialModel::HighStrength(v(value)?),
@@ -828,13 +997,22 @@ impl<'de> Deserialize<'de> for MaterialModel {
             "hoek-brown" => MaterialModel::HoekBrown(v(value)?),
             "shansep" => MaterialModel::Shansep(v(value)?),
             "shear-normal" => MaterialModel::ShearNormal(v(value)?),
-            _ => {
-                if let Some(obj) = value.as_object_mut() {
-                    obj.insert("kind".into(), serde_json::Value::String(kind));
-                }
-                MaterialModel::Unknown(v(value)?)
-            }
-        })
+            _ => return None,
+        };
+        // a nested model kept as JSON makes this one JSON too (validation
+        // reads the nesting there)
+        if m.above_water().is_some_and(MaterialModel::is_raw) {
+            return None;
+        }
+        Some(m)
+    }
+
+    /// Whether the model is kept as the JSON it came as (`UnknownModel.raw`).
+    pub fn is_raw(&self) -> bool {
+        matches!(
+            self,
+            MaterialModel::Unknown(UnknownModel { raw: Some(_), .. })
+        )
     }
 }
 

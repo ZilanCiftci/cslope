@@ -1,7 +1,6 @@
-//! Regression tests from the review of the geometry port (the exact
-//! TypeScript outputs of these cases are in the differential fixtures:
-//! split_polygon "point …", "bowtie …", "spike", "one vertex", "short py",
-//! …; layer_top "NaN …").
+//! Regression tests from the review of the geometry port (degenerate and
+//! malformed input: split_polygon "point …", "bowtie …", "spike", "one
+//! vertex", "short py", …; layer_top "NaN …").
 
 use cslope_engine::model::geometry_ops::*;
 

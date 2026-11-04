@@ -9,7 +9,10 @@
  *   1. Define a new interface here extending `MaterialModelBase`.
  *   2. Add it to the `MaterialModel` union.
  *   3. Handle the `kind` in `resolveStrength()` (strength.ts).
+ *
+ * Implemented by the Rust engine (packages/engine-rs) through WebAssembly (see facade/internal.ts).
  */
+import { wasm } from "../facade/internal";
 
 // ── Base ───────────────────────────────────────────────────────
 
@@ -66,22 +69,6 @@ export interface UnsaturatedStrength {
   phiB?: number;
   /** Largest matric suction (kPa) taken into account, > 0. Not set: no limit. */
   maxSuction?: number;
-}
-
-/** Whether a model kind takes `UnsaturatedStrength` (S = f(depth) only in a combined analysis). */
-export function supportsSuctionStrength(kind: string): kind is "mohr-coulomb" | "anisotropic-function" | "s-f-depth" {
-  return kind === "mohr-coulomb" || kind === "anisotropic-function" || kind === "s-f-depth";
-}
-
-/**
- * φb (°) a model uses: its `phiB` where the model takes suction strength
- * (an S = f(depth) material only in a combined analysis) and φb > 0, else 0.
- */
-export function suctionAngle(model: { kind: string; phiB?: number; drainedCohesion?: number; drainedFrictionAngle?: number }): number {
-  if (!supportsSuctionStrength(model.kind)) return 0;
-  if (model.kind === "s-f-depth" && !isCombinedDepthModel(model)) return 0;
-  const phiB = model.phiB;
-  return phiB !== undefined && Number.isFinite(phiB) && phiB > 0 && phiB < 90 ? phiB : 0;
 }
 
 // ── Model variants ─────────────────────────────────────────────
@@ -146,11 +133,6 @@ export interface UndrainedAnisotropy {
    * take the factor at α = 0. Not set or empty: isotropic.
    */
   anisotropy?: [number, number][];
-}
-
-/** Whether a model kind takes `UndrainedAnisotropy.anisotropy`. */
-export function supportsAnisotropy(kind: string): kind is "undrained" | "s-f-depth" | "s-f-datum" | "shansep" {
-  return kind === "undrained" || kind === "s-f-depth" || kind === "s-f-datum" || kind === "shansep";
 }
 
 /** Undrained strength model (φ = 0). */
@@ -287,11 +269,6 @@ export interface StrengthFromDepthModel extends MaterialModelBase, UndrainedAnis
   drainedCohesionRate?: number;
   /** Drained friction angle φ′ (°) for a combined analysis (see `drainedCohesion`). */
   drainedFrictionAngle?: number;
-}
-
-/** Whether an S = f(depth) model has a drained branch (a combined analysis). */
-export function isCombinedDepthModel(model: { kind: string; drainedCohesion?: number; drainedFrictionAngle?: number }): boolean {
-  return model.kind === "s-f-depth" && model.drainedCohesion !== undefined && model.drainedFrictionAngle !== undefined;
 }
 
 /**
@@ -479,3 +456,26 @@ export const MATERIAL_MODEL_LABELS: Record<MaterialModelKind, string> = {
   shansep: "SHANSEP",
   "shear-normal": "Shear-normal function",
 };
+
+/** Whether a model kind takes `UnsaturatedStrength` (S = f(depth) only in a combined analysis). */
+export function supportsSuctionStrength(kind: string): kind is "mohr-coulomb" | "anisotropic-function" | "s-f-depth" {
+  return wasm().supports_suction_strength(kind);
+}
+
+/**
+ * φb (°) a model uses: its `phiB` where the model takes suction strength
+ * (an S = f(depth) material only in a combined analysis) and φb > 0, else 0.
+ */
+export function suctionAngle(model: { kind: string; phiB?: number; drainedCohesion?: number; drainedFrictionAngle?: number }): number {
+  return wasm().suction_angle(model);
+}
+
+/** Whether a model kind takes `UndrainedAnisotropy.anisotropy`. */
+export function supportsAnisotropy(kind: string): kind is "undrained" | "s-f-depth" | "s-f-datum" | "shansep" {
+  return wasm().supports_anisotropy(kind);
+}
+
+/** Whether an S = f(depth) model has a drained branch (a combined analysis). */
+export function isCombinedDepthModel(model: { kind: string; drainedCohesion?: number; drainedFrictionAngle?: number }): boolean {
+  return wasm().is_combined_depth_model(model);
+}

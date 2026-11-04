@@ -222,16 +222,24 @@ pub fn __test_call(name: &str, a: JsValue) -> JsResult<JsValue> {
             let (px, py, lines): (Vec<f64>, Vec<f64>, Vec<Vec<g::Pt>>) = args(a, name)?;
             to_js(&g::polygonize_regions_detailed(&px, &py, &lines).js()?)
         }
-        _ => Err(js_error(&format!(
-            "__test_call: no internal function \"{name}\" in the testing build"
-        ))),
+        n if n.starts_with("fem/") => crate::api::fem_testing::call(n, a),
+        _ => crate::testing_le::call(name, a).unwrap_or_else(|| {
+            Err(js_error(&format!(
+                "__test_call: no internal function \"{name}\" in the testing build"
+            )))
+        }),
     }
 }
 
 /// The names `__test_call` dispatches.
 #[wasm_bindgen]
 pub fn __test_functions() -> Vec<String> {
-    TEST_FUNCTIONS.iter().map(|s| s.to_string()).collect()
+    TEST_FUNCTIONS
+        .iter()
+        .chain(crate::testing_le::TEST_FUNCTIONS)
+        .chain(crate::api::fem_testing::FEM_TEST_FUNCTIONS)
+        .map(|s| s.to_string())
+        .collect()
 }
 
 #[cfg(test)]

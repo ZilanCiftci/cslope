@@ -30,12 +30,14 @@
  * Gauss point, by the midpoint rule on steps of at most 0.25 m, with the
  * unit weight below each material's water line taken saturated (also with
  * seepage pore pressures); σ′v ≤ 0 (no tension).
+ *
+ * Implemented by the Rust engine (packages/engine-rs) through WebAssembly (see facade/internal.ts and fem/_handles.ts).
  */
-
+import { testCall } from "../facade/internal";
+import type { FeModel, FeModelOptions } from "./model";
+import type { SrmOptions } from "./srm";
 import type { Slope } from "../model/slope";
-import type { Material } from "../types/material";
-import { buildFeModel, gaussUnitWeight, withInitialStress, type FeModel, type FeModelOptions } from "./model";
-import { runTrial, type SrmOptions } from "./srm";
+import { dataOptions, feModelOf, modelHandle, sizeFieldHandle, slopeRef } from "../facade/fem/_handles";
 
 export interface InitialStressOptions {
   /** "gravity" (default): gravity applied in one increment from zero stress; "k0": the K0 procedure. */
@@ -48,22 +50,6 @@ export interface InitialStressOptions {
   materialStages?: Readonly<Record<string, number>>;
 }
 
-/** Intervals of y inside a polygon along the vertical at x. */
-function verticalIntervals(px: readonly number[], py: readonly number[], x: number): [number, number][] {
-  const ys: number[] = [];
-  const n = px.length;
-  for (let i = 0; i < n; i++) {
-    const j = (i + 1) % n;
-    const x1 = px[i], x2 = px[j];
-    // half-open rule: a vertex on the line counts once
-    if ((x1 <= x && x < x2) || (x2 <= x && x < x1)) ys.push(py[i] + ((x - x1) / (x2 - x1)) * (py[j] - py[i]));
-  }
-  ys.sort((a, b) => a - b);
-  const out: [number, number][] = [];
-  for (let k = 0; k + 1 < ys.length; k += 2) out.push([ys[k], ys[k + 1]]);
-  return out;
-}
-
 /**
  * Initial effective stresses of the K0 procedure per Gauss point (σx, σy,
  * τxy, σz), the materials named in `inactive` excluded (zero stress, no
@@ -74,48 +60,8 @@ export function k0Stress(
   slope: Slope,
   options: { k0?: number; originalGroundLevel?: number; inactive?: ReadonlySet<string> } = {},
 ): Float64Array {
-  const ngp = 3 * model.elementCount;
-  const out = new Float64Array(4 * ngp);
-  const inactive = options.inactive ?? new Set<string>();
-  const geoms = slope.materialGeometries.filter((g) => !inactive.has(g.material.name));
-  const waterLine = new Map<Material, { x: number[]; y: number[] } | null>();
-  const wl = (m: Material) => {
-    if (!waterLine.has(m)) waterLine.set(m, slope.getWaterLineForMaterial(m));
-    return waterLine.get(m)!;
-  };
-  const STEP = 0.25;
-  const weightOver = (m: Material, x: number, lo: number, hi: number): number => {
-    if (!(hi > lo)) return 0;
-    const n = Math.max(1, Math.ceil((hi - lo) / STEP)), h = (hi - lo) / n;
-    let s = 0;
-    for (let k = 0; k < n; k++) s += gaussUnitWeight(m, wl(m), false, 0, x, lo + (k + 0.5) * h) * h;
-    return s;
-  };
-  for (let e = 0; e < model.elementCount; e++) {
-    if (model.elInactive[e]) continue;
-    const rigid = model.elElastic[e] === 1;
-    const nu = model.elNu[e];
-    for (let g = 0; g < 3; g++) {
-      const i = 3 * e + g, x = model.gpX[i], y = model.gpY[i];
-      let sv = 0, top = -Infinity, topMaterial: Material | null = null;
-      for (const geom of geoms) {
-        for (const [lo, hi] of verticalIntervals(geom.px, geom.py, x)) {
-          if (hi > top) { top = hi; topMaterial = geom.material; }
-          if (hi > y) sv += weightOver(geom.material, x, Math.max(lo, y), hi);
-        }
-      }
-      const g0 = options.originalGroundLevel;
-      if (g0 !== undefined && topMaterial && g0 > top) sv += weightOver(topMaterial, x, top, g0);
-      const svEff = Math.min(0, -sv + model.gpU[i]);
-      const phi = model.gpPhi[i];
-      // a given K0 is the soils'; rigid materials stay elastic
-      const k0 = rigid ? nu / (1 - nu) : options.k0 ?? (phi > 0 ? 1 - Math.sin(phi) : nu / (1 - nu));
-      out[4 * i] = k0 * svEff;
-      out[4 * i + 1] = svEff;
-      out[4 * i + 3] = k0 * svEff;
-    }
-  }
-  return out;
+  const o = { k0: options.k0, originalGroundLevel: options.originalGroundLevel, inactive: options.inactive ? [...options.inactive] : undefined };
+  return testCall("fem/initial-stress::k0Stress", [modelHandle(model), slopeRef(slope), o]);
 }
 
 /**
@@ -129,34 +75,11 @@ export function prepareFeModel(
   options: FeModelOptions & InitialStressOptions,
   trialOptions: SrmOptions,
 ): { model: FeModel; warnings: string[] } {
-  const warnings: string[] = [];
-  const k0 = options.initialStress === "k0";
-  const stageOf = (name: string) => options.materialStages?.[name] ?? 0;
-  const names = [...new Set(slope.materialGeometries.map((g) => g.material.name))];
-  const stages = [...new Set(names.map(stageOf))].sort((a, b) => a - b);
-  const k0Options = { k0: options.k0, originalGroundLevel: options.originalGroundLevel };
-  if (stages.length <= 1) {
-    const model = buildFeModel(slope, options);
-    return { model: k0 ? withInitialStress(model, k0Stress(model, slope, k0Options)) : model, warnings };
-  }
-  let sigma: Float64Array | null = null;
-  for (let s = 0; s + 1 < stages.length; s++) {
-    const inactive = names.filter((n) => stageOf(n) > stages[s]);
-    let model = buildFeModel(slope, { ...options, inactiveMaterials: inactive, withoutReinforcement: true });
-    if (s === 0 && k0) sigma = k0Stress(model, slope, { ...k0Options, inactive: new Set(inactive) });
-    if (sigma) model = withInitialStress(model, sigma);
-    let r = runTrial(model, 1, null, trialOptions);
-    // Newton and BFGS keep no state from a trial that fails; the viscoplastic
-    // iteration's last state shows how far the stage got.
-    if (!r.converged && r.solver !== "viscoplastic") r = runTrial(model, 1, null, { ...trialOptions, solver: "viscoplastic" });
-    if (!r.converged) {
-      warnings.push(`Construction stage ${s + 1} of ${stages.length} did not reach equilibrium at F = 1: the slope fails while it is built; the later stages start from its last state.`);
-    }
-    sigma = Float64Array.from(r.state.stress);
-    // a material not yet built carries no stress into the next stage
-    for (let e = 0; e < model.elementCount; e++) if (model.elInactive[e]) sigma.fill(0, 12 * e, 12 * e + 12);
-  }
-  const model = buildFeModel(slope, options);
-  if (model.bars.count > 0) warnings.push("The reinforcement acts from the last construction stage on.");
-  return { model: withInitialStress(model, sigma!), warnings };
+  const r = testCall<{ model: number; warnings: string[] }>("fem/initial-stress::prepareFeModel", [
+    slopeRef(slope),
+    dataOptions(options),
+    dataOptions(trialOptions),
+    sizeFieldHandle(options.sizeField),
+  ]);
+  return { model: feModelOf(r.model), warnings: r.warnings };
 }

@@ -7,7 +7,7 @@ import type {
   SlopeDefinition,
 } from "@cslope/engine";
 import { findExpressionErrors } from "../expression-check";
-import { DEFAULT_ANALYSIS_OPTIONS } from "@cslope/engine";
+import { DEFAULT_ANALYSIS_OPTIONS, engineModule } from "@cslope/engine";
 import type { AnalysisResponse, WorkerMessage } from "../../worker/messages";
 import type { SliceCreator } from "../helpers";
 import { boundaryWarningsInStoreOrder, buildSlopeDTOFromModel, nextId, RUN_RESET } from "../helpers";
@@ -211,17 +211,20 @@ function runInWorker<T>(
       reject(new Error(err.message || "The analysis worker failed to start."));
     };
 
+    // every worker gets the compiled engine with its request (it starts
+    // the engine on the first; an idle worker reused has it already)
+    const engine = engineModule();
     if (evaluators.length === 0) {
-      worker!.postMessage(request);
+      worker!.postMessage({ ...request, engine });
       return;
     }
     const ports = evaluators.map((evaluator) => {
       const channel = new MessageChannel();
       evaluator.onerror = worker!.onerror;
-      evaluator.postMessage({ type: "serve-evaluator", port: channel.port1 } satisfies WorkerMessage, [channel.port1]);
+      evaluator.postMessage({ type: "serve-evaluator", port: channel.port1, engine } satisfies WorkerMessage, [channel.port1]);
       return channel.port2;
     });
-    worker!.postMessage({ ...request, evaluators: ports }, ports);
+    worker!.postMessage({ ...request, evaluators: ports, engine }, ports);
   });
 
   return { promise, cancel };

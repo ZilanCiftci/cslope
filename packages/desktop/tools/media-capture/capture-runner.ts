@@ -18,6 +18,7 @@ import { resolve, join } from "node:path";
 import { execSync, spawn, type ChildProcess } from "node:child_process";
 import { createRequire } from "node:module";
 import { scenes } from "../../../website/src/content/media-scenes";
+import { initEngine } from "@cslope/engine";
 import { captureScene, setPixelRatio } from "./store-capture";
 import { VIEWPORT_WIDTH, VIEWPORT_HEIGHT, OUTPUT_DIR, MEDIA_DIR, CAPTURE_DPR } from "./capture-config";
 
@@ -56,6 +57,8 @@ const ONLY = process.env.CSLOPE_CAPTURE_ONLY;
 const selected = ONLY ? scenes.filter((s) => s.id.startsWith(ONLY)) : scenes;
 
 async function main() {
+  // the verification models are built with the engine here, in Bun
+  await initEngine();
   const outDir = join(ROOT, OUTPUT_DIR);
   await mkdir(outDir, { recursive: true });
 

@@ -1,32 +1,10 @@
-//! Shared helpers for the differential tests against fixtures exported from
-//! the TypeScript engine (see PORTING.md). Include with `mod common;`.
+//! Shared helpers of the tests: numbers from JSON, relative closeness, the
+//! verification problems of golden/verification.json. Include with `mod common;`.
 #![allow(dead_code, clippy::disallowed_methods)]
 
 use serde::de::DeserializeOwned;
 use serde_json::Value;
 use std::path::PathBuf;
-
-/// Path of fixtures/<area>/<name>.json.
-pub fn fixture_path(area: &str, name: &str) -> PathBuf {
-    PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-        .join("../../fixtures")
-        .join(area)
-        .join(format!("{name}.json"))
-}
-
-/// Loads a fixture, decoding "NaN"/"Infinity"/"-Infinity" strings in numeric
-/// positions is left to `num`/`JsNum`. Panics with a hint when the fixture
-/// has not been exported.
-pub fn load<T: DeserializeOwned>(area: &str, name: &str) -> T {
-    let path = fixture_path(area, name);
-    let text = std::fs::read_to_string(&path).unwrap_or_else(|_| {
-        panic!(
-            "missing fixture {}: run `cd packages/engine && bunx vitest run --config vitest.fixtures.config.ts {area}`",
-            path.display()
-        )
-    });
-    serde_json::from_str(&text).unwrap_or_else(|e| panic!("bad fixture {}: {e}", path.display()))
-}
 
 /// A JSON number or one of the non-finite strings, as f64.
 pub fn num(v: &Value) -> f64 {
@@ -53,7 +31,12 @@ pub fn close(a: f64, b: f64, rel: f64) -> bool {
             * cslope_engine::js::math::max(cslope_engine::js::math::max(a.abs(), b.abs()), 1e-300)
 }
 
-#[track_caller]
-pub fn assert_close(a: f64, b: f64, rel: f64, what: &str) {
-    assert!(close(a, b, rel), "{what}: {a} vs {b} (rel {rel})");
+/// The verification problems with their checks (each check's options as
+/// verificationOptions merges them), from golden/verification.json
+/// (tools/golden.ts).
+pub fn verification_cases<T: DeserializeOwned>() -> T {
+    let path = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../golden/verification.json");
+    let text = std::fs::read_to_string(&path).unwrap_or_else(|e| panic!("{}: {e}", path.display()));
+    let mut v: Value = serde_json::from_str(&text).expect("golden JSON");
+    serde_json::from_value(v["cases"].take()).expect("the verification cases")
 }

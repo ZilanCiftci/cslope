@@ -1,4 +1,8 @@
 /**
+ * Implemented by the Rust engine (packages/engine-rs) through WebAssembly (see facade/internal.ts).
+ */
+import { wasm } from "../facade/internal";
+/**
  * The generalised Hoek–Brown criterion for rock masses (Hoek, Carranza-
  * Torres & Corkum 2002, Proc. NARMS-TAC, 267–273):
  *
@@ -32,58 +36,20 @@ export interface HoekBrownParameters {
 
 /** mb, s and a of the generalised criterion from GSI, mi and the disturbance D. */
 export function hoekBrownParameters(ucs: number, gsi: number, mi: number, disturbance = 0): HoekBrownParameters {
-  const D = disturbance;
-  return {
-    ucs,
-    mb: mi * Math.exp((gsi - 100) / (28 - 14 * D)),
-    s: Math.exp((gsi - 100) / (9 - 3 * D)),
-    a: 0.5 + (Math.exp(-gsi / 15) - Math.exp(-20 / 3)) / 6,
-  };
+  return wasm().hoek_brown_parameters(ucs, gsi, mi, disturbance);
 }
 
 /** mb, s and a of a material: given directly, or from GSI, mi and D. */
-export function hoekBrownOf(model: {
-  ucs: number;
-  gsi: number;
-  mi: number;
-  disturbance?: number;
-  mb?: number;
-  s?: number;
-  a?: number;
-}): HoekBrownParameters {
-  if (model.mb !== undefined && model.s !== undefined) {
-    return { ucs: model.ucs, mb: model.mb, s: model.s, a: model.a ?? 0.5 };
-  }
-  return hoekBrownParameters(model.ucs, model.gsi, model.mi, model.disturbance ?? 0);
+export function hoekBrownOf(model: { ucs: number; gsi: number; mi: number; disturbance?: number; mb?: number; s?: number; a?: number }): HoekBrownParameters {
+  return wasm().hoek_brown_of(model);
 }
-
-/** The envelope at σ3 (compression positive): σn, τ and the slope k. */
-function atSigma3(p: HoekBrownParameters, s3: number): { sn: number; tau: number; k: number } {
-  const base = Math.max(1e-12, (p.mb * s3) / p.ucs + p.s);
-  const s1 = s3 + p.ucs * base ** p.a;
-  const k = 1 + p.a * p.mb * base ** (p.a - 1);
-  return { sn: (s1 + s3) / 2 - ((s1 - s3) / 2) * ((k - 1) / (k + 1)), tau: ((s1 - s3) * Math.sqrt(k)) / (k + 1), k };
-}
-
-const MAX_PHI = (89.9 * Math.PI) / 180;
 
 /** Instantaneous c (kPa) and φ (°) of the envelope at σ3 (compression positive). */
 export function instantaneousAtSigma3(p: HoekBrownParameters, s3: number): { cohesion: number; frictionAngle: number } {
-  const e = atSigma3(p, Math.max(s3, 0));
-  const phi = Math.min(MAX_PHI, Math.asin((e.k - 1) / (e.k + 1)));
-  return { cohesion: Math.max(0, e.tau - e.sn * Math.tan(phi)), frictionAngle: (phi * 180) / Math.PI };
+  return wasm().instantaneous_at_sigma3(p, s3);
 }
 
 /** Instantaneous c (kPa) and φ (°) of the envelope at the normal stress σn (compression positive). */
 export function instantaneousAtNormalStress(p: HoekBrownParameters, sn: number): { cohesion: number; frictionAngle: number } {
-  let lo = 0;
-  if (!(sn > atSigma3(p, lo).sn)) return instantaneousAtSigma3(p, lo);
-  let hi = Math.max(1, Math.abs(sn));
-  while (atSigma3(p, hi).sn < sn) hi *= 2;
-  for (let k = 0; k < 100 && hi - lo > 1e-10 * (1 + Math.abs(hi)); k++) {
-    const m = (lo + hi) / 2;
-    if (atSigma3(p, m).sn < sn) lo = m;
-    else hi = m;
-  }
-  return instantaneousAtSigma3(p, (lo + hi) / 2);
+  return wasm().instantaneous_at_normal_stress(p, sn);
 }
