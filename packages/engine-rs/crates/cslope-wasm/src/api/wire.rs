@@ -18,7 +18,8 @@
 use crate::convert::{from_js, to_js};
 use cslope_engine::model::slope::SearchPlane;
 use cslope_engine::types::{
-    HoekBrownParameters, MaterialId, MaterialModel, ReinforcementForce, ShearNormalModel, Slice,
+    CustomPlaneRef, HoekBrownParameters, MaterialId, MaterialModel, ReinforcementForce,
+    ShearNormalModel, Slice, SurfaceRejection,
 };
 use js_sys::{Float64Array, Object, Reflect};
 use serde::{Deserialize, Serialize};
@@ -289,6 +290,10 @@ pub struct PlaneMeta {
     pub tangent_to: Option<f64>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub below_min_size: Option<bool>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub custom_plane: Option<CustomPlaneRef>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub rejection: Option<SurfaceRejection>,
     /// Out only: the analysis dropped the slices, which the facade gets on
     /// request (`slope_plane_slices`).
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -315,6 +320,8 @@ fn meta(p: &SearchPlane) -> PlaneMeta {
         composite: p.composite.clone(),
         tangent_to: p.tangent_to.map(|v| v as f64),
         below_min_size: p.below_min_size,
+        custom_plane: p.custom_plane,
+        rejection: p.rejection,
         lazy_slices: None,
     }
 }
@@ -377,6 +384,8 @@ pub fn planes_from_js(v: JsValue) -> JsResult<Vec<SearchPlane>> {
             composite: m.composite,
             tangent_to: m.tangent_to.map(|v| v as usize),
             below_min_size: m.below_min_size,
+            custom_plane: m.custom_plane,
+            rejection: m.rejection,
         })
         .collect())
 }

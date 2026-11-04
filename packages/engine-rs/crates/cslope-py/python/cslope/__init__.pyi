@@ -199,6 +199,21 @@ class SlipSurfaceResult(TypedDict):
     composite: NotRequired[bool]
     reinforcementForces: NotRequired[List[ReinforcementForce]]
     crack: NotRequired[Dict[str, float]]
+    customPlane: NotRequired[CustomPlaneRef]
+
+class CustomPlaneRef(TypedDict):
+    """A custom search plane of the definition: its list and its index there."""
+
+    kind: Literal["circle", "polyline"]
+    index: int
+
+class CustomSurfaceResult(TypedDict):
+    """One custom search plane's result: its surface, or why it has no factor."""
+
+    kind: Literal["circle", "polyline"]
+    index: int
+    surface: NotRequired[SlipSurfaceResult]
+    reason: NotRequired[str]
 
 class SliceData(TypedDict):
     x: float
@@ -247,6 +262,7 @@ class AnalysisResult(TypedDict):
     otherDirectionMinFOS: NotRequired[Optional[float]]
     sgi3d: NotRequired[Dict[str, Any]]
     sgi3dError: NotRequired[str]
+    customSurfaces: NotRequired[List[CustomSurfaceResult]]
 
 # ── finite elements ─────────────────────────────────────────────────────
 

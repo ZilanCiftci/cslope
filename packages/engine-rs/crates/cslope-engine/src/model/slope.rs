@@ -30,8 +30,9 @@ use crate::model::search::MaterialInterface;
 use crate::model::surface::BelowGround;
 use crate::model::waternet::Waternet;
 use crate::types::analysis::{
-    default_analysis_options, AnalysisMethod, AnalysisOptions, FemAnalysisSettings,
-    IntersliceFunctionType, PartialFactors, PorePressureHead, SearchMethod, WaterTableInput,
+    default_analysis_options, AnalysisMethod, AnalysisOptions, CustomPlaneRef, FemAnalysisSettings,
+    IntersliceFunctionType, PartialFactors, PorePressureHead, SearchMethod, SurfaceRejection,
+    WaterTableInput,
 };
 use crate::types::constants::{ITERATIONS_RANGE, REFINED_ITERATIONS_RANGE, SLICES_RANGE};
 use crate::types::geometry::{GeometryWithMaterial, Slice};
@@ -102,6 +103,11 @@ pub struct SearchPlane {
     /// Not analysed: shallower than the minimum slip depth or smaller than
     /// the minimum slip area.
     pub below_min_size: Option<bool>,
+    /// The custom search plane of the definition this plane was added for
+    /// (build_slope.rs); carried through the analysis to the result.
+    pub custom_plane: Option<CustomPlaneRef>,
+    /// Why the evaluation left the plane without a factor (evaluate_plane).
+    pub rejection: Option<SurfaceRejection>,
 }
 
 /// `Partial<AnalysisOptions>`: the options given to `update_analysis_options`.
@@ -673,6 +679,9 @@ pub struct Slope {
     // ── Search planes ─────────────────────────────────────────────
     search: Vec<SearchPlane>,
     individual_planes: Vec<SearchPlane>,
+    /// Custom search planes of the definition that were not added (no
+    /// surface through the soil), with the reason, for the result.
+    custom_plane_rejections: Vec<(CustomPlaneRef, SurfaceRejection)>,
     custom_planes_only: bool,
     fixed_slices: Option<Vec<f64>>,
     split_failure_count: u32,
@@ -754,6 +763,7 @@ impl Slope {
             limits: [0.0; 4],
             search: Vec::new(),
             individual_planes: Vec::new(),
+            custom_plane_rejections: Vec::new(),
             custom_planes_only: false,
             fixed_slices: None,
             split_failure_count: 0,
@@ -1039,6 +1049,26 @@ impl Slope {
     /// The custom surfaces analysed, in canonical space (see `search`).
     pub fn individual_planes(&self) -> &[SearchPlane] {
         &self.individual_planes
+    }
+
+    /// The custom search planes of the definition that were not added, with
+    /// the reason (`add_custom_plane_rejection`).
+    pub fn custom_plane_rejections(&self) -> &[(CustomPlaneRef, SurfaceRejection)] {
+        &self.custom_plane_rejections
+    }
+
+    /// Records a custom search plane of the definition that gave no surface
+    /// to analyse (build_slope.rs), for the result.
+    pub fn add_custom_plane_rejection(&mut self, plane: CustomPlaneRef, why: SurfaceRejection) {
+        self.custom_plane_rejections.push((plane, why));
+    }
+
+    /// Marks the last individual plane as the custom search plane it was
+    /// added for (build_slope.rs).
+    pub fn mark_last_individual_plane(&mut self, plane: CustomPlaneRef) {
+        if let Some(last) = self.individual_planes.last_mut() {
+            last.custom_plane = Some(plane);
+        }
     }
 
     pub fn custom_planes_only(&self) -> bool {
@@ -2168,6 +2198,7 @@ impl Slope {
     /// Clear all manually added individual failure surfaces.
     pub fn remove_individual_planes(&mut self) {
         self.individual_planes = Vec::new();
+        self.custom_plane_rejections = Vec::new();
         self.reset_results();
     }
 

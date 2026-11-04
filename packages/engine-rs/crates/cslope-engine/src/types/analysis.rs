@@ -499,6 +499,97 @@ pub struct SlipSurfaceResult {
     /// crack.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub crack: Option<Crack>,
+    /// The custom search plane of the definition this surface was analysed
+    /// for (`customSearchPlanes` or `customSurfaces`, by index). Absent for
+    /// a surface of the search.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub custom_plane: Option<CustomPlaneRef>,
+}
+
+/// Which list of the definition a custom search plane is in.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum CustomPlaneKind {
+    /// `SlopeDefinition.customSearchPlanes` (cx, cy, radius).
+    Circle,
+    /// `SlopeDefinition.customSurfaces` (points).
+    Polyline,
+}
+
+/// A custom search plane of the definition: its list and its index there.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CustomPlaneRef {
+    pub kind: CustomPlaneKind,
+    pub index: usize,
+}
+
+/// Why a trial surface has no factor of safety (`SearchPlane.rejection`).
+/// Reported for the custom search planes (`CustomSurfaceResult.reason`).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "kebab-case")]
+pub enum SurfaceRejection {
+    /// A custom circle that does not cut the ground twice.
+    NoGroundCrossing,
+    /// A custom polyline that does not pass through the soil, or leaves the model.
+    NotThroughSoil,
+    /// A circle given directly that leaves the model where it is no composite surface.
+    OutsideModel,
+    /// No slices could be built (the surface lies outside the soil or is too shallow for the tension crack).
+    NoSlices,
+    /// Shallower than the minimum slip depth, or than 0.1 % of the model height.
+    TooShallow,
+    /// Smaller than the minimum slip area.
+    BelowMinArea,
+    /// Through impenetrable or non-sheared (high-strength) material.
+    ImpenetrableMaterial,
+    /// No net driving moment in the sliding direction.
+    NoDrivingMoment,
+    /// The consolidation stresses before rapid drawdown could not be computed.
+    Drawdown,
+    /// The solver did not converge (or gave a negative factor, or a slice with m_α ≤ 0).
+    NotConverged,
+}
+
+impl SurfaceRejection {
+    /// What the result shows for a custom surface without a factor.
+    pub fn message(self) -> &'static str {
+        match self {
+            SurfaceRejection::NoGroundCrossing => "the circle does not cut the ground twice",
+            SurfaceRejection::NotThroughSoil => {
+                "the polyline does not pass through the soil or leaves the model"
+            }
+            SurfaceRejection::OutsideModel => "the surface leaves the model",
+            SurfaceRejection::NoSlices => {
+                "no slices could be built (the surface lies outside the soil or above the tension crack depth)"
+            }
+            SurfaceRejection::TooShallow => "shallower than the minimum slip depth",
+            SurfaceRejection::BelowMinArea => "smaller than the minimum slip area",
+            SurfaceRejection::ImpenetrableMaterial => {
+                "the surface passes through impenetrable or non-sheared material"
+            }
+            SurfaceRejection::NoDrivingMoment => "no driving moment in the sliding direction",
+            SurfaceRejection::Drawdown => {
+                "the consolidation stresses before the rapid drawdown could not be computed"
+            }
+            SurfaceRejection::NotConverged => "the solver did not converge",
+        }
+    }
+}
+
+/// The result of one custom search plane of the definition: its surface
+/// with its factor of safety (also in `allSurfaces`), or why it has none.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CustomSurfaceResult {
+    pub kind: CustomPlaneKind,
+    pub index: usize,
+    /// The analysed surface, when it has a factor of safety.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub surface: Option<SlipSurfaceResult>,
+    /// Why the plane has no factor of safety, when it has none.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub reason: Option<String>,
 }
 
 /// Slice data for detailed output.
@@ -930,4 +1021,10 @@ pub struct AnalysisResult {
     /// Why the finite element analysis failed, when it was enabled and did not complete.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub fem_error: Option<String>,
+    /// The custom search planes of the definition, in its order (circles,
+    /// then polylines), each with its surface and factor of safety or the
+    /// reason it has none. Absent without custom search planes. Analysed in
+    /// the model's own direction (with `bothDirections` too).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub custom_surfaces: Option<Vec<CustomSurfaceResult>>,
 }

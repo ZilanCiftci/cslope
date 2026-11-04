@@ -39,6 +39,10 @@ export type {
   SlipSurfaceResult,
   SliceData,
   WaterTableInput,
+  CustomPlaneKind,
+  CustomPlaneRef,
+  CustomSurfaceResult,
+  SurfaceRejection,
 } from "./types/analysis";
 export { DEFAULT_ANALYSIS_OPTIONS, EC7_DA3_FACTORS, DEFAULT_FEM_SETTINGS, SAFETY_CLASS_GAMMA_D, swedishPartialFactors } from "./types/analysis";
 export type { FemAnalysisSettings, FemResultSummary } from "./types/analysis";

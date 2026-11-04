@@ -163,6 +163,7 @@ fn a_mirrored_model_finds_the_mirrored_minimum() {
                     composite: None,
                     reinforcement_forces: None,
                     crack: None,
+                    custom_plane: None,
                 }),
                 all_surfaces: vec![],
                 critical_slices: vec![],
@@ -186,6 +187,7 @@ fn a_mirrored_model_finds_the_mirrored_minimum() {
                 sgi3d: None,
                 sgi3d_error: None,
                 fem_error: None,
+                custom_surfaces: None,
             };
             let mapped = map_analysis_result_to_model_space(&result, &canonical)
                 .critical_surface
