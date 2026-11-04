@@ -7,8 +7,9 @@ import { ChevronDown } from "lucide-react";
  * each. The primary commands of a tab are large buttons (a 20 px icon
  * above an 11 px label, 50 px tall); the others are small buttons (a
  * 16 px icon with the label beside it, 24 px tall) stacked in pairs. The
- * icons are monochrome (lucide, stroke 1.5); the accent colour marks only
- * the active tab and pressed toggles. The icon props are in icon-props.ts.
+ * icons (components/icons/ribbon) are monochrome at stroke 1.5; the accent
+ * colour marks only the active tab and pressed toggles. The icon props are
+ * in icon-props.ts.
  */
 
 const HOVER = "hover:bg-[var(--color-vsc-list-hover)]";

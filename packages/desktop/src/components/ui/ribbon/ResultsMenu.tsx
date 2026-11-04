@@ -16,26 +16,26 @@ import {
   computePaperFrame,
 } from "../../../features/view/paper";
 import {
-  Blinds,
-  ChartArea,
-  ChartLine,
-  ChartScatter,
-  ChartSpline,
-  CircleDashed,
-  Columns3,
-  Crosshair,
-  FileDown,
-  FileText,
-  FileUp,
-  Palette,
-  SlidersHorizontal,
-  Spline,
-  Table,
-  Tag,
-  Type,
-  Zap,
-  Waypoints,
-} from "lucide-react";
+  CentreIcon,
+  ColorBarIcon,
+  ExportTemplateIcon,
+  FeMeshIcon,
+  FosLabelIcon,
+  ImportTemplateIcon,
+  MaterialTableIcon,
+  PdfIcon,
+  PlasticZoneIcon,
+  PlotIcon,
+  ProbabilisticIcon,
+  ReferenceLineIcon,
+  ResultsPlotIcon,
+  SensitivityIcon,
+  SettingsIcon,
+  SlicesIcon,
+  SoilColorsIcon,
+  SurfacesIcon,
+  TextIcon,
+} from "../../icons/ribbon";
 import {
   Chevron,
   RibbonButton,
@@ -301,19 +301,19 @@ export function ResultsMenu({ isOpen, onActivate, panelHost }: Props) {
           <div className="h-full flex items-stretch gap-0" role="menu">
             <RibbonGroup label="Plots">
               <RibbonButton
-                icon={<ChartLine {...LARGE_ICON} />}
+                icon={<ResultsPlotIcon {...LARGE_ICON} />}
                 label="Results Plot"
                 onClick={openResultsPlot}
                 disabled={!hasResult}
                 disabledTitle="Run the analysis first"
               />
               <RibbonButton
-                icon={<ChartSpline {...LARGE_ICON} />}
+                icon={<SensitivityIcon {...LARGE_ICON} />}
                 label="Sensitivity"
                 onClick={() => useSensitivityStore.getState().setOpen(true)}
               />
               <RibbonButton
-                icon={<ChartArea {...LARGE_ICON} />}
+                icon={<ProbabilisticIcon {...LARGE_ICON} />}
                 label="Probabilistic"
                 onClick={() => useReliabilityStore.getState().setOpen(true)}
               />
@@ -323,7 +323,7 @@ export function ResultsMenu({ isOpen, onActivate, panelHost }: Props) {
               <RibbonStack>
                 <div className="relative" ref={displayMenuRef}>
                   <RibbonSmallButton
-                    icon={<CircleDashed {...SMALL_ICON} />}
+                    icon={<SurfacesIcon {...SMALL_ICON} />}
                     label="Surfaces"
                     title={`Surfaces: ${rvs.surfaceDisplay === "critical" ? "Critical" : rvs.surfaceDisplay === "all" ? "All" : "Filter"}`}
                     onClick={() => setDisplayMenuOpen((o) => !o)}
@@ -410,21 +410,21 @@ export function ResultsMenu({ isOpen, onActivate, panelHost }: Props) {
                   )}
                 </div>
                 <RibbonSmallButton
-                  icon={<Columns3 {...SMALL_ICON} />}
+                  icon={<SlicesIcon {...SMALL_ICON} />}
                   label="Slices"
                   title="Show slices"
                   onClick={() => setRvs({ showSlices: !rvs.showSlices })}
                   active={rvs.showSlices}
                 />
                 <RibbonSmallButton
-                  icon={<Tag {...SMALL_ICON} />}
+                  icon={<FosLabelIcon {...SMALL_ICON} />}
                   label="FOS label"
                   title="Show FOS label"
                   onClick={() => setRvs({ showFosLabel: !rvs.showFosLabel })}
                   active={rvs.showFosLabel}
                 />
                 <RibbonSmallButton
-                  icon={<Crosshair {...SMALL_ICON} />}
+                  icon={<CentreIcon {...SMALL_ICON} />}
                   label="Centre"
                   title="Show centre mark"
                   onClick={() =>
@@ -433,7 +433,7 @@ export function ResultsMenu({ isOpen, onActivate, panelHost }: Props) {
                   active={rvs.showCentreMarker}
                 />
                 <RibbonSmallButton
-                  icon={<Palette {...SMALL_ICON} />}
+                  icon={<SoilColorsIcon {...SMALL_ICON} />}
                   label="Soil colors"
                   onClick={() =>
                     setRvs({ showSoilColor: !(rvs.showSoilColor ?? true) })
@@ -442,7 +442,7 @@ export function ResultsMenu({ isOpen, onActivate, panelHost }: Props) {
                 />
                 {result?.fem && (
                   <RibbonSmallButton
-                    icon={<Zap {...SMALL_ICON} />}
+                    icon={<PlasticZoneIcon {...SMALL_ICON} />}
                     label="Plastic zone"
                     title={`Shade the plastic zone of the finite element analysis (the failure mechanism). ${FEM_EXPERIMENTAL_NOTE}`}
                     onClick={() =>
@@ -453,7 +453,7 @@ export function ResultsMenu({ isOpen, onActivate, panelHost }: Props) {
                 )}
                 {result?.fem && (
                   <RibbonSmallButton
-                    icon={<Waypoints {...SMALL_ICON} />}
+                    icon={<FeMeshIcon {...SMALL_ICON} />}
                     label="FE mesh"
                     title={`Draw the mesh of the finite element analysis: its last refinement, finer where the failure mechanism lies. ${FEM_EXPERIMENTAL_NOTE}`}
                     onClick={() => setRvs({ showFemMesh: !(rvs.showFemMesh ?? false) })}
@@ -461,7 +461,7 @@ export function ResultsMenu({ isOpen, onActivate, panelHost }: Props) {
                   />
                 )}
                 <RibbonSmallButton
-                  icon={<SlidersHorizontal {...SMALL_ICON} />}
+                  icon={<SettingsIcon {...SMALL_ICON} />}
                   label="Settings"
                   onClick={openViewSettings}
                 />
@@ -471,33 +471,33 @@ export function ResultsMenu({ isOpen, onActivate, panelHost }: Props) {
             <RibbonGroup label="Annotations">
               <RibbonStack>
                 <RibbonSmallButton
-                  icon={<Type {...SMALL_ICON} />}
+                  icon={<TextIcon {...SMALL_ICON} />}
                   label="Text"
                   title="Add Text"
                   onClick={() => addAnnotation("text")}
                 />
                 <RibbonSmallButton
-                  icon={<ChartScatter {...SMALL_ICON} />}
+                  icon={<PlotIcon {...SMALL_ICON} />}
                   label="Plot"
                   title="Add Plot"
                   onClick={() => addAnnotation("plot")}
                 />
                 <RibbonSmallButton
-                  icon={<Table {...SMALL_ICON} />}
+                  icon={<MaterialTableIcon {...SMALL_ICON} />}
                   label="Material table"
                   title={rvs.annotations.some((a) => a.type === "material-table") ? "Remove Material Table" : "Add Material Table"}
                   onClick={() => toggleAnnotation("material-table")}
                   active={rvs.annotations.some((a) => a.type === "material-table")}
                 />
                 <RibbonSmallButton
-                  icon={<Blinds {...SMALL_ICON} />}
+                  icon={<ColorBarIcon {...SMALL_ICON} />}
                   label="Color bar"
                   title={rvs.annotations.some((a) => a.type === "color-bar") ? "Remove Color Bar" : "Add Color Bar"}
                   onClick={() => toggleAnnotation("color-bar")}
                   active={rvs.annotations.some((a) => a.type === "color-bar")}
                 />
                 <RibbonMenuButton
-                  icon={<Spline {...SMALL_ICON} />}
+                  icon={<ReferenceLineIcon {...SMALL_ICON} />}
                   label="Reference line"
                   items={[
                     {
@@ -518,7 +518,7 @@ export function ResultsMenu({ isOpen, onActivate, panelHost }: Props) {
             <RibbonGroup label="Templates">
               <RibbonStack>
                 <RibbonSmallButton
-                  icon={<FileUp {...SMALL_ICON} />}
+                  icon={<ExportTemplateIcon {...SMALL_ICON} />}
                   label="Export template"
                   onClick={() => {
                     // A template carries the sheet's layout (paper space);
@@ -536,7 +536,7 @@ export function ResultsMenu({ isOpen, onActivate, panelHost }: Props) {
                   }}
                 />
                 <RibbonSmallButton
-                  icon={<FileDown {...SMALL_ICON} />}
+                  icon={<ImportTemplateIcon {...SMALL_ICON} />}
                   label="Import template"
                   onClick={() => {
                     const input = document.createElement("input");
@@ -614,7 +614,7 @@ export function ResultsMenu({ isOpen, onActivate, panelHost }: Props) {
                   data-size="large"
                 >
                   <span className="flex items-center justify-center">
-                    <FileText {...LARGE_ICON} />
+                    <PdfIcon {...LARGE_ICON} />
                   </span>
                   <span className="text-[11px] leading-none">PDF</span>
                 </button>

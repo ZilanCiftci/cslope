@@ -7,19 +7,19 @@ import {
   performRedo,
 } from "../../../store/app-store";
 import {
-  Anchor,
-  ArrowDownToLine,
-  ArrowDownWideNarrow,
-  Layers,
-  PaintBucket,
-  Pentagon,
-  ScanSearch,
-  Settings,
-  Slash,
-  SlidersHorizontal,
-  Spline,
-  Waves,
-} from "lucide-react";
+  AssignIcon,
+  CustomPlanesIcon,
+  ExteriorIcon,
+  InteriorIcon,
+  LineLoadIcon,
+  MaterialsIcon,
+  OptionsIcon,
+  ParametersIcon,
+  PiezoIcon,
+  ReinforcementIcon,
+  SearchLimitsIcon,
+  UdlIcon,
+} from "../../icons/ribbon";
 import {
   RibbonGroup,
   RibbonButton,
@@ -116,7 +116,7 @@ export function EditMenu({ isOpen, onActivate, panelHost }: Props) {
           <div className="h-full flex items-stretch gap-0" role="menu">
             <RibbonGroup label="Boundaries">
               <RibbonButton
-                icon={<Pentagon {...LARGE_ICON} />}
+                icon={<ExteriorIcon {...LARGE_ICON} />}
                 label="Exterior"
                 onClick={() => {
                   setActiveSection("Exterior Boundary");
@@ -125,7 +125,7 @@ export function EditMenu({ isOpen, onActivate, panelHost }: Props) {
               />
               <RibbonStack>
                 <RibbonSmallButton
-                  icon={<Spline {...SMALL_ICON} />}
+                  icon={<InteriorIcon {...SMALL_ICON} />}
                   label="Interior"
                   onClick={() => {
                     setActiveSection("Interior Boundaries");
@@ -139,13 +139,13 @@ export function EditMenu({ isOpen, onActivate, panelHost }: Props) {
 
             <RibbonGroup label="Materials">
               <RibbonButton
-                icon={<Layers {...LARGE_ICON} />}
+                icon={<MaterialsIcon {...LARGE_ICON} />}
                 label="Materials"
                 onClick={() => window.cslope.openMaterialsDialog()}
               />
               <RibbonStack>
                 <RibbonSmallButton
-                  icon={<PaintBucket {...SMALL_ICON} />}
+                  icon={<AssignIcon {...SMALL_ICON} />}
                   label="Assign"
                   onClick={() => {
                     setActiveSection("Material Assignment");
@@ -160,7 +160,7 @@ export function EditMenu({ isOpen, onActivate, panelHost }: Props) {
             <RibbonGroup label="Loads & support">
               <RibbonStack>
                 <RibbonSmallButton
-                  icon={<ArrowDownWideNarrow {...SMALL_ICON} />}
+                  icon={<UdlIcon {...SMALL_ICON} />}
                   label="UDL"
                   onClick={() => {
                     setActiveSection("Loads");
@@ -168,7 +168,7 @@ export function EditMenu({ isOpen, onActivate, panelHost }: Props) {
                   }}
                 />
                 <RibbonSmallButton
-                  icon={<ArrowDownToLine {...SMALL_ICON} />}
+                  icon={<LineLoadIcon {...SMALL_ICON} />}
                   label="Line loads"
                   onClick={() => {
                     setActiveSection("Loads");
@@ -176,7 +176,7 @@ export function EditMenu({ isOpen, onActivate, panelHost }: Props) {
                   }}
                 />
                 <RibbonSmallButton
-                  icon={<Anchor {...SMALL_ICON} />}
+                  icon={<ReinforcementIcon {...SMALL_ICON} />}
                   label="Reinforcement"
                   onClick={() => {
                     setActiveSection("Loads");
@@ -190,7 +190,7 @@ export function EditMenu({ isOpen, onActivate, panelHost }: Props) {
 
             <RibbonGroup label="Water & parameters">
               <RibbonButton
-                icon={<Waves {...LARGE_ICON} />}
+                icon={<PiezoIcon {...LARGE_ICON} />}
                 label="Piezometric lines"
                 onClick={() => {
                   setActiveSection("Piezometric Lines");
@@ -199,7 +199,7 @@ export function EditMenu({ isOpen, onActivate, panelHost }: Props) {
               />
               <RibbonStack>
                 <RibbonSmallButton
-                  icon={<SlidersHorizontal {...SMALL_ICON} />}
+                  icon={<ParametersIcon {...SMALL_ICON} />}
                   label="Parameters"
                   onClick={() => {
                     setActiveSection("Parameters");
@@ -213,7 +213,7 @@ export function EditMenu({ isOpen, onActivate, panelHost }: Props) {
 
             <RibbonGroup label="Analysis">
               <RibbonButton
-                icon={<Settings {...LARGE_ICON} />}
+                icon={<OptionsIcon {...LARGE_ICON} />}
                 label="Options"
                 onClick={() => {
                   setActiveSection("Options");
@@ -222,7 +222,7 @@ export function EditMenu({ isOpen, onActivate, panelHost }: Props) {
               />
               <RibbonStack>
                 <RibbonSmallButton
-                  icon={<ScanSearch {...SMALL_ICON} />}
+                  icon={<SearchLimitsIcon {...SMALL_ICON} />}
                   label="Search limits"
                   onClick={() => {
                     setActiveSection("Search Limits");
@@ -230,7 +230,7 @@ export function EditMenu({ isOpen, onActivate, panelHost }: Props) {
                   }}
                 />
                 <RibbonSmallButton
-                  icon={<Slash {...SMALL_ICON} />}
+                  icon={<CustomPlanesIcon {...SMALL_ICON} />}
                   label="Custom planes"
                   onClick={() => {
                     setActiveSection("Custom Search Planes");
