@@ -151,6 +151,17 @@ function formatMaterialCell(
   }
 }
 
+const DEPTH_COLUMNS: MaterialTableColumnKey[] = ["depthRef", "cDatum", "cRate"];
+
+/** The chosen columns, plus the datum columns after the cohesion when a material's strength varies with depth. */
+function withDepthColumns(columns: MaterialTableColumnKey[], materials: MaterialRow[]): MaterialTableColumnKey[] {
+  const varies = materials.some((m) => m.model.kind === "s-f-depth" || m.model.kind === "s-f-datum");
+  const missing = DEPTH_COLUMNS.filter((c) => !columns.includes(c));
+  if (!varies || missing.length === 0) return columns;
+  const at = columns.indexOf("cohesion");
+  return at < 0 ? [...columns, ...missing] : [...columns.slice(0, at + 1), ...missing, ...columns.slice(at + 1)];
+}
+
 export function buildMaterialTableData(
   annotation: Annotation,
   materials: MaterialRow[],
@@ -160,9 +171,12 @@ export function buildMaterialTableData(
   header: string[];
   rows: string[][];
 } {
-  const visibleColumns = annotation.tableColumns?.length
+  const chosen = annotation.tableColumns?.length
     ? annotation.tableColumns
     : DEFAULT_MATERIAL_TABLE_COLUMNS;
+  // A strength that grows with depth is defined by its datum, value there
+  // and rate: those columns come along whenever such a material is listed.
+  const visibleColumns = withDepthColumns(chosen, materials);
   const visibleDefs = visibleColumns
     .map((key) => MATERIAL_TABLE_COLUMNS.find((c) => c.key === key))
     .filter((c): c is (typeof MATERIAL_TABLE_COLUMNS)[number] => c != null);

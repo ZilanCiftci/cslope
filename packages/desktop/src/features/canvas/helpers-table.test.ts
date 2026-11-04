@@ -283,4 +283,15 @@ describe("annotation hit boxes enclose what is drawn", () => {
       });
     }
   }
+  it("adds the datum, value and rate columns when a material's strength varies with depth", () => {
+    const four = { id: "t", type: "material-table" as const, x: 0, y: 0, tableColumns: ["model", "unitWeight", "cohesion", "frictionAngle"] as const };
+    const plain = buildMaterialTableData({ ...four, tableColumns: [...four.tableColumns] }, [row("a", DEFAULT_MATERIAL.model)]);
+    expect(plain.header).toEqual(["Color", "Name", "Material Model", "Unit Weight (kN/m3)", "Cohesion / Su (kPa)", "Effective Friction Angle (\u00b0)"]);
+    const varying = buildMaterialTableData({ ...four, tableColumns: [...four.tableColumns] }, [
+      row("a", DEFAULT_MATERIAL.model),
+      row("clay", { kind: "s-f-datum", unitWeight: 17, suRef: 19, yRef: -1.5, rate: -12.7 }),
+    ]);
+    expect(varying.columnKeys).toEqual(["color", "name", "model", "unitWeight", "cohesion", "depthRef", "cDatum", "cRate", "frictionAngle"]);
+    expect(varying.rows[1].slice(5, 8)).toEqual(["-1.5", "19", "-12.7"]);
+  });
 });
