@@ -18,6 +18,7 @@ import { waterLineFitPoints } from "../view/extents";
 import { MODEL_SHORT_LABELS } from "../rendering/style-spec";
 import { flatFieldsFromModel } from "../properties/sections/material-forms/model-defaults";
 import { resolveAnnotationText } from "../annotations/resolveAnnotationText";
+import { referenceWorldPoints } from "../annotations/reference";
 import {
   getMaterialTableColumnWidthPx,
   type MaterialTableRenderColumnKey,
@@ -438,6 +439,10 @@ export function getAnnotationBoundsPx(
     parameters,
   } = params;
 
+  // A reference annotation lies in model coordinates: no box on the paper
+  // (it is hit-tested through canvas/reference-geometry.ts).
+  if (anno.type === "reference") return { x: 0, y: 0, w: 0, h: 0 };
+
   const annoScale = Math.min(pf.w, pf.h) / 600;
   const ax = pf.x + anno.x * pf.w;
   const ay = pf.y + anno.y * pf.h;
@@ -748,6 +753,12 @@ export function extendBoundsWithResultFitExtras(params: {
   // annotation's anchor corner (the previous measurement here always
   // extended right/down from the anchor point).
   for (const anno of rvs.annotations) {
+    if (anno.type === "reference") {
+      // In model coordinates: a polyline's points, a whole circle; a circle
+      // clipped to the ground lies within the model and adds nothing.
+      for (const [x, y] of referenceWorldPoints(anno, () => null)) addPoint(x, y);
+      continue;
+    }
     const b = getAnnotationBoundsPx(ctx, {
       annotation: anno,
       paperFrame: pf,

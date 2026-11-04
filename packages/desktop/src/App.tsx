@@ -99,6 +99,8 @@ interface AnalysisStatePayload {
   piezometricLine?: PiezometricLineState;
   /** From the Options window: the water before drawdown; null: none. Missing: not sent. */
   rapidDrawdown?: PiezometricLineState["rapidDrawdown"] | null;
+  /** From a dialog window: a custom search plane to copy into a reference annotation. */
+  referenceFromPlaneId?: string;
 }
 
 interface ViewSettingsStatePayload {
@@ -898,6 +900,11 @@ function App() {
           ? { piezometricLine: withRapidDrawdown(useAppStore.getState().piezometricLine, next.rapidDrawdown) }
           : {}),
       });
+      // "Add as reference line" in a dialog window: the plane copied into a
+      // reference annotation of the result view.
+      if (next.referenceFromPlaneId) {
+        useAppStore.getState().addReferenceFromCustomPlane(next.referenceFromPlaneId);
+      }
     };
 
     const unsubscribeAnalysisRequestState = window.cslope.onAnalysisRequestState(handleAnalysisRequestState);

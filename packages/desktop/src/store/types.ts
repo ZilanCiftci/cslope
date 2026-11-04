@@ -330,7 +330,11 @@ export type AnchorPosition =
   | "bottom-left"
   | "bottom-right";
 
-export interface Annotation {
+/**
+ * An annotation placed on the paper: its anchor at (x, y) as fractions of
+ * the paper frame.
+ */
+export interface PaperAnnotation {
   id: string;
   type: "text" | "material-table" | "color-bar" | "plot";
   x: number;
@@ -348,6 +352,71 @@ export interface Annotation {
   plotAxisX?: PlotAxisMode;
   plotAxisY?: PlotMetricKey;
 }
+
+export type ReferenceDash = "solid" | "dashed" | "dotted";
+
+/**
+ * The fields of a paper annotation a reference annotation never has, typed
+ * absent so code over the Annotation union reads them as undefined without
+ * narrowing (`color` and `width` are shared).
+ */
+type NotOnReference = {
+  [K in Exclude<keyof PaperAnnotation, "id" | "type" | "color" | "width">]?: undefined;
+};
+
+/**
+ * What every reference annotation carries: a line in model coordinates
+ * (metres) drawn over the result, such as a slip surface from another
+ * program's printout or one interpreted from a paper.
+ */
+interface ReferenceAnnotationBase extends NotOnReference {
+  id: string;
+  type: "reference";
+  /** Drawn near the line, e.g. "F = 0.664 (other program)". */
+  label?: string;
+  /** CSS colour; absent: the theme's reference colour. */
+  color?: string;
+  /** Absent: solid. */
+  dash?: ReferenceDash;
+  /** Line width in paper px; absent: REFERENCE_DEFAULT_WIDTH (1.5). */
+  width?: number;
+  /** Also drawn in the edit view; absent: result view only. */
+  showInEdit?: boolean;
+}
+
+/** A polyline through the given points (at least two). */
+export interface ReferencePolyline extends ReferenceAnnotationBase {
+  shape: "polyline";
+  points: [number, number][];
+}
+
+/**
+ * A circle; `clip: "ground"` (the default) draws only the arc below the
+ * ground surface, like a slip circle, `"none"` the whole circle.
+ */
+export interface ReferenceCircle extends ReferenceAnnotationBase {
+  shape: "circle";
+  cx: number;
+  cy: number;
+  radius: number;
+  clip?: "ground" | "none";
+}
+
+/**
+ * The shapes of a reference annotation. A future `shape: "dimension"`
+ * (two points, an offset, arrows and a length label) is added here, in
+ * the normalizer (features/annotations/reference.ts), the geometry
+ * (referenceWorldPoints), the two drawing dispatches (canvas and PDF),
+ * the hit test and the properties panel.
+ */
+export type ReferenceAnnotation = ReferencePolyline | ReferenceCircle;
+
+type DistributiveOmit<T, K extends PropertyKey> = T extends unknown ? Omit<T, K> : never;
+
+/** A reference annotation without its id and type: what creating one takes. */
+export type ReferenceSpec = DistributiveOmit<ReferenceAnnotation, "id" | "type">;
+
+export type Annotation = PaperAnnotation | ReferenceAnnotation;
 
 export interface ResultViewSettings {
   surfaceDisplay: SurfaceDisplayMode;
@@ -673,7 +742,15 @@ export interface ResultViewSlice {
   selectedAnnotationIds: string[];
   selectedResultObject: "paper-frame" | null;
   setResultViewSettings: (patch: Partial<ResultViewSettings>) => void;
-  addAnnotation: (type: Annotation["type"]) => void;
+  addAnnotation: (type: PaperAnnotation["type"]) => void;
+  /** Adds a reference annotation (model coordinates) and selects it; returns its id. */
+  addReferenceAnnotation: (anno: ReferenceSpec) => string;
+  /**
+   * Copies a custom search plane (circle or polyline) into a reference
+   * annotation labelled "Custom surface n"; returns its id, or null when
+   * there is no such plane.
+   */
+  addReferenceFromCustomPlane: (planeId: string) => string | null;
   updateAnnotation: (id: string, patch: Partial<Annotation>) => void;
   removeAnnotation: (id: string) => void;
   setSelectedAnnotations: (ids: string[]) => void;

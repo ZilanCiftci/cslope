@@ -73,6 +73,7 @@
   --color-canvas-paper-ticks: #f1f3f5;
   --color-canvas-paper-border: #ffffff;
   --color-canvas-marker: #e8e8e8;
+  --color-canvas-reference: #e879f9;
 
   color-scheme: dark;
 }
@@ -145,6 +146,7 @@
   --color-canvas-paper-ticks: #2e2e2e;
   --color-canvas-paper-border: #111111;
   --color-canvas-marker: #000000;
+  --color-canvas-reference: #a21caf;
 
   color-scheme: light;
 }

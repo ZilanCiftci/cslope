@@ -43,6 +43,7 @@ import { resolveAnnotationText } from "../annotations/resolveAnnotationText";
 import { anchoredTopLeft } from "../annotations/anchorPosition";
 import { computeSlicePlotData } from "../annotations/slicePlotData";
 import type { PointHit } from "./types";
+import { drawReferenceLabels, drawReferenceLines, referenceSegments } from "./reference-draw";
 import {
   ANNOTATION_DEFAULT_FONT_FAMILY,
   ANNOTATION_DEFAULT_FONT_SIZE,
@@ -58,6 +59,7 @@ import {
   EXIT_DOT_COLOR,
   FAILURE_MASS_COLOR,
   FAILURE_MASS_FILL_OPACITY,
+  REFERENCE_ANNOTATION_COLOR,
   LINE_LOAD_COLOR,
   MARKER_COLOR,
   MIN_SLIP_MASS_BAND_OPACITY,
@@ -628,6 +630,8 @@ export function drawCanvas(
   const PAPER_BORDER_COLOR = cssVar("--color-canvas-paper-border");
   const SELECTED_BOUNDARY_COLOR = "#f59e0b";
   const MARKER_BASE = cssVar("--color-canvas-marker") || MARKER_COLOR.hex;
+  // Reference annotations without a colour of their own: the theme's.
+  const REFERENCE_COLOR = cssVar("--color-canvas-reference") || REFERENCE_ANNOTATION_COLOR.hex;
   // Point labels stay off the rulers (left and bottom) and the canvas edge.
   const labelBounds: Box = { left: RULER_SIZE_PX + 2, top: 2, right: w - 2, bottom: h - RULER_SIZE_PX - 2 };
   const labelColors = { text: STROKE_ACTIVE, plate: BG_COLOR };
@@ -1214,6 +1218,29 @@ export function drawCanvas(
       ctx.arc(cx, cy, Math.abs(ex - cx), 0, Math.PI * 2);
       ctx.stroke();
       ctx.restore();
+    }
+  }
+
+  // ── Reference annotations marked for the edit view ──────
+  // Lines over the soil as in the result view, with their labels; the
+  // point labels keep off them.
+  if (mode !== "result") {
+    const drawnRefs = drawReferenceLines(ctx, {
+      annotations: resultViewSettings.annotations,
+      mode: "edit",
+      toC: (x, y) => worldToCanvas(x, y, w, h),
+      groundYAt: surfaceYAtX,
+      paperZoom: 1,
+      defaultColor: REFERENCE_COLOR,
+    });
+    if (drawnRefs.length > 0) {
+      const refSegs = referenceSegments(drawnRefs);
+      for (const seg of refSegs) labelLines.push({ seg, pad: 2 });
+      const refLayout = new LabelLayout(labelBounds);
+      for (const seg of refSegs) refLayout.reserveSegment(seg, 2);
+      if (coordinates.length >= 3) refLayout.reservePolyline(coordinates.map(([x, y]) => worldToCanvas(x, y, w, h)), 2, true);
+      for (const box of drawReferenceLabels(ctx, drawnRefs, { toC: (x, y) => worldToCanvas(x, y, w, h), paperZoom: 1, layout: refLayout, plate: BG_COLOR }))
+        pointSymbols.push(box);
     }
   }
 
@@ -2037,6 +2064,20 @@ export function drawCanvas(
     // relative to the largest, so the failure mechanism shows as a band.
     if (result.fem && rvs.showFemPlasticZone !== false) drawFemPlasticZone(ctx, result.fem, (x, y) => worldToCanvas(x, y, w, h));
 
+    // ── Reference annotations: the lines, under the surfaces ──
+    // (their labels follow the FOS label, so they can keep clear of it)
+    const drawnReferences = drawReferenceLines(ctx, {
+      annotations: rvs.annotations,
+      mode: "result",
+      toC: (x, y) => worldToCanvas(x, y, w, h),
+      groundYAt: surfaceYAtX,
+      paperZoom,
+      defaultColor: REFERENCE_COLOR,
+      selectedIds: selectedAnnotationIds,
+      hoverHit,
+      handleStroke: PAPER_FILL_COLOR || BG_COLOR,
+    });
+
     // Non-critical surfaces (when "all" or "filter" mode)
     // Draw in reverse FOS order (high FOS first = behind, low FOS last = on top)
     if (rvs.surfaceDisplay !== "critical" && result.allSurfaces.length > 0) {
@@ -2337,6 +2378,37 @@ export function drawCanvas(
       }
     }
 
+    // ── Reference annotations: the labels ────────────────
+    // Clear of the lines of the drawing, the FOS label and each other,
+    // inside the plot area.
+    if (drawnReferences.some((d) => d.anno.label?.trim())) {
+      const toC = (x: number, y: number) => worldToCanvas(x, y, w, h);
+      const { paperFrame: rf } = rvs;
+      const frame = computePaperFrame(w, h, rf.paperSize, rf.landscape, rf.zoom ?? 1, rf.offsetX ?? 0, rf.offsetY ?? 0);
+      const refLayout = new LabelLayout({
+        left: frame.x + frame.w * PLOT_MARGINS.L + 2,
+        top: frame.y + frame.h * PLOT_MARGINS.T + 2,
+        right: frame.x + frame.w * (1 - PLOT_MARGINS.R) - 2,
+        bottom: frame.y + frame.h * (1 - PLOT_MARGINS.B) - 2,
+      });
+      for (const seg of referenceSegments(drawnReferences)) refLayout.reserveSegment(seg, 2 * paperZoom);
+      if (coordinates.length >= 3) refLayout.reservePolyline(coordinates.map(([x, y]) => toC(x, y)), 2, true);
+      for (const bnd of materialBoundaries) refLayout.reservePolyline(bnd.coordinates.map(([x, y]) => toC(x, y)), 2);
+      for (const line of piezometricLine.lines) refLayout.reservePolyline(line.coordinates.map(([x, y]) => toC(x, y)), 2);
+      if (result.criticalSurface) {
+        const cs = result.criticalSurface;
+        refLayout.reservePolyline(getArcPoints(cs).map(([x, y]) => toC(x, y)), 3 * paperZoom);
+        if (rvs.showFosLabel) {
+          // The FOS label's box, as drawn above.
+          const [lx, ly] = toC(...fosLabelAnchor(cs));
+          ctx.font = `bold ${12 * paperZoom}px sans-serif`;
+          const tw = ctx.measureText(cs.fos.toFixed(3)).width;
+          refLayout.reserve({ left: lx + 9 * paperZoom, top: ly - 12 * paperZoom, right: lx + 11 * paperZoom + tw, bottom: ly + 3 * paperZoom });
+        }
+      }
+      drawReferenceLabels(ctx, drawnReferences, { toC, paperZoom, layout: refLayout, plate: PAPER_FILL_COLOR || BG_COLOR });
+    }
+
     // ── Paper frame ──────────────────────────────────────
     const { paperFrame } = rvs;
     const pf = computePaperFrame(
@@ -2473,6 +2545,8 @@ export function drawCanvas(
     const annoScale = Math.min(pf.w, pf.h) / ANNOTATION_SCALE_DIVISOR;
 
     for (const anno of annotations) {
+      // Reference annotations are drawn with the result above (model coordinates).
+      if (anno.type === "reference") continue;
       // Convert fractional paper-frame coordinates to canvas pixels (anchor point)
       const ax = pf.x + anno.x * pf.w;
       const ay = pf.y + anno.y * pf.h;

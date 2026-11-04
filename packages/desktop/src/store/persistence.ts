@@ -21,6 +21,7 @@ import {
 import { DEFAULT_MODEL_NAME } from "../constants";
 import { nextId } from "./helpers";
 import { clampMinorTicks } from "../utils/ruler";
+import { normalizeReferenceAnnotation } from "../features/annotations/reference";
 import {
   APP_DEFAULT_ANALYSIS_OPTIONS,
   DEFAULT_ANALYSIS_LIMITS,
@@ -33,6 +34,7 @@ import {
   PAPER_DIMENSIONS,
 } from "./defaults";
 import type {
+  Annotation,
   AnalysisLimitsState,
   AppState,
   CoordinateExpression,
@@ -769,18 +771,7 @@ export function normalizeResultView(raw: unknown): ResultViewSettings {
         ? rawPaperFrame.offsetY
         : (DEFAULT_RESULT_VIEW_SETTINGS.paperFrame.offsetY ?? 0),
   };
-  const annotations = Array.isArray(view.annotations)
-    ? view.annotations.filter(
-        (anno): anno is ResultViewSettings["annotations"][number] => {
-          if (!anno || typeof anno !== "object") return false;
-          const a = anno as unknown as Record<string, unknown>;
-          if (typeof a.id !== "string") return false;
-          if (typeof a.type !== "string") return false;
-          if (typeof a.x !== "number" || typeof a.y !== "number") return false;
-          return true;
-        },
-      )
-    : [];
+  const annotations = normalizeAnnotations(view.annotations);
 
   return {
     surfaceDisplay:
@@ -825,6 +816,30 @@ export function normalizeResultView(raw: unknown): ResultViewSettings {
       ? { pdfTitleLine: view.pdfTitleLine }
       : {}),
   };
+}
+
+/**
+ * The annotations of a result view or template: paper annotations with an
+ * id, a type and a position; reference annotations (model coordinates)
+ * through normalizeReferenceAnnotation, their named fields only. Anything
+ * else is dropped.
+ */
+export function normalizeAnnotations(raw: unknown): Annotation[] {
+  if (!Array.isArray(raw)) return [];
+  const out: Annotation[] = [];
+  for (const anno of raw) {
+    if (!anno || typeof anno !== "object") continue;
+    const a = anno as Record<string, unknown>;
+    if (typeof a.id !== "string" || typeof a.type !== "string") continue;
+    if (a.type === "reference") {
+      const ref = normalizeReferenceAnnotation(a);
+      if (ref) out.push(ref);
+      continue;
+    }
+    if (typeof a.x !== "number" || typeof a.y !== "number") continue;
+    out.push(anno as Annotation);
+  }
+  return out;
 }
 
 function isFinitePair(value: unknown): value is [number, number] {

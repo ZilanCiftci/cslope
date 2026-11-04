@@ -91,6 +91,11 @@ interface AnalysisStatePayload {
   piezometricLine?: PiezometricLineState;
   /** From the Options window: the water before drawdown; null: none. Missing: not sent. */
   rapidDrawdown?: PiezometricLineState["rapidDrawdown"] | null;
+  /**
+   * From the custom search planes or Options window: the plane to copy
+   * into a reference annotation (the main window adds it). Missing: none.
+   */
+  referenceFromPlaneId?: string;
 }
 
 interface ViewSettingsStatePayload {

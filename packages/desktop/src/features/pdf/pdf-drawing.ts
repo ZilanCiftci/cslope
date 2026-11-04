@@ -1327,6 +1327,8 @@ export function drawAnnotations(
   const annoScale = Math.min(tf.paperW, tf.paperH) / ANNOTATION_SCALE_DIVISOR;
 
   for (const anno of annotations) {
+    // Reference annotations are drawn with the result (pdf-reference.ts).
+    if (anno.type === "reference") continue;
     const ax = paperFrame.x + anno.x * paperFrame.w;
     const ay = paperFrame.y + anno.y * paperFrame.h;
 

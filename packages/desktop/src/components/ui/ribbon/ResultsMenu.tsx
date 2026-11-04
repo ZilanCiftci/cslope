@@ -30,6 +30,7 @@ import {
   Grid3x3,
   Palette,
   SlidersHorizontal,
+  Spline,
   Table,
   Tag,
   Type,
@@ -40,10 +41,19 @@ import {
   Chevron,
   RibbonButton,
   RibbonGroup,
+  RibbonMenuButton,
   RibbonSep,
   RibbonSmallButton,
   RibbonStack,
 } from "./RibbonParts";
+import {
+  defaultReferenceCircle,
+  defaultReferencePolyline,
+  paperAnnotations,
+  referenceAnnotations,
+  type WorldBounds,
+} from "../../../features/annotations/reference";
+import { surfaceYAtX } from "../../../features/view/surface";
 import { LARGE_ICON, SMALL_ICON } from "./icon-props";
 import type { SurfaceDisplayMode } from "../../../store/types";
 import { buildSliceTable, toCsv } from "../../../features/export/sliceTable";
@@ -65,6 +75,7 @@ export function ResultsMenu({ isOpen, onActivate, panelHost }: Props) {
   const result = useAppStore((s) => s.result);
   const hasResult = Boolean(result?.allSurfaces?.length);
   const addAnnotation = useAppStore((s) => s.addAnnotation);
+  const addReferenceAnnotation = useAppStore((s) => s.addReferenceAnnotation);
   const rvs = useAppStore((s) => s.resultViewSettings);
   const setRvs = useAppStore((s) => s.setResultViewSettings);
   const [exportMenuOpen, setExportMenuOpen] = useState(false);
@@ -108,6 +119,23 @@ export function ResultsMenu({ isOpen, onActivate, panelHost }: Props) {
 
     return { xMin, xMax, yMin, yMax };
   };
+
+  // Where a new reference line goes: the plot area of the sheet (the model's
+  // bounds without a canvas, as in tests).
+  const referenceViewBounds = (): WorldBounds => {
+    const state = useAppStore.getState();
+    const inner = getInnerFrameWorldBounds(state);
+    if (inner && inner.xMax > inner.xMin && inner.yMax > inner.yMin) return inner;
+    const xs = state.coordinates.map((c) => c[0]);
+    const ys = state.coordinates.map((c) => c[1]);
+    if (xs.length === 0) return { xMin: 0, xMax: 10, yMin: 0, yMax: 10 };
+    return { xMin: Math.min(...xs), xMax: Math.max(...xs), yMin: Math.min(...ys), yMax: Math.max(...ys) };
+  };
+  const addReferencePolyline = () => {
+    const coords = useAppStore.getState().coordinates;
+    addReferenceAnnotation(defaultReferencePolyline(referenceViewBounds(), (x) => surfaceYAtX(coords, x)));
+  };
+  const addReferenceCircle = () => addReferenceAnnotation(defaultReferenceCircle(referenceViewBounds()));
 
   // The paper drawn again for the PNG, without the selection outlines.
   const handleExportPng = () => {
@@ -448,6 +476,22 @@ export function ResultsMenu({ isOpen, onActivate, panelHost }: Props) {
                   title="Add Color Bar"
                   onClick={() => addAnnotation("color-bar")}
                 />
+                <RibbonMenuButton
+                  icon={<Spline {...SMALL_ICON} />}
+                  label="Reference line"
+                  items={[
+                    {
+                      label: "Polyline",
+                      title: "Add a reference polyline (model coordinates): drag its points, right-click to add or remove one",
+                      onClick: addReferencePolyline,
+                    },
+                    {
+                      label: "Circle",
+                      title: "Add a reference circle, drawn below the ground like a slip circle: drag its centre or rim",
+                      onClick: addReferenceCircle,
+                    },
+                  ]}
+                />
               </RibbonStack>
             </RibbonGroup>
             <RibbonSep />
@@ -457,9 +501,12 @@ export function ResultsMenu({ isOpen, onActivate, panelHost }: Props) {
                   icon={<FileUp {...SMALL_ICON} />}
                   label="Export template"
                   onClick={() => {
+                    // A template carries the sheet's layout (paper space);
+                    // reference annotations are the model's own geometry
+                    // and stay out of it.
                     const template = {
                       version: 1,
-                      resultViewSettings: rvs,
+                      resultViewSettings: { ...rvs, annotations: paperAnnotations(rvs.annotations) },
                     };
                     downloadFile(
                       "view-template.json",
@@ -497,13 +544,20 @@ export function ResultsMenu({ isOpen, onActivate, panelHost }: Props) {
                           // Validate like a project file; unset optional
                           // fields so values from the current view don't
                           // leak into the template's settings.
+                          const imported = normalizeResultView(data.resultViewSettings);
                           setRvs({
                             gridSpacing: undefined,
                             minorTicks: undefined,
                             viewLock: undefined,
                             pdfSummaryPages: undefined,
                             pdfTitleLine: undefined,
-                            ...normalizeResultView(data.resultViewSettings),
+                            ...imported,
+                            // The model keeps its own reference lines; a
+                            // template's (if any) belong to another model.
+                            annotations: [
+                              ...paperAnnotations(imported.annotations),
+                              ...referenceAnnotations(useAppStore.getState().resultViewSettings.annotations),
+                            ],
                           });
                         } catch {
                           alert("Invalid template file.");

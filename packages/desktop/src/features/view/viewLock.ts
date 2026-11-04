@@ -1,4 +1,4 @@
-import type { Annotation, ResultViewSettings, ViewLock } from "../../store/types";
+import type { Annotation, PaperAnnotation, ResultViewSettings, ViewLock } from "../../store/types";
 import { PLOT_MARGINS } from "../../store/defaults";
 import { ANNOTATION_DEFAULT_FONT_SIZE, ANNOTATION_LINE_HEIGHT, ANNOTATION_SCALE_DIVISOR } from "../rendering/style-spec";
 import { getPlotAspectRatio } from "./paper";
@@ -140,14 +140,19 @@ const TITLE_BLOCK_GAP = 0.01;
  * sheet, the height, and less on a portrait one). A tag (#Title) counts
  * as one line.
  */
-function textBottom(a: AnnotationExtent): number {
+function textBottom(a: PaperExtent): number {
   if (a.type !== "text" || (a.anchor && !a.anchor.startsWith("top"))) return a.y;
   const lines = (a.text ?? "").split("\n").length;
   return a.y + (lines * (a.fontSize ?? ANNOTATION_DEFAULT_FONT_SIZE) * ANNOTATION_LINE_HEIGHT) / ANNOTATION_SCALE_DIVISOR;
 }
 
-/** What `paperTopBand` reads of an annotation. */
-type AnnotationExtent = Pick<Annotation, "y"> & Partial<Pick<Annotation, "type" | "text" | "fontSize" | "anchor">>;
+/** What `paperTopBand` reads of a paper annotation; a reference annotation (model coordinates) is skipped. */
+type PaperExtent = Pick<PaperAnnotation, "y"> & Partial<Pick<PaperAnnotation, "type" | "text" | "fontSize" | "anchor">>;
+type AnnotationExtent = PaperExtent | Pick<Extract<Annotation, { type: "reference" }>, "type">;
+
+function onPaper(a: AnnotationExtent): a is PaperExtent {
+  return a.type !== "reference";
+}
 
 /**
  * Share of the plot height at its top that `paperViewLock` keeps free of the
@@ -158,7 +163,7 @@ type AnnotationExtent = Pick<Annotation, "y"> & Partial<Pick<Annotation, "type" 
  * none otherwise (the verification problems' plain plots).
  */
 export function paperTopBand(annotations: readonly AnnotationExtent[]): number {
-  const top = annotations.filter((a) => a.y < TITLE_BLOCK_BOTTOM);
+  const top = annotations.filter(onPaper).filter((a) => a.y < TITLE_BLOCK_BOTTOM);
   if (top.length === 0) return 0;
   const textEnd = Math.max(...top.map(textBottom));
   const bottom = Math.max(TITLE_BLOCK_BOTTOM, textEnd + TITLE_BLOCK_GAP);

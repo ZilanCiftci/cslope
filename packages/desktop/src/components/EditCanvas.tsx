@@ -95,6 +95,7 @@ export function EditCanvas() {
   const insertCustomPlanePointAt = useAppStore((s) => s.insertCustomPlanePointAt);
   const removeCustomPlanePoint = useAppStore((s) => s.removeCustomPlanePoint);
   const removeCustomSearchPlane = useAppStore((s) => s.removeCustomSearchPlane);
+  const addReferenceFromCustomPlane = useAppStore((s) => s.addReferenceFromCustomPlane);
   const setSelectedCustomPlane = useAppStore((s) => s.setSelectedCustomPlane);
   const blockSearchObjects = useAppStore((s) => s.blockSearchObjects);
   const waternet = useAppStore((s) => s.waternet);
@@ -214,6 +215,7 @@ export function EditCanvas() {
     removeCustomPlanePoint,
     insertCustomPlanePointAt,
     setSelectedCustomPlane,
+    addReferenceFromCustomPlane,
   });
 
   const {

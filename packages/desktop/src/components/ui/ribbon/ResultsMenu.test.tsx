@@ -430,3 +430,60 @@ describe("ResultsMenu", () => {
     expect(store().selectedAnnotationIds).toEqual(["a1"]);
   });
 });
+
+describe("ResultsMenu reference lines", () => {
+  const refs = () => rvs().annotations.filter((a) => a.type === "reference");
+
+  it("adds a reference polyline and circle from the Annotations menu, through the middle of the model", async () => {
+    renderMenu();
+    await userEvent.click(screen.getByRole("menuitem", { name: "Reference line" }));
+    await userEvent.click(screen.getByRole("menuitem", { name: "Polyline" }));
+    expect(refs()).toHaveLength(1);
+    const line = refs()[0] as { shape: string; points: [number, number][] };
+    expect(line.shape).toBe("polyline");
+    expect(line.points).toHaveLength(3);
+    const xs = store().coordinates.map((c) => c[0]);
+    const [xMin, xMax] = [Math.min(...xs), Math.max(...xs)];
+    expect(line.points[0][0]).toBeCloseTo(xMin + 0.3 * (xMax - xMin), 1);
+    expect(line.points[2][0]).toBeCloseTo(xMin + 0.7 * (xMax - xMin), 1);
+    expect(store().selectedAnnotationIds).toEqual([refs()[0].id]);
+
+    await userEvent.click(screen.getByRole("menuitem", { name: "Reference line" }));
+    await userEvent.click(screen.getByRole("menuitem", { name: "Circle" }));
+    expect(refs()).toHaveLength(2);
+    expect(refs()[1]).toMatchObject({ shape: "circle", clip: "ground" });
+    expect((refs()[1] as { radius: number }).radius).toBeGreaterThan(0);
+  });
+
+  it("leaves reference lines out of an exported template and keeps the model's on import", async () => {
+    const pickers: HTMLInputElement[] = [];
+    vi.spyOn(HTMLInputElement.prototype, "click").mockImplementation(function (this: HTMLInputElement) {
+      pickers.push(this);
+    });
+    act(() => {
+      store().addReferenceAnnotation({ shape: "polyline", points: [[2, 10], [12, 4]], label: "mine" });
+    });
+    renderMenu();
+    await userEvent.click(screen.getByTitle("Export template"));
+    const exported = JSON.parse(mocks.downloadFile.mock.calls[0][1] as string);
+    expect(exported.resultViewSettings.annotations.some((a: { type: string }) => a.type === "reference")).toBe(false);
+    expect(exported.resultViewSettings.annotations.length).toBe(rvs().annotations.length - 1);
+
+    await userEvent.click(screen.getByTitle("Import template"));
+    const template = {
+      ...JSON.parse(JSON.stringify(rvs())),
+      annotations: [
+        { id: "t", type: "text", x: 0.1, y: 0.1, text: "From template" },
+        { id: "theirs", type: "reference", shape: "circle", cx: 1, cy: 2, radius: 3 },
+      ],
+    };
+    const file = new File([JSON.stringify({ version: 1, resultViewSettings: template })], "t.json", { type: "application/json" });
+    Object.defineProperty(pickers.at(-1)!, "files", { value: [file], configurable: true });
+    act(() => {
+      pickers.at(-1)!.onchange?.(new Event("change"));
+    });
+    await waitFor(() => expect(rvs().annotations.some((a) => a.id === "t")).toBe(true));
+    expect(rvs().annotations.map((a) => a.type)).toEqual(["text", "reference"]);
+    expect(rvs().annotations[1]).toMatchObject({ shape: "polyline", label: "mine" });
+  });
+});

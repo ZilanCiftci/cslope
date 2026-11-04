@@ -466,3 +466,97 @@ describe("ResultSidebar Insert variable", () => {
     expect(screen.getByRole("button", { name: /Insert variable/ })).toBeDisabled();
   });
 });
+
+describe("ResultSidebar reference lines", () => {
+  // Ids apart from the paper annotations' ("c" is the colour bar).
+  const LINE: Annotation = {
+    id: "rl",
+    type: "reference",
+    shape: "polyline",
+    points: [
+      [2, 10],
+      [12, 4],
+    ],
+    label: "other program",
+  };
+  const CIRCLE: Annotation = { id: "rc", type: "reference", shape: "circle", cx: 15, cy: 14, radius: 10 };
+  const ref = (id: string) =>
+    anno(id) as unknown as {
+      label?: string;
+      color?: string;
+      dash?: string;
+      width?: number;
+      showInEdit?: boolean;
+      points: [number, number][];
+      cx: number;
+      cy: number;
+      radius: number;
+      clip?: string;
+    };
+
+  beforeEach(() => {
+    useAppStore.setState({ resultViewSettings: { ...DEFAULT_RESULT_VIEW_SETTINGS, annotations: [...ANNOS, LINE, CIRCLE] } });
+  });
+
+  it("lists reference lines by their label or shape", () => {
+    render(<ResultSidebar />);
+    expect(screen.getByText("Reference: other program")).toBeInTheDocument();
+    expect(screen.getByText("Reference: Reference circle")).toBeInTheDocument();
+    fireEvent.click(screen.getByText("Reference: other program"));
+    expect(useAppStore.getState().selectedAnnotationIds).toEqual(["rl"]);
+  });
+
+  it("edits a polyline's label, points, colour, dash, width and edit-view visibility", () => {
+    select(["rl"]);
+    render(<ResultSidebar />);
+    // No paper position for a reference line.
+    expect(screen.queryByText("X (%)")).toBeNull();
+    fireEvent.change(field("Label"), { target: { value: "F = 0.664 (other program)" } });
+    expect(ref("rl").label).toBe("F = 0.664 (other program)");
+    const points = screen.getByLabelText("Reference polyline points") as HTMLTextAreaElement;
+    expect(points.value).toBe("2, 10; 12, 4");
+    fireEvent.change(points, { target: { value: "1, 9; 11, 3; 21, 4" } });
+    expect(ref("rl").points).toEqual([
+      [1, 9],
+      [11, 3],
+      [21, 4],
+    ]);
+    // A single pair is still being typed: the points stay, the field is flagged.
+    fireEvent.change(points, { target: { value: "1, 9" } });
+    expect(ref("rl").points).toHaveLength(3);
+    expect(points.getAttribute("aria-invalid")).toBe("true");
+    fireEvent.click(screen.getByRole("button", { name: "Color #cc0000" }));
+    expect(ref("rl").color).toBe("#cc0000");
+    fireEvent.click(screen.getByRole("button", { name: "Theme" }));
+    expect(ref("rl").color).toBeUndefined();
+    fireEvent.change(field("Line"), { target: { value: "dotted" } });
+    expect(ref("rl").dash).toBe("dotted");
+    fireEvent.change(field("Width (px)"), { target: { value: "2.5" } });
+    expect(ref("rl").width).toBe(2.5);
+    fireEvent.click(screen.getByLabelText("Show in edit view"));
+    expect(ref("rl").showInEdit).toBe(true);
+  });
+
+  it("edits a circle's centre, radius and clip; several lines share the common fields", () => {
+    select(["rc"]);
+    render(<ResultSidebar />);
+    fireEvent.change(screen.getByLabelText("Reference circle centre X"), { target: { value: "16" } });
+    fireEvent.change(screen.getByLabelText("Reference circle centre Y"), { target: { value: "13" } });
+    fireEvent.change(screen.getByLabelText("Reference circle radius"), { target: { value: "12" } });
+    expect(ref("rc")).toMatchObject({ cx: 16, cy: 13, radius: 12 });
+    // Below the smallest radius: kept.
+    fireEvent.change(screen.getByLabelText("Reference circle radius"), { target: { value: "0" } });
+    expect(ref("rc").radius).toBe(12);
+    fireEvent.change(field("Drawn"), { target: { value: "none" } });
+    expect(ref("rc").clip).toBe("none");
+
+    cleanup();
+    select(["rl", "rc"]);
+    render(<ResultSidebar />);
+    expect(screen.queryByLabelText("Reference polyline points")).toBeNull();
+    expect(screen.getByText("Select one reference line to edit its points.")).toBeInTheDocument();
+    expect(field("Label").placeholder).toBe("Mixed values");
+    fireEvent.change(field("Line"), { target: { value: "dashed" } });
+    expect([ref("rl").dash, ref("rc").dash]).toEqual(["dashed", "dashed"]);
+  });
+});
