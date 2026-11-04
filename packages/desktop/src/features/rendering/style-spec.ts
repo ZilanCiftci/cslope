@@ -111,7 +111,9 @@ export const FAILURE_MASS_FILL_OPACITY = 0.12;
 /** Opacity for slice wall lines. */
 export const SLICE_LINE_OPACITY = 0.6;
 /** Slice wall line width (logical px; PDF scales by mmPerPx). */
-export const SLICE_LINE_WIDTH_PX = 0.8;
+export const SLICE_LINE_WIDTH_PX = 0.55;
+/** The model outline over a result (canvas px; 1 in the edit view). */
+export const RESULT_OUTLINE_WIDTH_PX = 0.7;
 /** Slice wall colour over a dark material fill (white). */
 export const SLICE_LINE_ON_DARK_COLOR: DualColor = { hex: "#ffffff", rgb: [255, 255, 255] };
 /** A sliding mass thinner than this on screen gets a band of this width along it. */

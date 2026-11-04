@@ -920,7 +920,7 @@ function FemFields({
           onChange={(e) => set({ enabled: e.target.checked })}
           aria-label="Strength reduction by finite elements"
         />
-        <Label>Also run strength reduction (FE)</Label>
+        <Label>Run strength reduction (FE)</Label>
       </label>
       <p
         className="col-span-2 text-[10px]"
@@ -930,6 +930,9 @@ function FemFields({
       >
         {FEM_EXPERIMENTAL_ADVICE}
       </p>
+      {/* The settings only while the analysis is on. */}
+      {settings.enabled && (
+        <>
       <label className="col-span-2 flex flex-col gap-0.5">
         <Label>Flow rule</Label>
         <select
@@ -1146,6 +1149,8 @@ function FemFields({
         />
         <Label>Limit analysis bounds (the FE factor of safety)</Label>
       </label>
+        </>
+      )}
     </div>
   );
 }

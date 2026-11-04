@@ -80,6 +80,7 @@ describe("OptionsSection Bishop hint", () => {
 describe("OptionsSection finite elements", () => {
   it("marks finite elements, and the seepage, as experimental", () => {
     useAppStore.getState().newProject();
+    useAppStore.getState().setOptions({ fem: { ...DEFAULT_FEM_SETTINGS, enabled: true } });
     render(<OptionsSection plain />);
     expect(screen.getByRole("heading", { name: /Finite elements/ })).toHaveTextContent("Experimental");
     expect(screen.getByText("Experimental")).toHaveAttribute(
@@ -95,11 +96,13 @@ describe("OptionsSection finite elements", () => {
   it("selects the recommended flow rule, Davis B, in a new project", async () => {
     useAppStore.getState().newProject();
     render(<OptionsSection plain />);
+    // The settings are hidden until the analysis is turned on.
+    expect(screen.queryByRole("combobox", { name: "Flow rule" })).toBeNull();
+    expect(screen.getByText("Run strength reduction (FE)")).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("checkbox", { name: "Strength reduction by finite elements" }));
     const flowRule = screen.getByRole("combobox", { name: "Flow rule" }) as HTMLSelectElement;
     expect(flowRule.value).toBe("davis-b");
     expect(flowRule.selectedOptions[0].textContent).toBe("Davis B (recommended)");
-    // turning the analysis on keeps it
-    await userEvent.click(screen.getByRole("checkbox", { name: "Strength reduction by finite elements" }));
     expect(useAppStore.getState().options.fem).toMatchObject({ enabled: true, flowRule: "davis-b" });
   });
 

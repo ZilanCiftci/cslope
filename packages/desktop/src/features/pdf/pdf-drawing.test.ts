@@ -619,19 +619,14 @@ describe("drawEntryExitMarkers", () => {
     expect(lastDot).toBeLessThan(firstBar);
   });
 
-  it("keeps the markers off the sliding mass: no dots over it, triangles above the ground", () => {
+  it("puts no dots over the sliding mass; the markers stand on the ground as in the edit view", () => {
     const rec = recorder();
     drawEntryExitMarkers(rec.pdf, tf, limits, COORDS, { entryPoint: [ENTRY_X, 10], exitPoint: [22, 5] });
     const xs = rec.of("circle").map((c) => ((c.args[0] as number) - 20) / 5);
     expect(xs.length).toBeGreaterThan(0);
     for (const x of xs) expect(x < ENTRY_X || x > 22).toBe(true);
-    // Every triangle corner above the ground under it.
-    for (const c of [...rec.of("moveTo"), ...rec.of("lineTo")]) {
-      const [px, py] = c.args as [number, number];
-      const wx = (px - 20) / 5;
-      const gy = wx <= 10 ? 10 : wx <= 20 ? 10 - (wx - 10) / 2 : 5;
-      expect(py).toBeLessThan(tf.worldToPdf(wx, gy)[1]);
-    }
+    // Four triangles (one per limit), as in the edit view.
+    expect(rec.of("moveTo")).toHaveLength(4);
   });
 
   it("alternates the colours of the dots when the entry and exit ranges coincide", () => {
@@ -645,7 +640,7 @@ describe("drawEntryExitMarkers", () => {
     expect(new Set(xs).size).toBe(xs.length);
   });
 
-  it("is drawn lighter than the result and keeps the graphics state balanced", () => {
+  it("keeps the graphics state balanced", () => {
     const { rec } = triangles(limits);
     expect(rec.of("setGState")).toHaveLength(1);
     expect(rec.balanced()).toBe(true);

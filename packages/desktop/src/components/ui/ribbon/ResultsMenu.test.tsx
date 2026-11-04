@@ -126,13 +126,12 @@ describe("ResultsMenu", () => {
     await userEvent.click(screen.getByTitle("Show slices"));
     await userEvent.click(screen.getByTitle("Show FOS label"));
     await userEvent.click(screen.getByTitle("Show centre mark"));
-    await userEvent.click(screen.getByTitle("Grid lines"));
     await userEvent.click(screen.getByTitle("Soil colors"));
     const after = rvs();
     expect(after.showSlices).toBe(!before.showSlices);
     expect(after.showFosLabel).toBe(!before.showFosLabel);
     expect(after.showCentreMarker).toBe(!before.showCentreMarker);
-    expect(after.showGrid).toBe(!before.showGrid);
+    expect(screen.queryByTitle("Grid lines")).toBeNull(); // in Properties
     expect(after.showSoilColor).toBe(!(before.showSoilColor ?? true));
   });
 

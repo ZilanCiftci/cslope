@@ -61,6 +61,7 @@ import {
   FAILURE_MASS_FILL_OPACITY,
   LINE_LOAD_COLOR,
   MARKER_COLOR,
+  RESULT_OUTLINE_WIDTH_PX,
   MIN_SLIP_MASS_BAND_OPACITY,
   MIN_SLIP_MASS_PX,
   PIEZO_BAR_GAP1_PX,
@@ -814,7 +815,11 @@ export function drawCanvas(
   // On the paper the grid lines run through the labelled ticks; their
   // separately rounded automatic steps used to differ (e.g. grid 5 m,
   // ticks 2 m).
-  const gridStep = resultTickStep ?? autoGridStep;
+  // The grid has a spacing of its own when the user sets one (Properties).
+  const gridStep =
+    resultTickStep !== null
+      ? resolveTickStep(resultViewSettings.gridLineSpacing, resultTickStep)
+      : autoGridStep;
 
   ctx.strokeStyle = GRID_COLOR;
   ctx.lineWidth = 1 * paperZoom;
@@ -1033,7 +1038,8 @@ export function drawCanvas(
     }
     ctx.closePath();
     ctx.strokeStyle = POLY_STROKE;
-    ctx.lineWidth = 1 * paperZoom;
+    // Thinner over a result, where the slip surface is the heavy line.
+    ctx.lineWidth = (mode === "result" ? RESULT_OUTLINE_WIDTH_PX : 1) * paperZoom;
     // Round joins: a mitre at a sharp toe sticks out far past the corner.
     ctx.lineJoin = "round";
     ctx.stroke();
@@ -1715,20 +1721,21 @@ export function drawCanvas(
   // ── Entry / Exit range markers ──────────────────────────
   // Not when only prescribed surfaces are analysed (nothing is searched):
   // in the result, and in edit view once there is a prescribed surface. In
-  // the result they are lighter and drawn before the sliding mass, so the
-  // critical surface stays on top of them.
+  // the result they look as in the edit view, drawn before the sliding
+  // mass so the critical surface stays on top of them.
   const limitsShown =
     analysisLimits.enabled &&
     coordinates.length >= 3 &&
     !(customPlanesOnly && (mode === "result" || (customSearchPlanes?.length ?? 0) > 0));
   if (limitsShown) {
-    const markerAlpha = mode === "result" ? 0.55 : 1;
+    // Over a result as in the edit view (opaque, standing on the ground).
+    const markerAlpha = 1;
     const toC = (x: number, y: number) => worldToCanvas(x, y, w, h);
     const cs = mode === "result" ? (result?.criticalSurface ?? null) : null;
 
     // Dots along the ground over each range (alternating colours where the
     // entry and exit ranges coincide), none over the sliding mass.
-    const dotRadius = ENTRY_EXIT_DOT_RADIUS_PX * paperZoom * (mode === "result" ? 0.8 : 1);
+    const dotRadius = ENTRY_EXIT_DOT_RADIUS_PX * paperZoom;
     ctx.save();
     ctx.globalAlpha = markerAlpha;
     for (const d of layoutRangeDots(analysisLimits, coordinates, toC, paperZoom, {
@@ -1747,7 +1754,7 @@ export function drawCanvas(
     // only the bar for a range of zero width. Over a result the triangle
     // is lifted clear of the ground and a shared limit is drawn once.
     for (const m of layoutLimitMarkers(analysisLimits, coordinates, toC, paperZoom, {
-      lifted: mode === "result",
+      lifted: false,
       dots: vertexDots,
     })) {
       const isHover = hoverHit?.kind === "limit" && m.handles.includes(hoverHit.handle);

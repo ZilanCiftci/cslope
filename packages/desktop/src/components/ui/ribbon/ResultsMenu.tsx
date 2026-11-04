@@ -27,7 +27,6 @@ import {
   FileDown,
   FileText,
   FileUp,
-  Grid3x3,
   Palette,
   SlidersHorizontal,
   Table,
@@ -385,13 +384,6 @@ export function ResultsMenu({ isOpen, onActivate, panelHost }: Props) {
                     setRvs({ showCentreMarker: !rvs.showCentreMarker })
                   }
                   active={rvs.showCentreMarker}
-                />
-                <RibbonSmallButton
-                  icon={<Grid3x3 {...SMALL_ICON} />}
-                  label="Grid"
-                  title="Grid lines"
-                  onClick={() => setRvs({ showGrid: !rvs.showGrid })}
-                  active={rvs.showGrid}
                 />
                 <RibbonSmallButton
                   icon={<Palette {...SMALL_ICON} />}

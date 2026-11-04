@@ -436,7 +436,7 @@ export function limitMarkerObstacles(
 ): Box[] {
   if (!limits.enabled || coordinates.length < 3) return [];
   const out: Box[] = [];
-  for (const m of layoutLimitMarkers(limits, coordinates, toScreen, unit, { lifted: true })) {
+  for (const m of layoutLimitMarkers(limits, coordinates, toScreen, unit, { lifted: false })) {
     out.push({ left: m.cx - pad, top: m.barTop - pad, right: m.cx + pad, bottom: m.barBottom + pad });
     for (const t of m.triangles) {
       const b = pointsBox(t);

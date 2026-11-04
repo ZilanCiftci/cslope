@@ -320,6 +320,17 @@ describe("ResultSidebar paper frame properties", () => {
     fireEvent.blur(spacing);
     expect(rvs().gridSpacing).toBe(5);
 
+    // The grid: on/off, and a spacing of its own while on.
+    const grid = screen.getByRole("checkbox", { name: "Grid lines" }) as HTMLInputElement;
+    if (!grid.checked) fireEvent.click(grid);
+    const gridSpacing = field("Grid spacing");
+    fireEvent.change(gridSpacing, { target: { value: "2" } });
+    fireEvent.blur(gridSpacing);
+    expect(rvs().gridLineSpacing).toBe(2);
+    fireEvent.click(grid);
+    expect(rvs().showGrid).toBe(false);
+    expect(screen.queryByText("Grid spacing")).toBeNull();
+
     fireEvent.change(field("Paper size"), { target: { value: "A3" } });
     expect(rvs().paperFrame.paperSize).toBe("A3");
 

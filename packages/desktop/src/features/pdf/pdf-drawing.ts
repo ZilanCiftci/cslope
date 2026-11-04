@@ -137,6 +137,7 @@ export function drawGrid(
   viewScale: number,
   clip: { x: number; y: number; w: number; h: number },
   gridSpacing?: number,
+  gridLineSpacing?: number,
 ) {
   const [originPdfX, originPdfY] = tf.worldToPdf(0, 0);
   const worldPerMm = 1 / (viewScale * tf.mmPerPx);
@@ -148,14 +149,16 @@ export function drawGrid(
 
   // The ruler's major-tick spacing (drawRulerFrame, same frame), so the
   // grid lines run through the labelled ticks as on the canvas; the
-  // separately rounded automatic steps used to differ.
-  const gridStep = resolveTickStep(
+  // separately rounded automatic steps used to differ. The user may give
+  // the grid a spacing of its own.
+  const tickStep = resolveTickStep(
     gridSpacing,
     computeRulerStep(worldRight - worldLeft, clip.w, tf.paperW, [
       worldLeft,
       worldRight,
     ]),
   );
+  const gridStep = resolveTickStep(gridLineSpacing, tickStep);
 
   pdf.setDrawColor(220, 220, 220);
   pdf.setLineWidth(0.1);
@@ -893,15 +896,14 @@ export function drawPiezometricLines(
 }
 
 /** Opacity of the search-limit markers in the result (as on the canvas). */
-const RESULT_MARKER_OPACITY = 0.55;
+const RESULT_MARKER_OPACITY = 1;
 
 /**
  * The search limits as on the canvas over a result (layoutLimitMarkers,
  * layoutRangeDots): dots along the ground over each range, none over the
- * sliding mass of `critical`, then at each limit a bar with a triangle
- * lifted clear of the ground pointing into the range (only a bar for a
- * range of zero width), a limit both ranges share drawn once. Lighter
- * than the result drawn over them.
+ * sliding mass of `critical`, then at each limit a bar across the ground
+ * with a triangle pointing into the range (only a bar for a range of
+ * zero width), as in the edit view.
  */
 export function drawEntryExitMarkers(
   pdf: jsPDF,
@@ -911,7 +913,7 @@ export function drawEntryExitMarkers(
   critical: Pick<DrawableSurface, "entryPoint" | "exitPoint"> | null = null,
 ) {
   setOpacity(pdf, RESULT_MARKER_OPACITY);
-  const radius = ENTRY_EXIT_DOT_RADIUS_PX * tf.mmPerPx * 0.8;
+  const radius = ENTRY_EXIT_DOT_RADIUS_PX * tf.mmPerPx;
   for (const d of layoutRangeDots(limits, coordinates, tf.worldToPdf, tf.mmPerPx, {
     skip: critical ? [critical.entryPoint[0], critical.exitPoint[0]] : null,
     radius,
@@ -922,7 +924,7 @@ export function drawEntryExitMarkers(
   pdf.setDrawColor(...MARKER_COLOR.rgb);
   pdf.setFillColor(...MARKER_COLOR.rgb);
   pdf.setLineWidth(0.4);
-  for (const m of layoutLimitMarkers(limits, coordinates, tf.worldToPdf, tf.mmPerPx, { lifted: true })) {
+  for (const m of layoutLimitMarkers(limits, coordinates, tf.worldToPdf, tf.mmPerPx, { lifted: false })) {
     pdf.line(m.cx, m.barTop, m.cx, m.barBottom);
     for (const [tip, b1, b2] of m.triangles) {
       const triOps: PathOp[] = [

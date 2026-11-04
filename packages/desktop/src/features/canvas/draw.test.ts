@@ -1229,14 +1229,14 @@ describe("drawCanvas — result mode", () => {
     expect(at12[1][1]).toBeCloseTo(CIRCLE.cy - Math.sqrt(R * R - 9), 6);
   });
 
-  it("draws search limits lighter and under the sliding mass, and none for prescribed surfaces only", () => {
+  it("draws search limits as in the edit view, under the sliding mass, and none for prescribed surfaces only", () => {
     const limits = { enabled: true, entryLeftX: 2, entryRightX: 8, exitLeftX: 21, exitRightX: 28 };
     const rec = drawResult({ analysisLimits: limits });
     const massIndex = rec.paths.findIndex((p) => p.kind === "fill" && p.state.globalAlpha === 0.12);
     const dotIndex = rec.paths.findIndex((p) => p.kind === "fill" && p.state.fillStyle === EXIT_DOT_COLOR.hex);
     expect(dotIndex).toBeGreaterThanOrEqual(0);
     expect(dotIndex).toBeLessThan(massIndex);
-    expect(rec.paths[dotIndex].state.globalAlpha).toBeLessThan(1);
+    expect(rec.paths[dotIndex].state.globalAlpha).toBe(1);
 
     const only = drawResult({ analysisLimits: limits, customPlanesOnly: true });
     expect(only.fills(EXIT_DOT_COLOR.hex)).toHaveLength(0);
@@ -1244,20 +1244,15 @@ describe("drawCanvas — result mode", () => {
     expect(draw({ analysisLimits: limits, customPlanesOnly: true }).fills(EXIT_DOT_COLOR.hex).length).toBeGreaterThan(0);
   });
 
-  it("keeps the search markers off the result: triangles above the ground, shared limits once, no dots on the mass", () => {
+  it("draws the search markers over a result as in the edit view, no dots on the mass", () => {
     const limits = { enabled: true, entryLeftX: 2, entryRightX: 8, exitLeftX: 21, exitRightX: 28 };
     const triangles = (rec: ReturnType<typeof draw>) =>
       rec.fills().filter((p) => pathPoints(p).length === 3 && p.state.fillStyle === MARKER_COLOR.hex);
     const rec = drawResult({ analysisLimits: limits });
     const tris = triangles(rec);
     expect(tris).toHaveLength(4);
-    for (const t of tris) {
-      for (const [px, py] of pathPoints(t)) {
-        const [wx] = canvasToWorld(px, py, W, H);
-        const gy = toC(wx, surfaceYAtX(COORDS, wx)!)[1];
-        expect(py).toBeLessThan(gy); // above the ground
-      }
-    }
+    // The same triangles as in the edit view.
+    expect(tris.map(pathPoints)).toEqual(triangles(draw({ analysisLimits: limits })).map(pathPoints));
     // No dots over the sliding mass (entry ≈ 4.3 to exit 22).
     const dots = rec.fills().filter((p) => p.segments[0].op === "arc" && (p.state.fillStyle === ENTRY_DOT_COLOR.hex || p.state.fillStyle === EXIT_DOT_COLOR.hex));
     expect(dots.length).toBeGreaterThan(0);
@@ -1265,14 +1260,9 @@ describe("drawCanvas — result mode", () => {
       const [wx] = canvasToWorld(pathPoints(d)[0][0], pathPoints(d)[0][1], W, H);
       expect(wx < ENTRY_X || wx > 22).toBe(true);
     }
-    // In the edit view they stand on the ground.
-    const edit = triangles(draw({ analysisLimits: limits }));
-    expect(edit.some((t) => pathPoints(t).some(([, py]) => py > toC(0, 10)[1]))).toBe(true);
-
-    // Coinciding ranges: each limit once over a result (two triangles, not four).
+    // Coinciding ranges: as in the edit view.
     const same = { enabled: true, entryLeftX: 2, entryRightX: 28, exitLeftX: 2, exitRightX: 28 };
-    expect(triangles(drawResult({ analysisLimits: same }))).toHaveLength(2);
-    expect(triangles(draw({ analysisLimits: same }))).toHaveLength(4);
+    expect(triangles(drawResult({ analysisLimits: same }))).toHaveLength(4);
   });
 
   it("fills the mass behind a vertical wall face without spilling into the air", () => {

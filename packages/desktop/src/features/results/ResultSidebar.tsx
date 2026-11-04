@@ -882,6 +882,45 @@ export function ResultSidebar() {
               </div>
             </div>
 
+            <div
+              className="grid gap-2 items-end"
+              style={{
+                gridTemplateColumns: "repeat(auto-fit, minmax(64px, 1fr))",
+              }}
+            >
+              <label className="flex items-center gap-1.5 text-[11px] pb-1">
+                <input
+                  type="checkbox"
+                  checked={rvs.showGrid}
+                  onChange={(e) => setRvs({ showGrid: e.target.checked })}
+                  aria-label="Grid lines"
+                />
+                Grid
+              </label>
+              {rvs.showGrid && (
+                <div>
+                  <label
+                    className="text-[10px] block mb-0.5"
+                    style={{ color: "var(--color-vsc-text-muted)" }}
+                  >
+                    Grid spacing
+                  </label>
+                  <DraftNumberInput
+                    min={0}
+                    step="any"
+                    placeholder="As ticks"
+                    value={rvs.gridLineSpacing}
+                    onValueChange={(value) =>
+                      setRvs({ gridLineSpacing: value > 0 ? value : undefined })
+                    }
+                    onClear={() => setRvs({ gridLineSpacing: undefined })}
+                    title="Distance between the grid lines; empty: the tick spacing"
+                    className="w-full tabular-nums"
+                  />
+                </div>
+              )}
+            </div>
+
             <div>
               <label
                 className="text-[10px] block mb-0.5"

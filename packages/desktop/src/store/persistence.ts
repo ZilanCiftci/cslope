@@ -803,6 +803,9 @@ export function normalizeResultView(raw: unknown): ResultViewSettings {
     ...(Number.isFinite(view.gridSpacing)
       ? { gridSpacing: view.gridSpacing }
       : {}),
+    ...(Number.isFinite(view.gridLineSpacing) && (view.gridLineSpacing as number) > 0
+      ? { gridLineSpacing: view.gridLineSpacing }
+      : {}),
     // A whole number of ticks: a huge count made the ruler loops endless.
     ...(Number.isFinite(view.minorTicks)
       ? { minorTicks: clampMinorTicks(view.minorTicks as number) }

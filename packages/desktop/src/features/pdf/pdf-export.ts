@@ -373,11 +373,11 @@ export function exportVectorPdf(data: PdfExportData): void {
 
     // Grid on top of the (opaque) regions, as on the canvas.
     if (rvs.showGrid) {
-      drawGrid(pdf, tf, viewScale, innerFrame, rvs.gridSpacing);
+      drawGrid(pdf, tf, viewScale, innerFrame, rvs.gridSpacing, rvs.gridLineSpacing);
     }
 
     if (coordinates.length >= 3) {
-      drawClosedPolyline(pdf, tf, coordinates, [0, 0, 0], 0.5);
+      drawClosedPolyline(pdf, tf, coordinates, [0, 0, 0], 0.3);
     }
 
     // Clipped to the outline, as on the canvas.

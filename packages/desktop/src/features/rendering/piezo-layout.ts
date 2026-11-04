@@ -365,7 +365,7 @@ export function piezoObstacles(scene: PiezoScene, toD: (x: number, y: number) =>
   }
   const lim = scene.analysisLimits;
   if (lim?.enabled && coordinates.length >= 3) {
-    const lifted = !!scene.critical;
+    const lifted = false; // as drawn: on the ground, over a result too
     for (const m of layoutLimitMarkers(lim, coordinates, toD, unit, { lifted, dots: scene.vertexDots })) {
       avoid.push(box(m.cx, m.barTop, m.cx, m.barBottom));
       for (const t of m.triangles) avoid.push(box(Math.min(...t.map((p) => p[0])), Math.min(...t.map((p) => p[1])), Math.max(...t.map((p) => p[0])), Math.max(...t.map((p) => p[1]))));

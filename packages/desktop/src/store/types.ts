@@ -363,6 +363,8 @@ export interface ResultViewSettings {
   showFemMesh?: boolean;
   /** Grid / major-tick spacing in world units. undefined or 0 = auto. */
   gridSpacing?: number;
+  /** Grid line spacing in world units. undefined or 0 = the tick spacing. */
+  gridLineSpacing?: number;
   /** Number of minor tick subdivisions between major ticks. 0 = none. */
   minorTicks?: number;
   annotations: Annotation[];
