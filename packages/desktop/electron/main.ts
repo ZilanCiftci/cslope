@@ -1217,9 +1217,10 @@ export function cslpPath(filePath: string): string {
 function suggestedFileName(suggested: unknown): string {
   const raw = typeof suggested === "string" ? suggested : "";
   // A name only, never a path, in characters every file system takes.
+  // (The reserved characters go first: on Windows path.basename reads "a:"
+  // as a drive and would drop it.)
   const name = path
-    .basename(raw.replace(/[\\/]+/g, "_"))
-    .replace(/[:*?"<>|]+|\p{Cc}+/gu, "_")
+    .basename(raw.replace(/[\\/:*?"<>|]+|\p{Cc}+/gu, "_"))
     .slice(0, 200);
   return path.basename(cslpPath(name || "cslope-project"));
 }
