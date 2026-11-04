@@ -116,10 +116,14 @@ for (const name of SYNC_FAMILIES) {
 }
 
 let api: Record<string, (...args: any[]) => any>;
+// How often the preload exposed an API when it loaded, counted here: mock
+// call history is cleared before each test (clearMocks).
+let exposeCalls = 0;
 
 beforeAll(async () => {
   await import("./preload");
   api = fake.exposed.cslope;
+  exposeCalls = fake.contextBridge.exposeInMainWorld.mock.calls.length;
 });
 
 beforeEach(() => {
@@ -131,7 +135,7 @@ beforeEach(() => {
 
 describe("preload", () => {
   it("exposes exactly the scoped cslope API, never ipcRenderer itself", () => {
-    expect(fake.contextBridge.exposeInMainWorld).toHaveBeenCalledTimes(1);
+    expect(exposeCalls).toBe(1);
     expect(Object.keys(fake.exposed)).toEqual(["cslope"]);
     expect(Object.keys(api).sort()).toEqual(Object.keys(EXPECTED).sort());
     for (const fn of Object.values(api)) expect(typeof fn).toBe("function");
