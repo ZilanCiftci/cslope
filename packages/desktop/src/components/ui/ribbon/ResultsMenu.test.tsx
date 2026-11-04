@@ -230,7 +230,7 @@ describe("ResultsMenu", () => {
     const annotations = store().resultViewSettings.annotations;
     expect(annotations.map((a) => a.type)).toEqual(["text", "plot", "material-table", "color-bar"]);
     const bar = annotations.find((a) => a.type === "color-bar")!;
-    expect([bar.x, bar.y, bar.anchor]).toEqual([0.95, 0.25, "top-right"]);
+    expect([bar.x, bar.y, bar.anchor]).toEqual([0.94, 0.25, "top-right"]);
     expect(screen.getByTitle("Remove Color Bar")).toHaveAttribute("aria-pressed", "true");
     // A second click removes the one there instead of adding another.
     await userEvent.click(screen.getByTitle("Remove Color Bar"));

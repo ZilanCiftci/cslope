@@ -133,7 +133,7 @@ import {
   tensionCrackFace,
 } from "../../utils/slip-mass";
 import { resolveAnnotationText } from "../annotations/resolveAnnotationText";
-import { getMaterialTableColumnWidthPx } from "../annotations/materialTableLayout";
+import { layoutMaterialTable } from "../annotations/materialTableLayout";
 import { anchoredTopLeft } from "../annotations/anchorPosition";
 import { computeSlicePlotData } from "../annotations/slicePlotData";
 import { axisTicks, tickLabel } from "../annotations/plotAxis";
@@ -1312,31 +1312,12 @@ function layoutColorBarPdf(pdf: jsPDF, colorScale: FosColorScale, scale: number)
 /** Points per millimetre-sized font (1 pt = 0.3528 mm). */
 const MM_PER_PT = 0.3528;
 
-function wrapTextPdf(pdf: jsPDF, text: string, maxWidth: number): string[] {
-  if (pdf.getTextWidth(text) <= maxWidth) return [text];
-  const words = text.split(/\s+/).filter((w) => w.length > 0);
-  if (words.length <= 1) return [text];
-  const lines: string[] = [];
-  let line = "";
-  for (const word of words) {
-    const candidate = line ? `${line} ${word}` : word;
-    if (!line || pdf.getTextWidth(candidate) <= maxWidth) {
-      line = candidate;
-      continue;
-    }
-    lines.push(line);
-    line = word;
-  }
-  if (line) lines.push(line);
-  return lines.length > 0 ? lines : [text];
-}
-
 /**
- * Material table layout in mm.  Uses exactly the canvas formulas
- * (features/canvas/helpers.ts drawTable/measureTable) with the annotation
- * scale in mm instead of px, so the PDF table has the same proportions as
- * on screen.  (It used to convert px to mm twice and clamp fonts to 8 pt,
- * making the table ~3.7× too small with every cell cut off.)
+ * Material table layout in mm.  Uses exactly the canvas layout
+ * (layoutMaterialTable, as features/canvas/helpers.ts drawTable) with the
+ * annotation scale in mm instead of px, so the PDF table has the same
+ * proportions as on screen.  (It used to convert px to mm twice and clamp
+ * fonts to 8 pt, making the table ~3.7× too small with every cell cut off.)
  */
 function layoutMaterialTablePdf(
   pdf: jsPDF,
@@ -1346,62 +1327,28 @@ function layoutMaterialTablePdf(
   scale: number,
 ) {
   const fontSize = annotation.fontSize ?? 6;
-  const f = fontSize / 6;
   const { columnKeys, header, rows } = buildMaterialTableData(
     annotation,
     materials,
     piezometricLine,
   );
-  const padding = 3 * scale;
-  const rowH = 15 * scale * f;
   const fontMm = fontSize * scale;
   const bodyPt = fontMm / MM_PER_PT;
   const headerPt = fontMm / MM_PER_PT;
-  const swatchW = 10 * scale * f;
-  const headerLineH = Math.max(fontMm * 1.1, 11 * scale * f);
-
-  setSansFont(pdf, "bold");
-  pdf.setFontSize(headerPt);
-  const headerLines = header.map((h, c) =>
-    c <= 1
-      ? [h]
-      : wrapTextPdf(
-          pdf,
-          h,
-          Math.max(
-            20 * scale,
-            getMaterialTableColumnWidthPx(columnKeys[c], scale, fontSize) -
-              padding * 2,
-          ),
-        ),
-  );
-  const colW = columnKeys.map((key) =>
-    getMaterialTableColumnWidthPx(key, scale, fontSize),
-  );
-  colW[0] = Math.max(colW[0], swatchW + padding * 2);
-  const maxHeaderLines = Math.max(...headerLines.map((l) => l.length));
-  const headerH = Math.max(
-    22 * scale * f,
-    maxHeaderLines * headerLineH + padding * 2,
-  );
-  const totalW = colW.reduce((a, b) => a + b, 0);
-  const totalH = headerH + rows.length * rowH;
-  return {
+  const measureIn = (style: "bold" | "normal", pt: number) => (text: string) => {
+    setSansFont(pdf, style);
+    pdf.setFontSize(pt);
+    return pdf.getTextWidth(text);
+  };
+  const layout = layoutMaterialTable(
     columnKeys,
     header,
     rows,
-    padding,
-    rowH,
-    bodyPt,
-    headerPt,
-    swatchW,
-    headerLineH,
-    headerLines,
-    colW,
-    headerH,
-    totalW,
-    totalH,
-  };
+    { header: measureIn("bold", headerPt), body: measureIn("normal", bodyPt) },
+    scale,
+    fontSize,
+  );
+  return { ...layout, columnKeys, header, rows, bodyPt, headerPt };
 }
 
 function measureTablePdf(
@@ -1721,28 +1668,18 @@ function drawTablePdf(
   piezometricLine: PiezometricLineState,
   scale: number,
 ) {
-  // A shortened cell ends in "..." (the standard PDF fonts have no "…",
-  // which dropped silently and left a cut-off number looking complete).
-  const fitTextPdf = (text: string, maxWidth: number): string => {
-    if (maxWidth <= 0) return "";
-    if (pdf.getTextWidth(text) <= maxWidth) return text;
-    let out = text;
-    while (out.length > 1 && pdf.getTextWidth(`${out}...`) > maxWidth) {
-      out = out.slice(0, -1);
-    }
-    return `${out}...`;
-  };
-
   const {
     header,
     rows,
     padding,
-    rowH,
+    rowHeights,
     bodyPt,
     headerPt,
     swatchW,
     headerLineH,
+    bodyLineH,
     headerLines,
+    cellLines,
     colW,
     headerH,
     totalW,
@@ -1775,8 +1712,9 @@ function drawTablePdf(
 
   setSansFont(pdf, "normal");
   pdf.setFontSize(bodyPt);
+  let ry = y + headerH;
   for (let r = 0; r < rows.length; r++) {
-    const ry = y + headerH + r * rowH;
+    const rowH = rowHeights[r];
 
     if (r % 2 === 1) {
       pdf.setFillColor(248, 248, 248);
@@ -1801,17 +1739,21 @@ function drawTablePdf(
       }
 
       pdf.setTextColor(51, 51, 51);
-      const fitted = fitTextPdf(rows[r][c], Math.max(2, colW[c] - padding * 2));
-      pdf.text(fitted, cx + padding, ry + rowH / 2, { baseline: "middle" });
+      // The lines of a cell centred in its row (none is cut off).
+      const lines = cellLines[r][c];
+      const firstY = ry + rowH / 2 - ((lines.length - 1) * bodyLineH) / 2;
+      lines.forEach((line, i) => pdf.text(line, cx + padding, firstY + i * bodyLineH, { baseline: "middle" }));
       cx += colW[c];
     }
+    ry += rowH;
   }
 
   pdf.setDrawColor(0, 0, 0);
   pdf.setLineWidth(0.2);
   pdf.line(x, y + headerH, x + totalW, y + headerH);
+  let rule = y + headerH;
   for (let r = 0; r < rows.length - 1; r++) {
-    const rule = y + headerH + (r + 1) * rowH;
+    rule += rowHeights[r];
     pdf.line(x, rule, x + totalW, rule);
   }
   let separatorX = x;

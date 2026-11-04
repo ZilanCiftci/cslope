@@ -11,6 +11,7 @@ import { PanelHeaderRow } from "../../components/SidePanelChrome";
 import { Label } from "../../components/ui/Label";
 import { MultiSelectComboboxChips } from "../../components/ui/MultiSelectComboboxChips";
 import {
+  DEFAULT_MATERIAL_TABLE_COLUMNS,
   MATERIAL_TABLE_COLUMNS,
   getAnnotationBoundsPx,
 } from "../canvas/helpers";
@@ -62,21 +63,10 @@ const COLORS = [
   "#ffffff",
 ];
 
-const DEFAULT_TABLE_COLUMNS: MaterialTableColumnKey[] = [
-  "model",
-  "unitWeight",
-  "cohesion",
-  "piezometricLine",
-  "depthRef",
-  "cDatum",
-  "cRate",
-  "frictionAngle",
-];
-
 const SHORT_COLUMN_LABELS: Record<MaterialTableColumnKey, string> = {
   model: "Model",
   unitWeight: "Unit Wt.",
-  cohesion: "Su",
+  cohesion: "c / Su",
   piezometricLine: "Piezo",
   depthRef: "Datum",
   cDatum: "C-Datum",
@@ -464,10 +454,10 @@ export function ResultSidebar() {
   const visibleColumnsValue = useMemo(() => {
     if (selectedMaterialTableAnnotations.length === 0) return [];
     const first =
-      selectedMaterialTableAnnotations[0].tableColumns ?? DEFAULT_TABLE_COLUMNS;
+      selectedMaterialTableAnnotations[0].tableColumns ?? DEFAULT_MATERIAL_TABLE_COLUMNS;
     return first.filter((column) =>
       selectedMaterialTableAnnotations.every((anno) =>
-        (anno.tableColumns ?? DEFAULT_TABLE_COLUMNS).includes(column),
+        (anno.tableColumns ?? DEFAULT_MATERIAL_TABLE_COLUMNS).includes(column),
       ),
     );
   }, [selectedMaterialTableAnnotations]);

@@ -20,7 +20,8 @@ import { flatFieldsFromModel } from "../properties/sections/material-forms/model
 import { resolveAnnotationText } from "../annotations/resolveAnnotationText";
 import { referenceWorldPoints } from "../annotations/reference";
 import {
-  getMaterialTableColumnWidthPx,
+  layoutMaterialTable,
+  MATERIAL_TABLE_FONT_SIZE,
   type MaterialTableRenderColumnKey,
 } from "../annotations/materialTableLayout";
 import { anchoredTopLeft } from "../annotations/anchorPosition";
@@ -36,16 +37,17 @@ export const MATERIAL_TABLE_COLUMNS: Array<{
   label: string;
 }> = [
   { key: "model", label: "Material Model" },
-  { key: "unitWeight", label: "Unit Weight (kN/m3)" },
+  { key: "unitWeight", label: "Unit Weight (kN/m³)" },
   { key: "cohesion", label: "Cohesion / Su (kPa)" },
   { key: "piezometricLine", label: "Piezometric Surface" },
   { key: "depthRef", label: "Datum Elevation / Ref. Depth (m)" },
   { key: "cDatum", label: "C-Datum (kPa)" },
-  { key: "cRate", label: "C-Rate of Change (kN/m2/m)" },
+  { key: "cRate", label: "C-Rate of Change (kN/m²/m)" },
   { key: "frictionAngle", label: "Effective Friction Angle (\u00b0)" },
 ];
 
-const DEFAULT_MATERIAL_TABLE_COLUMNS: MaterialTableColumnKey[] = [
+/** The columns of a material table that names none. */
+export const DEFAULT_MATERIAL_TABLE_COLUMNS: MaterialTableColumnKey[] = [
   "model",
   "unitWeight",
   "cohesion",
@@ -197,48 +199,37 @@ export function buildMaterialTableData(
   return { columnKeys, header, rows };
 }
 
-function fitTextToWidth(
-  ctx: CanvasRenderingContext2D,
-  text: string,
-  maxWidth: number,
-): string {
-  if (maxWidth <= 0) return "";
-  if (ctx.measureText(text).width <= maxWidth) return text;
-  let out = text;
-  while (out.length > 1 && ctx.measureText(`${out}\u2026`).width > maxWidth) {
-    out = out.slice(0, -1);
-  }
-  return `${out}\u2026`;
-}
-
-function wrapHeaderText(
-  measure: (text: string) => number,
-  text: string,
-  maxWidth: number,
-): string[] {
-  if (measure(text) <= maxWidth) return [text];
-  const words = text.split(/\s+/).filter((w) => w.length > 0);
-  if (words.length <= 1) return [text];
-
-  const lines: string[] = [];
-  let line = "";
-  for (const word of words) {
-    const candidate = line ? `${line} ${word}` : word;
-    if (!line || measure(candidate) <= maxWidth) {
-      line = candidate;
-      continue;
-    }
-    lines.push(line);
-    line = word;
-  }
-  if (line) lines.push(line);
-  return lines.length > 0 ? lines : [text];
-}
-
-/** Draw a material table on the canvas. */
 /** The rules of the material table (thin, as on paper). */
 const TABLE_RULE_PX = 0.6;
 
+/** The layout of a material table on the canvas (see layoutMaterialTable). */
+function layoutTable(
+  ctx: CanvasRenderingContext2D,
+  columnKeys: MaterialTableRenderColumnKey[],
+  header: string[],
+  rows: string[][],
+  scale: number,
+  fontSize: number,
+) {
+  const size = fontSize * scale;
+  const headerFont = `bold ${size}px sans-serif`;
+  const bodyFont = `${size}px sans-serif`;
+  const measureIn = (font: string) => (text: string) => {
+    ctx.font = font;
+    return ctx.measureText(text).width;
+  };
+  const layout = layoutMaterialTable(
+    columnKeys,
+    header,
+    rows,
+    { header: measureIn(headerFont), body: measureIn(bodyFont) },
+    scale,
+    fontSize,
+  );
+  return { ...layout, headerFont, bodyFont };
+}
+
+/** Draw a material table on the canvas. */
 export function drawTable(
   ctx: CanvasRenderingContext2D,
   x: number,
@@ -248,45 +239,10 @@ export function drawTable(
   rows: string[][],
   materials: { color: string }[],
   scale = 1,
-  fontSize = 6,
+  fontSize = MATERIAL_TABLE_FONT_SIZE,
 ) {
-  const padding = 3 * scale;
-  const rowH = 15 * scale * (fontSize / 6);
-  const bodySize = fontSize * scale;
-  const font = `${bodySize}px sans-serif`;
-  const headingSize = fontSize * scale;
-  const headerFont = `bold ${headingSize}px sans-serif`;
-  const headerColor = "#000";
-  const swatchW = 10 * scale * (fontSize / 6);
-  const headerLineH = Math.max(headingSize * 1.1, 11 * scale * (fontSize / 6));
-
-  // Measure column widths
-  ctx.font = headerFont;
-  const headerLines = header.map((h, c) =>
-    c <= 1
-      ? [h]
-      : wrapHeaderText(
-          (t) => ctx.measureText(t).width,
-          h,
-          Math.max(
-            20 * scale,
-            getMaterialTableColumnWidthPx(columnKeys[c], scale, fontSize) -
-              padding * 2,
-          ),
-        ),
-  );
-  const colW = columnKeys.map((k) =>
-    getMaterialTableColumnWidthPx(k, scale, fontSize),
-  );
-  colW[0] = Math.max(colW[0], swatchW + padding * 2);
-  const maxHeaderLines = Math.max(...headerLines.map((l) => l.length));
-  const headerH = Math.max(
-    22 * scale * (fontSize / 6),
-    maxHeaderLines * headerLineH + padding * 2,
-  );
-
-  const totalW = colW.reduce((a, b) => a + b, 0);
-  const totalH = headerH + rows.length * rowH;
+  const { padding, swatchW, headerLineH, bodyLineH, headerLines, cellLines, colW, headerH, rowHeights, totalW, totalH, headerFont, bodyFont } =
+    layoutTable(ctx, columnKeys, header, rows, scale, fontSize);
 
   // Background
   ctx.fillStyle = "rgba(255,255,255,0.92)";
@@ -304,7 +260,7 @@ export function drawTable(
   ctx.lineTo(x + totalW, y + headerH);
   ctx.stroke();
 
-  ctx.fillStyle = headerColor;
+  ctx.fillStyle = "#000";
   ctx.font = headerFont;
   ctx.textAlign = "left";
   ctx.textBaseline = "top";
@@ -319,9 +275,10 @@ export function drawTable(
   }
 
   // Rows
-  ctx.font = font;
+  ctx.font = bodyFont;
+  let ry = y + headerH;
   for (let r = 0; r < rows.length; r++) {
-    const ry = y + headerH + r * rowH;
+    const rowH = rowHeights[r];
     // Alternating row color
     if (r % 2 === 1) {
       ctx.fillStyle = "rgba(0,0,0,0.03)";
@@ -353,14 +310,13 @@ export function drawTable(
       ctx.fillStyle = "#333";
       ctx.textAlign = "left";
       ctx.textBaseline = "middle";
-      const fitted = fitTextToWidth(
-        ctx,
-        rows[r][c],
-        Math.max(4, colW[c] - padding * 2),
-      );
-      ctx.fillText(fitted, cx + padding, ry + rowH / 2);
+      // The lines of a cell centred in its row.
+      const lines = cellLines[r][c];
+      const firstY = ry + rowH / 2 - ((lines.length - 1) * bodyLineH) / 2;
+      lines.forEach((line, i) => ctx.fillText(line, cx + padding, firstY + i * bodyLineH));
       cx += colW[c];
     }
+    ry += rowH;
   }
 
   // Column separators (drawn last to keep a crisp black grid)
@@ -382,43 +338,10 @@ export function measureTable(
   header: string[],
   rows: string[][],
   scale = 1,
-  fontSize = 6,
+  fontSize = MATERIAL_TABLE_FONT_SIZE,
 ) {
-  const padding = 3 * scale;
-  const rowH = 15 * scale * (fontSize / 6);
-  const headingSize = fontSize * scale;
-  const headerFont = `bold ${headingSize}px sans-serif`;
-  const swatchW = 10 * scale * (fontSize / 6);
-  const headerLineH = Math.max(headingSize * 1.1, 11 * scale * (fontSize / 6));
-
-  ctx.font = headerFont;
-  const headerLines = header.map((h, c) =>
-    c <= 1
-      ? [h]
-      : wrapHeaderText(
-          (t) => ctx.measureText(t).width,
-          h,
-          Math.max(
-            20 * scale,
-            getMaterialTableColumnWidthPx(columnKeys[c], scale, fontSize) -
-              padding * 2,
-          ),
-        ),
-  );
-  const colW = columnKeys.map((k) =>
-    getMaterialTableColumnWidthPx(k, scale, fontSize),
-  );
-  colW[0] = Math.max(colW[0], swatchW + padding * 2);
-  const maxHeaderLines = Math.max(...headerLines.map((l) => l.length));
-  const headerH = Math.max(
-    22 * scale * (fontSize / 6),
-    maxHeaderLines * headerLineH + padding * 2,
-  );
-
-  return {
-    w: colW.reduce((a, b) => a + b, 0),
-    h: headerH + rows.length * rowH,
-  };
+  const { totalW, totalH } = layoutTable(ctx, columnKeys, header, rows, scale, fontSize);
+  return { w: totalW, h: totalH };
 }
 
 export function getAnnotationBoundsPx(

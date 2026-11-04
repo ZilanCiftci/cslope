@@ -506,11 +506,11 @@ describe("ResultSidebar annotation properties", () => {
     Element.prototype.scrollIntoView = vi.fn();
     select(["m"]);
     render(<ResultSidebar />);
-    fireEvent.click(screen.getByLabelText("Remove Su"));
+    fireEvent.click(screen.getByLabelText("Remove c / Su"));
     expect(anno("m").tableColumns).not.toContain("cohesion");
     expect(anno("m").tableColumns).toContain("unitWeight");
     fireEvent.click(screen.getByLabelText("Toggle options"));
-    fireEvent.click(screen.getByRole("option", { name: "Su" }));
+    fireEvent.click(screen.getByRole("option", { name: "c / Su" }));
     expect(anno("m").tableColumns).toContain("cohesion");
   });
 

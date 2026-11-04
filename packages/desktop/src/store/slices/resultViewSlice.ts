@@ -1,8 +1,17 @@
-import { DEFAULT_RESULT_VIEW_SETTINGS } from "../defaults";
+import { DEFAULT_RESULT_VIEW_SETTINGS, PLOT_MARGINS } from "../defaults";
 import { customPlanesInResultOrder, nextId } from "../helpers";
 import type { SliceCreator } from "../helpers";
 import type { CustomSearchPlane, ModelEntry, ReferenceAnnotation, ResultViewSlice } from "../types";
 import { isPaperAnnotation, referenceFromCustomPlane } from "../../features/annotations/reference";
+import { NEW_MATERIAL_TABLE_FONT_SIZE } from "../../features/annotations/materialTableLayout";
+
+/**
+ * Where a new table or colour bar is pinned (fractions of the paper): 1 %
+ * of the paper inside the right and top lines of the plot frame.
+ */
+const FRAME_INSET = 0.01;
+const RIGHT_INSIDE_FRAME = Math.round((1 - PLOT_MARGINS.R - FRAME_INSET) * 1000) / 1000;
+const TOP_INSIDE_FRAME = Math.round((PLOT_MARGINS.T + FRAME_INSET) * 1000) / 1000;
 
 type ResultViewState = ResultViewSlice & {
   activeModelId: string;
@@ -32,13 +41,15 @@ export const createResultViewSlice: SliceCreator<ResultViewSlice> = (set, get) =
     const anno = {
       id: nextId("anno"),
       type,
-      // The table and the colour bar start at the right edge of the paper,
-      // clear of the model; text and plots in the middle, where they are seen.
-      x: type === "material-table" || type === "color-bar" ? 0.95 : 0.5,
-      y: type === "material-table" ? 0.05 : type === "color-bar" ? 0.25 : 0.5,
+      // The table and the colour bar start at the right edge of the plot
+      // frame (PLOT_MARGINS from the paper edge), just inside it so the
+      // frame line does not run through them; text and plots in the
+      // middle, where they are seen.
+      x: type === "material-table" || type === "color-bar" ? RIGHT_INSIDE_FRAME : 0.5,
+      y: type === "material-table" ? TOP_INSIDE_FRAME : type === "color-bar" ? 0.25 : 0.5,
       anchor: type === "material-table" || type === "color-bar" ? "top-right" : undefined,
       text: type === "text" ? "Annotation" : undefined,
-      fontSize: type === "material-table" ? 6 : 12,
+      fontSize: type === "material-table" ? NEW_MATERIAL_TABLE_FONT_SIZE : 12,
       width: type === "plot" ? 0.24 : undefined,
       height: type === "plot" ? 0.18 : undefined,
       plotAxisX: type === "plot" ? "slice" : undefined,
