@@ -126,6 +126,51 @@ def test_refuses_a_newer_file_and_damaged_archives():
         project.read(archive(dict(files, **{"models/a/model.json": "{"})))  # type: ignore[arg-type]
 
 
+def _declare_size(data: bytes, name: str, size: int) -> io.BytesIO:
+    """The archive with `name`'s uncompressed size in the central directory set to `size`."""
+    buf = bytearray(data)
+    at = 0
+    while True:
+        at = buf.index(b"PK\x01\x02", at)
+        name_len = int.from_bytes(buf[at + 28 : at + 30], "little")
+        if bytes(buf[at + 46 : at + 46 + name_len]) == name.encode():
+            buf[at + 24 : at + 28] = size.to_bytes(4, "little")
+            return io.BytesIO(bytes(buf))
+        at += 4
+
+
+def test_refuses_archives_larger_than_the_limits(monkeypatch: pytest.MonkeyPatch):
+    files = layout({"a": (MODEL, None)}, {"thumbnail.png": PNG})
+    data = archive(files).getvalue()
+    mb = 1024 * 1024
+    # A declared size above 100 MB is refused before anything is read.
+    with pytest.raises(ValueError, match=r"entry project.json is too large \(150 MB unpacked; at most 100 MB\)"):
+        project.read(_declare_size(data, "project.json", 150 * mb))  # type: ignore[arg-type]
+    # So are entries that unpack to more than 200 MB together.
+    big_data = _declare_size(_declare_size(data, "models/a/model.json", 90 * mb).getvalue(), "thumbnail.png", 90 * mb).getvalue()
+    big_data = _declare_size(big_data, "project.json", 30 * mb).getvalue()
+    with pytest.raises(ValueError, match=r"unpack to more than 200 MB"):
+        project.read(io.BytesIO(big_data))  # type: ignore[arg-type]
+    # The limits are those of the module.
+    monkeypatch.setattr(project, "MAX_ENTRY_BYTES", 50)
+    with pytest.raises(ValueError, match="too large"):
+        project.read(archive(files))  # type: ignore[arg-type]
+
+
+def test_refuses_units_other_than_si(tmp_path: Path):
+    files = layout({"a": (MODEL, None)})
+    imperial = dict(files, **{"project.json": dict(files["project.json"], units="imperial")})
+    with pytest.raises(ValueError, match="in imperial units; this reader reads SI projects only"):
+        project.read(archive(imperial))  # type: ignore[arg-type]
+    f = tmp_path / "old.json"
+    f.write_text(json.dumps({"units": 3, "models": [dict(MODEL, id="m1")]}), encoding="utf-8")
+    with pytest.raises(ValueError, match="in unknown units"):
+        project.read(f)
+    # Without units, SI.
+    f.write_text(json.dumps({"models": [dict(MODEL, id="m1")]}), encoding="utf-8")
+    assert project.read(f).units == "SI"
+
+
 def test_reads_the_first_cslp_layout_and_json_projects(tmp_path: Path):
     model = dict(MODEL, id="m1")
     old = {"project.json": {"version": 3, "activeModelId": "m1", "models": [model]}, "results.json": {"models": {"m1": {"runState": "done", "result": {"minFOS": 1.5}, "errorMessage": None}}}}
