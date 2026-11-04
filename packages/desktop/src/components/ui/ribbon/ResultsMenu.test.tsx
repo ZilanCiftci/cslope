@@ -159,6 +159,19 @@ describe("ResultsMenu", () => {
     );
     await userEvent.click(button);
     expect(rvs().showFemPlasticZone).toBe(false);
+    // the mesh: off by default, on with its button
+    const mesh = screen.getByTitle(/Draw the mesh of the finite element analysis/);
+    expect(rvs().showFemMesh ?? false).toBe(false);
+    await userEvent.click(mesh);
+    expect(rvs().showFemMesh).toBe(true);
+    await userEvent.click(mesh);
+    expect(rvs().showFemMesh).toBe(false);
+  });
+
+  it("offers no finite element display without a finite element result", () => {
+    renderMenu();
+    expect(screen.queryByTitle(/Draw the mesh of the finite element analysis/)).toBeNull();
+    expect(screen.queryByTitle(/Shade the plastic zone/)).toBeNull();
   });
 
   it("chooses which surfaces to show and filters by FOS", async () => {

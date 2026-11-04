@@ -382,16 +382,19 @@ class ReliabilityResult(TypedDict):
 
 class ProgressEvent(TypedDict):
     """``kind`` is "search" (``done``, ``totalHint``, ``phase``),
-    "reliability" (``progress``, 0-1), "femTrial" (``trial``) or "bounds"
-    (``level``)."""
+    "reliability" (``progress``, 0-1), "femTrial" (``trial``), "bounds"
+    (``level``) or "femStage" (``stage``: ``{"stage": "mesh" |
+    "strengthReduction" | "upperBound" | "lowerBound", "mesh", "meshes",
+    "davis"}``)."""
 
-    kind: Literal["search", "reliability", "femTrial", "bounds"]
+    kind: Literal["search", "reliability", "femTrial", "bounds", "femStage"]
     done: NotRequired[int]
     totalHint: NotRequired[int]
     phase: NotRequired[Literal["first", "refined", "local", "block", "optimise"]]
     progress: NotRequired[float]
     trial: NotRequired[Dict[str, Any]]
     level: NotRequired[Dict[str, Any]]
+    stage: NotRequired[Dict[str, Any]]
 
 ProgressCallback = Callable[[ProgressEvent], Optional[bool]]
 

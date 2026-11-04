@@ -359,6 +359,8 @@ export interface ResultViewSettings {
   showSoilColor?: boolean;
   /** Shade the plastic zone of a finite element result (default: shown). */
   showFemPlasticZone?: boolean;
+  /** Draw the final mesh of a finite element result (default: hidden). */
+  showFemMesh?: boolean;
   /** Grid / major-tick spacing in world units. undefined or 0 = auto. */
   gridSpacing?: number;
   /** Number of minor tick subdivisions between major ticks. 0 = none. */
@@ -606,10 +608,18 @@ export interface AnalysisSlice {
   options: AnalysisOptions;
   runState: RunState;
   progress: number;
+  /**
+   * The limit equilibrium result while the run goes on with the finite
+   * element analysis (`runState` "running"), else the run's result.
+   */
   result: AnalysisResult | null;
   errorMessage: string | null;
   /** The Run All batch for the status bar: while it runs, then its summary. */
   runAll: RunAllStatus | null;
+  /** What the single run is doing (the finite element analysis's stage and trials); null otherwise. */
+  runStage: string | null;
+  /** When the single run started (ms since the epoch), for its elapsed time; null when none runs. */
+  runStartedAt: number | null;
   invalidateAnalysis: () => void;
   setAnalysisLimits: (limits: Partial<AnalysisLimitsState>) => void;
   addCustomSearchPlane: (kind?: "circle" | "polyline") => void;

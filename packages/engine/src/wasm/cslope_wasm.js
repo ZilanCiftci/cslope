@@ -1973,14 +1973,15 @@ export function run_analysis(def, options, on_progress) {
 }
 
 /**
- * `runFemSummary(definition, settings, onTrial)`.
+ * `runFemSummary(definition, settings, onTrial, onStage)`.
  * @param {any} definition
  * @param {any} settings
  * @param {any} on_trial
+ * @param {any} on_stage
  * @returns {any}
  */
-export function run_fem_summary(definition, settings, on_trial) {
-    const ret = wasm.run_fem_summary(definition, settings, on_trial);
+export function run_fem_summary(definition, settings, on_trial, on_stage) {
+    const ret = wasm.run_fem_summary(definition, settings, on_trial, on_stage);
     if (ret[2]) {
         throw takeFromExternrefTable0(ret[1]);
     }
@@ -1988,15 +1989,16 @@ export function run_fem_summary(definition, settings, on_trial) {
 }
 
 /**
- * `runFemSummaryWithBounds(definition, settings, onTrial)` (Clarabel is
- * linked in: the facade's `solvers` loader is not called).
+ * `runFemSummaryWithBounds(definition, settings, onTrial, onStage)`
+ * (Clarabel is linked in: the facade's `solvers` loader is not called).
  * @param {any} definition
  * @param {any} settings
  * @param {any} on_trial
+ * @param {any} on_stage
  * @returns {any}
  */
-export function run_fem_summary_with_bounds(definition, settings, on_trial) {
-    const ret = wasm.run_fem_summary_with_bounds(definition, settings, on_trial);
+export function run_fem_summary_with_bounds(definition, settings, on_trial, on_stage) {
+    const ret = wasm.run_fem_summary_with_bounds(definition, settings, on_trial, on_stage);
     if (ret[2]) {
         throw takeFromExternrefTable0(ret[1]);
     }

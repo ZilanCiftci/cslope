@@ -2040,6 +2040,11 @@ export function drawCanvas(
     // ── Paper background + shadow (drawn first, behind geometry) ──
     // (already drawn before grid above)
 
+    // The finite element mesh (its last refinement), thin and faint under
+    // the plastic zone and the surfaces, to show where it was refined.
+    if (result.fem && rvs.showFemMesh === true) {
+      drawFemMesh(ctx, result.fem, (x, y) => worldToCanvas(x, y, w, h), POLY_STROKE, FEM_MESH_LINE_WIDTH_PX * paperZoom);
+    }
     // Plastic zone of the finite element analysis: elements shaded by the
     // shear strain of the last displacement increment before failure,
     // relative to the largest, so the failure mechanism shows as a band.
@@ -2801,6 +2806,52 @@ export function drawCanvas(
     ctx.stroke();
     ctx.setLineDash([]);
   }
+}
+
+/** Line width of the finite element mesh (px of the paper at zoom 1). */
+const FEM_MESH_LINE_WIDTH_PX = 0.4;
+
+/**
+ * The edges of the finite element mesh, each once (an edge between two
+ * elements is not drawn twice, which would make it darker).
+ */
+export function femMeshEdges(triangles: ArrayLike<number>): [number, number][] {
+  const seen = new Set<string>();
+  const edges: [number, number][] = [];
+  for (let e = 0; e + 2 < triangles.length; e += 3) {
+    for (let k = 0; k < 3; k++) {
+      const a = triangles[e + k];
+      const b = triangles[e + ((k + 1) % 3)];
+      const key = a < b ? `${a},${b}` : `${b},${a}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      edges.push([a, b]);
+    }
+  }
+  return edges;
+}
+
+function drawFemMesh(
+  ctx: CanvasRenderingContext2D,
+  fem: NonNullable<AnalysisResult["fem"]>,
+  toC: (x: number, y: number) => [number, number],
+  color: string,
+  lineWidth: number,
+): void {
+  const { x, y } = fem;
+  ctx.save();
+  ctx.strokeStyle = color;
+  ctx.globalAlpha = 0.35;
+  ctx.lineWidth = lineWidth;
+  ctx.beginPath();
+  for (const [a, b] of femMeshEdges(fem.triangles)) {
+    const [ax, ay] = toC(x[a], y[a]);
+    const [bx, by] = toC(x[b], y[b]);
+    ctx.moveTo(ax, ay);
+    ctx.lineTo(bx, by);
+  }
+  ctx.stroke();
+  ctx.restore();
 }
 
 /**

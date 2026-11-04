@@ -797,6 +797,9 @@ export function normalizeResultView(raw: unknown): ResultViewSettings {
     showGrid: view.showGrid ?? DEFAULT_RESULT_VIEW_SETTINGS.showGrid,
     showSoilColor:
       view.showSoilColor ?? DEFAULT_RESULT_VIEW_SETTINGS.showSoilColor,
+    // the finite element display, where it is not the default
+    ...(view.showFemPlasticZone === false ? { showFemPlasticZone: false } : {}),
+    ...(view.showFemMesh === true ? { showFemMesh: true } : {}),
     ...(Number.isFinite(view.gridSpacing)
       ? { gridSpacing: view.gridSpacing }
       : {}),
@@ -1421,6 +1424,13 @@ function stagesOf(raw: unknown): Record<string, number> | null {
   return Object.keys(out).length ? out : null;
 }
 
+/**
+ * Flow rule of a file's finite element settings without a valid one: the
+ * default of new projects before Davis B (non-associated), so that such a
+ * file gives the result it gave before.
+ */
+export const LEGACY_FEM_FLOW_RULE: FemAnalysisSettings["flowRule"] = "non-associated";
+
 /** Finite element settings from a file: each field checked, the default where it is not valid. */
 function normalizeFemSettings(f: Record<string, unknown>): FemAnalysisSettings {
   const d = DEFAULT_FEM_SETTINGS;
@@ -1428,7 +1438,7 @@ function normalizeFemSettings(f: Record<string, unknown>): FemAnalysisSettings {
     typeof v === "number" && Number.isFinite(v) && v >= lo && v <= hi ? v : fallback;
   return {
     enabled: f.enabled === true,
-    flowRule: f.flowRule === "associated" || f.flowRule === "non-associated" || f.flowRule === "davis-b" ? f.flowRule : d.flowRule,
+    flowRule: f.flowRule === "associated" || f.flowRule === "non-associated" || f.flowRule === "davis-b" ? f.flowRule : LEGACY_FEM_FLOW_RULE,
     youngsModulus: num(f.youngsModulus, 1, 1e9, d.youngsModulus),
     poissonsRatio: num(f.poissonsRatio, 0, 0.49, d.poissonsRatio),
     dilationAngle: num(f.dilationAngle, 0, 60, d.dilationAngle),

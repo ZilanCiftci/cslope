@@ -3,6 +3,7 @@ import { act, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { OptionsSection } from "./OptionsSection";
 import { useAppStore } from "../../../store/app-store";
+import { DEFAULT_FEM_SETTINGS } from "@cslope/engine";
 
 async function typeInto(label: string, text: string) {
   const input = screen.getByLabelText(label);
@@ -89,6 +90,24 @@ describe("OptionsSection finite elements", () => {
       /results may change between versions. Base the design on the limit equilibrium result/,
     );
     expect(screen.getByRole("option", { name: "Steady seepage (FE, experimental)" })).toBeInTheDocument();
+  });
+
+  it("selects the recommended flow rule, Davis B, in a new project", async () => {
+    useAppStore.getState().newProject();
+    render(<OptionsSection plain />);
+    const flowRule = screen.getByRole("combobox", { name: "Flow rule" }) as HTMLSelectElement;
+    expect(flowRule.value).toBe("davis-b");
+    expect(flowRule.selectedOptions[0].textContent).toBe("Davis B (recommended)");
+    // turning the analysis on keeps it
+    await userEvent.click(screen.getByRole("checkbox", { name: "Strength reduction by finite elements" }));
+    expect(useAppStore.getState().options.fem).toMatchObject({ enabled: true, flowRule: "davis-b" });
+  });
+
+  it("keeps the flow rule of a project that has one", () => {
+    useAppStore.getState().newProject();
+    useAppStore.getState().setOptions({ fem: { ...DEFAULT_FEM_SETTINGS, enabled: true, flowRule: "non-associated" } });
+    render(<OptionsSection plain />);
+    expect((screen.getByRole("combobox", { name: "Flow rule" }) as HTMLSelectElement).value).toBe("non-associated");
   });
 });
 

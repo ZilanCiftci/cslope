@@ -173,6 +173,10 @@ fn event_to_py<'py>(py: Python<'py>, event: &ProgressEvent) -> PyResult<Bound<'p
             d.set_item("kind", "bounds")?;
             d.set_item("level", to_py(py, l)?)?;
         }
+        ProgressEvent::FemStage(s) => {
+            d.set_item("kind", "femStage")?;
+            d.set_item("stage", to_py(py, s)?)?;
+        }
     }
     Ok(d)
 }

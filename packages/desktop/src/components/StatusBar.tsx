@@ -1,5 +1,7 @@
+import { useEffect, useState } from "react";
 import type { AnalysisResult, RunAllStatus, RunState } from "../store/types";
 import { APP_VERSION } from "../utils/app-version";
+import { elapsedText } from "../utils/elapsed-text";
 import { fosStatusColor } from "../utils/fos-color";
 
 interface Props {
@@ -10,6 +12,10 @@ interface Props {
   designValues?: boolean;
   /** The error of a failed run (shown while `runState` is "error"). */
   errorMessage?: string | null;
+  /** What the run is doing (the finite element analysis's stage), shown while it runs. */
+  runStage?: string | null;
+  /** When the run started (ms since the epoch): its elapsed time is shown while it runs. */
+  runStartedAt?: number | null;
   snapToGrid: boolean;
   gridSnapSize: number;
   setSnapToGrid: (value: boolean) => void;
@@ -63,12 +69,28 @@ function RunAllProgress({ status }: { status: RunAllStatus }) {
   );
 }
 
+/** The time since `since`, counting each second: the run is alive. */
+function Elapsed({ since }: { since: number }) {
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    const timer = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(timer);
+  }, []);
+  return (
+    <span data-testid="status-run-elapsed" className="tabular-nums" title="Time since the run started" style={{ opacity: 0.8 }}>
+      {elapsedText(now - since)}
+    </span>
+  );
+}
+
 export function StatusBar({
   mode,
   runState,
   result,
   designValues = false,
   errorMessage = null,
+  runStage = null,
+  runStartedAt = null,
   snapToGrid,
   gridSnapSize,
   setSnapToGrid,
@@ -123,6 +145,12 @@ export function StatusBar({
             <span style={{ color: "var(--color-vsc-accent)", fontWeight: 600 }}>
               Analysing...
             </span>
+            {runStage && (
+              <span data-testid="status-run-stage" className="truncate" title={runStage}>
+                {runStage}
+              </span>
+            )}
+            {runStartedAt !== null && <Elapsed since={runStartedAt} />}
           </>
         )}
         {runState === "error" && (

@@ -48,6 +48,8 @@ export function AppShell() {
   const result = useAppStore((s) => s.result);
   const errorMessage = useAppStore((s) => s.errorMessage);
   const runAll = useAppStore((s) => s.runAll);
+  const runStage = useAppStore((s) => s.runStage);
+  const runStartedAt = useAppStore((s) => s.runStartedAt);
   const designValues = useAppStore((s) => !!s.options.partialFactors);
   const models = useAppStore((s) => s.models);
   const activeModelId = useAppStore((s) => s.activeModelId);
@@ -253,6 +255,8 @@ export function AppShell() {
         result={result}
         designValues={designValues}
         errorMessage={errorMessage}
+        runStage={runStage}
+        runStartedAt={runStartedAt}
         snapToGrid={snapToGrid}
         gridSnapSize={gridSnapSize}
         setSnapToGrid={setSnapToGrid}

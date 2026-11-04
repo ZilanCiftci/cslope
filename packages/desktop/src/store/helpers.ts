@@ -67,7 +67,21 @@ export function boundaryWarningsInStoreOrder(
   };
 }
 
+/**
+ * The engine's definition of a model in canonical orientation (sliding to
+ * the right; a model facing left mirrored), as the limit equilibrium
+ * analysis takes it.
+ */
 export function buildSlopeDTOFromModel(model: ModelEntry): SlopeDefinition {
+  return toCanonicalSlopeDefinition(buildModelSpaceSlopeDTO(model));
+}
+
+/**
+ * The engine's definition of a model in the model's own coordinates, with
+ * its orientation, as the finite element analysis takes it (it turns the
+ * definition to canonical orientation itself, and its result back).
+ */
+export function buildModelSpaceSlopeDTO(model: ModelEntry): SlopeDefinition {
   const materials = model.materials ?? [];
   const analysisLimits = model.analysisLimits ?? { ...DEFAULT_ANALYSIS_LIMITS };
   const piezometricLine = model.piezometricLine ?? { ...DEFAULT_PIEZO_LINE };
@@ -238,7 +252,7 @@ export function buildSlopeDTOFromModel(model: ModelEntry): SlopeDefinition {
   if (model.waternet) slope.waternet = cloneData(model.waternet);
   if (model.earlierStage) slope.earlierStage = cloneData(model.earlierStage);
 
-  return toCanonicalSlopeDefinition(slope);
+  return slope;
 }
 
 /**

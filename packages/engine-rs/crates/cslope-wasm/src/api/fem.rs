@@ -17,7 +17,7 @@
 //! - **Typed arrays**: the fields TypeScript holds as `Float64Array`,
 //!   `Int32Array` or `Uint8Array` are built as such here (copies); metadata
 //!   goes through serde.
-//! - **Callbacks** (`onTrial`, `onLevel`) are JavaScript functions called
+//! - **Callbacks** (`onTrial`, `onLevel`, `onStage`) are JavaScript functions called
 //!   from the run's progress (`RunCtx.progress`); an exception they throw
 //!   stops the run and is rethrown unchanged.
 //! - **Time** is `performance.now()` ([`PerfClock`]).
@@ -198,6 +198,8 @@ pub fn size_field_constant(value: f64, min: Option<f64>) -> JsResult<u32> {
 pub(crate) struct Callbacks {
     pub on_trial: Option<Function>,
     pub on_level: Option<Function>,
+    /// The stages of the finite element analysis (`FemStage`), progress only.
+    pub on_stage: Option<Function>,
     pub thrown: RefCell<Option<JsValue>>,
 }
 
@@ -206,8 +208,15 @@ impl Callbacks {
         Callbacks {
             on_trial,
             on_level,
+            on_stage: None,
             thrown: RefCell::new(None),
         }
+    }
+
+    /// The same with a callback for the stages.
+    pub fn with_stage(mut self, on_stage: Option<Function>) -> Self {
+        self.on_stage = on_stage;
+        self
     }
 
     fn call(&self, f: &Function, arg: JsResult<JsValue>) -> ControlFlow<()> {
@@ -230,6 +239,10 @@ impl Callbacks {
             },
             ProgressEvent::Bounds(level) => match &self.on_level {
                 Some(f) => self.call(f, to_js(&level)),
+                None => ControlFlow::Continue(()),
+            },
+            ProgressEvent::FemStage(stage) => match &self.on_stage {
+                Some(f) => self.call(f, to_js(&stage)),
                 None => ControlFlow::Continue(()),
             },
             _ => ControlFlow::Continue(()),
@@ -384,31 +397,33 @@ pub fn adaptive_bounds(
     adaptive_result_js(&r)
 }
 
-/// `runFemSummary(definition, settings, onTrial)`.
+/// `runFemSummary(definition, settings, onTrial, onStage)`.
 #[wasm_bindgen]
 pub fn run_fem_summary(
     definition: JsValue,
     settings: JsValue,
     on_trial: JsValue,
+    on_stage: JsValue,
 ) -> JsResult<JsValue> {
     let def: SlopeDefinition = from_js(definition, "slope definition")?;
     let settings: FemAnalysisSettings = from_js(settings, "settings")?;
-    let cb = Callbacks::new(function_opt(on_trial), None);
+    let cb = Callbacks::new(function_opt(on_trial), None).with_stage(function_opt(on_stage));
     let r = run_with(&cb, |ctx| engine_run_fem_summary(&def, &settings, ctx))?;
     to_js(&r)
 }
 
-/// `runFemSummaryWithBounds(definition, settings, onTrial)` (Clarabel is
-/// linked in: the facade's `solvers` loader is not called).
+/// `runFemSummaryWithBounds(definition, settings, onTrial, onStage)`
+/// (Clarabel is linked in: the facade's `solvers` loader is not called).
 #[wasm_bindgen]
 pub fn run_fem_summary_with_bounds(
     definition: JsValue,
     settings: JsValue,
     on_trial: JsValue,
+    on_stage: JsValue,
 ) -> JsResult<JsValue> {
     let def: SlopeDefinition = from_js(definition, "slope definition")?;
     let settings: FemAnalysisSettings = from_js(settings, "settings")?;
-    let cb = Callbacks::new(function_opt(on_trial), None);
+    let cb = Callbacks::new(function_opt(on_trial), None).with_stage(function_opt(on_stage));
     let r = run_with(&cb, |ctx| {
         engine_run_fem_summary_with_bounds(&def, &settings, ctx)
     })?;

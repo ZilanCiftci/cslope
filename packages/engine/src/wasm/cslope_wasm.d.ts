@@ -362,15 +362,15 @@ export function restore_critical_slices(handle: number): void;
 export function run_analysis(def: any, options: any, on_progress?: Function | null): any;
 
 /**
- * `runFemSummary(definition, settings, onTrial)`.
+ * `runFemSummary(definition, settings, onTrial, onStage)`.
  */
-export function run_fem_summary(definition: any, settings: any, on_trial: any): any;
+export function run_fem_summary(definition: any, settings: any, on_trial: any, on_stage: any): any;
 
 /**
- * `runFemSummaryWithBounds(definition, settings, onTrial)` (Clarabel is
- * linked in: the facade's `solvers` loader is not called).
+ * `runFemSummaryWithBounds(definition, settings, onTrial, onStage)`
+ * (Clarabel is linked in: the facade's `solvers` loader is not called).
  */
-export function run_fem_summary_with_bounds(definition: any, settings: any, on_trial: any): any;
+export function run_fem_summary_with_bounds(definition: any, settings: any, on_trial: any, on_stage: any): any;
 
 export function select_entry_exit(handle: number, cx: number, cy: number, radius: number): any;
 
@@ -765,8 +765,8 @@ export interface InitOutput {
     readonly resolve_unit_weight: (a: any, b: number, c: number, d: number) => [number, number, number];
     readonly restore_critical_slices: (a: number) => [number, number];
     readonly run_analysis: (a: any, b: any, c: number) => [number, number, number];
-    readonly run_fem_summary: (a: any, b: any, c: any) => [number, number, number];
-    readonly run_fem_summary_with_bounds: (a: any, b: any, c: any) => [number, number, number];
+    readonly run_fem_summary: (a: any, b: any, c: any, d: any) => [number, number, number];
+    readonly run_fem_summary_with_bounds: (a: any, b: any, c: any, d: any) => [number, number, number];
     readonly select_entry_exit: (a: number, b: number, c: number, d: number) => [number, number, number];
     readonly set_entry_exit_planes: (a: number) => [number, number];
     readonly set_morgenstern_price_solver: (a: number, b: number) => void;

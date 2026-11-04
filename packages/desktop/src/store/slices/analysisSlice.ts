@@ -10,7 +10,7 @@ import { findExpressionErrors } from "../expression-check";
 import { DEFAULT_ANALYSIS_OPTIONS, engineModule } from "@cslope/engine";
 import type { AnalysisResponse, WorkerMessage } from "../../worker/messages";
 import type { SliceCreator } from "../helpers";
-import { boundaryWarningsInStoreOrder, buildSlopeDTOFromModel, nextId, RUN_RESET } from "../helpers";
+import { boundaryWarningsInStoreOrder, buildModelSpaceSlopeDTO, buildSlopeDTOFromModel, nextId, RUN_RESET } from "../helpers";
 import type { AnalysisSlice, AppState, ModelEntry, RunAllStatus } from "../types";
 import { DEFAULT_ANALYSIS_LIMITS } from "../defaults";
 import { ANALYSIS_TIMEOUT_MS, FEM_TIMEOUT_MS } from "../../constants";
@@ -58,6 +58,14 @@ function analysisTimeoutMs(options: AnalysisOptions): number {
   return ANALYSIS_TIMEOUT_MS * Math.max(1, surfaces / 1500) + fem;
 }
 
+/** What a run reports besides its progress fraction. */
+export interface RunEvents {
+  /** What the run is doing: the finite element analysis's stage and trials. */
+  onStage?: (text: string) => void;
+  /** The limit equilibrium result, while the finite element analysis goes on. */
+  onPartial?: (result: AnalysisResult) => void;
+}
+
 /**
  * Run a single model analysis in a Web Worker, with `threads − 1`
  * evaluator workers for its trial surfaces (analysis-workers.ts).
@@ -70,16 +78,23 @@ export function executeModelAnalysis(
   model: ModelEntry,
   onProgress?: (progress: number) => void,
   threads = analysisThreads(),
+  events?: RunEvents,
 ): AnalysisHandle {
   const { slope, options } = workerInputs(model);
+  const boundaries = model.materialBoundaries ?? [];
+  // the finite element analysis takes the model in its own coordinates
+  const femSlope = options.fem?.enabled ? buildModelSpaceSlopeDTO(model) : undefined;
   const handle = runInWorker<AnalysisResult>(
-    { type: "run-analysis", id: crypto.randomUUID(), slope, options },
+    { type: "run-analysis", id: crypto.randomUUID(), slope, options, ...(femSlope ? { femSlope } : {}) },
     analysisTimeoutMs(options),
     onProgress,
     RUN_PROGRESS_MAX,
     threads,
+    events && {
+      ...events,
+      onPartial: events.onPartial && ((r) => events.onPartial!(boundaryWarningsInStoreOrder(r, boundaries))),
+    },
   );
-  const boundaries = model.materialBoundaries ?? [];
   return {
     ...handle,
     promise: handle.promise.then((r) => boundaryWarningsInStoreOrder(r, boundaries)),
@@ -143,6 +158,7 @@ function runInWorker<T>(
   onProgress?: (progress: number) => void,
   progressMax = RUN_PROGRESS_MAX,
   threads = 1,
+  events?: RunEvents,
 ): { promise: Promise<T>; cancel: () => void } {
   // The analysis worker and its evaluators (each connected to it by its own
   // channel) come from the idle workers, which have the engine loaded and
@@ -199,6 +215,9 @@ function runInWorker<T>(
         resolve(msg.result as T);
       } else if (msg.type === "analysis-progress") {
         onProgress?.(Math.min(progressMax, Math.max(0, msg.progress)));
+        if (msg.stage) events?.onStage?.(msg.stage);
+      } else if (msg.type === "analysis-partial") {
+        events?.onPartial?.(msg.result);
       } else if (msg.type === "analysis-error") {
         stop();
         reject(new Error(msg.error));
@@ -335,6 +354,8 @@ export const createAnalysisSlice: SliceCreator<AnalysisSlice> = (set, get) => ({
   result: null,
   errorMessage: null,
   runAll: null,
+  runStage: null,
+  runStartedAt: null,
 
   invalidateAnalysis: () => {
     // A run for the model being edited would finish with a result for the
@@ -549,6 +570,8 @@ export const createAnalysisSlice: SliceCreator<AnalysisSlice> = (set, get) => ({
       errorMessage: null,
       // (the summary of an ended Run All goes; a running one stays)
       ...(s.runAll && !s.runAll.running ? { runAll: null } : {}),
+      runStage: null,
+      runStartedAt: Date.now(),
     }));
 
     // Fake progress interval for UI responsiveness
@@ -569,11 +592,27 @@ export const createAnalysisSlice: SliceCreator<AnalysisSlice> = (set, get) => ({
     }, 120);
 
     let handle: AnalysisHandle;
+    /** This run is still the one going on, for the model shown. */
+    const current = () => activeHandle === handle && get().activeModelId === runModelId && get().runState === "running";
     try {
-      handle = executeModelAnalysis(modelSnapshot, (p) => {
-        if (get().activeModelId !== runModelId) return;
-        set((s) => ({ progress: Math.max(s.progress, p) }));
-      });
+      handle = executeModelAnalysis(
+        modelSnapshot,
+        (p) => {
+          if (get().activeModelId !== runModelId) return;
+          set((s) => ({ progress: Math.max(s.progress, p) }));
+        },
+        undefined,
+        {
+          onStage: (text) => {
+            if (current()) set({ runStage: text });
+          },
+          // The limit equilibrium result while the finite elements run (the
+          // model's entry gets the whole result when the run is done).
+          onPartial: (partial) => {
+            if (current() && analysisInputKey(snapshotFromState(get())) === inputKey) set({ result: partial });
+          },
+        },
+      );
     } catch (err) {
       stopProgressInterval();
       set({
@@ -600,6 +639,7 @@ export const createAnalysisSlice: SliceCreator<AnalysisSlice> = (set, get) => ({
       activeHandle = null;
       activeRunModelId = null;
       stopProgressInterval();
+      set({ runStage: null, runStartedAt: null });
 
       const s = get();
       if (s.activeModelId === runModelId) {
@@ -656,8 +696,12 @@ export const createAnalysisSlice: SliceCreator<AnalysisSlice> = (set, get) => ({
       progress: 0,
       errorMessage: null,
       runAll: null,
+      // (a run's limit equilibrium result shown while its finite elements ran goes with it)
+      result: s.runState === "running" ? null : s.result,
+      runStage: null,
+      runStartedAt: null,
       models: s.models.map((m) =>
-        m.runState === "running" ? { ...m, runState: "idle", progress: 0 } : m,
+        m.runState === "running" ? { ...m, runState: "idle", progress: 0, result: null } : m,
       ),
     }));
   },

@@ -33,6 +33,12 @@ export interface AnalysisRequest extends EngineCarrier {
   id: string;
   slope: SlopeDefinition;
   options: AnalysisOptions;
+  /**
+   * The model in its own coordinates for the finite element analysis (which
+   * turns it to canonical orientation itself); `slope` is canonical. Without
+   * it the worker turns `slope` back (a model facing left is mirrored again).
+   */
+  femSlope?: SlopeDefinition;
   /** Ports to evaluator workers that evaluate trial surfaces for this run (transferred). */
   evaluators?: MessagePort[];
 }
@@ -72,10 +78,22 @@ export type AnalysisResponse =
       result: ReliabilityResult;
     }
   | {
+      /**
+       * The limit equilibrium result of a run that goes on with the finite
+       * element analysis (shown while that runs); "analysis-complete" follows
+       * with the whole result.
+       */
+      type: "analysis-partial";
+      id: string;
+      result: AnalysisResult;
+    }
+  | {
       type: "analysis-progress";
       id: string;
       /** Progress 0–1. */
       progress: number;
+      /** What the run is doing (the finite element analysis's stage and trials). */
+      stage?: string;
     }
   | {
       type: "analysis-error";
