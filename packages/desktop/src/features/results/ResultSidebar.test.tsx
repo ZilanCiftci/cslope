@@ -424,3 +424,39 @@ describe("ResultSidebar annotation properties", () => {
     expect(anno("p").plotAxisY).toBe("cohesion");
   });
 });
+
+describe("ResultSidebar Insert variable", () => {
+  it("inserts a tag into the selected text annotation at the caret", () => {
+    act(() => useAppStore.setState({ result: result({
+      sgi3d: {
+        factorOfSafety: 1.5,
+        f2dCritical: 1.234,
+        critical: { ...surface(1.234), f2d: 1.234, fp: 2, f3d: 1.5, drivingMoment: 1, endFaceArea: 1, endFaceMoment: 1 },
+        equation: "2-3",
+        options: { length: 10, overstrongF2D: null, excludeMaterials: [] },
+        warnings: [],
+      },
+    } as never) }));
+    select(["t1"]);
+    render(<ResultSidebar />);
+    const ta = field("Text");
+    act(() => {
+      ta.focus();
+      ta.setSelectionRange(5, 5);
+    });
+    fireEvent.click(screen.getByRole("button", { name: /Insert variable/ }));
+    const item = screen.getAllByRole("menuitem").find((el) => el.textContent?.startsWith("#FOS3D"))!;
+    expect(item).toHaveTextContent("(1.500)");
+    fireEvent.click(item);
+    expect(anno("t1").text).toBe("Title#FOS3D");
+    expect(document.activeElement).toBe(ta);
+    expect(ta.selectionStart).toBe(11);
+    expect(screen.getByLabelText("Text on the sheet")).toHaveTextContent("Title1.500");
+  });
+
+  it("is disabled while the selected texts differ", () => {
+    select(["t1", "t2"]);
+    render(<ResultSidebar />);
+    expect(screen.getByRole("button", { name: /Insert variable/ })).toBeDisabled();
+  });
+});

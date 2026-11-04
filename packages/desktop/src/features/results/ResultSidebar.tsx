@@ -4,7 +4,7 @@
 
 import { DraftNumberInput } from "../../components/ui/DraftNumberInput";
 import { ExperimentalBadge } from "../../components/ui/ExperimentalBadge";
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
 import { PAPER_DIMENSIONS, useAppStore } from "../../store/app-store";
 import { Section } from "../../components/ui/Section";
 import { Label } from "../../components/ui/Label";
@@ -30,6 +30,7 @@ import {
   DISCARDED_BY_SIZE_TITLE,
 } from "../../utils/result-summary";
 import { resolveAnnotationText } from "../annotations/resolveAnnotationText";
+import { InsertVariableMenu } from "../annotations/InsertVariableMenu";
 import { modelViewLock } from "../view/viewLock";
 import { paperContentOf } from "../view/extents";
 import { fosStatusColor } from "../../utils/fos-color";
@@ -140,6 +141,11 @@ export function ResultSidebar() {
       resolveAnnotationText({ text, projectInfo, result, parameters }),
     [projectInfo, result, parameters],
   );
+  const tagContext = useMemo(
+    () => ({ projectInfo, result }),
+    [projectInfo, result],
+  );
+  const textAreaRef = useRef<HTMLTextAreaElement>(null);
 
   const [openSections, setOpenSections] = useState<
     Record<SidebarSection, boolean>
@@ -1135,6 +1141,7 @@ export function ResultSidebar() {
                 Text
               </label>
               <textarea
+                ref={textAreaRef}
                 value={textValue ?? ""}
                 placeholder={textValue === undefined ? "Mixed values" : ""}
                 onChange={(e) => applyToSelectedText({ text: e.target.value })}
@@ -1144,6 +1151,14 @@ export function ResultSidebar() {
                   color: "var(--color-vsc-text)",
                   border: "1px solid var(--color-vsc-border)",
                 }}
+              />
+              <InsertVariableMenu
+                textareaRef={textAreaRef}
+                text={textValue ?? ""}
+                disabled={textValue === undefined}
+                onChange={(text) => applyToSelectedText({ text })}
+                ctx={tagContext}
+                parameters={parameters}
               />
               {textValue !== undefined &&
                 resolveText(textValue) !== textValue && (
