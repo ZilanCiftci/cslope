@@ -2,27 +2,100 @@ import type { AnalysisResult } from "@cslope/engine";
 import type { ParameterDef, ProjectInfo } from "../../store/types";
 import { evaluate, resolveParameters } from "../../utils/expression";
 
-const STATIC_TAG_RESOLVERS: Record<
-  string,
-  (projectInfo: Partial<ProjectInfo>, result?: AnalysisResult | null) => string
-> = {
-  Title: (projectInfo) => projectInfo.title ?? "",
-  Subtitle: (projectInfo) => projectInfo.subtitle ?? "",
-  Client: (projectInfo) => projectInfo.client ?? "",
-  ProjectNumber: (projectInfo) => projectInfo.projectNumber ?? "",
-  Revision: (projectInfo) => projectInfo.revision ?? "",
-  Author: (projectInfo) => projectInfo.author ?? "",
-  Checker: (projectInfo) => projectInfo.checker ?? "",
-  Date: (projectInfo) => projectInfo.date ?? "",
-  Description: (projectInfo) => projectInfo.description ?? "",
-  Method: (_projectInfo, result) => result?.method ?? "N/A",
-  FOS: (_projectInfo, result) =>
-    Number.isFinite(result?.minFOS) ? result!.minFOS.toFixed(3) : "N/A",
-  MinFOS: (_projectInfo, result) =>
-    Number.isFinite(result?.minFOS) ? result!.minFOS.toFixed(3) : "N/A",
+/** What a tag is resolved from. */
+export interface AnnotationTagContext {
+  projectInfo: Partial<ProjectInfo>;
+  result?: AnalysisResult | null;
+}
+
+/** A built-in text tag (`#tag`), the one list of them. */
+export interface AnnotationTag {
+  /** The name after `#`, as inserted (matching is case-insensitive). */
+  tag: string;
+  /** One line for the Insert variable menu, including what it shows without a value. */
+  description: string;
+  /** Its value, or null when the model has none (it then shows `missing`). */
+  value: (ctx: AnnotationTagContext) => string | null;
+  /** What the tag shows without a value. */
+  missing: string;
+}
+
+const info = (
+  tag: string,
+  key: keyof ProjectInfo,
+  description: string,
+): AnnotationTag => ({
+  tag,
+  description: `${description} (project information; empty if not set)`,
+  value: ({ projectInfo }) => {
+    const v = projectInfo[key];
+    return typeof v === "string" && v !== "" ? v : null;
+  },
+  missing: "",
+});
+
+const fos = (ctx: AnnotationTagContext): string | null => {
+  const v = ctx.result?.minFOS;
+  return v !== undefined && Number.isFinite(v) ? v.toFixed(3) : null;
 };
 
-function formatNumber(value: number): string {
+/**
+ * The built-in tags. Both the resolver and the Insert variable menu read
+ * this table, so the menu lists exactly what the sheet replaces.
+ */
+export const ANNOTATION_TAGS: readonly AnnotationTag[] = [
+  info("Title", "title", "Title"),
+  info("Subtitle", "subtitle", "Subtitle"),
+  info("Client", "client", "Client"),
+  info("ProjectNumber", "projectNumber", "Project number"),
+  info("Revision", "revision", "Revision"),
+  info("Author", "author", "Author"),
+  info("Checker", "checker", "Checker"),
+  info("Date", "date", "Date"),
+  info("Description", "description", "Description"),
+  {
+    tag: "Method",
+    description: "Analysis method (N/A without a result)",
+    value: ({ result }) => result?.method || null,
+    missing: "N/A",
+  },
+  {
+    tag: "FOS",
+    description: "Minimum factor of safety (N/A without a result)",
+    value: fos,
+    missing: "N/A",
+  },
+  {
+    tag: "MinFOS",
+    description: "Minimum factor of safety, same as #FOS",
+    value: fos,
+    missing: "N/A",
+  },
+  {
+    tag: "FOS3D",
+    description:
+      "Smallest 3D factor of safety after SGI Vägledning 8 (N/A without the 3D effects option)",
+    value: ({ result }) => {
+      const v = result?.sgi3d?.factorOfSafety;
+      return v !== undefined && Number.isFinite(v) ? v.toFixed(3) : null;
+    },
+    missing: "N/A",
+  },
+];
+
+const TAGS_BY_NAME = new Map(
+  ANNOTATION_TAGS.map((t) => [t.tag.toLowerCase(), t]),
+);
+
+/** What a built-in tag shows on the sheet. */
+export function annotationTagText(
+  tag: AnnotationTag,
+  ctx: AnnotationTagContext,
+): string {
+  return tag.value(ctx) ?? tag.missing;
+}
+
+export function formatNumber(value: number): string {
   if (!Number.isFinite(value)) return "";
   if (Math.abs(value) < 1e-12) return "0";
   return Number(value.toFixed(8)).toString();
@@ -38,9 +111,7 @@ export function resolveAnnotationText(params: {
   if (!text) return "";
 
   const { resolved } = resolveParameters(parameters);
-  const staticTags = new Map(
-    Object.entries(STATIC_TAG_RESOLVERS).map(([tag, fn]) => [tag.toLowerCase(), fn]),
-  );
+  const ctx: AnnotationTagContext = { projectInfo, result };
 
   // One pass, so text inserted for a tag (e.g. a title containing "#H",
   // "{{...}}" or "\n") is never processed again.  A parameter name wins
@@ -62,8 +133,8 @@ export function resolveAnnotationText(params: {
       if (Object.prototype.hasOwnProperty.call(resolved, name)) {
         return formatNumber(resolved[name]);
       }
-      const tag = staticTags.get(name.toLowerCase());
-      return tag ? tag(projectInfo, result) : full;
+      const tag = TAGS_BY_NAME.get(name.toLowerCase());
+      return tag ? annotationTagText(tag, ctx) : full;
     },
   );
 }

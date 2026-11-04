@@ -32,13 +32,14 @@ Drag annotations to place them; their position is stored as a percentage of the 
 
 ### Text fields
 
-Text annotations can show values from the model. They are replaced when the sheet is drawn:
+Text annotations can show values from the model. They are replaced when the sheet is drawn. **Insert variable** under the *Text* field lists them with their current values and inserts the chosen one at the cursor:
 
 | Field | Shows |
 | --- | --- |
 | `#Title`, `#Subtitle`, `#Client`, `#ProjectNumber`, `#Revision`, `#Author`, `#Checker`, `#Date`, `#Description` | The model's project information (right-click the model in the Explorer, then *Properties*) |
 | `#Method` | The analysis method |
 | `#FOS`, `#MinFOS` | The factor of safety |
+| `#FOS3D` | The smallest 3D factor of safety after SGI Vägledning 8 ([3D effects](/docs/analysis#3d-effects-temporary-slopes)); *N/A* when the analysis has no 3D result |
 | `#name` | The value of the parameter *name* |
 | `{{expression}}` | The value of an expression with parameters, for example `{{H / 2}}` |
 
