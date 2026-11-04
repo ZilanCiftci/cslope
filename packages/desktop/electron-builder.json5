@@ -3,11 +3,16 @@
   $schema: "https://raw.githubusercontent.com/electron-userland/electron-builder/master/packages/app-builder-lib/scheme.json",
   appId: "com.cslope.desktop",
   asar: true,
+  // Smaller installer (LZMA at its strongest setting) for a slower build.
+  compression: "maximum",
   productName: "cSlope",
   directories: {
     output: "release/${version}",
   },
-  files: ["dist", "dist-electron", "!**/LICENSES.chromium.html"],
+  // The app is bundled by Vite into dist and dist-electron; the main process
+  // loads only electron and Node built-ins at runtime, so the packages
+  // listed as dependencies (80 MB, already inside the bundle) stay out.
+  files: ["dist", "dist-electron", "!node_modules", "!**/LICENSES.chromium.html"],
   icon: "build/icon.png",
   // Only keep English locale files
   electronLanguages: ["en", "en-US"],

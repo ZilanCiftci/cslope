@@ -49,6 +49,11 @@ jobs:
           $asar = "$dir\resources\app.asar"
           if (-not (Test-Path $exe)) { throw "No packaged app at $exe" }
           if (-not (Test-Path $asar)) { throw "No archive at $asar" }
+          # The archive holds the Vite bundle only (about 9 MB); node_modules
+          # must stay out (electron-builder.json5, files).
+          $asarMB = [math]::Round((Get-Item $asar).Length / 1MB, 1)
+          Write-Host "app.asar: $asarMB MB"
+          if ($asarMB -gt 30) { throw "app.asar is $asarMB MB: more than the app bundle (node_modules packed?)" }
 
           # 1. The packaged app starts and stays up.
           $p = Start-Process -FilePath $exe -PassThru
