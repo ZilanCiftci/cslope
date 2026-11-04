@@ -1503,7 +1503,7 @@ describe("drawCanvas — result mode", () => {
     expect(uncapped.textStrings().some((t) => t.startsWith("≥"))).toBe(false);
   });
 
-  it("draws a slice plot with axis end labels, or a placeholder without slices", () => {
+  it("draws a slice plot with round ticks on both axes, or a placeholder without slices", () => {
     const anno: Annotation = { id: "p", type: "plot", x: 0.5, y: 0.5, plotAxisX: "slice", plotAxisY: "cohesion" };
     const empty = drawResult({ resultViewSettings: rvs({ annotations: [anno] }) });
     expect(empty.textStrings()).toContain("No slice data");
@@ -1522,6 +1522,9 @@ describe("drawCanvas — result mode", () => {
     expect(pts[0][1]).toBeGreaterThan(pts[1][1]);
     expect(pts[1][1]).toBeGreaterThan(pts[2][1]);
     expect(rec.fills("#26a69a")).toHaveLength(3);
+    // Cohesion 10–30 gets the ticks 10, 15, 20, 25, 30; the slices 1, 2, 3.
+    const labels = rec.textStrings();
+    for (const t of ["10", "15", "20", "25", "30", "1", "2", "3"]) expect(labels).toContain(t);
   });
 
   it("outlines selected annotations and the paper frame with a dashed rectangle", () => {

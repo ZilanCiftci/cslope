@@ -121,13 +121,13 @@ describe("PDF annotations match the canvas proportions", () => {
     expect(withSlices.circles).toBe(3);
 
     // Right-to-left model: slices come in descending x, the axis still
-    // runs from xMin (left) to xMax (right).
+    // runs from xMin (left) to xMax (right), with round ticks between.
     const pdf = new jsPDF({ unit: "mm", format: [297, 210], orientation: "landscape" });
-    const labels: { text: string; x: number }[] = [];
+    const labels: { text: string; x: number; align?: string }[] = [];
     const text = pdf.text.bind(pdf);
-    pdf.text = ((t: string, x: number, ...rest: unknown[]) => {
-      labels.push({ text: String(t), x });
-      return (text as (...a: unknown[]) => jsPDF)(t, x, ...rest);
+    pdf.text = ((t: string, x: number, y: number, opts?: { align?: string }) => {
+      labels.push({ text: String(t), x, align: opts?.align });
+      return (text as (...a: unknown[]) => jsPDF)(t, x, y, opts);
     }) as typeof pdf.text;
     drawAnnotations(
       pdf,
@@ -140,9 +140,11 @@ describe("PDF annotations match the canvas proportions", () => {
       [],
       FRAME,
     );
-    const left = labels.find((l) => l.text === "10.0")!;
-    const right = labels.find((l) => l.text === "30.0")!;
+    const xLabels = labels.filter((l) => l.align === "center");
+    const left = xLabels.find((l) => l.text === "10")!;
+    const right = xLabels.find((l) => l.text === "30")!;
     expect(left.x).toBeLessThan(right.x);
+    expect(xLabels.some((l) => l.text === "20")).toBe(true);
   });
 });
 

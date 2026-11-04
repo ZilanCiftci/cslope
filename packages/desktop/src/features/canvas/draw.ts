@@ -42,6 +42,7 @@ import {
 import { resolveAnnotationText } from "../annotations/resolveAnnotationText";
 import { anchoredTopLeft } from "../annotations/anchorPosition";
 import { computeSlicePlotData } from "../annotations/slicePlotData";
+import { axisTicks, tickLabel } from "../annotations/plotAxis";
 import type { PointHit } from "./types";
 import {
   ANNOTATION_DEFAULT_FONT_FAMILY,
@@ -2674,11 +2675,14 @@ export function drawCanvas(
         const chartW = Math.max(8, plotW - padLeft - padRight);
         const chartH = Math.max(8, plotH - padTop - padBottom);
         const { xMin, xMax, yMin, yMax } = plot.range;
+        // Round ticks on both axes; the axes run to the outer ticks.
+        const xTicks = axisTicks(xMin, xMax, 5, (anno.plotAxisX ?? "slice") === "slice");
+        const yTicks = axisTicks(yMin, yMax, 4);
 
         const mapX = (v: number) =>
-          chartX + ((v - xMin) / (xMax - xMin)) * chartW;
+          chartX + ((v - xTicks.min) / (xTicks.max - xTicks.min)) * chartW;
         const mapY = (v: number) =>
-          chartY + chartH - ((v - yMin) / (yMax - yMin)) * chartH;
+          chartY + chartH - ((v - yTicks.min) / (yTicks.max - yTicks.min)) * chartH;
 
         ctx.font = `${titleSize}px sans-serif`;
         ctx.fillStyle = "#78909c";
@@ -2688,11 +2692,19 @@ export function drawCanvas(
 
         ctx.strokeStyle = "rgba(120,144,156,0.35)";
         ctx.lineWidth = 0.8;
-        for (let i = 0; i <= 4; i++) {
-          const gy = chartY + (chartH * i) / 4;
+        for (const v of yTicks.values) {
+          const gy = mapY(v);
           ctx.beginPath();
           ctx.moveTo(chartX, gy);
           ctx.lineTo(chartX + chartW, gy);
+          ctx.stroke();
+        }
+        ctx.strokeStyle = "rgba(120,144,156,0.2)";
+        for (const v of xTicks.values) {
+          const gx = mapX(v);
+          ctx.beginPath();
+          ctx.moveTo(gx, chartY);
+          ctx.lineTo(gx, chartY + chartH);
           ctx.stroke();
         }
 
@@ -2720,27 +2732,32 @@ export function drawCanvas(
           ctx.fill();
         });
 
+        // Tick marks and values on both axes.
+        const tick = Math.max(2, 3 * annoScale);
+        ctx.strokeStyle = "#78909c";
+        ctx.lineWidth = 1;
         ctx.font = `${axisSize}px sans-serif`;
         ctx.fillStyle = "#5f6b73";
         ctx.textBaseline = "middle";
         ctx.textAlign = "right";
-        ctx.fillText(yMax.toFixed(2), chartX - 4, chartY);
-        ctx.fillText(yMin.toFixed(2), chartX - 4, chartY + chartH);
-
+        for (const v of yTicks.values) {
+          const gy = mapY(v);
+          ctx.beginPath();
+          ctx.moveTo(chartX - tick, gy);
+          ctx.lineTo(chartX, gy);
+          ctx.stroke();
+          ctx.fillText(tickLabel(v, yTicks), chartX - tick - 2, gy);
+        }
         ctx.textBaseline = "top";
         ctx.textAlign = "center";
-        // Axis ends, not first/last slice: slices of a right-to-left
-        // model come in descending x.
-        ctx.fillText(
-          xMin.toFixed(plot.xDecimals),
-          chartX,
-          chartY + chartH + 4,
-        );
-        ctx.fillText(
-          xMax.toFixed(plot.xDecimals),
-          chartX + chartW,
-          chartY + chartH + 4,
-        );
+        for (const v of xTicks.values) {
+          const gx = mapX(v);
+          ctx.beginPath();
+          ctx.moveTo(gx, chartY + chartH);
+          ctx.lineTo(gx, chartY + chartH + tick);
+          ctx.stroke();
+          ctx.fillText(tickLabel(v, xTicks), gx, chartY + chartH + tick + 2);
+        }
         ctx.restore();
       }
 

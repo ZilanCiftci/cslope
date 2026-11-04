@@ -129,6 +129,7 @@ import { resolveAnnotationText } from "../annotations/resolveAnnotationText";
 import { getMaterialTableColumnWidthPx } from "../annotations/materialTableLayout";
 import { anchoredTopLeft } from "../annotations/anchorPosition";
 import { computeSlicePlotData } from "../annotations/slicePlotData";
+import { axisTicks, tickLabel } from "../annotations/plotAxis";
 
 export function drawGrid(
   pdf: jsPDF,
@@ -1460,15 +1461,23 @@ function drawPlotAnnotationPdf(
   const chartW = Math.max(2, w - padLeft - padRight);
   const chartH = Math.max(2, h - padTop - padBottom);
   const { xMin, xMax, yMin, yMax } = plot.range;
-  const mapX = (v: number) => chartX + ((v - xMin) / (xMax - xMin)) * chartW;
+  // Round ticks on both axes; the axes run to the outer ticks (as on the canvas).
+  const xTicks = axisTicks(xMin, xMax, 5, (anno.plotAxisX ?? "slice") === "slice");
+  const yTicks = axisTicks(yMin, yMax, 4);
+  const mapX = (v: number) => chartX + ((v - xTicks.min) / (xTicks.max - xTicks.min)) * chartW;
   const mapY = (v: number) =>
-    chartY + chartH - ((v - yMin) / (yMax - yMin)) * chartH;
+    chartY + chartH - ((v - yTicks.min) / (yTicks.max - yTicks.min)) * chartH;
 
   pdf.setDrawColor(207, 216, 220);
   pdf.setLineWidth(0.15);
-  for (let i = 1; i < 4; i++) {
-    const gy = chartY + (chartH * i) / 4;
-    pdf.line(chartX, gy, chartX + chartW, gy);
+  for (const v of yTicks.values) {
+    const gy = mapY(v);
+    if (gy > chartY + 1e-6 && gy < chartY + chartH - 1e-6) pdf.line(chartX, gy, chartX + chartW, gy);
+  }
+  pdf.setDrawColor(228, 234, 237);
+  for (const v of xTicks.values) {
+    const gx = mapX(v);
+    if (gx > chartX + 1e-6 && gx < chartX + chartW - 1e-6) pdf.line(gx, chartY, gx, chartY + chartH);
   }
   pdf.setDrawColor(120, 144, 156);
   pdf.setLineWidth(0.2);
@@ -1485,26 +1494,21 @@ function drawPlotAnnotationPdf(
   const r = Math.max(0.35, 1.8 * scale);
   for (const p of plot.points) pdf.circle(mapX(p.x), mapY(p.y), r, "F");
 
+  // Tick marks and values on both axes.
+  const tick = 1.2 * scale;
+  pdf.setDrawColor(120, 144, 156);
+  pdf.setLineWidth(0.2);
   pdf.setTextColor(95, 107, 115);
-  pdf.text(yMax.toFixed(2), chartX - pad, chartY, {
-    align: "right",
-    baseline: "middle",
-  });
-  pdf.text(yMin.toFixed(2), chartX - pad, chartY + chartH, {
-    align: "right",
-    baseline: "middle",
-  });
-  // Axis ends, not first/last slice (descending x on rtl models).
-  pdf.text(xMin.toFixed(plot.xDecimals), chartX, chartY + chartH + pad, {
-    align: "center",
-    baseline: "top",
-  });
-  pdf.text(
-    xMax.toFixed(plot.xDecimals),
-    chartX + chartW,
-    chartY + chartH + pad,
-    { align: "center", baseline: "top" },
-  );
+  for (const v of yTicks.values) {
+    const gy = mapY(v);
+    pdf.line(chartX - tick, gy, chartX, gy);
+    pdf.text(tickLabel(v, yTicks), chartX - tick - pad / 2, gy, { align: "right", baseline: "middle" });
+  }
+  for (const v of xTicks.values) {
+    const gx = mapX(v);
+    pdf.line(gx, chartY + chartH, gx, chartY + chartH + tick);
+    pdf.text(tickLabel(v, xTicks), gx, chartY + chartH + tick + pad / 2, { align: "center", baseline: "top" });
+  }
 }
 
 function drawTextAnnotation(
