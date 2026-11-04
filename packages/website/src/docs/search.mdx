@@ -29,13 +29,13 @@ The size of the search is set in **Model › Analysis › Options**:
 | Setting | Range | Default | Meaning |
 | --- | --- | --- | --- |
 | **Iterations** | 500–100 000 | 1000 | Approximate number of trial circles: entry points × exit points × radii per pair (at least 5 radii per pair) |
-| **Refined Iterations** | 0–100 000 | 500 | Additional surfaces around the best ones |
+| **Refined iterations** | 0–100 000 | 500 | Additional surfaces around the best ones |
 
 More iterations give a more thorough search and take longer. For a final analysis, check that doubling the iterations no longer lowers the factor of safety noticeably.
 
 ## Analysis direction
 
-**Analysis Direction** in the options sets whether the slope fails **left to right** or **right to left**. A DXF import guesses the direction from the geometry. Tick **Analyse both sliding directions** to search both: the opposite direction uses automatic search limits, and the lower factor of safety is reported, with the other one in the summary.
+**Sliding direction** in **Options › Search** sets whether the slope fails **Left to right** or **Right to left**. A DXF import guesses the direction from the geometry. Choose **Both** to search both: the opposite direction uses automatic search limits, and the lower factor of safety is reported, with the other one in the summary.
 
 **Circles follow bedrock (composite)** is on by default. A trial circle that reaches impenetrable material (bedrock) on the base of the model follows its top there instead of being rejected: the slip surface runs along the firm base, as for clay on a firm bottom, and the slices along it have a straight base whose forces take their moments about the circle's centre (Duncan & Wright 2014, ch. 7, composite surfaces). The result shows such a surface as a circle with a straight part along the base. Turn it off to analyse circles only, as programs without composite surfaces do.
 
@@ -65,7 +65,7 @@ Where the failure is expected to run along a weak layer or a stiff base, a **blo
 
 Each trial surface takes one point from every object, joins them from left to right as the base of the sliding block, and rises from both ends of the base to the ground. The upslope end rises at the **upslope end angle**, the downslope end at the **downslope end angle**. Left empty, these are the Rankine angles of the soil the end segments cut: 45° + φ/2 upslope (active) and 45° − φ/2 downslope (passive). Give a range, for example 45–70, to let the search try angles within it.
 
-The objects are drawn on the canvas, numbered B1, B2, … as in the options. **Iterations** is the number of block surfaces tried; **Refined Iterations** adds surfaces around the best ones, in neighbourhoods that shrink step by step. The draws are repeatable: the same model gives the same result. The search limits apply to block surfaces as to circles. Tick **Non-circular optimisation** to optimise the best block surfaces further; the optimised surfaces may leave the objects.
+The objects are drawn on the canvas, numbered B1, B2, … as in the options. **Iterations** is the number of block surfaces tried; **Refined iterations** adds surfaces around the best ones, in neighbourhoods that shrink step by step. The draws are repeatable: the same model gives the same result. The search limits apply to block surfaces as to circles. Tick **Non-circular optimisation** to optimise the best block surfaces further; the optimised surfaces may leave the objects.
 
 A typical block search for a weak layer uses two lines or two thin windows along the layer: one under the crest, one under the toe.
 
