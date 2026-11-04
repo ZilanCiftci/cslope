@@ -258,6 +258,14 @@ pub fn analysis_result(
             let base_material = slope
                 .material(s.base_material.expect("a slice's base material"))
                 .clone();
+            let normal_force = match &solved_normals {
+                Some(n) => n[i],
+                None => (s.weight + surface_load) * js::math::cos(s.alpha) - s.u * s.base_length,
+            };
+            // As the app's slice table and plots show it (SliceData.shear_force).
+            let shear_force = s.cohesion * s.base_length
+                + js::math::max(normal_force, 0.0)
+                    * js::math::tan(s.friction_angle * std::f64::consts::PI / 180.0);
             critical_slices.push(SliceData {
                 x: s.x,
                 x_left: s.x_left,
@@ -273,12 +281,8 @@ pub fn analysis_result(
                 surface_load: Some(surface_load),
                 cohesion: s.cohesion,
                 friction_angle: s.friction_angle,
-                normal_force: match &solved_normals {
-                    Some(n) => n[i],
-                    None => {
-                        (s.weight + surface_load) * js::math::cos(s.alpha) - s.u * s.base_length
-                    }
-                },
+                normal_force,
+                shear_force,
                 // negative above the line in a material with φb (the suction)
                 pore_pressure: s.u - s.suction.unwrap_or(0.0),
                 base_material,

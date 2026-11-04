@@ -266,8 +266,9 @@ function withFem(
     // The site names no other program, not even by letter.
     const source = isProgramSource(r.source) ? "another program's verification manual" : r.source;
     const j = published.findIndex((v) => v.value === r.value && v.source === source);
-    if (j >= 0) published[j] = { ...published[j], analysis: FEM_LABEL, computed };
-    else published.push({ value: r.value, ...(r.upper != null ? { upper: r.upper } : {}), method: r.method, source, analysis: FEM_LABEL, computed });
+    const disputed = r.disputed ? { disputed: r.disputed } : {};
+    if (j >= 0) published[j] = { ...published[j], ...disputed, analysis: FEM_LABEL, computed };
+    else published.push({ value: r.value, ...(r.upper != null ? { upper: r.upper } : {}), method: r.method, source, ...disputed, analysis: FEM_LABEL, computed });
   }
   return {
     ...p,
@@ -277,9 +278,9 @@ function withFem(
   };
 }
 
-/** How many finite element results lie within their references' tolerance (fem-cases.ts). */
+/** How many finite element results lie within their references' tolerance (fem-cases.ts); a disputed reference is not counted. */
 export function femAgreement(fem: Record<string, FemRaw>): { agree: number; total: number } {
-  const refs = VERIFICATION_CASES.flatMap((c) => (c.fem ? c.fem.references.map((r) => ({ r, fos: fem[c.id]?.fos })) : []));
+  const refs = VERIFICATION_CASES.flatMap((c) => (c.fem ? c.fem.references.filter((r) => !r.disputed).map((r) => ({ r, fos: fem[c.id]?.fos })) : []));
   return { agree: refs.filter(({ r, fos }) => fos != null && femAgrees(r, fos)).length, total: refs.length };
 }
 

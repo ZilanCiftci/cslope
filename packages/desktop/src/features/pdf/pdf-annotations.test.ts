@@ -107,6 +107,7 @@ describe("PDF annotations match the canvas proportions", () => {
       frictionAngle: 30,
       baseLength: 1,
       normalForce: 40,
+      shearForce: 5 + 40 * Math.tan(Math.PI / 6),
       alpha: 0.3,
       porePressure: 0,
     });

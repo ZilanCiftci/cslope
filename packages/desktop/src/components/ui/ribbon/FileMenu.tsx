@@ -10,6 +10,7 @@ import { importStix } from "../../../features/project/importStix";
 import { exportStix } from "../../../features/project/exportStix";
 import { importSli } from "../../../features/project/importSli";
 import { exportSli } from "../../../features/project/exportSli";
+import { fileTooLarge } from "../../../features/project/file-limits";
 import {
   NewIcon,
   OpenIcon,
@@ -55,6 +56,11 @@ export function FileMenu({
     input.onchange = () => {
       const file = input.files?.[0];
       if (!file) return;
+      const tooLarge = fileTooLarge(file);
+      if (tooLarge) {
+        setSummary({ title: `Import of ${file.name} failed`, text: tooLarge });
+        return;
+      }
       const reader = new FileReader();
       reader.onload = () => {
         try {
@@ -77,6 +83,11 @@ export function FileMenu({
     input.onchange = () => {
       const file = input.files?.[0];
       if (!file) return;
+      const tooLarge = fileTooLarge(file);
+      if (tooLarge) {
+        setSummary({ title: `Import of ${file.name} failed`, text: tooLarge });
+        return;
+      }
       const reader = new FileReader();
       reader.onload = () => {
         run(new Uint8Array(reader.result as ArrayBuffer), file.name).then(

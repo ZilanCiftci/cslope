@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { renderHook } from "@testing-library/react";
 import { useHitTest } from "./useHitTest";
 import { DEFAULT_MATERIAL, DEFAULT_PIEZO_LINE } from "../../../store/defaults";
-import { surfaceYAtXFromCoordinates } from "../helpers";
+import { surfaceYAtX } from "../../view/surface";
 
 const W = 800;
 const H = 600;
@@ -41,7 +41,7 @@ function setup(over: Partial<Params> = {}, scale = 10) {
     analysisLimits: { enabled: true, entryLeftX: 2, entryRightX: 8, exitLeftX: 21, exitRightX: 28 },
     udls: [],
     lineLoads: [],
-    surfaceYAtX: (x) => surfaceYAtXFromCoordinates(coordinates, x),
+    surfaceYAtX: (x) => surfaceYAtX(coordinates, x),
     snapValue: (v) => Math.round(v),
     viewScale: scale,
     snapToGrid: false,

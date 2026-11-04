@@ -6,8 +6,10 @@
 //   bun packages/engine-rs/tools/check-wasm-fresh.ts [product|testing]
 //
 // Run by CI's check job and by the release, before packaging: the app
-// ships the committed product build (packages/engine/src/wasm). CI's rust
-// job also rebuilds it and compares the bytes (.github/workflows/ci.yml).
+// ships the committed product build (packages/engine/src/wasm). This is a
+// freshness check, not a reproduction: both hashes come from the build that
+// is committed. CI's rust job rebuilds the engine when it changes and
+// compares the bytes with the committed build (.github/workflows/ci.yml).
 import { existsSync, readFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { ENGINE_RS, fileSha256, sourceHash, type BuildInfo } from "./wasm-source-hash";

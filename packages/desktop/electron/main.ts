@@ -3,6 +3,7 @@ import { fileURLToPath } from "node:url";
 import path from "node:path";
 import fs from "node:fs";
 import { randomBytes } from "node:crypto";
+import { DEV_CSP, PRODUCTION_CSP } from "./csp";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -786,12 +787,9 @@ ipcMain.on("window:fitDialogHeight", (event, height: unknown) => {
 
 function setupCSP() {
   session.defaultSession.webRequest.onHeadersReceived((details, callback) => {
-    const csp = VITE_DEV_SERVER_URL
-      ? // Dev: allow Vite HMR websocket & eval for fast-refresh
-        "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; connect-src 'self' ws://localhost:*; worker-src 'self' blob:; img-src 'self' data: blob:; font-src 'self' data:;"
-      : // Production: strict policy ('wasm-unsafe-eval' lets the engine's
-        // WebAssembly compile; it allows no JavaScript eval)
-        "default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; worker-src 'self'; img-src 'self' data: blob:; font-src 'self' data:;";
+    // The policies are in csp.ts (the production one is also written into
+    // the built index.html as a <meta> fallback by vite.config.ts).
+    const csp = VITE_DEV_SERVER_URL ? DEV_CSP : PRODUCTION_CSP;
     callback({
       responseHeaders: {
         ...details.responseHeaders,
@@ -1181,7 +1179,10 @@ function sendFileName(name: string | null) {
   win?.webContents.send("file:nameChanged", name);
 }
 
-/** Largest project file accepted (a real project is a few hundred kB). */
+/**
+ * Largest project file accepted (a real project is a few hundred kB). The
+ * renderer's file pickers have the same limit (src/features/project/file-limits.ts).
+ */
 const MAX_PROJECT_BYTES = 50 * 1024 * 1024;
 
 ipcMain.handle("file:openPath", async (event, filePath: string) => {

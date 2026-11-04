@@ -1072,6 +1072,7 @@ if (FEM_CASES.length && fs.existsSync(FEM_DATA)) {
   );
   y += 2;
   const rows: Cell[][] = [];
+  const disputed: string[] = [];
   let nFem = 0, nFemPass = 0;
   for (const c of FEM_CASES) {
     const p = byId.get(c.id);
@@ -1079,18 +1080,22 @@ if (FEM_CASES.length && fs.existsSync(FEM_DATA)) {
     const levels = p?.fem?.levels ?? [];
     c.fem!.references.forEach((ref, j) => {
       const pass = fos != null && femAgrees(ref, fos);
-      nFem++;
-      if (pass) nFemPass++;
+      // A disputed reference measures its source, not cSlope (fem-cases.ts): shown, not counted.
+      if (ref.disputed) disputed.push(`${c.id}: ${ref.disputed}`);
+      else {
+        nFem++;
+        if (pass) nFemPass++;
+      }
       const refText = ref.upper != null ? `${fmt(ref.value, 2)}–${fmt(ref.upper, 2)}` : fmt(ref.value, ref.value < 10 ? 3 : 2).replace(/0+$/, "").replace(/\.$/, ".0");
       const row: Cell[] = [
         j === 0 ? c.id : "",
-        `${ref.method}, ${PUBLIC && isProgramSource(ref.source) ? "another program's manual" : ref.source}`,
+        `${ref.method}, ${PUBLIC && isProgramSource(ref.source) ? "another program's manual" : ref.source}${ref.disputed ? " (disputed: see below)" : ""}`,
         refText,
         j === 0 ? (p?.fem?.flowRule ?? c.fem!.flowRule ?? "davis-b") : "",
         j === 0 ? levels.map((l) => `${l.elements}: ${fmt(l.fos)}`).join(", ") : "",
         fmt(fos ?? NaN),
       ];
-      if (!PUBLIC) row.push(fos == null ? "–" : pct(femDeviation(ref, fos) * 100), statusCell(pass));
+      if (!PUBLIC) row.push(fos == null ? "–" : pct(femDeviation(ref, fos) * 100), ref.disputed ? { text: "Disputed", color: PENDING, bold: true } : statusCell(pass));
       rows.push(row);
     });
   }
@@ -1117,7 +1122,11 @@ if (FEM_CASES.length && fs.existsSync(FEM_DATA)) {
     rows,
     7.2,
   );
-  console.log(`${nFemPass}/${nFem} finite element references within tolerance.`);
+  for (const d of disputed) {
+    y += 2;
+    paragraph(d, 8, "italic", MUTED);
+  }
+  console.log(`${nFemPass}/${nFem} finite element references within tolerance${disputed.length ? `, ${disputed.length} disputed and not counted` : ""}.`);
 }
 
 // Header and footer on every page but the cover.

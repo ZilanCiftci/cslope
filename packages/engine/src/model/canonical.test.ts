@@ -127,6 +127,7 @@ describe("canonical helpers", () => {
           cohesion: 5,
           frictionAngle: 30,
           normalForce: 0,
+          shearForce: 10.5,
           porePressure: 0,
           baseMaterial: new Material({ name: "M1", cohesion: 5 }),
         },

@@ -6,7 +6,8 @@
  * `notes`, never dropped in silence.
  */
 
-import type { AnalysisOptions, MaterialModel, Pile, Reinforcement, SlopeDefinition } from "@cslope/engine";
+import { calculatePolygonArea, getYAtXStrict, type AnalysisOptions, type MaterialModel, type Pile, type Reinforcement, type SlopeDefinition } from "@cslope/engine";
+import { surfaceYAtX } from "../../view/surface";
 import { regionInteriorPoint } from "../../../utils/regions";
 import type { GszBlockGrid, GszFile, GszMaterial, GszSlipResult, GszStability } from "./gsz-read";
 
@@ -141,14 +142,7 @@ export function stabilityAnalyses(file: GszFile) {
   return file.analyses.filter((a) => isStability(a.kind));
 }
 
-function polygonArea(p: Pt[]): number {
-  let a = 0;
-  for (let i = 0; i < p.length; i++) {
-    const [x1, y1] = p[i], [x2, y2] = p[(i + 1) % p.length];
-    a += x1 * y2 - x2 * y1;
-  }
-  return a / 2;
-}
+const polygonArea = (p: Pt[]): number => calculatePolygonArea(p.map((q) => q[0]), p.map((q) => q[1]));
 
 function onSegment(p: Pt, a: Pt, b: Pt, tol: number): boolean {
   const dx = b[0] - a[0], dy = b[1] - a[1];
@@ -161,25 +155,11 @@ function onSegment(p: Pt, a: Pt, b: Pt, tol: number): boolean {
 }
 
 /** The highest ground (outline) point above x, or null. */
-function groundAt(outline: Pt[], x: number): number | null {
-  let best: number | null = null;
-  for (let i = 0; i < outline.length; i++) {
-    const [x1, y1] = outline[i], [x2, y2] = outline[(i + 1) % outline.length];
-    if ((x < Math.min(x1, x2)) || (x > Math.max(x1, x2)) || x1 === x2) continue;
-    const y = y1 + ((x - x1) * (y2 - y1)) / (x2 - x1);
-    if (best === null || y > best) best = y;
-  }
-  return best;
-}
+const groundAt = surfaceYAtX;
 
-function lineYAt(line: Pt[], x: number): number | null {
-  for (let i = 0; i + 1 < line.length; i++) {
-    const [x1, y1] = line[i], [x2, y2] = line[i + 1];
-    if (x >= Math.min(x1, x2) && x <= Math.max(x1, x2)) {
-      return x1 === x2 ? Math.max(y1, y2) : y1 + ((x - x1) * (y2 - y1)) / (x2 - x1);
-    }
-  }
-  return null;
+/** A line's y at x inside its x-range: the first segment reaching x (the engine's rule). */
+function lineYAt(line: Pt[], x: number): number {
+  return getYAtXStrict([line.map((p) => p[0]), line.map((p) => p[1])], x);
 }
 
 /** The most soil regions (or layers) of an analysis that are imported. */
@@ -636,7 +616,7 @@ export function gszToDefinition(file: GszFile, analysisId: number, fileName = "g
         const u = cuts[i] + ((cuts[i + 1] - cuts[i]) * k) / n, v = cuts[i] + ((cuts[i + 1] - cuts[i]) * (k + 1)) / n;
         const xm = (u + v) / 2;
         const top = lineYAt(line, xm), g = groundAt(geo.outline, xm);
-        if (top === null || g === null || top <= g) continue;
+        if (g === null || top <= g) continue;
         const q = Number((gw * (top - g)).toFixed(3));
         const last = udls[udls.length - 1];
         if (last && Math.abs(last.x2 - u) < 1e-9 && last.magnitude === q && (last.direction === "normal") === normal) last.x2 = v;

@@ -1,4 +1,4 @@
-import { isPointInPolygon } from "@cslope/engine";
+import { calculatePolygonArea, getYAtXStrict, isPointInPolygon } from "@cslope/engine";
 import { surfaceYAtX } from "../features/view/surface";
 import type { Region } from "./regions";
 
@@ -31,27 +31,18 @@ function groundTopAt(model: Pt[], x: number): number {
   return surfaceYAtX(model, x) ?? Number.NaN;
 }
 
-/** Water level of a line at x, continued horizontally beyond its ends. */
+/**
+ * Water level of a line at x, continued horizontally beyond its ends;
+ * between them the engine's rule (the first segment reaching x).
+ */
 function lineYAt(line: Pt[], x: number): number {
   const pts = [...line].sort((a, b) => a[0] - b[0]);
   if (x <= pts[0][0]) return pts[0][1];
-  for (let i = 0; i < pts.length - 1; i++) {
-    const [ax, ay] = pts[i];
-    const [bx, by] = pts[i + 1];
-    if (x <= bx) return bx === ax ? by : ay + ((x - ax) / (bx - ax)) * (by - ay);
-  }
-  return pts[pts.length - 1][1];
+  if (x >= pts[pts.length - 1][0]) return pts[pts.length - 1][1];
+  return getYAtXStrict([pts.map((p) => p[0]), pts.map((p) => p[1])], x);
 }
 
-function polygonArea(poly: Pt[]): number {
-  let a = 0;
-  for (let i = 0; i < poly.length; i++) {
-    const [x0, y0] = poly[i];
-    const [x1, y1] = poly[(i + 1) % poly.length];
-    a += x0 * y1 - x1 * y0;
-  }
-  return Math.abs(a) / 2;
-}
+const polygonArea = (poly: Pt[]): number => calculatePolygonArea(poly.map((p) => p[0]), poly.map((p) => p[1]));
 
 /** A pond: its water surface and the ground under it, both left to right. */
 export interface Pond {

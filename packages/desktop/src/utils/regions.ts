@@ -11,7 +11,7 @@
  * from the first RegionAssignment whose point falls inside the region polygon.
  */
 
-import { polygonizeRegions, isPointInPolygon } from "@cslope/engine";
+import { calculatePolygonArea, polygonizeRegions, isPointInPolygon } from "@cslope/engine";
 import type { MaterialBoundaryRow, RegionMaterials } from "../store/app-store";
 
 export interface Region {
@@ -32,21 +32,6 @@ export function isClosedBoundary(coords: [number, number][]): boolean {
   const [x0, y0] = coords[0];
   const [xn, yn] = coords[coords.length - 1];
   return Math.abs(x0 - xn) < 1e-9 && Math.abs(y0 - yn) < 1e-9;
-}
-
-/** Twice the signed area of a closed polygon (positive → CCW). */
-function signedArea2(px: number[], py: number[]): number {
-  const n = px.length - 1; // closed: last = first
-  let sum = 0;
-  for (let i = 0; i < n; i++) {
-    sum += px[i] * py[i + 1] - px[i + 1] * py[i];
-  }
-  return sum;
-}
-
-/** Absolute area of a closed polygon. */
-function polyArea(px: number[], py: number[]): number {
-  return Math.abs(signedArea2(px, py)) / 2;
 }
 
 /** Ensure a coordinate array is closed. */
@@ -121,7 +106,7 @@ export function computeRegions(
   });
 
   // Sort so smaller regions come last (drawn on top, matched first in reverse)
-  regions.sort((a, b) => polyArea(b.px, b.py) - polyArea(a.px, a.py));
+  regions.sort((a, b) => calculatePolygonArea(b.px, b.py) - calculatePolygonArea(a.px, a.py));
   return regions;
 }
 

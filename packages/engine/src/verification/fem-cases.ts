@@ -31,6 +31,15 @@ export interface FemReference {
   kind: "theory" | "bounds" | "numerical";
   /** The value was printed to this step (e.g. 0.05); default: its last printed digit. */
   precision?: number;
+  /**
+   * Why the value is shown but left out of the agreement count and the
+   * error statistics: a value confirmed in the source that disagrees with
+   * the source's own other results for the same mechanism and with the
+   * limit analysis bounds, so it measures the source's mesh rather than
+   * cSlope (as `disputed` on a paper value, presentation.ts). The
+   * comparison is still run and shown.
+   */
+  disputed?: string;
 }
 
 export interface FemSetup {

@@ -247,6 +247,28 @@ describe("in the store", () => {
     expect(loaded.materials[0].model).toMatchObject({ pop: 10, yieldFromEarlierStage: true });
   });
 
+  it("drops unknown keys of the file from boundaries and the earlier stage, so none reaches the engine", () => {
+    loadImported();
+    store().saveCurrentModel();
+    const raw = JSON.parse(JSON.stringify(serializeProject(store())));
+    const m = raw.models[0];
+    m.materialBoundaries[0].planted = { deep: [1, 2, 3] };
+    m.earlierStage.planted = "x";
+    m.earlierStage.materials[0].planted = "y";
+    m.earlierStage.materials[0].color = "#abc";
+    // (the stage of a stage is never kept: one stage back only)
+    m.earlierStage.earlierStage = { coordinates: m.earlierStage.coordinates, materials: m.earlierStage.materials };
+    const file = parseProjectFile(JSON.stringify(raw));
+    const loaded = file.models.find((x) => x.id === m.id)!;
+    expect(loaded.materialBoundaries[0]).not.toHaveProperty("planted");
+    expect(loaded.earlierStage).not.toHaveProperty("planted");
+    expect(loaded.earlierStage).not.toHaveProperty("earlierStage");
+    expect(loaded.earlierStage!.materials[0]).toEqual({ ...definition().earlierStage!.materials[0], color: "#abc" });
+    expect(loaded.earlierStage!.waterTable).toEqual(definition().earlierStage!.waterTable);
+    store().loadProject(file);
+    expect(JSON.stringify(buildSlopeDTO(store()))).not.toContain("planted");
+  });
+
   it("cleans the earlier stage on load: assignments and loads of dropped materials, non-finite numbers", () => {
     loadImported();
     store().saveCurrentModel();

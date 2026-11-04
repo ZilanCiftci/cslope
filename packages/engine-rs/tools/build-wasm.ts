@@ -7,9 +7,15 @@
 // Each build is `cargo build -p cslope-wasm --target wasm32-unknown-unknown
 // --profile wasm-release [--features testing]`, then `wasm-bindgen --target
 // web --omit-default-module-path` into the output directory, plus
-// BUILD-INFO.json (wasm-source-hash.ts). Machine paths are remapped
-// (--remap-path-prefix) so that panic messages, and so the bytes, do not
-// depend on where the repository is checked out.
+// BUILD-INFO.json (wasm-source-hash.ts).
+//
+// The build is reproducible, and CI's rust job compares its own build with
+// the committed product build byte for byte: machine paths are remapped
+// (--remap-path-prefix), so that panic messages, and so the bytes, do not
+// depend on where the repository or the Cargo home is; the producers
+// section, which would record the CLI's own dependency versions, is left
+// out; and the wasm-bindgen CLI is built from its own lockfile (--locked)
+// on both sides, so that it transforms the engine the same way.
 //
 // Needs the toolchain of rust-toolchain.toml (with the wasm32 target) and
 // the wasm-bindgen CLI of the version in Cargo.lock:
@@ -97,7 +103,7 @@ function build(flavour: Flavour, wasmBindgen: string): BuildInfo {
   const out = OUT_DIR[flavour];
   rmSync(out, { recursive: true, force: true });
   mkdirSync(out, { recursive: true });
-  run("wasm-bindgen", [input, "--target", "web", "--omit-default-module-path", "--out-dir", out, "--out-name", "cslope_wasm"]);
+  run("wasm-bindgen", [input, "--target", "web", "--omit-default-module-path", "--remove-producers-section", "--out-dir", out, "--out-name", "cslope_wasm"]);
   addReset(out);
 
   const wasm = join(out, "cslope_wasm_bg.wasm");

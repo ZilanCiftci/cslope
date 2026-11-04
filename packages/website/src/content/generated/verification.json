@@ -4020,6 +4020,7 @@
      "value": 0.6,
      "method": "finite elements (read from fig. 7)",
      "source": "Griffiths & Lane (1999)",
+     "disputed": "Griffiths & Lane's 0.60 is read from fig. 7 on their mesh of 60 × 20 eight-node elements of 0.1H (fig. 8), one element across the inclined part of the weak layer, with failure as non-convergence in 1000 viscoplastic iterations. It disagrees with the paper's own Janbu wedge for the same mechanism (0.485) and with the limit analysis bounds, 0.488–0.498 (exact for φu = 0; cSlope's lower and upper bound programs on refined meshes): cSlope's strength reduction falls with the mesh, 0.64 on a uniform 0.2H mesh, 0.59 on 0.16H, 0.545 on 0.1H, 0.51 refined and 0.504 on a 0.5 m mesh, so the paper's value measures its mesh rather than cSlope. Not counted in the agreement or the error statistics.",
      "analysis": "Strength reduction (FE)",
      "computed": 0.5094
     }

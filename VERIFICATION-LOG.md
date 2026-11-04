@@ -80,11 +80,44 @@ The script compares the regenerated verification table with the committed one an
 | 2026-11-03 | Parallel evaluation of trial surfaces (searches as steps, evaluator pool); sequential path unchanged | 0 | 0.332 → 0.332 | 0.465 → 0.465 | 0.942 → 0.942 | 1.522 → 1.522 | 803 s (4 workers, load 1.3 at start) |
 | 2026-11-04 | Morgenstern-Price: a converged solution needs positive Fm and Ff and a gap below a capped tolerance | 0 | 0.332 → 0.332 | 0.465 → 0.465 | 0.942 → 0.942 | 1.522 → 1.522 | 2341 s (4 workers, load 13.9 at start) |
 | 2026-11-04 | Engine rewritten in Rust (WebAssembly); TypeScript engine removed | 0 | 0.332 → 0.332 | 0.465 → 0.465 | 0.942 → 0.942 | 1.522 → 1.522 | 575 s (4 workers, load 2.2 at start) |
+| 2026-11-04 | V056: Griffiths & Lane's coarse-mesh finite element value disputed, not counted; slice shear force reported by the engine | 0 | 0.332 → 0.332 | 0.465 → 0.465 | 0.942 → 0.942 | 1.522 → 1.522 | 554 s (4 workers, load 0.9 at start) |
 <!-- summary-end -->
 
 ## Entries
 
 <!-- entries -->
+
+### 2026-11-04: V056: Griffiths & Lane's coarse-mesh finite element value disputed, not counted; slice shear force reported by the engine
+
+Compared with b706da8. Errors are relative to the reference, in percent. Verification run time: 554 s (4 workers, load 0.9 at start).
+
+**Against other programs (midpoint of their range):** 0 moved (0 closer to the reference, 0 further).
+
+| Result | Reference | Before | After | Error before | Error after |
+|---|---|---|---|---|---|
+| **Mean error (n = 301)** | | | | -0.218 % | -0.218 % |
+| **Mean absolute error** | | | | 0.332 % | 0.332 % |
+| **RMS error** | | | | 0.465 % | 0.465 % |
+| **Largest error** | | | | 2.109 % | 2.109 % |
+
+**Against the papers:** 0 moved (0 closer to the reference, 0 further).
+
+| Result | Reference | Before | After | Error before | Error after |
+|---|---|---|---|---|---|
+| **Mean error (n = 123)** | | | | -0.160 % | -0.160 % |
+| **Mean absolute error** | | | | 0.942 % | 0.942 % |
+| **RMS error** | | | | 1.522 % | 1.522 % |
+| **Largest error** | | | | 6.591 % | 6.591 % |
+
+**Finite elements against their references (FE, finite differences, limit analysis, theory):** 0 moved (0 closer to the reference, 0 further).
+
+| Result | Reference | Before | After | Error before | Error after |
+|---|---|---|---|---|---|
+| **Mean error (n = 34)** | | | | -0.711 % | -0.288 % |
+| **Mean absolute error** | | | | 2.399 % | 2.026 % |
+| **RMS error** | | | | 3.712 % | 2.735 % |
+| **Largest error** | | | | 15.100 % | 6.325 % |
+
 
 ### 2026-11-04: Engine rewritten in Rust (WebAssembly); TypeScript engine removed
 

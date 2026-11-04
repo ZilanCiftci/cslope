@@ -17,10 +17,16 @@ export const PLOT_METRIC_META: Record<
   pullingForce: { label: "Pulling", unit: "kN" },
 };
 
-/** Shear strength along a slice base, c·l + max(N', 0)·tan φ (kN/m). */
+/**
+ * Shear strength along a slice base, c·l + max(N', 0)·tan φ (kN/m), as the
+ * engine reports it (SliceData.shearForce). A result saved by a version
+ * before the engine reported it has no field: then it is made up here the
+ * same way, so that old project files keep their slice table and plots.
+ */
 export function sliceShearStrength(
-  slice: Pick<SliceData, "cohesion" | "baseLength" | "normalForce" | "frictionAngle">,
+  slice: Pick<SliceData, "shearForce" | "cohesion" | "baseLength" | "normalForce" | "frictionAngle">,
 ): number {
+  if (Number.isFinite(slice.shearForce)) return slice.shearForce;
   return (
     slice.cohesion * slice.baseLength +
     Math.max(slice.normalForce, 0) * Math.tan((slice.frictionAngle * Math.PI) / 180)

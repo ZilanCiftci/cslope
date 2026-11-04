@@ -2,7 +2,6 @@ import { describe, expect, it } from "vitest";
 import { PAPER_FRAME_MARGIN_PX } from "../../constants";
 import {
   computePaperFrame,
-  surfaceYAtXFromCoordinates,
   collectModelFitBounds,
   extendBoundsWithResultFitExtras,
 } from "./helpers";
@@ -63,45 +62,6 @@ describe("computePaperFrame", () => {
         700 - PAPER_FRAME_MARGIN_PX + 1,
       );
     }
-  });
-});
-
-describe("surfaceYAtXFromCoordinates", () => {
-  const coords: [number, number][] = [
-    [0, 0],
-    [0, 10],
-    [10, 10],
-    [12.5, 7.5],
-    [15, 7.5],
-    [17.5, 10],
-    [25, 10],
-    [25, 0],
-  ];
-
-  it("returns Y on a flat segment", () => {
-    // Between (0,10) and (10,10): y = 10
-    expect(surfaceYAtXFromCoordinates(coords, 5)).toBeCloseTo(10, 5);
-  });
-
-  it("interpolates on a sloped segment", () => {
-    // Between (10,10) and (12.5,7.5): slope of -1
-    expect(surfaceYAtXFromCoordinates(coords, 11.25)).toBeCloseTo(8.75, 5);
-  });
-
-  it("returns exact value at a vertex", () => {
-    expect(surfaceYAtXFromCoordinates(coords, 12.5)).toBeCloseTo(7.5, 5);
-  });
-
-  it("returns null for empty coordinates", () => {
-    expect(surfaceYAtXFromCoordinates([], 5)).toBeNull();
-  });
-
-  it("returns null for X outside a simple segment", () => {
-    const line: [number, number][] = [
-      [5, 0],
-      [10, 5],
-    ];
-    expect(surfaceYAtXFromCoordinates(line, 3)).toBeNull();
   });
 });
 

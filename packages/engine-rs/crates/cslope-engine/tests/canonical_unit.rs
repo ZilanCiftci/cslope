@@ -51,7 +51,7 @@ fn mirrors_an_rtl_definition() {
 
 fn slice_json() -> Value {
     json!({ "x": 4, "xLeft": 3, "xRight": 5, "width": 2, "yTop": 10, "yBottom": 5, "height": 5, "area": 10, "alpha": 0.3,
-        "baseLength": 2.1, "weight": 100, "cohesion": 5, "frictionAngle": 30, "normalForce": 0, "porePressure": 0,
+        "baseLength": 2.1, "weight": 100, "cohesion": 5, "frictionAngle": 30, "normalForce": 0, "shearForce": 10.5, "porePressure": 0,
         "baseMaterial": { "name": "M1", "color": "", "model": { "kind": "mohr-coulomb", "unitWeight": 20, "cohesion": 5, "frictionAngle": 35 } } })
 }
 

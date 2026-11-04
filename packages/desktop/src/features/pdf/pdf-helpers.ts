@@ -124,9 +124,3 @@ export function mapFontStyle(
   if (italic) return "italic";
   return "normal";
 }
-
-/**
- * @deprecated Use `surfaceYAtX` from `features/view/surface` directly.
- * Re-exported here for backward-compatible imports in pdf-drawing.ts / tests.
- */
-export { surfaceYAtX } from "../view/surface";

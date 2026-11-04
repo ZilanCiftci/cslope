@@ -15,15 +15,41 @@ function u32(b: Uint8Array, o: number): number {
   return (b[o] | (b[o + 1] << 8) | (b[o + 2] << 16) | (b[o + 3] << 24)) >>> 0;
 }
 
-async function inflateRaw(data: Uint8Array): Promise<Uint8Array> {
+/** Thrown when an entry inflates to more than its header declares (the archive is damaged, or a bomb with a false size). */
+class OversizeError extends Error {}
+
+/**
+ * Inflate a deflate-raw stream, reading chunk by chunk and stopping as soon
+ * as the output passes `limit` bytes: a crafted stream can inflate to a
+ * thousand times its size, so the output is never collected unbounded.
+ */
+async function inflateRaw(data: Uint8Array, limit: number): Promise<Uint8Array> {
   const source = new ReadableStream<Uint8Array>({
     start(controller) {
       controller.enqueue(data);
       controller.close();
     },
   });
-  const stream = source.pipeThrough(new DecompressionStream("deflate-raw") as unknown as ReadableWritablePair<Uint8Array, Uint8Array>);
-  return new Uint8Array(await new Response(stream).arrayBuffer());
+  const reader = source.pipeThrough(new DecompressionStream("deflate-raw") as unknown as ReadableWritablePair<Uint8Array, Uint8Array>).getReader();
+  const chunks: Uint8Array[] = [];
+  let total = 0;
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    total += value.length;
+    if (total > limit) {
+      await reader.cancel().catch(() => {});
+      throw new OversizeError();
+    }
+    chunks.push(value);
+  }
+  const out = new Uint8Array(total);
+  let o = 0;
+  for (const c of chunks) {
+    out.set(c, o);
+    o += c.length;
+  }
+  return out;
 }
 
 /** Whether the bytes start like a ZIP archive. */
@@ -31,8 +57,27 @@ export function isZip(bytes: Uint8Array): boolean {
   return bytes.length >= 4 && u32(bytes, 0) === 0x04034b50;
 }
 
-/** The entries of a ZIP archive by name (directories left out); with `want`, only the entries it accepts are read. */
-export async function readZip(bytes: Uint8Array, want?: (name: string) => boolean): Promise<Map<string, Uint8Array>> {
+/** Limits on what an archive may unpack to (a real project archive is a few MB). */
+export interface ZipLimits {
+  /** Largest entry, uncompressed. */
+  entryBytes: number;
+  /** Largest total of the entries read, uncompressed. */
+  totalBytes: number;
+}
+
+/** The limits the importers use: 100 MB per entry, 200 MB in all. */
+export const ZIP_LIMITS: ZipLimits = { entryBytes: 100 * 1024 * 1024, totalBytes: 200 * 1024 * 1024 };
+
+const megabytes = (n: number) => `${Math.ceil(n / (1024 * 1024))} MB`;
+
+/**
+ * The entries of a ZIP archive by name (directories left out); with `want`,
+ * only the entries it accepts are read. The sizes the central directory
+ * declares are checked against `limits` before an entry is unpacked, and an
+ * entry that unpacks to more than it declares is refused as damaged, so an
+ * archive can never unpack to more than the limits allow.
+ */
+export async function readZip(bytes: Uint8Array, want?: (name: string) => boolean, limits: ZipLimits = ZIP_LIMITS): Promise<Map<string, Uint8Array>> {
   // end of central directory: the last signature within the trailing 64 kB comment window
   let eocd = -1;
   for (let i = bytes.length - 22; i >= Math.max(0, bytes.length - 22 - 0xffff); i--) {
@@ -45,11 +90,13 @@ export async function readZip(bytes: Uint8Array, want?: (name: string) => boolea
   const count = u16(bytes, eocd + 10);
   let p = u32(bytes, eocd + 16);
   const out = new Map<string, Uint8Array>();
+  let total = 0;
   for (let k = 0; k < count; k++) {
     if (p + 46 > bytes.length || u32(bytes, p) !== 0x02014b50) throw new Error("Damaged ZIP archive (central directory).");
     const flags = u16(bytes, p + 8);
     const method = u16(bytes, p + 10);
     const compressed = u32(bytes, p + 20);
+    const uncompressed = u32(bytes, p + 24);
     const nameLen = u16(bytes, p + 28);
     const extraLen = u16(bytes, p + 30);
     const commentLen = u16(bytes, p + 32);
@@ -58,15 +105,27 @@ export async function readZip(bytes: Uint8Array, want?: (name: string) => boolea
     p += 46 + nameLen + extraLen + commentLen;
     if (name.endsWith("/") || (want && !want(name))) continue;
     if (flags & 1) throw new Error(`Encrypted ZIP entry: ${name}`);
+    // The declared sizes, before anything is unpacked.
+    if (uncompressed > limits.entryBytes) {
+      throw new Error(`The ZIP entry ${name} is too large to import (${megabytes(uncompressed)} unpacked; at most ${megabytes(limits.entryBytes)}).`);
+    }
+    total += uncompressed;
+    if (total > limits.totalBytes) {
+      throw new Error(`The ZIP archive is too large to import (its entries unpack to more than ${megabytes(limits.totalBytes)}).`);
+    }
     if (u32(bytes, local) !== 0x04034b50) throw new Error("Damaged ZIP archive (local header).");
     const start = local + 30 + u16(bytes, local + 26) + u16(bytes, local + 28);
     if (start + compressed > bytes.length) throw new Error(`Damaged ZIP archive (${name} is cut off).`);
     const data = bytes.subarray(start, start + compressed);
-    if (method === 0) out.set(name, data.slice());
-    else if (method === 8) {
+    if (method === 0) {
+      if (compressed > uncompressed) throw new Error(`Damaged ZIP archive (${name} is larger than its header says).`);
+      out.set(name, data.slice());
+    } else if (method === 8) {
       try {
-        out.set(name, await inflateRaw(data));
-      } catch {
+        // (what the stream really unpacks is bounded by the declared size)
+        out.set(name, await inflateRaw(data, uncompressed));
+      } catch (e) {
+        if (e instanceof OversizeError) throw new Error(`Damaged ZIP archive (${name} is larger than its header says).`);
         throw new Error(`Damaged ZIP archive (${name} cannot be decompressed).`);
       }
     } else throw new Error(`Unsupported ZIP compression (method ${method}) for ${name}`);

@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
 const mocks = vi.hoisted(() => ({ downloadFile: vi.fn() }));
@@ -174,6 +174,23 @@ describe("FileMenu in a browser", () => {
     await userEvent.click(screen.getByTitle("Export"));
     await userEvent.click(screen.getByTitle("Export the active model as a .gsz project file"));
     expect(await summaryText()).toMatch(/^Prepared "Section B" as Section B\.gsz for download/);
+  });
+
+  it("refuses an import file above the size limit without reading it", async () => {
+    const pickers = capturePickers();
+    renderMenu();
+    await userEvent.click(screen.getByTitle("Import"));
+    await userEvent.click(screen.getByTitle("Import a .gsz project file"));
+    const file = new File([""], "Huge.gsz");
+    Object.defineProperty(file, "size", { value: 51 * 1024 * 1024 });
+    const read = vi.spyOn(FileReader.prototype, "readAsArrayBuffer");
+    Object.defineProperty(pickers.at(-1)!, "files", { value: [file], configurable: true });
+    act(() => {
+      pickers.at(-1)!.onchange?.(new Event("change"));
+    });
+    expect(await summaryText()).toBe("Huge.gsz is too large (51 MB; files of at most 50 MB can be read).");
+    expect(screen.getByRole("dialog")).toHaveTextContent("Import of Huge.gsz failed");
+    expect(read).not.toHaveBeenCalled();
   });
 
   it("imports a .stix file from Import › .stix file and exports the model as one", async () => {

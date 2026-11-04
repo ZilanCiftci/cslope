@@ -27,10 +27,8 @@ import {
   VIEW_SCALE_MAX,
   VIEW_SCALE_MIN,
 } from "../features/canvas/constants";
-import {
-  collectModelFitBounds,
-  surfaceYAtXFromCoordinates,
-} from "../features/canvas/helpers";
+import { collectModelFitBounds } from "../features/canvas/helpers";
+import { surfaceYAtX as surfaceY } from "../features/view/surface";
 import { ContextMenuOverlay } from "../features/canvas/ContextMenuOverlay";
 import { MaterialPickerMenu } from "../features/canvas/MaterialPickerMenu";
 import { AxisOverlay } from "../features/canvas/AxisOverlay";
@@ -132,7 +130,7 @@ export function EditCanvas() {
   const editingLoads = mode === "edit" && activeSection === "Loads";
 
   const surfaceYAtX = useCallback(
-    (x: number): number | null => surfaceYAtXFromCoordinates(coordinates, x),
+    (x: number): number | null => surfaceY(coordinates, x),
     [coordinates],
   );
 

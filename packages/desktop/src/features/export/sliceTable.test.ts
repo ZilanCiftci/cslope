@@ -13,7 +13,8 @@ const result = {
     {
       x: 2, xLeft: 1, xRight: 3, width: 2, yTop: 5, yBottom: 3, height: 2, area: 4,
       alpha: Math.PI / 6, baseLength: 2.31, weight: 76, surfaceLoad: 10, cohesion: 5,
-      frictionAngle: 30, normalForce: 50, porePressure: 0, baseMaterial: { name: "Clay, soft" },
+      frictionAngle: 30, normalForce: 50, shearForce: 5 * 2.31 + 50 * Math.tan(Math.PI / 6), porePressure: 0,
+      baseMaterial: { name: "Clay, soft" },
     },
   ],
 } as unknown as AnalysisResult;
@@ -30,6 +31,13 @@ describe("slice table export", () => {
     expect(slice[9]).toBeCloseTo(30, 6); // α in degrees
     expect(slice[13]).toBe("Clay, soft");
     // c·l + N'·tan φ
+    expect(slice[18]).toBeCloseTo(5 * 2.31 + 50 * Math.tan(Math.PI / 6), 3);
+  });
+
+  it("makes up the shear force of a result saved before the engine reported it", () => {
+    const slices = result.criticalSlices.map((s) => ({ ...s, shearForce: undefined }));
+    const rows = buildSliceTable({ ...result, criticalSlices: slices } as unknown as AnalysisResult, { modelName: "M" });
+    const slice = rows[rows.findIndex((r) => r[0] === "Slice") + 1];
     expect(slice[18]).toBeCloseTo(5 * 2.31 + 50 * Math.tan(Math.PI / 6), 3);
   });
 

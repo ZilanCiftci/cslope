@@ -137,9 +137,25 @@ describe("ZIP", () => {
     const d = await readZip(await deflatedZip("m.xml", XML));
     expect(new TextDecoder().decode(d.get("m.xml"))).toBe(XML);
   });
+
+  it("refuses entries above the limits before unpacking them", async () => {
+    const z = writeZip([{ name: "a.xml", data: "x".repeat(12) }, { name: "b.xml", data: "y".repeat(8) }]);
+    await expect(readZip(z, undefined, { entryBytes: 10, totalBytes: 100 })).rejects.toThrow(/a\.xml is too large to import \(1 MB unpacked; at most 1 MB\)/);
+    await expect(readZip(z, undefined, { entryBytes: 20, totalBytes: 15 })).rejects.toThrow(/archive is too large to import \(its entries unpack to more than 1 MB\)/);
+    // the limits count only the entries wanted
+    expect((await readZip(z, (n) => n === "b.xml", { entryBytes: 20, totalBytes: 15 })).size).toBe(1);
+    expect((await readZip(z, undefined, { entryBytes: 20, totalBytes: 20 })).size).toBe(2);
+  });
 });
 
 describe(".gsz import", () => {
+  it("refuses a model XML with a document type declaration", async () => {
+    const doctype = XML.replace("<GSIData", '<!DOCTYPE GSIData [<!ENTITY a "aaaaaaaaaa"><!ENTITY b "&a;&a;&a;&a;&a;&a;&a;&a;&a;&a;">]>\n<GSIData');
+    expect(() => parseGszXml(doctype)).toThrow(/DOCTYPE declaration, which a \.gsz file never has/);
+    expect(() => parseGszXml(XML.replace("<GSIData", "<!doctype GSIData>\n<GSIData"))).toThrow(/DOCTYPE/);
+    await expect(readGsz(writeZip([{ name: "m.xml", data: doctype }]))).rejects.toThrow(/DOCTYPE/);
+  });
+
   it("reads the analyses, regions, materials, water, loads and search", () => {
     const f = parseGszXml(XML);
     expect(f.units).toBe("metric");

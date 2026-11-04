@@ -80,8 +80,8 @@ function data(over: Partial<PdfExportData> = {}): PdfExportData {
       criticalSurface: CS,
       allSurfaces: [CS, { ...CS, cy: 16, radius: Math.hypot(7, 11), fos: 2 }],
       criticalSlices: [
-        { x: 12, xLeft: 11, xRight: 13, baseLength: 2, weight: 50, cohesion: 12, frictionAngle: 0, normalForce: 40, porePressure: 0 },
-        { x: 14, xLeft: 13, xRight: 15, baseLength: 2, weight: 60, cohesion: 12, frictionAngle: 0, normalForce: 50, porePressure: 0 },
+        { x: 12, xLeft: 11, xRight: 13, baseLength: 2, weight: 50, cohesion: 12, frictionAngle: 0, normalForce: 40, shearForce: 24, porePressure: 0 },
+        { x: 14, xLeft: 13, xRight: 15, baseLength: 2, weight: 60, cohesion: 12, frictionAngle: 0, normalForce: 50, shearForce: 24, porePressure: 0 },
       ] as PdfExportData["result"]["criticalSlices"],
       method: "Bishop",
       elapsedMs: 1,

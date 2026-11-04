@@ -654,7 +654,7 @@ pub struct Serial;                                         // default; wasm
 - Repository growth is about 1–1.5 MB compressed per engine change. During the port the wasm is committed only at phase milestones. Revisit with LFS if growth becomes a problem.
 - CI keeps the committed build honest:
   - **Freshness check.** It needs no Rust and runs in the `check` job: `bun packages/engine-rs/tools/check-wasm-fresh.ts` recomputes `sourceHash` and fails if it differs from `BUILD-INFO.json` ("the engine sources changed; run `bun run build:wasm` and commit `packages/engine/src/wasm`").
-  - **Reproducibility.** The `wasm` job rebuilds on Linux and compares bytes with the committed file. On a mismatch it uploads its build as an artifact to commit instead. The Linux CI build is canonical.
+  - **Reproducibility.** The `rust` job rebuilds on Linux and compares bytes with the committed build (the wasm, the glue and `BUILD-INFO.json`). On a mismatch it fails and uploads its build as an artifact to look at or commit instead. The build is reproducible: `tools/build-wasm.ts` remaps machine paths, leaves the producers section out, and the wasm-bindgen CLI is installed `--locked` on both sides.
 
 ### 8.4 CI jobs (`.github/workflows/ci.yml`)
 

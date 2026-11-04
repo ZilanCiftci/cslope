@@ -12,7 +12,7 @@ import {
   DEFAULT_PROJECT_INFO,
   DEFAULT_RESULT_VIEW_SETTINGS,
 } from "../../store/defaults";
-import { surfaceYAtXFromCoordinates } from "./helpers";
+import { surfaceYAtX } from "../view/surface";
 import { POINT_COLOR, POINT_COLOR_HOVER, POINT_COLOR_SELECTED, POINT_RADIUS, RULER_SIZE_PX } from "./constants";
 import {
   ENTRY_DOT_COLOR,
@@ -91,7 +91,7 @@ function baseParams(over: Partial<DrawCanvasParams> = {}): DrawCanvasParams {
     interiorBoundariesDialogOpen: false,
     worldToCanvas,
     canvasToWorld,
-    surfaceYAtX: (x) => surfaceYAtXFromCoordinates(coordinates, x),
+    surfaceYAtX: (x) => surfaceYAtX(coordinates, x),
     editingExterior: false,
     editingBoundaries: false,
     editingPiezo: false,
@@ -147,6 +147,7 @@ function slice(xLeft: number, xRight: number, extra: Partial<SliceData> = {}): S
     cohesion: 12,
     frictionAngle: 0,
     normalForce: 80,
+    shearForce: 12 * (xRight - xLeft),
     porePressure: 0,
     baseMaterial: {} as unknown as SliceData["baseMaterial"],
     ...extra,
@@ -529,7 +530,7 @@ describe("drawCanvas — edit mode", () => {
     const exit = ends.find((e) => e[0] > 10)!;
     expect(entry[0]).toBeCloseTo(15 - Math.sqrt(84), 6);
     expect(entry[1]).toBeCloseTo(10, 6);
-    expect(exit[1]).toBeCloseTo(surfaceYAtXFromCoordinates(COORDS, exit[0])!, 6);
+    expect(exit[1]).toBeCloseTo(surfaceYAtX(COORDS, exit[0])!, 6);
     expect(exit[0]).toBeGreaterThan(19);
     expect(exit[0]).toBeLessThan(20);
     expect(dashed.some((p) => hasPoints(p, [toC(5, 10), toC(15, 3), toC(25, 5)]))).toBe(true);
@@ -927,7 +928,7 @@ describe("drawCanvas — edit mode", () => {
     expect(heads.length).toBeGreaterThanOrEqual(4);
     for (const head of heads) {
       const [tx, ty] = canvasToWorld(...pathPoints(head)[0], W, H);
-      expect(ty).toBeCloseTo(surfaceYAtXFromCoordinates(COORDS, tx)!, 6); // tip on the ground
+      expect(ty).toBeCloseTo(surfaceYAtX(COORDS, tx)!, 6); // tip on the ground
     }
     // Shafts: at most 20 px, within the 40 px deep water over the flat toe.
     const shafts = rec
@@ -1026,7 +1027,7 @@ describe("drawCanvas — edit mode", () => {
     ];
     const rec = draw({
       coordinates: stepped,
-      surfaceYAtX: (x) => surfaceYAtXFromCoordinates(stepped, x),
+      surfaceYAtX: (x) => surfaceYAtX(stepped, x),
       analysisLimits: { enabled: true, entryLeftX: 2, entryRightX: 18, exitLeftX: 2, exitRightX: 18 },
     });
     const dots = rec
@@ -1143,7 +1144,7 @@ describe("drawCanvas — result mode", () => {
     const massArea = (coords: [number, number][], cs: SlipSurfaceResult) => {
       const rec = drawResult({
         coordinates: coords,
-        surfaceYAtX: (x) => surfaceYAtXFromCoordinates(coords, x),
+        surfaceYAtX: (x) => surfaceYAtX(coords, x),
         result: result({ criticalSurface: cs, allSurfaces: [cs] }),
       });
       const pts = pathPoints(rec.fills().find((p) => p.state.globalAlpha === 0.12)!);
@@ -1253,7 +1254,7 @@ describe("drawCanvas — result mode", () => {
     for (const t of tris) {
       for (const [px, py] of pathPoints(t)) {
         const [wx] = canvasToWorld(px, py, W, H);
-        const gy = toC(wx, surfaceYAtXFromCoordinates(COORDS, wx)!)[1];
+        const gy = toC(wx, surfaceYAtX(COORDS, wx)!)[1];
         expect(py).toBeLessThan(gy); // above the ground
       }
     }
@@ -1286,7 +1287,7 @@ describe("drawCanvas — result mode", () => {
     const cs = surface({ points: [[16, 10], [10, 2], [4, 4]], entryPoint: [16, 10], exitPoint: [4, 4] });
     const rec = drawResult({
       coordinates: stepped,
-      surfaceYAtX: (x) => surfaceYAtXFromCoordinates(stepped, x),
+      surfaceYAtX: (x) => surfaceYAtX(stepped, x),
       result: result({ criticalSurface: cs, allSurfaces: [cs] }),
     });
     const pts = pathPoints(rec.fills().find((p) => p.state.globalAlpha === 0.12)!).map(([x, y]) =>

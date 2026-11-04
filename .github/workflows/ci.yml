@@ -30,10 +30,10 @@ jobs:
       engine: ${{ steps.filter.outputs.engine }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
       - name: Filter
         id: filter
-        uses: dorny/paths-filter@v3
+        uses: dorny/paths-filter@0e4a8c6effa4802afeda77dc8d303f8176d7dfad # v3.0.4
         with:
           filters: |
             engine:
@@ -47,15 +47,24 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
       - name: Setup Bun
-        uses: oven-sh/setup-bun@v2
+        uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
         with:
           bun-version-file: package.json
       - name: Install
         run: bun install --frozen-lockfile
+      # A high or critical advisory on a production dependency fails the
+      # job. The root package.json's audit script ignores the advisories
+      # reviewed as not reachable: jsPDF's HTML and annotation paths and
+      # DOMPurify (the app only saves PDFs it draws itself), and React
+      # Router's server runtime (the site is pre-rendered and static). The
+      # weekly verification-full workflow audits the Rust crates too.
+      - name: Audit dependencies
+        run: bun run audit
       # The committed WebAssembly engine was built from the Rust sources as
-      # they are (BUILD-INFO.json; no Rust needed).
+      # they are (BUILD-INFO.json; no Rust needed). The rust job reproduces
+      # it byte for byte when the engine changes.
       - name: Engine build is fresh
         run: bun packages/engine-rs/tools/check-wasm-fresh.ts
       - name: Typecheck
@@ -81,9 +90,9 @@ jobs:
       CSLOPE_QUICK_TESTS: "1"
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
       - name: Setup Bun
-        uses: oven-sh/setup-bun@v2
+        uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
         with:
           bun-version-file: package.json
       - name: Install
@@ -92,11 +101,11 @@ jobs:
         working-directory: packages/engine-rs
         run: rustup toolchain install
       - name: Cache Rust
-        uses: Swatinem/rust-cache@v2
+        uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
         with:
           workspaces: packages/engine-rs
       - name: Install wasm-bindgen
-        uses: taiki-e/install-action@v2
+        uses: taiki-e/install-action@b80e2bb2635f28eb98b9fce1e2f0887e1535c6b2 # v2.90.0
         with:
           tool: wasm-bindgen-cli@0.2.130
       - name: Build the testing engine
@@ -108,9 +117,9 @@ jobs:
     runs-on: ${{ (github.event_name == 'push' && github.ref != 'refs/heads/main') && 'ubuntu-latest' || 'windows-latest' }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
       - name: Setup Bun
-        uses: oven-sh/setup-bun@v2
+        uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
         with:
           bun-version-file: package.json
       - name: Install
@@ -127,9 +136,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
       - name: Setup Bun
-        uses: oven-sh/setup-bun@v2
+        uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
         with:
           bun-version-file: package.json
       - name: Install
@@ -139,14 +148,19 @@ jobs:
         working-directory: packages/engine-rs
         run: rustup toolchain install
       - name: Cache Rust
-        uses: Swatinem/rust-cache@v2
+        uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
         with:
           workspaces: packages/engine-rs
-      # The version in Cargo.lock; build-wasm.ts fails if they differ
+      # The CLI of the version in Cargo.lock (build-wasm.ts fails if they
+      # differ), built from its own lockfile like the developer's (--locked),
+      # so that it transforms the engine exactly as the developer's did and
+      # the bytes can be compared; rust-cache keeps the binary between runs.
       - name: Install wasm-bindgen
-        uses: taiki-e/install-action@v2
+        run: cargo install wasm-bindgen-cli --version 0.2.130 --locked
+      - name: Install cargo-audit
+        uses: taiki-e/install-action@b80e2bb2635f28eb98b9fce1e2f0887e1535c6b2 # v2.90.0
         with:
-          tool: wasm-bindgen-cli@0.2.130
+          tool: cargo-audit
       - name: Format
         working-directory: packages/engine-rs
         run: cargo fmt --check
@@ -160,12 +174,34 @@ jobs:
       - name: Test
         working-directory: packages/engine-rs
         run: cargo test --release --all-features
+      # Crates with a RustSec advisory fail the job (the weekly
+      # verification-full workflow runs this too).
+      - name: Audit crates
+        working-directory: packages/engine-rs
+        run: cargo audit
       - name: Build WebAssembly
         run: bun packages/engine-rs/tools/build-wasm.ts product
-      # The wasm bytes may differ by a few bytes between machines (symbol
-      # hashes), so only the generated glue is compared.
-      - name: Committed glue matches the build
-        run: git diff --exit-code -- packages/engine/src/wasm/cslope_wasm.js packages/engine/src/wasm/cslope_wasm.d.ts packages/engine/src/wasm/cslope_wasm_bg.wasm.d.ts
+      # The committed build (the wasm, the glue and BUILD-INFO.json) is
+      # reproduced byte for byte: the build remaps machine paths, leaves the
+      # producers section out, and the same wasm-bindgen CLI runs on both
+      # sides (tools/build-wasm.ts). A difference fails the job and uploads
+      # this build, to compare or to commit.
+      - name: Committed build matches the rebuild
+        id: compare
+        run: git diff --exit-code --stat -- packages/engine/src/wasm
+      - name: Show the difference
+        if: failure() && steps.compare.outcome == 'failure'
+        run: |
+          git show HEAD:packages/engine/src/wasm/cslope_wasm_bg.wasm > committed.wasm
+          echo "$(cmp -l packages/engine/src/wasm/cslope_wasm_bg.wasm committed.wasm | wc -l) bytes differ; the first:"
+          cmp -l packages/engine/src/wasm/cslope_wasm_bg.wasm committed.wasm | head -20
+          git diff -- packages/engine/src/wasm/BUILD-INFO.json
+      - name: Upload the rebuild
+        if: failure() && steps.compare.outcome == 'failure'
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: engine-wasm-rebuild
+          path: packages/engine/src/wasm
       # The size budget of the product build (ARCHITECTURE.md §3.5)
       - name: Size budget
         run: test "$(stat -c %s packages/engine/src/wasm/cslope_wasm_bg.wasm)" -le 4194304

@@ -152,6 +152,7 @@ const slice = (xLeft: number, xRight: number, extra: Partial<SliceData> = {}) =>
     cohesion: 10,
     frictionAngle: 0,
     normalForce: 40,
+    shearForce: 10 * (xRight - xLeft),
     porePressure: 0,
     ...extra,
   }) as SliceData;

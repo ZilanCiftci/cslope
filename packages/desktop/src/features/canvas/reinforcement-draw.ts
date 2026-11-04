@@ -1,4 +1,4 @@
-import type { ReinforcementForce } from "@cslope/engine";
+import { isPointInPolygon, type ReinforcementForce } from "@cslope/engine";
 import type { AnalysisLimitsState, PileRow, ReinforcementRow } from "../../store/types";
 import {
   pointSegmentDistance,
@@ -299,13 +299,7 @@ export interface ForceLabelContext {
 
 /** Whether (x, y) lies inside a polygon (even-odd rule). */
 function pointInPolygon(x: number, y: number, poly: readonly Pt[]): boolean {
-  let inside = false;
-  for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) {
-    const [xi, yi] = poly[i];
-    const [xj, yj] = poly[j];
-    if (yi > y !== yj > y && x < ((xj - xi) * (y - yi)) / (yj - yi) + xi) inside = !inside;
-  }
-  return inside;
+  return isPointInPolygon(x, y, poly.map((p) => p[0]), poly.map((p) => p[1]));
 }
 
 /**

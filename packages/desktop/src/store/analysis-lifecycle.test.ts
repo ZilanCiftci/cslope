@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { useAppStore } from "./app-store";
 import { INITIAL_MODEL } from "./slices/modelsSlice";
+import { stopIdleWorkers } from "./analysis-workers";
 
 type FakeMsg = MessageEvent<{ type: string; result?: unknown }>;
 
@@ -66,6 +67,7 @@ describe("analysis run lifecycle", () => {
 
   afterEach(() => {
     useAppStore.getState().cancelAnalysis();
+    stopIdleWorkers();
     Object.defineProperty(globalThis, "Worker", {
       configurable: true,
       writable: true,

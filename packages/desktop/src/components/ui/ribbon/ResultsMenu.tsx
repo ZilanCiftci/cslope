@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useAppStore } from "../../../store/app-store";
 import { normalizeResultView } from "../../../store/persistence";
+import { fileTooLarge } from "../../../features/project/file-limits";
 import { DraftNumberInput } from "../DraftNumberInput";
 import { isElectron } from "../../../utils/is-electron";
 import {
@@ -446,6 +447,11 @@ export function ResultsMenu({ isOpen, onActivate, panelHost }: Props) {
                   input.onchange = () => {
                     const file = input.files?.[0];
                     if (!file) return;
+                    const tooLarge = fileTooLarge(file);
+                    if (tooLarge) {
+                      alert(tooLarge);
+                      return;
+                    }
                     const reader = new FileReader();
                     reader.onload = () => {
                       try {

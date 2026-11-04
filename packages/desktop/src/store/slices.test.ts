@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import { useAppStore } from "./app-store";
 import { INITIAL_MODEL } from "./slices/modelsSlice";
+import { stopIdleWorkers } from "./analysis-workers";
 import type { ModelEntry } from "./types";
 
 function clone<T>(value: T): T {
@@ -230,6 +231,7 @@ describe("store slices", () => {
       expect(firstModel?.result).toBe(resultFirst);
       expect(secondModel?.result).toBe(resultSecond);
     } finally {
+      stopIdleWorkers();
       if (originalWorker === undefined) {
         delete (globalThis as { Worker?: unknown }).Worker;
       } else {

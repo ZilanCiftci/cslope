@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { AnalysisResult } from "@cslope/engine";
 import { useAppStore } from "./app-store";
 import { executeReliability } from "./slices/analysisSlice";
+import { stopIdleWorkers } from "./analysis-workers";
 import { ANALYSIS_TIMEOUT_MS } from "../constants";
 
 type Data = { type: string; result?: unknown; progress?: number; error?: string };
@@ -71,6 +72,7 @@ beforeEach(() => {
 
 afterEach(() => {
   store().cancelAnalysis();
+  stopIdleWorkers();
   vi.useRealTimers();
   vi.unstubAllGlobals();
   Object.defineProperty(globalThis, "Worker", {
@@ -97,7 +99,8 @@ describe("single run", () => {
     expect(store().progress).toBe(1);
     expect(store().result).toEqual(result(1.4));
     expect(entry(store().activeModelId).runState).not.toBe("running");
-    expect(w.terminated).toBe(true);
+    // (kept, with the engine loaded, for the next run)
+    expect(w.terminated).toBe(false);
   });
 
   it("advances a simulated progress bar up to 95 % and stops it when done", async () => {
@@ -349,8 +352,17 @@ describe("Run All", () => {
     expect(store().runState).toBe("running");
     expect(FakeWorker.instances).toHaveLength(2);
     expect(entry(a).runState).toBe("running");
+    // The models' progress is shown together, on the next tick.
     FakeWorker.instances[1].emit({ type: "analysis-progress", progress: 0.4 });
+    vi.advanceTimersByTime(120);
     expect(entry(b).progress).toBe(0.4);
+    expect(entry(a).progress).toBeGreaterThan(0.08);
+    // ...and never goes back.
+    FakeWorker.instances[1].emit({ type: "analysis-progress", progress: 0.3 });
+    vi.advanceTimersByTime(120);
+    expect(entry(b).progress).toBe(0.4);
+    vi.advanceTimersByTime(120);
+    expect(entry(b).progress).toBeGreaterThan(0.4);
     FakeWorker.instances[0].complete(1.1);
     FakeWorker.instances[1].complete(2.2);
     await run;
@@ -430,14 +442,48 @@ describe("Run All", () => {
     const run = store().runAllAnalyses();
     await flush();
     expect(FakeWorker.instances).toHaveLength(1);
-    FakeWorker.instances[0].complete(1);
+    const [w] = FakeWorker.instances;
+    w.complete(1);
     await flush();
-    expect(FakeWorker.instances).toHaveLength(2);
-    FakeWorker.instances[1].complete(2);
+    // The same worker, kept with the engine loaded, takes the next model.
+    expect(FakeWorker.instances).toHaveLength(1);
+    expect(w.posted).toHaveLength(2);
+    w.complete(2);
     await flush();
-    FakeWorker.instances[2].complete(3);
+    expect(w.posted).toHaveLength(3);
+    w.complete(3);
     await run;
     expect(store().models.map((m) => m.runState)).toEqual(["done", "done", "done"]);
+    expect(store().models.map((m) => m.result)).toEqual([result(1), result(2), result(3)]);
+  });
+
+  it("analyses the longest expected first; the list and its results keep their order", async () => {
+    vi.stubGlobal("navigator", { ...navigator, hardwareConcurrency: 1 });
+    const { a, b } = twoModels();
+    store().addModel("C");
+    const c = store().activeModelId;
+    store().setOptions({ iterations: 5000 });
+    store().switchModel(b);
+    store().setCustomPlanesOnly(true);
+    store().switchModel(a);
+    const run = store().runAllAnalyses();
+    await flush();
+    const [w] = FakeWorker.instances;
+    const posted = () => (w.posted as { options: { iterations: number } }[]).at(-1)!;
+    const runningIds = () => store().models.filter((m) => m.runState === "running").map((m) => m.id);
+    // C's big search first, then A and B (equal but for B's custom surface alone, last).
+    expect(posted().options.iterations).toBe(5000);
+    expect(runningIds()).toEqual([c]);
+    w.complete(3);
+    await flush();
+    expect(runningIds()).toEqual([a]);
+    w.complete(1);
+    await flush();
+    expect(runningIds()).toEqual([b]);
+    w.complete(2);
+    await run;
+    expect(store().models.map((m) => m.id)).toEqual([a, b, c]);
+    expect(store().models.map((m) => m.result)).toEqual([result(1), result(2), result(3)]);
   });
 
   it("falls back to four parallel runs when the core count is unknown", async () => {
@@ -450,9 +496,13 @@ describe("Run All", () => {
     expect(FakeWorker.instances).toHaveLength(4);
     for (const w of FakeWorker.instances) w.complete(1);
     await flush();
-    expect(FakeWorker.instances).toHaveLength(5);
-    FakeWorker.instances[4].complete(1);
+    // (the fifth model on one of the four, kept idle)
+    expect(FakeWorker.instances).toHaveLength(4);
+    const reused = FakeWorker.instances.filter((w) => w.posted.length === 2);
+    expect(reused).toHaveLength(1);
+    reused[0].complete(1);
     await run;
+    expect(store().models.map((m) => m.runState)).toEqual(["done", "done", "done", "done", "done"]);
   });
 
   it("drops the result of a background model edited while it ran", async () => {

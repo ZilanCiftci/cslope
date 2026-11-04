@@ -45,6 +45,51 @@ const MAX_SLICE_ARC: f64 = (2.0 * PI) / 180.0;
 /// Most segments of the arc under a slice (create_slice).
 const MAX_ARC_SEGMENTS: usize = 32;
 
+/// The base of a slice of a circle (not a port: an experiment switch, see
+/// PORTING.md "Slice base of a circle"). `Arc` is the engine's: the arc
+/// length, α at the middle of the arc and the weight of the soil above the
+/// arc. `Chord` is the conventional straight chord between the slice's
+/// edges, as most limit equilibrium programs discretise a circle: the
+/// chord's length and inclination (the same α: a chord is parallel to the
+/// tangent at the middle of its arc) and the weight of the polygon above the
+/// chord, with the base point (pore pressure, strength) at the chord's
+/// middle. `ChordEven` is the chord without the steep ends of the circle
+/// cut into narrower slices (get_slices), i.e. the nominal slices only.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum SliceBase {
+    Arc,
+    Chord,
+    ChordEven,
+}
+
+thread_local! {
+    static SLICE_BASE_OVERRIDE: std::cell::Cell<Option<SliceBase>> = const { std::cell::Cell::new(None) };
+}
+
+/// The slice base of a circle in force: the override of `with_slice_base`
+/// on this thread, else the environment variable `CSLOPE_SLICE_BASE`
+/// (`chord`, `chord-even`; read once; absent in WebAssembly), else `Arc`.
+pub fn slice_base() -> SliceBase {
+    if let Some(b) = SLICE_BASE_OVERRIDE.with(|c| c.get()) {
+        return b;
+    }
+    static FROM_ENV: std::sync::OnceLock<SliceBase> = std::sync::OnceLock::new();
+    *FROM_ENV.get_or_init(|| match std::env::var("CSLOPE_SLICE_BASE").as_deref() {
+        Ok("chord") => SliceBase::Chord,
+        Ok("chord-even") => SliceBase::ChordEven,
+        _ => SliceBase::Arc,
+    })
+}
+
+/// Runs `f` with the slices of circles built on `base` on this thread (a
+/// serial analysis; the evaluator's worker threads read the environment).
+pub fn with_slice_base<T>(base: SliceBase, f: impl FnOnce() -> T) -> T {
+    let before = SLICE_BASE_OVERRIDE.with(|c| c.replace(Some(base)));
+    let out = f();
+    SLICE_BASE_OVERRIDE.with(|c| c.set(before));
+    out
+}
+
 // ── Clipping buffers ──────────────────────────────────────────────
 // A slice clips every material polygon by the vertical strip, then by
 // each slip-surface edge (two on a straight base, more along an arc).
@@ -311,7 +356,11 @@ pub fn create_slice(
         Some(f) => f(x1),
         None => get_circle_y_coordinate_at_x(cx, cy, radius, x1),
     };
-    let y_bottom = if base.is_some() {
+    // A straight base: a non-circular surface, or a circle under the chord
+    // experiment switch (SliceBase::Chord: the chord's middle is the base
+    // point, its inclination α and its length the base's).
+    let straight = base.is_some() || slice_base() != SliceBase::Arc;
+    let y_bottom = if straight {
         (y0_bottom + y1_bottom) / 2.0
     } else {
         get_circle_y_coordinate_at_x(cx, cy, radius, x)
@@ -331,9 +380,9 @@ pub fn create_slice(
     // is the slice's base as the circle has it.
     let theta =
         |xx: f64| js::math::asin(js::math::max(-1.0, js::math::min(1.0, (xx - cx) / radius)));
-    let th0 = if base.is_some() { 0.0 } else { theta(x0) };
-    let th1 = if base.is_some() { 0.0 } else { theta(x1) };
-    let alpha = if base.is_some() {
+    let th0 = if straight { 0.0 } else { theta(x0) };
+    let th1 = if straight { 0.0 } else { theta(x1) };
+    let alpha = if straight {
         js::math::atan((y0_bottom - y1_bottom) / width)
     } else {
         -(th0 + th1) / 2.0
@@ -359,7 +408,7 @@ pub fn create_slice(
     // moment on an undrained clay with a steep crest, partly offset by the
     // weight under one arc node. With the steep ends cut (get_slices), the
     // error against 4000 slices is 0.013 % on average, 0.16 % at most.)
-    let base_length = if base.is_some() {
+    let base_length = if straight {
         width / js::math::cos(alpha)
     } else {
         radius * (th1 - th0).abs()
@@ -380,7 +429,7 @@ pub fn create_slice(
     // number of segments up to 32), so that the weight is that under the
     // arc. One node is always the base point (x, yBottom): the base material
     // is looked up just above it, and a chord there would lie above the arc.
-    let arc_segments = if base.is_some() {
+    let arc_segments = if straight {
         2.0
     } else {
         js::math::min(
@@ -1379,7 +1428,7 @@ pub fn get_slices(
     // (2026-11) this took the largest error from 0.87 % (V068, a vertical
     // tangent at the crest) to 0.16 %, with 3 % more slices; 65 or 80
     // even slices left 0.53 % and 0.35 %.
-    if poly.is_none() {
+    if poly.is_none() && slice_base() != SliceBase::ChordEven {
         let max_arc = js::math::max(MAX_SLICE_ARC, (2.0 * b) / radius);
         let theta =
             |x: f64| js::math::asin(js::math::max(-1.0, js::math::min(1.0, (x - cx) / radius)));

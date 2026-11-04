@@ -222,8 +222,8 @@ function normalizeModelEntry(raw: unknown): ModelEntry {
           .map((boundary) => {
           const boundaryRecord = boundary as Record<string, unknown>;
           const boundaryCoordinates = normalizePoints(boundaryRecord.coordinates);
+          // (named fields only: unknown keys of the file are dropped)
           return {
-            ...boundaryRecord,
             id:
               typeof boundaryRecord.id === "string"
                 ? boundaryRecord.id
@@ -393,15 +393,26 @@ function normalizeEarlierStage(raw: unknown): Pick<ModelEntry, "earlierStage"> {
   if (!Array.isArray(d.coordinates) || !Array.isArray(d.materials)) return {};
   // only an outline and valid materials reach the analysis
   const coordinates = normalizePoints(d.coordinates);
-  const materials = (d.materials as unknown[]).flatMap((m) => {
-    const q = m as { name?: unknown; model?: unknown } | null;
+  const materials = (d.materials as unknown[]).flatMap((m): StageDefinition["materials"] => {
+    const q = m as Record<string, unknown> | null;
     if (!q || typeof q.name !== "string" || !q.model || typeof q.model !== "object" || typeof (q.model as { kind?: unknown }).kind !== "string") return [];
     const model = sanitizeMaterialModel(q.model as MaterialModel);
-    return validateMaterialModel(model).length === 0 ? [{ ...q, name: q.name, model }] : [];
+    if (validateMaterialModel(model).length !== 0) return [];
+    // Named fields only: unknown keys of the file are dropped.
+    const kept: StageDefinition["materials"][number] = { name: q.name, model };
+    if (typeof q.color === "string") kept.color = q.color;
+    if (typeof q.waterTableId === "string") kept.waterTableId = q.waterTableId;
+    const depthRange = pointOrUndefined(q.depthRange);
+    if (depthRange) kept.depthRange = depthRange;
+    return [kept];
   });
   if (coordinates.length < 3 || materials.length === 0) return {};
-  const stage: Record<string, unknown> = { ...d, coordinates, materials };
-  delete stage.earlierStage; // one stage back only
+  // The stage's other fields, by name (unknown keys of the file are dropped;
+  // its own earlier stage too: one stage back only).
+  const stage: Record<string, unknown> = { coordinates, materials };
+  for (const key of Object.keys(STAGE_FIELDS) as (keyof typeof STAGE_FIELDS)[]) {
+    if (d[key] !== undefined) stage[key] = d[key];
+  }
   if (stage.materialBoundaries !== undefined) {
     stage.materialBoundaries = Array.isArray(stage.materialBoundaries)
       ? (stage.materialBoundaries as { coordinates?: unknown; materialName?: unknown }[]).map((b) => ({ coordinates: normalizePoints(b?.coordinates), materialName: typeof b?.materialName === "string" && materials.some((m) => m.name === b.materialName) ? b.materialName : "" })).filter((b) => b.coordinates.length >= 2)
@@ -442,6 +453,31 @@ function normalizeEarlierStage(raw: unknown): Pick<ModelEntry, "earlierStage"> {
 }
 
 type StageDefinition = NonNullable<ModelEntry["earlierStage"]>;
+
+/**
+ * The fields of an earlier stage besides its outline and materials: every
+ * field of an engine definition (a new field of the definition must be
+ * added here, or the stage loses it on load).
+ */
+const STAGE_FIELDS: Record<Exclude<keyof StageDefinition, "coordinates" | "materials">, true> = {
+  orientation: true,
+  waterTable: true,
+  waterTables: true,
+  udls: true,
+  lineLoads: true,
+  rapidDrawdown: true,
+  waternet: true,
+  reinforcements: true,
+  piles: true,
+  materialBoundaries: true,
+  topRegionMaterialName: true,
+  regionAssignments: true,
+  analysisLimits: true,
+  customSearchPlanes: true,
+  customSurfaces: true,
+  customPlanesOnly: true,
+  blockSearchObjects: true,
+};
 
 /** An earlier stage's water table (an engine definition's) with finite numbers, or undefined. */
 function normalizeStageWaterTable(raw: unknown): StageDefinition["waterTable"] {

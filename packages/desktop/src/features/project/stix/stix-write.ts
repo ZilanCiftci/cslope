@@ -18,6 +18,7 @@ import type { ModelEntry } from "../../../store/types";
 import { computeRegions } from "../../../utils/regions";
 import { holeFreeRegions, ringArea2, sharedRings } from "../../../utils/region-rings";
 import { writeZip } from "../../../utils/zip";
+import { surfaceYAtX } from "../../view/surface";
 
 type Pt = [number, number];
 type Json = Record<string, unknown>;
@@ -117,15 +118,9 @@ function soilJson(id: string, name: string, model: MaterialModel, notes: string[
   };
 }
 
-/** The ground (top of the outline) at x. */
+/** The ground (top of the outline) at x; beside the outline, its highest point. */
 function groundAt(outline: Pt[], x: number): number {
-  let top = -Infinity;
-  for (let i = 0; i < outline.length; i++) {
-    const a = outline[i], b = outline[(i + 1) % outline.length];
-    if ((a[0] - x) * (b[0] - x) > 0 || a[0] === b[0]) continue;
-    top = Math.max(top, a[1] + ((x - a[0]) / (b[0] - a[0])) * (b[1] - a[1]));
-  }
-  return Number.isFinite(top) ? top : Math.max(...outline.map((p) => p[1]));
+  return surfaceYAtX(outline, x) ?? Math.max(...outline.map((p) => p[1]));
 }
 
 /** A stage's documents (geometry, soil layers, water, state, loads, reinforcement) for a slope definition. */

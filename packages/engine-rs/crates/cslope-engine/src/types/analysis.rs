@@ -544,6 +544,15 @@ pub struct SliceData {
     /// Effective base normal force N′ = N − u·l (kN) from the method's equilibrium at the FOS (solvedEffectiveNormals).
     #[serde(deserialize_with = "crate::types::json::num")]
     pub normal_force: f64,
+    /// Shear force the base can resist, c·l + max(N′, 0)·tan φ (kN): no
+    /// friction from a negative effective normal (see the
+    /// negative-effective-normal warning). NaN in a result saved before the
+    /// field existed.
+    #[serde(
+        default = "crate::types::json::nan",
+        deserialize_with = "crate::types::json::num"
+    )]
+    pub shear_force: f64,
     /// Pore water pressure at the base (kPa): negative above the water line
     /// in a material with φb (the matric suction, see Slice.suction), else
     /// ≥ 0.

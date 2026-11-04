@@ -11,6 +11,7 @@
 
 import { waternetPorePressure, type AnalysisOptions, type MaterialModel, type SlopeDefinition } from "@cslope/engine";
 import { regionInteriorPoint } from "../../../utils/regions";
+import { surfaceYAtX } from "../../view/surface";
 import { MAX_REGIONS, regionsToGeometry } from "../gsz/gsz-to-definition";
 import { num, pts, type Pt, type StixCalculation, type StixFile, type StixStage } from "./stix-read";
 
@@ -291,12 +292,8 @@ function stagePart(file: StixFile, st: StixStage, notes: string[], inherited?: M
     return p[1] > hp ? ga : gb;
   };
   const svAt = (p: Pt): number => {
-    const top = Math.max(...geo.outline.flatMap((a, i) => {
-      const b = geo.outline[(i + 1) % geo.outline.length];
-      if ((a[0] - p[0]) * (b[0] - p[0]) > 0 || a[0] === b[0]) return [];
-      return [a[1] + ((p[0] - a[0]) / (b[0] - a[0])) * (b[1] - a[1])];
-    }));
-    if (!(top > p[1])) return 0;
+    const top = surfaceYAtX(geo.outline, p[0]);
+    if (top === null || !(top > p[1])) return 0;
     const n = 400, dz = (top - p[1]) / n;
     let sv = 0;
     for (let k = 0; k < n; k++) sv += gammaAt([p[0], p[1] + (k + 0.5) * dz]) * dz;

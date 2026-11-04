@@ -16,7 +16,7 @@ import {
   threadsPerRun,
 } from "./analysis-workers";
 
-type Data = { type: string; result?: unknown; port?: unknown; evaluators?: unknown[] };
+type Data = { type: string; result?: unknown; error?: string; port?: unknown; evaluators?: unknown[] };
 
 class FakeWorker {
   static instances: FakeWorker[] = [];
@@ -141,11 +141,26 @@ describe("evaluator workers", () => {
     expect([coordinator, e1, e2].map((w) => w.terminated)).toEqual([true, true, true]);
   });
 
-  it("a run with one thread starts a fresh worker and stops it, as before", async () => {
+  it("a run with one thread keeps its worker for the next run too", async () => {
     const run = executeModelAnalysis(model(), undefined, 1);
     const [w] = FakeWorker.instances;
     w.complete(1.2);
     await run.promise;
+    expect(w.terminated).toBe(false);
+    expect(idleWorkerCount()).toBe(1);
+    const second = executeModelAnalysis(model(), undefined, 1);
+    expect(FakeWorker.instances).toHaveLength(1);
+    expect(w.posted.map((m) => m.type)).toEqual(["run-analysis", "run-analysis"]);
+    w.complete(1.3);
+    expect((await second.promise).minFOS).toBe(1.3);
+    expect(idleWorkerCount()).toBe(1);
+  });
+
+  it("a failed run's worker is stopped, not kept", async () => {
+    const run = executeModelAnalysis(model(), undefined, 1);
+    const [w] = FakeWorker.instances;
+    w.onmessage?.({ data: { type: "analysis-error", error: "no surfaces" } } as MessageEvent<Data>);
+    await expect(run.promise).rejects.toThrow("no surfaces");
     expect(w.terminated).toBe(true);
     expect(idleWorkerCount()).toBe(0);
   });
@@ -190,5 +205,28 @@ describe("evaluator workers", () => {
     coordinators.forEach((c, i) => c.complete(1 + i));
     await run;
     expect(store().models.map((m) => m.runState)).toEqual(["done", "done"]);
+    expect(idleWorkerCount()).toBe(4);
+  });
+
+  it("Run All of more models than cores runs on one worker per core, each reused for the queue", async () => {
+    setAnalysisThreads(null);
+    vi.stubGlobal("navigator", { ...navigator, hardwareConcurrency: 2 });
+    for (const name of ["B", "C", "D", "E"]) store().addModel(name);
+    const run = store().runAllAnalyses();
+    await flush();
+    expect(FakeWorker.instances).toHaveLength(2);
+    for (let i = 0; i < 3; i++) {
+      const busy = FakeWorker.instances.filter((w) => w.onmessage !== null);
+      expect(busy.length).toBeGreaterThan(0);
+      busy[0].complete(1);
+      await flush();
+    }
+    expect(FakeWorker.instances).toHaveLength(2);
+    for (const w of FakeWorker.instances) if (w.onmessage) w.complete(1);
+    await run;
+    expect(store().models.map((m) => m.runState)).toEqual(["done", "done", "done", "done", "done"]);
+    expect(FakeWorker.instances.flatMap((w) => w.posted).filter((m) => m.type === "run-analysis")).toHaveLength(5);
+    expect(idleWorkerCount()).toBe(2);
+    expect(FakeWorker.instances.map((w) => w.terminated)).toEqual([false, false]);
   });
 });

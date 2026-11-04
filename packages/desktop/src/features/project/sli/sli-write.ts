@@ -24,6 +24,7 @@ import type { ModelEntry } from "../../../store/types";
 import { computeRegions } from "../../../utils/regions";
 import { sharedRings } from "../../../utils/region-rings";
 import { writeZip } from "../../../utils/zip";
+import { surfaceYAtX } from "../../view/surface";
 
 type Pt = [number, number];
 
@@ -333,11 +334,7 @@ export function modelToSli(model: ModelEntry): { text: string; notes: string[] }
   }
 
   // the ground: the top of the outline from its left end to its right end
-  const topAt = (x: number) => Math.max(...outline.flatMap((a, i) => {
-    const b = outline[(i + 1) % outline.length];
-    if ((a[0] - x) * (b[0] - x) > 0 || a[0] === b[0]) return [];
-    return [a[1] + ((x - a[0]) / (b[0] - a[0])) * (b[1] - a[1])];
-  }));
+  const topAt = (x: number) => surfaceYAtX(outline, x) ?? -Infinity;
   // (the outline counter-clockwise: its top runs from the top of the right side to the top of the left side)
   const ccw = area2(outlineRing.map(at)) > 0 ? outlineRing : [...outlineRing].reverse();
   const topOfSide = (x: number) => ccw.reduce((best, id, i) => (at(id)[0] === x && (best < 0 || at(id)[1] > at(ccw[best])[1]) ? i : best), -1);

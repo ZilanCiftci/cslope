@@ -389,6 +389,10 @@ describe("startup", () => {
     const csp = headers["Content-Security-Policy"][0] as string;
     expect(csp).toContain("script-src 'self' 'wasm-unsafe-eval';");
     expect(csp).not.toContain("'unsafe-eval'");
+    // No plugins, no <base>, no form submission, no framing.
+    for (const directive of ["object-src 'none'", "base-uri 'none'", "form-action 'none'", "frame-ancestors 'none'"]) {
+      expect(csp).toContain(`${directive};`);
+    }
   });
 
   it("allows the Vite HMR socket and eval only in development", async () => {

@@ -80,7 +80,10 @@ types, data and docs and calls the engine), and the steps below apply to
    the engine's tests. Commit the product build (`src/wasm`: the `.wasm`,
    the glue, `BUILD-INFO.json`): the app ships it, CI's check job and the
    release check that it is fresh (`tools/check-wasm-fresh.ts`), and CI's
-   rust job rebuilds it and compares the bytes.
+   rust job rebuilds it and compares the bytes. The build is reproducible
+   (`tools/build-wasm.ts`: machine paths remapped, no producers section,
+   the wasm-bindgen CLI installed `--locked` on both sides); a build that
+   differs fails that job and is uploaded as an artifact to look at.
 6. (Until the cutover, `test-manifest.json` recorded how each test file
    ran on the facade; all 102 ran unchanged, none was rust-ported, and it
    was removed at the cutover.)
@@ -328,6 +331,34 @@ porters. Each names where it lives.
   TypeScript's NaN-aware `!(x > 0)` and `x >= a && x <= b`); tests/common
   allows `clippy::disallowed_methods` for its tolerance helper.
 
+- **Slice base of a circle** (model/slices.rs `SliceBase`, `slice_base`,
+  `with_slice_base`; not a port: an experiment switch, 2026-11-04). The
+  engine's base of a slice of a circle is the arc (the arc length, α at
+  the middle of the arc, the weight of the soil above the arc, the steep
+  ends of the circle cut into narrower slices; CHANGELOG 2026-11-02). The
+  environment variable `CSLOPE_SLICE_BASE=chord` makes it the
+  conventional straight chord between the slice's edges, as the other
+  programs discretise a circle (the chord's length and inclination, the
+  weight of the polygon above the chord, the base point at the chord's
+  middle for the pore pressure and the strength); `chord-even` also
+  leaves the steep ends uncut (the nominal slices only). It is read once
+  per process; absent in WebAssembly (no environment), so the app always
+  analyses on the arc; `with_slice_base` overrides it on one thread for a
+  test (tests/slice_base_unit.rs). The moment arm of the weight stays
+  W·dx (the other programs take W·R·sin α of the chord, +0.03–0.1 % on F
+  at 30 slices). Measured on the verification (tests/verification_native
+  checks, `cargo run --release --example run_check -- --all`): against
+  the programs' values the mean absolute error is 0.333 % on the arc,
+  0.316 % on the chord and 0.307 % on the chord without the end cut
+  (RMS 0.464 → 0.445 → 0.438 %); against the papers 0.485 → 0.480 →
+  0.505 %. Against the converged value (500 slices) on 38 .gsz example
+  surfaces the arc is within 0.03 % on average at 30 slices, the chord
+  +0.11 % and the chord without the end cut +0.17 %, which is where the
+  programs' own values sit (+0.16 %); with `chord-even` and the files'
+  slice counts cSlope reproduces the files' slice weights, base angles
+  and base lengths exactly and their F within 0.1 %. The arc stays the
+  default: it converges from the first slice count, and the chord only
+  reproduces the other programs' discretisation error.
 - **jsts replacement (geometry).** `model/geometry_ops/jts/` ports exactly
   the jsts 2.12.1 code paths `geometry-ops.ts` reaches, not a general
   geometry library and not the `geo` crate: the order of faces, their start

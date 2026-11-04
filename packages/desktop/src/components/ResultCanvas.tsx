@@ -33,8 +33,8 @@ import {
   computePaperFrame,
   extendBoundsWithFosLabelFitPadding,
   extendBoundsWithResultFitExtras,
-  surfaceYAtXFromCoordinates,
 } from "../features/canvas/helpers";
+import { surfaceYAtX as surfaceY } from "../features/view/surface";
 import { ContextMenuOverlay } from "../features/canvas/ContextMenuOverlay";
 import { AxisOverlay } from "../features/canvas/AxisOverlay";
 import { setPaperDrawSource } from "../features/export/paper-png";
@@ -141,7 +141,7 @@ export function ResultCanvas() {
   const editingLoads = false;
 
   const surfaceYAtX = useCallback(
-    (x: number): number | null => surfaceYAtXFromCoordinates(coordinates, x),
+    (x: number): number | null => surfaceY(coordinates, x),
     [coordinates],
   );
 

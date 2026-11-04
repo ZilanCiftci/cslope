@@ -223,6 +223,27 @@ describe("ResultsMenu", () => {
     await waitFor(() => expect(alert).toHaveBeenCalledWith("Invalid template file."));
   });
 
+  it("refuses a template file above the size limit without reading it", async () => {
+    const alert = vi.spyOn(window, "alert").mockImplementation(() => {});
+    const pickers: HTMLInputElement[] = [];
+    vi.spyOn(HTMLInputElement.prototype, "click").mockImplementation(function (
+      this: HTMLInputElement,
+    ) {
+      pickers.push(this);
+    });
+    renderMenu();
+    await userEvent.click(screen.getByTitle("Import template"));
+    const file = new File(["{}"], "t.json", { type: "application/json" });
+    Object.defineProperty(file, "size", { value: 60 * 1024 * 1024 });
+    Object.defineProperty(pickers.at(-1)!, "files", { value: [file], configurable: true });
+    const read = vi.spyOn(FileReader.prototype, "readAsText");
+    act(() => {
+      pickers.at(-1)!.onchange?.(new Event("change"));
+    });
+    expect(alert).toHaveBeenCalledWith("t.json is too large (60 MB; files of at most 50 MB can be read).");
+    expect(read).not.toHaveBeenCalled();
+  });
+
   it("exports a PDF with the locked view as bounds", async () => {
     act(() =>
       store().setResultViewSettings({

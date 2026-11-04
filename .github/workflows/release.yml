@@ -25,9 +25,9 @@ jobs:
       VERCEL_DEPLOY_HOOK: ${{ secrets.VERCEL_DEPLOY_HOOK }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
       - name: Setup Bun
-        uses: oven-sh/setup-bun@v2
+        uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
         with:
           bun-version-file: package.json
       - name: Install
@@ -38,13 +38,17 @@ jobs:
         run: bun packages/engine-rs/tools/check-wasm-fresh.ts
       - name: Check the tag against the app version
         shell: pwsh
+        # (the tag reaches the script through the environment, never as part
+        # of its source)
+        env:
+          TAG: ${{ github.ref_name }}
         run: |
           # Stop at the first failing command, as bash does.
           $ErrorActionPreference = "Stop"
           $PSNativeCommandUseErrorActionPreference = $true
           $version = (Get-Content packages/desktop/package.json | ConvertFrom-Json).version
-          if ("v$version" -ne "${{ github.ref_name }}") {
-            throw "Tag ${{ github.ref_name }} does not match the app version $version"
+          if ("v$version" -ne $env:TAG) {
+            throw "Tag $env:TAG does not match the app version $version"
           }
       - name: Set up Azure Trusted Signing
         # sign.cjs signs with signtool and Microsoft's signing dlib, which
@@ -90,13 +94,15 @@ jobs:
           AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
           AZURE_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
         # The app bundle must not carry other programs' names (the
-        # verification data, which cites them, is not part of it). Bash
-        # stops at the first failing command; pwsh would carry on.
+        # verification data, which cites them, is not part of it) nor the
+        # developer's local project data. Bash stops at the first failing
+        # command; pwsh would carry on.
         shell: bash
         run: |
           bunx tsc -b
           bunx vite build
           bun ../website/scripts/check-names.ts dist dist-electron
+          bun scripts/check-local-data.ts dist dist-electron
           bunx electron-builder --win --publish never
       - name: Check the signature
         shell: pwsh
@@ -127,7 +133,7 @@ jobs:
         # forbidden-names guard, so a name stops the release here.
         run: bun scripts/verification-report.ts ../../cSlope-verification-report.pdf --public
       - name: Publish the release
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65 # v2.6.2
         with:
           name: cSlope ${{ github.ref_name }}
           body_path: release-notes.md

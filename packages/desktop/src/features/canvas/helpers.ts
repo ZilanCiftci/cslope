@@ -573,19 +573,6 @@ type LineLoadLike = {
   x: number;
 };
 
-import { surfaceYAtX as _surfaceYAtX } from "../view/surface";
-
-/**
- * @deprecated Use `surfaceYAtX` from `features/view/surface` directly.
- * Kept as a thin re-export for backward compatibility with existing call sites.
- */
-export function surfaceYAtXFromCoordinates(
-  coordinates: Coord[],
-  x: number,
-): number | null {
-  return _surfaceYAtX(coordinates, x);
-}
-
 export function collectModelFitBounds(params: {
   coordinates: Coord[];
   materialBoundaries: CoordinatesHolder[];

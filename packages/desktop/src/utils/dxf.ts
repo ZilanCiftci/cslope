@@ -10,6 +10,8 @@
  * blocks are not read (they are counted so the user can be told).
  */
 
+import { calculatePolygonArea } from "@cslope/engine";
+
 export type Pt = [number, number];
 
 export interface DxfPolyline {
@@ -223,15 +225,7 @@ export interface DxfGeometry {
 
 const WATER_LAYER = /water|piezo|(^|[^a-z])gw([^a-z]|$)|grundvatten|vatten|(^|[^a-z])wt([^a-z]|$)/i;
 
-function polygonArea(points: Pt[]): number {
-  let a = 0;
-  for (let i = 0; i < points.length; i++) {
-    const [x1, y1] = points[i];
-    const [x2, y2] = points[(i + 1) % points.length];
-    a += x1 * y2 - x2 * y1;
-  }
-  return Math.abs(a) / 2;
-}
+const polygonArea = (points: Pt[]): number => calculatePolygonArea(points.map((p) => p[0]), points.map((p) => p[1]));
 
 /** Model geometry from a parsed drawing (see the module comment). */
 export function dxfToGeometry(drawing: DxfDrawing): DxfGeometry {

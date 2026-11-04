@@ -572,6 +572,95 @@ describe("import robustness: large files", () => {
   });
 });
 
+describe("import robustness: zip bombs", () => {
+  /** A ZIP archive with the compression methods and declared sizes given (what a crafted archive can claim). */
+  function rawZip(entries: { name: string; data: Uint8Array; method: number; uncompressed: number }[]): Uint8Array {
+    const parts: Uint8Array[] = [];
+    const central: Uint8Array[] = [];
+    let offset = 0;
+    for (const e of entries) {
+      const name = enc.encode(e.name);
+      const local = new Uint8Array(30 + name.length);
+      const lv = new DataView(local.buffer);
+      lv.setUint32(0, 0x04034b50, true);
+      lv.setUint16(4, 20, true);
+      lv.setUint16(8, e.method, true);
+      lv.setUint32(18, e.data.length, true);
+      lv.setUint32(22, e.uncompressed, true);
+      lv.setUint16(26, name.length, true);
+      local.set(name, 30);
+      const cen = new Uint8Array(46 + name.length);
+      const cv = new DataView(cen.buffer);
+      cv.setUint32(0, 0x02014b50, true);
+      cv.setUint16(4, 20, true);
+      cv.setUint16(6, 20, true);
+      cv.setUint16(10, e.method, true);
+      cv.setUint32(20, e.data.length, true);
+      cv.setUint32(24, e.uncompressed, true);
+      cv.setUint16(28, name.length, true);
+      cv.setUint32(42, offset, true);
+      cen.set(name, 46);
+      parts.push(local, e.data);
+      central.push(cen);
+      offset += local.length + e.data.length;
+    }
+    const end = new Uint8Array(22);
+    const ev = new DataView(end.buffer);
+    ev.setUint32(0, 0x06054b50, true);
+    ev.setUint16(8, entries.length, true);
+    ev.setUint16(10, entries.length, true);
+    ev.setUint32(12, central.reduce((n, c) => n + c.length, 0), true);
+    ev.setUint32(16, offset, true);
+    const all = [...parts, ...central, end];
+    const out = new Uint8Array(all.reduce((n, a) => n + a.length, 0));
+    let o = 0;
+    for (const a of all) {
+      out.set(a, o);
+      o += a.length;
+    }
+    return out;
+  }
+
+  async function deflated(data: Uint8Array): Promise<Uint8Array> {
+    const source = new ReadableStream<Uint8Array>({
+      start(c) {
+        c.enqueue(data);
+        c.close();
+      },
+    });
+    return new Uint8Array(await new Response(source.pipeThrough(new CompressionStream("deflate-raw") as unknown as ReadableWritablePair<Uint8Array, Uint8Array>)).arrayBuffer());
+  }
+
+  const MB = 1024 * 1024;
+  const names = { gsz: "m.xml", stix: "soils.json", sli: "m.sli" } as const;
+
+  it("refuses entries and archives that claim to unpack above the limits, and streams that unpack past their declared size", async () => {
+    // 4 MB of zeros deflate to a few kB (the ratio of a bomb)
+    const zeros = new Uint8Array(4 * MB);
+    const comp = await deflated(zeros);
+    expect(comp.length).toBeLessThan(16 * 1024);
+    for (const kind of ["gsz", "stix", "sli"] as const) {
+      const name = names[kind];
+      const cases: [string, Uint8Array][] = [
+        ["entry claims 4 GB", rawZip([{ name, data: comp, method: 8, uncompressed: 0xffffffff }])],
+        ["entry claims 101 MB", rawZip([{ name, data: comp, method: 8, uncompressed: 101 * MB }])],
+        ["three entries claim 70 MB each", rawZip([1, 2, 3].map((i) => ({ name: `${i}/${name}`, data: comp, method: 8, uncompressed: 70 * MB })))],
+        ["entry claims 100 bytes but unpacks to 4 MB", rawZip([{ name, data: comp, method: 8, uncompressed: 100 }])],
+        ["stored entry claims fewer bytes than it holds", rawZip([{ name, data: zeros.subarray(0, 1000), method: 0, uncompressed: 10 }])],
+        ["entry unpacks to the 4 MB it declares", rawZip([{ name, data: comp, method: 8, uncompressed: zeros.length }])],
+      ];
+      expect(await run(kind, cases)).toBe("");
+    }
+    await expect(gszImports(rawZip([{ name: "m.xml", data: comp, method: 8, uncompressed: 0xffffffff }]), "x.gsz")).rejects.toThrow(
+      /m\.xml is too large to import \(4096 MB unpacked; at most 100 MB\)/,
+    );
+    await expect(stixImports(rawZip([{ name: "soils.json", data: comp, method: 8, uncompressed: 100 }]), "x.stix")).rejects.toThrow(/soils\.json is larger than its header says/);
+    await expect(sliImports(rawZip([1, 2, 3].map((i) => ({ name: `${i}.slsc`, data: comp, method: 8, uncompressed: 70 * MB }))), "x.slmd")).rejects.toThrow(
+      /entries unpack to more than 200 MB/,
+    );
+  });
+});
+
 describe("import robustness: one bad analysis among good ones", () => {
   it(".slmd: a scenario without cells is named, the others import", async () => {
     const good = sliText();

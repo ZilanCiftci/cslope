@@ -22,6 +22,10 @@ describe("runAnalysis", () => {
     expect(r.criticalSlices.length).toBeGreaterThan(0);
     expect(r.criticalResistingMoment).toBeCloseTo(r.criticalPushingMoment! * r.minFOS, 6);
     expect(r.elapsedMs).toBeGreaterThanOrEqual(0);
+    // The shear force of each base, as the app's slice table shows it.
+    for (const s of r.criticalSlices) {
+      expect(s.shearForce).toBeCloseTo(s.cohesion * s.baseLength + Math.max(s.normalForce, 0) * Math.tan((s.frictionAngle * Math.PI) / 180), 9);
+    }
   });
 
   it("reports progress after each batch", () => {

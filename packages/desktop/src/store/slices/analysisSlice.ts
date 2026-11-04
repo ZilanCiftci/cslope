@@ -20,7 +20,6 @@ import {
   acquireWorkers,
   analysisThreads,
   coreCount,
-  createAnalysisWorker,
   discardWorkers,
   releaseWorkers,
   threadsPerRun,
@@ -60,7 +59,7 @@ function analysisTimeoutMs(options: AnalysisOptions): number {
 }
 
 /**
- * Spawn a Web Worker to run a single model analysis, with `threads − 1`
+ * Run a single model analysis in a Web Worker, with `threads − 1`
  * evaluator workers for its trial surfaces (analysis-workers.ts).
  *
  * Returns a `{ promise, cancel }` handle.  The promise resolves with
@@ -145,23 +144,24 @@ function runInWorker<T>(
   progressMax = RUN_PROGRESS_MAX,
   threads = 1,
 ): { promise: Promise<T>; cancel: () => void } {
-  // With more than one thread the analysis worker and its evaluators (each
-  // connected to it by its own channel) come from the idle workers, which
-  // have the engine loaded and compiled, and go back after a completed run.
-  // One thread starts a fresh worker, as before.
-  const pooled = threads > 1;
-  const workers = pooled ? acquireWorkers(threads) : [createAnalysisWorker()];
+  // The analysis worker and its evaluators (each connected to it by its own
+  // channel) come from the idle workers, which have the engine loaded and
+  // compiled, and go back after a completed run (analysis-workers.ts).
+  const workers = acquireWorkers(threads);
   let worker: Worker | null = workers[0];
   let evaluators = workers.slice(1);
   let timeout: ReturnType<typeof setTimeout> | null = null;
   let settled = false;
   let rejectPromise: ((reason: Error) => void) | null = null;
 
-  /** Ends the run: stops its workers, or keeps those of a completed pooled run. */
+  /**
+   * Ends the run: keeps the workers of a completed run for the next, and
+   * stops those of a cancelled, failed or timed-out one.
+   */
   const stop = (completed = false) => {
     settled = true;
     const all = worker ? [worker, ...evaluators] : evaluators;
-    if (completed && pooled) releaseWorkers(all);
+    if (completed) releaseWorkers(all);
     else discardWorkers(all);
     worker = null;
     evaluators = [];
@@ -255,6 +255,43 @@ export function snapshotFromState(state: AppState): ModelEntry {
     options: state.options,
     analysisLimits: state.analysisLimits,
   };
+}
+
+/**
+ * The expected work of a model's analysis relative to the other models',
+ * for the order of Run All: the trial surfaces (the search, or the custom
+ * surfaces alone) times the slices, more for Morgenstern-Price, a block
+ * search, the non-circular optimisation and both directions, and far
+ * more for a finite element analysis (minutes against a search's second).
+ */
+export function expectedAnalysisWork(model: ModelEntry): number {
+  const options = model.options ?? DEFAULT_ANALYSIS_OPTIONS;
+  const custom = model.customSearchPlanes?.length ?? 0;
+  const surfaces = model.customPlanesOnly
+    ? Math.max(1, custom)
+    : (options.iterations ?? 0) + (options.refinedIterations ?? 0) + custom;
+  let work = surfaces * Math.max(1, options.slices ?? 25);
+  if (options.method === "Morgenstern-Price") work *= 1.5;
+  if (options.searchMethod === "block") work *= 2;
+  if (options.nonCircularOptimization) work *= 3;
+  if (options.bothDirections) work *= 2;
+  if (options.fem?.enabled) {
+    work += 1e9 * (1 + (options.fem.refinementLevels ?? 0)) * (options.fem.limitAnalysis ? 2 : 1);
+  }
+  return work;
+}
+
+/**
+ * The models in the order Run All analyses them: the longest expected
+ * first, so that the cores stay busy to the end instead of waiting for a
+ * long one started last; models expected equal keep the list's order.
+ * (The list itself, and so the UI, keeps its order.)
+ */
+export function runAllOrder(models: ModelEntry[]): ModelEntry[] {
+  return models
+    .map((model, index) => ({ model, index, work: expectedAnalysisWork(model) }))
+    .sort((a, b) => b.work - a.work || a.index - b.index)
+    .map((entry) => entry.model);
 }
 
 /**
@@ -659,7 +696,8 @@ export const createAnalysisSlice: SliceCreator<AnalysisSlice> = (set, get) => ({
   runAllAnalyses: async () => {
     const baseState = get();
     baseState.saveCurrentModel();
-    const models = get().models.slice();
+    // The queue: the longest analyses first (the list keeps its order).
+    const models = runAllOrder(get().models);
     // A new batch replaces a running one: stop its workers.
     for (const handle of batchHandles) handle.cancel();
     batchHandles.clear();
@@ -675,43 +713,53 @@ export const createAnalysisSlice: SliceCreator<AnalysisSlice> = (set, get) => ({
     const progressByModel = new Map<string, number>(
       models.map((model) => [model.id, 0]),
     );
-    const modelProgressIntervals = new Map<
-      string,
-      ReturnType<typeof setInterval>
-    >();
+    /** The models being analysed now, whose progress the ticks show. */
+    const running = new Set<string>();
+    /** Of them, those whose worker reported progress since the last tick. */
+    const reported = new Set<string>();
 
-    const stopModelProgressInterval = (modelId: string) => {
-      const interval = modelProgressIntervals.get(modelId);
-      if (!interval) return;
-      clearInterval(interval);
-      modelProgressIntervals.delete(modelId);
+    /** The batch's progress: the mean of the models'. */
+    const batchProgress = () => {
+      let total = 0;
+      for (const p of progressByModel.values()) total += p;
+      return Math.max(0, Math.min(1, total / models.length));
     };
 
-    const startModelProgressInterval = (modelId: string) => {
-      stopModelProgressInterval(modelId);
-      const interval = setInterval(() => {
-        const current = progressByModel.get(modelId) ?? 0;
+    /**
+     * Every 120 ms: advances the simulated progress of the running models
+     * (those whose engine reported none meanwhile, up to RUN_PROGRESS_MAX)
+     * and shows the running models' progress and the batch's, in one
+     * store update for all of them. A model's progress never goes back.
+     */
+    const tick = () => {
+      if (!isCurrentBatch()) {
+        clearInterval(ticks);
+        return;
+      }
+      for (const id of running) {
+        const current = progressByModel.get(id) ?? 0;
+        if (reported.has(id)) continue;
         const next = Math.min(
           RUN_PROGRESS_MAX,
           current + Math.max(0.006, (RUN_PROGRESS_MAX - current) * 0.06),
         );
-        if (next > current) {
-          progressByModel.set(modelId, next);
-          updateBatchProgress();
-        }
-      }, 120);
-      modelProgressIntervals.set(modelId, interval);
-    };
-
-    const updateBatchProgress = () => {
-      const totalProgress = models.reduce(
-        (sum, model) => sum + (progressByModel.get(model.id) ?? 0),
-        0,
-      );
-      set({
-        progress: Math.max(0, Math.min(1, totalProgress / models.length)),
+        if (next > current) progressByModel.set(id, next);
+      }
+      reported.clear();
+      const s = get();
+      let updated: ModelEntry[] | null = null;
+      s.models.forEach((m, i) => {
+        if (!running.has(m.id)) return;
+        const p = progressByModel.get(m.id) ?? 0;
+        if (p <= (m.progress ?? 0)) return;
+        updated ??= s.models.slice();
+        updated[i] = { ...m, progress: p };
       });
+      const progress = batchProgress();
+      if (updated) set({ progress, models: updated });
+      else if (progress !== s.progress) set({ progress });
     };
+    const ticks = setInterval(tick, 120);
 
     // Track active model status in UI while running batch.
     set({ runState: "running", progress: 0, errorMessage: null });
@@ -733,10 +781,9 @@ export const createAnalysisSlice: SliceCreator<AnalysisSlice> = (set, get) => ({
       };
 
       progressByModel.set(freshModel.id, 0.08);
-      updateBatchProgress();
-      startModelProgressInterval(freshModel.id);
 
       set((s) => ({
+        progress: batchProgress(),
         models: s.models.map((m) =>
           m.id === freshModel.id
             ? {
@@ -760,23 +807,18 @@ export const createAnalysisSlice: SliceCreator<AnalysisSlice> = (set, get) => ({
       let handle: AnalysisHandle;
       try {
         handle = executeModelAnalysis(freshModel, (p) => {
+          // (shown by the next tick, with the other models')
           progressByModel.set(
             freshModel.id,
             Math.max(progressByModel.get(freshModel.id) ?? 0, p),
           );
-          updateBatchProgress();
-          set((s) => ({
-            models: s.models.map((m) =>
-              m.id === freshModel.id ? { ...m, progress: p } : m,
-            ),
-          }));
+          reported.add(freshModel.id);
         }, threads);
       } catch (err) {
-        stopModelProgressInterval(freshModel.id);
         progressByModel.set(freshModel.id, 1);
-        updateBatchProgress();
         const errorMessage = analysisErrorText(err);
         set((s) => ({
+          progress: batchProgress(),
           models: s.models.map((m) =>
             m.id === freshModel.id
               ? { ...m, runState: "error", errorMessage }
@@ -790,15 +832,16 @@ export const createAnalysisSlice: SliceCreator<AnalysisSlice> = (set, get) => ({
       }
 
       batchHandles.add(handle);
+      running.add(freshModel.id);
       try {
         const result = await handle.promise;
-        stopModelProgressInterval(freshModel.id);
+        running.delete(freshModel.id);
         if (!isCurrentBatch()) return;
         progressByModel.set(freshModel.id, 1);
-        updateBatchProgress();
         if (currentKey() !== inputKey) {
           // The model was edited while it was being analysed.
           set((s) => ({
+            progress: batchProgress(),
             models: s.models.map((m) =>
               m.id === freshModel.id ? { ...m, ...RUN_RESET } : m,
             ),
@@ -806,6 +849,7 @@ export const createAnalysisSlice: SliceCreator<AnalysisSlice> = (set, get) => ({
           return;
         }
         set((s) => ({
+          progress: batchProgress(),
           models: s.models.map((m) =>
             m.id === freshModel.id
               ? { ...m, runState: "done", progress: 1, result }
@@ -820,12 +864,12 @@ export const createAnalysisSlice: SliceCreator<AnalysisSlice> = (set, get) => ({
             : {}),
         }));
       } catch (err) {
-        stopModelProgressInterval(freshModel.id);
+        running.delete(freshModel.id);
         if (err instanceof AnalysisCancelledError || !isCurrentBatch()) return;
         progressByModel.set(freshModel.id, 1);
-        updateBatchProgress();
         const errorMessage = analysisErrorText(err);
         set((s) => ({
+          progress: batchProgress(),
           models: s.models.map((m) =>
             m.id === freshModel.id
               ? { ...m, runState: "error", errorMessage }
@@ -855,10 +899,7 @@ export const createAnalysisSlice: SliceCreator<AnalysisSlice> = (set, get) => ({
       }),
     );
 
-    for (const interval of modelProgressIntervals.values()) {
-      clearInterval(interval);
-    }
-    modelProgressIntervals.clear();
+    clearInterval(ticks);
     if (!isCurrentBatch()) return;
 
     const currentActiveId = get().activeModelId;

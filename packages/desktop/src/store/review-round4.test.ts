@@ -3,6 +3,7 @@ import { useAppStore, isProjectDirty, markProjectClean } from "./app-store";
 import { performRedo, performUndo } from "./selectors";
 import { parseProjectFile, serializeProject } from "./persistence";
 import { clampMinorTicks } from "../utils/ruler";
+import { stopIdleWorkers } from "./analysis-workers";
 
 type FakeMsg = MessageEvent<{ type: string; result?: unknown; error?: string }>;
 class FakeWorker {
@@ -27,7 +28,10 @@ beforeEach(() => {
   (globalThis as unknown as { Worker: unknown }).Worker = FakeWorker;
   useAppStore.getState().newProject();
 });
-afterEach(() => useAppStore.getState().cancelAnalysis());
+afterEach(() => {
+  useAppStore.getState().cancelAnalysis();
+  stopIdleWorkers();
+});
 
 describe("undo history", () => {
   it("keeps real edits when the result paper is panned and zoomed", () => {
@@ -107,7 +111,9 @@ describe("runs", () => {
     await flush();
     useAppStore.getState().setOptions({ slices: 33 });
     useAppStore.getState().runAnalysis();
-    FakeWorker.instances[2].emitComplete({ minFOS: 2.2, allSurfaces: [] });
+    // (the single run reuses model A's worker, idle since its result)
+    expect(FakeWorker.instances).toHaveLength(2);
+    wa.emitComplete({ minFOS: 2.2, allSurfaces: [] });
     await flush();
     wb.emitComplete({ minFOS: 3.3, allSurfaces: [] });
     await flush();

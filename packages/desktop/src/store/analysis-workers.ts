@@ -10,10 +10,11 @@
  * Runs that go on at the same time (Run All, the sensitivity panel) share
  * the cores: each gets its part of them (threadsPerRun).
  *
- * The workers of a completed run with more than one thread are kept idle
- * for the next run (any of them can coordinate or evaluate: the same
- * script): a new worker loads the engine and runs it unoptimised at first,
- * which costs as much as a short search.
+ * The workers of a completed run are kept idle for the next run (any of
+ * them can coordinate or evaluate: the same script): a new worker loads
+ * the engine and runs it unoptimised at first, which costs as much as a
+ * short search. So a Run All of twenty models on four cores runs on four
+ * workers, not twenty.
  */
 
 /** Threads of one analysis at most (the coordinator and seven evaluators). */

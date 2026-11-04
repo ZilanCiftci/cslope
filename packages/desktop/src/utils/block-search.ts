@@ -1,4 +1,5 @@
 /** Helpers for block search objects (one point, a line or a window). */
+import { calculatePolygonArea } from "@cslope/engine";
 
 /** What an object of n points is. */
 export function blockObjectKind(n: number): string {
@@ -8,13 +9,9 @@ export function blockObjectKind(n: number): string {
   return "window";
 }
 
-/** Whether a window (three or more points) encloses an area. */
+/** Whether a window (three or more points) encloses an area (twice it above 1e-12). */
 function hasArea(points: [number, number][]): boolean {
-  let area = 0;
-  for (let k = 0, j = points.length - 1; k < points.length; j = k++) {
-    area += points[j][0] * points[k][1] - points[k][0] * points[j][1];
-  }
-  return Math.abs(area) > 1e-12;
+  return calculatePolygonArea(points.map((p) => p[0]), points.map((p) => p[1])) > 0.5e-12;
 }
 
 /** Why the object cannot be used, or null. */

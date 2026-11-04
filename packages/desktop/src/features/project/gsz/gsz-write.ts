@@ -18,6 +18,7 @@ import { computeRegions } from "../../../utils/regions";
 import { holeFreeRegions, sharedRings } from "../../../utils/region-rings";
 import { writeZip } from "../../../utils/zip";
 import { mainPiezoLine } from "../../../utils/piezo";
+import { surfaceYAtX } from "../../view/surface";
 
 type Pt = [number, number];
 
@@ -124,15 +125,8 @@ function phiBField(model: MaterialModel): [string, number][] {
   return phiB > 0 ? [["UnsatPhiB", phiB]] : [];
 }
 
-function groundAt(outline: Pt[], x: number): number {
-  let best = -Infinity;
-  for (let i = 0; i < outline.length; i++) {
-    const [x1, y1] = outline[i], [x2, y2] = outline[(i + 1) % outline.length];
-    if (x < Math.min(x1, x2) || x > Math.max(x1, x2) || x1 === x2) continue;
-    best = Math.max(best, y1 + ((x - x1) * (y2 - y1)) / (x2 - x1));
-  }
-  return best;
-}
+/** The ground (top of the outline) at x; -Infinity beside the outline. */
+const groundAt = (outline: Pt[], x: number): number => surfaceYAtX(outline, x) ?? -Infinity;
 
 /** The project XML of one model (metric units). */
 export function modelToGszXml(model: ModelEntry): { xml: string; notes: string[] } {

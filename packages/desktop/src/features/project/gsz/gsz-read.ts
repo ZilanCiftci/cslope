@@ -242,6 +242,10 @@ export interface GszBlockGrid {
 
 /** Parse the model XML of a .gsz. */
 export function parseGszXml(xml: string): Omit<GszFile, "results"> {
+  // A model never has a document type declaration; one can only carry
+  // entity tricks (a "billion laughs", an external entity), so it is
+  // refused before anything is parsed.
+  if (/<!DOCTYPE/i.test(xml)) throw new Error("The model XML has a DOCTYPE declaration, which a .gsz file never has; the file was not read.");
   const doc = new DOMParser().parseFromString(xml, "application/xml");
   const root = doc.documentElement;
   if (!root || root.tagName !== "GSIData" || doc.getElementsByTagName("parsererror").length > 0) {

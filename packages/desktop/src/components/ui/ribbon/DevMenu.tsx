@@ -1,6 +1,6 @@
 import { createPortal } from "react-dom";
 import { isProjectDirty, useAppStore } from "../../../store/app-store";
-import { LOCAL_LOVO_MODELS } from "../../../store/local-models";
+import { HAS_LOCAL_LOVO_MODELS } from "../../../store/local-models";
 import { confirmUnsavedChanges } from "../../../features/project/unsavedGuard";
 
 /**
@@ -52,7 +52,7 @@ export function DevMenu({ isOpen, onActivate, panelHost }: Props) {
       "Load Lovö models into the current workspace? This will replace current models.",
     );
     if (!ok) return;
-    useAppStore.getState().loadLovoModels();
+    await useAppStore.getState().loadLovoModels();
     useAppStore.temporal.getState().clear();
     if (isElectron) window.cslope.menuNew();
   };
@@ -106,7 +106,7 @@ export function DevMenu({ isOpen, onActivate, panelHost }: Props) {
               )}
             </RibbonGroup>
             <RibbonSep />
-            {LOCAL_LOVO_MODELS.length > 0 && (
+            {HAS_LOCAL_LOVO_MODELS && (
               <>
                 <RibbonGroup label="Models">
                   <RibbonButton

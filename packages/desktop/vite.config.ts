@@ -6,6 +6,7 @@ import electron from "vite-plugin-electron/simple";
 import react from "@vitejs/plugin-react";
 import tailwindcss from "@tailwindcss/vite";
 import type { Plugin } from "vite";
+import { metaCsp, PRODUCTION_CSP } from "./electron/csp";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const { version } = JSON.parse(
@@ -35,11 +36,28 @@ function base64Import(): Plugin {
   };
 }
 
+/**
+ * The production Content Security Policy as a <meta> in the built
+ * index.html (electron/csp.ts): a fallback for the header main.ts sets on
+ * every document. Not in development, where Vite's own inline scripts need
+ * the looser policy of the header.
+ */
+function cspMeta(): Plugin {
+  return {
+    name: "cslope-csp-meta",
+    apply: "build",
+    transformIndexHtml() {
+      return [{ tag: "meta", attrs: { "http-equiv": "Content-Security-Policy", content: metaCsp(PRODUCTION_CSP) }, injectTo: "head-prepend" }];
+    },
+  };
+}
+
 export default defineConfig({
   worker: { format: "es", plugins: () => [base64Import()] },
   define: { __APP_VERSION__: JSON.stringify(version) },
   plugins: [
     base64Import(),
+    cspMeta(),
     tailwindcss(),
     react(),
     electron({

@@ -12,6 +12,7 @@
     "test:coverage": "bun run --filter '*' test:coverage",
     "lint": "bun run --filter '*' lint",
     "typecheck": "bun run --filter '*' typecheck",
+    "audit": "bun audit --prod --audit-level=high --ignore=GHSA-wfv2-pwc8-crg5 --ignore=GHSA-7x6v-j9x4-qf24 --ignore=GHSA-mrv2-3pqr-j5jr --ignore=GHSA-49rj-9fvp-4h2h --ignore=GHSA-8646-j5j9-6r62 --ignore=GHSA-8x6r-g9mw-2r78 --ignore=GHSA-rxv8-25v2-qmq8 --ignore=GHSA-chx6-hx7r-mcp5 --ignore=GHSA-qwww-vcr4-c8h2",
     "media:capture": "bunx tsx packages/desktop/tools/media-capture/capture-runner.ts"
   }
 }
