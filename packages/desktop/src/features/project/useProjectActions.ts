@@ -65,7 +65,14 @@ export interface ProjectActions {
  *                         `"cslope-project"`).
  */
 export function useProjectActions(defaultBaseName: string): ProjectActions {
-  const [fileName, setFileName] = useState("");
+  const [fileName, setFileNameState] = useState("");
+  // The latest name also in a ref: a save right after another (Ctrl+S
+  // after Save As) runs before React has rendered the new name.
+  const fileNameRef = useRef("");
+  const setFileName = (name: string) => {
+    fileNameRef.current = name;
+    setFileNameState(name);
+  };
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // ── New ──────────────────────────────────────────────────────────
@@ -117,7 +124,7 @@ export function useProjectActions(defaultBaseName: string): ProjectActions {
       await saveProjectInElectron();
       return;
     }
-    const suggested = fileName || defaultBaseName;
+    const suggested = fileNameRef.current || defaultBaseName;
     await downloadProject(ensureCslpName(suggested));
   };
 
@@ -127,14 +134,15 @@ export function useProjectActions(defaultBaseName: string): ProjectActions {
     const state = useAppStore.getState();
     const created = createdForSave(state);
     try {
-      triggerBrowserDownload(await buildProjectArchive(state, { thumbnail: projectThumbnail, created }), finalName);
+      const bytes = await buildProjectArchive(state, { thumbnail: projectThumbnail, created });
+      setFileName(stripProjectExt(finalName));
+      triggerBrowserDownload(bytes, finalName);
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Unknown error";
       window.alert(`Unable to save project: ${msg}`);
       return;
     }
     markProjectSaved(state, created);
-    setFileName(stripProjectExt(finalName));
   };
 
   // ── Save As ──────────────────────────────────────────────────────
@@ -144,7 +152,7 @@ export function useProjectActions(defaultBaseName: string): ProjectActions {
       await saveProjectInElectron(true);
       return;
     }
-    const suggested = fileName || defaultBaseName;
+    const suggested = fileNameRef.current || defaultBaseName;
     const inputName = window.prompt("Save project as", suggested);
     if (!inputName?.trim()) return;
     await downloadProject(ensureCslpName(inputName));
