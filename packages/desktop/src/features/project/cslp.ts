@@ -415,7 +415,7 @@ export async function openProjectArchive(bytes: Uint8Array): Promise<OpenedProje
     archive = openZip(bytes);
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
-    throw new Error(`The file is not a readable cSlope project: ${msg}`);
+    throw new Error(`The file is not a readable cSlope project: ${msg}`, { cause: err });
   }
   if (!archive.has(MANIFEST)) {
     throw new Error("The file is not a cSlope project (the archive has no manifest.json).");

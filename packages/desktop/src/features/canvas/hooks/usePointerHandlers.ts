@@ -952,7 +952,7 @@ export function usePointerHandlers(deps: PointerDeps) {
         return;
       }
 
-      let hit: PointHit | null = null;
+      let hit: PointHit | null;
       if (mode === "result") {
         // Same hit area as a click, so the cursor matches what a click does.
         // Paper annotations first: they are drawn over the reference lines.

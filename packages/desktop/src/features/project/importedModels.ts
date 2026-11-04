@@ -44,7 +44,7 @@ export function importEach<T extends ImportedModel>(count: number, read: (i: num
       try {
         buildSlope(toCanonicalSlopeDefinition(imp.definition));
       } catch (e) {
-        throw new Error(`The model cannot be built: ${importErrorMessage(e, "Its definition")}`);
+        throw new Error(`The model cannot be built: ${importErrorMessage(e, "Its definition")}`, { cause: e });
       }
       imports.push(imp);
     } catch (e) {
