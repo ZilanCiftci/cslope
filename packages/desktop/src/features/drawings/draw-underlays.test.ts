@@ -6,6 +6,8 @@ const rasterFor = vi.fn();
 vi.mock("./drawing-cache", () => ({
   rasterFor: (...args: unknown[]) => rasterFor(...args),
   placementExtent: (p: BackgroundImage) => p.crop ?? { x0: 0, y0: 0, x1: 400, y1: 300 },
+  peekSource: () => null,
+  vectorsFor: () => null,
 }));
 
 const { drawUnderlays, placementCanvasCorners, worldToCanvasAffine } = await import("./draw-underlays");

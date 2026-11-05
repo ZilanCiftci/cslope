@@ -95,6 +95,7 @@
   --color-canvas-line-load: #9cc2ff;
   --color-canvas-line-load-hover: #c6dcff;
   --color-canvas-reference-line: #b3c1c9;
+  --color-canvas-drawing-ink: #c9d1d9;
   /* Water and head lines over the sheet (over a light soil fill they keep
      their print colours). */
   --color-canvas-water-line: #7ea8ff;
@@ -205,6 +206,7 @@
   --color-canvas-line-load: #2563eb;
   --color-canvas-line-load-hover: #3b82f6;
   --color-canvas-reference-line: #78909c;
+  --color-canvas-drawing-ink: #3a434c;
   --color-canvas-water-line: #1a3a8a;
   --color-canvas-head-line: #00897b;
   --color-canvas-annotation-text: #000000;

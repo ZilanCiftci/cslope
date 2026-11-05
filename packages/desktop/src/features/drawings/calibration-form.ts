@@ -5,9 +5,12 @@
  */
 import type { BackgroundImage, DrawingCalibration } from "../../store/types";
 import { fitAxes, fitPoints, fitScale, verticalExaggeration, type Affine, type FitResult, type Pt } from "./transform";
+import { drawingCoordinatesTransform, INSUNITS } from "./vectors";
 
-export type CalibrationMode = "points" | "axes" | "scale";
-export type ScaleUnit = "px" | "pt" | "mm";
+/** "drawing": a DWG or DXF drawing's own coordinates, scaled to metres by its units. */
+export type CalibrationMode = "points" | "axes" | "scale" | "drawing";
+/** Pixel, PDF point, millimetre on a PDF sheet, or a DWG or DXF drawing's unit. */
+export type ScaleUnit = "px" | "pt" | "mm" | "du";
 
 /** A point of the drawing and the model coordinates typed for it (as typed). */
 export interface PointRow {
@@ -29,6 +32,8 @@ export interface CalibrationForm {
   /** Axes mode: the placement whose x and y scales are reused (one tick per axis then). */
   reuseFrom: string | null;
   scale: { origin: PointRow; metersPerUnit: string; unit: ScaleUnit };
+  /** Drawing mode: the drawing's unit ($INSUNITS code: 4 mm, 6 m, …). */
+  drawingUnit: number;
 }
 
 /** Where the next click in the drawing goes. */
@@ -44,6 +49,7 @@ export function emptyForm(unit: ScaleUnit = "px"): CalibrationForm {
     axes: { x: [emptyTick(), emptyTick()], y: [emptyTick(), emptyTick()] },
     reuseFrom: null,
     scale: { origin: emptyPoint(), metersPerUnit: "", unit },
+    drawingUnit: 0,
   };
 }
 
@@ -55,7 +61,7 @@ export function parseNumber(text: string): number | null {
   return Number.isFinite(v) ? v : null;
 }
 
-/** Metres per source unit for a scale typed in `unit` (a PDF's source unit is the point; 1 mm = 72 / 25.4 pt). */
+/** Metres per source unit for a scale typed in `unit` (a PDF's source unit is the point; 1 mm = 72 / 25.4 pt; a drawing unit is the source unit). */
 export function metersPerSourceUnit(metersPerUnit: number, unit: ScaleUnit): number {
   return unit === "mm" ? (metersPerUnit * 25.4) / 72 : metersPerUnit;
 }
@@ -81,6 +87,8 @@ export function pickTargets(form: CalibrationForm): PickTarget[] {
     }
     case "scale":
       return [{ kind: "origin" }];
+    case "drawing":
+      return [];
   }
 }
 
@@ -225,10 +233,27 @@ export function evaluateForm(form: CalibrationForm, reuseScale: { x: number; y: 
       return {
         fit,
         calibration: { mode: "scale", points: [{ source: o.source, model: [x, y] }], scale: { metersPerUnit: k, unit: form.scale.unit } },
-        summary: fit.ok ? [`1 ${form.scale.unit} = ${fmt(k)} m`] : [],
+        summary: fit.ok ? [`1 ${form.scale.unit === "du" ? unitName : form.scale.unit} = ${fmt(k)} m`] : [],
+      };
+    }
+    case "drawing": {
+      const unit = INSUNITS[form.drawingUnit];
+      if (!unit) return fail("Choose the drawing's unit.", form);
+      const transform = drawingCoordinatesTransform(unit.meters);
+      return {
+        fit: { ok: true, transform, residuals: [] },
+        calibration: { mode: "drawing", points: [] },
+        summary: [`The drawing's own coordinates, 1 ${unit.name} = ${fmt(unit.meters)} m`],
       };
     }
   }
+}
+
+/** The $INSUNITS code of a "drawing's coordinates" transform (k, 0, 0, −k, 0, 0), or null for any other. */
+export function drawingUnitOf(t: Affine): number | null {
+  if (t.b !== 0 || t.c !== 0 || t.e !== 0 || t.f !== 0 || t.a <= 0 || Math.abs(t.d + t.a) > 1e-12 * t.a) return null;
+  for (const [code, u] of Object.entries(INSUNITS)) if (Math.abs(u.meters - t.a) <= 1e-12 * t.a) return Number(code);
+  return null;
 }
 
 function fail(error: string, form: CalibrationForm): FormResult {
@@ -268,6 +293,13 @@ export function formFromCalibration(c: DrawingCalibration, unit: ScaleUnit, fall
   }
 }
 
+/** The form of a DWG or DXF placement: its drawing mode when its transform is the drawing's coordinates, else as formFromCalibration. */
+export function formForVector(c: DrawingCalibration, t: Affine, fileUnit: number, fallback: () => DrawingCalibration["points"]): CalibrationForm {
+  const code = c.mode === "drawing" ? drawingUnitOf(t) : null;
+  if (code !== null) return { ...emptyForm("du"), mode: "drawing", drawingUnit: code };
+  return { ...formFromCalibration(c, "du", fallback), drawingUnit: fileUnit };
+}
+
 const padTicks = (t: TickRow[]) => [...t, ...Array.from({ length: Math.max(0, 2 - t.length) }, emptyTick)];
 const padPoints = (p: PointRow[]) => [...p, ...Array.from({ length: Math.max(0, 2 - p.length) }, emptyPoint)];
 
@@ -281,6 +313,10 @@ export function buildPlacement(args: {
   calibration: DrawingCalibration;
   transform: Affine;
   existing?: BackgroundImage;
+  /** A new placement's opacity (default 0.5). */
+  opacity?: number;
+  /** A new placement's hidden layers. */
+  hiddenLayers?: string[];
 }): BackgroundImage {
   const { existing } = args;
   const placement: BackgroundImage = {
@@ -289,12 +325,14 @@ export function buildPlacement(args: {
     name: args.name,
     calibration: args.calibration,
     transform: args.transform,
-    opacity: existing?.opacity ?? 0.5,
+    opacity: existing?.opacity ?? args.opacity ?? 0.5,
     visible: existing?.visible ?? true,
     order: existing?.order ?? 0,
   };
   if (args.page !== undefined) placement.page = args.page;
   if (args.crop) placement.crop = args.crop;
   if (existing?.showInResults) placement.showInResults = true;
+  const hidden = existing ? existing.hiddenLayers : args.hiddenLayers;
+  if (hidden && hidden.length > 0) placement.hiddenLayers = [...hidden];
   return placement;
 }

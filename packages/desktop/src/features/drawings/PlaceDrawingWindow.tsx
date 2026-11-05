@@ -11,8 +11,10 @@ import { useToolWindowState } from "../../utils/tool-window-sync";
 import { sha256Hex } from "../project/input-hash";
 import { MAX_DRAWING_BYTES, fileTooLarge } from "../project/file-limits";
 import type { BackgroundImage } from "../../store/types";
-import { drawingError, onDrawingsChanged, pageSizeOf, peekSource, rasterFor, setAssetLoader } from "./drawing-cache";
-import { DRAWING_ACCEPT, sniffDrawingMime, type DrawingSource } from "./sources";
+import { drawingError, pageSizeOf, peekSource, rasterFor, setAssetLoader, vectorsFor } from "./drawing-cache";
+import { DRAWING_ACCEPT, DRAWING_MIME, drawingKindName, pageRect, sniffDrawingMime, type DrawingSource } from "./sources";
+import { DRAWING_UNIT_CHOICES, type VectorDrawing } from "./vectors";
+import { drawVectorTexts, vectorPath } from "./vector-render";
 import { apply, cropCorners, normalizeCrop, type Affine, type Crop, type Pt } from "./transform";
 import { newPlacementId, placementLabel } from "./placement";
 import {
@@ -21,6 +23,7 @@ import {
   emptyForm,
   evaluateForm,
   formFromCalibration,
+  formForVector,
   nextTarget,
   pickTargets,
   sameTarget,
@@ -34,35 +37,9 @@ import {
   type ScaleUnit,
   type TickRow,
 } from "./calibration-form";
-import type { DrawingAssetInfo, DrawingAssetPayload, DrawingCommand, DrawingWindowState } from "./window-sync";
-
-// ── Bytes from the main window ──────────────────────────────────────
-
-const localBytes = new Map<string, { bytes: Uint8Array; mime: string }>();
-const waiting = new Map<string, { resolve: (v: { bytes: Uint8Array; mime: string }) => void; reject: (e: Error) => void }[]>();
-
-function receiveAsset(payload: DrawingAssetPayload): void {
-  const list = waiting.get(payload.id) ?? [];
-  waiting.delete(payload.id);
-  for (const w of list) {
-    if ("error" in payload) w.reject(new Error(payload.error));
-    else w.resolve({ bytes: payload.data, mime: payload.mime });
-  }
-}
-
-/** The window's loader: a file added here is in memory; the others are asked of the main window. */
-function windowLoader(send: (c: DrawingCommand) => void) {
-  return (id: string) => {
-    const local = localBytes.get(id);
-    if (local) return Promise.resolve(local);
-    return new Promise<{ bytes: Uint8Array; mime: string }>((resolve, reject) => {
-      const list = waiting.get(id) ?? [];
-      list.push({ resolve, reject });
-      waiting.set(id, list);
-      if (list.length === 1) send({ type: "requestAsset", id });
-    });
-  };
-}
+import type { DrawingAssetInfo, DrawingCommand, DrawingWindowState } from "./window-sync";
+import { NewModelsWindow } from "./NewModelsWindow";
+import { fileUnitCode, receiveAsset, rememberLocalBytes, useDrawingsTick, windowLoader } from "./place-window-shared";
 
 export function PlaceDrawingDialogApp() {
   const send = useCallback((c: DrawingCommand) => window.cslope.sendDrawingCommand(c), []);
@@ -77,6 +54,9 @@ export function PlaceDrawingDialogApp() {
     onState: (l) => window.cslope.onDrawingState(l),
     onChanged: (l) => window.cslope.onDrawingChanged(l),
   });
+  // "New models from drawing…" (opened so, or switched to in the window).
+  const [sheets, setSheets] = useState<{ on: boolean; nonce: number }>({ on: false, nonce: -1 });
+  if (state?.edit && state.edit.nonce !== sheets.nonce) setSheets({ on: !!state.edit.newModels, nonce: state.edit.nonce });
   if (!state) {
     return (
       <div className="h-screen p-3 text-[11px]" style={{ background: "var(--color-vsc-bg)", color: "var(--color-vsc-text-muted)" }}>
@@ -84,30 +64,37 @@ export function PlaceDrawingDialogApp() {
       </div>
     );
   }
-  return <PlaceDrawingWindow key={state.modelId} state={state} onCommand={send} onClose={() => window.close()} />;
+  if (sheets.on) {
+    return <NewModelsWindow state={state} onCommand={send} onClose={() => window.close()} onBack={() => setSheets((s) => ({ ...s, on: false }))} />;
+  }
+  return (
+    <PlaceDrawingWindow
+      key={state.modelId}
+      state={state}
+      onCommand={send}
+      onClose={() => window.close()}
+      onNewModels={() => setSheets((s) => ({ ...s, on: true }))}
+    />
+  );
 }
 
 // ── The window ──────────────────────────────────────────────────────
 
-type Tool = "pick" | "crop" | "pan";
+export type Tool = "pick" | "crop" | "pan";
 
 const muted = { color: "var(--color-vsc-text-muted)" } as const;
-
-/** Re-render when a drawing opened or a raster became ready. */
-function useDrawingsTick(): number {
-  const [tick, setTick] = useState(0);
-  useEffect(() => onDrawingsChanged(() => setTick((t) => t + 1)), []);
-  return tick;
-}
 
 export function PlaceDrawingWindow({
   state,
   onCommand,
   onClose,
+  onNewModels,
 }: {
   state: DrawingWindowState;
   onCommand: (c: DrawingCommand) => void;
   onClose: () => void;
+  /** Switch to "New models from drawing…". */
+  onNewModels?: () => void;
 }) {
   const tick = useDrawingsTick();
   const [assetId, setAssetId] = useState<string | null>(state.assets[0]?.id ?? null);
@@ -125,8 +112,11 @@ export function PlaceDrawingWindow({
   void tick;
   const source = assetId ? peekSource(assetId) : null;
   const error = assetId ? drawingError(assetId) : null;
-  const unit: ScaleUnit = asset?.mime === "application/pdf" ? "pt" : "px";
-  const unitName = unit === "pt" ? "point" : "pixel";
+  const vector = !!asset && DRAWING_MIME[asset.mime] === "vector";
+  const drawing = vector && assetId ? vectorsFor(assetId, 1) : null;
+  const fileUnit = fileUnitCode(drawing);
+  const unit: ScaleUnit = vector ? "du" : asset?.mime === "application/pdf" ? "pt" : "px";
+  const unitName = vector ? (drawing?.unitName ?? "drawing unit") : unit === "pt" ? "point" : "pixel";
 
   // A placement to recalibrate: its file, page, crop and inputs.
   if (state.edit && state.edit.nonce !== seenNonce) {
@@ -134,20 +124,26 @@ export function PlaceDrawingWindow({
     const ref = state.placements.find((p) => p.modelId === state.modelId && p.placement.id === state.edit!.placementId);
     if (ref) {
       const p = ref.placement;
-      const pUnit: ScaleUnit = state.assets.find((a) => a.id === p.assetId)?.mime === "application/pdf" ? "pt" : "px";
+      const pMime = state.assets.find((a) => a.id === p.assetId)?.mime ?? "";
+      const pUnit: ScaleUnit = pMime === "application/pdf" ? "pt" : "px";
       setEditing(p);
       setAssetId(p.assetId);
       setPage(p.page ?? 1);
       setCrop(p.crop ?? null);
-      const f = formFromCalibration(p.calibration, pUnit, () => {
+      const fallback = () => {
         // A placement without inputs: two corners of what it shows, where they are now.
-        const c = p.crop ?? (pageSizeOf(p.assetId, p.page ?? 1) ? { x0: 0, y0: 0, ...toXY(pageSizeOf(p.assetId, p.page ?? 1)!) } : null);
+        const size = pageSizeOf(p.assetId, p.page ?? 1);
+        const c = p.crop ?? (size ? pageRect(size) : null);
         if (!c) return [];
         return [
           { source: [c.x0, c.y1] as Pt, model: apply(p.transform, [c.x0, c.y1]) },
           { source: [c.x1, c.y1] as Pt, model: apply(p.transform, [c.x1, c.y1]) },
         ];
-      });
+      };
+      const f =
+        DRAWING_MIME[pMime] === "vector"
+          ? formForVector(p.calibration, p.transform, 0, fallback)
+          : formFromCalibration(p.calibration, pUnit, fallback);
       setForm(f);
       setTarget(nextTarget(f, null));
       setTool("pick");
@@ -163,17 +159,25 @@ export function PlaceDrawingWindow({
   );
   const reuseRef = reuseOptions.find((r) => `${r.modelId}/${r.placement.id}` === form.reuseFrom) ?? null;
   const reuseScale = reuseRef ? axisScalesOf(reuseRef.placement.transform) : null;
-  const result = useMemo(() => evaluateForm(form, reuseScale, unitName), [form, reuseScale, unitName]);
+  // (drawing mode: the file's unit unless one was chosen)
+  const effective = form.mode === "drawing" && form.drawingUnit === 0 ? { ...form, drawingUnit: fileUnit ?? 6 } : form;
+  const result = evaluateForm(effective, reuseScale, unitName);
 
   const pageSize = assetId ? pageSizeOf(assetId, page) : null;
-  const shown: Crop | null = crop ?? (pageSize ? { x0: 0, y0: 0, x1: pageSize.width, y1: pageSize.height } : null);
+  const shown: Crop | null = crop ?? (pageSize ? pageRect(pageSize) : null);
 
-  const chooseAsset = (id: string) => {
+  const chooseAsset = (id: string, mime = state.assets.find((a) => a.id === id)?.mime ?? "") => {
     if (id === assetId) return;
     setAssetId(id);
     setPage(1);
     setCrop(null);
-    setForm((f) => ({ ...emptyForm(f.scale.unit), mode: f.mode }));
+    const isVector = DRAWING_MIME[mime] === "vector";
+    // A DWG or DXF drawing starts at its own coordinates; another file keeps the mode.
+    setForm((f) =>
+      isVector
+        ? { ...emptyForm("du"), mode: "drawing" }
+        : { ...emptyForm(f.scale.unit === "du" ? "px" : f.scale.unit), mode: f.mode === "drawing" ? "axes" : f.mode },
+    );
     setTarget(null);
     setEditing(null);
   };
@@ -198,7 +202,7 @@ export function PlaceDrawingWindow({
     const bytes = new Uint8Array(await file.arrayBuffer());
     const mime = sniffDrawingMime(bytes);
     if (!mime) {
-      setMessage(`${file.name} is not a PNG, JPEG, TIFF or PDF file.`);
+      setMessage(`${file.name} is not a PNG, JPEG, TIFF, PDF, DWG or DXF file.`);
       return;
     }
     const sha256 = await sha256Hex(bytes);
@@ -209,10 +213,10 @@ export function PlaceDrawingWindow({
       return;
     }
     const id = crypto.randomUUID();
-    localBytes.set(id, { bytes, mime });
+    rememberLocalBytes(id, bytes, mime);
     onCommand({ type: "addAsset", id, name: file.name, mime, sha256, data: bytes });
     setMessage(null);
-    chooseAsset(id);
+    chooseAsset(id, mime);
   };
 
   // ── Place ──
@@ -227,6 +231,9 @@ export function PlaceDrawingWindow({
       calibration: result.calibration,
       transform: result.fit.transform,
       existing: editing ?? undefined,
+      // Line work has no sheet to see through: more opaque at first; layers the file has off stay hidden.
+      opacity: vector ? 0.8 : undefined,
+      hiddenLayers: vector && drawing && drawing.layersOff.length > 0 ? drawing.layersOff : undefined,
     });
     onCommand({ type: "place", placement });
     onClose();
@@ -256,11 +263,17 @@ export function PlaceDrawingWindow({
         onAdd={() => fileInput.current?.click()}
         modelName={state.modelName}
         editing={editing}
+        onNewModels={editing ? undefined : onNewModels}
       />
       <input ref={fileInput} type="file" accept={DRAWING_ACCEPT} className="hidden" onChange={(e) => void addFile(e)} aria-label="Drawing file" />
       {message && (
         <div role="status" className="px-3 py-1 text-[11px]" style={{ background: "var(--color-vsc-input-bg)" }}>
           {message}
+        </div>
+      )}
+      {drawing && drawing.notes.length > 0 && (
+        <div className="px-3 py-1 text-[11px]" style={{ ...muted, background: "var(--color-vsc-input-bg)" }} data-testid="drawing-notes">
+          {drawing.notes.join(" ")}
         </div>
       )}
       <div className="flex-1 min-h-0 flex">
@@ -316,7 +329,8 @@ export function PlaceDrawingWindow({
               <div role="radiogroup" aria-label="Calibration" className="flex gap-1 mt-1.5">
                 {(
                   [
-                    ["axes", "Axes (x and y separately)"],
+                    ...(vector ? ([["drawing", "Drawing coordinates"]] as const) : []),
+                    ["axes", vector ? "Axes" : "Axes (x and y separately)"],
                     ["points", "Points"],
                     ["scale", "Scale"],
                   ] as const
@@ -326,14 +340,21 @@ export function PlaceDrawingWindow({
                   </button>
                 ))}
               </div>
+              {form.mode === "drawing" && <DrawingInputs form={effective} setForm={setForm} drawing={drawing} fileUnit={fileUnit} />}
               {form.mode === "axes" && (
-                <AxesInputs form={form} setForm={setForm} target={target} setTarget={setTarget} reuseOptions={reuseOptions} />
+                <AxesInputs
+                  form={form}
+                  setForm={setForm}
+                  target={target}
+                  setTarget={setTarget}
+                  reuseOptions={reuseOptions.map((r) => ({ key: `${r.modelId}/${r.placement.id}`, label: `${r.modelName}: ${placementLabel(r.placement)}` }))}
+                />
               )}
               {form.mode === "points" && (
                 <PointsInputs form={form} setForm={setForm} target={target} setTarget={setTarget} residuals={result.fit.ok ? result.fit.residuals : null} />
               )}
               {form.mode === "scale" && (
-                <ScaleInputs form={form} setForm={setForm} target={target} setTarget={setTarget} isPdf={unit === "pt"} />
+                <ScaleInputs form={form} setForm={setForm} target={target} setTarget={setTarget} isPdf={unit === "pt"} unitName={unitName} />
               )}
               <div className="mt-2 text-[11px]" aria-live="polite">
                 {result.fit.ok ? (
@@ -367,17 +388,17 @@ export function PlaceDrawingWindow({
   );
 }
 
-const toXY = (s: { width: number; height: number }) => ({ x1: s.width, y1: s.height });
-
 // ── The files ───────────────────────────────────────────────────────
 
-function AssetStrip({
+export function AssetStrip({
   assets,
   selected,
   onSelect,
   onAdd,
   modelName,
   editing,
+  title,
+  onNewModels,
 }: {
   assets: DrawingAssetInfo[];
   selected: string | null;
@@ -385,14 +406,17 @@ function AssetStrip({
   onAdd: () => void;
   modelName: string;
   editing: BackgroundImage | null;
+  /** The heading (default: Place drawing, or Recalibrate drawing). */
+  title?: { main: string; sub: string };
+  onNewModels?: () => void;
 }) {
-  const kind = (mime: string) => (mime === "application/pdf" ? "PDF" : mime === "image/tiff" ? "TIFF" : mime === "image/jpeg" ? "JPEG" : "PNG");
+  const kind = drawingKindName;
   return (
     <div className="border-b px-3 py-2 flex items-center gap-3" style={{ borderColor: "var(--color-vsc-border)" }}>
       <div className="shrink-0">
-        <div className="font-semibold">{editing ? "Recalibrate drawing" : "Place drawing"}</div>
+        <div className="font-semibold">{title?.main ?? (editing ? "Recalibrate drawing" : "Place drawing")}</div>
         <div className="text-[11px]" style={muted}>
-          into {modelName || "the active model"}
+          {title?.sub ?? `into ${modelName || "the active model"}`}
         </div>
       </div>
       <div className="flex-1 min-w-0">
@@ -402,7 +426,7 @@ function AssetStrip({
         <div role="listbox" aria-label="Drawings in this project" className="flex gap-1.5 overflow-x-auto">
           {assets.length === 0 && (
             <span className="text-[11px]" style={muted}>
-              None yet: add a PNG, JPEG, TIFF or PDF file.
+              None yet: add a PNG, JPEG, TIFF, PDF, DWG or DXF file.
             </span>
           )}
           {assets.map((a) => (
@@ -428,6 +452,11 @@ function AssetStrip({
       <button className="btn shrink-0" onClick={onAdd}>
         Add file…
       </button>
+      {onNewModels && (
+        <button className="btn shrink-0" onClick={onNewModels} title="Draw a frame around each section of the drawing and make a model of each">
+          New models from drawing…
+        </button>
+      )}
     </div>
   );
 }
@@ -436,10 +465,10 @@ function formatBytes(n: number): string {
   return n >= 1024 * 1024 ? `${(n / (1024 * 1024)).toFixed(1)} MB` : `${Math.max(1, Math.round(n / 1024))} kB`;
 }
 
-function EmptyViewer({ onAdd }: { onAdd: () => void }) {
+export function EmptyViewer({ onAdd }: { onAdd: () => void }) {
   return (
     <div className="h-full flex flex-col items-center justify-center gap-2" style={muted}>
-      <p>Add a drawing of the section: a PNG, JPEG, TIFF or PDF file.</p>
+      <p>Add a drawing of the section: a PNG, JPEG, TIFF, PDF, DWG or DXF file.</p>
       <button className="btn" onClick={onAdd}>
         Add file…
       </button>
@@ -449,7 +478,7 @@ function EmptyViewer({ onAdd }: { onAdd: () => void }) {
 
 // ── Pages ───────────────────────────────────────────────────────────
 
-function PageStrip({ source, assetId, page, onPage }: { source: DrawingSource; assetId: string; page: number; onPage: (n: number) => void }) {
+export function PageStrip({ source, assetId, page, onPage }: { source: DrawingSource; assetId: string; page: number; onPage: (n: number) => void }) {
   const pages = Array.from({ length: Math.min(source.pageCount, 200) }, (_, i) => i + 1);
   return (
     <div role="listbox" aria-label="Pages" className="w-[132px] shrink-0 overflow-y-auto border-r p-2 flex flex-col gap-2" style={{ borderColor: "var(--color-vsc-border)" }}>
@@ -497,13 +526,14 @@ function PageThumb({ source, assetId, page }: { source: DrawingSource; assetId: 
 
 // ── The viewer ──────────────────────────────────────────────────────
 
-function ViewerToolbar({
+export function ViewerToolbar({
   tool,
   setTool,
   crop,
   onClearCrop,
   unitName,
   pageSize,
+  cropLabel = "Crop",
 }: {
   tool: Tool;
   setTool: (t: Tool) => void;
@@ -511,13 +541,15 @@ function ViewerToolbar({
   onClearCrop: () => void;
   unitName: string;
   pageSize: { width: number; height: number } | null;
+  /** The crop tool's name (the sheet view: "Draw frame"). */
+  cropLabel?: string;
 }) {
   return (
     <div className="px-2 py-1 border-b flex items-center gap-1.5 text-[11px]" style={{ borderColor: "var(--color-vsc-border)" }}>
       {(
         [
           ["pick", "Pick points"],
-          ["crop", "Crop"],
+          ["crop", cropLabel],
           ["pan", "Pan"],
         ] as const
       ).map(([t, label]) => (
@@ -556,7 +588,14 @@ function formMarks(form: CalibrationForm): { at: Pt; label: string; target: Pick
 const LOUPE = 140;
 const LOUPE_ZOOM = 4;
 
-function Viewer({
+/** A frame drawn on the sheet ("New models from drawing…"). */
+export interface FrameMark {
+  crop: Crop;
+  label: string;
+  selected: boolean;
+}
+
+export function Viewer({
   assetId,
   page,
   tool,
@@ -565,6 +604,7 @@ function Viewer({
   form,
   target,
   onPick,
+  frames = [],
 }: {
   assetId: string;
   page: number;
@@ -574,6 +614,7 @@ function Viewer({
   form: CalibrationForm;
   target: PickTarget | null;
   onPick: (p: Pt) => void;
+  frames?: FrameMark[];
 }) {
   const tick = useDrawingsTick();
   const box = useRef<HTMLDivElement>(null);
@@ -602,7 +643,7 @@ function Viewer({
   const [fitted, setFitted] = useState("");
   if (pageSize && fitted !== fitKey && size.w > 0) {
     setFitted(fitKey);
-    const r = crop ?? { x0: 0, y0: 0, x1: pageSize.width, y1: pageSize.height };
+    const r = crop ?? pageRect(pageSize);
     const zoom = Math.min((size.w - 40) / (r.x1 - r.x0), (size.h - 40) / (r.y1 - r.y0));
     setView({ zoom, x: size.w / 2 - ((r.x0 + r.x1) / 2) * zoom, y: size.h / 2 - ((r.y0 + r.y1) / 2) * zoom });
   }
@@ -639,11 +680,14 @@ function Viewer({
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     ctx.fillStyle = "#6b7078";
     ctx.fillRect(0, 0, size.w, size.h);
-    const raster = rasterFor({ assetId, page }, view.zoom * dpr);
-    if (pageSize) {
+    const lines = peekSource(assetId)?.kind === "vector" ? vectorsFor(assetId, page) : null;
+    const raster = lines ? null : rasterFor({ assetId, page }, view.zoom * dpr);
+    const pr = pageSize ? pageRect(pageSize) : null;
+    if (pr) {
       ctx.fillStyle = "#ffffff";
-      ctx.fillRect(view.x, view.y, pageSize.width * view.zoom, pageSize.height * view.zoom);
+      ctx.fillRect(view.x + pr.x0 * view.zoom, view.y + pr.y0 * view.zoom, (pr.x1 - pr.x0) * view.zoom, (pr.y1 - pr.y0) * view.zoom);
     }
+    if (lines) drawLineWork(ctx, lines, view.zoom, view.x, view.y);
     if (raster) {
       ctx.save();
       ctx.setTransform(dpr * view.zoom, 0, 0, dpr * view.zoom, dpr * view.x, dpr * view.y);
@@ -659,7 +703,8 @@ function Viewer({
       ctx.save();
       ctx.fillStyle = "rgba(0,0,0,0.35)";
       ctx.beginPath();
-      ctx.rect(view.x, view.y, pageSize.width * view.zoom, pageSize.height * view.zoom);
+      const pr2 = pageRect(pageSize);
+      ctx.rect(view.x + pr2.x0 * view.zoom, view.y + pr2.y0 * view.zoom, pageSize.width * view.zoom, pageSize.height * view.zoom);
       ctx.rect(x0, y0, x1 - x0, y1 - y0);
       ctx.fill("evenodd");
       ctx.strokeStyle = "#0a84ff";
@@ -668,8 +713,23 @@ function Viewer({
       ctx.strokeRect(x0, y0, x1 - x0, y1 - y0);
       ctx.restore();
     }
+    for (const f of frames) {
+      const [x0, y0] = toScreen([f.crop.x0, f.crop.y0]);
+      const [x1, y1] = toScreen([f.crop.x1, f.crop.y1]);
+      ctx.save();
+      ctx.strokeStyle = f.selected ? "#0a84ff" : "#7a8590";
+      ctx.lineWidth = f.selected ? 2.5 : 1.5;
+      ctx.strokeRect(x0, y0, x1 - x0, y1 - y0);
+      ctx.font = "bold 11px system-ui, sans-serif";
+      const w = ctx.measureText(f.label).width + 8;
+      ctx.fillStyle = f.selected ? "#0a84ff" : "#7a8590";
+      ctx.fillRect(x0, y0 - 16, w, 16);
+      ctx.fillStyle = "#ffffff";
+      ctx.fillText(f.label, x0 + 4, y0 - 4);
+      ctx.restore();
+    }
     drawMarks(ctx, formMarks(form), target, toScreen);
-  }, [tick, view, size, assetId, page, crop, cropDraft, form, target, pageSize, toScreen]);
+  }, [tick, view, size, assetId, page, crop, cropDraft, form, target, pageSize, toScreen, frames]);
 
   // The loupe: the drawing around the pointer, magnified, with a crosshair.
   useEffect(() => {
@@ -685,7 +745,9 @@ function Viewer({
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     ctx.fillStyle = "#ffffff";
     ctx.fillRect(0, 0, LOUPE, LOUPE);
-    const raster = rasterFor({ assetId, page }, z * dpr, "loupe") ?? rasterFor({ assetId, page }, view.zoom * dpr);
+    const lines = peekSource(assetId)?.kind === "vector" ? vectorsFor(assetId, page) : null;
+    if (lines) drawLineWork(ctx, lines, z, LOUPE / 2 - u * z, LOUPE / 2 - v * z);
+    const raster = lines ? null : (rasterFor({ assetId, page }, z * dpr, "loupe") ?? rasterFor({ assetId, page }, view.zoom * dpr));
     if (raster) {
       ctx.save();
       ctx.setTransform(dpr * z, 0, 0, dpr * z, dpr * (LOUPE / 2 - u * z), dpr * (LOUPE / 2 - v * z));
@@ -709,7 +771,11 @@ function Viewer({
     const r = box.current!.getBoundingClientRect();
     return { x: e.clientX - r.left, y: e.clientY - r.top };
   };
-  const clampToPage = ([u, v]: Pt): Pt => (pageSize ? [Math.min(Math.max(u, 0), pageSize.width), Math.min(Math.max(v, 0), pageSize.height)] : [u, v]);
+  const clampToPage = ([u, v]: Pt): Pt => {
+    if (!pageSize) return [u, v];
+    const r = pageRect(pageSize);
+    return [Math.min(Math.max(u, r.x0), r.x1), Math.min(Math.max(v, r.y0), r.y1)];
+  };
 
   const onPointerDown = (e: RPointerEvent<HTMLCanvasElement>) => {
     if (!view) return;
@@ -809,6 +875,17 @@ function Viewer({
   );
 }
 
+/** A DWG or DXF drawing's line work at `zoom` px per unit, its origin at (x, y) px. */
+function drawLineWork(ctx: CanvasRenderingContext2D, drawing: VectorDrawing, zoom: number, x: number, y: number) {
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.strokeStyle = "#2b2f33";
+  ctx.lineWidth = 1;
+  ctx.stroke(vectorPath(drawing, new Set(), { a: zoom, b: 0, c: 0, d: zoom }));
+  ctx.restore();
+  drawVectorTexts(ctx, drawing, new Set(), { a: zoom, b: 0, c: 0, d: zoom, e: x, f: y }, "#2b2f33");
+}
+
 function drawMarks(ctx: CanvasRenderingContext2D, marks: { at: Pt; label: string; target: PickTarget }[], target: PickTarget | null, toScreen: (p: Pt) => Pt) {
   ctx.save();
   ctx.font = "bold 11px system-ui, sans-serif";
@@ -862,7 +939,7 @@ function PickButton({ t, form, target, setTarget }: { t: PickTarget } & Pick<Inp
   );
 }
 
-function AxesInputs({ form, setForm, target, setTarget, reuseOptions }: InputsProps & { reuseOptions: DrawingWindowState["placements"] }) {
+export function AxesInputs({ form, setForm, target, setTarget, reuseOptions }: InputsProps & { reuseOptions: { key: string; label: string }[] }) {
   const n = form.reuseFrom ? 1 : 2;
   const setTick = (axis: "x" | "y", i: number, value: string) =>
     setForm({ ...form, axes: { ...form.axes, [axis]: form.axes[axis].map((t: TickRow, k: number) => (k === i ? { ...t, value } : t)) } });
@@ -899,8 +976,8 @@ function AxesInputs({ form, setForm, target, setTarget, reuseOptions }: InputsPr
           >
             <option value="">No: two points per axis</option>
             {reuseOptions.map((r) => (
-              <option key={`${r.modelId}/${r.placement.id}`} value={`${r.modelId}/${r.placement.id}`}>
-                {r.modelName}: {placementLabel(r.placement)} (one point per axis)
+              <option key={r.key} value={r.key}>
+                {r.label} (one point per axis)
               </option>
             ))}
           </select>
@@ -910,7 +987,7 @@ function AxesInputs({ form, setForm, target, setTarget, reuseOptions }: InputsPr
   );
 }
 
-function PointsInputs({ form, setForm, target, setTarget, residuals }: InputsProps & { residuals: number[] | null }) {
+export function PointsInputs({ form, setForm, target, setTarget, residuals }: InputsProps & { residuals: number[] | null }) {
   const setRow = (i: number, patch: Partial<PointRow>) => setForm({ ...form, points: form.points.map((p, k) => (k === i ? { ...p, ...patch } : p)) });
   const filled = form.points.filter((p) => p.source && p.x.trim() && p.y.trim());
   return (
@@ -959,7 +1036,7 @@ function PointsInputs({ form, setForm, target, setTarget, residuals }: InputsPro
   );
 }
 
-function ScaleInputs({ form, setForm, target, setTarget, isPdf }: InputsProps & { isPdf: boolean }) {
+export function ScaleInputs({ form, setForm, target, setTarget, isPdf, unitName }: InputsProps & { isPdf: boolean; unitName: string }) {
   const o = form.scale.origin;
   const set = (patch: Partial<CalibrationForm["scale"]>) => setForm({ ...form, scale: { ...form.scale, ...patch } });
   return (
@@ -980,7 +1057,7 @@ function ScaleInputs({ form, setForm, target, setTarget, isPdf }: InputsProps & 
             <option value="pt">point (1/72 in)</option>
           </select>
         ) : (
-          <span className="text-[11px]">pixel</span>
+          <span className="text-[11px]">{unitName}</span>
         )}
         <span className="text-[11px]">=</span>
         <input className={fieldClass} value={form.scale.metersPerUnit} aria-label="Meters per drawing unit" onChange={(e) => set({ metersPerUnit: e.target.value })} inputMode="decimal" />
@@ -989,6 +1066,44 @@ function ScaleInputs({ form, setForm, target, setTarget, isPdf }: InputsProps & 
       {isPdf && (
         <p className="text-[10px]" style={muted}>
           A sheet at 1:200 has 1 mm = 0.2 m.
+        </p>
+      )}
+    </div>
+  );
+}
+
+/** Drawing coordinates: the drawing as it is, its unit converted to metres. */
+export function DrawingInputs({
+  form,
+  setForm,
+  drawing,
+  fileUnit,
+}: {
+  form: CalibrationForm;
+  setForm: (f: CalibrationForm) => void;
+  drawing: VectorDrawing | null;
+  fileUnit: number | null;
+}) {
+  return (
+    <div className="mt-2 flex flex-col gap-1.5">
+      <p className="text-[11px]" style={muted}>
+        The drawing is placed at its own coordinates: a point at x, y in the drawing is at x, y in the model, in meters. Use
+        this when the section is drawn at its true coordinates (for example, its elevations as y).
+      </p>
+      <label className="flex items-center gap-1.5">
+        <span className="text-[11px] whitespace-nowrap">Drawing unit</span>
+        <select aria-label="Drawing unit" value={form.drawingUnit} onChange={(e) => setForm({ ...form, drawingUnit: Number(e.target.value) })}>
+          {DRAWING_UNIT_CHOICES.map((c) => (
+            <option key={c.insunits} value={c.insunits}>
+              {c.label}
+              {c.insunits === fileUnit ? " (from the file)" : ""}
+            </option>
+          ))}
+        </select>
+      </label>
+      {drawing && fileUnit === null && (
+        <p className="text-[10px]" style={muted}>
+          The file does not say its unit: choose the one it is drawn in.
         </p>
       )}
     </div>

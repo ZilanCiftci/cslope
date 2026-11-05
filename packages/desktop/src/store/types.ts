@@ -508,7 +508,7 @@ export interface DrawingCalibration {
     reuseFrom?: string;
   };
   /** Scale mode: metres per drawing unit, and the unit the user typed it in. */
-  scale?: { metersPerUnit: number; unit: "px" | "pt" | "mm" };
+  scale?: { metersPerUnit: number; unit: "px" | "pt" | "mm" | "du" };
 }
 
 /**
@@ -539,6 +539,8 @@ export interface BackgroundImage {
   order: number;
   /** Also drawn in the result view and the PDF export (default false). */
   showInResults?: boolean;
+  /** A DWG or DXF drawing: the names of its layers not shown (nor snapped to, nor picked); absent: all shown. */
+  hiddenLayers?: string[];
 }
 
 /**

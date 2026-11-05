@@ -199,7 +199,7 @@ export function StatusBar({
           <option value="5">5.0 m</option>
         </select>
         <span style={{ color: "var(--color-vsc-border)" }}>|</span>
-        {cursorWorld ? (
+        {cursorWorld && cursorWorld.every(Number.isFinite) ? (
           <span className="font-mono">
             X:{" "}
             <span className="inline-block w-12 text-right">

@@ -1279,6 +1279,7 @@ export function drawCanvas(
   if (backgrounds.length > 0) {
     drawUnderlays(ctx, backgrounds, (x, y) => worldToCanvas(x, y, w, h), {
       pixelRatio,
+      ink: INK.drawingInk,
       include: (p) => p.visible && (mode !== "result" || p.showInResults === true),
     });
   }

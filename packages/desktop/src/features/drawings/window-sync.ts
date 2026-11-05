@@ -41,15 +41,20 @@ export interface DrawingWindowState {
   assets: DrawingAssetInfo[];
   /** Every model's placements (the active model's as they are now). */
   placements: PlacementRef[];
-  /** A placement to recalibrate (from the drawings list or the canvas); a new nonce each time. */
-  edit: { placementId: string; nonce: number } | null;
+  /**
+   * What the window opens for: a placement to recalibrate (from the
+   * drawings list or the canvas), or "New models from drawing…"; a new
+   * nonce each time.
+   */
+  edit: { placementId?: string; newModels?: boolean; nonce: number } | null;
 }
 
 /** What the window asks of the main window. */
 export type DrawingCommand =
   | { type: "requestAsset"; id: string }
   | { type: "addAsset"; id: string; name: string; mime: string; sha256: string; data: Uint8Array }
-  | { type: "place"; placement: BackgroundImage };
+  | { type: "place"; placement: BackgroundImage }
+  | { type: "createModels"; models: { name: string; placement: BackgroundImage }[] };
 
 /** A drawing file's bytes, sent to the window (or why they cannot be). */
 export type DrawingAssetPayload = { id: string; mime: string; data: Uint8Array } | { id: string; error: string };
@@ -66,6 +71,53 @@ export function openPlaceDrawing(placementId?: string): void {
   pendingEdit = placementId ? { placementId, nonce: ++editNonce } : null;
   for (const l of editListeners) l();
   if (isElectron) window.cslope.openPlaceDrawingDialog();
+}
+
+/** Open the window for "New models from drawing…": frames drawn on a drawing's sheets, one model each. */
+export function openNewModelsFromDrawing(): void {
+  pendingEdit = { newModels: true, nonce: ++editNonce };
+  for (const l of editListeners) l();
+  if (isElectron) window.cslope.openPlaceDrawingDialog();
+}
+
+/**
+ * New models, each with a drawing placed (the file shared) and an empty
+ * geometry, named as given (an empty name: the next default name); the
+ * first of them becomes the active model. Like an import, not an undo
+ * step (a model is removed in the explorer).
+ */
+export function createModelsFromDrawing(models: { name: string; placement: BackgroundImage }[]): void {
+  if (models.length === 0) return;
+  // The models first (a placement may name another's model), then their drawings.
+  const modelOf = new Map<string, string>();
+  for (const m of models) {
+    useAppStore.getState().addModel(m.name.trim() || undefined);
+    useAppStore.getState().setCoordinates([]);
+    modelOf.set(m.placement.id, useAppStore.getState().activeModelId);
+  }
+  let first: string | null = null;
+  for (const m of models) {
+    const id = modelOf.get(m.placement.id)!;
+    if (useAppStore.getState().activeModelId !== id) useAppStore.getState().switchModel(id);
+    const s = useAppStore.getState();
+    // A scale reused from another frame: that frame's model and placement.
+    const reuse = m.placement.calibration.axes?.reuseFrom;
+    const placement =
+      reuse?.startsWith("placement:") && m.placement.calibration.axes
+        ? {
+            ...m.placement,
+            calibration: {
+              ...m.placement.calibration,
+              axes: { ...m.placement.calibration.axes, reuseFrom: `${modelOf.get(reuse.slice(10)) ?? ""}/${reuse.slice(10)}` },
+            },
+          }
+        : m.placement;
+    s.addBackground(placement);
+    first ??= useAppStore.getState().activeModelId;
+  }
+  if (first && useAppStore.getState().activeModelId !== first) useAppStore.getState().switchModel(first);
+  useAppStore.setState({ _pendingFitToScreen: true });
+  useAppStore.temporal.getState().clear();
 }
 
 /** The state the window is sent. */
@@ -127,6 +179,10 @@ export async function handleDrawingCommand(command: DrawingCommand, send: (asset
       pendingEdit = null;
       return;
     }
+    case "createModels":
+      createModelsFromDrawing(command.models);
+      pendingEdit = null;
+      return;
   }
 }
 

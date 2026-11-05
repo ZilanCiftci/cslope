@@ -1,10 +1,12 @@
 /**
  * The Drawings section of the Models panel: the active model's placed
  * drawings, topmost first, each with its visibility, lock, opacity,
- * "Show in results", name, order, Recalibrate… and Remove. Every change
- * is an undo step of the model (an opacity drag is one step).
+ * "Show in results", name, order, Recalibrate… and Remove; a DWG or DXF
+ * drawing's layers (each shown or hidden), and "Pick lines…" for a drawing
+ * with line work. Every change is an undo step of the model (an opacity
+ * drag is one step).
  */
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { ChevronDown, ChevronUp, Eye, EyeOff, Lock, LockOpen, Trash2 } from "lucide-react";
 import { useAppStore } from "../../store/app-store";
 import { isObjectLocked, sameObject } from "../../store/canvas-selection";
@@ -13,6 +15,8 @@ import type { BackgroundImage } from "../../store/types";
 import { projectAsset } from "./asset-registry";
 import { placementLabel } from "./placement";
 import { openPlaceDrawing } from "./window-sync";
+import { onDrawingsChanged, peekSource, vectorsFor } from "./drawing-cache";
+import { startLinePick, useLinePick } from "./line-pick-store";
 
 const muted = { color: "var(--color-vsc-text-muted)" } as const;
 
@@ -66,6 +70,12 @@ function DrawingRow({ placement: b, first, last }: { placement: BackgroundImage;
   const st = () => useAppStore.getState();
   const [editing, setEditing] = useState<string | null>(null);
   const [drag, setDrag] = useState<number | null>(null);
+  const [layersOpen, setLayersOpen] = useState(false);
+  const [, setTick] = useState(0);
+  useEffect(() => onDrawingsChanged(() => setTick((t) => t + 1)), []);
+  const picking = useLinePick((s) => s.placementId === b.id);
+  const kind = peekSource(b.assetId)?.kind;
+  const drawing = kind === "vector" ? vectorsFor(b.assetId, b.page ?? 1) : null;
   const label = placementLabel(b, projectAsset(b.assetId)?.originalName);
   const iconButton = "w-6 h-6 flex items-center justify-center rounded-sm hover:bg-(--color-vsc-list-active)";
   const commitName = () => {
@@ -180,14 +190,86 @@ function DrawingRow({ placement: b, first, last }: { placement: BackgroundImage;
           <Trash2 size={12} aria-hidden />
         </button>
       </div>
-      <div className="flex items-center gap-1 mt-1">
+      <div className="flex items-center flex-wrap gap-1 mt-1">
         <button className="btn text-[11px] px-2 py-0.5" onClick={() => openPlaceDrawing(b.id)}>
           Recalibrate…
         </button>
         <button className="btn text-[11px] px-2 py-0.5" onClick={() => setEditing(label)}>
           Rename
         </button>
+        {(kind === "vector" || kind === "pdf") && (
+          <button
+            className="btn text-[11px] px-2 py-0.5"
+            aria-pressed={picking}
+            disabled={!b.visible}
+            title="Pick lines of the drawing on the canvas and use them as the exterior boundary, material boundaries or water lines"
+            onClick={() => (picking ? useLinePick.getState().stop() : startLinePick(b.id))}
+          >
+            {picking ? "Done picking" : "Pick lines…"}
+          </button>
+        )}
       </div>
+      {drawing && drawing.layers.length > 0 && (
+        <LayerList
+          label={label}
+          layers={drawing.layers}
+          hidden={b.hiddenLayers ?? []}
+          open={layersOpen}
+          setOpen={setLayersOpen}
+          onChange={(hiddenLayers) => st().updateBackground(b.id, { hiddenLayers: hiddenLayers.length > 0 ? hiddenLayers : undefined })}
+        />
+      )}
+    </div>
+  );
+}
+
+/** A DWG or DXF drawing's layers, each shown or hidden (the placement's `hiddenLayers`). */
+function LayerList({
+  label,
+  layers,
+  hidden,
+  open,
+  setOpen,
+  onChange,
+}: {
+  label: string;
+  layers: string[];
+  hidden: string[];
+  open: boolean;
+  setOpen: (v: boolean) => void;
+  onChange: (hidden: string[]) => void;
+}) {
+  const shown = layers.filter((l) => !hidden.includes(l)).length;
+  return (
+    <div className="mt-1">
+      <button className="flex items-center gap-1 text-[11px]" onClick={() => setOpen(!open)} aria-expanded={open} aria-label={`Layers of ${label}`}>
+        <svg width="8" height="8" viewBox="0 0 10 10" fill="currentColor" style={{ transform: open ? "rotate(0deg)" : "rotate(-90deg)" }} aria-hidden>
+          <path d="M2 3l3 3.5L8 3z" />
+        </svg>
+        Layers <span style={muted}>({shown} of {layers.length} shown)</span>
+      </button>
+      {open && (
+        <div className="mt-1 pl-3 flex flex-col gap-0.5 max-h-[180px] overflow-y-auto" role="group" aria-label={`Layers of ${label}`}>
+          <div className="flex gap-2 text-[10px]">
+            <button className="underline" onClick={() => onChange([])} disabled={hidden.length === 0}>
+              Show all
+            </button>
+            <button className="underline" onClick={() => onChange([...layers])} disabled={shown === 0}>
+              Hide all
+            </button>
+          </div>
+          {layers.map((name) => (
+            <label key={name} className="flex items-center gap-1.5 min-w-0">
+              <input
+                type="checkbox"
+                checked={!hidden.includes(name)}
+                onChange={(e) => onChange(e.target.checked ? hidden.filter((h) => h !== name) : [...hidden, name])}
+              />
+              <span className="truncate">{name || "(no name)"}</span>
+            </label>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

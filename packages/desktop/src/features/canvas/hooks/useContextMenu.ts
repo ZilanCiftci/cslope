@@ -11,6 +11,8 @@ import type { ContextMenuItem, ContextMenuState, EdgeHit, MaterialPickerState } 
 import { findReferenceEdgeAt, findReferenceHitAt, referenceHitId } from "../reference-geometry";
 import type { CanvasCandidate } from "../object-hits";
 import { openPlaceDrawing } from "../../drawings/window-sync";
+import { peekSource } from "../../drawings/drawing-cache";
+import { startLinePick } from "../../drawings/line-pick-store";
 import {
   LOCK_GROUPS,
   canDeletePoint,
@@ -402,9 +404,19 @@ function drawingMenuItems(id: string, close: (fn: () => void) => () => void): Co
       }),
     },
     { label: "Recalibrate…", action: close(() => openPlaceDrawing(id)) },
+    ...(hasLineWork(st.backgrounds.find((b) => b.id === id)?.assetId)
+      ? [{ label: "Pick lines from drawing…", action: close(() => startLinePick(id)) }]
+      : []),
     { label: "Hide drawing", action: close(() => useAppStore.getState().updateBackground(id, { visible: false })) },
     { label: "Remove drawing", danger: true, action: close(() => useAppStore.getState().removeBackground(id)) },
   ];
+}
+
+/** A drawing that may have line work to pick (a DWG, DXF or PDF file, not an image). */
+function hasLineWork(assetId: string | undefined): boolean {
+  if (!assetId) return false;
+  const kind = peekSource(assetId)?.kind;
+  return kind === "vector" || kind === "pdf";
 }
 
 /** Remove a vertex of an object (the caller checks it may be removed). */

@@ -62,6 +62,8 @@ export interface CanvasInk {
   pileText: string;
   /** The grid lines of the edit canvas (and the result's grid). */
   gridLine: string;
+  /** The lines and texts of a DWG or DXF drawing placed under a model. */
+  drawingInk: string;
 }
 
 /** The print colours: the light theme, the PDF and the PNG export. */
@@ -96,6 +98,7 @@ export const PRINT_INK: Readonly<CanvasInk> = {
   reinforcementText: "#8e44ad",
   pileText: "#5d4037",
   gridLine: "rgba(0, 0, 0, 0.1)",
+  drawingInk: "#3a434c",
 };
 
 /** The token of each colour (index.css, both themes). */
@@ -130,6 +133,7 @@ export const INK_TOKENS: Readonly<Record<keyof CanvasInk, string>> = {
   reinforcementText: "--color-canvas-reinforcement-text",
   pileText: "--color-canvas-pile-text",
   gridLine: "--color-canvas-grid-line",
+  drawingInk: "--color-canvas-drawing-ink",
 };
 
 /** The theme's canvas colours (read at render time), the print colours where a token is not set. */

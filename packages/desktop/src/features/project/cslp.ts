@@ -219,12 +219,14 @@ function extensionOf(mime: string): string {
     "image/tiff": "tif",
     "image/svg+xml": "svg",
     "application/pdf": "pdf",
+    "image/vnd.dwg": "dwg",
+    "image/vnd.dxf": "dxf",
   };
   return known[mime.toLowerCase()] ?? "bin";
 }
 
 /** Types compressed already: stored as they are. */
-const STORED_MIME = new Set(["image/png", "image/jpeg", "image/webp", "image/gif", "application/pdf", "application/zip"]);
+const STORED_MIME = new Set(["image/png", "image/jpeg", "image/webp", "image/gif", "application/pdf", "application/zip", "image/vnd.dwg"]);
 
 const json = (name: string, value: unknown): ZipInput => ({ name, data: canonicalJson(value) });
 

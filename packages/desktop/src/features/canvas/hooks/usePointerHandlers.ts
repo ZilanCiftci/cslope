@@ -35,6 +35,8 @@ import { translate } from "../../drawings/transform";
 import { bodyDraggable, dragHitOf, type CanvasCandidate } from "../object-hits";
 import { isObjectLocked, nextCycleIndex, sameObject } from "../../../store/canvas-selection";
 import { handleAxes, moveHandleTo, type HandleActions } from "../handle-edit";
+import type { DrawingSnap } from "../../drawings/snap";
+import type { SnapMarker } from "../../drawings/canvas-snap";
 
 type UndoableSnapshot = Pick<
   AppState,
@@ -114,6 +116,8 @@ interface PointerDeps {
     hit: PointHit,
   ) => [number, number] | null;
   snapValue: (v: number) => number;
+  /** Snapping to the placed drawings' line work (end points, intersections, lines); absent: none. */
+  findDrawingSnap?: (wx: number, wy: number) => DrawingSnap | null;
   assigningMaterialId: string | null;
   panActive: boolean;
   setRegionMaterial: (point: [number, number], materialId: string) => void;
@@ -276,6 +280,7 @@ export function usePointerHandlers(deps: PointerDeps) {
   const [hoverObject, setHoverObject] = useState<HoverObject | null>(null);
   const hoverObjectRef = useRef<HoverObject | null>(null);
   const [dragTip, setDragTip] = useState<DragTip | null>(null);
+  const [snapMarker, setSnapMarker] = useState<SnapMarker | null>(null);
   const [dragging, setDragging] = useState(false);
 
   const isSameHit = (a: PointHit | null, b: PointHit | null) => {
@@ -422,8 +427,26 @@ export function usePointerHandlers(deps: PointerDeps) {
         drag.hit.kind === "udlBody" ||
         drag.hit.kind === "customPlaneBody";
       const snap = gridOnly ? null : findSnapTarget(rawX, rawY, drag.hit);
-      const newX = snap ? snap[0] : snapValue(rawX);
-      const newY = snap ? snap[1] : snapValue(rawY);
+      // The drawings' line work, where no model point is near (a drawing
+      // moved whole does not snap to itself).
+      const drawingSnap =
+        snap || gridOnly || drag.hit.kind === "backgroundBody" || drag.hit.kind === "annotation"
+          ? null
+          : (depsRef.current.findDrawingSnap?.(rawX, rawY) ?? null);
+      const newX = snap ? snap[0] : drawingSnap ? drawingSnap.point[0] : snapValue(rawX);
+      const newY = snap ? snap[1] : drawingSnap ? drawingSnap.point[1] : snapValue(rawY);
+      {
+        const r = canvasRef.current?.getBoundingClientRect();
+        const kind = snap ? "endpoint" : drawingSnap?.kind;
+        if (kind && r) {
+          const px = clientX - r.left + (newX - rawX) * currentViewScale;
+          const py = clientY - r.top - (newY - rawY) * currentViewScale;
+          const dir = drawingSnap?.direction;
+          setSnapMarker({ x: px, y: py, kind, angle: dir ? Math.atan2(-dir[1], dir[0]) : undefined });
+        } else {
+          setSnapMarker(null);
+        }
+      }
 
       // Show the snapped coordinate in the status bar, not the raw mouse position
       if (drag.hit.kind !== "annotation") {
@@ -988,6 +1011,7 @@ export function usePointerHandlers(deps: PointerDeps) {
       pressRef.current = null;
       lastPointerRef.current = null;
       setDragTip(null);
+      setSnapMarker(null);
       setDragging(false);
       stopAutoPan();
       (e.target as HTMLElement).releasePointerCapture(e.pointerId);
@@ -1100,6 +1124,7 @@ export function usePointerHandlers(deps: PointerDeps) {
     hoverHit,
     hoverObject,
     dragTip,
+    snapMarker,
     dragging,
     cursor: mode === "edit" ? editCursor() : hoverHit ? "grab" : "default",
     handlePointerDown,

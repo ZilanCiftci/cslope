@@ -57,6 +57,32 @@ type UndoableState = Pick<
   | "backgrounds"
 >;
 
+/** The part of the state the undo history keeps. */
+export const undoableState = (state: AppState): UndoableState => ({
+  orientation: state.orientation,
+  coordinates: state.coordinates,
+  coordinateExpressions: state.coordinateExpressions,
+  parameters: state.parameters,
+  materials: state.materials,
+  materialBoundaries: state.materialBoundaries,
+  regionMaterials: state.regionMaterials,
+  piezometricLine: state.piezometricLine,
+  udls: state.udls,
+  lineLoads: state.lineLoads,
+  reinforcements: state.reinforcements,
+  piles: state.piles,
+  customSearchPlanes: state.customSearchPlanes,
+  customPlanesOnly: state.customPlanesOnly,
+  blockSearchObjects: state.blockSearchObjects,
+  waternet: state.waternet,
+  earlierStage: state.earlierStage,
+  analysisLimits: state.analysisLimits,
+  options: state.options,
+  resultViewSettings: state.resultViewSettings,
+  locks: state.locks,
+  backgrounds: state.backgrounds,
+});
+
 /** The undo history (set once the store exists). */
 let undoHistory: () => { pastStates: unknown[]; futureStates: unknown[] } = () => ({ pastStates: [], futureStates: [] });
 
@@ -76,30 +102,7 @@ export const useAppStore = create<AppState>()(
       ...createBackgroundsSlice(...args),
     }),
     {
-      partialize: (state): UndoableState => ({
-        orientation: state.orientation,
-        coordinates: state.coordinates,
-        coordinateExpressions: state.coordinateExpressions,
-        parameters: state.parameters,
-        materials: state.materials,
-        materialBoundaries: state.materialBoundaries,
-        regionMaterials: state.regionMaterials,
-        piezometricLine: state.piezometricLine,
-        udls: state.udls,
-        lineLoads: state.lineLoads,
-        reinforcements: state.reinforcements,
-        piles: state.piles,
-        customSearchPlanes: state.customSearchPlanes,
-        customPlanesOnly: state.customPlanesOnly,
-        blockSearchObjects: state.blockSearchObjects,
-        waternet: state.waternet,
-        earlierStage: state.earlierStage,
-        analysisLimits: state.analysisLimits,
-        options: state.options,
-        resultViewSettings: state.resultViewSettings,
-        locks: state.locks,
-        backgrounds: state.backgrounds,
-      }),
+      partialize: undoableState,
       limit: 50,
       // Typing in a field is one step, not one per keystroke.
       handleSet: coalescingHandleSet<UndoableState>(() => undoHistory()) as never,

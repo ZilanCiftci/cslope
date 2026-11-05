@@ -33,6 +33,12 @@ import { ContextMenuOverlay } from "../features/canvas/ContextMenuOverlay";
 import { MaterialPickerMenu } from "../features/canvas/MaterialPickerMenu";
 import { AxisOverlay } from "../features/canvas/AxisOverlay";
 import { edgeInsertAt, findBackgroundsAt, findCanvasObjectsAt } from "../features/canvas/object-hits";
+import { drawingSnapAt } from "../features/drawings/canvas-snap";
+import { placementExtent } from "../features/drawings/drawing-cache";
+import { cropCorners } from "../features/drawings/transform";
+import type { BackgroundImage } from "../store/types";
+import { SnapMarkerView } from "../features/drawings/SnapMarkerView";
+import { useLinePickCanvas } from "../features/drawings/useLinePickCanvas";
 import { PointEditor, type PointEditorState } from "../features/canvas/PointEditor";
 import { nudgeHandle } from "../features/canvas/handle-edit";
 import { canDeletePoint, isObjectLocked } from "../store/canvas-selection";
@@ -224,7 +230,7 @@ export function EditCanvas() {
       const rect = canvas.getBoundingClientRect();
       const toPx = (x: number, y: number) => worldToCanvas(x, y, rect.width, rect.height);
       const [mx, my] = toPx(wx, wy);
-      return edgeInsertAt(
+      const edge = edgeInsertAt(
         useAppStore.getState(),
         object,
         mx,
@@ -233,8 +239,17 @@ export function EditCanvas() {
         (px, py) => canvasToWorld(px, py, rect.width, rect.height),
         snapValue,
       );
+      // A point added at a drawing's corner or crossing goes there.
+      const snap = edge ? drawingSnapAt(useAppStore.getState(), "edit", wx, wy, viewScale) : null;
+      return edge && snap && snap.kind !== "line" ? { ...edge, snapPoint: snap.point } : edge;
     },
-    [canvasToWorld, snapValue, worldToCanvas],
+    [canvasToWorld, snapValue, viewScale, worldToCanvas],
+  );
+
+  /** Snapping to the placed drawings' line work while a point is dragged. */
+  const findDrawingSnap = useCallback(
+    (wx: number, wy: number) => drawingSnapAt(useAppStore.getState(), "edit", wx, wy, viewScale),
+    [viewScale],
   );
 
   const { contextMenu, setContextMenu, handleContextMenu } = useContextMenu({
@@ -257,6 +272,7 @@ export function EditCanvas() {
     hoverHit,
     hoverObject,
     dragTip,
+    snapMarker,
     cursor,
     handlePointerDown,
     handlePointerMove,
@@ -275,6 +291,7 @@ export function EditCanvas() {
     findRegionAtPoint: hitTest.findRegionAtPoint,
     findSnapTarget: hitTest.findSnapTarget,
     snapValue,
+    findDrawingSnap,
     assigningMaterialId,
     panActive,
     setRegionMaterial,
@@ -296,6 +313,8 @@ export function EditCanvas() {
     setContextMenu,
     setMaterialPicker,
   });
+
+  const linePick = useLinePickCanvas({ canvasRef, getEventWorldPos, viewScale, setContextMenu });
 
   // Sync mouse world position to the store so StatusBar can display it
   useEffect(() => {
@@ -495,7 +514,9 @@ export function EditCanvas() {
   }, [setAssigningMaterial, setContextMenu, setMaterialPicker, setSelectedRegionKey]);
 
   const handleFitToScreen = useCallback(() => {
-    if (coordinates.length < 2) return;
+    // A model without geometry yet: its drawings.
+    const drawings = coordinates.length < 2 ? drawingFitBounds(backgrounds) : null;
+    if (coordinates.length < 2 && !drawings) return;
 
     const container = containerRef.current;
     const canvas = canvasRef.current;
@@ -513,15 +534,17 @@ export function EditCanvas() {
     const targetCx = left + fitW / 2;
     const targetCy = top + fitH / 2;
 
-    const modelBounds = collectModelFitBounds({
-      coordinates,
-      materialBoundaries,
-      piezometricLines: piezometricLine.lines,
-      analysisLimits,
-      udls,
-      lineLoads,
-      surfaceYAtX,
-    });
+    const modelBounds =
+      drawings ??
+      collectModelFitBounds({
+        coordinates,
+        materialBoundaries,
+        piezometricLines: piezometricLine.lines,
+        analysisLimits,
+        udls,
+        lineLoads,
+        surfaceYAtX,
+      });
     if (!modelBounds) return;
 
     const { xMin, xMax, yMin } = modelBounds;
@@ -562,6 +585,7 @@ export function EditCanvas() {
     setActiveViewOffset([ox, oy]);
   }, [
     analysisLimits,
+    backgrounds,
     coordinates,
     lineLoads,
     materialBoundaries,
@@ -683,9 +707,10 @@ export function EditCanvas() {
         (e.target as HTMLElement).setPointerCapture(e.pointerId);
         return;
       }
+      if (e.button === 0 && linePick.onPointerDown(e)) return;
       handlePointerDown(e);
     },
-    [zoomBoxActive, handlePointerDown],
+    [zoomBoxActive, handlePointerDown, linePick],
   );
 
   const handleCanvasPointerMove = useCallback(
@@ -695,8 +720,9 @@ export function EditCanvas() {
         return;
       }
       handlePointerMove(e);
+      linePick.onPointerMove(e);
     },
-    [zoomBoxStart, handlePointerMove],
+    [zoomBoxStart, handlePointerMove, linePick],
   );
 
   const handleCanvasPointerUp = useCallback(
@@ -754,9 +780,11 @@ export function EditCanvas() {
         return;
       }
 
+      if (e.button === 0 && linePick.onPointerUp(e)) return;
       handlePointerUp(e);
     },
     [
+      linePick,
       zoomBoxStart,
       zoomBoxCurrent,
       canvasToWorld,
@@ -829,7 +857,7 @@ export function EditCanvas() {
           ref={canvasRef}
           className="absolute inset-0 w-full h-full"
           style={{
-            cursor: assigningMaterialId
+            cursor: assigningMaterialId || linePick.active
               ? "crosshair"
               : zoomBoxActive
                 ? "crosshair"
@@ -844,6 +872,7 @@ export function EditCanvas() {
           onDoubleClick={handleDoubleClick}
           onContextMenu={(e) => {
             setPointEditor(null);
+            if (linePick.onContextMenu(e)) return;
             handleContextMenu(e);
           }}
           data-testid="slope-canvas"
@@ -879,6 +908,12 @@ export function EditCanvas() {
         {hoverObject?.locked && !dragTip && !contextMenu && mouseWorld && (
           <LockedTip mouseWorld={mouseWorld} worldToCanvas={worldToCanvas} canvasRef={canvasRef} />
         )}
+
+        {linePick.overlay(
+          (x, y) => worldToCanvas(x, y, canvasSize.width, canvasSize.height),
+          canvasSize,
+        )}
+        <SnapMarkerView marker={snapMarker} />
 
         {dragTip && (
           <div
@@ -945,4 +980,16 @@ export function EditCanvas() {
       <AxisOverlay containerRef={containerRef} canvasRef={canvasRef} />
     </div>
   );
+}
+
+/** The extent of the visible drawings in the model (fitting a model without geometry), or null. */
+function drawingFitBounds(backgrounds: readonly BackgroundImage[]): { xMin: number; xMax: number; yMin: number; yMax: number } | null {
+  const pts = backgrounds.flatMap((b) => {
+    const extent = b.visible ? placementExtent(b) : null;
+    return extent ? cropCorners(b.transform, extent) : [];
+  });
+  if (pts.length === 0) return null;
+  const xs = pts.map((p) => p[0]);
+  const ys = pts.map((p) => p[1]);
+  return { xMin: Math.min(...xs), xMax: Math.max(...xs), yMin: Math.min(...ys), yMax: Math.max(...ys) };
 }

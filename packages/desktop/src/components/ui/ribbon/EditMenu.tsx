@@ -30,7 +30,7 @@ import {
 } from "./RibbonParts";
 import { LARGE_ICON, SMALL_ICON } from "./icon-props";
 import type { CanvasObjectRef, CanvasObjectType } from "../../../store/types";
-import { openPlaceDrawing } from "../../../features/drawings/window-sync";
+import { openNewModelsFromDrawing, openPlaceDrawing } from "../../../features/drawings/window-sync";
 
 /**
  * A window of the Model tab is a table of objects on the canvas: opening it
@@ -171,9 +171,17 @@ export function EditMenu({ isOpen, onActivate, panelHost }: Props) {
               <RibbonButton
                 icon={<DrawingIcon {...LARGE_ICON} />}
                 label="Drawing"
-                tooltip="Place drawing… (a section drawing under the model: PNG, JPEG, TIFF or PDF)"
+                tooltip="Place drawing… (a section drawing under the model: PNG, JPEG, TIFF, PDF, DWG or DXF)"
                 onClick={() => openPlaceDrawing()}
               />
+              <RibbonStack>
+                <RibbonSmallButton
+                  icon={<DrawingIcon {...SMALL_ICON} />}
+                  label="New models…"
+                  title="New models from drawing… (a frame around each section of a drawing, one model each)"
+                  onClick={() => openNewModelsFromDrawing()}
+                />
+              </RibbonStack>
             </RibbonGroup>
 
             <RibbonSep />

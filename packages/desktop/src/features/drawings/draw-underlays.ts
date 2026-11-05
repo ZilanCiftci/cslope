@@ -14,9 +14,16 @@
  * them, on any fill and in both themes. So: a sheet, half transparent by
  * default; the opacity slider trades the drawing against the fills. The
  * model's own lines and points are drawn over it and stay sharp.
+ *
+ * A DWG or DXF drawing has no sheet: its line work is drawn as lines (one
+ * cached path per zoom, vector-render.ts) in the theme's drawing ink, its
+ * hidden layers left out, at its opacity, clipped to its crop.
  */
 import type { BackgroundImage } from "../../store/types";
-import { placementExtent, rasterFor } from "./drawing-cache";
+import { peekSource, placementExtent, rasterFor, vectorsFor } from "./drawing-cache";
+import { hiddenLayerSet } from "./vectors";
+import { drawVectorTexts, vectorPath } from "./vector-render";
+import { PRINT_INK } from "../canvas/ink";
 import { sortedBackgrounds } from "../../store/slices/backgroundsSlice";
 import { compose, cropCorners, determinant, type Affine, type Pt } from "./transform";
 
@@ -37,6 +44,8 @@ export interface UnderlayOptions {
   pixelRatio?: number;
   /** Which placements to draw (default: the visible ones). */
   include?: (p: BackgroundImage) => boolean;
+  /** The colour of a DWG or DXF drawing's lines (the theme's drawing ink). */
+  ink?: string;
 }
 
 /** Draw the placements (in their order) on `ctx`, whose current transform maps canvas units to the device. */
@@ -44,7 +53,7 @@ export function drawUnderlays(
   ctx: CanvasRenderingContext2D,
   placements: readonly BackgroundImage[],
   toCanvas: WorldToCanvas,
-  { blend = "source-over", pixelRatio = 1, include = (p) => p.visible }: UnderlayOptions = {},
+  { blend = "source-over", pixelRatio = 1, include = (p) => p.visible, ink = PRINT_INK.drawingInk }: UnderlayOptions = {},
 ): void {
   if (placements.length === 0) return;
   const world = worldToCanvasAffine(toCanvas);
@@ -54,6 +63,10 @@ export function drawUnderlays(
     // Canvas pixels per source unit, for the raster's resolution.
     const scale = Math.sqrt(Math.abs(determinant(m))) * pixelRatio;
     if (!(scale > 0) || !Number.isFinite(scale)) continue;
+    if (peekSource(p.assetId)?.kind === "vector") {
+      drawVectorPlacement(ctx, p, m, ink);
+      continue;
+    }
     const raster = rasterFor(p, scale);
     const extent = placementExtent(p);
     if (!raster || !extent) continue;
@@ -70,6 +83,31 @@ export function drawUnderlays(
     ctx.drawImage(raster.image, r.x0, r.y0, r.x1 - r.x0, r.y1 - r.y0);
     ctx.restore();
   }
+}
+
+/** A DWG or DXF placement's line work through `m` (source → canvas), clipped to its crop. */
+function drawVectorPlacement(ctx: CanvasRenderingContext2D, p: BackgroundImage, m: Affine, ink: string): void {
+  const drawing = vectorsFor(p.assetId, p.page ?? 1);
+  const extent = placementExtent(p);
+  if (!drawing || !extent) return;
+  const hidden = hiddenLayerSet(drawing, p.hiddenLayers);
+  ctx.save();
+  // The crop, in canvas units.
+  const corners = cropCorners(m, extent);
+  ctx.beginPath();
+  corners.forEach(([x, y], i) => (i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y)));
+  ctx.closePath();
+  ctx.clip();
+  ctx.globalAlpha = p.opacity;
+  ctx.strokeStyle = ink;
+  ctx.lineWidth = 1;
+  ctx.lineJoin = "round";
+  ctx.lineCap = "round";
+  ctx.translate(m.e, m.f);
+  ctx.stroke(vectorPath(drawing, hidden, m));
+  ctx.translate(-m.e, -m.f);
+  drawVectorTexts(ctx, drawing, hidden, m, ink);
+  ctx.restore();
 }
 
 /** The corners of a placement's shown region on the canvas (null until its size is known). */

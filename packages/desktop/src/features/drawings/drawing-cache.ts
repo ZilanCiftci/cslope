@@ -7,8 +7,11 @@
  */
 import type { BackgroundImage } from "../../store/types";
 import { projectAsset } from "./asset-registry";
-import { openDrawingSource, type DrawingSource, type PageSize, type Raster } from "./sources";
+import { openDrawingSource, pageRect, type DrawingSource, type PageSize, type Raster } from "./sources";
 import type { Crop } from "./transform";
+import { SegmentIndex } from "./vector-index";
+import type { VectorDrawing } from "./vectors";
+import type { SnapSource } from "./snap";
 
 /** Where a file's bytes come from (the main window: the project's attachments; the Place drawing window: what the main window sent). */
 export type AssetLoader = (assetId: string) => Promise<{ bytes: Uint8Array; mime: string }>;
@@ -102,7 +105,60 @@ export function pageSizeOf(assetId: string, page = 1): PageSize | null {
 export function placementExtent(p: Pick<BackgroundImage, "assetId" | "page" | "crop">): Crop | null {
   if (p.crop) return p.crop;
   const size = pageSizeOf(p.assetId, p.page ?? 1);
-  return size ? { x0: 0, y0: 0, x1: size.width, y1: size.height } : null;
+  return size ? pageRect(size) : null;
+}
+
+// ── Line work ───────────────────────────────────────────────────────
+
+interface VectorEntry {
+  drawing: VectorDrawing | null;
+  index: SegmentIndex | null;
+  error: string | null;
+}
+
+const vectorEntries = new Map<string, VectorEntry>();
+
+/**
+ * The line work of a page (a DWG or DXF drawing's, a PDF page's vector
+ * paths), if read already; else it starts being read (null until then, and
+ * for an image).
+ */
+export function vectorsFor(assetId: string, page = 1): VectorDrawing | null {
+  return vectorEntry(assetId, page)?.drawing ?? null;
+}
+
+function vectorEntry(assetId: string, page: number): VectorEntry | null {
+  const key = `${assetId}|${page}`;
+  const known = vectorEntries.get(key);
+  if (known) return known;
+  const source = peekSource(assetId);
+  if (!source) return null;
+  const entry: VectorEntry = { drawing: null, index: null, error: null };
+  vectorEntries.set(key, entry);
+  source.vectors(page).then(
+    (drawing) => {
+      entry.drawing = drawing;
+      notify();
+    },
+    (err: unknown) => {
+      entry.error = err instanceof Error ? err.message : String(err);
+    },
+  );
+  return entry;
+}
+
+/** The line work of a page, read now. */
+export async function loadVectors(assetId: string, page = 1): Promise<VectorDrawing | null> {
+  const source = await drawingSource(assetId);
+  return source.vectors(page);
+}
+
+/** A placement's line work with its segment grid (built on the first call), or null while there is none. */
+export function snapSourceFor(p: BackgroundImage): SnapSource | null {
+  const entry = vectorEntry(p.assetId, p.page ?? 1);
+  if (!entry?.drawing || entry.drawing.paths.length === 0) return null;
+  entry.index ??= new SegmentIndex(entry.drawing);
+  return { placement: p, drawing: entry.drawing, index: entry.index };
 }
 
 // ── Rasters ─────────────────────────────────────────────────────────
@@ -156,7 +212,7 @@ export function rasterFor(p: Pick<BackgroundImage, "assetId" | "page" | "crop">,
   if (page < 1 || page > source.pageCount) return null;
   const region = p.crop ?? (() => {
     const size = source.pageSize(page);
-    return size ? { x0: 0, y0: 0, x1: size.width, y1: size.height } : null;
+    return size ? pageRect(size) : null;
   })();
   if (!region) {
     void source.loadPageSize(page).then(notify, () => {});
@@ -199,9 +255,9 @@ export function rasterFor(p: Pick<BackgroundImage, "assetId" | "page" | "crop">,
 }
 
 /** A raster of a placement's region at `scale`, rendered now (the PDF export). */
-export async function renderPlacement(p: Pick<BackgroundImage, "assetId" | "page" | "crop">, scale: number): Promise<Raster> {
+export async function renderPlacement(p: Pick<BackgroundImage, "assetId" | "page" | "crop" | "hiddenLayers">, scale: number): Promise<Raster> {
   const source = await drawingSource(p.assetId);
-  return source.render(p.page ?? 1, scale, p.crop);
+  return source.render(p.page ?? 1, scale, p.crop, p.hiddenLayers);
 }
 
 /** Forget everything (a test; or the Place drawing window when the project's files change). */
@@ -210,4 +266,5 @@ export function clearDrawingCache(): void {
   sources.clear();
   for (const e of rasters.values()) if (e.pending) clearTimeout(e.pending);
   rasters.clear();
+  vectorEntries.clear();
 }

@@ -41,7 +41,7 @@ function readCalibration(raw: unknown): DrawingCalibration {
     if (typeof raw.axes.reuseFrom === "string") out.axes.reuseFrom = raw.axes.reuseFrom;
   }
   if (isObject(raw.scale) && finite(raw.scale.metersPerUnit) && raw.scale.metersPerUnit > 0) {
-    const unit = raw.scale.unit === "pt" || raw.scale.unit === "mm" ? raw.scale.unit : "px";
+    const unit = raw.scale.unit === "pt" || raw.scale.unit === "mm" || raw.scale.unit === "du" ? raw.scale.unit : "px";
     out.scale = { metersPerUnit: raw.scale.metersPerUnit, unit };
   }
   return out;
@@ -106,6 +106,10 @@ export function normalizeBackgrounds(
       if (crop.x1 - crop.x0 > 0 && crop.y1 - crop.y0 > 0) entry.crop = crop;
     }
     if (item.showInResults === true) entry.showInResults = true;
+    if (Array.isArray(item.hiddenLayers)) {
+      const names = [...new Set(item.hiddenLayers.filter((n): n is string => typeof n === "string"))];
+      if (names.length > 0) entry.hiddenLayers = names;
+    }
     out.push(entry);
   });
   return out.sort((a, b) => a.order - b.order);

@@ -36,6 +36,8 @@ import {
 } from "../features/canvas/helpers";
 import { surfaceYAtX as surfaceY } from "../features/view/surface";
 import { ContextMenuOverlay } from "../features/canvas/ContextMenuOverlay";
+import { drawingSnapAt } from "../features/drawings/canvas-snap";
+import { SnapMarkerView } from "../features/drawings/SnapMarkerView";
 import { AxisOverlay } from "../features/canvas/AxisOverlay";
 import { setPaperDrawSource } from "../features/export/paper-png";
 export function ResultCanvas() {
@@ -175,14 +177,22 @@ export function ResultCanvas() {
     snapValue,
   });
 
+  // A reference line's point snaps to the drawings shown in results.
+  const findDrawingSnap = useCallback(
+    (wx: number, wy: number) => drawingSnapAt(useAppStore.getState(), "result", wx, wy, viewScale),
+    [viewScale],
+  );
+
   const {
     mouseWorld,
     hoverHit,
+    snapMarker,
     handlePointerDown,
     handlePointerMove,
     handlePointerUp,
     handlePointerCancel,
   } = usePointerHandlers({
+    findDrawingSnap,
     canvasRef,
     containerRef,
     getEventWorldPos,
@@ -1057,6 +1067,7 @@ export function ResultCanvas() {
             </button>
           </div>
         )}
+        <SnapMarkerView marker={snapMarker} />
         <ContextMenuOverlay menu={contextMenu} />
       </div>
       <AxisOverlay containerRef={containerRef} canvasRef={canvasRef} />

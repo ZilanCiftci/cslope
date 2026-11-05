@@ -12,6 +12,7 @@ import {
 } from "./RibbonParts";
 import { LARGE_ICON, SMALL_ICON } from "./icon-props";
 import { importDxf } from "../../../features/project/importDxf";
+import { openNewModelsFromDrawing } from "../../../features/drawings/window-sync";
 import { importDwg } from "../../../features/project/importDwg";
 import { importGsz } from "../../../features/project/importGsz";
 import { exportGsz } from "../../../features/project/exportGsz";
@@ -201,6 +202,11 @@ export function FileMenu({
                   items={[
                     { label: "DXF file…", title: "Import a DXF file", onClick: handleImportDxf },
                     { label: "DWG file…", title: "Import a DWG drawing (AutoCAD Release 11 or later)", onClick: handleImportDwg },
+                    {
+                      label: "New models from drawing…",
+                      title: "Frame each section of a drawing (PDF, DWG, DXF or image) and make a model of each, the drawing placed under it",
+                      onClick: () => openNewModelsFromDrawing(),
+                    },
                     { label: ".gsz file…", title: "Import a .gsz project file", onClick: handleImportGsz },
                     { label: ".stix file…", title: "Import a .stix project file", onClick: handleImportStix },
                     { label: ".sli/.slim/.slmd file…", title: "Import a .sli, .slim or .slmd model file", onClick: handleImportSli },
