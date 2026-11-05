@@ -1,0 +1,66 @@
+name: Bug report
+description: Something in cSlope does not work as it should (crash, wrong behavior, display problem).
+labels: ["bug", "needs-triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting. For a factor of safety you believe is wrong, use **Wrong result** instead.
+        **Do not attach client data.** Project files often hold client names, locations and site data: remove them first (see "Before you attach a project file" below).
+  - type: input
+    id: version
+    attributes:
+      label: cSlope version
+      description: Help › About, e.g. 0.1.0-beta.2.
+      placeholder: 0.1.0-beta.2
+    validations:
+      required: true
+  - type: dropdown
+    id: os
+    attributes:
+      label: Operating system
+      options:
+        - Windows 11
+        - Windows 10
+        - macOS
+        - Linux
+        - Other
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      description: What did you do, step by step?
+      placeholder: |
+        1. Open the attached project
+        2. Results › Export › PDF
+        3. ...
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: What happened
+      description: Include the exact error message if there was one.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: What you expected
+    validations:
+      required: true
+  - type: textarea
+    id: attachments
+    attributes:
+      label: Screenshots and files
+      description: Drag files here. A small .cslp project that shows the problem helps the most.
+  - type: checkboxes
+    id: confidential
+    attributes:
+      label: Before you attach a project file
+      description: Remove the project information (File › Model properties), rename materials and models that identify the client or site, and remove drawings you may not share.
+      options:
+        - label: I have removed client and confidential information from anything I attached (or attached nothing).
+          required: true

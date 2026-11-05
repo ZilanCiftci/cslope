@@ -1,0 +1,69 @@
+name: Wrong result
+description: A factor of safety (or another result) that you believe is wrong.
+labels: ["wrong-result", "needs-triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Results matter most, so these reports get priority. Please give enough to reproduce the analysis.
+        **Do not attach client data** (see the checkbox at the end).
+  - type: input
+    id: version
+    attributes:
+      label: cSlope version
+      placeholder: 0.1.0-beta.2
+    validations:
+      required: true
+  - type: dropdown
+    id: analysis
+    attributes:
+      label: Analysis
+      options:
+        - Limit equilibrium (Bishop, Janbu, Spencer, Morgenstern-Price)
+        - Finite elements (experimental)
+        - Probabilistic or sensitivity
+        - Other
+    validations:
+      required: true
+  - type: input
+    id: method
+    attributes:
+      label: Method and surface
+      description: e.g. Morgenstern-Price, half-sine; circular search; or a given surface.
+    validations:
+      required: true
+  - type: input
+    id: cslope-value
+    attributes:
+      label: cSlope result
+      placeholder: "F = 1.234"
+    validations:
+      required: true
+  - type: input
+    id: reference-value
+    attributes:
+      label: Value you compare with
+      placeholder: "F = 1.300"
+    validations:
+      required: true
+  - type: textarea
+    id: reference-source
+    attributes:
+      label: Source of that value
+      description: A published paper or textbook (with page or figure), a hand calculation, or another program (describe it generically, e.g. "a commercial limit equilibrium program"). Say whether it used the same surface, method and options.
+    validations:
+      required: true
+  - type: textarea
+    id: model
+    attributes:
+      label: Model
+      description: Attach the .cslp project, or describe the geometry, materials, water and loads.
+    validations:
+      required: true
+  - type: checkboxes
+    id: confidential
+    attributes:
+      label: Confidential data
+      options:
+        - label: I have removed client and confidential information from anything I attached (or attached nothing).
+          required: true

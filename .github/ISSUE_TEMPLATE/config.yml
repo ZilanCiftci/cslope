@@ -1,0 +1,11 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Question or "how do I…?"
+    url: https://github.com/ZilanCiftci/cslope/discussions/categories/q-a
+    about: Ask in Discussions. Issues are for bugs, wrong results and feature requests.
+  - name: Documentation
+    url: https://github.com/ZilanCiftci/cslope#readme
+    about: The user guide, the theory and the verification report are on the project website (linked from the README).
+  - name: Security vulnerability
+    url: https://github.com/ZilanCiftci/cslope/security/advisories/new
+    about: Report security problems privately, never in a public issue.

@@ -1,0 +1,52 @@
+name: Import or export problem
+description: A file that does not import or export correctly (.gsz, .stix, .sli/.slim, DXF, DWG, PDF or image drawings, Excel/CSV).
+labels: ["import-export", "needs-triage"]
+body:
+  - type: input
+    id: version
+    attributes:
+      label: cSlope version
+      placeholder: 0.1.0-beta.2
+    validations:
+      required: true
+  - type: dropdown
+    id: direction
+    attributes:
+      label: Direction
+      options:
+        - Import
+        - Export
+        - Drawing (underlay)
+    validations:
+      required: true
+  - type: input
+    id: format
+    attributes:
+      label: File format and version
+      description: e.g. .stix, DWG 2018, a 3-page PDF.
+    validations:
+      required: true
+  - type: input
+    id: origin
+    attributes:
+      label: Where the file comes from
+      description: The kind of program and its version (described generically), or "made by hand".
+  - type: textarea
+    id: problem
+    attributes:
+      label: What went wrong
+      description: The message shown, what is missing or different, and screenshots of both sides if you can.
+    validations:
+      required: true
+  - type: textarea
+    id: attachments
+    attributes:
+      label: Files
+      description: The file, if you may share it. A cut-down copy that still shows the problem is best.
+  - type: checkboxes
+    id: confidential
+    attributes:
+      label: Confidential data
+      options:
+        - label: I have removed client and confidential information from anything I attached (or attached nothing).
+          required: true

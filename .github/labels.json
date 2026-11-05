@@ -1,0 +1,18 @@
+[
+  { "name": "bug", "color": "d73a4a", "description": "Something does not work as it should" },
+  { "name": "wrong-result", "color": "b60205", "description": "A factor of safety or other result believed to be wrong" },
+  { "name": "import-export", "color": "1d76db", "description": ".gsz, .stix, .sli, DXF, DWG, PDF/image drawings, Excel/CSV" },
+  { "name": "enhancement", "color": "a2eeef", "description": "New feature or improvement" },
+  { "name": "fe-experimental", "color": "fbca04", "description": "Finite element analysis (experimental)" },
+  { "name": "ui", "color": "c5def5", "description": "User interface and usability" },
+  { "name": "docs", "color": "0075ca", "description": "Documentation and website" },
+  { "name": "verification", "color": "5319e7", "description": "Verification problems and the verification report" },
+  { "name": "needs-triage", "color": "ededed", "description": "Not yet looked at by a maintainer" },
+  { "name": "needs-repro", "color": "f9d0c4", "description": "Needs a model or steps that reproduce it" },
+  { "name": "confidential-data", "color": "000000", "description": "Contains client data: hide or remove the attachment" },
+  { "name": "good first issue", "color": "7057ff", "description": "Good for newcomers" },
+  { "name": "help wanted", "color": "008672", "description": "Extra attention is wanted" },
+  { "name": "duplicate", "color": "cfd3d7", "description": "This issue or pull request already exists" },
+  { "name": "wontfix", "color": "ffffff", "description": "This will not be worked on" },
+  { "name": "dependencies", "color": "0366d6", "description": "Dependency updates (Dependabot)" }
+]

@@ -43,6 +43,7 @@ packages/desktop/src/store/lovo.local.ts
 
 # Agent files
 .github/*.md
+!.github/pull_request_template.md
 # Rust build output
 packages/engine-rs/target/
 # WebAssembly engine builds (packages/engine-rs/tools/build-wasm.ts): the

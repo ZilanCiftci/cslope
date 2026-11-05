@@ -1,0 +1,28 @@
+name: Feature request
+description: Suggest a new feature or an improvement.
+labels: ["enhancement", "needs-triage"]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: The problem
+      description: What are you trying to do, and what makes it hard today?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Your proposal
+      description: How you would like it to work. Sketches and screenshots are welcome.
+    validations:
+      required: true
+  - type: textarea
+    id: workaround
+    attributes:
+      label: How you do it today
+      description: Workarounds, other tools, hand calculations.
+  - type: textarea
+    id: references
+    attributes:
+      label: References
+      description: Standards, guidelines or papers the feature should follow (e.g. a national guideline with section).
