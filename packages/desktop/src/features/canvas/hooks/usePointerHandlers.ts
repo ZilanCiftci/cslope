@@ -8,7 +8,7 @@ import {
   type RefObject,
 } from "react";
 import { computePaperFrame, getAnnotationBoundsPx } from "../helpers";
-import { useAppStore } from "../../../store/app-store";
+import { undoableState, useAppStore } from "../../../store/app-store";
 import { VIEW_SCALE_MAX, VIEW_SCALE_MIN } from "../constants";
 import type { CanvasWheelEvent } from "./useNonPassiveWheel";
 import type { ContextMenuState, MaterialPickerState, PointHit } from "../types";
@@ -38,42 +38,9 @@ import { handleAxes, moveHandleTo, type HandleActions } from "../handle-edit";
 import type { DrawingSnap } from "../../drawings/snap";
 import type { SnapMarker } from "../../drawings/canvas-snap";
 
-type UndoableSnapshot = Pick<
-  AppState,
-  | "orientation"
-  | "coordinates"
-  | "materials"
-  | "materialBoundaries"
-  | "regionMaterials"
-  | "piezometricLine"
-  | "udls"
-  | "lineLoads"
-  | "reinforcements"
-  | "piles"
-  | "customSearchPlanes"
-  | "analysisLimits"
-  | "options"
-  | "resultViewSettings"
->;
-
-function pickUndoableSnapshot(state: AppState): UndoableSnapshot {
-  return {
-    orientation: state.orientation,
-    coordinates: state.coordinates,
-    materials: state.materials,
-    materialBoundaries: state.materialBoundaries,
-    regionMaterials: state.regionMaterials,
-    piezometricLine: state.piezometricLine,
-    udls: state.udls,
-    lineLoads: state.lineLoads,
-    reinforcements: state.reinforcements,
-    piles: state.piles,
-    customSearchPlanes: state.customSearchPlanes,
-    analysisLimits: state.analysisLimits,
-    options: state.options,
-    resultViewSettings: state.resultViewSettings,
-  };
-}
+/** What a drag records as one undo step: the same fields the undo history keeps (a drawing's placement, the locks, …). */
+type UndoableSnapshot = ReturnType<typeof undoableState>;
+const pickUndoableSnapshot = undoableState;
 
 /** What a drag shows beside the pointer: the point's coordinates, or a circle's centre and radius. */
 export interface DragTip {

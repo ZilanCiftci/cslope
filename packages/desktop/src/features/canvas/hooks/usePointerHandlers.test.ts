@@ -3,7 +3,7 @@ import { act, renderHook } from "@testing-library/react";
 import type { PointerEvent as RPointerEvent } from "react";
 import { DRAG_THRESHOLD_PX, usePointerHandlers } from "./usePointerHandlers";
 import type { CanvasCandidate } from "../object-hits";
-import type { CanvasObjectRef, CanvasPointKey } from "../../../store/types";
+import type { BackgroundImage, CanvasObjectRef, CanvasPointKey } from "../../../store/types";
 import { useAppStore } from "../../../store/app-store";
 import { DEFAULT_PIEZO_LINE, DEFAULT_RESULT_VIEW_SETTINGS } from "../../../store/defaults";
 import { computePaperFrame } from "../helpers";
@@ -249,6 +249,39 @@ describe("select, then drag (edit view)", () => {
     expect(past).toHaveLength(1);
     expect(past[0].coordinates![2]).toEqual([10, 10]);
     expect(useAppStore.getState().coordinates[2]).toEqual([13, 10]);
+  });
+
+  it("records dragging a drawing as one undo step, which undoes the drag only", () => {
+    const drawing: BackgroundImage = {
+      id: "d1",
+      assetId: "a1",
+      calibration: { mode: "points", points: [] },
+      transform: { a: 0.1, b: 0, c: 0, d: -0.1, e: 0, f: 10 },
+      opacity: 1,
+      visible: true,
+      order: 0,
+    };
+    act(() => useAppStore.getState().addBackground(drawing));
+    // (a drawing placed is locked; unlocked to be moved)
+    act(() => useAppStore.setState({ locks: {} }));
+    act(() => useAppStore.getState().setCoordinate(0, [0, 1]));
+    const before = useAppStore.temporal.getState().pastStates.length;
+    const D: CanvasObjectRef = { type: "background", id: "d1" };
+    select(D);
+    const { down, move, up } = setup({ findObjectsAt: under({ object: D, point: null }) });
+    const [sx, sy] = toScreen(5, 5);
+    down(sx, sy);
+    move(sx + 10, sy);
+    move(sx + 20, sy);
+    up(sx + 20, sy);
+    const moved = useAppStore.getState().backgrounds[0].transform.e;
+    expect(moved).not.toBe(0);
+    expect(useAppStore.temporal.getState().pastStates).toHaveLength(before + 1);
+    act(() => useAppStore.temporal.getState().undo());
+    expect(useAppStore.getState().backgrounds[0].transform.e).toBe(0);
+    expect(useAppStore.getState().coordinates[0]).toEqual([0, 1]);
+    act(() => useAppStore.temporal.getState().redo());
+    expect(useAppStore.getState().backgrounds[0].transform.e).toBe(moved);
   });
 
   it("does not drag the exterior or a material boundary by its line", () => {
