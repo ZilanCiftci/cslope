@@ -21,7 +21,7 @@ Layout (the entries in the order a writer writes them; the optional ones only wh
 ├── project.json                  the project: schema version, the models' order, the active model, units
 ├── models/<id>/model.json        one model, without the outcome of its run
 ├── models/<id>/result.json       the outcome of its run (optional)
-├── models/<id>/backgrounds.json  its background images (optional)
+├── models/<id>/backgrounds.json  the drawings placed under it (optional)
 ├── assets/index.json             the attachments (optional, with assets/)
 ├── assets/<id>.<ext>             the attachments themselves
 └── thumbnail.png                 the active model's result sheet, small (optional)
@@ -31,7 +31,7 @@ The model folders come in the order of `project.json`'s `models`; within a folde
 
 Every entry carries the same DOS date and time in its local and central headers: the manifest's `modified`, in the writer's local time, to 2 s. (A writer that writes an archive for comparison only may use any constant; the first `.cslp` layout wrote 0.)
 
-Limits a reader enforces, before anything is unpacked: the file is at most 50 MB; an entry may declare at most 100 MB uncompressed; the entries actually unpacked may declare at most 200 MB together. An entry that unpacks to more than its central directory declares is damaged, and the reader stops at the declared size. A reader reads the central directory, unpacks the JSON entries it needs, and leaves the attachments and the thumbnail until they are asked for.
+Limits a reader enforces, before anything is unpacked: the file is at most 500 MB (its drawings are stored in it, up to 100 MB each); an entry may declare at most 100 MB uncompressed; the deflated entries actually unpacked may declare at most 200 MB together (a stored entry is a copy of bytes the file holds, so it cannot unpack to more than the file's size; the writer stores the drawings). An entry that unpacks to more than its central directory declares is damaged, and the reader stops at the declared size. A reader reads the central directory, unpacks the JSON entries it needs, and leaves the attachments and the thumbnail until they are asked for.
 
 ## 2. JSON entries
 
@@ -159,40 +159,58 @@ The outcome is read from `result.json` only: run fields in `model.json` are igno
 
 ### 4.5 models/\<id\>/backgrounds.json
 
-Background images under the model's drawing, each an attachment of the file. A JSON array; absent when the model has none. There is no interface for them yet: the format reads and writes them.
+The drawings placed under the model: each an attachment of the file (an image, or a page of a PDF), optionally cropped, placed in the model by a 2D affine transform. A JSON array; absent when the model has none. The same attachment may be placed by several models, each with its own page, crop and calibration; the attachment is written once.
 
 ```json
 [
   {
-    "assetId": "0c8f4a2e-6b1d-4f3a-9e7b-2d5c8a1f6e43",
-    "opacity": 0.6,
-    "order": 0,
-    "transform": {
-      "mirrored": false,
-      "originX": 0,
-      "originY": -5,
-      "rotationDeg": 0,
-      "scale": 0.1
+    "assetId": "5b1e0f6a-2c4d-4e8f-9a1b-3c5d7e9f1a2b",
+    "calibration": {
+      "axes": {
+        "x": [{ "source": [85.04, 425.2], "value": 0 }, { "source": [651.97, 425.2], "value": 40 }],
+        "y": [{ "source": [85.04, 425.2], "value": 0 }, { "source": [85.04, 141.73], "value": 10 }]
+      },
+      "mode": "axes",
+      "points": []
     },
+    "crop": { "x0": 56.69, "x1": 680.31, "y0": 42.52, "y1": 453.54 },
+    "id": "drawing-a",
+    "name": "Section A-A",
+    "opacity": 0.5,
+    "order": 0,
+    "page": 1,
+    "showInResults": true,
+    "transform": { "a": 0.0706, "b": 0, "c": 0, "d": -0.0353, "e": -6, "f": 15 },
     "visible": true
   }
 ]
 ```
 
+*Source units* are the drawing's own coordinates, with the origin at the top-left corner of the page (or image) and y downwards: pixels of an image, points (1/72 in) of a PDF page as it is displayed (its `/Rotate` applied, its crop box as the page). *Model coordinates* are metres, y upwards.
+
 | Member | Type | Meaning |
 | --- | --- | --- |
-| `assetId` | string | The id of an entry of `assets/index.json`. A background whose attachment is not in the index is dropped on read. |
-| `transform.originX`, `transform.originY` | number | World coordinates (m) of the image's bottom-left corner. Required. |
-| `transform.scale` | number > 0 | World units (m) per image pixel. Required. |
-| `transform.rotationDeg` | number | Rotation about the origin, counter-clockwise, degrees (default 0). |
-| `transform.mirrored` | boolean | Mirrored left to right before the rotation (default false). |
+| `id` | string matching `[A-Za-z0-9_-]+` | The placement's id, unique within the model (the model's `locks.backgrounds` refers to it). A reader gives an entry without a valid id `drawing-<n>` (n its position, from 1) and makes repeated ids unique. |
+| `assetId` | string | The id of an entry of `assets/index.json`. A placement whose attachment is not in the index is dropped on read. |
+| `transform` | object `{ a, b, c, d, e, f }` of numbers | The placement: model = M · source, `x = a·u + c·v + e`, `y = b·u + d·v + f` for a source point (u, v). Required; a reader drops an entry whose transform is not finite or is singular (`a·d − b·c` nearly 0). |
+| `page` | integer ≥ 1 | The page of a PDF (or the image of a multi-page TIFF), from 1. Absent: the first. |
+| `crop` | object `{ x0, y0, x1, y1 }` of numbers | The part of the page shown, in source units. Absent: the whole page. A reader orders the corners and drops an empty rectangle. |
+| `calibration` | object | How the transform was found, so that it can be changed later; a reader does not recompute the transform from it. `mode`: `"points"` (two or more source → model point pairs: two give a similarity, three or more a least-squares affine), `"axes"` (two ticks on each axis with their values, x and y scaled separately, no rotation), `"scale"` (one point pair, the origin, and a scale) or `"drawing"` (the transform as stored, without inputs). `points`: an array of `{ "source": [u, v], "model": [x, y] }`. `axes` (axes mode): `{ "x": [{ "source": [u, v], "value": x }...], "y": [...], "reuseFrom"?: "<model id>/<placement id>" }` (with `reuseFrom`, one tick per axis and the other placement's scales). `scale` (scale mode): `{ "metersPerUnit": number > 0, "unit": "px" \| "pt" \| "mm" }`, the scale as typed (1 mm = 72/25.4 pt). A missing or unknown `mode` reads as `"drawing"`. |
+| `name` | string | A name of the user's. Absent: the attachment's `originalName` (with the page). |
 | `opacity` | number, 0 to 1 | Default 1; clamped. |
 | `visible` | boolean | Default true. |
-| `order` | number | Drawing order among the model's backgrounds, lowest first; default the entry's position. |
+| `order` | number | Drawing order among the model's drawings, lowest first (drawn first); default the entry's position. |
+| `showInResults` | boolean | Also drawn in the result view and the PDF export. Default false. |
+
+Whether a placement is locked on the canvas is part of the model: `locks.backgrounds` in `model.json` (an array of placement ids); a reader drops ids of placements the model does not have.
+
+**The first form.** Files written before placements had calibrations hold entries whose `transform` is `{ originX, originY, scale, rotationDeg?, mirrored? }`: the model coordinates (m) of the image's bottom-left corner, metres per pixel (> 0), a rotation counter-clockwise about that corner (degrees, default 0), and a mirror left to right in place before the rotation (default false); without `id` or `calibration`. A reader converts such an entry to the affine transform with the image's size (W × H pixels, read from the image's header): with s the scale, the local placement `x' = s·u` (mirrored: `s·(W − u)`), `y' = s·(H − v)`, rotated by the angle and moved to the origin; `calibration` becomes `{ "mode": "drawing", "points": [] }`. When the image's size cannot be read, H and W are taken as 0. A writer writes the form above only.
+
+The new members are optional additions an older reader ignores (section 2.1): it drops a placement whose transform it does not know (it reads the file incompletely, not wrongly), so the format version stays 1.
 
 ### 4.6 assets/index.json and assets/\<id\>.\<ext\>
 
-The attachments: a JSON array, one entry per file under `assets/`. Absent (with the folder) when there are none. A writer writes only the attachments some model refers to (today: from `backgrounds.json`); the others are dropped at save.
+The attachments: a JSON array, one entry per file under `assets/`. Absent (with the folder) when there are none. A writer writes only the attachments some model refers to (today: from `backgrounds.json`), each once however many placements refer to it; the others are dropped at save. The app places PNG, JPEG, TIFF and PDF files (at most 100 MB each) and tells the type from the bytes, not the name.
 
 ```json
 [
@@ -243,7 +261,7 @@ Readers open two earlier formats and convert them on read; a save writes the lay
 - **JSON project** (`.json`, `.cslope`; cSlope up to 0.1.0-beta.2): a single UTF-8 JSON object, with or without a byte order mark, `{ "version", "activeModelId", "models": [ModelEntry with its run fields] }`; a file without `version` is schema version 1. Recognised by its content: the first non-blank character is `{`.
 - **The first .cslp layout** (never released): `manifest.json` (`format`, `formatVersion: 1`, `appVersion`, `created`), `project.json` with the models in an array (without run fields) and `results.json` `{ "models": { "<id>": { "runState", "result", "errorMessage" } } }`. Recognised by a `.cslp` archive without any `models/<id>/model.json` entry whose `project.json` has a `models` array.
 
-The test fixtures in `packages/desktop/src/features/project/fixtures/` hold one small file of each format that must stay readable: `legacy-json-v1.json`, `legacy-json-v3.json`, `cslp-3file.cslp` and `cslp-v1.cslp` (this layout, made by `scripts/make-project-fixture.ts`).
+The test fixtures in `packages/desktop/src/features/project/fixtures/` hold one small file of each format that must stay readable: `legacy-json-v1.json`, `legacy-json-v3.json`, `cslp-3file.cslp`, `cslp-v1.cslp` (this layout, with a background of the first form of `backgrounds.json`) and `cslp-v1-drawings.cslp` (this layout with one PDF placed in two models, page 1 and page 2, made by `scripts/make-project-fixture.ts`).
 
 ## 8. Saving
 

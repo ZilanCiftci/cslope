@@ -2,8 +2,9 @@
 /**
  * Every project file format cSlope must keep opening, one small committed
  * file each (fixtures/): JSON projects of schema versions 1 and 3, the
- * first .cslp layout, and this version's layout (made by
- * scripts/make-project-fixture.ts).
+ * first .cslp layout, and this version's layout: with a background of the
+ * first backgrounds.json form (cslp-v1.cslp), and with a PDF placed in
+ * two models (cslp-v1-drawings.cslp, made by scripts/make-project-fixture.ts).
  */
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
@@ -69,8 +70,18 @@ describe("project file fixtures", () => {
     expect(file.models[1]).toMatchObject({ runState: "error", errorMessage: "No admissible surface" });
     expect(opened.results.get("model-1")?.inputHash).toMatch(/^[0-9a-f]{64}$/);
     expect(opened.results.has("model-2")).toBe(true);
+    // (backgrounds.json in its first form, origin and scale, converted to
+    // the affine placement: the 1 × 1 px image's bottom-left corner at (0, -5))
     expect(file.models[0].backgrounds).toEqual([
-      { assetId: "0c8f4a2e-6b1d-4f3a-9e7b-2d5c8a1f6e43", transform: { originX: 0, originY: -5, scale: 0.1, rotationDeg: 0, mirrored: false }, opacity: 0.6, visible: true, order: 0 },
+      {
+        id: "drawing-1",
+        assetId: "0c8f4a2e-6b1d-4f3a-9e7b-2d5c8a1f6e43",
+        calibration: { mode: "drawing", points: [] },
+        transform: { a: 0.1, b: 0, c: 0, d: -0.1, e: 0, f: -4.9 },
+        opacity: 0.6,
+        visible: true,
+        order: 0,
+      },
     ]);
     expect(opened.assets).toEqual([
       {
@@ -86,5 +97,31 @@ describe("project file fixtures", () => {
     const png = await opened.readAsset("0c8f4a2e-6b1d-4f3a-9e7b-2d5c8a1f6e43");
     expect(Array.from(png.subarray(0, 8))).toEqual([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
     expect(await opened.readThumbnail()).toEqual(png);
+  });
+
+  it("cslp-v1-drawings.cslp: one PDF placed in two models (page 1 and page 2, cropped), written once", async () => {
+    const opened = await openProject(fixture("cslp-v1-drawings.cslp"));
+    expect(opened.layout).toBe("cslp");
+    const pdf = "5b1e0f6a-2c4d-4e8f-9a1b-3c5d7e9f1a2b";
+    expect(opened.assets).toEqual([
+      expect.objectContaining({ id: pdf, path: `assets/${pdf}.pdf`, mime: "application/pdf", originalName: "sections.pdf" }),
+    ]);
+    const [a, b] = opened.file.models;
+    expect(a.backgrounds).toHaveLength(1);
+    expect(a.backgrounds![0]).toMatchObject({
+      id: "drawing-a",
+      assetId: pdf,
+      name: "Section A-A",
+      page: 1,
+      calibration: { mode: "axes" },
+      opacity: 0.5,
+      showInResults: true,
+    });
+    expect(a.backgrounds![0].calibration.axes?.x).toHaveLength(2);
+    expect(a.locks).toEqual({ backgrounds: ["drawing-a"] });
+    expect(b.backgrounds![0]).toMatchObject({ id: "drawing-b", assetId: pdf, page: 2, calibration: { mode: "points" } });
+    expect(b.backgrounds![0].crop).toEqual(a.backgrounds![0].crop);
+    const bytes = await opened.readAsset(pdf);
+    expect(new TextDecoder().decode(bytes.subarray(0, 5))).toBe("%PDF-");
   });
 });

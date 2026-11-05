@@ -7,7 +7,7 @@ in the repository)::
     project.json                   schema version, the models' order, the active model, units
     models/<id>/model.json         one model, without the outcome of its run
     models/<id>/result.json        the outcome of its run (optional)
-    models/<id>/backgrounds.json   its background images (optional)
+    models/<id>/backgrounds.json   the drawings placed under it (optional)
     assets/index.json              the attachments (optional)
     assets/<id>.<ext>              the attachments themselves
     thumbnail.png                  a small picture of the active model's result (optional)
@@ -25,6 +25,7 @@ are read too.
     >>> [m.name for m in p.models]  # doctest: +SKIP
     >>> p.models[0].data["coordinates"]  # doctest: +SKIP
     >>> p.models[0].result["result"]["minFOS"]  # doctest: +SKIP
+    >>> [(d.name, d.page, d.to_model(100, 200)) for d in p.placements(p.models[0])]  # doctest: +SKIP
 
 This module needs only the standard library (zipfile, json): it is usable
 without the compiled engine, through ``cslope.project`` or on its own.
@@ -34,22 +35,25 @@ from __future__ import annotations
 
 import hashlib
 import json
+import math
 import os
 import re
+import struct
 import zipfile
 from dataclasses import dataclass, field
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Dict, List, Optional, Tuple, Union
 
-__all__ = ["FORMAT", "FORMAT_VERSION", "Asset", "Model", "Project", "read"]
+__all__ = ["FORMAT", "FORMAT_VERSION", "Asset", "Model", "Placement", "Project", "read"]
 
 #: The manifest's ``format``.
 FORMAT = "cslope-project"
 #: The layout this reader knows; a file whose ``minReaderVersion`` is above it is refused.
 FORMAT_VERSION = 1
 
-#: The largest an archive's entry may unpack to, and all its entries together
-#: (their declared sizes, checked before anything is read): the limits of the
-#: app's reader.
+#: The largest an archive's entry may unpack to, and all its deflated entries
+#: together (their declared sizes, checked before anything is read; a stored
+#: entry, such as a drawing, cannot unpack to more than the archive holds):
+#: the limits of the app's reader.
 MAX_ENTRY_BYTES = 100 * 1024 * 1024
 MAX_TOTAL_BYTES = 200 * 1024 * 1024
 
@@ -81,7 +85,7 @@ class Model:
     #: ``models/<id>/result.json``: ``runState``, ``result``, ``errorMessage``,
     #: ``inputHash`` and ``engine``; None without a saved outcome.
     result: Optional[Dict[str, Any]] = None
-    #: ``models/<id>/backgrounds.json``.
+    #: ``models/<id>/backgrounds.json`` as it is (``Project.placements`` reads it).
     backgrounds: List[Dict[str, Any]] = field(default_factory=list)
 
     @property
@@ -93,6 +97,78 @@ class Model:
         """The factor of safety of the saved result, or None."""
         r = self.result.get("result") if self.result else None
         return float(r["minFOS"]) if isinstance(r, dict) and "minFOS" in r else None
+
+
+@dataclass
+class Placement:
+    """A drawing placed under a model (an entry of ``backgrounds.json``, validated).
+
+    The drawing's own coordinates (``source``: pixels of an image, points of a
+    PDF page, origin at the top left, y downwards) map to the model's (m, y
+    upwards) by the affine ``transform`` ``(a, b, c, d, e, f)``:
+    ``x = a*u + c*v + e``, ``y = b*u + d*v + f``.
+    """
+
+    id: str
+    asset_id: str
+    transform: Tuple[float, float, float, float, float, float]
+    #: ``mode`` ("points", "axes", "scale" or "drawing") and its inputs.
+    calibration: Dict[str, Any]
+    opacity: float = 1.0
+    visible: bool = True
+    order: float = 0
+    #: The PDF page (1-based), or None (the first page).
+    page: Optional[int] = None
+    #: The part of the page shown, ``(x0, y0, x1, y1)`` in source units, or None (the whole page).
+    crop: Optional[Tuple[float, float, float, float]] = None
+    name: Optional[str] = None
+    show_in_results: bool = False
+    #: Locked on the canvas (the model's ``locks.backgrounds``).
+    locked: bool = False
+
+    def to_model(self, u: float, v: float) -> Tuple[float, float]:
+        """The model point (m) of a point of the drawing."""
+        a, b, c, d, e, f = self.transform
+        return (a * u + c * v + e, b * u + d * v + f)
+
+
+def _finite(v: Any) -> bool:
+    return isinstance(v, (int, float)) and not isinstance(v, bool) and math.isfinite(v)
+
+
+def _image_size(data: bytes) -> Optional[Tuple[int, int]]:
+    """An image's pixel size from its header (PNG, JPEG, GIF, BMP), or None."""
+    if data[:8] == b"\x89PNG\r\n\x1a\n" and len(data) >= 24:
+        return struct.unpack(">II", data[16:24])
+    if data[:3] == b"GIF" and len(data) >= 10:
+        return struct.unpack("<HH", data[6:10])
+    if data[:2] == b"BM" and len(data) >= 26:
+        w, h = struct.unpack("<ii", data[18:26])
+        return abs(w), abs(h)
+    if data[:2] == b"\xff\xd8":
+        i = 2
+        while i + 9 < len(data) and data[i] == 0xFF:
+            marker = data[i + 1]
+            if marker == 0xFF:
+                i += 1
+                continue
+            length = struct.unpack(">H", data[i + 2 : i + 4])[0]
+            if 0xC0 <= marker <= 0xCF and marker not in (0xC4, 0xC8, 0xCC):
+                h, w = struct.unpack(">HH", data[i + 5 : i + 9])
+                return w, h
+            i += 2 + length
+    return None
+
+
+def _legacy_transform(t: Dict[str, Any], size: Optional[Tuple[int, int]]) -> Tuple[float, ...]:
+    """The first form of a placement (bottom-left corner, m per pixel, rotation, mirror) as an affine transform."""
+    w, h = size or (0, 0)
+    s = float(t["scale"])
+    la, le = (-s, s * w) if t.get("mirrored") is True else (s, 0.0)
+    ld, lf = -s, s * h
+    r = math.radians(float(t["rotationDeg"])) if _finite(t.get("rotationDeg")) else 0.0
+    cos, sin = math.cos(r), math.sin(r)
+    return (cos * la, sin * la, -sin * ld, cos * ld, cos * le - sin * lf + t["originX"], sin * le + cos * lf + t["originY"])
 
 
 @dataclass
@@ -136,6 +212,72 @@ class Project:
         if hashlib.sha256(data).hexdigest() != a.sha256:
             raise ValueError(f"the attachment {a.original_name or a.path} does not match its hash")
         return data
+
+    def placements(self, model: Union[Model, str]) -> List["Placement"]:
+        """The drawings placed under a model, validated as the app reads them, in drawing order.
+
+        An entry of the first form (``originX``, ``scale``...) is converted to
+        the affine transform with its image's size read from the attachment.
+        Entries whose attachment is missing or whose transform is unusable are
+        left out.
+        """
+        m = self.model(model) if isinstance(model, str) else model
+        locks = m.data.get("locks")
+        locked = set(locks.get("backgrounds", [])) if isinstance(locks, dict) and isinstance(locks.get("backgrounds"), list) else set()
+        known = {a.id for a in self.assets}
+        out: List[Placement] = []
+        ids: set = set()
+        for i, b in enumerate(m.backgrounds):
+            asset_id = b.get("assetId")
+            t = b.get("transform")
+            if not isinstance(asset_id, str) or asset_id not in known or not isinstance(t, dict):
+                continue
+            if "originX" in t:
+                if not all(_finite(t.get(k)) for k in ("originX", "originY", "scale")) or t["scale"] <= 0:
+                    continue
+                size = None
+                try:
+                    size = _image_size(self.read_asset(asset_id)[:65536])
+                except (KeyError, ValueError):
+                    size = None
+                transform = _legacy_transform(t, size)
+                calibration: Dict[str, Any] = {"mode": "drawing", "points": []}
+            else:
+                if not all(_finite(t.get(k)) for k in "abcdef"):
+                    continue
+                transform = tuple(float(t[k]) for k in "abcdef")
+                if abs(transform[0] * transform[3] - transform[1] * transform[2]) <= 1e-9 * max(math.hypot(transform[0], transform[1]), math.hypot(transform[2], transform[3])) ** 2:
+                    continue
+                calibration = b.get("calibration") if isinstance(b.get("calibration"), dict) else {"mode": "drawing", "points": []}
+            pid = b.get("id") if isinstance(b.get("id"), str) and _SAFE_ID.match(b["id"]) else f"drawing-{i + 1}"
+            while pid in ids:
+                pid += "-1"
+            ids.add(pid)
+            crop = b.get("crop")
+            box = None
+            if isinstance(crop, dict) and all(_finite(crop.get(k)) for k in ("x0", "y0", "x1", "y1")):
+                x0, x1 = sorted((crop["x0"], crop["x1"]))
+                y0, y1 = sorted((crop["y0"], crop["y1"]))
+                if x1 > x0 and y1 > y0:
+                    box = (x0, y0, x1, y1)
+            page = b.get("page")
+            out.append(
+                Placement(
+                    id=pid,
+                    asset_id=asset_id,
+                    transform=transform,  # type: ignore[arg-type]
+                    calibration=calibration,
+                    opacity=min(1.0, max(0.0, float(b["opacity"]))) if _finite(b.get("opacity")) else 1.0,
+                    visible=b.get("visible") is not False,
+                    order=b["order"] if _finite(b.get("order")) else i,
+                    page=page if isinstance(page, int) and not isinstance(page, bool) and page >= 1 else None,
+                    crop=box,
+                    name=b["name"] if isinstance(b.get("name"), str) and b["name"].strip() else None,
+                    show_in_results=b.get("showInResults") is True,
+                    locked=pid in locked,
+                )
+            )
+        return sorted(out, key=lambda p: p.order)
 
     def thumbnail(self) -> Optional[bytes]:
         """``thumbnail.png``, or None without one."""
@@ -182,6 +324,8 @@ def _check_sizes(archive: zipfile.ZipFile) -> None:
     for info in archive.infolist():
         if info.file_size > MAX_ENTRY_BYTES:
             raise ValueError(f"the archive's entry {info.filename} is too large ({_megabytes(info.file_size)} unpacked; at most {_megabytes(MAX_ENTRY_BYTES)})")
+        if info.compress_type == zipfile.ZIP_STORED:
+            continue
         total += info.file_size
         if total > MAX_TOTAL_BYTES:
             raise ValueError(f"the archive is too large (its entries unpack to more than {_megabytes(MAX_TOTAL_BYTES)})")

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { analyseSlope, buildSlope, DEFAULT_ANALYSIS_OPTIONS, toCanonicalSlopeDefinition, type SlopeDefinition } from "@cslope/engine";
-import { readZip, writeZip } from "../../../utils/zip";
+import { readZip, writeZip, writeZipDeflated } from "../../../utils/zip";
 import { parseGszXml, parseSlipSurfaceCsv, readGsz } from "./gsz-read";
 import { gszToDefinition } from "./gsz-to-definition";
 import { modelToGsz, modelToGszXml } from "./gsz-write";
@@ -139,7 +139,8 @@ describe("ZIP", () => {
   });
 
   it("refuses entries above the limits before unpacking them", async () => {
-    const z = writeZip([{ name: "a.xml", data: "x".repeat(12) }, { name: "b.xml", data: "y".repeat(8) }]);
+    // (deflated: the total limit is on what deflated entries unpack to)
+    const z = await writeZipDeflated([{ name: "a.xml", data: "x".repeat(12) }, { name: "b.xml", data: "y".repeat(8) }]);
     await expect(readZip(z, undefined, { entryBytes: 10, totalBytes: 100 })).rejects.toThrow(/a\.xml is too large to import \(1 MB unpacked; at most 1 MB\)/);
     await expect(readZip(z, undefined, { entryBytes: 20, totalBytes: 15 })).rejects.toThrow(/archive is too large to import \(its entries unpack to more than 1 MB\)/);
     // the limits count only the entries wanted

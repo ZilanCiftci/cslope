@@ -68,7 +68,11 @@ export function isZip(bytes: Uint8Array): boolean {
 export interface ZipLimits {
   /** Largest entry, uncompressed. */
   entryBytes: number;
-  /** Largest total of the entries read, uncompressed. */
+  /**
+   * Largest total of the deflated entries read, uncompressed. (A stored
+   * entry is a copy of bytes the archive holds: it cannot unpack to more
+   * than the archive's own size, and does not count.)
+   */
   totalBytes: number;
 }
 
@@ -96,7 +100,7 @@ export interface ZipEntryInfo {
  * An open archive: its central directory, and entries unpacked on demand.
  * The declared sizes are checked against the limits before an entry is
  * unpacked (the entry's against `entryBytes`, the running total of what
- * was unpacked plus the entry's against `totalBytes`), and an entry that
+ * deflated entries unpacked plus the entry's against `totalBytes`), and an entry that
  * unpacks to more than it declares is refused as damaged, so an archive
  * can never unpack to more than the limits allow, however many entries it
  * has. An entry read twice is unpacked once.
@@ -109,7 +113,7 @@ export interface ZipArchive {
   size(name: string): number | undefined;
   /** The entry unpacked; throws without the entry or when it cannot be read within the limits. */
   read(name: string): Promise<Uint8Array>;
-  /** What the entries read so far unpacked to (bytes). */
+  /** What the deflated entries read so far unpacked to (bytes). */
   unpacked(): number;
 }
 
@@ -153,7 +157,7 @@ export function openZip(bytes: Uint8Array, limits: ZipLimits = ZIP_LIMITS): ZipA
     if (size > limits.entryBytes) {
       throw new Error(`The ZIP entry ${name} is too large to import (${megabytes(size)} unpacked; at most ${megabytes(limits.entryBytes)}).`);
     }
-    if (total + size > limits.totalBytes) {
+    if (method === 8 && total + size > limits.totalBytes) {
       throw new Error(`The ZIP archive is too large to import (its entries unpack to more than ${megabytes(limits.totalBytes)}).`);
     }
     if (local + 30 > bytes.length || u32(bytes, local) !== 0x04034b50) throw new Error("Damaged ZIP archive (local header).");
@@ -173,7 +177,7 @@ export function openZip(bytes: Uint8Array, limits: ZipLimits = ZIP_LIMITS): ZipA
         throw new Error(`Damaged ZIP archive (${name} cannot be decompressed).`, { cause: err });
       }
     } else throw new Error(`Unsupported ZIP compression (method ${method}) for ${name}`);
-    total += size;
+    if (method === 8) total += size;
     return out;
   }
 

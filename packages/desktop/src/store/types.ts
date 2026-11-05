@@ -476,26 +476,69 @@ export interface ResultViewSettings {
   pdfTitleLine?: boolean;
 }
 
-/** A background image of a model: an asset of the project file, placed in world coordinates. */
+/** The first form of a background's placement (read from older files, converted on read). */
+export interface LegacyBackgroundTransform {
+  /** World coordinates of the image's bottom-left corner (m). */
+  originX: number;
+  originY: number;
+  /** World units per image pixel. */
+  scale: number;
+  /** Rotation about the origin, counter-clockwise (degrees). */
+  rotationDeg: number;
+  /** Mirrored left to right before the rotation. */
+  mirrored: boolean;
+}
+
+/** How a drawing's placement was found (features/drawings/transform.ts). */
+export interface DrawingCalibration {
+  /**
+   * "points": two points (similarity) or more (least-squares affine);
+   * "axes": two ticks on each axis, x and y scaled separately; "scale": an
+   * origin and a scale; "drawing": the transform as stored, without input
+   * (an entry of the first form, or a drawing moved on the canvas).
+   */
+  mode: "points" | "axes" | "drawing" | "scale";
+  /** Drawing point → model point pairs (points mode; the origin in scale mode). */
+  points: { source: [number, number]; model: [number, number] }[];
+  /** Axes mode: the ticks clicked on each axis with their values. */
+  axes?: {
+    x: { source: [number, number]; value: number }[];
+    y: { source: [number, number]; value: number }[];
+    /** The placement (of the same drawing) whose scale was reused, if any. */
+    reuseFrom?: string;
+  };
+  /** Scale mode: metres per drawing unit, and the unit the user typed it in. */
+  scale?: { metersPerUnit: number; unit: "px" | "pt" | "mm" };
+}
+
+/**
+ * A drawing placed under a model (models/<id>/backgrounds.json): an asset
+ * of the project file (an image, or a page of a PDF), optionally cropped,
+ * placed by a 2D affine transform from the drawing's units (pixels or PDF
+ * points, y downwards) to the model (m, y upwards). Its lock is in the
+ * model's locks (`backgrounds`).
+ */
 export interface BackgroundImage {
+  /** Unique within the model. */
+  id: string;
   /** The asset's id in assets/index.json. */
   assetId: string;
-  transform: {
-    /** World coordinates of the image's bottom-left corner (m). */
-    originX: number;
-    originY: number;
-    /** World units per image pixel. */
-    scale: number;
-    /** Rotation about the origin, counter-clockwise (degrees). */
-    rotationDeg: number;
-    /** Mirrored left to right before the rotation. */
-    mirrored: boolean;
-  };
+  /** A name of the user's; absent: the file's name. */
+  name?: string;
+  /** PDF: the page (1-based); absent: the first page. */
+  page?: number;
+  /** The part of the page shown, in source units; absent: the whole page. */
+  crop?: { x0: number; y0: number; x1: number; y1: number };
+  calibration: DrawingCalibration;
+  /** model = M · source: x = a·u + c·v + e, y = b·u + d·v + f. */
+  transform: { a: number; b: number; c: number; d: number; e: number; f: number };
   /** 0 to 1. */
   opacity: number;
   visible: boolean;
   /** Drawing order among the model's backgrounds, lowest first. */
   order: number;
+  /** Also drawn in the result view and the PDF export (default false). */
+  showInResults?: boolean;
 }
 
 /**
@@ -506,7 +549,7 @@ export type CanvasObjectRef =
   | { type: "exterior" }
   | { type: "searchLimits" }
   | {
-      type: "boundary" | "waterLine" | "udl" | "lineLoad" | "reinforcement" | "pile" | "customPlane";
+      type: "boundary" | "waterLine" | "udl" | "lineLoad" | "reinforcement" | "pile" | "customPlane" | "background";
       id: string;
     };
 
@@ -557,6 +600,8 @@ export interface ModelLocks {
   searchLimits?: true;
   /** Custom search plane ids. */
   customSurfaces?: string[];
+  /** Drawing (background) placement ids. */
+  backgrounds?: string[];
   /** The geometry was locked by an import (the status bar offers to unlock it). */
   fromImport?: true;
 }
@@ -594,9 +639,8 @@ export interface ModelEntry {
    */
   importNotes?: string[];
   /**
-   * Background images under the drawing (models/<id>/backgrounds.json of a
-   * .cslp file), each an asset of the project file. Read and written by the
-   * project file; there is no interface for them yet. Absent: none.
+   * Drawings placed under the model (models/<id>/backgrounds.json of a
+   * .cslp file), each an asset of the project file. Absent: none.
    */
   backgrounds?: BackgroundImage[];
   /** Objects locked against canvas editing; absent: none. */
@@ -946,6 +990,20 @@ export interface CanvasSelectionSlice {
   unlockGeometry: () => void;
 }
 
+/** The active model's drawings (backgrounds), each change an undo step. */
+export interface BackgroundsSlice {
+  /** The active model's drawings. */
+  backgrounds: BackgroundImage[];
+  /** Place a drawing, locked (so clicks go to the model's objects). */
+  addBackground: (placement: BackgroundImage) => void;
+  /** Change a placement (opacity, visibility, name, a new calibration). */
+  updateBackground: (id: string, patch: Partial<Omit<BackgroundImage, "id">>) => void;
+  /** Remove a placement from the model (its file stays in the project while another model uses it). */
+  removeBackground: (id: string) => void;
+  /** Draw a placement one step later ("up": over the others) or earlier. */
+  moveBackground: (id: string, direction: "up" | "down") => void;
+}
+
 export type AppState = LayoutSlice &
   ModelsSlice &
   GeometrySlice &
@@ -955,4 +1013,5 @@ export type AppState = LayoutSlice &
   ViewportSlice &
   ResultViewSlice &
   CanvasToolbarSlice &
-  CanvasSelectionSlice;
+  CanvasSelectionSlice &
+  BackgroundsSlice;

@@ -132,7 +132,10 @@ result = cslope.analyse(model, model["options"])
 `read(path)` gives a `Project`: `manifest`, `version` (the project schema
 version), `active_model_id`, `units`, `models` (each a `Model` with `id`,
 `data`, `result`, `backgrounds`), `assets` (the attachments; `read_asset(id)`
-unpacks one and checks its SHA-256) and `thumbnail()`. The dicts are the
+unpacks one and checks its SHA-256), `placements(model)` (the drawings placed
+under a model, validated: each a `Placement` with its attachment, page,
+crop, calibration and affine `transform`; `to_model(u, v)` maps a point of
+the drawing to the model) and `thumbnail()`. The dicts are the
 files' JSON as it is, with camelCase keys: nothing is validated or migrated
 (the app drops unknown fields and brings older schema versions up to date;
 the engine ignores unknown keys). A file that needs a newer reader raises

@@ -16,7 +16,7 @@ import {
   useAppStore,
 } from "../../store/app-store";
 import { isElectron } from "../../utils/is-electron";
-import { fileTooLarge } from "./file-limits";
+import { fileTooLarge, MAX_PROJECT_FILE_BYTES } from "./file-limits";
 import {
   buildProjectArchive,
   ensureCslpName,
@@ -163,7 +163,7 @@ export function useProjectActions(defaultBaseName: string): ProjectActions {
   const handleFileChange: ChangeEventHandler<HTMLInputElement> = (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    const tooLarge = fileTooLarge(file);
+    const tooLarge = fileTooLarge(file, MAX_PROJECT_FILE_BYTES);
     if (tooLarge) {
       window.alert(`Unable to open project: ${tooLarge}`);
       return;

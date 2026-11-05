@@ -41,7 +41,8 @@ describe("openZip", () => {
     expect(archive.unpacked()).toBe(2);
     const first = await archive.read("dir/b.bin");
     expect(first).toBe(await archive.read("dir/b.bin"));
-    expect(archive.unpacked()).toBe(2 + MB);
+    // (a stored entry is a copy of the archive's own bytes: not counted)
+    expect(archive.unpacked()).toBe(2);
     await expect(archive.read("none")).rejects.toThrow("no entry none");
   });
 
@@ -53,7 +54,7 @@ describe("openZip", () => {
     const archive = openZip(bytes, limits);
     expect(dec.decode(await archive.read("small.txt"))).toBe("hello");
     // declared sizes decide before anything is unpacked
-    const big = writeZip([
+    const big = await writeZipDeflated([
       { name: "a.bin", data: new Uint8Array(1_500_000) },
       { name: "b.bin", data: new Uint8Array(700_000) },
       { name: "c.bin", data: new Uint8Array(900_000) },
@@ -67,6 +68,14 @@ describe("openZip", () => {
     await expect(lazy.read("d.bin")).rejects.toThrow(/archive is too large to import/);
     await expect(readZip(big, (n) => n !== "a.bin", limits)).rejects.toThrow(/archive is too large to import/);
     expect([...(await readZip(big, (n) => n === "b.bin", limits)).keys()]).toEqual(["b.bin"]);
+    // Stored entries (drawings: PNG, JPEG, PDF) cannot unpack to more than
+    // the archive holds: only the entry limit applies to them.
+    const stored = writeZip([
+      { name: "b.bin", data: new Uint8Array(700_000) },
+      { name: "c.bin", data: new Uint8Array(900_000) },
+      { name: "d.bin", data: new Uint8Array(900_000) },
+    ]);
+    expect([...(await readZip(stored, undefined, limits)).keys()]).toEqual(["b.bin", "c.bin", "d.bin"]);
     // a deflated entry that unpacks past its declared size is refused as damaged, bounded by the declaration
     const bytes2 = await writeZipDeflated([{ name: "z.bin", data: new Uint8Array(4 * MB) }]);
     const z = bytes2.slice();

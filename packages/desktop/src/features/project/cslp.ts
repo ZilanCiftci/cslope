@@ -6,7 +6,7 @@
  *   project.json                    the project: schema version, the models' order, the active model, units
  *   models/<id>/model.json          one model without the outcome of its run
  *   models/<id>/result.json         the outcome of its run (optional), with the hash of the input it belongs to
- *   models/<id>/backgrounds.json    its background images (optional)
+ *   models/<id>/backgrounds.json    the drawings placed under it (optional)
  *   assets/index.json               the binary attachments (optional)
  *   assets/<id>.<ext>               the attachments themselves
  *   thumbnail.png                   the active model's result sheet, small (optional)
@@ -34,12 +34,17 @@ import {
   serializeProject,
   type ProjectFile,
 } from "../../store/persistence";
-import type { AnalysisResult, AppState, BackgroundImage, ModelEntry } from "../../store/types";
+import type { AnalysisResult, AppState, ModelEntry } from "../../store/types";
 import { APP_VERSION, ENGINE_BUILD } from "../../utils/app-version";
 import { canonicalJson } from "../../utils/canonical-json";
 import { isZip, openZip, writeZipDeflated, type ZipArchive, type ZipInput } from "../../utils/zip";
-import { MAX_FILE_BYTES } from "./file-limits";
+import { MAX_PROJECT_FILE_BYTES } from "./file-limits";
 import { analysisInputHash, sha256Hex } from "./input-hash";
+import { adoptProjectAssets, openedProjectAssets, type ProjectAsset } from "../drawings/asset-registry";
+import { isLegacyEntry, normalizeBackgrounds } from "../drawings/placement";
+import { imageSize } from "../drawings/image-size";
+
+export { adoptProjectAssets, openedProjectAssets, normalizeBackgrounds, type ProjectAsset };
 
 /** The project file's extension. */
 export const PROJECT_EXTENSION = ".cslp";
@@ -104,15 +109,6 @@ export interface CslpAssetEntry {
   originalName: string;
   /** When it was attached (ISO 8601). */
   addedAt: string;
-}
-
-/** An attachment to write: its index fields and its bytes (read when the file is written). */
-export interface ProjectAsset {
-  id: string;
-  mime: string;
-  originalName: string;
-  addedAt: string;
-  data: () => Promise<Uint8Array> | Uint8Array;
 }
 
 /** What is written besides the project. */
@@ -210,30 +206,6 @@ export function withSafeModelIds(file: ProjectFile): ProjectFile {
   return { ...file, activeModelId, models };
 }
 
-// ── The attachments of the opened project ───────────────────────────
-
-/**
- * The attachments of the project last opened, read from its archive when
- * a save needs them (the models keep their references; the store holds no
- * bytes). Replaced when the next project is loaded (adoptProjectAssets).
- */
-let openedAssets: ProjectAsset[] = [];
-
-/**
- * Keep `assets` (from readProject) for the next save: call it where the
- * project read is loaded, not before, so a file read and then not opened
- * (the user cancels, or saves the current project first) leaves the
- * current project's attachments in place.
- */
-export function adoptProjectAssets(assets: ProjectAsset[]): void {
-  openedAssets = assets;
-}
-
-/** For tests: the attachments a save would take by default. */
-export function openedProjectAssets(): ProjectAsset[] {
-  return openedAssets;
-}
-
 // ── Writing ─────────────────────────────────────────────────────────
 
 /** The file extension of an attachment, from its type. */
@@ -302,7 +274,7 @@ export async function writeProjectArchive(input: ProjectFile, options: WriteProj
   const entries: ZipInput[] = [json(MANIFEST, manifest), json(PROJECT, project)];
 
   // The attachments the models refer to (others are dropped).
-  const available = new Map((options.assets ?? openedAssets).map((a) => [a.id, a]));
+  const available = new Map((options.assets ?? openedProjectAssets()).map((a) => [a.id, a]));
   const referenced = new Set<string>();
   for (const model of file.models) {
     const dir = `${MODELS_DIR}${model.id}/`;
@@ -359,7 +331,15 @@ export interface ReadProject {
  */
 export async function readProject(bytes: Uint8Array): Promise<ReadProject> {
   const opened = await openProject(bytes);
-  const assets = opened.assets.map((a) => ({ id: a.id, mime: a.mime, originalName: a.originalName, addedAt: a.addedAt, data: () => opened.readAsset(a.id) }));
+  const assets = opened.assets.map((a) => ({
+    id: a.id,
+    mime: a.mime,
+    originalName: a.originalName,
+    addedAt: a.addedAt,
+    sha256: a.sha256,
+    bytes: a.bytes,
+    data: () => opened.readAsset(a.id),
+  }));
   return { file: opened.file, assets };
 }
 
@@ -370,7 +350,7 @@ export async function readProjectBytes(bytes: Uint8Array): Promise<ProjectFile> 
 
 /** Open a project file (a .cslp archive, or a JSON project of an earlier version) and what else it holds. */
 export async function openProject(bytes: Uint8Array): Promise<OpenedProject> {
-  if (bytes.length > MAX_FILE_BYTES) {
+  if (bytes.length > MAX_PROJECT_FILE_BYTES) {
     throw new Error("The file is too large to be a cSlope project.");
   }
   if (isZip(bytes)) return openProjectArchive(bytes);
@@ -491,7 +471,7 @@ async function openLayout(archive: ZipArchive, manifest: CslpManifest): Promise<
   }
 
   const results = new Map<string, Pick<CslpResult, "inputHash" | "engine">>();
-  const backgroundsById = new Map<string, BackgroundImage[]>();
+  const rawBackgrounds = new Map<string, unknown>();
   const models: unknown[] = [];
   for (const id of ids) {
     const dir = `${MODELS_DIR}${id}/`;
@@ -515,7 +495,7 @@ async function openLayout(archive: ZipArchive, manifest: CslpManifest): Promise<
       }
     }
     if (archive.has(`${dir}backgrounds.json`)) {
-      backgroundsById.set(id, normalizeBackgrounds(await readJsonEntry(archive, `${dir}backgrounds.json`)));
+      rawBackgrounds.set(id, await readJsonEntry(archive, `${dir}backgrounds.json`));
     }
     models.push(model);
   }
@@ -532,9 +512,29 @@ async function openLayout(archive: ZipArchive, manifest: CslpManifest): Promise<
   // its attachment is dropped.
   const assets = archive.has(ASSET_INDEX) ? normalizeAssetIndex(await readJsonEntry(archive, ASSET_INDEX), archive) : [];
   const assetIds = new Set(assets.map((a) => a.id));
+  // An entry of the first form is placed by its image's corner: the
+  // image's size is read from its header (only for such an entry).
+  const sizes = new Map<string, { width: number; height: number } | null>();
+  for (const raw of rawBackgrounds.values()) {
+    for (const item of Array.isArray(raw) ? raw : []) {
+      const assetId = isLegacyEntry(item) ? (item as { assetId?: unknown }).assetId : undefined;
+      const entry = typeof assetId === "string" && !sizes.has(assetId) ? assets.find((a) => a.id === assetId) : undefined;
+      if (entry) sizes.set(entry.id, await archive.read(entry.path).then(imageSize, () => null));
+    }
+  }
   for (const model of file.models) {
-    const backgrounds = backgroundsById.get(model.id)?.filter((b) => assetIds.has(b.assetId));
-    if (backgrounds && backgrounds.length > 0) model.backgrounds = backgrounds;
+    const backgrounds = normalizeBackgrounds(rawBackgrounds.get(model.id), (id) => sizes.get(id) ?? null).filter((b) => assetIds.has(b.assetId));
+    if (backgrounds.length > 0) model.backgrounds = backgrounds;
+    // Locks of drawings the model does not have are dropped.
+    if (model.locks?.backgrounds) {
+      const placed = new Set(backgrounds.map((b) => b.id));
+      const kept = model.locks.backgrounds.filter((id) => placed.has(id));
+      const locks = { ...model.locks };
+      if (kept.length > 0) locks.backgrounds = kept;
+      else delete locks.backgrounds;
+      if (Object.keys(locks).length > 0) model.locks = locks;
+      else delete model.locks;
+    }
   }
   for (const id of results.keys()) {
     if (!file.models.some((m) => m.id === id && (m.runState === "done" || m.runState === "error"))) results.delete(id);
@@ -560,31 +560,6 @@ async function openLayout(archive: ZipArchive, manifest: CslpManifest): Promise<
 }
 
 const finite = (v: unknown): v is number => typeof v === "number" && Number.isFinite(v);
-
-/** backgrounds.json validated: entries of the shape BackgroundImage, in `order`. */
-export function normalizeBackgrounds(raw: unknown): BackgroundImage[] {
-  if (!Array.isArray(raw)) return [];
-  const out: BackgroundImage[] = [];
-  for (const item of raw) {
-    if (!isObject(item) || typeof item.assetId !== "string" || !SAFE_ID.test(item.assetId) || !isObject(item.transform)) continue;
-    const t = item.transform;
-    if (!finite(t.originX) || !finite(t.originY) || !finite(t.scale) || t.scale <= 0) continue;
-    out.push({
-      assetId: item.assetId,
-      transform: {
-        originX: t.originX,
-        originY: t.originY,
-        scale: t.scale,
-        rotationDeg: finite(t.rotationDeg) ? t.rotationDeg : 0,
-        mirrored: t.mirrored === true,
-      },
-      opacity: finite(item.opacity) ? Math.min(1, Math.max(0, item.opacity)) : 1,
-      visible: item.visible !== false,
-      order: finite(item.order) ? item.order : out.length,
-    });
-  }
-  return out.sort((a, b) => a.order - b.order);
-}
 
 /** assets/index.json validated: entries naming an archive entry of the declared size. */
 function normalizeAssetIndex(raw: unknown, archive: ZipArchive): CslpAssetEntry[] {

@@ -23,6 +23,8 @@ import {
   type ProjectAsset,
 } from "./cslp";
 import { analysisInputHash } from "./input-hash";
+import type { BackgroundImage } from "../../store/types";
+import { MAX_PROJECT_FILE_BYTES } from "./file-limits";
 
 const store = () => useAppStore.getState();
 const enc = new TextEncoder();
@@ -317,7 +319,15 @@ describe("attachments and backgrounds", () => {
     { id: "img-1", mime: "image/png", originalName: "plan.png", addedAt: "2026-11-04T00:00:00.000Z", data: () => PNG },
     { id: "unused", mime: "text/plain", originalName: "notes.txt", addedAt: "2026-11-04T00:00:00.000Z", data: () => enc.encode("x") },
   ];
-  const background = { assetId: "img-1", transform: { originX: 1, originY: 2, scale: 0.05, rotationDeg: 0, mirrored: false }, opacity: 0.5, visible: true, order: 0 };
+  const background: BackgroundImage = {
+    id: "drawing-1",
+    assetId: "img-1",
+    calibration: { mode: "points", points: [{ source: [0, 0], model: [1, 2] }, { source: [10, 0], model: [1.5, 2] }] },
+    transform: { a: 0.05, b: 0, c: 0, d: -0.05, e: 1, f: 2 },
+    opacity: 0.5,
+    visible: true,
+    order: 0,
+  };
 
   function withBackground(): ProjectFile {
     const file = project();
@@ -408,22 +418,77 @@ describe("attachments and backgrounds", () => {
     }
     const twice = await open({ "assets/index.json": [good, good] });
     expect(twice.assets).toHaveLength(1);
-    // backgrounds.json: entries without a transform or with a bad scale are dropped; the rest sorted by order
+    // backgrounds.json: entries without a usable transform are dropped, one of
+    // the first form (origin, scale) is converted (its image is 1 × 1 px:
+    // the bottom-left corner at the origin), the rest sorted by order
     const opened = await open({
       "assets/index.json": [good],
       [`models/${id}/backgrounds.json`]: [
         { ...background, order: 2, opacity: 7 },
         { assetId: "img-1" },
-        { ...background, transform: { ...background.transform, scale: 0 } },
-        { ...background, assetId: "missing", order: 0 },
-        { ...background, order: 1, visible: false, transform: { originX: 0, originY: 0, scale: 1 } },
+        { ...background, id: "singular", transform: { ...background.transform, a: 0, d: 0 } },
+        { ...background, id: "elsewhere", assetId: "missing", order: 0 },
+        { assetId: "img-1", order: 1, visible: false, transform: { originX: 3, originY: 4, scale: 2 } },
+        { ...background, id: "old-scale", transform: { originX: 0, originY: 0, scale: 0 } },
       ],
     });
     expect(opened.file.models[0].backgrounds).toEqual([
-      { ...background, order: 1, visible: false, transform: { originX: 0, originY: 0, scale: 1, rotationDeg: 0, mirrored: false } },
+      { id: "drawing-5", assetId: "img-1", calibration: { mode: "drawing", points: [] }, transform: { a: 2, b: 0, c: 0, d: -2, e: 3, f: 6 }, opacity: 1, visible: false, order: 1 },
       { ...background, order: 2, opacity: 1 },
     ]);
     expect((await open({ "assets/index.json": [good], [`models/${id}/backgrounds.json`]: { not: "a list" } })).file.models[0].backgrounds).toBeUndefined();
+  });
+
+  it("writes a drawing placed in two models once, with each model's page, crop and calibration", async () => {
+    const PDF = enc.encode("%PDF-1.4\n% a stand-in: the writer does not read it\n");
+    const pdfAsset: ProjectAsset = { id: "sheet", mime: "application/pdf", originalName: "sections.pdf", addedAt: "2026-11-04T00:00:00.000Z", data: () => PDF };
+    const first: BackgroundImage = {
+      id: "drawing-a",
+      assetId: "sheet",
+      name: "Section A",
+      page: 1,
+      crop: { x0: 40, y0: 60, x1: 500, y1: 300 },
+      calibration: {
+        mode: "axes",
+        points: [],
+        axes: {
+          x: [{ source: [50, 280], value: 0 }, { source: [450, 280], value: 40 }],
+          y: [{ source: [45, 280], value: 0 }, { source: [45, 80], value: 10 }],
+        },
+      },
+      transform: { a: 0.1, b: 0, c: 0, d: -0.05, e: -5, f: 14 },
+      opacity: 0.4,
+      visible: true,
+      order: 0,
+      showInResults: true,
+    };
+    const second: BackgroundImage = {
+      ...first,
+      id: "drawing-b",
+      name: "Section B",
+      page: 2,
+      crop: { x0: 10, y0: 20, x1: 300, y1: 200 },
+      calibration: { ...first.calibration, axes: { ...first.calibration.axes!, reuseFrom: "model-a/drawing-a" } },
+      showInResults: undefined,
+    };
+    delete second.showInResults;
+    const file = project();
+    const two: ProjectFile = { ...file, models: [{ ...file.models[0], backgrounds: [first] }, { ...file.models[1], backgrounds: [second] }] };
+    const bytes = await writeProjectArchive(two, { assets: [pdfAsset] });
+    const list = await names(bytes);
+    expect(list.filter((n) => n.startsWith("assets/"))).toEqual(["assets/index.json", "assets/sheet.pdf"]);
+    expect(openZip(bytes).entries().find((e) => e.name === "assets/sheet.pdf")?.method).toBe(0);
+    const opened = await openProject(bytes);
+    expect(opened.file.models[0].backgrounds).toEqual([first]);
+    expect(opened.file.models[1].backgrounds).toEqual([second]);
+    expect([...(await opened.readAsset("sheet"))]).toEqual([...PDF]);
+  });
+
+  it("keeps the locks of the drawings a model has, and drops the others", async () => {
+    const file = withBackground();
+    const locked = { ...file, models: [{ ...file.models[0], locks: { backgrounds: ["drawing-1", "gone"] } }, file.models[1]] };
+    const opened = await openProject(await writeProjectArchive(locked, { assets: assets() }));
+    expect(opened.file.models[0].locks).toEqual({ backgrounds: ["drawing-1"] });
   });
 });
 
@@ -521,9 +586,12 @@ describe(".cslp archives that are refused", () => {
     await expect(readProjectBytes(archive(files).subarray(0, 40))).rejects.toThrow(/not a readable cSlope project/);
   });
 
-  it("refuses files above the 50 MB limit", async () => {
-    const big = new Uint8Array(50 * MB + 1);
+  it("refuses files above the project limit (500 MB, for projects with drawings)", async () => {
+    expect(MAX_PROJECT_FILE_BYTES).toBe(500 * MB);
+    // (a stand-in whose length says it is over the limit, not 500 MB of memory)
+    const big = new Uint8Array(8);
     big.set([0x50, 0x4b, 3, 4]);
+    Object.defineProperty(big, "length", { value: MAX_PROJECT_FILE_BYTES + 1 });
     await expect(readProjectBytes(big)).rejects.toThrow("The file is too large to be a cSlope project.");
   });
 

@@ -93,6 +93,56 @@ def test_reads_this_layout_with_results_backgrounds_and_assets():
             p.model("c")
 
 
+def test_reads_placements_with_page_crop_and_calibration():
+    sha = hashlib.sha256(PNG).hexdigest()
+    index = [{"id": "img", "path": "assets/img.png", "mime": "image/png", "bytes": len(PNG), "sha256": sha, "originalName": "s.png", "addedAt": ""}]
+    entry = {
+        "id": "drawing-1",
+        "assetId": "img",
+        "name": "Section",
+        "page": 2,
+        "crop": {"x0": 30, "y0": 40, "x1": 10, "y1": 20},
+        "calibration": {"mode": "scale", "points": [{"source": [0, 0], "model": [1, 2]}], "scale": {"metersPerUnit": 0.5, "unit": "px"}},
+        "transform": {"a": 0.5, "b": 0, "c": 0, "d": -0.5, "e": 1, "f": 2},
+        "opacity": 3,
+        "visible": False,
+        "order": 1,
+        "showInResults": True,
+    }
+    files = layout(
+        {"a": ({**MODEL, "locks": {"backgrounds": ["drawing-1"]}}, None)},
+        {
+            "assets/index.json": index,
+            "assets/img.png": PNG,
+            "models/a/backgrounds.json": [
+                entry,
+                {**entry, "id": "x", "assetId": "missing"},
+                {**entry, "id": "y", "transform": {"a": 0, "b": 0, "c": 0, "d": 0, "e": 0, "f": 0}},
+                {"assetId": "img", "transform": {"originX": 1, "originY": 1, "scale": 2}, "order": 0},
+            ],
+        },
+    )
+    with project.read(archive(files)) as p:  # type: ignore[arg-type]
+        old, new = p.placements("a")
+        assert new == project.Placement(
+            id="drawing-1",
+            asset_id="img",
+            transform=(0.5, 0.0, 0.0, -0.5, 1.0, 2.0),
+            calibration=entry["calibration"],
+            opacity=1.0,
+            visible=False,
+            order=1,
+            page=2,
+            crop=(10, 20, 30, 40),
+            name="Section",
+            show_in_results=True,
+            locked=True,
+        )
+        assert new.to_model(2, 2) == (2.0, 1.0)
+        # the first form: the 1 x 1 px image's bottom-left corner at the origin, 2 m per pixel
+        assert old.id == "drawing-4" and old.to_model(0, 1) == pytest.approx((1, 1)) and old.to_model(1, 0) == pytest.approx((3, 3))
+
+
 def test_checks_an_attachment_against_its_hash_and_drops_bad_index_entries():
     good = {"id": "img", "path": "assets/img.png", "mime": "image/png", "bytes": len(PNG), "sha256": "0" * 64, "originalName": "plan.png", "addedAt": ""}
     p = project.read(archive(layout({"a": (MODEL, None)}, {"assets/index.json": [good], "assets/img.png": PNG})))  # type: ignore[arg-type]
@@ -202,3 +252,17 @@ def test_opens_the_committed_fixtures():
         assert asset.original_name == "section.png" and p.models[0].backgrounds[0]["assetId"] == asset.id
         assert p.read_asset(asset.id)[:8] == b"\x89PNG\r\n\x1a\n"
         assert p.thumbnail() == p.read_asset(asset.id)
+        # the first form of backgrounds.json, converted (1 x 1 px image: its bottom-left corner at (0, -5))
+        (old,) = p.placements(p.models[0])
+        assert old.calibration == {"mode": "drawing", "points": []}
+        assert old.to_model(0, 1) == pytest.approx((0, -5)) and old.to_model(1, 0) == pytest.approx((0.1, -4.9))
+    with project.read(FIXTURES / "cslp-v1-drawings.cslp") as p:
+        (pdf,) = p.assets
+        assert pdf.mime == "application/pdf" and p.read_asset(pdf.id)[:5] == b"%PDF-"
+        (a,) = p.placements(p.models[0])
+        (b,) = p.placements(p.models[1])
+        assert (a.asset_id, a.page, a.name, a.locked, a.show_in_results) == (pdf.id, 1, "Section A-A", True, True)
+        assert (b.asset_id, b.page, b.calibration["mode"]) == (pdf.id, 2, "points")
+        assert a.calibration["mode"] == "axes" and a.crop == b.crop
+        # vertical exaggeration 2: twice the metres per point along x as along y
+        assert abs(a.transform[0]) == pytest.approx(2 * abs(a.transform[3]))
