@@ -108,6 +108,7 @@ def test_reads_placements_with_page_crop_and_calibration():
         "visible": False,
         "order": 1,
         "showInResults": True,
+        "hiddenLayers": ["text", 3, "text", "axes"],
     }
     files = layout(
         {"a": ({**MODEL, "locks": {"backgrounds": ["drawing-1"]}}, None)},
@@ -137,8 +138,10 @@ def test_reads_placements_with_page_crop_and_calibration():
             name="Section",
             show_in_results=True,
             locked=True,
+            hidden_layers=("text", "axes"),
         )
         assert new.to_model(2, 2) == (2.0, 1.0)
+        assert old.hidden_layers == ()
         # the first form: the 1 x 1 px image's bottom-left corner at the origin, 2 m per pixel
         assert old.id == "drawing-4" and old.to_model(0, 1) == pytest.approx((1, 1)) and old.to_model(1, 0) == pytest.approx((3, 3))
 

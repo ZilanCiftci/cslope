@@ -27,7 +27,7 @@ Layout (the entries in the order a writer writes them; the optional ones only wh
 └── thumbnail.png                 the active model's result sheet, small (optional)
 ```
 
-The model folders come in the order of `project.json`'s `models`; within a folder, `model.json`, `result.json`, `backgrounds.json`. The attachments come in the order of their ids (sorted as strings). `thumbnail.png` is last. The writer deflates every JSON entry and `thumbnail.png` is stored; an attachment is stored when its type is compressed already (`image/png`, `image/jpeg`, `image/webp`, `image/gif`, `application/pdf`, `application/zip`) and deflated otherwise. A reader must accept either method for any entry.
+The model folders come in the order of `project.json`'s `models`; within a folder, `model.json`, `result.json`, `backgrounds.json`. The attachments come in the order of their ids (sorted as strings). `thumbnail.png` is last. The writer deflates every JSON entry and `thumbnail.png` is stored; an attachment is stored when its type is compressed already (`image/png`, `image/jpeg`, `image/webp`, `image/gif`, `application/pdf`, `application/zip`, `image/vnd.dwg`) and deflated otherwise. A reader must accept either method for any entry.
 
 Every entry carries the same DOS date and time in its local and central headers: the manifest's `modified`, in the writer's local time, to 2 s. (A writer that writes an archive for comparison only may use any constant; the first `.cslp` layout wrote 0.)
 
@@ -159,7 +159,7 @@ The outcome is read from `result.json` only: run fields in `model.json` are igno
 
 ### 4.5 models/\<id\>/backgrounds.json
 
-The drawings placed under the model: each an attachment of the file (an image, or a page of a PDF), optionally cropped, placed in the model by a 2D affine transform. A JSON array; absent when the model has none. The same attachment may be placed by several models, each with its own page, crop and calibration; the attachment is written once.
+The drawings placed under the model: each an attachment of the file (an image, a page of a PDF, or the model space of a DWG or DXF drawing), optionally cropped, placed in the model by a 2D affine transform. A JSON array; absent when the model has none. The same attachment may be placed by several models, each with its own page, crop and calibration; the attachment is written once.
 
 ```json
 [
@@ -186,7 +186,7 @@ The drawings placed under the model: each an attachment of the file (an image, o
 ]
 ```
 
-*Source units* are the drawing's own coordinates, with the origin at the top-left corner of the page (or image) and y downwards: pixels of an image, points (1/72 in) of a PDF page as it is displayed (its `/Rotate` applied, its crop box as the page). *Model coordinates* are metres, y upwards.
+*Source units* are the drawing's own coordinates, with the origin at the top-left corner of the page (or image) and y downwards: pixels of an image, points (1/72 in) of a PDF page as it is displayed (its `/Rotate` applied, its crop box as the page). A DWG or DXF drawing's source coordinates are its model space coordinates in its own units with y turned downwards: (u, v) = (x, −y); its "page" is the extent of its line work, which a writer does not store (so a placement does not move when a later reader reads more or less of the drawing). With metres per drawing unit k (from `$INSUNITS`), the transform that keeps the drawing's coordinates is `{ a: k, b: 0, c: 0, d: −k, e: 0, f: 0 }` (calibration mode `"drawing"`). *Model coordinates* are metres, y upwards.
 
 | Member | Type | Meaning |
 | --- | --- | --- |
@@ -195,12 +195,13 @@ The drawings placed under the model: each an attachment of the file (an image, o
 | `transform` | object `{ a, b, c, d, e, f }` of numbers | The placement: model = M · source, `x = a·u + c·v + e`, `y = b·u + d·v + f` for a source point (u, v). Required; a reader drops an entry whose transform is not finite or is singular (`a·d − b·c` nearly 0). |
 | `page` | integer ≥ 1 | The page of a PDF (or the image of a multi-page TIFF), from 1. Absent: the first. |
 | `crop` | object `{ x0, y0, x1, y1 }` of numbers | The part of the page shown, in source units. Absent: the whole page. A reader orders the corners and drops an empty rectangle. |
-| `calibration` | object | How the transform was found, so that it can be changed later; a reader does not recompute the transform from it. `mode`: `"points"` (two or more source → model point pairs: two give a similarity, three or more a least-squares affine), `"axes"` (two ticks on each axis with their values, x and y scaled separately, no rotation), `"scale"` (one point pair, the origin, and a scale) or `"drawing"` (the transform as stored, without inputs). `points`: an array of `{ "source": [u, v], "model": [x, y] }`. `axes` (axes mode): `{ "x": [{ "source": [u, v], "value": x }...], "y": [...], "reuseFrom"?: "<model id>/<placement id>" }` (with `reuseFrom`, one tick per axis and the other placement's scales). `scale` (scale mode): `{ "metersPerUnit": number > 0, "unit": "px" \| "pt" \| "mm" }`, the scale as typed (1 mm = 72/25.4 pt). A missing or unknown `mode` reads as `"drawing"`. |
+| `calibration` | object | How the transform was found, so that it can be changed later; a reader does not recompute the transform from it. `mode`: `"points"` (two or more source → model point pairs: two give a similarity, three or more a least-squares affine), `"axes"` (two ticks on each axis with their values, x and y scaled separately, no rotation), `"scale"` (one point pair, the origin, and a scale) or `"drawing"` (the transform as stored, without inputs). `points`: an array of `{ "source": [u, v], "model": [x, y] }`. `axes` (axes mode): `{ "x": [{ "source": [u, v], "value": x }...], "y": [...], "reuseFrom"?: "<model id>/<placement id>" }` (with `reuseFrom`, one tick per axis and the other placement's scales). `scale` (scale mode): `{ "metersPerUnit": number > 0, "unit": "px" \| "pt" \| "mm" \| "du" }`, the scale as typed (1 mm = 72/25.4 pt; `du`: a DWG or DXF drawing's own unit). A missing or unknown `mode` reads as `"drawing"`. |
 | `name` | string | A name of the user's. Absent: the attachment's `originalName` (with the page). |
 | `opacity` | number, 0 to 1 | Default 1; clamped. |
 | `visible` | boolean | Default true. |
 | `order` | number | Drawing order among the model's drawings, lowest first (drawn first); default the entry's position. |
 | `showInResults` | boolean | Also drawn in the result view and the PDF export. Default false. |
+| `hiddenLayers` | array of strings | A DWG or DXF drawing: the names of its layers that are not shown (nor snapped to, nor picked). Absent: all shown. A reader drops entries that are not strings and repeated names; names of layers the drawing does not have are kept (and do nothing). |
 
 Whether a placement is locked on the canvas is part of the model: `locks.backgrounds` in `model.json` (an array of placement ids); a reader drops ids of placements the model does not have.
 
@@ -210,7 +211,7 @@ The new members are optional additions an older reader ignores (section 2.1): it
 
 ### 4.6 assets/index.json and assets/\<id\>.\<ext\>
 
-The attachments: a JSON array, one entry per file under `assets/`. Absent (with the folder) when there are none. A writer writes only the attachments some model refers to (today: from `backgrounds.json`), each once however many placements refer to it; the others are dropped at save. The app places PNG, JPEG, TIFF and PDF files (at most 100 MB each) and tells the type from the bytes, not the name.
+The attachments: a JSON array, one entry per file under `assets/`. Absent (with the folder) when there are none. A writer writes only the attachments some model refers to (today: from `backgrounds.json`), each once however many placements refer to it; the others are dropped at save. The app places PNG, JPEG, TIFF, PDF, DWG (`image/vnd.dwg`, extension `dwg`) and ASCII DXF (`image/vnd.dxf`, extension `dxf`) files (at most 100 MB each) and tells the type from the bytes, not the name.
 
 ```json
 [

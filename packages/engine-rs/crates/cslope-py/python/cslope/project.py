@@ -104,8 +104,9 @@ class Placement:
     """A drawing placed under a model (an entry of ``backgrounds.json``, validated).
 
     The drawing's own coordinates (``source``: pixels of an image, points of a
-    PDF page, origin at the top left, y downwards) map to the model's (m, y
-    upwards) by the affine ``transform`` ``(a, b, c, d, e, f)``:
+    PDF page, origin at the top left, y downwards; a DWG or DXF drawing's
+    model space coordinates with y turned downwards, ``(x, -y)``) map to the
+    model's (m, y upwards) by the affine ``transform`` ``(a, b, c, d, e, f)``:
     ``x = a*u + c*v + e``, ``y = b*u + d*v + f``.
     """
 
@@ -125,6 +126,8 @@ class Placement:
     show_in_results: bool = False
     #: Locked on the canvas (the model's ``locks.backgrounds``).
     locked: bool = False
+    #: A DWG or DXF drawing: the names of its layers not shown.
+    hidden_layers: Tuple[str, ...] = ()
 
     def to_model(self, u: float, v: float) -> Tuple[float, float]:
         """The model point (m) of a point of the drawing."""
@@ -275,6 +278,9 @@ class Project:
                     name=b["name"] if isinstance(b.get("name"), str) and b["name"].strip() else None,
                     show_in_results=b.get("showInResults") is True,
                     locked=pid in locked,
+                    hidden_layers=tuple(dict.fromkeys(n for n in b["hiddenLayers"] if isinstance(n, str)))
+                    if isinstance(b.get("hiddenLayers"), list)
+                    else (),
                 )
             )
         return sorted(out, key=lambda p: p.order)
