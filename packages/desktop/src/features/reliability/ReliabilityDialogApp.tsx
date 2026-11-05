@@ -1,8 +1,11 @@
 import { useMemo, useState } from "react";
+import { X } from "lucide-react";
 import { Bar, BarChart, CartesianGrid, ReferenceLine, Tooltip, XAxis, YAxis } from "recharts";
 import { Label } from "../../components/ui/Label";
 import { DraftNumberInput } from "../../components/ui/DraftNumberInput";
 import { ToolWindowFrame } from "../../components/ui/ToolWindowFrame";
+import { CHART } from "../../components/ui/chart-colors";
+import { ChartTooltip } from "../../components/ui/ChartTooltip";
 import { useWidth } from "../../utils/use-width";
 import { downloadFile, safeFileName } from "../../utils/download";
 import { isElectron } from "../../utils/is-electron";
@@ -103,48 +106,43 @@ function ReliabilityBody({
     <ToolWindowFrame
       title={TITLE}
       description={DESCRIPTION}
-      footer={
-        <div className="flex flex-wrap items-center gap-2 text-[11px]">
+      footer={([false, true] as const).map((swedish) => (
+        <button
+          key={String(swedish)}
+          onClick={() =>
+            result &&
+            downloadFile(
+              safeFileName(`${model.name || "cslope"} probabilistic`, "csv"),
+              "﻿" + reliabilityCsv(result, labels, swedish),
+              "text/csv;charset=utf-8",
+            )
+          }
+          disabled={!result || running}
+          className="btn"
+          title={
+            swedish
+              ? "CSV with semicolons and decimal commas, for Excel set to a decimal-comma locale"
+              : "CSV with commas and decimal points"
+          }
+        >
+          {swedish ? "CSV (decimal comma)" : "Export CSV"}
+        </button>
+      ))}
+      primary={
+        <>
+          <span style={{ color: "var(--color-vsc-text-muted)" }}>
+            {running ? `${Math.round(progress * 100)} %` : ""}
+          </span>
           {running ? (
             <button onClick={() => onCommand({ type: "cancel" })} className="btn">
               Cancel
             </button>
           ) : (
-            <button
-              onClick={start}
-              disabled={variables.length === 0}
-              className="btn btn-primary min-w-[64px]"
-            >
+            <button onClick={start} disabled={variables.length === 0} className="btn btn-primary">
               Run
             </button>
           )}
-          <span style={{ color: "var(--color-vsc-text-muted)" }}>
-            {running ? `${Math.round(progress * 100)} %` : ""}
-          </span>
-          <span className="flex-1" />
-          {([false, true] as const).map((swedish) => (
-            <button
-              key={String(swedish)}
-              onClick={() =>
-                result &&
-                downloadFile(
-                  safeFileName(`${model.name || "cslope"} probabilistic`, "csv"),
-                  "﻿" + reliabilityCsv(result, labels, swedish),
-                  "text/csv;charset=utf-8",
-                )
-              }
-              disabled={!result || running}
-              className="btn"
-              title={
-                swedish
-                  ? "CSV with semicolons and decimal commas, for Excel set to a decimal-comma locale"
-                  : "CSV with commas and decimal points"
-              }
-            >
-              {swedish ? "CSV (decimal comma)" : "Export CSV"}
-            </button>
-          ))}
-        </div>
+        </>
       }
     >
       <div className="flex flex-col gap-2 text-[12px]">
@@ -171,7 +169,7 @@ function ReliabilityBody({
                 {rows.map((row, i) => {
                   const options = candidates.filter((c) => c.key === row.key || !rows.some((r) => r.key === c.key));
                   return (
-                    <tr key={row.key}>
+                    <tr key={row.key} className="group">
                       <td className="pr-1">
                         <select
                           value={row.key}
@@ -213,10 +211,10 @@ function ReliabilityBody({
                           onClick={() => setRows((rs) => rs.filter((_, j) => j !== i))}
                           aria-label={`Remove variable ${i + 1}`}
                           title="Remove variable"
-                          className="w-6 h-6 flex items-center justify-center rounded cursor-pointer text-[16px] leading-none hover:bg-[var(--color-vsc-list-hover)]"
+                          className="w-6 h-6 flex items-center justify-center rounded cursor-pointer opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 focus:opacity-100 hover:bg-[var(--color-vsc-list-hover)]"
                           style={{ color: "var(--color-vsc-text-muted)" }}
                         >
-                          ×
+                          <X size={12} strokeWidth={1.75} aria-hidden />
                         </button>
                       </td>
                     </tr>
@@ -234,25 +232,27 @@ function ReliabilityBody({
                   if (c) setRows((rs) => [...rs, { key: c.key, sd: defaultSd(c), distribution: "normal" }]);
                 }}
                 disabled={unused.length === 0}
-                className="btn"
+                className="text-[11px] font-medium cursor-pointer hover:underline disabled:cursor-default disabled:no-underline disabled:opacity-50"
+                style={{ color: "var(--color-vsc-accent)" }}
               >
                 + Add variable
               </button>
             </div>
 
-            <div className="flex items-center gap-3 text-[11px]">
-              <Label>Method</Label>
+            <div role="group" aria-label="Method" className="flex items-center gap-1 text-[11px]">
+              <span className="mr-2">
+                <Label>Method</Label>
+              </span>
               {(["taylor", "monte-carlo"] as const).map((m) => (
-                <label key={m} className="flex items-center gap-1 cursor-pointer">
-                  <input type="radio" name="reliability-method" checked={method === m} onChange={() => setMethod(m)} />
+                <button key={m} type="button" className="btn" aria-pressed={method === m} onClick={() => setMethod(m)}>
                   {m === "taylor" ? "Taylor series" : "Monte Carlo"}
-                </label>
+                </button>
               ))}
             </div>
             {method === "taylor" ? (
               <label className="flex items-center gap-1 text-[11px] cursor-pointer">
                 <input type="checkbox" checked={search} onChange={(e) => setSearch(e.target.checked)} />
-                Search the critical surface again for each value (1 + 2·{variables.length} analyses)
+                Search the critical surface again for each value ({1 + 2 * variables.length} analyses)
               </label>
             ) : (
               <div className="grid grid-cols-2 gap-2">
@@ -291,6 +291,13 @@ function ReliabilityBody({
         {error && (
           <p className="text-[11px]" style={{ color: "var(--color-vsc-error)" }}>
             {error}
+          </p>
+        )}
+
+        {!result && !running && !error && variables.length > 0 && (
+          // Before the first run: where the results will be, and how to get them.
+          <p className="text-[11px]" style={{ color: "var(--color-vsc-text-muted)" }} data-testid="reliability-empty">
+            Run to compute β and Pf.
           </p>
         )}
 
@@ -338,7 +345,7 @@ function ReliabilityBody({
             {bars.length > 0 && (
               <div aria-label="Distribution of the FOS" ref={chartRef}>
                 <BarChart width={chartWidth} height={200} data={bars} margin={{ top: 10, right: 16, left: 0, bottom: 14 }} barCategoryGap={0}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="rgba(120,130,140,0.35)" />
+                  <CartesianGrid strokeDasharray="3 3" stroke={CHART.grid} />
                   <XAxis
                     type="number"
                     dataKey="mid"
@@ -350,16 +357,15 @@ function ReliabilityBody({
                   <YAxis tick={{ fontSize: 10, fill: "var(--color-vsc-text-muted)" }} width={40} />
                   <ReferenceLine x={1} stroke="var(--color-vsc-error)" strokeDasharray="4 3" ifOverflow="extendDomain" />
                   <Tooltip
-                    contentStyle={{
-                      background: "var(--color-vsc-input-bg)",
-                      border: "1px solid var(--color-vsc-border)",
-                      borderRadius: 6,
-                      fontSize: 11,
-                    }}
-                    formatter={(v) => [String(v), "Samples"]}
-                    labelFormatter={(v) => `FOS ≈ ${Number(v).toFixed(3)}`}
+                    content={(p) => (
+                      <ChartTooltip
+                        {...p}
+                        formatValue={(v) => String(v)}
+                        formatLabel={(v) => `FOS ≈ ${Number(v).toFixed(3)}`}
+                      />
+                    )}
                   />
-                  <Bar dataKey="count" fill="#26a69a" isAnimationActive={false} />
+                  <Bar dataKey="count" name="Samples" fill={CHART.series} isAnimationActive={false} />
                 </BarChart>
               </div>
             )}
