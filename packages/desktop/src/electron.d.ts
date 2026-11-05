@@ -319,6 +319,10 @@ declare global {
       /** The window closed (sent to the main window). */
       onDrawingClosed: (listener: (event: unknown) => void) => () => void;
       requestResultsPlotState: () => void;
+      sendResultsPlotHover: (outline: [number, number][] | null) => void;
+      onResultsPlotHover: (
+        listener: (event: unknown, outline: [number, number][] | null) => void,
+      ) => () => void;
       sendResultsPlotState: (state: ResultsPlotStatePayload) => void;
       sendResultsPlotChanged: (state: ResultsPlotStatePayload) => void;
       onResultsPlotRequestState: (listener: (event: unknown) => void) => () => void;

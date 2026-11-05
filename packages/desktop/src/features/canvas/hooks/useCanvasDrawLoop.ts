@@ -1,6 +1,6 @@
 import { useEffect, type MutableRefObject } from "react";
 import { useAppStore, getActiveViewport } from "../../../store/app-store";
-import { drawCanvas, type DrawCanvasParams } from "../draw";
+import { drawCanvas, drawHighlightedSlice, type DrawCanvasParams } from "../draw";
 import type { CanvasSize } from "./useCanvasSizing";
 import { onDrawingsChanged } from "../../drawings/drawing-cache";
 
@@ -90,6 +90,12 @@ export function useCanvasDrawLoop({
           0,
         );
         drawCanvas(ctx, updatedArgs);
+        // The slice hovered in the Results plot window, over the result.
+        if (state.mode === "result" && state.highlightedSlice && activeArgs.result) {
+          drawHighlightedSlice(ctx, state.highlightedSlice, (x, y) =>
+            currentWorldToCanvas(x, y, canvasSize.width, canvasSize.height),
+          );
+        }
 
         if (drawDirtyRef.current) requestDraw();
       });
@@ -126,7 +132,8 @@ export function useCanvasDrawLoop({
       const resultViewRenderChanged =
         state.resultViewSettings !== prevState.resultViewSettings ||
         state.result !== prevState.result ||
-        state.selectedAnnotationIds !== prevState.selectedAnnotationIds;
+        state.selectedAnnotationIds !== prevState.selectedAnnotationIds ||
+        state.highlightedSlice !== prevState.highlightedSlice;
 
       if (
         oldOffset !== newOffset ||

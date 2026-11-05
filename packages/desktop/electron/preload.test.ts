@@ -125,6 +125,9 @@ for (const name of ["Sensitivity", "Reliability", "Drawing"]) {
 // The Place drawing window also gets the drawing files it asks for.
 EXPECTED.sendDrawingAsset = ["send", "drawing:asset"];
 EXPECTED.onDrawingAsset = ["on", "drawing:asset"];
+// The slice hovered in the Results plot window.
+EXPECTED.sendResultsPlotHover = ["send", "resultsPlot:hover"];
+EXPECTED.onResultsPlotHover = ["on", "resultsPlot:hover"];
 
 for (const name of SYNC_FAMILIES) {
   const prefix = name[0].toLowerCase() + name.slice(1);

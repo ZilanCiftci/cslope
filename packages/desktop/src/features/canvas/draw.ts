@@ -3481,3 +3481,32 @@ function drawFemPlasticZone(
   }
   ctx.restore();
 }
+
+/**
+ * A slice's outline (model coordinates) filled and outlined in the accent
+ * color: the slice hovered in the Results plot window.
+ */
+export function drawHighlightedSlice(
+  ctx: CanvasRenderingContext2D,
+  outline: [number, number][],
+  toCanvas: (x: number, y: number) => [number, number],
+): void {
+  if (outline.length < 3) return;
+  const accent = getComputedStyle(document.documentElement).getPropertyValue("--color-vsc-accent").trim() || "#0078d4";
+  ctx.save();
+  ctx.beginPath();
+  outline.forEach(([x, y], i) => {
+    const [cx, cy] = toCanvas(x, y);
+    if (i === 0) ctx.moveTo(cx, cy);
+    else ctx.lineTo(cx, cy);
+  });
+  ctx.closePath();
+  ctx.globalAlpha = 0.35;
+  ctx.fillStyle = accent;
+  ctx.fill();
+  ctx.globalAlpha = 1;
+  ctx.lineWidth = 1.5;
+  ctx.strokeStyle = accent;
+  ctx.stroke();
+  ctx.restore();
+}

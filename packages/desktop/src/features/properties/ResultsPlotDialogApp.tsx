@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   buildSlope,
   getDomainX,
@@ -59,6 +59,8 @@ interface PlotPoint {
   cohesionStrength: number;
   resistingForce: number;
   pullingForce: number;
+  /** The slice's outline in model coordinates (marked on the canvas while hovered). */
+  outline: [number, number][];
 }
 
 interface LffPoint {
@@ -264,12 +266,32 @@ export function ResultsPlotDialogApp() {
           cohesionStrength,
           resistingForce,
           pullingForce,
+          outline: [
+            [toModelX(slice.xLeft), slice.y0Top],
+            [toModelX(slice.xRight), slice.y1Top],
+            [toModelX(slice.xRight), slice.y1Bottom],
+            [toModelX(slice.xLeft), slice.y0Bottom],
+          ],
         };
       });
     } catch {
       return [];
     }
   }, [snapshot, selectedSurface]);
+
+  // The hovered slice, marked on the main window's result canvas.
+  const hoveredRef = useRef<number | null>(null);
+  const hoverSlice = useCallback(
+    (index: number | null) => {
+      if (!isElectron || hoveredRef.current === index) return;
+      hoveredRef.current = index;
+      const outline = index === null ? null : (plotData[index]?.outline ?? null);
+      window.cslope.sendResultsPlotHover(outline);
+    },
+    [plotData],
+  );
+  // Another surface or plot: nothing stays marked.
+  useEffect(() => () => hoverSlice(null), [hoverSlice]);
 
   const metricMeta =
     METRIC_OPTIONS.find((m) => m.key === metric) ?? METRIC_OPTIONS[0];
@@ -572,6 +594,11 @@ export function ResultsPlotDialogApp() {
                 <ResponsiveContainer width="100%" height="100%">
                   <LineChart
                     data={plotData}
+                    onMouseMove={(state) => {
+                      const i = Number(state?.activeTooltipIndex);
+                      hoverSlice(Number.isInteger(i) && i >= 0 && i < plotData.length ? i : null);
+                    }}
+                    onMouseLeave={() => hoverSlice(null)}
                     margin={{ top: 16, right: 20, left: 6, bottom: 12 }}
                   >
                     <CartesianGrid

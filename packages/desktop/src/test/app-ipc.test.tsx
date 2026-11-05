@@ -130,6 +130,12 @@ describe("main window IPC", () => {
     emit("onMaterialAssignmentChanged", { regionMaterials: useAppStore.getState().regionMaterials, selectedRegionKey: "r2" });
     expect(useAppStore.getState().selectedRegionKey).toBe("r2");
 
+    // The slice hovered in the Results plot window is marked; a malformed outline clears it.
+    emit("onResultsPlotHover", [[0, 0], [1, 0], [1, -1], [0, -1]]);
+    expect(useAppStore.getState().highlightedSlice).toEqual([[0, 0], [1, 0], [1, -1], [0, -1]]);
+    emit("onResultsPlotHover", [[0, 0], ["x", 1]]);
+    expect(useAppStore.getState().highlightedSlice).toBeNull();
+
     emit("onParametersChanged", { parameters: [{ name: "H", expression: "4" }] });
     s = useAppStore.getState();
     expect(s.parameters[0].expression).toBe("4");

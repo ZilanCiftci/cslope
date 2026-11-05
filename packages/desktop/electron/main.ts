@@ -567,6 +567,8 @@ function createResultsPlotWindow() {
   });
 
   resultsPlotWin.on("closed", () => {
+    // (no slice stays marked once the window is gone)
+    if (win && !win.isDestroyed()) win.webContents.send("resultsPlot:hover", null);
     resultsPlotWin = null;
   });
 
@@ -1050,6 +1052,12 @@ ipcMain.on("resultsPlot:requestState", (event) => {
 ipcMain.on("resultsPlot:stateResponse", (event, state) => {
   if (event.sender === win?.webContents) {
     resultsPlotWin?.webContents.send("resultsPlot:stateResponse", state);
+  }
+});
+
+ipcMain.on("resultsPlot:hover", (event, outline) => {
+  if (event.sender === resultsPlotWin?.webContents) {
+    win?.webContents.send("resultsPlot:hover", outline);
   }
 });
 

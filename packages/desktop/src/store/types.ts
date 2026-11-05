@@ -737,6 +737,12 @@ export interface GeometrySlice {
   selectedMaterialBoundaryId: string | null;
   assigningMaterialId: string | null;
   selectedRegionKey: string | null;
+  /**
+   * The slice hovered in the Results plot window (its outline in model
+   * coordinates), marked on the result canvas. Not saved, not an undo step.
+   */
+  highlightedSlice: [number, number][] | null;
+  setHighlightedSlice: (outline: [number, number][] | null) => void;
   setOrientation: (orientation: ModelOrientation) => void;
   setSelectedPoint: (index: number | null) => void;
   setSelectedMaterialBoundary: (boundaryId: string | null) => void;

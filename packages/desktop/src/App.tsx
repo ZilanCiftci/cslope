@@ -962,9 +962,19 @@ function App() {
     };
 
     const unsubscribeResultsPlotRequestState = window.cslope.onResultsPlotRequestState(handleResultsPlotRequestState);
+    // The slice hovered in the plot, marked on the result canvas.
+    const unsubscribeResultsPlotHover = window.cslope.onResultsPlotHover((_event, outline) => {
+      const valid =
+        Array.isArray(outline) &&
+        outline.length >= 3 &&
+        outline.length <= 64 &&
+        outline.every((p) => Array.isArray(p) && p.length === 2 && p.every((v) => Number.isFinite(v)));
+      useAppStore.getState().setHighlightedSlice(valid ? outline : null);
+    });
 
     return () => {
       unsubscribeResultsPlotRequestState();
+      unsubscribeResultsPlotHover();
     };
   }, [isAnyDialogWindow]);
 

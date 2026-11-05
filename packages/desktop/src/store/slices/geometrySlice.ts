@@ -73,6 +73,7 @@ export const createGeometrySlice: SliceCreator<GeometrySlice> = (set, get) => ({
   selectedMaterialBoundaryId: null,
   assigningMaterialId: null,
   selectedRegionKey: null,
+  highlightedSlice: null,
 
   // The exterior's selected point is the canvas selection's.
   setSelectedPoint: (index) => {
@@ -90,6 +91,7 @@ export const createGeometrySlice: SliceCreator<GeometrySlice> = (set, get) => ({
   setAssigningMaterial: (materialId) =>
     set({ assigningMaterialId: materialId }),
   setSelectedRegionKey: (key) => set({ selectedRegionKey: key }),
+  setHighlightedSlice: (outline) => set({ highlightedSlice: outline }),
 
   setCoordinates: (coords) => {
     set((s) =>

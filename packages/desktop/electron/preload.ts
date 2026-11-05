@@ -210,6 +210,10 @@ contextBridge.exposeInMainWorld("cslope", {
     subscribe("resultsPlot:stateResponse", listener),
   onResultsPlotChanged: (listener: (event: unknown, state: unknown) => void) =>
     subscribe("resultsPlot:changed", listener),
+  // The slice hovered in the Results plot window (its outline, or null).
+  sendResultsPlotHover: (outline: unknown) => ipcRenderer.send("resultsPlot:hover", outline),
+  onResultsPlotHover: (listener: (event: unknown, outline: unknown) => void) =>
+    subscribe("resultsPlot:hover", listener),
   // Sensitivity window sync (the main window runs the analyses)
   requestSensitivityState: () => ipcRenderer.send("sensitivity:requestState"),
   sendSensitivityState: (state: unknown) =>
