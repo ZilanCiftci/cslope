@@ -34,7 +34,7 @@ await step("udl/lineloads filled", async () => {
 });
 await step("piezo filled", async () => {
   const w = await openDialog("Model", "Piezometric lines"); await clickAll(w, "Add", 2); await w.waitForTimeout(300);
-  await clickAll(w, "+ Add Point", 3);
+  await clickAll(w, "+ Add point", 3);
   await shotWindow(w, "53-dlg-piezo-filled"); await truncation(w, "piezo");
 });
 await step("parameters filled", async () => {
@@ -52,7 +52,7 @@ await step("options all on", async () => {
 await step("materials every model", async () => {
   const w = await openDialog("Model", "Materials");
   await shotWindow(w, "58-dlg-materials-long"); await truncation(w, "materials-list");
-  const sel = w.locator("label").filter({ has: w.getByText("Material Model", { exact: true }) }).locator("select").first();
+  const sel = w.locator("label").filter({ has: w.getByText("Material model", { exact: true }) }).locator("select").first();
   const fallback = w.locator("select").first();
   const s = (await sel.count()) ? sel : fallback;
   const opts = await s.evaluate((el: HTMLSelectElement) => [...el.options].map((o) => o.text));

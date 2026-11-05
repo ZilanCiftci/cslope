@@ -267,7 +267,7 @@ export function UdlDialogApp() {
                 className="flex items-center gap-2 text-[11px]"
               >
                 <span className="flex-1" title="Part of the load carried as excess pore pressure below the water in this material: 0 (consolidated) to 1 (none of it consolidated)">
-                  UDL {i + 1}, Material "{name}": excess pore pressure{" "}
+                  UDL {i + 1}, material "{name}": excess pore pressure{" "}
                   <DraftNumberInput
                     value={entry.ratio}
                     min={0}
@@ -276,7 +276,7 @@ export function UdlDialogApp() {
                     onValueChange={(ratio) => {
                       if (ratio >= 0 && ratio <= 1) setExcessRatio(row, entry.materialId, ratio);
                     }}
-                    aria-label={`Excess pore pressure ratio of UDL ${i + 1} in Material "${name}"`}
+                    aria-label={`Excess pore pressure ratio of UDL ${i + 1} in material "${name}"`}
                     title="Part of the load carried as excess pore pressure in this material, 0 (consolidated) to 1 (none of it consolidated)"
                   />
                   {" "}× q (0 to 1)
@@ -285,7 +285,7 @@ export function UdlDialogApp() {
                   type="button"
                   onClick={() => removeExcess(row, entry.materialId)}
                   className="btn flex-shrink-0"
-                  aria-label={`Remove the excess pore pressure of UDL ${i + 1} in Material "${name}"`}
+                  aria-label={`Remove the excess pore pressure of UDL ${i + 1} in material "${name}"`}
                   title="Treat the load as fully consolidated in this material"
                 >
                   Remove

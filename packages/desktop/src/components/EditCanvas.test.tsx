@@ -246,16 +246,16 @@ describe("EditCanvas pointer interaction", () => {
     renderCanvas();
     const [sx, sy] = toScreen([20, 5]);
     fireEvent.contextMenu(canvas(), { clientX: sx, clientY: sy });
-    fireEvent.click(screen.getByRole("button", { name: "Delete Point" }));
+    fireEvent.click(screen.getByRole("button", { name: "Delete point" }));
     expect(useAppStore.getState().coordinates).not.toContainEqual([20, 5]);
-    expect(screen.queryByRole("button", { name: "Delete Point" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Delete point" })).toBeNull();
   });
 
   it("adds a vertex on an edge from its context menu", () => {
     renderCanvas();
     const [sx, sy] = toScreen([15, 0]);
     fireEvent.contextMenu(canvas(), { clientX: sx, clientY: sy });
-    fireEvent.click(screen.getByRole("button", { name: "Add Point" }));
+    fireEvent.click(screen.getByRole("button", { name: "Add point" }));
     const coords = useAppStore.getState().coordinates;
     expect(coords).toHaveLength(7);
     expect(coords[6][0]).toBeCloseTo(15, 6);
@@ -267,12 +267,12 @@ describe("EditCanvas pointer interaction", () => {
     renderCanvas();
     const [sx, sy] = toScreen([5, 5]);
     fireEvent.pointerDown(canvas(), { button: 0, clientX: sx, clientY: sy, pointerId: 1 });
-    expect(screen.getByText("Assign Material")).toBeInTheDocument();
+    expect(screen.getByText("Assign material")).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Sand" }));
     const assigned = useAppStore.getState().regionMaterials;
     expect(assigned).toHaveLength(1);
     expect(assigned[0].materialId).toBe("sand");
     expect(assigned[0].point[0]).toBeCloseTo(5, 6);
-    expect(screen.queryByText("Assign Material")).toBeNull();
+    expect(screen.queryByText("Assign material")).toBeNull();
   });
 });

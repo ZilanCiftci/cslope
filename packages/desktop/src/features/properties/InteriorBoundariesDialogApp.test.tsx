@@ -71,7 +71,7 @@ describe("InteriorBoundariesDialogApp", () => {
     render(<InteriorBoundariesDialogApp />);
     hydrate([boundary("b1", [[0, 5], [20, 5]]), boundary("b2", [[0, 2], [20, 2]])]);
     expect(store().selectedMaterialBoundaryId).toBe("b1");
-    expect(screen.getByText("Boundary 1 Coordinates")).toBeInTheDocument();
+    expect(screen.getByText("Boundary 1 coordinates")).toBeInTheDocument();
     expect(sentBoundaries()).toEqual([]);
   });
 
@@ -86,7 +86,7 @@ describe("InteriorBoundariesDialogApp", () => {
       [20, 5],
     ]);
     expect(store().selectedMaterialBoundaryId).toBe(bs[1].id);
-    expect(screen.getByText("Boundary 2 Coordinates")).toBeInTheDocument();
+    expect(screen.getByText("Boundary 2 coordinates")).toBeInTheDocument();
     expect(sentBoundaries().at(-1)!.materialBoundaries).toHaveLength(2);
   });
 

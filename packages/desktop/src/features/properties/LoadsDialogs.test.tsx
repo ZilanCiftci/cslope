@@ -187,10 +187,10 @@ describe("UdlDialogApp", () => {
       materialNames: [{ id: "m1", name: "Clay" }, { id: "m2", name: "Peat" }],
     });
     const notes = screen.getByTestId("udl-excess-notes");
-    expect(notes).toHaveTextContent(/UDL 1, Material "Clay": excess pore pressure\s*× q \(0 to 1\)/);
-    const clay = screen.getByLabelText('Excess pore pressure ratio of UDL 1 in Material "Clay"');
+    expect(notes).toHaveTextContent(/UDL 1, material "Clay": excess pore pressure\s*× q \(0 to 1\)/);
+    const clay = screen.getByLabelText('Excess pore pressure ratio of UDL 1 in material "Clay"');
     expect(clay).toHaveValue("0.5");
-    expect(screen.getByLabelText('Excess pore pressure ratio of UDL 1 in Material "Peat"')).toHaveValue("0.25");
+    expect(screen.getByLabelText('Excess pore pressure ratio of UDL 1 in material "Peat"')).toHaveValue("0.25");
     // Editable from 0 to 1; a value out of range is not taken.
     await userEvent.clear(clay);
     await userEvent.type(clay, "1");
@@ -199,9 +199,9 @@ describe("UdlDialogApp", () => {
     await userEvent.tab();
     expect(useAppStore.getState().udls[0].excessPorePressure?.[0].ratio).toBe(1);
     expect(clay).toHaveValue("1");
-    await userEvent.click(screen.getByRole("button", { name: 'Remove the excess pore pressure of UDL 1 in Material "Clay"' }));
+    await userEvent.click(screen.getByRole("button", { name: 'Remove the excess pore pressure of UDL 1 in material "Clay"' }));
     expect(useAppStore.getState().udls[0].excessPorePressure).toEqual([{ materialId: "m2", ratio: 0.25 }]);
-    await userEvent.click(screen.getByRole("button", { name: 'Remove the excess pore pressure of UDL 1 in Material "Peat"' }));
+    await userEvent.click(screen.getByRole("button", { name: 'Remove the excess pore pressure of UDL 1 in material "Peat"' }));
     expect(useAppStore.getState().udls[0].excessPorePressure).toBeUndefined();
     expect(screen.queryByTestId("udl-excess-notes")).toBeNull();
   });

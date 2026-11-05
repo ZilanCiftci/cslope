@@ -283,7 +283,7 @@ export function InteriorBoundariesDialogApp() {
               className="text-[10px] font-bold uppercase tracking-[0.1em]"
               style={{ color: "var(--color-vsc-text-muted)" }}
             >
-              Boundary {selectedBoundaryIndex + 1} Coordinates
+              Boundary {selectedBoundaryIndex + 1} coordinates
             </h4>
 
             <SpreadsheetTable

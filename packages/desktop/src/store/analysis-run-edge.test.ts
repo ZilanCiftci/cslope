@@ -344,7 +344,7 @@ describe("single run", () => {
   });
 });
 
-describe("Run All", () => {
+describe("Run all", () => {
   it("runs every model and shows the active model's result", async () => {
     const { a, b } = twoModels();
     const run = store().runAllAnalyses();

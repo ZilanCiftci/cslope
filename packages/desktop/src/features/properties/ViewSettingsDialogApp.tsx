@@ -268,7 +268,7 @@ export function ViewSettingsDialogApp() {
         </FieldRow>
 
         {/* ── Grid & Ticks ──────────────────────── */}
-        <GroupHeading>Grid &amp; Ticks</GroupHeading>
+        <GroupHeading>Grid &amp; ticks</GroupHeading>
 
         <FieldRow label="Tick spacing (m)">
           <DraftNumberInput
@@ -299,8 +299,8 @@ export function ViewSettingsDialogApp() {
           />
         </FieldRow>
 
-        {/* ── Plot Extents ─────────────────────────── */}
-        <GroupHeading>Plot Extents</GroupHeading>
+        {/* ── Plot extents ─────────────────────────── */}
+        <GroupHeading>Plot extents</GroupHeading>
 
         <div className="space-y-2 px-2">
           <div className="grid grid-cols-2 gap-x-3 gap-y-2">

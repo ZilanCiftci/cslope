@@ -108,20 +108,20 @@ export async function setPixelRatio(page: Page, width?: number, height?: number)
  * title of every window is "cSlope", so windows are told apart by URL.
  */
 const WINDOW_HASH: Record<string, string> = {
-  "Define Materials": "materials-dialog",
-  "Assign Materials": "material-assignment-dialog",
-  "Exterior Boundary": "geometry-dialog",
-  "Interior Boundaries": "interior-boundaries-dialog",
-  UDL: "udl-dialog",
-  "Line Loads": "line-loads-dialog",
+  "Define materials": "materials-dialog",
+  "Assign materials": "material-assignment-dialog",
+  "Exterior boundary": "geometry-dialog",
+  "Interior boundaries": "interior-boundaries-dialog",
+  "Distributed loads": "udl-dialog",
+  "Line loads": "line-loads-dialog",
   Reinforcement: "reinforcement-dialog",
-  "Piezometric Lines": "piezo-dialog",
+  "Piezometric lines": "piezo-dialog",
   Parameters: "parameters-dialog",
-  "Results Plot": "results-plot-dialog",
+  "Results plot": "results-plot-dialog",
   "Search limits": "search-limits-dialog",
   "Custom search planes": "custom-search-planes-dialog",
   Options: "options-dialog",
-  "View Settings": "view-settings-dialog",
+  "View settings": "view-settings-dialog",
 };
 
 /**

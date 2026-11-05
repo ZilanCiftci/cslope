@@ -78,7 +78,7 @@ describe("run lifecycle (round 5)", () => {
     expect(FakeWorker.instances).toHaveLength(1);
   });
 
-  it("Run All does not bring back a result after the active model was edited", async () => {
+  it("Run all does not bring back a result after the active model was edited", async () => {
     const a = useAppStore.getState().activeModelId;
     useAppStore.getState().addModel("B");
     useAppStore.getState().switchModel(a);

@@ -38,10 +38,10 @@ function RunAllProgress({ status }: { status: RunAllStatus }) {
           className="flex items-center gap-1.5"
           style={{ color: "var(--color-vsc-accent)", fontWeight: 600 }}
         >
-          Run All {finished}/{total}
+          Run all {finished}/{total}
           <span
             role="progressbar"
-            aria-label="Run All progress"
+            aria-label="Run all progress"
             aria-valuemin={0}
             aria-valuemax={100}
             aria-valuenow={Math.round(progress * 100)}
@@ -59,7 +59,7 @@ function RunAllProgress({ status }: { status: RunAllStatus }) {
         </span>
       ) : (
         <span data-testid="status-run-all">
-          Run All done: {total} {total === 1 ? "model" : "models"}
+          Run all done: {total} {total === 1 ? "model" : "models"}
           {failed > 0 && (
             <span style={{ color: "var(--color-vsc-error)", fontWeight: 600 }}>, {failed} failed</span>
           )}

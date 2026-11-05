@@ -120,5 +120,5 @@ export function GeometrySection({ plain = false }: GeometrySectionProps) {
     return <div className="space-y-2.5">{content}</div>;
   }
 
-  return <Section title="Exterior Boundary">{content}</Section>;
+  return <Section title="Exterior boundary">{content}</Section>;
 }

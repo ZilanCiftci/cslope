@@ -36,14 +36,14 @@ export const MATERIAL_TABLE_COLUMNS: Array<{
   key: MaterialTableColumnKey;
   label: string;
 }> = [
-  { key: "model", label: "Material Model" },
-  { key: "unitWeight", label: "Unit Weight (kN/m³)" },
+  { key: "model", label: "Material model" },
+  { key: "unitWeight", label: "Unit weight (kN/m³)" },
   { key: "cohesion", label: "Cohesion / Su (kPa)" },
-  { key: "piezometricLine", label: "Piezometric Surface" },
-  { key: "depthRef", label: "Datum Elevation / Ref. Depth (m)" },
-  { key: "cDatum", label: "C-Datum (kPa)" },
-  { key: "cRate", label: "C-Rate of Change (kN/m²/m)" },
-  { key: "frictionAngle", label: "Effective Friction Angle (\u00b0)" },
+  { key: "piezometricLine", label: "Piezometric surface" },
+  { key: "depthRef", label: "Datum elevation / ref. depth (m)" },
+  { key: "cDatum", label: "C-datum (kPa)" },
+  { key: "cRate", label: "C-rate of change (kN/m²/m)" },
+  { key: "frictionAngle", label: "Effective friction angle (\u00b0)" },
 ];
 
 /** The columns of a material table that names none. */

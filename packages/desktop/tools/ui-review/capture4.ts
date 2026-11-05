@@ -11,7 +11,7 @@ await page.waitForTimeout(500);
 await step("escape modal", async () => {
   await page.getByText("T-ACADS Simple", { exact: true }).click({ button: "right" }); await page.getByText("Properties", { exact: true }).click(); await page.waitForTimeout(400);
   await page.keyboard.press("Escape"); await page.waitForTimeout(300);
-  console.log("modal open after Escape:", await page.getByText("Model Properties").count());
+  console.log("modal open after Escape:", await page.getByText("Model properties").count());
   const c = page.getByRole("button", { name: "Cancel" }); if (await c.count()) await c.click();
 });
 await step("rename", async () => { await page.getByText("T-ACADS Simple", { exact: true }).click({ button: "right" }); await page.getByText("Rename", { exact: true }).click(); await page.waitForTimeout(300); await shot("90-rename"); await page.keyboard.press("Escape"); });
@@ -47,7 +47,7 @@ await step("dark", async () => {
     const w = await openDialog("Model", b); await shotWindow(w, `94-dark-dlg-${n}`, false); await H.closeOthers();
   }
   await S((s) => s.setMode("result")); await page.waitForTimeout(300);
-  const w = await openDialog("Results", "Results Plot"); await shotWindow(w, "94-dark-dlg-resultsplot", false); await H.closeOthers();
+  const w = await openDialog("Results", "Results plot"); await shotWindow(w, "94-dark-dlg-resultsplot", false); await H.closeOthers();
   await tab("Results"); await H.clickRibbon("Sensitivity"); await page.waitForTimeout(400); await shot("94-dark-sensitivity");
   await page.getByRole("button", { name: "Switch to light mode" }).click().catch(() => {});
 });

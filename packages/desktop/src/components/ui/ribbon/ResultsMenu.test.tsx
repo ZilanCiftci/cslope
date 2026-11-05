@@ -92,7 +92,7 @@ describe("ResultsMenu", () => {
   it("disables the results plot and export without a result", () => {
     renderMenu({ withResult: false });
     // The tooltip says why.
-    const plot = screen.getByRole("menuitem", { name: "Results Plot" });
+    const plot = screen.getByRole("menuitem", { name: "Results plot" });
     expect(plot).toHaveAttribute("aria-disabled", "true");
     expect(plot).toHaveAttribute("title", "Run the analysis first");
     const pdf = screen.getByRole("menuitem", { name: "Export PDF" });
@@ -104,7 +104,7 @@ describe("ResultsMenu", () => {
   it("explains that the results plot needs the desktop app in a browser", async () => {
     const alert = vi.spyOn(window, "alert").mockImplementation(() => {});
     renderMenu();
-    await userEvent.click(screen.getByTitle("Results Plot"));
+    await userEvent.click(screen.getByTitle("Results plot"));
     await userEvent.click(screen.getByTitle("Settings"));
     expect(alert).toHaveBeenCalledTimes(2);
     expect(alert.mock.calls[0][0]).toMatch(/desktop app/);
@@ -223,20 +223,20 @@ describe("ResultsMenu", () => {
   it("adds annotations; the table and the colour bar toggle and start at the right edge", async () => {
     renderMenu();
     store().setResultViewSettings({ annotations: [] });
-    await userEvent.click(screen.getByTitle("Add Text"));
-    await userEvent.click(screen.getByTitle("Add Plot"));
-    await userEvent.click(screen.getByTitle("Add Material Table"));
-    await userEvent.click(screen.getByTitle("Add Color Bar"));
+    await userEvent.click(screen.getByTitle("Add text"));
+    await userEvent.click(screen.getByTitle("Add plot"));
+    await userEvent.click(screen.getByTitle("Add material table"));
+    await userEvent.click(screen.getByTitle("Add color bar"));
     const annotations = store().resultViewSettings.annotations;
     expect(annotations.map((a) => a.type)).toEqual(["text", "plot", "material-table", "color-bar"]);
     const bar = annotations.find((a) => a.type === "color-bar")!;
     expect([bar.x, bar.y, bar.anchor]).toEqual([0.94, 0.35, "top-right"]);
-    expect(screen.getByTitle("Remove Color Bar")).toHaveAttribute("aria-pressed", "true");
+    expect(screen.getByTitle("Remove color bar")).toHaveAttribute("aria-pressed", "true");
     // A second click removes the one there instead of adding another.
-    await userEvent.click(screen.getByTitle("Remove Color Bar"));
-    await userEvent.click(screen.getByTitle("Remove Material Table"));
+    await userEvent.click(screen.getByTitle("Remove color bar"));
+    await userEvent.click(screen.getByTitle("Remove material table"));
     expect(store().resultViewSettings.annotations.map((a) => a.type)).toEqual(["text", "plot"]);
-    expect(screen.getByTitle("Add Color Bar")).toHaveAttribute("aria-pressed", "false");
+    expect(screen.getByTitle("Add color bar")).toHaveAttribute("aria-pressed", "false");
   });
 
   it("exports the view settings as a template", async () => {

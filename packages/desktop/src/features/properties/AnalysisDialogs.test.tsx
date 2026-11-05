@@ -322,8 +322,8 @@ describe("SearchLimitsDialogApp", () => {
   it("names the crest and toe sides for the sliding direction", async () => {
     render(<SearchLimitsDialogApp />);
     hydrate({ analysisLimits: { enabled: true }, orientation: "rtl" });
-    expect(screen.getByText("Entry Range (crest side — right)")).toBeInTheDocument();
-    expect(screen.getByText("Exit Range (toe side — left)")).toBeInTheDocument();
+    expect(screen.getByText("Entry range (crest side — right)")).toBeInTheDocument();
+    expect(screen.getByText("Exit range (toe side — left)")).toBeInTheDocument();
     expect(screen.getByText("Model X range: 0 – 40 m")).toBeInTheDocument();
   });
 

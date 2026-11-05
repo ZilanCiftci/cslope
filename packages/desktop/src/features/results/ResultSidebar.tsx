@@ -66,12 +66,12 @@ const COLORS = [
 
 const SHORT_COLUMN_LABELS: Record<MaterialTableColumnKey, string> = {
   model: "Model",
-  unitWeight: "Unit Wt.",
+  unitWeight: "Unit wt.",
   cohesion: "c / Su",
   piezometricLine: "Piezo",
   depthRef: "Datum",
-  cDatum: "C-Datum",
-  cRate: "C-Rate",
+  cDatum: "C-datum",
+  cRate: "C-rate",
   frictionAngle: "Friction",
 };
 
@@ -105,6 +105,12 @@ function commonValue<T>(values: T[]): T | undefined {
   if (values.length === 0) return undefined;
   const first = values[0];
   return values.every((v) => v === first) ? first : undefined;
+}
+
+/** "top-left" → "Top left": an annotation anchor in sentence case. */
+function anchorLabel(anchor: string): string {
+  const text = anchor.replace("-", " ");
+  return text[0].toUpperCase() + text.slice(1);
 }
 
 export function ResultSidebar() {
@@ -662,9 +668,9 @@ export function ResultSidebar() {
               anno.type === "reference"
                 ? `Reference: ${referenceListName(anno)}`
                 : anno.type === "color-bar"
-                  ? "Color Bar"
+                  ? "Color bar"
                   : anno.type === "material-table"
-                    ? "Material Table"
+                    ? "Material table"
                     : anno.type === "plot"
                       ? "Plot"
                       : shown || "Text (empty)";
@@ -1092,10 +1098,7 @@ export function ResultSidebar() {
                             : "var(--color-vsc-border)",
                         border: "none",
                       }}
-                      title={a
-                        .split("-")
-                        .map((w) => w[0].toUpperCase() + w.slice(1))
-                        .join(" ")}
+                      title={anchorLabel(a)}
                     />
                   ))}
                 </div>
@@ -1104,10 +1107,7 @@ export function ResultSidebar() {
                   style={{ color: "var(--color-vsc-text-muted)" }}
                 >
                   {anchorValue !== undefined
-                    ? anchorValue
-                        .split("-")
-                        .map((w) => w[0].toUpperCase() + w.slice(1))
-                        .join(" ")
+                    ? anchorLabel(anchorValue)
                     : "Mixed"}
                 </span>
               </div>

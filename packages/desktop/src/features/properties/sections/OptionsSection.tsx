@@ -671,7 +671,7 @@ export function OptionsSection({ plain = false }: OptionsSectionProps) {
     return <div className="space-y-2.5">{content}</div>;
   }
 
-  return <Section title="Analysis Options">{content}</Section>;
+  return <Section title="Analysis options">{content}</Section>;
 }
 
 /** Swedish practice (EKS / IEG): γcu 1.5, γc' = γφ' = 1.3; γQ 1.3 (safety class 3, η = 1). */

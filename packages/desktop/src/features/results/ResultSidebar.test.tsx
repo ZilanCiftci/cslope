@@ -190,13 +190,13 @@ describe("ResultSidebar annotations list", () => {
     // Text annotations by their text.
     expect(screen.getByText("Title")).toBeInTheDocument();
     expect(screen.getByText("Sub")).toBeInTheDocument();
-    expect(screen.getByText("Material Table")).toBeInTheDocument();
+    expect(screen.getByText("Material table")).toBeInTheDocument();
     expect(screen.getByText("Plot")).toBeInTheDocument();
-    expect(screen.getByText("Color Bar")).toBeInTheDocument();
+    expect(screen.getByText("Color bar")).toBeInTheDocument();
 
     fireEvent.click(screen.getByText("Plot"));
     expect(useAppStore.getState().selectedAnnotationIds).toEqual(["p"]);
-    fireEvent.click(screen.getByText("Color Bar"), { ctrlKey: true });
+    fireEvent.click(screen.getByText("Color bar"), { ctrlKey: true });
     expect(useAppStore.getState().selectedAnnotationIds).toEqual(["p", "c"]);
 
     fireEvent.click(screen.getAllByTitle("Remove annotation")[4]);
@@ -399,8 +399,8 @@ describe("ResultSidebar annotation properties", () => {
     act(() => useAppStore.setState({ result: null }));
     select(["p"]);
     render(<ResultSidebar />);
-    expect(screen.getByText("Top Left", { selector: "span" })).toBeInTheDocument();
-    fireEvent.click(screen.getByTitle("Bottom Right"));
+    expect(screen.getByText("Top left", { selector: "span" })).toBeInTheDocument();
+    fireEvent.click(screen.getByTitle("Bottom right"));
     expect(anno("p")).toMatchObject({ anchor: "bottom-right", x: 0.5, y: 0.6 });
   });
 
@@ -410,7 +410,7 @@ describe("ResultSidebar annotation properties", () => {
       .mockImplementation(() => createRecordingContext(1200, 800).ctx as never);
     select(["p"]);
     render(<ResultSidebar />);
-    fireEvent.click(screen.getByTitle("Bottom Right"));
+    fireEvent.click(screen.getByTitle("Bottom right"));
     const p = anno("p");
     expect(p.anchor).toBe("bottom-right");
     // Bottom-right of a box whose top-left stays at (0.5, 0.6), plot ≈ 24 % × 18 %.
@@ -419,7 +419,7 @@ describe("ResultSidebar annotation properties", () => {
     expect(p.y).toBeGreaterThan(0.75);
     expect(p.y).toBeLessThan(0.8);
     // Same anchor again: position unchanged.
-    fireEvent.click(screen.getByTitle("Bottom Right"));
+    fireEvent.click(screen.getByTitle("Bottom right"));
     expect(anno("p")).toEqual(p);
     spy.mockRestore();
   });

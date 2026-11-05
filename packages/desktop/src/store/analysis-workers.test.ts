@@ -191,7 +191,7 @@ describe("evaluator workers", () => {
     expect(evaluators).toHaveLength(2);
   });
 
-  it("Run All shares the cores: two models on four get two threads each", async () => {
+  it("Run all shares the cores: two models on four get two threads each", async () => {
     setAnalysisThreads(null);
     vi.stubGlobal("navigator", { ...navigator, hardwareConcurrency: 4 });
     store().addModel("B");
@@ -208,7 +208,7 @@ describe("evaluator workers", () => {
     expect(idleWorkerCount()).toBe(4);
   });
 
-  it("Run All of more models than cores runs on one worker per core, each reused for the queue", async () => {
+  it("Run all of more models than cores runs on one worker per core, each reused for the queue", async () => {
     setAnalysisThreads(null);
     vi.stubGlobal("navigator", { ...navigator, hardwareConcurrency: 2 });
     for (const name of ["B", "C", "D", "E"]) store().addModel(name);

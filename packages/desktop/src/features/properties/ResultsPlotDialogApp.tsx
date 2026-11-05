@@ -441,7 +441,7 @@ export function ResultsPlotDialogApp() {
                 value={plotMode}
                 onChange={(e) => setPlotMode(e.target.value as PlotMode)}
               >
-                <option value="slipSurface">Slip Surface Variables</option>
+                <option value="slipSurface">Slip surface variables</option>
                 <option value="lambdaFmFf" disabled={!canShowLambdaPlot}>
                   Lambda vs Fm/Ff
                 </option>
@@ -523,7 +523,7 @@ export function ResultsPlotDialogApp() {
                 <div
                   className="field" aria-disabled="true"
                 >
-                  Factor of Safety
+                  Factor of safety
                 </div>
               )}
             </label>
@@ -709,7 +709,7 @@ export function ResultsPlotDialogApp() {
                     tickLine={{ stroke: "var(--color-vsc-border)" }}
                     axisLine={{ stroke: "var(--color-vsc-border)" }}
                     label={{
-                      value: "Factor of Safety",
+                      value: "Factor of safety",
                       angle: -90,
                       position: "insideLeft",
                       fill: "var(--color-vsc-text-muted)",

@@ -302,7 +302,7 @@ export function ResultsMenu({ isOpen, onActivate, panelHost }: Props) {
             <RibbonGroup label="Plots">
               <RibbonButton
                 icon={<ResultsPlotIcon {...LARGE_ICON} />}
-                label="Results Plot"
+                label="Results plot"
                 onClick={openResultsPlot}
                 disabled={!hasResult}
                 disabledTitle="Run the analysis first"
@@ -473,26 +473,26 @@ export function ResultsMenu({ isOpen, onActivate, panelHost }: Props) {
                 <RibbonSmallButton
                   icon={<TextIcon {...SMALL_ICON} />}
                   label="Text"
-                  title="Add Text"
+                  title="Add text"
                   onClick={() => addAnnotation("text")}
                 />
                 <RibbonSmallButton
                   icon={<PlotIcon {...SMALL_ICON} />}
                   label="Plot"
-                  title="Add Plot"
+                  title="Add plot"
                   onClick={() => addAnnotation("plot")}
                 />
                 <RibbonSmallButton
                   icon={<MaterialTableIcon {...SMALL_ICON} />}
                   label="Material table"
-                  title={rvs.annotations.some((a) => a.type === "material-table") ? "Remove Material Table" : "Add Material Table"}
+                  title={rvs.annotations.some((a) => a.type === "material-table") ? "Remove material table" : "Add material table"}
                   onClick={() => toggleAnnotation("material-table")}
                   active={rvs.annotations.some((a) => a.type === "material-table")}
                 />
                 <RibbonSmallButton
                   icon={<ColorBarIcon {...SMALL_ICON} />}
                   label="Color bar"
-                  title={rvs.annotations.some((a) => a.type === "color-bar") ? "Remove Color Bar" : "Add Color Bar"}
+                  title={rvs.annotations.some((a) => a.type === "color-bar") ? "Remove color bar" : "Add color bar"}
                   onClick={() => toggleAnnotation("color-bar")}
                   active={rvs.annotations.some((a) => a.type === "color-bar")}
                 />

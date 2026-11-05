@@ -21,14 +21,14 @@ describe("ContextMenuOverlay", () => {
           screenX: 40,
           screenY: 60,
           items: [
-            { label: "Add Point", action: add },
-            { label: "Delete Point", action: del, danger: true, disabled: true },
+            { label: "Add point", action: add },
+            { label: "Delete point", action: del, danger: true, disabled: true },
           ],
         }}
       />,
     );
-    const addBtn = screen.getByRole("button", { name: "Add Point" });
-    const delBtn = screen.getByRole("button", { name: "Delete Point" });
+    const addBtn = screen.getByRole("button", { name: "Add point" });
+    const delBtn = screen.getByRole("button", { name: "Delete point" });
     expect((addBtn.parentElement as HTMLElement).style.left).toBe("40px");
     expect(delBtn).toBeDisabled();
     expect(delBtn.style.color).toBe("var(--color-vsc-error)");

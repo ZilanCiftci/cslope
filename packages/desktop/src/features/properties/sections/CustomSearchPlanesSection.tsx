@@ -171,7 +171,7 @@ export function CustomSearchPlanesSection({
     return <div className="space-y-2.5">{content}</div>;
   }
 
-  return <Section title="Custom Search Planes">{content}</Section>;
+  return <Section title="Custom search planes">{content}</Section>;
 }
 
 /** "Add as reference line": the plane drawn over the result, labelled "Custom surface n". */

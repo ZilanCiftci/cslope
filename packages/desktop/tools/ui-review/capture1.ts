@@ -84,7 +84,7 @@ await page.waitForFunction(() => ["done", "error"].includes((window as any).__CS
 await S((s) => s.setMode("result"));
 await page.waitForTimeout(800);
 await step("results main", async () => { await tab("Results"); await shot(page, "20-results-tab"); });
-for (const [text, name] of [["Results Plot", "resultsplot"], ["Settings", "viewsettings"]] as const) {
+for (const [text, name] of [["Results plot", "resultsplot"], ["Settings", "viewsettings"]] as const) {
   await step("dialog " + name, async () => {
     await tab("Results"); const before = others().length; await clickRibbon(text);
     const w = await waitNewWindow(before);

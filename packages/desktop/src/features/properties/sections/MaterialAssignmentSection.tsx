@@ -98,7 +98,7 @@ export function MaterialAssignmentSection({
                   setRegionMaterial([r.cx, r.cy], e.target.value);
                 }}
                 onClick={(e) => e.stopPropagation()}
-                aria-label={`Material for Region ${r.index}`}
+                aria-label={`Material for region ${r.index}`}
               >
                 {materials.map((m) => (
                   <option key={m.id} value={m.id}>
@@ -116,5 +116,5 @@ export function MaterialAssignmentSection({
     return <div className="space-y-2.5">{content}</div>;
   }
 
-  return <Section title="Material Assignment">{content}</Section>;
+  return <Section title="Material assignment">{content}</Section>;
 }

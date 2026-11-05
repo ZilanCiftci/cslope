@@ -101,7 +101,7 @@ describe("FileMenu in a browser", () => {
   it("does nothing when Save As is cancelled", async () => {
     vi.spyOn(window, "prompt").mockReturnValue(null);
     renderMenu();
-    await userEvent.click(screen.getByTitle("Save As (Ctrl+Shift+S)"));
+    await userEvent.click(screen.getByTitle("Save as (Ctrl+Shift+S)"));
     expect(mocks.downloadFile).not.toHaveBeenCalled();
   });
 

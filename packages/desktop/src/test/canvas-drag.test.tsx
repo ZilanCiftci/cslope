@@ -232,21 +232,21 @@ describe("dragging points on the edit canvas", () => {
       // On the segment (12, 2)–(22, 5), at x = 17 (y = 3.5).
       const [ex, ey] = toScreen([17, 3.5]);
       fireEvent.contextMenu(canvas, { clientX: ex, clientY: ey });
-      fireEvent.click(screen.getByRole("button", { name: "Add Point" }));
+      fireEvent.click(screen.getByRole("button", { name: "Add point" }));
       const pts = planes()[1].points!;
       expect(pts).toHaveLength(4);
       expect(pts[2][0]).toBeCloseTo(17, 6);
       expect(pts[2][1]).toBeCloseTo(3.5, 6);
-      expect(screen.queryByRole("button", { name: "Add Point" })).toBeNull();
+      expect(screen.queryByRole("button", { name: "Add point" })).toBeNull();
       const [vx, vy] = toScreen([2, 6]);
       fireEvent.contextMenu(canvas, { clientX: vx, clientY: vy });
-      fireEvent.click(screen.getByRole("button", { name: "Delete Point" }));
+      fireEvent.click(screen.getByRole("button", { name: "Delete point" }));
       expect(planes()[1].points).toHaveLength(3);
       expect(planes()[1].points![0]).toEqual([12, 2]);
       // A circle: its centre offers to delete it.
       const [cx, cy] = toScreen([12, 18]);
       fireEvent.contextMenu(canvas, { clientX: cx, clientY: cy });
-      fireEvent.click(screen.getByRole("button", { name: "Delete Circle" }));
+      fireEvent.click(screen.getByRole("button", { name: "Delete circle" }));
       expect(planes().map((p) => p.id)).toEqual(["p1"]);
     });
   });

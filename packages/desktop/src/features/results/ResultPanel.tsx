@@ -129,7 +129,7 @@ export function ResultPanel({ showTitle = true }: { showTitle?: boolean }) {
             </Row>
           )}
           {(result.splitFailureCount ?? 0) > 0 && (
-            <Row label="Geometry Split">
+            <Row label="Geometry split">
               <span style={{ color: "var(--color-vsc-warning-text)" }}>
                 {result.splitFailureCount} split operation(s) failed
               </span>
@@ -144,7 +144,7 @@ export function ResultPanel({ showTitle = true }: { showTitle?: boolean }) {
                 className="font-medium mb-1"
                 style={{ color: "var(--color-vsc-text-bright)" }}
               >
-                Critical Surface
+                Critical surface
               </p>
               {result.criticalSurface.points && !result.criticalSurface.composite ? (
                 <p>
