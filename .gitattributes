@@ -1,0 +1,18 @@
+# Line endings: LF in the repository for all text files; Git converts on
+# checkout only if core.autocrlf asks it to. Binary files are left alone.
+* text=auto eol=lf
+
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.tif binary
+*.tiff binary
+*.pdf binary
+*.dwg binary
+*.wasm binary
+*.cslp binary
+*.zip binary
+*.ico binary
+*.woff binary
+*.woff2 binary
+*.ttf binary
