@@ -257,7 +257,7 @@ export function NewModelsWindow({
                       key={f.id}
                       role="listitem"
                       className="flex items-center gap-1.5 p-1 rounded"
-                      style={{ border: "1px solid var(--color-vsc-border)", background: f.id === selected ? "var(--color-vsc-list-active)" : "transparent" }}
+                      style={{ border: "1px solid var(--color-vsc-border)", background: f.id === selected ? "var(--color-vsc-selected-bg)" : "transparent" }}
                     >
                       <button className="btn text-[11px] px-1.5" onClick={() => selectFrame(f)} aria-pressed={f.id === selected} title="Select the frame to calibrate it">
                         {i + 1}

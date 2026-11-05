@@ -238,7 +238,7 @@ export function InteriorBoundariesDialogApp() {
                       className="cursor-pointer transition-colors"
                       style={{
                         background: isSelected
-                          ? "var(--color-vsc-list-active)"
+                          ? "var(--color-vsc-selected-bg)"
                           : "transparent",
                         color: isSelected
                           ? "var(--color-vsc-text-bright)"

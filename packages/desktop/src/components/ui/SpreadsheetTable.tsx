@@ -107,8 +107,9 @@ function SpreadsheetRow<T>({
 }) {
   const [hovered, setHovered] = useState(false);
 
+  // (the light blue of a selected row everywhere in the app)
   const bg = selected
-    ? "var(--color-vsc-selection)"
+    ? "var(--color-vsc-selected-bg)"
     : hovered && clickable
       ? "var(--color-vsc-list-hover)"
       : "transparent";

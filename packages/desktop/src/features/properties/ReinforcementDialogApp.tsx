@@ -258,7 +258,7 @@ function ElementList<T extends { id: string }>({
                 aria-selected={isSelected}
                 className="cursor-pointer transition-colors focus-visible:outline focus-visible:outline-1 focus-visible:-outline-offset-1"
                 style={{
-                  background: isSelected ? "var(--color-vsc-list-active)" : "transparent",
+                  background: isSelected ? "var(--color-vsc-selected-bg)" : "transparent",
                   color: isSelected ? "var(--color-vsc-text-bright)" : "var(--color-vsc-text)",
                 }}
                 onMouseEnter={(e) => {

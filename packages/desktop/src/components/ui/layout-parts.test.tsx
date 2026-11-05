@@ -101,7 +101,7 @@ describe("SpreadsheetTable", () => {
     ]);
     const rows = screen.getAllByRole("row").slice(1);
     expect(rows.map((r) => r.textContent)).toEqual(["a1-", "b2-"]);
-    expect(rows[1].style.background).toContain("var(--color-vsc-selection)");
+    expect(rows[1].style.background).toContain("var(--color-vsc-selected-bg)");
     expect(rows[0].style.fontWeight).toBe("bold");
     await userEvent.hover(rows[0]);
     expect(rows[0].style.background).toContain("var(--color-vsc-list-hover)");

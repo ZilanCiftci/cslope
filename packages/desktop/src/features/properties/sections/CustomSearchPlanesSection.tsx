@@ -58,7 +58,7 @@ export function CustomSearchPlanesSection({
     "aria-selected": selectedPlaneId === id,
     style:
       selectedPlaneId === id
-        ? { background: "var(--color-vsc-list-active)", borderRadius: 4, boxShadow: "0 0 0 3px var(--color-vsc-list-active)" }
+        ? { background: "var(--color-vsc-selected-bg)", borderRadius: 4, boxShadow: "0 0 0 3px var(--color-vsc-selected-bg)" }
         : undefined,
   });
 
