@@ -47,6 +47,10 @@
       "destination": "/docs/analysis/index.html"
     },
     {
+      "source": "/docs/drawings",
+      "destination": "/docs/drawings/index.html"
+    },
+    {
       "source": "/docs/file-format",
       "destination": "/docs/file-format/index.html"
     },

@@ -1,0 +1,66 @@
+---
+title: Drawings (underlays)
+description: Place a section drawing (PNG, JPEG, TIFF or PDF) under a model, calibrate it to the model's coordinates, and trace the model over it.
+section: Modeling
+order: 1.5
+---
+
+A **drawing** is a picture of the section, such as a scanned sheet or a page of a PDF set, placed under a model so that you can trace the exterior boundary, the layers and the water over it. The drawing is a reference only: the analysis never reads it.
+
+The drawing file is stored once in the project file. Each model places it on its own, with its own page, crop and calibration, so one PDF with many sections serves many models.
+
+## Place a drawing
+
+Open **Model › Drawing**. The **Place drawing** window opens for the active model.
+
+1. Under **Drawings in this project**, pick a drawing, or click **Add file…** and choose a PNG, JPEG, TIFF or PDF file (at most 100 MB). For a PDF or a TIFF with several pages, pick the page in the strip on the left.
+2. **Crop** (optional): click **Crop rectangle** and drag a rectangle around the section on the page. Without a crop, the whole page is placed.
+3. **Calibrate**: tell cSlope where the drawing lies in the model (below).
+4. Check the **Preview**, which shows the placed drawing under the model's outline, and click **Place**.
+
+In the drawing, the mouse wheel zooms and the middle mouse button (or <Kbd>Space</Kbd> and drag, or the **Pan** tool) pans. A magnifier and a crosshair follow the pointer, so you can pick a tick mark or a corner exactly.
+
+## Calibrate
+
+Choose how the drawing is calibrated:
+
+- **Axes (x and y separately)**: click two points on the horizontal axis and type their x, then two points on the vertical axis and type their y. The x and y scales are found separately, so a section drawn with **vertical exaggeration** is placed true to scale. The drawing is not rotated. When the same drawing is placed in another model, choose it under **Reuse scale from**; then one point per axis is enough, which suits a second section on the same sheet.
+- **Points**: click a point in the drawing and type its model x and y, then a second point. Two points give the scale and the rotation (the same scale in both directions). Add a third point or more for a best fit that also takes different scales in x and y; the misfit of each point is shown in meters.
+- **Scale**: click one point whose model coordinates you know, type them, and type the scale: how many meters one drawing unit is. The unit is a pixel for an image; for a PDF, a millimeter or a point (1/72 in) of the sheet. A sheet drawn at 1:200 has 1 mm = 0.2 m.
+
+The window says what is still missing, and refuses points that are too close together or that do not span the drawing.
+
+<Callout type="tip">
+  Calibrate on the drawing's own axes or grid where it has them: they are where its coordinates are known best. Pick points far apart.
+</Callout>
+
+## The drawings of a model
+
+Once a model has a drawing, the **Drawings** section at the bottom of the **Models** panel lists its drawings, the topmost first (**Place…** there opens the window too). For each drawing you can:
+
+- show or hide it (the eye),
+- lock or unlock it (the padlock),
+- set its **Opacity**,
+- turn on **Show in results**, to draw it in the result view and the PDF export too,
+- move it up or down when drawings overlap,
+- **Rename** it (or double-click its name),
+- **Recalibrate…**: the window opens again with the drawing's page, crop and calibration, to change them,
+- remove it from the model (the bin). The file stays in the project while another model places it; a file that no model places is left out when the project is saved.
+
+Every change is a step of **Undo** and **Redo**.
+
+## On the canvas
+
+A drawing is drawn above the soil colors and below the grid, the boundaries and the points of the model, at its opacity (half transparent when placed). A higher opacity shows the drawing more clearly, a lower one the soil colors.
+
+A drawing is **locked** when it is placed: clicks go through it to the model's objects, so you can trace over it. Right-click the drawing where no object of the model is to **Unlock drawing**, **Recalibrate…**, **Hide drawing** or **Remove drawing**. An unlocked drawing is selected by a click where no object of the model is, shows its frame, and moves with a drag (one undo step); lock it again when it is in place. **Lock all › Drawings** in the canvas menu locks every drawing of the model.
+
+## In the result view and the PDF
+
+A drawing with **Show in results** on is drawn in the result view, clipped to the plot frame, and in the PDF export as a picture over the soil colors and under the model's lines. It is off by default, so a report shows the analysis only.
+
+## Limits
+
+- PNG, JPEG, TIFF and PDF files of at most 100 MB each; a project file with drawings may be up to 500 MB.
+- A PDF page is shown as a picture at a resolution that follows the zoom; text and lines are not selectable, and the model's points do not snap to the drawing's lines.
+- CAD drawings (DXF, DWG) cannot be placed as drawings yet. To turn a DXF drawing into a model, use **File › Import › DXF file** (see [Geometry](/docs/geometry#import-from-dxf)).
