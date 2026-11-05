@@ -19,6 +19,7 @@ import { readDxfVectors } from "../../utils/dxf";
 import { fromDrawingCoordinates, type NeutralVectors, type VectorDrawing, type VectorText } from "./vectors";
 import { pathsFromOperatorList, pdfVectorDrawing, textsFromContent, type PdfOps } from "./pdf-vectors";
 import { vectorPath, drawVectorTexts } from "./vector-render";
+import { BundledPdfData, PDF_DATA_URL } from "./pdf-data";
 
 export type SourceKind = "image" | "pdf" | "vector";
 /** Pixels, PDF points, or the drawing units of a DWG or DXF file. */
@@ -287,7 +288,16 @@ function loadPdfJs(): Promise<PdfJs> {
 async function openPdf(bytes: Uint8Array): Promise<DrawingSource> {
   const lib = await loadPdfJs();
   // pdf.js takes over (detaches) the buffer it is given: a copy.
-  const task = lib.getDocument({ data: bytes.slice(), useSystemFonts: true, disableAutoFetch: true });
+  // The image decoders and standard fonts from the app's bundle (pdf-data.ts).
+  const task = lib.getDocument({
+    data: bytes.slice(),
+    useSystemFonts: true,
+    disableAutoFetch: true,
+    BinaryDataFactory: BundledPdfData,
+    useWorkerFetch: false,
+    wasmUrl: PDF_DATA_URL,
+    standardFontDataUrl: PDF_DATA_URL,
+  });
   const doc = await task.promise;
   const sizes = new Map<number, PageSize>();
   const pageSize = async (n: number): Promise<PageSize> => {

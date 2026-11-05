@@ -39,7 +39,7 @@ function engineBuild(): { version: string; sourceHash: string } {
  * which cannot be fetched from file://; main.tsx compiles it and posts the
  * module to the workers).
  */
-function base64Import(): Plugin {
+export function base64Import(): Plugin {
   return {
     name: "cslope-base64-import",
     enforce: "pre",
