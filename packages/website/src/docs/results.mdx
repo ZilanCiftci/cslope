@@ -11,7 +11,7 @@ After an analysis the canvas switches to **result mode**. It shows a print sheet
 
 ## The summary
 
-The result sidebar on the right (collapse or open it at its header row, see [The cSlope window](/docs/interface#layout)) has three parts: **Summary**, **Annotations** and **Properties**. The summary shows:
+The result sidebar on the right (collapse or open it at its header row, see [The cSlope window](/docs/interface#layout)) has three parts: **Summary**, **Layers** (see [Reporting](/docs/reporting#layers)) and **Properties**. The summary shows:
 
 - **Min FOS**: the lowest factor of safety found, colored red below 1.0, amber below 1.5 and green above. With partial factors it reads *Min FOS (design values)* and has no amber: 1.0 and above is green.
 - **Method** used.
@@ -37,7 +37,7 @@ The status bar also shows the factor of safety and the method.
 | **Soil colors** | The material colors |
 | **Plastic zone** / **FE mesh** | With a finite element result: the plastic zone (on by default) and the final mesh (off by default) |
 
-The grid is set in the paper's **Properties** (see [Reporting](/docs/reporting#paper-and-extents)). The search limits are drawn under the result as in the edit view, unless only custom surfaces were analyzed.
+Each option turned on is a row in the sidebar's **Layers** list, where its order among the other layers and the annotations is set ([Layers](/docs/reporting#layers)). The grid is set in the paper's **Properties** (see [Reporting](/docs/reporting#paper-and-extents)). The search limits are drawn under the result as in the edit view, unless only custom surfaces were analyzed.
 
 With **All surfaces**, each surface is colored by its factor of safety, from red (lowest) through yellow and green to blue. Add a **color bar** annotation to show the scale (see [Reporting](/docs/reporting)).
 

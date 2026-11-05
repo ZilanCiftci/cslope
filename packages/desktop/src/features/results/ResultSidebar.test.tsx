@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createRecordingContext } from "../../test/recording-context";
-import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { act, cleanup, createEvent, fireEvent, render, screen } from "@testing-library/react";
 import type { AnalysisResult } from "@cslope/engine";
 import { ResultSidebar } from "./ResultSidebar";
 import { useAppStore } from "../../store/app-store";
@@ -43,6 +43,11 @@ function field(label: string): HTMLInputElement & HTMLSelectElement & HTMLTextAr
   return el as HTMLInputElement & HTMLSelectElement & HTMLTextAreaElement;
 }
 
+/** Set result view settings now (the store's setter). */
+function setRvsNow(patch: Partial<ReturnType<typeof rvs>>) {
+  useAppStore.getState().setResultViewSettings(patch);
+}
+
 function select(ids: string[]) {
   act(() => useAppStore.getState().setSelectedAnnotations(ids));
 }
@@ -64,7 +69,7 @@ describe("ResultSidebar summary", () => {
     render(<ResultSidebar />);
     expect(screen.getByText("Min FOS").nextSibling!.textContent).toBe("1.234");
     expect(screen.getByText("Spencer")).toBeInTheDocument();
-    expect(screen.getByText("Surfaces").nextSibling!.textContent).toBe("3 (1 below 1.0)");
+    expect(screen.getAllByText("Surfaces")[0].nextSibling!.textContent).toBe("3 (1 below 1.0)");
     expect(screen.getByText("42 ms")).toBeInTheDocument();
   });
 
@@ -184,7 +189,7 @@ describe("ResultSidebar summary", () => {
   });
 });
 
-describe("ResultSidebar annotations list", () => {
+describe("ResultSidebar layers list", () => {
   it("lists annotations by type, selects, multi-selects and removes them", () => {
     render(<ResultSidebar />);
     // Text annotations by their text.
@@ -199,7 +204,8 @@ describe("ResultSidebar annotations list", () => {
     fireEvent.click(screen.getByText("Color bar"), { ctrlKey: true });
     expect(useAppStore.getState().selectedAnnotationIds).toEqual(["p", "c"]);
 
-    fireEvent.click(screen.getAllByTitle("Remove annotation")[4]);
+    // Topmost first: the last annotation (the color bar) is the first row.
+    fireEvent.click(screen.getAllByTitle("Remove annotation")[0]);
     expect(annotations().map((a) => a.id)).toEqual(["t1", "t2", "m", "p"]);
   });
 
@@ -225,11 +231,132 @@ describe("ResultSidebar annotations list", () => {
     expect(screen.getByLabelText("Text on the sheet")).toHaveTextContent("T-ACADS Non-Homogeneous FOS 2");
   });
 
-  it("says when there are no annotations", () => {
-    act(() => useAppStore.setState({ resultViewSettings: { ...DEFAULT_RESULT_VIEW_SETTINGS, annotations: [] } }));
+  it("says when nothing is drawn", () => {
+    act(() =>
+      useAppStore.setState({
+        result: null,
+        resultViewSettings: {
+          ...DEFAULT_RESULT_VIEW_SETTINGS,
+          annotations: [],
+          showSlices: false,
+          showFosLabel: false,
+          showCentreMarker: false,
+          showSoilColor: false,
+        },
+      }),
+    );
     render(<ResultSidebar />);
-    expect(screen.getByText("No annotations yet.")).toBeInTheDocument();
+    expect(screen.getByText("Nothing is drawn yet.")).toBeInTheDocument();
     expect(screen.getByText("Select an object on the canvas to edit its properties.")).toBeInTheDocument();
+  });
+
+  const rowKeys = () => screen.getAllByTestId("layer-row").map((r) => r.getAttribute("data-layer"));
+
+  it("lists the display layers turned on with the annotations, topmost first, in the default order", () => {
+    act(() => setRvsNow({ surfaceDisplay: "all", showCustomSurfaces: true }));
+    render(<ResultSidebar />);
+    expect(screen.getByRole("button", { name: "Layers" })).toBeInTheDocument();
+    expect(rowKeys()).toEqual(["c", "p", "m", "t2", "t1", "fosLabel", "center", "slices", "criticalSurface", "surfaces", "soilColor"]);
+    expect(screen.getByText("Soil colors")).toBeInTheDocument();
+    expect(screen.getByText("Critical surface")).toBeInTheDocument();
+    // Turned off in the ribbon: not listed.
+    act(() => setRvsNow({ showSlices: false, surfaceDisplay: "critical" }));
+    expect(rowKeys()).toEqual(["c", "p", "m", "t2", "t1", "fosLabel", "center", "criticalSurface", "soilColor"]);
+  });
+
+  it("turns a display layer off with its button, as the ribbon does; the critical surface has none", () => {
+    render(<ResultSidebar />);
+    fireEvent.click(screen.getByRole("button", { name: /^Turn off \(as the Slices button in the ribbon\)/ }));
+    expect(rvs().showSlices).toBe(false);
+    fireEvent.click(screen.getByRole("button", { name: /^Turn off \(as the Soil colors button/ }));
+    expect(rvs().showSoilColor).toBe(false);
+    const critical = screen.getAllByTestId("layer-row").find((r) => r.getAttribute("data-layer") === "criticalSurface")!;
+    expect(critical.querySelector("button")).toBeNull();
+    // A display layer selects nothing.
+    fireEvent.click(critical);
+    expect(useAppStore.getState().selectedAnnotationIds).toEqual([]);
+  });
+
+  it("moves a row with Alt+Up and Alt+Down, stored bottom first in the model's layer order (one undo step)", () => {
+    render(<ResultSidebar />);
+    const row = (key: string) => screen.getAllByTestId("layer-row").find((r) => r.getAttribute("data-layer") === key)!;
+    fireEvent.keyDown(row("soilColor"), { key: "ArrowUp", altKey: true });
+    expect(rowKeys().slice(-3)).toEqual(["slices", "soilColor", "criticalSurface"]);
+    expect(rvs().layerOrder).toEqual(["criticalSurface", "soilColor", "slices", "center", "fosLabel", "t1", "t2", "m", "p", "c"]);
+    expect(document.activeElement).toBe(row("soilColor"));
+    fireEvent.keyDown(row("t1"), { key: "ArrowDown", altKey: true });
+    expect(rowKeys().slice(4, 6)).toEqual(["fosLabel", "t1"]);
+    // Without Alt the arrows move the focus, and do not nudge the selection.
+    select(["t2"]);
+    const before = anno("t2");
+    fireEvent.keyDown(row("t2"), { key: "ArrowDown" });
+    expect(document.activeElement).toBe(row("fosLabel"));
+    expect(anno("t2")).toEqual(before);
+    // The top row stays on top.
+    fireEvent.keyDown(row("c"), { key: "ArrowUp", altKey: true });
+    expect(rowKeys()[0]).toBe("c");
+    act(() => useAppStore.temporal.getState().undo());
+    expect(rowKeys().slice(4, 6)).toEqual(["t1", "fosLabel"]);
+  });
+
+  it("drops a dragged row above or below the row under the pointer, with a drop line", () => {
+    render(<ResultSidebar />);
+    const row = (key: string) => screen.getAllByTestId("layer-row").find((r) => r.getAttribute("data-layer") === key)!;
+    const target = row("slices");
+    target.getBoundingClientRect = () => ({ top: 100, height: 24, bottom: 124, left: 0, right: 200, width: 200, x: 0, y: 100, toJSON: () => ({}) });
+    const dataTransfer = { setData: () => {}, effectAllowed: "", dropEffect: "" };
+    fireEvent.dragStart(row("t1"), { dataTransfer });
+    // (jsdom's drag events carry no pointer position)
+    const over = createEvent.dragOver(target, { dataTransfer });
+    Object.defineProperty(over, "clientY", { value: 120 });
+    fireEvent(target, over);
+    expect(screen.getByTestId("layer-drop-indicator")).toBeInTheDocument();
+    fireEvent.drop(target, { clientY: 120, dataTransfer });
+    expect(screen.queryByTestId("layer-drop-indicator")).toBeNull();
+    // Below the slices: drawn under them, over the critical surface.
+    expect(rowKeys().slice(-4)).toEqual(["slices", "t1", "criticalSurface", "soilColor"]);
+    expect(rvs().layerOrder).toEqual(["soilColor", "criticalSurface", "t1", "slices", "center", "fosLabel", "t2", "m", "p", "c"]);
+  });
+
+  it("keeps the place of a layer turned off and on again; a new annotation goes on top", () => {
+    act(() => setRvsNow({ layerOrder: ["soilColor", "slices", "criticalSurface", "center", "fosLabel", "t1", "t2", "m", "p", "c"] }));
+    render(<ResultSidebar />);
+    expect(rowKeys().slice(-3)).toEqual(["criticalSurface", "slices", "soilColor"]);
+    act(() => setRvsNow({ showSlices: false }));
+    expect(rowKeys()).not.toContain("slices");
+    act(() => setRvsNow({ showSlices: true }));
+    expect(rowKeys().slice(-3)).toEqual(["criticalSurface", "slices", "soilColor"]);
+    act(() => useAppStore.getState().addAnnotation("text"));
+    const added = annotations().at(-1)!.id;
+    expect(rowKeys()[0]).toBe(added);
+    // Removing an annotation drops it from the order.
+    fireEvent.click(screen.getAllByTitle("Remove annotation")[1]);
+    expect(rvs().layerOrder).not.toContain("c");
+  });
+
+  it("lists a drawing shown in results and takes it out of the results with its button", () => {
+    act(() =>
+      useAppStore.setState({
+        backgrounds: [
+          {
+            id: "d1",
+            assetId: "x",
+            name: "Survey",
+            calibration: { mode: "drawing", points: [] },
+            transform: { a: 1, b: 0, c: 0, d: 1, e: 0, f: 0 },
+            opacity: 1,
+            visible: true,
+            order: 0,
+            showInResults: true,
+          },
+        ],
+      }),
+    );
+    render(<ResultSidebar />);
+    expect(rowKeys().slice(-2)).toEqual(["drawing:d1", "soilColor"]);
+    fireEvent.click(screen.getByRole("button", { name: /^Hide from the results.*: Survey$/ }));
+    expect(useAppStore.getState().backgrounds[0].showInResults).toBe(false);
+    expect(rowKeys()).not.toContain("drawing:d1");
   });
 });
 

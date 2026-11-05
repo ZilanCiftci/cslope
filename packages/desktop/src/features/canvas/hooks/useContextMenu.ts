@@ -4,6 +4,7 @@ import {
   type RefObject,
   type MouseEvent as RMouseEvent,
 } from "react";
+import { annotationsInLayerOrder } from "../../results/layers";
 import { computePaperFrame, getAnnotationBoundsPx } from "../helpers";
 import { useAppStore } from "../../../store/app-store";
 import type { AppMode, CanvasObjectRef } from "../../../store/types";
@@ -90,7 +91,8 @@ export function useContextMenu(params: ContextMenuParams) {
           useAppStore.getState().resultViewSettings.paperFrame.offsetY ?? 0,
         );
         const state = useAppStore.getState();
-        const annos = state.resultViewSettings.annotations;
+        // In the order they are drawn (Properties › Layers): the topmost is hit first.
+        const annos = annotationsInLayerOrder(state);
         const resultForBounds = state.result;
 
         // A paper annotation under the pointer: drawn over the reference

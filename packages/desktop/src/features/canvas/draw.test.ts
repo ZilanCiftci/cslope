@@ -2011,3 +2011,78 @@ describe("drawCanvas — dark theme ink", () => {
     expect(rec.paths.filter((p) => p.kind === "clip" && p.fillRule === "evenodd")).toHaveLength(0);
   });
 });
+
+describe("drawCanvas — layer order", () => {
+  const ANNOS: Annotation[] = [
+    { id: "m", type: "material-table", x: 0.9, y: 0.05, anchor: "top-right" },
+    { id: "r", type: "reference", shape: "polyline", points: [[3, 9], [12, 3], [19, 4]], label: "other program" },
+    { id: "t", type: "text", x: 0.1, y: 0.1, text: "Hello" },
+  ];
+  const view = (over: Partial<ResultViewSettings> = {}) =>
+    rvs({ showSlices: true, showFosLabel: true, showCentreMarker: true, surfaceDisplay: "all", annotations: ANNOS, ...over });
+  const drawOrdered = (over: Partial<ResultViewSettings> = {}) =>
+    draw({
+      mode: "result",
+      result: result({ criticalSlices: [slice(6, 8), slice(8, 10), slice(10, 12), slice(12, 14)] }),
+      resultViewSettings: view(over),
+    });
+  const log = (rec: ReturnType<typeof draw>) => JSON.stringify(rec.calls.map((c) => [c.name, c.args, c.state, c.depth]));
+  const soilFill = (rec: ReturnType<typeof draw>) => rec.paths.findIndex((p) => p.kind === "fill" && p.state.fillStyle === DEFAULT_MATERIAL.color);
+  /** The slice lines: vertical two-point strokes inside the sliding mass. */
+  const sliceStrokes = (rec: ReturnType<typeof draw>) =>
+    rec.paths.flatMap((p, i) => {
+      const pts = pathPoints(p);
+      if (p.kind !== "stroke" || pts.length !== 2 || pts[0][0] !== pts[1][0] || pts[0][1] === pts[1][1]) return [];
+      const [[x, y1], [, y2]] = pts.map(([px, py]) => canvasToWorld(px, py, W, H));
+      // at a slice boundary, between the slip surface and the ground (not a grid line)
+      return [6, 8, 10, 12, 14].some((b) => Math.abs(x - b) < 1e-6) && Math.min(y1, y2) > 1 && Math.max(y1, y2) < 10.5 ? [i] : [];
+    });
+  const textIndex = (rec: ReturnType<typeof draw>, text: string) => rec.texts.findIndex((t) => t.text === text);
+
+  it("draws exactly the same with the default order stored as without one", () => {
+    const keys = ["soilColor", "r", "surfaces", "criticalSurface", "slices", "center", "fosLabel", "m", "t"];
+    expect(log(drawOrdered({ layerOrder: keys }))).toBe(log(drawOrdered()));
+  });
+
+  it("draws the soil colours over the slices when they are moved above them", () => {
+    const before = drawOrdered();
+    expect(sliceStrokes(before).length).toBeGreaterThan(0);
+    expect(soilFill(before)).toBeLessThan(sliceStrokes(before)[0]);
+    const after = drawOrdered({ layerOrder: ["r", "surfaces", "criticalSurface", "slices", "soilColor", "center", "fosLabel", "m", "t"] });
+    expect(soilFill(after)).toBeGreaterThan(Math.max(...sliceStrokes(after)));
+    // drawn once (the other fill is the material table's swatch)
+    const fills = (rec: ReturnType<typeof draw>) => rec.paths.filter((p) => p.kind === "fill" && p.state.fillStyle === DEFAULT_MATERIAL.color).length;
+    expect(fills(after)).toBe(fills(before));
+    expect(after.depth()).toBe(0);
+  });
+
+  it("draws a text annotation under the material table when it is moved below it", () => {
+    const before = drawOrdered();
+    expect(textIndex(before, "Hello")).toBeGreaterThan(textIndex(before, DEFAULT_MATERIAL.name));
+    const after = drawOrdered({ layerOrder: ["soilColor", "r", "surfaces", "criticalSurface", "slices", "center", "fosLabel", "t", "m"] });
+    expect(textIndex(after, "Hello")).toBeLessThan(textIndex(after, DEFAULT_MATERIAL.name));
+  });
+
+  it("draws the model's layers above a paper annotation clipped to the plot area again, save/restore balanced", () => {
+    const rec = drawOrdered({ layerOrder: ["t", "soilColor", "r", "surfaces", "criticalSurface", "slices", "center", "m", "fosLabel"] });
+    expect(rec.depth()).toBe(0);
+    const hello = textIndex(rec, "Hello");
+    const fos = textIndex(rec, "1.234");
+    expect(hello).toBeGreaterThanOrEqual(0);
+    expect(fos).toBeGreaterThan(hello);
+    // The FOS label (on top) after the table; the reference label after the FOS label.
+    expect(fos).toBeGreaterThan(textIndex(rec, DEFAULT_MATERIAL.name));
+    expect(textIndex(rec, "other program")).toBeGreaterThan(fos);
+    // The text is drawn unclipped: a clip of the plot area is set again after it.
+    const clipsAfterText = rec.calls.slice(rec.calls.findIndex((c) => c.name === "fillText" && c.args[0] === "Hello")).filter((c) => c.name === "clip");
+    expect(clipsAfterText.length).toBeGreaterThan(0);
+  });
+
+  it("draws the slices over the center when they are moved above it", () => {
+    const rec = drawOrdered({ layerOrder: ["soilColor", "r", "surfaces", "criticalSurface", "center", "slices", "fosLabel", "m", "t"] });
+    const c = toC(CIRCLE.cx, CIRCLE.cy);
+    const dot = rec.paths.findIndex((p) => p.kind === "fill" && p.segments[0].op === "arc" && close(pathPoints(p)[0], c));
+    expect(dot).toBeGreaterThanOrEqual(0);
+    expect(Math.min(...sliceStrokes(rec))).toBeGreaterThan(dot);
+  });
+});

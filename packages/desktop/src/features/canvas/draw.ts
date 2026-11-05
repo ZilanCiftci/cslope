@@ -1,7 +1,7 @@
 import { isPointInPolygon } from "@cslope/engine";
 import type { AnalysisResult } from "@cslope/engine";
 import { PAPER_DIMENSIONS, PLOT_MARGINS } from "../../store/app-store";
-import type { AppState, CanvasObjectRef, CanvasPointKey, CanvasSelection, ModelLocks } from "../../store/types";
+import type { Annotation, AppState, BackgroundImage, CanvasObjectRef, CanvasPointKey, CanvasSelection, ModelLocks, PaperAnnotation } from "../../store/types";
 import { isObjectLocked, sameObject } from "../../store/canvas-selection";
 import {
   fosLabelAnchor,
@@ -47,7 +47,8 @@ import { computeSlicePlotData } from "../annotations/slicePlotData";
 import { axisTicks, tickLabel } from "../annotations/plotAxis";
 import type { PointHit } from "./types";
 import { drawUnderlays, placementCanvasCorners } from "../drawings/draw-underlays";
-import { drawReferenceLabels, drawReferenceLines, referenceSegments } from "./reference-draw";
+import { drawReferenceLabels, drawReferenceLines, referenceSegments, type DrawnReference } from "./reference-draw";
+import { baseLayerCount, isPaperStep, layerSteps, resultLayers } from "../results/layers";
 import {
   ANNOTATION_DEFAULT_FONT_FAMILY,
   ANNOTATION_DEFAULT_FONT_SIZE,
@@ -896,6 +897,20 @@ export function drawCanvas(
   const labelMargin = POINT_RADIUS;
   const onScreen = (px: number, py: number) => pointInBox(px, py, { left: 0, top: 0, right: w, bottom: h }, labelMargin);
 
+  // The layers of a result sheet in the model's order (bottom first);
+  // those at the bottom, the soil colours and drawings, are drawn with
+  // the model under its lines, as by default; the rest over them.
+  const resultLayerList =
+    mode === "result" && result ? resultLayers({ resultViewSettings, result, backgrounds }) : null;
+  const baseLayerTotal = resultLayerList ? baseLayerCount(resultLayerList) : 0;
+  const baseLayerList = resultLayerList?.slice(0, baseLayerTotal) ?? [];
+  const soilIndex = baseLayerList.findIndex((l) => l.key === "soilColor");
+  const soilInBase = soilIndex >= 0;
+  const baseDrawings = (from: number, to: number) =>
+    baseLayerList.slice(from, to).flatMap((l) => (l.kind === "drawing" ? [l.drawing] : []));
+  const baseDrawingsBelowSoil = soilInBase ? baseDrawings(0, soilIndex) : [];
+  const baseDrawingsAboveSoil = baseDrawings(soilInBase ? soilIndex + 1 : 0, baseLayerList.length);
+
   // Background
   ctx.fillStyle = BG_COLOR;
   ctx.fillRect(0, 0, w, h);
@@ -1111,16 +1126,9 @@ export function drawCanvas(
   };
 
   // ── Material region fills ─────────────────────────────
-  if (coordinates.length >= 3) {
-    const showSoilColor = resultViewSettings.showSoilColor !== false;
-    const defaultMatId = materials[0]?.id ?? "";
-    const regions = getCachedRegions(
-      coordinates,
-      materialBoundaries,
-      regionMaterials,
-      defaultMatId,
-    );
-
+  // The soil colours of the regions (`fill`, with the hatches of special
+  // materials) and, over a result, their outlines.
+  const paintRegions = (regions: ReturnType<typeof getCachedRegions>, fill: boolean, outline: boolean) => {
     // Clip to model polygon so material colors cannot bleed outside the model
     ctx.save();
     ctx.beginPath();
@@ -1171,12 +1179,12 @@ export function drawCanvas(
         }
       }
 
-      if (showSoilColor) {
+      if (fill) {
         ctx.fillStyle = mat.color;
         ctx.fill(region.holes ? "evenodd" : "nonzero");
       }
 
-      if (mode === "result") {
+      if (outline) {
         ctx.strokeStyle = POLY_STROKE;
         ctx.lineWidth = 0.6 * paperZoom;
         ctx.lineJoin = "round"; // no mitre spikes at sharp corners
@@ -1189,7 +1197,7 @@ export function drawCanvas(
       const hatchPattern = modelKind
         ? MODEL_HATCH_PATTERNS[modelKind]
         : undefined;
-      if (showSoilColor && hatchPattern) {
+      if (fill && hatchPattern) {
         const canvasPts: [number, number][] = region.px.map((_, i) =>
           worldToCanvas(region.px[i], region.py[i], w, h),
         );
@@ -1228,6 +1236,38 @@ export function drawCanvas(
       }
     }
     ctx.restore();
+  };
+  const modelRegions = () => getCachedRegions(coordinates, materialBoundaries, regionMaterials, materials[0]?.id ?? "");
+  // The soil colours as a layer of their own, above the bottom of the
+  // order (the base drawing drew the outlines without them).
+  const paintSoilFills = () => {
+    if (coordinates.length >= 3) paintRegions(modelRegions(), true, false);
+  };
+  // Placed drawings shown in results, each a layer, in the given order.
+  const drawDrawingLayers = (list: readonly BackgroundImage[]) => {
+    for (const d of list) {
+      drawUnderlays(ctx, [d], (x, y) => worldToCanvas(x, y, w, h), { pixelRatio, ink: INK.drawingInk, include: (p) => p.visible });
+    }
+  };
+  // Drawings below the soil colours in the order (default: none).
+  if (baseDrawingsBelowSoil.length > 0) {
+    ctx.save();
+    drawDrawingLayers(baseDrawingsBelowSoil);
+    ctx.restore();
+  }
+  if (coordinates.length >= 3) {
+    // Over a result the soil colours here only at the bottom of the
+    // layers' order (as by default); otherwise a step of their own.
+    const showSoilColor = resultLayerList ? soilInBase : resultViewSettings.showSoilColor !== false;
+    const defaultMatId = materials[0]?.id ?? "";
+    const regions = getCachedRegions(
+      coordinates,
+      materialBoundaries,
+      regionMaterials,
+      defaultMatId,
+    );
+
+    paintRegions(regions, showSoilColor, mode === "result");
 
     // ── Highlight the region whose material is being chosen ──
     if (selectedRegionKey && mode !== "result") {
@@ -1288,11 +1328,13 @@ export function drawCanvas(
       ctx.rect(RULER_SIZE_PX, 0, Math.max(0, w - RULER_SIZE_PX), Math.max(0, h - RULER_SIZE_PX));
       ctx.clip();
     }
-    drawUnderlays(ctx, backgrounds, (x, y) => worldToCanvas(x, y, w, h), {
-      pixelRatio,
-      ink: INK.drawingInk,
-      include: (p) => p.visible && (mode !== "result" || p.showInResults === true),
-    });
+    if (resultLayerList) drawDrawingLayers(baseDrawingsAboveSoil);
+    else
+      drawUnderlays(ctx, backgrounds, (x, y) => worldToCanvas(x, y, w, h), {
+        pixelRatio,
+        ink: INK.drawingInk,
+        include: (p) => p.visible && (mode !== "result" || p.showInResults === true),
+      });
     ctx.restore();
   }
 
@@ -2443,57 +2485,85 @@ export function drawCanvas(
     // ── Paper background + shadow (drawn first, behind geometry) ──
     // (already drawn before grid above)
 
-    // The finite element mesh (its last refinement), thin and faint under
-    // the plastic zone and the surfaces, to show where it was refined.
-    if (result.fem && rvs.showFemMesh === true) {
-      drawFemMesh(ctx, result.fem, (x, y) => worldToCanvas(x, y, w, h), POLY_STROKE, FEM_MESH_LINE_WIDTH_PX * paperZoom);
-    }
-    // Plastic zone of the finite element analysis: elements shaded by the
-    // shear strain of the last displacement increment before failure,
-    // relative to the largest, so the failure mechanism shows as a band.
-    if (result.fem && rvs.showFemPlasticZone !== false) drawFemPlasticZone(ctx, result.fem, (x, y) => worldToCanvas(x, y, w, h), INK.feLabel);
+    // The paper and its plot area (the frame, the annotations and the clip).
+    const { paperFrame } = rvs;
+    const pf = computePaperFrame(
+      w,
+      h,
+      paperFrame.paperSize,
+      paperFrame.landscape,
+      paperFrame.zoom ?? 1,
+      paperFrame.offsetX ?? 0,
+      paperFrame.offsetY ?? 0,
+    );
+    // Scale factor for annotations based on paper frame size
+    const annoScale = Math.min(pf.w, pf.h) / ANNOTATION_SCALE_DIVISOR;
+
+    // The layers, each drawn by a step below, in the model's order
+    // (Properties › Layers; features/results/layers.ts).
+
+    const drawFemMeshLayer = () => {
+      // The finite element mesh (its last refinement), thin and faint under
+      // the plastic zone and the surfaces, to show where it was refined.
+      if (result.fem && rvs.showFemMesh === true) {
+        drawFemMesh(ctx, result.fem, (x, y) => worldToCanvas(x, y, w, h), POLY_STROKE, FEM_MESH_LINE_WIDTH_PX * paperZoom);
+      }
+    };
+    const drawPlasticZoneLayer = () => {
+      // Plastic zone of the finite element analysis: elements shaded by the
+      // shear strain of the last displacement increment before failure,
+      // relative to the largest, so the failure mechanism shows as a band.
+      if (result.fem && rvs.showFemPlasticZone !== false) drawFemPlasticZone(ctx, result.fem, (x, y) => worldToCanvas(x, y, w, h), INK.feLabel);
+    };
 
     // ── Reference annotations: the lines, under the surfaces ──
     // (their labels follow the FOS label, so they can keep clear of it)
-    const drawnReferences = drawReferenceLines(ctx, {
-      annotations: rvs.annotations,
-      mode: "result",
-      toC: (x, y) => worldToCanvas(x, y, w, h),
-      groundYAt: surfaceYAtX,
-      paperZoom,
-      defaultColor: REFERENCE_COLOR,
-      selectedIds: selectedAnnotationIds,
-      hoverHit,
-      handleStroke: PAPER_FILL_COLOR || BG_COLOR,
-    });
+    const drawnReferences: DrawnReference[] = [];
+    const drawReferenceLayer = (annotations: Annotation[]) => {
+      drawnReferences.push(
+        ...drawReferenceLines(ctx, {
+          annotations,
+          mode: "result",
+          toC: (x, y) => worldToCanvas(x, y, w, h),
+          groundYAt: surfaceYAtX,
+          paperZoom,
+          defaultColor: REFERENCE_COLOR,
+          selectedIds: selectedAnnotationIds,
+          hoverHit,
+          handleStroke: PAPER_FILL_COLOR || BG_COLOR,
+        }),
+      );
+    };
 
-    // Non-critical surfaces (when "all" or "filter" mode)
-    // Draw in reverse FOS order (high FOS first = behind, low FOS last = on top)
-    if (rvs.surfaceDisplay !== "critical" && result.allSurfaces.length > 0) {
-      // The scale of the colour bar, so the plot and the bar agree.
-      const fosScale = colorScaleOf(rvs, result);
-      for (let si = result.allSurfaces.length - 1; si >= 0; si--) {
-        const surf = result.allSurfaces[si];
-        // Skip critical (drawn separately) and filtered out
-        if (result.criticalSurface && sameSurface(surf, result.criticalSurface))
-          continue;
-        if (rvs.surfaceDisplay === "filter" && surf.fos > rvs.fosFilterMax)
-          continue;
+    const drawSurfacesLayer = () => {
+      // Non-critical surfaces (when "all" or "filter" mode)
+      // Draw in reverse FOS order (high FOS first = behind, low FOS last = on top)
+      if (rvs.surfaceDisplay !== "critical" && result.allSurfaces.length > 0) {
+        // The scale of the colour bar, so the plot and the bar agree.
+        const fosScale = colorScaleOf(rvs, result);
+        for (let si = result.allSurfaces.length - 1; si >= 0; si--) {
+          const surf = result.allSurfaces[si];
+          // Skip critical (drawn separately) and filtered out
+          if (result.criticalSurface && sameSurface(surf, result.criticalSurface))
+            continue;
+          if (rvs.surfaceDisplay === "filter" && surf.fos > rvs.fosFilterMax)
+            continue;
 
-        const arcPts = getArcPoints(surf);
-        ctx.strokeStyle = fosScale.colorOf(surf.fos);
-        ctx.lineWidth = 1 * paperZoom;
-        ctx.globalAlpha = SLIP_SURFACE_OPACITY;
-        ctx.beginPath();
-        for (let i = 0; i < arcPts.length; i++) {
-          const [px, py] = worldToCanvas(arcPts[i][0], arcPts[i][1], w, h);
-          if (i === 0) ctx.moveTo(px, py);
-          else ctx.lineTo(px, py);
+          const arcPts = getArcPoints(surf);
+          ctx.strokeStyle = fosScale.colorOf(surf.fos);
+          ctx.lineWidth = 1 * paperZoom;
+          ctx.globalAlpha = SLIP_SURFACE_OPACITY;
+          ctx.beginPath();
+          for (let i = 0; i < arcPts.length; i++) {
+            const [px, py] = worldToCanvas(arcPts[i][0], arcPts[i][1], w, h);
+            if (i === 0) ctx.moveTo(px, py);
+            else ctx.lineTo(px, py);
+          }
+          ctx.stroke();
+          ctx.globalAlpha = 1.0;
         }
-        ctx.stroke();
-        ctx.globalAlpha = 1.0;
       }
-    }
+    };
 
     // The custom search planes' surfaces, on request (whatever the
     // surface display): dashed in their own colour on a halo of the paper,
@@ -2516,92 +2586,43 @@ export function drawCanvas(
     let criticalLabelBox: Box | null = null;
     // The custom surfaces' FOS labels' boxes, kept clear by the reference labels.
     const customLabelBoxes: Box[] = [];
-    if (customSurfaces.length > 0) {
-      ctx.save();
-      for (const surf of customSurfaces) {
-        const arcPts = getArcPoints(surf);
-        const path = () => {
-          ctx.beginPath();
-          arcPts.forEach(([x, y], i) => {
-            const [px, py] = worldToCanvas(x, y, w, h);
-            if (i === 0) ctx.moveTo(px, py);
-            else ctx.lineTo(px, py);
-          });
-        };
-        ctx.setLineDash([]);
-        ctx.strokeStyle = PAPER_FILL_COLOR || BG_COLOR;
-        ctx.globalAlpha = 0.55;
-        ctx.lineWidth = 4 * paperZoom;
-        path();
-        ctx.stroke();
-        ctx.strokeStyle = CUSTOM_SURFACE;
-        ctx.globalAlpha = 1;
-        ctx.lineWidth = CUSTOM_SURFACE_LINE_WIDTH_PX * paperZoom;
-        ctx.setLineDash(CUSTOM_SURFACE_DASH_PX.map((d) => d * paperZoom));
-        path();
-        ctx.stroke();
+    const drawCustomSurfacesLayer = () => {
+      if (customSurfaces.length > 0) {
+        ctx.save();
+        for (const surf of customSurfaces) {
+          const arcPts = getArcPoints(surf);
+          const path = () => {
+            ctx.beginPath();
+            arcPts.forEach(([x, y], i) => {
+              const [px, py] = worldToCanvas(x, y, w, h);
+              if (i === 0) ctx.moveTo(px, py);
+              else ctx.lineTo(px, py);
+            });
+          };
+          ctx.setLineDash([]);
+          ctx.strokeStyle = PAPER_FILL_COLOR || BG_COLOR;
+          ctx.globalAlpha = 0.55;
+          ctx.lineWidth = 4 * paperZoom;
+          path();
+          ctx.stroke();
+          ctx.strokeStyle = CUSTOM_SURFACE;
+          ctx.globalAlpha = 1;
+          ctx.lineWidth = CUSTOM_SURFACE_LINE_WIDTH_PX * paperZoom;
+          ctx.setLineDash(CUSTOM_SURFACE_DASH_PX.map((d) => d * paperZoom));
+          path();
+          ctx.stroke();
+        }
+        ctx.restore();
       }
-      ctx.restore();
-    }
+    };
 
-    // Critical surface
-    if (result.criticalSurface) {
-      const cs = result.criticalSurface;
-      const arcPts = getArcPoints(cs);
+    const cs = result.criticalSurface;
+    // The critical surface and its radius lines: the theme's ink, black
+    // over a light soil fill (paintAgainstFills).
+    const paintCritical = (paint: (color: string) => void) => paintAgainstFills(INK.critical, CRITICAL_SURFACE_COLOR.hex, paint);
 
-      // The critical surface and its radius lines: the theme's ink, black
-      // over a light soil fill (paintAgainstFills).
-      const paintCritical = (paint: (color: string) => void) => paintAgainstFills(INK.critical, CRITICAL_SURFACE_COLOR.hex, paint);
-
-      // The sliding mass: the ground from the entry to the exit (both
-      // corners of every vertical face, and the crack face at a tension
-      // crack), then back along the slip surface; semi-transparent fill.
-      const massPx = slipMassPolygon(coordinates, cs, arcPts).map(([mx, my]) =>
-        worldToCanvas(mx, my, w, h),
-      );
-      ctx.save();
-      ctx.globalAlpha = FAILURE_MASS_FILL_OPACITY;
-      ctx.fillStyle = FAILURE_MASS_COLOR.hex;
-      ctx.beginPath();
-      massPx.forEach(([px, py], i) => {
-        if (i === 0) ctx.moveTo(px, py);
-        else ctx.lineTo(px, py);
-      });
-      ctx.closePath();
-      ctx.fill();
-      // A very thin mass (a shallow slab) gets a band of minimum width
-      // under the ground along it, so it doesn't disappear into the ground
-      // line: the ground from the entry to the exit stroked twice as wide
-      // and clipped to the soil, so none of it spills into the air, and
-      // to between the slip line's ends, so its ends don't stick out.
-      if (meanThickness(massPx) < MIN_SLIP_MASS_PX * paperZoom && coordinates.length >= 3) {
-        ctx.beginPath();
-        coordinates.forEach(([bx, by], i) => {
-          const [px, py] = worldToCanvas(bx, by, w, h);
-          if (i === 0) ctx.moveTo(px, py);
-          else ctx.lineTo(px, py);
-        });
-        ctx.closePath();
-        ctx.clip();
-        const [ex] = worldToCanvas(cs.entryPoint[0], cs.entryPoint[1], w, h);
-        const [xx] = worldToCanvas(cs.exitPoint[0], cs.exitPoint[1], w, h);
-        ctx.beginPath();
-        ctx.rect(Math.min(ex, xx), 0, Math.abs(xx - ex), h);
-        ctx.clip();
-        ctx.globalAlpha = MIN_SLIP_MASS_BAND_OPACITY;
-        ctx.strokeStyle = FAILURE_MASS_COLOR.hex;
-        ctx.lineWidth = 2 * MIN_SLIP_MASS_PX * paperZoom;
-        ctx.lineJoin = "round";
-        ctx.beginPath();
-        groundProfile(coordinates, cs.entryPoint, cs.exitPoint).forEach(([gx, gy], i) => {
-          const [px, py] = worldToCanvas(gx, gy, w, h);
-          if (i === 0) ctx.moveTo(px, py);
-          else ctx.lineTo(px, py);
-        });
-        ctx.stroke();
-      }
-      ctx.restore();
-
+    const drawSlicesLayer = () => {
+      if (!cs) return;
       // Slice lines (vertical lines within the failure mass): black, or
       // white over a dark material, and thinner and fainter where the
       // slices lie close together on screen.
@@ -2655,6 +2676,173 @@ export function drawCanvas(
         }
         ctx.restore();
       }
+    };
+
+    const drawCentreLayer = () => {
+      if (!cs) return;
+      // Centre dot and radius lines to entry/exit (circles only: the
+      // axis point of a non-circular surface is no centre)
+      if (rvs.showCentreMarker && (!cs.points || cs.composite)) {
+        const [ccx, ccy] = worldToCanvas(cs.cx, cs.cy, w, h);
+        const [epx, epy] = worldToCanvas(
+          cs.entryPoint[0],
+          cs.entryPoint[1],
+          w,
+          h,
+        );
+        const [xpx, xpy] = worldToCanvas(
+          cs.exitPoint[0],
+          cs.exitPoint[1],
+          w,
+          h,
+        );
+
+        // Radius lines (solid, bold — same style as the arc)
+        paintCritical((color) => {
+          ctx.strokeStyle = color;
+          ctx.lineWidth = 1 * paperZoom;
+          ctx.beginPath();
+          ctx.moveTo(ccx, ccy);
+          ctx.lineTo(epx, epy);
+          ctx.stroke();
+          ctx.beginPath();
+          ctx.moveTo(ccx, ccy);
+          ctx.lineTo(xpx, xpy);
+          ctx.stroke();
+
+          // Small filled circle at centre
+          ctx.fillStyle = color;
+          ctx.beginPath();
+          ctx.arc(ccx, ccy, 3 * paperZoom, 0, Math.PI * 2);
+          ctx.fill();
+        });
+      }
+    };
+
+    // The FOS labels: the critical surface's, then the custom surfaces'.
+    const drawFosLabelLayer = () => {
+      if (cs) {
+        // FOS label to the right of the circle centre
+        if (rvs.showFosLabel) {
+          const [ax, ay] = fosLabelAnchor(cs);
+          const [ccx2, ccy2] = worldToCanvas(ax, ay, w, h);
+          const fosText = cs.fos.toFixed(3);
+          ctx.font = `bold ${12 * paperZoom}px sans-serif`;
+          const tw = ctx.measureText(fosText).width;
+          const labelX = ccx2 + 10 * paperZoom;
+          criticalLabelBox = fosLabelBox(labelX, ccy2, tw);
+
+          // Text
+          ctx.fillStyle = INK.critical;
+          ctx.textAlign = "left";
+          ctx.textBaseline = "middle";
+          ctx.fillText(fosText, labelX, ccy2 - 4 * paperZoom);
+
+          // Underline
+          ctx.strokeStyle = INK.critical;
+          ctx.lineWidth = 1 * paperZoom;
+          ctx.beginPath();
+          ctx.moveTo(labelX - 1 * paperZoom, ccy2 + 2 * paperZoom);
+          ctx.lineTo(labelX + tw + 1 * paperZoom, ccy2 + 2 * paperZoom);
+          ctx.stroke();
+        }
+      }
+
+      // The custom surfaces' FOS labels, like the critical one's, in their
+      // colour: each moved down from its anchor until it is clear of the
+      // critical label and the ones placed before it.
+      if (customSurfaces.length > 0 && rvs.showFosLabel) {
+        const placed: Box[] = criticalLabelBox ? [criticalLabelBox] : [];
+        ctx.save();
+        ctx.font = `bold ${12 * paperZoom}px sans-serif`;
+        ctx.textAlign = "left";
+        ctx.textBaseline = "middle";
+        ctx.setLineDash([]);
+        for (const surf of customSurfaces) {
+          const [ax, ay] = fosLabelAnchor(surf);
+          const [lx, ly] = worldToCanvas(ax, ay, w, h);
+          const fosText = surf.fos.toFixed(3);
+          const tw = ctx.measureText(fosText).width;
+          const labelX = lx + 10 * paperZoom;
+          let cy = ly;
+          let box = fosLabelBox(labelX, cy, tw);
+          for (let n = 0; n < 20 && placed.some((b) => boxesOverlap(box, b, 0)); n++) {
+            cy += box.bottom - box.top + 2 * paperZoom;
+            box = fosLabelBox(labelX, cy, tw);
+          }
+          placed.push(box);
+          customLabelBoxes.push(box);
+          ctx.fillStyle = CUSTOM_SURFACE;
+          ctx.fillText(fosText, labelX, cy - 4 * paperZoom);
+          ctx.strokeStyle = CUSTOM_SURFACE;
+          ctx.lineWidth = 1 * paperZoom;
+          ctx.beginPath();
+          ctx.moveTo(labelX - 1 * paperZoom, cy + 2 * paperZoom);
+          ctx.lineTo(labelX + tw + 1 * paperZoom, cy + 2 * paperZoom);
+          ctx.stroke();
+        }
+        ctx.restore();
+      }
+    };
+
+    // The critical surface: the sliding mass, the water in a tension
+    // crack, the line and the reinforcement forces, with the slices, the
+    // center and the FOS label between them when they follow it directly
+    // (layerSteps), as they always were.
+    const drawCriticalLayer = (step: { withSlices: boolean; withCenter: boolean; withFosLabel: boolean }) => {
+      if (!cs) return;
+      const arcPts = getArcPoints(cs);
+
+      // The sliding mass: the ground from the entry to the exit (both
+      // corners of every vertical face, and the crack face at a tension
+      // crack), then back along the slip surface; semi-transparent fill.
+      const massPx = slipMassPolygon(coordinates, cs, arcPts).map(([mx, my]) =>
+        worldToCanvas(mx, my, w, h),
+      );
+      ctx.save();
+      ctx.globalAlpha = FAILURE_MASS_FILL_OPACITY;
+      ctx.fillStyle = FAILURE_MASS_COLOR.hex;
+      ctx.beginPath();
+      massPx.forEach(([px, py], i) => {
+        if (i === 0) ctx.moveTo(px, py);
+        else ctx.lineTo(px, py);
+      });
+      ctx.closePath();
+      ctx.fill();
+      // A very thin mass (a shallow slab) gets a band of minimum width
+      // under the ground along it, so it doesn't disappear into the ground
+      // line: the ground from the entry to the exit stroked twice as wide
+      // and clipped to the soil, so none of it spills into the air, and
+      // to between the slip line's ends, so its ends don't stick out.
+      if (meanThickness(massPx) < MIN_SLIP_MASS_PX * paperZoom && coordinates.length >= 3) {
+        ctx.beginPath();
+        coordinates.forEach(([bx, by], i) => {
+          const [px, py] = worldToCanvas(bx, by, w, h);
+          if (i === 0) ctx.moveTo(px, py);
+          else ctx.lineTo(px, py);
+        });
+        ctx.closePath();
+        ctx.clip();
+        const [ex] = worldToCanvas(cs.entryPoint[0], cs.entryPoint[1], w, h);
+        const [xx] = worldToCanvas(cs.exitPoint[0], cs.exitPoint[1], w, h);
+        ctx.beginPath();
+        ctx.rect(Math.min(ex, xx), 0, Math.abs(xx - ex), h);
+        ctx.clip();
+        ctx.globalAlpha = MIN_SLIP_MASS_BAND_OPACITY;
+        ctx.strokeStyle = FAILURE_MASS_COLOR.hex;
+        ctx.lineWidth = 2 * MIN_SLIP_MASS_PX * paperZoom;
+        ctx.lineJoin = "round";
+        ctx.beginPath();
+        groundProfile(coordinates, cs.entryPoint, cs.exitPoint).forEach(([gx, gy], i) => {
+          const [px, py] = worldToCanvas(gx, gy, w, h);
+          if (i === 0) ctx.moveTo(px, py);
+          else ctx.lineTo(px, py);
+        });
+        ctx.stroke();
+      }
+      ctx.restore();
+
+      if (step.withSlices) drawSlicesLayer();
 
       // Water in a tension crack (the one the analysis reports): a blue
       // band in the crack, against the face on the side of the sliding
@@ -2700,43 +2888,7 @@ export function drawCanvas(
         ctx.stroke();
       });
 
-      // Centre dot and radius lines to entry/exit (circles only: the
-      // axis point of a non-circular surface is no centre)
-      if (rvs.showCentreMarker && (!cs.points || cs.composite)) {
-        const [ccx, ccy] = worldToCanvas(cs.cx, cs.cy, w, h);
-        const [epx, epy] = worldToCanvas(
-          cs.entryPoint[0],
-          cs.entryPoint[1],
-          w,
-          h,
-        );
-        const [xpx, xpy] = worldToCanvas(
-          cs.exitPoint[0],
-          cs.exitPoint[1],
-          w,
-          h,
-        );
-
-        // Radius lines (solid, bold — same style as the arc)
-        paintCritical((color) => {
-          ctx.strokeStyle = color;
-          ctx.lineWidth = 1 * paperZoom;
-          ctx.beginPath();
-          ctx.moveTo(ccx, ccy);
-          ctx.lineTo(epx, epy);
-          ctx.stroke();
-          ctx.beginPath();
-          ctx.moveTo(ccx, ccy);
-          ctx.lineTo(xpx, xpy);
-          ctx.stroke();
-
-          // Small filled circle at centre
-          ctx.fillStyle = color;
-          ctx.beginPath();
-          ctx.arc(ccx, ccy, 3 * paperZoom, 0, Math.PI * 2);
-          ctx.fill();
-        });
-      }
+      if (step.withCenter) drawCentreLayer();
 
       // Reinforcement forces on the sliding mass
       if (cs.reinforcementForces?.length) {
@@ -2803,118 +2955,49 @@ export function drawCanvas(
         drawReinforcementForces(ctx, forces, toC, paperZoom, { layout, plate: PAPER_FILL_COLOR || BG_COLOR, text: INK.reinforcementText });
       }
 
-      // FOS label to the right of the circle centre
-      if (rvs.showFosLabel) {
-        const [ax, ay] = fosLabelAnchor(cs);
-        const [ccx2, ccy2] = worldToCanvas(ax, ay, w, h);
-        const fosText = cs.fos.toFixed(3);
-        ctx.font = `bold ${12 * paperZoom}px sans-serif`;
-        const tw = ctx.measureText(fosText).width;
-        const labelX = ccx2 + 10 * paperZoom;
-        criticalLabelBox = fosLabelBox(labelX, ccy2, tw);
+      if (step.withFosLabel) drawFosLabelLayer();
+    };
 
-        // Text
-        ctx.fillStyle = INK.critical;
-        ctx.textAlign = "left";
-        ctx.textBaseline = "middle";
-        ctx.fillText(fosText, labelX, ccy2 - 4 * paperZoom);
-
-        // Underline
-        ctx.strokeStyle = INK.critical;
-        ctx.lineWidth = 1 * paperZoom;
-        ctx.beginPath();
-        ctx.moveTo(labelX - 1 * paperZoom, ccy2 + 2 * paperZoom);
-        ctx.lineTo(labelX + tw + 1 * paperZoom, ccy2 + 2 * paperZoom);
-        ctx.stroke();
-      }
-    }
-
-    // The custom surfaces' FOS labels, like the critical one's, in their
-    // colour: each moved down from its anchor until it is clear of the
-    // critical label and the ones placed before it.
-    if (customSurfaces.length > 0 && rvs.showFosLabel) {
-      const placed: Box[] = criticalLabelBox ? [criticalLabelBox] : [];
-      ctx.save();
-      ctx.font = `bold ${12 * paperZoom}px sans-serif`;
-      ctx.textAlign = "left";
-      ctx.textBaseline = "middle";
-      ctx.setLineDash([]);
-      for (const surf of customSurfaces) {
-        const [ax, ay] = fosLabelAnchor(surf);
-        const [lx, ly] = worldToCanvas(ax, ay, w, h);
-        const fosText = surf.fos.toFixed(3);
-        const tw = ctx.measureText(fosText).width;
-        const labelX = lx + 10 * paperZoom;
-        let cy = ly;
-        let box = fosLabelBox(labelX, cy, tw);
-        for (let n = 0; n < 20 && placed.some((b) => boxesOverlap(box, b, 0)); n++) {
-          cy += box.bottom - box.top + 2 * paperZoom;
-          box = fosLabelBox(labelX, cy, tw);
+    const drawReferenceLabelsStep = () => {
+      // ── Reference annotations: the labels ────────────────
+      // Clear of the lines of the drawing, the FOS label and each other,
+      // inside the plot area.
+      if (drawnReferences.some((d) => d.anno.label?.trim())) {
+        const toC = (x: number, y: number) => worldToCanvas(x, y, w, h);
+        const { paperFrame: rf } = rvs;
+        const frame = computePaperFrame(w, h, rf.paperSize, rf.landscape, rf.zoom ?? 1, rf.offsetX ?? 0, rf.offsetY ?? 0);
+        const refLayout = new LabelLayout({
+          left: frame.x + frame.w * PLOT_MARGINS.L + 2,
+          top: frame.y + frame.h * PLOT_MARGINS.T + 2,
+          right: frame.x + frame.w * (1 - PLOT_MARGINS.R) - 2,
+          bottom: frame.y + frame.h * (1 - PLOT_MARGINS.B) - 2,
+        });
+        for (const seg of referenceSegments(drawnReferences)) refLayout.reserveSegment(seg, 2 * paperZoom);
+        if (coordinates.length >= 3) refLayout.reservePolyline(coordinates.map(([x, y]) => toC(x, y)), 2, true);
+        for (const bnd of materialBoundaries) refLayout.reservePolyline(bnd.coordinates.map(([x, y]) => toC(x, y)), 2);
+        for (const line of piezometricLine.lines) refLayout.reservePolyline(line.coordinates.map(([x, y]) => toC(x, y)), 2);
+        if (result.criticalSurface) {
+          const cs = result.criticalSurface;
+          refLayout.reservePolyline(getArcPoints(cs).map(([x, y]) => toC(x, y)), 3 * paperZoom);
+          if (rvs.showFosLabel) {
+            // The FOS label's box, as drawn above.
+            const [lx, ly] = toC(...fosLabelAnchor(cs));
+            ctx.font = `bold ${12 * paperZoom}px sans-serif`;
+            const tw = ctx.measureText(cs.fos.toFixed(3)).width;
+            refLayout.reserve({ left: lx + 9 * paperZoom, top: ly - 12 * paperZoom, right: lx + 11 * paperZoom + tw, bottom: ly + 3 * paperZoom });
+          }
         }
-        placed.push(box);
-        customLabelBoxes.push(box);
-        ctx.fillStyle = CUSTOM_SURFACE;
-        ctx.fillText(fosText, labelX, cy - 4 * paperZoom);
-        ctx.strokeStyle = CUSTOM_SURFACE;
-        ctx.lineWidth = 1 * paperZoom;
-        ctx.beginPath();
-        ctx.moveTo(labelX - 1 * paperZoom, cy + 2 * paperZoom);
-        ctx.lineTo(labelX + tw + 1 * paperZoom, cy + 2 * paperZoom);
-        ctx.stroke();
+        // The custom surfaces' dashed lines and FOS labels, as drawn above.
+        for (const surf of customSurfaces) refLayout.reservePolyline(getArcPoints(surf).map(([x, y]) => toC(x, y)), 2 * paperZoom);
+        for (const box of customLabelBoxes) refLayout.reserve(box);
+        drawReferenceLabels(ctx, drawnReferences, { toC, paperZoom, layout: refLayout, plate: PAPER_FILL_COLOR || BG_COLOR });
       }
-      ctx.restore();
-    }
-
-    // ── Reference annotations: the labels ────────────────
-    // Clear of the lines of the drawing, the FOS label and each other,
-    // inside the plot area.
-    if (drawnReferences.some((d) => d.anno.label?.trim())) {
-      const toC = (x: number, y: number) => worldToCanvas(x, y, w, h);
-      const { paperFrame: rf } = rvs;
-      const frame = computePaperFrame(w, h, rf.paperSize, rf.landscape, rf.zoom ?? 1, rf.offsetX ?? 0, rf.offsetY ?? 0);
-      const refLayout = new LabelLayout({
-        left: frame.x + frame.w * PLOT_MARGINS.L + 2,
-        top: frame.y + frame.h * PLOT_MARGINS.T + 2,
-        right: frame.x + frame.w * (1 - PLOT_MARGINS.R) - 2,
-        bottom: frame.y + frame.h * (1 - PLOT_MARGINS.B) - 2,
-      });
-      for (const seg of referenceSegments(drawnReferences)) refLayout.reserveSegment(seg, 2 * paperZoom);
-      if (coordinates.length >= 3) refLayout.reservePolyline(coordinates.map(([x, y]) => toC(x, y)), 2, true);
-      for (const bnd of materialBoundaries) refLayout.reservePolyline(bnd.coordinates.map(([x, y]) => toC(x, y)), 2);
-      for (const line of piezometricLine.lines) refLayout.reservePolyline(line.coordinates.map(([x, y]) => toC(x, y)), 2);
-      if (result.criticalSurface) {
-        const cs = result.criticalSurface;
-        refLayout.reservePolyline(getArcPoints(cs).map(([x, y]) => toC(x, y)), 3 * paperZoom);
-        if (rvs.showFosLabel) {
-          // The FOS label's box, as drawn above.
-          const [lx, ly] = toC(...fosLabelAnchor(cs));
-          ctx.font = `bold ${12 * paperZoom}px sans-serif`;
-          const tw = ctx.measureText(cs.fos.toFixed(3)).width;
-          refLayout.reserve({ left: lx + 9 * paperZoom, top: ly - 12 * paperZoom, right: lx + 11 * paperZoom + tw, bottom: ly + 3 * paperZoom });
-        }
-      }
-      // The custom surfaces' dashed lines and FOS labels, as drawn above.
-      for (const surf of customSurfaces) refLayout.reservePolyline(getArcPoints(surf).map(([x, y]) => toC(x, y)), 2 * paperZoom);
-      for (const box of customLabelBoxes) refLayout.reserve(box);
-      drawReferenceLabels(ctx, drawnReferences, { toC, paperZoom, layout: refLayout, plate: PAPER_FILL_COLOR || BG_COLOR });
-    }
+    };
 
     // ── Paper frame ──────────────────────────────────────
-    const { paperFrame } = rvs;
-    const pf = computePaperFrame(
-      w,
-      h,
-      paperFrame.paperSize,
-      paperFrame.landscape,
-      paperFrame.zoom ?? 1,
-      paperFrame.offsetX ?? 0,
-      paperFrame.offsetY ?? 0,
-    );
-
-    {
-      // Restore clip (ticks draw inside paper, on top of geometry)
-      ctx.restore();
-
+    // Ticks and labels between the paper edge and the plot area, over the
+    // geometry (drawn unclipped).
+    const drawFrame = () => {
       // Inner frame (plot area) inset from paper (using standardized percentages)
       const PLOT_PAD_L = pf.w * PLOT_MARGINS.L;
       const PLOT_PAD_B = pf.h * PLOT_MARGINS.B;
@@ -3027,16 +3110,11 @@ export function drawCanvas(
       ctx.strokeStyle = PAPER_BORDER_COLOR;
       ctx.lineWidth = 1.5 * paperZoom;
       ctx.strokeRect(ifx, ify, ifw, ifh);
-    }
+    };
 
     // ── Annotations ──────────────────────────────────────
-    const annotations = resultViewSettings.annotations;
-    // Scale factor for annotations based on paper frame size
-    const annoScale = Math.min(pf.w, pf.h) / ANNOTATION_SCALE_DIVISOR;
-
-    for (const anno of annotations) {
-      // Reference annotations are drawn with the result above (model coordinates).
-      if (anno.type === "reference") continue;
+    // A paper annotation (references are drawn with the model above).
+    const drawPaperAnnotation = (anno: PaperAnnotation) => {
       // Convert fractional paper-frame coordinates to canvas pixels (anchor point)
       const ax = pf.x + anno.x * pf.w;
       const ay = pf.y + anno.y * pf.h;
@@ -3237,7 +3315,7 @@ export function drawCanvas(
           ctx.textBaseline = "middle";
           ctx.fillText("No slice data", drawX + plotW / 2, drawY + plotH / 2);
           ctx.restore();
-          continue;
+          return;
         }
 
         const padLeft = Math.max(26, 32 * annoScale);
@@ -3358,7 +3436,63 @@ export function drawCanvas(
         ctx.setLineDash([]);
         ctx.restore();
       }
-    }
+    };
+
+    // The steps in order, the model's layers clipped to the plot area, the
+    // paper annotations not; after the topmost of the model's layers the
+    // reference labels (over the lines they keep clear of) and the frame.
+    const steps = layerSteps((resultLayerList ?? []).slice(baseLayerTotal));
+    let lastModelStep = -1;
+    steps.forEach((s, i) => {
+      if (!isPaperStep(s)) lastModelStep = i;
+    });
+    // The clip to the plot area set with the paper above.
+    let clipped = true;
+    const clipToPlot = () => {
+      if (clipped) return;
+      ctx.save();
+      ctx.beginPath();
+      ctx.rect(
+        pf.x + pf.w * PLOT_MARGINS.L,
+        pf.y + pf.h * PLOT_MARGINS.T,
+        pf.w - pf.w * PLOT_MARGINS.L - pf.w * PLOT_MARGINS.R,
+        pf.h - pf.h * PLOT_MARGINS.T - pf.h * PLOT_MARGINS.B,
+      );
+      ctx.clip();
+      clipped = true;
+    };
+    const unclip = () => {
+      if (!clipped) return;
+      ctx.restore();
+      clipped = false;
+    };
+    const finishModel = () => {
+      clipToPlot();
+      drawReferenceLabelsStep();
+      unclip();
+      drawFrame();
+    };
+    if (lastModelStep < 0) finishModel();
+    steps.forEach((step, i) => {
+      if (step.kind === "paper") {
+        unclip();
+        drawPaperAnnotation(step.annotation as PaperAnnotation);
+      } else {
+        clipToPlot();
+        if (step.kind === "critical") drawCriticalLayer(step);
+        else if (step.kind === "references") drawReferenceLayer(step.annotations);
+        else if (step.kind === "drawings") drawDrawingLayers(step.drawings);
+        else if (step.layer === "soilColor") paintSoilFills();
+        else if (step.layer === "femMesh") drawFemMeshLayer();
+        else if (step.layer === "femPlasticZone") drawPlasticZoneLayer();
+        else if (step.layer === "surfaces") drawSurfacesLayer();
+        else if (step.layer === "customSurfaces") drawCustomSurfacesLayer();
+        else if (step.layer === "slices") drawSlicesLayer();
+        else if (step.layer === "center") drawCentreLayer();
+        else drawFosLabelLayer();
+      }
+      if (i === lastModelStep) finishModel();
+    });
 
     // Selection highlight for paper/axis properties target.
     if (selectedResultObject === "paper-frame") {

@@ -159,6 +159,10 @@ export const createResultViewSlice: SliceCreator<ResultViewSlice> = (set, get) =
         annotations: s.resultViewSettings.annotations.filter(
           (a) => a.id !== id,
         ),
+        // (its place in the layers' order goes with it)
+        ...(s.resultViewSettings.layerOrder?.includes(id)
+          ? { layerOrder: s.resultViewSettings.layerOrder.filter((k) => k !== id) }
+          : {}),
       }),
       selectedAnnotationIds: s.selectedAnnotationIds.filter((i) => i !== id),
     })),

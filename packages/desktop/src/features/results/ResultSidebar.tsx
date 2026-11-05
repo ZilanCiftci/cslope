@@ -30,8 +30,9 @@ import { ResultNotes } from "./ResultNotes";
 import { ColorBarProperties } from "./ColorBarProperties";
 import { resolveAnnotationText } from "../annotations/resolveAnnotationText";
 import { InsertVariableMenu } from "../annotations/InsertVariableMenu";
-import { isPaperAnnotation, isReferenceAnnotation, referenceListName } from "../annotations/reference";
+import { isPaperAnnotation, isReferenceAnnotation } from "../annotations/reference";
 import { ReferenceProperties } from "./ReferenceProperties";
+import { LayersList } from "./LayersList";
 import { modelViewLock } from "../view/viewLock";
 import { paperContentOf } from "../view/extents";
 import { fosStatusColor } from "../../utils/fos-color";
@@ -99,7 +100,7 @@ const PLOT_AXIS_Y_OPTIONS: Array<{ value: PlotMetricKey; label: string }> = [
   { value: "pullingForce", label: "Pulling force" },
 ];
 
-type SidebarSection = "summary" | "annotations" | "properties";
+type SidebarSection = "summary" | "layers" | "properties";
 type ExtentField = "bl_x" | "bl_y" | "tr_x" | "tr_y";
 
 function commonValue<T>(values: T[]): T | undefined {
@@ -125,14 +126,9 @@ export function ResultSidebar() {
   const runStage = useAppStore((s) => s.runStage);
   const rvs = useAppStore((s) => s.resultViewSettings);
   const setRvs = useAppStore((s) => s.setResultViewSettings);
-  const removeAnnotation = useAppStore((s) => s.removeAnnotation);
   const updateAnnotation = useAppStore((s) => s.updateAnnotation);
   const selectedAnnotationIds = useAppStore((s) => s.selectedAnnotationIds);
   const selectedResultObject = useAppStore((s) => s.selectedResultObject);
-  const setSelectedAnnotations = useAppStore((s) => s.setSelectedAnnotations);
-  const toggleAnnotationSelection = useAppStore(
-    (s) => s.toggleAnnotationSelection,
-  );
   const projectInfo = useAppStore((s) => s.projectInfo);
   const parameters = useAppStore((s) => s.parameters);
   // Text as the sheet shows it: #Title, {{expressions}} and \n resolved.
@@ -151,7 +147,7 @@ export function ResultSidebar() {
     Record<SidebarSection, boolean>
   >({
     summary: true,
-    annotations: true,
+    layers: true,
     properties: true,
   });
 
@@ -662,82 +658,14 @@ export function ResultSidebar() {
       </Section>
 
       <Section
-        title="Annotations"
-        open={openSections.annotations}
-        onToggle={() => toggleSection("annotations")}
+        title="Layers"
+        open={openSections.layers}
+        onToggle={() => toggleSection("layers")}
       >
-        <div className="space-y-1">
-          {rvs.annotations.length === 0 && (
-            <p
-              className="text-[11px]"
-              style={{ color: "var(--color-vsc-text-muted)" }}
-            >
-              No annotations yet.
-            </p>
-          )}
-
-          {rvs.annotations.map((anno) => {
-            const isSelected = selectedAnnotationIds.includes(anno.id);
-            const shown =
-              anno.type === "text"
-                ? resolveText(anno.text ?? "").replace(/\s+/g, " ").trim()
-                : "";
-            const name =
-              anno.type === "reference"
-                ? `Reference: ${referenceListName(anno)}`
-                : anno.type === "color-bar"
-                  ? "Color bar"
-                  : anno.type === "material-table"
-                    ? "Material table"
-                    : anno.type === "plot"
-                      ? "Plot"
-                      : shown || "Text (empty)";
-            return (
-              <div
-                key={anno.id}
-                className="flex items-center gap-1 p-1 rounded cursor-pointer select-none"
-                style={{
-                  background: isSelected
-                    ? "var(--color-vsc-list-active)"
-                    : "var(--color-vsc-list-hover)",
-                  outline: isSelected
-                    ? "1px solid var(--color-vsc-accent)"
-                    : "none",
-                }}
-                onClick={(e) => {
-                  if (e.ctrlKey || e.metaKey || e.shiftKey) {
-                    toggleAnnotationSelection(anno.id, true);
-                  } else if (!isSelected) {
-                    setSelectedAnnotations([anno.id]);
-                  }
-                }}
-              >
-                <span
-                  className="text-[10px] flex-1 min-w-0 truncate"
-                  style={{ color: "var(--color-vsc-text)" }}
-                  title={anno.type === "text" ? `Text: ${shown}` : undefined}
-                >
-                  {name}
-                </span>
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    removeAnnotation(anno.id);
-                  }}
-                  className="text-[10px] px-1 py-0 rounded cursor-pointer leading-none"
-                  style={{
-                    color: "var(--color-vsc-error)",
-                    background: "transparent",
-                    border: "none",
-                  }}
-                  title="Remove annotation"
-                >
-                  ×
-                </button>
-              </div>
-            );
-          })}
-        </div>
+        {/* What the sheet draws, topmost first: the annotations and the
+            display layers turned on in the ribbon, in an order of the
+            model's (drag a row or Alt+Up/Down). */}
+        <LayersList resolveText={resolveText} />
       </Section>
 
       <Section

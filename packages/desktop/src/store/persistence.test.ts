@@ -767,3 +767,39 @@ describe("normalizeResultView (also used for view templates)", () => {
     });
   });
 });
+
+describe("persistence of the layers' order", () => {
+  const annotations = [
+    { id: "t", type: "text", x: 0.1, y: 0.1, text: "Hello" },
+    { id: "r", type: "reference", shape: "polyline", points: [[0, 0], [1, 1]] },
+  ];
+
+  it("keeps the known keys of a stored order once each, and leaves it unset when none is left", () => {
+    const view = normalizeResultView({
+      annotations,
+      layerOrder: ["soilColor", "t", "t", 4, "gone", "drawing:d1", "slices", "r"],
+    });
+    expect(view.layerOrder).toEqual(["soilColor", "t", "drawing:d1", "slices", "r"]);
+    expect("layerOrder" in normalizeResultView({ annotations, layerOrder: ["gone"] })).toBe(false);
+    expect("layerOrder" in normalizeResultView({ annotations, layerOrder: "soilColor" })).toBe(false);
+    expect("layerOrder" in normalizeResultView({ annotations })).toBe(false);
+  });
+
+  it("reads the order back from a project file", () => {
+    const json = makeBaseProject([
+      {
+        id: "m1",
+        name: "Layers",
+        coordinates: [
+          [0, 0],
+          [0, 10],
+          [10, 5],
+          [10, 0],
+        ],
+        materials: [{ id: "mat-1", name: "M1", unitWeight: 20, frictionAngle: 30, cohesion: 5, color: "#6d5f2a" }],
+        resultViewSettings: { ...DEFAULT_RESULT_VIEW_SETTINGS, annotations, layerOrder: ["t", "slices", "soilColor", "r"] },
+      },
+    ]);
+    expect(parseProjectFile(json).models[0].resultViewSettings?.layerOrder).toEqual(["t", "slices", "soilColor", "r"]);
+  });
+});

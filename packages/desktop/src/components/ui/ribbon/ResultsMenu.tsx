@@ -595,6 +595,7 @@ export function ResultsMenu({ isOpen, onActivate, panelHost }: Props) {
                             viewLock: undefined,
                             pdfSummaryPages: undefined,
                             pdfTitleLine: undefined,
+                            layerOrder: undefined,
                             ...imported,
                             // The model keeps its own reference lines; a
                             // template's (if any) belong to another model.
