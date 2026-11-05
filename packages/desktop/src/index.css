@@ -69,17 +69,56 @@
   --color-canvas-tooltip-text: #ffffff;
   --color-canvas-tooltip-shadow: rgba(0,0,0,0.4);
   --color-canvas-hint-text: rgba(255,255,255,0.3);
-  --color-canvas-paper-outside: #24272c;
-  --color-canvas-paper: #4b525a;
-  --color-canvas-paper-shadow: rgba(0,0,0,0.35);
-  --color-canvas-paper-ticks: #f1f3f5;
-  --color-canvas-paper-border: #ffffff;
+  /* The result sheet stays dark: a mid/dark grey, lighter than the canvas
+     around it, with light ink. Contrast on the sheet (WCAG): text 4.8 to
+     8.6:1, lines 3:1 or more. The PDF and the PNG export print the light
+     theme's colours on white paper. */
+  --color-canvas-paper-outside: #1f2226;
+  --color-canvas-paper: #3e444b;
+  --color-canvas-paper-shadow: rgba(0,0,0,0.45);
+  --color-canvas-paper-ticks: #e6e8eb;
+  --color-canvas-paper-border: #d6dbe0;
   --color-canvas-marker: #e8e8e8;
-  --color-canvas-custom-surface: #c084fc;
-  --color-canvas-reference: #e879f9;
-  /* Labels of water and head lines (the lines keep their print colours). */
+  --color-canvas-custom-surface: #d4a8ff;
+  --color-canvas-reference: #f2a7fa;
+  /* Labels of water and head lines. */
   --color-canvas-water-label: #b4ccff;
   --color-canvas-head-label: #6ee0d2;
+  /* Ink of the drawing: the critical surface, its radius lines and FOS
+     label, slice lines over the sheet (over a soil fill the print colour
+     where it reads better). */
+  --color-canvas-ink: #eef0f2;
+  --color-canvas-grid-line: rgba(255,255,255,0.07);
+  --color-canvas-udl: #ffa198;
+  --color-canvas-udl-hover: #ffc9c2;
+  --color-canvas-udl-hatch: rgba(255,161,152,0.8);
+  --color-canvas-line-load: #9cc2ff;
+  --color-canvas-line-load-hover: #c6dcff;
+  --color-canvas-reference-line: #b3c1c9;
+  /* Water and head lines over the sheet (over a light soil fill they keep
+     their print colours). */
+  --color-canvas-water-line: #7ea8ff;
+  --color-canvas-head-line: #4fd1c5;
+  --color-canvas-annotation-text: #eef0f2;
+  --color-canvas-color-bar: #e6e8eb;
+  --color-canvas-table-bg: #30353b;
+  --color-canvas-table-header-bg: #272b30;
+  --color-canvas-table-row-alt: rgba(255,255,255,0.04);
+  --color-canvas-table-rule: #9aa4ae;
+  --color-canvas-table-header-text: #f4f5f6;
+  --color-canvas-table-text: #e1e4e8;
+  --color-canvas-table-swatch-border: #c9d1d6;
+  --color-canvas-plot-bg: #30353b;
+  --color-canvas-plot-frame: #93a4ae;
+  --color-canvas-plot-title: #b9c6cd;
+  --color-canvas-plot-text: #c9d1d6;
+  --color-canvas-plot-muted: #b0b8be;
+  --color-canvas-plot-line: #4fd1c5;
+  --color-canvas-plot-grid-major: rgba(176,190,197,0.3);
+  --color-canvas-plot-grid-minor: rgba(176,190,197,0.16);
+  --color-canvas-fe-label: #ff9b91;
+  --color-canvas-reinforcement-text: #d9b3f0;
+  --color-canvas-pile-text: #d7b9ad;
 
   color-scheme: dark;
 }
@@ -157,6 +196,37 @@
   --color-canvas-reference: #a21caf;
   --color-canvas-water-label: #1a3a8a;
   --color-canvas-head-label: #00796b;
+  /* The print colours (as the PDF). */
+  --color-canvas-ink: #000000;
+  --color-canvas-grid-line: rgba(0, 0, 0, 0.1);
+  --color-canvas-udl: #cc0000;
+  --color-canvas-udl-hover: #ff0000;
+  --color-canvas-udl-hatch: rgba(204,0,0,0.5);
+  --color-canvas-line-load: #2563eb;
+  --color-canvas-line-load-hover: #3b82f6;
+  --color-canvas-reference-line: #78909c;
+  --color-canvas-water-line: #1a3a8a;
+  --color-canvas-head-line: #00897b;
+  --color-canvas-annotation-text: #000000;
+  --color-canvas-color-bar: #000000;
+  --color-canvas-table-bg: rgba(255,255,255,0.92);
+  --color-canvas-table-header-bg: #f0f0f0;
+  --color-canvas-table-row-alt: rgba(0,0,0,0.03);
+  --color-canvas-table-rule: #000000;
+  --color-canvas-table-header-text: #000000;
+  --color-canvas-table-text: #333333;
+  --color-canvas-table-swatch-border: #666666;
+  --color-canvas-plot-bg: #ffffff;
+  --color-canvas-plot-frame: #78909c;
+  --color-canvas-plot-title: #78909c;
+  --color-canvas-plot-text: #5f6b73;
+  --color-canvas-plot-muted: #666666;
+  --color-canvas-plot-line: #26a69a;
+  --color-canvas-plot-grid-major: rgba(120,144,156,0.35);
+  --color-canvas-plot-grid-minor: rgba(120,144,156,0.2);
+  --color-canvas-fe-label: rgba(160, 30, 30, 0.95);
+  --color-canvas-reinforcement-text: #8e44ad;
+  --color-canvas-pile-text: #5d4037;
 
   color-scheme: light;
 }

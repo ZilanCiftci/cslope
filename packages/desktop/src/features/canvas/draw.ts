@@ -26,6 +26,7 @@ import {
   cssVar,
   RULER_SIZE_PX,
 } from "./constants";
+import { PRINT_INK, themeInk } from "./ink";
 import { GRID_RAW_STEP_PX } from "../../constants";
 import {
   clampMinorTicks,
@@ -49,7 +50,6 @@ import { drawReferenceLabels, drawReferenceLines, referenceSegments } from "./re
 import {
   ANNOTATION_DEFAULT_FONT_FAMILY,
   ANNOTATION_DEFAULT_FONT_SIZE,
-  ANNOTATION_DEFAULT_TEXT_COLOR,
   ANNOTATION_LINE_HEIGHT,
   ANNOTATION_SCALE_DIVISOR,
   COLOR_BAR_NUM_TICKS,
@@ -65,7 +65,6 @@ import {
   FAILURE_MASS_COLOR,
   FAILURE_MASS_FILL_OPACITY,
   REFERENCE_ANNOTATION_COLOR,
-  LINE_LOAD_COLOR,
   MARKER_COLOR,
   RESULT_OUTLINE_WIDTH_PX,
   MIN_SLIP_MASS_BAND_OPACITY,
@@ -84,7 +83,6 @@ import {
   SLICE_LINE_OPACITY,
   SLICE_LINE_WIDTH_PX,
   SLIP_SURFACE_OPACITY,
-  UDL_LOAD_COLOR,
   MODEL_HATCH_PATTERNS,
 } from "../rendering/style-spec";
 import { drawCanvasHatch, drawCanvasHatchLabel } from "../rendering/hatch";
@@ -146,8 +144,6 @@ import {
   type Seg,
 } from "./label-layout";
 
-/** Imported head lines (teal, apart from the blue water lines). */
-const HEAD_LINE_COLOR = "#00897b";
 /** Margin of the plate around a line label, in px at paper zoom 1. */
 const LABEL_PLATE_PAD_PX = 1.5;
 
@@ -172,8 +168,6 @@ function fillTextOnPlate(ctx: CanvasRenderingContext2D, text: string, x: number,
   ctx.restore();
   ctx.fillText(text, x, y);
 }
-/** Imported reference lines (drawn faintly). */
-const REFERENCE_LINE_COLOR = "#78909c";
 
 const arcPointCache = new WeakMap<object, Map<string, [number, number][]>>();
 
@@ -505,9 +499,9 @@ function getArcCache(result: AppState["result"]) {
 }
 
 /** Load arrows in ponded water (pondArrowLayout), in the water line's colour. */
-function drawPondArrows(ctx: CanvasRenderingContext2D, arrows: PondArrow[], paperZoom: number) {
-  ctx.strokeStyle = PIEZO_COLOR.hex;
-  ctx.fillStyle = PIEZO_COLOR.hex;
+function drawPondArrows(ctx: CanvasRenderingContext2D, arrows: PondArrow[], paperZoom: number, color: string) {
+  ctx.strokeStyle = color;
+  ctx.fillStyle = color;
   ctx.lineWidth = POND_ARROW_WIDTH_PX * paperZoom;
   for (const a of arrows) {
     ctx.beginPath();
@@ -647,7 +641,10 @@ export function drawCanvas(
 ) {
   // Read theme-aware colors
   const BG_COLOR = cssVar("--color-canvas-bg");
-  const GRID_COLOR = "rgba(0, 0, 0, 0.1)";
+  // The drawing's ink: the print colours in the light theme, lighter ones
+  // on the dark theme's dark sheet (see ink.ts).
+  const INK = themeInk();
+  const GRID_COLOR = INK.gridLine;
   const GRID_TEXT_COLOR = cssVar("--color-canvas-grid-text");
   const POLY_STROKE = cssVar("--color-canvas-poly-stroke");
   const STROKE_ACTIVE = cssVar("--color-canvas-stroke-active");
@@ -667,8 +664,53 @@ export function drawCanvas(
   // Labels of the water and head lines: a lighter tint in the dark theme,
   // on a plate in the colour of the sheet or the canvas behind them.
   const WATER_LABEL_COLOR = cssVar("--color-canvas-water-label") || PIEZO_COLOR.hex;
-  const HEAD_LABEL_COLOR = cssVar("--color-canvas-head-label") || HEAD_LINE_COLOR;
+  const HEAD_LABEL_COLOR = cssVar("--color-canvas-head-label") || PRINT_INK.headLine;
   const LINE_LABEL_HALO = (mode === "result" && result ? PAPER_FILL_COLOR : BG_COLOR) || "#ffffff";
+  // Lines that cross the soil (the critical surface, water and head lines):
+  // in the theme's ink over the sheet, in the print colour over the light
+  // soil fills, where the dark theme's light ink would not read (the fills
+  // are the user's colours in both themes). One pass where the two are
+  // the same (the light theme).
+  let lightFillRings: [number, number][][] | null = null;
+  const paintAgainstFills = (ink: string, print: string, paint: (color: string) => void) => {
+    if (ink === print || resultViewSettings.showSoilColor === false || coordinates.length < 3) {
+      paint(ink);
+      return;
+    }
+    lightFillRings ??= getCachedRegions(coordinates, materialBoundaries, regionMaterials, materials[0]?.id ?? "").flatMap((r) => {
+      const color = materials.find((m) => m.id === r.materialId)?.color;
+      if (color === undefined || r.px.length < 3 || isDarkFill(color)) return [];
+      return [r, ...(r.holes ?? [])]
+        .filter((ring) => ring.px.length >= 3)
+        .map((ring) => ring.px.map((x, i) => worldToCanvas(x, ring.py[i], w, h)));
+    });
+    const rings = lightFillRings;
+    if (rings.length === 0) {
+      paint(ink);
+      return;
+    }
+    const addRings = () => {
+      for (const ring of rings) {
+        ring.forEach(([px, py], i) => (i === 0 ? ctx.moveTo(px, py) : ctx.lineTo(px, py)));
+        ctx.closePath();
+      }
+    };
+    // Outside the light fills, then inside them (each part once, so a
+    // translucent line is not painted twice).
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(0, 0, w, h);
+    addRings();
+    ctx.clip("evenodd");
+    paint(ink);
+    ctx.restore();
+    ctx.save();
+    ctx.beginPath();
+    addRings();
+    ctx.clip("evenodd");
+    paint(print);
+    ctx.restore();
+  };
   // Point labels stay off the rulers (left and bottom) and the canvas edge.
   const labelBounds: Box = { left: RULER_SIZE_PX + 2, top: 2, right: w - 2, bottom: h - RULER_SIZE_PX - 2 };
   const labelColors = { text: STROKE_ACTIVE, plate: BG_COLOR };
@@ -1384,9 +1426,8 @@ export function drawCanvas(
       ctx.closePath();
     }
     ctx.clip();
-    ctx.strokeStyle = UDL_LOAD_COLOR.hex;
+    ctx.strokeStyle = INK.udlHatch;
     ctx.lineWidth = 1 * thin * paperZoom;
-    ctx.globalAlpha = 0.5;
     const allPts = strips.flatMap((s) => [...s.ground, ...s.top]);
     const minX = Math.min(...allPts.map(([x]) => x));
     const maxX = Math.max(...allPts.map(([x]) => x));
@@ -1404,7 +1445,7 @@ export function drawCanvas(
 
     // Outline: up the left end, along the tops (stepping between strips of
     // different size), down the right end, back along the ground.
-    ctx.strokeStyle = UDL_LOAD_COLOR.hex;
+    ctx.strokeStyle = INK.udl;
     ctx.lineWidth = 1.5 * thin * paperZoom;
     ctx.beginPath();
     ctx.moveTo(strips[0].ground[0][0], strips[0].ground[0][1]);
@@ -1414,14 +1455,14 @@ export function drawCanvas(
     ctx.closePath();
     ctx.stroke();
 
-    for (const a of g.arrows) drawDownArrow(a, a.hover ? "#ff0000" : UDL_LOAD_COLOR.hex, a.hover ? 3 : 2);
+    for (const a of g.arrows) drawDownArrow(a, a.hover ? INK.udlHover : INK.udl, a.hover ? 3 : 2);
   }
-  for (const a of loads.lineLoads) drawDownArrow(a, a.hover ? "#3b82f6" : LINE_LOAD_COLOR.hex, a.hover ? 3 : 2);
+  for (const a of loads.lineLoads) drawDownArrow(a, a.hover ? INK.lineLoadHover : INK.lineLoad, a.hover ? 3 : 2);
   ctx.font = `bold ${LOAD_LABEL_FONT_PX * paperZoom}px sans-serif`;
   ctx.textAlign = "center";
   ctx.textBaseline = "bottom";
   for (const l of loads.labels) {
-    ctx.fillStyle = l.kind === "udl" ? UDL_LOAD_COLOR.hex : l.hover ? "#3b82f6" : LINE_LOAD_COLOR.hex;
+    ctx.fillStyle = l.kind === "udl" ? INK.udl : l.hover ? INK.lineLoadHover : INK.lineLoad;
     ctx.fillText(l.text, l.cx, l.box.bottom);
   }
   ctx.textBaseline = "alphabetic";
@@ -1440,10 +1481,11 @@ export function drawCanvas(
     drawReinforcements(ctx, reinforcements, (x, y) => worldToCanvas(x, y, w, h), paperZoom, {
       scene: numberScene,
       halo: (mode === "result" && PAPER_FILL_COLOR) || BG_COLOR,
+      color: INK.reinforcementText,
     });
   }
   if (piles && piles.length > 0) {
-    drawPiles(ctx, piles, (x, y) => worldToCanvas(x, y, w, h), paperZoom);
+    drawPiles(ctx, piles, (x, y) => worldToCanvas(x, y, w, h), paperZoom, INK.pileText);
   }
 
   // The vertex dots of the edit view (drawn over the search-limit markers,
@@ -1538,13 +1580,15 @@ export function drawCanvas(
   const waterBefore = piezometricLine.rapidDrawdown?.waterBefore;
   if (waterBefore && waterBefore.length >= 2) {
     const pts = waterBefore.map(([x, y]) => worldToCanvas(x, y, w, h));
-    ctx.strokeStyle = PIEZO_COLOR.hex;
-    ctx.lineWidth = 1.5 * paperZoom;
-    ctx.setLineDash([8 * paperZoom, 5 * paperZoom]);
-    ctx.beginPath();
-    pts.forEach(([px, py], i) => (i === 0 ? ctx.moveTo(px, py) : ctx.lineTo(px, py)));
-    ctx.stroke();
-    ctx.setLineDash([]);
+    paintAgainstFills(INK.waterLine, PIEZO_COLOR.hex, (color) => {
+      ctx.strokeStyle = color;
+      ctx.lineWidth = 1.5 * paperZoom;
+      ctx.setLineDash([8 * paperZoom, 5 * paperZoom]);
+      ctx.beginPath();
+      pts.forEach(([px, py], i) => (i === 0 ? ctx.moveTo(px, py) : ctx.lineTo(px, py)));
+      ctx.stroke();
+      ctx.setLineDash([]);
+    });
     const [lx, ly] = pts.reduce((a, b) => (b[0] > a[0] ? b : a));
     ctx.fillStyle = WATER_LABEL_COLOR;
     ctx.font = `${9 * paperZoom}px 'Segoe UI', sans-serif`;
@@ -1567,21 +1611,25 @@ export function drawCanvas(
       });
       ctx.stroke();
     };
-    ctx.save();
-    ctx.globalAlpha = 0.45;
-    ctx.strokeStyle = REFERENCE_LINE_COLOR;
-    ctx.lineWidth = 1 * paperZoom;
-    ctx.setLineDash([1.5 * paperZoom, 3 * paperZoom]);
-    for (const ref of waternet.referenceLines) if (ref.points.length >= 2) path(ref.points);
-    ctx.restore();
-
-    ctx.strokeStyle = HEAD_LINE_COLOR;
-    ctx.lineWidth = 1.2 * paperZoom;
-    ctx.setLineDash([8 * paperZoom, 3 * paperZoom, 2 * paperZoom, 3 * paperZoom]);
-    waternet.headLines.forEach((head) => {
-      if (head.points.length >= 2) path(head.points);
+    paintAgainstFills(INK.referenceLine, PRINT_INK.referenceLine, (color) => {
+      ctx.save();
+      ctx.globalAlpha = 0.45;
+      ctx.strokeStyle = color;
+      ctx.lineWidth = 1 * paperZoom;
+      ctx.setLineDash([1.5 * paperZoom, 3 * paperZoom]);
+      for (const ref of waternet.referenceLines) if (ref.points.length >= 2) path(ref.points);
+      ctx.restore();
     });
-    ctx.setLineDash([]);
+
+    paintAgainstFills(INK.headLine, PRINT_INK.headLine, (color) => {
+      ctx.strokeStyle = color;
+      ctx.lineWidth = 1.2 * paperZoom;
+      ctx.setLineDash([8 * paperZoom, 3 * paperZoom, 2 * paperZoom, 3 * paperZoom]);
+      waternet.headLines.forEach((head) => {
+        if (head.points.length >= 2) path(head.points);
+      });
+      ctx.setLineDash([]);
+    });
     ctx.fillStyle = HEAD_LABEL_COLOR;
     ctx.font = `${9 * paperZoom}px 'Segoe UI', sans-serif`;
     // Below the line, clear of the "before drawdown" label above its line.
@@ -1603,7 +1651,7 @@ export function drawCanvas(
   }
   if (piezometricLine.lines.length > 0) {
     const multiLine = piezometricLine.lines.length > 1;
-    const piezoBlue = PIEZO_COLOR.hex;
+    const piezoBlue = INK.waterLine;
     // Free water standing on the ground (from the line of the material at
     // the ground, as the analysis takes it).
     if (piezometricLine.freeWater !== false) {
@@ -1635,6 +1683,7 @@ export function drawCanvas(
           drawnPiezoSymbols.flat().map((sym) => piezoSymbolBox(sym, paperZoom, multiLine)),
         ),
         paperZoom,
+        piezoBlue,
       );
       ctx.globalAlpha = 1;
     }
@@ -1644,32 +1693,34 @@ export function drawCanvas(
       const isActive = line.id === piezometricLine.activeLineId;
       const plCoords = line.coordinates;
 
-      // Stroke: solid polyline
-      const lineColor =
-        isActive && editingPiezo ? SELECTED_BOUNDARY_COLOR : piezoBlue;
-      ctx.strokeStyle = lineColor;
-      ctx.lineWidth = (isActive && editingPiezo ? 3 : 1.5) * thin * paperZoom;
-      ctx.beginPath();
-      for (let i = 0; i < plCoords.length; i++) {
-        const [px, py] = worldToCanvas(plCoords[i][0], plCoords[i][1], w, h);
-        if (i === 0) ctx.moveTo(px, py);
-        else ctx.lineTo(px, py);
-      }
-      ctx.stroke();
-
-      // Dashed: the horizontal continuation the analysis uses beyond the
-      // line's end points.
-      ctx.setLineDash([6 * paperZoom, 4 * paperZoom]);
-      ctx.lineWidth = 1 * paperZoom;
-      for (const [a, b] of piezoExtensions(plCoords, coordinates)) {
-        const [ax, ay] = worldToCanvas(a[0], a[1], w, h);
-        const [bx, by] = worldToCanvas(b[0], b[1], w, h);
+      // Stroke: solid polyline (the water ink over the sheet, the print
+      // blue over a light fill)
+      const selectedLine = isActive && editingPiezo;
+      paintAgainstFills(selectedLine ? SELECTED_BOUNDARY_COLOR : piezoBlue, selectedLine ? SELECTED_BOUNDARY_COLOR : PIEZO_COLOR.hex, (lineColor) => {
+        ctx.strokeStyle = lineColor;
+        ctx.lineWidth = (selectedLine ? 3 : 1.5) * thin * paperZoom;
         ctx.beginPath();
-        ctx.moveTo(ax, ay);
-        ctx.lineTo(bx, by);
+        for (let i = 0; i < plCoords.length; i++) {
+          const [px, py] = worldToCanvas(plCoords[i][0], plCoords[i][1], w, h);
+          if (i === 0) ctx.moveTo(px, py);
+          else ctx.lineTo(px, py);
+        }
         ctx.stroke();
-      }
-      ctx.setLineDash([]);
+
+        // Dashed: the horizontal continuation the analysis uses beyond the
+        // line's end points.
+        ctx.setLineDash([6 * paperZoom, 4 * paperZoom]);
+        ctx.lineWidth = 1 * paperZoom;
+        for (const [a, b] of piezoExtensions(plCoords, coordinates)) {
+          const [ax, ay] = worldToCanvas(a[0], a[1], w, h);
+          const [bx, by] = worldToCanvas(b[0], b[1], w, h);
+          ctx.beginPath();
+          ctx.moveTo(ax, ay);
+          ctx.lineTo(bx, by);
+          ctx.stroke();
+        }
+        ctx.setLineDash([]);
+      });
 
       // Water-table symbols: an inverted triangle with its tip on the line
       // and two bars below, spaced along the line on its flat parts, clear
@@ -1681,25 +1732,27 @@ export function drawCanvas(
       const symbols = drawnPiezoSymbols[lineIdx];
       for (const { x: mx, y: my, bars } of symbols) {
         const triTop = my - triH;
-        ctx.beginPath();
-        ctx.moveTo(mx - triHalf, triTop);
-        ctx.lineTo(mx + triHalf, triTop);
-        ctx.lineTo(mx, my);
-        ctx.closePath();
-        ctx.fillStyle = piezoBlue;
-        ctx.fill();
+        paintAgainstFills(piezoBlue, PIEZO_COLOR.hex, (symbolColor) => {
+          ctx.beginPath();
+          ctx.moveTo(mx - triHalf, triTop);
+          ctx.lineTo(mx + triHalf, triTop);
+          ctx.lineTo(mx, my);
+          ctx.closePath();
+          ctx.fillStyle = symbolColor;
+          ctx.fill();
 
-        // Two bars below the tip (left out where they would go into the ground).
-        if (bars) {
-          ctx.strokeStyle = piezoBlue;
-          ctx.lineWidth = 1.2 * thin * paperZoom;
-          for (const gap of [PIEZO_BAR_GAP1_PX, PIEZO_BAR_GAP2_PX]) {
-            ctx.beginPath();
-            ctx.moveTo(mx - barW, my + gap * paperZoom);
-            ctx.lineTo(mx + barW, my + gap * paperZoom);
-            ctx.stroke();
+          // Two bars below the tip (left out where they would go into the ground).
+          if (bars) {
+            ctx.strokeStyle = symbolColor;
+            ctx.lineWidth = 1.2 * thin * paperZoom;
+            for (const gap of [PIEZO_BAR_GAP1_PX, PIEZO_BAR_GAP2_PX]) {
+              ctx.beginPath();
+              ctx.moveTo(mx - barW, my + gap * paperZoom);
+              ctx.lineTo(mx + barW, my + gap * paperZoom);
+              ctx.stroke();
+            }
           }
-        }
+        });
 
         // Line number above the triangle (only if multiple lines)
         if (multiLine) {
@@ -2108,7 +2161,7 @@ export function drawCanvas(
     // Plastic zone of the finite element analysis: elements shaded by the
     // shear strain of the last displacement increment before failure,
     // relative to the largest, so the failure mechanism shows as a band.
-    if (result.fem && rvs.showFemPlasticZone !== false) drawFemPlasticZone(ctx, result.fem, (x, y) => worldToCanvas(x, y, w, h));
+    if (result.fem && rvs.showFemPlasticZone !== false) drawFemPlasticZone(ctx, result.fem, (x, y) => worldToCanvas(x, y, w, h), INK.feLabel);
 
     // ── Reference annotations: the lines, under the surfaces ──
     // (their labels follow the FOS label, so they can keep clear of it)
@@ -2206,6 +2259,10 @@ export function drawCanvas(
       const cs = result.criticalSurface;
       const arcPts = getArcPoints(cs);
 
+      // The critical surface and its radius lines: the theme's ink, black
+      // over a light soil fill (paintAgainstFills).
+      const paintCritical = (paint: (color: string) => void) => paintAgainstFills(INK.critical, CRITICAL_SURFACE_COLOR.hex, paint);
+
       // The sliding mass: the ground from the entry to the exit (both
       // corners of every vertical face, and the crack face at a tension
       // crack), then back along the slip surface; semi-transparent fill.
@@ -2293,8 +2350,11 @@ export function drawCanvas(
           const botY = arcYAtX(x);
           if (topY === null || botY === null) continue;
           for (const part of splitVerticalByRegion(sliceRegions, x, botY, topY)) {
+            // Over the sheet (no fill) the theme's ink; over a fill black,
+            // or white over a dark one.
             const dark = part.region !== null && regionDark.get(part.region) === true;
-            ctx.strokeStyle = dark ? SLICE_LINE_ON_DARK_COLOR.hex : CRITICAL_SURFACE_COLOR.hex;
+            ctx.strokeStyle =
+              part.region === null ? INK.critical : dark ? SLICE_LINE_ON_DARK_COLOR.hex : CRITICAL_SURFACE_COLOR.hex;
             const [sx, sy] = worldToCanvas(x, part.y1, w, h);
             const [, ey] = worldToCanvas(x, part.y0, w, h);
             ctx.beginPath();
@@ -2334,19 +2394,21 @@ export function drawCanvas(
 
       // Arc stroke (bold black like reference image), from the top of the
       // tension crack (its face is part of the slip surface) to the exit.
-      ctx.strokeStyle = CRITICAL_SURFACE_COLOR.hex;
-      ctx.lineWidth = 1.5 * paperZoom;
-      ctx.beginPath();
-      if (crack) {
-        const [tx, ty] = worldToCanvas(crack.x, crack.top, w, h);
-        ctx.moveTo(tx, ty);
-      }
-      for (let i = 0; i < arcPts.length; i++) {
-        const [px, py] = worldToCanvas(arcPts[i][0], arcPts[i][1], w, h);
-        if (i === 0 && !crack) ctx.moveTo(px, py);
-        else ctx.lineTo(px, py);
-      }
-      ctx.stroke();
+      paintCritical((color) => {
+        ctx.strokeStyle = color;
+        ctx.lineWidth = 1.5 * paperZoom;
+        ctx.beginPath();
+        if (crack) {
+          const [tx, ty] = worldToCanvas(crack.x, crack.top, w, h);
+          ctx.moveTo(tx, ty);
+        }
+        for (let i = 0; i < arcPts.length; i++) {
+          const [px, py] = worldToCanvas(arcPts[i][0], arcPts[i][1], w, h);
+          if (i === 0 && !crack) ctx.moveTo(px, py);
+          else ctx.lineTo(px, py);
+        }
+        ctx.stroke();
+      });
 
       // Centre dot and radius lines to entry/exit (circles only: the
       // axis point of a non-circular surface is no centre)
@@ -2366,22 +2428,24 @@ export function drawCanvas(
         );
 
         // Radius lines (solid, bold — same style as the arc)
-        ctx.strokeStyle = CRITICAL_SURFACE_COLOR.hex;
-        ctx.lineWidth = 1 * paperZoom;
-        ctx.beginPath();
-        ctx.moveTo(ccx, ccy);
-        ctx.lineTo(epx, epy);
-        ctx.stroke();
-        ctx.beginPath();
-        ctx.moveTo(ccx, ccy);
-        ctx.lineTo(xpx, xpy);
-        ctx.stroke();
+        paintCritical((color) => {
+          ctx.strokeStyle = color;
+          ctx.lineWidth = 1 * paperZoom;
+          ctx.beginPath();
+          ctx.moveTo(ccx, ccy);
+          ctx.lineTo(epx, epy);
+          ctx.stroke();
+          ctx.beginPath();
+          ctx.moveTo(ccx, ccy);
+          ctx.lineTo(xpx, xpy);
+          ctx.stroke();
 
-        // Small filled circle at centre
-        ctx.fillStyle = CRITICAL_SURFACE_COLOR.hex;
-        ctx.beginPath();
-        ctx.arc(ccx, ccy, 3 * paperZoom, 0, Math.PI * 2);
-        ctx.fill();
+          // Small filled circle at centre
+          ctx.fillStyle = color;
+          ctx.beginPath();
+          ctx.arc(ccx, ccy, 3 * paperZoom, 0, Math.PI * 2);
+          ctx.fill();
+        });
       }
 
       // Reinforcement forces on the sliding mass
@@ -2446,7 +2510,7 @@ export function drawCanvas(
               }),
             ),
         );
-        drawReinforcementForces(ctx, forces, toC, paperZoom, { layout, plate: PAPER_FILL_COLOR || BG_COLOR });
+        drawReinforcementForces(ctx, forces, toC, paperZoom, { layout, plate: PAPER_FILL_COLOR || BG_COLOR, text: INK.reinforcementText });
       }
 
       // FOS label to the right of the circle centre
@@ -2460,13 +2524,13 @@ export function drawCanvas(
         criticalLabelBox = fosLabelBox(labelX, ccy2, tw);
 
         // Text
-        ctx.fillStyle = CRITICAL_SURFACE_COLOR.hex;
+        ctx.fillStyle = INK.critical;
         ctx.textAlign = "left";
         ctx.textBaseline = "middle";
         ctx.fillText(fosText, labelX, ccy2 - 4 * paperZoom);
 
         // Underline
-        ctx.strokeStyle = CRITICAL_SURFACE_COLOR.hex;
+        ctx.strokeStyle = INK.critical;
         ctx.lineWidth = 1 * paperZoom;
         ctx.beginPath();
         ctx.moveTo(labelX - 1 * paperZoom, ccy2 + 2 * paperZoom);
@@ -2699,7 +2763,7 @@ export function drawCanvas(
           result,
           parameters,
         });
-        ctx.fillStyle = anno.color ?? ANNOTATION_DEFAULT_TEXT_COLOR;
+        ctx.fillStyle = anno.color ?? INK.annotationText;
         ctx.font = `${style} ${weight} ${fontSize}px ${family}`;
         ctx.textAlign = "left";
         ctx.textBaseline = "top";
@@ -2764,12 +2828,12 @@ export function drawCanvas(
         }
 
         // Border
-        ctx.strokeStyle = "#000000";
+        ctx.strokeStyle = INK.colorBar;
         ctx.lineWidth = 1;
         ctx.strokeRect(barX, barY, barW, barH);
 
         // Labels
-        ctx.fillStyle = "#000000";
+        ctx.fillStyle = INK.colorBar;
         ctx.font = `${labelFontSize}px 'Segoe UI', sans-serif`;
         ctx.textAlign = "left";
         ctx.textBaseline = "middle";
@@ -2788,7 +2852,7 @@ export function drawCanvas(
           const y = barY + frac * barH;
 
           // Tick
-          ctx.strokeStyle = "#000000";
+          ctx.strokeStyle = INK.colorBar;
           ctx.lineWidth = 1;
           ctx.beginPath();
           ctx.moveTo(barX + barW, y);
@@ -2796,7 +2860,7 @@ export function drawCanvas(
           ctx.stroke();
 
           // Label
-          ctx.fillStyle = "#000000";
+          ctx.fillStyle = INK.colorBar;
           ctx.fillText(fosTickLabel(fosScale, t, numTicks), labelX2, y);
         }
       } else if (anno.type === "material-table") {
@@ -2831,6 +2895,7 @@ export function drawCanvas(
           materials,
           annoScale,
           tableFontSize,
+          INK,
         );
       } else if (anno.type === "plot") {
         const plotW = pf.w * (anno.width ?? 0.24);
@@ -2845,8 +2910,8 @@ export function drawCanvas(
 
         ctx.save();
         // Opaque, as in the PDF: the surfaces behind it do not show through.
-        ctx.fillStyle = "#ffffff";
-        ctx.strokeStyle = "#78909c";
+        ctx.fillStyle = INK.plotBg;
+        ctx.strokeStyle = INK.plotFrame;
         ctx.lineWidth = 1;
         ctx.fillRect(drawX, drawY, plotW, plotH);
         ctx.strokeRect(drawX, drawY, plotW, plotH);
@@ -2864,12 +2929,12 @@ export function drawCanvas(
 
         if (!plot.range) {
           ctx.font = `${titleSize}px sans-serif`;
-          ctx.fillStyle = "#78909c";
+          ctx.fillStyle = INK.plotTitle;
           ctx.textAlign = "left";
           ctx.textBaseline = "top";
           ctx.fillText(title, drawX + 6, drawY + 4);
           ctx.font = `${axisSize}px sans-serif`;
-          ctx.fillStyle = "#666";
+          ctx.fillStyle = INK.plotMuted;
           ctx.textAlign = "center";
           ctx.textBaseline = "middle";
           ctx.fillText("No slice data", drawX + plotW / 2, drawY + plotH / 2);
@@ -2898,12 +2963,12 @@ export function drawCanvas(
           chartY + chartH - ((v - yTicks.min) / (yTicks.max - yTicks.min)) * chartH;
 
         ctx.font = `${titleSize}px sans-serif`;
-        ctx.fillStyle = "#78909c";
+        ctx.fillStyle = INK.plotTitle;
         ctx.textAlign = "left";
         ctx.textBaseline = "top";
         ctx.fillText(title, drawX + 6, drawY + 4);
 
-        ctx.strokeStyle = "rgba(120,144,156,0.35)";
+        ctx.strokeStyle = INK.plotGridMajor;
         ctx.lineWidth = 0.8;
         for (const v of yTicks.values) {
           const gy = mapY(v);
@@ -2912,7 +2977,7 @@ export function drawCanvas(
           ctx.lineTo(chartX + chartW, gy);
           ctx.stroke();
         }
-        ctx.strokeStyle = "rgba(120,144,156,0.2)";
+        ctx.strokeStyle = INK.plotGridMinor;
         for (const v of xTicks.values) {
           const gx = mapX(v);
           ctx.beginPath();
@@ -2921,11 +2986,11 @@ export function drawCanvas(
           ctx.stroke();
         }
 
-        ctx.strokeStyle = "#78909c";
+        ctx.strokeStyle = INK.plotFrame;
         ctx.lineWidth = 1;
         ctx.strokeRect(chartX, chartY, chartW, chartH);
 
-        ctx.strokeStyle = "#26a69a";
+        ctx.strokeStyle = INK.plotLine;
         ctx.lineWidth = Math.max(1.1, 1.3 * annoScale);
         ctx.beginPath();
         points.forEach((point, index) => {
@@ -2936,7 +3001,7 @@ export function drawCanvas(
         });
         ctx.stroke();
 
-        ctx.fillStyle = "#26a69a";
+        ctx.fillStyle = INK.plotLine;
         points.forEach((point) => {
           const px = mapX(point.x);
           const py = mapY(point.y);
@@ -2947,10 +3012,10 @@ export function drawCanvas(
 
         // Tick marks and values on both axes.
         const tick = Math.max(2, 3 * annoScale);
-        ctx.strokeStyle = "#78909c";
+        ctx.strokeStyle = INK.plotFrame;
         ctx.lineWidth = 1;
         ctx.font = `${axisSize}px sans-serif`;
-        ctx.fillStyle = "#5f6b73";
+        ctx.fillStyle = INK.plotText;
         ctx.textBaseline = "middle";
         ctx.textAlign = "right";
         for (const v of yTicks.values) {
@@ -3083,6 +3148,7 @@ function drawFemPlasticZone(
   ctx: CanvasRenderingContext2D,
   fem: NonNullable<AnalysisResult["fem"]>,
   toC: (x: number, y: number) => [number, number],
+  labelColor: string,
 ): void {
   const field = fem.shearIncrement ?? fem.plasticShear;
   let max = 0;
@@ -3112,7 +3178,7 @@ function drawFemPlasticZone(
     ctx.font = "11px sans-serif";
     ctx.textAlign = "center";
     ctx.textBaseline = "bottom";
-    ctx.fillStyle = "rgba(160, 30, 30, 0.95)";
+    ctx.fillStyle = labelColor;
     ctx.fillText("FE plastic zone (experimental)", topX, topY - 4);
   }
   ctx.restore();

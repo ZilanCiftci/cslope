@@ -16,6 +16,7 @@ import {
 import { computePaperFrame } from "../view/paper";
 import { waterLineFitPoints } from "../view/extents";
 import { MODEL_SHORT_LABELS } from "../rendering/style-spec";
+import { PRINT_INK, type CanvasInk } from "./ink";
 import { flatFieldsFromModel } from "../properties/sections/material-forms/model-defaults";
 import { resolveAnnotationText } from "../annotations/resolveAnnotationText";
 import { referenceWorldPoints } from "../annotations/reference";
@@ -229,6 +230,12 @@ function layoutTable(
   return { ...layout, headerFont, bodyFont };
 }
 
+/** The material table's colours (see CanvasInk). */
+export type TableInk = Pick<
+  CanvasInk,
+  "tableBg" | "tableHeaderBg" | "tableRowAlt" | "tableRule" | "tableHeaderText" | "tableText" | "tableSwatchBorder"
+>;
+
 /** Draw a material table on the canvas. */
 export function drawTable(
   ctx: CanvasRenderingContext2D,
@@ -240,27 +247,29 @@ export function drawTable(
   materials: { color: string }[],
   scale = 1,
   fontSize = MATERIAL_TABLE_FONT_SIZE,
+  /** Its colours: the print colours (white paper) unless the theme's are passed. */
+  ink: TableInk = PRINT_INK,
 ) {
   const { padding, swatchW, headerLineH, bodyLineH, headerLines, cellLines, colW, headerH, rowHeights, totalW, totalH, headerFont, bodyFont } =
     layoutTable(ctx, columnKeys, header, rows, scale, fontSize);
 
   // Background
-  ctx.fillStyle = "rgba(255,255,255,0.92)";
-  ctx.strokeStyle = "#000";
+  ctx.fillStyle = ink.tableBg;
+  ctx.strokeStyle = ink.tableRule;
   ctx.lineWidth = TABLE_RULE_PX;
   ctx.fillRect(x, y, totalW, totalH);
   ctx.strokeRect(x, y, totalW, totalH);
 
   // Header
-  ctx.fillStyle = "#f0f0f0";
+  ctx.fillStyle = ink.tableHeaderBg;
   ctx.fillRect(x, y, totalW, headerH);
-  ctx.strokeStyle = "#000";
+  ctx.strokeStyle = ink.tableRule;
   ctx.beginPath();
   ctx.moveTo(x, y + headerH);
   ctx.lineTo(x + totalW, y + headerH);
   ctx.stroke();
 
-  ctx.fillStyle = "#000";
+  ctx.fillStyle = ink.tableHeaderText;
   ctx.font = headerFont;
   ctx.textAlign = "left";
   ctx.textBaseline = "top";
@@ -281,11 +290,11 @@ export function drawTable(
     const rowH = rowHeights[r];
     // Alternating row color
     if (r % 2 === 1) {
-      ctx.fillStyle = "rgba(0,0,0,0.03)";
+      ctx.fillStyle = ink.tableRowAlt;
       ctx.fillRect(x, ry, totalW, rowH);
     }
     // Row border
-    ctx.strokeStyle = "#000";
+    ctx.strokeStyle = ink.tableRule;
     ctx.lineWidth = TABLE_RULE_PX;
     ctx.beginPath();
     ctx.moveTo(x, ry + rowH);
@@ -300,14 +309,14 @@ export function drawTable(
         ctx.fillStyle = materials[r].color;
         const swatchY = ry + (rowH - swatchW) / 2;
         ctx.fillRect(swatchX, swatchY, swatchW, swatchW);
-        ctx.strokeStyle = "#666";
+        ctx.strokeStyle = ink.tableSwatchBorder;
         ctx.strokeRect(swatchX, swatchY, swatchW, swatchW);
       }
       if (c === 0) {
         cx += colW[c];
         continue;
       }
-      ctx.fillStyle = "#333";
+      ctx.fillStyle = ink.tableText;
       ctx.textAlign = "left";
       ctx.textBaseline = "middle";
       // The lines of a cell centred in its row.
@@ -319,11 +328,11 @@ export function drawTable(
     ry += rowH;
   }
 
-  // Column separators (drawn last to keep a crisp black grid)
+  // Column separators (drawn last to keep a crisp grid)
   let separatorX = x;
   for (let c = 0; c < colW.length - 1; c++) {
     separatorX += colW[c];
-    ctx.strokeStyle = "#000";
+    ctx.strokeStyle = ink.tableRule;
     ctx.lineWidth = TABLE_RULE_PX;
     ctx.beginPath();
     ctx.moveTo(separatorX, y);

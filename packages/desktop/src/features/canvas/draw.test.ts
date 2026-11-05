@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import type { AnalysisResult, SliceData, SlipSurfaceResult } from "@cslope/engine";
 import { DEFAULT_ANALYSIS_OPTIONS } from "@cslope/engine";
 import { drawCanvas, editOverlayBoxes, femMeshEdges, POINT_LABEL_PLATE_ALPHA, type DrawCanvasParams } from "./draw";
@@ -26,9 +26,11 @@ import {
   POND_OPACITY,
   SLIP_SURFACE_OPACITY,
   CUSTOM_SURFACE_COLOR,
+  CRITICAL_SURFACE_COLOR,
   UDL_LOAD_COLOR,
 } from "../rendering/style-spec";
 import { REINFORCEMENT_COLOR, PILE_COLOR } from "./reinforcement-draw";
+import { INK_TOKENS, PRINT_INK, themeInk, type CanvasInk } from "./ink";
 import { newPile, newReinforcement } from "../../utils/reinforcement";
 import { fosColor, fosColorIn } from "../../utils/fos-color";
 import { colorScaleOfBar } from "../annotations/colorScale";
@@ -1848,5 +1850,96 @@ describe("drawCanvas — reference annotations", () => {
     expect(shown.findText("F = 0.664 (other program)")).toBeDefined();
     expect(shown.depth()).toBe(0);
     expect(drawRefs({ selectedAnnotationIds: ["l", "c"] }).depth()).toBe(0);
+  });
+});
+
+// ── Dark theme: the drawing in the dark sheet's ink ──────────
+describe("drawCanvas — dark theme ink", () => {
+  /** The dark theme's ink tokens, as index.css sets them. */
+  const DARK: Partial<Record<keyof CanvasInk, string>> = {
+    critical: "#eef0f2",
+    udl: "#ffa198",
+    lineLoad: "#9cc2ff",
+    annotationText: "#eef0f2",
+    colorBar: "#e6e8eb",
+    tableText: "#e1e4e8",
+    tableBg: "#30353b",
+    waterLine: "#7ea8ff",
+  };
+  const root = () => document.documentElement;
+  beforeEach(() => {
+    for (const [key, value] of Object.entries(DARK)) root().style.setProperty(INK_TOKENS[key as keyof CanvasInk], value);
+  });
+  afterEach(() => {
+    for (const key of Object.keys(DARK)) root().style.removeProperty(INK_TOKENS[key as keyof CanvasInk]);
+  });
+
+  const drawDark = (over: Partial<ResultViewSettings> = {}, params: Partial<DrawCanvasParams> = {}) =>
+    draw({
+      mode: "result",
+      result: result({ criticalSlices: [slice(6, 8), slice(8, 10)] }),
+      resultViewSettings: rvs({ showFosLabel: true, showCentreMarker: true, showSlices: true, ...over }),
+      ...params,
+    });
+  const isArc = (p: PaintedPath) => p.state.lineWidth === 1.5 && pathPoints(p).length > 20;
+
+  it("reads the tokens (the print colours where none is set)", () => {
+    expect(themeInk().critical).toBe("#eef0f2");
+    expect(themeInk().udlHover).toBe(PRINT_INK.udlHover);
+  });
+
+  it("draws the critical surface, its radius lines, centre, slices and FOS label in the light ink over the sheet", () => {
+    const rec = drawDark({ showSoilColor: false });
+    const arcs = rec.strokes().filter(isArc);
+    expect(arcs.map((p) => p.state.strokeStyle)).toEqual(["#eef0f2"]);
+    expect(rec.findText("1.234")!.state.fillStyle).toBe("#eef0f2");
+    // radius lines (to the entry and the exit) and the centre dot
+    expect(rec.strokes("#eef0f2").filter((p) => p.state.lineWidth === 1 && pathPoints(p).length === 2).length).toBeGreaterThanOrEqual(2);
+    expect(rec.fills("#eef0f2").length).toBeGreaterThanOrEqual(1);
+    // nothing of it black on the dark sheet
+    expect(rec.strokes(CRITICAL_SURFACE_COLOR.hex).filter((p) => isArc(p) || pathPoints(p).length === 2)).toHaveLength(0);
+  });
+
+  it("draws the critical surface black over a light soil fill, in the light ink elsewhere", () => {
+    const rec = drawDark();
+    const arcs = rec.strokes().filter(isArc);
+    expect(arcs.map((p) => p.state.strokeStyle).sort()).toEqual([CRITICAL_SURFACE_COLOR.hex, "#eef0f2"].sort());
+    // each pass inside its own (even-odd) clip
+    expect(rec.paths.filter((p) => p.kind === "clip" && p.fillRule === "evenodd").length).toBeGreaterThanOrEqual(2);
+    expect(rec.depth()).toBe(0);
+  });
+
+  it("draws loads, text annotations without a colour, the colour bar and the material table in the dark ink", () => {
+    const rec = drawDark(
+      {
+        showSoilColor: false,
+        annotations: [
+          { id: "t", type: "text", x: 0.1, y: 0.1, text: "Plain" },
+          { id: "t2", type: "text", x: 0.1, y: 0.2, text: "Own colour", color: "#123456" },
+          { id: "c", type: "color-bar", x: 0.8, y: 0.2 },
+          { id: "m", type: "material-table", x: 0.9, y: 0.05, anchor: "top-right" },
+        ],
+      },
+      { udls: [{ id: "u1", magnitude: 15, x1: 2, x2: 8 }], lineLoads: [{ id: "l1", magnitude: 50, x: 25 }] },
+    );
+    expect(rec.findText("q = 15 kPa")!.state.fillStyle).toBe("#ffa198");
+    expect(rec.findText("P = 50 kN/m")!.state.fillStyle).toBe("#9cc2ff");
+    expect(rec.strokes("#ffa198").length).toBeGreaterThan(0);
+    expect(rec.strokes(UDL_LOAD_COLOR.hex)).toHaveLength(0);
+    expect(rec.findText("Plain")!.state.fillStyle).toBe("#eef0f2");
+    expect(rec.findText("Own colour")!.state.fillStyle).toBe("#123456");
+    expect(rec.findText("FOS")!.state.fillStyle).toBe("#e6e8eb");
+    expect(rec.findText(DEFAULT_MATERIAL.name)!.state.fillStyle).toBe("#e1e4e8");
+    expect(rec.fills("#30353b").length).toBeGreaterThan(0);
+  });
+
+  it("keeps the print colours without the tokens (the light theme sets them to these)", () => {
+    for (const key of Object.keys(DARK)) root().style.removeProperty(INK_TOKENS[key as keyof CanvasInk]);
+    const rec = drawDark({}, { udls: [{ id: "u1", magnitude: 15, x1: 2, x2: 8 }] });
+    expect(rec.strokes().filter(isArc).map((p) => p.state.strokeStyle)).toEqual([CRITICAL_SURFACE_COLOR.hex]);
+    expect(rec.findText("1.234")!.state.fillStyle).toBe(CRITICAL_SURFACE_COLOR.hex);
+    expect(rec.findText("q = 15 kPa")!.state.fillStyle).toBe(UDL_LOAD_COLOR.hex);
+    // one pass: no even-odd clips for the lines over the fills
+    expect(rec.paths.filter((p) => p.kind === "clip" && p.fillRule === "evenodd")).toHaveLength(0);
   });
 });

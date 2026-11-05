@@ -208,8 +208,8 @@ export function drawReinforcements(
   rows: readonly ReinforcementRow[],
   toCanvas: (x: number, y: number) => [number, number],
   zoom = 1,
-  /** What the numbers keep off (elementNumberLayout) and the colour of their halo. */
-  numbers: { scene?: NumberScene; halo?: string } = {},
+  /** What the numbers keep off (elementNumberLayout), the colour of their halo and their own (default REINFORCEMENT_COLOR). */
+  numbers: { scene?: NumberScene; halo?: string; color?: string } = {},
 ): void {
   ctx.save();
   const nums = elementNumberLayout(rows, toCanvas, 11 * zoom, numbers.scene);
@@ -253,7 +253,7 @@ export function drawReinforcements(
       const s = 3.5 * zoom;
       ctx.fillRect(bx - s, by - s, 2 * s, 2 * s);
     }
-    ctx.fillStyle = REINFORCEMENT_COLOR;
+    ctx.fillStyle = numbers.color ?? REINFORCEMENT_COLOR;
     ctx.font = `bold ${11 * zoom}px sans-serif`;
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
@@ -1072,7 +1072,8 @@ export function drawReinforcementForces(
   forces: readonly ReinforcementForce[],
   toCanvas: (x: number, y: number) => [number, number],
   zoom = 1,
-  options: { context?: ForceLabelContext; plate?: string; layout?: readonly ForceLayout[] } = {},
+  /** `text`: the colour of the labels on their plate (default REINFORCEMENT_COLOR). */
+  options: { context?: ForceLabelContext; plate?: string; layout?: readonly ForceLayout[]; text?: string } = {},
 ): void {
   const em = 10 * zoom;
   ctx.save();
@@ -1114,7 +1115,8 @@ export function drawReinforcementForces(
     ctx.fillStyle = options.plate ?? "#ffffff";
     ctx.fillRect(label.left, label.top, label.right - label.left, label.bottom - label.top);
     ctx.globalAlpha = 1;
-    ctx.fillStyle = REINFORCEMENT_COLOR;
+    ctx.fillStyle = options.text ?? REINFORCEMENT_COLOR;
+    ctx.strokeStyle = options.text ?? REINFORCEMENT_COLOR;
     const cy = (label.top + label.bottom) / 2 + 0.5 * zoom;
     const p = forceLabelPieces(l, size.pad, size.measure, em);
     ctx.fillText(l.value, p.valueX, cy);
@@ -1144,6 +1146,8 @@ export function drawPiles(
   rows: readonly PileRow[],
   toCanvas: (x: number, y: number) => [number, number],
   zoom = 1,
+  /** The colour of the P1… labels. */
+  labelColor = PILE_COLOR,
 ): void {
   ctx.save();
   rows.forEach((p, i) => {
@@ -1157,7 +1161,7 @@ export function drawPiles(
     ctx.lineTo(bx, by);
     ctx.stroke();
     ctx.setLineDash([]);
-    ctx.fillStyle = PILE_COLOR;
+    ctx.fillStyle = labelColor;
     ctx.font = `bold ${11 * zoom}px sans-serif`;
     ctx.textAlign = "center";
     ctx.textBaseline = "bottom";
