@@ -12,14 +12,14 @@ import {
   PanelRightClose,
   PanelRightOpen,
 } from "lucide-react";
+import { SECTION_HEADING_TEXT } from "./ui/Section";
 
 export type PanelSide = "left" | "right";
 
 /** The width of a collapsed panel's strip, in pixels. */
 export const COLLAPSED_STRIP_WIDTH = 22;
 
-const HEADER_TEXT_CLASS =
-  "text-[10px] font-bold uppercase tracking-[0.08em] select-none";
+const HEADER_TEXT_CLASS = SECTION_HEADING_TEXT;
 
 const otherSide = (side: PanelSide): PanelSide =>
   side === "left" ? "right" : "left";
@@ -141,8 +141,8 @@ export function CollapsedPanelStrip({ side, label, onOpen, onMove }: StripProps)
         <Icon size={14} strokeWidth={1.75} aria-hidden="true" />
         <span
           style={{
+            // Top to bottom on both sides, so the two strips read alike.
             writingMode: "vertical-rl",
-            transform: side === "left" ? "rotate(180deg)" : undefined,
             lineHeight: `${COLLAPSED_STRIP_WIDTH - 2}px`,
           }}
         >

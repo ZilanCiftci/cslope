@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { act, cleanup, createEvent, fireEvent, render, screen } from "@testing-library/react";
+import { act, cleanup, createEvent, fireEvent, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { AnalysisResult } from "@cslope/engine";
 
@@ -48,6 +48,10 @@ describe("Explorer — list and selection", () => {
     ]);
     expect(row("Alpha")).toHaveAttribute("aria-selected", "true");
     expect(row("Beta")).toHaveAttribute("aria-selected", "false");
+    // A tree, with the active model as its stop on the Tab key.
+    expect(within(screen.getByRole("tree", { name: "Models" })).getAllByRole("treeitem")).toHaveLength(3);
+    expect(row("Alpha")).toHaveAttribute("tabindex", "0");
+    expect(row("Beta")).toHaveAttribute("tabindex", "-1");
   });
 
   it("moves the selection to a model made active elsewhere (e.g. an import)", async () => {
@@ -174,7 +178,8 @@ describe("Explorer — rename", () => {
   it("renames with a double click and Enter", async () => {
     render(<Explorer />);
     await userEvent.dblClick(row("Beta"));
-    const input = screen.getByDisplayValue("Beta");
+    const input = screen.getByRole("textbox", { name: "Model name" });
+    expect(input).toHaveValue("Beta");
     expect(input).toHaveFocus();
     await userEvent.clear(input);
     await userEvent.type(input, "  Slope 2  {Enter}");
@@ -318,7 +323,8 @@ describe("Explorer — drag and drop", () => {
     } as DOMRect);
     fireEvent.dragStart(row("Alpha"));
     dragOverAt(row("Gamma"), 15);
-    expect(row("Gamma").style.borderBottom).toContain("var(--color-vsc-accent)");
+    // The drop line under the target row.
+    expect(within(row("Gamma")).getByTestId("model-drop-indicator").style.bottom).toBe("-1px");
     fireEvent.drop(row("Gamma"));
     expect(names()).toEqual(["Beta", "Gamma", "Alpha"]);
 

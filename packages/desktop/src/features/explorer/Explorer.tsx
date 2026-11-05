@@ -1,6 +1,7 @@
 import { useCallback, useMemo, useState } from "react";
 import { useAppStore, type ProjectInfo } from "../../store/app-store";
 import { PanelHeaderRow } from "../../components/SidePanelChrome";
+import { FoldChevron, SECTION_HEADING_ROW } from "../../components/ui/Section";
 import { ContextMenu, type MenuPos } from "./ContextMenu";
 import { ModelRow } from "./ModelRow";
 import { ProjectInfoDialog } from "./ProjectInfoDialog";
@@ -297,26 +298,18 @@ export function Explorer() {
         }
       >
         <button
-          className="flex items-center gap-1.5 px-4 py-1.5 cursor-pointer w-full text-left"
+          className={`${SECTION_HEADING_ROW} cursor-pointer w-full text-left`}
           onClick={() => setModelsOpen((v) => !v)}
           aria-expanded={modelsOpen}
           aria-label="Toggle models list"
         >
-          <svg
-            width="10"
-            height="10"
-            viewBox="0 0 10 10"
-            fill="currentColor"
-            style={{ transform: modelsOpen ? "rotate(0deg)" : "rotate(-90deg)" }}
-          >
-            <path d="M2 3l3 3.5L8 3z" />
-          </svg>
-          MODELS
+          <FoldChevron open={modelsOpen} />
+          Models
         </button>
       </PanelHeaderRow>
 
       {modelsOpen && (
-        <div className="flex-1 overflow-y-auto py-1">
+        <div className="flex-1 overflow-y-auto py-1" role="tree" aria-label="Models" aria-multiselectable="true">
           {models.map((model) => {
             const isActive = model.id === activeModelId;
             const isSelected = effectiveSelectedModelIds.includes(model.id);
