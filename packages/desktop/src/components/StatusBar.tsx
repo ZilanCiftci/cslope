@@ -50,8 +50,11 @@ function RunAllProgress({ status }: { status: RunAllStatus }) {
             className="inline-block w-16 h-1.5 rounded-full overflow-hidden"
             style={{ background: "var(--color-vsc-input-bg)" }}
           >
+            {/* No width transition: the batch updates it every 120 ms, and
+                with every core busy each transition restarted from where
+                the last one had not yet moved, so the bar stood still. */}
             <span
-              className="block h-1.5 rounded-full transition-all duration-150"
+              className="block h-1.5 rounded-full"
               style={{
                 width: `${Math.max(2, Math.round(progress * 100))}%`,
                 background: "var(--color-vsc-accent)",
