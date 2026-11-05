@@ -28,9 +28,9 @@ interface Params {
 
 const DRAG_PX = 4;
 
-/** The banner's buttons: on one line, white on a darker accent (over 4.5:1); a disabled one fainter. */
-const BANNER_BUTTON = "px-1.5 py-0.5 rounded text-[11px] whitespace-nowrap shrink-0 cursor-pointer disabled:cursor-default disabled:opacity-60";
-const BANNER_BUTTON_STYLE = { background: "rgba(0,0,0,0.28)", color: "#ffffff" } as const;
+/** The bar's buttons: the app's ordinary buttons, on one line. */
+const BANNER_BUTTON = "btn text-[11px] whitespace-nowrap shrink-0";
+const BANNER_BUTTON_STYLE = {} as const; // (kept for the action buttons)
 
 export function useLinePickCanvas({ canvasRef, getEventWorldPos, viewScale, setContextMenu }: Params) {
   const placementId = useLinePick((s) => s.placementId);
@@ -188,14 +188,14 @@ export function useLinePickCanvas({ canvasRef, getEventWorldPos, viewScale, setC
             />
           )}
           {/* As wide as it needs, up to the canvas: the explanation wraps, the buttons do not.
-              White on the accent (4.5:1); the buttons darker still. */}
+              Styled like the floating toolbar (panel, border, ordinary buttons). */}
           <div
             className="absolute top-2 left-1/2 -translate-x-1/2 w-max max-w-[calc(100%-16px)] z-40 flex flex-col items-center gap-1 select-none"
             data-testid="line-pick-banner"
           >
             <div
-              className="flex items-center gap-2 px-3 py-1.5 rounded-md text-[12px]"
-              style={{ background: "var(--color-vsc-accent)", color: "#ffffff", boxShadow: "0 4px 12px var(--color-canvas-tooltip-shadow)" }}
+              className="flex items-center gap-2 px-2.5 py-1 rounded-xs shadow-md text-[12px]"
+              style={{ background: "var(--color-vsc-sidebar)", color: "var(--color-vsc-text)", border: "1px solid var(--color-vsc-border)" }}
             >
               <span className="min-w-0">
                 Pick lines of <strong>{label}</strong>: click a line, Shift+click to add, drag a window.{" "}
@@ -219,7 +219,7 @@ export function useLinePickCanvas({ canvasRef, getEventWorldPos, viewScale, setC
                   {text}
                 </button>
               ))}
-              <button className={BANNER_BUTTON} style={BANNER_BUTTON_STYLE} title="Stop picking lines (Esc)" onClick={() => useLinePick.getState().stop()}>
+              <button className={`${BANNER_BUTTON} btn-primary`} title="Stop picking lines (Esc)" onClick={() => useLinePick.getState().stop()}>
                 Done
               </button>
             </div>
