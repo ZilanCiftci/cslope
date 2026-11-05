@@ -24,7 +24,7 @@ export interface CanvasInk {
   /** Distributed loads (outline, hatch, arrows, label) and their hover colour. */
   udl: string;
   udlHover: string;
-  /** The hatch under a distributed load (with its opacity). */
+  /** The hatch under a distributed load (drawn at half opacity). */
   udlHatch: string;
   /** Line loads (arrow, label) and their hover colour. */
   lineLoad: string;
@@ -69,7 +69,7 @@ export const PRINT_INK: Readonly<CanvasInk> = {
   critical: CRITICAL_SURFACE_COLOR.hex,
   udl: UDL_LOAD_COLOR.hex,
   udlHover: "#ff0000",
-  udlHatch: "rgba(204,0,0,0.5)",
+  udlHatch: UDL_LOAD_COLOR.hex,
   lineLoad: LINE_LOAD_COLOR.hex,
   lineLoadHover: "#3b82f6",
   referenceLine: "#78909c",

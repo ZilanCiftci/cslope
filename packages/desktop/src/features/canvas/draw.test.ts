@@ -1859,6 +1859,7 @@ describe("drawCanvas — dark theme ink", () => {
   const DARK: Partial<Record<keyof CanvasInk, string>> = {
     critical: "#eef0f2",
     udl: "#ffa198",
+    udlHatch: "#ffd2cc",
     lineLoad: "#9cc2ff",
     annotationText: "#eef0f2",
     colorBar: "#e6e8eb",

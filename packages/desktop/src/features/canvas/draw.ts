@@ -1428,6 +1428,7 @@ export function drawCanvas(
     ctx.clip();
     ctx.strokeStyle = INK.udlHatch;
     ctx.lineWidth = 1 * thin * paperZoom;
+    ctx.globalAlpha = 0.5;
     const allPts = strips.flatMap((s) => [...s.ground, ...s.top]);
     const minX = Math.min(...allPts.map(([x]) => x));
     const maxX = Math.max(...allPts.map(([x]) => x));
