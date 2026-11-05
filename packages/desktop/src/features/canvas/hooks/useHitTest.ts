@@ -59,11 +59,11 @@ interface UseHitTestParams {
   viewScale: number;
   snapToGrid: boolean;
   gridSnapSize: number;
-  editingExterior: boolean;
-  editingBoundaries: boolean;
-  editingPiezo: boolean;
-  editingLimits: boolean;
-  editingLoads: boolean;
+  editingExterior?: boolean;
+  editingBoundaries?: boolean;
+  editingPiezo?: boolean;
+  editingLimits?: boolean;
+  editingLoads?: boolean;
   /** The custom search planes, picked whenever there are any (edit view). */
   customSearchPlanes?: AppState["customSearchPlanes"];
   editingCustomPlanes?: boolean;
@@ -86,11 +86,11 @@ export function useHitTest({
   viewScale,
   snapToGrid,
   gridSnapSize,
-  editingExterior,
-  editingBoundaries,
-  editingPiezo,
-  editingLimits,
-  editingLoads,
+  editingExterior = false,
+  editingBoundaries = false,
+  editingPiezo = false,
+  editingLimits = false,
+  editingLoads = false,
   customSearchPlanes = NO_PLANES,
   editingCustomPlanes = false,
 }: UseHitTestParams) {

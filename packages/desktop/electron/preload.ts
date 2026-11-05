@@ -79,9 +79,6 @@ contextBridge.exposeInMainWorld("cslope", {
   openOptionsDialog: () => ipcRenderer.send("window:openOptionsDialog"),
   openViewSettingsDialog: () =>
     ipcRenderer.send("window:openViewSettingsDialog"),
-  onInteriorBoundariesDialogOpenChanged: (
-    listener: (event: unknown, open: unknown) => void,
-  ) => subscribe("interiorBoundaries:dialogOpenChanged", listener),
   isMaximized: () => ipcRenderer.invoke("window:isMaximized"),
   onMaximized: (listener: (event: unknown, isMax: unknown) => void) =>
     subscribe("window:maximized", listener),
@@ -93,6 +90,15 @@ contextBridge.exposeInMainWorld("cslope", {
   menuAbout: () => ipcRenderer.send("menu:about"),
   openDocumentation: () => ipcRenderer.send("help:openDocumentation"),
   toggleDevTools: () => ipcRenderer.send("dev:toggle-devtools"),
+  // Canvas selection sync (the main window and every dialog window)
+  requestSelectionState: () => ipcRenderer.send("selection:requestState"),
+  sendSelectionChanged: (selection: unknown) =>
+    ipcRenderer.send("selection:changed", selection),
+  onSelectionRequestState: (listener: (event: unknown) => void) =>
+    subscribe("selection:requestState", listener),
+  onSelectionChanged: (
+    listener: (event: unknown, selection: unknown) => void,
+  ) => subscribe("selection:changed", listener),
   // Materials dialog sync
   requestMaterialsState: () => ipcRenderer.send("materials:requestState"),
   sendMaterialsState: (materials: unknown) =>

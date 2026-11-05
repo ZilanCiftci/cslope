@@ -1,7 +1,8 @@
 import { isPointInPolygon } from "@cslope/engine";
 import type { AnalysisResult } from "@cslope/engine";
 import { PAPER_DIMENSIONS, PLOT_MARGINS } from "../../store/app-store";
-import type { AppState } from "../../store/types";
+import type { AppState, CanvasObjectRef, CanvasPointKey, CanvasSelection, ModelLocks } from "../../store/types";
+import { isObjectLocked, sameObject } from "../../store/canvas-selection";
 import {
   fosLabelAnchor,
   sameSurface,
@@ -21,7 +22,6 @@ import {
   HATCH_SPACING_PX,
   POINT_COLOR,
   POINT_COLOR_HOVER,
-  POINT_COLOR_SELECTED,
   POINT_RADIUS,
   cssVar,
   RULER_SIZE_PX,
@@ -529,6 +529,33 @@ function getArcKey(surf: ArcSurface): string {
   ].join("|");
 }
 
+/**
+ * A small padlock (canvas px, its body's top left at x, y): on a locked
+ * selection's handles.
+ */
+export function drawPadlock(ctx: CanvasRenderingContext2D, x: number, y: number, color: string, halo: string): void {
+  ctx.save();
+  ctx.setLineDash([]);
+  // a plate keeps it readable over lines and fills
+  ctx.fillStyle = halo;
+  ctx.globalAlpha = 0.85;
+  ctx.beginPath();
+  ctx.arc(x + 4, y + 2.5, 7, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.globalAlpha = 1;
+  ctx.strokeStyle = color;
+  ctx.fillStyle = color;
+  ctx.lineWidth = 1.4;
+  ctx.beginPath();
+  ctx.arc(x + 4, y + 1, 2.4, Math.PI, 0);
+  ctx.lineTo(x + 6.4, y + 3);
+  ctx.moveTo(x + 1.6, y + 1);
+  ctx.lineTo(x + 1.6, y + 3);
+  ctx.stroke();
+  ctx.fillRect(x, y + 3, 8, 5.5);
+  ctx.restore();
+}
+
 export interface DrawCanvasParams {
   w: number;
   h: number;
@@ -541,7 +568,6 @@ export interface DrawCanvasParams {
   materialBoundaries: AppState["materialBoundaries"];
   regionMaterials: AppState["regionMaterials"];
   selectedRegionKey: AppState["selectedRegionKey"];
-  editingAssignment: boolean;
   selectedAnnotationIds: AppState["selectedAnnotationIds"];
   selectedResultObject: AppState["selectedResultObject"];
   projectInfo: AppState["projectInfo"];
@@ -566,16 +592,20 @@ export interface DrawCanvasParams {
   waternet?: AppState["waternet"];
   /** Prescribed slip surfaces, drawn faintly in edit view. */
   customSearchPlanes?: AppState["customSearchPlanes"];
-  /** The custom search plane picked on the canvas, drawn highlighted. */
-  selectedCustomPlaneId?: string | null;
   /** Block search objects, drawn in edit view when the block search is selected. */
   blockSearchObjects?: AppState["blockSearchObjects"];
   viewScale: number;
   mouseWorld: [number, number] | null;
   hoverHit: PointHit | null;
-  selectedPointIndex: number | null;
-  selectedMaterialBoundaryId: string | null;
-  interiorBoundariesDialogOpen: boolean;
+  /**
+   * The selection of the edit canvas: its object is drawn in the selection
+   * colour with its handles (grey with a padlock when it is locked).
+   */
+  selection?: CanvasSelection | null;
+  /** The object under the pointer (edit view), drawn with a faint highlight. */
+  hoverObject?: { object: CanvasObjectRef; point: CanvasPointKey | null } | null;
+  /** The locked objects of the edit view. */
+  locks?: ModelLocks;
   worldToCanvas: (
     wx: number,
     wy: number,
@@ -589,10 +619,9 @@ export interface DrawCanvasParams {
     h: number,
   ) => [number, number];
   surfaceYAtX: (x: number) => number | null;
-  editingExterior: boolean;
-  editingBoundaries: boolean;
-  editingPiezo: boolean;
 }
+
+const NO_LOCKS: ModelLocks = {};
 
 export function drawCanvas(
   ctx: CanvasRenderingContext2D,
@@ -608,7 +637,6 @@ export function drawCanvas(
     materialBoundaries,
     regionMaterials,
     selectedRegionKey,
-    editingAssignment,
     selectedAnnotationIds,
     selectedResultObject,
     projectInfo,
@@ -623,22 +651,28 @@ export function drawCanvas(
     piezometricLine,
     waternet,
     customSearchPlanes,
-    selectedCustomPlaneId = null,
     blockSearchObjects,
     viewScale,
     mouseWorld,
     hoverHit,
-    selectedPointIndex,
-    selectedMaterialBoundaryId,
-    interiorBoundariesDialogOpen,
+    selection = null,
+    hoverObject = null,
+    locks = NO_LOCKS,
     worldToCanvas,
     canvasToWorld,
     surfaceYAtX,
-    editingExterior,
-    editingBoundaries,
-    editingPiezo,
   }: DrawCanvasParams,
 ) {
+  // The selected object of the edit view: the one drawn with its handles.
+  const selObject = mode !== "result" ? (selection?.object ?? null) : null;
+  const selPoint = selObject ? (selection?.point ?? null) : null;
+  const selLocked = !!selObject && isObjectLocked(locks, selObject);
+  const editingExterior = selObject?.type === "exterior";
+  const selectedPointIndex = editingExterior && typeof selPoint === "number" ? selPoint : null;
+  const selectedBoundaryId = selObject?.type === "boundary" ? selObject.id : null;
+  const editingBoundaries = selectedBoundaryId !== null;
+  const selectedWaterLineId = selObject?.type === "waterLine" ? selObject.id : null;
+  const selectedCustomPlaneId = selObject?.type === "customPlane" ? selObject.id : null;
   // Read theme-aware colors
   const BG_COLOR = cssVar("--color-canvas-bg");
   // The drawing's ink: the print colours in the light theme, lighter ones
@@ -656,7 +690,124 @@ export function drawCanvas(
   const PAPER_SHADOW_COLOR = cssVar("--color-canvas-paper-shadow");
   const PAPER_TICK_COLOR = cssVar("--color-canvas-paper-ticks");
   const PAPER_BORDER_COLOR = cssVar("--color-canvas-paper-border");
-  const SELECTED_BOUNDARY_COLOR = "#f59e0b";
+  // The selection's colour (the accent), and the grey of a locked object's handles.
+  const SELECTED_BOUNDARY_COLOR = cssVar("--color-vsc-accent") || POINT_COLOR;
+  const LOCKED_HANDLE_COLOR = "#9aa3ad";
+  /** The ring around the selected point of the selection. */
+  const selectedPointRing = (px: number, py: number, r: number) => {
+    ctx.save();
+    ctx.setLineDash([]);
+    ctx.strokeStyle = selLocked ? LOCKED_HANDLE_COLOR : SELECTED_BOUNDARY_COLOR;
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.arc(px, py, r + 3.5, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.restore();
+  };
+  /** The canvas lines of an object (edit view), for its hover highlight and its selection outline. */
+  const objectLines = (ref: CanvasObjectRef): { pts: [number, number][]; closed: boolean }[] => {
+    const toC = (pts: [number, number][]) => pts.map(([x, y]) => worldToCanvas(x, y, w, h));
+    const groundLine = (x1: number, x2: number) => {
+      const lo = Math.min(x1, x2);
+      const hi = Math.max(x1, x2);
+      const xs = [lo, ...coordinates.map(([x]) => x).filter((x) => x > lo && x < hi), hi].sort((a, b) => a - b);
+      return xs.flatMap((x): [number, number][] => {
+        const y = surfaceYAtX(x);
+        return y === null ? [] : [[x, y]];
+      });
+    };
+    switch (ref.type) {
+      case "exterior":
+        return [{ pts: toC(coordinates), closed: true }];
+      case "boundary": {
+        const b = materialBoundaries.find((v) => v.id === ref.id);
+        return b ? [{ pts: toC(b.coordinates), closed: false }] : [];
+      }
+      case "waterLine": {
+        const l = piezometricLine.lines.find((v) => v.id === ref.id);
+        return l ? [{ pts: toC(l.coordinates), closed: false }] : [];
+      }
+      case "udl": {
+        const u = udls.find((v) => v.id === ref.id);
+        return u ? [{ pts: toC(groundLine(u.x1, u.x2)), closed: false }] : [];
+      }
+      case "reinforcement":
+      case "pile": {
+        const list: { id: string; x1: number; y1: number; x2: number; y2: number }[] =
+          ref.type === "pile" ? (piles ?? []) : (reinforcements ?? []);
+        const r = list.find((v) => v.id === ref.id);
+        return r ? [{ pts: toC([[r.x1, r.y1], [r.x2, r.y2]]), closed: false }] : [];
+      }
+      case "customPlane": {
+        const p = customSearchPlanes?.find((v) => v.id === ref.id);
+        if (!p) return [];
+        if (p.points) return [{ pts: toC(p.points), closed: false }];
+        const n = 72;
+        return [{ pts: toC(Array.from({ length: n }, (_, k): [number, number] => [p.cx + p.radius * Math.cos((2 * Math.PI * k) / n), p.cy + p.radius * Math.sin((2 * Math.PI * k) / n)])), closed: true }];
+      }
+      default:
+        return [];
+    }
+  };
+  const strokeObject = (ref: CanvasObjectRef, color: string, width: number, alpha: number) => {
+    ctx.save();
+    ctx.setLineDash([]);
+    ctx.lineJoin = "round";
+    ctx.lineCap = "round";
+    ctx.strokeStyle = color;
+    ctx.globalAlpha = alpha;
+    ctx.lineWidth = width;
+    for (const { pts, closed } of objectLines(ref)) {
+      if (pts.length < 2) continue;
+      ctx.beginPath();
+      pts.forEach(([px, py], i) => (i === 0 ? ctx.moveTo(px, py) : ctx.lineTo(px, py)));
+      if (closed) ctx.closePath();
+      ctx.stroke();
+    }
+    ctx.restore();
+  };
+  /** Where the padlock of a locked selection goes: its selected point, else its first handle (canvas px). */
+  const selectionAnchor = (ref: CanvasObjectRef, point: CanvasPointKey | null): [number, number] | null => {
+    const at = (x: number, y: number | null): [number, number] | null => (y === null ? null : worldToCanvas(x, y, w, h));
+    const vertex = (pts: [number, number][] | undefined) => {
+      if (!pts || pts.length === 0) return null;
+      const k = typeof point === "number" && pts[point] ? point : 0;
+      return at(pts[k][0], pts[k][1]);
+    };
+    switch (ref.type) {
+      case "exterior":
+        return vertex(coordinates);
+      case "boundary":
+        return vertex(materialBoundaries.find((v) => v.id === ref.id)?.coordinates);
+      case "waterLine":
+        return vertex(piezometricLine.lines.find((v) => v.id === ref.id)?.coordinates);
+      case "udl": {
+        const u = udls.find((v) => v.id === ref.id);
+        const x = u ? (point === "x2" ? u.x2 : u.x1) : null;
+        return x === null ? null : at(x, surfaceYAtX(x));
+      }
+      case "lineLoad": {
+        const l = lineLoads.find((v) => v.id === ref.id);
+        return l ? at(l.x, surfaceYAtX(l.x)) : null;
+      }
+      case "searchLimits": {
+        const key = point === "entryRightX" || point === "exitLeftX" || point === "exitRightX" ? point : "entryLeftX";
+        return at(analysisLimits[key], surfaceYAtX(analysisLimits[key]));
+      }
+      case "reinforcement":
+      case "pile": {
+        const list: { id: string; x1: number; y1: number; x2: number; y2: number }[] =
+          ref.type === "pile" ? (piles ?? []) : (reinforcements ?? []);
+        const r = list.find((v) => v.id === ref.id);
+        return r ? (point === "end2" ? at(r.x2, r.y2) : at(r.x1, r.y1)) : null;
+      }
+      case "customPlane": {
+        const p = customSearchPlanes?.find((v) => v.id === ref.id);
+        if (!p) return null;
+        return p.points ? vertex(p.points) : at(p.cx, p.cy);
+      }
+    }
+  };
   const MARKER_BASE = cssVar("--color-canvas-marker") || MARKER_COLOR.hex;
   const CUSTOM_SURFACE = cssVar("--color-canvas-custom-surface") || CUSTOM_SURFACE_COLOR.hex;
   // Reference annotations without a colour of their own: the theme's.
@@ -1057,8 +1208,8 @@ export function drawCanvas(
     }
     ctx.restore();
 
-    // ── Highlight selected region (only when Material Assignment is open) ──
-    if (selectedRegionKey && editingAssignment) {
+    // ── Highlight the region whose material is being chosen ──
+    if (selectedRegionKey && mode !== "result") {
       const sel = regions.find((r) => r.regionKey === selectedRegionKey);
       if (sel && sel.px.length >= 3) {
         // Helper to build the combined outer+holes path
@@ -1148,13 +1299,10 @@ export function drawCanvas(
       });
       ctx.closePath();
     };
-    const strokeBoundaries = () => {
+    const strokeBoundaries = (only: string | null = null) => {
       for (const b of materialBoundaries) {
-        if (b.coordinates.length < 2) continue;
-        const isSelectedBoundary =
-          interiorBoundariesDialogOpen &&
-          selectedMaterialBoundaryId !== null &&
-          b.id === selectedMaterialBoundaryId;
+        if (b.coordinates.length < 2 || (only !== null && b.id !== only)) continue;
+        const isSelectedBoundary = b.id === selectedBoundaryId;
         ctx.strokeStyle = isSelectedBoundary
           ? SELECTED_BOUNDARY_COLOR
           : POLY_STROKE;
@@ -1182,7 +1330,7 @@ export function drawCanvas(
       ctx.clip("evenodd");
       ctx.globalAlpha = 0.45;
       ctx.setLineDash([4, 4]);
-      strokeBoundaries();
+      strokeBoundaries(selectedBoundaryId);
       ctx.restore();
     }
   }
@@ -1498,16 +1646,17 @@ export function drawCanvas(
       const [px, py] = worldToCanvas(x, y, w, h);
       vertexDots.push({ x: px, y: py, r: extR });
     }
-    const bndR = (editingBoundaries ? POINT_RADIUS - 1 : 3) + (editingBoundaries ? 0.75 : 0.5);
+    const bndR = (edited: boolean) => (edited ? POINT_RADIUS - 1 : 3) + (edited ? 0.75 : 0.5);
     const ext = coordinates.map(([x, y]) => worldToCanvas(x, y, w, h));
     const onModel = (px: number, py: number) =>
       ext.length < 3 ||
       isPointInPolygon(px, py, ext.map((c) => c[0]), ext.map((c) => c[1])) ||
       ext.some((a, k) => distanceToSegment(px, py, a, ext[(k + 1) % ext.length]) <= 1.5);
     for (const b of materialBoundaries) {
+      const edited = b.id === selectedBoundaryId;
       for (const [x, y] of b.coordinates) {
         const [px, py] = worldToCanvas(x, y, w, h);
-        if (editingBoundaries || onModel(px, py)) vertexDots.push({ x: px, y: py, r: bndR });
+        if (edited || onModel(px, py)) vertexDots.push({ x: px, y: py, r: bndR(edited) });
       }
     }
   }
@@ -1545,7 +1694,7 @@ export function drawCanvas(
             editCrackMarker?.top,
             editCrackMarker?.bottom,
             editingExterior,
-            editingBoundaries,
+            selectedBoundaryId,
           ],
           () =>
             layoutPiezoSymbols(
@@ -1691,12 +1840,11 @@ export function drawCanvas(
     for (let lineIdx = 0; lineIdx < piezometricLine.lines.length; lineIdx++) {
       const line = piezometricLine.lines[lineIdx];
       if (line.coordinates.length < 2) continue;
-      const isActive = line.id === piezometricLine.activeLineId;
       const plCoords = line.coordinates;
 
       // Stroke: solid polyline (the water ink over the sheet, the print
       // blue over a light fill)
-      const selectedLine = isActive && editingPiezo;
+      const selectedLine = line.id === selectedWaterLineId;
       paintAgainstFills(selectedLine ? SELECTED_BOUNDARY_COLOR : piezoBlue, selectedLine ? SELECTED_BOUNDARY_COLOR : PIEZO_COLOR.hex, (lineColor) => {
         ctx.strokeStyle = lineColor;
         ctx.lineWidth = (selectedLine ? 3 : 1.5) * thin * paperZoom;
@@ -1768,11 +1916,11 @@ export function drawCanvas(
 
       // Circle node markers are edit-mode affordances only; hide them in result view.
       if (mode !== "result") {
-        const piezoRadius = editingPiezo ? POINT_RADIUS : 3;
+        const piezoRadius = selectedLine ? POINT_RADIUS : 3;
         for (let i = 0; i < plCoords.length; i++) {
           const [px, py] = worldToCanvas(plCoords[i][0], plCoords[i][1], w, h);
           const isHover =
-            editingPiezo &&
+            selectedLine &&
             hoverHit?.kind === "piezo" &&
             hoverHit.lineId === line.id &&
             hoverHit.index === i;
@@ -1781,24 +1929,25 @@ export function drawCanvas(
           ctx.arc(px, py, piezoRadius, 0, Math.PI * 2);
           ctx.fillStyle = isHover
             ? POINT_COLOR_HOVER
-            : editingPiezo && isActive
-              ? SELECTED_BOUNDARY_COLOR
-              : editingPiezo
-                ? piezoBlue
-                : piezoBlue + "99";
+            : selectedLine
+              ? selLocked
+                ? LOCKED_HANDLE_COLOR
+                : SELECTED_BOUNDARY_COLOR
+              : piezoBlue + "99";
           ctx.fill();
-          ctx.strokeStyle = editingPiezo ? STROKE_ACTIVE : STROKE_INACTIVE;
-          ctx.lineWidth = editingPiezo ? 1.5 : 1;
+          ctx.strokeStyle = selectedLine ? STROKE_ACTIVE : STROKE_INACTIVE;
+          ctx.lineWidth = selectedLine ? 1.5 : 1;
           ctx.stroke();
+          if (selectedLine && selPoint === i) selectedPointRing(px, py, piezoRadius);
 
           pointSymbols.push(boxAround(px, py, piezoRadius));
-          if (editingPiezo && isActive && onScreen(px, py)) {
+          if (selectedLine && onScreen(px, py)) {
             pointLabels.push({
               text: `(${plCoords[i][0].toFixed(1)}, ${plCoords[i][1].toFixed(1)})`,
               px,
               py,
               below: false,
-              force: isHover,
+              force: isHover || selPoint === i,
             });
           }
         }
@@ -1901,6 +2050,14 @@ export function drawCanvas(
     }
   }
 
+  // ── Selection outline and hover highlight (edit view) ───
+  // The selected object's lines in the selection colour; the object under
+  // the pointer with a faint, wide halo of it (under the handles).
+  if (mode !== "result") {
+    if (selObject?.type === "exterior") strokeObject(selObject, SELECTED_BOUNDARY_COLOR, 2, 0.9);
+    if (hoverObject) strokeObject(hoverObject.object, SELECTED_BOUNDARY_COLOR, 8, 0.3);
+  }
+
   // Vertex dots go over the markers and the dotted ranges.
   // ── External boundary points ─────────────────────────
   if (mode !== "result") {
@@ -1925,17 +2082,18 @@ export function drawCanvas(
 
       ctx.beginPath();
       ctx.arc(px, py, extRadius, 0, Math.PI * 2);
-      ctx.fillStyle = isSelected
-        ? POINT_COLOR_SELECTED
-        : isHover
-          ? POINT_COLOR_HOVER
-          : editingExterior
-            ? POINT_COLOR
-            : STROKE_INACTIVE;
+      ctx.fillStyle = isHover
+        ? POINT_COLOR_HOVER
+        : editingExterior
+          ? selLocked
+            ? LOCKED_HANDLE_COLOR
+            : SELECTED_BOUNDARY_COLOR
+          : STROKE_INACTIVE;
       ctx.fill();
       ctx.strokeStyle = editingExterior ? STROKE_ACTIVE : STROKE_INACTIVE;
       ctx.lineWidth = editingExterior ? 1.5 : 1;
       ctx.stroke();
+      if (isSelected) selectedPointRing(px, py, extRadius);
 
       // Coordinate label — only when editing.
       pointSymbols.push(boxAround(px, py, extRadius));
@@ -1955,7 +2113,7 @@ export function drawCanvas(
 
   // ── Material boundary points (interactive) ──────────
   if (mode !== "result") {
-    const bndRadius = editingBoundaries ? POINT_RADIUS - 1 : 3;
+    const bndRadiusOf = (edited: boolean) => (edited ? POINT_RADIUS - 1 : 3);
     // Outside the model a boundary point divides nothing; it is shown (and
     // can be picked) only while the boundaries are edited.
     const ext = coordinates.map(([x, y]) => worldToCanvas(x, y, w, h));
@@ -1965,12 +2123,13 @@ export function drawCanvas(
       ext.some((a, k) => distanceToSegment(px, py, a, ext[(k + 1) % ext.length]) <= 1.5);
     for (const b of materialBoundaries) {
       const color = materials[0]?.color ?? "#888";
-      const isSelectedBoundary =
-        interiorBoundariesDialogOpen &&
-        selectedMaterialBoundaryId !== null &&
-        b.id === selectedMaterialBoundaryId;
+      const isSelectedBoundary = b.id === selectedBoundaryId;
+      const edited = isSelectedBoundary;
+      const bndRadius = bndRadiusOf(edited);
       const boundaryBaseColor = isSelectedBoundary
-        ? SELECTED_BOUNDARY_COLOR
+        ? selLocked
+          ? LOCKED_HANDLE_COLOR
+          : SELECTED_BOUNDARY_COLOR
         : color;
 
       for (let i = 0; i < b.coordinates.length; i++) {
@@ -1980,9 +2139,9 @@ export function drawCanvas(
           w,
           h,
         );
-        if (!editingBoundaries && !onModel(px, py)) continue;
+        if (!edited && !onModel(px, py)) continue;
         const isHover =
-          editingBoundaries &&
+          edited &&
           hoverHit?.kind === "boundary" &&
           hoverHit.boundaryId === b.id &&
           hoverHit.pointIndex === i;
@@ -1991,46 +2150,46 @@ export function drawCanvas(
         ctx.arc(px, py, bndRadius, 0, Math.PI * 2);
         ctx.fillStyle = isHover
           ? POINT_COLOR_HOVER
-          : editingBoundaries
+          : edited
             ? boundaryBaseColor
             : STROKE_INACTIVE;
         ctx.fill();
-        ctx.strokeStyle = editingBoundaries
-          ? isSelectedBoundary
-            ? SELECTED_BOUNDARY_COLOR
-            : STROKE_ACTIVE
-          : STROKE_INACTIVE;
-        ctx.lineWidth = editingBoundaries ? (isSelectedBoundary ? 2 : 1.5) : 1;
+        ctx.strokeStyle = edited ? STROKE_ACTIVE : STROKE_INACTIVE;
+        ctx.lineWidth = edited ? 1.5 : 1;
         ctx.stroke();
+        if (edited && selPoint === i) selectedPointRing(px, py, bndRadius);
         pointSymbols.push(boxAround(px, py, bndRadius));
       }
     }
   }
 
-  // ── Custom search plane handles (interactive) ──────────
-  // A circle's centre and a non-circular surface's vertices, draggable
-  // whenever there are custom planes; a centre carries a small cross.
+  // ── Custom search plane handles ────────────────────────
+  // A circle's centre and a non-circular surface's vertices: handles of
+  // the selected surface, small dots of the others; a centre carries a
+  // small cross.
   if (mode !== "result" && customSearchPlanes?.length) {
-    const handleRadius = POINT_RADIUS - 1;
-    const drawHandle = (px: number, py: number, hover: boolean, selected: boolean, cross: boolean) => {
+    const drawHandle = (px: number, py: number, hover: boolean, selected: boolean, cross: boolean, picked: boolean) => {
+      const r = selected ? POINT_RADIUS - 1 : 3;
       ctx.beginPath();
-      ctx.arc(px, py, handleRadius, 0, Math.PI * 2);
-      ctx.fillStyle = hover ? POINT_COLOR_HOVER : selected ? SELECTED_BOUNDARY_COLOR : MARKER_BASE;
+      ctx.arc(px, py, r, 0, Math.PI * 2);
+      ctx.fillStyle = hover ? POINT_COLOR_HOVER : selected ? (selLocked ? LOCKED_HANDLE_COLOR : SELECTED_BOUNDARY_COLOR) : MARKER_BASE;
       ctx.fill();
-      ctx.strokeStyle = selected ? SELECTED_BOUNDARY_COLOR : STROKE_ACTIVE;
-      ctx.lineWidth = selected ? 2 : 1.5;
+      ctx.strokeStyle = selected ? STROKE_ACTIVE : STROKE_INACTIVE;
+      ctx.lineWidth = selected ? 1.5 : 1;
       ctx.stroke();
       if (cross) {
-        const arm = handleRadius + 3;
+        const arm = r + 3;
         ctx.beginPath();
         ctx.moveTo(px - arm, py);
         ctx.lineTo(px + arm, py);
         ctx.moveTo(px, py - arm);
         ctx.lineTo(px, py + arm);
+        ctx.strokeStyle = selected ? SELECTED_BOUNDARY_COLOR : MARKER_BASE;
         ctx.lineWidth = 1;
         ctx.stroke();
       }
-      pointSymbols.push(boxAround(px, py, handleRadius + (cross ? 3 : 0)));
+      if (picked) selectedPointRing(px, py, r);
+      pointSymbols.push(boxAround(px, py, r + (cross ? 3 : 0)));
     };
     ctx.save();
     ctx.setLineDash([]);
@@ -2040,17 +2199,100 @@ export function drawCanvas(
         for (let i = 0; i < s.points.length; i++) {
           const [px, py] = worldToCanvas(s.points[i][0], s.points[i][1], w, h);
           const hover =
-            hoverHit?.kind === "customVertex" && hoverHit.planeId === s.id && hoverHit.pointIndex === i;
-          drawHandle(px, py, hover, selected, false);
+            selected && hoverHit?.kind === "customVertex" && hoverHit.planeId === s.id && hoverHit.pointIndex === i;
+          drawHandle(px, py, hover, selected, false, selected && selPoint === i);
         }
       } else {
         const [px, py] = worldToCanvas(s.cx, s.cy, w, h);
         const hover =
-          hoverHit?.kind === "customCircle" && hoverHit.planeId === s.id && hoverHit.handle === "centre";
-        drawHandle(px, py, hover, selected, true);
+          selected && hoverHit?.kind === "customCircle" && hoverHit.planeId === s.id && hoverHit.handle === "centre";
+        drawHandle(px, py, hover, selected, true, selected && selPoint === "centre");
       }
     }
     ctx.restore();
+  }
+
+  // ── The selection's other handles (edit view) ──────────
+  // A load's ends or point, the search limits, an element's ends: handles
+  // on the selected object only (its line in the selection colour for an
+  // element); a locked object's handles are grey with a padlock.
+  if (mode !== "result" && selObject) {
+    const handle = (wx: number, wy: number, key: CanvasPointKey) => {
+      const [px, py] = worldToCanvas(wx, wy, w, h);
+      const hover = hoverObject?.point === key && sameObject(hoverObject.object, selObject);
+      ctx.beginPath();
+      ctx.arc(px, py, POINT_RADIUS - 1, 0, Math.PI * 2);
+      ctx.fillStyle = hover ? POINT_COLOR_HOVER : selLocked ? LOCKED_HANDLE_COLOR : SELECTED_BOUNDARY_COLOR;
+      ctx.fill();
+      ctx.strokeStyle = STROKE_ACTIVE;
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
+      if (selPoint === key) selectedPointRing(px, py, POINT_RADIUS - 1);
+      pointSymbols.push(boxAround(px, py, POINT_RADIUS - 1));
+    };
+    const ground = (x: number) => surfaceYAtX(x);
+    ctx.save();
+    ctx.setLineDash([]);
+    switch (selObject.type) {
+      case "udl": {
+        const u = udls.find((v) => v.id === selObject.id);
+        for (const key of ["x1", "x2"] as const) {
+          const gy = u ? ground(u[key]) : null;
+          if (u && gy !== null) handle(u[key], gy, key);
+        }
+        break;
+      }
+      case "lineLoad": {
+        const l = lineLoads.find((v) => v.id === selObject.id);
+        const gy = l ? (l.angle && Number.isFinite(l.y) ? l.y! : ground(l.x)) : null;
+        if (l && gy !== null) handle(l.x, gy, "x");
+        break;
+      }
+      case "searchLimits":
+        if (analysisLimits.enabled) {
+          for (const key of ["entryLeftX", "entryRightX", "exitLeftX", "exitRightX"] as const) {
+            const gy = ground(analysisLimits[key]);
+            if (gy !== null) handle(analysisLimits[key], gy, key);
+          }
+        }
+        break;
+      case "reinforcement":
+      case "pile": {
+        const list: { id: string; x1: number; y1: number; x2: number; y2: number }[] =
+          selObject.type === "pile" ? (piles ?? []) : (reinforcements ?? []);
+        const r = list.find((v) => v.id === selObject.id);
+        if (r) {
+          const [ax, ay] = worldToCanvas(r.x1, r.y1, w, h);
+          const [bx, by] = worldToCanvas(r.x2, r.y2, w, h);
+          ctx.strokeStyle = SELECTED_BOUNDARY_COLOR;
+          ctx.globalAlpha = 0.6;
+          ctx.lineWidth = 4;
+          ctx.beginPath();
+          ctx.moveTo(ax, ay);
+          ctx.lineTo(bx, by);
+          ctx.stroke();
+          ctx.globalAlpha = 1;
+          handle(r.x1, r.y1, "end1");
+          handle(r.x2, r.y2, "end2");
+        }
+        break;
+      }
+      default:
+        break;
+    }
+    ctx.restore();
+    // One padlock on a locked selection, beside its first handle (or its
+    // selected point).
+    if (selLocked) {
+      const at = selectionAnchor(selObject, selPoint);
+      if (at) {
+        const lx = at[0] + POINT_RADIUS + 3;
+        const ly = at[1] - POINT_RADIUS - 9;
+        drawPadlock(ctx, lx, ly, STROKE_ACTIVE, BG_COLOR);
+        // the coordinate labels keep off it
+        pointSymbols.push({ left: lx - 3, top: ly - 5, right: lx + 11, bottom: ly + 10 });
+      }
+    }
   }
 
   if (pointLabels.length > 0 || crackLabel) {
@@ -2085,7 +2327,7 @@ export function drawCanvas(
         isPointInPolygon(x, y, extC.map((c) => c[0]), extC.map((c) => c[1]));
       for (const bnd of materialBoundaries) {
         const pts = bnd.coordinates.map(([x, y]) => worldToCanvas(x, y, w, h));
-        if (editingBoundaries) layout.reservePolyline(pts, 2);
+        if (bnd.id === selectedBoundaryId) layout.reservePolyline(pts, 2);
         else for (const seg of segmentsInside(pts, extC, inModel)) layout.reserveSegment(seg, 2);
       }
     }

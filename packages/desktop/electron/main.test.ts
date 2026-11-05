@@ -643,25 +643,45 @@ describe("dialog windows", () => {
     },
   );
 
-  it("tells the main window when the interior boundaries dialog opens and closes", async () => {
+  it("no longer tells the main window that a window opened: opening one gates no editing", async () => {
     await loadMain();
     const win = mainWin();
     const dlg = openDialog("window:openInteriorBoundariesDialog");
-    expect(win.webContents.send).toHaveBeenLastCalledWith(
-      "interiorBoundaries:dialogOpenChanged",
-      true,
-    );
-    win.webContents.send.mockClear();
-    send("window:openInteriorBoundariesDialog", win.webContents);
-    expect(win.webContents.send).toHaveBeenLastCalledWith(
-      "interiorBoundaries:dialogOpenChanged",
-      true,
-    );
     dlg.close();
-    expect(win.webContents.send).toHaveBeenLastCalledWith(
-      "interiorBoundaries:dialogOpenChanged",
-      false,
-    );
+    expect(win.webContents.send.mock.calls.map((c: unknown[]) => c[0])).not.toContain("interiorBoundaries:dialogOpenChanged");
+  });
+
+  it("sends the canvas selection from the main window to every open window, and a window's pick to the main window", async () => {
+    await loadMain();
+    const win = mainWin();
+    const geometry = openDialog("window:openGeometryDialog");
+    const piezo = openDialog("window:openPiezoDialog");
+    const sel = { object: { type: "exterior" }, point: 2 };
+    send("selection:changed", win.webContents, sel);
+    expect(geometry.webContents.send).toHaveBeenCalledWith("selection:changed", sel);
+    expect(piezo.webContents.send).toHaveBeenCalledWith("selection:changed", sel);
+    win.webContents.send.mockClear();
+    const pick = { object: { type: "waterLine", id: "w1" }, point: 0 };
+    send("selection:changed", piezo.webContents, pick);
+    expect(win.webContents.send).toHaveBeenCalledWith("selection:changed", pick);
+    // a window asks for the selection; the main window answers by sending it
+    send("selection:requestState", geometry.webContents);
+    expect(win.webContents.send).toHaveBeenCalledWith("selection:requestState");
+    // a closed window is skipped
+    geometry.close();
+    geometry.webContents.send.mockClear();
+    send("selection:changed", win.webContents, sel);
+    expect(geometry.webContents.send).not.toHaveBeenCalled();
+  });
+
+  it("ignores selection messages from a sender that is no window of the app", async () => {
+    await loadMain();
+    const win = mainWin();
+    const other = stranger();
+    win.webContents.send.mockClear();
+    send("selection:changed", other, { object: { type: "exterior" }, point: null });
+    send("selection:requestState", other);
+    expect(win.webContents.send).not.toHaveBeenCalled();
   });
 
   it("keeps the dialog titles but lets the main window take the page title", async () => {

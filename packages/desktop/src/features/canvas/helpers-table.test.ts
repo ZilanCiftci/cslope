@@ -228,7 +228,6 @@ function drawTexts(annotations: Annotation[]): TextCall[] {
     materialBoundaries: [],
     regionMaterials: [],
     selectedRegionKey: null,
-    editingAssignment: false,
     selectedAnnotationIds: [],
     selectedResultObject: null,
     projectInfo: { ...DEFAULT_PROJECT_INFO, title: "A fairly long project title" },
@@ -240,15 +239,9 @@ function drawTexts(annotations: Annotation[]): TextCall[] {
     viewScale: 20,
     mouseWorld: null,
     hoverHit: null,
-    selectedPointIndex: null,
-    selectedMaterialBoundaryId: null,
-    interiorBoundariesDialogOpen: false,
     worldToCanvas: (x, y, w, h) => [w / 2 + (x - 15) * 20, h / 2 - (y - 5) * 20],
     canvasToWorld: (x, y, w, h) => [(x - w / 2) / 20 + 15, -(y - h / 2) / 20 + 5],
     surfaceYAtX: () => null,
-    editingExterior: false,
-    editingBoundaries: false,
-    editingPiezo: false,
   };
   drawCanvas(rec.ctx, params);
   return rec.texts;

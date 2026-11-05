@@ -58,6 +58,10 @@ export function PiezoDialogApp() {
   const addPiezoLine = useAppStore((s) => s.addPiezoLine);
   const removePiezoLine = useAppStore((s) => s.removePiezoLine);
   const setActivePiezoLine = useAppStore((s) => s.setActivePiezoLine);
+  // The canvas selection: a row picked here selects its line (or point)
+  // on the canvas, and one selected there is the selected row here.
+  const canvasSelection = useAppStore((s) => s.canvasSelection);
+  const selectCanvasObject = useAppStore((s) => s.selectCanvasObject);
   const setPiezoCoordinate = useAppStore((s) => s.setPiezoCoordinate);
   const addPiezoPoint = useAppStore((s) => s.addPiezoPoint);
   const insertPiezoPointAt = useAppStore((s) => s.insertPiezoPointAt);
@@ -306,7 +310,10 @@ export function PiezoDialogApp() {
                   return (
                     <tr
                       key={line.id}
-                      onClick={() => setActivePiezoLine(line.id)}
+                      onClick={() => {
+                        setActivePiezoLine(line.id);
+                        selectCanvasObject({ type: "waterLine", id: line.id });
+                      }}
                       className="cursor-pointer transition-colors"
                       style={{
                         background: isSelected
@@ -375,6 +382,14 @@ export function PiezoDialogApp() {
               rows={activeLine.coordinates}
               columns={coordinateColumns}
               getRowKey={(_row, i) => `${activeLine.id}-${i}`}
+              selectedRowIndex={
+                canvasSelection?.object.type === "waterLine" &&
+                canvasSelection.object.id === activeLine.id &&
+                typeof canvasSelection.point === "number"
+                  ? canvasSelection.point
+                  : null
+              }
+              onRowClick={(_row, i) => selectCanvasObject({ type: "waterLine", id: activeLine.id }, i)}
             />
 
             <button

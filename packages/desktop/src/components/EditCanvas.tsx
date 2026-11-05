@@ -32,9 +32,45 @@ import { surfaceYAtX as surfaceY } from "../features/view/surface";
 import { ContextMenuOverlay } from "../features/canvas/ContextMenuOverlay";
 import { MaterialPickerMenu } from "../features/canvas/MaterialPickerMenu";
 import { AxisOverlay } from "../features/canvas/AxisOverlay";
+import { edgeInsertAt, findCanvasObjectsAt } from "../features/canvas/object-hits";
+import { PointEditor, type PointEditorState } from "../features/canvas/PointEditor";
+import { nudgeHandle } from "../features/canvas/handle-edit";
+import { canDeletePoint, isObjectLocked } from "../store/canvas-selection";
+import type { CanvasObjectRef } from "../store/types";
 
 /** Gap kept around the model by zoom-to-fit, besides the rulers and the toolbar. */
 const FIT_PAD_PX = 16;
+
+/** Beside the pointer over a locked object: how to unlock it. */
+function LockedTip({
+  mouseWorld,
+  worldToCanvas,
+  canvasRef,
+}: {
+  mouseWorld: [number, number];
+  worldToCanvas: (wx: number, wy: number, w: number, h: number) => [number, number];
+  canvasRef: React.RefObject<HTMLCanvasElement | null>;
+}) {
+  // eslint-disable-next-line react-hooks/refs -- the canvas size places the tip; read at render like the zoom percentage
+  const rect = canvasRef.current?.getBoundingClientRect();
+  const [x, y] = worldToCanvas(mouseWorld[0], mouseWorld[1], rect?.width ?? 0, rect?.height ?? 0);
+  return (
+    <div
+      role="tooltip"
+      data-testid="locked-tip"
+      className="absolute px-1.5 py-0.5 rounded text-[11px] whitespace-nowrap select-none pointer-events-none z-40"
+      style={{
+        left: x + 14,
+        top: y + 14,
+        background: "var(--color-vsc-input-bg)",
+        color: "var(--color-vsc-text)",
+        border: "1px solid var(--color-vsc-border)",
+      }}
+    >
+      Locked · right-click to unlock
+    </div>
+  );
+}
 
 export function EditCanvas() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -71,9 +107,6 @@ export function EditCanvas() {
     reinforcements,
     piles,
     piezometricLine,
-    selectedPointIndex,
-    selectedMaterialBoundaryId,
-    interiorBoundariesDialogOpen,
     regionMaterials,
     assigningMaterialId,
     selectedRegionKey,
@@ -87,16 +120,10 @@ export function EditCanvas() {
     options,
     customPlanesOnly,
   } = useCanvasModelState();
-  const activeSection = useAppStore((s) => s.activeSection);
   const customSearchPlanes = useAppStore((s) => s.customSearchPlanes);
-  const selectedCustomPlaneId = useAppStore((s) => s.selectedCustomPlaneId);
-  const updateCustomSearchPlane = useAppStore((s) => s.updateCustomSearchPlane);
-  const updateCustomPlanePoint = useAppStore((s) => s.updateCustomPlanePoint);
-  const insertCustomPlanePointAt = useAppStore((s) => s.insertCustomPlanePointAt);
-  const removeCustomPlanePoint = useAppStore((s) => s.removeCustomPlanePoint);
-  const removeCustomSearchPlane = useAppStore((s) => s.removeCustomSearchPlane);
+  const canvasSelection = useAppStore((s) => s.canvasSelection);
+  const locks = useAppStore((s) => s.locks);
   const addReferenceFromCustomPlane = useAppStore((s) => s.addReferenceFromCustomPlane);
-  const setSelectedCustomPlane = useAppStore((s) => s.setSelectedCustomPlane);
   const blockSearchObjects = useAppStore((s) => s.blockSearchObjects);
   const waternet = useAppStore((s) => s.waternet);
   const {
@@ -104,16 +131,8 @@ export function EditCanvas() {
     updateUdl,
     updateLineLoad,
     setPiezoCoordinate,
-    insertPiezoPointAt,
-    removePiezoPoint,
     setCoordinate,
-    insertCoordinateAt,
-    removeCoordinate,
-    setSelectedPoint,
-    setSelectedMaterialBoundary,
     updateBoundaryPoint,
-    removeBoundaryPoint,
-    insertBoundaryPointAt,
     setRegionMaterial,
     setAssigningMaterial,
     setSelectedRegionKey,
@@ -124,20 +143,8 @@ export function EditCanvas() {
     alignAnnotations,
     setCanvasToolbar,
     setCursorWorld,
-    setActivePiezoLine,
   } = useCanvasActions();
-
-  const editingExterior =
-    mode === "edit" && activeSection === "Exterior Boundary";
-  const editingBoundaries =
-    mode === "edit" && activeSection === "Interior Boundaries";
-  const editingPiezo = mode === "edit" && activeSection === "Piezometric Lines";
-  const editingAssignment =
-    mode === "edit" && activeSection === "Material Assignment";
-  const editingLimits = mode === "edit" && activeSection === "Search Limits";
-  const editingLoads = mode === "edit" && activeSection === "Loads";
-  // The custom search planes are editable on the canvas whenever there are any.
-  const editingCustomPlanes = mode === "edit" && customSearchPlanes.length > 0;
+  const [pointEditor, setPointEditor] = useState<PointEditorState | null>(null);
 
   const surfaceYAtX = useCallback(
     (x: number): number | null => surfaceY(coordinates, x),
@@ -179,14 +186,42 @@ export function EditCanvas() {
     viewScale,
     snapToGrid,
     gridSnapSize,
-    editingExterior,
-    editingBoundaries,
-    editingPiezo,
-    editingLimits,
-    editingLoads,
     customSearchPlanes,
-    editingCustomPlanes,
   });
+
+  /** Every object under a world point, topmost first (in canvas px of the current view). */
+  const findObjectsAt = useCallback(
+    (wx: number, wy: number) => {
+      const canvas = canvasRef.current;
+      if (!canvas) return [];
+      const rect = canvas.getBoundingClientRect();
+      const toPx = (x: number, y: number) => worldToCanvas(x, y, rect.width, rect.height);
+      const [mx, my] = toPx(wx, wy);
+      return findCanvasObjectsAt(useAppStore.getState(), mx, my, toPx, surfaceYAtX);
+    },
+    [surfaceYAtX, worldToCanvas],
+  );
+
+  /** Where a point would be added on an object's line at a world point. */
+  const edgeAt = useCallback(
+    (object: CanvasObjectRef, wx: number, wy: number) => {
+      const canvas = canvasRef.current;
+      if (!canvas) return null;
+      const rect = canvas.getBoundingClientRect();
+      const toPx = (x: number, y: number) => worldToCanvas(x, y, rect.width, rect.height);
+      const [mx, my] = toPx(wx, wy);
+      return edgeInsertAt(
+        useAppStore.getState(),
+        object,
+        mx,
+        my,
+        toPx,
+        (px, py) => canvasToWorld(px, py, rect.width, rect.height),
+        snapValue,
+      );
+    },
+    [canvasToWorld, snapValue, worldToCanvas],
+  );
 
   const { contextMenu, setContextMenu, handleContextMenu } = useContextMenu({
     canvasRef,
@@ -195,37 +230,24 @@ export function EditCanvas() {
     setSelectedAnnotations,
     alignAnnotations,
     getEventWorldPos,
-    findNearPointUnified: hitTest.findNearPointUnified,
-    findNearEdgeUnified: hitTest.findNearEdgeUnified,
-    coordinates,
-    materialBoundaries,
-    piezometricLine,
-    setActivePiezoLine,
-    removeCoordinate,
-    removeBoundaryPoint,
-    removePiezoPoint,
-    insertCoordinateAt,
-    insertBoundaryPointAt,
-    insertPiezoPointAt,
-    setSelectedPoint,
-    setSelectedMaterialBoundary,
+    findObjectsAt,
+    edgeAt,
+    findRegionAtPoint: hitTest.findRegionAtPoint,
     setMaterialPicker,
-    customSearchPlanes,
-    removeCustomSearchPlane,
-    removeCustomPlanePoint,
-    insertCustomPlanePointAt,
-    setSelectedCustomPlane,
     addReferenceFromCustomPlane,
   });
 
   const {
     mouseWorld,
     hoverHit,
+    hoverObject,
     dragTip,
+    cursor,
     handlePointerDown,
     handlePointerMove,
     handlePointerUp,
     handlePointerCancel,
+    handleDoubleClick,
     handleWheel,
   } = usePointerHandlers({
     canvasRef,
@@ -234,32 +256,16 @@ export function EditCanvas() {
     viewOffset,
     setActiveViewOffset,
     setActiveViewScale,
-    findNearPointUnified: hitTest.findNearPointUnified,
-    findNearEdgeUnified: hitTest.findNearEdgeUnified,
+    findObjectsAt,
     findRegionAtPoint: hitTest.findRegionAtPoint,
     findSnapTarget: hitTest.findSnapTarget,
     snapValue,
-    coordinates,
-    piezometricLine,
-    setActivePiezoLine,
-    analysisLimits,
-    udls,
-    lineLoads,
-    materialBoundaries,
-    customSearchPlanes,
-    updateCustomSearchPlane,
-    updateCustomPlanePoint,
-    setSelectedCustomPlane,
     assigningMaterialId,
-    editingAssignment,
-    editingBoundaries,
-    editingCustomPlanes,
     panActive,
     setRegionMaterial,
     setAssigningMaterial,
     setSelectedRegionKey,
-    setSelectedMaterialBoundary,
-    setSelectedPoint,
+    onEditPoint: (object, point, at) => setPointEditor({ object, point, x: at.x, y: at.y }),
     updateAnnotation,
     setSelectedAnnotations,
     toggleAnnotationSelection,
@@ -298,7 +304,6 @@ export function EditCanvas() {
       materialBoundaries,
       regionMaterials,
       selectedRegionKey,
-      editingAssignment,
       selectedAnnotationIds,
       selectedResultObject,
       projectInfo,
@@ -313,20 +318,16 @@ export function EditCanvas() {
       piezometricLine,
       waternet,
       customSearchPlanes,
-      selectedCustomPlaneId,
       blockSearchObjects,
       viewScale,
       mouseWorld: null,
       hoverHit,
-      selectedPointIndex,
-      selectedMaterialBoundaryId,
-      interiorBoundariesDialogOpen,
+      selection: canvasSelection,
+      hoverObject,
+      locks,
       worldToCanvas,
       canvasToWorld,
       surfaceYAtX,
-      editingExterior,
-      editingBoundaries,
-      editingPiezo,
     }),
     [
       canvasSize.width,
@@ -343,19 +344,14 @@ export function EditCanvas() {
       piezometricLine,
       waternet,
       customSearchPlanes,
-      selectedCustomPlaneId,
       blockSearchObjects,
       viewScale,
       hoverHit,
-      selectedPointIndex,
-      selectedMaterialBoundaryId,
-      interiorBoundariesDialogOpen,
+      canvasSelection,
+      hoverObject,
+      locks,
       canvasToWorld,
       worldToCanvas,
-      editingExterior,
-      editingBoundaries,
-      editingPiezo,
-      editingAssignment,
       selectedRegionKey,
       regionMaterials,
       surfaceYAtX,
@@ -412,44 +408,74 @@ export function EditCanvas() {
     ctx.setLineDash([]);
   }, [canvasSize, mode, mouseWorld, worldToCanvas]);
 
-  // Keyboard shortcuts
+  // Keyboard: Escape clears the selection (and closes menus), Delete
+  // removes the selected point where that is allowed, the arrows nudge it
+  // by one snap step (Shift: ten). Not for a locked object, nor while
+  // typing in a field.
   useEffect(() => {
     const handleKey = (e: KeyboardEvent) => {
+      const target = e.target as HTMLElement | null;
+      const typing =
+        !!target &&
+        (["INPUT", "TEXTAREA", "SELECT"].includes(target.tagName) || target.isContentEditable);
       if (e.key === "Escape") {
         setContextMenu(null);
         setMaterialPicker(null);
-        setAssigningMaterial(null);
+        setSelectedRegionKey(null);
+        setPointEditor(null);
+        const st = useAppStore.getState();
+        if (st.assigningMaterialId) setAssigningMaterial(null);
+        else if (!typing && st.mode === "edit") st.clearCanvasSelection();
         return;
       }
-      // Delete the selected exterior vertex, like the context menu does.
+      if (typing || e.ctrlKey || e.metaKey || e.altKey) return;
+      // Only for the canvas: not while another control (a list, a button)
+      // has the keyboard, whose arrow keys are its own.
+      const onCanvas =
+        !target ||
+        (target as unknown) === document ||
+        target === document.body ||
+        !!containerRef.current?.contains(target);
+      if (!onCanvas) return;
+      const st = useAppStore.getState();
+      const sel = st.canvasSelection;
+      if (st.mode !== "edit" || !sel) return;
       if (e.key === "Delete" || e.key === "Backspace") {
-        const target = e.target as HTMLElement | null;
-        if (
-          target &&
-          (["INPUT", "TEXTAREA", "SELECT"].includes(target.tagName) ||
-            target.isContentEditable)
-        ) {
-          return;
+        if (sel.point === null || isObjectLocked(st.locks, sel.object) || !canDeletePoint(st, sel.object, sel.point)) return;
+        e.preventDefault();
+        const index = sel.point as number;
+        switch (sel.object.type) {
+          case "exterior":
+            st.removeCoordinate(index);
+            break;
+          case "boundary":
+            st.removeBoundaryPoint(sel.object.id, index);
+            break;
+          case "waterLine":
+            st.removePiezoPoint(index);
+            break;
+          case "customPlane":
+            st.removeCustomPlanePoint(sel.object.id, index);
+            break;
         }
-        const st = useAppStore.getState();
-        // Only while the exterior is edited: elsewhere the selection is
-        // not drawn, so Delete would remove a vertex the user cannot see
-        // is selected.
-        if (
-          st.mode === "edit" &&
-          st.activeSection === "Exterior Boundary" &&
-          st.selectedPointIndex !== null &&
-          st.coordinates.length > 3
-        ) {
-          e.preventDefault();
-          st.removeCoordinate(st.selectedPointIndex);
-          st.setSelectedPoint(null);
-        }
+        useAppStore.getState().selectCanvasPoint(null);
+        return;
       }
+      const dir: Record<string, [number, number]> = {
+        ArrowLeft: [-1, 0],
+        ArrowRight: [1, 0],
+        ArrowUp: [0, 1],
+        ArrowDown: [0, -1],
+      };
+      const d = dir[e.key];
+      if (!d || sel.point === null || isObjectLocked(st.locks, sel.object)) return;
+      e.preventDefault();
+      const step = st.gridSnapSize * (e.shiftKey ? 10 : 1);
+      nudgeHandle(st, st, sel.object, sel.point, d[0] * step, d[1] * step, (x) => surfaceY(st.coordinates, x));
     };
     document.addEventListener("keydown", handleKey);
     return () => document.removeEventListener("keydown", handleKey);
-  }, [setAssigningMaterial, setContextMenu, setMaterialPicker]);
+  }, [setAssigningMaterial, setContextMenu, setMaterialPicker, setSelectedRegionKey]);
 
   const handleFitToScreen = useCallback(() => {
     if (coordinates.length < 2) return;
@@ -629,6 +655,9 @@ export function EditCanvas() {
 
   const handleCanvasPointerDown = useCallback(
     (e: React.PointerEvent<HTMLCanvasElement>) => {
+      // The canvas takes the keyboard (arrows, Delete, Escape) from a
+      // button or list that had it.
+      containerRef.current?.focus({ preventScroll: true });
       if (zoomBoxActive && e.button === 0) {
         const rect = canvasRef.current?.getBoundingClientRect() ?? null;
         if (rect) setZoomBoxOrigin([rect.left, rect.top]);
@@ -772,7 +801,8 @@ export function EditCanvas() {
     <div className="relative w-full h-full">
       <div
         ref={containerRef}
-        className="relative w-full h-full overflow-hidden"
+        tabIndex={-1}
+        className="relative w-full h-full overflow-hidden outline-none"
         style={{
           background: "var(--color-canvas-bg)",
           overscrollBehavior: "none",
@@ -786,24 +816,19 @@ export function EditCanvas() {
               ? "crosshair"
               : zoomBoxActive
                 ? "crosshair"
-                : panActive
+                : panActive && cursor === "default"
                   ? "grab"
-                  : hoverHit?.kind === "limit" ||
-                      hoverHit?.kind === "udl" ||
-                      hoverHit?.kind === "lineLoad"
-                    ? "ew-resize"
-                    : hoverHit?.kind === "customCircle" &&
-                        hoverHit.handle === "rim"
-                      ? "crosshair"
-                      : hoverHit
-                        ? "grab"
-                        : "default",
+                  : cursor,
           }}
           onPointerDown={handleCanvasPointerDown}
           onPointerMove={handleCanvasPointerMove}
           onPointerUp={handleCanvasPointerUp}
           onPointerCancel={handlePointerCancel}
-          onContextMenu={handleContextMenu}
+          onDoubleClick={handleDoubleClick}
+          onContextMenu={(e) => {
+            setPointEditor(null);
+            handleContextMenu(e);
+          }}
           data-testid="slope-canvas"
         />
         <canvas
@@ -832,6 +857,10 @@ export function EditCanvas() {
           >
             x: {mouseWorld[0].toFixed(1)} &nbsp; y: {mouseWorld[1].toFixed(1)}
           </div>
+        )}
+
+        {hoverObject?.locked && !dragTip && !contextMenu && mouseWorld && (
+          <LockedTip mouseWorld={mouseWorld} worldToCanvas={worldToCanvas} canvasRef={canvasRef} />
         )}
 
         {dragTip && (
@@ -882,6 +911,7 @@ export function EditCanvas() {
           </div>
         )}
         <ContextMenuOverlay menu={contextMenu} />
+        {pointEditor && <PointEditor editor={pointEditor} onClose={() => setPointEditor(null)} />}
 
         <MaterialPickerMenu
           picker={materialPicker}
@@ -889,7 +919,10 @@ export function EditCanvas() {
           onSelect={(worldPoint, materialId) =>
             setRegionMaterial(worldPoint, materialId)
           }
-          onClose={() => setMaterialPicker(null)}
+          onClose={() => {
+            setMaterialPicker(null);
+            setSelectedRegionKey(null);
+          }}
         />
       </div>
       <AxisOverlay containerRef={containerRef} canvasRef={canvasRef} />

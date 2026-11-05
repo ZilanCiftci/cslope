@@ -5,7 +5,8 @@ import { useContextMenu } from "./useContextMenu";
 import { useAppStore } from "../../../store/app-store";
 import { DEFAULT_PIEZO_LINE, DEFAULT_RESULT_VIEW_SETTINGS } from "../../../store/defaults";
 import { computePaperFrame } from "../helpers";
-import type { EdgeHit, PointHit } from "../types";
+import type { CanvasCandidate } from "../object-hits";
+import type { CanvasObjectRef } from "../../../store/types";
 
 type Params = Parameters<typeof useContextMenu>[0];
 
@@ -26,31 +27,10 @@ function setup(over: Partial<Params> = {}) {
     setSelectedAnnotations: vi.fn(),
     alignAnnotations: vi.fn(),
     getEventWorldPos: vi.fn(() => [1, 2] as [number, number]),
-    findNearPointUnified: vi.fn(() => null),
-    findNearEdgeUnified: vi.fn(() => null),
-    coordinates: [
-      [0, 0],
-      [0, 10],
-      [10, 10],
-      [20, 0],
-    ],
-    materialBoundaries: [],
-    piezometricLine: DEFAULT_PIEZO_LINE,
-    setActivePiezoLine: vi.fn(),
-    removeCoordinate: vi.fn(),
-    removeBoundaryPoint: vi.fn(),
-    removePiezoPoint: vi.fn(),
-    insertCoordinateAt: vi.fn(),
-    insertBoundaryPointAt: vi.fn(),
-    insertPiezoPointAt: vi.fn(),
-    setSelectedPoint: vi.fn(),
-    setSelectedMaterialBoundary: vi.fn(),
+    findObjectsAt: vi.fn(() => []),
+    edgeAt: vi.fn(() => null),
+    findRegionAtPoint: vi.fn(() => null),
     setMaterialPicker: vi.fn(),
-    customSearchPlanes: [],
-    removeCustomSearchPlane: vi.fn(),
-    removeCustomPlanePoint: vi.fn(),
-    insertCustomPlanePointAt: vi.fn(),
-    setSelectedCustomPlane: vi.fn(),
     ...over,
   };
   const hook = renderHook(() => useContextMenu(params));
@@ -73,166 +53,202 @@ function setup(over: Partial<Params> = {}) {
   return { params, open, menu, click };
 }
 
-const pointHit = (hit: PointHit) => vi.fn(() => hit);
-const edgeHit = (hit: EdgeHit) => vi.fn(() => hit);
+
+/** Objects under the pointer, as the canvas's hit test reports them. */
+const under = (...c: CanvasCandidate[]) => vi.fn(() => c.map((x) => ({ ...x })));
+const EXT: CanvasObjectRef = { type: "exterior" };
+const labels = (m: ReturnType<ReturnType<typeof setup>["menu"]>) => m!.items.map((i) => i.label);
+const item = (m: ReturnType<ReturnType<typeof setup>["menu"]>, label: string) => m!.items.find((i) => i.label === label)!;
 
 describe("useContextMenu — edit mode", () => {
-  it("offers to delete an exterior point at the click position, relative to the canvas", () => {
-    const { params, open, menu, click } = setup({
+  beforeEach(() => {
+    useAppStore.getState().newProject();
+    useAppStore.setState({
       coordinates: [
         [0, 0],
         [0, 10],
         [10, 10],
-        [20, 5],
         [20, 0],
       ],
-      findNearPointUnified: pointHit({ kind: "external", index: 2 }),
+      coordinateExpressions: [],
+      materialBoundaries: [{ id: "b", coordinates: [[0, 5], [10, 5], [20, 2]] }],
+      piezometricLine: {
+        ...DEFAULT_PIEZO_LINE,
+        lines: [
+          { id: "w", name: "w", color: "#000", coordinates: [[0, 8], [10, 8], [20, 6]] },
+          { id: "v", name: "v", color: "#000", coordinates: [[0, 1], [20, 1]] },
+        ],
+        activeLineId: "v",
+      },
     });
-    const prevented = open(110, 220);
-    expect(prevented).toHaveBeenCalled();
-    expect(params.setMaterialPicker).toHaveBeenCalledWith(null);
+  });
+  const st = () => useAppStore.getState();
+
+  it("selects the point under the pointer and offers to delete it, at the click position relative to the canvas", () => {
+    const { open, menu, click } = setup({ findObjectsAt: under({ object: EXT, point: 1 }) });
+    const prevent = open(110, 220);
+    expect(prevent).toHaveBeenCalled();
     expect(menu()).toMatchObject({ screenX: 100, screenY: 200 });
-    expect(menu()!.items).toEqual([expect.objectContaining({ label: "Delete point", danger: true, disabled: false })]);
+    expect(labels(menu())).toEqual(["Delete point", "Lock"]);
+    expect(item(menu(), "Lock").separator).toBe(true);
+    // The right-click selects what the menu acts on.
+    expect(st().canvasSelection).toEqual({ object: EXT, point: 1 });
     click("Delete point");
-    expect(params.removeCoordinate).toHaveBeenCalledWith(2);
-    expect(params.setSelectedPoint).toHaveBeenCalledWith(null);
+    expect(st().coordinates).toHaveLength(3);
+    expect(st().canvasSelection).toEqual({ object: EXT, point: null });
     expect(menu()).toBeNull();
   });
 
-  it("disables deleting an exterior point of a triangle", () => {
-    const { params, open, menu, click } = setup({
-      coordinates: [
-        [0, 0],
-        [0, 10],
-        [10, 0],
-      ],
-      findNearPointUnified: pointHit({ kind: "external", index: 0 }),
-    });
+  it("disables deleting a point of a triangle, of a two-point line, and of a locked object", () => {
+    act(() => st().removeCoordinate(3));
+    const triangle = setup({ findObjectsAt: under({ object: EXT, point: 1 }) });
+    triangle.open();
+    expect(item(triangle.menu(), "Delete point").disabled).toBe(true);
+    triangle.click("Delete point");
+    expect(st().coordinates).toHaveLength(3);
+
+    const water = setup({ findObjectsAt: under({ object: { type: "waterLine", id: "v" }, point: 0 }) });
+    water.open();
+    expect(item(water.menu(), "Delete point").disabled).toBe(true);
+
+    act(() => st().setObjectLocked({ type: "waterLine", id: "w" }, true));
+    const locked = setup({ findObjectsAt: under({ object: { type: "waterLine", id: "w" }, point: 1 }) });
+    locked.open();
+    expect(item(locked.menu(), "Delete point").disabled).toBe(true);
+    locked.click("Delete point");
+    expect(st().piezometricLine.lines[0].coordinates).toHaveLength(3);
+  });
+
+  it("deletes a point of the water line it is on (made the active one) and of a boundary", () => {
+    const water = setup({ findObjectsAt: under({ object: { type: "waterLine", id: "w" }, point: 1 }) });
+    water.open();
+    expect(st().piezometricLine.activeLineId).toBe("w");
+    water.click("Delete point");
+    expect(st().piezometricLine.lines[0].coordinates).toEqual([
+      [0, 8],
+      [20, 6],
+    ]);
+    const boundary = setup({ findObjectsAt: under({ object: { type: "boundary", id: "b" }, point: 1 }) });
+    boundary.open();
+    boundary.click("Delete point");
+    expect(st().materialBoundaries[0].coordinates).toHaveLength(2);
+    expect(st().selectedMaterialBoundaryId).toBe("b");
+  });
+
+  it("adds a point on the line of an object at the snapped position and selects it", () => {
+    const edgeAt = vi.fn(() => ({ kind: "external" as const, insertIndex: 2, snapPoint: [5, 10] as [number, number] }));
+    const { open, menu, click } = setup({ findObjectsAt: under({ object: EXT, point: null }), edgeAt });
     open();
-    expect(menu()!.items[0].disabled).toBe(true);
-    click("Delete point");
-    expect(params.removeCoordinate).not.toHaveBeenCalled();
-  });
-
-  it("activates the water line of a point and only deletes beyond two points", () => {
-    const line = (n: number) => ({
-      id: "w",
-      name: "w",
-      color: "#000",
-      coordinates: Array.from({ length: n }, (_, i) => [i, 5] as [number, number]),
-    });
-    const three = setup({
-      piezometricLine: { ...DEFAULT_PIEZO_LINE, lines: [line(3)] },
-      findNearPointUnified: pointHit({ kind: "piezo", lineId: "w", index: 1 }),
-    });
-    three.open();
-    expect(three.params.setActivePiezoLine).toHaveBeenCalledWith("w");
-    expect(three.menu()!.items[0].disabled).toBe(false);
-    three.click("Delete point");
-    expect(three.params.removePiezoPoint).toHaveBeenCalledWith(1);
-
-    const two = setup({
-      piezometricLine: { ...DEFAULT_PIEZO_LINE, lines: [line(2)] },
-      findNearPointUnified: pointHit({ kind: "piezo", lineId: "w", index: 1 }),
-    });
-    two.open();
-    expect(two.menu()!.items[0].disabled).toBe(true);
-    two.click("Delete point");
-    expect(two.params.removePiezoPoint).not.toHaveBeenCalled();
-  });
-
-  it("selects the boundary of a point; a closed boundary keeps at least a triangle", () => {
-    const closedTriangle = {
-      id: "c",
-      coordinates: [
-        [1, 1],
-        [3, 1],
-        [2, 3],
-        [1, 1],
-      ] as [number, number][],
-    };
-    const openLine = {
-      id: "o",
-      coordinates: [
-        [0, 5],
-        [5, 4],
-        [10, 5],
-      ] as [number, number][],
-    };
-    const closed = setup({
-      materialBoundaries: [closedTriangle, openLine],
-      findNearPointUnified: pointHit({ kind: "boundary", boundaryId: "c", pointIndex: 1 }),
-    });
-    closed.open();
-    expect(closed.params.setSelectedMaterialBoundary).toHaveBeenCalledWith("c");
-    expect(closed.menu()!.items[0].disabled).toBe(true);
-
-    const open = setup({
-      materialBoundaries: [closedTriangle, openLine],
-      findNearPointUnified: pointHit({ kind: "boundary", boundaryId: "o", pointIndex: 1 }),
-    });
-    open.open();
-    expect(open.menu()!.items[0].disabled).toBe(false);
-    open.click("Delete point");
-    expect(open.params.removeBoundaryPoint).toHaveBeenCalledWith("o", 1);
-
-    const missing = setup({
-      findNearPointUnified: pointHit({ kind: "boundary", boundaryId: "gone", pointIndex: 0 }),
-    });
-    missing.open();
-    expect(missing.menu()!.items[0].disabled).toBe(true);
-  });
-
-  it("offers no items for other point kinds (e.g. a load handle)", () => {
-    const { open, menu } = setup({ findNearPointUnified: pointHit({ kind: "lineLoad", loadId: "l" }) });
-    open();
-    expect(menu()!.items).toEqual([]);
-  });
-
-  it("adds a point on an exterior edge at the snapped position and selects it", () => {
-    const { params, open, click } = setup({
-      findNearEdgeUnified: edgeHit({ kind: "external", insertIndex: 3, snapPoint: [15, 5] }),
-    });
-    open();
-    expect(params.findNearPointUnified).toHaveBeenCalledWith(1, 2);
+    expect(edgeAt).toHaveBeenCalledWith(EXT, 1, 2);
+    expect(labels(menu())).toEqual(["Add point", "Lock"]);
     click("Add point");
-    expect(params.insertCoordinateAt).toHaveBeenCalledWith(3, [15, 5]);
-    expect(params.setSelectedPoint).toHaveBeenCalledWith(3);
+    expect(st().coordinates[2]).toEqual([5, 10]);
+    expect(st().canvasSelection).toEqual({ object: EXT, point: 2 });
   });
 
-  it("adds a point on a water line or boundary edge, activating it first", () => {
+  it("adds a point on a water line (made the active one) and on a boundary", () => {
     const water = setup({
-      findNearEdgeUnified: edgeHit({ kind: "piezo", lineId: "w", insertIndex: 1, snapPoint: [4, 5] }),
+      findObjectsAt: under({ object: { type: "waterLine", id: "w" }, point: null }),
+      edgeAt: vi.fn(() => ({ kind: "piezo" as const, lineId: "w", insertIndex: 1, snapPoint: [5, 8] as [number, number] })),
     });
     water.open();
-    expect(water.params.setActivePiezoLine).toHaveBeenCalledWith("w");
     water.click("Add point");
-    expect(water.params.insertPiezoPointAt).toHaveBeenCalledWith(1, [4, 5]);
-
+    expect(st().piezometricLine.lines[0].coordinates[1]).toEqual([5, 8]);
     const boundary = setup({
-      findNearEdgeUnified: edgeHit({ kind: "boundary", boundaryId: "b", insertIndex: 2, snapPoint: [6, 3] }),
+      findObjectsAt: under({ object: { type: "boundary", id: "b" }, point: null }),
+      edgeAt: vi.fn(() => ({ kind: "boundary" as const, boundaryId: "b", insertIndex: 1, snapPoint: [5, 5] as [number, number] })),
     });
     boundary.open();
-    expect(boundary.params.setSelectedMaterialBoundary).toHaveBeenCalledWith("b");
     boundary.click("Add point");
-    expect(boundary.params.insertBoundaryPointAt).toHaveBeenCalledWith("b", 2, [6, 3]);
+    expect(st().materialBoundaries[0].coordinates[1]).toEqual([5, 5]);
   });
 
-  it("leaves the menu closed when nothing is under the pointer", () => {
-    const empty = setup();
-    empty.open();
-    expect(empty.params.findNearEdgeUnified).toHaveBeenCalledWith(1, 2);
-    expect(empty.menu()).toBeNull();
+  it("offers only Lock for objects without point editing (a load handle)", () => {
+    act(() => st().addUdl());
+    const id = st().udls[0].id;
+    const { open, menu } = setup({ findObjectsAt: under({ object: { type: "udl", id }, point: "x1" }) });
+    open();
+    expect(labels(menu())).toEqual(["Lock"]);
+    expect(item(menu(), "Lock").separator).toBeFalsy();
+  });
+
+  it("locks and unlocks an object, as one undo step each", () => {
+    useAppStore.temporal.getState().clear();
+    const lock = setup({ findObjectsAt: under({ object: { type: "boundary", id: "b" }, point: null }) });
+    lock.open();
+    lock.click("Lock");
+    expect(st().locks).toEqual({ boundaries: ["b"] });
+    const unlock = setup({ findObjectsAt: under({ object: { type: "boundary", id: "b" }, point: null }) });
+    unlock.open();
+    // A locked object offers no point editing.
+    expect(item(unlock.menu(), "Unlock")).toBeDefined();
+    unlock.click("Unlock");
+    expect(st().locks).toEqual({});
+    expect(useAppStore.temporal.getState().pastStates).toHaveLength(2);
+    act(() => useAppStore.temporal.getState().undo());
+    expect(st().locks).toEqual({ boundaries: ["b"] });
+  });
+
+  it("acts on the selected object where objects overlap", () => {
+    act(() => st().selectCanvasObject({ type: "boundary", id: "b" }));
+    const { open } = setup({
+      findObjectsAt: under({ object: EXT, point: 1 }, { object: { type: "boundary", id: "b" }, point: 0 }),
+    });
+    open();
+    expect(st().canvasSelection).toEqual({ object: { type: "boundary", id: "b" }, point: 0 });
+  });
+
+  it("offers Assign material, Lock all by type and Unlock all on empty canvas", () => {
+    const setMaterialPicker = vi.fn();
+    const { open, menu, click } = setup({
+      findObjectsAt: under(),
+      findRegionAtPoint: vi.fn(() => ({ regionKey: "r1" })),
+      setMaterialPicker,
+    });
+    open(110, 220);
+    expect(labels(menu())).toEqual(["Assign material…", "Lock all", "Unlock all"]);
+    expect(item(menu(), "Unlock all").disabled).toBe(true);
+    const groups = item(menu(), "Lock all").submenu!;
+    expect(groups.map((g) => g.label)).toEqual([
+      "Exterior boundary",
+      "Material boundaries",
+      "Water lines",
+      "Loads",
+      "Reinforcement",
+      "Search limits",
+      "Custom surfaces",
+    ]);
+    // Nothing to lock among loads, reinforcement and custom surfaces here.
+    expect(groups.filter((g) => g.disabled).map((g) => g.label)).toEqual(
+      expect.arrayContaining(["Loads", "Reinforcement", "Custom surfaces"]),
+    );
+    act(() => groups.find((g) => g.label === "Water lines")!.action());
+    expect(st().locks).toEqual({ waterLines: ["w", "v"] });
+    act(() => groups.find((g) => g.label === "Exterior boundary")!.action());
+    expect(st().locks.exterior).toBe(true);
+    // Unlock all, now that something is locked.
+    open(110, 220);
+    expect(item(menu(), "Unlock all").disabled).toBe(false);
+    click("Unlock all");
+    expect(st().locks).toEqual({});
+    // Assign material opens the picker at the click.
+    open(110, 220);
+    click("Assign material…");
+    expect(setMaterialPicker).toHaveBeenLastCalledWith({ screenX: 100, screenY: 200, worldPoint: [1, 2] });
+    expect(st().selectedRegionKey).toBe("r1");
+  });
+
+  it("leaves out Assign material outside the model", () => {
+    const { open, menu } = setup({ findObjectsAt: under(), findRegionAtPoint: vi.fn(() => null) });
+    open();
+    expect(labels(menu())).toEqual(["Lock all", "Unlock all"]);
   });
 
   it("does nothing without a canvas", () => {
-    const { params, open, menu } = setup({
-      canvasRef: { current: null },
-      findNearPointUnified: pointHit({ kind: "external", index: 0 }),
-    });
+    const { params, open, menu } = setup({ canvasRef: { current: null }, findObjectsAt: under({ object: EXT, point: 1 }) });
     open();
     expect(menu()).toBeNull();
-    expect(params.findNearPointUnified).not.toHaveBeenCalled();
+    expect(params.findObjectsAt).not.toHaveBeenCalled();
   });
 });
 
@@ -260,7 +276,7 @@ describe("useContextMenu — result mode", () => {
     open(...at(0.6, 0.6));
     expect(params.setSelectedAnnotations).toHaveBeenCalledWith(["b"]);
     expect(menu()).toBeNull();
-    expect(params.findNearPointUnified).not.toHaveBeenCalled();
+    expect(params.findObjectsAt).not.toHaveBeenCalled();
   });
 
   it("offers alignment for a multi-selection and runs the chosen alignment", () => {
@@ -292,61 +308,80 @@ describe("useContextMenu — result mode", () => {
 });
 
 describe("useContextMenu — custom search planes", () => {
-  const LINE = { id: "p1", points: [[5, 8], [15, 2], [25, 4]] as [number, number][] };
-
-  it("offers to delete a vertex (a surface keeps two) or the whole surface", () => {
-    const { params, open, menu, click } = setup({
-      customSearchPlanes: [LINE],
-      findNearPointUnified: pointHit({ kind: "customVertex", planeId: "p1", pointIndex: 1 }),
-    });
-    open();
-    expect(params.setSelectedCustomPlane).toHaveBeenCalledWith("p1");
-    expect(menu()!.items.map((i) => i.label)).toEqual(["Delete point", "Delete surface"]);
-    expect(menu()!.items[0]).toMatchObject({ danger: true, disabled: false });
-    click("Delete point");
-    expect(params.removeCustomPlanePoint).toHaveBeenCalledWith("p1", 1);
-    expect(menu()).toBeNull();
-    open();
-    click("Delete surface");
-    expect(params.removeCustomSearchPlane).toHaveBeenCalledWith("p1");
-    expect(menu()).toBeNull();
-
-    const two = setup({
-      customSearchPlanes: [{ id: "p1", points: [[5, 8], [25, 4]] }],
-      findNearPointUnified: pointHit({ kind: "customVertex", planeId: "p1", pointIndex: 0 }),
-    });
-    two.open();
-    expect(two.menu()!.items[0]).toMatchObject({ label: "Delete point", disabled: true });
-    two.click("Delete point");
-    expect(two.params.removeCustomPlanePoint).not.toHaveBeenCalled();
+  const LINE = { id: "p1", cx: 0, cy: 0, radius: 0, points: [[5, 8], [15, 2], [25, 4]] as [number, number][] };
+  const CIRCLE = { id: "c1", cx: 15, cy: 14, radius: 10 };
+  const P1: CanvasObjectRef = { type: "customPlane", id: "p1" };
+  const C1: CanvasObjectRef = { type: "customPlane", id: "c1" };
+  const planes = () => useAppStore.getState().customSearchPlanes;
+  beforeEach(() => {
+    useAppStore.getState().newProject();
+    useAppStore.setState({ customSearchPlanes: [LINE, CIRCLE] });
   });
 
-  it("offers to delete a circle from its centre or its rim", () => {
-    for (const handle of ["centre", "rim"] as const) {
-      const { params, open, menu, click } = setup({
-        customSearchPlanes: [{ id: "c1" }],
-        findNearPointUnified: pointHit({ kind: "customCircle", planeId: "c1", handle }),
-      });
-      open();
-      expect(params.setSelectedCustomPlane).toHaveBeenCalledWith("c1");
-      expect(menu()!.items).toEqual([expect.objectContaining({ label: "Delete circle", danger: true })]);
-      click("Delete circle");
-      expect(params.removeCustomSearchPlane).toHaveBeenCalledWith("c1");
-      expect(menu()).toBeNull();
-    }
+  it("offers to delete a vertex (a surface keeps two) or the whole surface", () => {
+    const { open, menu, click } = setup({ findObjectsAt: under({ object: P1, point: 1 }) });
+    open();
+    expect(labels(menu())).toEqual(["Delete point", "Delete surface", "Lock"]);
+    click("Delete point");
+    expect(planes()[0].points).toEqual([
+      [5, 8],
+      [25, 4],
+    ]);
+    open();
+    expect(item(menu(), "Delete point").disabled).toBe(true);
+    click("Delete surface");
+    expect(planes().map((p) => p.id)).toEqual(["c1"]);
+  });
+
+  it("offers to delete a circle from its centre or its rim, not when it is locked", () => {
+    const rim = setup({ findObjectsAt: under({ object: C1, point: "rim" }) });
+    rim.open();
+    expect(labels(rim.menu())).toEqual(["Delete circle", "Lock"]);
+    expect(useAppStore.getState().canvasSelection).toEqual({ object: C1, point: "rim" });
+    act(() => useAppStore.getState().setObjectLocked(C1, true));
+    const centre = setup({ findObjectsAt: under({ object: C1, point: "centre" }) });
+    centre.open();
+    expect(item(centre.menu(), "Delete circle").disabled).toBe(true);
+    centre.click("Delete circle");
+    expect(planes().map((p) => p.id)).toEqual(["p1", "c1"]);
   });
 
   it("adds a point on a surface segment at the snapped position", () => {
-    const { params, open, menu, click } = setup({
-      customSearchPlanes: [LINE],
-      findNearEdgeUnified: edgeHit({ kind: "customPlane", planeId: "p1", insertIndex: 2, snapPoint: [20, 3] }),
+    const { open, click } = setup({
+      findObjectsAt: under({ object: P1, point: null }),
+      edgeAt: vi.fn(() => ({ kind: "customPlane" as const, planeId: "p1", insertIndex: 2, snapPoint: [20, 3] as [number, number] })),
     });
     open();
-    expect(params.setSelectedCustomPlane).toHaveBeenCalledWith("p1");
-    expect(menu()!.items.map((i) => i.label)).toEqual(["Add point"]);
     click("Add point");
-    expect(params.insertCustomPlanePointAt).toHaveBeenCalledWith("p1", 2, [20, 3]);
-    expect(menu()).toBeNull();
+    expect(planes()[0].points![2]).toEqual([20, 3]);
+    expect(useAppStore.getState().canvasSelection).toEqual({ object: P1, point: 2 });
+  });
+
+  it("offers to add a custom search plane as a reference line in the edit view", () => {
+    const addReferenceFromCustomPlane = vi.fn();
+    const vertex = setup({ addReferenceFromCustomPlane, findObjectsAt: under({ object: P1, point: 1 }) });
+    vertex.open();
+    expect(labels(vertex.menu())).toEqual(["Delete point", "Delete surface", "Add as reference line", "Lock"]);
+    vertex.click("Add as reference line");
+    expect(addReferenceFromCustomPlane).toHaveBeenCalledWith("p1");
+    expect(vertex.menu()).toBeNull();
+
+    const circle = setup({ addReferenceFromCustomPlane, findObjectsAt: under({ object: C1, point: "rim" }) });
+    circle.open();
+    expect(labels(circle.menu())).toEqual(["Delete circle", "Add as reference line", "Lock"]);
+
+    const edge = setup({
+      addReferenceFromCustomPlane,
+      findObjectsAt: under({ object: P1, point: null }),
+      edgeAt: vi.fn(() => ({ kind: "customPlane" as const, planeId: "p1", insertIndex: 2, snapPoint: [20, 3] as [number, number] })),
+    });
+    edge.open();
+    expect(labels(edge.menu())).toEqual(["Add point", "Delete surface", "Add as reference line", "Lock"]);
+
+    // Without the action (the result canvas) the item is not offered.
+    const none = setup({ findObjectsAt: under({ object: P1, point: 1 }) });
+    none.open();
+    expect(labels(none.menu())).toEqual(["Delete point", "Delete surface", "Lock"]);
   });
 });
 
@@ -435,44 +470,5 @@ describe("useContextMenu — reference annotations", () => {
     expect(menu()!.items.map((i) => i.label)).toEqual(["Delete reference circle"]);
     click("Delete reference circle");
     expect(refs().map((a) => a.id)).toEqual(["l"]);
-  });
-
-  it("offers to add a custom search plane as a reference line in the edit view", () => {
-    const LINE_PLANE = { id: "p1", points: [[5, 8], [15, 2], [25, 4]] as [number, number][] };
-    const addReferenceFromCustomPlane = vi.fn();
-    const vertex = setup({
-      customSearchPlanes: [LINE_PLANE],
-      addReferenceFromCustomPlane,
-      findNearPointUnified: pointHit({ kind: "customVertex", planeId: "p1", pointIndex: 1 }),
-    });
-    vertex.open();
-    expect(vertex.menu()!.items.map((i) => i.label)).toEqual(["Delete point", "Delete surface", "Add as reference line"]);
-    vertex.click("Add as reference line");
-    expect(addReferenceFromCustomPlane).toHaveBeenCalledWith("p1");
-    expect(vertex.menu()).toBeNull();
-
-    const circle = setup({
-      customSearchPlanes: [{ id: "c1" }],
-      addReferenceFromCustomPlane,
-      findNearPointUnified: pointHit({ kind: "customCircle", planeId: "c1", handle: "rim" }),
-    });
-    circle.open();
-    expect(circle.menu()!.items.map((i) => i.label)).toEqual(["Delete circle", "Add as reference line"]);
-
-    const edge = setup({
-      customSearchPlanes: [LINE_PLANE],
-      addReferenceFromCustomPlane,
-      findNearEdgeUnified: edgeHit({ kind: "customPlane", planeId: "p1", insertIndex: 2, snapPoint: [20, 3] }),
-    });
-    edge.open();
-    expect(edge.menu()!.items.map((i) => i.label)).toEqual(["Add point", "Add as reference line"]);
-
-    // Without the action (the result canvas) the item is not offered.
-    const none = setup({
-      customSearchPlanes: [LINE_PLANE],
-      findNearPointUnified: pointHit({ kind: "customVertex", planeId: "p1", pointIndex: 1 }),
-    });
-    none.open();
-    expect(none.menu()!.items.map((i) => i.label)).toEqual(["Delete point", "Delete surface"]);
   });
 });

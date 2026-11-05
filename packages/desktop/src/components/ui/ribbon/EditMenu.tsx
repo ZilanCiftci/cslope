@@ -28,6 +28,59 @@ import {
   RibbonStack,
 } from "./RibbonParts";
 import { LARGE_ICON, SMALL_ICON } from "./icon-props";
+import type { CanvasObjectRef, CanvasObjectType } from "../../../store/types";
+
+/**
+ * A window of the Model tab is a table of objects on the canvas: opening it
+ * selects one of them on the canvas, unless one of its kind is selected
+ * already (the exterior; the boundary, water line or plane the window
+ * shows; else the first). It changes nothing about what can be edited.
+ */
+function selectForWindow(type: CanvasObjectType): void {
+  const st = useAppStore.getState();
+  const sel = st.canvasSelection;
+  const kinds: CanvasObjectType[] = type === "reinforcement" ? ["reinforcement", "pile"] : [type];
+  if (sel && kinds.includes(sel.object.type)) return;
+  let object: CanvasObjectRef | null = null;
+  switch (type) {
+    case "exterior":
+      object = st.coordinates.length > 0 ? { type } : null;
+      break;
+    case "searchLimits":
+      object = st.analysisLimits.enabled ? { type } : null;
+      break;
+    case "boundary": {
+      const id = st.materialBoundaries.find((b) => b.id === st.selectedMaterialBoundaryId)?.id ?? st.materialBoundaries[0]?.id;
+      object = id ? { type, id } : null;
+      break;
+    }
+    case "waterLine": {
+      const lines = st.piezometricLine.lines;
+      const id = lines.find((l) => l.id === st.piezometricLine.activeLineId)?.id ?? lines[0]?.id;
+      object = id ? { type, id } : null;
+      break;
+    }
+    case "udl":
+      object = st.udls[0] ? { type, id: st.udls[0].id } : null;
+      break;
+    case "lineLoad":
+      object = st.lineLoads[0] ? { type, id: st.lineLoads[0].id } : null;
+      break;
+    case "reinforcement":
+      object = st.reinforcements[0]
+        ? { type, id: st.reinforcements[0].id }
+        : st.piles[0]
+          ? { type: "pile", id: st.piles[0].id }
+          : null;
+      break;
+    case "customPlane":
+      object = st.customSearchPlanes[0] ? { type, id: st.customSearchPlanes[0].id } : null;
+      break;
+    default:
+      break;
+  }
+  if (object) st.selectCanvasObject(object);
+}
 
 interface Props {
   isOpen: boolean;
@@ -36,8 +89,6 @@ interface Props {
 }
 
 export function EditMenu({ isOpen, onActivate, panelHost }: Props) {
-  const setActiveSection = useAppStore((s) => s.setActiveSection);
-
   const canUndo = useStore(
     useAppStore.temporal,
     (s) => s.pastStates.length > 0,
@@ -119,7 +170,7 @@ export function EditMenu({ isOpen, onActivate, panelHost }: Props) {
                 icon={<ExteriorIcon {...LARGE_ICON} />}
                 label="Exterior"
                 onClick={() => {
-                  setActiveSection("Exterior Boundary");
+                  selectForWindow("exterior");
                   window.cslope.openGeometryDialog();
                 }}
               />
@@ -128,7 +179,7 @@ export function EditMenu({ isOpen, onActivate, panelHost }: Props) {
                   icon={<InteriorIcon {...SMALL_ICON} />}
                   label="Interior"
                   onClick={() => {
-                    setActiveSection("Interior Boundaries");
+                    selectForWindow("boundary");
                     window.cslope.openInteriorBoundariesDialog();
                   }}
                 />
@@ -148,7 +199,6 @@ export function EditMenu({ isOpen, onActivate, panelHost }: Props) {
                   icon={<AssignIcon {...SMALL_ICON} />}
                   label="Assign"
                   onClick={() => {
-                    setActiveSection("Material Assignment");
                     window.cslope.openMaterialAssignmentDialog();
                   }}
                 />
@@ -163,7 +213,7 @@ export function EditMenu({ isOpen, onActivate, panelHost }: Props) {
                   icon={<UdlIcon {...SMALL_ICON} />}
                   label="UDL"
                   onClick={() => {
-                    setActiveSection("Loads");
+                    selectForWindow("udl");
                     window.cslope.openUdlDialog();
                   }}
                 />
@@ -171,7 +221,7 @@ export function EditMenu({ isOpen, onActivate, panelHost }: Props) {
                   icon={<LineLoadIcon {...SMALL_ICON} />}
                   label="Line loads"
                   onClick={() => {
-                    setActiveSection("Loads");
+                    selectForWindow("lineLoad");
                     window.cslope.openLineLoadsDialog();
                   }}
                 />
@@ -179,7 +229,7 @@ export function EditMenu({ isOpen, onActivate, panelHost }: Props) {
                   icon={<ReinforcementIcon {...SMALL_ICON} />}
                   label="Reinforcement"
                   onClick={() => {
-                    setActiveSection("Loads");
+                    selectForWindow("reinforcement");
                     window.cslope.openReinforcementDialog();
                   }}
                 />
@@ -193,7 +243,7 @@ export function EditMenu({ isOpen, onActivate, panelHost }: Props) {
                 icon={<PiezoIcon {...LARGE_ICON} />}
                 label="Piezometric lines"
                 onClick={() => {
-                  setActiveSection("Piezometric Lines");
+                  selectForWindow("waterLine");
                   window.cslope.openPiezoDialog();
                 }}
               />
@@ -202,7 +252,6 @@ export function EditMenu({ isOpen, onActivate, panelHost }: Props) {
                   icon={<ParametersIcon {...SMALL_ICON} />}
                   label="Parameters"
                   onClick={() => {
-                    setActiveSection("Parameters");
                     window.cslope.openParametersDialog();
                   }}
                 />
@@ -216,7 +265,6 @@ export function EditMenu({ isOpen, onActivate, panelHost }: Props) {
                 icon={<OptionsIcon {...LARGE_ICON} />}
                 label="Options"
                 onClick={() => {
-                  setActiveSection("Options");
                   window.cslope.openOptionsDialog();
                 }}
               />
@@ -225,7 +273,7 @@ export function EditMenu({ isOpen, onActivate, panelHost }: Props) {
                   icon={<SearchLimitsIcon {...SMALL_ICON} />}
                   label="Search limits"
                   onClick={() => {
-                    setActiveSection("Search Limits");
+                    selectForWindow("searchLimits");
                     window.cslope.openSearchLimitsDialog();
                   }}
                 />
@@ -233,7 +281,7 @@ export function EditMenu({ isOpen, onActivate, panelHost }: Props) {
                   icon={<CustomPlanesIcon {...SMALL_ICON} />}
                   label="Custom planes"
                   onClick={() => {
-                    setActiveSection("Custom Search Planes");
+                    selectForWindow("customPlane");
                     window.cslope.openCustomSearchPlanesDialog();
                   }}
                 />

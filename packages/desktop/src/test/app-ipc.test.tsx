@@ -241,11 +241,20 @@ describe("main window IPC", () => {
     expect((lastSent("sendViewSettingsChanged").resultViewSettings as { showSlices: boolean }).showSlices).toBe(false);
   });
 
-  it("tracks whether the Interior Boundaries window is open", () => {
-    emit("onInteriorBoundariesDialogOpenChanged", true);
-    expect(useAppStore.getState().interiorBoundariesDialogOpen).toBe(true);
-    emit("onInteriorBoundariesDialogOpenChanged", false);
-    expect(useAppStore.getState().interiorBoundariesDialogOpen).toBe(false);
+  it("sends the canvas selection to the windows and takes the one a window picks", () => {
+    act(() => useAppStore.getState().selectCanvasObject({ type: "exterior" }, 1));
+    expect(lastSent("sendSelectionChanged")).toEqual({ object: { type: "exterior" }, point: 1 });
+    // A row picked in a window selects that point here.
+    emit("onSelectionChanged", { object: { type: "exterior" }, point: 2 });
+    expect(useAppStore.getState().canvasSelection).toEqual({ object: { type: "exterior" }, point: 2 });
+    expect(useAppStore.getState().selectedPointIndex).toBe(2);
+    // A window that opens asks for it.
+    const before = sentCount("sendSelectionChanged");
+    emit("onSelectionRequestState");
+    expect(sentCount("sendSelectionChanged")).toBe(before + 1);
+    // Something that is no selection clears it.
+    emit("onSelectionChanged", { object: { type: "nonsense" } });
+    expect(useAppStore.getState().canvasSelection).toBeNull();
   });
 });
 
@@ -291,6 +300,41 @@ describe("dialog windows", () => {
     expect(calls.some((c) => /^request[A-Za-z]+State$/.test(c))).toBe(true);
     // The main-window sync handlers are not installed in a dialog window.
     expect(handlers.get("onMaterialsRequestState") ?? []).toHaveLength(0);
+  });
+
+  it("shows the canvas selection as the selected row, and sends a row the user picks", () => {
+    window.location.hash = "#geometry-dialog";
+    const { container } = render(<App />);
+    expect(calls).toContain("requestSelectionState");
+    // The main window's selection: the row of point 3 is the selected one.
+    emit("onSelectionChanged", { object: { type: "exterior" }, point: 2 });
+    const rows = () => Array.from(container.querySelectorAll("tbody tr"));
+    expect(rows()[2].getAttribute("aria-selected")).toBe("true");
+    // Told, not picked: nothing goes back.
+    expect(sentCount("sendSelectionChanged")).toBe(0);
+    // A row the user picks goes to the main window.
+    act(() => (rows()[0] as HTMLElement).click());
+    expect(lastSent("sendSelectionChanged")).toEqual({ object: { type: "exterior" }, point: 0 });
+    // An object this window's copy of the model lacks stays selected (the
+    // main window has it).
+    emit("onSelectionChanged", { object: { type: "waterLine", id: "only-in-main" }, point: 1 });
+    expect(useAppStore.getState().canvasSelection).toEqual({ object: { type: "waterLine", id: "only-in-main" }, point: 1 });
+  });
+
+  it("leaves the selection as it is when a window closes", () => {
+    window.location.hash = "#piezo-dialog";
+    const { unmount } = render(<App />);
+    emit("onSelectionChanged", { object: { type: "exterior" }, point: 1 });
+    unmount();
+    // Closing sends nothing: the main window keeps its selection.
+    expect(sentCount("sendSelectionChanged")).toBe(0);
+    // The main window, for its part, has no window-closed handler that would clear it.
+    window.location.hash = "";
+    handlers.clear();
+    render(<App />);
+    act(() => useAppStore.getState().selectCanvasObject({ type: "exterior" }, 1));
+    expect([...handlers.keys()].filter((k) => /Closed|DialogOpen/.test(k))).toEqual([]);
+    expect(useAppStore.getState().canvasSelection).toEqual({ object: { type: "exterior" }, point: 1 });
   });
 
   it("closes on Escape, also from a field, after leaving the field", () => {

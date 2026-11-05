@@ -119,6 +119,7 @@ function SpreadsheetRow<T>({
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
       className={clickable ? "cursor-pointer" : undefined}
+      aria-selected={clickable ? selected : undefined}
       style={{
         background: bg,
         transition: "background 120ms ease",

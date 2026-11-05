@@ -13,7 +13,7 @@ import {
   DEFAULT_RESULT_VIEW_SETTINGS,
 } from "../../store/defaults";
 import { surfaceYAtX } from "../view/surface";
-import { POINT_COLOR, POINT_COLOR_HOVER, POINT_COLOR_SELECTED, POINT_RADIUS, RULER_SIZE_PX } from "./constants";
+import { POINT_COLOR, POINT_COLOR_HOVER, POINT_RADIUS, RULER_SIZE_PX } from "./constants";
 import {
   ENTRY_DOT_COLOR,
   EXIT_DOT_COLOR,
@@ -76,7 +76,6 @@ function baseParams(over: Partial<DrawCanvasParams> = {}): DrawCanvasParams {
     materialBoundaries: [],
     regionMaterials: [],
     selectedRegionKey: null,
-    editingAssignment: false,
     selectedAnnotationIds: [],
     selectedResultObject: null,
     projectInfo: DEFAULT_PROJECT_INFO,
@@ -90,18 +89,16 @@ function baseParams(over: Partial<DrawCanvasParams> = {}): DrawCanvasParams {
     viewScale: SCALE,
     mouseWorld: null,
     hoverHit: null,
-    selectedPointIndex: null,
-    selectedMaterialBoundaryId: null,
-    interiorBoundariesDialogOpen: false,
     worldToCanvas,
     canvasToWorld,
     surfaceYAtX: (x) => surfaceYAtX(coordinates, x),
-    editingExterior: false,
-    editingBoundaries: false,
-    editingPiezo: false,
     ...over,
   };
 }
+
+/** The exterior boundary selected on the canvas (its handles and labels drawn), or one of its points. */
+const EXTERIOR: DrawCanvasParams["selection"] = { object: { type: "exterior" }, point: null };
+const exteriorPoint = (i: number): DrawCanvasParams["selection"] => ({ object: { type: "exterior" }, point: i });
 
 function draw(over: Partial<DrawCanvasParams> = {}) {
   const rec = createRecordingContext(W, H);
@@ -185,7 +182,7 @@ function rvs(over: Partial<ResultViewSettings> = {}): ResultViewSettings {
 
 describe("drawCanvas — edit mode", () => {
   it("keeps save/restore balanced", () => {
-    const rec = draw({ editingExterior: true });
+    const rec = draw({ selection: EXTERIOR });
     expect(rec.depth()).toBe(0);
   });
 
@@ -238,7 +235,7 @@ describe("drawCanvas — edit mode", () => {
     expect(inner[0].fillRule).toBe("nonzero");
   });
 
-  it("outlines the selected region only while assigning materials", () => {
+  it("outlines the region whose material is being chosen (the picker is open)", () => {
     const lens = {
       id: "lens",
       coordinates: [
@@ -251,13 +248,16 @@ describe("drawCanvas — edit mode", () => {
     };
     const regions = computeRegions(COORDS, [lens], [], DEFAULT_MATERIAL.id);
     const ring = regions.find((r) => r.holes?.length)!;
-    const selected = draw({ materialBoundaries: [lens], selectedRegionKey: ring.regionKey, editingAssignment: true });
+    const selected = draw({ materialBoundaries: [lens], selectedRegionKey: ring.regionKey });
     const outline = selected.strokes().filter((p) => p.state.lineWidth === 6);
     expect(outline).toHaveLength(1);
     // Clipped to the region (even-odd so the hole stays clear).
     expect(selected.paths.some((p) => p.kind === "clip" && p.fillRule === "evenodd")).toBe(true);
-    const idle = draw({ materialBoundaries: [lens], selectedRegionKey: ring.regionKey, editingAssignment: false });
+    const idle = draw({ materialBoundaries: [lens], selectedRegionKey: null });
     expect(idle.strokes().filter((p) => p.state.lineWidth === 6)).toHaveLength(0);
+    // Not in the result.
+    const result = draw({ materialBoundaries: [lens], selectedRegionKey: ring.regionKey, mode: "result" });
+    expect(result.strokes().filter((p) => p.state.lineWidth === 6)).toHaveLength(0);
   });
 
   it("hatches and labels high-strength materials", () => {
@@ -277,7 +277,7 @@ describe("drawCanvas — edit mode", () => {
   });
 
   it("draws vertices large with coordinate labels only while editing the exterior", () => {
-    const editing = draw({ editingExterior: true });
+    const editing = draw({ selection: EXTERIOR });
     const dots = editing.callsOf("arc");
     expect(dots).toHaveLength(COORDS.length);
     expect(dots.every((c) => c.args[2] === POINT_RADIUS)).toBe(true);
@@ -311,7 +311,7 @@ describe("drawCanvas — edit mode", () => {
       canvasToWorld(W - 4, 300, W, H),
       canvasToWorld(W - 4, H - 4, W, H),
     ];
-    const rec = draw({ editingExterior: true, coordinates });
+    const rec = draw({ selection: EXTERIOR, coordinates });
     const labels = rec.callsOf("fillText").filter((c) => String(c.args[0]).startsWith("("));
     expect(labels).toHaveLength(4);
     for (const c of labels) {
@@ -334,7 +334,7 @@ describe("drawCanvas — edit mode", () => {
     // Steps 0.2 m (4 px) apart along the crest: the labels can't all fit.
     const crest = Array.from({ length: 14 }, (_, k) => [10 + 0.2 * k, 10] as [number, number]);
     const coordinates: [number, number][] = [[0, 0], [0, 10], ...crest, [20, 5], [30, 5], [30, 0]];
-    const rec = draw({ editingExterior: true, coordinates });
+    const rec = draw({ selection: EXTERIOR, coordinates });
     const boxes = labelBoxes(rec);
     expect(boxes.length).toBeGreaterThan(5);
     expect(boxes.length).toBeLessThan(coordinates.length);
@@ -350,16 +350,16 @@ describe("drawCanvas — edit mode", () => {
     }
     // A hovered point always shows its label.
     for (let i = 2; i <= 6; i++) {
-      const hovered = draw({ editingExterior: true, coordinates, hoverHit: { kind: "external", index: i } });
+      const hovered = draw({ selection: EXTERIOR, coordinates, hoverHit: { kind: "external", index: i } });
       expect(hovered.textStrings()).toContain(`(${coordinates[i][0].toFixed(1)}, ${coordinates[i][1].toFixed(1)})`);
-      const selected = draw({ editingExterior: true, coordinates, selectedPointIndex: i });
+      const selected = draw({ selection: exteriorPoint(i), coordinates });
       expect(selected.textStrings()).toContain(`(${coordinates[i][0].toFixed(1)}, ${coordinates[i][1].toFixed(1)})`);
     }
   });
 
   it("keeps coordinate labels off the ground line, its entry/exit dots and interior boundaries", () => {
     const rec = draw({
-      editingExterior: true,
+      selection: EXTERIOR,
       analysisLimits: { enabled: true, entryLeftX: 1, entryRightX: 9, exitLeftX: 21, exitRightX: 29 },
       materialBoundaries: [{ id: "b", coordinates: [[0, 6], [16, 6], [30, 3]] }],
     });
@@ -384,7 +384,7 @@ describe("drawCanvas — edit mode", () => {
 
   it("draws vertex dots over the search-limit markers, the triangle moved off the dot", () => {
     const rec = draw({
-      editingExterior: true,
+      selection: EXTERIOR,
       analysisLimits: { enabled: true, entryLeftX: 0, entryRightX: 8, exitLeftX: 21, exitRightX: 30 },
     });
     const [vx, vy] = toC(0, 10);
@@ -402,15 +402,15 @@ describe("drawCanvas — edit mode", () => {
     const zoom = 200;
     const toZ = (wx: number, wy: number, w: number, h: number): [number, number] => [w / 2 + (wx - 20) * zoom, h / 2 - (wy - 5) * zoom];
     const fromZ = (cx: number, cy: number, w: number, h: number): [number, number] => [(cx - w / 2) / zoom + 20, -(cy - h / 2) / zoom + 5];
-    const rec = draw({ editingExterior: true, worldToCanvas: toZ, canvasToWorld: fromZ, viewScale: zoom });
+    const rec = draw({ selection: EXTERIOR, worldToCanvas: toZ, canvasToWorld: fromZ, viewScale: zoom });
     expect(rec.textStrings().filter((t) => t.startsWith("("))).toEqual(["(20.0, 5.0)"]);
   });
 
   it("lets a hovered duplicate label show without taking space from the others", () => {
     // Two coincident vertices: one label; hovering the second doesn't move the rest.
     const coordinates: [number, number][] = [[0, 0], [0, 10], [10, 10], [10, 10], [20, 5], [30, 5], [30, 0]];
-    const plain = draw({ editingExterior: true, coordinates });
-    const hovered = draw({ editingExterior: true, coordinates, hoverHit: { kind: "external", index: 3 } });
+    const plain = draw({ selection: EXTERIOR, coordinates });
+    const hovered = draw({ selection: EXTERIOR, coordinates, hoverHit: { kind: "external", index: 3 } });
     const pos = (rec: ReturnType<typeof draw>) =>
       rec.texts.filter((t) => t.text.startsWith("(") && t.text !== "(10.0, 10.0)").map((t) => [t.text, t.x, t.y]);
     expect(pos(hovered)).toEqual(pos(plain));
@@ -434,7 +434,7 @@ describe("drawCanvas — edit mode", () => {
 
   it("keeps coordinate labels off search-limit markers, loads and water-table symbols", () => {
     const rec = draw({
-      editingExterior: true,
+      selection: EXTERIOR,
       analysisLimits: { enabled: true, entryLeftX: 10, entryRightX: 8, exitLeftX: 20, exitRightX: 28 },
       lineLoads: [{ id: "l1", x: 30, magnitude: 50 }],
       piezometricLine: {
@@ -497,13 +497,13 @@ describe("drawCanvas — edit mode", () => {
   });
 
   it("puts each coordinate label on a near-opaque plate of the background colour", () => {
-    const rec = draw({ editingExterior: true });
+    const rec = draw({ selection: EXTERIOR });
     const plates = rec.callsOf("fillRect").filter((c) => c.state.globalAlpha === POINT_LABEL_PLATE_ALPHA);
     expect(plates).toHaveLength(COORDS.length);
     expect(POINT_LABEL_PLATE_ALPHA).toBeGreaterThanOrEqual(0.9);
   });
 
-  it("clips interior boundaries to the model; outside parts only while editing them", () => {
+  it("clips interior boundaries to the model; outside parts only of the selected one", () => {
     // Runs from x = -5 to 35, past the model on both sides.
     const boundary = { id: "b1", coordinates: [[-5, 4], [35, 4]] as [number, number][] };
     const strokesOf = (rec: ReturnType<typeof draw>) =>
@@ -518,7 +518,7 @@ describe("drawCanvas — edit mode", () => {
     // Its end points off the model are hidden when not editing boundaries.
     expect(idle.callsOf("arc").filter((c) => c.args[0] === toC(-5, 4)[0])).toHaveLength(0);
 
-    const editing = draw({ materialBoundaries: [boundary], editingBoundaries: true });
+    const editing = draw({ materialBoundaries: [boundary], selection: { object: { type: "boundary", id: "b1" }, point: null } });
     const both = strokesOf(editing);
     expect(both).toHaveLength(2);
     expect(both[1].state.lineDash.length).toBeGreaterThan(0);
@@ -604,17 +604,74 @@ describe("drawCanvas — edit mode", () => {
     expect(marker(draw({ analysisLimits, customPlanesOnly: true, customSearchPlanes: circle }))).toBe(false);
   });
 
-  it("colours the selected and hovered vertices", () => {
+  it("colours the selection's handles, rings its selected point and colours the hovered one", () => {
     const rec = draw({
-      editingExterior: true,
-      selectedPointIndex: 2,
+      selection: exteriorPoint(2),
       hoverHit: { kind: "external", index: 3 },
     });
     const dotAt = (i: number) =>
       rec.fills().find((p) => p.segments[0].op === "arc" && close(pathPoints(p)[0], toC(...COORDS[i])))!;
-    expect(dotAt(2).state.fillStyle).toBe(POINT_COLOR_SELECTED);
+    expect(dotAt(2).state.fillStyle).toBe(POINT_COLOR);
     expect(dotAt(3).state.fillStyle).toBe(POINT_COLOR_HOVER);
     expect(dotAt(0).state.fillStyle).toBe(POINT_COLOR);
+    // A ring around the selected point only.
+    const rings = rec.strokes().filter((p) => p.segments.some((s) => s.op === "arc" && s.r === POINT_RADIUS + 3.5));
+    expect(rings).toHaveLength(1);
+    expect(close(pathPoints(rings[0])[0], toC(...COORDS[2]))).toBe(true);
+    // The exterior's outline in the selection colour.
+    expect(rec.strokes(POINT_COLOR).some((p) => hasPoints(p, COORDS.map(([x, y]) => toC(x, y))))).toBe(true);
+    // Unselected, its vertices are small and grey.
+    const idle = draw();
+    expect(idle.callsOf("arc").filter((c) => c.args[2] === POINT_RADIUS)).toHaveLength(0);
+  });
+
+  it("draws a locked selection's handles grey with a padlock, and no hover on them", () => {
+    const rec = draw({
+      selection: exteriorPoint(2),
+      locks: { exterior: true },
+      hoverHit: null,
+    });
+    const dotAt = (i: number) =>
+      rec.fills().find((p) => p.segments[0].op === "arc" && close(pathPoints(p)[0], toC(...COORDS[i])))!;
+    expect(dotAt(0).state.fillStyle).toBe("#9aa3ad");
+    expect(dotAt(2).state.fillStyle).toBe("#9aa3ad");
+    // The padlock's body, beside the selected point.
+    const body = rec.callsOf("fillRect").find((c) => c.args[2] === 8 && c.args[3] === 5.5);
+    expect(body).toBeDefined();
+    const [px, py] = toC(...COORDS[2]);
+    expect(body!.args[0]).toBeGreaterThan(px);
+    expect(body!.args[1]).toBeLessThan(py);
+    // Not locked: no padlock.
+    expect(draw({ selection: exteriorPoint(2) }).callsOf("fillRect").some((c) => c.args[2] === 8 && c.args[3] === 5.5)).toBe(false);
+  });
+
+  it("draws a faint wide halo along the object under the pointer", () => {
+    const boundary = { id: "b1", coordinates: [[0, 4], [30, 3]] as [number, number][] };
+    const rec = draw({ materialBoundaries: [boundary], hoverObject: { object: { type: "boundary", id: "b1" }, point: null } });
+    const halo = rec.strokes(POINT_COLOR).find((p) => p.state.lineWidth === 8);
+    expect(halo).toBeDefined();
+    expect(halo!.state.globalAlpha).toBeLessThan(0.5);
+    expect(hasPoints(halo!, [toC(0, 4), toC(30, 3)])).toBe(true);
+    expect(draw({ materialBoundaries: [boundary] }).strokes(POINT_COLOR).some((p) => p.state.lineWidth === 8)).toBe(false);
+  });
+
+  it("draws the handles of a selected load, the search limits and an element", () => {
+    const handles = (rec: ReturnType<typeof draw>) =>
+      rec.fills(POINT_COLOR).filter((p) => p.segments[0].op === "arc").map((p) => pathPoints(p)[0]);
+    const udl = draw({ udls: [{ id: "u1", magnitude: 15, x1: 2, x2: 8 }], selection: { object: { type: "udl", id: "u1" }, point: "x2" } });
+    expect(handles(udl).some((c) => close(c, toC(2, 10)))).toBe(true);
+    expect(handles(udl).some((c) => close(c, toC(8, 10)))).toBe(true);
+    const limits = draw({
+      analysisLimits: { enabled: true, entryLeftX: 1, entryRightX: 9, exitLeftX: 21, exitRightX: 29 },
+      selection: { object: { type: "searchLimits" }, point: null },
+    });
+    expect(handles(limits)).toHaveLength(4);
+    const el = { ...newReinforcement("r1", "nail", COORDS, "ltr"), x1: 22, y1: 4, x2: 12, y2: 1 };
+    const element = draw({ reinforcements: [el], selection: { object: { type: "reinforcement", id: "r1" }, point: null } });
+    expect(handles(element).some((c) => close(c, toC(22, 4)))).toBe(true);
+    expect(handles(element).some((c) => close(c, toC(12, 1)))).toBe(true);
+    // Unselected: none of these handles.
+    expect(handles(draw({ udls: [{ id: "u1", magnitude: 15, x1: 2, x2: 8 }] }))).toHaveLength(0);
   });
 
   it("draws grid lines at round world steps and the axes through the origin", () => {
@@ -633,7 +690,7 @@ describe("drawCanvas — edit mode", () => {
     expect(axis).toBeDefined();
   });
 
-  it("highlights the selected interior boundary while its dialog is open", () => {
+  it("highlights the selected interior boundary", () => {
     const boundary = {
       id: "b1",
       coordinates: [
@@ -643,18 +700,16 @@ describe("drawCanvas — edit mode", () => {
     };
     const rec = draw({
       materialBoundaries: [boundary],
-      interiorBoundariesDialogOpen: true,
-      selectedMaterialBoundaryId: "b1",
-      editingBoundaries: true,
+      selection: { object: { type: "boundary", id: "b1" }, point: null },
     });
-    const line = rec.strokes("#f59e0b").find((p) => hasPoints(p, [toC(0, 4), toC(30, 3)]));
+    const line = rec.strokes(POINT_COLOR).find((p) => hasPoints(p, [toC(0, 4), toC(30, 3)]));
     expect(line?.state.lineWidth).toBe(2);
     // Boundary vertices are drawn (selected colour, slightly smaller than exterior ones).
     const dots = rec.callsOf("arc").filter((c) => c.args[2] === POINT_RADIUS - 1);
     expect(dots).toHaveLength(2);
 
     const unselected = draw({ materialBoundaries: [boundary] });
-    expect(unselected.strokes("#f59e0b")).toHaveLength(0);
+    expect(unselected.strokes(POINT_COLOR)).toHaveLength(0);
   });
 
   it("draws a UDL with arrows ending on the ground and a label above", () => {
@@ -845,9 +900,9 @@ describe("drawCanvas — edit mode", () => {
     expect(Math.abs(a.y - b.y)).toBeGreaterThanOrEqual(13);
   });
 
-  it("highlights the active piezometric line and labels its vertices while editing", () => {
+  it("highlights the selected water line and labels its vertices", () => {
     const rec = draw({
-      editingPiezo: true,
+      selection: { object: { type: "waterLine", id: "a" }, point: null },
       piezometricLine: {
         ...DEFAULT_PIEZO_LINE,
         lines: [
@@ -864,12 +919,12 @@ describe("drawCanvas — edit mode", () => {
         activeLineId: "a",
       },
     });
-    const active = rec.strokes("#f59e0b").find((p) => p.state.lineWidth === 3);
+    const active = rec.strokes(POINT_COLOR).find((p) => p.state.lineWidth === 3);
     expect(active).toBeDefined();
     expect(rec.textStrings()).toEqual(expect.arrayContaining(["(0.0, 4.0)", "(30.0, 4.0)"]));
   });
 
-  it("colours water-line vertices by hover, active line and editing state", () => {
+  it("colours water-line vertices by selection and hover", () => {
     const line = (id: string, y: number) => ({
       id,
       name: id,
@@ -887,10 +942,17 @@ describe("drawCanvas — edit mode", () => {
     };
     const dotColour = (rec: ReturnType<typeof draw>, x: number, y: number) =>
       rec.fills().find((p) => p.segments[0].op === "arc" && close(pathPoints(p)[0], toC(x, y)))?.state.fillStyle;
-    const editing = draw({ editingPiezo: true, piezometricLine, hoverHit: { kind: "piezo", lineId: "b", index: 1 } });
-    expect(dotColour(editing, 0, 4)).toBe("#f59e0b"); // active line
-    expect(dotColour(editing, 0, 2)).toBe(PIEZO_COLOR.hex); // other line
-    expect(dotColour(editing, 30, 2)).toBe(POINT_COLOR_HOVER);
+    const editing = draw({
+      selection: { object: { type: "waterLine", id: "a" }, point: null },
+      piezometricLine,
+      hoverHit: { kind: "piezo", lineId: "a", index: 1 },
+    });
+    expect(dotColour(editing, 0, 4)).toBe(POINT_COLOR); // the selected line
+    expect(dotColour(editing, 30, 4)).toBe(POINT_COLOR_HOVER);
+    expect(dotColour(editing, 0, 2)).toBe(PIEZO_COLOR.hex + "99"); // another line
+    // A hover on a line that is not selected colours no handle.
+    const other = draw({ selection: { object: { type: "waterLine", id: "a" }, point: null }, piezometricLine, hoverHit: { kind: "piezo", lineId: "b", index: 1 } });
+    expect(dotColour(other, 30, 2)).toBe(PIEZO_COLOR.hex + "99");
     // A line with a single point is not drawn.
     expect(dotColour(editing, 3, 1)).toBeUndefined();
     const idle = draw({ piezometricLine });
@@ -1669,7 +1731,7 @@ describe("drawCanvas — result mode", () => {
   });
 
   it("does not draw edit affordances (vertices, crosshair) in result mode", () => {
-    const rec = drawResult({ mouseWorld: [5, 5], editingExterior: true });
+    const rec = drawResult({ mouseWorld: [5, 5], selection: EXTERIOR });
     expect(rec.texts.some((t) => t.text.startsWith("("))).toBe(false);
     expect(rec.strokes().some((p) => p.state.lineDash.join() === "4,4")).toBe(false);
   });
@@ -1681,34 +1743,41 @@ describe("custom search plane handles", () => {
   const planes = [CIRCLE_PLANE, LINE_PLANE];
   const handleDots = (rec: ReturnType<typeof draw>) => rec.callsOf("arc").filter((c) => c.args[2] === POINT_RADIUS - 1);
 
-  it("draws a dot on each vertex and a crossed dot on a circle's centre, in the edit view only", () => {
-    const rec = draw({ customSearchPlanes: planes });
-    const centres = handleDots(rec).map((c) => [c.args[0], c.args[1]] as [number, number]);
-    for (const [x, y] of [[15, 14], ...LINE_PLANE.points] as [number, number][]) {
-      expect(centres.some((c) => close(c, toC(x, y)))).toBe(true);
-    }
+  it("draws handles on the selected plane's vertices or centre (crossed), small dots on the others, in the edit view only", () => {
+    const smallDots = (rec: ReturnType<typeof draw>) => rec.callsOf("arc").filter((c) => c.args[2] === 3);
+    const at = (calls: { args: unknown[] }[]) => calls.map((c) => [c.args[0], c.args[1]] as [number, number]);
+    const circle = draw({ customSearchPlanes: planes, selection: { object: { type: "customPlane", id: "c1" }, point: null } });
+    expect(at(handleDots(circle)).some((c) => close(c, toC(15, 14)))).toBe(true);
+    for (const [x, y] of LINE_PLANE.points) expect(at(smallDots(circle)).some((c) => close(c, toC(x, y)))).toBe(true);
     const [cx, cy] = toC(15, 14);
     const arm = POINT_RADIUS + 2;
-    expect(rec.strokes().some((p) => hasPoints(p, [[cx - arm, cy], [cx + arm, cy], [cx, cy - arm], [cx, cy + arm]]))).toBe(true);
-    expect(handleDots(draw({ customSearchPlanes: planes, mode: "result" }))).toHaveLength(0);
+    expect(circle.strokes().some((p) => hasPoints(p, [[cx - arm, cy], [cx + arm, cy], [cx, cy - arm], [cx, cy + arm]]))).toBe(true);
+    const line = draw({ customSearchPlanes: planes, selection: { object: { type: "customPlane", id: "p1" }, point: null } });
+    for (const [x, y] of LINE_PLANE.points) expect(at(handleDots(line)).some((c) => close(c, toC(x, y)))).toBe(true);
+    expect(handleDots(draw({ customSearchPlanes: planes }))).toHaveLength(0);
+    expect(handleDots(draw({ customSearchPlanes: planes, mode: "result", selection: { object: { type: "customPlane", id: "p1" }, point: null } }))).toHaveLength(0);
     expect(handleDots(draw({ customSearchPlanes: [] }))).toHaveLength(0);
   });
 
   it("highlights the hovered handle, the hovered rim and the picked plane", () => {
-    const hover = draw({ customSearchPlanes: planes, hoverHit: { kind: "customVertex", planeId: "p1", pointIndex: 1 } });
+    const hover = draw({
+      customSearchPlanes: planes,
+      selection: { object: { type: "customPlane", id: "p1" }, point: null },
+      hoverHit: { kind: "customVertex", planeId: "p1", pointIndex: 1 },
+    });
     const [vx, vy] = toC(15, 3);
     expect(hover.fills(POINT_COLOR_HOVER).some((p) => p.segments.some((s) => s.op === "arc" && close([s.x, s.y], [vx, vy])))).toBe(true);
     // The whole rim as a ring while the pointer is on it (the dashed arc is clipped to the model).
     const rim = draw({ customSearchPlanes: planes, hoverHit: { kind: "customCircle", planeId: "c1", handle: "rim" } });
     expect(rim.strokes(POINT_COLOR_HOVER).some((p) => p.segments.some((s) => s.op === "arc" && s.r === 10 * SCALE))).toBe(true);
     expect(draw({ customSearchPlanes: planes }).strokes(POINT_COLOR_HOVER)).toHaveLength(0);
-    // The picked plane: its dashed line and its dots in the selection colour.
-    const picked = draw({ customSearchPlanes: planes, selectedCustomPlaneId: "p1" });
-    const line = picked.strokes("#f59e0b").find((p) => p.state.lineDash.length > 0)!;
+    // The selected plane: its dashed line and its handles in the selection colour.
+    const picked = draw({ customSearchPlanes: planes, selection: { object: { type: "customPlane", id: "p1" }, point: null } });
+    const line = picked.strokes(POINT_COLOR).find((p) => p.state.lineDash.length > 0)!;
     expect(line).toBeDefined();
     expect(hasPoints(line, LINE_PLANE.points.map(([x, y]) => toC(x, y)))).toBe(true);
-    expect(picked.fills("#f59e0b")).toHaveLength(LINE_PLANE.points.length);
-    expect(draw({ customSearchPlanes: planes }).strokes("#f59e0b")).toHaveLength(0);
+    expect(picked.fills(POINT_COLOR)).toHaveLength(LINE_PLANE.points.length);
+    expect(draw({ customSearchPlanes: planes }).strokes(POINT_COLOR)).toHaveLength(0);
   });
 });
 

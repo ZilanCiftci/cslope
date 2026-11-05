@@ -38,11 +38,6 @@ import { surfaceYAtX as surfaceY } from "../features/view/surface";
 import { ContextMenuOverlay } from "../features/canvas/ContextMenuOverlay";
 import { AxisOverlay } from "../features/canvas/AxisOverlay";
 import { setPaperDrawSource } from "../features/export/paper-png";
-import type { CustomSearchPlane } from "../store/types";
-
-/** The result canvas never edits the custom search planes. */
-const NO_PLANES: CustomSearchPlane[] = [];
-
 export function ResultCanvas() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const crosshairCanvasRef = useRef<HTMLCanvasElement>(null);
@@ -89,9 +84,6 @@ export function ResultCanvas() {
     reinforcements,
     piles,
     piezometricLine,
-    selectedPointIndex,
-    selectedMaterialBoundaryId,
-    interiorBoundariesDialogOpen,
     regionMaterials,
     assigningMaterialId,
     selectedRegionKey,
@@ -113,16 +105,8 @@ export function ResultCanvas() {
     updateUdl,
     updateLineLoad,
     setPiezoCoordinate,
-    insertPiezoPointAt,
-    removePiezoPoint,
     setCoordinate,
-    insertCoordinateAt,
-    removeCoordinate,
-    setSelectedPoint,
-    setSelectedMaterialBoundary,
     updateBoundaryPoint,
-    removeBoundaryPoint,
-    insertBoundaryPointAt,
     setRegionMaterial,
     setAssigningMaterial,
     setSelectedRegionKey,
@@ -134,15 +118,7 @@ export function ResultCanvas() {
     alignAnnotations,
     setCanvasToolbar,
     setCursorWorld,
-    setActivePiezoLine,
   } = useCanvasActions();
-
-  const editingExterior = false;
-  const editingBoundaries = false;
-  const editingPiezo = false;
-  const editingAssignment = false;
-  const editingLimits = false;
-  const editingLoads = false;
 
   const surfaceYAtX = useCallback(
     (x: number): number | null => surfaceY(coordinates, x),
@@ -166,8 +142,6 @@ export function ResultCanvas() {
   } = useViewport(canvasRef, containerRef);
 
   const setMaterialPicker = useCallback(() => {}, []);
-  // The custom search planes are edited on the edit canvas only.
-  const noPlaneEdit = useCallback(() => {}, []);
 
   const hitTest = useHitTest({
     canvasRef,
@@ -186,11 +160,6 @@ export function ResultCanvas() {
     viewScale,
     snapToGrid,
     gridSnapSize,
-    editingExterior,
-    editingBoundaries,
-    editingPiezo,
-    editingLimits,
-    editingLoads,
   });
 
   const { contextMenu, setContextMenu, handleContextMenu } = useContextMenu({
@@ -200,26 +169,7 @@ export function ResultCanvas() {
     setSelectedAnnotations,
     alignAnnotations,
     getEventWorldPos,
-    findNearPointUnified: hitTest.findNearPointUnified,
-    findNearEdgeUnified: hitTest.findNearEdgeUnified,
-    coordinates,
-    materialBoundaries,
-    piezometricLine,
-    setActivePiezoLine,
-    removeCoordinate,
-    removeBoundaryPoint,
-    removePiezoPoint,
-    insertCoordinateAt,
-    insertBoundaryPointAt,
-    insertPiezoPointAt,
-    setSelectedPoint,
-    setSelectedMaterialBoundary,
     setMaterialPicker,
-    customSearchPlanes: NO_PLANES,
-    removeCustomSearchPlane: noPlaneEdit,
-    removeCustomPlanePoint: noPlaneEdit,
-    insertCustomPlanePointAt: noPlaneEdit,
-    setSelectedCustomPlane: noPlaneEdit,
     // A point added to a reference polyline snaps like a dragged one.
     snapValue,
   });
@@ -238,32 +188,14 @@ export function ResultCanvas() {
     viewOffset,
     setActiveViewOffset,
     setActiveViewScale,
-    findNearPointUnified: hitTest.findNearPointUnified,
-    findNearEdgeUnified: hitTest.findNearEdgeUnified,
     findRegionAtPoint: hitTest.findRegionAtPoint,
     findSnapTarget: hitTest.findSnapTarget,
     snapValue,
-    coordinates,
-    piezometricLine,
-    setActivePiezoLine,
-    analysisLimits,
-    udls,
-    lineLoads,
-    materialBoundaries,
-    customSearchPlanes: NO_PLANES,
-    updateCustomSearchPlane: noPlaneEdit,
-    updateCustomPlanePoint: noPlaneEdit,
-    setSelectedCustomPlane: noPlaneEdit,
     assigningMaterialId,
-    editingAssignment,
-    editingBoundaries,
-    editingCustomPlanes: false,
     panActive,
     setRegionMaterial,
     setAssigningMaterial,
     setSelectedRegionKey,
-    setSelectedMaterialBoundary,
-    setSelectedPoint,
     updateAnnotation,
     setSelectedAnnotations,
     toggleAnnotationSelection,
@@ -426,7 +358,6 @@ export function ResultCanvas() {
       materialBoundaries,
       regionMaterials,
       selectedRegionKey,
-      editingAssignment,
       selectedAnnotationIds,
       selectedResultObject,
       projectInfo,
@@ -443,15 +374,9 @@ export function ResultCanvas() {
       viewScale,
       mouseWorld: null,
       hoverHit,
-      selectedPointIndex,
-      selectedMaterialBoundaryId,
-      interiorBoundariesDialogOpen,
       worldToCanvas,
       canvasToWorld,
       surfaceYAtX,
-      editingExterior,
-      editingBoundaries,
-      editingPiezo,
     }),
     [
       canvasSize.width,
@@ -469,15 +394,8 @@ export function ResultCanvas() {
       waternet,
       viewScale,
       hoverHit,
-      selectedPointIndex,
-      selectedMaterialBoundaryId,
-      interiorBoundariesDialogOpen,
       canvasToWorld,
       worldToCanvas,
-      editingExterior,
-      editingBoundaries,
-      editingPiezo,
-      editingAssignment,
       selectedRegionKey,
       regionMaterials,
       surfaceYAtX,

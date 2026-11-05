@@ -65,7 +65,6 @@ beforeEach(() => {
   useAppStore.getState().newProject();
   useAppStore.setState({
     mode: "edit",
-    activeSection: "Exterior Boundary",
     coordinates: COORDS,
     coordinateExpressions: [],
     materials: [{ ...DEFAULT_MATERIAL }, { ...DEFAULT_MATERIAL, id: "sand", name: "Sand", color: "#eedd88" }],
@@ -108,12 +107,95 @@ describe("EditCanvas keyboard", () => {
     expect(useAppStore.getState().coordinates).toHaveLength(3);
   });
 
-  it("does not delete a vertex that is not shown as selected (another section is edited)", () => {
+  it("deletes no point of a locked object, and nothing when only the object is selected", () => {
     renderCanvas();
-    act(() => useAppStore.getState().setSelectedPoint(2));
-    act(() => useAppStore.setState({ activeSection: "Loads" }));
+    act(() => useAppStore.getState().selectCanvasObject({ type: "exterior" }));
     fireEvent.keyDown(document, { key: "Delete" });
     expect(useAppStore.getState().coordinates).toHaveLength(6);
+    act(() => {
+      useAppStore.getState().setObjectLocked({ type: "exterior" }, true);
+      useAppStore.getState().selectCanvasObject({ type: "exterior" }, 2);
+    });
+    fireEvent.keyDown(document, { key: "Delete" });
+    expect(useAppStore.getState().coordinates).toHaveLength(6);
+  });
+
+  it("deletes the selected point of a water line, a boundary and a custom surface, keeping their minimum", () => {
+    renderCanvas();
+    act(() => {
+      const s = useAppStore.getState();
+      s.addPiezoLine([[0, 8], [10, 8], [30, 6]]);
+      s.addMaterialBoundary([[0, 4], [10, 4], [30, 3]]);
+      s.addCustomSearchPlane("polyline");
+    });
+    const s = () => useAppStore.getState();
+    const line = s().piezometricLine.lines.at(-1)!;
+    act(() => s().selectCanvasObject({ type: "waterLine", id: line.id }, 1));
+    fireEvent.keyDown(document, { key: "Delete" });
+    expect(s().piezometricLine.lines.at(-1)!.coordinates).toEqual([[0, 8], [30, 6]]);
+    // two points left: kept
+    act(() => s().selectCanvasObject({ type: "waterLine", id: line.id }, 1));
+    fireEvent.keyDown(document, { key: "Delete" });
+    expect(s().piezometricLine.lines.at(-1)!.coordinates).toHaveLength(2);
+    const b = s().materialBoundaries[0];
+    act(() => s().selectCanvasObject({ type: "boundary", id: b.id }, 1));
+    fireEvent.keyDown(document, { key: "Backspace" });
+    expect(s().materialBoundaries[0].coordinates).toEqual([[0, 4], [30, 3]]);
+    expect(s().canvasSelection).toEqual({ object: { type: "boundary", id: b.id }, point: null });
+  });
+
+  it("nudges the selected point by one snap step with the arrows, ten with Shift, one undo step each", () => {
+    act(() => useAppStore.setState({ gridSnapSize: 0.5 }));
+    renderCanvas();
+    useAppStore.temporal.getState().clear();
+    act(() => useAppStore.getState().selectCanvasObject({ type: "exterior" }, 2));
+    fireEvent.keyDown(document, { key: "ArrowRight" });
+    expect(useAppStore.getState().coordinates[2]).toEqual([10.5, 10]);
+    fireEvent.keyDown(document, { key: "ArrowUp", shiftKey: true });
+    expect(useAppStore.getState().coordinates[2]).toEqual([10.5, 15]);
+    fireEvent.keyDown(document, { key: "ArrowDown" });
+    fireEvent.keyDown(document, { key: "ArrowLeft" });
+    expect(useAppStore.getState().coordinates[2]).toEqual([10, 14.5]);
+    expect(useAppStore.temporal.getState().pastStates).toHaveLength(4);
+    // Not in a field, nor while another control has the keyboard, nor for a locked object.
+    const input = document.createElement("input");
+    document.body.appendChild(input);
+    fireEvent.keyDown(input, { key: "ArrowRight" });
+    input.remove();
+    const button = document.createElement("button");
+    document.body.appendChild(button);
+    fireEvent.keyDown(button, { key: "ArrowRight" });
+    expect(useAppStore.getState().coordinates[2]).toEqual([10, 14.5]);
+    // A press on the canvas gives it the keyboard back.
+    button.focus();
+    fireEvent.pointerDown(canvas(), { button: 0, clientX: 1, clientY: 1, pointerId: 1 });
+    fireEvent.pointerUp(canvas(), { button: 0, clientX: 1, clientY: 1, pointerId: 1 });
+    expect(document.activeElement).not.toBe(button);
+    button.remove();
+    act(() => useAppStore.getState().selectCanvasObject({ type: "exterior" }, 2));
+    act(() => useAppStore.getState().setObjectLocked({ type: "exterior" }, true));
+    fireEvent.keyDown(document, { key: "ArrowRight" });
+    expect(useAppStore.getState().coordinates[2]).toEqual([10, 14.5]);
+  });
+
+  it("nudges a load's end only along x, and a circle's radius by its rim", () => {
+    act(() => useAppStore.setState({ gridSnapSize: 1, udls: [{ id: "u", magnitude: 10, x1: 2, x2: 8 }], customSearchPlanes: [{ id: "c", cx: 15, cy: 14, radius: 10 }] }));
+    renderCanvas();
+    act(() => useAppStore.getState().selectCanvasObject({ type: "udl", id: "u" }, "x2"));
+    fireEvent.keyDown(document, { key: "ArrowUp" });
+    expect(useAppStore.getState().udls[0]).toMatchObject({ x1: 2, x2: 8 });
+    fireEvent.keyDown(document, { key: "ArrowRight" });
+    expect(useAppStore.getState().udls[0]).toMatchObject({ x1: 2, x2: 9 });
+    act(() => useAppStore.getState().selectCanvasObject({ type: "customPlane", id: "c" }, "rim"));
+    fireEvent.keyDown(document, { key: "ArrowUp" });
+    expect(useAppStore.getState().customSearchPlanes[0]).toMatchObject({ cx: 15, cy: 14, radius: 11 });
+  });
+
+  it("clears the selection with Escape", () => {
+    renderCanvas();
+    act(() => useAppStore.getState().selectCanvasObject({ type: "exterior" }, 2));
+    fireEvent.keyDown(document, { key: "Escape" });
+    expect(useAppStore.getState().canvasSelection).toBeNull();
   });
 
   it("cancels material assignment with Escape or the banner button", () => {
@@ -246,27 +328,68 @@ describe("EditCanvas pointer interaction", () => {
     renderCanvas();
     const [sx, sy] = toScreen([20, 5]);
     fireEvent.contextMenu(canvas(), { clientX: sx, clientY: sy });
-    fireEvent.click(screen.getByRole("button", { name: "Delete point" }));
+    fireEvent.click(screen.getByRole("menuitem", { name: "Delete point" }));
     expect(useAppStore.getState().coordinates).not.toContainEqual([20, 5]);
-    expect(screen.queryByRole("button", { name: "Delete point" })).toBeNull();
+    expect(screen.queryByRole("menuitem", { name: "Delete point" })).toBeNull();
   });
 
   it("adds a vertex on an edge from its context menu", () => {
     renderCanvas();
     const [sx, sy] = toScreen([15, 0]);
     fireEvent.contextMenu(canvas(), { clientX: sx, clientY: sy });
-    fireEvent.click(screen.getByRole("button", { name: "Add point" }));
+    fireEvent.click(screen.getByRole("menuitem", { name: "Add point" }));
     const coords = useAppStore.getState().coordinates;
     expect(coords).toHaveLength(7);
     expect(coords[6][0]).toBeCloseTo(15, 6);
     expect(coords[6][1]).toBeCloseTo(0, 6);
   });
 
-  it("assigns a material from the picker while editing assignments", () => {
-    act(() => useAppStore.setState({ activeSection: "Material Assignment" }));
+  it("locks the exterior from its context menu: its points are not dragged, a tip says how to unlock", () => {
+    renderCanvas();
+    const [sx, sy] = toScreen([20, 5]);
+    fireEvent.contextMenu(canvas(), { clientX: sx, clientY: sy });
+    fireEvent.click(screen.getByRole("menuitem", { name: "Lock" }));
+    expect(useAppStore.getState().locks).toEqual({ exterior: true });
+    fireEvent.pointerMove(canvas(), { clientX: sx, clientY: sy, pointerId: 1 });
+    expect(screen.getByTestId("locked-tip")).toHaveTextContent("Locked · right-click to unlock");
+    expect(canvas().style.cursor).toBe("not-allowed");
+    fireEvent.pointerDown(canvas(), { button: 0, clientX: sx, clientY: sy, pointerId: 1 });
+    fireEvent.pointerMove(canvas(), { clientX: sx + 40, clientY: sy, pointerId: 1 });
+    fireEvent.pointerUp(canvas(), { button: 0, clientX: sx + 40, clientY: sy, pointerId: 1 });
+    expect(useAppStore.getState().coordinates).toContainEqual([20, 5]);
+    fireEvent.contextMenu(canvas(), { clientX: sx, clientY: sy });
+    fireEvent.click(screen.getByRole("menuitem", { name: "Unlock" }));
+    expect(useAppStore.getState().locks).toEqual({});
+  });
+
+  it("edits a point's exact coordinates after a double-click on it, as one undo step", () => {
+    renderCanvas();
+    useAppStore.temporal.getState().clear();
+    act(() => useAppStore.getState().selectCanvasObject({ type: "exterior" }));
+    const [sx, sy] = toScreen([20, 5]);
+    fireEvent.doubleClick(canvas(), { clientX: sx, clientY: sy });
+    const editor = screen.getByTestId("point-editor");
+    expect(editor).toHaveTextContent("Exterior boundary, point 4");
+    fireEvent.change(screen.getByLabelText("x (m)"), { target: { value: "21.25" } });
+    fireEvent.change(screen.getByLabelText("y (m)"), { target: { value: "6" } });
+    fireEvent.keyDown(screen.getByLabelText("y (m)"), { key: "Enter" });
+    expect(useAppStore.getState().coordinates[3]).toEqual([21.25, 6]);
+    expect(screen.queryByTestId("point-editor")).toBeNull();
+    expect(useAppStore.temporal.getState().pastStates).toHaveLength(1);
+    // Escape closes it without a change.
+    const [px, py] = toScreen([10, 10]);
+    fireEvent.doubleClick(canvas(), { clientX: px, clientY: py });
+    fireEvent.change(screen.getByLabelText("x (m)"), { target: { value: "99" } });
+    fireEvent.keyDown(screen.getByLabelText("x (m)"), { key: "Escape" });
+    expect(screen.queryByTestId("point-editor")).toBeNull();
+    expect(useAppStore.getState().coordinates[2]).toEqual([10, 10]);
+  });
+
+  it("assigns a material from the picker opened by a right-click in a region", () => {
     renderCanvas();
     const [sx, sy] = toScreen([5, 5]);
-    fireEvent.pointerDown(canvas(), { button: 0, clientX: sx, clientY: sy, pointerId: 1 });
+    fireEvent.contextMenu(canvas(), { clientX: sx, clientY: sy });
+    fireEvent.click(screen.getByRole("menuitem", { name: "Assign material…" }));
     expect(screen.getByText("Assign material")).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Sand" }));
     const assigned = useAppStore.getState().regionMaterials;

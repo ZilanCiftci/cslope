@@ -301,14 +301,9 @@ function createGeometryWindow() {
 function createInteriorBoundariesWindow() {
   if (!win) return;
 
-  const broadcastOpenState = (open: boolean) => {
-    win?.webContents.send("interiorBoundaries:dialogOpenChanged", open);
-  };
-
   if (interiorBoundariesWin && !interiorBoundariesWin.isDestroyed()) {
     interiorBoundariesWin.show();
     interiorBoundariesWin.focus();
-    broadcastOpenState(true);
     return;
   }
 
@@ -331,11 +326,8 @@ function createInteriorBoundariesWindow() {
   });
 
   interiorBoundariesWin.on("closed", () => {
-    broadcastOpenState(false);
     interiorBoundariesWin = null;
   });
-
-  broadcastOpenState(true);
 
   if (VITE_DEV_SERVER_URL) {
     interiorBoundariesWin.loadURL(
@@ -1120,6 +1112,44 @@ ipcMain.on("viewSettings:changed", (event, state) => {
   if (event.sender === win?.webContents) {
     viewSettingsWin?.webContents.send("viewSettings:changed", state);
   }
+});
+
+// ── Canvas selection sync (main window <-> every dialog window) ──────
+// The object (and point) selected on the canvas: the windows' tables show
+// it as their selected row, and a row picked in a window selects it on the
+// canvas. A window that is closed simply gets nothing.
+
+const dialogWindows = () => [
+  materialsWin,
+  materialAssignmentWin,
+  geometryWin,
+  interiorBoundariesWin,
+  udlWin,
+  lineLoadsWin,
+  reinforcementWin,
+  piezoWin,
+  parametersWin,
+  resultsPlotWin,
+  searchLimitsWin,
+  customSearchPlanesWin,
+  optionsWin,
+  viewSettingsWin,
+];
+const isDialogWindow = (sender: Electron.WebContents) =>
+  dialogWindows().some((w) => w && !w.isDestroyed() && w.webContents === sender);
+
+ipcMain.on("selection:requestState", (event) => {
+  if (isDialogWindow(event.sender)) win?.webContents.send("selection:requestState");
+});
+
+ipcMain.on("selection:changed", (event, selection) => {
+  if (event.sender === win?.webContents) {
+    for (const w of dialogWindows()) {
+      if (w && !w.isDestroyed()) w.webContents.send("selection:changed", selection);
+    }
+    return;
+  }
+  if (isDialogWindow(event.sender)) win?.webContents.send("selection:changed", selection);
 });
 
 // ── Native file dialogs via IPC ──────────────────────────────

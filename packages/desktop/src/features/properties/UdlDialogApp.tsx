@@ -37,6 +37,10 @@ function normalizeLoadsPayload(
 
 export function UdlDialogApp() {
   const udls = useAppStore((s) => s.udls);
+  // The canvas selection: a row picked here selects its load on the
+  // canvas, and one selected there is the selected row here.
+  const canvasSelection = useAppStore((s) => s.canvasSelection);
+  const selectCanvasObject = useAppStore((s) => s.selectCanvasObject);
   const lineLoads = useAppStore((s) => s.lineLoads);
   const addUdl = useAppStore((s) => s.addUdl);
   const updateUdl = useAppStore((s) => s.updateUdl);
@@ -249,6 +253,8 @@ export function UdlDialogApp() {
           rows={udls}
           columns={columns}
           getRowKey={(row) => row.id}
+          selectedRowIndex={canvasSelection?.object.type === "udl" ? udls.findIndex((u) => u.id === (canvasSelection.object as { id: string }).id) : null}
+          onRowClick={(row) => selectCanvasObject({ type: "udl", id: row.id })}
         />
         <button
           onClick={addUdl}

@@ -34,6 +34,10 @@ export function InteriorBoundariesDialogApp() {
   const setSelectedMaterialBoundary = useAppStore(
     (s) => s.setSelectedMaterialBoundary,
   );
+  // The canvas selection: a row picked here selects its boundary (or
+  // point) on the canvas, and one selected there is the selected row here.
+  const canvasSelection = useAppStore((s) => s.canvasSelection);
+  const selectCanvasObject = useAppStore((s) => s.selectCanvasObject);
   const [isHydrated, setIsHydrated] = useState(!isElectron);
   const suppressNextBroadcastRef = useRef(false);
   const boundaryRowRefs = useRef<Map<string, HTMLTableRowElement>>(new Map());
@@ -227,7 +231,10 @@ export function InteriorBoundariesDialogApp() {
                         }
                         boundaryRowRefs.current.set(boundary.id, el);
                       }}
-                      onClick={() => setSelectedMaterialBoundary(boundary.id)}
+                      onClick={() => {
+                        setSelectedMaterialBoundary(boundary.id);
+                        selectCanvasObject({ type: "boundary", id: boundary.id });
+                      }}
                       className="cursor-pointer transition-colors"
                       style={{
                         background: isSelected
@@ -289,6 +296,14 @@ export function InteriorBoundariesDialogApp() {
             <SpreadsheetTable
               rows={selectedBoundary.coordinates}
               getRowKey={(_row, i) => `${selectedBoundary.id}-${i}`}
+              selectedRowIndex={
+                canvasSelection?.object.type === "boundary" &&
+                canvasSelection.object.id === selectedBoundary.id &&
+                typeof canvasSelection.point === "number"
+                  ? canvasSelection.point
+                  : null
+              }
+              onRowClick={(_row, i) => selectCanvasObject({ type: "boundary", id: selectedBoundary.id }, i)}
               columns={
                 [
                   {

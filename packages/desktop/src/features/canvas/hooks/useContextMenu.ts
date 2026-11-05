@@ -6,16 +6,18 @@ import {
 } from "react";
 import { computePaperFrame, getAnnotationBoundsPx } from "../helpers";
 import { useAppStore } from "../../../store/app-store";
-import type { AppMode } from "../../../store/types";
-import type {
-  ContextMenuState,
-  EdgeHit,
-  MaterialPickerState,
-  PointHit,
-} from "../types";
-import type { PiezometricLineState } from "../../../store/types";
-import { isClosedBoundary } from "../../../utils/regions";
+import type { AppMode, CanvasObjectRef } from "../../../store/types";
+import type { ContextMenuItem, ContextMenuState, EdgeHit, MaterialPickerState } from "../types";
 import { findReferenceEdgeAt, findReferenceHitAt, referenceHitId } from "../reference-geometry";
+import type { CanvasCandidate } from "../object-hits";
+import {
+  LOCK_GROUPS,
+  canDeletePoint,
+  groupHasUnlocked,
+  hasLocks,
+  isObjectLocked,
+  sameObject,
+} from "../../../store/canvas-selection";
 
 interface ContextMenuParams {
   canvasRef: RefObject<HTMLCanvasElement | null>;
@@ -29,34 +31,13 @@ interface ContextMenuParams {
     clientX: number;
     clientY: number;
   }) => [number, number];
-  findNearPointUnified: (wx: number, wy: number) => PointHit | null;
-  findNearEdgeUnified: (wx: number, wy: number) => EdgeHit | null;
-  coordinates: [number, number][];
-  materialBoundaries: { id: string; coordinates: [number, number][] }[];
-  piezometricLine: PiezometricLineState;
-  setActivePiezoLine: (lineId: string | null) => void;
-  removeCoordinate: (idx: number) => void;
-  removeBoundaryPoint: (boundaryId: string, idx: number) => void;
-  removePiezoPoint: (idx: number) => void;
-  insertCoordinateAt: (idx: number, pt: [number, number]) => void;
-  insertBoundaryPointAt: (
-    boundaryId: string,
-    idx: number,
-    pt: [number, number],
-  ) => void;
-  insertPiezoPointAt: (idx: number, pt: [number, number]) => void;
-  setSelectedPoint: (idx: number | null) => void;
-  setSelectedMaterialBoundary: (boundaryId: string | null) => void;
+  /** Edit view: every object under the pointer, topmost first. */
+  findObjectsAt?: (wx: number, wy: number) => CanvasCandidate[];
+  /** Edit view: where a point would be added on the object's line under the pointer. */
+  edgeAt?: (object: CanvasObjectRef, wx: number, wy: number) => EdgeHit | null;
+  /** Edit view: the material region under the pointer. */
+  findRegionAtPoint?: (wx: number, wy: number) => { regionKey: string } | null;
   setMaterialPicker: (picker: MaterialPickerState | null) => void;
-  customSearchPlanes: { id: string; points?: [number, number][] }[];
-  removeCustomSearchPlane: (id: string) => void;
-  removeCustomPlanePoint: (id: string, pointIndex: number) => void;
-  insertCustomPlanePointAt: (
-    id: string,
-    pointIndex: number,
-    point: [number, number],
-  ) => void;
-  setSelectedCustomPlane: (id: string | null) => void;
   /** Edit view: copies a custom search plane into a reference annotation (absent: no such item). */
   addReferenceFromCustomPlane?: (planeId: string) => void;
   /** Result view: snaps a point added to a reference polyline (absent: no snapping). */
@@ -71,26 +52,10 @@ export function useContextMenu(params: ContextMenuParams) {
     setSelectedAnnotations,
     alignAnnotations,
     getEventWorldPos,
-    findNearPointUnified,
-    findNearEdgeUnified,
-    coordinates,
-    materialBoundaries,
-    piezometricLine,
-    setActivePiezoLine,
-    removeCoordinate,
-    removeBoundaryPoint,
-    removePiezoPoint,
-    insertCoordinateAt,
-    insertBoundaryPointAt,
-    insertPiezoPointAt,
-    setSelectedPoint,
-    setSelectedMaterialBoundary,
+    findObjectsAt,
+    edgeAt,
+    findRegionAtPoint,
     setMaterialPicker,
-    customSearchPlanes,
-    removeCustomSearchPlane,
-    removeCustomPlanePoint,
-    insertCustomPlanePointAt,
-    setSelectedCustomPlane,
     addReferenceFromCustomPlane,
     snapValue,
   } = params;
@@ -279,207 +244,123 @@ export function useContextMenu(params: ContextMenuParams) {
       const canvasRect = canvas.getBoundingClientRect();
       const screenX = e.clientX - canvasRect.left;
       const screenY = e.clientY - canvasRect.top;
+      const st = useAppStore.getState();
+      const close = (fn: () => void) => () => {
+        fn();
+        setContextMenu(null);
+      };
 
-      const pointHit = findNearPointUnified(wx, wy);
-      if (pointHit) {
-        const items: ContextMenuState["items"] = [];
-        if (pointHit.kind === "external") {
+      // The object under the pointer: the selected one where it is there,
+      // else the topmost. A right-click selects it (and the point under the
+      // pointer), so the menu acts on what is shown as selected.
+      const candidates = findObjectsAt?.(wx, wy) ?? [];
+      const sel = st.canvasSelection;
+      const target = (sel && candidates.find((c) => sameObject(c.object, sel.object))) ?? candidates[0];
+      if (target) {
+        const object = target.object;
+        if (!sel || !sameObject(sel.object, object) || sel.point !== target.point) {
+          st.selectCanvasObject(object, target.point);
+        }
+        const locked = isObjectLocked(st.locks, object);
+        const items: ContextMenuItem[] = [];
+        const point = target.point;
+        if (typeof point === "number") {
           items.push({
             label: "Delete point",
             danger: true,
-            disabled: coordinates.length <= 3,
-            action: () => {
-              if (coordinates.length > 3) {
-                removeCoordinate(pointHit.index);
-                setSelectedPoint(null);
-              }
-              setContextMenu(null);
-            },
+            disabled: locked || !canDeletePoint(st, object, point),
+            action: close(() => {
+              const s = useAppStore.getState();
+              if (isObjectLocked(s.locks, object) || !canDeletePoint(s, object, point)) return;
+              deletePoint(object, point);
+              s.selectCanvasObject(object, null);
+            }),
           });
-        } else if (pointHit.kind === "piezo") {
-          setActivePiezoLine(pointHit.lineId);
-          const piezoLine = piezometricLine.lines.find(
-            (l) => l.id === pointHit.lineId,
-          );
-          const lineLen = piezoLine?.coordinates.length ?? 0;
-          items.push({
-            label: "Delete point",
-            danger: true,
-            disabled: lineLen <= 2,
-            action: () => {
-              if (lineLen > 2) {
-                removePiezoPoint(pointHit.index);
-              }
-              setContextMenu(null);
-            },
-          });
-        } else if (pointHit.kind === "boundary") {
-          setSelectedMaterialBoundary(pointHit.boundaryId);
-          const b = materialBoundaries.find(
-            (mb) => mb.id === pointHit.boundaryId,
-          );
-          items.push({
-            label: "Delete point",
-            danger: true,
-            // Open polyline: at least 2 points; closed: at least a triangle.
-            disabled:
-              !b ||
-              b.coordinates.length <= (isClosedBoundary(b.coordinates) ? 4 : 2),
-            action: () => {
-              if (b && b.coordinates.length > 2) {
-                removeBoundaryPoint(pointHit.boundaryId, pointHit.pointIndex);
-              }
-              setContextMenu(null);
-            },
-          });
-        } else if (pointHit.kind === "customVertex") {
-          setSelectedCustomPlane(pointHit.planeId);
-          const plane = customSearchPlanes.find((p) => p.id === pointHit.planeId);
-          const count = plane?.points?.length ?? 0;
-          items.push({
-            label: "Delete point",
-            danger: true,
-            // A non-circular surface keeps at least two points.
-            disabled: count <= 2,
-            action: () => {
-              if (count > 2) {
-                removeCustomPlanePoint(pointHit.planeId, pointHit.pointIndex);
-              }
-              setContextMenu(null);
-            },
-          });
-          items.push({
-            label: "Delete surface",
-            danger: true,
-            action: () => {
-              removeCustomSearchPlane(pointHit.planeId);
-              setContextMenu(null);
-            },
-          });
-          if (addReferenceFromCustomPlane) {
+        } else if (point === null) {
+          const edge = edgeAt?.(object, wx, wy) ?? null;
+          if (edge) {
             items.push({
-              label: "Add as reference line",
-              action: () => {
-                addReferenceFromCustomPlane(pointHit.planeId);
-                setContextMenu(null);
-              },
-            });
-          }
-        } else if (pointHit.kind === "customCircle") {
-          setSelectedCustomPlane(pointHit.planeId);
-          items.push({
-            label: "Delete circle",
-            danger: true,
-            action: () => {
-              removeCustomSearchPlane(pointHit.planeId);
-              setContextMenu(null);
-            },
-          });
-          if (addReferenceFromCustomPlane) {
-            items.push({
-              label: "Add as reference line",
-              action: () => {
-                addReferenceFromCustomPlane(pointHit.planeId);
-                setContextMenu(null);
-              },
+              label: "Add point",
+              disabled: locked,
+              action: close(() => {
+                if (isObjectLocked(useAppStore.getState().locks, object)) return;
+                insertPoint(edge);
+                useAppStore.getState().selectCanvasObject(object, edge.insertIndex);
+              }),
             });
           }
         }
+        if (object.type === "customPlane") {
+          const plane = st.customSearchPlanes.find((p) => p.id === object.id);
+          items.push({
+            label: plane?.points ? "Delete surface" : "Delete circle",
+            danger: true,
+            disabled: locked,
+            action: close(() => {
+              const s = useAppStore.getState();
+              if (!isObjectLocked(s.locks, object)) s.removeCustomSearchPlane(object.id);
+            }),
+          });
+          if (addReferenceFromCustomPlane) {
+            items.push({
+              label: "Add as reference line",
+              action: close(() => addReferenceFromCustomPlane(object.id)),
+            });
+          }
+        }
+        items.push({
+          label: locked ? "Unlock" : "Lock",
+          separator: items.length > 0,
+          action: close(() => useAppStore.getState().setObjectLocked(object, !locked)),
+        });
         setContextMenu({ screenX, screenY, items });
         return;
       }
 
-      const edgeHit = findNearEdgeUnified(wx, wy);
-      if (edgeHit) {
-        const items: ContextMenuState["items"] = [];
-        if (edgeHit.kind === "external") {
-          items.push({
-            label: "Add point",
-            action: () => {
-              insertCoordinateAt(edgeHit.insertIndex, edgeHit.snapPoint);
-              setSelectedPoint(edgeHit.insertIndex);
-              setContextMenu(null);
-            },
-          });
-        } else if (edgeHit.kind === "piezo") {
-          setActivePiezoLine(edgeHit.lineId);
-          items.push({
-            label: "Add point",
-            action: () => {
-              insertPiezoPointAt(edgeHit.insertIndex, edgeHit.snapPoint);
-              setContextMenu(null);
-            },
-          });
-        } else if (edgeHit.kind === "customPlane") {
-          setSelectedCustomPlane(edgeHit.planeId);
-          items.push({
-            label: "Add point",
-            action: () => {
-              insertCustomPlanePointAt(
-                edgeHit.planeId,
-                edgeHit.insertIndex,
-                edgeHit.snapPoint,
-              );
-              setContextMenu(null);
-            },
-          });
-          if (addReferenceFromCustomPlane) {
-            items.push({
-              label: "Add as reference line",
-              action: () => {
-                addReferenceFromCustomPlane(edgeHit.planeId);
-                setContextMenu(null);
-              },
-            });
-          }
-        } else if (edgeHit.kind === "boundary") {
-          setSelectedMaterialBoundary(edgeHit.boundaryId);
-          items.push({
-            label: "Add point",
-            action: () => {
-              insertBoundaryPointAt(
-                edgeHit.boundaryId,
-                edgeHit.insertIndex,
-                edgeHit.snapPoint,
-              );
-              setContextMenu(null);
-            },
-          });
-        }
-        setContextMenu({ screenX, screenY, items });
-        return;
+      // Empty canvas: the material of the region there, and the locks.
+      const items: ContextMenuItem[] = [];
+      const region = findRegionAtPoint?.(wx, wy) ?? null;
+      if (region) {
+        items.push({
+          label: "Assign material…",
+          action: () => {
+            st.setSelectedRegionKey(region.regionKey);
+            setContextMenu(null);
+            setMaterialPicker({ screenX, screenY, worldPoint: [wx, wy] });
+          },
+        });
       }
-
-      setContextMenu(null);
+      const lockable = LOCK_GROUPS.filter(({ group }) => groupHasUnlocked(st.locks, st, group));
+      items.push({
+        label: "Lock all",
+        separator: items.length > 0,
+        disabled: lockable.length === 0,
+        action: () => {},
+        submenu: LOCK_GROUPS.map(({ group, label }) => ({
+          label,
+          disabled: !groupHasUnlocked(st.locks, st, group),
+          action: close(() => useAppStore.getState().lockAllOfGroup(group)),
+        })),
+      });
+      items.push({
+        label: "Unlock all",
+        disabled: !hasLocks(st.locks),
+        action: close(() => useAppStore.getState().unlockAll()),
+      });
+      setContextMenu({ screenX, screenY, items });
     },
     [
       addReferenceFromCustomPlane,
       alignAnnotations,
       canvasRef,
-      coordinates,
-      customSearchPlanes,
-      findNearEdgeUnified,
-      findNearPointUnified,
+      edgeAt,
+      findObjectsAt,
+      findRegionAtPoint,
       getEventWorldPos,
-      insertBoundaryPointAt,
-      insertCoordinateAt,
-      insertCustomPlanePointAt,
-      insertPiezoPointAt,
-      materialBoundaries,
       mode,
-      piezometricLine.lines,
-      removeBoundaryPoint,
-      removeCoordinate,
-      removeCustomPlanePoint,
-      removeCustomSearchPlane,
-      removePiezoPoint,
       selectedAnnotationIds,
       setSelectedAnnotations,
-      setActivePiezoLine,
       setMaterialPicker,
-      setSelectedCustomPlane,
-      setSelectedMaterialBoundary,
-      setSelectedPoint,
       snapValue,
     ],
   );
@@ -489,4 +370,44 @@ export function useContextMenu(params: ContextMenuParams) {
     setContextMenu,
     handleContextMenu,
   };
+}
+
+/** Remove a vertex of an object (the caller checks it may be removed). */
+function deletePoint(object: CanvasObjectRef, index: number): void {
+  const s = useAppStore.getState();
+  switch (object.type) {
+    case "exterior":
+      s.removeCoordinate(index);
+      break;
+    case "boundary":
+      s.removeBoundaryPoint(object.id, index);
+      break;
+    case "waterLine":
+      if (s.piezometricLine.activeLineId !== object.id) s.setActivePiezoLine(object.id);
+      useAppStore.getState().removePiezoPoint(index);
+      break;
+    case "customPlane":
+      s.removeCustomPlanePoint(object.id, index);
+      break;
+  }
+}
+
+/** Add a vertex on a segment of an object's line. */
+function insertPoint(edge: EdgeHit): void {
+  const s = useAppStore.getState();
+  switch (edge.kind) {
+    case "external":
+      s.insertCoordinateAt(edge.insertIndex, edge.snapPoint);
+      break;
+    case "boundary":
+      s.insertBoundaryPointAt(edge.boundaryId, edge.insertIndex, edge.snapPoint);
+      break;
+    case "piezo":
+      if (s.piezometricLine.activeLineId !== edge.lineId) s.setActivePiezoLine(edge.lineId);
+      useAppStore.getState().insertPiezoPointAt(edge.insertIndex, edge.snapPoint);
+      break;
+    case "customPlane":
+      s.insertCustomPlanePointAt(edge.planeId, edge.insertIndex, edge.snapPoint);
+      break;
+  }
 }

@@ -43,11 +43,12 @@ describe("AnalysisErrorBanner", () => {
     expect(screen.queryByRole("alert")).toBeNull();
   });
 
-  it("opens the search limits when no slip surface was found", () => {
+  it("opens the search limits when no slip surface was found, and selects them on the canvas", () => {
+    useAppStore.getState().setAnalysisLimits({ enabled: true });
     render(<AnalysisErrorBanner />);
     fail(NO_SURFACE);
     fireEvent.click(screen.getByRole("button", { name: "Search limits…" }));
-    expect(useAppStore.getState().activeSection).toBe("Search Limits");
+    expect(useAppStore.getState().canvasSelection).toEqual({ object: { type: "searchLimits" }, point: null });
   });
 
   it("stays dismissed until the next run", () => {

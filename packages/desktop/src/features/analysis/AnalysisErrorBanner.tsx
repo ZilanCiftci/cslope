@@ -12,7 +12,6 @@ export function AnalysisErrorBanner() {
   const runState = useAppStore((s) => s.runState);
   const errorMessage = useAppStore((s) => s.errorMessage);
   const activeModelId = useAppStore((s) => s.activeModelId);
-  const setActiveSection = useAppStore((s) => s.setActiveSection);
   // The "click a region to assign" hint sits at the top centre too.
   const assigning = useAppStore((s) => s.assigningMaterialId !== null);
 
@@ -35,7 +34,9 @@ export function AnalysisErrorBanner() {
   }
 
   const openSearchLimits = () => {
-    setActiveSection("Search Limits");
+    // The limits are what the message is about: select them on the canvas.
+    const st = useAppStore.getState();
+    if (st.analysisLimits.enabled) st.selectCanvasObject({ type: "searchLimits" });
     if (isElectron) window.cslope.openSearchLimitsDialog();
   };
 

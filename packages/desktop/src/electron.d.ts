@@ -152,9 +152,10 @@ declare global {
       openCustomSearchPlanesDialog: () => void;
       openOptionsDialog: () => void;
       openViewSettingsDialog: () => void;
-      onInteriorBoundariesDialogOpenChanged: (
-        listener: (event: unknown, open: boolean) => void,
-      ) => () => void;
+      requestSelectionState: () => void;
+      sendSelectionChanged: (selection: unknown) => void;
+      onSelectionRequestState: (listener: (event: unknown) => void) => () => void;
+      onSelectionChanged: (listener: (event: unknown, selection: unknown) => void) => () => void;
       isMaximized: () => Promise<boolean>;
       onMaximized: (listener: (event: unknown, isMax: unknown) => void) => () => void;
       // App lifecycle

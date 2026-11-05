@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import type { AnalysisResult, RunAllStatus, RunState } from "../store/types";
 import { APP_VERSION } from "../utils/app-version";
 import { elapsedText } from "../utils/elapsed-text";
@@ -24,6 +24,8 @@ interface Props {
   cursorWorld: [number, number] | null;
   /** A Run All batch: its progress while it runs, then its summary. */
   runAll?: RunAllStatus | null;
+  /** The edit canvas's selection and locks, after the point count. */
+  selectionStatus?: ReactNode;
 }
 
 /** "Run All 7/20" and a small bar while the batch runs, then its outcome. */
@@ -98,6 +100,7 @@ export function StatusBar({
   coordinateCount,
   cursorWorld,
   runAll = null,
+  selectionStatus = null,
 }: Props) {
   return (
     <div
@@ -124,6 +127,7 @@ export function StatusBar({
         </span>
         <span style={{ color: "var(--color-vsc-border)" }}>|</span>
         <span>Points: {coordinateCount}</span>
+        {selectionStatus}
         {result && (
           <>
             <span style={{ color: "var(--color-vsc-border)" }}>|</span>

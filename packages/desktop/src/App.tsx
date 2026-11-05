@@ -40,6 +40,7 @@ import type {
 } from "./store/types";
 import { DIALOG_BODY_SELECTOR, naturalDialogHeight } from "./utils/dialog-height";
 import { paperContentOf, type PaperContent } from "./features/view/extents";
+import { useSelectionSync } from "./features/canvas/useSelectionSync";
 
 interface LoadsStatePayload {
   udls: UdlRow[];
@@ -245,9 +246,6 @@ function buildResultsPlotPayloadFromState(): ResultsPlotStatePayload {
 
 function App() {
   const setRegionMaterials = useAppStore((s) => s.setRegionMaterials);
-  const setInteriorBoundariesDialogOpen = useAppStore(
-    (s) => s.setInteriorBoundariesDialogOpen,
-  );
   const coordinates = useAppStore((s) => s.coordinates);
   const coordinateExpressions = useAppStore((s) => s.coordinateExpressions);
   const materials = useAppStore((s) => s.materials);
@@ -418,20 +416,8 @@ function App() {
     }
   }, [isAnyDialogWindow]);
 
-  useEffect(() => {
-    if (!isElectron || isAnyDialogWindow) return;
-
-    const handleOpenChanged = (_event: unknown, open: boolean) => {
-      setInteriorBoundariesDialogOpen(Boolean(open));
-    };
-
-    const unsubscribeInteriorBoundariesDialogOpenChanged = window.cslope.onInteriorBoundariesDialogOpenChanged(handleOpenChanged);
-
-    return () => {
-      unsubscribeInteriorBoundariesDialogOpenChanged();
-      setInteriorBoundariesDialogOpen(false);
-    };
-  }, [isAnyDialogWindow, setInteriorBoundariesDialogOpen]);
+  // The canvas selection, the same in the main window and the dialog windows.
+  useSelectionSync(isAnyDialogWindow);
 
   useEffect(() => {
     if (!isElectron || isAnyDialogWindow) return;

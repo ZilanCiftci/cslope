@@ -64,23 +64,61 @@ describe("MenuBar", () => {
 });
 
 describe("Model ribbon", () => {
+  /** One object of each kind, so every window has something to select. */
+  const withEveryObject = () =>
+    act(() => {
+      const s = store();
+      s.addMaterialBoundary([
+        [0, -5],
+        [50, -5],
+      ]);
+      s.addPiezoLine([
+        [0, -2],
+        [50, -2],
+      ]);
+      s.addUdl();
+      s.addLineLoad();
+      s.addReinforcement();
+      s.addCustomSearchPlane("circle");
+      s.setAnalysisLimits({ enabled: true });
+      s.clearCanvasSelection();
+    });
+
   it.each([
-    ["Exterior", "openGeometryDialog", "Exterior Boundary"],
-    ["Interior", "openInteriorBoundariesDialog", "Interior Boundaries"],
-    ["Assign", "openMaterialAssignmentDialog", "Material Assignment"],
-    ["UDL", "openUdlDialog", "Loads"],
-    ["Line loads", "openLineLoadsDialog", "Loads"],
-    ["Reinforcement", "openReinforcementDialog", "Loads"],
-    ["Piezometric lines", "openPiezoDialog", "Piezometric Lines"],
-    ["Search limits", "openSearchLimitsDialog", "Search Limits"],
-    ["Custom planes", "openCustomSearchPlanesDialog", "Custom Search Planes"],
-    ["Options", "openOptionsDialog", "Options"],
-  ])("%s opens its window and the matching side panel section", async (label, call, section) => {
+    ["Exterior", "openGeometryDialog", "exterior"],
+    ["Interior", "openInteriorBoundariesDialog", "boundary"],
+    ["Assign", "openMaterialAssignmentDialog", null],
+    ["UDL", "openUdlDialog", "udl"],
+    ["Line loads", "openLineLoadsDialog", "lineLoad"],
+    ["Reinforcement", "openReinforcementDialog", "reinforcement"],
+    ["Piezometric lines", "openPiezoDialog", "waterLine"],
+    ["Search limits", "openSearchLimitsDialog", "searchLimits"],
+    ["Custom planes", "openCustomSearchPlanesDialog", "customPlane"],
+    ["Options", "openOptionsDialog", null],
+  ])("%s opens its window and selects its kind of object on the canvas", async (label, call, type) => {
+    withEveryObject();
+    const section = store().activeSection;
     render(<MenuBar />);
     await userEvent.click(tab("Model"));
     await userEvent.click(screen.getByTitle(label));
     expect(bridge.callNames()).toContain(call);
+    expect(store().canvasSelection?.object.type ?? null).toBe(type);
+    // Opening a window is no editing mode.
     expect(store().activeSection).toBe(section);
+  });
+
+  it("keeps a selection of the window's kind, and selects nothing when there is none", async () => {
+    withEveryObject();
+    act(() => store().selectCanvasObject({ type: "exterior" }, 2));
+    render(<MenuBar />);
+    await userEvent.click(tab("Model"));
+    await userEvent.click(screen.getByTitle("Exterior"));
+    expect(store().canvasSelection).toEqual({ object: { type: "exterior" }, point: 2 });
+    act(() => {
+      for (const u of store().udls) store().removeUdl(u.id);
+    });
+    await userEvent.click(screen.getByTitle("UDL"));
+    expect(store().canvasSelection).toEqual({ object: { type: "exterior" }, point: 2 });
   });
 
   it("opens the materials and parameters windows", async () => {
@@ -91,7 +129,7 @@ describe("Model ribbon", () => {
     expect(bridge.callNames()).toEqual(
       expect.arrayContaining(["openMaterialsDialog", "openParametersDialog"]),
     );
-    expect(store().activeSection).toBe("Parameters");
+    expect(store().canvasSelection).toBeNull();
   });
 
   it("undoes and redoes model edits with Ctrl+Z, Ctrl+Shift+Z and Ctrl+Y", () => {

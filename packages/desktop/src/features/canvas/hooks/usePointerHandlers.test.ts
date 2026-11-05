@@ -1,12 +1,14 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { act, renderHook } from "@testing-library/react";
 import type { PointerEvent as RPointerEvent } from "react";
-import { usePointerHandlers } from "./usePointerHandlers";
+import { DRAG_THRESHOLD_PX, usePointerHandlers } from "./usePointerHandlers";
+import type { CanvasCandidate } from "../object-hits";
+import type { CanvasObjectRef, CanvasPointKey } from "../../../store/types";
 import { useAppStore } from "../../../store/app-store";
 import { DEFAULT_PIEZO_LINE, DEFAULT_RESULT_VIEW_SETTINGS } from "../../../store/defaults";
 import { computePaperFrame } from "../helpers";
 import { VIEW_SCALE_MAX } from "../constants";
-import type { EdgeHit, PointHit } from "../types";
+import type { PointHit } from "../types";
 
 type Deps = Parameters<typeof usePointerHandlers>[0];
 
@@ -73,32 +75,17 @@ function setup(over: Partial<Deps> = {}) {
       useAppStore.setState(useAppStore.getState().mode === "result" ? { resultViewScale: s } : { editViewScale: s }),
     ),
     onZoomCompleted: vi.fn(),
-    findNearPointUnified: vi.fn(() => null),
-    findNearEdgeUnified: vi.fn(() => null),
+    findObjectsAt: vi.fn(() => []),
     findRegionAtPoint: vi.fn(() => ({ regionKey: "r1" })),
     findSnapTarget: vi.fn(() => null),
     snapValue: (v: number) => Math.round(v * 10) / 10,
-    coordinates: COORDS,
-    piezometricLine: DEFAULT_PIEZO_LINE,
-    setActivePiezoLine: vi.fn(),
-    analysisLimits: { enabled: true, entryLeftX: 2, entryRightX: 8, exitLeftX: 21, exitRightX: 28 },
-    udls: [],
-    lineLoads: [],
-    materialBoundaries: [],
-    customSearchPlanes: [],
     updateCustomSearchPlane: vi.fn((id, patch) => useAppStore.getState().updateCustomSearchPlane(id, patch)),
     updateCustomPlanePoint: vi.fn((id, i, pt) => useAppStore.getState().updateCustomPlanePoint(id, i, pt)),
-    setSelectedCustomPlane: vi.fn(),
     assigningMaterialId: null,
-    editingAssignment: false,
-    editingBoundaries: false,
-    editingCustomPlanes: false,
     panActive: false,
     setRegionMaterial: vi.fn(),
     setAssigningMaterial: vi.fn(),
     setSelectedRegionKey: vi.fn(),
-    setSelectedMaterialBoundary: vi.fn(),
-    setSelectedPoint: vi.fn(),
     updateAnnotation: vi.fn(),
     setSelectedAnnotations: vi.fn(),
     toggleAnnotationSelection: vi.fn(),
@@ -134,8 +121,6 @@ function setup(over: Partial<Deps> = {}) {
   };
 }
 
-const hitOnce = (hit: PointHit) => vi.fn(() => hit);
-
 beforeEach(() => {
   vi.useFakeTimers();
   useAppStore.getState().newProject();
@@ -153,23 +138,66 @@ afterEach(() => {
   vi.useRealTimers();
 });
 
-describe("dragging in the edit view", () => {
-  it("selects a vertex on click without moving it below the drag threshold", () => {
-    const { deps, down, move, up } = setup({ findNearPointUnified: hitOnce({ kind: "external", index: 2 }) });
+/** Objects under the pointer, as the canvas's hit test reports them. */
+const under = (...c: CanvasCandidate[]) => vi.fn(() => c.map((x) => ({ ...x })));
+const EXT: CanvasObjectRef = { type: "exterior" };
+const select = (object: CanvasObjectRef | null, point: CanvasPointKey | null = null) =>
+  act(() => useAppStore.getState().selectCanvasObject(object, point));
+const selection = () => useAppStore.getState().canvasSelection;
+
+describe("select, then drag (edit view)", () => {
+  it("selects an object by a click, without moving it", () => {
+    const { deps, down, move, up } = setup({ findObjectsAt: under({ object: EXT, point: 2 }) });
     const [sx, sy] = toScreen(10, 10);
     const e = down(sx, sy);
     expect(deps.setContextMenu).toHaveBeenCalledWith(null);
-    expect(deps.setSelectedPoint).toHaveBeenCalledWith(2);
-    expect(deps.setSelectedMaterialBoundary).toHaveBeenCalledWith(null);
     expect((e.target as unknown as { setPointerCapture: () => void }).setPointerCapture).toHaveBeenCalledWith(1);
+    // Nothing is selected until the click ends.
+    expect(selection()).toBeNull();
     move(sx + 2, sy);
     up(sx + 2, sy);
+    expect(selection()).toEqual({ object: EXT, point: null });
     expect(deps.setCoordinate).not.toHaveBeenCalled();
     expect(useAppStore.temporal.getState().pastStates).toHaveLength(0);
   });
 
-  it("drags a vertex by the pointer travel in world units, snapped", () => {
-    const { deps, h, down, move } = setup({ findNearPointUnified: hitOnce({ kind: "external", index: 2 }) });
+  it("does nothing to an object that is not selected when it is dragged", () => {
+    const { deps, down, move, up } = setup({ findObjectsAt: under({ object: EXT, point: 2 }) });
+    const [sx, sy] = toScreen(10, 10);
+    down(sx, sy);
+    move(sx + 30, sy + 20);
+    up(sx + 30, sy + 20);
+    expect(deps.setCoordinate).not.toHaveBeenCalled();
+    // A drag is no click: nothing is selected either.
+    expect(selection()).toBeNull();
+    expect(useAppStore.temporal.getState().pastStates).toHaveLength(0);
+  });
+
+  it("pans in pan mode when a drag starts on an object that is not selected", () => {
+    const { deps, down, move } = setup({ panActive: true, findObjectsAt: under({ object: EXT, point: 2 }) });
+    down(400, 300);
+    move(380, 330);
+    expect(deps.setActiveViewOffset).toHaveBeenLastCalledWith([-15 - 2, -5 - 3]);
+    expect(deps.setCoordinate).not.toHaveBeenCalled();
+  });
+
+  it("keeps a dead zone of 4 px: a press that moves less is a click", () => {
+    expect(DRAG_THRESHOLD_PX).toBe(4);
+    select(EXT);
+    const { deps, down, move, up } = setup({ findObjectsAt: under({ object: EXT, point: 2 }) });
+    const [sx, sy] = toScreen(10, 10);
+    down(sx, sy);
+    move(sx + 3, sy + 2); // 3.6 px
+    expect(deps.setCoordinate).not.toHaveBeenCalled();
+    up(sx + 3, sy + 2);
+    // The click picks the point under the pointer.
+    expect(selection()).toEqual({ object: EXT, point: 2 });
+    expect(useAppStore.temporal.getState().pastStates).toHaveLength(0);
+  });
+
+  it("drags a handle of the selected object by the pointer travel, snapped, and selects that point", () => {
+    select(EXT);
+    const { deps, h, down, move } = setup({ findObjectsAt: under({ object: EXT, point: 2 }) });
     const [sx, sy] = toScreen(10, 10);
     down(sx, sy);
     move(sx + 33, sy - 12);
@@ -177,11 +205,15 @@ describe("dragging in the edit view", () => {
     expect(deps.setCoordinate).toHaveBeenLastCalledWith(2, [13.3, 11.2]);
     // The status bar shows the snapped position.
     expect(h().mouseWorld).toEqual([13.3, 11.2]);
+    expect(selection()).toEqual({ object: EXT, point: 2 });
+    // The exterior's points carry their own labels: no tip beside the pointer.
+    expect(h().dragTip).toBeNull();
   });
 
   it("snaps to a neighbouring vertex when one is in range", () => {
+    select(EXT);
     const { deps, down, move } = setup({
-      findNearPointUnified: hitOnce({ kind: "external", index: 2 }),
+      findObjectsAt: under({ object: EXT, point: 2 }),
       findSnapTarget: vi.fn(() => [20, 5] as [number, number]),
     });
     const [sx, sy] = toScreen(10, 10);
@@ -193,7 +225,8 @@ describe("dragging in the edit view", () => {
 
   it("keeps an axis that a parameter expression drives", () => {
     useAppStore.setState({ coordinateExpressions: [{}, {}, { x: "L" }] });
-    const { deps, down, move } = setup({ findNearPointUnified: hitOnce({ kind: "external", index: 2 }) });
+    select(EXT);
+    const { deps, down, move } = setup({ findObjectsAt: under({ object: EXT, point: 2 }) });
     const [sx, sy] = toScreen(10, 10);
     down(sx, sy);
     move(sx + 30, sy - 30);
@@ -201,8 +234,9 @@ describe("dragging in the edit view", () => {
   });
 
   it("records one undo step per drag", () => {
+    select(EXT);
     const { down, move, up } = setup({
-      findNearPointUnified: hitOnce({ kind: "external", index: 2 }),
+      findObjectsAt: under({ object: EXT, point: 2 }),
       setCoordinate: (i, c) => useAppStore.getState().setCoordinate(i, c),
     });
     const [sx, sy] = toScreen(10, 10);
@@ -217,8 +251,38 @@ describe("dragging in the edit view", () => {
     expect(useAppStore.getState().coordinates[2]).toEqual([13, 10]);
   });
 
+  it("does not drag the exterior or a material boundary by its line", () => {
+    select(EXT);
+    const { deps, down, move } = setup({ findObjectsAt: under({ object: EXT, point: null }) });
+    const [sx, sy] = toScreen(5, 10);
+    down(sx, sy);
+    move(sx + 30, sy);
+    expect(deps.setCoordinate).not.toHaveBeenCalled();
+  });
+
+  it("drags no handle of a locked object, and still selects it and its points", () => {
+    act(() => useAppStore.getState().setObjectLocked(EXT, true));
+    select(EXT);
+    const { deps, h, down, move, up } = setup({ findObjectsAt: under({ object: EXT, point: 2 }) });
+    const [sx, sy] = toScreen(10, 10);
+    move(sx, sy);
+    expect(h().hoverObject).toMatchObject({ object: EXT, point: 2, locked: true });
+    expect(h().cursor).toBe("not-allowed");
+    // No hover on a handle that cannot move.
+    expect(h().hoverHit).toBeNull();
+    down(sx, sy);
+    move(sx + 30, sy);
+    up(sx + 30, sy);
+    expect(deps.setCoordinate).not.toHaveBeenCalled();
+    down(sx, sy);
+    up(sx, sy);
+    expect(selection()).toEqual({ object: EXT, point: 2 });
+  });
+
   it("drags search-limit handles horizontally", () => {
-    const { deps, down, move } = setup({ findNearPointUnified: hitOnce({ kind: "limit", handle: "exitLeftX" }) });
+    useAppStore.setState({ analysisLimits: { enabled: true, entryLeftX: 2, entryRightX: 8, exitLeftX: 21, exitRightX: 28 } });
+    select({ type: "searchLimits" });
+    const { deps, down, move } = setup({ findObjectsAt: under({ object: { type: "searchLimits" }, point: "exitLeftX" }) });
     const [sx, sy] = toScreen(21, 4.5);
     down(sx, sy);
     move(sx - 15, sy + 40);
@@ -233,62 +297,91 @@ describe("dragging in the edit view", () => {
       ],
       lineLoads: [{ id: "l", magnitude: 5, x: 25 }],
     });
-    const udls = useAppStore.getState().udls;
-    const lineLoads = useAppStore.getState().lineLoads;
 
-    const u = setup({ udls, findNearPointUnified: hitOnce({ kind: "udl", udlId: "u", handle: "x2" }) });
+    select({ type: "udl", id: "u" });
+    const u = setup({ findObjectsAt: under({ object: { type: "udl", id: "u" }, point: "x2" }) });
     const [ux, uy] = toScreen(8, 12);
     u.down(ux, uy);
     u.move(ux + 20, uy);
     expect(u.deps.updateUdl).toHaveBeenLastCalledWith("u", { x2: 10 });
+    expect(u.h().dragTip?.text).toBe("x 10.00 m");
+    u.up(ux + 20, uy);
 
-    const fixed = setup({ udls, findNearPointUnified: hitOnce({ kind: "udl", udlId: "fixed", handle: "x2" }) });
+    select({ type: "udl", id: "fixed" });
+    const fixed = setup({ findObjectsAt: under({ object: { type: "udl", id: "fixed" }, point: "x2" }) });
     fixed.down(ux, uy);
     fixed.move(ux + 20, uy);
     expect(fixed.deps.updateUdl).not.toHaveBeenCalled();
+    fixed.up(ux + 20, uy);
 
-    const l = setup({ lineLoads, findNearPointUnified: hitOnce({ kind: "lineLoad", loadId: "l" }) });
+    select({ type: "lineLoad", id: "l" });
+    const l = setup({ findObjectsAt: under({ object: { type: "lineLoad", id: "l" }, point: "x" }) });
     const [lx, ly] = toScreen(25, 7);
     l.down(lx, ly);
     l.move(lx - 50, ly);
     expect(l.deps.updateLineLoad).toHaveBeenLastCalledWith("l", { x: 20 });
   });
 
-  it("drags interior boundary points and selects their boundary", () => {
-    const boundary = { id: "b", coordinates: [[0, 4], [30, 3]] as [number, number][] };
-    useAppStore.setState({ materialBoundaries: [boundary] });
-    const { deps, down, move } = setup({
-      materialBoundaries: [boundary],
-      findNearPointUnified: hitOnce({ kind: "boundary", boundaryId: "b", pointIndex: 1 }),
+  it("moves a selected load whole by its strip, in whole grid steps", () => {
+    useAppStore.setState({ udls: [{ id: "u", magnitude: 10, x1: 2, x2: 8 }] });
+    select({ type: "udl", id: "u" });
+    const { deps, h, down, move } = setup({
+      snapValue: (v: number) => Math.round(v),
+      findObjectsAt: under({ object: { type: "udl", id: "u" }, point: null }),
     });
-    const [sx, sy] = toScreen(30, 3);
+    const [sx, sy] = toScreen(5, 11);
     down(sx, sy);
-    expect(deps.setSelectedMaterialBoundary).toHaveBeenCalledWith("b");
-    expect(deps.setSelectedPoint).toHaveBeenCalledWith(null);
-    move(sx, sy - 20);
-    expect(deps.updateBoundaryPoint).toHaveBeenLastCalledWith("b", 1, [30, 5]);
+    move(sx + 33, sy - 8);
+    expect(deps.updateUdl).toHaveBeenLastCalledWith("u", { x1: 5, x2: 11 });
+    expect(h().dragTip?.text).toBe("x 5.00 to 11.00 m");
   });
 
-  it("drags points of the active water line", () => {
+  it("drags interior boundary points of the selected boundary", () => {
+    const boundary = { id: "b", coordinates: [[0, 4], [30, 3]] as [number, number][] };
+    useAppStore.setState({ materialBoundaries: [boundary] });
+    select({ type: "boundary", id: "b" });
+    const { deps, down, move } = setup({ findObjectsAt: under({ object: { type: "boundary", id: "b" }, point: 1 }) });
+    const [sx, sy] = toScreen(30, 3);
+    down(sx, sy);
+    move(sx, sy - 20);
+    expect(deps.updateBoundaryPoint).toHaveBeenLastCalledWith("b", 1, [30, 5]);
+    expect(selection()).toEqual({ object: { type: "boundary", id: "b" }, point: 1 });
+  });
+
+  it("drags points of the selected water line (made the active one)", () => {
     const piezometricLine = {
       ...DEFAULT_PIEZO_LINE,
-      lines: [{ id: "w", name: "w", color: "#000", coordinates: [[0, 7], [30, 6]] as [number, number][] }],
-      activeLineId: "w",
+      lines: [
+        { id: "w", name: "w", color: "#000", coordinates: [[0, 7], [30, 6]] as [number, number][] },
+        { id: "v", name: "v", color: "#000", coordinates: [[0, 2], [30, 2]] as [number, number][] },
+      ],
+      activeLineId: "v",
     };
     useAppStore.setState({ piezometricLine });
-    const { deps, down, move } = setup({
-      piezometricLine,
-      findNearPointUnified: hitOnce({ kind: "piezo", lineId: "w", index: 0 }),
-    });
+    select({ type: "waterLine", id: "w" });
+    expect(useAppStore.getState().piezometricLine.activeLineId).toBe("w");
+    const { deps, down, move } = setup({ findObjectsAt: under({ object: { type: "waterLine", id: "w" }, point: 0 }) });
     const [sx, sy] = toScreen(0, 7);
     down(sx, sy);
-    expect(deps.setActivePiezoLine).toHaveBeenCalledWith("w");
     move(sx + 10, sy + 10);
     expect(deps.setPiezoCoordinate).toHaveBeenLastCalledWith(0, [1, 6]);
   });
 
+  it("drags the ends of a reinforcement element", () => {
+    act(() => useAppStore.getState().addReinforcement("nail"));
+    const r = useAppStore.getState().reinforcements[0];
+    select({ type: "reinforcement", id: r.id });
+    const { down, move, h } = setup({ findObjectsAt: under({ object: { type: "reinforcement", id: r.id }, point: "end2" }) });
+    const [sx, sy] = toScreen(r.x2, r.y2);
+    down(sx, sy);
+    move(sx + 20, sy - 10);
+    expect(useAppStore.getState().reinforcements[0]).toMatchObject({ x1: r.x1, y1: r.y1, x2: Math.round((r.x2 + 2) * 10) / 10, y2: Math.round((r.y2 + 1) * 10) / 10 });
+    expect(h().dragTip).not.toBeNull();
+  });
+
   it("pans the view when a drag nears the canvas edge", () => {
-    const { down, move } = setup({ findNearPointUnified: hitOnce({ kind: "external", index: 2 }) });
+    select(EXT);
+    const { down, move } = setup({ findObjectsAt: under({ object: EXT, point: 2 }) });
     const [sx, sy] = toScreen(10, 10);
     down(sx, sy);
     move(sx + 10, sy); // past the threshold
@@ -300,8 +393,9 @@ describe("dragging in the edit view", () => {
   });
 
   it("commits the drag on pointer cancel", () => {
+    select(EXT);
     const { h, down, move } = setup({
-      findNearPointUnified: hitOnce({ kind: "external", index: 2 }),
+      findObjectsAt: under({ object: EXT, point: 2 }),
       setCoordinate: (i, c) => useAppStore.getState().setCoordinate(i, c),
     });
     const [sx, sy] = toScreen(10, 10);
@@ -314,13 +408,77 @@ describe("dragging in the edit view", () => {
   });
 });
 
-describe("clicks on empty space in the edit view", () => {
-  it("pans with the middle button", () => {
-    const { down, move, deps } = setup();
+describe("clicks (edit view)", () => {
+  const click = (s: ReturnType<typeof setup>, x: number, y: number) => {
+    s.down(x, y);
+    s.up(x, y);
+  };
+  const WATER: CanvasObjectRef = { type: "waterLine", id: "w" };
+  const BOUNDARY: CanvasObjectRef = { type: "boundary", id: "b" };
+
+  beforeEach(() => {
+    useAppStore.setState({
+      materialBoundaries: [{ id: "b", coordinates: [[0, 10], [30, 3]] }],
+      piezometricLine: { ...DEFAULT_PIEZO_LINE, lines: [{ id: "w", name: "w", color: "#000", coordinates: [[0, 10], [30, 6]] }], activeLineId: "w" },
+    });
+  });
+
+  it("selects a point of the selected object by a click on it", () => {
+    select(EXT);
+    const s = setup({ findObjectsAt: under({ object: EXT, point: 3 }) });
+    click(s, ...toScreen(20, 5));
+    expect(selection()).toEqual({ object: EXT, point: 3 });
+    // A click on the object's line drops the point, keeps the object.
+    const line = setup({ findObjectsAt: under({ object: EXT, point: null }) });
+    click(line, ...toScreen(25, 5));
+    expect(selection()).toEqual({ object: EXT, point: null });
+  });
+
+  it("cycles through the objects under the pointer on repeated clicks at one spot", () => {
+    const s = setup({
+      findObjectsAt: under({ object: WATER, point: 0 }, { object: BOUNDARY, point: 0 }, { object: EXT, point: 1 }),
+    });
+    const at = toScreen(0, 10);
+    click(s, ...at);
+    expect(selection()).toEqual({ object: WATER, point: null });
+    expect(useAppStore.getState().canvasSelectionCycle).toEqual({ position: 1, count: 3 });
+    // Again: its point under the pointer; then the next object.
+    click(s, ...at);
+    expect(selection()).toEqual({ object: WATER, point: 0 });
+    click(s, ...at);
+    expect(selection()).toEqual({ object: BOUNDARY, point: null });
+    expect(useAppStore.getState().canvasSelectionCycle).toEqual({ position: 2, count: 3 });
+    click(s, ...at);
+    click(s, ...at);
+    expect(selection()).toEqual({ object: EXT, point: null });
+    expect(useAppStore.getState().canvasSelectionCycle).toEqual({ position: 3, count: 3 });
+    click(s, ...at);
+    click(s, ...at);
+    expect(selection()?.object).toEqual(WATER);
+  });
+
+  it("does not cycle on a click elsewhere: the selected object stays", () => {
+    select(BOUNDARY);
+    const s = setup({ findObjectsAt: under({ object: WATER, point: null }, { object: BOUNDARY, point: null }) });
+    click(s, ...toScreen(5, 9));
+    expect(selection()).toEqual({ object: BOUNDARY, point: null });
+  });
+
+  it("clears the selection by a click on empty canvas", () => {
+    select(EXT, 2);
+    const s = setup({ findObjectsAt: under() });
+    click(s, ...toScreen(28, 2));
+    expect(selection()).toBeNull();
+    expect(useAppStore.getState().selectedPointIndex).toBeNull();
+  });
+
+  it("pans with the middle button, also over an object", () => {
+    const { down, move, deps } = setup({ findObjectsAt: under({ object: EXT, point: 2 }) });
     const e = down(400, 300, { button: 1 });
     expect(e.preventDefault).toHaveBeenCalled();
     move(450, 280);
     expect(deps.setActiveViewOffset).toHaveBeenLastCalledWith([-15 + 5, -5 + 2]);
+    expect(deps.findObjectsAt).not.toHaveBeenCalled();
   });
 
   it("pans with the left button in pan mode", () => {
@@ -331,12 +489,12 @@ describe("clicks on empty space in the edit view", () => {
     expect(deps.findRegionAtPoint).not.toHaveBeenCalled();
   });
 
-  it("assigns the armed material to the clicked region", () => {
-    const { down, deps } = setup({ assigningMaterialId: "sand" });
+  it("assigns the armed material to the clicked region, before any selection", () => {
+    const { down, deps } = setup({ assigningMaterialId: "sand", findObjectsAt: under({ object: EXT, point: null }) });
     down(...toScreen(5, 5));
     expect(deps.setRegionMaterial).toHaveBeenCalledWith([5, 5], "sand");
     expect(deps.setAssigningMaterial).toHaveBeenCalledWith(null);
-    expect(deps.setSelectedPoint).toHaveBeenCalledWith(null);
+    expect(deps.findObjectsAt).not.toHaveBeenCalled();
   });
 
   it("disarms the material when clicking outside the model", () => {
@@ -346,74 +504,114 @@ describe("clicks on empty space in the edit view", () => {
     expect(deps.setAssigningMaterial).toHaveBeenCalledWith(null);
   });
 
-  it("opens the material picker at the click while assigning materials", () => {
-    const { down, deps } = setup({ editingAssignment: true });
-    const [sx, sy] = toScreen(5, 5);
-    down(sx, sy);
-    expect(deps.setSelectedRegionKey).toHaveBeenCalledWith("r1");
-    expect(deps.setMaterialPicker).toHaveBeenLastCalledWith({ screenX: sx, screenY: sy, worldPoint: [5, 5] });
-  });
-
-  it("selects an interior boundary by clicking its edge while editing boundaries", () => {
-    const { down, deps } = setup({
-      editingBoundaries: true,
-      findNearEdgeUnified: vi.fn(() => ({ kind: "boundary" as const, boundaryId: "b", insertIndex: 1, snapPoint: [1, 1] as [number, number] })),
-    });
-    down(...toScreen(5, 4));
-    expect(deps.setSelectedMaterialBoundary).toHaveBeenCalledWith("b");
-    expect(deps.findRegionAtPoint).not.toHaveBeenCalled();
-  });
-
-  it("ignores non-primary buttons on empty space", () => {
-    const { down, deps } = setup({ assigningMaterialId: "sand" });
+  it("ignores non-primary buttons", () => {
+    const { down, up, deps } = setup({ assigningMaterialId: "sand", findObjectsAt: under({ object: EXT, point: 1 }) });
     down(...toScreen(5, 5), { button: 2 });
-    expect(deps.findNearPointUnified).not.toHaveBeenCalled();
+    up(...toScreen(5, 5));
+    expect(deps.findObjectsAt).not.toHaveBeenCalled();
     expect(deps.setRegionMaterial).not.toHaveBeenCalled();
+    expect(selection()).toBeNull();
   });
 });
 
-describe("hover", () => {
-  it("reports the hovered handle and keeps the same object while it does not change", () => {
-    const hit: PointHit = { kind: "external", index: 1 };
-    const find = vi.fn<(x: number, y: number) => PointHit | null>(() => ({ ...hit }));
-    const { h, move } = setup({ findNearPointUnified: find });
+describe("double-click (edit view)", () => {
+  const dbl = (s: ReturnType<typeof setup>, x: number, y: number) =>
+    act(() => s.h().handleDoubleClick({ clientX: x, clientY: y } as unknown as Parameters<ReturnType<typeof usePointerHandlers>["handleDoubleClick"]>[0]));
+
+  it("opens the point editor on a point of the selected object", () => {
+    select(EXT);
+    const onEditPoint = vi.fn();
+    const s = setup({ onEditPoint, findObjectsAt: under({ object: EXT, point: 3 }) });
+    const [sx, sy] = toScreen(20, 5);
+    dbl(s, sx, sy);
+    expect(onEditPoint).toHaveBeenCalledWith(EXT, 3, { x: sx, y: sy });
+    expect(selection()).toEqual({ object: EXT, point: 3 });
+  });
+
+  it("opens the material picker on empty canvas in a region", () => {
+    const s = setup({ findObjectsAt: under() });
+    const [sx, sy] = toScreen(5, 5);
+    dbl(s, sx, sy);
+    expect(s.deps.setSelectedRegionKey).toHaveBeenCalledWith("r1");
+    expect(s.deps.setMaterialPicker).toHaveBeenLastCalledWith({ screenX: sx, screenY: sy, worldPoint: [5, 5] });
+  });
+
+  it("does nothing on an object that is not selected", () => {
+    const onEditPoint = vi.fn();
+    const s = setup({ onEditPoint, findObjectsAt: under({ object: EXT, point: 3 }) });
+    dbl(s, ...toScreen(20, 5));
+    expect(onEditPoint).not.toHaveBeenCalled();
+    expect(s.deps.setMaterialPicker).not.toHaveBeenCalled();
+  });
+});
+
+describe("hover (edit view)", () => {
+  it("reports the object under the pointer and keeps the same object while it does not change", () => {
+    const find = vi.fn<(x: number, y: number) => CanvasCandidate[]>(() => [{ object: EXT, point: 1 }]);
+    const { h, move } = setup({ findObjectsAt: find });
     move(...toScreen(0, 10));
-    const first = h().hoverHit;
-    expect(first).toEqual(hit);
+    const first = h().hoverObject;
+    expect(first).toEqual({ object: EXT, point: 1, locked: false });
+    // A pointer cursor over an object that is not selected.
+    expect(h().cursor).toBe("pointer");
     move(...toScreen(0.1, 10));
-    expect(h().hoverHit).toBe(first);
-    find.mockReturnValue(null);
+    expect(h().hoverObject).toBe(first);
+    find.mockReturnValue([]);
     move(...toScreen(5, 5));
-    expect(h().hoverHit).toBeNull();
+    expect(h().hoverObject).toBeNull();
+    expect(h().cursor).toBe("default");
     expect(h().mouseWorld).toEqual([5, 5]);
   });
-});
 
-describe("hover identity for each kind of handle", () => {
-  it("keeps the hover object for an equal hit and replaces it for a different one", () => {
-    const hits: PointHit[] = [
-      { kind: "piezo", lineId: "w", index: 0 },
-      { kind: "piezo", lineId: "w", index: 1 },
-      { kind: "limit", handle: "entryLeftX" },
-      { kind: "limit", handle: "exitLeftX" },
-      { kind: "udl", udlId: "u", handle: "x1" },
-      { kind: "udl", udlId: "u", handle: "x2" },
-      { kind: "lineLoad", loadId: "a" },
-      { kind: "lineLoad", loadId: "b" },
-      { kind: "boundary", boundaryId: "b", pointIndex: 0 },
-      { kind: "boundary", boundaryId: "b", pointIndex: 1 },
-      { kind: "annotation", annoId: "x" },
-      { kind: "annotation", annoId: "y" },
-      { kind: "external", index: 0 },
+  it("prefers the selected object where objects overlap, with a grab cursor on its handles", () => {
+    useAppStore.setState({
+      piezometricLine: { ...DEFAULT_PIEZO_LINE, lines: [{ id: "w", name: "w", color: "#000", coordinates: [[0, 10], [30, 6]] }], activeLineId: "w" },
+    });
+    select({ type: "waterLine", id: "w" });
+    const { h, move } = setup({
+      findObjectsAt: under({ object: EXT, point: 1 }, { object: { type: "waterLine", id: "w" }, point: 0 }),
+    });
+    move(...toScreen(0, 10));
+    expect(h().hoverObject?.object).toEqual({ type: "waterLine", id: "w" });
+    expect(h().hoverHit).toEqual({ kind: "piezo", lineId: "w", index: 0 });
+    expect(h().cursor).toBe("grab");
+  });
+
+  it("shows a move cursor over a movable body and a resize cursor over a load end", () => {
+    useAppStore.setState({ udls: [{ id: "u", magnitude: 10, x1: 2, x2: 8 }] });
+    select({ type: "udl", id: "u" });
+    const body = setup({ findObjectsAt: under({ object: { type: "udl", id: "u" }, point: null }) });
+    body.move(...toScreen(5, 11));
+    expect(body.h().cursor).toBe("move");
+    const end = setup({ findObjectsAt: under({ object: { type: "udl", id: "u" }, point: "x1" }) });
+    end.move(...toScreen(2, 11));
+    expect(end.h().cursor).toBe("ew-resize");
+  });
+
+  it("keeps the hover handle for an equal hit and replaces it for a different one", () => {
+    const candidates: CanvasCandidate[] = [
+      { object: { type: "waterLine", id: "w" }, point: 0 },
+      { object: { type: "waterLine", id: "w" }, point: 1 },
+      { object: { type: "searchLimits" }, point: "entryLeftX" },
+      { object: { type: "searchLimits" }, point: "exitLeftX" },
+      { object: { type: "udl", id: "u" }, point: "x1" },
+      { object: { type: "udl", id: "u" }, point: "x2" },
+      { object: { type: "lineLoad", id: "a" }, point: "x" },
+      { object: { type: "lineLoad", id: "b" }, point: "x" },
+      { object: { type: "boundary", id: "b" }, point: 0 },
+      { object: { type: "boundary", id: "b" }, point: 1 },
+      { object: { type: "reinforcement", id: "r" }, point: "end1" },
+      { object: { type: "reinforcement", id: "r" }, point: "end2" },
+      { object: EXT, point: 0 },
     ];
-    let current: PointHit = hits[0];
-    const { h, move } = setup({ findNearPointUnified: vi.fn(() => ({ ...current })) });
+    let current = candidates[0];
+    const { h, move } = setup({ findObjectsAt: vi.fn(() => [{ ...current }]) });
     let previous: PointHit | null = null;
-    for (const hit of hits) {
-      current = hit;
+    for (const c of candidates) {
+      current = c;
       move(100, 100);
       const first = h().hoverHit;
-      expect(first).toEqual(hit);
+      expect(first).not.toBeNull();
       if (previous) expect(first).not.toBe(previous);
       // Same hit again (a new but equal object): unchanged.
       move(101, 100);
@@ -533,7 +731,7 @@ describe("annotations in the result view", () => {
     const empty = setup({ mode: "result" });
     empty.down(...at(0.4, 0.9));
     expect(empty.deps.setSelectedResultObject).toHaveBeenCalledWith("paper-frame");
-    expect(empty.deps.findNearPointUnified).not.toHaveBeenCalled();
+    expect(empty.deps.findObjectsAt).not.toHaveBeenCalled();
   });
 
   it("hovers annotations with the same hit area as clicks", () => {
@@ -548,8 +746,9 @@ describe("annotations in the result view", () => {
 describe("custom search planes", () => {
   const CIRCLE = { id: "c1", cx: 15, cy: 14, radius: 10 };
   const LINE = { id: "p1", cx: 0, cy: 0, radius: 0, points: [[5, 8], [15, 2], [25, 4]] as [number, number][] };
+  const C1: CanvasObjectRef = { type: "customPlane", id: "c1" };
+  const P1: CanvasObjectRef = { type: "customPlane", id: "p1" };
   const planes = () => useAppStore.getState().customSearchPlanes;
-  const centreHit = () => hitOnce({ kind: "customCircle", planeId: "c1", handle: "centre" });
 
   beforeEach(() => {
     useAppStore.setState({ customSearchPlanes: [CIRCLE, LINE] });
@@ -557,31 +756,26 @@ describe("custom search planes", () => {
   });
 
   it("drags a circle's centre, snapped to the grid only, showing its numbers beside the pointer", () => {
+    select(C1);
     const { deps, h, down, move, up } = setup({
-      customSearchPlanes: planes(),
-      editingCustomPlanes: true,
-      findNearPointUnified: centreHit(),
+      findObjectsAt: under({ object: C1, point: "centre" }),
       findSnapTarget: vi.fn(() => [0, 0] as [number, number]),
     });
     const [sx, sy] = toScreen(15, 14);
     down(sx, sy);
-    expect(deps.setSelectedCustomPlane).toHaveBeenCalledWith("c1");
-    expect(deps.setSelectedPoint).toHaveBeenCalledWith(null);
     move(sx + 33, sy - 12);
     expect(deps.findSnapTarget).not.toHaveBeenCalled();
     expect(planes()[0]).toMatchObject({ cx: 18.3, cy: 15.2, radius: 10 });
     expect(h().mouseWorld).toEqual([18.3, 15.2]);
     expect(h().dragTip).toEqual({ text: "cx 18.30  cy 15.20  R 10.00 m", x: sx + 33, y: sy - 12 });
+    expect(selection()).toEqual({ object: C1, point: "centre" });
     up(sx + 33, sy - 12);
     expect(h().dragTip).toBeNull();
   });
 
   it("drags a circle's rim: the radius is the pointer's distance from the centre, at least 0.1 m", () => {
-    const { h, down, move } = setup({
-      customSearchPlanes: planes(),
-      editingCustomPlanes: true,
-      findNearPointUnified: hitOnce({ kind: "customCircle", planeId: "c1", handle: "rim" }),
-    });
+    select(C1);
+    const { h, down, move } = setup({ findObjectsAt: under({ object: C1, point: "rim" }) });
     // Pressed on the rim below the centre, dragged 30 px further down.
     const [sx, sy] = toScreen(15, 4);
     down(sx, sy);
@@ -597,15 +791,13 @@ describe("custom search planes", () => {
   });
 
   it("drags a vertex of a non-circular surface, snapping to neighbouring points, anywhere in the soil", () => {
-    const { deps, down, move, up } = setup({
-      customSearchPlanes: planes(),
-      editingCustomPlanes: true,
-      findNearPointUnified: hitOnce({ kind: "customVertex", planeId: "p1", pointIndex: 1 }),
+    select(P1);
+    const { down, move, up } = setup({
+      findObjectsAt: under({ object: P1, point: 1 }),
       findSnapTarget: vi.fn((x: number, y: number) => (Math.hypot(x - 20, y - 5) < 1 ? ([20, 5] as [number, number]) : null)),
     });
     const [sx, sy] = toScreen(15, 2);
     down(sx, sy);
-    expect(deps.setSelectedCustomPlane).toHaveBeenCalledWith("p1");
     move(sx + 20, sy + 30);
     expect(planes()[1].points![1]).toEqual([17, -1]);
     move(sx + 48, sy - 28);
@@ -614,12 +806,29 @@ describe("custom search planes", () => {
     expect(useAppStore.temporal.getState().pastStates).toHaveLength(1);
   });
 
-  it("records one undo step for a drag, which restores the circle", () => {
+  it("moves a non-circular surface whole by its line, in whole grid steps, in one undo step", () => {
+    select(P1);
     const { down, move, up } = setup({
-      customSearchPlanes: planes(),
-      editingCustomPlanes: true,
-      findNearPointUnified: centreHit(),
+      snapValue: (v: number) => Math.round(v),
+      findObjectsAt: under({ object: P1, point: null }),
     });
+    const [sx, sy] = toScreen(10, 5);
+    down(sx, sy);
+    move(sx + 21, sy - 9);
+    expect(planes()[1].points).toEqual([
+      [7, 9],
+      [17, 3],
+      [27, 5],
+    ]);
+    up(sx + 21, sy - 9);
+    expect(useAppStore.temporal.getState().pastStates).toHaveLength(1);
+    act(() => useAppStore.temporal.getState().undo());
+    expect(planes()[1]).toEqual(LINE);
+  });
+
+  it("records one undo step for a drag, which restores the circle", () => {
+    select(C1);
+    const { down, move, up } = setup({ findObjectsAt: under({ object: C1, point: "centre" }) });
     const [sx, sy] = toScreen(15, 14);
     down(sx, sy);
     move(sx + 10, sy);
@@ -636,11 +845,8 @@ describe("custom search planes", () => {
   });
 
   it("does not move a handle that is only clicked, and records no step", () => {
-    const { down, move, up } = setup({
-      customSearchPlanes: planes(),
-      editingCustomPlanes: true,
-      findNearPointUnified: centreHit(),
-    });
+    select(C1);
+    const { down, move, up } = setup({ findObjectsAt: under({ object: C1, point: "centre" }) });
     const [sx, sy] = toScreen(15, 14);
     down(sx, sy);
     move(sx + 2, sy + 1);
@@ -649,23 +855,17 @@ describe("custom search planes", () => {
     expect(useAppStore.temporal.getState().pastStates).toHaveLength(0);
   });
 
-  it("picks a surface by a click on its line, and clears the pick on empty canvas", () => {
-    const edge: EdgeHit = { kind: "customPlane", planeId: "p1", insertIndex: 2, snapPoint: [20, 3] };
-    const onLine = setup({
-      customSearchPlanes: planes(),
-      editingCustomPlanes: true,
-      findNearEdgeUnified: vi.fn(() => edge),
-    });
+  it("picks a surface by a click on its line (the older pick follows), and clears it on empty canvas", () => {
+    const onLine = setup({ findObjectsAt: under({ object: P1, point: null }) });
     onLine.down(...toScreen(20, 3));
-    expect(onLine.deps.setSelectedCustomPlane).toHaveBeenLastCalledWith("p1");
-    expect(onLine.deps.setSelectedPoint).toHaveBeenCalledWith(null);
-    const empty = setup({ customSearchPlanes: planes(), editingCustomPlanes: true });
+    onLine.up(...toScreen(20, 3));
+    expect(selection()).toEqual({ object: P1, point: null });
+    expect(useAppStore.getState().selectedCustomPlaneId).toBe("p1");
+    const empty = setup({ findObjectsAt: under() });
     empty.down(...toScreen(28, 2));
-    expect(empty.deps.setSelectedCustomPlane).toHaveBeenLastCalledWith(null);
-    // Without custom planes nothing touches the pick.
-    const none = setup({ customSearchPlanes: [], editingCustomPlanes: false });
-    none.down(...toScreen(28, 2));
-    expect(none.deps.setSelectedCustomPlane).not.toHaveBeenCalled();
+    empty.up(...toScreen(28, 2));
+    expect(selection()).toBeNull();
+    expect(useAppStore.getState().selectedCustomPlaneId).toBeNull();
   });
 });
 
@@ -699,11 +899,18 @@ describe("reference annotations in the result view", () => {
     useAppStore.temporal.getState().clear();
   });
 
-  it("selects a polyline by a click on its line and drags it whole, in one undo step", () => {
-    const { deps, down, move, up } = setup({ mode: "result", updateAnnotation: realUpdate });
+  it("selects a polyline by a press on its line without moving it, then drags it whole, in one undo step", () => {
+    const first = setup({ mode: "result", updateAnnotation: realUpdate });
     const [sx, sy] = toScreen(7, 7);
+    first.down(sx, sy);
+    expect(first.deps.setSelectedAnnotations).toHaveBeenCalledWith(["l"]);
+    first.move(sx + 20, sy - 20);
+    first.up(sx + 20, sy - 20);
+    expect(line().points).toEqual(LINE.points);
+    expect(useAppStore.temporal.getState().pastStates).toHaveLength(0);
+    // Selected: a drag moves it.
+    const { down, move, up } = setup({ mode: "result", selectedAnnotationIds: ["l"], updateAnnotation: realUpdate });
     down(sx, sy);
-    expect(deps.setSelectedAnnotations).toHaveBeenCalledWith(["l"]);
     move(sx + 10, sy - 20);
     move(sx + 20, sy - 20);
     expect(line().points).toEqual([
@@ -719,8 +926,8 @@ describe("reference annotations in the result view", () => {
     expect(circle()).toEqual(CIRCLE);
   });
 
-  it("drags a vertex (snapped to the grid) and a circle's centre and rim", () => {
-    const { down, move, up } = setup({ mode: "result", updateAnnotation: realUpdate });
+  it("drags a vertex (snapped to the grid) and a circle's centre and rim of the selected lines", () => {
+    const { down, move, up } = setup({ mode: "result", selectedAnnotationIds: ["l", "c"], updateAnnotation: realUpdate });
     const [vx, vy] = toScreen(12, 4);
     down(vx, vy);
     move(vx + 6.3, vy + 4.2); // +1.26 m, -0.84 m → snapped to 0.1

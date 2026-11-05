@@ -44,6 +44,10 @@ function normalizeLoadsPayload(
 export function LineLoadsDialogApp() {
   const udls = useAppStore((s) => s.udls);
   const lineLoads = useAppStore((s) => s.lineLoads);
+  // The canvas selection: a row picked here selects its load on the
+  // canvas, and one selected there is the selected row here.
+  const canvasSelection = useAppStore((s) => s.canvasSelection);
+  const selectCanvasObject = useAppStore((s) => s.selectCanvasObject);
   const addLineLoad = useAppStore((s) => s.addLineLoad);
   const updateLineLoad = useAppStore((s) => s.updateLineLoad);
   const removeLineLoad = useAppStore((s) => s.removeLineLoad);
@@ -246,6 +250,8 @@ export function LineLoadsDialogApp() {
           rows={lineLoads}
           columns={columns}
           getRowKey={(row) => row.id}
+          selectedRowIndex={canvasSelection?.object.type === "lineLoad" ? lineLoads.findIndex((l) => l.id === (canvasSelection.object as { id: string }).id) : null}
+          onRowClick={(row) => selectCanvasObject({ type: "lineLoad", id: row.id })}
         />
         <button
           onClick={addLineLoad}

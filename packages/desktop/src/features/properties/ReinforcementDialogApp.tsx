@@ -316,6 +316,18 @@ export function ReinforcementDialogApp() {
   const [isHydrated, setIsHydrated] = useState(!isElectron);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [selectedPileId, setSelectedPileId] = useState<string | null>(null);
+  // The canvas selection: an element picked here is selected on the
+  // canvas, and one selected there is the element shown here.
+  const canvasSelection = useAppStore((s) => s.canvasSelection);
+  const selectCanvasObject = useAppStore((s) => s.selectCanvasObject);
+  const selectedOnCanvas =
+    canvasSelection?.object.type === "reinforcement" || canvasSelection?.object.type === "pile" ? canvasSelection.object : null;
+  const [shownSelection, setShownSelection] = useState(selectedOnCanvas);
+  if (shownSelection !== selectedOnCanvas) {
+    setShownSelection(selectedOnCanvas);
+    if (selectedOnCanvas?.type === "reinforcement") setSelectedId(selectedOnCanvas.id);
+    if (selectedOnCanvas?.type === "pile") setSelectedPileId(selectedOnCanvas.id);
+  }
   const [newType, setNewType] = useState<ReinforcementType>("anchor");
   const suppressNextBroadcastRef = useRef(false);
 
@@ -418,7 +430,10 @@ export function ReinforcementDialogApp() {
                 formatNumber(r.spacing),
               ]}
               selectedId={selected?.id}
-              onSelect={setSelectedId}
+              onSelect={(id) => {
+                setSelectedId(id);
+                selectCanvasObject({ type: "reinforcement", id });
+              }}
               empty="No reinforcement. Choose a type and click Add."
               label="Reinforcement elements list"
             />
@@ -651,7 +666,10 @@ export function ReinforcementDialogApp() {
                 p.mode === "force" ? `${formatNumber(p.force)} kN` : "Ito & Matsui",
               ]}
               selectedId={pile?.id}
-              onSelect={setSelectedPileId}
+              onSelect={(id) => {
+                setSelectedPileId(id);
+                selectCanvasObject({ type: "pile", id });
+              }}
               empty="No piles. Choose a type and click Add."
               label="Piles list"
             />

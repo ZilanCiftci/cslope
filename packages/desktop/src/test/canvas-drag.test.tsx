@@ -57,7 +57,6 @@ describe("dragging points on the edit canvas", () => {
     act(() => {
       useAppStore.setState({
         mode: "edit",
-        activeSection: "Exterior Boundary",
         editViewScale: SCALE,
         editViewOffset: [0, 0],
         snapToGrid: true,
@@ -75,21 +74,39 @@ describe("dragging points on the edit canvas", () => {
     vi.useRealTimers();
   });
 
-  it("does not move or snap a point that is only clicked", async () => {
+  it("selects the exterior by a click and its point by a second one, moving and snapping nothing", async () => {
     const before = useAppStore.getState().coordinates[1];
     const [sx, sy] = toScreen(before);
     const canvas = screen.getByTestId("slope-canvas");
     fireEvent.pointerDown(canvas, { button: 0, clientX: sx, clientY: sy, pointerId: 1 });
     await frames(4);
     fireEvent.pointerUp(canvas, { button: 0, clientX: sx, clientY: sy, pointerId: 1 });
+    expect(useAppStore.getState().canvasSelection).toEqual({ object: { type: "exterior" }, point: null });
+    fireEvent.pointerDown(canvas, { button: 0, clientX: sx, clientY: sy, pointerId: 1 });
+    await frames(4);
+    fireEvent.pointerUp(canvas, { button: 0, clientX: sx, clientY: sy, pointerId: 1 });
     expect(useAppStore.getState().selectedPointIndex).toBe(1);
     expect(useAppStore.getState().coordinates[1]).toEqual(before);
+    expect(useAppStore.temporal.getState().pastStates.length).toBe(1);
   });
 
-  it("still drags a point once the pointer moves", async () => {
+  it("does not drag a point of an object that is not selected", async () => {
     const before = useAppStore.getState().coordinates[1];
     const [sx, sy] = toScreen(before);
     const canvas = screen.getByTestId("slope-canvas");
+    fireEvent.pointerDown(canvas, { button: 0, clientX: sx, clientY: sy, pointerId: 1 });
+    fireEvent.pointerMove(canvas, { clientX: sx + 30, clientY: sy, pointerId: 1 });
+    await frames(2);
+    fireEvent.pointerUp(canvas, { button: 0, clientX: sx + 30, clientY: sy, pointerId: 1 });
+    expect(useAppStore.getState().coordinates[1]).toEqual(before);
+    expect(useAppStore.getState().canvasSelection).toBeNull();
+  });
+
+  it("still drags a point of the selected object once the pointer moves", async () => {
+    const before = useAppStore.getState().coordinates[1];
+    const [sx, sy] = toScreen(before);
+    const canvas = screen.getByTestId("slope-canvas");
+    act(() => useAppStore.getState().selectCanvasObject({ type: "exterior" }));
     fireEvent.pointerDown(canvas, { button: 0, clientX: sx, clientY: sy, pointerId: 1 });
     fireEvent.pointerMove(canvas, { clientX: sx + 30, clientY: sy, pointerId: 1 });
     await frames(2);
@@ -102,7 +119,6 @@ describe("dragging points on the edit canvas", () => {
     act(() => {
       useAppStore.setState({
         snapToGrid: false,
-        activeSection: "Interior Boundaries",
         materialBoundaries: [
           {
             id: "lens",
@@ -120,6 +136,7 @@ describe("dragging points on the edit canvas", () => {
     });
     const [sx, sy] = toScreen([2, -4]);
     const canvas = screen.getByTestId("slope-canvas");
+    act(() => useAppStore.getState().selectCanvasObject({ type: "boundary", id: "lens" }));
     fireEvent.pointerDown(canvas, { button: 0, clientX: sx, clientY: sy, pointerId: 1 });
     for (let i = 1; i <= 5; i++) {
       fireEvent.pointerMove(canvas, { clientX: sx - 4 * i, clientY: sy, pointerId: 1 });
@@ -147,6 +164,7 @@ describe("dragging points on the edit canvas", () => {
     });
     const [sx, sy] = toScreen(vertex);
     const canvas = screen.getByTestId("slope-canvas");
+    act(() => useAppStore.getState().selectCanvasObject({ type: "exterior" }));
     fireEvent.pointerDown(canvas, { button: 0, clientX: sx, clientY: sy, pointerId: 1 });
     for (let i = 1; i <= 5; i++) {
       fireEvent.pointerMove(canvas, { clientX: sx, clientY: sy - 4 * i, pointerId: 1 });
@@ -188,11 +206,18 @@ describe("dragging points on the edit canvas", () => {
       });
     });
 
-    it("drags a circle's centre whatever section is edited, with a tip, and undoes it in one step", async () => {
+    /** A click: selects what is under the pointer. */
+    const clickAt = (canvas: HTMLElement, x: number, y: number) => {
+      fireEvent.pointerDown(canvas, { button: 0, clientX: x, clientY: y, pointerId: 1 });
+      fireEvent.pointerUp(canvas, { button: 0, clientX: x, clientY: y, pointerId: 1 });
+    };
+
+    it("drags a circle's centre once it is selected by a click, with a tip, and undoes it in one step", async () => {
       const [sx, sy] = toScreen([12, 18]);
       const canvas = screen.getByTestId("slope-canvas");
-      fireEvent.pointerDown(canvas, { button: 0, clientX: sx, clientY: sy, pointerId: 1 });
+      clickAt(canvas, sx, sy);
       expect(useAppStore.getState().selectedCustomPlaneId).toBe("c1");
+      fireEvent.pointerDown(canvas, { button: 0, clientX: sx, clientY: sy, pointerId: 1 });
       fireEvent.pointerMove(canvas, { clientX: sx + 30, clientY: sy - 20, pointerId: 1 });
       await frames(2);
       expect(planes()[0]).toMatchObject({ cx: 15, cy: 20, radius: 12 });
@@ -208,6 +233,7 @@ describe("dragging points on the edit canvas", () => {
       // On the rim right of the centre, dragged 25 px further out.
       const [sx, sy] = toScreen([24, 18]);
       const canvas = screen.getByTestId("slope-canvas");
+      clickAt(canvas, sx, sy);
       fireEvent.pointerDown(canvas, { button: 0, clientX: sx, clientY: sy, pointerId: 1 });
       fireEvent.pointerMove(canvas, { clientX: sx + 25, clientY: sy, pointerId: 1 });
       await frames(2);
@@ -219,6 +245,7 @@ describe("dragging points on the edit canvas", () => {
     it("drags a vertex of a non-circular surface", async () => {
       const [sx, sy] = toScreen([12, 2]);
       const canvas = screen.getByTestId("slope-canvas");
+      clickAt(canvas, sx, sy);
       fireEvent.pointerDown(canvas, { button: 0, clientX: sx, clientY: sy, pointerId: 1 });
       fireEvent.pointerMove(canvas, { clientX: sx + 10, clientY: sy + 10, pointerId: 1 });
       await frames(2);
@@ -232,21 +259,21 @@ describe("dragging points on the edit canvas", () => {
       // On the segment (12, 2)–(22, 5), at x = 17 (y = 3.5).
       const [ex, ey] = toScreen([17, 3.5]);
       fireEvent.contextMenu(canvas, { clientX: ex, clientY: ey });
-      fireEvent.click(screen.getByRole("button", { name: "Add point" }));
+      fireEvent.click(screen.getByRole("menuitem", { name: "Add point" }));
       const pts = planes()[1].points!;
       expect(pts).toHaveLength(4);
       expect(pts[2][0]).toBeCloseTo(17, 6);
       expect(pts[2][1]).toBeCloseTo(3.5, 6);
-      expect(screen.queryByRole("button", { name: "Add point" })).toBeNull();
+      expect(screen.queryByRole("menuitem", { name: "Add point" })).toBeNull();
       const [vx, vy] = toScreen([2, 6]);
       fireEvent.contextMenu(canvas, { clientX: vx, clientY: vy });
-      fireEvent.click(screen.getByRole("button", { name: "Delete point" }));
+      fireEvent.click(screen.getByRole("menuitem", { name: "Delete point" }));
       expect(planes()[1].points).toHaveLength(3);
       expect(planes()[1].points![0]).toEqual([12, 2]);
       // A circle: its centre offers to delete it.
       const [cx, cy] = toScreen([12, 18]);
       fireEvent.contextMenu(canvas, { clientX: cx, clientY: cy });
-      fireEvent.click(screen.getByRole("button", { name: "Delete circle" }));
+      fireEvent.click(screen.getByRole("menuitem", { name: "Delete circle" }));
       expect(planes().map((p) => p.id)).toEqual(["p1"]);
     });
   });

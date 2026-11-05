@@ -27,9 +27,9 @@ describe("ContextMenuOverlay", () => {
         }}
       />,
     );
-    const addBtn = screen.getByRole("button", { name: "Add point" });
-    const delBtn = screen.getByRole("button", { name: "Delete point" });
-    expect((addBtn.parentElement as HTMLElement).style.left).toBe("40px");
+    const addBtn = screen.getByRole("menuitem", { name: "Add point" });
+    const delBtn = screen.getByRole("menuitem", { name: "Delete point" });
+    expect(screen.getByRole("menu").style.left).toBe("40px");
     expect(delBtn).toBeDisabled();
     expect(delBtn.style.color).toBe("var(--color-vsc-error)");
     fireEvent.click(addBtn);
@@ -42,6 +42,50 @@ describe("ContextMenuOverlay", () => {
     expect(addBtn.style.background).toBe("");
     fireEvent.mouseEnter(delBtn);
     expect(delBtn.style.background).toBe("");
+  });
+});
+
+describe("ContextMenuOverlay submenus", () => {
+  it("shows a submenu beside its item on hover and runs its items; a separator sets an item apart", () => {
+    const lockExterior = vi.fn();
+    const lockLoads = vi.fn();
+    const unlockAll = vi.fn();
+    render(
+      <ContextMenuOverlay
+        menu={{
+          screenX: 5,
+          screenY: 5,
+          items: [
+            { label: "Assign material…", action: vi.fn() },
+            {
+              label: "Lock all",
+              separator: true,
+              action: vi.fn(),
+              submenu: [
+                { label: "Exterior boundary", action: lockExterior },
+                { label: "Loads", action: lockLoads, disabled: true },
+              ],
+            },
+            { label: "Unlock all", action: unlockAll },
+          ],
+        }}
+      />,
+    );
+    const lockAll = screen.getByRole("menuitem", { name: "Lock all" });
+    expect(lockAll).toHaveAttribute("aria-haspopup", "menu");
+    expect(lockAll).toHaveAttribute("aria-expanded", "false");
+    expect(screen.queryByRole("menuitem", { name: "Exterior boundary" })).toBeNull();
+    fireEvent.mouseEnter(lockAll.parentElement as HTMLElement);
+    expect(lockAll).toHaveAttribute("aria-expanded", "true");
+    fireEvent.click(screen.getByRole("menuitem", { name: "Exterior boundary" }));
+    fireEvent.click(screen.getByRole("menuitem", { name: "Loads" }));
+    expect(lockExterior).toHaveBeenCalledTimes(1);
+    expect(lockLoads).not.toHaveBeenCalled();
+    // Hovering another item closes the submenu.
+    fireEvent.mouseEnter(screen.getByRole("menuitem", { name: "Unlock all" }).parentElement as HTMLElement);
+    expect(screen.queryByRole("menuitem", { name: "Exterior boundary" })).toBeNull();
+    // The separator is drawn above "Lock all".
+    expect((lockAll.previousElementSibling as HTMLElement).className).toContain("h-px");
   });
 });
 

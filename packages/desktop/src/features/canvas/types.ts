@@ -12,6 +12,12 @@ export type PointHit =
   | { kind: "limit"; handle: LimitHandle }
   | { kind: "udl"; udlId: string; handle: UdlHandle }
   | { kind: "lineLoad"; loadId: string }
+  /** A distributed load's strip: a drag moves the load whole. */
+  | { kind: "udlBody"; udlId: string }
+  /** An end of a reinforcement element or a pile. */
+  | { kind: "elementEnd"; element: "reinforcement" | "pile"; id: string; end: "end1" | "end2" }
+  /** A custom non-circular surface's line: a drag moves it whole. */
+  | { kind: "customPlaneBody"; planeId: string }
   | { kind: "annotation"; annoId: string }
   /** A custom search circle: its centre dot, or its rim (drag sets the radius). */
   | { kind: "customCircle"; planeId: string; handle: "centre" | "rim" }
@@ -53,15 +59,21 @@ export type EdgeHit =
       snapPoint: [number, number];
     };
 
+export interface ContextMenuItem {
+  label: string;
+  action: () => void;
+  danger?: boolean;
+  disabled?: boolean;
+  /** A line above the item, setting it apart from the ones before. */
+  separator?: boolean;
+  /** Items shown beside this one while it is hovered (its own action is not used). */
+  submenu?: ContextMenuItem[];
+}
+
 export interface ContextMenuState {
   screenX: number;
   screenY: number;
-  items: {
-    label: string;
-    action: () => void;
-    danger?: boolean;
-    disabled?: boolean;
-  }[];
+  items: ContextMenuItem[];
 }
 
 export interface MaterialPickerState {

@@ -3,6 +3,7 @@ import {
   useEffect,
   useRef,
   useState,
+  type MouseEvent as RMouseEvent,
   type PointerEvent as RPointerEvent,
   type RefObject,
 } from "react";
@@ -10,19 +11,16 @@ import { computePaperFrame, getAnnotationBoundsPx } from "../helpers";
 import { useAppStore } from "../../../store/app-store";
 import { VIEW_SCALE_MAX, VIEW_SCALE_MIN } from "../constants";
 import type { CanvasWheelEvent } from "./useNonPassiveWheel";
-import type {
-  ContextMenuState,
-  EdgeHit,
-  MaterialPickerState,
-  PointHit,
-} from "../types";
+import type { ContextMenuState, MaterialPickerState, PointHit } from "../types";
 import type {
   AnalysisLimitsState,
   AppState,
+  CanvasObjectRef,
+  CanvasPointKey,
   CustomSearchPlane,
   LineLoadRow,
-  MaterialBoundaryRow,
-  PiezometricLineState,
+  PileRow,
+  ReinforcementRow,
   UdlRow,
 } from "../../../store/types";
 import {
@@ -32,6 +30,9 @@ import {
 import { findReferenceHitAt, isSameReferenceHit, referenceHitId } from "../reference-geometry";
 import { isPaperAnnotation, MIN_REFERENCE_RADIUS, translateReference } from "../../annotations/reference";
 import type { Annotation, ReferenceAnnotation } from "../../../store/types";
+import { bodyDraggable, dragHitOf, type CanvasCandidate } from "../object-hits";
+import { isObjectLocked, nextCycleIndex, sameObject } from "../../../store/canvas-selection";
+import { handleAxes, moveHandleTo, type HandleActions } from "../handle-edit";
 
 type UndoableSnapshot = Pick<
   AppState,
@@ -43,6 +44,8 @@ type UndoableSnapshot = Pick<
   | "piezometricLine"
   | "udls"
   | "lineLoads"
+  | "reinforcements"
+  | "piles"
   | "customSearchPlanes"
   | "analysisLimits"
   | "options"
@@ -59,6 +62,8 @@ function pickUndoableSnapshot(state: AppState): UndoableSnapshot {
     piezometricLine: state.piezometricLine,
     udls: state.udls,
     lineLoads: state.lineLoads,
+    reinforcements: state.reinforcements,
+    piles: state.piles,
     customSearchPlanes: state.customSearchPlanes,
     analysisLimits: state.analysisLimits,
     options: state.options,
@@ -66,7 +71,7 @@ function pickUndoableSnapshot(state: AppState): UndoableSnapshot {
   };
 }
 
-/** What a circle drag shows beside the pointer: its centre and radius. */
+/** What a drag shows beside the pointer: the point's coordinates, or a circle's centre and radius. */
 export interface DragTip {
   text: string;
   /** Canvas px. */
@@ -82,6 +87,11 @@ function isSameUndoableSnapshot(a: UndoableSnapshot, b: UndoableSnapshot) {
   return JSON.stringify(a) === JSON.stringify(b);
 }
 
+/** The object under the pointer on the edit canvas, for the hover highlight and the cursor. */
+export interface HoverObject extends CanvasCandidate {
+  locked: boolean;
+}
+
 interface PointerDeps {
   canvasRef: RefObject<HTMLCanvasElement | null>;
   containerRef?: RefObject<HTMLDivElement | null>;
@@ -93,8 +103,8 @@ interface PointerDeps {
   setActiveViewOffset: (offset: [number, number]) => void;
   setActiveViewScale: (scale: number) => void;
   onZoomCompleted?: () => void;
-  findNearPointUnified: (wx: number, wy: number) => PointHit | null;
-  findNearEdgeUnified: (wx: number, wy: number) => EdgeHit | null;
+  /** Edit view: every object under the pointer, topmost first. */
+  findObjectsAt?: (wx: number, wy: number) => CanvasCandidate[];
   findRegionAtPoint: (wx: number, wy: number) => { regionKey: string } | null;
   findSnapTarget: (
     wx: number,
@@ -102,35 +112,11 @@ interface PointerDeps {
     hit: PointHit,
   ) => [number, number] | null;
   snapValue: (v: number) => number;
-  coordinates: [number, number][];
-  piezometricLine: PiezometricLineState;
-  setActivePiezoLine: (lineId: string | null) => void;
-  analysisLimits: AnalysisLimitsState;
-  udls: UdlRow[];
-  lineLoads: LineLoadRow[];
-  materialBoundaries: MaterialBoundaryRow[];
-  customSearchPlanes: CustomSearchPlane[];
-  updateCustomSearchPlane: (
-    id: string,
-    patch: Partial<CustomSearchPlane>,
-  ) => void;
-  updateCustomPlanePoint: (
-    id: string,
-    pointIndex: number,
-    point: [number, number],
-  ) => void;
-  setSelectedCustomPlane: (id: string | null) => void;
   assigningMaterialId: string | null;
-  editingAssignment: boolean;
-  editingBoundaries: boolean;
-  /** The custom search planes can be picked (edit view, any planes). */
-  editingCustomPlanes: boolean;
   panActive: boolean;
   setRegionMaterial: (point: [number, number], materialId: string) => void;
   setAssigningMaterial: (materialId: string | null) => void;
   setSelectedRegionKey: (key: string | null) => void;
-  setSelectedMaterialBoundary: (boundaryId: string | null) => void;
-  setSelectedPoint: (idx: number | null) => void;
   updateAnnotation: (id: string, patch: Partial<Annotation>) => void;
   setSelectedAnnotations: (ids: string[]) => void;
   toggleAnnotationSelection: (id: string, add: boolean) => void;
@@ -142,17 +128,24 @@ interface PointerDeps {
   updateLineLoad: (id: string, patch: Partial<LineLoadRow>) => void;
   setCoordinate: (index: number, coord: [number, number]) => void;
   setPiezoCoordinate: (index: number, coord: [number, number]) => void;
+  setActivePiezoLine?: (lineId: string | null) => void;
   updateBoundaryPoint: (
     boundaryId: string,
     pointIndex: number,
     coord: [number, number],
   ) => void;
+  updateCustomSearchPlane?: (id: string, patch: Partial<CustomSearchPlane>) => void;
+  updateCustomPlanePoint?: (id: string, pointIndex: number, point: [number, number]) => void;
+  updateReinforcement?: (id: string, patch: Partial<ReinforcementRow>) => void;
+  updatePile?: (id: string, patch: Partial<PileRow>) => void;
   setContextMenu: (menu: ContextMenuState | null) => void;
   setMaterialPicker: (picker: MaterialPickerState | null) => void;
+  /** Edit view: a double-click on a point of the selected object (canvas px). */
+  onEditPoint?: (object: CanvasObjectRef, point: CanvasPointKey, at: { x: number; y: number }) => void;
 }
 
-/** Pointer travel (px) before a press on a handle becomes a drag. */
-const DRAG_THRESHOLD_PX = 3;
+/** Pointer travel (px) before a press becomes a drag: a click never moves anything. */
+export const DRAG_THRESHOLD_PX = 4;
 
 export function usePointerHandlers(deps: PointerDeps) {
   const {
@@ -163,47 +156,48 @@ export function usePointerHandlers(deps: PointerDeps) {
     setActiveViewOffset,
     setActiveViewScale,
     onZoomCompleted,
-    findNearPointUnified,
-    findNearEdgeUnified,
+    findObjectsAt,
     findRegionAtPoint,
     findSnapTarget,
     snapValue,
-    coordinates,
-    piezometricLine,
-    setActivePiezoLine,
-    analysisLimits,
-    udls,
-    lineLoads,
-    materialBoundaries,
-    customSearchPlanes,
-    updateCustomSearchPlane,
-    updateCustomPlanePoint,
-    setSelectedCustomPlane,
     assigningMaterialId,
-    editingAssignment,
-    editingBoundaries,
-    editingCustomPlanes,
     panActive,
     setRegionMaterial,
     setAssigningMaterial,
     setSelectedRegionKey,
-    setSelectedMaterialBoundary,
-    setSelectedPoint,
     updateAnnotation,
     setSelectedAnnotations,
     toggleAnnotationSelection,
     setSelectedResultObject,
     selectedAnnotationIds,
     mode,
-    setAnalysisLimits,
-    updateUdl,
-    updateLineLoad,
-    setCoordinate,
-    setPiezoCoordinate,
-    updateBoundaryPoint,
     setContextMenu,
     setMaterialPicker,
+    onEditPoint,
   } = deps;
+
+  // The store's actions, unless the caller gives its own (tests).
+  const depsRef = useRef(deps);
+  useEffect(() => {
+    depsRef.current = deps;
+  });
+  const handleActions = useCallback((): HandleActions => {
+    const s = useAppStore.getState();
+    const d = depsRef.current;
+    return {
+      setCoordinate: d.setCoordinate,
+      updateBoundaryPoint: d.updateBoundaryPoint,
+      setPiezoCoordinate: d.setPiezoCoordinate,
+      setActivePiezoLine: d.setActivePiezoLine ?? s.setActivePiezoLine,
+      updateUdl: d.updateUdl,
+      updateLineLoad: d.updateLineLoad,
+      setAnalysisLimits: d.setAnalysisLimits,
+      updateCustomSearchPlane: d.updateCustomSearchPlane ?? s.updateCustomSearchPlane,
+      updateCustomPlanePoint: d.updateCustomPlanePoint ?? s.updateCustomPlanePoint,
+      updateReinforcement: d.updateReinforcement ?? s.updateReinforcement,
+      updatePile: d.updatePile ?? s.updatePile,
+    };
+  }, []);
 
   const dragRef = useRef<{
     hit: PointHit;
@@ -215,7 +209,24 @@ export function usePointerHandlers(deps: PointerDeps) {
     moved: boolean;
     /** The reference annotation as it was when its drag began. */
     reference?: ReferenceAnnotation;
+    /** Edit view: the object and the handle (null: its body) dragged. */
+    object?: CanvasObjectRef;
+    point?: CanvasPointKey | null;
+    /** A load or surface moved whole, as it was when the drag began. */
+    udl?: UdlRow;
+    plane?: CustomSearchPlane;
   } | null>(null);
+  /**
+   * Edit view: a press that is a click until the pointer moves past the
+   * drag threshold, with the objects that were under it.
+   */
+  const pressRef = useRef<{
+    downPx: [number, number];
+    candidates: CanvasCandidate[];
+    moved: boolean;
+  } | null>(null);
+  /** Edit view: where the last click was, to cycle through overlapping objects. */
+  const lastClickRef = useRef<{ px: [number, number]; candidates: CanvasCandidate[] } | null>(null);
   const panRef = useRef<{
     startPx: [number, number];
     startOffset: [number, number];
@@ -258,7 +269,10 @@ export function usePointerHandlers(deps: PointerDeps) {
   const [mouseWorld, setMouseWorld] = useState<[number, number] | null>(null);
   const [hoverHit, setHoverHit] = useState<PointHit | null>(null);
   const hoverHitRef = useRef<PointHit | null>(null);
+  const [hoverObject, setHoverObject] = useState<HoverObject | null>(null);
+  const hoverObjectRef = useRef<HoverObject | null>(null);
   const [dragTip, setDragTip] = useState<DragTip | null>(null);
+  const [dragging, setDragging] = useState(false);
 
   const isSameHit = (a: PointHit | null, b: PointHit | null) => {
     if (!a || !b) return a === b;
@@ -278,8 +292,14 @@ export function usePointerHandlers(deps: PointerDeps) {
         return b.kind === "limit" && a.handle === b.handle;
       case "udl":
         return b.kind === "udl" && a.udlId === b.udlId && a.handle === b.handle;
+      case "udlBody":
+        return b.kind === "udlBody" && a.udlId === b.udlId;
       case "lineLoad":
         return b.kind === "lineLoad" && a.loadId === b.loadId;
+      case "elementEnd":
+        return b.kind === "elementEnd" && a.id === b.id && a.end === b.end;
+      case "customPlaneBody":
+        return b.kind === "customPlaneBody" && a.planeId === b.planeId;
       case "boundary":
         return (
           b.kind === "boundary" &&
@@ -368,6 +388,13 @@ export function usePointerHandlers(deps: PointerDeps) {
         );
         if (moved < DRAG_THRESHOLD_PX) return;
         drag.moved = true;
+        if (pressRef.current) pressRef.current.moved = true;
+        setDragging(true);
+        // The point dragged is the point selected.
+        const st = useAppStore.getState();
+        if (drag.object && drag.point !== undefined && drag.point !== null && sameObject(st.canvasSelection?.object, drag.object)) {
+          st.selectCanvasPoint(drag.point);
+        }
       }
 
       const s = useAppStore.getState();
@@ -380,11 +407,15 @@ export function usePointerHandlers(deps: PointerDeps) {
       const rawY = drag.startWorld[1] + dy;
 
       // A circle's centre is no geometry point: it snaps to the grid only;
-      // so does a reference circle, and a reference line moved whole.
-      const snap =
-        drag.hit.kind === "customCircle" || drag.hit.kind === "referenceCircle" || drag.hit.kind === "referenceLine"
-          ? null
-          : findSnapTarget(rawX, rawY, drag.hit);
+      // so does a reference circle, a reference line moved whole, and an
+      // object moved whole (by a whole number of grid steps).
+      const gridOnly =
+        drag.hit.kind === "customCircle" ||
+        drag.hit.kind === "referenceCircle" ||
+        drag.hit.kind === "referenceLine" ||
+        drag.hit.kind === "udlBody" ||
+        drag.hit.kind === "customPlaneBody";
+      const snap = gridOnly ? null : findSnapTarget(rawX, rawY, drag.hit);
       const newX = snap ? snap[0] : snapValue(rawX);
       const newY = snap ? snap[1] : snapValue(rawY);
 
@@ -392,6 +423,8 @@ export function usePointerHandlers(deps: PointerDeps) {
       if (drag.hit.kind !== "annotation") {
         setMouseWorld([newX, newY]);
       }
+      const rect = canvasRef.current?.getBoundingClientRect();
+      const tipAt = { x: clientX - (rect?.left ?? 0), y: clientY - (rect?.top ?? 0) };
 
       if (drag.hit.kind === "customCircle") {
         const hit = drag.hit;
@@ -401,19 +434,8 @@ export function usePointerHandlers(deps: PointerDeps) {
           hit.handle === "centre"
             ? { cx: newX, cy: newY }
             : { radius: circleRadiusFromPointer(plane.cx, plane.cy, rawX, rawY, snapValue) };
-        updateCustomSearchPlane(hit.planeId, patch);
-        const rect = canvasRef.current?.getBoundingClientRect();
-        setDragTip({
-          text: circleTipText({ ...plane, ...patch }),
-          x: clientX - (rect?.left ?? 0),
-          y: clientY - (rect?.top ?? 0),
-        });
-        return;
-      }
-      if (drag.hit.kind === "customVertex") {
-        // The ends are extended to the ground by the analysis, so a vertex
-        // may lie anywhere, inside the soil included.
-        updateCustomPlanePoint(drag.hit.planeId, drag.hit.pointIndex, [newX, newY]);
+        handleActions().updateCustomSearchPlane(hit.planeId, patch);
+        setDragTip({ text: circleTipText({ ...plane, ...patch }), ...tipAt });
         return;
       }
 
@@ -487,74 +509,54 @@ export function usePointerHandlers(deps: PointerDeps) {
             y: drag.startWorld[1] + dyFrac,
           });
         }
-      } else if (drag.hit.kind === "limit") {
-        setAnalysisLimits({ [drag.hit.handle]: newX });
-      } else {
-        // An axis driven by a parameter expression stays where the
-        // expression puts it; otherwise the next parameter edit would
-        // silently snap the dragged point back.
-        const st = useAppStore.getState();
-        const hit = drag.hit;
-        const keepAxes = (
-          current: [number, number] | undefined,
-          expr: { x?: string; y?: string } | undefined,
-        ): [number, number] => [
-          current && expr?.x?.trim() ? current[0] : newX,
-          current && expr?.y?.trim() ? current[1] : newY,
-        ];
-        if (hit.kind === "external") {
-          setCoordinate(
-            hit.index,
-            keepAxes(st.coordinates[hit.index], st.coordinateExpressions[hit.index]),
-          );
-        } else if (hit.kind === "piezo") {
-          const line = st.piezometricLine.lines.find(
-            (l) => l.id === st.piezometricLine.activeLineId,
-          );
-          setPiezoCoordinate(
-            hit.index,
-            keepAxes(
-              line?.coordinates[hit.index],
-              line?.coordinateExpressions?.[hit.index],
-            ),
-          );
-        } else if (hit.kind === "udl") {
-          const udl = st.udls.find((u) => u.id === hit.udlId);
-          if (!udl?.expressions?.[hit.handle]?.trim()) {
-            updateUdl(hit.udlId, { [hit.handle]: newX });
-          }
-        } else if (hit.kind === "lineLoad") {
-          const load = st.lineLoads.find((l) => l.id === hit.loadId);
-          if (!load?.expressions?.x?.trim()) {
-            updateLineLoad(hit.loadId, { x: newX });
-          }
-        } else {
-          const b = st.materialBoundaries.find((m) => m.id === hit.boundaryId);
-          updateBoundaryPoint(
-            hit.boundaryId,
-            hit.pointIndex,
-            keepAxes(
-              b?.coordinates[hit.pointIndex],
-              b?.coordinateExpressions?.[hit.pointIndex],
-            ),
-          );
+        return;
+      }
+
+      // Objects moved whole (edit view): by the pointer's travel, in whole
+      // grid steps, so points on the grid stay on it.
+      if (drag.hit.kind === "udlBody") {
+        const start = drag.udl;
+        if (!start || start.expressions?.x1?.trim() || start.expressions?.x2?.trim()) return;
+        const d = snapValue(rawX - drag.startWorld[0]);
+        handleActions().updateUdl(start.id, { x1: start.x1 + d, x2: start.x2 + d });
+        setDragTip({ text: `x ${(start.x1 + d).toFixed(2)} to ${(start.x2 + d).toFixed(2)} m`, ...tipAt });
+        return;
+      }
+      if (drag.hit.kind === "customPlaneBody") {
+        const start = drag.plane;
+        if (!start?.points) return;
+        const ddx = snapValue(rawX - drag.startWorld[0]);
+        const ddy = snapValue(rawY - drag.startWorld[1]);
+        handleActions().updateCustomSearchPlane(start.id, {
+          points: start.points.map(([x, y]): [number, number] => [x + ddx, y + ddy]),
+        });
+        setDragTip({ text: `moved ${ddx.toFixed(2)}, ${ddy.toFixed(2)} m`, ...tipAt });
+        return;
+      }
+
+      // A handle (edit view): it follows the snapped pointer.
+      if (drag.object && drag.point !== undefined && drag.point !== null) {
+        const point = drag.point;
+        const object = drag.object;
+        moveHandleTo(useAppStore.getState(), handleActions(), object, point, [newX, newY]);
+        // The exterior's and the water lines' points carry their own
+        // coordinate labels; other handles show theirs beside the pointer.
+        if (object.type !== "exterior" && object.type !== "waterLine") {
+          const axes = handleAxes(object, point);
+          setDragTip({
+            text: axes === "x" ? `x ${newX.toFixed(2)} m` : `${newX.toFixed(2)}, ${newY.toFixed(2)}`,
+            ...tipAt,
+          });
         }
       }
     },
     [
       canvasRef,
       findSnapTarget,
+      handleActions,
       selectedAnnotationIds,
-      setAnalysisLimits,
-      setCoordinate,
-      setPiezoCoordinate,
       snapValue,
       updateAnnotation,
-      updateBoundaryPoint,
-      updateCustomPlanePoint,
-      updateCustomSearchPlane,
-      updateLineLoad,
-      updateUdl,
     ],
   );
 
@@ -651,6 +653,36 @@ export function usePointerHandlers(deps: PointerDeps) {
     autoPanRafRef.current = requestAnimationFrame(tick);
   }, []);
 
+  /** Edit view: the drag a press on the selected object would start (null: none). */
+  const editDragAt = useCallback(
+    (candidates: CanvasCandidate[], wx: number, wy: number) => {
+      const st = useAppStore.getState();
+      const sel = st.canvasSelection;
+      if (!sel) return null;
+      const own = candidates.find((c) => sameObject(c.object, sel.object));
+      if (!own || isObjectLocked(st.locks, sel.object)) return null;
+      if (own.point === null && !bodyDraggable(sel.object)) return null;
+      const hit = dragHitOf(st, sel.object, own.point);
+      if (!hit) return null;
+      // A handle starts from its own position (it snaps from there); a
+      // rim or a body from the pointer.
+      let startWorld: [number, number] = [wx, wy];
+      if (own.point !== null && own.point !== "rim") {
+        const at = handleStart(st, sel.object, own.point);
+        if (at) startWorld = at;
+      }
+      return {
+        hit,
+        startWorld,
+        object: sel.object,
+        point: own.point,
+        udl: hit.kind === "udlBody" ? st.udls.find((u) => u.id === hit.udlId) : undefined,
+        plane: hit.kind === "customPlaneBody" ? st.customSearchPlanes.find((p) => p.id === hit.planeId) : undefined,
+      };
+    },
+    [],
+  );
+
   const handlePointerDown = useCallback(
     (e: RPointerEvent<HTMLCanvasElement>) => {
       setContextMenu(null);
@@ -680,12 +712,15 @@ export function usePointerHandlers(deps: PointerDeps) {
           const refHit = a ? null : findReferenceAt(e.clientX, e.clientY);
           const refId = referenceHitId(refHit);
           if (refHit && refId) {
+            // Select first, then drag: a press on a line that is not
+            // selected selects it and moves nothing.
+            const wasSelected = selectedAnnotationIds.includes(refId);
             if (e.ctrlKey || e.shiftKey) {
               toggleAnnotationSelection(refId, true);
-            } else if (!selectedAnnotationIds.includes(refId)) {
+            } else if (!wasSelected) {
               setSelectedAnnotations([refId]);
             }
-            if (e.button !== 0) return;
+            if (e.button !== 0 || !wasSelected) return;
             const anno = useAppStore.getState().resultViewSettings.annotations.find((an) => an.id === refId);
             if (!anno || anno.type !== "reference") return;
             // A handle starts from its own point (it snaps from there); a
@@ -744,186 +779,84 @@ export function usePointerHandlers(deps: PointerDeps) {
 
       if (e.button !== 0) return;
 
-      const hit = findNearPointUnified(wx, wy);
-      if (hit) {
-        const startWorld: [number, number] =
-          hit.kind === "external"
-            ? [coordinates[hit.index][0], coordinates[hit.index][1]]
-            : hit.kind === "piezo"
-              ? (() => {
-                  const line = piezometricLine.lines.find(
-                    (l) => l.id === hit.lineId,
-                  );
-                  return line
-                    ? [
-                        line.coordinates[hit.index][0],
-                        line.coordinates[hit.index][1],
-                      ]
-                    : [0, 0];
-                })()
-              : hit.kind === "limit"
-                ? [analysisLimits[hit.handle], 0]
-                : hit.kind === "udl"
-                  ? (() => {
-                      const udl = udls.find((u) => u.id === hit.udlId);
-                      const val = udl
-                        ? hit.handle === "x1"
-                          ? udl.x1
-                          : udl.x2
-                        : 0;
-                      return [val, 0];
-                    })()
-                  : hit.kind === "lineLoad"
-                    ? [lineLoads.find((l) => l.id === hit.loadId)!.x, 0]
-                    : hit.kind === "boundary"
-                      ? (() => {
-                          const b = materialBoundaries.find(
-                            (mb) => mb.id === hit.boundaryId,
-                          )!;
-                          return [
-                            b.coordinates[hit.pointIndex][0],
-                            b.coordinates[hit.pointIndex][1],
-                          ];
-                        })()
-                      : hit.kind === "customCircle"
-                        ? (() => {
-                            const p = customSearchPlanes.find(
-                              (cp) => cp.id === hit.planeId,
-                            );
-                            // The rim follows the pointer itself: the
-                            // radius is its distance from the centre.
-                            return p && hit.handle === "centre"
-                              ? [p.cx, p.cy]
-                              : [wx, wy];
-                          })()
-                        : hit.kind === "customVertex"
-                          ? (() => {
-                              const p = customSearchPlanes.find(
-                                (cp) => cp.id === hit.planeId,
-                              );
-                              const pt = p?.points?.[hit.pointIndex];
-                              return pt ? [pt[0], pt[1]] : [wx, wy];
-                            })()
-                          : [0, 0];
+      // Assigning a material (armed in the Assign window): the click goes
+      // to the region under it.
+      if (assigningMaterialId) {
+        if (findRegionAtPoint(wx, wy)) setRegionMaterial([wx, wy], assigningMaterialId);
+        setAssigningMaterial(null);
+        return;
+      }
 
+      const candidates = findObjectsAt?.(wx, wy) ?? [];
+      pressRef.current = { downPx: [e.clientX, e.clientY], candidates, moved: false };
+      (e.target as HTMLElement).setPointerCapture(e.pointerId);
+
+      // A press on a handle (or the movable body) of the selected, unlocked
+      // object drags it once the pointer moves; on anything else a drag
+      // moves nothing (or pans, with the pan tool).
+      const drag = editDragAt(candidates, wx, wy);
+      if (drag) {
         dragRef.current = {
-          hit,
-          startWorld,
+          ...drag,
           startPx: [e.clientX, e.clientY],
           downPx: [e.clientX, e.clientY],
           moved: false,
         };
         beginDragHistoryBatch();
         startAutoPan();
-        if (hit.kind === "external") {
-          setSelectedPoint(hit.index);
-          setSelectedMaterialBoundary(null);
-        }
-        if (hit.kind === "piezo") {
-          setActivePiezoLine(hit.lineId);
-        }
-        if (hit.kind === "boundary") {
-          setSelectedMaterialBoundary(hit.boundaryId);
-          setSelectedPoint(null);
-        }
-        if (hit.kind === "customCircle" || hit.kind === "customVertex") {
-          setSelectedCustomPlane(hit.planeId);
-          setSelectedPoint(null);
-        } else if (editingCustomPlanes) {
-          setSelectedCustomPlane(null);
-        }
-        (e.target as HTMLElement).setPointerCapture(e.pointerId);
-      } else if (panActive) {
+        return;
+      }
+      if (panActive) {
         panRef.current = {
           startPx: [e.clientX, e.clientY],
           startOffset: [...viewOffset],
         };
-        (e.target as HTMLElement).setPointerCapture(e.pointerId);
-        return;
-      } else {
-        if (editingBoundaries || editingCustomPlanes) {
-          const edgeHit = findNearEdgeUnified(wx, wy);
-          if (editingBoundaries && edgeHit?.kind === "boundary") {
-            setSelectedMaterialBoundary(edgeHit.boundaryId);
-            setSelectedPoint(null);
-            if (editingCustomPlanes) setSelectedCustomPlane(null);
-            return;
-          }
-          // A click on a non-circular surface's line picks the surface.
-          if (edgeHit?.kind === "customPlane") {
-            setSelectedCustomPlane(edgeHit.planeId);
-            setSelectedPoint(null);
-            return;
-          }
-        }
-        if (editingCustomPlanes) setSelectedCustomPlane(null);
-
-        const region = findRegionAtPoint(wx, wy);
-        if (region) {
-          if (assigningMaterialId) {
-            setRegionMaterial([wx, wy], assigningMaterialId);
-            setAssigningMaterial(null);
-          } else if (editingAssignment) {
-            // Open the material picker popup at the click position so the
-            // user can assign a material to the point they clicked.
-            setSelectedRegionKey(region.regionKey);
-            const rect = canvasRef.current?.getBoundingClientRect();
-            if (rect) {
-              setMaterialPicker({
-                screenX: e.clientX - rect.left,
-                screenY: e.clientY - rect.top,
-                worldPoint: [wx, wy],
-              });
-            }
-          }
-        } else if (assigningMaterialId) {
-          setAssigningMaterial(null);
-        }
-        setSelectedPoint(null);
-        if (!editingBoundaries) {
-          setSelectedMaterialBoundary(null);
-        }
       }
     },
     [
-      analysisLimits,
       assigningMaterialId,
+      beginDragHistoryBatch,
       canvasRef,
-      coordinates,
-      customSearchPlanes,
-      editingAssignment,
-      editingBoundaries,
-      editingCustomPlanes,
+      editDragAt,
       findAnnotationAt,
+      findObjectsAt,
       findReferenceAt,
-      findNearEdgeUnified,
-      findNearPointUnified,
       findRegionAtPoint,
       getEventWorldPos,
-      lineLoads,
-      materialBoundaries,
       mode,
       panActive,
-      piezometricLine.lines,
       selectedAnnotationIds,
-      setActivePiezoLine,
       setAssigningMaterial,
       setContextMenu,
       setMaterialPicker,
+      setRegionMaterial,
       setSelectedAnnotations,
       setSelectedResultObject,
-      setSelectedCustomPlane,
-      setSelectedMaterialBoundary,
-      setSelectedPoint,
-      setSelectedRegionKey,
-      setRegionMaterial,
       startAutoPan,
       toggleAnnotationSelection,
-      udls,
       viewOffset,
-      beginDragHistoryBatch,
     ],
   );
+
+  /** Edit view: what the hover highlights and the cursor shows, from the objects under the pointer. */
+  const updateEditHover = useCallback((candidates: CanvasCandidate[]) => {
+    const st = useAppStore.getState();
+    const sel = st.canvasSelection;
+    // The selected object's handle wins where it overlaps others.
+    const top = (sel && candidates.find((c) => sameObject(c.object, sel.object))) ?? candidates[0] ?? null;
+    const next: HoverObject | null = top ? { ...top, locked: isObjectLocked(st.locks, top.object) } : null;
+    const prev = hoverObjectRef.current;
+    if (!(prev === next || (prev && next && sameObject(prev.object, next.object) && prev.point === next.point && prev.locked === next.locked))) {
+      hoverObjectRef.current = next;
+      setHoverObject(next);
+    }
+    // A locked object's handles show no hover: they cannot be dragged.
+    const hit = top && top.point !== null && !next?.locked ? dragHitOf(st, top.object, top.point) : null;
+    if (!isSameHit(hoverHitRef.current, hit)) {
+      hoverHitRef.current = hit;
+      setHoverHit(hit);
+    }
+  }, []);
 
   const handlePointerMove = useCallback(
     (e: RPointerEvent<HTMLCanvasElement>) => {
@@ -934,6 +867,11 @@ export function usePointerHandlers(deps: PointerDeps) {
       const s = useAppStore.getState();
       const currentViewScale =
         (s.mode === "result" ? s.resultViewScale : s.editViewScale) || 1;
+
+      const press = pressRef.current;
+      if (press && !press.moved && Math.hypot(e.clientX - press.downPx[0], e.clientY - press.downPx[1]) >= DRAG_THRESHOLD_PX) {
+        press.moved = true;
+      }
 
       if (dragRef.current) applyEdgePan();
 
@@ -951,58 +889,130 @@ export function usePointerHandlers(deps: PointerDeps) {
         updateDragAtPointer(e.clientX, e.clientY);
         return;
       }
+      // A press that is no drag moves nothing; the hover stays as it was.
+      if (press) return;
 
-      let hit: PointHit | null;
       if (mode === "result") {
         // Same hit area as a click, so the cursor matches what a click does.
         // Paper annotations first: they are drawn over the reference lines.
         const a = findAnnotationAt(e.clientX, e.clientY);
         const ref = a ? null : findReferenceAt(e.clientX, e.clientY);
-        hit = a ? { kind: "annotation", annoId: a.id } : ref;
-      } else {
-        hit = findNearPointUnified(wx, wy);
+        const hit: PointHit | null = a ? { kind: "annotation", annoId: a.id } : ref;
+        if (!isSameHit(hoverHitRef.current, hit)) {
+          hoverHitRef.current = hit;
+          setHoverHit(hit);
+        }
+        return;
       }
-      if (!isSameHit(hoverHitRef.current, hit)) {
-        hoverHitRef.current = hit;
-        setHoverHit(hit);
-      }
+      updateEditHover(findObjectsAt?.(wx, wy) ?? []);
     },
     [
       applyEdgePan,
       findAnnotationAt,
+      findObjectsAt,
       findReferenceAt,
-      findNearPointUnified,
       getEventWorldPos,
       mode,
       setActiveViewOffset,
       updateDragAtPointer,
+      updateEditHover,
     ],
   );
 
-  const handlePointerUp = useCallback(
-    (e: RPointerEvent<HTMLCanvasElement>) => {
-      if (dragRef.current) commitDragHistoryBatch();
+  /**
+   * Edit view: a click (a press without a drag). On the selected object's
+   * point: that point is selected. Again at the same spot: the next of the
+   * objects under the pointer. On another object: it is selected. On empty
+   * canvas: the selection is cleared.
+   */
+  const handleEditClick = useCallback((press: { downPx: [number, number]; candidates: CanvasCandidate[] }) => {
+    const st = useAppStore.getState();
+    const { candidates } = press;
+    const last = lastClickRef.current;
+    const repeat =
+      !!last &&
+      Math.hypot(last.px[0] - press.downPx[0], last.px[1] - press.downPx[1]) <= DRAG_THRESHOLD_PX &&
+      last.candidates.length === candidates.length &&
+      last.candidates.every((c, i) => sameObject(c.object, candidates[i].object));
+    lastClickRef.current = { px: press.downPx, candidates };
+    if (candidates.length === 0) {
+      st.clearCanvasSelection();
+      setSelectedRegionKey(null);
+      return;
+    }
+    const sel = st.canvasSelection;
+    const own = sel ? candidates.find((c) => sameObject(c.object, sel.object)) : undefined;
+    const cycleOf = (i: number) => (candidates.length > 1 ? { position: i + 1, count: candidates.length } : null);
+    if (sel && own) {
+      if (own.point !== null && own.point !== sel.point) {
+        st.selectCanvasPoint(own.point);
+      } else if (repeat && candidates.length > 1) {
+        const i = nextCycleIndex(candidates.map((c) => c.object), sel.object);
+        st.selectCanvasObject(candidates[i].object, null, cycleOf(i));
+      } else if (own.point === null && sel.point !== null) {
+        st.selectCanvasPoint(null);
+      }
+      return;
+    }
+    st.selectCanvasObject(candidates[0].object, null, cycleOf(0));
+  }, [setSelectedRegionKey]);
+
+  const endPointer = useCallback(
+    (e: RPointerEvent<HTMLCanvasElement>, click: boolean) => {
+      const press = pressRef.current;
+      const drag = dragRef.current;
+      if (drag) commitDragHistoryBatch();
       dragRef.current = null;
       panRef.current = null;
+      pressRef.current = null;
       lastPointerRef.current = null;
       setDragTip(null);
+      setDragging(false);
       stopAutoPan();
       (e.target as HTMLElement).releasePointerCapture(e.pointerId);
+      if (click && press && !press.moved && !drag?.moved) handleEditClick(press);
     },
-    [commitDragHistoryBatch, stopAutoPan],
+    [commitDragHistoryBatch, handleEditClick, stopAutoPan],
+  );
+
+  const handlePointerUp = useCallback(
+    (e: RPointerEvent<HTMLCanvasElement>) => endPointer(e, true),
+    [endPointer],
   );
 
   const handlePointerCancel = useCallback(
-    (e: RPointerEvent<HTMLCanvasElement>) => {
-      if (dragRef.current) commitDragHistoryBatch();
-      dragRef.current = null;
-      panRef.current = null;
-      lastPointerRef.current = null;
-      setDragTip(null);
-      stopAutoPan();
-      (e.target as HTMLElement).releasePointerCapture(e.pointerId);
+    (e: RPointerEvent<HTMLCanvasElement>) => endPointer(e, false),
+    [endPointer],
+  );
+
+  /**
+   * Edit view: a double-click on a point of the selected object opens its
+   * editor; on empty canvas in a region, the material picker.
+   */
+  const handleDoubleClick = useCallback(
+    (e: RMouseEvent<HTMLCanvasElement>) => {
+      if (mode !== "edit") return;
+      const [wx, wy] = getEventWorldPos(e);
+      const candidates = findObjectsAt?.(wx, wy) ?? [];
+      const rect = canvasRef.current?.getBoundingClientRect();
+      const at = { x: e.clientX - (rect?.left ?? 0), y: e.clientY - (rect?.top ?? 0) };
+      const st = useAppStore.getState();
+      const sel = st.canvasSelection;
+      const own = sel ? candidates.find((c) => sameObject(c.object, sel.object)) : undefined;
+      if (sel && own && own.point !== null) {
+        st.selectCanvasPoint(own.point);
+        onEditPoint?.(sel.object, own.point, at);
+        return;
+      }
+      if (candidates.length === 0) {
+        const region = findRegionAtPoint(wx, wy);
+        if (region) {
+          setSelectedRegionKey(region.regionKey);
+          setMaterialPicker({ screenX: at.x, screenY: at.y, worldPoint: [wx, wy] });
+        }
+      }
     },
-    [commitDragHistoryBatch, stopAutoPan],
+    [canvasRef, findObjectsAt, findRegionAtPoint, getEventWorldPos, mode, onEditPoint, setMaterialPicker, setSelectedRegionKey],
   );
 
   const handleWheel = useCallback(
@@ -1047,16 +1057,73 @@ export function usePointerHandlers(deps: PointerDeps) {
     [canvasRef, onZoomCompleted, setActiveViewOffset, setActiveViewScale],
   );
 
+  /** The cursor over the edit canvas: grab a draggable handle, point at a selectable object. */
+  const editCursor = (): string => {
+    if (dragging) return "grabbing";
+    const h = hoverObject;
+    if (!h) return "default";
+    const sel = useAppStore.getState().canvasSelection;
+    if (!sel || !sameObject(sel.object, h.object)) return "pointer";
+    if (h.locked) return h.point !== null || bodyDraggable(h.object) ? "not-allowed" : "pointer";
+    if (h.point === null) return bodyDraggable(h.object) ? "move" : "pointer";
+    if (h.point === "rim") return "crosshair";
+    return handleAxes(h.object, h.point) === "x" ? "ew-resize" : "grab";
+  };
+
   return {
     mouseWorld,
     hoverHit,
+    hoverObject,
     dragTip,
+    dragging,
+    cursor: mode === "edit" ? editCursor() : hoverHit ? "grab" : "default",
     handlePointerDown,
     handlePointerMove,
     handlePointerUp,
     handlePointerCancel,
+    handleDoubleClick,
     handleWheel,
     setMouseWorld,
     setHoverHit,
   };
+}
+
+/** Where a handle drag starts: the handle's own position (a load end on the ground line's x). */
+function handleStart(st: AppState, object: CanvasObjectRef, point: CanvasPointKey): [number, number] | null {
+  switch (object.type) {
+    case "exterior":
+      return typeof point === "number" ? [...st.coordinates[point]] : null;
+    case "boundary": {
+      const p = typeof point === "number" ? st.materialBoundaries.find((b) => b.id === object.id)?.coordinates[point] : undefined;
+      return p ? [p[0], p[1]] : null;
+    }
+    case "waterLine": {
+      const p = typeof point === "number" ? st.piezometricLine.lines.find((l) => l.id === object.id)?.coordinates[point] : undefined;
+      return p ? [p[0], p[1]] : null;
+    }
+    case "searchLimits":
+      return point === "entryLeftX" || point === "entryRightX" || point === "exitLeftX" || point === "exitRightX"
+        ? [st.analysisLimits[point], 0]
+        : null;
+    case "udl": {
+      const u = st.udls.find((v) => v.id === object.id);
+      return u && (point === "x1" || point === "x2") ? [u[point], 0] : null;
+    }
+    case "lineLoad": {
+      const l = st.lineLoads.find((v) => v.id === object.id);
+      return l ? [l.x, 0] : null;
+    }
+    case "reinforcement":
+    case "pile": {
+      const r = (object.type === "pile" ? st.piles : st.reinforcements).find((v) => v.id === object.id);
+      if (!r) return null;
+      return point === "end1" ? [r.x1, r.y1] : point === "end2" ? [r.x2, r.y2] : null;
+    }
+    case "customPlane": {
+      const p = st.customSearchPlanes.find((v) => v.id === object.id);
+      if (!p) return null;
+      if (p.points) return typeof point === "number" && p.points[point] ? [p.points[point][0], p.points[point][1]] : null;
+      return point === "centre" ? [p.cx, p.cy] : null;
+    }
+  }
 }

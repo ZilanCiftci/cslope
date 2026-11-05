@@ -45,6 +45,22 @@ export function CustomSearchPlanesSection({
   const updatePlane = useAppStore((s) => s.updateCustomSearchPlane);
   const removePlane = useAppStore((s) => s.removeCustomSearchPlane);
   const setCustomPlanesOnly = useAppStore((s) => s.setCustomPlanesOnly);
+  // The canvas selection: a surface picked here is selected on the canvas,
+  // and one selected there is highlighted here.
+  const selectedPlaneId = useAppStore((s) =>
+    s.canvasSelection?.object.type === "customPlane" ? s.canvasSelection.object.id : null,
+  );
+  const selectCanvasObject = useAppStore((s) => s.selectCanvasObject);
+  const rowProps = (id: string) => ({
+    onClick: () => {
+      if (selectedPlaneId !== id) selectCanvasObject({ type: "customPlane", id });
+    },
+    "aria-selected": selectedPlaneId === id,
+    style:
+      selectedPlaneId === id
+        ? { background: "var(--color-vsc-list-active)", borderRadius: 4, boxShadow: "0 0 0 3px var(--color-vsc-list-active)" }
+        : undefined,
+  });
 
   const content = (
     <>
@@ -70,7 +86,7 @@ export function CustomSearchPlanesSection({
       {planes.map((p) => {
         if (p.points) {
           return (
-            <div key={p.id} className="flex items-end gap-1 text-[12px]">
+            <div key={p.id} className="flex items-end gap-1 text-[12px]" {...rowProps(p.id)}>
               <label className="flex flex-col flex-1 min-w-0">
                 <Label>Points x, y (m); x, y; …</Label>
                 <PolylineInput
@@ -92,7 +108,7 @@ export function CustomSearchPlanesSection({
         }
         const radiusInvalid = p.radius <= 0;
         return (
-          <div key={p.id} className="flex items-end gap-1 text-[12px]">
+          <div key={p.id} className="flex items-end gap-1 text-[12px]" {...rowProps(p.id)}>
             <label className="flex flex-col">
               <Label>cx (m)</Label>
               <DraftNumberInput
