@@ -1,0 +1,31 @@
+# Violations of the limit analysis checks of the finite element
+# verification problems (tests/verification_bounds.rs) that are understood,
+# each with its cause. `key` is "problem|check", the check one of "order"
+# (lower <= upper; the Davis B lower bound below the associated one),
+# "reference" (a published exact value or pair of bounds of an associated
+# rigid-plastic material bracketed by the bounds) or "srm" (the strength
+# reduction factor within the bracket, to the resolution of its search).
+# An entry that is no longer needed fails the test. No tolerance is
+# widened instead: a violation not listed here fails.
+#
+# Found 2026-11-04 (all 35 problems, `-- --ignored`). The strength reduction
+# runs on the default mesh without refinement; the verification's own
+# results (adaptive, fem-cases.ts) are given for comparison. All four are
+# above the associated upper bound, which bounds the non-associated
+# (ψ = 0) material of the setups too (Radenkovic).
+
+[[violation]]
+key = "V039|srm"
+reason = "Convergence test, not the mesh: the viscoplastic increment test (the default, Griffiths & Lane) accepts a creeping state, F = 1.2403 against the upper bound 1.2325 (+0.6 %); with the equilibrium test (relative unbalanced force 1e-3, Vermeer & van Langen's global error) the same mesh gives 1.2327, at the bound. The adaptive verification result stays 1.2403. Kept: the equilibrium test as default moves other problems far more (V026 0.874 against 1.186)."
+
+[[violation]]
+key = "V056|srm"
+reason = "Mesh: 0.5382 against the upper bound 0.5116 (+5 %) with every convergence test (increment, equilibrium, Newton's residual), so the discretisation, not the solver; adaptive refinement lowers it to 0.5094, inside the bracket. Griffiths & Lane's 0.6 (disputed in fem-cases.ts) is above the bound too."
+
+[[violation]]
+key = "V057b|srm"
+reason = "Mesh: 2.0943 against the upper bound 2.0771 (+0.8 %) with every convergence test (increment, equilibrium, Newton's residual); adaptive refinement lowers it to 2.0422, inside the bracket."
+
+[[violation]]
+key = "V059c|srm"
+reason = "Mesh: 1.3965 against the upper bound 1.3844 (+0.9 %) with every convergence test (increment, equilibrium, Newton's residual); adaptive refinement lowers it to 1.3617, inside the bracket."

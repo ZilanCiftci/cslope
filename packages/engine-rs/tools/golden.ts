@@ -36,6 +36,9 @@ const cases = VERIFICATION_CASES.map((c) => ({
     options: verificationOptions(k.method, k.options),
     ...(k.pending !== undefined ? { pending: k.pending } : {}),
   })),
+  // the finite element setup and references (verification/fem-cases.ts), for
+  // the limit analysis checks of tests/verification_bounds.rs
+  ...(c.fem ? { fem: c.fem } : {}),
 }));
 
 const searches: Record<string, unknown>[] = [];
@@ -74,7 +77,7 @@ const text =
   JSON.stringify(
     {
       $comment:
-        "Reference results of the verification analyses, from the engine the app ships (WebAssembly; tools/golden.ts): per analysis the minimum F, the critical surface's key and the counts of surfaces; and the problems with their checks. tests/verification_native.rs compares the native engine with them (F within 1e-6, near-ties in tests/allowlist.toml).",
+        "Reference results of the verification analyses, from the engine the app ships (WebAssembly; tools/golden.ts): per analysis the minimum F, the critical surface's key and the counts of surfaces; and the problems with their checks (and their finite element setups, for tests/verification_bounds.rs). tests/verification_native.rs compares the native engine with them (F within 1e-6, near-ties in tests/allowlist.toml).",
       cases,
       searches,
     },
