@@ -15,6 +15,29 @@ Project files have the extension `.cslp`. cSlope always saves `.cslp`, whatever 
 
 A save writes the whole file anew under a temporary name and then replaces the old file, so a crash or a full disk during a save leaves the previous file intact.
 
+## Sharing a project: Save as anonymized
+
+Project files often hold client names, site locations, borehole data and drawings. To share a project, for example to attach it to an issue on GitHub, use **File › Save as anonymized…**. It saves an anonymized **copy**, offered as *&lt;name&gt;-anonymized.cslp* next to the project (in a browser, a download). The open project is not changed: it keeps its file name, and unsaved changes stay unsaved.
+
+The dialog has these options; the defaults are on unless stated:
+
+| Option | What the copy gets |
+| --- | --- |
+| Remove project information | Empty title, subtitle, client, project number, revision, author, checker, date and description of every model, and no import notes. |
+| Rename models | *Model 1*, *Model 2*, … |
+| Rename materials | *Material 1*, *Material 2*, …, with their parameters and colors; the 3D effects' excluded materials and an imported earlier stage follow. |
+| Give other objects generic names | *Water line 1*, …, *Reference line 1*, …, *Drawing 1*, …; reinforcement and pile labels are removed, and head lines of an imported waternet are renamed. |
+| Remove drawings and their files | No drawings under the models and none of their files in the archive. |
+| Remove free text from text annotations | Text other than the variables (#FOS, #Method, `{{…}}`) becomes *Text*, so "Calculated FOS: #FOS" becomes "Text #FOS"; or the text annotations are deleted. |
+| Remove results (off) | No results. Results do not name the client and help to reproduce a problem, but they contain coordinates. |
+| Move to a local origin (off) | Every coordinate shifted so that the smallest x of each model is 0, and optionally its lowest point y = 0. |
+
+Always: the copy has no thumbnail, its manifest is dated at the time it is saved, drawing files keep no original file name, and attachments no model uses are left out. In the copy's results the old material and model names are replaced too.
+
+Moving to a local origin hides the real chainage and levels. A rigid shift does not change the factor of safety, so every absolute coordinate is moved by the same amount: the geometry, boundaries, region assignments, water lines (also before a rapid drawdown), loads, reinforcement, piles, search limits, custom and block surfaces, the imported waternet and earlier stage, the datum elevations of strength profiles (S = f(datum), the reference levels of Su and c′ growing with depth, OCR against elevation, the points of a spatial Mohr-Coulomb material), drawings, reference lines and a locked result view. An expression of a coordinate or datum elevation gets the shift added (`H` becomes `(H) - 1200`), so the parameters keep their values. The results are removed, since they are in the original coordinates; run the analysis again in the copy. A model with a material model this version does not know is left where it is, and the summary says so.
+
+Before saving, the dialog lists what will be removed or renamed. Names inside parameters, expressions and other free text, and the content of drawing files you keep, are not changed: the dialog lists those it finds. Open the copy and check it before you share it.
+
 ## What a project contains
 
 A `.cslp` file is a ZIP archive of JSON files, one folder per model:

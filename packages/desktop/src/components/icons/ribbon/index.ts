@@ -11,6 +11,7 @@ export { ImportIcon } from "./outline/ImportIcon";
 export { ExportIcon } from "./outline/ExportIcon";
 export { SaveIcon } from "./outline/SaveIcon";
 export { SaveAsIcon } from "./outline/SaveAsIcon";
+export { SaveAnonymizedIcon } from "./outline/SaveAnonymizedIcon";
 export { ExitIcon } from "./outline/ExitIcon";
 export { UndoIcon } from "./outline/UndoIcon";
 export { RedoIcon } from "./outline/RedoIcon";

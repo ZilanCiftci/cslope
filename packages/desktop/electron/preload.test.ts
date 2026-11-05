@@ -58,6 +58,7 @@ const EXPECTED: Record<string, [Kind, string]> = {
   onCloseRequested: ["on", "app:closeRequested"],
   saveFile: ["invoke", "dialog:saveFile"],
   saveFileAs: ["invoke", "dialog:saveFileAs"],
+  saveCopy: ["invoke", "dialog:saveCopy"],
   minimize: ["send", "window:minimize"],
   maximize: ["send", "window:maximize"],
   close: ["send", "window:close"],

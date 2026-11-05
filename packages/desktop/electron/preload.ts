@@ -55,6 +55,9 @@ contextBridge.exposeInMainWorld("cslope", {
     ipcRenderer.invoke("dialog:saveFile", content, suggestedName),
   saveFileAs: (content: Uint8Array, suggestedName?: string) =>
     ipcRenderer.invoke("dialog:saveFileAs", content, suggestedName),
+  // A copy of the project (anonymized) next to the open file, named with `suffix`.
+  saveCopy: (content: Uint8Array, suffix: string) =>
+    ipcRenderer.invoke("dialog:saveCopy", content, suffix),
   // Window controls
   minimize: () => ipcRenderer.send("window:minimize"),
   maximize: () => ipcRenderer.send("window:maximize"),

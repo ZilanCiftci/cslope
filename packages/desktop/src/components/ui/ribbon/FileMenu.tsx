@@ -27,10 +27,14 @@ import {
   ImportIcon,
   NewIcon,
   OpenIcon,
+  SaveAnonymizedIcon,
   SaveAsIcon,
   SaveIcon,
 } from "../../icons/ribbon";
 import { SummaryDialog } from "../SummaryDialog";
+import { AnonymizeDialog } from "../../../features/project/AnonymizeDialog";
+import { projectSnapshot } from "../../../features/project/saveAnonymized";
+import type { ProjectFile } from "../../../store/persistence";
 
 interface Props {
   activeModelName?: string;
@@ -47,6 +51,7 @@ export function FileMenu({
 }: Props) {
   const defaultBaseName = activeModelName?.trim() || "cslope-project";
   const {
+    fileName,
     fileInputRef,
     handleNew,
     handleOpen,
@@ -57,6 +62,8 @@ export function FileMenu({
 
   // What an import or export did (or why it failed), shown in a dialog.
   const [summary, setSummary] = useState<{ title: string; text: string } | null>(null);
+  // File > Save as anonymized: the project it anonymizes, while its dialog is open.
+  const [anonymizing, setAnonymizing] = useState<ProjectFile | null>(null);
   const failure = (what: string, err: unknown) =>
     // The title says what failed; the text says why.
     setSummary({ title: `${what} failed`, text: err instanceof Error ? err.message : String(err) });
@@ -238,6 +245,12 @@ export function FileMenu({
                   shortcut="Ctrl+Shift+S"
                   onClick={handleSaveAs}
                 />
+                <RibbonSmallButton
+                  icon={<SaveAnonymizedIcon {...SMALL_ICON} />}
+                  label="Save as anonymized…"
+                  title="Save a copy without client names, project information and drawings, to share it (for example in an issue)"
+                  onClick={() => setAnonymizing(projectSnapshot())}
+                />
               </RibbonStack>
             </RibbonGroup>
             {isElectron && (
@@ -266,6 +279,7 @@ export function FileMenu({
         onChange={handleFileChange}
       />
 
+      {anonymizing && <AnonymizeDialog snapshot={anonymizing} fileName={fileName} onClose={() => setAnonymizing(null)} />}
       {summary && <SummaryDialog title={summary.title} text={summary.text} onClose={() => setSummary(null)} />}
     </div>
   );

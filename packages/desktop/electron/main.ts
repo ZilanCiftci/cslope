@@ -1396,7 +1396,7 @@ ipcMain.handle("file:openRequested", async (event) => {
  * existing file first, so a crash, power loss or full disk mid-write
  * would destroy the user's only copy.
  */
-async function saveToPath(filePath: string, content: Uint8Array) {
+async function saveToPath(filePath: string, content: Uint8Array, becomesCurrent = true) {
   let target = filePath;
   try {
     target = fs.realpathSync(filePath); // keep symlinks pointing at the file
@@ -1443,7 +1443,7 @@ async function saveToPath(filePath: string, content: Uint8Array) {
     }
     throw err;
   }
-  setCurrentFilePath(filePath);
+  if (becomesCurrent) setCurrentFilePath(filePath);
   return true;
 }
 
@@ -1492,6 +1492,54 @@ async function saveAs(content: Uint8Array, suggestedName?: unknown): Promise<boo
   }
   return saveToPath(target, content);
 }
+
+/**
+ * A copy of the project (File › Save as anonymized…): offered next to the
+ * open file as <name><suffix>.cslp. The open file stays the save target,
+ * and the copy never replaces it. Returns the name saved to, or null.
+ */
+ipcMain.handle("dialog:saveCopy", async (event, content: unknown, suffix?: unknown) => {
+  if (!win || event.sender !== win.webContents || !isProjectData(content)) return null;
+  const base = currentFilePath ? path.basename(cslpPath(currentFilePath), PROJECT_EXT) : "cslope-project";
+  const name = suggestedFileName(`${base}${typeof suffix === "string" ? suffix : ""}`);
+  // Automated capture saves without the native dialog.
+  const capturePath = process.env.CSLOPE_CAPTURE ? process.env.CSLOPE_CAPTURE_SAVE_COPY_PATH : undefined;
+  let filePath = capturePath;
+  if (!filePath) {
+    const chosen = await dialog.showSaveDialog(win, {
+      title: "Save anonymized copy",
+      defaultPath: currentFilePath ? path.join(path.dirname(currentFilePath), name) : name,
+      filters: [{ name: "cSlope project", extensions: ["cslp"] }],
+    });
+    if (chosen.canceled || !chosen.filePath) return null;
+    filePath = chosen.filePath;
+  }
+  const target = cslpPath(filePath);
+  if (currentFilePath && path.resolve(target) === path.resolve(currentFilePath)) {
+    await dialog.showMessageBox(win, {
+      type: "warning",
+      title: "Save anonymized copy",
+      message: "This is the open project's file. Choose another name for the anonymized copy.",
+      buttons: ["OK"],
+      noLink: true,
+    });
+    return null;
+  }
+  if (!capturePath && target !== filePath && fs.existsSync(target)) {
+    const { response } = await dialog.showMessageBox(win, {
+      type: "warning",
+      title: "Save anonymized copy",
+      message: `${path.basename(target)} already exists. Do you want to replace it?`,
+      buttons: ["Replace", "Cancel"],
+      defaultId: 1,
+      cancelId: 1,
+      noLink: true,
+    });
+    if (response !== 0) return null;
+  }
+  await saveToPath(target, content, false);
+  return path.basename(target);
+});
 
 // ── Application menu (hidden — custom title bar in renderer) ─
 

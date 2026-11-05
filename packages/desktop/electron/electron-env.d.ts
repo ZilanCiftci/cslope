@@ -28,6 +28,7 @@ interface Window {
     openFile: () => Promise<Uint8Array | null>;
     saveFile: (content: Uint8Array, suggestedName?: string) => Promise<boolean>;
     saveFileAs: (content: Uint8Array, suggestedName?: string) => Promise<boolean>;
+    saveCopy: (content: Uint8Array, suffix: string) => Promise<string | null>;
     minimize: () => void;
     maximize: () => void;
     close: () => void;
