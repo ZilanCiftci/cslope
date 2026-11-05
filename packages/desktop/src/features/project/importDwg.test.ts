@@ -13,6 +13,7 @@ import * as glue from "../../dwg-wasm/cslope_dwg.js";
 import { useAppStore } from "../../store/app-store";
 import { DWG_READ_TIMEOUT_MS, readDwgFile, setDwgWorkerFactory, type DwgWorkerResponse } from "./dwg-reader";
 import { importDwg } from "./importDwg";
+import { dwgRequestHandler } from "./dwg-worker-handler";
 
 // (vitest runs from packages/desktop; under jsdom import.meta.url is not a file URL)
 const file = (path: string) => new Uint8Array(readFileSync(join(process.cwd(), path)));
@@ -83,6 +84,33 @@ describe("importDwg", () => {
     expect(workers).toHaveLength(2);
     expect(d.version).toBe("AC1018");
     expect(d.insunits).toBe(6);
+  });
+
+  it("a reader that cannot be started is started again on the next request, and its worker is replaced", async () => {
+    let starts = 0;
+    const handle = dwgRequestHandler(
+      async () => {
+        if (++starts === 1) throw new Error("no memory");
+      },
+      { drawing: () => "{}", vectors: () => "[]" },
+    );
+    const first = await handle(new Uint8Array([1]));
+    expect(first).toEqual({ ok: false, error: "The DWG reader could not be started: no memory.", trapped: false, broken: true });
+    expect(await handle(new Uint8Array([1]))).toEqual({ ok: true, json: "{}" });
+    expect(await handle({ vectors: true, bytes: new Uint8Array([1]) })).toEqual({ ok: true, json: "[]" });
+    expect(starts).toBe(2);
+
+    // the client discards a broken worker and starts a new one for the next file
+    const workers: ReturnType<typeof fakeWorker>[] = [];
+    setDwgWorkerFactory(() => {
+      const w = fakeWorker((bytes) => (workers.length === 1 ? first : inProcess(bytes)));
+      workers.push(w);
+      return w as unknown as Worker;
+    });
+    await expect(readDwgFile(new Uint8Array([1]))).rejects.toThrow("The DWG reader could not be started: no memory.");
+    expect(workers[0].terminate).toHaveBeenCalled();
+    expect((await readDwgFile(file("src/features/project/fixtures/slope-section.dwg"))).version).toBe("AC1018");
+    expect(workers).toHaveLength(2);
   });
 
   it("gives up on a reader that does not answer", async () => {

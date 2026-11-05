@@ -31,7 +31,8 @@ export type DwgWorkerRequest = Uint8Array | { vectors: true; bytes: Uint8Array }
 
 export type DwgWorkerResponse =
   | { ok: true; json: string }
-  | { ok: false; error: string; trapped: boolean };
+  /** `broken`: the reader could not be started (the worker is replaced for the next file). */
+  | { ok: false; error: string; trapped: boolean; broken?: boolean };
 
 /** Longest a file may take to read. */
 export const DWG_READ_TIMEOUT_MS = 60_000;
@@ -67,7 +68,10 @@ function readOnce<T>(request: DwgWorkerRequest): Promise<T> {
         resolve(JSON.parse(r.json) as T);
         return;
       }
-      if (r.trapped) {
+      if (r.broken) {
+        discard();
+        reject(new Error(r.error));
+      } else if (r.trapped) {
         discard();
         reject(new Error("The DWG reader failed on this file: it may be damaged, or use a part of the format the reader does not handle."));
       } else {
