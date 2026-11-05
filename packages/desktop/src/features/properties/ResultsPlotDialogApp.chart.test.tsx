@@ -89,7 +89,7 @@ describe("ResultsPlotDialogApp charts", () => {
     expect(ticks.length).toBeGreaterThan(2);
 
     await userEvent.selectOptions(screen.getByRole("combobox", { name: "Y axis" }), "pwp");
-    expect(axisLabels(container)).toContain("PWP (kN)");
+    expect(axisLabels(container)).toContain("Pore water force (kN)");
 
     await userEvent.selectOptions(screen.getByRole("combobox", { name: "X axis" }), "x");
     expect(axisLabels(container)).toContain("X value");
@@ -127,5 +127,27 @@ describe("ResultsPlotDialogApp charts", () => {
     expect(screen.getByText("Lambda points: 1")).toBeInTheDocument();
     expect(screen.getByText("Equilibrium λ: 0.3000")).toBeInTheDocument();
     expect(tickTexts(container).length).toBeGreaterThan(0);
+  });
+});
+
+describe("the slip surface plot's quantities", () => {
+  it("offers the base stresses, forces, strength parameters and geometry in groups; a quantity without a unit has no parentheses", async () => {
+    const model = activeModel();
+    const { container } = render(<ResultsPlotDialogApp />);
+    bridge.emit("onResultsPlotState", { model, result: result(surface(model, 1.3), "Bishop") });
+    const select = screen.getByRole("combobox", { name: "Y axis" }) as HTMLSelectElement;
+    expect(Array.from(select.querySelectorAll("optgroup")).map((g) => g.label)).toEqual([
+      "Stresses on the base",
+      "Forces",
+      "Strength parameters",
+      "Geometry",
+    ]);
+    for (const key of ["normalEffective", "baseNormalStress", "mobilizedShearStress", "baseInclination", "baseElevation"]) {
+      expect(select.querySelector(`option[value="${key}"]`)).not.toBeNull();
+    }
+    await userEvent.selectOptions(select, "localFos");
+    expect(axisLabels(container)).toContain("Local factor of safety");
+    await userEvent.selectOptions(select, "baseNormalStress");
+    expect(axisLabels(container)).toContain("Effective normal stress (σ′) (kPa)");
   });
 });

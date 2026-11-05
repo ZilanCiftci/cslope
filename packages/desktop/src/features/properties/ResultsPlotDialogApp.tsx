@@ -45,7 +45,18 @@ type MetricKey =
   | "cohesionStrength"
   | "resistingForce"
   | "pullingForce"
-  | "normalEffective";
+  | "normalEffective"
+  | "frictionStrength"
+  | "mobilizedShearForce"
+  | "baseNormalStress"
+  | "mobilizedShearStress"
+  | "localFos"
+  | "surchargeLoad"
+  | "baseInclination"
+  | "baseLength"
+  | "sliceWidth"
+  | "sliceHeight"
+  | "baseElevation";
 
 interface PlotPoint {
   sliceNumber: number;
@@ -62,6 +73,17 @@ interface PlotPoint {
   pullingForce: number;
   /** The effective normal force on the base, N′ (negative: the slice is in tension, see the result's notes). */
   normalEffective: number;
+  frictionStrength: number;
+  mobilizedShearForce: number;
+  baseNormalStress: number;
+  mobilizedShearStress: number;
+  localFos: number;
+  surchargeLoad: number;
+  baseInclination: number;
+  baseLength: number;
+  sliceWidth: number;
+  sliceHeight: number;
+  baseElevation: number;
   /** The slice's outline in model coordinates (marked on the canvas while hovered). */
   outline: [number, number][];
 }
@@ -73,19 +95,32 @@ interface LffPoint {
   gap: number;
 }
 
-const METRIC_OPTIONS: Array<{ key: MetricKey; label: string; unit: string }> = [
-  { key: "shearStrength", label: "Shear strength", unit: "kPa" },
-  { key: "frictionAngle", label: "Friction angle", unit: "deg" },
-  { key: "cohesion", label: "Cohesion", unit: "kPa" },
-  { key: "baseCohesion", label: "Base cohesion", unit: "kPa" },
-  { key: "porePressure", label: "Pore pressure", unit: "kPa" },
-  { key: "pwp", label: "PWP", unit: "kN" },
-  { key: "sliceWeight", label: "Slice weight", unit: "kN" },
-  { key: "cohesionStrength", label: "Cohesion strength", unit: "kN" },
-  { key: "resistingForce", label: "Resisting force", unit: "kN" },
-  { key: "pullingForce", label: "Pulling force", unit: "kN" },
-  { key: "normalEffective", label: "Effective normal force (N′)", unit: "kN" },
+/** The quantities of the slice plot, in the groups the select shows. */
+const METRIC_OPTIONS: Array<{ key: MetricKey; label: string; unit: string; group: string }> = [
+  { key: "shearStrength", label: "Shear strength", unit: "kPa", group: "Stresses on the base" },
+  { key: "mobilizedShearStress", label: "Mobilized shear stress (τ)", unit: "kPa", group: "Stresses on the base" },
+  { key: "baseNormalStress", label: "Effective normal stress (σ′)", unit: "kPa", group: "Stresses on the base" },
+  { key: "porePressure", label: "Pore pressure", unit: "kPa", group: "Stresses on the base" },
+  { key: "localFos", label: "Local factor of safety", unit: "", group: "Stresses on the base" },
+  { key: "normalEffective", label: "Effective normal force (N′)", unit: "kN", group: "Forces" },
+  { key: "mobilizedShearForce", label: "Mobilized shear force", unit: "kN", group: "Forces" },
+  { key: "resistingForce", label: "Resisting force", unit: "kN", group: "Forces" },
+  { key: "pullingForce", label: "Pulling force", unit: "kN", group: "Forces" },
+  { key: "cohesionStrength", label: "Cohesion strength", unit: "kN", group: "Forces" },
+  { key: "frictionStrength", label: "Friction strength", unit: "kN", group: "Forces" },
+  { key: "pwp", label: "Pore water force", unit: "kN", group: "Forces" },
+  { key: "sliceWeight", label: "Slice weight (with loads)", unit: "kN", group: "Forces" },
+  { key: "surchargeLoad", label: "Surcharge on the slice", unit: "kN", group: "Forces" },
+  { key: "frictionAngle", label: "Friction angle", unit: "deg", group: "Strength parameters" },
+  { key: "cohesion", label: "Cohesion", unit: "kPa", group: "Strength parameters" },
+  { key: "baseCohesion", label: "Base cohesion", unit: "kPa", group: "Strength parameters" },
+  { key: "baseInclination", label: "Base inclination (α)", unit: "deg", group: "Geometry" },
+  { key: "baseLength", label: "Base length", unit: "m", group: "Geometry" },
+  { key: "sliceWidth", label: "Slice width", unit: "m", group: "Geometry" },
+  { key: "sliceHeight", label: "Slice height", unit: "m", group: "Geometry" },
+  { key: "baseElevation", label: "Base elevation", unit: "m", group: "Geometry" },
 ];
+const METRIC_GROUPS = [...new Set(METRIC_OPTIONS.map((m) => m.group))];
 
 function isSameSurface(a: SlipSurfaceResult, b: SlipSurfaceResult): boolean {
   const tol = 1e-6;
@@ -255,6 +290,11 @@ export function ResultsPlotDialogApp() {
         const pullingForce = totalWeight * Math.sin(slice.alpha);
         const shearStrength =
           slice.baseLength > 1e-9 ? resistingForce / slice.baseLength : 0;
+        // The method's shear on the base at this surface's FOS, and the
+        // ratio of the strength to the shear the base must carry.
+        const fos = selectedSurface.fos;
+        const mobilizedShearForce = fos > 0 ? resistingForce / fos : 0;
+        const localFos = Math.abs(pullingForce) > 1e-9 ? resistingForce / pullingForce : NaN;
 
         return {
           sliceNumber: index + 1,
@@ -271,6 +311,17 @@ export function ResultsPlotDialogApp() {
           resistingForce,
           pullingForce,
           normalEffective,
+          frictionStrength,
+          mobilizedShearForce,
+          baseNormalStress: slice.baseLength > 1e-9 ? normalEffective / slice.baseLength : 0,
+          mobilizedShearStress: slice.baseLength > 1e-9 ? mobilizedShearForce / slice.baseLength : 0,
+          localFos,
+          surchargeLoad: slice.udl + slice.ll,
+          baseInclination: (slice.alpha * 180) / Math.PI,
+          baseLength: slice.baseLength,
+          sliceWidth: slice.width,
+          sliceHeight: slice.height,
+          baseElevation: slice.yBottom,
           outline: [
             [toModelX(slice.xLeft), slice.y0Top],
             [toModelX(slice.xRight), slice.y1Top],
@@ -540,10 +591,14 @@ export function ResultsPlotDialogApp() {
                   value={metric}
                   onChange={(e) => setMetric(e.target.value as MetricKey)}
                 >
-                  {METRIC_OPTIONS.map((option) => (
-                    <option key={option.key} value={option.key}>
-                      {option.label}
-                    </option>
+                  {METRIC_GROUPS.map((group) => (
+                    <optgroup key={group} label={group}>
+                      {METRIC_OPTIONS.filter((o) => o.group === group).map((option) => (
+                        <option key={option.key} value={option.key}>
+                          {option.label}
+                        </option>
+                      ))}
+                    </optgroup>
                   ))}
                 </select>
               ) : (
@@ -642,7 +697,7 @@ export function ResultsPlotDialogApp() {
                       tickLine={{ stroke: "var(--color-vsc-border)" }}
                       axisLine={{ stroke: "var(--color-vsc-border)" }}
                       label={{
-                        value: `${metricMeta.label} (${metricMeta.unit})`,
+                        value: metricMeta.unit ? `${metricMeta.label} (${metricMeta.unit})` : metricMeta.label,
                         angle: -90,
                         position: "insideLeft",
                         fill: "var(--color-vsc-text-muted)",
@@ -660,8 +715,8 @@ export function ResultsPlotDialogApp() {
                       formatter={(value) => {
                         const numeric = toFiniteNumber(value);
                         return numeric == null
-                          ? `- ${metricMeta.unit}`
-                          : `${formatNumber(numeric, 2)} ${metricMeta.unit}`;
+                          ? `- ${metricMeta.unit}`.trimEnd()
+                          : `${formatNumber(numeric, 2)} ${metricMeta.unit}`.trimEnd();
                       }}
                       labelFormatter={(label) => {
                         const numeric = toFiniteNumber(label);
