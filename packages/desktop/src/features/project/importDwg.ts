@@ -2,11 +2,11 @@ import { finishDrawing } from "../../utils/dxf";
 import { readDwgFile } from "./dwg-reader";
 import { importDrawing } from "./importDxf";
 
-/** AutoCAD releases by DWG version code. */
+/** The release (year) of each DWG version code. */
 const RELEASES: Record<string, string> = {
-  AC1009: "Release 11/12",
-  AC1012: "Release 13",
-  AC1014: "Release 14",
+  AC1009: "R11/12",
+  AC1012: "R13",
+  AC1014: "R14",
   AC1015: "2000",
   AC1018: "2004",
   AC1021: "2007",
@@ -28,7 +28,7 @@ export async function importDwg(bytes: Uint8Array, fileName: string): Promise<st
   const dwg = await readDwgFile(bytes);
   const notes: string[] = [];
   const release = RELEASES[dwg.version];
-  notes.push(`DWG format: ${release ? `AutoCAD ${release}` : "unknown"} (${dwg.version}).`);
+  notes.push(`DWG version ${dwg.version}${release ? ` (${release})` : ""}.`);
   if (dwg.bulgedPolylines > 0) {
     notes.push(`${plural(dwg.bulgedPolylines, "polyline has", "polylines have")} arc segments, imported as straight segments.`);
   }

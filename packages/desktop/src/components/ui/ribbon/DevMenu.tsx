@@ -71,7 +71,6 @@ export function DevMenu({ isOpen, onActivate, panelHost }: Props) {
           color: "#e5a00d",
           background: isOpen ? "var(--color-vsc-tab-active)" : "transparent",
         }}
-        aria-haspopup="menu"
         aria-expanded={isOpen}
       >
         Dev
@@ -86,7 +85,7 @@ export function DevMenu({ isOpen, onActivate, panelHost }: Props) {
       {isOpen &&
         panelHost &&
         createPortal(
-          <div className="h-full flex items-stretch gap-0" role="menu">
+          <div className="h-full flex items-stretch gap-0" role="toolbar" aria-label="Dev">
             <RibbonGroup label="Window">
               <RibbonStack>
                 <RibbonSmallButton

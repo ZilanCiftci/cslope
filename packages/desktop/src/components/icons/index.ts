@@ -7,9 +7,6 @@ export {
   PanIcon,
   PlusIcon,
   MinusIcon,
-  RibbonFitIcon,
-  RibbonZoomBoxIcon,
-  RibbonHandIcon,
 } from "./ViewIcons";
 
 // Window controls

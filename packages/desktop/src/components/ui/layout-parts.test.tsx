@@ -139,12 +139,12 @@ describe("RibbonButton", () => {
     const { rerender } = render(
       <RibbonButton icon={null} label="Go" shortcut="G" onClick={onClick} disabled />,
     );
-    const button = screen.getByRole("menuitem", { name: "Go" });
+    const button = screen.getByRole("button", { name: "Go" });
     expect(button).toHaveAttribute("title", "Go (G)");
     await userEvent.click(button);
     expect(onClick).not.toHaveBeenCalled();
     rerender(<RibbonButton icon={null} label="Go" onClick={onClick} active />);
-    await userEvent.click(screen.getByRole("menuitem", { name: "Go" }));
+    await userEvent.click(screen.getByRole("button", { name: "Go" }));
     expect(onClick).toHaveBeenCalledTimes(1);
   });
 });

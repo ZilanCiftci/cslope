@@ -85,10 +85,15 @@ describe("InsertVariableMenu", () => {
     fireEvent.click(button());
     const items = screen.getAllByRole("menuitem");
     expect(items).toHaveLength(ANNOTATION_TAGS.length);
+    // Project information is said once, in its group's name; the other
+    // tags each describe themselves.
+    const project = screen.getByRole("group", { name: "Project information (empty if not set)" });
     ANNOTATION_TAGS.forEach((t, i) => {
       expect(items[i]).toHaveTextContent(`#${t.tag}`);
-      expect(items[i]).toHaveTextContent(t.description);
+      if (t.group === "project") expect(project).toContainElement(items[i]);
+      else expect(items[i]).toHaveTextContent(t.description);
     });
+    expect(screen.getByRole("menu")).not.toHaveTextContent("(project information");
     const fos = items.find((el) => el.textContent?.startsWith("#FOS("))!;
     expect(fos).toHaveTextContent("(1.404)");
     const fos3d = items.find((el) => el.textContent?.startsWith("#FOS3D"))!;

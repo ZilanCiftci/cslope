@@ -335,10 +335,12 @@ export function useContextMenu(params: ContextMenuParams) {
 
       // Empty canvas: a drawing there (locked ones let clicks through, so
       // this is where they are unlocked), the material of the region there,
-      // and the locks.
+      // and the locks. Removing the drawing comes last, apart from the rest.
       const items: ContextMenuItem[] = [];
       const drawingId = findDrawingAt?.(wx, wy) ?? null;
-      if (drawingId) items.push(...drawingMenuItems(drawingId, close));
+      const drawingItems = drawingId ? drawingMenuItems(drawingId, close) : [];
+      const removeDrawing = drawingItems.pop();
+      items.push(...drawingItems);
       const region = findRegionAtPoint?.(wx, wy) ?? null;
       if (region) {
         items.push({
@@ -368,6 +370,7 @@ export function useContextMenu(params: ContextMenuParams) {
         disabled: !hasLocks(st.locks),
         action: close(() => useAppStore.getState().unlockAll()),
       });
+      if (removeDrawing) items.push(removeDrawing);
       setContextMenu({ screenX, screenY, items });
     },
     [
@@ -394,7 +397,7 @@ export function useContextMenu(params: ContextMenuParams) {
   };
 }
 
-/** The menu of a drawing on the canvas: lock, recalibrate, hide, remove. */
+/** The menu of a drawing on the canvas: lock, recalibrate, hide and, last after a line, remove. */
 function drawingMenuItems(id: string, close: (fn: () => void) => () => void): ContextMenuItem[] {
   const st = useAppStore.getState();
   const object: CanvasObjectRef = { type: "background", id };
@@ -414,7 +417,7 @@ function drawingMenuItems(id: string, close: (fn: () => void) => () => void): Co
       ? [{ label: "Pick lines…", action: close(() => startLinePick(id)) }]
       : []),
     { label: "Hide drawing", action: close(() => useAppStore.getState().updateBackground(id, { visible: false })) },
-    { label: "Remove drawing", danger: true, action: close(() => useAppStore.getState().removeBackground(id)) },
+    { label: "Remove drawing", danger: true, separator: true, action: close(() => useAppStore.getState().removeBackground(id)) },
   ];
 }
 

@@ -46,7 +46,7 @@ describe("MenuBar", () => {
     expect(screen.queryByTitle("New (Ctrl+N)")).toBeNull();
     expect(screen.getByTitle("Exterior")).toBeInTheDocument();
     await userEvent.click(tab("Results"));
-    expect(screen.getByRole("menuitem", { name: "Results plot" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Results plot" })).toBeInTheDocument();
     await userEvent.click(tab("Help"));
     expect(screen.getByTitle("About")).toBeInTheDocument();
   });
@@ -159,7 +159,7 @@ describe("Model ribbon", () => {
     adoptProjectAssets([]);
     render(<MenuBar />);
     await userEvent.click(tab("Model"));
-    await userEvent.click(screen.getByRole("menuitem", { name: "Drawing" }));
+    await userEvent.click(screen.getByRole("button", { name: "Drawing" }));
     expect(bridge.callNames()).toContain("openPlaceDrawingDialog");
 
     const more = screen.getByRole("button", { name: "More drawing commands" });
@@ -353,8 +353,8 @@ describe("Compact ribbon", () => {
     expect(screen.getByTitle("Materials")).toHaveAttribute("data-size", "large");
     expect(screen.getByTitle("Assign")).toHaveAttribute("data-size", "small");
     await userEvent.click(tab("Results"));
-    expect(screen.getByRole("menuitem", { name: "Results plot" })).toHaveAttribute("data-size", "large");
-    expect(screen.getByRole("menuitem", { name: "Export PDF" })).toHaveAttribute("data-size", "large");
+    expect(screen.getByRole("button", { name: "Results plot" })).toHaveAttribute("data-size", "large");
+    expect(screen.getByRole("button", { name: "Export PDF" })).toHaveAttribute("data-size", "large");
     expect(screen.getByTitle("Sheet settings")).toHaveAttribute("data-size", "small");
   });
 
