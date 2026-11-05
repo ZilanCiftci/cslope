@@ -1089,16 +1089,17 @@ describe("store slices", () => {
     expect(added.y).toBe(0.5);
   });
 
-  it("resultViewSlice addAnnotation steps a new text or plot away from the last one", () => {
+  it("resultViewSlice addAnnotation puts a new text or plot clear of the ones there", () => {
     const st = () => useAppStore.getState();
     st().setResultViewSettings({ annotations: [] });
     st().addAnnotation("plot");
     st().addAnnotation("text");
     st().addAnnotation("text");
     const [plot, text1, text2] = st().resultViewSettings.annotations;
+    // The plot in the middle, the first text right below it, the next below that.
     expect([plot.x, plot.y]).toEqual([0.5, 0.5]);
-    expect([text1.x, text1.y]).toEqual([0.54, 0.54]);
-    expect([text2.x, text2.y]).toEqual([0.58, 0.58]);
+    expect([text1.x, text1.y]).toEqual([0.5, 0.7]);
+    expect([text2.x, text2.y]).toEqual([0.5, 0.755]);
     // Moved away, the middle is free again.
     st().updateAnnotation(plot.id, { x: 0.2, y: 0.3 });
     st().addAnnotation("text");

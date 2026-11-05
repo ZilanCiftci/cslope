@@ -563,7 +563,8 @@ export function ViewerToolbar({
   /** The crop tool's name (the sheet view: "Draw frame"). */
   cropLabel?: string;
 }) {
-  const hint = `Wheel: zoom · middle button or Space + drag: pan${extent ? ` · ${extent}` : ""}`;
+  // The size first: a narrow window cuts the end of the hint.
+  const hint = `${extent ? `${extent} · ` : ""}Wheel: zoom · middle button or Space + drag: pan`;
   return (
     <div className="px-2 py-1 border-b flex items-center gap-1.5 text-[11px]" style={{ borderColor: "var(--color-vsc-border)" }}>
       {(

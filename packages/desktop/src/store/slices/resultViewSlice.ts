@@ -26,19 +26,42 @@ const syncActiveModel = (
   ),
 });
 
-/** Step between annotations added one after another (fraction of the paper). */
-const CASCADE_STEP = 0.04;
+/** Rough size of a new text annotation (fraction of the paper), to keep others clear of it. */
+const TEXT_BOX = { w: 0.12, h: 0.035 };
+/** Space between a new annotation and the one it is placed by (fraction of the paper). */
+const GAP = 0.02;
 
-/** The middle of the sheet, or the first step from it that no annotation takes. */
-export function cascadePosition(annotations: readonly { x?: number; y?: number }[]): { x: number; y: number } {
-  const taken = (x: number, y: number) =>
-    annotations.some((a) => Math.abs((a.x ?? 0) - x) < CASCADE_STEP / 2 && Math.abs((a.y ?? 0) - y) < CASCADE_STEP / 2);
-  for (let k = 0; k < 8; k++) {
-    const x = Math.round((0.5 + k * CASCADE_STEP) * 1000) / 1000;
-    const y = Math.round((0.5 + k * CASCADE_STEP) * 1000) / 1000;
-    if (!taken(x, y)) return { x, y };
-  }
-  return { x: 0.5, y: 0.5 };
+type Placed = { type: string; x?: number; y?: number; width?: number; height?: number; anchor?: string };
+
+/** The box of a text or plot annotation (top-left anchored), or null for the others. */
+function boxOf(a: Placed): { x: number; y: number; w: number; h: number } | null {
+  if ((a.type !== "text" && a.type !== "plot") || (a.anchor && a.anchor !== "top-left")) return null;
+  const size = a.type === "plot" ? { w: a.width ?? 0.24, h: a.height ?? 0.18 } : TEXT_BOX;
+  return { x: a.x ?? 0, y: a.y ?? 0, ...size };
+}
+
+/**
+ * Where a new text or plot goes: the middle of the sheet, else right below
+ * one of the texts and plots there (the last first), else to the right of
+ * one: the first place where it overlaps none of them and stays on the
+ * paper. Several added one after another so do not land on each other.
+ */
+export function freeAnnotationPosition(annotations: readonly Placed[], type: "text" | "plot"): { x: number; y: number } {
+  const size = type === "plot" ? { w: 0.24, h: 0.18 } : TEXT_BOX;
+  const boxes = annotations.map(boxOf).filter((b): b is NonNullable<typeof b> => b !== null);
+  const r = (v: number) => Math.round(v * 1000) / 1000;
+  const candidates = [
+    { x: 0.5, y: 0.5 },
+    ...[...boxes].reverse().map((b) => ({ x: b.x, y: b.y + b.h + GAP })),
+    ...[...boxes].reverse().map((b) => ({ x: b.x + b.w + GAP, y: b.y })),
+  ];
+  const free = candidates.find(
+    (c) =>
+      c.x + size.w <= 0.97 &&
+      c.y + size.h <= 0.97 &&
+      boxes.every((b) => c.x >= b.x + b.w || c.x + size.w <= b.x || c.y >= b.y + b.h || c.y + size.h <= b.y),
+  );
+  return free ? { x: r(free.x), y: r(free.y) } : { x: 0.5, y: 0.5 };
 }
 
 export const createResultViewSlice: SliceCreator<ResultViewSlice> = (set, get) => ({
@@ -64,9 +87,9 @@ export const createResultViewSlice: SliceCreator<ResultViewSlice> = (set, get) =
             state.resultViewSettings.paperFrame,
           )
         : null;
-    // Text and plots start in the middle; one added after another steps
-    // down and right, so a new one is not hidden under the last.
-    const free = cascadePosition(state.resultViewSettings.annotations);
+    // Text and plots start in the middle, or by the ones there, so a new
+    // one is not hidden under the last.
+    const free = type === "text" || type === "plot" ? freeAnnotationPosition(state.resultViewSettings.annotations, type) : { x: 0.5, y: 0.5 };
     const anno = {
       id: nextId("anno"),
       type,
