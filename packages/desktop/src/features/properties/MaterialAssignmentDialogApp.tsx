@@ -13,6 +13,8 @@ interface MaterialAssignmentStatePayload {
   materialBoundaries: MaterialBoundaryRow[];
   regionMaterials: RegionMaterials;
   materials: MaterialRow[];
+  /** The region selected in the list or on the canvas (highlighted on both). */
+  selectedRegionKey?: string | null;
 }
 
 export function MaterialAssignmentDialogApp() {
@@ -24,6 +26,8 @@ export function MaterialAssignmentDialogApp() {
   const setMaterials = useAppStore((s) => s.setMaterials);
   const setMaterialBoundaries = useAppStore((s) => s.setMaterialBoundaries);
   const setRegionMaterials = useAppStore((s) => s.setRegionMaterials);
+  const selectedRegionKey = useAppStore((s) => s.selectedRegionKey);
+  const setSelectedRegionKey = useAppStore((s) => s.setSelectedRegionKey);
   const [isHydrated, setIsHydrated] = useState(!isElectron);
   const suppressNextBroadcastRef = useRef(false);
 
@@ -39,6 +43,7 @@ export function MaterialAssignmentDialogApp() {
       setMaterials(next.materials);
       setMaterialBoundaries(next.materialBoundaries);
       setRegionMaterials(next.regionMaterials);
+      if (next.selectedRegionKey !== undefined) setSelectedRegionKey(next.selectedRegionKey);
       setIsHydrated(true);
     };
 
@@ -50,7 +55,7 @@ export function MaterialAssignmentDialogApp() {
       unsubscribeMaterialAssignmentState();
       unsubscribeMaterialAssignmentChanged();
     };
-  }, [setCoordinates, setMaterials, setMaterialBoundaries, setRegionMaterials]);
+  }, [setCoordinates, setMaterials, setMaterialBoundaries, setRegionMaterials, setSelectedRegionKey]);
 
   useEffect(() => {
     if (!isElectron || !isHydrated) return;
@@ -65,8 +70,9 @@ export function MaterialAssignmentDialogApp() {
       materialBoundaries,
       regionMaterials,
       materials,
+      selectedRegionKey,
     });
-  }, [coordinates, materialBoundaries, regionMaterials, materials, isHydrated]);
+  }, [coordinates, materialBoundaries, regionMaterials, materials, selectedRegionKey, isHydrated]);
 
   return (
     <div

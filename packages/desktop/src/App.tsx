@@ -245,6 +245,7 @@ function App() {
   const materials = useAppStore((s) => s.materials);
   const materialBoundaries = useAppStore((s) => s.materialBoundaries);
   const regionMaterials = useAppStore((s) => s.regionMaterials);
+  const selectedRegionKey = useAppStore((s) => s.selectedRegionKey);
   const udls = useAppStore((s) => s.udls);
   const lineLoads = useAppStore((s) => s.lineLoads);
   const reinforcements = useAppStore((s) => s.reinforcements);
@@ -520,15 +521,18 @@ function App() {
         materialBoundaries: state.materialBoundaries,
         regionMaterials: state.regionMaterials,
         materials: state.materials,
+        selectedRegionKey: state.selectedRegionKey,
       });
     };
 
     const handleAssignmentChanged = (
       _event: unknown,
-      next: { regionMaterials: RegionMaterials },
+      next: { regionMaterials: RegionMaterials; selectedRegionKey?: string | null },
     ) => {
       suppressNextMaterialAssignmentBroadcastRef.current = true;
       setRegionMaterials(next.regionMaterials);
+      // A region picked in the window's list is highlighted on the canvas.
+      if (next.selectedRegionKey !== undefined) useAppStore.getState().setSelectedRegionKey(next.selectedRegionKey);
     };
 
     const unsubscribeMaterialAssignmentRequestState = window.cslope.onMaterialAssignmentRequestState(handleAssignmentRequestState);
@@ -553,12 +557,14 @@ function App() {
       materialBoundaries,
       regionMaterials,
       materials,
+      selectedRegionKey,
     });
   }, [
     coordinates,
     materialBoundaries,
     regionMaterials,
     materials,
+    selectedRegionKey,
     isAnyDialogWindow,
   ]);
 

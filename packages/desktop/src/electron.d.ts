@@ -28,6 +28,8 @@ interface MaterialAssignmentStatePayload {
   materialBoundaries: MaterialBoundaryRow[];
   regionMaterials: RegionMaterials;
   materials: MaterialRow[];
+  /** The selected region, highlighted in the window's list and on the canvas. */
+  selectedRegionKey?: string | null;
 }
 
 interface GeometryStatePayload {

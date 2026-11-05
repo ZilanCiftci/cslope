@@ -126,6 +126,9 @@ describe("main window IPC", () => {
 
     emit("onMaterialAssignmentChanged", { regionMaterials: [{ point: [1, 1], materialId: s.materials[0].id }] });
     expect(useAppStore.getState().regionMaterials).toHaveLength(1);
+    // A region picked in the Assign window's list is selected (highlighted) on the canvas.
+    emit("onMaterialAssignmentChanged", { regionMaterials: useAppStore.getState().regionMaterials, selectedRegionKey: "r2" });
+    expect(useAppStore.getState().selectedRegionKey).toBe("r2");
 
     emit("onParametersChanged", { parameters: [{ name: "H", expression: "4" }] });
     s = useAppStore.getState();
