@@ -7,7 +7,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { act, fireEvent, render, screen } from "@testing-library/react";
 import { useAppStore } from "../../store/app-store";
 import type { BackgroundImage } from "../../store/types";
-import { DrawingsPanel } from "./DrawingsPanel";
+import { AttachmentsPanel, ModelDrawings } from "./DrawingsPanel";
 import { drawingWindowState, handleDrawingCommand, openPlaceDrawing } from "./window-sync";
 import { adoptProjectAssets, openedProjectAssets } from "./asset-registry";
 import { findBackgroundsAt, findCanvasObjectsAt } from "../canvas/object-hits";
@@ -36,15 +36,17 @@ beforeEach(() => {
   adoptProjectAssets([{ id: "sheet", mime: "application/pdf", originalName: "sheet.pdf", addedAt: "", data: () => new Uint8Array([37]) }]);
 });
 
-describe("Drawings panel", () => {
+describe("drawings in the models tree", () => {
+  const tree = () => render(<ModelDrawings modelId={s().activeModelId} />);
+
   it("lists the model's drawings and acts on them, each an undo step", () => {
     act(() => {
       s().addBackground(placement("A"));
       s().addBackground(placement("B"));
     });
-    render(<DrawingsPanel />);
+    tree();
     // topmost first
-    expect(screen.getAllByRole("listitem").map((li) => li.getAttribute("aria-label"))).toEqual(["Section B", "Section A"]);
+    expect(screen.getAllByRole("treeitem").map((li) => li.getAttribute("aria-label"))).toEqual(["Section B", "Section A"]);
 
     fireEvent.click(screen.getByRole("button", { name: "Hide Section A" }));
     expect(s().backgrounds.find((b) => b.id === "A")?.visible).toBe(false);
@@ -54,16 +56,22 @@ describe("Drawings panel", () => {
     fireEvent.click(screen.getByRole("button", { name: "Unlock Section A" }));
     expect(s().locks.backgrounds).toEqual(["B"]);
 
+    // The settings open below the selected drawing only.
+    expect(screen.queryByTestId("drawing-settings")).toBeNull();
+    fireEvent.click(screen.getByText("Section A"));
+    expect(s().canvasSelection?.object).toEqual({ type: "background", id: "A" });
+    expect(screen.getAllByTestId("drawing-settings")).toHaveLength(1);
+
     fireEvent.change(screen.getByLabelText("Opacity of Section A"), { target: { value: "80" } });
     expect(s().backgrounds.find((b) => b.id === "A")?.opacity).toBe(0.8);
 
-    fireEvent.click(screen.getAllByRole("checkbox")[1]);
+    fireEvent.click(screen.getByRole("checkbox"));
     expect(s().backgrounds.find((b) => b.id === "A")?.showInResults).toBe(true);
 
     fireEvent.click(screen.getByRole("button", { name: "Move Section A up" }));
     expect([...s().backgrounds].sort((a, b) => a.order - b.order).map((b) => b.id)).toEqual(["B", "A"]);
 
-    fireEvent.doubleClick(screen.getByTitle("Section A (double-click to rename)"));
+    fireEvent.doubleClick(screen.getByText("Section A"));
     const input = screen.getByLabelText("Drawing name");
     fireEvent.change(input, { target: { value: "Section A-A" } });
     fireEvent.keyDown(input, { key: "Enter" });
@@ -78,8 +86,11 @@ describe("Drawings panel", () => {
   });
 
   it("one opacity drag is one undo step", () => {
-    act(() => s().addBackground(placement("A")));
-    render(<DrawingsPanel />);
+    act(() => {
+      s().addBackground(placement("A"));
+      s().selectCanvasObject({ type: "background", id: "A" });
+    });
+    tree();
     const slider = screen.getByLabelText("Opacity of Section A");
     const before = useAppStore.temporal.getState().pastStates.length;
     fireEvent.pointerDown(slider);
@@ -91,9 +102,42 @@ describe("Drawings panel", () => {
     expect(s().backgrounds[0].opacity).toBe(0.5);
   });
 
-  it("is not shown while the model has no drawings", () => {
-    render(<DrawingsPanel />);
-    expect(screen.queryByTestId("drawings-panel")).toBeNull();
+  it("shows nothing for a model without drawings", () => {
+    tree();
+    expect(screen.queryByRole("treeitem")).toBeNull();
+  });
+
+  it("a drawing of another model makes that model the active one when clicked", () => {
+    const first = s().activeModelId;
+    act(() => s().addBackground(placement("A")));
+    act(() => s().addModel("Second"));
+    expect(s().activeModelId).not.toBe(first);
+    render(<ModelDrawings modelId={first} />);
+    fireEvent.click(screen.getByText("Section A"));
+    expect(s().activeModelId).toBe(first);
+    expect(s().canvasSelection?.object).toEqual({ type: "background", id: "A" });
+  });
+});
+
+describe("Attachments", () => {
+  it("lists the project's files with the models that place them", () => {
+    render(<AttachmentsPanel />);
+    expect(screen.getByRole("listitem", { name: "sheet.pdf" })).toHaveTextContent("not used (left out when saved)");
+    act(() => s().addBackground(placement("A")));
+    const model = s().models.find((m) => m.id === s().activeModelId)!.name;
+    expect(screen.getByRole("listitem", { name: "sheet.pdf" })).toHaveTextContent(`in ${model}`);
+  });
+
+  it("is not shown without attachments", () => {
+    adoptProjectAssets([]);
+    render(<AttachmentsPanel />);
+    expect(screen.queryByTestId("attachments-panel")).toBeNull();
+  });
+
+  it("places a file of the project in the active model", () => {
+    render(<AttachmentsPanel />);
+    fireEvent.click(screen.getByRole("button", { name: "Place sheet.pdf in the active model" }));
+    expect(drawingWindowState().edit).toMatchObject({ assetId: "sheet" });
   });
 });
 

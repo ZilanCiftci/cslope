@@ -4,7 +4,7 @@ import { PanelHeaderRow } from "../../components/SidePanelChrome";
 import { ContextMenu, type MenuPos } from "./ContextMenu";
 import { ModelRow } from "./ModelRow";
 import { ProjectInfoDialog } from "./ProjectInfoDialog";
-import { DrawingsPanel } from "../drawings/DrawingsPanel";
+import { AttachmentsPanel, ModelDrawings } from "../drawings/DrawingsPanel";
 import type { ModelEntry } from "../../store/types";
 
 type DropPosition = "before" | "after";
@@ -45,6 +45,17 @@ export function Explorer() {
   // The active model's result and error are in the flat state too.
   const activeHasResult = useAppStore((s) => !!s.result);
   const activeFailed = useAppStore((s) => s.runState === "error");
+  const activeDrawingCount = useAppStore((s) => s.backgrounds.length);
+  // Models whose drawings are folded away (all are open at first).
+  const [foldedIds, setFoldedIds] = useState<ReadonlySet<string>>(() => new Set());
+  const toggleFolded = useCallback((id: string) => {
+    setFoldedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }, []);
 
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editName, setEditName] = useState("");
@@ -310,9 +321,11 @@ export function Explorer() {
             const isActive = model.id === activeModelId;
             const isSelected = effectiveSelectedModelIds.includes(model.id);
             const isEditing = model.id === editingId;
+            const drawingCount = isActive ? activeDrawingCount : (model.backgrounds?.length ?? 0);
+            const folded = foldedIds.has(model.id);
             return (
+              <div key={model.id} role="none">
               <ModelRow
-                key={model.id}
                 model={model}
                 isActive={isActive}
                 isSelected={isSelected}
@@ -340,16 +353,20 @@ export function Explorer() {
                 onDragOver={handleDragOver}
                 onDrop={handleDrop}
                 onDragEnd={clearDragState}
+                drawingsOpen={drawingCount > 0 ? !folded : undefined}
+                onToggleDrawings={() => toggleFolded(model.id)}
               />
+              {drawingCount > 0 && !folded && <ModelDrawings modelId={model.id} />}
+              </div>
             );
           })}
         </div>
       )}
 
-      {/* The active model's drawings, below its list. */}
+      {/* The project's attached files, below the models. */}
       {!modelsOpen && <div className="flex-1" />}
-      <div className="shrink-0 max-h-[55%] overflow-y-auto">
-        <DrawingsPanel />
+      <div className="shrink-0 max-h-[40%] overflow-y-auto">
+        <AttachmentsPanel />
       </div>
 
       {menu && (

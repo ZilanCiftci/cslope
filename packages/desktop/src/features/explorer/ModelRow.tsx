@@ -30,6 +30,9 @@ interface Props {
   onDragOver: (e: React.DragEvent<HTMLElement>, modelId: string) => void;
   onDrop: (e: React.DragEvent<HTMLElement>, modelId: string) => void;
   onDragEnd: () => void;
+  /** Whether the model's drawings are shown under it; undefined: it has none. */
+  drawingsOpen?: boolean;
+  onToggleDrawings?: () => void;
 }
 
 export function ModelRow({
@@ -54,6 +57,8 @@ export function ModelRow({
   onDragOver,
   onDrop,
   onDragEnd,
+  drawingsOpen,
+  onToggleDrawings,
 }: Props) {
   const state = isRunning
     ? { label: "Analyzing", fill: "var(--color-vsc-accent)" }
@@ -65,7 +70,7 @@ export function ModelRow({
 
   return (
     <div
-      className="group flex items-center gap-2 px-4 py-[5px] cursor-pointer text-[12px] select-none rounded-sm mx-1 transition-colors"
+      className="group flex items-center gap-2 pl-1.5 pr-4 py-[5px] cursor-pointer text-[12px] select-none rounded-sm mx-1 transition-colors"
       style={{
         background: isActive
           ? "var(--color-vsc-selected-bg)"
@@ -110,6 +115,25 @@ export function ModelRow({
       aria-selected={isActive || isSelected}
       aria-label={model.name}
     >
+      {/* Folds the model's drawings away (a slot of the same width without any). */}
+      {drawingsOpen === undefined ? (
+        <span className="w-[14px] shrink-0" aria-hidden />
+      ) : (
+        <button
+          className="w-[14px] h-[14px] shrink-0 flex items-center justify-center rounded-sm hover:bg-(--color-vsc-list-active)"
+          onClick={(e) => {
+            e.stopPropagation();
+            onToggleDrawings?.();
+          }}
+          aria-expanded={drawingsOpen}
+          aria-label={drawingsOpen ? `Hide the drawings of ${model.name}` : `Show the drawings of ${model.name}`}
+          title={drawingsOpen ? "Hide drawings" : "Show drawings"}
+        >
+          <svg width="10" height="10" viewBox="0 0 10 10" fill="currentColor" style={{ transform: drawingsOpen ? "rotate(0deg)" : "rotate(-90deg)" }} aria-hidden>
+            <path d="M2 3l3 3.5L8 3z" />
+          </svg>
+        </button>
+      )}
       {/* The run state as a dot before the box: green analysed, blue
           running, red failed, hollow grey not run. Selection is shown
           by the row background only. */}

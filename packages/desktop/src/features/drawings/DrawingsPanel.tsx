@@ -1,23 +1,36 @@
 /**
- * The Drawings section of the Models panel: the active model's placed
- * drawings, topmost first, each with its visibility, lock, opacity,
- * "Show in results", name, order, Recalibrate… and Remove; a DWG or DXF
- * drawing's layers (each shown or hidden), and "Pick lines…" for a drawing
- * with line work. Every change is an undo step of the model (an opacity
- * drag is one step).
+ * The drawings in the Models panel. Under each model, the drawings placed
+ * in it (topmost first), each with its visibility and lock; a click selects
+ * one (making its model the active one) and opens its settings below it:
+ * opacity, "Show in results", order, Recalibrate…, Rename, Pick lines…,
+ * Remove and a DWG or DXF drawing's layers. Below the models, Attachments
+ * lists the project's files and the models that use each. Every change is
+ * an undo step of the model (an opacity drag is one step).
  */
-import { useEffect, useState } from "react";
-import { ChevronDown, ChevronUp, Eye, EyeOff, Lock, LockOpen, Trash2 } from "lucide-react";
+import { useEffect, useState, useSyncExternalStore } from "react";
+import {
+  ChevronDown,
+  ChevronUp,
+  Eye,
+  EyeOff,
+  FileImage,
+  FileText,
+  Lock,
+  LockOpen,
+  PencilRuler,
+  Trash2,
+} from "lucide-react";
 import { useAppStore } from "../../store/app-store";
 import { isObjectLocked, sameObject } from "../../store/canvas-selection";
 import { sortedBackgrounds } from "../../store/slices/backgroundsSlice";
 import type { BackgroundImage } from "../../store/types";
-import { projectAsset } from "./asset-registry";
+import { onProjectAssetsChanged, openedProjectAssets, projectAsset } from "./asset-registry";
 import { placementLabel } from "./placement";
 import { openPlaceDrawing } from "./window-sync";
 import { onDrawingsChanged, peekSource, vectorsFor } from "./drawing-cache";
 import { startLinePick, useLinePick } from "./line-pick-store";
 import { PICK_LINES_HIDDEN } from "./pick-lines-target";
+import { DRAWING_MIME } from "./sources";
 
 const muted = { color: "var(--color-vsc-text-muted)" } as const;
 
@@ -30,89 +43,96 @@ function oneStep(id: string, start: Partial<BackgroundImage>, end: Partial<Backg
   useAppStore.getState().updateBackground(id, end);
 }
 
-export function DrawingsPanel() {
-  const backgrounds = useAppStore((s) => s.backgrounds);
-  const [open, setOpen] = useState(true);
-  const list = sortedBackgrounds(backgrounds).reverse();
-  // Shown once the model has a drawing (Model › Drawing places the first).
-  if (list.length === 0) return null;
+/** The icon of a drawing file's kind (an image, a PDF, line work). */
+function KindIcon({ mime, size = 13 }: { mime: string | undefined; size?: number }) {
+  const kind = mime ? DRAWING_MIME[mime] : undefined;
+  const Icon = kind === "vector" ? PencilRuler : kind === "pdf" ? FileText : FileImage;
+  return <Icon size={size} strokeWidth={1.75} className="shrink-0" aria-hidden color="var(--color-vsc-text-muted)" />;
+}
+
+const iconButton =
+  "w-6 h-6 flex items-center justify-center rounded-sm hover:bg-(--color-vsc-list-active) disabled:opacity-35 disabled:pointer-events-none shrink-0";
+
+/** Make `modelId` the active model (a drawing of another model was clicked). */
+function activate(modelId: string): void {
+  const st = useAppStore.getState();
+  if (st.activeModelId !== modelId) st.switchModel(modelId);
+}
+
+/** A model's placed drawings (the active model's as they are now), topmost first. */
+function useModelDrawings(modelId: string): BackgroundImage[] {
+  const own = useAppStore((s) => (s.activeModelId === modelId ? s.backgrounds : s.models.find((m) => m.id === modelId)?.backgrounds));
+  return sortedBackgrounds(own ?? []).reverse();
+}
+
+/**
+ * The drawings of a model, as rows under it in the models tree. The
+ * settings of the selected one open below its row.
+ */
+export function ModelDrawings({ modelId }: { modelId: string }) {
+  const drawings = useModelDrawings(modelId);
+  if (drawings.length === 0) return null;
   return (
-    <div className="border-t" style={{ borderColor: "var(--color-vsc-border)" }} data-testid="drawings-panel">
-      <div className="flex items-center">
-        <button
-          className="flex items-center gap-1.5 px-4 py-1.5 cursor-pointer flex-1 text-left text-[10px] font-bold uppercase tracking-[0.08em] select-none"
-          onClick={() => setOpen((v) => !v)}
-          aria-expanded={open}
-          aria-label="Toggle drawings list"
-        >
-          <svg width="10" height="10" viewBox="0 0 10 10" fill="currentColor" style={{ transform: open ? "rotate(0deg)" : "rotate(-90deg)" }}>
-            <path d="M2 3l3 3.5L8 3z" />
-          </svg>
-          Drawings
-        </button>
-        <button className="btn text-[11px] mr-2 px-2 py-0.5" onClick={() => openPlaceDrawing()} title="Place drawing…">
-          Place…
-        </button>
-      </div>
-      {open && (
-        <div className="pb-2" role="list" aria-label="Drawings of the model">
-          {list.map((b, i) => (
-            <DrawingRow key={b.id} placement={b} first={i === 0} last={i === list.length - 1} />
-          ))}
-        </div>
-      )}
+    <div role="group" aria-label="Drawings of the model">
+      {drawings.map((b, i) => (
+        <DrawingRow key={b.id} modelId={modelId} placement={b} first={i === 0} last={i === drawings.length - 1} />
+      ))}
     </div>
   );
 }
 
-function DrawingRow({ placement: b, first, last }: { placement: BackgroundImage; first: boolean; last: boolean }) {
-  const locked = useAppStore((s) => isObjectLocked(s.locks, { type: "background", id: b.id }));
-  const selected = useAppStore((s) => sameObject(s.canvasSelection?.object, { type: "background", id: b.id }));
-  const st = () => useAppStore.getState();
+function DrawingRow({ modelId, placement: b, first, last }: { modelId: string; placement: BackgroundImage; first: boolean; last: boolean }) {
+  const isActiveModel = useAppStore((s) => s.activeModelId === modelId);
+  const locked = useAppStore((s) =>
+    isObjectLocked(s.activeModelId === modelId ? s.locks : (s.models.find((m) => m.id === modelId)?.locks ?? {}), { type: "background", id: b.id }),
+  );
+  const selected = useAppStore((s) => s.activeModelId === modelId && sameObject(s.canvasSelection?.object, { type: "background", id: b.id }));
   const [editing, setEditing] = useState<string | null>(null);
-  const [drag, setDrag] = useState<number | null>(null);
-  const [layersOpen, setLayersOpen] = useState(false);
-  const [, setTick] = useState(0);
-  useEffect(() => onDrawingsChanged(() => setTick((t) => t + 1)), []);
-  const picking = useLinePick((s) => s.placementId === b.id);
-  const kind = peekSource(b.assetId)?.kind;
-  const drawing = kind === "vector" ? vectorsFor(b.assetId, b.page ?? 1) : null;
+  const mime = projectAsset(b.assetId)?.mime;
   const label = placementLabel(b, projectAsset(b.assetId)?.originalName);
-  const iconButton =
-    "w-6 h-6 flex items-center justify-center rounded-sm hover:bg-(--color-vsc-list-active) disabled:opacity-35 disabled:pointer-events-none";
+  const st = () => useAppStore.getState();
+  // Acts on the model's drawing: its model is made the active one first.
+  const act = (f: () => void) => {
+    activate(modelId);
+    f();
+  };
   const commitName = () => {
     if (editing !== null) {
       const name = editing.trim();
-      if (name && name !== b.name) st().updateBackground(b.id, { name });
+      if (name && name !== b.name) act(() => st().updateBackground(b.id, { name }));
       setEditing(null);
     }
   };
   return (
-    <div
-      role="listitem"
-      aria-label={label}
-      className="mx-2 my-1 px-2 py-1.5 rounded text-[11px]"
-      style={{
-        background: selected ? "var(--color-vsc-list-active)" : "transparent",
-        border: "1px solid var(--color-vsc-border)",
-      }}
-    >
-      <div className="flex items-center gap-1">
-        <button
-          className={iconButton}
-          onClick={() => st().updateBackground(b.id, { visible: !b.visible })}
-          aria-label={b.visible ? `Hide ${label}` : `Show ${label}`}
-          title={b.visible ? "Hide" : "Show"}
-          aria-pressed={!b.visible}
-        >
-          {b.visible ? <Eye size={13} aria-hidden /> : <EyeOff size={13} aria-hidden />}
-        </button>
+    <div role="treeitem" aria-label={label} aria-selected={selected}>
+      <div
+        className="group flex items-center gap-1.5 pl-[43px] pr-1 py-[2px] mx-1 rounded-sm text-[12px] cursor-pointer select-none"
+        style={{
+          background: selected ? "var(--color-vsc-selected-bg)" : undefined,
+          color: selected ? "var(--color-vsc-text-bright)" : "var(--color-vsc-text)",
+        }}
+        onMouseEnter={(e) => {
+          if (!selected) (e.currentTarget as HTMLElement).style.background = "var(--color-vsc-list-hover)";
+        }}
+        onMouseLeave={(e) => {
+          if (!selected) (e.currentTarget as HTMLElement).style.background = "";
+        }}
+        onClick={() => {
+          if (editing !== null) return;
+          act(() => (selected ? st().clearCanvasSelection() : st().selectCanvasObject({ type: "background", id: b.id })));
+        }}
+        onDoubleClick={() => setEditing(label)}
+        title={`${label}: click for its settings, double-click to rename`}
+        data-testid="drawing-tree-row"
+      >
+        <KindIcon mime={mime} />
         {editing !== null ? (
           <input
             autoFocus
-            className="flex-1 min-w-0 text-[11px]"
+            className="flex-1 min-w-0 text-[11px] py-0"
             value={editing}
             aria-label="Drawing name"
+            onClick={(e) => e.stopPropagation()}
             onChange={(e) => setEditing(e.target.value)}
             onBlur={commitName}
             onKeyDown={(e) => {
@@ -124,19 +144,28 @@ function DrawingRow({ placement: b, first, last }: { placement: BackgroundImage;
             }}
           />
         ) : (
-          <button
-            className="flex-1 min-w-0 truncate text-left"
-            style={{ opacity: b.visible ? 1 : 0.55 }}
-            onClick={() => st().selectCanvasObject({ type: "background", id: b.id })}
-            onDoubleClick={() => setEditing(label)}
-            title={`${label} (double-click to rename)`}
-          >
+          <span className="flex-1 min-w-0 truncate" style={{ opacity: b.visible ? 1 : 0.55 }}>
             {label}
-          </button>
+          </span>
         )}
         <button
           className={iconButton}
-          onClick={() => st().setObjectLocked({ type: "background", id: b.id }, !locked)}
+          onClick={(e) => {
+            e.stopPropagation();
+            act(() => st().updateBackground(b.id, { visible: !b.visible }));
+          }}
+          aria-label={b.visible ? `Hide ${label}` : `Show ${label}`}
+          title={b.visible ? "Hide" : "Show"}
+          aria-pressed={!b.visible}
+        >
+          {b.visible ? <Eye size={13} aria-hidden /> : <EyeOff size={13} aria-hidden />}
+        </button>
+        <button
+          className={iconButton}
+          onClick={(e) => {
+            e.stopPropagation();
+            act(() => st().setObjectLocked({ type: "background", id: b.id }, !locked));
+          }}
           aria-label={locked ? `Unlock ${label}` : `Lock ${label}`}
           title={locked ? "Locked: clicks on the canvas go to the model. Click to unlock (then it can be selected and moved)." : "Unlocked: click to lock"}
           aria-pressed={locked}
@@ -144,7 +173,42 @@ function DrawingRow({ placement: b, first, last }: { placement: BackgroundImage;
           {locked ? <Lock size={12} aria-hidden /> : <LockOpen size={12} aria-hidden />}
         </button>
       </div>
-      <div className="flex items-center gap-1.5 mt-1" style={{ opacity: b.visible ? 1 : 0.55 }} title={b.visible ? undefined : "The drawing is hidden"}>
+      {selected && isActiveModel && (
+        <DrawingSettings placement={b} label={label} first={first} last={last} onRename={() => setEditing(label)} />
+      )}
+    </div>
+  );
+}
+
+/** The selected drawing's settings, below its row (the active model's). */
+function DrawingSettings({
+  placement: b,
+  label,
+  first,
+  last,
+  onRename,
+}: {
+  placement: BackgroundImage;
+  label: string;
+  first: boolean;
+  last: boolean;
+  onRename: () => void;
+}) {
+  const st = () => useAppStore.getState();
+  const [drag, setDrag] = useState<number | null>(null);
+  const [layersOpen, setLayersOpen] = useState(false);
+  const [, setTick] = useState(0);
+  useEffect(() => onDrawingsChanged(() => setTick((t) => t + 1)), []);
+  const picking = useLinePick((s) => s.placementId === b.id);
+  const kind = peekSource(b.assetId)?.kind;
+  const drawing = kind === "vector" ? vectorsFor(b.assetId, b.page ?? 1) : null;
+  return (
+    <div
+      className="ml-[47px] mr-2 mt-0.5 mb-1.5 px-2 py-1.5 rounded text-[11px]"
+      style={{ border: "1px solid var(--color-vsc-border)", background: "var(--color-vsc-panel, transparent)" }}
+      data-testid="drawing-settings"
+    >
+      <div className="flex items-center gap-1.5" style={{ opacity: b.visible ? 1 : 0.55 }} title={b.visible ? undefined : "The drawing is hidden"}>
         <span style={muted}>Opacity</span>
         <input
           type="range"
@@ -188,7 +252,7 @@ function DrawingRow({ placement: b, first, last }: { placement: BackgroundImage;
         <button className={iconButton} disabled={last} onClick={() => st().moveBackground(b.id, "down")} aria-label={`Move ${label} down`} title="Draw under the drawing below it">
           <ChevronDown size={13} aria-hidden />
         </button>
-        <button className={iconButton} onClick={() => st().removeBackground(b.id)} aria-label={`Remove ${label} from the model`} title="Remove from model (the file stays in the project while another model uses it)">
+        <button className={iconButton} onClick={() => st().removeBackground(b.id)} aria-label={`Remove ${label} from the model`} title="Remove from the model (the file stays in Attachments while another model uses it)">
           <Trash2 size={12} aria-hidden />
         </button>
       </div>
@@ -196,7 +260,7 @@ function DrawingRow({ placement: b, first, last }: { placement: BackgroundImage;
         <button className="btn text-[11px] px-2 py-0.5" onClick={() => openPlaceDrawing(b.id)}>
           Recalibrate…
         </button>
-        <button className="btn text-[11px] px-2 py-0.5" onClick={() => setEditing(label)}>
+        <button className="btn text-[11px] px-2 py-0.5" onClick={onRename}>
           Rename
         </button>
         {(kind === "vector" || kind === "pdf") && (
@@ -224,6 +288,85 @@ function DrawingRow({ placement: b, first, last }: { placement: BackgroundImage;
           setOpen={setLayersOpen}
           onChange={(hiddenLayers) => st().updateBackground(b.id, { hiddenLayers: hiddenLayers.length > 0 ? hiddenLayers : undefined })}
         />
+      )}
+    </div>
+  );
+}
+
+/** The project's files: a new list each time they change. */
+function useProjectAssets() {
+  return useSyncExternalStore(onProjectAssetsChanged, openedProjectAssets);
+}
+
+const sizeText = (bytes: number | undefined) =>
+  bytes === undefined ? "" : bytes >= 1024 * 1024 ? `${(bytes / (1024 * 1024)).toFixed(1)} MB` : `${Math.max(1, Math.round(bytes / 1024))} kB`;
+
+/**
+ * The project's attached files (the drawings' files), each with the models
+ * that place it; one no model uses is left out when the project is saved.
+ * "Add…" opens the Place drawing window; "Place…" on a file places it in
+ * the active model.
+ */
+export function AttachmentsPanel() {
+  const assets = useProjectAssets().filter((a) => DRAWING_MIME[a.mime] !== undefined);
+  const models = useAppStore((s) => s.models);
+  const activeModelId = useAppStore((s) => s.activeModelId);
+  const activeBackgrounds = useAppStore((s) => s.backgrounds);
+  const [open, setOpen] = useState(true);
+  if (assets.length === 0) return null;
+  const usedBy = (assetId: string) =>
+    models.filter((m) => (m.id === activeModelId ? activeBackgrounds : (m.backgrounds ?? [])).some((b) => b.assetId === assetId)).map((m) => m.name);
+  return (
+    <div className="border-t" style={{ borderColor: "var(--color-vsc-border)" }} data-testid="attachments-panel">
+      <div className="flex items-center">
+        <button
+          className="flex items-center gap-1.5 px-4 py-1.5 cursor-pointer flex-1 text-left text-[10px] font-bold uppercase tracking-[0.08em] select-none"
+          onClick={() => setOpen((v) => !v)}
+          aria-expanded={open}
+          aria-label="Toggle attachments list"
+        >
+          <svg width="10" height="10" viewBox="0 0 10 10" fill="currentColor" style={{ transform: open ? "rotate(0deg)" : "rotate(-90deg)" }}>
+            <path d="M2 3l3 3.5L8 3z" />
+          </svg>
+          Attachments
+        </button>
+        <button className="btn text-[11px] mr-2 px-2 py-0.5" onClick={() => openPlaceDrawing()} title="Add a drawing file and place it in the active model">
+          Add…
+        </button>
+      </div>
+      {open && (
+        <ul className="pb-1.5" aria-label="Attached files">
+          {assets.map((a) => {
+            const users = usedBy(a.id);
+            return (
+              <li
+                key={a.id}
+                aria-label={a.originalName}
+                className="group flex items-start gap-2 px-4 py-1 mx-1 rounded-sm text-[12px] hover:bg-(--color-vsc-list-hover)"
+              >
+                <span className="mt-[2px]">
+                  <KindIcon mime={a.mime} size={14} />
+                </span>
+                <div className="flex-1 min-w-0">
+                  <div className="truncate" title={a.originalName}>
+                    {a.originalName}
+                  </div>
+                  <div className="text-[10px] truncate" style={muted} title={users.join(", ")}>
+                    {[sizeText(a.bytes), users.length > 0 ? `in ${users.join(", ")}` : "not used (left out when saved)"].filter(Boolean).join(" · ")}
+                  </div>
+                </div>
+                <button
+                  className="btn text-[11px] px-2 py-0.5 shrink-0 self-center opacity-0 group-hover:opacity-100 focus:opacity-100"
+                  onClick={() => openPlaceDrawing({ assetId: a.id })}
+                  aria-label={`Place ${a.originalName} in the active model`}
+                  title="Place in the active model"
+                >
+                  Place…
+                </button>
+              </li>
+            );
+          })}
+        </ul>
       )}
     </div>
   );

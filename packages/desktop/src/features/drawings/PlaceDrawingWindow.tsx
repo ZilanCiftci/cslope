@@ -156,6 +156,16 @@ export function PlaceDrawingWindow({
       setForm(f);
       setTarget(nextTarget(f, null));
       setTool("pick");
+    } else if (state.edit.assetId && state.assets.some((a) => a.id === state.edit!.assetId)) {
+      // A file of the project to place in this model (Attachments › Place…).
+      const mime = state.assets.find((a) => a.id === state.edit!.assetId)?.mime ?? "";
+      setEditing(null);
+      setAssetId(state.edit.assetId);
+      setPage(1);
+      setCrop(null);
+      setForm((f) => initialForm(unitOfMime(mime), f));
+      setTarget(null);
+      setTool("pick");
     }
   }
 

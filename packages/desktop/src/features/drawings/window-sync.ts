@@ -49,7 +49,7 @@ export interface DrawingWindowState {
    * drawings list or the canvas), or "New models from drawing…"; a new
    * nonce each time.
    */
-  edit: { placementId?: string; newModels?: boolean; nonce: number } | null;
+  edit: { placementId?: string; newModels?: boolean; assetId?: string; nonce: number } | null;
 }
 
 /** What the window asks of the main window. */
@@ -67,11 +67,17 @@ let editNonce = 0;
 const editListeners = new Set<() => void>();
 
 /**
- * Open the Place drawing window: for a new placement, or to recalibrate
- * the active model's placement `placementId`.
+ * Open the Place drawing window: for a new placement (of the project's
+ * file `assetId`, when given), or to recalibrate the active model's
+ * placement `placementId`.
  */
-export function openPlaceDrawing(placementId?: string): void {
-  pendingEdit = placementId ? { placementId, nonce: ++editNonce } : null;
+export function openPlaceDrawing(target?: string | { assetId: string }): void {
+  pendingEdit =
+    typeof target === "string"
+      ? { placementId: target, nonce: ++editNonce }
+      : target
+        ? { assetId: target.assetId, nonce: ++editNonce }
+        : null;
   for (const l of editListeners) l();
   if (isElectron) window.cslope.openPlaceDrawingDialog();
 }

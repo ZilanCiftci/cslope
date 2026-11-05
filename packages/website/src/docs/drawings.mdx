@@ -39,7 +39,7 @@ The window says what to do next, and refuses points that are too close together 
 
 A DWG or DXF drawing is shown as lines, not as a picture: the lines, polylines (with their arcs), arcs, circles, ellipses, splines and texts of its model space, in a neutral ink color that suits the light and the dark theme, at the drawing's opacity. Block references are drawn in place (with their scale and rotation, nested blocks too), and so are dimensions. The layouts (paper space) are not shown: only the model space is; the Place drawing window says how many entities it left out. Hatches, images and 3D objects are not shown either.
 
-A drawing's **Layers** are listed under it in the Drawings section: clear a layer's box to hide its lines and texts (**Show all** and **Hide all** set every layer). A hidden layer is not snapped to and its lines cannot be picked. Layers that are off or frozen in the file start hidden. Each change is an undo step.
+A drawing's **Layers** are listed in its settings under the model in the **Models** panel: clear a layer's box to hide its lines and texts (**Show all** and **Hide all** set every layer). A hidden layer is not snapped to and its lines cannot be picked. Layers that are off or frozen in the file start hidden. Each change is an undo step.
 
 DWG files from AutoCAD Release 11 (1990) to the current version are read; DXF files must be ASCII (binary DXF is not read).
 
@@ -54,7 +54,7 @@ A point of the model nearby still comes first. Only the part of a drawing inside
 
 ## Use a drawing's lines as boundaries
 
-You can make the model's objects of a drawing's lines instead of tracing them. Click **Pick lines…** under the drawing in the Drawings section, right-click the drawing and choose **Pick lines…**, or choose **Pick lines…** in the ▾ menu of **Model › Drawing** (it picks the lines of the model's topmost shown DWG, DXF or PDF drawing). A hidden drawing's lines cannot be picked: show it first. A banner at the top of the canvas shows that lines are being picked; the model's objects do not take clicks then.
+You can make the model's objects of a drawing's lines instead of tracing them. Click **Pick lines…** in the drawing's settings under the model in the **Models** panel, right-click the drawing and choose **Pick lines…**, or choose **Pick lines…** in the ▾ menu of **Model › Drawing** (it picks the lines of the model's topmost shown DWG, DXF or PDF drawing). A hidden drawing's lines cannot be picked: show it first. A banner at the top of the canvas shows that lines are being picked; the model's objects do not take clicks then.
 
 - Click a line to pick it, with the lines that continue it end to end: a polyline drawn as separate lines is picked whole, up to a point where three or more lines meet.
 - <Kbd>Shift</Kbd>+click adds a line, or removes a picked one.
@@ -75,18 +75,20 @@ The models are added like imported ones: remove one in the explorer if it is not
 
 ## The drawings of a model
 
-Once a model has a drawing, the **Drawings** section at the bottom of the **Models** panel lists its drawings, the topmost first (**Place…** there opens the window too). For each drawing you can:
+In the **Models** panel, the drawings a model places are listed under it, the topmost first (the arrow before the model folds them away). Each row has an eye to show or hide the drawing and a padlock to lock or unlock it. Click a drawing to select it (its model becomes the active one) and open its settings below the row, where you can:
 
-- show or hide it (the eye),
-- lock or unlock it (the padlock),
 - set its **Opacity**,
 - turn on **Show in results**, to draw it in the result view and the PDF export too,
 - move it up or down when drawings overlap,
 - **Rename** it (or double-click its name),
 - **Recalibrate…**: the window opens again with the drawing's page, crop and calibration, to change them,
-- remove it from the model (the bin). The file stays in the project while another model places it; a file that no model places is left out when the project is saved.
+- remove it from the model (the bin). The file stays in **Attachments** while another model places it; a file that no model places is left out when the project is saved.
 
 Every change is a step of **Undo** and **Redo**.
+
+## Attachments
+
+The **Attachments** section at the bottom of the **Models** panel lists the drawing files of the project, each with its size and the models that place it. **Add…** opens the Place drawing window for a new file; **Place…** on a file (shown when the pointer is over it) opens the window with that file, to place it in the active model as well. A file that no model places is marked *not used* and is left out when the project is saved.
 
 ## On the canvas
 
