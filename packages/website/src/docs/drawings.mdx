@@ -1,11 +1,11 @@
 ---
 title: Drawings (underlays)
-description: Place a section drawing (PNG, JPEG, TIFF or PDF) under a model, calibrate it to the model's coordinates, and trace the model over it.
+description: Place a section drawing (PNG, JPEG, TIFF, PDF, DWG or DXF) under a model, calibrate it to the model's coordinates, snap to its lines, use its lines as boundaries, and make models of a sheet of sections.
 section: Modeling
 order: 1.5
 ---
 
-A **drawing** is a picture of the section, such as a scanned sheet or a page of a PDF set, placed under a model so that you can trace the exterior boundary, the layers and the water over it. The drawing is a reference only: the analysis never reads it.
+A **drawing** is a picture of the section, such as a scanned sheet, a page of a PDF set or a CAD drawing (DWG or DXF), placed under a model so that you can trace the exterior boundary, the layers and the water over it. The drawing is a reference only: the analysis never reads it.
 
 The drawing file is stored once in the project file. Each model places it on its own, with its own page, crop and calibration, so one PDF with many sections serves many models.
 
@@ -13,7 +13,7 @@ The drawing file is stored once in the project file. Each model places it on its
 
 Open **Model › Drawing**. The **Place drawing** window opens for the active model.
 
-1. Under **Drawings in this project**, pick a drawing, or click **Add file…** and choose a PNG, JPEG, TIFF or PDF file (at most 100 MB). For a PDF or a TIFF with several pages, pick the page in the strip on the left.
+1. Under **Drawings in this project**, pick a drawing, or click **Add file…** and choose a PNG, JPEG, TIFF, PDF, DWG or DXF file (at most 100 MB). For a PDF or a TIFF with several pages, pick the page in the strip on the left.
 2. **Crop** (optional): click **Crop rectangle** and drag a rectangle around the section on the page. Without a crop, the whole page is placed.
 3. **Calibrate**: tell cSlope where the drawing lies in the model (below).
 4. Check the **Preview**, which shows the placed drawing under the model's outline, and click **Place**.
@@ -24,15 +24,54 @@ In the drawing, the mouse wheel zooms and the middle mouse button (or <Kbd>Space
 
 Choose how the drawing is calibrated:
 
+- **Drawing coordinates** (DWG and DXF only, chosen first): the drawing is placed at its own coordinates, so a section drawn at its true coordinates (its stations as x, its elevations as y) needs no calibration. The **Drawing unit** comes from the file (its `$INSUNITS`, such as millimeters or meters) and is converted to meters; choose it when the file does not say.
 - **Axes (x and y separately)**: click two points on the horizontal axis and type their x, then two points on the vertical axis and type their y. The x and y scales are found separately, so a section drawn with **vertical exaggeration** is placed true to scale. The drawing is not rotated. When the same drawing is placed in another model, choose it under **Reuse scale from**; then one point per axis is enough, which suits a second section on the same sheet.
 - **Points**: click a point in the drawing and type its model x and y, then a second point. Two points give the scale and the rotation (the same scale in both directions). Add a third point or more for a best fit that also takes different scales in x and y; the misfit of each point is shown in meters.
-- **Scale**: click one point whose model coordinates you know, type them, and type the scale: how many meters one drawing unit is. The unit is a pixel for an image; for a PDF, a millimeter or a point (1/72 in) of the sheet. A sheet drawn at 1:200 has 1 mm = 0.2 m.
+- **Scale**: click one point whose model coordinates you know, type them, and type the scale: how many meters one drawing unit is. The unit is a pixel for an image; for a PDF, a millimeter or a point (1/72 in) of the sheet; for a DWG or DXF drawing, its own unit. A sheet drawn at 1:200 has 1 mm = 0.2 m.
 
 The window says what is still missing, and refuses points that are too close together or that do not span the drawing.
 
 <Callout type="tip">
   Calibrate on the drawing's own axes or grid where it has them: they are where its coordinates are known best. Pick points far apart.
 </Callout>
+
+## DWG and DXF drawings
+
+A DWG or DXF drawing is shown as lines, not as a picture: the lines, polylines (with their arcs), arcs, circles, ellipses, splines and texts of its model space, in a neutral ink color that suits the light and the dark theme, at the drawing's opacity. Block references are drawn in place (with their scale and rotation, nested blocks too), and so are dimensions. The layouts (paper space) are not shown: only the model space is; the Place drawing window says how many entities it left out. Hatches, images and 3D objects are not shown either.
+
+A drawing's **Layers** are listed under it in the Drawings section: clear a layer's box to hide its lines and texts (**Show all** and **Hide all** set every layer). A hidden layer is not snapped to and its lines cannot be picked. Layers that are off or frozen in the file start hidden. Each change is an undo step.
+
+DWG files from AutoCAD Release 11 (1990) to the current version are read; DXF files must be ASCII (binary DXF is not read).
+
+## Snapping to a drawing
+
+With **Snap** on in the status bar, a point you drag (a vertex of the exterior, a boundary or a water line, the end of a load or an element, a point of a custom surface, a reference line's point in the result view) also snaps to the visible drawings' lines, within the same distance as to the model's points:
+
+- to an **end point** of a line or a point where two lines cross, first: a square marks an end point, an X a crossing;
+- else to the nearest point **on a line**, marked by a short line along it.
+
+A point of the model nearby still comes first. Only the part of a drawing inside its crop counts. **Add point** on a line puts the new point on a drawing's end point or crossing when one is under the pointer. A PDF page snaps too, where it has vector lines (a scanned page has none); its lines are read when they are first needed.
+
+## Use a drawing's lines as boundaries
+
+You can make the model's objects of a drawing's lines instead of tracing them. Click **Pick lines…** under the drawing in the Drawings section, or right-click the drawing and choose **Pick lines from drawing…** (DWG, DXF and PDF drawings). A banner at the top of the canvas shows that lines are being picked; the model's objects do not take clicks then.
+
+- Click a line to pick it, with the lines that continue it end to end: a polyline drawn as separate lines is picked whole, up to a point where three or more lines meet.
+- <Kbd>Shift</Kbd>+click adds a line, or removes a picked one.
+- Drag a window to pick every line that lies wholly inside it.
+
+Then click **Exterior**, **Material boundary** or **Water line** in the banner, or right-click and choose **Use as exterior boundary**, **Use as material boundary** or **Use as water line**. The picked lines are joined where their ends meet, clipped to the drawing's crop, and taken into the model through the drawing's calibration. The exterior boundary needs one closed loop: when the ends of the picked lines are close (within the snap distance), cSlope offers to close the loop; otherwise it says how far apart they are. Each command is one undo step, and the new objects are not locked. Press <Kbd>Esc</Kbd> or click **Done** to stop picking.
+
+## New models from a drawing
+
+A sheet with several sections can become several models at once. Choose **Model › New models…** or **File › Import › New models from drawing…** (or **New models from drawing…** in the Place drawing window).
+
+1. Pick a drawing of the project or add a file (PDF, DWG, DXF or an image).
+2. With **Draw frame**, drag a rectangle around each section, on any page. Each frame is listed with a name taken from the texts inside it (a title such as "Section 2", else a name like "A–A", else the largest text); change the name as you like, or leave it empty for the default name.
+3. Select a frame and calibrate it as a placed drawing is calibrated. Once one frame is calibrated by its axes, each frame drawn after it **reuses its scale**, so one known value on each axis is enough (choose another frame, or none, under **Reuse scale from**). A DWG or DXF drawing starts with its own coordinates.
+4. Click **Create models**: one model per frame, named after it, with the drawing placed under it, cropped to the frame. The models start without geometry: make it with **Pick lines…** or draw it over the drawing.
+
+The models are added like imported ones: remove one in the explorer if it is not wanted.
 
 ## The drawings of a model
 
@@ -61,6 +100,8 @@ A drawing with **Show in results** on is drawn in the result view, clipped to th
 
 ## Limits
 
-- PNG, JPEG, TIFF and PDF files of at most 100 MB each; a project file with drawings may be up to 500 MB.
-- A PDF page is shown as a picture at a resolution that follows the zoom; text and lines are not selectable, and the model's points do not snap to the drawing's lines.
-- CAD drawings (DXF, DWG) cannot be placed as drawings yet. To turn a DXF drawing into a model, use **File › Import › DXF file** (see [Geometry](/docs/geometry#import-from-dxf)).
+- PNG, JPEG, TIFF, PDF, DWG and DXF files of at most 100 MB each; a project file with drawings may be up to 500 MB.
+- A PDF page is shown as a picture at a resolution that follows the zoom; its text is not selectable. Its vector lines are snapped to and can be picked.
+- A DWG or DXF drawing's model space only; no hatches, images, 3D solids or external references.
+- **New models from drawing** makes models without geometry; turning the lines in a frame into boundaries at once is not offered (pick them in each model).
+- To turn a whole DXF or DWG drawing into a model by its layers instead, use **File › Import › DXF file** or **DWG file** (see [Geometry](/docs/geometry#import-from-dxf)).
