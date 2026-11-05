@@ -19,6 +19,7 @@ import { ExperimentalBadge } from "../../../components/ui/ExperimentalBadge";
 import { FEM_EXPERIMENTAL_ADVICE } from "../../../constants";
 import { BlockSearchSection } from "./BlockSearchSection";
 import { RapidDrawdownFields } from "./RapidDrawdownFields";
+import { LimitsDirectionWarning } from "../../analysis/LimitsDirectionWarning";
 
 const METHODS: AnalysisMethod[] = ["Bishop", "Janbu", "Morgenstern-Price"];
 const INTERSLICE_FUNCTIONS: IntersliceFunctionType[] = [
@@ -339,6 +340,7 @@ export function OptionsSection({ plain = false }: OptionsSectionProps) {
               )}
             </div>
           </div>
+          <LimitsDirectionWarning />
           <label
             className="col-span-2 flex items-center gap-1.5"
             title="A circle that reaches impenetrable material (bedrock) follows its top there instead of being rejected, as on a firm base (composite surface). Off: such circles are not analyzed."

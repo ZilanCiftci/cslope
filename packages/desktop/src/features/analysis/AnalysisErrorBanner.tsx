@@ -1,19 +1,26 @@
 import { useEffect, useState } from "react";
 import { useAppStore } from "../../store/app-store";
 import { isElectron } from "../../utils/is-electron";
-import { isNoSlipSurfaceError } from "./analysis-error";
+import {
+  isNoSlipSurfaceError,
+  limitsDirectionMessage,
+  limitsDirectionMismatch,
+} from "./analysis-error";
 
 /**
- * The error of a failed run, over the edit canvas (the results sidebar shows
- * it in results mode).  Dismissed until the next run or another model.
+ * The error of a failed run, over the canvas in both modes (the results
+ * sidebar's summary repeats it). Dismissed until the next run or another
+ * model. When no surface was found and the search limits are drawn for the
+ * other sliding direction, it says so and offers to switch.
  */
 export function AnalysisErrorBanner() {
-  const mode = useAppStore((s) => s.mode);
   const runState = useAppStore((s) => s.runState);
   const errorMessage = useAppStore((s) => s.errorMessage);
   const activeModelId = useAppStore((s) => s.activeModelId);
   // The "click a region to assign" hint sits at the top centre too.
   const assigning = useAppStore((s) => s.assigningMaterialId !== null);
+  const limits = useAppStore((s) => s.analysisLimits);
+  const orientation = useAppStore((s) => s.orientation);
 
   const errorKey =
     runState === "error" ? `${activeModelId}\n${errorMessage ?? ""}` : null;
@@ -29,9 +36,12 @@ export function AnalysisErrorBanner() {
     [],
   );
 
-  if (mode !== "edit" || errorKey === null || dismissedKey === errorKey) {
+  if (errorKey === null || dismissedKey === errorKey) {
     return null;
   }
+
+  const noSurface = isNoSlipSurfaceError(errorMessage);
+  const drawnFor = noSurface ? limitsDirectionMismatch(limits, orientation) : null;
 
   const openSearchLimits = () => {
     // The limits are what the message is about: select them on the canvas.
@@ -76,8 +86,21 @@ export function AnalysisErrorBanner() {
           Analysis failed
         </div>
         <div className="mt-0.5 break-words">{errorMessage}</div>
+        {drawnFor && (
+          <div className="mt-1 break-words font-semibold" data-testid="limits-direction-hint">
+            {limitsDirectionMessage(drawnFor)}
+          </div>
+        )}
       </div>
-      {isNoSlipSurfaceError(errorMessage) && (
+      {drawnFor && (
+        <button
+          onClick={() => useAppStore.getState().setOrientation(drawnFor)}
+          className="btn shrink-0 self-center"
+        >
+          {drawnFor === "ltr" ? "Use left to right" : "Use right to left"}
+        </button>
+      )}
+      {noSurface && (
         <button
           onClick={openSearchLimits}
           className="btn shrink-0 self-center"

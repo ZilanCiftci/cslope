@@ -2,7 +2,8 @@ import { beforeEach, describe, expect, it } from "vitest";
 import { act, fireEvent, render, screen } from "@testing-library/react";
 import { useAppStore } from "../../store/app-store";
 import { AnalysisErrorBanner } from "./AnalysisErrorBanner";
-import { isNoSlipSurfaceError } from "./analysis-error";
+import { LimitsDirectionWarning } from "./LimitsDirectionWarning";
+import { isNoSlipSurfaceError, limitsDirectionMismatch } from "./analysis-error";
 
 const NO_SURFACE =
   "No valid slip surface was found. Check the search limits, the geometry and the material strengths.";
@@ -18,6 +19,8 @@ describe("AnalysisErrorBanner", () => {
       runState: "idle",
       errorMessage: null,
       activeSection: null,
+      orientation: "ltr",
+      analysisLimits: { enabled: false, entryLeftX: 0, entryRightX: 0, exitLeftX: 0, exitRightX: 0 },
     });
   });
 
@@ -36,11 +39,22 @@ describe("AnalysisErrorBanner", () => {
     expect(screen.queryByRole("button", { name: "Search limits…" })).toBeNull();
   });
 
-  it("is left to the results sidebar in results mode", () => {
+  it("shows in results mode too, as soon as the run fails", () => {
     useAppStore.setState({ mode: "result" });
     render(<AnalysisErrorBanner />);
     fail(NO_SURFACE);
-    expect(screen.queryByRole("alert")).toBeNull();
+    expect(screen.getByRole("alert")).toHaveTextContent("Analysis failed");
+  });
+
+  it("says when the search limits are drawn for the other direction, and turns it round", () => {
+    useAppStore.getState().setOrientation("rtl");
+    useAppStore.getState().setAnalysisLimits({ enabled: true, entryLeftX: -13, entryRightX: -4.5, exitLeftX: -3, exitRightX: 1 });
+    render(<AnalysisErrorBanner />);
+    fail(NO_SURFACE);
+    expect(screen.getByTestId("limits-direction-hint")).toHaveTextContent("left of the exit range");
+    fireEvent.click(screen.getByRole("button", { name: "Use left to right" }));
+    expect(useAppStore.getState().orientation).toBe("ltr");
+    expect(screen.queryByTestId("limits-direction-hint")).toBeNull();
   });
 
   it("opens the search limits when no slip surface was found, and selects them on the canvas", () => {
@@ -82,5 +96,32 @@ describe("AnalysisErrorBanner", () => {
     expect(isNoSlipSurfaceError("No valid slip surface at the mean values.")).toBe(true);
     expect(isNoSlipSurfaceError("Reinforcement spacing must be > 0.")).toBe(false);
     expect(isNoSlipSurfaceError(null)).toBe(false);
+  });
+});
+
+describe("limitsDirectionMismatch", () => {
+  const limits = (entry: [number, number], exit: [number, number]) => ({
+    enabled: true, entryLeftX: entry[0], entryRightX: entry[1], exitLeftX: exit[0], exitRightX: exit[1],
+  });
+  it("names the direction the limits are drawn for when it is not the model's", () => {
+    expect(limitsDirectionMismatch(limits([-13, -4.5], [-3, 1]), "rtl")).toBe("ltr");
+    expect(limitsDirectionMismatch(limits([5, 10], [-3, 1]), "ltr")).toBe("rtl");
+  });
+  it("is null when they agree, overlap or are off", () => {
+    expect(limitsDirectionMismatch(limits([-13, -4.5], [-3, 1]), "ltr")).toBeNull();
+    expect(limitsDirectionMismatch(limits([-5, 0], [-3, 1]), "rtl")).toBeNull();
+    expect(limitsDirectionMismatch({ ...limits([-13, -4.5], [-3, 1]), enabled: false }, "rtl")).toBeNull();
+  });
+});
+
+describe("LimitsDirectionWarning", () => {
+  it("warns before a run and turns the direction round", () => {
+    useAppStore.getState().setOrientation("rtl");
+    useAppStore.getState().setAnalysisLimits({ enabled: true, entryLeftX: -13, entryRightX: -4.5, exitLeftX: -3, exitRightX: 1 });
+    render(<LimitsDirectionWarning />);
+    expect(screen.getByTestId("limits-direction-warning")).toHaveTextContent("No slip surface will be found");
+    fireEvent.click(screen.getByRole("button", { name: "Use left to right" }));
+    expect(useAppStore.getState().orientation).toBe("ltr");
+    expect(screen.queryByTestId("limits-direction-warning")).toBeNull();
   });
 });

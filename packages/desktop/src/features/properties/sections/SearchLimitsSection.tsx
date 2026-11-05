@@ -2,6 +2,7 @@ import { useAppStore } from "../../../store/app-store";
 import { Section } from "../../../components/ui/Section";
 import { Label } from "../../../components/ui/Label";
 import { DraftNumberInput } from "../../../components/ui/DraftNumberInput";
+import { LimitsDirectionWarning } from "../../analysis/LimitsDirectionWarning";
 
 interface SearchLimitsSectionProps {
   plain?: boolean;
@@ -92,6 +93,7 @@ export function SearchLimitsSection({
           >
             Model X range: {xMin} – {xMax} m
           </div>
+          <LimitsDirectionWarning />
         </div>
       )}
     </>
